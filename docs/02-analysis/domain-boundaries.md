@@ -134,7 +134,7 @@
 
 - FR-ADMIN-003
 
-FR-CREATOR-001과 FR-CREATOR-002의 최종 사용자 유스케이스는 방문 관계를 기준으로 결과를 정하므로 Visit가 주 소유하며, Creator는 표시할 기본 정보와 상태를 제공한다.
+FR-CREATOR-001과 FR-CREATOR-002의 관계 기반 최종 사용자 유스케이스는 Visit가 주 소유한다. FR-CREATOR-003의 공개 유튜버 선택 목록은 Creator가 주 소유하며 Visit와 Restaurant가 필터 연동에 협업한다.
 
 ### 소유 비즈니스 규칙
 
@@ -341,6 +341,7 @@ FR-VIDEO-001은 단순 영상 조회가 아니라 특정 맛집의 유효한 방
 | FR-RESTAURANT-003 | 지역별 필터 | Restaurant | 없음 | 지역은 맛집 주소의 구성 개념이다. |
 | FR-RESTAURANT-004 | 음식 카테고리별 필터 | Restaurant | 없음 | 대표 음식 카테고리는 Restaurant가 소유한다. |
 | FR-CREATOR-001 | 유튜버 기준 방문 맛집 조회 | Visit | Creator, Restaurant, Video | 결과 포함 여부는 공개 유튜버와 공개 영상에 근거한 유효 방문 관계가 결정하며 Restaurant가 맛집 정보를 제공한다. |
+| FR-CREATOR-003 | 유튜버 필터 선택 목록 조회 | Creator | Visit, Restaurant | Creator가 공개 유튜버의 최소 선택 정보를 제공하고 WS-01이 필터에서 사용한다. |
 | FR-RESTAURANT-005 | 검색 및 필터 조건 조합 | Restaurant | Visit | Restaurant가 최종 탐색 조건을 조합하고 유튜버 조건의 관계 판정만 Visit에 요청한다. |
 | FR-RESTAURANT-006 | 페이지 단위 조회 | Restaurant | 없음 | 맛집 탐색 결과의 페이지 정책이다. |
 | FR-RESTAURANT-007 | 기본 정렬 적용 | Restaurant | 없음 | 맛집 이름과 주소를 기준으로 정렬한다. |
@@ -641,7 +642,7 @@ Restaurant --관계 기반 조회 요청--> Visit
 
 ### RV-DOMAIN-004 유튜버 목록 조회 기능의 MVP 포함 여부
 
-- 현재 상태: 팀 결정 필요
+- 현재 상태: 결정 완료 — 공개 유튜버의 최소 선택 목록을 MVP에 포함
 - 관련 문서:
   - scope.md
   - functional-requirements.md
@@ -765,9 +766,9 @@ Restaurant --관계 기반 조회 요청--> Visit
 
 ### 추가 검토 연결 항목
 
-- 맛집 목록에서 유튜버가 많을 때 표시 인원과 축약 방식은 `scope.md` 제9장에서 결정한다.
+- 맛집 목록은 채널명 오름차순 최대 3명과 `외 N명`으로 축약하고 전체 방문 유튜버는 상세에서 제공한다.
 - 관리자 계정 발급·회수·복구와 인증 수준은 `scope.md` 제9장 및 `RV-NFR-007`에서 결정한다.
-- 외부 YouTube API 사용 여부와 링크 상태 확인 정책은 `RV-NFR-008`, `RV-NFR-016`에서 결정한다.
+- 관리자 등록은 YouTube API 조회 후 확인한 정보를 저장하고 일반 사용자 조회는 저장 정보를 사용한다. 자동 주기 동기화는 후속 범위다.
 - 초기 데이터 규모와 성능 기준은 `RV-NFR-001`, `RV-NFR-002`, `RV-NFR-004`, `RV-NFR-014`, `RV-NFR-015`에서 결정한다.
 
 ### 경계 판단 요약

@@ -29,7 +29,7 @@ WS-03은 선택한 유튜버와 공개·유효 방문 관계를 판정해 고유
 
 ## 6. 공통 요구사항 및 규칙
 
-- 기준 요구사항: `FR-RESTAURANT-001`~`007`, `FR-CREATOR-001`
+- 기준 요구사항: `FR-RESTAURANT-001`~`007`, `FR-CREATOR-001`, `FR-CREATOR-003`
 - 공통 탐색 규칙: `BR-SEARCH-001`~`009`
 - 공개 정책: `BR-PUBLICATION-001`, `003`~`006`
 - 원문은 [기능 요구사항](../../../01-requirements/functional-requirements.md), [비즈니스 규칙](../../../01-requirements/business-rules.md)과 [제품 개요](../00-product-overview.md)를 따른다.

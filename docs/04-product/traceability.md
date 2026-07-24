@@ -22,6 +22,7 @@
 | FR-RESTAURANT-003 | 지역별 필터 | PRD-DISCOVERY-001 | PRD-ADMIN-001 | WS-01 | 양성훈 |
 | FR-RESTAURANT-004 | 음식 카테고리별 필터 | PRD-DISCOVERY-001 | PRD-ADMIN-001 | WS-01 | 양성훈 |
 | FR-CREATOR-001 | 유튜버 기준 방문 맛집 조회 | PRD-DISCOVERY-002 | PRD-DISCOVERY-001, PRD-ADMIN-001 | WS-03 | 이우람 |
+| FR-CREATOR-003 | 유튜버 필터 선택 목록 조회 | PRD-DISCOVERY-002 | PRD-DISCOVERY-001, PRD-ADMIN-001 | WS-03 | 이우람 |
 | FR-RESTAURANT-005 | 검색 및 필터 조건 조합 | PRD-DISCOVERY-001 | PRD-DISCOVERY-002 | WS-01 | 양성훈 |
 | FR-RESTAURANT-006 | 페이지 단위 조회 | PRD-DISCOVERY-001 | 없음 | WS-01 | 양성훈 |
 | FR-RESTAURANT-007 | 기본 정렬 적용 | PRD-DISCOVERY-001 | 없음 | WS-01 | 양성훈 |
@@ -37,7 +38,7 @@
 | FR-ADMIN-004 | 영상 정보 등록 | PRD-ADMIN-001 | PRD-DISCOVERY-002, PRD-DETAIL-001 | WS-04 | 김인안 |
 | FR-VISIT-001 | 맛집·유튜버·영상 방문 관계 등록 | PRD-ADMIN-001 | PRD-DISCOVERY-001, PRD-DISCOVERY-002, PRD-DETAIL-001 | WS-04 | 김인안 |
 
-기능 요구사항 19개는 각각 정확히 하나의 주 PRD에 배정됐다. 보조 PRD는 데이터 또는 계약 영향을 뜻하며 요구사항 완료 책임을 중복시키지 않는다.
+기능 요구사항 20개는 각각 정확히 하나의 주 PRD에 배정됐다. 보조 PRD는 데이터 또는 계약 영향을 뜻하며 요구사항 완료 책임을 중복시키지 않는다.
 
 ## 4. 비즈니스 규칙 → PRD 매핑
 
@@ -176,7 +177,7 @@
 - 기능 요구사항 없이 생성된 기능 PRD: 없음
 - MVP 제외 기능을 구현 대상으로 포함한 PRD: 없음. `NFR-PRIVACY-003`은 범위 재검토 표지로만 유지한다.
 - 상위 제품 PRD와 기능 PRD 범위 충돌: 없음
-- 검토 필요: 유튜버 선택 목록은 기능 요구사항이 없어 구현 범위에서 제외했고, 관리자 인증 수준·상세 부분 실패·성능 수치는 후속 결정이 필요하다.
+- 후속 결정: 인증 기술, 상세 조합의 애플리케이션 책임 위치, 외부 API 실패 세부 기준과 성능 수치는 API·기술 명세에서 결정한다.
 
 ## 9. 변경 영향 추적
 
