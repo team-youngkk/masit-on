@@ -1,11 +1,11 @@
 ---
 related_documents:
-  1: ../00-overview/scope.md
-  2: functional-requirements.md
-  3: ../06-architecture/technology-policy.md
-  4: ../07-adr/adr-traceability.md
-  5: ../07-adr/quality/test-001-automation-strategy.md
-  6: ../07-adr/quality/obs-001-logging-observability.md
+  - ../00-overview/scope.md
+  - functional-requirements.md
+  - ../06-architecture/technology-policy.md
+  - ../07-adr/adr-traceability.md
+  - ../07-adr/quality/test-001-automation-strategy.md
+  - ../07-adr/quality/obs-001-logging-observability.md
 ---
 
 # 맛잇온 비기능 요구사항

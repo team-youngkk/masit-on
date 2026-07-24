@@ -1,22 +1,22 @@
 ---
 related_documents:
-  1: ../00-overview/scope.md
-  2: ../05-specs/README.md
-  3: ../06-architecture/technology-policy.md
-  4: adr-index.md
-  5: adr-backlog.md
-  6: adr-traceability.md
+  - ../00-overview/scope.md
+  - ../05-specs/README.md
+  - ../06-architecture/technology-policy.md
+  - adr-index.md
+  - adr-backlog.md
+  - adr-traceability.md
 ---
 
 # 맛잇온 Architecture Decision Records
 
 ## 1. 문서 목적
 
-이 디렉터리는 맛잇온의 장기적이고 변경 비용이 큰 기술·아키텍처 결정을 기록한다. 기능 범위는 [#1 docs/00-overview/scope.md](../00-overview/scope.md), 외부 계약과 데이터 정의는 `docs/05-specs/`가 소유한다.
+이 디렉터리는 맛잇온의 장기적이고 변경 비용이 큰 기술·아키텍처 결정을 기록한다. 기능 범위는 [docs/00-overview/scope.md](../00-overview/scope.md), 외부 계약과 데이터 정의는 `docs/05-specs/`가 소유한다.
 
 ## 2. 기술 스펙과 ADR의 관계
 
-`맛잇온 기술 스펙 결정`에서 고정·확정된 항목은 MVP 범위와 대조한 뒤 Accepted ADR로 전환한다. 반복 규칙은 [#3 ../06-architecture/technology-policy.md](../06-architecture/technology-policy.md), 조건부·Post-MVP·충돌 항목은 [#5 adr-backlog.md](adr-backlog.md)에서 관리한다. 기술 스펙의 버전은 재선정하거나 최신화하지 않는다.
+`맛잇온 기술 스펙 결정`에서 고정·확정된 항목은 MVP 범위와 대조한 뒤 Accepted ADR로 전환한다. 반복 규칙은 [../06-architecture/technology-policy.md](../06-architecture/technology-policy.md), 조건부·Post-MVP·충돌 항목은 [adr-backlog.md](adr-backlog.md)에서 관리한다. 기술 스펙의 버전은 재선정하거나 최신화하지 않는다.
 
 ## 3. ADR 상태
 
@@ -76,7 +76,7 @@ docs/07-adr/
 | `integration/` | 외부 서비스·제공자 연동 | EXT |
 | `quality/` | 테스트, 로그, 관측성 | TEST, OBS |
 
-각 하위 디렉터리의 `README.md`는 해당 영역의 탐색용 목록이다. 전체 상태·우선순위·공식 경로는 루트 [#4 adr-index.md](adr-index.md)만을 기준으로 한다.
+각 하위 디렉터리의 `README.md`는 해당 영역의 탐색용 목록이다. 전체 상태·우선순위·공식 경로는 루트 [adr-index.md](adr-index.md)만을 기준으로 한다.
 
 ## 6. Accepted ADR 작성 기준
 
@@ -98,8 +98,8 @@ ADR은 하나의 결정 문제와 선택 이유를 기록한다. 버전 범위 �
 
 ## 9. 변경 및 대체 절차
 
-Accepted ADR은 내용만 덮어써서 결론을 바꾸지 않는다. 변경 제안은 영향과 테스트 결과를 갖춘 새 ADR을 만들고 기존 ADR의 `superseded_by`와 새 ADR의 `supersedes`를 연결한다. 상태 변경 시 [#4 adr-index.md](adr-index.md), [#6 adr-traceability.md](adr-traceability.md)와 기술 정책을 함께 갱신한다.
+Accepted ADR은 내용만 덮어써서 결론을 바꾸지 않는다. 변경 제안은 영향과 테스트 결과를 갖춘 새 ADR을 만들고 기존 ADR의 `superseded_by`와 새 ADR의 `supersedes`를 연결한다. 상태 변경 시 [adr-index.md](adr-index.md), [adr-traceability.md](adr-traceability.md)와 기술 정책을 함께 갱신한다.
 
 ## 10. 현재 ADR 목록
 
-현재 상태와 경로의 기준은 [#4 ADR 인덱스](adr-index.md)다. 조건부·Post-MVP·범위 충돌은 [#5 ADR Backlog](adr-backlog.md), 기술·요구사항 연결은 [#6 ADR 추적성](adr-traceability.md)을 따른다.
+현재 상태와 경로의 기준은 [ADR 인덱스](adr-index.md)다. 조건부·Post-MVP·범위 충돌은 [ADR Backlog](adr-backlog.md), 기술·요구사항 연결은 [ADR 추적성](adr-traceability.md)을 따른다.

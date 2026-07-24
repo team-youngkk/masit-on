@@ -1,12 +1,12 @@
 ---
 related_documents:
-  1: ../00-overview/service-overview.md
-  2: ../00-overview/scope.md
-  3: ../00-overview/glossary.md
-  4: functional-requirements.md
-  5: requirements-review.md
-  6: ../05-specs/data/constraints.md
-  7: ../05-specs/data/lifecycle-rules.md
+  - ../00-overview/service-overview.md
+  - ../00-overview/scope.md
+  - ../00-overview/glossary.md
+  - functional-requirements.md
+  - requirements-review.md
+  - ../05-specs/data/constraints.md
+  - ../05-specs/data/lifecycle-rules.md
 ---
 
 # 맛잇온 비즈니스 규칙
@@ -17,13 +17,13 @@ related_documents:
 
 기준 문서는 다음과 같다.
 
-- [#1 docs/00-overview/service-overview.md](../00-overview/service-overview.md)
-- [#2 docs/00-overview/scope.md](../00-overview/scope.md)
-- [#3 docs/00-overview/glossary.md](../00-overview/glossary.md)
-- [#4 docs/01-requirements/functional-requirements.md](functional-requirements.md)
-- [#5 docs/01-requirements/requirements-review.md](requirements-review.md)
+- [docs/00-overview/service-overview.md](../00-overview/service-overview.md)
+- [docs/00-overview/scope.md](../00-overview/scope.md)
+- [docs/00-overview/glossary.md](../00-overview/glossary.md)
+- [docs/01-requirements/functional-requirements.md](functional-requirements.md)
+- [docs/01-requirements/requirements-review.md](requirements-review.md)
 
-기준 문서에서 확정되지 않은 사항은 [#5 requirements-review.md](requirements-review.md)의 합의 결과를 따르며, 아직 결정되지 않은 사항만 제11장의 `검토 필요` 항목으로 유지한다.
+기준 문서에서 확정되지 않은 사항은 [requirements-review.md](requirements-review.md)의 합의 결과를 따르며, 아직 결정되지 않은 사항만 제11장의 `검토 필요` 항목으로 유지한다.
 
 ## 2. 규칙 작성 원칙
 
@@ -54,8 +54,8 @@ related_documents:
 - 위반 시 처리:
   - 등록되지 않은 음식점은 일반 사용자 조회 대상에서 제외한다.
 - 관련 요구사항:
-  - [#4 FR-RESTAURANT-001](functional-requirements.md#fr-restaurant-001-맛집-목록-조회)
-  - [#4 FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
+  - [FR-RESTAURANT-001](functional-requirements.md#fr-restaurant-001-맛집-목록-조회)
+  - [FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
 
 ### BR-RESTAURANT-002 영상과 독립된 맛집
 
@@ -73,10 +73,10 @@ related_documents:
 - 위반 시 처리:
   - 연결 정보가 없는 영역만 빈 결과로 제공하고 맛집 기본 정보는 제공한다.
 - 관련 요구사항:
-  - [#4 FR-RESTAURANT-001](functional-requirements.md#fr-restaurant-001-맛집-목록-조회)
-  - [#4 FR-RESTAURANT-008](functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회)
-  - [#4 FR-RESTAURANT-011](functional-requirements.md#fr-restaurant-011-영상-연결이-없는-맛집-상세-조회)
-  - [#4 FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
+  - [FR-RESTAURANT-001](functional-requirements.md#fr-restaurant-001-맛집-목록-조회)
+  - [FR-RESTAURANT-008](functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회)
+  - [FR-RESTAURANT-011](functional-requirements.md#fr-restaurant-011-영상-연결이-없는-맛집-상세-조회)
+  - [FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
 
 ### BR-RESTAURANT-003 맛집 최소 등록 정보
 
@@ -94,10 +94,10 @@ related_documents:
 - 위반 시 처리:
   - 맛집 등록을 거부한다.
 - 관련 요구사항:
-  - [#4 FR-RESTAURANT-008](functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회)
-  - [#4 FR-RESTAURANT-009](functional-requirements.md#fr-restaurant-009-지역-정보-확인)
-  - [#4 FR-RESTAURANT-010](functional-requirements.md#fr-restaurant-010-음식-카테고리-확인)
-  - [#4 FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
+  - [FR-RESTAURANT-008](functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회)
+  - [FR-RESTAURANT-009](functional-requirements.md#fr-restaurant-009-지역-정보-확인)
+  - [FR-RESTAURANT-010](functional-requirements.md#fr-restaurant-010-음식-카테고리-확인)
+  - [FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
 
 ### BR-RESTAURANT-004 대표 음식 카테고리
 
@@ -115,9 +115,9 @@ related_documents:
 - 위반 시 처리:
   - 대표 카테고리의 판단 근거가 부족하면 등록을 보류하고, 대표 카테고리가 없거나 `기타`의 음식 종류 기록이 비어 있거나 식별할 수 없으면 맛집 등록을 거부한다.
 - 관련 요구사항:
-  - [#4 FR-RESTAURANT-004](functional-requirements.md#fr-restaurant-004-음식-카테고리별-필터)
-  - [#4 FR-RESTAURANT-010](functional-requirements.md#fr-restaurant-010-음식-카테고리-확인)
-  - [#4 FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
+  - [FR-RESTAURANT-004](functional-requirements.md#fr-restaurant-004-음식-카테고리별-필터)
+  - [FR-RESTAURANT-010](functional-requirements.md#fr-restaurant-010-음식-카테고리-확인)
+  - [FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
 
 ### BR-RESTAURANT-005 맛집의 지역 소속
 
@@ -135,9 +135,9 @@ related_documents:
 - 위반 시 처리:
   - 맛집 등록을 거부한다.
 - 관련 요구사항:
-  - [#4 FR-RESTAURANT-003](functional-requirements.md#fr-restaurant-003-지역별-필터)
-  - [#4 FR-RESTAURANT-009](functional-requirements.md#fr-restaurant-009-지역-정보-확인)
-  - [#4 FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
+  - [FR-RESTAURANT-003](functional-requirements.md#fr-restaurant-003-지역별-필터)
+  - [FR-RESTAURANT-009](functional-requirements.md#fr-restaurant-009-지역-정보-확인)
+  - [FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
 
 ### BR-RESTAURANT-006 맛집 중복 판단
 
@@ -155,7 +155,7 @@ related_documents:
 - 위반 시 처리:
   - 새 등록을 거부하고 기존 맛집을 사용한다. 동일 여부가 불명확하면 등록을 보류한다.
 - 관련 요구사항:
-  - [#4 FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
+  - [FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
 
 ### BR-RESTAURANT-007 동일 상호의 지점 구분
 
@@ -173,7 +173,7 @@ related_documents:
 - 위반 시 처리:
   - 카카오 장소 일치 여부를 다시 검증한다.
 - 관련 요구사항:
-  - [#4 FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
+  - [FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
 
 ### BR-RESTAURANT-008 맛집 공개 조건
 
@@ -190,8 +190,8 @@ related_documents:
 - 위반 시 처리:
   - 해당 맛집을 일반 사용자 조회 결과에서 제외한다.
 - 관련 요구사항:
-  - [#4 FR-RESTAURANT-001](functional-requirements.md#fr-restaurant-001-맛집-목록-조회)
-  - [#4 FR-RESTAURANT-008](functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회)
+  - [FR-RESTAURANT-001](functional-requirements.md#fr-restaurant-001-맛집-목록-조회)
+  - [FR-RESTAURANT-008](functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회)
 
 ### BR-RESTAURANT-009 맛집 이름 변경
 
@@ -210,7 +210,7 @@ related_documents:
 - 위반 시 처리:
   - 장소 동일성을 다시 검증하고 확인 전까지 기존 정보를 유지한다.
 - 관련 요구사항:
-  - [#4 FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
+  - [FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
 
 ### BR-RESTAURANT-010 주소 변경과 장소 이전
 
@@ -229,8 +229,8 @@ related_documents:
 - 위반 시 처리:
   - 장소별 맛집 정보를 분리하고 검증되지 않은 관계 이전을 거부한다.
 - 관련 요구사항:
-  - [#4 FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
-  - [#4 FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
+  - [FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
+  - [FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
 
 ### BR-RESTAURANT-011 폐업과 장기 운영 중단
 
@@ -248,8 +248,8 @@ related_documents:
 - 위반 시 처리:
   - 해당 맛집을 비공개 상태로 전환하고 재개업 검증 전까지 재공개하지 않는다.
 - 관련 요구사항:
-  - [#4 FR-RESTAURANT-001](functional-requirements.md#fr-restaurant-001-맛집-목록-조회)
-  - [#4 FR-RESTAURANT-008](functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회)
+  - [FR-RESTAURANT-001](functional-requirements.md#fr-restaurant-001-맛집-목록-조회)
+  - [FR-RESTAURANT-008](functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회)
 
 ## 4. 유튜버 및 채널 규칙
 
@@ -270,9 +270,9 @@ related_documents:
 - 위반 시 처리:
   - YouTube 채널 단위로 다시 식별하고 동일 채널 여부가 불명확하면 등록을 보류한다.
 - 관련 요구사항:
-  - [#4 FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
-  - [#4 FR-CREATOR-002](functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
-  - [#4 FR-ADMIN-003](functional-requirements.md#fr-admin-003-유튜버-정보-등록)
+  - [FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
+  - [FR-CREATOR-002](functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
+  - [FR-ADMIN-003](functional-requirements.md#fr-admin-003-유튜버-정보-등록)
 
 ### BR-CREATOR-002 유튜버 최소 등록 정보
 
@@ -290,7 +290,7 @@ related_documents:
 - 위반 시 처리:
   - 유튜버 등록을 거부한다.
 - 관련 요구사항:
-  - [#4 FR-ADMIN-003](functional-requirements.md#fr-admin-003-유튜버-정보-등록)
+  - [FR-ADMIN-003](functional-requirements.md#fr-admin-003-유튜버-정보-등록)
 
 ### BR-CREATOR-003 동일 채널 중복 판단
 
@@ -308,7 +308,7 @@ related_documents:
 - 위반 시 처리:
   - 새 등록을 거부하고 기존 유튜버 정보를 사용한다.
 - 관련 요구사항:
-  - [#4 FR-ADMIN-003](functional-requirements.md#fr-admin-003-유튜버-정보-등록)
+  - [FR-ADMIN-003](functional-requirements.md#fr-admin-003-유튜버-정보-등록)
 
 ### BR-CREATOR-004 유튜버 표시 정보
 
@@ -329,9 +329,9 @@ related_documents:
 - 위반 시 처리:
   - 검증된 표시 정보가 없는 유튜버는 일반 사용자 조회에 제공하지 않는다.
 - 관련 요구사항:
-  - [#4 FR-CREATOR-003](functional-requirements.md#fr-creator-003-유튜버-필터-선택-목록-조회)
-  - [#4 FR-CREATOR-002](functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
-  - [#4 FR-ADMIN-003](functional-requirements.md#fr-admin-003-유튜버-정보-등록)
+  - [FR-CREATOR-003](functional-requirements.md#fr-creator-003-유튜버-필터-선택-목록-조회)
+  - [FR-CREATOR-002](functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
+  - [FR-ADMIN-003](functional-requirements.md#fr-admin-003-유튜버-정보-등록)
 
 ### BR-CREATOR-005 방문 관계의 유튜버 일치
 
@@ -349,8 +349,8 @@ related_documents:
 - 위반 시 처리:
   - 방문 관계 등록을 거부한다.
 - 관련 요구사항:
-  - [#4 FR-ADMIN-004](functional-requirements.md#fr-admin-004-영상-정보-등록)
-  - [#4 FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
+  - [FR-ADMIN-004](functional-requirements.md#fr-admin-004-영상-정보-등록)
+  - [FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
 
 ### BR-CREATOR-006 채널명 변경과 동일성 유지
 
@@ -369,7 +369,7 @@ related_documents:
 - 위반 시 처리:
   - 채널 동일성을 다시 검증하고 기존 관계를 임의로 변경하지 않는다.
 - 관련 요구사항:
-  - [#4 FR-ADMIN-003](functional-requirements.md#fr-admin-003-유튜버-정보-등록)
+  - [FR-ADMIN-003](functional-requirements.md#fr-admin-003-유튜버-정보-등록)
 
 ### BR-CREATOR-007 채널 이용 불가 처리
 
@@ -388,8 +388,8 @@ related_documents:
 - 위반 시 처리:
   - 해당 유튜버를 비공개 상태로 전환하고 관리자 확인 전까지 재공개하지 않는다.
 - 관련 요구사항:
-  - [#4 FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
-  - [#4 FR-CREATOR-002](functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
+  - [FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
+  - [FR-CREATOR-002](functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
 
 ## 5. 영상 규칙
 
@@ -409,8 +409,8 @@ related_documents:
 - 위반 시 처리:
   - 원본 파일을 등록 대상에서 제외하고 해당 등록을 거부한다.
 - 관련 요구사항:
-  - [#4 FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
-  - [#4 FR-ADMIN-004](functional-requirements.md#fr-admin-004-영상-정보-등록)
+  - [FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
+  - [FR-ADMIN-004](functional-requirements.md#fr-admin-004-영상-정보-등록)
 
 ### BR-VIDEO-002 영상 최소 등록 정보
 
@@ -428,7 +428,7 @@ related_documents:
 - 위반 시 처리:
   - 영상 등록을 거부한다.
 - 관련 요구사항:
-  - [#4 FR-ADMIN-004](functional-requirements.md#fr-admin-004-영상-정보-등록)
+  - [FR-ADMIN-004](functional-requirements.md#fr-admin-004-영상-정보-등록)
 
 ### BR-VIDEO-003 영상 식별 및 중복 판단
 
@@ -446,7 +446,7 @@ related_documents:
 - 위반 시 처리:
   - 새 등록을 거부하고 기존 영상을 사용한다.
 - 관련 요구사항:
-  - [#4 FR-ADMIN-004](functional-requirements.md#fr-admin-004-영상-정보-등록)
+  - [FR-ADMIN-004](functional-requirements.md#fr-admin-004-영상-정보-등록)
 
 ### BR-VIDEO-004 영상과 방문 관계의 다대상 연결
 
@@ -464,8 +464,8 @@ related_documents:
 - 위반 시 처리:
   - 실제 방문이 확인되지 않은 맛집과의 관계 등록을 거부한다.
 - 관련 요구사항:
-  - [#4 FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
-  - [#4 FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
+  - [FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
+  - [FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
 
 ### BR-VIDEO-005 실제 방문 근거
 
@@ -483,9 +483,9 @@ related_documents:
 - 위반 시 처리:
   - 방문 관계 등록을 거부한다.
 - 관련 요구사항:
-  - [#4 FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
-  - [#4 FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
-  - [#4 FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
+  - [FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
+  - [FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
+  - [FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
 
 ### BR-VIDEO-006 게시일과 방문일의 구분
 
@@ -503,7 +503,7 @@ related_documents:
 - 위반 시 처리:
   - 근거 없는 방문일 정보는 등록하지 않는다.
 - 관련 요구사항:
-  - [#4 FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
+  - [FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
 
 ### BR-VIDEO-007 외부 링크 장애의 격리
 
@@ -521,9 +521,9 @@ related_documents:
 - 위반 시 처리:
   - 외부 링크 오류를 관련 영상 범위로 제한하고 맛집 기본 정보를 제공한다.
 - 관련 요구사항:
-  - [#4 FR-RESTAURANT-008](functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회)
-  - [#4 FR-RESTAURANT-011](functional-requirements.md#fr-restaurant-011-영상-연결이-없는-맛집-상세-조회)
-  - [#4 FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
+  - [FR-RESTAURANT-008](functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회)
+  - [FR-RESTAURANT-011](functional-requirements.md#fr-restaurant-011-영상-연결이-없는-맛집-상세-조회)
+  - [FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
 
 ### BR-VIDEO-008 영상 표시 정보 변경
 
@@ -542,7 +542,7 @@ related_documents:
 - 위반 시 처리:
   - 원본 영상의 동일성을 다시 검증한다.
 - 관련 요구사항:
-  - [#4 FR-ADMIN-004](functional-requirements.md#fr-admin-004-영상-정보-등록)
+  - [FR-ADMIN-004](functional-requirements.md#fr-admin-004-영상-정보-등록)
 
 ### BR-VIDEO-009 영상 이용 불가 처리
 
@@ -561,9 +561,9 @@ related_documents:
 - 위반 시 처리:
   - 해당 영상을 비공개 상태로 전환하고 실제 방문 근거 재검증 전까지 재공개하지 않는다.
 - 관련 요구사항:
-  - [#4 FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
-  - [#4 FR-CREATOR-002](functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
-  - [#4 FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
+  - [FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
+  - [FR-CREATOR-002](functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
+  - [FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
 
 ## 6. 방문 관계 규칙
 
@@ -584,7 +584,7 @@ related_documents:
 - 위반 시 처리:
   - 방문 관계 등록을 거부한다.
 - 관련 요구사항:
-  - [#4 FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
+  - [FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
 
 ### BR-VISIT-002 방문 근거 필수
 
@@ -605,10 +605,10 @@ related_documents:
 - 위반 시 처리:
   - 방문 관계 등록을 거부한다.
 - 관련 요구사항:
-  - [#4 FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
-  - [#4 FR-CREATOR-002](functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
-  - [#4 FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
-  - [#4 FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
+  - [FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
+  - [FR-CREATOR-002](functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
+  - [FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
+  - [FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
 
 ### BR-VISIT-003 방문 관계 중복 판단
 
@@ -626,7 +626,7 @@ related_documents:
 - 위반 시 처리:
   - 새 등록을 거부하고 기존 관계를 사용한다.
 - 관련 요구사항:
-  - [#4 FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
+  - [FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
 
 ### BR-VISIT-004 방문 관계의 연결 범위
 
@@ -645,10 +645,10 @@ related_documents:
 - 위반 시 처리:
   - 개별 방문 사실이 확인되지 않은 관계 등록을 거부한다.
 - 관련 요구사항:
-  - [#4 FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
-  - [#4 FR-CREATOR-002](functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
-  - [#4 FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
-  - [#4 FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
+  - [FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
+  - [FR-CREATOR-002](functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
+  - [FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
+  - [FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
 
 ### BR-VISIT-005 방문 관계의 조회 유효성
 
@@ -667,9 +667,9 @@ related_documents:
 - 위반 시 처리:
   - 해당 관계를 일반 사용자 조회에서 제외한다.
 - 관련 요구사항:
-  - [#4 FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
-  - [#4 FR-CREATOR-002](functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
-  - [#4 FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
+  - [FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
+  - [FR-CREATOR-002](functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
+  - [FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
 
 ### BR-VISIT-006 방문 날짜 관리 제외
 
@@ -687,7 +687,7 @@ related_documents:
 - 위반 시 처리:
   - 근거 없는 방문 날짜를 등록하거나 표시하지 않는다.
 - 관련 요구사항:
-  - [#4 FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
+  - [FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
 
 ### BR-VISIT-007 등록 완료와 검증 상태
 
@@ -705,7 +705,7 @@ related_documents:
 - 위반 시 처리:
   - 검증되지 않은 관계 등록을 거부한다.
 - 관련 요구사항:
-  - [#4 FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
+  - [FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
 
 ## 7. 검색 및 필터 규칙
 
@@ -724,7 +724,7 @@ related_documents:
 - 위반 시 처리:
   - 허용되지 않은 대상을 검색 범위에 포함하지 않는다.
 - 관련 요구사항:
-  - [#4 FR-RESTAURANT-002](functional-requirements.md#fr-restaurant-002-맛집-이름-검색)
+  - [FR-RESTAURANT-002](functional-requirements.md#fr-restaurant-002-맛집-이름-검색)
 
 ### BR-SEARCH-002 검색어 공백 처리
 
@@ -741,7 +741,7 @@ related_documents:
 - 위반 시 처리:
   - 앞뒤 공백을 제거한 값을 다시 평가하고, 빈 값이면 다른 지정 조건만 적용하거나 전체 목록을 조회한다.
 - 관련 요구사항:
-  - [#4 FR-RESTAURANT-002](functional-requirements.md#fr-restaurant-002-맛집-이름-검색)
+  - [FR-RESTAURANT-002](functional-requirements.md#fr-restaurant-002-맛집-이름-검색)
 
 ### BR-SEARCH-003 필터 종류와 단일 선택
 
@@ -758,10 +758,10 @@ related_documents:
 - 위반 시 처리:
   - 유효하지 않은 필터 조건으로 처리한다.
 - 관련 요구사항:
-  - [#4 FR-RESTAURANT-003](functional-requirements.md#fr-restaurant-003-지역별-필터)
-  - [#4 FR-RESTAURANT-004](functional-requirements.md#fr-restaurant-004-음식-카테고리별-필터)
-  - [#4 FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
-  - [#4 FR-RESTAURANT-005](functional-requirements.md#fr-restaurant-005-검색-및-필터-조건-조합)
+  - [FR-RESTAURANT-003](functional-requirements.md#fr-restaurant-003-지역별-필터)
+  - [FR-RESTAURANT-004](functional-requirements.md#fr-restaurant-004-음식-카테고리별-필터)
+  - [FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
+  - [FR-RESTAURANT-005](functional-requirements.md#fr-restaurant-005-검색-및-필터-조건-조합)
 
 ### BR-SEARCH-004 검색과 필터 조합
 
@@ -778,7 +778,7 @@ related_documents:
 - 위반 시 처리:
   - 모든 지정 조건을 다시 적용한 결과를 제공한다.
 - 관련 요구사항:
-  - [#4 FR-RESTAURANT-005](functional-requirements.md#fr-restaurant-005-검색-및-필터-조건-조합)
+  - [FR-RESTAURANT-005](functional-requirements.md#fr-restaurant-005-검색-및-필터-조건-조합)
 
 ### BR-SEARCH-005 조회 결과의 고유성
 
@@ -795,9 +795,9 @@ related_documents:
 - 위반 시 처리:
   - 맛집 기준으로 중복을 제거한다.
 - 관련 요구사항:
-  - [#4 FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
-  - [#4 FR-RESTAURANT-005](functional-requirements.md#fr-restaurant-005-검색-및-필터-조건-조합)
-  - [#4 FR-RESTAURANT-006](functional-requirements.md#fr-restaurant-006-페이지-단위-조회)
+  - [FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
+  - [FR-RESTAURANT-005](functional-requirements.md#fr-restaurant-005-검색-및-필터-조건-조합)
+  - [FR-RESTAURANT-006](functional-requirements.md#fr-restaurant-006-페이지-단위-조회)
 
 ### BR-SEARCH-006 빈 조회 결과
 
@@ -814,12 +814,12 @@ related_documents:
 - 위반 시 처리:
   - 유효한 조건의 무결과 요청을 빈 목록으로 처리한다.
 - 관련 요구사항:
-  - [#4 FR-RESTAURANT-001](functional-requirements.md#fr-restaurant-001-맛집-목록-조회)
-  - [#4 FR-RESTAURANT-002](functional-requirements.md#fr-restaurant-002-맛집-이름-검색)
-  - [#4 FR-RESTAURANT-003](functional-requirements.md#fr-restaurant-003-지역별-필터)
-  - [#4 FR-RESTAURANT-004](functional-requirements.md#fr-restaurant-004-음식-카테고리별-필터)
-  - [#4 FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
-  - [#4 FR-RESTAURANT-005](functional-requirements.md#fr-restaurant-005-검색-및-필터-조건-조합)
+  - [FR-RESTAURANT-001](functional-requirements.md#fr-restaurant-001-맛집-목록-조회)
+  - [FR-RESTAURANT-002](functional-requirements.md#fr-restaurant-002-맛집-이름-검색)
+  - [FR-RESTAURANT-003](functional-requirements.md#fr-restaurant-003-지역별-필터)
+  - [FR-RESTAURANT-004](functional-requirements.md#fr-restaurant-004-음식-카테고리별-필터)
+  - [FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
+  - [FR-RESTAURANT-005](functional-requirements.md#fr-restaurant-005-검색-및-필터-조건-조합)
 
 ### BR-SEARCH-007 유튜버 필터의 방문 근거
 
@@ -836,8 +836,8 @@ related_documents:
 - 위반 시 처리:
   - 유효하지 않은 관계에 연결된 맛집을 필터 결과에서 제외한다.
 - 관련 요구사항:
-  - [#4 FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
-  - [#4 FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
+  - [FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
+  - [FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
 
 ### BR-SEARCH-008 페이지 단위 조회
 
@@ -854,9 +854,9 @@ related_documents:
 - 위반 시 처리:
   - 동일 조건에서 안정적인 페이지 결과를 다시 제공한다.
 - 관련 요구사항:
-  - [#4 FR-RESTAURANT-001](functional-requirements.md#fr-restaurant-001-맛집-목록-조회)
-  - [#4 FR-RESTAURANT-006](functional-requirements.md#fr-restaurant-006-페이지-단위-조회)
-  - [#4 FR-RESTAURANT-007](functional-requirements.md#fr-restaurant-007-기본-정렬-적용)
+  - [FR-RESTAURANT-001](functional-requirements.md#fr-restaurant-001-맛집-목록-조회)
+  - [FR-RESTAURANT-006](functional-requirements.md#fr-restaurant-006-페이지-단위-조회)
+  - [FR-RESTAURANT-007](functional-requirements.md#fr-restaurant-007-기본-정렬-적용)
 
 ### BR-SEARCH-009 기본 정렬
 
@@ -875,9 +875,9 @@ related_documents:
 - 위반 시 처리:
   - 기본 정렬을 다시 적용해 안정적인 페이지 결과를 제공한다.
 - 관련 요구사항:
-  - [#4 FR-RESTAURANT-001](functional-requirements.md#fr-restaurant-001-맛집-목록-조회)
-  - [#4 FR-RESTAURANT-006](functional-requirements.md#fr-restaurant-006-페이지-단위-조회)
-  - [#4 FR-RESTAURANT-007](functional-requirements.md#fr-restaurant-007-기본-정렬-적용)
+  - [FR-RESTAURANT-001](functional-requirements.md#fr-restaurant-001-맛집-목록-조회)
+  - [FR-RESTAURANT-006](functional-requirements.md#fr-restaurant-006-페이지-단위-조회)
+  - [FR-RESTAURANT-007](functional-requirements.md#fr-restaurant-007-기본-정렬-적용)
 
 ## 8. 관리자 등록 및 검증 규칙
 
@@ -896,7 +896,7 @@ related_documents:
 - 위반 시 처리:
   - 관리자 등록 기능 접근을 거부한다.
 - 관련 요구사항:
-  - [#4 FR-ADMIN-001](functional-requirements.md#fr-admin-001-관리자-등록-기능-접근)
+  - [FR-ADMIN-001](functional-requirements.md#fr-admin-001-관리자-등록-기능-접근)
 
 ### BR-ADMIN-002 등록 전 사실 검증
 
@@ -913,10 +913,10 @@ related_documents:
 - 위반 시 처리:
   - 등록을 거부한다.
 - 관련 요구사항:
-  - [#4 FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
-  - [#4 FR-ADMIN-003](functional-requirements.md#fr-admin-003-유튜버-정보-등록)
-  - [#4 FR-ADMIN-004](functional-requirements.md#fr-admin-004-영상-정보-등록)
-  - [#4 FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
+  - [FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
+  - [FR-ADMIN-003](functional-requirements.md#fr-admin-003-유튜버-정보-등록)
+  - [FR-ADMIN-004](functional-requirements.md#fr-admin-004-영상-정보-등록)
+  - [FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
 
 ### BR-ADMIN-003 등록 정합성 검증
 
@@ -933,10 +933,10 @@ related_documents:
 - 위반 시 처리:
   - 등록을 거부하거나 판단 완료 시까지 보류한다.
 - 관련 요구사항:
-  - [#4 FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
-  - [#4 FR-ADMIN-003](functional-requirements.md#fr-admin-003-유튜버-정보-등록)
-  - [#4 FR-ADMIN-004](functional-requirements.md#fr-admin-004-영상-정보-등록)
-  - [#4 FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
+  - [FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
+  - [FR-ADMIN-003](functional-requirements.md#fr-admin-003-유튜버-정보-등록)
+  - [FR-ADMIN-004](functional-requirements.md#fr-admin-004-영상-정보-등록)
+  - [FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
 
 ### BR-ADMIN-004 검증 후 등록 및 조회 반영
 
@@ -954,10 +954,10 @@ related_documents:
 - 위반 시 처리:
   - 공개 조건을 충족하지 않은 데이터를 일반 사용자 조회에서 제외한다.
 - 관련 요구사항:
-  - [#4 FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
-  - [#4 FR-ADMIN-003](functional-requirements.md#fr-admin-003-유튜버-정보-등록)
-  - [#4 FR-ADMIN-004](functional-requirements.md#fr-admin-004-영상-정보-등록)
-  - [#4 FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
+  - [FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
+  - [FR-ADMIN-003](functional-requirements.md#fr-admin-003-유튜버-정보-등록)
+  - [FR-ADMIN-004](functional-requirements.md#fr-admin-004-영상-정보-등록)
+  - [FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
 
 ### BR-ADMIN-005 MVP 관리 기능의 경계
 
@@ -974,10 +974,10 @@ related_documents:
 - 위반 시 처리:
   - 해당 기능을 1차 MVP에서 제외하고 범위 변경 절차로 검토한다.
 - 관련 요구사항:
-  - [#4 FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
-  - [#4 FR-ADMIN-003](functional-requirements.md#fr-admin-003-유튜버-정보-등록)
-  - [#4 FR-ADMIN-004](functional-requirements.md#fr-admin-004-영상-정보-등록)
-  - [#4 FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
+  - [FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
+  - [FR-ADMIN-003](functional-requirements.md#fr-admin-003-유튜버-정보-등록)
+  - [FR-ADMIN-004](functional-requirements.md#fr-admin-004-영상-정보-등록)
+  - [FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
 
 ### BR-ADMIN-006 잘못 등록된 데이터의 정정 원칙
 
@@ -996,9 +996,9 @@ related_documents:
 - 위반 시 처리:
   - 해당 데이터를 일반 사용자 조회에서 제외하고 관리자 재검증 대상으로 유지한다.
 - 관련 요구사항:
-  - [#4 FR-RESTAURANT-001](functional-requirements.md#fr-restaurant-001-맛집-목록-조회)
-  - [#4 FR-CREATOR-002](functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
-  - [#4 FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
+  - [FR-RESTAURANT-001](functional-requirements.md#fr-restaurant-001-맛집-목록-조회)
+  - [FR-CREATOR-002](functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
+  - [FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
 
 ### BR-ADMIN-007 동시 등록의 고유성
 
@@ -1016,10 +1016,10 @@ related_documents:
 - 위반 시 처리:
   - 중복 등록을 거부하고 기존 대상을 사용한다.
 - 관련 요구사항:
-  - [#4 FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
-  - [#4 FR-ADMIN-003](functional-requirements.md#fr-admin-003-유튜버-정보-등록)
-  - [#4 FR-ADMIN-004](functional-requirements.md#fr-admin-004-영상-정보-등록)
-  - [#4 FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
+  - [FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
+  - [FR-ADMIN-003](functional-requirements.md#fr-admin-003-유튜버-정보-등록)
+  - [FR-ADMIN-004](functional-requirements.md#fr-admin-004-영상-정보-등록)
+  - [FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
 
 ### BR-ADMIN-008 보류 요청의 처리
 
@@ -1036,10 +1036,10 @@ related_documents:
 - 위반 시 처리:
   - 해당 요청을 비공개 보류 상태로 유지한다.
 - 관련 요구사항:
-  - [#4 FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
-  - [#4 FR-ADMIN-003](functional-requirements.md#fr-admin-003-유튜버-정보-등록)
-  - [#4 FR-ADMIN-004](functional-requirements.md#fr-admin-004-영상-정보-등록)
-  - [#4 FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
+  - [FR-ADMIN-002](functional-requirements.md#fr-admin-002-맛집-정보-등록)
+  - [FR-ADMIN-003](functional-requirements.md#fr-admin-003-유튜버-정보-등록)
+  - [FR-ADMIN-004](functional-requirements.md#fr-admin-004-영상-정보-등록)
+  - [FR-VISIT-001](functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
 
 ## 9. 공개·비공개 및 삭제 규칙
 
@@ -1058,11 +1058,11 @@ related_documents:
 - 위반 시 처리:
   - 해당 데이터를 일반 사용자 조회 결과에서 제외한다.
 - 관련 요구사항:
-  - [#4 FR-RESTAURANT-001](functional-requirements.md#fr-restaurant-001-맛집-목록-조회)
-  - [#4 FR-RESTAURANT-008](functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회)
-  - [#4 FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
-  - [#4 FR-CREATOR-002](functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
-  - [#4 FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
+  - [FR-RESTAURANT-001](functional-requirements.md#fr-restaurant-001-맛집-목록-조회)
+  - [FR-RESTAURANT-008](functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회)
+  - [FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
+  - [FR-CREATOR-002](functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
+  - [FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
 
 ### BR-PUBLICATION-002 비공개 데이터의 접근
 
@@ -1079,9 +1079,9 @@ related_documents:
 - 위반 시 처리:
   - 일반 사용자 접근을 차단한다.
 - 관련 요구사항:
-  - [#4 FR-ADMIN-001](functional-requirements.md#fr-admin-001-관리자-등록-기능-접근)
-  - [#4 FR-RESTAURANT-001](functional-requirements.md#fr-restaurant-001-맛집-목록-조회)
-  - [#4 FR-RESTAURANT-008](functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회)
+  - [FR-ADMIN-001](functional-requirements.md#fr-admin-001-관리자-등록-기능-접근)
+  - [FR-RESTAURANT-001](functional-requirements.md#fr-restaurant-001-맛집-목록-조회)
+  - [FR-RESTAURANT-008](functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회)
 
 ### BR-PUBLICATION-003 맛집 상태와 연결 정보 노출
 
@@ -1098,10 +1098,10 @@ related_documents:
 - 위반 시 처리:
   - 맛집과 그 상세 맥락 전체를 일반 사용자 조회에서 제외한다.
 - 관련 요구사항:
-  - [#4 FR-RESTAURANT-001](functional-requirements.md#fr-restaurant-001-맛집-목록-조회)
-  - [#4 FR-RESTAURANT-008](functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회)
-  - [#4 FR-CREATOR-002](functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
-  - [#4 FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
+  - [FR-RESTAURANT-001](functional-requirements.md#fr-restaurant-001-맛집-목록-조회)
+  - [FR-RESTAURANT-008](functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회)
+  - [FR-CREATOR-002](functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
+  - [FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
 
 ### BR-PUBLICATION-004 유튜버 상태와 관계 노출
 
@@ -1119,8 +1119,8 @@ related_documents:
 - 위반 시 처리:
   - 해당 유튜버와 관계를 일반 사용자 조회에서 제외한다.
 - 관련 요구사항:
-  - [#4 FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
-  - [#4 FR-CREATOR-002](functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
+  - [FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
+  - [FR-CREATOR-002](functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
 
 ### BR-PUBLICATION-005 영상 상태와 관계 노출
 
@@ -1139,9 +1139,9 @@ related_documents:
 - 위반 시 처리:
   - 해당 영상과 관계를 일반 사용자 조회에서 제외한다.
 - 관련 요구사항:
-  - [#4 FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
-  - [#4 FR-CREATOR-002](functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
-  - [#4 FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
+  - [FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
+  - [FR-CREATOR-002](functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
+  - [FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
 
 ### BR-PUBLICATION-006 관계 상태와 맛집 기본 조회
 
@@ -1160,9 +1160,9 @@ related_documents:
 - 위반 시 처리:
   - 관계 영역을 빈 결과로 처리하고 맛집 기본 정보를 제공한다.
 - 관련 요구사항:
-  - [#4 FR-RESTAURANT-011](functional-requirements.md#fr-restaurant-011-영상-연결이-없는-맛집-상세-조회)
-  - [#4 FR-CREATOR-002](functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
-  - [#4 FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
+  - [FR-RESTAURANT-011](functional-requirements.md#fr-restaurant-011-영상-연결이-없는-맛집-상세-조회)
+  - [FR-CREATOR-002](functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
+  - [FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
 
 ### BR-PUBLICATION-007 외부 영상 삭제의 영향 범위
 
@@ -1180,9 +1180,9 @@ related_documents:
 - 위반 시 처리:
   - 외부 영상과 그 관계의 노출만 제한하고 맛집 기본 정보는 유지한다.
 - 관련 요구사항:
-  - [#4 FR-RESTAURANT-008](functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회)
-  - [#4 FR-RESTAURANT-011](functional-requirements.md#fr-restaurant-011-영상-연결이-없는-맛집-상세-조회)
-  - [#4 FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
+  - [FR-RESTAURANT-008](functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회)
+  - [FR-RESTAURANT-011](functional-requirements.md#fr-restaurant-011-영상-연결이-없는-맛집-상세-조회)
+  - [FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
 
 ### BR-PUBLICATION-008 상태 변경의 일관성
 
@@ -1199,11 +1199,11 @@ related_documents:
 - 위반 시 처리:
   - 더 높은 우선순위의 공개·접근 제한 규칙에 맞춰 노출을 제외한다.
 - 관련 요구사항:
-  - [#4 FR-RESTAURANT-001](functional-requirements.md#fr-restaurant-001-맛집-목록-조회)
-  - [#4 FR-RESTAURANT-008](functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회)
-  - [#4 FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
-  - [#4 FR-CREATOR-002](functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
-  - [#4 FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
+  - [FR-RESTAURANT-001](functional-requirements.md#fr-restaurant-001-맛집-목록-조회)
+  - [FR-RESTAURANT-008](functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회)
+  - [FR-CREATOR-001](functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
+  - [FR-CREATOR-002](functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
+  - [FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
 
 ## 10. 규칙 간 우선순위
 
@@ -1216,10 +1216,10 @@ related_documents:
 5. 검색 및 표시 규칙
 6. 구현 편의성
 
-구현 편의성을 이유로 상위 비즈니스 규칙을 위반할 수 없다. 충돌을 해소할 수 없으면 임의로 구현하지 않고 제11장의 검토 필요 항목으로 기록하며, 범위 변경이 필요한 경우 [#2 docs/00-overview/scope.md](../00-overview/scope.md)를 먼저 변경한다.
+구현 편의성을 이유로 상위 비즈니스 규칙을 위반할 수 없다. 충돌을 해소할 수 없으면 임의로 구현하지 않고 제11장의 검토 필요 항목으로 기록하며, 범위 변경이 필요한 경우 [docs/00-overview/scope.md](../00-overview/scope.md)를 먼저 변경한다.
 
 ## 11. 검토 필요 항목
 
-이 문서에서 별도로 관리하는 미결정 비즈니스 규칙은 없다. 합의된 결정은 [#5 requirements-review.md](requirements-review.md)와 제3장부터 제9장의 규칙에 반영했다. 프로젝트 범위에 남아 있는 미결정 사항은 [#2 docs/00-overview/scope.md](../00-overview/scope.md) 제9장을 단일 기준으로 사용한다.
+이 문서에서 별도로 관리하는 미결정 비즈니스 규칙은 없다. 합의된 결정은 [requirements-review.md](requirements-review.md)와 제3장부터 제9장의 규칙에 반영했다. 프로젝트 범위에 남아 있는 미결정 사항은 [docs/00-overview/scope.md](../00-overview/scope.md) 제9장을 단일 기준으로 사용한다.
 
-비즈니스 정책을 변경하지 않는 후속 기술 선택은 [#5 requirements-review.md](requirements-review.md) 제3장을 따른다.
+비즈니스 정책을 변경하지 않는 후속 기술 선택은 [requirements-review.md](requirements-review.md) 제3장을 따른다.

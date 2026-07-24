@@ -1,8 +1,8 @@
 ---
 related_documents:
-  1: scope.md
-  2: glossary.md
-  3: ../04-product/prd/00-product-overview.md
+  - scope.md
+  - glossary.md
+  - ../04-product/prd/00-product-overview.md
 ---
 
 # 맛잇온 서비스 개요

@@ -1,18 +1,18 @@
 ---
 related_documents:
-  1: ../../01-requirements/requirements-review.md
-  2: ../api-review.md
-  3: data-model.md
-  4: entity-definitions.md
-  5: relationship-rules.md
-  6: lifecycle-rules.md
-  7: constraints.md
-  8: ../diagrams/erd-spec.md
-  9: ../../07-adr/adr-traceability.md
-  10: ../../00-overview/scope.md
-  11: ../../01-requirements/business-rules.md
-  12: ../api/admin/reference-data-api.md
-  13: ../api/admin/visit-registration-api.md
+  - ../../01-requirements/requirements-review.md
+  - ../api-review.md
+  - data-model.md
+  - entity-definitions.md
+  - relationship-rules.md
+  - lifecycle-rules.md
+  - constraints.md
+  - ../diagrams/erd-spec.md
+  - ../../07-adr/adr-traceability.md
+  - ../../00-overview/scope.md
+  - ../../01-requirements/business-rules.md
+  - ../api/admin/reference-data-api.md
+  - ../api/admin/visit-registration-api.md
 ---
 
 # 맛잇온 데이터 모델 검토
@@ -37,9 +37,9 @@ related_documents:
 
 - 중요도: Critical
 - 현재 상태: 물리 설계 전 결정 필요
-- 관련 문서: [#10 scope.md](../../00-overview/scope.md), [#11 BR-RESTAURANT-006](../../01-requirements/business-rules.md#br-restaurant-006-맛집-중복-판단)·[#11 BR-RESTAURANT-007](../../01-requirements/business-rules.md#br-restaurant-007-동일-상호의-지점-구분), [#12 API-ADMIN-RESTAURANT-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-restaurant-preview-001-맛집-등록-검증-미리보기)
+- 관련 문서: [scope.md](../../00-overview/scope.md), [BR-RESTAURANT-006](../../01-requirements/business-rules.md#br-restaurant-006-맛집-중복-판단)·[BR-RESTAURANT-007](../../01-requirements/business-rules.md#br-restaurant-007-동일-상호의-지점-구분), [API-ADMIN-RESTAURANT-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-restaurant-preview-001-맛집-등록-검증-미리보기)
 - 영향 데이터: Restaurant
-- 영향 API: [#12 API-ADMIN-RESTAURANT-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-restaurant-preview-001-맛집-등록-검증-미리보기), [#12 API-ADMIN-RESTAURANT-001](../api/admin/reference-data-api.md#api-admin-restaurant-001-맛집-등록-확정)
+- 영향 API: [API-ADMIN-RESTAURANT-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-restaurant-preview-001-맛집-등록-검증-미리보기), [API-ADMIN-RESTAURANT-001](../api/admin/reference-data-api.md#api-admin-restaurant-001-맛집-등록-확정)
 - 결정 질문: 카카오의 동일 장소를 어떤 안정된 외부 값과 정규화 규칙으로 저장소에서 유일하게 보장하는가?
 - 선택지: 제공자 장소 ID / 검증된 정규 URL 기반 키 / 별도 정규화 키
 - 영향: 지점 구분, 동시 등록, URL 변경 대응과 마이그레이션
@@ -49,7 +49,7 @@ related_documents:
 
 - 중요도: Critical
 - 현재 상태: ADR 또는 물리 설계 전 결정 필요
-- 관련 문서: [#11 BR-RESTAURANT-008](../../01-requirements/business-rules.md#br-restaurant-008-맛집-공개-조건), [#11 BR-PUBLICATION-001](../../01-requirements/business-rules.md#br-publication-001-일반-사용자-공개-범위)~[#11 BR-PUBLICATION-008](../../01-requirements/business-rules.md#br-publication-008-상태-변경의-일관성), [#11 BR-ADMIN-005](../../01-requirements/business-rules.md#br-admin-005-mvp-관리-기능의-경계)·[#11 BR-ADMIN-006](../../01-requirements/business-rules.md#br-admin-006-잘못-등록된-데이터의-정정-원칙)
+- 관련 문서: [BR-RESTAURANT-008](../../01-requirements/business-rules.md#br-restaurant-008-맛집-공개-조건), [BR-PUBLICATION-001](../../01-requirements/business-rules.md#br-publication-001-일반-사용자-공개-범위)~[BR-PUBLICATION-008](../../01-requirements/business-rules.md#br-publication-008-상태-변경의-일관성), [BR-ADMIN-005](../../01-requirements/business-rules.md#br-admin-005-mvp-관리-기능의-경계)·[BR-ADMIN-006](../../01-requirements/business-rules.md#br-admin-006-잘못-등록된-데이터의-정정-원칙)
 - 영향 데이터: Restaurant, Creator, Video, Visit
 - 영향 API: 모든 공개 조회; 현재 수정·삭제 API는 없음
 - 결정 질문: publication과 lifecycle 상태를 어떤 값·전환·보존 정책으로 분리하는가?
@@ -70,15 +70,15 @@ related_documents:
 
 | 검토 항목 | 결론 | 근거·후속 조건 |
 |---|---|---|
-| 유튜버 개인 대 채널 | 채널 단위 확정 | scope, [#11 BR-CREATOR-001](../../01-requirements/business-rules.md#br-creator-001-유튜버-정보의-의미) |
-| 지역 관리 단위·계층 | 서울 자치구 참조 데이터, 단일 단계 | glossary, [#11 BR-RESTAURANT-005](../../01-requirements/business-rules.md#br-restaurant-005-맛집의-지역-소속) |
-| 다중 음식 카테고리 | 허용하지 않음, 정확히 1개 | [#11 BR-RESTAURANT-004](../../01-requirements/business-rules.md#br-restaurant-004-대표-음식-카테고리) |
-| Visit 구조 | Restaurant·Creator·Video 삼항 관계 | [#11 BR-VISIT-001](../../01-requirements/business-rules.md#br-visit-001-방문-관계의-구성), [#13 API-ADMIN-VISIT-001](../api/admin/visit-registration-api.md#api-admin-visit-001-방문-관계-등록) |
-| Visit와 게시 채널 일치 | 반드시 일치 | [#11 BR-CREATOR-005](../../01-requirements/business-rules.md#br-creator-005-방문-관계의-유튜버-일치) |
+| 유튜버 개인 대 채널 | 채널 단위 확정 | scope, [BR-CREATOR-001](../../01-requirements/business-rules.md#br-creator-001-유튜버-정보의-의미) |
+| 지역 관리 단위·계층 | 서울 자치구 참조 데이터, 단일 단계 | glossary, [BR-RESTAURANT-005](../../01-requirements/business-rules.md#br-restaurant-005-맛집의-지역-소속) |
+| 다중 음식 카테고리 | 허용하지 않음, 정확히 1개 | [BR-RESTAURANT-004](../../01-requirements/business-rules.md#br-restaurant-004-대표-음식-카테고리) |
+| Visit 구조 | Restaurant·Creator·Video 삼항 관계 | [BR-VISIT-001](../../01-requirements/business-rules.md#br-visit-001-방문-관계의-구성), [API-ADMIN-VISIT-001](../api/admin/visit-registration-api.md#api-admin-visit-001-방문-관계-등록) |
+| Visit와 게시 채널 일치 | 반드시 일치 | [BR-CREATOR-005](../../01-requirements/business-rules.md#br-creator-005-방문-관계의-유튜버-일치) |
 | 한 방문의 여러 영상 근거 | MVP 미지원 | 세 대상 조합마다 별도 Visit |
-| 한 영상의 여러 맛집 | 허용, 맛집별 Visit | [#11 BR-VIDEO-004](../../01-requirements/business-rules.md#br-video-004-영상과-방문-관계의-다대상-연결) |
-| 재방문 | 다른 Video면 별도 Visit | [#11 BR-VISIT-003](../../01-requirements/business-rules.md#br-visit-003-방문-관계-중복-판단); 방문일 도입 시 재검토 |
-| 영상 없는 Visit | 금지 | [#11 BR-VISIT-002](../../01-requirements/business-rules.md#br-visit-002-방문-근거-필수) |
+| 한 영상의 여러 맛집 | 허용, 맛집별 Visit | [BR-VIDEO-004](../../01-requirements/business-rules.md#br-video-004-영상과-방문-관계의-다대상-연결) |
+| 재방문 | 다른 Video면 별도 Visit | [BR-VISIT-003](../../01-requirements/business-rules.md#br-visit-003-방문-관계-중복-판단); 방문일 도입 시 재검토 |
+| 영상 없는 Visit | 금지 | [BR-VISIT-002](../../01-requirements/business-rules.md#br-visit-002-방문-근거-필수) |
 
 ## 6. 필수값·중복·공개 정책 검토
 
@@ -198,6 +198,6 @@ related_documents:
 
 ## 13. Assumptions
 
-- 현재 수정된 [#10 scope.md](../../00-overview/scope.md), 확정 비즈니스 규칙과 API 계약을 이 작업 시점의 정본으로 사용했다.
+- 현재 수정된 [scope.md](../../00-overview/scope.md), 확정 비즈니스 규칙과 API 계약을 이 작업 시점의 정본으로 사용했다.
 - API가 확인한 YouTube 채널·영상은 안정된 외부 ID를 제공하며, 구체 필드명·형식은 외부 연계 설계에서 정한다.
 - Region·FoodCategory를 별도 참조 데이터로 두되 독립 도메인으로 승격하지 않는다.

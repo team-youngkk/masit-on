@@ -7,12 +7,12 @@ owner: 박진영
 reviewers:
   - 김인안
 related_requirements:
-  1: FR-RESTAURANT-008
-  2: FR-RESTAURANT-009
-  3: FR-RESTAURANT-010
-  4: FR-RESTAURANT-011
-  5: FR-CREATOR-002
-  6: FR-VIDEO-001
+  - FR-RESTAURANT-008
+  - FR-RESTAURANT-009
+  - FR-RESTAURANT-010
+  - FR-RESTAURANT-011
+  - FR-CREATOR-002
+  - FR-VIDEO-001
 related_business_rules:
   - BR-RESTAURANT-002
   - BR-RESTAURANT-004
@@ -39,23 +39,23 @@ related_nfr:
   - NFR-TEST-001
   - NFR-TEST-002
 related_documents:
-  1: ../00-product-overview.md
-  2: ../discovery/creator-discovery.md
-  3: ../../../01-requirements/functional-requirements.md
-  4: ../../../01-requirements/business-rules.md
-  5: ../../../02-analysis/mvp-workstreams.md
-  6: ../../../05-specs/api/detail/restaurant-detail-api.md
-  7: ../../../05-specs/data/relationship-rules.md
-  8: ../../../05-specs/data/lifecycle-rules.md
-  9: ../../../01-requirements/non-functional-requirements.md
-  10: ../../traceability.md
+  - ../00-product-overview.md
+  - ../discovery/creator-discovery.md
+  - ../../../01-requirements/functional-requirements.md
+  - ../../../01-requirements/business-rules.md
+  - ../../../02-analysis/mvp-workstreams.md
+  - ../../../05-specs/api/detail/restaurant-detail-api.md
+  - ../../../05-specs/data/relationship-rules.md
+  - ../../../05-specs/data/lifecycle-rules.md
+  - ../../../01-requirements/non-functional-requirements.md
+  - ../../traceability.md
 ---
 
 # 맛집 상세 및 콘텐츠 조회 PRD
 
 ## 1. 문서 정보
 
-맛집 기본 정보와 유효한 방문 유튜버·관련 영상을 한 사용자 흐름으로 조합한다. [#5 WS-02](../../../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)가 여러 영역의 최종 표시 결과를 책임한다.
+맛집 기본 정보와 유효한 방문 유튜버·관련 영상을 한 사용자 흐름으로 조합한다. [WS-02](../../../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)가 여러 영역의 최종 표시 결과를 책임한다.
 
 ## 2. 기능 개요
 
@@ -115,18 +115,18 @@ related_documents:
 
 | PRD 요구사항 | 제품 동작 | 관련 기능 요구사항 | 중요도 | 상태 |
 |---|---|---|---|---|
-| PR-DETAIL-001 | 공개 맛집의 기본 정보를 조회한다. | [REQ#1 FR-RESTAURANT-008](../../../01-requirements/functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회) | Must | 확정 |
-| PR-DETAIL-002 | 전체 도로명주소와 필요한 상세 위치를 확인한다. | [REQ#2 FR-RESTAURANT-009](../../../01-requirements/functional-requirements.md#fr-restaurant-009-지역-정보-확인) | Must | 확정 |
-| PR-DETAIL-003 | 대표 음식 카테고리를 확인한다. | [REQ#3 FR-RESTAURANT-010](../../../01-requirements/functional-requirements.md#fr-restaurant-010-음식-카테고리-확인) | Must | 확정 |
-| PR-DETAIL-004 | 영상 연결이 없어도 맛집 기본 정보를 조회한다. | [REQ#4 FR-RESTAURANT-011](../../../01-requirements/functional-requirements.md#fr-restaurant-011-영상-연결이-없는-맛집-상세-조회) | Must | 확정 |
-| PR-DETAIL-005 | 유효 관계의 방문 유튜버 표시 정보와 채널 링크를 확인한다. | [REQ#5 FR-CREATOR-002](../../../01-requirements/functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인) | Must | 확정 |
-| PR-DETAIL-006 | 유효 관계의 영상 표시 정보와 원본 링크를 확인한다. | [REQ#6 FR-VIDEO-001](../../../01-requirements/functional-requirements.md#fr-video-001-관련-영상-정보-확인) | Must | 확정 |
+| PR-DETAIL-001 | 공개 맛집의 기본 정보를 조회한다. | [FR-RESTAURANT-008](../../../01-requirements/functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회) | Must | 확정 |
+| PR-DETAIL-002 | 전체 도로명주소와 필요한 상세 위치를 확인한다. | [FR-RESTAURANT-009](../../../01-requirements/functional-requirements.md#fr-restaurant-009-지역-정보-확인) | Must | 확정 |
+| PR-DETAIL-003 | 대표 음식 카테고리를 확인한다. | [FR-RESTAURANT-010](../../../01-requirements/functional-requirements.md#fr-restaurant-010-음식-카테고리-확인) | Must | 확정 |
+| PR-DETAIL-004 | 영상 연결이 없어도 맛집 기본 정보를 조회한다. | [FR-RESTAURANT-011](../../../01-requirements/functional-requirements.md#fr-restaurant-011-영상-연결이-없는-맛집-상세-조회) | Must | 확정 |
+| PR-DETAIL-005 | 유효 관계의 방문 유튜버 표시 정보와 채널 링크를 확인한다. | [FR-CREATOR-002](../../../01-requirements/functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인) | Must | 확정 |
+| PR-DETAIL-006 | 유효 관계의 영상 표시 정보와 원본 링크를 확인한다. | [FR-VIDEO-001](../../../01-requirements/functional-requirements.md#fr-video-001-관련-영상-정보-확인) | Must | 확정 |
 
 ## 11. 비즈니스 규칙
 
-- 맛집의 영상 독립성, 카테고리·지역·공개 조건은 [#4 BR-RESTAURANT-002](../../../01-requirements/business-rules.md#br-restaurant-002-영상과-독립된-맛집), [#4 BR-RESTAURANT-004](../../../01-requirements/business-rules.md#br-restaurant-004-대표-음식-카테고리), [#4 BR-RESTAURANT-005](../../../01-requirements/business-rules.md#br-restaurant-005-맛집의-지역-소속), [#4 BR-RESTAURANT-008](../../../01-requirements/business-rules.md#br-restaurant-008-맛집-공개-조건)을 따른다.
-- 유튜버·영상 표시와 이용 불가·외부 장애는 [#4 BR-CREATOR-004](../../../01-requirements/business-rules.md#br-creator-004-유튜버-표시-정보), [#4 BR-CREATOR-007](../../../01-requirements/business-rules.md#br-creator-007-채널-이용-불가-처리), [#4 BR-VIDEO-001](../../../01-requirements/business-rules.md#br-video-001-영상의-의미와-보관-범위), [#4 BR-VIDEO-004](../../../01-requirements/business-rules.md#br-video-004-영상과-방문-관계의-다대상-연결), [#4 BR-VIDEO-007](../../../01-requirements/business-rules.md#br-video-007-외부-링크-장애의-격리)~[#4 BR-VIDEO-009](../../../01-requirements/business-rules.md#br-video-009-영상-이용-불가-처리)를 따른다.
-- 관계 연결 범위·조회 유효성은 [#4 BR-VISIT-004](../../../01-requirements/business-rules.md#br-visit-004-방문-관계의-연결-범위), [#4 BR-VISIT-005](../../../01-requirements/business-rules.md#br-visit-005-방문-관계의-조회-유효성), 공개 노출은 [#4 BR-PUBLICATION-001](../../../01-requirements/business-rules.md#br-publication-001-일반-사용자-공개-범위), [#4 BR-PUBLICATION-003](../../../01-requirements/business-rules.md#br-publication-003-맛집-상태와-연결-정보-노출)~[#4 BR-PUBLICATION-007](../../../01-requirements/business-rules.md#br-publication-007-외부-영상-삭제의-영향-범위)을 따른다.
+- 맛집의 영상 독립성, 카테고리·지역·공개 조건은 [BR-RESTAURANT-002](../../../01-requirements/business-rules.md#br-restaurant-002-영상과-독립된-맛집), [BR-RESTAURANT-004](../../../01-requirements/business-rules.md#br-restaurant-004-대표-음식-카테고리), [BR-RESTAURANT-005](../../../01-requirements/business-rules.md#br-restaurant-005-맛집의-지역-소속), [BR-RESTAURANT-008](../../../01-requirements/business-rules.md#br-restaurant-008-맛집-공개-조건)을 따른다.
+- 유튜버·영상 표시와 이용 불가·외부 장애는 [BR-CREATOR-004](../../../01-requirements/business-rules.md#br-creator-004-유튜버-표시-정보), [BR-CREATOR-007](../../../01-requirements/business-rules.md#br-creator-007-채널-이용-불가-처리), [BR-VIDEO-001](../../../01-requirements/business-rules.md#br-video-001-영상의-의미와-보관-범위), [BR-VIDEO-004](../../../01-requirements/business-rules.md#br-video-004-영상과-방문-관계의-다대상-연결), [BR-VIDEO-007](../../../01-requirements/business-rules.md#br-video-007-외부-링크-장애의-격리)~[BR-VIDEO-009](../../../01-requirements/business-rules.md#br-video-009-영상-이용-불가-처리)를 따른다.
+- 관계 연결 범위·조회 유효성은 [BR-VISIT-004](../../../01-requirements/business-rules.md#br-visit-004-방문-관계의-연결-범위), [BR-VISIT-005](../../../01-requirements/business-rules.md#br-visit-005-방문-관계의-조회-유효성), 공개 노출은 [BR-PUBLICATION-001](../../../01-requirements/business-rules.md#br-publication-001-일반-사용자-공개-범위), [BR-PUBLICATION-003](../../../01-requirements/business-rules.md#br-publication-003-맛집-상태와-연결-정보-노출)~[BR-PUBLICATION-007](../../../01-requirements/business-rules.md#br-publication-007-외부-영상-삭제의-영향-범위)을 따른다.
 
 ## 12. 예외 및 경계 상황
 
@@ -142,20 +142,20 @@ related_documents:
 
 ## 13. 품질 요구사항
 
-조회 성능은 [#9 NFR-PERFORMANCE-001](../../../01-requirements/non-functional-requirements.md#nfr-performance-001-일반-조회-응답-시간), 외부 링크 격리는 [#9 NFR-INTEGRITY-004](../../../01-requirements/non-functional-requirements.md#nfr-integrity-004-외부-링크와-내부-데이터-분리), [#9 NFR-EXTERNAL-001](../../../01-requirements/non-functional-requirements.md#nfr-external-001-영상-원본과-외부-링크-분리), [#9 NFR-EXTERNAL-002](../../../01-requirements/non-functional-requirements.md#nfr-external-002-외부-호출-실패와-변경-격리)를 따른다. 공통 오류·응답·모바일 크기와 다중 제공자 실패 테스트는 메타데이터의 관련 NFR로 검증한다.
+조회 성능은 [NFR-PERFORMANCE-001](../../../01-requirements/non-functional-requirements.md#nfr-performance-001-일반-조회-응답-시간), 외부 링크 격리는 [NFR-INTEGRITY-004](../../../01-requirements/non-functional-requirements.md#nfr-integrity-004-외부-링크와-내부-데이터-분리), [NFR-EXTERNAL-001](../../../01-requirements/non-functional-requirements.md#nfr-external-001-영상-원본과-외부-링크-분리), [NFR-EXTERNAL-002](../../../01-requirements/non-functional-requirements.md#nfr-external-002-외부-호출-실패와-변경-격리)를 따른다. 공통 오류·응답·모바일 크기와 다중 제공자 실패 테스트는 메타데이터의 관련 NFR로 검증한다.
 
 ## 14. 의존성
 
 - 선행 정책: 공개 상태 우선순위와 관계 유효성·중복 제거
-- 데이터 의존성: [#5 WS-04](../../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록)가 등록한 기본 데이터와 관계
-- 다른 기능 PRD: [#2 PRD-DISCOVERY-002](../discovery/creator-discovery.md)와 동일 Visit 판정 정책 공유
-- 다른 Workstream: [#5 WS-03](../../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 관계 계약, [#5 WS-04](../../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 등록 결과
+- 데이터 의존성: [WS-04](../../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록)가 등록한 기본 데이터와 관계
+- 다른 기능 PRD: [PRD-DISCOVERY-002](../discovery/creator-discovery.md)와 동일 Visit 판정 정책 공유
+- 다른 Workstream: [WS-03](../../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 관계 계약, [WS-04](../../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 등록 결과
 - 외부 서비스: 카카오 장소 링크와 YouTube 원본 링크
 - 공통 API 계약: 식별자, 표시 정보, 오류와 부분 실패 계약
 
 ## 15. Workstream 및 책임자
 
-- 주 Workstream: [#5 WS-02](../../../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) 맛집 상세 및 콘텐츠 조회
+- 주 Workstream: [WS-02](../../../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) 맛집 상세 및 콘텐츠 조회
 - 최종 책임자: 박진영
 - 기본 리뷰어: 김인안
 - 협업: 이우람(Visit 판정), 양성훈(목록·상세 식별자), 김인안(등록 반영)
@@ -169,7 +169,7 @@ related_documents:
 ## 17. 완료 기준
 
 - 6개 요구사항과 관련 규칙의 구현·자동화 테스트가 완료된다.
-- 네 영역 표시 계약, [#5 WS-03](../../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 관계 정책과 [#5 WS-04](../../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 등록 데이터를 통합 검증한다.
+- 네 영역 표시 계약, [WS-03](../../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 관계 정책과 [WS-04](../../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 등록 데이터를 통합 검증한다.
 - 외부 링크·빈 콘텐츠·중복·부분 실패 시나리오와 PC·모바일 흐름이 통과한다.
 - API 계약, 문서와 추적성이 실제 동작과 일치한다.
 
@@ -181,12 +181,12 @@ related_documents:
 
 ## 19. 관련 문서
 
-- [#1 전체 제품 PRD](../00-product-overview.md)
-- [#2 유튜버 기반 탐색 PRD](../discovery/creator-discovery.md)
-- [#3 기능 요구사항](../../../01-requirements/functional-requirements.md)
-- [#4 비즈니스 규칙](../../../01-requirements/business-rules.md)
-- [#5 MVP Workstream](../../../02-analysis/mvp-workstreams.md)
-- [#10 추적성](../../traceability.md)
+- [전체 제품 PRD](../00-product-overview.md)
+- [유튜버 기반 탐색 PRD](../discovery/creator-discovery.md)
+- [기능 요구사항](../../../01-requirements/functional-requirements.md)
+- [비즈니스 규칙](../../../01-requirements/business-rules.md)
+- [MVP Workstream](../../../02-analysis/mvp-workstreams.md)
+- [추적성](../../traceability.md)
 
 ## 20. 검토 필요 항목
 

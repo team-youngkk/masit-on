@@ -1,8 +1,8 @@
 ---
 related_documents:
-  1: ../README.md
-  2: ../../data/entity-definitions.md
-  3: ../../data/lifecycle-rules.md
+  - ../README.md
+  - ../../data/entity-definitions.md
+  - ../../data/lifecycle-rules.md
 ---
 
 # 날짜·시간 계약

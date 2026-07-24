@@ -1,23 +1,23 @@
 ---
 related_documents:
-  1: ../00-overview/scope.md
-  2: ../01-requirements/functional-requirements.md
-  3: ../01-requirements/business-rules.md
-  4: domain-boundaries.md
-  5: ../03-team/roles.md
-  6: ../03-team/ownership.md
-  7: ../04-product/traceability.md
-  8: ../01-requirements/non-functional-requirements.md
-  9: ../01-requirements/requirements-review.md
+  - ../00-overview/scope.md
+  - ../01-requirements/functional-requirements.md
+  - ../01-requirements/business-rules.md
+  - domain-boundaries.md
+  - ../03-team/roles.md
+  - ../03-team/ownership.md
+  - ../04-product/traceability.md
+  - ../01-requirements/non-functional-requirements.md
+  - ../01-requirements/requirements-review.md
 ---
 
 # 맛잇온 MVP Workstream
 
 ## 1. 문서 목적
 
-이 문서는 맛잇온 1차 MVP의 기능 요구사항과 도메인 경계를, 한 명의 최종 책임자가 사용자 가치 또는 관리자 업무를 처음부터 끝까지 완성할 수 있는 세로 단위 Workstream으로 변환한다. 이후 [#5 roles.md](../03-team/roles.md), [#6 ownership.md](../03-team/ownership.md), PRD, API 계약, 데이터 모델, 구현 계획과 Task 분배는 이 문서의 책임 경계와 요구사항 배정을 기준으로 구체화한다.
+이 문서는 맛잇온 1차 MVP의 기능 요구사항과 도메인 경계를, 한 명의 최종 책임자가 사용자 가치 또는 관리자 업무를 처음부터 끝까지 완성할 수 있는 세로 단위 Workstream으로 변환한다. 이후 [roles.md](../03-team/roles.md), [ownership.md](../03-team/ownership.md), PRD, API 계약, 데이터 모델, 구현 계획과 Task 분배는 이 문서의 책임 경계와 요구사항 배정을 기준으로 구체화한다.
 
-이 문서의 Workstream은 기술 계층이나 도메인과 일대일 대응하지 않는다. Workstream은 여러 도메인의 협업을 포함할 수 있지만 각 도메인의 데이터와 정책 소유권은 [#4 domain-boundaries.md](domain-boundaries.md)를 따른다. 확정되지 않은 API 구조, 저장 방식과 운영 기준은 권장안 또는 검토 항목으로 구분하며 임의로 확정하지 않는다.
+이 문서의 Workstream은 기술 계층이나 도메인과 일대일 대응하지 않는다. Workstream은 여러 도메인의 협업을 포함할 수 있지만 각 도메인의 데이터와 정책 소유권은 [domain-boundaries.md](domain-boundaries.md)를 따른다. 확정되지 않은 API 구조, 저장 방식과 운영 기준은 권장안 또는 검토 항목으로 구분하며 임의로 확정하지 않는다.
 
 ## 2. Workstream 분리 원칙
 
@@ -71,7 +71,7 @@ related_documents:
 | 4인 병렬 개발 | 독립 작업 하나가 줄어든다. | 네 개 Workstream 병렬 배치와 잘 맞는다. |
 | MVP 복잡도 | 초기 계약 수는 적지만 결합 복잡도가 [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색)에 집중된다. | 최소 판정 계약이 필요하지만 소유권과 장애 범위가 명확하다. |
 
-**결정:** [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)을 유지한다. [#2 FR-CREATOR-001](../01-requirements/functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회), [#2 FR-CREATOR-003](../01-requirements/functional-requirements.md#fr-creator-003-유튜버-필터-선택-목록-조회)과 [#3 BR-SEARCH-007](../01-requirements/business-rules.md#br-search-007-유튜버-필터의-방문-근거)의 완료 책임은 [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)이 갖고, [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색)은 [#2 FR-RESTAURANT-005](../01-requirements/functional-requirements.md#fr-restaurant-005-검색-및-필터-조건-조합)에 따라 [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)이 제공하는 선택·판정 결과를 이름·지역·카테고리 조건과 결합한다. 사용자에게는 하나의 탐색 흐름으로 제공하되 구현 책임만 분리한다.
+**결정:** [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)을 유지한다. [FR-CREATOR-001](../01-requirements/functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회), [FR-CREATOR-003](../01-requirements/functional-requirements.md#fr-creator-003-유튜버-필터-선택-목록-조회)과 [BR-SEARCH-007](../01-requirements/business-rules.md#br-search-007-유튜버-필터의-방문-근거)의 완료 책임은 [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)이 갖고, [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색)은 [FR-RESTAURANT-005](../01-requirements/functional-requirements.md#fr-restaurant-005-검색-및-필터-조건-조합)에 따라 [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)이 제공하는 선택·판정 결과를 이름·지역·카테고리 조건과 결합한다. 사용자에게는 하나의 탐색 흐름으로 제공하되 구현 책임만 분리한다.
 
 #### 맛집 상세와 관련 콘텐츠
 
@@ -159,21 +159,21 @@ related_documents:
 
 ### 관련 요구사항
 
-- [#2 FR-RESTAURANT-001](../01-requirements/functional-requirements.md#fr-restaurant-001-맛집-목록-조회) ~ [#2 FR-RESTAURANT-007](../01-requirements/functional-requirements.md#fr-restaurant-007-기본-정렬-적용)
+- [FR-RESTAURANT-001](../01-requirements/functional-requirements.md#fr-restaurant-001-맛집-목록-조회) ~ [FR-RESTAURANT-007](../01-requirements/functional-requirements.md#fr-restaurant-007-기본-정렬-적용)
 
 ### 관련 비즈니스 규칙
 
-- [#3 BR-RESTAURANT-001](../01-requirements/business-rules.md#br-restaurant-001-맛집의-의미), [#3 BR-RESTAURANT-002](../01-requirements/business-rules.md#br-restaurant-002-영상과-독립된-맛집), [#3 BR-RESTAURANT-008](../01-requirements/business-rules.md#br-restaurant-008-맛집-공개-조건)
-- [#3 BR-SEARCH-001](../01-requirements/business-rules.md#br-search-001-검색-대상과-일치-기준) ~ [#3 BR-SEARCH-009](../01-requirements/business-rules.md#br-search-009-기본-정렬)
-- [#3 BR-PUBLICATION-001](../01-requirements/business-rules.md#br-publication-001-일반-사용자-공개-범위), [#3 BR-PUBLICATION-003](../01-requirements/business-rules.md#br-publication-003-맛집-상태와-연결-정보-노출) ~ [#3 BR-PUBLICATION-006](../01-requirements/business-rules.md#br-publication-006-관계-상태와-맛집-기본-조회)
+- [BR-RESTAURANT-001](../01-requirements/business-rules.md#br-restaurant-001-맛집의-의미), [BR-RESTAURANT-002](../01-requirements/business-rules.md#br-restaurant-002-영상과-독립된-맛집), [BR-RESTAURANT-008](../01-requirements/business-rules.md#br-restaurant-008-맛집-공개-조건)
+- [BR-SEARCH-001](../01-requirements/business-rules.md#br-search-001-검색-대상과-일치-기준) ~ [BR-SEARCH-009](../01-requirements/business-rules.md#br-search-009-기본-정렬)
+- [BR-PUBLICATION-001](../01-requirements/business-rules.md#br-publication-001-일반-사용자-공개-범위), [BR-PUBLICATION-003](../01-requirements/business-rules.md#br-publication-003-맛집-상태와-연결-정보-노출) ~ [BR-PUBLICATION-006](../01-requirements/business-rules.md#br-publication-006-관계-상태와-맛집-기본-조회)
 
 ### 관련 비기능 요구사항
 
-- [#8 NFR-PERFORMANCE-001](../01-requirements/non-functional-requirements.md#nfr-performance-001-일반-조회-응답-시간), [#8 NFR-PERFORMANCE-002](../01-requirements/non-functional-requirements.md#nfr-performance-002-검색필터-조합-응답-시간), [#8 NFR-PERFORMANCE-004](../01-requirements/non-functional-requirements.md#nfr-performance-004-페이지-크기-및-조회량-제한)
-- [#8 NFR-SECURITY-002](../01-requirements/non-functional-requirements.md#nfr-security-002-입력-및-웹-공격-방어), [#8 NFR-SECURITY-003](../01-requirements/non-functional-requirements.md#nfr-security-003-비밀정보와-오류-정보-보호)
-- [#8 NFR-RELIABILITY-001](../01-requirements/non-functional-requirements.md#nfr-reliability-001-오류-격리와-공통-오류-정책), [#8 NFR-RELIABILITY-003](../01-requirements/non-functional-requirements.md#nfr-reliability-003-사용자-오류-메시지와-기능-분리)
-- [#8 NFR-COMPATIBILITY-002](../01-requirements/non-functional-requirements.md#nfr-compatibility-002-응답-형식과-문자-처리), [#8 NFR-COMPATIBILITY-003](../01-requirements/non-functional-requirements.md#nfr-compatibility-003-모바일-응답-크기)
-- [#8 NFR-TEST-001](../01-requirements/non-functional-requirements.md#nfr-test-001-자동화-테스트-계층), [#8 NFR-TEST-002](../01-requirements/non-functional-requirements.md#nfr-test-002-변경외부-의존성성능-검증)
+- [NFR-PERFORMANCE-001](../01-requirements/non-functional-requirements.md#nfr-performance-001-일반-조회-응답-시간), [NFR-PERFORMANCE-002](../01-requirements/non-functional-requirements.md#nfr-performance-002-검색필터-조합-응답-시간), [NFR-PERFORMANCE-004](../01-requirements/non-functional-requirements.md#nfr-performance-004-페이지-크기-및-조회량-제한)
+- [NFR-SECURITY-002](../01-requirements/non-functional-requirements.md#nfr-security-002-입력-및-웹-공격-방어), [NFR-SECURITY-003](../01-requirements/non-functional-requirements.md#nfr-security-003-비밀정보와-오류-정보-보호)
+- [NFR-RELIABILITY-001](../01-requirements/non-functional-requirements.md#nfr-reliability-001-오류-격리와-공통-오류-정책), [NFR-RELIABILITY-003](../01-requirements/non-functional-requirements.md#nfr-reliability-003-사용자-오류-메시지와-기능-분리)
+- [NFR-COMPATIBILITY-002](../01-requirements/non-functional-requirements.md#nfr-compatibility-002-응답-형식과-문자-처리), [NFR-COMPATIBILITY-003](../01-requirements/non-functional-requirements.md#nfr-compatibility-003-모바일-응답-크기)
+- [NFR-TEST-001](../01-requirements/non-functional-requirements.md#nfr-test-001-자동화-테스트-계층), [NFR-TEST-002](../01-requirements/non-functional-requirements.md#nfr-test-002-변경외부-의존성성능-검증)
 
 ### 필요한 입력 데이터
 
@@ -276,26 +276,26 @@ related_documents:
 
 ### 관련 요구사항
 
-- [#2 FR-RESTAURANT-008](../01-requirements/functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회) ~ [#2 FR-RESTAURANT-011](../01-requirements/functional-requirements.md#fr-restaurant-011-영상-연결이-없는-맛집-상세-조회)
-- [#2 FR-CREATOR-002](../01-requirements/functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
-- [#2 FR-VIDEO-001](../01-requirements/functional-requirements.md#fr-video-001-관련-영상-정보-확인)
+- [FR-RESTAURANT-008](../01-requirements/functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회) ~ [FR-RESTAURANT-011](../01-requirements/functional-requirements.md#fr-restaurant-011-영상-연결이-없는-맛집-상세-조회)
+- [FR-CREATOR-002](../01-requirements/functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
+- [FR-VIDEO-001](../01-requirements/functional-requirements.md#fr-video-001-관련-영상-정보-확인)
 
 ### 관련 비즈니스 규칙
 
-- [#3 BR-RESTAURANT-002](../01-requirements/business-rules.md#br-restaurant-002-영상과-독립된-맛집), [#3 BR-RESTAURANT-004](../01-requirements/business-rules.md#br-restaurant-004-대표-음식-카테고리), [#3 BR-RESTAURANT-005](../01-requirements/business-rules.md#br-restaurant-005-맛집의-지역-소속), [#3 BR-RESTAURANT-008](../01-requirements/business-rules.md#br-restaurant-008-맛집-공개-조건)
-- [#3 BR-CREATOR-004](../01-requirements/business-rules.md#br-creator-004-유튜버-표시-정보), [#3 BR-CREATOR-007](../01-requirements/business-rules.md#br-creator-007-채널-이용-불가-처리)
-- [#3 BR-VIDEO-001](../01-requirements/business-rules.md#br-video-001-영상의-의미와-보관-범위), [#3 BR-VIDEO-004](../01-requirements/business-rules.md#br-video-004-영상과-방문-관계의-다대상-연결), [#3 BR-VIDEO-007](../01-requirements/business-rules.md#br-video-007-외부-링크-장애의-격리) ~ [#3 BR-VIDEO-009](../01-requirements/business-rules.md#br-video-009-영상-이용-불가-처리)
-- [#3 BR-VISIT-004](../01-requirements/business-rules.md#br-visit-004-방문-관계의-연결-범위), [#3 BR-VISIT-005](../01-requirements/business-rules.md#br-visit-005-방문-관계의-조회-유효성)
-- [#3 BR-PUBLICATION-001](../01-requirements/business-rules.md#br-publication-001-일반-사용자-공개-범위), [#3 BR-PUBLICATION-003](../01-requirements/business-rules.md#br-publication-003-맛집-상태와-연결-정보-노출) ~ [#3 BR-PUBLICATION-007](../01-requirements/business-rules.md#br-publication-007-외부-영상-삭제의-영향-범위)
+- [BR-RESTAURANT-002](../01-requirements/business-rules.md#br-restaurant-002-영상과-독립된-맛집), [BR-RESTAURANT-004](../01-requirements/business-rules.md#br-restaurant-004-대표-음식-카테고리), [BR-RESTAURANT-005](../01-requirements/business-rules.md#br-restaurant-005-맛집의-지역-소속), [BR-RESTAURANT-008](../01-requirements/business-rules.md#br-restaurant-008-맛집-공개-조건)
+- [BR-CREATOR-004](../01-requirements/business-rules.md#br-creator-004-유튜버-표시-정보), [BR-CREATOR-007](../01-requirements/business-rules.md#br-creator-007-채널-이용-불가-처리)
+- [BR-VIDEO-001](../01-requirements/business-rules.md#br-video-001-영상의-의미와-보관-범위), [BR-VIDEO-004](../01-requirements/business-rules.md#br-video-004-영상과-방문-관계의-다대상-연결), [BR-VIDEO-007](../01-requirements/business-rules.md#br-video-007-외부-링크-장애의-격리) ~ [BR-VIDEO-009](../01-requirements/business-rules.md#br-video-009-영상-이용-불가-처리)
+- [BR-VISIT-004](../01-requirements/business-rules.md#br-visit-004-방문-관계의-연결-범위), [BR-VISIT-005](../01-requirements/business-rules.md#br-visit-005-방문-관계의-조회-유효성)
+- [BR-PUBLICATION-001](../01-requirements/business-rules.md#br-publication-001-일반-사용자-공개-범위), [BR-PUBLICATION-003](../01-requirements/business-rules.md#br-publication-003-맛집-상태와-연결-정보-노출) ~ [BR-PUBLICATION-007](../01-requirements/business-rules.md#br-publication-007-외부-영상-삭제의-영향-범위)
 
 ### 관련 비기능 요구사항
 
-- [#8 NFR-PERFORMANCE-001](../01-requirements/non-functional-requirements.md#nfr-performance-001-일반-조회-응답-시간)
-- [#8 NFR-INTEGRITY-004](../01-requirements/non-functional-requirements.md#nfr-integrity-004-외부-링크와-내부-데이터-분리)
-- [#8 NFR-RELIABILITY-001](../01-requirements/non-functional-requirements.md#nfr-reliability-001-오류-격리와-공통-오류-정책), [#8 NFR-RELIABILITY-003](../01-requirements/non-functional-requirements.md#nfr-reliability-003-사용자-오류-메시지와-기능-분리)
-- [#8 NFR-EXTERNAL-001](../01-requirements/non-functional-requirements.md#nfr-external-001-영상-원본과-외부-링크-분리), [#8 NFR-EXTERNAL-002](../01-requirements/non-functional-requirements.md#nfr-external-002-외부-호출-실패와-변경-격리)
-- [#8 NFR-COMPATIBILITY-002](../01-requirements/non-functional-requirements.md#nfr-compatibility-002-응답-형식과-문자-처리), [#8 NFR-COMPATIBILITY-003](../01-requirements/non-functional-requirements.md#nfr-compatibility-003-모바일-응답-크기)
-- [#8 NFR-TEST-001](../01-requirements/non-functional-requirements.md#nfr-test-001-자동화-테스트-계층), [#8 NFR-TEST-002](../01-requirements/non-functional-requirements.md#nfr-test-002-변경외부-의존성성능-검증)
+- [NFR-PERFORMANCE-001](../01-requirements/non-functional-requirements.md#nfr-performance-001-일반-조회-응답-시간)
+- [NFR-INTEGRITY-004](../01-requirements/non-functional-requirements.md#nfr-integrity-004-외부-링크와-내부-데이터-분리)
+- [NFR-RELIABILITY-001](../01-requirements/non-functional-requirements.md#nfr-reliability-001-오류-격리와-공통-오류-정책), [NFR-RELIABILITY-003](../01-requirements/non-functional-requirements.md#nfr-reliability-003-사용자-오류-메시지와-기능-분리)
+- [NFR-EXTERNAL-001](../01-requirements/non-functional-requirements.md#nfr-external-001-영상-원본과-외부-링크-분리), [NFR-EXTERNAL-002](../01-requirements/non-functional-requirements.md#nfr-external-002-외부-호출-실패와-변경-격리)
+- [NFR-COMPATIBILITY-002](../01-requirements/non-functional-requirements.md#nfr-compatibility-002-응답-형식과-문자-처리), [NFR-COMPATIBILITY-003](../01-requirements/non-functional-requirements.md#nfr-compatibility-003-모바일-응답-크기)
+- [NFR-TEST-001](../01-requirements/non-functional-requirements.md#nfr-test-001-자동화-테스트-계층), [NFR-TEST-002](../01-requirements/non-functional-requirements.md#nfr-test-002-변경외부-의존성성능-검증)
 
 ### 필요한 입력 데이터
 
@@ -399,24 +399,24 @@ related_documents:
 
 ### 관련 요구사항
 
-- [#2 FR-CREATOR-001](../01-requirements/functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
-- [#2 FR-CREATOR-003](../01-requirements/functional-requirements.md#fr-creator-003-유튜버-필터-선택-목록-조회)
+- [FR-CREATOR-001](../01-requirements/functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
+- [FR-CREATOR-003](../01-requirements/functional-requirements.md#fr-creator-003-유튜버-필터-선택-목록-조회)
 
 ### 관련 비즈니스 규칙
 
-- [#3 BR-CREATOR-001](../01-requirements/business-rules.md#br-creator-001-유튜버-정보의-의미), [#3 BR-CREATOR-004](../01-requirements/business-rules.md#br-creator-004-유튜버-표시-정보), [#3 BR-CREATOR-005](../01-requirements/business-rules.md#br-creator-005-방문-관계의-유튜버-일치), [#3 BR-CREATOR-007](../01-requirements/business-rules.md#br-creator-007-채널-이용-불가-처리)
-- [#3 BR-VIDEO-005](../01-requirements/business-rules.md#br-video-005-실제-방문-근거), [#3 BR-VIDEO-009](../01-requirements/business-rules.md#br-video-009-영상-이용-불가-처리)
-- [#3 BR-VISIT-001](../01-requirements/business-rules.md#br-visit-001-방문-관계의-구성) ~ [#3 BR-VISIT-007](../01-requirements/business-rules.md#br-visit-007-등록-완료와-검증-상태)
-- [#3 BR-SEARCH-003](../01-requirements/business-rules.md#br-search-003-필터-종류와-단일-선택) ~ [#3 BR-SEARCH-007](../01-requirements/business-rules.md#br-search-007-유튜버-필터의-방문-근거)
-- [#3 BR-PUBLICATION-001](../01-requirements/business-rules.md#br-publication-001-일반-사용자-공개-범위), [#3 BR-PUBLICATION-003](../01-requirements/business-rules.md#br-publication-003-맛집-상태와-연결-정보-노출) ~ [#3 BR-PUBLICATION-006](../01-requirements/business-rules.md#br-publication-006-관계-상태와-맛집-기본-조회)
+- [BR-CREATOR-001](../01-requirements/business-rules.md#br-creator-001-유튜버-정보의-의미), [BR-CREATOR-004](../01-requirements/business-rules.md#br-creator-004-유튜버-표시-정보), [BR-CREATOR-005](../01-requirements/business-rules.md#br-creator-005-방문-관계의-유튜버-일치), [BR-CREATOR-007](../01-requirements/business-rules.md#br-creator-007-채널-이용-불가-처리)
+- [BR-VIDEO-005](../01-requirements/business-rules.md#br-video-005-실제-방문-근거), [BR-VIDEO-009](../01-requirements/business-rules.md#br-video-009-영상-이용-불가-처리)
+- [BR-VISIT-001](../01-requirements/business-rules.md#br-visit-001-방문-관계의-구성) ~ [BR-VISIT-007](../01-requirements/business-rules.md#br-visit-007-등록-완료와-검증-상태)
+- [BR-SEARCH-003](../01-requirements/business-rules.md#br-search-003-필터-종류와-단일-선택) ~ [BR-SEARCH-007](../01-requirements/business-rules.md#br-search-007-유튜버-필터의-방문-근거)
+- [BR-PUBLICATION-001](../01-requirements/business-rules.md#br-publication-001-일반-사용자-공개-범위), [BR-PUBLICATION-003](../01-requirements/business-rules.md#br-publication-003-맛집-상태와-연결-정보-노출) ~ [BR-PUBLICATION-006](../01-requirements/business-rules.md#br-publication-006-관계-상태와-맛집-기본-조회)
 
 ### 관련 비기능 요구사항
 
-- [#8 NFR-PERFORMANCE-002](../01-requirements/non-functional-requirements.md#nfr-performance-002-검색필터-조합-응답-시간)
-- [#8 NFR-INTEGRITY-004](../01-requirements/non-functional-requirements.md#nfr-integrity-004-외부-링크와-내부-데이터-분리)
-- [#8 NFR-RELIABILITY-001](../01-requirements/non-functional-requirements.md#nfr-reliability-001-오류-격리와-공통-오류-정책), [#8 NFR-RELIABILITY-003](../01-requirements/non-functional-requirements.md#nfr-reliability-003-사용자-오류-메시지와-기능-분리)
-- [#8 NFR-TEST-001](../01-requirements/non-functional-requirements.md#nfr-test-001-자동화-테스트-계층), [#8 NFR-TEST-002](../01-requirements/non-functional-requirements.md#nfr-test-002-변경외부-의존성성능-검증)
-- [#8 NFR-MAINTAINABILITY-001](../01-requirements/non-functional-requirements.md#nfr-maintainability-001-책임과-의존성-경계), [#8 NFR-MAINTAINABILITY-002](../01-requirements/non-functional-requirements.md#nfr-maintainability-002-공통-정책과-규칙-배치)
+- [NFR-PERFORMANCE-002](../01-requirements/non-functional-requirements.md#nfr-performance-002-검색필터-조합-응답-시간)
+- [NFR-INTEGRITY-004](../01-requirements/non-functional-requirements.md#nfr-integrity-004-외부-링크와-내부-데이터-분리)
+- [NFR-RELIABILITY-001](../01-requirements/non-functional-requirements.md#nfr-reliability-001-오류-격리와-공통-오류-정책), [NFR-RELIABILITY-003](../01-requirements/non-functional-requirements.md#nfr-reliability-003-사용자-오류-메시지와-기능-분리)
+- [NFR-TEST-001](../01-requirements/non-functional-requirements.md#nfr-test-001-자동화-테스트-계층), [NFR-TEST-002](../01-requirements/non-functional-requirements.md#nfr-test-002-변경외부-의존성성능-검증)
+- [NFR-MAINTAINABILITY-001](../01-requirements/non-functional-requirements.md#nfr-maintainability-001-책임과-의존성-경계), [NFR-MAINTAINABILITY-002](../01-requirements/non-functional-requirements.md#nfr-maintainability-002-공통-정책과-규칙-배치)
 
 ### 필요한 입력 데이터
 
@@ -464,7 +464,7 @@ related_documents:
 
 ### 완료 조건
 
-- [#2 FR-CREATOR-001](../01-requirements/functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)과 [#2 FR-CREATOR-003](../01-requirements/functional-requirements.md#fr-creator-003-유튜버-필터-선택-목록-조회)의 인수 조건과 적용 비기능 요구사항을 충족한다.
+- [FR-CREATOR-001](../01-requirements/functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)과 [FR-CREATOR-003](../01-requirements/functional-requirements.md#fr-creator-003-유튜버-필터-선택-목록-조회)의 인수 조건과 적용 비기능 요구사항을 충족한다.
 - 관계 유효성 판정이 [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)와 동일한 정책을 사용한다.
 - [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색)이 실제 계약으로 결과를 결합하고 중복 없는 목록을 제공한다.
 - 비공개·무효 관계가 사용자 결과에 노출되지 않는다.
@@ -523,27 +523,27 @@ related_documents:
 
 ### 관련 요구사항
 
-- [#2 FR-ADMIN-001](../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근) ~ [#2 FR-ADMIN-004](../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록)
-- [#2 FR-VISIT-001](../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
+- [FR-ADMIN-001](../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근) ~ [FR-ADMIN-004](../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록)
+- [FR-VISIT-001](../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
 
 ### 관련 비즈니스 규칙
 
-- [#3 BR-RESTAURANT-003](../01-requirements/business-rules.md#br-restaurant-003-맛집-최소-등록-정보) ~ [#3 BR-RESTAURANT-008](../01-requirements/business-rules.md#br-restaurant-008-맛집-공개-조건)
-- [#3 BR-CREATOR-001](../01-requirements/business-rules.md#br-creator-001-유튜버-정보의-의미) ~ [#3 BR-CREATOR-003](../01-requirements/business-rules.md#br-creator-003-동일-채널-중복-판단), [#3 BR-CREATOR-005](../01-requirements/business-rules.md#br-creator-005-방문-관계의-유튜버-일치)
-- [#3 BR-VIDEO-001](../01-requirements/business-rules.md#br-video-001-영상의-의미와-보관-범위) ~ [#3 BR-VIDEO-006](../01-requirements/business-rules.md#br-video-006-게시일과-방문일의-구분)
-- [#3 BR-VISIT-001](../01-requirements/business-rules.md#br-visit-001-방문-관계의-구성) ~ [#3 BR-VISIT-007](../01-requirements/business-rules.md#br-visit-007-등록-완료와-검증-상태)
-- [#3 BR-ADMIN-001](../01-requirements/business-rules.md#br-admin-001-관리자-권한-검증) ~ [#3 BR-ADMIN-008](../01-requirements/business-rules.md#br-admin-008-보류-요청의-처리)
-- [#3 BR-PUBLICATION-001](../01-requirements/business-rules.md#br-publication-001-일반-사용자-공개-범위), [#3 BR-PUBLICATION-002](../01-requirements/business-rules.md#br-publication-002-비공개-데이터의-접근), [#3 BR-PUBLICATION-008](../01-requirements/business-rules.md#br-publication-008-상태-변경의-일관성)
+- [BR-RESTAURANT-003](../01-requirements/business-rules.md#br-restaurant-003-맛집-최소-등록-정보) ~ [BR-RESTAURANT-008](../01-requirements/business-rules.md#br-restaurant-008-맛집-공개-조건)
+- [BR-CREATOR-001](../01-requirements/business-rules.md#br-creator-001-유튜버-정보의-의미) ~ [BR-CREATOR-003](../01-requirements/business-rules.md#br-creator-003-동일-채널-중복-판단), [BR-CREATOR-005](../01-requirements/business-rules.md#br-creator-005-방문-관계의-유튜버-일치)
+- [BR-VIDEO-001](../01-requirements/business-rules.md#br-video-001-영상의-의미와-보관-범위) ~ [BR-VIDEO-006](../01-requirements/business-rules.md#br-video-006-게시일과-방문일의-구분)
+- [BR-VISIT-001](../01-requirements/business-rules.md#br-visit-001-방문-관계의-구성) ~ [BR-VISIT-007](../01-requirements/business-rules.md#br-visit-007-등록-완료와-검증-상태)
+- [BR-ADMIN-001](../01-requirements/business-rules.md#br-admin-001-관리자-권한-검증) ~ [BR-ADMIN-008](../01-requirements/business-rules.md#br-admin-008-보류-요청의-처리)
+- [BR-PUBLICATION-001](../01-requirements/business-rules.md#br-publication-001-일반-사용자-공개-범위), [BR-PUBLICATION-002](../01-requirements/business-rules.md#br-publication-002-비공개-데이터의-접근), [BR-PUBLICATION-008](../01-requirements/business-rules.md#br-publication-008-상태-변경의-일관성)
 
 ### 관련 비기능 요구사항
 
-- [#8 NFR-PERFORMANCE-003](../01-requirements/non-functional-requirements.md#nfr-performance-003-관리자-등록-응답-시간)
-- [#8 NFR-SECURITY-001](../01-requirements/non-functional-requirements.md#nfr-security-001-공개-조회와-관리자-접근-통제) ~ [#8 NFR-SECURITY-003](../01-requirements/non-functional-requirements.md#nfr-security-003-비밀정보와-오류-정보-보호)
-- [#8 NFR-INTEGRITY-001](../01-requirements/non-functional-requirements.md#nfr-integrity-001-참조-및-필수값-정합성) ~ [#8 NFR-INTEGRITY-003](../01-requirements/non-functional-requirements.md#nfr-integrity-003-등록-원자성과-공개-상태-일관성)
-- [#8 NFR-EXTERNAL-003](../01-requirements/non-functional-requirements.md#nfr-external-003-링크-검증과-외부-인증정보)
-- [#8 NFR-OBSERVABILITY-001](../01-requirements/non-functional-requirements.md#nfr-observability-001-요청-추적과-오류-분류) ~ [#8 NFR-OBSERVABILITY-003](../01-requirements/non-functional-requirements.md#nfr-observability-003-로그-품질과-민감정보-차단)
-- [#8 NFR-TEST-001](../01-requirements/non-functional-requirements.md#nfr-test-001-자동화-테스트-계층) ~ [#8 NFR-TEST-003](../01-requirements/non-functional-requirements.md#nfr-test-003-배포-품질-게이트)
-- [#8 NFR-PRIVACY-001](../01-requirements/non-functional-requirements.md#nfr-privacy-001-mvp-개인정보-최소화), [#8 NFR-PRIVACY-002](../01-requirements/non-functional-requirements.md#nfr-privacy-002-인증정보와-외부-키-보호)
+- [NFR-PERFORMANCE-003](../01-requirements/non-functional-requirements.md#nfr-performance-003-관리자-등록-응답-시간)
+- [NFR-SECURITY-001](../01-requirements/non-functional-requirements.md#nfr-security-001-공개-조회와-관리자-접근-통제) ~ [NFR-SECURITY-003](../01-requirements/non-functional-requirements.md#nfr-security-003-비밀정보와-오류-정보-보호)
+- [NFR-INTEGRITY-001](../01-requirements/non-functional-requirements.md#nfr-integrity-001-참조-및-필수값-정합성) ~ [NFR-INTEGRITY-003](../01-requirements/non-functional-requirements.md#nfr-integrity-003-등록-원자성과-공개-상태-일관성)
+- [NFR-EXTERNAL-003](../01-requirements/non-functional-requirements.md#nfr-external-003-링크-검증과-외부-인증정보)
+- [NFR-OBSERVABILITY-001](../01-requirements/non-functional-requirements.md#nfr-observability-001-요청-추적과-오류-분류) ~ [NFR-OBSERVABILITY-003](../01-requirements/non-functional-requirements.md#nfr-observability-003-로그-품질과-민감정보-차단)
+- [NFR-TEST-001](../01-requirements/non-functional-requirements.md#nfr-test-001-자동화-테스트-계층) ~ [NFR-TEST-003](../01-requirements/non-functional-requirements.md#nfr-test-003-배포-품질-게이트)
+- [NFR-PRIVACY-001](../01-requirements/non-functional-requirements.md#nfr-privacy-001-mvp-개인정보-최소화), [NFR-PRIVACY-002](../01-requirements/non-functional-requirements.md#nfr-privacy-002-인증정보와-외부-키-보호)
 
 ### 필요한 입력 데이터
 
@@ -615,7 +615,7 @@ related_documents:
 - 내용:
   - 두 Workstream은 동일한 맛집 식별자, 기본 표시 정보와 공개 상태를 사용한다.
   - [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색)은 상세 진입에 필요한 식별자를 제공하고 [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)는 그 식별자로 상세를 완성한다.
-  - [#2 FR-CREATOR-002](../01-requirements/functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)의 주 책임인 [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)는 맛집별 방문 채널 표시 계약을 제공하고 [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색)은 목록 표현과 페이지 조합을 책임진다.
+  - [FR-CREATOR-002](../01-requirements/functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)의 주 책임인 [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)는 맛집별 방문 채널 표시 계약을 제공하고 [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색)은 목록 표현과 페이지 조합을 책임진다.
 - 선행 필요: 목록·상세 사이 식별자, 공통 맛집 필드와 방문 채널 표시 정보의 의미 합의
 - 개발 차단 여부: 차단하지 않는다. 각자 Fixture로 개발하고 계약 테스트에서 결합한다.
 - 순환 방지: 서로의 구현을 호출하지 않고 공통 Restaurant 계약만 사용한다.
@@ -682,7 +682,7 @@ related_documents:
 | 개발자 C | [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) | Visit 조회·유효성 규칙 |
 | 개발자 D | [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 공통 관리자 권한 기반 |
 
-이 표는 최종 Role 배정안이 아니라 네 Workstream이 4인 병렬 개발에 적합한지 검증하기 위한 예시다. 실제 담당자와 소유 파일은 [#5 roles.md](../03-team/roles.md)와 [#6 ownership.md](../03-team/ownership.md)에서 확정한다.
+이 표는 최종 Role 배정안이 아니라 네 Workstream이 4인 병렬 개발에 적합한지 검증하기 위한 예시다. 실제 담당자와 소유 파일은 [roles.md](../03-team/roles.md)와 [ownership.md](../03-team/ownership.md)에서 확정한다.
 
 각 개발자는 주 Workstream의 요구사항 구체화, 계약 상세화, 데이터 접근, 비즈니스 로직, 오류 처리, 자동화 테스트, 문서 갱신과 통합 지원을 끝까지 책임진다. [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록)의 작업량이 크므로 개발자 C는 관계 유효성 계약, 개발자 B는 등록 후 상세 반영 검증처럼 계약 소유 범위 안에서 통합을 지원할 수 있다.
 
@@ -715,26 +715,26 @@ related_documents:
 
 | 요구사항 ID | 기능 | 주 Workstream | 협업 Workstream | 배정 근거 |
 |---|---|---|---|---|
-| [#2 FR-RESTAURANT-001](../01-requirements/functional-requirements.md#fr-restaurant-001-맛집-목록-조회) | 맛집 목록 조회 | [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색) | [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색), [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 탐색 시작점이며 채널명과 등록 데이터가 필요하다. |
-| [#2 FR-RESTAURANT-002](../01-requirements/functional-requirements.md#fr-restaurant-002-맛집-이름-검색) | 맛집 이름 검색 | [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색) | [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | Restaurant 탐색 규칙이며 등록된 이름을 사용한다. |
-| [#2 FR-RESTAURANT-003](../01-requirements/functional-requirements.md#fr-restaurant-003-지역별-필터) | 지역별 필터 | [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색) | [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | Restaurant가 소유하는 자치구 조건이다. |
-| [#2 FR-RESTAURANT-004](../01-requirements/functional-requirements.md#fr-restaurant-004-음식-카테고리별-필터) | 음식 카테고리별 필터 | [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색) | [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | Restaurant가 소유하는 대표 카테고리 조건이다. |
-| [#2 FR-CREATOR-001](../01-requirements/functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회) | 유튜버 기준 방문 맛집 조회 | [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) | [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색), [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | Visit의 유효 관계 판정이 핵심이고 [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색)이 결과를 조합한다. |
-| [#2 FR-CREATOR-003](../01-requirements/functional-requirements.md#fr-creator-003-유튜버-필터-선택-목록-조회) | 유튜버 필터 선택 목록 조회 | [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) | [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색), [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)이 공개 유튜버 선택 계약을 제공하고 [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색)이 필터 화면에서 사용한다. |
-| [#2 FR-RESTAURANT-005](../01-requirements/functional-requirements.md#fr-restaurant-005-검색-및-필터-조건-조합) | 검색 및 필터 조건 조합 | [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색) | [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) | 최종 AND 조합과 맛집 목록 완료 책임은 [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색)에 있다. |
-| [#2 FR-RESTAURANT-006](../01-requirements/functional-requirements.md#fr-restaurant-006-페이지-단위-조회) | 페이지 단위 조회 | [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색) | 없음 | 최종 탐색 결과의 페이지 정책이다. |
-| [#2 FR-RESTAURANT-007](../01-requirements/functional-requirements.md#fr-restaurant-007-기본-정렬-적용) | 기본 정렬 적용 | [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색) | 없음 | 최종 맛집 목록의 안정 정렬 책임이다. |
-| [#2 FR-RESTAURANT-008](../01-requirements/functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회) | 맛집 기본 정보 조회 | [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) | [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 상세 가치의 기본 정보이며 등록 데이터가 필요하다. |
-| [#2 FR-RESTAURANT-009](../01-requirements/functional-requirements.md#fr-restaurant-009-지역-정보-확인) | 지역 정보 확인 | [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) | [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 상세 화면의 전체 도로명주소 제공 책임이다. |
-| [#2 FR-RESTAURANT-010](../01-requirements/functional-requirements.md#fr-restaurant-010-음식-카테고리-확인) | 음식 카테고리 확인 | [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) | [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 상세 화면의 대표 카테고리 제공 책임이다. |
-| [#2 FR-RESTAURANT-011](../01-requirements/functional-requirements.md#fr-restaurant-011-영상-연결이-없는-맛집-상세-조회) | 영상 연결이 없는 맛집 상세 조회 | [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) | [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 기본 상세와 빈 콘텐츠의 조합 책임이 [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)에 있다. |
-| [#2 FR-CREATOR-002](../01-requirements/functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인) | 방문 유튜버 정보 확인 | [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) | [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색), [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색), [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 맛집 상세·목록 맥락의 관계 기반 유튜버 표시 기능이며 [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)가 공통 표시 계약을 완결한다. |
-| [#2 FR-VIDEO-001](../01-requirements/functional-requirements.md#fr-video-001-관련-영상-정보-확인) | 관련 영상 정보 확인 | [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) | [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색), [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 상세 화면에서 관계 기반 영상을 조합하는 기능이다. |
-| [#2 FR-ADMIN-001](../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근) | 관리자 등록 기능 접근 | [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 공통 인증 작업 | 관리자 등록 흐름 전체의 선행 접근 책임이다. |
-| [#2 FR-ADMIN-002](../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록) | 맛집 정보 등록 | [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색), [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) | 관리자 데이터 생성 흐름이며 두 조회에 반영된다. |
-| [#2 FR-ADMIN-003](../01-requirements/functional-requirements.md#fr-admin-003-유튜버-정보-등록) | 유튜버 정보 등록 | [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회), [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) | 관계 생성의 선행 데이터이며 유튜버 조회에 반영된다. |
-| [#2 FR-ADMIN-004](../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록) | 영상 정보 등록 | [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회), [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) | 관계 근거의 선행 데이터이며 상세·필터 유효성에 쓰인다. |
-| [#2 FR-VISIT-001](../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록) | 맛집·유튜버·영상 방문 관계 등록 | [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색), [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회), [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) | 관리자 등록 흐름의 마지막 단계이며 모든 관계 기반 조회에 반영된다. |
+| [FR-RESTAURANT-001](../01-requirements/functional-requirements.md#fr-restaurant-001-맛집-목록-조회) | 맛집 목록 조회 | [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색) | [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색), [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 탐색 시작점이며 채널명과 등록 데이터가 필요하다. |
+| [FR-RESTAURANT-002](../01-requirements/functional-requirements.md#fr-restaurant-002-맛집-이름-검색) | 맛집 이름 검색 | [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색) | [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | Restaurant 탐색 규칙이며 등록된 이름을 사용한다. |
+| [FR-RESTAURANT-003](../01-requirements/functional-requirements.md#fr-restaurant-003-지역별-필터) | 지역별 필터 | [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색) | [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | Restaurant가 소유하는 자치구 조건이다. |
+| [FR-RESTAURANT-004](../01-requirements/functional-requirements.md#fr-restaurant-004-음식-카테고리별-필터) | 음식 카테고리별 필터 | [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색) | [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | Restaurant가 소유하는 대표 카테고리 조건이다. |
+| [FR-CREATOR-001](../01-requirements/functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회) | 유튜버 기준 방문 맛집 조회 | [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) | [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색), [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | Visit의 유효 관계 판정이 핵심이고 [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색)이 결과를 조합한다. |
+| [FR-CREATOR-003](../01-requirements/functional-requirements.md#fr-creator-003-유튜버-필터-선택-목록-조회) | 유튜버 필터 선택 목록 조회 | [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) | [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색), [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)이 공개 유튜버 선택 계약을 제공하고 [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색)이 필터 화면에서 사용한다. |
+| [FR-RESTAURANT-005](../01-requirements/functional-requirements.md#fr-restaurant-005-검색-및-필터-조건-조합) | 검색 및 필터 조건 조합 | [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색) | [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) | 최종 AND 조합과 맛집 목록 완료 책임은 [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색)에 있다. |
+| [FR-RESTAURANT-006](../01-requirements/functional-requirements.md#fr-restaurant-006-페이지-단위-조회) | 페이지 단위 조회 | [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색) | 없음 | 최종 탐색 결과의 페이지 정책이다. |
+| [FR-RESTAURANT-007](../01-requirements/functional-requirements.md#fr-restaurant-007-기본-정렬-적용) | 기본 정렬 적용 | [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색) | 없음 | 최종 맛집 목록의 안정 정렬 책임이다. |
+| [FR-RESTAURANT-008](../01-requirements/functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회) | 맛집 기본 정보 조회 | [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) | [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 상세 가치의 기본 정보이며 등록 데이터가 필요하다. |
+| [FR-RESTAURANT-009](../01-requirements/functional-requirements.md#fr-restaurant-009-지역-정보-확인) | 지역 정보 확인 | [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) | [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 상세 화면의 전체 도로명주소 제공 책임이다. |
+| [FR-RESTAURANT-010](../01-requirements/functional-requirements.md#fr-restaurant-010-음식-카테고리-확인) | 음식 카테고리 확인 | [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) | [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 상세 화면의 대표 카테고리 제공 책임이다. |
+| [FR-RESTAURANT-011](../01-requirements/functional-requirements.md#fr-restaurant-011-영상-연결이-없는-맛집-상세-조회) | 영상 연결이 없는 맛집 상세 조회 | [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) | [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 기본 상세와 빈 콘텐츠의 조합 책임이 [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)에 있다. |
+| [FR-CREATOR-002](../01-requirements/functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인) | 방문 유튜버 정보 확인 | [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) | [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색), [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색), [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 맛집 상세·목록 맥락의 관계 기반 유튜버 표시 기능이며 [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)가 공통 표시 계약을 완결한다. |
+| [FR-VIDEO-001](../01-requirements/functional-requirements.md#fr-video-001-관련-영상-정보-확인) | 관련 영상 정보 확인 | [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) | [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색), [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 상세 화면에서 관계 기반 영상을 조합하는 기능이다. |
+| [FR-ADMIN-001](../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근) | 관리자 등록 기능 접근 | [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 공통 인증 작업 | 관리자 등록 흐름 전체의 선행 접근 책임이다. |
+| [FR-ADMIN-002](../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록) | 맛집 정보 등록 | [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색), [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) | 관리자 데이터 생성 흐름이며 두 조회에 반영된다. |
+| [FR-ADMIN-003](../01-requirements/functional-requirements.md#fr-admin-003-유튜버-정보-등록) | 유튜버 정보 등록 | [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회), [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) | 관계 생성의 선행 데이터이며 유튜버 조회에 반영된다. |
+| [FR-ADMIN-004](../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록) | 영상 정보 등록 | [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회), [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) | 관계 근거의 선행 데이터이며 상세·필터 유효성에 쓰인다. |
+| [FR-VISIT-001](../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록) | 맛집·유튜버·영상 방문 관계 등록 | [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색), [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회), [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) | 관리자 등록 흐름의 마지막 단계이며 모든 관계 기반 조회에 반영된다. |
 
 기능 요구사항 20개가 모두 한 번씩 주 Workstream에 배정되었으며 중복 주 배정이나 미배정 요구사항은 없다.
 
@@ -769,7 +769,7 @@ related_documents:
 - 주요 입력 오류, 빈 결과, 찾을 수 없음, 인증 실패, 중복·동시 등록과 외부 링크 장애 테스트가 통과한다.
 - Workstream 간 계약, API 문서와 실제 구현이 일치하고 임시 Stub/Fake가 운영 경로에 남지 않는다.
 - MVP 제외 기능이 구현·선행 구조 범위에 포함되지 않는다.
-- [#5 roles.md](../03-team/roles.md)와 [#6 ownership.md](../03-team/ownership.md)에서 각 Workstream 최종 책임자와 계약·공유 파일 소유자를 지정할 수 있다.
+- [roles.md](../03-team/roles.md)와 [ownership.md](../03-team/ownership.md)에서 각 Workstream 최종 책임자와 계약·공유 파일 소유자를 지정할 수 있다.
 
 ## 15. 검토 필요 항목
 
@@ -787,8 +787,8 @@ related_documents:
 
 - 현재 상태: 결정 완료 — [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)이 관계 판정·유튜버별 조회를 소유하고 [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색)이 최종 조건을 조합
 - 관련 요구사항:
-  - [#2 FR-CREATOR-001](../01-requirements/functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
-  - [#2 FR-RESTAURANT-005](../01-requirements/functional-requirements.md#fr-restaurant-005-검색-및-필터-조건-조합)
+  - [FR-CREATOR-001](../01-requirements/functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
+  - [FR-RESTAURANT-005](../01-requirements/functional-requirements.md#fr-restaurant-005-검색-및-필터-조건-조합)
 - 선택지:
   1. [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색)이 관계 판정까지 소유
   2. [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)이 관계 판정·유튜버별 조회를 소유하고 [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색)이 결과를 조합
@@ -799,9 +799,9 @@ related_documents:
 
 - 현재 상태: [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) Workstream 소유는 권장, 실제 애플리케이션 책임 위치는 팀 결정 필요
 - 관련 요구사항:
-  - [#2 FR-RESTAURANT-008](../01-requirements/functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회) ~ [#2 FR-RESTAURANT-011](../01-requirements/functional-requirements.md#fr-restaurant-011-영상-연결이-없는-맛집-상세-조회)
-  - [#2 FR-CREATOR-002](../01-requirements/functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
-  - [#2 FR-VIDEO-001](../01-requirements/functional-requirements.md#fr-video-001-관련-영상-정보-확인)
+  - [FR-RESTAURANT-008](../01-requirements/functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회) ~ [FR-RESTAURANT-011](../01-requirements/functional-requirements.md#fr-restaurant-011-영상-연결이-없는-맛집-상세-조회)
+  - [FR-CREATOR-002](../01-requirements/functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
+  - [FR-VIDEO-001](../01-requirements/functional-requirements.md#fr-video-001-관련-영상-정보-확인)
 - 선택지:
   1. Restaurant 중심 애플리케이션 책임이 Visit 결과를 조합
   2. 별도 조회 조합 책임을 두되 새로운 비즈니스 도메인으로 만들지 않음
@@ -812,8 +812,8 @@ related_documents:
 
 - 현재 상태: 결정 완료 — 최소 선택 목록을 MVP에 포함
 - 관련 요구사항:
-  - [#2 FR-CREATOR-001](../01-requirements/functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
-  - [#2 FR-CREATOR-003](../01-requirements/functional-requirements.md#fr-creator-003-유튜버-필터-선택-목록-조회)
+  - [FR-CREATOR-001](../01-requirements/functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
+  - [FR-CREATOR-003](../01-requirements/functional-requirements.md#fr-creator-003-유튜버-필터-선택-목록-조회)
 - 결정 내용:
   - 공개 유튜버의 식별자와 현재 채널명만 채널명 오름차순으로 제공한다.
   - 검색·페이지네이션·프로필·구독자 정보와 상세 조회는 제외한다.
@@ -824,18 +824,18 @@ related_documents:
 
 - 현재 상태: 결정 완료 — 1차 MVP 제외
 - 관련 요구사항:
-  - [#2 FR-ADMIN-002](../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록) ~ [#2 FR-ADMIN-004](../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록)
-  - [#2 FR-VISIT-001](../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
+  - [FR-ADMIN-002](../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록) ~ [FR-ADMIN-004](../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록)
+  - [FR-VISIT-001](../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
 - 결정 내용: 등록만 포함하며 수정·삭제·승인 상태 관리는 구현하지 않는다.
 - 영향: [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 범위와 정정 운영 절차
-- 근거: [#3 BR-ADMIN-005](../01-requirements/business-rules.md#br-admin-005-mvp-관리-기능의-경계), [#9 RV-BR-009](../01-requirements/requirements-review.md#rv-br-009-잘못-등록된-데이터의-정정), [#4 RV-DOMAIN-008](domain-boundaries.md#rv-domain-008-관리자-수정삭제-기능의-mvp-포함-여부)
+- 근거: [BR-ADMIN-005](../01-requirements/business-rules.md#br-admin-005-mvp-관리-기능의-경계), [RV-BR-009](../01-requirements/requirements-review.md#rv-br-009-잘못-등록된-데이터의-정정), [RV-DOMAIN-008](domain-boundaries.md#rv-domain-008-관리자-수정삭제-기능의-mvp-포함-여부)
 
 ### RV-WS-006 기본 데이터 등록과 방문 관계 등록의 분리 여부
 
 - 현재 상태: 결정 완료 — 하나의 [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 안에서 기본 데이터와 방문 관계 등록의 두 단계로 관리
 - 관련 요구사항:
-  - [#2 FR-ADMIN-002](../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록) ~ [#2 FR-ADMIN-004](../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록)
-  - [#2 FR-VISIT-001](../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
+  - [FR-ADMIN-002](../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록) ~ [FR-ADMIN-004](../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록)
+  - [FR-VISIT-001](../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
 - 선택지:
   1. 하나의 [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록)에서 단계와 도메인 계약만 분리
   2. 두 Workstream으로 분리
@@ -846,8 +846,8 @@ related_documents:
 
 - 현재 상태: 제품 정책과 담당 결정 완료, 인증 기술은 후속 설계
 - 관련 요구사항:
-  - [#2 FR-ADMIN-001](../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근)
-  - [#8 NFR-SECURITY-001](../01-requirements/non-functional-requirements.md#nfr-security-001-공개-조회와-관리자-접근-통제)
+  - [FR-ADMIN-001](../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근)
+  - [NFR-SECURITY-001](../01-requirements/non-functional-requirements.md#nfr-security-001-공개-조회와-관리자-접근-통제)
 - 선택지:
   1. [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 책임자가 공통 작업 구현도 담당
   2. 다른 개발자가 공통 구현을 보조하고 [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록)가 인수·적용 책임
@@ -880,8 +880,8 @@ related_documents:
 
 - 현재 상태: [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 기본 맛집 등록 → [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색) 기본 목록 권장
 - 관련 요구사항:
-  - [#2 FR-ADMIN-002](../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록)
-  - [#2 FR-RESTAURANT-001](../01-requirements/functional-requirements.md#fr-restaurant-001-맛집-목록-조회)
+  - [FR-ADMIN-002](../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록)
+  - [FR-RESTAURANT-001](../01-requirements/functional-requirements.md#fr-restaurant-001-맛집-목록-조회)
 - 대안: [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색) 목록 → [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) 기본 상세를 먼저 연결
 - 영향: 데이터 반영·공개 상태의 조기 검증과 Visit 통합 시점
 - 결정 시점: 병렬 개발 중 첫 통합 계획 확정 시
@@ -901,8 +901,8 @@ related_documents:
 
 - 현재 상태: 결정 완료
 - 관련 요구사항:
-  - [#2 FR-RESTAURANT-001](../01-requirements/functional-requirements.md#fr-restaurant-001-맛집-목록-조회)
-  - [#2 FR-CREATOR-002](../01-requirements/functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
+  - [FR-RESTAURANT-001](../01-requirements/functional-requirements.md#fr-restaurant-001-맛집-목록-조회)
+  - [FR-CREATOR-002](../01-requirements/functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
 - 결정 내용: 중복 제거한 채널명을 채널명 오름차순으로 최대 3명까지 표시하고 나머지는 `외 N명`으로 축약한다. 전체 목록은 맛집 상세에서 제공한다.
 - 영향: 목록 응답 크기, 성능, 모바일 표시와 계약
 - 결정 시점: API·화면 명세 작성 전
@@ -911,9 +911,9 @@ related_documents:
 
 - 현재 상태: 결정 완료
 - 관련 요구사항:
-  - [#2 FR-RESTAURANT-011](../01-requirements/functional-requirements.md#fr-restaurant-011-영상-연결이-없는-맛집-상세-조회)
-  - [#2 FR-CREATOR-002](../01-requirements/functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
-  - [#2 FR-VIDEO-001](../01-requirements/functional-requirements.md#fr-video-001-관련-영상-정보-확인)
+  - [FR-RESTAURANT-011](../01-requirements/functional-requirements.md#fr-restaurant-011-영상-연결이-없는-맛집-상세-조회)
+  - [FR-CREATOR-002](../01-requirements/functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
+  - [FR-VIDEO-001](../01-requirements/functional-requirements.md#fr-video-001-관련-영상-정보-확인)
 - 결정 내용:
   - 맛집 기본 정보 제공자가 실패하면 상세 전체를 실패 처리한다.
   - 방문 관계·유튜버·영상 정보 제공자만 실패하면 기본 정보를 제공하고 정상 빈 결과와 구분되는 일시적 콘텐츠 조회 실패로 처리한다.

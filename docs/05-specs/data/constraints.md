@@ -1,16 +1,16 @@
 ---
 related_documents:
-  1: ../../01-requirements/business-rules.md
-  2: data-model.md
-  3: entity-definitions.md
-  4: relationship-rules.md
-  5: lifecycle-rules.md
-  6: ../api/admin/reference-data-api.md
-  7: ../api/admin/visit-registration-api.md
-  8: ../../07-adr/data/data-001-postgresql.md
-  9: ../api/discovery/restaurant-discovery-api.md
-  10: ../api/admin/authentication-api.md
-  11: ../../01-requirements/non-functional-requirements.md
+  - ../../01-requirements/business-rules.md
+  - data-model.md
+  - entity-definitions.md
+  - relationship-rules.md
+  - lifecycle-rules.md
+  - ../api/admin/reference-data-api.md
+  - ../api/admin/visit-registration-api.md
+  - ../../07-adr/data/data-001-postgresql.md
+  - ../api/discovery/restaurant-discovery-api.md
+  - ../api/admin/authentication-api.md
+  - ../../01-requirements/non-functional-requirements.md
 ---
 
 # 맛잇온 데이터 제약조건
@@ -37,7 +37,7 @@ related_documents:
 - 제약: 카카오에서 같은 장소로 확인되는 Restaurant는 하나만 존재한다. 이름은 유일하지 않다.
 - 보장 수준: 저장소와 애플리케이션 모두. 저장소 키의 구체 표현은 물리 설계 전 확정한다.
 - 위반 시 처리: `DUPLICATE_RESTAURANT` 또는 동일성 불명확 시 `IDENTITY_VERIFICATION_REQUIRED`
-- 관련 규칙/API: [#1 BR-RESTAURANT-006](../../01-requirements/business-rules.md#br-restaurant-006-맛집-중복-판단)·[#1 BR-RESTAURANT-007](../../01-requirements/business-rules.md#br-restaurant-007-동일-상호의-지점-구분), [#6 API-ADMIN-RESTAURANT-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-restaurant-preview-001-맛집-등록-검증-미리보기)·[#6 API-ADMIN-RESTAURANT-001](../api/admin/reference-data-api.md#api-admin-restaurant-001-맛집-등록-확정)
+- 관련 규칙/API: [BR-RESTAURANT-006](../../01-requirements/business-rules.md#br-restaurant-006-맛집-중복-판단)·[BR-RESTAURANT-007](../../01-requirements/business-rules.md#br-restaurant-007-동일-상호의-지점-구분), [API-ADMIN-RESTAURANT-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-restaurant-preview-001-맛집-등록-검증-미리보기)·[API-ADMIN-RESTAURANT-001](../api/admin/reference-data-api.md#api-admin-restaurant-001-맛집-등록-확정)
 
 ### DATA-CONSTRAINT-002 외부 채널 ID 유일성
 
@@ -45,7 +45,7 @@ related_documents:
 - 제약: 같은 YouTube 채널 ID를 가진 Creator는 하나만 존재한다. 채널명은 유일하지 않다.
 - 보장 수준: 저장소와 애플리케이션 모두
 - 위반 시 처리: `DUPLICATE_CREATOR`
-- 관련 규칙/API: [#1 BR-CREATOR-001](../../01-requirements/business-rules.md#br-creator-001-유튜버-정보의-의미)·[#1 BR-CREATOR-003](../../01-requirements/business-rules.md#br-creator-003-동일-채널-중복-판단), [#6 API-ADMIN-CREATOR-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-creator-preview-001-유튜버-등록-검증-미리보기)·[#6 API-ADMIN-CREATOR-001](../api/admin/reference-data-api.md#api-admin-creator-001-유튜버-등록-확정)
+- 관련 규칙/API: [BR-CREATOR-001](../../01-requirements/business-rules.md#br-creator-001-유튜버-정보의-의미)·[BR-CREATOR-003](../../01-requirements/business-rules.md#br-creator-003-동일-채널-중복-판단), [API-ADMIN-CREATOR-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-creator-preview-001-유튜버-등록-검증-미리보기)·[API-ADMIN-CREATOR-001](../api/admin/reference-data-api.md#api-admin-creator-001-유튜버-등록-확정)
 
 채널 URL은 정규화·변경 가능성이 있어 외부 채널 ID의 유일성을 대체하지 않는다. 보조 유일성 사용 여부는 물리 설계에서 결정한다.
 
@@ -55,7 +55,7 @@ related_documents:
 - 제약: 같은 YouTube 원본 영상 ID를 가진 Video는 하나만 존재한다.
 - 보장 수준: 저장소와 애플리케이션 모두
 - 위반 시 처리: `DUPLICATE_VIDEO`
-- 관련 규칙/API: [#1 BR-VIDEO-003](../../01-requirements/business-rules.md#br-video-003-영상-식별-및-중복-판단), [#6 API-ADMIN-VIDEO-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-video-preview-001-영상-등록-검증-미리보기)·[#6 API-ADMIN-VIDEO-001](../api/admin/reference-data-api.md#api-admin-video-001-영상-등록-확정)
+- 관련 규칙/API: [BR-VIDEO-003](../../01-requirements/business-rules.md#br-video-003-영상-식별-및-중복-판단), [API-ADMIN-VIDEO-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-video-preview-001-영상-등록-검증-미리보기)·[API-ADMIN-VIDEO-001](../api/admin/reference-data-api.md#api-admin-video-001-영상-등록-확정)
 
 영상 URL만으로 유일성을 판단하지 않는다.
 
@@ -65,7 +65,7 @@ related_documents:
 - 제약: 같은 Restaurant·Creator·Video 조합은 하나만 존재한다.
 - 보장 수준: 저장소와 애플리케이션 모두
 - 위반 시 처리: `DUPLICATE_VISIT_RELATIONSHIP`
-- 관련 규칙/API: [#1 BR-VISIT-003](../../01-requirements/business-rules.md#br-visit-003-방문-관계-중복-판단), [#7 API-ADMIN-VISIT-001](../api/admin/visit-registration-api.md#api-admin-visit-001-방문-관계-등록)
+- 관련 규칙/API: [BR-VISIT-003](../../01-requirements/business-rules.md#br-visit-003-방문-관계-중복-판단), [API-ADMIN-VISIT-001](../api/admin/visit-registration-api.md#api-admin-visit-001-방문-관계-등록)
 
 ### DATA-CONSTRAINT-005 참조 데이터 표준값 유일성
 
@@ -73,7 +73,7 @@ related_documents:
 - 제약: Region.name과 FoodCategory.name은 각 집합 안에서 유일하다. 별도 code를 도입하면 각 code도 유일해야 한다.
 - 보장 수준: 저장소와 애플리케이션 모두
 - 위반 시 처리: 기준 데이터 변경 거부
-- 관련 규칙/API: [#1 BR-RESTAURANT-004](../../01-requirements/business-rules.md#br-restaurant-004-대표-음식-카테고리)·[#1 BR-RESTAURANT-005](../../01-requirements/business-rules.md#br-restaurant-005-맛집의-지역-소속), [#9 API-DISCOVERY-001](../api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색)
+- 관련 규칙/API: [BR-RESTAURANT-004](../../01-requirements/business-rules.md#br-restaurant-004-대표-음식-카테고리)·[BR-RESTAURANT-005](../../01-requirements/business-rules.md#br-restaurant-005-맛집의-지역-소속), [API-DISCOVERY-001](../api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색)
 
 ### DATA-CONSTRAINT-006 관리자 로그인 ID 유일성
 
@@ -81,7 +81,7 @@ related_documents:
 - 제약: 정규화된 loginId는 하나의 계정만 식별한다.
 - 보장 수준: 저장소 필수, 애플리케이션 필수
 - 위반 시 처리: 계정 발급 거부
-- 관련 항목: [#10 API-ADMIN-AUTH-001](../api/admin/authentication-api.md#api-admin-auth-001-관리자-로그인)
+- 관련 항목: [API-ADMIN-AUTH-001](../api/admin/authentication-api.md#api-admin-auth-001-관리자-로그인)
 
 ## 4. 참조 무결성
 
@@ -92,7 +92,7 @@ related_documents:
 - Visit는 존재하는 Restaurant, Creator, Video를 참조한다.
 - AdminRefreshToken은 존재하는 AdminAccount를 참조한다.
 - 보장 수준: 저장소 수준 필수
-- 관련 요구사항: [#11 NFR-INTEGRITY-001](../../01-requirements/non-functional-requirements.md#nfr-integrity-001-참조-및-필수값-정합성)
+- 관련 요구사항: [NFR-INTEGRITY-001](../../01-requirements/non-functional-requirements.md#nfr-integrity-001-참조-및-필수값-정합성)
 
 참조 대상을 비공개·비활성으로 새로 연결할 수 있는지는 저장소 참조 제약만으로 충분하지 않으므로 애플리케이션에서 검증한다. Visit는 세 참조가 모두 공개일 때만 생성한다. 비활성 Region·FoodCategory는 신규 Restaurant에 연결하지 않는다.
 
@@ -102,7 +102,7 @@ related_documents:
 - 제약: Video.creatorId가 있으면 외부 게시 채널 ID와 Creator.externalChannelId가 같고, Visit.Creator.externalChannelId는 Visit.Video.publisherExternalChannelId와 같아야 한다.
 - 보장 수준: 애플리케이션 검증 필수. 저장소에서 복합 참조로 보장할지는 후속 물리 설계에서 결정한다.
 - 위반 시 처리: `VIDEO_CHANNEL_MISMATCH`
-- 관련 규칙/API: [#1 BR-CREATOR-005](../../01-requirements/business-rules.md#br-creator-005-방문-관계의-유튜버-일치), [#7 API-ADMIN-VISIT-001](../api/admin/visit-registration-api.md#api-admin-visit-001-방문-관계-등록)
+- 관련 규칙/API: [BR-CREATOR-005](../../01-requirements/business-rules.md#br-creator-005-방문-관계의-유튜버-일치), [API-ADMIN-VISIT-001](../api/admin/visit-registration-api.md#api-admin-visit-001-방문-관계-등록)
 
 ## 5. 상태 제약
 

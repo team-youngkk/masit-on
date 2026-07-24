@@ -1,10 +1,10 @@
 ---
 related_documents:
-  1: ../README.md
-  2: identifier-contract.md
-  3: response-contract.md
-  4: ../../../01-requirements/non-functional-requirements.md
-  5: ../../../07-adr/quality/obs-001-logging-observability.md
+  - ../README.md
+  - identifier-contract.md
+  - response-contract.md
+  - ../../../01-requirements/non-functional-requirements.md
+  - ../../../07-adr/quality/obs-001-logging-observability.md
 ---
 
 # 오류 계약

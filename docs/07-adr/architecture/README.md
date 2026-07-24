@@ -1,10 +1,10 @@
 ---
 related_documents:
-  1: ../README.md
-  2: arch-001-domain-monolith.md
-  3: arch-002-external-ports-adapters.md
-  4: ../../02-analysis/domain-boundaries.md
-  5: ../../06-architecture/technology-policy.md
+  - ../README.md
+  - arch-001-domain-monolith.md
+  - arch-002-external-ports-adapters.md
+  - ../../02-analysis/domain-boundaries.md
+  - ../../06-architecture/technology-policy.md
 ---
 
 # 아키텍처 ADR
@@ -13,6 +13,6 @@ related_documents:
 
 | ADR | 제목 |
 |---|---|
-| [#2 ADR-ARCH-001](arch-001-domain-monolith.md) | 단일 모듈 도메인 중심 모놀리스 |
-| [#3 ADR-ARCH-002](arch-002-external-ports-adapters.md) | 외부 연동 Port/Adapter 경계 |
+| [ADR-ARCH-001](arch-001-domain-monolith.md) | 단일 모듈 도메인 중심 모놀리스 |
+| [ADR-ARCH-002](arch-002-external-ports-adapters.md) | 외부 연동 Port/Adapter 경계 |
 

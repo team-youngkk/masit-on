@@ -1,21 +1,21 @@
 ---
 related_documents:
-  1: data-model.md
-  2: relationship-rules.md
-  3: lifecycle-rules.md
-  4: constraints.md
-  5: ../api/common/identifier-contract.md
-  6: ../diagrams/erd-spec.md
-  7: ../../01-requirements/business-rules.md
-  8: ../../01-requirements/functional-requirements.md
-  9: ../api/discovery/restaurant-discovery-api.md
-  10: ../api/detail/restaurant-detail-api.md
-  11: ../api/admin/reference-data-api.md
-  12: ../api/discovery/creator-discovery-api.md
-  13: ../api/admin/visit-registration-api.md
-  14: ../../02-analysis/mvp-workstreams.md
-  15: ../../01-requirements/non-functional-requirements.md
-  16: ../api/admin/authentication-api.md
+  - data-model.md
+  - relationship-rules.md
+  - lifecycle-rules.md
+  - constraints.md
+  - ../api/common/identifier-contract.md
+  - ../diagrams/erd-spec.md
+  - ../../01-requirements/business-rules.md
+  - ../../01-requirements/functional-requirements.md
+  - ../api/discovery/restaurant-discovery-api.md
+  - ../api/detail/restaurant-detail-api.md
+  - ../api/admin/reference-data-api.md
+  - ../api/discovery/creator-discovery-api.md
+  - ../api/admin/visit-registration-api.md
+  - ../../02-analysis/mvp-workstreams.md
+  - ../../01-requirements/non-functional-requirements.md
+  - ../api/admin/authentication-api.md
 ---
 
 # 맛잇온 데이터 엔티티 정의
@@ -75,7 +75,7 @@ related_documents:
 
 ### 변경 규칙
 
-- MVP API는 수정 기능을 제공하지 않는다. 이름·주소 변경과 장소 이전은 [#7 BR-RESTAURANT-009](../../01-requirements/business-rules.md#br-restaurant-009-맛집-이름-변경)·[#7 BR-RESTAURANT-010](../../01-requirements/business-rules.md#br-restaurant-010-주소-변경과-장소-이전)에 따라 후속 관리 기능에서 재검증한다.
+- MVP API는 수정 기능을 제공하지 않는다. 이름·주소 변경과 장소 이전은 [BR-RESTAURANT-009](../../01-requirements/business-rules.md#br-restaurant-009-맛집-이름-변경)·[BR-RESTAURANT-010](../../01-requirements/business-rules.md#br-restaurant-010-주소-변경과-장소-이전)에 따라 후속 관리 기능에서 재검증한다.
 
 ### 공개 규칙
 
@@ -91,15 +91,15 @@ related_documents:
 
 ### 관련 요구사항
 
-- [#8 FR-RESTAURANT-001](../../01-requirements/functional-requirements.md#fr-restaurant-001-맛집-목록-조회)~[#8 FR-RESTAURANT-011](../../01-requirements/functional-requirements.md#fr-restaurant-011-영상-연결이-없는-맛집-상세-조회), [#8 FR-ADMIN-002](../../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록)
+- [FR-RESTAURANT-001](../../01-requirements/functional-requirements.md#fr-restaurant-001-맛집-목록-조회)~[FR-RESTAURANT-011](../../01-requirements/functional-requirements.md#fr-restaurant-011-영상-연결이-없는-맛집-상세-조회), [FR-ADMIN-002](../../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록)
 
 ### 관련 비즈니스 규칙
 
-- [#7 BR-RESTAURANT-001](../../01-requirements/business-rules.md#br-restaurant-001-맛집의-의미)~[#7 BR-RESTAURANT-011](../../01-requirements/business-rules.md#br-restaurant-011-폐업과-장기-운영-중단), [#7 BR-PUBLICATION-001](../../01-requirements/business-rules.md#br-publication-001-일반-사용자-공개-범위)~[#7 BR-PUBLICATION-003](../../01-requirements/business-rules.md#br-publication-003-맛집-상태와-연결-정보-노출)·[#7 BR-PUBLICATION-007](../../01-requirements/business-rules.md#br-publication-007-외부-영상-삭제의-영향-범위)·[#7 BR-PUBLICATION-008](../../01-requirements/business-rules.md#br-publication-008-상태-변경의-일관성)
+- [BR-RESTAURANT-001](../../01-requirements/business-rules.md#br-restaurant-001-맛집의-의미)~[BR-RESTAURANT-011](../../01-requirements/business-rules.md#br-restaurant-011-폐업과-장기-운영-중단), [BR-PUBLICATION-001](../../01-requirements/business-rules.md#br-publication-001-일반-사용자-공개-범위)~[BR-PUBLICATION-003](../../01-requirements/business-rules.md#br-publication-003-맛집-상태와-연결-정보-노출)·[BR-PUBLICATION-007](../../01-requirements/business-rules.md#br-publication-007-외부-영상-삭제의-영향-범위)·[BR-PUBLICATION-008](../../01-requirements/business-rules.md#br-publication-008-상태-변경의-일관성)
 
 ### 관련 API
 
-- [#9 API-DISCOVERY-001](../api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색), [#10 API-DETAIL-001](../api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회), [#11 API-ADMIN-RESTAURANT-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-restaurant-preview-001-맛집-등록-검증-미리보기), [#11 API-ADMIN-RESTAURANT-001](../api/admin/reference-data-api.md#api-admin-restaurant-001-맛집-등록-확정)
+- [API-DISCOVERY-001](../api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색), [API-DETAIL-001](../api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회), [API-ADMIN-RESTAURANT-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-restaurant-preview-001-맛집-등록-검증-미리보기), [API-ADMIN-RESTAURANT-001](../api/admin/reference-data-api.md#api-admin-restaurant-001-맛집-등록-확정)
 
 ## Region
 
@@ -135,9 +135,9 @@ Restaurant 등록과 지역 필터에 공통으로 사용하는 서울특별시 
 
 ### 관련 요구사항·규칙·API
 
-- [#8 FR-RESTAURANT-003](../../01-requirements/functional-requirements.md#fr-restaurant-003-지역별-필터)·[#8 FR-RESTAURANT-009](../../01-requirements/functional-requirements.md#fr-restaurant-009-지역-정보-확인), [#8 FR-ADMIN-002](../../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록)
-- [#7 BR-RESTAURANT-003](../../01-requirements/business-rules.md#br-restaurant-003-맛집-최소-등록-정보)·[#7 BR-RESTAURANT-005](../../01-requirements/business-rules.md#br-restaurant-005-맛집의-지역-소속)
-- [#9 API-DISCOVERY-001](../api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색), [#10 API-DETAIL-001](../api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회), [#11 API-ADMIN-RESTAURANT-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-restaurant-preview-001-맛집-등록-검증-미리보기)
+- [FR-RESTAURANT-003](../../01-requirements/functional-requirements.md#fr-restaurant-003-지역별-필터)·[FR-RESTAURANT-009](../../01-requirements/functional-requirements.md#fr-restaurant-009-지역-정보-확인), [FR-ADMIN-002](../../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록)
+- [BR-RESTAURANT-003](../../01-requirements/business-rules.md#br-restaurant-003-맛집-최소-등록-정보)·[BR-RESTAURANT-005](../../01-requirements/business-rules.md#br-restaurant-005-맛집의-지역-소속)
+- [API-DISCOVERY-001](../api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색), [API-DETAIL-001](../api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회), [API-ADMIN-RESTAURANT-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-restaurant-preview-001-맛집-등록-검증-미리보기)
 
 ## FoodCategory
 
@@ -164,7 +164,7 @@ Restaurant의 주된 메뉴와 영업 정체성을 나타내는 사전 정의된
 - FoodCategory 1 : N Restaurant. Restaurant는 정확히 하나를 참조한다.
 - Restaurant–FoodCategory 다중 관계 엔티티는 만들지 않는다.
 - `기타`일 때 Restaurant.otherCategoryName이 필요하다.
-- 관련 항목: [#8 FR-RESTAURANT-004](../../01-requirements/functional-requirements.md#fr-restaurant-004-음식-카테고리별-필터)·[#8 FR-RESTAURANT-010](../../01-requirements/functional-requirements.md#fr-restaurant-010-음식-카테고리-확인), [#8 FR-ADMIN-002](../../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록), [#7 BR-RESTAURANT-004](../../01-requirements/business-rules.md#br-restaurant-004-대표-음식-카테고리), [#9 API-DISCOVERY-001](../api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색)·[#10 API-DETAIL-001](../api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회)·[#11 API-ADMIN-RESTAURANT-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-restaurant-preview-001-맛집-등록-검증-미리보기)
+- 관련 항목: [FR-RESTAURANT-004](../../01-requirements/functional-requirements.md#fr-restaurant-004-음식-카테고리별-필터)·[FR-RESTAURANT-010](../../01-requirements/functional-requirements.md#fr-restaurant-010-음식-카테고리-확인), [FR-ADMIN-002](../../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록), [BR-RESTAURANT-004](../../01-requirements/business-rules.md#br-restaurant-004-대표-음식-카테고리), [API-DISCOVERY-001](../api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색)·[API-DETAIL-001](../api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회)·[API-ADMIN-RESTAURANT-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-restaurant-preview-001-맛집-등록-검증-미리보기)
 
 ## Creator
 
@@ -202,7 +202,7 @@ Restaurant의 주된 메뉴와 영업 정체성을 나타내는 사전 정의된
 - Video 0개 이상을 게시한다.
 - Visit 0개 이상에서 참조될 수 있다.
 - 채널 이용 불가 확인 시 비공개로 전환하되 Creator·Video·Visit를 자동 삭제하지 않는다.
-- 관련 항목: [#8 FR-CREATOR-001](../../01-requirements/functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)~[#8 FR-CREATOR-003](../../01-requirements/functional-requirements.md#fr-creator-003-유튜버-필터-선택-목록-조회), [#8 FR-ADMIN-003](../../01-requirements/functional-requirements.md#fr-admin-003-유튜버-정보-등록), [#7 BR-CREATOR-001](../../01-requirements/business-rules.md#br-creator-001-유튜버-정보의-의미)~[#7 BR-CREATOR-007](../../01-requirements/business-rules.md#br-creator-007-채널-이용-불가-처리), [#12 API-CREATOR-DISCOVERY-001](../api/discovery/creator-discovery-api.md#api-creator-discovery-001-유튜버-필터-선택-목록), [#9 API-DISCOVERY-001](../api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색), [#10 API-DETAIL-001](../api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회), [#11 API-ADMIN-CREATOR-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-creator-preview-001-유튜버-등록-검증-미리보기)·[#11 API-ADMIN-CREATOR-001](../api/admin/reference-data-api.md#api-admin-creator-001-유튜버-등록-확정)
+- 관련 항목: [FR-CREATOR-001](../../01-requirements/functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)~[FR-CREATOR-003](../../01-requirements/functional-requirements.md#fr-creator-003-유튜버-필터-선택-목록-조회), [FR-ADMIN-003](../../01-requirements/functional-requirements.md#fr-admin-003-유튜버-정보-등록), [BR-CREATOR-001](../../01-requirements/business-rules.md#br-creator-001-유튜버-정보의-의미)~[BR-CREATOR-007](../../01-requirements/business-rules.md#br-creator-007-채널-이용-불가-처리), [API-CREATOR-DISCOVERY-001](../api/discovery/creator-discovery-api.md#api-creator-discovery-001-유튜버-필터-선택-목록), [API-DISCOVERY-001](../api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색), [API-DETAIL-001](../api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회), [API-ADMIN-CREATOR-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-creator-preview-001-유튜버-등록-검증-미리보기)·[API-ADMIN-CREATOR-001](../api/admin/reference-data-api.md#api-admin-creator-001-유튜버-등록-확정)
 
 ## Video
 
@@ -228,7 +228,7 @@ Visit의 실제 방문 근거 후보로 등록된 YouTube 원본 콘텐츠의 �
 | externalVideoId | YouTube 원본 영상 식별자 | 필수 | 유일 | 불가 | 비공개 | 중복 기준 |
 | title | 확인된 영상 제목 | 필수 | 단독 유일 아님 | 후속 관리 기능 | 공개 |  |
 | sourceUrl | YouTube 원본 링크 | 필수 | 보조 유일성 검토 | 가능 | 공개 | 원본 파일 아님 |
-| thumbnailUrl | 확인된 썸네일 URL | 필수 | 아님 | 후속 관리 기능 | 공개 | [#7 BR-VIDEO-002](../../01-requirements/business-rules.md#br-video-002-영상-최소-등록-정보) |
+| thumbnailUrl | 확인된 썸네일 URL | 필수 | 아님 | 후속 관리 기능 | 공개 | [BR-VIDEO-002](../../01-requirements/business-rules.md#br-video-002-영상-최소-등록-정보) |
 | publisherExternalChannelId | 외부 영상의 게시 YouTube 채널 ID | 필수 | 아님 | 원칙상 불가 | 비공개 | Creator보다 먼저 등록 가능 |
 | creatorId | 일치하는 내부 Creator 참조 | 선택 | 아님 | 연결 해소 시 | 비공개 | 존재하면 외부 채널 ID가 같아야 함 |
 | publishedAt | YouTube 게시 시각 | 선택 | 아님 | 외부 정보 갱신 시 | 현재 API 비공개 | 방문일과 다름 |
@@ -243,7 +243,7 @@ Visit의 실제 방문 근거 후보로 등록된 YouTube 원본 콘텐츠의 �
 - Visit 0개 이상에서 근거로 참조될 수 있고 한 영상이 여러 맛집의 근거가 될 수 있다.
 - 등록만으로 Restaurant와 연결되지 않는다.
 - 외부 이용 불가 확인 시 관계와 맛집을 자동 삭제하지 않는다.
-- 관련 항목: [#8 FR-VIDEO-001](../../01-requirements/functional-requirements.md#fr-video-001-관련-영상-정보-확인), [#8 FR-ADMIN-004](../../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록), [#7 BR-VIDEO-001](../../01-requirements/business-rules.md#br-video-001-영상의-의미와-보관-범위)~[#7 BR-VIDEO-009](../../01-requirements/business-rules.md#br-video-009-영상-이용-불가-처리), [#10 API-DETAIL-001](../api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회), [#11 API-ADMIN-VIDEO-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-video-preview-001-영상-등록-검증-미리보기)·[#11 API-ADMIN-VIDEO-001](../api/admin/reference-data-api.md#api-admin-video-001-영상-등록-확정)
+- 관련 항목: [FR-VIDEO-001](../../01-requirements/functional-requirements.md#fr-video-001-관련-영상-정보-확인), [FR-ADMIN-004](../../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록), [BR-VIDEO-001](../../01-requirements/business-rules.md#br-video-001-영상의-의미와-보관-범위)~[BR-VIDEO-009](../../01-requirements/business-rules.md#br-video-009-영상-이용-불가-처리), [API-DETAIL-001](../api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회), [API-ADMIN-VIDEO-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-video-preview-001-영상-등록-검증-미리보기)·[API-ADMIN-VIDEO-001](../api/admin/reference-data-api.md#api-admin-video-001-영상-등록-확정)
 
 ## Visit
 
@@ -277,7 +277,7 @@ Visit의 실제 방문 근거 후보로 등록된 YouTube 원본 콘텐츠의 �
 - Creator는 Video의 게시 Creator와 같아야 한다.
 - 세 대상이 존재하고 공개이며 실제 방문을 관리자가 확인한 경우에만 원자적으로 생성한다.
 - 같은 세 대상 조합은 중복이며, 같은 Restaurant·Creator라도 Video가 다르면 별도 Visit를 허용한다.
-- 관련 항목: [#8 FR-VISIT-001](../../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록), [#7 BR-CREATOR-005](../../01-requirements/business-rules.md#br-creator-005-방문-관계의-유튜버-일치), [#7 BR-VIDEO-004](../../01-requirements/business-rules.md#br-video-004-영상과-방문-관계의-다대상-연결)~[#7 BR-VIDEO-006](../../01-requirements/business-rules.md#br-video-006-게시일과-방문일의-구분), [#7 BR-VISIT-001](../../01-requirements/business-rules.md#br-visit-001-방문-관계의-구성)~[#7 BR-VISIT-007](../../01-requirements/business-rules.md#br-visit-007-등록-완료와-검증-상태), [#13 API-ADMIN-VISIT-001](../api/admin/visit-registration-api.md#api-admin-visit-001-방문-관계-등록)
+- 관련 항목: [FR-VISIT-001](../../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록), [BR-CREATOR-005](../../01-requirements/business-rules.md#br-creator-005-방문-관계의-유튜버-일치), [BR-VIDEO-004](../../01-requirements/business-rules.md#br-video-004-영상과-방문-관계의-다대상-연결)~[BR-VIDEO-006](../../01-requirements/business-rules.md#br-video-006-게시일과-방문일의-구분), [BR-VISIT-001](../../01-requirements/business-rules.md#br-visit-001-방문-관계의-구성)~[BR-VISIT-007](../../01-requirements/business-rules.md#br-visit-007-등록-완료와-검증-상태), [API-ADMIN-VISIT-001](../api/admin/visit-registration-api.md#api-admin-visit-001-방문-관계-등록)
 
 ## AdminAccount
 
@@ -287,7 +287,7 @@ MVP 관리자 인증에 사용하는 사전 발급 내부 계정이다. 일반 �
 
 ### 소유 책임
 
-- [#14 WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록)의 관리자 인증 애플리케이션 책임. 발급·회수·복구는 수동 운영이다.
+- [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록)의 관리자 인증 애플리케이션 책임. 발급·회수·복구는 수동 운영이다.
 
 ### 속성
 
@@ -303,7 +303,7 @@ MVP 관리자 인증에 사용하는 사전 발급 내부 계정이다. 일반 �
 
 ### 관련 항목
 
-- [#8 FR-ADMIN-001](../../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근), [#7 BR-ADMIN-001](../../01-requirements/business-rules.md#br-admin-001-관리자-권한-검증), [#15 NFR-SECURITY-001](../../01-requirements/non-functional-requirements.md#nfr-security-001-공개-조회와-관리자-접근-통제)·[#15 NFR-SECURITY-003](../../01-requirements/non-functional-requirements.md#nfr-security-003-비밀정보와-오류-정보-보호), [#15 NFR-PRIVACY-002](../../01-requirements/non-functional-requirements.md#nfr-privacy-002-인증정보와-외부-키-보호), [#16 API-ADMIN-AUTH-001](../api/admin/authentication-api.md#api-admin-auth-001-관리자-로그인)~[#16 API-ADMIN-AUTH-003](../api/admin/authentication-api.md#api-admin-auth-003-관리자-로그아웃)
+- [FR-ADMIN-001](../../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근), [BR-ADMIN-001](../../01-requirements/business-rules.md#br-admin-001-관리자-권한-검증), [NFR-SECURITY-001](../../01-requirements/non-functional-requirements.md#nfr-security-001-공개-조회와-관리자-접근-통제)·[NFR-SECURITY-003](../../01-requirements/non-functional-requirements.md#nfr-security-003-비밀정보와-오류-정보-보호), [NFR-PRIVACY-002](../../01-requirements/non-functional-requirements.md#nfr-privacy-002-인증정보와-외부-키-보호), [API-ADMIN-AUTH-001](../api/admin/authentication-api.md#api-admin-auth-001-관리자-로그인)~[API-ADMIN-AUTH-003](../api/admin/authentication-api.md#api-admin-auth-003-관리자-로그아웃)
 
 ## AdminRefreshToken
 

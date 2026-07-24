@@ -1,14 +1,14 @@
 ---
 related_documents:
-  1: ../../01-requirements/business-rules.md
-  2: data-model.md
-  3: entity-definitions.md
-  4: lifecycle-rules.md
-  5: constraints.md
-  6: ../api/discovery/creator-discovery-api.md
-  7: ../api/detail/restaurant-detail-api.md
-  8: ../api/admin/visit-registration-api.md
-  9: ../diagrams/erd-spec.md
+  - ../../01-requirements/business-rules.md
+  - data-model.md
+  - entity-definitions.md
+  - lifecycle-rules.md
+  - constraints.md
+  - ../api/discovery/creator-discovery-api.md
+  - ../api/detail/restaurant-detail-api.md
+  - ../api/admin/visit-registration-api.md
+  - ../diagrams/erd-spec.md
 ---
 
 # 맛잇온 데이터 관계 규칙
@@ -49,7 +49,7 @@ related_documents:
 
 ### 관련 규칙
 
-- [#1 BR-RESTAURANT-003](../../01-requirements/business-rules.md#br-restaurant-003-맛집-최소-등록-정보)·[#1 BR-RESTAURANT-005](../../01-requirements/business-rules.md#br-restaurant-005-맛집의-지역-소속)
+- [BR-RESTAURANT-003](../../01-requirements/business-rules.md#br-restaurant-003-맛집-최소-등록-정보)·[BR-RESTAURANT-005](../../01-requirements/business-rules.md#br-restaurant-005-맛집의-지역-소속)
 
 ## 4. Restaurant–FoodCategory
 
@@ -70,7 +70,7 @@ related_documents:
 
 ### 관련 규칙
 
-- [#1 BR-RESTAURANT-004](../../01-requirements/business-rules.md#br-restaurant-004-대표-음식-카테고리)
+- [BR-RESTAURANT-004](../../01-requirements/business-rules.md#br-restaurant-004-대표-음식-카테고리)
 
 ## 5. Creator/Channel–Video
 
@@ -97,7 +97,7 @@ Creator는 YouTube 채널 단위이고 Video는 외부 게시 채널 ID를 필�
 
 ### 관련 규칙
 
-- [#1 BR-CREATOR-001](../../01-requirements/business-rules.md#br-creator-001-유튜버-정보의-의미)·[#1 BR-CREATOR-003](../../01-requirements/business-rules.md#br-creator-003-동일-채널-중복-판단)·[#1 BR-CREATOR-005](../../01-requirements/business-rules.md#br-creator-005-방문-관계의-유튜버-일치)·[#1 BR-CREATOR-007](../../01-requirements/business-rules.md#br-creator-007-채널-이용-불가-처리), [#1 BR-VIDEO-002](../../01-requirements/business-rules.md#br-video-002-영상-최소-등록-정보)·[#1 BR-VIDEO-003](../../01-requirements/business-rules.md#br-video-003-영상-식별-및-중복-판단)·[#1 BR-VIDEO-009](../../01-requirements/business-rules.md#br-video-009-영상-이용-불가-처리)
+- [BR-CREATOR-001](../../01-requirements/business-rules.md#br-creator-001-유튜버-정보의-의미)·[BR-CREATOR-003](../../01-requirements/business-rules.md#br-creator-003-동일-채널-중복-판단)·[BR-CREATOR-005](../../01-requirements/business-rules.md#br-creator-005-방문-관계의-유튜버-일치)·[BR-CREATOR-007](../../01-requirements/business-rules.md#br-creator-007-채널-이용-불가-처리), [BR-VIDEO-002](../../01-requirements/business-rules.md#br-video-002-영상-최소-등록-정보)·[BR-VIDEO-003](../../01-requirements/business-rules.md#br-video-003-영상-식별-및-중복-판단)·[BR-VIDEO-009](../../01-requirements/business-rules.md#br-video-009-영상-이용-불가-처리)
 
 ## 6. Restaurant–Visit
 
@@ -130,7 +130,7 @@ Creator는 YouTube 채널 단위이고 Video는 외부 게시 채널 ID를 필�
 
 ### 관련 규칙
 
-- [#1 BR-RESTAURANT-002](../../01-requirements/business-rules.md#br-restaurant-002-영상과-독립된-맛집)·[#1 BR-RESTAURANT-008](../../01-requirements/business-rules.md#br-restaurant-008-맛집-공개-조건), [#1 BR-VISIT-001](../../01-requirements/business-rules.md#br-visit-001-방문-관계의-구성)~[#1 BR-VISIT-005](../../01-requirements/business-rules.md#br-visit-005-방문-관계의-조회-유효성), [#1 BR-PUBLICATION-003](../../01-requirements/business-rules.md#br-publication-003-맛집-상태와-연결-정보-노출)
+- [BR-RESTAURANT-002](../../01-requirements/business-rules.md#br-restaurant-002-영상과-독립된-맛집)·[BR-RESTAURANT-008](../../01-requirements/business-rules.md#br-restaurant-008-맛집-공개-조건), [BR-VISIT-001](../../01-requirements/business-rules.md#br-visit-001-방문-관계의-구성)~[BR-VISIT-005](../../01-requirements/business-rules.md#br-visit-005-방문-관계의-조회-유효성), [BR-PUBLICATION-003](../../01-requirements/business-rules.md#br-publication-003-맛집-상태와-연결-정보-노출)
 
 ## 7. Creator/Channel–Visit
 
@@ -151,7 +151,7 @@ Creator는 YouTube 채널 단위이고 Video는 외부 게시 채널 ID를 필�
 
 ### 관련 규칙
 
-- [#1 BR-CREATOR-001](../../01-requirements/business-rules.md#br-creator-001-유튜버-정보의-의미)·[#1 BR-CREATOR-005](../../01-requirements/business-rules.md#br-creator-005-방문-관계의-유튜버-일치)·[#1 BR-CREATOR-007](../../01-requirements/business-rules.md#br-creator-007-채널-이용-불가-처리), [#1 BR-PUBLICATION-004](../../01-requirements/business-rules.md#br-publication-004-유튜버-상태와-관계-노출)
+- [BR-CREATOR-001](../../01-requirements/business-rules.md#br-creator-001-유튜버-정보의-의미)·[BR-CREATOR-005](../../01-requirements/business-rules.md#br-creator-005-방문-관계의-유튜버-일치)·[BR-CREATOR-007](../../01-requirements/business-rules.md#br-creator-007-채널-이용-불가-처리), [BR-PUBLICATION-004](../../01-requirements/business-rules.md#br-publication-004-유튜버-상태와-관계-노출)
 
 ## 8. Video–Visit
 
@@ -177,7 +177,7 @@ Creator는 YouTube 채널 단위이고 Video는 외부 게시 채널 ID를 필�
 
 ### 관련 규칙
 
-- [#1 BR-VIDEO-004](../../01-requirements/business-rules.md#br-video-004-영상과-방문-관계의-다대상-연결)~[#1 BR-VIDEO-007](../../01-requirements/business-rules.md#br-video-007-외부-링크-장애의-격리)·[#1 BR-VIDEO-009](../../01-requirements/business-rules.md#br-video-009-영상-이용-불가-처리), [#1 BR-VISIT-001](../../01-requirements/business-rules.md#br-visit-001-방문-관계의-구성)~[#1 BR-VISIT-006](../../01-requirements/business-rules.md#br-visit-006-방문-날짜-관리-제외), [#1 BR-PUBLICATION-005](../../01-requirements/business-rules.md#br-publication-005-영상-상태와-관계-노출)·[#1 BR-PUBLICATION-007](../../01-requirements/business-rules.md#br-publication-007-외부-영상-삭제의-영향-범위)
+- [BR-VIDEO-004](../../01-requirements/business-rules.md#br-video-004-영상과-방문-관계의-다대상-연결)~[BR-VIDEO-007](../../01-requirements/business-rules.md#br-video-007-외부-링크-장애의-격리)·[BR-VIDEO-009](../../01-requirements/business-rules.md#br-video-009-영상-이용-불가-처리), [BR-VISIT-001](../../01-requirements/business-rules.md#br-visit-001-방문-관계의-구성)~[BR-VISIT-006](../../01-requirements/business-rules.md#br-visit-006-방문-날짜-관리-제외), [BR-PUBLICATION-005](../../01-requirements/business-rules.md#br-publication-005-영상-상태와-관계-노출)·[BR-PUBLICATION-007](../../01-requirements/business-rules.md#br-publication-007-외부-영상-삭제의-영향-범위)
 
 ## 9. 관계 생성 및 해제 규칙
 
@@ -210,7 +210,7 @@ Creator는 YouTube 채널 단위이고 Video는 외부 게시 채널 ID를 필�
 ### 권장 모델
 
 - 선택: A, 삼항 Visit
-- 이유: [#1 BR-VISIT-001](../../01-requirements/business-rules.md#br-visit-001-방문-관계의-구성)·[#1 BR-VISIT-003](../../01-requirements/business-rules.md#br-visit-003-방문-관계-중복-판단)과 [#8 API-ADMIN-VISIT-001](../api/admin/visit-registration-api.md#api-admin-visit-001-방문-관계-등록)이 Restaurant·Creator·Video 하나씩을 명시하고 동일 세 대상 조합을 중복으로 확정했다.
+- 이유: [BR-VISIT-001](../../01-requirements/business-rules.md#br-visit-001-방문-관계의-구성)·[BR-VISIT-003](../../01-requirements/business-rules.md#br-visit-003-방문-관계-중복-판단)과 [API-ADMIN-VISIT-001](../api/admin/visit-registration-api.md#api-admin-visit-001-방문-관계-등록)이 Restaurant·Creator·Video 하나씩을 명시하고 동일 세 대상 조합을 중복으로 확정했다.
 - 감수하는 제약: 실제 하나의 방문 사실에 여러 근거 영상을 묶을 수 없고, 다른 영상은 별도 Visit로 표현된다.
 - 변경 조건: 한 방문의 복수 근거, 영상 없는 검증된 방문, 방문일 기반 재방문 이력 또는 채널과 실제 출연자 분리가 범위에 들어올 때 C 또는 새 모델을 검토한다.
 - ADR 필요 여부: 현재는 확정 비즈니스·API 계약을 그대로 명세하므로 필수 ADR이 아니다. 변경 시 장기 구조 영향이 크므로 ADR을 작성한다.

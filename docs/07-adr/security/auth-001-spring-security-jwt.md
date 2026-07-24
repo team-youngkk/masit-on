@@ -6,19 +6,19 @@ decision_date: 2026-07-24
 owners:
   - 김인안
 related_requirements:
-  1: FR-ADMIN-001
-  2: NFR-SECURITY-001
-  3: NFR-SECURITY-003
-  4: NFR-PRIVACY-002
+  - FR-ADMIN-001
+  - NFR-SECURITY-001
+  - NFR-SECURITY-003
+  - NFR-PRIVACY-002
 related_documents:
-  1: ../../00-overview/scope.md
-  2: ../../05-specs/api/admin/authentication-api.md
-  3: ../../01-requirements/non-functional-requirements.md
-  4: ../data/data-005-redis-refresh-token.md
-  5: sec-001-secrets-workload-identity.md
-  6: ../platform/frame-001-spring-boot.md
-  7: ../../02-analysis/mvp-workstreams.md
-  8: ../../06-architecture/technology-policy.md
+  - ../../00-overview/scope.md
+  - ../../05-specs/api/admin/authentication-api.md
+  - ../../01-requirements/non-functional-requirements.md
+  - ../data/data-005-redis-refresh-token.md
+  - sec-001-secrets-workload-identity.md
+  - ../platform/frame-001-spring-boot.md
+  - ../../02-analysis/mvp-workstreams.md
+  - ../../06-architecture/technology-policy.md
 supersedes: []
 superseded_by: null
 ---
@@ -35,7 +35,7 @@ Accepted
 
 ## 3. 배경
 
-사전 발급된 관리자만 [#7 WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 등록 API에 접근하도록 통제해야 하며 일반 사용자 공개 조회는 무인증이어야 한다.
+사전 발급된 관리자만 [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 등록 API에 접근하도록 통제해야 하며 일반 사용자 공개 조회는 무인증이어야 한다.
 
 ## 4. 결정 문제
 
@@ -87,6 +87,6 @@ JWT 서명 키 보호·교체, Redis 가용성, Token 회전·폐기·로그 마
 
 ## 15. 관련 문서
 
-- [#2 관리자 인증 API](../../05-specs/api/admin/authentication-api.md)
-- [#4 Redis Token 저장 ADR](../data/data-005-redis-refresh-token.md)
-- [#8 기술 정책](../../06-architecture/technology-policy.md)
+- [관리자 인증 API](../../05-specs/api/admin/authentication-api.md)
+- [Redis Token 저장 ADR](../data/data-005-redis-refresh-token.md)
+- [기술 정책](../../06-architecture/technology-policy.md)

@@ -9,7 +9,7 @@ owner: 김인안
 reviewers:
   - 이우람
 related_requirements:
-  1: FR-ADMIN-001
+  - FR-ADMIN-001
 related_business_rules:
   - BR-ADMIN-001
 related_nfr:
@@ -20,12 +20,12 @@ related_nfr:
   - NFR-OBSERVABILITY-003
   - NFR-PRIVACY-002
 related_documents:
-  1: ../../../04-product/prd/admin/admin-data-management.md
-  2: ../common/response-contract.md
-  3: ../common/error-contract.md
-  4: ../../data/entity-definitions.md
-  5: ../../../07-adr/security/auth-001-spring-security-jwt.md
-  6: ../../../07-adr/data/data-005-redis-refresh-token.md
+  - ../../../04-product/prd/admin/admin-data-management.md
+  - ../common/response-contract.md
+  - ../common/error-contract.md
+  - ../../data/entity-definitions.md
+  - ../../../07-adr/security/auth-001-spring-security-jwt.md
+  - ../../../07-adr/data/data-005-redis-refresh-token.md
 ---
 
 # 관리자 인증 API

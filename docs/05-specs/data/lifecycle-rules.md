@@ -1,12 +1,12 @@
 ---
 related_documents:
-  1: ../../01-requirements/business-rules.md
-  2: data-model.md
-  3: entity-definitions.md
-  4: relationship-rules.md
-  5: constraints.md
-  6: ../api/detail/restaurant-detail-api.md
-  7: ../api/admin/reference-data-api.md
+  - ../../01-requirements/business-rules.md
+  - data-model.md
+  - entity-definitions.md
+  - relationship-rules.md
+  - constraints.md
+  - ../api/detail/restaurant-detail-api.md
+  - ../api/admin/reference-data-api.md
 ---
 
 # 맛잇온 데이터 생명주기

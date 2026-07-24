@@ -1,10 +1,10 @@
 ---
 related_documents:
-  1: service-overview.md
-  2: glossary.md
-  3: ../01-requirements/functional-requirements.md
-  4: ../01-requirements/business-rules.md
-  5: ../04-product/prd/00-product-overview.md
+  - service-overview.md
+  - glossary.md
+  - ../01-requirements/functional-requirements.md
+  - ../01-requirements/business-rules.md
+  - ../04-product/prd/00-product-overview.md
 ---
 
 # 맛잇온 프로젝트 범위

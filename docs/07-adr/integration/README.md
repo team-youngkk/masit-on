@@ -1,9 +1,9 @@
 ---
 related_documents:
-  1: ../README.md
-  2: ext-001-reference-verification.md
-  3: ../architecture/arch-002-external-ports-adapters.md
-  4: ../../05-specs/api/admin/reference-data-api.md
+  - ../README.md
+  - ext-001-reference-verification.md
+  - ../architecture/arch-002-external-ports-adapters.md
+  - ../../05-specs/api/admin/reference-data-api.md
 ---
 
 # 외부 연동 ADR
@@ -12,5 +12,5 @@ related_documents:
 
 | ADR | 제목 |
 |---|---|
-| [#2 ADR-EXT-001](ext-001-reference-verification.md) | 관리자 외부 기준정보 확인 서비스 |
+| [ADR-EXT-001](ext-001-reference-verification.md) | 관리자 외부 기준정보 확인 서비스 |
 

@@ -1,13 +1,13 @@
 ---
 related_documents:
-  1: ../00-overview/scope.md
-  2: ../01-requirements/non-functional-requirements.md
-  3: ../06-architecture/technology-policy.md
-  4: README.md
-  5: adr-index.md
-  6: adr-traceability.md
-  7: security/auth-001-spring-security-jwt.md
-  8: data/data-005-redis-refresh-token.md
+  - ../00-overview/scope.md
+  - ../01-requirements/non-functional-requirements.md
+  - ../06-architecture/technology-policy.md
+  - README.md
+  - adr-index.md
+  - adr-traceability.md
+  - security/auth-001-spring-security-jwt.md
+  - data/data-005-redis-refresh-token.md
 ---
 
 # 맛잇온 ADR Backlog
@@ -54,7 +54,7 @@ related_documents:
 
 - 현재 상태: Conditional
 - 현재 결정: 성능 요구사항과 테스트 환경은 유지하되 도구 의존성은 추가하지 않는다.
-- 활성화 조건: [#2 RV-NFR-011](../01-requirements/non-functional-requirements.md#rv-nfr-011-성능-테스트-환경)의 환경·데이터 규모·부하 모델을 팀이 결정한다.
+- 활성화 조건: [RV-NFR-011](../01-requirements/non-functional-requirements.md#rv-nfr-011-성능-테스트-환경)의 환경·데이터 규모·부하 모델을 팀이 결정한다.
 - 도입 전 확인: 정확한 버전, CI 실행 위치, 임계값, 결과 보관
 - 영향: CI 시간, 성능 품질 게이트
 
@@ -138,14 +138,14 @@ related_documents:
 | FCM | Post-MVP | 사용자 알림 제외 | 계정·동의·알림 범위 변경 |
 | S3 이미지 저장 | Post-MVP | 현재 이미지 업로드·사용자 이미지 요구사항 없음 | 이미지 기능 범위 변경 |
 | Redis 캐시 | 조건부 도입 | 캐시 필요성을 입증한 성능 측정 없음 | 병목과 무효화 전략 확인 |
-| Redis 관리자 Refresh Token | 범위 일치 | 관리자 JWT 재발급·폐기에 사용 | [#7 ADR-AUTH-001](security/auth-001-spring-security-jwt.md)·[#8 ADR-DATA-005](data/data-005-redis-refresh-token.md) 적용 |
+| Redis 관리자 Refresh Token | 범위 일치 | 관리자 JWT 재발급·폐기에 사용 | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md)·[ADR-DATA-005](data/data-005-redis-refresh-token.md) 적용 |
 | Redis 일반 사용자 Token | Post-MVP | 일반 사용자 로그인 없음 | 회원 인증 범위 변경 |
 | Redis 분산 락 | 조건부 도입 | 자동 배치와 다중 실행이 MVP에서 제외·미확정 | 실행 토폴로지와 중복 피해 확인 |
 | n8n·Batch·크롤링 | Post-MVP | 관리자 수동 확인·등록, 자동 수집 제외 | 승인된 자동화 범위 정의 |
 | Nginx·EC2·ECR | 결정 완료 (2026-07-24) | 기술 스펙에는 확정, NFR은 배포 상세를 후속 설계로 둠 | 단일 EC2 인스턴스(Nginx 리버스 프록시+App), 장애 시 수동 복구 |
 | ALB·ASG·Blue-Green | 결정 완료 (2026-07-24) | 기술 스펙의 다중 인스턴스 구조와 NFR의 단일 인스턴스 수동 복구·복잡도 제한이 충돌 | MVP는 도입하지 않음. ALB는 확장 단계 우선 검토 대상으로 남기고, ASG·Blue-Green은 Post-MVP로 보류 |
-| 전체 CI/CD 배포 흐름 | 팀 결정 필요 | 빌드·테스트 게이트는 확정, 배포 자동화·수동 승인 지점은 미확정 | [#2 RV-NFR-012](../01-requirements/non-functional-requirements.md#rv-nfr-012-배포-자동화-범위) 결정 |
-| 로그 14일 보관 | 결정 완료 (2026-07-24) | 기술 스펙 값과 [#2 RV-NFR-009](../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간)의 미결정 상태가 충돌 | 14일 보관(기술 스펙 값) 확정. 백업은 일 1회 자동 스냅샷+7일 보관, 알림은 CloudWatch 알람→이메일/Slack, 담당자 1명 |
+| 전체 CI/CD 배포 흐름 | 팀 결정 필요 | 빌드·테스트 게이트는 확정, 배포 자동화·수동 승인 지점은 미확정 | [RV-NFR-012](../01-requirements/non-functional-requirements.md#rv-nfr-012-배포-자동화-범위) 결정 |
+| 로그 14일 보관 | 결정 완료 (2026-07-24) | 기술 스펙 값과 [RV-NFR-009](../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간)의 미결정 상태가 충돌 | 14일 보관(기술 스펙 값) 확정. 백업은 일 1회 자동 스냅샷+7일 보관, 알림은 CloudWatch 알람→이메일/Slack, 담당자 1명 |
 
 ## 5. 활성화 조건
 
@@ -178,4 +178,4 @@ Backlog 항목은 다음을 모두 충족해야 활성화된다.
 | 백업 | PostgreSQL 일 1회 자동 스냅샷, 7일 보관, RPO 최대 24시간 |
 | 운영 알림 | CloudWatch 알람 → 이메일/Slack, 담당자 1명 |
 
-남은 미결정 항목: 배포 자동화 범위([#2 RV-NFR-012](../01-requirements/non-functional-requirements.md#rv-nfr-012-배포-자동화-범위), ALB·Blue-Green 전환 자동화 포함)는 배포 토폴로지가 확장될 때 별도 결정한다.
+남은 미결정 항목: 배포 자동화 범위([RV-NFR-012](../01-requirements/non-functional-requirements.md#rv-nfr-012-배포-자동화-범위), ALB·Blue-Green 전환 자동화 포함)는 배포 토폴로지가 확장될 때 별도 결정한다.
