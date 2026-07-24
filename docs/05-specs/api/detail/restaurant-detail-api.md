@@ -9,12 +9,12 @@ owner: 박진영
 reviewers:
   - 김인안
 related_requirements:
-  - FR-RESTAURANT-008
-  - FR-RESTAURANT-009
-  - FR-RESTAURANT-010
-  - FR-RESTAURANT-011
-  - FR-CREATOR-002
-  - FR-VIDEO-001
+  1: FR-RESTAURANT-008
+  2: FR-RESTAURANT-009
+  3: FR-RESTAURANT-010
+  4: FR-RESTAURANT-011
+  5: FR-CREATOR-002
+  6: FR-VIDEO-001
 related_business_rules:
   - BR-RESTAURANT-002
   - BR-RESTAURANT-004
@@ -40,6 +40,17 @@ related_nfr:
   - NFR-COMPATIBILITY-003
   - NFR-TEST-001
   - NFR-TEST-002
+related_documents:
+  1: ../../../04-product/prd/detail/restaurant-detail.md
+  2: ../../../04-product/prd/discovery/creator-discovery.md
+  3: ../common/identifier-contract.md
+  4: ../common/response-contract.md
+  5: ../common/error-contract.md
+  6: ../../data/data-model.md
+  7: ../../data/relationship-rules.md
+  8: ../../data/lifecycle-rules.md
+  9: ../../../02-analysis/mvp-workstreams.md
+  10: ../../../01-requirements/functional-requirements.md
 ---
 
 # 맛집 상세 API
@@ -60,9 +71,9 @@ related_nfr:
 
 | API ID | Method | Path | 설명 |
 |---|---|---|---|
-| API-DETAIL-001 | GET | `/restaurants/{restaurantId}` | 맛집 상세와 방문 콘텐츠 조회 |
+| [API-DETAIL-001](restaurant-detail-api.md#api-detail-001-맛집-상세-조회) | GET | `/restaurants/{restaurantId}` | 맛집 상세와 방문 콘텐츠 조회 |
 
-기본 정보와 방문 콘텐츠를 별도 API로 분리하지 않는다. PRD가 한 사용자 흐름과 WS-02의 최종 조합 책임을 확정했고, 한 번의 호출이 MVP 프론트엔드 복잡도를 낮춘다. 콘텐츠 제공자 실패는 응답 내부 상태로 격리한다.
+기본 정보와 방문 콘텐츠를 별도 API로 분리하지 않는다. PRD가 한 사용자 흐름과 [#9 WS-02](../../../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)의 최종 조합 책임을 확정했고, 한 번의 호출이 MVP 프론트엔드 복잡도를 낮춘다. 콘텐츠 제공자 실패는 응답 내부 상태로 격리한다.
 
 ## 5. 맛집 상세 조회
 
@@ -72,8 +83,8 @@ related_nfr:
 - Path: `/restaurants/{restaurantId}`
 - 인증: 없음
 - 권한: 일반 공개 조회
-- 관련 PRD: PRD-DETAIL-001
-- 관련 요구사항: FR-RESTAURANT-008~011, FR-CREATOR-002, FR-VIDEO-001
+- 관련 PRD: [#1 PRD-DETAIL-001](../../../04-product/prd/detail/restaurant-detail.md)
+- 관련 요구사항: [REQ#1 FR-RESTAURANT-008](../../../01-requirements/functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회)~[REQ#4 FR-RESTAURANT-011](../../../01-requirements/functional-requirements.md#fr-restaurant-011-영상-연결이-없는-맛집-상세-조회), [REQ#5 FR-CREATOR-002](../../../01-requirements/functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인), [REQ#6 FR-VIDEO-001](../../../01-requirements/functional-requirements.md#fr-video-001-관련-영상-정보-확인)
 - 설명: 한 공개 맛집의 기본 정보와 유효 방문 콘텐츠를 반환한다.
 
 #### Path Parameters
@@ -157,7 +168,7 @@ related_nfr:
 
 ## 6. 상세 응답 구성
 
-단일 응답 조합을 권장한다. PRD가 기본 정보와 콘텐츠를 같은 흐름으로 정의하고 WS-02가 최종 조합을 소유한다. 별도 API 분리는 프론트엔드 호출·오류 조합을 늘리며 현재 응답 크기와 변경 빈도만으로 분리할 근거가 없다.
+단일 응답 조합을 권장한다. PRD가 기본 정보와 콘텐츠를 같은 흐름으로 정의하고 [#9 WS-02](../../../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)가 최종 조합을 소유한다. 별도 API 분리는 프론트엔드 호출·오류 조합을 늘리며 현재 응답 크기와 변경 빈도만으로 분리할 근거가 없다.
 
 ## 7. 방문 유튜버 및 관련 영상 표현
 
@@ -182,7 +193,7 @@ related_nfr:
 
 ## 9. 오류 응답
 
-[공통 오류 계약](../common/error-contract.md)을 따른다. 외부 링크가 현재 열리지 않는다는 사실만으로 상세 오류를 반환하지 않는다.
+[#5 공통 오류 계약](../common/error-contract.md)을 따른다. 외부 링크가 현재 열리지 않는다는 사실만으로 상세 오류를 반환하지 않는다.
 
 ## 10. 예제
 
@@ -207,8 +218,8 @@ related_nfr:
 
 ## 11. 관련 요구사항 및 규칙
 
-- PRD-DETAIL-001, WS-02, 박진영; 리뷰어 김인안
-- FR-RESTAURANT-008~011, FR-CREATOR-002, FR-VIDEO-001
+- [#1 PRD-DETAIL-001](../../../04-product/prd/detail/restaurant-detail.md), [#9 WS-02](../../../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회), 박진영; 리뷰어 김인안
+- [REQ#1 FR-RESTAURANT-008](../../../01-requirements/functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회)~[REQ#4 FR-RESTAURANT-011](../../../01-requirements/functional-requirements.md#fr-restaurant-011-영상-연결이-없는-맛집-상세-조회), [REQ#5 FR-CREATOR-002](../../../01-requirements/functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인), [REQ#6 FR-VIDEO-001](../../../01-requirements/functional-requirements.md#fr-video-001-관련-영상-정보-확인)
 - 메타데이터의 관련 비즈니스 규칙과 NFR
 
 ## 12. 확정 사항

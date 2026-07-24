@@ -6,13 +6,23 @@ decision_date: 검토 필요
 owners:
   - 이우람
 related_requirements:
-  - NFR-AVAILABILITY-001
-  - NFR-OBSERVABILITY-001
-  - NFR-OBSERVABILITY-002
-  - NFR-OBSERVABILITY-003
+  1: NFR-AVAILABILITY-001
+  2: NFR-OBSERVABILITY-001
+  3: NFR-OBSERVABILITY-002
+  4: NFR-OBSERVABILITY-003
 related_documents:
-  - ../../01-requirements/non-functional-requirements.md
-  - ../../03-team/ownership.md
+  1: ../../01-requirements/non-functional-requirements.md
+  2: ../../03-team/ownership.md
+  3: ../../05-specs/api/common/error-contract.md
+  4: ../../06-architecture/technology-policy.md
+  5: ../security/auth-001-spring-security-jwt.md
+  6: ../security/sec-001-secrets-workload-identity.md
+  7: ../../02-analysis/mvp-workstreams.md
+  8: ../integration/ext-001-reference-verification.md
+  9: ../../03-team/roles.md
+  10: ../adr-traceability.md
+  11: ../platform/frame-001-spring-boot.md
+  12: ../adr-backlog.md
 supersedes: []
 superseded_by: null
 ---
@@ -25,83 +35,83 @@ Accepted
 
 ## 2. 결정 요약
 
-애플리케이션 로그는 SLF4J·Logback, 상태·운영 지표는 Spring Boot Actuator, 운영 수집·조회는 Amazon CloudWatch를 사용한다. 로그 보관 14일, DB 백업 일 1회 자동 스냅샷 후 7일 보관(RPO 최대 24시간), 운영 알림은 CloudWatch 알람을 이메일/Slack으로 담당자 1명에게 통지하는 것은 2026-07-24 결정 완료됐다(`RV-NFR-009`, `RV-NFR-010`, `RV-NFR-013`, `technology-policy.md` 13절).
+애플리케이션 로그는 SLF4J·Logback, 상태·운영 지표는 Spring Boot Actuator, 운영 수집·조회는 Amazon CloudWatch를 사용한다. 로그 보관 14일, DB 백업 일 1회 자동 스냅샷 후 7일 보관(RPO 최대 24시간), 운영 알림은 CloudWatch 알람을 이메일/Slack으로 담당자 1명에게 통지하는 것은 2026-07-24 결정 완료됐다([#1 RV-NFR-009](../../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간), [#1 RV-NFR-010](../../01-requirements/non-functional-requirements.md#rv-nfr-010-백업-주기와-복구-범위), [#1 RV-NFR-013](../../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준), [#4 technology-policy.md](../../06-architecture/technology-policy.md) 13절).
 
 ## 3. 배경
 
-1차 MVP는 단일 EC2 인스턴스(Nginx + Spring Boot)로 배포하며 장애 시 운영자가 수동으로 재기동·교체한다(`NFR-AVAILABILITY-002`, `technology-policy.md` 13절). 자동 복구나 다중 인스턴스 전환이 없다는 것은, 장애가 발생했을 때 원인을 진단하고 대응 여부를 판단하는 유일한 수단이 로그와 지표라는 뜻이다. 또한 WS-04 관리자 등록은 Kakao·YouTube 외부 호출(`ADR-EXT-001`)을 포함하므로, 요청 실패가 인증 실패·권한 실패·저장소 오류·외부 서비스 오류 중 무엇인지 구분하지 못하면 단일 인스턴스 수동 복구 절차에서 담당자가 잘못된 대응(예: 정상 인스턴스를 불필요하게 재기동)을 할 위험이 있다(`NFR-OBSERVABILITY-001`). 이 ADR은 인프라·아키텍처 조율 책임자인 이우람(`roles.md` 4장)이 소유한다.
+1차 MVP는 단일 EC2 인스턴스(Nginx + Spring Boot)로 배포하며 장애 시 운영자가 수동으로 재기동·교체한다([#1 NFR-AVAILABILITY-002](../../01-requirements/non-functional-requirements.md#nfr-availability-002-mvp-가용성과-수동-복구), [#4 technology-policy.md](../../06-architecture/technology-policy.md) 13절). 자동 복구나 다중 인스턴스 전환이 없다는 것은, 장애가 발생했을 때 원인을 진단하고 대응 여부를 판단하는 유일한 수단이 로그와 지표라는 뜻이다. 또한 [#7 WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 관리자 등록은 Kakao·YouTube 외부 호출([#8 ADR-EXT-001](../integration/ext-001-reference-verification.md))을 포함하므로, 요청 실패가 인증 실패·권한 실패·저장소 오류·외부 서비스 오류 중 무엇인지 구분하지 못하면 단일 인스턴스 수동 복구 절차에서 담당자가 잘못된 대응(예: 정상 인스턴스를 불필요하게 재기동)을 할 위험이 있다([REQ#2 NFR-OBSERVABILITY-001](../../01-requirements/non-functional-requirements.md#nfr-observability-001-요청-추적과-오류-분류)). 이 ADR은 인프라·아키텍처 조율 책임자인 이우람([#9 roles.md](../../03-team/roles.md) 4장)이 소유한다.
 
-이우람은 WS-03(유튜버 기반 탐색)의 최종 책임자이면서 동시에 인프라·배포 조율 책임을 겸한다(`roles.md` 4장 "아키텍처·배포 책임이 기능 개발 일정을 방해할 수 있다"는 주요 리스크로 이미 명시). 따라서 이 ADR이 정하는 관측 기준은 이우람이 매 배포마다 직접 붙어서 해석해야 하는 복잡한 도구가 아니라, 4명 모두가 자신의 워크스트림 오류를 스스로 진단할 수 있을 만큼 단순해야 한다.
+이우람은 [#7 WS-03](../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)(유튜버 기반 탐색)의 최종 책임자이면서 동시에 인프라·배포 조율 책임을 겸한다([#9 roles.md](../../03-team/roles.md) 4장 "아키텍처·배포 책임이 기능 개발 일정을 방해할 수 있다"는 주요 리스크로 이미 명시). 따라서 이 ADR이 정하는 관측 기준은 이우람이 매 배포마다 직접 붙어서 해석해야 하는 복잡한 도구가 아니라, 4명 모두가 자신의 워크스트림 오류를 스스로 진단할 수 있을 만큼 단순해야 한다.
 
 ## 4. 결정 문제
 
-애플리케이션과 AWS 운영 환경의 로그·상태·지표 기준을 어떤 도구로 통일할 것인가. 제약 조건은 초기 월 인프라 예산 목표 150,000원(`adr-traceability.md`), 이미 확정된 단일 EC2 배포 토폴로지(`technology-policy.md` 13절), 그리고 4명의 백엔드 개발자가 이해·운영할 수 없는 불필요한 분산 구성요소를 추가하지 않아야 한다는 `NFR-MAINTAINABILITY-003`이다.
+애플리케이션과 AWS 운영 환경의 로그·상태·지표 기준을 어떤 도구로 통일할 것인가. 제약 조건은 초기 월 인프라 예산 목표 150,000원([#10 adr-traceability.md](../adr-traceability.md)), 이미 확정된 단일 EC2 배포 토폴로지([#4 technology-policy.md](../../06-architecture/technology-policy.md) 13절), 그리고 4명의 백엔드 개발자가 이해·운영할 수 없는 불필요한 분산 구성요소를 추가하지 않아야 한다는 [#1 NFR-MAINTAINABILITY-003](../../01-requirements/non-functional-requirements.md#nfr-maintainability-003-추적성과-운영-복잡도)이다.
 
 ## 5. 고려한 선택지
 
 - **SLF4J·Logback + Actuator + CloudWatch**: Spring Boot 4.1.0에 이미 포함된 로깅·상태 확인 도구와, 이미 결정된 단일 EC2 AWS 배포에 네이티브한 수집·조회 도구를 그대로 사용한다.
-- **파일 로그만 사용**: 로그를 인스턴스 로컬 파일로만 남긴다. 단일 EC2 인스턴스가 장애로 교체·재기동되는 수동 복구 절차(`NFR-AVAILABILITY-002`)에서는 인스턴스가 사라지면 로컬 파일도 함께 유실될 위험이 있고, 14일 보관·검색이라는 이미 결정된 로그 정책(`RV-NFR-009`)을 인스턴스 파일 시스템만으로 구현하기 어렵다. 또한 CloudWatch 알람을 통한 이메일/Slack 통지(`RV-NFR-013`)와 연동할 표준 경로가 없어 별도의 전송 로직을 직접 구현해야 한다.
-- **별도 관측 플랫폼 선제 도입**: Datadog·ELK 같은 전용 관측 플랫폼을 새로 도입한다. 이는 초기 월 150,000원 예산 목표를 넘어서는 구독형 비용을 추가로 발생시킬 가능성이 높고, 이미 결정된 단일 EC2/RDS 배포 토폴로지(`technology-policy.md` 13절)에 없는 새로운 운영 구성요소를 더하는 것이므로 `NFR-MAINTAINABILITY-003`(4명이 운영할 수 없는 불필요한 분산 구성요소 금지)에 반한다.
+- **파일 로그만 사용**: 로그를 인스턴스 로컬 파일로만 남긴다. 단일 EC2 인스턴스가 장애로 교체·재기동되는 수동 복구 절차([#1 NFR-AVAILABILITY-002](../../01-requirements/non-functional-requirements.md#nfr-availability-002-mvp-가용성과-수동-복구))에서는 인스턴스가 사라지면 로컬 파일도 함께 유실될 위험이 있고, 14일 보관·검색이라는 이미 결정된 로그 정책([#1 RV-NFR-009](../../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간))을 인스턴스 파일 시스템만으로 구현하기 어렵다. 또한 CloudWatch 알람을 통한 이메일/Slack 통지([#1 RV-NFR-013](../../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준))와 연동할 표준 경로가 없어 별도의 전송 로직을 직접 구현해야 한다.
+- **별도 관측 플랫폼 선제 도입**: Datadog·ELK 같은 전용 관측 플랫폼을 새로 도입한다. 이는 초기 월 150,000원 예산 목표를 넘어서는 구독형 비용을 추가로 발생시킬 가능성이 높고, 이미 결정된 단일 EC2/RDS 배포 토폴로지([#4 technology-policy.md](../../06-architecture/technology-policy.md) 13절)에 없는 새로운 운영 구성요소를 더하는 것이므로 [#1 NFR-MAINTAINABILITY-003](../../01-requirements/non-functional-requirements.md#nfr-maintainability-003-추적성과-운영-복잡도)(4명이 운영할 수 없는 불필요한 분산 구성요소 금지)에 반한다.
 
 ## 6. 결정
 
-확정된 Spring·AWS 도구로 로그·상태·지표를 수집한다. 로그 보관 14일, DB 백업 일 1회 자동 스냅샷 후 7일 보관(RPO 최대 24시간), CloudWatch 알람의 이메일/Slack 통지와 담당자 1명 수신 체계는 2026-07-24 결정 완료됐다(`RV-NFR-009`, `RV-NFR-010`, `RV-NFR-013`). 다만 알람의 구체적 임계값 수치는 운영 전 별도로 확정한다(`RV-NFR-013`).
+확정된 Spring·AWS 도구로 로그·상태·지표를 수집한다. 로그 보관 14일, DB 백업 일 1회 자동 스냅샷 후 7일 보관(RPO 최대 24시간), CloudWatch 알람의 이메일/Slack 통지와 담당자 1명 수신 체계는 2026-07-24 결정 완료됐다([#1 RV-NFR-009](../../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간), [#1 RV-NFR-010](../../01-requirements/non-functional-requirements.md#rv-nfr-010-백업-주기와-복구-범위), [#1 RV-NFR-013](../../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준)). 다만 알람의 구체적 임계값 수치는 운영 전 별도로 확정한다([#1 RV-NFR-013](../../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준)).
 
-이 결정은 다음 세 층위로 나뉜다. 첫째, 애플리케이션 로그(SLF4J·Logback)는 요청 상관관계와 오류 분류를 남긴다. 둘째, 상태·지표(Actuator)는 프로세스 실행 여부와 DB·Redis 연결 가능 여부를 구분해 노출한다(`NFR-AVAILABILITY-001`). 셋째, 운영 수집·조회(CloudWatch)는 위 두 층위의 산출물을 모아 14일간 검색 가능하게 보관하고, 정의된 지표가 임계값을 넘으면 알람을 발생시킨다. 이 세 층위 중 하나만 갖추는 것으로는 단일 EC2 수동 복구 절차에서 필요한 진단이 완결되지 않는다.
+이 결정은 다음 세 층위로 나뉜다. 첫째, 애플리케이션 로그(SLF4J·Logback)는 요청 상관관계와 오류 분류를 남긴다. 둘째, 상태·지표(Actuator)는 프로세스 실행 여부와 DB·Redis 연결 가능 여부를 구분해 노출한다([REQ#1 NFR-AVAILABILITY-001](../../01-requirements/non-functional-requirements.md#nfr-availability-001-상태-확인과-장애-구분)). 셋째, 운영 수집·조회(CloudWatch)는 위 두 층위의 산출물을 모아 14일간 검색 가능하게 보관하고, 정의된 지표가 임계값을 넘으면 알람을 발생시킨다. 이 세 층위 중 하나만 갖추는 것으로는 단일 EC2 수동 복구 절차에서 필요한 진단이 완결되지 않는다.
 
 ## 7. 선택 근거
 
-- SLF4J·Actuator는 이미 채택된 Spring Boot 4.1.0 스택의 일부이므로(`ADR-FRAME-001`) 별도 의존성을 추가하지 않는다.
-- CloudWatch는 이미 결정된 단일 EC2 배포 토폴로지(`technology-policy.md` 13절)에 네이티브하게 연동되므로, 별도 에이전트·플랫폼 통합 작업 없이 로그·지표를 수집할 수 있다.
-- CloudWatch의 사용량 기반 과금 구조는, 동시 사용자 수(`RV-NFR-001`)와 초기 데이터 규모(`RV-NFR-002`, `RV-NFR-014`, `RV-NFR-015`)가 아직 미확정인 MVP 초기 단계에서 고정 구독료를 요구하는 전용 플랫폼보다 초기 월 150,000원 예산 목표에 맞추기 쉽다.
+- SLF4J·Actuator는 이미 채택된 Spring Boot 4.1.0 스택의 일부이므로([#11 ADR-FRAME-001](../platform/frame-001-spring-boot.md)) 별도 의존성을 추가하지 않는다.
+- CloudWatch는 이미 결정된 단일 EC2 배포 토폴로지([#4 technology-policy.md](../../06-architecture/technology-policy.md) 13절)에 네이티브하게 연동되므로, 별도 에이전트·플랫폼 통합 작업 없이 로그·지표를 수집할 수 있다.
+- CloudWatch의 사용량 기반 과금 구조는, 동시 사용자 수([#1 RV-NFR-001](../../01-requirements/non-functional-requirements.md#rv-nfr-001-목표-동시-사용자-수))와 초기 데이터 규모([#1 RV-NFR-002](../../01-requirements/non-functional-requirements.md#rv-nfr-002-초기-데이터-규모), [#1 RV-NFR-014](../../01-requirements/non-functional-requirements.md#rv-nfr-014-초기-예상-맛집-수), [#1 RV-NFR-015](../../01-requirements/non-functional-requirements.md#rv-nfr-015-초기-예상-영상-수))가 아직 미확정인 MVP 초기 단계에서 고정 구독료를 요구하는 전용 플랫폼보다 초기 월 150,000원 예산 목표에 맞추기 쉽다.
 
 ## 8. 트레이드오프
 
 - CloudWatch 종속: 로그·지표 조회 방식이 CloudWatch 쿼리 문법과 대시보드에 묶이므로 다른 관측 플랫폼으로의 이식성은 낮아진다. 이는 AWS 기반 배포를 이미 확정한 상태에서 수용 가능한 결합으로 본다.
-- 비용 상한: CloudWatch는 로그량과 지표 수에 따라 과금되므로, 로그량이 예상보다 늘어나면 150,000원 예산 목표를 초과할 위험이 있다. 이는 로그 보관 14일(`RV-NFR-009`)로 누적량을 제한하고, 불필요한 요청·응답 본문 로깅을 금지(11장)하는 방식으로 완화한다.
-- 단일 수신자 구조: `RV-NFR-013`에 따라 운영 알림은 담당자 1명에게만 전달된다. 이 담당자가 부재중이면 장애 인지가 지연될 위험이 있다. 4인 팀 규모에서 온콜 로테이션을 구성하는 것은 이 ADR의 범위 밖이며, 현재는 이 위험을 완화 장치 없이 수용된 리스크로 남겨두고 향후 팀 결정이 필요한 항목으로 취급한다.
+- 비용 상한: CloudWatch는 로그량과 지표 수에 따라 과금되므로, 로그량이 예상보다 늘어나면 150,000원 예산 목표를 초과할 위험이 있다. 이는 로그 보관 14일([#1 RV-NFR-009](../../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간))로 누적량을 제한하고, 불필요한 요청·응답 본문 로깅을 금지(11장)하는 방식으로 완화한다.
+- 단일 수신자 구조: [#1 RV-NFR-013](../../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준)에 따라 운영 알림은 담당자 1명에게만 전달된다. 이 담당자가 부재중이면 장애 인지가 지연될 위험이 있다. 4인 팀 규모에서 온콜 로테이션을 구성하는 것은 이 ADR의 범위 밖이며, 현재는 이 위험을 완화 장치 없이 수용된 리스크로 남겨두고 향후 팀 결정이 필요한 항목으로 취급한다.
 
 ## 9. 적용 범위
 
-모든 API, JWT 인증(`RV-NFR-007` 관리자 인증), PostgreSQL(RDS)·Redis(관리자 Refresh Token 저장)·외부 연동(`ADR-EXT-001`의 Kakao·YouTube 호출)과 단일 EC2 배포의 헬스체크·배포 상태 확인에 적용한다.
+모든 API, JWT 인증([#1 RV-NFR-007](../../01-requirements/non-functional-requirements.md#rv-nfr-007-관리자-인증-수준) 관리자 인증), PostgreSQL(RDS)·Redis(관리자 Refresh Token 저장)·외부 연동([#8 ADR-EXT-001](../integration/ext-001-reference-verification.md)의 Kakao·YouTube 호출)과 단일 EC2 배포의 헬스체크·배포 상태 확인에 적용한다.
 
 ## 10. 강제 규칙
 
-- 모든 오류 응답과 대응 로그에 서버가 생성한 요청 상관관계 식별자를 포함한다(`NFR-OBSERVABILITY-001`).
+- 모든 오류 응답과 대응 로그에 서버가 생성한 요청 상관관계 식별자를 포함한다([REQ#2 NFR-OBSERVABILITY-001](../../01-requirements/non-functional-requirements.md#nfr-observability-001-요청-추적과-오류-분류)).
 - 관리자 등록 실패, 인증 실패, 권한 실패, 데이터 저장소 오류, 외부 서비스 오류(Kakao·YouTube)를 서로 다른 오류 분류로 기록한다.
-- 비밀번호, 관리자 JWT Access·Refresh Token, 외부 서비스 API 키(Kakao·YouTube), 개인정보를 로그에서 마스킹한다(`NFR-PRIVACY-002`).
+- 비밀번호, 관리자 JWT Access·Refresh Token, 외부 서비스 API 키(Kakao·YouTube), 개인정보를 로그에서 마스킹한다([#1 NFR-PRIVACY-002](../../01-requirements/non-functional-requirements.md#nfr-privacy-002-인증정보와-외부-키-보호)).
 
 ## 11. 금지 사항
 
-- 민감정보 원문 기록: 비밀번호·토큰·API 키 원문을 남기면 `NFR-SECURITY-003`·`NFR-PRIVACY-002`를 직접 위반한다.
+- 민감정보 원문 기록: 비밀번호·토큰·API 키 원문을 남기면 [#1 NFR-SECURITY-003](../../01-requirements/non-functional-requirements.md#nfr-security-003-비밀정보와-오류-정보-보호)·[#1 NFR-PRIVACY-002](../../01-requirements/non-functional-requirements.md#nfr-privacy-002-인증정보와-외부-키-보호)를 직접 위반한다.
 - 불필요한 요청·응답 본문 로깅: 로그량이 늘어나면 14일 보관 기준에서도 CloudWatch 수집·저장 비용이 커져 150,000원 예산 목표를 압박한다.
-- 근거 없이 확정한 보관 기간·알림 임계값: 로그 보관(14일), 백업 주기·보관(일 1회, 7일), 알림 채널(CloudWatch 알람→이메일/Slack, 담당자 1명)은 2026-07-24 결정 완료됐지만, 알람의 구체적 임계값 수치는 여전히 운영 전 별도로 확정해야 하는 미결정 항목이며(`RV-NFR-013`) 이를 이 ADR에서 임의로 정하지 않는다.
+- 근거 없이 확정한 보관 기간·알림 임계값: 로그 보관(14일), 백업 주기·보관(일 1회, 7일), 알림 채널(CloudWatch 알람→이메일/Slack, 담당자 1명)은 2026-07-24 결정 완료됐지만, 알람의 구체적 임계값 수치는 여전히 운영 전 별도로 확정해야 하는 미결정 항목이며([#1 RV-NFR-013](../../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준)) 이를 이 ADR에서 임의로 정하지 않는다.
 
 ## 12. 구현 및 운영 영향
 
 - 구조화 로그에 요청 상관관계 식별자와 오류 분류를 포함한다.
-- Actuator Health Group을 애플리케이션 프로세스 상태와 DB·Redis 연결 상태가 구분되도록 구성한다(`NFR-AVAILABILITY-001`).
-- CloudWatch 접근 권한은 EC2 IAM Role로 부여하고 장기 AWS 키를 사용하지 않는다(`ADR-SEC-001`).
-- 로그 14일 보관 후 자동 폐기, PostgreSQL(RDS) 일 1회 자동 스냅샷·7일 보관 설정을 구성하고 확인한다(`RV-NFR-009`, `RV-NFR-010`).
-- CloudWatch 알람을 오류율·응답 지연·헬스체크 실패·저장소 장애 지표에 연결하고 이메일/Slack으로 담당자 1명에게 통지하도록 구성한다(`RV-NFR-013`). 비용 대시보드로 150,000원 예산 목표 대비 로그·지표 사용량을 추적한다.
-- 로그 레벨은 개발·시험·운영 환경별로 조정 가능하게 구성하고, 정상적인 빈 조회 결과(예: 검색 결과 없음)는 오류로 기록하지 않는다(`NFR-OBSERVABILITY-003`).
-- 동시 사용자 수(`RV-NFR-001`)와 초기 데이터 규모(`RV-NFR-002`, `RV-NFR-014`, `RV-NFR-015`)가 아직 미확정이므로, 로그·지표 수집량에 대한 초기 용량 산정은 하지 않고 운영 초기 실측치를 기준으로 비용을 재확인한다.
+- Actuator Health Group을 애플리케이션 프로세스 상태와 DB·Redis 연결 상태가 구분되도록 구성한다([REQ#1 NFR-AVAILABILITY-001](../../01-requirements/non-functional-requirements.md#nfr-availability-001-상태-확인과-장애-구분)).
+- CloudWatch 접근 권한은 EC2 IAM Role로 부여하고 장기 AWS 키를 사용하지 않는다([#6 ADR-SEC-001](../security/sec-001-secrets-workload-identity.md)).
+- 로그 14일 보관 후 자동 폐기, PostgreSQL(RDS) 일 1회 자동 스냅샷·7일 보관 설정을 구성하고 확인한다([#1 RV-NFR-009](../../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간), [#1 RV-NFR-010](../../01-requirements/non-functional-requirements.md#rv-nfr-010-백업-주기와-복구-범위)).
+- CloudWatch 알람을 오류율·응답 지연·헬스체크 실패·저장소 장애 지표에 연결하고 이메일/Slack으로 담당자 1명에게 통지하도록 구성한다([#1 RV-NFR-013](../../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준)). 비용 대시보드로 150,000원 예산 목표 대비 로그·지표 사용량을 추적한다.
+- 로그 레벨은 개발·시험·운영 환경별로 조정 가능하게 구성하고, 정상적인 빈 조회 결과(예: 검색 결과 없음)는 오류로 기록하지 않는다([REQ#4 NFR-OBSERVABILITY-003](../../01-requirements/non-functional-requirements.md#nfr-observability-003-로그-품질과-민감정보-차단)).
+- 동시 사용자 수([#1 RV-NFR-001](../../01-requirements/non-functional-requirements.md#rv-nfr-001-목표-동시-사용자-수))와 초기 데이터 규모([#1 RV-NFR-002](../../01-requirements/non-functional-requirements.md#rv-nfr-002-초기-데이터-규모), [#1 RV-NFR-014](../../01-requirements/non-functional-requirements.md#rv-nfr-014-초기-예상-맛집-수), [#1 RV-NFR-015](../../01-requirements/non-functional-requirements.md#rv-nfr-015-초기-예상-영상-수))가 아직 미확정이므로, 로그·지표 수집량에 대한 초기 용량 산정은 하지 않고 운영 초기 실측치를 기준으로 비용을 재확인한다.
 
 ## 13. 검증 방법
 
 - 상관관계 식별자가 모든 오류 응답과 대응 로그에 실제로 포함되는지 표본 검사한다.
-- 애플리케이션 프로세스 이상과 DB·Redis 연결 단절을 헬스체크 결과로 구분할 수 있는지 테스트한다(`NFR-AVAILABILITY-001`).
-- 비밀번호·JWT·API 키 원문이 표본 로그에 노출되지 않는지 자동·수동 검사한다(`NFR-OBSERVABILITY-003`).
-- 로그가 14일 경과 후 실제로 폐기되는지, PostgreSQL 스냅샷이 일 1회 생성되고 7일 보관되는지 설정을 확인하고, RPO 24시간 이내로 복구할 수 있는지 복구 리허설로 검증한다(`RV-NFR-010`).
-- CloudWatch 알람이 오류율·응답 지연·헬스체크 실패·저장소 장애 지표에 실제로 연결되어 이메일/Slack으로 통지되는지 시험 알람을 발생시켜 확인한다(`RV-NFR-013`).
-- 배포 후 맛집 목록·상세 등 핵심 API가 정상 동작하는지 확인한다(`NFR-DEPLOYMENT-002`).
+- 애플리케이션 프로세스 이상과 DB·Redis 연결 단절을 헬스체크 결과로 구분할 수 있는지 테스트한다([REQ#1 NFR-AVAILABILITY-001](../../01-requirements/non-functional-requirements.md#nfr-availability-001-상태-확인과-장애-구분)).
+- 비밀번호·JWT·API 키 원문이 표본 로그에 노출되지 않는지 자동·수동 검사한다([REQ#4 NFR-OBSERVABILITY-003](../../01-requirements/non-functional-requirements.md#nfr-observability-003-로그-품질과-민감정보-차단)).
+- 로그가 14일 경과 후 실제로 폐기되는지, PostgreSQL 스냅샷이 일 1회 생성되고 7일 보관되는지 설정을 확인하고, RPO 24시간 이내로 복구할 수 있는지 복구 리허설로 검증한다([#1 RV-NFR-010](../../01-requirements/non-functional-requirements.md#rv-nfr-010-백업-주기와-복구-범위)).
+- CloudWatch 알람이 오류율·응답 지연·헬스체크 실패·저장소 장애 지표에 실제로 연결되어 이메일/Slack으로 통지되는지 시험 알람을 발생시켜 확인한다([#1 RV-NFR-013](../../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준)).
+- 배포 후 맛집 목록·상세 등 핵심 API가 정상 동작하는지 확인한다([#1 NFR-DEPLOYMENT-002](../../01-requirements/non-functional-requirements.md#nfr-deployment-002-배포-전후-검증)).
 
 ## 14. 재검토 조건
 
-동시 사용자 규모(`RV-NFR-001`)나 초기 데이터 규모(`RV-NFR-002`, `RV-NFR-014`, `RV-NFR-015`)가 확정되어 CloudWatch 비용이 150,000원 예산 목표를 넘어설 것으로 판단될 때, SLO 요구가 CloudWatch 단일 대시보드로 충분히 표현되지 않을 때, 또는 알림 임계값의 구체적 수치가 운영 전 확정될 때(`RV-NFR-013`) 재검토한다.
+동시 사용자 규모([#1 RV-NFR-001](../../01-requirements/non-functional-requirements.md#rv-nfr-001-목표-동시-사용자-수))나 초기 데이터 규모([#1 RV-NFR-002](../../01-requirements/non-functional-requirements.md#rv-nfr-002-초기-데이터-규모), [#1 RV-NFR-014](../../01-requirements/non-functional-requirements.md#rv-nfr-014-초기-예상-맛집-수), [#1 RV-NFR-015](../../01-requirements/non-functional-requirements.md#rv-nfr-015-초기-예상-영상-수))가 확정되어 CloudWatch 비용이 150,000원 예산 목표를 넘어설 것으로 판단될 때, SLO 요구가 CloudWatch 단일 대시보드로 충분히 표현되지 않을 때, 또는 알림 임계값의 구체적 수치가 운영 전 확정될 때([#1 RV-NFR-013](../../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준)) 재검토한다.
 
 ## 15. 관련 문서
 
-- [NFR](../../01-requirements/non-functional-requirements.md)
-- [ADR Backlog](../adr-backlog.md#4-범위-충돌-검토)
-- [배포 토폴로지 정책](../../06-architecture/technology-policy.md)
+- [#1 NFR](../../01-requirements/non-functional-requirements.md)
+- [#12 ADR Backlog](../adr-backlog.md#4-범위-충돌-검토)
+- [#4 배포 토폴로지 정책](../../06-architecture/technology-policy.md)

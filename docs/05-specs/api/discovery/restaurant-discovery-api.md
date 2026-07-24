@@ -10,14 +10,14 @@ owner: 양성훈
 reviewers:
   - 이우람
 related_requirements:
-  - FR-RESTAURANT-001
-  - FR-RESTAURANT-002
-  - FR-RESTAURANT-003
-  - FR-RESTAURANT-004
-  - FR-RESTAURANT-005
-  - FR-RESTAURANT-006
-  - FR-RESTAURANT-007
-  - FR-CREATOR-001
+  1: FR-RESTAURANT-001
+  2: FR-RESTAURANT-002
+  3: FR-RESTAURANT-003
+  4: FR-RESTAURANT-004
+  5: FR-RESTAURANT-005
+  6: FR-RESTAURANT-006
+  7: FR-RESTAURANT-007
+  8: FR-CREATOR-001
 related_business_rules:
   - BR-SEARCH-001
   - BR-SEARCH-002
@@ -40,6 +40,20 @@ related_nfr:
   - NFR-COMPATIBILITY-003
   - NFR-TEST-001
   - NFR-TEST-002
+related_documents:
+  1: ../../../04-product/prd/discovery/restaurant-discovery.md
+  2: ../../../04-product/prd/discovery/creator-discovery.md
+  3: creator-discovery-api.md
+  4: ../common/identifier-contract.md
+  5: ../common/response-contract.md
+  6: ../common/error-contract.md
+  7: ../common/pagination-contract.md
+  8: ../common/filtering-contract.md
+  9: ../../data/data-model.md
+  10: ../../data/relationship-rules.md
+  11: ../../../01-requirements/functional-requirements.md
+  12: ../../../02-analysis/mvp-workstreams.md
+  13: ../../../01-requirements/business-rules.md
 ---
 
 # 맛집 탐색 API
@@ -60,7 +74,7 @@ related_nfr:
 
 | API ID | Method | Path | 설명 |
 |---|---|---|---|
-| API-DISCOVERY-001 | GET | `/restaurants` | 맛집 목록 및 조건 검색 |
+| [API-DISCOVERY-001](restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색) | GET | `/restaurants` | 맛집 목록 및 조건 검색 |
 
 `/restaurants`를 선택한다. 검색과 필터는 목록 조회의 조건이므로 `/restaurant-discovery`나 `/search/restaurants`처럼 별도 동사·기능 경로로 분리하지 않는다.
 
@@ -72,8 +86,8 @@ related_nfr:
 - Path: `/restaurants`
 - 인증: 없음
 - 권한: 일반 공개 조회
-- 관련 PRD: PRD-DISCOVERY-001, PRD-DISCOVERY-002
-- 관련 요구사항: FR-RESTAURANT-001~007, FR-CREATOR-001
+- 관련 PRD: [#1 PRD-DISCOVERY-001](../../../04-product/prd/discovery/restaurant-discovery.md), [#2 PRD-DISCOVERY-002](../../../04-product/prd/discovery/creator-discovery.md)
+- 관련 요구사항: [REQ#1 FR-RESTAURANT-001](../../../01-requirements/functional-requirements.md#fr-restaurant-001-맛집-목록-조회)~[REQ#7 FR-RESTAURANT-007](../../../01-requirements/functional-requirements.md#fr-restaurant-007-기본-정렬-적용), [REQ#8 FR-CREATOR-001](../../../01-requirements/functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
 - 설명: 지정한 조건을 모두 만족하는 공개 맛집을 고유하게 정렬해 페이지로 반환한다.
 
 #### Query Parameters
@@ -90,7 +104,7 @@ related_nfr:
 #### Request Rules
 
 - 검색과 서로 다른 필터는 AND로 적용하고 미지정 조건은 적용하지 않는다.
-- `creatorId` 조건의 유효 관계 판정은 WS-03 계약을 따르며 최종 조합·정렬·페이지는 WS-01이 수행한다.
+- `creatorId` 조건의 유효 관계 판정은 [#12 WS-03](../../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 계약을 따르며 최종 조합·정렬·페이지는 [#12 WS-01](../../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)이 수행한다.
 - 비공개·삭제 맛집과 무효 관계는 제외한다. 영상 관계가 없는 공개 맛집은 유튜버 조건이 없을 때 포함한다.
 - 같은 맛집에 여러 관계가 있어도 한 번만 반환한다.
 - 검색·필터 변경 시 클라이언트는 첫 페이지를 요청한다.
@@ -167,7 +181,7 @@ related_nfr:
 
 ## 9. 오류 응답
 
-[공통 오류 계약](../common/error-contract.md)을 따른다. 빈 결과와 범위 밖 유효 페이지는 오류가 아니다.
+[#6 공통 오류 계약](../common/error-contract.md)을 따른다. 빈 결과와 범위 밖 유효 페이지는 오류가 아니다.
 
 ## 10. 예제
 
@@ -177,10 +191,10 @@ related_nfr:
 
 ## 11. 관련 요구사항 및 규칙
 
-- 주 책임: PRD-DISCOVERY-001, WS-01, 양성훈
-- 관계 조건 협업: PRD-DISCOVERY-002, WS-03, 이우람
-- 요구사항: FR-RESTAURANT-001~007, FR-CREATOR-001
-- 규칙: BR-SEARCH-001~009 중 001~009 전체, 공개 범위 규칙
+- 주 책임: [#1 PRD-DISCOVERY-001](../../../04-product/prd/discovery/restaurant-discovery.md), [#12 WS-01](../../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색), 양성훈
+- 관계 조건 협업: [#2 PRD-DISCOVERY-002](../../../04-product/prd/discovery/creator-discovery.md), [#12 WS-03](../../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색), 이우람
+- 요구사항: [REQ#1 FR-RESTAURANT-001](../../../01-requirements/functional-requirements.md#fr-restaurant-001-맛집-목록-조회)~[REQ#7 FR-RESTAURANT-007](../../../01-requirements/functional-requirements.md#fr-restaurant-007-기본-정렬-적용), [REQ#8 FR-CREATOR-001](../../../01-requirements/functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
+- 규칙: [#13 BR-SEARCH-001](../../../01-requirements/business-rules.md#br-search-001-검색-대상과-일치-기준)~[#13 BR-SEARCH-009](../../../01-requirements/business-rules.md#br-search-009-기본-정렬) 중 001~009 전체, 공개 범위 규칙
 
 ## 12. 확정 사항
 

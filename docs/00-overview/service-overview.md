@@ -1,3 +1,10 @@
+---
+related_documents:
+  1: scope.md
+  2: glossary.md
+  3: ../04-product/prd/00-product-overview.md
+---
+
 # 맛잇온 서비스 개요
 
 ## 1. 서비스 한 줄 정의

@@ -1,3 +1,28 @@
+---
+related_documents:
+  1: ../../01-requirements/functional-requirements.md
+  2: ../../01-requirements/business-rules.md
+  3: ../../03-team/ownership.md
+  4: ../../04-product/traceability.md
+  5: ../api-traceability.md
+  6: data-model.md
+  7: entity-definitions.md
+  8: relationship-rules.md
+  9: constraints.md
+  10: ../../07-adr/adr-traceability.md
+  11: ../../04-product/prd/discovery/restaurant-discovery.md
+  12: ../../04-product/prd/discovery/creator-discovery.md
+  13: ../../04-product/prd/detail/restaurant-detail.md
+  14: ../../04-product/prd/admin/admin-data-management.md
+  15: ../api/admin/authentication-api.md
+  16: ../../02-analysis/mvp-workstreams.md
+  17: ../api/admin/reference-data-api.md
+  18: ../api/admin/visit-registration-api.md
+  19: ../api/discovery/restaurant-discovery-api.md
+  20: ../api/discovery/creator-discovery-api.md
+  21: ../api/detail/restaurant-detail-api.md
+---
+
 # 맛잇온 데이터 추적성
 
 ## 1. 문서 목적
@@ -8,60 +33,60 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 
 | PRD | 사용자·관리자 결과 | 주 데이터 | 관계·조합 데이터 |
 |---|---|---|---|
-| PRD-DISCOVERY-001 | 맛집 목록·이름·지역·카테고리 탐색 | Restaurant, Region, FoodCategory | Visit, Creator |
-| PRD-DISCOVERY-002 | 유튜버 선택 및 방문 맛집 탐색 | Creator | Visit, Restaurant, Video 공개 유효성 |
-| PRD-DETAIL-001 | 맛집 기본 정보와 방문 콘텐츠 | Restaurant | Region, FoodCategory, Visit, Creator, Video |
-| PRD-ADMIN-001 | 인증된 관리자 검증·등록 | AdminAccount, AdminRefreshToken | Restaurant, Creator, Video, Visit |
+| [#11 PRD-DISCOVERY-001](../../04-product/prd/discovery/restaurant-discovery.md) | 맛집 목록·이름·지역·카테고리 탐색 | Restaurant, Region, FoodCategory | Visit, Creator |
+| [#12 PRD-DISCOVERY-002](../../04-product/prd/discovery/creator-discovery.md) | 유튜버 선택 및 방문 맛집 탐색 | Creator | Visit, Restaurant, Video 공개 유효성 |
+| [#13 PRD-DETAIL-001](../../04-product/prd/detail/restaurant-detail.md) | 맛집 기본 정보와 방문 콘텐츠 | Restaurant | Region, FoodCategory, Visit, Creator, Video |
+| [#14 PRD-ADMIN-001](../../04-product/prd/admin/admin-data-management.md) | 인증된 관리자 검증·등록 | AdminAccount, AdminRefreshToken | Restaurant, Creator, Video, Visit |
 
 ## 3. 기능 요구사항 → 데이터 개념 매핑
 
 | 요구사항 | 데이터 모델 반영 | 주요 제약·파생 |
 |---|---|---|
-| FR-RESTAURANT-001·002·005~007 | Restaurant | publication 필터, 이름 검색, 고유 결과·정렬·페이지는 조회 책임 |
-| FR-RESTAURANT-003·009 | Region, Restaurant | 서울 자치구 1개 참조 |
-| FR-RESTAURANT-004·010 | FoodCategory, Restaurant | 대표 카테고리 정확히 1개 |
-| FR-RESTAURANT-008·011 | Restaurant | Visit 없이 기본 상세 조회 |
-| FR-CREATOR-001·002 | Creator, Visit, Video | 공개·유효 관계와 채널 일치, 중복 제거 |
-| FR-CREATOR-003 | Creator | 공개 Creator 최소 선택 정보 |
-| FR-VIDEO-001 | Video, Creator, Visit | 공개 관련 영상, 외부 장애 격리 |
-| FR-ADMIN-001 | AdminAccount, AdminRefreshToken | 사전 발급 활성 계정, JWT·Refresh 회전·ADMIN 권한 |
-| FR-ADMIN-002 | Restaurant, Region, FoodCategory | 카카오 동일성, 서울 주소, 단일 카테고리, 원자적 공개 생성 |
-| FR-ADMIN-003 | Creator | 외부 채널 ID 유일, 채널 단위 생성 |
-| FR-ADMIN-004 | Video, Creator | 외부 영상 ID 유일, 게시 채널 필수, 원본 미저장 |
-| FR-VISIT-001 | Visit, Restaurant, Creator, Video | 세 참조·실제 근거·채널 일치·복합 유일·원자성 |
+| [#1 FR-RESTAURANT-001](../../01-requirements/functional-requirements.md#fr-restaurant-001-맛집-목록-조회)·[#1 FR-RESTAURANT-002](../../01-requirements/functional-requirements.md#fr-restaurant-002-맛집-이름-검색)·[#1 FR-RESTAURANT-005](../../01-requirements/functional-requirements.md#fr-restaurant-005-검색-및-필터-조건-조합)~[#1 FR-RESTAURANT-007](../../01-requirements/functional-requirements.md#fr-restaurant-007-기본-정렬-적용) | Restaurant | publication 필터, 이름 검색, 고유 결과·정렬·페이지는 조회 책임 |
+| [#1 FR-RESTAURANT-003](../../01-requirements/functional-requirements.md#fr-restaurant-003-지역별-필터)·[#1 FR-RESTAURANT-009](../../01-requirements/functional-requirements.md#fr-restaurant-009-지역-정보-확인) | Region, Restaurant | 서울 자치구 1개 참조 |
+| [#1 FR-RESTAURANT-004](../../01-requirements/functional-requirements.md#fr-restaurant-004-음식-카테고리별-필터)·[#1 FR-RESTAURANT-010](../../01-requirements/functional-requirements.md#fr-restaurant-010-음식-카테고리-확인) | FoodCategory, Restaurant | 대표 카테고리 정확히 1개 |
+| [#1 FR-RESTAURANT-008](../../01-requirements/functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회)·[#1 FR-RESTAURANT-011](../../01-requirements/functional-requirements.md#fr-restaurant-011-영상-연결이-없는-맛집-상세-조회) | Restaurant | Visit 없이 기본 상세 조회 |
+| [#1 FR-CREATOR-001](../../01-requirements/functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)·[#1 FR-CREATOR-002](../../01-requirements/functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인) | Creator, Visit, Video | 공개·유효 관계와 채널 일치, 중복 제거 |
+| [#1 FR-CREATOR-003](../../01-requirements/functional-requirements.md#fr-creator-003-유튜버-필터-선택-목록-조회) | Creator | 공개 Creator 최소 선택 정보 |
+| [#1 FR-VIDEO-001](../../01-requirements/functional-requirements.md#fr-video-001-관련-영상-정보-확인) | Video, Creator, Visit | 공개 관련 영상, 외부 장애 격리 |
+| [#1 FR-ADMIN-001](../../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근) | AdminAccount, AdminRefreshToken | 사전 발급 활성 계정, JWT·Refresh 회전·ADMIN 권한 |
+| [#1 FR-ADMIN-002](../../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록) | Restaurant, Region, FoodCategory | 카카오 동일성, 서울 주소, 단일 카테고리, 원자적 공개 생성 |
+| [#1 FR-ADMIN-003](../../01-requirements/functional-requirements.md#fr-admin-003-유튜버-정보-등록) | Creator | 외부 채널 ID 유일, 채널 단위 생성 |
+| [#1 FR-ADMIN-004](../../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록) | Video, Creator | 외부 영상 ID 유일, 게시 채널 필수, 원본 미저장 |
+| [#1 FR-VISIT-001](../../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록) | Visit, Restaurant, Creator, Video | 세 참조·실제 근거·채널 일치·복합 유일·원자성 |
 
 ## 4. 비즈니스 규칙 → 제약조건 매핑
 
 | 규칙 ID | 규칙 | 데이터 모델 반영 | 저장소 제약 | 애플리케이션 검증 |
 |---|---|---|---:|---:|
-| BR-RESTAURANT-002 | 영상과 독립된 맛집 | Restaurant와 Visit 선택 관계 | 참조 방향 | 필요 |
-| BR-RESTAURANT-003~005 | 최소 정보·카테고리·지역 | 필수 속성, Region·FoodCategory 1개 | 필요 | 필요 |
-| BR-RESTAURANT-006·007 | 카카오 동일성·지점 구분 | kakaoPlaceIdentity 유일, 이름 비유일 | 필요 | 필요 |
-| BR-CREATOR-001~003 | 채널 관리 단위·최소 정보·중복 | externalChannelId 유일 | 필요 | 필요 |
-| BR-CREATOR-005 | Visit 채널 일치 | Video 게시 Creator와 Visit.Creator 일치 | 후속 설계 | 필요 |
-| BR-VIDEO-001~003 | 원본 미저장·필수 메타·중복 | Video 메타, externalVideoId 유일 | 필요 | 필요 |
-| BR-VIDEO-004·005 | 다대상·실제 방문 | Video 1:N Visit, 생성 전 확인 | 참조 필요 | 필요 |
-| BR-VIDEO-006 | 게시일·방문일 구분 | Visit 방문일 없음, Video 게시일 선택 | 해당 없음 | 필요 |
-| BR-VISIT-001~004 | 삼항 구성·근거·중복·범위 | 세 필수 참조, 복합 유일 | 필요 | 필요 |
-| BR-VISIT-005·BR-PUBLICATION-001~008 | 조회 공개 유효성 | 개별 publication·외부 상태 | 허용값 필요 | 필요 |
-| BR-VISIT-006·007 | 방문일·검증 상태 제외 | 속성 미생성, 생성 완료가 검증 완료 | 해당 없음 | 필요 |
-| BR-ADMIN-003·007 | 정합성·동시성 | 유일·참조·원자성 | 필요 | 필요 |
-| BR-ADMIN-008 | 보류 요청 | 핵심 엔티티·보류 레코드 미생성 | 해당 없음 | 필요 |
+| [#2 BR-RESTAURANT-002](../../01-requirements/business-rules.md#br-restaurant-002-영상과-독립된-맛집) | 영상과 독립된 맛집 | Restaurant와 Visit 선택 관계 | 참조 방향 | 필요 |
+| [#2 BR-RESTAURANT-003](../../01-requirements/business-rules.md#br-restaurant-003-맛집-최소-등록-정보)~[#2 BR-RESTAURANT-005](../../01-requirements/business-rules.md#br-restaurant-005-맛집의-지역-소속) | 최소 정보·카테고리·지역 | 필수 속성, Region·FoodCategory 1개 | 필요 | 필요 |
+| [#2 BR-RESTAURANT-006](../../01-requirements/business-rules.md#br-restaurant-006-맛집-중복-판단)·[#2 BR-RESTAURANT-007](../../01-requirements/business-rules.md#br-restaurant-007-동일-상호의-지점-구분) | 카카오 동일성·지점 구분 | kakaoPlaceIdentity 유일, 이름 비유일 | 필요 | 필요 |
+| [#2 BR-CREATOR-001](../../01-requirements/business-rules.md#br-creator-001-유튜버-정보의-의미)~[#2 BR-CREATOR-003](../../01-requirements/business-rules.md#br-creator-003-동일-채널-중복-판단) | 채널 관리 단위·최소 정보·중복 | externalChannelId 유일 | 필요 | 필요 |
+| [#2 BR-CREATOR-005](../../01-requirements/business-rules.md#br-creator-005-방문-관계의-유튜버-일치) | Visit 채널 일치 | Video 게시 Creator와 Visit.Creator 일치 | 후속 설계 | 필요 |
+| [#2 BR-VIDEO-001](../../01-requirements/business-rules.md#br-video-001-영상의-의미와-보관-범위)~[#2 BR-VIDEO-003](../../01-requirements/business-rules.md#br-video-003-영상-식별-및-중복-판단) | 원본 미저장·필수 메타·중복 | Video 메타, externalVideoId 유일 | 필요 | 필요 |
+| [#2 BR-VIDEO-004](../../01-requirements/business-rules.md#br-video-004-영상과-방문-관계의-다대상-연결)·[#2 BR-VIDEO-005](../../01-requirements/business-rules.md#br-video-005-실제-방문-근거) | 다대상·실제 방문 | Video 1:N Visit, 생성 전 확인 | 참조 필요 | 필요 |
+| [#2 BR-VIDEO-006](../../01-requirements/business-rules.md#br-video-006-게시일과-방문일의-구분) | 게시일·방문일 구분 | Visit 방문일 없음, Video 게시일 선택 | 해당 없음 | 필요 |
+| [#2 BR-VISIT-001](../../01-requirements/business-rules.md#br-visit-001-방문-관계의-구성)~[#2 BR-VISIT-004](../../01-requirements/business-rules.md#br-visit-004-방문-관계의-연결-범위) | 삼항 구성·근거·중복·범위 | 세 필수 참조, 복합 유일 | 필요 | 필요 |
+| [#2 BR-VISIT-005](../../01-requirements/business-rules.md#br-visit-005-방문-관계의-조회-유효성)·[#2 BR-PUBLICATION-001](../../01-requirements/business-rules.md#br-publication-001-일반-사용자-공개-범위)~[#2 BR-PUBLICATION-008](../../01-requirements/business-rules.md#br-publication-008-상태-변경의-일관성) | 조회 공개 유효성 | 개별 publication·외부 상태 | 허용값 필요 | 필요 |
+| [#2 BR-VISIT-006](../../01-requirements/business-rules.md#br-visit-006-방문-날짜-관리-제외)·[#2 BR-VISIT-007](../../01-requirements/business-rules.md#br-visit-007-등록-완료와-검증-상태) | 방문일·검증 상태 제외 | 속성 미생성, 생성 완료가 검증 완료 | 해당 없음 | 필요 |
+| [#2 BR-ADMIN-003](../../01-requirements/business-rules.md#br-admin-003-등록-정합성-검증)·[#2 BR-ADMIN-007](../../01-requirements/business-rules.md#br-admin-007-동시-등록의-고유성) | 정합성·동시성 | 유일·참조·원자성 | 필요 | 필요 |
+| [#2 BR-ADMIN-008](../../01-requirements/business-rules.md#br-admin-008-보류-요청의-처리) | 보류 요청 | 핵심 엔티티·보류 레코드 미생성 | 해당 없음 | 필요 |
 
 ## 5. API 요청 → 데이터 변경 매핑
 
 | API ID | 요청 목적 | 생성·변경 데이터 | 필수 참조 | 원자성 범위 | 담당 Workstream |
 |---|---|---|---|---|---|
-| API-ADMIN-AUTH-001 | 관리자 로그인 | AdminRefreshToken 생성·기존 활성 Token 폐기 | AdminAccount | 계정당 활성 Token 전환 | WS-04 |
-| API-ADMIN-AUTH-002 | 토큰 재발급 | 기존 Token 폐기·AdminRefreshToken 회전 | AdminAccount, AdminRefreshToken | 검증·회전 원자성 | WS-04 |
-| API-ADMIN-AUTH-003 | 로그아웃 | AdminRefreshToken 폐기 | AdminRefreshToken | 현재 Token 하나 | WS-04 |
-| API-ADMIN-RESTAURANT-PREVIEW-001 | 외부 장소·입력 검증 | 핵심 데이터 변경 없음 | Region, FoodCategory 기준 | 토큰 발급 여부만 일관 | WS-04 |
-| API-ADMIN-RESTAURANT-001 | 맛집 생성 | Restaurant와 필수 참조 연결 | Region, FoodCategory | Restaurant 한 건 전체 | WS-04 / Restaurant |
-| API-ADMIN-CREATOR-PREVIEW-001 | 외부 채널 검증 | 핵심 데이터 변경 없음 | 없음 | 토큰 발급 여부만 일관 | WS-04 |
-| API-ADMIN-CREATOR-001 | Creator 생성 | Creator | 없음 | Creator 한 건 전체 | WS-04 / Creator |
-| API-ADMIN-VIDEO-PREVIEW-001 | 외부 영상·게시 채널 검증 | 핵심 데이터 변경 없음 | 게시 채널 후보 | 토큰 발급 여부만 일관 | WS-04 |
-| API-ADMIN-VIDEO-001 | Video 생성 | Video와 게시 채널 외부 식별 | 없음(내부 Creator 연결 선택) | Video 한 건 전체 | WS-04 / Video |
-| API-ADMIN-VISIT-001 | 방문 관계 생성 | Visit | Restaurant, Creator, Video | 검증·복합 중복·저장 전체 | WS-04 / Visit |
+| [#15 API-ADMIN-AUTH-001](../api/admin/authentication-api.md#api-admin-auth-001-관리자-로그인) | 관리자 로그인 | AdminRefreshToken 생성·기존 활성 Token 폐기 | AdminAccount | 계정당 활성 Token 전환 | [#16 WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
+| [#15 API-ADMIN-AUTH-002](../api/admin/authentication-api.md#api-admin-auth-002-관리자-토큰-재발급) | 토큰 재발급 | 기존 Token 폐기·AdminRefreshToken 회전 | AdminAccount, AdminRefreshToken | 검증·회전 원자성 | [#16 WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
+| [#15 API-ADMIN-AUTH-003](../api/admin/authentication-api.md#api-admin-auth-003-관리자-로그아웃) | 로그아웃 | AdminRefreshToken 폐기 | AdminRefreshToken | 현재 Token 하나 | [#16 WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
+| [#17 API-ADMIN-RESTAURANT-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-restaurant-preview-001-맛집-등록-검증-미리보기) | 외부 장소·입력 검증 | 핵심 데이터 변경 없음 | Region, FoodCategory 기준 | 토큰 발급 여부만 일관 | [#16 WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
+| [#17 API-ADMIN-RESTAURANT-001](../api/admin/reference-data-api.md#api-admin-restaurant-001-맛집-등록-확정) | 맛집 생성 | Restaurant와 필수 참조 연결 | Region, FoodCategory | Restaurant 한 건 전체 | [#16 WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) / Restaurant |
+| [#17 API-ADMIN-CREATOR-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-creator-preview-001-유튜버-등록-검증-미리보기) | 외부 채널 검증 | 핵심 데이터 변경 없음 | 없음 | 토큰 발급 여부만 일관 | [#16 WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
+| [#17 API-ADMIN-CREATOR-001](../api/admin/reference-data-api.md#api-admin-creator-001-유튜버-등록-확정) | Creator 생성 | Creator | 없음 | Creator 한 건 전체 | [#16 WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) / Creator |
+| [#17 API-ADMIN-VIDEO-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-video-preview-001-영상-등록-검증-미리보기) | 외부 영상·게시 채널 검증 | 핵심 데이터 변경 없음 | 게시 채널 후보 | 토큰 발급 여부만 일관 | [#16 WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
+| [#17 API-ADMIN-VIDEO-001](../api/admin/reference-data-api.md#api-admin-video-001-영상-등록-확정) | Video 생성 | Video와 게시 채널 외부 식별 | 없음(내부 Creator 연결 선택) | Video 한 건 전체 | [#16 WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) / Video |
+| [#18 API-ADMIN-VISIT-001](../api/admin/visit-registration-api.md#api-admin-visit-001-방문-관계-등록) | 방문 관계 생성 | Visit | Restaurant, Creator, Video | 검증·복합 중복·저장 전체 | [#16 WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) / Visit |
 
 확인 토큰은 10분 만료와 후보 무결성을 제공하지만 서버 저장 레코드인지 서명된 단기 값인지는 후속 기술 설계 대상이다. `REVIEW_REQUIRED`는 등록 요청으로 저장하지 않는다.
 
@@ -69,14 +94,14 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 
 | API ID | 응답 영역 | 주 데이터 | 조합 데이터 | 파생 필드 | 조회 책임 |
 |---|---|---|---|---|---|
-| API-DISCOVERY-001 | 맛집 목록 | Restaurant | Region, FoodCategory, 공개 Visit·Creator | `visitedBy` 최대 3명, `remainingVisitedByCount`, page | WS-01, 관계 판정 WS-03 |
-| API-CREATOR-DISCOVERY-001 | 유튜버 선택 목록 | Creator | 없음 | 채널명 정렬 | WS-03 |
-| API-DETAIL-001 | 맛집 기본 정보 | Restaurant | Region, FoodCategory | address DTO | WS-02 |
-| API-DETAIL-001 | 방문 유튜버 | Visit | Creator, Video 공개 유효성 | Creator 식별자 중복 제거 | WS-02, 판정 Visit |
-| API-DETAIL-001 | 관련 영상 | Visit | Video, Creator | Video 식별자 중복 제거, `contentStatus` | WS-02 |
-| API-ADMIN-*-PREVIEW-001 | 후보·중복 판정 | 외부 확인 결과 | 기존 핵심 데이터 | `decision`, token, expiry, candidate DTO | WS-04 |
-| API-ADMIN-*-001 | 생성 결과 | 생성 엔티티 | 표준 표시값 | 응답 DTO 조합 | WS-04와 소유 도메인 |
-| API-ADMIN-AUTH-001·002 | 인증·재발급 | AdminRefreshToken | AdminAccount 활성 여부 | JWT Access Token, 만료 시간 | WS-04 |
+| [#19 API-DISCOVERY-001](../api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색) | 맛집 목록 | Restaurant | Region, FoodCategory, 공개 Visit·Creator | `visitedBy` 최대 3명, `remainingVisitedByCount`, page | [#16 WS-01](../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색), 관계 판정 [#16 WS-03](../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) |
+| [#20 API-CREATOR-DISCOVERY-001](../api/discovery/creator-discovery-api.md#api-creator-discovery-001-유튜버-필터-선택-목록) | 유튜버 선택 목록 | Creator | 없음 | 채널명 정렬 | [#16 WS-03](../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) |
+| [#21 API-DETAIL-001](../api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회) | 맛집 기본 정보 | Restaurant | Region, FoodCategory | address DTO | [#16 WS-02](../../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) |
+| [#21 API-DETAIL-001](../api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회) | 방문 유튜버 | Visit | Creator, Video 공개 유효성 | Creator 식별자 중복 제거 | [#16 WS-02](../../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회), 판정 Visit |
+| [#21 API-DETAIL-001](../api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회) | 관련 영상 | Visit | Video, Creator | Video 식별자 중복 제거, `contentStatus` | [#16 WS-02](../../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) |
+| API-ADMIN-*-PREVIEW-001 | 후보·중복 판정 | 외부 확인 결과 | 기존 핵심 데이터 | `decision`, token, expiry, candidate DTO | [#16 WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
+| API-ADMIN-*-001 | 생성 결과 | 생성 엔티티 | 표준 표시값 | 응답 DTO 조합 | [#16 WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록)와 소유 도메인 |
+| [#15 API-ADMIN-AUTH-001](../api/admin/authentication-api.md#api-admin-auth-001-관리자-로그인)·[#15 API-ADMIN-AUTH-002](../api/admin/authentication-api.md#api-admin-auth-002-관리자-토큰-재발급) | 인증·재발급 | AdminRefreshToken | AdminAccount 활성 여부 | JWT Access Token, 만료 시간 | [#16 WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
 
 `contentStatus`, 페이지 메타데이터, 후보 `decision`, `remainingVisitedByCount`는 엔티티에 저장하지 않는다.
 
@@ -84,10 +109,10 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 
 | Workstream | 변경 소유 | 조회·의존 데이터 | 책임 경계 |
 |---|---|---|---|
-| WS-01 맛집 탐색 | Restaurant 조회 규칙 | Region, FoodCategory, Visit·Creator 판정 결과 | Visit 규칙을 재구현하지 않음 |
-| WS-02 상세 및 콘텐츠 | 상세 조합 | Restaurant, Visit, Creator, Video | 기본 데이터와 관계를 임의 변경하지 않음 |
-| WS-03 유튜버 기반 탐색 | Visit 관계 판정 계약 | Creator, Video, Restaurant 상태 | 최종 Restaurant 페이지 조합은 WS-01 |
-| WS-04 관리자 등록 | 인증·등록 흐름 조율 | AdminAccount·AdminRefreshToken 및 네 소유 도메인 | 도메인 고유·정합성 규칙을 우회하지 않음 |
+| [#16 WS-01](../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색) 맛집 탐색 | Restaurant 조회 규칙 | Region, FoodCategory, Visit·Creator 판정 결과 | Visit 규칙을 재구현하지 않음 |
+| [#16 WS-02](../../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) 상세 및 콘텐츠 | 상세 조합 | Restaurant, Visit, Creator, Video | 기본 데이터와 관계를 임의 변경하지 않음 |
+| [#16 WS-03](../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 유튜버 기반 탐색 | Visit 관계 판정 계약 | Creator, Video, Restaurant 상태 | 최종 Restaurant 페이지 조합은 [#16 WS-01](../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색) |
+| [#16 WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 관리자 등록 | 인증·등록 흐름 조율 | AdminAccount·AdminRefreshToken 및 네 소유 도메인 | 도메인 고유·정합성 규칙을 우회하지 않음 |
 
 ## 8. 미매핑 항목
 
@@ -98,8 +123,8 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 
 ## 9. 변경 영향 추적
 
-- 지역 단계·범위 변경: Region, Restaurant, 탐색/등록 API와 BR-RESTAURANT-005를 함께 검토한다.
-- 다중 카테고리 변경: Restaurant–FoodCategory 카디널리티, 필터 API와 BR-RESTAURANT-004를 함께 변경한다.
+- 지역 단계·범위 변경: Region, Restaurant, 탐색/등록 API와 [#2 BR-RESTAURANT-005](../../01-requirements/business-rules.md#br-restaurant-005-맛집의-지역-소속)를 함께 검토한다.
+- 다중 카테고리 변경: Restaurant–FoodCategory 카디널리티, 필터 API와 [#2 BR-RESTAURANT-004](../../01-requirements/business-rules.md#br-restaurant-004-대표-음식-카테고리)를 함께 변경한다.
 - Creator를 개인 단위로 변경: Creator·Video·Visit 식별과 모든 유튜버 API를 재설계한다.
 - 복수 근거·방문일 도입: Visit 모델, 복합 유일성, 관리자 요청과 상세 응답을 재검토한다.
 - 공개·삭제 정책 변경: 네 핵심 데이터, 모든 공개 조회와 운영 정정 흐름을 함께 검토한다.

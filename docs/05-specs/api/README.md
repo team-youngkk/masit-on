@@ -1,3 +1,26 @@
+---
+related_documents:
+  1: ../README.md
+  2: ../../01-requirements/functional-requirements.md
+  3: ../../01-requirements/business-rules.md
+  4: common/identifier-contract.md
+  5: common/response-contract.md
+  6: common/error-contract.md
+  7: common/pagination-contract.md
+  8: common/filtering-contract.md
+  9: ../api-traceability.md
+  10: common/date-time-contract.md
+  11: discovery/restaurant-discovery-api.md
+  12: ../../02-analysis/mvp-workstreams.md
+  13: discovery/creator-discovery-api.md
+  14: detail/restaurant-detail-api.md
+  15: admin/reference-data-api.md
+  16: admin/visit-registration-api.md
+  17: admin/authentication-api.md
+  18: ../../00-overview/scope.md
+  19: ../api-review.md
+---
+
 # 맛잇온 API 계약
 
 ## 1. 문서 목적
@@ -15,23 +38,23 @@
 
 ## 3. 공통 계약
 
-- [식별자 계약](common/identifier-contract.md)
-- [응답 계약](common/response-contract.md)
-- [오류 계약](common/error-contract.md)
-- [페이지네이션 계약](common/pagination-contract.md)
-- [검색·필터 계약](common/filtering-contract.md)
-- [날짜·시간 계약](common/date-time-contract.md)
+- [#4 식별자 계약](common/identifier-contract.md)
+- [#5 응답 계약](common/response-contract.md)
+- [#6 오류 계약](common/error-contract.md)
+- [#7 페이지네이션 계약](common/pagination-contract.md)
+- [#8 검색·필터 계약](common/filtering-contract.md)
+- [#10 날짜·시간 계약](common/date-time-contract.md)
 
 ## 4. 기능별 API 문서
 
 | 기능 | 문서 | 주 Workstream |
 |---|---|---|
-| 맛집 목록·검색·필터 | [맛집 탐색 API](discovery/restaurant-discovery-api.md) | WS-01 |
-| 유튜버 선택·관계 판정 | [유튜버 기반 탐색 API](discovery/creator-discovery-api.md) | WS-03 |
-| 맛집 기본 정보·방문 콘텐츠 | [맛집 상세 API](detail/restaurant-detail-api.md) | WS-02 |
-| 맛집·유튜버·영상 등록 | [관리자 기본 데이터 API](admin/reference-data-api.md) | WS-04 |
-| 방문 관계 등록 | [관리자 방문 관계 등록 API](admin/visit-registration-api.md) | WS-04 |
-| 관리자 JWT 인증 | [관리자 인증 API](admin/authentication-api.md) | WS-04 |
+| 맛집 목록·검색·필터 | [#11 맛집 탐색 API](discovery/restaurant-discovery-api.md) | [#12 WS-01](../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색) |
+| 유튜버 선택·관계 판정 | [#13 유튜버 기반 탐색 API](discovery/creator-discovery-api.md) | [#12 WS-03](../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) |
+| 맛집 기본 정보·방문 콘텐츠 | [#14 맛집 상세 API](detail/restaurant-detail-api.md) | [#12 WS-02](../../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) |
+| 맛집·유튜버·영상 등록 | [#15 관리자 기본 데이터 API](admin/reference-data-api.md) | [#12 WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
+| 방문 관계 등록 | [#16 관리자 방문 관계 등록 API](admin/visit-registration-api.md) | [#12 WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
+| 관리자 JWT 인증 | [#17 관리자 인증 API](admin/authentication-api.md) | [#12 WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
 
 ## 5. 인증 및 접근 범위
 
@@ -41,10 +64,10 @@
 
 ### 사용자 동작 또는 범위 변경
 
-1. `scope.md`와 기능 PRD를 검토한다.
+1. [#18 scope.md](../../00-overview/scope.md)와 기능 PRD를 검토한다.
 2. 기능 요구사항과 비즈니스 규칙을 수정한다.
 3. API 계약을 수정한다.
-4. `api-traceability.md`를 갱신한다.
+4. [#9 api-traceability.md](../api-traceability.md)를 갱신한다.
 5. 데이터 모델과 구현 영향을 검토한다.
 
 ### API 계약만 변경
@@ -54,7 +77,7 @@
 3. 영향받는 Workstream 담당자가 리뷰한다.
 4. 프론트엔드 계약을 갱신한다.
 5. 구현과 테스트를 수정한다.
-6. `api-traceability.md`를 갱신한다.
+6. [#9 api-traceability.md](../api-traceability.md)를 갱신한다.
 
 내부 구현만 바뀌고 외부 동작이 같으면 API 계약을 수정하지 않는다. 기술 선택은 아키텍처 문서와 ADR에서 관리한다.
 
@@ -64,4 +87,4 @@
 
 ## 8. 확정된 주요 결정
 
-외부 식별자는 불투명 문자열, 관리자는 Spring Security JWT Access Token과 Redis Refresh Token, 방문 관계는 `Visit Relationship`과 `/admin/visit-relationships`, 외부 데이터 등록은 검증 미리보기와 확인 토큰의 2단계 흐름을 사용한다. 페이지 번호는 1부터 시작하고 상세 콘텐츠 부분 실패는 필수 `contentStatus`로 구분한다. 모든 오류 응답에는 서버 생성 `traceId`를 포함한다. 전체 결정 목록은 `api-review.md`를 따른다.
+외부 식별자는 불투명 문자열, 관리자는 Spring Security JWT Access Token과 Redis Refresh Token, 방문 관계는 `Visit Relationship`과 `/admin/visit-relationships`, 외부 데이터 등록은 검증 미리보기와 확인 토큰의 2단계 흐름을 사용한다. 페이지 번호는 1부터 시작하고 상세 콘텐츠 부분 실패는 필수 `contentStatus`로 구분한다. 모든 오류 응답에는 서버 생성 `traceId`를 포함한다. 전체 결정 목록은 [#19 api-review.md](../api-review.md)를 따른다.

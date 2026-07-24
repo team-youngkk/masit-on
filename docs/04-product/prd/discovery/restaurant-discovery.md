@@ -7,13 +7,13 @@ owner: 양성훈
 reviewers:
   - 이우람
 related_requirements:
-  - FR-RESTAURANT-001
-  - FR-RESTAURANT-002
-  - FR-RESTAURANT-003
-  - FR-RESTAURANT-004
-  - FR-RESTAURANT-005
-  - FR-RESTAURANT-006
-  - FR-RESTAURANT-007
+  1: FR-RESTAURANT-001
+  2: FR-RESTAURANT-002
+  3: FR-RESTAURANT-003
+  4: FR-RESTAURANT-004
+  5: FR-RESTAURANT-005
+  6: FR-RESTAURANT-006
+  7: FR-RESTAURANT-007
 related_business_rules:
   - BR-SEARCH-001
   - BR-SEARCH-002
@@ -35,13 +35,25 @@ related_nfr:
   - NFR-COMPATIBILITY-003
   - NFR-TEST-001
   - NFR-TEST-002
+related_documents:
+  1: ../00-product-overview.md
+  2: README.md
+  3: creator-discovery.md
+  4: ../../../01-requirements/functional-requirements.md
+  5: ../../../01-requirements/business-rules.md
+  6: ../../../02-analysis/mvp-workstreams.md
+  7: ../../../05-specs/api/discovery/restaurant-discovery-api.md
+  8: ../../../05-specs/api/common/filtering-contract.md
+  9: ../../../05-specs/api/common/pagination-contract.md
+  10: ../../../01-requirements/non-functional-requirements.md
+  11: ../../traceability.md
 ---
 
 # 맛집 탐색 PRD
 
 ## 1. 문서 정보
 
-공개 맛집의 최종 목록·검색·필터·정렬·페이지 흐름을 정의한다. 주 Workstream은 WS-01이며 유튜버 조건의 관계 판정은 [유튜버 기반 탐색 PRD](creator-discovery.md)에 의존한다.
+공개 맛집의 최종 목록·검색·필터·정렬·페이지 흐름을 정의한다. 주 Workstream은 [#6 WS-01](../../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)이며 유튜버 조건의 관계 판정은 [#3 유튜버 기반 탐색 PRD](creator-discovery.md)에 의존한다.
 
 ## 2. 기능 개요
 
@@ -69,7 +81,7 @@ related_nfr:
 
 - 맛집은 서울특별시 자치구와 대표 음식 카테고리 1개를 가진다.
 - 공개 맛집과 공개·유효 방문 관계만 사용자 결과에 포함된다.
-- 유튜버 조건은 WS-03이 제공하는 유효 맛집 판정 결과를 사용한다.
+- 유튜버 조건은 [#6 WS-03](../../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)이 제공하는 유효 맛집 판정 결과를 사용한다.
 
 ## 8. 핵심 사용자 흐름
 
@@ -97,7 +109,7 @@ related_nfr:
 - 중복 제거한 채널명 오름차순 최대 3명과 나머지 `외 N명` 축약
 - 맛집 이름 부분 일치, 앞뒤 공백 제거와 영문 대소문자 무시
 - 서울 자치구 1개, 대표 음식 카테고리 1개 필터
-- WS-03 결과를 이용한 유튜버 1명 조건과 모든 조건의 AND 조합
+- [#6 WS-03](../../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 결과를 이용한 유튜버 1명 조건과 모든 조건의 AND 조합
 - 10·20·50개 페이지 크기, 기본 20개, 안정된 기본 정렬과 빈 결과
 
 ### 제외 범위
@@ -113,19 +125,19 @@ related_nfr:
 
 | PRD 요구사항 | 제품 동작 | 관련 기능 요구사항 | 중요도 | 상태 |
 |---|---|---|---|---|
-| PR-DISC-001 | 사용자는 공개 맛집 요약 목록을 조회한다. | FR-RESTAURANT-001 | Must | 확정 |
-| PR-DISC-002 | 이름 일부와 일치하는 맛집을 찾고 공백·영문 대소문자를 일관되게 처리한다. | FR-RESTAURANT-002 | Must | 확정 |
-| PR-DISC-003 | 서울특별시 자치구 1개로 결과를 제한한다. | FR-RESTAURANT-003 | Must | 확정 |
-| PR-DISC-004 | 확정된 대표 음식 카테고리 1개로 결과를 제한한다. | FR-RESTAURANT-004 | Must | 확정 |
-| PR-DISC-005 | 지정한 서로 다른 탐색 조건을 모두 만족하는 고유 맛집만 제공한다. | FR-RESTAURANT-005 | Must | 확정 |
-| PR-DISC-006 | 결과를 허용된 크기의 페이지 단위로 제공한다. | FR-RESTAURANT-006 | Must | 확정 |
-| PR-DISC-007 | 이름과 전체 도로명주소 기준의 안정된 기본 정렬을 적용한다. | FR-RESTAURANT-007 | Must | 확정 |
+| PR-DISC-001 | 사용자는 공개 맛집 요약 목록을 조회한다. | [REQ#1 FR-RESTAURANT-001](../../../01-requirements/functional-requirements.md#fr-restaurant-001-맛집-목록-조회) | Must | 확정 |
+| PR-DISC-002 | 이름 일부와 일치하는 맛집을 찾고 공백·영문 대소문자를 일관되게 처리한다. | [REQ#2 FR-RESTAURANT-002](../../../01-requirements/functional-requirements.md#fr-restaurant-002-맛집-이름-검색) | Must | 확정 |
+| PR-DISC-003 | 서울특별시 자치구 1개로 결과를 제한한다. | [REQ#3 FR-RESTAURANT-003](../../../01-requirements/functional-requirements.md#fr-restaurant-003-지역별-필터) | Must | 확정 |
+| PR-DISC-004 | 확정된 대표 음식 카테고리 1개로 결과를 제한한다. | [REQ#4 FR-RESTAURANT-004](../../../01-requirements/functional-requirements.md#fr-restaurant-004-음식-카테고리별-필터) | Must | 확정 |
+| PR-DISC-005 | 지정한 서로 다른 탐색 조건을 모두 만족하는 고유 맛집만 제공한다. | [REQ#5 FR-RESTAURANT-005](../../../01-requirements/functional-requirements.md#fr-restaurant-005-검색-및-필터-조건-조합) | Must | 확정 |
+| PR-DISC-006 | 결과를 허용된 크기의 페이지 단위로 제공한다. | [REQ#6 FR-RESTAURANT-006](../../../01-requirements/functional-requirements.md#fr-restaurant-006-페이지-단위-조회) | Must | 확정 |
+| PR-DISC-007 | 이름과 전체 도로명주소 기준의 안정된 기본 정렬을 적용한다. | [REQ#7 FR-RESTAURANT-007](../../../01-requirements/functional-requirements.md#fr-restaurant-007-기본-정렬-적용) | Must | 확정 |
 
 ## 11. 비즈니스 규칙
 
-- 검색 대상·공백·필터·AND 조합·고유성·빈 결과·페이지·정렬은 `BR-SEARCH-001`~`006`, `008`, `009`를 따른다.
-- 유튜버 조건의 방문 근거는 `BR-SEARCH-007`과 [유튜버 기반 탐색 PRD](creator-discovery.md)가 소유한다.
-- 영상 연결이 없는 맛집 포함과 공개 범위는 `BR-RESTAURANT-002`, `008`, `BR-PUBLICATION-001`, `003`~`006`을 따른다.
+- 검색 대상·공백·필터·AND 조합·고유성·빈 결과·페이지·정렬은 [#5 BR-SEARCH-001](../../../01-requirements/business-rules.md#br-search-001-검색-대상과-일치-기준)~[#5 BR-SEARCH-006](../../../01-requirements/business-rules.md#br-search-006-빈-조회-결과), [#5 BR-SEARCH-008](../../../01-requirements/business-rules.md#br-search-008-페이지-단위-조회), [#5 BR-SEARCH-009](../../../01-requirements/business-rules.md#br-search-009-기본-정렬)를 따른다.
+- 유튜버 조건의 방문 근거는 [#5 BR-SEARCH-007](../../../01-requirements/business-rules.md#br-search-007-유튜버-필터의-방문-근거)과 [#3 유튜버 기반 탐색 PRD](creator-discovery.md)가 소유한다.
+- 영상 연결이 없는 맛집 포함과 공개 범위는 [#5 BR-RESTAURANT-002](../../../01-requirements/business-rules.md#br-restaurant-002-영상과-독립된-맛집), [#5 BR-RESTAURANT-008](../../../01-requirements/business-rules.md#br-restaurant-008-맛집-공개-조건), [#5 BR-PUBLICATION-001](../../../01-requirements/business-rules.md#br-publication-001-일반-사용자-공개-범위), [#5 BR-PUBLICATION-003](../../../01-requirements/business-rules.md#br-publication-003-맛집-상태와-연결-정보-노출)~[#5 BR-PUBLICATION-006](../../../01-requirements/business-rules.md#br-publication-006-관계-상태와-맛집-기본-조회)을 따른다.
 
 ## 12. 예외 및 경계 상황
 
@@ -141,21 +153,21 @@ related_nfr:
 
 ## 13. 품질 요구사항
 
-일반 조회와 조건 조합 성능, 페이지 제한은 `NFR-PERFORMANCE-001`, `002`, `004`를 따른다. 입력·오류 보호, 공통 오류, 문자·응답 크기와 자동화 검증은 메타데이터의 관련 NFR을 적용한다. 목표 성능 수치는 팀 결정 전까지 확정값으로 간주하지 않는다.
+일반 조회와 조건 조합 성능, 페이지 제한은 [#10 NFR-PERFORMANCE-001](../../../01-requirements/non-functional-requirements.md#nfr-performance-001-일반-조회-응답-시간), [#10 NFR-PERFORMANCE-002](../../../01-requirements/non-functional-requirements.md#nfr-performance-002-검색필터-조합-응답-시간), [#10 NFR-PERFORMANCE-004](../../../01-requirements/non-functional-requirements.md#nfr-performance-004-페이지-크기-및-조회량-제한)를 따른다. 입력·오류 보호, 공통 오류, 문자·응답 크기와 자동화 검증은 메타데이터의 관련 NFR을 적용한다. 목표 성능 수치는 팀 결정 전까지 확정값으로 간주하지 않는다.
 
 ## 14. 의존성
 
 - 선행 정책: 공개 상태와 페이지·오류 계약
-- 데이터 의존성: WS-04가 등록한 공개 맛집과 관계
-- 다른 기능 PRD: 유튜버 조건 판정을 제공하는 PRD-DISCOVERY-002
-- 다른 Workstream: WS-03 관계 판정, WS-04 등록 데이터
+- 데이터 의존성: [#6 WS-04](../../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록)가 등록한 공개 맛집과 관계
+- 다른 기능 PRD: 유튜버 조건 판정을 제공하는 [#3 PRD-DISCOVERY-002](creator-discovery.md)
+- 다른 Workstream: [#6 WS-03](../../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 관계 판정, [#6 WS-04](../../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 등록 데이터
 - 공통 API 계약: 식별자, 응답·오류와 페이지네이션 계약
 
-WS-03 구현 전에는 계약 Stub으로 나머지 탐색 범위를 독립 검증할 수 있으며 순환 선행 의존을 만들지 않는다.
+[#6 WS-03](../../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 구현 전에는 계약 Stub으로 나머지 탐색 범위를 독립 검증할 수 있으며 순환 선행 의존을 만들지 않는다.
 
 ## 15. Workstream 및 책임자
 
-- 주 Workstream: WS-01 맛집 탐색
+- 주 Workstream: [#6 WS-01](../../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색) 맛집 탐색
 - 최종 책임자: 양성훈
 - 기본 리뷰어: 이우람
 - 협업: 박진영(목록·상세 식별자), 김인안(등록 데이터 반영)
@@ -169,7 +181,7 @@ WS-03 구현 전에는 계약 Stub으로 나머지 탐색 범위를 독립 검�
 ## 17. 완료 기준
 
 - 7개 관련 요구사항과 비즈니스 규칙이 검토되고 구현·자동화 테스트가 완료된다.
-- WS-03 관계 판정과 WS-04 등록 결과가 실제 탐색에 통합된다.
+- [#6 WS-03](../../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 관계 판정과 [#6 WS-04](../../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 등록 결과가 실제 탐색에 통합된다.
 - API 계약, 오류·페이지 계약, 문서와 추적성이 실제 동작과 일치한다.
 - PC·모바일 핵심 탐색 인수 흐름이 통과한다.
 
@@ -180,12 +192,12 @@ WS-03 구현 전에는 계약 Stub으로 나머지 탐색 범위를 독립 검�
 
 ## 19. 관련 문서
 
-- [전체 제품 PRD](../00-product-overview.md)
-- [탐색 영역 PRD](README.md)
-- [기능 요구사항](../../../01-requirements/functional-requirements.md)
-- [비즈니스 규칙](../../../01-requirements/business-rules.md)
-- [MVP Workstream](../../../02-analysis/mvp-workstreams.md)
-- [추적성](../../traceability.md)
+- [#1 전체 제품 PRD](../00-product-overview.md)
+- [#2 탐색 영역 PRD](README.md)
+- [#4 기능 요구사항](../../../01-requirements/functional-requirements.md)
+- [#5 비즈니스 규칙](../../../01-requirements/business-rules.md)
+- [#6 MVP Workstream](../../../02-analysis/mvp-workstreams.md)
+- [#11 추적성](../../traceability.md)
 
 ## 20. 검토 필요 항목
 

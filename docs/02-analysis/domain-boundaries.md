@@ -1,3 +1,17 @@
+---
+related_documents:
+  1: ../00-overview/glossary.md
+  2: ../00-overview/scope.md
+  3: ../01-requirements/functional-requirements.md
+  4: ../01-requirements/business-rules.md
+  5: mvp-workstreams.md
+  6: ../05-specs/data/data-model.md
+  7: ../07-adr/architecture/arch-001-domain-monolith.md
+  8: ../00-overview/service-overview.md
+  9: ../01-requirements/requirements-review.md
+  10: ../01-requirements/non-functional-requirements.md
+---
+
 # 맛잇온 도메인 경계
 
 ## 1. 문서 목적
@@ -8,13 +22,13 @@
 
 근거 문서는 다음과 같다.
 
-- `docs/00-overview/service-overview.md`
-- `docs/00-overview/scope.md`
-- `docs/00-overview/glossary.md`
-- `docs/01-requirements/functional-requirements.md`
-- `docs/01-requirements/requirements-review.md`
-- `docs/01-requirements/business-rules.md`
-- `docs/01-requirements/non-functional-requirements.md`
+- [#8 docs/00-overview/service-overview.md](../00-overview/service-overview.md)
+- [#2 docs/00-overview/scope.md](../00-overview/scope.md)
+- [#1 docs/00-overview/glossary.md](../00-overview/glossary.md)
+- [#3 docs/01-requirements/functional-requirements.md](../01-requirements/functional-requirements.md)
+- [#9 docs/01-requirements/requirements-review.md](../01-requirements/requirements-review.md)
+- [#4 docs/01-requirements/business-rules.md](../01-requirements/business-rules.md)
+- [#10 docs/01-requirements/non-functional-requirements.md](../01-requirements/non-functional-requirements.md)
 
 ## 2. 도메인 분리 원칙
 
@@ -66,25 +80,25 @@
 
 ### 소유 기능 요구사항
 
-- FR-RESTAURANT-001
-- FR-RESTAURANT-002
-- FR-RESTAURANT-003
-- FR-RESTAURANT-004
-- FR-RESTAURANT-005
-- FR-RESTAURANT-006
-- FR-RESTAURANT-007
-- FR-RESTAURANT-008
-- FR-RESTAURANT-009
-- FR-RESTAURANT-010
-- FR-RESTAURANT-011
-- FR-ADMIN-002
+- [#3 FR-RESTAURANT-001](../01-requirements/functional-requirements.md#fr-restaurant-001-맛집-목록-조회)
+- [#3 FR-RESTAURANT-002](../01-requirements/functional-requirements.md#fr-restaurant-002-맛집-이름-검색)
+- [#3 FR-RESTAURANT-003](../01-requirements/functional-requirements.md#fr-restaurant-003-지역별-필터)
+- [#3 FR-RESTAURANT-004](../01-requirements/functional-requirements.md#fr-restaurant-004-음식-카테고리별-필터)
+- [#3 FR-RESTAURANT-005](../01-requirements/functional-requirements.md#fr-restaurant-005-검색-및-필터-조건-조합)
+- [#3 FR-RESTAURANT-006](../01-requirements/functional-requirements.md#fr-restaurant-006-페이지-단위-조회)
+- [#3 FR-RESTAURANT-007](../01-requirements/functional-requirements.md#fr-restaurant-007-기본-정렬-적용)
+- [#3 FR-RESTAURANT-008](../01-requirements/functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회)
+- [#3 FR-RESTAURANT-009](../01-requirements/functional-requirements.md#fr-restaurant-009-지역-정보-확인)
+- [#3 FR-RESTAURANT-010](../01-requirements/functional-requirements.md#fr-restaurant-010-음식-카테고리-확인)
+- [#3 FR-RESTAURANT-011](../01-requirements/functional-requirements.md#fr-restaurant-011-영상-연결이-없는-맛집-상세-조회)
+- [#3 FR-ADMIN-002](../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록)
 
 ### 소유 비즈니스 규칙
 
-- BR-RESTAURANT-001 ~ BR-RESTAURANT-011
-- BR-SEARCH-001 ~ BR-SEARCH-006
-- BR-SEARCH-008 ~ BR-SEARCH-009
-- BR-PUBLICATION-003
+- [#4 BR-RESTAURANT-001](../01-requirements/business-rules.md#br-restaurant-001-맛집의-의미) ~ [#4 BR-RESTAURANT-011](../01-requirements/business-rules.md#br-restaurant-011-폐업과-장기-운영-중단)
+- [#4 BR-SEARCH-001](../01-requirements/business-rules.md#br-search-001-검색-대상과-일치-기준) ~ [#4 BR-SEARCH-006](../01-requirements/business-rules.md#br-search-006-빈-조회-결과)
+- [#4 BR-SEARCH-008](../01-requirements/business-rules.md#br-search-008-페이지-단위-조회) ~ [#4 BR-SEARCH-009](../01-requirements/business-rules.md#br-search-009-기본-정렬)
+- [#4 BR-PUBLICATION-003](../01-requirements/business-rules.md#br-publication-003-맛집-상태와-연결-정보-노출)
 
 ### 제공하는 정보
 
@@ -132,15 +146,15 @@
 
 ### 소유 기능 요구사항
 
-- FR-ADMIN-003
+- [#3 FR-ADMIN-003](../01-requirements/functional-requirements.md#fr-admin-003-유튜버-정보-등록)
 
-FR-CREATOR-001과 FR-CREATOR-002의 관계 기반 최종 사용자 유스케이스는 Visit가 주 소유한다. FR-CREATOR-003의 공개 유튜버 선택 목록은 Creator가 주 소유하며 Visit와 Restaurant가 필터 연동에 협업한다.
+[#3 FR-CREATOR-001](../01-requirements/functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)과 [#3 FR-CREATOR-002](../01-requirements/functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)의 관계 기반 최종 사용자 유스케이스는 Visit가 주 소유한다. [#3 FR-CREATOR-003](../01-requirements/functional-requirements.md#fr-creator-003-유튜버-필터-선택-목록-조회)의 공개 유튜버 선택 목록은 Creator가 주 소유하며 Visit와 Restaurant가 필터 연동에 협업한다.
 
 ### 소유 비즈니스 규칙
 
-- BR-CREATOR-001 ~ BR-CREATOR-004
-- BR-CREATOR-006 ~ BR-CREATOR-007
-- BR-PUBLICATION-004
+- [#4 BR-CREATOR-001](../01-requirements/business-rules.md#br-creator-001-유튜버-정보의-의미) ~ [#4 BR-CREATOR-004](../01-requirements/business-rules.md#br-creator-004-유튜버-표시-정보)
+- [#4 BR-CREATOR-006](../01-requirements/business-rules.md#br-creator-006-채널명-변경과-동일성-유지) ~ [#4 BR-CREATOR-007](../01-requirements/business-rules.md#br-creator-007-채널-이용-불가-처리)
+- [#4 BR-PUBLICATION-004](../01-requirements/business-rules.md#br-publication-004-유튜버-상태와-관계-노출)
 
 ### 제공하는 정보
 
@@ -187,16 +201,16 @@ FR-CREATOR-001과 FR-CREATOR-002의 관계 기반 최종 사용자 유스케이�
 
 ### 소유 기능 요구사항
 
-- FR-ADMIN-004
+- [#3 FR-ADMIN-004](../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록)
 
-FR-VIDEO-001은 단순 영상 조회가 아니라 특정 맛집의 유효한 방문 관계에 연결된 영상을 찾는 유스케이스이므로 Visit가 주 소유하고 Video가 표시 정보를 제공한다.
+[#3 FR-VIDEO-001](../01-requirements/functional-requirements.md#fr-video-001-관련-영상-정보-확인)은 단순 영상 조회가 아니라 특정 맛집의 유효한 방문 관계에 연결된 영상을 찾는 유스케이스이므로 Visit가 주 소유하고 Video가 표시 정보를 제공한다.
 
 ### 소유 비즈니스 규칙
 
-- BR-VIDEO-001 ~ BR-VIDEO-003
-- BR-VIDEO-007 ~ BR-VIDEO-009
-- BR-PUBLICATION-005
-- BR-PUBLICATION-007
+- [#4 BR-VIDEO-001](../01-requirements/business-rules.md#br-video-001-영상의-의미와-보관-범위) ~ [#4 BR-VIDEO-003](../01-requirements/business-rules.md#br-video-003-영상-식별-및-중복-판단)
+- [#4 BR-VIDEO-007](../01-requirements/business-rules.md#br-video-007-외부-링크-장애의-격리) ~ [#4 BR-VIDEO-009](../01-requirements/business-rules.md#br-video-009-영상-이용-불가-처리)
+- [#4 BR-PUBLICATION-005](../01-requirements/business-rules.md#br-publication-005-영상-상태와-관계-노출)
+- [#4 BR-PUBLICATION-007](../01-requirements/business-rules.md#br-publication-007-외부-영상-삭제의-영향-범위)
 
 ### 제공하는 정보
 
@@ -247,18 +261,18 @@ FR-VIDEO-001은 단순 영상 조회가 아니라 특정 맛집의 유효한 방
 
 ### 소유 기능 요구사항
 
-- FR-CREATOR-001
-- FR-CREATOR-002
-- FR-VIDEO-001
-- FR-VISIT-001
+- [#3 FR-CREATOR-001](../01-requirements/functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)
+- [#3 FR-CREATOR-002](../01-requirements/functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
+- [#3 FR-VIDEO-001](../01-requirements/functional-requirements.md#fr-video-001-관련-영상-정보-확인)
+- [#3 FR-VISIT-001](../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
 
 ### 소유 비즈니스 규칙
 
-- BR-CREATOR-005
-- BR-VIDEO-004 ~ BR-VIDEO-006
-- BR-VISIT-001 ~ BR-VISIT-007
-- BR-SEARCH-007
-- BR-PUBLICATION-006
+- [#4 BR-CREATOR-005](../01-requirements/business-rules.md#br-creator-005-방문-관계의-유튜버-일치)
+- [#4 BR-VIDEO-004](../01-requirements/business-rules.md#br-video-004-영상과-방문-관계의-다대상-연결) ~ [#4 BR-VIDEO-006](../01-requirements/business-rules.md#br-video-006-게시일과-방문일의-구분)
+- [#4 BR-VISIT-001](../01-requirements/business-rules.md#br-visit-001-방문-관계의-구성) ~ [#4 BR-VISIT-007](../01-requirements/business-rules.md#br-visit-007-등록-완료와-검증-상태)
+- [#4 BR-SEARCH-007](../01-requirements/business-rules.md#br-search-007-유튜버-필터의-방문-근거)
+- [#4 BR-PUBLICATION-006](../01-requirements/business-rules.md#br-publication-006-관계-상태와-맛집-기본-조회)
 
 ### 제공하는 정보
 
@@ -304,9 +318,9 @@ FR-VIDEO-001은 단순 영상 조회가 아니라 특정 맛집의 유효한 방
 
 ### 관리자 애플리케이션 책임
 
-- FR-ADMIN-001의 관리자 접근과 인증된 진입점 제공
-- BR-ADMIN-001 ~ BR-ADMIN-008의 공통 관리자 등록 정책 조율
-- BR-PUBLICATION-001, BR-PUBLICATION-002와 BR-PUBLICATION-008의 일관된 접근·노출 정책 적용
+- [#3 FR-ADMIN-001](../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근)의 관리자 접근과 인증된 진입점 제공
+- [#4 BR-ADMIN-001](../01-requirements/business-rules.md#br-admin-001-관리자-권한-검증) ~ [#4 BR-ADMIN-008](../01-requirements/business-rules.md#br-admin-008-보류-요청의-처리)의 공통 관리자 등록 정책 조율
+- [#4 BR-PUBLICATION-001](../01-requirements/business-rules.md#br-publication-001-일반-사용자-공개-범위), [#4 BR-PUBLICATION-002](../01-requirements/business-rules.md#br-publication-002-비공개-데이터의-접근)와 [#4 BR-PUBLICATION-008](../01-requirements/business-rules.md#br-publication-008-상태-변경의-일관성)의 일관된 접근·노출 정책 적용
 - 각 도메인의 공개 등록 유스케이스 호출
 - 여러 호출이 필요한 경우 부분 반영 방지와 오류 결과 조합
 
@@ -336,26 +350,26 @@ FR-VIDEO-001은 단순 영상 조회가 아니라 특정 맛집의 유효한 방
 
 | 요구사항 ID | 기능 | 주 소유 도메인 | 협업 도메인 | 소유 근거 |
 |---|---|---|---|---|
-| FR-RESTAURANT-001 | 맛집 목록 조회 | Restaurant | Visit | 맛집 기본 정보와 탐색 조건은 Restaurant가 소유하고 채널명 표시에 필요한 관계는 Visit가 제공한다. |
-| FR-RESTAURANT-002 | 맛집 이름 검색 | Restaurant | 없음 | 검색 대상과 일치 기준이 맛집 이름 정책이다. |
-| FR-RESTAURANT-003 | 지역별 필터 | Restaurant | 없음 | 지역은 맛집 주소의 구성 개념이다. |
-| FR-RESTAURANT-004 | 음식 카테고리별 필터 | Restaurant | 없음 | 대표 음식 카테고리는 Restaurant가 소유한다. |
-| FR-CREATOR-001 | 유튜버 기준 방문 맛집 조회 | Visit | Creator, Restaurant, Video | 결과 포함 여부는 공개 유튜버와 공개 영상에 근거한 유효 방문 관계가 결정하며 Restaurant가 맛집 정보를 제공한다. |
-| FR-CREATOR-003 | 유튜버 필터 선택 목록 조회 | Creator | Visit, Restaurant | Creator가 공개 유튜버의 최소 선택 정보를 제공하고 WS-01이 필터에서 사용한다. |
-| FR-RESTAURANT-005 | 검색 및 필터 조건 조합 | Restaurant | Visit | Restaurant가 최종 탐색 조건을 조합하고 유튜버 조건의 관계 판정만 Visit에 요청한다. |
-| FR-RESTAURANT-006 | 페이지 단위 조회 | Restaurant | 없음 | 맛집 탐색 결과의 페이지 정책이다. |
-| FR-RESTAURANT-007 | 기본 정렬 적용 | Restaurant | 없음 | 맛집 이름과 주소를 기준으로 정렬한다. |
-| FR-RESTAURANT-008 | 맛집 기본 정보 조회 | Restaurant | 없음 | 영상·관계와 독립된 맛집 기본 조회다. |
-| FR-RESTAURANT-009 | 지역 정보 확인 | Restaurant | 없음 | 전체 도로명주소와 자치구는 Restaurant 소유 정보다. |
-| FR-RESTAURANT-010 | 음식 카테고리 확인 | Restaurant | 없음 | 대표 음식 카테고리는 Restaurant 소유 정보다. |
-| FR-RESTAURANT-011 | 영상 연결이 없는 맛집 상세 조회 | Restaurant | Visit | 기본 상세는 Restaurant가 보장하고 Visit는 빈 관계 결과를 제공한다. |
-| FR-CREATOR-002 | 방문 유튜버 정보 확인 | Visit | Creator, Restaurant, Video | 방문 여부와 중복 제거는 Visit가 판정하고 Creator가 채널 표시 정보를 제공한다. |
-| FR-VIDEO-001 | 관련 영상 정보 확인 | Visit | Video, Restaurant, Creator | 특정 맛집의 관련 영상 여부는 방문 관계가 결정하고 Video가 영상 표시 정보를 제공한다. |
-| FR-ADMIN-001 | 관리자 등록 기능 접근 | 관리자 유스케이스(애플리케이션) | Restaurant, Creator, Video, Visit | 인증과 공통 진입점은 독립 비즈니스 도메인이 아닌 애플리케이션 책임이다. |
-| FR-ADMIN-002 | 맛집 정보 등록 | Restaurant | 관리자 유스케이스 | 맛집 필수 정보, 장소 동일성, 지역과 카테고리 규칙을 Restaurant가 소유한다. |
-| FR-ADMIN-003 | 유튜버 정보 등록 | Creator | 관리자 유스케이스 | 채널 관리 단위와 동일 채널 중복 규칙을 Creator가 소유한다. |
-| FR-ADMIN-004 | 영상 정보 등록 | Video | 관리자 유스케이스, Creator | 영상 메타데이터와 동일 영상 중복 규칙을 Video가 소유한다. |
-| FR-VISIT-001 | 맛집·유튜버·영상 방문 관계 등록 | Visit | Restaurant, Creator, Video, 관리자 유스케이스 | 실제 방문 근거, 대상 일치와 관계 중복 규칙을 Visit가 소유한다. |
+| [#3 FR-RESTAURANT-001](../01-requirements/functional-requirements.md#fr-restaurant-001-맛집-목록-조회) | 맛집 목록 조회 | Restaurant | Visit | 맛집 기본 정보와 탐색 조건은 Restaurant가 소유하고 채널명 표시에 필요한 관계는 Visit가 제공한다. |
+| [#3 FR-RESTAURANT-002](../01-requirements/functional-requirements.md#fr-restaurant-002-맛집-이름-검색) | 맛집 이름 검색 | Restaurant | 없음 | 검색 대상과 일치 기준이 맛집 이름 정책이다. |
+| [#3 FR-RESTAURANT-003](../01-requirements/functional-requirements.md#fr-restaurant-003-지역별-필터) | 지역별 필터 | Restaurant | 없음 | 지역은 맛집 주소의 구성 개념이다. |
+| [#3 FR-RESTAURANT-004](../01-requirements/functional-requirements.md#fr-restaurant-004-음식-카테고리별-필터) | 음식 카테고리별 필터 | Restaurant | 없음 | 대표 음식 카테고리는 Restaurant가 소유한다. |
+| [#3 FR-CREATOR-001](../01-requirements/functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회) | 유튜버 기준 방문 맛집 조회 | Visit | Creator, Restaurant, Video | 결과 포함 여부는 공개 유튜버와 공개 영상에 근거한 유효 방문 관계가 결정하며 Restaurant가 맛집 정보를 제공한다. |
+| [#3 FR-CREATOR-003](../01-requirements/functional-requirements.md#fr-creator-003-유튜버-필터-선택-목록-조회) | 유튜버 필터 선택 목록 조회 | Creator | Visit, Restaurant | Creator가 공개 유튜버의 최소 선택 정보를 제공하고 [#5 WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색)이 필터에서 사용한다. |
+| [#3 FR-RESTAURANT-005](../01-requirements/functional-requirements.md#fr-restaurant-005-검색-및-필터-조건-조합) | 검색 및 필터 조건 조합 | Restaurant | Visit | Restaurant가 최종 탐색 조건을 조합하고 유튜버 조건의 관계 판정만 Visit에 요청한다. |
+| [#3 FR-RESTAURANT-006](../01-requirements/functional-requirements.md#fr-restaurant-006-페이지-단위-조회) | 페이지 단위 조회 | Restaurant | 없음 | 맛집 탐색 결과의 페이지 정책이다. |
+| [#3 FR-RESTAURANT-007](../01-requirements/functional-requirements.md#fr-restaurant-007-기본-정렬-적용) | 기본 정렬 적용 | Restaurant | 없음 | 맛집 이름과 주소를 기준으로 정렬한다. |
+| [#3 FR-RESTAURANT-008](../01-requirements/functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회) | 맛집 기본 정보 조회 | Restaurant | 없음 | 영상·관계와 독립된 맛집 기본 조회다. |
+| [#3 FR-RESTAURANT-009](../01-requirements/functional-requirements.md#fr-restaurant-009-지역-정보-확인) | 지역 정보 확인 | Restaurant | 없음 | 전체 도로명주소와 자치구는 Restaurant 소유 정보다. |
+| [#3 FR-RESTAURANT-010](../01-requirements/functional-requirements.md#fr-restaurant-010-음식-카테고리-확인) | 음식 카테고리 확인 | Restaurant | 없음 | 대표 음식 카테고리는 Restaurant 소유 정보다. |
+| [#3 FR-RESTAURANT-011](../01-requirements/functional-requirements.md#fr-restaurant-011-영상-연결이-없는-맛집-상세-조회) | 영상 연결이 없는 맛집 상세 조회 | Restaurant | Visit | 기본 상세는 Restaurant가 보장하고 Visit는 빈 관계 결과를 제공한다. |
+| [#3 FR-CREATOR-002](../01-requirements/functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인) | 방문 유튜버 정보 확인 | Visit | Creator, Restaurant, Video | 방문 여부와 중복 제거는 Visit가 판정하고 Creator가 채널 표시 정보를 제공한다. |
+| [#3 FR-VIDEO-001](../01-requirements/functional-requirements.md#fr-video-001-관련-영상-정보-확인) | 관련 영상 정보 확인 | Visit | Video, Restaurant, Creator | 특정 맛집의 관련 영상 여부는 방문 관계가 결정하고 Video가 영상 표시 정보를 제공한다. |
+| [#3 FR-ADMIN-001](../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근) | 관리자 등록 기능 접근 | 관리자 유스케이스(애플리케이션) | Restaurant, Creator, Video, Visit | 인증과 공통 진입점은 독립 비즈니스 도메인이 아닌 애플리케이션 책임이다. |
+| [#3 FR-ADMIN-002](../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록) | 맛집 정보 등록 | Restaurant | 관리자 유스케이스 | 맛집 필수 정보, 장소 동일성, 지역과 카테고리 규칙을 Restaurant가 소유한다. |
+| [#3 FR-ADMIN-003](../01-requirements/functional-requirements.md#fr-admin-003-유튜버-정보-등록) | 유튜버 정보 등록 | Creator | 관리자 유스케이스 | 채널 관리 단위와 동일 채널 중복 규칙을 Creator가 소유한다. |
+| [#3 FR-ADMIN-004](../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록) | 영상 정보 등록 | Video | 관리자 유스케이스, Creator | 영상 메타데이터와 동일 영상 중복 규칙을 Video가 소유한다. |
+| [#3 FR-VISIT-001](../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록) | 맛집·유튜버·영상 방문 관계 등록 | Visit | Restaurant, Creator, Video, 관리자 유스케이스 | 실제 방문 근거, 대상 일치와 관계 중복 규칙을 Visit가 소유한다. |
 
 ### 요구사항 배정 요약
 
@@ -374,65 +388,65 @@ Creator와 Video의 조회 제공 책임은 각각의 기본 정보 소유에 �
 
 | 규칙 ID | 규칙 | 주 소유 도메인 | 협업 도메인 | 근거 |
 |---|---|---|---|---|
-| BR-RESTAURANT-001 | 맛집의 의미 | Restaurant | 관리자 유스케이스 | 맛집 등록·조회 대상의 정의다. |
-| BR-RESTAURANT-002 | 영상과 독립된 맛집 | Restaurant | Visit | 맛집 생명주기를 관계와 분리한다. |
-| BR-RESTAURANT-003 | 맛집 최소 등록 정보 | Restaurant | 관리자 유스케이스 | 맛집의 필수 정보 규칙이다. |
-| BR-RESTAURANT-004 | 대표 음식 카테고리 | Restaurant | 관리자 유스케이스 | Restaurant 구성 개념의 선택 규칙이다. |
-| BR-RESTAURANT-005 | 맛집의 지역 소속 | Restaurant | 관리자 유스케이스 | 주소와 자치구 소속 규칙이다. |
-| BR-RESTAURANT-006 | 맛집 중복 판단 | Restaurant | 관리자 유스케이스 | 장소 동일성으로 맛집 고유성을 판단한다. |
-| BR-RESTAURANT-007 | 동일 상호의 지점 구분 | Restaurant | 관리자 유스케이스 | 맛집 식별 경계를 정한다. |
-| BR-RESTAURANT-008 | 맛집 공개 조건 | Restaurant | 관리자 유스케이스 | 맛집 자체의 조회 가능 상태를 판단한다. |
-| BR-RESTAURANT-009 | 맛집 이름 변경 | Restaurant | Visit | 동일 맛집의 생명주기와 관계 보존 기준이다. |
-| BR-RESTAURANT-010 | 주소 변경과 장소 이전 | Restaurant | Visit | 장소 동일성과 관계 이전 금지를 정한다. |
-| BR-RESTAURANT-011 | 폐업과 장기 운영 중단 | Restaurant | 관리자 유스케이스 | 맛집 상태와 재공개 기준이다. |
-| BR-CREATOR-001 | 유튜버 정보의 의미 | Creator | Visit, Video | YouTube 채널을 관리 단위로 정한다. |
-| BR-CREATOR-002 | 유튜버 최소 등록 정보 | Creator | 관리자 유스케이스 | 유튜버 기본 정보의 필수값 규칙이다. |
-| BR-CREATOR-003 | 동일 채널 중복 판단 | Creator | 관리자 유스케이스 | 채널 고유성 판단 규칙이다. |
-| BR-CREATOR-004 | 유튜버 표시 정보 | Creator | Visit | Creator가 제공할 공개 표시 정보를 정한다. |
-| BR-CREATOR-005 | 방문 관계의 유튜버 일치 | Visit | Creator, Video | 관계 생성 시 게시 채널과 유튜버 일치를 판정한다. |
-| BR-CREATOR-006 | 채널명 변경과 동일성 유지 | Creator | Visit, Video | 유튜버 생명주기와 관계 보존 기준이다. |
-| BR-CREATOR-007 | 채널 이용 불가 처리 | Creator | Visit | 유튜버 상태를 판단하고 Visit가 노출에서 제외한다. |
-| BR-VIDEO-001 | 영상의 의미와 보관 범위 | Video | 없음 | 원본과 메타데이터의 관리 경계를 정한다. |
-| BR-VIDEO-002 | 영상 최소 등록 정보 | Video | 관리자 유스케이스 | 영상 기본 정보의 필수값 규칙이다. |
-| BR-VIDEO-003 | 영상 식별 및 중복 판단 | Video | 관리자 유스케이스 | 원본 콘텐츠 기준 영상 고유성 규칙이다. |
-| BR-VIDEO-004 | 영상과 방문 관계의 다대상 연결 | Visit | Video, Restaurant | 영상 하나와 맛집별 관계 생성 범위를 정한다. |
-| BR-VIDEO-005 | 실제 방문 근거 | Visit | Video, Creator | 영상을 관계 근거로 채택하는 조건이다. |
-| BR-VIDEO-006 | 게시일과 방문일의 구분 | Visit | Video | 방문 관계가 관리하지 않을 날짜 의미를 정한다. |
-| BR-VIDEO-007 | 외부 링크 장애의 격리 | Video | Restaurant, Visit | 링크 장애와 내부 기본 정보 생명주기를 분리한다. |
-| BR-VIDEO-008 | 영상 표시 정보 변경 | Video | Visit | 동일 영상의 메타데이터 변경과 관계 보존 기준이다. |
-| BR-VIDEO-009 | 영상 이용 불가 처리 | Video | Visit | 영상 상태를 판단하고 Visit가 관계 노출을 제한한다. |
-| BR-VISIT-001 | 방문 관계의 구성 | Visit | Restaurant, Creator, Video | 관계가 참조하는 세 대상을 정의한다. |
-| BR-VISIT-002 | 방문 근거 필수 | Visit | Video, Creator | 관계 생성의 핵심 불변 조건이다. |
-| BR-VISIT-003 | 방문 관계 중복 판단 | Visit | 없음 | 관계 고유성 규칙이다. |
-| BR-VISIT-004 | 방문 관계의 연결 범위 | Visit | Restaurant, Creator, Video | 다대다 관계를 개별 방문 근거 단위로 제한한다. |
-| BR-VISIT-005 | 방문 관계의 조회 유효성 | Visit | Restaurant, Creator, Video | 조회에 사용할 관계의 유효성을 판단한다. |
-| BR-VISIT-006 | 방문 날짜 관리 제외 | Visit | Video | MVP 관계 모델에서 방문 날짜를 제외한다. |
-| BR-VISIT-007 | 등록 완료와 검증 상태 | Visit | 관리자 유스케이스 | 등록 완료를 검증 완료로 보는 관계 정책이다. |
-| BR-SEARCH-001 | 검색 대상과 일치 기준 | Restaurant | 없음 | 맛집 이름 검색 규칙이다. |
-| BR-SEARCH-002 | 검색어 공백 처리 | Restaurant | 없음 | 맛집 이름 조건의 정규화 규칙이다. |
-| BR-SEARCH-003 | 필터 종류와 단일 선택 | Restaurant | Visit | 최종 맛집 탐색 입력 정책이다. |
-| BR-SEARCH-004 | 검색과 필터 조합 | Restaurant | Visit | Restaurant가 최종 조건 결합을 책임진다. |
-| BR-SEARCH-005 | 조회 결과의 고유성 | Restaurant | Visit | 최종 맛집 목록의 중복 제거 책임이다. |
-| BR-SEARCH-006 | 빈 조회 결과 | Restaurant | Visit | 맛집 탐색 결과의 반환 정책이다. |
-| BR-SEARCH-007 | 유튜버 필터의 방문 근거 | Visit | Creator, Video, Restaurant | 유튜버 조건은 유효 방문 관계가 결정한다. |
-| BR-SEARCH-008 | 페이지 단위 조회 | Restaurant | 없음 | 맛집 목록의 페이지 정책이다. |
-| BR-SEARCH-009 | 기본 정렬 | Restaurant | 없음 | 맛집 이름과 주소를 이용한 정렬 정책이다. |
-| BR-ADMIN-001 | 관리자 권한 검증 | 관리자 유스케이스(애플리케이션) | Restaurant, Creator, Video, Visit | 인증과 진입점은 애플리케이션 접근 책임이다. |
-| BR-ADMIN-002 | 등록 전 사실 검증 | 관리자 유스케이스(애플리케이션) | Restaurant, Creator, Video, Visit | 등록 호출 전 공통 운영 흐름이다. |
-| BR-ADMIN-003 | 등록 정합성 검증 | 관리자 유스케이스(애플리케이션) | Restaurant, Creator, Video, Visit | 각 도메인의 검증 결과를 조율한다. |
-| BR-ADMIN-004 | 검증 후 등록 및 조회 반영 | 관리자 유스케이스(애플리케이션) | Restaurant, Creator, Video, Visit | 등록과 사용자 조회 반영의 공통 흐름이다. |
-| BR-ADMIN-005 | MVP 관리 기능의 경계 | 관리자 유스케이스(애플리케이션) | Restaurant, Creator, Video, Visit | 관리자 기능 범위를 등록으로 제한한다. |
-| BR-ADMIN-006 | 잘못 등록된 데이터의 정정 원칙 | 관리자 유스케이스(애플리케이션) | Restaurant, Creator, Video, Visit | 여러 도메인에 적용되는 운영 정정 흐름이다. |
-| BR-ADMIN-007 | 동시 등록의 고유성 | 관리자 유스케이스(애플리케이션) | Restaurant, Creator, Video, Visit | 공통 등록 조율 책임이며 고유성 판단은 각 도메인에 위임한다. |
-| BR-ADMIN-008 | 보류 요청의 처리 | 관리자 유스케이스(애플리케이션) | Restaurant, Creator, Video, Visit | 미확정 등록 요청의 공통 운영 흐름이다. |
-| BR-PUBLICATION-001 | 일반 사용자 공개 범위 | 관리자 유스케이스(애플리케이션) | Restaurant, Creator, Video, Visit | 공통 조회 정책이며 각 대상 상태 판단은 소유 도메인에 위임한다. |
-| BR-PUBLICATION-002 | 비공개 데이터의 접근 | 관리자 유스케이스(애플리케이션) | Restaurant, Creator, Video, Visit | 관리자 접근과 일반 사용자 차단을 조율한다. |
-| BR-PUBLICATION-003 | 맛집 상태와 연결 정보 노출 | Restaurant | Visit | 맛집 상태가 상세 맥락 전체의 진입 가능성을 결정한다. |
-| BR-PUBLICATION-004 | 유튜버 상태와 관계 노출 | Creator | Visit | Creator가 상태를 판단하고 Visit가 관계 결과에서 제외한다. |
-| BR-PUBLICATION-005 | 영상 상태와 관계 노출 | Video | Visit | Video가 상태를 판단하고 Visit가 관계 결과에서 제외한다. |
-| BR-PUBLICATION-006 | 관계 상태와 맛집 기본 조회 | Visit | Restaurant | 관계 노출은 Visit가 제한하되 Restaurant 기본 조회는 유지한다. |
-| BR-PUBLICATION-007 | 외부 영상 삭제의 영향 범위 | Video | Visit, Restaurant | 영상 상태 변경의 영향 경계를 Video가 소유한다. |
-| BR-PUBLICATION-008 | 상태 변경의 일관성 | 관리자 유스케이스(애플리케이션) | Restaurant, Creator, Video, Visit | 여러 조회에 동일한 공개 정책을 조율한다. |
+| [#4 BR-RESTAURANT-001](../01-requirements/business-rules.md#br-restaurant-001-맛집의-의미) | 맛집의 의미 | Restaurant | 관리자 유스케이스 | 맛집 등록·조회 대상의 정의다. |
+| [#4 BR-RESTAURANT-002](../01-requirements/business-rules.md#br-restaurant-002-영상과-독립된-맛집) | 영상과 독립된 맛집 | Restaurant | Visit | 맛집 생명주기를 관계와 분리한다. |
+| [#4 BR-RESTAURANT-003](../01-requirements/business-rules.md#br-restaurant-003-맛집-최소-등록-정보) | 맛집 최소 등록 정보 | Restaurant | 관리자 유스케이스 | 맛집의 필수 정보 규칙이다. |
+| [#4 BR-RESTAURANT-004](../01-requirements/business-rules.md#br-restaurant-004-대표-음식-카테고리) | 대표 음식 카테고리 | Restaurant | 관리자 유스케이스 | Restaurant 구성 개념의 선택 규칙이다. |
+| [#4 BR-RESTAURANT-005](../01-requirements/business-rules.md#br-restaurant-005-맛집의-지역-소속) | 맛집의 지역 소속 | Restaurant | 관리자 유스케이스 | 주소와 자치구 소속 규칙이다. |
+| [#4 BR-RESTAURANT-006](../01-requirements/business-rules.md#br-restaurant-006-맛집-중복-판단) | 맛집 중복 판단 | Restaurant | 관리자 유스케이스 | 장소 동일성으로 맛집 고유성을 판단한다. |
+| [#4 BR-RESTAURANT-007](../01-requirements/business-rules.md#br-restaurant-007-동일-상호의-지점-구분) | 동일 상호의 지점 구분 | Restaurant | 관리자 유스케이스 | 맛집 식별 경계를 정한다. |
+| [#4 BR-RESTAURANT-008](../01-requirements/business-rules.md#br-restaurant-008-맛집-공개-조건) | 맛집 공개 조건 | Restaurant | 관리자 유스케이스 | 맛집 자체의 조회 가능 상태를 판단한다. |
+| [#4 BR-RESTAURANT-009](../01-requirements/business-rules.md#br-restaurant-009-맛집-이름-변경) | 맛집 이름 변경 | Restaurant | Visit | 동일 맛집의 생명주기와 관계 보존 기준이다. |
+| [#4 BR-RESTAURANT-010](../01-requirements/business-rules.md#br-restaurant-010-주소-변경과-장소-이전) | 주소 변경과 장소 이전 | Restaurant | Visit | 장소 동일성과 관계 이전 금지를 정한다. |
+| [#4 BR-RESTAURANT-011](../01-requirements/business-rules.md#br-restaurant-011-폐업과-장기-운영-중단) | 폐업과 장기 운영 중단 | Restaurant | 관리자 유스케이스 | 맛집 상태와 재공개 기준이다. |
+| [#4 BR-CREATOR-001](../01-requirements/business-rules.md#br-creator-001-유튜버-정보의-의미) | 유튜버 정보의 의미 | Creator | Visit, Video | YouTube 채널을 관리 단위로 정한다. |
+| [#4 BR-CREATOR-002](../01-requirements/business-rules.md#br-creator-002-유튜버-최소-등록-정보) | 유튜버 최소 등록 정보 | Creator | 관리자 유스케이스 | 유튜버 기본 정보의 필수값 규칙이다. |
+| [#4 BR-CREATOR-003](../01-requirements/business-rules.md#br-creator-003-동일-채널-중복-판단) | 동일 채널 중복 판단 | Creator | 관리자 유스케이스 | 채널 고유성 판단 규칙이다. |
+| [#4 BR-CREATOR-004](../01-requirements/business-rules.md#br-creator-004-유튜버-표시-정보) | 유튜버 표시 정보 | Creator | Visit | Creator가 제공할 공개 표시 정보를 정한다. |
+| [#4 BR-CREATOR-005](../01-requirements/business-rules.md#br-creator-005-방문-관계의-유튜버-일치) | 방문 관계의 유튜버 일치 | Visit | Creator, Video | 관계 생성 시 게시 채널과 유튜버 일치를 판정한다. |
+| [#4 BR-CREATOR-006](../01-requirements/business-rules.md#br-creator-006-채널명-변경과-동일성-유지) | 채널명 변경과 동일성 유지 | Creator | Visit, Video | 유튜버 생명주기와 관계 보존 기준이다. |
+| [#4 BR-CREATOR-007](../01-requirements/business-rules.md#br-creator-007-채널-이용-불가-처리) | 채널 이용 불가 처리 | Creator | Visit | 유튜버 상태를 판단하고 Visit가 노출에서 제외한다. |
+| [#4 BR-VIDEO-001](../01-requirements/business-rules.md#br-video-001-영상의-의미와-보관-범위) | 영상의 의미와 보관 범위 | Video | 없음 | 원본과 메타데이터의 관리 경계를 정한다. |
+| [#4 BR-VIDEO-002](../01-requirements/business-rules.md#br-video-002-영상-최소-등록-정보) | 영상 최소 등록 정보 | Video | 관리자 유스케이스 | 영상 기본 정보의 필수값 규칙이다. |
+| [#4 BR-VIDEO-003](../01-requirements/business-rules.md#br-video-003-영상-식별-및-중복-판단) | 영상 식별 및 중복 판단 | Video | 관리자 유스케이스 | 원본 콘텐츠 기준 영상 고유성 규칙이다. |
+| [#4 BR-VIDEO-004](../01-requirements/business-rules.md#br-video-004-영상과-방문-관계의-다대상-연결) | 영상과 방문 관계의 다대상 연결 | Visit | Video, Restaurant | 영상 하나와 맛집별 관계 생성 범위를 정한다. |
+| [#4 BR-VIDEO-005](../01-requirements/business-rules.md#br-video-005-실제-방문-근거) | 실제 방문 근거 | Visit | Video, Creator | 영상을 관계 근거로 채택하는 조건이다. |
+| [#4 BR-VIDEO-006](../01-requirements/business-rules.md#br-video-006-게시일과-방문일의-구분) | 게시일과 방문일의 구분 | Visit | Video | 방문 관계가 관리하지 않을 날짜 의미를 정한다. |
+| [#4 BR-VIDEO-007](../01-requirements/business-rules.md#br-video-007-외부-링크-장애의-격리) | 외부 링크 장애의 격리 | Video | Restaurant, Visit | 링크 장애와 내부 기본 정보 생명주기를 분리한다. |
+| [#4 BR-VIDEO-008](../01-requirements/business-rules.md#br-video-008-영상-표시-정보-변경) | 영상 표시 정보 변경 | Video | Visit | 동일 영상의 메타데이터 변경과 관계 보존 기준이다. |
+| [#4 BR-VIDEO-009](../01-requirements/business-rules.md#br-video-009-영상-이용-불가-처리) | 영상 이용 불가 처리 | Video | Visit | 영상 상태를 판단하고 Visit가 관계 노출을 제한한다. |
+| [#4 BR-VISIT-001](../01-requirements/business-rules.md#br-visit-001-방문-관계의-구성) | 방문 관계의 구성 | Visit | Restaurant, Creator, Video | 관계가 참조하는 세 대상을 정의한다. |
+| [#4 BR-VISIT-002](../01-requirements/business-rules.md#br-visit-002-방문-근거-필수) | 방문 근거 필수 | Visit | Video, Creator | 관계 생성의 핵심 불변 조건이다. |
+| [#4 BR-VISIT-003](../01-requirements/business-rules.md#br-visit-003-방문-관계-중복-판단) | 방문 관계 중복 판단 | Visit | 없음 | 관계 고유성 규칙이다. |
+| [#4 BR-VISIT-004](../01-requirements/business-rules.md#br-visit-004-방문-관계의-연결-범위) | 방문 관계의 연결 범위 | Visit | Restaurant, Creator, Video | 다대다 관계를 개별 방문 근거 단위로 제한한다. |
+| [#4 BR-VISIT-005](../01-requirements/business-rules.md#br-visit-005-방문-관계의-조회-유효성) | 방문 관계의 조회 유효성 | Visit | Restaurant, Creator, Video | 조회에 사용할 관계의 유효성을 판단한다. |
+| [#4 BR-VISIT-006](../01-requirements/business-rules.md#br-visit-006-방문-날짜-관리-제외) | 방문 날짜 관리 제외 | Visit | Video | MVP 관계 모델에서 방문 날짜를 제외한다. |
+| [#4 BR-VISIT-007](../01-requirements/business-rules.md#br-visit-007-등록-완료와-검증-상태) | 등록 완료와 검증 상태 | Visit | 관리자 유스케이스 | 등록 완료를 검증 완료로 보는 관계 정책이다. |
+| [#4 BR-SEARCH-001](../01-requirements/business-rules.md#br-search-001-검색-대상과-일치-기준) | 검색 대상과 일치 기준 | Restaurant | 없음 | 맛집 이름 검색 규칙이다. |
+| [#4 BR-SEARCH-002](../01-requirements/business-rules.md#br-search-002-검색어-공백-처리) | 검색어 공백 처리 | Restaurant | 없음 | 맛집 이름 조건의 정규화 규칙이다. |
+| [#4 BR-SEARCH-003](../01-requirements/business-rules.md#br-search-003-필터-종류와-단일-선택) | 필터 종류와 단일 선택 | Restaurant | Visit | 최종 맛집 탐색 입력 정책이다. |
+| [#4 BR-SEARCH-004](../01-requirements/business-rules.md#br-search-004-검색과-필터-조합) | 검색과 필터 조합 | Restaurant | Visit | Restaurant가 최종 조건 결합을 책임진다. |
+| [#4 BR-SEARCH-005](../01-requirements/business-rules.md#br-search-005-조회-결과의-고유성) | 조회 결과의 고유성 | Restaurant | Visit | 최종 맛집 목록의 중복 제거 책임이다. |
+| [#4 BR-SEARCH-006](../01-requirements/business-rules.md#br-search-006-빈-조회-결과) | 빈 조회 결과 | Restaurant | Visit | 맛집 탐색 결과의 반환 정책이다. |
+| [#4 BR-SEARCH-007](../01-requirements/business-rules.md#br-search-007-유튜버-필터의-방문-근거) | 유튜버 필터의 방문 근거 | Visit | Creator, Video, Restaurant | 유튜버 조건은 유효 방문 관계가 결정한다. |
+| [#4 BR-SEARCH-008](../01-requirements/business-rules.md#br-search-008-페이지-단위-조회) | 페이지 단위 조회 | Restaurant | 없음 | 맛집 목록의 페이지 정책이다. |
+| [#4 BR-SEARCH-009](../01-requirements/business-rules.md#br-search-009-기본-정렬) | 기본 정렬 | Restaurant | 없음 | 맛집 이름과 주소를 이용한 정렬 정책이다. |
+| [#4 BR-ADMIN-001](../01-requirements/business-rules.md#br-admin-001-관리자-권한-검증) | 관리자 권한 검증 | 관리자 유스케이스(애플리케이션) | Restaurant, Creator, Video, Visit | 인증과 진입점은 애플리케이션 접근 책임이다. |
+| [#4 BR-ADMIN-002](../01-requirements/business-rules.md#br-admin-002-등록-전-사실-검증) | 등록 전 사실 검증 | 관리자 유스케이스(애플리케이션) | Restaurant, Creator, Video, Visit | 등록 호출 전 공통 운영 흐름이다. |
+| [#4 BR-ADMIN-003](../01-requirements/business-rules.md#br-admin-003-등록-정합성-검증) | 등록 정합성 검증 | 관리자 유스케이스(애플리케이션) | Restaurant, Creator, Video, Visit | 각 도메인의 검증 결과를 조율한다. |
+| [#4 BR-ADMIN-004](../01-requirements/business-rules.md#br-admin-004-검증-후-등록-및-조회-반영) | 검증 후 등록 및 조회 반영 | 관리자 유스케이스(애플리케이션) | Restaurant, Creator, Video, Visit | 등록과 사용자 조회 반영의 공통 흐름이다. |
+| [#4 BR-ADMIN-005](../01-requirements/business-rules.md#br-admin-005-mvp-관리-기능의-경계) | MVP 관리 기능의 경계 | 관리자 유스케이스(애플리케이션) | Restaurant, Creator, Video, Visit | 관리자 기능 범위를 등록으로 제한한다. |
+| [#4 BR-ADMIN-006](../01-requirements/business-rules.md#br-admin-006-잘못-등록된-데이터의-정정-원칙) | 잘못 등록된 데이터의 정정 원칙 | 관리자 유스케이스(애플리케이션) | Restaurant, Creator, Video, Visit | 여러 도메인에 적용되는 운영 정정 흐름이다. |
+| [#4 BR-ADMIN-007](../01-requirements/business-rules.md#br-admin-007-동시-등록의-고유성) | 동시 등록의 고유성 | 관리자 유스케이스(애플리케이션) | Restaurant, Creator, Video, Visit | 공통 등록 조율 책임이며 고유성 판단은 각 도메인에 위임한다. |
+| [#4 BR-ADMIN-008](../01-requirements/business-rules.md#br-admin-008-보류-요청의-처리) | 보류 요청의 처리 | 관리자 유스케이스(애플리케이션) | Restaurant, Creator, Video, Visit | 미확정 등록 요청의 공통 운영 흐름이다. |
+| [#4 BR-PUBLICATION-001](../01-requirements/business-rules.md#br-publication-001-일반-사용자-공개-범위) | 일반 사용자 공개 범위 | 관리자 유스케이스(애플리케이션) | Restaurant, Creator, Video, Visit | 공통 조회 정책이며 각 대상 상태 판단은 소유 도메인에 위임한다. |
+| [#4 BR-PUBLICATION-002](../01-requirements/business-rules.md#br-publication-002-비공개-데이터의-접근) | 비공개 데이터의 접근 | 관리자 유스케이스(애플리케이션) | Restaurant, Creator, Video, Visit | 관리자 접근과 일반 사용자 차단을 조율한다. |
+| [#4 BR-PUBLICATION-003](../01-requirements/business-rules.md#br-publication-003-맛집-상태와-연결-정보-노출) | 맛집 상태와 연결 정보 노출 | Restaurant | Visit | 맛집 상태가 상세 맥락 전체의 진입 가능성을 결정한다. |
+| [#4 BR-PUBLICATION-004](../01-requirements/business-rules.md#br-publication-004-유튜버-상태와-관계-노출) | 유튜버 상태와 관계 노출 | Creator | Visit | Creator가 상태를 판단하고 Visit가 관계 결과에서 제외한다. |
+| [#4 BR-PUBLICATION-005](../01-requirements/business-rules.md#br-publication-005-영상-상태와-관계-노출) | 영상 상태와 관계 노출 | Video | Visit | Video가 상태를 판단하고 Visit가 관계 결과에서 제외한다. |
+| [#4 BR-PUBLICATION-006](../01-requirements/business-rules.md#br-publication-006-관계-상태와-맛집-기본-조회) | 관계 상태와 맛집 기본 조회 | Visit | Restaurant | 관계 노출은 Visit가 제한하되 Restaurant 기본 조회는 유지한다. |
+| [#4 BR-PUBLICATION-007](../01-requirements/business-rules.md#br-publication-007-외부-영상-삭제의-영향-범위) | 외부 영상 삭제의 영향 범위 | Video | Visit, Restaurant | 영상 상태 변경의 영향 경계를 Video가 소유한다. |
+| [#4 BR-PUBLICATION-008](../01-requirements/business-rules.md#br-publication-008-상태-변경의-일관성) | 상태 변경의 일관성 | 관리자 유스케이스(애플리케이션) | Restaurant, Creator, Video, Visit | 여러 조회에 동일한 공개 정책을 조율한다. |
 
 관리자 유스케이스는 표의 단일 주 소유 책임이지만 비즈니스 도메인이 아니다. BR-ADMIN 계열과 범용 공개 정책은 애플리케이션 계층이 흐름을 조율하고, 실제 업무 판단은 협업란의 각 소유 도메인이 수행한다.
 
@@ -595,8 +609,8 @@ Restaurant --관계 기반 조회 요청--> Visit
 
 - 현재 상태: 결정 완료
 - 관련 문서:
-  - requirements-review.md
-  - business-rules.md
+  - [#9 requirements-review.md](../01-requirements/requirements-review.md)
+  - [#4 business-rules.md](../01-requirements/business-rules.md)
 - 영향을 받는 도메인:
   - Creator
   - Video
@@ -606,15 +620,15 @@ Restaurant --관계 기반 조회 요청--> Visit
 - 영향:
   - 채널 동일성, 영상 게시 주체, 관계 일치와 표시 이름
 - 결정 근거:
-  - RV-BR-001, BR-CREATOR-001
+  - [#9 RV-BR-001](../01-requirements/requirements-review.md#rv-br-001-유튜버-관리-단위), [#4 BR-CREATOR-001](../01-requirements/business-rules.md#br-creator-001-유튜버-정보의-의미)
 
 ### RV-DOMAIN-002 하나의 맛집에 여러 음식 카테고리 허용 여부
 
 - 현재 상태: 결정 완료
 - 관련 문서:
-  - scope.md
-  - requirements-review.md
-  - business-rules.md
+  - [#2 scope.md](../00-overview/scope.md)
+  - [#9 requirements-review.md](../01-requirements/requirements-review.md)
+  - [#4 business-rules.md](../01-requirements/business-rules.md)
 - 영향을 받는 도메인:
   - Restaurant
 - 결정된 내용:
@@ -622,15 +636,15 @@ Restaurant --관계 기반 조회 요청--> Visit
 - 영향:
   - 맛집 등록, 필터와 표시
 - 결정 근거:
-  - RV-BR-015, BR-RESTAURANT-004
+  - [#9 RV-BR-015](../01-requirements/requirements-review.md#rv-br-015-음식-카테고리-분류-기준), [#4 BR-RESTAURANT-004](../01-requirements/business-rules.md#br-restaurant-004-대표-음식-카테고리)
 
 ### RV-DOMAIN-003 지역 정보의 관리 단위
 
 - 현재 상태: 결정 완료
 - 관련 문서:
-  - scope.md
-  - functional-requirements.md
-  - business-rules.md
+  - [#2 scope.md](../00-overview/scope.md)
+  - [#3 functional-requirements.md](../01-requirements/functional-requirements.md)
+  - [#4 business-rules.md](../01-requirements/business-rules.md)
 - 영향을 받는 도메인:
   - Restaurant
 - 결정된 내용:
@@ -638,14 +652,14 @@ Restaurant --관계 기반 조회 요청--> Visit
 - 영향:
   - 맛집 등록, 주소 표시와 지역 필터
 - 결정 근거:
-  - FR-RESTAURANT-003, BR-RESTAURANT-005
+  - [#3 FR-RESTAURANT-003](../01-requirements/functional-requirements.md#fr-restaurant-003-지역별-필터), [#4 BR-RESTAURANT-005](../01-requirements/business-rules.md#br-restaurant-005-맛집의-지역-소속)
 
 ### RV-DOMAIN-004 유튜버 목록 조회 기능의 MVP 포함 여부
 
 - 현재 상태: 결정 완료 — 공개 유튜버의 최소 선택 목록을 MVP에 포함
 - 관련 문서:
-  - scope.md
-  - functional-requirements.md
+  - [#2 scope.md](../00-overview/scope.md)
+  - [#3 functional-requirements.md](../01-requirements/functional-requirements.md)
 - 영향을 받는 도메인:
   - Creator
   - Visit
@@ -660,8 +674,8 @@ Restaurant --관계 기반 조회 요청--> Visit
 
 - 현재 상태: 팀 결정 필요
 - 관련 문서:
-  - scope.md
-  - functional-requirements.md
+  - [#2 scope.md](../00-overview/scope.md)
+  - [#3 functional-requirements.md](../01-requirements/functional-requirements.md)
 - 영향을 받는 도메인:
   - Restaurant
   - Creator
@@ -678,8 +692,8 @@ Restaurant --관계 기반 조회 요청--> Visit
 
 - 현재 상태: 결정 완료
 - 관련 문서:
-  - requirements-review.md
-  - business-rules.md
+  - [#9 requirements-review.md](../01-requirements/requirements-review.md)
+  - [#4 business-rules.md](../01-requirements/business-rules.md)
 - 영향을 받는 도메인:
   - Video
   - Visit
@@ -689,13 +703,13 @@ Restaurant --관계 기반 조회 요청--> Visit
 - 영향:
   - 상태 변경, 관계 조회와 상세 표시
 - 결정 근거:
-  - RV-BR-006, BR-VIDEO-009, BR-PUBLICATION-005
+  - [#9 RV-BR-006](../01-requirements/requirements-review.md#rv-br-006-영상-정보-변경과-이용-불가-처리), [#4 BR-VIDEO-009](../01-requirements/business-rules.md#br-video-009-영상-이용-불가-처리), [#4 BR-PUBLICATION-005](../01-requirements/business-rules.md#br-publication-005-영상-상태와-관계-노출)
 
 ### RV-DOMAIN-007 Visit와 기본 정보 공개 상태의 우선순위
 
 - 현재 상태: 결정 완료
 - 관련 문서:
-  - business-rules.md
+  - [#4 business-rules.md](../01-requirements/business-rules.md)
 - 영향을 받는 도메인:
   - Restaurant
   - Creator
@@ -706,15 +720,15 @@ Restaurant --관계 기반 조회 요청--> Visit
 - 영향:
   - 목록, 유튜버 필터, 상세와 관련 영상 결과
 - 결정 근거:
-  - BR-PUBLICATION-003 ~ BR-PUBLICATION-006
+  - [#4 BR-PUBLICATION-003](../01-requirements/business-rules.md#br-publication-003-맛집-상태와-연결-정보-노출) ~ [#4 BR-PUBLICATION-006](../01-requirements/business-rules.md#br-publication-006-관계-상태와-맛집-기본-조회)
 
 ### RV-DOMAIN-008 관리자 수정·삭제 기능의 MVP 포함 여부
 
 - 현재 상태: 결정 완료
 - 관련 문서:
-  - functional-requirements.md
-  - requirements-review.md
-  - business-rules.md
+  - [#3 functional-requirements.md](../01-requirements/functional-requirements.md)
+  - [#9 requirements-review.md](../01-requirements/requirements-review.md)
+  - [#4 business-rules.md](../01-requirements/business-rules.md)
 - 영향을 받는 도메인:
   - Restaurant
   - Creator
@@ -725,15 +739,15 @@ Restaurant --관계 기반 조회 요청--> Visit
 - 영향:
   - 관리자 유스케이스 범위와 작업 분해
 - 결정 근거:
-  - BR-ADMIN-005, RV-BR-009
+  - [#4 BR-ADMIN-005](../01-requirements/business-rules.md#br-admin-005-mvp-관리-기능의-경계), [#9 RV-BR-009](../01-requirements/requirements-review.md#rv-br-009-잘못-등록된-데이터의-정정)
 
 ### RV-DOMAIN-009 Admin을 독립 도메인으로 둘지 여부
 
 - 현재 상태: 본 문서 권장안 제시, 후속 아키텍처에서 확인 필요
 - 관련 문서:
-  - functional-requirements.md
-  - business-rules.md
-  - non-functional-requirements.md
+  - [#3 functional-requirements.md](../01-requirements/functional-requirements.md)
+  - [#4 business-rules.md](../01-requirements/business-rules.md)
+  - [#10 non-functional-requirements.md](../01-requirements/non-functional-requirements.md)
 - 영향을 받는 도메인:
   - Restaurant
   - Creator
@@ -750,8 +764,8 @@ Restaurant --관계 기반 조회 요청--> Visit
 
 - 현재 상태: 팀 결정 필요
 - 관련 문서:
-  - functional-requirements.md
-  - non-functional-requirements.md
+  - [#3 functional-requirements.md](../01-requirements/functional-requirements.md)
+  - [#10 non-functional-requirements.md](../01-requirements/non-functional-requirements.md)
 - 영향을 받는 도메인:
   - Restaurant
   - Creator
@@ -767,16 +781,16 @@ Restaurant --관계 기반 조회 요청--> Visit
 ### 추가 검토 연결 항목
 
 - 맛집 목록은 채널명 오름차순 최대 3명과 `외 N명`으로 축약하고 전체 방문 유튜버는 상세에서 제공한다.
-- 관리자 계정 발급·회수·복구와 인증 수준은 `scope.md` 제9장 및 `RV-NFR-007`에서 결정한다.
+- 관리자 계정 발급·회수·복구와 인증 수준은 [#2 scope.md](../00-overview/scope.md) 제9장 및 [#10 RV-NFR-007](../01-requirements/non-functional-requirements.md#rv-nfr-007-관리자-인증-수준)에서 결정한다.
 - 관리자 등록은 YouTube API 조회 후 확인한 정보를 저장하고 일반 사용자 조회는 저장 정보를 사용한다. 자동 주기 동기화는 후속 범위다.
-- 초기 데이터 규모와 성능 기준은 `RV-NFR-001`, `RV-NFR-002`, `RV-NFR-004`, `RV-NFR-014`, `RV-NFR-015`에서 결정한다.
+- 초기 데이터 규모와 성능 기준은 [#10 RV-NFR-001](../01-requirements/non-functional-requirements.md#rv-nfr-001-목표-동시-사용자-수), [#10 RV-NFR-002](../01-requirements/non-functional-requirements.md#rv-nfr-002-초기-데이터-규모), [#10 RV-NFR-004](../01-requirements/non-functional-requirements.md#rv-nfr-004-목표-응답-시간과-허용-오류율), [#10 RV-NFR-014](../01-requirements/non-functional-requirements.md#rv-nfr-014-초기-예상-맛집-수), [#10 RV-NFR-015](../01-requirements/non-functional-requirements.md#rv-nfr-015-초기-예상-영상-수)에서 결정한다.
 
 ### 경계 판단 요약
 
 | 검토 대상 | 판단 | 근거 |
 |---|---|---|
 | Restaurant와 Visit | 기본 정보와 탐색은 Restaurant, 검증된 방문 관계와 관계 기반 포함 여부는 Visit가 소유 | 영상 없는 맛집도 독립 조회되며 관계에는 별도 근거·중복·유효성 규칙이 있다. |
-| 유튜버별 맛집 필터 | Visit가 관계 판정, Restaurant가 최종 맛집 목록 조합 | BR-SEARCH-007은 유효한 방문 근거를 요구한다. |
+| 유튜버별 맛집 필터 | Visit가 관계 판정, Restaurant가 최종 맛집 목록 조합 | [#4 BR-SEARCH-007](../01-requirements/business-rules.md#br-search-007-유튜버-필터의-방문-근거)은 유효한 방문 근거를 요구한다. |
 | 방문 유튜버·관련 영상 조회 | Visit가 관계 결과를 소유하고 Creator·Video가 표시 정보를 제공 | 기본 정보 소유와 관계 소유를 분리한다. |
 | Admin 독립 도메인 | 독립 도메인으로 두지 않음 | 관리자 등록은 각 도메인 유스케이스를 인증·조율하는 애플리케이션 책임이다. |
 | Search·Filter | 독립 도메인으로 두지 않음 | 현재 탐색 규칙은 Restaurant와 Visit의 기존 변경 이유 안에 있다. |

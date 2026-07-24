@@ -1,3 +1,13 @@
+---
+related_documents:
+  1: ../data/data-model.md
+  2: ../data/entity-definitions.md
+  3: ../data/relationship-rules.md
+  4: ../data/lifecycle-rules.md
+  5: ../data/constraints.md
+  6: ../data/data-review.md
+---
+
 # 맛잇온 ERD 작성 명세
 
 ## 1. 문서 목적
@@ -103,4 +113,4 @@ Restaurant–Video와 Restaurant–Creator 직접 관계는 그리지 않는다.
 - [x] publication과 외부 availability가 분리됐다.
 - [x] 핵심 유일·복합 유일 제약이 문서화됐다.
 - [x] MVP 제외 데이터가 없다.
-- [x] ERD와 `relationship-rules.md`가 일치한다.
+- [x] ERD와 [#3 relationship-rules.md](../data/relationship-rules.md)가 일치한다.

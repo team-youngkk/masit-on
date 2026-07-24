@@ -1,3 +1,11 @@
+---
+related_documents:
+  1: ../README.md
+  2: response-contract.md
+  3: error-contract.md
+  4: ../../data/entity-definitions.md
+---
+
 # 식별자 계약
 
 ## 1. 적용 범위

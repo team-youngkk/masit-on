@@ -1,3 +1,11 @@
+---
+related_documents:
+  1: ../README.md
+  2: identifier-contract.md
+  3: error-contract.md
+  4: pagination-contract.md
+---
+
 # 응답 계약
 
 ## 1. 권장 방식

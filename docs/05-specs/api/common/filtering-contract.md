@@ -1,3 +1,13 @@
+---
+related_documents:
+  1: ../README.md
+  2: ../../../01-requirements/business-rules.md
+  3: pagination-contract.md
+  4: identifier-contract.md
+  5: ../discovery/restaurant-discovery-api.md
+  6: ../discovery/creator-discovery-api.md
+---
+
 # 검색·필터 계약
 
 ## 1. 전달 방식

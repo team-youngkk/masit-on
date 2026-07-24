@@ -1,3 +1,13 @@
+---
+related_documents:
+  1: ../00-overview/scope.md
+  2: ../00-overview/glossary.md
+  3: business-rules.md
+  4: requirements-review.md
+  5: ../02-analysis/domain-boundaries.md
+  6: ../02-analysis/mvp-workstreams.md
+---
+
 # 맛잇온 기능 요구사항
 
 ## 1. 문서 목적
@@ -21,8 +31,8 @@
 - 각 요구사항은 설명, 사용자, 선행 조건, 입력 조건, 처리 규칙, 결과, 예외 및 경계 조건, 인수 조건을 포함한다.
 - 인수 조건은 사용자의 행동 또는 시스템의 결과로 검증할 수 있게 작성한다.
 - 여러 기능에 공통으로 적용되는 인증, 공개 상태, 오류 및 중복 표시 규칙은 제5장을 따른다.
-- `맛집`, `유튜버`, `영상`, `방문 관계`, `검색`, `필터`, `등록`, `검증`은 `docs/00-overview/glossary.md`의 의미로 사용한다.
-- 요구사항 사이에 충돌이 있으면 1차 MVP 범위의 기준 문서인 `docs/00-overview/scope.md`를 우선한다.
+- `맛집`, `유튜버`, `영상`, `방문 관계`, `검색`, `필터`, `등록`, `검증`은 [#2 docs/00-overview/glossary.md](../00-overview/glossary.md)의 의미로 사용한다.
+- 요구사항 사이에 충돌이 있으면 1차 MVP 범위의 기준 문서인 [#1 docs/00-overview/scope.md](../00-overview/scope.md)를 우선한다.
 
 ## 3. 일반 사용자 기능
 
@@ -1009,8 +1019,8 @@
 - 관리자 회원가입, 계정 관리 화면, 등급과 기능별 권한 세분화
 - 별도의 영상 상세 페이지와 영상 탐색
 
-제외 기능은 `docs/00-overview/scope.md`의 범위 변경 절차가 완료되기 전까지 현재 요구사항이나 구현 범위에 포함하지 않는다.
+제외 기능은 [#1 docs/00-overview/scope.md](../00-overview/scope.md)의 범위 변경 절차가 완료되기 전까지 현재 요구사항이나 구현 범위에 포함하지 않는다.
 
 ## 8. 검토 필요 항목
 
-기능 요구사항에만 해당하는 추가 미결정 항목은 없다. 프로젝트 범위에 남아 있는 미결정 사항은 `docs/00-overview/scope.md` 제9장을 단일 기준으로 사용하며, 확정 전에는 임의로 기능 범위를 확대하지 않는다.
+기능 요구사항에만 해당하는 추가 미결정 항목은 없다. 프로젝트 범위에 남아 있는 미결정 사항은 [#1 docs/00-overview/scope.md](../00-overview/scope.md) 제9장을 단일 기준으로 사용하며, 확정 전에는 임의로 기능 범위를 확대하지 않는다.

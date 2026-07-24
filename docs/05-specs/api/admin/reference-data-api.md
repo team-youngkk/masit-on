@@ -9,10 +9,10 @@ owner: 김인안
 reviewers:
   - 박진영
 related_requirements:
-  - FR-ADMIN-001
-  - FR-ADMIN-002
-  - FR-ADMIN-003
-  - FR-ADMIN-004
+  1: FR-ADMIN-001
+  2: FR-ADMIN-002
+  3: FR-ADMIN-003
+  4: FR-ADMIN-004
 related_business_rules:
   - BR-RESTAURANT-003
   - BR-RESTAURANT-004
@@ -54,6 +54,18 @@ related_nfr:
   - NFR-TEST-003
   - NFR-PRIVACY-001
   - NFR-PRIVACY-002
+related_documents:
+  1: ../../../04-product/prd/admin/admin-data-management.md
+  2: authentication-api.md
+  3: ../common/identifier-contract.md
+  4: ../common/response-contract.md
+  5: ../common/error-contract.md
+  6: ../../data/entity-definitions.md
+  7: ../../data/constraints.md
+  8: ../../../07-adr/integration/ext-001-reference-verification.md
+  9: ../../../07-adr/architecture/arch-002-external-ports-adapters.md
+  10: ../../../01-requirements/functional-requirements.md
+  11: ../../../02-analysis/mvp-workstreams.md
 ---
 
 # 관리자 기본 데이터 API
@@ -68,18 +80,18 @@ related_nfr:
 
 ## 3. 인증 및 권한
 
-모든 API는 `Authorization: Bearer` JWT Access Token과 `ADMIN` 권한을 요구한다. 인증 없음·실패는 `401`, 권한 검증 실패는 `403`이다. 자세한 전달 방식은 [관리자 인증 API](authentication-api.md)를 따른다.
+모든 API는 `Authorization: Bearer` JWT Access Token과 `ADMIN` 권한을 요구한다. 인증 없음·실패는 `401`, 권한 검증 실패는 `403`이다. 자세한 전달 방식은 [#2 관리자 인증 API](authentication-api.md)를 따른다.
 
 ## 4. API 요약
 
 | API ID | Method | Path | 설명 |
 |---|---|---|---|
-| API-ADMIN-RESTAURANT-PREVIEW-001 | POST | `/admin/restaurant-registration-previews` | 맛집 입력·카카오 장소 검증 미리보기 |
-| API-ADMIN-RESTAURANT-001 | POST | `/admin/restaurants` | 검증된 맛집 등록 |
-| API-ADMIN-CREATOR-PREVIEW-001 | POST | `/admin/creator-registration-previews` | YouTube 채널 검증 미리보기 |
-| API-ADMIN-CREATOR-001 | POST | `/admin/creators` | YouTube 채널 단위 유튜버 등록 |
-| API-ADMIN-VIDEO-PREVIEW-001 | POST | `/admin/video-registration-previews` | YouTube 영상 검증 미리보기 |
-| API-ADMIN-VIDEO-001 | POST | `/admin/videos` | 방문 근거 후보 영상 등록 |
+| [API-ADMIN-RESTAURANT-PREVIEW-001](reference-data-api.md#api-admin-restaurant-preview-001-맛집-등록-검증-미리보기) | POST | `/admin/restaurant-registration-previews` | 맛집 입력·카카오 장소 검증 미리보기 |
+| [API-ADMIN-RESTAURANT-001](reference-data-api.md#api-admin-restaurant-001-맛집-등록-확정) | POST | `/admin/restaurants` | 검증된 맛집 등록 |
+| [API-ADMIN-CREATOR-PREVIEW-001](reference-data-api.md#api-admin-creator-preview-001-유튜버-등록-검증-미리보기) | POST | `/admin/creator-registration-previews` | YouTube 채널 검증 미리보기 |
+| [API-ADMIN-CREATOR-001](reference-data-api.md#api-admin-creator-001-유튜버-등록-확정) | POST | `/admin/creators` | YouTube 채널 단위 유튜버 등록 |
+| [API-ADMIN-VIDEO-PREVIEW-001](reference-data-api.md#api-admin-video-preview-001-영상-등록-검증-미리보기) | POST | `/admin/video-registration-previews` | YouTube 영상 검증 미리보기 |
+| [API-ADMIN-VIDEO-001](reference-data-api.md#api-admin-video-001-영상-등록-확정) | POST | `/admin/videos` | 방문 근거 후보 영상 등록 |
 
 등록 순서는 맛집·유튜버·영상 사이에는 강제하지 않는다. 세 대상이 모두 등록된 뒤 방문 관계를 등록한다.
 
@@ -102,8 +114,8 @@ related_nfr:
 - Path: `/admin/restaurant-registration-previews`
 - 인증: JWT Access Token과 `ADMIN` 권한 필수
 - 권한: 관리자 등록 권한
-- 관련 PRD: PRD-ADMIN-001
-- 관련 요구사항: FR-ADMIN-001, FR-ADMIN-002
+- 관련 PRD: [#1 PRD-ADMIN-001](../../../04-product/prd/admin/admin-data-management.md)
+- 관련 요구사항: [REQ#1 FR-ADMIN-001](../../../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근), [REQ#2 FR-ADMIN-002](../../../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록)
 
 #### Request Body
 
@@ -189,7 +201,7 @@ related_nfr:
 - Method: `POST`
 - Path: `/admin/creator-registration-previews`
 - 인증·권한: JWT Access Token과 `ADMIN` 권한 필수
-- 관련 요구사항: FR-ADMIN-001, FR-ADMIN-003
+- 관련 요구사항: [REQ#1 FR-ADMIN-001](../../../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근), [REQ#3 FR-ADMIN-003](../../../01-requirements/functional-requirements.md#fr-admin-003-유튜버-정보-등록)
 
 #### Request Body
 
@@ -257,7 +269,7 @@ related_nfr:
 - Method: `POST`
 - Path: `/admin/video-registration-previews`
 - 인증·권한: JWT Access Token과 `ADMIN` 권한 필수
-- 관련 요구사항: FR-ADMIN-001, FR-ADMIN-004
+- 관련 요구사항: [REQ#1 FR-ADMIN-001](../../../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근), [REQ#4 FR-ADMIN-004](../../../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록)
 
 #### Request Body
 
@@ -328,7 +340,7 @@ related_nfr:
 
 ## 10. 오류 응답
 
-공통적으로 `401 AUTHENTICATION_REQUIRED`, `403 FORBIDDEN`, `500 INTERNAL_SERVER_ERROR`가 적용되며 본문은 [공통 오류 계약](../common/error-contract.md)을 따른다. 외부 응답 원문·키·내부 예외는 노출하지 않는다.
+공통적으로 `401 AUTHENTICATION_REQUIRED`, `403 FORBIDDEN`, `500 INTERNAL_SERVER_ERROR`가 적용되며 본문은 [#5 공통 오류 계약](../common/error-contract.md)을 따른다. 외부 응답 원문·키·내부 예외는 노출하지 않는다.
 
 ## 11. 예제
 
@@ -336,8 +348,8 @@ related_nfr:
 
 ## 12. 관련 요구사항 및 규칙
 
-- PRD-ADMIN-001, WS-04, 김인안; 리뷰어 박진영
-- FR-ADMIN-001~004
+- [#1 PRD-ADMIN-001](../../../04-product/prd/admin/admin-data-management.md), [#11 WS-04](../../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록), 김인안; 리뷰어 박진영
+- [REQ#1 FR-ADMIN-001](../../../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근)~[REQ#4 FR-ADMIN-004](../../../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록)
 - 메타데이터에 나열한 등록·공개·보안·정합성 규칙
 
 ## 13. 확정 사항

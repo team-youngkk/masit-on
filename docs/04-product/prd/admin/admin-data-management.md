@@ -7,11 +7,11 @@ owner: 김인안
 reviewers:
   - 박진영
 related_requirements:
-  - FR-ADMIN-001
-  - FR-ADMIN-002
-  - FR-ADMIN-003
-  - FR-ADMIN-004
-  - FR-VISIT-001
+  1: FR-ADMIN-001
+  2: FR-ADMIN-002
+  3: FR-ADMIN-003
+  4: FR-ADMIN-004
+  5: FR-VISIT-001
 related_business_rules:
   - BR-RESTAURANT-003
   - BR-RESTAURANT-004
@@ -61,13 +61,26 @@ related_nfr:
   - NFR-TEST-003
   - NFR-PRIVACY-001
   - NFR-PRIVACY-002
+related_documents:
+  1: ../00-product-overview.md
+  2: ../../../01-requirements/functional-requirements.md
+  3: ../../../01-requirements/requirements-review.md
+  4: ../../../01-requirements/business-rules.md
+  5: ../../../02-analysis/mvp-workstreams.md
+  6: ../../../03-team/ownership.md
+  7: ../../../05-specs/api/admin/README.md
+  8: ../../../05-specs/data/README.md
+  9: ../../../07-adr/security/auth-001-spring-security-jwt.md
+  10: ../../../07-adr/integration/ext-001-reference-verification.md
+  11: ../../../01-requirements/non-functional-requirements.md
+  12: ../../traceability.md
 ---
 
 # 관리자 데이터 등록 PRD
 
 ## 1. 문서 정보
 
-관리자 접근부터 맛집·유튜버·영상 기본 데이터, 방문 관계 등록과 사용자 조회 반영까지 하나의 완결된 WS-04 업무 흐름으로 정의한다.
+관리자 접근부터 맛집·유튜버·영상 기본 데이터, 방문 관계 등록과 사용자 조회 반영까지 하나의 완결된 [#5 WS-04](../../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 업무 흐름으로 정의한다.
 
 ## 2. 기능 개요
 
@@ -112,7 +125,7 @@ related_nfr:
 - 시작 조건: 세 기본 대상이 존재하고 관리자가 실제 방문 영상 근거를 확인했다.
 - 사용자 행동: 맛집·유튜버·영상 조합을 선택해 방문 관계를 등록한다.
 - 시스템 동작: 참조 존재, 영상 게시 채널과 유튜버 일치, 실제 방문 근거, 관계 중복과 공개 조건을 검증한다.
-- 성공 결과: 고유 관계가 등록되고 WS-01·02·03 사용자 조회에 반영된다.
+- 성공 결과: 고유 관계가 등록되고 [#5 WS-01](../../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)·[#5 WS-02](../../../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)·[#5 WS-03](../../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 사용자 조회에 반영된다.
 - 빈 결과 또는 실패 처리: 참조 없음·채널 불일치·근거 없음·중복이면 새 관계를 만들지 않으며 부분 실패로 불완전 관계를 공개하지 않는다.
 
 ## 9. 기능 범위
@@ -138,18 +151,18 @@ related_nfr:
 
 | PRD 요구사항 | 제품 동작 | 관련 기능 요구사항 | 중요도 | 상태 |
 |---|---|---|---|---|
-| PR-ADMIN-001 | 인증된 관리자만 등록 기능에 접근한다. | FR-ADMIN-001 | Must | 확정 |
-| PR-ADMIN-002 | 검증된 맛집 정보를 필수값·중복·공개 조건에 따라 등록한다. | FR-ADMIN-002 | Must | 확정 |
-| PR-ADMIN-003 | YouTube 채널 단위 유튜버 정보를 검증해 등록한다. | FR-ADMIN-003 | Must | 확정 |
-| PR-ADMIN-004 | 방문 근거로 사용할 영상 정보와 원본 링크를 검증해 등록한다. | FR-ADMIN-004 | Must | 확정 |
-| PR-ADMIN-005 | 존재하는 세 대상과 실제 방문 영상을 근거로 고유 방문 관계를 등록한다. | FR-VISIT-001 | Must | 확정 |
+| PR-ADMIN-001 | 인증된 관리자만 등록 기능에 접근한다. | [REQ#1 FR-ADMIN-001](../../../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근) | Must | 확정 |
+| PR-ADMIN-002 | 검증된 맛집 정보를 필수값·중복·공개 조건에 따라 등록한다. | [REQ#2 FR-ADMIN-002](../../../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록) | Must | 확정 |
+| PR-ADMIN-003 | YouTube 채널 단위 유튜버 정보를 검증해 등록한다. | [REQ#3 FR-ADMIN-003](../../../01-requirements/functional-requirements.md#fr-admin-003-유튜버-정보-등록) | Must | 확정 |
+| PR-ADMIN-004 | 방문 근거로 사용할 영상 정보와 원본 링크를 검증해 등록한다. | [REQ#4 FR-ADMIN-004](../../../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록) | Must | 확정 |
+| PR-ADMIN-005 | 존재하는 세 대상과 실제 방문 영상을 근거로 고유 방문 관계를 등록한다. | [REQ#5 FR-VISIT-001](../../../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록) | Must | 확정 |
 
 ## 11. 비즈니스 규칙
 
-- 기본 데이터 최소 정보·동일성·공개 조건은 `BR-RESTAURANT-003`~`008`, `BR-CREATOR-001`~`003`, `005`, `BR-VIDEO-001`~`006`을 따른다.
-- 관계의 구성·근거·중복·참조·유효성과 날짜 제외는 `BR-VISIT-001`~`007`을 따른다.
-- 접근, 사실·정합성 검증, 조회 반영, MVP 경계, 정정·동시성·보류는 `BR-ADMIN-001`~`008`을 따른다.
-- 공개·비공개와 상태 변경 일관성은 `BR-PUBLICATION-001`, `002`, `008`을 따른다.
+- 기본 데이터 최소 정보·동일성·공개 조건은 [#4 BR-RESTAURANT-003](../../../01-requirements/business-rules.md#br-restaurant-003-맛집-최소-등록-정보)~[#4 BR-RESTAURANT-008](../../../01-requirements/business-rules.md#br-restaurant-008-맛집-공개-조건), [#4 BR-CREATOR-001](../../../01-requirements/business-rules.md#br-creator-001-유튜버-정보의-의미)~[#4 BR-CREATOR-003](../../../01-requirements/business-rules.md#br-creator-003-동일-채널-중복-판단), [#4 BR-CREATOR-005](../../../01-requirements/business-rules.md#br-creator-005-방문-관계의-유튜버-일치), [#4 BR-VIDEO-001](../../../01-requirements/business-rules.md#br-video-001-영상의-의미와-보관-범위)~[#4 BR-VIDEO-006](../../../01-requirements/business-rules.md#br-video-006-게시일과-방문일의-구분)을 따른다.
+- 관계의 구성·근거·중복·참조·유효성과 날짜 제외는 [#4 BR-VISIT-001](../../../01-requirements/business-rules.md#br-visit-001-방문-관계의-구성)~[#4 BR-VISIT-007](../../../01-requirements/business-rules.md#br-visit-007-등록-완료와-검증-상태)을 따른다.
+- 접근, 사실·정합성 검증, 조회 반영, MVP 경계, 정정·동시성·보류는 [#4 BR-ADMIN-001](../../../01-requirements/business-rules.md#br-admin-001-관리자-권한-검증)~[#4 BR-ADMIN-008](../../../01-requirements/business-rules.md#br-admin-008-보류-요청의-처리)을 따른다.
+- 공개·비공개와 상태 변경 일관성은 [#4 BR-PUBLICATION-001](../../../01-requirements/business-rules.md#br-publication-001-일반-사용자-공개-범위), [#4 BR-PUBLICATION-002](../../../01-requirements/business-rules.md#br-publication-002-비공개-데이터의-접근), [#4 BR-PUBLICATION-008](../../../01-requirements/business-rules.md#br-publication-008-상태-변경의-일관성)을 따른다.
 
 ## 12. 예외 및 경계 상황
 
@@ -165,14 +178,14 @@ related_nfr:
 
 ## 13. 품질 요구사항
 
-등록 성능은 `NFR-PERFORMANCE-003`, 접근·입력·비밀정보 보호는 `NFR-SECURITY-001`~`003`을 따른다. 참조·중복·원자성은 `NFR-INTEGRITY-001`~`003`, 링크·관측·테스트·개인정보는 메타데이터의 관련 NFR로 검증한다. 목표 등록 시간과 인증 수준은 확정 전까지 팀 결정 필요다.
+등록 성능은 [#11 NFR-PERFORMANCE-003](../../../01-requirements/non-functional-requirements.md#nfr-performance-003-관리자-등록-응답-시간), 접근·입력·비밀정보 보호는 [#11 NFR-SECURITY-001](../../../01-requirements/non-functional-requirements.md#nfr-security-001-공개-조회와-관리자-접근-통제)~[#11 NFR-SECURITY-003](../../../01-requirements/non-functional-requirements.md#nfr-security-003-비밀정보와-오류-정보-보호)을 따른다. 참조·중복·원자성은 [#11 NFR-INTEGRITY-001](../../../01-requirements/non-functional-requirements.md#nfr-integrity-001-참조-및-필수값-정합성)~[#11 NFR-INTEGRITY-003](../../../01-requirements/non-functional-requirements.md#nfr-integrity-003-등록-원자성과-공개-상태-일관성), 링크·관측·테스트·개인정보는 메타데이터의 관련 NFR로 검증한다. 목표 등록 시간과 인증 수준은 확정 전까지 팀 결정 필요다.
 
 ## 14. 의존성
 
 - 선행 정책: 관리자 인증, 식별자·필수값·중복·공개 상태와 보류 오류 계약
 - 데이터 의존성: 기본 데이터가 방문 관계보다 선행
 - 다른 기능 PRD: 세 조회 PRD가 등록 결과 반영을 인수 검증
-- 다른 Workstream: WS-01·02·03의 조회 계약
+- 다른 Workstream: [#5 WS-01](../../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)·[#5 WS-02](../../../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)·[#5 WS-03](../../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)의 조회 계약
 - 외부 서비스: 카카오 장소와 YouTube 채널·영상 사실 및 링크 확인
 - 공통 API 계약: 인증 주체, 오류, 충돌·보류와 식별자 계약
 
@@ -180,7 +193,7 @@ related_nfr:
 
 ## 15. Workstream 및 책임자
 
-- 주 Workstream: WS-04 관리자 데이터 등록
+- 주 Workstream: [#5 WS-04](../../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 관리자 데이터 등록
 - 최종 책임자: 김인안
 - 기본 리뷰어: 박진영
 - 협업: 이우람(인증·Visit 계약), 양성훈(목록 반영), 박진영(상세 반영)
@@ -206,17 +219,17 @@ related_nfr:
 
 ## 19. 관련 문서
 
-- [전체 제품 PRD](../00-product-overview.md)
-- [기능 요구사항](../../../01-requirements/functional-requirements.md)
-- [요구사항 검토 결과](../../../01-requirements/requirements-review.md)
-- [비즈니스 규칙](../../../01-requirements/business-rules.md)
-- [MVP Workstream](../../../02-analysis/mvp-workstreams.md)
-- [소유권](../../../03-team/ownership.md)
-- [추적성](../../traceability.md)
+- [#1 전체 제품 PRD](../00-product-overview.md)
+- [#2 기능 요구사항](../../../01-requirements/functional-requirements.md)
+- [#3 요구사항 검토 결과](../../../01-requirements/requirements-review.md)
+- [#4 비즈니스 규칙](../../../01-requirements/business-rules.md)
+- [#5 MVP Workstream](../../../02-analysis/mvp-workstreams.md)
+- [#6 소유권](../../../03-team/ownership.md)
+- [#12 추적성](../../traceability.md)
 
 ## 20. 검토 필요 항목
 
 - JWT Access·Refresh Token의 정확한 만료 시간, 서명 키 교체와 Redis Token 운영 방식
 - 보류 요청의 저장·재검토 운영 방식(승인 화면은 MVP 제외)
-- WS-04 내부 단계별 작업 분담과 등록 목표 응답 시간
+- [#5 WS-04](../../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 내부 단계별 작업 분담과 등록 목표 응답 시간
 - 핵심 데이터 모델 변경 승인 방식

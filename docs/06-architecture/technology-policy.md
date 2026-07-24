@@ -1,3 +1,15 @@
+---
+related_documents:
+  1: ../00-overview/scope.md
+  2: ../01-requirements/non-functional-requirements.md
+  3: ../05-specs/api-review.md
+  4: ../05-specs/data/README.md
+  5: ../07-adr/README.md
+  6: ../07-adr/adr-index.md
+  7: ../07-adr/adr-backlog.md
+  8: ../07-adr/adr-traceability.md
+---
+
 # 맛잇온 기술 정책
 
 ## 1. 문서 목적
@@ -6,13 +18,13 @@
 
 ## 2. 적용 우선순위
 
-1. `docs/00-overview/scope.md`의 1차 MVP 범위
+1. [#1 docs/00-overview/scope.md](../00-overview/scope.md)의 1차 MVP 범위
 2. 확정 요구사항, 비즈니스 규칙, API·데이터 명세
 3. Accepted ADR
 4. 이 기술 정책
 5. Conditional·Post-MVP ADR Backlog
 
-하위 문서가 상위 범위를 확장할 수 없다. 충돌은 임의로 해소하지 않고 `docs/07-adr/adr-backlog.md`의 범위 충돌 검토에 기록한다.
+하위 문서가 상위 범위를 확장할 수 없다. 충돌은 임의로 해소하지 않고 [#7 docs/07-adr/adr-backlog.md](../07-adr/adr-backlog.md)의 범위 충돌 검토에 기록한다.
 
 ## 3. 고정 버전 정책
 
@@ -87,7 +99,7 @@
 
 ## 9. 조건부 기술 도입 정책
 
-- Conditional 항목은 `adr-backlog.md`의 활성화 조건과 도입 전 확인 항목을 모두 충족하기 전 의존성·설정·스키마를 추가하지 않는다.
+- Conditional 항목은 [#7 adr-backlog.md](../07-adr/adr-backlog.md)의 활성화 조건과 도입 전 확인 항목을 모두 충족하기 전 의존성·설정·스키마를 추가하지 않는다.
 - QueryDSL은 단순 Repository 메서드나 명시적 JPQL로 유지하기 어려운 복합 조회가 검증된 뒤 도입한다.
 - Playwright는 JavaScript 렌더링이 필수인 승인된 수집 기능이 생긴 뒤 도입한다.
 - Redis 분산 락은 동일 작업의 다중 실행 가능성과 중복 피해가 확인된 뒤 도입한다.
@@ -126,7 +138,7 @@
 - ALB는 트래픽·가용성 요구가 늘어나는 확장 단계에서 도입 여부를 재검토할 확장 경로로 남겨두고, Blue-Green 배포와 ASG 다중 인스턴스 자동화는 Post-MVP로 보류한다.
 - CI/CD는 GitHub Actions → ECR → EC2 배포까지를 우선 대상으로 하며, ALB·Blue-Green 전환 자동화 범위는 배포 토폴로지가 확장될 때 별도로 설계한다.
 - 로그는 14일 보관, DB 백업은 일 1회 자동 스냅샷 후 7일 보관(RPO 최대 24시간), 운영 알림은 CloudWatch 알람을 이메일/Slack으로 담당자 1명에게 통지한다.
-- 관련: `docs/07-adr/adr-backlog.md` 범위 충돌 검토, RV-NFR-005·009·010·013.
+- 관련: [#7 docs/07-adr/adr-backlog.md](../07-adr/adr-backlog.md) 범위 충돌 검토, [#2 RV-NFR-005](../01-requirements/non-functional-requirements.md#rv-nfr-005-목표-가용성과-복구-시간)·[#2 RV-NFR-009](../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간)·[#2 RV-NFR-010](../01-requirements/non-functional-requirements.md#rv-nfr-010-백업-주기와-복구-범위)·[#2 RV-NFR-013](../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준).
 
 ## 14. 위반 검증 방법
 

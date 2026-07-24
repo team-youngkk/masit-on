@@ -1,3 +1,11 @@
+---
+related_documents:
+  1: ../README.md
+  2: response-contract.md
+  3: filtering-contract.md
+  4: ../discovery/restaurant-discovery-api.md
+---
+
 # 페이지네이션 계약
 
 ## 1. 요청

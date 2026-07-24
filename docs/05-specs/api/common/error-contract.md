@@ -1,3 +1,12 @@
+---
+related_documents:
+  1: ../README.md
+  2: identifier-contract.md
+  3: response-contract.md
+  4: ../../../01-requirements/non-functional-requirements.md
+  5: ../../../07-adr/quality/obs-001-logging-observability.md
+---
+
 # 오류 계약
 
 ## 1. 오류 본문

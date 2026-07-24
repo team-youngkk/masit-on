@@ -1,8 +1,17 @@
+---
+related_documents:
+  1: ../00-overview/scope.md
+  2: functional-requirements.md
+  3: business-rules.md
+  4: ../05-specs/api-review.md
+  5: ../05-specs/data/data-review.md
+---
+
 # 맛잇온 요구사항 검토 결과
 
 ## 1. 문서 목적
 
-이 문서는 맛잇온 비즈니스 규칙 작성 과정에서 확인된 미결정 사항의 합의 결과를 기록한다. 확정된 결과는 `business-rules.md`에 반영하며, 기술 구현 방식은 후속 설계에서 결정한다.
+이 문서는 맛잇온 비즈니스 규칙 작성 과정에서 확인된 미결정 사항의 합의 결과를 기록한다. 확정된 결과는 [#3 business-rules.md](business-rules.md)에 반영하며, 기술 구현 방식은 후속 설계에서 결정한다.
 
 ## 2. 확정된 결정
 

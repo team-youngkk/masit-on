@@ -1,3 +1,13 @@
+---
+related_documents:
+  1: ../00-overview/scope.md
+  2: functional-requirements.md
+  3: ../06-architecture/technology-policy.md
+  4: ../07-adr/adr-traceability.md
+  5: ../07-adr/quality/test-001-automation-strategy.md
+  6: ../07-adr/quality/obs-001-logging-observability.md
+---
+
 # 맛잇온 비기능 요구사항
 
 ## 1. 문서 목적
@@ -279,7 +289,7 @@
   - 운영 인프라와 장애 복구 절차
 - 목표 기준:
   - 문서화된 복구 절차를 이용한 복구 훈련 성공
-  - 단일 EC2 인스턴스, 수동 복구, ALB·ASG·Blue-Green은 확장 단계 재검토 (2026-07-24 결정, RV-NFR-005 참조)
+  - 단일 EC2 인스턴스, 수동 복구, ALB·ASG·Blue-Green은 확장 단계 재검토 (2026-07-24 결정, [RV-NFR-005](non-functional-requirements.md#rv-nfr-005-목표-가용성과-복구-시간) 참조)
 - 검증 방법:
   - 출시 전 수동 복구 리허설과 핵심 조회 점검
 - 중요도:
@@ -654,44 +664,44 @@
 
 | ID | 요구사항 | 중요도 | 측정 방법 | 결정 상태 | 결정·검증 시점 |
 |---|---|---|---|---|---|
-| NFR-PERFORMANCE-001 | 일반 조회 응답 시간 | High | 부하 테스트·메트릭 | 확정 | 출시 전 검증 |
-| NFR-PERFORMANCE-002 | 검색·필터 조합 응답 시간 | High | 부하 테스트 | 확정 | 출시 전 검증 |
-| NFR-PERFORMANCE-003 | 관리자 등록 응답 시간 | High | 부하 테스트 | 확정 | 출시 전 검증 |
-| NFR-PERFORMANCE-004 | 페이지 크기 및 조회량 제한 | High | 경계값·응답 검사 | 확정 | API 명세 전 확정 |
-| NFR-SECURITY-001 | 공개 조회와 관리자 접근 통제 | Critical | 보안 테스트 | 확정 | 출시 전 검증 |
-| NFR-SECURITY-002 | 입력 및 웹 공격 방어 | Critical | 악성 입력 테스트 | 확정 | 출시 전 검증 |
-| NFR-SECURITY-003 | 비밀정보와 오류 정보 보호 | Critical | 비밀정보·응답 검사 | 확정 | 출시 전 검증 |
-| NFR-INTEGRITY-001 | 참조 및 필수값 정합성 | Critical | 통합 테스트 | 확정 | 데이터 모델링 전 확정 |
-| NFR-INTEGRITY-002 | 중복 및 동시 등록 방지 | Critical | 동시성 테스트 | 확정 | 데이터 모델링 전 확정 |
-| NFR-INTEGRITY-003 | 등록 원자성과 공개 상태 일관성 | Critical | 실패 주입·인수 테스트 | 확정 | 데이터 모델링 전 확정 |
-| NFR-INTEGRITY-004 | 외부 링크와 내부 데이터 분리 | Critical | 장애 모의 테스트 | 확정 | 데이터 모델링 전 확정 |
-| NFR-RELIABILITY-001 | 오류 격리와 공통 오류 정책 | High | 계약·장애 테스트 | 확정 | API 명세 전 확정 |
-| NFR-RELIABILITY-002 | 저장소 장애 및 재시도 통제 | High | 장애 주입 | 후속 설계에서 결정 | 구현 시작 전 확정 |
-| NFR-RELIABILITY-003 | 사용자 오류 메시지와 기능 분리 | High | 인수 테스트 | 확정 | API 명세 전 확정 |
-| NFR-AVAILABILITY-001 | 상태 확인과 장애 구분 | High | 상태 확인 테스트 | 후속 설계에서 결정 | 배포 설계 전 확정 |
-| NFR-AVAILABILITY-002 | MVP 가용성과 수동 복구 | High | 복구 리허설 | 팀 결정 필요 | 배포 설계 전 확정 |
-| NFR-EXTERNAL-001 | 영상 원본과 외부 링크 분리 | High | 장애 모의·저장 검사 | 확정 | 구현 시작 전 확정 |
-| NFR-EXTERNAL-002 | 외부 호출 실패와 변경 격리 | High | 외부 계약 모의 테스트 | 후속 설계에서 결정 | API 명세 전 확정 |
-| NFR-EXTERNAL-003 | 링크 검증과 외부 인증정보 | High | 입력·비밀정보 검사 | 확정 | API 명세 전 확정 |
-| NFR-OBSERVABILITY-001 | 요청 추적과 오류 분류 | High | 로그 상관관계 검사 | 확정 | 출시 전 검증 |
-| NFR-OBSERVABILITY-002 | 운영 지표와 생명주기 기록 | High | 지표·로그 대조 | 후속 설계에서 결정 | 배포 설계 전 확정 |
-| NFR-OBSERVABILITY-003 | 로그 품질과 민감정보 차단 | Critical | 로그 검사 | 확정 | 출시 전 검증 |
-| NFR-COMPATIBILITY-001 | 웹·모바일 브라우저 호환성 | High | 브라우저 인수 테스트 | 팀 결정 필요 | 출시 전 검증 |
-| NFR-COMPATIBILITY-002 | 응답 형식과 문자 처리 | High | 계약·문자 테스트 | 확정 | API 명세 전 확정 |
-| NFR-COMPATIBILITY-003 | 모바일 응답 크기 | Medium | 응답 검사 | 확정 | API 명세 전 확정 |
-| NFR-TEST-001 | 자동화 테스트 계층 | High | 테스트 추적 검토 | 확정 | 구현 시작 전 확정 |
-| NFR-TEST-002 | 변경·외부 의존성·성능 검증 | High | 계약·부하 테스트 | 후속 설계에서 결정 | 출시 전 검증 |
-| NFR-TEST-003 | 배포 품질 게이트 | Critical | 배포 차단 시험 | 확정 | 배포 설계 전 확정 |
-| NFR-DEPLOYMENT-001 | 재현 가능한 빌드와 환경 분리 | High | 재빌드·비밀정보 검사 | 확정 | 배포 설계 전 확정 |
-| NFR-DEPLOYMENT-002 | 배포 전후 검증 | Critical | 배포 기록 확인 | 확정 | 출시 전 검증 |
-| NFR-DEPLOYMENT-003 | 버전 추적과 복구 절차 | High | 복구 리허설 | 후속 설계에서 결정 | 배포 설계 전 확정 |
-| NFR-DEPLOYMENT-004 | MVP 배포 복잡도 제한 | Medium | 절차 시험 | 후속 설계에서 결정 | 배포 설계 전 확정 |
-| NFR-MAINTAINABILITY-001 | 책임과 의존성 경계 | High | 아키텍처 검사 | 후속 설계에서 결정 | 구현 시작 전 확정 |
-| NFR-MAINTAINABILITY-002 | 공통 정책과 규칙 배치 | High | 계약·아키텍처 테스트 | 후속 설계에서 결정 | 구현 시작 전 확정 |
-| NFR-MAINTAINABILITY-003 | 추적성과 운영 복잡도 | High | 추적성·ADR 검토 | 확정 | 출시 전 검증 |
-| NFR-PRIVACY-001 | MVP 개인정보 최소화 | Critical | 데이터 항목 검사 | 확정 | 구현 시작 전 확정 |
-| NFR-PRIVACY-002 | 인증정보와 외부 키 보호 | Critical | 비밀정보 검사 | 확정 | 출시 전 검증 |
-| NFR-PRIVACY-003 | 회원 기능 도입 시 재검토 | High | 범위 변경 심사 | MVP 제외 | 구현 시작 전 확정 |
+| [NFR-PERFORMANCE-001](non-functional-requirements.md#nfr-performance-001-일반-조회-응답-시간) | 일반 조회 응답 시간 | High | 부하 테스트·메트릭 | 확정 | 출시 전 검증 |
+| [NFR-PERFORMANCE-002](non-functional-requirements.md#nfr-performance-002-검색필터-조합-응답-시간) | 검색·필터 조합 응답 시간 | High | 부하 테스트 | 확정 | 출시 전 검증 |
+| [NFR-PERFORMANCE-003](non-functional-requirements.md#nfr-performance-003-관리자-등록-응답-시간) | 관리자 등록 응답 시간 | High | 부하 테스트 | 확정 | 출시 전 검증 |
+| [NFR-PERFORMANCE-004](non-functional-requirements.md#nfr-performance-004-페이지-크기-및-조회량-제한) | 페이지 크기 및 조회량 제한 | High | 경계값·응답 검사 | 확정 | API 명세 전 확정 |
+| [NFR-SECURITY-001](non-functional-requirements.md#nfr-security-001-공개-조회와-관리자-접근-통제) | 공개 조회와 관리자 접근 통제 | Critical | 보안 테스트 | 확정 | 출시 전 검증 |
+| [NFR-SECURITY-002](non-functional-requirements.md#nfr-security-002-입력-및-웹-공격-방어) | 입력 및 웹 공격 방어 | Critical | 악성 입력 테스트 | 확정 | 출시 전 검증 |
+| [NFR-SECURITY-003](non-functional-requirements.md#nfr-security-003-비밀정보와-오류-정보-보호) | 비밀정보와 오류 정보 보호 | Critical | 비밀정보·응답 검사 | 확정 | 출시 전 검증 |
+| [NFR-INTEGRITY-001](non-functional-requirements.md#nfr-integrity-001-참조-및-필수값-정합성) | 참조 및 필수값 정합성 | Critical | 통합 테스트 | 확정 | 데이터 모델링 전 확정 |
+| [NFR-INTEGRITY-002](non-functional-requirements.md#nfr-integrity-002-중복-및-동시-등록-방지) | 중복 및 동시 등록 방지 | Critical | 동시성 테스트 | 확정 | 데이터 모델링 전 확정 |
+| [NFR-INTEGRITY-003](non-functional-requirements.md#nfr-integrity-003-등록-원자성과-공개-상태-일관성) | 등록 원자성과 공개 상태 일관성 | Critical | 실패 주입·인수 테스트 | 확정 | 데이터 모델링 전 확정 |
+| [NFR-INTEGRITY-004](non-functional-requirements.md#nfr-integrity-004-외부-링크와-내부-데이터-분리) | 외부 링크와 내부 데이터 분리 | Critical | 장애 모의 테스트 | 확정 | 데이터 모델링 전 확정 |
+| [NFR-RELIABILITY-001](non-functional-requirements.md#nfr-reliability-001-오류-격리와-공통-오류-정책) | 오류 격리와 공통 오류 정책 | High | 계약·장애 테스트 | 확정 | API 명세 전 확정 |
+| [NFR-RELIABILITY-002](non-functional-requirements.md#nfr-reliability-002-저장소-장애-및-재시도-통제) | 저장소 장애 및 재시도 통제 | High | 장애 주입 | 후속 설계에서 결정 | 구현 시작 전 확정 |
+| [NFR-RELIABILITY-003](non-functional-requirements.md#nfr-reliability-003-사용자-오류-메시지와-기능-분리) | 사용자 오류 메시지와 기능 분리 | High | 인수 테스트 | 확정 | API 명세 전 확정 |
+| [NFR-AVAILABILITY-001](non-functional-requirements.md#nfr-availability-001-상태-확인과-장애-구분) | 상태 확인과 장애 구분 | High | 상태 확인 테스트 | 후속 설계에서 결정 | 배포 설계 전 확정 |
+| [NFR-AVAILABILITY-002](non-functional-requirements.md#nfr-availability-002-mvp-가용성과-수동-복구) | MVP 가용성과 수동 복구 | High | 복구 리허설 | 팀 결정 필요 | 배포 설계 전 확정 |
+| [NFR-EXTERNAL-001](non-functional-requirements.md#nfr-external-001-영상-원본과-외부-링크-분리) | 영상 원본과 외부 링크 분리 | High | 장애 모의·저장 검사 | 확정 | 구현 시작 전 확정 |
+| [NFR-EXTERNAL-002](non-functional-requirements.md#nfr-external-002-외부-호출-실패와-변경-격리) | 외부 호출 실패와 변경 격리 | High | 외부 계약 모의 테스트 | 후속 설계에서 결정 | API 명세 전 확정 |
+| [NFR-EXTERNAL-003](non-functional-requirements.md#nfr-external-003-링크-검증과-외부-인증정보) | 링크 검증과 외부 인증정보 | High | 입력·비밀정보 검사 | 확정 | API 명세 전 확정 |
+| [NFR-OBSERVABILITY-001](non-functional-requirements.md#nfr-observability-001-요청-추적과-오류-분류) | 요청 추적과 오류 분류 | High | 로그 상관관계 검사 | 확정 | 출시 전 검증 |
+| [NFR-OBSERVABILITY-002](non-functional-requirements.md#nfr-observability-002-운영-지표와-생명주기-기록) | 운영 지표와 생명주기 기록 | High | 지표·로그 대조 | 후속 설계에서 결정 | 배포 설계 전 확정 |
+| [NFR-OBSERVABILITY-003](non-functional-requirements.md#nfr-observability-003-로그-품질과-민감정보-차단) | 로그 품질과 민감정보 차단 | Critical | 로그 검사 | 확정 | 출시 전 검증 |
+| [NFR-COMPATIBILITY-001](non-functional-requirements.md#nfr-compatibility-001-웹모바일-브라우저-호환성) | 웹·모바일 브라우저 호환성 | High | 브라우저 인수 테스트 | 팀 결정 필요 | 출시 전 검증 |
+| [NFR-COMPATIBILITY-002](non-functional-requirements.md#nfr-compatibility-002-응답-형식과-문자-처리) | 응답 형식과 문자 처리 | High | 계약·문자 테스트 | 확정 | API 명세 전 확정 |
+| [NFR-COMPATIBILITY-003](non-functional-requirements.md#nfr-compatibility-003-모바일-응답-크기) | 모바일 응답 크기 | Medium | 응답 검사 | 확정 | API 명세 전 확정 |
+| [NFR-TEST-001](non-functional-requirements.md#nfr-test-001-자동화-테스트-계층) | 자동화 테스트 계층 | High | 테스트 추적 검토 | 확정 | 구현 시작 전 확정 |
+| [NFR-TEST-002](non-functional-requirements.md#nfr-test-002-변경외부-의존성성능-검증) | 변경·외부 의존성·성능 검증 | High | 계약·부하 테스트 | 후속 설계에서 결정 | 출시 전 검증 |
+| [NFR-TEST-003](non-functional-requirements.md#nfr-test-003-배포-품질-게이트) | 배포 품질 게이트 | Critical | 배포 차단 시험 | 확정 | 배포 설계 전 확정 |
+| [NFR-DEPLOYMENT-001](non-functional-requirements.md#nfr-deployment-001-재현-가능한-빌드와-환경-분리) | 재현 가능한 빌드와 환경 분리 | High | 재빌드·비밀정보 검사 | 확정 | 배포 설계 전 확정 |
+| [NFR-DEPLOYMENT-002](non-functional-requirements.md#nfr-deployment-002-배포-전후-검증) | 배포 전후 검증 | Critical | 배포 기록 확인 | 확정 | 출시 전 검증 |
+| [NFR-DEPLOYMENT-003](non-functional-requirements.md#nfr-deployment-003-버전-추적과-복구-절차) | 버전 추적과 복구 절차 | High | 복구 리허설 | 후속 설계에서 결정 | 배포 설계 전 확정 |
+| [NFR-DEPLOYMENT-004](non-functional-requirements.md#nfr-deployment-004-mvp-배포-복잡도-제한) | MVP 배포 복잡도 제한 | Medium | 절차 시험 | 후속 설계에서 결정 | 배포 설계 전 확정 |
+| [NFR-MAINTAINABILITY-001](non-functional-requirements.md#nfr-maintainability-001-책임과-의존성-경계) | 책임과 의존성 경계 | High | 아키텍처 검사 | 후속 설계에서 결정 | 구현 시작 전 확정 |
+| [NFR-MAINTAINABILITY-002](non-functional-requirements.md#nfr-maintainability-002-공통-정책과-규칙-배치) | 공통 정책과 규칙 배치 | High | 계약·아키텍처 테스트 | 후속 설계에서 결정 | 구현 시작 전 확정 |
+| [NFR-MAINTAINABILITY-003](non-functional-requirements.md#nfr-maintainability-003-추적성과-운영-복잡도) | 추적성과 운영 복잡도 | High | 추적성·ADR 검토 | 확정 | 출시 전 검증 |
+| [NFR-PRIVACY-001](non-functional-requirements.md#nfr-privacy-001-mvp-개인정보-최소화) | MVP 개인정보 최소화 | Critical | 데이터 항목 검사 | 확정 | 구현 시작 전 확정 |
+| [NFR-PRIVACY-002](non-functional-requirements.md#nfr-privacy-002-인증정보와-외부-키-보호) | 인증정보와 외부 키 보호 | Critical | 비밀정보 검사 | 확정 | 출시 전 검증 |
+| [NFR-PRIVACY-003](non-functional-requirements.md#nfr-privacy-003-회원-기능-도입-시-재검토) | 회원 기능 도입 시 재검토 | High | 범위 변경 심사 | MVP 제외 | 구현 시작 전 확정 |
 
 ## 16. 검토 필요 항목
 

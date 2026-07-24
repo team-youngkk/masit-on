@@ -9,7 +9,7 @@ owner: 김인안
 reviewers:
   - 이우람
 related_requirements:
-  - FR-ADMIN-001
+  1: FR-ADMIN-001
 related_business_rules:
   - BR-ADMIN-001
 related_nfr:
@@ -19,6 +19,13 @@ related_nfr:
   - NFR-OBSERVABILITY-001
   - NFR-OBSERVABILITY-003
   - NFR-PRIVACY-002
+related_documents:
+  1: ../../../04-product/prd/admin/admin-data-management.md
+  2: ../common/response-contract.md
+  3: ../common/error-contract.md
+  4: ../../data/entity-definitions.md
+  5: ../../../07-adr/security/auth-001-spring-security-jwt.md
+  6: ../../../07-adr/data/data-005-redis-refresh-token.md
 ---
 
 # 관리자 인증 API
@@ -44,9 +51,9 @@ related_nfr:
 
 | API ID | Method | Path | 설명 |
 |---|---|---|---|
-| API-ADMIN-AUTH-001 | POST | `/admin/auth/tokens` | 사전 발급 계정으로 Access·Refresh Token 발급 |
-| API-ADMIN-AUTH-002 | POST | `/admin/auth/tokens/refresh` | Refresh Token 회전과 새 Access Token 발급 |
-| API-ADMIN-AUTH-003 | DELETE | `/admin/auth/tokens` | 현재 Refresh Token 폐기와 쿠키 만료 |
+| [API-ADMIN-AUTH-001](authentication-api.md#api-admin-auth-001-관리자-로그인) | POST | `/admin/auth/tokens` | 사전 발급 계정으로 Access·Refresh Token 발급 |
+| [API-ADMIN-AUTH-002](authentication-api.md#api-admin-auth-002-관리자-토큰-재발급) | POST | `/admin/auth/tokens/refresh` | Refresh Token 회전과 새 Access Token 발급 |
+| [API-ADMIN-AUTH-003](authentication-api.md#api-admin-auth-003-관리자-로그아웃) | DELETE | `/admin/auth/tokens` | 현재 Refresh Token 폐기와 쿠키 만료 |
 
 ## 4. 토큰 발급
 

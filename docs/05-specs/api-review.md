@@ -1,3 +1,24 @@
+---
+related_documents:
+  1: ../01-requirements/requirements-review.md
+  2: api/README.md
+  3: api-traceability.md
+  4: api/discovery/restaurant-discovery-api.md
+  5: api/discovery/creator-discovery-api.md
+  6: api/detail/restaurant-detail-api.md
+  7: api/admin/authentication-api.md
+  8: api/admin/reference-data-api.md
+  9: api/admin/visit-registration-api.md
+  10: data/data-review.md
+  11: ../02-analysis/mvp-workstreams.md
+  12: ../04-product/prd/discovery/creator-discovery.md
+  13: ../01-requirements/functional-requirements.md
+  14: ../04-product/prd/admin/admin-data-management.md
+  15: ../04-product/prd/discovery/restaurant-discovery.md
+  16: ../04-product/prd/detail/restaurant-detail.md
+  17: ../01-requirements/non-functional-requirements.md
+---
+
 # 맛잇온 API 계약 검토
 
 ## 1. 검토 목적
@@ -7,13 +28,13 @@ API를 임의 정책 결정 없이 구현·프론트엔드 연동 가능한 상�
 ## 2. 검토 결과 요약
 
 - 일반 조회는 `/restaurants`, `/creators`, `/restaurants/{restaurantId}` 세 경로로 과도한 분리 없이 구성했다.
-- 관리자 등록은 하나의 PRD·WS-04 안에서 기본 데이터와 방문 관계 두 단계로 나눴다.
+- 관리자 등록은 하나의 PRD·[#11 WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 안에서 기본 데이터와 방문 관계 두 단계로 나눴다.
 - Critical 차단 항목 4개는 API 계약 결정으로 해소했다.
 - 외부 식별자는 불투명 JSON 문자열, 관리자 인증·인가는 Spring Security와 JWT를 사용한다.
 - 방문 관계 표준명과 경로는 `Visit Relationship`, `/admin/visit-relationships`로 확정했다.
 - 외부 데이터 등록은 검증 미리보기에서 확인 토큰을 발급하고 생성 요청에서 확정하는 2단계 흐름을 사용한다.
 - 페이지 번호는 1부터 시작하는 것으로 확정했다.
-- 기능 요구사항과 상위 범위의 직접 충돌은 발견하지 않았다. 다만 PRD-DISCOVERY-002의 리스크 문구는 이미 존재하는 FR-CREATOR-003과 불일치한다.
+- 기능 요구사항과 상위 범위의 직접 충돌은 발견하지 않았다. 다만 [#12 PRD-DISCOVERY-002](../04-product/prd/discovery/creator-discovery.md)의 리스크 문구는 이미 존재하는 [#13 FR-CREATOR-003](../01-requirements/functional-requirements.md#fr-creator-003-유튜버-필터-선택-목록-조회)과 불일치한다.
 
 ## 3. 해결한 API 차단 항목
 
@@ -32,8 +53,8 @@ API를 임의 정책 결정 없이 구현·프론트엔드 연동 가능한 상�
 
 - 중요도: Critical
 - 현재 상태: 결정 완료
-- 관련 PRD: PRD-ADMIN-001
-- 관련 요구사항: FR-ADMIN-001
+- 관련 PRD: [#14 PRD-ADMIN-001](../04-product/prd/admin/admin-data-management.md)
+- 관련 요구사항: [#13 FR-ADMIN-001](../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근)
 - 영향 API: 모든 `/admin` API
 - 결정: 사전 발급 `loginId`·비밀번호로 JWT Access Token과 Refresh Token을 발급한다. Access Token은 메모리에 유지해 `Authorization: Bearer` 헤더로 전달하고, Redis 8.8에 저장한 Refresh Token은 `HttpOnly`, `Secure`, `SameSite=Strict` 쿠키로만 전달·회전한다.
 - 영향: 로그인·토큰 재발급·로그아웃과 모든 관리자 API의 인증·인가 전달 계약이 확정됐다.
@@ -43,19 +64,19 @@ API를 임의 정책 결정 없이 구현·프론트엔드 연동 가능한 상�
 
 - 중요도: Critical
 - 현재 상태: 결정 완료
-- 관련 PRD: PRD-ADMIN-001
-- 관련 요구사항: FR-VISIT-001
-- 영향 API: API-ADMIN-VISIT-001
+- 관련 PRD: [#14 PRD-ADMIN-001](../04-product/prd/admin/admin-data-management.md)
+- 관련 요구사항: [#13 FR-VISIT-001](../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
+- 영향 API: [#9 API-ADMIN-VISIT-001](api/admin/visit-registration-api.md#api-admin-visit-001-방문-관계-등록)
 - 결정: 표준 영문명은 `Visit Relationship`, 컬렉션 경로는 `/admin/visit-relationships`를 사용한다.
-- 영향: 용어집과 API-ADMIN-VISIT-001 경로를 함께 확정했다.
+- 영향: 용어집과 [#9 API-ADMIN-VISIT-001](api/admin/visit-registration-api.md#api-admin-visit-001-방문-관계-등록) 경로를 함께 확정했다.
 - 결정 시점: 2026-07-24 API 계약에서 완료
 
 ### RV-API-004 외부 조회와 관리자 확인 HTTP 흐름
 
 - 중요도: Critical
 - 현재 상태: 결정 완료
-- 관련 PRD: PRD-ADMIN-001
-- 관련 요구사항: FR-ADMIN-002, FR-ADMIN-003, FR-ADMIN-004
+- 관련 PRD: [#14 PRD-ADMIN-001](../04-product/prd/admin/admin-data-management.md)
+- 관련 요구사항: [#13 FR-ADMIN-002](../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록), [#13 FR-ADMIN-003](../01-requirements/functional-requirements.md#fr-admin-003-유튜버-정보-등록), [#13 FR-ADMIN-004](../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록)
 - 영향 API: 세 기본 데이터 등록 API
 - 결정: 자원별 검증 미리보기 POST가 `READY`, `DUPLICATE`, `REVIEW_REQUIRED`와 정규화 후보를 반환한다. 관리자는 `READY` 후보를 확인한 뒤 JWT의 관리자 식별자에 묶인 `confirmationToken`으로 생성한다.
 - 영향: 외부 조회 결과 확인, 중복 기존 자원 재사용, 보류와 최종 생성 경계가 분리됐다.
@@ -67,8 +88,8 @@ API를 임의 정책 결정 없이 구현·프론트엔드 연동 가능한 상�
 
 - 중요도: High
 - 현재 상태: 결정 완료
-- 관련 PRD: PRD-ADMIN-001
-- 관련 요구사항: FR-ADMIN-002~004, FR-VISIT-001
+- 관련 PRD: [#14 PRD-ADMIN-001](../04-product/prd/admin/admin-data-management.md)
+- 관련 요구사항: [#13 FR-ADMIN-002](../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록)~[#13 FR-ADMIN-004](../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록), [#13 FR-VISIT-001](../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
 - 영향 API: 모든 관리자 등록·공개 조회 API
 - 결정: `READY` 후보를 관리자가 확인해 생성한 기본 데이터는 즉시 `PUBLIC`로 취급한다. 미리보기와 보류는 자원을 만들지 않는다.
 - 영향: 생성 성공 후 관련 공개 조회에 즉시 반영한다. 공개 상태 입력 필드는 두지 않는다.
@@ -78,9 +99,9 @@ API를 임의 정책 결정 없이 구현·프론트엔드 연동 가능한 상�
 
 - 중요도: High
 - 현재 상태: 결정 완료
-- 관련 PRD: PRD-ADMIN-001
-- 관련 요구사항: FR-VISIT-001
-- 영향 API: API-ADMIN-VISIT-001, API-DISCOVERY-001, API-DETAIL-001
+- 관련 PRD: [#14 PRD-ADMIN-001](../04-product/prd/admin/admin-data-management.md)
+- 관련 요구사항: [#13 FR-VISIT-001](../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
+- 영향 API: [#9 API-ADMIN-VISIT-001](api/admin/visit-registration-api.md#api-admin-visit-001-방문-관계-등록), [#4 API-DISCOVERY-001](api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색), [#6 API-DETAIL-001](api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회)
 - 결정: 맛집·유튜버·영상이 모두 공개일 때만 새 관계를 만들며 하나라도 비공개이면 `422 REFERENCE_NOT_PUBLIC`로 거부한다.
 - 영향: 생성 성공한 관계는 즉시 공개 조회에 반영되고 비공개 참조의 잠복 관계를 만들지 않는다.
 - 결정 시점: 2026-07-24 API 계약에서 완료
@@ -89,8 +110,8 @@ API를 임의 정책 결정 없이 구현·프론트엔드 연동 가능한 상�
 
 - 중요도: High
 - 현재 상태: 결정 완료
-- 관련 PRD: PRD-ADMIN-001
-- 관련 요구사항: FR-ADMIN-002~004, FR-VISIT-001
+- 관련 PRD: [#14 PRD-ADMIN-001](../04-product/prd/admin/admin-data-management.md)
+- 관련 요구사항: [#13 FR-ADMIN-002](../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록)~[#13 FR-ADMIN-004](../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록), [#13 FR-VISIT-001](../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
 - 영향 API: 모든 관리자 등록 API
 - 결정: 미리보기의 `DUPLICATE`와 생성 시 동시성 `409`에 기존 자원의 식별자와 최소 표시 정보를 제공한다. 관리자 전용 별도 목록 API는 만들지 않는다.
 - 영향: 관리자는 기존 식별자를 다음 등록 단계에 바로 사용할 수 있다.
@@ -102,9 +123,9 @@ API를 임의 정책 결정 없이 구현·프론트엔드 연동 가능한 상�
 
 - 중요도: High
 - 현재 상태: 결정 완료
-- 관련 PRD: PRD-DISCOVERY-001
-- 관련 요구사항: FR-RESTAURANT-001, FR-RESTAURANT-006
-- 영향 API: API-DISCOVERY-001
+- 관련 PRD: [#15 PRD-DISCOVERY-001](../04-product/prd/discovery/restaurant-discovery.md)
+- 관련 요구사항: [#13 FR-RESTAURANT-001](../01-requirements/functional-requirements.md#fr-restaurant-001-맛집-목록-조회), [#13 FR-RESTAURANT-006](../01-requirements/functional-requirements.md#fr-restaurant-006-페이지-단위-조회)
+- 영향 API: [#4 API-DISCOVERY-001](api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색)
 - 결정: 페이지 번호는 1부터 시작하고 기본값은 1이다. 0 이하는 `400 INVALID_FIELD_VALUE`다.
 - 영향: 화면 페이지 번호와 API 번호를 변환하지 않고 그대로 사용한다.
 - 결정 시점: 2026-07-24 API 계약에서 완료
@@ -113,9 +134,9 @@ API를 임의 정책 결정 없이 구현·프론트엔드 연동 가능한 상�
 
 - 중요도: High
 - 현재 상태: 결정 완료
-- 관련 PRD: PRD-DETAIL-001
-- 관련 요구사항: FR-CREATOR-002, 공통 기능 규칙 5.2
-- 영향 API: API-DETAIL-001
+- 관련 PRD: [#16 PRD-DETAIL-001](../04-product/prd/detail/restaurant-detail.md)
+- 관련 요구사항: [#13 FR-CREATOR-002](../01-requirements/functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인), 공통 기능 규칙 5.2
+- 영향 API: [#6 API-DETAIL-001](api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회)
 - 결정: 필수 `contentStatus`에 `AVAILABLE`, `TEMPORARILY_UNAVAILABLE` 두 값만 사용한다.
 - 영향: `AVAILABLE`과 빈 배열은 정상적인 콘텐츠 없음, `TEMPORARILY_UNAVAILABLE`과 빈 배열은 재시도 가능한 제공자 실패다.
 - 결정 시점: 2026-07-24 API 계약에서 완료
@@ -124,8 +145,8 @@ API를 임의 정책 결정 없이 구현·프론트엔드 연동 가능한 상�
 
 - 중요도: High
 - 현재 상태: 결정 완료
-- 관련 PRD: PRD-DISCOVERY-001, PRD-ADMIN-001
-- 관련 요구사항: FR-RESTAURANT-002, FR-ADMIN-002~004
+- 관련 PRD: [#15 PRD-DISCOVERY-001](../04-product/prd/discovery/restaurant-discovery.md), [#14 PRD-ADMIN-001](../04-product/prd/admin/admin-data-management.md)
+- 관련 요구사항: [#13 FR-RESTAURANT-002](../01-requirements/functional-requirements.md#fr-restaurant-002-맛집-이름-검색), [#13 FR-ADMIN-002](../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록)~[#13 FR-ADMIN-004](../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록)
 - 영향 API: 검색과 모든 관리자 등록 API
 - 결정: 검색어·맛집명·기타 음식명은 각각 100자, 도로명주소 255자, 상세 위치 200자, URL 2,048자다. 전화번호는 7~20자이며 숫자·공백·`+`·`-`·괄호만 허용한다. 로그인 ID는 100자, 비밀번호는 12~128자다.
 - 영향: 프론트엔드와 서버가 같은 경계값으로 검증하고 초과값은 `400 INVALID_FIELD_VALUE`로 처리한다.
@@ -136,7 +157,7 @@ API를 임의 정책 결정 없이 구현·프론트엔드 연동 가능한 상�
 - 중요도: Medium
 - 현재 상태: 결정 완료
 - 관련 PRD: 전체
-- 관련 요구사항: NFR-OBSERVABILITY-001
+- 관련 요구사항: [#17 NFR-OBSERVABILITY-001](../01-requirements/non-functional-requirements.md#nfr-observability-001-요청-추적과-오류-분류)
 - 영향 API: 공통 오류 응답
 - 결정: 모든 오류 응답에 서버가 생성한 비어 있지 않은 불투명 문자열 `traceId`를 필수로 포함하고 같은 값을 로그에 기록한다.
 - 영향: 프론트엔드는 구조를 해석하지 않고 오류 문의·관측 상관관계에 그대로 사용한다.
@@ -148,20 +169,20 @@ API를 임의 정책 결정 없이 구현·프론트엔드 연동 가능한 상�
 
 - 중요도: Medium
 - 현재 상태: 결정 완료
-- 관련 PRD: PRD-DISCOVERY-002 제18장
-- 관련 요구사항: FR-CREATOR-003
-- 영향 API: API-CREATOR-DISCOVERY-001
-- 결정: 불일치 리스크 문구를 제거하고 FR-CREATOR-003의 최소·비페이지 선택 목록 경계 유지 위험으로 교체했다.
-- 영향: PRD와 기능 요구사항, API-CREATOR-DISCOVERY-001의 범위가 일치한다.
+- 관련 PRD: [#12 PRD-DISCOVERY-002](../04-product/prd/discovery/creator-discovery.md) 제18장
+- 관련 요구사항: [#13 FR-CREATOR-003](../01-requirements/functional-requirements.md#fr-creator-003-유튜버-필터-선택-목록-조회)
+- 영향 API: [#5 API-CREATOR-DISCOVERY-001](api/discovery/creator-discovery-api.md#api-creator-discovery-001-유튜버-필터-선택-목록)
+- 결정: 불일치 리스크 문구를 제거하고 [#13 FR-CREATOR-003](../01-requirements/functional-requirements.md#fr-creator-003-유튜버-필터-선택-목록-조회)의 최소·비페이지 선택 목록 경계 유지 위험으로 교체했다.
+- 영향: PRD와 기능 요구사항, [#5 API-CREATOR-DISCOVERY-001](api/discovery/creator-discovery-api.md#api-creator-discovery-001-유튜버-필터-선택-목록)의 범위가 일치한다.
 - 결정 시점: 2026-07-24 문서 동기화에서 완료
 
 ### RV-API-013 외부 링크 오류의 사용자 표시
 
 - 중요도: Medium
 - 현재 상태: 결정 완료
-- 관련 PRD: PRD-DETAIL-001
-- 관련 요구사항: FR-RESTAURANT-008, FR-VIDEO-001
-- 영향 API: API-DETAIL-001
+- 관련 PRD: [#16 PRD-DETAIL-001](../04-product/prd/detail/restaurant-detail.md)
+- 관련 요구사항: [#13 FR-RESTAURANT-008](../01-requirements/functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회), [#13 FR-VIDEO-001](../01-requirements/functional-requirements.md#fr-video-001-관련-영상-정보-확인)
+- 영향 API: [#6 API-DETAIL-001](api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회)
 - 결정: 외부 링크의 실시간 상태 필드는 제공하지 않는다. 일시 실패에도 저장된 링크와 기본 상세를 유지하고, 관리자가 삭제·비공개를 확인한 콘텐츠만 응답에서 제외한다.
 - 영향: 프론트엔드는 링크의 실시간 성공을 보장받지 않으며 링크 실패를 맛집 상세 실패로 해석하지 않는다.
 - 결정 시점: 2026-07-24 API 계약에서 완료
@@ -170,7 +191,7 @@ API를 임의 정책 결정 없이 구현·프론트엔드 연동 가능한 상�
 
 - `/restaurants` 하나에 목록·검색·세 필터를 통합한 것은 모두 같은 자원 목록의 조건이므로 적절하다.
 - 유튜버 최소 선택 목록은 반환 모델·페이지 정책이 달라 `/creators`로 분리했다. 유튜버 방문 맛집용 별도 목록 API는 만들지 않았다.
-- 맛집 상세는 PRD 사용자 흐름과 WS-02 책임에 맞춰 기본 정보·방문 콘텐츠를 한 응답으로 결합했다. 부분 실패 상태로 외부 장애를 격리한다.
+- 맛집 상세는 PRD 사용자 흐름과 [#11 WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) 책임에 맞춰 기본 정보·방문 콘텐츠를 한 응답으로 결합했다. 부분 실패 상태로 외부 장애를 격리한다.
 - 관리자 기본 데이터 세 POST는 참조 선행 데이터를 각각 생성해야 해 분리하되 하나의 문서·Workstream에 유지했다.
 - 방문 관계 등록은 세 자원의 원자적 조합이라 기본 데이터 등록과 별도 엔드포인트가 적절하다.
 - 엔티티별 수정·삭제·목록·상세 CRUD는 추가하지 않았다.
@@ -179,7 +200,7 @@ API를 임의 정책 결정 없이 구현·프론트엔드 연동 가능한 상�
 
 | 우선순위 | 항목 |
 |---|---|
-| 완료 | RV-API-001~013 |
+| 완료 | [RV-API-001](api-review.md#rv-api-001-식별자-json-표현)~[RV-API-013](api-review.md#rv-api-013-외부-링크-오류의-사용자-표시) |
 
 ## 9. 권장 결정 순서
 
@@ -190,7 +211,7 @@ API를 임의 정책 결정 없이 구현·프론트엔드 연동 가능한 상�
 
 ## 10. API 계약 완료 기준
 
-- RV-API-001~013이 모두 결정되고 관련 기능 문서·공통 계약·추적성이 갱신됐다.
+- [RV-API-001](api-review.md#rv-api-001-식별자-json-표현)~[RV-API-013](api-review.md#rv-api-013-외부-링크-오류의-사용자-표시)이 모두 결정되고 관련 기능 문서·공통 계약·추적성이 갱신됐다.
 - 모든 요청·응답 식별자 타입과 관리자 인증 전달 방식이 프론트엔드에 명확하다.
 - 등록 확인·중복·보류·공개 반영 흐름이 끝까지 호출 가능하다.
 - 페이지·필터·빈 결과·404·부분 실패·외부 장애·원자성 계약 테스트가 작성 가능하다.

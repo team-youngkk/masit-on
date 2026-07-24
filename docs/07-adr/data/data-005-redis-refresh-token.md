@@ -7,13 +7,16 @@ owners:
   - 김인안
   - 이우람
 related_requirements:
-  - FR-ADMIN-001
-  - NFR-SECURITY-001
-  - NFR-RELIABILITY-002
-  - NFR-PRIVACY-002
+  1: FR-ADMIN-001
+  2: NFR-SECURITY-001
+  3: NFR-RELIABILITY-002
+  4: NFR-PRIVACY-002
 related_documents:
-  - ../../05-specs/api/admin/authentication-api.md
-  - ../../05-specs/data/entity-definitions.md
+  1: ../../05-specs/api/admin/authentication-api.md
+  2: ../../05-specs/data/entity-definitions.md
+  3: ../security/auth-001-spring-security-jwt.md
+  4: ../../06-architecture/technology-policy.md
+  5: ../quality/obs-001-logging-observability.md
 supersedes: []
 superseded_by: null
 ---
@@ -80,6 +83,6 @@ Redis 운영 비용·가용성 문제가 발생하거나 인증 제공자 전환
 
 ## 15. 관련 문서
 
-- [관리자 인증 ADR](../security/auth-001-spring-security-jwt.md)
-- [관리자 인증 API](../../05-specs/api/admin/authentication-api.md)
-- [Redis 정책](../../06-architecture/technology-policy.md#7-redis-연결-및-역할-분리-정책)
+- [#3 관리자 인증 ADR](../security/auth-001-spring-security-jwt.md)
+- [#1 관리자 인증 API](../../05-specs/api/admin/authentication-api.md)
+- [#4 Redis 정책](../../06-architecture/technology-policy.md#7-redis-연결-및-역할-분리-정책)

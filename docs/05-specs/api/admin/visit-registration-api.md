@@ -9,8 +9,8 @@ owner: 김인안
 reviewers:
   - 박진영
 related_requirements:
-  - FR-ADMIN-001
-  - FR-VISIT-001
+  1: FR-ADMIN-001
+  2: FR-VISIT-001
 related_business_rules:
   - BR-CREATOR-005
   - BR-VIDEO-004
@@ -42,6 +42,18 @@ related_nfr:
   - NFR-TEST-001
   - NFR-TEST-002
   - NFR-TEST-003
+related_documents:
+  1: ../../../04-product/prd/admin/admin-data-management.md
+  2: authentication-api.md
+  3: reference-data-api.md
+  4: ../common/identifier-contract.md
+  5: ../common/response-contract.md
+  6: ../common/error-contract.md
+  7: ../../data/relationship-rules.md
+  8: ../../data/constraints.md
+  9: ../../../01-requirements/functional-requirements.md
+  10: ../../../02-analysis/mvp-workstreams.md
+  11: ../../../01-requirements/business-rules.md
 ---
 
 # 관리자 방문 관계 등록 API
@@ -56,13 +68,13 @@ related_nfr:
 
 ## 3. 인증 및 권한
 
-`Authorization: Bearer` JWT Access Token과 `ADMIN` 등록 권한이 필수다. [관리자 인증 API](authentication-api.md)를 따른다.
+`Authorization: Bearer` JWT Access Token과 `ADMIN` 등록 권한이 필수다. [#2 관리자 인증 API](authentication-api.md)를 따른다.
 
 ## 4. API 요약
 
 | API ID | Method | Path | 설명 |
 |---|---|---|---|
-| API-ADMIN-VISIT-001 | POST | `/admin/visit-relationships` | 맛집·유튜버·영상 방문 관계 등록 |
+| [API-ADMIN-VISIT-001](visit-registration-api.md#api-admin-visit-001-방문-관계-등록) | POST | `/admin/visit-relationships` | 맛집·유튜버·영상 방문 관계 등록 |
 
 표준 영문명 `Visit Relationship`을 복수 자원 경로 `visit-relationships`로 표현한다.
 
@@ -74,8 +86,8 @@ related_nfr:
 - Path: `/admin/visit-relationships`
 - 인증: JWT Access Token과 `ADMIN` 권한 필수
 - 권한: 관리자 등록 권한
-- 관련 PRD: PRD-ADMIN-001
-- 관련 요구사항: FR-ADMIN-001, FR-VISIT-001
+- 관련 PRD: [#1 PRD-ADMIN-001](../../../04-product/prd/admin/admin-data-management.md)
+- 관련 요구사항: [REQ#1 FR-ADMIN-001](../../../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근), [REQ#2 FR-VISIT-001](../../../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
 
 #### Request Body
 
@@ -146,7 +158,7 @@ related_nfr:
 
 ## 9. 오류 응답
 
-공통 `401`, `403`, `500`과 [공통 오류 계약](../common/error-contract.md)을 적용한다. 검증 실패·중복·참조 없음 시 어떤 관계도 생성하지 않는다.
+공통 `401`, `403`, `500`과 [#6 공통 오류 계약](../common/error-contract.md)을 적용한다. 검증 실패·중복·참조 없음 시 어떤 관계도 생성하지 않는다.
 
 ## 10. 예제
 
@@ -154,9 +166,9 @@ related_nfr:
 
 ## 11. 관련 요구사항 및 규칙
 
-- PRD-ADMIN-001, WS-04, 김인안; 리뷰어 박진영
-- FR-ADMIN-001, FR-VISIT-001
-- BR-CREATOR-005, BR-VIDEO-004~006, BR-VISIT-001~007, BR-ADMIN-001~005·007·008
+- [#1 PRD-ADMIN-001](../../../04-product/prd/admin/admin-data-management.md), [#10 WS-04](../../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록), 김인안; 리뷰어 박진영
+- [REQ#1 FR-ADMIN-001](../../../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근), [REQ#2 FR-VISIT-001](../../../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
+- [#11 BR-CREATOR-005](../../../01-requirements/business-rules.md#br-creator-005-방문-관계의-유튜버-일치), [#11 BR-VIDEO-004](../../../01-requirements/business-rules.md#br-video-004-영상과-방문-관계의-다대상-연결)~[#11 BR-VIDEO-006](../../../01-requirements/business-rules.md#br-video-006-게시일과-방문일의-구분), [#11 BR-VISIT-001](../../../01-requirements/business-rules.md#br-visit-001-방문-관계의-구성)~[#11 BR-VISIT-007](../../../01-requirements/business-rules.md#br-visit-007-등록-완료와-검증-상태), [#11 BR-ADMIN-001](../../../01-requirements/business-rules.md#br-admin-001-관리자-권한-검증)~[#11 BR-ADMIN-005](../../../01-requirements/business-rules.md#br-admin-005-mvp-관리-기능의-경계)·[#11 BR-ADMIN-007](../../../01-requirements/business-rules.md#br-admin-007-동시-등록의-고유성)·[#11 BR-ADMIN-008](../../../01-requirements/business-rules.md#br-admin-008-보류-요청의-처리)
 
 ## 12. 확정 사항
 

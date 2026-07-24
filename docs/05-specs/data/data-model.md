@@ -1,3 +1,16 @@
+---
+related_documents:
+  1: ../../02-analysis/domain-boundaries.md
+  2: ../../01-requirements/business-rules.md
+  3: entity-definitions.md
+  4: relationship-rules.md
+  5: lifecycle-rules.md
+  6: constraints.md
+  7: ../diagrams/erd-spec.md
+  8: ../../02-analysis/mvp-workstreams.md
+  9: data-review.md
+---
+
 # 맛잇온 논리 데이터 모델
 
 ## 1. 문서 목적
@@ -40,12 +53,12 @@ FoodCategory도 Restaurant 도메인의 참조 데이터로 둔다. Restaurant�
 
 | 데이터 개념 | 주 소유 도메인 | 생성 책임 | 변경 책임 | 주요 조회 사용자 |
 |---|---|---|---|---|
-| Restaurant | Restaurant | 관리자 맛집 등록 유스케이스(WS-04 조율) | Restaurant | 일반 사용자, 관리자 |
+| Restaurant | Restaurant | 관리자 맛집 등록 유스케이스([#8 WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 조율) | Restaurant | 일반 사용자, 관리자 |
 | Region | Restaurant | 기준 데이터 운영 | Restaurant | Restaurant 등록·탐색 |
 | FoodCategory | Restaurant | 기준 데이터 운영 | Restaurant | Restaurant 등록·탐색 |
-| Creator | Creator | 관리자 유튜버 등록 유스케이스(WS-04 조율) | Creator | 일반 사용자, Visit, 관리자 |
-| Video | Video | 관리자 영상 등록 유스케이스(WS-04 조율) | Video | 일반 사용자, Visit, 관리자 |
-| Visit | Visit | 관리자 방문 관계 등록 유스케이스(WS-04 조율) | Visit | WS-01·02·03, 관리자 |
+| Creator | Creator | 관리자 유튜버 등록 유스케이스([#8 WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 조율) | Creator | 일반 사용자, Visit, 관리자 |
+| Video | Video | 관리자 영상 등록 유스케이스([#8 WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 조율) | Video | 일반 사용자, Visit, 관리자 |
+| Visit | Visit | 관리자 방문 관계 등록 유스케이스([#8 WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 조율) | Visit | [#8 WS-01](../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)·[#8 WS-02](../../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)·[#8 WS-03](../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색), 관리자 |
 | AdminAccount | 관리자 인증 애플리케이션 책임 | 수동 운영 발급 | 수동 운영 | 관리자 인증 |
 | AdminRefreshToken | 관리자 인증 애플리케이션 책임 | JWT 로그인·재발급 성공 | 회전·로그아웃·만료·재사용 탐지 | 관리자 인증 API |
 
@@ -111,4 +124,4 @@ Restaurant, Creator, Video와 Visit는 일반 사용자 노출을 위한 publica
 - 확인 토큰, 로그인 실패 제한과 Refresh Token의 키·검증값·TTL·정리 전략
 - 내부 식별자 타입, 데이터베이스, 인덱스와 동시성 구현 방식
 
-상세 상태와 우선순위는 `data-review.md`에 기록한다.
+상세 상태와 우선순위는 [#9 data-review.md](data-review.md)에 기록한다.
