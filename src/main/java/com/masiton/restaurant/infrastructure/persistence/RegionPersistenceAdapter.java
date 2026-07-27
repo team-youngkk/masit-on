@@ -15,22 +15,19 @@ import com.masiton.restaurant.domain.model.Region;
 class RegionPersistenceAdapter implements RegionRepositoryPort {
 
     private final SpringDataRegionRepository springDataRegionRepository;
-    private final RegionMapper regionMapper;
 
-    public RegionPersistenceAdapter(
-            SpringDataRegionRepository springDataRegionRepository, RegionMapper regionMapper) {
+    RegionPersistenceAdapter(SpringDataRegionRepository springDataRegionRepository) {
         this.springDataRegionRepository = springDataRegionRepository;
-        this.regionMapper = regionMapper;
     }
 
     @Override
     public Region save(Region region) {
-        RegionJpaEntity savedEntity = springDataRegionRepository.save(regionMapper.toJpaEntity(region));
-        return regionMapper.toDomain(savedEntity);
+        RegionJpaEntity savedEntity = springDataRegionRepository.save(RegionMapper.toEntity(region));
+        return RegionMapper.toDomain(savedEntity);
     }
 
     @Override
     public Optional<Region> findById(UUID id) {
-        return springDataRegionRepository.findById(id).map(regionMapper::toDomain);
+        return springDataRegionRepository.findById(id).map(RegionMapper::toDomain);
     }
 }

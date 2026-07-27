@@ -16,23 +16,20 @@ import com.masiton.restaurant.domain.model.Restaurant;
 class RestaurantPersistenceAdapter implements RestaurantRepositoryPort {
 
     private final SpringDataRestaurantRepository springDataRestaurantRepository;
-    private final RestaurantMapper restaurantMapper;
 
-    public RestaurantPersistenceAdapter(
-            SpringDataRestaurantRepository springDataRestaurantRepository, RestaurantMapper restaurantMapper) {
+    RestaurantPersistenceAdapter(SpringDataRestaurantRepository springDataRestaurantRepository) {
         this.springDataRestaurantRepository = springDataRestaurantRepository;
-        this.restaurantMapper = restaurantMapper;
     }
 
     @Override
     public Restaurant save(Restaurant restaurant) {
         RestaurantJpaEntity savedEntity =
-                springDataRestaurantRepository.save(restaurantMapper.toJpaEntity(restaurant));
-        return restaurantMapper.toDomain(savedEntity);
+                springDataRestaurantRepository.save(RestaurantMapper.toEntity(restaurant));
+        return RestaurantMapper.toDomain(savedEntity);
     }
 
     @Override
     public Optional<Restaurant> findById(UUID id) {
-        return springDataRestaurantRepository.findById(id).map(restaurantMapper::toDomain);
+        return springDataRestaurantRepository.findById(id).map(RestaurantMapper::toDomain);
     }
 }

@@ -16,24 +16,20 @@ import com.masiton.restaurant.domain.model.FoodCategory;
 class FoodCategoryPersistenceAdapter implements FoodCategoryRepositoryPort {
 
     private final SpringDataFoodCategoryRepository springDataFoodCategoryRepository;
-    private final FoodCategoryMapper foodCategoryMapper;
 
-    public FoodCategoryPersistenceAdapter(
-            SpringDataFoodCategoryRepository springDataFoodCategoryRepository,
-            FoodCategoryMapper foodCategoryMapper) {
+    FoodCategoryPersistenceAdapter(SpringDataFoodCategoryRepository springDataFoodCategoryRepository) {
         this.springDataFoodCategoryRepository = springDataFoodCategoryRepository;
-        this.foodCategoryMapper = foodCategoryMapper;
     }
 
     @Override
     public FoodCategory save(FoodCategory foodCategory) {
         FoodCategoryJpaEntity savedEntity =
-                springDataFoodCategoryRepository.save(foodCategoryMapper.toJpaEntity(foodCategory));
-        return foodCategoryMapper.toDomain(savedEntity);
+                springDataFoodCategoryRepository.save(FoodCategoryMapper.toEntity(foodCategory));
+        return FoodCategoryMapper.toDomain(savedEntity);
     }
 
     @Override
     public Optional<FoodCategory> findById(UUID id) {
-        return springDataFoodCategoryRepository.findById(id).map(foodCategoryMapper::toDomain);
+        return springDataFoodCategoryRepository.findById(id).map(FoodCategoryMapper::toDomain);
     }
 }

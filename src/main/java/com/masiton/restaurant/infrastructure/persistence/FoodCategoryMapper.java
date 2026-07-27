@@ -1,16 +1,16 @@
 package com.masiton.restaurant.infrastructure.persistence;
 
-import org.springframework.stereotype.Component;
-
 import com.masiton.restaurant.domain.model.FoodCategory;
 
 /**
  * FoodCategoryJpaEntity와 domain.model.FoodCategory 간 변환만 담당한다.
  */
-@Component
-class FoodCategoryMapper {
+final class FoodCategoryMapper {
 
-    public FoodCategory toDomain(FoodCategoryJpaEntity entity) {
+    private FoodCategoryMapper() {
+    }
+
+    static FoodCategory toDomain(FoodCategoryJpaEntity entity) {
         return new FoodCategory(
                 entity.getId(),
                 entity.getCode(),
@@ -21,7 +21,7 @@ class FoodCategoryMapper {
                 entity.getUpdatedAt());
     }
 
-    public FoodCategoryJpaEntity toJpaEntity(FoodCategory domain) {
+    static FoodCategoryJpaEntity toEntity(FoodCategory domain) {
         return new FoodCategoryJpaEntity(
                 domain.getId(),
                 domain.getCode(),
