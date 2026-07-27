@@ -44,6 +44,9 @@
   --space-8: 2rem;
   --space-12: 3rem;
 
+  /* 컨트롤 — 모바일 터치 목표 크기. 입력 컨트롤이 공통으로 참조한다 */
+  --control-min-height: 44px;
+
   /* 모양 */
   --radius-sm: 6px;
   --radius-md: 10px;

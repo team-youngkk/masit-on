@@ -1,3 +1,4 @@
+import { Brand } from './Brand'
 import styles from './SiteFooter.module.css'
 
 /*
@@ -9,12 +10,7 @@ export function SiteFooter() {
   return (
     <footer className={styles.footer}>
       <div className={styles.inner}>
-        <span className={styles.brand}>
-          <span className={styles.mark} aria-hidden="true">
-            ●
-          </span>
-          맛잇온
-        </span>
+        <Brand />
         <p className={styles.tagline}>
           유튜버가 방문한 맛집을 지역·음식 종류·유튜버로 찾아보세요.
         </p>

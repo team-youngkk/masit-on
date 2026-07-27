@@ -2,6 +2,8 @@
 
 import type { ButtonHTMLAttributes } from 'react'
 
+import { cn } from '@/lib/cn'
+
 import styles from './Button.module.css'
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -14,9 +16,11 @@ export function Button({
   type = 'button',
   ...props
 }: ButtonProps) {
-  const classes = [styles.button, styles[variant], className]
-    .filter(Boolean)
-    .join(' ')
-
-  return <button type={type} className={classes} {...props} />
+  return (
+    <button
+      type={type}
+      className={cn(styles.button, styles[variant], className)}
+      {...props}
+    />
+  )
 }

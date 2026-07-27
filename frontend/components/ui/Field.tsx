@@ -3,6 +3,8 @@
 import type { InputHTMLAttributes, ReactNode } from 'react'
 import { useId } from 'react'
 
+import { cn } from '@/lib/cn'
+
 import styles from './Field.module.css'
 
 type FieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> & {
@@ -14,9 +16,15 @@ type FieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> & {
 export function Field({ label, error, className, ...props }: FieldProps) {
   const id = useId()
   const errorId = `${id}-error`
-  const classes = [styles.control, error && styles.invalid, className]
-    .filter(Boolean)
-    .join(' ')
+
+  /*
+   * 호출자가 넘긴 aria-describedby를 덮지 않고 오류 메시지 id와 합친다.
+   * props를 먼저 펼치고 계산한 값을 뒤에 두어 스프레드가 이기지 않게 한다.
+   */
+  const describedBy =
+    [props['aria-describedby'], error ? errorId : undefined]
+      .filter(Boolean)
+      .join(' ') || undefined
 
   return (
     <div className={styles.field}>
@@ -24,11 +32,11 @@ export function Field({ label, error, className, ...props }: FieldProps) {
         {label}
       </label>
       <input
-        id={id}
-        className={classes}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? errorId : undefined}
         {...props}
+        id={id}
+        className={cn(styles.control, error && styles.invalid, className)}
+        aria-invalid={error ? true : props['aria-invalid']}
+        aria-describedby={describedBy}
       />
       {error ? (
         <p id={errorId} className={styles.error}>

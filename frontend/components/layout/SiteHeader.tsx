@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { Brand } from './Brand'
 import styles from './SiteHeader.module.css'
 
 /*
@@ -11,11 +12,8 @@ export function SiteHeader() {
   return (
     <header className={styles.header}>
       <div className={styles.inner}>
-        <Link href="/restaurants" className={styles.brand}>
-          <span className={styles.mark} aria-hidden="true">
-            ●
-          </span>
-          맛잇온
+        <Link href="/restaurants" className={styles.brandLink}>
+          <Brand />
         </Link>
         <nav className={styles.nav} aria-label="주요 메뉴">
           <Link href="/restaurants">맛집 탐색</Link>
