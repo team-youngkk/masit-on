@@ -6,9 +6,7 @@ import com.masiton.security.application.AdminPrincipal;
 
 public interface AdminCredentialVerifier {
 
-    boolean matches(String loginId, String password);
-
-    Optional<AdminPrincipal> findActivePrincipal(String loginId);
+    Optional<AdminPrincipal> authenticate(String loginId, String password);
 
     Optional<AdminPrincipal> findActivePrincipalById(String adminId);
 }

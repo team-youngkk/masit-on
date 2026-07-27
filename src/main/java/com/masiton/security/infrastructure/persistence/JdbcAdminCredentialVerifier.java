@@ -17,6 +17,8 @@ import com.masiton.security.application.port.out.AdminCredentialVerifier;
 @Component
 public class JdbcAdminCredentialVerifier implements AdminCredentialVerifier {
 
+    private static final String DUMMY_PASSWORD_HASH = "$2a$10$7EqJtq98hPqEX7fNZaFWoOhi.0P8EIw1PhqcoUL24TJnS0W9TuP.2";
+
     private final JdbcTemplate jdbcTemplate;
     private final PasswordEncoder passwordEncoder;
 
@@ -26,21 +28,23 @@ public class JdbcAdminCredentialVerifier implements AdminCredentialVerifier {
     }
 
     @Override
-    public boolean matches(String loginId, String password) {
-        List<String> passwordHashes = jdbcTemplate.query(
-                "select password_hash from admin_account where login_id = ?",
-                (resultSet, rowNumber) -> resultSet.getString("password_hash"),
+    public Optional<AdminPrincipal> authenticate(String loginId, String password) {
+        List<AdminAccount> accounts = jdbcTemplate.query(
+                "select id, role, password_hash from admin_account where login_id = ? and active = true",
+                (resultSet, rowNumber) -> new AdminAccount(
+                        resultSet.getString("id"),
+                        resultSet.getString("role"),
+                        resultSet.getString("password_hash")
+                ),
                 loginId
         );
-        return passwordHashes.size() == 1 && passwordEncoder.matches(password, passwordHashes.getFirst());
-    }
 
-    @Override
-    public Optional<AdminPrincipal> findActivePrincipal(String loginId) {
-        return findPrincipal(
-                "select id, role from admin_account where login_id = ? and active = true",
-                loginId
-        );
+        AdminAccount account = accounts.stream().findFirst().orElse(null);
+        String passwordHash = account == null ? DUMMY_PASSWORD_HASH : account.passwordHash();
+        if (!passwordEncoder.matches(password, passwordHash) || account == null) {
+            return Optional.empty();
+        }
+        return toPrincipal(account.adminId(), account.role());
     }
 
     @Override
@@ -52,14 +56,31 @@ public class JdbcAdminCredentialVerifier implements AdminCredentialVerifier {
     }
 
     private Optional<AdminPrincipal> findPrincipal(String sql, String value) {
-        List<AdminPrincipal> principals = jdbcTemplate.query(
+        List<AdminAccount> accounts = jdbcTemplate.query(
                 sql,
-                (resultSet, rowNumber) -> new AdminPrincipal(
-                        resultSet.getObject("id").toString(),
-                        java.util.Set.of(AdminRole.valueOf(resultSet.getString("role")))
+                (resultSet, rowNumber) -> new AdminAccount(
+                        resultSet.getString("id"),
+                        resultSet.getString("role"),
+                        null
                 ),
                 value
         );
-        return principals.stream().findFirst();
+        return accounts.stream()
+                .findFirst()
+                .flatMap(account -> toPrincipal(account.adminId(), account.role()));
+    }
+
+    private Optional<AdminPrincipal> toPrincipal(String adminId, String role) {
+        if (adminId == null || role == null) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(new AdminPrincipal(adminId, java.util.Set.of(AdminRole.valueOf(role))));
+        } catch (IllegalArgumentException exception) {
+            return Optional.empty();
+        }
+    }
+
+    private record AdminAccount(String adminId, String role, String passwordHash) {
     }
 }

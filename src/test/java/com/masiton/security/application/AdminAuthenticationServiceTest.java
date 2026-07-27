@@ -43,8 +43,7 @@ class AdminAuthenticationServiceTest {
     @DisplayName("활성 관리자 자격 증명이 맞으면 Access와 Refresh Token을 발급한다")
     void 로그인_활성관리자_토큰발급() {
         AdminPrincipal principal = new AdminPrincipal("admin-id", Set.of(AdminRole.ADMIN));
-        when(credentialVerifier.matches("admin", "correct-password")).thenReturn(true);
-        when(credentialVerifier.findActivePrincipal("admin")).thenReturn(Optional.of(principal));
+        when(credentialVerifier.authenticate("admin", "correct-password")).thenReturn(Optional.of(principal));
         when(refreshTokenStore.issue("admin-id", Duration.ofDays(14)))
                 .thenReturn(new RefreshTokenRotation("admin-id", "refresh-token"));
         when(tokenIssuer.issueAccessToken(principal)).thenReturn("access-token");
@@ -58,7 +57,7 @@ class AdminAuthenticationServiceTest {
     @Test
     @DisplayName("잘못된 자격 증명은 동일한 401로 실패 횟수만 기록한다")
     void 로그인_잘못된자격증명_실패기록후401() {
-        when(credentialVerifier.matches("unknown", "wrong-password")).thenReturn(false);
+        when(credentialVerifier.authenticate("unknown", "wrong-password")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.login(new LoginCommand("unknown", "wrong-password")))
                 .isInstanceOf(BusinessException.class)
