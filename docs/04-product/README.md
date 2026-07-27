@@ -15,6 +15,7 @@ related_documents:
   - ../01-requirements/business-rules.md
   - ../01-requirements/non-functional-requirements.md
   - ../03-team/ownership.md
+  - wireframes/README.md
 ---
 
 # 맛잇온 제품 문서
@@ -40,6 +41,7 @@ related_documents:
 | [맛집 상세 및 콘텐츠 조회](prd/detail/restaurant-detail.md) | 맛집 기본 정보와 방문 콘텐츠를 한 흐름에서 확인 | [WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) | 박진영 |
 | [관리자 데이터 등록](prd/admin/admin-data-management.md) | 검증된 기본 데이터와 방문 관계를 순서대로 등록 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 김인안 |
 | [PRD 추적성](traceability.md) | 기준 문서와 PRD의 매핑 및 변경 영향 | 전체 | 김인안(PRD 조율) |
+| [와이어프레임 적용 기준](wireframes/README.md) | 단계별 화면 참조와 1차 MVP UI 적용·제외 기준 | 전체 | 양성훈·김인안 |
 
 유튜버 조건은 독립된 관계 판정과 [WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 책임이 있으므로 별도 PRD로 둔다. 상세와 방문 콘텐츠는 한 화면의 완결된 흐름이며 [WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)가 최종 조합을 책임하므로 통합한다. 기본 데이터와 방문 관계 등록은 하나의 [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록)가 선행 순서부터 조회 반영까지 책임하므로 하나의 관리자 PRD로 관리한다.
 

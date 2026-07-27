@@ -97,17 +97,17 @@ related_documents:
 | Spring Batch Test 6.0.4 | 파생·기능 제외 | Duplicate or Derived Rule | [ADR-AUTO-001](adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) | Spring Batch 활성화에 종속 |
 | k6 | 도구 도입 조건부, 환경 결정 완료 | Conditional ADR | [ADR-PERF-001](adr-backlog.md#adr-perf-001-k6-성능-테스트-체계) | 정확한 버전·CI 실행 비용 승인 전 설치 금지 |
 | SLF4J + Logback | 확정 | Accepted ADR | [ADR-OBS-001](quality/obs-001-logging-observability.md) | 애플리케이션 로그 기준 |
-| Actuator + CloudWatch | 확정 | Accepted ADR | [ADR-OBS-001](quality/obs-001-logging-observability.md) | 오류율·응답 지연·상태·저장소 장애 임계값 확정 |
-| 로그 보관 14일 | 결정 완료 (2026-07-24) | Operational Configuration | [ADR-OBS-001](quality/obs-001-logging-observability.md) | [RV-NFR-009](../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간) 결정 완료, 14일 유지 |
-| Parameter Store SecureString + KMS | 확정 | Accepted ADR | [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 운영 비밀정보 보호 |
-| EC2 IAM Role | 확정 | Accepted ADR | [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 장기 AWS 키 제거 |
-| GitHub Actions OIDC | 확정 | Accepted ADR | [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | CI의 단기 AWS 자격 증명 |
+| Actuator + CloudWatch | 기술 선택 확정, 적용 시점 이관 | Accepted ADR | [ADR-OBS-001](quality/obs-001-logging-observability.md), [ADR-DEPLOY-001](platform/deploy-001-release-sequencing.md) | Actuator는 전 단계, CloudWatch는 최종 배포부터 적용 |
+| 로그 보관 14일 | 최종 배포 단계 적용 | Operational Configuration | [ADR-OBS-001](quality/obs-001-logging-observability.md) | AWS 운영 시작 후 14일 유지 |
+| Parameter Store SecureString + KMS | 최종 배포 단계 적용 | Accepted ADR | [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 운영 비밀정보 보호 |
+| EC2 IAM Role | 최종 배포 단계 적용 | Accepted ADR | [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 장기 AWS 키 제거 |
+| GitHub Actions OIDC | 최종 배포 단계 적용 | Accepted ADR | [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | CI의 단기 AWS 자격 증명 |
 | Docker | 확정 | Accepted ADR | [ADR-RUNTIME-001](platform/runtime-001-docker.md) | 재현 가능한 실행·배포 산출물 |
 | GitHub Actions 빌드·테스트 | 확정 | Accepted ADR | [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md) | 배포 후보 품질 게이트 |
 | Nginx | 경로 경계 결정 완료 (2026-07-27) | Accepted ADR | [ADR-WEB-003](platform/web-003-routing-boundary.md), [ADR-RUNTIME-001](platform/runtime-001-docker.md) | `/api/**`는 Spring Boot, 나머지 외부 경로는 Next.js, `/internal/**`은 외부 차단 |
-| Amazon ECR·EC2 | 결정 완료 (2026-07-24) | Scope Conflict Review | 배포 토폴로지 Backlog | 단일 EC2 인스턴스 배포로 확정, 비용 대조는 운영 중 재확인 |
-| ALB·ASG·Blue-Green | 결정 완료 (2026-07-24) | Scope Conflict Review | 배포 토폴로지 Backlog | MVP 미도입. 단일 인스턴스 수동 복구로 시작하고 ALB는 확장 단계 검토 경로로 보류 |
-| GitHub Actions → ECR → EC2 | 결정 완료 (2026-07-27) | Scope Conflict Review | [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md) | 빌드·테스트·이미지 생성·ECR push 자동, 운영 EC2 배포 수동 승인, Smoke Test 자동, 복구 수동. ALB·Blue-Green은 확장 시 재설계 |
+| Amazon ECR·EC2 | 기술 선택 확정, 최종 배포로 이관 | Accepted ADR | [ADR-DEPLOY-001](platform/deploy-001-release-sequencing.md) | 모든 확장 완료 후 단일 EC2에 배포 |
+| ALB·ASG·Blue-Green | 최종 배포 이후 재검토 | Scope Conflict Review | [ADR-DEPLOY-001](platform/deploy-001-release-sequencing.md) | 최초 운영은 단일 인스턴스 수동 복구 |
+| GitHub Actions → ECR → EC2 | 최종 배포 단계 적용 | Accepted ADR | [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md), [ADR-DEPLOY-001](platform/deploy-001-release-sequencing.md) | 단계별 CI는 빌드·테스트만 수행하고 AWS 경로는 최종 배포에서 활성화 |
 | Amazon S3 이미지 저장 | 확정이나 기능 없음 | Post-MVP ADR | [ADR-MEDIA-001](adr-backlog.md#adr-media-001-s3-사용자-이미지-저장) | 이미지 업로드·사용자 이미지 요구사항 없음 |
 | FCM HTTP v1 | 확정이나 범위 제외 | Post-MVP ADR | [ADR-NOTIFY-001](adr-backlog.md#adr-notify-001-fcm-푸시-알림) | 사용자 알림 제외 |
 | 초기 월 인프라 예산 15만 원 | 목표 | Operational Configuration | 배포 토폴로지 Backlog | 운영 제약·조정 가능한 수치 |
@@ -119,12 +119,12 @@ related_documents:
 | [NFR-SECURITY-001](../01-requirements/non-functional-requirements.md#nfr-security-001-공개-조회와-관리자-접근-통제)~[NFR-SECURITY-003](../01-requirements/non-functional-requirements.md#nfr-security-003-비밀정보와-오류-정보-보호) | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md), [ADR-AUTH-003](security/auth-003-confirmation-token.md), [ADR-WEB-003](platform/web-003-routing-boundary.md), [ADR-AUTH-004](adr-backlog.md#adr-auth-004-관리자-권한-세분화), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 관리자 접근, 인증 matcher, 확인 Token 무결성, 권한 확장, 입력·비밀 보호 |
 | [NFR-INTEGRITY-001](../01-requirements/non-functional-requirements.md#nfr-integrity-001-참조-및-필수값-정합성)~[NFR-INTEGRITY-004](../01-requirements/non-functional-requirements.md#nfr-integrity-004-외부-링크와-내부-데이터-분리) | [ADR-DATA-003](data/data-003-spring-data-jpa.md), [ADR-DATA-004](data/data-004-flyway.md), [ADR-DATA-006](adr-backlog.md#adr-data-006-동시-쓰기-충돌-제어), [ADR-AUTH-003](security/auth-003-confirmation-token.md), [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md), [ADR-TEST-001](quality/test-001-automation-strategy.md) | 참조·원자성·동시 등록·확인 Token 재사용·외부 실패 격리 |
 | [NFR-RELIABILITY-001](../01-requirements/non-functional-requirements.md#nfr-reliability-001-오류-격리와-공통-오류-정책)~[NFR-RELIABILITY-003](../01-requirements/non-functional-requirements.md#nfr-reliability-003-사용자-오류-메시지와-기능-분리) | [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md), [ADR-EXT-002](adr-backlog.md#adr-ext-002-자동-복원력과-신뢰성-이벤트-전달), [ADR-TEST-001](quality/test-001-automation-strategy.md) | 오류 경계, 재시도·회로 차단·이벤트 전달, 장애 검증 |
-| [NFR-AVAILABILITY-001](../01-requirements/non-functional-requirements.md#nfr-availability-001-상태-확인과-장애-구분)~[NFR-AVAILABILITY-002](../01-requirements/non-functional-requirements.md#nfr-availability-002-mvp-가용성과-수동-복구) | [ADR-WEB-003](platform/web-003-routing-boundary.md), [ADR-OBS-001](quality/obs-001-logging-observability.md), [ADR-RUNTIME-001](platform/runtime-001-docker.md), 배포 토폴로지 Backlog | 내부 상태 확인 경로와 단일 인스턴스 수동 복구 |
+| [NFR-AVAILABILITY-001](../01-requirements/non-functional-requirements.md#nfr-availability-001-상태-확인과-장애-구분)~[NFR-AVAILABILITY-002](../01-requirements/non-functional-requirements.md#nfr-availability-002-최종-배포-가용성과-수동-복구) | [ADR-WEB-003](platform/web-003-routing-boundary.md), [ADR-OBS-001](quality/obs-001-logging-observability.md), [ADR-RUNTIME-001](platform/runtime-001-docker.md), [ADR-DEPLOY-001](platform/deploy-001-release-sequencing.md) | 단계별 로컬 상태 확인과 최종 배포 수동 복구 |
 | [NFR-EXTERNAL-001](../01-requirements/non-functional-requirements.md#nfr-external-001-영상-원본과-외부-링크-분리)~[NFR-EXTERNAL-003](../01-requirements/non-functional-requirements.md#nfr-external-003-링크-검증과-외부-인증정보) | [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md), [ADR-EXT-001](integration/ext-001-reference-verification.md), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 원본 미저장, 외부 호출 격리, 키 보호 |
 | [NFR-OBSERVABILITY-001](../01-requirements/non-functional-requirements.md#nfr-observability-001-요청-추적과-오류-분류)~[NFR-OBSERVABILITY-003](../01-requirements/non-functional-requirements.md#nfr-observability-003-로그-품질과-민감정보-차단) | [ADR-OBS-001](quality/obs-001-logging-observability.md), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 요청 추적·지표·민감정보 차단 |
 | [NFR-TEST-001](../01-requirements/non-functional-requirements.md#nfr-test-001-자동화-테스트-계층)~[NFR-TEST-003](../01-requirements/non-functional-requirements.md#nfr-test-003-배포-품질-게이트) | [ADR-TEST-001](quality/test-001-automation-strategy.md), [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md) | 테스트 계층과 배포 품질 게이트 |
-| [NFR-DEPLOYMENT-001](../01-requirements/non-functional-requirements.md#nfr-deployment-001-재현-가능한-빌드와-환경-분리)~[NFR-DEPLOYMENT-002](../01-requirements/non-functional-requirements.md#nfr-deployment-002-배포-전후-검증) | [ADR-BUILD-001](platform/build-001-gradle-groovy.md), [ADR-WEB-003](platform/web-003-routing-boundary.md), [ADR-RUNTIME-001](platform/runtime-001-docker.md), [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 재현 빌드, 경로 전달·내부 차단, 환경 분리, 배포 전후 검증 |
-| [NFR-DEPLOYMENT-003](../01-requirements/non-functional-requirements.md#nfr-deployment-003-버전-추적과-복구-절차)~[NFR-DEPLOYMENT-004](../01-requirements/non-functional-requirements.md#nfr-deployment-004-mvp-배포-복잡도-제한) | [ADR-DATA-004](data/data-004-flyway.md), 배포 토폴로지 Backlog | 복구·자동화·복잡도는 후속 결정 |
+| [NFR-DEPLOYMENT-001](../01-requirements/non-functional-requirements.md#nfr-deployment-001-재현-가능한-빌드와-환경-분리)~[NFR-DEPLOYMENT-002](../01-requirements/non-functional-requirements.md#nfr-deployment-002-배포-전후-검증) | [ADR-BUILD-001](platform/build-001-gradle-groovy.md), [ADR-WEB-003](platform/web-003-routing-boundary.md), [ADR-RUNTIME-001](platform/runtime-001-docker.md), [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md), [ADR-DEPLOY-001](platform/deploy-001-release-sequencing.md) | 재현 빌드, 단계별 로컬 통합과 최종 배포 검증 |
+| [NFR-DEPLOYMENT-003](../01-requirements/non-functional-requirements.md#nfr-deployment-003-버전-추적과-복구-절차)~[NFR-DEPLOYMENT-004](../01-requirements/non-functional-requirements.md#nfr-deployment-004-단계별-실행-및-최종-배포-복잡도-제한) | [ADR-DATA-004](data/data-004-flyway.md), [ADR-DEPLOY-001](platform/deploy-001-release-sequencing.md) | 단계별 실행과 최종 배포 복구·복잡도 |
 | [NFR-MAINTAINABILITY-001](../01-requirements/non-functional-requirements.md#nfr-maintainability-001-책임과-의존성-경계)~[NFR-MAINTAINABILITY-003](../01-requirements/non-functional-requirements.md#nfr-maintainability-003-추적성과-운영-복잡도) | [ADR-ARCH-001](architecture/arch-001-domain-monolith.md), [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md), [ADR-ARCH-003](adr-backlog.md#adr-arch-003-조회-확장-패턴), [ADR-ARCH-004](adr-backlog.md#adr-arch-004-멀티모듈독립-배포-전환) | 책임 경계, 조회 확장, 배포 경계와 운영 복잡도 제한 |
 | [NFR-PRIVACY-001](../01-requirements/non-functional-requirements.md#nfr-privacy-001-mvp-개인정보-최소화)~[NFR-PRIVACY-003](../01-requirements/non-functional-requirements.md#nfr-privacy-003-회원-기능-도입-시-재검토) | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md), [ADR-AUTH-002](adr-backlog.md#adr-auth-002-일반-사용자-jwt와-refresh-token), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 일반 사용자 계정 제외와 비밀 보호 |
 
@@ -181,9 +181,9 @@ related_documents:
 모든 기술 스펙 항목은 위 표에서 ADR, 정책, Backlog 또는 운영 설정으로 분류됐다. 다음은 2026-07-24 결정 완료 항목이다.
 
 - 관리자 JWT 만료(30분)·Redis Refresh Token TTL(14일, 회전+재사용 탐지)·Redis 장애 시 fail-closed 정책
-- Nginx·ECR·EC2를 포함한 최소 MVP 배포 토폴로지(단일 EC2 인스턴스)
+- Nginx·ECR·EC2를 포함한 최종 배포 토폴로지(단일 EC2 인스턴스)
 - `/api` 화면·백엔드 분리, 관리자 인증 matcher와 `/internal` 상태 확인 경계
-- ALB·ASG·Blue-Green: MVP 미도입, ALB는 확장 경로로 보류
+- ALB·ASG·Blue-Green: 최초 최종 배포에는 미도입, 운영 근거 발생 시 재검토
 - 로그 14일 보관, 백업(일 1회 자동 스냅샷·7일 보관), 운영 알림(CloudWatch→이메일/Slack, 담당자 1명)
 
 다음은 여전히 팀 결정이 필요한 미결정 항목이다.

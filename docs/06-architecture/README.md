@@ -1,5 +1,6 @@
 ---
 related_documents:
+  - implementation-conventions.md
   - technology-policy.md
   - architecture-overview.md
   - module-boundaries.md
@@ -26,21 +27,23 @@ related_documents:
 
 ## 2. 문서 읽기 순서
 
-1. [기술 정책](technology-policy.md): 고정 기술, 버전과 도입 금지 기준
-2. [아키텍처 개요](architecture-overview.md): 전체 스타일과 현재/목표 상태
-3. [모듈 경계](module-boundaries.md): 네 도메인의 소유권과 공개 계약
-4. [패키지 구조](package-structure.md): 목표 Java 패키지 트리와 이전 방법
-5. [의존성 규칙](dependency-rules.md): 허용·금지 의존과 자동 검증
-6. [애플리케이션 흐름](application-flow.md): 주요 Command·Query 실행 순서
-7. [트랜잭션 경계](transaction-boundaries.md): 원자성, 동시성과 외부 호출 경계
-8. [조회 조합](query-composition.md): 맛집 상세 전용 읽기 모델과 성능 원칙
-9. [보안 경계](security-boundary.md): 인증, 인가와 관리자 유스케이스
-10. [외부 연동](external-integration.md): Port/Adapter와 실패 변환
+1. [구현 컨벤션 및 공통 정책](implementation-conventions.md): Java, Spring·JPA, 테스트, Git과 AI 구현 규칙
+2. [기술 정책](technology-policy.md): 고정 기술, 버전과 도입 금지 기준
+3. [아키텍처 개요](architecture-overview.md): 전체 스타일과 현재/목표 상태
+4. [모듈 경계](module-boundaries.md): 네 도메인의 소유권과 공개 계약
+5. [패키지 구조](package-structure.md): 목표 Java 패키지 트리와 이전 방법
+6. [의존성 규칙](dependency-rules.md): 허용·금지 의존과 자동 검증
+7. [애플리케이션 흐름](application-flow.md): 주요 Command·Query 실행 순서
+8. [트랜잭션 경계](transaction-boundaries.md): 원자성, 동시성과 외부 호출 경계
+9. [조회 조합](query-composition.md): 맛집 상세 전용 읽기 모델과 성능 원칙
+10. [보안 경계](security-boundary.md): 인증, 인가와 관리자 유스케이스
+11. [외부 연동](external-integration.md): Port/Adapter와 실패 변환
 
 ## 3. 문서별 역할
 
 | 문서 | 답하는 질문 | 다루지 않는 내용 |
 |---|---|---|
+| `implementation-conventions.md` | 모든 구현과 협업에 공통으로 적용할 규칙은 무엇인가? | 개별 기능의 상세 계약 |
 | `architecture-overview.md` | 시스템을 어떤 큰 구조로 나누는가? | 세부 패키지와 클래스 |
 | `module-boundaries.md` | 각 도메인이 무엇을 소유하고 무엇만 공개하는가? | 계층별 디렉터리 배치 |
 | `package-structure.md` | 코드를 어느 패키지에 두는가? | 결정의 역사와 대안 |

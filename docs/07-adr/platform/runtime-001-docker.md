@@ -38,7 +38,7 @@ Accepted
 
 ## 3. 배경
 
-1차 MVP의 배포 토폴로지는 단일 EC2 인스턴스 위에서 Nginx 리버스 프록시, Next.js 프론트엔드와 Spring Boot 백엔드를 함께 운영하며, 장애 시 ASG 자동 복구 없이 운영자가 수동으로 재기동·교체한다([docs/06-architecture/technology-policy.md](../../06-architecture/technology-policy.md) 13장, [ADR-WEB-003](web-003-routing-boundary.md), [docs/07-adr/adr-backlog.md](../adr-backlog.md) 5장). ALB·다중 인스턴스·Blue-Green은 트래픽이 늘어나는 확장 단계로 미뤄 두었다. 초기 월 인프라 예산은 15만 원 수준으로 제한적이다([docs/07-adr/adr-traceability.md](../adr-traceability.md)). 이런 제약에서는 EC2 위에 무엇을, 어떤 형태로 올릴지를 재현 가능한 단일 산출물로 못박아 두는 것이 중요하다. 인스턴스가 하나뿐이므로 그 한 대 위에서 실행되는 내용이 로컬 개발·CI에서 검증한 것과 다르면, 장애가 났을 때 수동 복구 절차(로그인해서 재기동)만으로는 원인을 재현하기 어렵다. 또한 네 명(이우람 [WS-03](../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색), 양성훈 [WS-01](../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색), 박진영 [WS-02](../../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회), 김인안 [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록))이 독립적으로 개발한 코드가 결국 이 한 대의 인스턴스에 함께 배포되므로, 각자 로컬에서 검증한 실행 환경과 실제 배포 환경 사이의 차이를 최소화해야 한다.
+[ADR-DEPLOY-001](deploy-001-release-sequencing.md)에 따라 1차 MVP와 2차부터 4차 확장 단계는 로컬 Docker 환경에서 통합 실행한다. 모든 확장 완료 후 최종 배포에서 단일 EC2 인스턴스 위에 Nginx, Next.js와 Spring Boot를 함께 운영한다. 따라서 현재 단계의 우선 목적은 네 명의 개발자가 같은 PostgreSQL·Redis·애플리케이션 실행 환경을 재현하는 것이며, 동일 이미지를 최종 배포 산출물로 이어갈 수 있게 유지한다.
 
 ## 4. 결정 문제
 
@@ -52,7 +52,7 @@ Accepted
 
 ## 6. 결정
 
-애플리케이션 이미지를 빌드하고 개발 PostgreSQL 17.10·Redis 8.8을 Docker로 실행한다. 운영 EC2에는 Nginx(리버스 프록시)와 애플리케이션 컨테이너를 함께 배치하고, RDS·운영 Redis 등 관리형 서비스는 컨테이너화하지 않는다([technology-policy.md](../../06-architecture/technology-policy.md) 5~7장 환경 분리 정책).
+애플리케이션 이미지를 빌드하고 개발 PostgreSQL 17.10·Redis 8.8을 Docker로 실행한다. EC2·RDS·운영 Redis 구성은 모든 확장 완료 후 최종 배포 단계에서 적용한다.
 
 ## 7. 선택 근거
 
@@ -64,11 +64,11 @@ Docker를 쓰면 이미지 빌드·스캔·저장·정리라는 새로운 운영
 
 ## 9. 적용 범위
 
-백엔드·프론트엔드 배포 이미지와 개발·테스트 의존 서비스에 적용한다. 운영 측면에서는 단일 EC2 인스턴스에 배치되는 Nginx·애플리케이션 컨테이너, 개발 측면에서는 팀원 로컬의 PostgreSQL·Redis 컨테이너가 모두 대상이다. 운영 RDS·운영 Redis는 관리형 서비스이므로 이 ADR의 컨테이너화 대상이 아니다([technology-policy.md](../../06-architecture/technology-policy.md) 5장).
+1차 MVP와 확장 단계에서는 백엔드·프론트엔드 이미지와 로컬 PostgreSQL·Redis 컨테이너에 적용한다. 최종 배포 단계에서는 단일 EC2의 Nginx·애플리케이션 컨테이너에도 적용한다.
 
 ## 10. 강제 규칙
 
-명시 태그와 승인 시 digest를 고정하고 최소 이미지, 비루트 실행, Healthcheck와 환경 외부 주입을 사용한다. 운영 배포 시에는 GitHub Actions → ECR → EC2 경로([technology-policy.md](../../06-architecture/technology-policy.md) 13장)로 빌드된 이미지만 사용한다. [ADR-WEB-003](web-003-routing-boundary.md)에 따라 Docker Healthcheck는 내부 `/internal/health/live`, 배포 Smoke Test는 `/internal/health/ready`, CloudWatch Agent와 운영자 점검은 `/internal/health/dependencies`를 사용한다.
+명시 태그를 고정하고 최소 이미지, 비루트 실행, Healthcheck와 환경 외부 주입을 사용한다. 로컬 Docker Healthcheck는 `/internal/health/live`와 `/internal/health/ready`를 사용한다. ECR digest, CloudWatch Agent와 운영 배포 Smoke Test는 최종 배포 단계에서 적용한다.
 
 ## 11. 금지 사항
 

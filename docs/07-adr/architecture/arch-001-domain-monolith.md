@@ -38,11 +38,11 @@ Accepted
 
 네 명의 백엔드 개발자(양성훈-[WS-01](../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색) 맛집 탐색, 박진영-[WS-02](../../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) 맛집 상세, 이우람-[WS-03](../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 유튜버 기반 탐색, 김인안-[WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 관리자 등록)가 하나의 MVP 기간 안에서 각자 담당 Workstream을 요구사항부터 API 계약, 데이터 모델, 구현, 테스트까지 끝까지 책임진다([docs/03-team/roles.md](../../03-team/roles.md)). [roles.md](../../03-team/roles.md)는 역할을 Controller·Service·Repository와 같은 기술 계층이 아니라 기능·도메인 소유권 기준으로 나눈다고 명시하며, 개인별 기술 역량과 선호도는 아직 확인되지 않았다고 밝히고 있어 특정 인프라·서비스 경계를 개인의 역량에 맞춰 설계할 근거가 없다.
 
-[scope.md](../../00-overview/scope.md) 6번 범위 경계 규칙은 새 기능이 "4명의 백엔드 개발자가 MVP 기간 내 서로 독립적으로 개발 가능한 크기와 의존성을 가지는가"를 요구하며, 이는 코드 수준의 소유권 경계(누가 어떤 패키지를 바꾸는가)가 배포 수준의 서비스 경계보다 먼저 해결해야 할 문제임을 보여준다. 동시에 초기 월 인프라 예산은 15만 원 수준을 목표로 하고([docs/07-adr/adr-traceability.md](../adr-traceability.md)), 배포 토폴로지는 단일 EC2 인스턴스(Nginx 리버스 프록시 + Next.js 프론트엔드 + Spring Boot 백엔드)에 수동 복구를 전제로 하며 ALB·ASG·Blue-Green은 Post-MVP로 보류한다([docs/06-architecture/technology-policy.md](../../06-architecture/technology-policy.md) 13절). 이 예산·배포 제약 안에서 Restaurant·Creator·Video·Visit 각 영역의 정책 소유권과 변경 경계를 어떻게 보존할지가 이 결정의 배경이다.
+[scope.md](../../00-overview/scope.md) 6번 범위 경계 규칙은 새 기능이 "4명의 백엔드 개발자가 MVP 기간 내 서로 독립적으로 개발 가능한 크기와 의존성을 가지는가"를 요구하며, 이는 코드 수준의 소유권 경계가 배포 수준의 서비스 경계보다 먼저 해결해야 할 문제임을 보여준다. 각 단계는 로컬 Docker에서 하나의 애플리케이션으로 통합하고, 모든 확장 완료 후 단일 EC2에 최종 배포하므로 Restaurant·Creator·Video·Visit의 정책 소유권과 변경 경계를 배포 시점과 무관하게 보존해야 한다.
 
 ## 4. 결정 문제
 
-단일 EC2·15만 원 예산 제약 안에서 MVP의 배포 단위와 내부 코드 경계를 어떻게 구성해야 4명이 서로의 작업을 막지 않고 각자 담당 Workstream을 독립적으로 완결할 수 있는가.
+로컬 통합과 향후 단일 EC2 최종 배포에 공통으로 사용할 애플리케이션 단위와 내부 코드 경계를 어떻게 구성해야 4명이 각자 담당 Workstream을 독립적으로 완결할 수 있는가.
 
 ## 5. 고려한 선택지
 

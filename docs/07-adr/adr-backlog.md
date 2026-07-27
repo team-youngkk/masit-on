@@ -202,10 +202,10 @@ related_documents:
 | n8n·Batch·크롤링 | Post-MVP | 관리자 수동 확인·등록, 자동 수집 제외 | 승인된 자동화 범위 정의 |
 | 멀티모듈·독립 배포 | Post-MVP | 단일 모듈·단일 애플리케이션 배포로 MVP 복잡도 제한 | [ADR-ARCH-004](#adr-arch-004-멀티모듈독립-배포-전환)의 경계·이전 전략 결정 |
 | 세분화된 관리자 권한 | Post-MVP | 사전 발급 단일 `ADMIN` 역할만 범위에 포함 | [ADR-AUTH-004](#adr-auth-004-관리자-권한-세분화)의 권한 모델·이전 결정 |
-| Nginx·EC2·ECR | 결정 완료 (2026-07-24) | 기술 스펙에는 확정, NFR은 배포 상세를 후속 설계로 둠 | 단일 EC2 인스턴스(Nginx 리버스 프록시+App), 장애 시 수동 복구 |
-| ALB·ASG·Blue-Green | 결정 완료 (2026-07-24) | 기술 스펙의 다중 인스턴스 구조와 NFR의 단일 인스턴스 수동 복구·복잡도 제한이 충돌 | MVP는 도입하지 않음. ALB는 확장 단계 우선 검토 대상으로 남기고, ASG·Blue-Green은 Post-MVP로 보류 |
-| 전체 CI/CD 배포 흐름 | 결정 완료 (2026-07-27) | 빌드·테스트·이미지 생성·ECR push 자동, 운영 EC2 배포 수동 승인, Smoke Test 자동, 복구 수동 | 배포 토폴로지 확장 시 재검토 |
-| 로그 14일 보관 | 결정 완료 (2026-07-24) | 기술 스펙 값과 [RV-NFR-009](../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간)의 미결정 상태가 충돌 | 14일 보관(기술 스펙 값) 확정. 백업은 일 1회 자동 스냅샷+7일 보관, 알림은 CloudWatch 알람→이메일/Slack, 담당자 1명 |
+| Nginx·EC2·ECR | 기술 선택 완료, 최종 배포로 이관 (2026-07-27) | [ADR-DEPLOY-001](platform/deploy-001-release-sequencing.md)에서 단계 순서 변경 | 모든 확장 완료 후 단일 EC2 인스턴스에 적용 |
+| ALB·ASG·Blue-Green | 최종 배포 이후 재검토 | 최초 운영은 단일 인스턴스 수동 복구 | 운영 근거가 생긴 뒤 확장 여부 결정 |
+| 전체 CI/CD 배포 흐름 | 최종 배포 단계 적용 (2026-07-27) | 단계별 CI는 빌드·테스트만 수행 | 최종 배포에서 ECR push·EC2 승인 배포·Smoke Test 활성화 |
+| 로그 14일 보관 | 최종 배포 단계 적용 (2026-07-27) | 로컬 단계에는 CloudWatch 미사용 | AWS 운영 시작 후 로그·백업·알림 정책 활성화 |
 
 ## 6. 활성화 조건
 
@@ -233,7 +233,8 @@ Conditional·Post-MVP Backlog 항목은 다음을 모두 충족해야 활성화�
 |---|---|
 | 관리자 등록 확인 Token | PostgreSQL 저장형 불투명 Token, SHA-256 해시·후보 JSONB Snapshot, 10분 만료, Entity 생성과 원자적 소비 |
 | 확인 Token 재시도·보관 | 최초 생성 `201`, 생성 완료 재시도 `200`, 동시 중복은 결정적 `409`, 완료·만료 기록 24시간 보관 후 발급 시 지연 정리 |
-| 배포 토폴로지 | 단일 EC2 인스턴스(Nginx+App), 장애 시 수동 복구로 시작. ALB는 확장 단계에서 우선 검토할 확장 경로로 남기고 ASG·Blue-Green은 Post-MVP 보류 |
+| 배포 순서 | 1차 MVP와 2~4차 확장은 로컬 통합 검증, 이후 최종 AWS 배포 |
+| 배포 토폴로지 | 최종 배포는 단일 EC2 인스턴스(Nginx+App), 장애 시 수동 복구로 시작 |
 | 관리자 JWT | Access Token 만료 30분 |
 | 관리자 Refresh Token(Redis) | TTL 14일, 재발급마다 회전 + 재사용 탐지·즉시 폐기 |
 | Redis 장애 처리 | Fail-closed(재발급 차단, Access Token 만료 후 강제 재로그인) |
@@ -241,4 +242,4 @@ Conditional·Post-MVP Backlog 항목은 다음을 모두 충족해야 활성화�
 | 백업 | PostgreSQL 일 1회 자동 스냅샷, 7일 보관, RPO 최대 24시간 |
 | 운영 알림 | CloudWatch 알람 → 이메일/Slack, 담당자 1명 |
 
-현재 구현 전 필수 미결정 항목은 없다. ALB·Blue-Green 전환 자동화는 배포 토폴로지가 확장될 때 별도 결정한다.
+현재 1차 MVP 구현 전 필수 미결정 항목은 없다. AWS 운영 세부와 ALB·Blue-Green 전환 자동화는 최종 배포 착수 전에 재검토한다.

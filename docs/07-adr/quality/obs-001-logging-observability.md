@@ -36,11 +36,11 @@ Accepted
 
 ## 2. 결정 요약
 
-애플리케이션 로그는 SLF4J·Logback, 상태·운영 지표는 Spring Boot Actuator, 운영 수집·조회는 Amazon CloudWatch를 사용한다. 로그 보관 14일, DB 백업 일 1회 자동 스냅샷 후 7일 보관(RPO 최대 24시간), 운영 알림은 CloudWatch 알람을 이메일/Slack으로 담당자 1명에게 통지하는 것은 2026-07-24 결정 완료됐다([RV-NFR-009](../../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간), [RV-NFR-010](../../01-requirements/non-functional-requirements.md#rv-nfr-010-백업-주기와-복구-범위), [RV-NFR-013](../../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준), [technology-policy.md](../../06-architecture/technology-policy.md) 13절).
+1차 MVP와 확장 단계에서는 SLF4J·Logback과 Spring Boot Actuator로 로컬 로그·상태를 검증한다. Amazon CloudWatch, 로그 보관 14일, DB 스냅샷과 운영 알림은 모든 확장 완료 후 최종 배포 단계에서 적용한다.
 
 ## 3. 배경
 
-1차 MVP는 단일 EC2 인스턴스(Nginx + Next.js + Spring Boot)로 배포하며 장애 시 운영자가 수동으로 재기동·교체한다([NFR-AVAILABILITY-002](../../01-requirements/non-functional-requirements.md#nfr-availability-002-mvp-가용성과-수동-복구), [technology-policy.md](../../06-architecture/technology-policy.md) 13절). 자동 복구나 다중 인스턴스 전환이 없다는 것은, 장애가 발생했을 때 원인을 진단하고 대응 여부를 판단하는 유일한 수단이 로그와 지표라는 뜻이다. 또한 [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 관리자 등록은 Kakao·YouTube 외부 호출([ADR-EXT-001](../integration/ext-001-reference-verification.md))을 포함하므로, 요청 실패가 인증 실패·권한 실패·저장소 오류·외부 서비스 오류 중 무엇인지 구분하지 못하면 단일 인스턴스 수동 복구 절차에서 담당자가 잘못된 대응(예: 정상 인스턴스를 불필요하게 재기동)을 할 위험이 있다([NFR-OBSERVABILITY-001](../../01-requirements/non-functional-requirements.md#nfr-observability-001-요청-추적과-오류-분류)). 이 ADR은 인프라·아키텍처 조율 책임자인 이우람([roles.md](../../03-team/roles.md) 4장)이 소유한다.
+[ADR-DEPLOY-001](../platform/deploy-001-release-sequencing.md)에 따라 1차 MVP와 확장 단계는 로컬에서 검증한다. 이 단계에서도 관리자 등록의 Kakao·YouTube 외부 호출, 인증 실패, 저장소 오류를 구분할 수 있어야 하므로 구조화 로그와 헬스체크는 구현한다. AWS 수집·알림은 최종 배포까지 활성화하지 않는다.
 
 이우람은 [WS-03](../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)(유튜버 기반 탐색)의 최종 책임자이면서 동시에 인프라·배포 조율 책임을 겸한다([roles.md](../../03-team/roles.md) 4장 "아키텍처·배포 책임이 기능 개발 일정을 방해할 수 있다"는 주요 리스크로 이미 명시). 따라서 이 ADR이 정하는 관측 기준은 이우람이 매 배포마다 직접 붙어서 해석해야 하는 복잡한 도구가 아니라, 4명 모두가 자신의 워크스트림 오류를 스스로 진단할 수 있을 만큼 단순해야 한다.
 
@@ -51,12 +51,12 @@ Accepted
 ## 5. 고려한 선택지
 
 - **SLF4J·Logback + Actuator + CloudWatch**: Spring Boot 4.1.0에 이미 포함된 로깅·상태 확인 도구와, 이미 결정된 단일 EC2 AWS 배포에 네이티브한 수집·조회 도구를 그대로 사용한다.
-- **파일 로그만 사용**: 로그를 인스턴스 로컬 파일로만 남긴다. 단일 EC2 인스턴스가 장애로 교체·재기동되는 수동 복구 절차([NFR-AVAILABILITY-002](../../01-requirements/non-functional-requirements.md#nfr-availability-002-mvp-가용성과-수동-복구))에서는 인스턴스가 사라지면 로컬 파일도 함께 유실될 위험이 있고, 14일 보관·검색이라는 이미 결정된 로그 정책([RV-NFR-009](../../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간))을 인스턴스 파일 시스템만으로 구현하기 어렵다. 또한 CloudWatch 알람을 통한 이메일/Slack 통지([RV-NFR-013](../../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준))와 연동할 표준 경로가 없어 별도의 전송 로직을 직접 구현해야 한다.
+- **파일 로그만 사용**: 로그를 인스턴스 로컬 파일로만 남긴다. 단일 EC2 인스턴스가 장애로 교체·재기동되는 수동 복구 절차([NFR-AVAILABILITY-002](../../01-requirements/non-functional-requirements.md#nfr-availability-002-최종-배포-가용성과-수동-복구))에서는 인스턴스가 사라지면 로컬 파일도 함께 유실될 위험이 있고, 14일 보관·검색이라는 운영 정책을 충족하기 어렵다.
 - **별도 관측 플랫폼 선제 도입**: Datadog·ELK 같은 전용 관측 플랫폼을 새로 도입한다. 이는 초기 월 150,000원 예산 목표를 넘어서는 구독형 비용을 추가로 발생시킬 가능성이 높고, 이미 결정된 단일 EC2/RDS 배포 토폴로지([technology-policy.md](../../06-architecture/technology-policy.md) 13절)에 없는 새로운 운영 구성요소를 더하는 것이므로 [NFR-MAINTAINABILITY-003](../../01-requirements/non-functional-requirements.md#nfr-maintainability-003-추적성과-운영-복잡도)(4명이 운영할 수 없는 불필요한 분산 구성요소 금지)에 반한다.
 
 ## 6. 결정
 
-확정된 Spring·AWS 도구로 로그·상태·지표를 수집한다. 로그 보관 14일, DB 백업 일 1회 자동 스냅샷 후 7일 보관(RPO 최대 24시간), CloudWatch 알람의 이메일/Slack 통지와 담당자 1명 수신 체계를 사용한다. 알람은 5분 서버 오류율 5% 이상, 5분 p95 응답시간 2초 초과, 상태 확인 연속 3회 실패를 기준으로 하며 PostgreSQL·Redis 연결 실패도 상태 확인에서 연속 3회 감지되면 통지한다.
+단계별 로컬 검증에는 SLF4J·Logback과 Actuator를 사용한다. 최종 배포에서는 CloudWatch 수집, 로그 14일 보관, DB 일 1회 스냅샷·7일 보관과 이메일/Slack 알림을 활성화한다.
 
 이 결정은 다음 세 층위로 나뉜다. 첫째, 애플리케이션 로그(SLF4J·Logback)는 요청 상관관계와 오류 분류를 남긴다. 둘째, 상태·지표(Actuator)는 [ADR-WEB-003](../platform/web-003-routing-boundary.md)의 `/internal/health/live`, `/internal/health/ready`, `/internal/health/dependencies`에서 프로세스와 PostgreSQL·Redis 연결 가능 여부를 구분한다([NFR-AVAILABILITY-001](../../01-requirements/non-functional-requirements.md#nfr-availability-001-상태-확인과-장애-구분)). 셋째, 운영 수집·조회(CloudWatch)는 위 두 층위의 산출물을 모아 14일간 검색 가능하게 보관하고, 정의된 지표가 임계값을 넘으면 알람을 발생시킨다. 이 세 층위 중 하나만 갖추는 것으로는 단일 EC2 수동 복구 절차에서 필요한 진단이 완결되지 않는다.
 
@@ -74,7 +74,7 @@ Accepted
 
 ## 9. 적용 범위
 
-모든 API, JWT 인증([RV-NFR-007](../../01-requirements/non-functional-requirements.md#rv-nfr-007-관리자-인증-수준) 관리자 인증), PostgreSQL(RDS)·Redis(관리자 Refresh Token 저장)·외부 연동([ADR-EXT-001](../integration/ext-001-reference-verification.md)의 Kakao·YouTube 호출)과 단일 EC2 배포의 헬스체크·배포 상태 확인에 적용한다.
+구조화 로그와 Actuator는 모든 단계의 API·인증·PostgreSQL·Redis·외부 연동에 적용한다. RDS·EC2·CloudWatch 운영 구성은 최종 배포 단계에만 적용한다.
 
 ## 10. 강제 규칙
 
@@ -92,9 +92,7 @@ Accepted
 
 - 구조화 로그에 요청 상관관계 식별자와 오류 분류를 포함한다.
 - Actuator Health Group을 `/internal/health/live`는 프로세스만, `/internal/health/ready`는 PostgreSQL, `/internal/health/dependencies`는 PostgreSQL·Redis를 개별 구분하도록 구성한다. 세 경로는 인터넷 Nginx에서 차단한다([NFR-AVAILABILITY-001](../../01-requirements/non-functional-requirements.md#nfr-availability-001-상태-확인과-장애-구분)).
-- CloudWatch 접근 권한은 EC2 IAM Role로 부여하고 장기 AWS 키를 사용하지 않는다([ADR-SEC-001](../security/sec-001-secrets-workload-identity.md)).
-- 로그 14일 보관 후 자동 폐기, PostgreSQL(RDS) 일 1회 자동 스냅샷·7일 보관 설정을 구성하고 확인한다([RV-NFR-009](../../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간), [RV-NFR-010](../../01-requirements/non-functional-requirements.md#rv-nfr-010-백업-주기와-복구-범위)).
-- CloudWatch 알람을 오류율·응답 지연·헬스체크 실패·저장소 장애 지표에 연결하고 이메일/Slack으로 담당자 1명에게 통지하도록 구성한다([RV-NFR-013](../../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준)). 비용 대시보드로 150,000원 예산 목표 대비 로그·지표 사용량을 추적한다.
+- 최종 배포 단계에서 CloudWatch 접근 권한, 로그 보관, RDS 스냅샷과 운영 알림을 구성한다.
 - 로그 레벨은 개발·시험·운영 환경별로 조정 가능하게 구성하고, 정상적인 빈 조회 결과(예: 검색 결과 없음)는 오류로 기록하지 않는다([NFR-OBSERVABILITY-003](../../01-requirements/non-functional-requirements.md#nfr-observability-003-로그-품질과-민감정보-차단)).
 - 정상 부하 50명·20 RPS, 최대 부하 200명·80 RPS와 초기 기준 데이터 규모를 사용해 로그·지표 수집량을 산정하고 운영 초기 실측치로 비용을 재확인한다.
 

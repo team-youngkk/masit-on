@@ -3,6 +3,7 @@ related_documents:
   - docs/00-overview/service-overview.md
   - docs/00-overview/scope.md
   - docs/04-product/prd/00-product-overview.md
+  - docs/08-planning/mvp-2day-implementation-plan.md
 ---
 
 # masit-on

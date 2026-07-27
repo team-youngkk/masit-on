@@ -19,6 +19,7 @@ related_documents:
   - ../../02-analysis/mvp-workstreams.md
   - ../../00-overview/scope.md
   - ../../06-architecture/technology-policy.md
+  - deploy-001-release-sequencing.md
   - ../adr-backlog.md
   - ../../03-team/roles.md
   - ../adr-traceability.md
@@ -34,13 +35,13 @@ Accepted
 
 ## 2. 결정 요약
 
-GitHub Actions에서 고정 런타임으로 빌드·자동 테스트를 실행하고 실패한 변경을 운영 배포 후보에서 차단한다.
+GitHub Actions에서 고정 런타임으로 빌드·자동 테스트를 실행하고 실패한 변경을 단계 완료 후보와 최종 운영 배포 후보에서 차단한다.
 
 ## 3. 배경
 
 모든 Workstream 변경이 같은 재현 빌드와 테스트 기준을 통과해야 한다.
 
-4명(이우람·양성훈·박진영·김인안)이 [WS-01](../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)~[WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록)를 독립적으로 개발하며([scope.md](../../00-overview/scope.md) 범위 경계 규칙 6), 각자의 변경이 다른 Workstream을 깨뜨리지 않는지 사람이 매번 수동으로 확인할 인원과 일정 여유는 없다. 배포 토폴로지는 단일 EC2 인스턴스(Nginx 리버스 프록시 + Next.js + Spring Boot, 장애 시 수동 복구)로 결정되었고, ALB·ASG·Blue-Green은 Post-MVP로 보류되었다([technology-policy.md](../../06-architecture/technology-policy.md) 13장, [adr-backlog.md](../adr-backlog.md) 5장). GitHub Actions는 빌드·테스트·컨테이너 이미지 생성·ECR push까지 자동화하고, 운영 EC2 배포는 지정 담당자의 수동 승인을 받은 뒤 실행한다.
+4명(이우람·양성훈·박진영·김인안)이 [WS-01](../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)~[WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록)를 독립적으로 개발하며([scope.md](../../00-overview/scope.md) 범위 경계 규칙 6), 각자의 변경이 다른 Workstream을 깨뜨리지 않는지 사람이 매번 수동으로 확인할 인원과 일정 여유는 없다. [ADR-DEPLOY-001](deploy-001-release-sequencing.md)에 따라 1차 MVP와 확장 단계에는 빌드·테스트 품질 게이트만 적용하고, 이미지 생성·ECR push·EC2 배포는 모든 확장 완료 후 최종 배포 단계에서 활성화한다.
 
 ## 4. 결정 문제
 
@@ -59,23 +60,23 @@ GitHub Actions에서 고정 런타임으로 빌드·자동 테스트를 실행�
 
 ## 6. 결정
 
-GitHub Actions를 CI 기준으로 사용한다. AWS 접근이 필요한 단계는 OIDC를 사용한다. ECR·Green·ALB 전환 자동화는 배포 토폴로지 결정 전 확정하지 않는다.
+GitHub Actions를 CI 기준으로 사용한다. 1차 MVP와 확장 단계에서는 빌드·자동 테스트까지만 필수로 한다. 최종 배포에서 AWS 접근이 필요한 단계는 OIDC를 사용한다.
 
 ## 7. 선택 근거
 
-GitHub Actions는 이미 사용 중인 저장소에 내장되어 있어 별도 서버 운영 비용이 없고, OIDC로 AWS 자격 증명을 단기 발급받을 수 있어 배포 관련 장기 키를 저장소에 두지 않아도 된다([ADR-SEC-001](../security/sec-001-secrets-workload-identity.md)과 일치). 반복 가능한 빌드·테스트·이미지 생성·ECR push는 자동화하고 실제 운영 반영은 수동 승인으로 보호하는 것이 단일 EC2·수동 복구 토폴로지와 일치한다. ALB·Blue-Green 전환 자동화는 토폴로지가 확장될 때 별도로 설계한다.
+GitHub Actions는 저장소에 내장되어 있어 별도 서버 운영 비용 없이 단계별 동일 품질 기준을 제공한다. 최종 배포 단계에서는 OIDC로 AWS 자격 증명을 단기 발급받아 장기 키를 저장소에 두지 않고, 이미지 생성·ECR push를 자동화하며 실제 운영 반영은 수동 승인으로 보호한다.
 
 ## 8. 트레이드오프
 
-GitHub Actions를 CI 기준으로 삼으면 자체 서버를 운영하지 않아도 되는 대신, 워크플로 실행 시간과 캐시 효율, GitHub Actions 자체의 가용성에 의존하게 된다. 4명이 동시에 여러 PR을 올리는 시점이 몰리면(예: 통합 직전) 동시 실행 한도나 실행 시간 과금이 15만 원 예산에 영향을 줄 수 있다. 배포 후 Smoke Test는 자동 실행하고 실패 시 파이프라인을 실패로 끝내며, 운영자가 직전 검증 이미지로 수동 복구한다.
+GitHub Actions를 CI 기준으로 삼으면 자체 서버를 운영하지 않아도 되는 대신, 워크플로 실행 시간과 캐시 효율, GitHub Actions 자체의 가용성에 의존하게 된다. 최종 배포 파이프라인은 확장 완료 시점까지 실제 운영 환경에서 검증되지 않으므로 최종 배포 전 별도 리허설이 필요하다.
 
 ## 9. 적용 범위
 
-백엔드(Spring Boot, JDK 21.0.12)·프론트엔드(Node.js 24.18.0, Next.js) 빌드, 단위·통합·계약 테스트([ADR-TEST-001](../quality/test-001-automation-strategy.md))와 컨테이너 이미지 검증에 적용한다. 단일 EC2 인스턴스로의 배포 실행 자체(ECR 푸시 이후 단계)는 이 ADR의 품질 게이트 범위에 포함하되, ALB·Blue-Green 전환 자동화는 포함하지 않는다.
+백엔드(Spring Boot, JDK 21.0.12)·프론트엔드(Node.js 24.18.0, Next.js) 빌드와 단위·통합·계약 테스트에 1차 MVP부터 적용한다. 컨테이너 이미지 생성·ECR push·EC2 배포 검증은 최종 배포 단계에 적용한다.
 
 ## 10. 강제 규칙
 
-고정 런타임(JDK 21.0.12, Node 24.18.0)·Wrapper(Gradle 8.14.3)·잠금 파일을 사용하고, 단위·통합·계약 테스트 중 하나라도 실패하면 해당 커밋을 배포 후보에서 제외한다. AWS 접근이 필요한 단계(ECR 푸시 등)는 GitHub Actions OIDC로 발급된 단기 자격 증명만 사용한다.
+고정 런타임(JDK 21.0.12, Node 24.18.0)·Wrapper(Gradle 8.14.3)·잠금 파일을 사용하고, 단위·통합·계약 테스트 중 하나라도 실패하면 해당 커밋을 단계 완료 후보에서 제외한다. 최종 배포의 AWS 접근 단계는 GitHub Actions OIDC로 발급된 단기 자격 증명만 사용한다.
 
 ## 11. 금지 사항
 
@@ -87,7 +88,7 @@ GitHub Actions를 CI 기준으로 삼으면 자체 서버를 운영하지 않아
 
 ## 13. 검증 방법
 
-의도적으로 실패하는 커밋(테스트 실패, 빌드 오류)을 올려 배포 후보에서 차단되는지 확인한다. 캐시를 지운 깨끗한 상태에서 재빌드가 동일한 결과를 내는지, 테스트 결과·커버리지가 기록되는지, OIDC로 발급된 자격 증명이 필요한 권한 범위를 넘지 않는지 확인한다. 이미지 생성·ECR push, 운영 배포 수동 승인, 배포 후 Smoke Test와 직전 이미지 수동 복구도 검증한다.
+의도적으로 실패하는 커밋을 올려 단계 완료 후보에서 차단되는지 확인한다. 캐시를 지운 깨끗한 상태에서 재빌드가 동일한 결과를 내는지와 테스트 결과가 기록되는지 확인한다. OIDC, 이미지 생성·ECR push, 운영 배포 수동 승인, 배포 후 Smoke Test와 직전 이미지 복구는 최종 배포 단계에서 검증한다.
 
 ## 14. 재검토 조건
 

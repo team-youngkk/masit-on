@@ -34,11 +34,11 @@ Accepted
 
 ## 2. 결정 요약
 
-운영 비밀값은 Parameter Store SecureString과 KMS, EC2의 AWS 접근은 IAM Role, GitHub Actions의 AWS 접근은 OIDC 단기 자격 증명을 사용한다.
+최종 배포의 운영 비밀값은 Parameter Store SecureString과 KMS, EC2의 AWS 접근은 IAM Role, GitHub Actions의 AWS 접근은 OIDC 단기 자격 증명을 사용한다.
 
 ## 3. 배경
 
-관리자 JWT 서명 키([ADR-AUTH-001](auth-001-spring-security-jwt.md), Access Token 30분·Refresh Token 14일 TTL), DB(PostgreSQL)·Redis 자격 증명, Kakao Local·YouTube Data API 키([ADR-EXT-001](../integration/ext-001-reference-verification.md), [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 등록 확인에 사용)라는 구체적인 비밀값을 코드·GitHub 저장소·장기 Access Key에서 분리해야 한다. 배포는 단일 EC2 인스턴스(Nginx+Next.js+Spring Boot)이며 CI/CD는 GitHub Actions → ECR → EC2 경로를 사용한다([technology-policy.md](../../06-architecture/technology-policy.md) 13절). 초기 월 인프라 예산은 15만 원 수준을 목표로 하므로([adr-traceability.md](../adr-traceability.md)) 비밀 관리 방식도 이 예산 제약 안에서 운영 가능해야 한다.
+관리자 JWT 서명 키, DB·Redis 자격 증명과 Kakao·YouTube API 키는 모든 단계에서 코드·GitHub 저장소와 분리해야 한다. 1차 MVP와 확장 단계는 로컬 전용 비밀 주입 방식을 사용하고, Parameter Store·KMS·IAM Role·OIDC는 모든 확장 완료 후 최종 AWS 배포 단계에서 적용한다.
 
 ## 4. 결정 문제
 
@@ -53,7 +53,7 @@ JWT 서명 키, DB·Redis 자격 증명, Kakao·YouTube API 키와 같은 운영
 
 ## 6. 결정
 
-비밀값은 Parameter Store SecureString으로 저장하고 KMS로 암호화하며, EC2 런타임은 IAM Role, GitHub Actions CI는 OIDC 기반 단기 자격 증명으로 각각 최소 권한만 부여받아 접근한다.
+로컬 단계에서는 Git에 포함되지 않은 환경별 비밀 주입을 사용한다. 최종 배포에서는 비밀값을 Parameter Store SecureString과 KMS로 보호하고, EC2 런타임은 IAM Role, GitHub Actions는 OIDC 기반 단기 자격 증명을 사용한다.
 
 ## 7. 선택 근거
 
