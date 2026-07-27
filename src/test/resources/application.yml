@@ -8,6 +8,34 @@ spring:
       host: localhost
       port: 6379
 
+management:
+  endpoints:
+    web:
+      base-path: /internal
+      exposure:
+        include: health
+  endpoint:
+    health:
+      access: read_only
+      show-details: never
+      show-components: always
+      group:
+        live:
+          include: ping
+        ready:
+          include: db
+        dependencies:
+          include: db,redis
+  health:
+    defaults:
+      enabled: false
+    ping:
+      enabled: true
+    db:
+      enabled: true
+    redis:
+      enabled: true
+
 masiton:
   security:
     jwt:

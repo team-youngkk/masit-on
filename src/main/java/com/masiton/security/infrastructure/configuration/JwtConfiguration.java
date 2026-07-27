@@ -2,10 +2,17 @@ package com.masiton.security.infrastructure.configuration;
 
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
+import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
+import com.nimbusds.jose.proc.JWSVerificationKeySelector;
+import com.nimbusds.jose.proc.SecurityContext;
+import com.nimbusds.jwt.proc.DefaultJWTProcessor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,10 +22,11 @@ import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtValidationException;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
-import org.springframework.security.oauth2.jwt.JwtEncoder;
 
 import com.masiton.security.application.SecurityTokenLifetime;
 
@@ -40,15 +48,27 @@ public class JwtConfiguration {
         RSAPublicKey publicKey = JwtKeyParser.publicKey(properties.getJwt().getPublicKeyPem());
         RSAKey jwk = new RSAKey.Builder(publicKey)
                 .privateKey(privateKey)
-                .keyID(properties.getJwt().getKeyId())
+                .keyID(requiredKeyId(properties))
                 .build();
         return new NimbusJwtEncoder(new ImmutableJWKSet<>(new JWKSet(jwk)));
     }
 
     @Bean
     JwtDecoder jwtDecoder(SecurityProperties properties) {
-        RSAPublicKey publicKey = JwtKeyParser.publicKey(properties.getJwt().getPublicKeyPem());
-        NimbusJwtDecoder decoder = NimbusJwtDecoder.withPublicKey(publicKey).build();
+        Map<String, String> configuredKeys = new LinkedHashMap<>(properties.getJwt().getVerificationKeys());
+        configuredKeys.putIfAbsent(requiredKeyId(properties), properties.getJwt().getPublicKeyPem());
+        JWKSet keySet = new JWKSet(configuredKeys.entrySet().stream()
+                .map(entry -> new RSAKey.Builder(JwtKeyParser.publicKey(entry.getValue()))
+                        .keyID(requireKeyId(entry.getKey()))
+                        .build())
+                .map(com.nimbusds.jose.jwk.JWK.class::cast)
+                .toList());
+        DefaultJWTProcessor<SecurityContext> processor = new DefaultJWTProcessor<>();
+        processor.setJWSKeySelector(new JWSVerificationKeySelector<>(
+                JWSAlgorithm.RS256,
+                new ImmutableJWKSet<>(keySet)
+        ));
+        NimbusJwtDecoder decoder = new NimbusJwtDecoder(processor);
         OAuth2TokenValidator<Jwt> audienceValidator = jwt -> jwt.getAudience().contains(properties.getJwt().getAudience())
                 ? OAuth2TokenValidatorResult.success()
                 : OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", "Invalid audience", null));
@@ -56,6 +76,26 @@ public class JwtConfiguration {
                 JwtValidators.createDefaultWithIssuer(properties.getJwt().getIssuer()),
                 audienceValidator
         ));
-        return decoder;
+        return token -> {
+            Jwt jwt = decoder.decode(token);
+            Object kid = jwt.getHeaders().get("kid");
+            if (!(kid instanceof String keyId) || !configuredKeys.containsKey(keyId)) {
+                throw new JwtValidationException("JWT kid is missing or unknown", List.of(
+                        new OAuth2Error("invalid_token", "JWT kid is missing or unknown", null)
+                ));
+            }
+            return jwt;
+        };
+    }
+
+    private String requiredKeyId(SecurityProperties properties) {
+        return requireKeyId(properties.getJwt().getKeyId());
+    }
+
+    private String requireKeyId(String keyId) {
+        if (keyId == null || keyId.isBlank()) {
+            throw new IllegalStateException("JWT key id must be configured");
+        }
+        return keyId;
     }
 }

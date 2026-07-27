@@ -2,8 +2,16 @@ package com.masiton.security.infrastructure.configuration;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
+import java.time.Instant;
+import java.util.List;
 import java.util.Base64;
 
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.crypto.RSASSASigner;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +19,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -23,6 +33,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -33,6 +44,9 @@ class SecurityConfigurationApiTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private JwtDecoder jwtDecoder;
 
     @DynamicPropertySource
     static void securityProperties(DynamicPropertyRegistry registry) {
@@ -89,6 +103,29 @@ class SecurityConfigurationApiTest {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    @DisplayName("검증 키 목록에 없는 kid JWT는 거부한다")
+    void jwt_알수없는Kid_거부한다() throws Exception {
+        assertThatThrownBy(() -> jwtDecoder.decode(signedToken("retired-key")))
+                .isInstanceOf(JwtException.class);
+    }
+
+    @Test
+    @DisplayName("kid 없는 JWT는 거부한다")
+    void jwt_Kid없음_거부한다() throws Exception {
+        assertThatThrownBy(() -> jwtDecoder.decode(signedToken(null)))
+                .isInstanceOf(JwtException.class);
+    }
+
+    @Test
+    @DisplayName("issuer 또는 audience가 다른 JWT는 거부한다")
+    void jwt_IssuerAudience불일치_거부한다() throws Exception {
+        assertThatThrownBy(() -> jwtDecoder.decode(signedToken("test-key-20260727", "other-issuer", "masit-on-admin-api")))
+                .isInstanceOf(JwtException.class);
+        assertThatThrownBy(() -> jwtDecoder.decode(signedToken("test-key-20260727", "masit-on", "other-audience")))
+                .isInstanceOf(JwtException.class);
+    }
+
     private static KeyPair keyPair() {
         try {
             KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
@@ -105,5 +142,27 @@ class SecurityConfigurationApiTest {
                 Base64.getMimeEncoder(64, "\n".getBytes()).encodeToString(encoded),
                 type
         );
+    }
+
+    private static String signedToken(String keyId) throws Exception {
+        return signedToken(keyId, "masit-on", "masit-on-admin-api");
+    }
+
+    private static String signedToken(String keyId, String issuer, String audience) throws Exception {
+        Instant now = Instant.now();
+        JWTClaimsSet claims = new JWTClaimsSet.Builder()
+                .issuer(issuer)
+                .audience(List.of(audience))
+                .subject("admin-id")
+                .issueTime(java.util.Date.from(now))
+                .expirationTime(java.util.Date.from(now.plusSeconds(60)))
+                .build();
+        com.nimbusds.jose.JWSHeader.Builder header = new com.nimbusds.jose.JWSHeader.Builder(JWSAlgorithm.RS256);
+        if (keyId != null) {
+            header.keyID(keyId);
+        }
+        SignedJWT jwt = new SignedJWT(header.build(), claims);
+        jwt.sign(new RSASSASigner((RSAPrivateKey) KEY_PAIR.getPrivate()));
+        return jwt.serialize();
     }
 }

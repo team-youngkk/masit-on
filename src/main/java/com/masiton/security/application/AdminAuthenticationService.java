@@ -66,7 +66,8 @@ public class AdminAuthenticationService implements LoginAdminUseCase, RefreshAdm
         RefreshTokenRotation rotation;
         try {
             rotation = refreshTokenStore.rotate(refreshToken, refreshTokenTtl);
-        } catch (InvalidRefreshTokenException exception) {
+        } catch (RuntimeException exception) {
+            // Redis 검증·회전이 불가능하면 새 Access Token을 발급하지 않는 fail-closed 정책이다.
             throw authenticationRequired();
         }
         AdminPrincipal principal = credentialVerifier.findActivePrincipalById(rotation.adminId())

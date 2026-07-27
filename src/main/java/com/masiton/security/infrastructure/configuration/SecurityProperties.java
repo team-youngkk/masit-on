@@ -1,6 +1,8 @@
 package com.masiton.security.infrastructure.configuration;
 
 import java.time.Duration;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -71,6 +73,7 @@ public class SecurityProperties {
         private String keyId;
         private String privateKeyPem;
         private String publicKeyPem;
+        private Map<String, String> verificationKeys = new LinkedHashMap<>();
 
         public String getIssuer() {
             return issuer;
@@ -118,6 +121,14 @@ public class SecurityProperties {
 
         public void setPublicKeyPem(String publicKeyPem) {
             this.publicKeyPem = publicKeyPem;
+        }
+
+        public Map<String, String> getVerificationKeys() {
+            return verificationKeys;
+        }
+
+        public void setVerificationKeys(Map<String, String> verificationKeys) {
+            this.verificationKeys = new LinkedHashMap<>(verificationKeys);
         }
     }
 

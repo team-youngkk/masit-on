@@ -82,6 +82,19 @@ class AdminAuthenticationServiceTest {
     }
 
     @Test
+    @DisplayName("Refresh Token 저장소 장애는 새 Access Token 없이 401로 차단한다")
+    void 재발급_Redis장애_401로차단한다() {
+        when(refreshTokenStore.rotate(eq("refresh-token"), any()))
+                .thenThrow(new IllegalStateException("redis unavailable"));
+
+        assertThatThrownBy(() -> service.refresh("refresh-token"))
+                .isInstanceOf(BusinessException.class)
+                .extracting(exception -> ((BusinessException) exception).code())
+                .isEqualTo(ErrorCode.AUTHENTICATION_REQUIRED.name());
+        verify(tokenIssuer, never()).issueAccessToken(any());
+    }
+
+    @Test
     @DisplayName("로그아웃은 현재 관리자와 일치하는 Refresh Token만 폐기한다")
     void 로그아웃_현재관리자RefreshToken일치_폐기() {
         when(refreshTokenStore.matches("admin-id", "refresh-token")).thenReturn(true);
