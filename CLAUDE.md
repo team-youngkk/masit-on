@@ -23,7 +23,7 @@ related_documents:
 
 유튜버가 방문한 맛집을 지역·음식 종류·유튜버별로 탐색하는 서비스. 4인 팀의 1차 MVP를 구현 중이다.
 
-**현재 상태: 애플리케이션 소스가 없다.** 저장소에는 문서와 설정 파일만 있고 `src/`, Gradle 빌드 파일, `package.json`이 없다. 따라서 **빌드·테스트·실행 명령이 아직 존재하지 않는다.** `T-01`(백엔드·Docker)과 `T-02`(Next.js) 스캐폴딩이 생기면 4절 뒤에 "실행 명령" 절을 추가한다.
+**현재 상태: 백엔드 실행 기반만 있다.** `T-01`로 Gradle·Spring Boot 스캐폴딩, Docker Compose 의존 서비스와 헬스체크가 생겼다. 도메인 패키지(`restaurant`, `creator`, `video`, `visit`, `orchestration`, `security`)와 Flyway 마이그레이션, 프론트엔드(`package.json`)는 아직 없다. 실행 방법은 5절을 따른다.
 
 ## 2. 문서가 계약이다
 
@@ -76,7 +76,53 @@ MVP 범위 밖 기능(지도, 찜, 테마 큐레이션, 일반 사용자 로그�
 
 전체 목록과 근거는 [ADR 인덱스](docs/07-adr/adr-index.md), 버전 고정·업그레이드 정책은 [기술 정책](docs/06-architecture/technology-policy.md)을 따른다. 아직 결정되지 않은 항목은 [ADR 백로그](docs/07-adr/adr-backlog.md)에 있다.
 
-## 5. 아키텍처 필수 규칙
+## 5. 실행 명령
+
+Docker Desktop과 JDK 21이 필요하다. Gradle은 Wrapper를 쓰므로 따로 설치하지 않는다. **시스템 Gradle로 Wrapper를 우회하지 않는다.**
+
+의존 서비스만 띄우고 애플리케이션은 IDE·Gradle로 실행하는 방식이 기본 개발 루프다.
+
+```bash
+cp .env.example .env
+docker compose up -d postgres redis wiremock
+./gradlew bootRun
+```
+
+애플리케이션까지 컨테이너로 통합 실행한다.
+
+```bash
+docker compose up -d --build
+```
+
+빌드와 테스트를 실행한다. 통합 테스트는 Testcontainers를 쓰므로 Docker가 떠 있어야 한다.
+
+```bash
+./gradlew clean build
+```
+
+컨테이너와 데이터 볼륨까지 초기화한다.
+
+```bash
+docker compose down -v
+```
+
+| 항목 | 값 |
+|---|---|
+| 애플리케이션 | `http://localhost:8080` |
+| 상태 확인 | `/internal/health/live`, `/internal/health/ready`, `/internal/health/dependencies` |
+| PostgreSQL | `localhost:5432` (DB·계정 `masiton`) |
+| Redis | `localhost:6379` |
+| WireMock | `http://localhost:8081` (관리 `/__admin`) |
+
+`.env`는 로컬 전용 값이며 커밋하지 않는다. **`.env`는 Docker Compose만 읽는다.** `./gradlew bootRun`은 `.env`를 로드하지 않으므로 컨테이너 포트를 바꿨다면 애플리케이션에도 같은 값을 환경 변수로 넘겨야 한다.
+
+```bash
+DB_URL=jdbc:postgresql://localhost:15432/masiton REDIS_PORT=16379 ./gradlew bootRun
+```
+
+`/internal/**`은 로컬 컨테이너 네트워크 전용이며 최종 배포에서 인터넷 진입점에 노출하지 않는다([ADR-WEB-003](docs/07-adr/platform/web-003-routing-boundary.md)).
+
+## 6. 아키텍처 필수 규칙
 
 단일 모듈 **도메인 중심 계층형 모놀리스**. 루트 패키지 `com.masiton`, 진입점 `com.masiton.MasitOnApplication`.
 
@@ -91,7 +137,7 @@ MVP 범위 밖 기능(지도, 찜, 테마 큐레이션, 일반 사용자 로그�
 
 보안 경계(인증 필터·matcher 순서·Principal 전달)는 [보안 경계](docs/06-architecture/security-boundary.md)와 [ADR-WEB-003 라우팅 경계](docs/07-adr/platform/web-003-routing-boundary.md), 외부 연동(Kakao·YouTube Port/Adapter·timeout·실패 처리)은 [외부 연동](docs/06-architecture/external-integration.md)을 따른다.
 
-## 6. API·데이터
+## 7. API·데이터
 
 - 백엔드 경로는 버전 없는 `/api`, 관리자는 `/api/admin` 경계로 분리한다. `/v1` 같은 경로 버전을 도입하지 않는다.
 - 공개 GET 3종(`/api/restaurants`, `/api/creators`, `/api/restaurants/{id}`)은 무인증이다. 로그인(`POST /api/admin/auth/tokens`)과 재발급(`POST /api/admin/auth/tokens/refresh`)은 JWT를 요구하지 않고 각각 자격 증명과 Refresh 쿠키만 검증한다. 그 외 `/api/admin/**`은 JWT + `ADMIN`이고, 정의되지 않은 경로는 기본 거부한다.
@@ -109,7 +155,7 @@ MVP 범위 밖 기능(지도, 찜, 테마 큐레이션, 일반 사용자 로그�
 
 공통 계약 6종: [식별자](docs/05-specs/api/common/identifier-contract.md) · [응답](docs/05-specs/api/common/response-contract.md) · [오류](docs/05-specs/api/common/error-contract.md) · [페이지네이션](docs/05-specs/api/common/pagination-contract.md) · [검색·필터](docs/05-specs/api/common/filtering-contract.md) · [날짜·시간](docs/05-specs/api/common/date-time-contract.md)
 
-## 7. 테스트
+## 8. 테스트
 
 - 클래스명 `XxxTest` / `XxxIntegrationTest` / `XxxApiTest`, 메서드명 `행위_조건_기대결과`, `@DisplayName`은 자연스러운 한글 문장, 본문은 Given-When-Then.
 - 단위는 외부 저장소 없이, Repository·제약·트랜잭션은 PostgreSQL Testcontainers, Controller는 MockMvc, 외부 Adapter는 WireMock으로 검증한다.
@@ -121,7 +167,7 @@ MVP 범위 밖 기능(지도, 찜, 테마 큐레이션, 일반 사용자 로그�
 
 원문: [ADR-TEST-001](docs/07-adr/quality/test-001-automation-strategy.md)
 
-## 8. Git 협업
+## 9. Git 협업
 
 - `main`(배포 기준) / `develop`(통합). 둘 다 직접 push 금지.
 - 브랜치는 최신 `develop`에서 분기. `feature/ws-{번호}-{기능명}`, `fix/{기능명}`.
@@ -132,7 +178,7 @@ MVP 범위 밖 기능(지도, 찜, 테마 큐레이션, 일반 사용자 로그�
 
 PR 완료 점검 목록은 [구현 컨벤션 9절](docs/06-architecture/implementation-conventions.md#9-pr-완료-점검)을 사용한다.
 
-## 9. Workstream과 소유권
+## 10. Workstream과 소유권
 
 | WS | 범위 | 담당 | PRD |
 |---|---|---|---|
@@ -147,7 +193,7 @@ PR 완료 점검 목록은 [구현 컨벤션 9절](docs/06-architecture/implemen
 
 Task 분해·선행 관계·완료 정의는 [1차 MVP 구현 계획](docs/08-planning/mvp-2day-implementation-plan.md)을 따른다.
 
-## 10. 문서 맵
+## 11. 문서 맵
 
 각 디렉터리의 README를 진입점으로 쓴다. README에 읽기 순서와 문서별 역할이 있다.
 

@@ -113,7 +113,8 @@ Visit는 현재 MVP에서 독립 공개 HTTP 자원이 없으므로 `visit.prese
 | `VisitRegistrationController` | `orchestration.presentation.visit` | 상세 설계 결정 |
 | `RegisterVisitService` | `orchestration.application.command` | 상세 설계 결정 |
 | `SecurityConfig`, JWT Filter | `security.infrastructure` | 제안 이름 |
-| `GlobalExceptionHandler` | `common.web` | 허용 후보 |
+| `GlobalExceptionHandler` | `common.web` | `T-01`에서 구현 완료 |
+| `TraceIdFilter` | `common.observability` | `T-01`에서 구현 완료 |
 
 ## 5. Persistence 내부 구조
 
@@ -163,14 +164,16 @@ restaurant/infrastructure/persistence/
 
 ## 8. 현재 경로에서 목표 경로로의 매핑
 
-현재 저장소에는 애플리케이션 경로가 없으므로 클래스별 매핑은 존재하지 않는다.
+`T-01`이 소스 경로와 진입점, 제한된 `common`을 만들었다. 네 도메인과 `orchestration`, `security`는 아직 클래스가 없으므로 클래스별 매핑도 없다.
 
 | 현재 | 목표 | 전환 |
 |---|---|---|
-| 애플리케이션 소스 없음 | `src/main/java/com/masiton/...` | 프로젝트 초기 설정에서 생성 |
-| 테스트 소스 없음 | `src/test/java/com/masiton/...` | 운영 패키지 구조를 반영 |
-| Flyway 경로 없음 | `src/main/resources/db/migration/` | 물리 DB 설계 후 생성 |
-| 아키텍처 테스트 없음 | 테스트 하위 `architecture` | 첫 패키지 생성과 동시에 추가 |
+| `src/main/java/com/masiton/MasitOnApplication.java` | 동일 | `T-01`에서 생성 완료 |
+| `src/main/java/com/masiton/common/{web,observability}` | 동일 | 공통 오류·traceId 기반만 포함 |
+| 도메인 패키지 없음 | `src/main/java/com/masiton/{restaurant,creator,video,visit,orchestration,security}/...` | 각 Workstream의 첫 실제 클래스와 함께 생성 |
+| `src/test/java/com/masiton/...` | 동일 | 운영 패키지 구조를 반영 |
+| `src/main/resources/db/migration/` (비어 있음) | 동일 | `T-03`이 V1~V5를 추가 |
+| `src/test/java/com/masiton/architecture` | 동일 | `T-01`에서 ArchUnit 규칙 적용 완료 |
 
 ## 9. 단계적 이전 방법
 
