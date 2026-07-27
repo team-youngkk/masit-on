@@ -21,7 +21,7 @@ related_documents:
 
 이 문서는 맛잇온 1차 MVP의 Workstream, 기능 요구사항, 비즈니스 규칙, 비기능 요구사항, 공통 작업과 문서의 최종 책임자를 추적한다. 소유자는 담당 항목의 요구사항 구체화, 계약, 구현, 테스트, 문서화와 통합 완료를 책임진다.
 
-현재 배정은 기준 문서에 확인된 Workstream 구조와 책임 균형에 따른 권장안이다. 개인별 기술 역량과 선호도는 확인되지 않았으므로 담당자 조합은 `팀 조정 가능`이지만, 조정 중에도 각 Workstream과 기능 요구사항의 최종 책임자는 한 명만 유지한다.
+현재 배정은 2026-07-27 승인된 Workstream 구조와 책임 균형 기준안이다. 일정 차단이나 지속적인 부담 불균형이 확인될 때만 11장의 절차로 조정하며, 조정 중에도 각 Workstream과 기능 요구사항의 최종 책임자는 한 명만 유지한다.
 
 ## 2. 소유권 원칙
 
@@ -52,7 +52,7 @@ related_documents:
 | [WS-01](../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색) | 7 | Restaurant, Visit | 검색·필터·공개·페이지 규칙과 다중 조건 데이터 접근 | [WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 판정 결과를 최종 AND 조건·정렬·페이지에 결합 | 조합·경계값·중복 제거 테스트, 탐색 화면 연동 범위가 큼 | 관계 판정과 등록 데이터 반영 지연 | High |
 | [WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) | 6 | Restaurant, Visit, Creator, Video | 네 영역의 표시 정보와 공개 상태 조합 | 기본 상세와 관계·콘텐츠를 조합하고 빈 콘텐츠를 정상 처리 | 관계 정합성, 중복, 외부 링크 장애와 상세 화면 전체 테스트 | 부분 실패 정책과 공유 모델 충돌 | High |
 | [WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) | 2 | Visit, Creator, Video, Restaurant | 최소 선택 목록과 관계 유효성·채널 일치·공개 상태·중복 정책 | [WS-01](../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)·[WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)에 선택·판정 계약을 제공하지만 최종 조합은 소유하지 않음 | 관계 Fixture와 공개 상태 조합 테스트 | 잘못된 판정이 세 조회 흐름에 전파 | Medium |
-| [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 5 | 관리자 유스케이스와 네 책임 영역 | 인증, 필수값, 중복·참조·원자성과 등록 순서가 복합적 | 공통 인증과 도메인별 등록 계약을 사용하고 세 조회에 결과 제공 | 동시 등록·실패·조회 반영 테스트, 관리자 화면 연동 범위가 큼 | 작업량, 데이터 모델 충돌과 인증 미확정 | High |
+| [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 5 | 관리자 유스케이스와 네 책임 영역 | 인증, 필수값, 중복·참조·원자성과 등록 순서가 복합적 | 공통 인증과 도메인별 등록 계약을 사용하고 세 조회에 결과 제공 | 동시 등록·실패·조회 반영 테스트, 관리자 화면 연동 범위가 큼 | 작업량과 데이터 모델 충돌 | High |
 
 ### 권장 최종 배정안과 근거
 
@@ -175,26 +175,26 @@ related_documents:
 
 | NFR ID | 요구사항 | 적용 유형 | 구현 책임자 | 준수 책임자 | 리뷰 담당 | 상태 |
 |---|---|---|---|---|---|---|
-| [NFR-PERFORMANCE-001](../01-requirements/non-functional-requirements.md#nfr-performance-001-일반-조회-응답-시간) | 일반 조회 응답 시간 | Workstream 적용형 | 각 조회 Workstream 담당자 | [WS-01](../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)·[WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) 담당자 | 이우람 | 팀 결정 필요 |
-| [NFR-PERFORMANCE-002](../01-requirements/non-functional-requirements.md#nfr-performance-002-검색필터-조합-응답-시간) | 검색·필터 조합 응답 시간 | Workstream 적용형 | 양성훈 | [WS-01](../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)·[WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 담당자 | 이우람 | 팀 결정 필요 |
-| [NFR-PERFORMANCE-003](../01-requirements/non-functional-requirements.md#nfr-performance-003-관리자-등록-응답-시간) | 관리자 등록 응답 시간 | Workstream 적용형 | 김인안 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 담당자 | 박진영 | 팀 결정 필요 |
+| [NFR-PERFORMANCE-001](../01-requirements/non-functional-requirements.md#nfr-performance-001-일반-조회-응답-시간) | 일반 조회 응답 시간 | Workstream 적용형 | 각 조회 Workstream 담당자 | [WS-01](../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)·[WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) 담당자 | 이우람 | 배정 완료 |
+| [NFR-PERFORMANCE-002](../01-requirements/non-functional-requirements.md#nfr-performance-002-검색필터-조합-응답-시간) | 검색·필터 조합 응답 시간 | Workstream 적용형 | 양성훈 | [WS-01](../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)·[WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 담당자 | 이우람 | 배정 완료 |
+| [NFR-PERFORMANCE-003](../01-requirements/non-functional-requirements.md#nfr-performance-003-관리자-등록-응답-시간) | 관리자 등록 응답 시간 | Workstream 적용형 | 김인안 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 담당자 | 박진영 | 배정 완료 |
 | [NFR-PERFORMANCE-004](../01-requirements/non-functional-requirements.md#nfr-performance-004-페이지-크기-및-조회량-제한) | 페이지 크기 및 조회량 제한 | Workstream 적용형 | 양성훈 | [WS-01](../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색) 담당자 | 박진영 | 배정 완료 |
 | [NFR-SECURITY-002](../01-requirements/non-functional-requirements.md#nfr-security-002-입력-및-웹-공격-방어) | 입력 및 웹 공격 방어 | Workstream 적용형 | 각 Workstream 담당자 | 전체 팀 | 김인안 | 배정 완료 |
 | [NFR-INTEGRITY-001](../01-requirements/non-functional-requirements.md#nfr-integrity-001-참조-및-필수값-정합성) | 참조 및 필수값 정합성 | Workstream 적용형 | 김인안 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 및 관련 도메인 담당자 | 박진영 | 배정 완료 |
 | [NFR-INTEGRITY-002](../01-requirements/non-functional-requirements.md#nfr-integrity-002-중복-및-동시-등록-방지) | 중복 및 동시 등록 방지 | Workstream 적용형 | 김인안 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 담당자 | 이우람 | 배정 완료 |
 | [NFR-INTEGRITY-003](../01-requirements/non-functional-requirements.md#nfr-integrity-003-등록-원자성과-공개-상태-일관성) | 등록 원자성과 공개 상태 일관성 | Workstream 적용형 | 김인안 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 및 조회 담당자 | 박진영 | 배정 완료 |
 | [NFR-INTEGRITY-004](../01-requirements/non-functional-requirements.md#nfr-integrity-004-외부-링크와-내부-데이터-분리) | 외부 링크와 내부 데이터 분리 | Workstream 적용형 | 박진영 | [WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)·[WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)·[WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 담당자 | 이우람 | 배정 완료 |
-| [NFR-RELIABILITY-002](../01-requirements/non-functional-requirements.md#nfr-reliability-002-저장소-장애-및-재시도-통제) | 저장소 장애 및 재시도 통제 | Workstream 적용형 | 각 Workstream 담당자 | 전체 팀 | 박진영 | 팀 결정 필요 |
+| [NFR-RELIABILITY-002](../01-requirements/non-functional-requirements.md#nfr-reliability-002-저장소-장애-및-재시도-통제) | 저장소 장애 및 재시도 통제 | Workstream 적용형 | 각 Workstream 담당자 | 전체 팀 | 박진영 | 배정 완료 |
 | [NFR-RELIABILITY-003](../01-requirements/non-functional-requirements.md#nfr-reliability-003-사용자-오류-메시지와-기능-분리) | 사용자 오류 메시지와 기능 분리 | Workstream 적용형 | 각 Workstream 담당자 | 전체 팀 | 양성훈 | 배정 완료 |
 | [NFR-EXTERNAL-001](../01-requirements/non-functional-requirements.md#nfr-external-001-영상-원본과-외부-링크-분리) | 영상 원본과 외부 링크 분리 | Workstream 적용형 | 박진영 | [WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)·[WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 담당자 | 김인안 | 배정 완료 |
-| [NFR-EXTERNAL-002](../01-requirements/non-functional-requirements.md#nfr-external-002-외부-호출-실패와-변경-격리) | 외부 호출 실패와 변경 격리 | Workstream 적용형 | 박진영 | [WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)·[WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)·[WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 담당자 | 이우람 | 팀 결정 필요 |
+| [NFR-EXTERNAL-002](../01-requirements/non-functional-requirements.md#nfr-external-002-외부-호출-실패와-변경-격리) | 외부 호출 실패와 변경 격리 | Workstream 적용형 | 박진영 | [WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)·[WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)·[WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 담당자 | 이우람 | 배정 완료 |
 | [NFR-EXTERNAL-003](../01-requirements/non-functional-requirements.md#nfr-external-003-링크-검증과-외부-인증정보) | 링크 검증과 외부 인증정보 | Workstream 적용형 | 김인안 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 담당자 | 이우람 | 배정 완료 |
-| [NFR-COMPATIBILITY-001](../01-requirements/non-functional-requirements.md#nfr-compatibility-001-웹모바일-브라우저-호환성) | 웹·모바일 브라우저 호환성 | Workstream 적용형 | 각 Workstream 담당자 | 전체 팀 | 김인안 | 팀 결정 필요 |
+| [NFR-COMPATIBILITY-001](../01-requirements/non-functional-requirements.md#nfr-compatibility-001-웹모바일-브라우저-호환성) | 웹·모바일 브라우저 호환성 | Workstream 적용형 | 각 Workstream 담당자 | 전체 팀 | 김인안 | 배정 완료 |
 | [NFR-COMPATIBILITY-003](../01-requirements/non-functional-requirements.md#nfr-compatibility-003-모바일-응답-크기) | 모바일 응답 크기 | Workstream 적용형 | 각 조회 Workstream 담당자 | [WS-01](../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)·[WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)·[WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 담당자 | 김인안 | 배정 완료 |
 | [NFR-TEST-001](../01-requirements/non-functional-requirements.md#nfr-test-001-자동화-테스트-계층) | 자동화 테스트 계층 | Workstream 적용형 | 각 Workstream 담당자 | 전체 팀 | 박진영 | 배정 완료 |
-| [NFR-TEST-002](../01-requirements/non-functional-requirements.md#nfr-test-002-변경외부-의존성성능-검증) | 변경·외부 의존성·성능 검증 | Workstream 적용형 | 각 Workstream 담당자 | 전체 팀 | 박진영 | 팀 결정 필요 |
-| [NFR-MAINTAINABILITY-001](../01-requirements/non-functional-requirements.md#nfr-maintainability-001-책임과-의존성-경계) | 책임과 의존성 경계 | Workstream 적용형 | 각 Workstream 담당자 | 전체 팀 | 이우람 | 팀 결정 필요 |
-| [NFR-MAINTAINABILITY-002](../01-requirements/non-functional-requirements.md#nfr-maintainability-002-공통-정책과-규칙-배치) | 공통 정책과 규칙 배치 | Workstream 적용형 | 각 Workstream 담당자 | 전체 팀 | 이우람 | 팀 결정 필요 |
+| [NFR-TEST-002](../01-requirements/non-functional-requirements.md#nfr-test-002-변경외부-의존성성능-검증) | 변경·외부 의존성·성능 검증 | Workstream 적용형 | 각 Workstream 담당자 | 전체 팀 | 박진영 | 배정 완료 |
+| [NFR-MAINTAINABILITY-001](../01-requirements/non-functional-requirements.md#nfr-maintainability-001-책임과-의존성-경계) | 책임과 의존성 경계 | Workstream 적용형 | 각 Workstream 담당자 | 전체 팀 | 이우람 | 배정 완료 |
+| [NFR-MAINTAINABILITY-002](../01-requirements/non-functional-requirements.md#nfr-maintainability-002-공통-정책과-규칙-배치) | 공통 정책과 규칙 배치 | Workstream 적용형 | 각 Workstream 담당자 | 전체 팀 | 이우람 | 배정 완료 |
 | [NFR-MAINTAINABILITY-003](../01-requirements/non-functional-requirements.md#nfr-maintainability-003-추적성과-운영-복잡도) | 추적성과 운영 복잡도 | Workstream 적용형 | 각 Workstream 담당자 | 전체 팀 | 이우람 | 배정 완료 |
 | [NFR-PRIVACY-001](../01-requirements/non-functional-requirements.md#nfr-privacy-001-mvp-개인정보-최소화) | MVP 개인정보 최소화 | Workstream 적용형 | 각 Workstream 담당자 | 전체 팀 | 김인안 | 배정 완료 |
 | [NFR-PRIVACY-003](../01-requirements/non-functional-requirements.md#nfr-privacy-003-회원-기능-도입-시-재검토) | 회원 기능 도입 시 재검토 | Workstream 적용형 | 없음 | 없음 | 이우람 | MVP 제외 |
@@ -206,20 +206,20 @@ related_documents:
 | [NFR-SECURITY-001](../01-requirements/non-functional-requirements.md#nfr-security-001-공개-조회와-관리자-접근-통제) | 공개 조회와 관리자 접근 통제 | 공통 기반형 | 김인안 | 전체 팀 | 이우람 | 배정 완료 |
 | [NFR-SECURITY-003](../01-requirements/non-functional-requirements.md#nfr-security-003-비밀정보와-오류-정보-보호) | 비밀정보와 오류 정보 보호 | 공통 기반형 | 이우람 | 전체 팀 | 김인안 | 배정 완료 |
 | [NFR-RELIABILITY-001](../01-requirements/non-functional-requirements.md#nfr-reliability-001-오류-격리와-공통-오류-정책) | 오류 격리와 공통 오류 정책 | 공통 기반형 | 양성훈 | 전체 팀 | 박진영 | 배정 완료 |
-| [NFR-AVAILABILITY-001](../01-requirements/non-functional-requirements.md#nfr-availability-001-상태-확인과-장애-구분) | 상태 확인과 장애 구분 | 공통 기반형 | 이우람 | 전체 팀 | 박진영 | 팀 결정 필요 |
-| [NFR-AVAILABILITY-002](../01-requirements/non-functional-requirements.md#nfr-availability-002-mvp-가용성과-수동-복구) | MVP 가용성과 수동 복구 | 공통 기반형 | 이우람 | 전체 팀 | 박진영 | 팀 결정 필요 |
-| [NFR-OBSERVABILITY-001](../01-requirements/non-functional-requirements.md#nfr-observability-001-요청-추적과-오류-분류) | 요청 추적과 오류 분류 | 공통 기반형 | 이우람 | 전체 팀 | 박진영 | 팀 결정 필요 |
-| [NFR-OBSERVABILITY-002](../01-requirements/non-functional-requirements.md#nfr-observability-002-운영-지표와-생명주기-기록) | 운영 지표와 생명주기 기록 | 공통 기반형 | 이우람 | 전체 팀 | 박진영 | 팀 결정 필요 |
+| [NFR-AVAILABILITY-001](../01-requirements/non-functional-requirements.md#nfr-availability-001-상태-확인과-장애-구분) | 상태 확인과 장애 구분 | 공통 기반형 | 이우람 | 전체 팀 | 박진영 | 배정 완료 |
+| [NFR-AVAILABILITY-002](../01-requirements/non-functional-requirements.md#nfr-availability-002-mvp-가용성과-수동-복구) | MVP 가용성과 수동 복구 | 공통 기반형 | 이우람 | 전체 팀 | 박진영 | 배정 완료 |
+| [NFR-OBSERVABILITY-001](../01-requirements/non-functional-requirements.md#nfr-observability-001-요청-추적과-오류-분류) | 요청 추적과 오류 분류 | 공통 기반형 | 이우람 | 전체 팀 | 박진영 | 배정 완료 |
+| [NFR-OBSERVABILITY-002](../01-requirements/non-functional-requirements.md#nfr-observability-002-운영-지표와-생명주기-기록) | 운영 지표와 생명주기 기록 | 공통 기반형 | 이우람 | 전체 팀 | 박진영 | 배정 완료 |
 | [NFR-OBSERVABILITY-003](../01-requirements/non-functional-requirements.md#nfr-observability-003-로그-품질과-민감정보-차단) | 로그 품질과 민감정보 차단 | 공통 기반형 | 이우람 | 전체 팀 | 김인안 | 배정 완료 |
 | [NFR-COMPATIBILITY-002](../01-requirements/non-functional-requirements.md#nfr-compatibility-002-응답-형식과-문자-처리) | 응답 형식과 문자 처리 | 공통 기반형 | 양성훈 | 전체 팀 | 김인안 | 배정 완료 |
 | [NFR-TEST-003](../01-requirements/non-functional-requirements.md#nfr-test-003-배포-품질-게이트) | 배포 품질 게이트 | 공통 기반형 | 이우람 | 전체 팀 | 박진영 | 배정 완료 |
 | [NFR-DEPLOYMENT-001](../01-requirements/non-functional-requirements.md#nfr-deployment-001-재현-가능한-빌드와-환경-분리) | 재현 가능한 빌드와 환경 분리 | 공통 기반형 | 이우람 | 전체 팀 | 김인안 | 배정 완료 |
 | [NFR-DEPLOYMENT-002](../01-requirements/non-functional-requirements.md#nfr-deployment-002-배포-전후-검증) | 배포 전후 검증 | 공통 기반형 | 이우람 | 전체 팀 | 박진영 | 배정 완료 |
-| [NFR-DEPLOYMENT-003](../01-requirements/non-functional-requirements.md#nfr-deployment-003-버전-추적과-복구-절차) | 버전 추적과 복구 절차 | 공통 기반형 | 이우람 | 전체 팀 | 박진영 | 팀 결정 필요 |
-| [NFR-DEPLOYMENT-004](../01-requirements/non-functional-requirements.md#nfr-deployment-004-mvp-배포-복잡도-제한) | MVP 배포 복잡도 제한 | 공통 기반형 | 이우람 | 전체 팀 | 김인안 | 팀 결정 필요 |
+| [NFR-DEPLOYMENT-003](../01-requirements/non-functional-requirements.md#nfr-deployment-003-버전-추적과-복구-절차) | 버전 추적과 복구 절차 | 공통 기반형 | 이우람 | 전체 팀 | 박진영 | 배정 완료 |
+| [NFR-DEPLOYMENT-004](../01-requirements/non-functional-requirements.md#nfr-deployment-004-mvp-배포-복잡도-제한) | MVP 배포 복잡도 제한 | 공통 기반형 | 이우람 | 전체 팀 | 김인안 | 배정 완료 |
 | [NFR-PRIVACY-002](../01-requirements/non-functional-requirements.md#nfr-privacy-002-인증정보와-외부-키-보호) | 인증정보와 외부 키 보호 | 공통 기반형 | 이우람 | 김인안 및 외부 연동 담당자 | 김인안 | 배정 완료 |
 
-초기 제안 수치나 후속 설계에서 결정할 기준은 구현 책임자를 지정하더라도 `팀 결정 필요`로 유지한다. 결정 전에는 측정 방법과 최소 안전 기준만 준비하고 수치를 확정된 요구사항처럼 사용하지 않는다.
+아직 후속 설계가 필요한 기준만 `팀 결정 필요`로 유지한다. 2026-07-27 확정된 부하·데이터·브라우저·배포·알림 기준은 `배정 완료`로 관리한다.
 
 ## 7. 공통 작업 소유권
 
@@ -230,7 +230,7 @@ related_documents:
 | 공통 응답 형식 | 팀 공동 | 양성훈 | 김인안 | API 구현 전 | 배정 완료 |
 | 공통 오류 처리 | 팀 공동 | 양성훈 | 박진영 | API 구현 전 | 배정 완료 |
 | 페이지네이션 계약 | 영향받는 조회 담당자 공동 | 양성훈 | 박진영 | 조회 API 구현 전 | 배정 완료 |
-| 관리자 인증 및 권한 기반 | 팀 공동 | 김인안 | 이우람 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 연결 전 | 공동 검토 필요 |
+| 관리자 인증 및 권한 기반 | 팀 공동 | 김인안 | 이우람 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 연결 전 | 배정 완료 |
 | API 문서화 기반 | 팀 공동 | 양성훈 | 김인안 | API 계약 작성 전 | 배정 완료 |
 | 데이터베이스 마이그레이션 기반 | 팀 공동 | 박진영 | 이우람 | 데이터 구현 전 | 배정 완료 |
 | 테스트 환경 | 팀 공동 | 박진영 | 양성훈 | 병렬 개발 전 | 배정 완료 |
@@ -345,14 +345,14 @@ related_documents:
 
 ### RV-ROLE-003 관리자 인증 정책과 담당 범위
 
-- 현재 상태: 제품 정책과 담당 결정 완료, 인증 기술은 후속 설계
+- 현재 상태: 결정 완료 (2026-07-27)
 - 관련 Workstream:
   - [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록)
 - 현재 권장 담당자:
   - 김인안
 - 결정 내용:
   - 사전 발급 계정과 동일 등록 권한을 사용하며 계정 관리 화면은 MVP에서 제외한다.
-  - 김인안이 공통 기반과 [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 적용을 책임한다. 인증 주체 전달과 보호 기술은 후속 설계에서 결정한다.
+  - 김인안이 공통 기반과 [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 적용을 책임한다. Spring Security JWT, Redis Refresh Token과 `com.masiton.security.application.AdminPrincipal` 계약을 따른다.
 - 영향:
   - 보안 검증
   - [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 일정
@@ -362,7 +362,7 @@ related_documents:
 
 ### RV-ROLE-004 맛집 상세 조합 위치와 부분 실패 정책
 
-- 현재 상태: 부분 실패 제품 정책 결정 완료, 애플리케이션 책임 위치는 아키텍처 설계에서 결정
+- 현재 상태: 결정 완료 (2026-07-27)
 - 관련 Workstream:
   - [WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)
 - 현재 권장 담당자:
@@ -370,7 +370,7 @@ related_documents:
 - 결정 내용:
   - 맛집 기본 정보 제공자 실패는 상세 전체 실패로 처리한다.
   - 관계·유튜버·영상 제공자만 실패하면 기본 정보와 명시적 콘텐츠 조회 실패를 제공한다.
-  - 실제 애플리케이션 책임 위치는 후속 아키텍처 설계에서 결정한다.
+  - 실제 애플리케이션 책임은 `com.masiton.orchestration.application.query`의 전용 Query Service에 둔다.
 - 영향:
   - 모듈 의존성
   - 오류 계약
@@ -380,13 +380,14 @@ related_documents:
 
 ### RV-ROLE-005 공통 데이터 모델 변경 승인 방식
 
-- 현재 상태: 팀 결정 필요
+- 현재 상태: 결정 완료 (2026-07-27)
 - 관련 Workstream:
   - 전체
 - 현재 권장 담당자:
-  - 박진영이 변경을 조율하고 팀이 승인
-- 결정이 필요한 내용:
-  - 핵심 관계, 마이그레이션과 공유 식별자 변경의 필수 승인자와 적용 순서를 정한다.
+  - 박진영이 변경을 조율한다.
+- 결정 내용:
+  - 핵심 관계, 공유 식별자와 Flyway 마이그레이션 변경은 박진영과 영향받는 Workstream 최종 책임자 1명 이상의 승인을 받아야 한다.
+  - 마이그레이션 버전은 병합 순서대로 재배정하고 같은 버전 충돌을 허용하지 않는다.
 - 영향:
   - 병렬 개발 충돌
   - 데이터 정합성
@@ -396,13 +397,14 @@ related_documents:
 
 ### RV-ROLE-006 프론트엔드 AI 작업의 실제 범위
 
-- 현재 상태: 팀 결정 필요
+- 현재 상태: 결정 완료 (2026-07-27)
 - 관련 Workstream:
   - 전체
 - 현재 권장 담당자:
   - AI는 김인안·이우람·양성훈, 프론트엔드는 양성훈·김인안이 의사결정을 주도하고 각 Workstream 담당자가 연동 검증
-- 결정이 필요한 내용:
-  - 횡단 역할 담당자의 직접 개발 범위, 계약 전달 방식과 미확정 정책 차단 절차를 정한다.
+- 결정 내용:
+  - 양성훈·김인안이 프론트엔드 공통 구조와 API 계약 의사결정을 주도하고 각 Workstream 담당자가 자기 화면의 직접 구현·연동·인수 테스트를 소유한다.
+  - AI 기능은 MVP에서 구현하지 않고 범위 변경 검토가 승인될 때만 AI 담당 역할을 활성화한다.
 - 영향:
   - [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 부담
   - API 변경 통제
@@ -412,13 +414,14 @@ related_documents:
 
 ### RV-ROLE-007 인프라 담당자의 기능 부담
 
-- 현재 상태: 공동 검토 필요
+- 현재 상태: 결정 완료 (2026-07-27)
 - 관련 Workstream:
   - [WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)
 - 현재 권장 담당자:
   - 이우람
-- 결정이 필요한 내용:
-  - CI·배포·관측성 작업이 [WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)과 통합 지원을 방해하면 공통 작업을 다른 팀원에게 재배정한다.
+- 결정 내용:
+  - 이우람이 인프라 공통 작업과 [WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)을 함께 유지한다.
+  - 두 작업 중 하나가 통합 일정을 연속 2영업일 이상 차단하면 박진영이 인프라 검증 작업을 우선 지원한다.
 - 영향:
   - 배포 준비
   - 관계 기반 조회 일정
@@ -428,13 +431,15 @@ related_documents:
 
 ### RV-ROLE-008 리뷰 담당자 순환 방식
 
-- 현재 상태: 팀 조정 가능
+- 현재 상태: 결정 완료 (2026-07-27)
 - 관련 Workstream:
   - 전체
 - 현재 권장 담당자:
   - 기본 교차 리뷰 표 적용
-- 결정이 필요한 내용:
-  - 대체 리뷰어, 순환 주기와 긴급 변경 승인 방식을 정한다.
+- 결정 내용:
+  - 기본 교차 리뷰 조합을 2주마다 교체한다.
+  - 기본 리뷰어가 없으면 작성자와 같은 Workstream을 소유하지 않은 팀원 한 명이 대체한다.
+  - 긴급 변경도 작성자 외 1명 승인을 받고 다음 영업일에 전체 영향 리뷰를 수행한다.
 - 영향:
   - 승인 독립성
   - 지식 분산
@@ -444,13 +449,14 @@ related_documents:
 
 ### RV-ROLE-009 개인별 기술 선호·경험 반영
 
-- 현재 상태: 팀 조정 가능
+- 현재 상태: 결정 완료 (2026-07-27)
 - 관련 Workstream:
   - 전체
 - 현재 권장 담당자:
   - 현재 배정 유지
-- 결정이 필요한 내용:
-  - 확인된 경험이나 선호가 책임 균형을 개선하는 경우 Workstream 담당자를 교환할지 결정한다.
+- 결정 내용:
+  - 현재 Workstream 담당자 배정을 유지한다.
+  - 일정 차단이나 지속적인 부담 불균형이 확인될 때만 11장의 소유권 변경 절차로 재배정한다.
 - 영향:
   - 학습 비용
   - 개발 속도

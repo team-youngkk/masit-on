@@ -2,7 +2,7 @@
 id: ADR-ARCH-002
 title: 외부 연동 Port/Adapter 경계
 status: Accepted
-decision_date: 검토 필요
+decision_date: 2026-07-27
 owners:
   - 이우람
 related_requirements:
@@ -49,7 +49,7 @@ Kakao·YouTube 등 외부 서비스 호출은 애플리케이션이 소유한 Po
 - 서비스 계층에서 SDK·HTTP Client 직접 호출: 등록 유스케이스 코드가 Kakao Local·YouTube Data API 클라이언트를 직접 호출한다. 등록은 김인안([WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록))이 소유하지만 저장되는 결과(장소 일치 여부, 채널명, 영상 메타데이터)는 양성훈·박진영·이우람의 조회 도메인이 그대로 사용하므로, 직접 호출로 제공자 응답 필드·인증 방식·오류 코드가 등록 유스케이스 코드에 흩어지면 제공자 쪽 변경이나 장애가 등록 로직 전반을 건드리게 되고 조회 담당자들이 그 결과 계약을 신뢰하기 어려워진다.
 - 제공자 응답 모델을 내부 모델로 사용: Kakao·YouTube의 DTO를 그대로 저장·전달한다. 제공자가 필드명이나 구조를 바꾸면 그 여파가 등록 도메인뿐 아니라 이를 소비하는 조회 Workstream까지 즉시 전파되며, [ADR-EXT-001](../integration/ext-001-reference-verification.md) 11절이 금지하는 "관리자 확인 없는 자동 등록"과도 결합하기 쉬워 관리자 검증이라는 MVP 원칙([scope.md](../../00-overview/scope.md) 3.4절 "중복 등록 방지")을 지키기 어렵다.
 
-무거운 회복탄력성 프레임워크(예: Resilience4j Circuit Breaker, 별도 재시도 큐)의 전면 도입은 이번 결정에서 함께 채택하지 않는다. Kakao·YouTube 호출은 관리자가 등록 화면에서 트리거하는 저빈도·동기 호출이며 대량 트래픽을 상시 처리하는 통합이 아니므로, Adapter 수준의 타임아웃·오류 변환만으로 시작하고 실제 실패율·호출량이 확인된 뒤([RV-NFR-001](../../01-requirements/non-functional-requirements.md#rv-nfr-001-목표-동시-사용자-수)·[RV-NFR-002](../../01-requirements/non-functional-requirements.md#rv-nfr-002-초기-데이터-규모), 동시 사용자·데이터 규모 미확정 참조) 회로 차단기 도입 여부를 재검토한다.
+무거운 회복탄력성 프레임워크(예: Resilience4j Circuit Breaker, 별도 재시도 큐)의 전면 도입은 이번 결정에서 함께 채택하지 않는다. Kakao·YouTube 호출은 관리자가 등록 화면에서 트리거하는 저빈도·동기 호출이며 대량 트래픽을 상시 처리하는 통합이 아니므로, 연결 timeout 2초·전체 응답 timeout 5초와 오류 변환만으로 시작하고 실제 실패율·호출량이 병목으로 확인된 뒤 회로 차단기 도입 여부를 재검토한다.
 
 ## 6. 결정
 

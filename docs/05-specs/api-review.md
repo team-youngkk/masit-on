@@ -198,6 +198,28 @@ API를 임의 정책 결정 없이 구현·프론트엔드 연동 가능한 상�
 - 영향: 화면과 API 경로 충돌을 제거하고, 관리자 로그인·재발급 예외와 내부 상태 확인 경계를 명시했다.
 - 결정 시점: 2026-07-27 [ADR-WEB-003](../07-adr/platform/web-003-routing-boundary.md)으로 확정
 
+### RV-API-015 맛집 상세 콘텐츠 정렬
+
+- 중요도: Medium
+- 현재 상태: 결정 완료 (2026-07-27)
+- 관련 PRD: [PRD-DETAIL-001](../04-product/prd/detail/restaurant-detail.md)
+- 관련 요구사항: [FR-CREATOR-002](../01-requirements/functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인), [FR-VIDEO-001](../01-requirements/functional-requirements.md#fr-video-001-관련-영상-정보-확인)
+- 영향 API: [API-DETAIL-001](api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회)
+- 결정: `visitedBy`는 `channelName`·Creator ID, `videos`는 `title`·Video ID 오름차순으로 안정 정렬한다.
+- 영향: 게시일·방문일 최신순을 도입하지 않고 같은 데이터에서 동일한 배열 순서를 보장한다.
+- 근거: 2026-07-27 사용자 승인
+
+### RV-API-016 관리자 미리보기의 외부 제공자 ID 표시
+
+- 중요도: High
+- 현재 상태: 결정 완료 (2026-07-27)
+- 관련 ADR: [ADR-EXT-001](../07-adr/integration/ext-001-reference-verification.md)
+- 영향 API: [API-ADMIN-RESTAURANT-PREVIEW-001](api/admin/reference-data-api.md#api-admin-restaurant-preview-001-맛집-등록-검증-미리보기), [API-ADMIN-CREATOR-PREVIEW-001](api/admin/reference-data-api.md#api-admin-creator-preview-001-유튜버-등록-검증-미리보기), [API-ADMIN-VIDEO-PREVIEW-001](api/admin/reference-data-api.md#api-admin-video-preview-001-영상-등록-검증-미리보기)
+- 결정: 외부 제공자 ID를 API·화면에 노출하지 않고 서버의 동일성 판정·후보 Snapshot·저장소 유일 키에만 사용한다.
+- 관리자 확인: 정규화된 이름·주소·URL·제목·채널명·썸네일로 수행한다.
+- 보안 경계: 외부 ID는 비밀정보는 아니지만 내부 구현 정보로 취급해 공개·관리자 응답과 업무 로그에서 제외한다.
+- 근거: 2026-07-27 사용자 승인, [ADR-EXT-001](../07-adr/integration/ext-001-reference-verification.md) 갱신
+
 ## 7. 과도한 분리 및 결합 검토
 
 - `/api/restaurants` 하나에 목록·검색·세 필터를 통합한 것은 모두 같은 자원 목록의 조건이므로 적절하다.
@@ -211,7 +233,7 @@ API를 임의 정책 결정 없이 구현·프론트엔드 연동 가능한 상�
 
 | 우선순위 | 항목 |
 |---|---|
-| 완료 | [RV-API-001](api-review.md#rv-api-001-식별자-json-표현)~[RV-API-014](api-review.md#rv-api-014-화면api운영-경로-경계) |
+| 완료 | [RV-API-001](api-review.md#rv-api-001-식별자-json-표현)~[RV-API-016](api-review.md#rv-api-016-관리자-미리보기의-외부-제공자-id-표시) |
 
 ## 9. 권장 결정 순서
 
@@ -219,10 +241,12 @@ API를 임의 정책 결정 없이 구현·프론트엔드 연동 가능한 상�
 2. 완료: 공개·중복·보류·비공개 참조 관계 정책을 확정했다.
 3. 완료: 1-based 페이지, 입력 상한과 상세 부분 실패 필드를 확정했다.
 4. 완료: 요청 추적, 외부 링크 상태 표현과 화면·API·운영 경로 경계를 확정했다.
+5. 완료: 상세 콘텐츠 정렬과 tie-breaker를 확정했다.
+6. 완료: 외부 제공자 ID는 내부 동일성 값으로만 사용하도록 API와 ADR을 동기화했다.
 
 ## 10. API 계약 완료 기준
 
-- [RV-API-001](api-review.md#rv-api-001-식별자-json-표현)~[RV-API-014](api-review.md#rv-api-014-화면api운영-경로-경계)이 모두 결정되고 관련 기능 문서·공통 계약·추적성이 갱신됐다.
+- [RV-API-001](api-review.md#rv-api-001-식별자-json-표현)~[RV-API-016](api-review.md#rv-api-016-관리자-미리보기의-외부-제공자-id-표시)이 모두 결정 완료다.
 - 모든 요청·응답 식별자 타입과 관리자 인증 전달 방식이 프론트엔드에 명확하다.
 - 등록 확인·중복·보류·공개 반영 흐름이 끝까지 호출 가능하다.
 - 페이지·필터·빈 결과·404·부분 실패·외부 장애·원자성 계약 테스트가 작성 가능하다.

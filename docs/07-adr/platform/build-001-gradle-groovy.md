@@ -2,7 +2,7 @@
 id: ADR-BUILD-001
 title: Gradle과 Groovy DSL 빌드 체계
 status: Accepted
-decision_date: 검토 필요
+decision_date: 2026-07-27
 owners:
   - 맛잇온 Team
 related_requirements:

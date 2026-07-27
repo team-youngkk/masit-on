@@ -2,7 +2,7 @@
 id: ADR-DATA-003
 title: Spring Data JPA 기본 데이터 접근
 status: Accepted
-decision_date: 검토 필요
+decision_date: 2026-07-27
 owners:
   - 박진영
 related_requirements:
@@ -73,7 +73,7 @@ Spring Data JPA의 선언적 Repository 패턴은 4명이 서로 다른 엔티�
 
 ## 12. 구현 및 운영 영향
 
-목록·검색 조회는 기본 페이지 크기 20, 허용 크기 10/20/50([RV-NFR-003](../../01-requirements/non-functional-requirements.md#rv-nfr-003-페이지-크기))을 `Pageable`로 강제하고 그 밖의 값은 잘못된 요청으로 거부한다. 연결 풀 크기는 예상 동시 사용자 수([RV-NFR-001](../../01-requirements/non-functional-requirements.md#rv-nfr-001-목표-동시-사용자-수) 미확정)가 정해지는 대로 조정하며, 개발 단계에서는 SQL 로그를 활성화해 생성되는 쿼리와 N+1 여부를 팀원이 직접 확인할 수 있게 한다. 조인이 잦은 조회는 인덱스와 실행 계획을 리뷰 대상에 포함한다.
+목록·검색 조회는 기본 페이지 크기 20, 허용 크기 10/20/50([RV-NFR-003](../../01-requirements/non-functional-requirements.md#rv-nfr-003-페이지-크기))을 `Pageable`로 강제하고 그 밖의 값은 잘못된 요청으로 거부한다. 연결 풀 크기는 정상 부하 50명·20 RPS와 최대 부하 200명·80 RPS 성능 테스트 결과로 조정하며, 개발 단계에서는 SQL 로그를 활성화해 생성되는 쿼리와 N+1 여부를 팀원이 직접 확인할 수 있게 한다. 조인이 잦은 조회는 인덱스와 실행 계획을 리뷰 대상에 포함한다.
 
 ## 13. 검증 방법
 

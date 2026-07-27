@@ -2,7 +2,7 @@
 id: ADR-WEB-002
 title: 프론트엔드 데이터와 상태 책임 분리
 status: Accepted
-decision_date: 검토 필요
+decision_date: 2026-07-27
 owners:
   - 양성훈
   - 김인안
@@ -85,7 +85,7 @@ URL 검색 상태를 화면 지역 state로 중복 저장하는 것, 서버 데�
 
 ## 12. 구현 및 운영 영향
 
-Server Components와 Client Components 사이의 Hydration 경계, 캐시 무효화 시점(예: 관리자 등록 직후 목록 재조회), 브라우저 뒤로가기 시나리오를 테스트해야 한다. 동시 사용자 수와 초기 데이터 규모가 아직 미확정이므로([RV-NFR-001](../../01-requirements/non-functional-requirements.md#rv-nfr-001-목표-동시-사용자-수), [RV-NFR-002](../../01-requirements/non-functional-requirements.md#rv-nfr-002-초기-데이터-규모)), 캐시 적중률이나 서버 부하 수준은 이 ADR 시점에는 가정하지 않는다.
+Server Components와 Client Components 사이의 Hydration 경계, 캐시 무효화 시점(예: 관리자 등록 직후 목록 재조회), 브라우저 뒤로가기 시나리오를 테스트해야 한다. 정상 부하 50명·20 RPS와 초기 기준 데이터 규모를 사용해 서버 부하를 검증하되, 캐시는 실제 반복 조회율과 병목이 확인되기 전 선제 도입하지 않는다.
 
 ## 13. 검증 방법
 

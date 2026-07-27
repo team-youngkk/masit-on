@@ -10,6 +10,9 @@ related_documents:
   - ../../02-analysis/mvp-workstreams.md
   - data-review.md
   - ../../07-adr/security/auth-003-confirmation-token.md
+  - physical-data-model.md
+  - ../../07-adr/data/data-007-uuid-v4-identifiers.md
+  - ../../07-adr/data/data-008-publication-lifecycle-soft-delete.md
 ---
 
 # 맛잇온 논리 데이터 모델
@@ -48,7 +51,7 @@ Region은 Restaurant의 자유 문자열 속성이 아니라 Restaurant 도메�
 
 ### FoodCategory 권장안
 
-FoodCategory도 Restaurant 도메인의 참조 데이터로 둔다. Restaurant는 정확히 하나의 대표 FoodCategory를 참조하며 다중 연결 엔티티는 만들지 않는다. `기타` 선택 시 구체 음식 종류는 Restaurant의 보충 속성으로 관리한다.
+FoodCategory도 Restaurant 도메인의 참조 데이터로 둔다. Restaurant는 정확히 하나의 대표 FoodCategory를 참조하며 다중 연결 엔티티는 만들지 않는다. `기타`도 별도 보충 속성 없이 표준 FoodCategory 참조만 저장한다.
 
 ## 4. 도메인별 데이터 소유권
 
@@ -100,7 +103,7 @@ Restaurant, Creator, Video와 Visit는 일반 사용자 노출을 위한 publica
 
 ## 9. 논리 삭제 및 이력 요구사항
 
-비즈니스 규칙은 삭제 상태 데이터를 공개 조회에서 제외하도록 요구하지만 MVP API는 수정·삭제를 제공하지 않는다. 따라서 삭제·보관을 나타낼 독립 lifecycle 상태의 필요성은 인정하되, 물리 삭제 여부, 삭제 시각, 복구, 변경 이력과 관리자 식별 기록은 후속 설계에서 결정한다. 생성·수정 시각은 운영 추적을 위한 공통 감사 속성으로 권장한다.
+비즈니스 규칙은 삭제 상태 데이터를 공개 조회에서 제외하도록 요구하지만 MVP API는 수정·삭제를 제공하지 않는다. publication과 lifecycle을 분리하고 `deleted_at`을 결합한 논리 삭제·FK `RESTRICT`를 사용한다. MVP 감사 범위는 생성·수정·삭제 시각이며 변경자·사유 이력은 관리 기능 도입 시 재검토한다.
 
 ## 10. 데이터 정합성 원칙
 
@@ -115,14 +118,11 @@ Restaurant, Creator, Video와 Visit는 일반 사용자 노출을 위한 publica
 
 모든 공개 조회 API, 관리자 인증 API, 맛집·유튜버·영상 검증 미리보기와 등록 API, 방문 관계 등록 API를 지원한다. 확인 Token은 PostgreSQL에 해시·관리자·자원 종류·후보 스키마 버전·JSONB Snapshot과 결과 상태를 저장하는 10분 수명의 단기 기술 데이터다. 핵심 도메인 모델에는 포함하지 않으며 저장·소비·24시간 결과 재현은 [ADR-AUTH-003](../../07-adr/security/auth-003-confirmation-token.md)을 따른다. `REVIEW_REQUIRED` 미리보기는 등록 요청 데이터로 저장하지 않는다.
 
-## 12. 검토 필요 항목
+## 12. 확정 및 조건부 재검토
 
-- 카카오 동일 장소를 저장소 유일성으로 표현할 안정된 외부 식별값과 정규화 방식
-- Region·FoodCategory의 별도 업무 코드 필요 여부(이름은 API 계약의 표준 값)
-- publication status와 삭제·보관 상태의 실제 값 및 전환 수단
-- 생성·수정 시각 외 변경자·변경 사유 이력 범위
-- 외부 상태 마지막 확인 시각의 저장 필요 여부
-- 로그인 실패 제한과 Refresh Token의 키·검증값·TTL·정리 전략
-- 내부 식별자 타입, 데이터베이스, 인덱스와 동시성 구현 방식
+- 삭제·비공개 전환은 별도 운영 명령으로 수행하고 논리 삭제 데이터는 자동 purge 없이 보존한다.
+- 외부 표시 메타데이터는 최신값만 유지하고 변경 이력을 저장하지 않는다.
+- 로그인 실패 제한과 Refresh Token의 Redis 키·검증값·정리 전략은 [data-review.md](data-review.md#rv-data-006-관리자-refresh-token로그인-제한-저장)와 인증 ADR에서 확정했다.
+- 검색 인덱스와 추가 동시성 제어는 확정 부하·데이터 규모의 성능 측정에서 병목이 확인될 때만 활성화한다.
 
 상세 상태와 우선순위는 [data-review.md](data-review.md)에 기록한다.

@@ -2,7 +2,7 @@
 id: ADR-ARCH-001
 title: 단일 모듈 도메인 중심 모놀리스
 status: Accepted
-decision_date: 검토 필요
+decision_date: 2026-07-27
 owners:
   - 이우람
 related_requirements:

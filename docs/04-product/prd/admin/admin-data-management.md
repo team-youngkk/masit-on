@@ -180,7 +180,7 @@ related_documents:
 
 ## 13. 품질 요구사항
 
-등록 성능은 [NFR-PERFORMANCE-003](../../../01-requirements/non-functional-requirements.md#nfr-performance-003-관리자-등록-응답-시간), 접근·입력·비밀정보 보호는 [NFR-SECURITY-001](../../../01-requirements/non-functional-requirements.md#nfr-security-001-공개-조회와-관리자-접근-통제)~[NFR-SECURITY-003](../../../01-requirements/non-functional-requirements.md#nfr-security-003-비밀정보와-오류-정보-보호)을 따른다. 참조·중복·원자성은 [NFR-INTEGRITY-001](../../../01-requirements/non-functional-requirements.md#nfr-integrity-001-참조-및-필수값-정합성)~[NFR-INTEGRITY-003](../../../01-requirements/non-functional-requirements.md#nfr-integrity-003-등록-원자성과-공개-상태-일관성), 링크·관측·테스트·개인정보는 메타데이터의 관련 NFR로 검증한다. 목표 등록 시간과 인증 수준은 확정 전까지 팀 결정 필요다.
+등록 성능은 [NFR-PERFORMANCE-003](../../../01-requirements/non-functional-requirements.md#nfr-performance-003-관리자-등록-응답-시간), 접근·입력·비밀정보 보호는 [NFR-SECURITY-001](../../../01-requirements/non-functional-requirements.md#nfr-security-001-공개-조회와-관리자-접근-통제)~[NFR-SECURITY-003](../../../01-requirements/non-functional-requirements.md#nfr-security-003-비밀정보와-오류-정보-보호)을 따른다. 참조·중복·원자성은 [NFR-INTEGRITY-001](../../../01-requirements/non-functional-requirements.md#nfr-integrity-001-참조-및-필수값-정합성)~[NFR-INTEGRITY-003](../../../01-requirements/non-functional-requirements.md#nfr-integrity-003-등록-원자성과-공개-상태-일관성), 링크·관측·테스트·개인정보는 메타데이터의 관련 NFR로 검증한다. 관리자 등록 내부 처리 p95 1초와 확정 인증 정책을 적용한다.
 
 ## 14. 의존성
 
@@ -216,7 +216,7 @@ related_documents:
 ## 18. 리스크
 
 - 네 대상 등록과 세 조회 통합으로 작업량과 테스트 범위가 크다.
-- 관리자 최소 인증 수준과 보류 요청의 저장·운영 방식이 미확정이다.
+- 관리자 인증과 확인 Token 저장·운영 방식은 확정됐으며 구현 복잡도를 일정 리스크로 관리한다.
 - 공통 데이터 관계 변경이 모든 Workstream에 영향을 줄 수 있다.
 
 ## 19. 관련 문서
@@ -229,9 +229,9 @@ related_documents:
 - [소유권](../../../03-team/ownership.md)
 - [추적성](../../traceability.md)
 
-## 20. 검토 필요 항목
+## 20. 확정 상세 정책
 
-- JWT Access·Refresh Token의 정확한 만료 시간, 서명 키 교체와 Redis Token 운영 방식
-- 보류 요청의 저장·재검토 운영 방식(승인 화면은 MVP 제외)
-- [WS-04](../../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 내부 단계별 작업 분담과 등록 목표 응답 시간
-- 핵심 데이터 모델 변경 승인 방식
+- Access Token 30분, Refresh Token 14일, RS256·90일 키 교체와 Redis 원자 회전·재사용 탐지를 적용한다.
+- `READY` 후보만 PostgreSQL 확인 Token Snapshot으로 10분 저장하며 `REVIEW_REQUIRED`는 저장하지 않는다.
+- 김인안이 하나의 [WS-04](../../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 안에서 기본 데이터와 방문 관계 등록을 두 단계로 관리한다.
+- 핵심 데이터 모델은 박진영과 영향 Workstream 책임자 1명 이상의 승인을 받아 변경한다.

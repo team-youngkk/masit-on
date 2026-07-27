@@ -2,7 +2,8 @@
 id: ADR-EXT-001
 title: 관리자 외부 기준정보 확인 서비스
 status: Accepted
-decision_date: 검토 필요
+decision_date: 2026-07-27
+last_reviewed: 2026-07-27
 owners:
   - 김인안
 related_requirements:
@@ -86,8 +87,9 @@ Kakao 어댑터와 YouTube 어댑터는 동일한 Port 계약(존재 확인, 현
 
 ## 10. 강제 규칙
 
-- 관리자 확인을 필수로 하고, 관리자가 확인하지 않은 조회 결과는 저장하지 않는다. 관리자 화면에는 조회된 제공자 원본 식별자(카카오 place id, YouTube channel·video id)와 현재 표시 정보(장소명, 채널명, 영상 제목·썸네일)를 함께 노출해 관리자가 실제로 무엇을 확인하고 있는지 알 수 있게 한다.
+- 관리자 확인을 필수로 하고, 관리자가 확인하지 않은 조회 결과는 저장하지 않는다. 관리자 화면에는 현재 표시 정보와 정규화 URL(장소명·주소, 채널명, 영상 제목·썸네일)을 노출한다. 제공자 원본 식별자(Kakao place ID, YouTube channel/video ID)는 서버의 동일성 판정과 저장소 유일 키로만 사용하며 API·화면에 노출하지 않는다.
 - 제공자 원본 ID를 동일성 기준으로 사용한다. 구체적으로 동일 카카오 place id는 중복 맛집, 동일 YouTube 채널 id는 중복 유튜버, 동일 YouTube 영상 id는 중복 영상, 동일한 (맛집, 유튜버, 영상) id 조합은 중복 방문 관계로 판단한다([scope.md](../../00-overview/scope.md) 3.4).
+- 제공자 원본 ID는 비밀정보는 아니지만 내부 구현 정보로 분류해 일반·관리자 응답과 업무 로그에서 제외한다.
 - 상호명이 같아도 카카오 place id가 다르면 별도 지점으로 등록할 수 있다([scope.md](../../00-overview/scope.md) 명시 규칙).
 - 타임아웃과 오류를 등록 실패와 구분해 관리자에게 원인(존재하지 않음, 요청 제한 초과, 응답 지연·장애)을 알 수 있는 형태로 노출한다.
 
@@ -101,7 +103,8 @@ Kakao 어댑터와 YouTube 어댑터는 동일한 Port 계약(존재 확인, 현
 ## 12. 구현 및 운영 영향
 
 - API 키(Kakao REST API 키, YouTube API 키)는 소스 코드·저장소와 분리하고 Parameter Store SecureString + KMS로 보호한다([ADR-SEC-001](../security/sec-001-secrets-workload-identity.md)).
-- 호출 제한·타임아웃의 구체적 수치는 후속 설계에서 결정하되([NFR-EXTERNAL-002](../../01-requirements/non-functional-requirements.md#nfr-external-002-외부-호출-실패와-변경-격리) 결정 상태: 적용 원칙 확정, 세부 기준 후속 설계), 반드시 상한이 있어야 한다.
+- Kakao·YouTube Adapter는 연결 timeout 2초, 전체 응답 timeout 5초를 사용하며 설정·WireMock 테스트·운영 문서에 같은 값을 적용한다.
+- 등록 이후 외부 표시 메타데이터는 최신값만 유지하고 변경 이력을 별도로 저장하지 않는다. 자동 갱신은 MVP에서 수행하지 않는다.
 - 제공자 오류를 존재하지 않음(404류), 요청 제한 초과, 응답 지연·서버 오류로 구분해 관리자에게 각기 다른 안내로 매핑한다.
 - `READY` 중간 결과는 [ADR-AUTH-003](../security/auth-003-confirmation-token.md)에 따라 PostgreSQL 확인 Token 레코드의 10분 수명 후보 JSONB Snapshot으로만 저장한다. 핵심 Entity나 미확정 영구 자원으로 저장하지 않으며 `DUPLICATE`·`REVIEW_REQUIRED`에는 Token 레코드를 만들지 않는다.
 - 실패한 호출의 재시도는 자동 재시도 루프가 아니라 관리자가 화면에서 다시 시도하는 수동 재시도로 한정한다. 자동 재시도를 넣으려면 상한 횟수·백오프 정책을 별도로 설계해야 하므로([NFR-RELIABILITY-002](../../01-requirements/non-functional-requirements.md#nfr-reliability-002-저장소-장애-및-재시도-통제)), 이 ADR 범위에서는 도입하지 않는다.

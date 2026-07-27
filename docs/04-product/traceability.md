@@ -196,7 +196,7 @@ related_documents:
 - 기능 요구사항 없이 생성된 기능 PRD: 없음
 - MVP 제외 기능을 구현 대상으로 포함한 PRD: 없음. [NFR-PRIVACY-003](../01-requirements/non-functional-requirements.md#nfr-privacy-003-회원-기능-도입-시-재검토)은 범위 재검토 표지로만 유지한다.
 - 상위 제품 PRD와 기능 PRD 범위 충돌: 없음
-- 후속 결정: 인증 기술, 상세 조합의 애플리케이션 책임 위치, 외부 API 실패 세부 기준과 성능 수치는 API·기술 명세에서 결정한다.
+- 상세 결정: 인증은 Spring Security JWT·Redis Refresh Token, 상세 조합은 `com.masiton.orchestration.application.query`, 외부 API timeout은 연결 2초·전체 응답 5초를 사용하고 성능 수치는 비기능 요구사항을 따른다.
 
 ## 9. 변경 영향 추적
 

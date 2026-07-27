@@ -75,7 +75,7 @@ related_documents:
 - 카카오에서 확인한 장소 동일성
 - 맛집 이름, 전체 도로명주소, 상세 위치, 전화번호와 카카오 장소 링크
 - 서울특별시 자치구
-- 대표 음식 카테고리와 `기타`의 구체 음식 종류
+- 대표 음식 카테고리. `기타`도 별도 보충 이름 없이 하나의 표준 카테고리로 취급한다.
 - 맛집 공개 상태
 
 ### 소유 기능 요구사항
@@ -601,7 +601,7 @@ Restaurant --관계 기반 조회 요청--> Visit
 | External YouTube | 독립 도메인으로 두지 않음 | YouTube는 외부 시스템 경계다. 채널 정보는 Creator, 영상 정보는 Video가 소유한다. | 다수 외부 플랫폼 통합과 독립 동기화·장애 정책 도입 |
 | Common | 만들지 않음 | 책임과 변경 이유가 불명확해 규칙 소유권을 숨기고 결합을 키운다. | 분리 조건 없음. 실제 책임이 발견되면 구체적인 이름의 정책 또는 도메인으로 정의 |
 
-## 15. 검토 필요 항목
+## 15. 검토 결정 기록
 
 기준 문서에서 이미 결정된 항목은 결정 상태와 근거를 기록한다. 미결정 항목만 후속 설계에서 확정하며, 이 문서가 새로운 기능을 추가하는 근거가 되어서는 안 된다.
 
@@ -663,8 +663,8 @@ Restaurant --관계 기반 조회 요청--> Visit
 - 영향을 받는 도메인:
   - Creator
   - Visit
-- 결정이 필요한 내용:
-  - 별도 유튜버 상세 페이지는 제외되어 있으나 유튜버 필터 선택지를 제공하기 위한 목록 조회 계약이 독립 기능 요구사항으로 필요한지 정해야 한다.
+- 결정 내용:
+  - 별도 유튜버 상세 페이지는 제외하고 유튜버 필터 선택지를 위한 최소 목록 조회 계약만 독립 기능 요구사항으로 둔다.
 - 영향:
   - 기능 요구사항 추적, 조회 계약과 프론트엔드 필터 구성
 - 결정 시점:
@@ -672,7 +672,7 @@ Restaurant --관계 기반 조회 요청--> Visit
 
 ### RV-DOMAIN-005 맛집 상세 조합 조회의 주 책임
 
-- 현재 상태: 팀 결정 필요
+- 현재 상태: 결정 완료 — `com.masiton.orchestration.application.query` 전용 Query Service
 - 관련 문서:
   - [scope.md](../00-overview/scope.md)
   - [functional-requirements.md](../01-requirements/functional-requirements.md)
@@ -681,8 +681,8 @@ Restaurant --관계 기반 조회 요청--> Visit
   - Creator
   - Video
   - Visit
-- 결정이 필요한 내용:
-  - 맛집 기본 상세를 주도하는 Restaurant 애플리케이션 서비스가 Visit 결과를 조합할지, 전용 조회 책임을 둘지 정해야 한다. 방문 유튜버와 관련 영상의 관계 판정 소유자는 Visit로 유지한다.
+- 결정 내용:
+  - 전용 `com.masiton.orchestration.application.query`가 Restaurant 기본 상세와 Visit 결과를 조합하고 관계 판정 소유자는 Visit로 유지한다.
 - 영향:
   - 유스케이스 경계, 조회 계약, 성능과 테스트 책임
 - 결정 시점:
@@ -743,7 +743,7 @@ Restaurant --관계 기반 조회 요청--> Visit
 
 ### RV-DOMAIN-009 Admin을 독립 도메인으로 둘지 여부
 
-- 현재 상태: 본 문서 권장안 제시, 후속 아키텍처에서 확인 필요
+- 현재 상태: 결정 완료 — 독립 도메인으로 두지 않고 `security`와 `orchestration` 애플리케이션 책임으로 구성
 - 관련 문서:
   - [functional-requirements.md](../01-requirements/functional-requirements.md)
   - [business-rules.md](../01-requirements/business-rules.md)
@@ -753,7 +753,7 @@ Restaurant --관계 기반 조회 요청--> Visit
   - Creator
   - Video
   - Visit
-- 권장 내용:
+- 결정 내용:
   - Admin은 독립 도메인으로 두지 않고, 인증과 진입점을 제공하는 애플리케이션 책임으로 둔다. 각 도메인이 자신의 등록 유스케이스를 소유한다.
 - 영향:
   - 모듈 책임, 관리자 흐름과 병렬 작업 경계
@@ -762,7 +762,7 @@ Restaurant --관계 기반 조회 요청--> Visit
 
 ### RV-DOMAIN-010 조회 전용 조합 책임을 별도로 둘지 여부
 
-- 현재 상태: 팀 결정 필요
+- 현재 상태: 결정 완료 — 별도 비즈니스 도메인 없이 `com.masiton.orchestration.application.query`가 담당
 - 관련 문서:
   - [functional-requirements.md](../01-requirements/functional-requirements.md)
   - [non-functional-requirements.md](../01-requirements/non-functional-requirements.md)
@@ -771,8 +771,8 @@ Restaurant --관계 기반 조회 요청--> Visit
   - Creator
   - Video
   - Visit
-- 결정이 필요한 내용:
-  - 맛집 목록의 채널명과 상세의 방문 유튜버·영상 조합을 기존 애플리케이션 서비스가 수행할지 전용 조회 책임이 수행할지 정해야 한다. 별도 비즈니스 도메인으로 만들 필요는 없다.
+- 결정 내용:
+  - 맛집 목록의 채널명과 상세의 방문 유튜버·영상 조합은 `com.masiton.orchestration.application.query` 전용 조회 책임이 수행한다. 별도 비즈니스 도메인으로 만들지 않는다.
 - 영향:
   - 조회 의존, 성능 최적화, 캐시 가능성과 인수 테스트 책임
 - 결정 시점:
@@ -781,9 +781,9 @@ Restaurant --관계 기반 조회 요청--> Visit
 ### 추가 검토 연결 항목
 
 - 맛집 목록은 채널명 오름차순 최대 3명과 `외 N명`으로 축약하고 전체 방문 유튜버는 상세에서 제공한다.
-- 관리자 계정 발급·회수·복구와 인증 수준은 [scope.md](../00-overview/scope.md) 제9장 및 [RV-NFR-007](../01-requirements/non-functional-requirements.md#rv-nfr-007-관리자-인증-수준)에서 결정한다.
+- 관리자 계정 발급·회수·복구는 별도 운영 명령으로 수행하고 인증 수준은 [RV-NFR-007](../01-requirements/non-functional-requirements.md#rv-nfr-007-관리자-인증-수준)을 따른다.
 - 관리자 등록은 YouTube API 조회 후 확인한 정보를 저장하고 일반 사용자 조회는 저장 정보를 사용한다. 자동 주기 동기화는 후속 범위다.
-- 초기 데이터 규모와 성능 기준은 [RV-NFR-001](../01-requirements/non-functional-requirements.md#rv-nfr-001-목표-동시-사용자-수), [RV-NFR-002](../01-requirements/non-functional-requirements.md#rv-nfr-002-초기-데이터-규모), [RV-NFR-004](../01-requirements/non-functional-requirements.md#rv-nfr-004-목표-응답-시간과-허용-오류율), [RV-NFR-014](../01-requirements/non-functional-requirements.md#rv-nfr-014-초기-예상-맛집-수), [RV-NFR-015](../01-requirements/non-functional-requirements.md#rv-nfr-015-초기-예상-영상-수)에서 결정한다.
+- 초기 데이터 규모와 성능 기준은 [RV-NFR-001](../01-requirements/non-functional-requirements.md#rv-nfr-001-목표-동시-사용자-수), [RV-NFR-002](../01-requirements/non-functional-requirements.md#rv-nfr-002-초기-데이터-규모), [RV-NFR-004](../01-requirements/non-functional-requirements.md#rv-nfr-004-목표-응답-시간과-허용-오류율), [RV-NFR-014](../01-requirements/non-functional-requirements.md#rv-nfr-014-초기-예상-맛집-수), [RV-NFR-015](../01-requirements/non-functional-requirements.md#rv-nfr-015-초기-예상-영상-수)의 확정값을 사용한다.
 
 ### 경계 판단 요약
 
@@ -797,5 +797,5 @@ Restaurant --관계 기반 조회 요청--> Visit
 | Region·FoodCategory | Restaurant 구성 개념 | 맛집 주소·등록·필터 정책과 함께 변경된다. |
 | Publication | 독립 도메인으로 두지 않음 | 공통 노출 정책은 공유하되 대상 상태는 각 도메인이 소유한다. |
 | External YouTube | 외부 시스템 경계 | 채널은 Creator, 영상은 Video가 소유하며 원본은 저장하지 않는다. |
-| 조회 조합 | 애플리케이션 책임, 구체 위치는 검토 필요 | 조회 협업을 도메인 간 변경 의존과 분리해야 한다. |
+| 조회 조합 | `com.masiton.orchestration.application.query` | 조회 협업을 도메인 간 변경 의존과 분리한다. |
 | 배포 형태 | 모듈형 모놀리스 우선 | 4인 MVP에서 불필요한 분산 운영 비용을 피하면서 책임 경계를 유지한다. |

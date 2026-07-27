@@ -14,6 +14,14 @@ related_documents:
   - ../api/admin/reference-data-api.md
   - ../api/admin/visit-registration-api.md
   - ../../07-adr/security/auth-003-confirmation-token.md
+  - physical-data-model.md
+  - table-definitions.md
+  - constraint-mapping.md
+  - index-strategy.md
+  - migration-plan.md
+  - seed-data-plan.md
+  - ../../07-adr/data/data-007-uuid-v4-identifiers.md
+  - ../../07-adr/data/data-008-publication-lifecycle-soft-delete.md
 ---
 
 # 맛잇온 데이터 모델 검토
@@ -27,41 +35,41 @@ related_documents:
 - 논리 모델 차단 항목은 없다. 채널 관리 단위, 단일 지역·카테고리, Visit 삼항 관계, 중복·공개 초기값은 상위 문서에서 확정됐다.
 - Restaurant는 영상·Visit 없이 존재하며 Video 하나는 여러 Restaurant의 Visit 근거가 된다.
 - API DTO의 축약·집계·판정 값은 저장 모델에서 제외했다.
-- 물리 설계 전 반드시 결정할 Critical 항목은 카카오 장소 동일성 키와 상태·삭제 구현이다.
-- 관리자 내부 계정과 Redis Refresh Token 상태는 MVP 저장 범위에 포함하되 구체 키·검증값·TTL은 후속 설계로 남겼다.
+- 카카오 장소 동일성은 [ADR-EXT-001](../../07-adr/integration/ext-001-reference-verification.md)의 제공자 place ID로 확정되어 물리 유일 키에 반영됐다.
+- UUID 내부 ID와 상태·논리 삭제는 [ADR-DATA-007](../../07-adr/data/data-007-uuid-v4-identifiers.md)·[ADR-DATA-008](../../07-adr/data/data-008-publication-lifecycle-soft-delete.md)로 확정됐다.
+- 관리자 내부 계정과 Redis Refresh Token 상태는 MVP 저장 범위다. Redis 8.8, 14일 TTL, 회전·재사용 탐지는 확정됐고 키·검증값·로그인 제한 카운터가 후속 상세다.
 - 확인 Token은 PostgreSQL 저장형 불투명 Token과 원자적 소비·결과 재현으로 확정됐다.
 
 ## 3. 모델링 차단 항목
 
-현재 논리 모델 작성과 ERD를 막는 미결정은 없다. 다음 두 항목은 구현 착수 전에는 차단 요소가 된다.
+현재 논리 모델 작성과 ERD를 막는 미결정은 없다. 물리 설계 결과와 승인 상태는 다음과 같다.
 
 ### RV-DATA-001 카카오 장소 동일성의 저장 표현
 
 - 중요도: Critical
-- 현재 상태: 물리 설계 전 결정 필요
+- 현재 상태: 결정 완료
 - 관련 문서: [scope.md](../../00-overview/scope.md), [BR-RESTAURANT-006](../../01-requirements/business-rules.md#br-restaurant-006-맛집-중복-판단)·[BR-RESTAURANT-007](../../01-requirements/business-rules.md#br-restaurant-007-동일-상호의-지점-구분), [API-ADMIN-RESTAURANT-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-restaurant-preview-001-맛집-등록-검증-미리보기)
 - 영향 데이터: Restaurant
 - 영향 API: [API-ADMIN-RESTAURANT-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-restaurant-preview-001-맛집-등록-검증-미리보기), [API-ADMIN-RESTAURANT-001](../api/admin/reference-data-api.md#api-admin-restaurant-001-맛집-등록-확정)
-- 결정 질문: 카카오의 동일 장소를 어떤 안정된 외부 값과 정규화 규칙으로 저장소에서 유일하게 보장하는가?
-- 선택지: 제공자 장소 ID / 검증된 정규 URL 기반 키 / 별도 정규화 키
-- 영향: 지점 구분, 동시 등록, URL 변경 대응과 마이그레이션
-- 결정 시점: 물리 모델·DDL 작성 전
+- 결정: [ADR-EXT-001](../../07-adr/integration/ext-001-reference-verification.md)이 공식 API의 Kakao place ID를 동일성 기준으로 확정했다. 물리 모델은 `restaurant.kakao_place_id` UK로 구현한다.
+- 영향: URL·이름·주소는 표시 정보이며 중복 키로 사용하지 않는다.
+- 근거: [physical-data-model.md](physical-data-model.md#3-외부-동일성-결정)
 
 ### RV-DATA-002 공개 상태와 삭제·보관 상태 표현
 
 - 중요도: Critical
-- 현재 상태: ADR 또는 물리 설계 전 결정 필요
+- 현재 상태: 결정 완료 (2026-07-27)
 - 관련 문서: [BR-RESTAURANT-008](../../01-requirements/business-rules.md#br-restaurant-008-맛집-공개-조건), [BR-PUBLICATION-001](../../01-requirements/business-rules.md#br-publication-001-일반-사용자-공개-범위)~[BR-PUBLICATION-008](../../01-requirements/business-rules.md#br-publication-008-상태-변경의-일관성), [BR-ADMIN-005](../../01-requirements/business-rules.md#br-admin-005-mvp-관리-기능의-경계)·[BR-ADMIN-006](../../01-requirements/business-rules.md#br-admin-006-잘못-등록된-데이터의-정정-원칙)
 - 영향 데이터: Restaurant, Creator, Video, Visit
 - 영향 API: 모든 공개 조회; 현재 수정·삭제 API는 없음
-- 결정 질문: publication과 lifecycle 상태를 어떤 값·전환·보존 정책으로 분리하는가?
-- 선택지: 독립 상태 필드 / 비공개 상태 + 삭제 시각 / 별도 보관 모델
-- 영향: 공개 판정 일관성, 복구, 참조 보존, 인덱스와 운영 절차
-- 결정 시점: 데이터 스키마와 운영 정정 수단 구현 전
+- 결정: `PUBLIC/PRIVATE`, `ACTIVE/DELETED`, `deleted_at`을 분리하고 FK `RESTRICT`와 논리 삭제를 사용한다.
+- 영향: 공개 판정, 복구, 참조 보존과 partial index
+- 근거: [ADR-DATA-008](../../07-adr/data/data-008-publication-lifecycle-soft-delete.md), 2026-07-27 사용자 승인
 
 ## 4. API와 데이터 모델 충돌
 
-- 직접 충돌은 발견하지 못했다.
+- 물리 저장 모델과 API 필드 사이의 직접 충돌은 없다.
+- 외부 제공자 ID는 내부 동일성 판정·후보 Snapshot·저장소 유일 키에만 사용하고 API·화면에는 노출하지 않는 것으로 [RV-API-016](../api-review.md#rv-api-016-관리자-미리보기의-외부-제공자-id-표시)에서 확정해 [ADR-EXT-001](../../07-adr/integration/ext-001-reference-verification.md)과 동기화했다.
 - API의 `creatorId` 명칭은 서비스 표준 용어 `유튜버`를 따르지만 저장 개념은 YouTube 채널 단위 Creator다.
 - API 후보 응답에는 외부 채널·영상 ID가 노출되지 않지만 동일성 보장을 위해 내부 저장 모델에는 안정된 외부 ID가 필요하다. 클라이언트 입력값이 아니라 서버의 외부 검증 결과다.
 - 기본 데이터 API가 Creator와 Video의 등록 순서를 강제하지 않으므로 Video의 게시 채널 외부 ID는 필수로 저장하고 내부 Creator 참조는 선택으로 두었다. Visit 생성 시에는 등록된 Creator와 외부 게시 채널 일치를 필수 검증한다.
@@ -98,38 +106,39 @@ related_documents:
 | 동시 중복 | 저장소 고유성 + 애플리케이션 오류 변환 모두 필요 |
 | 부분 저장 | 각 생성 요청 원자성으로 금지 |
 
-## 7. 물리 설계 전 결정 항목
+## 7. 물리 설계 결과 및 승인 항목
 
 ### RV-DATA-003 내부 식별자 전략
 
 - 중요도: High
-- 현재 상태: 후속 설계에서 결정
+- 현재 상태: 결정 완료 (2026-07-27)
 - 영향 데이터: 모든 엔티티
-- 결정 질문: 내부 ID의 생성 위치·형식·JSON 문자열 변환은 무엇인가?
-- 결정 시점: 스키마·API 구현 전
+- 결정: 애플리케이션 생성 UUID v4, PostgreSQL `uuid`, API 불투명 문자열
+- 근거: [ADR-DATA-007](../../07-adr/data/data-007-uuid-v4-identifiers.md), 2026-07-27 사용자 승인
 
 ### RV-DATA-004 참조 데이터 코드와 배포 방식
 
 - 중요도: Medium
-- 현재 상태: 후속 설계에서 결정
+- 현재 상태: 물리 설계 결정 완료
 - 영향 데이터: Region, FoodCategory
-- 결정 질문: API 표준 이름 외 별도 code가 필요한가, 기준값은 migration·seed·운영 중 무엇으로 관리하는가?
-- 결정 시점: 초기 데이터 적재 전
+- 결정: 고정 UUID·code를 두고 Region 25개·FoodCategory 10개를 Flyway V5로 적재한다.
+- 근거: [seed-data-plan.md](seed-data-plan.md)
 
 ### RV-DATA-005 감사 필드와 변경 이력 범위
 
 - 중요도: High
-- 현재 상태: 팀 결정 필요
+- 현재 상태: MVP 물리 범위 결정 완료
 - 영향 데이터: 모든 핵심 데이터와 관리자 인증
-- 결정 질문: createdAt·updatedAt 외 변경자, 사유, 상태 이력을 어디까지 저장하는가?
-- 결정 시점: 정정·비공개 운영 설계 전
+- 결정: `created_at`, `updated_at`, 핵심 삭제 데이터의 `deleted_at`만 저장한다. 변경자·사유 이력은 수정·삭제 관리 기능 승인 시 재검토한다.
+- 근거: [physical-data-model.md](physical-data-model.md#42-이력-범위)
 
 ### RV-DATA-006 관리자 Refresh Token·로그인 제한 저장
 
 - 중요도: High
-- 현재 상태: 후속 보안 설계에서 결정
+- 현재 상태: 결정 완료 (2026-07-27)
 - 영향 데이터: AdminAccount, AdminRefreshToken 및 단기 로그인 실패 상태
-- 결정 질문: Redis 키, 안전한 Refresh Token 검증값, 계정당 활성 Token 유일성·회전·재사용 탐지와 실패 제한을 어떻게 보장하는가?
+- 결정: Refresh Token은 `auth:refresh:{adminId}` 키에 SHA-256 Token 해시와 Token 계열·만료 정보를 JSON으로 저장한다. 로그인 실패는 `auth:login-failure:{loginIdHash}` 카운터를 사용하고 첫 실패부터 15분 TTL을 적용하며 5회 실패 시 남은 TTL 동안 차단하고 성공 시 삭제한다.
+- 원자성: 새 로그인·회전·재사용 탐지는 Redis Lua Script 또는 동등한 단일 원자 연산으로 계정당 활성 Token 하나를 보장한다.
 - 결정 시점: 인증 구현 전
 
 ### RV-DATA-007 검증 확인 토큰 구현
@@ -143,25 +152,25 @@ related_documents:
 ### RV-DATA-008 저장소 대 애플리케이션 검증 경계
 
 - 중요도: High
-- 현재 상태: 논리 책임 확정, 구체 구현 결정 필요
+- 현재 상태: 물리 설계 결정 완료
 - 영향 데이터: Video, Visit, 모든 고유 엔티티
-- 결정 질문: 선택 Video.creatorId와 외부 게시 채널, Visit.Creator의 일치를 저장소에서도 강제할 것인가?
-- 결정 시점: 물리 관계·트랜잭션 설계 전
+- 결정: `video(creator_id, publisher_external_channel_id)`와 `visit(video_id, creator_id)` 복합 FK로 저장소에서도 강제한다.
+- 근거: [constraint-mapping.md](constraint-mapping.md#3-fk-목록과-삭제-정책)
 
 ## 8. ADR 대상
 
 | 대상 | ADR 필요성 | 이유 |
 |---|---|---|
-| 데이터베이스 제품 | 필요 | 제약·트랜잭션·운영에 장기 영향 |
-| 내부 식별자 전략 | 필요 | 모든 API·관계·마이그레이션 영향 |
+| 데이터베이스 제품 | 결정 완료 | [ADR-DATA-001](../../07-adr/data/data-001-postgresql.md) |
+| 내부 식별자 전략 | 결정 완료 | [ADR-DATA-007](../../07-adr/data/data-007-uuid-v4-identifiers.md) |
 | Visit 모델링 | 현재 불필요 | 상위 규칙과 API가 삼항 관계로 확정; 변경 시 필요 |
-| 논리 삭제·보관 전략 | 필요 | 공개·복구·참조와 운영 영향 |
-| 스키마 마이그레이션 도구 | 필요 | 배포·복구 절차 영향 |
+| 논리 삭제·보관 전략 | 결정 완료 | [ADR-DATA-008](../../07-adr/data/data-008-publication-lifecycle-soft-delete.md) |
+| 스키마 마이그레이션 도구 | 결정 완료 | [ADR-DATA-004](../../07-adr/data/data-004-flyway.md) |
 | 위치 데이터 표현 | 현재 불필요 | MVP는 주소+서울 자치구; 지도 도입 시 필요 |
-| 외부 영상 식별 전략 | 필요 여부 검토 | 외부 ID 정규화와 URL 변경 대응 |
-| 동시 중복 방지 전략 | 필요 | DB 기능·격리·오류 변환 영향 |
+| 외부 자원 식별 전략 | 결정 완료 | [ADR-EXT-001](../../07-adr/integration/ext-001-reference-verification.md)의 제공자 원본 ID |
+| 동시 중복 방지 전략 | 기본안 완료·강화 조건부 | UK+오류 변환; 강화는 [ADR-DATA-006](../../07-adr/adr-backlog.md#adr-data-006-동시-쓰기-충돌-제어) |
 | 확인 Token 저장 전략 | 결정 완료 | [ADR-AUTH-003](../../07-adr/security/auth-003-confirmation-token.md) |
-| Refresh Token 저장 전략 | 추가 상세 필요 | Redis 키·회전·로그인 제한 운영 영향 |
+| Refresh Token 저장 전략 | 저장소 결정 완료·세부 필요 | [ADR-DATA-005](../../07-adr/data/data-005-redis-refresh-token.md); 로그인 제한 구조는 후속 |
 
 ## 9. 구현 중 결정 가능한 항목
 
@@ -171,15 +180,11 @@ related_documents:
 - 공통 감사 필드 자동 입력 방식
 - 외부 URL 정규화 코드 구성(동일성 원칙은 변경 금지)
 
-## 10. 권장 결정 순서
+## 10. 확정 결과와 남은 상세
 
-1. 데이터베이스 제품과 내부 식별자 전략
-2. 카카오 장소·YouTube 외부 식별 정규화
-3. publication/lifecycle 및 논리 삭제 전략
-4. 저장소 고유성·참조·채널 일치와 동시성 방식
-5. AdminAccount·AdminRefreshToken 보안 저장과 확정된 확인 Token 물리 테이블 반영
-6. 감사·이력 범위와 기준 데이터 적재
-7. 물리 모델·마이그레이션·인덱스 설계
+1. 내부 ID, 상태·논리 삭제, 외부 동일성, 채널 일치와 Flyway·seed 계획은 확정됐다.
+2. 상세 콘텐츠 정렬과 외부 제공자 ID 노출 경계도 API 계약에 반영됐다.
+3. Redis 로그인 제한 세부 구조와 외부 timeout 수치는 각 보안·외부 연동 상세 설계에서 정한다.
 
 ## 11. 데이터 모델 완료 기준
 
@@ -190,14 +195,15 @@ related_documents:
 - 모든 MVP API의 조회·변경 데이터가 추적된다.
 - 저장소와 애플리케이션 검증 책임이 구분됐다.
 - MVP 제외 데이터는 포함하지 않았다.
-- 물리 설계·ADR 전 결정 항목이 식별됐다.
+- 물리 설계와 필수 ADR이 확정됐다.
 - `erd.mmd`의 카디널리티가 관계 문서와 일치한다.
 
-## 12. Open Questions
+## 12. Open Questions 상태
 
-- [RV-DATA-001](data-review.md#rv-data-001-카카오-장소-동일성의-저장-표현)~[RV-DATA-006](data-review.md#rv-data-006-관리자-refresh-token로그인-제한-저장)과 [RV-DATA-008](data-review.md#rv-data-008-저장소-대-애플리케이션-검증-경계)의 구현 전 결정 항목
-- 외부 상태 마지막 확인 시각과 외부 메타데이터 갱신 이력의 실제 저장 범위
-- 삭제·비공개 운영 수단이 MVP 내부 운영 절차로 필요한지, 후속 관리 API까지 미룰지
+- 현재 MVP 물리 모델의 미결 Open Question은 없다.
+- 외부 표시 메타데이터는 최신값만 유지하고 변경 이력을 저장하지 않는다.
+- 삭제·비공개 전환은 별도 운영 명령으로 수행하며 관리자 API는 후속 범위로 미룬다.
+- 논리 삭제 데이터는 자동 물리 purge 없이 보존한다.
 
 ## 13. Assumptions
 

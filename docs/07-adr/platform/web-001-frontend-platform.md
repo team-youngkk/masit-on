@@ -2,7 +2,7 @@
 id: ADR-WEB-001
 title: 프론트엔드 런타임과 프레임워크 기준
 status: Accepted
-decision_date: 검토 필요
+decision_date: 2026-07-27
 owners:
   - 양성훈
   - 김인안
@@ -89,7 +89,7 @@ Node.js 24.18.0, Next.js 16.2.11, TypeScript 7.0.2를 정확히 고정한다.
 
 ## 12. 구현 및 운영 영향
 
-개발 환경, CI([ADR-CI-001](ci-001-github-actions-quality-gate.md))와 컨테이너 빌드가 동일한 Node 24.18.0 기준을 사용해야 하며, 이는 GitHub Actions에서 검증된다. 지원 브라우저는 [scope.md](../../00-overview/scope.md) MVP 완료 기준에 따라 PC Chrome·Edge, Android Chrome, iPhone Safari의 최신 안정 버전이 원칙이나, 구체적인 테스트 버전과 화면 크기는 [scope.md](../../00-overview/scope.md) 9장 검토 필요 항목(지원 대상 브라우저의 구체적인 테스트 버전과 화면 크기)으로 남아 있어 이 ADR만으로 확정하지 않는다.
+개발 환경, CI([ADR-CI-001](ci-001-github-actions-quality-gate.md))와 컨테이너 빌드가 동일한 Node 24.18.0 기준을 사용해야 하며, 이는 GitHub Actions에서 검증된다. PC Chrome·Edge, Android Chrome, iPhone Safari의 테스트 시점 최신 및 직전 안정 버전을 지원하고 360px, 390px, 768px, 1280px, 1440px 화면 폭을 검증한다.
 
 ## 13. 검증 방법
 
@@ -97,7 +97,7 @@ CI에서 `node -v`, `npm ls next typescript` 결과가 각각 정확히 24.18.0,
 
 ## 14. 재검토 조건
 
-지원 종료, [scope.md](../../00-overview/scope.md) 9장의 브라우저 버전 세부 결정([RV-NFR-006](../../01-requirements/non-functional-requirements.md#rv-nfr-006-지원-브라우저-범위) 관련) 확정, 또는 사용자 승인된 프레임워크 전환 시 재검토한다.
+런타임 지원 종료, 승인된 브라우저 범위 변경 또는 사용자 승인된 프레임워크 전환 시 재검토한다.
 
 ## 15. 관련 문서
 

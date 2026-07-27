@@ -2,7 +2,7 @@
 id: ADR-RUNTIME-001
 title: Docker 기반 실행 환경
 status: Accepted
-decision_date: 검토 필요
+decision_date: 2026-07-27
 owners:
   - 이우람
 related_requirements:
@@ -80,7 +80,7 @@ Docker를 쓰면 이미지 빌드·스캔·저장·정리라는 새로운 운영
 
 ## 13. 검증 방법
 
-깨끗한 이미지 빌드, 버전·비밀·취약점 검사와 컨테이너 기반 Smoke Test를 실행한다. 구체적으로는 CI에서 클린 빌드 컨텍스트로 이미지를 빌드해 성공 여부를 확인하고, 이미지 안에 평문 비밀값이나 `.env` 파일이 포함되지 않았는지 검사하며, 베이스 이미지가 명시 태그(운영 확정 시 digest)를 쓰는지 대조한다. 컨테이너 내부에서 `/internal/health/live`, PostgreSQL을 포함한 `/internal/health/ready`가 정상 응답하는지, 애플리케이션 시작 로그에 오류가 없는지를 Smoke Test로 확인한다. `/internal/**`이 인터넷 Nginx 경로에서 차단되는지도 배포 후 검사한다. 이 검증은 이미지 빌드 재현성과 배포 가능 여부 확인이 목적이며, p95 500ms/800ms/1초 등 성능 기준([RV-NFR-004](../../01-requirements/non-functional-requirements.md#rv-nfr-004-목표-응답-시간과-허용-오류율))이나 오류율 1% 기준은 별도 성능·부하 테스트([RV-NFR-011](../../01-requirements/non-functional-requirements.md#rv-nfr-011-성능-테스트-환경) 미확정, [ADR-PERF-001](../adr-backlog.md#adr-perf-001-k6-성능-테스트-체계) Conditional)에서 다룬다.
+깨끗한 이미지 빌드, 버전·비밀·취약점 검사와 컨테이너 기반 Smoke Test를 실행한다. 구체적으로는 CI에서 클린 빌드 컨텍스트로 이미지를 빌드해 성공 여부를 확인하고, 이미지 안에 평문 비밀값이나 `.env` 파일이 포함되지 않았는지 검사하며, 베이스 이미지가 명시 태그(운영 확정 시 digest)를 쓰는지 대조한다. 컨테이너 내부에서 `/internal/health/live`, PostgreSQL을 포함한 `/internal/health/ready`가 정상 응답하는지, 애플리케이션 시작 로그에 오류가 없는지를 Smoke Test로 확인한다. `/internal/**`이 인터넷 Nginx 경로에서 차단되는지도 배포 후 검사한다. p95 500ms/800ms/1초와 오류율 1% 기준은 운영 동급 단일 EC2, 기준 데이터 100%, WireMock 외부 Stub 환경의 별도 성능·부하 테스트에서 검증한다.
 
 ## 14. 재검토 조건
 

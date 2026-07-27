@@ -22,6 +22,14 @@ related_documents:
   - ../api/discovery/creator-discovery-api.md
   - ../api/detail/restaurant-detail-api.md
   - ../../07-adr/security/auth-003-confirmation-token.md
+  - physical-data-model.md
+  - table-definitions.md
+  - constraint-mapping.md
+  - index-strategy.md
+  - migration-plan.md
+  - seed-data-plan.md
+  - ../../07-adr/data/data-007-uuid-v4-identifiers.md
+  - ../../07-adr/data/data-008-publication-lifecycle-soft-delete.md
 ---
 
 # 맛잇온 데이터 추적성
@@ -64,12 +72,12 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 | [BR-RESTAURANT-003](../../01-requirements/business-rules.md#br-restaurant-003-맛집-최소-등록-정보)~[BR-RESTAURANT-005](../../01-requirements/business-rules.md#br-restaurant-005-맛집의-지역-소속) | 최소 정보·카테고리·지역 | 필수 속성, Region·FoodCategory 1개 | 필요 | 필요 |
 | [BR-RESTAURANT-006](../../01-requirements/business-rules.md#br-restaurant-006-맛집-중복-판단)·[BR-RESTAURANT-007](../../01-requirements/business-rules.md#br-restaurant-007-동일-상호의-지점-구분) | 카카오 동일성·지점 구분 | kakaoPlaceIdentity 유일, 이름 비유일 | 필요 | 필요 |
 | [BR-CREATOR-001](../../01-requirements/business-rules.md#br-creator-001-유튜버-정보의-의미)~[BR-CREATOR-003](../../01-requirements/business-rules.md#br-creator-003-동일-채널-중복-판단) | 채널 관리 단위·최소 정보·중복 | externalChannelId 유일 | 필요 | 필요 |
-| [BR-CREATOR-005](../../01-requirements/business-rules.md#br-creator-005-방문-관계의-유튜버-일치) | Visit 채널 일치 | Video 게시 Creator와 Visit.Creator 일치 | 후속 설계 | 필요 |
+| [BR-CREATOR-005](../../01-requirements/business-rules.md#br-creator-005-방문-관계의-유튜버-일치) | Visit 채널 일치 | Video 게시 Creator와 Visit.Creator 일치 | 복합 FK | 필요 |
 | [BR-VIDEO-001](../../01-requirements/business-rules.md#br-video-001-영상의-의미와-보관-범위)~[BR-VIDEO-003](../../01-requirements/business-rules.md#br-video-003-영상-식별-및-중복-판단) | 원본 미저장·필수 메타·중복 | Video 메타, externalVideoId 유일 | 필요 | 필요 |
 | [BR-VIDEO-004](../../01-requirements/business-rules.md#br-video-004-영상과-방문-관계의-다대상-연결)·[BR-VIDEO-005](../../01-requirements/business-rules.md#br-video-005-실제-방문-근거) | 다대상·실제 방문 | Video 1:N Visit, 생성 전 확인 | 참조 필요 | 필요 |
 | [BR-VIDEO-006](../../01-requirements/business-rules.md#br-video-006-게시일과-방문일의-구분) | 게시일·방문일 구분 | Visit 방문일 없음, Video 게시일 선택 | 해당 없음 | 필요 |
 | [BR-VISIT-001](../../01-requirements/business-rules.md#br-visit-001-방문-관계의-구성)~[BR-VISIT-004](../../01-requirements/business-rules.md#br-visit-004-방문-관계의-연결-범위) | 삼항 구성·근거·중복·범위 | 세 필수 참조, 복합 유일 | 필요 | 필요 |
-| [BR-VISIT-005](../../01-requirements/business-rules.md#br-visit-005-방문-관계의-조회-유효성)·[BR-PUBLICATION-001](../../01-requirements/business-rules.md#br-publication-001-일반-사용자-공개-범위)~[BR-PUBLICATION-008](../../01-requirements/business-rules.md#br-publication-008-상태-변경의-일관성) | 조회 공개 유효성 | 개별 publication·외부 상태 | 허용값 필요 | 필요 |
+| [BR-VISIT-005](../../01-requirements/business-rules.md#br-visit-005-방문-관계의-조회-유효성)·[BR-PUBLICATION-001](../../01-requirements/business-rules.md#br-publication-001-일반-사용자-공개-범위)~[BR-PUBLICATION-008](../../01-requirements/business-rules.md#br-publication-008-상태-변경의-일관성) | 조회 공개 유효성 | publication·lifecycle·외부 상태 | CHECK 허용값·조합 | 필요 |
 | [BR-VISIT-006](../../01-requirements/business-rules.md#br-visit-006-방문-날짜-관리-제외)·[BR-VISIT-007](../../01-requirements/business-rules.md#br-visit-007-등록-완료와-검증-상태) | 방문일·검증 상태 제외 | 속성 미생성, 생성 완료가 검증 완료 | 해당 없음 | 필요 |
 | [BR-ADMIN-003](../../01-requirements/business-rules.md#br-admin-003-등록-정합성-검증)·[BR-ADMIN-007](../../01-requirements/business-rules.md#br-admin-007-동시-등록의-고유성) | 정합성·동시성 | 유일·참조·원자성 | 필요 | 필요 |
 | [BR-ADMIN-008](../../01-requirements/business-rules.md#br-admin-008-보류-요청의-처리) | 보류 요청 | 핵심 엔티티·보류 레코드 미생성 | 해당 없음 | 필요 |
@@ -87,7 +95,7 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 | [API-ADMIN-CREATOR-001](../api/admin/reference-data-api.md#api-admin-creator-001-유튜버-등록-확정) | Creator 생성 | Creator | 없음 | Creator 한 건 전체 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) / Creator |
 | [API-ADMIN-VIDEO-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-video-preview-001-영상-등록-검증-미리보기) | 외부 영상·게시 채널 검증 | 핵심 Entity 변경 없음, `READY`이면 ConfirmationToken 기술 행 생성 | 게시 채널 후보 | Token 발급 행 하나 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
 | [API-ADMIN-VIDEO-001](../api/admin/reference-data-api.md#api-admin-video-001-영상-등록-확정) | Video 생성 | Video와 게시 채널 외부 식별 | 없음(내부 Creator 연결 선택) | Video 한 건 전체 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) / Video |
-| [API-ADMIN-VISIT-001](../api/admin/visit-registration-api.md#api-admin-visit-001-방문-관계-등록) | 방문 관계 생성 | Visit | Restaurant, Creator, Video | 검증·복합 중복·저장 전체 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) / Visit |
+| [API-ADMIN-VISIT-001](../api/admin/visit-registration-api.md#api-admin-visit-001-방문-관계-등록) | 방문 관계 생성 | Visit, 필요 시 Video.Creator 연결 | Restaurant, Creator, Video | 채널 연결 해소·검증·복합 중복·저장 전체 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) / Visit |
 
 확인 Token은 PostgreSQL에 SHA-256 해시·관리자·자원 종류·후보 스키마 버전·JSONB Snapshot과 결과 상태를 저장한다. 10분 만료, 원자적 소비와 완료·만료 결과 24시간 재현은 [ADR-AUTH-003](../../07-adr/security/auth-003-confirmation-token.md)을 따른다. `REVIEW_REQUIRED`는 등록 요청으로 저장하지 않는다.
 
@@ -115,14 +123,26 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 | [WS-03](../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 유튜버 기반 탐색 | Visit 관계 판정 계약 | Creator, Video, Restaurant 상태 | 최종 Restaurant 페이지 조합은 [WS-01](../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색) |
 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 관리자 등록 | 인증·등록 흐름 조율 | AdminAccount·AdminRefreshToken 및 네 소유 도메인 | 도메인 고유·정합성 규칙을 우회하지 않음 |
 
-## 8. 미매핑 항목
+## 8. 물리 설계 라우팅
+
+| 결정 | 구현 문서 | 승인·근거 |
+|---|---|---|
+| PostgreSQL 테이블·컬럼·타입 | [table-definitions.md](table-definitions.md) | [ADR-DATA-001](../../07-adr/data/data-001-postgresql.md) |
+| UUID 내부 식별자 | [physical-data-model.md](physical-data-model.md#2-확정-물리-컨벤션) | [ADR-DATA-007](../../07-adr/data/data-007-uuid-v4-identifiers.md) Accepted |
+| 공개·논리 삭제 상태 | [constraint-mapping.md](constraint-mapping.md#5-상태-전환-불변식) | [ADR-DATA-008](../../07-adr/data/data-008-publication-lifecycle-soft-delete.md) Accepted |
+| 외부 자원 동일성 | [constraint-mapping.md](constraint-mapping.md#1-논리-규칙-물리-제약) | [ADR-EXT-001](../../07-adr/integration/ext-001-reference-verification.md) |
+| 채널 일치·참조·유일성 | [constraint-mapping.md](constraint-mapping.md) | 논리 규칙 + PostgreSQL 복합 FK·UK |
+| 조회 인덱스 | [index-strategy.md](index-strategy.md) | API 조회·성능 NFR |
+| 스키마 배포·기준 데이터 | [migration-plan.md](migration-plan.md), [seed-data-plan.md](seed-data-plan.md) | [ADR-DATA-004](../../07-adr/data/data-004-flyway.md) |
+
+## 9. 미매핑 항목
 
 - Restaurant 설명·대표 이미지·영업 정보는 확정 요구사항/API가 없어 저장 모델에서 제외했다.
 - Creator 프로필 이미지, Video 게시일의 외부 API 노출, Visit 방문일·검증 상태·검증자는 MVP에서 제외하거나 선택 데이터다.
 - 수정·삭제·승인·보류 목록 API가 없으므로 관련 운영 전환은 API 변경으로 만들지 않았다.
 - 로그인 실패 제한 카운터는 저장 방식이 미정이다. 확인 Token은 PostgreSQL 단기 기술 테이블로 확정됐지만 핵심 도메인 ERD에는 포함하지 않는다.
 
-## 9. 변경 영향 추적
+## 10. 변경 영향 추적
 
 - 지역 단계·범위 변경: Region, Restaurant, 탐색/등록 API와 [BR-RESTAURANT-005](../../01-requirements/business-rules.md#br-restaurant-005-맛집의-지역-소속)를 함께 검토한다.
 - 다중 카테고리 변경: Restaurant–FoodCategory 카디널리티, 필터 API와 [BR-RESTAURANT-004](../../01-requirements/business-rules.md#br-restaurant-004-대표-음식-카테고리)를 함께 변경한다.

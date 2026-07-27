@@ -10,14 +10,16 @@ erDiagram
     REGION {
         identifier id PK
         text name UK
-        text code "optional, review required"
+        text code UK
+        integer sortOrder UK
         boolean active
     }
 
     FOOD_CATEGORY {
         identifier id PK
         text name UK
-        text code "optional, review required"
+        text code UK
+        integer sortOrder UK
         boolean active
     }
 
@@ -33,8 +35,10 @@ erDiagram
         text phoneNumber
         text otherCategoryName "required only for Other"
         status publicationStatus
+        status lifecycleStatus
         timestamp createdAt
         timestamp updatedAt
+        timestamp deletedAt "required only when deleted"
     }
 
     CREATOR {
@@ -43,9 +47,12 @@ erDiagram
         text channelName
         text channelUrl
         status publicationStatus
+        status lifecycleStatus
         status externalAvailabilityStatus
+        timestamp lastExternalStatusCheckedAt
         timestamp createdAt
         timestamp updatedAt
+        timestamp deletedAt "required only when deleted"
     }
 
     VIDEO {
@@ -58,9 +65,12 @@ erDiagram
         text thumbnailUrl
         timestamp publishedAt "optional, not visit date"
         status publicationStatus
+        status lifecycleStatus
         status externalAvailabilityStatus
+        timestamp lastExternalStatusCheckedAt
         timestamp createdAt
         timestamp updatedAt
+        timestamp deletedAt "required only when deleted"
     }
 
     VISIT {
@@ -69,8 +79,10 @@ erDiagram
         identifier creatorId FK "composite UK part; matches Video publisher channel"
         identifier videoId FK "composite UK part"
         status publicationStatus
+        status lifecycleStatus
         timestamp createdAt
         timestamp updatedAt
+        timestamp deletedAt "required only when deleted"
     }
 
     ADMIN_ACCOUNT {

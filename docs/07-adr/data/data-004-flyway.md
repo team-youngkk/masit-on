@@ -2,7 +2,7 @@
 id: ADR-DATA-004
 title: Flyway 스키마 마이그레이션
 status: Accepted
-decision_date: 검토 필요
+decision_date: 2026-07-27
 owners:
   - 박진영
 related_requirements:

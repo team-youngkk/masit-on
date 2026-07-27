@@ -16,15 +16,17 @@ related_documents:
   - ../../02-analysis/mvp-workstreams.md
   - ../../01-requirements/non-functional-requirements.md
   - ../api/admin/authentication-api.md
+  - physical-data-model.md
+  - table-definitions.md
 ---
 
 # 맛잇온 데이터 엔티티 정의
 
 ## 공통 규칙
 
-- 모든 핵심 데이터는 외부 식별자와 분리된 불투명 내부 식별자를 가진다. 구체 타입은 후속 설계에서 결정한다.
-- publication status는 `PUBLIC`과 일반 사용자 비노출 상태를 구분한다. 삭제·보관 상태의 물리 표현은 별도 검토한다.
-- `createdAt`, `updatedAt`은 공통 감사 속성 후보이며 정확한 적용 범위와 변경자 이력은 후속 설계에서 결정한다.
+- 모든 핵심 데이터는 외부 식별자와 분리된 불투명 내부 식별자를 가진다. PostgreSQL `uuid`와 애플리케이션 생성 UUID v4를 사용한다.
+- publication status는 `PUBLIC`과 일반 사용자 비노출 상태를 구분한다. 물리안의 삭제 표현은 [ADR-DATA-008](../../07-adr/data/data-008-publication-lifecycle-soft-delete.md)을 따른다.
+- `createdAt`, `updatedAt`은 공통 감사 속성이고 핵심 삭제 데이터는 `deletedAt`을 추가한다. 변경자·사유 이력은 MVP에 저장하지 않는다.
 - API 응답의 집계·축약·조합 필드는 엔티티 속성이 아니다.
 
 ## Restaurant
@@ -41,26 +43,25 @@ related_documents:
 
 - 내부 식별자: API와 내부 관계에서 사용하는 서비스 식별자
 - 업무 식별 기준: 카카오에서 확인한 동일 장소
-- 외부 식별자: 카카오 장소 동일성을 안정적으로 나타내는 값. 구체 추출·정규화 방식은 검토 필요
+- 외부 식별자: Kakao Local REST API 응답의 place ID를 문자열 그대로 저장하며 입력 URL이나 장소명에서 추정하지 않는다.
 - 이름은 식별자가 아니며 같은 상호의 다른 지점을 허용한다.
 
 ### 속성
 
 | 속성 | 의미 | 필수 여부 | 유일성 | 변경 가능 여부 | 공개 여부 | 비고 |
 |---|---|---:|---:|---:|---:|---|
-| id | 내부 식별자 | 필수 | 유일 | 불가 | 공개 | 타입 미확정 |
+| id | 내부 식별자 | 필수 | 유일 | 불가 | 공개 | PostgreSQL UUID |
 | name | 맛집 표시 이름 | 필수 | 단독 유일 아님 | 후속 관리 기능 | 공개 | 동일 상호 허용 |
-| kakaoPlaceIdentity | 카카오 동일 장소 판정값 | 필수 | 유일 필요 | 원칙상 불가 | 비공개 | 물리 표현 검토 필요 |
+| kakaoPlaceIdentity | 카카오 동일 장소 판정값 | 필수 | 유일 필요 | 원칙상 불가 | 비공개 | 물리 컬럼 `kakao_place_id` |
 | kakaoPlaceUrl | 카카오 장소 링크 | 필수 | 단독 유일성에 의존하지 않음 | 후속 관리 기능 | 공개 | HTTPS 허용 호스트 검증 |
 | roadAddress | 서울특별시 전체 도로명주소 | 필수 | 단독 유일 아님 | 후속 관리 기능 | 공개 | 지점 구분 보조 정보 |
 | detailAddress | 건물명·층·호 등 상세 위치 | 선택 | 아님 | 후속 관리 기능 | 공개 | 없으면 null |
 | phoneNumber | 확인된 전화번호 | 필수 | 아님 | 후속 관리 기능 | 공개 | 현재 API 필수 |
-| otherCategoryName | `기타` 카테고리의 구체 음식 종류 | 조건부 필수 | 아님 | 후속 관리 기능 | 검토 필요 | `기타`가 아니면 없음 |
 | publicationStatus | 사용자 공개 여부 | 필수 | 아님 | 운영 정정 시 | 비공개 | 생성 성공 시 PUBLIC |
-| lifecycleStatus | 활성·삭제/보관 구분 | 검토 필요 | 아님 | 가능 | 비공개 | 구현·값 미확정 |
-| createdAt / updatedAt | 생성·변경 시각 | 공통 요구 | 아님 | 시스템 | 비공개 | API 미노출 |
+| lifecycleStatus | 활성·삭제 구분 | 필수 | 아님 | 가능 | 비공개 | 물리안 ACTIVE/DELETED |
+| createdAt / updatedAt / deletedAt | 생성·변경·삭제 시각 | 공통 요구 | 아님 | 시스템 | 비공개 | deletedAt은 삭제 상태에서만 필수 |
 
-설명, 대표 이미지 URL, 영업 정보는 확정 요구사항과 API에 없으므로 저장 속성으로 추가하지 않는다. 지점명은 필수값이 아니며 카카오 장소와 주소로 지점을 구분한다.
+설명, 대표 이미지 URL, 영업 정보와 `기타` 카테고리의 보충 이름은 확정 MVP 저장 속성으로 추가하지 않는다. 지점명은 필수값이 아니며 카카오 장소와 주소로 지점을 구분한다.
 
 ### 관계
 
@@ -123,8 +124,8 @@ Restaurant 등록과 지역 필터에 공통으로 사용하는 서울특별시 
 |---|---|---:|---:|---:|---:|---|
 | id | 내부 식별자 | 필수 | 유일 | 불가 | 비공개 | API는 이름을 사용 |
 | name | 자치구 표준 이름 | 필수 | 유일 | 기준 변경 시 | 공개 | 서울 자치구만 허용 |
-| code | 별도 업무 코드 | 검토 필요 | 사용 시 유일 | 기준 변경 시 | 비공개 | API 계약에는 없음 |
-| sortOrder | 선택 목록 정렬 | 선택 | 아님 | 가능 | 비공개 | 현재 API 정렬 계약 없음 |
+| code | 내부 기준 코드 | 필수 | 유일 | 원칙상 불가 | 비공개 | 물리 seed의 안정 코드 |
+| sortOrder | 선택 목록 정렬 | 필수 | 유일 | 기준 변경 시 | 비공개 | 물리 seed 순서 |
 | active | 신규 연결 허용 여부 | 필수 | 아님 | 가능 | 비공개 | 기존 Restaurant 관계 유지 |
 
 ### 관계 및 규칙
@@ -155,15 +156,15 @@ Restaurant의 주된 메뉴와 영업 정체성을 나타내는 사전 정의된
 |---|---|---:|---:|---:|---:|---|
 | id | 내부 식별자 | 필수 | 유일 | 불가 | 비공개 | 관계용 |
 | name | API에 노출되는 표준 카테고리 | 필수 | 유일 | 범위 변경 시 | 공개 | 확정 10개 값 |
-| code | 별도 업무 코드 | 검토 필요 | 사용 시 유일 | 기준 변경 시 | 비공개 | API 계약에는 없음 |
-| sortOrder | 선택 목록 정렬 | 선택 | 아님 | 가능 | 비공개 | 현재 계약 없음 |
+| code | 내부 기준 코드 | 필수 | 유일 | 원칙상 불가 | 비공개 | 물리 seed의 안정 코드 |
+| sortOrder | 선택 목록 정렬 | 필수 | 유일 | 기준 변경 시 | 비공개 | 물리 seed 순서 |
 | active | 신규 연결 허용 여부 | 필수 | 아님 | 가능 | 비공개 | 기존 관계 유지 |
 
 ### 관계 및 규칙
 
 - FoodCategory 1 : N Restaurant. Restaurant는 정확히 하나를 참조한다.
 - Restaurant–FoodCategory 다중 관계 엔티티는 만들지 않는다.
-- `기타`일 때 Restaurant.otherCategoryName이 필요하다.
+- `기타`도 별도 Restaurant 보충 속성 없이 FoodCategory 참조만 저장한다.
 - 관련 항목: [FR-RESTAURANT-004](../../01-requirements/functional-requirements.md#fr-restaurant-004-음식-카테고리별-필터)·[FR-RESTAURANT-010](../../01-requirements/functional-requirements.md#fr-restaurant-010-음식-카테고리-확인), [FR-ADMIN-002](../../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록), [BR-RESTAURANT-004](../../01-requirements/business-rules.md#br-restaurant-004-대표-음식-카테고리), [API-DISCOVERY-001](../api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색)·[API-DETAIL-001](../api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회)·[API-ADMIN-RESTAURANT-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-restaurant-preview-001-맛집-등록-검증-미리보기)
 
 ## Creator
@@ -191,9 +192,10 @@ Restaurant의 주된 메뉴와 영업 정체성을 나타내는 사전 정의된
 | channelName | 현재 확인된 채널 표시 이름 | 필수 | 단독 유일 아님 | 후속 관리 기능 | 공개 | 변경돼도 동일성 유지 |
 | channelUrl | 정규화된 YouTube 채널 링크 | 필수 | 보조 유일성 검토 | 가능 | 공개 | ID 유일성을 대체하지 않음 |
 | publicationStatus | 서비스 공개 여부 | 필수 | 아님 | 운영 정정 시 | 비공개 | 생성 시 PUBLIC |
+| lifecycleStatus | 활성·삭제 구분 | 필수 | 아님 | 가능 | 비공개 | 물리안 ACTIVE/DELETED |
 | externalAvailabilityStatus | YouTube 채널 가용 상태 | 필수 | 아님 | 관리자 확인 시 | 비공개 | 공개 상태와 분리 |
-| lastExternalStatusCheckedAt | 마지막 외부 확인 시각 | 검토 필요 | 아님 | 시스템 | 비공개 | 자동 주기 확인은 제외 |
-| createdAt / updatedAt | 생성·변경 시각 | 공통 요구 | 아님 | 시스템 | 비공개 |  |
+| lastExternalStatusCheckedAt | 마지막 외부 확인 시각 | 필수 | 아님 | 시스템 | 비공개 | 등록 미리보기 확인 시각 |
+| createdAt / updatedAt / deletedAt | 생성·변경·삭제 시각 | 공통 요구 | 아님 | 시스템 | 비공개 | deletedAt은 삭제 상태에서만 필수 |
 
 프로필 이미지 URL은 확정 요구사항과 API에 없으므로 추가하지 않는다.
 
@@ -233,9 +235,10 @@ Visit의 실제 방문 근거 후보로 등록된 YouTube 원본 콘텐츠의 �
 | creatorId | 일치하는 내부 Creator 참조 | 선택 | 아님 | 연결 해소 시 | 비공개 | 존재하면 외부 채널 ID가 같아야 함 |
 | publishedAt | YouTube 게시 시각 | 선택 | 아님 | 외부 정보 갱신 시 | 현재 API 비공개 | 방문일과 다름 |
 | publicationStatus | 서비스 공개 여부 | 필수 | 아님 | 운영 정정 시 | 비공개 | 생성 시 PUBLIC |
+| lifecycleStatus | 활성·삭제 구분 | 필수 | 아님 | 가능 | 비공개 | 물리안 ACTIVE/DELETED |
 | externalAvailabilityStatus | 외부 영상 가용 상태 | 필수 | 아님 | 관리자 확인 시 | 비공개 | 공개 상태와 분리 |
-| lastExternalStatusCheckedAt | 마지막 외부 확인 시각 | 검토 필요 | 아님 | 시스템 | 비공개 | 자동 확인 제외 |
-| createdAt / updatedAt | 생성·변경 시각 | 공통 요구 | 아님 | 시스템 | 비공개 |  |
+| lastExternalStatusCheckedAt | 마지막 외부 확인 시각 | 필수 | 아님 | 시스템 | 비공개 | 등록 미리보기 확인 시각 |
+| createdAt / updatedAt / deletedAt | 생성·변경·삭제 시각 | 공통 요구 | 아님 | 시스템 | 비공개 | deletedAt은 삭제 상태에서만 필수 |
 
 ### 관계와 규칙
 
@@ -266,8 +269,8 @@ Visit의 실제 방문 근거 후보로 등록된 YouTube 원본 콘텐츠의 �
 |---|---|---:|---:|---:|---:|---|
 | id | 내부 식별자 | 필수 | 유일 | 불가 | 관리자 응답 |  |
 | publicationStatus | 관계 공개 여부 | 필수 | 아님 | 운영 정정 시 | 비공개 | 생성 시 PUBLIC |
-| lifecycleStatus | 활성·삭제/보관 구분 | 검토 필요 | 아님 | 가능 | 비공개 | 물리 전략 미확정 |
-| createdAt / updatedAt | 생성·변경 시각 | 공통 요구 | 아님 | 시스템 | 비공개 |  |
+| lifecycleStatus | 활성·삭제 구분 | 필수 | 아님 | 가능 | 비공개 | 물리안 ACTIVE/DELETED |
+| createdAt / updatedAt / deletedAt | 생성·변경·삭제 시각 | 공통 요구 | 아님 | 시스템 | 비공개 | deletedAt은 삭제 상태에서만 필수 |
 
 방문일은 MVP에서 저장하지 않는다. 별도 검증 상태·검증자·검증 시각도 저장하지 않는다. `visitEvidenceConfirmed=true`는 생성 전 명령 검증값이며 Visit 속성이 아니다. 생성 완료 자체가 관리자 검증 완료를 뜻한다.
 
@@ -319,11 +322,11 @@ MVP 관리자 인증에 사용하는 사전 발급 내부 계정이다. 일반 �
 | tokenCredential | 쿠키 Refresh Token과 대조할 안전한 검증 값 | 필수 | 유일 | 비공개 | 원문 저장·로그 금지 |
 | tokenFamilyId | 회전·재사용 탐지 단위 | 필수 | 아님 | 비공개 | 재사용 시 계열 폐기 |
 | createdAt | 로그인·회전 시각 | 필수 | 아님 | 비공개 |  |
-| expiresAt | Refresh Token 만료 시각 | 필수 | 아님 | 비공개 | 정확한 TTL은 구현 전 확정 |
+| expiresAt | Refresh Token 만료 시각 | 필수 | 아님 | 비공개 | 발급·회전 후 14일 |
 | invalidatedAt | 로그아웃·대체 로그인·재사용 탐지 폐기 시각 | 선택 | 아님 | 비공개 |  |
 
 ### 관계와 규칙
 
 - 정확히 하나의 AdminAccount를 참조한다.
 - 계정당 활성 Refresh Token은 최대 하나이며 새 로그인은 기존 Token을 폐기한다.
-- 저장 매체는 Redis 8.8로 확정한다. 키 형식, 검증값 해시·암호화, 정확한 TTL, 서명 키 교체와 로그인 제한 카운터는 후속 기술 설계 대상이다.
+- 저장 매체는 Redis 8.8, TTL은 14일로 확정한다. 키 형식, 검증값 해시·암호화, 서명 키 교체와 로그인 제한 카운터는 후속 기술 설계 대상이다.

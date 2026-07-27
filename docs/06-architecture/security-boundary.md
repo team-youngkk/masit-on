@@ -147,14 +147,14 @@ URL은 HTTPS와 허용 호스트를 검증하고 리디렉션 최종 호스트�
 
 관리자 화면은 Access Token이 메모리에 없을 때 재발급을 한 번 시도한다. 성공하면 현재 화면을 유지하고 실패하면 `/admin/login`으로 이동한다. 관리자 API `401` 뒤 재발급과 원래 요청 재실행도 각각 한 번으로 제한한다. 프론트엔드 라우트 가드는 화면 노출만 제어하며 최종 권한 판정은 이 보안 경계가 수행한다.
 
-## 9. 확인 필요와 추가 ADR
+## 9. 확정 보안 세부와 추가 ADR
 
-### 확인 필요
+### 확정 보안 세부
 
-- JWT issuer, audience, 알고리즘, `kid`와 키 교체 절차
-- 로그인 실패 15분 내 5회의 저장 위치·동시성·해제 절차
-- Redis 키 형식, 직렬화와 Token 계열 정리 주기
-- 실제 Java Principal 타입의 소유 패키지
+- JWT는 RS256, `iss=masit-on`, `aud=masit-on-admin-api`를 사용하고 `kid`로 검증 키를 선택한다. 키는 90일마다 교체하며 새 검증 키 선배포 → 새 키 발급 전환 → 30분 뒤 이전 개인 키 폐기 순서를 지킨다.
+- 로그인 실패는 Redis `auth:login-failure:{loginIdHash}` 카운터에 첫 실패부터 15분 TTL을 적용한다. 원자 증가 결과가 5 이상이면 남은 TTL 동안 차단하고 로그인 성공 시 삭제한다.
+- Refresh Token은 Redis `auth:refresh:{adminId}`에 SHA-256 해시·Token 계열 ID·발급 및 만료 시각을 JSON으로 저장하고 14일 TTL로 정리한다. 회전과 재사용 탐지는 원자 연산으로 수행한다.
+- Java Principal 타입은 `com.masiton.security.application.AdminPrincipal`이 소유하고 presentation·domain 패키지에는 두지 않는다.
 
 ### 추가 ADR 필요
 

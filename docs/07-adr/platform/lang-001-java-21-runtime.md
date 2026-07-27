@@ -2,7 +2,7 @@
 id: ADR-LANG-001
 title: Java 21 런타임 기준
 status: Accepted
-decision_date: 검토 필요
+decision_date: 2026-07-27
 owners:
   - 맛잇온 Team
 related_requirements:

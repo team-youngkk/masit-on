@@ -62,15 +62,15 @@ Restaurant Domain 객체가 Visit, Creator, Video를 조회하지 않는다. Con
 
 ### 기본 정보
 
-Restaurant 테이블과 Restaurant 소유 참조 데이터(Region, FoodCategory)를 Projection으로 조회한다. 상세 API가 요구하는 필드만 선택한다.
+Restaurant 테이블과 Restaurant 소유 참조 데이터(Region, FoodCategory)를 Projection으로 조회한다. Restaurant는 `PUBLIC`·`ACTIVE` 조건을 만족해야 하며 상세 API가 요구하는 필드만 선택한다.
 
 ### 콘텐츠
 
 Visit를 기준으로 Creator와 Video를 조인해 다음 조건을 DB에서 먼저 적용한다.
 
-- Visit 공개·유효
-- Creator 공개 및 외부 이용 가능
-- Video 공개 및 외부 이용 가능
+- Visit `PUBLIC`·`ACTIVE`
+- Creator `PUBLIC`·`ACTIVE` 및 외부 `AVAILABLE`
+- Video `PUBLIC`·`ACTIVE` 및 외부 `AVAILABLE`
 - 요청 Restaurant ID 일치
 
 결과 Row는 한 Visit에 필요한 Creator·Video 표시 필드를 함께 가진다. Application이 다음을 수행한다.
@@ -80,7 +80,7 @@ Visit를 기준으로 Creator와 Video를 조인해 다음 조건을 DB에서 �
 - 안정적인 정렬 적용
 - API 목록으로 매핑
 
-구체 정렬 기준이 외부 API 계약에 아직 명시되지 않았으므로 임의의 “최신순”을 도입하지 않는다. **확인 필요:** 상세의 `visitedBy`와 `videos` 정렬 기준을 API 계약에서 확정한다.
+`visitedBy`는 `channelName`, 같은 이름은 Creator ID 오름차순으로 정렬한다. `videos`는 `title`, 같은 제목은 Video ID 오름차순으로 정렬한다. 게시일·방문일 최신순을 도입하지 않으며 DB의 우연한 반환 순서에 의존하지 않는다.
 
 ## 6. N+1과 쿼리 수
 
@@ -98,7 +98,7 @@ Visit를 기준으로 Creator와 Video를 조인해 다음 조건을 DB에서 �
 
 - 맛집 목록은 공통 페이지 계약(기본 20, 허용 10/20/50)을 따른다.
 - 상세 API는 방문 Creator와 Video 전체를 반환하는 현재 계약이므로 내부 페이지네이션을 노출하지 않는다.
-- 초기 데이터 규모와 맛집당 관계 상한은 미확정이다.
+- 초기 데이터는 맛집 1,000개, 유튜버 200개, 영상 5,000개, 방문 관계 10,000개를 기준으로 한다. 맛집당 관계 상한은 두지 않고 성능 데이터셋에 관계가 많은 맛집을 포함한다.
 - 단일 맛집의 관계 수가 p95 500ms 또는 응답 크기 기준을 위협한다면 API 분리·페이지네이션을 계약 변경으로 검토한다.
 
 상세 내부에서 임의로 결과를 잘라 API 계약과 다른 응답을 만들지 않는다.
@@ -129,7 +129,7 @@ MVP는 별도 물리 저장소가 없는 **코드 수준 CQRS**만 적용한다.
 MVP 상세 조회 캐시는 도입하지 않는다.
 
 - Redis는 관리자 Refresh Token 저장 역할로 확정됐고 조회 캐시는 별도 활성화 조건이 필요하다.
-- 데이터 규모·조회량·반복 조회율이 미확정이다.
+- 기준 데이터 규모와 목표 부하는 확정했으며 캐시는 실제 반복 조회율과 DB 부하가 병목으로 확인될 때만 검토한다.
 - 관리자 등록 직후 반영 요구와 캐시 무효화 규칙이 추가된다.
 
 실측 병목이 생기면 캐시 키, TTL, 무효화, 장애 시 fallback과 Token Redis 역할 분리를 추가 ADR로 결정한다.

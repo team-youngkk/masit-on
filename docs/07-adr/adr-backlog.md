@@ -14,6 +14,8 @@ related_documents:
   - security/auth-001-spring-security-jwt.md
   - security/auth-003-confirmation-token.md
   - data/data-005-redis-refresh-token.md
+  - data/data-007-uuid-v4-identifiers.md
+  - data/data-008-publication-lifecycle-soft-delete.md
 ---
 
 # 맛잇온 ADR Backlog
@@ -24,7 +26,7 @@ related_documents:
 
 ## 2. 구현 전 필수 ADR
 
-현재 미결정 항목은 없다. 확인 Token 결정은 2026-07-27 [ADR-AUTH-003](security/auth-003-confirmation-token.md)으로 확정했다.
+현재 미결정 항목은 없다. 확인 Token은 [ADR-AUTH-003](security/auth-003-confirmation-token.md), 내부 식별자는 [ADR-DATA-007](data/data-007-uuid-v4-identifiers.md), 공개·논리 삭제 생명주기는 [ADR-DATA-008](data/data-008-publication-lifecycle-soft-delete.md)로 2026-07-27 확정했다.
 
 ## 3. 조건부 ADR
 
@@ -90,7 +92,7 @@ related_documents:
 
 - 현재 상태: Conditional
 - 현재 결정: 성능 요구사항과 테스트 환경은 유지하되 도구 의존성은 추가하지 않는다.
-- 활성화 조건: [RV-NFR-011](../01-requirements/non-functional-requirements.md#rv-nfr-011-성능-테스트-환경)의 환경·데이터 규모·부하 모델을 팀이 결정한다.
+- 활성화 조건: 확정된 운영 동급 환경·기준 데이터·부하 모델을 자동 반복 실행할 도구가 필요하고 정확한 k6 버전과 CI 비용이 승인된다.
 - 도입 전 확인: 정확한 버전, CI 실행 위치, 임계값, 결과 보관
 - 영향: CI 시간, 성능 품질 게이트
 
@@ -202,7 +204,7 @@ related_documents:
 | 세분화된 관리자 권한 | Post-MVP | 사전 발급 단일 `ADMIN` 역할만 범위에 포함 | [ADR-AUTH-004](#adr-auth-004-관리자-권한-세분화)의 권한 모델·이전 결정 |
 | Nginx·EC2·ECR | 결정 완료 (2026-07-24) | 기술 스펙에는 확정, NFR은 배포 상세를 후속 설계로 둠 | 단일 EC2 인스턴스(Nginx 리버스 프록시+App), 장애 시 수동 복구 |
 | ALB·ASG·Blue-Green | 결정 완료 (2026-07-24) | 기술 스펙의 다중 인스턴스 구조와 NFR의 단일 인스턴스 수동 복구·복잡도 제한이 충돌 | MVP는 도입하지 않음. ALB는 확장 단계 우선 검토 대상으로 남기고, ASG·Blue-Green은 Post-MVP로 보류 |
-| 전체 CI/CD 배포 흐름 | 팀 결정 필요 | 빌드·테스트 게이트는 확정, 배포 자동화·수동 승인 지점은 미확정 | [RV-NFR-012](../01-requirements/non-functional-requirements.md#rv-nfr-012-배포-자동화-범위) 결정 |
+| 전체 CI/CD 배포 흐름 | 결정 완료 (2026-07-27) | 빌드·테스트·이미지 생성·ECR push 자동, 운영 EC2 배포 수동 승인, Smoke Test 자동, 복구 수동 | 배포 토폴로지 확장 시 재검토 |
 | 로그 14일 보관 | 결정 완료 (2026-07-24) | 기술 스펙 값과 [RV-NFR-009](../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간)의 미결정 상태가 충돌 | 14일 보관(기술 스펙 값) 확정. 백업은 일 1회 자동 스냅샷+7일 보관, 알림은 CloudWatch 알람→이메일/Slack, 담당자 1명 |
 
 ## 6. 활성화 조건
@@ -239,4 +241,4 @@ Conditional·Post-MVP Backlog 항목은 다음을 모두 충족해야 활성화�
 | 백업 | PostgreSQL 일 1회 자동 스냅샷, 7일 보관, RPO 최대 24시간 |
 | 운영 알림 | CloudWatch 알람 → 이메일/Slack, 담당자 1명 |
 
-남은 미결정 항목: 배포 자동화 범위([RV-NFR-012](../01-requirements/non-functional-requirements.md#rv-nfr-012-배포-자동화-범위), ALB·Blue-Green 전환 자동화 포함)는 배포 토폴로지가 확장될 때 별도 결정한다.
+현재 구현 전 필수 미결정 항목은 없다. ALB·Blue-Green 전환 자동화는 배포 토폴로지가 확장될 때 별도 결정한다.

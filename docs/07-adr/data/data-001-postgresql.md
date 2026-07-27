@@ -2,7 +2,7 @@
 id: ADR-DATA-001
 title: PostgreSQL 17.10 주 데이터베이스
 status: Accepted
-decision_date: 검토 필요
+decision_date: 2026-07-27
 owners:
   - 박진영
 related_requirements:
@@ -37,7 +37,7 @@ Accepted
 
 ## 3. 배경
 
-맛잇온의 핵심 도메인은 Restaurant, Visit, Creator, Video 네 엔티티이며 "어떤 크리에이터가 어떤 영상에서 어떤 맛집을 방문했는가"를 조회하는 것이 서비스 가치의 중심이다. 즉 대부분의 화면(목록, 상세, 검색·필터)이 여러 엔티티를 조인해서 응답을 구성하며, 관리자가 수동으로 등록하는 값들 사이의 참조 무결성(존재하지 않는 Creator를 가리키는 Video 금지 등)과 등록 트랜잭션의 원자성이 데이터 신뢰성의 최소 조건이다. 데이터 규모 자체는 크지 않지만(맛집·영상 수는 [RV-NFR-002](../../01-requirements/non-functional-requirements.md#rv-nfr-002-초기-데이터-규모)/[RV-NFR-014](../../01-requirements/non-functional-requirements.md#rv-nfr-014-초기-예상-맛집-수)/[RV-NFR-015](../../01-requirements/non-functional-requirements.md#rv-nfr-015-초기-예상-영상-수) 미확정) 관계의 밀도가 높은 소규모 정형 데이터라는 점이 이 결정의 핵심 배경이다.
+맛잇온의 핵심 도메인은 Restaurant, Visit, Creator, Video 네 엔티티이며 "어떤 크리에이터가 어떤 영상에서 어떤 맛집을 방문했는가"를 조회하는 것이 서비스 가치의 중심이다. 즉 대부분의 화면(목록, 상세, 검색·필터)이 여러 엔티티를 조인해서 응답을 구성하며, 관리자가 수동으로 등록하는 값들 사이의 참조 무결성(존재하지 않는 Creator를 가리키는 Video 금지 등)과 등록 트랜잭션의 원자성이 데이터 신뢰성의 최소 조건이다. 초기 기준 데이터는 맛집 1,000개, 유튜버 200개, 영상 5,000개, 방문 관계 10,000개이며 관계의 밀도가 높은 소규모 정형 데이터라는 점이 이 결정의 핵심 배경이다.
 
 ## 4. 결정 문제
 
@@ -75,7 +75,7 @@ MVP의 Restaurant, Creator, Video, Visit와 관리자 인증에 필요한 영속
 
 ## 12. 구현 및 운영 영향
 
-운영 배치는 단일 EC2(Nginx + Next.js + Spring Boot)와 별도의 Amazon RDS for PostgreSQL 17.10([ADR-DATA-002](data-002-database-placement.md))이며, 백업은 일 1회 자동 스냅샷·7일 보관·RPO 24시간([RV-NFR-010](../../01-requirements/non-functional-requirements.md#rv-nfr-010-백업-주기와-복구-범위))을 기준으로 한다. 장애 시 ALB/ASG 자동 복구는 도입하지 않고 운영자가 수동으로 인스턴스를 재기동·교체하므로, DB 연결 재시도와 커넥션 풀 설정도 이 수동 복구 시나리오를 전제로 설계한다. 용량·연결 수 설정은 예상 동시 사용자 수([RV-NFR-001](../../01-requirements/non-functional-requirements.md#rv-nfr-001-목표-동시-사용자-수) 미확정)가 정해지는 대로 조정한다.
+운영 배치는 단일 EC2(Nginx + Next.js + Spring Boot)와 별도의 Amazon RDS for PostgreSQL 17.10([ADR-DATA-002](data-002-database-placement.md))이며, 백업은 일 1회 자동 스냅샷·7일 보관·RPO 24시간([RV-NFR-010](../../01-requirements/non-functional-requirements.md#rv-nfr-010-백업-주기와-복구-범위))을 기준으로 한다. 장애 시 ALB/ASG 자동 복구는 도입하지 않고 운영자가 수동으로 인스턴스를 재기동·교체하므로, DB 연결 재시도와 커넥션 풀 설정도 이 수동 복구 시나리오를 전제로 설계한다. 용량·연결 수는 정상 부하 50명·20 RPS와 최대 부하 200명·80 RPS 성능 테스트 결과로 조정한다.
 
 ## 13. 검증 방법
 

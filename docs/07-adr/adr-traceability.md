@@ -23,6 +23,8 @@ related_documents:
   - data/data-003-spring-data-jpa.md
   - data/data-004-flyway.md
   - data/data-005-redis-refresh-token.md
+  - data/data-007-uuid-v4-identifiers.md
+  - data/data-008-publication-lifecycle-soft-delete.md
   - integration/ext-001-reference-verification.md
   - quality/test-001-automation-strategy.md
   - quality/obs-001-logging-observability.md
@@ -93,9 +95,9 @@ related_documents:
 | Spring Boot Test + Testcontainers 2.0.5 | 고정 | Accepted ADR | [ADR-TEST-001](quality/test-001-automation-strategy.md) | 실제 저장소 통합 검증 |
 | WireMock | 확정 | Accepted ADR | [ADR-TEST-001](quality/test-001-automation-strategy.md) | 외부 API 장애·계약 격리 |
 | Spring Batch Test 6.0.4 | 파생·기능 제외 | Duplicate or Derived Rule | [ADR-AUTO-001](adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) | Spring Batch 활성화에 종속 |
-| k6 | 확정 도구, 환경 미결정 | Conditional ADR | [ADR-PERF-001](adr-backlog.md#adr-perf-001-k6-성능-테스트-체계) | 성능 테스트 환경·부하 모델 팀 결정 필요 |
+| k6 | 도구 도입 조건부, 환경 결정 완료 | Conditional ADR | [ADR-PERF-001](adr-backlog.md#adr-perf-001-k6-성능-테스트-체계) | 정확한 버전·CI 실행 비용 승인 전 설치 금지 |
 | SLF4J + Logback | 확정 | Accepted ADR | [ADR-OBS-001](quality/obs-001-logging-observability.md) | 애플리케이션 로그 기준 |
-| Actuator + CloudWatch | 확정, 세부 지표 미결정 | Accepted ADR | [ADR-OBS-001](quality/obs-001-logging-observability.md) | 관측 도구는 확정, 임계값은 운영 설정 |
+| Actuator + CloudWatch | 확정 | Accepted ADR | [ADR-OBS-001](quality/obs-001-logging-observability.md) | 오류율·응답 지연·상태·저장소 장애 임계값 확정 |
 | 로그 보관 14일 | 결정 완료 (2026-07-24) | Operational Configuration | [ADR-OBS-001](quality/obs-001-logging-observability.md) | [RV-NFR-009](../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간) 결정 완료, 14일 유지 |
 | Parameter Store SecureString + KMS | 확정 | Accepted ADR | [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 운영 비밀정보 보호 |
 | EC2 IAM Role | 확정 | Accepted ADR | [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 장기 AWS 키 제거 |
@@ -105,7 +107,7 @@ related_documents:
 | Nginx | 경로 경계 결정 완료 (2026-07-27) | Accepted ADR | [ADR-WEB-003](platform/web-003-routing-boundary.md), [ADR-RUNTIME-001](platform/runtime-001-docker.md) | `/api/**`는 Spring Boot, 나머지 외부 경로는 Next.js, `/internal/**`은 외부 차단 |
 | Amazon ECR·EC2 | 결정 완료 (2026-07-24) | Scope Conflict Review | 배포 토폴로지 Backlog | 단일 EC2 인스턴스 배포로 확정, 비용 대조는 운영 중 재확인 |
 | ALB·ASG·Blue-Green | 결정 완료 (2026-07-24) | Scope Conflict Review | 배포 토폴로지 Backlog | MVP 미도입. 단일 인스턴스 수동 복구로 시작하고 ALB는 확장 단계 검토 경로로 보류 |
-| GitHub Actions → ECR → Green → ALB | 부분 결정 | Scope Conflict Review | [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md), 배포 토폴로지 Backlog | GitHub Actions → ECR → EC2까지 대상 확정, ALB·Blue-Green 전환 자동화는 배포 토폴로지 확장 시 재설계 ([RV-NFR-012](../01-requirements/non-functional-requirements.md#rv-nfr-012-배포-자동화-범위) 미결정 유지) |
+| GitHub Actions → ECR → EC2 | 결정 완료 (2026-07-27) | Scope Conflict Review | [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md) | 빌드·테스트·이미지 생성·ECR push 자동, 운영 EC2 배포 수동 승인, Smoke Test 자동, 복구 수동. ALB·Blue-Green은 확장 시 재설계 |
 | Amazon S3 이미지 저장 | 확정이나 기능 없음 | Post-MVP ADR | [ADR-MEDIA-001](adr-backlog.md#adr-media-001-s3-사용자-이미지-저장) | 이미지 업로드·사용자 이미지 요구사항 없음 |
 | FCM HTTP v1 | 확정이나 범위 제외 | Post-MVP ADR | [ADR-NOTIFY-001](adr-backlog.md#adr-notify-001-fcm-푸시-알림) | 사용자 알림 제외 |
 | 초기 월 인프라 예산 15만 원 | 목표 | Operational Configuration | 배포 토폴로지 Backlog | 운영 제약·조정 가능한 수치 |
@@ -144,6 +146,8 @@ related_documents:
 | 환경별 DB | [ADR-DATA-002](data/data-002-database-placement.md) | 개발 Docker / 운영 RDS, 버전 17.10 일치 |
 | 확인 Token 단기 상태 | [ADR-AUTH-003](security/auth-003-confirmation-token.md) | PostgreSQL 해시·후보 JSONB, 10분 만료, 완료·만료 결과 24시간 보관 |
 | 동시 쓰기 충돌 | [ADR-DATA-006](adr-backlog.md#adr-data-006-동시-쓰기-충돌-제어), [ADR-LOCK-001](adr-backlog.md#adr-lock-001-redis-분산-락-도입) | 기본 `UNIQUE` 이후 강화는 통합 테스트 근거 필요 |
+| 내부 식별자 | [ADR-DATA-007](data/data-007-uuid-v4-identifiers.md) | Accepted; UUID v4와 PostgreSQL `uuid` |
+| 공개·삭제 생명주기 | [ADR-DATA-008](data/data-008-publication-lifecycle-soft-delete.md) | Accepted; 상태 분리·논리 삭제·FK RESTRICT |
 | 공간·벡터 데이터 | [ADR-MAP-001](adr-backlog.md#adr-map-001-지도-표시와-공간-검색), [ADR-SEARCH-002](adr-backlog.md#adr-search-002-pgvector-자연어-검색rag) | 현재 모델·확장 설치 금지 |
 | 사용자·토큰·기기 데이터 | [ADR-AUTH-002](adr-backlog.md#adr-auth-002-일반-사용자-jwt와-refresh-token), [ADR-NOTIFY-001](adr-backlog.md#adr-notify-001-fcm-푸시-알림) | 현재 MVP 모델에 추가 금지 |
 
@@ -189,4 +193,4 @@ related_documents:
 - 자동 재시도·Circuit Breaker·비동기 이벤트·Transactional Outbox 도입 기준
 - 멀티모듈·독립 배포와 세분화된 관리자 권한의 전환 기준
 - TanStack Query, Jsoup, n8n, k6 등 정확한 버전이 없는 의존성
-- 배포 자동화 범위([RV-NFR-012](../01-requirements/non-functional-requirements.md#rv-nfr-012-배포-자동화-범위)): ALB·Blue-Green 전환 자동화를 포함한 수동 승인 지점
+- 현재 구현 전 필수 팀 결정은 없다. ALB·Blue-Green 전환 자동화는 토폴로지 확장 시 새 ADR로 결정한다.

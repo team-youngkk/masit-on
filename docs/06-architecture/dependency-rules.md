@@ -111,10 +111,10 @@ RegisterRestaurantService ──call──> RestaurantPersistenceAdapter ──>
 
 ## 8. ArchUnit 적용 예시
 
-아래는 목표 규칙의 예시이며 실제 루트 패키지 확정 후 테스트 코드로 옮긴다.
+아래는 확정 루트 패키지 기준의 목표 규칙이며 첫 구현과 함께 테스트 코드로 옮긴다.
 
 ```java
-@AnalyzeClasses(packages = "{basePackage}")
+@AnalyzeClasses(packages = "com.masiton")
 class ArchitectureTest {
 
     @ArchTest
@@ -148,7 +148,7 @@ class ArchitectureTest {
 - 패키지 Slice 순환 의존 금지
 - Controller 이름 클래스의 Repository 의존 금지
 
-`{basePackage}` placeholder는 그대로 실행할 수 없으므로 프로젝트 초기 설정에서 실제 값으로 치환해야 한다.
+ArchUnit은 `com.masiton` 아래의 운영 클래스를 대상으로 실행한다.
 
 ## 9. 리뷰 위반 사례
 

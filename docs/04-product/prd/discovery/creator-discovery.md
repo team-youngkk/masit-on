@@ -184,6 +184,6 @@ related_documents:
 - [MVP Workstream](../../../02-analysis/mvp-workstreams.md)
 - [추적성](../../traceability.md)
 
-## 20. 검토 필요 항목
+## 20. 확정 성능 기준
 
-- 목표 조건 조합 응답 시간
+- 초기 기준 데이터와 정상 부하 50명·20 RPS에서 조건 조합 p95 800ms 이하와 서버 오류율 1% 미만을 검증한다.

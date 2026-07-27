@@ -2,7 +2,7 @@
 id: ADR-TEST-001
 title: 계층별 자동화 테스트 전략
 status: Accepted
-decision_date: 검토 필요
+decision_date: 2026-07-27
 owners:
   - 박진영
 related_requirements:
@@ -98,12 +98,12 @@ Accepted
 
 - 도메인 정합성: [NFR-INTEGRITY-001](../../01-requirements/non-functional-requirements.md#nfr-integrity-001-참조-및-필수값-정합성)~[NFR-INTEGRITY-004](../../01-requirements/non-functional-requirements.md#nfr-integrity-004-외부-링크와-내부-데이터-분리)에 대응하는 통합 테스트(필수값·참조 무결성, 중복·동시 등록, 등록 원자성, 외부 링크 실패와 내부 데이터 분리)가 존재하고 통과해야 한다. 구체적으로 [scope.md](../../00-overview/scope.md) 3.4의 중복 판정 기준(동일 place id, 동일 채널 id, 동일 영상 id, 동일 (맛집, 유튜버, 영상) 조합)을 각각 재현하는 테스트가 있어야 한다.
 - 외부 장애 격리: WireMock으로 Kakao·YouTube 응답 지연·실패·계약 변경을 재현했을 때, 이미 저장된 맛집의 목록·상세 기본 정보 조회가 계속 성공하는지 확인한다([scope.md](../../00-overview/scope.md), [NFR-EXTERNAL-001](../../01-requirements/non-functional-requirements.md#nfr-external-001-영상-원본과-외부-링크-분리)).
-- 성능·오류율 기준: 계약·통합 테스트는 일반 조회 p95 500ms, 검색·필터 조합 p95 800ms, 관리자 등록(외부 대기 제외) p95 1초, 정상 부하 서버 오류율 1% 미만이라는 이미 결정된 기준([RV-NFR-004](../../01-requirements/non-functional-requirements.md#rv-nfr-004-목표-응답-시간과-허용-오류율))을 위반하는 회귀를 탐지할 수 있어야 한다. 다만 이 기준을 재현하는 실제 부하 테스트 환경과 도구는 아직 미확정이다([RV-NFR-011](../../01-requirements/non-functional-requirements.md#rv-nfr-011-성능-테스트-환경)). `k6`는 [ADR-PERF-001](../adr-backlog.md#adr-perf-001-k6-성능-테스트-체계)에서 Conditional 상태이며, 이 ADR은 `k6` 채택을 결정하지 않는다.
+- 성능·오류율 기준: 계약·통합 테스트는 일반 조회 p95 500ms, 검색·필터 조합 p95 800ms, 관리자 등록(외부 대기 제외) p95 1초, 정상 부하 서버 오류율 1% 미만이라는 기준을 위반하는 회귀를 탐지해야 한다. 운영 동급 단일 EC2, 기준 데이터 100%, WireMock 외부 Stub, 정상 부하 50명·20 RPS와 최대 부하 200명·80 RPS를 사용한다. 부하 생성 도구 채택은 [ADR-PERF-001](../adr-backlog.md#adr-perf-001-k6-성능-테스트-체계)에서 별도로 다룬다.
 - 배포 게이트: 필수 빌드·테스트가 실패한 변경은 운영 배포 후보로 승인되지 않는다([NFR-TEST-003](../../01-requirements/non-functional-requirements.md#nfr-test-003-배포-품질-게이트)).
 
 ## 14. 재검토 조건
 
-테스트 실행 시간이 각 워크스트림 담당자의 독립적 개발 속도를 지속적으로 저해할 때, [RV-NFR-002](../../01-requirements/non-functional-requirements.md#rv-nfr-002-초기-데이터-규모)·[RV-NFR-014](../../01-requirements/non-functional-requirements.md#rv-nfr-014-초기-예상-맛집-수)·[RV-NFR-015](../../01-requirements/non-functional-requirements.md#rv-nfr-015-초기-예상-영상-수)(초기 데이터 규모)가 확정되어 테스트 데이터셋 설계를 다시 해야 할 때, 또는 [ADR-PERF-001](../adr-backlog.md#adr-perf-001-k6-성능-테스트-체계)의 활성화 조건([RV-NFR-011](../../01-requirements/non-functional-requirements.md#rv-nfr-011-성능-테스트-환경) 성능 테스트 환경 결정)이 충족되어 새로운 성능 테스트 계층이 추가될 때 재검토한다.
+테스트 실행 시간이 각 워크스트림 담당자의 독립적 개발 속도를 지속적으로 저해할 때, 초기 기준 데이터 규모나 목표 부하가 변경될 때, 또는 [ADR-PERF-001](../adr-backlog.md#adr-perf-001-k6-성능-테스트-체계)에 따라 새로운 성능 테스트 도구·계층이 승인될 때 재검토한다.
 
 ## 15. 관련 문서
 

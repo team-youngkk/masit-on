@@ -117,7 +117,7 @@ Authorization: Bearer <access-token>
 
 Spring Security Filter Chain은 HTTP Method와 세부 경로를 먼저 매칭한다. `POST /api/admin/auth/tokens`는 로그인 자격 증명, `POST /api/admin/auth/tokens/refresh`는 Refresh Token 쿠키만 검증한다. `DELETE /api/admin/auth/tokens`는 JWT와 Refresh Token 쿠키를 모두 요구하며, 나머지 `/api/admin/**`는 JWT와 `ADMIN` 권한을 확인한다. 공개 GET API에는 Authorization 헤더를 요구하지 않고 정의되지 않은 API 경로는 기본 거부한다.
 
-## 8. 확정 사항과 검토 필요 사항
+## 8. 확정 사항
 
 ### 확정 사항
 
@@ -126,9 +126,17 @@ Spring Security Filter Chain은 HTTP Method와 세부 경로를 먼저 매칭한
 - Access Token은 브라우저 영구 저장소나 쿠키에 저장하지 않는다.
 - 계정당 활성 Refresh Token은 하나만 허용하고 새 로그인 성공 시 기존 Token을 폐기한다.
 - 계정 발급·회수·복구는 API가 아닌 관리자 운영 절차로 처리한다.
+- JWT는 RS256으로 서명하고 `iss=masit-on`, `aud=masit-on-admin-api`를 검증한다. 모든 서명 키에는 `kid`를 부여한다.
+- 새 공개 키를 검증 키 목록에 먼저 배포한 뒤 새 `kid`로 발급하고, 기존 Access Token 최대 수명 30분이 지난 후 이전 개인 키를 폐기한다. 정기 교체 주기는 90일이다.
+- Refresh Token은 `auth:refresh:{adminId}`에 SHA-256 Token 해시, Token 계열 ID, 발급·만료 시각을 JSON으로 저장하며 Redis TTL 14일을 적용한다.
+- 회전·재사용 탐지와 계정당 단일 활성 Token 보장은 Redis 원자 연산으로 처리한다. 만료 데이터는 TTL로 정리하고 별도 주기 삭제 작업을 두지 않는다.
+- 로그인 실패는 `auth:login-failure:{loginIdHash}` 카운터에 첫 실패부터 15분 TTL을 적용한다. 5회 실패하면 남은 TTL 동안 로그인을 차단하고 성공 시 카운터를 삭제한다.
 
-### 검토 필요 사항
+## 9. 관리자 계정 운영 절차
 
-- JWT issuer, audience, 서명 키 교체 주기와 `kid` 운영
-- Redis 키 형식, 직렬화, Token 계열 재사용 탐지와 정리 주기
+- 계정 발급: 승인된 운영자가 인증 저장소에 계정을 생성하는 별도 운영 명령을 실행하고 임시 비밀번호는 기존 협업 채널과 분리된 일회성 비밀 전달 수단으로 전달한다.
+- 비활성화·회수: 계정을 비활성화하고 해당 관리자의 `auth:refresh:{adminId}`를 즉시 삭제한다. 이미 발급된 Access Token은 최대 30분 뒤 만료된다.
+- 비밀번호 재설정: 본인 확인 뒤 운영 명령으로 임시 비밀번호를 발급하고 기존 Refresh Token을 폐기한다.
+- 모든 명령은 작업자, 대상 관리자 ID, 작업 종류, 성공 여부와 traceId를 감사 로그에 남기되 비밀번호·Token 원문은 기록하지 않는다.
+- 서비스 회원가입, 계정 관리와 비밀번호 복구 API·화면은 MVP에 포함하지 않는다.
 

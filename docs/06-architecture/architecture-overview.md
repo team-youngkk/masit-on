@@ -67,7 +67,7 @@ related_documents:
 | 애플리케이션 소스 | `src/` 없음 | Java 21/Spring Boot 단일 모듈 |
 | 빌드 설정 | Gradle 파일·Wrapper 없음 | ADR에 고정된 Gradle Groovy DSL |
 | 도메인 클래스 | 확인할 수 없음 | Restaurant·Creator·Video·Visit 경계 |
-| 패키지명 | 루트 패키지 미정 | [패키지 구조](package-structure.md)의 패턴 적용 |
+| 패키지명 | `com.masiton` | [패키지 구조](package-structure.md)의 패턴 적용 |
 | 트랜잭션 코드 | 없음 | Application 유스케이스 단위 |
 | 외부 Adapter | 없음 | Kakao·YouTube Port/Adapter |
 | 아키텍처 검증 | 없음 | ArchUnit과 통합 테스트 |
@@ -91,10 +91,11 @@ related_documents:
 - 방문 등록은 `orchestration.application.command`의 유스케이스가 트랜잭션 소유
 - 교차 도메인 조회 Projection은 읽기만 허용
 
-### 확인 필요
+### 확정된 초기 구조
 
-- 실제 Java 루트 패키지명과 Gradle `group`
-- 프로젝트 초기 디렉터리와 클래스 이름 확정
+- Gradle `group`과 Java 루트 패키지는 `com.masiton`이다.
+- Spring Boot 진입점은 `com.masiton.MasitOnApplication`이다.
+- 운영 소스는 `src/main/java/com/masiton`, 테스트는 `src/test/java/com/masiton`에서 시작한다.
 
 ### 추가 ADR 필요
 

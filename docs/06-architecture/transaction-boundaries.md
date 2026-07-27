@@ -8,6 +8,8 @@ related_documents:
   - ../07-adr/data/data-003-spring-data-jpa.md
   - ../07-adr/data/data-004-flyway.md
   - ../07-adr/security/auth-003-confirmation-token.md
+  - ../05-specs/data/physical-data-model.md
+  - ../05-specs/data/constraint-mapping.md
 ---
 
 # 트랜잭션 경계
@@ -41,10 +43,11 @@ related_documents:
 
 ```text
 트랜잭션 시작
-  ├─ Restaurant 공개 Reference 조회
-  ├─ Creator 공개 Reference 조회
-  ├─ Video 공개 Reference 조회
+  ├─ Restaurant 공개·활성 Reference 조회
+  ├─ Creator 공개·활성·외부 가용 Reference 조회
+  ├─ Video 공개·활성·외부 가용 Reference 조회
   ├─ 채널 일치 검증
+  ├─ Video.creatorId 미해소 시 검증된 Creator로 연결
   └─ Visit Create 입력 Port 호출
        ├─ 기존 Visit 조합 선조회
        ├─ Visit Domain 생성
@@ -62,9 +65,10 @@ Orchestration은 Visit Domain·Repository를 직접 호출하지 않는다. Visi
 2. Presentation: 세 ID 형식, 필수값, `visitEvidenceConfirmed == true`
 3. Application: 참조 존재·공개 상태
 4. Application/Visit Domain: 게시 채널과 Creator 채널 일치
-5. Application: 동일 조합 선조회
-6. Visit Domain: 관계 생성 불변 조건
-7. Persistence: FK·복합 UNIQUE 최종 보장
+5. Application: Video.creatorId가 null이면 Video Application의 `ResolveVideoCreatorUseCase`로 게시 채널이 일치하는 Creator 연결
+6. Application: 동일 조합 선조회
+7. Visit Domain: 관계 생성 불변 조건
+8. Persistence: 채널 일치 복합 FK·Visit 복합 UNIQUE 최종 보장
 
 근거 확인은 관리자 입력의 `true` 선언을 사용하되, 인증된 Principal이 전달된 경우에만 Application이 Domain 생성에 넘긴다. 별도 검증 상태·검증자·검증 시각은 현재 데이터 모델에 추가하지 않는다.
 
@@ -76,10 +80,10 @@ Orchestration은 Visit Domain·Repository를 직접 호출하지 않는다. Visi
 - 채널 불일치
 - 근거 확인 부족
 - 중복 선조회 또는 DB UNIQUE 충돌
-- 저장소 오류
+- Video.Creator 연결 또는 Visit 저장 오류
 - 예상하지 못한 Application/Domain 예외
 
-관계 등록은 기존 Restaurant·Creator·Video를 수정하지 않으므로 rollback 대상은 Visit 생성뿐이다. 실패한 요청이 참조 Entity의 상태를 바꾸지 않는다.
+Restaurant와 Creator는 수정하지 않는다. Video가 Creator보다 먼저 등록되어 `creator_id`가 null이면 Visit 등록 트랜잭션이 검증된 Creator 연결을 해소할 수 있다. 이 갱신과 Visit 생성은 함께 commit 또는 rollback되며 publication·lifecycle 상태는 바꾸지 않는다.
 
 ## 4. 동시성 및 일관성
 
@@ -90,7 +94,7 @@ Visit에는 `(restaurant_id, creator_id, video_id)` 복합 UNIQUE가 필수다. 
 3. 한 요청만 커밋한다.
 4. 다른 요청의 제약 위반을 `DUPLICATE_VISIT_RELATIONSHIP`으로 변환한다.
 
-분산 락, 비관적 락과 Redis 락은 도입하지 않는다. 현재 단일 DB의 UNIQUE로 충분하며, 락이 필요한 근거가 측정되면 별도 결정한다. 구체 제약명과 인덱스는 물리 DB 설계에서 확정한다.
+분산 락, 비관적 락과 Redis 락은 도입하지 않는다. 현재 단일 DB의 UNIQUE로 충분하며, 락이 필요한 근거가 측정되면 별도 결정한다. 구체 제약명과 인덱스는 [constraint-mapping.md](../05-specs/data/constraint-mapping.md)와 [index-strategy.md](../05-specs/data/index-strategy.md)를 따른다.
 
 기본 격리 수준을 임의로 강화하지 않는다. Spring/PostgreSQL 기본 격리와 UNIQUE를 사용하되, 실제 동시성 통합 테스트 결과가 불충분하면 격리 수준·락·upsert를 **추가 ADR**로 검토한다.
 
@@ -102,7 +106,7 @@ Visit에는 `(restaurant_id, creator_id, video_id)` 복합 UNIQUE가 필수다. 
 - 응답 생성 중 Lazy Loading이 발생하지 않도록 필요한 값을 Projection에서 완결한다.
 - Open Session in View에 의존해 Controller에서 연관을 읽지 않는다.
 
-**확인 필요:** Spring Boot 초기 설정에서 Open Session in View를 명시적으로 비활성화하고 Projection/명시 조회 원칙을 적용할지 공통 Spring·JPA 컨벤션에 반영한다.
+Spring Boot 초기 설정에서 Open Session in View를 명시적으로 비활성화하고 Projection/명시 조회 원칙을 적용한다. 이는 [물리 데이터 모델](../05-specs/data/physical-data-model.md#7-jpa-매핑-경계)의 JPA 경계와 같다.
 
 ## 6. 외부 API와 DB 트랜잭션
 

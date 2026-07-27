@@ -175,6 +175,8 @@ related_documents:
 - 유효 방문 관계가 없으면 `contentStatus: AVAILABLE`, `visitedBy: []`, `videos: []`다.
 - 관계는 있으나 공개 영상이 없으면 유효한 공개 유튜버가 관계 요건을 충족하는 범위에서 `visitedBy`를 제공하고 `videos`는 `[]`다. 비공개·삭제 영상만이 근거라면 그 관계도 사용자 조회에서 제외한다.
 - 같은 유튜버 또는 영상은 여러 관계가 있어도 한 번만 제공한다.
+- `visitedBy`는 `channelName` 오름차순, 같은 이름은 `id` 오름차순으로 안정 정렬한다.
+- `videos`는 `title` 오름차순, 같은 제목은 `id` 오름차순으로 안정 정렬한다.
 - 영상 게시일은 MVP 사용자 조회 제외 범위라 반환하지 않는다.
 
 ## 8. 예외 및 경계 상황
@@ -227,4 +229,4 @@ related_documents:
 - `contentStatus`는 필수이며 `AVAILABLE`, `TEMPORARILY_UNAVAILABLE` 두 값만 사용한다.
 - 일시적인 외부 링크 도달 실패를 나타내는 별도 필드는 제공하지 않는다. API는 저장된 링크의 실시간 유효성을 보장하지 않으며, 관리자가 삭제·비공개를 확인한 콘텐츠는 응답에서 제외한다.
 - 일반 상세의 애플리케이션 서버 내부 처리 시간 목표는 정상 운영 조건 p95 500ms 이하다. 외부 서비스와 사용자 네트워크 지연은 제외한다.
-- 상세 조합의 내부 책임 위치는 후속 아키텍처 결정이며 외부 계약을 바꾸지 않는다.
+- 상세 조합의 내부 책임은 `com.masiton.orchestration.application.query`의 전용 Query Service에 있으며 외부 계약과 분리한다.

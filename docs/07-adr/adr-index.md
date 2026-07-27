@@ -20,6 +20,8 @@ related_documents:
   - security/auth-001-spring-security-jwt.md
   - security/auth-003-confirmation-token.md
   - data/data-005-redis-refresh-token.md
+  - data/data-007-uuid-v4-identifiers.md
+  - data/data-008-publication-lifecycle-soft-delete.md
   - integration/ext-001-reference-verification.md
   - quality/test-001-automation-strategy.md
   - quality/obs-001-logging-observability.md
@@ -47,6 +49,8 @@ related_documents:
 | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md) | 관리자 Spring Security JWT 인증·인가 | Accepted | Critical | Spring Security 7.1.0, JWT, Redis 8.8 Refresh Token | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 관리자 | [문서](security/auth-001-spring-security-jwt.md) |
 | [ADR-AUTH-003](security/auth-003-confirmation-token.md) | 관리자 등록 확인 Token의 저장·소비·재시도 | Accepted | Critical | PostgreSQL, SHA-256, 불투명 Token, JSONB Snapshot | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 기준정보 등록 | [문서](security/auth-003-confirmation-token.md) |
 | [ADR-DATA-005](data/data-005-redis-refresh-token.md) | Redis 8.8 관리자 Refresh Token 저장소 | Accepted | Critical | Redis Open Source 8.8 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 인증·운영 | [문서](data/data-005-redis-refresh-token.md) |
+| [ADR-DATA-007](data/data-007-uuid-v4-identifiers.md) | 애플리케이션 생성 UUID v4 내부 식별자 | Accepted | High | Java UUID, PostgreSQL uuid | 전체 영속 데이터 | [문서](data/data-007-uuid-v4-identifiers.md) |
+| [ADR-DATA-008](data/data-008-publication-lifecycle-soft-delete.md) | 공개 상태와 논리 삭제 생명주기 분리 | Accepted | Critical | PostgreSQL CHECK, partial index | 핵심 공개 데이터 | [문서](data/data-008-publication-lifecycle-soft-delete.md) |
 | [ADR-EXT-001](integration/ext-001-reference-verification.md) | 관리자 외부 기준정보 확인 서비스 | Accepted | High | Kakao Local REST API V2, YouTube Data API v3 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 등록 | [문서](integration/ext-001-reference-verification.md) |
 | [ADR-TEST-001](quality/test-001-automation-strategy.md) | 계층별 자동화 테스트 전략 | Accepted | Critical | JUnit 5, Mockito, Spring Boot Test, Testcontainers 2.0.5, WireMock | 전체 Workstream | [문서](quality/test-001-automation-strategy.md) |
 | [ADR-OBS-001](quality/obs-001-logging-observability.md) | 애플리케이션 로그와 운영 관측 기준 | Accepted | High | SLF4J, Logback, Actuator, CloudWatch | 전체 운영 | [문서](quality/obs-001-logging-observability.md) |

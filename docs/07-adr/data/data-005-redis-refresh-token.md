@@ -47,7 +47,9 @@ JWT Access Token 재발급을 통제하고 새 로그인·로그아웃·Token �
 
 ## 6. 결정
 
-개발은 Docker Redis 8.8, 운영은 사설 서브넷 전용 Redis 8.8 인스턴스를 사용한다. 계정당 활성 Refresh Token 하나와 Token 계열 회전·폐기를 저장한다. Refresh Token TTL은 14일이며 재발급마다 회전하고 재사용을 탐지해 즉시 폐기한다.
+개발은 Docker Redis 8.8, 운영은 사설 서브넷 전용 Redis 8.8 인스턴스를 사용한다. Refresh Token은 `auth:refresh:{adminId}` 키에 SHA-256 Token 해시, Token 계열 ID, 발급·만료 시각을 JSON으로 저장한다. 계정당 활성 Refresh Token 하나만 유지하며 TTL은 14일이다. 재발급마다 원자적으로 회전하고 재사용을 탐지해 Token 계열을 즉시 폐기한다.
+
+로그인 실패는 원문 login ID 대신 SHA-256 해시를 사용한 `auth:login-failure:{loginIdHash}` 카운터에 저장한다. 첫 실패부터 15분 TTL을 부여하고 원자 증가 결과가 5 이상이면 남은 TTL 동안 로그인을 차단하며 성공 시 삭제한다. 만료된 인증 상태는 Redis TTL로 정리하고 별도 주기 삭제 작업을 두지 않는다.
 
 ## 7. 선택 근거
 
@@ -63,7 +65,7 @@ JWT Access Token 재발급을 통제하고 새 로그인·로그아웃·Token �
 
 ## 10. 강제 규칙
 
-8.8 계열, 사설 네트워크, 계정·Token 네임스페이스, 정확한 TTL, 회전 원자성과 재사용 탐지를 적용한다.
+8.8 계열, 사설 네트워크, `auth:refresh`·`auth:login-failure` 네임스페이스, JSON 직렬화, 정확한 TTL, 회전 원자성과 재사용 탐지를 적용한다.
 
 ## 11. 금지 사항
 

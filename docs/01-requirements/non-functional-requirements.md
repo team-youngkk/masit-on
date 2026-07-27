@@ -36,7 +36,7 @@ related_documents:
   - 애플리케이션 서버 내부 처리 시간 p95 500ms 이하
 - 측정 조건:
   - 외부 YouTube·카카오 서비스와 사용자 네트워크의 지연은 제외한다.
-  - 데이터 규모와 동시 사용자 조건은 성능 테스트 계획 확정 후 기록한다.
+  - 초기 기준 데이터(맛집 1,000개, 유튜버 200개, 영상 5,000개, 방문 관계 10,000개)와 정상 부하 50명·20 RPS를 사용한다.
 - 검증 방법:
   - 대표 데이터셋을 사용한 부하 테스트 및 운영 응답 시간 메트릭 확인
 - 중요도:
@@ -239,13 +239,14 @@ related_documents:
   - 데이터 접근과 재시도 가능한 외부 연계
 - 목표 기준:
   - 장애 로그에 요청 식별 정보, 실패 대상과 오류 분류 포함
-  - 모든 자동 재시도에 횟수 또는 시간 상한 존재
+  - MVP 애플리케이션 요청 처리에서는 데이터 저장 쓰기와 Kakao·YouTube 호출을 자동 재시도하지 않음
+  - 실패 요청은 명시적 오류로 종료하고 관리자 작업·배포 복구는 운영자가 수동 재시도
 - 검증 방법:
   - 연결 실패·시간 초과 장애 주입 및 로그·재시도 횟수 검사
 - 중요도:
   - High
 - 결정 상태:
-  - 후속 설계에서 결정
+  - 확정
 
 ### NFR-RELIABILITY-003 사용자 오류 메시지와 기능 분리
 
@@ -381,7 +382,7 @@ related_documents:
 - 중요도:
   - High
 - 결정 상태:
-  - 후속 설계에서 결정
+  - 확정
 
 ### NFR-OBSERVABILITY-003 로그 품질과 민감정보 차단
 
@@ -409,13 +410,14 @@ related_documents:
   - 일반 사용자 웹 화면과 API
 - 목표 기준:
   - 합의된 브라우저·화면 크기 조합의 핵심 인수 시나리오 통과율 100%
-  - 최신 주요 브라우저를 우선 지원하며 구체적 버전은 프론트엔드 정책에서 확정
+  - PC Chrome·Edge, Android Chrome, iPhone Safari의 테스트 시점 최신 및 직전 안정 버전
+  - 대표 화면 폭 360px, 390px, 768px, 1280px, 1440px
 - 검증 방법:
   - 지원 매트릭스 기반 PC·모바일 브라우저 인수 테스트
 - 중요도:
   - High
 - 결정 상태:
-  - 팀 결정 필요
+  - 확정
 
 ### NFR-COMPATIBILITY-002 응답 형식과 문자 처리
 
@@ -481,7 +483,7 @@ related_documents:
 - 중요도:
   - High
 - 결정 상태:
-  - 후속 설계에서 결정
+  - 확정
 
 ### NFR-TEST-003 배포 품질 게이트
 
@@ -545,7 +547,7 @@ related_documents:
 - 중요도:
   - High
 - 결정 상태:
-  - 후속 설계에서 결정
+  - 확정
 
 ### NFR-DEPLOYMENT-004 MVP 배포 복잡도 제한
 
@@ -561,7 +563,7 @@ related_documents:
 - 중요도:
   - Medium
 - 결정 상태:
-  - 후속 설계에서 결정
+  - 확정
 
 ## 13. 유지보수성
 
@@ -579,7 +581,7 @@ related_documents:
 - 중요도:
   - High
 - 결정 상태:
-  - 후속 설계에서 결정
+  - 확정
 
 ### NFR-MAINTAINABILITY-002 공통 정책과 규칙 배치
 
@@ -595,7 +597,7 @@ related_documents:
 - 중요도:
   - High
 - 결정 상태:
-  - 후속 설계에서 결정
+  - 확정
 
 ### NFR-MAINTAINABILITY-003 추적성과 운영 복잡도
 
@@ -677,21 +679,21 @@ related_documents:
 | [NFR-INTEGRITY-003](non-functional-requirements.md#nfr-integrity-003-등록-원자성과-공개-상태-일관성) | 등록 원자성과 공개 상태 일관성 | Critical | 실패 주입·인수 테스트 | 확정 | 데이터 모델링 전 확정 |
 | [NFR-INTEGRITY-004](non-functional-requirements.md#nfr-integrity-004-외부-링크와-내부-데이터-분리) | 외부 링크와 내부 데이터 분리 | Critical | 장애 모의 테스트 | 확정 | 데이터 모델링 전 확정 |
 | [NFR-RELIABILITY-001](non-functional-requirements.md#nfr-reliability-001-오류-격리와-공통-오류-정책) | 오류 격리와 공통 오류 정책 | High | 계약·장애 테스트 | 확정 | API 명세 전 확정 |
-| [NFR-RELIABILITY-002](non-functional-requirements.md#nfr-reliability-002-저장소-장애-및-재시도-통제) | 저장소 장애 및 재시도 통제 | High | 장애 주입 | 후속 설계에서 결정 | 구현 시작 전 확정 |
+| [NFR-RELIABILITY-002](non-functional-requirements.md#nfr-reliability-002-저장소-장애-및-재시도-통제) | 저장소 장애 및 재시도 통제 | High | 장애 주입 | 확정 | 구현에서 검증 |
 | [NFR-RELIABILITY-003](non-functional-requirements.md#nfr-reliability-003-사용자-오류-메시지와-기능-분리) | 사용자 오류 메시지와 기능 분리 | High | 인수 테스트 | 확정 | API 명세 전 확정 |
 | [NFR-AVAILABILITY-001](non-functional-requirements.md#nfr-availability-001-상태-확인과-장애-구분) | 상태 확인과 장애 구분 | High | 상태 확인 테스트 | 확정 | 배포 설계 전 확정 |
-| [NFR-AVAILABILITY-002](non-functional-requirements.md#nfr-availability-002-mvp-가용성과-수동-복구) | MVP 가용성과 수동 복구 | High | 복구 리허설 | 팀 결정 필요 | 배포 설계 전 확정 |
+| [NFR-AVAILABILITY-002](non-functional-requirements.md#nfr-availability-002-mvp-가용성과-수동-복구) | MVP 가용성과 수동 복구 | High | 복구 리허설 | 확정 | 출시 전 검증 |
 | [NFR-EXTERNAL-001](non-functional-requirements.md#nfr-external-001-영상-원본과-외부-링크-분리) | 영상 원본과 외부 링크 분리 | High | 장애 모의·저장 검사 | 확정 | 구현 시작 전 확정 |
-| [NFR-EXTERNAL-002](non-functional-requirements.md#nfr-external-002-외부-호출-실패와-변경-격리) | 외부 호출 실패와 변경 격리 | High | 외부 계약 모의 테스트 | 후속 설계에서 결정 | API 명세 전 확정 |
+| [NFR-EXTERNAL-002](non-functional-requirements.md#nfr-external-002-외부-호출-실패와-변경-격리) | 외부 호출 실패와 변경 격리 | High | 외부 계약 모의 테스트 | 확정 | 구현에서 검증 |
 | [NFR-EXTERNAL-003](non-functional-requirements.md#nfr-external-003-링크-검증과-외부-인증정보) | 링크 검증과 외부 인증정보 | High | 입력·비밀정보 검사 | 확정 | API 명세 전 확정 |
 | [NFR-OBSERVABILITY-001](non-functional-requirements.md#nfr-observability-001-요청-추적과-오류-분류) | 요청 추적과 오류 분류 | High | 로그 상관관계 검사 | 확정 | 출시 전 검증 |
-| [NFR-OBSERVABILITY-002](non-functional-requirements.md#nfr-observability-002-운영-지표와-생명주기-기록) | 운영 지표와 생명주기 기록 | High | 지표·로그 대조 | 후속 설계에서 결정 | 배포 설계 전 확정 |
+| [NFR-OBSERVABILITY-002](non-functional-requirements.md#nfr-observability-002-운영-지표와-생명주기-기록) | 운영 지표와 생명주기 기록 | High | 지표·로그 대조 | 확정 | 출시 전 검증 |
 | [NFR-OBSERVABILITY-003](non-functional-requirements.md#nfr-observability-003-로그-품질과-민감정보-차단) | 로그 품질과 민감정보 차단 | Critical | 로그 검사 | 확정 | 출시 전 검증 |
-| [NFR-COMPATIBILITY-001](non-functional-requirements.md#nfr-compatibility-001-웹모바일-브라우저-호환성) | 웹·모바일 브라우저 호환성 | High | 브라우저 인수 테스트 | 팀 결정 필요 | 출시 전 검증 |
+| [NFR-COMPATIBILITY-001](non-functional-requirements.md#nfr-compatibility-001-웹모바일-브라우저-호환성) | 웹·모바일 브라우저 호환성 | High | 브라우저 인수 테스트 | 확정 | 출시 전 검증 |
 | [NFR-COMPATIBILITY-002](non-functional-requirements.md#nfr-compatibility-002-응답-형식과-문자-처리) | 응답 형식과 문자 처리 | High | 계약·문자 테스트 | 확정 | API 명세 전 확정 |
 | [NFR-COMPATIBILITY-003](non-functional-requirements.md#nfr-compatibility-003-모바일-응답-크기) | 모바일 응답 크기 | Medium | 응답 검사 | 확정 | API 명세 전 확정 |
 | [NFR-TEST-001](non-functional-requirements.md#nfr-test-001-자동화-테스트-계층) | 자동화 테스트 계층 | High | 테스트 추적 검토 | 확정 | 구현 시작 전 확정 |
-| [NFR-TEST-002](non-functional-requirements.md#nfr-test-002-변경외부-의존성성능-검증) | 변경·외부 의존성·성능 검증 | High | 계약·부하 테스트 | 후속 설계에서 결정 | 출시 전 검증 |
+| [NFR-TEST-002](non-functional-requirements.md#nfr-test-002-변경외부-의존성성능-검증) | 변경·외부 의존성·성능 검증 | High | 계약·부하 테스트 | 확정 | 출시 전 검증 |
 | [NFR-TEST-003](non-functional-requirements.md#nfr-test-003-배포-품질-게이트) | 배포 품질 게이트 | Critical | 배포 차단 시험 | 확정 | 배포 설계 전 확정 |
 | [NFR-DEPLOYMENT-001](non-functional-requirements.md#nfr-deployment-001-재현-가능한-빌드와-환경-분리) | 재현 가능한 빌드와 환경 분리 | High | 재빌드·비밀정보 검사 | 확정 | 배포 설계 전 확정 |
 | [NFR-DEPLOYMENT-002](non-functional-requirements.md#nfr-deployment-002-배포-전후-검증) | 배포 전후 검증 | Critical | 배포 기록 확인 | 확정 | 출시 전 검증 |
@@ -704,13 +706,14 @@ related_documents:
 | [NFR-PRIVACY-002](non-functional-requirements.md#nfr-privacy-002-인증정보와-외부-키-보호) | 인증정보와 외부 키 보호 | Critical | 비밀정보 검사 | 확정 | 출시 전 검증 |
 | [NFR-PRIVACY-003](non-functional-requirements.md#nfr-privacy-003-회원-기능-도입-시-재검토) | 회원 기능 도입 시 재검토 | High | 범위 변경 심사 | MVP 제외 | 구현 시작 전 확정 |
 
-## 16. 검토 필요 항목
+## 16. 검토 결정 기록
 
 ### RV-NFR-001 목표 동시 사용자 수
 
-- 현재 상태: 팀 결정 필요
-- 결정이 필요한 내용:
-  - 정상 부하와 최대 부하를 정의할 동시 사용자 또는 초당 요청 수
+- 현재 상태: 결정 완료 (2026-07-27)
+- 결정 내용:
+  - 정상 부하는 동시 사용자 50명·20 RPS, 최대 부하는 동시 사용자 200명·80 RPS로 정의한다.
+  - 성능 합격 기준은 정상 부하에서 판정하고 최대 부하는 급격한 성능 저하·오류 확산 여부를 확인하는 용량 검증에 사용한다.
 - 영향:
   - 성능·오류율 기준과 운영 용량
 - 결정 시점:
@@ -718,9 +721,10 @@ related_documents:
 
 ### RV-NFR-002 초기 데이터 규모
 
-- 현재 상태: 팀 결정 필요
-- 결정이 필요한 내용:
-  - MVP 출시 시 예상 맛집, 영상, 유튜버와 방문 관계 수
+- 현재 상태: 결정 완료 (2026-07-27)
+- 결정 내용:
+  - MVP 출시·초기 운영 기준 데이터는 맛집 1,000개, 유튜버 200개, 영상 5,000개, 방문 관계 10,000개로 정의한다.
+  - 성능 테스트와 용량 산정은 네 수치를 모두 채운 대표 데이터셋을 사용한다.
 - 영향:
   - 성능 테스트, 데이터 접근 설계와 운영 용량
 - 결정 시점:
@@ -762,9 +766,10 @@ related_documents:
 
 ### RV-NFR-006 지원 브라우저 범위
 
-- 현재 상태: 팀 결정 필요
-- 결정이 필요한 내용:
-  - PC·모바일 지원 브라우저 버전과 시험 화면 크기
+- 현재 상태: 결정 완료 (2026-07-27)
+- 결정 내용:
+  - PC Chrome·Edge와 Android Chrome, iPhone Safari의 테스트 시점 최신 안정 버전 및 직전 안정 버전을 지원한다.
+  - 대표 화면 폭은 360px, 390px, 768px, 1280px, 1440px로 검증한다.
 - 영향:
   - 프론트엔드 구현 및 인수 테스트 매트릭스
 - 결정 시점:
@@ -821,9 +826,11 @@ related_documents:
 
 ### RV-NFR-011 성능 테스트 환경
 
-- 현재 상태: 팀 결정 필요
-- 결정이 필요한 내용:
-  - 운영 대비 자원 비율, 데이터 규모, 부하 모델과 외부 연계 처리 방식
+- 현재 상태: 결정 완료 (2026-07-27)
+- 결정 내용:
+  - 운영과 동급인 단일 EC2 자원 구성을 사용하고 초기 기준 데이터 100%를 적재한다.
+  - 정상 부하 50명·20 RPS와 최대 부하 200명·80 RPS를 각각 실행한다.
+  - Kakao·YouTube 연계는 WireMock Stub으로 대체하고 외부 대기 시간은 애플리케이션 성능 수치에서 분리한다.
 - 영향:
   - 성능 수치의 재현성과 출시 판단
 - 결정 시점:
@@ -831,9 +838,11 @@ related_documents:
 
 ### RV-NFR-012 배포 자동화 범위
 
-- 현재 상태: 후속 설계에서 결정
-- 결정이 필요한 내용:
-  - 빌드·테스트·배포·복구 중 자동화할 단계와 수동 승인 지점
+- 현재 상태: 결정 완료 (2026-07-27)
+- 결정 내용:
+  - GitHub Actions가 빌드, 자동화 테스트, 컨테이너 이미지 생성과 ECR push까지 자동 수행한다.
+  - 운영 EC2 배포는 지정 담당자의 수동 승인을 거쳐 시작한다.
+  - 배포 후 Smoke Test는 자동 수행하고 실패 시 이전 이미지로의 복구는 운영자가 수동 실행한다.
 - 영향:
   - 배포 오류율, 운영 부담과 구현 비용
 - 결정 시점:
@@ -841,10 +850,12 @@ related_documents:
 
 ### RV-NFR-013 운영 알림 기준
 
-- 현재 상태: 결정 완료 (2026-07-24)
+- 현재 상태: 결정 완료 (2026-07-27 보완)
 - 결정 내용:
   - CloudWatch 알람을 오류율·응답 지연·상태 확인 실패·저장소 장애 지표에 연결하고, 알람 발생 시 이메일/Slack으로 통지한다.
-  - 수신 책임자는 운영 담당자 1명으로 하며 구체적 임계값 수치는 운영 전 별도로 확정한다.
+  - 수신 책임자는 운영 담당자 1명으로 한다.
+  - 5분 구간 서버 오류율 5% 이상, 5분 구간 p95 응답시간 2초 초과, 상태 확인 연속 3회 실패를 알림 기준으로 사용한다.
+  - PostgreSQL·Redis 연결 실패는 상태 확인에서 연속 3회 감지되면 저장소 장애 알림을 발생시킨다.
 - 영향:
   - 장애 탐지 시간과 운영 부담
 - 결정 시점:
@@ -852,9 +863,10 @@ related_documents:
 
 ### RV-NFR-014 초기 예상 맛집 수
 
-- 현재 상태: 팀 결정 필요
-- 결정이 필요한 내용:
-  - 출시 시점과 초기 운영 기간의 예상 맛집 수
+- 현재 상태: 결정 완료 (2026-07-27)
+- 결정 내용:
+  - 출시 시점과 초기 운영 기간의 기준 맛집 수는 1,000개로 한다.
+  - [RV-NFR-002](non-functional-requirements.md#rv-nfr-002-초기-데이터-규모)의 통합 데이터 규모를 단일 기준으로 사용한다.
 - 영향:
   - 검색·페이지네이션 성능과 데이터 용량
 - 결정 시점:
@@ -862,9 +874,10 @@ related_documents:
 
 ### RV-NFR-015 초기 예상 영상 수
 
-- 현재 상태: 팀 결정 필요
-- 결정이 필요한 내용:
-  - 출시 시점과 초기 운영 기간의 예상 영상 및 방문 관계 수
+- 현재 상태: 결정 완료 (2026-07-27)
+- 결정 내용:
+  - 출시 시점과 초기 운영 기간의 기준 영상 수는 5,000개, 방문 관계 수는 10,000개로 한다.
+  - 유튜버 200개를 포함한 [RV-NFR-002](non-functional-requirements.md#rv-nfr-002-초기-데이터-규모)의 통합 데이터 규모를 단일 기준으로 사용한다.
 - 영향:
   - 상세 조회·유튜버 필터 성능과 데이터 용량
 - 결정 시점:

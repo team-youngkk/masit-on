@@ -102,11 +102,11 @@ related_documents:
 
 | 최소 공동 계약 | 현재 근거 또는 결정 | 시작 전 산출물 | 차단 대상 |
 |---|---|---|---|
-| Critical 후속 설계 항목 | 관리자 제품 정책은 확정, 인증 기술과 일부 NFR 측정값은 미확정 | 인증 전달·보호 계약과 미확정 수치의 책임자·결정 시점 | [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록), 보안 검증 |
+| Critical 상세 설계 항목 | 관리자 인증·NFR 측정값 확정 | JWT·Redis 계약과 확정 부하·데이터·브라우저 기준 | [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록), 보안·성능 검증 |
 | 유튜버 관리 단위 | YouTube 채널을 고유 단위로 사용 | 채널 식별·표시 정보 계약 | [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회), [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색), [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
 | 맛집·음식 카테고리 | 사전 정의된 대표 카테고리 정확히 1개 | 카테고리 값과 `기타` 기록 검증 계약 | [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색), [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회), [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
 | 지역 관리 단위 | 서울특별시 전체 도로명주소와 자치구 1개 | 자치구 입력·표시·검증 계약 | [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색), [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회), [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
-| 공통 식별자 | 표현 방식은 후속 설계 사항 | 도메인 경계를 넘는 식별자 표현 규칙 | 전체 |
+| 공통 식별자 | 애플리케이션 생성 UUID v4 | 도메인 경계를 넘는 UUID 표현 규칙 | 전체 |
 | 공개·비공개 기준 | 네 대상이 모두 공개·유효한 관계만 노출 | 대상별 상태 판정과 조합 우선순위 | 전체 조회·등록 |
 | 공통 응답·오류 | 형식은 미확정 | 성공, 빈 목록, 잘못된 요청, 찾을 수 없음, 충돌, 인증 실패 계약 | 전체 |
 | 페이지네이션 | 크기 10·20·50, 기본 20, 범위 밖은 빈 목록 | 페이지 입력과 메타데이터 계약 | [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색), [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) |
@@ -272,7 +272,7 @@ related_documents:
 - Creator: 공개 유튜버 표시 정보와 상태
 - Video: 공개 영상 표시 정보·원본 링크와 상태
 
-[WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)는 최종 상세 조합의 Workstream 소유자다. 실제 조합을 Restaurant 애플리케이션 책임 또는 전용 조회 책임 중 어디에 둘지는 후속 아키텍처 결정으로 남긴다.
+[WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)는 최종 상세 조합의 Workstream 소유자다. 실제 조합은 `com.masiton.orchestration.application.query`의 전용 Query Service에 둔다.
 
 ### 관련 요구사항
 
@@ -604,7 +604,7 @@ related_documents:
 ### 주요 리스크
 
 - 네 도메인의 등록 흐름을 조율하므로 다른 Workstream보다 작업량과 통합 범위가 크다.
-- 인증 기술과 계정 발급·회수·복구의 세부 운영 절차는 후속 설계가 필요하다.
+- 인증은 Spring Security JWT·Redis Refresh Token을 사용하고 계정 발급·회수·복구는 인증 API 문서의 별도 운영 명령 절차를 따른다.
 - 보류 요청을 실제로 저장·관리하는 방식은 후속 설계가 필요하며 MVP에 승인 화면을 추가해서는 안 된다.
 
 ## 9. Workstream 간 의존 관계
@@ -771,7 +771,7 @@ related_documents:
 - MVP 제외 기능이 구현·선행 구조 범위에 포함되지 않는다.
 - [roles.md](../03-team/roles.md)와 [ownership.md](../03-team/ownership.md)에서 각 Workstream 최종 책임자와 계약·공유 파일 소유자를 지정할 수 있다.
 
-## 15. 검토 필요 항목
+## 15. 검토 결정 기록
 
 ### RV-WS-001 실제 Workstream 개수
 
@@ -797,7 +797,7 @@ related_documents:
 
 ### RV-WS-003 맛집 상세 조합 조회의 책임 위치
 
-- 현재 상태: [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) Workstream 소유는 권장, 실제 애플리케이션 책임 위치는 팀 결정 필요
+- 현재 상태: 결정 완료 — [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)가 소유하고 `com.masiton.orchestration.application.query`의 전용 Query Service가 조합
 - 관련 요구사항:
   - [FR-RESTAURANT-008](../01-requirements/functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회) ~ [FR-RESTAURANT-011](../01-requirements/functional-requirements.md#fr-restaurant-011-영상-연결이-없는-맛집-상세-조회)
   - [FR-CREATOR-002](../01-requirements/functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
@@ -844,7 +844,7 @@ related_documents:
 
 ### RV-WS-007 공통 인증 작업의 담당 방식
 
-- 현재 상태: 제품 정책과 담당 결정 완료, 인증 기술은 후속 설계
+- 현재 상태: 결정 완료 — 김인안이 Spring Security JWT·Redis Refresh Token 공통 기반과 [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 적용을 책임
 - 관련 요구사항:
   - [FR-ADMIN-001](../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근)
   - [NFR-SECURITY-001](../01-requirements/non-functional-requirements.md#nfr-security-001-공개-조회와-관리자-접근-통제)
@@ -866,7 +866,7 @@ related_documents:
 
 ### RV-WS-009 Stub 또는 Fake가 필요한 통합 지점
 
-- 현재 상태: 사용 권장, 구체 도구와 제거 기준은 팀 결정 필요
+- 현재 상태: 결정 완료 — Workstream 간 Port Fake와 외부 Kakao·YouTube WireMock Stub을 사용하고 실제 통합 테스트가 통과하면 임시 Fake를 제거
 - 필요 지점:
   - [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색)의 [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 유튜버 조건 결과
   - [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)의 Visit·Creator·Video 표시 정보

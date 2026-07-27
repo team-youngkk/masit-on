@@ -11,16 +11,14 @@ related_documents:
 
 # 패키지 구조
 
-## 1. 루트 패키지 상태
+## 1. 루트 패키지
 
-저장소에 Gradle `group`이나 Java 소스가 없어 실제 루트 패키지명을 확인할 수 없다. 아래의 `{basePackage}`는 placeholder다.
-
-**확인 필요:** 프로젝트 초기 설정에서 조직이 소유한 역도메인 이름을 기준으로 Gradle `group`과 Java 루트 패키지를 확정한다. 예시 이름을 그대로 실제 값으로 간주하지 않는다.
+Gradle `group`과 Java 루트 패키지는 `com.masiton`으로 확정한다. Spring Boot 진입점은 `com.masiton.MasitOnApplication`이다.
 
 ## 2. 권장 패키지 트리
 
 ```text
-{basePackage}/
+com/masiton/
 ├─ restaurant/
 │  ├─ presentation/
 │  │  ├─ rest/
@@ -169,14 +167,14 @@ restaurant/infrastructure/persistence/
 
 | 현재 | 목표 | 전환 |
 |---|---|---|
-| 애플리케이션 소스 없음 | `src/main/java/{basePackage}/...` | 프로젝트 초기 설정에서 생성 |
-| 테스트 소스 없음 | `src/test/java/{basePackage}/...` | 운영 패키지 구조를 반영 |
+| 애플리케이션 소스 없음 | `src/main/java/com/masiton/...` | 프로젝트 초기 설정에서 생성 |
+| 테스트 소스 없음 | `src/test/java/com/masiton/...` | 운영 패키지 구조를 반영 |
 | Flyway 경로 없음 | `src/main/resources/db/migration/` | 물리 DB 설계 후 생성 |
 | 아키텍처 테스트 없음 | 테스트 하위 `architecture` | 첫 패키지 생성과 동시에 추가 |
 
 ## 9. 단계적 이전 방법
 
-1. Gradle `group`과 `{basePackage}`를 확정한다.
+1. Gradle `group=com.masiton`, 루트 패키지 `com.masiton`, 진입점 `MasitOnApplication`으로 프로젝트를 생성한다.
 2. 네 도메인과 `orchestration`, `security`, 제한된 `common` 빈 패키지 대신 첫 실제 클래스와 함께 생성한다.
 3. 입력·출력 Port와 Domain을 먼저 만들고 Infrastructure 구현을 연결한다.
 4. 상세 조회와 방문 등록처럼 교차 도메인 흐름만 `orchestration`에 둔다.

@@ -7,6 +7,9 @@ related_documents:
   - constraints.md
   - ../api/detail/restaurant-detail-api.md
   - ../api/admin/reference-data-api.md
+  - physical-data-model.md
+  - constraint-mapping.md
+  - ../../07-adr/data/data-008-publication-lifecycle-soft-delete.md
 ---
 
 # 맛잇온 데이터 생명주기
@@ -22,7 +25,7 @@ related_documents:
 | publication status | 일반 사용자가 조회할 수 있는가 | Restaurant, Creator, Video, Visit | 생성 성공 시 PUBLIC, 비공개·삭제는 제외 |
 | reference active | 신규 관계에 사용할 수 있는가 | Region, FoodCategory | 비활성 값은 신규 연결 금지 |
 | external availability | 외부 YouTube 리소스가 확인 결과 이용 가능한가 | Creator, Video | publication과 분리, 실시간·주기 확인 없음 |
-| lifecycle status | 내부 데이터가 활성·삭제·보관 중인가 | 핵심 데이터 | 필요성은 확정, 값·구현은 후속 설계 |
+| lifecycle status | 내부 데이터가 활성·삭제 중인가 | 핵심 데이터 | `ACTIVE/DELETED`, ADR-DATA-008 확정 |
 | verification status | 검증 대기·완료인가 | Visit 후보 | 별도 상태를 저장하지 않음; 생성 완료가 검증 완료 |
 
 미리보기의 `READY`, `DUPLICATE`, `REVIEW_REQUIRED`는 핵심 엔티티 상태가 아니라 생성 전 판정이다. `REVIEW_REQUIRED`는 등록 요청으로 저장하지 않는다.
@@ -49,7 +52,7 @@ related_documents:
 
 1. 관리자가 YouTube 원본 URL을 제출한다.
 2. 외부 영상 ID, 제목, 썸네일, 게시 채널과 원본 URL을 확인한다.
-3. 게시 Creator가 존재하는 상태에서 관리자 확인 후 Video를 생성하고 PUBLIC 및 외부 AVAILABLE 상태로 시작한다.
+3. 관리자 확인 후 Video를 생성하고 PUBLIC·ACTIVE 및 외부 AVAILABLE 상태로 시작한다. 일치 Creator가 이미 있으면 내부 참조를 연결하고, 없으면 외부 게시 채널 ID만 저장한다.
 4. Video 등록만으로 Restaurant와 연결되지 않는다.
 5. 삭제·비공개를 관리자가 확인하면 외부 상태를 UNAVAILABLE로 기록하고 Video를 비공개 처리한다. 관련 Visit와 Restaurant를 자동 삭제하지 않는다.
 6. 공개 맛집 기본 정보는 유지하고 해당 영상과 그 영상에만 근거한 관계를 사용자 조회에서 제외한다.
@@ -83,16 +86,15 @@ related_documents:
 ## 9. 삭제 및 복구 요구사항
 
 - 외부 영상·채널 삭제를 내부 데이터 물리 삭제로 전파하지 않는다.
-- 비즈니스 규칙의 `삭제 상태`는 공개 조회 제외를 요구하지만 실제 물리 삭제·소프트 삭제·보관 방식은 미확정이다.
+- 핵심 행을 보존하는 논리 삭제를 사용하고 `PRIVATE`, `DELETED`, `deleted_at`을 한 트랜잭션에서 설정한다.
 - 잘못된 데이터는 먼저 비공개하고 출처와 사실을 재검증한 뒤 공개 조건을 충족할 때만 재공개한다.
 - 관련 관계를 다른 기본 데이터로 자동 이전하거나 임의 병합하지 않는다.
-- 복구 가능 범위, 삭제 시각·행위자·사유 이력과 참조 보존 정책은 후속 ADR/운영 설계에서 정한다.
+- 논리 삭제된 행은 인증된 운영 명령으로만 복구할 수 있고 참조 행은 보존한다. 상태 변경의 행위자·대상·이전/이후 상태·사유·traceId는 운영 감사 로그에 기록한다.
 
-## 10. 검토 필요 항목
+## 10. 확정 운영 정책
 
-- publication status와 lifecycle status 값·전환 명령·권한
-- 논리 삭제 대 물리 삭제, 보존 기간과 복구 정책
-- 외부 상태 마지막 확인 시각과 수동 운영 화면
-- 채널명·영상 제목 등 외부 표시 정보 갱신 이력
-- 관리자 정정 행위자·사유 감사 범위
-- Region·FoodCategory 비활성화 후 기존 Restaurant 표시 정책
+- 논리 삭제 데이터는 기한 없이 보존하고 자동 purge하지 않으며 승인된 운영자만 별도 명령으로 복구할 수 있다.
+- 상태 변경 화면·관리 API는 MVP에 만들지 않고 인증된 운영 명령만 제공한다.
+- 채널명·영상 제목 등 외부 표시 정보는 최신값만 유지하고 변경 이력을 별도로 저장하지 않는다.
+- 상태 변경 감사 로그에는 행위자·대상·이전/이후 상태·사유·traceId를 남긴다.
+- Region·FoodCategory를 비활성화해도 기존 Restaurant는 해당 이름을 계속 표시하고 신규 연결만 금지한다.

@@ -9,6 +9,9 @@ related_documents:
   - ../api/detail/restaurant-detail-api.md
   - ../api/admin/visit-registration-api.md
   - ../diagrams/erd-spec.md
+  - physical-data-model.md
+  - constraint-mapping.md
+  - ../../07-adr/data/data-008-publication-lifecycle-soft-delete.md
 ---
 
 # 맛잇온 데이터 관계 규칙
@@ -65,7 +68,7 @@ related_documents:
 ### 생성·상태 규칙
 
 - 활성 FoodCategory만 신규 Restaurant에 연결한다.
-- `기타`이면 Restaurant에 구체 음식 종류를 함께 기록한다.
+- `기타`도 Restaurant에 별도 구체 음식 종류를 기록하지 않는다.
 - 비활성화해도 기존 Restaurant 관계는 자동 삭제하지 않는다.
 
 ### 관련 규칙
@@ -126,7 +129,7 @@ Creator는 YouTube 채널 단위이고 Video는 외부 게시 채널 ID를 필�
 ### 삭제 또는 비공개 영향
 
 - Restaurant가 비공개·삭제 상태이면 그 Restaurant와 관련 콘텐츠 맥락 전체를 일반 조회에서 제외한다.
-- Restaurant 상태 변경이 Visit를 물리 삭제하는지는 후속 삭제 전략에서 결정한다.
+- Restaurant 상태 변경은 Visit를 물리 삭제하지 않는다. 공개 조회에서 관계를 제외하며 FK는 `RESTRICT`로 보존한다.
 
 ### 관련 규칙
 
@@ -142,7 +145,7 @@ Creator는 YouTube 채널 단위이고 Video는 외부 게시 채널 ID를 필�
 
 - Visit는 실제 방문 주체인 채널 단위 Creator 하나를 반드시 참조한다.
 - Creator는 Visit 없이 존재할 수 있다.
-- Visit.Creator.externalChannelId는 Visit.Video.publisherExternalChannelId와 같아야 하며, Video.creatorId가 있으면 같은 Creator여야 한다.
+- Visit.Creator.externalChannelId는 Visit.Video.publisherExternalChannelId와 같아야 한다. 물리 모델은 Visit 생성 전에 Video.creatorId를 같은 Creator로 해소하고 복합 FK로 일치를 보존한다.
 
 ### 삭제 또는 비공개 영향
 
@@ -188,10 +191,10 @@ Creator는 YouTube 채널 단위이고 Video는 외부 게시 채널 ID를 필�
 
 ## 10. 관계 삭제 영향
 
-- 참조 대상 삭제를 물리 연쇄 삭제로 구현한다고 결정하지 않는다.
+- 참조 대상 삭제를 물리 연쇄 삭제하지 않고 논리 삭제와 FK `RESTRICT`를 사용한다.
 - 공개 조회는 Restaurant·Creator·Video·Visit 네 대상의 상태를 모두 확인한다.
 - Creator·Video·Visit만 비공개이면 공개 Restaurant 기본 정보는 유지한다.
-- 실제 삭제, 보관과 복구 방식은 ADR 및 물리 설계 대상이다.
+- 삭제 상태 조합과 복구 불변식은 [physical-data-model.md](physical-data-model.md#4-공개삭제외부-상태)와 [constraint-mapping.md](constraint-mapping.md#5-상태-전환-불변식)을 따른다.
 
 ## 11. 카디널리티 검토
 
@@ -215,9 +218,8 @@ Creator는 YouTube 채널 단위이고 Video는 외부 게시 채널 ID를 필�
 - 변경 조건: 한 방문의 복수 근거, 영상 없는 검증된 방문, 방문일 기반 재방문 이력 또는 채널과 실제 출연자 분리가 범위에 들어올 때 C 또는 새 모델을 검토한다.
 - ADR 필요 여부: 현재는 확정 비즈니스·API 계약을 그대로 명세하므로 필수 ADR이 아니다. 변경 시 장기 구조 영향이 크므로 ADR을 작성한다.
 
-## 12. 검토 필요 항목
+## 12. 확정 및 범위 변경 조건
 
-- 물리 삭제 시 참조 제한·보관·복구 정책
-- 카카오 외부 장소 동일성의 물리 키
-- publication/lifecycle 상태 값과 운영 전환 수단
-- 향후 복수 방문 근거·방문일 도입 시 Visit 식별 기준
+- 삭제·복구 전환은 MVP에서 인증된 별도 운영 명령으로만 수행하고 관리자 API는 만들지 않는다.
+- 논리 삭제 데이터는 MVP에서 기한 없이 보존하고 자동 물리 purge를 수행하지 않는다. 보존 요구나 용량 문제가 생기면 별도 ADR로 정한다.
+- 복수 방문 근거·방문일은 MVP 범위가 아니며 도입 승인 시 Visit 식별 기준을 새 ADR로 결정한다.

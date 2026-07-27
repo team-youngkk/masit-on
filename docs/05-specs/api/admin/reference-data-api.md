@@ -106,6 +106,8 @@ related_documents:
 
 미리보기 응답의 `decision`은 `READY`, `DUPLICATE`, `REVIEW_REQUIRED` 중 하나다. `READY`일 때만 `confirmationToken`이 문자열이고, 나머지는 `null`이다. Token은 서버가 생성한 최소 256-bit 불투명 난수이며 JWT의 관리자 식별자와 서버가 저장한 정규화 후보 Snapshot에 묶이고 발급 후 10분에 만료된다. 서버는 원문 대신 SHA-256 해시를 PostgreSQL에 저장한다. `expiresAt`은 RFC 3339 시각이다. 만료·변조·다른 관리자·다른 자원 생성 API 사용은 `409 VERIFICATION_EXPIRED` 또는 `400 INVALID_CONFIRMATION_TOKEN`이며 생성하지 않는다.
 
+Kakao place ID와 YouTube channel/video ID는 서버의 동일성 판정·후보 Snapshot·저장소 유일 키에만 사용하고 관리자 API 응답과 화면에는 노출하지 않는다. 관리자는 정규화된 이름·주소·URL·제목·채널명·썸네일을 확인한다.
+
 Token 소비와 Entity 생성 또는 동시 중복 완료는 한 PostgreSQL 트랜잭션으로 처리한다. 최초 생성은 `201 Created`를 반환하고 조회 가능한 정식 자원 URI가 계약에 존재하면 `Location` 헤더를 함께 반환한다. 생성 완료 뒤 동일 관리자·동일 Token 재시도는 새 Entity를 만들지 않고 최초 성공과 같은 자원 표현을 `200 OK`로 반환한다. 미리보기 뒤 다른 요청이 같은 자원을 먼저 만들었다면 최초와 재시도 모두 같은 `409 DUPLICATE_*`와 기존 자원의 ID·최소 정보를 반환한다. 별도 `replayed` 필드는 추가하지 않고 `201`과 `200`으로 구분하며, 이 결과 재현은 부수 효과를 다시 실행하는 Token 재사용이 아니다. 조회 API가 없는 Creator·Video에 존재하지 않는 상세 경로를 만들기 위해 `Location`을 추가하지 않는다.
 
 ## 5. 맛집 등록
@@ -128,8 +130,7 @@ Token 소비와 Entity 생성 또는 동시 중복 완료는 한 PostgreSQL 트�
   "roadAddress": "서울특별시 마포구 월드컵로 1",
   "detailAddress": null,
   "phoneNumber": "02-000-0000",
-  "category": "한식",
-  "otherCategoryName": null
+  "category": "한식"
 }
 ```
 
@@ -141,9 +142,8 @@ Token 소비와 Entity 생성 또는 동시 중복 완료는 한 PostgreSQL 트�
 | `detailAddress` | string 또는 null | 예 | 건물명·층·호 등 상세 위치 | 없으면 `null`, 있으면 앞뒤 공백 제거 후 1~200자 |
 | `phoneNumber` | string | 예 | 확인된 전화번호 | 7~20자, 숫자·공백·`+`·`-`·`(`·`)`만 허용 |
 | `category` | string | 예 | 대표 음식 카테고리 정확히 1개 | 공통 10개 값 중 하나 |
-| `otherCategoryName` | string 또는 null | 예 | `기타`의 구체 음식 종류 | `기타`이면 앞뒤 공백 제거 후 1~100자, 아니면 `null` |
 
-대표 이미지는 확정 요구사항에 없으므로 요청·응답에 포함하지 않는다. 자치구는 전체 도로명주소에 해당하는 값이며 별도 다중 입력을 받지 않는다.
+대표 이미지는 확정 요구사항에 없으므로 요청·응답에 포함하지 않는다. 자치구는 전체 도로명주소에 해당하는 값이며 별도 다중 입력을 받지 않는다. `기타` 카테고리도 별도 구체 음식 종류 필드를 받지 않는다.
 
 #### Success Response
 

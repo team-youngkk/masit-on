@@ -6,7 +6,11 @@ related_documents:
   - ../data/lifecycle-rules.md
   - ../data/constraints.md
   - ../data/data-review.md
+  - ../data/physical-data-model.md
+  - ../data/constraint-mapping.md
   - ../../07-adr/security/auth-003-confirmation-token.md
+  - ../../07-adr/data/data-007-uuid-v4-identifiers.md
+  - ../../07-adr/data/data-008-publication-lifecycle-soft-delete.md
 ---
 
 # 맛잇온 ERD 작성 명세
@@ -37,22 +41,22 @@ related_documents:
 - 별도 방문 근거, 방문일·검증 상태 엔티티
 - 검증 미리보기·보류 요청: 핵심 자원을 생성하지 않으며 `REVIEW_REQUIRED`를 저장하지 않음
 - 확인 Token: PostgreSQL 단기 기술 테이블로 확정됐지만 핵심 도메인 ERD에서는 제외([ADR-AUTH-003](../../07-adr/security/auth-003-confirmation-token.md))
-- 로그인 실패 카운터: 저장 방식 미확정 단기 기술 아티팩트
+- 로그인 실패 카운터: Redis `auth:login-failure:{loginIdHash}`의 15분 TTL 단기 기술 아티팩트
 
 ## 4. 엔티티별 핵심 속성
 
 | 엔티티 | 식별·고유 속성 | 필수 관계 속성 | 상태·주요 속성 |
 |---|---|---|---|
-| Restaurant | id, kakaoPlaceIdentity | regionId, foodCategoryId | name, address, phone, publicationStatus |
-| Region | id, name | 없음 | active |
-| FoodCategory | id, name | 없음 | active |
-| Creator | id, externalChannelId | 없음 | channelName, channelUrl, publicationStatus, externalAvailabilityStatus |
-| Video | id, externalVideoId | publisherExternalChannelId; creatorId는 선택 | title, sourceUrl, thumbnailUrl, publicationStatus, externalAvailabilityStatus |
-| Visit | id, (restaurantId+creatorId+videoId) | 세 참조 모두 | publicationStatus |
+| Restaurant | id, kakaoPlaceIdentity | regionId, foodCategoryId | name, address, phone, publicationStatus, lifecycleStatus |
+| Region | id, code, name | 없음 | sortOrder, active |
+| FoodCategory | id, code, name | 없음 | sortOrder, active |
+| Creator | id, externalChannelId | 없음 | channelName, channelUrl, publicationStatus, lifecycleStatus, externalAvailabilityStatus |
+| Video | id, externalVideoId | publisherExternalChannelId; creatorId는 선택 | title, sourceUrl, thumbnailUrl, publicationStatus, lifecycleStatus, externalAvailabilityStatus |
+| Visit | id, (restaurantId+creatorId+videoId) | 세 참조 모두 | publicationStatus, lifecycleStatus |
 | AdminAccount | id, loginId | 없음 | passwordCredential, active |
 | AdminRefreshToken | tokenId, tokenCredential | adminAccountId | tokenFamilyId, expiresAt, invalidatedAt |
 
-논리 삭제·보관의 실제 필드는 미확정이므로 Mermaid 속성에는 넣지 않고 publication과 외부 상태만 표시한다.
+논리 ERD는 publication과 lifecycle을 서로 다른 상태 축으로 표시한다. 실제 값, `deleted_at` 조합과 FK 삭제 동작은 [물리 데이터 모델](../data/physical-data-model.md)과 [ADR-DATA-008](../../07-adr/data/data-008-publication-lifecycle-soft-delete.md)을 따른다.
 
 ## 5. 관계와 카디널리티
 
@@ -69,21 +73,22 @@ Restaurant–Video와 Restaurant–Creator 직접 관계는 그리지 않는다.
 ## 6. 유일성 및 참조 제약
 
 - Restaurant.kakaoPlaceIdentity 유일
-- Region.name, FoodCategory.name 유일
+- Region.code/name/sortOrder, FoodCategory.code/name/sortOrder 유일
 - Creator.externalChannelId 유일
 - Video.externalVideoId 유일
 - Visit의 restaurantId+creatorId+videoId 복합 유일
 - AdminAccount.loginId, AdminRefreshToken.tokenCredential 유일
 - 모든 FK는 존재하는 대상을 참조한다.
-- Video의 선택 Creator 및 Visit.Creator와 외부 게시 채널 ID의 일치는 ERD 주석만으로 충분하지 않으며 제약 문서의 애플리케이션 필수 검증을 따른다.
+- Video의 선택 Creator 및 Visit.Creator와 외부 게시 채널 ID의 일치는 애플리케이션 검증과 [물리 복합 FK](../data/constraint-mapping.md#3-fk-목록과-삭제-정책)를 함께 사용한다.
 
 ## 7. 상태 필드 표현
 
 - Restaurant·Creator·Video·Visit의 `publicationStatus`는 사용자 노출 여부다.
+- Restaurant·Creator·Video·Visit의 `lifecycleStatus`는 활성·삭제 여부다.
 - Creator·Video의 `externalAvailabilityStatus`는 YouTube 리소스 가용 여부다.
 - Region·FoodCategory의 `active`는 신규 연결 가능 여부다.
 - AdminAccount.active와 AdminRefreshToken.invalidatedAt은 인증·재발급 유효성을 표현한다.
-- lifecycle 삭제·보관과 검증 상태를 위 상태에 합치지 않는다.
+- lifecycle, publication, 외부 availability와 검증 상태를 서로 합치지 않는다.
 
 ## 8. ERD 표기 규칙
 

@@ -113,17 +113,18 @@ HTTP Request
 1. Security Filter가 JWT와 `ADMIN` 권한을 검증한다.
 2. Controller가 ID 형식과 `visitEvidenceConfirmed == true`를 검증한다.
 3. `RegisterVisitService`가 트랜잭션을 시작한다.
-4. Restaurant, Creator, Video 공개 Reference를 각각 조회한다.
-5. 없으면 대상별 `404`, 비공개면 `422 REFERENCE_NOT_PUBLIC`로 실패한다.
+4. Restaurant, Creator, Video의 공개·활성 Reference를 각각 조회한다. Creator와 Video는 외부 `AVAILABLE`도 만족해야 한다.
+5. 없으면 대상별 `404`, 공개·활성·외부 가용 조건을 충족하지 않으면 `422 REFERENCE_NOT_PUBLIC`로 실패한다.
 6. Creator 외부 채널 ID와 Video 게시 채널 ID 일치를 확인한다.
-7. `CreateVisitUseCase`에 검증된 세 Reference와 근거 확인 값을 전달한다.
-8. Visit Application이 동일 세 ID 관계를 조회해 있으면 `409`로 실패한다.
-9. Visit Domain이 근거 확인, 채널 일치와 세 식별자로 관계를 생성한다.
-10. Visit Application이 Repository Port로 저장한다.
-11. DB 복합 UNIQUE 충돌도 `DUPLICATE_VISIT_RELATIONSHIP`으로 변환한다.
-12. 바깥 Orchestration 트랜잭션이 커밋된 뒤 `201 Created`를 반환한다.
+7. Video의 내부 Creator가 미해소이면 Video Application의 `ResolveVideoCreatorUseCase`로 같은 Creator 연결을 해소한다. 이미 같은 Creator면 그대로 진행하고 다른 Creator면 `VIDEO_CHANNEL_MISMATCH`로 실패한다.
+8. `CreateVisitUseCase`에 검증된 세 Reference와 근거 확인 값을 전달한다.
+9. Visit Application이 동일 세 ID 관계를 조회해 있으면 `409`로 실패한다.
+10. Visit Domain이 근거 확인, 채널 일치와 세 식별자로 관계를 생성한다.
+11. Visit Application이 Repository Port로 저장한다.
+12. DB의 채널 일치 복합 FK와 Visit 복합 UNIQUE 충돌을 각각 도메인 오류로 변환한다.
+13. Video 연결과 Visit를 포함한 바깥 Orchestration 트랜잭션이 커밋된 뒤 `201 Created`를 반환한다.
 
-Orchestration은 Visit Domain이나 Visit Repository를 직접 import하지 않고 Visit의 공개 입력 Port만 호출한다.
+Orchestration은 Video·Visit Domain이나 Repository를 직접 import하지 않고 각 Application의 공개 입력 Port만 호출한다.
 
 ## 4. 오류 변환
 

@@ -115,8 +115,8 @@ Application이 받는 안정된 실패 유형은 최소 다음 의미를 구분�
 ### timeout
 
 - 연결과 전체 응답에 유한한 상한을 둔다.
-- 구체 수치는 현재 NFR과 ADR에서 확정되지 않았다.
-- **확인 필요:** Kakao·YouTube별 연결·응답 timeout 수치를 구현 전에 확정하고 설정·WireMock 테스트·운영 문서에 같은 값을 사용한다.
+- Kakao·YouTube 모두 연결 timeout 2초, 전체 응답 timeout 5초를 사용한다.
+- 설정, WireMock 지연 테스트와 운영 문서에 같은 값을 사용한다.
 - timeout은 Adapter 설정이며 Domain에 전파하지 않는다.
 
 ### retry

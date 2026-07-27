@@ -7,6 +7,8 @@ related_documents:
   - data-003-spring-data-jpa.md
   - data-004-flyway.md
   - data-005-redis-refresh-token.md
+  - data-007-uuid-v4-identifiers.md
+  - data-008-publication-lifecycle-soft-delete.md
 ---
 
 # 데이터 ADR
@@ -20,4 +22,6 @@ related_documents:
 | [ADR-DATA-003](data-003-spring-data-jpa.md) | Spring Data JPA 기본 데이터 접근 |
 | [ADR-DATA-004](data-004-flyway.md) | Flyway 스키마 마이그레이션 |
 | [ADR-DATA-005](data-005-redis-refresh-token.md) | Redis 8.8 관리자 Refresh Token 저장소 |
+| [ADR-DATA-007](data-007-uuid-v4-identifiers.md) | 애플리케이션 생성 UUID v4 내부 식별자 |
+| [ADR-DATA-008](data-008-publication-lifecycle-soft-delete.md) | 공개 상태와 논리 삭제 생명주기 분리 |
 

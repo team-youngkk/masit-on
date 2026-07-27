@@ -177,7 +177,7 @@ related_documents:
 ## 18. 리스크
 
 - 여러 영역 조합과 상태 확인이 성능·통합 테스트 복잡도를 높인다.
-- 상세 조합의 실제 애플리케이션 책임 위치가 미확정이다.
+- 상세 조합은 `com.masiton.orchestration.application.query`의 전용 Query Service가 담당한다.
 - 외부 링크 상태 변화가 표시 품질에 영향을 준다.
 
 ## 19. 관련 문서
@@ -189,7 +189,7 @@ related_documents:
 - [MVP Workstream](../../../02-analysis/mvp-workstreams.md)
 - [추적성](../../traceability.md)
 
-## 20. 검토 필요 항목
+## 20. 확정 상세 정책
 
-- 상세 조합의 애플리케이션 책임 위치
-- 일반 조회 목표 응답 시간과 외부 링크 확인 정책
+- 상세 조합은 `com.masiton.orchestration.application.query`가 담당한다.
+- 일반 상세 조회 p95 500ms 이하를 검증하고 외부 링크는 일반 조회에서 실시간 확인하지 않는다.

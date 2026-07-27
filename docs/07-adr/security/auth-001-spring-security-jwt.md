@@ -50,7 +50,7 @@ Accepted
 
 ## 6. 결정
 
-Spring Security Filter Chain이 Bearer JWT의 서명·issuer·audience·만료와 `ADMIN` 권한을 검증한다. Refresh Token은 Redis에 저장하고 `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/api/admin/auth` 쿠키로만 전달하며 재발급 때 회전한다.
+Spring Security Filter Chain이 Bearer JWT의 RS256 서명, `iss=masit-on`, `aud=masit-on-admin-api`, 만료와 `ADMIN` 권한을 검증한다. 모든 서명 키에 `kid`를 부여하고 90일마다 새 검증 키 선배포, 새 키 발급 전환, Access Token 최대 수명 30분 경과 뒤 이전 개인 키 폐기 순서로 교체한다. Refresh Token은 Redis에 저장하고 `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/api/admin/auth` 쿠키로만 전달하며 재발급 때 회전한다.
 
 Access Token 만료는 30분, Refresh Token TTL은 14일로 하며 재발급마다 회전하고 재사용을 탐지해 즉시 폐기한다. Redis 장애로 Refresh Token 조회가 불가능한 경우 재발급을 차단하는 fail-closed로 처리하여 Access Token 만료 후 관리자 재로그인을 요구한다.
 
@@ -68,7 +68,7 @@ Access Token 만료는 30분, Refresh Token TTL은 14일로 하며 재발급마�
 
 ## 10. 강제 규칙
 
-Access Token은 메모리에만 유지해 Bearer 헤더로 보내고 JWT claim은 최소화한다. Refresh Token은 JavaScript에 노출하지 않고 회전·재사용 탐지를 수행한다.
+Access Token은 메모리에만 유지해 Bearer 헤더로 보내고 JWT claim은 최소화한다. Refresh Token은 JavaScript에 노출하지 않고 회전·재사용 탐지를 수행한다. 로그인 실패는 Redis 카운터에 첫 실패부터 15분 TTL을 적용하고 5회 실패 시 남은 TTL 동안 차단하며 성공 시 초기화한다.
 
 ## 11. 금지 사항
 
@@ -76,7 +76,7 @@ Access·Refresh Token의 localStorage·sessionStorage 저장, 장기 Access Key,
 
 ## 12. 구현 및 운영 영향
 
-JWT 서명 키 보호·교체, Redis 가용성, Token 회전·폐기·로그 마스킹과 프론트엔드 메모리 상태 처리가 필요하다. Access Token 30분·Refresh Token 14일 TTL과 Redis 장애 시 fail-closed(강제 재로그인) 정책을 구현에 반영한다 (2026-07-24 결정).
+JWT 서명 키 보호·90일 교체, Redis 가용성, Token 회전·폐기·로그 마스킹과 프론트엔드 메모리 상태 처리가 필요하다. Access Token 30분·Refresh Token 14일 TTL과 Redis 장애 시 fail-closed(강제 재로그인) 정책을 구현에 반영한다. Java Principal은 `com.masiton.security.application.AdminPrincipal`이 소유한다.
 
 ## 13. 검증 방법
 

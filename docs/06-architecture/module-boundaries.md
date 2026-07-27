@@ -34,7 +34,7 @@ Restaurant, Creator, Video, Visit는 각각 데이터, 불변 조건과 변경 �
 
 ## 3. 경계별 공개 계약 예시
 
-아래 이름은 목표 구조의 예시다. 실제 루트 패키지는 미정이지만 계약의 형태와 정보 최소화 원칙은 고정한다.
+아래 이름은 `com.masiton` 루트 패키지 아래의 목표 구조 예시이며 계약의 형태와 정보 최소화 원칙은 고정한다.
 
 ```java
 // restaurant.application.port.in

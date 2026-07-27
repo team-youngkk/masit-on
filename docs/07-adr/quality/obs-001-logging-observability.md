@@ -2,7 +2,7 @@
 id: ADR-OBS-001
 title: 애플리케이션 로그와 운영 관측 기준
 status: Accepted
-decision_date: 검토 필요
+decision_date: 2026-07-27
 owners:
   - 이우람
 related_requirements:
@@ -56,7 +56,7 @@ Accepted
 
 ## 6. 결정
 
-확정된 Spring·AWS 도구로 로그·상태·지표를 수집한다. 로그 보관 14일, DB 백업 일 1회 자동 스냅샷 후 7일 보관(RPO 최대 24시간), CloudWatch 알람의 이메일/Slack 통지와 담당자 1명 수신 체계는 2026-07-24 결정 완료됐다([RV-NFR-009](../../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간), [RV-NFR-010](../../01-requirements/non-functional-requirements.md#rv-nfr-010-백업-주기와-복구-범위), [RV-NFR-013](../../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준)). 다만 알람의 구체적 임계값 수치는 운영 전 별도로 확정한다([RV-NFR-013](../../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준)).
+확정된 Spring·AWS 도구로 로그·상태·지표를 수집한다. 로그 보관 14일, DB 백업 일 1회 자동 스냅샷 후 7일 보관(RPO 최대 24시간), CloudWatch 알람의 이메일/Slack 통지와 담당자 1명 수신 체계를 사용한다. 알람은 5분 서버 오류율 5% 이상, 5분 p95 응답시간 2초 초과, 상태 확인 연속 3회 실패를 기준으로 하며 PostgreSQL·Redis 연결 실패도 상태 확인에서 연속 3회 감지되면 통지한다.
 
 이 결정은 다음 세 층위로 나뉜다. 첫째, 애플리케이션 로그(SLF4J·Logback)는 요청 상관관계와 오류 분류를 남긴다. 둘째, 상태·지표(Actuator)는 [ADR-WEB-003](../platform/web-003-routing-boundary.md)의 `/internal/health/live`, `/internal/health/ready`, `/internal/health/dependencies`에서 프로세스와 PostgreSQL·Redis 연결 가능 여부를 구분한다([NFR-AVAILABILITY-001](../../01-requirements/non-functional-requirements.md#nfr-availability-001-상태-확인과-장애-구분)). 셋째, 운영 수집·조회(CloudWatch)는 위 두 층위의 산출물을 모아 14일간 검색 가능하게 보관하고, 정의된 지표가 임계값을 넘으면 알람을 발생시킨다. 이 세 층위 중 하나만 갖추는 것으로는 단일 EC2 수동 복구 절차에서 필요한 진단이 완결되지 않는다.
 
@@ -64,7 +64,7 @@ Accepted
 
 - SLF4J·Actuator는 이미 채택된 Spring Boot 4.1.0 스택의 일부이므로([ADR-FRAME-001](../platform/frame-001-spring-boot.md)) 별도 의존성을 추가하지 않는다.
 - CloudWatch는 이미 결정된 단일 EC2 배포 토폴로지([technology-policy.md](../../06-architecture/technology-policy.md) 13절)에 네이티브하게 연동되므로, 별도 에이전트·플랫폼 통합 작업 없이 로그·지표를 수집할 수 있다.
-- CloudWatch의 사용량 기반 과금 구조는, 동시 사용자 수([RV-NFR-001](../../01-requirements/non-functional-requirements.md#rv-nfr-001-목표-동시-사용자-수))와 초기 데이터 규모([RV-NFR-002](../../01-requirements/non-functional-requirements.md#rv-nfr-002-초기-데이터-규모), [RV-NFR-014](../../01-requirements/non-functional-requirements.md#rv-nfr-014-초기-예상-맛집-수), [RV-NFR-015](../../01-requirements/non-functional-requirements.md#rv-nfr-015-초기-예상-영상-수))가 아직 미확정인 MVP 초기 단계에서 고정 구독료를 요구하는 전용 플랫폼보다 초기 월 150,000원 예산 목표에 맞추기 쉽다.
+- CloudWatch의 사용량 기반 과금 구조는 정상 부하 50명·20 RPS와 초기 기준 데이터 규모에서 고정 구독료를 요구하는 전용 플랫폼보다 초기 월 150,000원 예산 목표에 맞추기 쉽다.
 
 ## 8. 트레이드오프
 
@@ -86,7 +86,7 @@ Accepted
 
 - 민감정보 원문 기록: 비밀번호·토큰·API 키 원문을 남기면 [NFR-SECURITY-003](../../01-requirements/non-functional-requirements.md#nfr-security-003-비밀정보와-오류-정보-보호)·[NFR-PRIVACY-002](../../01-requirements/non-functional-requirements.md#nfr-privacy-002-인증정보와-외부-키-보호)를 직접 위반한다.
 - 불필요한 요청·응답 본문 로깅: 로그량이 늘어나면 14일 보관 기준에서도 CloudWatch 수집·저장 비용이 커져 150,000원 예산 목표를 압박한다.
-- 근거 없이 확정한 보관 기간·알림 임계값: 로그 보관(14일), 백업 주기·보관(일 1회, 7일), 알림 채널(CloudWatch 알람→이메일/Slack, 담당자 1명)은 2026-07-24 결정 완료됐지만, 알람의 구체적 임계값 수치는 여전히 운영 전 별도로 확정해야 하는 미결정 항목이며([RV-NFR-013](../../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준)) 이를 이 ADR에서 임의로 정하지 않는다.
+- 운영 실측 없는 임계값 완화: 초기 알람 기준은 확정값으로 적용하고 운영 실측 없이 임의로 완화하지 않는다.
 
 ## 12. 구현 및 운영 영향
 
@@ -96,7 +96,7 @@ Accepted
 - 로그 14일 보관 후 자동 폐기, PostgreSQL(RDS) 일 1회 자동 스냅샷·7일 보관 설정을 구성하고 확인한다([RV-NFR-009](../../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간), [RV-NFR-010](../../01-requirements/non-functional-requirements.md#rv-nfr-010-백업-주기와-복구-범위)).
 - CloudWatch 알람을 오류율·응답 지연·헬스체크 실패·저장소 장애 지표에 연결하고 이메일/Slack으로 담당자 1명에게 통지하도록 구성한다([RV-NFR-013](../../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준)). 비용 대시보드로 150,000원 예산 목표 대비 로그·지표 사용량을 추적한다.
 - 로그 레벨은 개발·시험·운영 환경별로 조정 가능하게 구성하고, 정상적인 빈 조회 결과(예: 검색 결과 없음)는 오류로 기록하지 않는다([NFR-OBSERVABILITY-003](../../01-requirements/non-functional-requirements.md#nfr-observability-003-로그-품질과-민감정보-차단)).
-- 동시 사용자 수([RV-NFR-001](../../01-requirements/non-functional-requirements.md#rv-nfr-001-목표-동시-사용자-수))와 초기 데이터 규모([RV-NFR-002](../../01-requirements/non-functional-requirements.md#rv-nfr-002-초기-데이터-규모), [RV-NFR-014](../../01-requirements/non-functional-requirements.md#rv-nfr-014-초기-예상-맛집-수), [RV-NFR-015](../../01-requirements/non-functional-requirements.md#rv-nfr-015-초기-예상-영상-수))가 아직 미확정이므로, 로그·지표 수집량에 대한 초기 용량 산정은 하지 않고 운영 초기 실측치를 기준으로 비용을 재확인한다.
+- 정상 부하 50명·20 RPS, 최대 부하 200명·80 RPS와 초기 기준 데이터 규모를 사용해 로그·지표 수집량을 산정하고 운영 초기 실측치로 비용을 재확인한다.
 
 ## 13. 검증 방법
 
@@ -109,7 +109,7 @@ Accepted
 
 ## 14. 재검토 조건
 
-동시 사용자 규모([RV-NFR-001](../../01-requirements/non-functional-requirements.md#rv-nfr-001-목표-동시-사용자-수))나 초기 데이터 규모([RV-NFR-002](../../01-requirements/non-functional-requirements.md#rv-nfr-002-초기-데이터-규모), [RV-NFR-014](../../01-requirements/non-functional-requirements.md#rv-nfr-014-초기-예상-맛집-수), [RV-NFR-015](../../01-requirements/non-functional-requirements.md#rv-nfr-015-초기-예상-영상-수))가 확정되어 CloudWatch 비용이 150,000원 예산 목표를 넘어설 것으로 판단될 때, SLO 요구가 CloudWatch 단일 대시보드로 충분히 표현되지 않을 때, 또는 알림 임계값의 구체적 수치가 운영 전 확정될 때([RV-NFR-013](../../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준)) 재검토한다.
+실측 로그·지표 비용이 150,000원 예산 목표를 넘어설 것으로 판단될 때, SLO 요구가 CloudWatch 단일 대시보드로 충분히 표현되지 않을 때, 또는 초기 알림 임계값이 반복적으로 오탐·미탐을 만들 때 재검토한다.
 
 ## 15. 관련 문서
 

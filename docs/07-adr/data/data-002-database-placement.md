@@ -2,7 +2,7 @@
 id: ADR-DATA-002
 title: 개발 Docker와 운영 RDS 데이터베이스 분리
 status: Accepted
-decision_date: 검토 필요
+decision_date: 2026-07-27
 owners:
   - 이우람
 related_requirements:
