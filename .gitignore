@@ -31,3 +31,8 @@ next-env.d.ts
 
 # Claude Code — 공유 설정만 커밋하고 개인 로컬 설정은 제외한다
 .claude/settings.local.json
+
+# IDE
+.idea/
+*.iml
+.vscode/

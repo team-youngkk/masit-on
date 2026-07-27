@@ -83,6 +83,19 @@ Node.js 24.18.0, Next.js 16.2.11, TypeScript 7.0.2를 정확히 고정한다.
 
 런타임·패키지 버전과 `package-lock.json` 등 잠금 파일을 저장소에 고정하고, Server Components와 Client Components(`"use client"`) 경계를 파일 단위로 명시한다. 관리자 화면은 공개 화면과 같은 코드베이스를 쓰되, [ADR-WEB-003](web-003-routing-boundary.md)의 `/admin/login`, 기능별 `/admin/**` 경로와 인증 복구 흐름으로 구분한다.
 
+### 10.1 승인된 예외 — Next 내장 TypeScript 검사 비활성화
+
+6장이 고정한 Next.js 16.2.11과 TypeScript 7.0.2 조합에서 `next build`의 내장 TypeScript 단계가 동작하지 않는다. TypeScript 7 패키지는 `main` 없이 `exports`만 노출하고 API 표면이 재편되어, Next이 설치된 TypeScript를 탐지하지 못하고 재설치를 시도하다 `The "id" argument must be of type string. Received undefined`로 중단된다. TypeScript 5.9.3으로 바꾸면 통과하며, 6장이 정한 Node 24.18.0과 npm 11.16.0에서도 같은 오류를 재현했으므로 런타임 문제가 아니다.
+
+6장의 버전 고정을 유지하기 위해 `frontend/next.config.ts`에서 `typescript.ignoreBuildErrors`로 내장 단계만 비활성화하고, 타입 검사는 `npm run typecheck`(`tsc --noEmit`)로 수행한다. TypeScript 7.0.2에서 `tsc` 자체는 정상 동작하므로 7장이 말하는 "타입 불일치를 컴파일 시점에 드러낸다"는 목적은 유지된다.
+
+이 예외는 다음 조건에서 제거한다.
+
+- Next.js가 TypeScript 7을 지원해 내장 단계가 정상 동작할 때
+- 또는 6장의 TypeScript 버전을 변경하는 후속 결정이 승인될 때
+
+13장의 검증 항목 중 CI의 `tsc --noEmit` 통과를 타입 검사 기준으로 사용한다.
+
 ## 11. 금지 사항
 
 범위 버전, 다른 패치·Preview, Node `latest`와 잠금 파일 없는 설치를 금지한다. 이는 기술 정책 3장의 고정 버전 정책과 동일하다.
