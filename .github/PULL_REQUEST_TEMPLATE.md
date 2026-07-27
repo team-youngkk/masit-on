@@ -1,3 +1,19 @@
+Closes #
+
+<!-- 이 PR이 구현한 이슈 번호를 적는다. 기본 브랜치가 develop이므로 머지되면 해당 이슈가 자동으로 닫힌다.
+     여러 이슈를 닫으려면 "Closes #1, Closes #2"처럼 각각 적는다.
+     닫을 이슈가 없으면 이 줄을 지우고 아래 관련 문서에 근거를 남긴다. -->
+
+## 메타데이터
+
+<!-- PR 템플릿은 담당자·리뷰어·레이블을 자동으로 지정하지 못한다.
+     PR을 만든 직후 오른쪽 사이드바에서 직접 설정하고, 같은 값을 아래에 적는다. -->
+
+- Workstream·Task:
+- 담당자:
+- 리뷰어: <!-- ownership.md 9장 기본 리뷰 구조를 따른다. 작성자를 제외한 2명 승인이 필요하다 -->
+- 레이블: <!-- mvp / size:S·M / sequence:1-foundation~4-verification / area:backend·frontend·database·infra·security·integration·test -->
+
 ## 변경 목적
 
 <!-- 무엇을 왜 바꿨는지 두세 문장. 구현 방법이 아니라 목적을 적는다. -->
@@ -55,3 +71,6 @@
 - [ ] 최소 두 명의 승인을 받았고 대상 브랜치의 병합 방식을 지켰다.
 
 <!-- 병합 방식: feature·fix → develop 은 일반 Merge, develop → main 만 Squash Merge -->
+
+<!-- PR 본문과 커밋 메시지에 AI 도구 생성 표기를 남기지 않는다.
+     "Generated with Claude Code" 같은 문구와 도구 서명·배지를 넣지 않는다. -->
