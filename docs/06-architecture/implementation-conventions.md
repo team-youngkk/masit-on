@@ -129,6 +129,8 @@ related_documents:
 - `main`은 배포 가능한 기준 브랜치, `develop`은 기능 통합 브랜치다.
 - 기능과 수정 브랜치는 최신 `develop`에서 분기한다.
 - 기능 브랜치는 `feature/ws-{번호}-{기능명}`, 수정 브랜치는 `fix/{기능명}` 형식을 사용한다.
+- Workstream에 속하지 않는 작업은 커밋 유형과 같은 접두사를 사용한다. 접두사는 `docs/`, `chore/`, `build/`, `ci/`, `test/`, `refactor/`이며 뒤에 `{작업명}`을 붙인다.
+- 구현 계획의 기반 Task처럼 Workstream 번호가 없는 기능 작업은 `feature/t-{번호}-{작업명}`을 사용한다. 예: `feature/t-02-web-foundation`
 - `main`과 `develop`에 직접 push하지 않는다.
 
 ### 7.2 PR과 병합
