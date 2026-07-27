@@ -149,6 +149,26 @@ class ErrorContractApiTest {
     }
 
     @Test
+    @DisplayName("예상하지 못한 예외의 민감한 메시지는 로그에 남지 않는다")
+    void 예외로그_민감정보포함_원문을기록하지않는다() throws Exception {
+        Logger handlerLogger = (Logger) LoggerFactory.getLogger(GlobalExceptionHandler.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        handlerLogger.addAppender(appender);
+
+        try {
+            mockMvc.perform(get("/test-support/unexpected-error"))
+                    .andExpect(status().isInternalServerError());
+
+            assertThat(appender.list)
+                    .extracting(ILoggingEvent::getFormattedMessage)
+                    .noneMatch(message -> message.contains("admin-password") || message.contains("access-token"));
+        } finally {
+            handlerLogger.detachAppender(appender);
+        }
+    }
+
+    @Test
     @DisplayName("요청 처리가 끝나면 traceId가 MDC에 남지 않는다")
     void traceId정리_요청종료_MDC가비어있다() throws Exception {
         mockMvc.perform(get("/test-support/business-error"));
@@ -193,7 +213,7 @@ class ErrorContractApiTest {
 
         @GetMapping("/test-support/unexpected-error")
         String unexpectedError() {
-            throw new IllegalStateException("내부 구현 세부 정보");
+            throw new IllegalStateException("password=admin-password, authorization=Bearer access-token");
         }
     }
 

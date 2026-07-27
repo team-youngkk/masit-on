@@ -57,3 +57,21 @@ logging:
   level:
     root: ${LOG_LEVEL_ROOT:INFO}
     com.masiton: ${LOG_LEVEL_APP:INFO}
+
+masiton:
+  security:
+    jwt:
+      issuer: masit-on
+      audience: masit-on-admin-api
+      access-token-ttl: PT30M
+      key-id: ${JWT_KEY_ID:}
+      private-key-pem: ${JWT_PRIVATE_KEY_PEM:}
+      public-key-pem: ${JWT_PUBLIC_KEY_PEM:}
+    refresh-token-ttl: P14D
+    cookie-name: masit_on_refresh
+    secure: true
+    same-site: Strict
+    path: /api/admin/auth
+    login-failure:
+      max-attempts: 5
+      ttl: PT15M

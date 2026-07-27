@@ -1,0 +1,9 @@
+{
+  "kind": "youtube#channelListResponse",
+  "etag": "fixture-channel-contract-error",
+  "items": [
+    {
+      "id": "UCfixtureContractError1"
+    }
+  ]
+}

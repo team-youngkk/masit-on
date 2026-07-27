@@ -61,6 +61,9 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:-masiton_local}
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      JWT_KEY_ID: ${JWT_KEY_ID}
+      JWT_PRIVATE_KEY_PEM: ${JWT_PRIVATE_KEY_PEM}
+      JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM}
     ports:
       - "${APP_PORT:-8080}:8080"
     depends_on:

@@ -49,7 +49,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpectedException(Exception exception) {
-        log.error("unhandled error", exception);
+        log.error("unhandled error: type={}", exception.getClass().getSimpleName());
         ErrorCode errorCode = ErrorCode.INTERNAL_SERVER_ERROR;
         return ResponseEntity.status(errorCode.status())
                 .body(ErrorResponse.of(errorCode.name(), errorCode.defaultMessage(), traceId()));
@@ -95,7 +95,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     ) {
         ErrorCode errorCode = resolveErrorCode(statusCode);
         if (statusCode.is5xxServerError()) {
-            log.error("unhandled framework error", exception);
+            log.error("unhandled framework error: type={}", exception.getClass().getSimpleName());
         }
         return ResponseEntity.status(statusCode)
                 .body(ErrorResponse.of(errorCode.name(), errorCode.defaultMessage(), traceId()));

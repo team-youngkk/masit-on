@@ -20,22 +20,23 @@ related_documents:
 
 ### 최초 1회
 
-```bash
-cp .env.example .env
+```powershell
+Copy-Item .env.example .env
+. .\scripts\Initialize-LocalJwt.ps1
 ```
 
-`.env`는 로컬 전용 값이며 커밋하지 않는다. 운영 자격 증명을 넣지 않는다.
+`.env`는 로컬 전용 값이며 커밋하지 않는다. 운영 자격 증명을 넣지 않는다. 초기화 스크립트는 `.env`에 로컬 RSA 키를 생성하고 현재 PowerShell 세션에도 같은 값을 설정한다. 새 PowerShell 세션에서 `bootRun`을 실행할 때는 스크립트를 다시 dot-source한다.
 
 ### 개발 루프 (의존 서비스는 컨테이너, 애플리케이션은 로컬)
 
-```bash
+```powershell
 docker compose up -d postgres redis wiremock
-./gradlew bootRun
+.\gradlew.bat bootRun
 ```
 
 ### 통합 실행 (애플리케이션까지 컨테이너)
 
-```bash
+```powershell
 docker compose up -d --build
 ```
 
@@ -51,8 +52,8 @@ curl http://localhost:8080/internal/health/dependencies
 
 ### 빌드와 테스트
 
-```bash
-./gradlew clean build
+```powershell
+.\gradlew.bat clean build
 ```
 
 통합 테스트가 Testcontainers로 PostgreSQL·Redis·WireMock 컨테이너를 띄우므로 Docker가 실행 중이어야 한다. 테스트는 실제 Kakao·YouTube API를 호출하지 않는다.
@@ -78,10 +79,12 @@ docker compose down -v
 
 포트가 겹치면 `.env`의 `APP_PORT`, `POSTGRES_PORT`, `REDIS_PORT`, `WIREMOCK_PORT`를 바꾼다.
 
-`.env`는 Docker Compose만 읽는다. `./gradlew bootRun`은 `.env`를 로드하지 않으므로, 컨테이너 포트를 바꿨다면 애플리케이션에도 같은 값을 환경 변수로 넘겨야 한다.
+`.env`는 Docker Compose만 읽는다. `bootRun`은 `.env`를 로드하지 않으므로, 컨테이너 포트를 바꿨다면 애플리케이션에도 같은 값을 환경 변수로 넘겨야 한다. JWT 설정은 위 초기화 스크립트를 dot-source해 현재 셸에 주입한다.
 
-```bash
-DB_URL=jdbc:postgresql://localhost:15432/masiton REDIS_PORT=16379 ./gradlew bootRun
+```powershell
+$env:DB_URL = 'jdbc:postgresql://localhost:15432/masiton'
+$env:REDIS_PORT = '16379'
+.\gradlew.bat bootRun
 ```
 
 ## 문서

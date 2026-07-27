@@ -1,0 +1,20 @@
+{
+  "kind": "youtube#channelListResponse",
+  "etag": "fixture-channel-normal",
+  "items": [
+    {
+      "kind": "youtube#channel",
+      "etag": "fixture-channel-item-normal",
+      "id": "UCfixtureNormalChannel01",
+      "snippet": {
+        "title": "맛잇온 테스트 채널",
+        "customUrl": "@masiton-fixture",
+        "thumbnails": {
+          "high": {
+            "url": "https://i.ytimg.com/vi/fixtureVid1/hqdefault.jpg"
+          }
+        }
+      }
+    }
+  ]
+}

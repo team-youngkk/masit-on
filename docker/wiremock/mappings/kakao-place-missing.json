@@ -1,0 +1,14 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/v2/local/search/keyword.json",
+    "queryParameters": {
+      "query": { "equalTo": "fixture-place-missing" }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json; charset=utf-8" },
+    "bodyFileName": "kakao-place-missing.json"
+  }
+}

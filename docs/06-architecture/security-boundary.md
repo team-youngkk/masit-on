@@ -152,7 +152,7 @@ URL은 HTTPS와 허용 호스트를 검증하고 리디렉션 최종 호스트�
 ### 확정 보안 세부
 
 - JWT는 RS256, `iss=masit-on`, `aud=masit-on-admin-api`를 사용하고 `kid`로 검증 키를 선택한다. 키는 90일마다 교체하며 새 검증 키 선배포 → 새 키 발급 전환 → 30분 뒤 이전 개인 키 폐기 순서를 지킨다.
-- 로그인 실패는 Redis `auth:login-failure:{loginIdHash}` 카운터에 첫 실패부터 15분 TTL을 적용한다. 원자 증가 결과가 5 이상이면 남은 TTL 동안 차단하고 로그인 성공 시 삭제한다.
+- 로그인 실패는 Redis `auth:login-failure:login-id:{loginIdHash}`와 `auth:login-failure:source:{sourceHash}` 카운터에 첫 실패부터 15분 TTL을 적용한다. 두 카운터 중 하나의 원자 증가 결과가 5 이상이면 남은 TTL 동안 차단하고 로그인 성공 시 함께 삭제한다. 현재 MVP는 서블릿 연결 원격 주소만 출처로 사용하며, 신뢰 프록시 범위가 확정되기 전에는 `X-Forwarded-For` 같은 전달 헤더를 신뢰하지 않는다.
 - Refresh Token은 Redis `auth:refresh:{adminId}`에 SHA-256 해시·Token 계열 ID·발급 및 만료 시각을 JSON으로 저장하고 14일 TTL로 정리한다. 회전과 재사용 탐지는 원자 연산으로 수행한다.
 - Java Principal 타입은 `com.masiton.security.application.AdminPrincipal`이 소유하고 presentation·domain 패키지에는 두지 않는다.
 

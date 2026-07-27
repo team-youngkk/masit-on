@@ -1,0 +1,13 @@
+{
+  "error": {
+    "code": 429,
+    "message": "Fixture quota exceeded",
+    "errors": [
+      {
+        "domain": "youtube.quota",
+        "reason": "quotaExceeded",
+        "message": "Fixture quota exceeded"
+      }
+    ]
+  }
+}
