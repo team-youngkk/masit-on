@@ -71,6 +71,7 @@ related_documents:
   - ../../../05-specs/api/admin/README.md
   - ../../../05-specs/data/README.md
   - ../../../07-adr/security/auth-001-spring-security-jwt.md
+  - ../../../07-adr/platform/web-003-routing-boundary.md
   - ../../../07-adr/integration/ext-001-reference-verification.md
   - ../../../01-requirements/non-functional-requirements.md
   - ../../traceability.md
@@ -80,7 +81,7 @@ related_documents:
 
 ## 1. 문서 정보
 
-관리자 접근부터 맛집·유튜버·영상 기본 데이터, 방문 관계 등록과 사용자 조회 반영까지 하나의 완결된 [WS-04](../../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 업무 흐름으로 정의한다.
+관리자 접근부터 맛집·유튜버·영상 기본 데이터, 방문 관계 등록과 사용자 조회 반영까지 하나의 완결된 [WS-04](../../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 업무 흐름으로 정의한다. 화면은 `/admin/login`, `/admin/restaurants/new`, `/admin/creators/new`, `/admin/videos/new`, `/admin/visits/new`로 분리하고 백엔드 호출은 `/api/admin/**`를 사용한다.
 
 ## 2. 기능 개요
 
@@ -108,6 +109,7 @@ related_documents:
 
 - 팀이 최소 관리자 인증과 접근 거부 계약을 확정한다.
 - 방문 관계 전에 참조할 맛집·유튜버·영상이 등록돼 있어야 한다.
+- 관리자 화면 진입 시 메모리 Access Token이 없으면 Refresh Token 재발급을 한 번 시도하고 실패하면 `/admin/login`으로 이동한다.
 - 관리자는 출처와 사실, 영상 게시 채널과 실제 방문 근거를 확인한다.
 
 ## 8. 핵심 사용자 흐름

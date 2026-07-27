@@ -74,16 +74,16 @@ related_documents:
 
 | API ID | Method | Path | 설명 |
 |---|---|---|---|
-| [API-DISCOVERY-001](restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색) | GET | `/restaurants` | 맛집 목록 및 조건 검색 |
+| [API-DISCOVERY-001](restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색) | GET | `/api/restaurants` | 맛집 목록 및 조건 검색 |
 
-`/restaurants`를 선택한다. 검색과 필터는 목록 조회의 조건이므로 `/restaurant-discovery`나 `/search/restaurants`처럼 별도 동사·기능 경로로 분리하지 않는다.
+`/api/restaurants`를 선택한다. `/api`는 화면과 백엔드를 구분하고 검색과 필터는 목록 조회의 조건이므로 `/api/restaurant-discovery`나 `/api/search/restaurants`처럼 별도 동사·기능 경로로 분리하지 않는다.
 
 ## 5. 맛집 목록 및 조건 검색
 
 ### API-DISCOVERY-001 맛집 목록 및 조건 검색
 
 - Method: `GET`
-- Path: `/restaurants`
+- Path: `/api/restaurants`
 - 인증: 없음
 - 권한: 일반 공개 조회
 - 관련 PRD: [PRD-DISCOVERY-001](../../../04-product/prd/discovery/restaurant-discovery.md), [PRD-DISCOVERY-002](../../../04-product/prd/discovery/creator-discovery.md)
@@ -185,7 +185,7 @@ related_documents:
 
 ## 10. 예제
 
-`GET /restaurants?query=식당&district=마포구&category=한식&creatorId=creator-id&page=1&size=20`
+`GET /api/restaurants?query=식당&district=마포구&category=한식&creatorId=creator-id&page=1&size=20`
 
 이 요청은 네 탐색 조건을 모두 만족하는 공개 맛집의 첫 페이지를 요청한다.
 

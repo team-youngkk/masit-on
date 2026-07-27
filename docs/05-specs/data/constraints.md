@@ -8,6 +8,7 @@ related_documents:
   - ../api/admin/reference-data-api.md
   - ../api/admin/visit-registration-api.md
   - ../../07-adr/data/data-001-postgresql.md
+  - ../../07-adr/security/auth-003-confirmation-token.md
   - ../api/discovery/restaurant-discovery-api.md
   - ../api/admin/authentication-api.md
   - ../../01-requirements/non-functional-requirements.md
@@ -124,7 +125,7 @@ related_documents:
 - 각 기본 데이터 생성 요청은 해당 엔티티와 필수 관계·상태를 한 원자적 범위에서 만든다.
 - Visit 생성은 세 참조·채널 일치·공개 상태·중복 확인과 관계 저장을 한 원자적 범위에서 처리한다.
 - 실패 시 부분 데이터나 부분 공개 상태가 남지 않는다.
-- 검증 미리보기는 핵심 엔티티를 생성하지 않는다. 확인 토큰의 소비와 생성 요청 재사용 방지는 토큰 구현 방식과 함께 후속 설계한다.
+- 검증 미리보기는 핵심 엔티티를 생성하지 않고 PostgreSQL에 10분 수명의 확인 Token 해시·관리자·자원 종류·후보 스키마 버전·JSONB Snapshot을 저장한다. Token 소비와 Entity 생성 또는 중복 완료는 한 트랜잭션으로 처리한다.
 - 서로 별도인 맛집·Creator·Video 등록을 하나의 거대 트랜잭션으로 묶지 않는다.
 
 ## 8. 애플리케이션 검증과 저장소 제약의 구분
@@ -142,13 +143,14 @@ related_documents:
 | `기타` 구체 이름 조건부 필수 | 후속 설계 | 필요 | 교차 필드 조건과 오류 설명 |
 | publication 허용값 | 필요 | 필요 | 값 무결성과 전환 정책 |
 | 계정당 활성 Refresh Token 최대 1개 | Redis·애플리케이션 | 필요 | 키·회전·무효화 전략에 의존 |
+| 확인 Token 단일 사용·결과 재현 | PostgreSQL 행 잠금·상태·고유 해시 | 필요 | 생성과 Token 결과를 같은 트랜잭션으로 커밋 |
 
 ## 9. 동시성 검토
 
 - Restaurant 외부 장소 키, Creator 외부 채널 ID, Video 외부 영상 ID, Visit 세 참조 조합에 최종 고유성 보장이 필요하다.
 - 애플리케이션의 선조회만으로 중복을 막지 않는다.
 - 고유성 충돌은 기존 자원을 반환할 수 있는 도메인 중복 오류로 변환한다.
-- 락, 격리 수준, upsert, 재시도와 확인 토큰 단일 사용 방식은 데이터베이스 제품 선택 후 ADR 또는 물리 설계에서 결정한다.
+- 일반 동시 쓰기의 격리 수준·락·upsert 강화는 [ADR-DATA-006](../../07-adr/adr-backlog.md#adr-data-006-동시-쓰기-충돌-제어)의 활성화 조건을 따른다. 확인 Token 생성 확정은 [ADR-AUTH-003](../../07-adr/security/auth-003-confirmation-token.md)에 따라 행 잠금과 제한된 `ON CONFLICT DO NOTHING RETURNING`으로 결과를 원자적으로 확정한다.
 
 ## 10. 검토 필요 항목
 
@@ -156,5 +158,4 @@ related_documents:
 - Video–Creator와 Visit–Creator 일치를 저장소에서도 강제할 물리 구조
 - publication/lifecycle 상태의 정확한 값과 조건부 제약
 - Redis에서 계정당 활성 Refresh Token 하나와 회전·재사용 탐지를 보장하는 방법
-- 확인 토큰 단일 사용·만료·변조 방지 방식
 - URL 보조 유일성, 대소문자·공백 정규화와 구체 인덱스

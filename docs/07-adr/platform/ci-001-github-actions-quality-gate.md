@@ -40,7 +40,7 @@ GitHub Actions에서 고정 런타임으로 빌드·자동 테스트를 실행�
 
 모든 Workstream 변경이 같은 재현 빌드와 테스트 기준을 통과해야 한다.
 
-4명(이우람·양성훈·박진영·김인안)이 [WS-01](../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)~[WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록)를 독립적으로 개발하며([scope.md](../../00-overview/scope.md) 범위 경계 규칙 6), 각자의 변경이 다른 Workstream을 깨뜨리지 않는지 사람이 매번 수동으로 확인할 인원과 일정 여유는 없다. 배포 토폴로지는 2026-07-24에 단일 EC2 인스턴스(Nginx 리버스 프록시 + Spring Boot, 장애 시 수동 복구)로 결정되었고, ALB·ASG·Blue-Green은 Post-MVP로 보류되었다([technology-policy.md](../../06-architecture/technology-policy.md) 13장, [adr-backlog.md](../adr-backlog.md) 4장). 따라서 CI가 보장해야 하는 것은 배포 자동화의 정교함이 아니라 "배포 후보가 빌드·테스트를 통과했는가"라는 상대적으로 단순한 게이트이며, ALB·Blue-Green 전환 자동화 범위([RV-NFR-012](../../01-requirements/non-functional-requirements.md#rv-nfr-012-배포-자동화-범위))는 이 ADR이 결정하지 않는다.
+4명(이우람·양성훈·박진영·김인안)이 [WS-01](../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)~[WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록)를 독립적으로 개발하며([scope.md](../../00-overview/scope.md) 범위 경계 규칙 6), 각자의 변경이 다른 Workstream을 깨뜨리지 않는지 사람이 매번 수동으로 확인할 인원과 일정 여유는 없다. 배포 토폴로지는 단일 EC2 인스턴스(Nginx 리버스 프록시 + Next.js + Spring Boot, 장애 시 수동 복구)로 결정되었고, ALB·ASG·Blue-Green은 Post-MVP로 보류되었다([technology-policy.md](../../06-architecture/technology-policy.md) 13장, [adr-backlog.md](../adr-backlog.md) 5장). 따라서 CI가 보장해야 하는 것은 배포 자동화의 정교함이 아니라 "배포 후보가 빌드·테스트를 통과했는가"라는 상대적으로 단순한 게이트이며, ALB·Blue-Green 전환 자동화 범위([RV-NFR-012](../../01-requirements/non-functional-requirements.md#rv-nfr-012-배포-자동화-범위))는 이 ADR이 결정하지 않는다.
 
 ## 4. 결정 문제
 
@@ -97,4 +97,4 @@ GitHub Actions를 CI 기준으로 삼으면 자체 서버를 운영하지 않아
 
 - [테스트 ADR](../quality/test-001-automation-strategy.md)
 - [비밀정보 ADR](../security/sec-001-secrets-workload-identity.md)
-- [ADR Backlog](../adr-backlog.md#4-범위-충돌-검토)
+- [ADR Backlog](../adr-backlog.md#5-범위-충돌-검토)

@@ -7,6 +7,7 @@ related_documents:
   - frame-001-spring-boot.md
   - web-001-frontend-platform.md
   - web-002-data-state.md
+  - web-003-routing-boundary.md
   - runtime-001-docker.md
   - ci-001-github-actions-quality-gate.md
 ---
@@ -22,6 +23,7 @@ related_documents:
 | [ADR-FRAME-001](frame-001-spring-boot.md) | Spring Boot 애플리케이션 기준 |
 | [ADR-WEB-001](web-001-frontend-platform.md) | 프론트엔드 런타임과 프레임워크 기준 |
 | [ADR-WEB-002](web-002-data-state.md) | 프론트엔드 데이터와 상태 책임 분리 |
+| [ADR-WEB-003](web-003-routing-boundary.md) | 웹 화면·API·운영 경로 경계 |
 | [ADR-RUNTIME-001](runtime-001-docker.md) | Docker 기반 실행 환경 |
 | [ADR-CI-001](ci-001-github-actions-quality-gate.md) | GitHub Actions 빌드·테스트 품질 게이트 |
 

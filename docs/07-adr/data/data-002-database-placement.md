@@ -33,7 +33,7 @@ Accepted
 
 ## 3. 배경
 
-초기 월 인프라 예산은 150,000원([adr-traceability.md](../adr-traceability.md))이며 운영 배포는 단일 EC2 인스턴스(Nginx + Spring Boot, ALB/ASG 미도입, 장애 시 수동 재기동)로 결정되어 있다([technology-policy.md](../../06-architecture/technology-policy.md) 13절, 2026-07-24). 이 예산 범위 안에서 관리형 백업([RV-NFR-010](../../01-requirements/non-functional-requirements.md#rv-nfr-010-백업-주기와-복구-범위): 일 1회 스냅샷, 7일 보관, RPO 24시간)을 직접 구현하지 않고 확보하려면 운영 DB는 자체 구축 서버가 아닌 관리형 서비스가 유리하다. 한편 팀원 4명이 각자 로컬에서 독립적으로 개발·테스트를 반복해야 하므로([scope.md](../../00-overview/scope.md) 범위 경계 원칙 6번) 개발 환경은 비용이 들지 않고 즉시 재현 가능해야 한다. 이 둘의 요구가 다르기 때문에 환경별 배치 분리가 필요하다.
+초기 월 인프라 예산은 150,000원([adr-traceability.md](../adr-traceability.md))이며 운영 배포는 단일 EC2 인스턴스(Nginx + Next.js + Spring Boot, ALB/ASG 미도입, 장애 시 수동 재기동)로 결정되어 있다([technology-policy.md](../../06-architecture/technology-policy.md) 13절). 이 예산 범위 안에서 관리형 백업([RV-NFR-010](../../01-requirements/non-functional-requirements.md#rv-nfr-010-백업-주기와-복구-범위): 일 1회 스냅샷, 7일 보관, RPO 24시간)을 직접 구현하지 않고 확보하려면 운영 DB는 자체 구축 서버가 아닌 관리형 서비스가 유리하다. 한편 팀원 4명이 각자 로컬에서 독립적으로 개발·테스트를 반복해야 하므로([scope.md](../../00-overview/scope.md) 범위 경계 원칙 6번) 개발 환경은 비용이 들지 않고 즉시 재현 가능해야 한다. 이 둘의 요구가 다르기 때문에 환경별 배치 분리가 필요하다.
 
 ## 4. 결정 문제
 

@@ -9,6 +9,7 @@ related_documents:
   - ../diagrams/erd-spec.md
   - ../../02-analysis/mvp-workstreams.md
   - data-review.md
+  - ../../07-adr/security/auth-003-confirmation-token.md
 ---
 
 # 맛잇온 논리 데이터 모델
@@ -87,9 +88,9 @@ Admin은 독립 비즈니스 도메인이 아니다. 인증과 등록 흐름을 
 
 ## 7. 조회 데이터 조합
 
-- `GET /restaurants`: Restaurant에 Region과 FoodCategory를 결합하고, 공개·유효 Visit를 통해 Creator를 중복 제거한다. 최대 3명과 나머지 수는 조회 파생 값이다.
-- `GET /creators`: 공개 Creator의 식별자와 표시 이름을 조회한다.
-- `GET /restaurants/{restaurantId}`: Restaurant 기본 정보에 공개 Visit를 통해 Creator와 Video 표시 정보를 결합한다.
+- `GET /api/restaurants`: Restaurant에 Region과 FoodCategory를 결합하고, 공개·유효 Visit를 통해 Creator를 중복 제거한다. 최대 3명과 나머지 수는 조회 파생 값이다.
+- `GET /api/creators`: 공개 Creator의 식별자와 표시 이름을 조회한다.
+- `GET /api/restaurants/{restaurantId}`: Restaurant 기본 정보에 공개 Visit를 통해 Creator와 Video 표시 정보를 결합한다.
 - `remainingVisitedByCount`, `contentStatus`, 페이지 메타데이터는 영속 속성이 아니다.
 - `channelName`은 Video에 중복 저장해 조회하는 값이 아니라 게시 Creator에서 얻는 것을 기본 원칙으로 한다. 외부 확인 당시 원문 보관이 필요하면 별도 이력 요구를 먼저 확정한다.
 
@@ -112,7 +113,7 @@ Restaurant, Creator, Video와 Visit는 일반 사용자 노출을 위한 publica
 
 ## 11. API 지원 범위
 
-모든 공개 조회 API, 관리자 인증 API, 맛집·유튜버·영상 검증 미리보기와 등록 API, 방문 관계 등록 API를 지원한다. 확인 토큰은 10분 만료·단일 후보 무결성을 보장해야 하지만 서명 토큰인지 단기 서버 저장 데이터인지는 이 논리 모델에서 결정하지 않는다. `REVIEW_REQUIRED` 미리보기는 등록 요청 데이터로 저장하지 않는다.
+모든 공개 조회 API, 관리자 인증 API, 맛집·유튜버·영상 검증 미리보기와 등록 API, 방문 관계 등록 API를 지원한다. 확인 Token은 PostgreSQL에 해시·관리자·자원 종류·후보 스키마 버전·JSONB Snapshot과 결과 상태를 저장하는 10분 수명의 단기 기술 데이터다. 핵심 도메인 모델에는 포함하지 않으며 저장·소비·24시간 결과 재현은 [ADR-AUTH-003](../../07-adr/security/auth-003-confirmation-token.md)을 따른다. `REVIEW_REQUIRED` 미리보기는 등록 요청 데이터로 저장하지 않는다.
 
 ## 12. 검토 필요 항목
 
@@ -121,7 +122,7 @@ Restaurant, Creator, Video와 Visit는 일반 사용자 노출을 위한 publica
 - publication status와 삭제·보관 상태의 실제 값 및 전환 수단
 - 생성·수정 시각 외 변경자·변경 사유 이력 범위
 - 외부 상태 마지막 확인 시각의 저장 필요 여부
-- 확인 토큰, 로그인 실패 제한과 Refresh Token의 키·검증값·TTL·정리 전략
+- 로그인 실패 제한과 Refresh Token의 키·검증값·TTL·정리 전략
 - 내부 식별자 타입, 데이터베이스, 인덱스와 동시성 구현 방식
 
 상세 상태와 우선순위는 [data-review.md](data-review.md)에 기록한다.

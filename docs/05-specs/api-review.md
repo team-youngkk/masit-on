@@ -17,6 +17,7 @@ related_documents:
   - ../04-product/prd/discovery/restaurant-discovery.md
   - ../04-product/prd/detail/restaurant-detail.md
   - ../01-requirements/non-functional-requirements.md
+  - ../07-adr/security/auth-003-confirmation-token.md
 ---
 
 # 맛잇온 API 계약 검토
@@ -27,14 +28,14 @@ API를 임의 정책 결정 없이 구현·프론트엔드 연동 가능한 상�
 
 ## 2. 검토 결과 요약
 
-- 일반 조회는 `/restaurants`, `/creators`, `/restaurants/{restaurantId}` 세 경로로 과도한 분리 없이 구성했다.
+- 일반 조회는 `/api/restaurants`, `/api/creators`, `/api/restaurants/{restaurantId}` 세 API 경로로 과도한 분리 없이 구성했다.
 - 관리자 등록은 하나의 PRD·[WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 안에서 기본 데이터와 방문 관계 두 단계로 나눴다.
-- Critical 차단 항목 4개는 API 계약 결정으로 해소했다.
+- 기존 Critical 차단 항목 4개와 후속 화면·API 라우팅 차단 항목 1개는 API 계약과 ADR 결정으로 해소했다.
 - 외부 식별자는 불투명 JSON 문자열, 관리자 인증·인가는 Spring Security와 JWT를 사용한다.
-- 방문 관계 표준명과 경로는 `Visit Relationship`, `/admin/visit-relationships`로 확정했다.
-- 외부 데이터 등록은 검증 미리보기에서 확인 토큰을 발급하고 생성 요청에서 확정하는 2단계 흐름을 사용한다.
+- 방문 관계 표준명과 경로는 `Visit Relationship`, `/api/admin/visit-relationships`로 확정했다.
+- 외부 데이터 등록은 검증 미리보기에서 PostgreSQL 저장형 확인 Token을 발급하고 생성 요청에서 원자적으로 소비하는 2단계 흐름을 사용한다.
 - 페이지 번호는 1부터 시작하는 것으로 확정했다.
-- 기능 요구사항과 상위 범위의 직접 충돌은 발견하지 않았다. 다만 [PRD-DISCOVERY-002](../04-product/prd/discovery/creator-discovery.md)의 리스크 문구는 이미 존재하는 [FR-CREATOR-003](../01-requirements/functional-requirements.md#fr-creator-003-유튜버-필터-선택-목록-조회)과 불일치한다.
+- 기능 요구사항과 상위 범위의 직접 충돌은 발견하지 않았으며, [PRD-DISCOVERY-002](../04-product/prd/discovery/creator-discovery.md)에 있던 [FR-CREATOR-003](../01-requirements/functional-requirements.md#fr-creator-003-유튜버-필터-선택-목록-조회) 불일치 리스크 문구도 정정했다.
 
 ## 3. 해결한 API 차단 항목
 
@@ -55,8 +56,8 @@ API를 임의 정책 결정 없이 구현·프론트엔드 연동 가능한 상�
 - 현재 상태: 결정 완료
 - 관련 PRD: [PRD-ADMIN-001](../04-product/prd/admin/admin-data-management.md)
 - 관련 요구사항: [FR-ADMIN-001](../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근)
-- 영향 API: 모든 `/admin` API
-- 결정: 사전 발급 `loginId`·비밀번호로 JWT Access Token과 Refresh Token을 발급한다. Access Token은 메모리에 유지해 `Authorization: Bearer` 헤더로 전달하고, Redis 8.8에 저장한 Refresh Token은 `HttpOnly`, `Secure`, `SameSite=Strict` 쿠키로만 전달·회전한다.
+- 영향 API: 모든 `/api/admin` API
+- 결정: 사전 발급 `loginId`·비밀번호로 JWT Access Token과 Refresh Token을 발급한다. Access Token은 메모리에 유지해 `Authorization: Bearer` 헤더로 전달하고, Redis 8.8에 저장한 Refresh Token은 `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/api/admin/auth` 쿠키로만 전달·회전한다.
 - 영향: 로그인·토큰 재발급·로그아웃과 모든 관리자 API의 인증·인가 전달 계약이 확정됐다.
 - 결정 시점: 2026-07-24 API 계약에서 완료
 
@@ -67,7 +68,7 @@ API를 임의 정책 결정 없이 구현·프론트엔드 연동 가능한 상�
 - 관련 PRD: [PRD-ADMIN-001](../04-product/prd/admin/admin-data-management.md)
 - 관련 요구사항: [FR-VISIT-001](../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)
 - 영향 API: [API-ADMIN-VISIT-001](api/admin/visit-registration-api.md#api-admin-visit-001-방문-관계-등록)
-- 결정: 표준 영문명은 `Visit Relationship`, 컬렉션 경로는 `/admin/visit-relationships`를 사용한다.
+- 결정: 표준 영문명은 `Visit Relationship`, 컬렉션 경로는 `/api/admin/visit-relationships`를 사용한다.
 - 영향: 용어집과 [API-ADMIN-VISIT-001](api/admin/visit-registration-api.md#api-admin-visit-001-방문-관계-등록) 경로를 함께 확정했다.
 - 결정 시점: 2026-07-24 API 계약에서 완료
 
@@ -78,9 +79,9 @@ API를 임의 정책 결정 없이 구현·프론트엔드 연동 가능한 상�
 - 관련 PRD: [PRD-ADMIN-001](../04-product/prd/admin/admin-data-management.md)
 - 관련 요구사항: [FR-ADMIN-002](../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록), [FR-ADMIN-003](../01-requirements/functional-requirements.md#fr-admin-003-유튜버-정보-등록), [FR-ADMIN-004](../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록)
 - 영향 API: 세 기본 데이터 등록 API
-- 결정: 자원별 검증 미리보기 POST가 `READY`, `DUPLICATE`, `REVIEW_REQUIRED`와 정규화 후보를 반환한다. 관리자는 `READY` 후보를 확인한 뒤 JWT의 관리자 식별자에 묶인 `confirmationToken`으로 생성한다.
-- 영향: 외부 조회 결과 확인, 중복 기존 자원 재사용, 보류와 최종 생성 경계가 분리됐다.
-- 결정 시점: 2026-07-24 API 계약에서 완료
+- 결정: 자원별 검증 미리보기 POST가 `READY`, `DUPLICATE`, `REVIEW_REQUIRED`와 정규화 후보를 반환한다. 관리자는 `READY` 후보를 확인한 뒤 JWT의 관리자 식별자에 묶인 `confirmationToken`으로 생성한다. Token은 PostgreSQL에 해시·후보 Snapshot을 저장하고 Entity 생성과 원자적으로 소비한다.
+- 영향: 외부 조회 결과 확인, 중복 기존 자원 재사용, 보류와 최종 생성 경계가 분리됐다. 최초 생성은 `201`, 생성 완료 재시도는 기존 자원의 `200`, 동시 중복 최초·재시도는 같은 `409`다.
+- 결정 시점: 2026-07-24 API 흐름 확정, 2026-07-27 [ADR-AUTH-003](../07-adr/security/auth-003-confirmation-token.md)으로 Token 저장·재시도 계약 확정
 
 ## 4. 데이터 모델 전 결정 항목
 
@@ -187,10 +188,20 @@ API를 임의 정책 결정 없이 구현·프론트엔드 연동 가능한 상�
 - 영향: 프론트엔드는 링크의 실시간 성공을 보장받지 않으며 링크 실패를 맛집 상세 실패로 해석하지 않는다.
 - 결정 시점: 2026-07-24 API 계약에서 완료
 
+### RV-API-014 화면·API·운영 경로 경계
+
+- 중요도: Critical
+- 현재 상태: 결정 완료
+- 관련 요구사항: [FR-RESTAURANT-001](../01-requirements/functional-requirements.md#fr-restaurant-001-맛집-목록-조회), [FR-RESTAURANT-008](../01-requirements/functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회), [FR-ADMIN-001](../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근), [NFR-AVAILABILITY-001](../01-requirements/non-functional-requirements.md#nfr-availability-001-상태-확인과-장애-구분)
+- 영향 API: 모든 외부 API와 관리자 인증 API
+- 결정: 모든 백엔드 API는 버전 없는 `/api` 접두사를 사용한다. Nginx는 `/api/**`만 Spring Boot, 나머지 외부 경로는 Next.js로 전달하고 `/internal/**`은 인터넷에서 차단한다. 로그인·재발급 matcher를 포괄 관리자 matcher보다 먼저 평가한다.
+- 영향: 화면과 API 경로 충돌을 제거하고, 관리자 로그인·재발급 예외와 내부 상태 확인 경계를 명시했다.
+- 결정 시점: 2026-07-27 [ADR-WEB-003](../07-adr/platform/web-003-routing-boundary.md)으로 확정
+
 ## 7. 과도한 분리 및 결합 검토
 
-- `/restaurants` 하나에 목록·검색·세 필터를 통합한 것은 모두 같은 자원 목록의 조건이므로 적절하다.
-- 유튜버 최소 선택 목록은 반환 모델·페이지 정책이 달라 `/creators`로 분리했다. 유튜버 방문 맛집용 별도 목록 API는 만들지 않았다.
+- `/api/restaurants` 하나에 목록·검색·세 필터를 통합한 것은 모두 같은 자원 목록의 조건이므로 적절하다.
+- 유튜버 최소 선택 목록은 반환 모델·페이지 정책이 달라 `/api/creators`로 분리했다. 유튜버 방문 맛집용 별도 목록 API는 만들지 않았다.
 - 맛집 상세는 PRD 사용자 흐름과 [WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) 책임에 맞춰 기본 정보·방문 콘텐츠를 한 응답으로 결합했다. 부분 실패 상태로 외부 장애를 격리한다.
 - 관리자 기본 데이터 세 POST는 참조 선행 데이터를 각각 생성해야 해 분리하되 하나의 문서·Workstream에 유지했다.
 - 방문 관계 등록은 세 자원의 원자적 조합이라 기본 데이터 등록과 별도 엔드포인트가 적절하다.
@@ -200,18 +211,18 @@ API를 임의 정책 결정 없이 구현·프론트엔드 연동 가능한 상�
 
 | 우선순위 | 항목 |
 |---|---|
-| 완료 | [RV-API-001](api-review.md#rv-api-001-식별자-json-표현)~[RV-API-013](api-review.md#rv-api-013-외부-링크-오류의-사용자-표시) |
+| 완료 | [RV-API-001](api-review.md#rv-api-001-식별자-json-표현)~[RV-API-014](api-review.md#rv-api-014-화면api운영-경로-경계) |
 
 ## 9. 권장 결정 순서
 
 1. 완료: 방문 관계 표준 영문명, 외부 식별자, 관리자 인증, 외부 조회·확인 흐름을 계약에 반영했다.
 2. 완료: 공개·중복·보류·비공개 참조 관계 정책을 확정했다.
 3. 완료: 1-based 페이지, 입력 상한과 상세 부분 실패 필드를 확정했다.
-4. 완료: 요청 추적과 외부 링크 상태 표현 정책을 확정했다.
+4. 완료: 요청 추적, 외부 링크 상태 표현과 화면·API·운영 경로 경계를 확정했다.
 
 ## 10. API 계약 완료 기준
 
-- [RV-API-001](api-review.md#rv-api-001-식별자-json-표현)~[RV-API-013](api-review.md#rv-api-013-외부-링크-오류의-사용자-표시)이 모두 결정되고 관련 기능 문서·공통 계약·추적성이 갱신됐다.
+- [RV-API-001](api-review.md#rv-api-001-식별자-json-표현)~[RV-API-014](api-review.md#rv-api-014-화면api운영-경로-경계)이 모두 결정되고 관련 기능 문서·공통 계약·추적성이 갱신됐다.
 - 모든 요청·응답 식별자 타입과 관리자 인증 전달 방식이 프론트엔드에 명확하다.
 - 등록 확인·중복·보류·공개 반영 흐름이 끝까지 호출 가능하다.
 - 페이지·필터·빈 결과·404·부분 실패·외부 장애·원자성 계약 테스트가 작성 가능하다.

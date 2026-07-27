@@ -3,10 +3,16 @@ related_documents:
   - ../00-overview/scope.md
   - ../01-requirements/non-functional-requirements.md
   - ../06-architecture/technology-policy.md
+  - ../06-architecture/transaction-boundaries.md
+  - ../06-architecture/query-composition.md
+  - ../06-architecture/external-integration.md
+  - ../06-architecture/module-boundaries.md
+  - ../06-architecture/security-boundary.md
   - README.md
   - adr-index.md
   - adr-traceability.md
   - security/auth-001-spring-security-jwt.md
+  - security/auth-003-confirmation-token.md
   - data/data-005-redis-refresh-token.md
 ---
 
@@ -14,9 +20,39 @@ related_documents:
 
 ## 1. 문서 목적
 
-현재 1차 MVP에서 바로 구현 기준으로 사용할 수 없는 조건부, Post-MVP와 범위 충돌 결정을 관리한다. 여기 있는 기술은 고정 버전이 있더라도 활성화 전 의존성·설정·스키마를 추가하지 않는다.
+현재 확정되지 않은 구현 전 필수 결정, 조건부 결정, Post-MVP와 범위 충돌 결정을 관리한다. `Proposed` 항목은 명시된 결정 시점 전에 Accepted ADR로 확정하고, `Conditional`·`Post-MVP` 기술은 활성화 전 의존성·설정·스키마를 추가하지 않는다.
 
-## 2. 조건부 ADR
+## 2. 구현 전 필수 ADR
+
+현재 미결정 항목은 없다. 확인 Token 결정은 2026-07-27 [ADR-AUTH-003](security/auth-003-confirmation-token.md)으로 확정했다.
+
+## 3. 조건부 ADR
+
+### ADR-DATA-006 동시 쓰기 충돌 제어
+
+- 현재 상태: Conditional
+- 현재 결정: 일반 쓰기는 애플리케이션 선조회와 PostgreSQL `UNIQUE` 제약을 함께 사용하고 기본 격리 수준을 임의로 강화하지 않는다. 제약 위반은 도메인 중복 오류로 변환한다. 확인 Token 생성 확정의 제한된 `ON CONFLICT DO NOTHING RETURNING`은 [ADR-AUTH-003](security/auth-003-confirmation-token.md)이 소유하며 이 일반 전환 후보를 활성화하지 않는다.
+- 활성화 조건: 동시성 통합 테스트에서 `UNIQUE`만으로 업무 불변 조건·응답 계약을 보장하지 못하거나 중복 충돌률·재시도 비용이 허용 기준을 넘는다.
+- 도입 전 확인: 격리 수준, 낙관적·비관적·분산 락, `INSERT ... ON CONFLICT` 기반 upsert, 멱등성 키 중 최소 복잡도 대안 비교, 교착·기아·재시도 상한, 오류 매핑
+- 영향: 트랜잭션 경계, Repository·SQL 구현, DB 부하, API 멱등성, 동시성 테스트
+- 관련 후보: Redis 분산 락이 선택지에 포함될 때만 [ADR-LOCK-001](#adr-lock-001-redis-분산-락-도입)을 함께 활성화한다.
+
+### ADR-ARCH-003 조회 확장 패턴
+
+- 현재 상태: Conditional
+- 현재 결정: 동일 PostgreSQL의 Projection을 사용하는 코드 수준 CQRS를 유지하고, 서버 조회 캐시·읽기 복제본·별도 읽기 저장소·물리적 CQRS는 도입하지 않는다.
+- 활성화 조건: 성능·부하 테스트에서 읽기 병목이 확인되고 쿼리·인덱스 최적화만으로 NFR을 충족하지 못하거나, 쓰기 모델과 다른 조회 모델·독립 확장 요구가 승인된다.
+- 도입 전 확인: 캐시·읽기 복제본·전용 읽기 모델·물리적 CQRS 대안 비교, 허용 staleness, 동기화·재구축, 캐시 무효화, 장애 fallback, 운영 비용과 관측성
+- 영향: 조회 API, 데이터 일관성, 배포·운영 구성요소, 스키마·이벤트, 성능·복구 테스트
+- 관련 후보: Redis 캐시를 선택할 때만 [ADR-CACHE-001](#adr-cache-001-redis-캐시-도입)을 함께 활성화한다.
+
+### ADR-EXT-002 자동 복원력과 신뢰성 이벤트 전달
+
+- 현재 상태: Conditional
+- 현재 결정: 외부 호출은 timeout과 오류 분류만 적용하고 관리자가 수동 재시도한다. 도메인 이벤트·메시지 브로커·비동기 Worker·Transactional Outbox는 도입하지 않는다.
+- 활성화 조건: 측정된 외부 실패율·호출량 때문에 수동 재시도로 운영 목표를 지킬 수 없거나, DB 커밋 뒤 유실되어서는 안 되는 알림·외부 동기화·후속 작업이 승인된다.
+- 도입 전 확인: 자동 재시도 대상과 최대 횟수·backoff·jitter·전체 시간 예산·429 처리·멱등성, Circuit Breaker 상태·임계값·fallback, 이벤트 전달 보장·순서·중복 소비, Outbox 스키마·발행기·정리·재처리·DLQ
+- 영향: 외부 Adapter, 트랜잭션·이벤트 경계, 저장소·Queue, 장애 복구, 관측성·통합 테스트
 
 ### ADR-SEARCH-001 QueryDSL 도입
 
@@ -58,7 +94,7 @@ related_documents:
 - 도입 전 확인: 정확한 버전, CI 실행 위치, 임계값, 결과 보관
 - 영향: CI 시간, 성능 품질 게이트
 
-## 3. Post-MVP ADR
+## 4. Post-MVP ADR
 
 ### ADR-MAP-001 지도 표시와 공간 검색
 
@@ -124,7 +160,23 @@ related_documents:
 - 도입 전 확인: 파일 제한, 악성 파일 검사, 접근 정책, 수명주기, 비용, CDN 필요성
 - 영향: API·데이터 모델, S3 권한, 개인정보
 
-## 4. 범위 충돌 검토
+### ADR-ARCH-004 멀티모듈·독립 배포 전환
+
+- 현재 상태: Post-MVP
+- 현재 결정: 단일 Gradle 모듈의 도메인 중심 모놀리스와 단일 애플리케이션 배포를 유지한다.
+- 활성화 조건: 도메인별 독립 배포·확장·장애 격리 요구가 측정 가능한 병목으로 확인되거나 팀 소유권·예산·배포 토폴로지 변경이 승인된다.
+- 도입 전 확인: 단일 모듈 유지·Gradle 멀티모듈·모듈러 모놀리스·독립 서비스 대안, 모듈 API와 의존 방향, 데이터 소유권, 동기·비동기 계약, 배포·관측·장애 대응 책임, 단계적 이전·rollback
+- 영향: 빌드, 패키지·모듈 경계, 데이터·트랜잭션, CI/CD, 인프라 비용, 팀 소유권
+
+### ADR-AUTH-004 관리자 권한 세분화
+
+- 현재 상태: Post-MVP
+- 현재 결정: 사전 발급 관리자에게 단일 `ADMIN` 역할과 동일 등록 권한을 적용하고 관리자 등급·기능별 권한은 제공하지 않는다.
+- 활성화 조건: 관리자 수가 늘거나 자원·기능별 최소 권한, 승인 분리, 감사 요구가 범위 변경으로 승인된다.
+- 도입 전 확인: 역할·권한 모델(RBAC/permission), 자원·행위 매트릭스, JWT claim과 서버 조회 책임, 권한 변경 반영·Token 폐기, 기본 거부·승격 승인·감사 로그, 기존 `ADMIN` 이전
+- 영향: 인증·인가, 관리자 API, 계정·권한 데이터 모델, 운영 절차, 보안 테스트
+
+## 5. 범위 충돌 검토
 
 | 검토 항목 | 분류 | 근거 | 필요한 결정 |
 |---|---|---|---|
@@ -141,15 +193,21 @@ related_documents:
 | Redis 관리자 Refresh Token | 범위 일치 | 관리자 JWT 재발급·폐기에 사용 | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md)·[ADR-DATA-005](data/data-005-redis-refresh-token.md) 적용 |
 | Redis 일반 사용자 Token | Post-MVP | 일반 사용자 로그인 없음 | 회원 인증 범위 변경 |
 | Redis 분산 락 | 조건부 도입 | 자동 배치와 다중 실행이 MVP에서 제외·미확정 | 실행 토폴로지와 중복 피해 확인 |
+| 확인 Token 저장·서명·단일 사용 | 결정 완료 (2026-07-27) | PostgreSQL 저장형 불투명 Token, 해시·후보 Snapshot, 원자적 소비와 결과 재현 | [ADR-AUTH-003](security/auth-003-confirmation-token.md) 적용 |
+| `UNIQUE` 이후 일반 동시성 제어 | 조건부 도입 | 기본 격리+고유 제약으로 시작하며 확인 Token의 제한된 conflict 처리는 별도 확정 | [ADR-DATA-006](#adr-data-006-동시-쓰기-충돌-제어)의 격리·락·일반 upsert 대안 검토 |
+| 캐시·읽기 저장소·물리적 CQRS | 조건부 도입 | 현재 동일 PostgreSQL Projection으로 NFR 미검증 | [ADR-ARCH-003](#adr-arch-003-조회-확장-패턴)의 일관성·동기화·복구 결정 |
+| 자동 재시도·Circuit Breaker·비동기 이벤트·Outbox | 조건부 도입 | 저빈도 관리자 호출은 수동 재시도, 유실 불가 후속 이벤트 없음 | [ADR-EXT-002](#adr-ext-002-자동-복원력과-신뢰성-이벤트-전달)의 실패·전달 보장 결정 |
 | n8n·Batch·크롤링 | Post-MVP | 관리자 수동 확인·등록, 자동 수집 제외 | 승인된 자동화 범위 정의 |
+| 멀티모듈·독립 배포 | Post-MVP | 단일 모듈·단일 애플리케이션 배포로 MVP 복잡도 제한 | [ADR-ARCH-004](#adr-arch-004-멀티모듈독립-배포-전환)의 경계·이전 전략 결정 |
+| 세분화된 관리자 권한 | Post-MVP | 사전 발급 단일 `ADMIN` 역할만 범위에 포함 | [ADR-AUTH-004](#adr-auth-004-관리자-권한-세분화)의 권한 모델·이전 결정 |
 | Nginx·EC2·ECR | 결정 완료 (2026-07-24) | 기술 스펙에는 확정, NFR은 배포 상세를 후속 설계로 둠 | 단일 EC2 인스턴스(Nginx 리버스 프록시+App), 장애 시 수동 복구 |
 | ALB·ASG·Blue-Green | 결정 완료 (2026-07-24) | 기술 스펙의 다중 인스턴스 구조와 NFR의 단일 인스턴스 수동 복구·복잡도 제한이 충돌 | MVP는 도입하지 않음. ALB는 확장 단계 우선 검토 대상으로 남기고, ASG·Blue-Green은 Post-MVP로 보류 |
 | 전체 CI/CD 배포 흐름 | 팀 결정 필요 | 빌드·테스트 게이트는 확정, 배포 자동화·수동 승인 지점은 미확정 | [RV-NFR-012](../01-requirements/non-functional-requirements.md#rv-nfr-012-배포-자동화-범위) 결정 |
 | 로그 14일 보관 | 결정 완료 (2026-07-24) | 기술 스펙 값과 [RV-NFR-009](../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간)의 미결정 상태가 충돌 | 14일 보관(기술 스펙 값) 확정. 백업은 일 1회 자동 스냅샷+7일 보관, 알림은 CloudWatch 알람→이메일/Slack, 담당자 1명 |
 
-## 5. 활성화 조건
+## 6. 활성화 조건
 
-Backlog 항목은 다음을 모두 충족해야 활성화된다.
+Conditional·Post-MVP Backlog 항목은 다음을 모두 충족해야 활성화된다. Proposed 항목은 각 항목에 적힌 결정 시점과 검증 기준을 따른다.
 
 1. 상위 범위 변경 또는 명시된 조건 충족
 2. 관련 요구사항·NFR·API·데이터 영향 확정
@@ -158,18 +216,21 @@ Backlog 항목은 다음을 모두 충족해야 활성화된다.
 5. 개별 ADR 작성과 팀 리뷰
 6. 테스트 계획과 되돌리기 방법 승인
 
-## 6. 작성 우선순위
+## 7. 작성 우선순위
 
-1. [결정 완료 2026-07-24] 배포 토폴로지와 ALB·ASG·Blue-Green 충돌 해결
-2. [결정 완료 2026-07-24] 관리자 JWT 만료·서명 키와 Redis Refresh Token 키·회전·장애 정책 결정
-3. [결정 완료 2026-07-24] 로그 보관·운영 지표·알림 기준 결정
-4. QueryDSL과 성능 테스트 도구는 구현 복잡도·성능 근거 발생 시 검토
-5. 지도·회원·AI·RAG·알림·이미지·자동화는 해당 확장 단계 승인 후 검토
+1. [결정 완료 2026-07-27] 관리자 검증 미리보기의 확인 Token 저장·단일 사용·재시도 정책 결정
+2. [결정 완료 2026-07-24] 배포 토폴로지와 ALB·ASG·Blue-Green 충돌 해결
+3. [결정 완료 2026-07-24] 관리자 JWT 만료·서명 키와 Redis Refresh Token 키·회전·장애 정책 결정
+4. [결정 완료 2026-07-24] 로그 보관·운영 지표·알림 기준 결정
+5. 동시성·조회 확장·자동 복원력은 테스트·운영 근거 발생 시 검토
+6. 지도·회원·AI·RAG·알림·이미지·자동화·독립 배포·권한 세분화는 해당 확장 단계 승인 후 검토
 
-## 7. 결정 기록 (2026-07-24)
+## 8. 결정 기록
 
 | 항목 | 결정 |
 |---|---|
+| 관리자 등록 확인 Token | PostgreSQL 저장형 불투명 Token, SHA-256 해시·후보 JSONB Snapshot, 10분 만료, Entity 생성과 원자적 소비 |
+| 확인 Token 재시도·보관 | 최초 생성 `201`, 생성 완료 재시도 `200`, 동시 중복은 결정적 `409`, 완료·만료 기록 24시간 보관 후 발급 시 지연 정리 |
 | 배포 토폴로지 | 단일 EC2 인스턴스(Nginx+App), 장애 시 수동 복구로 시작. ALB는 확장 단계에서 우선 검토할 확장 경로로 남기고 ASG·Blue-Green은 Post-MVP 보류 |
 | 관리자 JWT | Access Token 만료 30분 |
 | 관리자 Refresh Token(Redis) | TTL 14일, 재발급마다 회전 + 재사용 탐지·즉시 폐기 |

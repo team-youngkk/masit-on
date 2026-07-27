@@ -45,6 +45,7 @@ related_documents:
   - ../../../05-specs/api/discovery/restaurant-discovery-api.md
   - ../../../05-specs/api/common/filtering-contract.md
   - ../../../05-specs/api/common/pagination-contract.md
+  - ../../../07-adr/platform/web-003-routing-boundary.md
   - ../../../01-requirements/non-functional-requirements.md
   - ../../traceability.md
 ---
@@ -53,7 +54,7 @@ related_documents:
 
 ## 1. 문서 정보
 
-공개 맛집의 최종 목록·검색·필터·정렬·페이지 흐름을 정의한다. 주 Workstream은 [WS-01](../../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)이며 유튜버 조건의 관계 판정은 [유튜버 기반 탐색 PRD](creator-discovery.md)에 의존한다.
+공개 맛집의 최종 목록·검색·필터·정렬·페이지 흐름을 정의한다. 화면 경로는 `/restaurants`, 백엔드 API는 `GET /api/restaurants`다. 주 Workstream은 [WS-01](../../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)이며 유튜버 조건의 관계 판정은 [유튜버 기반 탐색 PRD](creator-discovery.md)에 의존한다.
 
 ## 2. 기능 개요
 

@@ -61,7 +61,7 @@ related_documents:
 
 ## 2. 적용 범위
 
-공개 유튜버의 최소 선택 목록은 별도 조회한다. 특정 유튜버가 방문한 맛집은 별도 목록 API를 만들지 않고 `GET /restaurants?creatorId=...`로 조회한다.
+공개 유튜버의 최소 선택 목록은 별도 조회한다. 특정 유튜버가 방문한 맛집은 별도 목록 API를 만들지 않고 `GET /api/restaurants?creatorId=...`로 조회한다.
 
 ## 3. 접근 권한
 
@@ -71,15 +71,15 @@ related_documents:
 
 | API ID | Method | Path | 설명 |
 |---|---|---|---|
-| [API-CREATOR-DISCOVERY-001](creator-discovery-api.md#api-creator-discovery-001-유튜버-필터-선택-목록) | GET | `/creators` | 유튜버 필터 최소 선택 목록 |
-| [API-DISCOVERY-001](restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색) | GET | `/restaurants?creatorId=...` | 특정 유튜버의 방문 맛집을 최종 목록으로 조회 |
+| [API-CREATOR-DISCOVERY-001](creator-discovery-api.md#api-creator-discovery-001-유튜버-필터-선택-목록) | GET | `/api/creators` | 유튜버 필터 최소 선택 목록 |
+| [API-DISCOVERY-001](restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색) | GET | `/api/restaurants?creatorId=...` | 특정 유튜버의 방문 맛집을 최종 목록으로 조회 |
 
 ## 5. 유튜버 필터 선택 목록
 
 ### API-CREATOR-DISCOVERY-001 유튜버 필터 선택 목록
 
 - Method: `GET`
-- Path: `/creators`
+- Path: `/api/creators`
 - 인증: 없음
 - 권한: 일반 공개 조회
 - 관련 PRD: [PRD-DISCOVERY-002](../../../04-product/prd/discovery/creator-discovery.md)

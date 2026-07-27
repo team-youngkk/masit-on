@@ -71,7 +71,7 @@ related_documents:
 
 | API ID | Method | Path | 설명 |
 |---|---|---|---|
-| [API-DETAIL-001](restaurant-detail-api.md#api-detail-001-맛집-상세-조회) | GET | `/restaurants/{restaurantId}` | 맛집 상세와 방문 콘텐츠 조회 |
+| [API-DETAIL-001](restaurant-detail-api.md#api-detail-001-맛집-상세-조회) | GET | `/api/restaurants/{restaurantId}` | 맛집 상세와 방문 콘텐츠 조회 |
 
 기본 정보와 방문 콘텐츠를 별도 API로 분리하지 않는다. PRD가 한 사용자 흐름과 [WS-02](../../../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)의 최종 조합 책임을 확정했고, 한 번의 호출이 MVP 프론트엔드 복잡도를 낮춘다. 콘텐츠 제공자 실패는 응답 내부 상태로 격리한다.
 
@@ -80,7 +80,7 @@ related_documents:
 ### API-DETAIL-001 맛집 상세 조회
 
 - Method: `GET`
-- Path: `/restaurants/{restaurantId}`
+- Path: `/api/restaurants/{restaurantId}`
 - 인증: 없음
 - 권한: 일반 공개 조회
 - 관련 PRD: [PRD-DETAIL-001](../../../04-product/prd/detail/restaurant-detail.md)

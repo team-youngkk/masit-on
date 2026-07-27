@@ -270,16 +270,17 @@ related_documents:
 - 요구사항:
   - 애플리케이션의 실행 상태와 핵심 의존성 사용 가능 여부를 확인할 수 있어야 하며 애플리케이션 장애와 데이터 저장소 장애를 구분해야 한다.
 - 적용 대상:
-  - 운영 상태 확인 경로
+  - 내부 운영 상태 확인 경로 `/internal/health/live`, `/internal/health/ready`, `/internal/health/dependencies`
 - 목표 기준:
-  - 상태 확인 결과만으로 프로세스 실행 여부와 데이터 저장소 연결 가능 여부를 구분
+  - `live`는 프로세스, `ready`는 PostgreSQL을 포함한 핵심 준비 상태, `dependencies`는 PostgreSQL·Redis 상태를 각각 구분
+  - 인터넷 Nginx 경로에서는 `/internal/**`을 차단하고 EC2 내부 Agent·컨테이너에서만 호출
   - 상태 확인은 외부 YouTube 링크의 실시간 성공에 의존하지 않음
 - 검증 방법:
   - 정상·애플리케이션 이상·저장소 단절 상태 확인 테스트
 - 중요도:
   - High
 - 결정 상태:
-  - 후속 설계에서 결정
+  - 확정 ([ADR-WEB-003](../07-adr/platform/web-003-routing-boundary.md))
 
 ### NFR-AVAILABILITY-002 MVP 가용성과 수동 복구
 
@@ -678,7 +679,7 @@ related_documents:
 | [NFR-RELIABILITY-001](non-functional-requirements.md#nfr-reliability-001-오류-격리와-공통-오류-정책) | 오류 격리와 공통 오류 정책 | High | 계약·장애 테스트 | 확정 | API 명세 전 확정 |
 | [NFR-RELIABILITY-002](non-functional-requirements.md#nfr-reliability-002-저장소-장애-및-재시도-통제) | 저장소 장애 및 재시도 통제 | High | 장애 주입 | 후속 설계에서 결정 | 구현 시작 전 확정 |
 | [NFR-RELIABILITY-003](non-functional-requirements.md#nfr-reliability-003-사용자-오류-메시지와-기능-분리) | 사용자 오류 메시지와 기능 분리 | High | 인수 테스트 | 확정 | API 명세 전 확정 |
-| [NFR-AVAILABILITY-001](non-functional-requirements.md#nfr-availability-001-상태-확인과-장애-구분) | 상태 확인과 장애 구분 | High | 상태 확인 테스트 | 후속 설계에서 결정 | 배포 설계 전 확정 |
+| [NFR-AVAILABILITY-001](non-functional-requirements.md#nfr-availability-001-상태-확인과-장애-구분) | 상태 확인과 장애 구분 | High | 상태 확인 테스트 | 확정 | 배포 설계 전 확정 |
 | [NFR-AVAILABILITY-002](non-functional-requirements.md#nfr-availability-002-mvp-가용성과-수동-복구) | MVP 가용성과 수동 복구 | High | 복구 리허설 | 팀 결정 필요 | 배포 설계 전 확정 |
 | [NFR-EXTERNAL-001](non-functional-requirements.md#nfr-external-001-영상-원본과-외부-링크-분리) | 영상 원본과 외부 링크 분리 | High | 장애 모의·저장 검사 | 확정 | 구현 시작 전 확정 |
 | [NFR-EXTERNAL-002](non-functional-requirements.md#nfr-external-002-외부-호출-실패와-변경-격리) | 외부 호출 실패와 변경 격리 | High | 외부 계약 모의 테스트 | 후속 설계에서 결정 | API 명세 전 확정 |
@@ -750,7 +751,8 @@ related_documents:
 
 - 현재 상태: 결정 완료 (2026-07-24)
 - 결정 내용:
-  - 1차 MVP는 단일 EC2 인스턴스(Nginx 리버스 프록시 + Spring Boot 애플리케이션)로 배포하며 다중 리전·고가용성 구성을 도입하지 않는다.
+  - 1차 MVP는 단일 EC2 인스턴스(Nginx 리버스 프록시 + Next.js 프론트엔드 + Spring Boot 백엔드)로 배포하며 다중 리전·고가용성 구성을 도입하지 않는다.
+  - Nginx는 `/api/**`만 Spring Boot로 전달하고 나머지 외부 경로는 Next.js로 전달하며 `/internal/**`은 인터넷에서 차단한다.
   - 장애 발생 시 운영자가 인스턴스를 수동으로 재기동·교체하고 핵심 조회를 확인하는 절차를 사용한다. ASG 기반 자동 복구는 도입하지 않는다.
   - ALB·Blue-Green 배포는 트래픽·가용성 요구가 늘어나는 확장 단계에서 재검토할 확장 경로로 남겨둔다.
 - 영향:
@@ -774,7 +776,7 @@ related_documents:
 - 결정 내용:
   - 사전 발급 계정과 동일 등록 권한을 사용하며 계정 관리 화면은 MVP에서 제외한다.
   - Spring Security 7.1.0과 JWT Access Token으로 관리자 인증·인가를 수행한다.
-  - Refresh Token은 Redis 8.8에 저장하고 `HttpOnly`, `Secure`, `SameSite=Strict` 쿠키로만 전달하며 재발급 때 회전한다.
+  - Refresh Token은 Redis 8.8에 저장하고 `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/api/admin/auth` 쿠키로만 전달하며 재발급 때 회전한다.
   - Access Token은 `Authorization: Bearer` 헤더로 전달하고 브라우저 영구 저장소에 보관하지 않는다.
   - 계정당 활성 Refresh Token 하나만 허용한다. Access Token 만료는 30분, Refresh Token TTL은 14일이며 재발급마다 회전하고 재사용을 탐지해 폐기한다. Redis 장애 시에는 재발급을 차단하는 fail-closed로 처리해 Access Token 만료 후 재로그인을 요구한다.
   - 계정 발급·회수·복구는 수동 운영한다.

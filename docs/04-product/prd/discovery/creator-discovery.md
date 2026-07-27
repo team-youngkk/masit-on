@@ -46,6 +46,7 @@ related_documents:
   - ../../../02-analysis/mvp-workstreams.md
   - ../../../05-specs/api/discovery/creator-discovery-api.md
   - ../../../05-specs/api/discovery/restaurant-discovery-api.md
+  - ../../../07-adr/platform/web-003-routing-boundary.md
   - ../../../05-specs/data/relationship-rules.md
   - ../../../01-requirements/non-functional-requirements.md
   - ../../traceability.md
@@ -55,7 +56,7 @@ related_documents:
 
 ## 1. 문서 정보
 
-특정 YouTube 채널 단위 유튜버의 유효 방문 맛집을 판정하는 독립 기능을 정의한다. [WS-03](../../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)이 관계 판정을 소유하고 [WS-01](../../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)이 최종 목록 조합을 소유한다.
+특정 YouTube 채널 단위 유튜버의 유효 방문 맛집을 판정하는 독립 기능을 정의한다. 별도 화면을 만들지 않고 `/restaurants`에서 `GET /api/creators`의 선택 목록과 `GET /api/restaurants?creatorId=...`를 사용한다. [WS-03](../../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)이 관계 판정을 소유하고 [WS-01](../../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)이 최종 목록 조합을 소유한다.
 
 ## 2. 기능 개요
 

@@ -20,6 +20,7 @@ related_documents:
   - ../security/sec-001-secrets-workload-identity.md
   - ../adr-backlog.md
   - ../adr-traceability.md
+  - web-003-routing-boundary.md
   - ../../02-analysis/mvp-workstreams.md
 supersedes: []
 superseded_by: null
@@ -37,7 +38,7 @@ Accepted
 
 ## 3. 배경
 
-2026-07-24 결정에 따라 1차 MVP의 배포 토폴로지는 단일 EC2 인스턴스 위에서 Nginx 리버스 프록시와 Spring Boot 애플리케이션을 함께 운영하며, 장애 시 ASG 자동 복구 없이 운영자가 수동으로 재기동·교체한다([docs/06-architecture/technology-policy.md](../../06-architecture/technology-policy.md) 13장, [docs/07-adr/adr-backlog.md](../adr-backlog.md) 4장). ALB·다중 인스턴스·Blue-Green은 트래픽이 늘어나는 확장 단계로 미뤄 두었다. 초기 월 인프라 예산은 15만 원 수준으로 제한적이다([docs/07-adr/adr-traceability.md](../adr-traceability.md)). 이런 제약에서는 EC2 위에 무엇을, 어떤 형태로 올릴지를 재현 가능한 단일 산출물로 못박아 두는 것이 중요하다. 인스턴스가 하나뿐이므로 그 한 대 위에서 실행되는 내용이 로컬 개발·CI에서 검증한 것과 다르면, 장애가 났을 때 수동 복구 절차(로그인해서 재기동)만으로는 원인을 재현하기 어렵다. 또한 네 명(이우람 [WS-03](../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색), 양성훈 [WS-01](../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색), 박진영 [WS-02](../../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회), 김인안 [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록))이 독립적으로 개발한 코드가 결국 이 한 대의 인스턴스에 함께 배포되므로, 각자 로컬에서 검증한 실행 환경과 실제 배포 환경 사이의 차이를 최소화해야 한다.
+1차 MVP의 배포 토폴로지는 단일 EC2 인스턴스 위에서 Nginx 리버스 프록시, Next.js 프론트엔드와 Spring Boot 백엔드를 함께 운영하며, 장애 시 ASG 자동 복구 없이 운영자가 수동으로 재기동·교체한다([docs/06-architecture/technology-policy.md](../../06-architecture/technology-policy.md) 13장, [ADR-WEB-003](web-003-routing-boundary.md), [docs/07-adr/adr-backlog.md](../adr-backlog.md) 5장). ALB·다중 인스턴스·Blue-Green은 트래픽이 늘어나는 확장 단계로 미뤄 두었다. 초기 월 인프라 예산은 15만 원 수준으로 제한적이다([docs/07-adr/adr-traceability.md](../adr-traceability.md)). 이런 제약에서는 EC2 위에 무엇을, 어떤 형태로 올릴지를 재현 가능한 단일 산출물로 못박아 두는 것이 중요하다. 인스턴스가 하나뿐이므로 그 한 대 위에서 실행되는 내용이 로컬 개발·CI에서 검증한 것과 다르면, 장애가 났을 때 수동 복구 절차(로그인해서 재기동)만으로는 원인을 재현하기 어렵다. 또한 네 명(이우람 [WS-03](../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색), 양성훈 [WS-01](../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색), 박진영 [WS-02](../../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회), 김인안 [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록))이 독립적으로 개발한 코드가 결국 이 한 대의 인스턴스에 함께 배포되므로, 각자 로컬에서 검증한 실행 환경과 실제 배포 환경 사이의 차이를 최소화해야 한다.
 
 ## 4. 결정 문제
 
@@ -67,7 +68,7 @@ Docker를 쓰면 이미지 빌드·스캔·저장·정리라는 새로운 운영
 
 ## 10. 강제 규칙
 
-명시 태그와 승인 시 digest를 고정하고 최소 이미지, 비루트 실행, Healthcheck와 환경 외부 주입을 사용한다. 운영 배포 시에는 GitHub Actions → ECR → EC2 경로([technology-policy.md](../../06-architecture/technology-policy.md) 13장)로 빌드된 이미지만 사용하고, Healthcheck는 단일 인스턴스 수동 복구 절차에서 운영자가 장애 여부를 판단하는 최소 신호로 쓴다.
+명시 태그와 승인 시 digest를 고정하고 최소 이미지, 비루트 실행, Healthcheck와 환경 외부 주입을 사용한다. 운영 배포 시에는 GitHub Actions → ECR → EC2 경로([technology-policy.md](../../06-architecture/technology-policy.md) 13장)로 빌드된 이미지만 사용한다. [ADR-WEB-003](web-003-routing-boundary.md)에 따라 Docker Healthcheck는 내부 `/internal/health/live`, 배포 Smoke Test는 `/internal/health/ready`, CloudWatch Agent와 운영자 점검은 `/internal/health/dependencies`를 사용한다.
 
 ## 11. 금지 사항
 
@@ -79,7 +80,7 @@ Docker를 쓰면 이미지 빌드·스캔·저장·정리라는 새로운 운영
 
 ## 13. 검증 방법
 
-깨끗한 이미지 빌드, 버전·비밀·취약점 검사와 컨테이너 기반 Smoke Test를 실행한다. 구체적으로는 CI에서 클린 빌드 컨텍스트로 이미지를 빌드해 성공 여부를 확인하고, 이미지 안에 평문 비밀값이나 `.env` 파일이 포함되지 않았는지 검사하며, 베이스 이미지가 명시 태그(운영 확정 시 digest)를 쓰는지 대조한다. 컨테이너를 실행한 뒤 Healthcheck 엔드포인트가 정상 응답하는지, 애플리케이션 시작 로그에 오류가 없는지를 Smoke Test로 확인한다. 이 검증은 이미지 빌드 재현성과 배포 가능 여부 확인이 목적이며, p95 500ms/800ms/1초 등 성능 기준([RV-NFR-004](../../01-requirements/non-functional-requirements.md#rv-nfr-004-목표-응답-시간과-허용-오류율))이나 오류율 1% 기준은 별도 성능·부하 테스트([RV-NFR-011](../../01-requirements/non-functional-requirements.md#rv-nfr-011-성능-테스트-환경) 미확정, [ADR-PERF-001](../adr-backlog.md#adr-perf-001-k6-성능-테스트-체계) Conditional)에서 다룬다.
+깨끗한 이미지 빌드, 버전·비밀·취약점 검사와 컨테이너 기반 Smoke Test를 실행한다. 구체적으로는 CI에서 클린 빌드 컨텍스트로 이미지를 빌드해 성공 여부를 확인하고, 이미지 안에 평문 비밀값이나 `.env` 파일이 포함되지 않았는지 검사하며, 베이스 이미지가 명시 태그(운영 확정 시 digest)를 쓰는지 대조한다. 컨테이너 내부에서 `/internal/health/live`, PostgreSQL을 포함한 `/internal/health/ready`가 정상 응답하는지, 애플리케이션 시작 로그에 오류가 없는지를 Smoke Test로 확인한다. `/internal/**`이 인터넷 Nginx 경로에서 차단되는지도 배포 후 검사한다. 이 검증은 이미지 빌드 재현성과 배포 가능 여부 확인이 목적이며, p95 500ms/800ms/1초 등 성능 기준([RV-NFR-004](../../01-requirements/non-functional-requirements.md#rv-nfr-004-목표-응답-시간과-허용-오류율))이나 오류율 1% 기준은 별도 성능·부하 테스트([RV-NFR-011](../../01-requirements/non-functional-requirements.md#rv-nfr-011-성능-테스트-환경) 미확정, [ADR-PERF-001](../adr-backlog.md#adr-perf-001-k6-성능-테스트-체계) Conditional)에서 다룬다.
 
 ## 14. 재검토 조건
 

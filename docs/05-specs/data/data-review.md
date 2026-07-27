@@ -13,6 +13,7 @@ related_documents:
   - ../../01-requirements/business-rules.md
   - ../api/admin/reference-data-api.md
   - ../api/admin/visit-registration-api.md
+  - ../../07-adr/security/auth-003-confirmation-token.md
 ---
 
 # 맛잇온 데이터 모델 검토
@@ -28,6 +29,7 @@ related_documents:
 - API DTO의 축약·집계·판정 값은 저장 모델에서 제외했다.
 - 물리 설계 전 반드시 결정할 Critical 항목은 카카오 장소 동일성 키와 상태·삭제 구현이다.
 - 관리자 내부 계정과 Redis Refresh Token 상태는 MVP 저장 범위에 포함하되 구체 키·검증값·TTL은 후속 설계로 남겼다.
+- 확인 Token은 PostgreSQL 저장형 불투명 Token과 원자적 소비·결과 재현으로 확정됐다.
 
 ## 3. 모델링 차단 항목
 
@@ -133,10 +135,10 @@ related_documents:
 ### RV-DATA-007 검증 확인 토큰 구현
 
 - 중요도: High
-- 현재 상태: 후속 기술 설계에서 결정
+- 현재 상태: 결정 완료 (2026-07-27)
 - 영향 데이터: 핵심 엔티티 없음, 단기 등록 후보
-- 결정 질문: 10분 만료·변조 방지·재사용 통제를 서명 토큰과 서버 저장 중 무엇으로 구현하는가?
-- 결정 시점: 관리자 미리보기 구현 전
+- 결정: PostgreSQL에 SHA-256 Token 해시·관리자·자원 종류·후보 스키마 버전·JSONB Snapshot과 `ISSUED/CREATED/DUPLICATE` 결과를 저장한다. 생성과 소비를 한 트랜잭션으로 처리하고 완료·만료 결과는 24시간 재현한다.
+- 근거: [ADR-AUTH-003](../../07-adr/security/auth-003-confirmation-token.md)
 
 ### RV-DATA-008 저장소 대 애플리케이션 검증 경계
 
@@ -158,7 +160,8 @@ related_documents:
 | 위치 데이터 표현 | 현재 불필요 | MVP는 주소+서울 자치구; 지도 도입 시 필요 |
 | 외부 영상 식별 전략 | 필요 여부 검토 | 외부 ID 정규화와 URL 변경 대응 |
 | 동시 중복 방지 전략 | 필요 | DB 기능·격리·오류 변환 영향 |
-| 확인 토큰·Refresh Token 저장 전략 | 필요 여부 검토 | 보안·확장·만료 운영 영향 |
+| 확인 Token 저장 전략 | 결정 완료 | [ADR-AUTH-003](../../07-adr/security/auth-003-confirmation-token.md) |
+| Refresh Token 저장 전략 | 추가 상세 필요 | Redis 키·회전·로그인 제한 운영 영향 |
 
 ## 9. 구현 중 결정 가능한 항목
 
@@ -174,7 +177,7 @@ related_documents:
 2. 카카오 장소·YouTube 외부 식별 정규화
 3. publication/lifecycle 및 논리 삭제 전략
 4. 저장소 고유성·참조·채널 일치와 동시성 방식
-5. AdminAccount·AdminRefreshToken·확인 토큰 보안 저장
+5. AdminAccount·AdminRefreshToken 보안 저장과 확정된 확인 Token 물리 테이블 반영
 6. 감사·이력 범위와 기준 데이터 적재
 7. 물리 모델·마이그레이션·인덱스 설계
 
@@ -192,7 +195,7 @@ related_documents:
 
 ## 12. Open Questions
 
-- [RV-DATA-001](data-review.md#rv-data-001-카카오-장소-동일성의-저장-표현)~[RV-DATA-008](data-review.md#rv-data-008-저장소-대-애플리케이션-검증-경계)의 구현 전 결정 항목
+- [RV-DATA-001](data-review.md#rv-data-001-카카오-장소-동일성의-저장-표현)~[RV-DATA-006](data-review.md#rv-data-006-관리자-refresh-token로그인-제한-저장)과 [RV-DATA-008](data-review.md#rv-data-008-저장소-대-애플리케이션-검증-경계)의 구현 전 결정 항목
 - 외부 상태 마지막 확인 시각과 외부 메타데이터 갱신 이력의 실제 저장 범위
 - 삭제·비공개 운영 수단이 MVP 내부 운영 절차로 필요한지, 후속 관리 API까지 미룰지
 

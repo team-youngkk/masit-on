@@ -17,6 +17,7 @@ related_documents:
   - ../data/data-005-redis-refresh-token.md
   - sec-001-secrets-workload-identity.md
   - ../platform/frame-001-spring-boot.md
+  - ../platform/web-003-routing-boundary.md
   - ../../02-analysis/mvp-workstreams.md
   - ../../06-architecture/technology-policy.md
 supersedes: []
@@ -49,7 +50,7 @@ Accepted
 
 ## 6. 결정
 
-Spring Security Filter Chain이 Bearer JWT의 서명·issuer·audience·만료와 `ADMIN` 권한을 검증한다. Refresh Token은 Redis에 저장하고 `HttpOnly`, `Secure`, `SameSite=Strict` 쿠키로만 전달하며 재발급 때 회전한다.
+Spring Security Filter Chain이 Bearer JWT의 서명·issuer·audience·만료와 `ADMIN` 권한을 검증한다. Refresh Token은 Redis에 저장하고 `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/api/admin/auth` 쿠키로만 전달하며 재발급 때 회전한다.
 
 Access Token 만료는 30분, Refresh Token TTL은 14일로 하며 재발급마다 회전하고 재사용을 탐지해 즉시 폐기한다. Redis 장애로 Refresh Token 조회가 불가능한 경우 재발급을 차단하는 fail-closed로 처리하여 Access Token 만료 후 관리자 재로그인을 요구한다.
 
@@ -63,7 +64,7 @@ Access Token 만료는 30분, Refresh Token TTL은 14일로 하며 재발급마�
 
 ## 9. 적용 범위
 
-관리자 로그인·재발급·로그아웃과 모든 `/admin` 등록 API에 적용한다. 일반 사용자 공개 API에는 적용하지 않는다.
+관리자 로그인·재발급·로그아웃과 모든 `/api/admin` 등록 API에 적용한다. 로그인은 자격 증명, 재발급은 Refresh Token 쿠키, 로그아웃은 JWT와 Refresh Token 쿠키를 검증하고 나머지 관리자 API는 JWT와 `ADMIN` 권한을 요구한다. 일반 사용자 공개 API에는 적용하지 않는다. matcher 순서는 [ADR-WEB-003](../platform/web-003-routing-boundary.md)을 따른다.
 
 ## 10. 강제 규칙
 
@@ -79,7 +80,7 @@ JWT 서명 키 보호·교체, Redis 가용성, Token 회전·폐기·로그 마
 
 ## 13. 검증 방법
 
-정상·만료·변조·잘못된 issuer/audience JWT, 권한 없음, Refresh 회전·재사용·로그아웃과 비밀정보 로그 검사를 자동화한다.
+정상·만료·변조·잘못된 issuer/audience JWT, 권한 없음, 로그인·재발급 matcher 예외, Refresh 회전·재사용·로그아웃과 비밀정보 로그 검사를 자동화한다.
 
 ## 14. 재검토 조건
 
@@ -89,4 +90,5 @@ JWT 서명 키 보호·교체, Redis 가용성, Token 회전·폐기·로그 마
 
 - [관리자 인증 API](../../05-specs/api/admin/authentication-api.md)
 - [Redis Token 저장 ADR](../data/data-005-redis-refresh-token.md)
+- [웹·API 라우팅 경계 ADR](../platform/web-003-routing-boundary.md)
 - [기술 정책](../../06-architecture/technology-policy.md)

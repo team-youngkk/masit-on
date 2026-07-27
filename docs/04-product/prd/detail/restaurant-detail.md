@@ -45,6 +45,7 @@ related_documents:
   - ../../../01-requirements/business-rules.md
   - ../../../02-analysis/mvp-workstreams.md
   - ../../../05-specs/api/detail/restaurant-detail-api.md
+  - ../../../07-adr/platform/web-003-routing-boundary.md
   - ../../../05-specs/data/relationship-rules.md
   - ../../../05-specs/data/lifecycle-rules.md
   - ../../../01-requirements/non-functional-requirements.md
@@ -55,7 +56,7 @@ related_documents:
 
 ## 1. 문서 정보
 
-맛집 기본 정보와 유효한 방문 유튜버·관련 영상을 한 사용자 흐름으로 조합한다. [WS-02](../../../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)가 여러 영역의 최종 표시 결과를 책임한다.
+맛집 기본 정보와 유효한 방문 유튜버·관련 영상을 한 사용자 흐름으로 조합한다. 화면 경로는 `/restaurants/{restaurantId}`, 백엔드 API는 `GET /api/restaurants/{restaurantId}`다. [WS-02](../../../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)가 여러 영역의 최종 표시 결과를 책임한다.
 
 ## 2. 기능 개요
 

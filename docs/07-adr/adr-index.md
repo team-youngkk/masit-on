@@ -9,6 +9,7 @@ related_documents:
   - platform/frame-001-spring-boot.md
   - platform/web-001-frontend-platform.md
   - platform/web-002-data-state.md
+  - platform/web-003-routing-boundary.md
   - ../02-analysis/mvp-workstreams.md
   - architecture/arch-001-domain-monolith.md
   - architecture/arch-002-external-ports-adapters.md
@@ -17,6 +18,7 @@ related_documents:
   - data/data-003-spring-data-jpa.md
   - data/data-004-flyway.md
   - security/auth-001-spring-security-jwt.md
+  - security/auth-003-confirmation-token.md
   - data/data-005-redis-refresh-token.md
   - integration/ext-001-reference-verification.md
   - quality/test-001-automation-strategy.md
@@ -35,6 +37,7 @@ related_documents:
 | [ADR-FRAME-001](platform/frame-001-spring-boot.md) | Spring Boot 애플리케이션 기준 | Accepted | Critical | Spring Boot 4.1.0, Spring Security 7.1.0 BOM | 전체 백엔드 | [문서](platform/frame-001-spring-boot.md) |
 | [ADR-WEB-001](platform/web-001-frontend-platform.md) | 프론트엔드 런타임과 프레임워크 기준 | Accepted | High | Node.js 24.18.0, Next.js 16.2.11, TypeScript 7.0.2 | 전체 웹 UI | [문서](platform/web-001-frontend-platform.md) |
 | [ADR-WEB-002](platform/web-002-data-state.md) | 프론트엔드 데이터와 상태 책임 분리 | Accepted | Medium | Server Components `fetch`, TanStack Query, URL Query Parameter, `useState` | [WS-01](../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)~[WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 웹 UI | [문서](platform/web-002-data-state.md) |
+| [ADR-WEB-003](platform/web-003-routing-boundary.md) | 웹 화면·API·운영 경로 경계 | Accepted | Critical | Next.js App Router, Nginx, Spring Security, `/api`, `/internal` | 전체 웹·API·운영 진입점 | [문서](platform/web-003-routing-boundary.md) |
 | [ADR-ARCH-001](architecture/arch-001-domain-monolith.md) | 단일 모듈 도메인 중심 모놀리스 | Accepted | Critical | 단일 모듈, 계층형 모놀리스 | 전체 Workstream | [문서](architecture/arch-001-domain-monolith.md) |
 | [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md) | 외부 연동 Port/Adapter 경계 | Accepted | High | Port/Adapter | [WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)~[WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록), 외부 연동 | [문서](architecture/arch-002-external-ports-adapters.md) |
 | [ADR-DATA-001](data/data-001-postgresql.md) | PostgreSQL 17.10 주 데이터베이스 | Accepted | Critical | PostgreSQL 17.10 | 전체 영속 데이터 | [문서](data/data-001-postgresql.md) |
@@ -42,6 +45,7 @@ related_documents:
 | [ADR-DATA-003](data/data-003-spring-data-jpa.md) | Spring Data JPA 기본 데이터 접근 | Accepted | High | Spring Data JPA | 전체 Repository | [문서](data/data-003-spring-data-jpa.md) |
 | [ADR-DATA-004](data/data-004-flyway.md) | Flyway 스키마 마이그레이션 | Accepted | Critical | Flyway 12.4.0 | 전체 스키마 변경 | [문서](data/data-004-flyway.md) |
 | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md) | 관리자 Spring Security JWT 인증·인가 | Accepted | Critical | Spring Security 7.1.0, JWT, Redis 8.8 Refresh Token | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 관리자 | [문서](security/auth-001-spring-security-jwt.md) |
+| [ADR-AUTH-003](security/auth-003-confirmation-token.md) | 관리자 등록 확인 Token의 저장·소비·재시도 | Accepted | Critical | PostgreSQL, SHA-256, 불투명 Token, JSONB Snapshot | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 기준정보 등록 | [문서](security/auth-003-confirmation-token.md) |
 | [ADR-DATA-005](data/data-005-redis-refresh-token.md) | Redis 8.8 관리자 Refresh Token 저장소 | Accepted | Critical | Redis Open Source 8.8 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 인증·운영 | [문서](data/data-005-redis-refresh-token.md) |
 | [ADR-EXT-001](integration/ext-001-reference-verification.md) | 관리자 외부 기준정보 확인 서비스 | Accepted | High | Kakao Local REST API V2, YouTube Data API v3 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 등록 | [문서](integration/ext-001-reference-verification.md) |
 | [ADR-TEST-001](quality/test-001-automation-strategy.md) | 계층별 자동화 테스트 전략 | Accepted | Critical | JUnit 5, Mockito, Spring Boot Test, Testcontainers 2.0.5, WireMock | 전체 Workstream | [문서](quality/test-001-automation-strategy.md) |

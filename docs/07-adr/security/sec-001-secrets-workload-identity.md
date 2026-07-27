@@ -38,7 +38,7 @@ Accepted
 
 ## 3. 배경
 
-관리자 JWT 서명 키([ADR-AUTH-001](auth-001-spring-security-jwt.md), Access Token 30분·Refresh Token 14일 TTL), DB(PostgreSQL)·Redis 자격 증명, Kakao Local·YouTube Data API 키([ADR-EXT-001](../integration/ext-001-reference-verification.md), [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 등록 확인에 사용)라는 구체적인 비밀값을 코드·GitHub 저장소·장기 Access Key에서 분리해야 한다. 배포는 2026-07-24 결정된 대로 단일 EC2 인스턴스(Nginx+Spring Boot)이며 CI/CD는 GitHub Actions → ECR → EC2 경로를 사용한다([technology-policy.md](../../06-architecture/technology-policy.md) 13절). 초기 월 인프라 예산은 15만 원 수준을 목표로 하므로([adr-traceability.md](../adr-traceability.md)) 비밀 관리 방식도 이 예산 제약 안에서 운영 가능해야 한다.
+관리자 JWT 서명 키([ADR-AUTH-001](auth-001-spring-security-jwt.md), Access Token 30분·Refresh Token 14일 TTL), DB(PostgreSQL)·Redis 자격 증명, Kakao Local·YouTube Data API 키([ADR-EXT-001](../integration/ext-001-reference-verification.md), [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 등록 확인에 사용)라는 구체적인 비밀값을 코드·GitHub 저장소·장기 Access Key에서 분리해야 한다. 배포는 단일 EC2 인스턴스(Nginx+Next.js+Spring Boot)이며 CI/CD는 GitHub Actions → ECR → EC2 경로를 사용한다([technology-policy.md](../../06-architecture/technology-policy.md) 13절). 초기 월 인프라 예산은 15만 원 수준을 목표로 하므로([adr-traceability.md](../adr-traceability.md)) 비밀 관리 방식도 이 예산 제약 안에서 운영 가능해야 한다.
 
 ## 4. 결정 문제
 

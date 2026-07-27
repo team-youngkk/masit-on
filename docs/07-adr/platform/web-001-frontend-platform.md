@@ -14,6 +14,7 @@ related_documents:
   - ../../03-team/ownership.md
   - ../../04-product/prd/00-product-overview.md
   - ../../05-specs/api/README.md
+  - web-003-routing-boundary.md
   - ../../06-architecture/technology-policy.md
   - web-002-data-state.md
   - ../security/auth-001-spring-security-jwt.md
@@ -80,7 +81,7 @@ Node.js 24.18.0, Next.js 16.2.11, TypeScript 7.0.2를 정확히 고정한다.
 
 ## 10. 강제 규칙
 
-런타임·패키지 버전과 `package-lock.json` 등 잠금 파일을 저장소에 고정하고, Server Components와 Client Components(`"use client"`) 경계를 파일 단위로 명시한다. 관리자 화면은 공개 화면과 같은 코드베이스를 쓰되, 인증이 필요한 라우트임을 라우팅 구조에서 구분한다.
+런타임·패키지 버전과 `package-lock.json` 등 잠금 파일을 저장소에 고정하고, Server Components와 Client Components(`"use client"`) 경계를 파일 단위로 명시한다. 관리자 화면은 공개 화면과 같은 코드베이스를 쓰되, [ADR-WEB-003](web-003-routing-boundary.md)의 `/admin/login`, 기능별 `/admin/**` 경로와 인증 복구 흐름으로 구분한다.
 
 ## 11. 금지 사항
 

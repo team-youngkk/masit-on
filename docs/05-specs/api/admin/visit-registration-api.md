@@ -74,7 +74,7 @@ related_documents:
 
 | API ID | Method | Path | 설명 |
 |---|---|---|---|
-| [API-ADMIN-VISIT-001](visit-registration-api.md#api-admin-visit-001-방문-관계-등록) | POST | `/admin/visit-relationships` | 맛집·유튜버·영상 방문 관계 등록 |
+| [API-ADMIN-VISIT-001](visit-registration-api.md#api-admin-visit-001-방문-관계-등록) | POST | `/api/admin/visit-relationships` | 맛집·유튜버·영상 방문 관계 등록 |
 
 표준 영문명 `Visit Relationship`을 복수 자원 경로 `visit-relationships`로 표현한다.
 
@@ -83,7 +83,7 @@ related_documents:
 ### API-ADMIN-VISIT-001 방문 관계 등록
 
 - Method: `POST`
-- Path: `/admin/visit-relationships`
+- Path: `/api/admin/visit-relationships`
 - 인증: JWT Access Token과 `ADMIN` 권한 필수
 - 권한: 관리자 등록 권한
 - 관련 PRD: [PRD-ADMIN-001](../../../04-product/prd/admin/admin-data-management.md)
@@ -162,7 +162,7 @@ related_documents:
 
 ## 10. 예제
 
-관리자는 영상에서 실제 방문과 게시 채널 일치를 확인한 뒤 세 등록 API의 식별자를 한 요청에 전달한다. 성공 후 해당 관계가 모두 공개 조건을 충족하면 `GET /restaurants?creatorId=...`와 `GET /restaurants/{restaurantId}`에 반영된다.
+관리자는 영상에서 실제 방문과 게시 채널 일치를 확인한 뒤 세 등록 API의 식별자를 한 요청에 전달한다. 성공 후 해당 관계가 모두 공개 조건을 충족하면 `GET /api/restaurants?creatorId=...`와 `GET /api/restaurants/{restaurantId}`에 반영된다.
 
 ## 11. 관련 요구사항 및 규칙
 

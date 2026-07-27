@@ -75,7 +75,7 @@ MVP의 Restaurant, Creator, Video, Visit와 관리자 인증에 필요한 영속
 
 ## 12. 구현 및 운영 영향
 
-운영 배치는 단일 EC2(Nginx + Spring Boot)와 별도의 Amazon RDS for PostgreSQL 17.10([ADR-DATA-002](data-002-database-placement.md))이며, 백업은 일 1회 자동 스냅샷·7일 보관·RPO 24시간([RV-NFR-010](../../01-requirements/non-functional-requirements.md#rv-nfr-010-백업-주기와-복구-범위))을 기준으로 한다. 장애 시 ALB/ASG 자동 복구는 도입하지 않고 운영자가 수동으로 인스턴스를 재기동·교체하므로, DB 연결 재시도와 커넥션 풀 설정도 이 수동 복구 시나리오를 전제로 설계한다. 용량·연결 수 설정은 예상 동시 사용자 수([RV-NFR-001](../../01-requirements/non-functional-requirements.md#rv-nfr-001-목표-동시-사용자-수) 미확정)가 정해지는 대로 조정한다.
+운영 배치는 단일 EC2(Nginx + Next.js + Spring Boot)와 별도의 Amazon RDS for PostgreSQL 17.10([ADR-DATA-002](data-002-database-placement.md))이며, 백업은 일 1회 자동 스냅샷·7일 보관·RPO 24시간([RV-NFR-010](../../01-requirements/non-functional-requirements.md#rv-nfr-010-백업-주기와-복구-범위))을 기준으로 한다. 장애 시 ALB/ASG 자동 복구는 도입하지 않고 운영자가 수동으로 인스턴스를 재기동·교체하므로, DB 연결 재시도와 커넥션 풀 설정도 이 수동 복구 시나리오를 전제로 설계한다. 용량·연결 수 설정은 예상 동시 사용자 수([RV-NFR-001](../../01-requirements/non-functional-requirements.md#rv-nfr-001-목표-동시-사용자-수) 미확정)가 정해지는 대로 조정한다.
 
 ## 13. 검증 방법
 

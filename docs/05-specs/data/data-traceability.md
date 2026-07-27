@@ -21,6 +21,7 @@ related_documents:
   - ../api/discovery/restaurant-discovery-api.md
   - ../api/discovery/creator-discovery-api.md
   - ../api/detail/restaurant-detail-api.md
+  - ../../07-adr/security/auth-003-confirmation-token.md
 ---
 
 # 맛잇온 데이터 추적성
@@ -80,15 +81,15 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 | [API-ADMIN-AUTH-001](../api/admin/authentication-api.md#api-admin-auth-001-관리자-로그인) | 관리자 로그인 | AdminRefreshToken 생성·기존 활성 Token 폐기 | AdminAccount | 계정당 활성 Token 전환 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
 | [API-ADMIN-AUTH-002](../api/admin/authentication-api.md#api-admin-auth-002-관리자-토큰-재발급) | 토큰 재발급 | 기존 Token 폐기·AdminRefreshToken 회전 | AdminAccount, AdminRefreshToken | 검증·회전 원자성 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
 | [API-ADMIN-AUTH-003](../api/admin/authentication-api.md#api-admin-auth-003-관리자-로그아웃) | 로그아웃 | AdminRefreshToken 폐기 | AdminRefreshToken | 현재 Token 하나 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
-| [API-ADMIN-RESTAURANT-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-restaurant-preview-001-맛집-등록-검증-미리보기) | 외부 장소·입력 검증 | 핵심 데이터 변경 없음 | Region, FoodCategory 기준 | 토큰 발급 여부만 일관 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
+| [API-ADMIN-RESTAURANT-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-restaurant-preview-001-맛집-등록-검증-미리보기) | 외부 장소·입력 검증 | 핵심 Entity 변경 없음, `READY`이면 ConfirmationToken 기술 행 생성 | Region, FoodCategory 기준 | Token 발급 행 하나 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
 | [API-ADMIN-RESTAURANT-001](../api/admin/reference-data-api.md#api-admin-restaurant-001-맛집-등록-확정) | 맛집 생성 | Restaurant와 필수 참조 연결 | Region, FoodCategory | Restaurant 한 건 전체 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) / Restaurant |
-| [API-ADMIN-CREATOR-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-creator-preview-001-유튜버-등록-검증-미리보기) | 외부 채널 검증 | 핵심 데이터 변경 없음 | 없음 | 토큰 발급 여부만 일관 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
+| [API-ADMIN-CREATOR-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-creator-preview-001-유튜버-등록-검증-미리보기) | 외부 채널 검증 | 핵심 Entity 변경 없음, `READY`이면 ConfirmationToken 기술 행 생성 | 없음 | Token 발급 행 하나 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
 | [API-ADMIN-CREATOR-001](../api/admin/reference-data-api.md#api-admin-creator-001-유튜버-등록-확정) | Creator 생성 | Creator | 없음 | Creator 한 건 전체 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) / Creator |
-| [API-ADMIN-VIDEO-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-video-preview-001-영상-등록-검증-미리보기) | 외부 영상·게시 채널 검증 | 핵심 데이터 변경 없음 | 게시 채널 후보 | 토큰 발급 여부만 일관 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
+| [API-ADMIN-VIDEO-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-video-preview-001-영상-등록-검증-미리보기) | 외부 영상·게시 채널 검증 | 핵심 Entity 변경 없음, `READY`이면 ConfirmationToken 기술 행 생성 | 게시 채널 후보 | Token 발급 행 하나 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
 | [API-ADMIN-VIDEO-001](../api/admin/reference-data-api.md#api-admin-video-001-영상-등록-확정) | Video 생성 | Video와 게시 채널 외부 식별 | 없음(내부 Creator 연결 선택) | Video 한 건 전체 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) / Video |
 | [API-ADMIN-VISIT-001](../api/admin/visit-registration-api.md#api-admin-visit-001-방문-관계-등록) | 방문 관계 생성 | Visit | Restaurant, Creator, Video | 검증·복합 중복·저장 전체 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) / Visit |
 
-확인 토큰은 10분 만료와 후보 무결성을 제공하지만 서버 저장 레코드인지 서명된 단기 값인지는 후속 기술 설계 대상이다. `REVIEW_REQUIRED`는 등록 요청으로 저장하지 않는다.
+확인 Token은 PostgreSQL에 SHA-256 해시·관리자·자원 종류·후보 스키마 버전·JSONB Snapshot과 결과 상태를 저장한다. 10분 만료, 원자적 소비와 완료·만료 결과 24시간 재현은 [ADR-AUTH-003](../../07-adr/security/auth-003-confirmation-token.md)을 따른다. `REVIEW_REQUIRED`는 등록 요청으로 저장하지 않는다.
 
 ## 6. API 응답 → 데이터 조회 매핑
 
@@ -119,7 +120,7 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 - Restaurant 설명·대표 이미지·영업 정보는 확정 요구사항/API가 없어 저장 모델에서 제외했다.
 - Creator 프로필 이미지, Video 게시일의 외부 API 노출, Visit 방문일·검증 상태·검증자는 MVP에서 제외하거나 선택 데이터다.
 - 수정·삭제·승인·보류 목록 API가 없으므로 관련 운영 전환은 API 변경으로 만들지 않았다.
-- 로그인 실패 제한 카운터와 확인 토큰 저장 방식은 API 동작 요구는 있으나 핵심 ERD 저장 모델로 확정하지 않았다.
+- 로그인 실패 제한 카운터는 저장 방식이 미정이다. 확인 Token은 PostgreSQL 단기 기술 테이블로 확정됐지만 핵심 도메인 ERD에는 포함하지 않는다.
 
 ## 9. 변경 영향 추적
 

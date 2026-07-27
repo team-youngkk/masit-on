@@ -6,6 +6,7 @@ related_documents:
   - ../data/lifecycle-rules.md
   - ../data/constraints.md
   - ../data/data-review.md
+  - ../../07-adr/security/auth-003-confirmation-token.md
 ---
 
 # 맛잇온 ERD 작성 명세
@@ -35,7 +36,8 @@ related_documents:
 - 다중 카테고리 관계와 Region 계층
 - 별도 방문 근거, 방문일·검증 상태 엔티티
 - 검증 미리보기·보류 요청: 핵심 자원을 생성하지 않으며 `REVIEW_REQUIRED`를 저장하지 않음
-- 확인 토큰·로그인 실패 카운터: 저장 방식 미확정 단기 기술 아티팩트
+- 확인 Token: PostgreSQL 단기 기술 테이블로 확정됐지만 핵심 도메인 ERD에서는 제외([ADR-AUTH-003](../../07-adr/security/auth-003-confirmation-token.md))
+- 로그인 실패 카운터: 저장 방식 미확정 단기 기술 아티팩트
 
 ## 4. 엔티티별 핵심 속성
 

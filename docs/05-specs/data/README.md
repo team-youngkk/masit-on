@@ -12,6 +12,7 @@ related_documents:
   - data-review.md
   - ../diagrams/erd-spec.md
   - ../../00-overview/scope.md
+  - ../../07-adr/security/auth-003-confirmation-token.md
 ---
 
 # 맛잇온 데이터 명세
@@ -38,7 +39,7 @@ related_documents:
 
 현재 문서는 논리 데이터 모델이다. 실제 테이블명, 컬럼명, SQL 자료형, 내부 식별자 타입, 인덱스 상세, ORM 매핑과 패키지 구조는 확정하지 않는다. 저장소 제약이 필요하다고 명시한 규칙도 구체적인 DDL은 후속 물리 설계에서 정한다.
 
-검증 미리보기의 확인 토큰, 로그인 제한 카운터처럼 저장 매체가 영속 데이터베이스인지 단기 저장소인지 확정되지 않은 기술 아티팩트는 핵심 엔티티로 만들지 않는다. 다만 API 계약을 지키기 위한 수명·원자성·보안 요구는 관련 문서에 남긴다.
+검증 미리보기의 확인 Token은 PostgreSQL 단기 기술 테이블로 확정됐지만 핵심 도메인 엔티티나 논리 ERD에는 포함하지 않는다. Token 해시·관리자·자원 종류·후보 스키마 버전·JSONB Snapshot과 결과 상태만 저장하며 세부 정책은 [ADR-AUTH-003](../../07-adr/security/auth-003-confirmation-token.md)을 따른다. 저장 위치가 미정인 로그인 제한 카운터 같은 기술 아티팩트도 핵심 엔티티로 만들지 않는다.
 
 ## 4. 문서 참조 순서
 

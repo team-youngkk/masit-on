@@ -86,12 +86,12 @@ related_documents:
 
 | API ID | Method | Path | 설명 |
 |---|---|---|---|
-| [API-ADMIN-RESTAURANT-PREVIEW-001](reference-data-api.md#api-admin-restaurant-preview-001-맛집-등록-검증-미리보기) | POST | `/admin/restaurant-registration-previews` | 맛집 입력·카카오 장소 검증 미리보기 |
-| [API-ADMIN-RESTAURANT-001](reference-data-api.md#api-admin-restaurant-001-맛집-등록-확정) | POST | `/admin/restaurants` | 검증된 맛집 등록 |
-| [API-ADMIN-CREATOR-PREVIEW-001](reference-data-api.md#api-admin-creator-preview-001-유튜버-등록-검증-미리보기) | POST | `/admin/creator-registration-previews` | YouTube 채널 검증 미리보기 |
-| [API-ADMIN-CREATOR-001](reference-data-api.md#api-admin-creator-001-유튜버-등록-확정) | POST | `/admin/creators` | YouTube 채널 단위 유튜버 등록 |
-| [API-ADMIN-VIDEO-PREVIEW-001](reference-data-api.md#api-admin-video-preview-001-영상-등록-검증-미리보기) | POST | `/admin/video-registration-previews` | YouTube 영상 검증 미리보기 |
-| [API-ADMIN-VIDEO-001](reference-data-api.md#api-admin-video-001-영상-등록-확정) | POST | `/admin/videos` | 방문 근거 후보 영상 등록 |
+| [API-ADMIN-RESTAURANT-PREVIEW-001](reference-data-api.md#api-admin-restaurant-preview-001-맛집-등록-검증-미리보기) | POST | `/api/admin/restaurant-registration-previews` | 맛집 입력·카카오 장소 검증 미리보기 |
+| [API-ADMIN-RESTAURANT-001](reference-data-api.md#api-admin-restaurant-001-맛집-등록-확정) | POST | `/api/admin/restaurants` | 검증된 맛집 등록 |
+| [API-ADMIN-CREATOR-PREVIEW-001](reference-data-api.md#api-admin-creator-preview-001-유튜버-등록-검증-미리보기) | POST | `/api/admin/creator-registration-previews` | YouTube 채널 검증 미리보기 |
+| [API-ADMIN-CREATOR-001](reference-data-api.md#api-admin-creator-001-유튜버-등록-확정) | POST | `/api/admin/creators` | YouTube 채널 단위 유튜버 등록 |
+| [API-ADMIN-VIDEO-PREVIEW-001](reference-data-api.md#api-admin-video-preview-001-영상-등록-검증-미리보기) | POST | `/api/admin/video-registration-previews` | YouTube 영상 검증 미리보기 |
+| [API-ADMIN-VIDEO-001](reference-data-api.md#api-admin-video-001-영상-등록-확정) | POST | `/api/admin/videos` | 방문 근거 후보 영상 등록 |
 
 등록 순서는 맛집·유튜버·영상 사이에는 강제하지 않는다. 세 대상이 모두 등록된 뒤 방문 관계를 등록한다.
 
@@ -104,14 +104,16 @@ related_documents:
 3. 관리자가 화면에서 후보를 확인한다.
 4. `decision`이 `READY`이면 `confirmationToken`을 해당 생성 API에 제출한다.
 
-미리보기 응답의 `decision`은 `READY`, `DUPLICATE`, `REVIEW_REQUIRED` 중 하나다. `READY`일 때만 `confirmationToken`이 문자열이고, 나머지는 `null`이다. 토큰은 서버가 서명·관리하는 불투명 문자열이며 JWT의 관리자 식별자와 후보 내용에 묶이고 발급 후 10분에 만료된다. `expiresAt`은 RFC 3339 시각이다. 만료·변조·다른 관리자 사용은 `409 VERIFICATION_EXPIRED` 또는 `400 INVALID_CONFIRMATION_TOKEN`이며 생성하지 않는다.
+미리보기 응답의 `decision`은 `READY`, `DUPLICATE`, `REVIEW_REQUIRED` 중 하나다. `READY`일 때만 `confirmationToken`이 문자열이고, 나머지는 `null`이다. Token은 서버가 생성한 최소 256-bit 불투명 난수이며 JWT의 관리자 식별자와 서버가 저장한 정규화 후보 Snapshot에 묶이고 발급 후 10분에 만료된다. 서버는 원문 대신 SHA-256 해시를 PostgreSQL에 저장한다. `expiresAt`은 RFC 3339 시각이다. 만료·변조·다른 관리자·다른 자원 생성 API 사용은 `409 VERIFICATION_EXPIRED` 또는 `400 INVALID_CONFIRMATION_TOKEN`이며 생성하지 않는다.
+
+Token 소비와 Entity 생성 또는 동시 중복 완료는 한 PostgreSQL 트랜잭션으로 처리한다. 최초 생성은 `201 Created`를 반환하고 조회 가능한 정식 자원 URI가 계약에 존재하면 `Location` 헤더를 함께 반환한다. 생성 완료 뒤 동일 관리자·동일 Token 재시도는 새 Entity를 만들지 않고 최초 성공과 같은 자원 표현을 `200 OK`로 반환한다. 미리보기 뒤 다른 요청이 같은 자원을 먼저 만들었다면 최초와 재시도 모두 같은 `409 DUPLICATE_*`와 기존 자원의 ID·최소 정보를 반환한다. 별도 `replayed` 필드는 추가하지 않고 `201`과 `200`으로 구분하며, 이 결과 재현은 부수 효과를 다시 실행하는 Token 재사용이 아니다. 조회 API가 없는 Creator·Video에 존재하지 않는 상세 경로를 만들기 위해 `Location`을 추가하지 않는다.
 
 ## 5. 맛집 등록
 
 ### API-ADMIN-RESTAURANT-PREVIEW-001 맛집 등록 검증 미리보기
 
 - Method: `POST`
-- Path: `/admin/restaurant-registration-previews`
+- Path: `/api/admin/restaurant-registration-previews`
 - 인증: JWT Access Token과 `ADMIN` 권한 필수
 - 권한: 관리자 등록 권한
 - 관련 PRD: [PRD-ADMIN-001](../../../04-product/prd/admin/admin-data-management.md)
@@ -182,7 +184,7 @@ related_documents:
 ### API-ADMIN-RESTAURANT-001 맛집 등록 확정
 
 - Method: `POST`
-- Path: `/admin/restaurants`
+- Path: `/api/admin/restaurants`
 - 인증: JWT Access Token과 `ADMIN` 권한 필수
 - 권한: 관리자 등록 권한
 
@@ -192,14 +194,14 @@ related_documents:
 }
 ```
 
-`READY` 미리보기에서 받은 유효 토큰만 허용한다. 성공 시 `201 Created`와 미리보기의 `candidate`에 `id`를 추가한 맛집 객체를 반환한다. 성공은 관리자 확인이 완료된 공개 맛집이 생성됐음을 뜻하며 영상·관계 없이 공개 조회에 반영된다.
+`READY` 미리보기에서 받은 유효 토큰만 허용한다. 최초 성공 시 `201 Created`, `Location: /api/restaurants/{restaurantId}`와 미리보기의 `candidate`에 `id`를 추가한 맛집 객체를 반환한다. 생성 완료 Token 재시도는 같은 객체를 `200 OK`로 반환한다. 동시 중복 완료는 `409 DUPLICATE_RESTAURANT`와 기존 맛집 ID·최소 정보를 반환한다. 성공은 관리자 확인이 완료된 공개 맛집이 생성됐음을 뜻하며 영상·관계 없이 공개 조회에 반영된다.
 
 ## 6. 유튜버 등록
 
 ### API-ADMIN-CREATOR-PREVIEW-001 유튜버 등록 검증 미리보기
 
 - Method: `POST`
-- Path: `/admin/creator-registration-previews`
+- Path: `/api/admin/creator-registration-previews`
 - 인증·권한: JWT Access Token과 `ADMIN` 권한 필수
 - 관련 요구사항: [FR-ADMIN-001](../../../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근), [FR-ADMIN-003](../../../01-requirements/functional-requirements.md#fr-admin-003-유튜버-정보-등록)
 
@@ -251,7 +253,7 @@ related_documents:
 ### API-ADMIN-CREATOR-001 유튜버 등록 확정
 
 - Method: `POST`
-- Path: `/admin/creators`
+- Path: `/api/admin/creators`
 - 인증·권한: JWT Access Token과 `ADMIN` 권한 필수
 
 ```json
@@ -260,14 +262,14 @@ related_documents:
 }
 ```
 
-성공 시 `201 Created`와 `id`, `channelName`, `channelUrl`을 반환한다. 생성된 공개 유튜버는 필터 선택 목록과 방문 관계 참조에 사용할 수 있다.
+최초 성공 시 `201 Created`와 `id`, `channelName`, `channelUrl`을 반환한다. Creator 상세 조회 API가 없으므로 `Location`은 반환하지 않는다. 생성 완료 Token 재시도는 같은 객체를 `200 OK`로 반환한다. 동시 중복 완료는 `409 DUPLICATE_CREATOR`와 기존 유튜버 ID·최소 정보를 반환한다. 생성된 공개 유튜버는 필터 선택 목록과 방문 관계 참조에 사용할 수 있다.
 
 ## 7. 영상 등록
 
 ### API-ADMIN-VIDEO-PREVIEW-001 영상 등록 검증 미리보기
 
 - Method: `POST`
-- Path: `/admin/video-registration-previews`
+- Path: `/api/admin/video-registration-previews`
 - 인증·권한: JWT Access Token과 `ADMIN` 권한 필수
 - 관련 요구사항: [FR-ADMIN-001](../../../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근), [FR-ADMIN-004](../../../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록)
 
@@ -319,7 +321,7 @@ related_documents:
 ### API-ADMIN-VIDEO-001 영상 등록 확정
 
 - Method: `POST`
-- Path: `/admin/videos`
+- Path: `/api/admin/videos`
 - 인증·권한: JWT Access Token과 `ADMIN` 권한 필수
 
 ```json
@@ -328,11 +330,11 @@ related_documents:
 }
 ```
 
-성공 시 `201 Created`와 `id`, `title`, `thumbnailUrl`, `channelName`, `sourceUrl`을 반환한다. 생성된 영상은 방문 관계의 근거 후보이며 등록만으로 특정 맛집과 연결되지 않는다.
+최초 성공 시 `201 Created`와 `id`, `title`, `thumbnailUrl`, `channelName`, `sourceUrl`을 반환한다. Video 상세 조회 API가 없으므로 `Location`은 반환하지 않는다. 생성 완료 Token 재시도는 같은 객체를 `200 OK`로 반환한다. 동시 중복 완료는 `409 DUPLICATE_VIDEO`와 기존 영상 ID·최소 정보를 반환한다. 생성된 영상은 방문 관계의 근거 후보이며 등록만으로 특정 맛집과 연결되지 않는다.
 
 ## 8. 중복 및 입력 검증
 
-카카오 동일 장소, 동일 YouTube 채널, 동일 YouTube 원본 영상을 각각 중복 기준으로 사용한다. 이름·채널명·영상 제목만으로 병합하지 않는다. 미리보기의 `DUPLICATE`는 기존 자원 최소 정보를 제공하고 생성하지 않으며, `REVIEW_REQUIRED`는 토큰을 발급하지 않는다. 미리보기 뒤 동시 요청으로 중복이 생기면 생성 API가 `409 DUPLICATE_*`를 반환하고 기존 자원 정보를 오류의 `resource` 필드로 제공한다.
+카카오 동일 장소, 동일 YouTube 채널, 동일 YouTube 원본 영상을 각각 중복 기준으로 사용한다. 이름·채널명·영상 제목만으로 병합하지 않는다. 미리보기의 `DUPLICATE`는 기존 자원 최소 정보를 제공하고 생성하지 않으며, `REVIEW_REQUIRED`는 Token을 발급하지 않는다. 미리보기 뒤 동시 요청으로 중복이 생기면 생성 API가 `409 DUPLICATE_*`를 반환하고 기존 자원 정보를 오류의 `resource` 필드로 제공한다. 해당 Token은 `DUPLICATE` 완료 결과와 기존 자원 ID를 기록하므로 재시도에도 같은 결과를 반환한다.
 
 ## 9. 공개 상태 처리
 
@@ -356,5 +358,5 @@ related_documents:
 
 - `kakaoPlaceUrl`은 최대 2,048자의 HTTPS URL이며 리디렉션을 해석한 최종 호스트가 `place.map.kakao.com`이어야 한다. 외부 확인 실패·시간 초과·할당량 문제는 `502 EXTERNAL_SERVICE_ERROR`이고 토큰을 발급하지 않는다.
 - 문자열·전화번호·URL 길이와 형식은 각 요청 표를 따른다.
-- 검증 미리보기 확인 토큰은 발급 후 10분에 만료된다.
+- 검증 미리보기 확인 Token은 발급 후 10분에 만료된다. 완료·만료 결과는 24시간 재현하며 최초 생성 `201`, 생성 완료 재시도 `200`, 동시 중복 최초·재시도 `409`를 사용한다.
 - `REVIEW_REQUIRED` 미리보기는 서버에 등록 요청으로 저장하지 않는다. 관리자는 출처를 수동 재확인하고 입력을 수정해 새 미리보기를 요청한다. 별도 보류 목록·승인 API는 만들지 않는다.

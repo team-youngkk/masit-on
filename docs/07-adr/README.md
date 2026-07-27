@@ -16,7 +16,7 @@ related_documents:
 
 ## 2. 기술 스펙과 ADR의 관계
 
-`맛잇온 기술 스펙 결정`에서 고정·확정된 항목은 MVP 범위와 대조한 뒤 Accepted ADR로 전환한다. 반복 규칙은 [../06-architecture/technology-policy.md](../06-architecture/technology-policy.md), 조건부·Post-MVP·충돌 항목은 [adr-backlog.md](adr-backlog.md)에서 관리한다. 기술 스펙의 버전은 재선정하거나 최신화하지 않는다.
+`맛잇온 기술 스펙 결정`에서 고정·확정된 항목은 MVP 범위와 대조한 뒤 Accepted ADR로 전환한다. 반복 규칙은 [../06-architecture/technology-policy.md](../06-architecture/technology-policy.md), 구현 전 Proposed·조건부·Post-MVP·충돌 항목은 [adr-backlog.md](adr-backlog.md)에서 관리한다. 기술 스펙의 버전은 재선정하거나 최신화하지 않는다.
 
 ## 3. ADR 상태
 
@@ -27,7 +27,7 @@ related_documents:
 - `Rejected`: 검토 후 채택하지 않았다.
 - `Superseded`: 후속 ADR로 대체됐다.
 
-이 저장소는 `Conditional`과 `Post-MVP`를 정식 상태로 사용한다. Backlog 항목은 개별 ADR 파일을 만들기 전의 결정 후보이며 Accepted ADR 목록에 포함하지 않는다.
+이 저장소는 `Proposed`, `Conditional`과 `Post-MVP`를 Backlog 상태로 사용한다. Backlog 항목은 개별 ADR 파일을 만들기 전의 결정 후보이며 Accepted ADR 목록에 포함하지 않는다.
 
 ## 4. ADR ID 규칙
 
@@ -85,11 +85,12 @@ docs/07-adr/
 - 결정 문제, 고려 선택지, 근거, 트레이드오프, 검증과 재검토 조건이 있다.
 - 미확정 요구사항이나 운영 수치를 확정값으로 만들지 않는다.
 
-## 7. Conditional 및 Post-MVP ADR 기준
+## 7. Proposed, Conditional 및 Post-MVP ADR 기준
 
+- Proposed는 MVP 구현에 필요하지만 결론이 남은 항목이며 구현 전 결정 시점과 검증 기준을 가진다.
 - Conditional은 구체적 활성화 조건과 도입 전 검증을 가진다.
 - Post-MVP는 상위 범위 문서의 제외 기능과 연결한다.
-- 둘 다 조건 충족 전 의존성, 설정, 스키마 또는 선행 구조를 추가하지 않는다.
+- Conditional과 Post-MVP는 조건 충족 전 의존성, 설정, 스키마 또는 선행 구조를 추가하지 않는다.
 - 활성화할 때 개별 ADR을 작성하거나 Backlog 항목을 Accepted로 전환하고 추적성을 갱신한다.
 
 ## 8. 기술 정책과 ADR의 구분
@@ -102,4 +103,4 @@ Accepted ADR은 내용만 덮어써서 결론을 바꾸지 않는다. 변경 제
 
 ## 10. 현재 ADR 목록
 
-현재 상태와 경로의 기준은 [ADR 인덱스](adr-index.md)다. 조건부·Post-MVP·범위 충돌은 [ADR Backlog](adr-backlog.md), 기술·요구사항 연결은 [ADR 추적성](adr-traceability.md)을 따른다.
+현재 상태와 경로의 기준은 [ADR 인덱스](adr-index.md)다. 구현 전 Proposed·조건부·Post-MVP·범위 충돌은 [ADR Backlog](adr-backlog.md), 기술·요구사항 연결은 [ADR 추적성](adr-traceability.md)을 따른다.

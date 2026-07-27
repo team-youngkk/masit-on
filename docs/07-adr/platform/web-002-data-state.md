@@ -14,6 +14,7 @@ related_documents:
   - ../../05-specs/api/discovery/restaurant-discovery-api.md
   - ../../05-specs/api/README.md
   - web-001-frontend-platform.md
+  - web-003-routing-boundary.md
   - ../../02-analysis/mvp-workstreams.md
   - ../../00-overview/scope.md
   - ../../01-requirements/non-functional-requirements.md
@@ -76,7 +77,7 @@ Accepted
 
 ## 10. 강제 규칙
 
-검색 조건은 `05-specs`의 API 계약과 동일한 URL 의미(파라미터 이름·값)를 유지하고, TanStack Query 캐시 키에는 페이지 번호·페이지 크기(10/20/50)·검색어·지역·유튜버·카테고리 조건을 모두 포함해 조건이 다르면 다른 캐시로 취급한다.
+검색 조건은 `05-specs`의 API 계약과 동일한 URL 의미(파라미터 이름·값)를 유지한다. 화면 URL `/restaurants`의 Query Parameter를 백엔드 `/api/restaurants` 호출에 전달하고, TanStack Query 캐시 키에는 페이지 번호·페이지 크기(10/20/50)·검색어·지역·유튜버·카테고리 조건을 모두 포함해 조건이 다르면 다른 캐시로 취급한다.
 
 ## 11. 금지 사항
 

@@ -3,6 +3,7 @@ related_documents:
   - ../00-overview/scope.md
   - ../01-requirements/non-functional-requirements.md
   - ../05-specs/api-review.md
+  - ../07-adr/platform/web-003-routing-boundary.md
   - ../05-specs/data/README.md
   - ../07-adr/README.md
   - ../07-adr/adr-index.md
@@ -133,12 +134,13 @@ related_documents:
 
 ## 13. 배포 토폴로지 정책 (2026-07-24 결정)
 
-- 1차 MVP는 단일 EC2 인스턴스(Nginx 리버스 프록시 + Spring Boot 애플리케이션)로 배포하며 다중 리전·다중 인스턴스 고가용성 구성을 필수로 하지 않는다.
+- 1차 MVP는 단일 EC2 인스턴스(Nginx 리버스 프록시 + Next.js 프론트엔드 + Spring Boot 백엔드)로 배포하며 다중 리전·다중 인스턴스 고가용성 구성을 필수로 하지 않는다.
+- Nginx는 `/api/**`를 Spring Boot, 나머지 외부 경로를 Next.js로 전달하며 `/internal/**`은 인터넷에서 차단한다. 세부 경로와 인증 matcher는 [ADR-WEB-003](../07-adr/platform/web-003-routing-boundary.md)을 따른다.
 - 장애 발생 시 운영자가 인스턴스를 수동으로 재기동·교체하는 절차를 사용하며, ASG 기반 자동 복구는 도입하지 않는다.
 - ALB는 트래픽·가용성 요구가 늘어나는 확장 단계에서 도입 여부를 재검토할 확장 경로로 남겨두고, Blue-Green 배포와 ASG 다중 인스턴스 자동화는 Post-MVP로 보류한다.
 - CI/CD는 GitHub Actions → ECR → EC2 배포까지를 우선 대상으로 하며, ALB·Blue-Green 전환 자동화 범위는 배포 토폴로지가 확장될 때 별도로 설계한다.
 - 로그는 14일 보관, DB 백업은 일 1회 자동 스냅샷 후 7일 보관(RPO 최대 24시간), 운영 알림은 CloudWatch 알람을 이메일/Slack으로 담당자 1명에게 통지한다.
-- 관련: [docs/07-adr/adr-backlog.md](../07-adr/adr-backlog.md) 범위 충돌 검토, [RV-NFR-005](../01-requirements/non-functional-requirements.md#rv-nfr-005-목표-가용성과-복구-시간)·[RV-NFR-009](../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간)·[RV-NFR-010](../01-requirements/non-functional-requirements.md#rv-nfr-010-백업-주기와-복구-범위)·[RV-NFR-013](../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준).
+- 관련: [ADR-WEB-003](../07-adr/platform/web-003-routing-boundary.md), [docs/07-adr/adr-backlog.md](../07-adr/adr-backlog.md) 범위 충돌 검토, [RV-NFR-005](../01-requirements/non-functional-requirements.md#rv-nfr-005-목표-가용성과-복구-시간)·[RV-NFR-009](../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간)·[RV-NFR-010](../01-requirements/non-functional-requirements.md#rv-nfr-010-백업-주기와-복구-범위)·[RV-NFR-013](../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준).
 
 ## 14. 위반 검증 방법
 

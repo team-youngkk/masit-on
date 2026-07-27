@@ -12,8 +12,10 @@ related_documents:
   - platform/build-001-gradle-groovy.md
   - platform/frame-001-spring-boot.md
   - security/auth-001-spring-security-jwt.md
+  - security/auth-003-confirmation-token.md
   - platform/web-001-frontend-platform.md
   - platform/web-002-data-state.md
+  - platform/web-003-routing-boundary.md
   - architecture/arch-001-domain-monolith.md
   - architecture/arch-002-external-ports-adapters.md
   - data/data-001-postgresql.md
@@ -50,7 +52,9 @@ related_documents:
 | React `useState` | 확정 | Duplicate or Derived Rule | [ADR-WEB-002](platform/web-002-data-state.md) | 화면 지역 상태 구현 규칙 |
 | MVP 단일 모듈 | 확정 | Accepted ADR | [ADR-ARCH-001](architecture/arch-001-domain-monolith.md) | 초기 배포·테스트 단순화 |
 | 도메인 중심 계층형 모놀리스 | 확정 | Accepted ADR | [ADR-ARCH-001](architecture/arch-001-domain-monolith.md) | 단일 모듈과 같은 구조 결정 문제 |
+| Gradle 멀티모듈·독립 배포 | 범위 제외 | Post-MVP ADR | [ADR-ARCH-004](adr-backlog.md#adr-arch-004-멀티모듈독립-배포-전환) | 독립 확장·배포·소유권 근거가 생길 때 전환 |
 | Port/Adapter | 확정 | Accepted ADR | [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md) | 외부 서비스 변동 격리 |
+| 서버 캐시·읽기 저장소·물리적 CQRS | 조건부 | Conditional ADR | [ADR-ARCH-003](adr-backlog.md#adr-arch-003-조회-확장-패턴) | 동일 PostgreSQL Projection의 실측 한계 확인 전 도입 금지 |
 | PostgreSQL 17.10 | 고정 | Accepted ADR | [ADR-DATA-001](data/data-001-postgresql.md) | 주 관계형 데이터베이스 |
 | 개발 Docker PostgreSQL / 운영 RDS | 확정 | Accepted ADR | [ADR-DATA-002](data/data-002-database-placement.md) | 환경 분리와 운영 배치 |
 | Spring Data JPA | 확정 | Accepted ADR | [ADR-DATA-003](data/data-003-spring-data-jpa.md) | 기본 ORM·Repository 전략 |
@@ -64,12 +68,16 @@ related_documents:
 | Redis 관리자 Refresh Token | 사용자 확정 | Accepted ADR | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md), [ADR-DATA-005](data/data-005-redis-refresh-token.md) | 관리자 JWT 재발급·폐기 |
 | Redis 일반 사용자 Refresh Token | 기술 스펙 확정, 범위 제외 | Post-MVP ADR | [ADR-AUTH-002](adr-backlog.md#adr-auth-002-일반-사용자-jwt와-refresh-token) | 일반 사용자 로그인 제외 |
 | Redis 분산 락 | 확정 기술 용도 | Conditional ADR | [ADR-LOCK-001](adr-backlog.md#adr-lock-001-redis-분산-락-도입) | 자동 배치·다중 실행 미확정 |
+| 격리 수준·락·upsert 동시성 제어 | 조건부 | Conditional ADR | [ADR-DATA-006](adr-backlog.md#adr-data-006-동시-쓰기-충돌-제어) | 기본 격리와 `UNIQUE`로 불충분하다는 동시성 근거 필요 |
 | 관리자 Spring Security 7.1.0 + JWT | 사용자 확정 | Accepted ADR | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md) | 관리자 인증·인가 기준 |
 | 관리자 Refresh Token 보안 쿠키 | 사용자 확정 | Accepted ADR | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md), [ADR-DATA-005](data/data-005-redis-refresh-token.md) | Redis 저장·회전, HttpOnly·Secure 전달 |
+| 확인 Token 저장·소비·재시도 | 결정 완료 (2026-07-27) | Accepted ADR | [ADR-AUTH-003](security/auth-003-confirmation-token.md) | PostgreSQL 해시·후보 Snapshot, 생성과 원자적 소비, 완료 결과 재현 |
+| 관리자 등급·기능별 권한 | 범위 제외 | Post-MVP ADR | [ADR-AUTH-004](adr-backlog.md#adr-auth-004-관리자-권한-세분화) | MVP는 사전 발급 단일 `ADMIN` 역할 |
 | 일반 사용자 JWT·Refresh Token | 기술 스펙 확정, 범위 제외 | Post-MVP ADR | [ADR-AUTH-002](adr-backlog.md#adr-auth-002-일반-사용자-jwt와-refresh-token) | 회원가입·로그인 제외 |
 | springdoc-openapi 3.0.3 + Swagger UI | 고정 | Technology Policy | [ADR-FRAME-001](platform/frame-001-spring-boot.md) | 구현과 명세 대조 도구, 외부 계약 원문은 `docs/05-specs` |
 | Kakao Local REST API V2 | 확정·MVP 필요 | Accepted ADR | [ADR-EXT-001](integration/ext-001-reference-verification.md) | 관리자 맛집 장소 확인 |
 | YouTube Data API v3 | 확정·MVP 필요 | Accepted ADR | [ADR-EXT-001](integration/ext-001-reference-verification.md) | 관리자 채널·영상 확인 |
+| 자동 재시도·Circuit Breaker·비동기 이벤트·Outbox | 조건부 | Conditional ADR | [ADR-EXT-002](adr-backlog.md#adr-ext-002-자동-복원력과-신뢰성-이벤트-전달) | 수동 재시도·동기 처리로 운영 목표를 지킬 수 없다는 근거 필요 |
 | Kakao Maps JavaScript API V3 | 확정이나 범위 제외 | Post-MVP ADR | [ADR-MAP-001](adr-backlog.md#adr-map-001-지도-표시와-공간-검색) | 지도 SDK·표시 제외 |
 | Kakao Mobility Directions API V1 | 확정이나 범위 제외 | Post-MVP ADR | [ADR-ROUTE-001](adr-backlog.md#adr-route-001-kakao-mobility와-동선-추천) | 동선·코스 추천 제외 |
 | Java + Jsoup | 확정이나 자동화 제외 | Post-MVP ADR | [ADR-AUTO-001](adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) | 자동 수집 제외 |
@@ -94,7 +102,7 @@ related_documents:
 | GitHub Actions OIDC | 확정 | Accepted ADR | [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | CI의 단기 AWS 자격 증명 |
 | Docker | 확정 | Accepted ADR | [ADR-RUNTIME-001](platform/runtime-001-docker.md) | 재현 가능한 실행·배포 산출물 |
 | GitHub Actions 빌드·테스트 | 확정 | Accepted ADR | [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md) | 배포 후보 품질 게이트 |
-| Nginx | 결정 완료 (2026-07-24) | Scope Conflict Review | 배포 토폴로지 Backlog | 단일 EC2 인스턴스의 리버스 프록시로 확정 |
+| Nginx | 경로 경계 결정 완료 (2026-07-27) | Accepted ADR | [ADR-WEB-003](platform/web-003-routing-boundary.md), [ADR-RUNTIME-001](platform/runtime-001-docker.md) | `/api/**`는 Spring Boot, 나머지 외부 경로는 Next.js, `/internal/**`은 외부 차단 |
 | Amazon ECR·EC2 | 결정 완료 (2026-07-24) | Scope Conflict Review | 배포 토폴로지 Backlog | 단일 EC2 인스턴스 배포로 확정, 비용 대조는 운영 중 재확인 |
 | ALB·ASG·Blue-Green | 결정 완료 (2026-07-24) | Scope Conflict Review | 배포 토폴로지 Backlog | MVP 미도입. 단일 인스턴스 수동 복구로 시작하고 ALB는 확장 단계 검토 경로로 보류 |
 | GitHub Actions → ECR → Green → ALB | 부분 결정 | Scope Conflict Review | [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md), 배포 토폴로지 Backlog | GitHub Actions → ECR → EC2까지 대상 확정, ALB·Blue-Green 전환 자동화는 배포 토폴로지 확장 시 재설계 ([RV-NFR-012](../01-requirements/non-functional-requirements.md#rv-nfr-012-배포-자동화-범위) 미결정 유지) |
@@ -106,26 +114,26 @@ related_documents:
 
 | NFR | 관련 ADR | 적용 |
 |---|---|---|
-| [NFR-SECURITY-001](../01-requirements/non-functional-requirements.md#nfr-security-001-공개-조회와-관리자-접근-통제)~[NFR-SECURITY-003](../01-requirements/non-functional-requirements.md#nfr-security-003-비밀정보와-오류-정보-보호) | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 관리자 접근, 입력·비밀 보호 |
-| [NFR-INTEGRITY-001](../01-requirements/non-functional-requirements.md#nfr-integrity-001-참조-및-필수값-정합성)~[NFR-INTEGRITY-004](../01-requirements/non-functional-requirements.md#nfr-integrity-004-외부-링크와-내부-데이터-분리) | [ADR-DATA-003](data/data-003-spring-data-jpa.md), [ADR-DATA-004](data/data-004-flyway.md), [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md), [ADR-TEST-001](quality/test-001-automation-strategy.md) | 참조·원자성·외부 실패 격리 |
-| [NFR-RELIABILITY-001](../01-requirements/non-functional-requirements.md#nfr-reliability-001-오류-격리와-공통-오류-정책)~[NFR-RELIABILITY-003](../01-requirements/non-functional-requirements.md#nfr-reliability-003-사용자-오류-메시지와-기능-분리) | [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md), [ADR-TEST-001](quality/test-001-automation-strategy.md) | 오류 경계와 장애 검증 |
-| [NFR-AVAILABILITY-001](../01-requirements/non-functional-requirements.md#nfr-availability-001-상태-확인과-장애-구분)~[NFR-AVAILABILITY-002](../01-requirements/non-functional-requirements.md#nfr-availability-002-mvp-가용성과-수동-복구) | [ADR-OBS-001](quality/obs-001-logging-observability.md), 배포 토폴로지 Backlog | 상태 확인과 단일 인스턴스 수동 복구 |
+| [NFR-SECURITY-001](../01-requirements/non-functional-requirements.md#nfr-security-001-공개-조회와-관리자-접근-통제)~[NFR-SECURITY-003](../01-requirements/non-functional-requirements.md#nfr-security-003-비밀정보와-오류-정보-보호) | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md), [ADR-AUTH-003](security/auth-003-confirmation-token.md), [ADR-WEB-003](platform/web-003-routing-boundary.md), [ADR-AUTH-004](adr-backlog.md#adr-auth-004-관리자-권한-세분화), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 관리자 접근, 인증 matcher, 확인 Token 무결성, 권한 확장, 입력·비밀 보호 |
+| [NFR-INTEGRITY-001](../01-requirements/non-functional-requirements.md#nfr-integrity-001-참조-및-필수값-정합성)~[NFR-INTEGRITY-004](../01-requirements/non-functional-requirements.md#nfr-integrity-004-외부-링크와-내부-데이터-분리) | [ADR-DATA-003](data/data-003-spring-data-jpa.md), [ADR-DATA-004](data/data-004-flyway.md), [ADR-DATA-006](adr-backlog.md#adr-data-006-동시-쓰기-충돌-제어), [ADR-AUTH-003](security/auth-003-confirmation-token.md), [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md), [ADR-TEST-001](quality/test-001-automation-strategy.md) | 참조·원자성·동시 등록·확인 Token 재사용·외부 실패 격리 |
+| [NFR-RELIABILITY-001](../01-requirements/non-functional-requirements.md#nfr-reliability-001-오류-격리와-공통-오류-정책)~[NFR-RELIABILITY-003](../01-requirements/non-functional-requirements.md#nfr-reliability-003-사용자-오류-메시지와-기능-분리) | [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md), [ADR-EXT-002](adr-backlog.md#adr-ext-002-자동-복원력과-신뢰성-이벤트-전달), [ADR-TEST-001](quality/test-001-automation-strategy.md) | 오류 경계, 재시도·회로 차단·이벤트 전달, 장애 검증 |
+| [NFR-AVAILABILITY-001](../01-requirements/non-functional-requirements.md#nfr-availability-001-상태-확인과-장애-구분)~[NFR-AVAILABILITY-002](../01-requirements/non-functional-requirements.md#nfr-availability-002-mvp-가용성과-수동-복구) | [ADR-WEB-003](platform/web-003-routing-boundary.md), [ADR-OBS-001](quality/obs-001-logging-observability.md), [ADR-RUNTIME-001](platform/runtime-001-docker.md), 배포 토폴로지 Backlog | 내부 상태 확인 경로와 단일 인스턴스 수동 복구 |
 | [NFR-EXTERNAL-001](../01-requirements/non-functional-requirements.md#nfr-external-001-영상-원본과-외부-링크-분리)~[NFR-EXTERNAL-003](../01-requirements/non-functional-requirements.md#nfr-external-003-링크-검증과-외부-인증정보) | [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md), [ADR-EXT-001](integration/ext-001-reference-verification.md), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 원본 미저장, 외부 호출 격리, 키 보호 |
 | [NFR-OBSERVABILITY-001](../01-requirements/non-functional-requirements.md#nfr-observability-001-요청-추적과-오류-분류)~[NFR-OBSERVABILITY-003](../01-requirements/non-functional-requirements.md#nfr-observability-003-로그-품질과-민감정보-차단) | [ADR-OBS-001](quality/obs-001-logging-observability.md), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 요청 추적·지표·민감정보 차단 |
 | [NFR-TEST-001](../01-requirements/non-functional-requirements.md#nfr-test-001-자동화-테스트-계층)~[NFR-TEST-003](../01-requirements/non-functional-requirements.md#nfr-test-003-배포-품질-게이트) | [ADR-TEST-001](quality/test-001-automation-strategy.md), [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md) | 테스트 계층과 배포 품질 게이트 |
-| [NFR-DEPLOYMENT-001](../01-requirements/non-functional-requirements.md#nfr-deployment-001-재현-가능한-빌드와-환경-분리)~[NFR-DEPLOYMENT-002](../01-requirements/non-functional-requirements.md#nfr-deployment-002-배포-전후-검증) | [ADR-BUILD-001](platform/build-001-gradle-groovy.md), [ADR-RUNTIME-001](platform/runtime-001-docker.md), [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 재현 빌드, 환경 분리, 배포 전후 검증 |
+| [NFR-DEPLOYMENT-001](../01-requirements/non-functional-requirements.md#nfr-deployment-001-재현-가능한-빌드와-환경-분리)~[NFR-DEPLOYMENT-002](../01-requirements/non-functional-requirements.md#nfr-deployment-002-배포-전후-검증) | [ADR-BUILD-001](platform/build-001-gradle-groovy.md), [ADR-WEB-003](platform/web-003-routing-boundary.md), [ADR-RUNTIME-001](platform/runtime-001-docker.md), [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 재현 빌드, 경로 전달·내부 차단, 환경 분리, 배포 전후 검증 |
 | [NFR-DEPLOYMENT-003](../01-requirements/non-functional-requirements.md#nfr-deployment-003-버전-추적과-복구-절차)~[NFR-DEPLOYMENT-004](../01-requirements/non-functional-requirements.md#nfr-deployment-004-mvp-배포-복잡도-제한) | [ADR-DATA-004](data/data-004-flyway.md), 배포 토폴로지 Backlog | 복구·자동화·복잡도는 후속 결정 |
-| [NFR-MAINTAINABILITY-001](../01-requirements/non-functional-requirements.md#nfr-maintainability-001-책임과-의존성-경계)~[NFR-MAINTAINABILITY-003](../01-requirements/non-functional-requirements.md#nfr-maintainability-003-추적성과-운영-복잡도) | [ADR-ARCH-001](architecture/arch-001-domain-monolith.md), [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md) | 책임 경계와 운영 복잡도 제한 |
+| [NFR-MAINTAINABILITY-001](../01-requirements/non-functional-requirements.md#nfr-maintainability-001-책임과-의존성-경계)~[NFR-MAINTAINABILITY-003](../01-requirements/non-functional-requirements.md#nfr-maintainability-003-추적성과-운영-복잡도) | [ADR-ARCH-001](architecture/arch-001-domain-monolith.md), [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md), [ADR-ARCH-003](adr-backlog.md#adr-arch-003-조회-확장-패턴), [ADR-ARCH-004](adr-backlog.md#adr-arch-004-멀티모듈독립-배포-전환) | 책임 경계, 조회 확장, 배포 경계와 운영 복잡도 제한 |
 | [NFR-PRIVACY-001](../01-requirements/non-functional-requirements.md#nfr-privacy-001-mvp-개인정보-최소화)~[NFR-PRIVACY-003](../01-requirements/non-functional-requirements.md#nfr-privacy-003-회원-기능-도입-시-재검토) | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md), [ADR-AUTH-002](adr-backlog.md#adr-auth-002-일반-사용자-jwt와-refresh-token), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 일반 사용자 계정 제외와 비밀 보호 |
 
 ## 4. API → ADR 매핑
 
 | API 영역 | 관련 ADR | 경계 |
 |---|---|---|
-| 공개 탐색·상세 API | [ADR-WEB-002](platform/web-002-data-state.md), [ADR-ARCH-001](architecture/arch-001-domain-monolith.md), [ADR-DATA-003](data/data-003-spring-data-jpa.md) | 계약은 `docs/05-specs/api/`가 소유 |
-| 관리자 인증 API | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md), [ADR-DATA-005](data/data-005-redis-refresh-token.md) | JWT Bearer, Redis Refresh Token 보안 쿠키 사용 |
-| 관리자 기준정보 등록 API | [ADR-EXT-001](integration/ext-001-reference-verification.md), [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | Kakao·YouTube 확인, 실패·키 격리 |
-| 전체 API | [ADR-TEST-001](quality/test-001-automation-strategy.md), [ADR-OBS-001](quality/obs-001-logging-observability.md) | 계약·장애 테스트와 요청 추적 |
+| 공개 탐색·상세 API | [ADR-WEB-002](platform/web-002-data-state.md), [ADR-WEB-003](platform/web-003-routing-boundary.md), [ADR-ARCH-001](architecture/arch-001-domain-monolith.md), [ADR-ARCH-003](adr-backlog.md#adr-arch-003-조회-확장-패턴), [ADR-DATA-003](data/data-003-spring-data-jpa.md) | `/api` 경로와 계약은 `docs/05-specs/api/`가 소유 |
+| 관리자 인증 API | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md), [ADR-WEB-003](platform/web-003-routing-boundary.md), [ADR-DATA-005](data/data-005-redis-refresh-token.md) | 세부 matcher, JWT Bearer, Redis Refresh Token 보안 쿠키 사용 |
+| 관리자 기준정보 등록 API | [ADR-EXT-001](integration/ext-001-reference-verification.md), [ADR-EXT-002](adr-backlog.md#adr-ext-002-자동-복원력과-신뢰성-이벤트-전달), [ADR-AUTH-003](security/auth-003-confirmation-token.md), [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | Kakao·YouTube 확인, 확인 Token, 실패·키 격리 |
+| 전체 API | [ADR-WEB-003](platform/web-003-routing-boundary.md), [ADR-TEST-001](quality/test-001-automation-strategy.md), [ADR-OBS-001](quality/obs-001-logging-observability.md) | `/api` 전달, 계약·장애 테스트와 요청 추적 |
 
 ## 5. 데이터 모델 → ADR 매핑
 
@@ -134,6 +142,8 @@ related_documents:
 | MVP 관계형 데이터 | [ADR-DATA-001](data/data-001-postgresql.md), [ADR-DATA-003](data/data-003-spring-data-jpa.md) | 엔티티·관계 원문은 `docs/05-specs/data/` |
 | 스키마 변경 | [ADR-DATA-004](data/data-004-flyway.md) | Flyway만 사용 |
 | 환경별 DB | [ADR-DATA-002](data/data-002-database-placement.md) | 개발 Docker / 운영 RDS, 버전 17.10 일치 |
+| 확인 Token 단기 상태 | [ADR-AUTH-003](security/auth-003-confirmation-token.md) | PostgreSQL 해시·후보 JSONB, 10분 만료, 완료·만료 결과 24시간 보관 |
+| 동시 쓰기 충돌 | [ADR-DATA-006](adr-backlog.md#adr-data-006-동시-쓰기-충돌-제어), [ADR-LOCK-001](adr-backlog.md#adr-lock-001-redis-분산-락-도입) | 기본 `UNIQUE` 이후 강화는 통합 테스트 근거 필요 |
 | 공간·벡터 데이터 | [ADR-MAP-001](adr-backlog.md#adr-map-001-지도-표시와-공간-검색), [ADR-SEARCH-002](adr-backlog.md#adr-search-002-pgvector-자연어-검색rag) | 현재 모델·확장 설치 금지 |
 | 사용자·토큰·기기 데이터 | [ADR-AUTH-002](adr-backlog.md#adr-auth-002-일반-사용자-jwt와-refresh-token), [ADR-NOTIFY-001](adr-backlog.md#adr-notify-001-fcm-푸시-알림) | 현재 MVP 모델에 추가 금지 |
 
@@ -141,10 +151,10 @@ related_documents:
 
 | Workstream | 필수 ADR | 추가 책임 |
 |---|---|---|
-| [WS-01](../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색) | [ADR-WEB-001](platform/web-001-frontend-platform.md)~[ADR-WEB-002](platform/web-002-data-state.md), [ADR-ARCH-001](architecture/arch-001-domain-monolith.md), [ADR-DATA-003](data/data-003-spring-data-jpa.md), [ADR-TEST-001](quality/test-001-automation-strategy.md) | 검색 상태·최종 조회 조합 |
+| [WS-01](../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색) | [ADR-WEB-001](platform/web-001-frontend-platform.md)~[ADR-WEB-003](platform/web-003-routing-boundary.md), [ADR-ARCH-001](architecture/arch-001-domain-monolith.md), [ADR-DATA-003](data/data-003-spring-data-jpa.md), [ADR-TEST-001](quality/test-001-automation-strategy.md) | 화면·API 경로, 검색 상태·최종 조회 조합 |
 | [WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) | [ADR-ARCH-001](architecture/arch-001-domain-monolith.md)~[ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md), [ADR-DATA-003](data/data-003-spring-data-jpa.md), [ADR-TEST-001](quality/test-001-automation-strategy.md) | 외부 링크 실패 격리·상세 조합 |
 | [WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) | [ADR-ARCH-001](architecture/arch-001-domain-monolith.md), [ADR-DATA-003](data/data-003-spring-data-jpa.md), [ADR-TEST-001](quality/test-001-automation-strategy.md) | Visit 관계 판정 경계 |
-| [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md), [ADR-EXT-001](integration/ext-001-reference-verification.md), [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md), [ADR-DATA-003](data/data-003-spring-data-jpa.md)~[ADR-DATA-004](data/data-004-flyway.md), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 인증·외부 확인·등록 정합성 |
+| [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md), [ADR-AUTH-003](security/auth-003-confirmation-token.md), [ADR-WEB-003](platform/web-003-routing-boundary.md), [ADR-EXT-001](integration/ext-001-reference-verification.md), [ADR-EXT-002](adr-backlog.md#adr-ext-002-자동-복원력과-신뢰성-이벤트-전달), [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md), [ADR-DATA-003](data/data-003-spring-data-jpa.md)~[ADR-DATA-004](data/data-004-flyway.md), [ADR-DATA-006](adr-backlog.md#adr-data-006-동시-쓰기-충돌-제어), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 관리자 화면·API 경로, 인증·확인 Token·외부 확인·등록 정합성 |
 | 전체 | [ADR-LANG-001](platform/lang-001-java-21-runtime.md), [ADR-BUILD-001](platform/build-001-gradle-groovy.md), [ADR-FRAME-001](platform/frame-001-spring-boot.md), [ADR-OBS-001](quality/obs-001-logging-observability.md), [ADR-RUNTIME-001](platform/runtime-001-docker.md), [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md) | 공통 구현·운영 기준 |
 
 ## 7. 기술 정책 → ADR 매핑
@@ -155,6 +165,9 @@ related_documents:
 | 개발·테스트·운영 분리 | [ADR-DATA-002](data/data-002-database-placement.md), [ADR-RUNTIME-001](platform/runtime-001-docker.md), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) |
 | DB 스키마 변경 | [ADR-DATA-004](data/data-004-flyway.md) |
 | Redis 역할 선확정 | [ADR-CACHE-001](adr-backlog.md#adr-cache-001-redis-캐시-도입), [ADR-LOCK-001](adr-backlog.md#adr-lock-001-redis-분산-락-도입), [ADR-AUTH-002](adr-backlog.md#adr-auth-002-일반-사용자-jwt와-refresh-token) |
+| 동시성 강화 선확정 | [ADR-DATA-006](adr-backlog.md#adr-data-006-동시-쓰기-충돌-제어), [ADR-LOCK-001](adr-backlog.md#adr-lock-001-redis-분산-락-도입) |
+| 조회 저장소·물리적 CQRS 선확정 | [ADR-ARCH-003](adr-backlog.md#adr-arch-003-조회-확장-패턴), [ADR-CACHE-001](adr-backlog.md#adr-cache-001-redis-캐시-도입) |
+| 자동 복원력·비동기 전달 선확정 | [ADR-EXT-002](adr-backlog.md#adr-ext-002-자동-복원력과-신뢰성-이벤트-전달) |
 | 비밀정보·워크로드 인증 | [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) |
 | 조건부·Post-MVP 선제 도입 금지 | 모든 Backlog 항목 |
 | AI 생성 코드 검증 | [ADR-TEST-001](quality/test-001-automation-strategy.md), [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md) |
@@ -165,10 +178,15 @@ related_documents:
 
 - 관리자 JWT 만료(30분)·Redis Refresh Token TTL(14일, 회전+재사용 탐지)·Redis 장애 시 fail-closed 정책
 - Nginx·ECR·EC2를 포함한 최소 MVP 배포 토폴로지(단일 EC2 인스턴스)
+- `/api` 화면·백엔드 분리, 관리자 인증 matcher와 `/internal` 상태 확인 경계
 - ALB·ASG·Blue-Green: MVP 미도입, ALB는 확장 경로로 보류
 - 로그 14일 보관, 백업(일 1회 자동 스냅샷·7일 보관), 운영 알림(CloudWatch→이메일/Slack, 담당자 1명)
 
 다음은 여전히 팀 결정이 필요한 미결정 항목이다.
 
+- `UNIQUE` 이후 격리 수준·락·upsert 도입 기준
+- 캐시·별도 읽기 저장소·물리적 CQRS 전환 기준
+- 자동 재시도·Circuit Breaker·비동기 이벤트·Transactional Outbox 도입 기준
+- 멀티모듈·독립 배포와 세분화된 관리자 권한의 전환 기준
 - TanStack Query, Jsoup, n8n, k6 등 정확한 버전이 없는 의존성
 - 배포 자동화 범위([RV-NFR-012](../01-requirements/non-functional-requirements.md#rv-nfr-012-배포-자동화-범위)): ALB·Blue-Green 전환 자동화를 포함한 수동 승인 지점

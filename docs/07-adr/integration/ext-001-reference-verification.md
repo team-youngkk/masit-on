@@ -17,6 +17,7 @@ related_documents:
   - ../../05-specs/api/admin/reference-data-api.md
   - ../architecture/arch-002-external-ports-adapters.md
   - ../security/sec-001-secrets-workload-identity.md
+  - ../security/auth-003-confirmation-token.md
   - ../quality/test-001-automation-strategy.md
   - ../../02-analysis/mvp-workstreams.md
   - ../../03-team/roles.md
@@ -102,7 +103,7 @@ Kakao 어댑터와 YouTube 어댑터는 동일한 Port 계약(존재 확인, 현
 - API 키(Kakao REST API 키, YouTube API 키)는 소스 코드·저장소와 분리하고 Parameter Store SecureString + KMS로 보호한다([ADR-SEC-001](../security/sec-001-secrets-workload-identity.md)).
 - 호출 제한·타임아웃의 구체적 수치는 후속 설계에서 결정하되([NFR-EXTERNAL-002](../../01-requirements/non-functional-requirements.md#nfr-external-002-외부-호출-실패와-변경-격리) 결정 상태: 적용 원칙 확정, 세부 기준 후속 설계), 반드시 상한이 있어야 한다.
 - 제공자 오류를 존재하지 않음(404류), 요청 제한 초과, 응답 지연·서버 오류로 구분해 관리자에게 각기 다른 안내로 매핑한다.
-- 관리자가 조회는 했지만 아직 확인·저장을 완료하지 않은 중간 결과를 어디에 보관할지 정의해야 한다. 이 중간 결과는 요청 처리 범위를 벗어나 DB에 미확정 상태로 영구 저장하지 않는다([NFR-INTEGRITY-001](../../01-requirements/non-functional-requirements.md#nfr-integrity-001-참조-및-필수값-정합성) 필수값·유효 참조 원칙과 충돌하지 않도록).
+- `READY` 중간 결과는 [ADR-AUTH-003](../security/auth-003-confirmation-token.md)에 따라 PostgreSQL 확인 Token 레코드의 10분 수명 후보 JSONB Snapshot으로만 저장한다. 핵심 Entity나 미확정 영구 자원으로 저장하지 않으며 `DUPLICATE`·`REVIEW_REQUIRED`에는 Token 레코드를 만들지 않는다.
 - 실패한 호출의 재시도는 자동 재시도 루프가 아니라 관리자가 화면에서 다시 시도하는 수동 재시도로 한정한다. 자동 재시도를 넣으려면 상한 횟수·백오프 정책을 별도로 설계해야 하므로([NFR-RELIABILITY-002](../../01-requirements/non-functional-requirements.md#nfr-reliability-002-저장소-장애-및-재시도-통제)), 이 ADR 범위에서는 도입하지 않는다.
 - 외부 호출 실패·성공 이벤트는 [ADR-OBS-001](../quality/obs-001-logging-observability.md)의 오류 분류 규칙에 따라 외부 서비스 오류로 별도 기록해, 저장소 오류나 인증 실패와 혼동되지 않게 한다.
 
