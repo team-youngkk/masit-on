@@ -129,11 +129,16 @@ related_documents:
 - `main`은 배포 가능한 기준 브랜치, `develop`은 기능 통합 브랜치다.
 - 기능과 수정 브랜치는 최신 `develop`에서 분기한다.
 - 기능 브랜치는 `feature/ws-{번호}-{기능명}`, 수정 브랜치는 `fix/{기능명}` 형식을 사용한다.
+- Workstream에 속하지 않는 작업은 커밋 유형과 같은 접두사를 사용한다. 접두사는 `docs/`, `chore/`, `build/`, `ci/`, `test/`, `refactor/`이며 뒤에 `{작업명}`을 붙인다.
+- 구현 계획의 기반 Task처럼 Workstream 번호가 없는 기능 작업은 `feature/t-{번호}-{작업명}`을 사용한다. 예: `feature/t-02-web-foundation`
 - `main`과 `develop`에 직접 push하지 않는다.
 
 ### 7.2 PR과 병합
 
 - 모든 변경은 PR을 통해 병합한다.
+- PR 본문 첫 줄에 `Closes #{이슈번호}`로 구현한 이슈를 연결한다. 기본 브랜치가 `develop`이므로 병합 시 해당 이슈가 자동으로 닫힌다. 닫을 이슈가 없으면 근거 문서로 대신한다.
+- PR 본문에 담당자, 리뷰어와 레이블을 함께 적고 GitHub 사이드바에도 같은 값을 지정한다.
+- PR 본문과 커밋 메시지에 AI 도구 생성 표기를 남기지 않는다. `Generated with Claude Code` 같은 문구, 도구 서명과 배지를 넣지 않는다.
 - 기능·수정 브랜치에서 `develop`으로 병합할 때 일반 Merge를 사용한다.
 - `develop`에서 `main`으로 병합할 때만 Squash Merge를 사용한다.
 - 모든 PR은 작성자를 제외한 최소 두 명의 승인을 받아야 한다.
@@ -165,6 +170,9 @@ related_documents:
 
 ## 9. PR 완료 점검
 
+- [ ] 구현한 이슈를 `Closes #{이슈번호}`로 연결하고 담당자·리뷰어·레이블을 지정했다.
+- [ ] PR 본문의 변경 범위가 실제 diff와 일치한다.
+- [ ] PR 본문과 커밋 메시지에 AI 도구 생성 표기가 없다.
 - [ ] 관련 요구사항·PRD·API·ADR·테이블을 확인했다.
 - [ ] NAVER Java 컨벤션과 프로젝트 우선 규칙을 준수했다.
 - [ ] 계층, 도메인, 트랜잭션과 외부 Port/Adapter 경계를 지켰다.

@@ -1,0 +1,61 @@
+# 맛잇온 코드 소유자
+#
+# docs/03-team/ownership.md 8장(문서 소유권)과 9장(리뷰 및 승인 책임)을 경로로 옮긴 것이다.
+# 두 문서가 어긋나면 ownership.md가 기준이다. 소유자를 바꾸려면 ownership.md 11장의
+# 소유권 변경 절차를 먼저 거치고 이 파일을 같은 PR에서 갱신한다.
+#
+# GitHub 계정 대응
+#   @tjdgns0618 양성훈   @w00lam 이우람   @jinyp01 박진영   @inan0226 김인안
+#
+# 여기 지정된 소유자는 자동으로 리뷰 요청을 받는다. 승인 2명 규칙은 그대로이며
+# 작성자 본인은 자신의 변경을 최종 승인하지 않는다.
+
+# 기본 — 지정되지 않은 경로는 팀 공동 리뷰
+#
+# 현재 저장소에 애플리케이션 코드가 없어 이 규칙이 사실상 문서에만 적용된다.
+# T-01·T-03이 `src/`를 만들면 도메인 경로별 규칙을 반드시 추가한다. 그러지 않으면
+# 백엔드 PR마다 네 명 전원에게 리뷰 요청이 가서 ownership.md 9장의 Workstream별
+# "기본 리뷰 담당" 1인 구조와 어긋난다.
+# 추가 책임자: 이우람(백엔드 실행 기반 소유자), 시점: `src/` 최초 생성 PR
+*                                       @tjdgns0618 @w00lam @jinyp01 @inan0226
+
+# 상위 범위 문서 — 이우람이 변경을 조율하되 내용을 단독 결정하지 않는다
+/docs/00-overview/service-overview.md   @w00lam
+/docs/00-overview/scope.md              @w00lam
+/docs/00-overview/glossary.md           @jinyp01
+
+# 요구사항
+/docs/01-requirements/functional-requirements.md      @tjdgns0618
+/docs/01-requirements/business-rules.md               @jinyp01
+/docs/01-requirements/non-functional-requirements.md  @w00lam
+
+# 분석
+/docs/02-analysis/domain-boundaries.md  @jinyp01
+/docs/02-analysis/mvp-workstreams.md    @w00lam
+
+# 팀
+/docs/03-team/roles.md                  @w00lam
+/docs/03-team/ownership.md              @tjdgns0618
+
+# 제품 — PRD 조율은 김인안, 리뷰에 이우람이 참여한다
+/docs/04-product/                       @inan0226 @w00lam
+
+# 명세 — 데이터 모델과 ERD는 박진영이 일관성을 조율한다
+/docs/05-specs/data/                    @jinyp01
+/docs/05-specs/diagrams/                @jinyp01
+/docs/05-specs/api/                     @tjdgns0618 @jinyp01 @w00lam @inan0226
+/docs/05-specs/api/admin/               @inan0226 @w00lam
+
+# 아키텍처와 ADR — 이우람 조율, 승인은 팀
+/docs/06-architecture/                  @w00lam
+/docs/07-adr/                           @w00lam
+/docs/08-planning/                      @w00lam
+
+# 프론트엔드 — ADR-WEB-001 공동 소유자
+/frontend/                              @tjdgns0618 @inan0226
+
+# 저장소 설정과 실행 기반 — ownership.md 9장 "보안·배포·설정 변경은 이우람과 김인안"
+/.github/                               @w00lam @inan0226
+/.claude/                               @w00lam @inan0226
+/CLAUDE.md                              @w00lam @inan0226
+/.gitignore                             @w00lam @inan0226

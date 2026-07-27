@@ -171,10 +171,13 @@ DB_URL=jdbc:postgresql://localhost:15432/masiton REDIS_PORT=16379 ./gradlew boot
 
 - `main`(배포 기준) / `develop`(통합). 둘 다 직접 push 금지.
 - 브랜치는 최신 `develop`에서 분기. `feature/ws-{번호}-{기능명}`, `fix/{기능명}`.
+- Workstream 번호가 없는 기반 Task는 `feature/t-{번호}-{작업명}`, 그 밖의 작업은 커밋 유형과 같은 접두사(`docs/`, `chore/`, `build/`, `ci/`, `test/`, `refactor/`)를 쓴다.
 - `feature`→`develop`은 일반 Merge, `develop`→`main`만 Squash Merge.
 - Conventional Commits (`feat`, `fix`, `test`, `refactor`, `docs`, `build`, `ci`, `chore`). 예: `feat: 맛집 목록 조회 구현`
 - 모든 변경은 PR로 병합하고 작성자를 제외한 **최소 2명 승인**이 필요하다. AI가 작성한 코드도 동일하다.
 - 서로 독립적인 변경은 커밋·PR을 분리한다. 포매팅·정적 분석만 고치는 변경은 로직 변경과 분리한다.
+- PR 본문 첫 줄에 `Closes #{이슈번호}`로 구현한 이슈를 연결한다. 기본 브랜치가 `develop`이므로 머지 시 자동으로 닫힌다.
+- **PR 본문과 커밋 메시지에 AI 도구 생성 표기를 남기지 않는다.** `Generated with Claude Code` 같은 문구, 도구 서명과 배지를 넣지 않는다.
 
 PR 완료 점검 목록은 [구현 컨벤션 9절](docs/06-architecture/implementation-conventions.md#9-pr-완료-점검)을 사용한다.
 
