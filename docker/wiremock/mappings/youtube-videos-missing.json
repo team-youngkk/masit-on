@@ -1,0 +1,14 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/youtube/v3/videos",
+    "queryParameters": {
+      "id": { "equalTo": "fixtureMis" }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json; charset=utf-8" },
+    "bodyFileName": "youtube-videos-missing.json"
+  }
+}

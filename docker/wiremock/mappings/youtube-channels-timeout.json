@@ -1,0 +1,15 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/youtube/v3/channels",
+    "queryParameters": {
+      "id": { "equalTo": "UCfixtureTimeoutChannel1" }
+    }
+  },
+  "response": {
+    "status": 200,
+    "fixedDelayMilliseconds": 6000,
+    "headers": { "Content-Type": "application/json; charset=utf-8" },
+    "bodyFileName": "youtube-channels-normal.json"
+  }
+}

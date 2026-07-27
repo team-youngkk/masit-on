@@ -1,0 +1,22 @@
+{
+  "kind": "youtube#videoListResponse",
+  "etag": "fixture-video-normal",
+  "items": [
+    {
+      "kind": "youtube#video",
+      "etag": "fixture-video-item-normal",
+      "id": "fixtureVid1",
+      "snippet": {
+        "publishedAt": "2026-07-27T10:00:00Z",
+        "channelId": "UCfixtureNormalChannel01",
+        "channelTitle": "맛잇온 테스트 채널",
+        "title": "맛잇온 테스트 식당 방문 영상",
+        "thumbnails": {
+          "high": {
+            "url": "https://i.ytimg.com/vi/fixtureVid1/hqdefault.jpg"
+          }
+        }
+      }
+    }
+  ]
+}
