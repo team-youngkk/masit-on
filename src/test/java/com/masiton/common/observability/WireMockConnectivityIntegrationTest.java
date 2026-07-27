@@ -25,9 +25,16 @@ class WireMockConnectivityIntegrationTest {
 
     private static final int WIREMOCK_PORT = 8080;
 
+    /**
+     * Compose와 같은 이미지를 검증해야 의미가 있으므로 `.env`의 값을 그대로 읽는다.
+     * 기본값은 docker-compose.yml의 기본값과 같아야 한다.
+     */
+    private static final String WIREMOCK_IMAGE = System.getenv()
+            .getOrDefault("WIREMOCK_IMAGE", "wiremock/wiremock:3.13.2-alpine");
+
     @Container
     static final GenericContainer<?> WIREMOCK =
-            new GenericContainer<>("wiremock/wiremock:3.13.2-alpine")
+            new GenericContainer<>(WIREMOCK_IMAGE)
                     .withExposedPorts(WIREMOCK_PORT)
                     .waitingFor(Wait.forHttp("/__admin/health").forPort(WIREMOCK_PORT).forStatusCode(200));
 

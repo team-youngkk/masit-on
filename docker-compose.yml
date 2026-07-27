@@ -34,7 +34,8 @@ services:
       start_period: 5s
 
   wiremock:
-    image: wiremock/wiremock:3.13.2-alpine
+    # 태그를 바꾸면 .env.example의 WIREMOCK_IMAGE도 같이 바꾼다. 통합 테스트가 같은 값을 읽는다.
+    image: ${WIREMOCK_IMAGE:-wiremock/wiremock:3.13.2-alpine}
     container_name: masiton-wiremock
     command: ["--global-response-templating", "--disable-banner"]
     ports:

@@ -47,6 +47,8 @@ related_documents:
 | springdoc-openapi | 3.0.3 | MVP Accepted |
 | Testcontainers | 2.0.5 | MVP Accepted |
 | ArchUnit | archunit-junit5 1.4.1 | MVP Accepted, `T-01`에서 고정 (Spring Boot BOM 관리 대상 아님) |
+| Gradle 의존성 관리 플러그인 | io.spring.dependency-management 1.1.7 | MVP Accepted, `T-01`에서 고정 |
+| WireMock 로컬 컨테이너 | `wiremock/wiremock:3.13.2-alpine` | MVP Accepted, `T-01`에서 고정. Compose와 통합 테스트가 같은 태그를 사용한다 |
 | Spring Batch | 6.0.4, Spring Boot BOM 관리 | Post-MVP |
 
 - `latest`, `+`, `x`, `^`, `~` 또는 동등한 범위 버전을 사용하지 않는다.

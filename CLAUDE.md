@@ -114,7 +114,13 @@ docker compose down -v
 | Redis | `localhost:6379` |
 | WireMock | `http://localhost:8081` (관리 `/__admin`) |
 
-`.env`는 로컬 전용 값이며 커밋하지 않는다. 포트가 겹치면 `.env`에서 `APP_PORT`, `POSTGRES_PORT`, `REDIS_PORT`, `WIREMOCK_PORT`를 바꾼다. `/internal/**`은 로컬 컨테이너 네트워크 전용이며 최종 배포에서 인터넷 진입점에 노출하지 않는다([ADR-WEB-003](docs/07-adr/platform/web-003-routing-boundary.md)).
+`.env`는 로컬 전용 값이며 커밋하지 않는다. **`.env`는 Docker Compose만 읽는다.** `./gradlew bootRun`은 `.env`를 로드하지 않으므로 컨테이너 포트를 바꿨다면 애플리케이션에도 같은 값을 환경 변수로 넘겨야 한다.
+
+```bash
+DB_URL=jdbc:postgresql://localhost:15432/masiton REDIS_PORT=16379 ./gradlew bootRun
+```
+
+`/internal/**`은 로컬 컨테이너 네트워크 전용이며 최종 배포에서 인터넷 진입점에 노출하지 않는다([ADR-WEB-003](docs/07-adr/platform/web-003-routing-boundary.md)).
 
 ## 6. 아키텍처 필수 규칙
 

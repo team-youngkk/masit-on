@@ -113,7 +113,8 @@ Visit는 현재 MVP에서 독립 공개 HTTP 자원이 없으므로 `visit.prese
 | `VisitRegistrationController` | `orchestration.presentation.visit` | 상세 설계 결정 |
 | `RegisterVisitService` | `orchestration.application.command` | 상세 설계 결정 |
 | `SecurityConfig`, JWT Filter | `security.infrastructure` | 제안 이름 |
-| `GlobalExceptionHandler` | `common.web` | 허용 후보 |
+| `GlobalExceptionHandler` | `common.web` | `T-01`에서 구현 완료 |
+| `TraceIdFilter` | `common.observability` | `T-01`에서 구현 완료 |
 
 ## 5. Persistence 내부 구조
 

@@ -78,6 +78,12 @@ docker compose down -v
 
 포트가 겹치면 `.env`의 `APP_PORT`, `POSTGRES_PORT`, `REDIS_PORT`, `WIREMOCK_PORT`를 바꾼다.
 
+`.env`는 Docker Compose만 읽는다. `./gradlew bootRun`은 `.env`를 로드하지 않으므로, 컨테이너 포트를 바꿨다면 애플리케이션에도 같은 값을 환경 변수로 넘겨야 한다.
+
+```bash
+DB_URL=jdbc:postgresql://localhost:15432/masiton REDIS_PORT=16379 ./gradlew bootRun
+```
+
 ## 문서
 
 구현 규칙과 설계 문서는 [CLAUDE.md](CLAUDE.md)와 [docs/](docs/)를 따른다. 진입점은 각 디렉터리의 `README.md`다.
