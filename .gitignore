@@ -31,6 +31,10 @@ build/
 .idea/
 *.iml
 out/
+# `port.out`은 헥사고날 아키텍처의 소스 패키지이므로 IDE 출력 디렉터리 예외로 추적한다.
+!src/main/java/**/port/
+!src/main/java/**/port/out/
+!src/main/java/**/port/out/**
 
 # 로컬 환경 값
 .env
