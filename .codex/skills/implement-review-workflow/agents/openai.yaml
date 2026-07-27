@@ -1,0 +1,4 @@
+interface:
+  display_name: "Implement & Review Workflow"
+  short_description: "Coordinate implementation, review, fixes, and verification"
+  default_prompt: "Use $implement-review-workflow to implement this change with delegated review and verification."
