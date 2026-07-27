@@ -15,7 +15,8 @@ const nextConfig: NextConfig = {
      * 타입 검사는 `npm run typecheck`(tsc --noEmit)로 수행한다.
      * TypeScript 7.0.2에서 tsc 자체는 정상 동작한다.
      *
-     * 이 우회는 Next이 TypeScript 7을 지원하면 제거한다.
+     * ADR이 정한 Node 24.18.0과 npm 11.16.0에서도 같은 오류를 재현했으므로
+     * 런타임 버전 문제가 아니다. Next이 TypeScript 7을 지원하면 이 우회를 제거한다.
      */
     ignoreBuildErrors: true,
   },
