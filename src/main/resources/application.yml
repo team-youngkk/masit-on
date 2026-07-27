@@ -16,6 +16,10 @@ spring:
       # 같은 이유로 유한 상한을 둔다. Redis는 Refresh Token 조회 경로라 지연 허용치가 더 짧다.
       timeout: 2s
       connect-timeout: 2s
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
 
 server:
   port: ${SERVER_PORT:8080}
