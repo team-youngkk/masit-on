@@ -14,4 +14,8 @@ public interface VideoRepositoryPort {
     Video save(Video video);
 
     Optional<Video> findById(UUID id);
+
+    Optional<Video> findByExternalVideoId(String externalVideoId);
+
+    Optional<Video> insertIfAbsent(Video video);
 }

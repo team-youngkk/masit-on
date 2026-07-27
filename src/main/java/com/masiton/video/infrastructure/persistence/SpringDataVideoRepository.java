@@ -1,6 +1,7 @@
 package com.masiton.video.infrastructure.persistence;
 
 import java.util.UUID;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -9,4 +10,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
  * Infrastructure 내부 타입이며 Application·Presentation에서 직접 주입하지 않는다.
  */
 interface SpringDataVideoRepository extends JpaRepository<VideoJpaEntity, UUID> {
+    Optional<VideoJpaEntity> findByExternalVideoId(String externalVideoId);
 }

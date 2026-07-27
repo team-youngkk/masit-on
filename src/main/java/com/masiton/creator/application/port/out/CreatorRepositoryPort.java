@@ -10,4 +10,8 @@ public interface CreatorRepositoryPort {
     Creator save(Creator creator);
 
     Optional<Creator> findById(UUID id);
+
+    Optional<Creator> findByExternalChannelId(String externalChannelId);
+
+    Optional<Creator> insertIfAbsent(Creator creator);
 }
