@@ -16,6 +16,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import com.masiton.security.application.InvalidRefreshTokenException;
 import com.masiton.security.application.RefreshTokenRotation;
+import com.masiton.security.application.port.out.LoginFailureStore;
 import com.masiton.security.application.port.out.RefreshTokenStore;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,6 +41,9 @@ class RedisRefreshTokenStoreIntegrationTest {
 
     @Autowired
     private RefreshTokenStore refreshTokenStore;
+
+    @Autowired
+    private LoginFailureStore loginFailureStore;
 
     @Autowired
     private StringRedisTemplate redisTemplate;
@@ -69,5 +73,18 @@ class RedisRefreshTokenStoreIntegrationTest {
         assertThatThrownBy(() -> refreshTokenStore.rotate(issued.refreshToken(), Duration.ofDays(14)))
                 .isInstanceOf(InvalidRefreshTokenException.class);
         assertThat(refreshTokenStore.matches("admin-a", rotated.refreshToken())).isFalse();
+    }
+
+    @Test
+    @DisplayName("로그인 실패는 다섯 번째부터 남은 TTL 동안 차단한다")
+    void 로그인실패_다섯번째_차단한다() {
+        for (int attempt = 0; attempt < 4; attempt++) {
+            loginFailureStore.recordFailure("admin-login");
+            assertThat(loginFailureStore.isBlocked("admin-login")).isFalse();
+        }
+
+        loginFailureStore.recordFailure("admin-login");
+
+        assertThat(loginFailureStore.isBlocked("admin-login")).isTrue();
     }
 }
