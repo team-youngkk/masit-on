@@ -38,3 +38,17 @@ out/
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+# Node / Next.js
+node_modules/
+.next/
+next-env.d.ts
+*.tsbuildinfo
+
+# Claude Code — 공유 설정만 커밋하고 개인 로컬 설정은 제외한다
+.claude/settings.local.json
+
+# IDE
+.idea/
+*.iml
+.vscode/
