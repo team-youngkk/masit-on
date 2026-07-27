@@ -10,7 +10,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -24,6 +23,9 @@ import com.masiton.security.application.port.in.LoginAdminUseCase;
 import com.masiton.security.application.port.in.LogoutAdminUseCase;
 import com.masiton.security.application.port.in.RefreshAdminTokenUseCase;
 import com.masiton.security.infrastructure.configuration.SecurityProperties;
+
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/admin/auth/tokens")
@@ -52,9 +54,8 @@ public class AdminAuthenticationController {
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<AccessTokenResponse> refresh(
-            @CookieValue(name = "${masiton.security.cookie-name}", required = false) String refreshToken
-    ) {
+    public ResponseEntity<AccessTokenResponse> refresh(HttpServletRequest request) {
+        String refreshToken = refreshToken(request);
         if (refreshToken == null) {
             throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
         }
@@ -62,10 +63,8 @@ public class AdminAuthenticationController {
     }
 
     @DeleteMapping
-    public ResponseEntity<Void> logout(
-            Authentication authentication,
-            @CookieValue(name = "${masiton.security.cookie-name}", required = false) String refreshToken
-    ) {
+    public ResponseEntity<Void> logout(Authentication authentication, HttpServletRequest request) {
+        String refreshToken = refreshToken(request);
         if (refreshToken == null) {
             throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
         }
@@ -99,6 +98,19 @@ public class AdminAuthenticationController {
                 .path(properties.getPath())
                 .maxAge(Duration.ZERO)
                 .build();
+    }
+
+    private String refreshToken(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) {
+            return null;
+        }
+        for (Cookie cookie : cookies) {
+            if (properties.getCookieName().equals(cookie.getName())) {
+                return cookie.getValue();
+            }
+        }
+        return null;
     }
 
     public record LoginRequest(
