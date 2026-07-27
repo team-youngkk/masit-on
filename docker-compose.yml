@@ -1,0 +1,81 @@
+name: masit-on
+
+services:
+  postgres:
+    image: postgres:17.10-alpine
+    container_name: masiton-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-masiton}
+      POSTGRES_USER: ${POSTGRES_USER:-masiton}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-masiton_local}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-masiton} -d ${POSTGRES_DB:-masiton}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  redis:
+    image: redis:8.8-alpine
+    container_name: masiton-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  wiremock:
+    image: wiremock/wiremock:3.13.2-alpine
+    container_name: masiton-wiremock
+    command: ["--global-response-templating", "--disable-banner"]
+    ports:
+      - "${WIREMOCK_PORT:-8081}:8080"
+    volumes:
+      - ./docker/wiremock/mappings:/home/wiremock/mappings
+      - ./docker/wiremock/__files:/home/wiremock/__files
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/__admin/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: masiton-app
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-masiton}
+      DB_USERNAME: ${POSTGRES_USER:-masiton}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-masiton_local}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      wiremock:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/internal/health/live"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 40s
+
+volumes:
+  postgres-data:
+  redis-data:

@@ -1,0 +1,53 @@
+spring:
+  application:
+    name: masit-on
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/masiton}
+    username: ${DB_USERNAME:masiton}
+    password: ${DB_PASSWORD:masiton_local}
+    hikari:
+      connection-timeout: 3000
+      validation-timeout: 2000
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2s
+      connect-timeout: 2s
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      base-path: /internal
+      exposure:
+        include: health
+  endpoint:
+    health:
+      access: read_only
+      show-details: never
+      show-components: always
+      group:
+        live:
+          include: ping
+        ready:
+          include: db
+        dependencies:
+          include: db,redis
+  health:
+    defaults:
+      enabled: false
+    ping:
+      enabled: true
+    db:
+      enabled: true
+    redis:
+      enabled: true
+
+logging:
+  level:
+    root: ${LOG_LEVEL_ROOT:INFO}
+    com.masiton: ${LOG_LEVEL_APP:INFO}
