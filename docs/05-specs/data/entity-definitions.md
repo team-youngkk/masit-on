@@ -26,7 +26,7 @@ related_documents:
 
 - 모든 핵심 데이터는 외부 식별자와 분리된 불투명 내부 식별자를 가진다. PostgreSQL `uuid`와 애플리케이션 생성 UUID v4를 사용한다.
 - publication status는 `PUBLIC`과 일반 사용자 비노출 상태를 구분한다. 물리안의 삭제 표현은 [ADR-DATA-008](../../07-adr/data/data-008-publication-lifecycle-soft-delete.md)을 따른다.
-- `createdAt`, `updatedAt`은 공통 감사 속성이고 핵심 삭제 데이터는 `deletedAt`을 추가한다. 변경자·사유 이력은 MVP에 저장하지 않는다.
+- `createdAt`, `updatedAt`은 공통 감사 속성이고 핵심 삭제 데이터는 `deletedAt`을 추가한다. 변경자·사유를 구조화된 도메인 이력으로 저장하지 않으며, 인증된 운영 명령의 상태 변경은 별도 운영 감사 로그에 남긴다.
 - API 응답의 집계·축약·조합 필드는 엔티티 속성이 아니다.
 
 ## Restaurant

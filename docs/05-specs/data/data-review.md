@@ -37,7 +37,7 @@ related_documents:
 - API DTO의 축약·집계·판정 값은 저장 모델에서 제외했다.
 - 카카오 장소 동일성은 [ADR-EXT-001](../../07-adr/integration/ext-001-reference-verification.md)의 제공자 place ID로 확정되어 물리 유일 키에 반영됐다.
 - UUID 내부 ID와 상태·논리 삭제는 [ADR-DATA-007](../../07-adr/data/data-007-uuid-v4-identifiers.md)·[ADR-DATA-008](../../07-adr/data/data-008-publication-lifecycle-soft-delete.md)로 확정됐다.
-- 관리자 내부 계정과 Redis Refresh Token 상태는 MVP 저장 범위다. Redis 8.8, 14일 TTL, 회전·재사용 탐지는 확정됐고 키·검증값·로그인 제한 카운터가 후속 상세다.
+- 관리자 내부 계정과 Redis Refresh Token 상태는 MVP 저장 범위다. Redis 8.8, `auth:refresh:{adminId}` 키의 SHA-256 Token 해시·계열·만료 정보, 14일 TTL, 원자적 회전·재사용 탐지와 `auth:login-failure:{loginIdHash}` 로그인 제한 카운터까지 확정됐다.
 - 확인 Token은 PostgreSQL 저장형 불투명 Token과 원자적 소비·결과 재현으로 확정됐다.
 
 ## 3. 모델링 차단 항목
@@ -129,7 +129,7 @@ related_documents:
 - 중요도: High
 - 현재 상태: MVP 물리 범위 결정 완료
 - 영향 데이터: 모든 핵심 데이터와 관리자 인증
-- 결정: `created_at`, `updated_at`, 핵심 삭제 데이터의 `deleted_at`만 저장한다. 변경자·사유 이력은 수정·삭제 관리 기능 승인 시 재검토한다.
+- 결정: PostgreSQL 핵심 테이블에는 `created_at`, `updated_at`, 삭제 데이터의 `deleted_at`만 저장하고 별도 상태 변경 이력 테이블이나 변경 관리자 FK를 두지 않는다. 인증된 운영 명령의 상태 변경은 행위자·대상·이전/이후 상태·사유·traceId를 운영 감사 로그에 기록한다. DB에 구조화된 변경 이력을 영속화하는 요구는 관리 API 또는 법적 감사 범위가 승인될 때 재검토한다.
 - 근거: [physical-data-model.md](physical-data-model.md#42-이력-범위)
 
 ### RV-DATA-006 관리자 Refresh Token·로그인 제한 저장
@@ -170,13 +170,13 @@ related_documents:
 | 외부 자원 식별 전략 | 결정 완료 | [ADR-EXT-001](../../07-adr/integration/ext-001-reference-verification.md)의 제공자 원본 ID |
 | 동시 중복 방지 전략 | 기본안 완료·강화 조건부 | UK+오류 변환; 강화는 [ADR-DATA-006](../../07-adr/adr-backlog.md#adr-data-006-동시-쓰기-충돌-제어) |
 | 확인 Token 저장 전략 | 결정 완료 | [ADR-AUTH-003](../../07-adr/security/auth-003-confirmation-token.md) |
-| Refresh Token 저장 전략 | 저장소 결정 완료·세부 필요 | [ADR-DATA-005](../../07-adr/data/data-005-redis-refresh-token.md); 로그인 제한 구조는 후속 |
+| Refresh Token 저장 전략 | 결정 완료 | [ADR-DATA-005](../../07-adr/data/data-005-redis-refresh-token.md), [관리자 인증 API](../api/admin/authentication-api.md), [보안 경계](../../06-architecture/security-boundary.md) |
 
 ## 9. 구현 중 결정 가능한 항목
 
-- 변수·클래스·테이블 이름, SQL 자료형과 ORM 매핑
+- 변수·클래스 이름과 ORM 세부 매핑. 테이블·컬럼명과 SQL 자료형은 [table-definitions.md](table-definitions.md)를 변경하지 않는다.
 - 표시값 변환과 조회 DTO 조립 위치(도메인 소유권은 유지)
-- 세부 인덱스 열 순서와 쿼리 튜닝
+- [index-strategy.md](index-strategy.md)의 초기 인덱스는 그대로 구현하고, 운영 유사 데이터의 실행계획 근거가 생긴 뒤 후속 인덱스 추가·제거와 쿼리 튜닝을 결정한다.
 - 공통 감사 필드 자동 입력 방식
 - 외부 URL 정규화 코드 구성(동일성 원칙은 변경 금지)
 
@@ -184,7 +184,7 @@ related_documents:
 
 1. 내부 ID, 상태·논리 삭제, 외부 동일성, 채널 일치와 Flyway·seed 계획은 확정됐다.
 2. 상세 콘텐츠 정렬과 외부 제공자 ID 노출 경계도 API 계약에 반영됐다.
-3. Redis 로그인 제한 세부 구조와 외부 timeout 수치는 각 보안·외부 연동 상세 설계에서 정한다.
+3. Redis 로그인 제한 구조와 외부 timeout 수치는 보안·외부 연동 상세 설계에 확정됐으며 구현과 검증 단계에서 해당 계약을 그대로 적용한다.
 
 ## 11. 데이터 모델 완료 기준
 

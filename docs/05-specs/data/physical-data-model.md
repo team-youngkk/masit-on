@@ -66,7 +66,7 @@ UUID v4는 DB 확장 없이 생성할 수 있고 API의 불투명 문자열 계�
 | `RV-DATA-002` | [ADR-DATA-008](../../07-adr/data/data-008-publication-lifecycle-soft-delete.md): publication/lifecycle 분리와 논리 삭제 |
 | `RV-DATA-003` | [ADR-DATA-007](../../07-adr/data/data-007-uuid-v4-identifiers.md): 애플리케이션 생성 UUID v4 |
 | `RV-DATA-004` | 고정 code·UUID를 가진 Flyway 기준 데이터 |
-| `RV-DATA-005` | 공통 시각 3종만 저장, 변경자·사유 이력은 후속 범위 |
+| `RV-DATA-005` | 핵심 테이블은 공통 시각 3종만 저장하고 상태 변경은 운영 감사 로그에 기록; 구조화된 DB 이력은 후속 범위 |
 | `RV-DATA-008` | Creator–Video와 Video–Visit 복합 FK로 채널 일치 강제 |
 
 ## 4. 공개·삭제·외부 상태
@@ -93,7 +93,7 @@ Creator와 Video는 여기에 `external_availability_status='AVAILABLE'`을 추�
 
 ### 4.2 이력 범위
 
-MVP는 상태 변경 이력 테이블, 변경 사유와 변경 관리자 FK를 두지 않는다. `created_at`, `updated_at`, `deleted_at`만 저장한다. 수정·삭제 관리 기능이 범위에 들어오면 변경자·사유·복구 감사 요구를 먼저 확정하고 새 Flyway 마이그레이션으로 확장한다.
+MVP는 상태 변경 이력 테이블, 변경 사유 컬럼과 변경 관리자 FK를 두지 않는다. 핵심 테이블에는 `created_at`, `updated_at`, `deleted_at`만 저장한다. 인증된 운영 명령의 상태 변경은 행위자·대상·이전/이후 상태·사유·traceId를 애플리케이션 운영 감사 로그에 남기며 PostgreSQL 도메인 이력으로 보지 않는다. 관리 API 또는 법적 감사 범위가 도입되어 구조화된 이력 조회·보존이 필요해지면 새 Flyway 마이그레이션으로 확장한다.
 
 ## 5. 관계 구현
 

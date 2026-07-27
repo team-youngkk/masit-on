@@ -174,7 +174,7 @@ Token 소비와 Entity 생성 또는 동시 중복 완료는 한 PostgreSQL 트�
 | 오류 코드 | HTTP | 조건 |
 |---|---:|---|
 | `MISSING_REQUIRED_FIELD` | 400 | 필수 필드 누락 |
-| `INVALID_FIELD_VALUE` | 400 | URL·서울 주소·카테고리·기타 기록 등 오류 |
+| `INVALID_FIELD_VALUE` | 400 | URL·서울 주소·카테고리 값 오류 |
 | `DUPLICATE_RESTAURANT` | 409 | 생성 확정 직전 동일 장소가 등록됨 |
 | `IDENTITY_VERIFICATION_REQUIRED` | 409 | 생성 확정 시 동일 장소 판단 상태가 변경됨 |
 | `EXTERNAL_SERVICE_ERROR` | 502 | 등록에 필요한 카카오 확인을 완료할 수 없음 |
