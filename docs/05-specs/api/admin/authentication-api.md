@@ -130,7 +130,7 @@ Spring Security Filter Chain은 HTTP Method와 세부 경로를 먼저 매칭한
 - 새 공개 키를 검증 키 목록에 먼저 배포한 뒤 새 `kid`로 발급하고, 기존 Access Token 최대 수명 30분이 지난 후 이전 개인 키를 폐기한다. 정기 교체 주기는 90일이다.
 - Refresh Token은 `auth:refresh:{adminId}`에 SHA-256 Token 해시, Token 계열 ID, 발급·만료 시각을 JSON으로 저장하며 Redis TTL 14일을 적용한다.
 - 회전·재사용 탐지와 계정당 단일 활성 Token 보장은 Redis 원자 연산으로 처리한다. 만료 데이터는 TTL로 정리하고 별도 주기 삭제 작업을 두지 않는다.
-- 로그인 실패는 `auth:login-failure:{loginIdHash}` 카운터에 첫 실패부터 15분 TTL을 적용한다. 5회 실패하면 남은 TTL 동안 로그인을 차단하고 성공 시 카운터를 삭제한다.
+- 로그인 실패는 `auth:login-failure:login-id:{loginIdHash}`와 `auth:login-failure:source:{sourceHash}` 카운터에 첫 실패부터 15분 TTL을 적용한다. 둘 중 하나가 5회 이상이면 남은 TTL 동안 로그인을 차단하고 성공 시 두 카운터를 삭제한다. `source`는 신뢰 프록시 설정이 없는 현재 MVP에서 연결 원격 주소를 사용하며, 조작 가능한 전달 헤더는 신뢰하지 않는다.
 
 ## 9. 관리자 계정 운영 절차
 

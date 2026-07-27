@@ -45,17 +45,18 @@ public class AdminAuthenticationService implements LoginAdminUseCase, RefreshAdm
     @Override
     public AuthenticationResult login(LoginCommand command) {
         String loginId = command.loginId().trim();
-        if (loginFailureStore.isBlocked(loginId)) {
-            loginFailureStore.recordFailure(loginId);
+        String source = command.source();
+        if (loginFailureStore.isBlocked(loginId, source)) {
+            loginFailureStore.recordFailure(loginId, source);
             throw authenticationRequired();
         }
 
         AdminPrincipal principal = credentialVerifier.authenticate(loginId, command.password())
                 .orElseThrow(() -> {
-                    loginFailureStore.recordFailure(loginId);
+                    loginFailureStore.recordFailure(loginId, source);
                     return authenticationRequired();
                 });
-        loginFailureStore.clear(loginId);
+        loginFailureStore.clear(loginId, source);
         RefreshTokenRotation rotation = refreshTokenStore.issue(principal.adminId(), refreshTokenTtl);
         return result(principal, rotation.refreshToken());
     }

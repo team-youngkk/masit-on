@@ -17,7 +17,8 @@ import com.masiton.security.infrastructure.configuration.SecurityProperties;
 @Component
 public class RedisLoginFailureStore implements LoginFailureStore {
 
-    private static final String KEY_PREFIX = "auth:login-failure:";
+    private static final String LOGIN_ID_KEY_PREFIX = "auth:login-failure:login-id:";
+    private static final String SOURCE_KEY_PREFIX = "auth:login-failure:source:";
     private static final DefaultRedisScript<Long> INCREMENT_WITH_TTL = new DefaultRedisScript<>("""
             local attempts = redis.call('INCR', KEYS[1])
             if attempts == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end
@@ -33,24 +34,34 @@ public class RedisLoginFailureStore implements LoginFailureStore {
     }
 
     @Override
-    public boolean isBlocked(String loginId) {
-        String count = redisTemplate.opsForValue().get(key(loginId));
+    public boolean isBlocked(String loginId, String source) {
+        return isBlocked(loginIdKey(loginId)) || isBlocked(sourceKey(source));
+    }
+
+    @Override
+    public void recordFailure(String loginId, String source) {
+        Duration ttl = properties.getLoginFailure().getTtl();
+        String ttlSeconds = String.valueOf(ttl.toSeconds());
+        redisTemplate.execute(INCREMENT_WITH_TTL, List.of(loginIdKey(loginId)), ttlSeconds);
+        redisTemplate.execute(INCREMENT_WITH_TTL, List.of(sourceKey(source)), ttlSeconds);
+    }
+
+    @Override
+    public void clear(String loginId, String source) {
+        redisTemplate.delete(List.of(loginIdKey(loginId), sourceKey(source)));
+    }
+
+    private boolean isBlocked(String key) {
+        String count = redisTemplate.opsForValue().get(key);
         return count != null && Long.parseLong(count) >= properties.getLoginFailure().getMaxAttempts();
     }
 
-    @Override
-    public void recordFailure(String loginId) {
-        Duration ttl = properties.getLoginFailure().getTtl();
-        redisTemplate.execute(INCREMENT_WITH_TTL, List.of(key(loginId)), String.valueOf(ttl.toSeconds()));
+    private String loginIdKey(String loginId) {
+        return LOGIN_ID_KEY_PREFIX + hash(loginId);
     }
 
-    @Override
-    public void clear(String loginId) {
-        redisTemplate.delete(key(loginId));
-    }
-
-    private String key(String loginId) {
-        return KEY_PREFIX + hash(loginId);
+    private String sourceKey(String source) {
+        return SOURCE_KEY_PREFIX + hash(source);
     }
 
     private String hash(String value) {

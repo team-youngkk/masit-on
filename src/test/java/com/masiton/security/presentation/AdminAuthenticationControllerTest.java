@@ -13,7 +13,9 @@ import com.masiton.security.infrastructure.configuration.SecurityProperties;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @DisplayName("관리자 인증 Cookie 계약")
@@ -31,13 +33,18 @@ class AdminAuthenticationControllerTest {
     void 로그인_성공_RefreshCookie보안속성을반환한다() {
         when(loginUseCase.login(any())).thenReturn(new AuthenticationResult("access", "refresh", 1800));
 
-        String cookie = controller.login(new AdminAuthenticationController.LoginRequest("admin", "correct-password"))
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRemoteAddr("203.0.113.10");
+        request.addHeader("X-Forwarded-For", "198.51.100.20");
+
+        String cookie = controller.login(new AdminAuthenticationController.LoginRequest("admin", "correct-password"), request)
                 .getHeaders()
                 .getFirst("Set-Cookie");
 
         assertThat(cookie)
                 .contains("masit_on_refresh=refresh", "Path=/api/admin/auth", "Max-Age=1209600")
                 .contains("HttpOnly", "Secure", "SameSite=Strict");
+        verify(loginUseCase).login(argThat(command -> command.source().equals("203.0.113.10")));
     }
 
     @Test

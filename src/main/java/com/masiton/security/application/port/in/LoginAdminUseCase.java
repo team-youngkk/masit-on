@@ -6,6 +6,10 @@ public interface LoginAdminUseCase {
 
     AuthenticationResult login(LoginCommand command);
 
-    record LoginCommand(String loginId, String password) {
+    record LoginCommand(String loginId, String password, String source) {
+
+        public LoginCommand {
+            source = source == null || source.isBlank() ? "unknown" : source;
+        }
     }
 }

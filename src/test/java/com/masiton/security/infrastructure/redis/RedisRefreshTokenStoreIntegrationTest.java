@@ -79,12 +79,22 @@ class RedisRefreshTokenStoreIntegrationTest {
     @DisplayName("로그인 실패는 다섯 번째부터 남은 TTL 동안 차단한다")
     void 로그인실패_다섯번째_차단한다() {
         for (int attempt = 0; attempt < 4; attempt++) {
-            loginFailureStore.recordFailure("admin-login");
-            assertThat(loginFailureStore.isBlocked("admin-login")).isFalse();
+            loginFailureStore.recordFailure("admin-login", "127.0.0.1");
+            assertThat(loginFailureStore.isBlocked("admin-login", "127.0.0.1")).isFalse();
         }
 
-        loginFailureStore.recordFailure("admin-login");
+        loginFailureStore.recordFailure("admin-login", "127.0.0.1");
 
-        assertThat(loginFailureStore.isBlocked("admin-login")).isTrue();
+        assertThat(loginFailureStore.isBlocked("admin-login", "127.0.0.1")).isTrue();
+    }
+
+    @Test
+    @DisplayName("같은 출처의 다른 로그인 ID 다섯 번 실패도 차단한다")
+    void 로그인실패_같은출처다른로그인ID_차단한다() {
+        for (int attempt = 0; attempt < 5; attempt++) {
+            loginFailureStore.recordFailure("admin-" + attempt, "127.0.0.1");
+        }
+
+        assertThat(loginFailureStore.isBlocked("another-admin", "127.0.0.1")).isTrue();
     }
 }

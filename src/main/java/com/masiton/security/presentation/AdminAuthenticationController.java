@@ -49,8 +49,13 @@ public class AdminAuthenticationController {
     }
 
     @PostMapping
-    public ResponseEntity<AccessTokenResponse> login(@Valid @RequestBody LoginRequest request) {
-        return tokenResponse(loginAdminUseCase.login(new LoginAdminUseCase.LoginCommand(request.loginId(), request.password())));
+    public ResponseEntity<AccessTokenResponse> login(
+            @Valid @RequestBody LoginRequest request,
+            HttpServletRequest servletRequest
+    ) {
+        return tokenResponse(loginAdminUseCase.login(
+                new LoginAdminUseCase.LoginCommand(request.loginId(), request.password(), servletRequest.getRemoteAddr())
+        ));
     }
 
     @PostMapping("/refresh")

@@ -48,10 +48,10 @@ class AdminAuthenticationServiceTest {
                 .thenReturn(new RefreshTokenRotation("admin-id", "refresh-token"));
         when(tokenIssuer.issueAccessToken(principal)).thenReturn("access-token");
 
-        AuthenticationResult result = service.login(new LoginCommand(" admin ", "correct-password"));
+        AuthenticationResult result = service.login(new LoginCommand(" admin ", "correct-password", "127.0.0.1"));
 
         assertThat(result).isEqualTo(new AuthenticationResult("access-token", "refresh-token", 1800));
-        verify(loginFailureStore).clear("admin");
+        verify(loginFailureStore).clear("admin", "127.0.0.1");
     }
 
     @Test
@@ -59,12 +59,12 @@ class AdminAuthenticationServiceTest {
     void 로그인_잘못된자격증명_실패기록후401() {
         when(credentialVerifier.authenticate("unknown", "wrong-password")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.login(new LoginCommand("unknown", "wrong-password")))
+        assertThatThrownBy(() -> service.login(new LoginCommand("unknown", "wrong-password", "127.0.0.1")))
                 .isInstanceOf(BusinessException.class)
                 .extracting(exception -> ((BusinessException) exception).code())
                 .isEqualTo(ErrorCode.AUTHENTICATION_REQUIRED.name());
 
-        verify(loginFailureStore).recordFailure("unknown");
+        verify(loginFailureStore).recordFailure("unknown", "127.0.0.1");
         verify(refreshTokenStore, never()).issue(any(), any());
     }
 
