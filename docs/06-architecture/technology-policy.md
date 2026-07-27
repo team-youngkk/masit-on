@@ -46,6 +46,7 @@ related_documents:
 | Gemini | `gemini-3-flash-preview` | Post-MVP, 승인된 유일한 Preview 예외 |
 | springdoc-openapi | 3.0.3 | MVP Accepted |
 | Testcontainers | 2.0.5 | MVP Accepted |
+| ArchUnit | archunit-junit5 1.4.1 | MVP Accepted, `T-01`에서 고정 (Spring Boot BOM 관리 대상 아님) |
 | Spring Batch | 6.0.4, Spring Boot BOM 관리 | Post-MVP |
 
 - `latest`, `+`, `x`, `^`, `~` 또는 동등한 범위 버전을 사용하지 않는다.

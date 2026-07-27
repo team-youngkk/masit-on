@@ -23,7 +23,7 @@ related_documents:
 
 이 디렉터리는 Accepted ADR과 확정된 API·논리 데이터 계약을 구현 가능한 패키지, 의존성, 흐름과 경계로 구체화한다. 결정 이유와 대안은 ADR이 권위 있는 원문이며, 이 문서는 결정된 원칙을 실제 코드 구조에 적용하는 기준이다.
 
-현재 저장소에는 `src/`, Gradle 빌드 파일과 애플리케이션 클래스가 없다. 따라서 이 문서의 클래스 이름은 모두 **목표 구조의 제안 이름**이며 현재 구현을 설명하지 않는다. 다만 Gradle `group`과 루트 Java 패키지 `com.masiton`, 진입점 `com.masiton.MasitOnApplication`은 [패키지 구조](package-structure.md) 1절에서 확정됐다.
+현재 저장소에는 `T-01`이 만든 Gradle 빌드와 `com.masiton.MasitOnApplication`, `com.masiton.common`의 공통 오류·traceId 기반만 있다. 네 도메인과 `orchestration`, `security` 패키지는 아직 없으므로 이 문서의 나머지 클래스 이름은 여전히 **목표 구조의 제안 이름**이며 현재 구현을 설명하지 않는다. Gradle `group`과 루트 Java 패키지 `com.masiton`, 진입점 `com.masiton.MasitOnApplication`은 [패키지 구조](package-structure.md) 1절에서 확정됐다.
 
 ## 2. 문서 읽기 순서
 
