@@ -2,6 +2,7 @@ package com.masiton.security.infrastructure.persistence;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -49,13 +50,17 @@ public class JdbcAdminCredentialVerifier implements AdminCredentialVerifier {
 
     @Override
     public Optional<AdminPrincipal> findActivePrincipalById(String adminId) {
-        return findPrincipal(
-                "select id, role from admin_account where id = ? and active = true",
-                adminId
-        );
+        try {
+            return findPrincipal(
+                    "select id, role from admin_account where id = ? and active = true",
+                    UUID.fromString(adminId)
+            );
+        } catch (IllegalArgumentException exception) {
+            return Optional.empty();
+        }
     }
 
-    private Optional<AdminPrincipal> findPrincipal(String sql, String value) {
+    private Optional<AdminPrincipal> findPrincipal(String sql, Object value) {
         List<AdminAccount> accounts = jdbcTemplate.query(
                 sql,
                 (resultSet, rowNumber) -> new AdminAccount(

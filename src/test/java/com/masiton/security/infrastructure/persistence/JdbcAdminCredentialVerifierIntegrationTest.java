@@ -93,6 +93,16 @@ class JdbcAdminCredentialVerifierIntegrationTest {
         assertThat(verifier.authenticate("unknown-role", "correct-password")).isEmpty();
     }
 
+    @Test
+    @DisplayName("UUID 관리자 식별자로 활성 주체를 조회한다")
+    void findActivePrincipalById_UUID_주체반환() {
+        String adminId = insertAccount("admin", "correct-password", "ADMIN", true);
+
+        assertThat(verifier.findActivePrincipalById(adminId))
+                .contains(new AdminPrincipal(adminId, java.util.Set.of(AdminRole.ADMIN)));
+        assertThat(verifier.findActivePrincipalById("not-a-uuid")).isEmpty();
+    }
+
     private String insertAccount(String loginId, String password, String role, boolean active) {
         String adminId = UUID.randomUUID().toString();
         jdbcTemplate.update(
