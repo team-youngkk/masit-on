@@ -4,8 +4,8 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import com.masiton.common.persistence.BaseAuditable;
-import com.masiton.common.persistence.LifecycleStatus;
-import com.masiton.common.persistence.PublicationStatus;
+import com.masiton.visit.domain.model.LifecycleStatus;
+import com.masiton.visit.domain.model.PublicationStatus;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

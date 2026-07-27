@@ -30,7 +30,7 @@ build/
 # IDE
 .idea/
 *.iml
-out/
+/out/
 
 # 로컬 환경 값
 .env

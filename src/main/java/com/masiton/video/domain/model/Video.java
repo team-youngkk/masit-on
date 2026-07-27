@@ -3,8 +3,6 @@ package com.masiton.video.domain.model;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-import com.masiton.common.persistence.LifecycleStatus;
-import com.masiton.common.persistence.PublicationStatus;
 
 /**
  * video 테이블과 대응하는 순수 도메인 모델이다.

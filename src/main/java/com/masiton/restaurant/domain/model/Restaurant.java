@@ -3,8 +3,6 @@ package com.masiton.restaurant.domain.model;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-import com.masiton.common.persistence.LifecycleStatus;
-import com.masiton.common.persistence.PublicationStatus;
 
 /**
  * restaurant 테이블과 대응하는 순수 도메인 모델이다.

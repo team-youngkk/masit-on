@@ -3,8 +3,6 @@ package com.masiton.creator.domain.model;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-import com.masiton.common.persistence.LifecycleStatus;
-import com.masiton.common.persistence.PublicationStatus;
 
 /**
  * creator 테이블에 대응하는 프레임워크 독립 도메인 모델이다.
