@@ -26,7 +26,6 @@ import tools.jackson.databind.ObjectMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -102,6 +101,21 @@ class CreatorRegistrationServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(exception -> ((BusinessException) exception).code())
                 .isEqualTo(ErrorCode.INVALID_FIELD_VALUE.name());
+    }
+
+    @Test
+    @DisplayName("유효한 공개 채널을 확인할 수 없으면 INVALID_FIELD_VALUE로 거부한다")
+    void preview_공개채널확인불가_INVALID_FIELD_VALUE() {
+        when(channelVerificationPort.verify(any())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.preview(
+                new CreatorRegistrationUseCase.CreatorPreviewCommand(
+                        adminId,
+                        "https://www.youtube.com/channel/missing-channel")))
+                .isInstanceOf(BusinessException.class)
+                .extracting(exception -> ((BusinessException) exception).code())
+                .isEqualTo(ErrorCode.INVALID_FIELD_VALUE.name());
+        verify(confirmationTokenUseCase, never()).issue(any());
     }
 
     @Test

@@ -361,6 +361,8 @@ related_documents:
 
 `T-09`부터 `T-12`의 공동 담당 Task는 앞에 적힌 담당자가 최종 병합 책임을 갖고 뒤 담당자가 자신의 계약 영역을 지원한다.
 
+`T-13`의 자동화 검증은 `AdminRegistrationJourneyAcceptanceTest`에서 실제 PostgreSQL·Redis와 WireMock을 사용해 관리자 로그인, 세 기준정보 미리보기·확정, Visit 등록, 공개 목록·유튜버 필터·상세·유튜버 선택 목록 반영을 하나의 사용자 여정으로 실행한다. 같은 테스트 묶음에서 무인증 접근, 빈 상태, 외부 검증 실패, 중복 Visit의 부분 저장 방지도 확인한다. 실제 Kakao·YouTube API와 운영 키는 사용하지 않는다.
+
 ## 9. 의존성 및 실행 순서
 
 - 1차 병렬 실행: `T-01`, `T-02`, `T-03`, `T-04`
