@@ -74,6 +74,7 @@ Visit를 기준으로 Creator와 Video를 조인해 다음 조건을 DB에서 �
 - 요청 Restaurant ID 일치
 
 결과 Row는 한 Visit에 필요한 Creator·Video 표시 필드를 함께 가진다. Application이 다음을 수행한다.
+비공개·삭제·외부 이용 불가 Video는 필드만 `NULL`로 만들지 않고 그 Video를 근거로 한 Visit Row 전체를 제외한다. 따라서 공개·유효한 근거 영상이 없는 Creator를 `visitedBy`에 단독으로 노출하지 않는다.
 
 - Creator ID 기준 중복 제거
 - Video ID 기준 중복 제거
@@ -91,6 +92,7 @@ Visit를 기준으로 Creator와 Video를 조인해 다음 조건을 DB에서 �
 - 총 2 query
 
 각 Visit Row마다 Creator나 Video Repository를 다시 호출하지 않는다. Lazy 연관 탐색으로 응답을 만들지 않는다. 통합 테스트에서 쿼리 수를 단언한다.
+관계가 0건, 1건, 다수인 상세 API 경로를 각각 검증하며, 모두 기본 정보 1회와 콘텐츠 1회의 총 2 query를 유지해야 한다.
 
 목록 조회도 Restaurant마다 방문 Creator를 개별 조회하지 않는다. `EXISTS`, 집계 Projection 또는 제한된 별도 일괄 조회 중 실행 계획이 단순하고 성능 기준을 만족하는 방식을 사용한다. QueryDSL은 Conditional ADR이 활성화되기 전 선제 도입하지 않는다.
 
