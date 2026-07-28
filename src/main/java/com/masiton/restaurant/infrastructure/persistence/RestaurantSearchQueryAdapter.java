@@ -136,7 +136,8 @@ class RestaurantSearchQueryAdapter implements RestaurantSearchQueryPort {
     public boolean existsPublicCreator(UUID creatorId) {
         Boolean exists = jdbcTemplate.queryForObject(
                 "SELECT EXISTS (SELECT 1 FROM creator WHERE id = :creatorId "
-                        + "AND publication_status = 'PUBLIC' AND lifecycle_status = 'ACTIVE')",
+                        + "AND publication_status = 'PUBLIC' AND lifecycle_status = 'ACTIVE' "
+                        + "AND external_availability_status = 'AVAILABLE')",
                 new MapSqlParameterSource("creatorId", creatorId),
                 Boolean.class);
         return Boolean.TRUE.equals(exists);
