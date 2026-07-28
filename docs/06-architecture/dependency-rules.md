@@ -43,6 +43,9 @@ Application이 Persistence나 외부 API 기능을 호출할 때는 자신이 �
 ### 허용
 
 - `orchestration.application` → 각 도메인의 `application.port.in`
+- `module-boundaries.md`에서 승인한 단방향 Query 협력의 도메인 `application` → 다른 도메인의
+  `application.port.in` 공개 Port. 이때 전달 타입은 불투명 식별자 또는 최소 Snapshot으로
+  제한하고, 반대 방향 호출을 추가해 순환 의존을 만들지 않는다.
 - `orchestration`의 읽기 Adapter → 승인된 읽기 전용 DB Projection
 - 각 도메인의 Infrastructure Adapter → 자신이 구현하는 Port
 - Presentation → 동일 도메인 Application

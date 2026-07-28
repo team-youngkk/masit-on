@@ -3,6 +3,7 @@ package com.masiton.restaurant.application.query;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
@@ -21,6 +22,8 @@ import com.masiton.restaurant.application.port.out.RestaurantSearchRow;
 import com.masiton.restaurant.application.port.out.VisitedByRow;
 import com.masiton.restaurant.domain.model.FoodCategory;
 import com.masiton.restaurant.domain.model.Region;
+import com.masiton.visit.application.port.in.CreatorRestaurantCandidates;
+import com.masiton.visit.application.port.in.FindDistinctValidRestaurantIdsByCreatorQuery;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -37,9 +40,14 @@ class RestaurantSearchQueryServiceTest {
     private final RegionRepositoryPort regionRepositoryPort = mock(RegionRepositoryPort.class);
     private final FoodCategoryRepositoryPort foodCategoryRepositoryPort = mock(FoodCategoryRepositoryPort.class);
     private final RestaurantSearchQueryPort restaurantSearchQueryPort = mock(RestaurantSearchQueryPort.class);
+    private final FindDistinctValidRestaurantIdsByCreatorQuery findRestaurantIdsByCreatorQuery =
+            mock(FindDistinctValidRestaurantIdsByCreatorQuery.class);
 
     private final RestaurantSearchQueryService service = new RestaurantSearchQueryService(
-            regionRepositoryPort, foodCategoryRepositoryPort, restaurantSearchQueryPort);
+            regionRepositoryPort,
+            foodCategoryRepositoryPort,
+            restaurantSearchQueryPort,
+            findRestaurantIdsByCreatorQuery);
 
     @Test
     @DisplayName("검색어가 공백뿐이면 트림 후 이름 조건을 적용하지 않는다")
@@ -127,7 +135,8 @@ class RestaurantSearchQueryServiceTest {
     void search_creatorId비공개또는존재하지않음_400INVALID_FIELD_VALUE를던진다() {
         // given
         UUID creatorId = UUID.randomUUID();
-        when(restaurantSearchQueryPort.existsPublicCreator(creatorId)).thenReturn(false);
+        when(findRestaurantIdsByCreatorQuery.findDistinctValidRestaurantIdsByCreator(creatorId))
+                .thenReturn(new CreatorRestaurantCandidates(false, Set.of()));
 
         // when & then
         assertThatThrownBy(() ->
@@ -145,9 +154,13 @@ class RestaurantSearchQueryServiceTest {
         UUID regionId = UUID.randomUUID();
         UUID categoryId = UUID.randomUUID();
         UUID creatorId = UUID.randomUUID();
+        UUID candidateRestaurantId1 = UUID.randomUUID();
+        UUID candidateRestaurantId2 = UUID.randomUUID();
         when(regionRepositoryPort.findByName("마포구")).thenReturn(Optional.of(region(regionId, "마포구")));
         when(foodCategoryRepositoryPort.findByName("한식")).thenReturn(Optional.of(foodCategory(categoryId, "한식")));
-        when(restaurantSearchQueryPort.existsPublicCreator(creatorId)).thenReturn(true);
+        when(findRestaurantIdsByCreatorQuery.findDistinctValidRestaurantIdsByCreator(creatorId))
+                .thenReturn(new CreatorRestaurantCandidates(
+                        true, Set.of(candidateRestaurantId1, candidateRestaurantId2)));
         when(restaurantSearchQueryPort.search(any()))
                 .thenReturn(new RestaurantSearchQueryResult(List.of(), 0));
 
@@ -156,7 +169,41 @@ class RestaurantSearchQueryServiceTest {
 
         // then
         verify(restaurantSearchQueryPort).search(eq(new RestaurantSearchCriteria(
-                "식당", regionId, categoryId, creatorId, 2, 10)));
+                "식당", regionId, categoryId, Set.of(candidateRestaurantId1, candidateRestaurantId2), 2, 10)));
+    }
+
+    @Test
+    @DisplayName("creatorId가 없으면 후보 제한 없음(null)을 Criteria에 전달한다")
+    void search_creatorId없음_후보제한없음을전달한다() {
+        // given
+        when(restaurantSearchQueryPort.search(any()))
+                .thenReturn(new RestaurantSearchQueryResult(List.of(), 0));
+
+        // when
+        service.search(new SearchRestaurantsCommand(null, null, null, null, 1, 20));
+
+        // then
+        verify(restaurantSearchQueryPort).search(
+                argThatCriteria(criteria -> criteria.candidateRestaurantIds() == null));
+        verify(findRestaurantIdsByCreatorQuery, never()).findDistinctValidRestaurantIdsByCreator(any());
+    }
+
+    @Test
+    @DisplayName("공개 유튜버의 유효 방문 후보가 없으면 빈 후보 집합을 Criteria에 전달한다")
+    void search_공개유튜버후보없음_빈후보집합을전달한다() {
+        // given
+        UUID creatorId = UUID.randomUUID();
+        when(findRestaurantIdsByCreatorQuery.findDistinctValidRestaurantIdsByCreator(creatorId))
+                .thenReturn(new CreatorRestaurantCandidates(true, Set.of()));
+        when(restaurantSearchQueryPort.search(any()))
+                .thenReturn(new RestaurantSearchQueryResult(List.of(), 0));
+
+        // when
+        service.search(new SearchRestaurantsCommand(null, null, null, creatorId.toString(), 1, 20));
+
+        // then
+        verify(restaurantSearchQueryPort).search(
+                argThatCriteria(criteria -> Set.of().equals(criteria.candidateRestaurantIds())));
     }
 
     @Test

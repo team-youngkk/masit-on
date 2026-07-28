@@ -2,6 +2,7 @@ package com.masiton.restaurant.infrastructure.persistence;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -129,19 +130,6 @@ class RestaurantSearchQueryAdapterIntegrationTest {
     }
 
     @Test
-    @DisplayName("existsPublicCreator는 공개·활성 유튜버만 존재로 판정한다")
-    void existsPublicCreator_공개활성유튜버만존재로판정한다() {
-        // given
-        UUID publicCreatorId = insertCreator("공개유튜버", "PUBLIC", "ACTIVE", "AVAILABLE");
-        UUID privateCreatorId = insertCreator("비공개유튜버", "PRIVATE", "ACTIVE", "AVAILABLE");
-
-        // when & then
-        assertThat(restaurantSearchQueryPort.existsPublicCreator(publicCreatorId)).isTrue();
-        assertThat(restaurantSearchQueryPort.existsPublicCreator(privateCreatorId)).isFalse();
-        assertThat(restaurantSearchQueryPort.existsPublicCreator(UUID.randomUUID())).isFalse();
-    }
-
-    @Test
     @DisplayName("district 필터는 지정한 자치구의 맛집만 반환한다")
     void search_district필터_지정한자치구만반환한다() {
         // given
@@ -174,33 +162,41 @@ class RestaurantSearchQueryAdapterIntegrationTest {
     }
 
     @Test
-    @DisplayName("creatorId 필터는 공개·유효한 방문 근거가 있는 맛집만 반환하고 중복 없이 한 번만 반환한다")
-    void search_creatorId필터_유효한방문근거가있는맛집만중복없이반환한다() {
+    @DisplayName("후보 ID 필터는 여러 후보 맛집을 중복 없이 반환한다")
+    void search_후보ID필터_여러후보맛집을중복없이반환한다() {
         // given
-        UUID visitedRestaurantId = insertRestaurant("방문맛집", MAPO_REGION_ID, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
-        UUID notVisitedRestaurantId =
+        UUID candidateRestaurantId1 =
+                insertRestaurant("후보맛집1", MAPO_REGION_ID, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
+        UUID candidateRestaurantId2 =
+                insertRestaurant("후보맛집2", MAPO_REGION_ID, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
+        UUID nonCandidateRestaurantId =
                 insertRestaurant("미방문맛집", MAPO_REGION_ID, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
-        UUID privatelyVisitedRestaurantId =
-                insertRestaurant("비공개관계맛집", MAPO_REGION_ID, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
 
-        UUID creatorId = insertCreator("맛집유튜버", "PUBLIC", "ACTIVE", "AVAILABLE");
-        String channelId = channelIdOf(creatorId);
-        UUID videoId1 = insertVideo(creatorId, channelId, "PUBLIC", "ACTIVE", "AVAILABLE");
-        UUID videoId2 = insertVideo(creatorId, channelId, "PUBLIC", "ACTIVE", "AVAILABLE");
-        // 같은 맛집을 서로 다른 영상 두 건으로 방문 처리해 중복 제거를 검증한다.
-        insertVisit(visitedRestaurantId, creatorId, videoId1, "PUBLIC", "ACTIVE");
-        insertVisit(visitedRestaurantId, creatorId, videoId2, "PUBLIC", "ACTIVE");
-        // 비공개 관계는 후보에서 제외되어야 한다.
-        insertVisit(privatelyVisitedRestaurantId, creatorId, videoId1, "PRIVATE", "ACTIVE");
+        // when
+        RestaurantSearchQueryResult result = restaurantSearchQueryPort.search(
+                criteria(null, null, null, Set.of(candidateRestaurantId1, candidateRestaurantId2), 1, 20));
+
+        // then
+        assertThat(result.totalElements()).isEqualTo(2);
+        assertThat(result.rows())
+                .extracting(RestaurantSearchRow::id)
+                .containsExactlyInAnyOrder(candidateRestaurantId1, candidateRestaurantId2);
+        assertThat(nonCandidateRestaurantId).isNotNull();
+    }
+
+    @Test
+    @DisplayName("빈 후보 ID 집합은 전체 조회가 아니라 안전한 빈 결과를 반환한다")
+    void search_빈후보ID집합_빈결과를반환한다() {
+        // given
+        insertRestaurant("공개맛집", MAPO_REGION_ID, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
 
         // when
         RestaurantSearchQueryResult result =
-                restaurantSearchQueryPort.search(criteria(null, null, null, creatorId, 1, 20));
+                restaurantSearchQueryPort.search(criteria(null, null, null, Set.of(), 1, 20));
 
         // then
-        assertThat(result.totalElements()).isEqualTo(1);
-        assertThat(result.rows()).extracting(RestaurantSearchRow::id).containsExactly(visitedRestaurantId);
-        assertThat(notVisitedRestaurantId).isNotNull();
+        assertThat(result.rows()).isEmpty();
+        assertThat(result.totalElements()).isZero();
     }
 
     @Test
@@ -210,14 +206,10 @@ class RestaurantSearchQueryAdapterIntegrationTest {
         UUID matchRestaurantId = insertRestaurant("공덕 한식당", MAPO_REGION_ID, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
         insertRestaurant("공덕 한식당2", GANGNAM_REGION_ID, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
         insertRestaurant("공덕 일식당", MAPO_REGION_ID, JAPANESE_CATEGORY_ID, "PUBLIC", "ACTIVE");
-        UUID creatorId = insertCreator("조합유튜버", "PUBLIC", "ACTIVE", "AVAILABLE");
-        String channelId = channelIdOf(creatorId);
-        UUID videoId = insertVideo(creatorId, channelId, "PUBLIC", "ACTIVE", "AVAILABLE");
-        insertVisit(matchRestaurantId, creatorId, videoId, "PUBLIC", "ACTIVE");
 
         // when
         RestaurantSearchQueryResult result = restaurantSearchQueryPort.search(
-                criteria("공덕", MAPO_REGION_ID, KOREAN_CATEGORY_ID, creatorId, 1, 20));
+                criteria("공덕", MAPO_REGION_ID, KOREAN_CATEGORY_ID, Set.of(matchRestaurantId), 1, 20));
 
         // then
         assertThat(result.totalElements()).isEqualTo(1);
@@ -282,8 +274,13 @@ class RestaurantSearchQueryAdapterIntegrationTest {
     }
 
     private RestaurantSearchCriteria criteria(
-            String query, UUID regionId, UUID foodCategoryId, UUID creatorId, int page, int size) {
-        return new RestaurantSearchCriteria(query, regionId, foodCategoryId, creatorId, page, size);
+            String query,
+            UUID regionId,
+            UUID foodCategoryId,
+            Set<UUID> candidateRestaurantIds,
+            int page,
+            int size) {
+        return new RestaurantSearchCriteria(query, regionId, foodCategoryId, candidateRestaurantIds, page, size);
     }
 
     private UUID insertRestaurant(
