@@ -13,5 +13,13 @@ public interface RestaurantRepositoryPort {
 
     Restaurant save(Restaurant restaurant);
 
+    /**
+     * Kakao place identity uniqueness is resolved without placing the PostgreSQL transaction into
+     * an aborted state on a concurrent insert.
+     */
+    Optional<Restaurant> insertIfAbsent(Restaurant restaurant);
+
     Optional<Restaurant> findById(UUID id);
+
+    Optional<Restaurant> findByKakaoPlaceId(String kakaoPlaceId);
 }
