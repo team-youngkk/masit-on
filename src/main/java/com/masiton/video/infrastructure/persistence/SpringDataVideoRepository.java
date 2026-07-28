@@ -4,6 +4,10 @@ import java.util.UUID;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+
+import jakarta.persistence.LockModeType;
 
 /**
  * video 테이블에 대한 Spring Data JPA Repository다.
@@ -11,4 +15,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
  */
 interface SpringDataVideoRepository extends JpaRepository<VideoJpaEntity, UUID> {
     Optional<VideoJpaEntity> findByExternalVideoId(String externalVideoId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select video from VideoJpaEntity video where video.id = :id")
+    Optional<VideoJpaEntity> findByIdForUpdate(UUID id);
 }

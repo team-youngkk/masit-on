@@ -66,6 +66,11 @@ class RestaurantPersistenceAdapter implements RestaurantRepositoryPort {
     }
 
     @Override
+    public Optional<Restaurant> findByIdForUpdate(UUID id) {
+        return springDataRestaurantRepository.findByIdForUpdate(id).map(RestaurantMapper::toDomain);
+    }
+
+    @Override
     public Optional<Restaurant> findByKakaoPlaceId(String kakaoPlaceId) {
         return springDataRestaurantRepository.findByKakaoPlaceId(kakaoPlaceId)
                 .map(RestaurantMapper::toDomain);

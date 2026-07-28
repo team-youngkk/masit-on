@@ -21,5 +21,7 @@ public interface RestaurantRepositoryPort {
 
     Optional<Restaurant> findById(UUID id);
 
+    Optional<Restaurant> findByIdForUpdate(UUID id);
+
     Optional<Restaurant> findByKakaoPlaceId(String kakaoPlaceId);
 }

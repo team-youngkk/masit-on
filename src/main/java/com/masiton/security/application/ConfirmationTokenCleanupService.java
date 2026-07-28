@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +20,7 @@ class ConfirmationTokenCleanupService {
     private final ConfirmationTokenRepositoryPort confirmationTokenRepository;
     private final Clock clock;
 
+    @Autowired
     ConfirmationTokenCleanupService(ConfirmationTokenRepositoryPort confirmationTokenRepository) {
         this(confirmationTokenRepository, Clock.systemUTC());
     }
