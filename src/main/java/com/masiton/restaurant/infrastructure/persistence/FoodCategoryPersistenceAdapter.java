@@ -32,4 +32,9 @@ class FoodCategoryPersistenceAdapter implements FoodCategoryRepositoryPort {
     public Optional<FoodCategory> findById(UUID id) {
         return springDataFoodCategoryRepository.findById(id).map(FoodCategoryMapper::toDomain);
     }
+
+    @Override
+    public Optional<FoodCategory> findByName(String name) {
+        return springDataFoodCategoryRepository.findByName(name).map(FoodCategoryMapper::toDomain);
+    }
 }

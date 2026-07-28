@@ -162,8 +162,8 @@ related_documents:
 
 | 오류 코드 | HTTP 상태 | 발생 조건 |
 |---|---:|---|
-| `INVALID_REQUEST` | 400 | 지원하지 않는 쿼리나 복수 값 형식 |
-| `INVALID_FIELD_VALUE` | 400 | 자치구·카테고리·유튜버·페이지·크기가 유효하지 않음 |
+| `INVALID_REQUEST` | 400 | 지원하지 않는 쿼리 파라미터 |
+| `INVALID_FIELD_VALUE` | 400 | 자치구·카테고리·유튜버·페이지·크기가 유효하지 않거나, 같은 필터를 반복·배열·쉼표 목록 등 복수 값 형식으로 전달함([필터링 계약](../common/filtering-contract.md) 2절) |
 | `INVALID_IDENTIFIER` | 400 | `creatorId` 형식이 잘못됨 |
 | `INTERNAL_SERVER_ERROR` | 500 | 예상하지 못한 내부 오류 |
 
