@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { Button } from '@/components/ui/Button'
@@ -54,6 +54,7 @@ export function RegistrationFlow({
   const [error, setError] = useState<string | null>(null)
   const [preview, setPreview] = useState<Preview | null>(null)
   const [created, setCreated] = useState<Record<string, unknown> | null>(null)
+  const previewGeneration = useRef(0)
 
   const previewMutation = useMutation({
     mutationFn: (body: Record<string, string | null>) =>
@@ -61,10 +62,6 @@ export function RegistrationFlow({
         method: 'POST',
         body: JSON.stringify(body),
       }),
-    onSuccess: (result) => {
-      setPreview(result)
-      setCreated(null)
-    },
   })
 
   const createMutation = useMutation({
@@ -80,6 +77,7 @@ export function RegistrationFlow({
   })
 
   function updateValue(name: string, value: string) {
+    previewGeneration.current += 1
     setValues((current) => ({ ...current, [name]: value }))
     setPreview(null)
     setCreated(null)
@@ -107,8 +105,20 @@ export function RegistrationFlow({
     setPreview(null)
     setCreated(null)
 
+    const generation = ++previewGeneration.current
+
     previewMutation.mutate(previewPayload(), {
+      onSuccess: (result) => {
+        if (generation !== previewGeneration.current) {
+          return
+        }
+        setPreview(result)
+        setCreated(null)
+      },
       onError: (reason) => {
+        if (generation !== previewGeneration.current) {
+          return
+        }
         setFieldErrors(fieldErrorsFor(reason))
         setError(messageFor(reason))
       },
