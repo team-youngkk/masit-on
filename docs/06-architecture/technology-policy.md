@@ -137,18 +137,18 @@ related_documents:
 5. 단위·통합·계약·배포 검증 중 영향받는 테스트를 실행한다.
 6. ADR 인덱스, 추적성, 정책과 구현을 함께 갱신한다.
 
-## 13. 실행 및 최종 배포 토폴로지 정책 (2026-07-27 변경)
+## 13. 실행 및 운영 배포 토폴로지 정책 (2026-07-28 변경)
 
-- 1차 MVP와 2차부터 4차까지의 확장 단계는 로컬 Docker 환경에서 Next.js, Spring Boot, PostgreSQL과 Redis를 통합 실행하고 검증한다.
-- AWS 운영 배포는 모든 확장 단계의 구현과 검증이 끝난 뒤 최종 배포 단계에서 수행한다.
-- 최종 배포는 단일 EC2 인스턴스(Nginx 리버스 프록시 + Next.js 프론트엔드 + Spring Boot 백엔드)를 사용하며 다중 리전·다중 인스턴스 고가용성 구성을 필수로 하지 않는다.
+- 1차 MVP 구현은 로컬 Docker 환경에서 Next.js, Spring Boot, PostgreSQL과 Redis를 통합 실행하고 검증한다.
+- M2에서 다음 확장 단계보다 먼저 최초 운영 환경을 제한 공개로 배포하고, 검증을 통과한 같은 환경을 계속 운영한다.
+- 최초 운영 배포는 단일 EC2 인스턴스(Nginx 리버스 프록시 + Next.js 프론트엔드 + Spring Boot 백엔드)를 사용하며 다중 리전·다중 인스턴스 고가용성 구성을 필수로 하지 않는다.
 - Nginx는 `/api/**`를 Spring Boot, 나머지 외부 경로를 Next.js로 전달하며 `/internal/**`은 인터넷에서 차단한다. 세부 경로와 인증 matcher는 [ADR-WEB-003](../07-adr/platform/web-003-routing-boundary.md)을 따른다.
 - 장애 발생 시 운영자가 인스턴스를 수동으로 재기동·교체하는 절차를 사용하며, ASG 기반 자동 복구는 도입하지 않는다.
-- ALB는 트래픽·가용성 요구가 늘어나는 확장 단계에서 도입 여부를 재검토할 확장 경로로 남겨두고, Blue-Green 배포와 ASG 다중 인스턴스 자동화는 Post-MVP로 보류한다.
-- 1차 MVP에서는 GitHub Actions 빌드·테스트 품질 게이트까지만 적용한다. ECR push와 EC2 배포 자동화는 최종 배포 단계에서 활성화한다.
-- 최종 배포 단계에서는 GitHub Actions → ECR → EC2 경로를 사용한다. ALB·Blue-Green 전환 자동화 범위는 배포 토폴로지가 확장될 때 별도로 설계한다.
-- 최종 배포 후 로그는 14일 보관하고, DB 백업은 일 1회 자동 스냅샷 후 7일 보관(RPO 최대 24시간)하며, 운영 알림은 CloudWatch 알람을 이메일/Slack으로 담당자 1명에게 통지한다.
-- 관련: [ADR-WEB-003](../07-adr/platform/web-003-routing-boundary.md), [docs/07-adr/adr-backlog.md](../07-adr/adr-backlog.md) 범위 충돌 검토, [RV-NFR-005](../01-requirements/non-functional-requirements.md#rv-nfr-005-목표-가용성과-복구-시간)·[RV-NFR-009](../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간)·[RV-NFR-010](../01-requirements/non-functional-requirements.md#rv-nfr-010-백업-주기와-복구-범위)·[RV-NFR-013](../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준).
+- ALB·Blue-Green·ASG 다중 인스턴스 자동화는 운영 근거가 생기는 확장 단계에서 재검토한다. 전환 시 Nginx의 경로 라우팅 책임을 ALB가 대체할지도 함께 결정한다.
+- GitHub Actions 빌드·테스트 품질 게이트는 전 단계에 적용하고, ECR push·EC2 승인 배포·Smoke Test는 M2부터 활성화한다.
+- M2부터 GitHub Actions → ECR → EC2 경로를 사용한다. ALB·Blue-Green 전환 자동화 범위는 배포 토폴로지가 확장될 때 별도로 설계한다.
+- M2부터 로그는 14일 보관하고, DB 백업은 일 1회 자동 스냅샷 후 7일 보관(RPO 최대 24시간)하며, 운영 알림은 CloudWatch 알람을 Slack으로 담당자 1명에게 통지한다.
+- 관련: [ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md), [ADR-WEB-003](../07-adr/platform/web-003-routing-boundary.md), [docs/07-adr/adr-backlog.md](../07-adr/adr-backlog.md) 범위 충돌 검토, [RV-NFR-005](../01-requirements/non-functional-requirements.md#rv-nfr-005-목표-가용성과-복구-시간)·[RV-NFR-009](../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간)·[RV-NFR-010](../01-requirements/non-functional-requirements.md#rv-nfr-010-백업-주기와-복구-범위)·[RV-NFR-013](../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준).
 
 ## 14. 위반 검증 방법
 

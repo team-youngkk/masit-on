@@ -1,7 +1,7 @@
 ---
 id: ADR-DEPLOY-001
 title: 단계별 로컬 검증과 최종 AWS 배포 순서
-status: Accepted
+status: Superseded
 decision_date: 2026-07-27
 owners:
   - 이우람
@@ -20,14 +20,14 @@ related_documents:
   - runtime-001-docker.md
   - ../quality/obs-001-logging-observability.md
 supersedes: []
-superseded_by: null
+superseded_by: ADR-DEPLOY-002
 ---
 
 # ADR-DEPLOY-001 단계별 로컬 검증과 최종 AWS 배포 순서
 
 ## 1. 상태
 
-Accepted
+Superseded by [ADR-DEPLOY-002](deploy-002-validation-deployment-before-expansion.md)
 
 ## 2. 결정 요약
 
