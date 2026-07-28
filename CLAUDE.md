@@ -96,10 +96,9 @@ docker compose up -d postgres redis wiremock
 docker compose up -d --build
 ```
 
-빌드와 테스트를 실행한다. 통합 테스트는 Testcontainers를 쓰고 일부 통합 테스트는 Compose로 띄운 PostgreSQL·Redis에 직접 붙으므로, 의존 서비스를 먼저 올린 상태에서 실행한다.
+빌드와 테스트를 실행한다. 통합 테스트는 Testcontainers로 PostgreSQL·Redis를 실행 시점에 격리해 사용하므로 Docker만 실행 중이면 된다.
 
 ```bash
-docker compose up -d postgres redis wiremock
 ./gradlew clean build
 ```
 

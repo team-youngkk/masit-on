@@ -30,6 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 검증한다(query-composition.md 5절에 따라 이관됨).
  */
 @SpringBootTest
+@com.masiton.test.TestProfile
 @Testcontainers
 @DisplayName("Visit 공개·유효 조합 판정")
 class VisitQueryIntegrationTest {

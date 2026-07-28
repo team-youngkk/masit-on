@@ -28,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * visit.VisitQueryIntegrationTest가 검증한다.
  */
 @SpringBootTest
+@com.masiton.test.TestProfile
 @Testcontainers
 @DisplayName("맛집 상세 콘텐츠(방문 유튜버·관련 영상) 조회")
 class VisitContentQueryIntegrationTest {

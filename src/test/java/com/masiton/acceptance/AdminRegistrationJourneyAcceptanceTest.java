@@ -32,6 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
+@com.masiton.test.TestProfile
 @AutoConfigureMockMvc
 @Testcontainers
 @DisplayName("관리자 데이터 등록 사용자 여정 인수")

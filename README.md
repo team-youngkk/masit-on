@@ -64,7 +64,7 @@ npm --prefix frontend run dev
 | 로컬 | `src/main/resources/application-local.yml` | PostgreSQL·Redis 접속값, Kakao·YouTube를 WireMock으로 돌리는 `masiton.integration.*` |
 | 테스트 | `src/test/resources/application-test.yml` | 테스트 접속값, 테스트 전용 JWT 픽스처, 외부 호출 fail-closed 설정 |
 
-`bootRun`은 `local` 프로파일로 실행되고(`build.gradle`), 컨테이너 실행은 `SPRING_PROFILES_ACTIVE=local`을 받는다. 테스트는 `src/test/resources/application.properties`가 `test` 프로파일을 활성화하므로 Gradle과 IDE 단건 실행이 같게 동작한다. 프로파일을 지정하지 않은 실행은 접속값이 없어 기동에 실패한다.
+`bootRun`은 `local` 프로파일로 실행되고(`build.gradle`), 컨테이너 실행은 `SPRING_PROFILES_ACTIVE=local`을 받는다. Spring 컨텍스트 테스트는 공통 `@TestProfile`이 `test` 프로파일을 활성화하므로 셸 환경·Gradle·IDE 단건 실행에서 동일하게 동작한다. 프로파일을 지정하지 않은 애플리케이션 실행은 접속값이 없어 기동에 실패한다.
 
 각 프로파일 계층은 공통 계층에서 상속하는 값을 다시 선언하지 않는다. 규칙 원문은 [구현 컨벤션 4.5절](docs/06-architecture/implementation-conventions.md#45-설정-계층)이며 `ConfigurationLayeringTest`와 `EnvironmentInvariantIntegrationTest`가 검증한다.
 
@@ -90,7 +90,7 @@ curl http://localhost:8080/internal/health/dependencies
 .\gradlew.bat clean build
 ```
 
-통합 테스트가 Testcontainers로 PostgreSQL·Redis·WireMock 컨테이너를 띄우므로 Docker가 실행 중이어야 한다. 테스트는 실제 Kakao·YouTube API를 호출하지 않는다. 일부 통합 테스트는 Compose로 띄운 PostgreSQL·Redis에 직접 붙으므로 `docker compose up -d postgres redis wiremock`을 먼저 실행한다.
+통합 테스트가 Testcontainers로 PostgreSQL·Redis·WireMock 컨테이너를 테스트 실행 시점에 띄우므로 Docker만 실행 중이면 된다. 테스트는 Compose 서비스나 실제 Kakao·YouTube API에 연결하지 않는다.
 
 프론트엔드까지 포함한 병합 전 필수 명령은 다음 네 개다.
 

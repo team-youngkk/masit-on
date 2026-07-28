@@ -25,6 +25,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * 다른 테스트가 만든 데이터에 의존하지 않는다.
  */
 @SpringBootTest
+@com.masiton.test.TestProfile
 @Testcontainers
 @DisplayName("제약 조건 위반")
 class ConstraintViolationIntegrationTest {

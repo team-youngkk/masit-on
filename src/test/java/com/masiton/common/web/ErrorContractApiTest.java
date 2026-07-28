@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.jayway.jsonpath.JsonPath;
 import com.masiton.common.observability.TraceIdFilter;
+import com.masiton.test.FullContextIntegrationTest;
 
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -37,7 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @DisplayName("공통 오류 계약")
-class ErrorContractApiTest {
+class ErrorContractApiTest extends FullContextIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;

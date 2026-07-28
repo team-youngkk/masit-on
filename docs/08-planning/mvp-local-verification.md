@@ -55,7 +55,7 @@ related_documents:
 | 로컬 | `src/main/resources/application-local.yml` | PostgreSQL·Redis 접속값, Kakao·YouTube를 WireMock으로 돌리는 `masiton.integration.*` |
 | 테스트 | `src/test/resources/application-test.yml` | 테스트 접속값, 테스트 전용 JWT 픽스처, 외부 호출 fail-closed 설정 |
 
-`bootRun`은 `build.gradle`이 `local`을, 컨테이너 실행은 Compose가 `SPRING_PROFILES_ACTIVE=local`을 지정한다. 테스트는 `src/test/resources/application.properties`가 `test` 프로파일을 활성화하므로 Gradle과 IDE 단건 실행 결과가 같다. 프로파일을 지정하지 않은 실행은 접속값이 없어 기동에 실패한다(fail closed). 프로파일 계층은 공통 계층에서 상속하는 값을 다시 선언하지 않으며, 규칙 원문은 [구현 컨벤션 4.5절](../06-architecture/implementation-conventions.md#45-설정-계층)에 있다.
+`bootRun`은 `build.gradle`이 `local`을, 컨테이너 실행은 Compose가 `SPRING_PROFILES_ACTIVE=local`을 지정한다. Spring 컨텍스트 테스트는 공통 `@TestProfile`이 우선순위 높은 `@ActiveProfiles("test")`를 적용하므로 셸 환경·Gradle·IDE 단건 실행 결과가 같다. 프로파일을 지정하지 않은 애플리케이션 실행은 접속값이 없어 기동에 실패한다(fail closed). 프로파일 계층은 공통 계층에서 상속하는 값을 다시 선언하지 않으며, 규칙 원문은 [구현 컨벤션 4.5절](../06-architecture/implementation-conventions.md#45-설정-계층)에 있다.
 
 ### 3.2 수정한 결함
 
@@ -71,7 +71,7 @@ related_documents:
 | `EnvironmentInvariantIntegrationTest` | `test` 프로파일로 기동한 실제 컨텍스트에서 JPA 불변값과 Refresh 쿠키 불변값이 유지된다. Testcontainers PostgreSQL을 써서 공유 DB 상태에 의존하지 않는다 |
 | 컨테이너 실행 로그 | `masiton-app`이 `The following 1 profile is active: "local"`로 기동해 로컬 계층이 적용됨을 확인했다 |
 
-검증 도중 프로파일 활성화를 Gradle `test` 태스크에만 두면 IDE 단건 실행에서 `local` 프로파일이 적용돼 JWT 키가 비어 컨텍스트 기동이 실패하는 것을 재현했다. 활성화 지점을 `src/test/resources/application.properties`로 옮겨 실행기와 무관하게 같은 프로파일이 적용되도록 고쳤다.
+검증 도중 프로파일 활성화를 Gradle `test` 태스크나 Config Data에만 두면 IDE 단건 실행 또는 셸의 `SPRING_PROFILES_ACTIVE`에 따라 `local` 프로파일이 적용돼 JWT 키가 비어 컨텍스트 기동이 실패하는 것을 재현했다. 모든 Spring 컨텍스트 테스트에 공통 `@TestProfile`을 적용해 실행기와 셸 상태에 무관하게 `test` 프로파일을 사용하도록 고쳤다.
 
 ## 4. 로컬 실행 절차 재현
 
@@ -143,7 +143,7 @@ related_documents:
 | 등록 결과가 목록·필터·상세에 반영 | 통과 | 4절 5번, `AdminRegistrationJourneyAcceptanceTest` |
 | 확장 기능 미노출 | 통과 | `next build` Route 10개에 지도·찜·테마·일반 로그인 Route가 없다 |
 | 비밀번호·Token·API Key 원문 부재 | 통과 | 6절 |
-| 핵심 단위·통합·계약·인수 테스트 통과 | 통과 | 2절. 226개 테스트 실패 0 |
+| 핵심 단위·통합·계약·인수 테스트 통과 | 통과 | 2절. 229개 테스트 실패 0 |
 | 지정 화면 폭에서 핵심 흐름 완료 | 통과 | 5절 |
 | AWS 리소스 미생성 | 통과 | 로컬 Docker만 사용했고 AWS 관련 설정·자원이 없다 |
 
@@ -161,7 +161,6 @@ related_documents:
 | YouTube API Key가 query string으로 전달된다 | 요청 URI를 남기는 로깅·프록시가 추가되면 Key가 기록된다 | YouTube Adapter 경로에 URI를 남기는 로깅을 추가하지 않는다 |
 | Actuator 노출 범위를 넓히면 `configprops`·`env`로 JWT 개인키에 도달할 수 있다 | 비밀키 노출 | `management.endpoints.web.exposure.include`를 `health`에서 넓히지 않는다 |
 | `.env`를 예전 파일로 재사용하면 초기화 스크립트가 JWT 값을 기록하지 못한다 | 관리자 인증이 조용히 실패한다 | README에 `.env.example`에서 새로 복사하고 `JWT_*` 세 줄을 확인하도록 명시했다 |
-| 일부 `@SpringBootTest`가 Testcontainers 없이 Compose PostgreSQL에 직접 붙는다(`MasitOnApplicationTest`, `ErrorContractApiTest`, `SecurityBoundaryApiTest`) | 개발자별 공유 DB 상태가 테스트 결과에 영향을 줄 수 있다. ADR-TEST-001의 격리 원칙과 어긋난다 | `T-14`가 추가한 `EnvironmentInvariantIntegrationTest`는 Testcontainers로 만들었다. 기존 세 테스트의 전환은 각 소유자 후속 과제로 남긴다 |
 | 정식 성능 p95 측정을 하지 않았다 | 성능 목표 미확인 | 구현 계획 10절대로 후속 안정화 과제로 남긴다 |
 
 ## 10. 검증하지 않은 항목

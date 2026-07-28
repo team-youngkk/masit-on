@@ -27,6 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 근거: docs/05-specs/api/discovery/restaurant-discovery-api.md
  */
 @SpringBootTest
+@com.masiton.test.TestProfile
 @AutoConfigureMockMvc
 @Testcontainers
 @DisplayName("맛집 검색 API")

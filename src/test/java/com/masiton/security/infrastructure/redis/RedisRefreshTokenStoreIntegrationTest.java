@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
+@com.masiton.test.TestProfile
 @Testcontainers
 @DisplayName("Redis Refresh Token 저장소")
 class RedisRefreshTokenStoreIntegrationTest {

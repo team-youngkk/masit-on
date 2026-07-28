@@ -43,6 +43,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * query-composition.md 6·11절이 요구하는 "상세 정상 경로 쿼리 수 2회"를 자동으로 검증하기 위함이다.
  */
 @SpringBootTest
+@com.masiton.test.TestProfile
 @AutoConfigureMockMvc
 @Testcontainers
 @DisplayName("맛집 상세 조회 API")

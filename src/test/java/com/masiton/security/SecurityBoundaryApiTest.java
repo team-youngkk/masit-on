@@ -8,6 +8,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.masiton.test.FullContextIntegrationTest;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -16,7 +18,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @DisplayName("관리자 API 보안 경계")
-class SecurityBoundaryApiTest {
+class SecurityBoundaryApiTest extends FullContextIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;

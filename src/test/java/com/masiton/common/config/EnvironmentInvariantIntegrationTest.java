@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 결과를 Environment에서 확인한다.
  */
 @SpringBootTest
+@com.masiton.test.TestProfile
 @Testcontainers
 @DisplayName("환경별 운영 불변값")
 class EnvironmentInvariantIntegrationTest {
