@@ -1,0 +1,178 @@
+'use client'
+
+import { useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+
+import { Button } from '@/components/ui/Button'
+import { Field } from '@/components/ui/Field'
+import { adminJson, fieldErrorsFor, messageFor } from '@/lib/admin/api'
+
+import styles from './admin.module.css'
+
+type Input = {
+  name: string
+  label: string
+  type?: 'text' | 'url' | 'tel'
+  required?: boolean
+}
+
+type Preview = {
+  decision: 'READY' | 'DUPLICATE' | 'REVIEW_REQUIRED'
+  confirmationToken: string | null
+  expiresAt: string | null
+  candidate: Record<string, unknown> | null
+  existingResource: Record<string, unknown> | null
+}
+
+type RegistrationFlowProps = {
+  inputs: Input[]
+  previewPath: string
+  createPath: string
+  resourceName: string
+}
+
+function formatRecord(record: Record<string, unknown> | null): string | null {
+  if (!record) {
+    return null
+  }
+
+  return Object.entries(record)
+    .filter(([, value]) => value !== null && value !== undefined && value !== '')
+    .map(([key, value]) => `${key}: ${String(value)}`)
+    .join('\n')
+}
+
+export function RegistrationFlow({
+  inputs,
+  previewPath,
+  createPath,
+  resourceName,
+}: RegistrationFlowProps) {
+  const queryClient = useQueryClient()
+  const [values, setValues] = useState<Record<string, string>>({})
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [error, setError] = useState<string | null>(null)
+  const [preview, setPreview] = useState<Preview | null>(null)
+  const [created, setCreated] = useState<Record<string, unknown> | null>(null)
+
+  const previewMutation = useMutation({
+    mutationFn: (body: Record<string, string>) =>
+      adminJson<Preview>(previewPath, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    onSuccess: (result) => {
+      setPreview(result)
+      setCreated(null)
+    },
+  })
+
+  const createMutation = useMutation({
+    mutationFn: (confirmationToken: string) =>
+      adminJson<Record<string, unknown>>(createPath, {
+        method: 'POST',
+        body: JSON.stringify({ confirmationToken }),
+      }),
+    onSuccess: (result) => {
+      setCreated(result)
+      void queryClient.invalidateQueries({ queryKey: ['admin'] })
+    },
+  })
+
+  function updateValue(name: string, value: string) {
+    setValues((current) => ({ ...current, [name]: value }))
+  }
+
+  function handlePreview(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError(null)
+    setFieldErrors({})
+    setPreview(null)
+    setCreated(null)
+
+    previewMutation.mutate(values, {
+      onError: (reason) => {
+        setFieldErrors(fieldErrorsFor(reason))
+        setError(messageFor(reason))
+      },
+    })
+  }
+
+  function handleCreate() {
+    if (!preview?.confirmationToken) {
+      return
+    }
+
+    setError(null)
+    setFieldErrors({})
+    createMutation.mutate(preview.confirmationToken, {
+      onError: (reason) => {
+        setFieldErrors(fieldErrorsFor(reason))
+        setError(messageFor(reason))
+      },
+    })
+  }
+
+  const candidate = formatRecord(preview?.candidate ?? null)
+  const existing = formatRecord(preview?.existingResource ?? null)
+  const createdResource = formatRecord(created)
+
+  return (
+    <div className={styles.flow}>
+      <form className={styles.form} onSubmit={handlePreview} noValidate>
+        {inputs.map((input) => (
+          <Field
+            key={input.name}
+            label={input.label}
+            name={input.name}
+            type={input.type ?? 'text'}
+            value={values[input.name] ?? ''}
+            onChange={(event) => updateValue(input.name, event.target.value)}
+            error={fieldErrors[input.name]}
+            required={input.required ?? true}
+          />
+        ))}
+        {error ? <p className={styles.error} role="alert">{error}</p> : null}
+        <Button type="submit" disabled={previewMutation.isPending}>
+          {previewMutation.isPending ? '미리보기 확인 중…' : '미리보기 확인'}
+        </Button>
+      </form>
+
+      {preview ? (
+        <section className={styles.result} aria-live="polite">
+          <h2>미리보기 결과</h2>
+          {preview.decision === 'READY' ? (
+            <>
+              <p>등록할 {resourceName} 정보를 확인했습니다.</p>
+              {candidate ? <pre>{candidate}</pre> : null}
+              {preview.expiresAt ? <p>확인 유효 시간: {preview.expiresAt}</p> : null}
+              <Button onClick={handleCreate} disabled={createMutation.isPending}>
+                {createMutation.isPending ? '등록 중…' : '확정 등록'}
+              </Button>
+            </>
+          ) : null}
+          {preview.decision === 'DUPLICATE' ? (
+            <>
+              <p className={styles.error}>이미 등록된 {resourceName}입니다. 중복 등록할 수 없습니다.</p>
+              {existing ? <pre>{existing}</pre> : null}
+            </>
+          ) : null}
+          {preview.decision === 'REVIEW_REQUIRED' ? (
+            <>
+              <p className={styles.notice}>자동 등록할 수 없어 검토가 필요합니다. 내용을 확인한 뒤 다시 시도해 주세요.</p>
+              {candidate ? <pre>{candidate}</pre> : null}
+            </>
+          ) : null}
+        </section>
+      ) : null}
+
+      {createdResource ? (
+        <section className={styles.success} aria-live="polite">
+          <h2>등록 완료</h2>
+          <p>{resourceName} 등록을 완료했습니다. 방문 관계 등록에 사용할 식별자를 확인해 주세요.</p>
+          <pre>{createdResource}</pre>
+        </section>
+      ) : null}
+    </div>
+  )
+}
