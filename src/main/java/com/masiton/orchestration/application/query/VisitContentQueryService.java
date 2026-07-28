@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.masiton.orchestration.application.port.in.FindValidVisitContentByRestaurantQuery;
@@ -25,9 +26,17 @@ import com.masiton.orchestration.application.port.out.VisitContentRow;
  * <p>Row의 Creator 필드는 항상 채워지지만 Video 필드는 그 Visit의 영상이 공개·유효 조건을
  * 만족하지 못하면 Port 구현에서 NULL로 온다(restaurant-detail-api.md 7절: 공개 영상이 없어도
  * 유효한 유튜버는 visitedBy에 표시). videoId가 NULL인 Row는 videos에 반영하지 않는다.
+ *
+ * <p>{@code RestaurantDetailQueryService}가 기본 정보 조회와 함께 이 메서드를 호출할 때도 항상
+ * 읽기 전용 트랜잭션 경계는 지켜야 한다(transaction-boundaries.md 2·5절). 그래서 propagation을
+ * {@link Propagation#REQUIRES_NEW}로 둔다: 이 호출이 바깥의 상세 조회 트랜잭션에 참여(REQUIRED)하면
+ * 이 메서드가 던진 예외로 바깥 트랜잭션이 rollback-only로 표시돼, 호출자가 예외를 catch해 정상
+ * 반환해도 바깥 트랜잭션 커밋 시점에 {@code UnexpectedRollbackException}이 발생한다.
+ * REQUIRES_NEW로 독립된 물리 트랜잭션을 강제하면 이 메서드의 실패가 자신만의 트랜잭션 안에서
+ * 끝나고, 바깥 상세 조회 트랜잭션은 영향받지 않는다.
  */
 @Service
-@Transactional(readOnly = true)
+@Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
 public class VisitContentQueryService implements FindValidVisitContentByRestaurantQuery {
 
     private final RestaurantDetailContentQueryPort restaurantDetailContentQueryPort;

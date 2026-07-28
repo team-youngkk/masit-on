@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.masiton.common.web.BusinessException;
 import com.masiton.orchestration.application.port.in.FindValidVisitContentByRestaurantQuery;
@@ -26,16 +27,16 @@ import com.masiton.orchestration.application.port.in.VisitedCreatorView;
  * 콘텐츠 Port 실패는 기본 정보 조회 실패와 분리해 전체 요청을 실패시키지 않고
  * {@link ContentStatus#TEMPORARILY_UNAVAILABLE}로 격리한다.
  *
- * <p>이 메서드 자체에는 의도적으로 {@code @Transactional}을 두지 않는다.
- * {@code FindValidVisitContentByRestaurantQuery} 구현체가 이미 자신의 public 메서드에
- * {@code @Transactional(readOnly = true)}를 갖고 있어(transaction-boundaries.md 5절: "상세는
- * 기본 정보와 콘텐츠를 분리 조회해 콘텐츠 실패를 격리한다"), 이 메서드까지 트랜잭션을 열면 같은
- * 물리 트랜잭션에 참여(REQUIRED)하게 된다. 그 상태에서 콘텐츠 호출이 던진 예외를 이 메서드가
- * catch해 정상 반환해도, 참여 트랜잭션은 이미 rollback-only로 표시돼 있어 바깥 트랜잭션 커밋
- * 시점에 {@code UnexpectedRollbackException}이 발생해 계약과 다른 500으로 이어진다. 트랜잭션을
- * 열지 않으면 콘텐츠 조회가 자신만의 독립된 트랜잭션을 시작·종료하므로 실패가 격리된다.
+ * <p>transaction-boundaries.md 2·5절: 공개 상세 Query의 트랜잭션 경계는 이 Query Service의
+ * public 메서드이며 읽기 전용이다. 콘텐츠 조회({@code VisitContentQueryService})는 자신의
+ * {@code @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)}로 독립된
+ * 물리 트랜잭션을 강제하므로, 이 메서드가 참여(REQUIRED)하는 바깥 트랜잭션과 별개다. 콘텐츠
+ * 호출이 예외를 던져도 그 실패는 콘텐츠 쪽 트랜잭션 안에서 끝나고, 이 메서드가 예외를 catch해
+ * 정상 반환하면 바깥 트랜잭션은 rollback-only로 표시되지 않아 정상 커밋된다
+ * ({@code UnexpectedRollbackException} 없음).
  */
 @Service
+@Transactional(readOnly = true)
 public class RestaurantDetailQueryService implements GetRestaurantDetailQuery {
 
     private static final Logger log = LoggerFactory.getLogger(RestaurantDetailQueryService.class);
