@@ -53,3 +53,9 @@ tasks.named('test') {
         events 'passed', 'skipped', 'failed'
     }
 }
+
+tasks.named('bootRun') {
+    // 로컬 개발 루프의 접속값과 WireMock 엔드포인트는 local 프로파일에만 있다.
+    // 프로파일을 명시하지 않은 실행은 접속값이 없어 기동에 실패해야 한다(fail closed).
+    systemProperty 'spring.profiles.active', System.getProperty('spring.profiles.active', 'local')
+}

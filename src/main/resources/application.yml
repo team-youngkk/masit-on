@@ -2,17 +2,12 @@ spring:
   application:
     name: masit-on
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/masiton}
-    username: ${DB_USERNAME:masiton}
-    password: ${DB_PASSWORD:masiton_local}
     hikari:
       # 상태 확인이 저장소 장애를 유한 시간 안에 DOWN으로 보고해야 하므로 기본값(30s)보다 낮춘다.
       # 콜드 스타트 동시 기동을 견디도록 여유를 둔 값이다. (NFR-AVAILABILITY-001)
       connection-timeout: 10000
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
       # 같은 이유로 유한 상한을 둔다. Redis는 Refresh Token 조회 경로라 지연 허용치가 더 짧다.
       timeout: 2s
       connect-timeout: 2s

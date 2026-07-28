@@ -23,7 +23,7 @@ related_documents:
 
 유튜버가 방문한 맛집을 지역·음식 종류·유튜버별로 탐색하는 서비스. 4인 팀의 1차 MVP를 구현 중이다.
 
-**현재 상태: 백엔드 실행 기반만 있다.** `T-01`로 Gradle·Spring Boot 스캐폴딩, Docker Compose 의존 서비스와 헬스체크가 생겼다. 도메인 패키지(`restaurant`, `creator`, `video`, `visit`, `orchestration`, `security`)와 Flyway 마이그레이션, 프론트엔드(`package.json`)는 아직 없다. 실행 방법은 5절을 따른다.
+**현재 상태: 1차 MVP 구현이 `T-14` 최종 검증 단계에 있다.** 백엔드 도메인 패키지(`restaurant`, `creator`, `video`, `visit`, `orchestration`, `security`, `common`), Flyway `V1`~`V5`, 관리자 인증·등록, 공개 탐색·상세, `frontend/`의 Next.js 화면이 모두 있다. 실행 방법은 5절을 따르고, 최근 실행·회귀 검증 결과는 [로컬 실행·회귀 검증 결과](docs/08-planning/mvp-local-verification.md)에 있다.
 
 ## 2. 문서가 계약이다
 
@@ -88,15 +88,18 @@ docker compose up -d postgres redis wiremock
 ./gradlew bootRun
 ```
 
+관리자 인증에 필요한 로컬 JWT 키와 관리자 계정 생성 절차, 프론트엔드 실행은 [README](README.md)를 따른다.
+
 애플리케이션까지 컨테이너로 통합 실행한다.
 
 ```bash
 docker compose up -d --build
 ```
 
-빌드와 테스트를 실행한다. 통합 테스트는 Testcontainers를 쓰므로 Docker가 떠 있어야 한다.
+빌드와 테스트를 실행한다. 통합 테스트는 Testcontainers를 쓰고 일부 통합 테스트는 Compose로 띄운 PostgreSQL·Redis에 직접 붙으므로, 의존 서비스를 먼저 올린 상태에서 실행한다.
 
 ```bash
+docker compose up -d postgres redis wiremock
 ./gradlew clean build
 ```
 
@@ -119,6 +122,8 @@ docker compose down -v
 ```bash
 DB_URL=jdbc:postgresql://localhost:15432/masiton REDIS_PORT=16379 ./gradlew bootRun
 ```
+
+WireMock 포트를 바꿨다면 `KAKAO_BASE_URL`, `YOUTUBE_BASE_URL`도 같이 넘긴다. 설정은 공통·`local`·`test` 세 계층이며 `bootRun`은 `local`, 테스트는 `test` 프로파일을 쓴다. 프로파일을 지정하지 않은 실행은 접속값이 없어 기동에 실패한다. 계층 규칙은 [구현 컨벤션 4.5절](docs/06-architecture/implementation-conventions.md#45-설정-계층)에 있다.
 
 `/internal/**`은 로컬 컨테이너 네트워크 전용이며 최종 배포에서 인터넷 진입점에 노출하지 않는다([ADR-WEB-003](docs/07-adr/platform/web-003-routing-boundary.md)).
 

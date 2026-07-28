@@ -16,8 +16,8 @@ class MasitOnApplicationTest {
     private ApplicationContext applicationContext;
 
     @Test
-    @DisplayName("의존 서비스에 연결하지 않고도 컨텍스트가 기동한다")
-    void 컨텍스트기동_의존서비스없음_성공() {
+    @DisplayName("로컬 의존 서비스가 떠 있으면 컨텍스트가 기동한다")
+    void 컨텍스트기동_로컬의존서비스실행중_성공() {
         assertThat(applicationContext).isNotNull();
         assertThat(applicationContext.getBean(MasitOnApplication.class)).isNotNull();
     }

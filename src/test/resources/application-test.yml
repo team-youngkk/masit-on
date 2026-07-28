@@ -8,37 +8,19 @@ spring:
       host: localhost
       port: 6379
 
-management:
-  endpoints:
-    web:
-      base-path: /internal
-      exposure:
-        include: health
-  endpoint:
-    health:
-      access: read_only
-      show-details: never
-      show-components: always
-      group:
-        live:
-          include: ping
-        ready:
-          include: db
-        dependencies:
-          include: db,redis
-  health:
-    defaults:
-      enabled: false
-    ping:
-      enabled: true
-    db:
-      enabled: true
-    redis:
-      enabled: true
-
 masiton:
+  integration:
+    # 테스트는 닫힌 포트를 가리켜 실패 시 실제 Kakao/YouTube로 나가지 않고 즉시 연결 실패로
+    # fail closed 한다. WireMock이 필요한 테스트는 @DynamicPropertySource로 실제 URL을 덮어쓴다.
+    kakao:
+      base-url: http://localhost:1
+      rest-api-key: test-only-non-secret-key
+    youtube:
+      base-url: http://localhost:1
+      api-key: test-only-non-secret-key
   security:
     jwt:
+      # 로컬 테스트 전용 RSA 픽스처다. 테스트 밖에서는 절대 사용하지 않는다.
       key-id: test-1
       private-key-pem: MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDKpNkmwW7t185jpM7Y97ooj/3Jx+hDtECmJyzzSKZn0S2LQKDo/EiX8AUupVh3oxgyMx5WxBcqbA9xM8PhemtMz5uiv9d5DFdH7KCFoD2N6ZJAstXMfRgKAQ6baZpTKmg8FA5byBceJNxhlnc0FtWbWpJEp6BqRu/L4gbmHLPMhrDxm5QjVmp6TcKcCbT5dcmZrIGsCLBOEPnm8XQi2YKGm9DCvwPj3htOUC5LOYbSMpIFX5pG/uPPUy06mHKdnhHKCb/JUKX9sR+0jpYt5OGWD4JyftZO5Bj2tvw/smFVaowCYuzZN6/t53pb0ZmWxMF0l/WCMmaTLHNxo8uRO9PLAgMBAAECggEABGbzxeXcDFp5hAYJOk+Zx/zMy7MS81Msnlw2ghISqPaAPnvib8oScT6ISXzTdBHjQJMf6YAFn5wzJhROTcBawvnozLtnKZy563jGY4pZTyzP5D9Rg3ydZsY8GrMyF444L0OH3+vz8jZk+54ieJhQZQYULF3WqPuU62ej57oGGLJm3Y9KyuK5FCJ0nI4O4JXDE3nsz3v+EaUg4EmbtUZDMWDuNnwm+NqJjdt++8Wzh0JIb8s5c7+y9oaUQU8EyulBy9m2Nzg/wbRx8n91q1FsR6exKdeV2f90dSGd7bH0YF5Eiyxtl7koucn339ziTWjP0hh3ebnnHFWiKfInVQIMBQKBgQDdrPmBs+Y0LpSRjY5hSHxVI3M1KmopvRSFt1VjpIO4wV1nTrPOE9JrpQNLw7HE24an908+5Ccko7VbdZIPLUBA/hy+OocomDc2dppdJI1pkN1CeJ4vwtRkhD6ASfX7CpA86t0uQOvotHAsswnNpvTMgQn8jMEWZ9cyHTZO14jZlwKBgQDqBXjr3o9hUJJ8z1rUMi5c6tm2aiKWvifbYLzF8jGraR8N1fC7QD9TveXc0Sqh38LlKw6IWB3fLDPJe4EJ7C1IXvm+Ma+nqShWpozRczwsbki9v86dz6uAxXWBrQEqTXhYOA5DxfWRJWHJSxG992p3AkiWefNrWa5RI5ryq/cV7QKBgQC1PQ0p3DnkhAj4D/JO24K74SX6W9k8ktjKkp//vavsTDvfkNs1K8OoOtu9ABzBxHINtgdWdhcCv84xHqjyO58DBD/fz95ddEYAA2wlpxLvMn+ULyW2Cua3399x6AZy36oaBDQd8vpt4cis4xyqxUv0P7Q4haQAe5nX4UZbo6DBtQKBgAg4VP0D/klOyTZ1Gh2l/Zbp8OfFZp2g5EmCZl8VmMUKljqoLyKEqTTJ0M8m0baJ45ClKIeFgNcb+F21ZtzwXM7T9zXFDQR4nqAcjYm14IE3BnsTx7AnYUDOrsf1SbswqW9/2JBs3alRhNPLPT5M+IJhpCcU9YXpyoOzGng3riApAoGANc8l+AYBZKagfT3Hb2Ia+fYPEuC8MZuFG63prTLfa2qCMhMj+3lYkKxFV6u0p6Sq5YElt0Mn29fB/319DIMhLF6mH+SGrxRm3cZrZPBbb3tf9rm9mY4+434DC2/CavKFuZ6cFo/TVIAkOlGwgyj+YStrwcFo6RellSub3KqPQiU=
       public-key-pem: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyqTZJsFu7dfOY6TO2Pe6KI/9ycfoQ7RApics80imZ9Eti0Cg6PxIl/AFLqVYd6MYMjMeVsQXKmwPcTPD4XprTM+bor/XeQxXR+yghaA9jemSQLLVzH0YCgEOm2maUypoPBQOW8gXHiTcYZZ3NBbVm1qSRKegakbvy+IG5hyzzIaw8ZuUI1Zqek3CnAm0+XXJmayBrAiwThD55vF0ItmChpvQwr8D494bTlAuSzmG0jKSBV+aRv7jz1MtOphynZ4Rygm/yVCl/bEftI6WLeThlg+Ccn7WTuQY9rb8P7JhVWqMAmLs2Tev7ed6W9GZlsTBdJf1gjJmkyxzcaPLkTvTywIDAQAB

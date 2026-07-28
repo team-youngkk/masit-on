@@ -56,11 +56,14 @@ services:
       dockerfile: Dockerfile
     container_name: masiton-app
     environment:
+      SPRING_PROFILES_ACTIVE: local
       DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-masiton}
       DB_USERNAME: ${POSTGRES_USER:-masiton}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-masiton_local}
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      KAKAO_BASE_URL: http://wiremock:8080
+      YOUTUBE_BASE_URL: http://wiremock:8080
       JWT_KEY_ID: ${JWT_KEY_ID}
       JWT_PRIVATE_KEY_PEM: ${JWT_PRIVATE_KEY_PEM}
       JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM}

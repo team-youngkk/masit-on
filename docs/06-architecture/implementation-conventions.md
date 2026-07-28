@@ -86,6 +86,17 @@ related_documents:
 - N+1 문제는 Query Adapter의 fetch join, EntityGraph 또는 Projection으로 해결한다.
 - 여러 도메인의 조회 결과 조합은 [조회 조합](query-composition.md)의 책임과 제한을 따른다.
 
+### 4.5 설정 계층
+
+- 환경과 무관한 값과 운영 불변값은 공통 설정(`application.yml`)에만 선언한다. OSIV 비활성화, `ddl-auto=validate`, Actuator 노출 범위, Refresh 쿠키 속성이 여기에 속한다.
+- 환경별 설정(`application-{profile}.yml`)은 환경마다 실제로 다른 값만 정의하고, 공통 설정에서 상속하는 값을 다시 선언하지 않는다.
+- 테스트 리소스에 `application.yml`을 두지 않는다. Spring Boot는 `classpath:/application.yml`을 단일 리소스로 해석하므로 공통 설정 전체가 가려지고 운영 불변값이 그 환경에서 사라진다. 테스트 전용 값은 `application-test.yml`에 두고 프로파일로 얹는다.
+- 프로파일 활성화는 실행기와 무관하게 동작해야 한다. 빌드 도구 태스크 설정에만 두면 IDE 단건 실행에서 프로파일이 달라진다.
+- 접속값과 외부 연동 엔드포인트를 담은 프로파일을 암묵적 기본값으로 만들지 않는다. 프로파일을 지정하지 않은 실행은 기동에 실패해야 한다.
+- 운영 리소스에 포함되는 설정 파일에 키 재료와 비밀값을 직접 쓰지 않고 환경 변수로만 주입한다.
+
+이 규칙은 `ConfigurationLayeringTest`와 `EnvironmentInvariantIntegrationTest`가 검증한다.
+
 ## 5. API와 데이터베이스
 
 - API 경로, 응답, 오류, 식별자, 필터, 페이징과 날짜·시간 표현은 [API 계약](../05-specs/api/README.md)을 따른다.
