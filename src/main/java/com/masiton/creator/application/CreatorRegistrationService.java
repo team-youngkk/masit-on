@@ -54,7 +54,7 @@ public class CreatorRegistrationService implements CreatorRegistrationUseCase {
             throw new BusinessException(ErrorCode.EXTERNAL_SERVICE_ERROR);
         }
         if (verified.isEmpty()) {
-            return new CreatorPreviewResult(CreatorPreviewResult.Decision.REVIEW_REQUIRED, null, null, null, null);
+            throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE);
         }
         VerifiedChannel channel = verified.get();
         Optional<Creator> existing = creatorRepository.findByExternalChannelId(channel.externalChannelId());
