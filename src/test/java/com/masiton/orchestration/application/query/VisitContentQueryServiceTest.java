@@ -98,9 +98,40 @@ class VisitContentQueryServiceTest {
     }
 
     @Test
-    @DisplayName("Restaurant기준_콘텐츠조회_Row의videoId가null이면Creator는추가하고videos는추가하지않는다")
-    void Restaurant기준_콘텐츠조회_Row의videoId가null이면Creator는추가하고videos는추가하지않는다() {
-        // given: Port 구현은 Video가 공개·유효 조건을 만족하지 않으면 video 관련 필드를 null로 반환한다.
+    @DisplayName("Restaurant기준_콘텐츠조회_채널명과영상제목이같으면ID오름차순으로정렬한다")
+    void Restaurant기준_콘텐츠조회_채널명과영상제목이같으면ID오름차순으로정렬한다() {
+        // given
+        VisitContentQueryService service = new VisitContentQueryService(restaurantDetailContentQueryPort);
+        UUID restaurantId = UUID.randomUUID();
+        UUID firstCreatorId = UUID.fromString("00000000-0000-4000-8000-000000000001");
+        UUID secondCreatorId = UUID.fromString("00000000-0000-4000-8000-000000000002");
+        UUID firstVideoId = UUID.fromString("10000000-0000-4000-8000-000000000001");
+        UUID secondVideoId = UUID.fromString("10000000-0000-4000-8000-000000000002");
+
+        List<VisitContentRow> rows = List.of(
+                new VisitContentRow(
+                        secondCreatorId, "같은채널", "https://youtube.com/b",
+                        secondVideoId, "같은제목", "thumb2", "source2"),
+                new VisitContentRow(
+                        firstCreatorId, "같은채널", "https://youtube.com/a",
+                        firstVideoId, "같은제목", "thumb1", "source1"));
+        when(restaurantDetailContentQueryPort.findValidVisitContentRowsByRestaurantId(restaurantId))
+                .thenReturn(rows);
+
+        // when
+        VisitContentResult result = service.findValidVisitContentByRestaurant(restaurantId);
+
+        // then
+        assertThat(result.visitedBy()).extracting("id")
+                .containsExactly(firstCreatorId, secondCreatorId);
+        assertThat(result.videos()).extracting("id")
+                .containsExactly(firstVideoId, secondVideoId);
+    }
+
+    @Test
+    @DisplayName("Restaurant기준_콘텐츠조회_Row의videoId가null이면VisitRow전체를제외한다")
+    void Restaurant기준_콘텐츠조회_Row의videoId가null이면VisitRow전체를제외한다() {
+        // given: 운영 Port는 이 Row를 만들지 않지만 Application도 유효한 영상 없는 관계를 노출하지 않는다.
         VisitContentQueryService service = new VisitContentQueryService(restaurantDetailContentQueryPort);
         UUID restaurantId = UUID.randomUUID();
         UUID creatorId = UUID.randomUUID();
@@ -114,8 +145,7 @@ class VisitContentQueryServiceTest {
         VisitContentResult result = service.findValidVisitContentByRestaurant(restaurantId);
 
         // then
-        assertThat(result.visitedBy()).hasSize(1);
-        assertThat(result.visitedBy().get(0).id()).isEqualTo(creatorId);
+        assertThat(result.visitedBy()).isEmpty();
         assertThat(result.videos()).isEmpty();
     }
 

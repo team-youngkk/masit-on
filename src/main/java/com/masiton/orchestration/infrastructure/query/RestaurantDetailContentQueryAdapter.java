@@ -17,11 +17,10 @@ import com.masiton.orchestration.application.port.out.VisitContentRow;
  *
  * <p>visit·restaurant·creator·video는 같은 데이터베이스의 물리 테이블이므로 SQL 안에서 테이블명으로
  * JOIN한다. 판정 조건(BR-VISIT-005)은 visit.infrastructure.persistence.VisitQueryJpaRepository와
- * 동일하게 Visit·Restaurant·Creator는 PUBLIC/ACTIVE(Creator는 외부 AVAILABLE도)를 만족해야
- * Row 자체가 존재한다. Video는 restaurant-detail-api.md 7절("관계는 있으나 공개 영상이 없으면
- * 유효한 공개 유튜버는 그대로 표시하고 videos만 빈 배열")에 따라 Creator 노출 조건과 독립적이어야
- * 하므로 INNER JOIN이 아닌 LEFT JOIN으로 두고 공개·유효 조건을 ON 절에 둔다. Video가 조건을
- * 만족하지 않으면 video 관련 컬럼만 NULL이 되고 Row 자체(Creator)는 유지된다.
+ * 동일하게 Visit·Restaurant·Creator·Video 모두 PUBLIC/ACTIVE를 만족해야 Row가
+ * 존재하고, Creator·Video는 외부 상태도 AVAILABLE이어야 한다. BR-VISIT-005에 따라
+ * 영상이 비공개·삭제·외부 이용 불가면 그 영상을 근거로 한 Visit 전체를 제외하며,
+ * 이때 Creator만 단독으로 노출하지 않는다.
  */
 @Component
 class RestaurantDetailContentQueryAdapter implements RestaurantDetailContentQueryPort {
@@ -33,14 +32,14 @@ class RestaurantDetailContentQueryAdapter implements RestaurantDetailContentQuer
                     + "FROM visit v "
                     + "JOIN restaurant r ON r.id = v.restaurant_id "
                     + "JOIN creator c ON c.id = v.creator_id "
-                    + "LEFT JOIN video vi ON vi.id = v.video_id "
-                    + "AND vi.publication_status = 'PUBLIC' AND vi.lifecycle_status = 'ACTIVE' "
-                    + "AND vi.external_availability_status = 'AVAILABLE' "
+                    + "JOIN video vi ON vi.id = v.video_id "
                     + "WHERE v.restaurant_id = ? "
                     + "AND v.publication_status = 'PUBLIC' AND v.lifecycle_status = 'ACTIVE' "
                     + "AND r.publication_status = 'PUBLIC' AND r.lifecycle_status = 'ACTIVE' "
                     + "AND c.publication_status = 'PUBLIC' AND c.lifecycle_status = 'ACTIVE' "
-                    + "AND c.external_availability_status = 'AVAILABLE'";
+                    + "AND c.external_availability_status = 'AVAILABLE' "
+                    + "AND vi.publication_status = 'PUBLIC' AND vi.lifecycle_status = 'ACTIVE' "
+                    + "AND vi.external_availability_status = 'AVAILABLE'";
 
     private final JdbcTemplate jdbcTemplate;
 

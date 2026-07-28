@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -18,6 +19,7 @@ import com.masiton.orchestration.application.port.in.FindValidVisitContentByRest
 import com.masiton.orchestration.application.port.in.VisitContentResult;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * query-composition.md 5절이 지정한 콘텐츠 Query(공개·유효 Visit 기준 방문 유튜버·관련 영상)를
@@ -143,9 +145,9 @@ class VisitContentQueryIntegrationTest {
     }
 
     @Test
-    @DisplayName("Video가비공개_videos는비어도유효한Creator는visitedBy에그대로표시한다")
-    void Video가비공개_videos는비어도유효한Creator는visitedBy에그대로표시한다() {
-        // given: restaurant-detail-api.md 7절 — 공개 관련 영상이 없어도 유효한 유튜버는 표시한다.
+    @DisplayName("Video가비공개_그Video를근거로한Visit전체를제외한다")
+    void Video가비공개_그Video를근거로한Visit전체를제외한다() {
+        // given: BR-VISIT-005 — 연결된 영상까지 공개·유효해야 조회 관계로 사용한다.
         UUID restaurantId = UUID.randomUUID();
         UUID creatorId = UUID.randomUUID();
         UUID videoId = UUID.randomUUID();
@@ -159,8 +161,67 @@ class VisitContentQueryIntegrationTest {
                 .findValidVisitContentByRestaurant(restaurantId);
 
         // then
+        assertThat(result.visitedBy()).isEmpty();
         assertThat(result.videos()).isEmpty();
-        assertThat(result.visitedBy()).extracting("id").containsExactly(creatorId);
+    }
+
+    @Test
+    @DisplayName("Visit가비공개_공개RestaurantCreatorVideo여도두목록에서제외한다")
+    void Visit가비공개_공개RestaurantCreatorVideo여도두목록에서제외한다() {
+        // given
+        UUID restaurantId = UUID.randomUUID();
+        UUID creatorId = UUID.randomUUID();
+        UUID videoId = UUID.randomUUID();
+        insertRestaurant(restaurantId, "PUBLIC", "ACTIVE");
+        insertCreator(creatorId, "채널H", "PUBLIC", "ACTIVE", "AVAILABLE");
+        insertVideo(videoId, creatorId, "영상H", "PUBLIC", "ACTIVE", "AVAILABLE");
+        insertVisit(UUID.randomUUID(), restaurantId, creatorId, videoId, "PRIVATE", "ACTIVE");
+
+        // when
+        VisitContentResult result = findValidVisitContentByRestaurantQuery
+                .findValidVisitContentByRestaurant(restaurantId);
+
+        // then
+        assertThat(result.visitedBy()).isEmpty();
+        assertThat(result.videos()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Visit가삭제인데공개상태_DB삭제상태쌍제약으로저장을거부한다")
+    void Visit가삭제인데공개상태_DB삭제상태쌍제약으로저장을거부한다() {
+        // given: ck_visit__deleted_pair는 삭제 Visit을 PRIVATE로 함께 전환하도록 강제한다.
+        UUID restaurantId = UUID.randomUUID();
+        UUID creatorId = UUID.randomUUID();
+        UUID videoId = UUID.randomUUID();
+        insertRestaurant(restaurantId, "PUBLIC", "ACTIVE");
+        insertCreator(creatorId, "채널I", "PUBLIC", "ACTIVE", "AVAILABLE");
+        insertVideo(videoId, creatorId, "영상I", "PUBLIC", "ACTIVE", "AVAILABLE");
+
+        // when & then
+        assertThatThrownBy(() ->
+                insertVisit(UUID.randomUUID(), restaurantId, creatorId, videoId, "PUBLIC", "DELETED"))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    @DisplayName("Visit가삭제_공개RestaurantCreatorVideo여도두목록에서제외한다")
+    void Visit가삭제_공개RestaurantCreatorVideo여도두목록에서제외한다() {
+        // given: DB 제약상 삭제 Visit은 반드시 PRIVATE이므로 유효한 삭제 상태 쌍으로 저장한다.
+        UUID restaurantId = UUID.randomUUID();
+        UUID creatorId = UUID.randomUUID();
+        UUID videoId = UUID.randomUUID();
+        insertRestaurant(restaurantId, "PUBLIC", "ACTIVE");
+        insertCreator(creatorId, "채널I", "PUBLIC", "ACTIVE", "AVAILABLE");
+        insertVideo(videoId, creatorId, "영상I", "PUBLIC", "ACTIVE", "AVAILABLE");
+        insertVisit(UUID.randomUUID(), restaurantId, creatorId, videoId, "PRIVATE", "DELETED");
+
+        // when
+        VisitContentResult result = findValidVisitContentByRestaurantQuery
+                .findValidVisitContentByRestaurant(restaurantId);
+
+        // then
+        assertThat(result.visitedBy()).isEmpty();
+        assertThat(result.videos()).isEmpty();
     }
 
     @Test

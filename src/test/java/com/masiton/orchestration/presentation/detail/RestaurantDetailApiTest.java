@@ -103,10 +103,16 @@ class RestaurantDetailApiTest {
                 .andExpect(jsonPath("$.visitedBy", org.hamcrest.Matchers.hasSize(1)))
                 .andExpect(jsonPath("$.visitedBy[0].id").value(creatorId.toString()))
                 .andExpect(jsonPath("$.visitedBy[0].channelName").value("테스트 채널"))
+                .andExpect(jsonPath("$.visitedBy[0].channelUrl")
+                        .value("https://www.youtube.com/channel/" + channelId))
                 .andExpect(jsonPath("$.videos", org.hamcrest.Matchers.hasSize(1)))
                 .andExpect(jsonPath("$.videos[0].id").value(videoId.toString()))
                 .andExpect(jsonPath("$.videos[0].title").value("테스트 영상"))
-                .andExpect(jsonPath("$.videos[0].channelName").value("테스트 채널"));
+                .andExpect(jsonPath("$.videos[0].thumbnailUrl")
+                        .value("https://i.ytimg.com/" + videoId + ".jpg"))
+                .andExpect(jsonPath("$.videos[0].channelName").value("테스트 채널"))
+                .andExpect(jsonPath("$.videos[0].sourceUrl")
+                        .value("https://www.youtube.com/watch?v=" + videoId));
 
         // then: query-composition.md 6·11절 — 기본 정보 1회, 콘텐츠 1회, 총 2회.
         assertThat(PREPARED_STATEMENT_COUNT.get()).isEqualTo(2);
@@ -132,12 +138,16 @@ class RestaurantDetailApiTest {
         UUID restaurantId = UUID.randomUUID();
         insertRestaurant(restaurantId, "방문없는 맛집", null, "PUBLIC", "ACTIVE", null);
 
-        // when & then
+        // when
+        PREPARED_STATEMENT_COUNT.set(0);
         mockMvc.perform(get("/api/restaurants/{restaurantId}", restaurantId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.contentStatus").value("AVAILABLE"))
                 .andExpect(jsonPath("$.visitedBy", org.hamcrest.Matchers.hasSize(0)))
                 .andExpect(jsonPath("$.videos", org.hamcrest.Matchers.hasSize(0)));
+
+        // then
+        assertThat(PREPARED_STATEMENT_COUNT.get()).isEqualTo(2);
     }
 
     @Test
@@ -163,9 +173,9 @@ class RestaurantDetailApiTest {
     }
 
     @Test
-    @DisplayName("삭제된 영상의 방문 관계는 videos에서 제외하되 유효한 유튜버는 visitedBy에 그대로 표시한다")
-    void 상세조회_삭제된영상방문관계_videos에서제외하고유효한유튜버는visitedBy에표시한다() throws Exception {
-        // given: restaurant-detail-api.md 7절 — 공개 관련 영상이 없어도 유효한 유튜버는 표시한다.
+    @DisplayName("삭제된 영상을 근거로 한 방문 관계는 visitedBy와 videos에서 모두 제외한다")
+    void 상세조회_삭제된영상방문관계_visitedBy와videos에서모두제외한다() throws Exception {
+        // given: BR-VISIT-005 — 영상까지 공개·유효한 관계만 사용자 조회에 사용한다.
         UUID restaurantId = UUID.randomUUID();
         insertRestaurant(restaurantId, "삭제영상맛집", null, "PUBLIC", "ACTIVE", null);
         UUID creatorId = UUID.randomUUID();
@@ -180,10 +190,49 @@ class RestaurantDetailApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("삭제영상맛집"))
                 .andExpect(jsonPath("$.contentStatus").value("AVAILABLE"))
-                .andExpect(jsonPath("$.visitedBy", org.hamcrest.Matchers.hasSize(1)))
-                .andExpect(jsonPath("$.visitedBy[0].id").value(creatorId.toString()))
-                .andExpect(jsonPath("$.visitedBy[0].channelName").value("정상 채널"))
+                .andExpect(jsonPath("$.visitedBy", org.hamcrest.Matchers.hasSize(0)))
                 .andExpect(jsonPath("$.videos", org.hamcrest.Matchers.hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("방문 관계가 다수여도 중복 유튜버를 한 번만 표시하고 정확히 2개의 쿼리만 실행한다")
+    void 상세조회_방문관계다수_중복제거하고쿼리는정확히2회실행한다() throws Exception {
+        // given
+        UUID restaurantId = UUID.randomUUID();
+        insertRestaurant(restaurantId, "다수방문 맛집", null, "PUBLIC", "ACTIVE", null);
+
+        UUID creatorId1 = UUID.randomUUID();
+        String channelId1 = "UC-" + UUID.randomUUID();
+        insertCreator(creatorId1, channelId1, "가 채널", "PUBLIC", "ACTIVE", "AVAILABLE", null);
+        UUID videoId1 = UUID.randomUUID();
+        UUID videoId2 = UUID.randomUUID();
+        insertVideo(videoId1, creatorId1, channelId1, "가 영상", "PUBLIC", "ACTIVE", "AVAILABLE", null);
+        insertVideo(videoId2, creatorId1, channelId1, "나 영상", "PUBLIC", "ACTIVE", "AVAILABLE", null);
+        insertVisit(UUID.randomUUID(), restaurantId, creatorId1, videoId1, "PUBLIC", "ACTIVE", null);
+        insertVisit(UUID.randomUUID(), restaurantId, creatorId1, videoId2, "PUBLIC", "ACTIVE", null);
+
+        UUID creatorId2 = UUID.randomUUID();
+        String channelId2 = "UC-" + UUID.randomUUID();
+        insertCreator(creatorId2, channelId2, "나 채널", "PUBLIC", "ACTIVE", "AVAILABLE", null);
+        UUID videoId3 = UUID.randomUUID();
+        insertVideo(videoId3, creatorId2, channelId2, "다 영상", "PUBLIC", "ACTIVE", "AVAILABLE", null);
+        insertVisit(UUID.randomUUID(), restaurantId, creatorId2, videoId3, "PUBLIC", "ACTIVE", null);
+
+        // when
+        PREPARED_STATEMENT_COUNT.set(0);
+        mockMvc.perform(get("/api/restaurants/{restaurantId}", restaurantId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contentStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.visitedBy", org.hamcrest.Matchers.hasSize(2)))
+                .andExpect(jsonPath("$.visitedBy[0].id").value(creatorId1.toString()))
+                .andExpect(jsonPath("$.visitedBy[1].id").value(creatorId2.toString()))
+                .andExpect(jsonPath("$.videos", org.hamcrest.Matchers.hasSize(3)))
+                .andExpect(jsonPath("$.videos[0].id").value(videoId1.toString()))
+                .andExpect(jsonPath("$.videos[1].id").value(videoId2.toString()))
+                .andExpect(jsonPath("$.videos[2].id").value(videoId3.toString()));
+
+        // then
+        assertThat(PREPARED_STATEMENT_COUNT.get()).isEqualTo(2);
     }
 
     @Test
