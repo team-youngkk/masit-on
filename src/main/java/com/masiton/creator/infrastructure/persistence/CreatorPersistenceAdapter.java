@@ -1,5 +1,6 @@
 package com.masiton.creator.infrastructure.persistence;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -26,5 +27,12 @@ class CreatorPersistenceAdapter implements CreatorRepositoryPort {
     @Override
     public Optional<Creator> findById(UUID id) {
         return springDataCreatorRepository.findById(id).map(CreatorMapper::toDomain);
+    }
+
+    @Override
+    public List<Creator> findPublicSelectionList() {
+        return springDataCreatorRepository.findPublicSelectionList().stream()
+                .map(CreatorMapper::toDomain)
+                .toList();
     }
 }
