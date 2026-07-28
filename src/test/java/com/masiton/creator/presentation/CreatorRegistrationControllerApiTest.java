@@ -46,6 +46,25 @@ class CreatorRegistrationControllerApiTest {
                 .andExpect(jsonPath("$.candidate.id").doesNotExist());
     }
 
+    @Test
+    @DisplayName("중복 확정은 계약된 오류 코드와 기존 유튜버 정보를 반환한다")
+    void create_중복유튜버_409과기존정보를반환한다() throws Exception {
+        UUID creatorId = UUID.randomUUID();
+        when(creatorRegistrationUseCase.create(any())).thenReturn(new CreatorRegistrationUseCase.CreatorCreationResult(
+                new CreatorRegistrationUseCase.CreatorCandidate(
+                        creatorId, "채널명", "https://www.youtube.com/@channel"),
+                false,
+                true));
+
+        mockMvc.perform(post("/api/admin/creators")
+                        .principal(authentication())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"confirmationToken\":\"opaque-token\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("DUPLICATE_CREATOR"))
+                .andExpect(jsonPath("$.resource.id").value(creatorId.toString()));
+    }
+
     private UsernamePasswordAuthenticationToken authentication() {
         return UsernamePasswordAuthenticationToken.authenticated(adminId.toString(), "N/A", java.util.List.of());
     }
