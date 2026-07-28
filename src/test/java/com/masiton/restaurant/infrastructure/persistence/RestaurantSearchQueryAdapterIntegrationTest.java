@@ -33,6 +33,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * restaurant·creator·video·visit은 각 테스트가 직접 적재한 뒤 다음 테스트 실행 전 초기화한다.
  */
 @SpringBootTest
+@com.masiton.test.TestProfile
 @Testcontainers
 @DisplayName("맛집 검색 Query Adapter")
 class RestaurantSearchQueryAdapterIntegrationTest {

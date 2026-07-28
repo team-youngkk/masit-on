@@ -26,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 추가로 단언한다.
  */
 @SpringBootTest
+@com.masiton.test.TestProfile
 @Testcontainers
 @DisplayName("Flyway 마이그레이션과 기준 데이터")
 class FlywayMigrationIntegrationTest {

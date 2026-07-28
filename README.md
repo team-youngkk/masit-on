@@ -4,6 +4,7 @@ related_documents:
   - docs/00-overview/scope.md
   - docs/04-product/prd/00-product-overview.md
   - docs/08-planning/mvp-2day-implementation-plan.md
+  - docs/08-planning/mvp-local-verification.md
   - docs/06-architecture/README.md
 ---
 
@@ -27,12 +28,45 @@ Copy-Item .env.example .env
 
 `.env`는 로컬 전용 값이며 커밋하지 않는다. 운영 자격 증명을 넣지 않는다. 초기화 스크립트는 `.env`에 로컬 RSA 키를 생성하고 현재 PowerShell 세션에도 같은 값을 설정한다. 새 PowerShell 세션에서 `bootRun`을 실행할 때는 스크립트를 다시 dot-source한다.
 
+`.env`를 `.env.example`에서 새로 복사하지 않고 예전 파일을 그대로 쓰면 `JWT_*` 항목이 없어 초기화 스크립트가 값을 기록하지 못한다. `.env`에 `JWT_KEY_ID`, `JWT_PRIVATE_KEY_PEM`, `JWT_PUBLIC_KEY_PEM` 세 줄이 있는지 확인한다.
+
 ### 개발 루프 (의존 서비스는 컨테이너, 애플리케이션은 로컬)
 
 ```powershell
 docker compose up -d postgres redis wiremock
 .\gradlew.bat bootRun
 ```
+
+### 프론트엔드
+
+```powershell
+npm --prefix frontend ci
+npm --prefix frontend run dev
+```
+
+`http://localhost:3000`에서 공개 화면과 관리자 화면을 사용한다. 프론트엔드는 `/api`를 `API_BASE_URL`(기본값 `http://localhost:8080`)로 전달하므로 백엔드를 먼저 띄운다.
+
+### 로컬 관리자 계정
+
+관리자 계정은 사전 발급 대상이라 Flyway 기준 데이터에 넣지 않는다. 관리자 화면·API를 확인하려면 로컬에서만 계정을 만든다.
+
+```powershell
+.\scripts\New-LocalAdmin.ps1 -LoginId local-admin
+```
+
+비밀번호는 실행 중 프롬프트로 입력받고 BCrypt 해시만 컨테이너로 전달한다. 원문은 명령줄 인자나 파일에 남기지 않는다. **`-Password`를 명령줄로 넘기지 않는다.** 넘기면 PowerShell 히스토리 파일(`ConsoleHost_history.txt`)에 평문으로 남는다. 같은 `LoginId`로 다시 실행해도 계정을 중복 생성하지 않고, 원격 Docker context에서 실행하면 중단한다. 로컬 전용 값이며 운영 비밀번호를 쓰지 않는다.
+
+### 환경별 설정 계층
+
+| 계층 | 파일 | 담는 값 |
+|---|---|---|
+| 공통 | `src/main/resources/application.yml` | 모든 환경 공통값과 운영 불변값(`spring.jpa.open-in-view=false`, `spring.jpa.hibernate.ddl-auto=validate`), `management`·`logging`·`masiton.security` |
+| 로컬 | `src/main/resources/application-local.yml` | PostgreSQL·Redis 접속값, Kakao·YouTube를 WireMock으로 돌리는 `masiton.integration.*` |
+| 테스트 | `src/test/resources/application-test.yml` | 테스트 접속값, 테스트 전용 JWT 픽스처, 외부 호출 fail-closed 설정 |
+
+`bootRun`은 `local` 프로파일로 실행되고(`build.gradle`), 컨테이너 실행은 `SPRING_PROFILES_ACTIVE=local`을 받는다. Spring 컨텍스트 테스트는 공통 `@TestProfile`이 `test` 프로파일을 활성화하므로 셸 환경·Gradle·IDE 단건 실행에서 동일하게 동작한다. 프로파일을 지정하지 않은 애플리케이션 실행은 접속값이 없어 기동에 실패한다.
+
+각 프로파일 계층은 공통 계층에서 상속하는 값을 다시 선언하지 않는다. 규칙 원문은 [구현 컨벤션 4.5절](docs/06-architecture/implementation-conventions.md#45-설정-계층)이며 `ConfigurationLayeringTest`와 `EnvironmentInvariantIntegrationTest`가 검증한다.
 
 ### 통합 실행 (애플리케이션까지 컨테이너)
 
@@ -56,7 +90,18 @@ curl http://localhost:8080/internal/health/dependencies
 .\gradlew.bat clean build
 ```
 
-통합 테스트가 Testcontainers로 PostgreSQL·Redis·WireMock 컨테이너를 띄우므로 Docker가 실행 중이어야 한다. 테스트는 실제 Kakao·YouTube API를 호출하지 않는다.
+통합 테스트가 Testcontainers로 PostgreSQL·Redis·WireMock 컨테이너를 테스트 실행 시점에 띄우므로 Docker만 실행 중이면 된다. 테스트는 Compose 서비스나 실제 Kakao·YouTube API에 연결하지 않는다.
+
+프론트엔드까지 포함한 병합 전 필수 명령은 다음 네 개다.
+
+```powershell
+.\gradlew.bat clean build
+npm --prefix frontend ci
+npm --prefix frontend run typecheck
+npm --prefix frontend run build
+```
+
+가장 최근 실행 결과와 완료 정의 판정, 알려진 위험은 [로컬 실행·회귀 검증 결과](docs/08-planning/mvp-local-verification.md)에 있다.
 
 ### 종료와 초기화
 
@@ -79,7 +124,7 @@ docker compose down -v
 
 포트가 겹치면 `.env`의 `APP_PORT`, `POSTGRES_PORT`, `REDIS_PORT`, `WIREMOCK_PORT`를 바꾼다.
 
-`.env`는 Docker Compose만 읽는다. `bootRun`은 `.env`를 로드하지 않으므로, 컨테이너 포트를 바꿨다면 애플리케이션에도 같은 값을 환경 변수로 넘겨야 한다. JWT 설정은 위 초기화 스크립트를 dot-source해 현재 셸에 주입한다.
+`.env`는 Docker Compose만 읽는다. `bootRun`은 `.env`를 로드하지 않으므로, 컨테이너 포트를 바꿨다면 애플리케이션에도 같은 값을 환경 변수로 넘겨야 한다. `WIREMOCK_PORT`를 바꿨다면 `KAKAO_BASE_URL`, `YOUTUBE_BASE_URL`도 같이 넘긴다. JWT 설정은 위 초기화 스크립트를 dot-source해 현재 셸에 주입한다.
 
 ```powershell
 $env:DB_URL = 'jdbc:postgresql://localhost:15432/masiton'

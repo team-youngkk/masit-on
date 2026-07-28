@@ -32,6 +32,7 @@ import com.masiton.visit.application.port.in.FindDistinctValidRestaurantIdsByCre
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
+@com.masiton.test.TestProfile
 @Testcontainers
 @DisplayName("방문 관계 등록 통합")
 class VisitRelationshipRegistrationIntegrationTest {

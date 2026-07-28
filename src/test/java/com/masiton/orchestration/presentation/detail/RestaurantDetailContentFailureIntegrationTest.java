@@ -37,6 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 주지 않기 위함이다.
  */
 @SpringBootTest
+@com.masiton.test.TestProfile
 @AutoConfigureMockMvc
 @Testcontainers
 @DisplayName("맛집 상세 조회 API 콘텐츠 실패 격리")

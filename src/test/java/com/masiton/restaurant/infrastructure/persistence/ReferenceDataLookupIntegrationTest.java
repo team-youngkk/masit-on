@@ -25,6 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 기준 데이터를 그대로 사용한다.
  */
 @SpringBootTest
+@com.masiton.test.TestProfile
 @Testcontainers
 @DisplayName("Region·FoodCategory 이름 조회")
 class ReferenceDataLookupIntegrationTest {

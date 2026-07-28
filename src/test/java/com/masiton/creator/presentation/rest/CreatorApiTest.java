@@ -21,6 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 빈 목록 계약 검증과 쿼리 파라미터 검증이 서로의 데이터에 영향을 주지 않는다.
  */
 @SpringBootTest
+@com.masiton.test.TestProfile
 @AutoConfigureMockMvc
 @Testcontainers
 @DisplayName("유튜버 필터 선택 목록 API")

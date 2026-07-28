@@ -26,6 +26,8 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.masiton.test.FullContextIntegrationTest;
+
 import static org.hamcrest.Matchers.emptyString;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -38,7 +40,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @SpringBootTest
 @AutoConfigureMockMvc
 @DisplayName("관리자 API 보안 경계")
-class SecurityConfigurationApiTest {
+class SecurityConfigurationApiTest extends FullContextIntegrationTest {
 
     private static final KeyPair KEY_PAIR = keyPair();
 
