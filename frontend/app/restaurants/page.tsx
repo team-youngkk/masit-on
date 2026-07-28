@@ -120,7 +120,11 @@ export default async function RestaurantsPage({
             {items.map((restaurant) => (
               <li key={restaurant.id}>
                 <Card
-                  title={restaurant.name}
+                  title={
+                    <Link href={`/restaurants/${restaurant.id}`}>
+                      {restaurant.name}
+                    </Link>
+                  }
                   level={2}
                   meta={`${restaurant.district} · ${restaurant.category}`}
                 >
