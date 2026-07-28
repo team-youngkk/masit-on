@@ -106,7 +106,7 @@ related_documents:
 | GitHub Actions 빌드·테스트 | 확정 | Accepted ADR | [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md) | 배포 후보 품질 게이트 |
 | Nginx | 경로 경계 결정 완료 (2026-07-27) | Accepted ADR | [ADR-WEB-003](platform/web-003-routing-boundary.md), [ADR-RUNTIME-001](platform/runtime-001-docker.md) | `/api/**`는 Spring Boot, 나머지 외부 경로는 Next.js, `/internal/**`은 외부 차단 |
 | Amazon ECR·EC2 | 기술 선택 확정, 초기 운영 배포부터 적용 | Accepted ADR | [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | M2부터 단일 EC2에 배포하고 확장 단계별 변경 반영 |
-| ALB·ASG·Blue-Green | 3차 확장 이후 배포 고도화 단계에서 검토 | Scope Conflict Review | [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | 초기 운영 배포는 단일 인스턴스 수동 복구 |
+| ALB·ASG·Blue-Green | 3차 확장 이후 배포 고도화 단계에서 전환, 착수 시점 결정 완료 (2026-07-28) | Accepted ADR | [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | 초기 운영 배포는 단일 인스턴스 수동 복구, 토폴로지는 착수 시 별도 ADR |
 | GitHub Actions → ECR → EC2 | 초기 운영 배포부터 적용 | Accepted ADR | [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | 빌드·테스트 품질 게이트를 유지하고 M2부터 AWS 배포 경로 활성화 |
 | Amazon S3 이미지 저장 | 확정이나 기능 없음 | Post-MVP ADR | [ADR-MEDIA-001](adr-backlog.md#adr-media-001-s3-사용자-이미지-저장) | 이미지 업로드·사용자 이미지 요구사항 없음 |
 | FCM HTTP v1 | 확정이나 범위 제외 | Post-MVP ADR | [ADR-NOTIFY-001](adr-backlog.md#adr-notify-001-fcm-푸시-알림) | 사용자 알림 제외 |
@@ -183,7 +183,7 @@ related_documents:
 - 관리자 JWT 만료(30분)·Redis Refresh Token TTL(14일, 회전+재사용 탐지)·Redis 장애 시 fail-closed 정책
 - Nginx·ECR·EC2를 포함한 초기 운영 배포 토폴로지(단일 EC2 인스턴스)
 - `/api` 화면·백엔드 분리, 관리자 인증 matcher와 `/internal` 상태 확인 경계
-- ALB·ASG·Blue-Green: 초기 운영 배포에는 미도입, 3차 확장 이후 배포 고도화 단계에서 검토
+- ALB·ASG·Blue-Green: 초기 운영 배포에는 미도입, 3차 확장 이후 배포 고도화 단계에서 전환 (2026-07-28 착수 시점 결정)
 - 로그 14일 보관, 백업(일 1회 자동 스냅샷·7일 보관), 운영 알림(CloudWatch→Slack, 담당자 1명. 팀 상시 채널이 Slack뿐이라는 근거는 [RV-NFR-013](../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준))
 
 다음은 여전히 팀 결정이 필요한 미결정 항목이다.

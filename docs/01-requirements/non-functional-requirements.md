@@ -292,7 +292,7 @@ related_documents:
   - M2 초기 운영 배포부터 배포 고도화 전까지 사용하는 운영 인프라와 장애 복구 절차
 - 목표 기준:
   - 문서화된 복구 절차를 이용한 복구 훈련 성공
-  - 단일 EC2 인스턴스와 수동 복구를 유지하며, ALB·ASG·Blue-Green은 3차 확장 이후 배포 고도화 단계에서 도입을 검토 ([RV-NFR-005](non-functional-requirements.md#rv-nfr-005-목표-가용성과-복구-시간) 참조)
+  - 단일 EC2 인스턴스와 수동 복구를 유지하며, ALB·ASG·Blue-Green은 3차 확장 이후 배포 고도화 단계에서 전환 ([RV-NFR-005](non-functional-requirements.md#rv-nfr-005-목표-가용성과-복구-시간), [ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md) 3.1절 참조)
 - 검증 방법:
   - M2 제한 공개 전 수동 복구 리허설과 핵심 조회 점검
 - 중요도:
@@ -760,7 +760,7 @@ related_documents:
   - 초기 운영 배포는 단일 EC2 인스턴스(Nginx 리버스 프록시 + Next.js 프론트엔드 + Spring Boot 백엔드)를 사용하며 다중 리전·고가용성 구성을 도입하지 않는다.
   - Nginx는 `/api/**`만 Spring Boot로 전달하고 나머지 외부 경로는 Next.js로 전달하며 `/internal/**`은 인터넷에서 차단한다.
   - 장애 발생 시 운영자가 인스턴스를 수동으로 재기동·교체하고 핵심 조회를 확인하는 절차를 사용한다. ASG 기반 자동 복구는 도입하지 않는다.
-  - ALB·Blue-Green 무중단 배포는 3차 확장 이후 배포 고도화 단계에서 도입을 검토한다. 그때까지 단일 인스턴스와 수동 복구를 유지한다.
+  - ALB·Blue-Green 무중단 배포는 3차 확장 이후 배포 고도화 단계에서 전환한다. 그때까지 단일 인스턴스와 수동 복구를 유지한다. 착수 시점은 2026-07-28 배포·인프라 책임자 이우람이 결정했으며, 토폴로지·전환 절차·비용은 착수 시점의 별도 ADR에서 확정한다([ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md) 3.1절). 이 항목은 이슈 #34에서 합의한 범위를 넘는 결정이다.
 - 영향:
   - 인프라 비용, 복구 절차와 운영 대응
 - 결정 시점:
