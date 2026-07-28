@@ -3,6 +3,7 @@ package com.masiton.restaurant.application.query;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -25,6 +26,8 @@ import com.masiton.restaurant.application.port.out.RestaurantSearchRow;
 import com.masiton.restaurant.application.port.out.VisitedByRow;
 import com.masiton.restaurant.domain.model.FoodCategory;
 import com.masiton.restaurant.domain.model.Region;
+import com.masiton.visit.application.port.in.CreatorRestaurantCandidates;
+import com.masiton.visit.application.port.in.FindDistinctValidRestaurantIdsByCreatorQuery;
 
 /**
  * API-DISCOVERY-001 맛집 목록 및 조건 검색을 처리한다.
@@ -40,14 +43,17 @@ public class RestaurantSearchQueryService implements SearchRestaurantsUseCase {
     private final RegionRepositoryPort regionRepositoryPort;
     private final FoodCategoryRepositoryPort foodCategoryRepositoryPort;
     private final RestaurantSearchQueryPort restaurantSearchQueryPort;
+    private final FindDistinctValidRestaurantIdsByCreatorQuery findRestaurantIdsByCreatorQuery;
 
     public RestaurantSearchQueryService(
             RegionRepositoryPort regionRepositoryPort,
             FoodCategoryRepositoryPort foodCategoryRepositoryPort,
-            RestaurantSearchQueryPort restaurantSearchQueryPort) {
+            RestaurantSearchQueryPort restaurantSearchQueryPort,
+            FindDistinctValidRestaurantIdsByCreatorQuery findRestaurantIdsByCreatorQuery) {
         this.regionRepositoryPort = regionRepositoryPort;
         this.foodCategoryRepositoryPort = foodCategoryRepositoryPort;
         this.restaurantSearchQueryPort = restaurantSearchQueryPort;
+        this.findRestaurantIdsByCreatorQuery = findRestaurantIdsByCreatorQuery;
     }
 
     @Override
@@ -56,11 +62,16 @@ public class RestaurantSearchQueryService implements SearchRestaurantsUseCase {
         String normalizedQuery = normalizeQuery(command.query());
         UUID regionId = resolveRegionId(command.district());
         UUID foodCategoryId = resolveFoodCategoryId(command.category());
-        UUID creatorId = resolveCreatorId(command.creatorId());
+        Set<UUID> candidateRestaurantIds = resolveCandidateRestaurantIds(command.creatorId());
 
         RestaurantSearchQueryResult queryResult = restaurantSearchQueryPort.search(
                 new RestaurantSearchCriteria(
-                        normalizedQuery, regionId, foodCategoryId, creatorId, command.page(), command.size()));
+                        normalizedQuery,
+                        regionId,
+                        foodCategoryId,
+                        candidateRestaurantIds,
+                        command.page(),
+                        command.size()));
 
         Map<UUID, List<VisitedByRow>> visitedByRestaurantId = loadVisitedBy(queryResult.rows());
         List<RestaurantSummary> items = queryResult.rows().stream()
@@ -110,7 +121,7 @@ public class RestaurantSearchQueryService implements SearchRestaurantsUseCase {
         return foodCategory.getId();
     }
 
-    private UUID resolveCreatorId(String creatorId) {
+    private Set<UUID> resolveCandidateRestaurantIds(String creatorId) {
         if (creatorId == null) {
             return null;
         }
@@ -120,11 +131,13 @@ public class RestaurantSearchQueryService implements SearchRestaurantsUseCase {
         } catch (IllegalArgumentException exception) {
             throw new BusinessException(ErrorCode.INVALID_IDENTIFIER, "creatorId", "식별자 형식이 올바르지 않습니다.");
         }
-        if (!restaurantSearchQueryPort.existsPublicCreator(parsedId)) {
+        CreatorRestaurantCandidates candidates =
+                findRestaurantIdsByCreatorQuery.findDistinctValidRestaurantIdsByCreator(parsedId);
+        if (!candidates.creatorPublic()) {
             throw new BusinessException(
                     ErrorCode.INVALID_FIELD_VALUE, "creatorId", "존재하지 않거나 공개되지 않은 유튜버입니다.");
         }
-        return parsedId;
+        return candidates.restaurantIds();
     }
 
     private Map<UUID, List<VisitedByRow>> loadVisitedBy(List<RestaurantSearchRow> rows) {

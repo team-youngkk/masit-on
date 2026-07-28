@@ -13,6 +13,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
@@ -32,7 +33,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class RestaurantSearchApiTest {
 
     private static final UUID MAPO_REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000014");
+    private static final UUID GANGNAM_REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000023");
     private static final UUID KOREAN_CATEGORY_ID = UUID.fromString("20000000-0000-4000-8000-000000000001");
+    private static final UUID JAPANESE_CATEGORY_ID = UUID.fromString("20000000-0000-4000-8000-000000000003");
 
     @Container
     static final PostgreSQLContainer POSTGRES =
@@ -178,6 +181,126 @@ class RestaurantSearchApiTest {
         }
     }
 
+    @Test
+    @DisplayName("공개 유튜버에게 유효 방문 후보가 없으면 200과 빈 목록을 반환한다")
+    void search_공개유튜버후보없음_200과빈목록을반환한다() throws Exception {
+        // given
+        insertRestaurant("공개 맛집", MAPO_REGION_ID, KOREAN_CATEGORY_ID);
+        UUID creatorId = insertCreator("방문 없는 채널");
+
+        // when & then
+        mockMvc.perform(get("/api/restaurants").param("creatorId", creatorId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items").isEmpty())
+                .andExpect(jsonPath("$.page.totalElements").value(0));
+    }
+
+    @Test
+    @DisplayName("비공개 유튜버 식별자는 400 INVALID_FIELD_VALUE(creatorId)를 반환한다")
+    void search_비공개유튜버_400INVALID_FIELD_VALUE를반환한다() throws Exception {
+        // given
+        UUID creatorId = insertCreator("비공개 채널", "PRIVATE");
+
+        // when & then
+        mockMvc.perform(get("/api/restaurants").param("creatorId", creatorId.toString()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_FIELD_VALUE"))
+                .andExpect(jsonPath("$.errors[0].field").value("creatorId"));
+    }
+
+    @Test
+    @DisplayName("query·district·category·creatorId의 16개 허용 조합을 AND로 적용한다")
+    void search_전체허용필터16개조합_AND로적용한다() throws Exception {
+        // given
+        UUID allMatchId = insertRestaurant("공덕 기준 맛집", MAPO_REGION_ID, KOREAN_CATEGORY_ID);
+        UUID queryMismatchId = insertRestaurant("이름 불일치", MAPO_REGION_ID, KOREAN_CATEGORY_ID);
+        UUID districtMismatchId = insertRestaurant("공덕 강남 맛집", GANGNAM_REGION_ID, KOREAN_CATEGORY_ID);
+        UUID categoryMismatchId = insertRestaurant("공덕 일식 맛집", MAPO_REGION_ID, JAPANESE_CATEGORY_ID);
+        UUID creatorMismatchId = insertRestaurant("공덕 미방문 맛집", MAPO_REGION_ID, KOREAN_CATEGORY_ID);
+
+        UUID creatorId = insertCreator("조합 채널");
+        String channelId = "UC-" + creatorId;
+        UUID video1 = insertVideo(creatorId, channelId);
+        UUID video2 = insertVideo(creatorId, channelId);
+        insertVisit(allMatchId, creatorId, video1);
+        insertVisit(allMatchId, creatorId, video2);
+        insertVisit(queryMismatchId, creatorId, video1);
+        insertVisit(districtMismatchId, creatorId, video1);
+        insertVisit(categoryMismatchId, creatorId, video1);
+        insertVisit(creatorMismatchId, creatorId, video1, "PRIVATE");
+
+        for (int mask = 0; mask < 16; mask++) {
+            boolean query = (mask & 1) != 0;
+            boolean district = (mask & 2) != 0;
+            boolean category = (mask & 4) != 0;
+            boolean creator = (mask & 8) != 0;
+            MockHttpServletRequestBuilder request = get("/api/restaurants");
+            if (query) {
+                request.param("query", "공덕");
+            }
+            if (district) {
+                request.param("district", "마포구");
+            }
+            if (category) {
+                request.param("category", "한식");
+            }
+            if (creator) {
+                request.param("creatorId", creatorId.toString());
+            }
+            int expectedCount = 1
+                    + (query ? 0 : 1)
+                    + (district ? 0 : 1)
+                    + (category ? 0 : 1)
+                    + (creator ? 0 : 1);
+
+            mockMvc.perform(request)
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.page.totalElements").value(expectedCount))
+                    .andExpect(jsonPath("$.items[?(@.id == '" + allMatchId + "')]").isNotEmpty());
+        }
+    }
+
+    @Test
+    @DisplayName("유튜버 후보를 먼저 필터한 뒤 안정 정렬한 결과에 페이지를 적용한다")
+    void search_유튜버후보필터후정렬페이지_후보만누락중복없이반환한다() throws Exception {
+        // given
+        UUID creatorId = insertCreator("페이지 조합 채널");
+        UUID videoId = insertVideo(creatorId, "UC-" + creatorId);
+        insertRestaurant("후보 00", MAPO_REGION_ID, KOREAN_CATEGORY_ID);
+        for (int index = 12; index >= 1; index--) {
+            UUID restaurantId = insertRestaurant(
+                    String.format("후보 %02d", index), MAPO_REGION_ID, KOREAN_CATEGORY_ID);
+            insertVisit(restaurantId, creatorId, videoId);
+        }
+
+        // when & then
+        var firstPage = mockMvc.perform(get("/api/restaurants")
+                        .param("creatorId", creatorId.toString())
+                        .param("page", "1")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(10))
+                .andExpect(jsonPath("$.page.totalElements").value(12))
+                .andExpect(jsonPath("$.page.totalPages").value(2))
+                .andExpect(jsonPath("$.page.hasNext").value(true));
+        for (int index = 1; index <= 10; index++) {
+            firstPage.andExpect(jsonPath("$.items[" + (index - 1) + "].name")
+                    .value(String.format("후보 %02d", index)));
+        }
+
+        mockMvc.perform(get("/api/restaurants")
+                        .param("creatorId", creatorId.toString())
+                        .param("page", "2")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(2))
+                .andExpect(jsonPath("$.items[0].name").value("후보 11"))
+                .andExpect(jsonPath("$.items[1].name").value("후보 12"))
+                .andExpect(jsonPath("$.page.totalElements").value(12))
+                .andExpect(jsonPath("$.page.totalPages").value(2))
+                .andExpect(jsonPath("$.page.hasNext").value(false));
+    }
+
     private UUID insertRestaurant(String name, UUID regionId, UUID foodCategoryId) {
         UUID id = UUID.randomUUID();
         jdbcTemplate.update(
@@ -191,11 +314,21 @@ class RestaurantSearchApiTest {
     }
 
     private UUID insertCreator(String channelName) {
+        return insertCreator(channelName, "PUBLIC");
+    }
+
+    private UUID insertCreator(String channelName, String publicationStatus) {
         UUID id = UUID.randomUUID();
         jdbcTemplate.update(
-                "INSERT INTO creator (id, external_channel_id, channel_name, channel_url, external_status_checked_at) "
-                        + "VALUES (?, ?, ?, ?, ?)",
-                id, "UC-" + id, channelName, "https://example.com/channel/" + id, OffsetDateTime.now());
+                "INSERT INTO creator "
+                        + "(id, external_channel_id, channel_name, channel_url, publication_status, "
+                        + "external_status_checked_at) VALUES (?, ?, ?, ?, ?, ?)",
+                id,
+                "UC-" + id,
+                channelName,
+                "https://example.com/channel/" + id,
+                publicationStatus,
+                OffsetDateTime.now());
         return id;
     }
 
@@ -213,10 +346,15 @@ class RestaurantSearchApiTest {
     }
 
     private UUID insertVisit(UUID restaurantId, UUID creatorId, UUID videoId) {
+        return insertVisit(restaurantId, creatorId, videoId, "PUBLIC");
+    }
+
+    private UUID insertVisit(UUID restaurantId, UUID creatorId, UUID videoId, String publicationStatus) {
         UUID id = UUID.randomUUID();
         jdbcTemplate.update(
-                "INSERT INTO visit (id, restaurant_id, creator_id, video_id) VALUES (?, ?, ?, ?)",
-                id, restaurantId, creatorId, videoId);
+                "INSERT INTO visit (id, restaurant_id, creator_id, video_id, publication_status) "
+                        + "VALUES (?, ?, ?, ?, ?)",
+                id, restaurantId, creatorId, videoId, publicationStatus);
         return id;
     }
 }

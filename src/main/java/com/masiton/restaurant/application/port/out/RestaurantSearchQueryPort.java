@@ -18,11 +18,4 @@ public interface RestaurantSearchQueryPort {
      * 정렬·상위 3명 제한·remainingVisitedByCount 계산은 Application이 수행한다.
      */
     List<VisitedByRow> findVisitedByRestaurantIds(List<UUID> restaurantIds);
-
-    /**
-     * creatorId 조건 검증용 읽기 전용 Projection이다.
-     * 다른 도메인(creator)의 application.port.in을 직접 호출하지 않고, 이 Port가 이미
-     * visit·creator·video 테이블을 읽기 전용으로 조회하는 것과 같은 방식으로 공개 여부만 확인한다.
-     */
-    boolean existsPublicCreator(UUID creatorId);
 }

@@ -5,6 +5,7 @@ related_documents:
   - dependency-rules.md
   - diagrams/restaurant-detail-sequence.md
   - ../05-specs/api/detail/restaurant-detail-api.md
+  - ../05-specs/api/discovery/restaurant-discovery-api.md
   - ../05-specs/data/data-model.md
   - ../07-adr/data/data-003-spring-data-jpa.md
 ---
@@ -93,6 +94,22 @@ Visit를 기준으로 Creator와 Video를 조인해 다음 조건을 DB에서 �
 각 Visit Row마다 Creator나 Video Repository를 다시 호출하지 않는다. Lazy 연관 탐색으로 응답을 만들지 않는다. 통합 테스트에서 쿼리 수를 단언한다.
 
 목록 조회도 Restaurant마다 방문 Creator를 개별 조회하지 않는다. `EXISTS`, 집계 Projection 또는 제한된 별도 일괄 조회 중 실행 계획이 단순하고 성능 기준을 만족하는 방식을 사용한다. QueryDSL은 Conditional ADR이 활성화되기 전 선제 도입하지 않는다.
+
+### 맛집 목록의 Creator 조건 조합
+
+`RestaurantSearchQueryService`는 Creator·Visit 테이블을 직접 판정하지 않고 Visit 도메인의
+`FindDistinctValidRestaurantIdsByCreatorQuery`를 호출한다. 이 공개 Query Port가 Creator
+공개성과 공개·유효 Visit에 따른 중복 없는 Restaurant ID 후보 집합을 소유한다.
+
+- `creatorId` 미지정: 후보 제한을 `null`로 전달해 Restaurant 전체를 검색한다.
+- 공개되지 않았거나 존재하지 않는 Creator: `400 INVALID_FIELD_VALUE(creatorId)`다.
+- 공개 Creator이지만 유효 후보 없음: 빈 집합을 전달해 `200`과 빈 목록을 반환한다.
+- 후보 있음: Restaurant 검색 Adapter가 후보 ID를 이름·자치구·카테고리와 `AND`로 결합한 뒤
+  안정 정렬과 페이지네이션을 적용한다.
+
+Restaurant 검색 Adapter는 Visit 유효성이나 Creator 공개성을 다시 판정하지 않는다. 따라서
+Visit 정책 변경은 Visit 도메인의 Query 구현 한 곳에 반영하고, Restaurant 목록 조합은 후보
+집합과 자체 소유 필터 결합에만 책임을 둔다.
 
 ## 7. 페이징과 결과 크기
 
