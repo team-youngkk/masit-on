@@ -7,7 +7,7 @@ public interface RegisterVisitUseCase {
 
     VisitRegistrationResult register(RegisterVisitCommand command);
 
-    record RegisterVisitCommand(UUID restaurantId, UUID creatorId, UUID videoId) { }
+    record RegisterVisitCommand(UUID restaurantId, UUID creatorId, UUID videoId, boolean visitEvidenceConfirmed) { }
 
     record VisitRegistrationResult(UUID id, boolean created) { }
 }

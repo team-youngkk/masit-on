@@ -5,6 +5,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -34,10 +36,12 @@ class VisitRelationshipRegistrationControllerApiTest {
         UUID creatorId = UUID.randomUUID();
         UUID videoId = UUID.randomUUID();
         UUID visitId = UUID.randomUUID();
-        when(useCase.register(any())).thenReturn(new RegisterVisitRelationshipUseCase.RegisteredVisitRelationship(
+        when(useCase.register(any(), any())).thenReturn(new RegisterVisitRelationshipUseCase.RegisteredVisitRelationship(
                 visitId, restaurantId, creatorId, videoId));
 
         mockMvc.perform(post("/api/admin/visit-relationships")
+                        .principal(new UsernamePasswordAuthenticationToken(
+                                "admin-id", "", java.util.List.of(new SimpleGrantedAuthority("ADMIN"))))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body(restaurantId, creatorId, videoId, true)))
                 .andExpect(status().isCreated())

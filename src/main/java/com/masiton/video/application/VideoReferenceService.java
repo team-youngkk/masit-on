@@ -24,7 +24,7 @@ class VideoReferenceService implements FindVideoReferenceUseCase, ResolveVideoCr
 
     @Override
     public Optional<VideoReference> findVideoReference(UUID videoId) {
-        return videoRepository.findByIdForUpdate(videoId).map(this::referenceOf);
+        return videoRepository.findById(videoId).map(this::referenceOf);
     }
 
     @Override

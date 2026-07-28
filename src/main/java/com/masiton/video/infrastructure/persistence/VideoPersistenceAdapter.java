@@ -44,12 +44,6 @@ class VideoPersistenceAdapter implements VideoRepositoryPort {
     }
 
     @Override
-    public Optional<Video> findByIdForUpdate(UUID id) {
-        return springDataVideoRepository.findByIdForUpdate(id)
-                .map(VideoMapper::toDomain);
-    }
-
-    @Override
     public Optional<Video> findByExternalVideoId(String externalVideoId) {
         return springDataVideoRepository.findByExternalVideoId(externalVideoId).map(VideoMapper::toDomain);
     }

@@ -23,7 +23,7 @@ class RestaurantReferenceQueryService implements FindRestaurantReferenceUseCase 
 
     @Override
     public Optional<RestaurantReference> findRestaurantReference(UUID restaurantId) {
-        return restaurantRepository.findByIdForUpdate(restaurantId)
+        return restaurantRepository.findById(restaurantId)
                 .map(restaurant -> new RestaurantReference(
                         restaurant.getId(),
                         restaurant.getPublicationStatus() == PublicationStatus.PUBLIC

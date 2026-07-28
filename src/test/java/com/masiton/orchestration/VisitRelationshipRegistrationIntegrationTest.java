@@ -23,6 +23,8 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import com.masiton.common.web.BusinessException;
 import com.masiton.orchestration.application.port.in.RegisterVisitRelationshipUseCase;
+import com.masiton.security.application.AdminPrincipal;
+import com.masiton.security.application.AdminRole;
 import com.masiton.video.application.port.in.ResolveVideoCreatorUseCase;
 import com.masiton.visit.application.port.in.CreatorRestaurantCandidates;
 import com.masiton.visit.application.port.in.FindDistinctValidRestaurantIdsByCreatorQuery;
@@ -145,7 +147,8 @@ class VisitRelationshipRegistrationIntegrationTest {
         try {
             registerVisitRelationshipUseCase.register(
                     new RegisterVisitRelationshipUseCase.RegisterVisitRelationshipCommand(
-                            restaurantId, creatorId, videoId, true));
+                            restaurantId, creatorId, videoId, true),
+                    adminPrincipal());
             return true;
         } catch (BusinessException exception) {
             assertThat(exception.code()).isEqualTo("DUPLICATE_VISIT_RELATIONSHIP");
@@ -186,5 +189,9 @@ class VisitRelationshipRegistrationIntegrationTest {
                 "https://example.com/video/" + externalVideoId,
                 "https://example.com/thumbnail/" + externalVideoId,
                 OffsetDateTime.now());
+    }
+
+    private AdminPrincipal adminPrincipal() {
+        return new AdminPrincipal("admin-id", java.util.Set.of(AdminRole.ADMIN));
     }
 }

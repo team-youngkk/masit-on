@@ -15,8 +15,6 @@ public interface VideoRepositoryPort {
 
     Optional<Video> findById(UUID id);
 
-    Optional<Video> findByIdForUpdate(UUID id);
-
     Optional<Video> findByExternalVideoId(String externalVideoId);
 
     Optional<Video> insertIfAbsent(Video video);

@@ -11,6 +11,7 @@ import com.masiton.common.web.ErrorCode;
 import com.masiton.creator.application.port.in.FindCreatorReferenceUseCase;
 import com.masiton.orchestration.application.port.in.RegisterVisitRelationshipUseCase;
 import com.masiton.restaurant.application.port.in.FindRestaurantReferenceUseCase;
+import com.masiton.security.application.AdminPrincipal;
 import com.masiton.video.application.port.in.FindVideoReferenceUseCase;
 import com.masiton.video.application.port.in.ResolveVideoCreatorUseCase;
 import com.masiton.visit.application.port.in.RegisterVisitUseCase;
@@ -43,7 +44,8 @@ public class RegisterVisitService implements RegisterVisitRelationshipUseCase {
 
     @Override
     @Transactional
-    public RegisteredVisitRelationship register(RegisterVisitRelationshipCommand command) {
+    public RegisteredVisitRelationship register(RegisterVisitRelationshipCommand command, AdminPrincipal adminPrincipal) {
+        requireAdminPrincipal(adminPrincipal);
         requireEvidence(command);
 
         FindRestaurantReferenceUseCase.RestaurantReference restaurant = restaurantReferences
@@ -72,7 +74,8 @@ public class RegisterVisitService implements RegisterVisitRelationshipUseCase {
         }
 
         RegisterVisitUseCase.VisitRegistrationResult result = visitRegistration.register(
-                new RegisterVisitUseCase.RegisterVisitCommand(restaurant.id(), creator.id(), resolvedVideo.id()));
+                new RegisterVisitUseCase.RegisterVisitCommand(
+                        restaurant.id(), creator.id(), resolvedVideo.id(), command.visitEvidenceConfirmed()));
         if (!result.created()) {
             throw failure(HttpStatus.CONFLICT, "DUPLICATE_VISIT_RELATIONSHIP");
         }
@@ -82,6 +85,13 @@ public class RegisterVisitService implements RegisterVisitRelationshipUseCase {
     private void requireEvidence(RegisterVisitRelationshipCommand command) {
         if (command == null || !command.visitEvidenceConfirmed()) {
             throw failure(HttpStatus.UNPROCESSABLE_ENTITY, "VISIT_EVIDENCE_INSUFFICIENT");
+        }
+    }
+
+    private void requireAdminPrincipal(AdminPrincipal adminPrincipal) {
+        if (adminPrincipal == null || adminPrincipal.adminId() == null || adminPrincipal.adminId().isBlank()
+                || !adminPrincipal.hasAdminRole()) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
         }
     }
 

@@ -10,6 +10,8 @@ import com.masiton.common.web.BusinessException;
 import com.masiton.creator.application.port.in.FindCreatorReferenceUseCase;
 import com.masiton.orchestration.application.port.in.RegisterVisitRelationshipUseCase;
 import com.masiton.restaurant.application.port.in.FindRestaurantReferenceUseCase;
+import com.masiton.security.application.AdminPrincipal;
+import com.masiton.security.application.AdminRole;
 import com.masiton.video.application.port.in.FindVideoReferenceUseCase;
 import com.masiton.video.application.port.in.ResolveVideoCreatorUseCase;
 import com.masiton.visit.application.port.in.RegisterVisitUseCase;
@@ -43,12 +45,14 @@ class RegisterVisitServiceTest {
         when(videoCreatorResolver.resolveCreator(videoId, creatorId)).thenReturn(video(videoId, creatorId));
         when(visitRegistration.register(any())).thenReturn(new RegisterVisitUseCase.VisitRegistrationResult(visitId, true));
 
-        RegisterVisitRelationshipUseCase.RegisteredVisitRelationship result = service.register(command(
-                restaurantId, creatorId, videoId, true));
+        RegisterVisitRelationshipUseCase.RegisteredVisitRelationship result = service.register(
+                command(restaurantId, creatorId, videoId, true), adminPrincipal());
 
         assertThat(result).isEqualTo(new RegisterVisitRelationshipUseCase.RegisteredVisitRelationship(
                 visitId, restaurantId, creatorId, videoId));
         verify(videoCreatorResolver).resolveCreator(videoId, creatorId);
+        verify(visitRegistration).register(new RegisterVisitUseCase.RegisterVisitCommand(
+                restaurantId, creatorId, videoId, true));
     }
 
     @Test
@@ -62,7 +66,7 @@ class RegisterVisitServiceTest {
         when(videoReferences.findVideoReference(videoId)).thenReturn(Optional.of(new FindVideoReferenceUseCase.VideoReference(
                 videoId, creatorId, "different-channel", true, true)));
 
-        assertThatThrownBy(() -> service.register(command(restaurantId, creatorId, videoId, true)))
+        assertThatThrownBy(() -> service.register(command(restaurantId, creatorId, videoId, true), adminPrincipal()))
                 .isInstanceOfSatisfying(BusinessException.class,
                         exception -> assertThat(exception.code()).isEqualTo("VIDEO_CHANNEL_MISMATCH"));
     }
@@ -76,7 +80,7 @@ class RegisterVisitServiceTest {
         givenPublicReferences(restaurantId, creatorId, videoId, creatorId);
         when(visitRegistration.register(any())).thenReturn(new RegisterVisitUseCase.VisitRegistrationResult(null, false));
 
-        assertThatThrownBy(() -> service.register(command(restaurantId, creatorId, videoId, true)))
+        assertThatThrownBy(() -> service.register(command(restaurantId, creatorId, videoId, true), adminPrincipal()))
                 .isInstanceOfSatisfying(BusinessException.class,
                         exception -> assertThat(exception.code()).isEqualTo("DUPLICATE_VISIT_RELATIONSHIP"));
     }
@@ -84,9 +88,20 @@ class RegisterVisitServiceTest {
     @Test
     @DisplayName("방문 근거 확인이 없으면 참조와 저장을 조회하지 않고 422를 반환한다")
     void register_방문근거없음_422을반환한다() {
-        assertThatThrownBy(() -> service.register(command(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), false)))
+        assertThatThrownBy(() -> service.register(
+                        command(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), false), adminPrincipal()))
                 .isInstanceOfSatisfying(BusinessException.class,
                         exception -> assertThat(exception.code()).isEqualTo("VISIT_EVIDENCE_INSUFFICIENT"));
+    }
+
+    @Test
+    @DisplayName("ADMIN Principal이 없으면 참조를 조회하지 않고 403을 반환한다")
+    void register_관리자Principal없음_참조미조회403반환() {
+        assertThatThrownBy(() -> service.register(
+                        command(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), true),
+                        new AdminPrincipal("admin-id", java.util.Set.of())))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.code()).isEqualTo("FORBIDDEN"));
     }
 
     private void givenPublicReferences(UUID restaurantId, UUID creatorId, UUID videoId, UUID videoCreatorId) {
@@ -111,5 +126,9 @@ class RegisterVisitServiceTest {
             UUID restaurantId, UUID creatorId, UUID videoId, boolean evidenceConfirmed) {
         return new RegisterVisitRelationshipUseCase.RegisterVisitRelationshipCommand(
                 restaurantId, creatorId, videoId, evidenceConfirmed);
+    }
+
+    private AdminPrincipal adminPrincipal() {
+        return new AdminPrincipal("admin-id", java.util.Set.of(AdminRole.ADMIN));
     }
 }

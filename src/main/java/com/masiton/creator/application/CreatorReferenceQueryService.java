@@ -24,7 +24,7 @@ class CreatorReferenceQueryService implements FindCreatorReferenceUseCase {
 
     @Override
     public Optional<CreatorReference> findCreatorReference(UUID creatorId) {
-        return creatorRepository.findByIdForUpdate(creatorId)
+        return creatorRepository.findById(creatorId)
                 .map(creator -> new CreatorReference(
                         creator.getId(),
                         creator.getExternalChannelId(),

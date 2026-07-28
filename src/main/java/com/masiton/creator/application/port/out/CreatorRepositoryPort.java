@@ -12,8 +12,6 @@ public interface CreatorRepositoryPort {
 
     Optional<Creator> findById(UUID id);
 
-    Optional<Creator> findByIdForUpdate(UUID id);
-
     Optional<Creator> findByExternalChannelId(String externalChannelId);
 
     Optional<Creator> insertIfAbsent(Creator creator);

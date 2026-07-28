@@ -35,11 +35,6 @@ class CreatorPersistenceAdapter implements CreatorRepositoryPort {
     }
 
     @Override
-    public Optional<Creator> findByIdForUpdate(UUID id) {
-        return springDataCreatorRepository.findByIdForUpdate(id).map(CreatorMapper::toDomain);
-    }
-
-    @Override
     public Optional<Creator> findByExternalChannelId(String externalChannelId) {
         return springDataCreatorRepository.findByExternalChannelId(externalChannelId).map(CreatorMapper::toDomain);
     }
