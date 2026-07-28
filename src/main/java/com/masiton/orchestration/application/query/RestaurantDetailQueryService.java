@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import com.masiton.common.web.BusinessException;
 import com.masiton.orchestration.application.port.in.FindValidVisitContentByRestaurantQuery;
+import com.masiton.orchestration.application.port.in.GetRestaurantDetailQuery;
 import com.masiton.orchestration.application.port.in.RelatedVideoView;
 import com.masiton.orchestration.application.port.in.VisitContentResult;
 import com.masiton.orchestration.application.port.in.VisitedCreatorView;
@@ -35,7 +36,7 @@ import com.masiton.orchestration.application.port.in.VisitedCreatorView;
  * 열지 않으면 콘텐츠 조회가 자신만의 독립된 트랜잭션을 시작·종료하므로 실패가 격리된다.
  */
 @Service
-public class RestaurantDetailQueryService {
+public class RestaurantDetailQueryService implements GetRestaurantDetailQuery {
 
     private static final Logger log = LoggerFactory.getLogger(RestaurantDetailQueryService.class);
 
@@ -50,6 +51,7 @@ public class RestaurantDetailQueryService {
         this.findValidVisitContentByRestaurantQuery = findValidVisitContentByRestaurantQuery;
     }
 
+    @Override
     public RestaurantDetailResult getRestaurantDetail(UUID restaurantId) {
         RestaurantDetailBase base = restaurantDetailBaseQueryPort.findPublicDetailById(restaurantId)
                 .orElseThrow(() -> new BusinessException(
