@@ -21,6 +21,22 @@ public class Visit {
     private final OffsetDateTime updatedAt;
     private final OffsetDateTime deletedAt;
 
+    public static Visit register(UUID id, UUID restaurantId, UUID creatorId, UUID videoId, boolean evidenceConfirmed) {
+        if (!evidenceConfirmed) {
+            throw new VisitEvidenceRequiredException();
+        }
+        return new Visit(
+                id,
+                restaurantId,
+                creatorId,
+                videoId,
+                PublicationStatus.PUBLIC,
+                LifecycleStatus.ACTIVE,
+                null,
+                null,
+                null);
+    }
+
     public Visit(
             UUID id,
             UUID restaurantId,

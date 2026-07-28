@@ -7,9 +7,11 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+
 interface SpringDataCreatorRepository extends JpaRepository<CreatorJpaEntity, UUID> {
 
     Optional<CreatorJpaEntity> findByExternalChannelId(String externalChannelId);
+
     /**
      * ix_creator__public_name 부분 인덱스((channel_name COLLATE "C", id)
      * WHERE publication_status='PUBLIC' AND lifecycle_status='ACTIVE'

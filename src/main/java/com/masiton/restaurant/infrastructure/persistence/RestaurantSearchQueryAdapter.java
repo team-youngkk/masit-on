@@ -26,25 +26,6 @@ class RestaurantSearchQueryAdapter implements RestaurantSearchQueryPort {
             "r.publication_status = 'PUBLIC' AND r.lifecycle_status = 'ACTIVE'";
 
     /**
-     * BR-SEARCH-007의 유효 방문 근거 판정이다. WS-03(T-07)이 공식 방문 판정 서비스를 만들면
-     * 이 서브쿼리를 그 계약으로 교체할 수 있다.
-     */
-    private static final String CREATOR_VISIT_CONDITION = """
-             AND r.id IN (
-                 SELECT v.restaurant_id
-                 FROM visit v
-                 JOIN creator c ON c.id = v.creator_id
-                 JOIN video vi ON vi.id = v.video_id
-                 WHERE v.creator_id = :creatorId
-                   AND v.publication_status = 'PUBLIC' AND v.lifecycle_status = 'ACTIVE'
-                   AND c.publication_status = 'PUBLIC' AND c.lifecycle_status = 'ACTIVE'
-                   AND c.external_availability_status = 'AVAILABLE'
-                   AND vi.publication_status = 'PUBLIC' AND vi.lifecycle_status = 'ACTIVE'
-                   AND vi.external_availability_status = 'AVAILABLE'
-             )
-            """;
-
-    /**
      * PostgreSQL은 SELECT DISTINCT의 ORDER BY 표현식이 SELECT 목록과 문자 그대로 일치해야 한다.
      * COLLATE "C" 정렬은 DISTINCT와 같은 SELECT 절에 둘 수 없어 중복 제거를 내부 질의로 분리한다.
      */
@@ -88,9 +69,13 @@ class RestaurantSearchQueryAdapter implements RestaurantSearchQueryPort {
             where.append(" AND r.food_category_id = :foodCategoryId");
             params.addValue("foodCategoryId", criteria.foodCategoryId());
         }
-        if (criteria.creatorId() != null) {
-            where.append(CREATOR_VISIT_CONDITION);
-            params.addValue("creatorId", criteria.creatorId());
+        if (criteria.candidateRestaurantIds() != null) {
+            if (criteria.candidateRestaurantIds().isEmpty()) {
+                where.append(" AND 1 = 0");
+            } else {
+                where.append(" AND r.id IN (:candidateRestaurantIds)");
+                params.addValue("candidateRestaurantIds", criteria.candidateRestaurantIds());
+            }
         }
 
         Long totalElements = jdbcTemplate.queryForObject(
@@ -130,17 +115,6 @@ class RestaurantSearchQueryAdapter implements RestaurantSearchQueryPort {
                         resultSet.getObject("restaurant_id", UUID.class),
                         resultSet.getObject("creator_id", UUID.class),
                         resultSet.getString("channel_name")));
-    }
-
-    @Override
-    public boolean existsPublicCreator(UUID creatorId) {
-        Boolean exists = jdbcTemplate.queryForObject(
-                "SELECT EXISTS (SELECT 1 FROM creator WHERE id = :creatorId "
-                        + "AND publication_status = 'PUBLIC' AND lifecycle_status = 'ACTIVE' "
-                        + "AND external_availability_status = 'AVAILABLE')",
-                new MapSqlParameterSource("creatorId", creatorId),
-                Boolean.class);
-        return Boolean.TRUE.equals(exists);
     }
 
     /** LIKE 와일드카드(%, _)와 이스케이프 문자 자체를 리터럴로 취급하도록 이스케이프한다. */

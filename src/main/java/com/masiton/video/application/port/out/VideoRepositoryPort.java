@@ -18,4 +18,6 @@ public interface VideoRepositoryPort {
     Optional<Video> findByExternalVideoId(String externalVideoId);
 
     Optional<Video> insertIfAbsent(Video video);
+
+    Optional<Video> assignCreatorIfUnassigned(UUID videoId, UUID creatorId);
 }

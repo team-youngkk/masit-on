@@ -14,4 +14,8 @@ public interface VisitRepositoryPort {
     Visit save(Visit visit);
 
     Optional<Visit> findById(UUID id);
+
+    Optional<Visit> findByRestaurantIdAndCreatorIdAndVideoId(UUID restaurantId, UUID creatorId, UUID videoId);
+
+    Optional<Visit> insertIfAbsent(Visit visit);
 }
