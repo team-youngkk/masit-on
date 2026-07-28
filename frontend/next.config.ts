@@ -3,6 +3,17 @@ import type { NextConfig } from 'next'
 const nextConfig: NextConfig = {
   reactStrictMode: true,
 
+  async rewrites() {
+    const apiBaseUrl = process.env.API_BASE_URL ?? 'http://localhost:8080'
+
+    return [
+      {
+        source: '/api/:path*',
+        destination: `${apiBaseUrl}/api/:path*`,
+      },
+    ]
+  },
+
   typescript: {
     /*
      * ADR-WEB-001이 고정한 Next.js 16.2.11과 TypeScript 7.0.2 조합에서
