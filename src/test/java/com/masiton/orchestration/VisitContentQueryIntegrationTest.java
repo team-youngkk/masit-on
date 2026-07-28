@@ -143,9 +143,9 @@ class VisitContentQueryIntegrationTest {
     }
 
     @Test
-    @DisplayName("Video가비공개_두목록모두빈배열을반환한다")
-    void Video가비공개_두목록모두빈배열을반환한다() {
-        // given
+    @DisplayName("Video가비공개_videos는비어도유효한Creator는visitedBy에그대로표시한다")
+    void Video가비공개_videos는비어도유효한Creator는visitedBy에그대로표시한다() {
+        // given: restaurant-detail-api.md 7절 — 공개 관련 영상이 없어도 유효한 유튜버는 표시한다.
         UUID restaurantId = UUID.randomUUID();
         UUID creatorId = UUID.randomUUID();
         UUID videoId = UUID.randomUUID();
@@ -160,7 +160,7 @@ class VisitContentQueryIntegrationTest {
 
         // then
         assertThat(result.videos()).isEmpty();
-        assertThat(result.visitedBy()).isEmpty();
+        assertThat(result.visitedBy()).extracting("id").containsExactly(creatorId);
     }
 
     @Test
