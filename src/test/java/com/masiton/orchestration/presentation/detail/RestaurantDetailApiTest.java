@@ -163,9 +163,9 @@ class RestaurantDetailApiTest {
     }
 
     @Test
-    @DisplayName("삭제된 영상의 방문 관계는 제외하고 기본 정보는 유지한다")
-    void 상세조회_삭제된영상방문관계_콘텐츠에서제외하고기본정보는유지한다() throws Exception {
-        // given
+    @DisplayName("삭제된 영상의 방문 관계는 videos에서 제외하되 유효한 유튜버는 visitedBy에 그대로 표시한다")
+    void 상세조회_삭제된영상방문관계_videos에서제외하고유효한유튜버는visitedBy에표시한다() throws Exception {
+        // given: restaurant-detail-api.md 7절 — 공개 관련 영상이 없어도 유효한 유튜버는 표시한다.
         UUID restaurantId = UUID.randomUUID();
         insertRestaurant(restaurantId, "삭제영상맛집", null, "PUBLIC", "ACTIVE", null);
         UUID creatorId = UUID.randomUUID();
@@ -180,7 +180,9 @@ class RestaurantDetailApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("삭제영상맛집"))
                 .andExpect(jsonPath("$.contentStatus").value("AVAILABLE"))
-                .andExpect(jsonPath("$.visitedBy", org.hamcrest.Matchers.hasSize(0)))
+                .andExpect(jsonPath("$.visitedBy", org.hamcrest.Matchers.hasSize(1)))
+                .andExpect(jsonPath("$.visitedBy[0].id").value(creatorId.toString()))
+                .andExpect(jsonPath("$.visitedBy[0].channelName").value("정상 채널"))
                 .andExpect(jsonPath("$.videos", org.hamcrest.Matchers.hasSize(0)));
     }
 

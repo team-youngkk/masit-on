@@ -98,6 +98,28 @@ class VisitContentQueryServiceTest {
     }
 
     @Test
+    @DisplayName("Restaurant기준_콘텐츠조회_Row의videoId가null이면Creator는추가하고videos는추가하지않는다")
+    void Restaurant기준_콘텐츠조회_Row의videoId가null이면Creator는추가하고videos는추가하지않는다() {
+        // given: Port 구현은 Video가 공개·유효 조건을 만족하지 않으면 video 관련 필드를 null로 반환한다.
+        VisitContentQueryService service = new VisitContentQueryService(restaurantDetailContentQueryPort);
+        UUID restaurantId = UUID.randomUUID();
+        UUID creatorId = UUID.randomUUID();
+
+        List<VisitContentRow> rows = List.of(
+                new VisitContentRow(creatorId, "채널", "https://youtube.com/a", null, null, null, null));
+        when(restaurantDetailContentQueryPort.findValidVisitContentRowsByRestaurantId(restaurantId))
+                .thenReturn(rows);
+
+        // when
+        VisitContentResult result = service.findValidVisitContentByRestaurant(restaurantId);
+
+        // then
+        assertThat(result.visitedBy()).hasSize(1);
+        assertThat(result.visitedBy().get(0).id()).isEqualTo(creatorId);
+        assertThat(result.videos()).isEmpty();
+    }
+
+    @Test
     @DisplayName("Restaurant기준_콘텐츠조회_관계없으면두목록모두빈배열을반환한다")
     void Restaurant기준_콘텐츠조회_관계없으면두목록모두빈배열을반환한다() {
         // given

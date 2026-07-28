@@ -21,6 +21,10 @@ import com.masiton.orchestration.application.port.out.VisitContentRow;
  * 적용한 Row를 반환하면, 이 Application이 Creator ID/Video ID 기준 최종 중복 제거와 안정 정렬을
  * 수행해 restaurant-detail-api.md 계약(visitedBy/videos)에 맞는 결과로 조합한다.
  * transaction-boundaries.md 5절에 따라 읽기 전용 트랜잭션은 이 public 메서드에서 시작한다.
+ *
+ * <p>Row의 Creator 필드는 항상 채워지지만 Video 필드는 그 Visit의 영상이 공개·유효 조건을
+ * 만족하지 못하면 Port 구현에서 NULL로 온다(restaurant-detail-api.md 7절: 공개 영상이 없어도
+ * 유효한 유튜버는 visitedBy에 표시). videoId가 NULL인 Row는 videos에 반영하지 않는다.
  */
 @Service
 @Transactional(readOnly = true)
@@ -43,10 +47,12 @@ public class VisitContentQueryService implements FindValidVisitContentByRestaura
             creatorsById.putIfAbsent(
                     row.creatorId(),
                     new VisitedCreatorView(row.creatorId(), row.channelName(), row.channelUrl()));
-            videosById.putIfAbsent(
-                    row.videoId(),
-                    new RelatedVideoView(
-                            row.videoId(), row.title(), row.thumbnailUrl(), row.channelName(), row.sourceUrl()));
+            if (row.videoId() != null) {
+                videosById.putIfAbsent(
+                        row.videoId(),
+                        new RelatedVideoView(
+                                row.videoId(), row.title(), row.thumbnailUrl(), row.channelName(), row.sourceUrl()));
+            }
         }
 
         List<VisitedCreatorView> visitedBy = creatorsById.values().stream()
