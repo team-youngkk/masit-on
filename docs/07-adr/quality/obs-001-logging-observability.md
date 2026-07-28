@@ -40,7 +40,7 @@ Accepted
 
 ## 3. 배경
 
-[ADR-DEPLOY-002](../platform/deploy-002-validation-deployment-before-expansion.md)에 따라 1차 MVP 구현은 로컬에서 검증하고 M2부터 운영 환경을 함께 검증한다. 모든 단계에서 관리자 등록의 Kakao·YouTube 외부 호출, 인증 실패, 저장소 오류를 구분할 수 있어야 하므로 구조화 로그와 헬스체크는 구현한다. AWS 수집·알림은 M2부터 활성화한다.
+[ADR-DEPLOY-002](../platform/deploy-002-validation-deployment-before-expansion.md)에 따라 MVP 구현은 로컬에서 검증하고 M2부터 운영 환경을 함께 검증한다. 모든 단계에서 관리자 등록의 Kakao·YouTube 외부 호출, 인증 실패, 저장소 오류를 구분할 수 있어야 하므로 구조화 로그와 헬스체크는 구현한다. AWS 수집·알림은 M2부터 활성화한다.
 
 이우람은 [WS-03](../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)(유튜버 기반 탐색)의 최종 책임자이면서 동시에 인프라·배포 조율 책임을 겸한다([roles.md](../../03-team/roles.md) 4장 "아키텍처·배포 책임이 기능 개발 일정을 방해할 수 있다"는 주요 리스크로 이미 명시). 따라서 이 ADR이 정하는 관측 기준은 이우람이 매 배포마다 직접 붙어서 해석해야 하는 복잡한 도구가 아니라, 4명 모두가 자신의 워크스트림 오류를 스스로 진단할 수 있을 만큼 단순해야 한다.
 

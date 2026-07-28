@@ -14,7 +14,7 @@ related_documents:
   - ../06-architecture/implementation-conventions.md
 ---
 
-# 1차 MVP 로컬 실행·회귀 검증 결과
+# MVP 로컬 실행·회귀 검증 결과
 
 `T-14`의 검증 결과를 기록한다. 실행한 명령과 관찰한 결과만 적고, 실행하지 못한 항목은 10절에 분리해 남긴다.
 

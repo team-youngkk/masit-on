@@ -50,14 +50,14 @@ Accepted
 
 ## 4. 결정 문제
 
-MVP 등록 과정에서 장소와 YouTube 자원의 존재·동일성을 어떤 외부 기준으로 확인할 것인가. 이 결정은 다음 제약 안에서 이루어져야 한다: [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록)는 김인안 한 명이 등록 순서·중복·원자성까지 끝까지 책임지고([roles.md](../../03-team/roles.md)), 4명의 백엔드 개발자가 각자 MVP 기간 내에 독립적으로 개발·검증할 수 있어야 하며([scope.md](../../00-overview/scope.md) 6번 경계 규칙), AI 기반 자동 판정과 크롤링은 이미 1차 MVP 제외 범위로 결정되어 있다([scope.md](../../00-overview/scope.md) 4.5절, [ADR-AI-001](../adr-backlog.md#adr-ai-001-spring-ai와-gemini-영상-정보-추출), [ADR-AUTO-001](../adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) Post-MVP).
+MVP 등록 과정에서 장소와 YouTube 자원의 존재·동일성을 어떤 외부 기준으로 확인할 것인가. 이 결정은 다음 제약 안에서 이루어져야 한다: [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록)는 김인안 한 명이 등록 순서·중복·원자성까지 끝까지 책임지고([roles.md](../../03-team/roles.md)), 4명의 백엔드 개발자가 각자 MVP 기간 내에 독립적으로 개발·검증할 수 있어야 하며([scope.md](../../00-overview/scope.md) 6번 경계 규칙), AI 기반 자동 판정과 크롤링은 이미 MVP 제외 범위로 결정되어 있다([scope.md](../../00-overview/scope.md) 4.5절, [ADR-AI-001](../adr-backlog.md#adr-ai-001-spring-ai와-gemini-영상-정보-추출), [ADR-AUTO-001](../adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) Post-MVP).
 
 부수적으로, 확인 실패·지연을 어디에서 얼마나 감당할 것인가도 함께 결정해야 한다. 관리자 등록은 관리자 한 명이 트리거하는 저빈도 작업이므로, 이 결정 문제는 "완벽한 가용성을 보장하는 복원력 체계를 구축할 것인가" 대신 "이 정도 호출 빈도에 비례하는 최소한의 실패 처리로 충분한가"를 묻는다.
 
 ## 5. 고려한 선택지
 
 - **관리자 자유 입력만 사용**: 외부 식별자 없이 관리자가 입력한 이름·주소·채널명만으로 중복을 판단해야 한다. 그런데 [scope.md](../../00-overview/scope.md)의 중복 판단 기준은 "카카오에서 동일한 장소" "동일한 YouTube 채널·영상"처럼 외부 제공자 식별자를 전제로 정의되어 있어, 자유 입력만으로는 이 기준 자체를 구현할 수 없다. 관리자 계정은 모두 동일한 등록 권한을 가지며 별도의 교차 검수 단계가 없으므로([scope.md](../../00-overview/scope.md) 3.4 "관리자 접근"), 등록 건수가 늘어날수록 이름만으로 동일 장소·동일 채널 여부를 관리자가 기억에 의존해 판단하는 것은 [NFR-INTEGRITY-002](../../01-requirements/non-functional-requirements.md#nfr-integrity-002-중복-및-동시-등록-방지)(중복 및 동시 등록 방지, Critical)를 만족시키기 어렵다.
-- **크롤링·AI 자동 판정**: 관리자 확인 없이 자동으로 존재·동일성을 판정하는 방식이다. [scope.md](../../00-overview/scope.md) 4.5절은 "AI 또는 외부 데이터 수집을 통한 자동 등록"과 "관리자 확인 없는 자동 등록"을 1차 MVP 제외 범위로 명시하며, [ADR-AUTO-001](../adr-backlog.md#adr-auto-001-자동-수집과-배치-처리)(Jsoup·n8n·Scheduler·Batch)과 [ADR-AI-001](../adr-backlog.md#adr-ai-001-spring-ai와-gemini-영상-정보-추출)(Spring AI·Gemini)은 이미 Post-MVP로 분류되어 있다. 지금 이 방식을 채택하면 별도의 범위 변경 절차 없이 제외 범위를 구현 범위로 끌어오는 것이 되어 채택할 수 없다.
+- **크롤링·AI 자동 판정**: 관리자 확인 없이 자동으로 존재·동일성을 판정하는 방식이다. [scope.md](../../00-overview/scope.md) 4.5절은 "AI 또는 외부 데이터 수집을 통한 자동 등록"과 "관리자 확인 없는 자동 등록"을 MVP 제외 범위로 명시하며, [ADR-AUTO-001](../adr-backlog.md#adr-auto-001-자동-수집과-배치-처리)(Jsoup·n8n·Scheduler·Batch)과 [ADR-AI-001](../adr-backlog.md#adr-ai-001-spring-ai와-gemini-영상-정보-추출)(Spring AI·Gemini)은 이미 Post-MVP로 분류되어 있다. 지금 이 방식을 채택하면 별도의 범위 변경 절차 없이 제외 범위를 구현 범위로 끌어오는 것이 되어 채택할 수 없다.
 - **Kakao Local·YouTube 공식 API 조회 + 관리자 확인**: 관리자가 채널 링크·원본 링크를 입력하면 API로 존재·현재 표시 정보를 조회하고, 그 결과를 관리자가 확인한 뒤 저장한다([RV-NFR-008](../../01-requirements/non-functional-requirements.md#rv-nfr-008-외부-youtube-api-사용-여부), [RV-NFR-016](../../01-requirements/non-functional-requirements.md#rv-nfr-016-외부-링크-상태-확인-정책) 결정 완료). 이 방식만이 [scope.md](../../00-overview/scope.md)가 요구하는 외부 식별자 기반 동일성 판단과 "관리자 확인 후 저장"이라는 두 조건을 동시에 만족한다.
 
 ## 6. 결정

@@ -38,7 +38,7 @@ M2부터 운영 비밀값은 Parameter Store SecureString과 KMS, EC2의 AWS 접
 
 ## 3. 배경
 
-관리자 JWT 서명 키, DB·Redis 자격 증명과 Kakao·YouTube API 키는 모든 단계에서 코드·GitHub 저장소와 분리해야 한다. 1차 MVP 구현은 로컬 전용 비밀 주입 방식을 사용하고, Parameter Store·KMS·IAM Role·OIDC는 M2부터 적용한다.
+관리자 JWT 서명 키, DB·Redis 자격 증명과 Kakao·YouTube API 키는 모든 단계에서 코드·GitHub 저장소와 분리해야 한다. MVP 구현은 로컬 전용 비밀 주입 방식을 사용하고, Parameter Store·KMS·IAM Role·OIDC는 M2부터 적용한다.
 
 ## 4. 결정 문제
 

@@ -72,7 +72,7 @@ GitHub Actions를 CI 기준으로 삼으면 자체 서버를 운영하지 않아
 
 ## 9. 적용 범위
 
-백엔드(Spring Boot, JDK 21.0.12)·프론트엔드(Node.js 24.18.0, Next.js) 빌드와 단위·통합·계약 테스트에 1차 MVP부터 적용한다. 컨테이너 이미지 생성·ECR push·EC2 배포 검증은 M2부터 적용한다.
+백엔드(Spring Boot, JDK 21.0.12)·프론트엔드(Node.js 24.18.0, Next.js) 빌드와 단위·통합·계약 테스트에 MVP부터 적용한다. 컨테이너 이미지 생성·ECR push·EC2 배포 검증은 M2부터 적용한다.
 
 ## 10. 강제 규칙
 

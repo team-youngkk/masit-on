@@ -38,7 +38,7 @@ Accepted
 
 ## 3. 배경
 
-[ADR-DEPLOY-002](deploy-002-validation-deployment-before-expansion.md)에 따라 1차 MVP 구현은 로컬 Docker 환경에서 통합 실행하고, M2부터 단일 EC2 인스턴스 위에 Nginx, Next.js와 Spring Boot를 함께 운영한다. 따라서 현재 단계의 우선 목적은 네 명의 개발자가 같은 PostgreSQL·Redis·애플리케이션 실행 환경을 재현하는 것이며, 동일 이미지를 운영 배포 산출물로 이어갈 수 있게 유지한다.
+[ADR-DEPLOY-002](deploy-002-validation-deployment-before-expansion.md)에 따라 MVP 구현은 로컬 Docker 환경에서 통합 실행하고, M2부터 단일 EC2 인스턴스 위에 Nginx, Next.js와 Spring Boot를 함께 운영한다. 따라서 현재 단계의 우선 목적은 네 명의 개발자가 같은 PostgreSQL·Redis·애플리케이션 실행 환경을 재현하는 것이며, 동일 이미지를 운영 배포 산출물로 이어갈 수 있게 유지한다.
 
 ## 4. 결정 문제
 
@@ -64,7 +64,7 @@ Docker를 쓰면 이미지 빌드·스캔·저장·정리라는 새로운 운영
 
 ## 9. 적용 범위
 
-1차 MVP와 확장 단계에서는 백엔드·프론트엔드 이미지와 로컬 PostgreSQL·Redis 컨테이너에 적용한다. M2부터 단일 EC2의 Nginx·애플리케이션 컨테이너에도 적용한다.
+MVP와 확장 단계에서는 백엔드·프론트엔드 이미지와 로컬 PostgreSQL·Redis 컨테이너에 적용한다. M2부터 단일 EC2의 Nginx·애플리케이션 컨테이너에도 적용한다.
 
 ## 10. 강제 규칙
 

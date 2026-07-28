@@ -19,7 +19,7 @@ related_documents:
 
 ## 2. 적용 우선순위
 
-1. [docs/00-overview/scope.md](../00-overview/scope.md)의 1차 MVP 범위
+1. [docs/00-overview/scope.md](../00-overview/scope.md)의 MVP 범위
 2. 확정 요구사항, 비즈니스 규칙, API·데이터 명세
 3. Accepted ADR
 4. 이 기술 정책
@@ -90,7 +90,7 @@ related_documents:
 - Redis 버전 기준과 실제 사용 역할을 별개 결정으로 취급한다.
 - 관리자 Refresh Token은 Redis 8.8에 저장한다. Access Token 만료는 30분, Refresh Token TTL은 14일이며 재발급마다 회전하고 재사용을 탐지해 즉시 폐기한다. Redis 장애 시에는 재발급을 차단하는 fail-closed로 처리하여 Access Token 만료 후 재로그인을 요구한다 (2026-07-24 결정).
 - 캐시, 일반 사용자 Refresh Token과 분산 락은 관리자 Token 역할과 분리하고 각각 활성화 조건을 충족한 뒤 도입한다.
-- 1차 MVP에서 일반 사용자 Refresh Token 저장은 금지한다.
+- MVP에서 일반 사용자 Refresh Token 저장은 금지한다.
 - 자동 배치와 다중 인스턴스 실행이 확정되기 전 분산 락을 도입하지 않는다.
 - Redis를 활성화할 경우 개발·운영의 키 형식, TTL, 직렬화와 락 해제 규칙을 일치시킨다.
 - AOF `everysec`, RDB 스냅샷과 구체적 TTL은 운영 설정이며 배포 설계에서 검증한다.
@@ -139,7 +139,7 @@ related_documents:
 
 ## 13. 실행 및 운영 배포 토폴로지 정책 (2026-07-28 변경)
 
-- 1차 MVP 구현은 로컬 Docker 환경에서 Next.js, Spring Boot, PostgreSQL과 Redis를 통합 실행하고 검증한다.
+- MVP 구현은 로컬 Docker 환경에서 Next.js, Spring Boot, PostgreSQL과 Redis를 통합 실행하고 검증한다.
 - M2에서 다음 확장 단계보다 먼저 최초 운영 환경을 제한 공개로 배포하고, 검증을 통과한 같은 환경을 계속 운영한다.
 - 최초 운영 배포는 단일 EC2 인스턴스(Nginx 리버스 프록시 + Next.js 프론트엔드 + Spring Boot 백엔드)를 사용하며 다중 리전·다중 인스턴스 고가용성 구성을 필수로 하지 않는다.
 - Nginx는 `/api/**`를 Spring Boot, 나머지 외부 경로를 Next.js로 전달하며 `/internal/**`은 인터넷에서 차단한다. 세부 경로와 인증 matcher는 [ADR-WEB-003](../07-adr/platform/web-003-routing-boundary.md)을 따른다.
