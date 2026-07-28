@@ -55,4 +55,9 @@ class ConfirmationTokenPersistenceAdapter implements ConfirmationTokenRepository
                 resultResourceId,
                 completedAt) == 1;
     }
+
+    @Override
+    public int deleteExpiredRetentionRecords(OffsetDateTime retentionDeadline, int limit) {
+        return springDataConfirmationTokenRepository.deleteExpiredRetentionRecords(retentionDeadline, limit);
+    }
 }

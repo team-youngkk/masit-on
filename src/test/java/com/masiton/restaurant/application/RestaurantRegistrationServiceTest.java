@@ -59,7 +59,7 @@ class RestaurantRegistrationServiceTest {
     void 미리보기_정상장소확인_READY토큰발급하고맛집저장하지않는다() {
         // given
         prepareReferences();
-        when(placeVerificationPort.verify(any(), any())).thenReturn(Optional.of(verifiedPlace()));
+        when(placeVerificationPort.verify(any(), any(), any())).thenReturn(Optional.of(verifiedPlace()));
         when(restaurantRepository.findByKakaoPlaceId("place-1")).thenReturn(Optional.empty());
         when(confirmationTokenUseCase.issue(any())).thenReturn(
                 new IssuedConfirmationToken("opaque-token", OffsetDateTime.parse("2026-07-27T12:10:00Z")));
@@ -80,7 +80,7 @@ class RestaurantRegistrationServiceTest {
     void 미리보기_동일카카오장소_DUPLICATE기존자원반환하고토큰발급하지않는다() {
         // given
         prepareReferences();
-        when(placeVerificationPort.verify(any(), any())).thenReturn(Optional.of(verifiedPlace()));
+        when(placeVerificationPort.verify(any(), any(), any())).thenReturn(Optional.of(verifiedPlace()));
         Restaurant existing = restaurant(UUID.randomUUID(), "place-1");
         when(restaurantRepository.findByKakaoPlaceId("place-1")).thenReturn(Optional.of(existing));
 
@@ -100,7 +100,7 @@ class RestaurantRegistrationServiceTest {
     @DisplayName("카카오 검증 실패는 EXTERNAL_SERVICE_ERROR로 변환한다")
     void 미리보기_외부검증실패_EXTERNAL_SERVICE_ERROR() {
         prepareReferences();
-        when(placeVerificationPort.verify(any(), any())).thenThrow(new PlaceVerificationFailedException());
+        when(placeVerificationPort.verify(any(), any(), any())).thenThrow(new PlaceVerificationFailedException());
 
         assertThatThrownBy(() -> service.preview(command()))
                 .isInstanceOf(com.masiton.common.web.BusinessException.class)
@@ -175,6 +175,23 @@ class RestaurantRegistrationServiceTest {
         assertThat(result.duplicate()).isTrue();
         assertThat(result.restaurant().id()).isEqualTo(concurrent.getId());
         verify(confirmationTokenUseCase).completeDuplicate(tokenId, concurrent.getId());
+    }
+
+    @Test
+    @DisplayName("카카오가 서울 형식이 아닌 도로명주소를 반환하면 외부 서비스 오류로 변환한다")
+    void 미리보기_카카오주소형식오류_EXTERNAL_SERVICE_ERROR() {
+        prepareReferences();
+        when(placeVerificationPort.verify(any(), any(), any())).thenReturn(Optional.of(new VerifiedPlace(
+                "place-1",
+                "맛잇온 테스트 식당",
+                "https://place.map.kakao.com/place-1",
+                "부산광역시 해운대구 해운대로 1",
+                "02-000-0000")));
+
+        assertThatThrownBy(() -> service.preview(command()))
+                .isInstanceOf(com.masiton.common.web.BusinessException.class)
+                .extracting(exception -> ((com.masiton.common.web.BusinessException) exception).code())
+                .isEqualTo(com.masiton.common.web.ErrorCode.EXTERNAL_SERVICE_ERROR.name());
     }
 
     private void prepareReferences() {

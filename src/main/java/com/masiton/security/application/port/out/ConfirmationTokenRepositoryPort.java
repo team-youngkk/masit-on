@@ -33,4 +33,6 @@ public interface ConfirmationTokenRepositoryPort {
             ConfirmationTokenStatus status,
             UUID resultResourceId,
             OffsetDateTime completedAt);
+
+    int deleteExpiredRetentionRecords(OffsetDateTime retentionDeadline, int limit);
 }

@@ -9,5 +9,5 @@ import java.util.Optional;
  */
 public interface PlaceVerificationPort {
 
-    Optional<VerifiedPlace> verify(String restaurantName, URI kakaoPlaceUrl);
+    Optional<VerifiedPlace> verify(String restaurantName, URI kakaoPlaceUrl, String fallbackPhoneNumber);
 }

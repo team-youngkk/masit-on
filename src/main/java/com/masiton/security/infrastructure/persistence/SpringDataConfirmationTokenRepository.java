@@ -37,4 +37,20 @@ interface SpringDataConfirmationTokenRepository extends JpaRepository<Confirmati
             @Param("status") ConfirmationTokenStatus status,
             @Param("resultResourceId") UUID resultResourceId,
             @Param("completedAt") OffsetDateTime completedAt);
+
+    @Modifying(flushAutomatically = true)
+    @Query(value = """
+            delete from confirmation_token
+             where id in (
+                 select id
+                   from confirmation_token
+                  where (status = 'ISSUED' and expires_at <= :retentionDeadline)
+                     or (status in ('CREATED', 'DUPLICATE') and completed_at <= :retentionDeadline)
+                  order by issued_at
+                  limit :limit
+             )
+            """, nativeQuery = true)
+    int deleteExpiredRetentionRecords(
+            @Param("retentionDeadline") OffsetDateTime retentionDeadline,
+            @Param("limit") int limit);
 }

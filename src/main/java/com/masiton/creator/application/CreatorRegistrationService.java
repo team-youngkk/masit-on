@@ -59,7 +59,12 @@ public class CreatorRegistrationService implements CreatorRegistrationUseCase {
         VerifiedChannel channel = verified.get();
         Optional<Creator> existing = creatorRepository.findByExternalChannelId(channel.externalChannelId());
         if (existing.isPresent()) {
-            return new CreatorPreviewResult(CreatorPreviewResult.Decision.DUPLICATE, null, null, null, existing(existing.get()));
+            return new CreatorPreviewResult(
+                    CreatorPreviewResult.Decision.DUPLICATE,
+                    null,
+                    null,
+                    candidate(existing.get()),
+                    existing(existing.get()));
         }
         ChannelSnapshot snapshot = new ChannelSnapshot(channel.externalChannelId(), channel.channelName(), channel.channelUrl(), channel.checkedAt());
         IssuedConfirmationToken token = confirmationTokenUseCase.issue(new ConfirmationTokenIssueCommand(

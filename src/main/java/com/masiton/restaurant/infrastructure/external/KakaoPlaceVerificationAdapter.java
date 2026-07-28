@@ -60,7 +60,7 @@ class KakaoPlaceVerificationAdapter implements PlaceVerificationPort {
     }
 
     @Override
-    public Optional<VerifiedPlace> verify(String restaurantName, URI kakaoPlaceUrl) {
+    public Optional<VerifiedPlace> verify(String restaurantName, URI kakaoPlaceUrl, String fallbackPhoneNumber) {
         try {
             String query = URLEncoder.encode(restaurantName, StandardCharsets.UTF_8);
             URI requestUri = baseUri.resolve("/v2/local/search/keyword.json?query=" + query);
@@ -79,7 +79,7 @@ class KakaoPlaceVerificationAdapter implements PlaceVerificationPort {
                 throw new PlaceVerificationFailedException();
             }
 
-            return selectPlace(response.body(), kakaoPlaceUrl);
+            return selectPlace(response.body(), kakaoPlaceUrl, fallbackPhoneNumber);
         } catch (IOException | InterruptedException exception) {
             if (exception instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
@@ -94,7 +94,7 @@ class KakaoPlaceVerificationAdapter implements PlaceVerificationPort {
     }
 
     @SuppressWarnings("unchecked")
-    private Optional<VerifiedPlace> selectPlace(String responseBody, URI submittedUrl) {
+    private Optional<VerifiedPlace> selectPlace(String responseBody, URI submittedUrl, String fallbackPhoneNumber) {
         try {
             Map<String, Object> payload = objectMapper.readValue(responseBody, MAP_TYPE);
             Object documentsValue = payload.get("documents");
@@ -104,7 +104,7 @@ class KakaoPlaceVerificationAdapter implements PlaceVerificationPort {
             return documents.stream()
                     .filter(Map.class::isInstance)
                     .map(Map.class::cast)
-                    .map(document -> toVerifiedPlace((Map<String, Object>) document))
+                    .map(document -> toVerifiedPlace((Map<String, Object>) document, fallbackPhoneNumber))
                     .filter(Optional::isPresent)
                     .map(Optional::get)
                     .filter(place -> samePlaceUrl(place.kakaoPlaceUrl(), submittedUrl))
@@ -114,12 +114,15 @@ class KakaoPlaceVerificationAdapter implements PlaceVerificationPort {
         }
     }
 
-    private Optional<VerifiedPlace> toVerifiedPlace(Map<String, Object> document) {
+    private Optional<VerifiedPlace> toVerifiedPlace(Map<String, Object> document, String fallbackPhoneNumber) {
         String id = stringValue(document.get("id"));
         String name = stringValue(document.get("place_name"));
         String placeUrl = stringValue(document.get("place_url"));
         String roadAddress = stringValue(document.get("road_address_name"));
         String phoneNumber = stringValue(document.get("phone"));
+        if (phoneNumber == null) {
+            phoneNumber = fallbackPhoneNumber;
+        }
         if (id == null || name == null || placeUrl == null || roadAddress == null || phoneNumber == null) {
             throw new PlaceVerificationFailedException();
         }

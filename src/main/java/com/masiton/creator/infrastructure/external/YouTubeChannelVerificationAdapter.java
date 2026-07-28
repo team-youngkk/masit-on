@@ -41,7 +41,10 @@ class YouTubeChannelVerificationAdapter implements ChannelVerificationPort {
         this(HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build(), objectMapper, baseUrl, apiKey);
     }
     YouTubeChannelVerificationAdapter(HttpClient httpClient, ObjectMapper objectMapper, String baseUrl, String apiKey) {
-        this.httpClient = httpClient; this.objectMapper = objectMapper; this.baseUri = URI.create(baseUrl); this.apiKey = apiKey;
+        this.httpClient = httpClient;
+        this.objectMapper = objectMapper;
+        this.baseUri = URI.create(baseUrl);
+        this.apiKey = apiKey;
     }
     @Override
     public Optional<VerifiedChannel> verify(URI channelUrl) {

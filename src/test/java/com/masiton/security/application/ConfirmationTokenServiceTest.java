@@ -21,10 +21,12 @@ import com.masiton.security.domain.model.ConfirmationTokenResourceType;
 import com.masiton.security.domain.model.ConfirmationTokenStatus;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -35,8 +37,9 @@ class ConfirmationTokenServiceTest {
     private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
 
     private final ConfirmationTokenRepositoryPort confirmationTokenRepository = mock(ConfirmationTokenRepositoryPort.class);
+    private final ConfirmationTokenCleanupService confirmationTokenCleanupService = mock(ConfirmationTokenCleanupService.class);
     private final ConfirmationTokenService service = new ConfirmationTokenService(
-            confirmationTokenRepository, CLOCK, new SecureRandom());
+            confirmationTokenRepository, confirmationTokenCleanupService, CLOCK, new SecureRandom());
 
     @Test
     @DisplayName("검증된 미리보기에서 SHA-256 해시만 저장하고 10분 토큰을 발급한다")
@@ -142,6 +145,23 @@ class ConfirmationTokenServiceTest {
 
         verify(confirmationTokenRepository).completeIssuedToken(
                 eq(tokenId), eq(ConfirmationTokenStatus.CREATED), eq(resourceId), any());
+    }
+
+    @Test
+    @DisplayName("보관 기한 정리에 실패해도 새 확인 토큰을 발급한다")
+    void issue_보관기한정리실패_새토큰을발급한다() {
+        doThrow(new RuntimeException("cleanup failed"))
+                .when(confirmationTokenCleanupService).deleteExpiredRetentionRecords();
+        ConfirmationTokenIssueCommand command = new ConfirmationTokenIssueCommand(
+                UUID.randomUUID(),
+                ConfirmationTokenResourceType.RESTAURANT,
+                (short) 1,
+                "kakao:123",
+                "{\"name\":\"candidate\"}");
+
+        assertThatCode(() -> service.issue(command)).doesNotThrowAnyException();
+
+        verify(confirmationTokenRepository).save(any());
     }
 
     private ConfirmationToken issuedToken(

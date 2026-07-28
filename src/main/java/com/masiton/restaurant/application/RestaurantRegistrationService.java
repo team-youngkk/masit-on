@@ -71,7 +71,7 @@ public class RestaurantRegistrationService implements RestaurantRegistrationUseC
         ValidatedPreviewInput input = validate(command);
         Optional<VerifiedPlace> verifiedPlace;
         try {
-            verifiedPlace = placeVerificationPort.verify(input.name(), input.kakaoPlaceUrl());
+            verifiedPlace = placeVerificationPort.verify(input.name(), input.kakaoPlaceUrl(), input.phoneNumber());
         } catch (PlaceVerificationFailedException exception) {
             throw new BusinessException(ErrorCode.EXTERNAL_SERVICE_ERROR);
         }
@@ -80,7 +80,12 @@ public class RestaurantRegistrationService implements RestaurantRegistrationUseC
                     RestaurantPreviewResult.Decision.REVIEW_REQUIRED, null, null, null, null);
         }
 
-        RestaurantCandidateSnapshot snapshot = buildSnapshot(input, verifiedPlace.get());
+        RestaurantCandidateSnapshot snapshot;
+        try {
+            snapshot = buildSnapshot(input, verifiedPlace.get());
+        } catch (PlaceVerificationFailedException exception) {
+            throw new BusinessException(ErrorCode.EXTERNAL_SERVICE_ERROR);
+        }
         Optional<Restaurant> existing = restaurantRepository.findByKakaoPlaceId(snapshot.kakaoPlaceId());
         if (existing.isPresent()) {
             return new RestaurantPreviewResult(
@@ -171,7 +176,7 @@ public class RestaurantRegistrationService implements RestaurantRegistrationUseC
             throw invalid("phoneNumber");
         }
         String category = required(command.category(), "category", 30);
-        return new ValidatedPreviewInput(command.adminAccountId(), name, kakaoPlaceUrl, detailAddress, category);
+        return new ValidatedPreviewInput(command.adminAccountId(), name, kakaoPlaceUrl, detailAddress, phoneNumber, category);
     }
 
     private RestaurantCandidateSnapshot buildSnapshot(ValidatedPreviewInput input, VerifiedPlace place) {
@@ -244,7 +249,7 @@ public class RestaurantRegistrationService implements RestaurantRegistrationUseC
     private String districtOf(String roadAddress) {
         Matcher matcher = SEOUL_ROAD_ADDRESS.matcher(roadAddress.trim());
         if (!matcher.matches()) {
-            throw new BusinessException(ErrorCode.IDENTITY_VERIFICATION_REQUIRED);
+            throw new PlaceVerificationFailedException();
         }
         return matcher.group(1);
     }
@@ -328,6 +333,7 @@ public class RestaurantRegistrationService implements RestaurantRegistrationUseC
             String name,
             URI kakaoPlaceUrl,
             String detailAddress,
+            String phoneNumber,
             String category) {
     }
 

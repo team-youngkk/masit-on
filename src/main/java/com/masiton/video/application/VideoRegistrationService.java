@@ -51,7 +51,14 @@ public class VideoRegistrationService implements VideoRegistrationUseCase {
         if (verified.isEmpty()) return new VideoPreviewResult(VideoPreviewResult.Decision.REVIEW_REQUIRED, null, null, null, null);
         VerifiedVideo video = verified.get();
         Optional<Video> existing = videoRepository.findByExternalVideoId(video.externalVideoId());
-        if (existing.isPresent()) return new VideoPreviewResult(VideoPreviewResult.Decision.DUPLICATE, null, null, null, existing(existing.get(), video.channelName()));
+        if (existing.isPresent()) {
+            return new VideoPreviewResult(
+                    VideoPreviewResult.Decision.DUPLICATE,
+                    null,
+                    null,
+                    candidate(existing.get(), video.channelName()),
+                    existing(existing.get(), video.channelName()));
+        }
         VideoSnapshot snapshot = new VideoSnapshot(video.externalVideoId(), video.publisherExternalChannelId(), video.title(), video.thumbnailUrl(),
                 video.channelName(), video.sourceUrl(), video.publishedAt(), video.checkedAt());
         IssuedConfirmationToken token = confirmationTokenUseCase.issue(new ConfirmationTokenIssueCommand(adminId, ConfirmationTokenResourceType.VIDEO,

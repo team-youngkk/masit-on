@@ -23,6 +23,8 @@ import com.masiton.security.application.port.out.ConfirmationTokenRepositoryPort
 import com.masiton.security.domain.model.ConfirmationToken;
 import com.masiton.security.domain.model.ConfirmationTokenResourceType;
 import com.masiton.security.domain.model.ConfirmationTokenStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Keeps raw-token handling, hash lookup and completion state transitions in one reusable
@@ -32,23 +34,29 @@ import com.masiton.security.domain.model.ConfirmationTokenStatus;
 @Service
 public class ConfirmationTokenService implements ConfirmationTokenUseCase {
 
+    private static final Logger log = LoggerFactory.getLogger(ConfirmationTokenService.class);
     private static final Duration TOKEN_TTL = Duration.ofMinutes(10);
     private static final int RAW_TOKEN_BYTES = 32;
 
     private final ConfirmationTokenRepositoryPort confirmationTokenRepository;
+    private final ConfirmationTokenCleanupService confirmationTokenCleanupService;
     private final Clock clock;
     private final SecureRandom secureRandom;
 
     @Autowired
-    public ConfirmationTokenService(ConfirmationTokenRepositoryPort confirmationTokenRepository) {
-        this(confirmationTokenRepository, Clock.systemUTC(), new SecureRandom());
+    public ConfirmationTokenService(
+            ConfirmationTokenRepositoryPort confirmationTokenRepository,
+            ConfirmationTokenCleanupService confirmationTokenCleanupService) {
+        this(confirmationTokenRepository, confirmationTokenCleanupService, Clock.systemUTC(), new SecureRandom());
     }
 
     ConfirmationTokenService(
             ConfirmationTokenRepositoryPort confirmationTokenRepository,
+            ConfirmationTokenCleanupService confirmationTokenCleanupService,
             Clock clock,
             SecureRandom secureRandom) {
         this.confirmationTokenRepository = confirmationTokenRepository;
+        this.confirmationTokenCleanupService = confirmationTokenCleanupService;
         this.clock = clock;
         this.secureRandom = secureRandom;
     }
@@ -57,6 +65,7 @@ public class ConfirmationTokenService implements ConfirmationTokenUseCase {
     @Transactional
     public IssuedConfirmationToken issue(ConfirmationTokenIssueCommand command) {
         validateIssue(command);
+        cleanExpiredRetentionRecords();
 
         byte[] rawTokenBytes = new byte[RAW_TOKEN_BYTES];
         secureRandom.nextBytes(rawTokenBytes);
@@ -141,6 +150,14 @@ public class ConfirmationTokenService implements ConfirmationTokenUseCase {
         }
         if (command.candidateSnapshot() == null || command.candidateSnapshot().isBlank()) {
             throw new IllegalArgumentException("Candidate snapshot is required.");
+        }
+    }
+
+    private void cleanExpiredRetentionRecords() {
+        try {
+            confirmationTokenCleanupService.deleteExpiredRetentionRecords();
+        } catch (RuntimeException exception) {
+            log.warn("confirmation token retention cleanup failed", exception);
         }
     }
 
