@@ -32,7 +32,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException exception) {
         log.warn("business error: code={}", exception.code());
         return ResponseEntity.status(exception.status())
-                .body(ErrorResponse.of(exception.code(), exception.getMessage(), traceId()));
+                .body(ErrorResponse.of(exception.code(), exception.getMessage(), exception.fieldErrors(), traceId()));
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)

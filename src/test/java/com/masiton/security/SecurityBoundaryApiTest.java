@@ -44,6 +44,6 @@ class SecurityBoundaryApiTest {
     @DisplayName("공개 조회 경로는 인증 필터에서 거부하지 않는다")
     void 공개조회_미인증_보안경계에서거부하지않는다() throws Exception {
         mockMvc.perform(get("/api/restaurants"))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isOk());
     }
 }

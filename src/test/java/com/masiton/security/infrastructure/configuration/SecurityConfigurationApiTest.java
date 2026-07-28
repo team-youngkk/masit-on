@@ -100,7 +100,7 @@ class SecurityConfigurationApiTest {
     @DisplayName("공개 목록 matcher는 인증 없이 통과시킨다")
     void 공개목록_무인증_401이아님() throws Exception {
         mockMvc.perform(get("/api/restaurants"))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isOk());
     }
 
     @Test
