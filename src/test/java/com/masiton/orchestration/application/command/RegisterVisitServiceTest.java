@@ -68,7 +68,10 @@ class RegisterVisitServiceTest {
 
         assertThatThrownBy(() -> service.register(command(restaurantId, creatorId, videoId, true), adminPrincipal()))
                 .isInstanceOfSatisfying(BusinessException.class,
-                        exception -> assertThat(exception.code()).isEqualTo("VIDEO_CHANNEL_MISMATCH"));
+                        exception -> {
+                            assertThat(exception.code()).isEqualTo("VIDEO_CHANNEL_MISMATCH");
+                            assertThat(exception.getMessage()).isEqualTo("영상의 게시 채널과 유튜버 채널이 일치하지 않습니다.");
+                        });
     }
 
     @Test
@@ -82,7 +85,10 @@ class RegisterVisitServiceTest {
 
         assertThatThrownBy(() -> service.register(command(restaurantId, creatorId, videoId, true), adminPrincipal()))
                 .isInstanceOfSatisfying(BusinessException.class,
-                        exception -> assertThat(exception.code()).isEqualTo("DUPLICATE_VISIT_RELATIONSHIP"));
+                        exception -> {
+                            assertThat(exception.code()).isEqualTo("DUPLICATE_VISIT_RELATIONSHIP");
+                            assertThat(exception.getMessage()).isEqualTo("동일한 방문 관계가 이미 등록되어 있습니다.");
+                        });
     }
 
     @Test
@@ -91,7 +97,25 @@ class RegisterVisitServiceTest {
         assertThatThrownBy(() -> service.register(
                         command(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), false), adminPrincipal()))
                 .isInstanceOfSatisfying(BusinessException.class,
-                        exception -> assertThat(exception.code()).isEqualTo("VISIT_EVIDENCE_INSUFFICIENT"));
+                        exception -> {
+                            assertThat(exception.code()).isEqualTo("VISIT_EVIDENCE_INSUFFICIENT");
+                            assertThat(exception.getMessage()).isEqualTo("방문 근거 확인이 필요합니다.");
+                        });
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 맛집은 일반화된 404 메시지로 반환한다")
+    void register_맛집없음_일반화된404메시지반환() {
+        UUID restaurantId = UUID.randomUUID();
+        when(restaurantReferences.findRestaurantReference(restaurantId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.register(
+                        command(restaurantId, UUID.randomUUID(), UUID.randomUUID(), true), adminPrincipal()))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> {
+                            assertThat(exception.code()).isEqualTo("RESTAURANT_NOT_FOUND");
+                            assertThat(exception.getMessage()).isEqualTo("요청한 맛집을 찾을 수 없습니다.");
+                        });
     }
 
     @Test

@@ -96,6 +96,14 @@ public class RegisterVisitService implements RegisterVisitRelationshipUseCase {
     }
 
     private BusinessException failure(HttpStatus status, String code) {
-        return new BusinessException(status, code, code);
+        return new BusinessException(status, code, switch (code) {
+            case "RESTAURANT_NOT_FOUND" -> "요청한 맛집을 찾을 수 없습니다.";
+            case "CREATOR_NOT_FOUND" -> "요청한 유튜버를 찾을 수 없습니다.";
+            case "VIDEO_NOT_FOUND" -> "요청한 영상을 찾을 수 없습니다.";
+            case "VIDEO_CHANNEL_MISMATCH" -> "영상의 게시 채널과 유튜버 채널이 일치하지 않습니다.";
+            case "DUPLICATE_VISIT_RELATIONSHIP" -> "동일한 방문 관계가 이미 등록되어 있습니다.";
+            case "VISIT_EVIDENCE_INSUFFICIENT" -> "방문 근거 확인이 필요합니다.";
+            default -> "요청을 처리할 수 없습니다.";
+        });
     }
 }
