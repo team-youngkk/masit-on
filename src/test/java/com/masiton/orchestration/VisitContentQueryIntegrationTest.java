@@ -143,9 +143,9 @@ class VisitContentQueryIntegrationTest {
     }
 
     @Test
-    @DisplayName("Video가비공개_videos는비어도유효한Creator는visitedBy에그대로표시한다")
-    void Video가비공개_videos는비어도유효한Creator는visitedBy에그대로표시한다() {
-        // given: restaurant-detail-api.md 7절 — 공개 관련 영상이 없어도 유효한 유튜버는 표시한다.
+    @DisplayName("Video가비공개_그Video를근거로한Visit전체를제외한다")
+    void Video가비공개_그Video를근거로한Visit전체를제외한다() {
+        // given: BR-VISIT-005 — 연결된 영상까지 공개·유효해야 조회 관계로 사용한다.
         UUID restaurantId = UUID.randomUUID();
         UUID creatorId = UUID.randomUUID();
         UUID videoId = UUID.randomUUID();
@@ -159,8 +159,50 @@ class VisitContentQueryIntegrationTest {
                 .findValidVisitContentByRestaurant(restaurantId);
 
         // then
+        assertThat(result.visitedBy()).isEmpty();
         assertThat(result.videos()).isEmpty();
-        assertThat(result.visitedBy()).extracting("id").containsExactly(creatorId);
+    }
+
+    @Test
+    @DisplayName("Visit가비공개_공개RestaurantCreatorVideo여도두목록에서제외한다")
+    void Visit가비공개_공개RestaurantCreatorVideo여도두목록에서제외한다() {
+        // given
+        UUID restaurantId = UUID.randomUUID();
+        UUID creatorId = UUID.randomUUID();
+        UUID videoId = UUID.randomUUID();
+        insertRestaurant(restaurantId, "PUBLIC", "ACTIVE");
+        insertCreator(creatorId, "채널H", "PUBLIC", "ACTIVE", "AVAILABLE");
+        insertVideo(videoId, creatorId, "영상H", "PUBLIC", "ACTIVE", "AVAILABLE");
+        insertVisit(UUID.randomUUID(), restaurantId, creatorId, videoId, "PRIVATE", "ACTIVE");
+
+        // when
+        VisitContentResult result = findValidVisitContentByRestaurantQuery
+                .findValidVisitContentByRestaurant(restaurantId);
+
+        // then
+        assertThat(result.visitedBy()).isEmpty();
+        assertThat(result.videos()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Visit가삭제_공개RestaurantCreatorVideo여도두목록에서제외한다")
+    void Visit가삭제_공개RestaurantCreatorVideo여도두목록에서제외한다() {
+        // given
+        UUID restaurantId = UUID.randomUUID();
+        UUID creatorId = UUID.randomUUID();
+        UUID videoId = UUID.randomUUID();
+        insertRestaurant(restaurantId, "PUBLIC", "ACTIVE");
+        insertCreator(creatorId, "채널I", "PUBLIC", "ACTIVE", "AVAILABLE");
+        insertVideo(videoId, creatorId, "영상I", "PUBLIC", "ACTIVE", "AVAILABLE");
+        insertVisit(UUID.randomUUID(), restaurantId, creatorId, videoId, "PRIVATE", "DELETED");
+
+        // when
+        VisitContentResult result = findValidVisitContentByRestaurantQuery
+                .findValidVisitContentByRestaurant(restaurantId);
+
+        // then
+        assertThat(result.visitedBy()).isEmpty();
+        assertThat(result.videos()).isEmpty();
     }
 
     @Test

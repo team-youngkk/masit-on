@@ -23,9 +23,9 @@ import com.masiton.orchestration.application.port.out.VisitContentRow;
  * 수행해 restaurant-detail-api.md 계약(visitedBy/videos)에 맞는 결과로 조합한다.
  * transaction-boundaries.md 5절에 따라 읽기 전용 트랜잭션은 이 public 메서드에서 시작한다.
  *
- * <p>Row의 Creator 필드는 항상 채워지지만 Video 필드는 그 Visit의 영상이 공개·유효 조건을
- * 만족하지 못하면 Port 구현에서 NULL로 온다(restaurant-detail-api.md 7절: 공개 영상이 없어도
- * 유효한 유튜버는 visitedBy에 표시). videoId가 NULL인 Row는 videos에 반영하지 않는다.
+ * <p>Port는 BR-VISIT-005에 따라 Visit·Restaurant·Creator·Video가 모두 공개·유효한
+ * Row만 반환한다. 이 서비스도 방어적으로 {@code videoId == null}인 Row 전체를
+ * 제외해 유효한 근거 영상 없이 Creator만 노출되지 않게 한다.
  *
  * <p>{@code RestaurantDetailQueryService}가 기본 정보 조회와 함께 이 메서드를 호출할 때도 항상
  * 읽기 전용 트랜잭션 경계는 지켜야 한다(transaction-boundaries.md 2·5절). 그래서 propagation을
@@ -53,15 +53,16 @@ public class VisitContentQueryService implements FindValidVisitContentByRestaura
         Map<UUID, VisitedCreatorView> creatorsById = new LinkedHashMap<>();
         Map<UUID, RelatedVideoView> videosById = new LinkedHashMap<>();
         for (VisitContentRow row : rows) {
+            if (row.videoId() == null) {
+                continue;
+            }
             creatorsById.putIfAbsent(
                     row.creatorId(),
                     new VisitedCreatorView(row.creatorId(), row.channelName(), row.channelUrl()));
-            if (row.videoId() != null) {
-                videosById.putIfAbsent(
-                        row.videoId(),
-                        new RelatedVideoView(
-                                row.videoId(), row.title(), row.thumbnailUrl(), row.channelName(), row.sourceUrl()));
-            }
+            videosById.putIfAbsent(
+                    row.videoId(),
+                    new RelatedVideoView(
+                            row.videoId(), row.title(), row.thumbnailUrl(), row.channelName(), row.sourceUrl()));
         }
 
         List<VisitedCreatorView> visitedBy = creatorsById.values().stream()
