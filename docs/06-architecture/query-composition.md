@@ -156,7 +156,7 @@ MVP 상세 조회 캐시는 도입하지 않는다.
 ## 11. 테스트
 
 - 관계 없음: `AVAILABLE`, 두 목록 빈 배열
-- 영상 없는 유효 관계 또는 비공개 콘텐츠: API 계약에 맞는 필터 결과
+- 공개·유효한 영상을 근거로 한 관계 없음 또는 비공개 콘텐츠: API 계약에 맞는 필터 결과
 - 중복 관계 Row: Creator·Video ID 기준 한 번만 반환
 - 콘텐츠 Adapter 실패: 기본 정보 유지, `TEMPORARILY_UNAVAILABLE`
 - 기본 Adapter 실패: 전체 500
