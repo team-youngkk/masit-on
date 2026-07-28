@@ -1,8 +1,6 @@
 package com.masiton.visit;
 
 import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
@@ -16,9 +14,8 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
+import com.masiton.visit.application.port.in.CreatorRestaurantCandidates;
 import com.masiton.visit.application.port.in.FindDistinctValidRestaurantIdsByCreatorQuery;
-import com.masiton.visit.application.port.in.FindValidVisitContentByRestaurantQuery;
-import com.masiton.visit.application.port.in.VisitContentResult;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -28,6 +25,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Fixture, PostgreSQLContainer)을 따르되, 판정 대상인 publication_status·lifecycle_status·
  * external_availability_status를 시나리오별로 다르게 구성한다. 각 테스트는 고유 UUID를 스스로
  * 준비하므로 다른 테스트 데이터에 의존하지 않는다.
+ *
+ * <p>맛집 상세 콘텐츠(방문 유튜버·관련 영상) 조회는 orchestration.VisitContentQueryIntegrationTest가
+ * 검증한다(query-composition.md 5절에 따라 이관됨).
  */
 @SpringBootTest
 @Testcontainers
@@ -60,12 +60,9 @@ class VisitQueryIntegrationTest {
     @Autowired
     private FindDistinctValidRestaurantIdsByCreatorQuery findDistinctValidRestaurantIdsByCreatorQuery;
 
-    @Autowired
-    private FindValidVisitContentByRestaurantQuery findValidVisitContentByRestaurantQuery;
-
     @Test
-    @DisplayName("네대상모두공개유효_후보Restaurant와콘텐츠에포함된다")
-    void 네대상모두공개유효_후보Restaurant와콘텐츠에포함된다() {
+    @DisplayName("네대상모두공개유효_creatorPublic참에후보Restaurant를포함한다")
+    void 네대상모두공개유효_creatorPublic참에후보Restaurant를포함한다() {
         // given
         UUID restaurantId = UUID.randomUUID();
         UUID creatorId = UUID.randomUUID();
@@ -76,25 +73,17 @@ class VisitQueryIntegrationTest {
         insertVisit(UUID.randomUUID(), restaurantId, creatorId, videoId, "PUBLIC", "ACTIVE");
 
         // when
-        Set<UUID> candidates = findDistinctValidRestaurantIdsByCreatorQuery
+        CreatorRestaurantCandidates result = findDistinctValidRestaurantIdsByCreatorQuery
                 .findDistinctValidRestaurantIdsByCreator(creatorId);
-        VisitContentResult content = findValidVisitContentByRestaurantQuery
-                .findValidVisitContentByRestaurant(restaurantId);
 
         // then
-        assertThat(candidates).containsExactly(restaurantId);
-        assertThat(content.visitedBy()).extracting("id").containsExactly(creatorId);
-        assertThat(content.visitedBy().get(0).channelUrl())
-                .isEqualTo("https://www.youtube.com/channel/" + creatorId);
-        assertThat(content.videos()).extracting("id").containsExactly(videoId);
-        assertThat(content.videos().get(0).thumbnailUrl()).isEqualTo("https://i.ytimg.com/" + videoId + ".jpg");
-        assertThat(content.videos().get(0).sourceUrl())
-                .isEqualTo("https://www.youtube.com/watch?v=" + videoId);
+        assertThat(result.creatorPublic()).isTrue();
+        assertThat(result.restaurantIds()).containsExactly(restaurantId);
     }
 
     @Test
-    @DisplayName("Restaurant가비공개_후보와콘텐츠에서제외된다")
-    void Restaurant가비공개_후보와콘텐츠에서제외된다() {
+    @DisplayName("Restaurant가비공개_creatorPublic은참이지만후보에서제외된다")
+    void Restaurant가비공개_creatorPublic은참이지만후보에서제외된다() {
         // given
         UUID restaurantId = UUID.randomUUID();
         UUID creatorId = UUID.randomUUID();
@@ -105,20 +94,17 @@ class VisitQueryIntegrationTest {
         insertVisit(UUID.randomUUID(), restaurantId, creatorId, videoId, "PUBLIC", "ACTIVE");
 
         // when
-        Set<UUID> candidates = findDistinctValidRestaurantIdsByCreatorQuery
+        CreatorRestaurantCandidates result = findDistinctValidRestaurantIdsByCreatorQuery
                 .findDistinctValidRestaurantIdsByCreator(creatorId);
-        VisitContentResult content = findValidVisitContentByRestaurantQuery
-                .findValidVisitContentByRestaurant(restaurantId);
 
         // then
-        assertThat(candidates).isEmpty();
-        assertThat(content.visitedBy()).isEmpty();
-        assertThat(content.videos()).isEmpty();
+        assertThat(result.creatorPublic()).isTrue();
+        assertThat(result.restaurantIds()).isEmpty();
     }
 
     @Test
-    @DisplayName("Restaurant가삭제상태_후보와콘텐츠에서제외된다")
-    void Restaurant가삭제상태_후보와콘텐츠에서제외된다() {
+    @DisplayName("Restaurant가삭제상태_후보에서제외된다")
+    void Restaurant가삭제상태_후보에서제외된다() {
         // given
         UUID restaurantId = UUID.randomUUID();
         UUID creatorId = UUID.randomUUID();
@@ -129,16 +115,16 @@ class VisitQueryIntegrationTest {
         insertVisit(UUID.randomUUID(), restaurantId, creatorId, videoId, "PUBLIC", "ACTIVE");
 
         // when
-        Set<UUID> candidates = findDistinctValidRestaurantIdsByCreatorQuery
+        CreatorRestaurantCandidates result = findDistinctValidRestaurantIdsByCreatorQuery
                 .findDistinctValidRestaurantIdsByCreator(creatorId);
 
         // then
-        assertThat(candidates).isEmpty();
+        assertThat(result.restaurantIds()).isEmpty();
     }
 
     @Test
-    @DisplayName("Creator가비공개_후보와콘텐츠에서제외된다")
-    void Creator가비공개_후보와콘텐츠에서제외된다() {
+    @DisplayName("Creator가비공개_creatorPublic거짓을반환한다")
+    void Creator가비공개_creatorPublic거짓을반환한다() {
         // given
         UUID restaurantId = UUID.randomUUID();
         UUID creatorId = UUID.randomUUID();
@@ -149,20 +135,17 @@ class VisitQueryIntegrationTest {
         insertVisit(UUID.randomUUID(), restaurantId, creatorId, videoId, "PUBLIC", "ACTIVE");
 
         // when
-        Set<UUID> candidates = findDistinctValidRestaurantIdsByCreatorQuery
+        CreatorRestaurantCandidates result = findDistinctValidRestaurantIdsByCreatorQuery
                 .findDistinctValidRestaurantIdsByCreator(creatorId);
-        VisitContentResult content = findValidVisitContentByRestaurantQuery
-                .findValidVisitContentByRestaurant(restaurantId);
 
-        // then
-        assertThat(candidates).isEmpty();
-        assertThat(content.visitedBy()).isEmpty();
-        assertThat(content.videos()).isEmpty();
+        // then: creator-discovery-api.md 127행 근거 — 호출자가 이 값으로 400 처리를 판단한다
+        assertThat(result.creatorPublic()).isFalse();
+        assertThat(result.restaurantIds()).isEmpty();
     }
 
     @Test
-    @DisplayName("Creator가삭제상태_후보와콘텐츠에서제외된다")
-    void Creator가삭제상태_후보와콘텐츠에서제외된다() {
+    @DisplayName("Creator가삭제상태_creatorPublic거짓을반환한다")
+    void Creator가삭제상태_creatorPublic거짓을반환한다() {
         // given
         UUID restaurantId = UUID.randomUUID();
         UUID creatorId = UUID.randomUUID();
@@ -173,16 +156,17 @@ class VisitQueryIntegrationTest {
         insertVisit(UUID.randomUUID(), restaurantId, creatorId, videoId, "PUBLIC", "ACTIVE");
 
         // when
-        Set<UUID> candidates = findDistinctValidRestaurantIdsByCreatorQuery
+        CreatorRestaurantCandidates result = findDistinctValidRestaurantIdsByCreatorQuery
                 .findDistinctValidRestaurantIdsByCreator(creatorId);
 
         // then
-        assertThat(candidates).isEmpty();
+        assertThat(result.creatorPublic()).isFalse();
+        assertThat(result.restaurantIds()).isEmpty();
     }
 
     @Test
-    @DisplayName("Creator가외부이용불가_후보와콘텐츠에서제외된다")
-    void Creator가외부이용불가_후보와콘텐츠에서제외된다() {
+    @DisplayName("Creator가외부이용불가_creatorPublic거짓을반환한다")
+    void Creator가외부이용불가_creatorPublic거짓을반환한다() {
         // given: ck_creator__external_unavailable_private 제약상 UNAVAILABLE은 PRIVATE와 함께여야 한다.
         UUID restaurantId = UUID.randomUUID();
         UUID creatorId = UUID.randomUUID();
@@ -193,19 +177,32 @@ class VisitQueryIntegrationTest {
         insertVisit(UUID.randomUUID(), restaurantId, creatorId, videoId, "PUBLIC", "ACTIVE");
 
         // when
-        Set<UUID> candidates = findDistinctValidRestaurantIdsByCreatorQuery
+        CreatorRestaurantCandidates result = findDistinctValidRestaurantIdsByCreatorQuery
                 .findDistinctValidRestaurantIdsByCreator(creatorId);
-        VisitContentResult content = findValidVisitContentByRestaurantQuery
-                .findValidVisitContentByRestaurant(restaurantId);
 
         // then
-        assertThat(candidates).isEmpty();
-        assertThat(content.visitedBy()).isEmpty();
+        assertThat(result.creatorPublic()).isFalse();
+        assertThat(result.restaurantIds()).isEmpty();
     }
 
     @Test
-    @DisplayName("Video가비공개_후보와콘텐츠에서제외된다")
-    void Video가비공개_후보와콘텐츠에서제외된다() {
+    @DisplayName("존재하지않는Creator_creatorPublic거짓을반환한다")
+    void 존재하지않는Creator_creatorPublic거짓을반환한다() {
+        // given: creator 테이블에 아예 행이 없는 무작위 UUID
+        UUID neverInsertedCreatorId = UUID.randomUUID();
+
+        // when
+        CreatorRestaurantCandidates result = findDistinctValidRestaurantIdsByCreatorQuery
+                .findDistinctValidRestaurantIdsByCreator(neverInsertedCreatorId);
+
+        // then
+        assertThat(result.creatorPublic()).isFalse();
+        assertThat(result.restaurantIds()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Video가비공개_후보에서제외된다")
+    void Video가비공개_후보에서제외된다() {
         // given
         UUID restaurantId = UUID.randomUUID();
         UUID creatorId = UUID.randomUUID();
@@ -216,20 +213,16 @@ class VisitQueryIntegrationTest {
         insertVisit(UUID.randomUUID(), restaurantId, creatorId, videoId, "PUBLIC", "ACTIVE");
 
         // when
-        Set<UUID> candidates = findDistinctValidRestaurantIdsByCreatorQuery
+        CreatorRestaurantCandidates result = findDistinctValidRestaurantIdsByCreatorQuery
                 .findDistinctValidRestaurantIdsByCreator(creatorId);
-        VisitContentResult content = findValidVisitContentByRestaurantQuery
-                .findValidVisitContentByRestaurant(restaurantId);
 
         // then
-        assertThat(candidates).isEmpty();
-        assertThat(content.videos()).isEmpty();
-        assertThat(content.visitedBy()).isEmpty();
+        assertThat(result.restaurantIds()).isEmpty();
     }
 
     @Test
-    @DisplayName("Video가삭제상태_후보와콘텐츠에서제외된다")
-    void Video가삭제상태_후보와콘텐츠에서제외된다() {
+    @DisplayName("Video가삭제상태_후보에서제외된다")
+    void Video가삭제상태_후보에서제외된다() {
         // given
         UUID restaurantId = UUID.randomUUID();
         UUID creatorId = UUID.randomUUID();
@@ -240,16 +233,16 @@ class VisitQueryIntegrationTest {
         insertVisit(UUID.randomUUID(), restaurantId, creatorId, videoId, "PUBLIC", "ACTIVE");
 
         // when
-        Set<UUID> candidates = findDistinctValidRestaurantIdsByCreatorQuery
+        CreatorRestaurantCandidates result = findDistinctValidRestaurantIdsByCreatorQuery
                 .findDistinctValidRestaurantIdsByCreator(creatorId);
 
         // then
-        assertThat(candidates).isEmpty();
+        assertThat(result.restaurantIds()).isEmpty();
     }
 
     @Test
-    @DisplayName("Video가외부이용불가_후보와콘텐츠에서제외된다")
-    void Video가외부이용불가_후보와콘텐츠에서제외된다() {
+    @DisplayName("Video가외부이용불가_후보에서제외된다")
+    void Video가외부이용불가_후보에서제외된다() {
         // given: ck_video__external_unavailable_private 제약상 UNAVAILABLE은 PRIVATE와 함께여야 한다.
         UUID restaurantId = UUID.randomUUID();
         UUID creatorId = UUID.randomUUID();
@@ -260,16 +253,16 @@ class VisitQueryIntegrationTest {
         insertVisit(UUID.randomUUID(), restaurantId, creatorId, videoId, "PUBLIC", "ACTIVE");
 
         // when
-        Set<UUID> candidates = findDistinctValidRestaurantIdsByCreatorQuery
+        CreatorRestaurantCandidates result = findDistinctValidRestaurantIdsByCreatorQuery
                 .findDistinctValidRestaurantIdsByCreator(creatorId);
 
         // then
-        assertThat(candidates).isEmpty();
+        assertThat(result.restaurantIds()).isEmpty();
     }
 
     @Test
-    @DisplayName("Visit자체가비공개_후보와콘텐츠에서제외된다")
-    void Visit자체가비공개_후보와콘텐츠에서제외된다() {
+    @DisplayName("Visit자체가비공개_후보에서제외된다")
+    void Visit자체가비공개_후보에서제외된다() {
         // given
         UUID restaurantId = UUID.randomUUID();
         UUID creatorId = UUID.randomUUID();
@@ -280,20 +273,16 @@ class VisitQueryIntegrationTest {
         insertVisit(UUID.randomUUID(), restaurantId, creatorId, videoId, "PRIVATE", "ACTIVE");
 
         // when
-        Set<UUID> candidates = findDistinctValidRestaurantIdsByCreatorQuery
+        CreatorRestaurantCandidates result = findDistinctValidRestaurantIdsByCreatorQuery
                 .findDistinctValidRestaurantIdsByCreator(creatorId);
-        VisitContentResult content = findValidVisitContentByRestaurantQuery
-                .findValidVisitContentByRestaurant(restaurantId);
 
         // then
-        assertThat(candidates).isEmpty();
-        assertThat(content.visitedBy()).isEmpty();
-        assertThat(content.videos()).isEmpty();
+        assertThat(result.restaurantIds()).isEmpty();
     }
 
     @Test
-    @DisplayName("Visit자체가삭제상태_후보와콘텐츠에서제외된다")
-    void Visit자체가삭제상태_후보와콘텐츠에서제외된다() {
+    @DisplayName("Visit자체가삭제상태_후보에서제외된다")
+    void Visit자체가삭제상태_후보에서제외된다() {
         // given
         UUID restaurantId = UUID.randomUUID();
         UUID creatorId = UUID.randomUUID();
@@ -304,16 +293,16 @@ class VisitQueryIntegrationTest {
         insertVisit(UUID.randomUUID(), restaurantId, creatorId, videoId, "PRIVATE", "DELETED");
 
         // when
-        Set<UUID> candidates = findDistinctValidRestaurantIdsByCreatorQuery
+        CreatorRestaurantCandidates result = findDistinctValidRestaurantIdsByCreatorQuery
                 .findDistinctValidRestaurantIdsByCreator(creatorId);
 
         // then
-        assertThat(candidates).isEmpty();
+        assertThat(result.restaurantIds()).isEmpty();
     }
 
     @Test
-    @DisplayName("같은Restaurant에같은Creator가다른Video로두번방문_후보는한번만콘텐츠visitedBy도Creator기준한번만반환한다")
-    void 같은Restaurant에같은Creator가다른Video로두번방문_후보는한번만콘텐츠visitedBy도Creator기준한번만반환한다() {
+    @DisplayName("같은Restaurant에같은Creator가다른Video로두번방문_후보는한번만반환한다")
+    void 같은Restaurant에같은Creator가다른Video로두번방문_후보는한번만반환한다() {
         // given
         UUID restaurantId = UUID.randomUUID();
         UUID creatorId = UUID.randomUUID();
@@ -327,16 +316,11 @@ class VisitQueryIntegrationTest {
         insertVisit(UUID.randomUUID(), restaurantId, creatorId, videoId2, "PUBLIC", "ACTIVE");
 
         // when
-        Set<UUID> candidates = findDistinctValidRestaurantIdsByCreatorQuery
+        CreatorRestaurantCandidates result = findDistinctValidRestaurantIdsByCreatorQuery
                 .findDistinctValidRestaurantIdsByCreator(creatorId);
-        VisitContentResult content = findValidVisitContentByRestaurantQuery
-                .findValidVisitContentByRestaurant(restaurantId);
 
         // then
-        assertThat(candidates).containsExactly(restaurantId);
-        assertThat(content.visitedBy()).extracting("id").containsExactly(creatorId);
-        assertThat(content.videos()).extracting("id").containsExactlyInAnyOrder(videoId1, videoId2);
-        assertThat(content.videos()).extracting("title").containsExactly("가영상", "나영상");
+        assertThat(result.restaurantIds()).containsExactly(restaurantId);
     }
 
     @Test
@@ -355,38 +339,27 @@ class VisitQueryIntegrationTest {
         insertVisit(UUID.randomUUID(), restaurantId2, creatorId, videoId, "PUBLIC", "ACTIVE");
 
         // when
-        Set<UUID> candidates = findDistinctValidRestaurantIdsByCreatorQuery
+        CreatorRestaurantCandidates result = findDistinctValidRestaurantIdsByCreatorQuery
                 .findDistinctValidRestaurantIdsByCreator(creatorId);
-        VisitContentResult content1 = findValidVisitContentByRestaurantQuery
-                .findValidVisitContentByRestaurant(restaurantId1);
-        VisitContentResult content2 = findValidVisitContentByRestaurantQuery
-                .findValidVisitContentByRestaurant(restaurantId2);
 
-        // then: 공개 Restaurant1만 후보에 포함되고, 비공개 Restaurant2는 별도 조회 시 빈 콘텐츠다.
-        assertThat(candidates).containsExactly(restaurantId1);
-        assertThat(content1.videos()).extracting("id").containsExactly(videoId);
-        assertThat(content2.videos()).isEmpty();
+        // then: 공개 Restaurant1만 후보에 포함되고, 비공개 Restaurant2는 제외된다.
+        assertThat(result.restaurantIds()).containsExactly(restaurantId1);
     }
 
     @Test
-    @DisplayName("관계없음_후보와콘텐츠모두빈결과를반환한다")
-    void 관계없음_후보와콘텐츠모두빈결과를반환한다() {
+    @DisplayName("관계없음_공개Creator이면creatorPublic참에빈후보를반환한다")
+    void 관계없음_공개Creator이면creatorPublic참에빈후보를반환한다() {
         // given
-        UUID restaurantId = UUID.randomUUID();
         UUID creatorId = UUID.randomUUID();
-        insertRestaurant(restaurantId, "PUBLIC", "ACTIVE");
         insertCreator(creatorId, "채널N", "PUBLIC", "ACTIVE", "AVAILABLE");
 
         // when
-        Set<UUID> candidates = findDistinctValidRestaurantIdsByCreatorQuery
+        CreatorRestaurantCandidates result = findDistinctValidRestaurantIdsByCreatorQuery
                 .findDistinctValidRestaurantIdsByCreator(creatorId);
-        VisitContentResult content = findValidVisitContentByRestaurantQuery
-                .findValidVisitContentByRestaurant(restaurantId);
 
         // then
-        assertThat(candidates).isEmpty();
-        assertThat(content.visitedBy()).isEmpty();
-        assertThat(content.videos()).isEmpty();
+        assertThat(result.creatorPublic()).isTrue();
+        assertThat(result.restaurantIds()).isEmpty();
     }
 
     private void insertRestaurant(UUID id, String publicationStatus, String lifecycleStatus) {

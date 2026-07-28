@@ -1,6 +1,5 @@
 package com.masiton.visit.application.port.in;
 
-import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -12,8 +11,10 @@ public interface FindDistinctValidRestaurantIdsByCreatorQuery {
 
     /**
      * @param creatorId 필터 기준 Creator 식별자
-     * @return 공개·유효 방문 관계를 가진 Restaurant ID의 중복 없는 집합. 관계가 없거나
-     *         Creator가 존재하지 않거나 비공개·이용 불가면 빈 집합이다.
+     * @return creatorPublic이 false면 존재하지 않거나 비공개·삭제·외부이용불가 Creator다(호출자가
+     *         400 INVALID_FIELD_VALUE로 처리한다). creatorPublic이 true면 공개 Creator이며
+     *         restaurantIds는 공개·유효 방문 관계를 가진 Restaurant ID의 중복 없는 집합이다
+     *         (관계가 없으면 빈 집합 — 정상 200 빈 목록).
      */
-    Set<UUID> findDistinctValidRestaurantIdsByCreator(UUID creatorId);
+    CreatorRestaurantCandidates findDistinctValidRestaurantIdsByCreator(UUID creatorId);
 }
