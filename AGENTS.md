@@ -148,7 +148,7 @@ $env:REDIS_PORT = '16379'
 .\gradlew.bat bootRun
 ```
 
-`/internal/**`은 로컬 컨테이너 네트워크 전용이며 최종 배포의 인터넷 진입점에 노출하지 않는다([ADR-WEB-003](docs/07-adr/platform/web-003-routing-boundary.md)).
+`/internal/**`은 로컬 컨테이너 네트워크 전용이며 운영 배포의 인터넷 진입점에 노출하지 않는다([ADR-WEB-003](docs/07-adr/platform/web-003-routing-boundary.md)).
 
 ## 6. 아키텍처 필수 규칙
 

@@ -203,7 +203,7 @@ related_documents:
 | 멀티모듈·독립 배포 | Post-MVP | 단일 모듈·단일 애플리케이션 배포로 MVP 복잡도 제한 | [ADR-ARCH-004](#adr-arch-004-멀티모듈독립-배포-전환)의 경계·이전 전략 결정 |
 | 세분화된 관리자 권한 | Post-MVP | 사전 발급 단일 `ADMIN` 역할만 범위에 포함 | [ADR-AUTH-004](#adr-auth-004-관리자-권한-세분화)의 권한 모델·이전 결정 |
 | Nginx·EC2·ECR | 기술 선택 완료, M2 적용 (2026-07-28) | [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md)에서 단계 순서 변경 | M2부터 단일 EC2 인스턴스에 적용 |
-| ALB·ASG·Blue-Green | M2 이후 재검토 | 최초 운영은 단일 인스턴스 수동 복구 | 운영 근거가 생긴 뒤 확장 여부 결정 |
+| ALB·ASG·Blue-Green | 3차 확장 이후 배포 고도화 단계에서 검토 | 초기 운영 배포는 단일 인스턴스 수동 복구 | 배포 고도화 착수 시 별도 ADR로 결정 |
 | 전체 CI/CD 배포 흐름 | M2 적용 (2026-07-28) | 전 단계 CI는 빌드·테스트 수행 | M2부터 ECR push·EC2 승인 배포·Smoke Test 활성화 |
 | 로그 14일 보관 | M2 적용 (2026-07-28) | 로컬 단계에는 CloudWatch 미사용 | M2부터 로그·백업·알림 정책 활성화 |
 
@@ -234,7 +234,7 @@ Conditional·Post-MVP Backlog 항목은 다음을 모두 충족해야 활성화�
 | 관리자 등록 확인 Token | PostgreSQL 저장형 불투명 Token, SHA-256 해시·후보 JSONB Snapshot, 10분 만료, Entity 생성과 원자적 소비 |
 | 확인 Token 재시도·보관 | 최초 생성 `201`, 생성 완료 재시도 `200`, 동시 중복은 결정적 `409`, 완료·만료 기록 24시간 보관 후 발급 시 지연 정리 |
 | 배포 순서 | MVP 구현은 로컬 통합 검증, M2에서 다음 확장 단계보다 먼저 최초 AWS 운영 배포 |
-| 배포 토폴로지 | M2는 단일 EC2 인스턴스(Nginx+App), 장애 시 수동 복구로 시작 |
+| 배포 토폴로지 | 초기 운영 배포는 단일 EC2 인스턴스(Nginx+App), 장애 시 수동 복구로 시작 |
 | 관리자 JWT | Access Token 만료 30분 |
 | 관리자 Refresh Token(Redis) | TTL 14일, 재발급마다 회전 + 재사용 탐지·즉시 폐기 |
 | Redis 장애 처리 | Fail-closed(재발급 차단, Access Token 만료 후 강제 재로그인) |
@@ -242,4 +242,4 @@ Conditional·Post-MVP Backlog 항목은 다음을 모두 충족해야 활성화�
 | 백업 | PostgreSQL 일 1회 자동 스냅샷, 7일 보관, RPO 최대 24시간 |
 | 운영 알림 | CloudWatch 알람 → Slack, 담당자 1명 |
 
-현재 MVP 구현 전 필수 미결정 항목은 없다. AWS 운영 세부는 M2 운영 문서에서 확정하고, ALB·Blue-Green 전환 자동화는 운영 근거가 생기는 확장 단계에서 재검토한다.
+현재 MVP 구현 전 필수 미결정 항목은 없다. AWS 운영 세부는 M2 초기 운영 배포 문서에서 확정하고, ALB·Blue-Green 전환 자동화는 3차 확장 이후 배포 고도화 단계에서 별도 ADR로 결정한다.

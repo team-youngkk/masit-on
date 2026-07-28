@@ -101,6 +101,8 @@ ADR은 하나의 결정 문제와 선택 이유를 기록한다. 버전 범위 �
 
 Accepted ADR은 내용만 덮어써서 결론을 바꾸지 않는다. 변경 제안은 영향과 테스트 결과를 갖춘 새 ADR을 만들고 기존 ADR의 `superseded_by`와 새 ADR의 `supersedes`를 연결한다. 상태 변경 시 [adr-index.md](adr-index.md), [adr-traceability.md](adr-traceability.md)와 기술 정책을 함께 갱신한다.
 
+용어 통일은 이 금지의 예외다. 단계 명칭처럼 저장소 전체에서 하나의 표기를 쓰기로 한 용어는 결정 내용을 바꾸지 않으므로 Accepted·Superseded ADR 본문에도 함께 적용한다. 같은 대상을 두 이름으로 부르는 문서가 남으면 독자가 서로 다른 결정으로 오해하기 때문이다. 이 예외는 표기에만 적용되며, 결정·근거·영향 범위·검증 기준의 변경에는 적용되지 않는다. 예외를 적용할 때는 어떤 표기 통일이었는지 해당 ADR 1절에 남긴다.
+
 ## 10. 현재 ADR 목록
 
 현재 상태와 경로의 기준은 [ADR 인덱스](adr-index.md)다. 구현 전 Proposed·조건부·Post-MVP·범위 충돌은 [ADR Backlog](adr-backlog.md), 기술·요구사항 연결은 [ADR 추적성](adr-traceability.md)을 따른다.

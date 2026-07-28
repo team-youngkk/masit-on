@@ -5,6 +5,7 @@ related_documents:
   - ../01-requirements/business-rules.md
   - ../02-analysis/domain-boundaries.md
   - ../05-specs/data/entity-definitions.md
+  - ../07-adr/platform/deploy-002-validation-deployment-before-expansion.md
 ---
 
 # 맛잇온 용어집
@@ -468,7 +469,7 @@ related_documents:
 
 ### MVP
 
-- 영문명: First MVP
+- 영문명: MVP
 - 정의: 계정이나 개인화 없이 핵심 맛집 탐색 가치와 관리자의 검증 데이터 등록 흐름을 검증하기 위한 최초 제공 범위다.
 - 포함:
   - 맛집 목록·이름 검색·필터
@@ -484,7 +485,7 @@ related_documents:
   - 확장 기능
   - 제외 범위
 - 사용 규칙:
-  - `MVP`만 단독으로 써서 다른 단계와 혼동될 수 있으면 `MVP`로 표현한다.
+  - `MVP`는 구현 범위를 가리킨다. 그 결과물을 운영 환경에 올리는 단계는 `초기 운영 배포`, 이후 무중단 배포 전환은 `배포 고도화`로 구분해 표기한다. 범위와 배포 단계를 같은 이름으로 부르지 않는다([ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md)).
   - 확장 가능성만 기록된 기능을 MVP의 선행 설계 또는 구현 대상으로 해석하지 않는다.
 
 ### 확장 기능

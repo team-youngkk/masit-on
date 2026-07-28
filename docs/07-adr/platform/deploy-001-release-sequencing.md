@@ -29,6 +29,8 @@ superseded_by: ADR-DEPLOY-002
 
 Superseded by [ADR-DEPLOY-002](deploy-002-validation-deployment-before-expansion.md)
 
+본문의 단계 명칭은 2026-07-28 저장소 전체 표기 통일에 맞춰 `1차 MVP` → `MVP`, `2차~4차 확장` → `1차~3차 확장`으로 갱신했다([README 9절](../README.md#9-변경-및-대체-절차) 용어 통일 예외). 결정 내용, 근거와 적용 시점은 결정 당시 그대로이며 변경하지 않았다. 배포 순서 자체는 ADR-DEPLOY-002가 대체했다.
+
 ## 2. 결정 요약
 
 MVP와 1차부터 3차까지의 확장 단계는 로컬 Docker 환경에서 구현·통합 검증한다. AWS 운영 배포는 모든 확장 단계가 끝난 뒤 별도의 최종 배포 단계에서 한 번 수행한다.

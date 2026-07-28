@@ -17,6 +17,7 @@ related_documents:
   - build-001-gradle-groovy.md
   - ../data/data-002-database-placement.md
   - ci-001-github-actions-quality-gate.md
+  - deploy-002-validation-deployment-before-expansion.md
   - ../security/sec-001-secrets-workload-identity.md
   - ../adr-backlog.md
   - ../adr-traceability.md

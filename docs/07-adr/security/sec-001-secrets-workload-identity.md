@@ -18,6 +18,7 @@ related_documents:
   - ../integration/ext-001-reference-verification.md
   - ../platform/runtime-001-docker.md
   - ../platform/ci-001-github-actions-quality-gate.md
+  - ../platform/deploy-002-validation-deployment-before-expansion.md
   - ../../02-analysis/mvp-workstreams.md
   - ../adr-traceability.md
   - ../../03-team/roles.md

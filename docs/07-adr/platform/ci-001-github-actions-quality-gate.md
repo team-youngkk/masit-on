@@ -19,7 +19,7 @@ related_documents:
   - ../../02-analysis/mvp-workstreams.md
   - ../../00-overview/scope.md
   - ../../06-architecture/technology-policy.md
-  - deploy-001-release-sequencing.md
+  - deploy-002-validation-deployment-before-expansion.md
   - ../adr-backlog.md
   - ../../03-team/roles.md
   - ../adr-traceability.md
