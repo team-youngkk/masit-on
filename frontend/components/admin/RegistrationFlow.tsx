@@ -56,7 +56,7 @@ export function RegistrationFlow({
   const [created, setCreated] = useState<Record<string, unknown> | null>(null)
 
   const previewMutation = useMutation({
-    mutationFn: (body: Record<string, string>) =>
+    mutationFn: (body: Record<string, string | null>) =>
       adminJson<Preview>(previewPath, {
         method: 'POST',
         body: JSON.stringify(body),
@@ -81,6 +81,23 @@ export function RegistrationFlow({
 
   function updateValue(name: string, value: string) {
     setValues((current) => ({ ...current, [name]: value }))
+    setPreview(null)
+    setCreated(null)
+    setError(null)
+  }
+
+  function previewPayload(): Record<string, string | null> {
+    return Object.fromEntries(
+      inputs.map((input) => {
+        const value = values[input.name] ?? ''
+        const normalizedValue = value.trim()
+
+        return [
+          input.name,
+          input.required === false && !normalizedValue ? null : value,
+        ]
+      }),
+    )
   }
 
   function handlePreview(event: React.FormEvent<HTMLFormElement>) {
@@ -90,7 +107,7 @@ export function RegistrationFlow({
     setPreview(null)
     setCreated(null)
 
-    previewMutation.mutate(values, {
+    previewMutation.mutate(previewPayload(), {
       onError: (reason) => {
         setFieldErrors(fieldErrorsFor(reason))
         setError(messageFor(reason))
