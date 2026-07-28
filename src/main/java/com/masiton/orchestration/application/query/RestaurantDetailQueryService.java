@@ -1,10 +1,7 @@
 package com.masiton.orchestration.application.query;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,10 +10,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.masiton.common.web.BusinessException;
+import com.masiton.orchestration.application.port.in.FindValidVisitContentByRestaurantQuery;
+import com.masiton.orchestration.application.port.in.RelatedVideoView;
+import com.masiton.orchestration.application.port.in.VisitContentResult;
+import com.masiton.orchestration.application.port.in.VisitedCreatorView;
 
 /**
  * 맛집 상세 응답을 조합하는 전용 Application Query 책임이다. Restaurant 소유 도메인이 아니며
- * {@link RestaurantDetailBaseQueryPort}, {@link RestaurantDetailContentQueryPort} 두 출력 Port만 호출한다.
+ * {@link RestaurantDetailBaseQueryPort}(기본 정보)와 {@link FindValidVisitContentByRestaurantQuery}
+ * (WS-03이 소유한 방문 콘텐츠 조회 계약)만 호출한다. 콘텐츠 중복 제거·정렬은
+ * {@code VisitContentQueryService}가 이미 restaurant-detail-api.md 계약대로 수행하므로
+ * 이 클래스는 재조합하지 않고 그대로 전달한다.
  *
  * <p>query-composition.md 4절의 조회 순서와 부분 실패 규칙을 그대로 구현한다.
  * 콘텐츠 Port 실패는 기본 정보 조회 실패와 분리해 전체 요청을 실패시키지 않고
@@ -28,14 +32,14 @@ public class RestaurantDetailQueryService {
     private static final Logger log = LoggerFactory.getLogger(RestaurantDetailQueryService.class);
 
     private final RestaurantDetailBaseQueryPort restaurantDetailBaseQueryPort;
-    private final RestaurantDetailContentQueryPort restaurantDetailContentQueryPort;
+    private final FindValidVisitContentByRestaurantQuery findValidVisitContentByRestaurantQuery;
 
     public RestaurantDetailQueryService(
             RestaurantDetailBaseQueryPort restaurantDetailBaseQueryPort,
-            RestaurantDetailContentQueryPort restaurantDetailContentQueryPort
+            FindValidVisitContentByRestaurantQuery findValidVisitContentByRestaurantQuery
     ) {
         this.restaurantDetailBaseQueryPort = restaurantDetailBaseQueryPort;
-        this.restaurantDetailContentQueryPort = restaurantDetailContentQueryPort;
+        this.findValidVisitContentByRestaurantQuery = findValidVisitContentByRestaurantQuery;
     }
 
     @Transactional(readOnly = true)
@@ -61,49 +65,14 @@ public class RestaurantDetailQueryService {
     }
 
     private ContentOutcome fetchContent(UUID restaurantId) {
-        List<VisitContentRow> rows;
+        VisitContentResult content;
         try {
-            rows = restaurantDetailContentQueryPort.findPublicContentByRestaurantId(restaurantId);
+            content = findValidVisitContentByRestaurantQuery.findValidVisitContentByRestaurant(restaurantId);
         } catch (Exception exception) {
             log.warn("맛집 상세 콘텐츠 조회 실패: restaurantId={}", restaurantId, exception);
             return new ContentOutcome(ContentStatus.TEMPORARILY_UNAVAILABLE, List.of(), List.of());
         }
-        return new ContentOutcome(ContentStatus.AVAILABLE, distinctCreators(rows), distinctVideos(rows));
-    }
-
-    private List<VisitedCreatorView> distinctCreators(List<VisitContentRow> rows) {
-        return dedupe(
-                rows,
-                VisitContentRow::creatorId,
-                row -> new VisitedCreatorView(row.creatorId(), row.channelName(), row.channelUrl()),
-                Comparator.comparing(VisitedCreatorView::channelName)
-                        .thenComparing(view -> view.id().toString())
-        );
-    }
-
-    private List<RelatedVideoView> distinctVideos(List<VisitContentRow> rows) {
-        return dedupe(
-                rows,
-                VisitContentRow::videoId,
-                row -> new RelatedVideoView(
-                        row.videoId(), row.title(), row.thumbnailUrl(), row.channelName(), row.sourceUrl()),
-                Comparator.comparing(RelatedVideoView::title)
-                        .thenComparing(view -> view.id().toString())
-        );
-    }
-
-    private <K, V> List<V> dedupe(
-            List<VisitContentRow> rows,
-            Function<VisitContentRow, K> keyExtractor,
-            Function<VisitContentRow, V> mapper,
-            Comparator<V> comparator
-    ) {
-        return rows.stream()
-                .collect(Collectors.toMap(keyExtractor, mapper, (first, second) -> first))
-                .values()
-                .stream()
-                .sorted(comparator)
-                .toList();
+        return new ContentOutcome(ContentStatus.AVAILABLE, content.visitedBy(), content.videos());
     }
 
     private record ContentOutcome(

@@ -14,4 +14,6 @@ public interface RegionRepositoryPort {
     Region save(Region region);
 
     Optional<Region> findById(UUID id);
+
+    Optional<Region> findByName(String name);
 }

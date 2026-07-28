@@ -30,4 +30,9 @@ class RegionPersistenceAdapter implements RegionRepositoryPort {
     public Optional<Region> findById(UUID id) {
         return springDataRegionRepository.findById(id).map(RegionMapper::toDomain);
     }
+
+    @Override
+    public Optional<Region> findByName(String name) {
+        return springDataRegionRepository.findByName(name).map(RegionMapper::toDomain);
+    }
 }

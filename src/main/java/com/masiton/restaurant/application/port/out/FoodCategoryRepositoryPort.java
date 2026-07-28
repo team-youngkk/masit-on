@@ -14,4 +14,6 @@ public interface FoodCategoryRepositoryPort {
     FoodCategory save(FoodCategory foodCategory);
 
     Optional<FoodCategory> findById(UUID id);
+
+    Optional<FoodCategory> findByName(String name);
 }

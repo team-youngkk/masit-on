@@ -2,9 +2,9 @@ package com.masiton.orchestration.presentation.detail;
 
 import java.util.List;
 
-import com.masiton.orchestration.application.query.RelatedVideoView;
+import com.masiton.orchestration.application.port.in.RelatedVideoView;
+import com.masiton.orchestration.application.port.in.VisitedCreatorView;
 import com.masiton.orchestration.application.query.RestaurantDetailResult;
-import com.masiton.orchestration.application.query.VisitedCreatorView;
 
 /**
  * API-DETAIL-001 성공 응답 계약이다. 식별자는 불투명 문자열로 직렬화하고
