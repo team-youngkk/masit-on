@@ -19,6 +19,9 @@ import com.masiton.security.application.InvalidRefreshTokenException;
 import com.masiton.security.application.RefreshTokenRotation;
 import com.masiton.security.application.port.out.LoginFailureStore;
 import com.masiton.security.application.port.out.RefreshTokenStore;
+import com.masiton.member.application.InvalidMemberSessionException;
+import com.masiton.member.application.MemberSession;
+import com.masiton.member.application.port.out.MemberSessionStore;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -58,6 +61,9 @@ class RedisRefreshTokenStoreIntegrationTest {
 
     @Autowired
     private RefreshTokenStore refreshTokenStore;
+
+    @Autowired
+    private MemberSessionStore memberSessionStore;
 
     @Autowired
     private LoginFailureStore loginFailureStore;
@@ -113,5 +119,29 @@ class RedisRefreshTokenStoreIntegrationTest {
         }
 
         assertThat(loginFailureStore.isBlocked("another-admin", "127.0.0.1")).isTrue();
+    }
+    @Test
+    @DisplayName("회원은 최대 세 개의 Redis refresh 세션만 유지한다")
+    void memberSession_최대세개_가장오래된세션폐기() {
+        MemberSession first = memberSessionStore.issue("member-a", Duration.ofDays(14));
+        memberSessionStore.issue("member-a", Duration.ofDays(14));
+        memberSessionStore.issue("member-a", Duration.ofDays(14));
+        MemberSession fourth = memberSessionStore.issue("member-a", Duration.ofDays(14));
+
+        assertThat(memberSessionStore.matches("member-a", first.refreshToken())).isFalse();
+        assertThat(memberSessionStore.matches("member-a", fourth.refreshToken())).isTrue();
+    }
+
+    @Test
+    @DisplayName("회원 refresh token 재사용은 원자적으로 현재 세션까지 폐기한다")
+    void memberSession_회전된토큰재사용_현재세션폐기() {
+        MemberSession issued = memberSessionStore.issue("member-a", Duration.ofDays(14));
+        MemberSession rotated = memberSessionStore.rotate(issued.refreshToken(), Duration.ofDays(14));
+
+        assertThatThrownBy(() -> memberSessionStore.rotate(issued.refreshToken(), Duration.ofDays(14)))
+                .isInstanceOf(InvalidMemberSessionException.class);
+        assertThat(memberSessionStore.matches("member-a", rotated.refreshToken())).isFalse();
+        assertThatThrownBy(() -> memberSessionStore.rotate(rotated.refreshToken(), Duration.ofDays(14)))
+                .isInstanceOf(InvalidMemberSessionException.class);
     }
 }

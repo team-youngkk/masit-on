@@ -57,6 +57,8 @@ URL matcher는 다음 순서로 평가한다.
 
 `/internal/health/live`, `/internal/health/ready`, `/internal/health/dependencies`는 애플리케이션 인증 없이 호출할 수 있지만, 인증 예외보다 앞선 네트워크 경계에서 인터넷 Nginx 전달을 차단하고 EC2 내부 Agent·컨테이너에서만 호출한다. 그 밖의 `/internal/**`은 허용하지 않는다.
 
+회원 인증은 관리자와 별도 JWT audience(`masit-on-member-api`), `MEMBER` authority, `MemberPrincipal(memberId, sessionId)`를 사용한다. `/api/admin/**`에는 관리자 decoder만, `/api/members/**`에는 회원 decoder만 적용해 교차 audience를 인증 단계에서 거부한다.
+
 ### Presentation
 
 - 로그인 입력의 형식 검증

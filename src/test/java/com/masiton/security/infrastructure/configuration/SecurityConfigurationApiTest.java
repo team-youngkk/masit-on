@@ -15,6 +15,7 @@ import com.nimbusds.jwt.SignedJWT;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
@@ -49,6 +50,10 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
 
     @Autowired
     private JwtDecoder jwtDecoder;
+
+    @Autowired
+    @Qualifier("memberJwtDecoder")
+    private JwtDecoder memberJwtDecoder;
 
     @DynamicPropertySource
     static void securityProperties(DynamicPropertyRegistry registry) {
@@ -125,6 +130,18 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
         assertThatThrownBy(() -> jwtDecoder.decode(signedToken("test-key-20260727", "other-issuer", "masit-on-admin-api")))
                 .isInstanceOf(JwtException.class);
         assertThatThrownBy(() -> jwtDecoder.decode(signedToken("test-key-20260727", "masit-on", "other-audience")))
+                .isInstanceOf(JwtException.class);
+    }
+
+    @Test
+    @DisplayName("관리자와 회원 JWT audience는 서로의 보안 경계에서 거부된다")
+    void jwt_관리자회원Audience교차거부() throws Exception {
+        String adminToken = signedToken("test-key-20260727", "masit-on", "masit-on-admin-api");
+        String memberToken = signedToken("test-key-20260727", "masit-on", "masit-on-member-api");
+
+        assertThatThrownBy(() -> jwtDecoder.decode(memberToken))
+                .isInstanceOf(JwtException.class);
+        assertThatThrownBy(() -> memberJwtDecoder.decode(adminToken))
                 .isInstanceOf(JwtException.class);
     }
 

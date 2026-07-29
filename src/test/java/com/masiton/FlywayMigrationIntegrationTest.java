@@ -62,7 +62,7 @@ class FlywayMigrationIntegrationTest {
         // then
         assertThat(rows)
                 .extracting(row -> row.get("version"))
-                .containsExactly("1");
+                .containsExactly("1", "2");
         assertThat(rows)
                 .allSatisfy(row -> assertThat(row.get("success")).isEqualTo(Boolean.TRUE));
     }
@@ -109,6 +109,18 @@ class FlywayMigrationIntegrationTest {
         assertColumnValuesAreUnique("food_category", "code");
         assertColumnValuesAreUnique("food_category", "name");
         assertColumnValuesAreUnique("food_category", "sort_order");
+    }
+
+    @Test
+    @DisplayName("V2 회원 계정과 인증 기반 테이블을 전진 적용한다")
+    void V2_회원보안기반_테이블생성() {
+        Integer memberAccountTables = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM information_schema.tables "
+                        + "WHERE table_schema = 'public' "
+                        + "AND table_name IN ('member_account', 'member_action_token', 'member_session_revocation')",
+                Integer.class);
+
+        assertThat(memberAccountTables).isEqualTo(3);
     }
 
     private void assertColumnValuesAreUnique(String table, String column) {

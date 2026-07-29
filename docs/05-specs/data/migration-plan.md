@@ -121,8 +121,12 @@ Flyway undo 파일과 하향 migration은 기본 경로로 사용하지 않는�
 - 기준 데이터 수·code·name·순서·`OTHER` 단일성 검증
 - 공개 목록·Creator 필터·상세 조회 실행계획 smoke test
 
-## 8. 향후 첫 변경 번호
+## 8. V2 회원 데이터·보안 기반
 
-초기 스키마 baseline이 적용된 뒤 모든 변경은 `V2`부터 시작한다.
+`V2__add_member_account_security_foundation.sql`은 `member_account`, `member_action_token`, `member_session_revocation`과 필요한 인덱스를 추가한다. V1의 관리자·공개 조회 데이터는 수정하지 않으며, 빈 V1 데이터베이스와 기존 V1 스키마 모두에 전진 적용된다.
+
+## 9. 향후 변경 번호
+
+초기 스키마 baseline 다음 변경은 `V2`로 적용됐으며, 이후 변경은 다음 비어 있는 버전 번호를 사용한다.
 
 `V1`은 개발 환경에 적용된 시점부터 수정하지 않고 `V2` 이상의 보정 migration을 추가한다. 운영 배포 전 통합은 2.1절 강제 규칙을 모두 증명한 경우에만 허용되는 예외다.

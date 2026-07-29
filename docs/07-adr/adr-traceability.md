@@ -68,14 +68,14 @@ related_documents:
 | Redis AOF `everysec` + RDB | 확정 설정 | Operational Configuration | Redis 역할 결정 후 운영 문서 | 아키텍처보다 영속화 설정값 |
 | Redis 캐시 | 확정 기술 용도 | Conditional ADR | [ADR-CACHE-001](adr-backlog.md#adr-cache-001-redis-캐시-도입) | 성능 병목·무효화 근거 없음 |
 | Redis 관리자 Refresh Token | 사용자 확정 | Accepted ADR | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md), [ADR-DATA-005](data/data-005-redis-refresh-token.md) | 관리자 JWT 재발급·폐기 |
-| Redis 일반 사용자 Refresh Token | 기술 스펙 확정, 범위 제외 | Post-MVP ADR | [ADR-AUTH-002](adr-backlog.md#adr-auth-002-일반-사용자-jwt와-refresh-token) | 일반 사용자 로그인 제외 |
+| Redis 회원 Refresh Token | 구현 범위 확정 | Accepted ADR | [ADR-AUTH-002](security/auth-002-member-jwt-refresh-token.md) | 최대 3세션·원자 회전·재사용 탐지 |
 | Redis 분산 락 | 확정 기술 용도 | Conditional ADR | [ADR-LOCK-001](adr-backlog.md#adr-lock-001-redis-분산-락-도입) | 자동 배치·다중 실행 미확정 |
 | 격리 수준·락·upsert 동시성 제어 | 조건부 | Conditional ADR | [ADR-DATA-006](adr-backlog.md#adr-data-006-동시-쓰기-충돌-제어) | 기본 격리와 `UNIQUE`로 불충분하다는 동시성 근거 필요 |
 | 관리자 Spring Security 7.1.0 + JWT | 사용자 확정 | Accepted ADR | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md) | 관리자 인증·인가 기준 |
 | 관리자 Refresh Token 보안 쿠키 | 사용자 확정 | Accepted ADR | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md), [ADR-DATA-005](data/data-005-redis-refresh-token.md) | Redis 저장·회전, HttpOnly·Secure 전달 |
 | 확인 Token 저장·소비·재시도 | 결정 완료 (2026-07-27) | Accepted ADR | [ADR-AUTH-003](security/auth-003-confirmation-token.md) | PostgreSQL 해시·후보 Snapshot, 생성과 원자적 소비, 완료 결과 재현 |
 | 관리자 등급·기능별 권한 | 범위 제외 | Post-MVP ADR | [ADR-AUTH-004](adr-backlog.md#adr-auth-004-관리자-권한-세분화) | MVP는 사전 발급 단일 `ADMIN` 역할 |
-| 일반 사용자 JWT·Refresh Token | 기술 스펙 확정, 범위 제외 | Post-MVP ADR | [ADR-AUTH-002](adr-backlog.md#adr-auth-002-일반-사용자-jwt와-refresh-token) | 회원가입·로그인 제외 |
+| 회원 JWT·Refresh Token | 구현 범위 확정 | Accepted ADR | [ADR-AUTH-002](security/auth-002-member-jwt-refresh-token.md) | 관리자 audience·principal·쿠키와 분리 |
 | springdoc-openapi 3.0.3 + Swagger UI | 고정 | Technology Policy | [ADR-FRAME-001](platform/frame-001-spring-boot.md) | 구현과 명세 대조 도구, 외부 계약 원문은 `docs/05-specs` |
 | Kakao Local REST API V2 | 확정·MVP 필요 | Accepted ADR | [ADR-EXT-001](integration/ext-001-reference-verification.md) | 관리자 맛집 장소 확인 |
 | YouTube Data API v3 | 확정·MVP 필요 | Accepted ADR | [ADR-EXT-001](integration/ext-001-reference-verification.md) | 관리자 채널·영상 확인 |
@@ -126,7 +126,7 @@ related_documents:
 | [NFR-DEPLOYMENT-001](../01-requirements/non-functional-requirements.md#nfr-deployment-001-재현-가능한-빌드와-환경-분리)~[NFR-DEPLOYMENT-002](../01-requirements/non-functional-requirements.md#nfr-deployment-002-배포-전후-검증) | [ADR-BUILD-001](platform/build-001-gradle-groovy.md), [ADR-WEB-003](platform/web-003-routing-boundary.md), [ADR-RUNTIME-001](platform/runtime-001-docker.md), [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | 재현 빌드, 로컬 통합과 초기 운영 배포 검증 |
 | [NFR-DEPLOYMENT-003](../01-requirements/non-functional-requirements.md#nfr-deployment-003-버전-추적과-복구-절차)~[NFR-DEPLOYMENT-004](../01-requirements/non-functional-requirements.md#nfr-deployment-004-단계별-실행-및-초기-운영-배포-복잡도-제한) | [ADR-DATA-004](data/data-004-flyway.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | 단계별 실행과 초기 운영 배포 복구·복잡도 |
 | [NFR-MAINTAINABILITY-001](../01-requirements/non-functional-requirements.md#nfr-maintainability-001-책임과-의존성-경계)~[NFR-MAINTAINABILITY-003](../01-requirements/non-functional-requirements.md#nfr-maintainability-003-추적성과-운영-복잡도) | [ADR-ARCH-001](architecture/arch-001-domain-monolith.md), [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md), [ADR-ARCH-003](adr-backlog.md#adr-arch-003-조회-확장-패턴), [ADR-ARCH-004](adr-backlog.md#adr-arch-004-멀티모듈독립-배포-전환) | 책임 경계, 조회 확장, 배포 경계와 운영 복잡도 제한 |
-| [NFR-PRIVACY-001](../01-requirements/non-functional-requirements.md#nfr-privacy-001-mvp-개인정보-최소화)~[NFR-PRIVACY-003](../01-requirements/non-functional-requirements.md#nfr-privacy-003-회원-기능-도입-시-재검토) | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md), [ADR-AUTH-002](adr-backlog.md#adr-auth-002-일반-사용자-jwt와-refresh-token), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 일반 사용자 계정 제외와 비밀 보호 |
+| [NFR-PRIVACY-001](../01-requirements/non-functional-requirements.md#nfr-privacy-001-mvp-개인정보-최소화)~[NFR-PRIVACY-003](../01-requirements/non-functional-requirements.md#nfr-privacy-003-회원-기능-도입-시-재검토) | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md), [ADR-AUTH-002](security/auth-002-member-jwt-refresh-token.md), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 회원 데이터 최소화와 비밀 보호 |
 
 ## 4. API → ADR 매핑
 
@@ -149,7 +149,7 @@ related_documents:
 | 내부 식별자 | [ADR-DATA-007](data/data-007-uuid-v4-identifiers.md) | Accepted; UUID v4와 PostgreSQL `uuid` |
 | 공개·삭제 생명주기 | [ADR-DATA-008](data/data-008-publication-lifecycle-soft-delete.md) | Accepted; 상태 분리·논리 삭제·FK RESTRICT |
 | 공간·벡터 데이터 | [ADR-MAP-001](adr-backlog.md#adr-map-001-지도-표시와-공간-검색), [ADR-SEARCH-002](adr-backlog.md#adr-search-002-pgvector-자연어-검색rag) | 현재 모델·확장 설치 금지 |
-| 사용자·토큰·기기 데이터 | [ADR-AUTH-002](adr-backlog.md#adr-auth-002-일반-사용자-jwt와-refresh-token), [ADR-NOTIFY-001](adr-backlog.md#adr-notify-001-fcm-푸시-알림) | 현재 MVP 모델에 추가 금지 |
+| 사용자·토큰·기기 데이터 | [ADR-AUTH-002](security/auth-002-member-jwt-refresh-token.md), [ADR-NOTIFY-001](adr-backlog.md#adr-notify-001-fcm-푸시-알림) | 회원·세션 데이터만 1차 확장 범위, 알림은 제외 |
 
 ## 6. Workstream → ADR 매핑
 
@@ -168,7 +168,7 @@ related_documents:
 | 고정 버전·BOM·범위 버전 금지 | [ADR-LANG-001](platform/lang-001-java-21-runtime.md), [ADR-BUILD-001](platform/build-001-gradle-groovy.md), [ADR-FRAME-001](platform/frame-001-spring-boot.md), [ADR-WEB-001](platform/web-001-frontend-platform.md), [ADR-DATA-004](data/data-004-flyway.md) |
 | 개발·테스트·운영 분리 | [ADR-DATA-002](data/data-002-database-placement.md), [ADR-RUNTIME-001](platform/runtime-001-docker.md), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) |
 | DB 스키마 변경 | [ADR-DATA-004](data/data-004-flyway.md) |
-| Redis 역할 선확정 | [ADR-CACHE-001](adr-backlog.md#adr-cache-001-redis-캐시-도입), [ADR-LOCK-001](adr-backlog.md#adr-lock-001-redis-분산-락-도입), [ADR-AUTH-002](adr-backlog.md#adr-auth-002-일반-사용자-jwt와-refresh-token) |
+| Redis 역할 선확정 | [ADR-CACHE-001](adr-backlog.md#adr-cache-001-redis-캐시-도입), [ADR-LOCK-001](adr-backlog.md#adr-lock-001-redis-분산-락-도입), [ADR-AUTH-002](security/auth-002-member-jwt-refresh-token.md) |
 | 동시성 강화 선확정 | [ADR-DATA-006](adr-backlog.md#adr-data-006-동시-쓰기-충돌-제어), [ADR-LOCK-001](adr-backlog.md#adr-lock-001-redis-분산-락-도입) |
 | 조회 저장소·물리적 CQRS 선확정 | [ADR-ARCH-003](adr-backlog.md#adr-arch-003-조회-확장-패턴), [ADR-CACHE-001](adr-backlog.md#adr-cache-001-redis-캐시-도입) |
 | 자동 복원력·비동기 전달 선확정 | [ADR-EXT-002](adr-backlog.md#adr-ext-002-자동-복원력과-신뢰성-이벤트-전달) |
