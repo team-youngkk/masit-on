@@ -10,6 +10,7 @@ import {
   buildApiSearchParams,
   buildPageNumbers,
   buildRestaurantsHref,
+  fetchCreators,
   fetchRestaurants,
   toSingleValue,
   type RawSearchParams,
@@ -31,13 +32,30 @@ export default async function RestaurantsPage({
 }: RestaurantsPageProps) {
   const rawParams = await searchParams
   const apiParams = buildApiSearchParams(rawParams)
-  const result = await fetchRestaurants(apiParams)
+  const [result, creatorsResult] = await Promise.all([
+    fetchRestaurants(apiParams),
+    fetchCreators(),
+  ])
 
   const currentQuery = toSingleValue(rawParams.query) ?? ''
   const currentDistrict = toSingleValue(rawParams.district) ?? ''
   const currentCategory = toSingleValue(rawParams.category) ?? ''
   const currentCreatorId = toSingleValue(rawParams.creatorId)
   const currentSize = apiParams.get('size') ?? '20'
+
+  /* URL의 creatorId가 현재 선택 목록에 없으면(삭제·비공개 전환 등) select에 그대로 defaultValue로
+   * 넘길 수 없다 — 일치하는 option이 없으면 브라우저가 조용히 "전체"를 선택한 것처럼 보여줘
+   * 화면과 실제 조회 조건이 어긋난다. */
+  const currentCreatorKnown =
+    creatorsResult.ok &&
+    (!currentCreatorId ||
+      creatorsResult.data.items.some((creator) => creator.id === currentCreatorId))
+  const clearCreatorIdHref = (() => {
+    const next = new URLSearchParams(apiParams)
+    next.delete('creatorId')
+    next.set('page', '1')
+    return `/restaurants?${next.toString()}`
+  })()
 
   const items = result.ok ? result.data.items : []
   const page = result.ok ? result.data.page : null
@@ -94,10 +112,62 @@ export default async function RestaurantsPage({
           </select>
         </div>
 
-        {/* 유튜버 선택 UI는 이번 범위가 아니다. 기존 값만 숨겨서 유지한다. */}
-        {currentCreatorId ? (
-          <input type="hidden" name="creatorId" value={currentCreatorId} />
-        ) : null}
+        <div className={styles.selectGroup}>
+          <label className={styles.selectLabel} htmlFor="creatorId">
+            유튜버
+          </label>
+          {creatorsResult.ok ? (
+            <select
+              id="creatorId"
+              name="creatorId"
+              defaultValue={currentCreatorId ?? ''}
+              className={styles.select}
+            >
+              <option value="">전체</option>
+              {creatorsResult.data.items.map((creator) => (
+                <option key={creator.id} value={creator.id}>
+                  {creator.channelName}
+                </option>
+              ))}
+              {/* 현재 선택된 유튜버가 목록에 없으면(삭제·비공개 전환) 그 사실을 그대로
+               * 보여준다. disabled를 쓰면 폼 제출 데이터 구성 시 선택된 option이
+               * 통째로 제외돼(WHATWG HTML 4.10.5.4) creatorId가 조용히 사라지므로
+               * 활성 option으로 두고, 사용자가 "전체"나 다른 유튜버로 직접 바꿔야만
+               * 필터가 바뀌게 한다. */}
+              {!currentCreatorKnown && currentCreatorId ? (
+                <option value={currentCreatorId}>선택할 수 없는 유튜버</option>
+              ) : null}
+            </select>
+          ) : (
+            <select id="creatorId" defaultValue="" className={styles.select} disabled>
+              <option value="">전체</option>
+            </select>
+          )}
+          {/* 조회 자체가 실패하면 select로 값을 바꿀 수 없으니 기존 값을 보존하되,
+           * 사용자가 URL을 몰라도 필터를 끌 수 있게 명시적 해제 링크를 같이 준다. */}
+          {!creatorsResult.ok && currentCreatorId ? (
+            <>
+              <input type="hidden" name="creatorId" value={currentCreatorId} />
+              <Link href={clearCreatorIdHref} className={styles.selectHint}>
+                유튜버 필터 해제
+              </Link>
+            </>
+          ) : null}
+          {creatorsResult.ok && creatorsResult.data.items.length === 0 ? (
+            <p className={styles.selectHint}>등록된 유튜버가 없습니다.</p>
+          ) : null}
+          {!creatorsResult.ok ? (
+            <p className={styles.selectError} role="alert">
+              {creatorsResult.message}
+              {creatorsResult.traceId ? (
+                <span className={styles.traceId}>
+                  traceId: {creatorsResult.traceId}
+                </span>
+              ) : null}
+            </p>
+          ) : null}
+        </div>
+
         <input type="hidden" name="size" value={currentSize} />
 
         <Button type="submit" className={styles.submit}>
