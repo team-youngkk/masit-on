@@ -26,6 +26,7 @@ related_documents:
   - data/data-007-uuid-v4-identifiers.md
   - data/data-008-publication-lifecycle-soft-delete.md
   - integration/ext-001-reference-verification.md
+  - integration/map-001-map-bounds-search.md
   - quality/test-001-automation-strategy.md
   - quality/obs-001-logging-observability.md
   - security/sec-001-secrets-workload-identity.md
@@ -62,7 +63,7 @@ related_documents:
 | Spring Data JPA | 확정 | Accepted ADR | [ADR-DATA-003](data/data-003-spring-data-jpa.md) | 기본 ORM·Repository 전략 |
 | Flyway 12.4.0 | 고정 | Accepted ADR | [ADR-DATA-004](data/data-004-flyway.md), [ADR-DATA-009](data/data-009-pre-release-migration-consolidation.md) | 스키마 변경 단일 경로, 적용된 마이그레이션의 환경 범위와 운영 배포 전 통합 예외 |
 | QueryDSL | 조건부 | Conditional ADR | [ADR-SEARCH-001](adr-backlog.md#adr-search-001-querydsl-도입) | 복합 조회 필요성 확인 후 도입 |
-| PostGIS | 기술 스펙 확정, 범위 제외 | Post-MVP ADR | [ADR-MAP-001](adr-backlog.md#adr-map-001-지도-표시와-공간-검색) | 지도·좌표·거리 검색 제외 |
+| PostGIS | 기술 스펙 확정, 현재 범위 제외 | Accepted ADR | [ADR-MAP-001](integration/map-001-map-bounds-search.md) | 1차 확장은 WGS84 bounds 조회만 사용하고 PostGIS·거리 검색은 제외 |
 | pgvector | Post-MVP | Post-MVP ADR | [ADR-SEARCH-002](adr-backlog.md#adr-search-002-pgvector-자연어-검색rag) | 자연어 검색·RAG 제외 |
 | Redis 8.8 전용 인스턴스 | 고정·관리자 Token 역할 확정 | Accepted ADR | [ADR-DATA-005](data/data-005-redis-refresh-token.md) | 관리자 Refresh Token 저장, 캐시·락은 별도 조건부 |
 | Redis AOF `everysec` + RDB | 확정 설정 | Operational Configuration | Redis 역할 결정 후 운영 문서 | 아키텍처보다 영속화 설정값 |
@@ -80,7 +81,7 @@ related_documents:
 | Kakao Local REST API V2 | 확정·MVP 필요 | Accepted ADR | [ADR-EXT-001](integration/ext-001-reference-verification.md) | 관리자 맛집 장소 확인 |
 | YouTube Data API v3 | 확정·MVP 필요 | Accepted ADR | [ADR-EXT-001](integration/ext-001-reference-verification.md) | 관리자 채널·영상 확인 |
 | 자동 재시도·Circuit Breaker·비동기 이벤트·Outbox | 조건부 | Conditional ADR | [ADR-EXT-002](adr-backlog.md#adr-ext-002-자동-복원력과-신뢰성-이벤트-전달) | 수동 재시도·동기 처리로 운영 목표를 지킬 수 없다는 근거 필요 |
-| Kakao Maps JavaScript API V3 | 확정이나 범위 제외 | Post-MVP ADR | [ADR-MAP-001](adr-backlog.md#adr-map-001-지도-표시와-공간-검색) | 지도 SDK·표시 제외 |
+| Kakao Maps JavaScript API V3 | 구현 범위 확정 | Accepted ADR | [ADR-MAP-001](integration/map-001-map-bounds-search.md) | 지도 SDK와 bounds 조회를 1차 확장에 포함하고 현재 위치·길찾기는 제외 |
 | Kakao Mobility Directions API V1 | 확정이나 범위 제외 | Post-MVP ADR | [ADR-ROUTE-001](adr-backlog.md#adr-route-001-kakao-mobility와-동선-추천) | 동선·코스 추천 제외 |
 | Java + Jsoup | 확정이나 자동화 제외 | Post-MVP ADR | [ADR-AUTO-001](adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) | 자동 수집 제외 |
 | Playwright | 필요 시 | Conditional ADR | [ADR-CRAWL-001](adr-backlog.md#adr-crawl-001-playwright-도입) | JS 렌더링 필요 검증 후 도입 |
@@ -148,7 +149,7 @@ related_documents:
 | 동시 쓰기 충돌 | [ADR-DATA-006](adr-backlog.md#adr-data-006-동시-쓰기-충돌-제어), [ADR-LOCK-001](adr-backlog.md#adr-lock-001-redis-분산-락-도입) | 기본 `UNIQUE` 이후 강화는 통합 테스트 근거 필요 |
 | 내부 식별자 | [ADR-DATA-007](data/data-007-uuid-v4-identifiers.md) | Accepted; UUID v4와 PostgreSQL `uuid` |
 | 공개·삭제 생명주기 | [ADR-DATA-008](data/data-008-publication-lifecycle-soft-delete.md) | Accepted; 상태 분리·논리 삭제·FK RESTRICT |
-| 공간·벡터 데이터 | [ADR-MAP-001](adr-backlog.md#adr-map-001-지도-표시와-공간-검색), [ADR-SEARCH-002](adr-backlog.md#adr-search-002-pgvector-자연어-검색rag) | 현재 모델·확장 설치 금지 |
+| 공간·벡터 데이터 | [ADR-MAP-001](integration/map-001-map-bounds-search.md), [ADR-SEARCH-002](adr-backlog.md#adr-search-002-pgvector-자연어-검색rag) | 1차 확장은 nullable WGS84 좌표와 bounds 조회만 허용, PostGIS·pgvector는 금지 |
 | 사용자·토큰·기기 데이터 | [ADR-AUTH-002](security/auth-002-member-jwt-refresh-token.md), [ADR-NOTIFY-001](adr-backlog.md#adr-notify-001-fcm-푸시-알림) | 회원·세션 데이터만 1차 확장 범위, 알림은 제외 |
 
 ## 6. Workstream → ADR 매핑

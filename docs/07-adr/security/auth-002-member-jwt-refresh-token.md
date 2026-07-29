@@ -43,6 +43,8 @@ Accepted
 
 2026-07-29 요구사항·API·데이터 계약 확정 결과를 동기화했다. 기존의 관리자·회원 인증 분리, RS256 JWT, Redis Refresh 세션과 최대 3세션이라는 결론은 변경하지 않았다.
 
+현재 `develop`에는 V2 회원 보안 데이터, 회원 JWT 발급과 Redis 세션 기반만 구현돼 있다. 이 문서의 계정 상태·`sid` 폐기 표식 조회, 회원 인증 API, 요청 제한 HMAC, 신뢰 프록시와 Origin 검증은 후속 구현이 완료되기 전까지 현재 적용된 보안 통제로 간주하지 않는다.
+
 ## 2. 결정 요약
 
 일반 회원은 `MEMBER` authority를 가진 RS256 JWT Access Token과 Redis Refresh Token 세션을 사용한다. 관리자 인증과 암호화 기반·서명 검증 구현은 재사용하되 경로, principal, audience, 쿠키와 Redis namespace는 분리한다. Access Token은 30분, Refresh Token은 회전 시점부터 14일간 유효하며 회원 한 명당 활성 세션은 최대 3개다.
