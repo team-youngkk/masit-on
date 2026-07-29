@@ -28,7 +28,7 @@ M2 초기 운영 배포에서 생성한 AWS 자원의 식별자와 완료 조건
 | 접근 방식 | IAM Identity Center 조직 인스턴스 `ssoins-7230c72b8df2ccaf`, 권한 세트 `AdministratorAccess`(세션 8시간) |
 | CLI 프로파일 | `masiton` (SSO. 장기 액세스 키 없음) |
 
-**이 계정은 맛잇온 전용이 아니다.** 2026-06-05에 만든 다른 프로젝트의 ECR 리포지토리 `commerce-payment`(이미지 8개)가 있고 삭제된 RDS의 로그 그룹 `RDSOSMetrics`가 남아 있다. 예산 범위 영향은 4절에 적었다.
+**이 계정은 맛잇온 전용이 아니다.** 2026-06-05에 만든 다른 프로젝트의 ECR 리포지토리 `commerce-payment`(이미지 8개)가 있고 삭제된 RDS의 로그 그룹 `RDSOSMetrics`가 남아 있다. 예산 범위 영향은 6절에 적었다.
 
 ## 3. M2-03 네트워크와 EC2 (#42)
 
@@ -128,7 +128,56 @@ aws logs describe-log-groups                       -> 인가됨
 
 **Docker가 설치돼 있지 않다.** `M2-05` Redis 컨테이너와 `M2-09` 애플리케이션 실행 전에 설치해야 한다.
 
-## 4. 예산 범위에 관한 확인 사항
+## 4. M2-02 도메인과 DNS (#41)
+
+| 항목 | 값 |
+|---|---|
+| 도메인 | **`masiton.click`** (Amazon Registrar, 2026-07-29 등록) |
+| 등록 비용 | `$3` 1회 청구, 1년. 만료 2027-07-29 |
+| 자동 갱신 | **끔.** 단기 프로젝트라 갱신 과금을 만들지 않기로 했다(2026-07-29 결정) |
+| 호스팅 영역 | `Z01447273NZ8O8LL4IA5` (`masiton.click.`, 퍼블릭). 등록 시 자동 생성 |
+| A 레코드 | `masiton.click.` → `3.37.228.52`, TTL 300, 상태 `INSYNC` |
+
+TTL을 300초로 둔 이유는 Elastic IP가 바뀌거나 `M2-13` 복구에서 인스턴스를 교체할 때 전파를 빨리 끝내기 위한 것이다.
+
+**자동 갱신을 끈 결과 2027-07-29에 도메인이 만료된다.** [ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md) 4절은 M2 환경을 1~3차 확장까지 계속 운영한다고 정했으므로, 확장이 그 시점을 넘기면 갱신 여부를 다시 판단해야 한다.
+
+기존에 다른 프로젝트의 `roviq.click`(호스팅 영역 `Z06023901J95I2V1Q2QH`)이 같은 계정에 있으나 맛잇온과 무관하며 사용하지 않는다.
+
+## 5. M2-04 RDS PostgreSQL (#43)
+
+| 항목 | 값 |
+|---|---|
+| 인스턴스 | `masiton-db` |
+| 엔진 | PostgreSQL **17.10** ([기술 정책 3절](../06-architecture/technology-policy.md) 고정 버전) |
+| 클래스 | `db.t4g.micro` (2 vCPU / 1 GiB) |
+| 스토리지 | gp3 20 GiB, 암호화 (`aws/rds` 관리형 KMS 키) |
+| 초기 데이터베이스 | `masiton` |
+| 마스터 사용자 | `masiton` |
+| 배치 | `masiton-db-subnet-group` (사설 서브넷 2a·2c), AZ `ap-northeast-2c` |
+| 보안 그룹 | `sg-0a85c62e8e98cf169` (5432, 출처 앱 SG만) |
+| 퍼블릭 액세스 | 없음 |
+| Multi-AZ | 사용하지 않음 |
+| 자동 백업 | 보관 7일, 창 `18:00-18:30` UTC (KST 03:00-03:30) |
+| 유지 관리 창 | `sun:19:00-sun:19:30` UTC (KST 월 04:00) |
+| 자동 마이너 버전 업그레이드 | **끔** |
+| 삭제 방지 | 켬 |
+
+`--no-auto-minor-version-upgrade`가 중요하다. [기술 정책 3절](../06-architecture/technology-policy.md)이 "고정 버전을 다른 패치·메이저 버전으로 바꾸지 않는다"고 정했으므로 AWS가 패치 버전을 임의로 올리면 고정 정책이 깨진다.
+
+Multi-AZ, Performance Insights, 확장 모니터링은 켜지 않았다. 계획 범위 밖이고 비용이 늘어난다.
+
+### 5.1. 마스터 암호 취급
+
+[ADR-SEC-001](../07-adr/security/sec-001-secrets-workload-identity.md)과 계획 `M2-07`이 지정한 대로 **Parameter Store SecureString**에 저장했다. RDS 관리형 마스터 암호(Secrets Manager)는 저장소가 달라 ADR 개정이 필요하므로 채택하지 않았다(2026-07-29 결정).
+
+| 파라미터 | 유형 | KMS 키 |
+|---|---|---|
+| `/masiton/db/password` | `SecureString` | `alias/aws/ssm` (관리형. 고객 관리 키의 월 `$1`이 발생하지 않는다) |
+
+암호는 담당자가 직접 생성해 입력했고 생성 명령과 파라미터 등록을 한 번의 입력으로 처리해 셸 히스토리에 남기지 않았다. **평문은 담당자 외 누구에게도 전달하지 않았다.** 연결 검증도 EC2가 IAM Role로 파라미터를 읽어 수행하며 평문을 출력하지 않는다.
+
+## 6. 예산 범위에 관한 확인 사항
 
 `My Monthly Cost Budget`(`$100`/월)은 **계정 전체 비용**을 대상으로 한다. 2절에 적었듯 이 계정에는 다른 프로젝트 자원이 있어 그 비용도 이 예산에 합산된다.
 
@@ -144,7 +193,7 @@ aws logs describe-log-groups                       -> 인가됨
 
 크레딧이 소진되면 예산 알림이 실제 청구액을 기준으로 동작하기 시작한다. 그 전까지는 크레딧이 지출을 가려 알림이 늦게 올 수 있으므로, `M2-12` 시점에 실제 청구액과 산정치를 대조한다(계획 10절 마지막 완료 항목).
 
-## 5. 검증하지 못한 항목
+## 7. 검증하지 못한 항목
 
 - **예산 초과 알림 실제 도달.** 시험 예산 `masiton-alert-test`(한도 `$0.5`, 실제 1% 초과)를 만들어 확인 중이다. AWS Budgets가 하루 약 3회만 평가해 즉시 도달하지 않는다. 도달 확인 후 시험 예산을 삭제한다.
 - **SSH 접속.** 키 페어 `masiton-app`을 만들었으나 실제 SSH 접속은 시도하지 않았다. 인스턴스 접근은 SSM RunCommand로 검증했다.
