@@ -6,7 +6,12 @@
  *       docs/05-specs/api/common/filtering-contract.md
  */
 
-const API_BASE_URL = 'http://localhost:8080'
+/*
+ * SSR은 Next.js 프로세스 안에서 실행되므로 `localhost`는 백엔드가 아니라 자기 자신이다.
+ * 컨테이너로 배포하면 백엔드가 다른 컨테이너·호스트에 있어 상수로는 도달할 수 없다.
+ * lib/api.ts와 같은 방식으로 런타임 환경 변수를 읽고, 기본값만 로컬 개발 기준값으로 둔다.
+ */
+const API_BASE_URL = process.env.API_BASE_URL ?? 'http://localhost:8080'
 const FALLBACK_ERROR_MESSAGE =
   '맛집 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
 
