@@ -144,6 +144,20 @@ TTL을 300초로 둔 이유는 Elastic IP가 바뀌거나 `M2-13` 복구에서 �
 
 기존에 다른 프로젝트의 `roviq.click`(호스팅 영역 `Z06023901J95I2V1Q2QH`)이 같은 계정에 있으나 맛잇온과 무관하며 사용하지 않는다.
 
+### 4.1. 완료 조건 검증
+
+| 완료 조건 | 결과 |
+|---|---|
+| 도메인이 Elastic IP로 해석된다 | 통과 |
+
+```text
+aws route53domains list-operations   -> REGISTER_DOMAIN SUCCESSFUL
+Resolve-DnsName masiton.click -Type A -Server 8.8.8.8
+  -> 3.37.228.52
+```
+
+외부 공개 리졸버(Google DNS `8.8.8.8`)로 확인했으므로 로컬 캐시가 아닌 실제 전파 결과다. **`M2-08`의 도메인 검증 방식 인증서 발급을 막던 전파 대기가 해소됐다.**
+
 ## 5. M2-04 RDS PostgreSQL (#43)
 
 | 항목 | 값 |
@@ -177,6 +191,55 @@ Multi-AZ, Performance Insights, 확장 모니터링은 켜지 않았다. 계획 
 
 암호는 담당자가 직접 생성해 입력했고 생성 명령과 파라미터 등록을 한 번의 입력으로 처리해 셸 히스토리에 남기지 않았다. **평문은 담당자 외 누구에게도 전달하지 않았다.** 연결 검증도 EC2가 IAM Role로 파라미터를 읽어 수행하며 평문을 출력하지 않는다.
 
+접속 정보 중 비밀이 아닌 값도 같은 경로에 등록해 `M2-09`가 한 곳에서 읽게 했다.
+
+| 파라미터 | 유형 | 값 |
+|---|---|---|
+| `/masiton/db/username` | `String` | `masiton` |
+| `/masiton/db/url` | `String` | `jdbc:postgresql://masiton-db.cvg4846kmjle.ap-northeast-2.rds.amazonaws.com:5432/masiton` |
+
+### 5.2. 완료 조건 검증
+
+| 완료 조건 | 결과 |
+|---|---|
+| RDS가 인터넷에서 직접 접근되지 않는다 | 통과 |
+| EC2에서만 연결된다 | 통과 |
+| 스냅샷 일정이 활성화된다 | 통과 |
+
+엔드포인트는 사설 IP로 해석되고 작업자 PC에서 TCP 연결이 되지 않는다.
+
+```text
+Resolve-DnsName masiton-db.cvg4846kmjle.ap-northeast-2.rds.amazonaws.com
+  -> 10.0.11.60                          (사설 서브넷 2c)
+TcpClient 5432 (작업자 PC, 5초 대기)     -> 연결 실패
+```
+
+EC2에서는 SSM RunCommand로 실제 인증까지 확인했다. 암호는 인스턴스가 Parameter Store에서 직접 읽었고 값을 출력하지 않았다.
+
+```text
+psql (PostgreSQL) 16.14                       # 클라이언트 설치
+password: fetched OK                          # 값 미출력
+select version()
+  -> PostgreSQL 17.10 on aarch64-unknown-linux-gnu ...
+select current_database(), current_user
+  -> masiton, masiton
+select count(*) from information_schema.tables where table_schema='public'
+  -> 0
+```
+
+`version()`이 고정 버전 **17.10**을 그대로 보고한다. `public` 스키마 테이블이 **0개**이므로 `M2-09`가 요구하는 "빈 RDS에 초기 스키마 Flyway 마이그레이션 적용" 전제도 만족한다.
+
+자동 스냅샷은 생성 직후 첫 스냅샷이 만들어져 일정이 동작함을 확인했다.
+
+```text
+aws rds describe-db-snapshots --snapshot-type automated
+  -> rds:masiton-db-2026-07-29-06-06  available
+```
+
+첫 스냅샷은 인스턴스 생성 시점에 만들어진 것이고, 이후로는 `18:00-18:30` UTC 창에서 일 1회 생성돼 7일간 보관된다. `M2-13`에서 이 스냅샷으로 복구 시험을 한다.
+
+**psql 클라이언트를 EC2에 설치했다**(`postgresql16`). 검증용이며 애플리케이션 실행에는 필요하지 않다.
+
 ## 6. 예산 범위에 관한 확인 사항
 
 `My Monthly Cost Budget`(`$100`/월)은 **계정 전체 비용**을 대상으로 한다. 2절에 적었듯 이 계정에는 다른 프로젝트 자원이 있어 그 비용도 이 예산에 합산된다.
@@ -197,4 +260,5 @@ Multi-AZ, Performance Insights, 확장 모니터링은 켜지 않았다. 계획 
 
 - **예산 초과 알림 실제 도달.** 시험 예산 `masiton-alert-test`(한도 `$0.5`, 실제 1% 초과)를 만들어 확인 중이다. AWS Budgets가 하루 약 3회만 평가해 즉시 도달하지 않는다. 도달 확인 후 시험 예산을 삭제한다.
 - **SSH 접속.** 키 페어 `masiton-app`을 만들었으나 실제 SSH 접속은 시도하지 않았다. 인스턴스 접근은 SSM RunCommand로 검증했다.
+- **HTTPS와 도메인 응답.** A 레코드 전파는 확인했으나 `masiton.click`으로 실제 HTTP·HTTPS 응답은 받지 못한다. Nginx가 아직 없다(`M2-08`).
 - **애플리케이션 기동 후 메모리.** 3.6절은 기동 직후 기준값이며 Nginx·Next.js·Spring Boot 실행 후 실측은 `M2-09`에서 한다.
