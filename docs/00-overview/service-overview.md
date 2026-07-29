@@ -151,7 +151,7 @@ MVP의 일반 사용자는 계정 없이 맛집을 탐색한다.
 ### MVP 검증 배포와 이후 운영
 
 - 초기 운영 배포(M2)는 다음 확장 단계 착수 전에 최초 AWS 운영 환경으로 수행한다.
-- 초기 운영 배포는 단일 EC2, ECR, RDS와 CloudWatch를 사용하는 현재 기술 결정을 적용하고 검증 참여자에게 제한 공개한다. ALB·Blue-Green 무중단 배포는 3차 확장 이후 배포 고도화 단계에서 전환한다([ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md) 3.1절).
+- 초기 운영 배포는 단일 EC2, ECR, RDS와 CloudWatch를 사용하는 현재 기술 결정을 적용하고 검증 참여자에게 제한 공개한다. ALB·Blue-Green 무중단 배포는 3차 확장 이후 배포 고도화 단계에서 도입을 검토한다([ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md) 3.1절).
 - 검증을 통과한 같은 환경을 계속 운영하며, 이후 확장에서는 필요한 인프라 변경을 해당 단계에 함께 반영한다.
 
 확장 기능의 세부 범위와 우선순위는 각 단계의 PRD에서 검토한다. 초기 운영 배포 절차는 후속 문서에서 구체화하되, 이 문서와 비기능 요구사항·ADR의 검증 기준을 충족해야 한다.
