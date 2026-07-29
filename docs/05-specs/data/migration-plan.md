@@ -22,17 +22,46 @@ related_documents:
 
 ## 2. 초기 순서
 
-V1·V2 DDL은 [ADR-DATA-007](../../07-adr/data/data-007-uuid-v4-identifiers.md)과 [ADR-DATA-008](../../07-adr/data/data-008-publication-lifecycle-soft-delete.md)의 확정 결정을 따른다.
+초기 스키마는 `V1__create_initial_schema.sql` 하나로 적용한다. DDL은 [ADR-DATA-007](../../07-adr/data/data-007-uuid-v4-identifiers.md)과 [ADR-DATA-008](../../07-adr/data/data-008-publication-lifecycle-soft-delete.md)의 확정 결정을 따른다.
 
-| 버전 | 파일 | 내용 | 선행 |
-|---:|---|---|---|
-| V1 | `V1__create_reference_and_admin_tables.sql` | `region`, `food_category`, `admin_account`; PK·UK·CHECK | 없음 |
-| V2 | `V2__create_core_domain_tables.sql` | `restaurant`, `creator`, `video`, `visit`; 상태·FK·복합 UK·CHECK | V1 |
-| V3 | `V3__create_confirmation_token_table.sql` | `confirmation_token`; Token 제약·FK | V1 |
-| V4 | `V4__create_query_indexes.sql` | `index-strategy.md`의 초기 일반·partial index | V2, V3 |
-| V5 | `V5__seed_reference_data.sql` | 서울 자치구 25개, 음식 카테고리 10개 | V1 |
+| 순서 | 내용 | 선행 |
+|---:|---|---|
+| 1 | `region`, `food_category`, `admin_account`; PK·UK·CHECK | 없음 |
+| 2 | `restaurant`, `creator`, `video`, `visit`; 상태·FK·복합 UK·CHECK | 1 |
+| 3 | `confirmation_token`; Token 제약·FK | 1 |
+| 4 | `index-strategy.md`의 초기 일반·partial index | 2, 3 |
+| 5 | 서울 자치구 25개, 음식 카테고리 10개 | 1 |
 
-V2는 부모 순서 `restaurant/creator` → `video` → `visit`로 작성한다. 순환 FK가 없으므로 테이블 생성 후 임시 무제약 상태를 두지 않는다.
+핵심 도메인 테이블은 부모 순서 `restaurant/creator` → `video` → `visit`로 작성한다. 순환 FK가 없으므로 테이블 생성 후 임시 무제약 상태를 두지 않는다. 위 다섯 구간은 한 파일 안에서 이 순서를 유지하고, 파일이 하나이므로 전체가 한 transaction으로 적용된다.
+
+### 2.1. 릴리스 전 마이그레이션 통합
+
+[ADR-DATA-004](../../07-adr/data/data-004-flyway.md) 10절의 `적용된 마이그레이션`은 개발 Docker와 공유 데이터베이스를 포함한 **모든 환경**에 적용된 것을 뜻한다([ADR-DATA-009](../../07-adr/data/data-009-pre-release-migration-consolidation.md)).
+
+| 구분 | 규칙 |
+|---|---|
+| 운영에 적용된 마이그레이션 | 수정·통합·삭제하지 않는다. 변경은 새 버전 파일로만 추가한다 |
+| 운영에 적용되지 않은 마이그레이션 | ADR-DATA-009 10절 강제 규칙을 모두 증명하면 운영 배포 직전 1회 통합할 수 있다 |
+
+통합은 10절 강제 규칙의 예외이며 절차 준수가 아니라 증명으로 성립한다. 통합 PR은 다음을 모두 증명해야 병합할 수 있다.
+
+1. 통합 대상 버전이 운영 `flyway_schema_history`에 없음을 조회 결과로 증명한다. 운영 데이터베이스가 없으면 그 사실을 근거로 대신한다.
+2. 통합 전후 SQL 본문이 주석과 공백을 제외하고 동일함을 대조 결과로 증명한다.
+3. 빈 데이터베이스 적용 결과가 통합 전과 같음을 자동화 테스트로 증명한다.
+4. 개발·공유 데이터베이스 재생성 절차를 PR 본문 최상단에 명시하고 병합 담당자가 병합 직후 공지한다.
+5. 삭제된 파일명을 참조하는 문서·주석이 남지 않음을 확인한다. 파일명 전체와 버전 번호 단독 표기를 모두 검색한다.
+
+통합 대상을 이미 적용한 데이터베이스는 checksum 불일치와 파일 부재로 Flyway `validate`가 실패해 애플리케이션이 기동하지 않는다. 잘못된 스키마로 조용히 동작하지 않는다는 점이 이 예외를 허용하는 근거다. 다음으로 재생성한다.
+
+```bash
+docker compose down -v
+```
+
+Testcontainers 기반 자동화 테스트는 매 실행 시 빈 데이터베이스를 생성하므로 영향을 받지 않는다.
+
+### 2.2. 초기 스키마 통합 이력 (2026-07-29)
+
+초기 스키마는 원래 `V1`~`V5` 다섯 파일이었고 MVP 구현(T-03)과 로컬 검증(T-14)에서 그 형태로 적용됐다. 운영 데이터베이스에 적용된 적이 없으므로 [ADR-DATA-009](../../07-adr/data/data-009-pre-release-migration-consolidation.md)에 따라 `V1__create_initial_schema.sql` 하나로 통합했다. 적용 결과 스키마와 기준 데이터는 통합 전과 동일하다.
 
 ## 3. 관리자 계정 부트스트랩
 
@@ -49,7 +78,7 @@ V2는 부모 순서 `restaurant/creator` → `video` → `visit`로 작성한다
 
 1. 운영 RDS 스냅샷 상태와 복구 가능 여부를 확인한다.
 2. 새 애플리케이션이 기존 스키마에서도 기동 가능한 expand 단계인지 검토한다.
-3. 빈 PostgreSQL 17.10에 V1부터 전체 적용한다.
+3. 빈 PostgreSQL 17.10에 초기 스키마 baseline을 적용한다.
 4. 이전 릴리스 스키마에 신규 버전만 적용하는 업그레이드 테스트를 수행한다.
 5. Flyway `validate`와 checksum을 확인한다.
 6. 마이그레이션을 애플리케이션보다 먼저 적용한다.
@@ -68,7 +97,7 @@ V2는 부모 순서 `restaurant/creator` → `video` → `visit`로 작성한다
 | 대형 인덱스 | 운영 데이터 규모·락 시간을 측정하고 필요 시 non-transactional `CREATE INDEX CONCURRENTLY`를 별도 migration으로 수행 |
 | 컬럼·테이블 제거 | 최소 한 릴리스 미사용 확인 후 별도 destructive migration |
 
-초기 V1~V5는 빈 DB 대상이므로 일반 transaction 안에서 수행한다. `CONCURRENTLY`가 필요한 후속 Flyway 파일은 해당 파일만 transaction 비활성화하고 한 파일에 다른 변경을 섞지 않는다.
+초기 스키마 baseline은 빈 DB 대상이므로 일반 transaction 안에서 수행한다. `CONCURRENTLY`가 필요한 후속 Flyway 파일은 해당 파일만 transaction 비활성화하고 한 파일에 다른 변경을 섞지 않는다.
 
 ## 6. 롤백과 복구
 
@@ -78,13 +107,14 @@ Flyway undo 파일과 하향 migration은 기본 경로로 사용하지 않는�
 2. 애플리케이션만 문제면 이전 애플리케이션이 확장된 스키마와 호환되는지 확인 후 되돌린다.
 3. 데이터 훼손 또는 호환 불가능 DDL이면 배포를 중지하고 RDS 스냅샷 복구를 판단한다.
 
-적용된 migration 파일 수정과 `flyway repair`로 잘못된 checksum을 덮는 행위는 금지한다. `repair`는 실제 파일 무결성과 복구 계획을 확인한 예외 운영 절차에서만 승인한다.
+운영에 적용된 migration 파일 수정과 `flyway repair`로 잘못된 checksum을 덮는 행위는 금지한다. `repair`는 실제 파일 무결성과 복구 계획을 확인한 예외 운영 절차에서만 승인한다.
 
 ## 7. CI 검증
 
 - PostgreSQL 17.10 Testcontainers 빈 DB 전체 migration
-- V4까지 적용 → V5 기준 데이터 적용 시나리오
+- 인덱스 생성까지 적용된 상태에서 기준 데이터가 적재되는 순서 검증
 - 마이그레이션 2회 실행 시 checksum/중복 적용 차단 확인
+- 운영 스키마 스냅샷 위에 신규 마이그레이션만 추가 적용하는 업그레이드 검증 ([ADR-DATA-004](../../07-adr/data/data-004-flyway.md) 13절). 2.1절 통합을 수행한 릴리스에서도 유지한다
 - PK·UK·FK·CHECK 이름과 존재 여부 검사
 - JPA `ddl-auto=validate`
 - 중복 Restaurant/Creator/Video/Visit, 채널 불일치, 삭제 상태 쌍, Token 상태 쌍 위반 테스트
@@ -93,4 +123,6 @@ Flyway undo 파일과 하향 migration은 기본 경로로 사용하지 않는�
 
 ## 8. 향후 첫 변경 번호
 
-초기 스키마가 V5까지 적용된 뒤 모든 변경은 V6부터 시작한다. 개발 중이라도 V1~V5가 다른 팀원 또는 공유 DB에 적용됐다면 내용을 고치지 않고 V6 이상의 보정 migration을 추가한다.
+초기 스키마 baseline이 적용된 뒤 모든 변경은 `V2`부터 시작한다.
+
+`V1`은 개발 환경에 적용된 시점부터 수정하지 않고 `V2` 이상의 보정 migration을 추가한다. 운영 배포 전 통합은 2.1절 강제 규칙을 모두 증명한 경우에만 허용되는 예외다.

@@ -172,7 +172,7 @@ restaurant/infrastructure/persistence/
 | `src/main/java/com/masiton/common/{web,observability}` | 동일 | 공통 오류·traceId 기반만 포함 |
 | 도메인 패키지 없음 | `src/main/java/com/masiton/{restaurant,creator,video,visit,orchestration,security}/...` | 각 Workstream의 첫 실제 클래스와 함께 생성 |
 | `src/test/java/com/masiton/...` | 동일 | 운영 패키지 구조를 반영 |
-| `src/main/resources/db/migration/` (비어 있음) | 동일 | `T-03`이 V1~V5를 추가 |
+| `src/main/resources/db/migration/` (비어 있음) | 동일 | `T-03`이 초기 스키마를 추가하고 이후 단일 baseline으로 통합 |
 | `src/test/java/com/masiton/architecture` | 동일 | `T-01`에서 ArchUnit 규칙 적용 완료 |
 
 ## 9. 단계적 이전 방법

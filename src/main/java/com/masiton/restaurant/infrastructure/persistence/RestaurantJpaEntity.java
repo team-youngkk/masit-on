@@ -16,7 +16,7 @@ import jakarta.persistence.Table;
 
 /**
  * restaurant 테이블과 매핑되는 JPA Entity다.
- * V2__create_core_domain_tables.sql의 restaurant 테이블 정의와 컬럼이 대응해야 한다.
+ * V1__create_initial_schema.sql의 restaurant 테이블 정의와 컬럼이 대응해야 한다.
  * region_id, food_category_id는 dependency-rules.md 3절에 따라 객체 연관관계 대신
  * 식별자(UUID) 컬럼으로만 매핑한다.
  */

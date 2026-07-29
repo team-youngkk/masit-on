@@ -11,7 +11,7 @@ import jakarta.persistence.Table;
 
 /**
  * food_category 테이블과 매핑되는 JPA Entity다.
- * V1__create_reference_and_admin_tables.sql의 food_category 테이블 정의와 컬럼이 대응해야 한다.
+ * V1__create_initial_schema.sql의 food_category 테이블 정의와 컬럼이 대응해야 한다.
  */
 @Entity
 @Table(name = "food_category")

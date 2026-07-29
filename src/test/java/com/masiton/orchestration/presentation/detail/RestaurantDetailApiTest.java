@@ -49,7 +49,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DisplayName("맛집 상세 조회 API")
 class RestaurantDetailApiTest {
 
-    // seed-data-plan.md 2·3절 고정 기준 데이터. V5가 적재하므로 참조만 하고 수정하지 않는다.
+    // seed-data-plan.md 2·3절 고정 기준 데이터. 초기 스키마 baseline이 적재하므로 참조만 하고 수정하지 않는다.
     private static final UUID SEED_FOOD_CATEGORY_ID =
             UUID.fromString("20000000-0000-4000-8000-000000000001");
 

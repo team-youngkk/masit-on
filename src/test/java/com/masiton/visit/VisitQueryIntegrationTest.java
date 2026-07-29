@@ -35,7 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("Visit 공개·유효 조합 판정")
 class VisitQueryIntegrationTest {
 
-    // seed-data-plan.md 2·3절 고정 기준 데이터. V5가 적재하므로 참조만 하고 수정하지 않는다.
+    // seed-data-plan.md 2·3절 고정 기준 데이터. 초기 스키마 baseline이 적재하므로 참조만 하고 수정하지 않는다.
     private static final UUID SEED_REGION_ID =
             UUID.fromString("10000000-0000-4000-8000-000000000001");
     private static final UUID SEED_FOOD_CATEGORY_ID =

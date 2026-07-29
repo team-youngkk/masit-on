@@ -56,6 +56,7 @@ related_documents:
 | [ADR-TEST-001](quality/test-001-automation-strategy.md) | 계층별 자동화 테스트 전략 | Accepted | Critical | JUnit 5, Mockito, Spring Boot Test, Testcontainers 2.0.5, WireMock | 전체 Workstream | [문서](quality/test-001-automation-strategy.md) |
 | [ADR-OBS-001](quality/obs-001-logging-observability.md) | 애플리케이션 로그와 운영 관측 기준 | Accepted | High | SLF4J, Logback, Actuator, CloudWatch | 전체 운영 | [문서](quality/obs-001-logging-observability.md) |
 | [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 비밀정보와 AWS 워크로드 인증 | Accepted | Critical | Parameter Store, KMS, IAM Role, GitHub OIDC | 운영·CI·외부 연동 | [문서](security/sec-001-secrets-workload-identity.md) |
+| [ADR-DATA-009](data/data-009-pre-release-migration-consolidation.md) | 운영 배포 전 마이그레이션 통합 범위 | Accepted | High | Flyway | 마이그레이션 파일과 모든 환경 스키마 | [문서](data/data-009-pre-release-migration-consolidation.md) |
 | [ADR-RUNTIME-001](platform/runtime-001-docker.md) | Docker 기반 실행 환경 | Accepted | High | Docker | 개발·테스트·배포 산출물 | [문서](platform/runtime-001-docker.md) |
 | [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md) | GitHub Actions 빌드·테스트 품질 게이트 | Accepted | Critical | GitHub Actions | 전체 배포 후보 | [문서](platform/ci-001-github-actions-quality-gate.md) |
 | [ADR-DEPLOY-001](platform/deploy-001-release-sequencing.md) | 단계별 로컬 검증과 최종 AWS 배포 순서 | Superseded | Critical | Docker, AWS | 전체 단계 및 최종 배포 | [문서](platform/deploy-001-release-sequencing.md) |
