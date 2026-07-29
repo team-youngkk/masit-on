@@ -43,6 +43,20 @@ export default async function RestaurantsPage({
   const currentCreatorId = toSingleValue(rawParams.creatorId)
   const currentSize = apiParams.get('size') ?? '20'
 
+  /* URL의 creatorId가 현재 선택 목록에 없으면(삭제·비공개 전환 등) select에 그대로 defaultValue로
+   * 넘길 수 없다 — 일치하는 option이 없으면 브라우저가 조용히 "전체"를 선택한 것처럼 보여줘
+   * 화면과 실제 조회 조건이 어긋난다. */
+  const currentCreatorKnown =
+    creatorsResult.ok &&
+    (!currentCreatorId ||
+      creatorsResult.data.items.some((creator) => creator.id === currentCreatorId))
+  const clearCreatorIdHref = (() => {
+    const next = new URLSearchParams(apiParams)
+    next.delete('creatorId')
+    next.set('page', '1')
+    return `/restaurants?${next.toString()}`
+  })()
+
   const items = result.ok ? result.data.items : []
   const page = result.ok ? result.data.page : null
   const pageNumbers = page ? buildPageNumbers(page.number, page.totalPages) : []
@@ -102,7 +116,7 @@ export default async function RestaurantsPage({
           <label className={styles.selectLabel} htmlFor="creatorId">
             유튜버
           </label>
-          {creatorsResult.ok && creatorsResult.data.items.length > 0 ? (
+          {creatorsResult.ok ? (
             <select
               id="creatorId"
               name="creatorId"
@@ -115,16 +129,29 @@ export default async function RestaurantsPage({
                   {creator.channelName}
                 </option>
               ))}
+              {/* 현재 선택된 유튜버가 목록에 없으면(삭제·비공개 전환) 그 사실을 그대로
+               * 보여준다. disabled라 다시 선택할 수는 없고, 사용자는 "전체"나 다른
+               * 유튜버를 골라야만 필터를 바꿀 수 있다 — 이게 곧 필터 해제 수단이다. */}
+              {!currentCreatorKnown && currentCreatorId ? (
+                <option value={currentCreatorId} disabled>
+                  선택할 수 없는 유튜버
+                </option>
+              ) : null}
             </select>
           ) : (
             <select id="creatorId" defaultValue="" className={styles.select} disabled>
               <option value="">전체</option>
             </select>
           )}
-          {/* select가 비활성화된 두 경우(빈 목록·조회 실패) 모두 기존 선택값을 잃지 않게 보존한다 */}
-          {(!creatorsResult.ok || creatorsResult.data.items.length === 0) &&
-          currentCreatorId ? (
-            <input type="hidden" name="creatorId" value={currentCreatorId} />
+          {/* 조회 자체가 실패하면 select로 값을 바꿀 수 없으니 기존 값을 보존하되,
+           * 사용자가 URL을 몰라도 필터를 끌 수 있게 명시적 해제 링크를 같이 준다. */}
+          {!creatorsResult.ok && currentCreatorId ? (
+            <>
+              <input type="hidden" name="creatorId" value={currentCreatorId} />
+              <Link href={clearCreatorIdHref} className={styles.selectHint}>
+                유튜버 필터 해제
+              </Link>
+            </>
           ) : null}
           {creatorsResult.ok && creatorsResult.data.items.length === 0 ? (
             <p className={styles.selectHint}>등록된 유튜버가 없습니다.</p>
@@ -132,6 +159,11 @@ export default async function RestaurantsPage({
           {!creatorsResult.ok ? (
             <p className={styles.selectError} role="alert">
               {creatorsResult.message}
+              {creatorsResult.traceId ? (
+                <span className={styles.traceId}>
+                  traceId: {creatorsResult.traceId}
+                </span>
+              ) : null}
             </p>
           ) : null}
         </div>
