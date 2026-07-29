@@ -69,6 +69,19 @@ jobs:
       - name: 백엔드 이미지 빌드
         run: docker build -t "masiton-backend:${IMAGE_TAG}" -f Dockerfile .
 
+      # ADR-LANG-001 13절: 이미지의 `java -version`이 정확히 21.0.12인지 대조한다.
+      # 베이스 이미지를 갱신하다 다른 패치로 넘어가면 여기서 막는다.
+      - name: 런타임 JDK 패치 버전 대조
+        run: |
+          set -euo pipefail
+          expected='21.0.12'
+          actual=$(docker run --rm --entrypoint java "masiton-backend:${IMAGE_TAG}" -version 2>&1 | head -1)
+          echo "이미지 java -version: ${actual}"
+          case "$actual" in
+            *"\"${expected}\""*) echo "JDK ${expected} 확인" ;;
+            *) echo "ADR-LANG-001이 요구하는 ${expected}가 아니다"; exit 1 ;;
+          esac
+
       - name: 프론트엔드 이미지 빌드
         run: docker build -t "masiton-frontend:${IMAGE_TAG}" -f frontend/Dockerfile frontend
 
