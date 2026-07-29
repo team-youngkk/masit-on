@@ -21,11 +21,13 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationProvider;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.authentication.AuthenticationManagerResolver;
 
 import jakarta.servlet.http.HttpServletRequest;
 
 import com.masiton.security.infrastructure.web.SecurityErrorWriter;
+import com.masiton.member.infrastructure.web.MemberSessionRevocationFilter;
 
 @Configuration
 public class SecurityConfiguration {
@@ -35,6 +37,7 @@ public class SecurityConfiguration {
             HttpSecurity http,
             Converter<Jwt, ? extends AbstractAuthenticationToken> jwtAuthenticationConverter,
             SecurityErrorWriter securityErrorWriter,
+            MemberSessionRevocationFilter memberSessionRevocationFilter,
             JwtDecoder jwtDecoder,
             @Qualifier("memberJwtDecoder") JwtDecoder memberJwtDecoder
     ) throws Exception {
@@ -73,6 +76,7 @@ public class SecurityConfiguration {
                                 jwtDecoder,
                                 memberJwtDecoder,
                                 jwtAuthenticationConverter)))
+                .addFilterAfter(memberSessionRevocationFilter, BearerTokenAuthenticationFilter.class)
                 .build();
     }
 

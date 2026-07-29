@@ -171,14 +171,14 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
         String adminToken = signedToken("test-key-20260727", "masit-on", "masit-on-admin-api");
         String memberToken = signedToken("test-key-20260727", "masit-on", "masit-on-member-api");
 
-        mockMvc.perform(get("/api/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken))
+        mockMvc.perform(get("/api/me/boundary").header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken))
                 .andExpect(status().isNotFound());
-        mockMvc.perform(get("/api/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+        mockMvc.perform(get("/api/me/boundary").header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
                 .andExpect(status().isUnauthorized());
         mockMvc.perform(get("/api/admin/restaurants").header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken))
                 .andExpect(status().isUnauthorized());
         mockMvc.perform(post("/api/auth/tokens"))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -196,7 +196,7 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
 
         for (String publicPath : publicPaths) {
             mockMvc.perform(post(publicPath))
-                    .andExpect(status().isNotFound());
+                    .andExpect(publicPath.endsWith("/refresh") ? status().isUnauthorized() : status().isBadRequest());
         }
         mockMvc.perform(post("/api/auth/password-reset-requests"))
                 .andExpect(status().isUnauthorized());
