@@ -29,12 +29,12 @@ public class RedisMemberSessionStore implements MemberSessionStore {
     private static final String USED_REFRESH_INDEX_PREFIX = "auth:member:refresh:used:";
     private static final String MEMBER_SESSIONS_PREFIX = "auth:member:sessions:";
     private static final String MEMBER_SESSION_SEQUENCE_PREFIX = "auth:member:sessions:sequence:";
-    private static final String MEMBER_SESSION_REVOCATION_EPOCH_PREFIX = "auth:member:sessions:revoked-at:";
+    private static final String MEMBER_SESSION_GENERATION_PREFIX = "auth:member:sessions:generation:";
     private static final String ISSUE_REVOKED_SENTINEL = "__REVOKED_DURING_ISSUE__";
 
     private static final DefaultRedisScript<String> ISSUE_SCRIPT = new DefaultRedisScript<>("""
-            local revokedAt = redis.call('GET', KEYS[5])
-            if revokedAt and tonumber(ARGV[1]) <= tonumber(revokedAt) then
+            local currentGeneration = redis.call('GET', KEYS[5]) or '0'
+            if currentGeneration ~= ARGV[8] then
               return '__REVOKED_DURING_ISSUE__'
             end
             local existing = redis.call('ZRANGE', KEYS[3], 0, -1)
@@ -87,9 +87,7 @@ public class RedisMemberSessionStore implements MemberSessionStore {
             end
             redis.call('DEL', KEYS[1])
             redis.call('DEL', KEYS[2])
-            local now = redis.call('TIME')
-            local revokedAt = tonumber(now[1]) * 1000 + math.floor(tonumber(now[2]) / 1000)
-            redis.call('SET', KEYS[3], revokedAt)
+            redis.call('INCR', KEYS[3])
             return #sessionIds
             """, Long.class);
 
@@ -153,6 +151,7 @@ public class RedisMemberSessionStore implements MemberSessionStore {
 
     @Override
     public MemberSession issue(String memberId, Duration ttl) {
+        String expectedGeneration = memberSessionGeneration(memberId);
         String sessionId = UUID.randomUUID().toString();
         String refreshToken = refreshTokenFactory.create();
         Instant createdAt = Instant.now(clock);
@@ -165,7 +164,7 @@ public class RedisMemberSessionStore implements MemberSessionStore {
                         refreshIndexKey(refreshToken),
                         memberSessionsKey(memberId),
                         memberSessionSequenceKey(memberId),
-                        memberSessionRevocationEpochKey(memberId)
+                        memberSessionGenerationKey(memberId)
                 ),
                 String.valueOf(createdAt.toEpochMilli()),
                 sessionId,
@@ -173,7 +172,8 @@ public class RedisMemberSessionStore implements MemberSessionStore {
                 SESSION_PREFIX,
                 REFRESH_INDEX_PREFIX,
                 serialize(record),
-                String.valueOf(ttl.toSeconds())
+                String.valueOf(ttl.toSeconds()),
+                expectedGeneration
         );
         if (ISSUE_REVOKED_SENTINEL.equals(evictedSessionId)) {
             throw new InvalidMemberSessionException();
@@ -255,7 +255,7 @@ public class RedisMemberSessionStore implements MemberSessionStore {
                 List.of(
                         memberSessionsKey(memberId),
                         memberSessionSequenceKey(memberId),
-                        memberSessionRevocationEpochKey(memberId)
+                        memberSessionGenerationKey(memberId)
                 ),
                 SESSION_PREFIX,
                 REFRESH_INDEX_PREFIX
@@ -301,8 +301,13 @@ public class RedisMemberSessionStore implements MemberSessionStore {
         return MEMBER_SESSION_SEQUENCE_PREFIX + memberId;
     }
 
-    private String memberSessionRevocationEpochKey(String memberId) {
-        return MEMBER_SESSION_REVOCATION_EPOCH_PREFIX + memberId;
+    private String memberSessionGenerationKey(String memberId) {
+        return MEMBER_SESSION_GENERATION_PREFIX + memberId;
+    }
+
+    private String memberSessionGeneration(String memberId) {
+        String generation = redisTemplate.opsForValue().get(memberSessionGenerationKey(memberId));
+        return generation == null ? "0" : generation;
     }
 
     private String hash(String value) {

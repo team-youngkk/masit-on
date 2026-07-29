@@ -182,9 +182,9 @@ class RedisRefreshTokenStoreIntegrationTest {
         when(memberSessionClock.instant()).thenAnswer(ignored -> {
             issuePrepared.countDown();
             if (!continueIssue.await(5, TimeUnit.SECONDS)) {
-                throw new IllegalStateException("Timed out waiting for session revocation");
+                throw new IllegalStateException("Timed out waiting for session generation change");
             }
-            return Instant.EPOCH;
+            return Instant.parse("2030-01-01T00:00:00Z");
         });
 
         try (ExecutorService executor = Executors.newSingleThreadExecutor()) {
@@ -198,6 +198,10 @@ class RedisRefreshTokenStoreIntegrationTest {
             assertThatThrownBy(issued::get)
                     .hasCauseInstanceOf(InvalidMemberSessionException.class);
             assertThat(redisTemplate.opsForZSet().size("auth:member:sessions:member-a")).isZero();
+
+            when(memberSessionClock.instant()).thenReturn(Instant.parse("2020-01-01T00:00:00Z"));
+            MemberSession issuedAfterRevocation = memberSessionStore.issue("member-a", Duration.ofDays(14));
+            assertThat(memberSessionStore.matches("member-a", issuedAfterRevocation.refreshToken())).isTrue();
         }
     }
 }
