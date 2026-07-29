@@ -19,7 +19,7 @@ related_documents:
 
 ## 1. 문서 목적
 
-이 문서는 맛잇온 1차 MVP의 Workstream, 기능 요구사항, 비즈니스 규칙, 비기능 요구사항, 공통 작업과 문서의 최종 책임자를 추적한다. 소유자는 담당 항목의 요구사항 구체화, 계약, 구현, 테스트, 문서화와 통합 완료를 책임진다.
+이 문서는 맛잇온 MVP의 Workstream, 기능 요구사항, 비즈니스 규칙, 비기능 요구사항, 공통 작업과 문서의 최종 책임자를 추적한다. 소유자는 담당 항목의 요구사항 구체화, 계약, 구현, 테스트, 문서화와 통합 완료를 책임진다.
 
 현재 배정은 2026-07-27 승인된 Workstream 구조와 책임 균형 기준안이다. 일정 차단이나 지속적인 부담 불균형이 확인될 때만 11장의 절차로 조정하며, 조정 중에도 각 Workstream과 기능 요구사항의 최종 책임자는 한 명만 유지한다.
 
@@ -207,7 +207,7 @@ related_documents:
 | [NFR-SECURITY-003](../01-requirements/non-functional-requirements.md#nfr-security-003-비밀정보와-오류-정보-보호) | 비밀정보와 오류 정보 보호 | 공통 기반형 | 이우람 | 전체 팀 | 김인안 | 배정 완료 |
 | [NFR-RELIABILITY-001](../01-requirements/non-functional-requirements.md#nfr-reliability-001-오류-격리와-공통-오류-정책) | 오류 격리와 공통 오류 정책 | 공통 기반형 | 양성훈 | 전체 팀 | 박진영 | 배정 완료 |
 | [NFR-AVAILABILITY-001](../01-requirements/non-functional-requirements.md#nfr-availability-001-상태-확인과-장애-구분) | 상태 확인과 장애 구분 | 공통 기반형 | 이우람 | 전체 팀 | 박진영 | 배정 완료 |
-| [NFR-AVAILABILITY-002](../01-requirements/non-functional-requirements.md#nfr-availability-002-최종-배포-가용성과-수동-복구) | 최종 배포 가용성과 수동 복구 | 최종 배포형 | 이우람 | 전체 팀 | 박진영 | 배정 완료 |
+| [NFR-AVAILABILITY-002](../01-requirements/non-functional-requirements.md#nfr-availability-002-초기-운영-배포-가용성과-수동-복구) | 초기 운영 배포 가용성과 수동 복구 | 운영 배포형 | 이우람 | 전체 팀 | 박진영 | 배정 완료 |
 | [NFR-OBSERVABILITY-001](../01-requirements/non-functional-requirements.md#nfr-observability-001-요청-추적과-오류-분류) | 요청 추적과 오류 분류 | 공통 기반형 | 이우람 | 전체 팀 | 박진영 | 배정 완료 |
 | [NFR-OBSERVABILITY-002](../01-requirements/non-functional-requirements.md#nfr-observability-002-운영-지표와-생명주기-기록) | 운영 지표와 생명주기 기록 | 공통 기반형 | 이우람 | 전체 팀 | 박진영 | 배정 완료 |
 | [NFR-OBSERVABILITY-003](../01-requirements/non-functional-requirements.md#nfr-observability-003-로그-품질과-민감정보-차단) | 로그 품질과 민감정보 차단 | 공통 기반형 | 이우람 | 전체 팀 | 김인안 | 배정 완료 |
@@ -216,7 +216,7 @@ related_documents:
 | [NFR-DEPLOYMENT-001](../01-requirements/non-functional-requirements.md#nfr-deployment-001-재현-가능한-빌드와-환경-분리) | 재현 가능한 빌드와 환경 분리 | 공통 기반형 | 이우람 | 전체 팀 | 김인안 | 배정 완료 |
 | [NFR-DEPLOYMENT-002](../01-requirements/non-functional-requirements.md#nfr-deployment-002-배포-전후-검증) | 배포 전후 검증 | 공통 기반형 | 이우람 | 전체 팀 | 박진영 | 배정 완료 |
 | [NFR-DEPLOYMENT-003](../01-requirements/non-functional-requirements.md#nfr-deployment-003-버전-추적과-복구-절차) | 버전 추적과 복구 절차 | 공통 기반형 | 이우람 | 전체 팀 | 박진영 | 배정 완료 |
-| [NFR-DEPLOYMENT-004](../01-requirements/non-functional-requirements.md#nfr-deployment-004-단계별-실행-및-최종-배포-복잡도-제한) | 단계별 실행 및 최종 배포 복잡도 제한 | 공통 기반형 | 이우람 | 전체 팀 | 김인안 | 배정 완료 |
+| [NFR-DEPLOYMENT-004](../01-requirements/non-functional-requirements.md#nfr-deployment-004-단계별-실행-및-초기-운영-배포-복잡도-제한) | 단계별 실행 및 초기 운영 배포 복잡도 제한 | 공통 기반형 | 이우람 | 전체 팀 | 김인안 | 배정 완료 |
 | [NFR-PRIVACY-002](../01-requirements/non-functional-requirements.md#nfr-privacy-002-인증정보와-외부-키-보호) | 인증정보와 외부 키 보호 | 공통 기반형 | 이우람 | 김인안 및 외부 연동 담당자 | 김인안 | 배정 완료 |
 
 아직 후속 설계가 필요한 기준만 `팀 결정 필요`로 유지한다. 2026-07-27 확정된 부하·데이터·브라우저·배포·알림 기준은 `배정 완료`로 관리한다.

@@ -14,7 +14,7 @@ related_documents:
   - ../06-architecture/implementation-conventions.md
 ---
 
-# 1차 MVP 로컬 실행·회귀 검증 결과
+# MVP 로컬 실행·회귀 검증 결과
 
 `T-14`의 검증 결과를 기록한다. 실행한 명령과 관찰한 결과만 적고, 실행하지 못한 항목은 10절에 분리해 남긴다.
 
@@ -168,4 +168,4 @@ related_documents:
 - 실제 단말·브라우저 매트릭스(PC Chrome·Edge, Android Chrome, iPhone Safari)에서의 확인. 이번 검증은 단일 브라우저 엔진에서 대표 화면 폭 5종만 확인했다.
 - 화면 캡처 증적. 검증 환경에서 스크린샷을 얻을 수 없어 DOM 구조·텍스트·가로 넘침 측정으로 대체했다.
 - 정식 성능 부하 시험과 p95 측정.
-- 실제 Kakao·YouTube Sandbox 계약 검증. 구현 계획 5.5절대로 최종 배포 전 과제로 남는다.
+- 실제 Kakao·YouTube Sandbox 계약 검증. 구현 계획 5.5절대로 초기 운영 배포 전 과제로 남는다.

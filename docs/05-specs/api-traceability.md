@@ -26,7 +26,7 @@ related_documents:
 
 ## 1. 문서 목적
 
-1차 MVP의 PRD, 기능 요구사항, 비즈니스 규칙, NFR, Workstream과 담당자를 외부 API 계약에 연결한다. API로 노출되는 모든 MVP 기능 요구사항은 하나의 주 API를 가진다.
+MVP의 PRD, 기능 요구사항, 비즈니스 규칙, NFR, Workstream과 담당자를 외부 API 계약에 연결한다. API로 노출되는 모든 MVP 기능 요구사항은 하나의 주 API를 가진다.
 
 ## 2. PRD → API 매핑
 

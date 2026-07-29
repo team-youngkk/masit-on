@@ -56,4 +56,4 @@ related_documents:
 |---|---|
 | [역할](../03-team/roles.md) · [소유권](../03-team/ownership.md) | Workstream별 최종 책임자 |
 | [모듈 경계](../06-architecture/module-boundaries.md) | 도메인 경계의 코드 구조 반영 |
-| [1차 MVP 구현 계획](../08-planning/mvp-2day-implementation-plan.md) | Workstream별 Task 분해와 통합 순서 |
+| [MVP 구현 계획](../08-planning/mvp-2day-implementation-plan.md) | Workstream별 Task 분해와 통합 순서 |

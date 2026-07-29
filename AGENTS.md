@@ -24,7 +24,7 @@ related_documents:
 
 ## 1. 프로젝트
 
-유튜버가 방문한 맛집을 지역·음식 종류·유튜버별로 탐색하는 서비스다. 4인 팀의 1차 MVP를 구현 중이다.
+유튜버가 방문한 맛집을 지역·음식 종류·유튜버별로 탐색하는 서비스다. 4인 팀의 MVP를 구현 중이다.
 
 현재 구현 상태를 문서의 과거 설명만으로 단정하지 않는다. 작업을 시작할 때 `git status`, 저장소 구조, 관련 소스와 테스트를 직접 확인한다. 구현 현황이 문서와 다르면 그 차이를 보고하고, 요청 없이 문서 또는 코드를 한쪽에 맞춰 대규모로 변경하지 않는다.
 
@@ -41,7 +41,7 @@ related_documents:
 
 규칙이 충돌하면 다음 순서로 적용한다.
 
-1. 확정된 요구사항과 1차 MVP 범위
+1. 확정된 요구사항과 MVP 범위
 2. Accepted ADR
 3. API·데이터 계약
 4. 아키텍처 상세 설계
@@ -98,7 +98,7 @@ ADR로 확정된 버전을 임의로 변경하지 않는다.
 | 인증 | Spring Security 7.1.0, JWT(RS256) + Redis Refresh Token, `ADMIN` 단일 역할 |
 | 외부 연동 | Kakao Local REST API V2, YouTube Data API v3 (Port/Adapter) |
 | 테스트 | JUnit 5, AssertJ, Mockito, Testcontainers 2.0.5, WireMock, ArchUnit |
-| 실행 | Docker / Docker Compose. 1차 MVP는 로컬 통합까지이며 AWS 배포는 하지 않는다 |
+| 실행 | Docker / Docker Compose. MVP는 로컬 통합까지이며 AWS 배포는 하지 않는다 |
 
 전체 목록과 근거는 [ADR 인덱스](docs/07-adr/adr-index.md), 버전 정책은 [기술 정책](docs/06-architecture/technology-policy.md), 미결정 항목은 [ADR 백로그](docs/07-adr/adr-backlog.md)를 따른다.
 
@@ -148,7 +148,7 @@ $env:REDIS_PORT = '16379'
 .\gradlew.bat bootRun
 ```
 
-`/internal/**`은 로컬 컨테이너 네트워크 전용이며 최종 배포의 인터넷 진입점에 노출하지 않는다([ADR-WEB-003](docs/07-adr/platform/web-003-routing-boundary.md)).
+`/internal/**`은 로컬 컨테이너 네트워크 전용이며 운영 배포의 인터넷 진입점에 노출하지 않는다([ADR-WEB-003](docs/07-adr/platform/web-003-routing-boundary.md)).
 
 ## 6. 아키텍처 필수 규칙
 
@@ -225,7 +225,7 @@ PR 완료 점검은 [구현 컨벤션 9절](docs/06-architecture/implementation-
 
 공통 파일은 동시에 수정하지 않는다. Spring Boot·Docker는 이우람, 프론트 공통 Layout은 양성훈, Flyway 순서는 박진영, 인증 공통은 김인안이 최종 병합한다.
 
-Task 분해·선행 관계·완료 정의는 [1차 MVP 구현 계획](docs/08-planning/mvp-2day-implementation-plan.md)을 따른다.
+Task 분해·선행 관계·완료 정의는 [MVP 구현 계획](docs/08-planning/mvp-2day-implementation-plan.md)을 따른다.
 
 ## 11. 문서 작성
 

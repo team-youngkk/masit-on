@@ -17,6 +17,7 @@ related_documents:
   - build-001-gradle-groovy.md
   - ../data/data-002-database-placement.md
   - ci-001-github-actions-quality-gate.md
+  - deploy-002-validation-deployment-before-expansion.md
   - ../security/sec-001-secrets-workload-identity.md
   - ../adr-backlog.md
   - ../adr-traceability.md
@@ -38,7 +39,7 @@ Accepted
 
 ## 3. 배경
 
-[ADR-DEPLOY-001](deploy-001-release-sequencing.md)에 따라 1차 MVP와 2차부터 4차 확장 단계는 로컬 Docker 환경에서 통합 실행한다. 모든 확장 완료 후 최종 배포에서 단일 EC2 인스턴스 위에 Nginx, Next.js와 Spring Boot를 함께 운영한다. 따라서 현재 단계의 우선 목적은 네 명의 개발자가 같은 PostgreSQL·Redis·애플리케이션 실행 환경을 재현하는 것이며, 동일 이미지를 최종 배포 산출물로 이어갈 수 있게 유지한다.
+[ADR-DEPLOY-002](deploy-002-validation-deployment-before-expansion.md)에 따라 MVP 구현은 로컬 Docker 환경에서 통합 실행하고, M2부터 단일 EC2 인스턴스 위에 Nginx, Next.js와 Spring Boot를 함께 운영한다. 따라서 현재 단계의 우선 목적은 네 명의 개발자가 같은 PostgreSQL·Redis·애플리케이션 실행 환경을 재현하는 것이며, 동일 이미지를 운영 배포 산출물로 이어갈 수 있게 유지한다.
 
 ## 4. 결정 문제
 
@@ -52,7 +53,7 @@ Accepted
 
 ## 6. 결정
 
-애플리케이션 이미지를 빌드하고 개발 PostgreSQL 17.10·Redis 8.8을 Docker로 실행한다. EC2·RDS·운영 Redis 구성은 모든 확장 완료 후 최종 배포 단계에서 적용한다.
+애플리케이션 이미지를 빌드하고 개발 PostgreSQL 17.10·Redis 8.8을 Docker로 실행한다. EC2·RDS·운영 Redis 구성은 M2부터 적용한다.
 
 ## 7. 선택 근거
 
@@ -64,11 +65,11 @@ Docker를 쓰면 이미지 빌드·스캔·저장·정리라는 새로운 운영
 
 ## 9. 적용 범위
 
-1차 MVP와 확장 단계에서는 백엔드·프론트엔드 이미지와 로컬 PostgreSQL·Redis 컨테이너에 적용한다. 최종 배포 단계에서는 단일 EC2의 Nginx·애플리케이션 컨테이너에도 적용한다.
+MVP와 확장 단계에서는 백엔드·프론트엔드 이미지와 로컬 PostgreSQL·Redis 컨테이너에 적용한다. M2부터 단일 EC2의 Nginx·애플리케이션 컨테이너에도 적용한다.
 
 ## 10. 강제 규칙
 
-명시 태그를 고정하고 최소 이미지, 비루트 실행, Healthcheck와 환경 외부 주입을 사용한다. 로컬 Docker Healthcheck는 `/internal/health/live`와 `/internal/health/ready`를 사용한다. ECR digest, CloudWatch Agent와 운영 배포 Smoke Test는 최종 배포 단계에서 적용한다.
+명시 태그를 고정하고 최소 이미지, 비루트 실행, Healthcheck와 환경 외부 주입을 사용한다. 로컬 Docker Healthcheck는 `/internal/health/live`와 `/internal/health/ready`를 사용한다. ECR digest, CloudWatch Agent와 운영 배포 Smoke Test는 M2부터 적용한다.
 
 ## 11. 금지 사항
 

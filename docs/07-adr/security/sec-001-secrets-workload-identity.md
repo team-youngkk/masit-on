@@ -18,6 +18,7 @@ related_documents:
   - ../integration/ext-001-reference-verification.md
   - ../platform/runtime-001-docker.md
   - ../platform/ci-001-github-actions-quality-gate.md
+  - ../platform/deploy-002-validation-deployment-before-expansion.md
   - ../../02-analysis/mvp-workstreams.md
   - ../adr-traceability.md
   - ../../03-team/roles.md
@@ -34,11 +35,11 @@ Accepted
 
 ## 2. 결정 요약
 
-최종 배포의 운영 비밀값은 Parameter Store SecureString과 KMS, EC2의 AWS 접근은 IAM Role, GitHub Actions의 AWS 접근은 OIDC 단기 자격 증명을 사용한다.
+M2부터 운영 비밀값은 Parameter Store SecureString과 KMS, EC2의 AWS 접근은 IAM Role, GitHub Actions의 AWS 접근은 OIDC 단기 자격 증명을 사용한다.
 
 ## 3. 배경
 
-관리자 JWT 서명 키, DB·Redis 자격 증명과 Kakao·YouTube API 키는 모든 단계에서 코드·GitHub 저장소와 분리해야 한다. 1차 MVP와 확장 단계는 로컬 전용 비밀 주입 방식을 사용하고, Parameter Store·KMS·IAM Role·OIDC는 모든 확장 완료 후 최종 AWS 배포 단계에서 적용한다.
+관리자 JWT 서명 키, DB·Redis 자격 증명과 Kakao·YouTube API 키는 모든 단계에서 코드·GitHub 저장소와 분리해야 한다. MVP 구현은 로컬 전용 비밀 주입 방식을 사용하고, Parameter Store·KMS·IAM Role·OIDC는 M2부터 적용한다.
 
 ## 4. 결정 문제
 
@@ -53,7 +54,7 @@ JWT 서명 키, DB·Redis 자격 증명, Kakao·YouTube API 키와 같은 운영
 
 ## 6. 결정
 
-로컬 단계에서는 Git에 포함되지 않은 환경별 비밀 주입을 사용한다. 최종 배포에서는 비밀값을 Parameter Store SecureString과 KMS로 보호하고, EC2 런타임은 IAM Role, GitHub Actions는 OIDC 기반 단기 자격 증명을 사용한다.
+로컬 단계에서는 Git에 포함되지 않은 환경별 비밀 주입을 사용한다. M2부터 비밀값을 Parameter Store SecureString과 KMS로 보호하고, EC2 런타임은 IAM Role, GitHub Actions는 OIDC 기반 단기 자격 증명을 사용한다.
 
 ## 7. 선택 근거
 

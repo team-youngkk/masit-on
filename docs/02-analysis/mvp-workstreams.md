@@ -15,7 +15,7 @@ related_documents:
 
 ## 1. 문서 목적
 
-이 문서는 맛잇온 1차 MVP의 기능 요구사항과 도메인 경계를, 한 명의 최종 책임자가 사용자 가치 또는 관리자 업무를 처음부터 끝까지 완성할 수 있는 세로 단위 Workstream으로 변환한다. 이후 [roles.md](../03-team/roles.md), [ownership.md](../03-team/ownership.md), PRD, API 계약, 데이터 모델, 구현 계획과 Task 분배는 이 문서의 책임 경계와 요구사항 배정을 기준으로 구체화한다.
+이 문서는 맛잇온 MVP의 기능 요구사항과 도메인 경계를, 한 명의 최종 책임자가 사용자 가치 또는 관리자 업무를 처음부터 끝까지 완성할 수 있는 세로 단위 Workstream으로 변환한다. 이후 [roles.md](../03-team/roles.md), [ownership.md](../03-team/ownership.md), PRD, API 계약, 데이터 모델, 구현 계획과 Task 분배는 이 문서의 책임 경계와 요구사항 배정을 기준으로 구체화한다.
 
 이 문서의 Workstream은 기술 계층이나 도메인과 일대일 대응하지 않는다. Workstream은 여러 도메인의 협업을 포함할 수 있지만 각 도메인의 데이터와 정책 소유권은 [domain-boundaries.md](domain-boundaries.md)를 따른다. 확정되지 않은 API 구조, 저장 방식과 운영 기준은 권장안 또는 검토 항목으로 구분하며 임의로 확정하지 않는다.
 
@@ -30,7 +30,7 @@ related_documents:
 - 공통 응답, 오류, 인증 기반, 테스트 환경과 배포 기반은 기능 Workstream과 분리하되 결정 책임과 구현 책임을 명시한다.
 - 테스트, 오류 처리, 계약 문서 갱신과 통합 지원을 각 Workstream의 완료 범위에 포함한다.
 - 기능 완결성과 의존성 감소를 작업량 균등 배분보다 우선한다.
-- 1차 MVP에서 제외된 수정·삭제, 유튜버 상세, 지도, 개인화, 추천, 관리자 확인 없는 자동 등록·자동 주기 동기화와 AI 추출 기능은 포함하지 않는다.
+- MVP에서 제외된 수정·삭제, 유튜버 상세, 지도, 개인화, 추천, 관리자 확인 없는 자동 등록·자동 주기 동기화와 AI 추출 기능은 포함하지 않는다.
 
 ## 3. Workstream 구성 요약
 
@@ -750,7 +750,7 @@ related_documents:
 | 6. 방문 관계 기반 조회 통합 | [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 관계 판정, [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 관계 등록 | [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색) 유튜버 조건과 [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) 콘텐츠 조합 병렬 | 등록 관계가 세 조회에 동일 정책으로 반영 |
 | 7. 공통 보안·오류 검증 | 통합 API | 모든 WS의 실패·경계 테스트 | 인증, 비공개, 오류·부분 실패 정책 통과 |
 | 8. 전체 인수 테스트 | 단계 4 ~ 7 | 성능·호환성·관찰성 검증 병행 | 기능 요구사항 20개와 MVP 시나리오 통과 |
-| 9. 로컬 통합 검증 | CI 품질 게이트 | 1차 MVP 실행 문서 최종화 | Docker 통합 실행, 헬스체크와 핵심 흐름 확인 |
+| 9. 로컬 통합 검증 | CI 품질 게이트 | MVP 실행 문서 최종화 | Docker 통합 실행, 헬스체크와 핵심 흐름 확인 |
 
 첫 통합 대상으로 [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 기본 맛집 등록 → [WS-01](mvp-workstreams.md#5-ws-01-맛집-탐색) 유튜버 조건 없는 기본 목록을 권장한다. 가장 적은 관계 의존으로 등록 데이터의 조회 반영, 공개 상태, 페이지와 기본 오류 계약을 조기에 검증할 수 있기 때문이다. 이후 [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) 기본 상세를 붙이고 마지막에 Visit 관계 기반 세 흐름을 동시에 연결한다.
 
@@ -759,7 +759,7 @@ related_documents:
 - Next.js, Spring Boot, PostgreSQL과 Redis가 로컬 Docker 환경에서 통합 실행된다.
 - 기능 요구사항 20개가 하나의 주 Workstream에 배정되어 있고 각 인수 조건을 충족한다.
 - 각 Workstream의 자동화 테스트, 계약 문서, 오류 처리와 통합 지원이 완료된다.
-- AWS 운영 배포와 EC2·ECR·RDS·CloudWatch 검증은 2차부터 4차 확장 완료 후 최종 배포 단계로 이관한다.
+- AWS 운영 배포와 EC2·ECR·RDS·CloudWatch 검증은 MVP 구현 완료 후 M2 초기 운영 배포에서 다음 확장 단계보다 먼저 수행한다.
 - 사용자는 계정 없이 맛집 목록, 이름 검색, 지역·음식 카테고리·유튜버 필터와 조건 조합을 사용할 수 있다.
 - 페이지 이동과 기본 정렬에서 항목이 누락되거나 중복되지 않는다.
 - 사용자는 맛집 상세에서 기본 정보, 방문 유튜버와 관련 영상을 확인할 수 있다.
@@ -824,7 +824,7 @@ related_documents:
 
 ### RV-WS-005 관리자 수정·삭제 기능의 MVP 포함 여부
 
-- 현재 상태: 결정 완료 — 1차 MVP 제외
+- 현재 상태: 결정 완료 — MVP 제외
 - 관련 요구사항:
   - [FR-ADMIN-002](../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록) ~ [FR-ADMIN-004](../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록)
   - [FR-VISIT-001](../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록)

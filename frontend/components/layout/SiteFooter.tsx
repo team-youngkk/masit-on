@@ -2,7 +2,7 @@ import { Brand } from './Brand'
 import styles from './SiteFooter.module.css'
 
 /*
- * 1차 MVP 푸터.
+ * MVP 푸터.
  * 와이어프레임의 고객센터·공지사항·광고문의·약관 링크는 대상 화면이 MVP 범위에 없다.
  * "준비 중 링크를 노출하지 않는다"는 시각 규칙에 따라 브랜드와 저작권만 남긴다.
  */

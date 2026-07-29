@@ -67,7 +67,7 @@ related_documents:
 ### ADR-CRAWL-001 Playwright 도입
 
 - 현재 상태: Conditional
-- 현재 결정: 1차 MVP에는 자동 크롤링을 구현하지 않는다.
+- 현재 결정: MVP에는 자동 크롤링을 구현하지 않는다.
 - 활성화 조건: 승인된 수집 기능에서 JavaScript 렌더링이 필수이고 정적 HTTP·Jsoup으로 요구사항을 충족할 수 없음이 확인된다.
 - 도입 전 확인: 기능 범위, 정확한 버전·브라우저 배치, 실행 비용, 실패·보안 테스트
 - 영향: 런타임 이미지, 배치 운영, 테스트 시간
@@ -110,7 +110,7 @@ related_documents:
 
 - 현재 상태: Post-MVP
 - 현재 결정: Kakao Mobility Directions API V1과 코스 모델을 도입하지 않는다.
-- 활성화 조건: 4차 확장 범위의 동선·코스 추천이 승인된다.
+- 활성화 조건: 3차 확장 범위의 동선·코스 추천이 승인된다.
 - 도입 전 확인: 이동수단·추천 규칙, API 비용·제한, 위치 데이터, 실패 대체
 - 영향: 외부 API, 추천 도메인, 테스트
 
@@ -126,7 +126,7 @@ related_documents:
 
 - 현재 상태: Post-MVP
 - 현재 결정: pgvector 확장, 임베딩 저장과 RAG 흐름을 도입하지 않는다.
-- 활성화 조건: 4차 확장 자연어 검색 또는 챗봇 범위가 승인된다.
+- 활성화 조건: 3차 확장 자연어 검색 또는 챗봇 범위가 승인된다.
 - 도입 전 확인: 검색 품질 기준, 임베딩 모델, RDS 확장 지원, 색인·재생성·비용
 - 영향: DB 확장·스키마, AI 연동, 검색 API
 
@@ -134,7 +134,7 @@ related_documents:
 
 - 현재 상태: Post-MVP
 - 현재 결정: 일반 사용자는 로그인하지 않는다. JWT, Refresh Token과 Redis 토큰 저장을 구현하지 않는다.
-- 활성화 조건: 2차 확장 회원가입·로그인이 승인되고 개인정보·세션 요구사항이 확정된다.
+- 활성화 조건: 1차 확장 회원가입·로그인이 승인되고 개인정보·세션 요구사항이 확정된다.
 - 도입 전 확인: 토큰 수명·폐기·회전, 브라우저 전달, Redis 필요성, 개인정보·보안 위협 모델
 - 영향: API 인증, Redis, 프론트엔드, 개인정보
 
@@ -150,7 +150,7 @@ related_documents:
 
 - 현재 상태: Post-MVP
 - 현재 결정: Firebase Cloud Messaging HTTP v1을 도입하지 않는다.
-- 활성화 조건: 3차 확장 알림과 사용자 식별·동의·토큰 수명주기가 승인된다.
+- 활성화 조건: 2차 확장 알림과 사용자 식별·동의·토큰 수명주기가 승인된다.
 - 도입 전 확인: 알림 이벤트, 기기 토큰, 동의·해지, 실패·재시도, 비밀정보
 - 영향: 사용자 데이터, 외부 API, 비동기 처리
 
@@ -186,8 +186,8 @@ related_documents:
 | 일반 사용자 JWT·Refresh Token | Post-MVP | 일반 사용자 로그인 제외 | 회원 기능 승인 시 별도 인증 ADR |
 | Kakao Maps·PostGIS | Post-MVP | 지도·좌표·거리 검색 제외 | 지도 기능 범위 변경 |
 | Kakao Local REST API | 범위 일치 | 관리자 맛집 등록 시 카카오 장소 확인 필요 | Port/Adapter와 장애 처리 구현 |
-| Kakao Mobility | Post-MVP | 동선·코스 추천 4차 확장 | 추천 범위 변경 |
-| Spring AI·Gemini | Post-MVP | AI 영상 추출 4차 확장 | 검수·품질·비용 기준 승인 |
+| Kakao Mobility | Post-MVP | 동선·코스 추천 3차 확장 | 추천 범위 변경 |
+| Spring AI·Gemini | Post-MVP | AI 영상 추출 3차 확장 | 검수·품질·비용 기준 승인 |
 | pgvector | Post-MVP | 자연어 검색·RAG 제외 | 검색 범위 변경 |
 | FCM | Post-MVP | 사용자 알림 제외 | 계정·동의·알림 범위 변경 |
 | S3 이미지 저장 | Post-MVP | 현재 이미지 업로드·사용자 이미지 요구사항 없음 | 이미지 기능 범위 변경 |
@@ -202,10 +202,10 @@ related_documents:
 | n8n·Batch·크롤링 | Post-MVP | 관리자 수동 확인·등록, 자동 수집 제외 | 승인된 자동화 범위 정의 |
 | 멀티모듈·독립 배포 | Post-MVP | 단일 모듈·단일 애플리케이션 배포로 MVP 복잡도 제한 | [ADR-ARCH-004](#adr-arch-004-멀티모듈독립-배포-전환)의 경계·이전 전략 결정 |
 | 세분화된 관리자 권한 | Post-MVP | 사전 발급 단일 `ADMIN` 역할만 범위에 포함 | [ADR-AUTH-004](#adr-auth-004-관리자-권한-세분화)의 권한 모델·이전 결정 |
-| Nginx·EC2·ECR | 기술 선택 완료, 최종 배포로 이관 (2026-07-27) | [ADR-DEPLOY-001](platform/deploy-001-release-sequencing.md)에서 단계 순서 변경 | 모든 확장 완료 후 단일 EC2 인스턴스에 적용 |
-| ALB·ASG·Blue-Green | 최종 배포 이후 재검토 | 최초 운영은 단일 인스턴스 수동 복구 | 운영 근거가 생긴 뒤 확장 여부 결정 |
-| 전체 CI/CD 배포 흐름 | 최종 배포 단계 적용 (2026-07-27) | 단계별 CI는 빌드·테스트만 수행 | 최종 배포에서 ECR push·EC2 승인 배포·Smoke Test 활성화 |
-| 로그 14일 보관 | 최종 배포 단계 적용 (2026-07-27) | 로컬 단계에는 CloudWatch 미사용 | AWS 운영 시작 후 로그·백업·알림 정책 활성화 |
+| Nginx·EC2·ECR | 기술 선택 완료, M2 적용 (2026-07-28) | [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md)에서 단계 순서 변경 | M2부터 단일 EC2 인스턴스에 적용 |
+| ALB·ASG·Blue-Green | 3차 확장 이후 배포 고도화 단계에서 검토 (2026-07-28 착수 시점 합의, 비용·일정 영향 검토 미완) | 초기 운영 배포는 단일 인스턴스 수동 복구 | 영향 검토 통과 후 착수, 토폴로지·비용은 별도 ADR |
+| 전체 CI/CD 배포 흐름 | M2 적용 (2026-07-28) | 전 단계 CI는 빌드·테스트 수행 | M2부터 ECR push·EC2 승인 배포·Smoke Test 활성화 |
+| 로그 14일 보관 | M2 적용 (2026-07-28) | 로컬 단계에는 CloudWatch 미사용 | M2부터 로그·백업·알림 정책 활성화 |
 
 ## 6. 활성화 조건
 
@@ -233,13 +233,13 @@ Conditional·Post-MVP Backlog 항목은 다음을 모두 충족해야 활성화�
 |---|---|
 | 관리자 등록 확인 Token | PostgreSQL 저장형 불투명 Token, SHA-256 해시·후보 JSONB Snapshot, 10분 만료, Entity 생성과 원자적 소비 |
 | 확인 Token 재시도·보관 | 최초 생성 `201`, 생성 완료 재시도 `200`, 동시 중복은 결정적 `409`, 완료·만료 기록 24시간 보관 후 발급 시 지연 정리 |
-| 배포 순서 | 1차 MVP와 2~4차 확장은 로컬 통합 검증, 이후 최종 AWS 배포 |
-| 배포 토폴로지 | 최종 배포는 단일 EC2 인스턴스(Nginx+App), 장애 시 수동 복구로 시작 |
+| 배포 순서 | MVP 구현은 로컬 통합 검증, M2에서 다음 확장 단계보다 먼저 최초 AWS 운영 배포 |
+| 배포 토폴로지 | 초기 운영 배포는 단일 EC2 인스턴스(Nginx+App), 장애 시 수동 복구로 시작 |
 | 관리자 JWT | Access Token 만료 30분 |
 | 관리자 Refresh Token(Redis) | TTL 14일, 재발급마다 회전 + 재사용 탐지·즉시 폐기 |
 | Redis 장애 처리 | Fail-closed(재발급 차단, Access Token 만료 후 강제 재로그인) |
 | 로그 보관 | 14일 (기존 기술 스펙 값 유지) |
 | 백업 | PostgreSQL 일 1회 자동 스냅샷, 7일 보관, RPO 최대 24시간 |
-| 운영 알림 | CloudWatch 알람 → 이메일/Slack, 담당자 1명 |
+| 운영 알림 | CloudWatch 알람 → Slack, 담당자 1명 |
 
-현재 1차 MVP 구현 전 필수 미결정 항목은 없다. AWS 운영 세부와 ALB·Blue-Green 전환 자동화는 최종 배포 착수 전에 재검토한다.
+현재 MVP 구현 전 필수 미결정 항목은 없다. AWS 운영 세부는 M2 초기 운영 배포 문서에서 확정한다. ALB·Blue-Green 전환은 3차 확장 이후 배포 고도화 단계에서 검토한다. 착수 시점은 2026-07-28 팀 4인 전원이 합의했으나 비용·일정 영향 검토가 남아 있다([ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) 3.1절). 영향 검토가 미결정 항목으로 남으며, 토폴로지·전환 절차·비용은 착수 시점의 별도 ADR에서 확정한다.

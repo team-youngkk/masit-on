@@ -16,10 +16,10 @@ related_documents:
   - ../05-specs/api/README.md
   - ../05-specs/data/README.md
   - ../06-architecture/README.md
-  - ../07-adr/platform/deploy-001-release-sequencing.md
+  - ../07-adr/platform/deploy-002-validation-deployment-before-expansion.md
 ---
 
-# 맛잇온 1차 MVP 구현 계획
+# 맛잇온 MVP 구현 계획
 
 ## 1. 목표 요약
 
@@ -53,9 +53,9 @@ related_documents:
 
 ### 범위 제외
 
-- 2차 확장: 일반 사용자 인증, 찜, 최근 본 맛집, 지도, 유튜버 상세
-- 3차 확장: 컬렉션, 인기 맛집, 큐레이션, 제보·신고, 알림
-- 4차 확장: 자연어 검색, AI 영상 추출, 동선·코스 추천
+- 1차 확장: 일반 사용자 인증, 찜, 최근 본 맛집, 지도, 유튜버 상세
+- 2차 확장: 컬렉션, 인기 맛집, 큐레이션, 제보·신고, 알림
+- 3차 확장: 자연어 검색, AI 영상 추출, 동선·코스 추천
 - 평점·리뷰·Restaurant 대표 이미지·영업시간·이메일 구독·예약·결제
 - EC2·ECR·RDS·CloudWatch와 AWS 운영 배포
 
@@ -172,15 +172,15 @@ related_documents:
 
 | 위치 | 대역 | 사용 목적 | 적용 구간 | 제거·전환 조건 |
 |---|---|---|---|---|
-| Kakao HTTP Adapter | WireMock Stub | 장소 정상·없음·timeout·제한·계약 오류 재현 | 외부 Adapter 개발·통합 전 과정 | 최종 배포 전 실제 Sandbox 계약 테스트 추가 |
-| YouTube HTTP Adapter | WireMock Stub | 채널·영상·게시 채널 검증과 오류 재현 | 외부 Adapter 개발·통합 전 과정 | 최종 배포 전 실제 Sandbox 계약 테스트 추가 |
+| Kakao HTTP Adapter | WireMock Stub | 장소 정상·없음·timeout·제한·계약 오류 재현 | 외부 Adapter 개발·통합 전 과정 | 초기 운영 배포 전 실제 Sandbox 계약 테스트 추가 |
+| YouTube HTTP Adapter | WireMock Stub | 채널·영상·게시 채널 검증과 오류 재현 | 외부 Adapter 개발·통합 전 과정 | 초기 운영 배포 전 실제 Sandbox 계약 테스트 추가 |
 | WS-01 → WS-03 | 유효 맛집 ID Query Port Fake | Visit 구현 전에 유튜버 필터 조합 개발 | WS-01 독립 구현 | T-07 완료 후 실제 Query Adapter로 교체 |
 | WS-02 → Visit 콘텐츠 | 상세 콘텐츠 Query Port Fake | 관계 데이터 없이 기본·빈·부분 실패 UI 개발 | WS-02 독립 구현 | T-07·T-09 완료 후 실제 Projection으로 교체 |
 | WS-04 기본 등록 | Repository Port Fake | 입력·중복·확인 Token Application 규칙 단위 테스트 | 단위 테스트 | 운영 코드에는 사용하지 않고 테스트 소스에 유지 |
 | 인증 | Token·Clock Fake | 만료·회전·재사용을 결정적으로 검증 | 단위 테스트 | 테스트 소스에 유지, 실제 통합은 Redis Adapter 사용 |
 | 프론트엔드 | 고정 API 응답 Fixture | 백엔드 완성 전 목록·상세·관리자 상태 렌더링 | 화면 독립 구현 | 관련 API 완료 후 실제 fetch로 교체 |
 
-- WireMock은 실제 Kakao·YouTube 네트워크 호출을 대체하는 1차 MVP의 확정 검증 수단이므로 제거하지 않는다.
+- WireMock은 실제 Kakao·YouTube 네트워크 호출을 대체하는 MVP의 확정 검증 수단이므로 제거하지 않는다.
 - Workstream 간 Fake와 프론트 고정 응답은 병렬 개발용 임시 대역이다. 관련 선행 Task가 끝나면 실제 구현으로 교체한다.
 - 임시 대역은 테스트 소스 또는 명시적 로컬 테스트 프로파일에만 둔다. 기본 실행 프로파일에 Fake Bean을 등록하지 않는다.
 - 통합 완료 시 `fake`, `stub`, `fixture` 사용 위치를 검색해 테스트 전용인지 확인한다.
@@ -386,7 +386,7 @@ related_documents:
 | 반응형 수동 | 지정 화면 폭 | 목록·상세·관리자 Form | 가로 잘림 없이 작업 완료 |
 | 회귀 | 전체 | 등록 결과의 세 공개 조회 반영 | 필수 CI 명령 전부 통과 |
 
-성능 전체 부하 시험은 1차 MVP 완료 조건에서 제외하지 않지만, 기준 데이터 자동 생성이나 도구 설치가 핵심 흐름을 지연시키면 쿼리 수·실행계획 Smoke Test까지만 수행하고 정식 p95 측정을 후속 안정화 위험으로 기록한다.
+성능 전체 부하 시험은 MVP 완료 조건에서 제외하지 않지만, 기준 데이터 자동 생성이나 도구 설치가 핵심 흐름을 지연시키면 쿼리 수·실행계획 Smoke Test까지만 수행하고 정식 p95 측정을 후속 안정화 위험으로 기록한다.
 
 ## 11. 배포 및 롤백 계획
 
@@ -394,17 +394,17 @@ related_documents:
 - 데이터 변경: Flyway V1~V5를 빈 PostgreSQL에 적용하고 파일 수정 대신 후속 migration 원칙을 사용한다.
 - 로컬 복구: 컨테이너와 볼륨 초기화 후 migration·seed를 재적용한다.
 - 기능 플래그: 도입하지 않는다. 확장 기능 Route·메뉴 자체를 만들지 않는다.
-- AWS 배포: 2차부터 4차 확장 완료 후 [ADR-DEPLOY-001](../07-adr/platform/deploy-001-release-sequencing.md)에 따라 별도 수행한다.
+- AWS 배포: [ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md)에 따라 이 단계 완료 후 M2 초기 운영 배포에서 다음 확장 단계보다 먼저 수행한다.
 
 ## 12. 위험 요소
 
 | 위험 | 가능성 | 영향 | 대응 |
 |---|---:|---:|---|
-| 신규 코드베이스에서 1차 MVP 전체를 구현 | 높음 | 높음 | 수직 슬라이스 병렬화, 전체 인수 흐름 연결 후 기능 동결 |
+| 신규 코드베이스에서 MVP 전체를 구현 | 높음 | 높음 | 수직 슬라이스 병렬화, 전체 인수 흐름 연결 후 기능 동결 |
 | T-08·T-09에 WS-04 작업 집중 | 높음 | 높음 | 이우람이 Visit, 박진영이 Projection 통합 지원 |
 | 공통 계약 변경으로 병렬 작업 충돌 | 높음 | 높음 | 1단계에서 DTO·Port 고정, 변경 시 네 명 즉시 공유 |
 | 최신 고정 버전 설치 호환 문제 | 중간 | 높음 | T-01·T-02를 먼저 실행해 설치 호환성을 검증 |
-| 실제 외부 API와 WireMock 차이 | 중간 | 중간 | Adapter 경계 유지, 최종 배포 전 Sandbox 계약 검증 |
+| 실제 외부 API와 WireMock 차이 | 중간 | 중간 | Adapter 경계 유지, 초기 운영 배포 전 Sandbox 계약 검증 |
 | 와이어프레임의 확장 기능 혼입 | 중간 | 중간 | 와이어프레임 검수 체크리스트 적용 |
 | 정식 성능 검증 시간 부족 | 높음 | 중간 | 쿼리 수·실행계획 우선, 미달 항목 명시 |
 | 통합 이후 결함 수정 범위 증가 | 높음 | 높음 | 전체 인수 흐름 연결 후 신규 기능을 금지하고 핵심 경로만 수정 |
@@ -413,11 +413,11 @@ related_documents:
 
 ### 확정
 
-- 구현 범위는 문서에 정의된 1차 MVP 전체다.
-- 4명이 1차 MVP 구현에 모두 투입된다.
-- 1차 MVP는 로컬 Docker 통합 검증으로 완료하며 AWS에 배포하지 않는다.
-- AWS 배포는 2차부터 4차 확장 완료 후 수행한다.
-- 제공된 와이어프레임은 1차 MVP 요소만 적용한다.
+- 구현 범위는 문서에 정의된 MVP 전체다.
+- 4명이 MVP 구현에 모두 투입된다.
+- MVP 구현 단계는 로컬 Docker 통합 검증으로 완료하며 이 단계에서는 AWS에 배포하지 않는다.
+- AWS 배포는 MVP 구현 완료 후 M2 초기 운영 배포에서 1차 확장보다 먼저 수행한다.
+- 제공된 와이어프레임은 MVP 요소만 적용한다.
 - 별도 와이어프레임이 없는 목록·상세·관리자 화면은 같은 디자인 언어로 파생한다.
 - Kakao·YouTube는 WireMock, 단위 테스트는 고정 응답 Fake로 검증한다.
 

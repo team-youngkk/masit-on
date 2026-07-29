@@ -21,9 +21,9 @@ related_documents:
 
 ## 1. 프로젝트
 
-유튜버가 방문한 맛집을 지역·음식 종류·유튜버별로 탐색하는 서비스. 4인 팀의 1차 MVP를 구현 중이다.
+유튜버가 방문한 맛집을 지역·음식 종류·유튜버별로 탐색하는 서비스. 4인 팀의 MVP를 구현 중이다.
 
-**현재 상태: 1차 MVP 구현이 `T-14` 최종 검증 단계에 있다.** 백엔드 도메인 패키지(`restaurant`, `creator`, `video`, `visit`, `orchestration`, `security`, `common`), Flyway `V1`~`V5`, 관리자 인증·등록, 공개 탐색·상세, `frontend/`의 Next.js 화면이 모두 있다. 실행 방법은 5절을 따르고, 최근 실행·회귀 검증 결과는 [로컬 실행·회귀 검증 결과](docs/08-planning/mvp-local-verification.md)에 있다.
+**현재 상태: MVP 구현이 `T-14` 최종 검증 단계에 있다.** 백엔드 도메인 패키지(`restaurant`, `creator`, `video`, `visit`, `orchestration`, `security`, `common`), Flyway `V1`~`V5`, 관리자 인증·등록, 공개 탐색·상세, `frontend/`의 Next.js 화면이 모두 있다. 실행 방법은 5절을 따르고, 최근 실행·회귀 검증 결과는 [로컬 실행·회귀 검증 결과](docs/08-planning/mvp-local-verification.md)에 있다.
 
 ## 2. 문서가 계약이다
 
@@ -38,7 +38,7 @@ related_documents:
 
 규칙이 충돌하면 다음 순서로 적용한다.
 
-1. 확정된 요구사항과 1차 MVP 범위
+1. 확정된 요구사항과 MVP 범위
 2. Accepted ADR
 3. API·데이터 계약
 4. 아키텍처 상세 설계
@@ -72,7 +72,7 @@ MVP 범위 밖 기능(지도, 찜, 테마 큐레이션, 일반 사용자 로그�
 | 인증 | Spring Security 7.1.0, JWT(RS256) + Redis Refresh Token, `ADMIN` 단일 역할 |
 | 외부 연동 | Kakao Local REST API V2, YouTube Data API v3 (Port/Adapter) |
 | 테스트 | JUnit 5, AssertJ, Mockito, Testcontainers 2.0.5, WireMock, ArchUnit |
-| 실행 | Docker / Docker Compose. 1차 MVP는 로컬 통합까지이며 AWS 배포는 하지 않는다 |
+| 실행 | Docker / Docker Compose. MVP는 로컬 통합까지이며 AWS 배포는 하지 않는다 |
 
 전체 목록과 근거는 [ADR 인덱스](docs/07-adr/adr-index.md), 버전 고정·업그레이드 정책은 [기술 정책](docs/06-architecture/technology-policy.md)을 따른다. 아직 결정되지 않은 항목은 [ADR 백로그](docs/07-adr/adr-backlog.md)에 있다.
 
@@ -124,7 +124,7 @@ DB_URL=jdbc:postgresql://localhost:15432/masiton REDIS_PORT=16379 ./gradlew boot
 
 WireMock 포트를 바꿨다면 `KAKAO_BASE_URL`, `YOUTUBE_BASE_URL`도 같이 넘긴다. 설정은 공통·`local`·`test` 세 계층이며 `bootRun`은 `local`, 테스트는 `test` 프로파일을 쓴다. 프로파일을 지정하지 않은 실행은 접속값이 없어 기동에 실패한다. 계층 규칙은 [구현 컨벤션 4.5절](docs/06-architecture/implementation-conventions.md#45-설정-계층)에 있다.
 
-`/internal/**`은 로컬 컨테이너 네트워크 전용이며 최종 배포에서 인터넷 진입점에 노출하지 않는다([ADR-WEB-003](docs/07-adr/platform/web-003-routing-boundary.md)).
+`/internal/**`은 로컬 컨테이너 네트워크 전용이며 운영 배포에서 인터넷 진입점에 노출하지 않는다([ADR-WEB-003](docs/07-adr/platform/web-003-routing-boundary.md)).
 
 ## 6. 아키텍처 필수 규칙
 
@@ -198,7 +198,7 @@ PR 완료 점검 목록은 [구현 컨벤션 9절](docs/06-architecture/implemen
 
 공통 파일은 동시에 수정하지 않는다. Spring Boot·Docker는 이우람, 프론트 공통 Layout은 양성훈, Flyway 순서는 박진영, 인증 공통은 김인안이 최종 병합한다.
 
-Task 분해·선행 관계·완료 정의는 [1차 MVP 구현 계획](docs/08-planning/mvp-2day-implementation-plan.md)을 따른다.
+Task 분해·선행 관계·완료 정의는 [MVP 구현 계획](docs/08-planning/mvp-2day-implementation-plan.md)을 따른다.
 
 ## 11. 문서 맵
 
@@ -214,6 +214,6 @@ Task 분해·선행 관계·완료 정의는 [1차 MVP 구현 계획](docs/08-pl
 | [05-specs](docs/05-specs/README.md) | API·데이터 계약 | [API 계약](docs/05-specs/api/README.md) · [데이터 명세](docs/05-specs/data/README.md) · [ERD](docs/05-specs/diagrams/erd-spec.md) |
 | [06-architecture](docs/06-architecture/README.md) | 아키텍처, 패키지, 의존성, 컨벤션 | [구현 컨벤션](docs/06-architecture/implementation-conventions.md) |
 | [07-adr](docs/07-adr/README.md) | 기술 결정 기록 | [ADR 인덱스](docs/07-adr/adr-index.md) |
-| [08-planning](docs/08-planning/README.md) | 구현 계획 | [1차 MVP 구현 계획](docs/08-planning/mvp-2day-implementation-plan.md) |
+| [08-planning](docs/08-planning/README.md) | 구현 계획 | [MVP 구현 계획](docs/08-planning/mvp-2day-implementation-plan.md) |
 
 문서 작성 시 기존 스타일을 따른다. 상단 `related_documents` frontmatter, 한국어 서술, 문서 간 상대 경로 링크.

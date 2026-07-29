@@ -21,7 +21,7 @@ related_documents:
 
 ## 1. 문서 목적
 
-맛잇온 1차 MVP의 기능 요구사항, 비즈니스 규칙, NFR, Workstream과 담당자를 PRD에 연결한다. 원문 정의는 각 기준 문서가 소유하며 이 문서는 배정과 변경 영향을 관리한다.
+맛잇온 MVP의 기능 요구사항, 비즈니스 규칙, NFR, Workstream과 담당자를 PRD에 연결한다. 원문 정의는 각 기준 문서가 소유하며 이 문서는 배정과 변경 영향을 관리한다.
 
 ## 2. 기능 PRD 목록
 
@@ -144,7 +144,7 @@ related_documents:
 | [NFR-RELIABILITY-002](../01-requirements/non-functional-requirements.md#nfr-reliability-002-저장소-장애-및-재시도-통제) | 저장소 장애 및 재시도 통제 | 예 | [PRODUCT-001](prd/00-product-overview.md), 전체 기능 PRD | 각 Workstream 담당자 |
 | [NFR-RELIABILITY-003](../01-requirements/non-functional-requirements.md#nfr-reliability-003-사용자-오류-메시지와-기능-분리) | 사용자 오류 메시지와 기능 분리 | 예 | 전체 기능 PRD | 각 Workstream 담당자 |
 | [NFR-AVAILABILITY-001](../01-requirements/non-functional-requirements.md#nfr-availability-001-상태-확인과-장애-구분) | 상태 확인과 장애 구분 | 예 | [PRODUCT-001](prd/00-product-overview.md) | 이우람 |
-| [NFR-AVAILABILITY-002](../01-requirements/non-functional-requirements.md#nfr-availability-002-최종-배포-가용성과-수동-복구) | 최종 배포 가용성과 수동 복구 | 최종 배포 | [PRODUCT-001](prd/00-product-overview.md) | 이우람 |
+| [NFR-AVAILABILITY-002](../01-requirements/non-functional-requirements.md#nfr-availability-002-초기-운영-배포-가용성과-수동-복구) | 초기 운영 배포 가용성과 수동 복구 | 운영 배포 | [PRODUCT-001](prd/00-product-overview.md) | 이우람 |
 | [NFR-EXTERNAL-001](../01-requirements/non-functional-requirements.md#nfr-external-001-영상-원본과-외부-링크-분리) | 영상 원본과 외부 링크 분리 | 아니요 | [API-DETAIL-001](../05-specs/api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회), [ADMIN-001](prd/admin/admin-data-management.md) | 박진영 |
 | [NFR-EXTERNAL-002](../01-requirements/non-functional-requirements.md#nfr-external-002-외부-호출-실패와-변경-격리) | 외부 호출 실패와 변경 격리 | 아니요 | [API-DETAIL-001](../05-specs/api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회), [DISCOVERY-002](prd/discovery/creator-discovery.md), [ADMIN-001](prd/admin/admin-data-management.md) | 박진영 |
 | [NFR-EXTERNAL-003](../01-requirements/non-functional-requirements.md#nfr-external-003-링크-검증과-외부-인증정보) | 링크 검증과 외부 인증정보 | 아니요 | [ADMIN-001](prd/admin/admin-data-management.md) | 김인안 |
@@ -160,7 +160,7 @@ related_documents:
 | [NFR-DEPLOYMENT-001](../01-requirements/non-functional-requirements.md#nfr-deployment-001-재현-가능한-빌드와-환경-분리) | 재현 가능한 빌드와 환경 분리 | 예 | [PRODUCT-001](prd/00-product-overview.md) | 이우람 |
 | [NFR-DEPLOYMENT-002](../01-requirements/non-functional-requirements.md#nfr-deployment-002-배포-전후-검증) | 배포 전후 검증 | 예 | [PRODUCT-001](prd/00-product-overview.md) | 이우람 |
 | [NFR-DEPLOYMENT-003](../01-requirements/non-functional-requirements.md#nfr-deployment-003-버전-추적과-복구-절차) | 버전 추적과 복구 절차 | 예 | [PRODUCT-001](prd/00-product-overview.md) | 이우람 |
-| [NFR-DEPLOYMENT-004](../01-requirements/non-functional-requirements.md#nfr-deployment-004-단계별-실행-및-최종-배포-복잡도-제한) | 단계별 실행 및 최종 배포 복잡도 제한 | 예 | [PRODUCT-001](prd/00-product-overview.md) | 이우람 |
+| [NFR-DEPLOYMENT-004](../01-requirements/non-functional-requirements.md#nfr-deployment-004-단계별-실행-및-초기-운영-배포-복잡도-제한) | 단계별 실행 및 초기 운영 배포 복잡도 제한 | 예 | [PRODUCT-001](prd/00-product-overview.md) | 이우람 |
 | [NFR-MAINTAINABILITY-001](../01-requirements/non-functional-requirements.md#nfr-maintainability-001-책임과-의존성-경계) | 책임과 의존성 경계 | 예 | [PRODUCT-001](prd/00-product-overview.md), 전체 기능 PRD | 각 Workstream 담당자 |
 | [NFR-MAINTAINABILITY-002](../01-requirements/non-functional-requirements.md#nfr-maintainability-002-공통-정책과-규칙-배치) | 공통 정책과 규칙 배치 | 예 | [PRODUCT-001](prd/00-product-overview.md), 전체 기능 PRD | 각 Workstream 담당자 |
 | [NFR-MAINTAINABILITY-003](../01-requirements/non-functional-requirements.md#nfr-maintainability-003-추적성과-운영-복잡도) | 추적성과 운영 복잡도 | 예 | [PRODUCT-001](prd/00-product-overview.md), 전체 기능 PRD | 각 Workstream 담당자 |
