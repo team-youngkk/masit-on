@@ -158,8 +158,8 @@ public class SecurityProperties {
     public static class Member {
 
         private Duration refreshTokenTtl = Duration.ofDays(14);
-        private String cookieName = "masit_on_member_refresh";
-        private String path = "/api/members/auth";
+        private String cookieName = "__Secure-masiton-member-refresh";
+        private String path = "/api/auth/tokens";
         private int maxSessions = 3;
 
         public Duration getRefreshTokenTtl() {

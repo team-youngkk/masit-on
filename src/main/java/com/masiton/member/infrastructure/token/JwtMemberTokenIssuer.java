@@ -32,6 +32,7 @@ public class JwtMemberTokenIssuer implements MemberTokenIssuer {
                 .issuer(properties.getJwt().getIssuer())
                 .subject(principal.memberId())
                 .audience(List.of(properties.getJwt().getMemberAudience()))
+                .id(java.util.UUID.randomUUID().toString())
                 .issuedAt(issuedAt)
                 .expiresAt(issuedAt.plus(properties.getJwt().getMemberAccessTokenTtl()))
                 .claim("sid", principal.sessionId())

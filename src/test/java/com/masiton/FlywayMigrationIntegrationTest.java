@@ -2,6 +2,8 @@ package com.masiton;
 
 import java.util.List;
 import java.util.Map;
+import java.time.Instant;
+import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -13,6 +15,9 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
+
+import com.masiton.member.application.MemberSessionRevocation;
+import com.masiton.member.application.port.out.MemberSessionRevocationStore;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -48,6 +53,9 @@ class FlywayMigrationIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private MemberSessionRevocationStore memberSessionRevocationStore;
 
     @Test
     @DisplayName("빈 데이터베이스에 초기 스키마 baseline이 성공으로 기록된다")
@@ -121,6 +129,31 @@ class FlywayMigrationIntegrationTest {
                 Integer.class);
 
         assertThat(memberAccountTables).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("동일 sid 폐기 기록은 가장 이른 폐기 시각과 가장 늦은 만료 시각을 유지한다")
+    void memberSessionRevocation_동일sid_시각병합() {
+        UUID sessionId = UUID.randomUUID();
+        Instant firstRevokedAt = Instant.parse("2026-07-29T09:00:00Z");
+        Instant firstExpiresAt = Instant.parse("2026-07-29T09:30:00Z");
+        memberSessionRevocationStore.record(new MemberSessionRevocation(sessionId, firstRevokedAt, firstExpiresAt));
+        memberSessionRevocationStore.record(new MemberSessionRevocation(
+                sessionId,
+                firstRevokedAt.plusSeconds(60),
+                firstExpiresAt.plusSeconds(60)
+        ));
+
+        Boolean merged = jdbcTemplate.queryForObject(
+                "SELECT revoked_at = ? AND expires_at = ? "
+                        + "FROM member_session_revocation WHERE session_id = ?",
+                Boolean.class,
+                firstRevokedAt,
+                firstExpiresAt.plusSeconds(60),
+                sessionId
+        );
+
+        assertThat(merged).isTrue();
     }
 
     private void assertColumnValuesAreUnique(String table, String column) {

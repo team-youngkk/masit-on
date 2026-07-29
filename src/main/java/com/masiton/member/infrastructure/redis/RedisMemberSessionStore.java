@@ -29,11 +29,15 @@ public class RedisMemberSessionStore implements MemberSessionStore {
     private static final String USED_REFRESH_INDEX_PREFIX = "auth:member:refresh:used:";
     private static final String MEMBER_SESSIONS_PREFIX = "auth:member:sessions:";
 
-    private static final DefaultRedisScript<Long> ISSUE_SCRIPT = new DefaultRedisScript<>("""
-            redis.call('ZREMRANGEBYSCORE', KEYS[3], '-inf', ARGV[1])
-            local now = redis.call('TIME')
-            local score = tonumber(now[1]) * 1000000 + tonumber(now[2])
-            redis.call('ZADD', KEYS[3], score, ARGV[2])
+    private static final DefaultRedisScript<String> ISSUE_SCRIPT = new DefaultRedisScript<>("""
+            local existing = redis.call('ZRANGE', KEYS[3], 0, -1)
+            for _, sessionId in ipairs(existing) do
+              if not redis.call('GET', ARGV[4] .. sessionId) then
+                redis.call('ZREM', KEYS[3], sessionId)
+              end
+            end
+            redis.call('ZADD', KEYS[3], ARGV[1], ARGV[2])
+            local evicted = ''
             while redis.call('ZCARD', KEYS[3]) > tonumber(ARGV[3]) do
               local oldest = redis.call('ZRANGE', KEYS[3], 0, 0)[1]
               local oldSessionKey = ARGV[4] .. oldest
@@ -44,12 +48,13 @@ public class RedisMemberSessionStore implements MemberSessionStore {
               end
               redis.call('DEL', oldSessionKey)
               redis.call('ZREM', KEYS[3], oldest)
+              evicted = oldest
             end
             redis.call('SET', KEYS[1], ARGV[6], 'EX', ARGV[7])
             redis.call('SET', KEYS[2], ARGV[2], 'EX', ARGV[7])
             redis.call('EXPIRE', KEYS[3], ARGV[7])
-            return 1
-            """, Long.class);
+            return evicted
+            """, String.class);
 
     private static final DefaultRedisScript<Long> ROTATE_SCRIPT = new DefaultRedisScript<>("""
             local sessionId = redis.call('GET', KEYS[1])
@@ -85,7 +90,6 @@ public class RedisMemberSessionStore implements MemberSessionStore {
             redis.call('SET', KEYS[2], sessionId, 'EX', ARGV[5])
             redis.call('SET', KEYS[3], sessionId, 'EX', ARGV[5])
             redis.call('SET', sessionKey, ARGV[4], 'EX', ARGV[5])
-            redis.call('ZADD', ARGV[6] .. record.memberId, ARGV[7], sessionId)
             redis.call('EXPIRE', ARGV[6] .. record.memberId, ARGV[5])
             return 1
             """, Long.class);
@@ -111,12 +115,13 @@ public class RedisMemberSessionStore implements MemberSessionStore {
     public MemberSession issue(String memberId, Duration ttl) {
         String sessionId = UUID.randomUUID().toString();
         String refreshToken = refreshTokenFactory.create();
-        Instant expiresAt = Instant.now().plus(ttl);
-        MemberSessionRecord record = new MemberSessionRecord(memberId, hash(refreshToken), expiresAt);
-        Long result = redisTemplate.execute(
+        Instant createdAt = Instant.now();
+        Instant expiresAt = createdAt.plus(ttl);
+        MemberSessionRecord record = new MemberSessionRecord(memberId, hash(refreshToken), createdAt, expiresAt);
+        String evictedSessionId = redisTemplate.execute(
                 ISSUE_SCRIPT,
                 List.of(sessionKey(sessionId), refreshIndexKey(refreshToken), memberSessionsKey(memberId)),
-                String.valueOf(Instant.now().toEpochMilli()),
+                String.valueOf(createdAt.toEpochMilli()),
                 sessionId,
                 String.valueOf(maxSessions),
                 SESSION_PREFIX,
@@ -124,10 +129,7 @@ public class RedisMemberSessionStore implements MemberSessionStore {
                 serialize(record),
                 String.valueOf(ttl.toSeconds())
         );
-        if (result == null || result != 1L) {
-            throw new IllegalStateException("Could not issue member session");
-        }
-        return new MemberSession(memberId, sessionId, refreshToken);
+        return new MemberSession(memberId, sessionId, refreshToken, revokedSessionIds(evictedSessionId));
     }
 
     @Override
@@ -135,7 +137,6 @@ public class RedisMemberSessionStore implements MemberSessionStore {
         String nextRefreshToken = refreshTokenFactory.create();
         Instant expiresAt = Instant.now().plus(ttl);
         String oldHash = hash(refreshToken);
-        MemberSessionRecord nextRecord = new MemberSessionRecord(null, hash(nextRefreshToken), expiresAt);
 
         String sessionId = redisTemplate.opsForValue().get(refreshIndexKey(refreshToken));
         if (sessionId == null) {
@@ -145,7 +146,12 @@ public class RedisMemberSessionStore implements MemberSessionStore {
             throw new InvalidMemberSessionException();
         }
         MemberSessionRecord current = read(redisTemplate.opsForValue().get(sessionKey(sessionId)));
-        MemberSessionRecord rotated = new MemberSessionRecord(current.memberId(), nextRecord.tokenHash(), expiresAt);
+        MemberSessionRecord rotated = new MemberSessionRecord(
+                current.memberId(),
+                hash(nextRefreshToken),
+                current.createdAt(),
+                expiresAt
+        );
         Long result = redisTemplate.execute(
                 ROTATE_SCRIPT,
                 List.of(
@@ -158,13 +164,12 @@ public class RedisMemberSessionStore implements MemberSessionStore {
                 oldHash,
                 serialize(rotated),
                 String.valueOf(ttl.toSeconds()),
-                MEMBER_SESSIONS_PREFIX,
-                String.valueOf(expiresAt.toEpochMilli())
+                MEMBER_SESSIONS_PREFIX
         );
         if (result == null || result != 1L) {
-            throw new InvalidMemberSessionException();
+            throw new InvalidMemberSessionException(revokedSessionIds(sessionId));
         }
-        return new MemberSession(current.memberId(), sessionId, nextRefreshToken);
+        return new MemberSession(current.memberId(), sessionId, nextRefreshToken, java.util.Set.of());
     }
 
     @Override
@@ -253,6 +258,10 @@ public class RedisMemberSessionStore implements MemberSessionStore {
         }
     }
 
-    private record MemberSessionRecord(String memberId, String tokenHash, Instant expiresAt) {
+    private java.util.Set<String> revokedSessionIds(String sessionId) {
+        return sessionId == null || sessionId.isBlank() ? java.util.Set.of() : java.util.Set.of(sessionId);
+    }
+
+    private record MemberSessionRecord(String memberId, String tokenHash, Instant createdAt, Instant expiresAt) {
     }
 }

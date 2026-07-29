@@ -126,10 +126,12 @@ class RedisRefreshTokenStoreIntegrationTest {
         MemberSession first = memberSessionStore.issue("member-a", Duration.ofDays(14));
         memberSessionStore.issue("member-a", Duration.ofDays(14));
         memberSessionStore.issue("member-a", Duration.ofDays(14));
+        memberSessionStore.rotate(first.refreshToken(), Duration.ofDays(14));
         MemberSession fourth = memberSessionStore.issue("member-a", Duration.ofDays(14));
 
         assertThat(memberSessionStore.matches("member-a", first.refreshToken())).isFalse();
         assertThat(memberSessionStore.matches("member-a", fourth.refreshToken())).isTrue();
+        assertThat(fourth.revokedSessionIds()).containsExactly(first.sessionId());
     }
 
     @Test

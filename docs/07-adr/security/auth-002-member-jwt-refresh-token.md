@@ -30,9 +30,9 @@ Accepted
 
 ## 2. 결정
 
-회원 인증은 관리자 인증과 독립된 JWT audience `masit-on-member-api`, `MEMBER` authority, `sid` claim을 사용한다. `/api/admin/**`와 `/api/members/**`는 각각 해당 audience만 검증하므로 토큰을 서로 교차 사용할 수 없다.
+회원 인증은 관리자 인증과 독립된 JWT audience `masit-on-member-api`, `MEMBER` authority, `sid` claim과 매 발급마다 새로 만드는 `jti`를 사용한다. `/api/admin/**`와 공개 회원 인증 메서드를 제외한 `/api/auth/**`, `/api/me/**`는 각각 해당 audience만 검증하므로 토큰을 서로 교차 사용할 수 없다.
 
-회원 Refresh Token은 관리자 Token과 다른 cookie와 Redis `auth:member:` namespace에 저장한다. Token 원문은 저장하지 않고 SHA-256 해시만 사용한다. 회원별 활성 세션은 최대 세 개이며, 새 세션은 가장 오래된 세션을 폐기한다.
+회원 Refresh Token은 이름 `__Secure-masiton-member-refresh`, 경로 `/api/auth/tokens`의 cookie와 Redis `auth:member:` namespace에 저장한다. Token 원문은 저장하지 않고 SHA-256 해시만 사용한다. 회원별 활성 세션은 최대 세 개이며, 새 세션은 최초 생성 시각을 기준으로 가장 오래된 세션을 폐기한다. 회전은 그 정렬 순서를 바꾸지 않는다.
 
 회전과 재사용 탐지는 Redis Lua script 한 번으로 처리한다. 회전된 Token 재사용을 발견하면 해당 세션의 최신 Refresh Token까지 폐기한다. Redis 장애 또는 상태 불일치는 fail-closed로 처리한다.
 

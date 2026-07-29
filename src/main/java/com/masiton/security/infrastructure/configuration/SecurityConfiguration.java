@@ -45,6 +45,13 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.POST, "/api/admin/auth/tokens").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/admin/auth/tokens/refresh").permitAll()
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/auth/registrations",
+                                "/api/auth/email-verifications",
+                                "/api/auth/password-reset-requests",
+                                "/api/auth/password-resets",
+                                "/api/auth/tokens",
+                                "/api/auth/tokens/refresh").permitAll()
                         .requestMatchers(HttpMethod.GET,
                                 "/api/restaurants",
                                 "/api/restaurants/*",
@@ -52,7 +59,8 @@ public class SecurityConfiguration {
                         .requestMatchers("/internal/health/live", "/internal/health/ready", "/internal/health/dependencies")
                         .permitAll()
                         .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
-                        .requestMatchers("/api/members/**").hasAuthority("MEMBER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/auth/tokens").hasAuthority("MEMBER")
+                        .requestMatchers("/api/me", "/api/me/**").hasAuthority("MEMBER")
                         .requestMatchers("/api/**", "/internal/**").denyAll()
                         // Non-API paths are owned by the web application, not by this API security boundary.
                         .anyRequest().permitAll())
@@ -72,9 +80,15 @@ public class SecurityConfiguration {
     ) {
         AuthenticationManager adminAuthenticationManager = authenticationManager(adminJwtDecoder, jwtAuthenticationConverter);
         AuthenticationManager memberAuthenticationManager = authenticationManager(memberJwtDecoder, jwtAuthenticationConverter);
-        return request -> request.getRequestURI().startsWith("/api/members/")
+        return request -> isMemberBoundary(request.getRequestURI())
                 ? memberAuthenticationManager
                 : adminAuthenticationManager;
+    }
+
+    private boolean isMemberBoundary(String requestUri) {
+        return requestUri.startsWith("/api/auth/")
+                || requestUri.equals("/api/me")
+                || requestUri.startsWith("/api/me/");
     }
 
     private AuthenticationManager authenticationManager(

@@ -71,8 +71,8 @@ masiton:
     path: /api/admin/auth
     member:
       refresh-token-ttl: P14D
-      cookie-name: masit_on_member_refresh
-      path: /api/members/auth
+      cookie-name: __Secure-masiton-member-refresh
+      path: /api/auth/tokens
       max-sessions: 3
     login-failure:
       max-attempts: 5
