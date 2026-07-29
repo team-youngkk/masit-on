@@ -29,8 +29,14 @@ public class RedisMemberSessionStore implements MemberSessionStore {
     private static final String USED_REFRESH_INDEX_PREFIX = "auth:member:refresh:used:";
     private static final String MEMBER_SESSIONS_PREFIX = "auth:member:sessions:";
     private static final String MEMBER_SESSION_SEQUENCE_PREFIX = "auth:member:sessions:sequence:";
+    private static final String MEMBER_SESSION_REVOCATION_EPOCH_PREFIX = "auth:member:sessions:revoked-at:";
+    private static final String ISSUE_REVOKED_SENTINEL = "__REVOKED_DURING_ISSUE__";
 
     private static final DefaultRedisScript<String> ISSUE_SCRIPT = new DefaultRedisScript<>("""
+            local revokedAt = redis.call('GET', KEYS[5])
+            if revokedAt and tonumber(ARGV[1]) <= tonumber(revokedAt) then
+              return '__REVOKED_DURING_ISSUE__'
+            end
             local existing = redis.call('ZRANGE', KEYS[3], 0, -1)
             for _, sessionId in ipairs(existing) do
               if not redis.call('GET', ARGV[4] .. sessionId) then
@@ -81,6 +87,9 @@ public class RedisMemberSessionStore implements MemberSessionStore {
             end
             redis.call('DEL', KEYS[1])
             redis.call('DEL', KEYS[2])
+            local now = redis.call('TIME')
+            local revokedAt = tonumber(now[1]) * 1000 + math.floor(tonumber(now[2]) / 1000)
+            redis.call('SET', KEYS[3], revokedAt)
             return #sessionIds
             """, Long.class);
 
@@ -155,7 +164,8 @@ public class RedisMemberSessionStore implements MemberSessionStore {
                         sessionKey(sessionId),
                         refreshIndexKey(refreshToken),
                         memberSessionsKey(memberId),
-                        memberSessionSequenceKey(memberId)
+                        memberSessionSequenceKey(memberId),
+                        memberSessionRevocationEpochKey(memberId)
                 ),
                 String.valueOf(createdAt.toEpochMilli()),
                 sessionId,
@@ -165,6 +175,9 @@ public class RedisMemberSessionStore implements MemberSessionStore {
                 serialize(record),
                 String.valueOf(ttl.toSeconds())
         );
+        if (ISSUE_REVOKED_SENTINEL.equals(evictedSessionId)) {
+            throw new InvalidMemberSessionException();
+        }
         return new MemberSession(memberId, sessionId, refreshToken, revokedSessionIds(evictedSessionId));
     }
 
@@ -239,7 +252,11 @@ public class RedisMemberSessionStore implements MemberSessionStore {
     public void revokeAll(String memberId) {
         redisTemplate.execute(
                 REVOKE_ALL_SCRIPT,
-                List.of(memberSessionsKey(memberId), memberSessionSequenceKey(memberId)),
+                List.of(
+                        memberSessionsKey(memberId),
+                        memberSessionSequenceKey(memberId),
+                        memberSessionRevocationEpochKey(memberId)
+                ),
                 SESSION_PREFIX,
                 REFRESH_INDEX_PREFIX
         );
@@ -282,6 +299,10 @@ public class RedisMemberSessionStore implements MemberSessionStore {
 
     private String memberSessionSequenceKey(String memberId) {
         return MEMBER_SESSION_SEQUENCE_PREFIX + memberId;
+    }
+
+    private String memberSessionRevocationEpochKey(String memberId) {
+        return MEMBER_SESSION_REVOCATION_EPOCH_PREFIX + memberId;
     }
 
     private String hash(String value) {

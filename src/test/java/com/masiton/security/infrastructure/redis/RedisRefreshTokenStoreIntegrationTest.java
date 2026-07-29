@@ -7,6 +7,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -174,28 +175,29 @@ class RedisRefreshTokenStoreIntegrationTest {
     }
 
     @Test
-    @DisplayName("전체 세션 폐기와 발급이 경합해도 후속 폐기가 orphan refresh token을 남기지 않는다")
-    void memberSession_전체폐기와발급경합_orphan없음() throws Exception {
-        MemberSession existing = memberSessionStore.issue("member-a", Duration.ofDays(14));
-        CountDownLatch start = new CountDownLatch(1);
-        try (ExecutorService executor = Executors.newFixedThreadPool(2)) {
-            Future<MemberSession> issued = executor.submit(() -> {
-                start.await();
-                return memberSessionStore.issue("member-a", Duration.ofDays(14));
-            });
-            Future<?> revoked = executor.submit(() -> {
-                start.await();
-                memberSessionStore.revokeAll("member-a");
-                return null;
-            });
+    @DisplayName("전체 폐기 전에 시작된 발급은 전체 폐기 뒤 실행돼도 세션을 만들지 않는다")
+    void memberSession_전체폐기후늦게실행된발급_거부() throws Exception {
+        CountDownLatch issuePrepared = new CountDownLatch(1);
+        CountDownLatch continueIssue = new CountDownLatch(1);
+        when(memberSessionClock.instant()).thenAnswer(ignored -> {
+            issuePrepared.countDown();
+            if (!continueIssue.await(5, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("Timed out waiting for session revocation");
+            }
+            return Instant.EPOCH;
+        });
 
-            start.countDown();
-            MemberSession concurrent = issued.get();
-            revoked.get();
+        try (ExecutorService executor = Executors.newSingleThreadExecutor()) {
+            Future<MemberSession> issued = executor.submit(
+                    () -> memberSessionStore.issue("member-a", Duration.ofDays(14)));
+            assertThat(issuePrepared.await(5, TimeUnit.SECONDS)).isTrue();
+
             memberSessionStore.revokeAll("member-a");
+            continueIssue.countDown();
 
-            assertThat(memberSessionStore.matches("member-a", existing.refreshToken())).isFalse();
-            assertThat(memberSessionStore.matches("member-a", concurrent.refreshToken())).isFalse();
+            assertThatThrownBy(issued::get)
+                    .hasCauseInstanceOf(InvalidMemberSessionException.class);
+            assertThat(redisTemplate.opsForZSet().size("auth:member:sessions:member-a")).isZero();
         }
     }
 }
