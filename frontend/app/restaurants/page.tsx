@@ -130,12 +130,12 @@ export default async function RestaurantsPage({
                 </option>
               ))}
               {/* 현재 선택된 유튜버가 목록에 없으면(삭제·비공개 전환) 그 사실을 그대로
-               * 보여준다. disabled라 다시 선택할 수는 없고, 사용자는 "전체"나 다른
-               * 유튜버를 골라야만 필터를 바꿀 수 있다 — 이게 곧 필터 해제 수단이다. */}
+               * 보여준다. disabled를 쓰면 폼 제출 데이터 구성 시 선택된 option이
+               * 통째로 제외돼(WHATWG HTML 4.10.5.4) creatorId가 조용히 사라지므로
+               * 활성 option으로 두고, 사용자가 "전체"나 다른 유튜버로 직접 바꿔야만
+               * 필터가 바뀌게 한다. */}
               {!currentCreatorKnown && currentCreatorId ? (
-                <option value={currentCreatorId} disabled>
-                  선택할 수 없는 유튜버
-                </option>
+                <option value={currentCreatorId}>선택할 수 없는 유튜버</option>
               ) : null}
             </select>
           ) : (
