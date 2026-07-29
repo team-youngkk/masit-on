@@ -14,6 +14,8 @@
 const API_BASE_URL = process.env.API_BASE_URL ?? 'http://localhost:8080'
 const FALLBACK_ERROR_MESSAGE =
   '맛집 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
+const FALLBACK_CREATORS_ERROR_MESSAGE =
+  '유튜버 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
 
 const DEFAULT_PAGE = '1'
 const DEFAULT_SIZE = '20'
@@ -102,6 +104,19 @@ export type FetchRestaurantsResult =
   | { ok: true; data: RestaurantListResponse }
   | { ok: false; message: string; traceId?: string }
 
+export type Creator = {
+  id: string
+  channelName: string
+}
+
+export type CreatorListResponse = {
+  items: Creator[]
+}
+
+export type FetchCreatorsResult =
+  | { ok: true; data: CreatorListResponse }
+  | { ok: false; message: string; traceId?: string }
+
 /* Next.js 검색 파라미터는 반복 쿼리를 배열로 넘길 수 있다. 첫 값만 사용한다. */
 export function toSingleValue(
   value: string | string[] | undefined,
@@ -130,7 +145,6 @@ export function buildApiSearchParams(
     params.set('category', category)
   }
 
-  /* 유튜버 선택 UI는 이번 범위가 아니다. 기존 값만 그대로 전달한다. */
   const creatorId = toSingleValue(rawParams.creatorId)
   if (creatorId) {
     params.set('creatorId', creatorId)
@@ -173,6 +187,35 @@ export async function fetchRestaurants(
     return { ok: true, data }
   } catch {
     return { ok: false, message: FALLBACK_ERROR_MESSAGE }
+  }
+}
+
+/* API-CREATOR-DISCOVERY-001(GET /api/creators)을 호출한다. 쿼리 파라미터는 없다. */
+export async function fetchCreators(): Promise<FetchCreatorsResult> {
+  let response: Response
+
+  try {
+    response = await fetch(`${API_BASE_URL}/api/creators`, {
+      cache: 'no-store',
+    })
+  } catch {
+    return { ok: false, message: FALLBACK_CREATORS_ERROR_MESSAGE }
+  }
+
+  if (!response.ok) {
+    const body = await readErrorBody(response)
+    return {
+      ok: false,
+      message: body?.message ?? FALLBACK_CREATORS_ERROR_MESSAGE,
+      traceId: body?.traceId,
+    }
+  }
+
+  try {
+    const data = (await response.json()) as CreatorListResponse
+    return { ok: true, data }
+  } catch {
+    return { ok: false, message: FALLBACK_CREATORS_ERROR_MESSAGE }
   }
 }
 
