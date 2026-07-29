@@ -28,8 +28,8 @@ public class JdbcMemberSessionRevocationStore implements MemberSessionRevocation
         jdbcTemplate.update(
                 UPSERT,
                 revocation.sessionId(),
-                revocation.revokedAt(),
-                revocation.expiresAt()
+                java.sql.Timestamp.from(revocation.revokedAt()),
+                java.sql.Timestamp.from(revocation.expiresAt())
         );
     }
 }
