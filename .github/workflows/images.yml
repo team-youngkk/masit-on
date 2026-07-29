@@ -115,6 +115,35 @@ jobs:
             echo "비루트 실행 확인 (uid=$uid)"
           done
 
+      # ADR-RUNTIME-001 13절 취약점 검사.
+      #
+      # ECR의 scan-on-push는 이 단계를 대신할 수 없다. 이름 그대로 push된 뒤에
+      # 시작하므로 취약한 이미지가 이미 게시된 상태가 된다. 완료 조건이 "실패하면
+      # push와 배포가 차단된다"이므로 게시 전에 판정해야 한다.
+      #
+      # --ignore-unfixed로 수정 버전이 없는 CVE는 제외한다. 베이스 이미지의 미수정
+      # CVE까지 차단하면 우리가 조치할 수 없는 이유로 배포가 멈추고, 결국 기준을
+      # 낮추게 되어 게이트가 무력화된다. 조치 가능한 것만 막는다.
+      #
+      # Trivy 버전은 태그와 digest로 고정한다. 기술 정책 3절이 `latest`를 금지한다.
+      - name: 취약점 검사
+        run: |
+          set -euo pipefail
+          for image in "masiton-backend:${IMAGE_TAG}" "masiton-frontend:${IMAGE_TAG}"; do
+            echo "=== $image ==="
+            docker run --rm \
+              -v /var/run/docker.sock:/var/run/docker.sock \
+              -v trivy-db:/root/.cache/trivy \
+              aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f \
+              image \
+                --scanners vuln \
+                --severity CRITICAL,HIGH \
+                --ignore-unfixed \
+                --exit-code 1 \
+                "$image"
+          done
+          echo '수정 가능한 CRITICAL·HIGH 취약점 없음'
+
       # 여기까지가 자격 증명 없이 수행하는 검증이다.
       # OIDC 신뢰 정책이 refs/heads/deploy/m2와 refs/heads/main만 허용하므로
       # 그 밖의 브랜치는 push 단계에서 자격 증명을 받지 못한다.

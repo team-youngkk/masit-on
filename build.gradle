@@ -19,6 +19,16 @@ repositories {
 
 ext {
     archunitVersion = '1.4.1'
+
+    /*
+     * Spring Boot 4.1.0 BOM이 고정하는 42.7.11에는 CVE-2026-54291(HIGH)이 있다.
+     * SCRAM-SHA-256-PLUS 다운그레이드로 중간자 공격 보호를 우회할 수 있어 RDS
+     * 연결 경로에 직접 해당한다. 42.7.12에서 수정됐고 42.7.13이 같은 계열 최신이다.
+     *
+     * 개별 dependency에 버전을 중복 선언하는 대신 Spring Boot가 제공하는 BOM 속성
+     * 재정의를 사용한다(기술 정책 4절). BOM이 이 버전 이상으로 올라가면 이 항목을 지운다.
+     */
+    set('postgresql.version', '42.7.13')
 }
 
 dependencies {

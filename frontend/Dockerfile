@@ -28,6 +28,11 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # 백엔드 이미지와 같은 1001을 사용해 두 컨테이너의 실행 사용자를 일치시킨다.
 RUN addgroup -S -g 1001 masiton && adduser -S -u 1001 -G masiton masiton
 
+# 런타임은 `node server.js`로 실행하므로 npm이 필요 없다.
+# 베이스 이미지에 포함된 npm CLI가 자체 의존성(tar, undici, brace-expansion)을
+# 함께 들여와 취약점 검사에 걸리고 실행에 쓰이지 않는 공격 표면을 만든다.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
+
 # standalone 출력에는 server.js와 추려낸 의존성만 들어 있다.
 # 정적 파일은 별도로 복사해야 한다.
 COPY --from=build --chown=masiton:masiton /app/.next/standalone ./
