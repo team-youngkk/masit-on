@@ -148,8 +148,8 @@ class FlywayMigrationIntegrationTest {
                 "SELECT revoked_at = ? AND expires_at = ? "
                         + "FROM member_session_revocation WHERE session_id = ?",
                 Boolean.class,
-                firstRevokedAt,
-                firstExpiresAt.plusSeconds(60),
+                java.sql.Timestamp.from(firstRevokedAt),
+                java.sql.Timestamp.from(firstExpiresAt.plusSeconds(60)),
                 sessionId
         );
 
