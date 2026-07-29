@@ -73,6 +73,7 @@ masiton:
       refresh-token-ttl: P14D
       cookie-name: __Secure-masiton-member-refresh
       path: /api/auth/tokens
+      public-base-url: ${MEMBER_PUBLIC_BASE_URL:http://localhost:3000}
       max-sessions: 3
     login-failure:
       max-attempts: 5

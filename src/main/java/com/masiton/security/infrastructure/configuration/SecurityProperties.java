@@ -160,6 +160,7 @@ public class SecurityProperties {
         private Duration refreshTokenTtl = Duration.ofDays(14);
         private String cookieName = "__Secure-masiton-member-refresh";
         private String path = "/api/auth/tokens";
+        private String publicBaseUrl = "http://localhost:3000";
         private int maxSessions = 3;
 
         public Duration getRefreshTokenTtl() {
@@ -184,6 +185,14 @@ public class SecurityProperties {
 
         public void setPath(String path) {
             this.path = path;
+        }
+
+        public String getPublicBaseUrl() {
+            return publicBaseUrl;
+        }
+
+        public void setPublicBaseUrl(String publicBaseUrl) {
+            this.publicBaseUrl = publicBaseUrl;
         }
 
         public int getMaxSessions() {
