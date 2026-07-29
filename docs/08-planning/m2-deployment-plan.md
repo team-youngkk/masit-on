@@ -71,6 +71,9 @@ related_documents:
 | 로그 | CloudWatch, 14일 보관 | RV-NFR-009 |
 | 알림 | CloudWatch 알람 → Slack Webhook, 담당자 1명 | RV-NFR-013 |
 | 월 인프라 예산 목표 | 150,000원 | ADR 추적표 |
+| 목표 완료일 | 2026-07-31 | [M2 마일스톤](https://github.com/team-youngkk/masit-on/milestone/2) |
+
+목표 완료일까지 여유가 크지 않다. 도메인 구입과 DNS 전파, RDS 생성처럼 대기 시간이 고정된 Task가 있으므로 M2-01을 먼저 끝내고 M2-02·M2-03을 같은 날 착수한다.
 
 ## 4. 확인 필요 항목
 
@@ -82,7 +85,6 @@ related_documents:
 | HTTPS 인증서 발급 방식 | M2-07 | ACM 인증서는 ALB·CloudFront·API Gateway에만 연결되고 EC2에 직접 설치할 수 없다. ALB를 배포 고도화로 미뤘으므로 단일 EC2에서는 Let's Encrypt(certbot)가 사실상 유일한 선택이다. **새 외부 서비스 도입이므로 별도 ADR이 필요하다.** |
 | 검증 참여자 제한 공개 방식 | M2-10 | ADR-DEPLOY-002는 "검증 참여자에게만 제한 공개"만 규정하고 방식을 정하지 않았다. Nginx Basic Auth, 보안 그룹 IP allowlist 중 선택이 필요하다 |
 | EC2 인스턴스 타입과 RDS 인스턴스 클래스 | M2-03, M2-04 | 예산 목표 150,000원 대비 산정이 필요하다. 단일 인스턴스에 Nginx·Next.js·Spring Boot가 함께 올라가므로 메모리 여유를 확인해야 한다 |
-| M2 목표 완료일 | 전체 | 미정 |
 
 ## 5. Task 분해
 
@@ -137,7 +139,8 @@ related_documents:
 
 ### M2-08 애플리케이션 배포
 
-- 작업: EC2에서 ECR 이미지 pull·실행, Parameter Store에서 설정 주입, Flyway `V1`~`V5`를 RDS에 적용, 관리자 계정 생성
+- 작업: EC2에서 ECR 이미지 pull·실행, Parameter Store에서 설정 주입, 초기 스키마 Flyway 마이그레이션을 빈 RDS에 적용, 관리자 계정 생성
+- 주의: 초기 스키마를 단일 baseline으로 통합하는 작업이 별도로 진행 중이다. 이 Task는 착수 시점에 저장소에 있는 마이그레이션 파일을 적용하며, 적용된 버전을 이미지 digest와 함께 기록한다
 - 선행: M2-04, M2-05, M2-06, M2-07
 - 완료 조건: `/internal/health/ready`와 `/internal/health/dependencies`가 EC2 내부에서 정상이고, 적용된 마이그레이션 버전과 이미지 digest가 기록된다
 - 근거: NFR-DEPLOYMENT-002, NFR-DEPLOYMENT-003
