@@ -72,11 +72,14 @@ related_documents:
 | 인증 저장소 | Redis 8.8. ElastiCache를 쓰지 않고 앱 EC2에 동거한다(2026-07-29 결정, 4.2절) | [ADR-DATA-005](../07-adr/data/data-005-redis-refresh-token.md), [사양·비용 산정 5.4절](m2-cost-and-sizing.md) |
 | 이미지 저장소 | ECR | ADR-DEPLOY-002 |
 | CI 경로 | GitHub Actions → ECR → EC2, 수동 승인 | RV-NFR-012 |
+| 브랜치 전략 | `deploy/m2` 한 브랜치에 M2 변경을 모으고 완료 시 `main`으로 병합 | 이번 마일스톤은 배포와 기능 구현을 함께 진행해 변경을 나눠 병합할 이점이 없다(2026-07-29 결정) |
 | 백업 | 일 1회 자동 스냅샷, 7일 보관, RPO 최대 24시간 | RV-NFR-010 |
 | 로그 | CloudWatch, 14일 보관 | RV-NFR-009 |
 | 알림 | CloudWatch 알람 → Slack Webhook, 담당자 1명 | RV-NFR-013 |
 | 월 인프라 예산 목표 | 150,000원 | ADR 추적표 |
 | 목표 완료일 | 2026-07-31 | [M2 마일스톤](https://github.com/team-youngkk/masit-on/milestone/2) |
+
+브랜치 전략은 **이 마일스톤 한정 예외다.** [CLAUDE.md](../../CLAUDE.md) 9절의 기본 흐름(`feature` → `develop` → `main`)은 그대로 유지하고, M2 이후 작업은 다시 `develop`을 거친다. `main` 병합 후 `deploy/m2`를 `develop`에도 back-merge해 `develop`이 뒤처지지 않게 한다.
 
 목표 완료일까지 여유가 크지 않다. 도메인 구입과 DNS 전파, RDS·Redis 생성처럼 대기 시간이 고정된 Task가 있으므로 M2-01을 먼저 끝내고 M2-02·M2-03을 같은 날 착수한다.
 
