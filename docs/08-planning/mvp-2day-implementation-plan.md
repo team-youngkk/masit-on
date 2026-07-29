@@ -391,7 +391,7 @@ related_documents:
 ## 11. 배포 및 롤백 계획
 
 - 이번 단계의 배포: 없음. 로컬 Docker 통합 실행이 완료 조건이다.
-- 데이터 변경: Flyway 초기 스키마를 빈 PostgreSQL에 적용하고 파일 수정 대신 후속 migration 원칙을 사용한다. 이 단계에서 적용한 `V1`~`V5`는 2026-07-29에 단일 baseline으로 통합됐다([migration-plan.md](../05-specs/data/migration-plan.md) 2.1절).
+- 데이터 변경: Flyway 초기 스키마를 빈 PostgreSQL에 적용하고 파일 수정 대신 후속 migration 원칙을 사용한다. 이 단계에서 적용한 `V1`~`V5`는 2026-07-29에 단일 baseline으로 통합됐다([migration-plan.md](../05-specs/data/migration-plan.md) 2.2절).
 - 로컬 복구: 컨테이너와 볼륨 초기화 후 migration·seed를 재적용한다.
 - 기능 플래그: 도입하지 않는다. 확장 기능 Route·메뉴 자체를 만들지 않는다.
 - AWS 배포: [ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md)에 따라 이 단계 완료 후 M2 초기 운영 배포에서 다음 확장 단계보다 먼저 수행한다.
