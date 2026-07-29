@@ -60,7 +60,7 @@ related_documents:
 | PostgreSQL 17.10 | 고정 | Accepted ADR | [ADR-DATA-001](data/data-001-postgresql.md) | 주 관계형 데이터베이스 |
 | 개발 Docker PostgreSQL / 운영 RDS | 확정 | Accepted ADR | [ADR-DATA-002](data/data-002-database-placement.md) | 환경 분리와 운영 배치 |
 | Spring Data JPA | 확정 | Accepted ADR | [ADR-DATA-003](data/data-003-spring-data-jpa.md) | 기본 ORM·Repository 전략 |
-| Flyway 12.4.0 | 고정 | Accepted ADR | [ADR-DATA-004](data/data-004-flyway.md) | 스키마 변경 단일 경로 |
+| Flyway 12.4.0 | 고정 | Accepted ADR | [ADR-DATA-004](data/data-004-flyway.md), [ADR-DATA-009](data/data-009-pre-release-migration-consolidation.md) | 스키마 변경 단일 경로, 적용된 마이그레이션의 환경 범위와 운영 배포 전 통합 예외 |
 | QueryDSL | 조건부 | Conditional ADR | [ADR-SEARCH-001](adr-backlog.md#adr-search-001-querydsl-도입) | 복합 조회 필요성 확인 후 도입 |
 | PostGIS | 기술 스펙 확정, 범위 제외 | Post-MVP ADR | [ADR-MAP-001](adr-backlog.md#adr-map-001-지도-표시와-공간-검색) | 지도·좌표·거리 검색 제외 |
 | pgvector | Post-MVP | Post-MVP ADR | [ADR-SEARCH-002](adr-backlog.md#adr-search-002-pgvector-자연어-검색rag) | 자연어 검색·RAG 제외 |
