@@ -177,11 +177,18 @@ jobs:
           for image in "masiton-backend:${IMAGE_TAG}" "masiton-frontend:${IMAGE_TAG}"; do
             echo "=== $image ==="
 
-            # find는 결과가 0건이어도 exit 0이므로 `|| true`가 필요하지 않다.
-            # 붙이면 docker나 컨테이너의 sh 실패까지 성공으로 바꿔, 검사가 수행되지
-            # 않았는데도 빈 결과로 통과한다. 실행 오류는 fail-closed로 둔다.
-            env_hits=$(docker run --rm --entrypoint sh "$image" -c \
-              "find / -xdev -name '.env' -o -xdev -name '.env.*' 2>/dev/null")
+            # 검사는 --user 0:0으로 실행한다. 이미지의 기본 사용자(uid 1001)로 `find /`를
+            # 돌리면 읽을 수 없는 경로에서 오류가 나 결과가 0건이어도 exit 1이 된다.
+            # 2>/dev/null은 메시지만 숨기고 종료 코드를 바꾸지 않는다.
+            #
+            # root로 돌리면 권한 오류가 사라져 종료 코드를 신뢰할 수 있고, 기본 사용자가
+            # 읽지 못하는 경로까지 검사 범위에 들어온다. 검사 전용 실행이며 이미지의
+            # USER 지시자는 그대로다(아래 비루트 실행 확인이 그것을 검증한다).
+            #
+            # find는 결과가 0건이어도 exit 0이므로 `|| true`를 붙이지 않는다. 붙이면
+            # docker나 sh 실패까지 성공으로 바꿔 검사가 수행되지 않았는데도 통과한다.
+            env_hits=$(docker run --rm --user 0:0 --entrypoint sh "$image" -c \
+              "find / -xdev -name '.env' -o -xdev -name '.env.*'")
             if [ -n "$env_hits" ]; then
               echo '.env 파일이 이미지에 포함됐다'
               printf '%s\n' "$env_hits"
@@ -192,8 +199,8 @@ jobs:
             # grep -rIl은 미검출이 exit 1이고 오류는 exit 2 이상이다. docker 자체 실패는
             # 125 이상이다. 따라서 1만 정상으로 처리하고 나머지는 workflow를 실패시킨다.
             set +e
-            secret_hits=$(docker run --rm --entrypoint sh "$image" -c \
-              "grep -rIl -e 'BEGIN PRIVATE KEY' -e 'BEGIN RSA PRIVATE KEY' -e 'JWT_PRIVATE_KEY_PEM' -e 'POSTGRES_PASSWORD' /app 2>/dev/null")
+            secret_hits=$(docker run --rm --user 0:0 --entrypoint sh "$image" -c \
+              "grep -rIl -e 'BEGIN PRIVATE KEY' -e 'BEGIN RSA PRIVATE KEY' -e 'JWT_PRIVATE_KEY_PEM' -e 'POSTGRES_PASSWORD' /app")
             grep_status=$?
             set -e
             if [ "$grep_status" -gt 1 ]; then
