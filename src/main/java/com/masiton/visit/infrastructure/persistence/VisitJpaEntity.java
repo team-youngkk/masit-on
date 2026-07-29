@@ -16,7 +16,7 @@ import jakarta.persistence.Table;
 
 /**
  * visit 테이블과 매핑되는 JPA Entity다.
- * V2__create_core_domain_tables.sql의 visit 테이블 정의와 컬럼이 대응해야 한다.
+ * V1__create_initial_schema.sql의 visit 테이블 정의와 컬럼이 대응해야 한다.
  * restaurant_id·creator_id·video_id는 다른 도메인 Entity를 참조하지 않고 평범한 UUID 컬럼으로만 매핑한다.
  */
 @Entity

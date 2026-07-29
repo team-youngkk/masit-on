@@ -22,17 +22,29 @@ related_documents:
 
 ## 2. 초기 순서
 
-V1·V2 DDL은 [ADR-DATA-007](../../07-adr/data/data-007-uuid-v4-identifiers.md)과 [ADR-DATA-008](../../07-adr/data/data-008-publication-lifecycle-soft-delete.md)의 확정 결정을 따른다.
+초기 스키마는 `V1__create_initial_schema.sql` 하나로 적용한다. DDL은 [ADR-DATA-007](../../07-adr/data/data-007-uuid-v4-identifiers.md)과 [ADR-DATA-008](../../07-adr/data/data-008-publication-lifecycle-soft-delete.md)의 확정 결정을 따른다.
 
-| 버전 | 파일 | 내용 | 선행 |
-|---:|---|---|---|
-| V1 | `V1__create_reference_and_admin_tables.sql` | `region`, `food_category`, `admin_account`; PK·UK·CHECK | 없음 |
-| V2 | `V2__create_core_domain_tables.sql` | `restaurant`, `creator`, `video`, `visit`; 상태·FK·복합 UK·CHECK | V1 |
-| V3 | `V3__create_confirmation_token_table.sql` | `confirmation_token`; Token 제약·FK | V1 |
-| V4 | `V4__create_query_indexes.sql` | `index-strategy.md`의 초기 일반·partial index | V2, V3 |
-| V5 | `V5__seed_reference_data.sql` | 서울 자치구 25개, 음식 카테고리 10개 | V1 |
+| 순서 | 내용 | 선행 |
+|---:|---|---|
+| 1 | `region`, `food_category`, `admin_account`; PK·UK·CHECK | 없음 |
+| 2 | `restaurant`, `creator`, `video`, `visit`; 상태·FK·복합 UK·CHECK | 1 |
+| 3 | `confirmation_token`; Token 제약·FK | 1 |
+| 4 | `index-strategy.md`의 초기 일반·partial index | 2, 3 |
+| 5 | 서울 자치구 25개, 음식 카테고리 10개 | 1 |
 
-V2는 부모 순서 `restaurant/creator` → `video` → `visit`로 작성한다. 순환 FK가 없으므로 테이블 생성 후 임시 무제약 상태를 두지 않는다.
+핵심 도메인 테이블은 부모 순서 `restaurant/creator` → `video` → `visit`로 작성한다. 순환 FK가 없으므로 테이블 생성 후 임시 무제약 상태를 두지 않는다. 위 다섯 구간은 한 파일 안에서 이 순서를 유지하고, 파일이 하나이므로 전체가 한 transaction으로 적용된다.
+
+### 2.1. V1~V5 통합 이력 (2026-07-29)
+
+초기 스키마는 원래 `V1`~`V5` 다섯 파일이었고 MVP 구현(T-03)과 로컬 검증(T-14)에서 그 형태로 적용됐다. 운영 환경 최초 배포 전에 baseline을 단순화하기 위해 다섯 파일을 `V1__create_initial_schema.sql` 하나로 통합했다. 적용 결과 스키마와 기준 데이터는 통합 전과 동일하다.
+
+통합 시점에 운영 데이터베이스는 존재하지 않았으므로 운영 데이터에 영향이 없다. 다만 통합 전 스키마가 적용된 데이터베이스에서는 `flyway_schema_history`에 기록된 `V1` checksum이 새 파일과 다르고 `V2`~`V5` 기록에 대응하는 파일이 없어 Flyway `validate`가 실패한다. 해당 데이터베이스는 볼륨을 삭제한 뒤 다시 적용해야 한다.
+
+```bash
+docker compose down -v
+```
+
+Testcontainers 기반 자동화 테스트는 매 실행 시 빈 데이터베이스를 생성하므로 영향을 받지 않는다.
 
 ## 3. 관리자 계정 부트스트랩
 
@@ -49,7 +61,7 @@ V2는 부모 순서 `restaurant/creator` → `video` → `visit`로 작성한다
 
 1. 운영 RDS 스냅샷 상태와 복구 가능 여부를 확인한다.
 2. 새 애플리케이션이 기존 스키마에서도 기동 가능한 expand 단계인지 검토한다.
-3. 빈 PostgreSQL 17.10에 V1부터 전체 적용한다.
+3. 빈 PostgreSQL 17.10에 초기 스키마 baseline을 적용한다.
 4. 이전 릴리스 스키마에 신규 버전만 적용하는 업그레이드 테스트를 수행한다.
 5. Flyway `validate`와 checksum을 확인한다.
 6. 마이그레이션을 애플리케이션보다 먼저 적용한다.
@@ -68,7 +80,7 @@ V2는 부모 순서 `restaurant/creator` → `video` → `visit`로 작성한다
 | 대형 인덱스 | 운영 데이터 규모·락 시간을 측정하고 필요 시 non-transactional `CREATE INDEX CONCURRENTLY`를 별도 migration으로 수행 |
 | 컬럼·테이블 제거 | 최소 한 릴리스 미사용 확인 후 별도 destructive migration |
 
-초기 V1~V5는 빈 DB 대상이므로 일반 transaction 안에서 수행한다. `CONCURRENTLY`가 필요한 후속 Flyway 파일은 해당 파일만 transaction 비활성화하고 한 파일에 다른 변경을 섞지 않는다.
+초기 스키마 baseline은 빈 DB 대상이므로 일반 transaction 안에서 수행한다. `CONCURRENTLY`가 필요한 후속 Flyway 파일은 해당 파일만 transaction 비활성화하고 한 파일에 다른 변경을 섞지 않는다.
 
 ## 6. 롤백과 복구
 
@@ -83,7 +95,7 @@ Flyway undo 파일과 하향 migration은 기본 경로로 사용하지 않는�
 ## 7. CI 검증
 
 - PostgreSQL 17.10 Testcontainers 빈 DB 전체 migration
-- V4까지 적용 → V5 기준 데이터 적용 시나리오
+- 인덱스 생성까지 적용된 상태에서 기준 데이터가 적재되는 순서 검증
 - 마이그레이션 2회 실행 시 checksum/중복 적용 차단 확인
 - PK·UK·FK·CHECK 이름과 존재 여부 검사
 - JPA `ddl-auto=validate`
@@ -93,4 +105,6 @@ Flyway undo 파일과 하향 migration은 기본 경로로 사용하지 않는�
 
 ## 8. 향후 첫 변경 번호
 
-초기 스키마가 V5까지 적용된 뒤 모든 변경은 V6부터 시작한다. 개발 중이라도 V1~V5가 다른 팀원 또는 공유 DB에 적용됐다면 내용을 고치지 않고 V6 이상의 보정 migration을 추가한다.
+초기 스키마 baseline이 적용된 뒤 모든 변경은 `V2`부터 시작한다. 개발 중이라도 `V1`이 다른 팀원 또는 공유 DB에 적용됐다면 내용을 고치지 않고 `V2` 이상의 보정 migration을 추가한다.
+
+2.1절의 통합은 운영 데이터베이스가 없던 시점의 일회성 baseline 정리이며 선례로 삼지 않는다. 운영 데이터베이스가 존재하는 시점부터 적용된 migration 파일 수정은 금지한다.

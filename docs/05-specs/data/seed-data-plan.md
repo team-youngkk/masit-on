@@ -68,7 +68,7 @@ related_documents:
 
 ## 4. Flyway 적재 방식
 
-V5는 열 목록을 명시한 일반 `INSERT`를 사용한다. `ON CONFLICT DO NOTHING`은 잘못된 기존 값이나 drift를 숨기므로 사용하지 않는다. 기준값이 이미 임의 데이터로 존재하면 migration이 실패하게 해 운영자가 차이를 확인한다.
+기준 데이터는 열 목록을 명시한 일반 `INSERT`를 사용한다. `ON CONFLICT DO NOTHING`은 잘못된 기존 값이나 drift를 숨기므로 사용하지 않는다. 기준값이 이미 임의 데이터로 존재하면 migration이 실패하게 해 운영자가 차이를 확인한다.
 
 기준값 변경은 다음 원칙을 따른다.
 
@@ -83,7 +83,7 @@ V5는 열 목록을 명시한 일반 `INSERT`를 사용한다. `ON CONFLICT DO N
 
 | 환경 | 데이터 | 방법 |
 |---|---|---|
-| 모든 환경 | Region·FoodCategory | Flyway V5 |
+| 모든 환경 | Region·FoodCategory | Flyway 초기 스키마 baseline |
 | 로컬 개발 | 가상 Restaurant·Creator·Video·Visit | 테스트/로컬 profile fixture, 운영 artifact 제외 |
 | CI | 시나리오별 최소 fixture | 테스트 코드·SQL fixture, 테스트 종료 시 폐기 |
 | 운영 | 검증된 실제 데이터 | 관리자 등록 API만 사용 |

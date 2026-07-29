@@ -23,7 +23,7 @@ related_documents:
 
 유튜버가 방문한 맛집을 지역·음식 종류·유튜버별로 탐색하는 서비스. 4인 팀의 MVP를 구현 중이다.
 
-**현재 상태: MVP 구현이 `T-14` 최종 검증 단계에 있다.** 백엔드 도메인 패키지(`restaurant`, `creator`, `video`, `visit`, `orchestration`, `security`, `common`), Flyway `V1`~`V5`, 관리자 인증·등록, 공개 탐색·상세, `frontend/`의 Next.js 화면이 모두 있다. 실행 방법은 5절을 따르고, 최근 실행·회귀 검증 결과는 [로컬 실행·회귀 검증 결과](docs/08-planning/mvp-local-verification.md)에 있다.
+**현재 상태: MVP 구현이 `T-14` 최종 검증 단계에 있다.** 백엔드 도메인 패키지(`restaurant`, `creator`, `video`, `visit`, `orchestration`, `security`, `common`), Flyway 초기 스키마 baseline(`V1__create_initial_schema.sql`), 관리자 인증·등록, 공개 탐색·상세, `frontend/`의 Next.js 화면이 모두 있다. 실행 방법은 5절을 따르고, 최근 실행·회귀 검증 결과는 [로컬 실행·회귀 검증 결과](docs/08-planning/mvp-local-verification.md)에 있다.
 
 ## 2. 문서가 계약이다
 

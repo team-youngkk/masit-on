@@ -18,7 +18,7 @@ import jakarta.persistence.Table;
 
 /**
  * confirmation_token 테이블과 매핑되는 JPA Entity다.
- * V3__create_confirmation_token_table.sql의 confirmation_token 테이블 정의와 컬럼이 대응해야 한다.
+ * V1__create_initial_schema.sql의 confirmation_token 테이블 정의와 컬럼이 대응해야 한다.
  * created_at/updated_at 감사 컬럼 구조가 아니라 issued_at만 있으므로 BaseAuditable을 상속하지 않는다.
  * candidate_snapshot(jsonb)은 Hibernate 6/7 표준 방식인
  * {@code @JdbcTypeCode(SqlTypes.JSON)}으로 String 필드를 jsonb 컬럼에 매핑한다.

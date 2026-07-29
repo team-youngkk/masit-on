@@ -121,7 +121,7 @@ related_documents:
 - 중요도: Medium
 - 현재 상태: 물리 설계 결정 완료
 - 영향 데이터: Region, FoodCategory
-- 결정: 고정 UUID·code를 두고 Region 25개·FoodCategory 10개를 Flyway V5로 적재한다.
+- 결정: 고정 UUID·code를 두고 Region 25개·FoodCategory 10개를 Flyway 초기 스키마 baseline으로 적재한다.
 - 근거: [seed-data-plan.md](seed-data-plan.md)
 
 ### RV-DATA-005 감사 필드와 변경 이력 범위

@@ -29,7 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * RestaurantSearchQueryAdapter의 네이티브 SQL 조회를 실제 PostgreSQL로 검증한다.
- * V5가 적재한 서울 자치구·대표 음식 카테고리 기준 데이터를 그대로 사용하고,
+ * 초기 스키마 baseline이 적재한 서울 자치구·대표 음식 카테고리 기준 데이터를 그대로 사용하고,
  * restaurant·creator·video·visit은 각 테스트가 직접 적재한 뒤 다음 테스트 실행 전 초기화한다.
  */
 @SpringBootTest
