@@ -185,6 +185,7 @@ WireMock 포트를 바꿨다면 `KAKAO_BASE_URL`, `YOUTUBE_BASE_URL`도 같이 �
 |---|---|
 | PR 필수, 승인 | 2명 |
 | CI 통과 필수 | `백엔드 빌드·테스트`, `프론트엔드 빌드·타입 검사` |
+| 새 커밋 push 시 | 기존 승인 무효화 |
 | 미해결 리뷰 스레드 | 병합 차단 |
 | 허용 병합 방식 | `develop`은 Merge, `main`은 Squash |
 | force push, 브랜치 삭제 | 금지 |
