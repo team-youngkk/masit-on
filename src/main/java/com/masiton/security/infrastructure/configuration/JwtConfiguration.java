@@ -30,6 +30,7 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 
 import com.masiton.security.application.SecurityTokenLifetime;
+import com.masiton.common.security.MemberCookieSettings;
 import com.masiton.common.security.MemberJwtSettings;
 import com.masiton.common.security.MemberSessionSettings;
 
@@ -58,6 +59,19 @@ public class JwtConfiguration {
     @Bean
     MemberSessionSettings memberSessionSettings(SecurityProperties properties) {
         return new MemberSessionSettings(properties.getMember().getMaxSessions());
+    }
+
+    @Bean
+    MemberCookieSettings memberCookieSettings(SecurityProperties properties) {
+        SecurityProperties.Member member = properties.getMember();
+        return new MemberCookieSettings(
+                member.getCookieName(),
+                member.getRefreshTokenTtl(),
+                member.getPath(),
+                properties.isSecure(),
+                properties.getSameSite(),
+                member.getPublicBaseUrl()
+        );
     }
 
     @Bean

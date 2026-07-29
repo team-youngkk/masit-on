@@ -1,8 +1,6 @@
-package com.masiton.member.infrastructure.web;
+package com.masiton.security.infrastructure.web;
 
 import java.io.IOException;
-import java.time.Instant;
-import java.util.UUID;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -11,20 +9,18 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.masiton.member.application.port.out.MemberSessionRevocationStore;
-import com.masiton.security.infrastructure.web.SecurityErrorWriter;
+import com.masiton.common.security.MemberSessionAccessChecker;
 
 @Component
 public class MemberSessionRevocationFilter extends OncePerRequestFilter {
-    private final MemberSessionRevocationStore revocations;
+    private final MemberSessionAccessChecker sessionAccessChecker;
     private final SecurityErrorWriter errorWriter;
 
-    public MemberSessionRevocationFilter(MemberSessionRevocationStore revocations, SecurityErrorWriter errorWriter) {
-        this.revocations = revocations;
+    public MemberSessionRevocationFilter(MemberSessionAccessChecker sessionAccessChecker, SecurityErrorWriter errorWriter) {
+        this.sessionAccessChecker = sessionAccessChecker;
         this.errorWriter = errorWriter;
     }
 
@@ -33,20 +29,12 @@ public class MemberSessionRevocationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         if (SecurityContextHolder.getContext().getAuthentication() instanceof JwtAuthenticationToken authentication) {
             String sessionId = authentication.getToken().getClaimAsString("sid");
-            if (sessionId != null && isRevoked(sessionId)) {
+            if (sessionId != null && !sessionAccessChecker.isAllowed(authentication.getName(), sessionId)) {
                 SecurityContextHolder.clearContext();
-                errorWriter.commence(request, response, new InsufficientAuthenticationException("Member session has been revoked"));
+                errorWriter.commence(request, response, new InsufficientAuthenticationException("Member session is unavailable"));
                 return;
             }
         }
         filterChain.doFilter(request, response);
-    }
-
-    private boolean isRevoked(String sessionId) {
-        try {
-            return revocations.isRevoked(UUID.fromString(sessionId), Instant.now());
-        } catch (IllegalArgumentException exception) {
-            return true;
-        }
     }
 }
