@@ -83,16 +83,18 @@ related_documents:
 
 계획 수립 시점에 결정되지 않았고 **임의로 확정하지 않는다.** 각 항목은 표시된 Task를 시작하기 전에 결정해야 한다.
 
-| 항목 | 필요 시점 |
-|---|---|
-| 도메인명 | M2-02 |
-| HTTPS 인증서 발급 방식 | M2-08 (4.1절) |
-| 검증 참여자 제한 공개 방식 | M2-11 |
-| EC2 인스턴스 타입, RDS 인스턴스 클래스, Redis 인스턴스 사양 | M2-03, M2-04, M2-05 |
+| 항목 | 필요 시점 | 상태 |
+|---|---|---|
+| 도메인명 | M2-02 | 미결정 |
+| HTTPS 인증서 발급 방식 | M2-08 (4.1절) | 미결정 |
+| 검증 참여자 제한 공개 방식 | M2-11 | 미결정 |
+| EC2 인스턴스 타입 | M2-03 | **결정** — `t4g.medium` ([사양·비용 산정](m2-cost-and-sizing.md) 3·7절) |
+| RDS 인스턴스 클래스 | M2-04 | **결정** — `db.t4g.micro` ([사양·비용 산정](m2-cost-and-sizing.md) 4·7절) |
+| Redis 인스턴스 사양 | M2-05 | 미결정 — 4.2절 |
 
 **제한 공개 방식**은 ADR-DEPLOY-002가 "검증 참여자에게만 제한 공개"만 규정하고 방식을 정하지 않았다. Nginx Basic Auth와 보안 그룹 IP allowlist 중 선택이 필요하다.
 
-**인스턴스 사양**은 예산 목표 150,000원 대비 산정이 필요하다. 단일 인스턴스에 Nginx·Next.js·Spring Boot가 함께 올라가므로 메모리 여유를 확인해야 한다.
+**인스턴스 사양과 월 예상 비용**은 `M2-01`에서 산정했다. 결과는 [M2 인스턴스 사양과 월 비용 산정](m2-cost-and-sizing.md)에 있다. 채택 가능한 구성의 월 예상 비용은 84,600~127,100원으로 예산 목표 150,000원 이내이며, NAT Gateway와 인터페이스 VPC 엔드포인트는 예산 비중이 커서 M2 구성에서 제외한다.
 
 ### 4.1. HTTPS 인증서 발급 방식
 
@@ -110,6 +112,12 @@ related_documents:
 마지막 두 행이 결정의 핵심이다. ACM은 새 외부 서비스가 아니어서 ADR 없이 운영 설정으로 처리할 수 있지만 재배포 자동화를 직접 만들어야 한다. Let's Encrypt는 갱신·배포가 모두 자동이지만 새 외부 서비스라 ADR이 필요하다.
 
 연간 비용 차이는 FQDN 하나 기준 약 $14로 예산 목표 150,000원 대비 작다. 따라서 비용보다 **갱신 실패 시 서비스 중단 위험**과 **운영 자동화 부담**을 기준으로 판단한다. 근거: [ACM exportable public certificates](https://docs.aws.amazon.com/acm/latest/userguide/acm-exportable-certificates.html).
+
+### 4.2. Redis 배치 방식
+
+`M2-01` 산정 과정에서 **계획대로 관리형 Redis를 쓸 수 없다는 제약 두 가지를 확인했다.** ElastiCache는 Redis OSS 7.1 이하만 제공해 고정 버전 8.8을 만족할 수 없고, `appendonly`·`appendfsync`를 지원하지 않아 `M2-05`가 요구하는 AOF `everysec`을 설정할 수 없다. 두 제약은 독립적이어서 Valkey로 버전 문제를 우회해도 AOF 문제는 남는다.
+
+선택지와 비용, 각 선택지가 바꾸는 계약 문서는 [사양·비용 산정 5절](m2-cost-and-sizing.md)에 정리했다. 이 결정은 [기술 정책 3절](../06-architecture/technology-policy.md)의 고정 버전 또는 [ADR-DATA-005](../07-adr/data/data-005-redis-refresh-token.md) 6·10·11절을 건드리므로 **임의로 정하지 않고** ADR-DATA-005 공동 owner(김인안·이우람)의 합의로 확정한다. `M2-05` 착수 전에 결정해야 한다.
 
 ## 5. Task 분해
 
