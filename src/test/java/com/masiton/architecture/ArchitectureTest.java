@@ -135,6 +135,31 @@ class ArchitectureTest {
                     });
 
     /** "com.masiton.restaurant.infrastructure.persistence.X" -> "restaurant" 처럼 최상위 도메인 세그먼트를 뽑는다. */
+    @ArchTest
+    static final ArchRule crossDomainInfrastructureDependenciesAreForbidden =
+            classes().that().resideInAPackage(ROOT_PACKAGE + "..infrastructure..")
+                    .should(new ArchCondition<JavaClass>(
+                            "does not directly depend on another top-level domain infrastructure class") {
+                        @Override
+                        public void check(JavaClass javaClass, ConditionEvents events) {
+                            String originDomain = topLevelDomainOf(javaClass);
+                            if (originDomain == null) {
+                                return;
+                            }
+                            javaClass.getDirectDependenciesFromSelf().forEach(dependency -> {
+                                JavaClass target = dependency.getTargetClass();
+                                if (!target.getPackageName().contains(".infrastructure.")) {
+                                    return;
+                                }
+                                String targetDomain = topLevelDomainOf(target);
+                                if (targetDomain != null && !targetDomain.equals(originDomain)) {
+                                    events.add(SimpleConditionEvent.violated(javaClass,
+                                            javaClass.getFullName() + " depends on " + target.getFullName()));
+                                }
+                            });
+                        }
+                    });
+
     private static String topLevelDomainOf(JavaClass javaClass) {
         String packageName = javaClass.getPackageName();
         String prefix = ROOT_PACKAGE + ".";

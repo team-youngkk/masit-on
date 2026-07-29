@@ -15,6 +15,7 @@ public class SecurityProperties {
     private boolean secure = true;
     private String sameSite = "Strict";
     private String path = "/api/admin/auth";
+    private final Member member = new Member();
     private final LoginFailure loginFailure = new LoginFailure();
 
     public Jwt getJwt() {
@@ -65,11 +66,17 @@ public class SecurityProperties {
         return loginFailure;
     }
 
+    public Member getMember() {
+        return member;
+    }
+
     public static class Jwt {
 
         private String issuer = "masit-on";
         private String audience = "masit-on-admin-api";
+        private String memberAudience = "masit-on-member-api";
         private Duration accessTokenTtl = Duration.ofMinutes(30);
+        private Duration memberAccessTokenTtl = Duration.ofMinutes(30);
         private String keyId;
         private String privateKeyPem;
         private String publicKeyPem;
@@ -91,12 +98,28 @@ public class SecurityProperties {
             this.audience = audience;
         }
 
+        public String getMemberAudience() {
+            return memberAudience;
+        }
+
+        public void setMemberAudience(String memberAudience) {
+            this.memberAudience = memberAudience;
+        }
+
         public Duration getAccessTokenTtl() {
             return accessTokenTtl;
         }
 
         public void setAccessTokenTtl(Duration accessTokenTtl) {
             this.accessTokenTtl = accessTokenTtl;
+        }
+
+        public Duration getMemberAccessTokenTtl() {
+            return memberAccessTokenTtl;
+        }
+
+        public void setMemberAccessTokenTtl(Duration memberAccessTokenTtl) {
+            this.memberAccessTokenTtl = memberAccessTokenTtl;
         }
 
         public String getKeyId() {
@@ -129,6 +152,46 @@ public class SecurityProperties {
 
         public void setVerificationKeys(Map<String, String> verificationKeys) {
             this.verificationKeys = new LinkedHashMap<>(verificationKeys);
+        }
+    }
+
+    public static class Member {
+
+        private Duration refreshTokenTtl = Duration.ofDays(14);
+        private String cookieName = "__Secure-masiton-member-refresh";
+        private String path = "/api/auth/tokens";
+        private int maxSessions = 3;
+
+        public Duration getRefreshTokenTtl() {
+            return refreshTokenTtl;
+        }
+
+        public void setRefreshTokenTtl(Duration refreshTokenTtl) {
+            this.refreshTokenTtl = refreshTokenTtl;
+        }
+
+        public String getCookieName() {
+            return cookieName;
+        }
+
+        public void setCookieName(String cookieName) {
+            this.cookieName = cookieName;
+        }
+
+        public String getPath() {
+            return path;
+        }
+
+        public void setPath(String path) {
+            this.path = path;
+        }
+
+        public int getMaxSessions() {
+            return maxSessions;
+        }
+
+        public void setMaxSessions(int maxSessions) {
+            this.maxSessions = maxSessions;
         }
     }
 

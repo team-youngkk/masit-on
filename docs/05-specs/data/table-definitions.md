@@ -156,6 +156,20 @@ related_documents:
 
 `result_resource_id`는 세 테이블 중 하나를 가리키므로 FK를 만들지 않는다. 자원 종류별 완료 처리와 24시간 재현 테스트로 참조 존재를 보장한다.
 
-## 10. Redis 경계
+## 10. `member_account`
+
+회원 계정은 관리자 계정과 identity·권한·인증 수명주기를 분리한다. 이메일은 고유하고, 비밀번호 원문이나 Refresh Token은 저장하지 않는다. 상태는 `PENDING_VERIFICATION`, `ACTIVE`, `DELETION_PENDING`, `DISABLED`이며, 이메일 인증 시각과 삭제 요청 시각의 조합을 CHECK 제약으로 강제한다.
+
+## 11. `member_action_token`
+
+이메일 인증과 비밀번호 재설정은 SHA-256 해시만 저장하는 1회용 Token을 사용한다. Token은 `ISSUED`, `USED`, `REVOKED` 상태와 완료 시각을 가지며, `(member_id, purpose)`별 `ISSUED` Token은 하나만 허용한다. 재발급할 때 기존 Token을 `REVOKED`로 완료 처리해 새 Token과 구분한다.
+
+## 12. `member_session_revocation`
+
+회원 탈퇴 또는 세션 폐기 시 Access Token의 `sid`를 만료 시각까지 기록한다. 이 테이블은 회원 FK를 두지 않아 회원 데이터가 물리 삭제된 뒤에도 기존 Access Token을 거부할 수 있다. 같은 `sid`를 다시 기록하면 최초 폐기 시각과 최장 만료 시각을 보존한다.
+
+## 13. Redis 경계
 
 `AdminRefreshToken`은 Redis 8.8에만 저장한다. PostgreSQL `admin_account.id` 문자열을 Redis 값의 관리자 참조로 사용하되 DB FK 같은 원자성은 제공하지 않는다. Redis 키·검증값·14일 TTL·회전·재사용 탐지와 로그인 실패 제한은 [관리자 인증 API](../api/admin/authentication-api.md)와 [보안 경계](../../06-architecture/security-boundary.md)의 확정 계약을 따른다. Redis 구조는 이 문서의 PostgreSQL 스키마와 Flyway 대상이 아니다.
+
+회원 세션은 `auth:member:` namespace만 사용하며 관리자 `auth:refresh:` 키와 공유하지 않는다. 세션 ID별 Refresh Token 해시와 회원별 정렬 집합을 함께 저장해 최대 세 세션을 유지한다. 회전과 재사용 탐지는 Lua 스크립트로 원자 처리하며 Redis를 읽거나 쓰지 못하면 발급·재발급을 허용하지 않는다.

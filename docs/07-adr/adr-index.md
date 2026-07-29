@@ -18,6 +18,7 @@ related_documents:
   - data/data-003-spring-data-jpa.md
   - data/data-004-flyway.md
   - security/auth-001-spring-security-jwt.md
+  - security/auth-002-member-jwt-refresh-token.md
   - security/auth-003-confirmation-token.md
   - data/data-005-redis-refresh-token.md
   - data/data-007-uuid-v4-identifiers.md
@@ -48,6 +49,7 @@ related_documents:
 | [ADR-DATA-003](data/data-003-spring-data-jpa.md) | Spring Data JPA 기본 데이터 접근 | Accepted | High | Spring Data JPA | 전체 Repository | [문서](data/data-003-spring-data-jpa.md) |
 | [ADR-DATA-004](data/data-004-flyway.md) | Flyway 스키마 마이그레이션 | Accepted | Critical | Flyway 12.4.0 | 전체 스키마 변경 | [문서](data/data-004-flyway.md) |
 | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md) | 관리자 Spring Security JWT 인증·인가 | Accepted | Critical | Spring Security 7.1.0, JWT, Redis 8.8 Refresh Token | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 관리자 | [문서](security/auth-001-spring-security-jwt.md) |
+| [ADR-AUTH-002](security/auth-002-member-jwt-refresh-token.md) | 회원 JWT와 Refresh Token | Accepted | Critical | Spring Security 7.1.0, JWT, Redis 8.8 Refresh Token | 회원 계정·인증 | [문서](security/auth-002-member-jwt-refresh-token.md) |
 | [ADR-AUTH-003](security/auth-003-confirmation-token.md) | 관리자 등록 확인 Token의 저장·소비·재시도 | Accepted | Critical | PostgreSQL, SHA-256, 불투명 Token, JSONB Snapshot | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 기준정보 등록 | [문서](security/auth-003-confirmation-token.md) |
 | [ADR-DATA-005](data/data-005-redis-refresh-token.md) | Redis 8.8 관리자 Refresh Token 저장소 | Accepted | Critical | Redis Open Source 8.8 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 인증·운영 | [문서](data/data-005-redis-refresh-token.md) |
 | [ADR-DATA-007](data/data-007-uuid-v4-identifiers.md) | 애플리케이션 생성 UUID v4 내부 식별자 | Accepted | High | Java UUID, PostgreSQL uuid | 전체 영속 데이터 | [문서](data/data-007-uuid-v4-identifiers.md) |

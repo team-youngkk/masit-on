@@ -15,9 +15,11 @@ import com.nimbusds.jwt.SignedJWT;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtException;
@@ -27,6 +29,8 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.masiton.test.FullContextIntegrationTest;
+import com.masiton.member.application.MemberPrincipal;
+import com.masiton.member.application.port.out.MemberTokenIssuer;
 
 import static org.hamcrest.Matchers.emptyString;
 import static org.hamcrest.Matchers.not;
@@ -36,6 +40,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -49,6 +54,13 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
 
     @Autowired
     private JwtDecoder jwtDecoder;
+
+    @Autowired
+    @Qualifier("memberJwtDecoder")
+    private JwtDecoder memberJwtDecoder;
+
+    @Autowired
+    private MemberTokenIssuer memberTokenIssuer;
 
     @DynamicPropertySource
     static void securityProperties(DynamicPropertyRegistry registry) {
@@ -128,6 +140,77 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
                 .isInstanceOf(JwtException.class);
     }
 
+    @Test
+    @DisplayName("관리자와 회원 JWT audience는 서로의 보안 경계에서 거부된다")
+    void jwt_관리자회원Audience교차거부() throws Exception {
+        String adminToken = signedToken("test-key-20260727", "masit-on", "masit-on-admin-api");
+        String memberToken = signedToken("test-key-20260727", "masit-on", "masit-on-member-api");
+
+        assertThatThrownBy(() -> jwtDecoder.decode(memberToken))
+                .isInstanceOf(JwtException.class);
+        assertThatThrownBy(() -> memberJwtDecoder.decode(adminToken))
+                .isInstanceOf(JwtException.class);
+    }
+
+    @Test
+    @DisplayName("회원 Access Token은 같은 sid와 매 발급 다른 jti를 가진다")
+    void memberAccessToken_sid유지_jti재발급() {
+        MemberPrincipal principal = new MemberPrincipal("member-id", "e320b522-e80f-4659-8974-bbd591b72573");
+
+        org.springframework.security.oauth2.jwt.Jwt first = memberJwtDecoder.decode(memberTokenIssuer.issueAccessToken(principal));
+        org.springframework.security.oauth2.jwt.Jwt second = memberJwtDecoder.decode(memberTokenIssuer.issueAccessToken(principal));
+
+        assertThat(first.getClaimAsString("sid")).isEqualTo(principal.sessionId());
+        assertThat(second.getClaimAsString("sid")).isEqualTo(principal.sessionId());
+        assertThat(second.getId()).isNotEqualTo(first.getId());
+    }
+
+    @Test
+    @DisplayName("회원 경계는 회원 JWT만 받고 관리자 경계는 관리자 JWT만 받는다")
+    void memberAdminApi_교차Audience_401거부() throws Exception {
+        String adminToken = signedToken("test-key-20260727", "masit-on", "masit-on-admin-api");
+        String memberToken = signedToken("test-key-20260727", "masit-on", "masit-on-member-api");
+
+        mockMvc.perform(get("/api/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/admin/restaurants").header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/auth/tokens"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("회원 공개 인증 경로는 계약된 POST 메서드만 허용한다")
+    void memberAuthenticationPublicRoutes_계약경로만허용() throws Exception {
+        String[] publicPaths = {
+                "/api/auth/registrations",
+                "/api/auth/email-verifications",
+                "/api/auth/email-verifications/resend",
+                "/api/auth/password-resets/requests",
+                "/api/auth/password-resets/confirmations",
+                "/api/auth/tokens",
+                "/api/auth/tokens/refresh"
+        };
+
+        for (String publicPath : publicPaths) {
+            mockMvc.perform(post(publicPath))
+                    .andExpect(status().isNotFound());
+        }
+        mockMvc.perform(post("/api/auth/password-reset-requests"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("회원 JWT를 포함한 공개 조회는 회원 decoder로 인증하고 허용한다")
+    void publicRead_memberJwt_허용() throws Exception {
+        String memberToken = signedToken("test-key-20260727", "masit-on", "masit-on-member-api");
+
+        mockMvc.perform(get("/api/restaurants").header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken))
+                .andExpect(status().isOk());
+    }
+
     private static KeyPair keyPair() {
         try {
             KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
@@ -156,6 +239,7 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
                 .issuer(issuer)
                 .audience(List.of(audience))
                 .subject("admin-id")
+                .claim("roles", List.of("MEMBER"))
                 .issueTime(java.util.Date.from(now))
                 .expirationTime(java.util.Date.from(now.plusSeconds(60)))
                 .build();
