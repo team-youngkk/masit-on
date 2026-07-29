@@ -17,6 +17,7 @@ related_documents:
   - ../07-adr/data/data-005-redis-refresh-token.md
   - mvp-2day-implementation-plan.md
   - mvp-local-verification.md
+  - m2-cost-and-sizing.md
 ---
 
 # 맛잇온 M2 초기 운영 배포 계획
