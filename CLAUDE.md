@@ -179,6 +179,9 @@ WireMock 포트를 바꿨다면 `KAKAO_BASE_URL`, `YOUTUBE_BASE_URL`도 같이 �
 - `feature`→`develop`은 일반 Merge, `develop`→`main`만 Squash Merge.
 - Conventional Commits (`feat`, `fix`, `test`, `refactor`, `docs`, `build`, `ci`, `chore`). 예: `feat: 맛집 목록 조회 구현`
 - 모든 변경은 PR로 병합하고 작성자를 제외한 **최소 2명 승인**이 필요하다. AI가 작성한 코드도 동일하다.
+- 위 두 규칙은 `main`·`develop`의 브랜치 보호로 강제한다. PR 없이 push할 수 없고, 승인 2명과 CI 통과(`백엔드 빌드·테스트`, `프론트엔드 타입 검사`)를 요구하며, 새 커밋이 오면 기존 승인이 무효화되고, 미해결 리뷰 대화가 있으면 병합할 수 없다. force push와 브랜치 삭제는 금지된다.
+- **관리자 예외.** 저장소 admin 권한 보유자(이우람)는 보호 규칙을 우회할 수 있다. `enforce_admins`를 적용하지 않았기 때문이다. 승인자를 확보하지 못해 배포나 장애 대응이 막히는 상황을 푸는 **비상 수단이며 통상 경로가 아니다.** 우회해서 병합하거나 push했다면 해당 PR 또는 이슈에 우회 사실과 이유를 남긴다. 예외를 없애려면 `enforce_admins`를 켜고 이 항목을 지운다.
+- 코드 소유자 리뷰 강제(`require_code_owner_reviews`)는 적용하지 않는다. [CODEOWNERS](.github/CODEOWNERS)의 `*` 폴백이 팀 전원이어서 백엔드 PR마다 4명 전원에게 리뷰가 요청되기 때문이다. 같은 파일이 예고한 도메인 경로별 규칙이 추가되면 다시 판단한다.
 - 서로 독립적인 변경은 커밋·PR을 분리한다. 포매팅·정적 분석만 고치는 변경은 로직 변경과 분리한다.
 - PR 본문 첫 줄에 `Closes #{이슈번호}`로 구현한 이슈를 연결한다. 기본 브랜치가 `develop`이므로 머지 시 자동으로 닫힌다.
 - **PR 본문과 커밋 메시지에 AI 도구 생성 표기를 남기지 않는다.** `Generated with Claude Code` 같은 문구, 도구 서명과 배지를 넣지 않는다.
