@@ -52,7 +52,7 @@ related_documents:
 - [ADR-OBS-001](../07-adr/quality/obs-001-logging-observability.md) — CloudWatch 수집, 로그 14일, 스냅샷, Slack 알림
 - [ADR-CI-001](../07-adr/platform/ci-001-github-actions-quality-gate.md) — 품질 게이트 유지, ECR push와 EC2 배포 활성화
 - [ADR-RUNTIME-001](../07-adr/platform/runtime-001-docker.md) — 이미지 검증(클린 빌드·비밀·취약점·명시 태그), ECR digest, CloudWatch Agent, 배포 후 Smoke Test
-- [ADR-DATA-005](../07-adr/data/data-005-redis-refresh-token.md) — 운영 사설 서브넷 Redis 8.8, Refresh Token 회전·재사용 탐지, 로그인 실패 제한, 장애 시 fail-closed
+- [ADR-DATA-005](../07-adr/data/data-005-redis-refresh-token.md) — Redis 8.8, Refresh Token 회전·재사용 탐지, 로그인 실패 제한, 장애 시 fail-closed. 6절의 배치 표현("사설 서브넷 전용 인스턴스")은 4.2절 결정에 따라 개정 대기 상태다
 
 ### 범위 제외
 
@@ -68,7 +68,7 @@ related_documents:
 | AWS 리전 | `ap-northeast-2` (서울) | 국내 사용자 대상 서비스로 서울 리전을 사용하기로 팀이 합의했다(2026-07-29 계획 수립 시점 확인). M2-01에서 설정하며 확정 기록을 남긴다 |
 | 토폴로지 | 단일 EC2 (Nginx + Next.js + Spring Boot) | 기술 정책 13절 |
 | 데이터베이스 | RDS PostgreSQL 17.10 | ADR-DATA-001, 기술 정책 |
-| 인증 저장소 | 사설 서브넷 Redis 8.8 | [ADR-DATA-005](../07-adr/data/data-005-redis-refresh-token.md) |
+| 인증 저장소 | Redis 8.8. ElastiCache를 쓰지 않고 앱 EC2에 동거한다(2026-07-29 결정, 4.2절) | [ADR-DATA-005](../07-adr/data/data-005-redis-refresh-token.md), [사양·비용 산정 5.4절](m2-cost-and-sizing.md) |
 | 이미지 저장소 | ECR | ADR-DEPLOY-002 |
 | CI 경로 | GitHub Actions → ECR → EC2, 수동 승인 | RV-NFR-012 |
 | 백업 | 일 1회 자동 스냅샷, 7일 보관, RPO 최대 24시간 | RV-NFR-010 |
@@ -90,7 +90,7 @@ related_documents:
 | 검증 참여자 제한 공개 방식 | M2-11 | 미결정 |
 | EC2 인스턴스 타입 | M2-03 | **결정** — `t4g.medium` ([사양·비용 산정](m2-cost-and-sizing.md) 3·7절) |
 | RDS 인스턴스 클래스 | M2-04 | **결정** — `db.t4g.micro` ([사양·비용 산정](m2-cost-and-sizing.md) 4·7절) |
-| Redis 인스턴스 사양 | M2-05 | 미결정 — 4.2절 |
+| Redis 인스턴스 사양 | M2-05 | **결정** — ElastiCache 미사용, 앱 EC2 동거 ([사양·비용 산정](m2-cost-and-sizing.md) 5.4절). ADR-DATA-005 6절 개정이 남았다 — 4.2절 |
 
 **제한 공개 방식**은 ADR-DEPLOY-002가 "검증 참여자에게만 제한 공개"만 규정하고 방식을 정하지 않았다. Nginx Basic Auth와 보안 그룹 IP allowlist 중 선택이 필요하다.
 
@@ -117,7 +117,9 @@ related_documents:
 
 `M2-01` 산정 과정에서 **계획대로 관리형 Redis를 쓸 수 없다는 제약 두 가지를 확인했다.** ElastiCache는 Redis OSS 7.1 이하만 제공해 고정 버전 8.8을 만족할 수 없고, `appendonly`·`appendfsync`를 지원하지 않아 `M2-05`가 요구하는 AOF `everysec`을 설정할 수 없다. 두 제약은 독립적이어서 Valkey로 버전 문제를 우회해도 AOF 문제는 남는다.
 
-선택지와 비용, 각 선택지가 바꾸는 계약 문서는 [사양·비용 산정 5절](m2-cost-and-sizing.md)에 정리했다. 이 결정은 [기술 정책 3절](../06-architecture/technology-policy.md)의 고정 버전 또는 [ADR-DATA-005](../07-adr/data/data-005-redis-refresh-token.md) 6·10·11절을 건드리므로 **임의로 정하지 않고** ADR-DATA-005 공동 owner(김인안·이우람)의 합의로 확정한다. `M2-05` 착수 전에 결정해야 한다.
+선택지와 비용은 [사양·비용 산정 5절](m2-cost-and-sizing.md)에 정리했다. **2026-07-29 이우람이 ElastiCache를 사용하지 않고 Redis 8.8을 앱 EC2에 함께 올리기로 결정했다.** 고정 버전과 AOF `everysec`을 모두 지키고 추가 비용이 없다. `M2-05`가 만들 사양은 같은 문서 5.4절에 있다.
+
+`M2-05` 착수 전에 **[ADR-DATA-005](../07-adr/data/data-005-redis-refresh-token.md) 6절의 "사설 서브넷 전용 Redis 8.8 인스턴스" 표현을 개정해야 한다.** 강제 규칙은 모두 유지되고 배치 표현만 어긋나지만, 계약 문서이므로 공동 owner(김인안·이우람) 합의로 개정하거나 배치만 다루는 후속 ADR을 추가한다.
 
 ## 5. Task 분해
 
@@ -137,7 +139,8 @@ related_documents:
 
 ### M2-03 네트워크와 EC2 프로비저닝
 
-- 작업: VPC 서브넷 구성(RDS·Redis용 사설 서브넷 포함), 보안 그룹 생성(인터넷 인바운드는 80·443만, 22는 작업자 IP로 제한), EC2 인스턴스 생성, Elastic IP 할당, EC2 IAM Role 부여
+- 작업: VPC 서브넷 구성(RDS용 사설 서브넷 포함), 보안 그룹 생성(인터넷 인바운드는 80·443만, 22는 작업자 IP로 제한), EC2 인스턴스 생성, Elastic IP 할당, EC2 IAM Role 부여
+- 사양: `t4g.medium`(arm64, 2 vCPU / 4 GiB), 루트 볼륨 gp3 30 GiB. NAT Gateway와 인터페이스 VPC 엔드포인트는 만들지 않는다([사양·비용 산정](m2-cost-and-sizing.md) 3·6.3절)
 - 선행: M2-01
 - 완료 조건: 22 포트가 전체 공개되지 않고, EC2가 IAM Role로 Parameter Store·ECR·CloudWatch에 접근하며, 사설 서브넷이 인터넷에서 직접 도달되지 않는다
 - 근거: ADR-SEC-001
@@ -145,16 +148,17 @@ related_documents:
 ### M2-04 RDS PostgreSQL 프로비저닝
 
 - 작업: 서브넷 그룹과 RDS 보안 그룹 생성(EC2 보안 그룹에서만 5432 허용), PostgreSQL 17.10 인스턴스 생성, 자동 스냅샷 일 1회·7일 보관 설정
+- 사양: `db.t4g.micro`(2 vCPU / 1 GiB), gp3 20 GiB, Single-AZ. `M2-12`에서 `FreeableMemory`·`CPUCreditBalance`를 확인하고 필요하면 `db.t4g.small`로 올린다([사양·비용 산정](m2-cost-and-sizing.md) 4절)
 - 선행: M2-03
 - 완료 조건: RDS가 인터넷에서 직접 접근되지 않고 EC2에서만 연결되며, 스냅샷 일정이 활성화된다
 - 근거: RV-NFR-010
 
 ### M2-05 Redis 프로비저닝
 
-- 작업: 사설 서브넷 전용 Redis 8.8 인스턴스 생성, Redis 보안 그룹 생성(EC2 보안 그룹에서만 6379 허용), 영속화 설정(AOF `everysec`, RDB 스냅샷), TTL·eviction 정책이 인증 키를 임의로 축출하지 않도록 확인
-- 선행: M2-03
-- 완료 조건: Redis가 인터넷에서 직접 접근되지 않고 EC2에서만 연결되며, 재기동 후에도 저장된 인증 상태가 유지되고, `auth:refresh:*`·`auth:login-failure:*` 키가 eviction 대상이 되지 않는다
-- 근거: [ADR-DATA-005](../07-adr/data/data-005-redis-refresh-token.md), [기술 정책 7절](../06-architecture/technology-policy.md)
+- 작업: 앱 EC2에 `redis:8.8-alpine` 컨테이너 실행, `127.0.0.1:6379`에만 바인딩, 영속화 설정(AOF `appendfsync everysec`, RDB 스냅샷)을 호스트 볼륨에 저장, `maxmemory-policy noeviction`과 `maxmemory` 256 MB 설정
+- 선행: M2-03, 4.2절 ADR-DATA-005 6절 개정
+- 완료 조건: Redis가 인터넷과 VPC 어디에서도 직접 접근되지 않고 같은 인스턴스에서만 연결되며, 재기동 후에도 저장된 인증 상태가 유지되고, `auth:refresh:*`·`auth:login-failure:*` 키가 eviction 대상이 되지 않는다
+- 근거: [ADR-DATA-005](../07-adr/data/data-005-redis-refresh-token.md), [기술 정책 7절](../06-architecture/technology-policy.md), [사양·비용 산정 5.4절](m2-cost-and-sizing.md)
 - 주의: 관리자 로그인·Refresh Token 회전·로그인 실패 제한과 `/internal/health/dependencies`가 Redis에 의존한다. 이 Task 없이는 M2-09의 관리자 흐름과 상태 확인 정상 조건을 만족할 수 없다
 
 ### M2-06 ECR 리포지토리와 이미지 push 자동화

@@ -72,9 +72,9 @@ MVP 데이터는 초기 스키마 baseline의 기준 데이터(Region 25건, Foo
 
 스토리지는 gp3 20 GiB(RDS 최소)로 시작한다. 자동 스냅샷은 프로비저닝 용량의 100%까지 무료이므로 7일 보관 스냅샷은 추가 비용이 발생하지 않는다.
 
-## 5. Redis 사양 — 결정 보류
+## 5. Redis 사양
 
-**계획 문서와 ADR이 요구하는 Redis 구성을 AWS 관리형 서비스로 만들 수 없다.** 사양을 정하기 전에 팀 결정이 필요하므로 6절 비용표에는 선택지별 금액을 모두 넣었다.
+**계획 문서와 ADR이 요구하는 Redis 구성을 AWS 관리형 서비스로 만들 수 없다.** 제약을 확인한 뒤 2026-07-29 이우람이 **ElastiCache를 사용하지 않고 초기에는 단일 인스턴스로 배포한다**고 결정했다. 5.4절이 결정 내용이고 5.1~5.3절은 그 근거다.
 
 ### 5.1. 확인한 제약 두 가지
 
@@ -106,7 +106,23 @@ MVP는 `ADMIN` 단일 역할에 소수 계정이므로 **전체 keyspace가 1 MB
 
 **R1은 두 강제 규칙을 모두 지키면서 비용이 0이지만 단일 장애점이 커진다.** 앱 인스턴스가 죽으면 Redis도 함께 죽는다. 다만 [ADR-DATA-005](../07-adr/data/data-005-redis-refresh-token.md) 12절이 Redis 장애를 fail-closed로 처리하고 재로그인을 요구하도록 이미 정했고, [NFR-AVAILABILITY-002](../01-requirements/non-functional-requirements.md#nfr-availability-002-초기-운영-배포-가용성과-수동-복구)가 단일 인스턴스·수동 복구를 허용하므로 이 위험은 M2 요구 수준 안에 있다.
 
-**어느 쪽도 계획 4절의 다른 항목처럼 임의로 정하지 않는다.** R1은 ADR-DATA-005의 배치 표현을, R3·R4는 고정 버전을 바꾼다. 결정은 [ownership.md](../03-team/ownership.md)상 인증 공통 최종 병합자(김인안)와 ADR-DATA-005 공동 owner(김인안·이우람)의 합의를 따른다.
+### 5.4. 결정 — R1
+
+**ElastiCache를 사용하지 않고 Redis Open Source 8.8을 앱 EC2에 함께 올린다**(2026-07-29, 이우람). 고정 버전과 AOF `everysec`을 모두 지킬 수 있고, 추가 비용이 없으며, `M2`가 단일 인스턴스 구성을 전제하므로 전용 인스턴스를 따로 두는 이점이 크지 않다는 판단이다. 채택 구성은 6.2절의 **A**다.
+
+`M2-05`가 만들 사양은 다음과 같다.
+
+| 항목 | 값 | 근거 |
+|---|---|---|
+| 엔진 | Redis Open Source 8.8 (`redis:8.8-alpine`) | [기술 정책 3절](../06-architecture/technology-policy.md), 로컬 `docker-compose.yml`과 같은 태그 |
+| 배치 | 앱 EC2의 컨테이너 | 5.4절 결정 |
+| 바인딩 | `127.0.0.1:6379` | 인터넷·VPC 어디에서도 도달하지 않게 한다. [ADR-DATA-005](../07-adr/data/data-005-redis-refresh-token.md) 11절 퍼블릭 IP 금지 |
+| 영속화 | AOF `appendfsync everysec` + RDB 스냅샷, 호스트 볼륨에 저장 | 계획 `M2-05`, 기술 정책 7절 |
+| eviction | `maxmemory-policy noeviction` | `auth:refresh:*`·`auth:login-failure:*`가 축출되지 않아야 한다(계획 `M2-05` 완료 조건) |
+| `maxmemory` | 256 MB | 5.2절 실제 keyspace가 1 MB 미만이라 상한에 닿지 않는다. 3절 메모리 여유 1.9 GiB 안이다 |
+| 백업 | EC2 볼륨 스냅샷에 포함 | 관리형 자동 백업이 없으므로 `M2-13`에서 재기동 후 인증 상태 유지를 확인한다 |
+
+**남은 절차 하나.** 이 결정은 [ADR-DATA-005](../07-adr/data/data-005-redis-refresh-token.md) 6절의 "운영은 사설 서브넷 전용 Redis 8.8 인스턴스를 사용한다"는 표현과 어긋난다. 강제 규칙(8.8 계열, 인터넷 미노출, 네임스페이스, TTL, 회전 원자성)은 모두 유지되지만 배치 표현은 갱신해야 한다. ADR 개정은 이 문서가 하지 않는다. 공동 owner(김인안·이우람) 합의로 ADR-DATA-005를 개정하거나 배치만 다루는 후속 ADR을 추가한다. **`M2-05` 착수 전에 처리한다.**
 
 ## 6. 월 비용 산정
 
@@ -151,7 +167,7 @@ MVP는 `ADMIN` 단일 역할에 소수 계정이므로 **전체 keyspace가 1 MB
 - **F는 예산을 초과한다.** NAT Gateway를 쓰는 구성은 채택할 수 없다.
 - **E는 산정치가 예산의 99%다.** RDS·ElastiCache 서울 배수가 EC2보다 크면 초과하고, 환율이 2026년 최고치로 가면 초과한다. 여유가 없어 권하지 않는다.
 - **NAT Gateway와 인터페이스 VPC 엔드포인트를 M2 구성에 넣지 않는다.** 두 항목만으로 예산의 28~43%를 쓴다. 앱 EC2는 계획대로 퍼블릭 서브넷에 두고 Elastic IP로 Parameter Store·ECR·CloudWatch에 접근하며, 인바운드는 보안 그룹으로 80·443과 작업자 IP의 22만 허용한다(`M2-03`).
-- 5절 결정이 R3·R4로 가면 구성 C, R1로 가면 구성 A가 된다. 두 경우 모두 EC2는 t4g.medium, RDS는 db.t4g.micro다.
+- **채택 구성은 A다**(5.4절 R1 결정). 월 예상 비용 `$57.53` = 84,600원으로 예산 목표의 56%다. `M2-12` 이후 RDS를 db.t4g.small로 올려도 구성 B의 105,800원(71%)으로 여유가 남는다.
 
 ## 7. 후속 Task에 넘기는 확정값
 
@@ -164,7 +180,8 @@ MVP는 `ADMIN` 단일 역할에 소수 계정이므로 **전체 keyspace가 1 MB
 | RDS 인스턴스 클래스 | `db.t4g.micro` (2 vCPU / 1 GiB) | `M2-04` (#43) |
 | RDS 스토리지 | gp3 20 GiB | `M2-04` (#43) |
 | RDS 배치 | Single-AZ, 사설 서브넷, 퍼블릭 액세스 없음 | `M2-04` (#43) |
-| Redis 사양 | **보류.** 5절 결정 후 확정 | `M2-05` (#44) |
+| Redis | `redis:8.8-alpine` 컨테이너를 앱 EC2에 동거, `127.0.0.1:6379` 바인딩, AOF `everysec`, `noeviction`, `maxmemory` 256 MB | `M2-05` (#44). 상세는 5.4절 |
+| ElastiCache | 사용하지 않는다 | `M2-05` (#44) |
 | NAT Gateway·인터페이스 VPC 엔드포인트 | 사용하지 않는다 | `M2-03` (#42) |
 | KMS 키 | `aws/ssm` 관리형 키 | `M2-07` (#46) |
 
