@@ -254,22 +254,13 @@ jobs:
       # 여기까지가 자격 증명 없이 수행하는 검증이다.
       # 브랜치 제한은 job 수준 `if`가 이미 처리하므로 step마다 반복하지 않는다.
       # 조건을 두 곳에 두면 한쪽만 고쳐 어긋날 수 있다.
-      # 진단용. OIDC 토큰의 sub·aud를 확인해 IAM 신뢰 정책과 대조한다.
-      # 이 값들은 비밀이 아니다. 토큰 자체는 출력하지 않는다.
-      # 신뢰 정책 일치가 확인되면 이 단계를 제거한다.
-      - name: OIDC claim 확인 (진단)
-        run: |
-          set -euo pipefail
-          token=$(curl -sSf -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
-            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | jq -r '.value')
-          payload=$(printf '%s' "$token" | cut -d. -f2 | tr '_-' '/+')
-          case $(( ${#payload} % 4 )) in
-            2) payload="${payload}==" ;;
-            3) payload="${payload}=" ;;
-          esac
-          printf '%s' "$payload" | base64 -d 2>/dev/null \
-            | jq -r '{sub, aud, ref, repository, event_name, workflow_ref}'
-
+      # IAM 역할 신뢰 정책은 GitHub의 immutable subject claim 형식을 기대한다.
+      #
+      #   repo:team-youngkk@307880221/masit-on@1308471593:ref:refs/heads/deploy/m2
+      #
+      # 조직·저장소 숫자 ID가 sub에 포함된다. 이름 기반 형식(`repo:owner/repo:ref:...`)으로
+      # 정책을 쓰면 AssumeRoleWithWebIdentity가 거절된다. 저장소를 옮기거나 이름을 바꿀
+      # 때는 ID가 유지되므로 정책을 고치지 않아도 되고, 이름 재사용 공격에도 안전하다.
       - name: AWS 자격 증명 (OIDC, 장기 키 없음)
         uses: aws-actions/configure-aws-credentials@v4
         with:
