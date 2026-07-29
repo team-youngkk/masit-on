@@ -1,0 +1,78 @@
+# ADR-CI-001 빌드·테스트 품질 게이트.
+# 모든 PR과 통합 브랜치 push에서 고정 런타임으로 빌드·자동 테스트를 실행하고
+# 실패한 변경을 차단한다.
+#
+# 이미지 빌드·검증·ECR push는 M2부터 활성화하는 별도 범위이므로 이 워크플로에 넣지 않는다
+# (ADR-DEPLOY-002, ADR-CI-001).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - develop
+      - main
+      - 'deploy/**'
+
+permissions:
+  contents: read
+
+# 같은 ref에 새 커밋이 오면 진행 중인 실행을 취소해 러너 시간을 낭비하지 않는다.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: 백엔드 빌드·테스트
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      # 기술 정책 3절이 JDK 21을 고정한다. Gradle은 Wrapper만 사용하며
+      # 시스템 Gradle로 Wrapper를 우회하지 않는다(CLAUDE.md 5절).
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      # 통합 테스트는 Testcontainers로 PostgreSQL·Redis를 실행 시점에 띄운다.
+      # ubuntu 러너에는 Docker가 이미 있어 추가 서비스 컨테이너가 필요하지 않다.
+      - name: 빌드와 자동화 테스트
+        run: ./gradlew --no-daemon clean build
+
+      # 실패 원인을 PR에서 바로 확인할 수 있어야 게이트가 쓸모 있다.
+      - name: 테스트 리포트 보관
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: |
+            build/reports/tests/test
+            build/test-results/test
+          retention-days: 14
+
+  frontend:
+    name: 프론트엔드 타입 검사
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      # 기술 정책 3절이 Node 24.18.0을 고정하고 frontend/.nvmrc도 같은 값이다.
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 의존성 설치
+        working-directory: frontend
+        run: npm ci
+
+      # next.config.ts가 Next 내장 TypeScript 단계를 끄고 있어 타입 검사는 tsc가 담당한다.
+      # `next build`는 러너에서 sharp 네이티브 바이너리 준비 문제로 조용히 실패하므로
+      # 컨테이너 이미지 빌드 쪽에서 검증한다.
+      - name: 타입 검사
+        working-directory: frontend
+        run: npm run typecheck
