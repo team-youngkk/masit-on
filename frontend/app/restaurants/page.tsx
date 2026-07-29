@@ -10,6 +10,7 @@ import {
   buildApiSearchParams,
   buildPageNumbers,
   buildRestaurantsHref,
+  fetchCreators,
   fetchRestaurants,
   toSingleValue,
   type RawSearchParams,
@@ -31,7 +32,10 @@ export default async function RestaurantsPage({
 }: RestaurantsPageProps) {
   const rawParams = await searchParams
   const apiParams = buildApiSearchParams(rawParams)
-  const result = await fetchRestaurants(apiParams)
+  const [result, creatorsResult] = await Promise.all([
+    fetchRestaurants(apiParams),
+    fetchCreators(),
+  ])
 
   const currentQuery = toSingleValue(rawParams.query) ?? ''
   const currentDistrict = toSingleValue(rawParams.district) ?? ''
@@ -94,10 +98,44 @@ export default async function RestaurantsPage({
           </select>
         </div>
 
-        {/* 유튜버 선택 UI는 이번 범위가 아니다. 기존 값만 숨겨서 유지한다. */}
-        {currentCreatorId ? (
-          <input type="hidden" name="creatorId" value={currentCreatorId} />
-        ) : null}
+        <div className={styles.selectGroup}>
+          <label className={styles.selectLabel} htmlFor="creatorId">
+            유튜버
+          </label>
+          {creatorsResult.ok && creatorsResult.data.items.length > 0 ? (
+            <select
+              id="creatorId"
+              name="creatorId"
+              defaultValue={currentCreatorId ?? ''}
+              className={styles.select}
+            >
+              <option value="">전체</option>
+              {creatorsResult.data.items.map((creator) => (
+                <option key={creator.id} value={creator.id}>
+                  {creator.channelName}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <select id="creatorId" defaultValue="" className={styles.select} disabled>
+              <option value="">전체</option>
+            </select>
+          )}
+          {/* select가 비활성화된 두 경우(빈 목록·조회 실패) 모두 기존 선택값을 잃지 않게 보존한다 */}
+          {(!creatorsResult.ok || creatorsResult.data.items.length === 0) &&
+          currentCreatorId ? (
+            <input type="hidden" name="creatorId" value={currentCreatorId} />
+          ) : null}
+          {creatorsResult.ok && creatorsResult.data.items.length === 0 ? (
+            <p className={styles.selectHint}>등록된 유튜버가 없습니다.</p>
+          ) : null}
+          {!creatorsResult.ok ? (
+            <p className={styles.selectError} role="alert">
+              {creatorsResult.message}
+            </p>
+          ) : null}
+        </div>
+
         <input type="hidden" name="size" value={currentSize} />
 
         <Button type="submit" className={styles.submit}>
