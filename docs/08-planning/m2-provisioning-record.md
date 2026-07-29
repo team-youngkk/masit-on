@@ -28,7 +28,7 @@ M2 초기 운영 배포에서 생성한 AWS 자원의 식별자와 완료 조건
 | 접근 방식 | IAM Identity Center 조직 인스턴스 `ssoins-7230c72b8df2ccaf`, 권한 세트 `AdministratorAccess`(세션 8시간) |
 | CLI 프로파일 | `masiton` (SSO. 장기 액세스 키 없음) |
 
-**이 계정은 맛잇온 전용이 아니다.** 2026-06-05에 만든 다른 프로젝트의 ECR 리포지토리 `commerce-payment`(이미지 8개)가 있고 삭제된 RDS의 로그 그룹 `RDSOSMetrics`가 남아 있다. 예산 범위 영향은 6절에 적었다.
+**이 계정은 맛잇온 전용이 아니다.** 2026-06-05에 만든 다른 프로젝트의 ECR 리포지토리 `commerce-payment`(이미지 8개)가 있고 삭제된 RDS의 로그 그룹 `RDSOSMetrics`가 남아 있다. 예산 범위 영향은 7절에 적었다.
 
 ## 3. M2-03 네트워크와 EC2 (#42)
 
@@ -240,7 +240,93 @@ aws rds describe-db-snapshots --snapshot-type automated
 
 **psql 클라이언트를 EC2에 설치했다**(`postgresql16`). 검증용이며 애플리케이션 실행에는 필요하지 않다.
 
-## 6. 예산 범위에 관한 확인 사항
+## 6. M2-06 ECR과 이미지 검증 (#45)
+
+### 6.1. ECR 리포지토리
+
+| 리포지토리 | URI |
+|---|---|
+| 백엔드 | `711457211155.dkr.ecr.ap-northeast-2.amazonaws.com/masiton-backend` |
+| 프론트엔드 | `711457211155.dkr.ecr.ap-northeast-2.amazonaws.com/masiton-frontend` |
+
+| 설정 | 값 | 이유 |
+|---|---|---|
+| 태그 변경 가능성 | `IMMUTABLE` | 같은 태그가 다른 이미지를 가리키는 것을 막는다. digest 식별 요구와 일관된다 |
+| push 시 스캔 | 활성 | 완료 조건의 취약점 검사. 기본 스캔이라 추가 비용이 없다 |
+| 암호화 | `AES256` | ECR 관리형. 고객 관리 KMS 키 비용이 발생하지 않는다 |
+| 수명 주기 | 최근 10개 초과분 만료 | 스토리지 비용 상한 |
+
+`latest` 태그는 쓰지 않는다([기술 정책 3절](../06-architecture/technology-policy.md)). 이미지는 커밋 SHA 태그와 digest로 식별한다.
+
+### 6.2. GitHub Actions OIDC
+
+| 자원 | 값 |
+|---|---|
+| OIDC 공급자 | `arn:aws:iam::711457211155:oidc-provider/token.actions.githubusercontent.com` |
+| 역할 | `masiton-github-actions-role` |
+| 최대 세션 | 3600초 |
+
+신뢰 정책이 허용하는 주체를 두 브랜치로 제한했다.
+
+```text
+repo:team-youngkk/masit-on:ref:refs/heads/deploy/m2
+repo:team-youngkk/masit-on:ref:refs/heads/main
+```
+
+PR 브랜치는 AWS 자격 증명을 받지 못한다. **이미지 빌드와 검증은 자격 증명 없이 수행할 수 있고 push만 AWS 권한이 필요하므로**, PR에서는 빌드·검증까지만 돌리고 push는 위 두 브랜치에서만 일어나게 하는 구성이다.
+
+인라인 정책 `masiton-ecr-push`는 `masiton-backend`·`masiton-frontend` 두 리포지토리로 범위를 좁혔다. `ecr:GetAuthorizationToken`만 리소스 범위를 지정할 수 없어 `*`로 두었다. 장기 액세스 키는 만들지 않았다([ADR-SEC-001](../07-adr/security/sec-001-secrets-workload-identity.md)).
+
+### 6.3. 이미지 검증 결과
+
+두 이미지를 **운영과 같은 `linux/arm64`로 빌드**해 [ADR-RUNTIME-001 13절](../07-adr/platform/runtime-001-docker.md)의 검사 항목을 확인했다.
+
+| 검사 | 백엔드 | 프론트엔드 |
+|---|---|---|
+| 클린 컨텍스트 빌드 | 성공 | 성공 |
+| 이미지 크기 | 132 MB | 74 MB |
+| 실행 사용자 | `uid=1001(masiton)` | `uid=1001(masiton)` |
+| `.env` 파일 | 0건 | 0건 |
+| 평문 비밀 패턴 | 0건 | 0건 |
+| 플랫폼 | `linux/arm64` | `linux/arm64` |
+| 컨테이너 기동 | 미확인 (8절) | Next.js 16.2.11 기동, `/` → `200` |
+
+평문 비밀 검사는 `BEGIN PRIVATE KEY`, `BEGIN RSA PRIVATE KEY`, `JWT_PRIVATE_KEY_PEM`, `POSTGRES_PASSWORD`, `masiton_local` 다섯 패턴을 이미지 파일 시스템에서 찾는 방식이다. 백엔드 `/app`에는 `application.jar` 하나만 있고 빌드 컨텍스트 잔여물이 없다.
+
+### 6.4. 베이스 이미지 digest 고정
+
+완료 조건이 "베이스 이미지가 명시 태그(운영은 digest)를 사용하고 대조된다"이므로 태그와 digest를 함께 고정했다.
+
+| 이미지 | digest |
+|---|---|
+| `node:24.18.0-alpine` | `sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd` |
+| `eclipse-temurin:21.0.11_10-jdk-alpine` | `sha256:1ff763083f2993d57d0bf374ab10bb3e2cb873af6c13a04458ebbd3e0337dc76` |
+| `eclipse-temurin:21.0.11_10-jre-alpine` | `sha256:3f08b13888f595cc49edabea7250ba69499ba25602b267da591720769400e08c` |
+
+세 이미지 모두 `linux/arm64/v8` 매니페스트를 포함한 다중 아키텍처 이미지임을 확인했다. digest는 매니페스트 목록 digest이므로 아키텍처와 무관하게 같은 값을 쓴다.
+
+**베이스 이미지를 갱신할 때는 태그와 digest를 함께 바꿔야 한다.** 한쪽만 바꾸면 빌드가 실패하거나 의도와 다른 이미지를 쓴다.
+
+### 6.5. 프론트엔드 이미지가 새로 필요했던 이유
+
+저장소에 백엔드 `Dockerfile` 하나만 있고 **프론트엔드 이미지를 만들 수단이 없었다.** `M2-06`이 프론트엔드 ECR 리포지토리와 이미지 push를 요구하므로 [frontend/Dockerfile](../../frontend/Dockerfile)을 추가했다.
+
+`next.config.ts`에 `output: 'standalone'`을 넣어 런타임 스테이지가 `node_modules` 전체 대신 추려낸 의존성만 담게 했다. 그 결과 이미지가 74 MB다. standalone 출력에는 정적 파일이 포함되지 않아 `.next/static`을 따로 복사한다.
+
+`frontend/.dockerignore`를 추가해 `node_modules`와 `.env`가 빌드 컨텍스트에 들어가지 않게 했다. 루트 `.dockerignore`에는 `frontend`를 넣어 백엔드 빌드 컨텍스트에서 프론트엔드 `node_modules` 전송을 없앴다.
+
+### 6.6. 남은 작업 — 워크플로
+
+**GitHub Actions 워크플로가 저장소에 존재하지 않는다.** `.github/`에 `CODEOWNERS`와 PR 템플릿만 있고 Actions 실행 이력도 0건이다. 그런데 다음 문서들은 워크플로가 이미 있는 것을 전제한다.
+
+- [ADR-CI-001](../07-adr/platform/ci-001-github-actions-quality-gate.md) (Accepted) — 빌드·자동 테스트를 실행해 실패한 변경을 차단한다
+- [ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md) 4절 — 품질 게이트를 "계속 유지한다"
+- [M2 계획](m2-deployment-plan.md) 8절 — 배포 후보 커밋의 GitHub Actions 빌드·테스트 통과
+- `M2-06` 작업 항목 — "워크플로에 이미지 빌드·검증·push 단계 추가"
+
+**ADR-CI-001이 구현된 적이 없어 추가할 대상 워크플로가 없다.** 기본 품질 게이트 워크플로 생성을 `M2-06`에 포함할지 별도 이슈로 분리할지는 팀 결정 사항이며, 이 문서는 사실만 기록한다. 어느 쪽이든 `M2-06` 완료 조건 "GitHub Actions가 장기 키 없이 OIDC로 push하고 이미지가 digest로 식별된다"는 워크플로 없이 검증할 수 없다.
+
+## 7. 예산 범위에 관한 확인 사항
 
 `My Monthly Cost Budget`(`$100`/월)은 **계정 전체 비용**을 대상으로 한다. 2절에 적었듯 이 계정에는 다른 프로젝트 자원이 있어 그 비용도 이 예산에 합산된다.
 
@@ -252,7 +338,7 @@ aws rds describe-db-snapshots --snapshot-type automated
 
 비용 할당 태그는 활성화 후 최대 24시간이 지나야 새 데이터에 적용되므로 M2 일정 안에서는 즉시 쓸 수 없다.
 
-### 6.1. 크레딧 만료
+### 7.1. 크레딧 만료
 
 **계정 크레딧 4건이 2026-07-29에 전량 만료됐다.** 따라서 M2 운영 비용은 전액 실제 청구다.
 
@@ -269,9 +355,12 @@ aws rds describe-db-snapshots --snapshot-type automated
 
 `M2-12` 시점에 실제 청구액과 산정치를 대조한다(계획 10절 마지막 완료 항목).
 
-## 7. 검증하지 못한 항목
+## 8. 검증하지 못한 항목
 
 - **예산 초과 알림 실제 도달.** 시험 예산 `masiton-alert-test`(한도 `$0.5`, 실제 1% 초과)를 만들어 확인 중이다. AWS Budgets가 하루 약 3회만 평가해 즉시 도달하지 않는다. 도달 확인 후 시험 예산을 삭제한다.
 - **SSH 접속.** 키 페어 `masiton-app`을 만들었으나 실제 SSH 접속은 시도하지 않았다. 인스턴스 접근은 SSM RunCommand로 검증했다.
 - **HTTPS와 도메인 응답.** A 레코드 전파는 확인했으나 `masiton.click`으로 실제 HTTP·HTTPS 응답은 받지 못한다. Nginx가 아직 없다(`M2-08`).
+- **백엔드 이미지 컨테이너 기동.** 이미지는 arm64로 빌드해 정적 검사를 통과했으나 컨테이너를 띄워 `/internal/health/live`를 확인하지는 않았다. 기동에 PostgreSQL·Redis 접속값이 필요하고 사설 서브넷 RDS는 작업자 PC에서 도달하지 않는다. `M2-09`에서 EC2 위에서 확인한다.
+- **ECR push와 digest 식별.** ECR 리포지토리와 OIDC 역할은 만들었으나 실제 push는 하지 않았다. 워크플로가 없어 6.6절 결정 후에 검증한다.
+- **취약점 검사 결과.** push 시 스캔을 활성화했으나 아직 push한 이미지가 없어 결과가 없다.
 - **애플리케이션 기동 후 메모리.** 3.6절은 기동 직후 기준값이며 Nginx·Next.js·Spring Boot 실행 후 실측은 `M2-09`에서 한다.
