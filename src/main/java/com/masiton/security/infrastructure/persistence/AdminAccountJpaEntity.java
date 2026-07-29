@@ -14,7 +14,7 @@ import jakarta.persistence.Table;
 
 /**
  * admin_account 테이블과 매핑되는 JPA Entity다.
- * V1__create_reference_and_admin_tables.sql의 admin_account 테이블 정의와 컬럼이 대응해야 한다.
+ * V1__create_initial_schema.sql의 admin_account 테이블 정의와 컬럼이 대응해야 한다.
  */
 @Entity
 @Table(name = "admin_account")
