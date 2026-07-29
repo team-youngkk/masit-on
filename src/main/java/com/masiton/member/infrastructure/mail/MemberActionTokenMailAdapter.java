@@ -7,18 +7,18 @@ import org.springframework.stereotype.Component;
 
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
+import com.masiton.common.security.MemberCookieSettings;
 import com.masiton.member.application.port.out.MemberActionTokenDeliveryPort;
 import com.masiton.member.domain.model.MemberActionPurpose;
-import com.masiton.security.infrastructure.configuration.SecurityProperties;
 
 @Component
 public class MemberActionTokenMailAdapter implements MemberActionTokenDeliveryPort {
     private final ObjectProvider<JavaMailSender> mailSenderProvider;
-    private final SecurityProperties properties;
+    private final MemberCookieSettings cookieSettings;
 
-    public MemberActionTokenMailAdapter(ObjectProvider<JavaMailSender> mailSenderProvider, SecurityProperties properties) {
+    public MemberActionTokenMailAdapter(ObjectProvider<JavaMailSender> mailSenderProvider, MemberCookieSettings cookieSettings) {
         this.mailSenderProvider = mailSenderProvider;
-        this.properties = properties;
+        this.cookieSettings = cookieSettings;
     }
 
     @Override
@@ -31,7 +31,7 @@ public class MemberActionTokenMailAdapter implements MemberActionTokenDeliveryPo
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);
         message.setSubject(purpose == MemberActionPurpose.EMAIL_VERIFICATION ? "Verify your Masit-on email" : "Reset your Masit-on password");
-        message.setText("Open this link to continue: " + properties.getMember().getPublicBaseUrl() + path + rawToken);
+        message.setText("Open this link to continue: " + cookieSettings.publicBaseUrl() + path + rawToken);
         try {
             mailSender.send(message);
         } catch (RuntimeException exception) {

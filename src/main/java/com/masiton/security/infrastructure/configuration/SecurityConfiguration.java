@@ -27,7 +27,7 @@ import org.springframework.security.authentication.AuthenticationManagerResolver
 import jakarta.servlet.http.HttpServletRequest;
 
 import com.masiton.security.infrastructure.web.SecurityErrorWriter;
-import com.masiton.member.infrastructure.web.MemberSessionRevocationFilter;
+import com.masiton.security.infrastructure.web.MemberSessionRevocationFilter;
 
 @Configuration
 public class SecurityConfiguration {

@@ -21,21 +21,21 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
+import com.masiton.common.security.MemberCookieSettings;
 import com.masiton.member.application.MemberAuthenticationResult;
 import com.masiton.member.application.MemberAuthenticationService;
 import com.masiton.member.application.MemberPrincipal;
 import com.masiton.member.domain.model.MemberAccount;
-import com.masiton.security.infrastructure.configuration.SecurityProperties;
 
 @RestController
 @RequestMapping("/api/auth")
 public class MemberAuthenticationController {
     private final MemberAuthenticationService service;
-    private final SecurityProperties properties;
+    private final MemberCookieSettings cookieSettings;
 
-    public MemberAuthenticationController(MemberAuthenticationService service, SecurityProperties properties) {
+    public MemberAuthenticationController(MemberAuthenticationService service, MemberCookieSettings cookieSettings) {
         this.service = service;
-        this.properties = properties;
+        this.cookieSettings = cookieSettings;
     }
 
     @PostMapping("/registrations")
@@ -93,7 +93,7 @@ public class MemberAuthenticationController {
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
             for (Cookie cookie : cookies) {
-                if (properties.getMember().getCookieName().equals(cookie.getName())) {
+                if (cookieSettings.cookieName().equals(cookie.getName())) {
                     return cookie.getValue();
                 }
             }
@@ -102,15 +102,15 @@ public class MemberAuthenticationController {
     }
 
     private ResponseCookie refreshCookie(String value) {
-        return ResponseCookie.from(properties.getMember().getCookieName(), value)
-                .httpOnly(true).secure(properties.isSecure()).sameSite(properties.getSameSite())
-                .path(properties.getMember().getPath()).maxAge(properties.getMember().getRefreshTokenTtl()).build();
+        return ResponseCookie.from(cookieSettings.cookieName(), value)
+                .httpOnly(true).secure(cookieSettings.secure()).sameSite(cookieSettings.sameSite())
+                .path(cookieSettings.path()).maxAge(cookieSettings.refreshTokenTtl()).build();
     }
 
     private ResponseCookie expiredRefreshCookie() {
-        return ResponseCookie.from(properties.getMember().getCookieName(), "")
-                .httpOnly(true).secure(properties.isSecure()).sameSite(properties.getSameSite())
-                .path(properties.getMember().getPath()).maxAge(Duration.ZERO).build();
+        return ResponseCookie.from(cookieSettings.cookieName(), "")
+                .httpOnly(true).secure(cookieSettings.secure()).sameSite(cookieSettings.sameSite())
+                .path(cookieSettings.path()).maxAge(Duration.ZERO).build();
     }
 
     public record EmailRequest(@NotBlank @Email @Size(max = 320) String email) { }
