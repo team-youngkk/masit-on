@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -48,8 +50,9 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.POST,
                                 "/api/auth/registrations",
                                 "/api/auth/email-verifications",
-                                "/api/auth/password-reset-requests",
-                                "/api/auth/password-resets",
+                                "/api/auth/email-verifications/resend",
+                                "/api/auth/password-resets/requests",
+                                "/api/auth/password-resets/confirmations",
                                 "/api/auth/tokens",
                                 "/api/auth/tokens/refresh").permitAll()
                         .requestMatchers(HttpMethod.GET,
@@ -80,15 +83,46 @@ public class SecurityConfiguration {
     ) {
         AuthenticationManager adminAuthenticationManager = authenticationManager(adminJwtDecoder, jwtAuthenticationConverter);
         AuthenticationManager memberAuthenticationManager = authenticationManager(memberJwtDecoder, jwtAuthenticationConverter);
-        return request -> isMemberBoundary(request.getRequestURI())
-                ? memberAuthenticationManager
-                : adminAuthenticationManager;
+        AuthenticationManager publicAuthenticationManager = authentication -> authenticatePublicRequest(
+                authentication,
+                memberAuthenticationManager,
+                adminAuthenticationManager
+        );
+        return request -> {
+            String requestUri = request.getRequestURI();
+            if (isMemberBoundary(requestUri)) {
+                return memberAuthenticationManager;
+            }
+            return isPublicReadRequest(request) ? publicAuthenticationManager : adminAuthenticationManager;
+        };
     }
 
     private boolean isMemberBoundary(String requestUri) {
         return requestUri.startsWith("/api/auth/")
                 || requestUri.equals("/api/me")
                 || requestUri.startsWith("/api/me/");
+    }
+
+    private boolean isPublicReadRequest(HttpServletRequest request) {
+        if (!HttpMethod.GET.matches(request.getMethod())) {
+            return false;
+        }
+        String requestUri = request.getRequestURI();
+        return requestUri.equals("/api/restaurants")
+                || requestUri.startsWith("/api/restaurants/")
+                || requestUri.equals("/api/creators");
+    }
+
+    private Authentication authenticatePublicRequest(
+            Authentication authentication,
+            AuthenticationManager memberAuthenticationManager,
+            AuthenticationManager adminAuthenticationManager
+    ) {
+        try {
+            return memberAuthenticationManager.authenticate(authentication);
+        } catch (AuthenticationException ignored) {
+            return adminAuthenticationManager.authenticate(authentication);
+        }
     }
 
     private AuthenticationManager authenticationManager(

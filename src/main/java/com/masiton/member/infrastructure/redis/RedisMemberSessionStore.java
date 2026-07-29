@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.HexFormat;
 import java.util.List;
@@ -18,8 +19,7 @@ import org.springframework.stereotype.Component;
 import com.masiton.member.application.InvalidMemberSessionException;
 import com.masiton.member.application.MemberSession;
 import com.masiton.member.application.port.out.MemberSessionStore;
-import com.masiton.security.infrastructure.configuration.SecurityProperties;
-import com.masiton.security.infrastructure.redis.RefreshTokenFactory;
+import com.masiton.common.security.MemberSessionSettings;
 
 @Component
 public class RedisMemberSessionStore implements MemberSessionStore {
@@ -28,6 +28,7 @@ public class RedisMemberSessionStore implements MemberSessionStore {
     private static final String REFRESH_INDEX_PREFIX = "auth:member:refresh:";
     private static final String USED_REFRESH_INDEX_PREFIX = "auth:member:refresh:used:";
     private static final String MEMBER_SESSIONS_PREFIX = "auth:member:sessions:";
+    private static final String MEMBER_SESSION_SEQUENCE_PREFIX = "auth:member:sessions:sequence:";
 
     private static final DefaultRedisScript<String> ISSUE_SCRIPT = new DefaultRedisScript<>("""
             local existing = redis.call('ZRANGE', KEYS[3], 0, -1)
@@ -36,7 +37,17 @@ public class RedisMemberSessionStore implements MemberSessionStore {
                 redis.call('ZREM', KEYS[3], sessionId)
               end
             end
-            redis.call('ZADD', KEYS[3], ARGV[1], ARGV[2])
+            local state = redis.call('GET', KEYS[4])
+            local sequence = 0
+            if state then
+              local separator = string.find(state, ':')
+              local stateCreatedAt = string.sub(state, 1, separator - 1)
+              if stateCreatedAt == ARGV[1] then
+                sequence = tonumber(string.sub(state, separator + 1)) + 1
+              end
+            end
+            local score = tonumber(ARGV[1]) + sequence / 1000
+            redis.call('ZADD', KEYS[3], score, ARGV[2])
             local evicted = ''
             while redis.call('ZCARD', KEYS[3]) > tonumber(ARGV[3]) do
               local oldest = redis.call('ZRANGE', KEYS[3], 0, 0)[1]
@@ -53,8 +64,25 @@ public class RedisMemberSessionStore implements MemberSessionStore {
             redis.call('SET', KEYS[1], ARGV[6], 'EX', ARGV[7])
             redis.call('SET', KEYS[2], ARGV[2], 'EX', ARGV[7])
             redis.call('EXPIRE', KEYS[3], ARGV[7])
+            redis.call('SET', KEYS[4], ARGV[1] .. ':' .. sequence, 'EX', ARGV[7])
             return evicted
             """, String.class);
+
+    private static final DefaultRedisScript<Long> REVOKE_ALL_SCRIPT = new DefaultRedisScript<>("""
+            local sessionIds = redis.call('ZRANGE', KEYS[1], 0, -1)
+            for _, sessionId in ipairs(sessionIds) do
+              local sessionKey = ARGV[1] .. sessionId
+              local serialized = redis.call('GET', sessionKey)
+              if serialized then
+                local record = cjson.decode(serialized)
+                redis.call('DEL', ARGV[2] .. record.tokenHash)
+              end
+              redis.call('DEL', sessionKey)
+            end
+            redis.call('DEL', KEYS[1])
+            redis.call('DEL', KEYS[2])
+            return #sessionIds
+            """, Long.class);
 
     private static final DefaultRedisScript<Long> ROTATE_SCRIPT = new DefaultRedisScript<>("""
             local sessionId = redis.call('GET', KEYS[1])
@@ -96,31 +124,39 @@ public class RedisMemberSessionStore implements MemberSessionStore {
 
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
-    private final RefreshTokenFactory refreshTokenFactory;
+    private final MemberRefreshTokenFactory refreshTokenFactory;
     private final int maxSessions;
+    private final Clock clock;
 
     public RedisMemberSessionStore(
             StringRedisTemplate redisTemplate,
             ObjectMapper objectMapper,
-            RefreshTokenFactory refreshTokenFactory,
-            SecurityProperties properties
+            MemberRefreshTokenFactory refreshTokenFactory,
+            MemberSessionSettings settings,
+            Clock memberSessionClock
     ) {
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
         this.refreshTokenFactory = refreshTokenFactory;
-        this.maxSessions = properties.getMember().getMaxSessions();
+        this.maxSessions = settings.maxSessions();
+        this.clock = memberSessionClock;
     }
 
     @Override
     public MemberSession issue(String memberId, Duration ttl) {
         String sessionId = UUID.randomUUID().toString();
         String refreshToken = refreshTokenFactory.create();
-        Instant createdAt = Instant.now();
+        Instant createdAt = Instant.now(clock);
         Instant expiresAt = createdAt.plus(ttl);
         MemberSessionRecord record = new MemberSessionRecord(memberId, hash(refreshToken), createdAt, expiresAt);
         String evictedSessionId = redisTemplate.execute(
                 ISSUE_SCRIPT,
-                List.of(sessionKey(sessionId), refreshIndexKey(refreshToken), memberSessionsKey(memberId)),
+                List.of(
+                        sessionKey(sessionId),
+                        refreshIndexKey(refreshToken),
+                        memberSessionsKey(memberId),
+                        memberSessionSequenceKey(memberId)
+                ),
                 String.valueOf(createdAt.toEpochMilli()),
                 sessionId,
                 String.valueOf(maxSessions),
@@ -135,7 +171,7 @@ public class RedisMemberSessionStore implements MemberSessionStore {
     @Override
     public MemberSession rotate(String refreshToken, Duration ttl) {
         String nextRefreshToken = refreshTokenFactory.create();
-        Instant expiresAt = Instant.now().plus(ttl);
+        Instant expiresAt = Instant.now(clock).plus(ttl);
         String oldHash = hash(refreshToken);
 
         String sessionId = redisTemplate.opsForValue().get(refreshIndexKey(refreshToken));
@@ -201,18 +237,12 @@ public class RedisMemberSessionStore implements MemberSessionStore {
 
     @Override
     public void revokeAll(String memberId) {
-        String sessionsKey = memberSessionsKey(memberId);
-        java.util.Set<String> sessionIds = redisTemplate.opsForZSet().range(sessionsKey, 0, -1);
-        if (sessionIds != null) {
-            for (String sessionId : sessionIds) {
-                String serialized = redisTemplate.opsForValue().get(sessionKey(sessionId));
-                if (serialized != null) {
-                    MemberSessionRecord record = read(serialized);
-                    redisTemplate.delete(List.of(sessionKey(sessionId), REFRESH_INDEX_PREFIX + record.tokenHash()));
-                }
-            }
-        }
-        redisTemplate.delete(sessionsKey);
+        redisTemplate.execute(
+                REVOKE_ALL_SCRIPT,
+                List.of(memberSessionsKey(memberId), memberSessionSequenceKey(memberId)),
+                SESSION_PREFIX,
+                REFRESH_INDEX_PREFIX
+        );
     }
 
     private MemberSessionRecord read(String serialized) {
@@ -248,6 +278,10 @@ public class RedisMemberSessionStore implements MemberSessionStore {
 
     private String memberSessionsKey(String memberId) {
         return MEMBER_SESSIONS_PREFIX + memberId;
+    }
+
+    private String memberSessionSequenceKey(String memberId) {
+        return MEMBER_SESSION_SEQUENCE_PREFIX + memberId;
     }
 
     private String hash(String value) {

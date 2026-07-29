@@ -12,34 +12,34 @@ import org.springframework.stereotype.Component;
 
 import com.masiton.member.application.MemberPrincipal;
 import com.masiton.member.application.port.out.MemberTokenIssuer;
-import com.masiton.security.infrastructure.configuration.SecurityProperties;
+import com.masiton.common.security.MemberJwtSettings;
 
 @Component
 public class JwtMemberTokenIssuer implements MemberTokenIssuer {
 
     private final JwtEncoder jwtEncoder;
-    private final SecurityProperties properties;
+    private final MemberJwtSettings settings;
 
-    public JwtMemberTokenIssuer(JwtEncoder jwtEncoder, SecurityProperties properties) {
+    public JwtMemberTokenIssuer(JwtEncoder jwtEncoder, MemberJwtSettings settings) {
         this.jwtEncoder = jwtEncoder;
-        this.properties = properties;
+        this.settings = settings;
     }
 
     @Override
     public String issueAccessToken(MemberPrincipal principal) {
         Instant issuedAt = Instant.now();
         JwtClaimsSet claims = JwtClaimsSet.builder()
-                .issuer(properties.getJwt().getIssuer())
+                .issuer(settings.issuer())
                 .subject(principal.memberId())
-                .audience(List.of(properties.getJwt().getMemberAudience()))
+                .audience(List.of(settings.audience()))
                 .id(java.util.UUID.randomUUID().toString())
                 .issuedAt(issuedAt)
-                .expiresAt(issuedAt.plus(properties.getJwt().getMemberAccessTokenTtl()))
+                .expiresAt(issuedAt.plus(settings.accessTokenTtl()))
                 .claim("sid", principal.sessionId())
                 .claim("roles", List.of("MEMBER"))
                 .build();
         JwsHeader header = JwsHeader.with(SignatureAlgorithm.RS256)
-                .keyId(properties.getJwt().getKeyId())
+                .keyId(settings.keyId())
                 .build();
         return jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
     }

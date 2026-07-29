@@ -1,6 +1,12 @@
 package com.masiton.security.infrastructure.redis;
 
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -10,6 +16,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -25,6 +32,7 @@ import com.masiton.member.application.port.out.MemberSessionStore;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.when;
 
 @SpringBootTest
 @com.masiton.test.TestProfile
@@ -71,9 +79,13 @@ class RedisRefreshTokenStoreIntegrationTest {
     @Autowired
     private StringRedisTemplate redisTemplate;
 
+    @MockitoBean
+    private Clock memberSessionClock;
+
     @BeforeEach
     void clearRedis() {
         redisTemplate.getConnectionFactory().getConnection().serverCommands().flushDb();
+        when(memberSessionClock.instant()).thenAnswer(ignored -> Instant.now());
     }
 
     @Test
@@ -145,5 +157,45 @@ class RedisRefreshTokenStoreIntegrationTest {
         assertThat(memberSessionStore.matches("member-a", rotated.refreshToken())).isFalse();
         assertThatThrownBy(() -> memberSessionStore.rotate(rotated.refreshToken(), Duration.ofDays(14)))
                 .isInstanceOf(InvalidMemberSessionException.class);
+    }
+
+    @Test
+    @DisplayName("같은 createdAt의 네 번째 발급도 신규 세션을 퇴출하지 않는다")
+    void memberSession_동일밀리초_신규세션퇴출방지() {
+        when(memberSessionClock.instant()).thenReturn(Instant.parse("2026-07-29T10:00:00Z"));
+
+        MemberSession first = memberSessionStore.issue("member-a", Duration.ofDays(14));
+        memberSessionStore.issue("member-a", Duration.ofDays(14));
+        memberSessionStore.issue("member-a", Duration.ofDays(14));
+        MemberSession fourth = memberSessionStore.issue("member-a", Duration.ofDays(14));
+
+        assertThat(memberSessionStore.matches("member-a", first.refreshToken())).isFalse();
+        assertThat(memberSessionStore.matches("member-a", fourth.refreshToken())).isTrue();
+    }
+
+    @Test
+    @DisplayName("전체 세션 폐기와 발급이 경합해도 후속 폐기가 orphan refresh token을 남기지 않는다")
+    void memberSession_전체폐기와발급경합_orphan없음() throws Exception {
+        MemberSession existing = memberSessionStore.issue("member-a", Duration.ofDays(14));
+        CountDownLatch start = new CountDownLatch(1);
+        try (ExecutorService executor = Executors.newFixedThreadPool(2)) {
+            Future<MemberSession> issued = executor.submit(() -> {
+                start.await();
+                return memberSessionStore.issue("member-a", Duration.ofDays(14));
+            });
+            Future<?> revoked = executor.submit(() -> {
+                start.await();
+                memberSessionStore.revokeAll("member-a");
+                return null;
+            });
+
+            start.countDown();
+            MemberSession concurrent = issued.get();
+            revoked.get();
+            memberSessionStore.revokeAll("member-a");
+
+            assertThat(memberSessionStore.matches("member-a", existing.refreshToken())).isFalse();
+            assertThat(memberSessionStore.matches("member-a", concurrent.refreshToken())).isFalse();
+        }
     }
 }

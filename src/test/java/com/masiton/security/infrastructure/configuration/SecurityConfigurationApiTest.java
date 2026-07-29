@@ -181,6 +181,36 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    @DisplayName("회원 공개 인증 경로는 계약된 POST 메서드만 허용한다")
+    void memberAuthenticationPublicRoutes_계약경로만허용() throws Exception {
+        String[] publicPaths = {
+                "/api/auth/registrations",
+                "/api/auth/email-verifications",
+                "/api/auth/email-verifications/resend",
+                "/api/auth/password-resets/requests",
+                "/api/auth/password-resets/confirmations",
+                "/api/auth/tokens",
+                "/api/auth/tokens/refresh"
+        };
+
+        for (String publicPath : publicPaths) {
+            mockMvc.perform(post(publicPath))
+                    .andExpect(status().isNotFound());
+        }
+        mockMvc.perform(post("/api/auth/password-reset-requests"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("회원 JWT를 포함한 공개 조회는 회원 decoder로 인증하고 허용한다")
+    void publicRead_memberJwt_허용() throws Exception {
+        String memberToken = signedToken("test-key-20260727", "masit-on", "masit-on-member-api");
+
+        mockMvc.perform(get("/api/restaurants").header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken))
+                .andExpect(status().isOk());
+    }
+
     private static KeyPair keyPair() {
         try {
             KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
