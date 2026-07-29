@@ -177,9 +177,11 @@ jobs:
           for image in "masiton-backend:${IMAGE_TAG}" "masiton-frontend:${IMAGE_TAG}"; do
             echo "=== $image ==="
 
-            # 컨테이너 안 find·grep이 결과 0건이면 비영점으로 끝나므로 `|| true`가 필요하다.
+            # find는 결과가 0건이어도 exit 0이므로 `|| true`가 필요하지 않다.
+            # 붙이면 docker나 컨테이너의 sh 실패까지 성공으로 바꿔, 검사가 수행되지
+            # 않았는데도 빈 결과로 통과한다. 실행 오류는 fail-closed로 둔다.
             env_hits=$(docker run --rm --entrypoint sh "$image" -c \
-              "find / -xdev -name '.env' -o -xdev -name '.env.*' 2>/dev/null" || true)
+              "find / -xdev -name '.env' -o -xdev -name '.env.*' 2>/dev/null")
             if [ -n "$env_hits" ]; then
               echo '.env 파일이 이미지에 포함됐다'
               printf '%s\n' "$env_hits"
@@ -187,8 +189,17 @@ jobs:
             fi
             echo '.env 미포함 확인'
 
+            # grep -rIl은 미검출이 exit 1이고 오류는 exit 2 이상이다. docker 자체 실패는
+            # 125 이상이다. 따라서 1만 정상으로 처리하고 나머지는 workflow를 실패시킨다.
+            set +e
             secret_hits=$(docker run --rm --entrypoint sh "$image" -c \
-              "grep -rIl -e 'BEGIN PRIVATE KEY' -e 'BEGIN RSA PRIVATE KEY' -e 'JWT_PRIVATE_KEY_PEM' -e 'POSTGRES_PASSWORD' /app 2>/dev/null" || true)
+              "grep -rIl -e 'BEGIN PRIVATE KEY' -e 'BEGIN RSA PRIVATE KEY' -e 'JWT_PRIVATE_KEY_PEM' -e 'POSTGRES_PASSWORD' /app 2>/dev/null")
+            grep_status=$?
+            set -e
+            if [ "$grep_status" -gt 1 ]; then
+              echo "비밀값 검사 실행이 실패했다 (exit ${grep_status}). 미검출로 처리하지 않는다."
+              exit 1
+            fi
             if [ -n "$secret_hits" ]; then
               echo '평문 비밀값 패턴이 이미지에 포함됐다'
               printf '%s\n' "$secret_hits"
@@ -236,6 +247,22 @@ jobs:
       # 여기까지가 자격 증명 없이 수행하는 검증이다.
       # 브랜치 제한은 job 수준 `if`가 이미 처리하므로 step마다 반복하지 않는다.
       # 조건을 두 곳에 두면 한쪽만 고쳐 어긋날 수 있다.
+      # 진단용. OIDC 토큰의 sub·aud를 확인해 IAM 신뢰 정책과 대조한다.
+      # 이 값들은 비밀이 아니다. 토큰 자체는 출력하지 않는다.
+      # 신뢰 정책 일치가 확인되면 이 단계를 제거한다.
+      - name: OIDC claim 확인 (진단)
+        run: |
+          set -euo pipefail
+          token=$(curl -sSf -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | jq -r '.value')
+          payload=$(printf '%s' "$token" | cut -d. -f2 | tr '_-' '/+')
+          case $(( ${#payload} % 4 )) in
+            2) payload="${payload}==" ;;
+            3) payload="${payload}=" ;;
+          esac
+          printf '%s' "$payload" | base64 -d 2>/dev/null \
+            | jq -r '{sub, aud, ref, repository, event_name, workflow_ref}'
+
       - name: AWS 자격 증명 (OIDC, 장기 키 없음)
         uses: aws-actions/configure-aws-credentials@v4
         with:
