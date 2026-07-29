@@ -55,7 +55,7 @@ jobs:
           retention-days: 14
 
   frontend:
-    name: 프론트엔드 빌드·타입 검사
+    name: 프론트엔드 타입 검사
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -71,11 +71,19 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      # package.json의 build는 `tsc --noEmit && next build`다.
-      # next.config.ts가 Next 내장 TypeScript 단계를 끄고 있어 타입 검사는 이 tsc가 담당한다.
-      - name: 타입 검사와 빌드
+      # 이 job은 타입 검사만 한다. `next build`는 images job이 컨테이너 안에서
+      # 실행하며 그쪽이 운영과 같은 Node·npm·아키텍처를 쓴다.
+      #
+      # 러너에서 `npm run build`(= tsc && next build)를 직접 돌렸을 때
+      # `next build`가 정적 페이지 생성 단계에서 조용히 exit 1로 죽었다. npm이
+      # sharp의 install 스크립트를 allow-scripts 게이트로 막아 네이티브 바이너리가
+      # 준비되지 않은 것이 원인으로 보인다. 같은 명령이 컨테이너 안에서는 통과한다.
+      #
+      # 러너 환경을 우회로 맞추는 대신 빌드 검증 지점을 컨테이너 하나로 모았다.
+      # `next build` 실패는 images job에서 그대로 차단된다.
+      - name: 타입 검사
         working-directory: frontend
-        run: npm run build
+        run: npm run typecheck
 
   images:
     name: 이미지 빌드·검증·push
