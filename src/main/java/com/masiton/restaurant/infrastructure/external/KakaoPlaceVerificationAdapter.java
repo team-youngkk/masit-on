@@ -2,6 +2,7 @@ package com.masiton.restaurant.infrastructure.external;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -126,14 +127,38 @@ class KakaoPlaceVerificationAdapter implements PlaceVerificationPort {
         if (id == null || name == null || placeUrl == null || roadAddress == null || phoneNumber == null) {
             throw new PlaceVerificationFailedException();
         }
-        return Optional.of(new VerifiedPlace(id, name, placeUrl, roadAddress, phoneNumber));
+        return Optional.of(new VerifiedPlace(id, name, canonicalPlaceUrl(placeUrl), roadAddress, phoneNumber));
+    }
+
+    /**
+     * Kakao 응답의 {@code place_url}은 {@code http}로 온다. 저장·노출하는 값은 https로
+     * 맞춘다. 같은 호스트가 https로 서비스하므로 scheme만 바꿔도 같은 자원을 가리킨다.
+     */
+    private String canonicalPlaceUrl(String placeUrl) {
+        try {
+            URI uri = URI.create(placeUrl);
+            if ("https".equalsIgnoreCase(uri.getScheme())) {
+                return placeUrl;
+            }
+            return new URI("https", uri.getAuthority(), uri.getPath(), uri.getQuery(), uri.getFragment()).toString();
+        } catch (IllegalArgumentException | URISyntaxException exception) {
+            throw new PlaceVerificationFailedException(exception);
+        }
     }
 
     private boolean samePlaceUrl(String verifiedUrl, URI submittedUrl) {
         try {
             URI verifiedUri = URI.create(verifiedUrl);
-            return verifiedUri.getScheme().equalsIgnoreCase("https")
-                    && verifiedUri.getHost().equalsIgnoreCase("place.map.kakao.com")
+            String scheme = verifiedUri.getScheme();
+            String host = verifiedUri.getHost();
+            if (scheme == null || host == null) {
+                return false;
+            }
+            // 제공자가 http로 주므로 scheme을 http·https 둘 다 허용한다. https만 받으면
+            // 실제 Kakao 응답의 모든 후보가 탈락해 맛집 등록이 성립하지 않는다.
+            // 동일성 판정은 host와 path로 한다.
+            return (scheme.equalsIgnoreCase("https") || scheme.equalsIgnoreCase("http"))
+                    && host.equalsIgnoreCase("place.map.kakao.com")
                     && verifiedUri.getPath().equals(submittedUrl.getPath());
         } catch (IllegalArgumentException exception) {
             throw new PlaceVerificationFailedException(exception);
