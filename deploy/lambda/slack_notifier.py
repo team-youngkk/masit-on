@@ -10,12 +10,19 @@ Webhook URL은 코드에 넣지 않고 Parameter Store SecureString에서 읽는
 그 복잡도를 늘릴 이유가 없다.
 """
 
+import datetime
 import json
 import os
 import urllib.error
 import urllib.request
 
 import boto3
+
+# CloudWatch 알람의 StateChangeTime은 항상 UTC로 온다. 운영자가 9시간을 환산해
+# 읽지 않도록 KST로 바꿔 보낸다. 오프셋은 명시한다(date-time-contract).
+# zoneinfo 대신 고정 오프셋을 쓰는 이유는 KST에 일광 절약 시간이 없고 Lambda
+# 런타임에 tzdata가 없을 수 있기 때문이다.
+KST = datetime.timezone(datetime.timedelta(hours=9), "KST")
 
 WEBHOOK_PARAMETER = os.environ.get("WEBHOOK_PARAMETER", "/masiton/alerts/slack-webhook-url")
 _ssm = boto3.client("ssm")
@@ -37,6 +44,23 @@ def _webhook_url() -> str:
     return _webhook_cache["url"]
 
 
+def _to_kst(value: str) -> str:
+    """CloudWatch의 UTC 표기를 KST로 바꾼다. 해석하지 못하면 원문을 그대로 둔다."""
+    if not value:
+        return ""
+    # `2026-07-30T06:10:00.000+0000`과 `...Z` 두 형태가 온다.
+    normalized = value.strip().replace("Z", "+00:00")
+    if len(normalized) >= 5 and normalized[-5] in "+-" and ":" not in normalized[-5:]:
+        normalized = f"{normalized[:-2]}:{normalized[-2:]}"
+    try:
+        parsed = datetime.datetime.fromisoformat(normalized)
+    except ValueError:
+        return value
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=datetime.timezone.utc)
+    return parsed.astimezone(KST).strftime("%Y-%m-%d %H:%M:%S +09:00")
+
+
 def _format(message: dict) -> str:
     """CloudWatch 알람 메시지를 사람이 읽는 한 줄로 만든다."""
     name = message.get("AlarmName", "(이름 없음)")
@@ -44,7 +68,7 @@ def _format(message: dict) -> str:
     reason = message.get("NewStateReason", "")
     description = message.get("AlarmDescription") or ""
     region = message.get("Region", "")
-    timestamp = message.get("StateChangeTime", "")
+    timestamp = _to_kst(message.get("StateChangeTime", ""))
 
     lines = [f"{STATE_MARK.get(state, state)}  *{name}*"]
     if description:
