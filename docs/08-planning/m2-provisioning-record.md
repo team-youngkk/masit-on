@@ -30,7 +30,7 @@ M2 초기 운영 배포에서 생성한 AWS 자원의 식별자와 완료 조건
 | 접근 방식 | IAM Identity Center 조직 인스턴스 `ssoins-7230c72b8df2ccaf`, 권한 세트 `AdministratorAccess`(세션 8시간) |
 | CLI 프로파일 | `masiton` (SSO. 장기 액세스 키 없음) |
 
-**이 계정은 맛잇온 전용이 아니다.** 2026-06-05에 만든 다른 프로젝트의 ECR 리포지토리 `commerce-payment`(이미지 8개)가 있고 삭제된 RDS의 로그 그룹 `RDSOSMetrics`가 남아 있다. 예산 범위 영향은 15절에 적었다.
+**이 계정은 맛잇온 전용이 아니다.** 2026-06-05에 만든 다른 프로젝트의 ECR 리포지토리 `commerce-payment`(이미지 8개)가 있고 삭제된 RDS의 로그 그룹 `RDSOSMetrics`가 남아 있다. 예산 범위 영향은 16절에 적었다.
 
 ## 3. M2-03 네트워크와 EC2 (#42)
 
@@ -291,7 +291,7 @@ PR 브랜치는 AWS 자격 증명을 받지 못한다. **이미지 빌드와 검
 | `.env` 파일 | 0건 | 0건 |
 | 평문 비밀 패턴 | 0건 | 0건 |
 | 플랫폼 | `linux/arm64` | `linux/arm64` |
-| 컨테이너 기동 | 미확인 (16절) | Next.js 16.2.11 기동, `/` → `200` |
+| 컨테이너 기동 | 미확인 (17절) | Next.js 16.2.11 기동, `/` → `200` |
 
 평문 비밀 검사는 `BEGIN PRIVATE KEY`, `BEGIN RSA PRIVATE KEY`, `JWT_PRIVATE_KEY_PEM`, `POSTGRES_PASSWORD`, `masiton_local` 다섯 패턴을 이미지 파일 시스템에서 찾는 방식이다. 백엔드 `/app`에는 `application.jar` 하나만 있고 빌드 컨텍스트 잔여물이 없다.
 
@@ -1052,7 +1052,70 @@ M2에서 실제로 한 것은 파이프라인 없는 수동 실행이다. 담당
 
 **2026-07-30에 CD를 M2 범위로 포함하기로 정했다.** 이슈 [#78](https://github.com/team-youngkk/masit-on/issues/78)에 현재 상태, 제안 방식(GitHub Actions `environment` 승인 게이트 + SSM 실행), 완료 조건, 검토가 필요한 지점을 정리했다.
 
-## 15. 예산 범위에 관한 확인 사항
+## 15. CD — 승인 게이트 배포 (#78)
+
+구성 일시 2026-07-30. **CD를 M2 범위로 포함하기로 정한 결정**(14.3절)에 따라 이 마일스톤에서 구현했다.
+
+### 15.1. 구성
+
+```text
+push(main·deploy/m2) → 빌드·테스트 → 이미지 빌드·검증·ECR push
+                     → [environment: production 승인 대기]
+                     → SSM으로 app-deploy.sh 실행 → 상태 확인
+```
+
+| 항목 | 값 |
+|---|---|
+| 위치 | [`ci.yml`](../../.github/workflows/ci.yml)의 `운영 배포` job |
+| 순서 보장 | `needs: [images]` |
+| 승인 게이트 | GitHub `environment: production` |
+| 필수 리뷰어 | 팀 4인(`w00lam`·`tjdgns0618`·`inan0226`·`jinyp01`) |
+| 배포 허용 브랜치 | `main`, `deploy/m2` |
+| 실행 경로 | OIDC → `ssm:SendCommand`(`AWS-RunShellScript`) |
+| 추가 권한 | `masiton-ssm-deploy` 인라인 정책. `SendCommand`를 대상 인스턴스와 문서로 제한 |
+
+**별도 워크플로로 나누지 않았다.** 이미지 job과 순서를 보장하려면 `needs`가 필요하고, 워크플로를 나누면 `workflow_run`에 의존해야 한다. 그 트리거는 기본 브랜치에 파일이 있어야 발동하고 OIDC `sub`가 실제 push된 ref를 가리키지 않는다. 6.6절에서 이미 겪은 문제다.
+
+**배포 스크립트를 저장소에서 실어 보낸다.** 인스턴스에 미리 설치해 두면 스크립트를 바꿀 때 수동 단계가 생겨 [ADR-RUNTIME-001](../07-adr/platform/runtime-001-docker.md) 12절이 경계한 "재현 절차가 문서 밖 암묵 지식이 되는 것"에 가까워진다. base64로 실어 인용과 개행 처리를 없앤다.
+
+### 15.2. environment를 쓰면 OIDC subject가 바뀐다
+
+첫 실행에서 `AssumeRoleWithWebIdentity`가 거절됐다. **job에 `environment`를 지정하면 OIDC `sub` claim이 `ref:refs/heads/...`가 아니라 `environment:production`이 된다.** 신뢰 정책이 ref 두 개만 허용하고 있어 맞지 않았다.
+
+신뢰 정책에 다음 subject를 추가해 해결했다.
+
+```text
+repo:team-youngkk@307880221/masit-on@1308471593:environment:production
+```
+
+6.6절의 "`workflow_run`은 `sub`가 기본 브랜치를 가리켜 거절된다"와 같은 계열이다. **OIDC subject는 트리거와 job 구성에 따라 달라지므로 신뢰 정책을 고칠 때 실제 발급되는 값을 확인해야 한다.**
+
+### 15.3. 완료 조건 검증
+
+| 완료 조건 | 결과 |
+|---|---|
+| 승인 없이는 배포 job이 실행되지 않는다 | 통과. 이미지 job 후 `waiting`으로 정지 |
+| 승인 후 배포가 실행되고 digest가 기록된다 | 통과. job summary와 실행 출력에 digest |
+| 배포 후 상태 확인 실패 시 job이 실패한다 | 스크립트가 폴링 후 non-zero로 끝나고 명령 상태가 `Success`가 아니면 job도 실패한다 |
+| 롤백도 같은 경로로 가능하다 | 이전 커밋 SHA의 실행을 재실행한다. 재실행도 승인을 다시 요구하는 것을 확인했다 |
+| 권한이 인스턴스와 문서 단위로 제한된다 | 통과. `SendCommand`가 `i-0b451f18bca827cc9`와 `AWS-RunShellScript`로 제한 |
+| 장기 AWS 액세스 키를 쓰지 않는다 | 통과. OIDC 단기 자격 증명 |
+
+배포 결과를 인스턴스에서 대조했다.
+
+```text
+CD가 기록한 참조   backend  @sha256:183d652d71f445c49d9e2dac6a4cad0e0966b941771bd8d8140c731cf2b91399
+ECR의 같은 태그    masiton-backend  sha256:183d652d... (일치)
+서비스 4종         masiton-redis·masiton-backend·masiton-frontend·nginx 모두 active
+상태 확인 3종      200, db·redis 개별 UP
+공개 조회          200
+docker inspect     비밀값 패턴 0건
+인터넷             화면·API·관리자 화면 모두 200
+```
+
+**의도적 실패 차단은 아직 시험하지 않았다.** 이슈 완료 조건의 마지막 항목이며 16절에 남겼다.
+
+## 16. 예산 범위에 관한 확인 사항
 
 `My Monthly Cost Budget`(`$100`/월)은 **계정 전체 비용**을 대상으로 한다. 2절에 적었듯 이 계정에는 다른 프로젝트 자원이 있어 그 비용도 이 예산에 합산된다.
 
@@ -1064,7 +1127,7 @@ M2에서 실제로 한 것은 파이프라인 없는 수동 실행이다. 담당
 
 비용 할당 태그는 활성화 후 최대 24시간이 지나야 새 데이터에 적용되므로 M2 일정 안에서는 즉시 쓸 수 없다.
 
-### 15.1. 크레딧 만료
+### 16.1. 크레딧 만료
 
 **계정 크레딧 4건이 2026-07-29에 전량 만료됐다.** 따라서 M2 운영 비용은 전액 실제 청구다.
 
@@ -1081,7 +1144,7 @@ M2에서 실제로 한 것은 파이프라인 없는 수동 실행이다. 담당
 
 `M2-12` 시점에 실제 청구액과 산정치를 대조한다(계획 10절 마지막 완료 항목).
 
-## 16. 검증하지 못한 항목
+## 17. 검증하지 못한 항목
 
 2026-07-30 기준이다. Kakao·YouTube 운영 API Key와 Slack Webhook 발급은 이 목록에서 해소됐다(12절, 11.4절).
 
@@ -1089,4 +1152,4 @@ M2에서 실제로 한 것은 파이프라인 없는 수동 실행이다. 담당
 - **SSH 접속.** 키 페어 `masiton-app`을 만들었으나 실제 SSH 접속은 시도하지 않았다. 인스턴스 접근은 SSM RunCommand로 검증했다.
 - **`masiton-admin` 폐기.** 배포·리허설 검증용 계정이며 M2 종료 시 폐기 여부를 판단한다.
 - **WS 담당자별 화면 인수.** 12.5절.
-- **CD 파이프라인.** 운영 배포가 아직 수동 실행이다. CD를 M2 범위로 포함하기로 정했으므로 [#78](https://github.com/team-youngkk/masit-on/issues/78)이 끝나야 M2가 완료된다(14.3절).
+- **CD의 의도적 실패 차단.** 15절에서 승인 게이트와 정상 배포는 검증했으나, 실패하는 배포를 일부러 만들어 job이 차단되는지는 시험하지 않았다.
