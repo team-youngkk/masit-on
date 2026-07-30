@@ -107,6 +107,11 @@
   font-size: var(--font-size-sm);
 }
 
+.cardAction {
+  margin-top: auto;
+  padding-top: var(--space-2);
+}
+
 .pagination {
   display: flex;
   flex-direction: column;
