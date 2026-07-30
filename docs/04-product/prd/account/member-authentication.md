@@ -254,7 +254,7 @@ Refresh Token 재사용이 탐지되면 해당 Token 계열을 폐기한다. Red
 - [회원 계정·인증 API](../../../05-specs/api/account/member-authentication-api.md)
 - [ADR-AUTH-002](../../../07-adr/security/auth-002-member-jwt-refresh-token.md)
 
-- [1차 확장 범위](../../../00-overview/scope.md#51-1차-확장-확정-범위)
+- [1차 확장 범위](../../../00-overview/scope.md#51-1차-확장)
 - [기능 요구사항](../../../01-requirements/functional-requirements.md)
 - [비즈니스 규칙](../../../01-requirements/business-rules.md)
 - [비기능 요구사항](../../../01-requirements/non-functional-requirements.md)

@@ -649,53 +649,133 @@ related_documents:
 - 결정 상태:
   - 확정
 
-### NFR-PRIVACY-003 회원 기능 도입 시 재검토
+<a id="nfr-privacy-003-회원-기능-도입-시-재검토"></a><a id="nfr-privacy-003-회원-개인정보-최소-수집과-생명주기"></a>
+
+### NFR-PRIVACY-003 회원 개인정보 최소 수집과 생명주기
 
 - 요구사항:
-  - 회원 기능이나 새로운 개인 정보 수집이 범위에 추가되기 전에 수집 목적, 항목, 보관, 삭제와 접근 통제 기준을 별도 요구사항으로 확정해야 한다.
+  - 1차 확장은 이메일, 비밀번호 해시, 계정 상태·시각, 인증·세션의 해시·식별자와 찜·최근 기록의 회원·맛집 식별자 및 시각만 수집한다.
+  - 탈퇴 요청 뒤 인증을 즉시 차단하고 개인화 관계·인증 정보를 정리한 다음 회원 개인정보를 물리 삭제해야 한다.
 - 적용 대상:
-  - MVP 이후 회원·개인화 기능
+  - 일반 회원 계정, 인증·세션, 찜과 최근 본 맛집
 - 목표 기준:
-  - 개인정보 기준 승인 전 해당 기능의 운영 반영 0건
+  - 이름, 전화번호, 생년월일, 주소, 사용자 위치, 비밀번호·Token 원문 수집·저장·로그·응답 노출 0건
+  - 탈퇴 중에는 처리 완료 전까지 재로그인·재가입 0건
 - 검증 방법:
-  - 범위 변경 및 출시 심사 체크리스트 확인
+  - 데이터 계약·탈퇴 통합 테스트·로그 및 API 응답 표본 검사
 - 중요도:
-  - High
+  - Critical
 - 결정 상태:
-  - MVP 제외
+  - 확정
 
 ## 15. 1차 확장 품질 기준
 
-<a id="nfr-security-004-회원-인증-보호"></a><a id="nfr-security-005-공개-조회-인증-장애-격리"></a>
+<a id="nfr-performance-005-개인화지도유튜버-상세-조회-응답-시간"></a>
 
-### NFR-SECURITY-004~005 회원 인증과 공개 조회
+### NFR-PERFORMANCE-005 개인화·지도·유튜버 상세 조회 응답 시간
 
-- 회원 비밀번호·Action Token·Refresh Token 원문은 저장·로그에 남기지 않고, 로그인 실패 제한·세션 회전·`sid` 폐기를 검증한다.
-- 공개 맛집 상세는 선택적 회원 인증 또는 개인화 저장소 장애에도 기본 `200` 응답을 유지하며 최근 기록만 생략한다.
+- 요구사항:
+  - 찜·최근 목록, 지도 영역 조회, 유튜버 상세와 연결 목록은 정상 부하에서 애플리케이션 서버 내부 처리 p95 1.5초 이하를 목표로 한다.
+- 적용 대상:
+  - 1차 확장의 회원 개인화 조회, 지도 bounds 조회, 유튜버 상세 조회
+- 검증 방법:
+  - 대표 데이터와 정상 부하에서 API 부하·실행 계획을 검사한다.
+- 중요도:
+  - High
+- 결정 상태:
+  - 확정
+
+<a id="nfr-security-004-회원-인증-보호"></a><a id="nfr-security-004-회원-자격-증명과-token-보호"></a>
+
+### NFR-SECURITY-004 회원 자격 증명과 Token 보호
+
+- 요구사항:
+  - 회원 비밀번호·Action Token·Refresh Token 원문을 저장·로그·응답에 남기지 않고, 로그인 실패 제한·세션 회전·`sid` 폐기를 강제한다.
+- 적용 대상:
+  - 일반 회원 가입·로그인·재발급·로그아웃·비밀번호 재설정·탈퇴
+- 검증 방법:
+  - 비밀정보 검사, Redis·PostgreSQL 통합 테스트, Token 재사용·세션 폐기 보안 테스트
+- 중요도:
+  - Critical
+- 결정 상태:
+  - 확정
+
+<a id="nfr-security-005-공개-조회-인증-장애-격리"></a><a id="nfr-security-005-회원-인증-남용과-계정-열거-방지"></a>
+
+### NFR-SECURITY-005 회원 인증 남용과 계정 열거 방지
+
+- 요구사항:
+  - 계정 상태·존재와 메일 발송 결과가 외부 응답·처리 시간으로 식별되지 않게 하며 가입·재설정·로그인 요청 제한을 적용한다.
+  - 공개 맛집 상세는 선택적 회원 인증 또는 개인화 저장소 장애에도 기본 `200` 응답을 유지하고 최근 기록만 생략한다.
+- 적용 대상:
+  - 회원 가입·인증·비밀번호 재설정·로그인과 공개 맛집 상세
+- 검증 방법:
+  - 계정 상태별 응답·처리 시간 표본, 요청 제한, 누락·만료·변조 Token 및 저장소 장애 통합 테스트
+- 중요도:
+  - Critical
+- 결정 상태:
+  - 확정
 
 <a id="nfr-external-004-지도-api-키와-외부-sdk-경계"></a>
 
 ### NFR-EXTERNAL-004 지도 API 키와 외부 SDK 경계
 
-- Kakao Maps 브라우저 키는 허용 도메인으로 제한하고 서버 REST 키·bounds 원문·위치 개인정보를 로그와 공개 응답에서 분리한다.
+- 요구사항:
+  - Kakao Maps 브라우저 키는 허용 도메인으로 제한하고 서버 REST 키·bounds 원문·위치 개인정보를 로그와 공개 응답에서 분리한다.
+- 적용 대상:
+  - 지도 SDK 로딩, 지도 영역 조회와 외부 키 설정
+- 검증 방법:
+  - 브라우저 키 출처·서버 설정·로그·응답 검사와 SDK 실패 브라우저 테스트
+- 중요도:
+  - High
+- 결정 상태:
+  - 확정
 
 <a id="nfr-compatibility-004-지도-접근성과-모바일-조작"></a>
 
 ### NFR-COMPATIBILITY-004 지도 접근성과 모바일 조작
 
-- 지도는 키보드·스크린 리더·360px 화면에서 대체 목록으로 탐색할 수 있고 SDK 실패가 공개 탐색을 막지 않아야 한다.
+- 요구사항:
+  - 지도는 키보드·스크린 리더·360px 화면에서 대체 목록으로 탐색할 수 있고 SDK 실패가 공개 탐색을 막지 않아야 한다.
+- 적용 대상:
+  - 지도 마커, 대체 목록, 맛집 선택과 상세 이동
+- 검증 방법:
+  - 지원 브라우저·360px 화면·키보드·스크린 리더 표본과 SDK 실패 테스트
+- 중요도:
+  - High
+- 결정 상태:
+  - 확정
 
 <a id="nfr-test-004-1차-확장-보안통합브라우저-검증"></a>
 
 ### NFR-TEST-004 1차 확장 보안·통합·브라우저 검증
 
-- 회원 인증·개인화 동시성·공개 상세 인증 장애 격리·V1→V5 migration·지도 SDK·유튜버 상세의 정상·예외·경계를 자동화 검증한다.
+- 요구사항:
+  - 회원 인증·개인화 동시성·공개 상세 인증 장애 격리·V1→V5 migration·지도 SDK·유튜버 상세의 정상·예외·경계를 자동화 검증한다.
+- 적용 대상:
+  - 1차 확장 API, 데이터 migration, 브라우저 사용자 여정
+- 검증 방법:
+  - JUnit·Testcontainers·MockMvc·브라우저 흐름과 CI 품질 게이트
+- 중요도:
+  - Critical
+- 결정 상태:
+  - 확정
 
 <a id="nfr-privacy-004-위치와-행동-데이터-최소화"></a>
 
 ### NFR-PRIVACY-004 위치와 행동 데이터 최소화
 
-- 최근 기록은 회원·맛집 식별자와 조회 시각만 최소 보존하고 30일·50개 제한을 적용한다. 현재 위치는 수집하지 않으며 지도 bounds 원문을 로그에 남기지 않는다.
+- 요구사항:
+  - 최근 기록은 회원·맛집 식별자와 조회 시각만 보관하고, upsert Command에서는 회원별 최신 50개 초과분만 정리한다.
+  - 30일 경과 기록은 별도 주기 cleanup Command로 삭제하며, 현재 위치는 수집하지 않고 지도 bounds 원문을 로그에 남기지 않는다.
+- 적용 대상:
+  - 최근 본 맛집, 지도 SDK·영역 조회와 로그·분석 이벤트
+- 검증 방법:
+  - 저장 항목·50개 경계·주기 cleanup·브라우저 권한·로그 표본 검사
+- 중요도:
+  - Critical
+- 결정 상태:
+  - 확정
 
 ## 16. 우선순위 및 측정 계획
 
@@ -705,9 +785,12 @@ related_documents:
 | [NFR-PERFORMANCE-002](non-functional-requirements.md#nfr-performance-002-검색필터-조합-응답-시간) | 검색·필터 조합 응답 시간 | High | 부하 테스트 | 확정 | 출시 전 검증 |
 | [NFR-PERFORMANCE-003](non-functional-requirements.md#nfr-performance-003-관리자-등록-응답-시간) | 관리자 등록 응답 시간 | High | 부하 테스트 | 확정 | 출시 전 검증 |
 | [NFR-PERFORMANCE-004](non-functional-requirements.md#nfr-performance-004-페이지-크기-및-조회량-제한) | 페이지 크기 및 조회량 제한 | High | 경계값·응답 검사 | 확정 | API 명세 전 확정 |
+| [NFR-PERFORMANCE-005](non-functional-requirements.md#nfr-performance-005-개인화지도유튜버-상세-조회-응답-시간) | 개인화·지도·유튜버 상세 조회 응답 시간 | High | 부하·실행 계획 검사 | 확정 | 구현에서 검증 |
 | [NFR-SECURITY-001](non-functional-requirements.md#nfr-security-001-공개-조회와-관리자-접근-통제) | 공개 조회와 관리자 접근 통제 | Critical | 보안 테스트 | 확정 | 출시 전 검증 |
 | [NFR-SECURITY-002](non-functional-requirements.md#nfr-security-002-입력-및-웹-공격-방어) | 입력 및 웹 공격 방어 | Critical | 악성 입력 테스트 | 확정 | 출시 전 검증 |
 | [NFR-SECURITY-003](non-functional-requirements.md#nfr-security-003-비밀정보와-오류-정보-보호) | 비밀정보와 오류 정보 보호 | Critical | 비밀정보·응답 검사 | 확정 | 출시 전 검증 |
+| [NFR-SECURITY-004](non-functional-requirements.md#nfr-security-004-회원-자격-증명과-token-보호) | 회원 자격 증명과 Token 보호 | Critical | 보안·통합 테스트 | 확정 | 구현에서 검증 |
+| [NFR-SECURITY-005](non-functional-requirements.md#nfr-security-005-회원-인증-남용과-계정-열거-방지) | 회원 인증 남용과 계정 열거 방지 | Critical | 응답·장애 격리 테스트 | 확정 | 구현에서 검증 |
 | [NFR-INTEGRITY-001](non-functional-requirements.md#nfr-integrity-001-참조-및-필수값-정합성) | 참조 및 필수값 정합성 | Critical | 통합 테스트 | 확정 | 데이터 모델링 전 확정 |
 | [NFR-INTEGRITY-002](non-functional-requirements.md#nfr-integrity-002-중복-및-동시-등록-방지) | 중복 및 동시 등록 방지 | Critical | 동시성 테스트 | 확정 | 데이터 모델링 전 확정 |
 | [NFR-INTEGRITY-003](non-functional-requirements.md#nfr-integrity-003-등록-원자성과-공개-상태-일관성) | 등록 원자성과 공개 상태 일관성 | Critical | 실패 주입·인수 테스트 | 확정 | 데이터 모델링 전 확정 |
@@ -720,15 +803,18 @@ related_documents:
 | [NFR-EXTERNAL-001](non-functional-requirements.md#nfr-external-001-영상-원본과-외부-링크-분리) | 영상 원본과 외부 링크 분리 | High | 장애 모의·저장 검사 | 확정 | 구현 시작 전 확정 |
 | [NFR-EXTERNAL-002](non-functional-requirements.md#nfr-external-002-외부-호출-실패와-변경-격리) | 외부 호출 실패와 변경 격리 | High | 외부 계약 모의 테스트 | 확정 | 구현에서 검증 |
 | [NFR-EXTERNAL-003](non-functional-requirements.md#nfr-external-003-링크-검증과-외부-인증정보) | 링크 검증과 외부 인증정보 | High | 입력·비밀정보 검사 | 확정 | API 명세 전 확정 |
+| [NFR-EXTERNAL-004](non-functional-requirements.md#nfr-external-004-지도-api-키와-외부-sdk-경계) | 지도 API 키와 외부 SDK 경계 | High | 키·SDK 장애 검사 | 확정 | 구현에서 검증 |
 | [NFR-OBSERVABILITY-001](non-functional-requirements.md#nfr-observability-001-요청-추적과-오류-분류) | 요청 추적과 오류 분류 | High | 로그 상관관계 검사 | 확정 | 출시 전 검증 |
 | [NFR-OBSERVABILITY-002](non-functional-requirements.md#nfr-observability-002-운영-지표와-생명주기-기록) | 운영 지표와 생명주기 기록 | High | 지표·로그 대조 | 확정 | 출시 전 검증 |
 | [NFR-OBSERVABILITY-003](non-functional-requirements.md#nfr-observability-003-로그-품질과-민감정보-차단) | 로그 품질과 민감정보 차단 | Critical | 로그 검사 | 확정 | 출시 전 검증 |
 | [NFR-COMPATIBILITY-001](non-functional-requirements.md#nfr-compatibility-001-웹모바일-브라우저-호환성) | 웹·모바일 브라우저 호환성 | High | 브라우저 인수 테스트 | 확정 | 출시 전 검증 |
 | [NFR-COMPATIBILITY-002](non-functional-requirements.md#nfr-compatibility-002-응답-형식과-문자-처리) | 응답 형식과 문자 처리 | High | 계약·문자 테스트 | 확정 | API 명세 전 확정 |
 | [NFR-COMPATIBILITY-003](non-functional-requirements.md#nfr-compatibility-003-모바일-응답-크기) | 모바일 응답 크기 | Medium | 응답 검사 | 확정 | API 명세 전 확정 |
+| [NFR-COMPATIBILITY-004](non-functional-requirements.md#nfr-compatibility-004-지도-접근성과-모바일-조작) | 지도 접근성과 모바일 조작 | High | 브라우저·보조기술 검사 | 확정 | 구현에서 검증 |
 | [NFR-TEST-001](non-functional-requirements.md#nfr-test-001-자동화-테스트-계층) | 자동화 테스트 계층 | High | 테스트 추적 검토 | 확정 | 구현 시작 전 확정 |
 | [NFR-TEST-002](non-functional-requirements.md#nfr-test-002-변경외부-의존성성능-검증) | 변경·외부 의존성·성능 검증 | High | 계약·부하 테스트 | 확정 | 출시 전 검증 |
 | [NFR-TEST-003](non-functional-requirements.md#nfr-test-003-배포-품질-게이트) | 배포 품질 게이트 | Critical | 배포 차단 시험 | 확정 | 배포 설계 전 확정 |
+| [NFR-TEST-004](non-functional-requirements.md#nfr-test-004-1차-확장-보안통합브라우저-검증) | 1차 확장 보안·통합·브라우저 검증 | Critical | 자동화·브라우저 테스트 | 확정 | 단계 완료 전 검증 |
 | [NFR-DEPLOYMENT-001](non-functional-requirements.md#nfr-deployment-001-재현-가능한-빌드와-환경-분리) | 재현 가능한 빌드와 환경 분리 | High | 재빌드·비밀정보 검사 | 확정 | 배포 설계 전 확정 |
 | [NFR-DEPLOYMENT-002](non-functional-requirements.md#nfr-deployment-002-배포-전후-검증) | 배포 전후 검증 | Critical | 배포 기록 확인 | 확정 | 출시 전 검증 |
 | [NFR-DEPLOYMENT-003](non-functional-requirements.md#nfr-deployment-003-버전-추적과-복구-절차) | 버전 추적과 복구 절차 | High | 복구 리허설 | 후속 설계에서 결정 | 배포 설계 전 확정 |
@@ -738,7 +824,8 @@ related_documents:
 | [NFR-MAINTAINABILITY-003](non-functional-requirements.md#nfr-maintainability-003-추적성과-운영-복잡도) | 추적성과 운영 복잡도 | High | 추적성·ADR 검토 | 확정 | 출시 전 검증 |
 | [NFR-PRIVACY-001](non-functional-requirements.md#nfr-privacy-001-mvp-개인정보-최소화) | MVP 개인정보 최소화 | Critical | 데이터 항목 검사 | 확정 | 구현 시작 전 확정 |
 | [NFR-PRIVACY-002](non-functional-requirements.md#nfr-privacy-002-인증정보와-외부-키-보호) | 인증정보와 외부 키 보호 | Critical | 비밀정보 검사 | 확정 | 출시 전 검증 |
-| [NFR-PRIVACY-003](non-functional-requirements.md#nfr-privacy-003-회원-기능-도입-시-재검토) | 회원 기능 도입 시 재검토 | High | 범위 변경 심사 | MVP 제외 | 구현 시작 전 확정 |
+| [NFR-PRIVACY-003](non-functional-requirements.md#nfr-privacy-003-회원-개인정보-최소-수집과-생명주기) | 회원 개인정보 최소 수집과 생명주기 | Critical | 데이터·탈퇴·로그 검사 | 확정 | 구현에서 검증 |
+| [NFR-PRIVACY-004](non-functional-requirements.md#nfr-privacy-004-위치와-행동-데이터-최소화) | 위치와 행동 데이터 최소화 | Critical | 저장·정리·로그 검사 | 확정 | 구현에서 검증 |
 
 ## 17. 검토 결정 기록
 

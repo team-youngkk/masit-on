@@ -132,7 +132,8 @@ related_documents:
 ### ADR-AUTO-001 자동 수집과 배치 처리
 
 - 현재 상태: Post-MVP
-- 현재 결정: Jsoup, n8n, Spring Scheduler, Spring Batch 6.0.4와 자동 주기 동기화를 도입하지 않는다.
+- 현재 결정: Jsoup, n8n, Spring Scheduler, Spring Batch 6.0.4와 자동 주기 수집·동기화를 도입하지 않는다.
+- 분리된 결정: 최근 본 맛집의 30일 보존을 집행하는 제한적 Scheduler는 자동 수집과 다른 문제이므로 [ADR-DATA-010](data/data-010-recent-view-retention-cleanup.md)에서 Accepted 결정으로 관리한다.
 - 활성화 조건: 관리자 확인 없는 자동 등록과 구분되는 승인된 수집·검수 흐름이 범위에 포함된다.
 - 도입 전 확인: n8n·Scheduler·Batch 책임 경계, 정확한 n8n·Jsoup 버전, 실행 이력·재시작·중복 방지, 외부 API 비용
 - 영향: 운영 구성요소, Redis 락, 테스트, 관리자 흐름

@@ -87,7 +87,7 @@ Redis `auth:member:` namespace에는 Refresh Token 원문이 아니라 SHA-256 �
 ### 4.4. 폐기와 계정 상태
 
 - 회원용 보호 API와 Refresh 검증은 Token의 암호학적 유효성만으로 허용하지 않고 현재 `member_account.status`가 `ACTIVE`인지 확인한다. `PENDING_VERIFICATION`, `DISABLED`, `DELETION_PENDING`과 삭제된 계정은 거부한다. 특히 탈퇴 요청으로 `DELETION_PENDING`이 저장된 직후부터 기존 Access Token도 사용할 수 없다.
-- 모든 회원 Bearer 인증은 JWT의 `sid`로 PostgreSQL `member_session_revocation`을 조회한다. 같은 `sid`의 폐기 표식이 있으면 Access Token의 서명과 만료가 유효해도 `401 AUTHENTICATION_REQUIRED`로 거부한다. 이 조회나 계정 상태 확인을 수행할 수 없으면 보호 API는 `503 AUTHENTICATION_SERVICE_UNAVAILABLE`로 fail-closed 처리한다.
+- 모든 **보호 경계의** 회원 Bearer 인증은 JWT의 `sid`로 PostgreSQL `member_session_revocation`을 조회한다. 같은 `sid`의 폐기 표식이 있으면 Access Token의 서명과 만료가 유효해도 `401 AUTHENTICATION_REQUIRED`로 거부한다. 이 조회나 계정 상태 확인을 수행할 수 없으면 보호 API는 `503 AUTHENTICATION_SERVICE_UNAVAILABLE`로 fail-closed 처리한다.
 - 로그아웃은 현재 `sid`만 폐기하고 다른 활성 세션은 유지한다. 비밀번호 재설정 완료와 회원 탈퇴는 해당 회원의 모든 활성 세션과 남은 인증·재설정 Token을 폐기한다.
 - 서버는 세션 폐기 시 PostgreSQL `member_session_revocation`에 `sid`, 최초 폐기 시각과 보호 만료 시각을 저장한다. 같은 `sid`의 재시도는 `revoked_at=LEAST(기존값, 입력값)`, `expires_at=GREATEST(기존값, 입력값)`인 멱등 upsert로 처리하여 폐기 시작 시점을 늦추거나 보호 기간을 줄이지 않는다.
 - 폐기 표식에는 회원 FK·이메일을 저장하지 않는다. 탈퇴로 회원을 물리 삭제한 뒤에도 필요한 최대 14일 동안 유지하고 `expires_at` 이후 물리 삭제한다.
@@ -106,7 +106,7 @@ Redis `auth:member:` namespace에는 Refresh Token 원문이 아니라 SHA-256 �
 
 회원가입·이메일 인증·비밀번호 재설정·로그인·재발급은 기능별로 정의된 `/api/auth/**` 경로만 허용한다. 로그아웃은 회원 Bearer JWT와 회원 Refresh 쿠키를 요구한다. 현재 회원 정보·탈퇴와 개인화 자원은 `/api/me` 및 `/api/me/**` 아래에 두고 `MemberPrincipal`로만 본인을 결정한다.
 
-공개 조회는 Authorization 헤더가 없으면 계속 무인증으로 동작한다. 헤더를 보냈지만 JWT가 만료·변조됐거나 audience가 다르면 인증된 회원으로 취급하지 않고 `401`을 반환한다.
+공개 조회는 Authorization 헤더가 없으면 계속 무인증으로 동작한다. `GET /api/restaurants/{restaurantId}`는 유효한 회원 Token에서만 최근 기록용 문맥을 선택적으로 사용한다. 이 한 경로에서는 헤더가 없거나 JWT가 만료·변조·폐기됐거나 audience가 다르고, 회원 상태·폐기 표식 조회 또는 최근 기록 저장에 실패해도 principal을 만들지 않고 최근 기록을 생략한 익명 `200` 공개 조회로 처리한다. 그 밖의 회원 보호 경계에서 헤더를 보냈지만 JWT가 만료·변조됐거나 audience가 다르면 `401`을 반환하며, 인증 상태 저장소 장애는 `503`으로 fail-closed 처리한다.
 
 ## 6. 선택 근거
 
@@ -164,6 +164,7 @@ Redis는 만료와 원자 회전에 적합하지만 장애 중 폐기 증거까�
 - 로그아웃 표식의 동일 `sid` 재시도와 역순 입력에서 `LEAST(revoked_at)`, `GREATEST(expires_at)`이 유지되고 표식 저장 직후 기존 Access Token이 `401`, Redis 복구 뒤 Refresh 세션이 거부·정리되는지 검증한다.
 - 네 번째 로그인에 따른 세션 퇴출, Refresh 재사용 탐지, 비밀번호 재설정과 탈퇴가 대상 `sid` 표식을 남기고 기존 Access Token을 즉시 거부하는지 검증한다. 비밀번호 재설정은 모든 세션의 표식을 보장할 수 없으면 비밀번호도 변경되지 않아야 한다.
 - PostgreSQL 표식 실패, Redis 장애, 탈퇴 부분 실패를 주입해 상태 코드, fail-closed, 재시도·알림·수동 복구와 공개 조회 격리를 검증한다.
+- 공개 맛집 상세는 유효 회원 Token에서만 최근 기록 upsert를 시도하고, 누락·만료·변조·폐기·교차 audience Token과 회원 인증·개인화 저장소 장애에서는 익명 `200`과 기록 생략을 유지하는지 검증한다.
 - Token·Cookie·Authorization, 이메일, 클라이언트 주소와 HMAC 비밀이 저장소·응답·로그에 남지 않는지 검사한다.
 
 ## 11. 재검토 조건

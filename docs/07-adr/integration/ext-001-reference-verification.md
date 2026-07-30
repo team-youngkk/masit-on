@@ -77,7 +77,7 @@ Kakao 어댑터와 YouTube 어댑터는 동일한 Port 계약(존재 확인, 현
 관리자 등록 요청은 Kakao·YouTube 응답을 기다리는 동안 동기적으로 블로킹된다. Kakao 또는 YouTube가 느리거나 응답하지 않으면:
 
 - [NFR-PERFORMANCE-003](../../01-requirements/non-functional-requirements.md#nfr-performance-003-관리자-등록-응답-시간)은 관리자 등록의 애플리케이션 내부 처리 시간만 p95 1초로 측정하고 외부 서비스 지연은 별도로 측정하도록 명시하므로, 외부 지연 자체는 이 성능 기준을 위반하지 않는다. 하지만 등록을 시도하는 관리자 세션은 실질적으로 그 시간만큼 대기하거나 실패를 마주한다.
-- MVP 범위에는 메시지 큐나 비동기 워커가 없으므로([ADR-AUTO-001](../adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) Post-MVP, Spring Batch·Scheduler 비활성), 실패한 등록은 관리자가 나중에 수동으로 재시도하는 것이 유일한 복구 경로다.
+- MVP 범위에는 관리자 등록을 위한 메시지 큐나 비동기 워커가 없으므로([ADR-AUTO-001](../adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) Post-MVP), 실패한 등록은 관리자가 나중에 수동으로 재시도하는 것이 유일한 복구 경로다. [ADR-DATA-010](../data/data-010-recent-view-retention-cleanup.md)의 최근 기록 cleanup Scheduler는 등록 경로에 적용하지 않는다.
 - 이 위험은 인프라로 없애지 않고 범위를 좁혀 완화한다. 첫째, 명시적 타임아웃을 두어 응답 없는 호출이 관리자 세션을 무한정 묶어두지 않게 한다(10장 강제 규칙). 둘째, 실패를 등록 실패로 명확히 구분해 반환하고 부분 저장을 금지한다([NFR-INTEGRITY-003](../../01-requirements/non-functional-requirements.md#nfr-integrity-003-등록-원자성과-공개-상태-일관성)) — 즉 외부 호출 실패가 일부만 저장된 맛집·유튜버·영상을 남기지는 않는다. 저빈도·단일 관리자 작업이라는 호출 패턴과 초기 월 150,000원 예산 목표([adr-traceability.md](../adr-traceability.md))를 고려하면, 이 정도의 관리자 측 재시도 부담을 수용하고 별도 비동기 인프라를 두지 않는 것이 이 시점에서 합리적인 절충이다.
 
 ## 9. 적용 범위

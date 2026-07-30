@@ -218,11 +218,11 @@ Creator는 상세 진입 여부와 채널 표시 정보를 소유한다. Visit�
 
 - [유튜버 상세 API](../../../05-specs/api/detail/creator-detail-api.md)
 
-- [1차 확장 범위](../../../00-overview/scope.md#51-1차-확장-확정-범위)
-- [기능 요구사항](../../../01-requirements/functional-requirements.md#56-유튜버-상세)
-- [비즈니스 규칙](../../../01-requirements/business-rules.md#15-유튜버-상세-확장-규칙)
+- [1차 확장 범위](../../../00-overview/scope.md#51-1차-확장)
+- [기능 요구사항](../../../01-requirements/functional-requirements.md#fr-creator-004-유튜버-상세-정보-조회)
+- [비즈니스 규칙](../../../01-requirements/business-rules.md#br-creator-008-유튜버-상세-공개와-찾을-수-없음-처리)
 - [비기능 요구사항](../../../01-requirements/non-functional-requirements.md)
-- [도메인 경계](../../../02-analysis/domain-boundaries.md#유튜버-상세-조합)
+- [도메인 경계](../../../02-analysis/domain-boundaries.md)
 - [맛집 상세 PRD](restaurant-detail.md)
 - [유튜버 기반 탐색 PRD](../discovery/creator-discovery.md)
 - [1차 확장 Workstream](../../../02-analysis/first-expansion-workstreams.md#7-ws-08-유튜버-상세)
