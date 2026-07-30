@@ -25,7 +25,7 @@ public class JdbcMemberActionTokenRepository implements MemberActionTokenReposit
         jdbcTemplate.update("UPDATE member_action_token SET status = 'REVOKED', completed_at = ? "
                         + "WHERE member_id = ? AND purpose = ? AND status = 'ISSUED'", issuedAt, token.memberId(), token.purpose().name());
         jdbcTemplate.update("INSERT INTO member_action_token (id, member_id, token_hash, purpose, status, issued_at, expires_at) "
-                        + "VALUES (?, ?, ?, ?, 'ISSUED', ?, ?)", java.util.UUID.randomUUID(), token.memberId(), token.tokenHash(),
+                        + "VALUES (?, ?, ?, ?, 'ISSUED', ?, ?)", token.id(), token.memberId(), token.tokenHash(),
                 token.purpose().name(), issuedAt, token.expiresAt());
     }
 
@@ -34,8 +34,8 @@ public class JdbcMemberActionTokenRepository implements MemberActionTokenReposit
         byte[] hash = hash(rawToken);
         return jdbcTemplate.query("UPDATE member_action_token SET status = 'USED', completed_at = ? "
                         + "WHERE token_hash = ? AND purpose = ? AND status = 'ISSUED' AND expires_at > ? "
-                        + "RETURNING member_id, token_hash, purpose, expires_at", (resultSet, rowNum) -> new MemberActionToken(
-                        resultSet.getObject("member_id", java.util.UUID.class), resultSet.getBytes("token_hash"),
+                        + "RETURNING id, member_id, token_hash, purpose, expires_at", (resultSet, rowNum) -> new MemberActionToken(
+                        resultSet.getObject("id", java.util.UUID.class), resultSet.getObject("member_id", java.util.UUID.class), resultSet.getBytes("token_hash"),
                         MemberActionPurpose.valueOf(resultSet.getString("purpose")), resultSet.getTimestamp("expires_at").toInstant()),
                 now, hash, purpose.name(), now).stream().findFirst();
     }

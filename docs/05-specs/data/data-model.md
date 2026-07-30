@@ -73,6 +73,9 @@ FoodCategory도 Restaurant 도메인의 참조 데이터로 둔다. Restaurant�
 | MemberAccount | Member/Auth | 회원가입·인증·로그인 유스케이스([WS-05](../../02-analysis/first-expansion-workstreams.md#4-ws-05-사용자-계정인증)) | Member/Auth | 회원 인증·개인화 |
 | MemberActionToken | Member/Auth | 메일 인증·재설정 발급 | Member/Auth | 회원 인증 API |
 | MemberSessionRevocation | Member/Auth | 로그아웃·세션 축출·탈퇴·재사용 탐지 | Member/Auth | 회원 인증 API |
+| MemberActionMailOutbox | Member/Auth | 키 식별자·AES-GCM 암호문을 사용한 인증·재설정 메일 비동기 전달 | Member/Auth | 회원 인증 API |
+| MemberDeletionJob | Member/Auth | 탈퇴 개인정보 정리 재시도 | Member/Auth | 회원 인증 API |
+| MemberSessionRevocationRecovery | Member/Auth | Redis↔PostgreSQL 폐기 표식 보상 | Member/Auth | 회원 인증 API |
 | Favorite | Personal | 회원 찜 명령 | Personal | 개인 맛집 관리 |
 | RecentRestaurantView | Personal | 공개 상세 부수효과·개별 삭제 | Personal | 개인 맛집 관리 |
 
@@ -141,7 +144,7 @@ Restaurant, Creator, Video와 Visit는 일반 사용자 노출을 위한 publica
 
 - 삭제·비공개 전환은 별도 운영 명령으로 수행하고 논리 삭제 데이터는 자동 purge 없이 보존한다.
 - 외부 표시 메타데이터는 최신값만 유지하고 변경 이력을 저장하지 않는다.
-- 로그인 실패 제한과 Refresh Token의 Redis 키·검증값·정리 전략은 [data-review.md](data-review.md#rv-data-006-관리자-refresh-token로그인-제한-저장)와 인증 ADR에서 확정했다.
+- 회원 요청·로그인 제한은 Redis 회원 namespace에 저장하고, key에는 정규화 이메일·클라이언트 주소 대신 용도 분리 `rateLimitSecret`의 HMAC-SHA-256 hex만 사용한다. Refresh Token의 Redis 키·검증값·정리 전략은 인증 ADR을 따른다.
 - 검색 인덱스와 추가 동시성 제어는 확정 부하·데이터 규모의 성능 측정에서 병목이 확인될 때만 활성화한다.
 
 상세 상태와 우선순위는 [data-review.md](data-review.md)에 기록한다.

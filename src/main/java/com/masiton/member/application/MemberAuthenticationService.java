@@ -18,6 +18,7 @@ import com.masiton.common.web.ErrorCode;
 import com.masiton.member.application.port.out.MemberAccountRepository;
 import com.masiton.member.application.port.out.MemberActionTokenDeliveryPort;
 import com.masiton.member.application.port.out.MemberActionTokenRepository;
+import com.masiton.member.application.port.out.MemberRateLimitStore;
 import com.masiton.member.application.port.out.MemberSessionRevocationStore;
 import com.masiton.member.application.port.out.MemberSessionStore;
 import com.masiton.member.application.port.out.MemberTokenIssuer;
@@ -35,6 +36,7 @@ public class MemberAuthenticationService {
     private final MemberAccountRepository accounts;
     private final MemberActionTokenRepository actionTokens;
     private final MemberActionTokenDeliveryPort actionTokenDelivery;
+    private final MemberRateLimitStore rateLimits;
     private final MemberSessionStore sessions;
     private final MemberSessionRevocationStore revocations;
     private final MemberTokenIssuer tokenIssuer;
@@ -43,12 +45,13 @@ public class MemberAuthenticationService {
     private final Clock clock;
 
     public MemberAuthenticationService(MemberAccountRepository accounts, MemberActionTokenRepository actionTokens,
-            MemberActionTokenDeliveryPort actionTokenDelivery, MemberSessionStore sessions,
+            MemberActionTokenDeliveryPort actionTokenDelivery, MemberRateLimitStore rateLimits, MemberSessionStore sessions,
             MemberSessionRevocationStore revocations, MemberTokenIssuer tokenIssuer, PasswordEncoder passwordEncoder,
             MemberJwtSettings jwtSettings, Clock memberSessionClock) {
         this.accounts = accounts;
         this.actionTokens = actionTokens;
         this.actionTokenDelivery = actionTokenDelivery;
+        this.rateLimits = rateLimits;
         this.sessions = sessions;
         this.revocations = revocations;
         this.tokenIssuer = tokenIssuer;
@@ -58,8 +61,11 @@ public class MemberAuthenticationService {
     }
 
     @Transactional
-    public void register(String email, String password) {
+    public void register(String email, String password, String source) {
         String normalizedEmail = normalizeEmail(email);
+        if (!rateLimits.tryAcquireAccountActionRequest(normalizedEmail, source)) {
+            return;
+        }
         if (normalizedEmail.equals(password)) {
             throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE);
         }
@@ -73,15 +79,23 @@ public class MemberAuthenticationService {
     }
 
     @Transactional
-    public void resendVerification(String email) {
-        accounts.findByEmail(normalizeEmail(email))
+    public void resendVerification(String email, String source) {
+        String normalizedEmail = normalizeEmail(email);
+        if (!rateLimits.tryAcquireAccountActionRequest(normalizedEmail, source)) {
+            return;
+        }
+        accounts.findByEmail(normalizedEmail)
                 .filter(account -> account.status() == MemberStatus.PENDING_VERIFICATION)
                 .ifPresent(account -> issueActionToken(account, MemberActionPurpose.EMAIL_VERIFICATION));
     }
 
     @Transactional
-    public void requestPasswordReset(String email) {
-        accounts.findByEmail(normalizeEmail(email)).filter(MemberAccount::canAuthenticate)
+    public void requestPasswordReset(String email, String source) {
+        String normalizedEmail = normalizeEmail(email);
+        if (!rateLimits.tryAcquireAccountActionRequest(normalizedEmail, source)) {
+            return;
+        }
+        accounts.findByEmail(normalizedEmail).filter(MemberAccount::canAuthenticate)
                 .ifPresent(account -> issueActionToken(account, MemberActionPurpose.PASSWORD_RESET));
     }
 
@@ -99,15 +113,19 @@ public class MemberAuthenticationService {
     }
 
     @Transactional
-    public MemberAuthenticationResult login(String email, String password) {
+    public MemberAuthenticationResult login(String email, String password, String source) {
+        String normalizedEmail = normalizeEmail(email);
         try {
-            MemberAccount account = accounts.findByEmailForUpdate(normalizeEmail(email))
-                    .orElseThrow(this::invalidCredentials);
-            if (!passwordEncoder.matches(password, account.passwordHash())) {
+            if (rateLimits.isLoginBlocked(normalizedEmail, source)) {
                 throw invalidCredentials();
             }
+            MemberAccount account = accounts.findByEmailForUpdate(normalizedEmail)
+                    .orElseThrow(() -> invalidCredentials(normalizedEmail, source));
+            if (!passwordEncoder.matches(password, account.passwordHash())) {
+                throw invalidCredentials(normalizedEmail, source);
+            }
             if (!account.canAuthenticate()) {
-                throw invalidCredentials();
+                throw invalidCredentials(normalizedEmail, source);
             }
             return issueSession(account.id());
         } catch (BusinessException exception) {
@@ -207,6 +225,11 @@ public class MemberAuthenticationService {
 
     private BusinessException invalidCredentials() {
         return new BusinessException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", "Invalid email or password");
+    }
+
+    private BusinessException invalidCredentials(String normalizedEmail, String source) {
+        rateLimits.recordLoginFailure(normalizedEmail, source);
+        return invalidCredentials();
     }
 
     private BusinessException invalidRefreshToken() {

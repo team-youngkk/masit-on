@@ -9,6 +9,9 @@ spring:
       port: 6379
 
 masiton:
+  member:
+    rate-limit:
+      secret: test-only-member-rate-limit-secret
   integration:
     # 테스트는 닫힌 포트를 가리켜 실패 시 실제 Kakao/YouTube로 나가지 않고 즉시 연결 실패로
     # fail closed 한다. WireMock이 필요한 테스트는 @DynamicPropertySource로 실제 URL을 덮어쓴다.

@@ -6,10 +6,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
 import com.masiton.common.web.BusinessException;
 import com.masiton.orchestration.application.port.in.GetRestaurantDetailQuery;
 import com.masiton.orchestration.application.query.RestaurantDetailResult;
+import com.masiton.personal.application.port.in.RecordRecentRestaurantViewUseCase;
 
 /**
  * API-DETAIL-001 맛집 상세 조회의 입력 Adapter다. 식별자 형식 검증과 HTTP 변환만 수행하고
@@ -20,15 +22,25 @@ import com.masiton.orchestration.application.query.RestaurantDetailResult;
 public class RestaurantDetailController {
 
     private final GetRestaurantDetailQuery getRestaurantDetailQuery;
+    private final RecordRecentRestaurantViewUseCase recordRecentRestaurantView;
 
-    public RestaurantDetailController(GetRestaurantDetailQuery getRestaurantDetailQuery) {
+    public RestaurantDetailController(GetRestaurantDetailQuery getRestaurantDetailQuery,
+            RecordRecentRestaurantViewUseCase recordRecentRestaurantView) {
         this.getRestaurantDetailQuery = getRestaurantDetailQuery;
+        this.recordRecentRestaurantView = recordRecentRestaurantView;
     }
 
     @GetMapping("/api/restaurants/{restaurantId}")
-    public RestaurantDetailResponse getRestaurantDetail(@PathVariable String restaurantId) {
+    public RestaurantDetailResponse getRestaurantDetail(@PathVariable String restaurantId, JwtAuthenticationToken authentication) {
         UUID id = parseRestaurantId(restaurantId);
         RestaurantDetailResult result = getRestaurantDetailQuery.getRestaurantDetail(id);
+        if (authentication != null) {
+            try {
+                recordRecentRestaurantView.record(UUID.fromString(authentication.getName()), id);
+            } catch (RuntimeException ignored) {
+                // 개인화 부수효과의 실패는 공개 상세 조회를 실패시키지 않는다.
+            }
+        }
         return RestaurantDetailResponse.from(result);
     }
 

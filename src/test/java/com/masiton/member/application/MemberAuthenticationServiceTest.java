@@ -19,6 +19,7 @@ import com.masiton.common.security.MemberJwtSettings;
 import com.masiton.member.application.port.out.MemberAccountRepository;
 import com.masiton.member.application.port.out.MemberActionTokenDeliveryPort;
 import com.masiton.member.application.port.out.MemberActionTokenRepository;
+import com.masiton.member.application.port.out.MemberRateLimitStore;
 import com.masiton.member.application.port.out.MemberSessionRevocationStore;
 import com.masiton.member.application.port.out.MemberSessionStore;
 import com.masiton.member.application.port.out.MemberTokenIssuer;
@@ -45,6 +46,8 @@ class MemberAuthenticationServiceTest {
     @Mock
     private MemberActionTokenDeliveryPort actionTokenDelivery;
     @Mock
+    private MemberRateLimitStore rateLimits;
+    @Mock
     private MemberSessionStore sessions;
     @Mock
     private MemberSessionRevocationStore revocations;
@@ -67,7 +70,7 @@ class MemberAuthenticationServiceTest {
         MemberAuthenticationService service = service();
 
         // when
-        MemberAuthenticationResult result = service.login("MEMBER@example.com", "correct-password");
+        MemberAuthenticationResult result = service.login("MEMBER@example.com", "correct-password", "127.0.0.1");
 
         // then
         assertThat(result.accessToken()).isEqualTo("access-token");
@@ -105,7 +108,7 @@ class MemberAuthenticationServiceTest {
         MemberAuthenticationService service = service();
 
         // when & then
-        assertThatThrownBy(() -> service.login("member@example.com", "correct-password"))
+        assertThatThrownBy(() -> service.login("member@example.com", "correct-password", "127.0.0.1"))
                 .isInstanceOf(com.masiton.common.web.BusinessException.class)
                 .extracting("status", "code")
                 .containsExactly(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,
@@ -113,7 +116,7 @@ class MemberAuthenticationServiceTest {
     }
 
     private MemberAuthenticationService service() {
-        return new MemberAuthenticationService(accounts, actionTokens, actionTokenDelivery, sessions, revocations,
+        return new MemberAuthenticationService(accounts, actionTokens, actionTokenDelivery, rateLimits, sessions, revocations,
                 tokenIssuer, passwordEncoder,
                 new MemberJwtSettings("issuer", "member", Duration.ofMinutes(30), "key-id"),
                 Clock.fixed(NOW, ZoneOffset.UTC));

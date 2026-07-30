@@ -5,6 +5,7 @@ import java.time.Duration;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletRequest;
 
 import com.masiton.common.security.MemberCookieSettings;
 import com.masiton.member.application.MemberAuthenticationService;
@@ -32,12 +33,14 @@ class MemberAuthenticationControllerTest {
     @Test
     @DisplayName("회원가입은 상태 비노출 접수 본문을 반환한다")
     void 회원가입_유효요청_접수본문반환() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRemoteAddr("127.0.0.1");
         var response = controller.register(new MemberAuthenticationController.CredentialsRequest(
-                "member@example.com", "correct horse battery staple"));
+                "member@example.com", "correct horse battery staple"), request);
 
         assertThat(response.getStatusCode().value()).isEqualTo(202);
         assertThat(response.getBody()).isEqualTo(new MemberAuthenticationController.AcceptedResponse(true));
-        verify(service).register("member@example.com", "correct horse battery staple");
+        verify(service).register("member@example.com", "correct horse battery staple", "127.0.0.1");
     }
 
     @Test

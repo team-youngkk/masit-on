@@ -80,7 +80,7 @@ class MemberAuthenticationConcurrencyIntegrationTest extends FullContextIntegrat
             Future<?> reset = executor.submit(() -> service.resetPassword(resetToken, NEW_PASSWORD));
             assertThat(resetHasAccountLock.await(5, TimeUnit.SECONDS)).isTrue();
 
-            Future<MemberAuthenticationResult> login = executor.submit(() -> service.login(account.email(), OLD_PASSWORD));
+            Future<MemberAuthenticationResult> login = executor.submit(() -> service.login(account.email(), OLD_PASSWORD, "127.0.0.1"));
             completeReset.countDown();
 
             reset.get(5, TimeUnit.SECONDS);
@@ -110,7 +110,7 @@ class MemberAuthenticationConcurrencyIntegrationTest extends FullContextIntegrat
         given(sessions.revokeAll(account.id().toString())).willReturn(Set.of(sessionId));
 
         try (ExecutorService executor = Executors.newFixedThreadPool(2)) {
-            Future<MemberAuthenticationResult> login = executor.submit(() -> service.login(account.email(), OLD_PASSWORD));
+            Future<MemberAuthenticationResult> login = executor.submit(() -> service.login(account.email(), OLD_PASSWORD, "127.0.0.1"));
             assertThat(loginHasAccountLock.await(5, TimeUnit.SECONDS)).isTrue();
 
             Future<?> reset = executor.submit(() -> service.resetPassword(resetToken, NEW_PASSWORD));

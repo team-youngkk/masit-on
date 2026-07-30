@@ -70,7 +70,7 @@ class FlywayMigrationIntegrationTest {
         // then
         assertThat(rows)
                 .extracting(row -> row.get("version"))
-                .containsExactly("1", "2");
+                .containsExactly("1", "2", "3", "4");
         assertThat(rows)
                 .allSatisfy(row -> assertThat(row.get("success")).isEqualTo(Boolean.TRUE));
     }
@@ -129,6 +129,57 @@ class FlywayMigrationIntegrationTest {
                 Integer.class);
 
         assertThat(memberAccountTables).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("V3 회원 인증 하드닝 작업 테이블을 전진 적용한다")
+    void V3_회원인증하드닝_작업테이블생성() {
+        Integer hardeningTables = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM information_schema.tables "
+                        + "WHERE table_schema = 'public' "
+                        + "AND table_name IN ('member_action_mail_outbox', 'member_deletion_job', "
+                        + "'member_session_revocation_recovery')",
+                Integer.class);
+
+        assertThat(hardeningTables).isEqualTo(3);
+
+        Integer cascadingOutboxForeignKeys = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM information_schema.referential_constraints "
+                        + "WHERE constraint_schema = 'public' "
+                        + "AND constraint_name = 'fk_member_action_mail_outbox__member_action_token' "
+                        + "AND delete_rule = 'CASCADE'",
+                Integer.class);
+        Integer deletionJobForeignKeys = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM information_schema.table_constraints "
+                        + "WHERE table_schema = 'public' AND table_name = 'member_deletion_job' "
+                        + "AND constraint_type = 'FOREIGN KEY'",
+                Integer.class);
+        Integer dispatchIndexes = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM pg_indexes WHERE schemaname = 'public' "
+                        + "AND indexname IN ('ix_member_action_mail_outbox__dispatch', "
+                        + "'ix_member_deletion_job__next_attempt', "
+                        + "'ix_member_session_revocation_recovery__next_attempt')",
+                Integer.class);
+
+        assertThat(cascadingOutboxForeignKeys).isEqualTo(1);
+        assertThat(deletionJobForeignKeys).isZero();
+        assertThat(dispatchIndexes).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("V4 회원 개인화 관계 테이블을 전진 적용한다")
+    void V4_회원개인화관계_테이블생성() {
+        Integer personalTables = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' "
+                        + "AND table_name IN ('favorite', 'recent_restaurant_view')", Integer.class);
+        Integer personalIndexes = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM pg_indexes WHERE schemaname = 'public' "
+                        + "AND indexname IN ('ix_favorite__member_favorited', "
+                        + "'ix_recent_restaurant_view__member_viewed', "
+                        + "'ix_recent_restaurant_view__cleanup_viewed')", Integer.class);
+
+        assertThat(personalTables).isEqualTo(2);
+        assertThat(personalIndexes).isEqualTo(3);
     }
 
     @Test

@@ -67,6 +67,7 @@ services:
       JWT_KEY_ID: ${JWT_KEY_ID}
       JWT_PRIVATE_KEY_PEM: ${JWT_PRIVATE_KEY_PEM}
       JWT_PUBLIC_KEY_PEM: ${JWT_PUBLIC_KEY_PEM}
+      MEMBER_RATE_LIMIT_SECRET: ${MEMBER_RATE_LIMIT_SECRET}
     ports:
       - "${APP_PORT:-8080}:8080"
     depends_on:

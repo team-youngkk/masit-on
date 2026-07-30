@@ -44,8 +44,8 @@ public class MemberAuthenticationController {
     }
 
     @PostMapping("/registrations")
-    public ResponseEntity<AcceptedResponse> register(@Valid @RequestBody CredentialsRequest request) {
-        service.register(request.email(), request.password());
+    public ResponseEntity<AcceptedResponse> register(@Valid @RequestBody CredentialsRequest request, HttpServletRequest servletRequest) {
+        service.register(request.email(), request.password(), servletRequest.getRemoteAddr());
         return accepted();
     }
 
@@ -56,14 +56,14 @@ public class MemberAuthenticationController {
     }
 
     @PostMapping("/email-verifications/resend")
-    public ResponseEntity<AcceptedResponse> resendVerification(@Valid @RequestBody EmailRequest request) {
-        service.resendVerification(request.email());
+    public ResponseEntity<AcceptedResponse> resendVerification(@Valid @RequestBody EmailRequest request, HttpServletRequest servletRequest) {
+        service.resendVerification(request.email(), servletRequest.getRemoteAddr());
         return accepted();
     }
 
     @PostMapping("/password-resets/requests")
-    public ResponseEntity<AcceptedResponse> requestPasswordReset(@Valid @RequestBody EmailRequest request) {
-        service.requestPasswordReset(request.email());
+    public ResponseEntity<AcceptedResponse> requestPasswordReset(@Valid @RequestBody EmailRequest request, HttpServletRequest servletRequest) {
+        service.requestPasswordReset(request.email(), servletRequest.getRemoteAddr());
         return accepted();
     }
 
@@ -74,8 +74,8 @@ public class MemberAuthenticationController {
     }
 
     @PostMapping("/tokens")
-    public ResponseEntity<AccessTokenResponse> login(@Valid @RequestBody CredentialsRequest request) {
-        return tokenResponse(service.login(request.email(), request.password()));
+    public ResponseEntity<AccessTokenResponse> login(@Valid @RequestBody CredentialsRequest request, HttpServletRequest servletRequest) {
+        return tokenResponse(service.login(request.email(), request.password(), servletRequest.getRemoteAddr()));
     }
 
     @PostMapping("/tokens/refresh")

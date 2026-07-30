@@ -54,6 +54,9 @@ logging:
     com.masiton: ${LOG_LEVEL_APP:INFO}
 
 masiton:
+  member:
+    rate-limit:
+      secret: ${MEMBER_RATE_LIMIT_SECRET:}
   security:
     jwt:
       issuer: masit-on
