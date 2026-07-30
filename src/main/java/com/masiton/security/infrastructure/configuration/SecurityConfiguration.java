@@ -1,30 +1,41 @@
 package com.masiton.security.infrastructure.configuration;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.ObjectPostProcessor;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.authentication.AuthenticationServiceException;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationManagerResolver;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationProvider;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.authentication.AuthenticationManagerResolver;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import com.masiton.member.application.MemberAuthenticationStoreUnavailableException;
+import com.masiton.member.application.MemberAuthenticationValidationService;
+import com.masiton.member.application.MemberPrincipal;
 import com.masiton.security.infrastructure.web.SecurityErrorWriter;
 
 @Configuration
@@ -34,6 +45,8 @@ public class SecurityConfiguration {
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             Converter<Jwt, ? extends AbstractAuthenticationToken> jwtAuthenticationConverter,
+            @Qualifier("memberJwtAuthenticationConverter")
+            Converter<Jwt, ? extends AbstractAuthenticationToken> memberJwtAuthenticationConverter,
             SecurityErrorWriter securityErrorWriter,
             JwtDecoder jwtDecoder,
             @Qualifier("memberJwtDecoder") JwtDecoder memberJwtDecoder
@@ -72,28 +85,38 @@ public class SecurityConfiguration {
                         .authenticationManagerResolver(authenticationManagerResolver(
                                 jwtDecoder,
                                 memberJwtDecoder,
-                                jwtAuthenticationConverter)))
+                                jwtAuthenticationConverter,
+                                memberJwtAuthenticationConverter))
+                        .addObjectPostProcessor(
+                                new ObjectPostProcessor<BearerTokenAuthenticationFilter>() {
+                                    @Override
+                                    public <O extends BearerTokenAuthenticationFilter> O postProcess(O filter) {
+                                        filter.setAuthenticationFailureHandler(securityErrorWriter);
+                                        return filter;
+                                    }
+                                }))
                 .build();
     }
 
     private AuthenticationManagerResolver<HttpServletRequest> authenticationManagerResolver(
             JwtDecoder adminJwtDecoder,
             JwtDecoder memberJwtDecoder,
-            Converter<Jwt, ? extends AbstractAuthenticationToken> jwtAuthenticationConverter
+            Converter<Jwt, ? extends AbstractAuthenticationToken> jwtAuthenticationConverter,
+            Converter<Jwt, ? extends AbstractAuthenticationToken> memberJwtAuthenticationConverter
     ) {
         AuthenticationManager adminAuthenticationManager = authenticationManager(adminJwtDecoder, jwtAuthenticationConverter);
-        AuthenticationManager memberAuthenticationManager = authenticationManager(memberJwtDecoder, jwtAuthenticationConverter);
-        AuthenticationManager publicAuthenticationManager = authentication -> authenticatePublicRequest(
-                authentication,
-                memberAuthenticationManager,
-                adminAuthenticationManager
-        );
+        AuthenticationManager memberAuthenticationManager =
+                authenticationManager(memberJwtDecoder, memberJwtAuthenticationConverter);
+        AuthenticationManager optionalMemberAuthenticationManager =
+                authentication -> authenticatePublicRequest(authentication, memberAuthenticationManager);
         return request -> {
             String requestUri = request.getRequestURI();
             if (isMemberBoundary(requestUri)) {
                 return memberAuthenticationManager;
             }
-            return isPublicReadRequest(request) ? publicAuthenticationManager : adminAuthenticationManager;
+            return isOptionalMemberDetailRequest(request)
+                    ? optionalMemberAuthenticationManager
+                    : adminAuthenticationManager;
         };
     }
 
@@ -103,25 +126,29 @@ public class SecurityConfiguration {
                 || requestUri.startsWith("/api/me/");
     }
 
-    private boolean isPublicReadRequest(HttpServletRequest request) {
+    private boolean isOptionalMemberDetailRequest(HttpServletRequest request) {
         if (!HttpMethod.GET.matches(request.getMethod())) {
             return false;
         }
         String requestUri = request.getRequestURI();
-        return requestUri.equals("/api/restaurants")
-                || requestUri.startsWith("/api/restaurants/")
-                || requestUri.equals("/api/creators");
+        String detailPrefix = "/api/restaurants/";
+        if (!requestUri.startsWith(detailPrefix)) {
+            return false;
+        }
+        String restaurantId = requestUri.substring(detailPrefix.length());
+        return !restaurantId.isEmpty() && !restaurantId.contains("/");
     }
 
     private Authentication authenticatePublicRequest(
             Authentication authentication,
-            AuthenticationManager memberAuthenticationManager,
-            AuthenticationManager adminAuthenticationManager
+            AuthenticationManager memberAuthenticationManager
     ) {
         try {
             return memberAuthenticationManager.authenticate(authentication);
-        } catch (AuthenticationException ignored) {
-            return adminAuthenticationManager.authenticate(authentication);
+        } catch (AuthenticationException memberAuthenticationFailure) {
+            return new AnonymousAuthenticationToken(
+                    "public-read", "anonymousUser",
+                    AuthorityUtils.createAuthorityList("ROLE_ANONYMOUS"));
         }
     }
 
@@ -146,5 +173,39 @@ public class SecurityConfiguration {
                     jwt.getSubject()
             );
         };
+    }
+
+    @Bean("memberJwtAuthenticationConverter")
+    Converter<Jwt, ? extends AbstractAuthenticationToken> memberJwtAuthenticationConverter(
+            MemberAuthenticationValidationService memberAuthenticationValidationService,
+            Clock memberSessionClock
+    ) {
+        return jwt -> {
+            MemberPrincipal principal = authenticateMember(jwt, memberAuthenticationValidationService, memberSessionClock.instant());
+            List<String> roles = jwt.getClaimAsStringList("roles");
+            JwtAuthenticationToken authentication = new JwtAuthenticationToken(
+                    jwt,
+                    (roles == null ? List.<String>of() : roles).stream()
+                            .map(SimpleGrantedAuthority::new)
+                            .collect(Collectors.toUnmodifiableSet()),
+                    principal.memberId()
+            );
+            authentication.setDetails(principal);
+            return authentication;
+        };
+    }
+
+    private MemberPrincipal authenticateMember(
+            Jwt jwt,
+            MemberAuthenticationValidationService memberAuthenticationValidationService,
+            Instant now
+    ) {
+        try {
+            return memberAuthenticationValidationService
+                    .validate(jwt.getSubject(), jwt.getClaimAsString("sid"), now)
+                    .orElseThrow(() -> new BadCredentialsException("Member token is invalid"));
+        } catch (MemberAuthenticationStoreUnavailableException exception) {
+            throw new AuthenticationServiceException("Member authentication state is unavailable", exception);
+        }
     }
 }
