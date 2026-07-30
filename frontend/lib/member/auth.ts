@@ -23,6 +23,15 @@ export function clearMemberAccessToken(): void {
   accessToken = null
 }
 
+export async function memberLogout(): Promise<void> {
+  try {
+    const response = await authenticatedMemberFetch('/api/auth/tokens', { method: 'DELETE' })
+    requireStatus(response, 204)
+  } finally {
+    clearMemberAccessToken()
+  }
+}
+
 export async function memberLogin(email: string, password: string): Promise<void> {
   await tokenResponse(await fetch('/api/auth/tokens', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) }))
 }

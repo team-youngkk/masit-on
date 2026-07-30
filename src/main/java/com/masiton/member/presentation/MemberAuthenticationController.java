@@ -112,10 +112,7 @@ public class MemberAuthenticationController {
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException exception, HttpServletRequest request) {
         ResponseEntity.BodyBuilder response = ResponseEntity.status(exception.status());
-        boolean memberRefreshEndpoint = request.getRequestURI().equals("/api/auth/tokens/refresh")
-                || request.getRequestURI().equals("/api/auth/tokens");
-        if (memberRefreshEndpoint && (exception.code().equals("INVALID_REFRESH_TOKEN")
-                || exception.code().equals("AUTHENTICATION_SERVICE_UNAVAILABLE"))) {
+        if (shouldExpireRefreshCookie(request, exception)) {
             response.header(HttpHeaders.SET_COOKIE, expiredRefreshCookie().toString());
         }
         String traceId = MDC.get(TraceIdFilter.TRACE_ID_MDC_KEY);
@@ -157,6 +154,19 @@ public class MemberAuthenticationController {
         return ResponseCookie.from(cookieSettings.cookieName(), "")
                 .httpOnly(true).secure(cookieSettings.secure()).sameSite(cookieSettings.sameSite())
                 .path(cookieSettings.path()).maxAge(Duration.ZERO).build();
+    }
+
+    private boolean shouldExpireRefreshCookie(HttpServletRequest request, BusinessException exception) {
+        String requestUri = request.getRequestURI();
+        if (requestUri.equals("/api/auth/tokens/refresh")) {
+            return exception.code().equals("INVALID_REFRESH_TOKEN")
+                    || exception.code().equals("AUTHENTICATION_SERVICE_UNAVAILABLE");
+        }
+        return requestUri.equals("/api/auth/tokens")
+                && "DELETE".equals(request.getMethod())
+                && (exception.code().equals("AUTHENTICATION_REQUIRED")
+                || exception.code().equals("INVALID_REFRESH_TOKEN")
+                || exception.code().equals("AUTHENTICATION_SERVICE_UNAVAILABLE"));
     }
 
     public record EmailRequest(@NotBlank @Email @Size(max = 320) String email) { }

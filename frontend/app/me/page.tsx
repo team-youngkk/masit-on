@@ -2,22 +2,98 @@
 
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/Button'
-import { authenticatedMemberFetch, clearMemberAccessToken } from '@/lib/member/auth'
+import { authenticatedMemberFetch, clearMemberAccessToken, memberLogout } from '@/lib/member/auth'
 
 type Me = { id: string; email: string }
+type Action = 'logout' | 'withdraw' | null
+
 export default function MePage() {
   const [member, setMember] = useState<Me | null>(null)
   const [message, setMessage] = useState('Loading account...')
-  useEffect(() => { authenticatedMemberFetch('/api/me').then(async response => { if (!response.ok) { setMessage('Sign in is required.'); return }; setMember(await response.json()); setMessage('') }).catch(() => setMessage('Could not load your account.')) }, [])
+  const [messageIsError, setMessageIsError] = useState(false)
+  const [action, setAction] = useState<Action>(null)
+  const [confirmingWithdrawal, setConfirmingWithdrawal] = useState(false)
+
+  useEffect(() => {
+    authenticatedMemberFetch('/api/me')
+      .then(async response => {
+        if (!response.ok) {
+          setMessageIsError(response.status !== 401)
+          setMessage(response.status === 401 ? 'Sign in is required.' : 'Could not load your account.')
+          return
+        }
+        setMember(await response.json())
+        setMessage('')
+      })
+      .catch(() => {
+        setMessageIsError(true)
+        setMessage('Could not load your account.')
+      })
+  }, [])
+
+  async function logout() {
+    setAction('logout')
+    setMessageIsError(false)
+    setMessage('Signing out...')
+    try {
+      await memberLogout()
+      setMember(null)
+      setMessage('You have been signed out.')
+    } catch (reason) {
+      setMember(null)
+      if (reason instanceof Response && reason.status === 401) {
+        setMessageIsError(false)
+        setMessage('Your session has expired. This device is signed out; sign in again to continue.')
+      } else {
+        setMessageIsError(true)
+        setMessage('Logout could not be completed. This device is signed out, but the server session could not be confirmed. Please try again after recovery.')
+      }
+    } finally {
+      setAction(null)
+    }
+  }
+
   async function withdraw() {
-    const response = await authenticatedMemberFetch('/api/me', { method: 'DELETE' })
-    if (response.status === 202) {
+    setAction('withdraw')
+    setMessageIsError(false)
+    setMessage('Starting account deletion...')
+    try {
+      const response = await authenticatedMemberFetch('/api/me', { method: 'DELETE' })
+      if (response.status !== 202) {
+        throw response
+      }
       clearMemberAccessToken()
       setMember(null)
-      setMessage('Deletion has been requested. You have been signed out.')
-      return
+      setConfirmingWithdrawal(false)
+      setMessage('Account deletion is in progress. Sign-in and re-registration with this email remain blocked until cleanup finishes.')
+    } catch (reason) {
+      setMessageIsError(true)
+      setMessage(reason instanceof Response && reason.status === 401
+        ? 'Your session has expired. Sign in again before requesting account deletion.'
+        : 'Account deletion could not be started. Your account remains protected; please try again after recovery.')
+    } finally {
+      setAction(null)
     }
-    setMessage('Could not request deletion.')
   }
-  return <section><h1>My account</h1>{member ? <><p>{member.email}</p><Button variant="secondary" onClick={withdraw}>Delete account</Button></> : <p>{message}</p>}</section>
+
+  return <section>
+    <h1>My account</h1>
+    {member ? <>
+      <p>{member.email}</p>
+      <Button variant="secondary" disabled={action !== null} onClick={logout}>
+        {action === 'logout' ? 'Signing out...' : 'Sign out'}
+      </Button>
+      {!confirmingWithdrawal
+        ? <Button variant="secondary" disabled={action !== null} onClick={() => { setConfirmingWithdrawal(true); setMessage('') }}>Delete account</Button>
+        : <div role="group" aria-labelledby="withdrawal-confirmation">
+          <h2 id="withdrawal-confirmation">Confirm account deletion</h2>
+          <p>Your account information, favorites, recent history, and all authentication sessions will be deleted.</p>
+          <Button variant="secondary" disabled={action !== null} onClick={() => { setConfirmingWithdrawal(false); setMessage('') }}>Cancel</Button>
+          <Button disabled={action !== null} onClick={withdraw}>
+            {action === 'withdraw' ? 'Starting deletion...' : 'Confirm deletion'}
+          </Button>
+        </div>}
+    </> : null}
+    {message ? <p role={messageIsError ? 'alert' : 'status'}>{message}</p> : null}
+  </section>
 }
