@@ -32,4 +32,12 @@ public class JdbcMemberSessionRevocationStore implements MemberSessionRevocation
                 java.sql.Timestamp.from(revocation.expiresAt())
         );
     }
+
+    @Override
+    public boolean isRevoked(java.util.UUID sessionId, java.time.Instant now) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM member_session_revocation WHERE session_id = ? AND expires_at > ?",
+                Integer.class, sessionId, java.sql.Timestamp.from(now));
+        return count != null && count > 0;
+    }
 }

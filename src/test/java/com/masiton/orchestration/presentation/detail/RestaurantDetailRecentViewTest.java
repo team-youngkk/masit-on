@@ -1,23 +1,16 @@
 package com.masiton.orchestration.presentation.detail;
 
-import java.time.Clock;
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.security.authentication.TestingAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
 import com.masiton.orchestration.application.port.in.GetRestaurantDetailQuery;
 import com.masiton.orchestration.application.query.ContentStatus;
 import com.masiton.orchestration.application.query.RestaurantDetailResult;
-import com.masiton.orchestration.application.query.RestaurantDetailWithMemberContextService;
-import com.masiton.personalization.application.port.in.RecordRecentRestaurantViewUseCase;
+import com.masiton.personal.application.port.in.RecordRecentRestaurantViewUseCase;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -33,30 +26,22 @@ class RestaurantDetailRecentViewTest {
 
     private static final UUID RESTAURANT_ID = UUID.randomUUID();
     private static final UUID MEMBER_ID = UUID.randomUUID();
-    private static final Instant NOW = Instant.parse("2026-07-30T00:00:00Z");
-
     private final GetRestaurantDetailQuery detailQuery = mock(GetRestaurantDetailQuery.class);
     private final RecordRecentRestaurantViewUseCase recorder = mock(RecordRecentRestaurantViewUseCase.class);
-    private final RestaurantDetailWithMemberContextService detailWithMemberContext =
-            new RestaurantDetailWithMemberContextService(
-                    detailQuery, recorder, Clock.fixed(NOW, ZoneOffset.UTC));
-    private final RestaurantDetailController controller = new RestaurantDetailController(detailWithMemberContext);
+    private final RestaurantDetailController controller = new RestaurantDetailController(detailQuery, recorder);
 
     @Test
     @DisplayName("회원의 정상 상세 조회는 최근 본 기록을 남긴다")
     void 상세조회_회원인증_최근기록을남긴다() {
         // given
         when(detailQuery.getRestaurantDetail(RESTAURANT_ID)).thenReturn(detail());
-        Authentication authentication = new TestingAuthenticationToken(
-                MEMBER_ID.toString(), null, List.of(new SimpleGrantedAuthority("MEMBER")));
+        JwtAuthenticationToken authentication = memberAuthentication();
 
         // when
         controller.getRestaurantDetail(RESTAURANT_ID.toString(), authentication);
 
         // then
-        verify(recorder).record(
-                eq(MEMBER_ID), eq(RESTAURANT_ID),
-                eq(OffsetDateTime.ofInstant(NOW, ZoneOffset.UTC)));
+        verify(recorder).record(eq(MEMBER_ID), eq(RESTAURANT_ID));
     }
 
     @Test
@@ -69,7 +54,7 @@ class RestaurantDetailRecentViewTest {
         controller.getRestaurantDetail(RESTAURANT_ID.toString(), null);
 
         // then
-        verify(recorder, never()).record(any(), any(), any());
+        verify(recorder, never()).record(any(), any());
     }
 
     @Test
@@ -77,10 +62,9 @@ class RestaurantDetailRecentViewTest {
     void 상세조회_최근기록실패_상세응답은성공한다() {
         // given
         when(detailQuery.getRestaurantDetail(RESTAURANT_ID)).thenReturn(detail());
-        Authentication authentication = new TestingAuthenticationToken(
-                MEMBER_ID.toString(), null, List.of(new SimpleGrantedAuthority("MEMBER")));
+        JwtAuthenticationToken authentication = memberAuthentication();
         doThrow(new RuntimeException("저장소 장애"))
-                .when(recorder).record(eq(MEMBER_ID), eq(RESTAURANT_ID), any());
+                .when(recorder).record(eq(MEMBER_ID), eq(RESTAURANT_ID));
 
         // when
         RestaurantDetailResponse response = controller.getRestaurantDetail(
@@ -96,5 +80,11 @@ class RestaurantDetailRecentViewTest {
                 RESTAURANT_ID, "테스트 맛집", "한식", "서울특별시 마포구 월드컵로 1",
                 null, "02-000-0000", "https://place.map.kakao.com/example",
                 ContentStatus.AVAILABLE, List.of(), List.of());
+    }
+
+    private JwtAuthenticationToken memberAuthentication() {
+        JwtAuthenticationToken authentication = mock(JwtAuthenticationToken.class);
+        when(authentication.getName()).thenReturn(MEMBER_ID.toString());
+        return authentication;
     }
 }

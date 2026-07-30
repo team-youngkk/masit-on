@@ -252,13 +252,15 @@ V1 내부 적용 순서는 다음과 같다.
 | High | 목록 API의 localhost 고정 | 배포·확장 환경 설정을 우회 |
 | Medium | 방문 관계 영상 UUID 수기 입력 | 관리자가 등록된 영상을 안정적으로 선택하기 어려움 |
 
+`CI 품질 게이트 부재`, `백엔드 테스트 재실행 실패 원인 확인`, `유튜버 선택 UI 부재`, `목록 API의 localhost 고정`은 이 표가 기록한 `f70ed19` 시점 이후 각각 E1-T01(PR #63)·E1-T02(PR #67)로 해결됐다. 이 표는 조사 당시 결함 목록을 그대로 보존하고, 해소 결과는 13절에만 기록한다.
+
 ## 13. 당시 결정 필요 사항의 해소와 후속 Task
 
 이 절은 2026-07-29 기준선 조사 당시의 질문을 보존한다. 이후 1차 확장 계약·ADR 확정으로 아래 항목은 더 이상 사용자 결정을 기다리는 blocker가 아니다.
 
 | 당시 질문 | 현재 확정 | 후속 Task |
 |---|---|---|
-| 유튜버 선택 UI와 CI 품질 게이트의 처리 순서 | 기준선 결함으로 유지하고 각각 `FE-01`, `FE-00`에서 먼저 닫는다. | [1차 확장 구현 계획](expansion-1-implementation-plan.md#8-전체-task-표) `FE-00`, `FE-01` |
+| 유튜버 선택 UI와 CI 품질 게이트의 처리 순서 | `FE-00`(E1-T01, PR #63)이 CI 품질 게이트를 복구했고 `FE-01`(E1-T02, PR #67)이 유튜버 선택 UI와 목록 API 환경변수 설정을 반영해 잔여 탐색 흐름을 닫았다. | [1차 확장 구현 계획](expansion-1-implementation-plan.md#8-전체-task-표) `FE-00`, `FE-01` |
 | 일반 사용자 principal·audience·쿠키·Redis namespace, 세션 수와 Access Token 전달 | 관리자와 분리, Bearer+메모리 Access Token, Refresh 쿠키, 최대 3세션으로 확정했다. | [ADR-AUTH-002](../07-adr/security/auth-002-member-jwt-refresh-token.md), `FE-02`, `FE-03` |
 | 좌표 타입·PostGIS·nullable·backfill | WGS84 nullable `numeric(9,6)`, PostGIS·현재 위치·반경 검색 제외, 관리자 검증 기반 단계적 backfill로 확정했다. | [ADR-MAP-001](../07-adr/integration/map-001-map-bounds-search.md), `FE-06`, `FE-07` |
 | Creator 상세 필드·갱신·외부 장애 | `profile_image_url`, `description`, `handle` nullable 저장, 사용자 조회 중 외부 호출 금지와 기존 공개 상태 정책으로 확정했다. | [유튜버 상세 API](../05-specs/api/detail/creator-detail-api.md), `FE-08` |

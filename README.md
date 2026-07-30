@@ -26,9 +26,11 @@ Copy-Item .env.example .env
 . .\scripts\Initialize-LocalJwt.ps1
 ```
 
-`.env`는 로컬 전용 값이며 커밋하지 않는다. 운영 자격 증명을 넣지 않는다. 초기화 스크립트는 `.env`에 로컬 RSA 키를 생성하고 현재 PowerShell 세션에도 같은 값을 설정한다. 새 PowerShell 세션에서 `bootRun`을 실행할 때는 스크립트를 다시 dot-source한다.
+초기화 스크립트는 로컬 JWT RSA 키와 회원 Action 메일 Token용 AES-256 키를 `.env`와 현재 PowerShell 세션에 생성한다. 운영에서는 `MEMBER_ACTION_MAIL_ACTIVE_KEY_ID`와 `MEMBER_ACTION_MAIL_ACTIVE_KEY`를 저장소가 아닌 배포 환경의 비밀 관리 수단으로 주입한다.
 
-`.env`를 `.env.example`에서 새로 복사하지 않고 예전 파일을 그대로 쓰면 `JWT_*` 항목이 없어 초기화 스크립트가 값을 기록하지 못한다. `.env`에 `JWT_KEY_ID`, `JWT_PRIVATE_KEY_PEM`, `JWT_PUBLIC_KEY_PEM` 세 줄이 있는지 확인한다.
+`.env`는 로컬 전용 값이며 커밋하지 않는다. 운영 자격 증명을 넣지 않는다. 새 PowerShell 세션에서 `bootRun`을 실행할 때는 스크립트를 다시 dot-source한다.
+
+`.env`를 `.env.example`에서 새로 복사하지 않고 예전 파일을 그대로 쓰면 `JWT_*` 또는 `MEMBER_ACTION_MAIL_*` 항목이 없어 초기화 스크립트가 값을 기록하지 못한다. `.env`에 `JWT_KEY_ID`, `JWT_PRIVATE_KEY_PEM`, `JWT_PUBLIC_KEY_PEM`, `MEMBER_ACTION_MAIL_ACTIVE_KEY_ID`, `MEMBER_ACTION_MAIL_ACTIVE_KEY` 항목이 있는지 확인한다.
 
 ### 개발 루프 (의존 서비스는 컨테이너, 애플리케이션은 로컬)
 

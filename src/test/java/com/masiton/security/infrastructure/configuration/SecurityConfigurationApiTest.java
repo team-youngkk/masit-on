@@ -5,26 +5,21 @@ import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.time.Instant;
-import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Base64;
-import java.util.UUID;
 
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpHeaders;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtException;
@@ -32,34 +27,24 @@ import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequ
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.masiton.test.FullContextIntegrationTest;
-import com.masiton.member.application.MemberAuthenticationStoreUnavailableException;
+import com.masiton.common.security.MemberSessionAccessChecker;
 import com.masiton.member.application.MemberPrincipal;
 import com.masiton.member.application.port.out.MemberTokenIssuer;
-import com.masiton.member.infrastructure.persistence.JdbcMemberAuthenticationStateAdapter;
-import com.masiton.orchestration.application.port.in.GetRestaurantDetailQuery;
-import com.masiton.orchestration.application.query.ContentStatus;
-import com.masiton.orchestration.application.query.RestaurantDetailResult;
-import com.masiton.personalization.application.PersonalRestaurantService;
 
 import static org.hamcrest.Matchers.emptyString;
 import static org.hamcrest.Matchers.not;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -67,8 +52,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 class SecurityConfigurationApiTest extends FullContextIntegrationTest {
 
     private static final KeyPair KEY_PAIR = keyPair();
-    private static final UUID MEMBER_ID = UUID.fromString("7d865f1a-98f5-46f8-b6c8-658f67dcc07e");
-    private static final UUID SESSION_ID = UUID.fromString("e320b522-e80f-4659-8974-bbd591b72573");
 
     @Autowired
     private MockMvc mockMvc;
@@ -83,29 +66,14 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
     @Autowired
     private MemberTokenIssuer memberTokenIssuer;
 
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
-
     @MockitoBean
-    private PersonalRestaurantService personalRestaurantService;
-
-    @MockitoBean
-    private GetRestaurantDetailQuery getRestaurantDetailQuery;
-
-    @MockitoSpyBean
-    private JdbcMemberAuthenticationStateAdapter memberAuthenticationStateAdapter;
+    private MemberSessionAccessChecker memberSessionAccessChecker;
 
     @DynamicPropertySource
     static void securityProperties(DynamicPropertyRegistry registry) {
         registry.add("masiton.security.jwt.key-id", () -> "test-key-20260727");
         registry.add("masiton.security.jwt.private-key-pem", () -> pem("PRIVATE KEY", KEY_PAIR.getPrivate().getEncoded()));
         registry.add("masiton.security.jwt.public-key-pem", () -> pem("PUBLIC KEY", KEY_PAIR.getPublic().getEncoded()));
-    }
-
-    @BeforeEach
-    void setUp() {
-        jdbcTemplate.execute("TRUNCATE TABLE recent_restaurant_view, favorite, member_action_token, "
-                + "member_session_revocation, member_account CASCADE");
     }
 
     @Test
@@ -205,38 +173,19 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
     }
 
     @Test
-    @DisplayName("회원 경계는 회원 JWT만 받고 관리자 경계는 관리자 JWT만 받는다")
-    void memberAdminApi_교차Audience_401거부() throws Exception {
+    @DisplayName("회원 경계는 교차 audience와 sid 없는 회원 JWT를 거부한다")
+    void memberAdminApi_교차Audience와sid누락_401거부() throws Exception {
         String adminToken = signedToken("test-key-20260727", "masit-on", "masit-on-admin-api");
-        String memberToken = memberToken(MEMBER_ID, UUID.randomUUID());
-        insertActiveMember(MEMBER_ID);
+        String memberToken = signedToken("test-key-20260727", "masit-on", "masit-on-member-api");
 
-        mockMvc.perform(get("/api/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken))
-                .andExpect(status().isNotFound());
-        mockMvc.perform(get("/api/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+        mockMvc.perform(get("/api/me/boundary").header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/me/boundary").header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
                 .andExpect(status().isUnauthorized());
         mockMvc.perform(get("/api/admin/restaurants").header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken))
                 .andExpect(status().isUnauthorized());
         mockMvc.perform(post("/api/auth/tokens"))
-                .andExpect(status().isNotFound());
-    }
-
-    @Test
-    @DisplayName("개인 맛집 API는 회원 JWT만 허용하고 관리자 JWT는 거부한다")
-    void personalRestaurantApi_회원Jwt만허용() throws Exception {
-        UUID restaurantId = UUID.randomUUID();
-        String adminToken = signedToken("test-key-20260727", "masit-on", "masit-on-admin-api");
-        String memberToken = memberToken(MEMBER_ID, UUID.randomUUID());
-        insertActiveMember(MEMBER_ID);
-        when(personalRestaurantService.isFavorite(MEMBER_ID, restaurantId)).thenReturn(true);
-
-        mockMvc.perform(get("/api/me/favorites/{restaurantId}", restaurantId)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.favorited").value(true));
-        mockMvc.perform(get("/api/me/favorites/{restaurantId}", restaurantId)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -253,141 +202,84 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
         };
 
         for (String publicPath : publicPaths) {
-            mockMvc.perform(post(publicPath))
-                    .andExpect(status().isNotFound());
+            var request = post(publicPath);
+            if (publicPath.endsWith("/refresh")) {
+                request.header(HttpHeaders.ORIGIN, "http://localhost:3000");
+            }
+            mockMvc.perform(request)
+                    .andExpect(publicPath.endsWith("/refresh") ? status().isUnauthorized() : status().isBadRequest());
         }
         mockMvc.perform(post("/api/auth/password-reset-requests"))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    @DisplayName("선택 인증 대상이 아닌 공개 목록은 회원 JWT 오류를 익명으로 격하하지 않는다")
-    void publicList_memberJwt_401거부() throws Exception {
-        String memberToken = memberToken(MEMBER_ID, UUID.randomUUID());
-        insertActiveMember(MEMBER_ID);
+    @DisplayName("무인증 회원 인증 경로는 잘못된 Bearer를 무시하고 입력 또는 쿠키 계약을 적용한다")
+    void memberAuthenticationPublicRoutes_잘못된Bearer무시() throws Exception {
+        String invalidToken = signedToken("retired-key");
 
-        mockMvc.perform(get("/api/restaurants").header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken))
-                .andExpect(status().isUnauthorized());
-
-        mockMvc.perform(get("/api/creators").header(HttpHeaders.AUTHORIZATION, "Bearer invalid-token"))
-                .andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/auth/tokens")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + invalidToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/api/auth/tokens/refresh")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + invalidToken)
+                        .header(HttpHeaders.ORIGIN, "http://localhost:3000"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_REFRESH_TOKEN"));
     }
 
     @Test
-    @DisplayName("공개 상세 조회의 유효한 회원 Bearer Token은 최근 기록을 남긴다")
-    void publicDetail_memberJwt_최근기록저장() throws Exception {
-        UUID restaurantId = UUID.randomUUID();
-        UUID sessionId = UUID.randomUUID();
-        String memberToken = memberToken(MEMBER_ID, sessionId);
-        insertActiveMember(MEMBER_ID);
-        when(getRestaurantDetailQuery.getRestaurantDetail(restaurantId)).thenReturn(detail(restaurantId));
+    @DisplayName("공개 상세는 유효 회원 JWT의 세션 문맥을 확인하고 인증한다")
+    void restaurantDetail_유효회원JWT_선택적으로인증한다() throws Exception {
+        String memberId = java.util.UUID.randomUUID().toString();
+        String sessionId = java.util.UUID.randomUUID().toString();
+        String memberToken = memberTokenIssuer.issueAccessToken(new MemberPrincipal(memberId, sessionId));
+        given(memberSessionAccessChecker.check(memberId, sessionId))
+                .willReturn(MemberSessionAccessChecker.AccessDecision.ALLOWED);
 
-        mockMvc.perform(get("/api/restaurants/{restaurantId}", restaurantId)
+        mockMvc.perform(get("/api/restaurants/{restaurantId}", java.util.UUID.randomUUID())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken))
-                .andExpect(status().isOk());
+                .andExpect(status().isNotFound());
 
-        verify(personalRestaurantService).record(
-                org.mockito.ArgumentMatchers.eq(MEMBER_ID),
-                org.mockito.ArgumentMatchers.eq(restaurantId), any());
+        verify(memberSessionAccessChecker).check(memberId, sessionId);
     }
 
     @Test
-    @DisplayName("sid 없는 회원 JWT는 보호 경계에서 401이고 공개 조회는 익명으로 격하한다")
-    void memberJwt_sid없음_보호401_공개익명() throws Exception {
-        UUID restaurantId = UUID.randomUUID();
-        when(getRestaurantDetailQuery.getRestaurantDetail(restaurantId)).thenReturn(detail(restaurantId));
+    @DisplayName("공개 상세는 무효 또는 폐기된 회원 JWT를 익명 조회로 폴백한다")
+    void restaurantDetail_무효또는폐기JWT_익명조회로폴백한다() throws Exception {
+        String invalidMemberToken = signedToken("retired-key", "masit-on", "masit-on-member-api");
+        String memberId = java.util.UUID.randomUUID().toString();
+        String sessionId = java.util.UUID.randomUUID().toString();
+        String revokedMemberToken = memberTokenIssuer.issueAccessToken(new MemberPrincipal(memberId, sessionId));
+        given(memberSessionAccessChecker.check(memberId, sessionId))
+                .willReturn(MemberSessionAccessChecker.AccessDecision.DENIED);
 
-        mockMvc.perform(get("/api/restaurants/{restaurantId}", restaurantId)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + memberTokenWithoutSid(MEMBER_ID)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(restaurantId.toString()));
-
-        mockMvc.perform(get("/api/me/favorites/{restaurantId}", UUID.randomUUID())
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + memberTokenWithoutSid(MEMBER_ID)))
-                .andExpect(status().isUnauthorized())
-                .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "private, no-store"));
-
-        verify(personalRestaurantService, never()).record(any(), any(), any());
+        mockMvc.perform(get("/api/restaurants/{restaurantId}", java.util.UUID.randomUUID())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + invalidMemberToken))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/restaurants/{restaurantId}", java.util.UUID.randomUUID())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + revokedMemberToken))
+                .andExpect(status().isNotFound());
     }
 
     @Test
-    @DisplayName("비활성 또는 폐기된 회원 세션은 401로 거부한다")
-    void memberJwt_비활성또는폐기세션_401거부() throws Exception {
-        UUID inactiveMemberId = UUID.randomUUID();
-        UUID inactiveSessionId = UUID.randomUUID();
-        insertMember(inactiveMemberId, "DISABLED");
+    @DisplayName("공개 상세의 상태 저장소 장애만 익명으로 폴백하고 회원 경계는 503을 유지한다")
+    void restaurantDetail_상태저장소장애_공개상세만익명폴백한다() throws Exception {
+        String memberId = java.util.UUID.randomUUID().toString();
+        String sessionId = java.util.UUID.randomUUID().toString();
+        String memberToken = memberTokenIssuer.issueAccessToken(new MemberPrincipal(memberId, sessionId));
+        given(memberSessionAccessChecker.check(memberId, sessionId))
+                .willReturn(MemberSessionAccessChecker.AccessDecision.UNAVAILABLE);
 
-        mockMvc.perform(get("/api/me/favorites/{restaurantId}", UUID.randomUUID())
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken(inactiveMemberId, inactiveSessionId)))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
-
-        UUID revokedSessionId = UUID.randomUUID();
-        insertActiveMember(MEMBER_ID);
-        revokeSession(revokedSessionId, OffsetDateTime.now().minusMinutes(5), OffsetDateTime.now().plusMinutes(5));
-
-        mockMvc.perform(get("/api/me/favorites/{restaurantId}", UUID.randomUUID())
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken(MEMBER_ID, revokedSessionId)))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
-    }
-
-    @Test
-    @DisplayName("공개 조회는 관리자 audience Bearer도 익명 요청으로만 처리한다")
-    void publicRead_adminAudienceBearer_익명허용() throws Exception {
-        UUID restaurantId = UUID.randomUUID();
-        when(getRestaurantDetailQuery.getRestaurantDetail(restaurantId)).thenReturn(detail(restaurantId));
-
-        mockMvc.perform(get("/api/restaurants/{restaurantId}", restaurantId)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer "
-                                + signedToken("test-key-20260727", "masit-on", "masit-on-admin-api")))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(restaurantId.toString()));
-
-        verify(personalRestaurantService, never()).record(any(), any(), any());
-    }
-
-    @Test
-    @DisplayName("/api/me 저장소 확인 실패는 503과 private no-store 헤더를 반환한다")
-    void memberBoundary_storeFailure_503과캐시헤더() throws Exception {
-        insertActiveMember(MEMBER_ID);
-        doThrow(new MemberAuthenticationStoreUnavailableException(
-                new DataAccessResourceFailureException("db down")))
-                .when(memberAuthenticationStateAdapter)
-                .load(org.mockito.ArgumentMatchers.eq(MEMBER_ID),
-                        org.mockito.ArgumentMatchers.eq(SESSION_ID), any(Instant.class));
-
-        mockMvc.perform(get("/api/me/favorites/{restaurantId}", UUID.randomUUID())
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken(MEMBER_ID, SESSION_ID)))
+        mockMvc.perform(get("/api/restaurants/{restaurantId}", java.util.UUID.randomUUID())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/me/boundary")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken))
                 .andExpect(status().isServiceUnavailable())
-                .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "private, no-store"))
                 .andExpect(jsonPath("$.code").value("AUTHENTICATION_SERVICE_UNAVAILABLE"));
-    }
-
-    @Test
-    @DisplayName("공개 조회 저장소 확인 실패는 익명 요청으로 격하한다")
-    void publicRead_storeFailure_익명허용() throws Exception {
-        UUID restaurantId = UUID.randomUUID();
-        insertActiveMember(MEMBER_ID);
-        when(getRestaurantDetailQuery.getRestaurantDetail(restaurantId)).thenReturn(detail(restaurantId));
-        doThrow(new MemberAuthenticationStoreUnavailableException(
-                new DataAccessResourceFailureException("db down")))
-                .when(memberAuthenticationStateAdapter)
-                .load(org.mockito.ArgumentMatchers.eq(MEMBER_ID),
-                        org.mockito.ArgumentMatchers.eq(SESSION_ID), any(Instant.class));
-
-        mockMvc.perform(get("/api/restaurants/{restaurantId}", restaurantId)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken(MEMBER_ID, SESSION_ID)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(restaurantId.toString()));
-
-        verify(personalRestaurantService, never()).record(any(), any(), any());
-    }
-
-    private RestaurantDetailResult detail(UUID restaurantId) {
-        return new RestaurantDetailResult(
-                restaurantId, "공개 맛집", "한식", "서울특별시 마포구 월드컵로 1",
-                null, null, null, ContentStatus.AVAILABLE, List.of(), List.of());
     }
 
     private static KeyPair keyPair() {
@@ -413,87 +305,21 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
     }
 
     private static String signedToken(String keyId, String issuer, String audience) throws Exception {
-        return signedToken(keyId, issuer, audience, MEMBER_ID.toString(), null, List.of("MEMBER"));
-    }
-
-    private static String memberToken(UUID memberId, UUID sessionId) throws Exception {
-        return signedToken(
-                "test-key-20260727",
-                "masit-on",
-                "masit-on-member-api",
-                memberId.toString(),
-                sessionId.toString(),
-                List.of("MEMBER")
-        );
-    }
-
-    private static String memberTokenWithoutSid(UUID memberId) throws Exception {
-        return signedToken(
-                "test-key-20260727",
-                "masit-on",
-                "masit-on-member-api",
-                memberId.toString(),
-                null,
-                List.of("MEMBER")
-        );
-    }
-
-    private static String signedToken(
-            String keyId,
-            String issuer,
-            String audience,
-            String subject,
-            String sessionId,
-            List<String> roles
-    ) throws Exception {
         Instant now = Instant.now();
-        JWTClaimsSet.Builder claims = new JWTClaimsSet.Builder()
+        JWTClaimsSet claims = new JWTClaimsSet.Builder()
                 .issuer(issuer)
                 .audience(List.of(audience))
-                .subject(subject)
-                .claim("roles", roles)
+                .subject("admin-id")
+                .claim("roles", List.of("MEMBER"))
                 .issueTime(java.util.Date.from(now))
-                .expirationTime(java.util.Date.from(now.plusSeconds(60)));
-        if (sessionId != null) {
-            claims.claim("sid", sessionId);
-        }
+                .expirationTime(java.util.Date.from(now.plusSeconds(60)))
+                .build();
         com.nimbusds.jose.JWSHeader.Builder header = new com.nimbusds.jose.JWSHeader.Builder(JWSAlgorithm.RS256);
         if (keyId != null) {
             header.keyID(keyId);
         }
-        SignedJWT jwt = new SignedJWT(header.build(), claims.build());
+        SignedJWT jwt = new SignedJWT(header.build(), claims);
         jwt.sign(new RSASSASigner((RSAPrivateKey) KEY_PAIR.getPrivate()));
         return jwt.serialize();
-    }
-
-    private void insertActiveMember(UUID memberId) {
-        insertMember(memberId, "ACTIVE");
-    }
-
-    private void insertMember(UUID memberId, String status) {
-        OffsetDateTime now = OffsetDateTime.now();
-        jdbcTemplate.update("""
-                INSERT INTO member_account (
-                    id, email, password_hash, email_verified_at, status, deletion_requested_at, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                memberId,
-                memberId + "@example.com",
-                "hashed-password",
-                "ACTIVE".equals(status) || "DELETION_PENDING".equals(status) ? java.sql.Timestamp.from(now.toInstant()) : null,
-                status,
-                "DELETION_PENDING".equals(status) ? java.sql.Timestamp.from(now.toInstant()) : null,
-                java.sql.Timestamp.from(now.toInstant()),
-                java.sql.Timestamp.from(now.toInstant()));
-    }
-
-    private void revokeSession(UUID sessionId, OffsetDateTime revokedAt, OffsetDateTime expiresAt) {
-        jdbcTemplate.update("""
-                INSERT INTO member_session_revocation (session_id, revoked_at, expires_at)
-                VALUES (?, ?, ?)
-                """,
-                sessionId,
-                java.sql.Timestamp.from(revokedAt.toInstant()),
-                java.sql.Timestamp.from(expiresAt.toInstant()));
     }
 }

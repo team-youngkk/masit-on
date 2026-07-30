@@ -13,7 +13,6 @@ public enum ErrorCode {
     INVALID_IDENTIFIER(HttpStatus.BAD_REQUEST, "식별자 형식이 올바르지 않습니다."),
     INVALID_CONFIRMATION_TOKEN(HttpStatus.BAD_REQUEST, "확인 토큰이 유효하지 않습니다."),
     AUTHENTICATION_REQUIRED(HttpStatus.UNAUTHORIZED, "인증이 필요합니다."),
-    AUTHENTICATION_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "인증 상태를 확인할 수 없습니다."),
     FORBIDDEN(HttpStatus.FORBIDDEN, "접근 권한이 없습니다."),
     RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 자원을 찾을 수 없습니다."),
     IDENTITY_VERIFICATION_REQUIRED(HttpStatus.CONFLICT, "동일 자원 여부를 확인할 수 없습니다."),
