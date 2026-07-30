@@ -30,7 +30,7 @@ M2 초기 운영 배포에서 생성한 AWS 자원의 식별자와 완료 조건
 | 접근 방식 | IAM Identity Center 조직 인스턴스 `ssoins-7230c72b8df2ccaf`, 권한 세트 `AdministratorAccess`(세션 8시간) |
 | CLI 프로파일 | `masiton` (SSO. 장기 액세스 키 없음) |
 
-**이 계정은 맛잇온 전용이 아니다.** 2026-06-05에 만든 다른 프로젝트의 ECR 리포지토리 `commerce-payment`(이미지 8개)가 있고 삭제된 RDS의 로그 그룹 `RDSOSMetrics`가 남아 있다. 예산 범위 영향은 14절에 적었다.
+**이 계정은 맛잇온 전용이 아니다.** 2026-06-05에 만든 다른 프로젝트의 ECR 리포지토리 `commerce-payment`(이미지 8개)가 있고 삭제된 RDS의 로그 그룹 `RDSOSMetrics`가 남아 있다. 예산 범위 영향은 15절에 적었다.
 
 ## 3. M2-03 네트워크와 EC2 (#42)
 
@@ -291,7 +291,7 @@ PR 브랜치는 AWS 자격 증명을 받지 못한다. **이미지 빌드와 검
 | `.env` 파일 | 0건 | 0건 |
 | 평문 비밀 패턴 | 0건 | 0건 |
 | 플랫폼 | `linux/arm64` | `linux/arm64` |
-| 컨테이너 기동 | 미확인 (15절) | Next.js 16.2.11 기동, `/` → `200` |
+| 컨테이너 기동 | 미확인 (16절) | Next.js 16.2.11 기동, `/` → `200` |
 
 평문 비밀 검사는 `BEGIN PRIVATE KEY`, `BEGIN RSA PRIVATE KEY`, `JWT_PRIVATE_KEY_PEM`, `POSTGRES_PASSWORD`, `masiton_local` 다섯 패턴을 이미지 파일 시스템에서 찾는 방식이다. 백엔드 `/app`에는 `application.jar` 하나만 있고 빌드 컨텍스트 잔여물이 없다.
 
@@ -548,16 +548,38 @@ reload가 master 프로세스를 바꾸지 않으므로 **인증서 교체에 �
 
 컨테이너는 `--network host`로 실행한다. [ADR-RUNTIME-001](../07-adr/platform/runtime-001-docker.md) 11절이 운영 설정의 Docker 서비스명을 금지하므로 앱이 저장소에 `127.0.0.1`로 붙어야 하고, Nginx도 `127.0.0.1`의 8080·3000으로 전달한다. 브리지 네트워크로는 두 방향이 함께 성립하지 않는다.
 
-비밀값은 `docker run -e VAR` **통과 형식**으로만 넘긴다. 환경 파일도 만들지 않는다. 실제로 무엇이 막히고 무엇이 남는지 인스턴스에서 측정했다.
+비밀값은 **tmpfs 파일로 주입한다.** 컨테이너 환경 변수로 넘기지 않는다.
 
-| 노출 경로 | 결과 |
+처음에는 `docker run -e VAR` 통과 형식을 썼다. 명령행 노출은 막았지만 **값이 컨테이너 스펙에 들어가고 Docker가 그것을 `/var/lib/docker/containers/<id>/config.v2.json`에 평문으로 적는다.** `docker inspect`로 JWT 개인키 전문이 읽혔고 루트 볼륨 스냅샷에도 함께 들어간다. [ADR-SEC-001](../07-adr/security/sec-001-secrets-workload-identity.md) 11절의 평문 저장 금지에 걸리며, PR 리뷰에서 지적받아 바꿨다.
+
+당시 기록에 "root만 조회할 수 있어 새 권한 경계가 생기는 것은 아니다"라고 적었는데, ADR 문구는 조건 없이 평문 저장을 금지하므로 그 판단이 틀렸다.
+
+| 항목 | 값 |
 |---|---|
-| `ps auxww` (프로세스 명령행) | **0건.** argv에 `-e JWT_PRIVATE_KEY_PEM`처럼 이름만 있고 값이 없다 |
-| `/proc/<pid>/environ` | `root` 소유 `0400` |
-| 디스크의 환경 파일 | 없음 |
-| **`docker inspect masiton-backend`** | **JWT 개인키 평문이 보인다** |
+| 렌더링 | [`app-secrets-render.sh`](../../deploy/scripts/app-secrets-render.sh)가 기동 직전 실행 |
+| 위치 | `/run/masiton/secrets` (**tmpfs**), 디렉터리 `0500` uid 1001, 파일 `0400` uid 1001 |
+| 읽는 쪽 | 컨테이너에 같은 경로로 읽기 전용 마운트, Spring `configtree:` |
+| 파일 이름 | 곧 속성 이름이다. `spring.datasource.password`, `masiton.security.jwt.private-key-pem` 등 |
+| 환경 변수로 남긴 것 | `DB_URL`, `DB_USERNAME`, `REDIS_HOST`, `REDIS_PORT`, `SECRETS_DIR`, `SPRING_PROFILES_ACTIVE` (비밀 아님) |
 
-**`docker inspect` 노출은 통과 형식으로 막을 수 없다.** 컨테이너에 환경 변수로 주입하는 방식이면 값이 컨테이너 스펙(`Config.Env`)에 들어가기 때문이다. Docker 소켓에 접근할 수 있는 주체(실질적으로 root)만 조회할 수 있고, 그 주체는 이미 Parameter Store를 IAM Role로 읽을 수 있으므로 새 권한 경계가 생기는 것은 아니다. 통과 형식의 실효는 **명령행 노출을 없애는 것**이다.
+파일 하나가 속성 하나이므로 JWT PEM처럼 여러 줄인 값도 이스케이프가 필요 없다. Redis `requirepass`(7.2절)와 Basic Auth `htpasswd`(10절)에 이미 쓰는 방식과 같다.
+
+`ExecStartPre`에 `-` 접두사를 붙이지 않아 렌더링이 실패하면 컨테이너를 띄우지 않는다. 매 렌더링에서 이전 잔여물을 지운다. 파라미터를 삭제한 뒤에도 옛 파일이 남으면 지웠다고 믿은 비밀값이 계속 주입된다.
+
+**노출 경로를 다시 측정했다.**
+
+| 노출 경로 | 환경 변수 방식 | tmpfs 파일 방식 |
+|---|---|---|
+| `ps auxww` | 0건 | 0건 |
+| `docker inspect` Env | **개인키 평문 노출** | **0건** (5개 패턴 모두) |
+| 컨테이너 스펙 파일 | **평문 포함** | **0건** (실제 값 문자열 대조) |
+| 디스크의 환경 파일 | 없음 | 없음 |
+
+**파일 이름을 최종 속성 이름으로 두는 이유**는 프로파일 문서에 속성을 선언하지 않기 위해서다. `private-key-pem: ${jwt.private-key-pem}`처럼 매핑하면 값이 아니라 플레이스홀더라도 `ConfigurationLayeringTest`의 "프로파일 계층은 JWT 키 재료를 담지 않는다" 규칙에 걸린다. 규칙을 느슨하게 하지 않고 선언을 없애는 방향으로 맞췄다.
+
+`configtree` 값이 공통 설정의 빈 기본값(`${JWT_KEY_ID:}` 등)을 이기는지는 추측하지 않고 테스트로 확정했다. 이긴다. `ProdSecretsConfigTreeTest` 5건이 매핑, 여러 줄 PEM 원문 보존, 선택 값 부재, 운영 불변값 상속을 고정한다.
+
+**전환 과정에서 결함을 하나 만들었다.** 프로파일을 최종 속성 이름 방식으로 바꿀 때 렌더링 스크립트의 이름을 함께 바꾸지 않아 DB 비밀번호가 주입되지 않았고 Flyway가 커넥션을 열지 못해 재기동 루프에 들어갔다. 테스트는 최종 이름으로 파일을 만들어 통과했으므로 **테스트가 검증한 것과 스크립트가 만드는 것이 어긋난** 셈이다. 12.1절 Kakao 스텁 건과 같은 유형이다. 약 6분간 `/api`가 응답하지 않았다.
 
 `prod` 프로파일은 저장소 접속값과 JWT 키에 기본값을 두지 않아 값이 없으면 기동이 실패한다. **Kakao·YouTube Key만 빈 기본값을 허용한다.** Key 없이도 공개 탐색·상세와 상태 확인이 동작하므로 배포와 Key 발급을 분리했다.
 
@@ -772,6 +794,21 @@ SNS 토픽에 알람 형식 메시지를 직접 publish해 경로 전체를 확�
 
 **시각 표기를 KST로 바꿨다.** CloudWatch `StateChangeTime`은 항상 UTC로 오는데 그대로 보내면 운영자가 매번 9시간을 환산해 읽어야 한다. `+0000`과 `Z` 두 표기를 받아 `2026-07-30 15:10:00 +09:00` 형태로 만들고, 해석하지 못하는 값은 원문을 그대로 둔다. 알림이 시간 파싱 실패로 사라지는 것보다 원문을 보여주는 편이 낫다. 고정 오프셋을 쓰는 이유는 KST에 일광 절약 시간이 없고 Lambda 런타임에 tzdata가 없을 수 있기 때문이다.
 
+### 11.7. 인증서 만료 임박 알람
+
+PR 리뷰 지적으로 추가했다. 배포 계획 4.1절이 M2-10 알람에 포함한다고 정한 항목인데 빠져 있었다.
+
+| 알람 | 지표 | 임계 | 잡는 것 |
+|---|---|---|---|
+| `masiton-acm-certificate-expiry` | `AWS/CertificateManager DaysToExpiry` | 30일 | ACM 자동 갱신 실패 |
+| `masiton-installed-certificate-expiry` | `masiton/health InstalledCertificateDaysToExpiry` | 21일 | 갱신본 재배포 실패 |
+
+**ACM 지표만으로는 두 번째를 잡을 수 없다.** ACM이 갱신하면 그쪽 남은 일수는 늘어나고 설치본만 만료로 간다. 그래서 [`health-metrics.sh`](../../deploy/scripts/health-metrics.sh)가 Nginx에 설치된 인증서의 남은 일수를 지표로 올린다. 임계를 다르게 둬 두 알람의 원인이 구분된다. ACM 알람 없이 설치본 알람만 뜨면 재배포 경로 문제다.
+
+인증서를 읽지 못하면 지표를 올리지 않는다. 0을 올리면 만료 임박으로 오탐하고 임의값을 올리면 실제 만료를 가린다. 지표가 끊기는 것은 `treat-missing-data=breaching`이 잡는다.
+
+측정값은 197일이고 인증서 만료일(2027-02-12)과 일치한다. 알람은 7종이 됐다.
+
 ## 12. M2-12 배포 후 기능 검증 (#51)
 
 검증 일시 2026-07-30. **진행 중이다.** 남은 항목은 12.5절에 있다.
@@ -962,7 +999,60 @@ docker exec -e REDISCLI_AUTH=... masiton-redis redis-cli del <키>
 
 **`source` 차단의 운영 영향을 기록해 둔다.** 실패 카운터의 `source`가 연결 원격 주소이고 Nginx를 경유한 모든 요청이 `127.0.0.1`로 보이므로, **한 사람이 5회 틀리면 15분 동안 전원의 로그인이 막힌다.** [인증 API 계약](../05-specs/api/admin/authentication-api.md) 8절이 "신뢰 프록시 설정이 없는 현재 MVP에서 연결 원격 주소를 사용한다"고 명시했으므로 계약대로의 동작이다. 검증 참여자에게 이 사실을 함께 안내했다.
 
-## 14. 예산 범위에 관한 확인 사항
+## 14. PR 리뷰 반영 (#76)
+
+`deploy/m2` → `main` PR에서 리뷰 5건을 받아 모두 반영했다. 커밋은 `261d596`, `0aa41ce`, `cda12e8`, `4bbb80a`다.
+
+| 우선순위 | 지적 | 반영 |
+|---|---|---|
+| P1 | 이미지 비밀값 검사가 JAR 내부를 보지 못한다 | `/app`을 러너로 꺼내 JAR을 풀어 검사. `BOOT-INF/lib` 제외 |
+| P1 | 컨테이너 환경 변수에 비밀값 평문이 남는다 | tmpfs 파일 주입으로 전환 (9.2절) |
+| P2 | Kakao `place_url`의 비 HTTP scheme이 통과한다 | 정규화 전 scheme 검증, 회귀 테스트 6건 |
+| P2 | 배포가 혼합 버전을 남길 수 있다 | 두 digest를 준비한 뒤 활성 참조를 함께 교체 |
+| P2 | 인증서 만료 임박 감시가 빠졌다 | 알람 2종 추가 (11.7절) |
+
+### 14.1. JAR 내부 비밀값 검사
+
+`grep -rIl`의 `-I`가 바이너리를 제외하므로 `/app`에 `application.jar` 하나만 있는 백엔드 이미지는 **사실상 무검사**였다.
+
+`BOOT-INF/lib`은 검사에서 뺀다. 서드파티 라이브러리가 시험용 키를 담고 있어 오탐이 되고, 막아야 하는 것은 우리 소스·리소스가 비밀값을 싣고 나가는 경우다.
+
+**패턴도 좁혔다.** JAR 내부까지 보게 되자 기존 패턴이 항상 걸렸다. `application.yml`의 `${JWT_PRIVATE_KEY_PEM:}`는 환경 변수 **이름**이고, `application-local.yml`의 `masiton_local`은 저장소에 공개된 로컬 기본값이다. 둘 다 이미지에 정상적으로 담긴다. 그래서 그 자체로 유출을 뜻하는 세 패턴만 남겼다.
+
+- 개인키 PEM 블록
+- AWS 장기 액세스 키(`AKIA…`). ADR-SEC-001이 발급을 금지한다
+- Slack Webhook URL
+
+실제 부트 JAR로 다섯 경우를 재현했다. 정상 JAR 0건, 심은 개인키·AWS 키·Webhook URL 각각 검출, `BOOT-INF/lib`에만 있는 값은 무시다.
+
+**후속 수정이 하나 있었다.** 프론트엔드 이미지에는 JAR이 없어 해제 디렉터리가 만들어지지 않고, 존재하지 않는 경로를 받은 `grep`이 exit 2를 반환해 **"검사 실행 실패를 미검출로 처리하지 않는다" 가드가 CI를 실패시켰다.** 가드는 의도대로 동작했고 준비가 빠졌던 것이다.
+
+### 14.2. 검증 결과
+
+리뷰 반영 후 운영 환경에서 다시 확인했다.
+
+```text
+docker inspect Env 비밀값 패턴 5종   -> 모두 0건
+컨테이너 스펙 파일 실제 값 대조 3종  -> 모두 0건
+마운트                               -> /run/masiton/secrets 읽기 전용
+상태 확인 3종                        -> 200, db·redis 개별 UP
+공개 조회                            -> 200
+관리자 로그인                        -> 200, kid=prod-1, RS256
+맛집 등록 미리보기                   -> 200 DUPLICATE (실제 Kakao 호출 성립)
+인터넷 화면·API·관리자 화면          -> 200
+```
+
+자동 테스트는 `KakaoPlaceVerificationAdapterTest` 6건, `ProdSecretsConfigTreeTest` 5건, `ConfigurationLayeringTest` 6건이 통과한다. CI 세 job 모두 통과했다.
+
+### 14.3. 남은 팀 결정 — CD 범위
+
+리뷰 과정에서 문서 간 간극을 하나 더 찾았다. [ADR-CI-001](../07-adr/platform/ci-001-github-actions-quality-gate.md)은 네 곳에서 EC2 배포를 M2 범위로 적는다("EC2 배포는 M2부터 활성화한다", "운영 배포 수동 승인 … 은 M2에서 검증한다"). 반면 계획의 `M2-09`는 승인 게이트 자동화를 요구하지 않는다.
+
+M2에서 실제로 한 것은 파이프라인 없는 수동 실행이다. 담당자가 배포 시점을 판단해 SSM RunCommand로 `app-deploy.sh`를 실행했다.
+
+**2026-07-30에 CD를 M2 범위로 포함하기로 정했다.** 이슈 [#78](https://github.com/team-youngkk/masit-on/issues/78)에 현재 상태, 제안 방식(GitHub Actions `environment` 승인 게이트 + SSM 실행), 완료 조건, 검토가 필요한 지점을 정리했다.
+
+## 15. 예산 범위에 관한 확인 사항
 
 `My Monthly Cost Budget`(`$100`/월)은 **계정 전체 비용**을 대상으로 한다. 2절에 적었듯 이 계정에는 다른 프로젝트 자원이 있어 그 비용도 이 예산에 합산된다.
 
@@ -974,7 +1064,7 @@ docker exec -e REDISCLI_AUTH=... masiton-redis redis-cli del <키>
 
 비용 할당 태그는 활성화 후 최대 24시간이 지나야 새 데이터에 적용되므로 M2 일정 안에서는 즉시 쓸 수 없다.
 
-### 14.1. 크레딧 만료
+### 15.1. 크레딧 만료
 
 **계정 크레딧 4건이 2026-07-29에 전량 만료됐다.** 따라서 M2 운영 비용은 전액 실제 청구다.
 
@@ -991,7 +1081,7 @@ docker exec -e REDISCLI_AUTH=... masiton-redis redis-cli del <키>
 
 `M2-12` 시점에 실제 청구액과 산정치를 대조한다(계획 10절 마지막 완료 항목).
 
-## 15. 검증하지 못한 항목
+## 16. 검증하지 못한 항목
 
 2026-07-30 기준이다. Kakao·YouTube 운영 API Key와 Slack Webhook 발급은 이 목록에서 해소됐다(12절, 11.4절).
 
@@ -999,4 +1089,4 @@ docker exec -e REDISCLI_AUTH=... masiton-redis redis-cli del <키>
 - **SSH 접속.** 키 페어 `masiton-app`을 만들었으나 실제 SSH 접속은 시도하지 않았다. 인스턴스 접근은 SSM RunCommand로 검증했다.
 - **`masiton-admin` 폐기.** 배포·리허설 검증용 계정이며 M2 종료 시 폐기 여부를 판단한다.
 - **WS 담당자별 화면 인수.** 12.5절.
-- **인증서 만료 임박 감시.** 8.2절이 요구한 항목이며 `M2-10` 알람 5종에 아직 포함하지 않았다. ACM 갱신 자체는 자동이고 감시는 재배포 실패를 잡기 위한 것이다.
+- **CD 파이프라인.** 운영 배포가 아직 수동 실행이다. CD를 M2 범위로 포함하기로 정했으므로 [#78](https://github.com/team-youngkk/masit-on/issues/78)이 끝나야 M2가 완료된다(14.3절).
