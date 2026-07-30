@@ -7,6 +7,8 @@ import com.masiton.personal.application.port.in.PersonalRestaurantPage;
 
 public interface PersonalRestaurantStore {
 
+    void lockMember(UUID memberId);
+
     boolean isPublicRestaurant(UUID restaurantId);
 
     void addFavorite(UUID memberId, UUID restaurantId, OffsetDateTime favoritedAt);

@@ -4,6 +4,10 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -17,6 +21,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
+import com.masiton.personal.application.RecordRecentRestaurantViewService;
 import com.masiton.personal.application.port.in.PersonalRestaurantPage;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -52,9 +57,13 @@ class JdbcPersonalRestaurantAdapterIntegrationTest {
     @Autowired
     private JdbcPersonalRestaurantAdapter adapter;
 
+    @Autowired
+    private RecordRecentRestaurantViewService recordRecentRestaurantViewService;
+
     @BeforeEach
-    void clearRecentRestaurantViews() {
+    void clearPersonalRestaurantRelations() {
         jdbcTemplate.update("DELETE FROM recent_restaurant_view");
+        jdbcTemplate.update("DELETE FROM favorite");
     }
 
     @Test
@@ -193,6 +202,163 @@ class JdbcPersonalRestaurantAdapterIntegrationTest {
         assertThat(deletedCount).isZero();
     }
 
+    @Test
+    @DisplayName("같은 회원의 서로 다른 최근 기록을 동시에 저장해도 최신 50건만 남는다")
+    void 최근기록_동시저장_회원별최신50건상한을유지한다() throws Exception {
+        // given
+        UUID memberId = UUID.randomUUID();
+        insertMember(memberId);
+        List<UUID> restaurantIds = new ArrayList<>();
+        for (int index = 0; index < 60; index++) {
+            UUID restaurantId = UUID.randomUUID();
+            restaurantIds.add(restaurantId);
+            insertRestaurant(restaurantId, "PUBLIC");
+        }
+        CountDownLatch ready = new CountDownLatch(restaurantIds.size());
+        CountDownLatch start = new CountDownLatch(1);
+
+        // when
+        try (ExecutorService executor = Executors.newFixedThreadPool(restaurantIds.size())) {
+            List<? extends Future<?>> futures = restaurantIds.stream()
+                    .map(restaurantId -> executor.submit(() -> {
+                        ready.countDown();
+                        await(start);
+                        recordRecentRestaurantViewService.record(memberId, restaurantId);
+                    }))
+                    .toList();
+            ready.await();
+            start.countDown();
+            for (Future<?> future : futures) {
+                future.get();
+            }
+        }
+
+        // then
+        assertThat(countRecent(memberId)).isEqualTo(50);
+    }
+
+    @Test
+    @DisplayName("찜 추가와 목록 조회 및 해제는 최신순과 멱등 상태를 유지한다")
+    void 찜_추가조회해제_최신순으로조회하고해제한다() {
+        // given
+        UUID memberId = UUID.randomUUID();
+        insertMember(memberId);
+        UUID olderRestaurantId = UUID.randomUUID();
+        UUID newerRestaurantId = UUID.randomUUID();
+        insertRestaurant(olderRestaurantId, "PUBLIC");
+        insertRestaurant(newerRestaurantId, "PUBLIC");
+        OffsetDateTime favoritedAt = OffsetDateTime.parse("2026-07-30T00:00:00Z");
+
+        // when
+        adapter.addFavorite(memberId, olderRestaurantId, favoritedAt.minusMinutes(1));
+        adapter.addFavorite(memberId, newerRestaurantId, favoritedAt);
+        PersonalRestaurantPage added = adapter.findFavorites(memberId, 1, 20);
+        adapter.removeFavorite(memberId, newerRestaurantId);
+        adapter.removeFavorite(memberId, newerRestaurantId);
+        PersonalRestaurantPage removed = adapter.findFavorites(memberId, 1, 20);
+
+        // then
+        assertThat(added.items())
+                .extracting(item -> item.restaurantId())
+                .containsExactly(newerRestaurantId, olderRestaurantId);
+        assertThat(added.totalElements()).isEqualTo(2);
+        assertThat(removed.items())
+                .extracting(item -> item.restaurantId())
+                .containsExactly(olderRestaurantId);
+        assertThat(adapter.existsFavorite(memberId, newerRestaurantId)).isFalse();
+    }
+
+    @Test
+    @DisplayName("같은 회원과 맛집을 동시에 찜해도 한 건으로 수렴한다")
+    void 찜_동시추가_한건으로수렴한다() throws Exception {
+        // given
+        UUID memberId = UUID.randomUUID();
+        UUID restaurantId = UUID.randomUUID();
+        insertMember(memberId);
+        insertRestaurant(restaurantId, "PUBLIC");
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        OffsetDateTime favoritedAt = OffsetDateTime.parse("2026-07-30T00:00:00Z");
+
+        // when
+        try (ExecutorService executor = Executors.newFixedThreadPool(2)) {
+            List<Future<?>> futures = List.of(
+                    executor.submit(() -> addFavoriteAfterStart(
+                            memberId, restaurantId, favoritedAt, ready, start)),
+                    executor.submit(() -> addFavoriteAfterStart(
+                            memberId, restaurantId, favoritedAt, ready, start)));
+            ready.await();
+            start.countDown();
+            for (Future<?> future : futures) {
+                future.get();
+            }
+        }
+
+        // then
+        assertThat(countFavorite(memberId, restaurantId)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("찜과 최근 목록은 다른 회원의 관계를 노출하지 않는다")
+    void 개인목록_다른회원관계_회원별로격리한다() {
+        // given
+        UUID firstMemberId = UUID.randomUUID();
+        UUID secondMemberId = UUID.randomUUID();
+        UUID firstRestaurantId = UUID.randomUUID();
+        UUID secondRestaurantId = UUID.randomUUID();
+        insertMember(firstMemberId);
+        insertMember(secondMemberId);
+        insertRestaurant(firstRestaurantId, "PUBLIC");
+        insertRestaurant(secondRestaurantId, "PUBLIC");
+        OffsetDateTime occurredAt = OffsetDateTime.parse("2026-07-30T00:00:00Z");
+        adapter.addFavorite(firstMemberId, firstRestaurantId, occurredAt);
+        adapter.addFavorite(secondMemberId, secondRestaurantId, occurredAt);
+        insertRecent(firstMemberId, firstRestaurantId, occurredAt);
+        insertRecent(secondMemberId, secondRestaurantId, occurredAt);
+
+        // when
+        adapter.removeFavorite(firstMemberId, firstRestaurantId);
+        adapter.removeRecentRestaurant(firstMemberId, firstRestaurantId);
+        PersonalRestaurantPage favorites = adapter.findFavorites(secondMemberId, 1, 20);
+        PersonalRestaurantPage recents = adapter.findRecentRestaurants(
+                secondMemberId, occurredAt.minusDays(30), 50, 1, 20);
+
+        // then
+        assertThat(favorites.items())
+                .extracting(item -> item.restaurantId())
+                .containsExactly(secondRestaurantId);
+        assertThat(favorites.totalElements()).isEqualTo(1);
+        assertThat(recents.items())
+                .extracting(item -> item.restaurantId())
+                .containsExactly(secondRestaurantId);
+        assertThat(recents.totalElements()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("찜과 최근 목록은 가장 큰 페이지 번호에서도 오류 없이 빈 목록을 반환한다")
+    void 개인목록_가장큰페이지번호_빈목록을반환한다() {
+        // given
+        UUID memberId = UUID.randomUUID();
+        UUID restaurantId = UUID.randomUUID();
+        insertMember(memberId);
+        insertRestaurant(restaurantId, "PUBLIC");
+        OffsetDateTime occurredAt = OffsetDateTime.parse("2026-07-30T00:00:00Z");
+        adapter.addFavorite(memberId, restaurantId, occurredAt);
+        insertRecent(memberId, restaurantId, occurredAt);
+
+        // when
+        PersonalRestaurantPage favorites = adapter.findFavorites(
+                memberId, Integer.MAX_VALUE, 50);
+        PersonalRestaurantPage recents = adapter.findRecentRestaurants(
+                memberId, occurredAt.minusDays(30), 50, Integer.MAX_VALUE, 50);
+
+        // then
+        assertThat(favorites.items()).isEmpty();
+        assertThat(favorites.totalElements()).isEqualTo(1);
+        assertThat(recents.items()).isEmpty();
+        assertThat(recents.totalElements()).isEqualTo(1);
+    }
+
     private void insertMember(UUID memberId) {
         jdbcTemplate.update("""
                 INSERT INTO member_account
@@ -232,6 +398,34 @@ class JdbcPersonalRestaurantAdapterIntegrationTest {
                 Long.class,
                 memberId);
         return count == null ? 0 : count;
+    }
+
+    private long countFavorite(UUID memberId, UUID restaurantId) {
+        Long count = jdbcTemplate.queryForObject("""
+                SELECT count(*) FROM favorite WHERE member_id = ? AND restaurant_id = ?
+                """, Long.class, memberId, restaurantId);
+        return count == null ? 0 : count;
+    }
+
+    private void addFavoriteAfterStart(
+            UUID memberId,
+            UUID restaurantId,
+            OffsetDateTime favoritedAt,
+            CountDownLatch ready,
+            CountDownLatch start
+    ) {
+        ready.countDown();
+        await(start);
+        adapter.addFavorite(memberId, restaurantId, favoritedAt);
+    }
+
+    private void await(CountDownLatch latch) {
+        try {
+            latch.await();
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("동시성 테스트 대기가 중단되었습니다.", exception);
+        }
     }
 
     private boolean hasRecent(UUID memberId, UUID restaurantId) {

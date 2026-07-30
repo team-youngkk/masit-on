@@ -23,6 +23,12 @@ public class JdbcPersonalRestaurantAdapter implements PersonalRestaurantStore {
     }
 
     @Override
+    public void lockMember(UUID memberId) {
+        jdbcTemplate.queryForObject(
+                "SELECT id FROM member_account WHERE id = ? FOR UPDATE", UUID.class, memberId);
+    }
+
+    @Override
     public boolean isPublicRestaurant(UUID restaurantId) {
         Boolean result = jdbcTemplate.queryForObject("""
                 SELECT EXISTS(SELECT 1 FROM restaurant
@@ -55,7 +61,7 @@ public class JdbcPersonalRestaurantAdapter implements PersonalRestaurantStore {
 
     @Override
     public PersonalRestaurantPage findFavorites(UUID memberId, int page, int size) {
-        int offset = (page - 1) * size;
+        long offset = ((long) page - 1) * size;
         List<PersonalRestaurantItem> items = jdbcTemplate.query("""
                 SELECT relation.restaurant_id, r.name, region.name AS district,
                        category.name AS category, relation.favorited_at AS occurred_at
@@ -76,7 +82,7 @@ public class JdbcPersonalRestaurantAdapter implements PersonalRestaurantStore {
     public PersonalRestaurantPage findRecentRestaurants(
             UUID memberId, OffsetDateTime cutoff, int retentionLimit, int page, int size
     ) {
-        int offset = (page - 1) * size;
+        long offset = ((long) page - 1) * size;
         List<PersonalRestaurantItem> items = jdbcTemplate.query("""
                 WITH retained AS (
                     SELECT restaurant_id, last_viewed_at

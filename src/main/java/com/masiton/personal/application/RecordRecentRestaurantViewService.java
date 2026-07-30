@@ -31,6 +31,7 @@ public class RecordRecentRestaurantViewService implements RecordRecentRestaurant
     @Transactional
     public void record(UUID memberId, UUID restaurantId) {
         OffsetDateTime viewedAt = OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
+        store.lockMember(memberId);
         store.upsertRecentRestaurant(memberId, restaurantId, viewedAt);
         store.pruneRecentRestaurantOverflow(memberId, RECENT_LIMIT);
     }

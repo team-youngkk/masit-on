@@ -39,6 +39,7 @@ class RecordRecentRestaurantViewServiceTest {
         // then
         OffsetDateTime viewedAt = OffsetDateTime.ofInstant(NOW, ZoneOffset.UTC);
         var ordered = inOrder(store);
+        ordered.verify(store).lockMember(MEMBER_ID);
         ordered.verify(store).upsertRecentRestaurant(MEMBER_ID, RESTAURANT_ID, viewedAt);
         ordered.verify(store).pruneRecentRestaurantOverflow(MEMBER_ID, 50);
         verify(store, never()).deleteRecentRestaurantViewsBefore(
