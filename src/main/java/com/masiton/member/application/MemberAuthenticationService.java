@@ -175,19 +175,19 @@ public class MemberAuthenticationService {
         try {
             owner = sessions.findSession(refreshToken).orElse(null);
         } catch (RuntimeException exception) {
-            recordRevocation(principal.sessionId(), Instant.now(clock));
+            recordLogoutRevocation(principal.sessionId(), Instant.now(clock));
             throw authenticationServiceUnavailable();
         }
         if (owner == null) {
-            recordRevocation(principal.sessionId(), Instant.now(clock));
+            recordLogoutRevocation(principal.sessionId(), Instant.now(clock));
             return;
         }
         if (!principal.memberId().equals(owner.memberId()) || !principal.sessionId().equals(owner.sessionId())) {
             throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
         }
         Instant now = Instant.now(clock);
+        recordLogoutRevocation(owner.sessionId(), now);
         try {
-            recordRevocation(owner.sessionId(), now);
             sessions.revoke(owner.memberId(), owner.sessionId());
         } catch (RuntimeException exception) {
             throw authenticationServiceUnavailable();
@@ -260,6 +260,10 @@ public class MemberAuthenticationService {
                 "AUTHENTICATION_SERVICE_UNAVAILABLE", "Authentication service is unavailable");
     }
 
+    private BusinessException internalServerError() {
+        return new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
+    }
+
     private void revokeAllSessions(String memberId, Instant now) {
         recordRevocations(sessions.revokeAll(memberId), now);
     }
@@ -276,6 +280,14 @@ public class MemberAuthenticationService {
         } catch (RuntimeException exception) {
             enqueueRecoveryBestEffort(revocation, now, exception);
             throw exception;
+        }
+    }
+
+    private void recordLogoutRevocation(String sessionId, Instant now) {
+        try {
+            recordRevocation(sessionId, now);
+        } catch (RuntimeException exception) {
+            throw internalServerError();
         }
     }
 

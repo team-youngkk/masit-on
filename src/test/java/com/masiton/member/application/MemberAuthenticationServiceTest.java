@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.masiton.common.security.MemberJwtSettings;
+import com.masiton.common.web.BusinessException;
 import com.masiton.member.application.port.out.MemberAccountRepository;
 import com.masiton.member.application.port.out.MemberActionMailOutboxStore;
 import com.masiton.member.application.port.out.MemberActionTokenDeliveryPort;
@@ -215,10 +216,32 @@ class MemberAuthenticationServiceTest {
 
         assertThatThrownBy(() -> service().logout(
                 new MemberPrincipal(memberId.toString(), sessionId.toString()), NOW.plusSeconds(60), "refresh-token"))
-                .isInstanceOf(com.masiton.common.web.BusinessException.class);
+                .isInstanceOfSatisfying(BusinessException.class, exception -> {
+                    assertThat(exception.status()).isEqualTo(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR);
+                    assertThat(exception.code()).isEqualTo("INTERNAL_SERVER_ERROR");
+                });
 
         verify(revocationRecoveryJobs).enqueue(
                 new MemberSessionRevocation(sessionId, NOW, NOW.plus(Duration.ofDays(14))), NOW);
+        verify(sessions, never()).revoke(memberId.toString(), sessionId.toString());
+    }
+
+    @Test
+    @DisplayName("Redis 세션 폐기 실패는 인증 서비스 장애로 구분한다")
+    void logout_Redis세션폐기실패_503반환() {
+        UUID memberId = UUID.randomUUID();
+        UUID sessionId = UUID.randomUUID();
+        given(sessions.findSession("refresh-token"))
+                .willReturn(Optional.of(new MemberSessionOwner(memberId.toString(), sessionId.toString())));
+        doThrow(new IllegalStateException("redis unavailable")).when(sessions)
+                .revoke(memberId.toString(), sessionId.toString());
+
+        assertThatThrownBy(() -> service().logout(
+                new MemberPrincipal(memberId.toString(), sessionId.toString()), NOW.plusSeconds(60), "refresh-token"))
+                .isInstanceOfSatisfying(BusinessException.class, exception -> {
+                    assertThat(exception.status()).isEqualTo(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE);
+                    assertThat(exception.code()).isEqualTo("AUTHENTICATION_SERVICE_UNAVAILABLE");
+                });
     }
 
     private MemberAuthenticationService service() {

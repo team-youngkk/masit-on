@@ -1,9 +1,13 @@
 package com.masiton.member.presentation;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.DisplayName;
@@ -18,9 +22,16 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.masiton.common.security.MemberCookieSettings;
+import com.masiton.common.security.MemberJwtSettings;
 import com.masiton.common.web.BusinessException;
 import com.masiton.member.application.MemberAuthenticationResult;
 import com.masiton.member.application.MemberAuthenticationService;
+import com.masiton.member.application.MemberPrincipal;
+import com.masiton.member.application.MemberSessionOwner;
+import com.masiton.member.application.MemberSessionRevocation;
+import com.masiton.member.application.port.out.MemberSessionRevocationRecoveryJobStore;
+import com.masiton.member.application.port.out.MemberSessionRevocationStore;
+import com.masiton.member.application.port.out.MemberSessionStore;
 import com.masiton.member.infrastructure.configuration.MemberRateLimitProperties;
 import com.masiton.member.infrastructure.web.MemberClientAddressResolver;
 
@@ -39,6 +50,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @DisplayName("회원 인증 API 응답 계약")
 class MemberAuthenticationControllerTest {
+
+    private static final Instant NOW = Instant.parse("2026-07-30T03:10:00Z");
 
     private final MemberAuthenticationService service = mock(MemberAuthenticationService.class);
     private final MemberCookieSettings cookieSettings = new MemberCookieSettings(
@@ -155,17 +168,28 @@ class MemberAuthenticationControllerTest {
 
     @Test
     @DisplayName("로그아웃의 서버 오류도 Refresh Cookie를 즉시 만료한다")
-    void 로그아웃_서버오류_만료Cookie반환() throws Exception {
-        doThrow(new BusinessException(
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                "INTERNAL_SERVER_ERROR",
-                "Internal server error"
-        )).when(service).logout(any(), any(), any());
+    void 로그아웃_폐기표식저장실패_500과만료Cookie반환() throws Exception {
+        UUID memberId = UUID.randomUUID();
+        UUID sessionId = UUID.randomUUID();
+        MemberSessionStore actualSessions = mock(MemberSessionStore.class);
+        MemberSessionRevocationStore actualRevocations = mock(MemberSessionRevocationStore.class);
+        MemberSessionRevocationRecoveryJobStore actualRecoveryJobs =
+                mock(MemberSessionRevocationRecoveryJobStore.class);
+        when(actualSessions.findSession("refresh-token"))
+                .thenReturn(Optional.of(new MemberSessionOwner(memberId.toString(), sessionId.toString())));
+        doThrow(new IllegalStateException("database unavailable")).when(actualRevocations)
+                .record(any(MemberSessionRevocation.class));
+        MemberAuthenticationController actualController = new MemberAuthenticationController(
+                actualService(actualSessions, actualRevocations, actualRecoveryJobs),
+                cookieSettings,
+                addressResolver()
+        );
+        MockMvc actualMockMvc = MockMvcBuilders.standaloneSetup(actualController).build();
 
-        mockMvc.perform(delete("/api/auth/tokens")
+        actualMockMvc.perform(delete("/api/auth/tokens")
                         .header(HttpHeaders.ORIGIN, cookieSettings.publicBaseUrl())
                         .cookie(new Cookie(cookieSettings.cookieName(), "refresh-token"))
-                        .principal(authentication()))
+                        .principal(authentication(memberId.toString(), sessionId.toString())))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.code").value("INTERNAL_SERVER_ERROR"))
                 .andExpect(header().string(HttpHeaders.SET_COOKIE, org.hamcrest.Matchers.allOf(
@@ -176,6 +200,14 @@ class MemberAuthenticationControllerTest {
                         org.hamcrest.Matchers.containsString("Secure"),
                         org.hamcrest.Matchers.containsString("SameSite=Strict")
                 )));
+        verify(actualRecoveryJobs).enqueue(
+                new MemberSessionRevocation(
+                        sessionId,
+                        NOW,
+                        NOW.plus(Duration.ofDays(14))
+                ),
+                NOW
+        );
     }
 
     @Test
@@ -201,14 +233,40 @@ class MemberAuthenticationControllerTest {
     }
 
     private JwtAuthenticationToken authentication() {
+        return authentication("member-id", "session-id");
+    }
+
+    private JwtAuthenticationToken authentication(String memberId, String sessionId) {
         Instant now = Instant.now();
         Jwt jwt = new Jwt(
                 "token",
                 now,
                 now.plusSeconds(1800),
                 Map.of("alg", "none"),
-                Map.of("sub", "member-id", "sid", "session-id")
+                Map.of("sub", memberId, "sid", sessionId)
         );
         return new JwtAuthenticationToken(jwt, List.of(new SimpleGrantedAuthority("MEMBER")));
+    }
+
+    private MemberAuthenticationService actualService(
+            MemberSessionStore actualSessions,
+            MemberSessionRevocationStore actualRevocations,
+            MemberSessionRevocationRecoveryJobStore actualRecoveryJobs
+    ) {
+        return new MemberAuthenticationService(
+                mock(com.masiton.member.application.port.out.MemberAccountRepository.class),
+                mock(com.masiton.member.application.port.out.MemberActionTokenRepository.class),
+                mock(com.masiton.member.application.port.out.MemberActionMailOutboxStore.class),
+                mock(com.masiton.member.application.port.out.MemberActionTokenCipher.class),
+                mock(com.masiton.member.application.port.out.MemberRateLimitStore.class),
+                mock(com.masiton.member.application.port.out.MemberDeletionJobStore.class),
+                actualSessions,
+                actualRecoveryJobs,
+                actualRevocations,
+                mock(com.masiton.member.application.port.out.MemberTokenIssuer.class),
+                mock(org.springframework.security.crypto.password.PasswordEncoder.class),
+                new MemberJwtSettings("issuer", "audience", Duration.ofMinutes(30), "key-id"),
+                Clock.fixed(NOW, ZoneOffset.UTC)
+        );
     }
 }
