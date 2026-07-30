@@ -5,11 +5,14 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import com.masiton.orchestration.application.port.in.GetRestaurantDetailQuery;
 import com.masiton.orchestration.application.query.ContentStatus;
 import com.masiton.orchestration.application.query.RestaurantDetailResult;
+import com.masiton.orchestration.application.query.RestaurantDetailWithMemberContextService;
 import com.masiton.personal.application.port.in.RecordRecentRestaurantViewUseCase;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,14 +31,16 @@ class RestaurantDetailRecentViewTest {
     private static final UUID MEMBER_ID = UUID.randomUUID();
     private final GetRestaurantDetailQuery detailQuery = mock(GetRestaurantDetailQuery.class);
     private final RecordRecentRestaurantViewUseCase recorder = mock(RecordRecentRestaurantViewUseCase.class);
-    private final RestaurantDetailController controller = new RestaurantDetailController(detailQuery, recorder);
+    private final RestaurantDetailWithMemberContextService detailWithMemberContext =
+            new RestaurantDetailWithMemberContextService(detailQuery, recorder);
+    private final RestaurantDetailController controller = new RestaurantDetailController(detailWithMemberContext);
 
     @Test
     @DisplayName("회원의 정상 상세 조회는 최근 본 기록을 남긴다")
     void 상세조회_회원인증_최근기록을남긴다() {
         // given
         when(detailQuery.getRestaurantDetail(RESTAURANT_ID)).thenReturn(detail());
-        JwtAuthenticationToken authentication = memberAuthentication();
+        Authentication authentication = memberAuthentication();
 
         // when
         controller.getRestaurantDetail(RESTAURANT_ID.toString(), authentication);
@@ -62,7 +67,7 @@ class RestaurantDetailRecentViewTest {
     void 상세조회_최근기록실패_상세응답은성공한다() {
         // given
         when(detailQuery.getRestaurantDetail(RESTAURANT_ID)).thenReturn(detail());
-        JwtAuthenticationToken authentication = memberAuthentication();
+        Authentication authentication = memberAuthentication();
         doThrow(new RuntimeException("저장소 장애"))
                 .when(recorder).record(eq(MEMBER_ID), eq(RESTAURANT_ID));
 
@@ -82,9 +87,8 @@ class RestaurantDetailRecentViewTest {
                 ContentStatus.AVAILABLE, List.of(), List.of());
     }
 
-    private JwtAuthenticationToken memberAuthentication() {
-        JwtAuthenticationToken authentication = mock(JwtAuthenticationToken.class);
-        when(authentication.getName()).thenReturn(MEMBER_ID.toString());
-        return authentication;
+    private Authentication memberAuthentication() {
+        return new TestingAuthenticationToken(
+                MEMBER_ID.toString(), null, List.of(new SimpleGrantedAuthority("MEMBER")));
     }
 }

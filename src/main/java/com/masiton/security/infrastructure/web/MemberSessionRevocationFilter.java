@@ -62,7 +62,15 @@ public class MemberSessionRevocationFilter extends OncePerRequestFilter {
     }
 
     private boolean isOptionalRestaurantDetailRequest(HttpServletRequest request) {
-        return HttpMethod.GET.matches(request.getMethod())
-                && request.getRequestURI().startsWith("/api/restaurants/");
+        if (!HttpMethod.GET.matches(request.getMethod())) {
+            return false;
+        }
+        String detailPrefix = "/api/restaurants/";
+        String requestUri = request.getRequestURI();
+        if (!requestUri.startsWith(detailPrefix)) {
+            return false;
+        }
+        String restaurantId = requestUri.substring(detailPrefix.length());
+        return !restaurantId.isEmpty() && !restaurantId.contains("/");
     }
 }
