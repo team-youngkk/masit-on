@@ -30,9 +30,21 @@ public class JdbcMemberAccountRepository implements MemberAccountRepository {
     }
 
     @Override
+    public Optional<MemberAccount> findByEmailForUpdate(String email) {
+        return jdbcTemplate.query("SELECT id, email, password_hash, status, email_verified_at, deletion_requested_at, created_at "
+                        + "FROM member_account WHERE email = ? FOR UPDATE", MAPPER, email).stream().findFirst();
+    }
+
+    @Override
     public Optional<MemberAccount> findById(UUID id) {
         return jdbcTemplate.query("SELECT id, email, password_hash, status, email_verified_at, deletion_requested_at, created_at "
                         + "FROM member_account WHERE id = ?", MAPPER, id).stream().findFirst();
+    }
+
+    @Override
+    public Optional<MemberAccount> findByIdForUpdate(UUID id) {
+        return jdbcTemplate.query("SELECT id, email, password_hash, status, email_verified_at, deletion_requested_at, created_at "
+                        + "FROM member_account WHERE id = ? FOR UPDATE", MAPPER, id).stream().findFirst();
     }
 
     @Override

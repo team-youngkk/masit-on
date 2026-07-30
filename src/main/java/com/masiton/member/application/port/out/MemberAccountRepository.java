@@ -8,7 +8,9 @@ import com.masiton.member.domain.model.MemberAccount;
 
 public interface MemberAccountRepository {
     Optional<MemberAccount> findByEmail(String email);
+    Optional<MemberAccount> findByEmailForUpdate(String email);
     Optional<MemberAccount> findById(UUID id);
+    Optional<MemberAccount> findByIdForUpdate(UUID id);
     MemberAccount create(String email, String passwordHash, Instant now);
     Optional<MemberAccount> createIfAbsent(String email, String passwordHash, Instant now);
     void activate(UUID id, Instant verifiedAt);

@@ -88,7 +88,7 @@ public class MemberAuthenticationService {
     @Transactional
     public void resetPassword(String rawToken, String password) {
         MemberActionToken token = consume(rawToken, MemberActionPurpose.PASSWORD_RESET);
-        MemberAccount account = accounts.findById(token.memberId()).orElseThrow(() -> new BusinessException(
+        MemberAccount account = accounts.findByIdForUpdate(token.memberId()).orElseThrow(() -> new BusinessException(
                 HttpStatus.BAD_REQUEST, "INVALID_PASSWORD_RESET_TOKEN", "The action token is invalid"));
         if (account.email().equals(password)) {
             throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE);
@@ -98,8 +98,9 @@ public class MemberAuthenticationService {
         accounts.changePassword(token.memberId(), passwordEncoder.encode(password), now);
     }
 
+    @Transactional
     public MemberAuthenticationResult login(String email, String password) {
-        MemberAccount account = accounts.findByEmail(normalizeEmail(email))
+        MemberAccount account = accounts.findByEmailForUpdate(normalizeEmail(email))
                 .orElseThrow(this::invalidCredentials);
         if (!passwordEncoder.matches(password, account.passwordHash())) {
             throw invalidCredentials();
