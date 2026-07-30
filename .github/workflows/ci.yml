@@ -185,8 +185,9 @@ jobs:
             # 읽지 못하는 경로까지 검사 범위에 들어온다. 검사 전용 실행이며 이미지의
             # USER 지시자는 그대로다(아래 비루트 실행 확인이 그것을 검증한다).
             #
-            # find는 결과가 0건이어도 exit 0이므로 `|| true`를 붙이지 않는다. 붙이면
-            # docker나 sh 실패까지 성공으로 바꿔 검사가 수행되지 않았는데도 통과한다.
+            # root 실행으로 권한 오류가 없어졌으므로 결과가 0건이면 find가 exit 0이다.
+            # 그래서 `|| true`가 필요하지 않다. 붙이면 docker나 sh 실패까지 성공으로 바꿔
+            # 검사가 수행되지 않았는데도 통과한다.
             env_hits=$(docker run --rm --user 0:0 --entrypoint sh "$image" -c \
               "find / -xdev -name '.env' -o -xdev -name '.env.*'")
             if [ -n "$env_hits" ]; then
