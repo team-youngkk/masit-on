@@ -542,7 +542,22 @@ reload가 master 프로세스를 바꾸지 않으므로 **인증서 교체에 �
 | 수명 주기 | systemd unit `masiton-backend.service`, `masiton-frontend.service` (둘 다 `enabled`) |
 | 적용된 마이그레이션 | `V1 create initial schema` (`installed_rank` 1, 성공). `public` 스키마 테이블 9개 |
 
-실행 참조는 태그가 아니라 **digest**다. `app-deploy.sh`가 태그로 조회한 digest를 `/opt/masiton/etc/{backend,frontend}.image`에 기록하고 unit이 그 파일을 읽는다. 배포마다 unit을 고치지 않고 파일 한 줄만 바뀐다. **롤백은 이전 커밋 SHA로 같은 스크립트를 다시 실행하는 것이다**(NFR-DEPLOYMENT-003).
+실행 참조는 태그가 아니라 **digest**다. `app-deploy.sh`가 태그로 조회한 digest를 `/opt/masiton/etc/{backend,frontend}.image`에 기록하고 unit이 그 파일을 읽는다. 배포마다 unit을 고치지 않고 파일 한 줄만 바뀐다. **롤백은 이전 커밋 SHA로 같은 스크립트를 다시 실행하는 것이다**(NFR-DEPLOYMENT-003). CD를 통한 롤백 경로는 15.4절에 있다.
+
+`app-deploy.sh`가 활성 경로에 반영하는 것은 다음 6개다. **두 이미지 pull이 모두 성공한 뒤에 함께 반영한다.**
+
+| 활성 경로 | 출처 |
+|---|---|
+| `/opt/masiton/bin/app-run.sh` | 스테이징 |
+| `/opt/masiton/bin/app-secrets-render.sh` | 스테이징 |
+| `/etc/systemd/system/masiton-backend.service` | 스테이징 |
+| `/etc/systemd/system/masiton-frontend.service` | 스테이징 |
+| `/opt/masiton/etc/backend.image` | ECR digest 조회 |
+| `/opt/masiton/etc/frontend.image` | ECR digest 조회 |
+
+실행 스크립트와 unit을 이미지 준비 전에 덮어쓰면, 이후 단계가 실패했을 때 이미지 참조와 실행 중 컨테이너는 이전 버전인데 **다음 재기동부터만 새 `app-run.sh`·unit이 적용된다.** 설정 형식이나 사전 실행 조건이 함께 바뀐 배포에서는 실패한 배포가 재부팅 후 장애를 만든다. PR 리뷰에서 지적받아 순서를 바꿨다.
+
+`app-secrets-render.sh`도 배포 산출물이다. backend unit의 `ExecStartPre`가 이 경로를 실행하므로 설치하지 않으면 새 인스턴스는 파일 없음으로 기동에 실패하고, 기존 인스턴스는 렌더러 변경이 배포에 반영되지 않는다. 이것도 리뷰 지적으로 필수 파일 목록과 설치 대상에 넣었다.
 
 ### 9.2. 설정과 비밀값 주입 방식
 
@@ -1043,7 +1058,9 @@ docker exec -e REDISCLI_AUTH=... masiton-redis redis-cli del <키>
 
 ## 14. PR 리뷰 반영 (#76)
 
-`deploy/m2` → `main` PR에서 리뷰 5건을 받아 모두 반영했다. 커밋은 `261d596`, `0aa41ce`, `cda12e8`, `4bbb80a`다.
+`deploy/m2` → `main` PR에서 리뷰를 두 차례 받았다. 1차 5건은 커밋 `261d596`, `0aa41ce`, `cda12e8`, `4bbb80a`로, CD 추가 후 받은 2차 3건은 그 뒤 커밋으로 반영했다.
+
+**1차 — 이미지·비밀값·외부 연동**
 
 | 우선순위 | 지적 | 반영 |
 |---|---|---|
@@ -1052,6 +1069,14 @@ docker exec -e REDISCLI_AUTH=... masiton-redis redis-cli del <키>
 | P2 | Kakao `place_url`의 비 HTTP scheme이 통과한다 | 정규화 전 scheme 검증, 회귀 테스트 6건 |
 | P2 | 배포가 혼합 버전을 남길 수 있다 | 두 digest를 준비한 뒤 활성 참조를 함께 교체 |
 | P2 | 인증서 만료 임박 감시가 빠졌다 | 알람 2종 추가 (11.7절) |
+
+**2차 — CD와 배포 스크립트**
+
+| 우선순위 | 지적 | 반영 |
+|---|---|---|
+| P1 | `app-secrets-render.sh`가 배포 산출물로 검증·설치되지 않는다 | 필수 파일 목록과 설치 대상에 추가 (9.1절) |
+| P1 | 승인 게이트에서 롤백 대상 SHA를 고를 수 없다 | `workflow_dispatch` 입력 추가 (15.4절) |
+| P2 | 실행 스크립트·unit이 이미지 준비 전에 활성 경로에 반영된다 | 두 pull 성공 후 이미지 참조와 함께 반영 (9.1절) |
 
 ### 14.1. JAR 내부 비밀값 검사
 
@@ -1100,17 +1125,25 @@ M2에서 실제로 한 것은 파이프라인 없는 수동 실행이다. 담당
 
 ### 15.1. 구성
 
+경로가 두 개다. 둘 다 같은 승인 게이트를 거친다.
+
 ```text
-push(main·deploy/m2) → 빌드·테스트 → 이미지 빌드·검증·ECR push
-                     → [environment: production 승인 대기]
-                     → SSM으로 app-deploy.sh 실행 → 상태 확인
+push(main·deploy/m2)  → 빌드·테스트 → 이미지 빌드·검증·ECR push
+                      → [environment: production 승인 대기]
+                      → SSM으로 app-deploy.sh 실행 → 상태 확인
+
+workflow_dispatch     → (빌드·테스트·이미지 job 건너뜀)
+  image_tag=<커밋 SHA> → [environment: production 승인 대기]
+                      → SSM으로 app-deploy.sh 실행 → 상태 확인
 ```
 
 | 항목 | 값 |
 |---|---|
 | 위치 | [`ci.yml`](../../.github/workflows/ci.yml)의 `운영 배포` job |
-| 순서 보장 | `needs: [images]` |
-| 승인 게이트 | GitHub `environment: production` |
+| 트리거 | `push`(`main`·`deploy/m2`), `workflow_dispatch` |
+| 배포 대상 | `push`는 그 실행의 커밋, `workflow_dispatch`는 `image_tag` 입력(비우면 브랜치 현재 커밋) |
+| 순서 보장 | `needs: [images]`. `workflow_dispatch`에서는 이미지 job이 `skipped`이고 job 조건이 그 경우만 통과시킨다 |
+| 승인 게이트 | GitHub `environment: production` (두 경로 공통) |
 | 필수 리뷰어 | 팀 4인(`w00lam`·`tjdgns0618`·`inan0226`·`jinyp01`) |
 | 배포 허용 브랜치 | `main`, `deploy/m2` |
 | 실행 경로 | OIDC → `ssm:SendCommand`(`AWS-RunShellScript`) |
@@ -1139,7 +1172,7 @@ repo:team-youngkk@307880221/masit-on@1308471593:environment:production
 | 승인 없이는 배포 job이 실행되지 않는다 | 통과. 이미지 job 후 `waiting`으로 정지 |
 | 승인 후 배포가 실행되고 digest가 기록된다 | 통과. job summary와 실행 출력에 digest |
 | 배포 후 상태 확인 실패 시 job이 실패한다 | 스크립트가 폴링 후 non-zero로 끝나고 명령 상태가 `Success`가 아니면 job도 실패한다 |
-| 롤백도 같은 경로로 가능하다 | 이전 커밋 SHA의 실행을 재실행한다. 재실행도 승인을 다시 요구하는 것을 확인했다 |
+| 롤백도 같은 경로로 가능하다 | `workflow_dispatch`의 `image_tag`로 대상 커밋 SHA를 입력한다. 15.4절 |
 | 권한이 인스턴스와 문서 단위로 제한된다 | 통과. `SendCommand`가 `i-0b451f18bca827cc9`와 `AWS-RunShellScript`로 제한 |
 | 장기 AWS 액세스 키를 쓰지 않는다 | 통과. OIDC 단기 자격 증명 |
 
@@ -1156,6 +1189,30 @@ docker inspect     비밀값 패턴 0건
 ```
 
 **의도적 실패 차단은 아직 시험하지 않았다.** 이슈 완료 조건의 마지막 항목이며 16절에 남겼다.
+
+### 15.4. 롤백 입력 경로
+
+처음에는 롤백을 "이전 커밋 SHA의 실행을 재실행한다"로 적었다. **그 방식으로는 대상을 고를 수 없다.** 재실행은 그 실행의 `github.sha`를 그대로 다시 배포하므로, 배포 job이 없던 시점의 커밋에는 재실행할 실행 자체가 없다. 결국 장애 시 직전 digest를 되돌리려면 승인 게이트 밖에서 SSM을 수동 실행해야 했고, 이것이 "롤백도 같은 경로로" 요구를 충족하지 못한다. PR 리뷰에서 지적받아 고쳤다.
+
+`workflow_dispatch` 입력을 넣었다.
+
+| 항목 | 값 |
+|---|---|
+| 입력 | `image_tag` — 배포할 커밋 SHA 40자. 비우면 선택한 브랜치의 현재 커밋 |
+| 승인 | `push` 경로와 같은 `environment: production` |
+| 브랜치 제한 | `main`, `deploy/m2` (job 조건이 먼저 막아 승인 요청이 뜨지 않는다) |
+| 빌드·테스트·이미지 job | 건너뛴다 |
+| 대상 이미지가 없으면 | `app-deploy.sh`가 ECR 조회에서 실패해 배포하지 않는다 |
+
+**빌드·테스트를 건너뛰어도 품질 게이트는 유지된다.** 이 경로는 ECR에 이미 있는 이미지만 배포하고, 그 이미지는 push 때 빌드·테스트 job을 통과해야 만들어졌다. 반대로 다시 도는 것은 배포 대상이 아닌 브랜치 현재 커밋을 검사하는 일이다. 롤백은 현재 커밋이 문제라서 하는 것이므로 그 검사를 기다리게 하면 복구만 늦어진다.
+
+**입력값은 커밋 SHA 형식만 받는다.** 이 값은 SSM 명령 문자열에 들어가 인스턴스에서 root로 실행되므로 자유 문자열을 그대로 실으면 명령 주입이 된다. 승인 게이트는 사람의 판단을 요구하지만 입력 내용을 검사하지 않는다. 소문자 16진수 40자가 아니면 job이 자격 증명 획득 전에 실패하고, 스크립트 인수도 인용한다.
+
+**동시성 그룹에 이벤트 종류를 넣었다.** `ref`만으로 묶으면 `cancel-in-progress`가 롤백 배포 중에 들어온 같은 브랜치 push 때문에 그 배포를 취소한다. 장애 대응 중 복구가 조용히 멈추는 방향의 실패다.
+
+**이 롤백이 되돌리는 것은 이미지뿐이다.** 실어 보내는 `app-deploy.sh`·`app-run.sh`·`app-secrets-render.sh`·unit은 선택한 브랜치의 현재 내용이다(15.1절의 "배포 스크립트를 저장소에서 실어 보낸다"). 스크립트나 unit 변경 자체가 장애 원인이면 그 커밋을 되돌리는 변경을 브랜치에 반영해야 한다. 이미지 태그만 바꿔서는 해소되지 않는다.
+
+**이 경로는 아직 운영에서 실행하지 않았다.** 워크플로 구성과 입력 검증까지 확인했고, 실제 `workflow_dispatch` 롤백 배포는 16절에 미검증으로 남긴다.
 
 ## 16. 예산 범위에 관한 확인 사항
 
@@ -1195,3 +1252,5 @@ docker inspect     비밀값 패턴 0건
 - **`masiton-admin` 폐기.** 배포·리허설 검증용 계정이며 M2 종료 시 폐기 여부를 판단한다.
 - **WS 담당자별 화면 인수.** 12.5절.
 - **CD의 의도적 실패 차단.** 15절에서 승인 게이트와 정상 배포는 검증했으나, 실패하는 배포를 일부러 만들어 job이 차단되는지는 시험하지 않았다.
+- **`workflow_dispatch` 롤백 배포.** 15.4절. 워크플로 구성과 입력 검증까지 확인했고 실제 실행은 하지 않았다. 스크립트 수준의 롤백은 13.3절에서 검증했다.
+- **2차 리뷰 반영본의 운영 배포.** 14절 2차 3건은 배포 스크립트와 워크플로 변경이며, 컨테이너 안에서 스텁으로 활성화 순서를 검증했다. 인스턴스에서 실제 배포로 확인하지 않았다.
