@@ -10,19 +10,47 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import com.masiton.member.application.port.out.MemberActionMailOutboxStore;
 import com.masiton.member.domain.model.MemberActionMailOutbox;
 import com.masiton.member.domain.model.MemberActionPurpose;
-import com.masiton.test.FullContextIntegrationTest;
+import com.masiton.test.TestProfile;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
+@TestProfile
+@Testcontainers
 @DisplayName("회원 Action 메일 outbox 영속화")
-class MemberActionMailOutboxPersistenceIntegrationTest extends FullContextIntegrationTest {
+class MemberActionMailOutboxPersistenceIntegrationTest {
 
+    private static final int REDIS_PORT = 6379;
     private static final Instant NOW = Instant.parse("2026-07-30T03:10:00Z");
+
+    @Container
+    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17.10-alpine")
+            .withDatabaseName("masiton")
+            .withUsername("masiton")
+            .withPassword("masiton_test");
+
+    @Container
+    static final GenericContainer<?> REDIS = new GenericContainer<>("redis:8.8-alpine")
+            .withExposedPorts(REDIS_PORT);
+
+    @DynamicPropertySource
+    static void dependencyProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
+        registry.add("spring.datasource.username", POSTGRES::getUsername);
+        registry.add("spring.datasource.password", POSTGRES::getPassword);
+        registry.add("spring.data.redis.host", REDIS::getHost);
+        registry.add("spring.data.redis.port", () -> REDIS.getMappedPort(REDIS_PORT));
+    }
 
     @Autowired
     private MemberAuthenticationService service;
