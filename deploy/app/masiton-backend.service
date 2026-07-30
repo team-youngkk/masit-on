@@ -1,0 +1,31 @@
+# 운영 백엔드 컨테이너 — M2-09.
+#
+# 이미지 참조는 /opt/masiton/etc/backend.image에 있고 app-deploy.sh가 갱신한다.
+# unit 파일에 태그를 박지 않는 이유는 배포마다 unit을 고쳐 daemon-reload하지
+# 않고 파일 한 줄만 바꿔 재기동하게 하려는 것이다.
+#
+# Redis가 먼저 떠 있어야 /internal/health/dependencies가 정상으로 보고된다.
+
+[Unit]
+Description=masiton backend (Spring Boot, M2-09)
+Documentation=https://github.com/team-youngkk/masit-on/blob/main/docs/08-planning/m2-deployment-plan.md
+After=docker.service network-online.target masiton-redis.service
+Requires=docker.service
+Wants=network-online.target masiton-redis.service
+
+[Service]
+Type=exec
+TimeoutStartSec=300
+Restart=always
+RestartSec=10s
+
+Environment=AWS_REGION=ap-northeast-2
+
+ExecStartPre=-/usr/bin/docker rm -f masiton-backend
+ExecStart=/opt/masiton/bin/app-run.sh backend
+# graceful shutdown을 설정했으므로(server.shutdown=graceful) 진행 중 요청을
+# 마칠 시간을 준다.
+ExecStop=/usr/bin/docker stop --time 40 masiton-backend
+
+[Install]
+WantedBy=multi-user.target
