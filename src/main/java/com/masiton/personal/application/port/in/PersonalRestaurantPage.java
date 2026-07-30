@@ -1,4 +1,4 @@
-package com.masiton.personalization.application.port.in;
+package com.masiton.personal.application.port.in;
 
 import java.util.List;
 

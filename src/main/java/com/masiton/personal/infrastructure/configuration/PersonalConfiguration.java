@@ -1,4 +1,4 @@
-package com.masiton.personalization.infrastructure.configuration;
+package com.masiton.personal.infrastructure.configuration;
 
 import java.time.Clock;
 
@@ -8,7 +8,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @Configuration
 @EnableScheduling
-public class PersonalizationConfiguration {
+public class PersonalConfiguration {
 
     @Bean
     Clock personalizationClock() {

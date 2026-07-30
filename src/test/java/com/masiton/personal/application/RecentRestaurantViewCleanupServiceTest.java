@@ -1,4 +1,4 @@
-package com.masiton.personalization.application;
+package com.masiton.personal.application;
 
 import java.lang.reflect.Method;
 import java.time.Clock;
@@ -10,7 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.masiton.personalization.application.port.out.PersonalRestaurantStore;
+import com.masiton.personal.application.port.out.PersonalRestaurantStore;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;

@@ -1,4 +1,4 @@
-package com.masiton.personalization.infrastructure.scheduling;
+package com.masiton.personal.infrastructure.scheduling;
 
 import java.util.concurrent.TimeUnit;
 
@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import com.masiton.personalization.application.port.in.CleanupRecentRestaurantViewsUseCase;
+import com.masiton.personal.application.port.in.CleanupRecentRestaurantViewsUseCase;
 
 @Component
 public class RecentRestaurantViewCleanupScheduler {

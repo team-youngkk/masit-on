@@ -1,9 +1,9 @@
-package com.masiton.personalization.application.port.out;
+package com.masiton.personal.application.port.out;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-import com.masiton.personalization.application.port.in.PersonalRestaurantPage;
+import com.masiton.personal.application.port.in.PersonalRestaurantPage;
 
 public interface PersonalRestaurantStore {
 

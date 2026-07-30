@@ -1,4 +1,4 @@
-package com.masiton.personalization.presentation;
+package com.masiton.personal.presentation;
 
 import java.util.List;
 import java.util.Set;
@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
-import com.masiton.personalization.application.port.in.PersonalRestaurantUseCase;
+import com.masiton.personal.application.port.in.PersonalRestaurantUseCase;
 
 @RestController
 @RequestMapping("/api/me")

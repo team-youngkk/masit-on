@@ -1,35 +1,31 @@
-package com.masiton.personalization.application;
+package com.masiton.personal.application;
 
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.masiton.common.web.BusinessException;
-import com.masiton.personalization.application.port.in.PersonalRestaurantPage;
-import com.masiton.personalization.application.port.in.PersonalRestaurantUseCase;
-import com.masiton.personalization.application.port.in.RecordRecentRestaurantViewUseCase;
-import com.masiton.personalization.application.port.out.PersonalRestaurantStore;
+import com.masiton.personal.application.port.in.PersonalRestaurantPage;
+import com.masiton.personal.application.port.in.PersonalRestaurantUseCase;
+import com.masiton.personal.application.port.out.PersonalRestaurantStore;
 
 @Service
-public class PersonalRestaurantService implements PersonalRestaurantUseCase, RecordRecentRestaurantViewUseCase {
+public class PersonalRestaurantService implements PersonalRestaurantUseCase {
 
     private static final int RECENT_LIMIT = 50;
     private final PersonalRestaurantStore store;
     private final Clock clock;
 
-    @Autowired
-    public PersonalRestaurantService(PersonalRestaurantStore store) {
-        this(store, Clock.systemUTC());
-    }
-
-    PersonalRestaurantService(PersonalRestaurantStore store, Clock clock) {
+    public PersonalRestaurantService(
+            PersonalRestaurantStore store,
+            @Qualifier("personalizationClock") Clock clock
+    ) {
         this.store = store;
         this.clock = clock;
     }
@@ -74,13 +70,6 @@ public class PersonalRestaurantService implements PersonalRestaurantUseCase, Rec
     public boolean removeRecentRestaurant(UUID memberId, UUID restaurantId) {
         store.removeRecentRestaurant(memberId, restaurantId);
         return false;
-    }
-
-    @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void record(UUID memberId, UUID restaurantId, OffsetDateTime viewedAt) {
-        store.upsertRecentRestaurant(memberId, restaurantId, viewedAt);
-        store.pruneRecentRestaurantOverflow(memberId, RECENT_LIMIT);
     }
 
     private void requirePublicRestaurant(UUID restaurantId) {

@@ -1,4 +1,4 @@
-package com.masiton.personalization.application;
+package com.masiton.personal.application;
 
 import java.lang.reflect.Method;
 import java.time.Clock;
@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.masiton.common.web.BusinessException;
-import com.masiton.personalization.application.port.out.PersonalRestaurantStore;
+import com.masiton.personal.application.port.out.PersonalRestaurantStore;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -59,22 +59,6 @@ class PersonalRestaurantServiceTest {
                         .isEqualTo("RESTAURANT_NOT_FOUND"));
         verify(store, never()).addFavorite(
                 org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
-                org.mockito.ArgumentMatchers.any());
-    }
-
-    @Test
-    @DisplayName("최근 조회 기록은 upsert 명령에서 최신 50건 초과분만 정리한다")
-    void 최근기록_정상조회_최신50건초과분만정리한다() {
-        // given
-        OffsetDateTime viewedAt = OffsetDateTime.parse("2026-07-29T12:00:00Z");
-
-        // when
-        service.record(MEMBER_ID, RESTAURANT_ID, viewedAt);
-
-        // then
-        verify(store).upsertRecentRestaurant(MEMBER_ID, RESTAURANT_ID, viewedAt);
-        verify(store).pruneRecentRestaurantOverflow(MEMBER_ID, 50);
-        verify(store, never()).deleteRecentRestaurantViewsBefore(
                 org.mockito.ArgumentMatchers.any());
     }
 

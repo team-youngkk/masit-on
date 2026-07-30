@@ -1,10 +1,10 @@
-package com.masiton.personalization.presentation;
+package com.masiton.personal.presentation;
 
 import java.time.OffsetDateTime;
 import java.util.List;
 
-import com.masiton.personalization.application.port.in.PersonalRestaurantItem;
-import com.masiton.personalization.application.port.in.PersonalRestaurantPage;
+import com.masiton.personal.application.port.in.PersonalRestaurantItem;
+import com.masiton.personal.application.port.in.PersonalRestaurantPage;
 
 final class PersonalRestaurantResponse {
 

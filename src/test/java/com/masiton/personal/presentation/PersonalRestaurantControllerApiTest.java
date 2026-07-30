@@ -1,4 +1,4 @@
-package com.masiton.personalization.presentation;
+package com.masiton.personal.presentation;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -11,13 +11,15 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.masiton.common.web.GlobalExceptionHandler;
-import com.masiton.personalization.application.port.in.PersonalRestaurantItem;
-import com.masiton.personalization.application.port.in.PersonalRestaurantPage;
-import com.masiton.personalization.application.port.in.PersonalRestaurantUseCase;
+import com.masiton.personal.application.port.in.PersonalRestaurantItem;
+import com.masiton.personal.application.port.in.PersonalRestaurantPage;
+import com.masiton.personal.application.port.in.PersonalRestaurantUseCase;
 import com.masiton.security.infrastructure.web.MemberPrivateCacheFilter;
 
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -79,6 +81,22 @@ class PersonalRestaurantControllerApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.restaurantId").value(restaurantId.toString()))
                 .andExpect(jsonPath("$.favorited").value(true));
+    }
+
+    @Test
+    @DisplayName("최근 기록 삭제 성공 응답도 private no-store 헤더를 반환한다")
+    void removeRecentRestaurant_회원요청_성공과캐시헤더반환() throws Exception {
+        UUID restaurantId = UUID.randomUUID();
+        when(useCase.removeRecentRestaurant(memberId, restaurantId)).thenReturn(false);
+
+        mockMvc.perform(delete("/api/me/recent-restaurants/{restaurantId}", restaurantId)
+                        .principal(authentication()))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", "private, no-store"))
+                .andExpect(jsonPath("$.restaurantId").value(restaurantId.toString()))
+                .andExpect(jsonPath("$.recorded").value(false));
+
+        verify(useCase).removeRecentRestaurant(memberId, restaurantId);
     }
 
     private UsernamePasswordAuthenticationToken authentication() {

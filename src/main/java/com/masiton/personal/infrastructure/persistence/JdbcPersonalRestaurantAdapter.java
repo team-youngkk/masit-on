@@ -1,4 +1,4 @@
-package com.masiton.personalization.infrastructure.persistence;
+package com.masiton.personal.infrastructure.persistence;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -9,9 +9,9 @@ import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-import com.masiton.personalization.application.port.in.PersonalRestaurantItem;
-import com.masiton.personalization.application.port.in.PersonalRestaurantPage;
-import com.masiton.personalization.application.port.out.PersonalRestaurantStore;
+import com.masiton.personal.application.port.in.PersonalRestaurantItem;
+import com.masiton.personal.application.port.in.PersonalRestaurantPage;
+import com.masiton.personal.application.port.out.PersonalRestaurantStore;
 
 @Repository
 public class JdbcPersonalRestaurantAdapter implements PersonalRestaurantStore {

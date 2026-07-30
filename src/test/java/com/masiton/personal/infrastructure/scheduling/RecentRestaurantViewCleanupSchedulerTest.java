@@ -1,9 +1,9 @@
-package com.masiton.personalization.infrastructure.scheduling;
+package com.masiton.personal.infrastructure.scheduling;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import com.masiton.personalization.application.port.in.CleanupRecentRestaurantViewsUseCase;
+import com.masiton.personal.application.port.in.CleanupRecentRestaurantViewsUseCase;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

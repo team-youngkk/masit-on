@@ -1,4 +1,4 @@
-package com.masiton.personalization.application;
+package com.masiton.personal.application;
 
 import java.time.Clock;
 import java.time.OffsetDateTime;
@@ -7,8 +7,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.masiton.personalization.application.port.in.CleanupRecentRestaurantViewsUseCase;
-import com.masiton.personalization.application.port.out.PersonalRestaurantStore;
+import com.masiton.personal.application.port.in.CleanupRecentRestaurantViewsUseCase;
+import com.masiton.personal.application.port.out.PersonalRestaurantStore;
 
 @Service
 public class RecentRestaurantViewCleanupService implements CleanupRecentRestaurantViewsUseCase {

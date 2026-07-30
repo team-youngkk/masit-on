@@ -1,4 +1,4 @@
-package com.masiton.personalization.infrastructure.persistence;
+package com.masiton.personal.infrastructure.persistence;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -17,7 +17,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
-import com.masiton.personalization.application.port.in.PersonalRestaurantPage;
+import com.masiton.personal.application.port.in.PersonalRestaurantPage;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
