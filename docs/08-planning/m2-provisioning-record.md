@@ -30,7 +30,7 @@ M2 초기 운영 배포에서 생성한 AWS 자원의 식별자와 완료 조건
 | 접근 방식 | IAM Identity Center 조직 인스턴스 `ssoins-7230c72b8df2ccaf`, 권한 세트 `AdministratorAccess`(세션 8시간) |
 | CLI 프로파일 | `masiton` (SSO. 장기 액세스 키 없음) |
 
-**이 계정은 맛잇온 전용이 아니다.** 2026-06-05에 만든 다른 프로젝트의 ECR 리포지토리 `commerce-payment`(이미지 8개)가 있고 삭제된 RDS의 로그 그룹 `RDSOSMetrics`가 남아 있다. 예산 범위 영향은 9절에 적었다.
+**이 계정은 맛잇온 전용이 아니다.** 2026-06-05에 만든 다른 프로젝트의 ECR 리포지토리 `commerce-payment`(이미지 8개)가 있고 삭제된 RDS의 로그 그룹 `RDSOSMetrics`가 남아 있다. 예산 범위 영향은 11절에 적었다.
 
 ## 3. M2-03 네트워크와 EC2 (#42)
 
@@ -291,7 +291,7 @@ PR 브랜치는 AWS 자격 증명을 받지 못한다. **이미지 빌드와 검
 | `.env` 파일 | 0건 | 0건 |
 | 평문 비밀 패턴 | 0건 | 0건 |
 | 플랫폼 | `linux/arm64` | `linux/arm64` |
-| 컨테이너 기동 | 미확인 (10절) | Next.js 16.2.11 기동, `/` → `200` |
+| 컨테이너 기동 | 미확인 (12절) | Next.js 16.2.11 기동, `/` → `200` |
 
 평문 비밀 검사는 `BEGIN PRIVATE KEY`, `BEGIN RSA PRIVATE KEY`, `JWT_PRIVATE_KEY_PEM`, `POSTGRES_PASSWORD`, `masiton_local` 다섯 패턴을 이미지 파일 시스템에서 찾는 방식이다. 백엔드 `/app`에는 `application.jar` 하나만 있고 빌드 컨텍스트 잔여물이 없다.
 
@@ -497,7 +497,7 @@ ACM은 만료 45일 전에 자동 갱신하지만 **갱신본을 EC2로 다시 �
 | 완료 조건 | 결과 |
 |---|---|
 | 인터넷에서 `/internal/health/live`가 차단된다 | 통과 |
-| HTTPS로 프론트엔드와 `/api/**`가 모두 응답한다 | **미완** — 애플리케이션 미배포로 `502`. `M2-09`에서 확인한다 |
+| HTTPS로 프론트엔드와 `/api/**`가 모두 응답한다 | 이 시점 **미완**(애플리케이션 미배포로 `502`). `M2-09` 배포 후 충족 — 9.4절 |
 | 인증서 갱신·재배포 절차가 문서화되고 최소 1회 시연된다 | 통과 (8.2절 문서화, 아래 시연) |
 
 인터넷(작업자 PC)에서 확인한 결과다.
@@ -527,7 +527,140 @@ TLS 버전은 인스턴스에서 서버 응답으로 확인했다. `tls1_1` 거�
 
 reload가 master 프로세스를 바꾸지 않으므로 **인증서 교체에 서비스 중단이 없다.**
 
-## 9. 예산 범위에 관한 확인 사항
+## 9. M2-09 애플리케이션 배포 (#48)
+
+배포 일시 2026-07-30. 배포 대상 커밋 `a824c4e`.
+
+### 9.1. 배포된 것
+
+| 항목 | 값 |
+|---|---|
+| 커밋 태그 | `a824c4e77c3ad2f2f0c1d3f7e950057c0864ebc9` |
+| 백엔드 digest | `sha256:61c4043214c20d102d2bab89bf5b85fd5dfc31f972e063285869bb8d2b2eae83` |
+| 프론트엔드 digest | `sha256:0643d6712f52eac23945a4d9a8f2decab7ec8f8d88199a3d1e5c9cd373162e7c` |
+| 실행 프로파일 | `prod` ([application-prod.yml](../../src/main/resources/application-prod.yml)) |
+| 수명 주기 | systemd unit `masiton-backend.service`, `masiton-frontend.service` (둘 다 `enabled`) |
+| 적용된 마이그레이션 | `V1 create initial schema` (`installed_rank` 1, 성공). `public` 스키마 테이블 9개 |
+
+실행 참조는 태그가 아니라 **digest**다. `app-deploy.sh`가 태그로 조회한 digest를 `/opt/masiton/etc/{backend,frontend}.image`에 기록하고 unit이 그 파일을 읽는다. 배포마다 unit을 고치지 않고 파일 한 줄만 바뀐다. **롤백은 이전 커밋 SHA로 같은 스크립트를 다시 실행하는 것이다**(NFR-DEPLOYMENT-003).
+
+### 9.2. 설정과 비밀값 주입 방식
+
+컨테이너는 `--network host`로 실행한다. [ADR-RUNTIME-001](../07-adr/platform/runtime-001-docker.md) 11절이 운영 설정의 Docker 서비스명을 금지하므로 앱이 저장소에 `127.0.0.1`로 붙어야 하고, Nginx도 `127.0.0.1`의 8080·3000으로 전달한다. 브리지 네트워크로는 두 방향이 함께 성립하지 않는다.
+
+비밀값은 `docker run -e VAR` **통과 형식**으로만 넘긴다. `-e VAR=값`으로 쓰면 같은 인스턴스의 `ps`와 `docker inspect`에 평문이 남는다. 환경 파일은 만들지 않는다.
+
+`prod` 프로파일은 저장소 접속값과 JWT 키에 기본값을 두지 않아 값이 없으면 기동이 실패한다. **Kakao·YouTube Key만 빈 기본값을 허용한다.** Key 없이도 공개 탐색·상세와 상태 확인이 동작하므로 배포와 Key 발급을 분리했다.
+
+### 9.3. 관리자 계정
+
+| 파라미터 | 유형 | 값 |
+|---|---|---|
+| `/masiton/admin/login-id` | `String` | `masiton-admin` |
+| `/masiton/admin/password` | `SecureString` | 미출력 |
+
+BCrypt 해시는 `htpasswd -nbBC 10 -i`로 만들었다. 강도 10은 애플리케이션 `BCryptPasswordEncoder` 기본값과 같아야 로그인이 성립한다. 애플리케이션 이미지에는 JRE만 있어 로컬 절차([scripts/New-LocalAdmin.ps1](../../scripts/New-LocalAdmin.ps1))처럼 클래스를 새로 컴파일할 수 없고 `openssl`은 bcrypt를 지원하지 않으므로 `httpd-tools`를 인스턴스에 설치했다. 검증용 도구이며 애플리케이션 실행에는 필요하지 않다.
+
+암호는 명령행 인자로 넘기지 않았다(`-i`는 표준 입력에서 읽는다). 평문은 Parameter Store에만 있고 어디에도 출력하지 않았다.
+
+### 9.4. 완료 조건 검증
+
+| 완료 조건 | 결과 |
+|---|---|
+| `/internal/health/ready`와 `/internal/health/dependencies`가 EC2 내부에서 정상 | 통과 |
+| PostgreSQL·Redis 상태가 각각 구분된다 | 통과 |
+| 적용된 마이그레이션 버전과 이미지 digest가 기록된다 | 통과 (9.1절) |
+
+```text
+/internal/health/live         -> 200 {"components":{"ping":{"status":"UP"}},"status":"UP"}
+/internal/health/ready        -> 200 {"components":{"db":{"status":"UP"}},"status":"UP"}
+/internal/health/dependencies -> 200 {"components":{"db":{"status":"UP"},"redis":{"status":"UP"}},"status":"UP"}
+```
+
+`M2-08`에서 미완으로 남긴 "HTTPS로 프론트엔드와 `/api/**`가 모두 응답한다"도 이 시점에 충족됐다. 인터넷에서 확인한 결과다(제한 공개 적용 전).
+
+```text
+https://masiton.click/restaurants      -> 200 (화면)
+https://masiton.click/api/restaurants  -> 200 {"items":[],"page":{...}}
+https://masiton.click/api/creators     -> 200 {"items":[]}
+https://masiton.click/internal/health/live -> 404
+무인증 https://masiton.click/api/admin/restaurants -> 401 (traceId 포함)
+```
+
+### 9.5. 관리자 인증 흐름
+
+`prod` 프로파일이 Parameter Store의 JWT 키와 Redis를 실제로 쓰는지 인스턴스에서 확인했다.
+
+| 검증 | 결과 |
+|---|---|
+| 로그인 `POST /api/admin/auth/tokens` | `200`, `tokenType=Bearer`, `expiresInSeconds=1800` |
+| JWT 헤더 | `{"kid":"prod-1","alg":"RS256"}` |
+| Refresh 쿠키 | `HttpOnly`, `Secure` |
+| Refresh Token 회전 | `200`이고 쿠키 값이 바뀐다 |
+| 이전 Refresh Token 재사용 | `401`. 재사용 탐지 |
+| 재사용 탐지 후 회전본 | `401`. Token 계열이 함께 폐기된다(ADR-DATA-005 6절) |
+| 토큰 없음·잘못된 토큰으로 관리자 API | `401 AUTHENTICATION_REQUIRED` |
+| 유효한 토큰으로 관리자 API | `400`으로 본문 검증 단계 진입. 인증·인가 통과 |
+| 공개 GET 3종 무인증 | `200`·`200`·없는 자원 `404` |
+
+관리자 경로는 모두 POST여서 `GET`은 `405`다. 인증 통과는 유효한 토큰으로 `401`이 아닌 `400`이 나오는 것으로 확인했다.
+
+**로그인 실패 제한은 이 시점에 시험하지 않았다.** 실패 카운터의 `source`가 연결 원격 주소 기준인데 Nginx를 경유한 모든 요청이 `127.0.0.1`로 보이므로, 5회 실패를 만들면 15분 동안 모든 출처의 로그인이 막힌다. `M2-12`에서 시점을 정해 확인한다.
+
+### 9.6. 애플리케이션 기동 후 실측
+
+| 항목 | 실측 | [산정](m2-cost-and-sizing.md) 3절 |
+|---|---|---|
+| 전체 메모리 | 3,835 MB | 4 GiB 기준 |
+| 사용 중 | **675 MB** | 합계 2,100 MB |
+| 백엔드 컨테이너 | 320 MiB / 1 GiB 상한 | Spring Boot 1,000 MB |
+| 프론트엔드 컨테이너 | 34 MiB / 512 MiB 상한 | Next.js 400 MB |
+| Redis 컨테이너 | 8.3 MiB / 384 MiB 상한 | 256 MB |
+
+**실측이 산정치의 3분의 1 수준이다.** 3.6절의 기동 직후 173 MB에서 502 MB만 늘었다. `t4g.medium`에 여유가 충분하고 CloudWatch Agent(`M2-10`)를 더해도 상한에 닿지 않는다.
+
+## 10. M2-11 검증 참여자 제한 공개 (#50)
+
+구성 일시 2026-07-30. 방식은 [계획 4절](m2-deployment-plan.md) 결정에 따라 Nginx Basic Auth다.
+
+| 항목 | 값 |
+|---|---|
+| 자격 증명 | `/masiton/access/basic-auth-username`(`String`, `masiton-verify`), `/masiton/access/basic-auth-password`(`SecureString`) |
+| htpasswd | `/run/masiton/htpasswd` (**tmpfs**), 소유자 `nginx`, 권한 `0400`, apr1 해시 |
+| 렌더링 시점 | `nginx.service` drop-in `10-masiton-basic-auth.conf`의 `ExecStartPre` |
+| realm | `masiton verification` |
+
+htpasswd를 tmpfs에 두는 이유는 자격 증명이 루트 볼륨과 볼륨 스냅샷에 남지 않게 하려는 것이다. 그래서 기동마다 다시 만들어야 하고 drop-in이 그것을 보장한다. `reload`는 `ExecStartPre`를 실행하지 않으므로 설치 스크립트는 `restart`를 쓴다.
+
+해시는 `openssl passwd -apr1`로 만든다. `httpd-tools`를 전제하지 않으려는 선택이며 Nginx가 apr1을 지원한다.
+
+### 10.1. 완료 조건 검증
+
+| 완료 조건 | 결과 |
+|---|---|
+| 검증 참여자만 접근하고 그 외 접근이 차단된다 | 통과 |
+| 자격 증명이 저장소·이미지에 남지 않는다 | 통과. 저장소에는 렌더링 스크립트만 있고 값은 Parameter Store에만 있다 |
+
+```text
+인터넷 무인증  https://masiton.click/            -> 401  WWW-Authenticate: Basic realm="masiton verification"
+인터넷 무인증  https://masiton.click/restaurants -> 401
+인터넷 무인증  https://masiton.click/api/restaurants -> 401
+인터넷 무인증  https://masiton.click/internal/health/live -> 404
+자격 증명 사용 /restaurants                      -> 200
+자격 증명 사용 /api/restaurants                  -> 200
+```
+
+**`/internal/**`은 자격 증명과 무관하게 `404`다.** `auth_basic off`로 인증보다 앞서 차단했다. 인증을 상속시키면 자격 증명이 없을 때 `401`이 되어 "인증만 통과하면 열리는 경로"로 보이고 `M2-08`에서 검증한 `404`와도 달라진다.
+
+Basic Auth는 제한 공개 수단이며 관리자 인증을 대체하지 않는다. `/api/admin/**`의 JWT·`ADMIN` 검증은 9.5절 그대로다.
+
+**검증 참여자에게 전달할 값은 Parameter Store에서 직접 읽는다.** 이 문서와 저장소에 평문을 적지 않는다.
+
+```bash
+aws ssm get-parameter --profile masiton --name /masiton/access/basic-auth-password --with-decryption --query Parameter.Value --output text
+```
+
+## 11. 예산 범위에 관한 확인 사항
 
 `My Monthly Cost Budget`(`$100`/월)은 **계정 전체 비용**을 대상으로 한다. 2절에 적었듯 이 계정에는 다른 프로젝트 자원이 있어 그 비용도 이 예산에 합산된다.
 
@@ -539,7 +672,7 @@ reload가 master 프로세스를 바꾸지 않으므로 **인증서 교체에 �
 
 비용 할당 태그는 활성화 후 최대 24시간이 지나야 새 데이터에 적용되므로 M2 일정 안에서는 즉시 쓸 수 없다.
 
-### 9.1. 크레딧 만료
+### 11.1. 크레딧 만료
 
 **계정 크레딧 4건이 2026-07-29에 전량 만료됐다.** 따라서 M2 운영 비용은 전액 실제 청구다.
 
@@ -556,12 +689,11 @@ reload가 master 프로세스를 바꾸지 않으므로 **인증서 교체에 �
 
 `M2-12` 시점에 실제 청구액과 산정치를 대조한다(계획 10절 마지막 완료 항목).
 
-## 10. 검증하지 못한 항목
+## 12. 검증하지 못한 항목
 
 - **예산 초과 알림 실제 도달.** 시험 예산 `masiton-alert-test`(한도 `$0.5`, 실제 1% 초과)를 만들어 확인 중이다. AWS Budgets가 하루 약 3회만 평가해 즉시 도달하지 않는다. 도달 확인 후 시험 예산을 삭제한다.
 - **SSH 접속.** 키 페어 `masiton-app`을 만들었으나 실제 SSH 접속은 시도하지 않았다. 인스턴스 접근은 SSM RunCommand로 검증했다.
-- **HTTPS와 도메인 응답.** A 레코드 전파는 확인했으나 `masiton.click`으로 실제 HTTP·HTTPS 응답은 받지 못한다. Nginx가 아직 없다(`M2-08`).
-- **백엔드 이미지 컨테이너 기동.** 이미지는 arm64로 빌드해 정적 검사를 통과했으나 컨테이너를 띄워 `/internal/health/live`를 확인하지는 않았다. 기동에 PostgreSQL·Redis 접속값이 필요하고 사설 서브넷 RDS는 작업자 PC에서 도달하지 않는다. `M2-09`에서 EC2 위에서 확인한다.
-- **애플리케이션과 Redis 연결.** Redis 자체는 7절에서 검증했으나 Spring Boot가 `127.0.0.1:6379`로 붙어 Refresh Token 회전과 `/internal/health/dependencies`가 동작하는 것은 `M2-09`에서 확인한다. 앱 컨테이너가 호스트 loopback에 도달하는 방식(ADR-RUNTIME-001 11절이 운영 설정의 Docker 서비스명을 금지한다)도 그때 확정한다.
-- **Redis 장애 시 fail-closed.** ADR-DATA-005 12절의 재발급 차단과 재로그인 복구는 애플리케이션이 붙은 뒤 `M2-13`에서 확인한다.
-- **애플리케이션 기동 후 메모리.** 3.6절은 기동 직후 기준값이며 Nginx·Next.js·Spring Boot 실행 후 실측은 `M2-09`에서 한다. Redis 컨테이너까지 올라간 현재 값도 그때 함께 기록한다.
+- **Kakao·YouTube 운영 API Key.** 2026-07-30 기준 아직 발급받지 않아 Parameter Store에 없다. `prod` 프로파일이 이 두 값만 빈 기본값을 허용하므로 배포와 공개 조회에는 영향이 없고, **관리자 등록 흐름 4종은 Key 없이 실패한다.** 발급 후 `/masiton/integration/kakao/rest-api-key`·`/masiton/integration/youtube/api-key`에 등록하고 백엔드를 재기동해야 하며, 등록 흐름 검증은 `M2-12`에서 한다.
+- **로그인 실패 제한.** 실패 카운터의 `source`가 연결 원격 주소 기준이고 Nginx 경유 요청이 모두 `127.0.0.1`로 보여, 5회 실패를 만들면 15분 동안 모든 출처의 로그인이 막힌다. `M2-12`에서 시점을 정해 확인한다(9.5절).
+- **Redis 장애 시 fail-closed.** ADR-DATA-005 12절의 재발급 차단과 재로그인 복구는 `M2-13`에서 확인한다.
+- **CloudWatch 로그·지표·알람.** `M2-10` 범위이며 아직 착수하지 않았다. 인증서 만료 임박 감시도 여기에 포함한다(8.2절).
