@@ -29,7 +29,11 @@ if [ ! -f "$BASE_CONF" ]; then
   exit 1
 fi
 
-install -d -m 0700 "$RUN_DIR"
+# /run/masiton은 0711로 통일한다. 여러 스크립트가 같은 디렉터리를 만드는데
+# 권한이 엇갈리면 마지막에 만든 쪽이 이긴다. 실제로 0700으로 만들어져 Nginx
+# worker가 htpasswd에 도달하지 못해 인증 통과 요청이 500이 된 적이 있다.
+# 0711은 탐색만 허용하고 목록 열거를 막으며, 파일 내용은 각 파일의 0400이 지킨다.
+install -d -m 0711 "$RUN_DIR"
 
 password=$(aws ssm get-parameter \
   --region "$REGION" \

@@ -17,7 +17,11 @@ HTPASSWD="${HTPASSWD:-$RUN_DIR/htpasswd}"
 # Nginx worker가 읽어야 한다. 파일 소유자를 nginx로 두고 0400으로 잠근다.
 NGINX_USER="${NGINX_USER:-nginx}"
 
-install -d -m 0755 "$RUN_DIR"
+# /run/masiton은 0711로 통일한다. 여러 스크립트가 같은 디렉터리를 만드는데
+# 권한이 엇갈리면 마지막에 만든 쪽이 이긴다. 실제로 0700으로 만들어져 Nginx
+# worker가 htpasswd에 도달하지 못해 인증 통과 요청이 500이 된 적이 있다.
+# 0711은 탐색만 허용하고 목록 열거를 막으며, 파일 내용은 각 파일의 0400이 지킨다.
+install -d -m 0711 "$RUN_DIR"
 
 username=$(aws ssm get-parameter --region "$REGION" --name "$USER_PARAMETER" \
   --query 'Parameter.Value' --output text | tr -d '\r\n')

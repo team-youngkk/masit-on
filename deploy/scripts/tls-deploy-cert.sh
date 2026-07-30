@@ -17,7 +17,11 @@ KEY="$TLS_DIR/masiton.click.key"
 
 # 중간 산출물은 tmpfs에만 둔다. 개인키 평문과 내보내기 암호가 루트 볼륨과
 # 볼륨 스냅샷에 남지 않게 하기 위한 것이다(NFR-SECURITY-003).
-install -d -m 0700 /run/masiton
+# /run/masiton은 0711로 통일한다. 여러 스크립트가 같은 디렉터리를 만드는데
+# 권한이 엇갈리면 마지막에 만든 쪽이 이긴다. 실제로 0700으로 만들어져 Nginx
+# worker가 htpasswd에 도달하지 못해 인증 통과 요청이 500이 된 적이 있다.
+# 0711은 탐색만 허용하고 목록 열거를 막으며, 파일 내용은 각 파일의 0400이 지킨다.
+install -d -m 0711 /run/masiton
 work=$(mktemp -d /run/masiton/tls.XXXXXXXX)
 trap 'rm -rf "$work"' EXIT
 umask 077
