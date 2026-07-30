@@ -100,11 +100,10 @@ related_documents:
 
 ### ADR-MAP-001 지도 표시와 공간 검색
 
-- 현재 상태: Post-MVP
-- 현재 결정: Kakao Maps JavaScript API V3와 PostGIS를 도입하지 않는다. MVP는 도로명주소와 카카오 장소 링크만 제공한다.
-- 활성화 조건: 지도 기반 탐색·현재 위치·거리 또는 반경 검색이 범위 변경으로 승인된다.
-- 도입 전 확인: 위치 개인정보, 좌표 모델, RDS 확장 지원, 지도 API 계약·비용, 공간 쿼리 성능
-- 영향: 프론트엔드, 데이터 모델·DB 확장, 외부 연동
+- 현재 상태: Accepted로 이동
+- 현재 결정: [ADR-MAP-001](integration/map-001-map-bounds-search.md)에 따라 1차 확장은 Kakao Maps JavaScript API V3와 nullable WGS84 좌표의 bounds 조회를 사용한다. PostGIS, 현재 위치, 거리·반경 검색은 도입하지 않는다.
+- 재검토 조건: 현재 위치·거리·반경·다각형 검색 또는 PostGIS가 범위에 들어온다.
+- 영향: 프론트엔드, Restaurant 좌표 모델, bounds 조회 API, 외부 지도 SDK
 
 ### ADR-ROUTE-001 Kakao Mobility와 동선 추천
 
@@ -133,7 +132,8 @@ related_documents:
 ### ADR-AUTO-001 자동 수집과 배치 처리
 
 - 현재 상태: Post-MVP
-- 현재 결정: Jsoup, n8n, Spring Scheduler, Spring Batch 6.0.4와 자동 주기 동기화를 도입하지 않는다.
+- 현재 결정: Jsoup, n8n, Spring Scheduler, Spring Batch 6.0.4와 자동 주기 수집·동기화를 도입하지 않는다.
+- 분리된 결정: 최근 본 맛집의 30일 보존을 집행하는 제한적 Scheduler는 자동 수집과 다른 문제이므로 [ADR-DATA-010](data/data-010-recent-view-retention-cleanup.md)에서 Accepted 결정으로 관리한다.
 - 활성화 조건: 관리자 확인 없는 자동 등록과 구분되는 승인된 수집·검수 흐름이 범위에 포함된다.
 - 도입 전 확인: n8n·Scheduler·Batch 책임 경계, 정확한 n8n·Jsoup 버전, 실행 이력·재시작·중복 방지, 외부 API 비용
 - 영향: 운영 구성요소, Redis 락, 테스트, 관리자 흐름

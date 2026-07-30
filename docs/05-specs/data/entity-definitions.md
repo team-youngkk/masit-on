@@ -59,6 +59,7 @@ related_documents:
 | phoneNumber | 확인된 전화번호 | 필수 | 아님 | 후속 관리 기능 | 공개 | 현재 API 필수 |
 | publicationStatus | 사용자 공개 여부 | 필수 | 아님 | 운영 정정 시 | 비공개 | 생성 성공 시 PUBLIC |
 | lifecycleStatus | 활성·삭제 구분 | 필수 | 아님 | 가능 | 비공개 | 물리안 ACTIVE/DELETED |
+| latitude / longitude | WGS84 좌표 쌍 | 선택 | 아님 | 관리자 확인 시 | 공개 지도 | 둘 다 null 또는 유효 범위 값 |
 | createdAt / updatedAt / deletedAt | 생성·변경·삭제 시각 | 공통 요구 | 아님 | 시스템 | 비공개 | deletedAt은 삭제 상태에서만 필수 |
 
 설명, 대표 이미지 URL, 영업 정보와 `기타` 카테고리의 보충 이름은 확정 MVP 저장 속성으로 추가하지 않는다. 지점명은 필수값이 아니며 카카오 장소와 주소로 지점을 구분한다.
@@ -195,9 +196,12 @@ Restaurant의 주된 메뉴와 영업 정체성을 나타내는 사전 정의된
 | lifecycleStatus | 활성·삭제 구분 | 필수 | 아님 | 가능 | 비공개 | 물리안 ACTIVE/DELETED |
 | externalAvailabilityStatus | YouTube 채널 가용 상태 | 필수 | 아님 | 관리자 확인 시 | 비공개 | 공개 상태와 분리 |
 | lastExternalStatusCheckedAt | 마지막 외부 확인 시각 | 필수 | 아님 | 시스템 | 비공개 | 등록 미리보기 확인 시각 |
+| profileImageUrl | 마지막 확인된 프로필 이미지 URL | 선택 | 아님 | 관리자 확인 시 | 공개 | 미등록이면 null |
+| description | 마지막 확인된 채널 소개 | 선택 | 아님 | 관리자 확인 시 | 공개 | 미등록이면 null |
+| handle | 마지막 확인된 채널 handle | 선택 | 아님 | 관리자 확인 시 | 공개 | 외부 채널 ID를 대체하지 않음 |
 | createdAt / updatedAt / deletedAt | 생성·변경·삭제 시각 | 공통 요구 | 아님 | 시스템 | 비공개 | deletedAt은 삭제 상태에서만 필수 |
 
-프로필 이미지 URL은 확정 요구사항과 API에 없으므로 추가하지 않는다.
+1차 확장 공개 상세는 기존 채널명·URL과 `profileImageUrl`, `description`, `handle`을 저장값으로만 표시한다. 사용자 조회 시 YouTube API를 호출하거나 구독자 수를 저장하지 않는다.
 
 ### 관계와 규칙
 

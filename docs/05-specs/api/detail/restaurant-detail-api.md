@@ -81,11 +81,11 @@ related_documents:
 
 - Method: `GET`
 - Path: `/api/restaurants/{restaurantId}`
-- 인증: 없음
+- 인증: 없음(선택적 회원 Bearer Token 허용)
 - 권한: 일반 공개 조회
 - 관련 PRD: [PRD-DETAIL-001](../../../04-product/prd/detail/restaurant-detail.md)
 - 관련 요구사항: [FR-RESTAURANT-008](../../../01-requirements/functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회)~[FR-RESTAURANT-011](../../../01-requirements/functional-requirements.md#fr-restaurant-011-영상-연결이-없는-맛집-상세-조회), [FR-CREATOR-002](../../../01-requirements/functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인), [FR-VIDEO-001](../../../01-requirements/functional-requirements.md#fr-video-001-관련-영상-정보-확인)
-- 설명: 한 공개 맛집의 기본 정보와 유효 방문 콘텐츠를 반환한다.
+- 설명: 한 공개 맛집의 기본 정보와 유효 방문 콘텐츠를 반환한다. 유효 회원 Token이면 최근 기록 부수효과를 시도하되, Token 검증·회원 인증 저장소·개인화 저장소 장애는 익명 조회로 격하해 기본 `200` 응답을 유지한다.
 
 #### Path Parameters
 
@@ -98,6 +98,9 @@ related_documents:
 - 맛집 기본 정보는 영상·관계 존재 여부와 독립적으로 조회한다.
 - 유튜버와 영상은 요청 맛집에 연결된 공개·유효 관계만 사용하고 각각 식별자 기준으로 중복 제거한다.
 - 사용자 조회 과정에서 YouTube·카카오 API를 실시간 필수 호출하지 않는다.
+- Authorization 헤더가 없거나 회원 Token이 만료·변조·폐기·잘못된 audience이면 회원 principal 없이 익명 공개 조회로 처리한다.
+- 유효 회원 Token일 때만 최근 기록 upsert를 시도한다. 회원 인증 상태 조회 또는 최근 기록 저장에 실패하면 최근 기록을 생략하고 공개 상세의 정상 `200` 응답을 유지한다.
+- 위 선택적 인증 격하는 이 공개 상세 경로에만 적용하며, 회원 보호 경로의 `401`·`503` 규칙을 완화하지 않는다.
 
 #### Success Response
 
