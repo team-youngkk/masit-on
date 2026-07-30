@@ -206,6 +206,10 @@ jobs:
             # 담고 있어 오탐을 만든다. 우리가 막아야 하는 것은 우리 소스·리소스가
             # 비밀값을 싣고 나가는 경우이므로 BOOT-INF/classes와 그 밖의 항목을 본다.
             work=$(mktemp -d)
+            # extracted를 미리 만든다. 프론트엔드 이미지에는 JAR이 없어 이 디렉터리가
+            # 생기지 않고, 존재하지 않는 경로를 받은 grep은 exit 2를 반환해 아래 가드가
+            # 검사 실행 실패로 판정한다.
+            mkdir -p "$work/extracted"
             cid=$(docker create "$image")
             docker cp "$cid:/app" "$work/app"
             docker rm "$cid" >/dev/null
