@@ -1205,7 +1205,55 @@ related_documents:
   - [FR-CREATOR-002](functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인)
   - [FR-VIDEO-001](functional-requirements.md#fr-video-001-관련-영상-정보-확인)
 
-## 10. 규칙 간 우선순위
+## 10. 1차 확장 규칙
+
+<a id="br-member-001-이메일-고유성"></a><a id="br-member-002-비밀번호-정책"></a><a id="br-member-003-계정-상태"></a><a id="br-member-004-회원-탈퇴와-재가입"></a>
+
+### BR-MEMBER-001~004 회원 식별·상태·탈퇴
+
+- 이메일은 정규화한 값으로 고유하며, 비밀번호는 정책을 충족한 해시만 저장한다.
+- 계정은 `PENDING_VERIFICATION`, `ACTIVE`, `DELETION_PENDING`, `DISABLED`로 전이하고 `ACTIVE`만 로그인한다.
+- 탈퇴 요청은 즉시 인증을 차단하고 세션·개인화 데이터를 정리한 뒤 개인정보를 물리 삭제한다.
+
+<a id="br-auth-001-관리자와-회원-인증-분리"></a><a id="br-auth-002-회원-access-refresh-token"></a><a id="br-auth-003-refresh-token-회전과-재사용"></a><a id="br-auth-004-다중-세션-한도"></a><a id="br-auth-005-로그인-실패-제한"></a><a id="br-auth-006-로그아웃과-폐기"></a><a id="br-auth-007-공개-상세의-선택적-회원-인증"></a><a id="br-auth-008-인증-장애-격리"></a>
+
+### BR-AUTH-001~008 회원 인증과 공개 조회 격리
+
+- 회원 인증은 관리자와 audience·principal·cookie·Redis namespace를 분리하고 Access/Refresh Token을 회전·재사용 탐지한다.
+- 회원은 최대 3세션이며 로그인 실패 제한, 로그아웃·탈퇴·`sid` 폐기를 적용한다.
+- 공개 맛집 상세는 회원 Token이 없거나 유효하지 않거나 회원 인증 저장소가 장애여도 익명 조회로 `200`을 유지한다. 이 경우 최근 기록을 만들지 않으며 인증 장애를 공개 응답으로 전파하지 않는다.
+
+<a id="br-favorite-001-회원별-찜의-고유성과-멱등성"></a><a id="br-favorite-002-찜-상태-조회와-본인-경계"></a><a id="br-favorite-003-찜-목록-정렬과-공개-상태"></a><a id="br-favorite-004-맛집-상태에-따른-찜-보존과-정리"></a>
+
+### BR-FAVORITE-001~004 찜 관계
+
+- `(member, restaurant)` 찜은 하나만 존재하며 추가·해제는 멱등이고 본인만 조회·변경한다.
+- 목록은 공개 맛집만 안정 정렬로 보이며 GET은 삭제를 수행하지 않는다.
+- 비공개 맛집 찜은 보존·숨김 처리하고, 회원 탈퇴와 맛집 물리 삭제의 Command/FK 정책에서 관계를 정리한다.
+
+<a id="br-recent-001-최근-본-맛집의-기록과-갱신"></a><a id="br-recent-002-최근-기록의-보존-상한과-정리"></a><a id="br-recent-003-최근-기록-목록-공개-상태와-정렬"></a><a id="br-recent-004-최근-기록-생성-실패-격리"></a><a id="br-recent-005-최근-기록-개별-삭제의-멱등성과-소유권"></a>
+
+### BR-RECENT-001~005 최근 기록
+
+- 공개 상세 성공 뒤 같은 `(member, restaurant)` 기록은 upsert하고 저장 실패는 공개 응답과 격리한다.
+- upsert Command 트랜잭션에서 30일 경과분과 회원별 최신 50개 초과분을 정리한다. GET은 삭제하지 않고 유효·공개 기록만 필터링한다.
+- 개별 삭제는 본인 기록만 멱등 처리한다.
+
+<a id="br-map-001-wgs84-좌표와-null-처리"></a><a id="br-map-002-bounds-검색과-기존-필터-결합"></a><a id="br-map-003-지도-결과-상한과-호출-제한"></a><a id="br-map-004-지도-sdk와-키-경계"></a><a id="br-map-005-지도-접근성과-장애-격리"></a>
+
+### BR-MAP-001~005 지도 탐색
+
+- WGS84 좌표가 있는 공개 맛집만 bounds와 기존 필터의 AND 결과로 지도에 표시하며 NULL 좌표는 지도에서만 제외한다.
+- 결과 200개 상한·호출 제한, SDK·키·bounds 로그 격리와 대체 목록 접근성을 적용한다.
+
+<a id="br-creator-001-creator-상세-공개-조건"></a><a id="br-creator-002-creator-표시-정보"></a><a id="br-creator-003-방문-맛집-목록-정렬"></a><a id="br-creator-004-근거-영상-목록-정렬"></a><a id="br-creator-005-visit-공개-유효성"></a><a id="br-creator-006-중복-제거"></a><a id="br-creator-007-빈-목록"></a><a id="br-creator-008-비공개-creator"></a><a id="br-creator-009-삭제-creator"></a><a id="br-creator-010-외부-상태"></a><a id="br-creator-011-외부-api-호출-금지"></a><a id="br-creator-012-캐시-도입-보류"></a>
+
+### BR-CREATOR-001~012 유튜버 상세
+
+- 공개·유효 Creator와 Visit만 상세·방문 맛집·근거 영상에 사용하고 중복은 제거하며 빈 목록은 정상 결과다.
+- 비공개·삭제·외부 이용 불가 관계는 숨기고 사용자 조회 중 외부 API를 호출하지 않는다. 캐시는 병목 근거 전까지 도입하지 않는다.
+
+## 11. 규칙 간 우선순위
 
 서로 다른 규칙이 충돌하면 다음 순서로 적용한다.
 
@@ -1218,7 +1266,7 @@ related_documents:
 
 구현 편의성을 이유로 상위 비즈니스 규칙을 위반할 수 없다. 충돌을 해소할 수 없으면 임의로 구현하지 않고 제11장의 검토 필요 항목으로 기록하며, 범위 변경이 필요한 경우 [docs/00-overview/scope.md](../00-overview/scope.md)를 먼저 변경한다.
 
-## 11. 검토 필요 항목
+## 12. 검토 필요 항목
 
 이 문서에서 별도로 관리하는 미결정 비즈니스 규칙은 없다. 합의된 결정은 [requirements-review.md](requirements-review.md)와 제3장부터 제9장의 규칙에 반영했다. 프로젝트 범위에 남아 있는 미결정 사항은 [docs/00-overview/scope.md](../00-overview/scope.md) 제9장을 단일 기준으로 사용한다.
 
