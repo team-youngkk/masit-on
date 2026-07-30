@@ -67,12 +67,15 @@ write_secret() {
   echo "  $property: ${#value}자"
 }
 
-render_required "db.password"        /masiton/db/password
-render_required "redis.password"     /masiton/redis/password
-render_required "jwt.key-id"         /masiton/jwt/key-id
-render_required "jwt.private-key-pem" /masiton/jwt/private-key-pem
-render_required "jwt.public-key-pem"  /masiton/jwt/public-key-pem
-render_optional "kakao.rest-api-key" /masiton/integration/kakao/rest-api-key
-render_optional "youtube.api-key"    /masiton/integration/youtube/api-key
+# 파일 이름이 곧 최종 속성 이름이다. 짧은 별칭을 쓰고 프로파일에서 매핑하면
+# 프로파일 문서가 JWT 키 속성을 선언하게 되어 ConfigurationLayeringTest에 걸린다.
+# 이름을 바꾸면 application-prod.yml 주석의 목록도 함께 바꾼다.
+render_required "spring.datasource.password"            /masiton/db/password
+render_required "spring.data.redis.password"            /masiton/redis/password
+render_required "masiton.security.jwt.key-id"           /masiton/jwt/key-id
+render_required "masiton.security.jwt.private-key-pem"  /masiton/jwt/private-key-pem
+render_required "masiton.security.jwt.public-key-pem"   /masiton/jwt/public-key-pem
+render_optional "masiton.integration.kakao.rest-api-key" /masiton/integration/kakao/rest-api-key
+render_optional "masiton.integration.youtube.api-key"    /masiton/integration/youtube/api-key
 
 echo "렌더링 완료: $SECRETS_DIR ($(find "$SECRETS_DIR" -type f | wc -l)개 파일)"
