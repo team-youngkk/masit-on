@@ -321,29 +321,32 @@ PR 브랜치는 AWS 자격 증명을 받지 못한다. **이미지 빌드와 검
 
 이 절은 작성 시점에 **GitHub Actions 워크플로가 저장소에 없다**는 사실을 기록했다. ADR-CI-001(Accepted), ADR-DEPLOY-002 4절, [M2 계획](m2-deployment-plan.md) 8절, `M2-06` 작업 항목이 모두 워크플로를 전제하는데 구현된 적이 없었다.
 
-**두 워크플로가 생겨 해소됐다.**
+**[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) 하나로 해소됐다.** 이 워크플로가 품질 게이트(빌드·테스트)와 이미지 빌드·검증·ECR push를 모두 갖는다. 이미지 job은 `deploy/m2`·`main`의 `push`에서만 실행돼 ADR-CI-001 9절의 "이미지 생성·push는 M2부터" 범위를 지킨다.
 
-| 워크플로 | 소유 | 역할 |
-|---|---|---|
-| [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) | `develop` | 모든 브랜치 공통 품질 게이트. 빌드·테스트·이미지 검증·취약점 검사 |
-| [`.github/workflows/images.yml`](../../.github/workflows/images.yml) | `deploy/m2` | `workflow_run`으로 CI 성공 뒤에만 실행. ECR push와 digest 기록 |
+**이미지 job을 별도 워크플로로 분리하지 않는다.** 한때 `images.yml`을 만들어 `workflow_run`으로 CI 성공 뒤에 실행하려 했으나 세 가지 이유로 되돌렸다.
 
-파일을 나눈 이유는 `ci.yml`이 `develop` 소유 공통 게이트여서 M2 전용 ECR·OIDC 단계를 섞으면 두 브랜치가 계속 어긋나기 때문이다. CI가 실패하면 `images.yml`에 도달하지 않으므로 push와 배포가 차단된다.
+- OIDC `sub`가 실제 push된 ref가 아니라 기본 브랜치를 가리켜 `AssumeRoleWithWebIdentity`가 거절된다. IAM 신뢰 정책은 `refs/heads/deploy/m2`와 `refs/heads/main`만 허용한다.
+- `workflow_run`은 권한 있는 컨텍스트라 fork PR의 head를 체크아웃한 상태로 OIDC를 주면 외부 코드가 ECR에 push할 수 있다.
+- `workflow_run` 이벤트는 **기본 브랜치에 있는 워크플로 파일만** 발동시킨다. 이 저장소의 기본 브랜치는 `main`이고 `main`에는 워크플로 파일이 없어 애초에 실행되지 않았다. 트리거를 `push`로 바꾸면 `ci.yml`의 이미지 job과 경합해 IMMUTABLE 태그에서 실패한다(2026-07-30 실제로 겪었다).
+
+`push` 이벤트는 저장소 내부 브랜치에서만 발생하므로 위 두 위험이 없다. 그래서 이미지 job은 `ci.yml`에 두고 조건으로 범위를 좁힌다.
 
 ### 6.7. ECR push와 취약점 검사 결과
 
-`M2-06` 완료 조건 중 이미지가 없어 미검증이던 취약점 검사 결과를 확인했다.
+`M2-06` 완료 조건 중 "GitHub Actions가 장기 키 없이 OIDC로 push하고 이미지가 digest로 식별된다"와 취약점 검사 결과를 확인했다. `ci.yml`의 `이미지 빌드·검증·push` job이 `deploy/m2` push에서 실행돼 두 커밋을 게시했다.
 
-| 리포지토리 | 태그(커밋) | digest | push 시각 | 기본 스캔 |
+| 커밋 | CI 실행 | 리포지토리 | digest | push 시각 |
 |---|---|---|---|---|
-| `masiton-backend` | `0b8daf4` | `sha256:ddcca41c2b02b0e0549056f908f60a0a022a1595c8165a0395e246a85e713afd` | 2026-07-29 21:58 KST | `COMPLETE`, 발견 0건 |
-| `masiton-frontend` | `0b8daf4` | `sha256:3f32cde364e941ca5f559ea406c70a708ecc8b90eb70b375070f12a414830e11` | 2026-07-29 21:58 KST | `COMPLETE`, 발견 0건 |
+| `69eb607` | `30506706010` | `masiton-backend` | `sha256:e325ff30058007a103ca5761067f86e8b36d6e149600f71f71f94e296cf7960b` | 2026-07-30 10:53 KST |
+| `69eb607` | `30506706010` | `masiton-frontend` | `sha256:e46ca3569e2ee66e291a2bc47b8df3b58444a048bcf8d81d4b9c50110b72c9dc` | 2026-07-30 10:54 KST |
+| `1b98b71` | `30507994704` | `masiton-backend` | `sha256:a35f172ba7f57b3c59447179d2785155ca9063569eb30079bfc2725d678f72db` | 2026-07-30 11:20 KST |
+| `1b98b71` | `30507994704` | `masiton-frontend` | `sha256:738298c9d36bab3293f9d45b7390b25219b45af00b596dda1f7238a7d83d5432` | 2026-07-30 11:21 KST |
 
-같은 커밋 쌍이 그 이전 `630259b`에도 있다. 두 쌍 모두 digest로 식별된다.
+두 실행 모두 세 job(`백엔드 빌드·테스트`, `프론트엔드 빌드·타입 검사`, `이미지 빌드·검증·push`)이 성공했다. **장기 액세스 키 없이 OIDC로 push됐고 태그는 커밋 SHA, 실행 참조는 digest다.**
 
-**이 이미지들은 GitHub Actions가 올린 것이 아니다.** `Images` 워크플로 실행 이력이 0건이므로 2026-07-29의 push는 Actions 밖에서 이뤄졌다. 따라서 `M2-06` 완료 조건 "GitHub Actions가 장기 키 없이 OIDC로 push한다"는 이 시점에 **여전히 미검증**이다(10절).
+그 이전 `0b8daf4`·`630259b` 쌍도 남아 있다(2026-07-29 21:50·21:58 KST).
 
-원인은 `images.yml`이 `workflow_run` 트리거를 쓴 것이다. GitHub는 이 이벤트를 **기본 브랜치에 있는 워크플로 파일만** 발동시키는데, 이 저장소의 기본 브랜치는 `main`이고 `main`에는 워크플로 파일이 없다. `push`·`pull_request`는 그 브랜치 자신의 파일을 읽으므로 `ci.yml`이 `develop`에만 있어도 동작하지만 `workflow_run`은 그렇지 않다. 2026-07-30에 트리거를 `push`로 바꾸고 "CI 통과 후에만 push" 게이트는 같은 커밋의 CI 결론을 REST API로 확인하는 방식으로 옮겼다.
+취약점 검사는 push 시 기본 스캔으로 `COMPLETE`, 심각도별 발견 0건이다.
 
 `aws ecr describe-images`의 `imageScanStatus`는 비어 보이지만 `describe-image-scan-findings`가 `COMPLETE`와 심각도별 0건을 보고한다. 조회 API에 따라 표시가 달라 스캔이 안 된 것처럼 보일 수 있으므로 확인은 후자로 한다.
 
@@ -559,7 +562,6 @@ reload가 master 프로세스를 바꾸지 않으므로 **인증서 교체에 �
 - **SSH 접속.** 키 페어 `masiton-app`을 만들었으나 실제 SSH 접속은 시도하지 않았다. 인스턴스 접근은 SSM RunCommand로 검증했다.
 - **HTTPS와 도메인 응답.** A 레코드 전파는 확인했으나 `masiton.click`으로 실제 HTTP·HTTPS 응답은 받지 못한다. Nginx가 아직 없다(`M2-08`).
 - **백엔드 이미지 컨테이너 기동.** 이미지는 arm64로 빌드해 정적 검사를 통과했으나 컨테이너를 띄워 `/internal/health/live`를 확인하지는 않았다. 기동에 PostgreSQL·Redis 접속값이 필요하고 사설 서브넷 RDS는 작업자 PC에서 도달하지 않는다. `M2-09`에서 EC2 위에서 확인한다.
-- **GitHub Actions OIDC push.** `Images` 워크플로가 트리거되지 않아 실행 이력이 0건이었고, ECR의 기존 이미지는 Actions 밖에서 올라간 것이다(6.7절). 트리거를 고친 뒤 첫 실행에서 OIDC push와 digest 기록을 확인한다.
 - **애플리케이션과 Redis 연결.** Redis 자체는 7절에서 검증했으나 Spring Boot가 `127.0.0.1:6379`로 붙어 Refresh Token 회전과 `/internal/health/dependencies`가 동작하는 것은 `M2-09`에서 확인한다. 앱 컨테이너가 호스트 loopback에 도달하는 방식(ADR-RUNTIME-001 11절이 운영 설정의 Docker 서비스명을 금지한다)도 그때 확정한다.
 - **Redis 장애 시 fail-closed.** ADR-DATA-005 12절의 재발급 차단과 재로그인 복구는 애플리케이션이 붙은 뒤 `M2-13`에서 확인한다.
 - **애플리케이션 기동 후 메모리.** 3.6절은 기동 직후 기준값이며 Nginx·Next.js·Spring Boot 실행 후 실측은 `M2-09`에서 한다. Redis 컨테이너까지 올라간 현재 값도 그때 함께 기록한다.
