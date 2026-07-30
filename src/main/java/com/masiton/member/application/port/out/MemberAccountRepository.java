@@ -16,4 +16,5 @@ public interface MemberAccountRepository {
     void activate(UUID id, Instant verifiedAt);
     void changePassword(UUID id, String passwordHash, Instant now);
     void requestDeletion(UUID id, Instant now);
+    void deleteById(UUID id);
 }

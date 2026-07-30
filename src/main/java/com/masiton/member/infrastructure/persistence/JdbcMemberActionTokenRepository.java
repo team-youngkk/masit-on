@@ -40,6 +40,11 @@ public class JdbcMemberActionTokenRepository implements MemberActionTokenReposit
                 now, hash, purpose.name(), now).stream().findFirst();
     }
 
+    @Override
+    public void deleteByMemberId(java.util.UUID memberId) {
+        jdbcTemplate.update("DELETE FROM member_action_token WHERE member_id = ?", memberId);
+    }
+
     private byte[] hash(String value) {
         try {
             return MessageDigest.getInstance("SHA-256").digest(value.getBytes(java.nio.charset.StandardCharsets.UTF_8));

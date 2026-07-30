@@ -20,6 +20,8 @@ import com.masiton.member.application.port.out.MemberAccountRepository;
 import com.masiton.member.application.port.out.MemberActionTokenDeliveryPort;
 import com.masiton.member.application.port.out.MemberActionTokenRepository;
 import com.masiton.member.application.port.out.MemberRateLimitStore;
+import com.masiton.member.application.port.out.MemberDeletionJobStore;
+import com.masiton.member.application.port.out.MemberSessionRevocationRecoveryJobStore;
 import com.masiton.member.application.port.out.MemberSessionRevocationStore;
 import com.masiton.member.application.port.out.MemberSessionStore;
 import com.masiton.member.application.port.out.MemberTokenIssuer;
@@ -49,7 +51,11 @@ class MemberAuthenticationServiceTest {
     @Mock
     private MemberRateLimitStore rateLimits;
     @Mock
+    private MemberDeletionJobStore deletionJobs;
+    @Mock
     private MemberSessionStore sessions;
+    @Mock
+    private MemberSessionRevocationRecoveryJobStore revocationRecoveryJobs;
     @Mock
     private MemberSessionRevocationStore revocations;
     @Mock
@@ -132,8 +138,44 @@ class MemberAuthenticationServiceTest {
         org.mockito.Mockito.verifyNoInteractions(actionTokens);
     }
 
+    @Test
+    @DisplayName("로그아웃 폐기는 PostgreSQL 복구 작업을 먼저 기록하고 성공 뒤 제거한다")
+    void logout_세션폐기_내구복구작업선기록후제거() {
+        UUID memberId = UUID.randomUUID();
+        UUID sessionId = UUID.randomUUID();
+        given(sessions.findSession("refresh-token"))
+                .willReturn(Optional.of(new MemberSessionOwner(memberId.toString(), sessionId.toString())));
+
+        service().logout(new MemberPrincipal(memberId.toString(), sessionId.toString()), NOW.plusSeconds(60), "refresh-token");
+
+        MemberSessionRevocation expected = new MemberSessionRevocation(sessionId, NOW, NOW.plus(Duration.ofDays(14)));
+        org.mockito.InOrder order = org.mockito.Mockito.inOrder(revocations, sessions);
+        order.verify(revocations).record(expected);
+        order.verify(sessions).revoke(memberId.toString(), sessionId.toString());
+        org.mockito.Mockito.verifyNoInteractions(revocationRecoveryJobs);
+    }
+
+    @Test
+    @DisplayName("폐기 marker 저장 실패는 복구 작업을 보상적으로 기록한다")
+    void logout_marker저장실패_복구작업보상기록() {
+        UUID memberId = UUID.randomUUID();
+        UUID sessionId = UUID.randomUUID();
+        given(sessions.findSession("refresh-token"))
+                .willReturn(Optional.of(new MemberSessionOwner(memberId.toString(), sessionId.toString())));
+        doThrow(new IllegalStateException("database unavailable")).when(revocations)
+                .record(org.mockito.ArgumentMatchers.any(MemberSessionRevocation.class));
+
+        assertThatThrownBy(() -> service().logout(
+                new MemberPrincipal(memberId.toString(), sessionId.toString()), NOW.plusSeconds(60), "refresh-token"))
+                .isInstanceOf(com.masiton.common.web.BusinessException.class);
+
+        verify(revocationRecoveryJobs).enqueue(
+                new MemberSessionRevocation(sessionId, NOW, NOW.plus(Duration.ofDays(14))), NOW);
+    }
+
     private MemberAuthenticationService service() {
-        return new MemberAuthenticationService(accounts, actionTokens, actionTokenDelivery, rateLimits, sessions, revocations,
+        return new MemberAuthenticationService(accounts, actionTokens, actionTokenDelivery, rateLimits, deletionJobs, sessions,
+                revocationRecoveryJobs, revocations,
                 tokenIssuer, passwordEncoder,
                 new MemberJwtSettings("issuer", "member", Duration.ofMinutes(30), "key-id"),
                 Clock.fixed(NOW, ZoneOffset.UTC));

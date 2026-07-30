@@ -20,6 +20,8 @@ import org.springframework.stereotype.Component;
 import com.masiton.member.application.InvalidMemberSessionException;
 import com.masiton.member.application.MemberSession;
 import com.masiton.member.application.MemberSessionOwner;
+import com.masiton.member.application.MemberSessionRevocation;
+import com.masiton.member.application.port.out.MemberSessionRevocationRecoveryQueue;
 import com.masiton.member.application.port.out.MemberSessionStore;
 import com.masiton.common.security.MemberSessionSettings;
 
@@ -35,6 +37,23 @@ public class RedisMemberSessionStore implements MemberSessionStore {
     private static final String ISSUE_REVOKED_SENTINEL = "__REVOKED_DURING_ISSUE__";
 
     private static final DefaultRedisScript<String> ISSUE_SCRIPT = new DefaultRedisScript<>("""
+            local function enqueueRevocation(sessionId, record)
+              local expiresAt = tonumber(record.expiresAtEpochMillis)
+              local now = tonumber(ARGV[9])
+              if not expiresAt or expiresAt <= now then
+                return
+              end
+              local recoveryKey = ARGV[10] .. sessionId
+              local existing = redis.call('GET', recoveryKey)
+              local revokedAt = now
+              if existing then
+                local separator = string.find(existing, ':')
+                revokedAt = math.min(revokedAt, tonumber(string.sub(existing, 1, separator - 1)))
+                expiresAt = math.max(expiresAt, tonumber(string.sub(existing, separator + 1)))
+              end
+              redis.call('SET', recoveryKey, revokedAt .. ':' .. expiresAt, 'PX', expiresAt - now)
+              redis.call('ZADD', KEYS[6], now, sessionId)
+            end
             local currentGeneration = redis.call('GET', KEYS[5]) or '0'
             if currentGeneration ~= ARGV[8] then
               return '__REVOKED_DURING_ISSUE__'
@@ -63,6 +82,7 @@ public class RedisMemberSessionStore implements MemberSessionStore {
               local oldRecord = redis.call('GET', oldSessionKey)
               if oldRecord then
                 local old = cjson.decode(oldRecord)
+                enqueueRevocation(oldest, old)
                 redis.call('DEL', ARGV[5] .. old.tokenHash)
               end
               redis.call('DEL', oldSessionKey)
@@ -77,12 +97,34 @@ public class RedisMemberSessionStore implements MemberSessionStore {
             """, String.class);
 
     private static final DefaultRedisScript<String> REVOKE_ALL_SCRIPT = new DefaultRedisScript<>("""
+            local function nowEpochMillis()
+              local time = redis.call('TIME')
+              return tonumber(time[1]) * 1000 + math.floor(tonumber(time[2]) / 1000)
+            end
+            local function enqueueRevocation(sessionId, record)
+              local expiresAt = tonumber(record.expiresAtEpochMillis)
+              local now = nowEpochMillis()
+              if not expiresAt or expiresAt <= now then
+                return
+              end
+              local recoveryKey = ARGV[3] .. sessionId
+              local existing = redis.call('GET', recoveryKey)
+              local revokedAt = now
+              if existing then
+                local separator = string.find(existing, ':')
+                revokedAt = math.min(revokedAt, tonumber(string.sub(existing, 1, separator - 1)))
+                expiresAt = math.max(expiresAt, tonumber(string.sub(existing, separator + 1)))
+              end
+              redis.call('SET', recoveryKey, revokedAt .. ':' .. expiresAt, 'PX', expiresAt - now)
+              redis.call('ZADD', KEYS[4], now, sessionId)
+            end
             local sessionIds = redis.call('ZRANGE', KEYS[1], 0, -1)
             for _, sessionId in ipairs(sessionIds) do
               local sessionKey = ARGV[1] .. sessionId
               local serialized = redis.call('GET', sessionKey)
               if serialized then
                 local record = cjson.decode(serialized)
+                enqueueRevocation(sessionId, record)
                 redis.call('DEL', ARGV[2] .. record.tokenHash)
               end
               redis.call('DEL', sessionKey)
@@ -97,6 +139,23 @@ public class RedisMemberSessionStore implements MemberSessionStore {
             """, String.class);
 
     private static final DefaultRedisScript<Long> ROTATE_SCRIPT = new DefaultRedisScript<>("""
+            local function enqueueRevocation(sessionId, record)
+              local expiresAt = tonumber(record.expiresAtEpochMillis)
+              local now = tonumber(ARGV[7])
+              if not expiresAt or expiresAt <= now then
+                return
+              end
+              local recoveryKey = ARGV[8] .. sessionId
+              local existing = redis.call('GET', recoveryKey)
+              local revokedAt = now
+              if existing then
+                local separator = string.find(existing, ':')
+                revokedAt = math.min(revokedAt, tonumber(string.sub(existing, 1, separator - 1)))
+                expiresAt = math.max(expiresAt, tonumber(string.sub(existing, separator + 1)))
+              end
+              redis.call('SET', recoveryKey, revokedAt .. ':' .. expiresAt, 'PX', expiresAt - now)
+              redis.call('ZADD', KEYS[4], now, sessionId)
+            end
             local sessionId = redis.call('GET', KEYS[1])
             if not sessionId then
               sessionId = redis.call('GET', KEYS[2])
@@ -107,6 +166,7 @@ public class RedisMemberSessionStore implements MemberSessionStore {
               local replayed = redis.call('GET', replayedSessionKey)
               if replayed then
                 local record = cjson.decode(replayed)
+                enqueueRevocation(sessionId, record)
                 redis.call('DEL', ARGV[2] .. record.tokenHash)
                 redis.call('DEL', replayedSessionKey)
                 redis.call('ZREM', ARGV[6] .. record.memberId, sessionId)
@@ -121,6 +181,7 @@ public class RedisMemberSessionStore implements MemberSessionStore {
             end
             local record = cjson.decode(stored)
             if record.tokenHash ~= ARGV[3] then
+              enqueueRevocation(sessionId, record)
               redis.call('DEL', KEYS[1])
               redis.call('DEL', sessionKey)
               redis.call('ZREM', ARGV[6] .. record.memberId, sessionId)
@@ -137,6 +198,7 @@ public class RedisMemberSessionStore implements MemberSessionStore {
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
     private final MemberRefreshTokenFactory refreshTokenFactory;
+    private final MemberSessionRevocationRecoveryQueue recoveryQueue;
     private final int maxSessions;
     private final Clock clock;
 
@@ -144,12 +206,14 @@ public class RedisMemberSessionStore implements MemberSessionStore {
             StringRedisTemplate redisTemplate,
             ObjectMapper objectMapper,
             MemberRefreshTokenFactory refreshTokenFactory,
+            MemberSessionRevocationRecoveryQueue recoveryQueue,
             MemberSessionSettings settings,
             Clock memberSessionClock
     ) {
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
         this.refreshTokenFactory = refreshTokenFactory;
+        this.recoveryQueue = recoveryQueue;
         this.maxSessions = settings.maxSessions();
         this.clock = memberSessionClock;
     }
@@ -169,7 +233,8 @@ public class RedisMemberSessionStore implements MemberSessionStore {
                         refreshIndexKey(refreshToken),
                         memberSessionsKey(memberId),
                         memberSessionSequenceKey(memberId),
-                        memberSessionGenerationKey(memberId)
+                        memberSessionGenerationKey(memberId),
+                        RedisMemberSessionRevocationRecoveryQueue.DUE_KEY
                 ),
                 String.valueOf(createdAt.toEpochMilli()),
                 sessionId,
@@ -178,7 +243,9 @@ public class RedisMemberSessionStore implements MemberSessionStore {
                 REFRESH_INDEX_PREFIX,
                 serialize(record),
                 String.valueOf(ttl.toSeconds()),
-                expectedGeneration
+                expectedGeneration,
+                String.valueOf(createdAt.toEpochMilli()),
+                RedisMemberSessionRevocationRecoveryQueue.RECOVERY_PREFIX
         );
         if (ISSUE_REVOKED_SENTINEL.equals(evictedSessionId)) {
             throw new InvalidMemberSessionException();
@@ -211,14 +278,17 @@ public class RedisMemberSessionStore implements MemberSessionStore {
                 List.of(
                         refreshIndexKey(refreshToken),
                         usedRefreshIndexKey(refreshToken),
-                        refreshIndexKey(nextRefreshToken)
+                        refreshIndexKey(nextRefreshToken),
+                        RedisMemberSessionRevocationRecoveryQueue.DUE_KEY
                 ),
                 SESSION_PREFIX,
                 REFRESH_INDEX_PREFIX,
                 oldHash,
                 serialize(rotated),
                 String.valueOf(ttl.toSeconds()),
-                MEMBER_SESSIONS_PREFIX
+                MEMBER_SESSIONS_PREFIX,
+                String.valueOf(Instant.now(clock).toEpochMilli()),
+                RedisMemberSessionRevocationRecoveryQueue.RECOVERY_PREFIX
         );
         if (result == null || result != 1L) {
             throw new InvalidMemberSessionException(revokedSessionIds(sessionId));
@@ -273,6 +343,8 @@ public class RedisMemberSessionStore implements MemberSessionStore {
         if (!memberId.equals(record.memberId())) {
             throw new InvalidMemberSessionException();
         }
+        Instant now = Instant.now(clock);
+        recoveryQueue.enqueue(new MemberSessionRevocation(UUID.fromString(sessionId), now, record.expiresAt()), now);
         redisTemplate.delete(List.of(sessionKey(sessionId), REFRESH_INDEX_PREFIX + record.tokenHash()));
         redisTemplate.opsForZSet().remove(memberSessionsKey(memberId), sessionId);
     }
@@ -284,10 +356,12 @@ public class RedisMemberSessionStore implements MemberSessionStore {
                 List.of(
                         memberSessionsKey(memberId),
                         memberSessionSequenceKey(memberId),
-                        memberSessionGenerationKey(memberId)
+                        memberSessionGenerationKey(memberId),
+                        RedisMemberSessionRevocationRecoveryQueue.DUE_KEY
                 ),
                 SESSION_PREFIX,
-                REFRESH_INDEX_PREFIX
+                REFRESH_INDEX_PREFIX,
+                RedisMemberSessionRevocationRecoveryQueue.RECOVERY_PREFIX
         );
         try {
             String[] sessionIds = objectMapper.readValue(
@@ -358,6 +432,11 @@ public class RedisMemberSessionStore implements MemberSessionStore {
         return sessionId == null || sessionId.isBlank() ? java.util.Set.of() : java.util.Set.of(sessionId);
     }
 
-    private record MemberSessionRecord(String memberId, String tokenHash, Instant createdAt, Instant expiresAt) {
+    private record MemberSessionRecord(String memberId, String tokenHash, Instant createdAt, Instant expiresAt,
+            long expiresAtEpochMillis) {
+
+        private MemberSessionRecord(String memberId, String tokenHash, Instant createdAt, Instant expiresAt) {
+            this(memberId, tokenHash, createdAt, expiresAt, expiresAt.toEpochMilli());
+        }
     }
 }

@@ -29,6 +29,8 @@ import com.masiton.security.application.port.out.LoginFailureStore;
 import com.masiton.security.application.port.out.RefreshTokenStore;
 import com.masiton.member.application.InvalidMemberSessionException;
 import com.masiton.member.application.MemberSession;
+import com.masiton.member.application.MemberSessionRevocation;
+import com.masiton.member.application.port.out.MemberSessionRevocationRecoveryQueue;
 import com.masiton.member.application.port.out.MemberSessionStore;
 import com.masiton.member.application.port.out.MemberRateLimitStore;
 
@@ -74,6 +76,9 @@ class RedisRefreshTokenStoreIntegrationTest {
 
     @Autowired
     private MemberSessionStore memberSessionStore;
+
+    @Autowired
+    private MemberSessionRevocationRecoveryQueue memberSessionRevocationRecoveryQueue;
 
     @Autowired
     private LoginFailureStore loginFailureStore;
@@ -290,5 +295,21 @@ class RedisRefreshTokenStoreIntegrationTest {
             MemberSession issuedAfterRevocation = memberSessionStore.issue("member-a", Duration.ofDays(14));
             assertThat(memberSessionStore.matches("member-a", issuedAfterRevocation.refreshToken())).isTrue();
         }
+    }
+
+    @Test
+    @DisplayName("회원 세션 한도 초과 폐기 전에 복구 큐에 sid와 폐기 시각을 남긴다")
+    void memberSession_한도초과폐기_복구큐선적재() {
+        Instant now = Instant.parse("2026-07-29T10:00:00Z");
+        when(memberSessionClock.instant()).thenReturn(now);
+
+        MemberSession first = memberSessionStore.issue("member-a", Duration.ofDays(14));
+        memberSessionStore.issue("member-a", Duration.ofDays(14));
+        memberSessionStore.issue("member-a", Duration.ofDays(14));
+        memberSessionStore.issue("member-a", Duration.ofDays(14));
+
+        assertThat(memberSessionRevocationRecoveryQueue.claimDue(now, 50)).containsExactly(
+                new MemberSessionRevocation(
+                        java.util.UUID.fromString(first.sessionId()), now, now.plus(Duration.ofDays(14))));
     }
 }

@@ -89,6 +89,11 @@ public class JdbcMemberAccountRepository implements MemberAccountRepository {
                         + "WHERE id = ? AND status = 'ACTIVE'", requestedAt, requestedAt, id);
     }
 
+    @Override
+    public void deleteById(UUID id) {
+        jdbcTemplate.update("DELETE FROM member_account WHERE id = ?", id);
+    }
+
     private static MemberAccount map(ResultSet resultSet, int rowNum) throws SQLException {
         return new MemberAccount(
                 resultSet.getObject("id", UUID.class),

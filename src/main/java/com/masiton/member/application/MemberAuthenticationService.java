@@ -21,6 +21,8 @@ import com.masiton.member.application.port.out.MemberAccountRepository;
 import com.masiton.member.application.port.out.MemberActionTokenDeliveryPort;
 import com.masiton.member.application.port.out.MemberActionTokenRepository;
 import com.masiton.member.application.port.out.MemberRateLimitStore;
+import com.masiton.member.application.port.out.MemberDeletionJobStore;
+import com.masiton.member.application.port.out.MemberSessionRevocationRecoveryJobStore;
 import com.masiton.member.application.port.out.MemberSessionRevocationStore;
 import com.masiton.member.application.port.out.MemberSessionStore;
 import com.masiton.member.application.port.out.MemberTokenIssuer;
@@ -40,7 +42,9 @@ public class MemberAuthenticationService {
     private final MemberActionTokenRepository actionTokens;
     private final MemberActionTokenDeliveryPort actionTokenDelivery;
     private final MemberRateLimitStore rateLimits;
+    private final MemberDeletionJobStore deletionJobs;
     private final MemberSessionStore sessions;
+    private final MemberSessionRevocationRecoveryJobStore revocationRecoveryJobs;
     private final MemberSessionRevocationStore revocations;
     private final MemberTokenIssuer tokenIssuer;
     private final PasswordEncoder passwordEncoder;
@@ -48,14 +52,17 @@ public class MemberAuthenticationService {
     private final Clock clock;
 
     public MemberAuthenticationService(MemberAccountRepository accounts, MemberActionTokenRepository actionTokens,
-            MemberActionTokenDeliveryPort actionTokenDelivery, MemberRateLimitStore rateLimits, MemberSessionStore sessions,
-            MemberSessionRevocationStore revocations, MemberTokenIssuer tokenIssuer, PasswordEncoder passwordEncoder,
+            MemberActionTokenDeliveryPort actionTokenDelivery, MemberRateLimitStore rateLimits, MemberDeletionJobStore deletionJobs, MemberSessionStore sessions,
+            MemberSessionRevocationRecoveryJobStore revocationRecoveryJobs, MemberSessionRevocationStore revocations,
+            MemberTokenIssuer tokenIssuer, PasswordEncoder passwordEncoder,
             MemberJwtSettings jwtSettings, Clock memberSessionClock) {
         this.accounts = accounts;
         this.actionTokens = actionTokens;
         this.actionTokenDelivery = actionTokenDelivery;
         this.rateLimits = rateLimits;
+        this.deletionJobs = deletionJobs;
         this.sessions = sessions;
+        this.revocationRecoveryJobs = revocationRecoveryJobs;
         this.revocations = revocations;
         this.tokenIssuer = tokenIssuer;
         this.passwordEncoder = passwordEncoder;
@@ -188,6 +195,7 @@ public class MemberAuthenticationService {
         Instant now = Instant.now(clock);
         revokeAllSessions(principal.memberId(), now);
         accounts.requestDeletion(memberId, now);
+        deletionJobs.enqueue(memberId, now);
     }
 
     public MemberAccount currentMember(String memberId) {
@@ -258,8 +266,23 @@ public class MemberAuthenticationService {
     }
 
     private void recordRevocation(String sessionId, Instant now) {
-        revocations.record(new MemberSessionRevocation(
-                UUID.fromString(sessionId), now, now.plus(REFRESH_TOKEN_TTL)));
+        MemberSessionRevocation revocation = new MemberSessionRevocation(
+                UUID.fromString(sessionId), now, now.plus(REFRESH_TOKEN_TTL));
+        try {
+            revocations.record(revocation);
+        } catch (RuntimeException exception) {
+            enqueueRecoveryBestEffort(revocation, now, exception);
+            throw exception;
+        }
+    }
+
+    private void enqueueRecoveryBestEffort(MemberSessionRevocation revocation, Instant now, RuntimeException originalFailure) {
+        try {
+            revocationRecoveryJobs.enqueue(revocation, now);
+        } catch (RuntimeException recoveryFailure) {
+            originalFailure.addSuppressed(recoveryFailure);
+            log.warn("member session revocation recovery enqueue failed: sessionId={}", revocation.sessionId());
+        }
     }
 
     private String normalizeEmail(String email) {
