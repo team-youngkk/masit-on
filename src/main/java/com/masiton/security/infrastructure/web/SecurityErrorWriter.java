@@ -49,7 +49,7 @@ public class SecurityErrorWriter implements AuthenticationEntryPoint, AccessDeni
             throws IOException {
         response.setStatus(503);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setHeader("Cache-Control", "no-store");
+        setCacheControl(request, response);
         String traceId = (String) request.getAttribute(TraceIdFilter.TRACE_ID_REQUEST_ATTRIBUTE);
         objectMapper.writeValue(response.getOutputStream(), ErrorResponse.of(
                 "AUTHENTICATION_SERVICE_UNAVAILABLE",
@@ -61,12 +61,18 @@ public class SecurityErrorWriter implements AuthenticationEntryPoint, AccessDeni
     private void write(HttpServletRequest request, HttpServletResponse response, ErrorCode errorCode) throws IOException {
         response.setStatus(errorCode.status().value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setHeader("Cache-Control", "no-store");
+        setCacheControl(request, response);
         String traceId = (String) request.getAttribute(TraceIdFilter.TRACE_ID_REQUEST_ATTRIBUTE);
         objectMapper.writeValue(response.getOutputStream(), ErrorResponse.of(
                 errorCode.name(),
                 errorCode.defaultMessage(),
                 traceId == null ? UUID.randomUUID().toString().replace("-", "") : traceId
         ));
+    }
+
+    private void setCacheControl(HttpServletRequest request, HttpServletResponse response) {
+        String requestUri = request.getRequestURI();
+        boolean memberPrivatePath = requestUri.equals("/api/me") || requestUri.startsWith("/api/me/");
+        response.setHeader("Cache-Control", memberPrivatePath ? "private, no-store" : "no-store");
     }
 }

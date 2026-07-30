@@ -54,6 +54,10 @@ logging:
     com.masiton: ${LOG_LEVEL_APP:INFO}
 
 masiton:
+  personalization:
+    recent-cleanup:
+      cron: ${RECENT_RESTAURANT_CLEANUP_CRON:0 0 3 * * *}
+      zone: ${RECENT_RESTAURANT_CLEANUP_ZONE:UTC}
   member:
     action-mail:
       active-key-id: ${MEMBER_ACTION_MAIL_ACTIVE_KEY_ID:}
