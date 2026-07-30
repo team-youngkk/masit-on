@@ -154,11 +154,19 @@ class KakaoPlaceVerificationAdapter implements PlaceVerificationPort {
     /**
      * Kakao 응답의 {@code place_url}은 {@code http}로 온다. 저장·노출하는 값은 https로
      * 맞춘다. 같은 호스트가 https로 서비스하므로 scheme만 바꿔도 같은 자원을 가리킨다.
+     *
+     * <p>정규화 전에 원본 scheme을 검증한다. 검증 없이 바꾸면 {@code ftp://}처럼 허용
+     * 대상이 아닌 scheme까지 https로 바뀌어 뒤따르는 판정을 통과한다. 예상 밖 제공자
+     * 값은 계약 오류로 처리한다.
      */
     private String canonicalPlaceUrl(String placeUrl) {
         try {
             URI uri = URI.create(placeUrl);
-            if ("https".equalsIgnoreCase(uri.getScheme())) {
+            String scheme = uri.getScheme();
+            if (scheme == null || !(scheme.equalsIgnoreCase("https") || scheme.equalsIgnoreCase("http"))) {
+                throw new PlaceVerificationFailedException();
+            }
+            if (scheme.equalsIgnoreCase("https")) {
                 return placeUrl;
             }
             return new URI("https", uri.getAuthority(), uri.getPath(), uri.getQuery(), uri.getFragment()).toString();
@@ -175,10 +183,11 @@ class KakaoPlaceVerificationAdapter implements PlaceVerificationPort {
             if (scheme == null || host == null) {
                 return false;
             }
-            // 제공자가 http로 주므로 scheme을 http·https 둘 다 허용한다. https만 받으면
-            // 실제 Kakao 응답의 모든 후보가 탈락해 맛집 등록이 성립하지 않는다.
+            // 여기 오는 값은 canonicalPlaceUrl을 이미 통과했다. 그 메서드가 http·https만
+            // 허용하고 https로 정규화하므로 이 시점의 scheme은 https다. 그 불변식을
+            // 조건으로 남겨 정규화 단계가 바뀌면 판정이 조용히 느슨해지지 않게 한다.
             // 동일성 판정은 host와 path로 한다.
-            return (scheme.equalsIgnoreCase("https") || scheme.equalsIgnoreCase("http"))
+            return scheme.equalsIgnoreCase("https")
                     && host.equalsIgnoreCase("place.map.kakao.com")
                     && verifiedUri.getPath().equals(submittedUrl.getPath());
         } catch (IllegalArgumentException exception) {
