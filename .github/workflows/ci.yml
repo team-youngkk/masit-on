@@ -365,3 +365,129 @@ jobs:
 
             echo "| ${repo} | \`${IMAGE_TAG}\` | \`${digest}\` | ${state} |" >> "$GITHUB_STEP_SUMMARY"
           done
+
+  # 운영 배포 — #78. ADR-CI-001이 정한 "EC2 배포는 M2부터 활성화, 실제 운영 반영은
+  # 수동 승인으로 보호"를 구현한다.
+  #
+  # 별도 워크플로로 분리하지 않는다. 이미지 job과 순서를 보장하려면 `needs`가 필요하고,
+  # 워크플로를 나누면 `workflow_run`에 의존해야 한다. 그 트리거는 기본 브랜치에 파일이
+  # 있어야 발동하고 OIDC `sub`가 실제 push된 ref를 가리키지 않아 AssumeRole이 거절된다
+  # (images.yml에서 실제로 겪었다. 기록 6.6절).
+  #
+  # 승인 게이트는 `environment: production`이다. 승인 전에는 job이 시작되지 않으므로
+  # 이미지가 게시돼도 배포는 사람의 판단을 기다린다.
+  deploy:
+    name: 운영 배포
+    needs: [images]
+    # 이미지 job과 같은 조건이다. 배포 대상 브랜치의 push에서만 실행한다.
+    if: >-
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/deploy/m2')
+    runs-on: ubuntu-24.04
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: ap-northeast-2
+      INSTANCE_ID: i-0b451f18bca827cc9
+      IMAGE_TAG: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: AWS 자격 증명 (OIDC, 장기 키 없음)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::711457211155:role/masiton-github-actions-role
+          aws-region: ${{ env.AWS_REGION }}
+
+      # 배포 스크립트를 인스턴스로 실어 보낸다. 인스턴스에 미리 설치해 두는 방식은
+      # 스크립트를 바꿀 때 수동 단계가 생겨 ADR-RUNTIME-001 12절이 경계한 "재현 절차가
+      # 문서 밖 암묵 지식이 되는 것"에 가까워진다. 저장소의 현재 내용을 그대로 보낸다.
+      #
+      # base64로 싣는 이유는 인용과 개행 처리를 없애기 위한 것이다.
+      - name: SSM 명령 준비
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' > command.json
+          import base64
+          import json
+          import os
+
+          files = [
+              "deploy/scripts/app-deploy.sh",
+              "deploy/scripts/app-run.sh",
+              "deploy/scripts/app-secrets-render.sh",
+              "deploy/app/masiton-backend.service",
+              "deploy/app/masiton-frontend.service",
+          ]
+
+          lines = [
+              "set -euo pipefail",
+              "STAGE=/tmp/masiton-deploy",
+              'rm -rf "$STAGE"',
+              'mkdir -p "$STAGE"',
+          ]
+          for path in files:
+              with open(path, "rb") as handle:
+                  encoded = base64.b64encode(handle.read().replace(b"\r\n", b"\n")).decode("ascii")
+              name = os.path.basename(path)
+              for index in range(0, len(encoded), 400):
+                  redirect = ">" if index == 0 else ">>"
+                  lines.append(f'printf %s "{encoded[index:index + 400]}" {redirect} "$STAGE/{name}.b64"')
+              lines.append(f'base64 -d "$STAGE/{name}.b64" > "$STAGE/{name}"')
+              lines.append(f'rm -f "$STAGE/{name}.b64"')
+          lines.append('chmod +x "$STAGE/app-deploy.sh" "$STAGE/app-run.sh" "$STAGE/app-secrets-render.sh"')
+          lines.append(f'"$STAGE/app-deploy.sh" {os.environ["IMAGE_TAG"]} "$STAGE"')
+
+          payload = {"commands": ["\n".join(lines)], "executionTimeout": ["1800"]}
+          print(json.dumps(payload, ensure_ascii=True))
+          PY
+          echo "명령 크기: $(wc -c < command.json)바이트"
+
+      # 배포 스크립트가 상태 확인 폴링까지 하고 실패하면 non-zero로 끝난다. 그래서
+      # 명령 상태가 Success가 아니면 이 job도 실패한다. 실패를 성공으로 바꾸지 않는다.
+      - name: SSM으로 배포 실행
+        run: |
+          set -euo pipefail
+          command_id=$(aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name AWS-RunShellScript \
+            --parameters "file://command.json" \
+            --query 'Command.CommandId' --output text)
+          echo "CommandId: $command_id"
+
+          status=Pending
+          for _ in $(seq 1 120); do
+            status=$(aws ssm get-command-invocation \
+              --command-id "$command_id" --instance-id "$INSTANCE_ID" \
+              --query 'Status' --output text 2>/dev/null || echo Pending)
+            case "$status" in
+              Success|Failed|Cancelled|TimedOut) break ;;
+            esac
+            sleep 10
+          done
+
+          {
+            echo '## 운영 배포'
+            echo
+            echo "커밋 \`${IMAGE_TAG}\`"
+            echo
+            echo '```text'
+            aws ssm get-command-invocation --command-id "$command_id" --instance-id "$INSTANCE_ID" \
+              --query 'StandardOutputContent' --output text
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "===== 실행 출력 ====="
+          aws ssm get-command-invocation --command-id "$command_id" --instance-id "$INSTANCE_ID" \
+            --query 'StandardOutputContent' --output text
+
+          if [ "$status" != "Success" ]; then
+            echo "===== 오류 출력 ====="
+            aws ssm get-command-invocation --command-id "$command_id" --instance-id "$INSTANCE_ID" \
+              --query 'StandardErrorContent' --output text
+            echo "배포가 실패했다 (상태 $status). 직전 이미지로 롤백하려면 이전 커밋 SHA로 이 job을 다시 실행한다." >&2
+            exit 1
+          fi
+          echo "배포 완료: $IMAGE_TAG"
