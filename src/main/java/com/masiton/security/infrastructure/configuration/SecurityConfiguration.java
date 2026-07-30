@@ -20,12 +20,16 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationProvider;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
+import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.authentication.AuthenticationManagerResolver;
 
 import jakarta.servlet.http.HttpServletRequest;
 
 import com.masiton.security.infrastructure.web.SecurityErrorWriter;
+import com.masiton.security.infrastructure.web.MemberSessionRevocationFilter;
 
 @Configuration
 public class SecurityConfiguration {
@@ -35,6 +39,7 @@ public class SecurityConfiguration {
             HttpSecurity http,
             Converter<Jwt, ? extends AbstractAuthenticationToken> jwtAuthenticationConverter,
             SecurityErrorWriter securityErrorWriter,
+            MemberSessionRevocationFilter memberSessionRevocationFilter,
             JwtDecoder jwtDecoder,
             @Qualifier("memberJwtDecoder") JwtDecoder memberJwtDecoder
     ) throws Exception {
@@ -69,10 +74,12 @@ public class SecurityConfiguration {
                         .anyRequest().permitAll())
                 .oauth2ResourceServer(resourceServer -> resourceServer
                         .authenticationEntryPoint(securityErrorWriter)
+                        .bearerTokenResolver(optionalMemberBearerTokenResolver())
                         .authenticationManagerResolver(authenticationManagerResolver(
                                 jwtDecoder,
                                 memberJwtDecoder,
                                 jwtAuthenticationConverter)))
+                .addFilterAfter(memberSessionRevocationFilter, BearerTokenAuthenticationFilter.class)
                 .build();
     }
 
@@ -85,16 +92,24 @@ public class SecurityConfiguration {
         AuthenticationManager memberAuthenticationManager = authenticationManager(memberJwtDecoder, jwtAuthenticationConverter);
         AuthenticationManager publicAuthenticationManager = authentication -> authenticatePublicRequest(
                 authentication,
-                memberAuthenticationManager,
-                adminAuthenticationManager
+                memberAuthenticationManager
         );
         return request -> {
             String requestUri = request.getRequestURI();
             if (isMemberBoundary(requestUri)) {
                 return memberAuthenticationManager;
             }
-            return isPublicReadRequest(request) ? publicAuthenticationManager : adminAuthenticationManager;
+            return isOptionalMemberAuthenticationRequest(request)
+                    ? publicAuthenticationManager
+                    : adminAuthenticationManager;
         };
+    }
+
+    private BearerTokenResolver optionalMemberBearerTokenResolver() {
+        DefaultBearerTokenResolver delegate = new DefaultBearerTokenResolver();
+        return request -> isAnonymousPublicReadRequest(request) || isUnauthenticatedAuthenticationRequest(request)
+                ? null
+                : delegate.resolve(request);
     }
 
     private boolean isMemberBoundary(String requestUri) {
@@ -103,25 +118,43 @@ public class SecurityConfiguration {
                 || requestUri.startsWith("/api/me/");
     }
 
-    private boolean isPublicReadRequest(HttpServletRequest request) {
+    private boolean isOptionalMemberAuthenticationRequest(HttpServletRequest request) {
+        return HttpMethod.GET.matches(request.getMethod())
+                && request.getRequestURI().startsWith("/api/restaurants/");
+    }
+
+    private boolean isAnonymousPublicReadRequest(HttpServletRequest request) {
         if (!HttpMethod.GET.matches(request.getMethod())) {
             return false;
         }
         String requestUri = request.getRequestURI();
-        return requestUri.equals("/api/restaurants")
-                || requestUri.startsWith("/api/restaurants/")
-                || requestUri.equals("/api/creators");
+        return requestUri.equals("/api/restaurants") || requestUri.equals("/api/creators");
+    }
+
+    private boolean isUnauthenticatedAuthenticationRequest(HttpServletRequest request) {
+        if (!HttpMethod.POST.matches(request.getMethod())) {
+            return false;
+        }
+        String requestUri = request.getRequestURI();
+        return requestUri.equals("/api/admin/auth/tokens")
+                || requestUri.equals("/api/admin/auth/tokens/refresh")
+                || requestUri.equals("/api/auth/registrations")
+                || requestUri.equals("/api/auth/email-verifications")
+                || requestUri.equals("/api/auth/email-verifications/resend")
+                || requestUri.equals("/api/auth/password-resets/requests")
+                || requestUri.equals("/api/auth/password-resets/confirmations")
+                || requestUri.equals("/api/auth/tokens")
+                || requestUri.equals("/api/auth/tokens/refresh");
     }
 
     private Authentication authenticatePublicRequest(
             Authentication authentication,
-            AuthenticationManager memberAuthenticationManager,
-            AuthenticationManager adminAuthenticationManager
+            AuthenticationManager memberAuthenticationManager
     ) {
         try {
             return memberAuthenticationManager.authenticate(authentication);
         } catch (AuthenticationException ignored) {
-            return adminAuthenticationManager.authenticate(authentication);
+            return null;
         }
     }
 

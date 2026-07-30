@@ -1,8 +1,8 @@
 package com.masiton;
 
-import java.util.List;
-import java.util.Map;
 import java.time.Instant;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
@@ -22,14 +22,13 @@ import com.masiton.member.application.port.out.MemberSessionRevocationStore;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * T-03 완료 조건을 검증한다: 빈 PostgreSQL에 Flyway 초기 스키마 baseline이 성공적으로
- * 적용되고, ddl-auto=validate로 컨텍스트가 기동하며, Region·FoodCategory 기준 데이터가
+ * 빈 PostgreSQL에 V1 baseline과 V2~V4 전진 마이그레이션이 순서대로 성공적으로 적용되고,
+ * ddl-auto=validate로 컨텍스트가 기동하며, Region·FoodCategory 기준 데이터가
  * seed-data-plan.md 2~4·6절 기준과 일치하는지 확인한다.
  *
  * <p>컨텍스트가 정상 기동하면 이미 Flyway 적용과 JPA validate가 통과한 것이므로,
- * 이 테스트는 flyway_schema_history를 직접 조회해 baseline이 성공으로 기록됐는지
- * 추가로 단언한다. 초기 스키마는 migration-plan.md 2.1절에 따라 단일 파일이므로
- * 기록되는 버전도 하나다.
+ * 이 테스트는 flyway_schema_history를 직접 조회해 적용 파일과 순서가 migration-plan.md
+ * 8~9절의 계약과 일치하는지 추가로 단언한다.
  */
 @SpringBootTest
 @com.masiton.test.TestProfile
@@ -58,21 +57,32 @@ class FlywayMigrationIntegrationTest {
     private MemberSessionRevocationStore memberSessionRevocationStore;
 
     @Test
-    @DisplayName("빈 데이터베이스에 초기 스키마 baseline이 성공으로 기록된다")
-    void 마이그레이션적용_빈데이터베이스_초기스키마baseline이성공으로기록된다() {
-        // given: 컨텍스트 기동 시점에 Flyway가 이미 초기 스키마 baseline을 적용했다.
+    @DisplayName("빈 데이터베이스에 V1부터 V4까지 계약된 순서와 파일명으로 성공 기록된다")
+    void 마이그레이션적용_빈데이터베이스_V1부터V4까지계약된순서와파일명으로성공기록된다() {
+        // given: 컨텍스트 기동 시점에 Flyway가 V1 baseline과 V2~V4 전진 변경을 적용했다.
 
         // when
-        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
-                "SELECT version, success FROM flyway_schema_history "
-                        + "WHERE version IS NOT NULL ORDER BY installed_rank");
+        List<AppliedMigration> appliedMigrations = jdbcTemplate.query(
+                "SELECT version, description, type, script, success FROM flyway_schema_history "
+                        + "WHERE version IS NOT NULL ORDER BY installed_rank",
+                (resultSet, rowNum) -> new AppliedMigration(
+                        resultSet.getString("version"),
+                        resultSet.getString("description"),
+                        resultSet.getString("type"),
+                        resultSet.getString("script"),
+                        resultSet.getBoolean("success")
+                ));
 
         // then
-        assertThat(rows)
-                .extracting(row -> row.get("version"))
-                .containsExactly("1", "2");
-        assertThat(rows)
-                .allSatisfy(row -> assertThat(row.get("success")).isEqualTo(Boolean.TRUE));
+        assertThat(appliedMigrations).containsExactly(
+                new AppliedMigration("1", "create initial schema", "SQL", "V1__create_initial_schema.sql", true),
+                new AppliedMigration("2", "add member account security foundation", "SQL",
+                        "V2__add_member_account_security_foundation.sql", true),
+                new AppliedMigration("3", "add member authentication hardening", "SQL",
+                        "V3__add_member_authentication_hardening.sql", true),
+                new AppliedMigration("4", "add member personal restaurant relations", "SQL",
+                        "V4__add_member_personal_restaurant_relations.sql", true)
+        );
     }
 
     @Test
@@ -120,8 +130,8 @@ class FlywayMigrationIntegrationTest {
     }
 
     @Test
-    @DisplayName("V2 회원 계정과 인증 기반 테이블을 전진 적용한다")
-    void V2_회원보안기반_테이블생성() {
+    @DisplayName("V2 회원 보안 기반은 회원 계정에만 인증 Token을 의존시키고 sid 폐기 표식은 독립시킨다")
+    void V2_회원보안기반_회원계정의존성과sid폐기표식독립성() {
         Integer memberAccountTables = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM information_schema.tables "
                         + "WHERE table_schema = 'public' "
@@ -129,6 +139,54 @@ class FlywayMigrationIntegrationTest {
                 Integer.class);
 
         assertThat(memberAccountTables).isEqualTo(3);
+        assertForeignKey("fk_member_action_token__member_account", "pk_member_account", "RESTRICT");
+        assertForeignKeyCount("member_session_revocation", 0);
+        assertIndexCount("ux_member_action_token__active_member_purpose", "ix_member_session_revocation__expires_at");
+    }
+
+    @Test
+    @DisplayName("V3 회원 인증 하드닝 작업 테이블을 전진 적용한다")
+    void V3_회원인증하드닝_작업테이블생성() {
+        Integer hardeningTables = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM information_schema.tables "
+                        + "WHERE table_schema = 'public' "
+                        + "AND table_name IN ('member_action_mail_outbox', 'member_deletion_job', "
+                        + "'member_session_revocation_recovery')",
+                Integer.class);
+
+        assertThat(hardeningTables).isEqualTo(3);
+
+        assertForeignKey("fk_member_action_mail_outbox__member_action_token", "pk_member_action_token", "CASCADE");
+        assertForeignKeyCount("member_deletion_job", 0);
+        assertForeignKeyCount("member_session_revocation_recovery", 0);
+        assertIndexCount(
+                "ix_member_action_mail_outbox__dispatch",
+                "ix_member_deletion_job__next_attempt",
+                "ix_member_session_revocation_recovery__next_attempt"
+        );
+        assertOutboxDoesNotDuplicatePersonalData();
+    }
+
+    @Test
+    @DisplayName("V4 회원 개인화 관계 테이블을 전진 적용한다")
+    void V4_회원개인화관계_테이블생성() {
+        Integer personalTables = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' "
+                        + "AND table_name IN ('favorite', 'recent_restaurant_view')", Integer.class);
+        Integer personalIndexes = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM pg_indexes WHERE schemaname = 'public' "
+                        + "AND indexname IN ('ix_favorite__member_favorited', "
+                        + "'ix_recent_restaurant_view__member_viewed', "
+                        + "'ix_recent_restaurant_view__cleanup_viewed')", Integer.class);
+
+        assertThat(personalTables).isEqualTo(2);
+        assertThat(personalIndexes).isEqualTo(3);
+        assertPrimaryKeyColumns("favorite", "member_id", "restaurant_id");
+        assertPrimaryKeyColumns("recent_restaurant_view", "member_id", "restaurant_id");
+        assertForeignKey("fk_favorite__member_account", "pk_member_account", "CASCADE");
+        assertForeignKey("fk_favorite__restaurant", "pk_restaurant", "RESTRICT");
+        assertForeignKey("fk_recent_restaurant_view__member_account", "pk_member_account", "CASCADE");
+        assertForeignKey("fk_recent_restaurant_view__restaurant", "pk_restaurant", "RESTRICT");
     }
 
     @Test
@@ -163,5 +221,79 @@ class FlywayMigrationIntegrationTest {
                 jdbcTemplate.queryForObject("SELECT count(*) FROM " + table, Integer.class);
 
         assertThat(distinctCount).isEqualTo(totalCount);
+    }
+
+    private void assertForeignKey(String constraintName, String targetConstraintName, String deleteRule) {
+        ForeignKeyContract foreignKey = jdbcTemplate.queryForObject(
+                "SELECT unique_constraint_name, update_rule, delete_rule "
+                        + "FROM information_schema.referential_constraints "
+                        + "WHERE constraint_schema = 'public' AND constraint_name = ?",
+                (resultSet, rowNum) -> new ForeignKeyContract(
+                        resultSet.getString("unique_constraint_name"),
+                        resultSet.getString("update_rule"),
+                        resultSet.getString("delete_rule")
+                ),
+                constraintName
+        );
+
+        assertThat(foreignKey).isEqualTo(new ForeignKeyContract(targetConstraintName, "RESTRICT", deleteRule));
+    }
+
+    private void assertForeignKeyCount(String tableName, int expectedCount) {
+        Integer foreignKeyCount = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM information_schema.table_constraints "
+                        + "WHERE table_schema = 'public' AND table_name = ? AND constraint_type = 'FOREIGN KEY'",
+                Integer.class,
+                tableName
+        );
+
+        assertThat(foreignKeyCount).isEqualTo(expectedCount);
+    }
+
+    private void assertIndexCount(String... indexNames) {
+        String placeholders = String.join(", ", Collections.nCopies(indexNames.length, "?"));
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM pg_indexes WHERE schemaname = 'public' AND indexname IN (" + placeholders + ")",
+                Integer.class,
+                indexNames
+        );
+
+        assertThat(count).isEqualTo(indexNames.length);
+    }
+
+    private void assertOutboxDoesNotDuplicatePersonalData() {
+        List<String> columnNames = jdbcTemplate.queryForList(
+                "SELECT column_name FROM information_schema.columns "
+                        + "WHERE table_schema = 'public' AND table_name = 'member_action_mail_outbox'",
+                String.class
+        );
+
+        assertThat(columnNames)
+                .contains("member_action_token_id", "encrypted_token", "encryption_nonce", "encryption_key_id")
+                .doesNotContain("member_id", "email", "client_address", "token");
+    }
+
+    private void assertPrimaryKeyColumns(String tableName, String... expectedColumns) {
+        List<String> primaryKeyColumns = jdbcTemplate.queryForList(
+                "SELECT key_column_usage.column_name "
+                        + "FROM information_schema.table_constraints "
+                        + "JOIN information_schema.key_column_usage "
+                        + "ON table_constraints.constraint_schema = key_column_usage.constraint_schema "
+                        + "AND table_constraints.constraint_name = key_column_usage.constraint_name "
+                        + "WHERE table_constraints.table_schema = 'public' "
+                        + "AND table_constraints.table_name = ? "
+                        + "AND table_constraints.constraint_type = 'PRIMARY KEY' "
+                        + "ORDER BY key_column_usage.ordinal_position",
+                String.class,
+                tableName
+        );
+
+        assertThat(primaryKeyColumns).containsExactly(expectedColumns);
+    }
+
+    private record AppliedMigration(String version, String description, String type, String script, boolean success) {
+    }
+
+    private record ForeignKeyContract(String targetConstraintName, String updateRule, String deleteRule) {
     }
 }

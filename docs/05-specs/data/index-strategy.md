@@ -68,7 +68,7 @@ Creator 필터는 `visit`에서 고유 Restaurant ID를 구한 뒤 Restaurant의
 
 ## 5. 1차 확장 인덱스
 
-V3~V5 인덱스는 해당 전진 Flyway에서 테이블·열 추가와 함께 생성한다. 기존 V1 인덱스는 수정하지 않는다.
+V3~V6 인덱스는 해당 전진 Flyway에서 테이블·열 추가와 함께 생성한다. 기존 V1 인덱스는 수정하지 않는다.
 
 | 이름 | 정의 요약 | 지원 쿼리 |
 |---|---|---|
@@ -76,8 +76,11 @@ V3~V5 인덱스는 해당 전진 Flyway에서 테이블·열 추가와 함께 �
 | `ix_recent_restaurant_view__member_viewed` | `(member_id, last_viewed_at DESC, restaurant_id)` | 최근 본 목록의 최신순·안정 정렬과 50건 초과 정리 대상 선택 |
 | `ix_recent_restaurant_view__cleanup_viewed` | `(last_viewed_at)` | 주기 cleanup Command의 30일 경과 기록 범위 삭제 |
 | `ix_restaurant__public_coordinate_bounds` | `(latitude, longitude) WHERE publication_status='PUBLIC' AND lifecycle_status='ACTIVE' AND latitude IS NOT NULL AND longitude IS NOT NULL` | WGS84 사각 bounds와 공개 지도 마커 조회 |
+| `ix_member_action_mail_outbox__dispatch` | `(status, next_attempt_at, created_at) WHERE status='PENDING'` | 잠금 가능한 메일 dispatch 후보 선택 |
+| `ix_member_deletion_job__next_attempt` | `(next_attempt_at, requested_at)` | 탈퇴 정리 재시도 후보 선택 |
+| `ix_member_session_revocation_recovery__next_attempt` | `(next_attempt_at, expires_at)` | `sid` 폐기 표식 보상 후보 선택 |
 
-`favorite`와 `recent_restaurant_view`의 복합 PK는 각각 중복 찜 방지와 upsert 충돌 키를 제공한다. Creator 상세는 PK 한 건 조회이므로 V5 표시 열만을 위한 별도 인덱스를 만들지 않는다.
+`favorite`와 `recent_restaurant_view`의 복합 PK는 각각 중복 찜 방지와 upsert 충돌 키를 제공한다. Creator 상세는 PK 한 건 조회이므로 V6 표시 열만을 위한 별도 인덱스를 만들지 않는다.
 
 ## 6. 통계와 검증
 

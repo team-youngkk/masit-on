@@ -54,6 +54,14 @@ logging:
     com.masiton: ${LOG_LEVEL_APP:INFO}
 
 masiton:
+  member:
+    action-mail:
+      active-key-id: ${MEMBER_ACTION_MAIL_ACTIVE_KEY_ID:}
+      active-key: ${MEMBER_ACTION_MAIL_ACTIVE_KEY:}
+    rate-limit:
+      secret: ${MEMBER_RATE_LIMIT_SECRET:}
+      trusted-proxy-addresses: ${MEMBER_TRUSTED_PROXY_ADDRESSES:}
+      reverse-proxy-enabled: ${MEMBER_REVERSE_PROXY_ENABLED:false}
   security:
     jwt:
       issuer: masit-on
@@ -73,6 +81,7 @@ masiton:
       refresh-token-ttl: P14D
       cookie-name: __Secure-masiton-member-refresh
       path: /api/auth/tokens
+      public-base-url: ${MEMBER_PUBLIC_BASE_URL:http://localhost:3000}
       max-sessions: 3
     login-failure:
       max-attempts: 5
