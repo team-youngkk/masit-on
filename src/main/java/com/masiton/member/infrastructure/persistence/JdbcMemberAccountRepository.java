@@ -44,6 +44,15 @@ public class JdbcMemberAccountRepository implements MemberAccountRepository {
     }
 
     @Override
+    public Optional<MemberAccount> createIfAbsent(String email, String passwordHash, Instant now) {
+        UUID id = UUID.randomUUID();
+        return jdbcTemplate.query("INSERT INTO member_account (id, email, password_hash, status, created_at, updated_at) "
+                        + "VALUES (?, ?, ?, 'PENDING_VERIFICATION', ?, ?) ON CONFLICT (email) DO NOTHING "
+                        + "RETURNING id, email, password_hash, status, email_verified_at, deletion_requested_at, created_at",
+                MAPPER, id, email, passwordHash, now, now).stream().findFirst();
+    }
+
+    @Override
     public void activate(UUID id, Instant verifiedAt) {
         jdbcTemplate.update("UPDATE member_account SET status = 'ACTIVE', email_verified_at = ?, updated_at = ? "
                         + "WHERE id = ? AND status = 'PENDING_VERIFICATION'", verifiedAt, verifiedAt, id);

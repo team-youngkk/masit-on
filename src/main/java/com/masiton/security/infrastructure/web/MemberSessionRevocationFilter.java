@@ -38,7 +38,7 @@ public class MemberSessionRevocationFilter extends OncePerRequestFilter {
         if (SecurityContextHolder.getContext().getAuthentication() instanceof JwtAuthenticationToken authentication) {
             String sessionId = authentication.getToken().getClaimAsString("sid");
             MemberSessionAccessChecker.AccessDecision decision = sessionId == null
-                    ? MemberSessionAccessChecker.AccessDecision.ALLOWED
+                    ? MemberSessionAccessChecker.AccessDecision.DENIED
                     : sessionAccessChecker.check(authentication.getName(), sessionId);
             if (decision != MemberSessionAccessChecker.AccessDecision.ALLOWED) {
                 SecurityContextHolder.clearContext();

@@ -63,11 +63,8 @@ public class MemberAuthenticationService {
         if (normalizedEmail.equals(password)) {
             throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE);
         }
-        if (accounts.findByEmail(normalizedEmail).isPresent()) {
-            return;
-        }
-        MemberAccount account = accounts.create(normalizedEmail, passwordEncoder.encode(password), Instant.now(clock));
-        issueActionToken(account, MemberActionPurpose.EMAIL_VERIFICATION);
+        accounts.createIfAbsent(normalizedEmail, passwordEncoder.encode(password), Instant.now(clock))
+                .ifPresent(account -> issueActionToken(account, MemberActionPurpose.EMAIL_VERIFICATION));
     }
 
     @Transactional
@@ -110,7 +107,11 @@ public class MemberAuthenticationService {
         if (!account.canAuthenticate()) {
             throw invalidCredentials();
         }
-        return issueSession(account.id());
+        try {
+            return issueSession(account.id());
+        } catch (RuntimeException exception) {
+            throw authenticationServiceUnavailable();
+        }
     }
 
     public MemberAuthenticationResult refresh(String refreshToken) {
@@ -138,13 +139,11 @@ public class MemberAuthenticationService {
         try {
             owner = sessions.findSession(refreshToken).orElse(null);
         } catch (RuntimeException exception) {
-            revocations.record(new MemberSessionRevocation(
-                    UUID.fromString(principal.sessionId()), Instant.now(clock), accessTokenExpiresAt));
+            recordRevocation(principal.sessionId(), Instant.now(clock));
             throw authenticationServiceUnavailable();
         }
         if (owner == null) {
-            revocations.record(new MemberSessionRevocation(
-                    UUID.fromString(principal.sessionId()), Instant.now(clock), accessTokenExpiresAt));
+            recordRevocation(principal.sessionId(), Instant.now(clock));
             return;
         }
         if (!principal.memberId().equals(owner.memberId()) || !principal.sessionId().equals(owner.sessionId())) {
@@ -152,7 +151,7 @@ public class MemberAuthenticationService {
         }
         Instant now = Instant.now(clock);
         try {
-            revocations.record(new MemberSessionRevocation(UUID.fromString(owner.sessionId()), now, accessTokenExpiresAt));
+            recordRevocation(owner.sessionId(), now);
             sessions.revoke(owner.memberId(), owner.sessionId());
         } catch (RuntimeException exception) {
             throw authenticationServiceUnavailable();
@@ -217,14 +216,16 @@ public class MemberAuthenticationService {
     }
 
     private void revokeAllSessions(String memberId, Instant now) {
-        recordRevocations(sessions.activeSessionIds(memberId), now);
-        sessions.revokeAll(memberId);
+        recordRevocations(sessions.revokeAll(memberId), now);
     }
 
     private void recordRevocations(java.util.Set<String> sessionIds, Instant now) {
-        Instant expiresAt = now.plus(jwtSettings.accessTokenTtl());
-        sessionIds.forEach(sessionId -> revocations.record(
-                new MemberSessionRevocation(UUID.fromString(sessionId), now, expiresAt)));
+        sessionIds.forEach(sessionId -> recordRevocation(sessionId, now));
+    }
+
+    private void recordRevocation(String sessionId, Instant now) {
+        revocations.record(new MemberSessionRevocation(
+                UUID.fromString(sessionId), now, now.plus(REFRESH_TOKEN_TTL)));
     }
 
     private String normalizeEmail(String email) {

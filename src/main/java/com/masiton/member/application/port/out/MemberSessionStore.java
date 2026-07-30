@@ -21,5 +21,5 @@ public interface MemberSessionStore {
 
     void revoke(String memberId, String sessionId);
 
-    void revokeAll(String memberId);
+    Set<String> revokeAll(String memberId);
 }

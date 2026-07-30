@@ -10,6 +10,7 @@ public interface MemberAccountRepository {
     Optional<MemberAccount> findByEmail(String email);
     Optional<MemberAccount> findById(UUID id);
     MemberAccount create(String email, String passwordHash, Instant now);
+    Optional<MemberAccount> createIfAbsent(String email, String passwordHash, Instant now);
     void activate(UUID id, Instant verifiedAt);
     void changePassword(UUID id, String passwordHash, Instant now);
     void requestDeletion(UUID id, Instant now);

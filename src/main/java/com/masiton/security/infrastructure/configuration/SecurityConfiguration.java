@@ -20,6 +20,8 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationProvider;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
+import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.authentication.AuthenticationManagerResolver;
@@ -72,6 +74,7 @@ public class SecurityConfiguration {
                         .anyRequest().permitAll())
                 .oauth2ResourceServer(resourceServer -> resourceServer
                         .authenticationEntryPoint(securityErrorWriter)
+                        .bearerTokenResolver(publicReadBearerTokenResolver())
                         .authenticationManagerResolver(authenticationManagerResolver(
                                 jwtDecoder,
                                 memberJwtDecoder,
@@ -99,6 +102,11 @@ public class SecurityConfiguration {
             }
             return isPublicReadRequest(request) ? publicAuthenticationManager : adminAuthenticationManager;
         };
+    }
+
+    private BearerTokenResolver publicReadBearerTokenResolver() {
+        DefaultBearerTokenResolver delegate = new DefaultBearerTokenResolver();
+        return request -> isPublicReadRequest(request) ? null : delegate.resolve(request);
     }
 
     private boolean isMemberBoundary(String requestUri) {

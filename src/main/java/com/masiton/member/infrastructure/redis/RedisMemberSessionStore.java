@@ -76,7 +76,7 @@ public class RedisMemberSessionStore implements MemberSessionStore {
             return evicted
             """, String.class);
 
-    private static final DefaultRedisScript<Long> REVOKE_ALL_SCRIPT = new DefaultRedisScript<>("""
+    private static final DefaultRedisScript<String> REVOKE_ALL_SCRIPT = new DefaultRedisScript<>("""
             local sessionIds = redis.call('ZRANGE', KEYS[1], 0, -1)
             for _, sessionId in ipairs(sessionIds) do
               local sessionKey = ARGV[1] .. sessionId
@@ -90,8 +90,8 @@ public class RedisMemberSessionStore implements MemberSessionStore {
             redis.call('DEL', KEYS[1])
             redis.call('DEL', KEYS[2])
             redis.call('INCR', KEYS[3])
-            return #sessionIds
-            """, Long.class);
+            return cjson.encode(sessionIds)
+            """, String.class);
 
     private static final DefaultRedisScript<Long> ROTATE_SCRIPT = new DefaultRedisScript<>("""
             local sessionId = redis.call('GET', KEYS[1])
@@ -275,8 +275,8 @@ public class RedisMemberSessionStore implements MemberSessionStore {
     }
 
     @Override
-    public void revokeAll(String memberId) {
-        redisTemplate.execute(
+    public java.util.Set<String> revokeAll(String memberId) {
+        String serializedSessionIds = redisTemplate.execute(
                 REVOKE_ALL_SCRIPT,
                 List.of(
                         memberSessionsKey(memberId),
@@ -286,6 +286,13 @@ public class RedisMemberSessionStore implements MemberSessionStore {
                 SESSION_PREFIX,
                 REFRESH_INDEX_PREFIX
         );
+        try {
+            String[] sessionIds = objectMapper.readValue(
+                    serializedSessionIds == null ? "[]" : serializedSessionIds, String[].class);
+            return java.util.Set.of(sessionIds);
+        } catch (JacksonException exception) {
+            throw new IllegalStateException("Could not read revoked member sessions", exception);
+        }
     }
 
     private MemberSessionRecord read(String serialized) {

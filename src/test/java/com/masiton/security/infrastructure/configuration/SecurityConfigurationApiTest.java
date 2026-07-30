@@ -166,13 +166,13 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
     }
 
     @Test
-    @DisplayName("회원 경계는 회원 JWT만 받고 관리자 경계는 관리자 JWT만 받는다")
-    void memberAdminApi_교차Audience_401거부() throws Exception {
+    @DisplayName("회원 경계는 교차 audience와 sid 없는 회원 JWT를 거부한다")
+    void memberAdminApi_교차Audience와sid누락_401거부() throws Exception {
         String adminToken = signedToken("test-key-20260727", "masit-on", "masit-on-admin-api");
         String memberToken = signedToken("test-key-20260727", "masit-on", "masit-on-member-api");
 
         mockMvc.perform(get("/api/me/boundary").header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isUnauthorized());
         mockMvc.perform(get("/api/me/boundary").header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
                 .andExpect(status().isUnauthorized());
         mockMvc.perform(get("/api/admin/restaurants").header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken))
