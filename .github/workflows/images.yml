@@ -4,14 +4,19 @@
 #     전용 ECR·OIDC 단계를 섞으면 develop과 배포 브랜치가 계속 어긋난다.
 #   - 이미지 생성·push는 ADR-CI-001 9절이 M2부터 적용한다고 범위를 나눴다.
 #
-# workflow_run으로 ci.yml 성공 뒤에만 실행한다. 빌드·테스트가 하나라도 실패하면
-# 이 워크플로에 도달하지 않으므로 push와 배포가 차단된다.
+# 트리거는 push다. 처음에는 workflow_run(CI 성공 뒤 실행)으로 두었으나 한 번도
+# 발동하지 않았다. GitHub는 workflow_run 이벤트를 **기본 브랜치에 있는 워크플로
+# 파일만** 발동시키는데, 이 저장소의 기본 브랜치는 main이고 main에는 워크플로가
+# 없다. push·pull_request는 그 브랜치 자신의 파일을 읽으므로 ci.yml은 develop에만
+# 있어도 동작하지만, workflow_run은 그렇지 않다.
+#
+# 그래서 push로 바꾸고 "CI 통과 후에만 push" 게이트는 이 워크플로 안에서 같은
+# 커밋의 CI 결론을 확인하는 방식으로 유지한다. 확인에 실패하면 ECR push에
+# 도달하지 않는다.
 name: Images
 
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
+  push:
     branches:
       - main
       - 'deploy/**'
@@ -20,21 +25,17 @@ permissions:
   contents: read
 
 concurrency:
-  group: images-${{ github.event.workflow_run.head_branch }}
+  group: images-${{ github.ref }}
   cancel-in-progress: true
 
 env:
   AWS_REGION: ap-northeast-2
   ECR_REGISTRY: 711457211155.dkr.ecr.ap-northeast-2.amazonaws.com
-  # workflow_run에서 github.sha는 기본 브랜치 head를 가리킨다.
-  # 검사 대상 커밋을 명시적으로 잡아야 이미지 태그와 실제 소스가 일치한다.
-  IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
+  IMAGE_TAG: ${{ github.sha }}
 
 jobs:
   build-verify-push:
     name: 이미지 빌드·검증·push
-    # CI가 통과한 커밋만 이미지로 만든다.
-    if: github.event.workflow_run.conclusion == 'success'
     # 운영 EC2가 arm64(t4g.medium)이므로 같은 아키텍처에서 빌드한다.
     # 공개 저장소는 arm64 러너를 무료로 쓸 수 있어 QEMU 에뮬레이션이 필요 없다.
     runs-on: ubuntu-24.04-arm
@@ -43,8 +44,45 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+
+      # 같은 커밋의 CI가 통과했는지 확인한다. push 트리거라 CI와 병렬로 시작하므로
+      # 결론이 날 때까지 기다린다. 실패·취소면 여기서 끝나 ECR push에 도달하지 않는다
+      # (M2-06 완료 조건: 하나라도 실패하면 push와 배포가 차단된다).
+      - name: CI 통과 확인
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # `gh run list --workflow CI`를 쓰지 않는다. gh는 워크플로 이름을 기본
+          # 브랜치의 파일에서 찾는데 ci.yml도 main에 없어 이름 해석이 실패한다.
+          # 커밋으로 실행 목록을 직접 조회하고 이름으로 골라낸다.
+          deadline=$(( $(date +%s) + 1800 ))
+          while :; do
+            conclusion=$(gh api \
+              "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${GITHUB_SHA}" \
+              --jq '[.workflow_runs[] | select(.name == "CI")] | first | if . == null then "" else "\(.status):\(.conclusion)" end')
+            case "$conclusion" in
+              completed:success)
+                echo "CI 통과 확인: $GITHUB_SHA"
+                break
+                ;;
+              completed:*)
+                echo "같은 커밋의 CI가 통과하지 않았다 ($conclusion). 이미지를 push하지 않는다." >&2
+                exit 1
+                ;;
+              '')
+                echo "CI 실행을 아직 찾지 못했다. 대기한다."
+                ;;
+              *)
+                echo "CI 진행 중 ($conclusion). 대기한다."
+                ;;
+            esac
+            if [ "$(date +%s)" -ge "$deadline" ]; then
+              echo "CI 결론을 30분 안에 확인하지 못했다. 이미지를 push하지 않는다." >&2
+              exit 1
+            fi
+            sleep 20
+          done
 
       # ADR-RUNTIME-001 13절: 베이스 이미지가 명시 태그(운영은 digest)를 쓰는지 대조한다.
       # digest 없이 태그만 쓴 FROM이 하나라도 있으면 실패시킨다.
@@ -135,20 +173,20 @@ jobs:
       # OIDC 신뢰 정책이 refs/heads/deploy/m2와 refs/heads/main만 허용하므로
       # 그 밖의 브랜치는 push 단계에서 자격 증명을 받지 못한다.
       - name: AWS 자격 증명 (OIDC, 장기 키 없음)
-        if: github.event.workflow_run.head_branch == 'main' || github.event.workflow_run.head_branch == 'deploy/m2'
+        if: github.ref_name == 'main' || github.ref_name == 'deploy/m2'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::711457211155:role/masiton-github-actions-role
           aws-region: ${{ env.AWS_REGION }}
 
       - name: ECR 로그인
-        if: github.event.workflow_run.head_branch == 'main' || github.event.workflow_run.head_branch == 'deploy/m2'
+        if: github.ref_name == 'main' || github.ref_name == 'deploy/m2'
         run: aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
 
       # 태그는 커밋 SHA를 쓴다. `latest`는 기술 정책 3절이 금지한다.
       # 리포지토리가 IMMUTABLE이라 같은 SHA를 다시 push할 수 없다.
       - name: 이미지 push와 digest 기록
-        if: github.event.workflow_run.head_branch == 'main' || github.event.workflow_run.head_branch == 'deploy/m2'
+        if: github.ref_name == 'main' || github.ref_name == 'deploy/m2'
         run: |
           set -euo pipefail
           {
