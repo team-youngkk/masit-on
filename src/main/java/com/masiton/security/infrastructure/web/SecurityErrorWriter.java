@@ -24,9 +24,6 @@ import jakarta.servlet.http.HttpServletResponse;
 
 @Component
 public class SecurityErrorWriter implements AuthenticationEntryPoint, AccessDeniedHandler {
-    private static final String PRIVATE_NO_STORE = "private, no-store";
-    private static final String NO_STORE = "no-store";
-
     private final ObjectMapper objectMapper;
     private final MemberCookieSettings memberCookieSettings;
 
@@ -57,7 +54,7 @@ public class SecurityErrorWriter implements AuthenticationEntryPoint, AccessDeni
             throws IOException {
         response.setStatus(503);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setHeader("Cache-Control", cacheControl(request));
+        setCacheControl(request, response);
         if (isMemberLogout(request)) {
             response.setHeader(HttpHeaders.SET_COOKIE, expiredMemberRefreshCookie().toString());
         }
@@ -72,7 +69,7 @@ public class SecurityErrorWriter implements AuthenticationEntryPoint, AccessDeni
     private void write(HttpServletRequest request, HttpServletResponse response, ErrorCode errorCode) throws IOException {
         response.setStatus(errorCode.status().value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setHeader("Cache-Control", cacheControl(request));
+        setCacheControl(request, response);
         String traceId = (String) request.getAttribute(TraceIdFilter.TRACE_ID_REQUEST_ATTRIBUTE);
         objectMapper.writeValue(response.getOutputStream(), ErrorResponse.of(
                 errorCode.name(),
@@ -81,11 +78,10 @@ public class SecurityErrorWriter implements AuthenticationEntryPoint, AccessDeni
         ));
     }
 
-    private String cacheControl(HttpServletRequest request) {
+    private void setCacheControl(HttpServletRequest request, HttpServletResponse response) {
         String requestUri = request.getRequestURI();
-        return requestUri.equals("/api/me") || requestUri.startsWith("/api/me/")
-                ? PRIVATE_NO_STORE
-                : NO_STORE;
+        boolean memberPrivatePath = requestUri.equals("/api/me") || requestUri.startsWith("/api/me/");
+        response.setHeader("Cache-Control", memberPrivatePath ? "private, no-store" : "no-store");
     }
 
     private boolean isMemberLogout(HttpServletRequest request) {
