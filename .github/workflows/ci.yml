@@ -150,7 +150,11 @@ jobs:
         run: |
           set -euo pipefail
           expected='21.0.12'
-          actual=$(docker run --rm --entrypoint java "masiton-backend:${IMAGE_TAG}" -version 2>&1 | head -1)
+          # `| head -1`을 쓰면 head가 첫 줄을 읽고 종료하면서 java에 SIGPIPE가 가고,
+          # pipefail이 그 141을 파이프라인 상태로 잡아 step이 실패한다.
+          # 출력을 변수에 담은 뒤 첫 줄을 꺼내면 파이프가 없어 이 문제가 없다.
+          version_output=$(docker run --rm --entrypoint java "masiton-backend:${IMAGE_TAG}" -version 2>&1)
+          actual=${version_output%%$'\n'*}
           echo "이미지 java -version: ${actual}"
           case "$actual" in
             *"\"${expected}\""*) echo "JDK ${expected} 확인" ;;
@@ -162,22 +166,51 @@ jobs:
 
       # ADR-RUNTIME-001 13절: 이미지에 평문 비밀값이나 .env가 포함되지 않았는지 검사한다.
       # 하나라도 걸리면 push에 도달하지 않는다.
+      # 검사 결과를 파이프로 넘기지 않고 변수에 담아 판정한다.
+      # `docker run ... | grep -q .`는 grep이 첫 매치에서 종료하며 docker에 SIGPIPE를
+      # 보내고, pipefail이 그 141을 파이프라인 상태로 잡는다. 그러면 `if`가 거짓으로
+      # 판정해 **실제로 비밀값을 찾았는데도 통과**하게 된다. 검사가 조용히 무력화되는
+      # 방향의 실패라 파이프를 쓰지 않는다.
       - name: 이미지 비밀값·실행 사용자 검증
         run: |
           set -euo pipefail
           for image in "masiton-backend:${IMAGE_TAG}" "masiton-frontend:${IMAGE_TAG}"; do
             echo "=== $image ==="
 
-            if docker run --rm --entrypoint sh "$image" -c \
-              "find / -xdev -name '.env' -o -xdev -name '.env.*' 2>/dev/null | head -1" | grep -q .; then
+            # 검사는 --user 0:0으로 실행한다. 이미지의 기본 사용자(uid 1001)로 `find /`를
+            # 돌리면 읽을 수 없는 경로에서 오류가 나 결과가 0건이어도 exit 1이 된다.
+            # 2>/dev/null은 메시지만 숨기고 종료 코드를 바꾸지 않는다.
+            #
+            # root로 돌리면 권한 오류가 사라져 종료 코드를 신뢰할 수 있고, 기본 사용자가
+            # 읽지 못하는 경로까지 검사 범위에 들어온다. 검사 전용 실행이며 이미지의
+            # USER 지시자는 그대로다(아래 비루트 실행 확인이 그것을 검증한다).
+            #
+            # root 실행으로 권한 오류가 없어졌으므로 결과가 0건이면 find가 exit 0이다.
+            # 그래서 `|| true`가 필요하지 않다. 붙이면 docker나 sh 실패까지 성공으로 바꿔
+            # 검사가 수행되지 않았는데도 통과한다.
+            env_hits=$(docker run --rm --user 0:0 --entrypoint sh "$image" -c \
+              "find / -xdev -name '.env' -o -xdev -name '.env.*'")
+            if [ -n "$env_hits" ]; then
               echo '.env 파일이 이미지에 포함됐다'
+              printf '%s\n' "$env_hits"
               exit 1
             fi
             echo '.env 미포함 확인'
 
-            if docker run --rm --entrypoint sh "$image" -c \
-              "grep -rIl -e 'BEGIN PRIVATE KEY' -e 'BEGIN RSA PRIVATE KEY' -e 'JWT_PRIVATE_KEY_PEM' -e 'POSTGRES_PASSWORD' /app 2>/dev/null | head -1" | grep -q .; then
+            # grep -rIl은 미검출이 exit 1이고 오류는 exit 2 이상이다. docker 자체 실패는
+            # 125 이상이다. 따라서 1만 정상으로 처리하고 나머지는 workflow를 실패시킨다.
+            set +e
+            secret_hits=$(docker run --rm --user 0:0 --entrypoint sh "$image" -c \
+              "grep -rIl -e 'BEGIN PRIVATE KEY' -e 'BEGIN RSA PRIVATE KEY' -e 'JWT_PRIVATE_KEY_PEM' -e 'POSTGRES_PASSWORD' /app")
+            grep_status=$?
+            set -e
+            if [ "$grep_status" -gt 1 ]; then
+              echo "비밀값 검사 실행이 실패했다 (exit ${grep_status}). 미검출로 처리하지 않는다."
+              exit 1
+            fi
+            if [ -n "$secret_hits" ]; then
               echo '평문 비밀값 패턴이 이미지에 포함됐다'
+              printf '%s\n' "$secret_hits"
               exit 1
             fi
             echo '평문 비밀값 패턴 미포함 확인'
@@ -222,6 +255,13 @@ jobs:
       # 여기까지가 자격 증명 없이 수행하는 검증이다.
       # 브랜치 제한은 job 수준 `if`가 이미 처리하므로 step마다 반복하지 않는다.
       # 조건을 두 곳에 두면 한쪽만 고쳐 어긋날 수 있다.
+      # IAM 역할 신뢰 정책은 GitHub의 immutable subject claim 형식을 기대한다.
+      #
+      #   repo:team-youngkk@307880221/masit-on@1308471593:ref:refs/heads/deploy/m2
+      #
+      # 조직·저장소 숫자 ID가 sub에 포함된다. 이름 기반 형식(`repo:owner/repo:ref:...`)으로
+      # 정책을 쓰면 AssumeRoleWithWebIdentity가 거절된다. 저장소를 옮기거나 이름을 바꿀
+      # 때는 ID가 유지되므로 정책을 고치지 않아도 되고, 이름 재사용 공격에도 안전하다.
       - name: AWS 자격 증명 (OIDC, 장기 키 없음)
         uses: aws-actions/configure-aws-credentials@v4
         with:
