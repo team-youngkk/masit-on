@@ -57,6 +57,8 @@ masiton:
   member:
     rate-limit:
       secret: ${MEMBER_RATE_LIMIT_SECRET:}
+      trusted-proxy-addresses: ${MEMBER_TRUSTED_PROXY_ADDRESSES:}
+      reverse-proxy-enabled: ${MEMBER_REVERSE_PROXY_ENABLED:false}
   security:
     jwt:
       issuer: masit-on

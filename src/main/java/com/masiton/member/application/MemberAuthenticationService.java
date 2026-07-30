@@ -11,6 +11,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.masiton.common.security.MemberJwtSettings;
 import com.masiton.common.web.BusinessException;
@@ -29,6 +31,7 @@ import com.masiton.member.domain.model.MemberStatus;
 
 @Service
 public class MemberAuthenticationService {
+    private static final Logger log = LoggerFactory.getLogger(MemberAuthenticationService.class);
     private static final Duration REFRESH_TOKEN_TTL = Duration.ofDays(14);
     private static final Duration EMAIL_VERIFICATION_TOKEN_TTL = Duration.ofHours(24);
     private static final Duration PASSWORD_RESET_TOKEN_TTL = Duration.ofMinutes(30);
@@ -209,8 +212,13 @@ public class MemberAuthenticationService {
         Duration ttl = purpose == MemberActionPurpose.EMAIL_VERIFICATION
                 ? EMAIL_VERIFICATION_TOKEN_TTL
                 : PASSWORD_RESET_TOKEN_TTL;
+        try {
+            actionTokenDelivery.send(account.email(), purpose, rawToken);
+        } catch (RuntimeException exception) {
+            log.warn("member action-token mail delivery failed: purpose={}", purpose);
+            return;
+        }
         actionTokens.replace(new MemberActionToken(account.id(), sha256(rawToken), purpose, now.plus(ttl)), now);
-        actionTokenDelivery.send(account.email(), purpose, rawToken);
     }
 
     private MemberActionToken consume(String rawToken, MemberActionPurpose purpose) {

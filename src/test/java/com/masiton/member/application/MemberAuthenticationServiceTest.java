@@ -32,6 +32,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.doThrow;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("MemberAuthenticationService")
@@ -113,6 +114,22 @@ class MemberAuthenticationServiceTest {
                 .extracting("status", "code")
                 .containsExactly(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,
                         "AUTHENTICATION_SERVICE_UNAVAILABLE");
+    }
+
+    @Test
+    @DisplayName("회원가입_메일전송실패여도접수처리를완료한다")
+    void 회원가입_메일전송실패_접수처리완료() {
+        MemberAccount account = new MemberAccount(UUID.randomUUID(), "member@example.com", "password-hash",
+                MemberStatus.PENDING_VERIFICATION, null, null, NOW);
+        given(rateLimits.tryAcquireAccountActionRequest("member@example.com", "127.0.0.1")).willReturn(true);
+        given(passwordEncoder.encode("correct horse battery staple")).willReturn("password-hash");
+        given(accounts.createIfAbsent("member@example.com", "password-hash", NOW)).willReturn(Optional.of(account));
+        doThrow(new IllegalStateException("smtp unavailable")).when(actionTokenDelivery)
+                .send(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyString());
+
+        service().register("member@example.com", "correct horse battery staple", "127.0.0.1");
+
+        org.mockito.Mockito.verifyNoInteractions(actionTokens);
     }
 
     private MemberAuthenticationService service() {

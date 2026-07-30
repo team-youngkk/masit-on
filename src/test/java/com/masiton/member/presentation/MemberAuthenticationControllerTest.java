@@ -5,10 +5,11 @@ import java.time.Duration;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.mock.web.MockHttpServletRequest;
 
 import com.masiton.common.security.MemberCookieSettings;
 import com.masiton.member.application.MemberAuthenticationService;
+import com.masiton.member.infrastructure.configuration.MemberRateLimitProperties;
+import com.masiton.member.infrastructure.web.MemberClientAddressResolver;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -27,7 +28,8 @@ class MemberAuthenticationControllerTest {
                     true,
                     "Strict",
                     "https://example.test"
-            )
+            ),
+            addressResolver()
     );
 
     @Test
@@ -51,5 +53,11 @@ class MemberAuthenticationControllerTest {
 
         assertThat(response.getStatusCode().value()).isEqualTo(204);
         verify(service).resetPassword("reset-token", "new correct horse battery staple");
+    }
+
+    private static MemberClientAddressResolver addressResolver() {
+        MemberRateLimitProperties properties = new MemberRateLimitProperties();
+        properties.setSecret("test-secret");
+        return new MemberClientAddressResolver(properties);
     }
 }

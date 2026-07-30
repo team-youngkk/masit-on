@@ -30,6 +30,7 @@ import com.masiton.member.application.MemberAuthenticationResult;
 import com.masiton.member.application.MemberAuthenticationService;
 import com.masiton.member.application.MemberPrincipal;
 import com.masiton.member.domain.model.MemberAccount;
+import com.masiton.member.infrastructure.web.MemberClientAddressResolver;
 import org.slf4j.MDC;
 
 @RestController
@@ -37,15 +38,18 @@ import org.slf4j.MDC;
 public class MemberAuthenticationController {
     private final MemberAuthenticationService service;
     private final MemberCookieSettings cookieSettings;
+    private final MemberClientAddressResolver clientAddressResolver;
 
-    public MemberAuthenticationController(MemberAuthenticationService service, MemberCookieSettings cookieSettings) {
+    public MemberAuthenticationController(MemberAuthenticationService service, MemberCookieSettings cookieSettings,
+            MemberClientAddressResolver clientAddressResolver) {
         this.service = service;
         this.cookieSettings = cookieSettings;
+        this.clientAddressResolver = clientAddressResolver;
     }
 
     @PostMapping("/registrations")
     public ResponseEntity<AcceptedResponse> register(@Valid @RequestBody CredentialsRequest request, HttpServletRequest servletRequest) {
-        service.register(request.email(), request.password(), servletRequest.getRemoteAddr());
+        service.register(request.email(), request.password(), clientAddressResolver.resolve(servletRequest));
         return accepted();
     }
 
@@ -57,13 +61,13 @@ public class MemberAuthenticationController {
 
     @PostMapping("/email-verifications/resend")
     public ResponseEntity<AcceptedResponse> resendVerification(@Valid @RequestBody EmailRequest request, HttpServletRequest servletRequest) {
-        service.resendVerification(request.email(), servletRequest.getRemoteAddr());
+        service.resendVerification(request.email(), clientAddressResolver.resolve(servletRequest));
         return accepted();
     }
 
     @PostMapping("/password-resets/requests")
     public ResponseEntity<AcceptedResponse> requestPasswordReset(@Valid @RequestBody EmailRequest request, HttpServletRequest servletRequest) {
-        service.requestPasswordReset(request.email(), servletRequest.getRemoteAddr());
+        service.requestPasswordReset(request.email(), clientAddressResolver.resolve(servletRequest));
         return accepted();
     }
 
@@ -75,7 +79,7 @@ public class MemberAuthenticationController {
 
     @PostMapping("/tokens")
     public ResponseEntity<AccessTokenResponse> login(@Valid @RequestBody CredentialsRequest request, HttpServletRequest servletRequest) {
-        return tokenResponse(service.login(request.email(), request.password(), servletRequest.getRemoteAddr()));
+        return tokenResponse(service.login(request.email(), request.password(), clientAddressResolver.resolve(servletRequest)));
     }
 
     @PostMapping("/tokens/refresh")

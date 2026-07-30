@@ -30,6 +30,7 @@ import com.masiton.security.application.port.out.RefreshTokenStore;
 import com.masiton.member.application.InvalidMemberSessionException;
 import com.masiton.member.application.MemberSession;
 import com.masiton.member.application.port.out.MemberSessionStore;
+import com.masiton.member.application.port.out.MemberRateLimitStore;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -80,6 +81,9 @@ class RedisRefreshTokenStoreIntegrationTest {
     @Autowired
     private StringRedisTemplate redisTemplate;
 
+    @Autowired
+    private MemberRateLimitStore memberRateLimitStore;
+
     @MockitoBean
     private Clock memberSessionClock;
 
@@ -122,6 +126,89 @@ class RedisRefreshTokenStoreIntegrationTest {
         loginFailureStore.recordFailure("admin-login", "127.0.0.1");
 
         assertThat(loginFailureStore.isBlocked("admin-login", "127.0.0.1")).isTrue();
+    }
+
+    @Test
+    @DisplayName("회원 인증 메일 요청은 60초 cooldown과 출처별 시간당 20회 제한을 원자적으로 적용한다")
+    void 회원인증메일요청_cooldown과출처한도_원자적적용() throws Exception {
+        assertThat(memberRateLimitStore.tryAcquireAccountActionRequest("member@example.com", "198.51.100.10")).isTrue();
+        assertThat(memberRateLimitStore.tryAcquireAccountActionRequest("member@example.com", "198.51.100.10")).isFalse();
+
+        ExecutorService executor = Executors.newFixedThreadPool(25);
+        CountDownLatch ready = new CountDownLatch(25);
+        CountDownLatch start = new CountDownLatch(1);
+        java.util.List<Future<Boolean>> results = new java.util.ArrayList<>();
+        for (int index = 0; index < 25; index++) {
+            int current = index;
+            results.add(executor.submit(() -> {
+                ready.countDown();
+                start.await(5, TimeUnit.SECONDS);
+                return memberRateLimitStore.tryAcquireAccountActionRequest(
+                        "member-" + current + "@example.com", "203.0.113.10");
+            }));
+        }
+        assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+        start.countDown();
+        long accepted = 0;
+        for (Future<Boolean> result : results) {
+            if (result.get(5, TimeUnit.SECONDS)) {
+                accepted++;
+            }
+        }
+        executor.shutdownNow();
+
+        assertThat(accepted).isEqualTo(20);
+        assertTtlRange("auth:member:rate-limit:email-cooldown:*", 60L);
+        assertTtlRange("auth:member:rate-limit:email-daily:*", 86_400L);
+        assertTtlRange("auth:member:rate-limit:account-action-source:*", 3_600L);
+    }
+
+    @Test
+    @DisplayName("회원 인증 메일 요청은 이메일별 하루 5회까지만 허용한다")
+    void 회원인증메일요청_이메일일일한도_다섯회() {
+        for (int attempt = 0; attempt < 5; attempt++) {
+            assertThat(memberRateLimitStore.tryAcquireAccountActionRequest("member@example.com", "198.51.100." + attempt))
+                    .isTrue();
+            redisTemplate.delete(redisTemplate.keys("auth:member:rate-limit:email-cooldown:*"));
+        }
+
+        assertThat(memberRateLimitStore.tryAcquireAccountActionRequest("member@example.com", "203.0.113.10")).isFalse();
+    }
+
+    @Test
+    @DisplayName("회원 로그인 실패는 5회 계정출처 제한과 15분 TTL을 적용한다")
+    void 회원로그인실패_다섯번째부터차단하고TTL을설정한다() {
+        for (int attempt = 0; attempt < 5; attempt++) {
+            memberRateLimitStore.recordLoginFailure("member@example.com", "198.51.100.10");
+        }
+
+        assertThat(memberRateLimitStore.isLoginBlocked("member@example.com", "198.51.100.10")).isTrue();
+        java.util.Set<String> keys = redisTemplate.keys("auth:member:rate-limit:login-*");
+        assertThat(keys).hasSize(3);
+        assertThat(keys).allSatisfy(key -> assertThat(redisTemplate.getExpire(key, TimeUnit.SECONDS))
+                .isBetween(1L, 900L));
+    }
+
+    @Test
+    @DisplayName("회원 로그인 실패는 이메일 10회와 출처 50회 제한을 각각 적용한다")
+    void 회원로그인실패_이메일과출처집계한도_적용() {
+        for (int attempt = 0; attempt < 10; attempt++) {
+            memberRateLimitStore.recordLoginFailure("member@example.com", "198.51.100." + attempt);
+        }
+        assertThat(memberRateLimitStore.isLoginBlocked("member@example.com", "203.0.113.200")).isTrue();
+
+        redisTemplate.getConnectionFactory().getConnection().serverCommands().flushDb();
+        for (int attempt = 0; attempt < 50; attempt++) {
+            memberRateLimitStore.recordLoginFailure("member-" + attempt + "@example.com", "203.0.113.10");
+        }
+        assertThat(memberRateLimitStore.isLoginBlocked("new-member@example.com", "203.0.113.10")).isTrue();
+    }
+
+    private void assertTtlRange(String pattern, long maximumSeconds) {
+        java.util.Set<String> keys = redisTemplate.keys(pattern);
+        assertThat(keys).isNotEmpty();
+        assertThat(keys).allSatisfy(key -> assertThat(redisTemplate.getExpire(key, TimeUnit.SECONDS))
+                .isBetween(1L, maximumSeconds));
     }
 
     @Test
