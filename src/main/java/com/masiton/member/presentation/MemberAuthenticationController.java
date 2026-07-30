@@ -166,7 +166,7 @@ public class MemberAuthenticationController {
                 && "DELETE".equals(request.getMethod())
                 && (exception.code().equals("AUTHENTICATION_REQUIRED")
                 || exception.code().equals("INVALID_REFRESH_TOKEN")
-                || exception.code().equals("AUTHENTICATION_SERVICE_UNAVAILABLE"));
+                || exception.status().is5xxServerError());
     }
 
     public record EmailRequest(@NotBlank @Email @Size(max = 320) String email) { }

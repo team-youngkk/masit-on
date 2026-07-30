@@ -26,6 +26,7 @@ import com.masiton.member.infrastructure.web.MemberClientAddressResolver;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -149,6 +150,31 @@ class MemberAuthenticationControllerTest {
                         org.hamcrest.Matchers.containsString(cookieSettings.cookieName() + "="),
                         org.hamcrest.Matchers.containsString("Path=" + cookieSettings.path()),
                         org.hamcrest.Matchers.containsString("Max-Age=0")
+                )));
+    }
+
+    @Test
+    @DisplayName("로그아웃의 서버 오류도 Refresh Cookie를 즉시 만료한다")
+    void 로그아웃_서버오류_만료Cookie반환() throws Exception {
+        doThrow(new BusinessException(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "INTERNAL_SERVER_ERROR",
+                "Internal server error"
+        )).when(service).logout(any(), any(), any());
+
+        mockMvc.perform(delete("/api/auth/tokens")
+                        .header(HttpHeaders.ORIGIN, cookieSettings.publicBaseUrl())
+                        .cookie(new Cookie(cookieSettings.cookieName(), "refresh-token"))
+                        .principal(authentication()))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("INTERNAL_SERVER_ERROR"))
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, org.hamcrest.Matchers.allOf(
+                        org.hamcrest.Matchers.containsString(cookieSettings.cookieName() + "="),
+                        org.hamcrest.Matchers.containsString("Path=" + cookieSettings.path()),
+                        org.hamcrest.Matchers.containsString("Max-Age=0"),
+                        org.hamcrest.Matchers.containsString("HttpOnly"),
+                        org.hamcrest.Matchers.containsString("Secure"),
+                        org.hamcrest.Matchers.containsString("SameSite=Strict")
                 )));
     }
 
