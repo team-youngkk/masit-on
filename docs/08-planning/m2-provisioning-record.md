@@ -30,7 +30,7 @@ M2 초기 운영 배포에서 생성한 AWS 자원의 식별자와 완료 조건
 | 접근 방식 | IAM Identity Center 조직 인스턴스 `ssoins-7230c72b8df2ccaf`, 권한 세트 `AdministratorAccess`(세션 8시간) |
 | CLI 프로파일 | `masiton` (SSO. 장기 액세스 키 없음) |
 
-**이 계정은 맛잇온 전용이 아니다.** 2026-06-05에 만든 다른 프로젝트의 ECR 리포지토리 `commerce-payment`(이미지 8개)가 있고 삭제된 RDS의 로그 그룹 `RDSOSMetrics`가 남아 있다. 예산 범위 영향은 8절에 적었다.
+**이 계정은 맛잇온 전용이 아니다.** 2026-06-05에 만든 다른 프로젝트의 ECR 리포지토리 `commerce-payment`(이미지 8개)가 있고 삭제된 RDS의 로그 그룹 `RDSOSMetrics`가 남아 있다. 예산 범위 영향은 9절에 적었다.
 
 ## 3. M2-03 네트워크와 EC2 (#42)
 
@@ -291,7 +291,7 @@ PR 브랜치는 AWS 자격 증명을 받지 못한다. **이미지 빌드와 검
 | `.env` 파일 | 0건 | 0건 |
 | 평문 비밀 패턴 | 0건 | 0건 |
 | 플랫폼 | `linux/arm64` | `linux/arm64` |
-| 컨테이너 기동 | 미확인 (9절) | Next.js 16.2.11 기동, `/` → `200` |
+| 컨테이너 기동 | 미확인 (10절) | Next.js 16.2.11 기동, `/` → `200` |
 
 평문 비밀 검사는 `BEGIN PRIVATE KEY`, `BEGIN RSA PRIVATE KEY`, `JWT_PRIVATE_KEY_PEM`, `POSTGRES_PASSWORD`, `masiton_local` 다섯 패턴을 이미지 파일 시스템에서 찾는 방식이다. 백엔드 `/app`에는 `application.jar` 하나만 있고 빌드 컨텍스트 잔여물이 없다.
 
@@ -422,7 +422,105 @@ TTL이 초기화되지 않고 이어서 감소하므로 AOF에서 복원된 것�
 - **Parameter Store 값에 섞인 `\r`로 인증이 어긋났다.** Windows 셸에서 `openssl rand -base64 36 | tr -d '\n'`으로 만든 값이 캐리지 리턴을 물고 등록됐다. Redis 설정 파서는 줄 끝의 `\r`을 떼어내는 반면 클라이언트는 그대로 보내 `WRONGPASS`가 됐다. 값을 다시 만들고 `redis-render-conf.sh`가 CR·LF를 걷어내며 공백이 있으면 기동을 실패시키게 했다.
 - **`aws ssm get-parameter --output text`는 Windows에서 출력에 `\r\n`을 쓴다.** 길이를 재서 값을 검증하면 실제보다 1자 길게 보인다. 저장된 값의 이상 여부는 인스턴스에서 판단해야 한다.
 
-## 8. 예산 범위에 관한 확인 사항
+## 8. M2-08 Nginx와 HTTPS (#47)
+
+구성 일시 2026-07-30. 인증서 방식은 [계획 4.1절](m2-deployment-plan.md) 결정(ACM exportable + EC2 Nginx 종료)을 따랐다.
+
+### 8.1. 인증서
+
+| 항목 | 값 |
+|---|---|
+| ARN | `arn:aws:acm:ap-northeast-2:711457211155:certificate/645e947f-f018-449d-9fc2-822563cf0c74` |
+| 도메인 | `masiton.click` (apex 단독. 와일드카드 미발급) |
+| 발급자 | `C=US, O=Amazon, CN=Amazon RSA 2048 M01` |
+| 키 알고리즘 | RSA-2048 |
+| Export | `ENABLED` (**요청 시점에만 정할 수 있고 나중에 바꿀 수 없다**) |
+| 유효기간 | 2026-07-30 ~ **2027-02-12** (198일) |
+| serial | `0E4C9FD3A2CFD7D945344298BE487B0C` |
+| 검증 | Route 53 DNS 검증. CNAME `_f56d012ccc6bcec12ec01777862e98c6.masiton.click` |
+
+검증 CNAME은 호스팅 영역 `Z01447273NZ8O8LL4IA5`에 UPSERT했고 요청부터 `ISSUED`까지 1분 이내였다. **A 레코드 전파가 이미 끝나 있어(4절) 대기가 없었다.**
+
+내보내기에 필요한 값은 Parameter Store에 있다.
+
+| 파라미터 | 유형 | 용도 |
+|---|---|---|
+| `/masiton/tls/certificate-arn` | `String` | 내보낼 인증서 ARN |
+| `/masiton/tls/export-passphrase` | `SecureString` | 개인키 내보내기 암호 |
+
+인스턴스 역할 `masiton-app-role`에 인라인 정책 `masiton-acm-export`를 추가했다. `acm:ExportCertificate`·`acm:DescribeCertificate`를 **이 인증서 ARN 하나로만** 제한했다.
+
+### 8.2. 인증서 배포와 갱신 재배포
+
+[`deploy/scripts/tls-deploy-cert.sh`](../../deploy/scripts/tls-deploy-cert.sh)가 내보내기부터 Nginx 반영까지 처리한다.
+
+1. Parameter Store에서 ARN과 내보내기 암호를 읽는다. 암호는 tmpfs 파일로 써서 `fileb://`로 넘긴다. 명령행 인자로 주면 같은 인스턴스의 `ps`에서 읽힌다.
+2. `aws acm export-certificate` 결과에서 인증서·체인·암호화된 개인키를 분리하고, 개인키를 풀어 평문 PEM으로 만든다.
+3. **인증서와 개인키가 짝인지 공개키 해시로 대조한다.** 어긋난 쌍을 배포하면 Nginx가 기동하지 못한다.
+4. 설치본과 같으면 아무 것도 하지 않는다. 다르면 `fullchain`(0644)과 개인키(0600)를 교체하고 `nginx -t` 후 reload한다.
+
+중간 산출물은 전부 tmpfs(`/run/masiton`)에 만들고 종료 시 삭제한다. 개인키 평문과 내보내기 암호가 루트 볼륨과 볼륨 스냅샷에 남지 않는다.
+
+ACM은 만료 45일 전에 자동 갱신하지만 **갱신본을 EC2로 다시 내보내는 것은 자동이 아니다.** 그 공백을 [`masiton-tls-renew.timer`](../../deploy/nginx/masiton-tls-renew.timer)가 메운다. 일 1회 실행이고 갱신되지 않았으면 파일이 같아 즉시 끝난다. `Persistent=true`라 인스턴스가 꺼져 지나간 실행은 부팅 후 따라 실행한다.
+
+**갱신 재배포는 인증서 만료 감시로 이중화해야 한다.** 타이머가 조용히 실패하면 만료 전까지 아무도 모른다. `M2-10`에서 만료 임박 알람을 구성한다.
+
+### 8.3. Nginx 구성
+
+| 항목 | 값 |
+|---|---|
+| 버전 | nginx 1.30.3 (Amazon Linux 2023 `dnf`) |
+| 최상위 설정 | [`deploy/nginx/nginx.conf`](../../deploy/nginx/nginx.conf). 배포판 원본은 `/etc/nginx/nginx.conf.masiton-orig`에 보관 |
+| 서버 블록 | [`deploy/nginx/masiton.click.conf`](../../deploy/nginx/masiton.click.conf) |
+| TLS | `TLSv1.2`·`TLSv1.3`만. 세션 티켓 끔, HSTS 1년 |
+
+경로 소유권은 [ADR-WEB-003](../07-adr/platform/web-003-routing-boundary.md) 6.1절 그대로다.
+
+| 경로 | 처리 |
+|---|---|
+| `/api/**` | `127.0.0.1:8080` Spring Boot |
+| `/internal/**`, `/internal` | `404`. 인터넷 진입점에서 전달하지 않는다 |
+| 그 외 | `127.0.0.1:3000` Next.js |
+| 알려지지 않은 Host·Elastic IP 직접 접근 | `444` (응답 없이 연결 종료) |
+
+`/internal/`은 `location ^~`로 선언해 뒤에 어떤 규칙이 추가돼도 우회되지 않게 했다. 배포판 기본 설정을 저장소 산출물로 교체한 이유는 원본에 `/usr/share/nginx/html`을 서비스하는 server 블록이 있어 도메인 밖 접근에 기본 페이지가 응답하기 때문이다.
+
+### 8.4. 완료 조건 검증
+
+| 완료 조건 | 결과 |
+|---|---|
+| 인터넷에서 `/internal/health/live`가 차단된다 | 통과 |
+| HTTPS로 프론트엔드와 `/api/**`가 모두 응답한다 | **미완** — 애플리케이션 미배포로 `502`. `M2-09`에서 확인한다 |
+| 인증서 갱신·재배포 절차가 문서화되고 최소 1회 시연된다 | 통과 (8.2절 문서화, 아래 시연) |
+
+인터넷(작업자 PC)에서 확인한 결과다.
+
+```text
+http://masiton.click/                     -> 301, Location: https://masiton.click/
+https://masiton.click/                    -> 502, ssl_verify_result=0 (공개 신뢰 저장소로 검증됨)
+https://masiton.click/internal/health/live        -> 404
+https://masiton.click/internal/health/ready       -> 404
+https://masiton.click/internal/health/dependencies-> 404
+https://masiton.click/internal                    -> 404
+https://masiton.click/api/restaurants     -> 502
+http://3.37.228.52/                       -> 응답 없이 종료 (444)
+Host: example.invalid                     -> 응답 없이 종료 (444)
+```
+
+**`502`는 예상된 상태다.** `/api/**`와 화면 경로의 upstream이 아직 없다. 라우팅이 목적지까지 도달했다는 뜻이며, `M2-09`에서 `200`으로 바뀌는 것을 확인한다.
+
+TLS 버전은 인스턴스에서 서버 응답으로 확인했다. `tls1_1` 거부, `tls1_2`·`tls1_3` 성립이다.
+
+갱신 재배포는 두 경우를 시연했다.
+
+| 시연 | 결과 |
+|---|---|
+| 갱신본이 없을 때 | 파일 해시 동일. 교체·reload 없이 종료 |
+| 갱신본이 온 상황(설치본을 치워 재현) | 다시 내보내 같은 내용으로 복구, `nginx -t` 후 reload. master pid 3349 유지, `nginx` active |
+
+reload가 master 프로세스를 바꾸지 않으므로 **인증서 교체에 서비스 중단이 없다.**
+
+## 9. 예산 범위에 관한 확인 사항
 
 `My Monthly Cost Budget`(`$100`/월)은 **계정 전체 비용**을 대상으로 한다. 2절에 적었듯 이 계정에는 다른 프로젝트 자원이 있어 그 비용도 이 예산에 합산된다.
 
@@ -434,7 +532,7 @@ TTL이 초기화되지 않고 이어서 감소하므로 AOF에서 복원된 것�
 
 비용 할당 태그는 활성화 후 최대 24시간이 지나야 새 데이터에 적용되므로 M2 일정 안에서는 즉시 쓸 수 없다.
 
-### 8.1. 크레딧 만료
+### 9.1. 크레딧 만료
 
 **계정 크레딧 4건이 2026-07-29에 전량 만료됐다.** 따라서 M2 운영 비용은 전액 실제 청구다.
 
@@ -451,7 +549,7 @@ TTL이 초기화되지 않고 이어서 감소하므로 AOF에서 복원된 것�
 
 `M2-12` 시점에 실제 청구액과 산정치를 대조한다(계획 10절 마지막 완료 항목).
 
-## 9. 검증하지 못한 항목
+## 10. 검증하지 못한 항목
 
 - **예산 초과 알림 실제 도달.** 시험 예산 `masiton-alert-test`(한도 `$0.5`, 실제 1% 초과)를 만들어 확인 중이다. AWS Budgets가 하루 약 3회만 평가해 즉시 도달하지 않는다. 도달 확인 후 시험 예산을 삭제한다.
 - **SSH 접속.** 키 페어 `masiton-app`을 만들었으나 실제 SSH 접속은 시도하지 않았다. 인스턴스 접근은 SSM RunCommand로 검증했다.

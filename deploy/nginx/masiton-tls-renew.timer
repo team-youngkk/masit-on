@@ -1,0 +1,17 @@
+# 매일 한 번 인증서 갱신본을 확인한다 — M2-08.
+# 갱신되지 않았으면 파일이 같아 아무 것도 하지 않는다. 유효기간 198일에 만료 45일
+# 전 갱신이므로 일 1회면 갱신 후 반영까지 최대 하루 안에 끝난다.
+
+[Unit]
+Description=masiton ACM 인증서 갱신본 반영 (일 1회)
+
+[Timer]
+OnCalendar=daily
+# 부팅 직후 몰리지 않게 흩뜨린다.
+RandomizedDelaySec=30m
+# 인스턴스가 꺼져 있어 지나간 실행은 부팅 후 따라 실행한다.
+Persistent=true
+Unit=masiton-tls-renew.service
+
+[Install]
+WantedBy=timers.target
