@@ -16,8 +16,6 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 
-import com.masiton.member.application.port.out.MemberAccountRepository;
-import com.masiton.member.application.port.out.MemberActionTokenRepository;
 import com.masiton.member.application.port.out.MemberDeletionJobStore;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -33,18 +31,17 @@ class MemberDeletionCleanupServiceTest {
     private static final Instant NOW = Instant.parse("2026-07-30T03:10:00Z");
 
     @Mock private MemberDeletionJobStore jobs;
-    @Mock private MemberAccountRepository accounts;
-    @Mock private MemberActionTokenRepository actionTokens;
+    @Mock private MemberDeletionCleanupCommandService cleanupCommands;
 
     @Test
     @DisplayName("한 시간 넘게 실패한 탈퇴 정리 작업은 운영 알림 로그를 남긴다")
     void run_한시간초과정리실패_운영알림을남긴다() {
         UUID memberId = UUID.randomUUID();
         given(jobs.claimDue(NOW, 50)).willReturn(List.of(memberId));
-        doThrow(new IllegalStateException("database unavailable")).when(actionTokens).deleteByMemberId(memberId);
+        doThrow(new IllegalStateException("database unavailable")).when(cleanupCommands).cleanup(memberId);
         given(jobs.hasExceededOneHour(memberId, NOW)).willReturn(true);
         MemberDeletionCleanupService service = new MemberDeletionCleanupService(
-                jobs, accounts, actionTokens, Clock.fixed(NOW, ZoneOffset.UTC));
+                jobs, cleanupCommands, Clock.fixed(NOW, ZoneOffset.UTC));
         Logger logger = (Logger) getLogger(MemberDeletionCleanupService.class);
         ListAppender<ILoggingEvent> appender = new ListAppender<>();
         appender.start();

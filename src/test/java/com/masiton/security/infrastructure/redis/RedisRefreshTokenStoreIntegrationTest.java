@@ -312,4 +312,62 @@ class RedisRefreshTokenStoreIntegrationTest {
                 new MemberSessionRevocation(
                         java.util.UUID.fromString(first.sessionId()), now, now.plus(Duration.ofDays(14))));
     }
+
+    @Test
+    @DisplayName("레거시 회원 세션도 한도 초과 폐기 전에 복구 큐에 적재한다")
+    void memberSession_레거시만료시각_한도초과폐기_복구큐선적재() {
+        Instant now = Instant.parse("2026-07-29T10:00:00Z");
+        when(memberSessionClock.instant()).thenReturn(now);
+
+        MemberSession first = memberSessionStore.issue("member-a", Duration.ofDays(14));
+        replaceWithLegacySessionRecord(first);
+        memberSessionStore.issue("member-a", Duration.ofDays(14));
+        memberSessionStore.issue("member-a", Duration.ofDays(14));
+        memberSessionStore.issue("member-a", Duration.ofDays(14));
+
+        assertThat(memberSessionRevocationRecoveryQueue.claimDue(now, 50)).containsExactly(
+                new MemberSessionRevocation(
+                        java.util.UUID.fromString(first.sessionId()), now, now.plus(Duration.ofDays(14))));
+    }
+
+    @Test
+    @DisplayName("레거시 회원 세션 전체 폐기도 복구 큐에 적재한다")
+    void memberSession_레거시만료시각_전체폐기_복구큐선적재() {
+        Instant now = Instant.parse("2026-07-29T10:00:00Z");
+        when(memberSessionClock.instant()).thenReturn(now);
+
+        MemberSession issued = memberSessionStore.issue("member-a", Duration.ofDays(14));
+        replaceWithLegacySessionRecord(issued);
+
+        assertThat(memberSessionStore.revokeAll("member-a")).containsExactly(issued.sessionId());
+        assertThat(memberSessionRevocationRecoveryQueue.claimDue(Instant.now().plusSeconds(1), 50))
+                .extracting(MemberSessionRevocation::sessionId)
+                .containsExactly(java.util.UUID.fromString(issued.sessionId()));
+    }
+
+    @Test
+    @DisplayName("레거시 회원 세션의 refresh token 재사용도 복구 큐에 적재한다")
+    void memberSession_레거시만료시각_refreshToken재사용_복구큐선적재() {
+        Instant now = Instant.parse("2026-07-29T10:00:00Z");
+        when(memberSessionClock.instant()).thenReturn(now);
+
+        MemberSession issued = memberSessionStore.issue("member-a", Duration.ofDays(14));
+        memberSessionStore.rotate(issued.refreshToken(), Duration.ofDays(14));
+        replaceWithLegacySessionRecord(issued);
+
+        assertThatThrownBy(() -> memberSessionStore.rotate(issued.refreshToken(), Duration.ofDays(14)))
+                .isInstanceOf(InvalidMemberSessionException.class);
+        assertThat(memberSessionRevocationRecoveryQueue.claimDue(now, 50)).containsExactly(
+                new MemberSessionRevocation(
+                        java.util.UUID.fromString(issued.sessionId()), now, now.plus(Duration.ofDays(14))));
+    }
+
+    private void replaceWithLegacySessionRecord(MemberSession session) {
+        String key = "auth:member:session:" + session.sessionId();
+        String serialized = redisTemplate.opsForValue().get(key);
+        String legacySerialized = serialized.replaceFirst(",\\s*\\\"expiresAtEpochMillis\\\"\\s*:\\s*\\d+(?=\\s*})", "");
+
+        assertThat(legacySerialized).doesNotContain("expiresAtEpochMillis");
+        redisTemplate.opsForValue().set(key, legacySerialized, Duration.ofDays(14));
+    }
 }

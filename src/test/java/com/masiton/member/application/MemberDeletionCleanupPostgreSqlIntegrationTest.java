@@ -10,6 +10,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -18,13 +22,16 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import com.masiton.member.application.port.out.MemberDeletionJobStore;
+import com.masiton.member.infrastructure.persistence.JdbcMemberDeletionJobStore;
 import com.masiton.test.TestProfile;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @TestProfile
 @Testcontainers
+@Import(MemberDeletionCleanupPostgreSqlIntegrationTest.LateFailureConfiguration.class)
 @DisplayName("회원 탈퇴 정리 PostgreSQL 통합")
 class MemberDeletionCleanupPostgreSqlIntegrationTest {
 
@@ -49,6 +56,12 @@ class MemberDeletionCleanupPostgreSqlIntegrationTest {
 
     @Autowired
     private MemberDeletionCleanupService cleanupService;
+
+    @Autowired
+    private MemberDeletionCleanupCommandService cleanupCommands;
+
+    @Autowired
+    private LateFailureMemberDeletionJobStore lateFailureJobs;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -109,6 +122,39 @@ class MemberDeletionCleanupPostgreSqlIntegrationTest {
         assertThat(count("member_deletion_job", memberId)).isZero();
     }
 
+    @Test
+    @DisplayName("완료 삭제 직후 실패하면 모든 회원 탈퇴 정리 변경을 롤백한다")
+    void 정리_완료직후실패_모든회원탈퇴정리변경을롤백한다() {
+        // given
+        UUID memberId = UUID.randomUUID();
+        UUID restaurantId = insertRestaurant();
+        Instant now = Instant.now();
+        insertDeletionPendingMember(memberId, now);
+        insertActionToken(memberId, now);
+        jdbcTemplate.update("INSERT INTO favorite (member_id, restaurant_id, favorited_at) VALUES (?, ?, ?)",
+                memberId, restaurantId, asOffsetDateTime(now));
+        jdbcTemplate.update("INSERT INTO recent_restaurant_view (member_id, restaurant_id, last_viewed_at) VALUES (?, ?, ?)",
+                memberId, restaurantId, asOffsetDateTime(now));
+        jobs.enqueue(memberId, now);
+        lateFailureJobs.failAfterCompleting(memberId);
+
+        // when
+        try {
+            assertThatThrownBy(() -> cleanupCommands.cleanup(memberId))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessage("late cleanup failure");
+        } finally {
+            lateFailureJobs.disableFailure();
+        }
+
+        // then
+        assertThat(memberAccountCount(memberId)).isEqualTo(1);
+        assertThat(count("member_action_token", memberId)).isEqualTo(1);
+        assertThat(count("favorite", memberId)).isEqualTo(1);
+        assertThat(count("recent_restaurant_view", memberId)).isEqualTo(1);
+        assertThat(count("member_deletion_job", memberId)).isEqualTo(1);
+    }
+
     private UUID insertRestaurant() {
         UUID restaurantId = UUID.randomUUID();
         String suffix = UUID.randomUUID().toString();
@@ -128,9 +174,10 @@ class MemberDeletionCleanupPostgreSqlIntegrationTest {
     }
 
     private void insertActionToken(UUID memberId, Instant now) {
+        byte[] tokenHash = UUID.randomUUID().toString().replace("-", "").getBytes(java.nio.charset.StandardCharsets.US_ASCII);
         jdbcTemplate.update("INSERT INTO member_action_token (id, member_id, token_hash, purpose, status, issued_at, expires_at) "
                         + "VALUES (?, ?, ?, 'PASSWORD_RESET', 'ISSUED', ?, ?)",
-                UUID.randomUUID(), memberId, new byte[32], asOffsetDateTime(now), asOffsetDateTime(now.plusSeconds(60)));
+                UUID.randomUUID(), memberId, tokenHash, asOffsetDateTime(now), asOffsetDateTime(now.plusSeconds(60)));
     }
 
     private long count(String tableName, UUID memberId) {
@@ -152,5 +199,59 @@ class MemberDeletionCleanupPostgreSqlIntegrationTest {
 
     private OffsetDateTime asOffsetDateTime(Instant instant) {
         return OffsetDateTime.ofInstant(instant, ZoneOffset.UTC);
+    }
+
+    @TestConfiguration(proxyBeanMethods = false)
+    static class LateFailureConfiguration {
+        @Bean
+        @Primary
+        LateFailureMemberDeletionJobStore lateFailureMemberDeletionJobStore(JdbcMemberDeletionJobStore delegate) {
+            return new LateFailureMemberDeletionJobStore(delegate);
+        }
+    }
+
+    static class LateFailureMemberDeletionJobStore implements MemberDeletionJobStore {
+        private final MemberDeletionJobStore delegate;
+        private UUID memberIdToFail;
+
+        LateFailureMemberDeletionJobStore(MemberDeletionJobStore delegate) {
+            this.delegate = delegate;
+        }
+
+        void failAfterCompleting(UUID memberId) {
+            memberIdToFail = memberId;
+        }
+
+        void disableFailure() {
+            memberIdToFail = null;
+        }
+
+        @Override
+        public void enqueue(UUID memberId, Instant now) {
+            delegate.enqueue(memberId, now);
+        }
+
+        @Override
+        public List<UUID> claimDue(Instant now, int limit) {
+            return delegate.claimDue(now, limit);
+        }
+
+        @Override
+        public boolean hasExceededOneHour(UUID memberId, Instant now) {
+            return delegate.hasExceededOneHour(memberId, now);
+        }
+
+        @Override
+        public void reschedule(UUID memberId, Instant now) {
+            delegate.reschedule(memberId, now);
+        }
+
+        @Override
+        public void complete(UUID memberId) {
+            delegate.complete(memberId);
+            if (memberId.equals(memberIdToFail)) {
+                throw new IllegalStateException("late cleanup failure");
+            }
+        }
     }
 }

@@ -5,6 +5,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Clock;
+import java.time.DateTimeException;
 import java.time.Instant;
 import java.util.HexFormat;
 import java.util.List;
@@ -12,7 +13,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Component;
@@ -35,6 +38,14 @@ public class RedisMemberSessionStore implements MemberSessionStore {
     private static final String MEMBER_SESSION_SEQUENCE_PREFIX = "auth:member:sessions:sequence:";
     private static final String MEMBER_SESSION_GENERATION_PREFIX = "auth:member:sessions:generation:";
     private static final String ISSUE_REVOKED_SENTINEL = "__REVOKED_DURING_ISSUE__";
+
+    private static final DefaultRedisScript<Long> MIGRATE_LEGACY_SESSION_RECORD_SCRIPT = new DefaultRedisScript<>("""
+            if redis.call('GET', KEYS[1]) ~= ARGV[1] then
+              return 0
+            end
+            redis.call('SET', KEYS[1], ARGV[2], 'KEEPTTL')
+            return 1
+            """, Long.class);
 
     private static final DefaultRedisScript<String> ISSUE_SCRIPT = new DefaultRedisScript<>("""
             local function enqueueRevocation(sessionId, record)
@@ -221,6 +232,7 @@ public class RedisMemberSessionStore implements MemberSessionStore {
     @Override
     public MemberSession issue(String memberId, Duration ttl) {
         String expectedGeneration = memberSessionGeneration(memberId);
+        migrateLegacySessionRecords(memberId);
         String sessionId = UUID.randomUUID().toString();
         String refreshToken = refreshTokenFactory.create();
         Instant createdAt = Instant.now(clock);
@@ -266,6 +278,7 @@ public class RedisMemberSessionStore implements MemberSessionStore {
         if (sessionId == null) {
             throw new InvalidMemberSessionException();
         }
+        migrateLegacySessionRecord(sessionId);
         MemberSessionRecord current = read(redisTemplate.opsForValue().get(sessionKey(sessionId)));
         MemberSessionRecord rotated = new MemberSessionRecord(
                 current.memberId(),
@@ -351,6 +364,7 @@ public class RedisMemberSessionStore implements MemberSessionStore {
 
     @Override
     public java.util.Set<String> revokeAll(String memberId) {
+        migrateLegacySessionRecords(memberId);
         String serializedSessionIds = redisTemplate.execute(
                 REVOKE_ALL_SCRIPT,
                 List.of(
@@ -377,7 +391,52 @@ public class RedisMemberSessionStore implements MemberSessionStore {
             throw new InvalidMemberSessionException();
         }
         try {
-            return objectMapper.readValue(serialized, MemberSessionRecord.class);
+            JsonNode record = objectMapper.readTree(serialized);
+            if (record instanceof ObjectNode objectRecord
+                    && !objectRecord.has("expiresAtEpochMillis")
+                    && objectRecord.hasNonNull("expiresAt")) {
+                objectRecord.put(
+                        "expiresAtEpochMillis",
+                        Instant.parse(objectRecord.get("expiresAt").asText()).toEpochMilli()
+                );
+            }
+            return objectMapper.treeToValue(record, MemberSessionRecord.class);
+        } catch (JacksonException | DateTimeException exception) {
+            throw new IllegalStateException("Could not read member session state", exception);
+        }
+    }
+
+    private void migrateLegacySessionRecords(String memberId) {
+        java.util.Set<String> sessionIds = redisTemplate.opsForZSet().range(memberSessionsKey(memberId), 0, -1);
+        if (sessionIds == null) {
+            return;
+        }
+        sessionIds.forEach(this::migrateLegacySessionRecord);
+    }
+
+    private void migrateLegacySessionRecord(String sessionId) {
+        String key = sessionKey(sessionId);
+        String serialized = redisTemplate.opsForValue().get(key);
+        if (serialized == null) {
+            return;
+        }
+        if (hasExpiryEpochMillis(serialized)) {
+            return;
+        }
+        MemberSessionRecord record = read(serialized);
+        MemberSessionRecord migrated = new MemberSessionRecord(
+                record.memberId(), record.tokenHash(), record.createdAt(), record.expiresAt());
+        redisTemplate.execute(
+                MIGRATE_LEGACY_SESSION_RECORD_SCRIPT,
+                List.of(key),
+                serialized,
+                serialize(migrated)
+        );
+    }
+
+    private boolean hasExpiryEpochMillis(String serialized) {
+        try {
+            return objectMapper.readTree(serialized).hasNonNull("expiresAtEpochMillis");
         } catch (JacksonException exception) {
             throw new IllegalStateException("Could not read member session state", exception);
         }
