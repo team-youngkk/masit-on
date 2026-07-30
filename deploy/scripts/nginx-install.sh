@@ -4,6 +4,7 @@
 # 저장소 파일을 인스턴스로 옮긴 스테이징 디렉터리를 인자로 받는다.
 # 스테이징에는 다음 파일이 있어야 한다.
 #   nginx.conf  masiton.click.conf  00-masiton-upgrade-map.conf
+#   01-masiton-api-auth-map.conf
 #   masiton-tls-renew.service  masiton-tls-renew.timer  tls-deploy-cert.sh
 #
 # 사용: sudo ./nginx-install.sh [스테이징 디렉터리]
@@ -13,6 +14,7 @@ STAGE="${1:-/tmp/masiton-deploy}"
 OPT_DIR=/opt/masiton
 
 for f in nginx.conf masiton.click.conf 00-masiton-upgrade-map.conf \
+         01-masiton-api-auth-map.conf \
          masiton-tls-renew.service masiton-tls-renew.timer tls-deploy-cert.sh \
          basic-auth-render.sh nginx-basic-auth.dropin.conf; do
   [ -f "$STAGE/$f" ] || { echo "스테이징에 $f 가 없다: $STAGE" >&2; exit 1; }
@@ -40,6 +42,7 @@ AWS_REGION="${AWS_REGION:-ap-northeast-2}" "$OPT_DIR/bin/basic-auth-render.sh"
 AWS_REGION="${AWS_REGION:-ap-northeast-2}" "$OPT_DIR/bin/tls-deploy-cert.sh"
 
 install -m 0644 "$STAGE/00-masiton-upgrade-map.conf" /etc/nginx/conf.d/00-masiton-upgrade-map.conf
+install -m 0644 "$STAGE/01-masiton-api-auth-map.conf" /etc/nginx/conf.d/01-masiton-api-auth-map.conf
 install -m 0644 "$STAGE/masiton.click.conf" /etc/nginx/conf.d/masiton.click.conf
 
 # 최상위 설정을 저장소 산출물로 교체한다. 배포판 기본 설정에는
