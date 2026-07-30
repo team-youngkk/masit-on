@@ -1,6 +1,7 @@
 package com.masiton.member.infrastructure.persistence;
 
 import java.security.MessageDigest;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.HexFormat;
 import java.util.Optional;
@@ -23,10 +24,10 @@ public class JdbcMemberActionTokenRepository implements MemberActionTokenReposit
     @Override
     public void replace(MemberActionToken token, Instant issuedAt) {
         jdbcTemplate.update("UPDATE member_action_token SET status = 'REVOKED', completed_at = ? "
-                        + "WHERE member_id = ? AND purpose = ? AND status = 'ISSUED'", issuedAt, token.memberId(), token.purpose().name());
+                        + "WHERE member_id = ? AND purpose = ? AND status = 'ISSUED'", Timestamp.from(issuedAt), token.memberId(), token.purpose().name());
         jdbcTemplate.update("INSERT INTO member_action_token (id, member_id, token_hash, purpose, status, issued_at, expires_at) "
-                        + "VALUES (?, ?, ?, ?, 'ISSUED', ?, ?)", token.id(), token.memberId(), token.tokenHash(),
-                token.purpose().name(), issuedAt, token.expiresAt());
+                + "VALUES (?, ?, ?, ?, 'ISSUED', ?, ?)", token.id(), token.memberId(), token.tokenHash(),
+                token.purpose().name(), Timestamp.from(issuedAt), Timestamp.from(token.expiresAt()));
     }
 
     @Override
@@ -37,7 +38,7 @@ public class JdbcMemberActionTokenRepository implements MemberActionTokenReposit
                         + "RETURNING id, member_id, token_hash, purpose, expires_at", (resultSet, rowNum) -> new MemberActionToken(
                         resultSet.getObject("id", java.util.UUID.class), resultSet.getObject("member_id", java.util.UUID.class), resultSet.getBytes("token_hash"),
                         MemberActionPurpose.valueOf(resultSet.getString("purpose")), resultSet.getTimestamp("expires_at").toInstant()),
-                now, hash, purpose.name(), now).stream().findFirst();
+                Timestamp.from(now), hash, purpose.name(), Timestamp.from(now)).stream().findFirst();
     }
 
     @Override

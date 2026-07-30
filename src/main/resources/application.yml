@@ -55,6 +55,9 @@ logging:
 
 masiton:
   member:
+    action-mail:
+      active-key-id: ${MEMBER_ACTION_MAIL_ACTIVE_KEY_ID:}
+      active-key: ${MEMBER_ACTION_MAIL_ACTIVE_KEY:}
     rate-limit:
       secret: ${MEMBER_RATE_LIMIT_SECRET:}
       trusted-proxy-addresses: ${MEMBER_TRUSTED_PROXY_ADDRESSES:}

@@ -20,7 +20,8 @@ public class JdbcRecentRestaurantViewRepository implements RecentRestaurantViewR
     @Override
     public void upsert(UUID memberId, UUID restaurantId, Instant viewedAt) {
         jdbcTemplate.update("INSERT INTO recent_restaurant_view (member_id, restaurant_id, last_viewed_at) VALUES (?, ?, ?) "
-                        + "ON CONFLICT (member_id, restaurant_id) DO UPDATE SET last_viewed_at = EXCLUDED.last_viewed_at",
+                        + "ON CONFLICT (member_id, restaurant_id) DO UPDATE SET "
+                        + "last_viewed_at = GREATEST(recent_restaurant_view.last_viewed_at, EXCLUDED.last_viewed_at)",
                 memberId, restaurantId, Timestamp.from(viewedAt));
         jdbcTemplate.update("DELETE FROM recent_restaurant_view WHERE member_id = ? AND restaurant_id IN ("
                         + "SELECT restaurant_id FROM recent_restaurant_view WHERE member_id = ? "

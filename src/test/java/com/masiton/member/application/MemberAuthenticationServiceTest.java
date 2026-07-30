@@ -17,7 +17,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.masiton.common.security.MemberJwtSettings;
 import com.masiton.member.application.port.out.MemberAccountRepository;
+import com.masiton.member.application.port.out.MemberActionMailOutboxStore;
 import com.masiton.member.application.port.out.MemberActionTokenDeliveryPort;
+import com.masiton.member.application.port.out.MemberActionTokenCipher;
 import com.masiton.member.application.port.out.MemberActionTokenRepository;
 import com.masiton.member.application.port.out.MemberRateLimitStore;
 import com.masiton.member.application.port.out.MemberDeletionJobStore;
@@ -26,15 +28,20 @@ import com.masiton.member.application.port.out.MemberSessionRevocationStore;
 import com.masiton.member.application.port.out.MemberSessionStore;
 import com.masiton.member.application.port.out.MemberTokenIssuer;
 import com.masiton.member.domain.model.MemberAccount;
+import com.masiton.member.domain.model.MemberActionMailOutbox;
 import com.masiton.member.domain.model.MemberActionPurpose;
 import com.masiton.member.domain.model.MemberActionToken;
 import com.masiton.member.domain.model.MemberStatus;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("MemberAuthenticationService")
@@ -48,6 +55,10 @@ class MemberAuthenticationServiceTest {
     private MemberActionTokenRepository actionTokens;
     @Mock
     private MemberActionTokenDeliveryPort actionTokenDelivery;
+    @Mock
+    private MemberActionMailOutboxStore actionMailOutbox;
+    @Mock
+    private MemberActionTokenCipher actionTokenCipher;
     @Mock
     private MemberRateLimitStore rateLimits;
     @Mock
@@ -130,12 +141,49 @@ class MemberAuthenticationServiceTest {
         given(rateLimits.tryAcquireAccountActionRequest("member@example.com", "127.0.0.1")).willReturn(true);
         given(passwordEncoder.encode("correct horse battery staple")).willReturn("password-hash");
         given(accounts.createIfAbsent("member@example.com", "password-hash", NOW)).willReturn(Optional.of(account));
-        doThrow(new IllegalStateException("smtp unavailable")).when(actionTokenDelivery)
-                .send(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyString());
+        given(actionTokenCipher.encrypt(any(), any(), any())).willReturn(
+                new MemberActionTokenCipher.EncryptedToken(new byte[17], new byte[12], "test-1"));
 
         service().register("member@example.com", "correct horse battery staple", "127.0.0.1");
 
-        org.mockito.Mockito.verifyNoInteractions(actionTokens);
+        org.mockito.InOrder persistence = inOrder(actionTokens, actionMailOutbox);
+        persistence.verify(actionTokens).replace(any(MemberActionToken.class), org.mockito.ArgumentMatchers.eq(NOW));
+        persistence.verify(actionMailOutbox).enqueue(any(MemberActionMailOutbox.class), org.mockito.ArgumentMatchers.eq(NOW));
+        verifyNoInteractions(actionTokenDelivery);
+    }
+
+    @Test
+    @DisplayName("인증 메일 재발송은 이메일 전용 제한기를 사용하고 출처 제한기는 사용하지 않는다")
+    void 인증메일재발송_이메일전용제한기_사용() {
+        MemberAccount account = new MemberAccount(UUID.randomUUID(), "member@example.com", "password-hash",
+                MemberStatus.PENDING_VERIFICATION, null, null, NOW);
+        given(rateLimits.tryAcquireEmailRequest("member@example.com")).willReturn(true);
+        given(accounts.findByEmail("member@example.com")).willReturn(Optional.of(account));
+        given(actionTokenCipher.encrypt(any(), any(), any())).willReturn(
+                new MemberActionTokenCipher.EncryptedToken(new byte[17], new byte[12], "test-1"));
+
+        service().resendVerification("member@example.com", "127.0.0.1");
+
+        verify(rateLimits).tryAcquireEmailRequest("member@example.com");
+        verify(rateLimits, never()).tryAcquireAccountActionRequest(any(), any());
+        verify(actionMailOutbox).enqueue(any(MemberActionMailOutbox.class), org.mockito.ArgumentMatchers.eq(NOW));
+        verifyNoInteractions(actionTokenDelivery);
+    }
+
+    @Test
+    @DisplayName("비밀번호 재설정 요청은 토큰과 outbox만 저장하고 직접 전송하지 않는다")
+    void 비밀번호재설정요청_outbox저장_직접전송없음() {
+        MemberAccount account = activeAccount(UUID.randomUUID());
+        given(rateLimits.tryAcquireAccountActionRequest("member@example.com", "127.0.0.1")).willReturn(true);
+        given(accounts.findByEmail("member@example.com")).willReturn(Optional.of(account));
+        given(actionTokenCipher.encrypt(any(), any(), any())).willReturn(
+                new MemberActionTokenCipher.EncryptedToken(new byte[17], new byte[12], "test-1"));
+
+        service().requestPasswordReset("member@example.com", "127.0.0.1");
+
+        verify(actionTokens).replace(any(MemberActionToken.class), org.mockito.ArgumentMatchers.eq(NOW));
+        verify(actionMailOutbox).enqueue(any(MemberActionMailOutbox.class), org.mockito.ArgumentMatchers.eq(NOW));
+        verifyNoInteractions(actionTokenDelivery);
     }
 
     @Test
@@ -174,7 +222,8 @@ class MemberAuthenticationServiceTest {
     }
 
     private MemberAuthenticationService service() {
-        return new MemberAuthenticationService(accounts, actionTokens, actionTokenDelivery, rateLimits, deletionJobs, sessions,
+        return new MemberAuthenticationService(accounts, actionTokens, actionMailOutbox, actionTokenCipher,
+                rateLimits, deletionJobs, sessions,
                 revocationRecoveryJobs, revocations,
                 tokenIssuer, passwordEncoder,
                 new MemberJwtSettings("issuer", "member", Duration.ofMinutes(30), "key-id"),

@@ -10,6 +10,10 @@ spring:
 
 masiton:
   member:
+    action-mail:
+      # Test-only AES-256 material; it is not used outside the test profile.
+      active-key-id: test-1
+      active-key: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
     rate-limit:
       secret: test-only-member-rate-limit-secret
   integration:

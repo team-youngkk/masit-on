@@ -18,7 +18,8 @@ import com.masiton.common.security.MemberJwtSettings;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
 import com.masiton.member.application.port.out.MemberAccountRepository;
-import com.masiton.member.application.port.out.MemberActionTokenDeliveryPort;
+import com.masiton.member.application.port.out.MemberActionMailOutboxStore;
+import com.masiton.member.application.port.out.MemberActionTokenCipher;
 import com.masiton.member.application.port.out.MemberActionTokenRepository;
 import com.masiton.member.application.port.out.MemberRateLimitStore;
 import com.masiton.member.application.port.out.MemberDeletionJobStore;
@@ -27,6 +28,7 @@ import com.masiton.member.application.port.out.MemberSessionRevocationStore;
 import com.masiton.member.application.port.out.MemberSessionStore;
 import com.masiton.member.application.port.out.MemberTokenIssuer;
 import com.masiton.member.domain.model.MemberAccount;
+import com.masiton.member.domain.model.MemberActionMailOutbox;
 import com.masiton.member.domain.model.MemberActionPurpose;
 import com.masiton.member.domain.model.MemberActionToken;
 import com.masiton.member.domain.model.MemberStatus;
@@ -40,7 +42,8 @@ public class MemberAuthenticationService {
 
     private final MemberAccountRepository accounts;
     private final MemberActionTokenRepository actionTokens;
-    private final MemberActionTokenDeliveryPort actionTokenDelivery;
+    private final MemberActionMailOutboxStore actionMailOutbox;
+    private final MemberActionTokenCipher actionTokenCipher;
     private final MemberRateLimitStore rateLimits;
     private final MemberDeletionJobStore deletionJobs;
     private final MemberSessionStore sessions;
@@ -52,13 +55,15 @@ public class MemberAuthenticationService {
     private final Clock clock;
 
     public MemberAuthenticationService(MemberAccountRepository accounts, MemberActionTokenRepository actionTokens,
-            MemberActionTokenDeliveryPort actionTokenDelivery, MemberRateLimitStore rateLimits, MemberDeletionJobStore deletionJobs, MemberSessionStore sessions,
+            MemberActionMailOutboxStore actionMailOutbox, MemberActionTokenCipher actionTokenCipher,
+            MemberRateLimitStore rateLimits, MemberDeletionJobStore deletionJobs, MemberSessionStore sessions,
             MemberSessionRevocationRecoveryJobStore revocationRecoveryJobs, MemberSessionRevocationStore revocations,
             MemberTokenIssuer tokenIssuer, PasswordEncoder passwordEncoder,
             MemberJwtSettings jwtSettings, Clock memberSessionClock) {
         this.accounts = accounts;
         this.actionTokens = actionTokens;
-        this.actionTokenDelivery = actionTokenDelivery;
+        this.actionMailOutbox = actionMailOutbox;
+        this.actionTokenCipher = actionTokenCipher;
         this.rateLimits = rateLimits;
         this.deletionJobs = deletionJobs;
         this.sessions = sessions;
@@ -91,7 +96,7 @@ public class MemberAuthenticationService {
     @Transactional
     public void resendVerification(String email, String source) {
         String normalizedEmail = normalizeEmail(email);
-        if (!rateLimits.tryAcquireAccountActionRequest(normalizedEmail, source)) {
+        if (!rateLimits.tryAcquireEmailRequest(normalizedEmail)) {
             return;
         }
         accounts.findByEmail(normalizedEmail)
@@ -220,13 +225,11 @@ public class MemberAuthenticationService {
         Duration ttl = purpose == MemberActionPurpose.EMAIL_VERIFICATION
                 ? EMAIL_VERIFICATION_TOKEN_TTL
                 : PASSWORD_RESET_TOKEN_TTL;
-        try {
-            actionTokenDelivery.send(account.email(), purpose, rawToken);
-        } catch (RuntimeException exception) {
-            log.warn("member action-token mail delivery failed: purpose={}", purpose);
-            return;
-        }
-        actionTokens.replace(new MemberActionToken(account.id(), sha256(rawToken), purpose, now.plus(ttl)), now);
+        MemberActionToken actionToken = new MemberActionToken(account.id(), sha256(rawToken), purpose, now.plus(ttl));
+        MemberActionTokenCipher.EncryptedToken encrypted = actionTokenCipher.encrypt(actionToken.id(), purpose, rawToken);
+        actionTokens.replace(actionToken, now);
+        actionMailOutbox.enqueue(new MemberActionMailOutbox(
+                UUID.randomUUID(), actionToken.id(), purpose, encrypted.ciphertext(), encrypted.nonce(), encrypted.keyId()), now);
     }
 
     private MemberActionToken consume(String rawToken, MemberActionPurpose purpose) {
