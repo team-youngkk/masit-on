@@ -141,7 +141,7 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 |---|---|---|---|---|
 | 회원 기반 | `FR-MEMBER-001`~`005`, `FR-AUTH-001`~`003`, 회원 인증 API | `member_account`, `member_action_token`, `member_session_revocation`, 회원 Redis | 이메일 고유성, Action Token 일회성, `sid` 만료까지 폐기 표식 보존 | WS-05 |
 | 찜 | `FR-FAVORITE-001`~`004`, `API-PERSONAL-001`~`004` | `favorite` | `(member_id, restaurant_id)` PK, 회원 삭제 cascade, 맛집 물리 삭제 전 정리 | WS-06 |
-| 최근 본 맛집 | `FR-RECENT-001`~`003`, `API-PERSONAL-005`~`006`, 공개 상세 부수효과 | `recent_restaurant_view` | 복합 PK upsert, 최신 시각순, Command에서 30일·50건 정리, GET은 읽기 전용 | WS-06 |
+| 최근 본 맛집 | `FR-RECENT-001`~`003`, `API-PERSONAL-005`~`006`, 공개 상세 부수효과 | `recent_restaurant_view` | 복합 PK upsert·최신 시각순·50건 상한, 주기 cleanup Command의 30일 물리 삭제, GET은 읽기 전용 | WS-06 |
 | 지도 탐색 | `FR-MAP-001`~`002`, `API-MAP-001` | `restaurant.latitude`, `restaurant.longitude` | nullable WGS84 쌍, 범위 CHECK, 좌표 없음은 지도에서만 제외 | WS-07 |
 | 유튜버 상세 | `FR-CREATOR-004`~`006`, `API-CREATOR-DETAIL-001`~`003` | `creator.profile_image_url`, `description`, `handle`과 기존 Creator·Visit·Video | 선택값은 null 또는 유효한 값, 사용자 조회 중 외부 API 호출 없음 | WS-08 |
 

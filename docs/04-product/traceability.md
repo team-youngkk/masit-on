@@ -166,7 +166,8 @@ related_documents:
 | [NFR-MAINTAINABILITY-003](../01-requirements/non-functional-requirements.md#nfr-maintainability-003-추적성과-운영-복잡도) | 추적성과 운영 복잡도 | 예 | [PRODUCT-001](prd/00-product-overview.md), 전체 기능 PRD | 각 Workstream 담당자 |
 | [NFR-PRIVACY-001](../01-requirements/non-functional-requirements.md#nfr-privacy-001-mvp-개인정보-최소화) | MVP 개인정보 최소화 | 예 | [PRODUCT-001](prd/00-product-overview.md), 전체 기능 PRD | 각 Workstream 담당자 |
 | [NFR-PRIVACY-002](../01-requirements/non-functional-requirements.md#nfr-privacy-002-인증정보와-외부-키-보호) | 인증정보와 외부 키 보호 | 예 | [PRODUCT-001](prd/00-product-overview.md), [ADMIN-001](prd/admin/admin-data-management.md) | 이우람 |
-| [NFR-PRIVACY-003](../01-requirements/non-functional-requirements.md#nfr-privacy-003-회원-기능-도입-시-재검토) | 회원 기능 도입 시 재검토 | 예 | [PRODUCT-001](prd/00-product-overview.md) | MVP 제외, 이우람 리뷰 |
+| [NFR-PRIVACY-003](../01-requirements/non-functional-requirements.md#nfr-privacy-003-회원-개인정보-최소-수집과-생명주기) | 회원 개인정보 최소 수집과 생명주기 | 예 | [PRD-ACCOUNT-001](prd/account/member-authentication.md), [PRD-PERSONAL-001](prd/personal/personal-restaurant-management.md) | WS-05·WS-06, 박진영 리뷰 |
+| [NFR-PRIVACY-004](../01-requirements/non-functional-requirements.md#nfr-privacy-004-위치와-행동-데이터-최소화) | 위치와 행동 데이터 최소화 | 예 | [PRD-PERSONAL-001](prd/personal/personal-restaurant-management.md), [PRD-DISCOVERY-003](prd/discovery/map-discovery.md) | WS-06·WS-07, 김인안 리뷰 |
 
 공통 NFR의 주 문서는 [PRD-PRODUCT-001](prd/00-product-overview.md)이다. `전체 조회 PRD`는 [API-DISCOVERY-001](../05-specs/api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색), [DISCOVERY-002](prd/discovery/creator-discovery.md)와 [API-DETAIL-001](../05-specs/api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회)을 뜻하며, `전체 기능 PRD`는 네 기능 PRD 전체를 뜻한다.
 
@@ -194,7 +195,7 @@ related_documents:
 - 여러 주 PRD에 중복 배정된 요구사항: 없음
 - 담당자 또는 Workstream 없는 기능 PRD: 없음
 - 기능 요구사항 없이 생성된 기능 PRD: 없음
-- MVP 제외 기능을 구현 대상으로 포함한 PRD: 없음. [NFR-PRIVACY-003](../01-requirements/non-functional-requirements.md#nfr-privacy-003-회원-기능-도입-시-재검토)은 범위 재검토 표지로만 유지한다.
+- MVP 제외 기능을 구현 대상으로 포함한 PRD: 없음. [NFR-PRIVACY-003](../01-requirements/non-functional-requirements.md#nfr-privacy-003-회원-개인정보-최소-수집과-생명주기)과 [NFR-PRIVACY-004](../01-requirements/non-functional-requirements.md#nfr-privacy-004-위치와-행동-데이터-최소화)은 1차 확장 회원·개인화·지도 범위의 완료 기준으로 추적한다.
 - 상위 제품 PRD와 기능 PRD 범위 충돌: 없음
 - 상세 결정: 인증은 Spring Security JWT·Redis Refresh Token, 상세 조합은 `com.masiton.orchestration.application.query`, 외부 API timeout은 연결 2초·전체 응답 5초를 사용하고 성능 수치는 비기능 요구사항을 따른다.
 

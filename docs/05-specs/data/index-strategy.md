@@ -74,6 +74,7 @@ V3~V5 인덱스는 해당 전진 Flyway에서 테이블·열 추가와 함께 �
 |---|---|---|
 | `ix_favorite__member_favorited` | `(member_id, favorited_at DESC, restaurant_id)` | 현재 회원 찜 목록의 최신순·안정 정렬 |
 | `ix_recent_restaurant_view__member_viewed` | `(member_id, last_viewed_at DESC, restaurant_id)` | 최근 본 목록의 최신순·안정 정렬과 50건 초과 정리 대상 선택 |
+| `ix_recent_restaurant_view__cleanup_viewed` | `(last_viewed_at)` | 주기 cleanup Command의 30일 경과 기록 범위 삭제 |
 | `ix_restaurant__public_coordinate_bounds` | `(latitude, longitude) WHERE publication_status='PUBLIC' AND lifecycle_status='ACTIVE' AND latitude IS NOT NULL AND longitude IS NOT NULL` | WGS84 사각 bounds와 공개 지도 마커 조회 |
 
 `favorite`와 `recent_restaurant_view`의 복합 PK는 각각 중복 찜 방지와 upsert 충돌 키를 제공한다. Creator 상세는 PK 한 건 조회이므로 V5 표시 열만을 위한 별도 인덱스를 만들지 않는다.

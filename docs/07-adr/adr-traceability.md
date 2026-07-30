@@ -86,9 +86,9 @@ related_documents:
 | Java + Jsoup | 확정이나 자동화 제외 | Post-MVP ADR | [ADR-AUTO-001](adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) | 자동 수집 제외 |
 | Playwright | 필요 시 | Conditional ADR | [ADR-CRAWL-001](adr-backlog.md#adr-crawl-001-playwright-도입) | JS 렌더링 필요 검증 후 도입 |
 | n8n | 확정이나 자동화 제외 | Post-MVP ADR | [ADR-AUTO-001](adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) | 자동 수집·동기화 제외 |
-| Spring Scheduler | 확정이나 자동화 제외 | Post-MVP ADR | [ADR-AUTO-001](adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) | 자동 주기 실행 제외 |
+| Spring Scheduler | 최근 기록 보존에 한해 채택 | 제한된 ADR 채택 | [ADR-AUTO-001](adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) | `recent_restaurant_view` 30일 cleanup Command만 하루 한 번 이상 실행; 자동 수집·동기화 제외 |
 | Spring Batch 6.0.4 | 고정이나 자동화 제외 | Post-MVP ADR | [ADR-AUTO-001](adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) | 이력·재시작 배치 범위 없음 |
-| 하루 1회 새벽 배치 | 확정 설정이나 기능 제외 | Operational Configuration | [ADR-AUTO-001](adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) | 활성화되지 않은 실행 주기 |
+| 하루 1회 이상 최근 기록 cleanup | 1차 확장 적용 | Operational Configuration | [ADR-AUTO-001](adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) | 신규 조회와 독립된 30일 경과 `recent_restaurant_view` 물리 삭제; 실패 관측·재시도 |
 | Spring AI 2.0.0 | 고정이나 범위 제외 | Post-MVP ADR | [ADR-AI-001](adr-backlog.md#adr-ai-001-spring-ai와-gemini-영상-정보-추출) | AI 영상 추출 제외 |
 | `gemini-3-flash-preview` | 승인된 Preview이나 범위 제외 | Post-MVP ADR | [ADR-AI-001](adr-backlog.md#adr-ai-001-spring-ai와-gemini-영상-정보-추출) | AI 기능 활성화 전 사용 금지 |
 | JSON Schema + Prompt Template | 확정이나 범위 제외 | Post-MVP ADR | [ADR-AI-001](adr-backlog.md#adr-ai-001-spring-ai와-gemini-영상-정보-추출) | AI 추출 계약은 기능과 함께 활성화 |
@@ -127,7 +127,7 @@ related_documents:
 | [NFR-DEPLOYMENT-001](../01-requirements/non-functional-requirements.md#nfr-deployment-001-재현-가능한-빌드와-환경-분리)~[NFR-DEPLOYMENT-002](../01-requirements/non-functional-requirements.md#nfr-deployment-002-배포-전후-검증) | [ADR-BUILD-001](platform/build-001-gradle-groovy.md), [ADR-WEB-003](platform/web-003-routing-boundary.md), [ADR-RUNTIME-001](platform/runtime-001-docker.md), [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | 재현 빌드, 로컬 통합과 초기 운영 배포 검증 |
 | [NFR-DEPLOYMENT-003](../01-requirements/non-functional-requirements.md#nfr-deployment-003-버전-추적과-복구-절차)~[NFR-DEPLOYMENT-004](../01-requirements/non-functional-requirements.md#nfr-deployment-004-단계별-실행-및-초기-운영-배포-복잡도-제한) | [ADR-DATA-004](data/data-004-flyway.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | 단계별 실행과 초기 운영 배포 복구·복잡도 |
 | [NFR-MAINTAINABILITY-001](../01-requirements/non-functional-requirements.md#nfr-maintainability-001-책임과-의존성-경계)~[NFR-MAINTAINABILITY-003](../01-requirements/non-functional-requirements.md#nfr-maintainability-003-추적성과-운영-복잡도) | [ADR-ARCH-001](architecture/arch-001-domain-monolith.md), [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md), [ADR-ARCH-003](adr-backlog.md#adr-arch-003-조회-확장-패턴), [ADR-ARCH-004](adr-backlog.md#adr-arch-004-멀티모듈독립-배포-전환) | 책임 경계, 조회 확장, 배포 경계와 운영 복잡도 제한 |
-| [NFR-PRIVACY-001](../01-requirements/non-functional-requirements.md#nfr-privacy-001-mvp-개인정보-최소화)~[NFR-PRIVACY-003](../01-requirements/non-functional-requirements.md#nfr-privacy-003-회원-기능-도입-시-재검토) | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md), [ADR-AUTH-002](security/auth-002-member-jwt-refresh-token.md), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 회원 데이터 최소화와 비밀 보호 |
+| [NFR-PRIVACY-001](../01-requirements/non-functional-requirements.md#nfr-privacy-001-mvp-개인정보-최소화)~[NFR-PRIVACY-004](../01-requirements/non-functional-requirements.md#nfr-privacy-004-위치와-행동-데이터-최소화) | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md), [ADR-AUTH-002](security/auth-002-member-jwt-refresh-token.md), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md), [ADR-AUTO-001](adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) | 회원 데이터 최소화·탈퇴 파기·최근 기록 30일 cleanup과 비밀 보호 |
 
 ## 4. API → ADR 매핑
 

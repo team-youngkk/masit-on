@@ -197,7 +197,8 @@ related_documents:
 | [NFR-MAINTAINABILITY-002](../01-requirements/non-functional-requirements.md#nfr-maintainability-002-공통-정책과-규칙-배치) | 공통 정책과 규칙 배치 | Workstream 적용형 | 각 Workstream 담당자 | 전체 팀 | 이우람 | 배정 완료 |
 | [NFR-MAINTAINABILITY-003](../01-requirements/non-functional-requirements.md#nfr-maintainability-003-추적성과-운영-복잡도) | 추적성과 운영 복잡도 | Workstream 적용형 | 각 Workstream 담당자 | 전체 팀 | 이우람 | 배정 완료 |
 | [NFR-PRIVACY-001](../01-requirements/non-functional-requirements.md#nfr-privacy-001-mvp-개인정보-최소화) | MVP 개인정보 최소화 | Workstream 적용형 | 각 Workstream 담당자 | 전체 팀 | 김인안 | 배정 완료 |
-| [NFR-PRIVACY-003](../01-requirements/non-functional-requirements.md#nfr-privacy-003-회원-기능-도입-시-재검토) | 회원 기능 도입 시 재검토 | Workstream 적용형 | 없음 | 없음 | 이우람 | MVP 제외 |
+| [NFR-PRIVACY-003](../01-requirements/non-functional-requirements.md#nfr-privacy-003-회원-개인정보-최소-수집과-생명주기) | 회원 개인정보 최소 수집과 생명주기 | Workstream 적용형 | 김인안 | [WS-05](../02-analysis/first-expansion-workstreams.md#4-ws-05-사용자-계정인증) 담당자 | 박진영 | 1차 확장 배정 완료 |
+| [NFR-PRIVACY-004](../01-requirements/non-functional-requirements.md#nfr-privacy-004-위치와-행동-데이터-최소화) | 위치와 행동 데이터 최소화 | Workstream 적용형 | 박진영 | [WS-06](../02-analysis/first-expansion-workstreams.md#5-ws-06-개인-맛집-관리)·[WS-07](../02-analysis/first-expansion-workstreams.md#6-ws-07-지도-탐색) 담당자 | 김인안 | 1차 확장 배정 완료 |
 
 ### 공통 기반형
 

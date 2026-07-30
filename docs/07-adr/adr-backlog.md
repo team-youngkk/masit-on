@@ -131,10 +131,11 @@ related_documents:
 
 ### ADR-AUTO-001 자동 수집과 배치 처리
 
-- 현재 상태: Post-MVP
-- 현재 결정: Jsoup, n8n, Spring Scheduler, Spring Batch 6.0.4와 자동 주기 동기화를 도입하지 않는다.
+- 현재 상태: Post-MVP. 단, 1차 확장의 최근 기록 30일 보존을 위한 제한된 Spring Scheduler 실행은 채택한다.
+- 현재 결정: Jsoup, n8n, Spring Batch 6.0.4와 자동 주기 수집·동기화를 도입하지 않는다. Spring Scheduler는 `recent_restaurant_view`의 30일 경과 행을 물리 삭제하는 idempotent cleanup Command에만 하루 한 번 이상 사용할 수 있다.
+- 제한된 채택 경계: cleanup은 외부 API·자동 등록·사용자 요청 처리를 수행하지 않고, 실패를 관측·재시도하며, 회원 조회·상세 조회와 별도 Command 트랜잭션으로 실행한다. 배치 이력·재시작 프레임워크, 분산 락과 별도 워커는 이 범위에 도입하지 않는다.
 - 활성화 조건: 관리자 확인 없는 자동 등록과 구분되는 승인된 수집·검수 흐름이 범위에 포함된다.
-- 도입 전 확인: n8n·Scheduler·Batch 책임 경계, 정확한 n8n·Jsoup 버전, 실행 이력·재시작·중복 방지, 외부 API 비용
+- 도입 전 확인: 자동 수집·동기화에 필요한 n8n·Scheduler·Batch 책임 경계, 정확한 n8n·Jsoup 버전, 실행 이력·재시작·중복 방지, 외부 API 비용
 - 영향: 운영 구성요소, Redis 락, 테스트, 관리자 흐름
 
 ### ADR-NOTIFY-001 FCM 푸시 알림

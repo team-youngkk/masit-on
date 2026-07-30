@@ -197,7 +197,7 @@ related_documents:
 | `restaurant_id` | `uuid` | NN | 없음 | PK 일부, FK → `restaurant.id` | 조회한 맛집 |
 | `last_viewed_at` | 시간 | NN | `CURRENT_TIMESTAMP` |  | 마지막 성공 상세 조회 시각 |
 
-복합 PK `(member_id, restaurant_id)`를 upsert 충돌 키로 사용한다. `member_id` FK는 `ON DELETE CASCADE`, `restaurant_id` FK는 `ON DELETE RESTRICT`다.
+복합 PK `(member_id, restaurant_id)`를 upsert 충돌 키로 사용한다. upsert Command는 회원별 최신 50개 상한만 정리하고, 30일 경과 행은 회원 조회와 독립된 주기 cleanup Command가 물리 삭제한다. `member_id` FK는 `ON DELETE CASCADE`, `restaurant_id` FK는 `ON DELETE RESTRICT`다.
 
 ### 13.3 V4 `restaurant` 좌표 열
 

@@ -120,7 +120,7 @@ Task에 없는 미결정 기술을 구현으로 끌어오지 않는다. 캐시·
 | `FE-01` MVP 탐색 잔여 흐름 종료 | 양성훈 / 이우람 | `FR-RESTAURANT-005`, `FR-CREATOR-001`, `FR-CREATOR-003`; `PRD-DISCOVERY-001/002` | 유튜버 선택 UI, 목록 조건 결합, 환경 기반 API 주소 | `FE-00` | 브라우저 흐름, 목록·Creator API 계약, 빈·오류 상태 | 사용자가 URL 수기 입력 없이 유튜버를 선택하고 다른 탐색 조건과 함께 조회한다. |
 | `FE-02` 회원 데이터·보안 기반 | 김인안 / 박진영 | `FR-MEMBER-001`~`005`, `FR-AUTH-001`~`003`; `PRD-ACCOUNT-001` | V2, Member·Action Token·세션 폐기 표식, 회원 Security matcher·principal·Redis namespace | `FE-00` | Flyway V1→V2, Testcontainers, JWT audience 교차 거부, Redis 원자 세션 테스트 | 회원·관리자 경계가 분리되고 V2가 기존 V1 데이터와 호환된다. |
 | `FE-03` 회원 계정·인증 사용자 흐름 | 김인안 / 이우람 | `FR-MEMBER-001`~`005`, `FR-AUTH-001`~`003`; `PRD-ACCOUNT-001` | 가입·인증·재설정·로그인·재발급·로그아웃·현재 회원·탈퇴 API와 화면 | `FE-02` | MockMvc, Redis·PostgreSQL 통합, 브라우저 인증 만료·오류, 계정 열거 방지 | 정상·제한·장애·탈퇴 흐름과 최대 3세션·`sid` 즉시 폐기가 계약대로 동작한다. |
-| `FE-04` 개인 맛집 데이터·API | 박진영 / 김인안 | `FR-FAVORITE-001`~`004`, `FR-RECENT-001`~`003`; `PRD-PERSONAL-001` | V3, Favorite·RecentView 명령·조회, 상세 성공 시 최근 기록 | `FE-02` | V1→V3, 중복 찜 동시성, recent `GREATEST` upsert·50건·30일, 탈퇴 정리 | 관계 고유성·보존·공개 상태·본인 접근 계약이 데이터와 API에서 일치한다. |
+| `FE-04` 개인 맛집 데이터·API | 박진영 / 김인안 | `FR-FAVORITE-001`~`004`, `FR-RECENT-001`~`003`; `PRD-PERSONAL-001` | V3, Favorite·RecentView 명령·조회, 상세 성공 시 최근 기록, 하루 한 번 이상 30일 만료 cleanup Scheduler | `FE-02` | V1→V3, 중복 찜 동시성, recent `GREATEST` upsert·50건 상한·30일 주기 cleanup, 탈퇴 정리 | 관계 고유성·보존·공개 상태·본인 접근 계약이 데이터와 API에서 일치한다. |
 | `FE-05` 개인 맛집 화면·통합 | 박진영 / 김인안 | `FR-FAVORITE-001`~`004`, `FR-RECENT-001`~`003`; `PRD-PERSONAL-001` | 찜 상태·목록, 최근 목록·삭제, 빈·비공개·인증 만료 화면 | `FE-03`, `FE-04` | 브라우저·API 통합, 모바일 빈 상태, 다른 회원 접근 거부 | 로그인 회원이 찜·최근 기록을 관리하고 탈퇴 뒤 개인화 데이터가 남지 않는다. |
 | `FE-06` 지도 좌표·영역 조회 | 양성훈 / 박진영 | `FR-MAP-001`~`002`; `PRD-DISCOVERY-003` | V4, nullable WGS84 좌표, bounds API, 200개 상한·호출 제한·좌표 보강 절차 | `FE-00` | V1→V4, 좌표 CHECK·인덱스, bounds·AND·200개·429 API, 실행계획 | 좌표 없는 기존 맛집은 공개 목록·상세에 남고 지도에서만 제외된다. |
 | `FE-07` 지도 화면·접근성 통합 | 양성훈 / 박진영 | `FR-MAP-001`~`002`; `PRD-DISCOVERY-003` | Kakao 지도·마커·대체 목록·선택 동기화, SDK/키/로그 경계 | `FE-06` | 지원 브라우저, 키보드·스크린 리더·360px, SDK 실패, bounds 로그 제외 | 지도 장애가 대체 목록·다른 공개 조회를 막지 않고 위치·bounds 원문이 로그에 남지 않는다. |
@@ -133,7 +133,7 @@ Task에 없는 미결정 기술을 구현으로 끌어오지 않는다. 캐시·
 |---|---|---|---|
 | WS-05 | `FE-02` | V2, 회원 principal·Security·Redis session | 관리자/회원 audience 교차 거부, 3세션, V1→V2 |
 | WS-05 | `FE-03` | 가입·메일 인증·재설정·로그인·탈퇴 API/화면 | 만료·제한·장애·계정 열거 방지·`sid` 즉시 폐기 |
-| WS-06 | `FE-04` | V3 Favorite·Recent 명령/조회와 상세 성공 부수효과 | 동시 중복 찜, `GREATEST` upsert, 50건·30일, 탈퇴 |
+| WS-06 | `FE-04` | V3 Favorite·Recent 명령/조회와 상세 성공 부수효과 | 동시 중복 찜, `GREATEST` upsert·50건 상한, 30일 주기 cleanup, 탈퇴 |
 | WS-06 | `FE-05` | 찜·최근 목록과 빈·비공개·인증 만료 화면 | 다른 회원 접근 거부, 모바일 상태, 탈퇴 정리 |
 | WS-07 | `FE-06` | V4 좌표, bounds API·제한·보강 절차 | 좌표 CHECK·인덱스·200개·429·NULL 호환 |
 | WS-07 | `FE-07` | Kakao 지도·마커·대체 목록·접근성 | SDK 장애, 360px, 키보드·스크린 리더, bounds 로그 제외 |

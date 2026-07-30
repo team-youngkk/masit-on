@@ -186,7 +186,7 @@ related_documents:
 - 검증 미리보기는 핵심 엔티티를 생성하지 않고 PostgreSQL에 10분 수명의 확인 Token 해시·관리자·자원 종류·후보 스키마 버전·JSONB Snapshot을 저장한다. Token 소비와 Entity 생성 또는 중복 완료는 한 트랜잭션으로 처리한다.
 - 서로 별도인 맛집·Creator·Video 등록을 하나의 거대 트랜잭션으로 묶지 않는다.
 - 회원 탈퇴는 세션·개인화 관계 정리와 개인정보 물리 삭제를 같은 작업 단위로 완료해야 한다.
-- 공개 상세의 Recent upsert Command는 대상 upsert와 회원별 30일·50개 정리를 같은 트랜잭션에서 처리한다.
+- 공개 상세의 Recent upsert Command는 대상 upsert와 회원별 최신 50개 정리를 같은 트랜잭션에서 처리한다. 30일 경과 기록의 물리 삭제는 회원 조회와 독립된 주기 cleanup Command가 수행한다.
 
 ## 8. 애플리케이션 검증과 저장소 제약의 구분
 

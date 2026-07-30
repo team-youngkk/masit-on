@@ -132,7 +132,7 @@ Flyway undo 파일과 하향 migration은 기본 경로로 사용하지 않는�
 | 순서 | 파일 | 변경 | 호환성·검증 |
 |---:|---|---|---|
 | V2 | `V2__add_member_account_security_foundation.sql` | `member_account`, `member_action_token`, `member_session_revocation`과 회원 보안 인덱스 | V1 공개·관리자 데이터 불변, V1→V2 적용 |
-| V3 | `V3__add_member_personal_restaurant_relations.sql` | `favorite`, `recent_restaurant_view`, 복합 PK·FK·회원 목록 인덱스 | 빈 개인화 관계로 적용, V1→V3 적용과 중복 찜/upsert 검증 |
+| V3 | `V3__add_member_personal_restaurant_relations.sql` | `favorite`, `recent_restaurant_view`, 복합 PK·FK·회원 목록 인덱스·최근 기록 만료 cleanup 인덱스 | 빈 개인화 관계로 적용, V1→V3 적용과 중복 찜/upsert·30일 cleanup 실행계획 검증 |
 | V4 | `V4__add_restaurant_coordinates.sql` | nullable `restaurant.latitude`, `restaurant.longitude`, null 쌍·범위 CHECK, 지도 partial B-tree | 기존 Restaurant 좌표는 모두 `NULL`, V1→V4 bounds 검증 |
 | V5 | `V5__add_creator_detail_display_fields.sql` | `creator.profile_image_url`, `description`, `handle` | 기존 Creator 선택 표시값은 `NULL`, V1→V5 공개 상세 null 표현 검증 |
 
