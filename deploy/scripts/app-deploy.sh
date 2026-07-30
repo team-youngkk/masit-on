@@ -28,6 +28,12 @@ install -m 0644 "$STAGE/masiton-frontend.service" /etc/systemd/system/masiton-fr
 aws ecr get-login-password --region "$REGION" \
   | docker login --username AWS --password-stdin "$REGISTRY" >/dev/null
 
+# 두 이미지를 모두 준비한 뒤에 활성 참조를 함께 교체한다. 백엔드 참조를 먼저
+# 기록하면 프론트엔드 조회나 pull이 실패했을 때 실행 중 컨테이너는 그대로여도
+# 다음 재기동부터 백엔드만 새 버전으로 떠 혼합 버전이 남는다.
+staged=$(mktemp -d)
+trap 'rm -rf "$staged"' EXIT
+
 for component in backend frontend; do
   repository="masiton-${component}"
   digest=$(aws ecr describe-images --region "$REGION" \
@@ -39,8 +45,13 @@ for component in backend frontend; do
   fi
   reference="${REGISTRY}/${repository}@${digest}"
   docker pull "$reference" >/dev/null
-  printf '%s\n' "$reference" > "$OPT_DIR/etc/${component}.image"
+  printf '%s\n' "$reference" > "$staged/${component}.image"
   echo "${component}: ${digest}"
+done
+
+# 여기까지 왔으면 두 이미지가 모두 로컬에 있다. 이제 활성 참조를 교체한다.
+for component in backend frontend; do
+  install -m 0644 "$staged/${component}.image" "$OPT_DIR/etc/${component}.image"
 done
 
 systemctl daemon-reload

@@ -53,11 +53,31 @@ ready=$(probe ready "")
 db=$(probe dependencies db)
 redis=$(probe dependencies redis)
 
-aws cloudwatch put-metric-data --region "$REGION" --namespace "$NAMESPACE" \
-  --metric-data \
-  "MetricName=HealthLive,Value=$live,Unit=None,Dimensions=[{Name=InstanceId,Value=$instance_id}]" \
-  "MetricName=HealthReady,Value=$ready,Unit=None,Dimensions=[{Name=InstanceId,Value=$instance_id}]" \
-  "MetricName=DependencyPostgres,Value=$db,Unit=None,Dimensions=[{Name=InstanceId,Value=$instance_id}]" \
-  "MetricName=DependencyRedis,Value=$redis,Unit=None,Dimensions=[{Name=InstanceId,Value=$instance_id}]"
+# Nginx에 **설치된** 인증서의 남은 일수를 올린다. ACM의 DaysToExpiry는 ACM이 가진
+# 인증서만 보므로, ACM이 갱신했는데 EC2 재배포가 실패한 경우를 잡지 못한다.
+# 계획 4.1절이 감시하려는 위험이 정확히 그 경우다.
+CERT="${TLS_CERT:-/etc/nginx/tls/masiton.click.fullchain.pem}"
+cert_days=""
+if [ -f "$CERT" ]; then
+  not_after=$(openssl x509 -in "$CERT" -noout -enddate 2>/dev/null | cut -d= -f2)
+  if [ -n "$not_after" ]; then
+    cert_days=$(( ( $(date -d "$not_after" +%s) - $(date +%s) ) / 86400 ))
+  fi
+fi
 
-echo "live=$live ready=$ready postgres=$db redis=$redis"
+metric_data=(
+  "MetricName=HealthLive,Value=$live,Unit=None,Dimensions=[{Name=InstanceId,Value=$instance_id}]"
+  "MetricName=HealthReady,Value=$ready,Unit=None,Dimensions=[{Name=InstanceId,Value=$instance_id}]"
+  "MetricName=DependencyPostgres,Value=$db,Unit=None,Dimensions=[{Name=InstanceId,Value=$instance_id}]"
+  "MetricName=DependencyRedis,Value=$redis,Unit=None,Dimensions=[{Name=InstanceId,Value=$instance_id}]"
+)
+# 인증서를 읽지 못했으면 지표를 올리지 않는다. 0을 올리면 만료 임박으로 오탐하고,
+# 임의값을 올리면 실제 만료를 가린다. 지표가 끊기면 알람이 breaching으로 잡는다.
+if [ -n "$cert_days" ]; then
+  metric_data+=("MetricName=InstalledCertificateDaysToExpiry,Value=$cert_days,Unit=Count,Dimensions=[{Name=InstanceId,Value=$instance_id}]")
+fi
+
+aws cloudwatch put-metric-data --region "$REGION" --namespace "$NAMESPACE" \
+  --metric-data "${metric_data[@]}"
+
+echo "live=$live ready=$ready postgres=$db redis=$redis cert_days=${cert_days:-미확인}"
