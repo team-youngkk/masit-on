@@ -70,7 +70,7 @@ class FlywayMigrationIntegrationTest {
         // then
         assertThat(rows)
                 .extracting(row -> row.get("version"))
-                .containsExactly("1", "2");
+                .containsExactly("1", "2", "3");
         assertThat(rows)
                 .allSatisfy(row -> assertThat(row.get("success")).isEqualTo(Boolean.TRUE));
     }
@@ -129,6 +129,39 @@ class FlywayMigrationIntegrationTest {
                 Integer.class);
 
         assertThat(memberAccountTables).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("V3 찜과 최근 본 맛집 테이블의 키와 조회 및 정리 인덱스를 생성한다")
+    void V3_개인맛집관리_테이블키인덱스생성() {
+        Integer tables = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM information_schema.tables "
+                        + "WHERE table_schema = 'public' "
+                        + "AND table_name IN ('favorite', 'recent_restaurant_view')",
+                Integer.class);
+        Integer primaryKeys = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM information_schema.table_constraints "
+                        + "WHERE table_schema = 'public' "
+                        + "AND table_name IN ('favorite', 'recent_restaurant_view') "
+                        + "AND constraint_type = 'PRIMARY KEY'",
+                Integer.class);
+        Integer foreignKeys = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM information_schema.table_constraints "
+                        + "WHERE table_schema = 'public' "
+                        + "AND table_name IN ('favorite', 'recent_restaurant_view') "
+                        + "AND constraint_type = 'FOREIGN KEY'",
+                Integer.class);
+        Integer indexes = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM pg_indexes WHERE schemaname = 'public' "
+                        + "AND indexname IN ('ix_favorite__member_favorited', "
+                        + "'ix_recent_restaurant_view__member_viewed', "
+                        + "'ix_recent_restaurant_view__cleanup_viewed')",
+                Integer.class);
+
+        assertThat(tables).isEqualTo(2);
+        assertThat(primaryKeys).isEqualTo(2);
+        assertThat(foreignKeys).isEqualTo(4);
+        assertThat(indexes).isEqualTo(3);
     }
 
     @Test
