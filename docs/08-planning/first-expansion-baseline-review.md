@@ -47,8 +47,8 @@ related_documents:
 | Creator 표시 정보 | 채널 ID·이름·URL과 공개·생명주기·외부 이용 상태만 보유. 프로필·소개·핸들·구독자 없음 |
 | 프론트 | 공개 목록·상세, 관리자 로그인·등록 Route, 공개 유튜버 선택 UI(E1-T02, PR #67) 구현 |
 | Flyway | 단일 `V1__create_initial_schema.sql` baseline. 다음 변경은 `V2` 이상 새 파일 |
-| 테스트 | 백엔드 테스트 45개 클래스·229개 케이스가 있으나 현재 실행은 테스트 클래스 로딩 단계에서 실패. 프론트 타입 검사·빌드는 성공 |
-| CI | `.github/workflows`가 없어 자동 품질 게이트 미구현 |
+| 테스트 | 백엔드 테스트 클래스 로딩 실패 4건을 E1-T01(PR #63)이 고쳐 CI에서 통과한다. 프론트 타입 검사·빌드는 계속 성공 |
+| CI | E1-T01(PR #63)이 `.github/workflows/ci.yml`(백엔드 빌드·테스트, 프론트엔드 빌드·타입 검사)을 추가해 `NFR-TEST-003` 품질 게이트를 충족한다 |
 
 ## 4. 1차 MVP 완료·미완료 기능
 
@@ -231,25 +231,25 @@ V1 내부 적용 순서는 다음과 같다.
 | `npm --prefix frontend run typecheck` | 성공 |
 | `npm --prefix frontend run build` | 성공. App Route 10개 생성 |
 
-백엔드 실패는 assertion 실패가 아니라 Gradle test worker의 classpath·실행 환경 단계 실패다. 컴파일 결과물에는 대상 `.class` 파일이 존재했으므로 저장소 결함인지 현재 로컬 실행 환경 문제인지는 미확인 상태다. 원인을 해결해 229개 테스트의 실제 통과 여부를 다시 확인해야 한다.
+백엔드 실패는 assertion 실패가 아니라 Gradle test worker의 classpath·실행 환경 단계 실패다. 컴파일 결과물에는 대상 `.class` 파일이 존재했으므로 저장소 결함인지 현재 로컬 실행 환경 문제인지는 조사 당시 미확인 상태였다.
+
+이 표는 2026-07-29 기준선 조사 당시의 실행 로그다. E1-T01(PR #63)이 CI에서 실패하던 백엔드 테스트 4건을 고쳤고, `.github/workflows/ci.yml`의 `백엔드 빌드·테스트` job이 이후 PR부터 통과한다.
 
 프론트 빌드 중 npm audit가 high severity 취약점 3건을 보고했지만 빌드 종료 코드는 성공이었다. 버전 변경은 ADR과 별도 검토 없이 수행하지 않는다.
 
 ### 11.3 CI
 
-`.github/workflows` 디렉터리가 없어 GitHub Actions 또는 다른 저장소 CI 품질 게이트가 없다. [NFR-TEST-003](../01-requirements/non-functional-requirements.md#nfr-test-003-배포-품질-게이트)은 각 확장 단계에서 자동 빌드·테스트와 실패 차단을 Critical로 요구하므로 현재 미충족이다.
+조사 당시 `.github/workflows` 디렉터리가 없어 GitHub Actions 또는 다른 저장소 CI 품질 게이트가 없었다. E1-T01(PR #63)이 `.github/workflows/ci.yml`에 `백엔드 빌드·테스트`, `프론트엔드 빌드·타입 검사` 두 job을 추가해 [NFR-TEST-003](../01-requirements/non-functional-requirements.md#nfr-test-003-배포-품질-게이트)을 충족한다. `develop`·`main` ruleset의 필수 상태 검사도 이 두 job 이름과 연결됐다.
 
-[MVP 로컬 검증 결과](mvp-local-verification.md)는 2026-07-28 기준 229개 테스트 성공을 기록하지만, 같은 문서에서 CI 부재를 후속 위험으로 분리한다. 현재 기준선은 과거 성공 기록과 별개로 오늘의 재실행 실패와 CI 부재를 함께 사용한다.
+[MVP 로컬 검증 결과](mvp-local-verification.md)는 2026-07-28 기준 229개 테스트 성공을 기록했었다. 조사 당시(2026-07-29 오전)에는 이 성공 기록과 별개로 로컬 재실행이 실패하고 CI도 없었으나, 같은 날 E1-T01(PR #63)이 두 문제를 함께 해결했다.
 
 ## 12. 확장 계획 전에 해결할 기준선 결함
 
 | 우선순위 | 항목 | 이유 |
 |---|---|---|
-| Critical | CI 품질 게이트 부재 | 확정 `NFR-TEST-003` 미충족 |
-| High | 백엔드 테스트 재실행 실패 원인 확인 | 현재 커밋의 자동화 통과 상태를 증명할 수 없음 |
 | Medium | 방문 관계 영상 UUID 수기 입력 | 관리자가 등록된 영상을 안정적으로 선택하기 어려움 |
 
-`유튜버 선택 UI 부재`(High)와 `목록 API의 localhost 고정`(High)은 E1-T02(PR #67)로 해결해 표에서 제외했다.
+`CI 품질 게이트 부재`(Critical)와 `백엔드 테스트 재실행 실패 원인 확인`(High)은 E1-T01(PR #63)로, `유튜버 선택 UI 부재`(High)와 `목록 API의 localhost 고정`(High)은 E1-T02(PR #67)로 해결해 표에서 제외했다.
 
 ## 13. 당시 결정 필요 사항의 해소와 후속 Task
 
