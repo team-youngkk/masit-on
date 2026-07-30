@@ -76,6 +76,26 @@ class RestaurantRegistrationServiceTest {
     }
 
     @Test
+    @DisplayName("카카오가 유효 좌표를 반환하면 확인 Token의 Snapshot에 좌표를 포함한다")
+    void 미리보기_카카오좌표반환_TokenSnapshot에좌표를포함한다() {
+        // given
+        prepareReferences();
+        when(placeVerificationPort.verify(any(), any(), any())).thenReturn(Optional.of(verifiedPlace()));
+        when(restaurantRepository.findByKakaoPlaceId("place-1")).thenReturn(Optional.empty());
+        when(confirmationTokenUseCase.issue(any())).thenReturn(
+                new IssuedConfirmationToken("opaque-token", OffsetDateTime.parse("2026-07-27T12:10:00Z")));
+        org.mockito.ArgumentCaptor<com.masiton.security.application.ConfirmationTokenIssueCommand> captor =
+                org.mockito.ArgumentCaptor.forClass(com.masiton.security.application.ConfirmationTokenIssueCommand.class);
+
+        // when
+        service.preview(command());
+
+        // then
+        verify(confirmationTokenUseCase).issue(captor.capture());
+        assertThat(captor.getValue().candidateSnapshot()).contains("37.5665", "126.9780");
+    }
+
+    @Test
     @DisplayName("동일 Kakao 장소는 미리보기에서 기존 맛집을 반환하고 Token을 만들지 않는다")
     void 미리보기_동일카카오장소_DUPLICATE기존자원반환하고토큰발급하지않는다() {
         // given
@@ -186,7 +206,9 @@ class RestaurantRegistrationServiceTest {
                 "맛잇온 테스트 식당",
                 "https://place.map.kakao.com/place-1",
                 "부산광역시 해운대구 해운대로 1",
-                "02-000-0000")));
+                "02-000-0000",
+                null,
+                null)));
 
         assertThatThrownBy(() -> service.preview(command()))
                 .isInstanceOf(com.masiton.common.web.BusinessException.class)
@@ -218,7 +240,9 @@ class RestaurantRegistrationServiceTest {
                 "맛잇온 테스트 식당",
                 "https://place.map.kakao.com/place-1",
                 "서울특별시 마포구 월드컵로 1",
-                "02-000-0000");
+                "02-000-0000",
+                new java.math.BigDecimal("37.5665"),
+                new java.math.BigDecimal("126.9780"));
     }
 
     private AcquiredConfirmationToken acquired(UUID tokenId, ConfirmationTokenStatus status, UUID resultResourceId) {
@@ -236,7 +260,8 @@ class RestaurantRegistrationServiceTest {
                 {"regionId":"%s","foodCategoryId":"%s","kakaoPlaceId":"place-1",
                 "name":"맛잇온 테스트 식당","district":"마포구","category":"한식",
                 "kakaoPlaceUrl":"https://place.map.kakao.com/place-1",
-                "roadAddress":"서울특별시 마포구 월드컵로 1","detailAddress":null,"phoneNumber":"02-000-0000"}
+                "roadAddress":"서울특별시 마포구 월드컵로 1","detailAddress":null,"phoneNumber":"02-000-0000",
+                "latitude":null,"longitude":null}
                 """.formatted(regionId, categoryId);
     }
 
@@ -244,7 +269,7 @@ class RestaurantRegistrationServiceTest {
         return new Restaurant(
                 id, regionId, categoryId, "기존 맛집", placeId,
                 "https://place.map.kakao.com/" + placeId,
-                "서울특별시 마포구 월드컵로 1", null, "02-000-0000",
+                "서울특별시 마포구 월드컵로 1", null, "02-000-0000", null, null,
                 PublicationStatus.PUBLIC, LifecycleStatus.ACTIVE, null, null, null);
     }
 }

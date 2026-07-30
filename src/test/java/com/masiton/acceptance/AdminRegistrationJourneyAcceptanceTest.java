@@ -120,6 +120,14 @@ class AdminRegistrationJourneyAcceptanceTest {
                 .andExpect(jsonPath("$.videos[0].id").value(videoId));
         mockMvc.perform(get("/api/creators"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.items[0].id").value(creatorId));
+
+        java.math.BigDecimal[] coordinate = jdbcTemplate.queryForObject(
+                "select latitude, longitude from restaurant where id = ?::uuid",
+                (resultSet, rowNum) -> new java.math.BigDecimal[] {
+                        resultSet.getBigDecimal("latitude"), resultSet.getBigDecimal("longitude")},
+                restaurantId);
+        assertThat(coordinate[0]).isEqualByComparingTo("37.566500");
+        assertThat(coordinate[1]).isEqualByComparingTo("126.978000");
     }
 
     @Test
