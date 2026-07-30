@@ -13,7 +13,8 @@ STAGE="${1:-/tmp/masiton-deploy}"
 OPT_DIR=/opt/masiton
 
 for f in nginx.conf masiton.click.conf 00-masiton-upgrade-map.conf \
-         masiton-tls-renew.service masiton-tls-renew.timer tls-deploy-cert.sh; do
+         masiton-tls-renew.service masiton-tls-renew.timer tls-deploy-cert.sh \
+         basic-auth-render.sh nginx-basic-auth.dropin.conf; do
   [ -f "$STAGE/$f" ] || { echo "스테이징에 $f 가 없다: $STAGE" >&2; exit 1; }
 done
 
@@ -24,6 +25,15 @@ echo "nginx: $(nginx -v 2>&1)"
 
 install -d -m 0755 "$OPT_DIR/bin"
 install -m 0750 "$STAGE/tls-deploy-cert.sh" "$OPT_DIR/bin/tls-deploy-cert.sh"
+install -m 0750 "$STAGE/basic-auth-render.sh" "$OPT_DIR/bin/basic-auth-render.sh"
+
+# M2-11 Basic Auth. htpasswd가 tmpfs에 있어 Nginx 기동 전에 매번 렌더링해야 하므로
+# drop-in의 ExecStartPre로 보장한다. 설정을 얹기 전에 한 번 실행해 두지 않으면
+# auth_basic_user_file이 없는 상태로 기동해 모든 요청이 500이 된다.
+install -d -m 0755 /etc/systemd/system/nginx.service.d
+install -m 0644 "$STAGE/nginx-basic-auth.dropin.conf" \
+  /etc/systemd/system/nginx.service.d/10-masiton-basic-auth.conf
+AWS_REGION="${AWS_REGION:-ap-northeast-2}" "$OPT_DIR/bin/basic-auth-render.sh"
 
 # 인증서를 먼저 내려받아야 Nginx가 기동한다. ssl_certificate 파일이 없으면
 # 설정 검사부터 실패한다.
@@ -41,8 +51,11 @@ fi
 install -m 0644 "$STAGE/nginx.conf" /etc/nginx/nginx.conf
 
 nginx -t
-systemctl enable --now nginx >/dev/null
-systemctl reload nginx
+# drop-in을 얹었으므로 daemon-reload가 필요하고, reload가 아니라 restart를 해야
+# ExecStartPre가 실행된다.
+systemctl daemon-reload
+systemctl enable nginx >/dev/null
+systemctl restart nginx
 
 install -m 0644 "$STAGE/masiton-tls-renew.service" /etc/systemd/system/masiton-tls-renew.service
 install -m 0644 "$STAGE/masiton-tls-renew.timer" /etc/systemd/system/masiton-tls-renew.timer
