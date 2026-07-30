@@ -30,7 +30,7 @@ M2 초기 운영 배포에서 생성한 AWS 자원의 식별자와 완료 조건
 | 접근 방식 | IAM Identity Center 조직 인스턴스 `ssoins-7230c72b8df2ccaf`, 권한 세트 `AdministratorAccess`(세션 8시간) |
 | CLI 프로파일 | `masiton` (SSO. 장기 액세스 키 없음) |
 
-**이 계정은 맛잇온 전용이 아니다.** 2026-06-05에 만든 다른 프로젝트의 ECR 리포지토리 `commerce-payment`(이미지 8개)가 있고 삭제된 RDS의 로그 그룹 `RDSOSMetrics`가 남아 있다. 예산 범위 영향은 11절에 적었다.
+**이 계정은 맛잇온 전용이 아니다.** 2026-06-05에 만든 다른 프로젝트의 ECR 리포지토리 `commerce-payment`(이미지 8개)가 있고 삭제된 RDS의 로그 그룹 `RDSOSMetrics`가 남아 있다. 예산 범위 영향은 12절에 적었다.
 
 ## 3. M2-03 네트워크와 EC2 (#42)
 
@@ -291,7 +291,7 @@ PR 브랜치는 AWS 자격 증명을 받지 못한다. **이미지 빌드와 검
 | `.env` 파일 | 0건 | 0건 |
 | 평문 비밀 패턴 | 0건 | 0건 |
 | 플랫폼 | `linux/arm64` | `linux/arm64` |
-| 컨테이너 기동 | 미확인 (12절) | Next.js 16.2.11 기동, `/` → `200` |
+| 컨테이너 기동 | 미확인 (13절) | Next.js 16.2.11 기동, `/` → `200` |
 
 평문 비밀 검사는 `BEGIN PRIVATE KEY`, `BEGIN RSA PRIVATE KEY`, `JWT_PRIVATE_KEY_PEM`, `POSTGRES_PASSWORD`, `masiton_local` 다섯 패턴을 이미지 파일 시스템에서 찾는 방식이다. 백엔드 `/app`에는 `application.jar` 하나만 있고 빌드 컨텍스트 잔여물이 없다.
 
@@ -548,7 +548,16 @@ reload가 master 프로세스를 바꾸지 않으므로 **인증서 교체에 �
 
 컨테이너는 `--network host`로 실행한다. [ADR-RUNTIME-001](../07-adr/platform/runtime-001-docker.md) 11절이 운영 설정의 Docker 서비스명을 금지하므로 앱이 저장소에 `127.0.0.1`로 붙어야 하고, Nginx도 `127.0.0.1`의 8080·3000으로 전달한다. 브리지 네트워크로는 두 방향이 함께 성립하지 않는다.
 
-비밀값은 `docker run -e VAR` **통과 형식**으로만 넘긴다. `-e VAR=값`으로 쓰면 같은 인스턴스의 `ps`와 `docker inspect`에 평문이 남는다. 환경 파일은 만들지 않는다.
+비밀값은 `docker run -e VAR` **통과 형식**으로만 넘긴다. 환경 파일도 만들지 않는다. 실제로 무엇이 막히고 무엇이 남는지 인스턴스에서 측정했다.
+
+| 노출 경로 | 결과 |
+|---|---|
+| `ps auxww` (프로세스 명령행) | **0건.** argv에 `-e JWT_PRIVATE_KEY_PEM`처럼 이름만 있고 값이 없다 |
+| `/proc/<pid>/environ` | `root` 소유 `0400` |
+| 디스크의 환경 파일 | 없음 |
+| **`docker inspect masiton-backend`** | **JWT 개인키 평문이 보인다** |
+
+**`docker inspect` 노출은 통과 형식으로 막을 수 없다.** 컨테이너에 환경 변수로 주입하는 방식이면 값이 컨테이너 스펙(`Config.Env`)에 들어가기 때문이다. Docker 소켓에 접근할 수 있는 주체(실질적으로 root)만 조회할 수 있고, 그 주체는 이미 Parameter Store를 IAM Role로 읽을 수 있으므로 새 권한 경계가 생기는 것은 아니다. 통과 형식의 실효는 **명령행 노출을 없애는 것**이다.
 
 `prod` 프로파일은 저장소 접속값과 JWT 키에 기본값을 두지 않아 값이 없으면 기동이 실패한다. **Kakao·YouTube Key만 빈 기본값을 허용한다.** Key 없이도 공개 탐색·상세와 상태 확인이 동작하므로 배포와 Key 발급을 분리했다.
 
@@ -660,7 +669,97 @@ Basic Auth는 제한 공개 수단이며 관리자 인증을 대체하지 않는
 aws ssm get-parameter --profile masiton --name /masiton/access/basic-auth-password --with-decryption --query Parameter.Value --output text
 ```
 
-## 11. 예산 범위에 관한 확인 사항
+## 11. M2-10 CloudWatch 로그·지표·알람 (#49)
+
+구성 일시 2026-07-30. **부분 완료다.** Slack 도달 시험만 남았고 이유는 11.4절에 있다.
+
+### 11.1. 로그 수집
+
+| 로그 그룹 | 원본 | 보관 |
+|---|---|---|
+| `/masiton/nginx/access` | `/var/log/nginx/access.log` (JSON) | 14일 |
+| `/masiton/nginx/error` | `/var/log/nginx/error.log` | 14일 |
+| `/masiton/containers` | `/var/lib/docker/containers/*/*-json.log` | 14일 |
+
+수집은 CloudWatch Agent `1.300067.1`(arm64)이 한다. 설정은 [`deploy/cloudwatch/amazon-cloudwatch-agent.json`](../../deploy/cloudwatch/amazon-cloudwatch-agent.json)이고 호스트 지표로 `MemoryUsedPercent`·`DiskUsedPercent`를 함께 올린다.
+
+**Nginx 로그 포맷을 JSON으로 바꿨다.** 배포판 기본 `main` 포맷에는 응답 시간이 없어 p95를 계산할 수 없었다. `status`와 `request_time`을 필드로 남겨 지표 필터가 읽는다. 요청·응답 본문은 남기지 않는다(ADR-OBS-001 11장).
+
+컨테이너 로그는 `json-file` 드라이버를 그대로 두고 Agent가 파일을 tail한다. `awslogs` 드라이버로 바꾸면 컨테이너별 로그 그룹을 나눌 수 있지만 `docker logs`와 systemd journal에서 로그가 사라진다. **대가로 세 컨테이너 로그가 한 스트림에 섞인다.** 구분이 필요해지면 그때 드라이버 전환을 판단한다.
+
+`log_stream_name`에 `{filename}`을 쓰면 리터럴로 들어간다. Agent가 지원하는 것은 `{instance_id}`·`{hostname}`·`{local_hostname}`·`{ip_address}`·`{date}`다. 초기 스트림 `i-0b451f18bca827cc9-{filename}`이 그 흔적이며 14일 후 만료된다.
+
+### 11.2. 지표 필터
+
+`/masiton/nginx/access`에 세 개를 걸었다.
+
+| 필터 | 패턴 | 지표 |
+|---|---|---|
+| `masiton-request-count` | `{ $.status >= 100 }` | `masiton/nginx RequestCount` |
+| `masiton-server-error-count` | `{ $.status >= 500 }` | `masiton/nginx ServerErrorCount` |
+| `masiton-request-time` | `{ $.request_time >= 0 }` | `masiton/nginx RequestTimeSeconds` (값은 `$.request_time`) |
+
+상태 확인은 `/internal/**`이 인터넷에서 차단돼 외부 감시로 볼 수 없으므로 인스턴스 안에서 1분 주기로 호출해 지표로 올린다([`health-metrics.sh`](../../deploy/scripts/health-metrics.sh), `masiton-health-metrics.timer`). 정상 1 / 실패 0이고 `masiton/health` 네임스페이스에 `HealthLive`·`HealthReady`·`DependencyPostgres`·`DependencyRedis`로 남는다.
+
+### 11.3. 알람
+
+| 알람 | 조건 | 상태 |
+|---|---|---|
+| `masiton-server-error-rate` | 5분 구간 `IF(total>0, 100*5xx/total, 0)` ≥ 5 | `OK` |
+| `masiton-latency-p95` | 5분 구간 `RequestTimeSeconds` p95 > 2초 | `OK` |
+| `masiton-health-ready-failure` | `HealthReady` < 1이 연속 3회(1분 주기) | `OK` |
+| `masiton-dependency-postgres-failure` | `DependencyPostgres` < 1이 연속 3회 | `OK` |
+| `masiton-dependency-redis-failure` | `DependencyRedis` < 1이 연속 3회 | `OK` |
+
+**저장소 알람을 둘로 나눈 이유**는 완료 조건이 "PostgreSQL·Redis 연결 실패가 각각 저장소 장애 알림을 발생시킨다"를 요구하기 때문이다. 하나로 묶으면 어느 저장소가 죽었는지 알림만으로 알 수 없다.
+
+오류율 알람은 metric math를 쓴다. 전체 요청이 0이면 `IF`가 0을 반환해 트래픽 없는 구간의 오탐을 막는다. 상태 확인 알람은 `treat-missing-data breaching`이다. 지표가 끊긴 것 자체가 인스턴스나 timer 장애이므로 정상으로 보면 안 된다.
+
+### 11.4. 알림 경로
+
+```text
+CloudWatch 알람 → SNS masiton-alerts → Lambda masiton-slack-notifier → Slack Incoming Webhook
+```
+
+| 자원 | 값 |
+|---|---|
+| SNS 토픽 | `arn:aws:sns:ap-northeast-2:711457211155:masiton-alerts` |
+| Lambda | `masiton-slack-notifier` (python3.13, arm64, 128 MB, 15초) |
+| 실행 역할 | `masiton-slack-notifier-role` (`AWSLambdaBasicExecutionRole` + `/masiton/alerts/*` 읽기) |
+| 코드 | [`deploy/lambda/slack_notifier.py`](../../deploy/lambda/slack_notifier.py). 표준 라이브러리와 boto3만 사용 |
+
+**Webhook URL은 코드와 환경 변수에 넣지 않고 Parameter Store SecureString `/masiton/alerts/slack-webhook-url`에서 읽는다.** URL 자체가 그 채널에 글을 쓸 수 있는 자격 증명이다.
+
+**이 파라미터가 아직 없다.** Slack Incoming Webhook 발급은 워크스페이스 설정 작업이라 담당자가 직접 해야 한다. 등록하면 알람이 즉시 Slack으로 흐른다.
+
+```bash
+aws ssm put-parameter --profile masiton --name /masiton/alerts/slack-webhook-url --type SecureString --key-id alias/aws/ssm --tags Key=Project,Value=masit-on --value "발급받은_Webhook_URL"
+```
+
+AWS Chatbot을 쓰지 않은 이유는 ADR-OBS-001이 알림 채널을 **Slack Webhook**으로 명시했고 Chatbot은 Webhook이 아니라 Slack 앱 인증 방식이라 ADR 개정이 필요하기 때문이다.
+
+### 11.5. 완료 조건 검증
+
+| 완료 조건 | 결과 |
+|---|---|
+| 시험 알람이 Slack에 실제로 도달한다 | **미완** — Webhook URL 미발급(11.4절) |
+| PostgreSQL·Redis 연결 실패가 각각 저장소 장애 알림을 발생시킨다 | 알람 2종을 구분해 구성. 실제 장애 주입은 `M2-13` fail-closed 시험과 함께 한다 |
+| 로그에 비밀번호·JWT·API 키 원문이 없다 | 통과 |
+
+로그 검사는 패턴과 실제 값 두 방식으로 했다.
+
+```text
+패턴(BEGIN PRIVATE KEY|JWT_PRIVATE_KEY_PEM|requirepass|Bearer eyJ|eyJraWQ)
+  nginx access.log      -> 0건
+  nginx error.log       -> 0건
+  컨테이너 로그          -> 0건
+실제 값 대조(admin·redis·tls·db 네 비밀값 문자열)
+  전체                  -> 0건
+```
+
+패턴만으로는 형식이 다른 값을 놓칠 수 있으므로 Parameter Store의 실제 값을 읽어 문자열 일치도 함께 확인했다.
+
+## 12. 예산 범위에 관한 확인 사항
 
 `My Monthly Cost Budget`(`$100`/월)은 **계정 전체 비용**을 대상으로 한다. 2절에 적었듯 이 계정에는 다른 프로젝트 자원이 있어 그 비용도 이 예산에 합산된다.
 
@@ -672,7 +771,7 @@ aws ssm get-parameter --profile masiton --name /masiton/access/basic-auth-passwo
 
 비용 할당 태그는 활성화 후 최대 24시간이 지나야 새 데이터에 적용되므로 M2 일정 안에서는 즉시 쓸 수 없다.
 
-### 11.1. 크레딧 만료
+### 12.1. 크레딧 만료
 
 **계정 크레딧 4건이 2026-07-29에 전량 만료됐다.** 따라서 M2 운영 비용은 전액 실제 청구다.
 
@@ -689,11 +788,12 @@ aws ssm get-parameter --profile masiton --name /masiton/access/basic-auth-passwo
 
 `M2-12` 시점에 실제 청구액과 산정치를 대조한다(계획 10절 마지막 완료 항목).
 
-## 12. 검증하지 못한 항목
+## 13. 검증하지 못한 항목
 
 - **예산 초과 알림 실제 도달.** 시험 예산 `masiton-alert-test`(한도 `$0.5`, 실제 1% 초과)를 만들어 확인 중이다. AWS Budgets가 하루 약 3회만 평가해 즉시 도달하지 않는다. 도달 확인 후 시험 예산을 삭제한다.
 - **SSH 접속.** 키 페어 `masiton-app`을 만들었으나 실제 SSH 접속은 시도하지 않았다. 인스턴스 접근은 SSM RunCommand로 검증했다.
 - **Kakao·YouTube 운영 API Key.** 2026-07-30 기준 아직 발급받지 않아 Parameter Store에 없다. `prod` 프로파일이 이 두 값만 빈 기본값을 허용하므로 배포와 공개 조회에는 영향이 없고, **관리자 등록 흐름 4종은 Key 없이 실패한다.** 발급 후 `/masiton/integration/kakao/rest-api-key`·`/masiton/integration/youtube/api-key`에 등록하고 백엔드를 재기동해야 하며, 등록 흐름 검증은 `M2-12`에서 한다.
 - **로그인 실패 제한.** 실패 카운터의 `source`가 연결 원격 주소 기준이고 Nginx 경유 요청이 모두 `127.0.0.1`로 보여, 5회 실패를 만들면 15분 동안 모든 출처의 로그인이 막힌다. `M2-12`에서 시점을 정해 확인한다(9.5절).
 - **Redis 장애 시 fail-closed.** ADR-DATA-005 12절의 재발급 차단과 재로그인 복구는 `M2-13`에서 확인한다.
-- **CloudWatch 로그·지표·알람.** `M2-10` 범위이며 아직 착수하지 않았다. 인증서 만료 임박 감시도 여기에 포함한다(8.2절).
+- **Slack 알람 도달.** `M2-10`을 구성했으나 Slack Incoming Webhook URL이 없어 도달 시험을 못 했다(11.4절). URL 등록만 남았다.
+- **인증서 만료 임박 감시.** 8.2절이 요구한 항목이며 `M2-10` 알람 5종에 아직 포함하지 않았다. ACM 갱신 자체는 자동이고 감시는 재배포 실패를 잡기 위한 것이다.
