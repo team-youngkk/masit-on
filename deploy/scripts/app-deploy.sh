@@ -16,21 +16,24 @@ REGION="${AWS_REGION:-ap-northeast-2}"
 REGISTRY="711457211155.dkr.ecr.${REGION}.amazonaws.com"
 OPT_DIR=/opt/masiton
 
-for f in app-run.sh masiton-backend.service masiton-frontend.service; do
+# app-secrets-render.sh도 배포 산출물이다. backend unit의 ExecStartPre가
+# /opt/masiton/bin/app-secrets-render.sh를 실행하므로 설치하지 않으면 새 인스턴스는
+# 파일 없음으로 기동에 실패하고, 기존 인스턴스는 렌더러 변경이 배포에 반영되지 않는다.
+for f in app-run.sh app-secrets-render.sh masiton-backend.service masiton-frontend.service; do
   [ -f "$STAGE/$f" ] || { echo "스테이징에 $f 가 없다: $STAGE" >&2; exit 1; }
 done
-
-install -d -m 0755 "$OPT_DIR/bin" "$OPT_DIR/etc"
-install -m 0750 "$STAGE/app-run.sh" "$OPT_DIR/bin/app-run.sh"
-install -m 0644 "$STAGE/masiton-backend.service" /etc/systemd/system/masiton-backend.service
-install -m 0644 "$STAGE/masiton-frontend.service" /etc/systemd/system/masiton-frontend.service
 
 aws ecr get-login-password --region "$REGION" \
   | docker login --username AWS --password-stdin "$REGISTRY" >/dev/null
 
-# 두 이미지를 모두 준비한 뒤에 활성 참조를 함께 교체한다. 백엔드 참조를 먼저
-# 기록하면 프론트엔드 조회나 pull이 실패했을 때 실행 중 컨테이너는 그대로여도
-# 다음 재기동부터 백엔드만 새 버전으로 떠 혼합 버전이 남는다.
+# 두 이미지를 모두 준비한 뒤에 활성 참조와 실행 산출물을 함께 교체한다. 백엔드
+# 참조를 먼저 기록하면 프론트엔드 조회나 pull이 실패했을 때 실행 중 컨테이너는
+# 그대로여도 다음 재기동부터 백엔드만 새 버전으로 떠 혼합 버전이 남는다.
+#
+# 실행 스크립트와 unit도 같은 이유로 여기서 미룬다. 이미지 준비 전에 활성 경로에
+# 덮어쓰면 이후 단계가 실패했을 때 이미지 참조와 실행 중 컨테이너는 이전 버전인데
+# 다음 재기동부터 새 app-run.sh·unit이 적용된다. 설정 형식이나 사전 실행 조건이
+# 함께 바뀐 배포에서는 실패한 배포가 재부팅 후 장애를 만든다.
 staged=$(mktemp -d)
 trap 'rm -rf "$staged"' EXIT
 
@@ -49,7 +52,13 @@ for component in backend frontend; do
   echo "${component}: ${digest}"
 done
 
-# 여기까지 왔으면 두 이미지가 모두 로컬에 있다. 이제 활성 참조를 교체한다.
+# 여기까지 왔으면 두 이미지가 모두 로컬에 있다. 이제 활성 경로를 교체한다.
+install -d -m 0755 "$OPT_DIR/bin" "$OPT_DIR/etc"
+install -m 0750 "$STAGE/app-run.sh" "$OPT_DIR/bin/app-run.sh"
+install -m 0750 "$STAGE/app-secrets-render.sh" "$OPT_DIR/bin/app-secrets-render.sh"
+install -m 0644 "$STAGE/masiton-backend.service" /etc/systemd/system/masiton-backend.service
+install -m 0644 "$STAGE/masiton-frontend.service" /etc/systemd/system/masiton-frontend.service
+
 for component in backend frontend; do
   install -m 0644 "$staged/${component}.image" "$OPT_DIR/etc/${component}.image"
 done
