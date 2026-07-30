@@ -83,7 +83,7 @@ related_documents:
 
 - 담당자 / 리뷰어: 박진영 / 김인안
 - 관련 계약: `FR-FAVORITE-001`~`004`, `FR-RECENT-001`~`003`; `PRD-PERSONAL-001`; [개인 맛집 API](../05-specs/api/personal/personal-restaurant-api.md), [맛집 상세 API](../05-specs/api/detail/restaurant-detail-api.md)
-- 테이블·ADR: V3 `favorite`, `recent_restaurant_view`; [ADR-DATA-003](../07-adr/data/data-003-spring-data-jpa.md), [ADR-AUTH-002](../07-adr/security/auth-002-member-jwt-refresh-token.md), [ADR-AUTO-001](../07-adr/adr-backlog.md#adr-auto-001-자동-수집과-배치-처리)
+- 테이블·ADR: V3 `favorite`, `recent_restaurant_view`; [ADR-DATA-003](../07-adr/data/data-003-spring-data-jpa.md), [ADR-DATA-010](../07-adr/data/data-010-recent-view-retention-cleanup.md), [ADR-AUTH-002](../07-adr/security/auth-002-member-jwt-refresh-token.md)
 - 수정 예상 영역: 신규 개인화 도메인/Port, Flyway V3, 맛집 상세 성공 시 최근 기록 부수효과, 하루 한 번 이상 30일 만료 cleanup Scheduler와 관측·재시도, 본인 자원 인가·탈퇴 정리
 - 선행 / 병렬 / 크기: `E1-T03` / `E1-T04`와 가능 / L
 - 테스트 범위: V1→V3, 중복·동시 찜, `GREATEST` upsert·최신 50건 상한, 30일 주기 cleanup, 비공개 맛집 숨김, 다른 회원 접근·탈퇴 정리

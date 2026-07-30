@@ -158,7 +158,7 @@ related_documents:
 - 적용 데이터: `creator.profile_image_url`, `creator.description`, `creator.handle`
 - 제약: 선택값은 `NULL` 또는 빈 문자열이 아닌 값이다. 프로필 이미지 URL은 저장 시 HTTPS URL이어야 하며 handle은 외부 채널 ID를 대체하는 고유 키가 아니다.
 - 보장 수준: PostgreSQL CHECK와 관리자 확인 흐름
-- 관련 규칙/API: [BR-CREATOR-002](../../01-requirements/business-rules.md#br-creator-002-creator-표시-정보), [API-CREATOR-DETAIL-001](../api/detail/creator-detail-api.md#api-creator-detail-001-유튜버-기본-상세-조회)
+- 관련 규칙/API: [BR-CREATOR-009](../../01-requirements/business-rules.md#br-creator-009-유튜버-상세-표시-정보), [API-CREATOR-DETAIL-001](../api/detail/creator-detail-api.md#api-creator-detail-001-유튜버-기본-상세-조회)
 
 ## 5. 상태 제약
 

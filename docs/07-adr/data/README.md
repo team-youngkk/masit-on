@@ -9,6 +9,8 @@ related_documents:
   - data-005-redis-refresh-token.md
   - data-007-uuid-v4-identifiers.md
   - data-008-publication-lifecycle-soft-delete.md
+  - data-009-pre-release-migration-consolidation.md
+  - data-010-recent-view-retention-cleanup.md
 ---
 
 # 데이터 ADR
@@ -24,4 +26,5 @@ related_documents:
 | [ADR-DATA-005](data-005-redis-refresh-token.md) | Redis 8.8 관리자 Refresh Token 저장소 |
 | [ADR-DATA-007](data-007-uuid-v4-identifiers.md) | 애플리케이션 생성 UUID v4 내부 식별자 |
 | [ADR-DATA-008](data-008-publication-lifecycle-soft-delete.md) | 공개 상태와 논리 삭제 생명주기 분리 |
-
+| [ADR-DATA-009](data-009-pre-release-migration-consolidation.md) | 운영 배포 전 마이그레이션 통합 범위 |
+| [ADR-DATA-010](data-010-recent-view-retention-cleanup.md) | 최근 본 맛집 보존 기간 정리 실행 |

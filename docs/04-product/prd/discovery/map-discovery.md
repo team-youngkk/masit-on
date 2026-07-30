@@ -210,11 +210,11 @@ WS-07은 지도·목록 연결과 최종 사용자 상태를 책임진다. Resta
 
 - [지도 탐색 API](../../../05-specs/api/discovery/map-discovery-api.md)
 
-- [1차 확장 범위](../../../00-overview/scope.md#51-1차-확장-확정-범위)
-- [기능 요구사항](../../../01-requirements/functional-requirements.md#55-지도-기반-탐색)
-- [비즈니스 규칙](../../../01-requirements/business-rules.md#14-지도-기반-탐색-규칙)
+- [1차 확장 범위](../../../00-overview/scope.md#51-1차-확장)
+- [기능 요구사항](../../../01-requirements/functional-requirements.md#fr-map-001-kakao-지도와-맛집-마커-표시)
+- [비즈니스 규칙](../../../01-requirements/business-rules.md#br-map-001-지도-표시-대상과-좌표)
 - [비기능 요구사항](../../../01-requirements/non-functional-requirements.md)
-- [도메인 경계](../../../02-analysis/domain-boundaries.md#지도-기능의-책임-위치)
+- [도메인 경계](../../../02-analysis/domain-boundaries.md)
 - [맛집 탐색 PRD](restaurant-discovery.md)
 - [1차 확장 Workstream](../../../02-analysis/first-expansion-workstreams.md#6-ws-07-지도-탐색)
 - [1차 확장 사용자 흐름](../../user-flows/first-expansion-user-flows.md#7-지도-탐색)

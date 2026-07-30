@@ -228,7 +228,7 @@ related_documents:
 
 - [개인 맛집 관리 API](../../../05-specs/api/personal/personal-restaurant-api.md)
 
-- [1차 확장 범위](../../../00-overview/scope.md#51-1차-확장-확정-범위)
+- [1차 확장 범위](../../../00-overview/scope.md#51-1차-확장)
 - [기능 요구사항](../../../01-requirements/functional-requirements.md)
 - [비즈니스 규칙](../../../01-requirements/business-rules.md)
 - [비기능 요구사항](../../../01-requirements/non-functional-requirements.md)
