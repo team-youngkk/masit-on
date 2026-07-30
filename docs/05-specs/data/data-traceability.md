@@ -135,14 +135,26 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 | 조회 인덱스 | [index-strategy.md](index-strategy.md) | API 조회·성능 NFR |
 | 스키마 배포·기준 데이터 | [migration-plan.md](migration-plan.md), [seed-data-plan.md](seed-data-plan.md) | [ADR-DATA-004](../../07-adr/data/data-004-flyway.md) |
 
-## 9. 미매핑 항목
+## 9. 1차 확장 데이터 추적
+
+| 범위 | 요구사항·API | 소유 데이터 | 생명주기·제약 | Workstream |
+|---|---|---|---|---|
+| 회원 기반 | `FR-MEMBER-001`~`005`, `FR-AUTH-001`~`003`, 회원 인증 API | `member_account`, `member_action_token`, `member_session_revocation`, 회원 Redis | 이메일 고유성, Action Token 일회성, `sid` 만료까지 폐기 표식 보존 | WS-05 |
+| 찜 | `FR-FAVORITE-001`~`004`, `API-PERSONAL-001`~`004` | `favorite` | `(member_id, restaurant_id)` PK, 회원 삭제 cascade, 맛집 물리 삭제 전 정리 | WS-06 |
+| 최근 본 맛집 | `FR-RECENT-001`~`003`, `API-PERSONAL-005`~`006`, 공개 상세 부수효과 | `recent_restaurant_view` | 복합 PK upsert, 최신 시각순, Command에서 30일·50건 정리, GET은 읽기 전용 | WS-06 |
+| 지도 탐색 | `FR-MAP-001`~`002`, `API-MAP-001` | `restaurant.latitude`, `restaurant.longitude` | nullable WGS84 쌍, 범위 CHECK, 좌표 없음은 지도에서만 제외 | WS-07 |
+| 유튜버 상세 | `FR-CREATOR-004`~`006`, `API-CREATOR-DETAIL-001`~`003` | `creator.profile_image_url`, `description`, `handle`과 기존 Creator·Visit·Video | 선택값은 null 또는 유효한 값, 사용자 조회 중 외부 API 호출 없음 | WS-08 |
+
+각 물리 계약은 [테이블 정의](table-definitions.md#13-1차-확장-v3v5-데이터-계약), [제약조건](constraints.md), [인덱스 전략](index-strategy.md#5-1차-확장-인덱스), [생명주기 규칙](lifecycle-rules.md#101-회원-개인화-관계-정리), [마이그레이션 계획](migration-plan.md#9-1차-확장-전진-마이그레이션-순서)을 함께 따른다.
+
+## 10. 미매핑 항목
 
 - Restaurant 설명·대표 이미지·영업 정보는 확정 요구사항/API가 없어 저장 모델에서 제외했다.
-- Creator 프로필 이미지, Video 게시일의 외부 API 노출, Visit 방문일·검증 상태·검증자는 MVP에서 제외하거나 선택 데이터다.
+- Creator 구독자 수·조회 수 같은 통계와 Video 게시일의 외부 API 노출, Visit 방문일·검증 상태·검증자는 저장 모델에서 제외하거나 선택 데이터다. V5 상세 표시 필드인 Creator 프로필 이미지·소개·handle은 저장 계약에 포함한다.
 - 수정·삭제·승인·보류 목록 API가 없으므로 관련 운영 전환은 API 변경으로 만들지 않았다.
 - 로그인 실패 제한 카운터는 저장 방식이 미정이다. 확인 Token은 PostgreSQL 단기 기술 테이블로 확정됐지만 핵심 도메인 ERD에는 포함하지 않는다.
 
-## 10. 변경 영향 추적
+## 11. 변경 영향 추적
 
 - 지역 단계·범위 변경: Region, Restaurant, 탐색/등록 API와 [BR-RESTAURANT-005](../../01-requirements/business-rules.md#br-restaurant-005-맛집의-지역-소속)를 함께 검토한다.
 - 다중 카테고리 변경: Restaurant–FoodCategory 카디널리티, 필터 API와 [BR-RESTAURANT-004](../../01-requirements/business-rules.md#br-restaurant-004-대표-음식-카테고리)를 함께 변경한다.

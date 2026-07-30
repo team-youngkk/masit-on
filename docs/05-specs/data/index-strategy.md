@@ -66,13 +66,25 @@ WHERE publication_status='PUBLIC' AND lifecycle_status='ACTIVE';
 
 Creator 필터는 `visit`에서 고유 Restaurant ID를 구한 뒤 Restaurant의 공개 상태와 추가 필터를 결합한다. 중복 제거를 위해 `SELECT DISTINCT restaurant_id` 또는 `EXISTS`를 사용하고, JPA 연관 컬렉션 전체 로딩으로 구현하지 않는다.
 
-## 5. 통계와 검증
+## 5. 1차 확장 인덱스
+
+V3~V5 인덱스는 해당 전진 Flyway에서 테이블·열 추가와 함께 생성한다. 기존 V1 인덱스는 수정하지 않는다.
+
+| 이름 | 정의 요약 | 지원 쿼리 |
+|---|---|---|
+| `ix_favorite__member_favorited` | `(member_id, favorited_at DESC, restaurant_id)` | 현재 회원 찜 목록의 최신순·안정 정렬 |
+| `ix_recent_restaurant_view__member_viewed` | `(member_id, last_viewed_at DESC, restaurant_id)` | 최근 본 목록의 최신순·안정 정렬과 50건 초과 정리 대상 선택 |
+| `ix_restaurant__public_coordinate_bounds` | `(latitude, longitude) WHERE publication_status='PUBLIC' AND lifecycle_status='ACTIVE' AND latitude IS NOT NULL AND longitude IS NOT NULL` | WGS84 사각 bounds와 공개 지도 마커 조회 |
+
+`favorite`와 `recent_restaurant_view`의 복합 PK는 각각 중복 찜 방지와 upsert 충돌 키를 제공한다. Creator 상세는 PK 한 건 조회이므로 V5 표시 열만을 위한 별도 인덱스를 만들지 않는다.
+
+## 6. 통계와 검증
 
 - Flyway 적용 후 `ANALYZE`를 수동 DDL로 넣지 않는다. 테스트 fixture 적재 뒤 테스트가 명시적으로 `ANALYZE`한다.
 - CI 성능 smoke test는 공개/비공개, 관계 없음, Creator당 복수 Video, Video당 복수 Restaurant를 포함한다.
 - 핵심 쿼리는 예상 인덱스 이름만 단정하지 않고 결과·쿼리 수·상한 시간과 실행계획의 sequential scan 규모를 함께 검토한다.
 - 초기 데이터가 작아 planner가 sequential scan을 고르는 것은 오류가 아니다.
 
-## 6. 운영 점검
+## 7. 운영 점검
 
 출시 후 `pg_stat_user_indexes`로 사용 횟수와 크기를 확인한다. 장기간 미사용 인덱스도 즉시 삭제하지 않고 쿼리 빈도·FK 보조 역할을 확인한 뒤 전진 마이그레이션으로 제거한다. 인덱스 추가·제거는 운영 수동 DDL이 아니라 Flyway만 사용한다.

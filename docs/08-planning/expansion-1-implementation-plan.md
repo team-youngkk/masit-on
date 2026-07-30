@@ -65,7 +65,7 @@ Task에 없는 미결정 기술을 구현으로 끌어오지 않는다. 캐시·
 | 회원 인증 정책·API·데이터·ADR | 확정 | `FE-02`~`FE-05`는 [ADR-AUTH-002](../07-adr/security/auth-002-member-jwt-refresh-token.md)와 회원 API·데이터 계약을 구현한다. |
 | 지도 좌표·영역 조회·외부 SDK ADR | 확정 | `FE-06`~`FE-07`은 [ADR-MAP-001](../07-adr/integration/map-001-map-bounds-search.md) 밖의 공간 기능을 추가하지 않는다. |
 | Creator 상세 API·데이터 계약 | 확정 | `FE-08`은 저장된 Creator·Visit·Restaurant·Video만 조회하며 사용자 조회 중 YouTube API를 호출하지 않는다. |
-| V2~V5 Flyway 순서 | 확정 | [마이그레이션 계획](../05-specs/data/migration-plan.md#9-1차-확장-전진-마이그레이션-순서)을 지키고 V1을 수정하지 않는다. |
+| V2~V5 Flyway 순서 | 확정 | [마이그레이션 계획](../05-specs/data/migration-plan.md#9-1차-확장-전진-마이그레이션-순서)을 지키고 V1을 수정하지 않는다. 세부 테이블·열·제약·인덱스는 [테이블 정의](../05-specs/data/table-definitions.md#13-1차-확장-v3v5-데이터-계약), [제약조건](../05-specs/data/constraints.md), [인덱스 전략](../05-specs/data/index-strategy.md#5-1차-확장-인덱스)을 기준으로 구현한다. |
 | MVP 잔여 사용자 흐름·품질 게이트 | 기준선 결함 | `FE-00`·`FE-01`에서 먼저 닫거나, 해당 미완료 상태를 1차 확장 완료로 오인하지 않는다. |
 
 ## 5. 구현 순서와 선행 관계

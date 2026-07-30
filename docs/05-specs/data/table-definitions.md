@@ -73,13 +73,15 @@ related_documents:
 | `road_address` | `varchar(255)` | NN | 없음 | trim 1~255 | 서울 전체 도로명주소 |
 | `detail_address` | `varchar(200)` | Yes | `NULL` | null 또는 빈 값 금지 | 상세 위치 |
 | `phone_number` | `varchar(20)` | NN | 없음 | 길이 7~20, 허용 문자 | 확인된 전화번호 |
+| `latitude` | `numeric(9,6)` | Yes | `NULL` | `-90..90`, longitude와 null 쌍 | WGS84 위도 |
+| `longitude` | `numeric(9,6)` | Yes | `NULL` | `-180..180`, latitude와 null 쌍 | WGS84 경도 |
 | `publication_status` | `varchar(16)` | NN | `'PUBLIC'` | `PUBLIC/PRIVATE` | 공개 상태 |
 | `lifecycle_status` | `varchar(16)` | NN | `'ACTIVE'` | `ACTIVE/DELETED` | 삭제 상태 |
 | `created_at` | 시간 | NN | `CURRENT_TIMESTAMP` |  | 생성 시각 |
 | `updated_at` | 시간 | NN | `CURRENT_TIMESTAMP` |  | 변경 시각 |
 | `deleted_at` | 시간 | Yes | `NULL` | lifecycle과 쌍 | 삭제 시각 |
 
-`OTHER`도 다른 FoodCategory와 같은 표준 참조 행이며 Restaurant에 별도 보충 이름 컬럼을 두지 않는다.
+`OTHER`도 다른 FoodCategory와 같은 표준 참조 행이며 Restaurant에 별도 보충 이름 컬럼을 두지 않는다. 좌표는 둘 다 값이 있거나 둘 다 `NULL`이어야 하며, 좌표가 없어도 일반 목록·상세 공개 대상에서는 제외되지 않는다.
 
 ## 6. `creator`
 
@@ -88,6 +90,9 @@ related_documents:
 | `id` | `uuid` | NN | 없음 | PK | API 식별자 |
 | `external_channel_id` | `varchar(64)` | NN | 없음 | UK, 빈 값 금지 | YouTube 채널 ID |
 | `channel_name` | `text` | NN | 없음 | 빈 값 금지 | 현재 표시 이름; 외부 제공자 길이에 임의 상한을 두지 않음 |
+| `profile_image_url` | `varchar(2048)` | Yes | `NULL` | null 또는 빈 값 금지 | 공개 상세용 프로필 이미지 URL |
+| `description` | `text` | Yes | `NULL` | null 또는 빈 값 금지 | 공개 상세용 채널 소개 |
+| `handle` | `varchar(255)` | Yes | `NULL` | null 또는 빈 값 금지 | 공개 상세용 채널 handle |
 | `channel_url` | `varchar(2048)` | NN | 없음 | 빈 값 금지 | 정규화된 채널 URL |
 | `publication_status` | `varchar(16)` | NN | `'PUBLIC'` | `PUBLIC/PRIVATE` | 공개 상태 |
 | `lifecycle_status` | `varchar(16)` | NN | `'ACTIVE'` | `ACTIVE/DELETED` | 삭제 상태 |
@@ -168,7 +173,54 @@ related_documents:
 
 회원 탈퇴 또는 세션 폐기 시 Access Token의 `sid`를 만료 시각까지 기록한다. 이 테이블은 회원 FK를 두지 않아 회원 데이터가 물리 삭제된 뒤에도 기존 Access Token을 거부할 수 있다. 같은 `sid`를 다시 기록하면 최초 폐기 시각과 최장 만료 시각을 보존한다.
 
-## 13. Redis 경계
+## 13. 1차 확장 V3~V5 데이터 계약
+
+### 13.1 V3 `favorite`
+
+회원이 맛집을 찜한 현재 상태만 저장하는 관계 테이블이다. 논리 삭제 열을 두지 않으며 해제는 행을 물리 삭제한다.
+
+| 컬럼 | SQL 타입 | Null | 기본값 | 제약조건 | 설명 |
+|---|---|---:|---|---|---|
+| `member_id` | `uuid` | NN | 없음 | PK 일부, FK → `member_account.id` | 찜한 회원 |
+| `restaurant_id` | `uuid` | NN | 없음 | PK 일부, FK → `restaurant.id` | 찜한 맛집 |
+| `favorited_at` | 시간 | NN | `CURRENT_TIMESTAMP` |  | 최초 찜 생성 시각 |
+
+복합 PK `(member_id, restaurant_id)`가 회원별 중복 찜을 원자적으로 막는다. `member_id` FK는 `ON DELETE CASCADE`, `restaurant_id` FK는 `ON DELETE RESTRICT`다.
+
+### 13.2 V3 `recent_restaurant_view`
+
+회원별 맛집 최근 본 기록이다. 한 회원과 맛집 조합은 하나만 유지하고, 공개 맛집 상세의 성공 후 Command에서 `last_viewed_at`을 갱신한다. 별도 생성 시각·논리 삭제 열은 두지 않는다.
+
+| 컬럼 | SQL 타입 | Null | 기본값 | 제약조건 | 설명 |
+|---|---|---:|---|---|---|
+| `member_id` | `uuid` | NN | 없음 | PK 일부, FK → `member_account.id` | 조회한 회원 |
+| `restaurant_id` | `uuid` | NN | 없음 | PK 일부, FK → `restaurant.id` | 조회한 맛집 |
+| `last_viewed_at` | 시간 | NN | `CURRENT_TIMESTAMP` |  | 마지막 성공 상세 조회 시각 |
+
+복합 PK `(member_id, restaurant_id)`를 upsert 충돌 키로 사용한다. `member_id` FK는 `ON DELETE CASCADE`, `restaurant_id` FK는 `ON DELETE RESTRICT`다.
+
+### 13.3 V4 `restaurant` 좌표 열
+
+`V4__add_restaurant_coordinates.sql`은 기존 행을 변경하지 않고 다음 nullable 열을 추가한다. 두 값은 항상 함께 저장하거나 함께 `NULL`이어야 하며, 좌표가 없는 맛집은 일반 공개 조회에는 계속 남고 지도 조회에서만 제외한다.
+
+| 컬럼 | SQL 타입 | Null | 기본값 | 제약조건 | 설명 |
+|---|---|---:|---|---|---|
+| `latitude` | `numeric(9,6)` | Yes | `NULL` | `-90..90`, longitude와 null 쌍 | WGS84 위도 |
+| `longitude` | `numeric(9,6)` | Yes | `NULL` | `-180..180`, latitude와 null 쌍 | WGS84 경도 |
+
+### 13.4 V5 `creator` 상세 표시 열
+
+`V5__add_creator_detail_display_fields.sql`은 관리자가 마지막으로 확인해 저장한 채널 표시 정보만 추가한다. 구독자 수·실시간 외부 조회·표시 정보 이력은 이 범위에 저장하지 않는다.
+
+| 컬럼 | SQL 타입 | Null | 기본값 | 제약조건 | 설명 |
+|---|---|---:|---|---|---|
+| `profile_image_url` | `varchar(2048)` | Yes | `NULL` | 비어 있지 않은 HTTPS URL | 채널 프로필 이미지 |
+| `description` | `text` | Yes | `NULL` | 빈 문자열 금지 | 채널 소개 |
+| `handle` | `varchar(255)` | Yes | `NULL` | 빈 문자열 금지 | 저장된 채널 handle; 고유 식별자로 사용하지 않음 |
+
+기존 `channel_name`, `channel_url`과 위 세 필드는 공개 상세 응답의 `channelName`, `channelUrl`, `profileImageUrl`, `description`, `handle`에 대응한다.
+
+## 14. Redis 경계
 
 `AdminRefreshToken`은 Redis 8.8에만 저장한다. PostgreSQL `admin_account.id` 문자열을 Redis 값의 관리자 참조로 사용하되 DB FK 같은 원자성은 제공하지 않는다. Redis 키·검증값·14일 TTL·회전·재사용 탐지와 로그인 실패 제한은 [관리자 인증 API](../api/admin/authentication-api.md)와 [보안 경계](../../06-architecture/security-boundary.md)의 확정 계약을 따른다. Redis 구조는 이 문서의 PostgreSQL 스키마와 Flyway 대상이 아니다.
 
