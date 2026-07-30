@@ -90,6 +90,9 @@ public class RedisMemberSessionStore implements MemberSessionStore {
             redis.call('DEL', KEYS[1])
             redis.call('DEL', KEYS[2])
             redis.call('INCR', KEYS[3])
+            if #sessionIds == 0 then
+              return '[]'
+            end
             return cjson.encode(sessionIds)
             """, String.class);
 
