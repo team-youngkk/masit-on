@@ -29,7 +29,8 @@ import com.masiton.member.domain.model.MemberStatus;
 @Service
 public class MemberAuthenticationService {
     private static final Duration REFRESH_TOKEN_TTL = Duration.ofDays(14);
-    private static final Duration ACTION_TOKEN_TTL = Duration.ofHours(1);
+    private static final Duration EMAIL_VERIFICATION_TOKEN_TTL = Duration.ofHours(24);
+    private static final Duration PASSWORD_RESET_TOKEN_TTL = Duration.ofMinutes(30);
 
     private final MemberAccountRepository accounts;
     private final MemberActionTokenRepository actionTokens;
@@ -59,8 +60,11 @@ public class MemberAuthenticationService {
     @Transactional
     public void register(String email, String password) {
         String normalizedEmail = normalizeEmail(email);
+        if (normalizedEmail.equals(password)) {
+            throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE);
+        }
         if (accounts.findByEmail(normalizedEmail).isPresent()) {
-            throw new BusinessException(HttpStatus.CONFLICT, "MEMBER_EMAIL_ALREADY_REGISTERED", "Email is already registered");
+            return;
         }
         MemberAccount account = accounts.create(normalizedEmail, passwordEncoder.encode(password), Instant.now(clock));
         issueActionToken(account, MemberActionPurpose.EMAIL_VERIFICATION);
@@ -87,21 +91,24 @@ public class MemberAuthenticationService {
     @Transactional
     public void resetPassword(String rawToken, String password) {
         MemberActionToken token = consume(rawToken, MemberActionPurpose.PASSWORD_RESET);
-        accounts.changePassword(token.memberId(), passwordEncoder.encode(password), Instant.now(clock));
-        sessions.revokeAll(token.memberId().toString());
+        MemberAccount account = accounts.findById(token.memberId()).orElseThrow(() -> new BusinessException(
+                HttpStatus.BAD_REQUEST, "INVALID_PASSWORD_RESET_TOKEN", "The action token is invalid"));
+        if (account.email().equals(password)) {
+            throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE);
+        }
+        Instant now = Instant.now(clock);
+        revokeAllSessions(token.memberId().toString(), now);
+        accounts.changePassword(token.memberId(), passwordEncoder.encode(password), now);
     }
 
     public MemberAuthenticationResult login(String email, String password) {
         MemberAccount account = accounts.findByEmail(normalizeEmail(email))
-                .orElseThrow(() -> new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED));
+                .orElseThrow(this::invalidCredentials);
         if (!passwordEncoder.matches(password, account.passwordHash())) {
-            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
-        }
-        if (account.status() == MemberStatus.PENDING_VERIFICATION) {
-            throw new BusinessException(HttpStatus.FORBIDDEN, "MEMBER_EMAIL_NOT_VERIFIED", "Email verification is required");
+            throw invalidCredentials();
         }
         if (!account.canAuthenticate()) {
-            throw new BusinessException(HttpStatus.FORBIDDEN, "MEMBER_ACCOUNT_UNAVAILABLE", "Account is unavailable");
+            throw invalidCredentials();
         }
         return issueSession(account.id());
     }
@@ -109,30 +116,55 @@ public class MemberAuthenticationService {
     public MemberAuthenticationResult refresh(String refreshToken) {
         try {
             MemberSession session = sessions.rotate(refreshToken, REFRESH_TOKEN_TTL);
+            if (revocations.isRevoked(UUID.fromString(session.sessionId()), Instant.now(clock))) {
+                sessions.revoke(session.memberId(), session.sessionId());
+                throw invalidRefreshToken();
+            }
             MemberAccount account = accounts.findById(UUID.fromString(session.memberId())).filter(MemberAccount::canAuthenticate)
-                    .orElseThrow(() -> new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED));
+                    .orElseThrow(this::invalidRefreshToken);
             return result(account.id(), session);
+        } catch (InvalidMemberSessionException exception) {
+            recordRevocations(exception.revokedSessionIds(), Instant.now(clock));
+            throw invalidRefreshToken();
         } catch (BusinessException exception) {
             throw exception;
         } catch (RuntimeException exception) {
-            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+            throw authenticationServiceUnavailable();
         }
     }
 
-    public void logout(String memberId, String refreshToken) {
-        if (!sessions.matches(memberId, refreshToken)) {
+    public void logout(MemberPrincipal principal, Instant accessTokenExpiresAt, String refreshToken) {
+        MemberSessionOwner owner;
+        try {
+            owner = sessions.findSession(refreshToken).orElse(null);
+        } catch (RuntimeException exception) {
+            revocations.record(new MemberSessionRevocation(
+                    UUID.fromString(principal.sessionId()), Instant.now(clock), accessTokenExpiresAt));
+            throw authenticationServiceUnavailable();
+        }
+        if (owner == null) {
+            revocations.record(new MemberSessionRevocation(
+                    UUID.fromString(principal.sessionId()), Instant.now(clock), accessTokenExpiresAt));
+            return;
+        }
+        if (!principal.memberId().equals(owner.memberId()) || !principal.sessionId().equals(owner.sessionId())) {
             throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
         }
-        sessions.revokeAll(memberId);
+        Instant now = Instant.now(clock);
+        try {
+            revocations.record(new MemberSessionRevocation(UUID.fromString(owner.sessionId()), now, accessTokenExpiresAt));
+            sessions.revoke(owner.memberId(), owner.sessionId());
+        } catch (RuntimeException exception) {
+            throw authenticationServiceUnavailable();
+        }
     }
 
     @Transactional
     public void requestDeletion(MemberPrincipal principal, Instant accessTokenExpiresAt) {
         UUID memberId = UUID.fromString(principal.memberId());
         Instant now = Instant.now(clock);
+        revokeAllSessions(principal.memberId(), now);
         accounts.requestDeletion(memberId, now);
-        sessions.revokeAll(principal.memberId());
-        revocations.record(new MemberSessionRevocation(UUID.fromString(principal.sessionId()), now, accessTokenExpiresAt));
     }
 
     public MemberAccount currentMember(String memberId) {
@@ -141,7 +173,9 @@ public class MemberAuthenticationService {
     }
 
     private MemberAuthenticationResult issueSession(UUID memberId) {
-        return result(memberId, sessions.issue(memberId.toString(), REFRESH_TOKEN_TTL));
+        MemberSession session = sessions.issue(memberId.toString(), REFRESH_TOKEN_TTL);
+        recordRevocations(session.revokedSessionIds(), Instant.now(clock));
+        return result(memberId, session);
     }
 
     private MemberAuthenticationResult result(UUID memberId, MemberSession session) {
@@ -152,13 +186,45 @@ public class MemberAuthenticationService {
     private void issueActionToken(MemberAccount account, MemberActionPurpose purpose) {
         String rawToken = UUID.randomUUID() + "-" + UUID.randomUUID();
         Instant now = Instant.now(clock);
-        actionTokens.replace(new MemberActionToken(account.id(), sha256(rawToken), purpose, now.plus(ACTION_TOKEN_TTL)), now);
+        Duration ttl = purpose == MemberActionPurpose.EMAIL_VERIFICATION
+                ? EMAIL_VERIFICATION_TOKEN_TTL
+                : PASSWORD_RESET_TOKEN_TTL;
+        actionTokens.replace(new MemberActionToken(account.id(), sha256(rawToken), purpose, now.plus(ttl)), now);
         actionTokenDelivery.send(account.email(), purpose, rawToken);
     }
 
     private MemberActionToken consume(String rawToken, MemberActionPurpose purpose) {
-        return actionTokens.consume(rawToken, purpose, Instant.now(clock))
-                .orElseThrow(() -> new BusinessException(HttpStatus.BAD_REQUEST, "MEMBER_ACTION_TOKEN_INVALID", "Action token is invalid"));
+        return actionTokens.consume(rawToken, purpose, Instant.now(clock)).orElseThrow(() -> new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                purpose == MemberActionPurpose.EMAIL_VERIFICATION
+                        ? "INVALID_EMAIL_VERIFICATION_TOKEN"
+                        : "INVALID_PASSWORD_RESET_TOKEN",
+                "The action token is invalid"
+        ));
+    }
+
+    private BusinessException invalidCredentials() {
+        return new BusinessException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", "Invalid email or password");
+    }
+
+    private BusinessException invalidRefreshToken() {
+        return new BusinessException(HttpStatus.UNAUTHORIZED, "INVALID_REFRESH_TOKEN", "Refresh token is invalid");
+    }
+
+    private BusinessException authenticationServiceUnavailable() {
+        return new BusinessException(HttpStatus.SERVICE_UNAVAILABLE,
+                "AUTHENTICATION_SERVICE_UNAVAILABLE", "Authentication service is unavailable");
+    }
+
+    private void revokeAllSessions(String memberId, Instant now) {
+        recordRevocations(sessions.activeSessionIds(memberId), now);
+        sessions.revokeAll(memberId);
+    }
+
+    private void recordRevocations(java.util.Set<String> sessionIds, Instant now) {
+        Instant expiresAt = now.plus(jwtSettings.accessTokenTtl());
+        sessionIds.forEach(sessionId -> revocations.record(
+                new MemberSessionRevocation(UUID.fromString(sessionId), now, expiresAt)));
     }
 
     private String normalizeEmail(String email) {

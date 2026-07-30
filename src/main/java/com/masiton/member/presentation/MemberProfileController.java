@@ -1,6 +1,7 @@
 package com.masiton.member.presentation;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,20 +22,21 @@ public class MemberProfileController {
     }
 
     @GetMapping
-    public MemberResponse current(JwtAuthenticationToken authentication) {
-        return response(service.currentMember(authentication.getName()));
+    public ResponseEntity<MemberResponse> current(JwtAuthenticationToken authentication) {
+        return ResponseEntity.ok().header(HttpHeaders.CACHE_CONTROL, "private, no-store")
+                .body(response(service.currentMember(authentication.getName())));
     }
 
     @DeleteMapping
     public ResponseEntity<Void> requestDeletion(JwtAuthenticationToken authentication) {
         String sessionId = authentication.getToken().getClaimAsString("sid");
         service.requestDeletion(new MemberPrincipal(authentication.getName(), sessionId), authentication.getToken().getExpiresAt());
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.accepted().build();
     }
 
     private MemberResponse response(MemberAccount account) {
-        return new MemberResponse(account.id().toString(), account.email(), account.status().name(), account.emailVerifiedAt());
+        return new MemberResponse(account.id().toString(), account.email());
     }
 
-    public record MemberResponse(String id, String email, String status, java.time.Instant emailVerifiedAt) { }
+    public record MemberResponse(String id, String email) { }
 }

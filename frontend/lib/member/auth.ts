@@ -6,11 +6,17 @@ let accessToken: string | null = null
 let refreshPromise: Promise<string | null> | null = null
 
 async function tokenResponse(response: Response): Promise<string> {
-  if (!response.ok) throw response
+  if (response.status !== 200) throw response
   const body = (await response.json()) as TokenResponse
-  if (!body.accessToken || body.tokenType !== 'Bearer') throw new Error('Invalid authentication response')
+  if (!body.accessToken || body.tokenType !== 'Bearer' || !Number.isInteger(body.expiresInSeconds) || body.expiresInSeconds <= 0) {
+    throw new Error('Invalid authentication response')
+  }
   accessToken = body.accessToken
   return body.accessToken
+}
+
+function requireStatus(response: Response, expectedStatus: number): void {
+  if (response.status !== expectedStatus) throw response
 }
 
 export function clearMemberAccessToken(): void {
@@ -23,22 +29,27 @@ export async function memberLogin(email: string, password: string): Promise<void
 
 export async function memberRegister(email: string, password: string): Promise<void> {
   const response = await fetch('/api/auth/registrations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) })
-  if (!response.ok) throw response
+  requireStatus(response, 202)
+}
+
+export async function resendMemberEmailVerification(email: string): Promise<void> {
+  const response = await fetch('/api/auth/email-verifications/resend', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) })
+  requireStatus(response, 202)
 }
 
 export async function requestPasswordReset(email: string): Promise<void> {
   const response = await fetch('/api/auth/password-resets/requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) })
-  if (!response.ok) throw response
+  requireStatus(response, 202)
 }
 
 export async function verifyMemberEmail(token: string): Promise<void> {
   const response = await fetch('/api/auth/email-verifications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) })
-  if (!response.ok) throw response
+  requireStatus(response, 204)
 }
 
-export async function confirmPasswordReset(token: string, password: string): Promise<void> {
-  const response = await fetch('/api/auth/password-resets/confirmations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, password }) })
-  if (!response.ok) throw response
+export async function confirmPasswordReset(token: string, newPassword: string): Promise<void> {
+  const response = await fetch('/api/auth/password-resets/confirmations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, newPassword }) })
+  requireStatus(response, 204)
 }
 
 async function refreshMemberAccessToken(): Promise<string | null> {

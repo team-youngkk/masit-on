@@ -8,6 +8,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import tools.jackson.core.JacksonException;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Component;
 
 import com.masiton.member.application.InvalidMemberSessionException;
 import com.masiton.member.application.MemberSession;
+import com.masiton.member.application.MemberSessionOwner;
 import com.masiton.member.application.port.out.MemberSessionStore;
 import com.masiton.common.security.MemberSessionSettings;
 
@@ -236,6 +238,30 @@ public class RedisMemberSessionStore implements MemberSessionStore {
         } catch (RuntimeException exception) {
             return false;
         }
+    }
+
+    @Override
+    public Optional<MemberSessionOwner> findSession(String refreshToken) {
+        String sessionId = redisTemplate.opsForValue().get(refreshIndexKey(refreshToken));
+        if (sessionId == null) {
+            sessionId = redisTemplate.opsForValue().get(usedRefreshIndexKey(refreshToken));
+        }
+        if (sessionId == null) {
+            return Optional.empty();
+        }
+        try {
+            MemberSessionRecord record = read(redisTemplate.opsForValue().get(sessionKey(sessionId)));
+            return Optional.of(new MemberSessionOwner(record.memberId(), sessionId));
+        } catch (InvalidMemberSessionException exception) {
+            redisTemplate.delete(List.of(refreshIndexKey(refreshToken), usedRefreshIndexKey(refreshToken)));
+            return Optional.empty();
+        }
+    }
+
+    @Override
+    public java.util.Set<String> activeSessionIds(String memberId) {
+        java.util.Set<String> sessionIds = redisTemplate.opsForZSet().range(memberSessionsKey(memberId), 0, -1);
+        return sessionIds == null ? java.util.Set.of() : java.util.Set.copyOf(sessionIds);
     }
 
     @Override

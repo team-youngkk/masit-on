@@ -24,14 +24,17 @@ public class MemberSessionAccessCheckerAdapter implements MemberSessionAccessChe
     }
 
     @Override
-    public boolean isAllowed(String memberId, String sessionId) {
+    public AccessDecision check(String memberId, String sessionId) {
         try {
             UUID accountId = UUID.fromString(memberId);
             UUID parsedSessionId = UUID.fromString(sessionId);
-            return accounts.findById(accountId).filter(MemberAccount::canAuthenticate).isPresent()
+            boolean allowed = accounts.findById(accountId).filter(MemberAccount::canAuthenticate).isPresent()
                     && !revocations.isRevoked(parsedSessionId, Instant.now());
+            return allowed ? AccessDecision.ALLOWED : AccessDecision.DENIED;
         } catch (IllegalArgumentException exception) {
-            return false;
+            return AccessDecision.DENIED;
+        } catch (RuntimeException exception) {
+            return AccessDecision.UNAVAILABLE;
         }
     }
 }

@@ -6,6 +6,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -25,12 +26,26 @@ public class MemberSessionRevocationFilter extends OncePerRequestFilter {
     }
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String requestUri = request.getRequestURI();
+        return !(requestUri.equals("/api/me") || requestUri.startsWith("/api/me/")
+                || (requestUri.equals("/api/auth/tokens") && HttpMethod.DELETE.matches(request.getMethod())));
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         if (SecurityContextHolder.getContext().getAuthentication() instanceof JwtAuthenticationToken authentication) {
             String sessionId = authentication.getToken().getClaimAsString("sid");
-            if (sessionId != null && !sessionAccessChecker.isAllowed(authentication.getName(), sessionId)) {
+            MemberSessionAccessChecker.AccessDecision decision = sessionId == null
+                    ? MemberSessionAccessChecker.AccessDecision.ALLOWED
+                    : sessionAccessChecker.check(authentication.getName(), sessionId);
+            if (decision != MemberSessionAccessChecker.AccessDecision.ALLOWED) {
                 SecurityContextHolder.clearContext();
+                if (decision == MemberSessionAccessChecker.AccessDecision.UNAVAILABLE) {
+                    errorWriter.authenticationServiceUnavailable(request, response);
+                    return;
+                }
                 errorWriter.commence(request, response, new InsufficientAuthenticationException("Member session is unavailable"));
                 return;
             }

@@ -195,7 +195,11 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
         };
 
         for (String publicPath : publicPaths) {
-            mockMvc.perform(post(publicPath))
+            var request = post(publicPath);
+            if (publicPath.endsWith("/refresh")) {
+                request.header(HttpHeaders.ORIGIN, "http://localhost:3000");
+            }
+            mockMvc.perform(request)
                     .andExpect(publicPath.endsWith("/refresh") ? status().isUnauthorized() : status().isBadRequest());
         }
         mockMvc.perform(post("/api/auth/password-reset-requests"))
