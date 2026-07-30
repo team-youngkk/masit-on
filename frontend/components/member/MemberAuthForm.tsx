@@ -9,6 +9,23 @@ import styles from '@/components/admin/admin.module.css'
 
 type Mode = 'login' | 'signup' | 'request-reset' | 'confirm-reset'
 
+function getSafeReturnTo(): string {
+  const returnTo = new URLSearchParams(window.location.search).get('returnTo')
+  if (!returnTo?.startsWith('/') || returnTo.startsWith('//')) {
+    return '/me'
+  }
+
+  try {
+    const destination = new URL(returnTo, window.location.origin)
+    if (destination.origin !== window.location.origin) {
+      return '/me'
+    }
+    return `${destination.pathname}${destination.search}${destination.hash}`
+  } catch {
+    return '/me'
+  }
+}
+
 export function MemberAuthForm({ mode }: { mode: Mode }) {
   const router = useRouter()
   const [email, setEmail] = useState('')
@@ -26,7 +43,7 @@ export function MemberAuthForm({ mode }: { mode: Mode }) {
         setMessage('Passwords do not match.')
         return
       }
-      if (mode === 'login') { await memberLogin(email, password); router.replace('/me') }
+      if (mode === 'login') { await memberLogin(email, password); router.replace(getSafeReturnTo()) }
       if (mode === 'signup') {
         await memberRegister(email, password)
         setRegistrationAccepted(true)
