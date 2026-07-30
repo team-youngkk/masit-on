@@ -28,6 +28,7 @@ import com.masiton.member.domain.model.MemberActionToken;
 import com.masiton.member.domain.model.MemberStatus;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
@@ -93,6 +94,22 @@ class MemberAuthenticationServiceTest {
         // then
         verify(accounts).findByIdForUpdate(memberId);
         verify(accounts).changePassword(memberId, "new-password-hash", NOW);
+    }
+
+    @Test
+    @DisplayName("로그인_계정저장소장애면인증서비스이용불가로변환한다")
+    void 로그인_계정저장소장애면인증서비스이용불가로변환한다() {
+        // given
+        given(accounts.findByEmailForUpdate("member@example.com"))
+                .willThrow(new IllegalStateException("database unavailable"));
+        MemberAuthenticationService service = service();
+
+        // when & then
+        assertThatThrownBy(() -> service.login("member@example.com", "correct-password"))
+                .isInstanceOf(com.masiton.common.web.BusinessException.class)
+                .extracting("status", "code")
+                .containsExactly(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,
+                        "AUTHENTICATION_SERVICE_UNAVAILABLE");
     }
 
     private MemberAuthenticationService service() {

@@ -74,7 +74,7 @@ public class SecurityConfiguration {
                         .anyRequest().permitAll())
                 .oauth2ResourceServer(resourceServer -> resourceServer
                         .authenticationEntryPoint(securityErrorWriter)
-                        .bearerTokenResolver(publicReadBearerTokenResolver())
+                        .bearerTokenResolver(optionalMemberBearerTokenResolver())
                         .authenticationManagerResolver(authenticationManagerResolver(
                                 jwtDecoder,
                                 memberJwtDecoder,
@@ -92,21 +92,24 @@ public class SecurityConfiguration {
         AuthenticationManager memberAuthenticationManager = authenticationManager(memberJwtDecoder, jwtAuthenticationConverter);
         AuthenticationManager publicAuthenticationManager = authentication -> authenticatePublicRequest(
                 authentication,
-                memberAuthenticationManager,
-                adminAuthenticationManager
+                memberAuthenticationManager
         );
         return request -> {
             String requestUri = request.getRequestURI();
             if (isMemberBoundary(requestUri)) {
                 return memberAuthenticationManager;
             }
-            return isPublicReadRequest(request) ? publicAuthenticationManager : adminAuthenticationManager;
+            return isOptionalMemberAuthenticationRequest(request)
+                    ? publicAuthenticationManager
+                    : adminAuthenticationManager;
         };
     }
 
-    private BearerTokenResolver publicReadBearerTokenResolver() {
+    private BearerTokenResolver optionalMemberBearerTokenResolver() {
         DefaultBearerTokenResolver delegate = new DefaultBearerTokenResolver();
-        return request -> isPublicReadRequest(request) ? null : delegate.resolve(request);
+        return request -> isAnonymousPublicReadRequest(request) || isUnauthenticatedAuthenticationRequest(request)
+                ? null
+                : delegate.resolve(request);
     }
 
     private boolean isMemberBoundary(String requestUri) {
@@ -115,25 +118,43 @@ public class SecurityConfiguration {
                 || requestUri.startsWith("/api/me/");
     }
 
-    private boolean isPublicReadRequest(HttpServletRequest request) {
+    private boolean isOptionalMemberAuthenticationRequest(HttpServletRequest request) {
+        return HttpMethod.GET.matches(request.getMethod())
+                && request.getRequestURI().startsWith("/api/restaurants/");
+    }
+
+    private boolean isAnonymousPublicReadRequest(HttpServletRequest request) {
         if (!HttpMethod.GET.matches(request.getMethod())) {
             return false;
         }
         String requestUri = request.getRequestURI();
-        return requestUri.equals("/api/restaurants")
-                || requestUri.startsWith("/api/restaurants/")
-                || requestUri.equals("/api/creators");
+        return requestUri.equals("/api/restaurants") || requestUri.equals("/api/creators");
+    }
+
+    private boolean isUnauthenticatedAuthenticationRequest(HttpServletRequest request) {
+        if (!HttpMethod.POST.matches(request.getMethod())) {
+            return false;
+        }
+        String requestUri = request.getRequestURI();
+        return requestUri.equals("/api/admin/auth/tokens")
+                || requestUri.equals("/api/admin/auth/tokens/refresh")
+                || requestUri.equals("/api/auth/registrations")
+                || requestUri.equals("/api/auth/email-verifications")
+                || requestUri.equals("/api/auth/email-verifications/resend")
+                || requestUri.equals("/api/auth/password-resets/requests")
+                || requestUri.equals("/api/auth/password-resets/confirmations")
+                || requestUri.equals("/api/auth/tokens")
+                || requestUri.equals("/api/auth/tokens/refresh");
     }
 
     private Authentication authenticatePublicRequest(
             Authentication authentication,
-            AuthenticationManager memberAuthenticationManager,
-            AuthenticationManager adminAuthenticationManager
+            AuthenticationManager memberAuthenticationManager
     ) {
         try {
             return memberAuthenticationManager.authenticate(authentication);
         } catch (AuthenticationException ignored) {
-            return adminAuthenticationManager.authenticate(authentication);
+            return null;
         }
     }
 

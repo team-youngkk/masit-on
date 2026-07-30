@@ -28,8 +28,7 @@ public class MemberSessionRevocationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String requestUri = request.getRequestURI();
-        return !(requestUri.equals("/api/me") || requestUri.startsWith("/api/me/")
-                || (requestUri.equals("/api/auth/tokens") && HttpMethod.DELETE.matches(request.getMethod())));
+        return !(isMemberProtectedRequest(requestUri, request.getMethod()) || isOptionalRestaurantDetailRequest(request));
     }
 
     @Override
@@ -42,6 +41,10 @@ public class MemberSessionRevocationFilter extends OncePerRequestFilter {
                     : sessionAccessChecker.check(authentication.getName(), sessionId);
             if (decision != MemberSessionAccessChecker.AccessDecision.ALLOWED) {
                 SecurityContextHolder.clearContext();
+                if (isOptionalRestaurantDetailRequest(request)) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
                 if (decision == MemberSessionAccessChecker.AccessDecision.UNAVAILABLE) {
                     errorWriter.authenticationServiceUnavailable(request, response);
                     return;
@@ -51,5 +54,15 @@ public class MemberSessionRevocationFilter extends OncePerRequestFilter {
             }
         }
         filterChain.doFilter(request, response);
+    }
+
+    private boolean isMemberProtectedRequest(String requestUri, String method) {
+        return requestUri.equals("/api/me") || requestUri.startsWith("/api/me/")
+                || (requestUri.equals("/api/auth/tokens") && HttpMethod.DELETE.matches(method));
+    }
+
+    private boolean isOptionalRestaurantDetailRequest(HttpServletRequest request) {
+        return HttpMethod.GET.matches(request.getMethod())
+                && request.getRequestURI().startsWith("/api/restaurants/");
     }
 }

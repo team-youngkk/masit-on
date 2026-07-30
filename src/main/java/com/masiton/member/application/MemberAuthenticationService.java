@@ -100,16 +100,18 @@ public class MemberAuthenticationService {
 
     @Transactional
     public MemberAuthenticationResult login(String email, String password) {
-        MemberAccount account = accounts.findByEmailForUpdate(normalizeEmail(email))
-                .orElseThrow(this::invalidCredentials);
-        if (!passwordEncoder.matches(password, account.passwordHash())) {
-            throw invalidCredentials();
-        }
-        if (!account.canAuthenticate()) {
-            throw invalidCredentials();
-        }
         try {
+            MemberAccount account = accounts.findByEmailForUpdate(normalizeEmail(email))
+                    .orElseThrow(this::invalidCredentials);
+            if (!passwordEncoder.matches(password, account.passwordHash())) {
+                throw invalidCredentials();
+            }
+            if (!account.canAuthenticate()) {
+                throw invalidCredentials();
+            }
             return issueSession(account.id());
+        } catch (BusinessException exception) {
+            throw exception;
         } catch (RuntimeException exception) {
             throw authenticationServiceUnavailable();
         }

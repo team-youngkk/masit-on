@@ -26,9 +26,11 @@ import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.masiton.test.FullContextIntegrationTest;
+import com.masiton.common.security.MemberSessionAccessChecker;
 import com.masiton.member.application.MemberPrincipal;
 import com.masiton.member.application.port.out.MemberTokenIssuer;
 
@@ -41,6 +43,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -61,6 +65,9 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
 
     @Autowired
     private MemberTokenIssuer memberTokenIssuer;
+
+    @MockitoBean
+    private MemberSessionAccessChecker memberSessionAccessChecker;
 
     @DynamicPropertySource
     static void securityProperties(DynamicPropertyRegistry registry) {
@@ -207,12 +214,72 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
     }
 
     @Test
-    @DisplayName("회원 JWT를 포함한 공개 조회는 회원 decoder로 인증하고 허용한다")
-    void publicRead_memberJwt_허용() throws Exception {
-        String memberToken = signedToken("test-key-20260727", "masit-on", "masit-on-member-api");
+    @DisplayName("무인증 회원 인증 경로는 잘못된 Bearer를 무시하고 입력 또는 쿠키 계약을 적용한다")
+    void memberAuthenticationPublicRoutes_잘못된Bearer무시() throws Exception {
+        String invalidToken = signedToken("retired-key");
 
-        mockMvc.perform(get("/api/restaurants").header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken))
-                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/auth/tokens")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + invalidToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/api/auth/tokens/refresh")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + invalidToken)
+                        .header(HttpHeaders.ORIGIN, "http://localhost:3000"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_REFRESH_TOKEN"));
+    }
+
+    @Test
+    @DisplayName("공개 상세는 유효 회원 JWT의 세션 문맥을 확인하고 인증한다")
+    void restaurantDetail_유효회원JWT_선택적으로인증한다() throws Exception {
+        String memberId = java.util.UUID.randomUUID().toString();
+        String sessionId = java.util.UUID.randomUUID().toString();
+        String memberToken = memberTokenIssuer.issueAccessToken(new MemberPrincipal(memberId, sessionId));
+        given(memberSessionAccessChecker.check(memberId, sessionId))
+                .willReturn(MemberSessionAccessChecker.AccessDecision.ALLOWED);
+
+        mockMvc.perform(get("/api/restaurants/{restaurantId}", java.util.UUID.randomUUID())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken))
+                .andExpect(status().isNotFound());
+
+        verify(memberSessionAccessChecker).check(memberId, sessionId);
+    }
+
+    @Test
+    @DisplayName("공개 상세는 무효 또는 폐기된 회원 JWT를 익명 조회로 폴백한다")
+    void restaurantDetail_무효또는폐기JWT_익명조회로폴백한다() throws Exception {
+        String invalidMemberToken = signedToken("retired-key", "masit-on", "masit-on-member-api");
+        String memberId = java.util.UUID.randomUUID().toString();
+        String sessionId = java.util.UUID.randomUUID().toString();
+        String revokedMemberToken = memberTokenIssuer.issueAccessToken(new MemberPrincipal(memberId, sessionId));
+        given(memberSessionAccessChecker.check(memberId, sessionId))
+                .willReturn(MemberSessionAccessChecker.AccessDecision.DENIED);
+
+        mockMvc.perform(get("/api/restaurants/{restaurantId}", java.util.UUID.randomUUID())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + invalidMemberToken))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/restaurants/{restaurantId}", java.util.UUID.randomUUID())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + revokedMemberToken))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("공개 상세의 상태 저장소 장애만 익명으로 폴백하고 회원 경계는 503을 유지한다")
+    void restaurantDetail_상태저장소장애_공개상세만익명폴백한다() throws Exception {
+        String memberId = java.util.UUID.randomUUID().toString();
+        String sessionId = java.util.UUID.randomUUID().toString();
+        String memberToken = memberTokenIssuer.issueAccessToken(new MemberPrincipal(memberId, sessionId));
+        given(memberSessionAccessChecker.check(memberId, sessionId))
+                .willReturn(MemberSessionAccessChecker.AccessDecision.UNAVAILABLE);
+
+        mockMvc.perform(get("/api/restaurants/{restaurantId}", java.util.UUID.randomUUID())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/me/boundary")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_SERVICE_UNAVAILABLE"));
     }
 
     private static KeyPair keyPair() {
