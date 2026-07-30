@@ -1,0 +1,34 @@
+# 운영 프로파일 — M2-09.
+#
+# 값은 전부 환경 변수로 주입한다. 파일에 접속값과 비밀값을 적지 않는다
+# (NFR-SECURITY-003, ADR-SEC-001). 주입은 Parameter Store에서 읽어 컨테이너
+# 환경으로 넘기는 방식이며 디스크의 환경 파일을 만들지 않는다.
+#
+# 저장소 접속값과 JWT 키에는 기본값을 두지 않는다. 값이 없으면 기동이 실패해야
+# 하고, 조용히 로컬 기본값으로 붙는 것이 더 위험하다.
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  data:
+    redis:
+      # 앱 EC2에 동거하는 Redis에 loopback으로 붙는다(ADR-DATA-005 6절).
+      # ADR-RUNTIME-001 11절이 운영 설정의 Docker 서비스명을 금지하므로
+      # `redis` 같은 컨테이너 이름을 쓰지 않는다.
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+
+masiton:
+  integration:
+    # 운영은 실제 제공자 호스트를 쓴다. WireMock은 local 프로파일 전용이다.
+    kakao:
+      base-url: ${KAKAO_BASE_URL:https://dapi.kakao.com}
+      # 두 Key만 빈 기본값을 허용한다. Key가 없어도 공개 탐색·상세와 상태 확인은
+      # 동작하고 관리자 등록 흐름에서만 필요하므로, 배포와 Key 발급을 분리해
+      # 진행할 수 있게 한다. Key가 비어 있으면 등록 시 검증 호출이 실패한다.
+      rest-api-key: ${KAKAO_REST_API_KEY:}
+    youtube:
+      base-url: ${YOUTUBE_BASE_URL:https://www.googleapis.com}
+      api-key: ${YOUTUBE_API_KEY:}
