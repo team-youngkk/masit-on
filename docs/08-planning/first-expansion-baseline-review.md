@@ -40,15 +40,15 @@ related_documents:
 
 | 조사 대상 | 현재 기준선 |
 |---|---|
-| 1차 MVP 기능 | 기능 요구사항 20개 중 완료 20개(E1-T02·PR #67로 잔여 3개 종료), 완전 미구현 0개 |
+| 1차 MVP 기능 | 기능 요구사항 20개 중 완료 17개, 부분 완료 3개, 완전 미구현 0개 |
 | 사용자 인증 | 일반 사용자 인증 없음. 사전 발급 `ADMIN` 계정용 인증만 존재 |
 | JWT·Redis 재사용 | 암호화·검증·회전 기술은 재사용 가능하나 principal, audience, 쿠키, Redis key와 DB 조회가 관리자에 결합 |
 | 맛집 좌표 | Kakao 응답 파싱부터 DB·API까지 전 구간 미저장 |
 | Creator 표시 정보 | 채널 ID·이름·URL과 공개·생명주기·외부 이용 상태만 보유. 프로필·소개·핸들·구독자 없음 |
-| 프론트 | 공개 목록·상세, 관리자 로그인·등록 Route, 공개 유튜버 선택 UI(E1-T02, PR #67) 구현 |
+| 프론트 | 공개 목록·상세, 관리자 로그인·등록 Route 구현. 공개 유튜버 선택 UI 없음 |
 | Flyway | 단일 `V1__create_initial_schema.sql` baseline. 다음 변경은 `V2` 이상 새 파일 |
-| 테스트 | 백엔드 테스트 클래스 로딩 실패 4건을 E1-T01(PR #63)이 고쳐 CI에서 통과한다. 프론트 타입 검사·빌드는 계속 성공 |
-| CI | E1-T01(PR #63)이 `.github/workflows/ci.yml`(백엔드 빌드·테스트, 프론트엔드 빌드·타입 검사)을 추가해 `NFR-TEST-003` 품질 게이트를 충족한다 |
+| 테스트 | 백엔드 테스트 45개 클래스·229개 케이스가 있으나 현재 실행은 테스트 클래스 로딩 단계에서 실패. 프론트 타입 검사·빌드는 성공 |
+| CI | `.github/workflows`가 없어 자동 품질 게이트 미구현 |
 
 ## 4. 1차 MVP 완료·미완료 기능
 
@@ -57,19 +57,20 @@ related_documents:
 | 범위 | 요구사항 | 상태 | 실제 구현 근거 |
 |---|---|---|---|
 | 맛집 목록·검색·필터·페이지 | `FR-RESTAURANT-001~004`, `FR-RESTAURANT-006~007` | 완료 | [RestaurantSearchController](../../src/main/java/com/masiton/restaurant/presentation/rest/RestaurantSearchController.java), [목록 화면](../../frontend/app/restaurants/page.tsx), `RestaurantSearchApiTest`, `RestaurantSearchQueryAdapterIntegrationTest` |
-| 검색·필터 조건 조합 | `FR-RESTAURANT-005` | 완료 | 백엔드 AND 조합에 더해 [목록 화면](../../frontend/app/restaurants/page.tsx)이 유튜버 select를 다른 필터와 같은 폼에서 조합한다(E1-T02, PR #67) |
-| 유튜버 기준 맛집 조회 | `FR-CREATOR-001` | 완료 | `GET /api/restaurants?creatorId=...`와 인수 테스트에 더해 [목록 화면](../../frontend/app/restaurants/page.tsx)이 유튜버 선택 UI로 `creatorId`를 구성한다(E1-T02, PR #67) |
-| 유튜버 선택 목록 | `FR-CREATOR-003` | 완료 | [CreatorController](../../src/main/java/com/masiton/creator/presentation/rest/CreatorController.java)와 `CreatorApiTest`에 더해 [restaurants-api.ts](../../frontend/lib/restaurants-api.ts)의 `fetchCreators`가 `/restaurants`에서 호출·표시한다(E1-T02, PR #67) |
+| 검색·필터 조건 조합 | `FR-RESTAURANT-005` | 부분 완료 | 백엔드는 네 조건의 AND 조합을 지원하지만 [목록 화면](../../frontend/app/restaurants/page.tsx)에 유튜버 선택 UI가 없어 일반 사용자가 전체 조건 조합을 구성할 수 없음 |
+| 유튜버 기준 맛집 조회 | `FR-CREATOR-001` | 부분 완료 | `GET /api/restaurants?creatorId=...`와 인수 테스트는 있으나 [목록 화면](../../frontend/app/restaurants/page.tsx)이 `creatorId`를 hidden 값으로만 유지하고 선택 UI를 제공하지 않음 |
+| 유튜버 선택 목록 | `FR-CREATOR-003` | 부분 완료 | [CreatorController](../../src/main/java/com/masiton/creator/presentation/rest/CreatorController.java)와 `CreatorApiTest`는 있으나 `/restaurants`에서 호출·표시하지 않음 |
 | 맛집 상세·방문 유튜버·영상 | `FR-RESTAURANT-008~011`, `FR-CREATOR-002`, `FR-VIDEO-001` | 완료 | [RestaurantDetailController](../../src/main/java/com/masiton/orchestration/presentation/detail/RestaurantDetailController.java), [상세 화면](../../frontend/app/restaurants/[id]/page.tsx), `RestaurantDetailApiTest`, `VisitContentQueryIntegrationTest` |
 | 관리자 인증 | `FR-ADMIN-001` | 완료 | [AdminAuthenticationController](../../src/main/java/com/masiton/security/presentation/AdminAuthenticationController.java), [로그인 화면](../../frontend/app/admin/login/page.tsx), `SecurityConfigurationApiTest`, `AdminAuthenticationServiceTest` |
 | 맛집·유튜버·영상 등록 | `FR-ADMIN-002~004` | 완료 | 세 등록 Controller·서비스·관리자 화면, 각 서비스와 API 테스트 |
 | 방문 관계 등록·조회 반영 | `FR-VISIT-001` | 완료 | [VisitRelationshipRegistrationController](../../src/main/java/com/masiton/orchestration/presentation/VisitRelationshipRegistrationController.java), [방문 등록 화면](../../frontend/app/admin/visits/new/page.tsx), `VisitRelationshipRegistrationIntegrationTest`, `AdminRegistrationJourneyAcceptanceTest` |
 
-유튜버 탐색 계약은 별도 `/creators` 화면이 아니라 `/restaurants`의 단일 선택 필터를 요구한다. [유튜버 기반 탐색 PRD](../04-product/prd/discovery/creator-discovery.md)는 공개 유튜버 최소 선택 목록과 탐색 화면에서의 단일 선택을 Must로 두며, E1-T02(PR #67)가 이 선택 UI를 완성해 API URL 직접 구성 없이도 세 요구사항의 사용자 흐름을 닫았다.
+유튜버 탐색 계약은 별도 `/creators` 화면이 아니라 `/restaurants`의 단일 선택 필터를 요구한다. 따라서 API URL을 직접 구성하면 조회된다는 사실만으로 사용자 흐름을 완료 처리할 수 없다. [유튜버 기반 탐색 PRD](../04-product/prd/discovery/creator-discovery.md)는 공개 유튜버 최소 선택 목록과 탐색 화면에서의 단일 선택을 Must로 둔다.
 
 ### 4.2 구현은 있으나 운영·확장 전에 정리할 제약
 
 - 방문 관계 화면은 맛집·유튜버는 조회해 선택하지만 영상 선택 API가 없어 영상 UUID를 수기로 입력한다. 핵심 등록 기능은 동작하지만 운영 UX 제약이 크다.
+- [맛집 목록 API 모듈](../../frontend/lib/restaurants-api.ts)은 백엔드 주소를 `http://localhost:8080`으로 고정해 `API_BASE_URL` 설정과 Next.js rewrite를 사용하지 않는다.
 - 관리자 인증 게이트는 서버 middleware나 `admin` layout 경계가 아니라 각 등록 화면의 `AdminPage`가 실행하는 client gate다.
 - 관리자 화면도 공개 Root Layout의 Header·Footer를 공유한다.
 
@@ -231,25 +232,27 @@ V1 내부 적용 순서는 다음과 같다.
 | `npm --prefix frontend run typecheck` | 성공 |
 | `npm --prefix frontend run build` | 성공. App Route 10개 생성 |
 
-백엔드 실패는 assertion 실패가 아니라 Gradle test worker의 classpath·실행 환경 단계 실패다. 컴파일 결과물에는 대상 `.class` 파일이 존재했으므로 저장소 결함인지 현재 로컬 실행 환경 문제인지는 조사 당시 미확인 상태였다.
-
-이 표는 2026-07-29 기준선 조사 당시의 실행 로그다. E1-T01(PR #63)이 CI에서 실패하던 백엔드 테스트 4건을 고쳤고, `.github/workflows/ci.yml`의 `백엔드 빌드·테스트` job이 이후 PR부터 통과한다.
+백엔드 실패는 assertion 실패가 아니라 Gradle test worker의 classpath·실행 환경 단계 실패다. 컴파일 결과물에는 대상 `.class` 파일이 존재했으므로 저장소 결함인지 현재 로컬 실행 환경 문제인지는 미확인 상태다. 원인을 해결해 229개 테스트의 실제 통과 여부를 다시 확인해야 한다.
 
 프론트 빌드 중 npm audit가 high severity 취약점 3건을 보고했지만 빌드 종료 코드는 성공이었다. 버전 변경은 ADR과 별도 검토 없이 수행하지 않는다.
 
 ### 11.3 CI
 
-조사 당시 `.github/workflows` 디렉터리가 없어 GitHub Actions 또는 다른 저장소 CI 품질 게이트가 없었다. E1-T01(PR #63)이 `.github/workflows/ci.yml`에 `백엔드 빌드·테스트`, `프론트엔드 빌드·타입 검사` 두 job을 추가해 [NFR-TEST-003](../01-requirements/non-functional-requirements.md#nfr-test-003-배포-품질-게이트)을 충족한다. `develop`·`main` ruleset의 필수 상태 검사도 이 두 job 이름과 연결됐다.
+`.github/workflows` 디렉터리가 없어 GitHub Actions 또는 다른 저장소 CI 품질 게이트가 없다. [NFR-TEST-003](../01-requirements/non-functional-requirements.md#nfr-test-003-배포-품질-게이트)은 각 확장 단계에서 자동 빌드·테스트와 실패 차단을 Critical로 요구하므로 현재 미충족이다.
 
-[MVP 로컬 검증 결과](mvp-local-verification.md)는 2026-07-28 기준 229개 테스트 성공을 기록했었다. 조사 당시(2026-07-29 오전)에는 이 성공 기록과 별개로 로컬 재실행이 실패하고 CI도 없었으나, 같은 날 E1-T01(PR #63)이 두 문제를 함께 해결했다.
+[MVP 로컬 검증 결과](mvp-local-verification.md)는 2026-07-28 기준 229개 테스트 성공을 기록하지만, 같은 문서에서 CI 부재를 후속 위험으로 분리한다. 현재 기준선은 과거 성공 기록과 별개로 오늘의 재실행 실패와 CI 부재를 함께 사용한다.
 
 ## 12. 확장 계획 전에 해결할 기준선 결함
 
 | 우선순위 | 항목 | 이유 |
 |---|---|---|
+| Critical | CI 품질 게이트 부재 | 확정 `NFR-TEST-003` 미충족 |
+| High | 유튜버 선택 UI 부재 | `FR-RESTAURANT-005`, `FR-CREATOR-001`, `FR-CREATOR-003`의 사용자 흐름 미완료 |
+| High | 백엔드 테스트 재실행 실패 원인 확인 | 현재 커밋의 자동화 통과 상태를 증명할 수 없음 |
+| High | 목록 API의 localhost 고정 | 배포·확장 환경 설정을 우회 |
 | Medium | 방문 관계 영상 UUID 수기 입력 | 관리자가 등록된 영상을 안정적으로 선택하기 어려움 |
 
-`CI 품질 게이트 부재`(Critical)와 `백엔드 테스트 재실행 실패 원인 확인`(High)은 E1-T01(PR #63)로, `유튜버 선택 UI 부재`(High)와 `목록 API의 localhost 고정`(High)은 E1-T02(PR #67)로 해결해 표에서 제외했다.
+`CI 품질 게이트 부재`, `백엔드 테스트 재실행 실패 원인 확인`, `유튜버 선택 UI 부재`, `목록 API의 localhost 고정`은 이 표가 기록한 `f70ed19` 시점 이후 각각 E1-T01(PR #63)·E1-T02(PR #67)로 해결됐다. 이 표는 조사 당시 결함 목록을 그대로 보존하고, 해소 결과는 13절에만 기록한다.
 
 ## 13. 당시 결정 필요 사항의 해소와 후속 Task
 
