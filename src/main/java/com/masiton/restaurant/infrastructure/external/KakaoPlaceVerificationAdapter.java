@@ -127,7 +127,28 @@ class KakaoPlaceVerificationAdapter implements PlaceVerificationPort {
         if (id == null || name == null || placeUrl == null || roadAddress == null || phoneNumber == null) {
             throw new PlaceVerificationFailedException();
         }
-        return Optional.of(new VerifiedPlace(id, name, canonicalPlaceUrl(placeUrl), roadAddress, phoneNumber));
+        return Optional.of(new VerifiedPlace(
+                id, name, canonicalPlaceUrl(placeUrl), canonicalRoadAddress(roadAddress), phoneNumber));
+    }
+
+    /**
+     * Kakao는 시도명을 축약해 {@code 서울 강남구 ...}로 준다. 도메인은 계약대로
+     * {@code 서울특별시 ...} 전체 표기를 쓰므로(reference-data-api 맛집 등록 규칙,
+     * 자치구 추출 패턴) 여기서 맞춘다. 제공자 표기를 도메인 표기로 바꾸는 것은
+     * Adapter의 책임이다.
+     *
+     * 서울 밖 주소는 바꾸지 않고 그대로 넘긴다. 등록 서비스가 자치구 추출에서
+     * 거부해야 하며, 여기서 서울로 보이게 만들면 그 판정을 무력화한다.
+     */
+    private String canonicalRoadAddress(String roadAddress) {
+        String normalized = roadAddress.trim();
+        if (normalized.startsWith("서울특별시")) {
+            return normalized;
+        }
+        if (normalized.startsWith("서울 ")) {
+            return "서울특별시 " + normalized.substring("서울 ".length()).trim();
+        }
+        return normalized;
     }
 
     /**
