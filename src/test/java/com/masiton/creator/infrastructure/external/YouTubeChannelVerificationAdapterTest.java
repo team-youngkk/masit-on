@@ -8,6 +8,7 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import com.masiton.creator.application.port.out.VerifiedChannel;
 import tools.jackson.databind.ObjectMapper;
@@ -15,6 +16,7 @@ import tools.jackson.databind.ObjectMapper;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -129,6 +131,44 @@ class YouTubeChannelVerificationAdapterTest {
         assertThat(verified).isPresent();
         assertThat(verified.get().handle()).isNull();
         assertThat(verified.get().description()).isNull();
+    }
+
+    /*
+     * 응답 파싱과 별개로 요청 URL 구성 자체를 고정한다. part·lookup·key 중 하나가 빠지거나 잘못
+     * 조립돼도 응답 stub은 그대로 반환되므로 파싱 테스트만으로는 드러나지 않는다.
+     */
+    @Test
+    @DisplayName("채널 URL 조회는 part=snippet과 id lookup, API 키를 담아 요청한다")
+    void 검증_채널URL_part와id와키를담아요청한다() throws Exception {
+        givenResponse(200, channel("\"description\": \"채널 소개\""));
+
+        adapter().verify(SUBMITTED_URL);
+
+        URI requested = capturedRequestUri();
+        assertThat(requested.getPath()).isEqualTo("/youtube/v3/channels");
+        assertThat(requested.getQuery()).contains("part=snippet");
+        assertThat(requested.getQuery()).contains("id=UCfixtureNormalChannel01");
+        assertThat(requested.getQuery()).contains("key=test-key");
+        assertThat(requested.getQuery()).doesNotContain("forHandle=");
+    }
+
+    @Test
+    @DisplayName("handle URL 조회는 id 대신 forHandle lookup으로 요청한다")
+    void 검증_handleURL_forHandlelookup으로요청한다() throws Exception {
+        givenResponse(200, channel("\"description\": \"채널 소개\""));
+
+        adapter().verify(URI.create("https://www.youtube.com/@masiton-fixture"));
+
+        /* handle 경로의 마지막 세그먼트를 그대로 쓰므로 `@`가 포함된다. getQuery()는 percent-decode된 값이다. */
+        URI requested = capturedRequestUri();
+        assertThat(requested.getQuery()).contains("forHandle=@masiton-fixture");
+        assertThat(requested.getQuery()).doesNotContain("id=");
+    }
+
+    private URI capturedRequestUri() throws Exception {
+        ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(httpClient).send(captor.capture(), any());
+        return captor.getValue().uri();
     }
 
     private YouTubeChannelVerificationAdapter adapter() {

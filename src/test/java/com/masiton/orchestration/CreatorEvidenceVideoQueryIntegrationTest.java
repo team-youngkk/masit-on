@@ -147,6 +147,62 @@ class CreatorEvidenceVideoQueryIntegrationTest {
     }
 
     @Test
+    @DisplayName("Visit 자체가 비공개면 목록에서 제외한다")
+    void Visit이비공개_목록에서제외한다() {
+        // given: BR-VISIT-005 — 관계 자체도 공개·활성이어야 조회에 사용한다.
+        UUID creatorId = insertCreator("채널V1", "PUBLIC", "ACTIVE", "AVAILABLE");
+        UUID restaurantId = insertRestaurant("비공개관계맛집", "PUBLIC", "ACTIVE");
+        UUID videoId = insertVideo(creatorId, "비공개관계영상", "PUBLIC", "ACTIVE", "AVAILABLE");
+        insertVisit(restaurantId, creatorId, videoId, "PRIVATE", "ACTIVE", OffsetDateTime.now());
+
+        // when
+        CreatorEvidenceVideoPageResult result = creatorEvidenceVideoQueryPort.findPage(creatorId, 1, 20);
+
+        // then
+        assertThat(result.rows()).isEmpty();
+        assertThat(result.totalElements()).isZero();
+    }
+
+    @Test
+    @DisplayName("Visit 자체가 삭제되면 목록에서 제외한다")
+    void Visit이삭제_목록에서제외한다() {
+        // given: ck_visit__deleted_pair가 DELETED를 PRIVATE와만 허용하므로 두 값을 함께 넣는다.
+        UUID creatorId = insertCreator("채널V2", "PUBLIC", "ACTIVE", "AVAILABLE");
+        UUID restaurantId = insertRestaurant("삭제관계맛집", "PUBLIC", "ACTIVE");
+        UUID videoId = insertVideo(creatorId, "삭제관계영상", "PUBLIC", "ACTIVE", "AVAILABLE");
+        insertVisit(restaurantId, creatorId, videoId, "PRIVATE", "DELETED", OffsetDateTime.now());
+
+        // when
+        CreatorEvidenceVideoPageResult result = creatorEvidenceVideoQueryPort.findPage(creatorId, 1, 20);
+
+        // then
+        assertThat(result.rows()).isEmpty();
+        assertThat(result.totalElements()).isZero();
+    }
+
+    @Test
+    @DisplayName("다른 유튜버의 유효 관계는 요청한 유튜버 목록에 섞이지 않는다")
+    void 다른유튜버의유효관계_요청한유튜버목록에섞이지않는다() {
+        // given
+        UUID creatorId = insertCreator("채널S1", "PUBLIC", "ACTIVE", "AVAILABLE");
+        UUID ownRestaurantId = insertRestaurant("본인맛집", "PUBLIC", "ACTIVE");
+        UUID ownVideoId = insertVideo(creatorId, "본인영상", "PUBLIC", "ACTIVE", "AVAILABLE");
+        insertVisit(ownRestaurantId, creatorId, ownVideoId, "PUBLIC", "ACTIVE", OffsetDateTime.now());
+
+        UUID otherCreatorId = insertCreator("채널S2", "PUBLIC", "ACTIVE", "AVAILABLE");
+        UUID otherRestaurantId = insertRestaurant("타인맛집", "PUBLIC", "ACTIVE");
+        UUID otherVideoId = insertVideo(otherCreatorId, "타인영상", "PUBLIC", "ACTIVE", "AVAILABLE");
+        insertVisit(otherRestaurantId, otherCreatorId, otherVideoId, "PUBLIC", "ACTIVE", OffsetDateTime.now());
+
+        // when
+        CreatorEvidenceVideoPageResult result = creatorEvidenceVideoQueryPort.findPage(creatorId, 1, 20);
+
+        // then
+        assertThat(result.rows()).extracting("id").containsExactly(ownVideoId);
+        assertThat(result.totalElements()).isEqualTo(1L);
+    }
+
+    @Test
     @DisplayName("가장 최근 유효 관계 생성 시각 내림차순, 동일하면 영상 ID 오름차순으로 정렬한다")
     void 정렬_최신관계시각내림차순_동일시각은영상ID오름차순() {
         // given

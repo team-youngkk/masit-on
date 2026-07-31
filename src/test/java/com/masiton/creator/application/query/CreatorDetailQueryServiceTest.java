@@ -97,11 +97,16 @@ class CreatorDetailQueryServiceTest {
                 .isEqualTo("CREATOR_NOT_FOUND");
     }
 
+    /*
+     * PUBLIC + DELETED 조합으로 lifecycle 판정만 독립 검증한다. PRIVATE + DELETED로 두면
+     * publication 조건만 보는 구현에서도 통과해 DELETED 분기를 증명하지 못한다. 실제 저장에서는
+     * ck_creator__deleted_pair가 이 조합을 막지만, 이 단위 테스트는 Domain 객체를 직접 만든다.
+     */
     @Test
     @DisplayName("삭제(DELETED) 유튜버는 404 CREATOR_NOT_FOUND를 던진다")
     void 조회_삭제유튜버_404CREATOR_NOT_FOUND를던진다() {
         Creator creator = creatorOf(
-                PublicationStatus.PRIVATE, LifecycleStatus.DELETED, ExternalAvailabilityStatus.AVAILABLE,
+                PublicationStatus.PUBLIC, LifecycleStatus.DELETED, ExternalAvailabilityStatus.AVAILABLE,
                 null, null, null);
         given(creatorRepository.findById(creatorId)).willReturn(Optional.of(creator));
         CreatorDetailQueryService service = new CreatorDetailQueryService(creatorRepository);
