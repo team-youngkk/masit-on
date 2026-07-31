@@ -1,4 +1,6 @@
 .header {
+  position: relative;
+  z-index: 10;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-background);
 }
@@ -13,17 +15,144 @@
 }
 
 .brandLink {
+  flex: 0 0 auto;
   font-size: var(--font-size-lg);
 }
 
 .nav {
   display: flex;
+  align-items: center;
   gap: var(--space-4);
+  min-width: 0;
   margin-left: auto;
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
 }
 
-.nav a:hover {
+.nav a,
+.memberMenu summary,
+.memberMenu button {
+  min-height: var(--control-min-height);
+}
+
+.nav > a,
+.memberMenu summary {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.nav a:hover,
+.memberMenu summary:hover,
+.memberMenu button:hover {
   color: var(--color-text);
+}
+
+.sessionLoading {
+  white-space: nowrap;
+  color: var(--color-text-muted);
+}
+
+.memberMenu {
+  position: relative;
+}
+
+.memberMenu summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.memberMenu summary::-webkit-details-marker {
+  display: none;
+}
+
+.memberMenu summary::after {
+  margin-left: var(--space-1);
+  content: '▾';
+  font-size: 0.75em;
+}
+
+.memberMenu[open] summary::after {
+  content: '▴';
+}
+
+.memberMenuItems {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  display: grid;
+  min-width: 168px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.memberMenuItems a,
+.memberMenuItems button {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: var(--space-2) var(--space-4);
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.memberMenuItems a:hover,
+.memberMenuItems button:hover {
+  background: var(--color-surface-muted);
+}
+
+.logoutError {
+  position: absolute;
+  top: 100%;
+  right: var(--layout-gutter);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-danger);
+  white-space: nowrap;
+  box-shadow: var(--shadow-card);
+}
+
+.logoutError button,
+.logoutError a {
+  min-height: var(--control-min-height);
+  padding: 0 var(--space-2);
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (max-width: 480px) {
+  .inner {
+    gap: var(--space-2);
+  }
+
+  .nav {
+    gap: var(--space-3);
+  }
+
+  .sessionLoading {
+    max-width: 4rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .logoutError {
+    right: var(--space-2);
+    left: var(--space-2);
+    flex-wrap: wrap;
+    white-space: normal;
+  }
 }

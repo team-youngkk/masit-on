@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation'
 
 import { Card } from '@/components/ui/Card'
+import { FavoriteButton } from '@/components/personal/FavoriteButton'
+import { RecentViewRecorder } from '@/components/personal/RecentViewRecorder'
 import {
   RestaurantNotFoundError,
   getRestaurantDetail,
@@ -45,9 +47,17 @@ export default async function RestaurantDetailPage({
 
   return (
     <article className={styles.page}>
+      <RecentViewRecorder restaurantId={restaurant.id} />
       <header className={styles.header}>
-        <h1 className={styles.name}>{restaurant.name}</h1>
-        <p className={styles.category}>{restaurant.category}</p>
+        <div className={styles.heading}>
+          <h1 className={styles.name}>{restaurant.name}</h1>
+          <p className={styles.category}>{restaurant.category}</p>
+        </div>
+        <FavoriteButton
+          restaurantId={restaurant.id}
+          restaurantName={restaurant.name}
+          returnTo={`/restaurants/${encodeURIComponent(restaurant.id)}`}
+        />
       </header>
 
       <section className={styles.infoSection} aria-label="기본 정보">
