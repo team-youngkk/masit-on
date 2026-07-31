@@ -29,6 +29,14 @@ class MemberClientAddressResolverTest {
     }
 
     @Test
+    @DisplayName("프록시 모드가 꺼져 있으면 신뢰 목록의 peer도 전달 헤더를 사용하지 않는다")
+    void resolve_프록시모드꺼짐_전달헤더무시() {
+        MockHttpServletRequest request = request("10.0.0.2", "198.51.100.20");
+
+        assertThat(resolver(false, "10.0.0.2").resolve(request)).isEqualTo("10.0.0.2");
+    }
+
+    @Test
     @DisplayName("신뢰 프록시라도 다중 전달 주소는 신뢰하지 않는다")
     void resolve_신뢰프록시_다중전달주소무시() {
         MockHttpServletRequest request = request("10.0.0.2", "198.51.100.20, 10.0.0.1");
@@ -47,9 +55,14 @@ class MemberClientAddressResolverTest {
     }
 
     private MemberClientAddressResolver resolver(String trustedProxyAddress) {
+        return resolver(true, trustedProxyAddress);
+    }
+
+    private MemberClientAddressResolver resolver(boolean reverseProxyEnabled, String trustedProxyAddress) {
         MemberRateLimitProperties properties = new MemberRateLimitProperties();
         properties.setSecret("test-secret");
         properties.setTrustedProxyAddresses(trustedProxyAddress);
+        properties.setReverseProxyEnabled(reverseProxyEnabled);
         return new MemberClientAddressResolver(properties);
     }
 

@@ -90,4 +90,27 @@ for _ in $(seq 1 36); do
 done
 [ -n "$front" ] || { echo "프론트엔드 응답 확인 실패" >&2; systemctl status masiton-frontend.service --no-pager -l | tail -20; exit 1; }
 
+# 운영 Origin이 주입됐는지 확인한다. 유효한 Origin과 Token 없는 요청은 인증 실패(401)여야
+# 하며, Origin 설정이 localhost 기본값으로 남으면 이 지점에서 403이 된다.
+refresh_status=$(curl -sS -m 5 -o /dev/null -w '%{http_code}' \
+  -X POST -H 'Origin: https://masiton.click' http://127.0.0.1:8080/api/auth/tokens/refresh)
+[ "$refresh_status" = "401" ] || { echo "회원 refresh Origin 검증 실패: HTTP $refresh_status" >&2; exit 1; }
+
+logout_status=$(curl -sS -m 5 -o /dev/null -w '%{http_code}' \
+  -X DELETE -H 'Origin: https://masiton.click' http://127.0.0.1:8080/api/auth/tokens)
+[ "$logout_status" = "401" ] || { echo "회원 logout Origin 검증 실패: HTTP $logout_status" >&2; exit 1; }
+
+# Nginx peer(127.0.0.1)를 신뢰해 X-Forwarded-For별로 버킷이 분리되는지 확인한다.
+# 첫 출처에 실패 제한을 발생시킨 뒤 다른 출처가 429가 아니면 전역 버킷 회귀가 아니다.
+login_body='{"email":"deploy-smoke@invalid.example","password":"invalid-password-123"}'
+for _ in $(seq 1 6); do
+  curl -sS -m 5 -o /dev/null -X POST \
+    -H 'Content-Type: application/json' -H 'X-Forwarded-For: 198.51.100.10' \
+    --data "$login_body" http://127.0.0.1:8080/api/auth/tokens || true
+done
+second_client_status=$(curl -sS -m 5 -o /dev/null -w '%{http_code}' -X POST \
+  -H 'Content-Type: application/json' -H 'X-Forwarded-For: 198.51.100.11' \
+  --data "$login_body" http://127.0.0.1:8080/api/auth/tokens)
+[ "$second_client_status" != "429" ] || { echo "회원 rate-limit이 프록시 전역 버킷으로 합쳐졌다" >&2; exit 1; }
+
 echo "배포 완료: tag=${TAG}"

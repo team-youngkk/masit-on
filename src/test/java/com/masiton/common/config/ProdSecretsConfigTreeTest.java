@@ -7,9 +7,16 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.mail.autoconfigure.MailSenderAutoConfiguration;
 import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.core.env.Environment;
+import org.springframework.mail.javamail.JavaMailSender;
+
+import com.masiton.member.infrastructure.configuration.MemberActionMailConfiguration;
+import com.masiton.member.infrastructure.configuration.MemberRateLimitConfiguration;
+import com.masiton.restaurant.infrastructure.configuration.MapRateLimitConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -42,6 +49,22 @@ class ProdSecretsConfigTreeTest {
             assertThat(environment.getProperty("masiton.security.jwt.key-id")).isEqualTo("prod-1");
             assertThat(environment.getProperty("masiton.security.jwt.public-key-pem"))
                     .startsWith("-----BEGIN PUBLIC KEY-----");
+            assertThat(environment.getProperty("masiton.member.action-mail.active-key-id")).isEqualTo("prod-mail-1");
+            assertThat(environment.getProperty("masiton.member.action-mail.active-key")).isEqualTo("mail-cipher-key");
+            assertThat(environment.getProperty("masiton.member.rate-limit.secret")).isEqualTo("member-rate-secret");
+            assertThat(environment.getProperty("spring.mail.username")).isEqualTo("smtp-user");
+            assertThat(environment.getProperty("spring.mail.password")).isEqualTo("smtp-password");
+        });
+    }
+
+    @Test
+    @DisplayName("운영 필수 비밀값과 SMTP 설정으로 Properties와 MailSender가 기동한다")
+    void 운영프로파일_필수설정주입_회원설정과SMTP기동성공(@TempDir Path secrets) throws Exception {
+        writeSecrets(secrets);
+
+        runner(secrets).run(context -> {
+            assertThat(context).hasNotFailed();
+            assertThat(context).hasSingleBean(JavaMailSender.class);
         });
     }
 
@@ -99,13 +122,25 @@ class ProdSecretsConfigTreeTest {
     private ApplicationContextRunner runner(Path secrets) {
         return new ApplicationContextRunner()
                 .withInitializer(new ConfigDataApplicationContextInitializer())
+                .withConfiguration(AutoConfigurations.of(MailSenderAutoConfiguration.class))
+                .withUserConfiguration(
+                        MemberActionMailConfiguration.class,
+                        MemberRateLimitConfiguration.class,
+                        MapRateLimitConfiguration.class)
                 .withPropertyValues(
                         "spring.profiles.active=prod",
                         "SECRETS_DIR=" + secrets.toAbsolutePath(),
                         "DB_URL=jdbc:postgresql://example.invalid:5432/masiton",
                         "DB_USERNAME=masiton",
                         "REDIS_HOST=127.0.0.1",
-                        "REDIS_PORT=6379"
+                        "REDIS_PORT=6379",
+                        "MAIL_HOST=smtp.example.invalid",
+                        "MAIL_PORT=587",
+                        "MEMBER_PUBLIC_BASE_URL=https://masiton.click",
+                        "MEMBER_TRUSTED_PROXY_ADDRESSES=127.0.0.1",
+                        "MEMBER_REVERSE_PROXY_ENABLED=true",
+                        "RESTAURANT_MAP_TRUSTED_PROXY_ADDRESSES=127.0.0.1",
+                        "RESTAURANT_MAP_REVERSE_PROXY_ENABLED=true"
                 );
     }
 
@@ -115,6 +150,11 @@ class ProdSecretsConfigTreeTest {
         write(secrets, "masiton.security.jwt.key-id", "prod-1");
         write(secrets, "masiton.security.jwt.private-key-pem", PRIVATE_KEY_PEM);
         write(secrets, "masiton.security.jwt.public-key-pem", "-----BEGIN PUBLIC KEY-----\npub\n-----END PUBLIC KEY-----");
+        write(secrets, "masiton.member.action-mail.active-key-id", "prod-mail-1");
+        write(secrets, "masiton.member.action-mail.active-key", "mail-cipher-key");
+        write(secrets, "masiton.member.rate-limit.secret", "member-rate-secret");
+        write(secrets, "spring.mail.username", "smtp-user");
+        write(secrets, "spring.mail.password", "smtp-password");
         write(secrets, "masiton.integration.kakao.rest-api-key", "kakao-key-value");
         write(secrets, "masiton.integration.youtube.api-key", "youtube-key-value");
     }

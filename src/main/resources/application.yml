@@ -37,7 +37,7 @@ management:
         ready:
           include: db
         dependencies:
-          include: db,redis
+          include: ${DEPENDENCY_HEALTH_COMPONENTS:db,redis}
   health:
     defaults:
       enabled: false
@@ -47,6 +47,9 @@ management:
       enabled: true
     redis:
       enabled: true
+    mail:
+      # 로컬·테스트는 SMTP 없이 기동하고 운영 배포만 연결·인증 상태를 dependencies에 포함한다.
+      enabled: ${MAIL_HEALTH_ENABLED:false}
 
 logging:
   level:
