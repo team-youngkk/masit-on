@@ -1,0 +1,12 @@
+.notFound {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-12) var(--space-4);
+}
+
+.link {
+  display: inline-block;
+  margin-top: var(--space-4);
+  color: var(--color-primary-strong);
+  font-weight: 600;
+}
