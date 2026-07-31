@@ -239,12 +239,9 @@ async function readErrorBody(response: Response): Promise<ApiErrorBody | null> {
 /*
  * 화면 쿼리 파라미터(restaurantsPage·videosPage)를 1-base 정수 페이지 값으로
  * 정규화한다. 값이 없거나 정수가 아니거나 1보다 작으면 첫 페이지로 취급해
- * 잘못된 값을 그대로 API에 보내 400을 유발하지 않는다.
- */
-/*
- * 백엔드 page는 Java int로 파싱되므로 int 범위를 넘는 값은 400을 받는다. 여기서
- * 상한까지 막지 않으면 `?restaurantsPage=9999999999`가 첫 페이지가 아니라 오류
- * 상태로 렌더된다.
+ * 잘못된 값을 그대로 API에 보내 400을 유발하지 않는다. 백엔드 page는 Java int로
+ * 파싱되므로 상한까지 막아야 `?restaurantsPage=9999999999`가 오류 상태가 아니라
+ * 첫 페이지로 렌더된다.
  */
 const MAX_PAGE = 2147483647
 
@@ -254,20 +251,4 @@ export function parsePageParam(value: string | undefined): number {
     return 1
   }
   return parsed
-}
-
-/*
- * 방문 맛집·근거 영상 페이지 상태를 URL에 함께 담아 반환한다. 두 목록은 서로
- * 독립적인 쿼리 파라미터(restaurantsPage, videosPage)로 관리하므로(PRD 7절),
- * 한 목록의 페이지를 바꿀 때도 항상 다른 목록의 현재 페이지를 그대로 유지해
- * 전달한다.
- */
-export function buildCreatorDetailHref(
-  creatorId: string,
-  pages: { restaurantsPage: number; videosPage: number },
-): string {
-  const params = new URLSearchParams()
-  params.set('restaurantsPage', String(pages.restaurantsPage))
-  params.set('videosPage', String(pages.videosPage))
-  return `/creators/${encodeURIComponent(creatorId)}?${params.toString()}`
 }

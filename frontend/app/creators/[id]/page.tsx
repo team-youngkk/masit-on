@@ -1,25 +1,20 @@
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
-import { Card } from '@/components/ui/Card'
 import { isSafeHttpUrl } from '@/lib/api'
-import { cn } from '@/lib/cn'
 import {
   CreatorDetailUnavailableError,
   CreatorIdentifierInvalidError,
   CreatorNotFoundError,
-  buildCreatorDetailHref,
   fetchCreatorRestaurants,
   fetchCreatorVideos,
   getCreatorDetail,
   parsePageParam,
   type CreatorDetail,
-  type CreatorListPage,
-  type FetchCreatorRestaurantsResult,
-  type FetchCreatorVideosResult,
 } from '@/lib/creators-api'
 import { toSingleValue, type RawSearchParams } from '@/lib/restaurants-api'
 
+import { CreatorRestaurantsSection } from './CreatorRestaurantsSection'
+import { CreatorVideosSection } from './CreatorVideosSection'
 import styles from './page.module.css'
 
 type CreatorDetailPageProps = {
@@ -32,6 +27,11 @@ type CreatorDetailPageProps = {
  * ADR-WEB-002에 따라 초기 서버 데이터는 Server Component `fetch`로 가져온다.
  * 방문 맛집·근거 영상은 각각 독립된 쿼리 파라미터(restaurantsPage, videosPage)로
  * 페이지 상태를 관리한다(PRD 6·7절: 두 목록을 하나의 공통 페이지 상태로 묶지 않는다).
+ *
+ * 이 서버 렌더는 두 목록의 최초 페이지까지만 담당한다. 이후 페이지 이동·재시도는
+ * 각 목록의 클라이언트 경계가 자기 endpoint만 조회한다. searchParams가 바뀌면 이
+ * 함수 전체가 다시 실행되어 상대 목록까지 재요청되기 때문이다
+ * (creator-detail-api.md 2절: 한 목록의 페이지 이동이 다른 목록을 다시 요청하지 않는다).
  */
 export default async function CreatorDetailPage({
   params,
@@ -127,9 +127,8 @@ export default async function CreatorDetailPage({
         <h2 className={styles.sectionTitle}>방문 맛집</h2>
         <CreatorRestaurantsSection
           creatorId={id}
-          result={restaurantsResult}
-          restaurantsPage={restaurantsPage}
-          videosPage={videosPage}
+          initialPage={restaurantsPage}
+          initialResult={restaurantsResult}
         />
       </section>
 
@@ -137,226 +136,10 @@ export default async function CreatorDetailPage({
         <h2 className={styles.sectionTitle}>근거 영상</h2>
         <CreatorVideosSection
           creatorId={id}
-          result={videosResult}
-          restaurantsPage={restaurantsPage}
-          videosPage={videosPage}
+          initialPage={videosPage}
+          initialResult={videosResult}
         />
       </section>
     </article>
-  )
-}
-
-function CreatorRestaurantsSection({
-  creatorId,
-  result,
-  restaurantsPage,
-  videosPage,
-}: {
-  creatorId: string
-  result: FetchCreatorRestaurantsResult
-  restaurantsPage: number
-  videosPage: number
-}) {
-  if (!result.ok) {
-    return (
-      <div className={styles.sectionError} role="alert">
-        <p>{result.message}</p>
-        {result.traceId ? (
-          <p className={styles.traceId}>traceId: {result.traceId}</p>
-        ) : null}
-        <Link
-          href={buildCreatorDetailHref(creatorId, { restaurantsPage, videosPage })}
-          className={styles.retryLink}
-        >
-          다시 시도
-        </Link>
-      </div>
-    )
-  }
-
-  const { items, page } = result.data
-
-  if (items.length === 0) {
-    return (
-      <>
-        <p className={styles.emptyState}>공개된 방문 맛집이 없습니다.</p>
-        {page.totalElements > 0 ? (
-          <CreatorPageNav
-            page={page}
-            buildHref={(nextPage) =>
-              buildCreatorDetailHref(creatorId, {
-                restaurantsPage: nextPage,
-                videosPage,
-              })
-            }
-          />
-        ) : null}
-      </>
-    )
-  }
-
-  return (
-    <>
-      <ul className={styles.restaurantList}>
-        {items.map((restaurant) => (
-          <li key={restaurant.id}>
-            <Card
-              title={
-                <Link href={`/restaurants/${encodeURIComponent(restaurant.id)}`}>
-                  {restaurant.name}
-                </Link>
-              }
-              level={3}
-              meta={`${restaurant.district} · ${restaurant.category}`}
-            />
-          </li>
-        ))}
-      </ul>
-      <CreatorPageNav
-        page={page}
-        buildHref={(nextPage) =>
-          buildCreatorDetailHref(creatorId, { restaurantsPage: nextPage, videosPage })
-        }
-      />
-    </>
-  )
-}
-
-function CreatorVideosSection({
-  creatorId,
-  result,
-  restaurantsPage,
-  videosPage,
-}: {
-  creatorId: string
-  result: FetchCreatorVideosResult
-  restaurantsPage: number
-  videosPage: number
-}) {
-  if (!result.ok) {
-    return (
-      <div className={styles.sectionError} role="alert">
-        <p>{result.message}</p>
-        {result.traceId ? (
-          <p className={styles.traceId}>traceId: {result.traceId}</p>
-        ) : null}
-        <Link
-          href={buildCreatorDetailHref(creatorId, { restaurantsPage, videosPage })}
-          className={styles.retryLink}
-        >
-          다시 시도
-        </Link>
-      </div>
-    )
-  }
-
-  const { items, page } = result.data
-
-  if (items.length === 0) {
-    return (
-      <>
-        <p className={styles.emptyState}>공개된 근거 영상이 없습니다.</p>
-        {page.totalElements > 0 ? (
-          <CreatorPageNav
-            page={page}
-            buildHref={(nextPage) =>
-              buildCreatorDetailHref(creatorId, {
-                restaurantsPage,
-                videosPage: nextPage,
-              })
-            }
-          />
-        ) : null}
-      </>
-    )
-  }
-
-  return (
-    <>
-      <div className={styles.videoGrid}>
-        {items.map((video) => {
-          /*
-           * 썸네일은 저장된 외부 YouTube URL이라 도메인이 고정돼 있지 않다.
-           * next/image는 next.config.ts에 remotePatterns 등록이 필요해 이
-           * 작업 범위(설정 파일 변경 금지) 밖이므로 일반 img 태그를 사용한다.
-           */
-          const thumbnail = isSafeHttpUrl(video.thumbnailUrl) ? (
-            <img
-              src={video.thumbnailUrl}
-              alt={video.title}
-              className={styles.thumbnail}
-            />
-          ) : null
-
-          return (
-            <Card key={video.id} title={video.title} level={3}>
-              {isSafeHttpUrl(video.sourceUrl) ? (
-                <a
-                  href={video.sourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.videoLink}
-                >
-                  {thumbnail}
-                  <span className={styles.videoLinkLabel}>원본 영상 보기</span>
-                </a>
-              ) : (
-                <div className={styles.videoLink}>
-                  {thumbnail}
-                  <span className={styles.videoLinkLabel}>{video.sourceUrl}</span>
-                </div>
-              )}
-            </Card>
-          )
-        })}
-      </div>
-      <CreatorPageNav
-        page={page}
-        buildHref={(nextPage) =>
-          buildCreatorDetailHref(creatorId, { restaurantsPage, videosPage: nextPage })
-        }
-      />
-    </>
-  )
-}
-
-/*
- * 와이어프레임 7절 레이아웃(이전/다음)에 맞춰 번호 목록 없이 이전·다음만
- * 제공한다. 총 건수·페이지 수는 상태 인지를 돕기 위해 함께 보여준다.
- */
-function CreatorPageNav({
-  page,
-  buildHref,
-}: {
-  page: CreatorListPage
-  buildHref: (page: number) => string
-}) {
-  return (
-    <nav className={styles.pagination} aria-label="페이지 이동">
-      <p className={styles.pageStatus}>
-        {page.number} / {Math.max(page.totalPages, 1)} 페이지 (총 {page.totalElements}건)
-      </p>
-      <div className={styles.pageLinks}>
-        {page.number > 1 ? (
-          <Link href={buildHref(page.number - 1)} className={styles.pageLink}>
-            이전
-          </Link>
-        ) : (
-          <span className={cn(styles.pageLink, styles.disabled)} aria-disabled="true">
-            이전
-          </span>
-        )}
-
-        {page.hasNext ? (
-          <Link href={buildHref(page.number + 1)} className={styles.pageLink}>
-            다음
-          </Link>
-        ) : (
-          <span className={cn(styles.pageLink, styles.disabled)} aria-disabled="true">
-            다음
-          </span>
-        )}
-      </div>
-    </nav>
   )
 }
