@@ -190,6 +190,7 @@ related_documents:
 |---:|---|---|
 | 400 | `INVALID_IDENTIFIER` | 유튜버 식별자 형식 오류 |
 | 400 | `INVALID_FIELD_VALUE` | 페이지·크기 오류 |
+| 400 | `INVALID_REQUEST` | 정의되지 않은 쿼리 파라미터 |
 | 404 | `CREATOR_NOT_FOUND` | 없음·비공개·삭제·외부 이용 불가 |
 | 500 | `INTERNAL_SERVER_ERROR` | 기본 정보 또는 요청 목록 제공 실패 |
 

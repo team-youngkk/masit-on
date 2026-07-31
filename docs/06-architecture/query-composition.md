@@ -61,6 +61,21 @@ Restaurant Domain 객체가 Visit, Creator, Video를 조회하지 않는다. Con
 
 ## 5. Repository/Query Adapter 전략
 
+### 적용 범위
+
+관계 유효성 규칙의 소유자는 Visit이고, Query Adapter는 Visit가 확정한 공개·유효 조건을 읽기
+계약으로 적용할 뿐 독자적으로 바꾸지 않는다([애플리케이션 흐름](application-flow.md) 참고).
+이 원칙 아래 두 조회 형태를 구분한다.
+
+| 조회 형태 | 판정 위치 |
+|---|---|
+| 후보 ID 집합으로 다른 조건과 결합하는 목록 필터(맛집 목록의 `creatorId`) | Visit 도메인의 공개 Query가 후보 집합을 소유하고, 목록 Adapter는 유효성을 다시 판정하지 않는다(6절). |
+| 여러 테이블의 표시 정보를 한 번에 읽는 상세 Projection(맛집 상세 콘텐츠, 유튜버 상세의 방문 맛집·근거 영상) | orchestration Query Adapter가 확정 조건을 JOIN SQL로 적용한다. |
+
+상세 Projection을 후보 ID 조회로 대체하면 표시 필드를 얻기 위해 도메인별 조회를 다시 해야 해
+6절의 쿼리 수 목표를 지킬 수 없다. 두 경우 모두 조건 자체는 Visit가 정하며 Adapter가 조건을
+바꾸면 규칙 소유가 깨진다.
+
 ### 기본 정보
 
 Restaurant 테이블과 Restaurant 소유 참조 데이터(Region, FoodCategory)를 Projection으로 조회한다. Restaurant는 `PUBLIC`·`ACTIVE` 조건을 만족해야 하며 상세 API가 요구하는 필드만 선택한다.
@@ -112,6 +127,8 @@ Visit를 기준으로 Creator와 Video를 조인해 다음 조건을 DB에서 �
 Restaurant 검색 Adapter는 Visit 유효성이나 Creator 공개성을 다시 판정하지 않는다. 따라서
 Visit 정책 변경은 Visit 도메인의 Query 구현 한 곳에 반영하고, Restaurant 목록 조합은 후보
 집합과 자체 소유 필터 결합에만 책임을 둔다.
+
+이 규칙은 후보 ID 집합을 쓰는 목록 필터에 적용된다. 상세 Projection은 5절 적용 범위를 따른다.
 
 ## 7. 페이징과 결과 크기
 

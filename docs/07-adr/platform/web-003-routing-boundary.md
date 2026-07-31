@@ -74,6 +74,7 @@ Nginx는 경로 접두사만으로 목적지를 정하며 요청 헤더, 사용�
 | `/` | `/restaurants`로 이동 |
 | `/restaurants` | 맛집 검색·필터·목록 |
 | `/restaurants/{restaurantId}` | 맛집 상세 |
+| `/creators/{creatorId}` | 유튜버 상세 |
 | `/admin/login` | 관리자 로그인 |
 | `/admin` | `/admin/restaurants/new`로 이동 |
 | `/admin/restaurants/new` | 맛집 등록 |
@@ -89,7 +90,7 @@ Nginx는 경로 접두사만으로 목적지를 정하며 요청 헤더, 사용�
 2. `POST /api/admin/auth/tokens/refresh`: Refresh Token 보안 쿠키만 검증하고 Bearer JWT를 요구하지 않는다.
 3. `DELETE /api/admin/auth/tokens`: Bearer JWT와 Refresh Token 보안 쿠키를 모두 요구한다.
 4. 나머지 `/api/admin/**`: Bearer JWT와 `ADMIN` 권한을 요구한다.
-5. `GET /api/restaurants`, `GET /api/restaurants/{restaurantId}`, `GET /api/creators`: 인증 없이 허용한다.
+5. `GET /api/restaurants`, `GET /api/restaurants/{restaurantId}`, `GET /api/creators`, `GET /api/creators/{creatorId}`, `GET /api/creators/{creatorId}/restaurants`, `GET /api/creators/{creatorId}/videos`: 인증 없이 허용한다. 유튜버 상세 세 조회는 회원 문맥을 쓰지 않으므로 Bearer Token을 해석하지 않는다.
 6. 정의되지 않은 API 요청: 기본 거부한다.
 
 구체적인 matcher는 더 구체적인 경로와 HTTP Method를 먼저 선언하고 포괄적인 `/api/admin/**` 규칙을 뒤에 둔다.
