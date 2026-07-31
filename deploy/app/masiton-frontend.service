@@ -1,0 +1,28 @@
+# 운영 프론트엔드 컨테이너 — M2-09.
+#
+# 이미지 참조는 /opt/masiton/etc/frontend.image에 있고 app-deploy.sh가 갱신한다.
+#
+# 백엔드보다 늦게 띄우지만 Requires로 묶지 않는다. 프론트엔드는 /api를 백엔드로
+# 전달하기만 하므로 백엔드가 재기동되는 동안에도 화면 자체는 응답해야 한다.
+
+[Unit]
+Description=masiton frontend (Next.js, M2-09)
+Documentation=https://github.com/team-youngkk/masit-on/blob/main/docs/08-planning/m2-deployment-plan.md
+After=docker.service network-online.target masiton-backend.service
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=exec
+TimeoutStartSec=180
+Restart=always
+RestartSec=10s
+
+Environment=AWS_REGION=ap-northeast-2
+
+ExecStartPre=-/usr/bin/docker rm -f masiton-frontend
+ExecStart=/opt/masiton/bin/app-run.sh frontend
+ExecStop=/usr/bin/docker stop --time 20 masiton-frontend
+
+[Install]
+WantedBy=multi-user.target
