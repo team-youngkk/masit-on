@@ -17,6 +17,7 @@ related_documents:
   - ../07-adr/data/data-005-redis-refresh-token.md
   - mvp-2day-implementation-plan.md
   - mvp-local-verification.md
+  - m2-cost-and-sizing.md
 ---
 
 # 맛잇온 M2 초기 운영 배포 계획
@@ -52,7 +53,7 @@ related_documents:
 - [ADR-OBS-001](../07-adr/quality/obs-001-logging-observability.md) — CloudWatch 수집, 로그 14일, 스냅샷, Slack 알림
 - [ADR-CI-001](../07-adr/platform/ci-001-github-actions-quality-gate.md) — 품질 게이트 유지, ECR push와 EC2 배포 활성화
 - [ADR-RUNTIME-001](../07-adr/platform/runtime-001-docker.md) — 이미지 검증(클린 빌드·비밀·취약점·명시 태그), ECR digest, CloudWatch Agent, 배포 후 Smoke Test
-- [ADR-DATA-005](../07-adr/data/data-005-redis-refresh-token.md) — 운영 사설 서브넷 Redis 8.8, Refresh Token 회전·재사용 탐지, 로그인 실패 제한, 장애 시 fail-closed
+- [ADR-DATA-005](../07-adr/data/data-005-redis-refresh-token.md) — Redis 8.8, Refresh Token 회전·재사용 탐지, 로그인 실패 제한, 장애 시 fail-closed. 6절의 배치 표현은 4.2절 결정에 따라 2026-07-30에 개정했다(앱 EC2 동거, `127.0.0.1:6379` 바인딩)
 
 ### 범위 제외
 
@@ -68,14 +69,17 @@ related_documents:
 | AWS 리전 | `ap-northeast-2` (서울) | 국내 사용자 대상 서비스로 서울 리전을 사용하기로 팀이 합의했다(2026-07-29 계획 수립 시점 확인). M2-01에서 설정하며 확정 기록을 남긴다 |
 | 토폴로지 | 단일 EC2 (Nginx + Next.js + Spring Boot) | 기술 정책 13절 |
 | 데이터베이스 | RDS PostgreSQL 17.10 | ADR-DATA-001, 기술 정책 |
-| 인증 저장소 | 사설 서브넷 Redis 8.8 | [ADR-DATA-005](../07-adr/data/data-005-redis-refresh-token.md) |
+| 인증 저장소 | Redis 8.8. ElastiCache를 쓰지 않고 앱 EC2에 동거한다(2026-07-29 결정, 4.2절) | [ADR-DATA-005](../07-adr/data/data-005-redis-refresh-token.md), [사양·비용 산정 5.4절](m2-cost-and-sizing.md) |
 | 이미지 저장소 | ECR | ADR-DEPLOY-002 |
 | CI 경로 | GitHub Actions → ECR → EC2, 수동 승인 | RV-NFR-012 |
+| 브랜치 전략 | `deploy/m2` 한 브랜치에 M2 변경을 모으고 완료 시 `main`으로 병합 | 이번 마일스톤은 배포와 기능 구현을 함께 진행해 변경을 나눠 병합할 이점이 없다(2026-07-29 결정) |
 | 백업 | 일 1회 자동 스냅샷, 7일 보관, RPO 최대 24시간 | RV-NFR-010 |
 | 로그 | CloudWatch, 14일 보관 | RV-NFR-009 |
 | 알림 | CloudWatch 알람 → Slack Webhook, 담당자 1명 | RV-NFR-013 |
 | 월 인프라 예산 목표 | 150,000원 | ADR 추적표 |
 | 목표 완료일 | 2026-07-31 | [M2 마일스톤](https://github.com/team-youngkk/masit-on/milestone/2) |
+
+브랜치 전략은 **이 마일스톤 한정 예외다.** [CLAUDE.md](../../CLAUDE.md) 9절의 기본 흐름(`feature` → `develop` → `main`)은 그대로 유지하고, M2 이후 작업은 다시 `develop`을 거친다. `main` 병합 후 `deploy/m2`를 `develop`에도 back-merge해 `develop`이 뒤처지지 않게 한다.
 
 목표 완료일까지 여유가 크지 않다. 도메인 구입과 DNS 전파, RDS·Redis 생성처럼 대기 시간이 고정된 Task가 있으므로 M2-01을 먼저 끝내고 M2-02·M2-03을 같은 날 착수한다.
 
@@ -83,20 +87,29 @@ related_documents:
 
 계획 수립 시점에 결정되지 않았고 **임의로 확정하지 않는다.** 각 항목은 표시된 Task를 시작하기 전에 결정해야 한다.
 
-| 항목 | 필요 시점 |
-|---|---|
-| 도메인명 | M2-02 |
-| HTTPS 인증서 발급 방식 | M2-08 (4.1절) |
-| 검증 참여자 제한 공개 방식 | M2-11 |
-| EC2 인스턴스 타입, RDS 인스턴스 클래스, Redis 인스턴스 사양 | M2-03, M2-04, M2-05 |
+| 항목 | 필요 시점 | 상태 |
+|---|---|---|
+| 도메인명 | M2-02 | **결정** — `masiton.click` (2026-07-29 등록, 자동 갱신 끔) |
+| HTTPS 인증서 발급 방식 | M2-08 (4.1절) | **결정** — ACM exportable public certificate를 EC2 Nginx에 배포 (2026-07-30, 4.1절) |
+| 검증 참여자 제한 공개 방식 | M2-11 | **결정** — Nginx Basic Auth (2026-07-30) |
+| EC2 인스턴스 타입 | M2-03 | **결정** — `t4g.medium` ([사양·비용 산정](m2-cost-and-sizing.md) 3·7절) |
+| RDS 인스턴스 클래스 | M2-04 | **결정** — `db.t4g.micro` ([사양·비용 산정](m2-cost-and-sizing.md) 4·7절) |
+| Redis 인스턴스 사양 | M2-05 | **결정** — ElastiCache 미사용, 앱 EC2 동거 ([사양·비용 산정](m2-cost-and-sizing.md) 5.4절). ADR-DATA-005 6절 배치 표현 개정 완료 — 4.2절 |
 
-**제한 공개 방식**은 ADR-DEPLOY-002가 "검증 참여자에게만 제한 공개"만 규정하고 방식을 정하지 않았다. Nginx Basic Auth와 보안 그룹 IP allowlist 중 선택이 필요하다.
+**제한 공개 방식**은 ADR-DEPLOY-002가 "검증 참여자에게만 제한 공개"만 규정하고 방식을 정하지 않았다. **2026-07-30에 Nginx Basic Auth로 결정했다.** 검증 참여자가 4개 WS 담당자를 포함해 여러 명이고 각자 공인 IP가 고정돼 있지 않으므로, 보안 그룹 IP allowlist는 IP가 바뀔 때마다 규칙을 갱신해야 하고 그 사이 검증이 끊긴다. Basic Auth는 자격 증명 배포만으로 참여자를 늘릴 수 있다.
 
-**인스턴스 사양**은 예산 목표 150,000원 대비 산정이 필요하다. 단일 인스턴스에 Nginx·Next.js·Spring Boot가 함께 올라가므로 메모리 여유를 확인해야 한다.
+Basic Auth 적용 시 지켜야 할 것은 두 가지다.
+
+- 자격 증명은 [ADR-SEC-001](../07-adr/security/sec-001-secrets-workload-identity.md)에 따라 Parameter Store SecureString에 두고 `htpasswd` 파일을 EC2에서 생성한다. 저장소·이미지에 남기지 않는다.
+- Basic Auth는 HTTPS 뒤에서만 쓴다. HTTP 요청은 인증 확인 전에 HTTPS로 리다이렉트한다(4.1절 구성과 같은 server block).
+
+Basic Auth는 제한 공개 수단이며 관리자 인증을 대체하지 않는다. `/api/admin/**`의 JWT·`ADMIN` 검증은 그대로 유지한다([NFR-SECURITY-001](../01-requirements/non-functional-requirements.md#nfr-security-001-공개-조회와-관리자-접근-통제)).
+
+**인스턴스 사양과 월 예상 비용**은 `M2-01`에서 산정했다. 결과는 [M2 인스턴스 사양과 월 비용 산정](m2-cost-and-sizing.md)에 있다. 단가는 AWS Price List API로 `ap-northeast-2` 값을 실측했다. 채택 구성의 월 예상 비용은 90,100원(예산의 60%)이고 RDS를 한 단계 올려도 118,000원(79%)으로 예산 목표 150,000원 이내이며, NAT Gateway와 인터페이스 VPC 엔드포인트는 예산 비중이 커서 M2 구성에서 제외한다.
 
 ### 4.1. HTTPS 인증서 발급 방식
 
-두 선택지를 비교해 결정한다. 어느 쪽도 배제되지 않는다.
+**2026-07-30에 ACM exportable public certificate를 EC2 Nginx에 배포하는 방식으로 결정했다.** 결정 근거는 아래 비교 표 다음의 두 단락에 있다.
 
 | 항목 | ACM exportable public certificate | Let's Encrypt (ACME) |
 |---|---|---|
@@ -110,6 +123,35 @@ related_documents:
 마지막 두 행이 결정의 핵심이다. ACM은 새 외부 서비스가 아니어서 ADR 없이 운영 설정으로 처리할 수 있지만 재배포 자동화를 직접 만들어야 한다. Let's Encrypt는 갱신·배포가 모두 자동이지만 새 외부 서비스라 ADR이 필요하다.
 
 연간 비용 차이는 FQDN 하나 기준 약 $14로 예산 목표 150,000원 대비 작다. 따라서 비용보다 **갱신 실패 시 서비스 중단 위험**과 **운영 자동화 부담**을 기준으로 판단한다. 근거: [ACM exportable public certificates](https://docs.aws.amazon.com/acm/latest/userguide/acm-exportable-certificates.html).
+
+#### 결정 내용 (2026-07-30)
+
+**ACM에서 `masiton.click` 퍼블릭 인증서를 Route 53 DNS 검증으로 발급받고, exportable 인증서를 EC2로 내보내 Nginx가 443을 직접 종료한다.** ADR·계획 변경 없이 진행할 수 있는 유일한 선택지이기 때문이다. Let's Encrypt는 새 외부 서비스라 ADR 추가와 승인 2인이 필요하고, 목표 완료일이 2026-07-31이다.
+
+| 항목 | 값 |
+|---|---|
+| 대상 FQDN | `masiton.click` apex 단독 |
+| 검증 방식 | Route 53 DNS 검증 (호스팅 영역 `Z01447273NZ8O8LL4IA5`에 검증 레코드 생성) |
+| 발급 비용 | 198일당 `$7` (약 10,300원). 월 환산 약 1,600원으로 예산 판정을 바꾸지 않는다 |
+| TLS 종료 지점 | EC2 Nginx |
+
+**와일드카드 `*.masiton.click`은 발급하지 않는다.** exportable 와일드카드는 `$79`로 apex 단독의 11배이고, M2 범위에 서브도메인 계획이 없다. 서브도메인이 필요해지면 그때 FQDN을 추가 발급한다.
+
+**ALB로 TLS를 종료하는 구성은 M2에서 채택하지 않는다.** ALB에서는 ACM 퍼블릭 인증서가 무료이고 갱신 시 재배포가 아예 없다는 이점이 있으나, [ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md) 3.1절에서 팀 4인이 ALB·Blue-Green 도입을 **3차 확장 이후 배포 고도화 단계 착수**로 합의했고 실제 착수는 비용·일정 영향 검토 통과를 조건으로 달았다. 같은 ADR 3.1절이 "Nginx의 경로 라우팅 책임을 ALB가 대체할지 여부"를 미결 항목으로 남겨 두었다. M2에서 ALB를 쓰려면 그 합의 개정과 미결 항목 결정이 선행돼야 하므로 2절 범위 제외를 그대로 유지한다.
+
+**이 선택의 대가는 갱신본 재배포를 직접 만들어야 하는 것이다.** 9절 위험 표의 "인증서 갱신 후 재배포 누락으로 만료"가 그대로 남으므로 `M2-08`에서 다음을 모두 만들고 시연한다.
+
+- ACM이 자동 갱신한 인증서를 다시 내보내 Nginx에 반영하고 reload하는 절차를 EC2에서 자동 실행한다.
+- 내보낸 개인키는 EC2 로컬에만 두고 저장소·이미지·Parameter Store 평문에 남기지 않는다.
+- 갱신·재배포가 실패하면 만료 전에 알 수 있도록 `M2-10` 알람 구성에 인증서 만료 임박 감시를 포함한다.
+
+### 4.2. Redis 배치 방식
+
+`M2-01` 산정 과정에서 **계획대로 관리형 Redis를 쓸 수 없다는 제약 두 가지를 확인했다.** ElastiCache는 Redis OSS 7.1 이하만 제공해 고정 버전 8.8을 만족할 수 없고, `appendonly`·`appendfsync`를 지원하지 않아 `M2-05`가 요구하는 AOF `everysec`을 설정할 수 없다. 두 제약은 독립적이어서 Valkey로 버전 문제를 우회해도 AOF 문제는 남는다.
+
+선택지와 비용은 [사양·비용 산정 5절](m2-cost-and-sizing.md)에 정리했다. **2026-07-29 이우람이 ElastiCache를 사용하지 않고 Redis 8.8을 앱 EC2에 함께 올리기로 결정했다.** 고정 버전과 AOF `everysec`을 모두 지키고 추가 비용이 없다. `M2-05`가 만들 사양은 같은 문서 5.4절에 있다.
+
+`M2-05` 선행 조건이었던 **[ADR-DATA-005](../07-adr/data/data-005-redis-refresh-token.md) 6절 배치 표현 개정은 2026-07-30 공동 owner(김인안·이우람) 합의로 완료했다.** 6절이 "앱 인스턴스에 함께 올린 Docker Redis 8.8, `127.0.0.1:6379` 바인딩"을 가리키게 바꿨고, 강제 규칙(10절)과 금지 사항(11절)은 그대로다. loopback 바인딩이 "사설 네트워크"와 "퍼블릭 IP 금지"를 사설 서브넷보다 강하게 만족하기 때문이다.
 
 ## 5. Task 분해
 
@@ -129,7 +171,8 @@ related_documents:
 
 ### M2-03 네트워크와 EC2 프로비저닝
 
-- 작업: VPC 서브넷 구성(RDS·Redis용 사설 서브넷 포함), 보안 그룹 생성(인터넷 인바운드는 80·443만, 22는 작업자 IP로 제한), EC2 인스턴스 생성, Elastic IP 할당, EC2 IAM Role 부여
+- 작업: VPC 서브넷 구성(RDS용 사설 서브넷 포함), 보안 그룹 생성(인터넷 인바운드는 80·443만, 22는 작업자 IP로 제한), EC2 인스턴스 생성, Elastic IP 할당, EC2 IAM Role 부여
+- 사양: `t4g.medium`(arm64, 2 vCPU / 4 GiB), 루트 볼륨 gp3 30 GiB. NAT Gateway와 인터페이스 VPC 엔드포인트는 만들지 않는다([사양·비용 산정](m2-cost-and-sizing.md) 3·6.3절)
 - 선행: M2-01
 - 완료 조건: 22 포트가 전체 공개되지 않고, EC2가 IAM Role로 Parameter Store·ECR·CloudWatch에 접근하며, 사설 서브넷이 인터넷에서 직접 도달되지 않는다
 - 근거: ADR-SEC-001
@@ -137,16 +180,17 @@ related_documents:
 ### M2-04 RDS PostgreSQL 프로비저닝
 
 - 작업: 서브넷 그룹과 RDS 보안 그룹 생성(EC2 보안 그룹에서만 5432 허용), PostgreSQL 17.10 인스턴스 생성, 자동 스냅샷 일 1회·7일 보관 설정
+- 사양: `db.t4g.micro`(2 vCPU / 1 GiB), gp3 20 GiB, Single-AZ. `M2-12`에서 `FreeableMemory`·`CPUCreditBalance`를 확인하고 필요하면 `db.t4g.small`로 올린다([사양·비용 산정](m2-cost-and-sizing.md) 4절)
 - 선행: M2-03
 - 완료 조건: RDS가 인터넷에서 직접 접근되지 않고 EC2에서만 연결되며, 스냅샷 일정이 활성화된다
 - 근거: RV-NFR-010
 
 ### M2-05 Redis 프로비저닝
 
-- 작업: 사설 서브넷 전용 Redis 8.8 인스턴스 생성, Redis 보안 그룹 생성(EC2 보안 그룹에서만 6379 허용), 영속화 설정(AOF `everysec`, RDB 스냅샷), TTL·eviction 정책이 인증 키를 임의로 축출하지 않도록 확인
-- 선행: M2-03
-- 완료 조건: Redis가 인터넷에서 직접 접근되지 않고 EC2에서만 연결되며, 재기동 후에도 저장된 인증 상태가 유지되고, `auth:refresh:*`·`auth:login-failure:*` 키가 eviction 대상이 되지 않는다
-- 근거: [ADR-DATA-005](../07-adr/data/data-005-redis-refresh-token.md), [기술 정책 7절](../06-architecture/technology-policy.md)
+- 작업: 앱 EC2에 `redis:8.8-alpine` 컨테이너 실행, `127.0.0.1:6379`에만 바인딩, 영속화 설정(AOF `appendfsync everysec`, RDB 스냅샷)을 호스트 볼륨에 저장, `maxmemory-policy noeviction`과 `maxmemory` 256 MB 설정
+- 선행: M2-03, 4.2절 ADR-DATA-005 6절 개정(2026-07-30 완료)
+- 완료 조건: Redis가 인터넷과 VPC 어디에서도 직접 접근되지 않고 같은 인스턴스에서만 연결되며, 재기동 후에도 저장된 인증 상태가 유지되고, `auth:refresh:*`·`auth:login-failure:*` 키가 eviction 대상이 되지 않는다
+- 근거: [ADR-DATA-005](../07-adr/data/data-005-redis-refresh-token.md), [기술 정책 7절](../06-architecture/technology-policy.md), [사양·비용 산정 5.4절](m2-cost-and-sizing.md)
 - 주의: 관리자 로그인·Refresh Token 회전·로그인 실패 제한과 `/internal/health/dependencies`가 Redis에 의존한다. 이 Task 없이는 M2-09의 관리자 흐름과 상태 확인 정상 조건을 만족할 수 없다
 
 ### M2-06 ECR 리포지토리와 이미지 push 자동화
@@ -170,8 +214,8 @@ related_documents:
 
 ### M2-08 Nginx 리버스 프록시와 HTTPS
 
-- 작업: Nginx 설치·설정(`/api/**` → Spring Boot, 나머지 외부 경로 → Next.js, `/internal/**` 차단), 4.1절에서 결정한 방식으로 인증서 발급과 갱신·재배포 구성, HTTP → HTTPS 리다이렉트
-- 선행: M2-02(DNS 전파 완료), M2-03, 4.1절 인증서 방식 결정
+- 작업: Nginx 설치·설정(`/api/**` → Spring Boot, 나머지 외부 경로 → Next.js, `/internal/**` 차단), ACM exportable 인증서(`masiton.click`, Route 53 DNS 검증) 발급과 EC2 내보내기·갱신 재배포 자동화 구성, HTTP → HTTPS 리다이렉트
+- 선행: M2-02(DNS 전파 완료), M2-03
 - 완료 조건: 인터넷에서 `/internal/health/live`가 차단되고, HTTPS로 프론트엔드와 `/api/**`가 모두 응답하며, 인증서 갱신과 재배포 절차가 문서화되고 최소 1회 시연된다
 - 근거: ADR-WEB-003, NFR-AVAILABILITY-001
 
@@ -192,9 +236,10 @@ related_documents:
 
 ### M2-11 검증 참여자 제한 공개 설정
 
-- 작업: 결정된 방식으로 접근을 제한하고 검증 참여자에게 접근 정보를 전달
-- 선행: M2-08, 제한 공개 방식 결정
-- 완료 조건: 검증 참여자만 접근하고 그 외 접근이 차단된다
+- 작업: Nginx Basic Auth 적용(`htpasswd` 파일을 EC2에서 생성, 자격 증명은 Parameter Store SecureString), 검증 참여자에게 접근 정보 전달
+- 선행: M2-08
+- 완료 조건: 검증 참여자만 접근하고 그 외 접근이 차단되며, 자격 증명이 저장소·이미지에 남지 않는다
+- 주의: Basic Auth는 제한 공개 수단이며 `/api/admin/**`의 JWT·`ADMIN` 검증을 대체하지 않는다(4절)
 
 ### M2-12 배포 후 기능 검증
 

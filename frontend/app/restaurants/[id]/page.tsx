@@ -4,6 +4,8 @@ import { Card } from '@/components/ui/Card'
 import { FavoriteButton } from '@/components/personal/FavoriteButton'
 import { RecentViewRecorder } from '@/components/personal/RecentViewRecorder'
 import {
+  RestaurantDetailUnavailableError,
+  RestaurantIdentifierInvalidError,
   RestaurantNotFoundError,
   getRestaurantDetail,
   isSafeHttpUrl,
@@ -29,18 +31,31 @@ export default async function RestaurantDetailPage({
   try {
     restaurant = await getRestaurantDetail(id)
   } catch (error) {
-    if (error instanceof RestaurantNotFoundError) {
+    /*
+     * 식별자 형식 오류도 찾을 수 없음으로 다뤄 404를 응답한다. 일시적 조회 실패로
+     * 보여주면 문구가 원인과 다르고, 없는 자원에 200을 응답해 오류 화면만 그리는
+     * 상태가 된다.
+     */
+    if (
+      error instanceof RestaurantNotFoundError ||
+      error instanceof RestaurantIdentifierInvalidError
+    ) {
       notFound()
     }
 
     /*
      * 맛집 기본 정보 제공자 실패(500, 네트워크 오류 등)는 찾을 수 없음과
      * 다른 상태다. API-DETAIL-001 8절: 기본 정보 실패는 상세 전체 실패로 다룬다.
+     * 이 상태만 서버에서 추적할 원인이 있으므로 traceId를 함께 보여준다.
      */
+    const traceId =
+      error instanceof RestaurantDetailUnavailableError ? error.traceId : undefined
+
     return (
       <section className={styles.errorState}>
         <h1>맛집 정보를 불러올 수 없습니다</h1>
         <p>일시적으로 정보를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.</p>
+        {traceId ? <p className={styles.traceId}>traceId: {traceId}</p> : null}
       </section>
     )
   }
