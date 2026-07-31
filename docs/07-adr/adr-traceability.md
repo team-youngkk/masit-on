@@ -80,7 +80,7 @@ related_documents:
 | springdoc-openapi 3.0.3 + Swagger UI | 고정 | Technology Policy | [ADR-FRAME-001](platform/frame-001-spring-boot.md) | 구현과 명세 대조 도구, 외부 계약 원문은 `docs/05-specs` |
 | Kakao Local REST API V2 | 확정·MVP 필요 | Accepted ADR | [ADR-EXT-001](integration/ext-001-reference-verification.md) | 관리자 맛집 장소 확인 |
 | YouTube Data API v3 | 확정·MVP 필요 | Accepted ADR | [ADR-EXT-001](integration/ext-001-reference-verification.md) | 관리자 채널·영상 확인 |
-| 자동 재시도·Circuit Breaker·비동기 이벤트·Outbox | 조건부 | Conditional ADR | [ADR-EXT-002](adr-backlog.md#adr-ext-002-자동-복원력과-신뢰성-이벤트-전달) | 수동 재시도·동기 처리로 운영 목표를 지킬 수 없다는 근거 필요 |
+| 자동 재시도·Circuit Breaker·비동기 이벤트·Outbox | 조건부(회원 Action 메일 Outbox만 부분 활성화) | Conditional ADR | [ADR-EXT-002](adr-backlog.md#adr-ext-002-자동-복원력과-신뢰성-이벤트-전달), 회원 Action 메일은 [ADR-AUTH-005](security/auth-005-member-action-mail-outbox.md) | 그 밖의 외부 Adapter·Circuit Breaker·이벤트는 수동 재시도·동기 처리로 운영 목표를 지킬 수 없다는 근거 필요 |
 | Kakao Maps JavaScript API V3 | 구현 범위 확정 | Accepted ADR | [ADR-MAP-001](integration/map-001-map-bounds-search.md) | 지도 SDK와 bounds 조회를 1차 확장에 포함하고 현재 위치·길찾기는 제외 |
 | Kakao Mobility Directions API V1 | 확정이나 범위 제외 | Post-MVP ADR | [ADR-ROUTE-001](adr-backlog.md#adr-route-001-kakao-mobility와-동선-추천) | 동선·코스 추천 제외 |
 | Java + Jsoup | 확정이나 자동화 제외 | Post-MVP ADR | [ADR-AUTO-001](adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) | 자동 수집 제외 |
@@ -192,7 +192,7 @@ related_documents:
 
 - `UNIQUE` 이후 격리 수준·락·upsert 도입 기준
 - 캐시·별도 읽기 저장소·물리적 CQRS 전환 기준
-- 자동 재시도·Circuit Breaker·비동기 이벤트·Transactional Outbox 도입 기준
+- 자동 재시도·Circuit Breaker·비동기 이벤트 도입 기준 (Transactional Outbox는 회원 Action 메일에 한해 [ADR-AUTH-005](security/auth-005-member-action-mail-outbox.md)로 확정, 나머지는 미결정)
 - 멀티모듈·독립 배포와 세분화된 관리자 권한의 전환 기준
 - Jsoup, n8n, k6 등 정확한 버전이 없는 의존성
 - 현재 구현 전 필수 팀 결정은 없다. ALB·Blue-Green 전환 자동화는 토폴로지 확장 시 새 ADR로 결정한다.

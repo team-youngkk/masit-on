@@ -50,10 +50,11 @@ related_documents:
 
 ### ADR-EXT-002 자동 복원력과 신뢰성 이벤트 전달
 
-- 현재 상태: Conditional
-- 현재 결정: 외부 호출은 timeout과 오류 분류만 적용하고 관리자가 수동 재시도한다. 도메인 이벤트·메시지 브로커·비동기 Worker·Transactional Outbox는 도입하지 않는다.
+- 현재 상태: Conditional (회원 Action 메일 발송 한 가지 사례만 부분 활성화, 아래 참고)
+- 현재 결정: 외부 호출은 timeout과 오류 분류만 적용하고 관리자가 수동 재시도한다. 도메인 이벤트·메시지 브로커·비동기 Worker·범용 Circuit Breaker는 도입하지 않는다.
+- 부분 활성화: 회원 가입 인증·비밀번호 재설정 메일은 "DB 커밋 뒤 유실되어서는 안 되는 후속 작업"에 해당해 [ADR-AUTH-005](security/auth-005-member-action-mail-outbox.md)(Accepted, 2026-07-31)로 Transactional Outbox를 좁게 승인했다. Kakao·YouTube 등 다른 외부 Adapter와 Circuit Breaker·메시지 브로커·도메인 이벤트는 이 활성화에 포함되지 않으며 아래 활성화 조건을 그대로 따른다.
 - 활성화 조건: 측정된 외부 실패율·호출량 때문에 수동 재시도로 운영 목표를 지킬 수 없거나, DB 커밋 뒤 유실되어서는 안 되는 알림·외부 동기화·후속 작업이 승인된다.
-- 도입 전 확인: 자동 재시도 대상과 최대 횟수·backoff·jitter·전체 시간 예산·429 처리·멱등성, Circuit Breaker 상태·임계값·fallback, 이벤트 전달 보장·순서·중복 소비, Outbox 스키마·발행기·정리·재처리·DLQ
+- 도입 전 확인: 자동 재시도 대상과 최대 횟수·backoff·jitter·전체 시간 예산·429 처리·멱등성, Circuit Breaker 상태·임계값·fallback, 이벤트 전달 보장·순서·중복 소비, Outbox 스키마·발행기·정리·재처리·DLQ(회원 Action 메일 Outbox는 ADR-AUTH-005가 이미 확정)
 - 영향: 외부 Adapter, 트랜잭션·이벤트 경계, 저장소·Queue, 장애 복구, 관측성·통합 테스트
 
 ### ADR-SEARCH-001 QueryDSL 도입
