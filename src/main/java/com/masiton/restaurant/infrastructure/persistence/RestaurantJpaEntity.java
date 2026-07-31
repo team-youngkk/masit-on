@@ -1,5 +1,6 @@
 package com.masiton.restaurant.infrastructure.persistence;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -52,6 +53,12 @@ public class RestaurantJpaEntity extends BaseAuditable {
     @Column(name = "phone_number", nullable = false, length = 20)
     private String phoneNumber;
 
+    @Column(name = "latitude", precision = 9, scale = 6)
+    private BigDecimal latitude;
+
+    @Column(name = "longitude", precision = 9, scale = 6)
+    private BigDecimal longitude;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "publication_status", nullable = false, length = 16)
     private PublicationStatus publicationStatus;
@@ -76,6 +83,8 @@ public class RestaurantJpaEntity extends BaseAuditable {
             String roadAddress,
             String detailAddress,
             String phoneNumber,
+            BigDecimal latitude,
+            BigDecimal longitude,
             PublicationStatus publicationStatus,
             LifecycleStatus lifecycleStatus,
             OffsetDateTime deletedAt) {
@@ -88,6 +97,8 @@ public class RestaurantJpaEntity extends BaseAuditable {
         this.roadAddress = roadAddress;
         this.detailAddress = detailAddress;
         this.phoneNumber = phoneNumber;
+        this.latitude = latitude;
+        this.longitude = longitude;
         this.publicationStatus = publicationStatus;
         this.lifecycleStatus = lifecycleStatus;
         this.deletedAt = deletedAt;
@@ -127,6 +138,14 @@ public class RestaurantJpaEntity extends BaseAuditable {
 
     public String getPhoneNumber() {
         return phoneNumber;
+    }
+
+    public BigDecimal getLatitude() {
+        return latitude;
+    }
+
+    public BigDecimal getLongitude() {
+        return longitude;
     }
 
     public PublicationStatus getPublicationStatus() {

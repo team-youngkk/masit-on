@@ -1,5 +1,6 @@
 package com.masiton.restaurant.application;
 
+import java.math.BigDecimal;
 import java.net.URI;
 import java.time.OffsetDateTime;
 import java.util.Optional;
@@ -144,6 +145,8 @@ public class RestaurantRegistrationService implements RestaurantRegistrationUseC
                 snapshot.roadAddress(),
                 snapshot.detailAddress(),
                 snapshot.phoneNumber(),
+                snapshot.latitude(),
+                snapshot.longitude(),
                 PublicationStatus.PUBLIC,
                 LifecycleStatus.ACTIVE,
                 null,
@@ -205,7 +208,9 @@ public class RestaurantRegistrationService implements RestaurantRegistrationUseC
                 place.kakaoPlaceUrl(),
                 place.roadAddress(),
                 input.detailAddress(),
-                place.phoneNumber());
+                place.phoneNumber(),
+                place.latitude(),
+                place.longitude());
     }
 
     private void verifyProviderValue(String value, int maximumLength) {
@@ -347,6 +352,8 @@ public class RestaurantRegistrationService implements RestaurantRegistrationUseC
             String kakaoPlaceUrl,
             String roadAddress,
             String detailAddress,
-            String phoneNumber) {
+            String phoneNumber,
+            BigDecimal latitude,
+            BigDecimal longitude) {
     }
 }

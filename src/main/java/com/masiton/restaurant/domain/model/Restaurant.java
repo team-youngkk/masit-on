@@ -1,5 +1,6 @@
 package com.masiton.restaurant.domain.model;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -20,6 +21,8 @@ public class Restaurant {
     private final String roadAddress;
     private final String detailAddress;
     private final String phoneNumber;
+    private final BigDecimal latitude;
+    private final BigDecimal longitude;
     private final PublicationStatus publicationStatus;
     private final LifecycleStatus lifecycleStatus;
     private final OffsetDateTime createdAt;
@@ -36,6 +39,8 @@ public class Restaurant {
             String roadAddress,
             String detailAddress,
             String phoneNumber,
+            BigDecimal latitude,
+            BigDecimal longitude,
             PublicationStatus publicationStatus,
             LifecycleStatus lifecycleStatus,
             OffsetDateTime createdAt,
@@ -50,6 +55,8 @@ public class Restaurant {
         this.roadAddress = roadAddress;
         this.detailAddress = detailAddress;
         this.phoneNumber = phoneNumber;
+        this.latitude = latitude;
+        this.longitude = longitude;
         this.publicationStatus = publicationStatus;
         this.lifecycleStatus = lifecycleStatus;
         this.createdAt = createdAt;
@@ -91,6 +98,14 @@ public class Restaurant {
 
     public String getPhoneNumber() {
         return phoneNumber;
+    }
+
+    public BigDecimal getLatitude() {
+        return latitude;
+    }
+
+    public BigDecimal getLongitude() {
+        return longitude;
     }
 
     public PublicationStatus getPublicationStatus() {

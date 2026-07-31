@@ -1,6 +1,7 @@
 package com.masiton.restaurant.infrastructure.external;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
@@ -127,8 +128,32 @@ class KakaoPlaceVerificationAdapter implements PlaceVerificationPort {
         if (id == null || name == null || placeUrl == null || roadAddress == null || phoneNumber == null) {
             throw new PlaceVerificationFailedException();
         }
+        BigDecimal longitude = decimalValue(document.get("x"), -180, 180);
+        BigDecimal latitude = decimalValue(document.get("y"), -90, 90);
+        if (latitude == null || longitude == null) {
+            latitude = null;
+            longitude = null;
+        }
         return Optional.of(new VerifiedPlace(
-                id, name, canonicalPlaceUrl(placeUrl), canonicalRoadAddress(roadAddress), phoneNumber));
+                id, name, canonicalPlaceUrl(placeUrl), canonicalRoadAddress(roadAddress), phoneNumber,
+                latitude, longitude));
+    }
+
+    /** 좌표는 등록 필수 항목이 아니므로 값이 없거나 범위를 벗어나면 검증 실패 대신 null로 취급한다. */
+    private BigDecimal decimalValue(Object value, int minimum, int maximum) {
+        String raw = stringValue(value);
+        if (raw == null) {
+            return null;
+        }
+        try {
+            BigDecimal decimal = new BigDecimal(raw);
+            if (decimal.compareTo(BigDecimal.valueOf(minimum)) < 0 || decimal.compareTo(BigDecimal.valueOf(maximum)) > 0) {
+                return null;
+            }
+            return decimal;
+        } catch (NumberFormatException exception) {
+            return null;
+        }
     }
 
     /**
