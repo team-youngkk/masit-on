@@ -1,4 +1,5 @@
 import { HydrationBoundary, QueryClient, dehydrate } from '@tanstack/react-query'
+import { headers } from 'next/headers'
 
 import { MapScreen } from '@/components/map/MapScreen'
 import { SEOUL_FALLBACK_BOUNDS } from '@/lib/map/map-points-query'
@@ -15,8 +16,9 @@ type MapPageProps = {
  * (ADR-WEB-002, ADR-MAP-001 6.6).
  */
 export default async function MapPage({ searchParams }: MapPageProps) {
-  const rawParams = await searchParams
+  const [rawParams, requestHeaders] = await Promise.all([searchParams, headers()])
   const creatorsResult = await fetchCreators()
+  const trustedClientAddress = requestHeaders.get('x-masiton-client-ip') ?? undefined
 
   const initialFilters = {
     query: toSingleValue(rawParams.query)?.trim() || undefined,
@@ -41,7 +43,12 @@ export default async function MapPage({ searchParams }: MapPageProps) {
       initialFilters.category ?? '',
       initialFilters.creatorId ?? '',
     ],
-    queryFn: () => fetchMapPointsOnServer(SEOUL_FALLBACK_BOUNDS, initialFilters),
+    queryFn: () =>
+      fetchMapPointsOnServer(
+        SEOUL_FALLBACK_BOUNDS,
+        initialFilters,
+        trustedClientAddress,
+      ),
   })
   const dehydratedState = dehydrate(queryClient)
 

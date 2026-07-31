@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 
 import { Card } from '@/components/ui/Card'
 import { FavoriteButton } from '@/components/personal/FavoriteButton'
@@ -142,17 +143,19 @@ function RestaurantContent({ restaurant }: { restaurant: RestaurantDetail }) {
           <ul className={styles.creatorList}>
             {restaurant.visitedBy.map((creator) => (
               <li key={creator.id}>
+                <Link href={`/creators/${encodeURIComponent(creator.id)}`}>
+                  {creator.channelName}
+                </Link>
                 {isSafeHttpUrl(creator.channelUrl) ? (
                   <a
                     href={creator.channelUrl}
                     target="_blank"
                     rel="noopener noreferrer"
+                    className={styles.externalCreatorLink}
                   >
-                    {creator.channelName}
+                    YouTube 채널
                   </a>
-                ) : (
-                  creator.channelName
-                )}
+                ) : null}
               </li>
             ))}
           </ul>

@@ -23,6 +23,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import com.masiton.personal.application.RecordRecentRestaurantViewService;
 import com.masiton.personal.application.port.in.PersonalRestaurantPage;
+import com.masiton.personal.application.port.out.PersonalRestaurantQueryPort;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -58,6 +59,9 @@ class JdbcPersonalRestaurantAdapterIntegrationTest {
     private JdbcPersonalRestaurantAdapter adapter;
 
     @Autowired
+    private PersonalRestaurantQueryPort queries;
+
+    @Autowired
     private RecordRecentRestaurantViewService recordRecentRestaurantViewService;
 
     @BeforeEach
@@ -88,7 +92,7 @@ class JdbcPersonalRestaurantAdapterIntegrationTest {
         insertRecent(memberId, expiredRestaurantId, now.minusDays(31));
 
         // when
-        PersonalRestaurantPage result = adapter.findRecentRestaurants(
+        PersonalRestaurantPage result = queries.findRecentRestaurants(
                 memberId, now.minusDays(30), 50, 1, 50);
 
         // then
@@ -116,9 +120,9 @@ class JdbcPersonalRestaurantAdapterIntegrationTest {
         }
 
         // when
-        PersonalRestaurantPage firstPage = adapter.findRecentRestaurants(
+        PersonalRestaurantPage firstPage = queries.findRecentRestaurants(
                 memberId, viewedAt.minusDays(30), 50, 1, 2);
-        PersonalRestaurantPage secondPage = adapter.findRecentRestaurants(
+        PersonalRestaurantPage secondPage = queries.findRecentRestaurants(
                 memberId, viewedAt.minusDays(30), 50, 2, 2);
 
         // then
@@ -252,10 +256,10 @@ class JdbcPersonalRestaurantAdapterIntegrationTest {
         // when
         adapter.addFavorite(memberId, olderRestaurantId, favoritedAt.minusMinutes(1));
         adapter.addFavorite(memberId, newerRestaurantId, favoritedAt);
-        PersonalRestaurantPage added = adapter.findFavorites(memberId, 1, 20);
+        PersonalRestaurantPage added = queries.findFavorites(memberId, 1, 20);
         adapter.removeFavorite(memberId, newerRestaurantId);
         adapter.removeFavorite(memberId, newerRestaurantId);
-        PersonalRestaurantPage removed = adapter.findFavorites(memberId, 1, 20);
+        PersonalRestaurantPage removed = queries.findFavorites(memberId, 1, 20);
 
         // then
         assertThat(added.items())
@@ -319,8 +323,8 @@ class JdbcPersonalRestaurantAdapterIntegrationTest {
         // when
         adapter.removeFavorite(firstMemberId, firstRestaurantId);
         adapter.removeRecentRestaurant(firstMemberId, firstRestaurantId);
-        PersonalRestaurantPage favorites = adapter.findFavorites(secondMemberId, 1, 20);
-        PersonalRestaurantPage recents = adapter.findRecentRestaurants(
+        PersonalRestaurantPage favorites = queries.findFavorites(secondMemberId, 1, 20);
+        PersonalRestaurantPage recents = queries.findRecentRestaurants(
                 secondMemberId, occurredAt.minusDays(30), 50, 1, 20);
 
         // then
@@ -347,9 +351,9 @@ class JdbcPersonalRestaurantAdapterIntegrationTest {
         insertRecent(memberId, restaurantId, occurredAt);
 
         // when
-        PersonalRestaurantPage favorites = adapter.findFavorites(
+        PersonalRestaurantPage favorites = queries.findFavorites(
                 memberId, Integer.MAX_VALUE, 50);
-        PersonalRestaurantPage recents = adapter.findRecentRestaurants(
+        PersonalRestaurantPage recents = queries.findRecentRestaurants(
                 memberId, occurredAt.minusDays(30), 50, Integer.MAX_VALUE, 50);
 
         // then

@@ -15,6 +15,7 @@ import {
 } from './map-points-query'
 import { classifyMapPointsResponse, type MapPointsApiResponse } from './map-points-response'
 import { parseRetryAfterHeader } from './retry-after'
+import { trustedClientForwardingHeaders } from './trusted-client-forwarding'
 
 const API_BASE_URL = process.env.API_BASE_URL ?? 'http://localhost:8080'
 const FALLBACK_ERROR_MESSAGE =
@@ -31,14 +32,16 @@ type ApiErrorBody = {
 export async function fetchMapPointsOnServer(
   bounds: MapBounds,
   filters: MapPointsFilters,
+  trustedClientAddress?: string,
 ): Promise<MapPointsFetchResult> {
   const params = buildMapPointsSearchParams(bounds, filters)
+  const headers = trustedClientForwardingHeaders(trustedClientAddress)
 
   let response: Response
   try {
     response = await fetch(
       `${API_BASE_URL}/api/restaurants/map-points?${params.toString()}`,
-      { cache: 'no-store' },
+      { cache: 'no-store', headers },
     )
   } catch {
     return { kind: 'error', message: FALLBACK_ERROR_MESSAGE }

@@ -13,20 +13,29 @@ import org.springframework.transaction.annotation.Transactional;
 import com.masiton.common.web.BusinessException;
 import com.masiton.personal.application.port.in.PersonalRestaurantPage;
 import com.masiton.personal.application.port.in.PersonalRestaurantUseCase;
+import com.masiton.personal.application.port.out.PersonalRestaurantQueryPort;
 import com.masiton.personal.application.port.out.PersonalRestaurantStore;
+import com.masiton.restaurant.application.port.in.FindRestaurantReferenceUseCase;
 
 @Service
 public class PersonalRestaurantService implements PersonalRestaurantUseCase {
 
     private static final int RECENT_LIMIT = 50;
+
     private final PersonalRestaurantStore store;
+    private final PersonalRestaurantQueryPort queries;
+    private final FindRestaurantReferenceUseCase restaurantReferences;
     private final Clock clock;
 
     public PersonalRestaurantService(
             PersonalRestaurantStore store,
+            PersonalRestaurantQueryPort queries,
+            FindRestaurantReferenceUseCase restaurantReferences,
             @Qualifier("personalizationClock") Clock clock
     ) {
         this.store = store;
+        this.queries = queries;
+        this.restaurantReferences = restaurantReferences;
         this.clock = clock;
     }
 
@@ -55,14 +64,13 @@ public class PersonalRestaurantService implements PersonalRestaurantUseCase {
     @Override
     @Transactional(readOnly = true)
     public PersonalRestaurantPage getFavorites(UUID memberId, int page, int size) {
-        return store.findFavorites(memberId, page, size);
+        return queries.findFavorites(memberId, page, size);
     }
 
     @Override
     @Transactional(readOnly = true)
     public PersonalRestaurantPage getRecentRestaurants(UUID memberId, int page, int size) {
-        OffsetDateTime cutoff = now().minusDays(30);
-        return store.findRecentRestaurants(memberId, cutoff, RECENT_LIMIT, page, size);
+        return queries.findRecentRestaurants(memberId, now().minusDays(30), RECENT_LIMIT, page, size);
     }
 
     @Override
@@ -73,9 +81,14 @@ public class PersonalRestaurantService implements PersonalRestaurantUseCase {
     }
 
     private void requirePublicRestaurant(UUID restaurantId) {
-        if (!store.isPublicRestaurant(restaurantId)) {
+        boolean publiclyVisible = restaurantReferences.findRestaurantReference(restaurantId)
+                .map(FindRestaurantReferenceUseCase.RestaurantReference::publiclyVisible)
+                .orElse(false);
+        if (!publiclyVisible) {
             throw new BusinessException(
-                    HttpStatus.NOT_FOUND, "RESTAURANT_NOT_FOUND", "요청한 맛집을 찾을 수 없습니다.");
+                    HttpStatus.NOT_FOUND,
+                    "RESTAURANT_NOT_FOUND",
+                    "요청한 맛집을 찾을 수 없습니다.");
         }
     }
 
