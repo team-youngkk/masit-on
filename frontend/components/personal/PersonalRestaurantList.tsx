@@ -129,13 +129,17 @@ export function PersonalRestaurantList({
   const { status } = useMemberSession()
   const copy = listCopy[kind]
   const requestSequence = useRef(0)
+  const deletionInFlight = useRef(false)
+  const currentViewKey = `${kind}:${page}:${size}`
+  const currentViewKeyRef = useRef(currentViewKey)
+  currentViewKeyRef.current = currentViewKey
   const [data, setData] = useState<DisplayPage | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<ErrorState | null>(null)
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
   const [itemErrors, setItemErrors] = useState<Record<string, ErrorState>>({})
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (): Promise<DisplayPage | null> => {
     const sequence = ++requestSequence.current
     setLoading(true)
     setError(null)
@@ -144,11 +148,16 @@ export function PersonalRestaurantList({
         kind === 'favorites'
           ? await getFavorites(page, size)
           : await getRecentRestaurants(page, size)
-      if (sequence !== requestSequence.current) return
-      setData(asDisplayPage(kind, response))
+      if (sequence !== requestSequence.current) return null
+      const displayPage = asDisplayPage(kind, response)
+      setData(displayPage)
+      return displayPage
     } catch (caught) {
-      if (sequence !== requestSequence.current) return
-      setError(await toError(caught, copy.fallback))
+      if (sequence !== requestSequence.current) return null
+      const nextError = await toError(caught, copy.fallback)
+      if (sequence !== requestSequence.current) return null
+      setError(nextError)
+      return null
     } finally {
       if (sequence === requestSequence.current) setLoading(false)
     }
@@ -172,6 +181,7 @@ export function PersonalRestaurantList({
   }, [load, status])
 
   function goToPage(nextPage: number) {
+    if (deletionInFlight.current) return
     router.push(`${copy.path}?page=${nextPage}&size=${size}`)
   }
 
@@ -179,6 +189,9 @@ export function PersonalRestaurantList({
   const loginHref = `/login?returnTo=${encodeURIComponent(currentRoute)}`
 
   async function remove(restaurantId: string) {
+    if (deletionInFlight.current) return
+    deletionInFlight.current = true
+    const viewKeyAtStart = currentViewKeyRef.current
     setPendingIds((current) => new Set(current).add(restaurantId))
     setItemErrors((current) => {
       const next = { ...current }
@@ -193,25 +206,18 @@ export function PersonalRestaurantList({
         await removeRecentRestaurant(restaurantId)
       }
 
-      const remainingTotal = Math.max(0, (data?.page.totalElements ?? 1) - 1)
-      if (page > 1 && remainingTotal <= (page - 1) * size) {
-        goToPage(page - 1)
-        return
-      }
+      if (viewKeyAtStart !== currentViewKeyRef.current) return
 
-      setData((current) =>
-        current
-          ? {
-              items: current.items.filter(
-                (item) => item.restaurant.id !== restaurantId,
-              ),
-              page: { ...current.page, totalElements: remainingTotal },
-            }
-          : current,
-      )
-      await load()
+      const refreshedPage = await load()
+      if (viewKeyAtStart !== currentViewKeyRef.current) return
+      if (page > 1 && refreshedPage?.items.length === 0) {
+        deletionInFlight.current = false
+        goToPage(page - 1)
+      }
     } catch (caught) {
+      if (viewKeyAtStart !== currentViewKeyRef.current) return
       const itemError = await toError(caught, copy.removeFallback)
+      if (viewKeyAtStart !== currentViewKeyRef.current) return
       if (itemError.status === 401) {
         setError(itemError)
       } else {
@@ -223,6 +229,7 @@ export function PersonalRestaurantList({
         next.delete(restaurantId)
         return next
       })
+      deletionInFlight.current = false
     }
   }
 
@@ -270,7 +277,7 @@ export function PersonalRestaurantList({
                     <div className={styles.actions}>
                       <Button
                         variant="secondary"
-                        disabled={pending}
+                        disabled={pendingIds.size > 0}
                         aria-describedby={itemError ? `remove-error-${id}` : undefined}
                         onClick={() => void remove(id)}
                       >
@@ -295,19 +302,20 @@ export function PersonalRestaurantList({
                 {data.page.number} / {data.page.totalPages} 페이지 (총 {data.page.totalElements}건)
               </p>
               <div className={styles.pageLinks}>
-                <Button variant="secondary" disabled={data.page.number <= 1} onClick={() => goToPage(data.page.number - 1)}>이전</Button>
+                <Button variant="secondary" disabled={data.page.number <= 1 || pendingIds.size > 0} onClick={() => goToPage(data.page.number - 1)}>이전</Button>
                 {pageNumbers(data.page.number, data.page.totalPages).map((number) => (
                   <button
                     key={number}
                     type="button"
                     className={number === data.page.number ? styles.currentPage : styles.pageButton}
                     aria-current={number === data.page.number ? 'page' : undefined}
+                    disabled={pendingIds.size > 0}
                     onClick={() => goToPage(number)}
                   >
                     {number}
                   </button>
                 ))}
-                <Button variant="secondary" disabled={!data.page.hasNext} onClick={() => goToPage(data.page.number + 1)}>다음</Button>
+                <Button variant="secondary" disabled={!data.page.hasNext || pendingIds.size > 0} onClick={() => goToPage(data.page.number + 1)}>다음</Button>
               </div>
             </nav>
           ) : null}
