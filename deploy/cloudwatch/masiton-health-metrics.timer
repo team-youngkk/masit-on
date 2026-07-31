@@ -1,0 +1,14 @@
+# 1분 주기 상태 확인 지표 수집 — M2-10.
+# 알람이 "연속 3회 실패"를 보므로 주기가 1분이면 장애 감지가 최대 3분이다.
+
+[Unit]
+Description=masiton 상태 확인 지표 수집 (1분 주기)
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1min
+AccuracySec=10s
+Unit=masiton-health-metrics.service
+
+[Install]
+WantedBy=timers.target

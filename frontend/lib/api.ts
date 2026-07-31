@@ -49,6 +49,33 @@ export class RestaurantNotFoundError extends Error {
 }
 
 /*
+ * 식별자 형식 오류(400 INVALID_IDENTIFIER)를 나타낸다. 화면은 이것을 찾을 수 없음과
+ * 같게 다룬다. 사용자가 잘못된 주소를 열었을 때 볼 것은 그 자리에 맛집이 없다는
+ * 사실이고, 형식 검증 여부를 알려주면 식별자를 불투명 문자열로 두는 계약
+ * (identifier-contract.md)과도 어긋난다. 일시적 조회 실패와는 다른 상태다.
+ */
+export class RestaurantIdentifierInvalidError extends Error {
+  constructor(restaurantId: string) {
+    super(`맛집 식별자 형식이 올바르지 않습니다: ${restaurantId}`)
+    this.name = 'RestaurantIdentifierInvalidError'
+  }
+}
+
+/*
+ * 기본 정보 제공자 실패(5xx 등)를 나타낸다. 이 상태만 서버에서 원인을 추적할 값이
+ * 있으므로 응답의 `traceId`를 화면까지 옮긴다(error-contract.md).
+ */
+export class RestaurantDetailUnavailableError extends Error {
+  constructor(
+    readonly status: number,
+    readonly traceId?: string,
+  ) {
+    super(`맛집 상세 조회에 실패했습니다: ${status}`)
+    this.name = 'RestaurantDetailUnavailableError'
+  }
+}
+
+/*
  * API-DETAIL-001(GET /api/restaurants/{restaurantId})을 호출한다.
  * 식별자는 불투명 문자열이라 형식을 검증하지 않고 그대로 경로에 전달하되,
  * `#`·`?` 등을 포함한 값이 fetch의 URL 파서에 의해 fragment·query로
@@ -66,8 +93,18 @@ export async function getRestaurantDetail(
     throw new RestaurantNotFoundError(restaurantId)
   }
 
+  if (response.status === 400) {
+    throw new RestaurantIdentifierInvalidError(restaurantId)
+  }
+
   if (!response.ok) {
-    throw new Error(`맛집 상세 조회에 실패했습니다: ${response.status}`)
+    let traceId: string | undefined
+    try {
+      traceId = ((await response.json()) as { traceId?: string }).traceId
+    } catch {
+      // 프록시가 만든 오류 응답처럼 본문이 JSON이 아니면 traceId 없이 안내한다.
+    }
+    throw new RestaurantDetailUnavailableError(response.status, traceId)
   }
 
   return (await response.json()) as RestaurantDetail
