@@ -246,6 +246,22 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
     }
 
     @Test
+    @DisplayName("회원 로그아웃은 유효한 JWT가 있어도 허용되지 않은 Origin을 403으로 거부한다")
+    void memberLogout_유효JWT와허용되지않은Origin_403거부() throws Exception {
+        String memberId = UUID.randomUUID().toString();
+        String sessionId = UUID.randomUUID().toString();
+        String memberToken = memberTokenIssuer.issueAccessToken(new MemberPrincipal(memberId, sessionId));
+        given(memberSessionAccessChecker.check(memberId, sessionId))
+                .willReturn(MemberSessionAccessChecker.AccessDecision.ALLOWED);
+
+        mockMvc.perform(delete("/api/auth/tokens")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken)
+                        .header(HttpHeaders.ORIGIN, "https://untrusted.example"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+    }
+
+    @Test
     @DisplayName("공개 상세는 유효 회원 JWT의 세션 문맥을 확인하고 인증한다")
     void restaurantDetail_유효회원JWT_선택적으로인증한다() throws Exception {
         String memberId = UUID.randomUUID().toString();

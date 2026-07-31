@@ -75,6 +75,11 @@ render_required "spring.data.redis.password"            /masiton/redis/password
 render_required "masiton.security.jwt.key-id"           /masiton/jwt/key-id
 render_required "masiton.security.jwt.private-key-pem"  /masiton/jwt/private-key-pem
 render_required "masiton.security.jwt.public-key-pem"   /masiton/jwt/public-key-pem
+render_required "masiton.member.action-mail.active-key-id" /masiton/member/action-mail/active-key-id
+render_required "masiton.member.action-mail.active-key"    /masiton/member/action-mail/active-key
+render_required "masiton.member.rate-limit.secret"         /masiton/member/rate-limit/secret
+render_required "spring.mail.username"                     /masiton/mail/username
+render_required "spring.mail.password"                     /masiton/mail/password
 render_optional "masiton.integration.kakao.rest-api-key" /masiton/integration/kakao/rest-api-key
 render_optional "masiton.integration.youtube.api-key"    /masiton/integration/youtube/api-key
 
