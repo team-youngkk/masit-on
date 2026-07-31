@@ -586,22 +586,22 @@ reload가 master 프로세스를 바꾸지 않으므로 **인증서 교체에 �
 |---|---|---|
 | `masiton.member.action-mail.active-key-id` | `/masiton/member/action-mail/active-key-id` | `String` |
 | `masiton.member.action-mail.active-key` | `/masiton/member/action-mail/active-key` | `SecureString` |
-| `masiton.member.rate-limit.secret` | `/masiton/member/rate-limit-secret` | `SecureString` |
+| `masiton.member.rate-limit.secret` | `/masiton/member/rate-limit/secret` | `SecureString` |
 | `spring.mail.username` | `/masiton/mail/username` | `SecureString` |
 | `spring.mail.password` | `/masiton/mail/password` | `SecureString` |
 
 SMTP 전송은 `/masiton/mail/host`·`/masiton/mail/port`의 인증 SMTP 서버와 필수
 STARTTLS를 사용한다. 호스트와 포트는 비밀이 아니므로 `app-run.sh`가 환경 변수로
 전달하고 사용자명·비밀번호만 configtree로 주입한다. `mail` health가 내부
-`dependencies` 그룹에 포함되므로 연결·인증이 성립하지 않으면 새 이미지 배포의 ready
-확인이 실패한다. 이 경우 배포 워크플로가 실패 상태로 끝나며 기록된 직전 이미지 SHA로
-같은 승인 게이트의 롤백 절차를 실행한다.
+`dependencies` 그룹에 포함되며 배포 스크립트가 `dependencies.mail`의 `UP` 상태를
+명시적으로 검사한다. 연결·인증이 성립하지 않으면 배포 워크플로가 실패 상태로 끝나며
+기록된 직전 이미지 SHA로 같은 승인 게이트의 롤백 절차를 실행한다.
 
 운영 공개 기준 URL은 `https://masiton.click`이고 Nginx와 애플리케이션이 같은 호스트
 네트워크를 사용하므로 loopback `127.0.0.1`만 신뢰 프록시로 둔다. 회원·지도 프록시
 모드를 명시적으로 켜며 다른 peer의 `X-Forwarded-For`는 계속 무시한다. 배포 스크립트는
-유효 Origin의 refresh/logout이 403이 아닌 인증 실패로 진입하는지와 서로 다른 전달 IP가
-하나의 rate-limit 버킷으로 합쳐지지 않는지를 확인한다.
+유효 Origin의 refresh smoke가 `403`이 아닌 인증 실패로 진입하는지 확인하고, Redis의
+`source` 키가 서로 다른 전달 IP별로 분리되는지 확인한다.
 
 파일 하나가 속성 하나이므로 JWT PEM처럼 여러 줄인 값도 이스케이프가 필요 없다. Redis `requirepass`(7.2절)와 Basic Auth `htpasswd`(10절)에 이미 쓰는 방식과 같다.
 
@@ -636,6 +636,9 @@ BCrypt 해시는 `htpasswd -nbBC 10 -i`로 만들었다. 강도 10은 애플리�
 암호는 명령행 인자로 넘기지 않았다(`-i`는 표준 입력에서 읽는다). 평문은 Parameter Store에만 있고 어디에도 출력하지 않았다.
 
 ### 9.4. 완료 조건 검증
+
+아래 응답은 회원 SMTP health를 도입하기 전 최초 운영 배포 시점의 기록이다. 현재 배포
+게이트는 7.5절과 같이 `dependencies.mail`의 `UP` 상태까지 추가로 요구한다.
 
 | 완료 조건 | 결과 |
 |---|---|
