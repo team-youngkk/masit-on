@@ -20,6 +20,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DisplayName("관리자 API 보안 경계")
 class SecurityBoundaryApiTest extends FullContextIntegrationTest {
 
+    private static final String UNKNOWN_CREATOR_ID = "00000000-0000-4000-8000-000000000000";
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -47,5 +49,41 @@ class SecurityBoundaryApiTest extends FullContextIntegrationTest {
     void 공개조회_미인증_보안경계에서거부하지않는다() throws Exception {
         mockMvc.perform(get("/api/restaurants"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("유튜버 상세 세 조회는 인증 없이 보안 경계를 통과한다")
+    void 유튜버상세공개조회_미인증_보안경계에서거부하지않는다() throws Exception {
+        mockMvc.perform(get("/api/creators/" + UNKNOWN_CREATOR_ID))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("CREATOR_NOT_FOUND"));
+        mockMvc.perform(get("/api/creators/" + UNKNOWN_CREATOR_ID + "/restaurants"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("CREATOR_NOT_FOUND"));
+        mockMvc.perform(get("/api/creators/" + UNKNOWN_CREATOR_ID + "/videos"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("CREATOR_NOT_FOUND"));
+    }
+
+    /*
+     * 공개 조회는 Bearer Token을 해석하지 않는다. 만료·다른 audience Token이 섞여 들어와도
+     * 401로 막히면 공개 계약이 인증 상태에 종속된다.
+     */
+    @Test
+    @DisplayName("유튜버 상세 조회는 해석할 수 없는 Bearer Token이 있어도 401을 반환하지 않는다")
+    void 유튜버상세공개조회_해석불가Bearer토큰_401을반환하지않는다() throws Exception {
+        mockMvc.perform(get("/api/creators/" + UNKNOWN_CREATOR_ID)
+                        .header("Authorization", "Bearer not-a-valid-token"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("CREATOR_NOT_FOUND"));
+    }
+
+    @Test
+    @DisplayName("정의되지 않은 유튜버 하위 경로는 기본 거부한다")
+    void 유튜버하위경로_정의되지않음_미인증_401공통오류를반환한다() throws Exception {
+        mockMvc.perform(get("/api/creators/" + UNKNOWN_CREATOR_ID + "/subscribers"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"))
+                .andExpect(jsonPath("$.traceId").isNotEmpty());
     }
 }

@@ -80,9 +80,42 @@ class YouTubeChannelVerificationAdapter implements ChannelVerificationPort {
             Map<String, Object> snippet = (Map<String, Object>) rawSnippet;
             String title = stringValue(snippet.get("title"));
             if (id.isBlank() || title == null) throw new ChannelVerificationFailedException();
-            return Optional.of(new VerifiedChannel(id, title, canonicalUrl(id), OffsetDateTime.now()));
+            String handle = stringValue(snippet.get("customUrl"));
+            String description = stringValue(snippet.get("description"));
+            String profileImageUrl = thumbnailUrl(snippet.get("thumbnails"));
+            return Optional.of(new VerifiedChannel(
+                    id, title, canonicalUrl(id), profileImageUrl, description, handle, OffsetDateTime.now()));
         } catch (JacksonException exception) { throw new ChannelVerificationFailedException(exception); }
     }
     private String canonicalUrl(String id) { return "https://www.youtube.com/channel/" + id; }
     private String stringValue(Object value) { return value instanceof String string && !string.trim().isEmpty() ? string.trim() : null; }
+
+    /**
+     * 표시용 프로필 이미지는 선택 값이므로 채널 검증 실패로 넓히지 않는다. high/medium/default
+     * 순서로 존재하는 첫 썸네일만 선택한다. creator 테이블 CHECK 제약이 비어 있지 않은 HTTPS
+     * URL만 허용하므로 선택된 URL이 HTTPS가 아니면 다음 우선순위로 넘기지 않고 즉시 null로
+     * 떨어뜨린다.
+     */
+    @SuppressWarnings("unchecked")
+    private String thumbnailUrl(Object value) {
+        if (!(value instanceof Map<?, ?> raw)) return null;
+        Map<String, Object> thumbnails = (Map<String, Object>) raw;
+        for (String key : List.of("high", "medium", "default")) {
+            if (thumbnails.get(key) instanceof Map<?, ?> image) {
+                String url = stringValue(image.get("url"));
+                if (url != null) {
+                    return isHttps(url) ? url : null;
+                }
+            }
+        }
+        return null;
+    }
+    /**
+     * ck_creator__profile_image_url_https는 {@code LIKE 'https://%'}로 대소문자와 슬래시 두 개를
+     * 문자 그대로 요구한다. URI scheme 비교는 {@code https:/host}·{@code HTTPS://host}까지 통과시켜
+     * 제약을 위반하는 값을 저장 경로로 흘려보내므로 제약과 같은 형태로 검사한다.
+     */
+    private boolean isHttps(String url) {
+        return url.startsWith("https://");
+    }
 }

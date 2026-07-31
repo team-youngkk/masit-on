@@ -1,6 +1,7 @@
 package com.masiton;
 
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -59,9 +60,9 @@ class FlywayMigrationIntegrationTest {
     private MemberSessionRevocationStore memberSessionRevocationStore;
 
     @Test
-    @DisplayName("빈 데이터베이스에 V1부터 V5까지 계약된 순서와 파일명으로 성공 기록된다")
-    void 마이그레이션적용_빈데이터베이스_V1부터V5까지계약된순서와파일명으로성공기록된다() {
-        // given: 컨텍스트 기동 시점에 Flyway가 V1 baseline과 V2~V5 전진 변경을 적용했다.
+    @DisplayName("빈 데이터베이스에 V1부터 V6까지 계약된 순서와 파일명으로 성공 기록된다")
+    void 마이그레이션적용_빈데이터베이스_V1부터V6까지계약된순서와파일명으로성공기록된다() {
+        // given: 컨텍스트 기동 시점에 Flyway가 V1 baseline과 V2~V6 전진 변경을 적용했다.
 
         // when
         List<AppliedMigration> appliedMigrations = jdbcTemplate.query(
@@ -85,7 +86,9 @@ class FlywayMigrationIntegrationTest {
                 new AppliedMigration("4", "add member personal restaurant relations", "SQL",
                         "V4__add_member_personal_restaurant_relations.sql", true),
                 new AppliedMigration("5", "add restaurant coordinates", "SQL",
-                        "V5__add_restaurant_coordinates.sql", true)
+                        "V5__add_restaurant_coordinates.sql", true),
+                new AppliedMigration("6", "add creator detail display fields", "SQL",
+                        "V6__add_creator_detail_display_fields.sql", true)
         );
     }
 
@@ -241,6 +244,37 @@ class FlywayMigrationIntegrationTest {
                         + "AND publication_status = 'PUBLIC' AND lifecycle_status = 'ACTIVE'",
                 Integer.class);
         assertThat(boundsRowCount).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("V6 Creator 상세 표시 열은 nullable이고 기존 Creator 행의 값은 NULL로 남는다")
+    void V6_Creator상세표시열_nullable이고기존행값은NULL로남는다() {
+        // given: V1 baseline이 표시 열 없이 Creator 한 행을 이미 적재했다고 가정한 상태를 재현한다.
+        UUID creatorId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO creator (id, external_channel_id, channel_name, channel_url, "
+                        + "external_status_checked_at) VALUES (?, ?, ?, ?, ?)",
+                creatorId, "UC-" + creatorId, "기존 채널", "https://example.com/channel/" + creatorId,
+                OffsetDateTime.now());
+
+        // when
+        List<String> nullableColumns = jdbcTemplate.queryForList(
+                "SELECT column_name FROM information_schema.columns "
+                        + "WHERE table_schema = 'public' AND table_name = 'creator' "
+                        + "AND column_name IN ('profile_image_url', 'description', 'handle') "
+                        + "AND is_nullable = 'YES'",
+                String.class);
+
+        Integer nullValueCount = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM creator WHERE id = ? "
+                        + "AND profile_image_url IS NULL AND description IS NULL AND handle IS NULL",
+                Integer.class,
+                creatorId);
+
+        // then
+        assertThat(nullableColumns)
+                .containsExactlyInAnyOrder("profile_image_url", "description", "handle");
+        assertThat(nullValueCount).isEqualTo(1);
     }
 
     @Test

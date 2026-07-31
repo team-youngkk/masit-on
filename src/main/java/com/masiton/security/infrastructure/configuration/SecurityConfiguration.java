@@ -63,7 +63,10 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET,
                                 "/api/restaurants",
                                 "/api/restaurants/*",
-                                "/api/creators").permitAll()
+                                "/api/creators",
+                                "/api/creators/*",
+                                "/api/creators/*/restaurants",
+                                "/api/creators/*/videos").permitAll()
                         .requestMatchers("/internal/health/live", "/internal/health/ready", "/internal/health/dependencies")
                         .permitAll()
                         .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
@@ -136,7 +139,29 @@ public class SecurityConfiguration {
             return false;
         }
         String requestUri = request.getRequestURI();
-        return requestUri.equals("/api/restaurants") || requestUri.equals("/api/creators");
+        return requestUri.equals("/api/restaurants")
+                || requestUri.equals("/api/creators")
+                || isCreatorDetailReadRequest(requestUri);
+    }
+
+    /**
+     * API-CREATOR-DETAIL-001~003은 회원 문맥이 없는 완전 공개 조회다. 맛집 상세와 달리 회원별
+     * 부수효과가 없으므로 Bearer Token을 해석하지 않는다. 만료·다른 audience Token을 들고 온
+     * 요청도 401 대신 공개 응답을 받는다.
+     */
+    private boolean isCreatorDetailReadRequest(String requestUri) {
+        String detailPrefix = "/api/creators/";
+        if (!requestUri.startsWith(detailPrefix)) {
+            return false;
+        }
+        String remainder = requestUri.substring(detailPrefix.length());
+        int separatorIndex = remainder.indexOf('/');
+        if (separatorIndex < 0) {
+            return !remainder.isEmpty();
+        }
+        String creatorId = remainder.substring(0, separatorIndex);
+        String subResource = remainder.substring(separatorIndex + 1);
+        return !creatorId.isEmpty() && ("restaurants".equals(subResource) || "videos".equals(subResource));
     }
 
     private boolean isUnauthenticatedAuthenticationRequest(HttpServletRequest request) {

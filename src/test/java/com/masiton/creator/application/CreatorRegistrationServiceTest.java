@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import com.masiton.creator.application.port.in.CreatorRegistrationUseCase;
 import com.masiton.creator.application.port.out.ChannelVerificationPort;
@@ -140,6 +141,61 @@ class CreatorRegistrationServiceTest {
     }
 
     @Test
+    @DisplayName("확정 시 미리보기에서 저장된 프로필 이미지·소개·handle을 Creator에 그대로 전달한다")
+    void create_발급토큰_표시정보를Creator에전달한다() {
+        UUID tokenId = UUID.randomUUID();
+        when(confirmationTokenUseCase.acquire(
+                eq("opaque-token"),
+                eq(adminId),
+                eq(ConfirmationTokenResourceType.CREATOR)))
+                .thenReturn(acquired(tokenId, ConfirmationTokenStatus.ISSUED, null));
+        when(creatorRepository.findByExternalChannelId("channel-1")).thenReturn(Optional.empty());
+        when(creatorRepository.insertIfAbsent(any())).thenAnswer(invocation -> Optional.of(invocation.getArgument(0)));
+        ArgumentCaptor<Creator> captor = ArgumentCaptor.forClass(Creator.class);
+
+        service.create(new CreatorRegistrationUseCase.CreatorCreateCommand(adminId, "opaque-token"));
+
+        verify(creatorRepository).insertIfAbsent(captor.capture());
+        Creator saved = captor.getValue();
+        assertThat(saved.getProfileImageUrl()).isEqualTo("https://i.ytimg.com/vi/fixtureVid1/hqdefault.jpg");
+        assertThat(saved.getDescription()).isEqualTo("채널 소개");
+        assertThat(saved.getHandle()).isEqualTo("@channel-handle");
+    }
+
+    @Test
+    @DisplayName("미리보기 snapshot의 표시 정보가 공백이면 저장 전 null로 정규화한다")
+    void create_snapshot표시정보공백_null로정규화한다() {
+        UUID tokenId = UUID.randomUUID();
+        when(confirmationTokenUseCase.acquire(
+                eq("opaque-token"),
+                eq(adminId),
+                eq(ConfirmationTokenResourceType.CREATOR)))
+                .thenReturn(new AcquiredConfirmationToken(
+                        tokenId,
+                        (short) 1,
+                        "channel-1",
+                        """
+                        {"externalChannelId":"channel-1","channelName":"채널명",
+                        "channelUrl":"https://www.youtube.com/channel/channel-1",
+                        "profileImageUrl":"   ","description":"","handle":"   ",
+                        "checkedAt":"2026-07-27T12:00:00Z"}
+                        """,
+                        ConfirmationTokenStatus.ISSUED,
+                        null));
+        when(creatorRepository.findByExternalChannelId("channel-1")).thenReturn(Optional.empty());
+        when(creatorRepository.insertIfAbsent(any())).thenAnswer(invocation -> Optional.of(invocation.getArgument(0)));
+        ArgumentCaptor<Creator> captor = ArgumentCaptor.forClass(Creator.class);
+
+        service.create(new CreatorRegistrationUseCase.CreatorCreateCommand(adminId, "opaque-token"));
+
+        verify(creatorRepository).insertIfAbsent(captor.capture());
+        Creator saved = captor.getValue();
+        assertThat(saved.getProfileImageUrl()).isNull();
+        assertThat(saved.getDescription()).isNull();
+        assertThat(saved.getHandle()).isNull();
+    }
+
+    @Test
     @DisplayName("완료된 CREATED 토큰 재시도는 새 유튜버를 만들지 않고 같은 결과를 반환한다")
     void create_CREATED재시도_같은결과를반환한다() {
         UUID tokenId = UUID.randomUUID();
@@ -202,6 +258,9 @@ class CreatorRegistrationServiceTest {
                 "channel-1",
                 "채널명",
                 "https://www.youtube.com/channel/channel-1",
+                "https://i.ytimg.com/vi/fixtureVid1/hqdefault.jpg",
+                "채널 소개",
+                "@channel-handle",
                 checkedAt);
     }
 
@@ -213,6 +272,8 @@ class CreatorRegistrationServiceTest {
                 """
                 {"externalChannelId":"channel-1","channelName":"채널명",
                 "channelUrl":"https://www.youtube.com/channel/channel-1",
+                "profileImageUrl":"https://i.ytimg.com/vi/fixtureVid1/hqdefault.jpg",
+                "description":"채널 소개","handle":"@channel-handle",
                 "checkedAt":"2026-07-27T12:00:00Z"}
                 """,
                 status,
@@ -225,6 +286,9 @@ class CreatorRegistrationServiceTest {
                 externalChannelId,
                 "기존 채널",
                 "https://www.youtube.com/channel/" + externalChannelId,
+                null,
+                null,
+                null,
                 PublicationStatus.PUBLIC,
                 LifecycleStatus.ACTIVE,
                 ExternalAvailabilityStatus.AVAILABLE,
