@@ -51,6 +51,7 @@ export function SiteHeader() {
         </Link>
         <nav className={styles.nav} aria-label="주요 메뉴">
           <Link href="/restaurants">맛집 탐색</Link>
+          <Link href="/map">지도</Link>
           {status === 'loading' ? (
             <span className={styles.sessionLoading} aria-live="polite">
               로그인 확인 중
