@@ -1,0 +1,25 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/masiton}
+    username: ${DB_USERNAME:masiton}
+    password: ${DB_PASSWORD:masiton_local}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+masiton:
+  integration:
+    # 로컬 프로파일은 실제 Kakao/YouTube 호스트에 접근하지 않는다. WireMock이
+    # docker/wiremock/mappings에 정의된 매핑으로 이 경로들을 대신 응답한다.
+    # (mvp-2day-implementation-plan.md 5.5절, CLAUDE.md 8절)
+    #
+    # Key는 환경 변수로 덮어쓸 수 없게 고정한다. base-url이 WireMock이므로 실제 제공자 Key를
+    # 넣어도 검증에 쓰이지 않고, WireMock 요청 저널(무인증 /__admin/requests)에 헤더와
+    # query string이 그대로 남아 Key만 노출된다.
+    kakao:
+      base-url: ${KAKAO_BASE_URL:http://localhost:8081}
+      rest-api-key: local-wiremock-key
+    youtube:
+      base-url: ${YOUTUBE_BASE_URL:http://localhost:8081}
+      api-key: local-wiremock-key

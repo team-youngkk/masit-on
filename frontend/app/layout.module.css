@@ -1,0 +1,13 @@
+/* 콘텐츠가 짧아도 푸터가 화면 하단에 붙도록 세로 flex로 구성한다. */
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.main {
+  width: 100%;
+  max-width: var(--layout-max-width);
+  margin: 0 auto;
+  padding: var(--space-8) var(--layout-gutter) var(--space-12);
+}

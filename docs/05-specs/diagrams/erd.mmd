@@ -1,0 +1,104 @@
+erDiagram
+    REGION ||--o{ RESTAURANT : classifies
+    FOOD_CATEGORY ||--o{ RESTAURANT : represents
+    CREATOR o|--o{ VIDEO : publishes
+    RESTAURANT ||--o{ VISIT : has
+    CREATOR ||--o{ VISIT : visits
+    VIDEO ||--o{ VISIT : proves
+    ADMIN_ACCOUNT ||--o{ ADMIN_REFRESH_TOKEN : owns
+
+    REGION {
+        identifier id PK
+        text name UK
+        text code UK
+        integer sortOrder UK
+        boolean active
+    }
+
+    FOOD_CATEGORY {
+        identifier id PK
+        text name UK
+        text code UK
+        integer sortOrder UK
+        boolean active
+    }
+
+    RESTAURANT {
+        identifier id PK
+        identifier regionId FK
+        identifier foodCategoryId FK
+        text kakaoPlaceIdentity UK
+        text name
+        text kakaoPlaceUrl
+        text roadAddress
+        text detailAddress "optional"
+        text phoneNumber
+        status publicationStatus
+        status lifecycleStatus
+        timestamp createdAt
+        timestamp updatedAt
+        timestamp deletedAt "required only when deleted"
+    }
+
+    CREATOR {
+        identifier id PK
+        text externalChannelId UK
+        text channelName
+        text channelUrl
+        status publicationStatus
+        status lifecycleStatus
+        status externalAvailabilityStatus
+        timestamp lastExternalStatusCheckedAt
+        timestamp createdAt
+        timestamp updatedAt
+        timestamp deletedAt "required only when deleted"
+    }
+
+    VIDEO {
+        identifier id PK
+        identifier creatorId FK "optional; matched by external channel"
+        text externalVideoId UK
+        text publisherExternalChannelId
+        text title
+        text sourceUrl
+        text thumbnailUrl
+        timestamp publishedAt "optional, not visit date"
+        status publicationStatus
+        status lifecycleStatus
+        status externalAvailabilityStatus
+        timestamp lastExternalStatusCheckedAt
+        timestamp createdAt
+        timestamp updatedAt
+        timestamp deletedAt "required only when deleted"
+    }
+
+    VISIT {
+        identifier id PK
+        identifier restaurantId FK "composite UK part"
+        identifier creatorId FK "composite UK part; matches Video publisher channel"
+        identifier videoId FK "composite UK part"
+        status publicationStatus
+        status lifecycleStatus
+        timestamp createdAt
+        timestamp updatedAt
+        timestamp deletedAt "required only when deleted"
+    }
+
+    ADMIN_ACCOUNT {
+        identifier id PK
+        text loginId UK
+        text passwordCredential
+        boolean active
+        timestamp createdAt
+        timestamp updatedAt
+    }
+
+    ADMIN_REFRESH_TOKEN {
+        identifier tokenId PK
+        identifier adminAccountId FK
+        text tokenCredential UK
+        text tokenFamilyId
+        timestamp createdAt
+        timestamp expiresAt
+        timestamp invalidatedAt "optional; at most one active token per account"
+    }

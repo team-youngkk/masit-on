@@ -1,0 +1,5 @@
+{
+  "kind": "youtube#channelListResponse",
+  "etag": "fixture-channel-missing",
+  "items": []
+}

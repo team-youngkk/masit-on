@@ -1,0 +1,14 @@
+{
+  "kind": "youtube#videoListResponse",
+  "etag": "fixture-video-contract-error",
+  "items": [
+    {
+      "id": "fixtureCon",
+      "snippet": {
+        "channelId": "UCfixtureNormalChannel01",
+        "channelTitle": "맛잇온 테스트 채널",
+        "title": "썸네일이 없는 테스트 영상"
+      }
+    }
+  ]
+}

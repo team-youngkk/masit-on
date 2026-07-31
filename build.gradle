@@ -1,0 +1,71 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.1.0'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.masiton'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    archunitVersion = '1.4.1'
+
+    /*
+     * Spring Boot 4.1.0 BOM이 고정하는 42.7.11에는 CVE-2026-54291(HIGH)이 있다.
+     * SCRAM-SHA-256-PLUS 다운그레이드로 중간자 공격 보호를 우회할 수 있어 RDS
+     * 연결 경로에 직접 해당한다. 42.7.12에서 수정됐고 42.7.13이 같은 계열 최신이다.
+     *
+     * 개별 dependency에 버전을 중복 선언하는 대신 Spring Boot가 제공하는 BOM 속성
+     * 재정의를 사용한다(기술 정책 4절). BOM이 이 버전 이상으로 올라가면 이 항목을 지운다.
+     */
+    set('postgresql.version', '42.7.13')
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+    implementation 'org.springframework.boot:spring-boot-flyway'
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-database-postgresql'
+
+    runtimeOnly 'org.postgresql:postgresql'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
+    testImplementation 'org.testcontainers:testcontainers-postgresql'
+    testImplementation "com.tngtech.archunit:archunit-junit5:${archunitVersion}"
+
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+    }
+}
+
+tasks.named('bootRun') {
+    // 로컬 개발 루프의 접속값과 WireMock 엔드포인트는 local 프로파일에만 있다.
+    // 프로파일을 명시하지 않은 실행은 접속값이 없어 기동에 실패해야 한다(fail closed).
+    systemProperty 'spring.profiles.active', System.getProperty('spring.profiles.active', 'local')
+}

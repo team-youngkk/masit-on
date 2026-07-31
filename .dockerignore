@@ -1,0 +1,28 @@
+# 빌드 컨텍스트를 Dockerfile이 실제로 COPY하는 파일로 제한한다.
+# 컨텍스트에 들어간 파일은 이미지에 굽지 않아도 빌드 캐시와 전송 비용에 영향을 준다.
+
+.git
+.gitattributes
+.gitignore
+.github
+
+.gradle
+build
+out
+bin
+
+# 프론트엔드는 frontend/Dockerfile이 frontend를 컨텍스트로 따로 빌드한다.
+# 백엔드 컨텍스트에 두면 node_modules까지 전송돼 빌드가 크게 느려진다.
+frontend
+
+.idea
+*.iml
+.vscode
+
+# 로컬 환경 값은 이미지에 들어가면 안 된다 (ADR-RUNTIME-001 11절)
+.env
+
+docs
+*.md
+
+docker

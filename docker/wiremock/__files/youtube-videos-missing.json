@@ -1,0 +1,5 @@
+{
+  "kind": "youtube#videoListResponse",
+  "etag": "fixture-video-missing",
+  "items": []
+}

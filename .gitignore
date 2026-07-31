@@ -19,6 +19,40 @@
 *.tar.gz
 *.rar
 
+# Gradle Wrapper는 ADR-BUILD-001에 따라 저장소에서 관리한다
+!gradle/wrapper/gradle-wrapper.jar
+
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/
+
+# IDE
+.idea/
+*.iml
+out/
+# `port.out`은 헥사고날 아키텍처의 소스 패키지이므로 IDE 출력 디렉터리 예외로 추적한다.
+!src/main/java/**/port/
+!src/main/java/**/port/out/
+!src/main/java/**/port/out/**
+
+# 로컬 환경 값
+.env
+
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+# Node / Next.js
+node_modules/
+.next/
+next-env.d.ts
+*.tsbuildinfo
+
+# Claude Code — 공유 설정만 커밋하고 개인 로컬 설정은 제외한다
+.claude/settings.local.json
+
+# IDE
+.idea/
+*.iml
+.vscode/

@@ -1,0 +1,14 @@
+{
+  "documents": [
+    {
+      "id": "fixture-place-contract-error",
+      "place_name": "도로명 주소가 누락된 테스트 식당",
+      "phone": "02-000-0000",
+      "place_url": "http://place.map.kakao.com/fixture-place-contract-error"
+    }
+  ],
+  "meta": {
+    "total_count": 1,
+    "is_end": true
+  }
+}

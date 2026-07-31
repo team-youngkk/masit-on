@@ -1,0 +1,72 @@
+spring:
+  application:
+    name: masit-on
+  datasource:
+    hikari:
+      # 상태 확인이 저장소 장애를 유한 시간 안에 DOWN으로 보고해야 하므로 기본값(30s)보다 낮춘다.
+      # 콜드 스타트 동시 기동을 견디도록 여유를 둔 값이다. (NFR-AVAILABILITY-001)
+      connection-timeout: 10000
+  data:
+    redis:
+      # 같은 이유로 유한 상한을 둔다. Redis는 Refresh Token 조회 경로라 지연 허용치가 더 짧다.
+      timeout: 2s
+      connect-timeout: 2s
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      base-path: /internal
+      exposure:
+        include: health
+  endpoint:
+    health:
+      access: read_only
+      show-details: never
+      show-components: always
+      group:
+        live:
+          include: ping
+        ready:
+          include: db
+        dependencies:
+          include: db,redis
+  health:
+    defaults:
+      enabled: false
+    ping:
+      enabled: true
+    db:
+      enabled: true
+    redis:
+      enabled: true
+
+logging:
+  level:
+    root: ${LOG_LEVEL_ROOT:INFO}
+    com.masiton: ${LOG_LEVEL_APP:INFO}
+
+masiton:
+  security:
+    jwt:
+      issuer: masit-on
+      audience: masit-on-admin-api
+      access-token-ttl: PT30M
+      key-id: ${JWT_KEY_ID:}
+      private-key-pem: ${JWT_PRIVATE_KEY_PEM:}
+      public-key-pem: ${JWT_PUBLIC_KEY_PEM:}
+    refresh-token-ttl: P14D
+    cookie-name: masit_on_refresh
+    secure: true
+    same-site: Strict
+    path: /api/admin/auth
+    login-failure:
+      max-attempts: 5
+      ttl: PT15M

@@ -1,0 +1,14 @@
+# ACM 갱신본을 EC2로 다시 내보내 Nginx에 반영한다 — M2-08.
+# ACM은 만료 45일 전에 자동 갱신하지만 갱신본의 재배포는 자동이 아니다.
+# 이 unit이 그 재배포를 맡고, masiton-tls-renew.timer가 매일 실행한다.
+
+[Unit]
+Description=masiton ACM 인증서 내보내기와 Nginx 반영
+Documentation=https://github.com/team-youngkk/masit-on/blob/main/docs/08-planning/m2-deployment-plan.md
+After=network-online.target nginx.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=AWS_REGION=ap-northeast-2
+ExecStart=/opt/masiton/bin/tls-deploy-cert.sh

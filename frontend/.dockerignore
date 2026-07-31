@@ -1,0 +1,21 @@
+# 빌드 컨텍스트를 Dockerfile이 실제로 COPY하는 파일로 제한한다.
+# 컨텍스트에 들어간 파일은 이미지에 굽지 않아도 빌드 캐시와 전송 비용에 영향을 준다.
+
+.git
+.gitignore
+
+# 이미지 안에서 npm ci로 다시 설치한다. 호스트 산출물을 그대로 넣으면
+# 플랫폼이 다른 네이티브 모듈이 섞여 들어갈 수 있다.
+node_modules
+
+# 빌드 스테이지가 새로 생성한다
+.next
+tsconfig.tsbuildinfo
+
+# 로컬 환경 값은 이미지에 들어가면 안 된다 (ADR-RUNTIME-001 11절)
+.env
+.env.*
+
+Dockerfile
+.dockerignore
+*.md

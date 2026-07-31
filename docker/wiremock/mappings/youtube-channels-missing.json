@@ -1,0 +1,14 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/youtube/v3/channels",
+    "queryParameters": {
+      "id": { "equalTo": "UCfixtureMissingChannel1" }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json; charset=utf-8" },
+    "bodyFileName": "youtube-channels-missing.json"
+  }
+}
