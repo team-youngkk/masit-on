@@ -123,20 +123,20 @@ related_documents:
 
 - 담당자 / 리뷰어: 이우람 / 박진영
 - 관련 계약: `FR-CREATOR-004`~`006`; `PRD-DETAIL-002`; [유튜버 상세 API](../05-specs/api/detail/creator-detail-api.md); [ADR-ARCH-001](../07-adr/architecture/arch-001-domain-monolith.md)
-- 테이블·ADR: V5 Creator 상세 표시 컬럼, `creator`, `visit`, `restaurant`, `video`; [Flyway ADR](../07-adr/data/data-004-flyway.md), [조회 조합](../06-architecture/query-composition.md)
-- 수정 예상 영역: Creator 도메인·Projection/Orchestration, Flyway V5, 상세·방문 맛집·근거 영상 API, Creator 상세 Route
+- 테이블·ADR: V6 Creator 상세 표시 컬럼, `creator`, `visit`, `restaurant`, `video`; [Flyway ADR](../07-adr/data/data-004-flyway.md), [조회 조합](../06-architecture/query-composition.md)
+- 수정 예상 영역: Creator 도메인·Projection/Orchestration, Flyway V6, 상세·방문 맛집·근거 영상 API, Creator 상세 Route
 - 선행 / 병렬 / 크기: `E1-T01` / `E1-T03`~`E1-T08`과 가능 / L
-- 테스트 범위: V1→V5, 공개·빈·404·중복 제거·페이지, 비공개/삭제 관계, 사용자 조회 중 외부 API 미호출, 브라우저 상세 흐름
+- 테스트 범위: V1→V6, 공개·빈·404·중복 제거·페이지, 비공개/삭제 관계, 사용자 조회 중 외부 API 미호출, 브라우저 상세 흐름
 - 완료 조건: 저장된 공개·유효 관계만으로 채널 정보, 방문 맛집, 근거 영상의 세 화면 상태가 일관되게 표시된다.
 
 ### E1-T10 1차 확장 교차 인수·회귀
 
 - 담당자 / 리뷰어: 전원 / 상호 교차 리뷰
 - 관련 계약: 1차 확장 전체 FR·BR·NFR·PRD; [제품 추적표](../04-product/traceability.md), [API 추적표](../05-specs/api-traceability.md), [데이터 추적표](../05-specs/data/data-traceability.md), [ADR 추적표](../07-adr/adr-traceability.md)
-- API·테이블·ADR: 회원·개인화·지도·Creator 전체 API와 V2~V5, [ADR-AUTH-002](../07-adr/security/auth-002-member-jwt-refresh-token.md), [ADR-MAP-001](../07-adr/integration/map-001-map-bounds-search.md), 테스트·CI ADR
+- API·테이블·ADR: 회원·개인화·지도·Creator 전체 API와 V2~V6, [ADR-AUTH-002](../07-adr/security/auth-002-member-jwt-refresh-token.md), [ADR-MAP-001](../07-adr/integration/map-001-map-bounds-search.md), 테스트·CI ADR
 - 수정 예상 영역: 교차 인수 테스트·브라우저 테스트·CI 결과, 추적표와 완료 기록. 기능 계약을 새로 결정하거나 범위를 확장하지 않는다.
 - 선행 / 병렬 / 크기: `E1-T02`, `E1-T04`, `E1-T06`, `E1-T08`, `E1-T09` / 아니오 / L
-- 테스트 범위: V1→V5 업그레이드, 인증·탈퇴·개인화, 지도 SDK·접근성, Creator 공개 상태, 성능 NFR, CI 전체 회귀
+- 테스트 범위: V1→V6 업그레이드, 인증·탈퇴·개인화, 지도 SDK·접근성, Creator 공개 상태, 성능 NFR, CI 전체 회귀
 - 완료 조건: 모든 1차 확장 FR이 주 PRD·API 또는 화면·데이터·ADR·Workstream·테스트·`E1-T*`로 추적되고, Conditional/Post-MVP 기술의 무단 도입이 없다.
 
 ## 4. 변경 통제와 리뷰 순서

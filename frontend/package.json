@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "npm test && tsc --noEmit && next build",
-    "test": "node --test components/personal/personal-list-coordination.test.ts components/personal/recent-view-coordination.test.ts lib/member/auth.test.ts lib/member/member-auth-cookie-lock.test.ts lib/map/map-points-query.test.ts lib/map/map-points-response.test.ts lib/map/retry-after.test.ts lib/map/selection-sync.test.ts",
+    "test": "node --test components/personal/personal-list-coordination.test.ts components/personal/recent-view-coordination.test.ts lib/member/auth.test.ts lib/member/member-auth-cookie-lock.test.ts lib/map/map-points-query.test.ts lib/map/map-points-response.test.ts lib/map/retry-after.test.ts lib/map/selection-sync.test.ts lib/creators/creator-list-navigation.test.ts",
     "start": "next start",
     "typecheck": "tsc --noEmit"
   },

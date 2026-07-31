@@ -17,6 +17,9 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import com.masiton.creator.application.port.out.CreatorRepositoryPort;
 import com.masiton.creator.domain.model.Creator;
+import com.masiton.creator.domain.model.ExternalAvailabilityStatus;
+import com.masiton.creator.domain.model.LifecycleStatus;
+import com.masiton.creator.domain.model.PublicationStatus;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -125,6 +128,63 @@ class CreatorPersistenceAdapterIntegrationTest {
                 .map(Creator::getId)
                 .toList();
         assertThat(orderedIds).containsExactlyElementsOf(expectedOrder);
+    }
+
+    @Test
+    @DisplayName("insertIfAbsent는 프로필 이미지·소개·handle을 그대로 저장한다")
+    void 저장_insertIfAbsent_표시정보세필드를그대로저장한다() {
+        // given: CreatorRegistrationService.create()가 실제로 쓰는 저장 경로다.
+        UUID id = UUID.randomUUID();
+        Creator creator = creatorWithDisplayFields(
+                id, "insert경로채널" + UUID.randomUUID(),
+                "https://i.ytimg.com/vi/fixtureVid1/hqdefault.jpg", "채널 소개", "@masiton-fixture");
+
+        // when
+        Creator inserted = creatorRepositoryPort.insertIfAbsent(creator).orElseThrow();
+
+        // then
+        assertThat(inserted.getProfileImageUrl()).isEqualTo("https://i.ytimg.com/vi/fixtureVid1/hqdefault.jpg");
+        assertThat(inserted.getDescription()).isEqualTo("채널 소개");
+        assertThat(inserted.getHandle()).isEqualTo("@masiton-fixture");
+    }
+
+    @Test
+    @DisplayName("표시 정보 세 필드가 없으면 저장 후 findById로 null 그대로 조회된다")
+    void 저장_표시정보없음_findById가null을그대로조회한다() {
+        // given
+        UUID id = UUID.randomUUID();
+        Creator creator = creatorWithDisplayFields(
+                id, "표시정보없음채널" + UUID.randomUUID(), null, null, null);
+
+        // when: 등록 흐름과 같은 insertIfAbsent 경로로 저장한다. save()는 신규 Entity의 감사 컬럼을
+        // JPA Auditing 기본 DateTimeProvider(LocalDateTime)로 채우려 해 OffsetDateTime 변환이
+        // 실패하며, 운영 코드가 쓰지 않는 경로다.
+        creatorRepositoryPort.insertIfAbsent(creator);
+        Creator found = creatorRepositoryPort.findById(id).orElseThrow();
+
+        // then
+        assertThat(found.getProfileImageUrl()).isNull();
+        assertThat(found.getDescription()).isNull();
+        assertThat(found.getHandle()).isNull();
+    }
+
+    private Creator creatorWithDisplayFields(
+            UUID id, String channelName, String profileImageUrl, String description, String handle) {
+        return new Creator(
+                id,
+                "UC-" + UUID.randomUUID(),
+                channelName,
+                "https://example.com/channel/" + id,
+                profileImageUrl,
+                description,
+                handle,
+                PublicationStatus.PUBLIC,
+                LifecycleStatus.ACTIVE,
+                ExternalAvailabilityStatus.AVAILABLE,
+                OffsetDateTime.now(),
+                null,
+                null,
+                null);
     }
 
     private void insertPublicActiveCreator(UUID id, String channelName) {

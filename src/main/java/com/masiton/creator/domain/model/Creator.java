@@ -14,6 +14,9 @@ public class Creator {
     private final String externalChannelId;
     private final String channelName;
     private final String channelUrl;
+    private final String profileImageUrl;
+    private final String description;
+    private final String handle;
     private final PublicationStatus publicationStatus;
     private final LifecycleStatus lifecycleStatus;
     private final ExternalAvailabilityStatus externalAvailabilityStatus;
@@ -27,6 +30,9 @@ public class Creator {
             String externalChannelId,
             String channelName,
             String channelUrl,
+            String profileImageUrl,
+            String description,
+            String handle,
             PublicationStatus publicationStatus,
             LifecycleStatus lifecycleStatus,
             ExternalAvailabilityStatus externalAvailabilityStatus,
@@ -38,6 +44,9 @@ public class Creator {
         this.externalChannelId = externalChannelId;
         this.channelName = channelName;
         this.channelUrl = channelUrl;
+        this.profileImageUrl = profileImageUrl;
+        this.description = description;
+        this.handle = handle;
         this.publicationStatus = publicationStatus;
         this.lifecycleStatus = lifecycleStatus;
         this.externalAvailabilityStatus = externalAvailabilityStatus;
@@ -61,6 +70,18 @@ public class Creator {
 
     public String getChannelUrl() {
         return channelUrl;
+    }
+
+    public String getProfileImageUrl() {
+        return profileImageUrl;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public String getHandle() {
+        return handle;
     }
 
     public PublicationStatus getPublicationStatus() {

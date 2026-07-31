@@ -36,6 +36,15 @@ public class CreatorJpaEntity extends BaseAuditable {
     @Column(name = "channel_url", nullable = false, length = 2048)
     private String channelUrl;
 
+    @Column(name = "profile_image_url", length = 2048)
+    private String profileImageUrl;
+
+    @Column(name = "description", columnDefinition = "text")
+    private String description;
+
+    @Column(name = "handle", length = 255)
+    private String handle;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "publication_status", nullable = false, length = 16)
     private PublicationStatus publicationStatus;
@@ -62,6 +71,9 @@ public class CreatorJpaEntity extends BaseAuditable {
             String externalChannelId,
             String channelName,
             String channelUrl,
+            String profileImageUrl,
+            String description,
+            String handle,
             PublicationStatus publicationStatus,
             LifecycleStatus lifecycleStatus,
             ExternalAvailabilityStatus externalAvailabilityStatus,
@@ -71,6 +83,9 @@ public class CreatorJpaEntity extends BaseAuditable {
         this.externalChannelId = externalChannelId;
         this.channelName = channelName;
         this.channelUrl = channelUrl;
+        this.profileImageUrl = profileImageUrl;
+        this.description = description;
+        this.handle = handle;
         this.publicationStatus = publicationStatus;
         this.lifecycleStatus = lifecycleStatus;
         this.externalAvailabilityStatus = externalAvailabilityStatus;
@@ -92,6 +107,18 @@ public class CreatorJpaEntity extends BaseAuditable {
 
     public String getChannelUrl() {
         return channelUrl;
+    }
+
+    public String getProfileImageUrl() {
+        return profileImageUrl;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public String getHandle() {
+        return handle;
     }
 
     public PublicationStatus getPublicationStatus() {
