@@ -48,6 +48,8 @@ npm --prefix frontend run dev
 
 `http://localhost:3000`에서 공개 화면과 관리자 화면을 사용한다. 프론트엔드는 `/api`를 `API_BASE_URL`(기본값 `http://localhost:8080`)로 전달하므로 백엔드를 먼저 띄운다.
 
+지도 화면(`/map`)은 `NEXT_PUBLIC_KAKAO_MAPS_JS_KEY`가 있어야 Kakao 지도를 표시한다. 이 값은 Kakao 콘솔에서 허용 도메인으로 제한하는 브라우저 노출 식별자이며 비밀키가 아니다([ADR-MAP-001 6.5](docs/07-adr/integration/map-001-map-bounds-search.md#65-키-비용과-외부-서비스-경계)). 값이 없으면 지도는 SDK 오류 상태로 대체되고 그 밖의 화면은 영향을 받지 않는다.
+
 ### 로컬 관리자 계정
 
 관리자 계정은 사전 발급 대상이라 Flyway 기준 데이터에 넣지 않는다. 관리자 화면·API를 확인하려면 로컬에서만 계정을 만든다.
