@@ -78,6 +78,46 @@ class KakaoPlaceVerificationAdapterTest {
     }
 
     @Test
+    @DisplayName("기본 포트가 붙은 place_url은 포트를 뺀 https로 정규화한다")
+    void 경계값_기본포트를주면_포트를빼고정규화한다() throws Exception {
+        givenResponse(200, document("http://place.map.kakao.com:80/" + PLACE_ID, "서울 강남구 언주로93길 22-3"));
+
+        Optional<VerifiedPlace> verified = adapter().verify("서울집", SUBMITTED_URL, "02-501-2126");
+
+        assertThat(verified).isPresent();
+        assertThat(verified.get().kakaoPlaceUrl()).isEqualTo("https://place.map.kakao.com/" + PLACE_ID);
+    }
+
+    @Test
+    @DisplayName("https의 기본 포트도 표기에서 뺀다")
+    void 경계값_https기본포트를주면_포트를빼고정규화한다() throws Exception {
+        givenResponse(200, document("https://place.map.kakao.com:443/" + PLACE_ID, "서울 강남구 언주로93길 22-3"));
+
+        Optional<VerifiedPlace> verified = adapter().verify("서울집", SUBMITTED_URL, "02-501-2126");
+
+        assertThat(verified).isPresent();
+        assertThat(verified.get().kakaoPlaceUrl()).isEqualTo("https://place.map.kakao.com/" + PLACE_ID);
+    }
+
+    @Test
+    @DisplayName("비표준 포트가 붙은 place_url은 계약 오류로 처리한다")
+    void 경계값_비표준포트를주면_계약오류로처리한다() throws Exception {
+        givenResponse(200, document("http://place.map.kakao.com:8080/" + PLACE_ID, "서울 강남구 언주로93길 22-3"));
+
+        assertThatThrownBy(() -> adapter().verify("서울집", SUBMITTED_URL, "02-501-2126"))
+                .isInstanceOf(PlaceVerificationFailedException.class);
+    }
+
+    @Test
+    @DisplayName("user-info가 붙은 place_url은 계약 오류로 처리한다")
+    void 예외_userinfo를주면_계약오류로처리한다() throws Exception {
+        givenResponse(200, document("http://attacker@place.map.kakao.com/" + PLACE_ID, "서울 강남구 언주로93길 22-3"));
+
+        assertThatThrownBy(() -> adapter().verify("서울집", SUBMITTED_URL, "02-501-2126"))
+                .isInstanceOf(PlaceVerificationFailedException.class);
+    }
+
+    @Test
     @DisplayName("host가 다른 place_url은 후보로 채택하지 않는다")
     void 예외_다른host를주면_후보로채택하지않는다() throws Exception {
         givenResponse(200, document("https://place.example.com/" + PLACE_ID, "서울 강남구 언주로93길 22-3"));
