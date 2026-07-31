@@ -197,24 +197,9 @@ WireMock 포트를 바꿨다면 `KAKAO_BASE_URL`, `YOUTUBE_BASE_URL`도 같이 �
 - PR 본문 첫 줄에 `Closes #{이슈번호}`로 구현한 이슈를 연결한다. **기본 브랜치는 `main`이다.** GitHub는 PR이 기본 브랜치로 병합될 때만 연결된 이슈를 자동으로 닫으므로, `develop`으로 병합하면 이슈는 **연결만 되고 닫히지 않는다.** `develop` 병합 시점에 닫아야 하면 수동으로 닫는다.
 - **새 PR의 기본 대상 브랜치도 `main`이다.** 기능·수정 브랜치의 PR을 만들 때 대상이 `develop`인지 확인한다. M2 운영 배포 전에는 기본 브랜치가 `develop`이었다.
 - **PR 본문과 커밋 메시지에 AI 도구 생성 표기를 남기지 않는다.** `Generated with Claude Code` 같은 문구, 도구 서명과 배지를 넣지 않는다.
+- **마일스톤을 `main`에 병합하면 병합자가 곧바로 `v{major}.{minor}.{patch}` annotated tag를 붙인다.** 확장 단계는 minor(M2 `v0.1.0`, M3 `v0.2.0`), 마일스톤 사이 결함 수정은 patch, 제한 공개 해제가 `v1.0.0`이다. GitHub 릴리즈는 `v1.0.0`부터 만들고 M1은 소급하지 않는다.
 
-PR 완료 점검 목록은 [구현 컨벤션 9절](docs/06-architecture/implementation-conventions.md#9-pr-완료-점검)을 사용한다.
-
-### 9.1 릴리즈 태그
-
-마일스톤 완료마다 `main`에 annotated tag를 붙인다. 형식은 `v{major}.{minor}.{patch}`이고 **병합자가 `main` 병합 직후에** 붙인다.
-
-| 올리는 자리 | 언제 | 예 |
-|---|---|---|
-| minor | 마일스톤 완료. 확장 단계는 기능 추가다 | M2 `v0.1.0`, M3 `v0.2.0`, M4 `v0.3.0`, M5 `v0.4.0` |
-| patch | 마일스톤 사이에 운영에 나가는 결함 수정 | `v0.1.1` |
-| major | 제한 공개를 해제하는 시점에 `v1.0.0`. 그 뒤로는 `/api/**` 계약의 하위 호환이 깨질 때만 | |
-
-확장 단계가 minor인 이유는 1~3차 확장이 전부 기능 추가이고 공개 GET 3종의 응답 형태를 깨지 않기 때문이다. 7절이 경로 버전(`/v1`)을 금지하고 API 계약 변경에 소유자 합의를 요구하므로 major는 드물고 의도적인 사건이다. `0.x` 구간은 semver 명세상 공개 API가 불안정한 구간이라 확장 중 계약을 손봐야 해도 minor로 처리한다.
-
-- **GitHub 릴리즈는 `v1.0.0`부터 만든다.** 그 전에는 태그만 둔다. 저장소가 public인데 서비스는 제한 공개라 공개 릴리즈 노트를 낼 독자가 아직 없다. annotated tag 메시지가 그 역할을 겸한다.
-- **M1은 소급하지 않는다.** 로컬 통합까지였고 배포된 적이 없어 배포 태그의 대상이 아니다.
-- 롤백은 태그가 가리키는 커밋 SHA를 CD의 `image_tag` 입력에 넣는다.
+PR 완료 점검 목록은 [구현 컨벤션 9절](docs/06-architecture/implementation-conventions.md#9-pr-완료-점검), 릴리즈 태그 규칙과 근거는 [구현 컨벤션 7.4절](docs/06-architecture/implementation-conventions.md#74-릴리즈-태그)을 원문으로 사용한다.
 
 ## 10. Workstream과 소유권
 
