@@ -151,7 +151,7 @@ WireMock 포트를 바꿨다면 `KAKAO_BASE_URL`, `YOUTUBE_BASE_URL`도 같이 �
 - 모든 오류 응답에 서버 생성 `traceId`를 포함한다.
 - Entity를 API 요청·응답에 노출하지 않는다.
 - 트랜잭션은 Application Service의 public 메서드에서 시작한다. 조회는 `@Transactional(readOnly = true)`. OSIV 비활성화, `ddl-auto=validate`.
-- 스키마 변경은 전부 Flyway. **이미 적용된 마이그레이션 파일은 수정하지 않고 새 파일을 추가한다.**
+- 스키마 변경은 전부 Flyway. **이미 적용된 마이그레이션 파일은 수정하지 않고 새 파일을 추가한다.** 운영에 적용되지 않은 마이그레이션은 운영 배포 직전 1회, [ADR-DATA-009](docs/07-adr/data/data-009-pre-release-migration-consolidation.md) 10절 증명을 모두 충족할 때만 통합할 수 있다.
 - 외부 HTTP 호출 중에는 DB 트랜잭션을 열지 않는다. 외부 호출 실패 시 핵심 Entity 저장 0건이어야 한다.
 - API 계약이나 테이블을 바꾸려면 소유자와 먼저 합의하고 코드·문서를 같은 PR에서 변경한다.
 

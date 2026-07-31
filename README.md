@@ -5,11 +5,15 @@ related_documents:
   - docs/04-product/prd/00-product-overview.md
   - docs/08-planning/mvp-2day-implementation-plan.md
   - docs/08-planning/mvp-local-verification.md
+  - docs/08-planning/first-expansion-baseline-review.md
+  - docs/02-analysis/first-expansion-workstreams.md
   - docs/06-architecture/README.md
 ---
 
 # masit-on
 유튜버가 방문한 맛집을 지역, 음식 종류, 유튜버별로 탐색할 수 있는 맛집 정보 서비스
+
+MVP 범위(공개 탐색·상세, 관리자 데이터 등록)에 1차 확장(회원 계정·인증, 찜·최근 본 맛집, 지도 탐색, 유튜버 상세)이 더해진 상태다. 마이그레이션은 `V1`(초기 스키마) · `V2`(1차 확장 통합, [마이그레이션 계획](docs/05-specs/data/migration-plan.md) 2.3절) 두 파일로 구성된다.
 
 ## 로컬 실행
 

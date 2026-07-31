@@ -20,6 +20,15 @@ related_documents:
   - api/admin/reference-data-api.md
   - api/admin/visit-registration-api.md
   - ../04-product/prd/00-product-overview.md
+  - ../02-analysis/first-expansion-workstreams.md
+  - ../04-product/prd/account/member-authentication.md
+  - api/account/member-authentication-api.md
+  - ../04-product/prd/personal/personal-restaurant-management.md
+  - api/personal/personal-restaurant-api.md
+  - ../04-product/prd/discovery/map-discovery.md
+  - api/discovery/map-discovery-api.md
+  - ../04-product/prd/detail/creator-detail.md
+  - api/detail/creator-detail-api.md
 ---
 
 # 맛잇온 API 추적성
@@ -38,6 +47,15 @@ MVP의 PRD, 기능 요구사항, 비즈니스 규칙, NFR, Workstream과 담당�
 | [PRD-ADMIN-001](../04-product/prd/admin/admin-data-management.md) | 관리자 데이터 등록 | [api/admin/authentication-api.md](api/admin/authentication-api.md), [api/admin/reference-data-api.md](api/admin/reference-data-api.md), [api/admin/visit-registration-api.md](api/admin/visit-registration-api.md) | [API-ADMIN-AUTH-001](api/admin/authentication-api.md#api-admin-auth-001-관리자-로그인)~[API-ADMIN-AUTH-003](api/admin/authentication-api.md#api-admin-auth-003-관리자-로그아웃), 기본 데이터 미리보기·생성 API, [API-ADMIN-VISIT-001](api/admin/visit-registration-api.md#api-admin-visit-001-방문-관계-등록) | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 김인안 |
 
 [PRD-PRODUCT-001](../04-product/prd/00-product-overview.md)은 전체 제품 범위를 제공하며 하나의 주 API에만 매핑하지 않는다.
+
+### 2.1 1차 확장 PRD → API 매핑
+
+| PRD ID | 기능 PRD | 주 API 문서 | 관련 API ID | Workstream | 담당자 |
+|---|---|---|---|---|---|
+| [PRD-ACCOUNT-001](../04-product/prd/account/member-authentication.md) | 사용자 계정·인증 | [api/account/member-authentication-api.md](api/account/member-authentication-api.md) | [API-MEMBER-AUTH-001](api/account/member-authentication-api.md#api-member-auth-001-회원가입)~[API-MEMBER-AUTH-010](api/account/member-authentication-api.md#api-member-auth-010-회원-탈퇴) | [WS-05](../02-analysis/first-expansion-workstreams.md#4-ws-05-사용자-계정인증) | 김인안 |
+| [PRD-PERSONAL-001](../04-product/prd/personal/personal-restaurant-management.md) | 개인 맛집 관리 | [api/personal/personal-restaurant-api.md](api/personal/personal-restaurant-api.md) | [API-PERSONAL-001](api/personal/personal-restaurant-api.md#api-personal-001-맛집-찜-추가)~[API-PERSONAL-006](api/personal/personal-restaurant-api.md#api-personal-006-최근-본-맛집-개별-삭제) | [WS-06](../02-analysis/first-expansion-workstreams.md#5-ws-06-개인-맛집-관리) | 박진영 |
+| [PRD-DISCOVERY-003](../04-product/prd/discovery/map-discovery.md) | 지도 탐색 | [api/discovery/map-discovery-api.md](api/discovery/map-discovery-api.md) | [API-MAP-001](api/discovery/map-discovery-api.md#api-map-001-지도-영역-맛집-조회) | [WS-07](../02-analysis/first-expansion-workstreams.md#6-ws-07-지도-탐색) | 양성훈 |
+| [PRD-DETAIL-002](../04-product/prd/detail/creator-detail.md) | 유튜버 상세 | [api/detail/creator-detail-api.md](api/detail/creator-detail-api.md) | [API-CREATOR-DETAIL-001](api/detail/creator-detail-api.md#api-creator-detail-001-유튜버-기본-상세-조회)~[API-CREATOR-DETAIL-003](api/detail/creator-detail-api.md#api-creator-detail-003-유튜버-근거-영상-조회) | [WS-08](../02-analysis/first-expansion-workstreams.md#7-ws-08-유튜버-상세) | 이우람 |
 
 ## 3. 기능 요구사항 → API 매핑
 
@@ -65,6 +83,31 @@ MVP의 PRD, 기능 요구사항, 비즈니스 규칙, NFR, Workstream과 담당�
 | [FR-VISIT-001](../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록) | 방문 관계 등록 | [API-ADMIN-VISIT-001](api/admin/visit-registration-api.md#api-admin-visit-001-방문-관계-등록) | [API-DISCOVERY-001](api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색), [API-DETAIL-001](api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회) | 참조·채널 일치·근거·중복·원자성 통합 테스트 | 김인안 |
 
 API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br-admin-006-잘못-등록된-데이터의-정정-원칙)의 정정 구현, 공개 상태 저장 구조, 동시성 보장 방식과 외부 동일성 식별값 저장 방식은 외부 API 기능이 아니라 후속 내부 설계다. 다만 그 결과는 공개 제외·중복 오류 계약으로 관찰된다.
+
+### 3.1 1차 확장 요구사항 → API 매핑
+
+| 요구사항 ID | 기능 | 주 API | 보조 API | 검증 방식 | 담당자 |
+|---|---|---|---|---|---|
+| [FR-MEMBER-001](../01-requirements/functional-requirements.md#fr-member-001-이메일-회원가입) | 이메일 회원가입 | [API-MEMBER-AUTH-001](api/account/member-authentication-api.md#api-member-auth-001-회원가입) | 없음 | 동시 가입 수렴, 계정 상태 비노출 테스트 | 김인안 |
+| [FR-MEMBER-002](../01-requirements/functional-requirements.md#fr-member-002-가입-이메일-인증) | 가입 이메일 인증 | [API-MEMBER-AUTH-002](api/account/member-authentication-api.md#api-member-auth-002-가입-이메일-인증) | [API-MEMBER-AUTH-003](api/account/member-authentication-api.md#api-member-auth-003-인증-메일-재발송) | Action Token 단일 소비·만료 테스트 | 김인안 |
+| [FR-MEMBER-003](../01-requirements/functional-requirements.md#fr-member-003-비밀번호-재설정) | 비밀번호 재설정 | [API-MEMBER-AUTH-004](api/account/member-authentication-api.md#api-member-auth-004-비밀번호-재설정-요청) | [API-MEMBER-AUTH-005](api/account/member-authentication-api.md#api-member-auth-005-비밀번호-재설정-완료) | 계정 열거 방지·재설정 직렬화 테스트 | 김인안 |
+| [FR-MEMBER-004](../01-requirements/functional-requirements.md#fr-member-004-회원-탈퇴) | 회원 탈퇴 | [API-MEMBER-AUTH-010](api/account/member-authentication-api.md#api-member-auth-010-회원-탈퇴) | [API-PERSONAL-001](api/personal/personal-restaurant-api.md#api-personal-001-맛집-찜-추가)~[API-PERSONAL-006](api/personal/personal-restaurant-api.md#api-personal-006-최근-본-맛집-개별-삭제) | 탈퇴 확인·취소·개인화 데이터 정리 테스트 | 김인안 |
+| [FR-MEMBER-005](../01-requirements/functional-requirements.md#fr-member-005-현재-사용자-정보-조회) | 현재 사용자 정보 조회 | [API-MEMBER-AUTH-009](api/account/member-authentication-api.md#api-member-auth-009-현재-사용자-정보) | 없음 | 캐시 금지·401 테스트 | 김인안 |
+| [FR-AUTH-001](../01-requirements/functional-requirements.md#fr-auth-001-로그인과-활성-세션-발급) | 로그인과 활성 세션 발급 | [API-MEMBER-AUTH-006](api/account/member-authentication-api.md#api-member-auth-006-로그인) | 없음 | 최대 3세션·Refresh Cookie 발급 테스트 | 김인안 |
+| [FR-AUTH-002](../01-requirements/functional-requirements.md#fr-auth-002-access-token-재발급) | Access Token 재발급 | [API-MEMBER-AUTH-007](api/account/member-authentication-api.md#api-member-auth-007-access-token-재발급) | 없음 | 회전·재사용 탐지 테스트 | 김인안 |
+| [FR-AUTH-003](../01-requirements/functional-requirements.md#fr-auth-003-로그아웃과-다중-로그인-세션-관리) | 로그아웃과 다중 로그인 세션 관리 | [API-MEMBER-AUTH-008](api/account/member-authentication-api.md#api-member-auth-008-로그아웃) | 없음 | `sid` 즉시 폐기·Redis 장애 fail-closed 테스트 | 김인안 |
+| [FR-FAVORITE-001](../01-requirements/functional-requirements.md#fr-favorite-001-맛집-찜-추가) | 맛집 찜 추가 | [API-PERSONAL-001](api/personal/personal-restaurant-api.md#api-personal-001-맛집-찜-추가) | 없음 | 중복 찜 동시성 테스트 | 박진영 |
+| [FR-FAVORITE-002](../01-requirements/functional-requirements.md#fr-favorite-002-맛집-찜-해제) | 맛집 찜 해제 | [API-PERSONAL-002](api/personal/personal-restaurant-api.md#api-personal-002-맛집-찜-해제) | 없음 | 다른 회원 접근 거부 테스트 | 박진영 |
+| [FR-FAVORITE-003](../01-requirements/functional-requirements.md#fr-favorite-003-맛집별-현재-회원-찜-상태-확인) | 맛집별 현재 회원 찜 상태 확인 | [API-PERSONAL-003](api/personal/personal-restaurant-api.md#api-personal-003-맛집별-현재-회원-찜-상태-조회) | 없음 | 비공개 맛집 숨김 테스트 | 박진영 |
+| [FR-FAVORITE-004](../01-requirements/functional-requirements.md#fr-favorite-004-찜-목록-조회) | 찜 목록 조회 | [API-PERSONAL-004](api/personal/personal-restaurant-api.md#api-personal-004-찜-목록-조회) | 없음 | 최신순 페이지·빈 목록 테스트 | 박진영 |
+| [FR-RECENT-001](../01-requirements/functional-requirements.md#fr-recent-001-최근-본-맛집-기록) | 최근 본 맛집 기록 | [API-DETAIL-001](api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회) | 없음 | `GREATEST` upsert·50건 상한 테스트 | 박진영 |
+| [FR-RECENT-002](../01-requirements/functional-requirements.md#fr-recent-002-최근-본-맛집-목록-조회) | 최근 본 맛집 목록 조회 | [API-PERSONAL-005](api/personal/personal-restaurant-api.md#api-personal-005-최근-본-맛집-목록-조회) | 없음 | 최신순 페이지·빈 목록 테스트 | 박진영 |
+| [FR-RECENT-003](../01-requirements/functional-requirements.md#fr-recent-003-최근-본-맛집-개별-삭제) | 최근 본 맛집 개별 삭제 | [API-PERSONAL-006](api/personal/personal-restaurant-api.md#api-personal-006-최근-본-맛집-개별-삭제) | 없음 | 다른 회원 접근 거부 테스트 | 박진영 |
+| [FR-MAP-001](../01-requirements/functional-requirements.md#fr-map-001-kakao-지도와-맛집-마커-표시) | Kakao 지도와 맛집 마커 표시 | [API-MAP-001](api/discovery/map-discovery-api.md#api-map-001-지도-영역-맛집-조회) | 없음 | 좌표 CHECK·bounds partial index 테스트 | 양성훈 |
+| [FR-MAP-002](../01-requirements/functional-requirements.md#fr-map-002-지도-영역과-탐색-조건-조합-조회) | 지도 영역과 탐색 조건 조합 조회 | [API-MAP-001](api/discovery/map-discovery-api.md#api-map-001-지도-영역-맛집-조회) | [API-DISCOVERY-001](api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색) | AND 조건·200개 상한·429 테스트 | 양성훈 |
+| [FR-CREATOR-004](../01-requirements/functional-requirements.md#fr-creator-004-유튜버-상세-정보-조회) | 유튜버 상세 정보 조회 | [API-CREATOR-DETAIL-001](api/detail/creator-detail-api.md#api-creator-detail-001-유튜버-기본-상세-조회) | 없음 | 공개·404·null 표시값 테스트 | 이우람 |
+| [FR-CREATOR-005](../01-requirements/functional-requirements.md#fr-creator-005-유튜버의-방문-맛집-목록-조회) | 유튜버의 방문 맛집 목록 조회 | [API-CREATOR-DETAIL-002](api/detail/creator-detail-api.md#api-creator-detail-002-유튜버-방문-맛집-조회) | 없음 | 중복 제거·페이지·빈 목록 테스트 | 이우람 |
+| [FR-CREATOR-006](../01-requirements/functional-requirements.md#fr-creator-006-유튜버의-근거-영상-목록-조회) | 유튜버의 근거 영상 목록 조회 | [API-CREATOR-DETAIL-003](api/detail/creator-detail-api.md#api-creator-detail-003-유튜버-근거-영상-조회) | 없음 | 중복 제거·페이지·외부 API 미호출 테스트 | 이우람 |
 
 ## 4. 비즈니스 규칙 → API 매핑
 
@@ -119,7 +162,7 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 
 ## 8. 미매핑 항목
 
-- 기능 요구사항 20개는 모두 주 API에 매핑됐다.
+- MVP 기능 요구사항 20개와 1차 확장 기능 요구사항 20개(3.1절) 모두 주 API에 매핑됐다.
 - MVP 제외 기능은 API에 매핑하지 않았다.
 - [PRD-PRODUCT-001](../04-product/prd/00-product-overview.md)은 전체 범위 문서라 개별 API 주 매핑이 없다.
 - Critical 차단 항목이었던 식별자 타입, 인증 전달, 방문 관계 경로, 외부 확인 흐름과 후속 화면·API 라우팅 경계는 확정돼 매핑에 반영됐다.
