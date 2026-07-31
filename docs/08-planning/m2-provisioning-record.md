@@ -21,6 +21,8 @@ M2 초기 운영 배포에서 생성한 AWS 자원의 식별자와 완료 조건
 
 계획과 완료 조건은 [M2 초기 운영 배포 계획](m2-deployment-plan.md), 사양 근거는 [사양과 월 비용 산정](m2-cost-and-sizing.md)에 있다.
 
+이 저장소는 공개되어 있다. 개인을 식별하는 값(작업자·검증 참여자의 공인 IP)과 공격 표면을 특정하는 값(EIP, 보안 그룹 ID, 검증용 관리자 로그인 ID)은 `<...>` 자리표시자로 마스킹했다. 실제 값은 AWS 콘솔과 Parameter Store에서 확인한다. **복구 절차를 수행할 때 자리표시자를 실제 값으로 채워 넣되 문서에는 되돌려 적지 않는다.**
+
 ## 2. 계정과 리전
 
 | 항목 | 값 |
@@ -55,8 +57,8 @@ M2 초기 운영 배포에서 생성한 AWS 자원의 식별자와 완료 조건
 
 | 자원 | 식별자 | 인바운드 |
 |---|---|---|
-| 앱 | `sg-01b22e8a546dc40e0` | `80` ← `0.0.0.0/0`, `443` ← `0.0.0.0/0`, `22` ← `39.123.84.157/32` |
-| RDS | `sg-0a85c62e8e98cf169` | `5432` ← `sg-01b22e8a546dc40e0` (보안 그룹 참조) |
+| 앱 | `<앱 보안 그룹 ID>` | `80` ← `0.0.0.0/0`, `443` ← `0.0.0.0/0`, `22` ← `<작업자 공인 IP>/32` |
+| RDS | `<RDS 보안 그룹 ID>` | `5432` ← `<앱 보안 그룹 ID>` (보안 그룹 참조) |
 
 `22`의 출처는 작업자 공인 IP 단일 주소다. **작업자 IP가 바뀌면 이 규칙을 갱신해야 SSH가 된다.** RDS는 CIDR이 아니라 앱 보안 그룹을 출처로 참조하므로 앱 인스턴스가 교체돼도 규칙을 고치지 않는다.
 
@@ -86,12 +88,12 @@ M2 초기 운영 배포에서 생성한 AWS 자원의 식별자와 완료 조건
 | AZ | `ap-northeast-2a` |
 | 루트 볼륨 | gp3 30 GiB, 암호화, 종료 시 삭제 |
 | 사설 IP | `10.0.0.231` |
-| Elastic IP | `3.37.228.52` (`eipalloc-0b50b23651d166133`, 연결 `eipassoc-0751939fdce9f1568`) |
+| Elastic IP | `<앱 EIP>` (`eipalloc-0b50b23651d166133`, 연결 `eipassoc-0751939fdce9f1568`) |
 | IMDS | IMDSv2 강제 (`HttpTokens=required`) |
 | CPU 크레딧 | `standard` (unlimited 미사용. 초과 과금을 만들지 않는다) |
 | 키 페어 | `masiton-app` (ed25519) |
 
-**Elastic IP `3.37.228.52`가 `M2-02`(#41) A 레코드의 대상이다.**
+**Elastic IP `<앱 EIP>`가 `M2-02`(#41) A 레코드의 대상이다.**
 
 CPU 크레딧을 `unlimited`가 아니라 `standard`로 둔 이유는 버스트가 예산 밖 과금을 만들지 않게 하는 것이다. 크레딧이 고갈되면 성능이 떨어지지만 요금이 늘지 않는다. `M2-12`에서 `CPUCreditBalance`를 확인한다.
 
@@ -101,7 +103,7 @@ CPU 크레딧을 `unlimited`가 아니라 `standard`로 둔 이유는 버스트�
 
 | 완료 조건 | 결과 |
 |---|---|
-| 22 포트가 전체 공개되지 않는다 | 통과. 출처가 `39.123.84.157/32` 단일 주소다 |
+| 22 포트가 전체 공개되지 않는다 | 통과. 출처가 `<작업자 공인 IP>/32` 단일 주소다 |
 | EC2가 IAM Role로 Parameter Store·ECR·CloudWatch에 접근한다 | 통과 |
 | 사설 서브넷이 인터넷에서 직접 도달되지 않는다 | 통과. 라우트 테이블에 `0.0.0.0/0`이 없다 |
 
@@ -138,7 +140,7 @@ aws logs describe-log-groups                       -> 인가됨
 | 등록 비용 | `$3` 1회 청구, 1년. 만료 2027-07-29 |
 | 자동 갱신 | **끔.** 단기 프로젝트라 갱신 과금을 만들지 않기로 했다(2026-07-29 결정) |
 | 호스팅 영역 | `Z01447273NZ8O8LL4IA5` (`masiton.click.`, 퍼블릭). 등록 시 자동 생성 |
-| A 레코드 | `masiton.click.` → `3.37.228.52`, TTL 300, 상태 `INSYNC` |
+| A 레코드 | `masiton.click.` → `<앱 EIP>`, TTL 300, 상태 `INSYNC` |
 
 TTL을 300초로 둔 이유는 Elastic IP가 바뀌거나 `M2-13` 복구에서 인스턴스를 교체할 때 전파를 빨리 끝내기 위한 것이다.
 
@@ -155,7 +157,7 @@ TTL을 300초로 둔 이유는 Elastic IP가 바뀌거나 `M2-13` 복구에서 �
 ```text
 aws route53domains list-operations   -> REGISTER_DOMAIN SUCCESSFUL
 Resolve-DnsName masiton.click -Type A -Server 8.8.8.8
-  -> 3.37.228.52
+  -> <앱 EIP>
 ```
 
 외부 공개 리졸버(Google DNS `8.8.8.8`)로 확인했으므로 로컬 캐시가 아닌 실제 전파 결과다. **`M2-08`의 도메인 검증 방식 인증서 발급을 막던 전파 대기가 해소됐다.**
@@ -171,7 +173,7 @@ Resolve-DnsName masiton.click -Type A -Server 8.8.8.8
 | 초기 데이터베이스 | `masiton` |
 | 마스터 사용자 | `masiton` |
 | 배치 | `masiton-db-subnet-group` (사설 서브넷 2a·2c), AZ `ap-northeast-2c` |
-| 보안 그룹 | `sg-0a85c62e8e98cf169` (5432, 출처 앱 SG만) |
+| 보안 그룹 | `<RDS 보안 그룹 ID>` (5432, 출처 앱 SG만) |
 | 퍼블릭 액세스 | 없음 |
 | Multi-AZ | 사용하지 않음 |
 | 자동 백업 | 보관 7일, 창 `18:00-18:30` UTC (KST 03:00-03:30) |
@@ -510,7 +512,7 @@ https://masiton.click/internal/health/ready       -> 404
 https://masiton.click/internal/health/dependencies-> 404
 https://masiton.click/internal                    -> 404
 https://masiton.click/api/restaurants     -> 502
-http://3.37.228.52/                       -> 응답 없이 종료 (444)
+http://<앱 EIP>/                       -> 응답 없이 종료 (444)
 Host: example.invalid                     -> 응답 없이 종료 (444)
 ```
 
@@ -602,7 +604,7 @@ reload가 master 프로세스를 바꾸지 않으므로 **인증서 교체에 �
 
 | 파라미터 | 유형 | 값 |
 |---|---|---|
-| `/masiton/admin/login-id` | `String` | `masiton-admin` |
+| `/masiton/admin/login-id` | `String` | `<검증용 관리자 로그인 ID>` |
 | `/masiton/admin/password` | `SecureString` | 미출력 |
 
 BCrypt 해시는 `htpasswd -nbBC 10 -i`로 만들었다. 강도 10은 애플리케이션 `BCryptPasswordEncoder` 기본값과 같아야 로그인이 성립한다. 애플리케이션 이미지에는 JRE만 있어 로컬 절차([scripts/New-LocalAdmin.ps1](../../scripts/New-LocalAdmin.ps1))처럼 클래스를 새로 컴파일할 수 없고 `openssl`은 bcrypt를 지원하지 않으므로 `httpd-tools`를 인스턴스에 설치했다. 검증용 도구이며 애플리케이션 실행에는 필요하지 않다.
@@ -929,7 +931,7 @@ Kakao place ID와 YouTube channel/video ID는 관리자 API 응답에 노출되�
 ### 12.6. 남은 항목
 
 - ~~팀원 관리자 계정 4개~~ → 2026-07-30에 생성하고 네 계정 모두 로그인 `200`을 확인했다. [`admin-account-create.sh`](../../deploy/scripts/admin-account-create.sh)로 만들었고 **생성 후 password 파라미터 4개를 삭제해 평문이 남지 않는다.**
-- **`masiton-admin` 폐기.** 배포·리허설 검증용 계정이다. M2 종료 시 판단한다.
+- **`<검증용 관리자 로그인 ID>` 폐기.** 배포·리허설 검증용 계정이다. M2 종료 시 판단한다.
 - ~~로그인 실패 5회 차단~~ → 13.7절에서 확인했다.
 - **WS 담당자별 인수 확인.** 계획 `M2-12`는 4개 WS 담당자가 각자 흐름을 확인하고 기록하도록 정했다. 12.2~12.4절은 이우람이 API 수준에서 수행한 것이고 화면 수준 확인은 담당자별로 진행 중이다. 2026-07-30 기준으로 목록·검색·필터(양성훈)와 상세·관련 영상(박진영)이 통과했다. 상세 화면은 잘못된 식별자를 일시적 조회 실패로 표시하고 `traceId`를 노출하지 않는 문제가 남았다. **같은 오류를 목록 화면은 종류에 맞는 문구와 `traceId`로 노출하므로 상세 화면의 오류 매핑 문제다.** 관리자 인증·등록(김인안)은 12.5절 결함으로 막혀 있었고 수정 후 미리보기 동작을 확인했으므로 담당자 재확인이 필요하다. 유튜버 탐색(이우람)은 중복 제거 1건을 뺀 나머지가 통과했다.
 
@@ -1017,7 +1019,7 @@ AOF로 인증 상태가 복원되므로 재기동이 세션 전량 소실로 이
 
 증상이 까다로웠다. **무인증 요청은 `401`로 정상이고 자격 증명을 넣은 사람만 `500`을 받는다.** 겉으로는 제한 공개가 동작하는 것처럼 보인다. `error_log`의 `open() "/run/masiton/htpasswd" failed (13: Permission denied)`로 확인했다.
 
-실제로 Redis fail-closed 리허설에서 `systemctl restart masiton-redis`를 실행한 07:26부터 약 20분간 검증 참여자 접속이 막혔다. 로그에 `222.109.6.149`, `180.64.121.111`의 같은 오류가 남아 있다.
+실제로 Redis fail-closed 리허설에서 `systemctl restart masiton-redis`를 실행한 07:26부터 약 20분간 검증 참여자 접속이 막혔다. 로그에 `<검증 참여자 A 공인 IP>`, `<검증 참여자 B 공인 IP>`의 같은 오류가 남아 있다.
 
 `0711`로 통일해 고쳤다. 탐색만 허용하고 목록 열거는 막으며 파일 내용은 각 파일의 `0400`이 지킨다. `nginx` 사용자가 `htpasswd`는 읽고 `redis.conf`는 읽지 못하는 것을 확인했고, Redis를 다시 재기동해도 권한이 회귀하지 않는 것까지 확인했다.
 
@@ -1251,7 +1253,7 @@ docker inspect     비밀값 패턴 0건
 
 - **예산 초과 알림 실제 도달.** 시험 예산 `masiton-alert-test`(한도 `$0.5`, 실제 1% 초과)를 만들어 확인 중이다. AWS Budgets가 하루 약 3회만 평가해 즉시 도달하지 않는다. 도달 확인 후 시험 예산을 삭제한다.
 - **SSH 접속.** 키 페어 `masiton-app`을 만들었으나 실제 SSH 접속은 시도하지 않았다. 인스턴스 접근은 SSM RunCommand로 검증했다.
-- **`masiton-admin` 폐기.** 배포·리허설 검증용 계정이며 M2 종료 시 폐기 여부를 판단한다.
+- **`<검증용 관리자 로그인 ID>` 폐기.** 배포·리허설 검증용 계정이며 M2 종료 시 폐기 여부를 판단한다.
 - **WS 담당자별 화면 인수.** 12.5절.
 - **CD의 의도적 실패 차단.** 15절에서 승인 게이트와 정상 배포는 검증했으나, 실패하는 배포를 일부러 만들어 job이 차단되는지는 시험하지 않았다.
 - **`workflow_dispatch` 롤백 배포.** 15.4절. `workflow_dispatch`가 기본 브랜치(`main`)의 워크플로 파일을 요구하고 그 파일이 아직 `main`에 없어, 병합 전에는 실행할 수 없다. 병합 직후 대상 커밋을 넣어 실행하고 결과를 이 절에서 지운다. 스크립트 수준의 롤백은 13.3절에서 검증했다.
