@@ -3,19 +3,25 @@
 import { useEffect, useRef } from 'react'
 
 import { useMemberSession } from '@/components/member/MemberSessionProvider'
+import {
+  coordinateRecentView,
+  initialRecentViewCoordinationState,
+} from '@/components/personal/recent-view-coordination'
 import { authenticatedMemberFetch } from '@/lib/member/auth'
 
 export function RecentViewRecorder({ restaurantId }: { restaurantId: string }) {
   const { status } = useMemberSession()
-  const requestedRestaurantId = useRef<string | null>(null)
+  const coordinationState = useRef(initialRecentViewCoordinationState)
 
   useEffect(() => {
-    if (status !== 'authenticated') {
-      requestedRestaurantId.current = null
-      return
-    }
-    if (requestedRestaurantId.current === restaurantId) return
-    requestedRestaurantId.current = restaurantId
+    const coordination = coordinateRecentView(
+      coordinationState.current,
+      status,
+      restaurantId,
+    )
+    coordinationState.current = coordination.state
+
+    if (!coordination.shouldRequest) return
 
     // 공개 상세 표시는 이 선택적 회원 기록 요청의 성공 여부와 분리한다.
     void authenticatedMemberFetch(

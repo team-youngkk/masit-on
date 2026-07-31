@@ -18,6 +18,16 @@ import {
   type RecentRestaurantsResponse,
 } from '@/lib/member/personal-restaurants'
 
+import {
+  canNavigatePersonalList,
+  createPersonalListCoordination,
+  finishPersonalListDeletion,
+  isCurrentPersonalListDeletion,
+  previousPageAfterEmptyDeletionRefresh,
+  startPersonalListDeletion,
+  updatePersonalListView,
+} from './personal-list-coordination'
+
 import styles from './personal-restaurants.module.css'
 
 type ListKind = 'favorites' | 'recent'
@@ -129,10 +139,14 @@ export function PersonalRestaurantList({
   const { status } = useMemberSession()
   const copy = listCopy[kind]
   const requestSequence = useRef(0)
-  const deletionInFlight = useRef(false)
   const currentViewKey = `${kind}:${page}:${size}`
-  const currentViewKeyRef = useRef(currentViewKey)
-  currentViewKeyRef.current = currentViewKey
+  const coordinationRef = useRef(
+    createPersonalListCoordination(currentViewKey),
+  )
+  coordinationRef.current = updatePersonalListView(
+    coordinationRef.current,
+    currentViewKey,
+  )
   const [data, setData] = useState<DisplayPage | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<ErrorState | null>(null)
@@ -181,7 +195,7 @@ export function PersonalRestaurantList({
   }, [load, status])
 
   function goToPage(nextPage: number) {
-    if (deletionInFlight.current) return
+    if (!canNavigatePersonalList(coordinationRef.current)) return
     router.push(`${copy.path}?page=${nextPage}&size=${size}`)
   }
 
@@ -189,9 +203,10 @@ export function PersonalRestaurantList({
   const loginHref = `/login?returnTo=${encodeURIComponent(currentRoute)}`
 
   async function remove(restaurantId: string) {
-    if (deletionInFlight.current) return
-    deletionInFlight.current = true
-    const viewKeyAtStart = currentViewKeyRef.current
+    const started = startPersonalListDeletion(coordinationRef.current)
+    coordinationRef.current = started.coordination
+    if (!started.deletion) return
+    const deletion = started.deletion
     setPendingIds((current) => new Set(current).add(restaurantId))
     setItemErrors((current) => {
       const next = { ...current }
@@ -206,18 +221,26 @@ export function PersonalRestaurantList({
         await removeRecentRestaurant(restaurantId)
       }
 
-      if (viewKeyAtStart !== currentViewKeyRef.current) return
+      if (!isCurrentPersonalListDeletion(coordinationRef.current, deletion)) return
 
       const refreshedPage = await load()
-      if (viewKeyAtStart !== currentViewKeyRef.current) return
-      if (page > 1 && refreshedPage?.items.length === 0) {
-        deletionInFlight.current = false
-        goToPage(page - 1)
+      const previousPage = previousPageAfterEmptyDeletionRefresh(
+        coordinationRef.current,
+        deletion,
+        page,
+        refreshedPage?.items.length,
+      )
+      if (previousPage !== null) {
+        coordinationRef.current = finishPersonalListDeletion(
+          coordinationRef.current,
+          deletion,
+        )
+        goToPage(previousPage)
       }
     } catch (caught) {
-      if (viewKeyAtStart !== currentViewKeyRef.current) return
+      if (!isCurrentPersonalListDeletion(coordinationRef.current, deletion)) return
       const itemError = await toError(caught, copy.removeFallback)
-      if (viewKeyAtStart !== currentViewKeyRef.current) return
+      if (!isCurrentPersonalListDeletion(coordinationRef.current, deletion)) return
       if (itemError.status === 401) {
         setError(itemError)
       } else {
@@ -229,7 +252,10 @@ export function PersonalRestaurantList({
         next.delete(restaurantId)
         return next
       })
-      deletionInFlight.current = false
+      coordinationRef.current = finishPersonalListDeletion(
+        coordinationRef.current,
+        deletion,
+      )
     }
   }
 
