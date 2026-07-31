@@ -25,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * 빈 PostgreSQL에 V1 baseline과 V2~V4 전진 마이그레이션이 순서대로 성공적으로 적용되고,
+ * 빈 PostgreSQL에 V1 baseline과 V2(1차 확장 통합 스키마)가 순서대로 성공적으로 적용되고,
  * ddl-auto=validate로 컨텍스트가 기동하며, Region·FoodCategory 기준 데이터가
  * seed-data-plan.md 2~4·6절 기준과 일치하는지 확인한다.
  *
@@ -60,9 +60,9 @@ class FlywayMigrationIntegrationTest {
     private MemberSessionRevocationStore memberSessionRevocationStore;
 
     @Test
-    @DisplayName("빈 데이터베이스에 V1부터 V6까지 계약된 순서와 파일명으로 성공 기록된다")
-    void 마이그레이션적용_빈데이터베이스_V1부터V6까지계약된순서와파일명으로성공기록된다() {
-        // given: 컨텍스트 기동 시점에 Flyway가 V1 baseline과 V2~V6 전진 변경을 적용했다.
+    @DisplayName("빈 데이터베이스에 V1과 V2(1차 확장 통합)가 계약된 순서와 파일명으로 성공 기록된다")
+    void 마이그레이션적용_빈데이터베이스_V1과V2가계약된순서와파일명으로성공기록된다() {
+        // given: 컨텍스트 기동 시점에 Flyway가 V1 baseline과 V2(1차 확장 통합) 변경을 적용했다.
 
         // when
         List<AppliedMigration> appliedMigrations = jdbcTemplate.query(
@@ -79,16 +79,8 @@ class FlywayMigrationIntegrationTest {
         // then
         assertThat(appliedMigrations).containsExactly(
                 new AppliedMigration("1", "create initial schema", "SQL", "V1__create_initial_schema.sql", true),
-                new AppliedMigration("2", "add member account security foundation", "SQL",
-                        "V2__add_member_account_security_foundation.sql", true),
-                new AppliedMigration("3", "add member authentication hardening", "SQL",
-                        "V3__add_member_authentication_hardening.sql", true),
-                new AppliedMigration("4", "add member personal restaurant relations", "SQL",
-                        "V4__add_member_personal_restaurant_relations.sql", true),
-                new AppliedMigration("5", "add restaurant coordinates", "SQL",
-                        "V5__add_restaurant_coordinates.sql", true),
-                new AppliedMigration("6", "add creator detail display fields", "SQL",
-                        "V6__add_creator_detail_display_fields.sql", true)
+                new AppliedMigration("2", "add expansion 1 schema", "SQL",
+                        "V2__add_expansion_1_schema.sql", true)
         );
     }
 
