@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { fetchMapPoints } from '@/lib/map/map-points-client'
+import { fetchMapPoints, type MapPointsFetchResult } from '@/lib/map/map-points-client'
 import {
   SEOUL_FALLBACK_BOUNDS,
   type MapBounds,
@@ -42,6 +42,17 @@ function buildMapHref(filters: MapPointsFilters): string {
   return queryString ? `/map?${queryString}` : '/map'
 }
 
+/* useQuery의 data 하나로부터 배너 상태를 계산한다. 최초 렌더 파생과 이후 갱신 양쪽에서 쓴다. */
+function deriveBanner(data: MapPointsFetchResult | undefined): Banner | null {
+  if (!data || data.kind === 'ok') {
+    return null
+  }
+  if (data.kind === 'rateLimited') {
+    return { kind: 'rateLimited', message: data.message, traceId: data.traceId }
+  }
+  return { kind: data.kind, message: data.message, traceId: data.traceId }
+}
+
 /*
  * ADR-WEB-002: 필터 네 조건만 URL 쿼리로 공유 가능하게 유지하고, 지도 bounds는
  * URL·로그 어디에도 남기지 않는 client 전용 state로 둔다(ADR-MAP-001 6.6).
@@ -59,8 +70,12 @@ export function MapScreen({ initialFilters, creatorsResult }: MapScreenProps) {
   const [bounds, setBounds] = useState<MapBounds>(SEOUL_FALLBACK_BOUNDS)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const [lastGoodView, setLastGoodView] = useState<MapPointsViewState | null>(null)
-  const [banner, setBanner] = useState<Banner | null>(null)
+  /*
+   * hydrated 결과가 우연히 rateLimited였는지는 useQuery를 호출하기 전에는 알 수 없어
+   * (아래 enabled 계산과 순환 참조가 생긴다) 초기값은 null로 둔다. 실제로 그 상태였다면
+   * useQuery가 즉시 재조회해 서버가 다시 429를 반환하는 순간 정상적으로 rateLimitedUntil이
+   * 설정되어 이후 호출을 막는다.
+   */
   const [rateLimitedUntil, setRateLimitedUntil] = useState<number | null>(null)
 
   const queryKey = useMemo(
@@ -83,26 +98,32 @@ export function MapScreen({ initialFilters, creatorsResult }: MapScreenProps) {
     enabled: !isRateLimited,
   })
 
-  useEffect(() => {
-    if (!data) {
-      return
-    }
+  /*
+   * page.tsx가 서버에서 미리 조회해 hydrate한 결과를 최초 렌더부터 그대로 보여줘야 한다
+   * (ADR-WEB-002). useEffect로 data를 lastGoodView/banner에 복사하면 effect는 서버 렌더·
+   * hydration 시점에 실행되지 않아 최초 HTML과 첫 페인트가 항상 로딩 상태로 나온다. 대신
+   * "렌더링 중 이전 값 갱신" 패턴(react.dev의 useState 문서가 권장하는 방식)을 써서, data가
+   * 바뀔 때마다 effect를 기다리지 않고 같은 렌더에서 즉시 파생시킨다.
+   */
+  const [lastGoodView, setLastGoodView] = useState<MapPointsViewState | null>(
+    () => (data?.kind === 'ok' ? data.view : null),
+  )
+  const [banner, setBanner] = useState<Banner | null>(() => deriveBanner(data))
 
-    if (data.kind === 'ok') {
+  const [previousData, setPreviousData] = useState(data)
+  if (data !== previousData) {
+    setPreviousData(data)
+    if (data?.kind === 'ok') {
       setLastGoodView(data.view)
       setBanner(null)
       setRateLimitedUntil(null)
-      return
-    }
-
-    if (data.kind === 'rateLimited') {
+    } else if (data?.kind === 'rateLimited') {
       setBanner({ kind: 'rateLimited', message: data.message, traceId: data.traceId })
       setRateLimitedUntil(data.retryAvailableAt)
-      return
+    } else if (data) {
+      setBanner({ kind: data.kind, message: data.message, traceId: data.traceId })
     }
-
-    setBanner({ kind: data.kind, message: data.message, traceId: data.traceId })
-  }, [data])
+  }
 
   useEffect(() => {
     if (rateLimitedUntil === null) {
