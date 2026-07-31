@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useMemberSession } from '@/components/member/MemberSessionProvider'
 import { Button } from '@/components/ui/Button'
 import { authenticatedMemberFetch, clearMemberAccessToken, memberLogout } from '@/lib/member/auth'
 
@@ -8,6 +9,7 @@ type Me = { id: string; email: string }
 type Action = 'logout' | 'withdraw' | null
 
 export default function MePage() {
+  const { status } = useMemberSession()
   const [member, setMember] = useState<Me | null>(null)
   const [message, setMessage] = useState('Loading account...')
   const [messageIsError, setMessageIsError] = useState(false)
@@ -15,21 +17,34 @@ export default function MePage() {
   const [confirmingWithdrawal, setConfirmingWithdrawal] = useState(false)
 
   useEffect(() => {
+    let active = true
+    if (status !== 'authenticated') {
+      setMember(null)
+      setMessage(status === 'loading' ? 'Loading account...' : 'Sign in is required.')
+      setMessageIsError(false)
+      return () => { active = false }
+    }
+
     authenticatedMemberFetch('/api/me')
       .then(async response => {
+        if (!active) return
         if (!response.ok) {
           setMessageIsError(response.status !== 401)
           setMessage(response.status === 401 ? 'Sign in is required.' : 'Could not load your account.')
           return
         }
-        setMember(await response.json())
+        const nextMember = (await response.json()) as Me
+        if (!active) return
+        setMember(nextMember)
         setMessage('')
       })
       .catch(() => {
+        if (!active) return
         setMessageIsError(true)
         setMessage('Could not load your account.')
       })
-  }, [])
+    return () => { active = false }
+  }, [status])
 
   async function logout() {
     setAction('logout')

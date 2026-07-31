@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Field } from '@/components/ui/Field'
+import { FavoriteButton } from '@/components/personal/FavoriteButton'
 import { cn } from '@/lib/cn'
 import {
   CATEGORY_OPTIONS,
@@ -60,6 +61,7 @@ export default async function RestaurantsPage({
   const items = result.ok ? result.data.items : []
   const page = result.ok ? result.data.page : null
   const pageNumbers = page ? buildPageNumbers(page.number, page.totalPages) : []
+  const currentRoute = `/restaurants?${apiParams.toString()}`
 
   return (
     <section>
@@ -198,6 +200,13 @@ export default async function RestaurantsPage({
                   level={2}
                   meta={`${restaurant.district} · ${restaurant.category}`}
                 >
+                  <div className={styles.cardAction}>
+                    <FavoriteButton
+                      restaurantId={restaurant.id}
+                      restaurantName={restaurant.name}
+                      returnTo={currentRoute}
+                    />
+                  </div>
                   {restaurant.visitedBy.length > 0 ? (
                     <p className={styles.visitedBy}>
                       방문 유튜버:{' '}

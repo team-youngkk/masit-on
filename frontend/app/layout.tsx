@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 
 import { SiteFooter } from '@/components/layout/SiteFooter'
 import { SiteHeader } from '@/components/layout/SiteHeader'
+import { MemberSessionProvider } from '@/components/member/MemberSessionProvider'
 
 import './globals.css'
 import styles from './layout.module.css'
@@ -24,9 +25,11 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className={styles.shell}>
-        <SiteHeader />
-        <main className={styles.main}>{children}</main>
-        <SiteFooter />
+        <MemberSessionProvider>
+          <SiteHeader />
+          <main className={styles.main}>{children}</main>
+          <SiteFooter />
+        </MemberSessionProvider>
       </body>
     </html>
   )
