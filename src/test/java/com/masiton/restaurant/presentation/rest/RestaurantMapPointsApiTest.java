@@ -164,6 +164,24 @@ class RestaurantMapPointsApiTest {
     }
 
     @Test
+    @DisplayName("결과가 정확히 200건이면 AVAILABLE과 200개 전체를 반환한다")
+    void mapPoints_결과200건_AVAILABLE과200개전체를반환한다() throws Exception {
+        // given
+        for (int index = 0; index < 200; index++) {
+            insertRestaurant(String.format("맛집 %03d", index), "37.5665", "126.9780");
+        }
+
+        // when & then
+        mockMvc.perform(get("/api/restaurants/map-points")
+                        .param("south", "37.5").param("west", "126.9")
+                        .param("north", "37.6").param("east", "127.0"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.limit").value(200))
+                .andExpect(jsonPath("$.items.length()").value(200));
+    }
+
+    @Test
     @DisplayName("결과가 201건이면 200개 상한을 넘겨 TOO_MANY_RESULTS와 빈 items를 반환한다")
     void mapPoints_결과201건_TOO_MANY_RESULTS와빈items를반환한다() throws Exception {
         // given
