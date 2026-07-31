@@ -30,6 +30,50 @@ class MemoryStorage implements Storage {
   }
 }
 
+class MutatingMemoryStorage extends MemoryStorage {
+  private mutation: (() => void) | null = null
+  private mutationCondition: (() => boolean) | null = null
+
+  mutateAfterNextKeyRead(mutation: () => void): void {
+    this.mutation = mutation
+    this.mutationCondition = null
+  }
+
+  mutateAfterNextKeyReadWhen(
+    condition: () => boolean,
+    mutation: () => void,
+  ): void {
+    this.mutation = mutation
+    this.mutationCondition = condition
+  }
+
+  setItemFirst(key: string, value: string): void {
+    const entries = Array.from(
+      { length: this.length },
+      (_, index) => this.key(index),
+    ).flatMap((existingKey) =>
+      existingKey === null
+        ? []
+        : [[existingKey, this.getItem(existingKey) ?? ''] as const],
+    )
+    this.clear()
+    this.setItem(key, value)
+    for (const [existingKey, existingValue] of entries) {
+      this.setItem(existingKey, existingValue)
+    }
+  }
+
+  override key(index: number): string | null {
+    const key = super.key(index)
+    if (this.mutationCondition && !this.mutationCondition()) return key
+    const mutation = this.mutation
+    this.mutation = null
+    this.mutationCondition = null
+    mutation?.()
+    return key
+  }
+}
+
 function deferred(): { promise: Promise<void>; resolve: () => void } {
   let resolve!: () => void
   const promise = new Promise<void>((next) => {
@@ -114,5 +158,151 @@ memberLockTest('만료되거나 손상된 fallback 항목을 제거하고 잠금
   })
 
   memberLockAssert.equal(executed, true)
+  memberLockAssert.equal(storage.length, 0)
+})
+
+memberLockTest('만료 항목 다음의 활성 잠금을 건너뛰지 않는다', async () => {
+  const storage = new MemoryStorage()
+  const staleKey = 'masit-on:member-auth-cookie:entry:stale'
+  const activeKey = 'masit-on:member-auth-cookie:entry:z-active'
+  storage.setItem(
+    staleKey,
+    JSON.stringify({
+      id: 'stale',
+      choosing: false,
+      number: 1,
+      expiresAt: 999,
+    }),
+  )
+  storage.setItem(
+    activeKey,
+    JSON.stringify({
+      id: 'z-active',
+      choosing: false,
+      number: 1,
+      expiresAt: 2_000,
+    }),
+  )
+  let executed = false
+  let waitCount = 0
+  const lock = createMemberAuthCookieLock({
+    lockManager: () => null,
+    storage: () => storage,
+    randomId: () => 'a-current',
+    now: () => 1_000,
+    delay: async () => {
+      waitCount += 1
+      memberLockAssert.equal(executed, false)
+      storage.removeItem(activeKey)
+    },
+  })
+
+  await lock(async () => {
+    executed = true
+  })
+
+  memberLockAssert.equal(waitCount, 1)
+  memberLockAssert.equal(executed, true)
+  memberLockAssert.equal(storage.length, 0)
+})
+
+memberLockTest('키 수집 중 저장소가 변경돼도 활성 잠금을 건너뛰지 않는다', async () => {
+  const storage = new MutatingMemoryStorage()
+  const staleKey = 'masit-on:member-auth-cookie:entry:stale'
+  const activeKey = 'masit-on:member-auth-cookie:entry:z-active'
+  storage.setItem(
+    staleKey,
+    JSON.stringify({
+      id: 'stale',
+      choosing: false,
+      number: 1,
+      expiresAt: 999,
+    }),
+  )
+  storage.setItem(
+    activeKey,
+    JSON.stringify({
+      id: 'z-active',
+      choosing: false,
+      number: 1,
+      expiresAt: 2_000,
+    }),
+  )
+  storage.mutateAfterNextKeyRead(() => storage.removeItem(staleKey))
+  let executed = false
+  let waitCount = 0
+  const lock = createMemberAuthCookieLock({
+    lockManager: () => null,
+    storage: () => storage,
+    randomId: () => 'a-current',
+    now: () => 1_000,
+    delay: async () => {
+      waitCount += 1
+      memberLockAssert.equal(executed, false)
+      storage.removeItem(activeKey)
+    },
+  })
+
+  await lock(async () => {
+    executed = true
+  })
+
+  memberLockAssert.equal(waitCount, 1)
+  memberLockAssert.equal(executed, true)
+  memberLockAssert.equal(storage.length, 0)
+})
+
+memberLockTest('키 수집 중 항목이 삽입돼도 기존 활성 잠금을 건너뛰지 않는다', async () => {
+  const storage = new MutatingMemoryStorage()
+  const activeKey = 'masit-on:member-auth-cookie:entry:z-active'
+  const insertedKey = 'masit-on:member-auth-cookie:entry:inserted'
+  storage.setItem(
+    activeKey,
+    JSON.stringify({
+      id: 'z-active',
+      choosing: false,
+      number: 1,
+      expiresAt: 2_000,
+    }),
+  )
+  storage.mutateAfterNextKeyReadWhen(
+    () => {
+      const current = storage.getItem(
+        'masit-on:member-auth-cookie:entry:a-current',
+      )
+      return current !== null && JSON.parse(current).choosing === false
+    },
+    () =>
+      storage.setItemFirst(
+        insertedKey,
+        JSON.stringify({
+          id: 'inserted',
+          choosing: false,
+          number: 99,
+          expiresAt: 2_000,
+        }),
+      ),
+  )
+  let executed = false
+  let waitCount = 0
+  const lock = createMemberAuthCookieLock({
+    lockManager: () => null,
+    storage: () => storage,
+    randomId: () => 'a-current',
+    now: () => 1_000,
+    delay: async () => {
+      waitCount += 1
+      memberLockAssert.equal(executed, false)
+      storage.removeItem(activeKey)
+    },
+  })
+
+  await lock(async () => {
+    executed = true
+  })
+
+  memberLockAssert.equal(waitCount, 1)
+  memberLockAssert.equal(executed, true)
+  storage.removeItem(insertedKey)
   memberLockAssert.equal(storage.length, 0)
 })

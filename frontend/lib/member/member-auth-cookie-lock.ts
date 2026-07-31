@@ -30,6 +30,7 @@ const FALLBACK_POLL_MILLISECONDS = 20
 const FALLBACK_MAX_WAIT_MILLISECONDS = 10_000
 const FALLBACK_LEASE_MILLISECONDS = 300_000
 const FALLBACK_HEARTBEAT_MILLISECONDS = 30_000
+const FALLBACK_SNAPSHOT_MAX_ATTEMPTS = 4
 
 function browserLockManager(): LockManagerLike | null {
   return typeof navigator === 'undefined' ? null : navigator.locks ?? null
@@ -55,12 +56,39 @@ function delay(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds))
 }
 
-function readEntries(storage: StorageLike, currentTime: number): BakeryEntry[] {
-  const entries: BakeryEntry[] = []
-  for (let index = 0; index < storage.length; index += 1) {
+function readEntryKeys(storage: StorageLike): string[] {
+  const keySet = new Set<string>()
+  for (let index = storage.length - 1; index >= 0; index -= 1) {
     const key = storage.key(index)
-    if (!key?.startsWith(FALLBACK_ENTRY_PREFIX)) continue
+    if (key?.startsWith(FALLBACK_ENTRY_PREFIX)) keySet.add(key)
+  }
+  return [...keySet].sort()
+}
 
+function readEntries(storage: StorageLike, currentTime: number): BakeryEntry[] {
+  let previousKeys: string[] | null = null
+  let keys: string[] | null = null
+
+  // Storage.key() 순서는 다른 탭의 삽입·삭제 중 바뀔 수 있으므로 안정된 두 관측만 사용한다.
+  for (let attempt = 0; attempt < FALLBACK_SNAPSHOT_MAX_ATTEMPTS; attempt += 1) {
+    const nextKeys = readEntryKeys(storage)
+    if (
+      previousKeys !== null &&
+      nextKeys.length === previousKeys.length &&
+      nextKeys.every((key, index) => key === previousKeys?.[index])
+    ) {
+      keys = nextKeys
+      break
+    }
+    previousKeys = nextKeys
+  }
+
+  if (!keys) {
+    throw new Error('Member authentication coordination is unstable')
+  }
+
+  const entries: BakeryEntry[] = []
+  for (const key of keys) {
     const rawEntry = storage.getItem(key)
     if (!rawEntry) continue
 
