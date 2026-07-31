@@ -133,13 +133,15 @@ Flyway undo 파일과 하향 migration은 기본 경로로 사용하지 않는�
 
 아래는 1차 확장 구현 시점에 구간별로 작성했던 내용이며, 2.3절 통합 이후 다섯 구간 모두 `V2__add_expansion_1_schema.sql` 하나 안의 순서로 존재하고 개별 파일은 없다. 구간과 요구사항 대응은 추적 목적으로 유지한다.
 
-| 순서(통합 전) | 구 파일명 | 변경 | 호환성·검증 |
+| 순서(통합 전) | 구간 | 변경 | 호환성·검증 |
 |---:|---|---|---|
-| V2 | `V2__add_member_account_security_foundation.sql` | `member_account`, `member_action_token`, `member_session_revocation`과 회원 보안 인덱스 | V1 공개·관리자 데이터 불변, V1→V2 적용 |
-| V3 | `V3__add_member_authentication_hardening.sql` | 키 식별자와 AES-GCM 암호문을 가진 Action Token 메일 아웃박스, 탈퇴 재시도 작업, Redis↔PostgreSQL 세션 폐기 복구 작업과 dispatch 인덱스 | V2 회원 데이터는 유지, 원문 Token·이메일·클라이언트 주소를 새 테이블에 추가하지 않음 |
-| V4 | `V4__add_member_personal_restaurant_relations.sql` | `favorite`, `recent_restaurant_view`, 복합 PK·FK·회원 목록 인덱스·최근 기록 만료 cleanup 인덱스 | 빈 개인화 관계로 적용, V1→V4 적용과 중복 찜/upsert·30일 cleanup 실행계획 검증 |
-| V5 | `V5__add_restaurant_coordinates.sql` | nullable `restaurant.latitude`, `restaurant.longitude`, null 쌍·범위 CHECK, 지도 partial B-tree | 기존 Restaurant 좌표는 모두 `NULL`, V1→V5 bounds 검증 |
-| V6 | `V6__add_creator_detail_display_fields.sql` | `creator.profile_image_url`, `description`, `handle` | 기존 Creator 선택 표시값은 `NULL`, V1→V6 공개 상세 null 표현 검증 |
+| V2 | 회원 계정·보안 기반 | `member_account`, `member_action_token`, `member_session_revocation`과 회원 보안 인덱스 | V1 공개·관리자 데이터 불변, V1→V2 적용 |
+| V3 | 회원 인증 강화 | 키 식별자와 AES-GCM 암호문을 가진 Action Token 메일 아웃박스, 탈퇴 재시도 작업, Redis↔PostgreSQL 세션 폐기 복구 작업과 dispatch 인덱스 | V2 회원 데이터는 유지, 원문 Token·이메일·클라이언트 주소를 새 테이블에 추가하지 않음 |
+| V4 | 개인 맛집 관계 | `favorite`, `recent_restaurant_view`, 복합 PK·FK·회원 목록 인덱스·최근 기록 만료 cleanup 인덱스 | 빈 개인화 관계로 적용, V1→V4 적용과 중복 찜/upsert·30일 cleanup 실행계획 검증 |
+| V5 | 맛집 좌표 | nullable `restaurant.latitude`, `restaurant.longitude`, null 쌍·범위 CHECK, 지도 partial B-tree | 기존 Restaurant 좌표는 모두 `NULL`, V1→V5 bounds 검증 |
+| V6 | Creator 상세 표시 열 | `creator.profile_image_url`, `description`, `handle` | 기존 Creator 선택 표시값은 `NULL`, V1→V6 공개 상세 null 표현 검증 |
+
+통합 후에는 위 다섯 구간을 가리키는 옛 파일명을 문서·코드 어디에도 남기지 않는다. 구간 이름만으로 참조하며, 실제 내용은 `V2__add_expansion_1_schema.sql` 안의 순서로 확인한다.
 
 V3 구간 아웃박스는 Action Token만 FK로 참조한다. 수신자는 `member_action_token.member_id → member_account` 조인으로만 결정하므로 다른 회원의 Token을 전달할 수 없다. 탈퇴 작업은 Action Token을 먼저 지워 CASCADE로 아웃박스를 제거한다. 탈퇴·세션 복구 작업은 회원 FK를 두지 않아 정리 실행 중에도 재시도 상태를 유지하고, 성공 시 명시적으로 제거한다. V4 구간의 회원 FK는 `ON DELETE CASCADE`, 맛집 FK는 `ON DELETE RESTRICT`로 생성한다. 따라서 회원 물리 파기는 관계를 함께 제거하고, 맛집 물리 삭제는 관계를 먼저 정리하는 명시적 Command가 선행되어야 한다. V5와 V6 구간은 기존 행을 백필하거나 외부 API를 호출하지 않는다.
 
