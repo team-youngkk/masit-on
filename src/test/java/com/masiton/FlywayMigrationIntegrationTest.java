@@ -9,6 +9,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -20,6 +21,7 @@ import com.masiton.member.application.MemberSessionRevocation;
 import com.masiton.member.application.port.out.MemberSessionRevocationStore;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * 빈 PostgreSQL에 V1 baseline과 V2~V4 전진 마이그레이션이 순서대로 성공적으로 적용되고,
@@ -57,9 +59,9 @@ class FlywayMigrationIntegrationTest {
     private MemberSessionRevocationStore memberSessionRevocationStore;
 
     @Test
-    @DisplayName("빈 데이터베이스에 V1부터 V4까지 계약된 순서와 파일명으로 성공 기록된다")
-    void 마이그레이션적용_빈데이터베이스_V1부터V4까지계약된순서와파일명으로성공기록된다() {
-        // given: 컨텍스트 기동 시점에 Flyway가 V1 baseline과 V2~V4 전진 변경을 적용했다.
+    @DisplayName("빈 데이터베이스에 V1부터 V5까지 계약된 순서와 파일명으로 성공 기록된다")
+    void 마이그레이션적용_빈데이터베이스_V1부터V5까지계약된순서와파일명으로성공기록된다() {
+        // given: 컨텍스트 기동 시점에 Flyway가 V1 baseline과 V2~V5 전진 변경을 적용했다.
 
         // when
         List<AppliedMigration> appliedMigrations = jdbcTemplate.query(
@@ -81,7 +83,9 @@ class FlywayMigrationIntegrationTest {
                 new AppliedMigration("3", "add member authentication hardening", "SQL",
                         "V3__add_member_authentication_hardening.sql", true),
                 new AppliedMigration("4", "add member personal restaurant relations", "SQL",
-                        "V4__add_member_personal_restaurant_relations.sql", true)
+                        "V4__add_member_personal_restaurant_relations.sql", true),
+                new AppliedMigration("5", "add restaurant coordinates", "SQL",
+                        "V5__add_restaurant_coordinates.sql", true)
         );
     }
 
@@ -187,6 +191,56 @@ class FlywayMigrationIntegrationTest {
         assertForeignKey("fk_favorite__restaurant", "pk_restaurant", "RESTRICT");
         assertForeignKey("fk_recent_restaurant_view__member_account", "pk_member_account", "CASCADE");
         assertForeignKey("fk_recent_restaurant_view__restaurant", "pk_restaurant", "RESTRICT");
+    }
+
+    @Test
+    @DisplayName("V5 맛집 좌표 열은 nullable이고 범위·null 쌍 CHECK와 bounds partial index를 강제한다")
+    void V5_맛집좌표_nullable범위쌍CHECK와partialIndex강제() {
+        assertIndexCount("ix_restaurant__public_coordinate_bounds");
+
+        UUID mapoRegionId = UUID.fromString("10000000-0000-4000-8000-000000000014");
+        UUID koreanCategoryId = UUID.fromString("20000000-0000-4000-8000-000000000001");
+
+        UUID coordinateFreeRestaurantId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO restaurant (id, region_id, food_category_id, name, kakao_place_id, "
+                        + "kakao_place_url, road_address, phone_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                coordinateFreeRestaurantId, mapoRegionId, koreanCategoryId, "좌표 없는 맛집",
+                "KAKAO-" + coordinateFreeRestaurantId, "https://example.com/place/" + coordinateFreeRestaurantId,
+                "서울특별시 마포구 월드컵로 1", "02-0000-0000");
+
+        UUID coordinatedRestaurantId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO restaurant (id, region_id, food_category_id, name, kakao_place_id, "
+                        + "kakao_place_url, road_address, phone_number, latitude, longitude) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                coordinatedRestaurantId, mapoRegionId, koreanCategoryId, "좌표 있는 맛집",
+                "KAKAO-" + coordinatedRestaurantId, "https://example.com/place/" + coordinatedRestaurantId,
+                "서울특별시 마포구 월드컵로 2", "02-0000-0001",
+                new java.math.BigDecimal("37.5665"), new java.math.BigDecimal("126.9780"));
+
+        assertThatThrownBy(() -> jdbcTemplate.update(
+                "INSERT INTO restaurant (id, region_id, food_category_id, name, kakao_place_id, "
+                        + "kakao_place_url, road_address, phone_number, latitude) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                UUID.randomUUID(), mapoRegionId, koreanCategoryId, "짝없는 위도 맛집",
+                "KAKAO-" + UUID.randomUUID(), "https://example.com/place/pair", "서울특별시 마포구 월드컵로 3",
+                "02-0000-0002", new java.math.BigDecimal("37.5665")))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        assertThatThrownBy(() -> jdbcTemplate.update(
+                "INSERT INTO restaurant (id, region_id, food_category_id, name, kakao_place_id, "
+                        + "kakao_place_url, road_address, phone_number, latitude, longitude) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                UUID.randomUUID(), mapoRegionId, koreanCategoryId, "범위 밖 위도 맛집",
+                "KAKAO-" + UUID.randomUUID(), "https://example.com/place/range", "서울특별시 마포구 월드컵로 4",
+                "02-0000-0003", new java.math.BigDecimal("91"), new java.math.BigDecimal("126.9780")))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        Integer boundsRowCount = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM restaurant WHERE latitude BETWEEN 37 AND 38 AND longitude BETWEEN 126 AND 127 "
+                        + "AND publication_status = 'PUBLIC' AND lifecycle_status = 'ACTIVE'",
+                Integer.class);
+        assertThat(boundsRowCount).isEqualTo(1);
     }
 
     @Test
