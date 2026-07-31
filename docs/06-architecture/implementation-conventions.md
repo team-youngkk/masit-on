@@ -10,6 +10,7 @@ related_documents:
   - external-integration.md
   - ../05-specs/api/README.md
   - ../05-specs/data/migration-plan.md
+  - ../07-adr/platform/deploy-002-validation-deployment-before-expansion.md
   - ../07-adr/quality/test-001-automation-strategy.md
   - ../02-analysis/mvp-workstreams.md
   - ../03-team/roles.md
@@ -147,7 +148,9 @@ related_documents:
 ### 7.2 PR과 병합
 
 - 모든 변경은 PR을 통해 병합한다.
-- PR 본문 첫 줄에 `Closes #{이슈번호}`로 구현한 이슈를 연결한다. 기본 브랜치가 `develop`이므로 병합 시 해당 이슈가 자동으로 닫힌다. 닫을 이슈가 없으면 근거 문서로 대신한다.
+- PR 본문 첫 줄에 `Closes #{이슈번호}`로 구현한 이슈를 연결한다. 닫을 이슈가 없으면 근거 문서로 대신한다.
+- 기본 브랜치는 `main`이다. GitHub는 PR이 기본 브랜치로 병합될 때만 연결된 이슈를 자동으로 닫으므로, `develop`으로 병합하면 이슈는 연결만 되고 닫히지 않는다. `develop` 병합 시점에 닫아야 하면 수동으로 닫는다.
+- 새 PR의 기본 대상 브랜치도 `main`이다. 기능·수정 브랜치의 PR을 만들 때 대상이 `develop`인지 확인한다. M2 운영 배포 전에는 기본 브랜치가 `develop`이었다.
 - PR 본문에 담당자, 리뷰어와 레이블을 함께 적고 GitHub 사이드바에도 같은 값을 지정한다.
 - PR 본문과 커밋 메시지에 AI 도구 생성 표기를 남기지 않는다. `Generated with Claude Code` 같은 문구, 도구 서명과 배지를 넣지 않는다.
 - 기능·수정 브랜치에서 `develop`으로 병합할 때 일반 Merge를 사용한다.
@@ -162,6 +165,22 @@ related_documents:
 - 대표 유형은 `feat`, `fix`, `test`, `refactor`, `docs`, `build`, `ci`, `chore`다.
 - 제목은 변경 목적이 드러나게 작성한다. 예: `feat: 맛집 목록 조회 구현`
 - 서로 독립적인 변경은 별도 커밋과 PR로 분리한다.
+
+### 7.4 릴리즈 태그
+
+마일스톤 완료마다 `main`에 annotated tag를 붙인다. 형식은 `v{major}.{minor}.{patch}`이고 병합자가 `main` 병합 직후에 붙인다.
+
+| 올리는 자리 | 언제 | 예 |
+|---|---|---|
+| minor | 마일스톤 완료. 확장 단계는 기능 추가다 | M2 `v0.1.0`, M3 `v0.2.0`, M4 `v0.3.0`, M5 `v0.4.0` |
+| patch | 마일스톤 사이에 운영에 나가는 결함 수정 | `v0.1.1` |
+| major | 제한 공개를 해제하는 시점에 `v1.0.0`. 그 뒤로는 `/api/**` 계약의 하위 호환이 깨질 때만 | |
+
+확장 단계가 minor인 이유는 1~3차 확장이 전부 기능 추가이고 공개 GET 3종의 응답 형태를 깨지 않기 때문이다. [API 계약](../05-specs/api/README.md)이 경로 버전(`/v1`)을 금지하고 5절이 API 계약 변경에 소유자 합의를 요구하므로 major는 드물고 의도적인 사건이다. `0.x` 구간은 semver 명세상 공개 API가 불안정한 구간이라 확장 중 계약을 손봐야 해도 minor로 처리한다.
+
+- GitHub 릴리즈는 `v1.0.0`부터 만든다. 그 전에는 태그만 둔다. 저장소가 public인데 서비스는 제한 공개라 공개 릴리즈 노트를 낼 독자가 아직 없다. annotated tag 메시지가 그 역할을 겸한다.
+- M1은 소급하지 않는다. 로컬 통합까지였고 배포된 적이 없어 배포 태그의 대상이 아니다.
+- 롤백은 태그가 가리키는 커밋 SHA를 CD의 `image_tag` 입력에 넣는다. [ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md)가 3차 확장까지 단일 인스턴스와 수동 복구를 유지하므로 사람이 읽을 수 있는 복구 지점이 이 구간에 필요하다.
 
 ## 8. 문서와 AI 구현
 
