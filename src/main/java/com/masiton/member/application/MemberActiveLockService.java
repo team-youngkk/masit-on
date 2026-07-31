@@ -4,6 +4,8 @@ import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.masiton.common.web.BusinessException;
 import com.masiton.member.application.port.in.LockActiveMemberUseCase;
@@ -20,6 +22,7 @@ class MemberActiveLockService implements LockActiveMemberUseCase {
     }
 
     @Override
+    @Transactional(propagation = Propagation.MANDATORY)
     public void lockActiveMember(UUID memberId) {
         accounts.findByIdForUpdate(memberId)
                 .filter(MemberAccount::canAuthenticate)
