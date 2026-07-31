@@ -122,7 +122,7 @@ docker compose down -v
 DB_URL=jdbc:postgresql://localhost:15432/masiton REDIS_PORT=16379 ./gradlew bootRun
 ```
 
-WireMock 포트를 바꿨다면 `KAKAO_BASE_URL`, `YOUTUBE_BASE_URL`도 같이 넘긴다. 설정은 공통·`local`·`test` 세 계층이며 `bootRun`은 `local`, 테스트는 `test` 프로파일을 쓴다. 프로파일을 지정하지 않은 실행은 접속값이 없어 기동에 실패한다. 계층 규칙은 [구현 컨벤션 4.5절](docs/06-architecture/implementation-conventions.md#45-설정-계층)에 있다.
+WireMock 포트를 바꿨다면 `KAKAO_BASE_URL`, `YOUTUBE_BASE_URL`도 같이 넘긴다. 설정은 공통·`local`·`test`·`prod` 네 계층이며 `bootRun`은 `local`, 테스트는 `test`, M2 운영 배포는 `prod` 프로파일을 쓴다. `prod`는 로컬 개발에서 쓰지 않는다. 프로파일을 지정하지 않은 실행은 접속값이 없어 기동에 실패한다. 계층 규칙은 [구현 컨벤션 4.5절](docs/06-architecture/implementation-conventions.md#45-설정-계층)에 있다.
 
 `/internal/**`은 로컬 컨테이너 네트워크 전용이며 운영 배포에서 인터넷 진입점에 노출하지 않는다([ADR-WEB-003](docs/07-adr/platform/web-003-routing-boundary.md)).
 

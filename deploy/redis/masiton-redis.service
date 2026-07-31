@@ -1,0 +1,38 @@
+# 운영 Redis 8.8 컨테이너 — M2-05.
+#
+# 컨테이너의 --restart 정책을 쓰지 않고 systemd가 수명 주기를 소유한다.
+# requirepass를 담은 설정이 tmpfs에 있어 재기동마다 다시 렌더링해야 하는데,
+# --restart로 되살아나는 컨테이너는 그 렌더링을 기다리지 않기 때문이다.
+#
+# 이미지는 태그가 아니라 digest로 고정한다(ADR-RUNTIME-001 11·13절).
+# 갱신할 때는 이 파일의 digest와 문서의 기록을 함께 바꾼다.
+
+[Unit]
+Description=masiton Redis 8.8 (M2-05)
+Documentation=https://github.com/team-youngkk/masit-on/blob/main/docs/08-planning/m2-deployment-plan.md
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=exec
+TimeoutStartSec=180
+Restart=always
+RestartSec=5s
+
+Environment=AWS_REGION=ap-northeast-2
+Environment=IMAGE=redis@sha256:8096655e437712b07503796fb64d81359256cfcff0ab29d95a7da72863786efb
+
+ExecStartPre=-/usr/bin/docker rm -f masiton-redis
+ExecStartPre=/opt/masiton/bin/redis-render-conf.sh
+ExecStart=/usr/bin/docker run --name masiton-redis \
+  --publish 127.0.0.1:6379:6379 \
+  --volume /run/masiton/redis.conf:/usr/local/etc/redis/redis.conf:ro \
+  --volume /opt/masiton/redis/data:/data \
+  --memory 384m \
+  --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 \
+  ${IMAGE} redis-server /usr/local/etc/redis/redis.conf
+ExecStop=/usr/bin/docker stop --time 30 masiton-redis
+
+[Install]
+WantedBy=multi-user.target

@@ -2,8 +2,9 @@
 # 모든 PR과 통합 브랜치 push에서 고정 런타임으로 빌드·자동 테스트를 실행하고
 # 실패한 변경을 차단한다.
 #
-# 이미지 빌드·검증·ECR push는 M2부터 활성화하는 별도 범위이므로 이 워크플로에 넣지 않는다
-# (ADR-DEPLOY-002, ADR-CI-001).
+# 이미지 빌드·검증·ECR push와 운영 배포는 M2부터 활성화하는 범위다(ADR-DEPLOY-002,
+# ADR-CI-001). 같은 워크플로에 두는 이유는 아래 images·deploy job 주석에 있다.
+# 두 job은 배포 대상 브랜치에서만 돌고 PR과 develop push에서는 실행되지 않는다.
 name: CI
 
 on:
@@ -13,18 +14,39 @@ on:
       - develop
       - main
       - 'deploy/**'
+  # 배포 대상 커밋을 직접 지정하는 입력 경로다. push 트리거만으로는 배포 job이 항상
+  # 현재 실행의 커밋을 배포하게 되어, 장애 시 직전 digest로 되돌리려면 승인 게이트
+  # 밖에서 SSM을 수동 실행해야 한다. 롤백도 같은 경로를 쓰도록 하는 #78 완료 조건이다.
+  #
+  # 이 경로도 배포 job의 `environment: production` 승인을 그대로 거친다. 승인 없이는
+  # job이 시작되지 않으므로 게이트를 우회하는 경로가 아니다.
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: '배포할 커밋 SHA 40자. 비우면 선택한 브랜치의 현재 커밋을 배포한다'
+        required: false
+        type: string
 
 permissions:
   contents: read
 
 # 같은 ref에 새 커밋이 오면 진행 중인 실행을 취소해 러너 시간을 낭비하지 않는다.
+#
+# 그룹에 이벤트 종류를 넣는다. ref만으로 묶으면 롤백 배포가 진행되는 중에 같은
+# 브랜치로 push가 들어오면 그 배포가 취소된다. 장애 대응 중에 복구가 조용히 멈추는
+# 방향의 실패라 두 경로를 분리한다.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  # workflow_dispatch는 이미 게시된 이미지를 배포하는 경로다. 그 이미지는 push 때
+  # 이 두 job을 통과해야 만들어졌으므로 품질 게이트는 이미 걸린 상태이고, 다시 도는
+  # 것은 배포 대상이 아닌 브랜치 현재 커밋을 검사하는 일이다. 롤백은 현재 커밋이
+  # 문제라서 하는 것이므로 그 검사를 기다리게 하면 복구만 몇 분 늦어진다.
   backend:
     name: 백엔드 빌드·테스트
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -57,6 +79,7 @@ jobs:
 
   frontend:
     name: 프론트엔드 빌드·타입 검사
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -197,11 +220,58 @@ jobs:
             fi
             echo '.env 미포함 확인'
 
-            # grep -rIl은 미검출이 exit 1이고 오류는 exit 2 이상이다. docker 자체 실패는
-            # 125 이상이다. 따라서 1만 정상으로 처리하고 나머지는 workflow를 실패시킨다.
+            # 검사를 컨테이너 안에서 grep으로 하지 않는다. `grep -rIl`의 `-I`가 바이너리를
+            # 건너뛰므로 백엔드 이미지의 /app에 application.jar 하나만 있는 구성에서는
+            # JAR 리소스에 개인키가 들어가도 통과한다. 그래서 /app을 러너로 꺼내
+            # JAR까지 풀어 검사한다.
+            #
+            # BOOT-INF/lib은 검사에서 뺀다. 서드파티 라이브러리가 시험용 키 파일을
+            # 담고 있어 오탐을 만든다. 우리가 막아야 하는 것은 우리 소스·리소스가
+            # 비밀값을 싣고 나가는 경우이므로 BOOT-INF/classes와 그 밖의 항목을 본다.
+            work=$(mktemp -d)
+            # extracted를 미리 만든다. 프론트엔드 이미지에는 JAR이 없어 이 디렉터리가
+            # 생기지 않고, 존재하지 않는 경로를 받은 grep은 exit 2를 반환해 아래 가드가
+            # 검사 실행 실패로 판정한다.
+            mkdir -p "$work/extracted"
+            cid=$(docker create "$image")
+            docker cp "$cid:/app" "$work/app"
+            docker rm "$cid" >/dev/null
+
+            for jar in $(find "$work/app" -name '*.jar' -type f); do
+              extract="$work/extracted/$(basename "$jar")"
+              mkdir -p "$extract"
+              # BOOT-INF/lib을 제외하고 푼다. unzip은 일치 항목이 없으면 exit 11이므로
+              # 그 경우만 정상으로 처리한다.
+              set +e
+              unzip -q -o "$jar" -x 'BOOT-INF/lib/*' -d "$extract"
+              unzip_status=$?
+              set -e
+              if [ "$unzip_status" -gt 1 ] && [ "$unzip_status" -ne 11 ]; then
+                echo "JAR 해제가 실패했다 ($jar, exit ${unzip_status}). 미검출로 처리하지 않는다."
+                exit 1
+              fi
+              echo "  JAR 해제: $(basename "$jar") -> $(find "$extract" -type f | wc -l)개 파일"
+            done
+
+            # --binary-files=text로 바이너리도 내용을 검사한다. 미검출은 exit 1이고
+            # 오류는 2 이상이므로 1만 정상으로 처리한다.
+            #
+            # 패턴은 값 자체를 식별할 수 있고 오탐이 없는 것만 쓴다.
+            #
+            # 환경 변수 이름(`JWT_PRIVATE_KEY_PEM`)이나 로컬 기본값(`masiton_local`)을
+            # 패턴에 넣으면 항상 걸린다. 이미지에는 `${JWT_PRIVATE_KEY_PEM:}` 플레이스홀더가
+            # 담긴 application.yml과 로컬 기본값을 담은 application-local.yml이 정상적으로
+            # 들어 있다. 둘 다 저장소에 공개된 값이고 운영은 prod 프로파일을 쓴다.
+            # JAR 내부까지 보게 되면서 드러난 오탐이라 패턴을 좁혔다.
+            #
+            # 남긴 세 패턴은 그 자체로 유출을 뜻한다. 개인키 PEM 블록, AWS 장기 액세스
+            # 키(ADR-SEC-001이 발급을 금지한다), Slack Webhook URL이다.
             set +e
-            secret_hits=$(docker run --rm --user 0:0 --entrypoint sh "$image" -c \
-              "grep -rIl -e 'BEGIN PRIVATE KEY' -e 'BEGIN RSA PRIVATE KEY' -e 'JWT_PRIVATE_KEY_PEM' -e 'POSTGRES_PASSWORD' /app")
+            secret_hits=$(grep -rlE --binary-files=text \
+              -e '-----BEGIN( RSA| EC| OPENSSH| DSA)? PRIVATE KEY-----' \
+              -e 'AKIA[0-9A-Z]{16}' \
+              -e 'hooks\.slack\.com/services/' \
+              --exclude='*.jar' "$work/app" "$work/extracted" 2>/dev/null)
             grep_status=$?
             set -e
             if [ "$grep_status" -gt 1 ]; then
@@ -213,7 +283,8 @@ jobs:
               printf '%s\n' "$secret_hits"
               exit 1
             fi
-            echo '평문 비밀값 패턴 미포함 확인'
+            echo "평문 비밀값 패턴 미포함 확인 (검사 파일 $(find "$work/app" "$work/extracted" -type f 2>/dev/null | wc -l)개)"
+            rm -rf "$work"
 
             uid=$(docker run --rm --entrypoint id "$image" -u)
             if [ "$uid" = "0" ]; then
@@ -317,3 +388,161 @@ jobs:
 
             echo "| ${repo} | \`${IMAGE_TAG}\` | \`${digest}\` | ${state} |" >> "$GITHUB_STEP_SUMMARY"
           done
+
+  # 운영 배포 — #78. ADR-CI-001이 정한 "EC2 배포는 M2부터 활성화, 실제 운영 반영은
+  # 수동 승인으로 보호"를 구현한다.
+  #
+  # 별도 워크플로로 분리하지 않는다. 이미지 job과 순서를 보장하려면 `needs`가 필요하고,
+  # 워크플로를 나누면 `workflow_run`에 의존해야 한다. 그 트리거는 기본 브랜치에 파일이
+  # 있어야 발동하고 OIDC `sub`가 실제 push된 ref를 가리키지 않아 AssumeRole이 거절된다
+  # (images.yml에서 실제로 겪었다. 기록 6.6절).
+  #
+  # 승인 게이트는 `environment: production`이다. 승인 전에는 job이 시작되지 않으므로
+  # 이미지가 게시돼도 배포는 사람의 판단을 기다린다.
+  deploy:
+    name: 운영 배포
+    needs: [images]
+    # 두 경로로 들어온다. 어느 쪽이든 배포 대상 브랜치여야 한다. OIDC 신뢰 정책이
+    # refs/heads/main과 refs/heads/deploy/m2만 허용하므로 그 밖의 ref는 AssumeRole
+    # 단계에서 거절되지만, 승인 요청 자체가 뜨지 않도록 여기서 먼저 막는다.
+    #
+    #   push               — 이미지 job이 성공해야 한다. 방금 게시한 이미지를 배포한다.
+    #   workflow_dispatch  — 이미 게시된 이미지를 배포한다(롤백·재배포). 이미지 job은
+    #                        push에서만 도므로 skipped이고, 그래서 `!cancelled()`로
+    #                        skipped 의존성을 통과시킨다. 대신 skipped를 명시적으로
+    #                        요구해 push 경로에서 이미지 실패가 통과되지 않게 한다.
+    if: >-
+      !cancelled() &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/deploy/m2') &&
+      (
+        (github.event_name == 'push' && needs.images.result == 'success') ||
+        (github.event_name == 'workflow_dispatch' && needs.images.result == 'skipped')
+      )
+    runs-on: ubuntu-24.04
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: ap-northeast-2
+      INSTANCE_ID: i-0b451f18bca827cc9
+      # 입력이 있으면 그 커밋을, 없으면 이 실행의 커밋을 배포한다. push 이벤트에는
+      # inputs가 없어 항상 github.sha가 된다.
+      IMAGE_TAG: ${{ github.event.inputs.image_tag || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # 이 값은 아래에서 SSM 명령 문자열에 들어가 인스턴스에서 root로 실행된다.
+      # 자유 문자열을 그대로 실으면 명령 주입이 되므로 커밋 SHA 형식만 받아들인다.
+      # 승인 게이트가 사람 판단을 요구하지만 그것은 입력 내용을 검사하지 않는다.
+      - name: 배포 대상 커밋 SHA 검증
+        run: |
+          set -euo pipefail
+          case "$IMAGE_TAG" in
+            "" | *[!0-9a-f]*)
+              echo "커밋 SHA는 소문자 16진수 40자여야 한다: '${IMAGE_TAG}'" >&2
+              exit 1
+              ;;
+          esac
+          if [ "${#IMAGE_TAG}" -ne 40 ]; then
+            echo "커밋 SHA는 40자여야 한다 (${#IMAGE_TAG}자): '${IMAGE_TAG}'" >&2
+            exit 1
+          fi
+          echo "배포 대상 커밋: $IMAGE_TAG"
+
+      - name: AWS 자격 증명 (OIDC, 장기 키 없음)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::711457211155:role/masiton-github-actions-role
+          aws-region: ${{ env.AWS_REGION }}
+
+      # 배포 스크립트를 인스턴스로 실어 보낸다. 인스턴스에 미리 설치해 두는 방식은
+      # 스크립트를 바꿀 때 수동 단계가 생겨 ADR-RUNTIME-001 12절이 경계한 "재현 절차가
+      # 문서 밖 암묵 지식이 되는 것"에 가까워진다. 저장소의 현재 내용을 그대로 보낸다.
+      #
+      # base64로 싣는 이유는 인용과 개행 처리를 없애기 위한 것이다.
+      - name: SSM 명령 준비
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' > command.json
+          import base64
+          import json
+          import os
+
+          files = [
+              "deploy/scripts/app-deploy.sh",
+              "deploy/scripts/app-run.sh",
+              "deploy/scripts/app-secrets-render.sh",
+              "deploy/app/masiton-backend.service",
+              "deploy/app/masiton-frontend.service",
+          ]
+
+          lines = [
+              "set -euo pipefail",
+              "STAGE=/tmp/masiton-deploy",
+              'rm -rf "$STAGE"',
+              'mkdir -p "$STAGE"',
+          ]
+          for path in files:
+              with open(path, "rb") as handle:
+                  encoded = base64.b64encode(handle.read().replace(b"\r\n", b"\n")).decode("ascii")
+              name = os.path.basename(path)
+              for index in range(0, len(encoded), 400):
+                  redirect = ">" if index == 0 else ">>"
+                  lines.append(f'printf %s "{encoded[index:index + 400]}" {redirect} "$STAGE/{name}.b64"')
+              lines.append(f'base64 -d "$STAGE/{name}.b64" > "$STAGE/{name}"')
+              lines.append(f'rm -f "$STAGE/{name}.b64"')
+          lines.append('chmod +x "$STAGE/app-deploy.sh" "$STAGE/app-run.sh" "$STAGE/app-secrets-render.sh"')
+          lines.append(f'"$STAGE/app-deploy.sh" "{os.environ["IMAGE_TAG"]}" "$STAGE"')
+
+          payload = {"commands": ["\n".join(lines)], "executionTimeout": ["1800"]}
+          print(json.dumps(payload, ensure_ascii=True))
+          PY
+          echo "명령 크기: $(wc -c < command.json)바이트"
+
+      # 배포 스크립트가 상태 확인 폴링까지 하고 실패하면 non-zero로 끝난다. 그래서
+      # 명령 상태가 Success가 아니면 이 job도 실패한다. 실패를 성공으로 바꾸지 않는다.
+      - name: SSM으로 배포 실행
+        run: |
+          set -euo pipefail
+          command_id=$(aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name AWS-RunShellScript \
+            --parameters "file://command.json" \
+            --query 'Command.CommandId' --output text)
+          echo "CommandId: $command_id"
+
+          status=Pending
+          for _ in $(seq 1 120); do
+            status=$(aws ssm get-command-invocation \
+              --command-id "$command_id" --instance-id "$INSTANCE_ID" \
+              --query 'Status' --output text 2>/dev/null || echo Pending)
+            case "$status" in
+              Success|Failed|Cancelled|TimedOut) break ;;
+            esac
+            sleep 10
+          done
+
+          {
+            echo '## 운영 배포'
+            echo
+            echo "커밋 \`${IMAGE_TAG}\`"
+            echo
+            echo '```text'
+            aws ssm get-command-invocation --command-id "$command_id" --instance-id "$INSTANCE_ID" \
+              --query 'StandardOutputContent' --output text
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "===== 실행 출력 ====="
+          aws ssm get-command-invocation --command-id "$command_id" --instance-id "$INSTANCE_ID" \
+            --query 'StandardOutputContent' --output text
+
+          if [ "$status" != "Success" ]; then
+            echo "===== 오류 출력 ====="
+            aws ssm get-command-invocation --command-id "$command_id" --instance-id "$INSTANCE_ID" \
+              --query 'StandardErrorContent' --output text
+            echo "배포가 실패했다 (상태 $status). 직전 이미지로 롤백하려면 Actions에서 이 워크플로를 workflow_dispatch로 실행하고 image_tag에 직전 커밋 SHA를 넣는다. 같은 승인 게이트를 거친다." >&2
+            exit 1
+          fi
+          echo "배포 완료: $IMAGE_TAG"

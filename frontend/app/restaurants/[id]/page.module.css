@@ -154,3 +154,8 @@
   text-align: center;
   color: var(--color-text-muted);
 }
+
+.traceId {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
