@@ -1,5 +1,7 @@
 'use client'
 
+import { withMemberAuthCookieLock } from './member-auth-cookie-lock.ts'
+
 type TokenResponse = {
   accessToken: string
   tokenType: string
@@ -11,15 +13,6 @@ let refreshPromise: Promise<string | null> | null = null
 let tokenRevision = 0
 
 export const MEMBER_SESSION_CHANGED_EVENT = 'masit-on:member-session-changed'
-const MEMBER_AUTH_COOKIE_LOCK = 'masit-on:member-auth-cookie'
-
-async function withMemberAuthCookieLock<T>(task: () => Promise<T>): Promise<T> {
-  if (typeof navigator === 'undefined' || !navigator.locks) {
-    return task()
-  }
-
-  return navigator.locks.request(MEMBER_AUTH_COOKIE_LOCK, { mode: 'exclusive' }, task)
-}
 
 function notifyMemberSessionChanged(): void {
   window.dispatchEvent(new Event(MEMBER_SESSION_CHANGED_EVENT))
@@ -71,11 +64,42 @@ export function clearMemberAccessToken(): void {
 }
 
 export async function memberLogout(): Promise<void> {
+  let clearedInsideLock = false
   try {
-    const response = await authenticatedMemberFetch('/api/auth/tokens', { method: 'DELETE' })
-    requireStatus(response, 204)
-  } finally {
-    clearMemberAccessToken()
+    await withMemberAuthCookieLock(async () => {
+      try {
+        const token = accessToken ?? await requestMemberAccessToken(tokenRevision)
+        if (!token) {
+          throw new Response(null, { status: 401 })
+        }
+
+        let response = await sendAuthenticatedMemberRequest(
+          '/api/auth/tokens',
+          { method: 'DELETE' },
+          token,
+        )
+        if (response.status === 401 && accessToken === token) {
+          discardAccessToken()
+          const renewedToken = await requestMemberAccessToken(tokenRevision)
+          if (renewedToken) {
+            response = await sendAuthenticatedMemberRequest(
+              '/api/auth/tokens',
+              { method: 'DELETE' },
+              renewedToken,
+            )
+          }
+        }
+        requireStatus(response, 204)
+      } finally {
+        clearMemberAccessToken()
+        clearedInsideLock = true
+      }
+    })
+  } catch (error) {
+    if (!clearedInsideLock) {
+      clearMemberAccessToken()
+    }
+    throw error
   }
 }
 
@@ -143,36 +167,56 @@ async function refreshMemberAccessToken(): Promise<string | null> {
   }
 
   const revisionAtStart = tokenRevision
-  refreshPromise = withMemberAuthCookieLock(async () => {
-    if (tokenRevision !== revisionAtStart) {
-      return accessToken
-    }
-
-    try {
-      const response = await fetch('/api/auth/tokens/refresh', {
-        method: 'POST',
-        credentials: 'include',
-      })
-      if (tokenRevision !== revisionAtStart) {
-        return accessToken
-      }
-      if (!response.ok) {
-        clearMemberAccessToken()
-        return null
-      }
-      return tokenResponse(response)
-    } catch {
-      if (tokenRevision === revisionAtStart) {
-        clearMemberAccessToken()
-        return null
-      }
-      return accessToken
-    }
-  }).finally(() => {
+  refreshPromise = withMemberAuthCookieLock(() =>
+    requestMemberAccessToken(revisionAtStart),
+  ).finally(() => {
     refreshPromise = null
   })
 
   return refreshPromise
+}
+
+async function requestMemberAccessToken(
+  revisionAtStart: number,
+): Promise<string | null> {
+  if (tokenRevision !== revisionAtStart) {
+    return accessToken
+  }
+
+  try {
+    const response = await fetch('/api/auth/tokens/refresh', {
+      method: 'POST',
+      credentials: 'include',
+    })
+    if (tokenRevision !== revisionAtStart) {
+      return accessToken
+    }
+    if (!response.ok) {
+      clearMemberAccessToken()
+      return null
+    }
+    return tokenResponse(response)
+  } catch {
+    if (tokenRevision === revisionAtStart) {
+      clearMemberAccessToken()
+      return null
+    }
+    return accessToken
+  }
+}
+
+function sendAuthenticatedMemberRequest(
+  input: RequestInfo | URL,
+  init: RequestInit,
+  token: string,
+): Promise<Response> {
+  const headers = new Headers(init.headers)
+  headers.set('Authorization', `Bearer ${token}`)
+  return fetch(input, {
+    ...init,
+    credentials: 'include',
+    headers,
+  })
 }
 
 export async function ensureMemberSession(): Promise<boolean> {
@@ -196,17 +240,7 @@ export async function authenticatedMemberFetch(
     return new Response(null, { status: 401 })
   }
 
-  const send = (value: string) => {
-    const headers = new Headers(init.headers)
-    headers.set('Authorization', `Bearer ${value}`)
-    return fetch(input, {
-      ...init,
-      credentials: 'include',
-      headers,
-    })
-  }
-
-  let response = await send(token)
+  let response = await sendAuthenticatedMemberRequest(input, init, token)
   if (response.status !== 401) {
     return response
   }
@@ -224,7 +258,7 @@ export async function authenticatedMemberFetch(
     return response
   }
 
-  response = await send(renewedToken)
+  response = await sendAuthenticatedMemberRequest(input, init, renewedToken)
   if (response.status === 401 && accessToken === renewedToken) {
     clearMemberAccessToken()
   }

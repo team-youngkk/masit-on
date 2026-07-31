@@ -31,9 +31,14 @@ export function MemberSessionProvider({ children }: { children: React.ReactNode 
 
   const refreshSession = useCallback(async () => {
     setStatus('loading')
-    const authenticated = await ensureMemberSession()
-    setStatus(authenticated ? 'authenticated' : 'anonymous')
-    return authenticated
+    try {
+      const authenticated = await ensureMemberSession()
+      setStatus(authenticated ? 'authenticated' : 'anonymous')
+      return authenticated
+    } catch {
+      setStatus('anonymous')
+      return false
+    }
   }, [])
 
   const logout = useCallback(async () => {
