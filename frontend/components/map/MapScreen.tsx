@@ -128,8 +128,10 @@ export function MapScreen({ initialFilters, creatorsResult }: MapScreenProps) {
     setSelectedId(null)
   }, [filters.query, filters.district, filters.category, filters.creatorId])
 
+  /* 필터 제출·초기화는 사용자가 의도한 탐색 지점이므로 history에 새 항목을 남긴다(뒤로 가기로
+   * 이전 필터 조합에 돌아올 수 있어야 한다). 지도 bounds는 이 경로와 무관하게 URL에 두지 않는다. */
   function applyFilters(next: MapPointsFilters) {
-    router.replace(buildMapHref(next), { scroll: false })
+    router.push(buildMapHref(next), { scroll: false })
   }
 
   const items = lastGoodView?.kind === 'results' ? lastGoodView.items : []

@@ -18,6 +18,7 @@ export type KakaoMarkerImage = object
 
 export type KakaoMarker = {
   setMap(map: KakaoMap | null): void
+  setImage(image: KakaoMarkerImage): void
 }
 
 export type KakaoMap = {

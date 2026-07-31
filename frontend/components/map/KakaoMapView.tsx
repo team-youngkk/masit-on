@@ -112,14 +112,18 @@ export function KakaoMapView({
   const mapRef = useRef<KakaoMap | null>(null)
   const kakaoRef = useRef<KakaoGlobal | null>(null)
   const markersRef = useRef<KakaoMarker[]>([])
+  const markersByIdRef = useRef<Map<string, KakaoMarker>>(new Map())
+  const previousSelectedIdRef = useRef<string | null>(null)
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const onSelectRef = useRef(onSelect)
   const onBoundsChangeRef = useRef(onBoundsChange)
+  const selectedIdRef = useRef(selectedId)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [retryCount, setRetryCount] = useState(0)
 
   onSelectRef.current = onSelect
   onBoundsChangeRef.current = onBoundsChange
+  selectedIdRef.current = selectedId
 
   useEffect(() => {
     if (!KAKAO_MAPS_JS_KEY) {
@@ -176,6 +180,12 @@ export function KakaoMapView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [retryCount])
 
+  /*
+   * items가 바뀔 때만 마커 집합을 처음부터 다시 만든다. selectedId를 의존성에 넣지 않아
+   * 마커 선택/해제만으로는(최대 200개까지 있을 수 있는) 전체 마커를 지우고 다시 만들지
+   * 않는다(Finding C). 마커는 항상 기본 이미지로 만들고, 현재 selectedId에 해당하는
+   * 마커가 있으면 즉시 선택 이미지로 되돌려 items 갱신 전후로 선택 표시가 유지되게 한다.
+   */
   useEffect(() => {
     const kakaoGlobal = kakaoRef.current
     const map = mapRef.current
@@ -187,8 +197,8 @@ export function KakaoMapView({
       marker.setMap(null)
     }
 
-    const selectedImage = createMarkerImage(kakaoGlobal, true)
     const defaultImage = createMarkerImage(kakaoGlobal, false)
+    const markersById = new Map<string, KakaoMarker>()
 
     markersRef.current = items.map((item) => {
       const position = new kakaoGlobal.maps.LatLng(
@@ -198,14 +208,60 @@ export function KakaoMapView({
       const marker = new kakaoGlobal.maps.Marker({
         position,
         map,
-        image: item.id === selectedId ? selectedImage : defaultImage,
+        image: defaultImage,
       })
       kakaoGlobal.maps.event.addListener(marker, 'click', () => {
         onSelectRef.current(item.id)
       })
+      markersById.set(item.id, marker)
       return marker
     })
-  }, [items, selectedId, status])
+
+    markersByIdRef.current = markersById
+
+    const currentSelectedId = selectedIdRef.current
+    const currentSelectedMarker = currentSelectedId
+      ? markersById.get(currentSelectedId)
+      : undefined
+    if (currentSelectedMarker) {
+      currentSelectedMarker.setImage(createMarkerImage(kakaoGlobal, true))
+      previousSelectedIdRef.current = currentSelectedId ?? null
+    } else {
+      previousSelectedIdRef.current = null
+    }
+  }, [items, status])
+
+  /*
+   * selectedId가 바뀔 때만 실행되어, 이전 선택 마커는 기본 이미지로 되돌리고 새 선택
+   * 마커만 선택 이미지로 바꾼다. 마커 전체를 다시 만들지 않으므로 깜빡임이 없다(Finding C).
+   * bounds 변경으로 선택된 맛집이 현재 items에서 빠진 뒤에도 selectedId가 남아있을 수
+   * 있으므로, 마커를 찾지 못하면 조용히 무시한다.
+   */
+  useEffect(() => {
+    const kakaoGlobal = kakaoRef.current
+    if (!kakaoGlobal || status !== 'ready') {
+      return
+    }
+
+    const markersById = markersByIdRef.current
+    const previousId = previousSelectedIdRef.current
+
+    if (previousId && previousId !== selectedId) {
+      const previousMarker = markersById.get(previousId)
+      if (previousMarker) {
+        previousMarker.setImage(createMarkerImage(kakaoGlobal, false))
+      }
+    }
+
+    if (selectedId) {
+      const selectedMarker = markersById.get(selectedId)
+      if (selectedMarker) {
+        selectedMarker.setImage(createMarkerImage(kakaoGlobal, true))
+      }
+    }
+
+    previousSelectedIdRef.current = selectedId
+  }, [selectedId, status])
 
   useEffect(() => {
     const kakaoGlobal = kakaoRef.current
