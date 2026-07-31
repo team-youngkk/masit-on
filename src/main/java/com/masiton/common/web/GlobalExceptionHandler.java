@@ -37,8 +37,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             HttpServletRequest request
     ) {
         log.warn("business error: code={}", exception.code());
-        return response(exception.status(), request)
-                .body(ErrorResponse.of(exception.code(), exception.getMessage(), exception.fieldErrors(), traceId()));
+        ResponseEntity.BodyBuilder response = response(exception.status(), request);
+        if (exception.retryAfterSeconds() != null) {
+            response.header(HttpHeaders.RETRY_AFTER, String.valueOf(exception.retryAfterSeconds()));
+        }
+        return response.body(ErrorResponse.of(exception.code(), exception.getMessage(), exception.fieldErrors(), traceId()));
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)

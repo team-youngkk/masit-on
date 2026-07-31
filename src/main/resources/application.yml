@@ -58,6 +58,11 @@ masiton:
     recent-cleanup:
       cron: ${RECENT_RESTAURANT_CLEANUP_CRON:0 0 3 * * *}
       zone: ${RECENT_RESTAURANT_CLEANUP_ZONE:UTC}
+  restaurant:
+    map:
+      rate-limit:
+        trusted-proxy-addresses: ${RESTAURANT_MAP_TRUSTED_PROXY_ADDRESSES:}
+        reverse-proxy-enabled: ${RESTAURANT_MAP_REVERSE_PROXY_ENABLED:false}
   member:
     action-mail:
       active-key-id: ${MEMBER_ACTION_MAIL_ACTIVE_KEY_ID:}
