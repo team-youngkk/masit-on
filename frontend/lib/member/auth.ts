@@ -11,6 +11,15 @@ let refreshPromise: Promise<string | null> | null = null
 let tokenRevision = 0
 
 export const MEMBER_SESSION_CHANGED_EVENT = 'masit-on:member-session-changed'
+const MEMBER_AUTH_COOKIE_LOCK = 'masit-on:member-auth-cookie'
+
+async function withMemberAuthCookieLock<T>(task: () => Promise<T>): Promise<T> {
+  if (typeof navigator === 'undefined' || !navigator.locks) {
+    return task()
+  }
+
+  return navigator.locks.request(MEMBER_AUTH_COOKIE_LOCK, { mode: 'exclusive' }, task)
+}
 
 function notifyMemberSessionChanged(): void {
   window.dispatchEvent(new Event(MEMBER_SESSION_CHANGED_EVENT))
@@ -71,14 +80,16 @@ export async function memberLogout(): Promise<void> {
 }
 
 export async function memberLogin(email: string, password: string): Promise<void> {
-  await tokenResponse(
-    await fetch('/api/auth/tokens', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    }),
-  )
+  await withMemberAuthCookieLock(async () => {
+    await tokenResponse(
+      await fetch('/api/auth/tokens', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      }),
+    )
+  })
 }
 
 export async function memberRegister(email: string, password: string): Promise<void> {
@@ -132,7 +143,11 @@ async function refreshMemberAccessToken(): Promise<string | null> {
   }
 
   const revisionAtStart = tokenRevision
-  refreshPromise = (async () => {
+  refreshPromise = withMemberAuthCookieLock(async () => {
+    if (tokenRevision !== revisionAtStart) {
+      return accessToken
+    }
+
     try {
       const response = await fetch('/api/auth/tokens/refresh', {
         method: 'POST',
@@ -153,7 +168,7 @@ async function refreshMemberAccessToken(): Promise<string | null> {
       }
       return accessToken
     }
-  })().finally(() => {
+  }).finally(() => {
     refreshPromise = null
   })
 

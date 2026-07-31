@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { useMemberSession } from '@/components/member/MemberSessionProvider'
 
@@ -12,6 +12,12 @@ export function SiteHeader() {
   const { status, logout } = useMemberSession()
   const menuRef = useRef<HTMLDetailsElement>(null)
   const [logoutFailed, setLogoutFailed] = useState(false)
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      setLogoutFailed(false)
+    }
+  }, [status])
 
   function closeMemberMenu(): void {
     menuRef.current?.removeAttribute('open')
