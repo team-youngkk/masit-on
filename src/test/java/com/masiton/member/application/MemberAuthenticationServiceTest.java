@@ -43,6 +43,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("MemberAuthenticationService")
@@ -94,6 +95,52 @@ class MemberAuthenticationServiceTest {
         // then
         assertThat(result.accessToken()).isEqualTo("access-token");
         verify(accounts).findByEmailForUpdate("member@example.com");
+    }
+
+    @Test
+    @DisplayName("로그인_잘못된 비밀번호는 실패를 기록하고 세션을 발급하지 않는다")
+    void 로그인_잘못된비밀번호_실패기록() {
+        // given
+        MemberAccount account = activeAccount(UUID.randomUUID());
+        given(accounts.findByEmailForUpdate("member@example.com")).willReturn(Optional.of(account));
+        given(passwordEncoder.matches("wrong-password", account.passwordHash())).willReturn(false);
+
+        // when & then
+        assertInvalidCredentials(() -> service().login(
+                "member@example.com", "wrong-password", "127.0.0.1"));
+        verify(rateLimits).recordLoginFailure("member@example.com", "127.0.0.1");
+        verifyNoInteractions(sessions);
+    }
+
+    @Test
+    @DisplayName("로그인_없는 계정도 더미 BCrypt 해시를 비교하고 실패를 기록한다")
+    void 로그인_없는계정_더미해시비교와실패기록() {
+        // given
+        given(accounts.findByEmailForUpdate("missing@example.com")).willReturn(Optional.empty());
+
+        // when & then
+        assertInvalidCredentials(() -> service().login(
+                "missing@example.com", "any-password", "127.0.0.1"));
+        verify(passwordEncoder).matches(
+                org.mockito.ArgumentMatchers.eq("any-password"),
+                org.mockito.ArgumentMatchers.startsWith("$2a$10$"));
+        verify(rateLimits).recordLoginFailure("missing@example.com", "127.0.0.1");
+        verifyNoInteractions(sessions);
+    }
+
+    @Test
+    @DisplayName("로그인_요청 제한 중이면 저장소와 BCrypt를 호출하지 않고 동일한 오류를 반환한다")
+    void 로그인_요청제한_동일오류반환() {
+        // given
+        given(rateLimits.isLoginBlocked("member@example.com", "127.0.0.1")).willReturn(true);
+
+        // when & then
+        assertInvalidCredentials(() -> service().login(
+                "member@example.com", "any-password", "127.0.0.1"));
+        verify(rateLimits).isLoginBlocked("member@example.com", "127.0.0.1");
+        verify(accounts, never()).findByEmailForUpdate(any());
+        verifyNoInteractions(passwordEncoder, sessions);
+        verifyNoMoreInteractions(rateLimits);
     }
 
     @Test
@@ -251,6 +298,14 @@ class MemberAuthenticationServiceTest {
                 tokenIssuer, passwordEncoder,
                 new MemberJwtSettings("issuer", "member", Duration.ofMinutes(30), "key-id"),
                 Clock.fixed(NOW, ZoneOffset.UTC));
+    }
+
+    private void assertInvalidCredentials(org.assertj.core.api.ThrowableAssert.ThrowingCallable callable) {
+        assertThatThrownBy(callable)
+                .isInstanceOfSatisfying(BusinessException.class, exception -> {
+                    assertThat(exception.status()).isEqualTo(org.springframework.http.HttpStatus.UNAUTHORIZED);
+                    assertThat(exception.code()).isEqualTo("INVALID_CREDENTIALS");
+                });
     }
 
     private MemberAccount activeAccount(UUID memberId) {

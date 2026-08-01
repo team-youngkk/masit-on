@@ -39,6 +39,8 @@ public class MemberAuthenticationService {
     private static final Duration REFRESH_TOKEN_TTL = Duration.ofDays(14);
     private static final Duration EMAIL_VERIFICATION_TOKEN_TTL = Duration.ofHours(24);
     private static final Duration PASSWORD_RESET_TOKEN_TTL = Duration.ofMinutes(30);
+    private static final String DUMMY_PASSWORD_HASH =
+            "$2a$10$7EqJtq98hPqEX7fNZaFWoOhi.0P8EIw1PhqcoUL24TJnS0W9TuP.2";
 
     private final MemberAccountRepository accounts;
     private final MemberActionTokenRepository actionTokens;
@@ -134,9 +136,9 @@ public class MemberAuthenticationService {
             if (rateLimits.isLoginBlocked(normalizedEmail, source)) {
                 throw invalidCredentials();
             }
-            MemberAccount account = accounts.findByEmailForUpdate(normalizedEmail)
-                    .orElseThrow(() -> invalidCredentials(normalizedEmail, source));
-            if (!passwordEncoder.matches(password, account.passwordHash())) {
+            MemberAccount account = accounts.findByEmailForUpdate(normalizedEmail).orElse(null);
+            String passwordHash = account == null ? DUMMY_PASSWORD_HASH : account.passwordHash();
+            if (!passwordEncoder.matches(password, passwordHash) || account == null) {
                 throw invalidCredentials(normalizedEmail, source);
             }
             if (!account.canAuthenticate()) {

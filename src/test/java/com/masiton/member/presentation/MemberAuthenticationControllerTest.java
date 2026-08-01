@@ -118,6 +118,25 @@ class MemberAuthenticationControllerTest {
     }
 
     @Test
+    @DisplayName("로그인 실패는 동일한 인증 오류를 반환하고 Refresh Cookie를 발급하지 않는다")
+    void 로그인_인증실패_401과Cookie미발급() throws Exception {
+        when(service.login(any(), any(), any())).thenThrow(new BusinessException(
+                HttpStatus.UNAUTHORIZED,
+                "INVALID_CREDENTIALS",
+                "Invalid email or password"
+        ));
+
+        mockMvc.perform(post("/api/auth/tokens")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"missing@example.com","password":"any-password"}
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"))
+                .andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE));
+    }
+
+    @Test
     @DisplayName("허용되지 않은 Origin의 Refresh 요청은 403이고 Cookie를 건드리지 않는다")
     void refresh_다른Origin_403과Cookie미변경() throws Exception {
         mockMvc.perform(post("/api/auth/tokens/refresh")

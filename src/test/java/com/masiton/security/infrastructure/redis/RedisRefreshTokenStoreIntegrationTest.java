@@ -253,6 +253,63 @@ class RedisRefreshTokenStoreIntegrationTest {
     }
 
     @Test
+    @DisplayName("같은 회원의 세 번째와 네 번째 동시 로그인 뒤 가장 오래된 세션만 퇴출한다")
+    void memberSession_동시네번째로그인_가장오래된세션만폐기() throws Exception {
+        when(memberSessionClock.instant()).thenReturn(Instant.parse("2026-07-29T10:00:00Z"));
+        MemberSession first = memberSessionStore.issue("member-a", Duration.ofDays(14));
+        MemberSession second = memberSessionStore.issue("member-a", Duration.ofDays(14));
+
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try (ExecutorService executor = Executors.newFixedThreadPool(2)) {
+            Future<MemberSession> third = executor.submit(() -> issueWhenReleased(ready, start));
+            Future<MemberSession> fourth = executor.submit(() -> issueWhenReleased(ready, start));
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            MemberSession concurrentlyIssuedA = third.get(5, TimeUnit.SECONDS);
+            MemberSession concurrentlyIssuedB = fourth.get(5, TimeUnit.SECONDS);
+
+            assertThat(memberSessionStore.matches("member-a", first.refreshToken())).isFalse();
+            assertThat(memberSessionStore.matches("member-a", second.refreshToken())).isTrue();
+            assertThat(memberSessionStore.matches("member-a", concurrentlyIssuedA.refreshToken())).isTrue();
+            assertThat(memberSessionStore.matches("member-a", concurrentlyIssuedB.refreshToken())).isTrue();
+            assertThat(redisTemplate.opsForZSet().size("auth:member:sessions:member-a")).isEqualTo(3L);
+            assertThat(java.util.stream.Stream.of(concurrentlyIssuedA, concurrentlyIssuedB)
+                    .flatMap(session -> session.revokedSessionIds().stream()))
+                    .containsExactly(first.sessionId());
+        }
+    }
+
+    @Test
+    @DisplayName("같은 Refresh Token의 동시 재발급은 한 요청만 성공하고 계열을 폐기한다")
+    void memberSession_동일RefreshToken동시회전_한요청만성공() throws Exception {
+        MemberSession issued = memberSessionStore.issue("member-a", Duration.ofDays(14));
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+
+        try (ExecutorService executor = Executors.newFixedThreadPool(2)) {
+            Future<MemberSession> first = executor.submit(() -> rotateWhenReleased(issued.refreshToken(), ready, start));
+            Future<MemberSession> second = executor.submit(() -> rotateWhenReleased(issued.refreshToken(), ready, start));
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            java.util.List<Future<MemberSession>> attempts = java.util.List.of(first, second);
+            long succeeded = attempts.stream().filter(this::completedSuccessfully).count();
+            assertThat(succeeded).isEqualTo(1L);
+            assertThat(attempts).filteredOn(this::completedExceptionally).allSatisfy(attempt ->
+                    assertThatThrownBy(attempt::get).hasCauseInstanceOf(InvalidMemberSessionException.class));
+            attempts.stream().filter(this::completedSuccessfully).forEach(attempt -> {
+                try {
+                    assertThat(memberSessionStore.matches("member-a", attempt.get().refreshToken())).isFalse();
+                } catch (Exception exception) {
+                    throw new AssertionError(exception);
+                }
+            });
+        }
+    }
+
+    @Test
     @DisplayName("같은 createdAt의 네 번째 발급도 신규 세션을 퇴출하지 않는다")
     void memberSession_동일밀리초_신규세션퇴출방지() {
         when(memberSessionClock.instant()).thenReturn(Instant.parse("2026-07-29T10:00:00Z"));
@@ -369,5 +426,31 @@ class RedisRefreshTokenStoreIntegrationTest {
 
         assertThat(legacySerialized).doesNotContain("expiresAtEpochMillis");
         redisTemplate.opsForValue().set(key, legacySerialized, Duration.ofDays(14));
+    }
+
+    private MemberSession issueWhenReleased(CountDownLatch ready, CountDownLatch start) throws Exception {
+        ready.countDown();
+        assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
+        return memberSessionStore.issue("member-a", Duration.ofDays(14));
+    }
+
+    private MemberSession rotateWhenReleased(String refreshToken, CountDownLatch ready, CountDownLatch start)
+            throws Exception {
+        ready.countDown();
+        assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
+        return memberSessionStore.rotate(refreshToken, Duration.ofDays(14));
+    }
+
+    private boolean completedSuccessfully(Future<MemberSession> attempt) {
+        try {
+            attempt.get(5, TimeUnit.SECONDS);
+            return true;
+        } catch (Exception exception) {
+            return false;
+        }
+    }
+
+    private boolean completedExceptionally(Future<MemberSession> attempt) {
+        return !completedSuccessfully(attempt);
     }
 }
