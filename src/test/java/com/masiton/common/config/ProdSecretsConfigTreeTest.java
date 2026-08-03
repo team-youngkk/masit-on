@@ -60,6 +60,10 @@ class ProdSecretsConfigTreeTest {
                     .isEqualTo("verification-bcrypt-hash");
             assertThat(environment.getProperty("masiton.security.verification.public-base-url"))
                     .isEqualTo("https://masiton.click");
+            assertThat(environment.getProperty("masiton.security.verification.trusted-proxy-addresses"))
+                    .isEqualTo("127.0.0.1");
+            assertThat(environment.getProperty("masiton.security.verification.reverse-proxy-enabled"))
+                    .isEqualTo("true");
         });
     }
 
@@ -144,6 +148,8 @@ class ProdSecretsConfigTreeTest {
                         "MAIL_PORT=587",
                         "MEMBER_PUBLIC_BASE_URL=https://masiton.click",
                         "VERIFICATION_PUBLIC_BASE_URL=https://masiton.click",
+                        "VERIFICATION_TRUSTED_PROXY_ADDRESSES=127.0.0.1",
+                        "VERIFICATION_REVERSE_PROXY_ENABLED=true",
                         "MEMBER_TRUSTED_PROXY_ADDRESSES=127.0.0.1",
                         "MEMBER_REVERSE_PROXY_ENABLED=true",
                         "RESTAURANT_MAP_TRUSTED_PROXY_ADDRESSES=127.0.0.1",

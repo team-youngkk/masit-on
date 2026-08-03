@@ -83,6 +83,8 @@ masiton:
       session-ttl: P7D
       failure-ttl: PT15M
       max-attempts: 5
+      trusted-proxy-addresses: ${VERIFICATION_TRUSTED_PROXY_ADDRESSES:}
+      reverse-proxy-enabled: ${VERIFICATION_REVERSE_PROXY_ENABLED:false}
     jwt:
       issuer: masit-on
       audience: masit-on-admin-api

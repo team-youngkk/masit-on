@@ -1,7 +1,11 @@
 package com.masiton.security.infrastructure.configuration;
 
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
 
+import jakarta.annotation.PostConstruct;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -18,6 +22,8 @@ public class VerificationAccessProperties implements VerificationSessionSettings
     private Duration sessionTtl = Duration.ofDays(7);
     private Duration failureTtl = Duration.ofMinutes(15);
     private int maxAttempts = 5;
+    private String trustedProxyAddresses = "";
+    private boolean reverseProxyEnabled;
 
     public String getLoginId() { return loginId; }
     public void setLoginId(String loginId) { this.loginId = loginId; }
@@ -33,6 +39,25 @@ public class VerificationAccessProperties implements VerificationSessionSettings
     public void setFailureTtl(Duration failureTtl) { this.failureTtl = failureTtl; }
     public int getMaxAttempts() { return maxAttempts; }
     public void setMaxAttempts(int maxAttempts) { this.maxAttempts = maxAttempts; }
+    public Set<String> trustedProxyAddresses() {
+        return Arrays.stream(trustedProxyAddresses.split(","))
+                .map(String::trim)
+                .filter(value -> !value.isEmpty())
+                .collect(Collectors.toUnmodifiableSet());
+    }
+    public void setTrustedProxyAddresses(String trustedProxyAddresses) {
+        this.trustedProxyAddresses = trustedProxyAddresses;
+    }
+    public boolean isReverseProxyEnabled() { return reverseProxyEnabled; }
+    public void setReverseProxyEnabled(boolean reverseProxyEnabled) { this.reverseProxyEnabled = reverseProxyEnabled; }
+
+    @PostConstruct
+    public void validateProxyBoundary() {
+        if (reverseProxyEnabled && trustedProxyAddresses().isEmpty()) {
+            throw new IllegalStateException(
+                    "Trusted verification proxy addresses are required when reverse proxy mode is enabled");
+        }
+    }
 
     @Override public Duration sessionTtl() { return sessionTtl; }
     @Override public Duration failureTtl() { return failureTtl; }

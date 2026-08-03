@@ -1,5 +1,9 @@
 package com.masiton.security.presentation;
 
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -24,17 +28,20 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import com.masiton.common.web.GlobalExceptionHandler;
 import com.masiton.security.application.VerificationSessionService;
 import com.masiton.security.infrastructure.configuration.VerificationAccessProperties;
+import com.masiton.security.infrastructure.web.VerificationClientAddressResolver;
 
 @ExtendWith(MockitoExtension.class)
 class VerificationSessionControllerTest {
 
     @Mock VerificationSessionService service;
+    @Mock VerificationClientAddressResolver clientAddressResolver;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         VerificationAccessProperties properties = new VerificationAccessProperties();
-        mockMvc = MockMvcBuilders.standaloneSetup(new VerificationSessionController(service, properties))
+        mockMvc = MockMvcBuilders.standaloneSetup(
+                        new VerificationSessionController(service, properties, clientAddressResolver))
                 .setControllerAdvice(new GlobalExceptionHandler()).build();
     }
 
@@ -42,6 +49,7 @@ class VerificationSessionControllerTest {
     @DisplayName("로그인 성공은 계약 속성의 7일 검증 쿠키만 발급한다")
     void 세션생성_정상요청_보안쿠키를발급한다() throws Exception {
         when(service.create("participant", "valid-password", "198.51.100.20")).thenReturn("raw-session");
+        when(clientAddressResolver.resolve(any())).thenReturn("198.51.100.20");
 
         mockMvc.perform(post("/api/verification/sessions")
                         .header(HttpHeaders.ORIGIN, "http://localhost:3000")
@@ -50,14 +58,14 @@ class VerificationSessionControllerTest {
                         .content("{\"loginId\":\"participant\",\"password\":\"valid-password\"}"))
                 .andExpect(status().isNoContent())
                 .andExpect(content().string(""))
-                .andExpect(header().string(HttpHeaders.SET_COOKIE, org.hamcrest.Matchers.allOf(
-                        org.hamcrest.Matchers.containsString("__Host-masiton-verification=raw-session"),
-                        org.hamcrest.Matchers.containsString("Path=/"),
-                        org.hamcrest.Matchers.containsString("Max-Age=604800"),
-                        org.hamcrest.Matchers.containsString("Secure"),
-                        org.hamcrest.Matchers.containsString("HttpOnly"),
-                        org.hamcrest.Matchers.containsString("SameSite=Strict"),
-                        org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Domain=")))));
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, allOf(
+                        containsString("__Host-masiton-verification=raw-session"),
+                        containsString("Path=/"),
+                        containsString("Max-Age=604800"),
+                        containsString("Secure"),
+                        containsString("HttpOnly"),
+                        containsString("SameSite=Strict"),
+                        not(containsString("Domain=")))));
     }
 
     @Test
@@ -77,7 +85,7 @@ class VerificationSessionControllerTest {
                         .header(HttpHeaders.ORIGIN, "http://localhost:3000"))
                 .andExpect(status().isNoContent())
                 .andExpect(header().string(HttpHeaders.SET_COOKIE,
-                        org.hamcrest.Matchers.containsString("Max-Age=0")));
+                        containsString("Max-Age=0")));
         verify(service).revoke(null);
     }
 

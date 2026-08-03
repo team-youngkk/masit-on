@@ -25,22 +25,26 @@ import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorResponse;
 import com.masiton.security.application.VerificationSessionService;
 import com.masiton.security.infrastructure.configuration.VerificationAccessProperties;
+import com.masiton.security.infrastructure.web.VerificationClientAddressResolver;
 
 @RestController
 public class VerificationSessionController {
 
     private final VerificationSessionService service;
     private final VerificationAccessProperties properties;
+    private final VerificationClientAddressResolver clientAddressResolver;
 
-    public VerificationSessionController(VerificationSessionService service, VerificationAccessProperties properties) {
+    public VerificationSessionController(VerificationSessionService service, VerificationAccessProperties properties,
+            VerificationClientAddressResolver clientAddressResolver) {
         this.service = service;
         this.properties = properties;
+        this.clientAddressResolver = clientAddressResolver;
     }
 
     @PostMapping("/api/verification/sessions")
     public ResponseEntity<Void> create(@Valid @RequestBody LoginRequest body, HttpServletRequest request) {
         requireSameOrigin(request);
-        String rawSessionId = service.create(body.loginId(), body.password(), trustedSource(request));
+        String rawSessionId = service.create(body.loginId(), body.password(), clientAddressResolver.resolve(request));
         return ResponseEntity.noContent().header(HttpHeaders.SET_COOKIE, sessionCookie(rawSessionId).toString()).build();
     }
 
@@ -90,17 +94,6 @@ public class VerificationSessionController {
             if (properties.getCookieName().equals(cookie.getName())) return cookie.getValue();
         }
         return null;
-    }
-
-    private String trustedSource(HttpServletRequest request) {
-        String remoteAddress = request.getRemoteAddr();
-        if ("127.0.0.1".equals(remoteAddress) || "::1".equals(remoteAddress)) {
-            String forwarded = request.getHeader("X-Forwarded-For");
-            if (forwarded != null && !forwarded.isBlank() && !forwarded.contains(",")) {
-                return forwarded.trim();
-            }
-        }
-        return remoteAddress;
     }
 
     private ResponseEntity<ErrorResponse> error(HttpStatus status, String code, String message) {

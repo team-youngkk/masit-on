@@ -6,6 +6,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.function.Supplier;
 
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Component;
 
 import com.masiton.security.application.port.out.VerificationAccessStore;
 import com.masiton.security.application.port.out.VerificationStoreUnavailableException;
+import com.masiton.security.infrastructure.configuration.VerificationAccessProperties;
 
 @Component
 public class RedisVerificationAccessStore implements VerificationAccessStore {
@@ -28,10 +30,9 @@ public class RedisVerificationAccessStore implements VerificationAccessStore {
             """, Long.class);
 
     private final StringRedisTemplate redis;
-    private final com.masiton.security.infrastructure.configuration.VerificationAccessProperties properties;
+    private final VerificationAccessProperties properties;
 
-    public RedisVerificationAccessStore(StringRedisTemplate redis,
-            com.masiton.security.infrastructure.configuration.VerificationAccessProperties properties) {
+    public RedisVerificationAccessStore(StringRedisTemplate redis, VerificationAccessProperties properties) {
         this.redis = redis;
         this.properties = properties;
     }
@@ -87,7 +88,7 @@ public class RedisVerificationAccessStore implements VerificationAccessStore {
         try { action.run(); } catch (DataAccessException exception) { throw new VerificationStoreUnavailableException(exception); }
     }
 
-    private <T> T query(java.util.function.Supplier<T> action) {
+    private <T> T query(Supplier<T> action) {
         try { return action.get(); } catch (DataAccessException exception) { throw new VerificationStoreUnavailableException(exception); }
     }
 }
