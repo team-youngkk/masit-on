@@ -13,6 +13,17 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Kakao Maps JavaScript 키는 `NEXT_PUBLIC_` 접두사라 `next build`가 클라이언트 번들에
+# 값을 박아 넣는다. 런타임 환경 변수로는 바뀌지 않으므로 빌드 시점에 받아야 한다.
+# 값이 없으면 지도 컴포넌트가 SDK 오류 상태로 떨어진다.
+#
+# 이 키는 브라우저에 노출되는 식별자이며 비밀키가 아니다. 허용 도메인 제한을 Kakao
+# 콘솔에서 적용한다(ADR-MAP-001 6.5). 그래서 `--build-arg`로 받는 것을 허용한다.
+# **서버용 Kakao Local REST API 키는 같은 ADR이 비밀정보로 분류하므로 이 경로로
+# 넘기지 않는다.** build arg는 이미지 히스토리에 남는다.
+ARG NEXT_PUBLIC_KAKAO_MAPS_JS_KEY
+ENV NEXT_PUBLIC_KAKAO_MAPS_JS_KEY=${NEXT_PUBLIC_KAKAO_MAPS_JS_KEY}
+
 # package.json의 build는 `tsc --noEmit && next build`다. next.config.ts가
 # Next 내장 TypeScript 단계를 끄고 있으므로 타입 검사는 이 tsc가 담당한다.
 ENV NEXT_TELEMETRY_DISABLED=1
