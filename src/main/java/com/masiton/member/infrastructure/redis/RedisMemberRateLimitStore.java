@@ -102,13 +102,6 @@ public class RedisMemberRateLimitStore implements MemberRateLimitStore {
             if attempts == 1 then
               redis.call('EXPIRE', KEYS[1], ARGV[2])
             end
-            if attempts > tonumber(ARGV[1]) then
-              local ttl = tonumber(redis.call('TTL', KEYS[1]) or '-1')
-              if ttl < 1 then
-                ttl = tonumber(ARGV[2])
-              end
-              return -ttl
-            end
             return 1
             """, Long.class);
 

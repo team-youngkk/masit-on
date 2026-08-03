@@ -10,5 +10,6 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #124 가입 이메일 인증 코드 리뷰 반영](pr-124-email-verification-code-review.md)
 - [PR #100 이메일 인증 후속 흐름 리뷰 반영](pr-100-email-verification-review.md)
 - [PR #99 반복 지도 필터 리뷰 판단](pr-99-repeated-map-filter.md)

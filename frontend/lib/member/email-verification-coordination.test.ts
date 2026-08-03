@@ -47,6 +47,10 @@ emailVerificationTest('single flight reuses the active verification request', as
 
 emailVerificationTest('verification code input trims ASCII edge whitespace and uppercases without truncating', () => {
   emailVerificationAssert.equal(
+    normalizeEmailVerificationCodeInput(' AB7K9M2Q '),
+    'AB7K9M2Q',
+  )
+  emailVerificationAssert.equal(
     normalizeEmailVerificationCodeInput(' \t ab12cd34 \n'),
     'AB12CD34',
   )

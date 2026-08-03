@@ -9,7 +9,6 @@ import {
 } from '@/lib/member/auth'
 import {
   createEmailVerificationSingleFlight,
-  EMAIL_VERIFICATION_CODE_LENGTH,
   normalizeEmailVerificationCodeInput,
   resendEmailVerification,
   submitEmailVerification,
@@ -117,7 +116,6 @@ export function VerifyEmail({ loginHref }: { loginHref: string }) {
               autoComplete="one-time-code"
               autoCapitalize="characters"
               inputMode="text"
-              maxLength={EMAIL_VERIFICATION_CODE_LENGTH}
               placeholder="AB7K9M2Q"
               spellCheck={false}
               disabled={busy}
