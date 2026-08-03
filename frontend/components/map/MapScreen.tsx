@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchMapPoints, type MapPointsFetchResult } from '@/lib/map/map-points-client'
 import {
   SEOUL_FALLBACK_BOUNDS,
+  buildMapPointsQueryKey,
   type MapPointsFilters,
 } from '@/lib/map/map-points-query'
 import type { MapPointsViewState } from '@/lib/map/map-points-response'
@@ -78,13 +79,7 @@ export function MapScreen({ initialFilters, creatorsResult }: MapScreenProps) {
   const [rateLimitedUntil, setRateLimitedUntil] = useState<number | null>(null)
 
   const queryKey = useMemo(
-    () => [
-      'map-points',
-      filters.query ?? '',
-      filters.district ?? '',
-      filters.category ?? '',
-      filters.creatorId ?? '',
-    ],
+    () => buildMapPointsQueryKey(filters),
     [filters.category, filters.creatorId, filters.district, filters.query],
   )
 

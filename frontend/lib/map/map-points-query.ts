@@ -56,3 +56,19 @@ export function buildMapPointsSearchParams(
 
   return params
 }
+
+/*
+ * MapScreen(client useQuery)과 app/map/page.tsx(server prefetchQuery)가 같은 필터에서
+ * 항상 같은 React Query Key를 만들도록 공유하는 단일 정의다. 두 곳이 각자 배열을 손으로
+ * 맞추면 하나만 바뀌어도 hydration이 조용히 무시되고 클라이언트가 다시 조회한다 — 이 함수가
+ * bounds를 포함하지 않는다는 것도 이 한 곳에서만 보장하면 된다(ADR-MAP-001 4.2~4.3).
+ */
+export function buildMapPointsQueryKey(filters: MapPointsFilters = {}) {
+  return [
+    'map-points',
+    filters.query ?? '',
+    filters.district ?? '',
+    filters.category ?? '',
+    filters.creatorId ?? '',
+  ]
+}

@@ -106,7 +106,7 @@ Kakao Maps JavaScript API V3는 지도 표시·이동·확대·축소·마커 �
 
 - 화면 밖 마커도 응답과 대체 목록에 포함된다.
 - 조건 없는 결과가 200개를 넘으면 사용자는 필터를 추가해야 한다.
-- 기존 bounds Controller·Command·Query·프론트 Query Key·테스트를 후속 구현에서 제거해야 한다.
+- 기존 bounds Controller·Command·Query·프론트 Query Key·테스트는 [E1-T11](../../08-planning/expansion-1-task-breakdown.md)에서 제거했다.
 - 기존 좌표 partial index는 적용된 migration 이력이므로 수정하지 않는다. 새 조회 실행계획에서 필요성이 낮아져도 측정 없이 파괴적 migration을 만들지 않는다.
 
 ## 7. 검증 방법
