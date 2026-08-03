@@ -1,17 +1,12 @@
 /*
  * Kakao Maps JavaScript SDK V3 최소 타입 선언.
- * ADR-MAP-001 6.1: Kakao SDK 타입은 프론트엔드 지도 코드 내부에만 머물러야 한다.
+ * ADR-MAP-001: Kakao SDK 타입은 프론트엔드 지도 코드 내부에만 머물러야 한다.
  * 이 파일은 frontend/components/map 밖에서 import하지 않는다.
  */
 
 export type KakaoLatLng = {
   getLat(): number
   getLng(): number
-}
-
-export type KakaoLatLngBounds = {
-  getSouthWest(): KakaoLatLng
-  getNorthEast(): KakaoLatLng
 }
 
 export type KakaoMarkerImage = object
@@ -22,7 +17,6 @@ export type KakaoMarker = {
 }
 
 export type KakaoMap = {
-  getBounds(): KakaoLatLngBounds
   panTo(position: KakaoLatLng): void
 }
 

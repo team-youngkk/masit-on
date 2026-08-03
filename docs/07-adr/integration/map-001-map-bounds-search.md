@@ -29,7 +29,7 @@ related_documents:
 
 Accepted. 2026-08-03 WS-07 소유자 양성훈 승인으로 기존 `south`·`west`·`north`·`east` 서버 AND 조회 결정을 변경했다.
 
-문서 계약은 변경됐지만 현재 코드는 bounds 요청·필터를 사용한다. 구현 정합화는 [E1-T11](../../08-planning/expansion-1-task-breakdown.md)에서 추적한다.
+이 결정에 맞춘 구현은 [E1-T11](../../08-planning/expansion-1-task-breakdown.md)에서 진행했다.
 
 ## 2. 결정 요약
 

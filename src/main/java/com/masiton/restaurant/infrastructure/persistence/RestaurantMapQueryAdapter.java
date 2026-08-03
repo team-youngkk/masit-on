@@ -20,8 +20,7 @@ class RestaurantMapQueryAdapter implements RestaurantMapPointsQueryPort {
 
     private static final String BASE_CONDITION =
             "r.publication_status = 'PUBLIC' AND r.lifecycle_status = 'ACTIVE' "
-                    + "AND r.latitude IS NOT NULL AND r.longitude IS NOT NULL "
-                    + "AND r.latitude BETWEEN :south AND :north AND r.longitude BETWEEN :west AND :east";
+                    + "AND r.latitude IS NOT NULL AND r.longitude IS NOT NULL";
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
 
@@ -30,13 +29,9 @@ class RestaurantMapQueryAdapter implements RestaurantMapPointsQueryPort {
     }
 
     @Override
-    public List<RestaurantMapPointRow> findWithinBounds(RestaurantMapPointsCriteria criteria, int fetchLimit) {
+    public List<RestaurantMapPointRow> findMatching(RestaurantMapPointsCriteria criteria, int fetchLimit) {
         StringBuilder where = new StringBuilder(BASE_CONDITION);
-        MapSqlParameterSource params = new MapSqlParameterSource()
-                .addValue("south", criteria.south())
-                .addValue("west", criteria.west())
-                .addValue("north", criteria.north())
-                .addValue("east", criteria.east());
+        MapSqlParameterSource params = new MapSqlParameterSource();
 
         if (criteria.normalizedQuery() != null) {
             where.append(" AND lower(r.name) LIKE lower(:query) ESCAPE '\\'");

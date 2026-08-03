@@ -7,7 +7,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchMapPoints, type MapPointsFetchResult } from '@/lib/map/map-points-client'
 import {
   SEOUL_FALLBACK_BOUNDS,
-  type MapBounds,
   type MapPointsFilters,
 } from '@/lib/map/map-points-query'
 import type { MapPointsViewState } from '@/lib/map/map-points-response'
@@ -54,8 +53,9 @@ function deriveBanner(data: MapPointsFetchResult | undefined): Banner | null {
 }
 
 /*
- * ADR-WEB-002: 필터 네 조건만 URL 쿼리로 공유 가능하게 유지하고, 지도 bounds는
- * URL·로그 어디에도 남기지 않는 client 전용 state로 둔다(ADR-MAP-001 6.6).
+ * ADR-WEB-002: 필터 네 조건만 URL 쿼리로 공유 가능하게 유지한다. 지도 뷰포트는 서버 조회·
+ * URL·로그와 무관한 Kakao 지도 전용 표시 상태이며 이 컴포넌트의 state로 두지 않는다
+ * (ADR-MAP-001 4.2~4.3).
  */
 export function MapScreen({ initialFilters, creatorsResult }: MapScreenProps) {
   const router = useRouter()
@@ -67,7 +67,6 @@ export function MapScreen({ initialFilters, creatorsResult }: MapScreenProps) {
    * 브라우저 뒤로·앞으로 가기로 바뀐 URL에도 자동으로 다시 반응한다.
    */
   const filters = initialFilters
-  const [bounds, setBounds] = useState<MapBounds>(SEOUL_FALLBACK_BOUNDS)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
   /*
@@ -81,20 +80,19 @@ export function MapScreen({ initialFilters, creatorsResult }: MapScreenProps) {
   const queryKey = useMemo(
     () => [
       'map-points',
-      bounds,
       filters.query ?? '',
       filters.district ?? '',
       filters.category ?? '',
       filters.creatorId ?? '',
     ],
-    [bounds, filters.category, filters.creatorId, filters.district, filters.query],
+    [filters.category, filters.creatorId, filters.district, filters.query],
   )
 
   const isRateLimited = rateLimitedUntil !== null && Date.now() < rateLimitedUntil
 
   const { data } = useQuery({
     queryKey,
-    queryFn: ({ signal }) => fetchMapPoints(bounds, filters, signal),
+    queryFn: ({ signal }) => fetchMapPoints(filters, signal),
     enabled: !isRateLimited,
   })
 
@@ -204,7 +202,6 @@ export function MapScreen({ initialFilters, creatorsResult }: MapScreenProps) {
             selectedId={selectedId}
             fallbackBounds={SEOUL_FALLBACK_BOUNDS}
             onSelect={handleSelect}
-            onBoundsChange={setBounds}
           />
         </div>
 

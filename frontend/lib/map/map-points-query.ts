@@ -1,15 +1,9 @@
 /*
  * GET /api/restaurants/map-points 쿼리 파라미터 구성 전용 순수 함수.
+ * ADR-MAP-001 4.2: south/west/north/east는 서버 계약에 없으므로 이 함수가 만들지 않는다.
  * 계약: docs/05-specs/api/discovery/map-discovery-api.md
  *       docs/05-specs/api/common/coordinate-contract.md
  */
-
-export type MapBounds = {
-  south: number
-  west: number
-  north: number
-  east: number
-}
 
 export type MapPointsFilters = {
   query?: string
@@ -18,9 +12,17 @@ export type MapPointsFilters = {
   creatorId?: string
 }
 
+export type MapBounds = {
+  south: number
+  west: number
+  north: number
+  east: number
+}
+
 /*
- * Kakao SDK가 아직 실제 화면 경계를 만들지 못한 동안(초기 로딩·SDK 오류) 쓰는 대체 영역이다.
- * 사용자의 실제 위치를 추정한 값이 아니라 서울 전역을 대략 덮는 고정 좌표다(ADR-MAP-001 6.6).
+ * Kakao 지도의 초기 중심 좌표 계산에만 쓰는 클라이언트 전용 상수다. 사용자의 실제 위치를
+ * 추정한 값이 아니라 서울 전역을 대략 덮는 고정 좌표이며, 서버 요청에는 포함하지 않는다
+ * (ADR-MAP-001 4.2~4.3).
  */
 export const SEOUL_FALLBACK_BOUNDS: MapBounds = {
   south: 37.42,
@@ -30,18 +32,13 @@ export const SEOUL_FALLBACK_BOUNDS: MapBounds = {
 }
 
 /*
- * API-MAP-001 4절: south/west/north/east는 필수 단일 값이고 query/district/category/creatorId는
- * 값이 있을 때만 단일 값으로 보낸다. 배열·반복 값·쉼표 목록은 서버가 400으로 거부하므로 만들지 않는다.
+ * API-MAP-001 4절: query/district/category/creatorId는 값이 있을 때만 단일 값으로 보낸다.
+ * 배열·반복 값·쉼표 목록은 서버가 400으로 거부하므로 만들지 않는다.
  */
 export function buildMapPointsSearchParams(
-  bounds: MapBounds,
   filters: MapPointsFilters = {},
 ): URLSearchParams {
   const params = new URLSearchParams()
-  params.set('south', String(bounds.south))
-  params.set('west', String(bounds.west))
-  params.set('north', String(bounds.north))
-  params.set('east', String(bounds.east))
 
   const query = filters.query?.trim()
   if (query) {

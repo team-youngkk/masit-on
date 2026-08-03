@@ -33,7 +33,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@DisplayName("지도 영역 맛집 조회 Application 서비스")
+@DisplayName("지도 맛집 마커 조회 Application 서비스")
 class RestaurantMapPointsQueryServiceTest {
 
     private final MapRateLimitPort mapRateLimitPort = mock(MapRateLimitPort.class);
@@ -52,7 +52,7 @@ class RestaurantMapPointsQueryServiceTest {
 
     RestaurantMapPointsQueryServiceTest() {
         when(mapRateLimitPort.tryAcquire(any())).thenReturn(true);
-        when(restaurantMapPointsQueryPort.findWithinBounds(any(), org.mockito.ArgumentMatchers.anyInt()))
+        when(restaurantMapPointsQueryPort.findMatching(any(), org.mockito.ArgumentMatchers.anyInt()))
                 .thenReturn(List.of());
     }
 
@@ -69,51 +69,7 @@ class RestaurantMapPointsQueryServiceTest {
                     assertThat(exception.status().value()).isEqualTo(429);
                     assertThat(exception.retryAfterSeconds()).isEqualTo(1L);
                 });
-        verify(restaurantMapPointsQueryPort, never()).findWithinBounds(any(), org.mockito.ArgumentMatchers.anyInt());
-    }
-
-    @Test
-    @DisplayName("south가 north보다 크거나 같으면 400 INVALID_FIELD_VALUE(north)를 던진다")
-    void search_south가north이상_400INVALID_FIELD_VALUE를던진다() {
-        assertThatThrownBy(() -> service.search(new SearchRestaurantMapPointsCommand(
-                bd("37.6"), bd("126.9"), bd("37.5"), bd("127.0"), null, null, null, null, "client-1")))
-                .isInstanceOfSatisfying(BusinessException.class, exception -> {
-                    assertThat(exception.code()).isEqualTo(ErrorCode.INVALID_FIELD_VALUE.name());
-                    assertThat(exception.fieldErrors()).extracting("field").containsExactly("north");
-                });
-    }
-
-    @Test
-    @DisplayName("west가 east보다 크거나 같으면 400 INVALID_FIELD_VALUE(east)를 던진다")
-    void search_west가east이상_400INVALID_FIELD_VALUE를던진다() {
-        assertThatThrownBy(() -> service.search(new SearchRestaurantMapPointsCommand(
-                bd("37.5"), bd("127.0"), bd("37.6"), bd("126.9"), null, null, null, null, "client-1")))
-                .isInstanceOfSatisfying(BusinessException.class, exception -> {
-                    assertThat(exception.code()).isEqualTo(ErrorCode.INVALID_FIELD_VALUE.name());
-                    assertThat(exception.fieldErrors()).extracting("field").containsExactly("east");
-                });
-    }
-
-    @Test
-    @DisplayName("위도가 -90..90 범위를 벗어나면 400 INVALID_FIELD_VALUE(south)를 던진다")
-    void search_위도범위초과_400INVALID_FIELD_VALUE를던진다() {
-        assertThatThrownBy(() -> service.search(new SearchRestaurantMapPointsCommand(
-                bd("-91"), bd("126.9"), bd("37.6"), bd("127.0"), null, null, null, null, "client-1")))
-                .isInstanceOfSatisfying(BusinessException.class, exception -> {
-                    assertThat(exception.code()).isEqualTo(ErrorCode.INVALID_FIELD_VALUE.name());
-                    assertThat(exception.fieldErrors()).extracting("field").containsExactly("south");
-                });
-    }
-
-    @Test
-    @DisplayName("경도가 -180..180 범위를 벗어나면 400 INVALID_FIELD_VALUE(east)를 던진다")
-    void search_경도범위초과_400INVALID_FIELD_VALUE를던진다() {
-        assertThatThrownBy(() -> service.search(new SearchRestaurantMapPointsCommand(
-                bd("37.5"), bd("126.9"), bd("37.6"), bd("181"), null, null, null, null, "client-1")))
-                .isInstanceOfSatisfying(BusinessException.class, exception -> {
-                    assertThat(exception.code()).isEqualTo(ErrorCode.INVALID_FIELD_VALUE.name());
-                    assertThat(exception.fieldErrors()).extracting("field").containsExactly("east");
-                });
+        verify(restaurantMapPointsQueryPort, never()).findMatching(any(), org.mockito.ArgumentMatchers.anyInt());
     }
 
     @Test
@@ -124,7 +80,7 @@ class RestaurantMapPointsQueryServiceTest {
                 .mapToObj(index -> new RestaurantMapPointRow(
                         UUID.randomUUID(), "맛집" + index, "한식", "서울특별시", bd("37.5"), bd("127.0")))
                 .toList();
-        when(restaurantMapPointsQueryPort.findWithinBounds(any(), org.mockito.ArgumentMatchers.anyInt()))
+        when(restaurantMapPointsQueryPort.findMatching(any(), org.mockito.ArgumentMatchers.anyInt()))
                 .thenReturn(rows);
 
         // when
@@ -141,7 +97,7 @@ class RestaurantMapPointsQueryServiceTest {
     void search_결과200건이하_AVAILABLE과전체결과를반환한다() {
         // given
         UUID restaurantId = UUID.randomUUID();
-        when(restaurantMapPointsQueryPort.findWithinBounds(any(), org.mockito.ArgumentMatchers.anyInt()))
+        when(restaurantMapPointsQueryPort.findMatching(any(), org.mockito.ArgumentMatchers.anyInt()))
                 .thenReturn(List.of(new RestaurantMapPointRow(
                         restaurantId, "마포 맛집", "한식", "서울특별시 마포구 월드컵로 1", bd("37.5665"), bd("126.9780"))));
 
@@ -162,7 +118,7 @@ class RestaurantMapPointsQueryServiceTest {
 
         // when & then
         assertThatThrownBy(() -> service.search(new SearchRestaurantMapPointsCommand(
-                bd("37.5"), bd("126.9"), bd("37.6"), bd("127.0"), null, "없는구", null, null, "client-1")))
+                null, "없는구", null, null, "client-1")))
                 .isInstanceOfSatisfying(BusinessException.class, exception -> {
                     assertThat(exception.code()).isEqualTo(ErrorCode.INVALID_FIELD_VALUE.name());
                     assertThat(exception.fieldErrors()).extracting("field").containsExactly("district");
@@ -173,7 +129,7 @@ class RestaurantMapPointsQueryServiceTest {
     @DisplayName("creatorId 형식이 UUID가 아니면 400 INVALID_IDENTIFIER를 던진다")
     void search_creatorId형식오류_400INVALID_IDENTIFIER를던진다() {
         assertThatThrownBy(() -> service.search(new SearchRestaurantMapPointsCommand(
-                bd("37.5"), bd("126.9"), bd("37.6"), bd("127.0"), null, null, null, "not-a-uuid", "client-1")))
+                null, null, null, "not-a-uuid", "client-1")))
                 .isInstanceOfSatisfying(BusinessException.class, exception -> {
                     assertThat(exception.code()).isEqualTo(ErrorCode.INVALID_IDENTIFIER.name());
                     assertThat(exception.fieldErrors()).extracting("field").containsExactly("creatorId");
@@ -197,11 +153,10 @@ class RestaurantMapPointsQueryServiceTest {
 
         // when
         service.search(new SearchRestaurantMapPointsCommand(
-                bd("37.5"), bd("126.9"), bd("37.6"), bd("127.0"), " 식당 ", "마포구", "한식",
-                creatorId.toString(), "client-1"));
+                " 식당 ", "마포구", "한식", creatorId.toString(), "client-1"));
 
         // then
-        verify(restaurantMapPointsQueryPort).findWithinBounds(argThatCriteria(criteria ->
+        verify(restaurantMapPointsQueryPort).findMatching(argThatCriteria(criteria ->
                 "식당".equals(criteria.normalizedQuery())
                         && regionId.equals(criteria.regionId())
                         && categoryId.equals(criteria.foodCategoryId())
@@ -210,8 +165,7 @@ class RestaurantMapPointsQueryServiceTest {
     }
 
     private SearchRestaurantMapPointsCommand command(String clientAddress) {
-        return new SearchRestaurantMapPointsCommand(
-                bd("37.5"), bd("126.9"), bd("37.6"), bd("127.0"), null, null, null, null, clientAddress);
+        return new SearchRestaurantMapPointsCommand(null, null, null, null, clientAddress);
     }
 
     private BigDecimal bd(String value) {
