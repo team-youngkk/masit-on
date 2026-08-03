@@ -193,7 +193,7 @@ Popularity 테이블, 알림 Outbox·전달 작업, 추천 점수와 수신 설�
 | `trace_id` | `varchar(64)` | NN | 빈 값 금지 | 요청 추적 ID |
 | `created_at` | 시간 | NN | 기본 현재 시각 | 처리 시각 |
 
-제보·신고 FK 중 정확히 하나만 값이 있어야 한다. 요청별 `to_status`는 한 번만 기록한다. 이력에는 회원 ID와 회원 입력 원문을 복제하지 않는다.
+DB CHECK `ck_moderation_history__exactly_one_request`는 `(submission_id IS NOT NULL) <> (report_id IS NOT NULL)`을 강제해 제보·신고 FK 중 정확히 하나만 값이 있게 한다. 요청별 `to_status`는 한 번만 기록한다. 이력에는 회원 ID와 회원 입력 원문을 복제하지 않는다.
 
 ModerationHistory는 관리자 전용 데이터이며 회원·공개 조회에 노출하지 않는다. 요청이 유지되는 동안 함께 보존하고 회원 연결 제거 뒤에도 비식별 감사 근거로 남긴다.
 
@@ -229,7 +229,7 @@ ModerationHistory는 관리자 전용 데이터이며 회원·공개 조회에 �
 | `read_at` | 시간 | Yes |  | NULL이면 미읽음 |
 | `created_at` | 시간 | NN | 기본 현재 시각 | 생성 시각 |
 
-제보·신고 FK 중 정확히 하나만 값이 있어야 하고 요청의 회원과 `member_id`가 일치해야 한다. DB FK만으로 교차 행 소유자 일치를 강제할 수 없으므로 같은 상태 전이 Application Service가 검증한다.
+DB CHECK `ck_notification__exactly_one_request`는 `(submission_id IS NOT NULL) <> (report_id IS NOT NULL)`을 강제해 제보·신고 FK 중 정확히 하나만 값이 있게 한다. 요청의 회원과 `member_id`가 일치해야 하지만 DB FK만으로 교차 행 소유자 일치를 강제할 수 없으므로 같은 상태 전이 Application Service가 검증한다.
 
 알림은 회원 본인 전용이며 별도 공개 상태와 삭제 API를 두지 않는다.
 
@@ -264,7 +264,9 @@ NotificationPreference·DeviceToken·Outbox·전송 상태·재시도 열은 만
 | `resource_id` | `uuid` | NN | 다형 참조 | 생성 자원 ID |
 | `created_at`, `expires_at` | 시간 | NN | 만료가 생성 이후 | 24시간 보존 |
 
-`UNIQUE(actor_type, actor_id, api_scope, key_hash)`가 성공 기록을 고유하게 한다. 원문 키·Access Token·비밀번호를 저장하지 않는다. 자원 생성과 기록을 한 트랜잭션에서 커밋하고 만료 행은 주기 작업으로 물리 삭제한다. 인덱스 `ix_idempotency_record__expires(expires_at)`를 둔다.
+`UNIQUE(actor_type, actor_id, api_scope, key_hash)`가 성공 기록을 고유하게 한다. 원문 키·Access Token·비밀번호를 저장하지 않는다. 자원 생성과 기록을 한 트랜잭션에서 커밋한다.
+
+`expires_at <= now()`인 행은 cleanup 실행 여부와 무관하게 조회 시 만료로 판정하며 기존 응답을 재생하지 않는다. 동일 키 범위를 직렬화한 트랜잭션에서 만료 행을 삭제하고 새 자원과 새 멱등 기록을 원자적으로 생성한다. 행이 없는 상태에서 동시 삽입해 고유 제약 충돌이 발생하면 승자 행을 다시 읽어 같은 `request_hash`는 새 성공 응답을 재생하고 다른 해시는 `409 IDEMPOTENCY_KEY_REUSED`로 처리한다. 주기 cleanup은 만료 행의 물리 공간 회수만 담당하므로 24시간 의미 경계는 cleanup 주기와 독립적이다. 인덱스 `ix_idempotency_record__expires(expires_at)`를 둔다.
 
 ## 9. 삭제·보존·감사 요약
 

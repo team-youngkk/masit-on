@@ -18,6 +18,7 @@ related_documents:
   - ../../08-planning/expansion-1-task-breakdown.md
   - web-003-routing-boundary.md
   - ../security/sec-001-secrets-workload-identity.md
+supersedes: []
 supersedes_decision: M2-11 Nginx Basic Auth 제한 공개
 superseded_by: null
 ---

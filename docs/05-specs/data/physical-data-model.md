@@ -46,7 +46,7 @@ MVP PostgreSQL 테이블은 `region`, `food_category`, `admin_account`, `restaur
 | boolean | `boolean`, 의미가 두 값으로 완결될 때만 사용 |
 | JSON | 서버 검증 후보에만 `jsonb`; 핵심 엔티티 속성을 JSON으로 저장하지 않음 |
 | 삭제 | 핵심 공개 데이터는 논리 삭제, FK 대상은 물리 삭제하지 않음 |
-| FK 삭제 동작 | 기본은 명시적 `ON DELETE RESTRICT`; `favorite`·`recent_restaurant_view`의 회원 FK만 회원 개인정보 파기를 위해 명시적 `ON DELETE CASCADE` |
+| FK 삭제 동작 | 기본은 명시적 `ON DELETE RESTRICT`; 회원 FK는 `favorite`·`recent_restaurant_view`·`personal_collection`·`notification`에 `CASCADE`, `submission`·`report`에 `SET NULL`을 적용하며 상세 예외는 §5와 [2차 확장 데이터 계약](second-expansion-data-contract.md)을 따른다. |
 | 감사 시각 | `created_at`, `updated_at`; DB 기본값은 `CURRENT_TIMESTAMP`, JPA가 변경 시각 갱신 |
 
 UUID v4는 DB 확장 없이 생성할 수 있고 API의 불투명 문자열 계약을 지킨다. JPA 저장 전에 ID를 부여해 `save()`의 신규/기존 판정과 테스트 픽스처를 명확히 한다. UUID 원문은 로그에 개인정보처럼 취급할 필요는 없지만 외부 제공자 ID와 확인 Token 해시는 공개·관리자 응답과 업무 로그에 노출하지 않는다.

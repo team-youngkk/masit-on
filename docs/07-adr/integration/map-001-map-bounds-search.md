@@ -4,9 +4,17 @@ title: Kakao 지도 표시와 뷰포트 비종속 마커 조회
 status: Accepted
 decision_date: 2026-07-29
 last_reviewed: 2026-08-03
+supersedes: []
+superseded_by: null
 supersedes_decision: WGS84 bounds 서버 AND 조회
 owners:
   - 양성훈
+related_requirements:
+  - FR-MAP-001
+  - FR-MAP-002
+  - NFR-PERFORMANCE-005
+  - NFR-EXTERNAL-004
+  - NFR-PRIVACY-004
 related_documents:
   - ../../01-requirements/functional-requirements.md
   - ../../01-requirements/business-rules.md

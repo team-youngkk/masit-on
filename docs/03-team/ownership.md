@@ -122,7 +122,7 @@ MVP 배정은 2026-07-27, 1차 확장 WS-05~WS-08과 2차 확장 WS-09~WS-13 배
 | [FR-ADMIN-004](../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록) | 영상 정보 등록 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 김인안 | 박진영 | 배정 완료 |
 | [FR-VISIT-001](../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록) | 맛집·유튜버·영상 방문 관계 등록 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 김인안 | 이우람 | 배정 완료 |
 
-기능 요구사항 20개는 모두 정확히 하나의 Workstream과 최종 책임자에게 배정되었다. 리뷰 담당자는 기능 책임자와 분리했으며 관계·조회·등록 계약에 따라 교차 배정했다.
+MVP 기능 요구사항 20개는 모두 정확히 하나의 Workstream과 최종 책임자에게 배정되었다. 리뷰 담당자는 기능 책임자와 분리했으며 관계·조회·등록 계약에 따라 교차 배정했다.
 
 ## 5. 비즈니스 규칙 소유권
 
@@ -327,7 +327,7 @@ MVP 배정은 2026-07-27, 1차 확장 WS-05~WS-08과 2차 확장 WS-09~WS-13 배
 
 - 팀원 4명 모두 하나의 주요 기능 Workstream을 소유한다.
 - 프로젝트 리더 이우람도 [WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)의 최종 책임자다.
-- 네 Workstream과 기능 요구사항 20개에 최종 책임자 한 명이 지정되어 있으며 중복 최종 책임자는 없다.
+- `WS-01`~`WS-13`의 13개 제품 Workstream과 MVP 20개·1차 확장 20개·2차 확장 21개, 총 61개 기능 요구사항에 각각 최종 책임자 한 명이 지정되어 있다. `OPS-*`는 제품 Workstream 수와 별도로 관리한다.
 - 역할은 기술 계층별로 분리하지 않았다.
 - 공통 작업은 결정 책임과 구현 책임을 구분했다.
 - 제한 공개 진입 경계는 [OPS-VALIDATION](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙)이 `API-VALIDATION-001~002`, `ADR-DEPLOY-003`, `FE-12`, `E1-T13`을 단일 책임선으로 소유하고 정식 공개 시 종료한다.

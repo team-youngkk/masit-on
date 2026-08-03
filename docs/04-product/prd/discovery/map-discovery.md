@@ -18,6 +18,15 @@ related_business_rules:
   - BR-MAP-003
   - BR-MAP-004
   - BR-MAP-005
+related_nfr:
+  - NFR-PERFORMANCE-005
+  - NFR-RELIABILITY-001
+  - NFR-RELIABILITY-003
+  - NFR-EXTERNAL-004
+  - NFR-COMPATIBILITY-004
+  - NFR-TEST-004
+  - NFR-PRIVACY-002
+  - NFR-PRIVACY-004
 related_documents:
   - restaurant-discovery.md
   - ../../../05-specs/api/discovery/map-discovery-api.md

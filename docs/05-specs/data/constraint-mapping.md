@@ -134,3 +134,6 @@ PostgreSQL의 `UNIQUE`는 이미 동일 컬럼 B-tree 인덱스를 만든다. �
 ## 8. 2차 확장 제약 라우팅
 
 2차 확장의 명명된 PK·FK·UK·CHECK, 애플리케이션 행 잠금과 상태-이력-알림 원자성은 [2차 확장 데이터 계약](second-expansion-data-contract.md)을 따른다. 특히 다형 신고 대상·처리 결과의 존재, 요청과 알림의 회원 일치는 애플리케이션 검증이며, 열린 요청·상태 이력·알림 중복은 partial unique로 최종 강제한다.
+
+- 생성 멱등 기록은 `UNIQUE(actor_type, actor_id, api_scope, key_hash)`로 최종 강제한다. 만료 여부는 조회 시 `expires_at`으로 판정하고 cleanup은 물리 정리에만 사용한다.
+- `moderation_history`와 `notification`의 제보·신고 FK XOR는 각각 DB CHECK `ck_moderation_history__exactly_one_request`, `ck_notification__exactly_one_request`로 강제한다.

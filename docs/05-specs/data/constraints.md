@@ -229,7 +229,7 @@ related_documents:
 
 2차 확장의 소유권, 컬렉션·큐레이션 상한, 열린 요청 중복, 상태 전이, 알림 고유성과 다형 FK XOR 제약은 [2차 확장 데이터 계약](second-expansion-data-contract.md)을 따른다.
 
-- DB 고유 제약: 컬렉션 맛집, 큐레이션 맛집·표시 위치, 게시 메인 위치, 열린 제보·신고, 요청·상태 알림과 상태 이력
-- DB CHECK: 상태 허용값, 큐레이션 게시 상태·위치, 두 요청 FK 중 하나, 완료 결과 필드 조합
+- DB 고유 제약: 컬렉션 맛집, 큐레이션 맛집·표시 위치, 게시 메인 위치, 열린 제보·신고, 요청·상태 알림과 상태 이력, `idempotency_record(actor_type, actor_id, api_scope, key_hash)`
+- DB CHECK: 상태 허용값, 큐레이션 게시 상태·위치, `ck_moderation_history__exactly_one_request`, `ck_notification__exactly_one_request`, 완료 결과 필드 조합
 - 애플리케이션+행 잠금: 회원당 컬렉션 20개, 컬렉션당 맛집 100개, 제보·신고 합산 일일 5건, Curation 구성 20개와 허용 상태 전이
 - 같은 트랜잭션: 요청 상태, ModerationHistory, 처리 결과 Notification
