@@ -24,6 +24,12 @@ COPY . .
 ARG NEXT_PUBLIC_KAKAO_MAPS_JS_KEY
 ENV NEXT_PUBLIC_KAKAO_MAPS_JS_KEY=${NEXT_PUBLIC_KAKAO_MAPS_JS_KEY}
 
+# build arg가 비어 있으면 지도 컴포넌트가 SDK 오류 상태로 빌드된다.
+# CI 워크플로뿐 아니라 Dockerfile 자체에서도 누락을 차단해 직접 docker build 시에도
+# 키 없는 이미지가 만들어지지 않도록 한다.
+RUN test -n "$NEXT_PUBLIC_KAKAO_MAPS_JS_KEY" \
+    || (echo "ERROR: NEXT_PUBLIC_KAKAO_MAPS_JS_KEY build arg is required" >&2 && exit 1)
+
 # package.json의 build는 `tsc --noEmit && next build`다. next.config.ts가
 # Next 내장 TypeScript 단계를 끄고 있으므로 타입 검사는 이 tsc가 담당한다.
 ENV NEXT_TELEMETRY_DISABLED=1
