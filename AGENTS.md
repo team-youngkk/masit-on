@@ -203,7 +203,7 @@ $env:REDIS_PORT = '16379'
 - `main`은 배포 기준, `develop`은 통합 브랜치이며 둘 다 직접 push하지 않는다.
 - 브랜치는 최신 `develop`에서 분기한다.
 - 브랜치 이름은 `feature/ws-{번호}-{기능명}`, `feature/t-{번호}-{작업명}`, `fix/{기능명}` 또는 변경 유형과 같은 접두사(`docs/`, `chore/`, `build/`, `ci/`, `test/`, `refactor/`)를 사용한다.
-- `feature` → `develop`은 일반 Merge, `develop` → `main`만 Squash Merge한다.
+- `feature/**`를 포함한 작업 브랜치 → `develop`은 Squash Merge, `develop` → `main`은 Create a merge commit을 사용한다. 정상 릴리즈 뒤에는 커밋 수 차이만 해소하려는 `main` → `develop` 역동기화를 하지 않고, `main` 전용 Hotfix가 있을 때만 PR로 역동기화한다.
 - Conventional Commits의 `feat`, `fix`, `test`, `refactor`, `docs`, `build`, `ci`, `chore`를 사용한다.
 - 모든 변경은 PR로 병합하며 작성자를 제외한 최소 2명 승인이 필요하다. AI가 작성한 코드도 동일하다.
 - 서로 독립적인 변경은 커밋과 PR을 분리한다. 포매팅·정적 분석만 고치는 변경은 로직 변경과 분리한다.

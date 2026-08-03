@@ -45,11 +45,13 @@ related_documents:
 | `DATA` | 데이터베이스·데이터 접근·마이그레이션 |
 | `AUTH` | 인증·인가·세션 |
 | `EXT` | 외부 서비스 연동 |
+| `NOTIFY` | 사용자 알림 저장·전달 |
 | `TEST` | 테스트 전략 |
 | `OBS` | 로그·관측성 |
 | `SEC` | 비밀정보·워크로드 인증 |
 | `RUNTIME` | 실행·컨테이너 환경 |
 | `CI` | 지속적 통합·배포 검증 |
+| `DEPLOY` | 운영 배포·제한 공개·전환 |
 
 ### 디렉터리 구조
 
@@ -69,11 +71,11 @@ docs/07-adr/
 
 | 디렉터리 | 책임 영역 | 포함 카테고리 |
 |---|---|---|
-| `platform/` | 언어, 빌드, 프레임워크, 웹 런타임, 컨테이너, CI | LANG, BUILD, FRAME, WEB, RUNTIME, CI |
+| `platform/` | 언어, 빌드, 프레임워크, 웹 런타임, 컨테이너, CI, 배포 | LANG, BUILD, FRAME, WEB, RUNTIME, CI, DEPLOY |
 | `architecture/` | 애플리케이션 구조와 의존 경계 | ARCH |
 | `data/` | 데이터베이스, ORM, 마이그레이션, 데이터 저장소 | DATA |
 | `security/` | 인증·인가, 비밀정보, 워크로드 신원 | AUTH, SEC |
-| `integration/` | 외부 서비스·제공자 연동 | EXT |
+| `integration/` | 외부 서비스·제공자 연동과 사용자 알림 전달 | EXT, NOTIFY |
 | `quality/` | 테스트, 로그, 관측성 | TEST, OBS |
 
 각 하위 디렉터리의 `README.md`는 해당 영역의 탐색용 목록이다. 전체 상태·우선순위·공식 경로는 루트 [adr-index.md](adr-index.md)만을 기준으로 한다.

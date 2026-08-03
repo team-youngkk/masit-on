@@ -67,11 +67,14 @@ Accepted
 
 Nginx는 경로 접두사만으로 목적지를 정하며 요청 헤더, 사용자 에이전트나 응답 형식으로 프론트엔드와 백엔드를 구분하지 않는다.
 
+정식 공개 전에는 [ADR-DEPLOY-003](deploy-003-validation-cookie-session.md)의 검증 참여자 쿠키 세션을 이 라우팅보다 먼저 확인한다. `/verification/login`, `/api/verification/sessions`와 로그인에 필요한 정적 자산만 무세션으로 허용하고, 다른 화면·API는 Nginx `auth_request`를 통과해야 한다. 이 진입 검증은 회원·관리자 Bearer 인증과 독립이며 정식 공개 시 제거한다.
+
 ### 6.2 화면 경로
 
 | 경로 | 동작 |
 |---|---|
 | `/` | `/restaurants`로 이동 |
+| `/verification/login` | 정식 공개 전 검증 참여자 세션 생성 화면 |
 | `/restaurants` | 맛집 검색·필터·목록 |
 | `/restaurants/{restaurantId}` | 맛집 상세 |
 | `/creators/{creatorId}` | 유튜버 상세 |

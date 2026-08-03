@@ -16,6 +16,7 @@ related_documents:
   - index-strategy.md
   - migration-plan.md
   - seed-data-plan.md
+  - second-expansion-data-contract.md
   - ../diagrams/erd-spec.md
   - ../../00-overview/scope.md
   - ../../07-adr/security/auth-003-confirmation-token.md
@@ -46,6 +47,7 @@ related_documents:
 | [index-strategy.md](index-strategy.md) | 공개 조회·검색·관계 조회 인덱스 전략 |
 | [migration-plan.md](migration-plan.md) | Flyway 파일 순서·배포·복구 계획 |
 | [seed-data-plan.md](seed-data-plan.md) | Region·FoodCategory 기준 데이터 계획 |
+| [second-expansion-data-contract.md](second-expansion-data-contract.md) | 2차 확장 논리 개념·테이블·제약·생명주기·인덱스·마이그레이션 계약 |
 | [../diagrams/erd-spec.md](../diagrams/erd-spec.md) | ERD 포함 범위와 표기 명세 |
 | `../diagrams/erd.mmd` | 논리 모델의 Mermaid 시각화 |
 
@@ -54,6 +56,8 @@ related_documents:
 `data-model.md`부터 `data-review.md`와 논리 ERD까지는 구현 기술에 독립적인 논리 데이터 모델이다. 실제 테이블명, 컬럼명, SQL 자료형, 내부 식별자 타입, 인덱스와 Flyway 순서는 `physical-data-model.md`부터 `seed-data-plan.md`까지의 물리 설계 문서가 정의한다. 논리 규칙과 물리 제약이 충돌하면 상위 요구사항을 확인하고 두 계층 문서를 함께 수정한다.
 
 UUID 내부 식별자와 논리 삭제 정책은 각각 [ADR-DATA-007](../../07-adr/data/data-007-uuid-v4-identifiers.md), [ADR-DATA-008](../../07-adr/data/data-008-publication-lifecycle-soft-delete.md)로 확정됐다.
+
+2차 확장은 기존 명세를 반복하지 않고 [2차 확장 데이터 계약](second-expansion-data-contract.md)을 진입점으로 사용한다. 인기 순위·알림 수신 설정·Device Token은 현재 범위에서 영속 데이터가 아니다.
 
 검증 미리보기의 확인 Token은 PostgreSQL 단기 기술 테이블로 확정됐지만 핵심 도메인 엔티티나 논리 ERD에는 포함하지 않는다. Token 해시·관리자·자원 종류·후보 스키마 버전·JSONB Snapshot과 결과 상태만 저장하며 세부 정책은 [ADR-AUTH-003](../../07-adr/security/auth-003-confirmation-token.md)을 따른다. 저장 위치가 미정인 로그인 제한 카운터 같은 기술 아티팩트도 핵심 엔티티로 만들지 않는다.
 

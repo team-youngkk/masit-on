@@ -44,7 +44,7 @@ Task에 없는 미결정 기술을 구현으로 끌어오지 않는다. 캐시·
 |---|---|---|
 | MVP 사용자 흐름 | 요구사항 20개 중 17개 완료, 유튜버 선택 UI 관련 3개 부분 완료 | `FE-01`이 1차 확장 인수 전에 잔여 탐색 흐름을 닫는다. |
 | 일반 사용자 인증 | 미구현; 관리자 JWT·Redis만 구현 | `FE-02`가 관리자와 분리된 identity·audience·쿠키·Redis namespace를 만든다. |
-| 맛집 좌표 | Kakao 응답부터 DB·공개 API까지 미저장 | `FE-06`이 V4 전진 마이그레이션과 bounds 계약을 함께 구현한다. |
+| 맛집 좌표 | Kakao 응답부터 DB·공개 API까지 미저장 | `FE-06`이 V4 좌표를 추가했고, 과거 bounds 계약은 `FE-10`에서 필터 기반 마커 조회로 교체한다. |
 | Creator 상세 표시 정보 | 채널 ID·이름·URL·공개/생명주기만 보유 | `FE-08`이 V6와 관리자 확인 흐름을 확장한다. |
 | 품질 게이트 | 백엔드 테스트 class loading 실패, CI workflow 없음; 프론트 typecheck·build 성공 | `FE-00`이 기능 Task보다 먼저 실제 테스트 실행과 CI 차단을 복구한다. |
 
@@ -54,8 +54,9 @@ Task에 없는 미결정 기술을 구현으로 끌어오지 않는다. 캐시·
 |---|---|---|---|
 | [WS-05 사용자 계정·인증](../02-analysis/first-expansion-workstreams.md#4-ws-05-사용자-계정인증) | 김인안 / 이우람 | `FE-02`, `FE-03` | 가입부터 탈퇴까지 회원 세션·계정 상태가 관리자 인증과 분리된다. |
 | [WS-06 개인 맛집 관리](../02-analysis/first-expansion-workstreams.md#5-ws-06-개인-맛집-관리) | 박진영 / 김인안 | `FE-04`, `FE-05` | 본인 찜·최근 기록의 소유권·보존·삭제가 일관된다. |
-| [WS-07 지도 탐색](../02-analysis/first-expansion-workstreams.md#6-ws-07-지도-탐색) | 양성훈 / 박진영 | `FE-06`, `FE-07` | 좌표·bounds·마커·대체 목록이 공개 탐색과 함께 동작한다. |
+| [WS-07 지도 탐색](../02-analysis/first-expansion-workstreams.md#6-ws-07-지도-탐색) | 양성훈 / 박진영 | `FE-06`, `FE-07`, `FE-10` | 좌표·필터 기반 마커·대체 목록이 지도 이동과 독립적으로 동작한다. |
 | [WS-08 유튜버 상세](../02-analysis/first-expansion-workstreams.md#7-ws-08-유튜버-상세) | 이우람 / 박진영 | `FE-08` | 저장된 공개 Creator·Visit·Restaurant·Video로 상세 세 화면을 제공한다. |
+| [OPS-VALIDATION 공통 운영·배포](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙) | 이우람 / 김인안 | `FE-12` | 제한 공개 진입 경계를 회원·관리자 인증과 분리하고 정식 공개 시 전체 제거할 수 있다. |
 | 공통 품질·통합 | 이우람 / 김인안 | `FE-00`, `FE-01`, `FE-09` | 기준선 결함, MVP 잔여 흐름, 교차 인수·회귀를 닫는다. |
 
 ## 4. 공통 계약 확정
@@ -63,8 +64,9 @@ Task에 없는 미결정 기술을 구현으로 끌어오지 않는다. 캐시·
 | 기준 | 상태 | 처리 원칙 |
 |---|---|---|
 | 회원 인증 정책·API·데이터·ADR | 확정 | `FE-02`~`FE-05`는 [ADR-AUTH-002](../07-adr/security/auth-002-member-jwt-refresh-token.md)와 회원 API·데이터 계약을 구현한다. |
-| 지도 좌표·영역 조회·외부 SDK ADR | 확정 | `FE-06`~`FE-07`은 [ADR-MAP-001](../07-adr/integration/map-001-map-bounds-search.md) 밖의 공간 기능을 추가하지 않는다. |
+| 지도 좌표·마커 조회·외부 SDK ADR | 확정 | `FE-06`~`FE-07`, `FE-10`은 [ADR-MAP-001](../07-adr/integration/map-001-map-bounds-search.md)의 뷰포트 비종속 경계를 따른다. |
 | Creator 상세 API·데이터 계약 | 확정 | `FE-08`은 저장된 Creator·Visit·Restaurant·Video만 조회하며 사용자 조회 중 YouTube API를 호출하지 않는다. |
+| 검증 참여자 제한 공개 계약 | 확정, 구현 미반영 | [OPS-VALIDATION](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙)이 [ADR-DEPLOY-003](../07-adr/platform/deploy-003-validation-cookie-session.md)과 검증 참여자 API를 `FE-12`·`E1-T13`에서 구현하고 정식 공개 시 제거한다. |
 | V2~V6 Flyway 순서 | 확정 | [마이그레이션 계획](../05-specs/data/migration-plan.md#9-1차-확장-전진-마이그레이션-순서)을 지키고 V1을 수정하지 않는다. 세부 테이블·열·제약·인덱스는 [테이블 정의](../05-specs/data/table-definitions.md#14-1차-확장-v4v6-데이터-계약), [제약조건](../05-specs/data/constraints.md), [인덱스 전략](../05-specs/data/index-strategy.md#5-1차-확장-인덱스)을 기준으로 구현한다. |
 | MVP 잔여 사용자 흐름·품질 게이트 | 기준선 결함 | `FE-00`·`FE-01`에서 먼저 닫거나, 해당 미완료 상태를 1차 확장 완료로 오인하지 않는다. |
 
@@ -84,7 +86,7 @@ Task에 없는 미결정 기술을 구현으로 끌어오지 않는다. 캐시·
 | 회원 identity·Security matcher·V2 | `FE-02` | `FE-03`, `FE-04` | 회원 API·개인화 데이터 |
 | 회원 인증 사용자 여정 | `FE-03` | `FE-05`, `FE-09` | 개인화 화면·탈퇴 교차 검증 |
 | Favorite·Recent V3 API | `FE-04` | `FE-05`, `FE-09` | 개인화 화면·데이터 검증 |
-| 좌표·bounds V4 | `FE-06` | `FE-07`, `FE-09` | 지도 화면·SDK 검증 |
+| 좌표 V4·필터 마커 조회 | `FE-06`, `FE-10` | `FE-07`, `FE-09` 재실행 | 지도 화면·SDK·이동 시 결과 유지 검증 |
 | Creator 표시·관계 V6 | `FE-08` | `FE-09` | 유튜버 상세 인수 |
 
 ## 6. 병렬 작업 범위
@@ -104,7 +106,7 @@ Task에 없는 미결정 기술을 구현으로 끌어오지 않는다. 캐시·
 
 1. `V2 회원 계정·세션 → 회원가입·로그인·재발급·탈퇴`를 실제 PostgreSQL·Redis로 검증한다.
 2. `인증 회원 → V3 찜·최근 기록 → 찜/최근 화면`을 연결하고, 탈퇴 뒤 데이터 삭제를 검증한다.
-3. `V4 좌표 → bounds API → 지도 마커·대체 목록`을 기존 검색 조건과 AND 결합한다.
+3. `V4 좌표 → 필터 기반 마커 API → 지도 마커·대체 목록`을 연결하고 지도 이동과 결과 집합을 분리한다.
 4. `V6 Creator 표시 정보 → Creator 상세·방문 맛집·근거 영상`을 공개·유효 Visit 판정과 연결한다.
 5. `FE-01 MVP 탐색 → 지도·유튜버 상세 → 로그인 개인화 → 탈퇴`의 교차 흐름을 `FE-09`에서 회귀한다.
 
@@ -112,7 +114,7 @@ Task에 없는 미결정 기술을 구현으로 끌어오지 않는다. 캐시·
 
 ## 8. 전체 Task 표
 
-실행·PR·검증에는 [최종 Task 분해](expansion-1-task-breakdown.md)의 `E1-T01`~`E1-T10`을 사용한다. 아래 `FE-*`는 구현 순서와 통합 단위를 설명하는 상위 묶음이며, `E1-T01`~`E1-T10`과 순서대로 대응한다.
+실행·PR·검증에는 [최종 Task 분해](expansion-1-task-breakdown.md)의 `E1-T01`~`E1-T13`을 사용한다. 아래 `FE-*`는 구현 순서와 통합 단위를 설명하는 상위 묶음이다. 2026-08-03 지도 계약 변경은 `FE-10`·`E1-T11`, 가입 이메일 인증 코드 변경은 `FE-11`·`E1-T12`, 제한 공개 인증 변경은 `FE-12`·`E1-T13`에서 별도 추적한다.
 
 | Task | 주 담당 / 기본 리뷰어 | 관련 FR·PRD | 주요 계약·산출물 | 선행 Task | 필수 검증 | 완료 기준 |
 |---|---|---|---|---|---|---|
@@ -122,10 +124,13 @@ Task에 없는 미결정 기술을 구현으로 끌어오지 않는다. 캐시·
 | `FE-03` 회원 계정·인증 사용자 흐름 | 김인안 / 이우람 | `FR-MEMBER-001`~`005`, `FR-AUTH-001`~`003`; `PRD-ACCOUNT-001` | 가입·인증·재설정·로그인·재발급·로그아웃·현재 회원·탈퇴 API와 화면 | `FE-02` | MockMvc, Redis·PostgreSQL 통합, 브라우저 인증 만료·오류, 계정 열거 방지 | 정상·제한·장애·탈퇴 흐름과 최대 3세션·`sid` 즉시 폐기가 계약대로 동작한다. |
 | `FE-04` 개인 맛집 데이터·API | 박진영 / 김인안 | `FR-FAVORITE-001`~`004`, `FR-RECENT-001`~`003`; `PRD-PERSONAL-001` | V3, Favorite·RecentView 명령·조회, 상세 성공 시 최근 기록, 하루 한 번 이상 30일 만료 cleanup Scheduler | `FE-02` | V1→V3, 중복 찜 동시성, recent `GREATEST` upsert·50건 상한·30일 주기 cleanup, 탈퇴 정리 | 관계 고유성·보존·공개 상태·본인 접근 계약이 데이터와 API에서 일치한다. |
 | `FE-05` 개인 맛집 화면·통합 | 박진영 / 김인안 | `FR-FAVORITE-001`~`004`, `FR-RECENT-001`~`003`; `PRD-PERSONAL-001` | 찜 상태·목록, 최근 목록·삭제, 빈·비공개·인증 만료 화면 | `FE-03`, `FE-04` | 브라우저·API 통합, 모바일 빈 상태, 다른 회원 접근 거부 | 로그인 회원이 찜·최근 기록을 관리하고 탈퇴 뒤 개인화 데이터가 남지 않는다. |
-| `FE-06` 지도 좌표·영역 조회 | 양성훈 / 박진영 | `FR-MAP-001`~`002`; `PRD-DISCOVERY-003` | V4, nullable WGS84 좌표, bounds API, 200개 상한·호출 제한·좌표 보강 절차 | `FE-00` | V1→V4, 좌표 CHECK·인덱스, bounds·AND·200개·429 API, 실행계획 | 좌표 없는 기존 맛집은 공개 목록·상세에 남고 지도에서만 제외된다. |
-| `FE-07` 지도 화면·접근성 통합 | 양성훈 / 박진영 | `FR-MAP-001`~`002`; `PRD-DISCOVERY-003` | Kakao 지도·마커·대체 목록·선택 동기화, SDK/키/로그 경계 | `FE-06` | 지원 브라우저, 키보드·스크린 리더·360px, SDK 실패, bounds 로그 제외 | 지도 장애가 대체 목록·다른 공개 조회를 막지 않고 위치·bounds 원문이 로그에 남지 않는다. |
+| `FE-06` 지도 좌표·영역 조회(과거 계약) | 양성훈 / 박진영 | `FR-MAP-001`~`002`; `PRD-DISCOVERY-003` | V4, nullable WGS84 좌표와 과거 bounds API. bounds 부분은 `FE-10`에서 교체 | `FE-00` | V1→V4, 좌표 CHECK·인덱스·200개·429 | 좌표 없는 기존 맛집은 공개 목록·상세에 남고 지도에서만 제외된다. |
+| `FE-07` 지도 화면·접근성 통합 | 양성훈 / 박진영 | `FR-MAP-001`~`002`; `PRD-DISCOVERY-003` | Kakao 지도·마커·대체 목록·선택 동기화, SDK/키/로그 경계 | `FE-06` | 지원 브라우저, 키보드·스크린 리더·360px, SDK 실패 | 지도 장애가 대체 목록·다른 공개 조회를 막지 않고 사용자 위치를 수집하지 않는다. |
 | `FE-08` 유튜버 상세 수직 슬라이스 | 이우람 / 박진영 | `FR-CREATOR-004`~`006`; `PRD-DETAIL-002` | V6, Creator 표시 필드, 상세·방문 맛집·근거 영상 API와 화면 | `FE-00` | V1→V6, 공개·빈·404·중복·페이지, 외부 API 미호출, 브라우저 흐름 | 저장된 정보와 공개 유효 관계만으로 세 상세 상태가 일관되게 표시된다. |
 | `FE-09` 1차 확장 교차 인수·회귀 | 전원 / 상호 교차 리뷰 | 1차 확장 전체 FR·NFR | 추적표 완료 확인, 보안·통합·브라우저·성능 결과와 기준선 비교 | `FE-01`, `FE-03`, `FE-05`, `FE-07`, `FE-08` | `NFR-TEST-004`, 성능 NFR, V1→V6 업그레이드, CI | 각 FR이 주 PRD·API 또는 화면·데이터·ADR·WS·테스트·Task로 추적되고 미결정 도입이 없음을 검토한다. |
+| `FE-10` 지도 뷰포트 비종속 전환 | 양성훈 / 박진영 | `FR-MAP-001`~`002`; `PRD-DISCOVERY-003` | bounds API·SQL·Query Key·idle 재조회 제거, 필터 결과·목록 유지 | `FE-06`, `FE-07` | bounds 없는 API, 이동 시 요청 0건, 결과·선택 유지, 200/201개 | 지도 이동으로 검색 결과가 사라지지 않고 네 URL 필터 변경 때만 재조회한다. |
+| `FE-11` 가입 이메일 인증 8자 코드 전환 | 김인안 / 이우람 | `FR-MEMBER-002`; `PRD-ACCOUNT-001` | 8자 CSPRNG 코드, 입력 정규화·제출 제한, 메일·화면 정합화 | `FE-02`, `FE-03` | 문자 집합·40-bit·24시간·단일 소비·10분 10회·원문 비로그·장애별 입력 보존 | 가입 인증만 8자 코드로 동작하고 비밀번호 재설정·Access·Refresh Token 계약은 유지된다. |
+| `FE-12` 검증 참여자 쿠키 세션 전환 | 이우람 / 김인안 | `NFR-SECURITY-003`, `NFR-DEPLOYMENT-004`; `ADR-DEPLOY-003` | 7일 HttpOnly 쿠키, Redis 세션, Nginx `auth_request`, Basic Auth 제거 | M2-11, `FE-03` | 무세션 차단, 반복창 0회, 회원·관리자 Bearer 동시 동작, 장애·로그·배포 복구 | 제한 공개와 서비스 인증이 분리되고 정식 공개 시 검증 경계만 제거할 수 있다. |
 
 ## 9. Workstream별 Task
 
@@ -133,10 +138,13 @@ Task에 없는 미결정 기술을 구현으로 끌어오지 않는다. 캐시·
 |---|---|---|---|
 | WS-05 | `FE-02` | V2, 회원 principal·Security·Redis session | 관리자/회원 audience 교차 거부, 3세션, V1→V2 |
 | WS-05 | `FE-03` | 가입·메일 인증·재설정·로그인·탈퇴 API/화면 | 만료·제한·장애·계정 열거 방지·`sid` 즉시 폐기 |
+| WS-05 | `FE-11` | 가입 이메일 인증 8자 코드·메일·API·화면 정합화 | 문자 집합·CSPRNG·제출 제한·단일 소비·원문 비로그·비밀번호 재설정 회귀 |
+| [OPS-VALIDATION](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙) | `FE-12` | 검증 참여자 쿠키 세션과 Nginx·Redis 진입 경계 | 반복 인증창 0회, Bearer 충돌 제거, 무세션·장애 차단, 정식 공개 제거 가능성 |
 | WS-06 | `FE-04` | V3 Favorite·Recent 명령/조회와 상세 성공 부수효과 | 동시 중복 찜, `GREATEST` upsert·50건 상한, 30일 주기 cleanup, 탈퇴 |
 | WS-06 | `FE-05` | 찜·최근 목록과 빈·비공개·인증 만료 화면 | 다른 회원 접근 거부, 모바일 상태, 탈퇴 정리 |
-| WS-07 | `FE-06` | V4 좌표, bounds API·제한·보강 절차 | 좌표 CHECK·인덱스·200개·429·NULL 호환 |
-| WS-07 | `FE-07` | Kakao 지도·마커·대체 목록·접근성 | SDK 장애, 360px, 키보드·스크린 리더, bounds 로그 제외 |
+| WS-07 | `FE-06` | V4 좌표와 과거 bounds API·보강 절차 | 좌표 CHECK·인덱스·200개·429·NULL 호환; bounds는 `FE-10`에서 제거 |
+| WS-07 | `FE-07` | Kakao 지도·마커·대체 목록·접근성 | SDK 장애, 360px, 키보드·스크린 리더, 사용자 위치 비수집 |
+| WS-07 | `FE-10` | 뷰포트 비종속 API·Query Key·지도 이동 UX 정합화 | 이동 시 요청 0건, 결과·선택 유지, 필터 변경 재조회 |
 | WS-08 | `FE-08` | V6, Creator 상세·방문 맛집·근거 영상 API/화면 | 공개·빈·404·중복·페이지, 외부 API 미호출 |
 | 공통 | `FE-00`, `FE-01`, `FE-09` | 품질 게이트·MVP 탐색 잔여·교차 회귀 | CI 차단, Creator 선택, V1→V6, 보안·브라우저·성능 |
 
@@ -144,9 +152,9 @@ Task에 없는 미결정 기술을 구현으로 끌어오지 않는다. 캐시·
 
 | 기능 요구사항 | 구현 Task | 인수·회귀 Task |
 |---|---|---|
-| `FR-MEMBER-001`, `FR-MEMBER-002`, `FR-MEMBER-003`, `FR-MEMBER-004`, `FR-MEMBER-005`, `FR-AUTH-001`, `FR-AUTH-002`, `FR-AUTH-003` | `FE-02`, `FE-03` | `FE-09` |
+| `FR-MEMBER-001`, `FR-MEMBER-002`, `FR-MEMBER-003`, `FR-MEMBER-004`, `FR-MEMBER-005`, `FR-AUTH-001`, `FR-AUTH-002`, `FR-AUTH-003` | `FE-02`, `FE-03`, `FE-11` | `FE-09` 재실행 |
 | `FR-FAVORITE-001`, `FR-FAVORITE-002`, `FR-FAVORITE-003`, `FR-FAVORITE-004`, `FR-RECENT-001`, `FR-RECENT-002`, `FR-RECENT-003` | `FE-04`, `FE-05` | `FE-09` |
-| `FR-MAP-001`, `FR-MAP-002` | `FE-06`, `FE-07` | `FE-09` |
+| `FR-MAP-001`, `FR-MAP-002` | `FE-06`, `FE-07`, `FE-10` | `FE-09` 재실행 |
 | `FR-CREATOR-004`, `FR-CREATOR-005`, `FR-CREATOR-006` | `FE-08` | `FE-09` |
 
 MVP 기능 요구사항은 [MVP 구현 계획 Task 목록](mvp-2day-implementation-plan.md#8-task-목록)의 `T-01`~`T-14`가 소유하며, 1차 확장과 맞닿은 미완료 탐색 흐름은 `FE-01`에서 닫는다.
@@ -159,7 +167,7 @@ MVP 기능 요구사항은 [MVP 구현 계획 Task 목록](mvp-2day-implementati
 | 관리자 인증 재사용 중 경계 혼합 | 회원 Token으로 관리자 접근 또는 세션 상호 오염 | audience·principal·cookie·Redis namespace·Security matcher를 `FE-02`에서 분리하고 교차 거부 테스트를 둔다. |
 | V2~V6 병렬 변경 충돌 | Flyway 순서·FK·데이터 호환성 파손 | 기존 V1은 수정하지 않고 전진 migration만 추가한다. 박진영이 번호·업그레이드 검증을 최종 조율한다. |
 | 좌표 결측·외부 SDK 장애 | 지도 화면이 공개 탐색을 막음 | NULL 좌표는 지도에서만 제외하고 대체 목록을 유지한다. SDK 실패는 독립 오류 상태로 처리한다. |
-| 개인정보·위치·토큰 로그 유출 | 보안·개인정보 NFR 위반 | Token·메일 인증값·좌표 bounds 원문을 로그에서 제외하고 `traceId`만 남기는 회귀 테스트를 둔다. |
+| 개인정보·위치·토큰 로그 유출 | 보안·개인정보 NFR 위반 | Token·메일 인증값·사용자 위치를 로그에서 제외하고 지도 뷰포트는 서버로 전송하지 않는 회귀 테스트를 둔다. |
 | 조건부 기술의 조기 도입 | 범위·운영 복잡도 확대 | Backlog 활성화와 Accepted ADR, 별도 Task 없이는 PostGIS·캐시·락·Outbox·자동 동기화를 구현하지 않는다. |
 
 ## 12. 권장 구현 핵심 경로
@@ -173,7 +181,7 @@ MVP 기능 요구사항은 [MVP 구현 계획 Task 목록](mvp-2day-implementati
   ↓
 회원 기반 사용자 여정 통합 (FE-05)
 
-병렬: 맛집 좌표 정책 → 지도 탐색 (FE-06 → FE-07)
+병렬: 맛집 좌표 정책 → 지도 탐색 → 뷰포트 비종속 정합화 (FE-06 → FE-07 → FE-10)
 병렬: Creator 계약 확장 → 유튜버 상세 (FE-08)
   ↓
 교차 인수·회귀 (FE-09)
@@ -184,7 +192,7 @@ MVP 기능 요구사항은 [MVP 구현 계획 Task 목록](mvp-2day-implementati
 - `FE-00`의 실제 테스트 실행·CI 차단이 복구되고, MVP 잔여 유튜버 선택 흐름(`FE-01`)이 완료된다.
 - 각 1차 확장 FR은 정확히 하나의 주 PRD와 API 또는 화면 계약, 데이터 소유·생명주기, Accepted ADR 또는 명시적 보류, Workstream·테스트·Task를 가진다.
 - 회원은 최대 3개 세션으로 가입·로그인·재발급·로그아웃·재설정·탈퇴를 수행하고, 찜·최근 기록은 본인 경계와 보존·삭제 정책을 지킨다.
-- 지도는 NULL 좌표·SDK 장애에도 대체 목록을 제공하고, 유튜버 상세는 외부 실시간 호출 없이 저장된 공개 관계만 표시한다.
+- 지도는 NULL 좌표·SDK 장애에도 대체 목록을 제공하고 지도 이동 중 검색 결과를 유지하며, 유튜버 상세는 외부 실시간 호출 없이 저장된 공개 관계만 표시한다.
 - V1→V6 업그레이드와 보안·통합·브라우저·접근성·성능 테스트가 CI에서 통과한다.
 - 각 Task는 연결된 FR의 정상·예외·경계 인수 조건을 자동화 테스트로 증명한다.
 - 외부 API, API 키, 개인정보, 보안 Token, migration 순서, 공통 Layout 및 인증 경계를 바꾸면 영향 Workstream의 기본 리뷰어가 검토한다.

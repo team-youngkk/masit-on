@@ -22,6 +22,7 @@ related_documents:
   - seed-data-plan.md
   - ../../07-adr/data/data-007-uuid-v4-identifiers.md
   - ../../07-adr/data/data-008-publication-lifecycle-soft-delete.md
+  - second-expansion-data-contract.md
 ---
 
 # 맛잇온 데이터 모델 검토
@@ -210,3 +211,11 @@ related_documents:
 - 현재 수정된 [scope.md](../../00-overview/scope.md), 확정 비즈니스 규칙과 API 계약을 이 작업 시점의 정본으로 사용했다.
 - API가 확인한 YouTube 채널·영상은 안정된 외부 ID를 제공하며, 구체 필드명·형식은 외부 연계 설계에서 정한다.
 - Region·FoodCategory를 별도 참조 데이터로 두되 독립 도메인으로 승격하지 않는다.
+
+## 14. 2차 확장 결정
+
+- 2차 확장 데이터의 정본은 [2차 확장 데이터 계약](second-expansion-data-contract.md)이다.
+- 인기 순위는 기존 Favorite의 현재 행에서 계산하고 Metric·Snapshot을 저장하지 않는다.
+- 알림은 필수 서비스 내 기록만 저장하며 Preference·DeviceToken·Outbox를 만들지 않는다.
+- 제보·신고는 별도 테이블, 상태 감사는 두 요청 중 하나를 참조하는 공통 ModerationHistory로 저장한다.
+- V1·V2는 수정하지 않고 V3 신규 마이그레이션을 계획한다. 운영 전 통합 예외는 ADR-DATA-009 증명이 있을 때만 허용한다.

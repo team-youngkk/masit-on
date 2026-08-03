@@ -3,6 +3,8 @@ related_documents:
   - roles.md
   - ownership.md
   - ../02-analysis/mvp-workstreams.md
+  - ../02-analysis/first-expansion-workstreams.md
+  - ../02-analysis/second-expansion-workstreams.md
   - ../06-architecture/implementation-conventions.md
   - ../08-planning/mvp-2day-implementation-plan.md
 ---
@@ -11,11 +13,11 @@ related_documents:
 
 ## 1. 목적
 
-이 디렉터리는 네 Workstream을 **누가 최종 책임지는지** 확정한다. 소유자는 담당 항목의 요구사항 구체화, 계약, 구현, 테스트, 문서화와 통합 완료를 책임진다.
+이 디렉터리는 MVP와 확장 Workstream 및 공통 운영 트랙을 **누가 최종 책임지는지** 확정한다. 소유자는 담당 항목의 요구사항 구체화, 계약, 구현, 테스트, 문서화와 통합 완료를 책임진다.
 
 원칙은 하나다. **각 Workstream과 기능 요구사항의 최종 책임자는 항상 한 명이다.** 공동 작업에서도 최종 병합 책임자는 한 명으로 유지한다.
 
-현재 배정은 2026-07-27에 승인된 기준안이다. 일정 차단이나 지속적인 부담 불균형이 확인될 때만 [소유권 변경 절차](ownership.md#11-소유권-변경-절차)로 조정한다.
+MVP 배정은 2026-07-27, 1·2차 확장과 `OPS-VALIDATION` 배정은 2026-08-03에 승인됐다. 일정 차단이나 지속적인 부담 불균형이 확인될 때만 [소유권 변경 절차](ownership.md#11-소유권-변경-절차)로 조정한다.
 
 ## 2. 문서 읽기 순서
 
@@ -33,12 +35,12 @@ related_documents:
 
 ## 4. 배정 요약
 
-| 담당 | Workstream | 공통 최종 병합 |
+| 담당 | 제품 Workstream | 공통·운영 책임 |
 |---|---|---|
-| 양성훈 | WS-01 맛집 탐색 | 프론트엔드 공통 Layout |
-| 박진영 | WS-02 맛집 상세·콘텐츠 | Flyway 마이그레이션 순서 |
-| 이우람 | WS-03 유튜버 기반 탐색 | Spring Boot·Docker 실행 기반 |
-| 김인안 | WS-04 관리자 인증·등록 | 인증 공통 설정 |
+| 양성훈 | WS-01 맛집 탐색, WS-07 지도 탐색, WS-10 인기 맛집 | 프론트엔드 공통 Layout |
+| 박진영 | WS-02 맛집 상세·콘텐츠, WS-06 개인 맛집, WS-09 개인 컬렉션 | Flyway 마이그레이션 순서 |
+| 이우람 | WS-03 유튜버 기반 탐색, WS-08 유튜버 상세, WS-13 사용자 알림 | Spring Boot·Docker 실행 기반, [OPS-VALIDATION](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙) |
+| 김인안 | WS-04 관리자 인증·등록, WS-05 회원 인증, WS-11 큐레이션, WS-12 제보·신고 | 인증 공통 설정 |
 
 상세 책임과 협업 관계는 [roles.md](roles.md), 항목 단위 배정은 [ownership.md](ownership.md)를 따른다.
 

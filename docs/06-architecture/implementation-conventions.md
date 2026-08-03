@@ -153,8 +153,21 @@ related_documents:
 - 새 PR의 기본 대상 브랜치도 `main`이다. 기능·수정 브랜치의 PR을 만들 때 대상이 `develop`인지 확인한다. M2 운영 배포 전에는 기본 브랜치가 `develop`이었다.
 - PR 본문에 담당자, 리뷰어와 레이블을 함께 적고 GitHub 사이드바에도 같은 값을 지정한다.
 - PR 본문과 커밋 메시지에 AI 도구 생성 표기를 남기지 않는다. `Generated with Claude Code` 같은 문구, 도구 서명과 배지를 넣지 않는다.
-- 기능·수정 브랜치에서 `develop`으로 병합할 때 일반 Merge를 사용한다.
-- `develop`에서 `main`으로 병합할 때만 Squash Merge를 사용한다.
+- `feature/**`를 포함해 `develop`을 대상으로 하는 작업 브랜치 PR은 Squash Merge를 사용한다. `fix/**`, `docs/**`, `chore/**`, `build/**`, `ci/**`, `test/**`, `refactor/**`도 별도 예외 결정이 없으면 같은 규칙을 따른다.
+- `develop`에서 `main`으로 승격하는 PR은 **Create a merge commit**을 사용한다. Squash Merge나 Rebase Merge를 사용하지 않는다.
+- 릴리즈 Merge Commit은 `main`의 첫 번째 부모 이력을 형성하고, `develop`의 Squash Commit들을 그대로 조상으로 포함해야 한다.
+- 정상적인 `develop → main` Merge 뒤에는 커밋 수 차이만 해소하려는 `main → develop` 역동기화 PR을 만들지 않는다. `main`의 릴리즈 Merge Commit이 `develop`에 없더라도 다음 승격의 merge base는 유지된다.
+- 운영 Hotfix, 릴리즈 전용 수정 등 `main`에만 새 내용이 생긴 경우에는 해당 변경을 `develop`으로 역동기화한다. 이때도 직접 push하지 않고 별도 PR을 사용한다.
+
+이 병합 방식은 2026-08-03 룰셋 변경 결정이다. 작업 브랜치의 여러 구현 커밋은 `develop`에서 PR당 하나의 Squash Commit으로 정리하고, `develop`의 실제 커밋 계보는 Merge Commit을 통해 `main`에 보존한다. 따라서 기존 `develop → main` Squash로 생기던 동일 변경의 서로 다른 커밋과 정기적인 역동기화 문제를 만들지 않는다.
+
+| PR 방향 | 허용 방식 | 병합 후 역동기화 |
+|---|---|---|
+| 작업 브랜치 → `develop` | Squash Merge | 없음. 후속 브랜치는 최신 `develop`에서 분기·갱신 |
+| `develop` → `main` | Create a merge commit | 없음. `main`의 Merge Commit만 없다는 이유로 역동기화하지 않음 |
+| 운영 Hotfix → `main` | Create a merge commit(직접 승격의 팀 승인 예외) | Hotfix 내용을 `develop`에 별도 PR로 반드시 반영 |
+
+원격 설정은 `Protect develop`의 `allowed_merge_methods: [squash]`, `Protect main`의 `allowed_merge_methods: [merge]`가 이 표를 강제한다. 두 룰셋 모두 PR 승인·미해결 스레드·필수 상태 검사 규칙을 함께 유지한다.
 - 모든 PR은 작성자를 제외한 최소 두 명의 승인을 받아야 한다.
 - 빌드와 관련 테스트를 통과하기 전에는 병합하지 않는다.
 - API, DB, 인증 경계 또는 공유 설정 변경은 관련 소유자와 사전 합의하고 해당 소유자에게 리뷰를 요청한다.
