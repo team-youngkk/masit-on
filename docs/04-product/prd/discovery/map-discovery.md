@@ -122,7 +122,7 @@ related_documents:
 - 화면 밖 맛집도 대체 목록에 남고 목록 선택으로 해당 마커에 접근할 수 있다.
 - 결과 200/201개, 공개·삭제·좌표 없음, 필터 AND와 중복 제거 경계가 검증된다.
 - 요청·응답·로그에 지도 뷰포트와 사용자 현재 위치가 없다.
-- 현재 코드의 bounds 계약 제거는 [E1-T11](../../../08-planning/expansion-1-task-breakdown.md) 완료 전까지 미구현 상태로 추적한다.
+- 코드의 bounds 계약 제거는 [E1-T11](../../../08-planning/expansion-1-task-breakdown.md)에서 구현했다.
 
 ## 10. 관련 문서
 

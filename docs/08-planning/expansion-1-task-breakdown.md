@@ -145,7 +145,7 @@ related_documents:
 
 ### E1-T11 지도 뷰포트 비종속 조회 전환
 
-- 현재 상태: Planned — 문서 계약 승인, 코드·테스트 미반영
+- 현재 상태: 구현 완료, PR 리뷰 대기 — `E1-T10` 지도 회귀는 병합 후 재실행한다.
 - 담당자 / 리뷰어: 양성훈 / 박진영
 - 승인 근거: WS-07 소유자 양성훈의 2026-08-03 UX 변경 승인
 - 관련 계약: `FR-MAP-001`~`002`, `BR-MAP-002`~`004`; [지도 탐색 PRD](../04-product/prd/discovery/map-discovery.md), [지도 API](../05-specs/api/discovery/map-discovery-api.md), [ADR-MAP-001](../07-adr/integration/map-001-map-bounds-search.md)

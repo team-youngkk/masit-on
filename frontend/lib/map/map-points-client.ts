@@ -4,11 +4,11 @@
  * GET /api/restaurants/map-points 연동 전용 fetch 래퍼.
  * 계약: docs/05-specs/api/discovery/map-discovery-api.md
  *       docs/05-specs/api/common/error-contract.md
- * ADR-MAP-001 6.6: bounds 원문을 로그에 남기지 않는다. 이 파일은 console.* 호출을 두지 않는다.
+ * ADR-MAP-001 4.4: 지도 뷰포트를 서버에 전달하지 않으므로 로그에 남을 원문 자체가 없다.
+ *                   이 파일은 console.* 호출을 두지 않는다.
  */
 import {
   buildMapPointsSearchParams,
-  type MapBounds,
   type MapPointsFilters,
 } from './map-points-query'
 import {
@@ -41,11 +41,10 @@ export type MapPointsFetchResult =
   | { kind: 'error'; message: string; traceId?: string }
 
 export async function fetchMapPoints(
-  bounds: MapBounds,
   filters: MapPointsFilters,
   signal?: AbortSignal,
 ): Promise<MapPointsFetchResult> {
-  const params = buildMapPointsSearchParams(bounds, filters)
+  const params = buildMapPointsSearchParams(filters)
 
   let response: Response
   try {
