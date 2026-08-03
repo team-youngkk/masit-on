@@ -18,7 +18,7 @@ related_documents:
 
 URL 탐색 조건에 맞는 공개 맛집의 위치·요약을 지도 마커와 대체 목록에 제공한다. Kakao 지도 뷰포트와 SDK 타입은 프론트엔드 내부 상태이며 API 요청·응답에 포함하지 않는다.
 
-이 계약은 2026-08-03 승인됐고 현재 bounds 기반 구현은 [E1-T11](../../../08-planning/expansion-1-task-breakdown.md)에서 변경한다. Task 완료 전까지 문서와 구현 차이가 존재한다.
+이 계약은 2026-08-03 승인됐고 이전 bounds 기반 구현은 [E1-T11](../../../08-planning/expansion-1-task-breakdown.md)에서 이 계약으로 교체했다.
 
 ## 2. API-MAP-001 지도 맛집 마커 조회
 
