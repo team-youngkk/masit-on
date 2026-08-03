@@ -1,12 +1,21 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { usePathname, useSearchParams } from 'next/navigation'
+import { Suspense, useEffect, useRef, useState } from 'react'
 
 import { useMemberSession } from '@/components/member/MemberSessionProvider'
+import { buildMapNavigationHref } from '@/lib/map/map-navigation'
 
 import { Brand } from './Brand'
 import styles from './SiteHeader.module.css'
+
+function MapNavigationLink() {
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  return <Link href={buildMapNavigationHref(pathname, searchParams)}>지도</Link>
+}
 
 export function SiteHeader() {
   const { status, logout } = useMemberSession()
@@ -51,7 +60,9 @@ export function SiteHeader() {
         </Link>
         <nav className={styles.nav} aria-label="주요 메뉴">
           <Link href="/restaurants">맛집 탐색</Link>
-          <Link href="/map">지도</Link>
+          <Suspense fallback={<Link href="/map">지도</Link>}>
+            <MapNavigationLink />
+          </Suspense>
           {status === 'loading' ? (
             <span className={styles.sessionLoading} aria-live="polite">
               로그인 확인 중
