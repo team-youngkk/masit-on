@@ -7,6 +7,8 @@ related_documents:
   - ../api/discovery/restaurant-discovery-api.md
   - ../api/discovery/creator-discovery-api.md
   - ../api/detail/restaurant-detail-api.md
+  - second-expansion-data-contract.md
+  - ../../07-adr/data/data-011-popular-restaurant-request-time-aggregation.md
 ---
 
 # 맛잇온 인덱스 전략
@@ -75,20 +77,31 @@ Creator 필터는 `visit`에서 고유 Restaurant ID를 구한 뒤 Restaurant의
 | `ix_favorite__member_favorited` | `(member_id, favorited_at DESC, restaurant_id)` | 현재 회원 찜 목록의 최신순·안정 정렬 |
 | `ix_recent_restaurant_view__member_viewed` | `(member_id, last_viewed_at DESC, restaurant_id)` | 최근 본 목록의 최신순·안정 정렬과 50건 초과 정리 대상 선택 |
 | `ix_recent_restaurant_view__cleanup_viewed` | `(last_viewed_at)` | 주기 cleanup Command의 30일 경과 기록 범위 삭제 |
-| `ix_restaurant__public_coordinate_bounds` | `(latitude, longitude) WHERE publication_status='PUBLIC' AND lifecycle_status='ACTIVE' AND latitude IS NOT NULL AND longitude IS NOT NULL` | WGS84 사각 bounds와 공개 지도 마커 조회 |
+| `ix_restaurant__public_coordinate_bounds` | `(latitude, longitude) WHERE publication_status='PUBLIC' AND lifecycle_status='ACTIVE' AND latitude IS NOT NULL AND longitude IS NOT NULL` | 과거 bounds 계약에서 생성된 적용 이력. 현재는 공개 지도 마커의 좌표 보유 후보 보조 인덱스이며 뷰포트 범위 조회를 계약하지 않는다. 실행계획 측정 없이 제거하지 않는다. |
 | `ix_member_action_mail_outbox__dispatch` | `(status, next_attempt_at, created_at) WHERE status='PENDING'` | 잠금 가능한 메일 dispatch 후보 선택 |
 | `ix_member_deletion_job__next_attempt` | `(next_attempt_at, requested_at)` | 탈퇴 정리 재시도 후보 선택 |
 | `ix_member_session_revocation_recovery__next_attempt` | `(next_attempt_at, expires_at)` | `sid` 폐기 표식 보상 후보 선택 |
 
 `favorite`와 `recent_restaurant_view`의 복합 PK는 각각 중복 찜 방지와 upsert 충돌 키를 제공한다. Creator 상세는 PK 한 건 조회이므로 V6 표시 열만을 위한 별도 인덱스를 만들지 않는다.
 
-## 6. 통계와 검증
+## 6. 2차 확장 인덱스
+
+2차 확장 인덱스의 정확한 이름·열·partial 조건은 [2차 확장 데이터 계약](second-expansion-data-contract.md)을 따른다. 핵심 추가는 다음과 같다.
+
+- `favorite(restaurant_id, member_id)` 역방향 인덱스로 실시간 인기 집계를 지원한다.
+- 개인 컬렉션은 회원·최근 수정, 구성은 컬렉션·추가 최신순으로 인덱싱한다.
+- 공개 큐레이션 메인 위치는 지연 가능한 상태·위치 unique, 구성 위치는 큐레이션별 unique로 강제한다.
+- 제보·신고는 열린 중복 partial unique와 회원 목록·관리자 오래된 큐·식별 제거 인덱스를 분리한다.
+- 알림은 요청·상태 partial unique, 회원 최신순·미읽음 partial·cleanup 인덱스를 둔다.
+- 멱등 기록은 만료 시각 인덱스를 둔다.
+
+## 7. 통계와 검증
 
 - Flyway 적용 후 `ANALYZE`를 수동 DDL로 넣지 않는다. 테스트 fixture 적재 뒤 테스트가 명시적으로 `ANALYZE`한다.
 - CI 성능 smoke test는 공개/비공개, 관계 없음, Creator당 복수 Video, Video당 복수 Restaurant를 포함한다.
 - 핵심 쿼리는 예상 인덱스 이름만 단정하지 않고 결과·쿼리 수·상한 시간과 실행계획의 sequential scan 규모를 함께 검토한다.
 - 초기 데이터가 작아 planner가 sequential scan을 고르는 것은 오류가 아니다.
 
-## 7. 운영 점검
+## 8. 운영 점검
 
 출시 후 `pg_stat_user_indexes`로 사용 횟수와 크기를 확인한다. 장기간 미사용 인덱스도 즉시 삭제하지 않고 쿼리 빈도·FK 보조 역할을 확인한 뒤 전진 마이그레이션으로 제거한다. 인덱스 추가·제거는 운영 수동 DDL이 아니라 Flyway만 사용한다.

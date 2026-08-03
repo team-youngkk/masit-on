@@ -18,6 +18,7 @@ related_documents:
   - ../../07-adr/security/auth-003-confirmation-token.md
   - ../../07-adr/data/data-007-uuid-v4-identifiers.md
   - ../../07-adr/data/data-008-publication-lifecycle-soft-delete.md
+  - second-expansion-data-contract.md
 ---
 
 # 맛잇온 물리 데이터 모델
@@ -113,7 +114,7 @@ erDiagram
 - Visit 생성 전 Video의 `creator_id`가 null이면 같은 트랜잭션에서 검증된 Creator로 연결한다.
 - `visit(video_id, creator_id)`는 `video(id, creator_id)`를 참조한다. 따라서 Visit.Creator와 Video.Creator가 DB에서도 같아야 한다.
 - Visit는 `(restaurant_id, creator_id, video_id)` 복합 유일이다.
-- FK는 모두 `RESTRICT`다. 공개·삭제 전파는 애플리케이션 상태 판정으로 처리하고 행 삭제로 전파하지 않는다.
+- Restaurant·Creator·Video·Visit 등 핵심 공개 데이터 FK는 `RESTRICT`다. 회원 소유 관계와 2차 확장 FK의 `CASCADE/SET NULL` 예외는 각 생명주기 계약에 명시하며 [2차 확장 데이터 계약](second-expansion-data-contract.md)을 따른다.
 
 ## 6. 트랜잭션 규칙
 
@@ -143,3 +144,5 @@ erDiagram
 - 부분 일치 검색이 실제 실행계획에서 병목이 되어 `pg_trgm` 도입 근거가 생길 때
 - UUID 삽입 지역성 또는 인덱스 크기가 측정된 병목이 될 때
 - 전국·계층 지역, 다중 카테고리, 한 방문의 복수 근거 영상이 범위에 포함될 때
+
+2차 확장의 추가 테이블·다형 참조·지연 가능 unique·cleanup은 [2차 확장 데이터 계약](second-expansion-data-contract.md)이 이 문서의 물리 컨벤션을 확장한다.

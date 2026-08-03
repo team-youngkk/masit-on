@@ -11,6 +11,8 @@ related_documents:
   - ../07-adr/data/data-005-redis-refresh-token.md
   - ../07-adr/security/sec-001-secrets-workload-identity.md
   - ../07-adr/platform/web-003-routing-boundary.md
+  - ../07-adr/platform/deploy-003-validation-cookie-session.md
+  - ../05-specs/api/common/validation-access-contract.md
 ---
 
 # 보안 경계
@@ -24,6 +26,8 @@ related_documents:
 Spring Security Filter Chain은 인증과 역할 인가를 담당한다. Controller와 Domain이 JWT를 직접 파싱하지 않는다.
 
 ## 2. 요청 유형별 경계
+
+검증 참여자 제한 공개는 서비스 권한보다 앞선 임시 운영 진입 경계다. `__Host-masiton-verification` HttpOnly 쿠키를 Nginx `auth_request`와 내부 Spring Adapter가 확인하며, 회원·관리자 Principal을 만들지 않는다. 검증 쿠키가 유효해도 각 보호 API는 기존 회원·관리자 Bearer JWT를 다시 검증한다. Basic Auth와 `WWW-Authenticate: Basic`은 사용하지 않는다.
 
 | 요청 | 인증 | 역할 | Application 추가 검증 |
 |---|---|---|---|
@@ -133,6 +137,7 @@ URL은 HTTPS와 허용 호스트를 검증하고 리디렉션 최종 호스트�
 - Kakao·YouTube API Key
 - Redis Token 검증 값
 - Authorization·Cookie 헤더
+- 검증 참여자 비밀번호와 검증 세션 ID·Redis key
 - 외부 제공자 원문 오류 본문
 
 오류 응답에는 안정된 코드, 일반화된 메시지, 안전한 필드 오류와 `traceId`만 제공한다. 로그인 실패 시 계정 존재 여부를 구분하지 않는다.
@@ -181,4 +186,5 @@ URL은 HTTPS와 허용 호스트를 검증하고 리디렉션 최종 호스트�
 - 확인 Token 원문·후보 Snapshot 로그 미노출
 - Refresh Token 회전·재사용·로그아웃·Redis 장애
 - 비밀번호·Token·API Key 로그 미노출
+- 검증 쿠키와 회원·관리자 Bearer 동시 사용, 7일 만료·폐기·Redis 장애·반복 인증창 0회
 - 비공개 자원의 공개 조회 404와 관리자 Visit 참조 422

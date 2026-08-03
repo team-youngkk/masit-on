@@ -4,6 +4,7 @@ related_documents:
   - ext-001-reference-verification.md
   - ../architecture/arch-002-external-ports-adapters.md
   - ../../05-specs/api/admin/reference-data-api.md
+  - notify-002-in-app-notification-reliability.md
 ---
 
 # 외부 연동 ADR
@@ -13,4 +14,4 @@ related_documents:
 | ADR | 제목 |
 |---|---|
 | [ADR-EXT-001](ext-001-reference-verification.md) | 관리자 외부 기준정보 확인 서비스 |
-
+| [ADR-NOTIFY-002](notify-002-in-app-notification-reliability.md) | 서비스 내 사용자 알림의 저장 신뢰성 경계 |

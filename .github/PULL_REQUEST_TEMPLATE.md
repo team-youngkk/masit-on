@@ -73,7 +73,8 @@ Closes #
 - [ ] 실제 외부 API와 운영 비밀정보를 사용하지 않았다.
 - [ ] 최소 두 명의 승인을 받았고 대상 브랜치의 병합 방식을 지켰다.
 
-<!-- 병합 방식: feature·fix → develop 은 일반 Merge, develop → main 만 Squash Merge -->
+<!-- 병합 방식: feature·fix 등 작업 브랜치 → develop 은 Squash Merge, develop → main 은 Create a merge commit -->
+<!-- 정상적인 develop → main Merge 뒤에는 커밋 수 차이만을 이유로 main → develop 역동기화 PR을 만들지 않는다. main 전용 Hotfix가 있을 때만 역동기화한다. -->
 
 <!-- PR 본문과 커밋 메시지에 AI 도구 생성 표기를 남기지 않는다.
      "Generated with Claude Code" 같은 문구와 도구 서명·배지를 넣지 않는다. -->

@@ -176,7 +176,7 @@ WireMock 포트를 바꿨다면 `KAKAO_BASE_URL`, `YOUTUBE_BASE_URL`도 같이 �
 - `main`(배포 기준) / `develop`(통합). 둘 다 직접 push 금지.
 - 브랜치는 최신 `develop`에서 분기. `feature/ws-{번호}-{기능명}`, `fix/{기능명}`.
 - Workstream 번호가 없는 기반 Task는 `feature/t-{번호}-{작업명}`, 그 밖의 작업은 커밋 유형과 같은 접두사(`docs/`, `chore/`, `build/`, `ci/`, `test/`, `refactor/`)를 쓴다.
-- `feature`→`develop`은 일반 Merge, `develop`→`main`만 Squash Merge.
+- `feature/**`를 포함한 작업 브랜치→`develop`은 Squash Merge, `develop`→`main`은 Create a merge commit. 정상 릴리즈 뒤에는 커밋 수 차이만 해소하려는 `main`→`develop` 역동기화를 하지 않고, `main` 전용 Hotfix가 있을 때만 PR로 역동기화한다.
 - Conventional Commits (`feat`, `fix`, `test`, `refactor`, `docs`, `build`, `ci`, `chore`). 예: `feat: 맛집 목록 조회 구현`
 - 모든 변경은 PR로 병합하고 작성자를 제외한 **최소 2명 승인**이 필요하다. AI가 작성한 코드도 동일하다.
 - 위 규칙은 저장소 ruleset `Protect main`·`Protect develop`으로 강제한다. **예외 대상(`bypass_actors`)이 비어 있어 admin 권한 보유자도 우회할 수 없다.** 강제 항목은 다음과 같다.
@@ -188,7 +188,7 @@ WireMock 포트를 바꿨다면 `KAKAO_BASE_URL`, `YOUTUBE_BASE_URL`도 같이 �
 | CI 실행 기준 | 최신 대상 브랜치와 합친 상태. 뒤처진 브랜치는 갱신 후 재검사해야 병합된다 |
 | 새 커밋 push 시 | 기존 승인 무효화 |
 | 미해결 리뷰 스레드 | 병합 차단 |
-| 허용 병합 방식 | `develop`은 Merge, `main`은 Squash |
+| 허용 병합 방식 | `develop` 대상 작업 PR은 Squash, `main` 대상 `develop` 승격 PR은 Merge Commit |
 | force push, 브랜치 삭제 | 금지 |
 
 - 필수 상태 검사 이름은 [CI 워크플로](.github/workflows/ci.yml)의 job 이름과 문자 그대로 일치해야 한다. **job 이름을 바꾸면 ruleset도 같은 PR에서 바꾼다.** 그러지 않으면 필수 검사가 영원히 대기 상태로 남아 병합이 막힌다.

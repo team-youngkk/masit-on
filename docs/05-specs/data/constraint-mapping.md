@@ -5,6 +5,7 @@ related_documents:
   - lifecycle-rules.md
   - physical-data-model.md
   - table-definitions.md
+  - second-expansion-data-contract.md
 ---
 
 # 맛잇온 제약 매핑
@@ -129,3 +130,7 @@ PostgreSQL의 `UNIQUE`는 이미 동일 컬럼 B-tree 인덱스를 만든다. �
 ## 7. DB가 강제하지 않는 규칙
 
 외부 사실, 참조 대상의 현재 공개·활성 상태, `기타` 의미, 실제 방문 장면, 후보 Snapshot 스키마 내용, 결과 자원의 다형 참조는 애플리케이션과 통합 테스트가 보장한다. DB 제약으로 옮길 수 없는 이유가 사라지면 새 마이그레이션으로 강화한다.
+
+## 8. 2차 확장 제약 라우팅
+
+2차 확장의 명명된 PK·FK·UK·CHECK, 애플리케이션 행 잠금과 상태-이력-알림 원자성은 [2차 확장 데이터 계약](second-expansion-data-contract.md)을 따른다. 특히 다형 신고 대상·처리 결과의 존재, 요청과 알림의 회원 일치는 애플리케이션 검증이며, 열린 요청·상태 이력·알림 중복은 partial unique로 최종 강제한다.

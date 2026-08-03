@@ -114,7 +114,7 @@ Admin은 독립 비즈니스 도메인이 아니다. 인증과 등록 흐름을 
 - `GET /api/creators`: 공개 Creator의 식별자와 표시 이름을 조회한다.
 - `GET /api/restaurants/{restaurantId}`: Restaurant 기본 정보에 공개 Visit를 통해 Creator와 Video 표시 정보를 결합한다.
 - `GET /api/me/favorites`, `GET /api/me/recent-restaurants`: Favorite·RecentRestaurantView를 공개 Restaurant와 결합해 최신순 페이지 목록을 만든다.
-- `GET /api/restaurants/map-points`: Restaurant의 공개 상태와 nullable WGS84 좌표를 bounds와 AND 결합한다.
+- `GET /api/restaurants/map-points`: Restaurant의 공개 상태·nullable WGS84 좌표와 이름·자치구·카테고리·유튜버 조건을 결합한다. 지도 뷰포트는 데이터 조회 조건이 아니다.
 - `GET /api/creators/{creatorId}`: Creator의 저장된 채널 표시 정보와 공개·유효 Visit 관계를 결합한다.
 - `remainingVisitedByCount`, `contentStatus`, 페이지 메타데이터는 영속 속성이 아니다.
 - `channelName`은 Video에 중복 저장해 조회하는 값이 아니라 게시 Creator에서 얻는 것을 기본 원칙으로 한다. 외부 확인 당시 원문 보관이 필요하면 별도 이력 요구를 먼저 확정한다.
@@ -144,7 +144,8 @@ Restaurant, Creator, Video와 Visit는 일반 사용자 노출을 위한 publica
 
 - 삭제·비공개 전환은 별도 운영 명령으로 수행하고 논리 삭제 데이터는 자동 purge 없이 보존한다.
 - 외부 표시 메타데이터는 최신값만 유지하고 변경 이력을 저장하지 않는다.
-- 회원 요청·로그인 제한은 Redis 회원 namespace에 저장하고, key에는 정규화 이메일·클라이언트 주소 대신 용도 분리 `rateLimitSecret`의 HMAC-SHA-256 hex만 사용한다. Refresh Token의 Redis 키·검증값·정리 전략은 인증 ADR을 따른다.
+- 회원 요청·로그인 제한과 이메일 인증 코드의 요청 출처당 10분 10회 제출 제한은 Redis 회원 namespace에 저장하고, key에는 정규화 이메일·클라이언트 주소 대신 용도 분리 `rateLimitSecret`의 HMAC-SHA-256 hex만 사용한다. Refresh Token의 Redis 키·검증값·정리 전략은 인증 ADR을 따른다.
+- 제한 공개 검증 세션은 Redis `auth:verification:` namespace에 세션 ID의 SHA-256 해시와 7일 고정 만료만 저장한다. 회원·관리자 ID·권한·Refresh Token과 결합하지 않으며 정식 공개 시 namespace 전체를 제거한다.
 - 검색 인덱스와 추가 동시성 제어는 확정 부하·데이터 규모의 성능 측정에서 병목이 확인될 때만 활성화한다.
 
 상세 상태와 우선순위는 [data-review.md](data-review.md)에 기록한다.

@@ -2,6 +2,9 @@
 related_documents:
   - domain-boundaries.md
   - mvp-workstreams.md
+  - first-expansion-workstreams.md
+  - second-expansion-domain-boundaries.md
+  - second-expansion-workstreams.md
   - ../01-requirements/functional-requirements.md
   - ../01-requirements/business-rules.md
   - ../03-team/roles.md
@@ -25,6 +28,9 @@ related_documents:
 
 1. [도메인 경계](domain-boundaries.md): Restaurant·Creator·Video·Visit의 책임, 소유 규칙, 협업 관계와 의존 방향
 2. [MVP Workstream](mvp-workstreams.md): WS-01~WS-04의 범위, 요구사항 배정, 의존 관계와 병렬 개발 전략
+3. [1차 확장 Workstream](first-expansion-workstreams.md): WS-05~WS-08의 회원·개인화·지도·유튜버 상세 책임과 `OPS-VALIDATION` 공통 운영·배포 트랙
+4. [2차 확장 도메인 경계](second-expansion-domain-boundaries.md): 컬렉션·인기·큐레이션·참여·알림 책임과 패키지 결정 게이트
+5. [2차 확장 Workstream](second-expansion-workstreams.md): WS-09~WS-13의 범위와 담당자·리뷰어
 
 `mvp-workstreams.md`는 `domain-boundaries.md`를 입력으로 사용한다. 순서를 바꿔 읽으면 Workstream이 왜 그렇게 잘렸는지 이해하기 어렵다.
 
@@ -43,6 +49,16 @@ related_documents:
 | [WS-02](mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) | 맛집 상세·콘텐츠 조회 | 박진영 |
 | [WS-03](mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) | 유튜버 기반 탐색·Visit 판정 | 이우람 |
 | [WS-04](mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 관리자 인증·데이터 등록 | 김인안 |
+| [WS-05](first-expansion-workstreams.md#4-ws-05-사용자-계정인증) | 사용자 계정·인증 | 김인안 |
+| [WS-06](first-expansion-workstreams.md#5-ws-06-개인-맛집-관리) | 개인 맛집 관리 | 박진영 |
+| [WS-07](first-expansion-workstreams.md#6-ws-07-지도-탐색) | 지도 탐색 | 양성훈 |
+| [WS-08](first-expansion-workstreams.md#7-ws-08-유튜버-상세) | 유튜버 상세 | 이우람 |
+| [OPS-VALIDATION](first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙) | 검증 참여자 제한 공개 진입 경계 — 정식 공개 시 종료 | 이우람 |
+| [WS-09](second-expansion-workstreams.md#4-ws-09-개인-컬렉션) | 개인 컬렉션 | 박진영 |
+| [WS-10](second-expansion-workstreams.md#5-ws-10-인기-맛집) | 인기 맛집 | 양성훈 |
+| [WS-11](second-expansion-workstreams.md#6-ws-11-관리자-큐레이션) | 관리자 큐레이션 | 김인안 |
+| [WS-12](second-expansion-workstreams.md#7-ws-12-제보신고-검토) | 제보·신고 검토 | 김인안 |
+| [WS-13](second-expansion-workstreams.md#8-ws-13-사용자-알림) | 사용자 알림 | 이우람 |
 
 ## 5. 사용 시 주의
 

@@ -10,6 +10,9 @@ related_documents:
   - relationship-rules.md
   - constraints.md
   - ../../07-adr/adr-traceability.md
+  - ../../08-planning/second-expansion-test-matrix.md
+  - ../../08-planning/expansion-2-implementation-plan.md
+  - ../../08-planning/expansion-2-task-breakdown.md
   - ../../04-product/prd/discovery/restaurant-discovery.md
   - ../../04-product/prd/discovery/creator-discovery.md
   - ../../04-product/prd/detail/restaurant-detail.md
@@ -26,6 +29,13 @@ related_documents:
   - table-definitions.md
   - constraint-mapping.md
   - index-strategy.md
+  - second-expansion-data-contract.md
+  - ../../02-analysis/second-expansion-workstreams.md
+  - ../api/personal/personal-collection-api.md
+  - ../api/discovery/popular-restaurant-api.md
+  - ../api/curation/curation-api.md
+  - ../api/participation/submission-report-api.md
+  - ../api/notification/notification-api.md
   - migration-plan.md
   - seed-data-plan.md
   - ../../07-adr/data/data-007-uuid-v4-identifiers.md
@@ -144,17 +154,46 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 | 최근 본 맛집 | `FR-RECENT-001`~`003`, `API-PERSONAL-005`~`006`, 공개 상세 부수효과 | `recent_restaurant_view` | 복합 PK upsert·최신 시각순·50건 상한, 주기 cleanup Command의 30일 물리 삭제, GET은 읽기 전용 | WS-06 |
 | 지도 탐색 | `FR-MAP-001`~`002`, `API-MAP-001` | `restaurant.latitude`, `restaurant.longitude` | nullable WGS84 쌍, 범위 CHECK, 좌표 없음은 지도에서만 제외 | WS-07 |
 | 유튜버 상세 | `FR-CREATOR-004`~`006`, `API-CREATOR-DETAIL-001`~`003` | `creator.profile_image_url`, `description`, `handle`과 기존 Creator·Visit·Video | 선택값은 null 또는 유효한 값, 사용자 조회 중 외부 API 호출 없음 | WS-08 |
+| 검증 참여자 제한 공개 | `API-VALIDATION-001`~`002`, `ADR-DEPLOY-003` | Redis `auth:verification:` 세션·실패 제한 | 128-bit 이상 세션 원문의 SHA-256 해시, 7일 고정 만료, 회원·관리자 인증과 분리, 정식 공개 시 전체 제거 | [OPS-VALIDATION](../../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙) |
 
 각 물리 계약은 [테이블 정의](table-definitions.md#13-1차-확장-v3v5-데이터-계약), [제약조건](constraints.md), [인덱스 전략](index-strategy.md#5-1차-확장-인덱스), [생명주기 규칙](lifecycle-rules.md#101-회원-개인화-관계-정리), [마이그레이션 계획](migration-plan.md#9-1차-확장-전진-마이그레이션-순서)을 함께 따른다.
 
-## 10. 미매핑 항목
+## 10. 2차 확장 데이터 추적
+
+| 범위 | 요구사항·API | 저장·파생 데이터 | 핵심 제약·생명주기 | Workstream |
+|---|---|---|---|---|
+| 개인 컬렉션 | `FR-COLLECTION-001~006`, `API-COLLECTION-001~007` | `personal_collection`, `collection_restaurant` | 회원 소유, 복합 PK, 20/100 상한, 고정 정렬, 탈퇴 CASCADE | WS-09 |
+| 인기 맛집 | `FR-POPULAR-001`, `API-POPULAR-001` | 기존 `favorite` 실시간 집계, 순위 비저장 | 현재 찜 1건 이상, 상위 20, Restaurant 공개 상태 | WS-10 |
+| 큐레이션 | `FR-CURATION-001~004`, `API-CURATION-001~009` | `curation`, `curation_restaurant` | `DRAFT/PUBLISHED`, 메인 5·구성 20, 위치 고유, 관리자 감사 | WS-11 |
+| 제보 | `FR-SUBMISSION-001~003`, 회원·관리자 제보 API | `submission`, `moderation_history` | 열린 지문 중복, 합산 일일 제한, 상태 이력, 1년 뒤 회원 연결 제거 | WS-12 |
+| 신고 | `FR-REPORT-001~003`, 회원·관리자 신고 API | `report`, `moderation_history` | 열린 대상·유형 중복, 자동 비공개 없음, 상태 이력, 1년 뒤 회원 연결 제거 | WS-12 |
+| 사용자 알림 | `FR-NOTIFICATION-001~004`, `API-NOTIFICATION-001~004` | `notification`, 미읽음 수 파생 | 요청·상태 고유, 상태와 원자 저장, 90일/최신 200개 중 넓은 보존, 탈퇴 CASCADE | WS-13 |
+| 생성 멱등성 | 2차 확장 공통 API 계약 | `idempotency_record` | 주체·scope·키 해시 고유, 성공과 원자 저장, 24시간 삭제 | 공통 인증/플랫폼 |
+
+전체 컬럼·인덱스·동시성·삭제 정책과 V3 순서는 [2차 확장 데이터 계약](second-expansion-data-contract.md)을 따른다. `PopularityMetric/Snapshot`, `NotificationPreference`, `DeviceToken`은 승인 범위에 없어 미매핑이 아니라 명시적인 비저장 개념이다.
+
+### 10.1 2차 확장 데이터 → ADR·테스트·Task 검증
+
+| 데이터 범위 | 소유 요구사항·API | ADR 또는 명시적 보류 | Workstream | 테스트 | E2 Task |
+|---|---|---|---|---|---|
+| `personal_collection`, `collection_restaurant` | `FR-COLLECTION-001~006`, `API-COLLECTION-001~007` | 기존 인증·PostgreSQL·Flyway ADR; 공유·순서 열 제외 | WS-09 | [`TST-E2-COL-001`](../../08-planning/second-expansion-test-matrix.md), `TST-E2-LIFE-001` | [`E2-T01`](../../08-planning/expansion-2-task-breakdown.md)~`E2-T03`, `E2-T14` |
+| 기존 `favorite` 요청 시 집계 | `FR-POPULAR-001`, `API-POPULAR-001` | [ADR-DATA-011](../../07-adr/data/data-011-popular-restaurant-request-time-aggregation.md); 집계 테이블·Snapshot·캐시 비저장 | WS-10 | [`TST-E2-POP-001`](../../08-planning/second-expansion-test-matrix.md), `TST-E2-PERF-001` | [`E2-T01`](../../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T04`, `E2-T05`, `E2-T14` |
+| `curation`, `curation_restaurant` | `FR-CURATION-001~004`, `API-CURATION-001~009` | 기존 관리자 인증·PostgreSQL ADR; 예약·추천·이미지 열 제외 | WS-11 | [`TST-E2-CUR-001`](../../08-planning/second-expansion-test-matrix.md), `TST-E2-PERF-001` | [`E2-T01`](../../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T06`, `E2-T07`, `E2-T14` |
+| `submission`, `moderation_history` | `FR-SUBMISSION-001~003`, 회원·관리자 제보 API | [ADR-DATA-012](../../07-adr/data/data-012-second-expansion-retention-cleanup.md), [ADR-NOTIFY-002](../../07-adr/integration/notify-002-in-app-notification-reliability.md) | WS-12 | [`TST-E2-SUB-001`](../../08-planning/second-expansion-test-matrix.md), `TST-E2-ATOMIC-001`, `TST-E2-LIFE-001` | [`E2-T01`](../../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T08`, `E2-T09`, `E2-T11`, `E2-T14` |
+| `report`, `moderation_history` | `FR-REPORT-001~003`, 회원·관리자 신고 API | [ADR-DATA-012](../../07-adr/data/data-012-second-expansion-retention-cleanup.md), [ADR-NOTIFY-002](../../07-adr/integration/notify-002-in-app-notification-reliability.md) | WS-12 | [`TST-E2-REP-001`](../../08-planning/second-expansion-test-matrix.md), `TST-E2-ATOMIC-001`, `TST-E2-LIFE-001` | [`E2-T01`](../../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T08`, `E2-T09`, `E2-T11`, `E2-T14` |
+| `notification` | `FR-NOTIFICATION-001~004`, `API-NOTIFICATION-001~004` | [ADR-NOTIFY-002](../../07-adr/integration/notify-002-in-app-notification-reliability.md), [ADR-DATA-012](../../07-adr/data/data-012-second-expansion-retention-cleanup.md); Preference·DeviceToken 비저장 | WS-13 | [`TST-E2-NOT-001`](../../08-planning/second-expansion-test-matrix.md), `TST-E2-ATOMIC-001`, `TST-E2-LIFE-001` | [`E2-T01`](../../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T10`, `E2-T11`, `E2-T14` |
+| `idempotency_record` | 2차 확장 생성 API 공통 계약 | [ADR-DATA-012](../../07-adr/data/data-012-second-expansion-retention-cleanup.md); 24시간 독립 cleanup | 공통 인증/플랫폼 | 각 기능 계약 테스트, `TST-E2-LIFE-001` | [`E2-T01`](../../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T14` |
+
+V3 전진 적용과 전체 FK·UNIQUE·CHECK·인덱스는 `TST-E2-E2E-001`, `E2-T14`에서 최종 회귀한다. `DeviceToken`·`NotificationPreference`와 푸시용 `E2-T12`는 현재 없다.
+
+## 11. 미매핑 항목
 
 - Restaurant 설명·대표 이미지·영업 정보는 확정 요구사항/API가 없어 저장 모델에서 제외했다.
 - Creator 구독자 수·조회 수 같은 통계와 Video 게시일의 외부 API 노출, Visit 방문일·검증 상태·검증자는 저장 모델에서 제외하거나 선택 데이터다. V6 상세 표시 필드인 Creator 프로필 이미지·소개·handle은 저장 계약에 포함한다.
 - 수정·삭제·승인·보류 목록 API가 없으므로 관련 운영 전환은 API 변경으로 만들지 않았다.
 - 로그인 실패 제한 카운터는 저장 방식이 미정이다. 확인 Token은 PostgreSQL 단기 기술 테이블로 확정됐지만 핵심 도메인 ERD에는 포함하지 않는다.
 
-## 11. 변경 영향 추적
+## 12. 변경 영향 추적
 
 - 지역 단계·범위 변경: Region, Restaurant, 탐색/등록 API와 [BR-RESTAURANT-005](../../01-requirements/business-rules.md#br-restaurant-005-맛집의-지역-소속)를 함께 검토한다.
 - 다중 카테고리 변경: Restaurant–FoodCategory 카디널리티, 필터 API와 [BR-RESTAURANT-004](../../01-requirements/business-rules.md#br-restaurant-004-대표-음식-카테고리)를 함께 변경한다.

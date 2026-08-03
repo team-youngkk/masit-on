@@ -20,13 +20,22 @@ related_documents:
   - prd/personal/personal-restaurant-management.md
   - prd/discovery/map-discovery.md
   - prd/detail/creator-detail.md
+  - prd/personal/personal-collection.md
+  - prd/discovery/popular-restaurants.md
+  - prd/curation/admin-curation.md
+  - ../02-analysis/second-expansion-workstreams.md
+  - prd/participation/user-submission-report.md
+  - prd/notification/user-notification.md
+  - ../08-planning/second-expansion-test-matrix.md
+  - ../08-planning/expansion-2-implementation-plan.md
+  - ../08-planning/expansion-2-task-breakdown.md
 ---
 
 # 맛잇온 PRD 추적성
 
 ## 1. 문서 목적
 
-맛잇온 MVP의 기능 요구사항, 비즈니스 규칙, NFR, Workstream과 담당자를 PRD에 연결한다. 원문 정의는 각 기준 문서가 소유하며 이 문서는 배정과 변경 영향을 관리한다.
+맛잇온 MVP와 단계별 확장의 기능 요구사항, 비즈니스 규칙, NFR, Workstream과 담당자를 PRD에 연결한다. 원문 정의는 각 기준 문서가 소유하며 이 문서는 배정과 변경 영향을 관리한다.
 
 ## 2. 기능 PRD 목록
 
@@ -93,12 +102,52 @@ related_documents:
 | [FR-RECENT-002](../01-requirements/functional-requirements.md#fr-recent-002-최근-본-맛집-목록-조회) | 최근 본 맛집 목록 조회 | [PRD-PERSONAL-001](prd/personal/personal-restaurant-management.md) | 없음 | [WS-06](../02-analysis/first-expansion-workstreams.md#5-ws-06-개인-맛집-관리) | 박진영 |
 | [FR-RECENT-003](../01-requirements/functional-requirements.md#fr-recent-003-최근-본-맛집-개별-삭제) | 최근 본 맛집 개별 삭제 | [PRD-PERSONAL-001](prd/personal/personal-restaurant-management.md) | 없음 | [WS-06](../02-analysis/first-expansion-workstreams.md#5-ws-06-개인-맛집-관리) | 박진영 |
 | [FR-MAP-001](../01-requirements/functional-requirements.md#fr-map-001-kakao-지도와-맛집-마커-표시) | Kakao 지도와 맛집 마커 표시 | [PRD-DISCOVERY-003](prd/discovery/map-discovery.md) | [PRD-DISCOVERY-001](prd/discovery/restaurant-discovery.md) | [WS-07](../02-analysis/first-expansion-workstreams.md#6-ws-07-지도-탐색) | 양성훈 |
-| [FR-MAP-002](../01-requirements/functional-requirements.md#fr-map-002-지도-영역과-탐색-조건-조합-조회) | 지도 영역과 탐색 조건 조합 조회 | [PRD-DISCOVERY-003](prd/discovery/map-discovery.md) | [PRD-DISCOVERY-001](prd/discovery/restaurant-discovery.md), [PRD-DISCOVERY-002](prd/discovery/creator-discovery.md) | [WS-07](../02-analysis/first-expansion-workstreams.md#6-ws-07-지도-탐색) | 양성훈 |
+| [FR-MAP-002](../01-requirements/functional-requirements.md#fr-map-002-지도-영역과-탐색-조건-조합-조회) | 지도 이동과 탐색 결과 유지 | [PRD-DISCOVERY-003](prd/discovery/map-discovery.md) | [PRD-DISCOVERY-001](prd/discovery/restaurant-discovery.md), [PRD-DISCOVERY-002](prd/discovery/creator-discovery.md) | [WS-07](../02-analysis/first-expansion-workstreams.md#6-ws-07-지도-탐색) | 양성훈 |
 | [FR-CREATOR-004](../01-requirements/functional-requirements.md#fr-creator-004-유튜버-상세-정보-조회) | 유튜버 상세 정보 조회 | [PRD-DETAIL-002](prd/detail/creator-detail.md) | [PRD-DISCOVERY-002](prd/discovery/creator-discovery.md) | [WS-08](../02-analysis/first-expansion-workstreams.md#7-ws-08-유튜버-상세) | 이우람 |
 | [FR-CREATOR-005](../01-requirements/functional-requirements.md#fr-creator-005-유튜버의-방문-맛집-목록-조회) | 유튜버의 방문 맛집 목록 조회 | [PRD-DETAIL-002](prd/detail/creator-detail.md) | [PRD-DETAIL-001](prd/detail/restaurant-detail.md) | [WS-08](../02-analysis/first-expansion-workstreams.md#7-ws-08-유튜버-상세) | 이우람 |
 | [FR-CREATOR-006](../01-requirements/functional-requirements.md#fr-creator-006-유튜버의-근거-영상-목록-조회) | 유튜버의 근거 영상 목록 조회 | [PRD-DETAIL-002](prd/detail/creator-detail.md) | [PRD-DETAIL-001](prd/detail/restaurant-detail.md) | [WS-08](../02-analysis/first-expansion-workstreams.md#7-ws-08-유튜버-상세) | 이우람 |
 
 1차 확장 기능 요구사항 20개도 MVP와 동일하게 각각 정확히 하나의 주 PRD에 배정됐다. Workstream·담당자 배정은 [1차 확장 Workstream](../02-analysis/first-expansion-workstreams.md) 2절과 일치한다.
+
+### 3.3 2차 확장 PRD 목록
+
+| PRD ID | 문서 | Workstream | 담당자 | 기본 리뷰어 |
+|---|---|---|---|---|
+| [PRD-COLLECTION-001](prd/personal/personal-collection.md) | [개인 컬렉션](prd/personal/personal-collection.md) | [WS-09](../02-analysis/second-expansion-workstreams.md#4-ws-09-개인-컬렉션) | 박진영 | 김인안 |
+| [PRD-DISCOVERY-004](prd/discovery/popular-restaurants.md) | [인기 맛집](prd/discovery/popular-restaurants.md) | [WS-10](../02-analysis/second-expansion-workstreams.md#5-ws-10-인기-맛집) | 양성훈 | 박진영 |
+| [PRD-CURATION-001](prd/curation/admin-curation.md) | [관리자 큐레이션](prd/curation/admin-curation.md) | [WS-11](../02-analysis/second-expansion-workstreams.md#6-ws-11-관리자-큐레이션) | 김인안 | 양성훈 |
+| [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md) | [사용자 제보와 신고](prd/participation/user-submission-report.md) | [WS-12](../02-analysis/second-expansion-workstreams.md#7-ws-12-제보신고-검토) | 김인안 | 이우람 |
+| [PRD-NOTIFICATION-001](prd/notification/user-notification.md) | [사용자 알림](prd/notification/user-notification.md) | [WS-13](../02-analysis/second-expansion-workstreams.md#8-ws-13-사용자-알림) | 이우람 | 김인안 |
+
+인기 집계와 큐레이션은 생성 흐름·도메인·최종 책임자가 달라 별도 PRD와 Workstream으로 분리한다.
+
+### 3.4 2차 확장 요구사항 → PRD 매핑
+
+| 요구사항 ID | 기능 | 주 PRD | 보조 PRD | Workstream | 담당자 |
+|---|---|---|---|---|---|
+| [FR-COLLECTION-001](../01-requirements/functional-requirements.md#fr-collection-001-개인-컬렉션-생성) | 개인 컬렉션 생성 | [PRD-COLLECTION-001](prd/personal/personal-collection.md) | [PRD-ACCOUNT-001](prd/account/member-authentication.md) | [WS-09](../02-analysis/second-expansion-workstreams.md#4-ws-09-개인-컬렉션) | 박진영 |
+| [FR-COLLECTION-002](../01-requirements/functional-requirements.md#fr-collection-002-개인-컬렉션-이름-변경) | 개인 컬렉션 이름 변경 | [PRD-COLLECTION-001](prd/personal/personal-collection.md) | 없음 | WS-09 | 박진영 |
+| [FR-COLLECTION-003](../01-requirements/functional-requirements.md#fr-collection-003-개인-컬렉션-삭제) | 개인 컬렉션 삭제 | [PRD-COLLECTION-001](prd/personal/personal-collection.md) | 없음 | WS-09 | 박진영 |
+| [FR-COLLECTION-004](../01-requirements/functional-requirements.md#fr-collection-004-개인-컬렉션-조회) | 개인 컬렉션 조회 | [PRD-COLLECTION-001](prd/personal/personal-collection.md) | 없음 | WS-09 | 박진영 |
+| [FR-COLLECTION-005](../01-requirements/functional-requirements.md#fr-collection-005-컬렉션-맛집-추가) | 컬렉션 맛집 추가 | [PRD-COLLECTION-001](prd/personal/personal-collection.md) | [PRD-DETAIL-001](prd/detail/restaurant-detail.md) | WS-09 | 박진영 |
+| [FR-COLLECTION-006](../01-requirements/functional-requirements.md#fr-collection-006-컬렉션-맛집-제거) | 컬렉션 맛집 제거 | [PRD-COLLECTION-001](prd/personal/personal-collection.md) | 없음 | WS-09 | 박진영 |
+| [FR-POPULAR-001](../01-requirements/functional-requirements.md#fr-popular-001-인기-맛집-조회) | 인기 맛집 조회 | [PRD-DISCOVERY-004](prd/discovery/popular-restaurants.md) | [PRD-PERSONAL-001](prd/personal/personal-restaurant-management.md) | [WS-10](../02-analysis/second-expansion-workstreams.md#5-ws-10-인기-맛집) | 양성훈 |
+| [FR-CURATION-001](../01-requirements/functional-requirements.md#fr-curation-001-관리자-큐레이션-등록) | 관리자 큐레이션 등록 | [PRD-CURATION-001](prd/curation/admin-curation.md) | [PRD-ADMIN-001](prd/admin/admin-data-management.md) | [WS-11](../02-analysis/second-expansion-workstreams.md#6-ws-11-관리자-큐레이션) | 김인안 |
+| [FR-CURATION-002](../01-requirements/functional-requirements.md#fr-curation-002-관리자-큐레이션-수정) | 관리자 큐레이션 수정 | [PRD-CURATION-001](prd/curation/admin-curation.md) | [PRD-ADMIN-001](prd/admin/admin-data-management.md) | WS-11 | 김인안 |
+| [FR-CURATION-003](../01-requirements/functional-requirements.md#fr-curation-003-관리자-큐레이션-공개-관리) | 관리자 큐레이션 공개 관리 | [PRD-CURATION-001](prd/curation/admin-curation.md) | [PRD-ADMIN-001](prd/admin/admin-data-management.md) | WS-11 | 김인안 |
+| [FR-CURATION-004](../01-requirements/functional-requirements.md#fr-curation-004-공개-큐레이션-조회) | 공개 큐레이션 조회 | [PRD-CURATION-001](prd/curation/admin-curation.md) | 없음 | WS-11 | 김인안 |
+| [FR-SUBMISSION-001](../01-requirements/functional-requirements.md#fr-submission-001-사용자-제보-등록) | 사용자 제보 등록 | [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md) | [PRD-ACCOUNT-001](prd/account/member-authentication.md) | [WS-12](../02-analysis/second-expansion-workstreams.md#7-ws-12-제보신고-검토) | 김인안 |
+| [FR-SUBMISSION-002](../01-requirements/functional-requirements.md#fr-submission-002-사용자-제보-조회) | 사용자 제보 조회 | [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md) | 없음 | WS-12 | 김인안 |
+| [FR-SUBMISSION-003](../01-requirements/functional-requirements.md#fr-submission-003-관리자-제보-검토) | 관리자 제보 검토 | [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md) | [PRD-ADMIN-001](prd/admin/admin-data-management.md), [PRD-NOTIFICATION-001](prd/notification/user-notification.md) | WS-12 | 김인안 |
+| [FR-REPORT-001](../01-requirements/functional-requirements.md#fr-report-001-사용자-신고-등록) | 사용자 신고 등록 | [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md) | [PRD-ACCOUNT-001](prd/account/member-authentication.md) | WS-12 | 김인안 |
+| [FR-REPORT-002](../01-requirements/functional-requirements.md#fr-report-002-사용자-신고-조회) | 사용자 신고 조회 | [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md) | 없음 | WS-12 | 김인안 |
+| [FR-REPORT-003](../01-requirements/functional-requirements.md#fr-report-003-관리자-신고-검토) | 관리자 신고 검토 | [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md) | [PRD-ADMIN-001](prd/admin/admin-data-management.md), [PRD-NOTIFICATION-001](prd/notification/user-notification.md) | WS-12 | 김인안 |
+| [FR-NOTIFICATION-001](../01-requirements/functional-requirements.md#fr-notification-001-처리-상태-알림-생성) | 처리 상태 알림 생성 | [PRD-NOTIFICATION-001](prd/notification/user-notification.md) | [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md) | [WS-13](../02-analysis/second-expansion-workstreams.md#8-ws-13-사용자-알림) | 이우람 |
+| [FR-NOTIFICATION-002](../01-requirements/functional-requirements.md#fr-notification-002-사용자-알림-목록-조회) | 사용자 알림 목록 조회 | [PRD-NOTIFICATION-001](prd/notification/user-notification.md) | 없음 | WS-13 | 이우람 |
+| [FR-NOTIFICATION-003](../01-requirements/functional-requirements.md#fr-notification-003-사용자-알림-개별-읽음) | 사용자 알림 개별 읽음 | [PRD-NOTIFICATION-001](prd/notification/user-notification.md) | 없음 | WS-13 | 이우람 |
+| [FR-NOTIFICATION-004](../01-requirements/functional-requirements.md#fr-notification-004-사용자-알림-전체-읽음) | 사용자 알림 전체 읽음 | [PRD-NOTIFICATION-001](prd/notification/user-notification.md) | 없음 | WS-13 | 이우람 |
+
+2차 확장 기능 요구사항 21개는 각각 정확히 하나의 주 PRD에 배정됐다.
 
 ## 4. 비즈니스 규칙 → PRD 매핑
 
@@ -166,6 +215,37 @@ related_documents:
 
 표의 축약 ID [API-DISCOVERY-001](../05-specs/api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색), [DISCOVERY-002](prd/discovery/creator-discovery.md), [API-DETAIL-001](../05-specs/api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회), [ADMIN-001](prd/admin/admin-data-management.md), [PRODUCT-001](prd/00-product-overview.md)은 각각 동일 접두사의 `PRD-` ID를 뜻한다.
 
+### 4.1 2차 확장 비즈니스 규칙 → PRD 매핑
+
+| 규칙 ID | 규칙 | 주 PRD | 영향 PRD | 담당자 |
+|---|---|---|---|---|
+| [BR-COLLECTION-001](../01-requirements/business-rules.md#br-collection-001-소유권과-비공개-경계) | 소유권과 비공개 경계 | [PRD-COLLECTION-001](prd/personal/personal-collection.md) | [PRD-ACCOUNT-001](prd/account/member-authentication.md) | 박진영 |
+| [BR-COLLECTION-002](../01-requirements/business-rules.md#br-collection-002-맛집-관계의-고유성과-상한) | 맛집 관계의 고유성과 상한 | [PRD-COLLECTION-001](prd/personal/personal-collection.md) | 없음 | 박진영 |
+| [BR-COLLECTION-003](../01-requirements/business-rules.md#br-collection-003-정렬과-직접-순서-변경-제외) | 정렬과 직접 순서 변경 제외 | [PRD-COLLECTION-001](prd/personal/personal-collection.md) | 없음 | 박진영 |
+| [BR-COLLECTION-004](../01-requirements/business-rules.md#br-collection-004-맛집-공개-상태) | 맛집 공개 상태 | [PRD-COLLECTION-001](prd/personal/personal-collection.md) | [PRD-PRODUCT-001](prd/00-product-overview.md) | 박진영 |
+| [BR-COLLECTION-005](../01-requirements/business-rules.md#br-collection-005-삭제와-회원-탈퇴) | 삭제와 회원 탈퇴 | [PRD-COLLECTION-001](prd/personal/personal-collection.md) | [PRD-ACCOUNT-001](prd/account/member-authentication.md) | 박진영 |
+| [BR-POPULAR-001](../01-requirements/business-rules.md#br-popular-001-인기-신호와-집계-기간) | 인기 신호와 집계 기간 | [PRD-DISCOVERY-004](prd/discovery/popular-restaurants.md) | [PRD-PERSONAL-001](prd/personal/personal-restaurant-management.md) | 양성훈 |
+| [BR-POPULAR-002](../01-requirements/business-rules.md#br-popular-002-포함-대상과-안정-정렬) | 포함 대상과 안정 정렬 | [PRD-DISCOVERY-004](prd/discovery/popular-restaurants.md) | 없음 | 양성훈 |
+| [BR-POPULAR-003](../01-requirements/business-rules.md#br-popular-003-실시간-집계와-반영) | 실시간 집계와 반영 | [PRD-DISCOVERY-004](prd/discovery/popular-restaurants.md) | [PRD-PERSONAL-001](prd/personal/personal-restaurant-management.md) | 양성훈 |
+| [BR-CURATION-001](../01-requirements/business-rules.md#br-curation-001-소유권과-게시-상태) | 소유권과 게시 상태 | [PRD-CURATION-001](prd/curation/admin-curation.md) | [PRD-ADMIN-001](prd/admin/admin-data-management.md) | 김인안 |
+| [BR-CURATION-002](../01-requirements/business-rules.md#br-curation-002-구성과-정렬-상한) | 구성과 정렬 상한 | [PRD-CURATION-001](prd/curation/admin-curation.md) | 없음 | 김인안 |
+| [BR-CURATION-003](../01-requirements/business-rules.md#br-curation-003-맛집-공개-상태와-경고) | 맛집 공개 상태와 경고 | [PRD-CURATION-001](prd/curation/admin-curation.md) | [PRD-ADMIN-001](prd/admin/admin-data-management.md) | 김인안 |
+| [BR-CURATION-004](../01-requirements/business-rules.md#br-curation-004-게시-중-수정-반영) | 게시 중 수정 반영 | [PRD-CURATION-001](prd/curation/admin-curation.md) | 없음 | 김인안 |
+| [BR-SUBMISSION-001](../01-requirements/business-rules.md#br-submission-001-대상과-근거) | 제보 대상과 근거 | [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md) | 없음 | 김인안 |
+| [BR-SUBMISSION-002](../01-requirements/business-rules.md#br-submission-002-중복과-요청-제한) | 제보 중복과 요청 제한 | [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md) | 없음 | 김인안 |
+| [BR-SUBMISSION-003](../01-requirements/business-rules.md#br-submission-003-상태-전이와-실제-등록) | 상태 전이와 실제 등록 | [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md) | [PRD-ADMIN-001](prd/admin/admin-data-management.md), [PRD-NOTIFICATION-001](prd/notification/user-notification.md) | 김인안 |
+| [BR-SUBMISSION-004](../01-requirements/business-rules.md#br-submission-004-소유권과-보존) | 제보 소유권과 보존 | [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md) | [PRD-ACCOUNT-001](prd/account/member-authentication.md) | 김인안 |
+| [BR-REPORT-001](../01-requirements/business-rules.md#br-report-001-대상과-근거) | 신고 대상과 근거 | [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md) | 없음 | 김인안 |
+| [BR-REPORT-002](../01-requirements/business-rules.md#br-report-002-중복과-요청-제한) | 신고 중복과 요청 제한 | [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md) | 없음 | 김인안 |
+| [BR-REPORT-003](../01-requirements/business-rules.md#br-report-003-상태-전이와-공개-상태) | 상태 전이와 공개 상태 | [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md) | [PRD-ADMIN-001](prd/admin/admin-data-management.md), [PRD-NOTIFICATION-001](prd/notification/user-notification.md) | 김인안 |
+| [BR-REPORT-004](../01-requirements/business-rules.md#br-report-004-소유권과-보존) | 신고 소유권과 보존 | [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md) | [PRD-ACCOUNT-001](prd/account/member-authentication.md) | 김인안 |
+| [BR-NOTIFICATION-001](../01-requirements/business-rules.md#br-notification-001-상태-전이와-원자적-생성) | 상태 전이와 원자적 생성 | [PRD-NOTIFICATION-001](prd/notification/user-notification.md) | [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md) | 이우람 |
+| [BR-NOTIFICATION-002](../01-requirements/business-rules.md#br-notification-002-소유권과-읽음) | 소유권과 읽음 | [PRD-NOTIFICATION-001](prd/notification/user-notification.md) | 없음 | 이우람 |
+| [BR-NOTIFICATION-003](../01-requirements/business-rules.md#br-notification-003-보존과-회원-탈퇴) | 보존과 회원 탈퇴 | [PRD-NOTIFICATION-001](prd/notification/user-notification.md) | [PRD-ACCOUNT-001](prd/account/member-authentication.md) | 이우람 |
+| [BR-NOTIFICATION-004](../01-requirements/business-rules.md#br-notification-004-채널과-동의-경계) | 채널과 동의 경계 | [PRD-NOTIFICATION-001](prd/notification/user-notification.md) | 없음 | 이우람 |
+
+2차 확장 비즈니스 규칙 24개도 각각 정확히 하나의 주 PRD에 배정됐다.
+
 ## 5. NFR → PRD 매핑
 
 | NFR ID | 품질 요구사항 | 공통 적용 여부 | 적용 PRD | 검증 책임 |
@@ -209,8 +289,15 @@ related_documents:
 | [NFR-PRIVACY-002](../01-requirements/non-functional-requirements.md#nfr-privacy-002-인증정보와-외부-키-보호) | 인증정보와 외부 키 보호 | 예 | [PRODUCT-001](prd/00-product-overview.md), [ADMIN-001](prd/admin/admin-data-management.md) | 이우람 |
 | [NFR-PRIVACY-003](../01-requirements/non-functional-requirements.md#nfr-privacy-003-회원-개인정보-최소-수집과-생명주기) | 회원 개인정보 최소 수집과 생명주기 | 예 | [PRD-ACCOUNT-001](prd/account/member-authentication.md), [PRD-PERSONAL-001](prd/personal/personal-restaurant-management.md) | WS-05·WS-06, 박진영 리뷰 |
 | [NFR-PRIVACY-004](../01-requirements/non-functional-requirements.md#nfr-privacy-004-위치와-행동-데이터-최소화) | 위치와 행동 데이터 최소화 | 예 | [PRD-PERSONAL-001](prd/personal/personal-restaurant-management.md), [PRD-DISCOVERY-003](prd/discovery/map-discovery.md) | WS-06·WS-07, 김인안 리뷰 |
+| [NFR-PERFORMANCE-006](../01-requirements/non-functional-requirements.md#nfr-performance-006-2차-확장-공개-조회와-인기-집계-성능) | 2차 확장 공개 조회와 인기 집계 성능 | 아니요 | [PRD-DISCOVERY-004](prd/discovery/popular-restaurants.md), [PRD-CURATION-001](prd/curation/admin-curation.md) | WS-10 양성훈, WS-11 김인안 |
+| [NFR-SECURITY-006](../01-requirements/non-functional-requirements.md#nfr-security-006-사용자-입력과-제보신고-남용-방지) | 사용자 입력과 제보·신고 남용 방지 | 아니요 | [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md) | WS-12 김인안 |
+| [NFR-INTEGRITY-005](../01-requirements/non-functional-requirements.md#nfr-integrity-005-처리-상태와-알림-원자성) | 처리 상태와 알림 원자성 | 아니요 | [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md), [PRD-NOTIFICATION-001](prd/notification/user-notification.md) | WS-12 김인안·WS-13 이우람 |
+| [NFR-RELIABILITY-004](../01-requirements/non-functional-requirements.md#nfr-reliability-004-실시간-집계와-서비스-내-알림-복구-경계) | 실시간 집계와 서비스 내 알림 복구 경계 | 아니요 | [PRD-DISCOVERY-004](prd/discovery/popular-restaurants.md), [PRD-NOTIFICATION-001](prd/notification/user-notification.md) | WS-10 양성훈·WS-13 이우람 |
+| [NFR-OBSERVABILITY-004](../01-requirements/non-functional-requirements.md#nfr-observability-004-관리자-검토-감사-이력) | 관리자 검토 감사 이력 | 아니요 | [PRD-CURATION-001](prd/curation/admin-curation.md), [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md) | WS-11·WS-12 김인안 |
+| [NFR-PRIVACY-005](../01-requirements/non-functional-requirements.md#nfr-privacy-005-2차-확장-개인정보-보존과-회원-탈퇴) | 2차 확장 개인정보 보존과 회원 탈퇴 | 아니요 | [PRD-COLLECTION-001](prd/personal/personal-collection.md), [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md), [PRD-NOTIFICATION-001](prd/notification/user-notification.md) | WS-09 박진영·WS-12 김인안·WS-13 이우람 |
+| [NFR-TEST-005](../01-requirements/non-functional-requirements.md#nfr-test-005-2차-확장-보안정합성성능-검증) | 2차 확장 보안·정합성·성능 검증 | 예 | 2차 확장 기능 PRD 전체 | WS-09~WS-13 담당자 |
 
-공통 NFR의 주 문서는 [PRD-PRODUCT-001](prd/00-product-overview.md)이다. `전체 조회 PRD`는 [API-DISCOVERY-001](../05-specs/api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색), [DISCOVERY-002](prd/discovery/creator-discovery.md)와 [API-DETAIL-001](../05-specs/api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회)을 뜻하며, `전체 기능 PRD`는 네 기능 PRD 전체를 뜻한다.
+공통 NFR의 주 문서는 [PRD-PRODUCT-001](prd/00-product-overview.md)이다. `전체 조회 PRD`는 [API-DISCOVERY-001](../05-specs/api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색), [DISCOVERY-002](prd/discovery/creator-discovery.md)와 [API-DETAIL-001](../05-specs/api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회)을 뜻한다. `전체 기능 PRD`는 MVP 기능 PRD를, `2차 확장 기능 PRD 전체`는 3.3절의 다섯 PRD를 뜻한다.
 
 ## 6. Workstream → PRD 매핑
 
@@ -221,6 +308,16 @@ related_documents:
 | [WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 유튜버 기반 탐색 | [PRD-DISCOVERY-002](prd/discovery/creator-discovery.md) | 유효 방문 관계 기반 맛집 판정 | [ADMIN-001](prd/admin/admin-data-management.md) |
 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 관리자 데이터 등록 | [PRD-ADMIN-001](prd/admin/admin-data-management.md) | 검증된 기본 데이터와 관계 | 없음 |
 
+### 6.1 2차 확장 Workstream
+
+| Workstream | 주 PRD | 제공 계약 | 의존 PRD |
+|---|---|---|---|
+| [WS-09](../02-analysis/second-expansion-workstreams.md#4-ws-09-개인-컬렉션) | [PRD-COLLECTION-001](prd/personal/personal-collection.md) | 개인 컬렉션 소유권·구성 | [PRD-ACCOUNT-001](prd/account/member-authentication.md), [PRD-DETAIL-001](prd/detail/restaurant-detail.md) |
+| [WS-10](../02-analysis/second-expansion-workstreams.md#5-ws-10-인기-맛집) | [PRD-DISCOVERY-004](prd/discovery/popular-restaurants.md) | 현재 찜 기반 인기 조회 | [PRD-PERSONAL-001](prd/personal/personal-restaurant-management.md) |
+| [WS-11](../02-analysis/second-expansion-workstreams.md#6-ws-11-관리자-큐레이션) | [PRD-CURATION-001](prd/curation/admin-curation.md) | 큐레이션 편집·게시 | [PRD-ADMIN-001](prd/admin/admin-data-management.md) |
+| [WS-12](../02-analysis/second-expansion-workstreams.md#7-ws-12-제보신고-검토) | [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md) | 접수·검토·처리 상태 | [PRD-ACCOUNT-001](prd/account/member-authentication.md), [PRD-ADMIN-001](prd/admin/admin-data-management.md), [PRD-NOTIFICATION-001](prd/notification/user-notification.md) |
+| [WS-13](../02-analysis/second-expansion-workstreams.md#8-ws-13-사용자-알림) | [PRD-NOTIFICATION-001](prd/notification/user-notification.md) | 처리 상태 알림·읽음 | [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md) |
+
 ## 7. 담당자 → PRD 매핑
 
 | 담당자 | 최종 책임 PRD | 협업·리뷰 PRD |
@@ -230,9 +327,18 @@ related_documents:
 | 이우람 | [PRD-DISCOVERY-002](prd/discovery/creator-discovery.md) | [API-DISCOVERY-001](../05-specs/api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색) 리뷰, [API-DETAIL-001](../05-specs/api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회) 관계 계약, [ADMIN-001](prd/admin/admin-data-management.md) 인증·Visit 계약 |
 | 김인안 | [PRD-ADMIN-001](prd/admin/admin-data-management.md) | [API-DETAIL-001](../05-specs/api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회) 리뷰, [API-DISCOVERY-001](../05-specs/api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색)·[DISCOVERY-002](prd/discovery/creator-discovery.md) 등록 반영 |
 
+### 7.1 2차 확장 담당자
+
+| 담당자 | 최종 책임 PRD | 협업·리뷰 PRD |
+|---|---|---|
+| 박진영 | [PRD-COLLECTION-001](prd/personal/personal-collection.md) | 김인안 기본 리뷰, 양성훈 공개 Restaurant 계약 리뷰 |
+| 양성훈 | [PRD-DISCOVERY-004](prd/discovery/popular-restaurants.md) | 박진영 기본 리뷰 |
+| 김인안 | [PRD-CURATION-001](prd/curation/admin-curation.md), [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md) | 양성훈·이우람 기본 리뷰 |
+| 이우람 | [PRD-NOTIFICATION-001](prd/notification/user-notification.md) | 김인안 기본 리뷰 |
+
 ## 8. 미매핑 항목 검토
 
-- 주 PRD 없는 MVP·1차 확장 기능 요구사항: 없음 (3.2절에서 1차 확장 FR 20개를 확인)
+- 주 PRD 없는 MVP·1차·2차 확장 기능 요구사항: 없음 (3.2절과 3.4절에서 확장 FR을 확인)
 - 여러 주 PRD에 중복 배정된 요구사항: 없음
 - 담당자 또는 Workstream 없는 기능 PRD: 없음
 - 기능 요구사항 없이 생성된 기능 PRD: 없음
@@ -262,3 +368,18 @@ related_documents:
 ### 기술 구현 변경
 
 사용자 동작과 제품 범위가 변하지 않으면 PRD는 수정하지 않는다. API 계약, 데이터 모델, 아키텍처 또는 ADR만 수정하며, 사용자 동작이 달라질 때 PRD와 이 문서를 함께 갱신한다.
+
+## 10. 2차 확장 종단 추적 검증
+
+아래 표는 제품 관점의 최종 수직 추적 기준선이다. 요구사항별 상세 테스트는 [2차 확장 테스트 추적표](../08-planning/second-expansion-test-matrix.md), 실행 순서는 [2차 확장 구현 계획](../08-planning/expansion-2-implementation-plan.md), 완료 판정은 [2차 확장 Task 분해](../08-planning/expansion-2-task-breakdown.md)를 따른다.
+
+| Scope 기능 | FR·BR·NFR | 주 PRD | API | 데이터 | ADR 또는 명시적 보류 | WS | 테스트 | E2 Task |
+|---|---|---|---|---|---|---|---|---|
+| 개인 컬렉션 | `FR-COLLECTION-001~006`, `BR-COLLECTION-001~005`, `NFR-PRIVACY-005` | [PRD-COLLECTION-001](prd/personal/personal-collection.md) | [개인 컬렉션 API](../05-specs/api/personal/personal-collection-api.md) | `personal_collection`, `collection_restaurant`, `idempotency_record` | 기존 인증·PostgreSQL·Flyway ADR 적용; 공유·직접 정렬·이미지는 범위 제외 | [WS-09](../02-analysis/second-expansion-workstreams.md#4-ws-09-개인-컬렉션) | [`TST-E2-COL-001`](../08-planning/second-expansion-test-matrix.md) | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md)~`E2-T03`, `E2-T13`, `E2-T14` |
+| 인기 맛집 | `FR-POPULAR-001`, `BR-POPULAR-001~003`, `NFR-PERFORMANCE-006`, `NFR-RELIABILITY-004` | [PRD-DISCOVERY-004](prd/discovery/popular-restaurants.md) | [인기 맛집 API](../05-specs/api/discovery/popular-restaurant-api.md) | 기존 `favorite` 요청 시 집계, 결과 비저장 | [ADR-DATA-011](../07-adr/data/data-011-popular-restaurant-request-time-aggregation.md); Snapshot·Batch·Redis는 명시적 비활성 | [WS-10](../02-analysis/second-expansion-workstreams.md#5-ws-10-인기-맛집) | [`TST-E2-POP-001`](../08-planning/second-expansion-test-matrix.md), `TST-E2-PERF-001` | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T04`, `E2-T05`, `E2-T13`, `E2-T14` |
+| 관리자 큐레이션 | `FR-CURATION-001~004`, `BR-CURATION-001~004`, `NFR-PERFORMANCE-006`, `NFR-OBSERVABILITY-004` | [PRD-CURATION-001](prd/curation/admin-curation.md) | [큐레이션 API](../05-specs/api/curation/curation-api.md) | `curation`, `curation_restaurant` | 기존 관리자 인증·PostgreSQL ADR 적용; 예약 게시·추천·이미지는 범위 제외 | [WS-11](../02-analysis/second-expansion-workstreams.md#6-ws-11-관리자-큐레이션) | [`TST-E2-CUR-001`](../08-planning/second-expansion-test-matrix.md), `TST-E2-PERF-001` | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T06`, `E2-T07`, `E2-T13`, `E2-T14` |
+| 사용자 제보 | `FR-SUBMISSION-001~003`, `BR-SUBMISSION-001~004`, `NFR-SECURITY-006`, `NFR-OBSERVABILITY-004`, `NFR-PRIVACY-005` | [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md) | [제보·신고 API](../05-specs/api/participation/submission-report-api.md) | `submission`, `moderation_history`, `idempotency_record` | [ADR-DATA-012](../07-adr/data/data-012-second-expansion-retention-cleanup.md), 상태 알림은 [ADR-NOTIFY-002](../07-adr/integration/notify-002-in-app-notification-reliability.md) | [WS-12](../02-analysis/second-expansion-workstreams.md#7-ws-12-제보신고-검토) | [`TST-E2-SUB-001`](../08-planning/second-expansion-test-matrix.md), `TST-E2-ATOMIC-001`, `TST-E2-LIFE-001` | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T08`, `E2-T09`, `E2-T11`, `E2-T13`, `E2-T14` |
+| 사용자 신고 | `FR-REPORT-001~003`, `BR-REPORT-001~004`, `NFR-SECURITY-006`, `NFR-OBSERVABILITY-004`, `NFR-PRIVACY-005` | [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md) | [제보·신고 API](../05-specs/api/participation/submission-report-api.md) | `report`, `moderation_history`, `idempotency_record` | [ADR-DATA-012](../07-adr/data/data-012-second-expansion-retention-cleanup.md), 상태 알림은 [ADR-NOTIFY-002](../07-adr/integration/notify-002-in-app-notification-reliability.md) | [WS-12](../02-analysis/second-expansion-workstreams.md#7-ws-12-제보신고-검토) | [`TST-E2-REP-001`](../08-planning/second-expansion-test-matrix.md), `TST-E2-ATOMIC-001`, `TST-E2-LIFE-001` | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T08`, `E2-T09`, `E2-T11`, `E2-T13`, `E2-T14` |
+| 서비스 내 사용자 알림 | `FR-NOTIFICATION-001~004`, `BR-NOTIFICATION-001~004`, `NFR-INTEGRITY-005`, `NFR-RELIABILITY-004`, `NFR-PRIVACY-005` | [PRD-NOTIFICATION-001](prd/notification/user-notification.md) | [알림 API](../05-specs/api/notification/notification-api.md) | `notification`; `NotificationPreference`·`DeviceToken` 비저장 | [ADR-NOTIFY-002](../07-adr/integration/notify-002-in-app-notification-reliability.md), [ADR-DATA-012](../07-adr/data/data-012-second-expansion-retention-cleanup.md); FCM은 [ADR-NOTIFY-001](../07-adr/adr-backlog.md#adr-notify-001-fcm-푸시-알림) Post-MVP | [WS-13](../02-analysis/second-expansion-workstreams.md#8-ws-13-사용자-알림) | [`TST-E2-NOT-001`](../08-planning/second-expansion-test-matrix.md), `TST-E2-ATOMIC-001`, `TST-E2-LIFE-001` | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T10`, `E2-T11`, `E2-T13`, `E2-T14` |
+
+공통 `NFR-TEST-005`는 모든 행에 적용하며 `TST-E2-SEC-001`, `TST-E2-E2E-001`과 `E2-T13`, `E2-T14`에서 최종 판정한다. 푸시용 `E2-T12`는 현재 생성하지 않는다. 따라서 2차 확장 21개 FR은 모두 `Scope → 요구사항 → PRD → API → 데이터 → ADR/보류 → Workstream → 테스트 → E2 Task` 경로를 가진다.
