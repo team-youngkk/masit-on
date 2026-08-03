@@ -5,11 +5,15 @@ related_documents:
   - docs/04-product/prd/00-product-overview.md
   - docs/08-planning/mvp-2day-implementation-plan.md
   - docs/08-planning/mvp-local-verification.md
+  - docs/08-planning/first-expansion-baseline-review.md
+  - docs/02-analysis/first-expansion-workstreams.md
   - docs/06-architecture/README.md
 ---
 
 # masit-on
 유튜버가 방문한 맛집을 지역, 음식 종류, 유튜버별로 탐색할 수 있는 맛집 정보 서비스
+
+MVP 범위(공개 탐색·상세, 관리자 데이터 등록)에 1차 확장(회원 계정·인증, 찜·최근 본 맛집, 지도 탐색, 유튜버 상세)이 더해진 상태다. 마이그레이션은 `V1`(초기 스키마) · `V2`(1차 확장 통합, [마이그레이션 계획](docs/05-specs/data/migration-plan.md) 2.3절) 두 파일로 구성된다.
 
 ## 로컬 실행
 
@@ -26,9 +30,11 @@ Copy-Item .env.example .env
 . .\scripts\Initialize-LocalJwt.ps1
 ```
 
-`.env`는 로컬 전용 값이며 커밋하지 않는다. 운영 자격 증명을 넣지 않는다. 초기화 스크립트는 `.env`에 로컬 RSA 키를 생성하고 현재 PowerShell 세션에도 같은 값을 설정한다. 새 PowerShell 세션에서 `bootRun`을 실행할 때는 스크립트를 다시 dot-source한다.
+초기화 스크립트는 로컬 JWT RSA 키와 회원 Action 메일 Token용 AES-256 키를 `.env`와 현재 PowerShell 세션에 생성한다. 운영에서는 `MEMBER_ACTION_MAIL_ACTIVE_KEY_ID`와 `MEMBER_ACTION_MAIL_ACTIVE_KEY`를 저장소가 아닌 배포 환경의 비밀 관리 수단으로 주입한다.
 
-`.env`를 `.env.example`에서 새로 복사하지 않고 예전 파일을 그대로 쓰면 `JWT_*` 항목이 없어 초기화 스크립트가 값을 기록하지 못한다. `.env`에 `JWT_KEY_ID`, `JWT_PRIVATE_KEY_PEM`, `JWT_PUBLIC_KEY_PEM` 세 줄이 있는지 확인한다.
+`.env`는 로컬 전용 값이며 커밋하지 않는다. 운영 자격 증명을 넣지 않는다. 새 PowerShell 세션에서 `bootRun`을 실행할 때는 스크립트를 다시 dot-source한다.
+
+`.env`를 `.env.example`에서 새로 복사하지 않고 예전 파일을 그대로 쓰면 `JWT_*` 또는 `MEMBER_ACTION_MAIL_*` 항목이 없어 초기화 스크립트가 값을 기록하지 못한다. `.env`에 `JWT_KEY_ID`, `JWT_PRIVATE_KEY_PEM`, `JWT_PUBLIC_KEY_PEM`, `MEMBER_ACTION_MAIL_ACTIVE_KEY_ID`, `MEMBER_ACTION_MAIL_ACTIVE_KEY` 항목이 있는지 확인한다.
 
 ### 개발 루프 (의존 서비스는 컨테이너, 애플리케이션은 로컬)
 
@@ -45,6 +51,8 @@ npm --prefix frontend run dev
 ```
 
 `http://localhost:3000`에서 공개 화면과 관리자 화면을 사용한다. 프론트엔드는 `/api`를 `API_BASE_URL`(기본값 `http://localhost:8080`)로 전달하므로 백엔드를 먼저 띄운다.
+
+지도 화면(`/map`)은 `NEXT_PUBLIC_KAKAO_MAPS_JS_KEY`가 있어야 Kakao 지도를 표시한다. 이 값은 Kakao 콘솔에서 허용 도메인으로 제한하는 브라우저 노출 식별자이며 비밀키가 아니다([ADR-MAP-001 6.5](docs/07-adr/integration/map-001-map-bounds-search.md#65-키-비용과-외부-서비스-경계)). 값이 없으면 지도는 SDK 오류 상태로 대체되고 그 밖의 화면은 영향을 받지 않는다.
 
 ### 로컬 관리자 계정
 

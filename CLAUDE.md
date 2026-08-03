@@ -151,7 +151,7 @@ WireMock 포트를 바꿨다면 `KAKAO_BASE_URL`, `YOUTUBE_BASE_URL`도 같이 �
 - 모든 오류 응답에 서버 생성 `traceId`를 포함한다.
 - Entity를 API 요청·응답에 노출하지 않는다.
 - 트랜잭션은 Application Service의 public 메서드에서 시작한다. 조회는 `@Transactional(readOnly = true)`. OSIV 비활성화, `ddl-auto=validate`.
-- 스키마 변경은 전부 Flyway. **이미 적용된 마이그레이션 파일은 수정하지 않고 새 파일을 추가한다.**
+- 스키마 변경은 전부 Flyway. **이미 적용된 마이그레이션 파일은 수정하지 않고 새 파일을 추가한다.** 운영에 적용되지 않은 마이그레이션은 운영 배포 직전 1회, [ADR-DATA-009](docs/07-adr/data/data-009-pre-release-migration-consolidation.md) 10절 증명을 모두 충족할 때만 통합할 수 있다.
 - 외부 HTTP 호출 중에는 DB 트랜잭션을 열지 않는다. 외부 호출 실패 시 핵심 Entity 저장 0건이어야 한다.
 - API 계약이나 테이블을 바꾸려면 소유자와 먼저 합의하고 코드·문서를 같은 PR에서 변경한다.
 
@@ -194,10 +194,12 @@ WireMock 포트를 바꿨다면 `KAKAO_BASE_URL`, `YOUTUBE_BASE_URL`도 같이 �
 - 필수 상태 검사 이름은 [CI 워크플로](.github/workflows/ci.yml)의 job 이름과 문자 그대로 일치해야 한다. **job 이름을 바꾸면 ruleset도 같은 PR에서 바꾼다.** 그러지 않으면 필수 검사가 영원히 대기 상태로 남아 병합이 막힌다.
 - 코드 소유자 리뷰 강제는 적용하지 않는다. [CODEOWNERS](.github/CODEOWNERS)의 `*` 폴백이 팀 전원이어서 백엔드 PR마다 4명 전원에게 리뷰가 요청되기 때문이다. 같은 파일이 예고한 도메인 경로별 규칙이 추가되면 다시 판단한다.
 - 서로 독립적인 변경은 커밋·PR을 분리한다. 포매팅·정적 분석만 고치는 변경은 로직 변경과 분리한다.
-- PR 본문 첫 줄에 `Closes #{이슈번호}`로 구현한 이슈를 연결한다. 기본 브랜치가 `develop`이므로 머지 시 자동으로 닫힌다.
+- PR 본문 첫 줄에 `Closes #{이슈번호}`로 구현한 이슈를 연결한다. **기본 브랜치는 `main`이다.** GitHub는 PR이 기본 브랜치로 병합될 때만 연결된 이슈를 자동으로 닫으므로, `develop`으로 병합하면 이슈는 **연결만 되고 닫히지 않는다.** `develop` 병합 시점에 닫아야 하면 수동으로 닫는다.
+- **새 PR의 기본 대상 브랜치도 `main`이다.** 기능·수정 브랜치의 PR을 만들 때 대상이 `develop`인지 확인한다. M2 운영 배포 전에는 기본 브랜치가 `develop`이었다.
 - **PR 본문과 커밋 메시지에 AI 도구 생성 표기를 남기지 않는다.** `Generated with Claude Code` 같은 문구, 도구 서명과 배지를 넣지 않는다.
+- **마일스톤을 `main`에 병합하면 병합자가 곧바로 `v{major}.{minor}.{patch}` annotated tag를 붙인다.** 확장 단계는 minor(M2 `v0.1.0`, M3 `v0.2.0`), 마일스톤 사이 결함 수정은 patch, 제한 공개 해제가 `v1.0.0`이다. GitHub 릴리즈는 `v1.0.0`부터 만들고 M1은 소급하지 않는다.
 
-PR 완료 점검 목록은 [구현 컨벤션 9절](docs/06-architecture/implementation-conventions.md#9-pr-완료-점검)을 사용한다.
+PR 완료 점검 목록은 [구현 컨벤션 9절](docs/06-architecture/implementation-conventions.md#9-pr-완료-점검), 릴리즈 태그 규칙과 근거는 [구현 컨벤션 7.4절](docs/06-architecture/implementation-conventions.md#74-릴리즈-태그)을 원문으로 사용한다.
 
 ## 10. Workstream과 소유권
 

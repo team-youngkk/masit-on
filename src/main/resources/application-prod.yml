@@ -21,6 +21,11 @@
 #   masiton.security.jwt.key-id
 #   masiton.security.jwt.private-key-pem
 #   masiton.security.jwt.public-key-pem
+#   masiton.member.action-mail.active-key-id
+#   masiton.member.action-mail.active-key
+#   masiton.member.rate-limit.secret
+#   spring.mail.username
+#   spring.mail.password
 #   masiton.integration.kakao.rest-api-key   (선택)
 #   masiton.integration.youtube.api-key      (선택)
 #
@@ -39,6 +44,19 @@ spring:
       # `redis` 같은 컨테이너 이름을 쓰지 않는다.
       host: ${REDIS_HOST}
       port: ${REDIS_PORT}
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
 
 masiton:
   integration:

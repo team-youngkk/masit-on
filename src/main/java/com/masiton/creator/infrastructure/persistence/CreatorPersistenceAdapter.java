@@ -43,14 +43,16 @@ class CreatorPersistenceAdapter implements CreatorRepositoryPort {
     public Optional<Creator> insertIfAbsent(Creator creator) {
         UUID id = jdbcTemplate.query("""
                         insert into creator (
-                            id, external_channel_id, channel_name, channel_url, publication_status,
+                            id, external_channel_id, channel_name, channel_url, profile_image_url,
+                            description, handle, publication_status,
                             lifecycle_status, external_availability_status, external_status_checked_at)
-                        values (?, ?, ?, ?, ?, ?, ?, ?)
+                        values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         on conflict (external_channel_id) do nothing
                         returning id
                         """,
                 resultSet -> resultSet.next() ? resultSet.getObject("id", UUID.class) : null,
                 creator.getId(), creator.getExternalChannelId(), creator.getChannelName(), creator.getChannelUrl(),
+                creator.getProfileImageUrl(), creator.getDescription(), creator.getHandle(),
                 creator.getPublicationStatus().name(), creator.getLifecycleStatus().name(),
                 creator.getExternalAvailabilityStatus().name(), creator.getExternalStatusCheckedAt());
         return id == null ? Optional.empty() : findById(id);

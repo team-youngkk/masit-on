@@ -35,7 +35,15 @@ aws ecr get-login-password --region "$REGION" \
 # 다음 재기동부터 새 app-run.sh·unit이 적용된다. 설정 형식이나 사전 실행 조건이
 # 함께 바뀐 배포에서는 실패한 배포가 재부팅 후 장애를 만든다.
 staged=$(mktemp -d)
-trap 'rm -rf "$staged"' EXIT
+smoke_redis_keys=()
+cleanup() {
+  if [ "${#smoke_redis_keys[@]}" -gt 0 ] && [ -n "${redis_password:-}" ]; then
+    docker exec -e REDISCLI_AUTH="$redis_password" masiton-redis redis-cli \
+      DEL "${smoke_redis_keys[@]}" >/dev/null 2>&1 || true
+  fi
+  rm -rf "$staged"
+}
+trap cleanup EXIT
 
 for component in backend frontend; do
   repository="masiton-${component}"
@@ -80,6 +88,23 @@ for _ in $(seq 1 60); do
 done
 [ -n "$ready" ] || { echo "백엔드 ready 확인 실패" >&2; systemctl status masiton-backend.service --no-pager -l | tail -20; exit 1; }
 
+dependencies_body="$staged/dependencies.json"
+dependencies_status=$(curl -sS -m 5 -o "$dependencies_body" -w '%{http_code}' \
+  http://127.0.0.1:8080/internal/health/dependencies)
+if [ "$dependencies_status" != "200" ] || ! python3 - "$dependencies_body" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as response:
+    body = json.load(response)
+if body.get("components", {}).get("mail", {}).get("status") != "UP":
+    raise SystemExit(1)
+PY
+then
+  echo "백엔드 mail dependency 확인 실패: HTTP $dependencies_status" >&2
+  exit 1
+fi
+
 front=""
 for _ in $(seq 1 36); do
   if curl -fsS -m 3 -o /dev/null http://127.0.0.1:3000/ 2>/dev/null; then
@@ -89,5 +114,57 @@ for _ in $(seq 1 36); do
   sleep 5
 done
 [ -n "$front" ] || { echo "프론트엔드 응답 확인 실패" >&2; systemctl status masiton-frontend.service --no-pager -l | tail -20; exit 1; }
+
+# 운영 Origin이 주입됐는지 확인한다. 유효한 Origin과 Token 없는 요청은 인증 실패(401)여야
+# 하며, Origin 설정이 localhost 기본값으로 남으면 이 지점에서 403이 된다.
+refresh_status=$(curl -sS -m 5 -o /dev/null -w '%{http_code}' \
+  -X POST -H 'Origin: https://masiton.click' http://127.0.0.1:8080/api/auth/tokens/refresh)
+[ "$refresh_status" = "401" ] || { echo "회원 refresh Origin 검증 실패: HTTP $refresh_status" >&2; exit 1; }
+
+# Nginx peer(127.0.0.1)를 신뢰해 서로 다른 X-Forwarded-For가 실제로 별도
+# login-source 버킷을 만드는지 Redis 키로 확인한다.
+redis_password=$(< /run/masiton/secrets/spring.data.redis.password)
+rate_limit_keys() {
+  python3 - "$1" "$2" <<'PY'
+import hashlib
+import hmac
+import sys
+
+with open("/run/masiton/secrets/masiton.member.rate-limit.secret", "rb") as secret_file:
+    secret = secret_file.read().rstrip(b"\r\n")
+source = sys.argv[1]
+email = sys.argv[2]
+digest = lambda value: hmac.new(secret, value, hashlib.sha256).hexdigest()
+prefix = "auth:member:rate-limit:"
+print(prefix + "login-source:" + digest(source.encode()))
+print(prefix + "login-email:" + digest(email.encode()))
+print(prefix + "login-email-source:" + digest((email + "\0" + source).encode()))
+PY
+}
+
+mapfile -t first_client_keys < <(rate_limit_keys '198.51.100.10' 'deploy-smoke-1@invalid.example')
+mapfile -t second_client_keys < <(rate_limit_keys '198.51.100.11' 'deploy-smoke-2@invalid.example')
+smoke_redis_keys=("${first_client_keys[@]}" "${second_client_keys[@]}")
+docker exec -e REDISCLI_AUTH="$redis_password" masiton-redis redis-cli \
+  DEL "${smoke_redis_keys[@]}" >/dev/null
+
+for client in \
+  '198.51.100.10|deploy-smoke-1@invalid.example' \
+  '198.51.100.11|deploy-smoke-2@invalid.example'; do
+  source=${client%%|*}
+  email=${client#*|}
+  login_body=$(printf '{"email":"%s","password":"invalid-password-123"}' "$email")
+  curl -sS -m 5 -o /dev/null -X POST \
+    -H 'Content-Type: application/json' -H "X-Forwarded-For: $source" \
+    --data "$login_body" http://127.0.0.1:8080/api/auth/tokens || true
+done
+
+for source_key in "${first_client_keys[0]}" "${second_client_keys[0]}"; do
+  source_count=$(docker exec -e REDISCLI_AUTH="$redis_password" masiton-redis redis-cli GET "$source_key")
+  [ "$source_count" = "1" ] || { echo "회원 rate-limit source 키 검증 실패: $source_key" >&2; exit 1; }
+done
+docker exec -e REDISCLI_AUTH="$redis_password" masiton-redis redis-cli \
+  DEL "${smoke_redis_keys[@]}" >/dev/null
+smoke_redis_keys=()
 
 echo "배포 완료: tag=${TAG}"

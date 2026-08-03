@@ -67,7 +67,7 @@ related_documents:
 - 비밀키, 실제 인증정보, 개인정보를 코드·테스트·로그·문서에 남기지 않는다.
 - 주석은 코드로 드러나지 않는 의도와 제약을 설명할 때만 쓴다. 담당자와 제거 조건 없는 `TODO`를 남기지 않는다.
 - 코드와 계약 문서가 함께 달라져야 하는 변경이면 같은 작업 범위에서 동기화한다. 다만 계약 자체의 변경에는 소유자 합의가 먼저 필요하다.
-- 기존에 적용된 Flyway 마이그레이션은 수정하지 않고 새 마이그레이션 파일을 추가한다.
+- 기존에 적용된 Flyway 마이그레이션은 수정하지 않고 새 마이그레이션 파일을 추가한다. 운영에 적용되지 않은 마이그레이션은 운영 배포 직전 1회, [ADR-DATA-009](docs/07-adr/data/data-009-pre-release-migration-consolidation.md) 10절 증명을 모두 충족할 때만 통합할 수 있다.
 
 ### 도구와 하위 에이전트
 
@@ -207,10 +207,12 @@ $env:REDIS_PORT = '16379'
 - Conventional Commits의 `feat`, `fix`, `test`, `refactor`, `docs`, `build`, `ci`, `chore`를 사용한다.
 - 모든 변경은 PR로 병합하며 작성자를 제외한 최소 2명 승인이 필요하다. AI가 작성한 코드도 동일하다.
 - 서로 독립적인 변경은 커밋과 PR을 분리한다. 포매팅·정적 분석만 고치는 변경은 로직 변경과 분리한다.
-- PR 본문 첫 줄에 `Closes #{이슈번호}`를 둔다.
+- PR 본문 첫 줄에 `Closes #{이슈번호}`를 둔다. 기본 브랜치는 `main`이고 GitHub는 기본 브랜치로 병합될 때만 이슈를 자동으로 닫으므로, `develop`으로 병합하면 이슈는 연결만 되고 닫히지 않는다.
+- 새 PR의 기본 대상 브랜치도 `main`이다. 기능·수정 브랜치의 PR을 만들 때 대상이 `develop`인지 확인한다.
 - PR 본문과 커밋 메시지에 AI 도구 생성 표기, 도구 서명, 배지를 넣지 않는다.
+- 마일스톤을 `main`에 병합하면 병합자가 곧바로 `v{major}.{minor}.{patch}` annotated tag를 붙인다. 확장 단계는 minor(M2 `v0.1.0`, M3 `v0.2.0`), 마일스톤 사이 결함 수정은 patch, 제한 공개 해제가 `v1.0.0`이다. GitHub 릴리즈는 `v1.0.0`부터 만들고 M1은 소급하지 않는다.
 
-PR 완료 점검은 [구현 컨벤션 9절](docs/06-architecture/implementation-conventions.md#9-pr-완료-점검)을 따른다.
+PR 완료 점검은 [구현 컨벤션 9절](docs/06-architecture/implementation-conventions.md#9-pr-완료-점검), 릴리즈 태그 규칙과 근거는 [구현 컨벤션 7.4절](docs/06-architecture/implementation-conventions.md#74-릴리즈-태그)을 원문으로 따른다.
 
 ## 10. Workstream과 소유권
 

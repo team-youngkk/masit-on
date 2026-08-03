@@ -15,6 +15,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
@@ -182,6 +183,101 @@ class ConstraintViolationIntegrationTest {
         assertThatThrownBy(() -> insertRestaurant(
                         UUID.randomUUID(), "KAKAO-" + UUID.randomUUID(), nonExistentRegionId))
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    @DisplayName("profile_image_url이 빈 문자열이면 ck_creator__profile_image_url_https 위반으로 실패한다")
+    void Creator저장_프로필이미지URL빈문자열_CHECK제약위반으로실패한다() {
+        // given
+        UUID creatorId = UUID.randomUUID();
+        String externalChannelId = "UC-" + UUID.randomUUID();
+
+        // when & then
+        assertThatThrownBy(() ->
+                        insertCreatorWithDisplayFields(creatorId, externalChannelId, "", null, null))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    @DisplayName("profile_image_url이 https가 아니면 ck_creator__profile_image_url_https 위반으로 실패한다")
+    void Creator저장_프로필이미지URL이HTTPS가아님_CHECK제약위반으로실패한다() {
+        // given
+        UUID creatorId = UUID.randomUUID();
+        String externalChannelId = "UC-" + UUID.randomUUID();
+
+        // when & then
+        assertThatThrownBy(() -> insertCreatorWithDisplayFields(
+                        creatorId, externalChannelId, "http://example.com/profile.png", null, null))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    @DisplayName("description이 빈 문자열이면 ck_creator__description_not_blank 위반으로 실패한다")
+    void Creator저장_소개빈문자열_CHECK제약위반으로실패한다() {
+        // given
+        UUID creatorId = UUID.randomUUID();
+        String externalChannelId = "UC-" + UUID.randomUUID();
+
+        // when & then
+        assertThatThrownBy(() ->
+                        insertCreatorWithDisplayFields(creatorId, externalChannelId, null, "", null))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    @DisplayName("handle이 빈 문자열이면 ck_creator__handle_not_blank 위반으로 실패한다")
+    void Creator저장_handle빈문자열_CHECK제약위반으로실패한다() {
+        // given
+        UUID creatorId = UUID.randomUUID();
+        String externalChannelId = "UC-" + UUID.randomUUID();
+
+        // when & then
+        assertThatThrownBy(() ->
+                        insertCreatorWithDisplayFields(creatorId, externalChannelId, null, null, ""))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    @DisplayName("상세 표시 열이 모두 NULL이거나 모두 유효한 값이면 정상 저장된다")
+    void Creator저장_상세표시열null과유효한값_모두성공한다() {
+        // given
+        UUID nullDisplayCreatorId = UUID.randomUUID();
+        UUID filledDisplayCreatorId = UUID.randomUUID();
+
+        // when
+        insertCreatorWithDisplayFields(
+                nullDisplayCreatorId, "UC-" + UUID.randomUUID(), null, null, null);
+        insertCreatorWithDisplayFields(
+                filledDisplayCreatorId,
+                "UC-" + UUID.randomUUID(),
+                "https://example.com/profile.png",
+                "채널 소개",
+                "@handle");
+
+        // then
+        Integer savedCount = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM creator WHERE id IN (?, ?)",
+                Integer.class,
+                nullDisplayCreatorId,
+                filledDisplayCreatorId);
+        assertThat(savedCount).isEqualTo(2);
+    }
+
+    private void insertCreatorWithDisplayFields(
+            UUID id, String externalChannelId, String profileImageUrl, String description, String handle) {
+        jdbcTemplate.update(
+                "INSERT INTO creator "
+                        + "(id, external_channel_id, channel_name, channel_url, external_status_checked_at, "
+                        + "profile_image_url, description, handle) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                id,
+                externalChannelId,
+                "테스트 채널",
+                "https://example.com/channel/" + externalChannelId,
+                OffsetDateTime.now(),
+                profileImageUrl,
+                description,
+                handle);
     }
 
     private void insertRestaurant(UUID id, String kakaoPlaceId, UUID regionId) {

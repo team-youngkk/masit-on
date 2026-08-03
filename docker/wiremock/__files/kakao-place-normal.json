@@ -5,7 +5,9 @@
       "place_name": "맛잇온 테스트 식당",
       "road_address_name": "서울 마포구 월드컵로 1",
       "phone": "02-000-0000",
-      "place_url": "http://place.map.kakao.com/fixture-place-normal"
+      "place_url": "http://place.map.kakao.com/fixture-place-normal",
+      "x": "126.978000",
+      "y": "37.566500"
     }
   ],
   "meta": {

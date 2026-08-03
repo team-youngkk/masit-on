@@ -37,7 +37,7 @@ management:
         ready:
           include: db
         dependencies:
-          include: db,redis
+          include: ${DEPENDENCY_HEALTH_COMPONENTS:db,redis}
   health:
     defaults:
       enabled: false
@@ -47,6 +47,9 @@ management:
       enabled: true
     redis:
       enabled: true
+    mail:
+      # 로컬·테스트는 SMTP 없이 기동하고 운영 배포만 연결·인증 상태를 dependencies에 포함한다.
+      enabled: ${MAIL_HEALTH_ENABLED:false}
 
 logging:
   level:
@@ -54,11 +57,30 @@ logging:
     com.masiton: ${LOG_LEVEL_APP:INFO}
 
 masiton:
+  personalization:
+    recent-cleanup:
+      cron: ${RECENT_RESTAURANT_CLEANUP_CRON:0 0 3 * * *}
+      zone: ${RECENT_RESTAURANT_CLEANUP_ZONE:UTC}
+  restaurant:
+    map:
+      rate-limit:
+        trusted-proxy-addresses: ${RESTAURANT_MAP_TRUSTED_PROXY_ADDRESSES:}
+        reverse-proxy-enabled: ${RESTAURANT_MAP_REVERSE_PROXY_ENABLED:false}
+  member:
+    action-mail:
+      active-key-id: ${MEMBER_ACTION_MAIL_ACTIVE_KEY_ID:}
+      active-key: ${MEMBER_ACTION_MAIL_ACTIVE_KEY:}
+    rate-limit:
+      secret: ${MEMBER_RATE_LIMIT_SECRET:}
+      trusted-proxy-addresses: ${MEMBER_TRUSTED_PROXY_ADDRESSES:}
+      reverse-proxy-enabled: ${MEMBER_REVERSE_PROXY_ENABLED:false}
   security:
     jwt:
       issuer: masit-on
       audience: masit-on-admin-api
+      member-audience: masit-on-member-api
       access-token-ttl: PT30M
+      member-access-token-ttl: PT30M
       key-id: ${JWT_KEY_ID:}
       private-key-pem: ${JWT_PRIVATE_KEY_PEM:}
       public-key-pem: ${JWT_PUBLIC_KEY_PEM:}
@@ -67,6 +89,12 @@ masiton:
     secure: true
     same-site: Strict
     path: /api/admin/auth
+    member:
+      refresh-token-ttl: P14D
+      cookie-name: __Secure-masiton-member-refresh
+      path: /api/auth/tokens
+      public-base-url: ${MEMBER_PUBLIC_BASE_URL:http://localhost:3000}
+      max-sessions: 3
     login-failure:
       max-attempts: 5
       ttl: PT15M

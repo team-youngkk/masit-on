@@ -1,6 +1,7 @@
 package com.masiton.restaurant.infrastructure.external;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
@@ -127,8 +128,32 @@ class KakaoPlaceVerificationAdapter implements PlaceVerificationPort {
         if (id == null || name == null || placeUrl == null || roadAddress == null || phoneNumber == null) {
             throw new PlaceVerificationFailedException();
         }
+        BigDecimal longitude = decimalValue(document.get("x"), -180, 180);
+        BigDecimal latitude = decimalValue(document.get("y"), -90, 90);
+        if (latitude == null || longitude == null) {
+            latitude = null;
+            longitude = null;
+        }
         return Optional.of(new VerifiedPlace(
-                id, name, canonicalPlaceUrl(placeUrl), canonicalRoadAddress(roadAddress), phoneNumber));
+                id, name, canonicalPlaceUrl(placeUrl), canonicalRoadAddress(roadAddress), phoneNumber,
+                latitude, longitude));
+    }
+
+    /** 좌표는 등록 필수 항목이 아니므로 값이 없거나 범위를 벗어나면 검증 실패 대신 null로 취급한다. */
+    private BigDecimal decimalValue(Object value, int minimum, int maximum) {
+        String raw = stringValue(value);
+        if (raw == null) {
+            return null;
+        }
+        try {
+            BigDecimal decimal = new BigDecimal(raw);
+            if (decimal.compareTo(BigDecimal.valueOf(minimum)) < 0 || decimal.compareTo(BigDecimal.valueOf(maximum)) > 0) {
+                return null;
+            }
+            return decimal;
+        } catch (NumberFormatException exception) {
+            return null;
+        }
     }
 
     /**
@@ -155,9 +180,15 @@ class KakaoPlaceVerificationAdapter implements PlaceVerificationPort {
      * Kakao 응답의 {@code place_url}은 {@code http}로 온다. 저장·노출하는 값은 https로
      * 맞춘다. 같은 호스트가 https로 서비스하므로 scheme만 바꿔도 같은 자원을 가리킨다.
      *
-     * <p>정규화 전에 원본 scheme을 검증한다. 검증 없이 바꾸면 {@code ftp://}처럼 허용
-     * 대상이 아닌 scheme까지 https로 바뀌어 뒤따르는 판정을 통과한다. 예상 밖 제공자
-     * 값은 계약 오류로 처리한다.
+     * <p>정규화 전에 원본을 검증한다. 검증 없이 바꾸면 {@code ftp://}처럼 허용 대상이
+     * 아닌 scheme까지 https로 바뀌어 뒤따르는 판정을 통과한다. 예상 밖 제공자 값은
+     * 계약 오류로 처리한다.
+     *
+     * <p>authority는 통째로 옮기지 않고 host만 옮긴다. authority에는 user-info와 포트가
+     * 함께 들어 있어서 {@code http://place.map.kakao.com:80/{id}}를 그대로 넘기면
+     * {@code https://place.map.kakao.com:80/{id}}가 되고, {@link #samePlaceUrl}은
+     * scheme·host·path만 비교하므로 표준 HTTPS 링크가 아닌 값이 채택된다.
+     * user-info와 비표준 포트는 계약 오류로 거부하고, 기본 포트는 표기에서 뺀다.
      */
     private String canonicalPlaceUrl(String placeUrl) {
         try {
@@ -166,13 +197,24 @@ class KakaoPlaceVerificationAdapter implements PlaceVerificationPort {
             if (scheme == null || !(scheme.equalsIgnoreCase("https") || scheme.equalsIgnoreCase("http"))) {
                 throw new PlaceVerificationFailedException();
             }
-            if (scheme.equalsIgnoreCase("https")) {
-                return placeUrl;
+            // host가 null이면 authority를 host로 해석하지 못한 값이다(registry 기반이 아니거나
+            // 형식이 깨진 경우). 판정 대상으로 삼을 수 없으므로 계약 오류로 처리한다.
+            String host = uri.getHost();
+            if (host == null || uri.getUserInfo() != null) {
+                throw new PlaceVerificationFailedException();
             }
-            return new URI("https", uri.getAuthority(), uri.getPath(), uri.getQuery(), uri.getFragment()).toString();
+            int port = uri.getPort();
+            if (port != -1 && port != defaultPort(scheme)) {
+                throw new PlaceVerificationFailedException();
+            }
+            return new URI("https", null, host, -1, uri.getPath(), uri.getQuery(), uri.getFragment()).toString();
         } catch (IllegalArgumentException | URISyntaxException exception) {
             throw new PlaceVerificationFailedException(exception);
         }
+    }
+
+    private int defaultPort(String scheme) {
+        return scheme.equalsIgnoreCase("https") ? 443 : 80;
     }
 
     private boolean samePlaceUrl(String verifiedUrl, URI submittedUrl) {
@@ -184,8 +226,9 @@ class KakaoPlaceVerificationAdapter implements PlaceVerificationPort {
                 return false;
             }
             // 여기 오는 값은 canonicalPlaceUrl을 이미 통과했다. 그 메서드가 http·https만
-            // 허용하고 https로 정규화하므로 이 시점의 scheme은 https다. 그 불변식을
-            // 조건으로 남겨 정규화 단계가 바뀌면 판정이 조용히 느슨해지지 않게 한다.
+            // 허용하고 https로 정규화하며 user-info와 비표준 포트를 거부하므로, 이 시점의
+            // 값은 scheme이 https이고 authority가 host뿐이다. 그 불변식을 조건으로 남겨
+            // 정규화 단계가 바뀌면 판정이 조용히 느슨해지지 않게 한다.
             // 동일성 판정은 host와 path로 한다.
             return scheme.equalsIgnoreCase("https")
                     && host.equalsIgnoreCase("place.map.kakao.com")

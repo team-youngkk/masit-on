@@ -58,6 +58,17 @@ class GenerateLocalJwt {
     }
 }
 
+function New-LocalMemberActionMailKey {
+    $key = [byte[]]::new(32)
+    $generator = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    try {
+        $generator.GetBytes($key)
+        return [Convert]::ToBase64String($key)
+    } finally {
+        $generator.Dispose()
+    }
+}
+
 $content = [System.IO.File]::ReadAllText((Resolve-Path -LiteralPath $EnvFile))
 $privateKey = Get-EnvValue $content 'JWT_PRIVATE_KEY_PEM'
 $publicKey = Get-EnvValue $content 'JWT_PUBLIC_KEY_PEM'
@@ -84,8 +95,28 @@ if ([string]::IsNullOrWhiteSpace($keyId)) {
     )
 }
 
+$memberActionMailKeyId = Get-EnvValue $content 'MEMBER_ACTION_MAIL_ACTIVE_KEY_ID'
+if ([string]::IsNullOrWhiteSpace($memberActionMailKeyId)) {
+    $memberActionMailKeyId = 'local-1'
+    $content = Set-EnvValue $content 'MEMBER_ACTION_MAIL_ACTIVE_KEY_ID' $memberActionMailKeyId
+}
+
+$memberActionMailKey = Get-EnvValue $content 'MEMBER_ACTION_MAIL_ACTIVE_KEY'
+if ([string]::IsNullOrWhiteSpace($memberActionMailKey)) {
+    $memberActionMailKey = New-LocalMemberActionMailKey
+    $content = Set-EnvValue $content 'MEMBER_ACTION_MAIL_ACTIVE_KEY' $memberActionMailKey
+}
+
+[System.IO.File]::WriteAllText(
+        (Resolve-Path -LiteralPath $EnvFile),
+        $content,
+        [System.Text.UTF8Encoding]::new($false)
+)
+
 $env:JWT_KEY_ID = $keyId
 $env:JWT_PRIVATE_KEY_PEM = $privateKey
 $env:JWT_PUBLIC_KEY_PEM = $publicKey
+$env:MEMBER_ACTION_MAIL_ACTIVE_KEY_ID = $memberActionMailKeyId
+$env:MEMBER_ACTION_MAIL_ACTIVE_KEY = $memberActionMailKey
 
-Write-Host '로컬 JWT 키를 준비했고 현재 PowerShell 세션에 설정했습니다.'
+Write-Host '로컬 JWT와 회원 Action 메일 AES 키를 준비했고 현재 PowerShell 세션에 설정했습니다.'

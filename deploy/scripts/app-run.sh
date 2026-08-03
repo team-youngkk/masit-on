@@ -48,6 +48,15 @@ case "$component" in
     DB_USERNAME=$(param /masiton/db/username); export DB_USERNAME
     export REDIS_HOST=127.0.0.1
     export REDIS_PORT=6379
+    MAIL_HOST=$(param /masiton/mail/host); export MAIL_HOST
+    MAIL_PORT=$(param /masiton/mail/port); export MAIL_PORT
+    export MAIL_HEALTH_ENABLED=true
+    export DEPENDENCY_HEALTH_COMPONENTS=db,redis,mail
+    export MEMBER_PUBLIC_BASE_URL=https://masiton.click
+    export MEMBER_TRUSTED_PROXY_ADDRESSES=127.0.0.1
+    export MEMBER_REVERSE_PROXY_ENABLED=true
+    export RESTAURANT_MAP_TRUSTED_PROXY_ADDRESSES=127.0.0.1
+    export RESTAURANT_MAP_REVERSE_PROXY_ENABLED=true
 
     [ -d "$SECRETS_DIR" ] || { echo "비밀값 디렉터리가 없다: $SECRETS_DIR" >&2; exit 1; }
 
@@ -59,6 +68,10 @@ case "$component" in
       -e SPRING_PROFILES_ACTIVE \
       -e DB_URL -e DB_USERNAME \
       -e REDIS_HOST -e REDIS_PORT \
+      -e MAIL_HOST -e MAIL_PORT -e MAIL_HEALTH_ENABLED -e DEPENDENCY_HEALTH_COMPONENTS \
+      -e MEMBER_PUBLIC_BASE_URL \
+      -e MEMBER_TRUSTED_PROXY_ADDRESSES -e MEMBER_REVERSE_PROXY_ENABLED \
+      -e RESTAURANT_MAP_TRUSTED_PROXY_ADDRESSES -e RESTAURANT_MAP_REVERSE_PROXY_ENABLED \
       -e SECRETS_DIR \
       "$image"
     ;;

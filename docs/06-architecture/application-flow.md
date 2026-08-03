@@ -29,7 +29,7 @@ HTTP Request
   → Controller Response Mapping
 ```
 
-- 공개 `GET /api/restaurants`, `GET /api/restaurants/{restaurantId}`, `GET /api/creators`는 인증 없이 Controller로 전달한다.
+- 공개 `GET /api/restaurants`, `GET /api/restaurants/{restaurantId}`, `GET /api/creators`, `GET /api/creators/{creatorId}`, `GET /api/creators/{creatorId}/restaurants`, `GET /api/creators/{creatorId}/videos`는 인증 없이 Controller로 전달한다.
 - `POST /api/admin/auth/tokens`는 로그인 자격 증명, `POST /api/admin/auth/tokens/refresh`는 Refresh Token 쿠키만 검증한다.
 - `DELETE /api/admin/auth/tokens`는 JWT와 Refresh Token 쿠키를 모두 검증하고, 나머지 `/api/admin/**`은 JWT와 `ADMIN` 권한을 먼저 확인한다.
 - 정의되지 않은 `/api/**`는 기본 거부하고 `/internal/**`은 인터넷 Nginx 경로로 전달하지 않는다.

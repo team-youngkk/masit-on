@@ -1,6 +1,9 @@
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 
 import { Card } from '@/components/ui/Card'
+import { FavoriteButton } from '@/components/personal/FavoriteButton'
+import { RecentViewRecorder } from '@/components/personal/RecentViewRecorder'
 import {
   RestaurantDetailUnavailableError,
   RestaurantIdentifierInvalidError,
@@ -60,9 +63,17 @@ export default async function RestaurantDetailPage({
 
   return (
     <article className={styles.page}>
+      <RecentViewRecorder restaurantId={restaurant.id} />
       <header className={styles.header}>
-        <h1 className={styles.name}>{restaurant.name}</h1>
-        <p className={styles.category}>{restaurant.category}</p>
+        <div className={styles.heading}>
+          <h1 className={styles.name}>{restaurant.name}</h1>
+          <p className={styles.category}>{restaurant.category}</p>
+        </div>
+        <FavoriteButton
+          restaurantId={restaurant.id}
+          restaurantName={restaurant.name}
+          returnTo={`/restaurants/${encodeURIComponent(restaurant.id)}`}
+        />
       </header>
 
       <section className={styles.infoSection} aria-label="기본 정보">
@@ -132,17 +143,19 @@ function RestaurantContent({ restaurant }: { restaurant: RestaurantDetail }) {
           <ul className={styles.creatorList}>
             {restaurant.visitedBy.map((creator) => (
               <li key={creator.id}>
+                <Link href={`/creators/${encodeURIComponent(creator.id)}`}>
+                  {creator.channelName}
+                </Link>
                 {isSafeHttpUrl(creator.channelUrl) ? (
                   <a
                     href={creator.channelUrl}
                     target="_blank"
                     rel="noopener noreferrer"
+                    className={styles.externalCreatorLink}
                   >
-                    {creator.channelName}
+                    YouTube 채널
                   </a>
-                ) : (
-                  creator.channelName
-                )}
+                ) : null}
               </li>
             ))}
           </ul>

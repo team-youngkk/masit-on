@@ -21,7 +21,7 @@ related_documents:
 | 관리자 login ID 유일 | `uk_admin_account__login_id` | trim 후 정확 일치, 1~100자 | 계정 발급 거부 |
 | Video.Creator와 게시 채널 일치 | `fk_video__creator_channel` 복합 FK | Video 연결 전 외부 ID 비교 | `VIDEO_CHANNEL_MISMATCH` |
 | Visit.Creator와 Video.Creator 일치 | `fk_visit__video_creator` 복합 FK | null Video.Creator를 같은 트랜잭션에서 연결 | `VIDEO_CHANNEL_MISMATCH` |
-| 참조 존재 | 명명된 FK와 `ON DELETE RESTRICT` | 대상별 조회로 404 구분 | `*_NOT_FOUND` |
+| 참조 존재 | 명명된 FK와 기본 `ON DELETE RESTRICT`; 개인화 관계의 회원 FK는 `ON DELETE CASCADE` | 대상별 조회로 404 구분 | `*_NOT_FOUND` |
 | 공개 참조만 Visit 생성 | DB FK로는 미보장 | 잠금된 트랜잭션 조회 | `REFERENCE_NOT_PUBLIC` |
 | 실제 방문 확인 | DB 저장 대상 아님 | `visitEvidenceConfirmed=true` 필수 | `VISIT_EVIDENCE_INSUFFICIENT` |
 | Token 단일 사용 | token hash UK + 행 잠금 + 상태 CHECK | 관리자·자원 종류·만료 검증 | Token 계약 오류 |
@@ -52,6 +52,8 @@ related_documents:
 | `uk_visit__restaurant_creator_video` | `visit` | `restaurant_id, creator_id, video_id` |
 | `pk_confirmation_token` | `confirmation_token` | `id` |
 | `uk_confirmation_token__token_hash` | `confirmation_token` | `token_hash` |
+| `pk_favorite` | `favorite` | `member_id, restaurant_id` |
+| `pk_recent_restaurant_view` | `recent_restaurant_view` | `member_id, restaurant_id` |
 
 PostgreSQL의 `UNIQUE`는 이미 동일 컬럼 B-tree 인덱스를 만든다. 같은 컬럼의 일반 인덱스를 중복 생성하지 않는다.
 
@@ -66,6 +68,10 @@ PostgreSQL의 `UNIQUE`는 이미 동일 컬럼 B-tree 인덱스를 만든다. �
 | `fk_visit__creator` | `visit.creator_id` | `creator.id` | 동일 |
 | `fk_visit__video_creator` | `visit(video_id, creator_id)` | `video(id, creator_id)` | 동일 |
 | `fk_confirmation_token__admin_account` | `confirmation_token.admin_account_id` | `admin_account.id` | 동일 |
+| `fk_favorite__member_account` | `favorite.member_id` | `member_account.id` | `ON DELETE CASCADE ON UPDATE RESTRICT` |
+| `fk_favorite__restaurant` | `favorite.restaurant_id` | `restaurant.id` | `ON DELETE RESTRICT ON UPDATE RESTRICT` |
+| `fk_recent_restaurant_view__member_account` | `recent_restaurant_view.member_id` | `member_account.id` | `ON DELETE CASCADE ON UPDATE RESTRICT` |
+| `fk_recent_restaurant_view__restaurant` | `recent_restaurant_view.restaurant_id` | `restaurant.id` | `ON DELETE RESTRICT ON UPDATE RESTRICT` |
 
 모든 FK는 기본 immediate 검사다. `DEFERRABLE`은 사용하지 않는다. Video.Creator 연결을 먼저 수행한 뒤 Visit를 INSERT하면 지연 제약 없이 원자성을 만족한다.
 
@@ -80,6 +86,8 @@ PostgreSQL의 `UNIQUE`는 이미 동일 컬럼 B-tree 인덱스를 만든다. �
 | `ck_admin_account__login_id_not_blank` | `btrim(login_id) <> ''` |
 | `ck_admin_account__role` | `role = 'ADMIN'` |
 | `ck_restaurant__phone_number` | `char_length(phone_number) BETWEEN 7 AND 20 AND phone_number ~ '^[0-9 +()\\-]+$'` |
+| `ck_restaurant__coordinate_pair` | `(latitude IS NULL AND longitude IS NULL) OR (latitude IS NOT NULL AND longitude IS NOT NULL)` |
+| `ck_restaurant__coordinate_range` | `(latitude BETWEEN -90 AND 90) AND (longitude BETWEEN -180 AND 180)` when both values are present |
 | `ck_{table}__publication_status` | `publication_status IN ('PUBLIC','PRIVATE')` |
 | `ck_{table}__lifecycle_status` | `lifecycle_status IN ('ACTIVE','DELETED')` |
 | `ck_creator__external_availability_status` | `external_availability_status IN ('AVAILABLE','UNAVAILABLE')` |

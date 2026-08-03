@@ -26,6 +26,7 @@ related_documents:
   - data/data-007-uuid-v4-identifiers.md
   - data/data-008-publication-lifecycle-soft-delete.md
   - integration/ext-001-reference-verification.md
+  - integration/map-001-map-bounds-search.md
   - quality/test-001-automation-strategy.md
   - quality/obs-001-logging-observability.md
   - security/sec-001-secrets-workload-identity.md
@@ -62,32 +63,32 @@ related_documents:
 | Spring Data JPA | 확정 | Accepted ADR | [ADR-DATA-003](data/data-003-spring-data-jpa.md) | 기본 ORM·Repository 전략 |
 | Flyway 12.4.0 | 고정 | Accepted ADR | [ADR-DATA-004](data/data-004-flyway.md), [ADR-DATA-009](data/data-009-pre-release-migration-consolidation.md) | 스키마 변경 단일 경로, 적용된 마이그레이션의 환경 범위와 운영 배포 전 통합 예외 |
 | QueryDSL | 조건부 | Conditional ADR | [ADR-SEARCH-001](adr-backlog.md#adr-search-001-querydsl-도입) | 복합 조회 필요성 확인 후 도입 |
-| PostGIS | 기술 스펙 확정, 범위 제외 | Post-MVP ADR | [ADR-MAP-001](adr-backlog.md#adr-map-001-지도-표시와-공간-검색) | 지도·좌표·거리 검색 제외 |
+| PostGIS | 기술 스펙 확정, 현재 범위 제외 | Accepted ADR | [ADR-MAP-001](integration/map-001-map-bounds-search.md) | 1차 확장은 WGS84 bounds 조회만 사용하고 PostGIS·거리 검색은 제외 |
 | pgvector | Post-MVP | Post-MVP ADR | [ADR-SEARCH-002](adr-backlog.md#adr-search-002-pgvector-자연어-검색rag) | 자연어 검색·RAG 제외 |
 | Redis 8.8 전용 인스턴스 | 고정·관리자 Token 역할 확정 | Accepted ADR | [ADR-DATA-005](data/data-005-redis-refresh-token.md) | 관리자 Refresh Token 저장, 캐시·락은 별도 조건부 |
 | Redis AOF `everysec` + RDB | 확정 설정 | Operational Configuration | Redis 역할 결정 후 운영 문서 | 아키텍처보다 영속화 설정값 |
 | Redis 캐시 | 확정 기술 용도 | Conditional ADR | [ADR-CACHE-001](adr-backlog.md#adr-cache-001-redis-캐시-도입) | 성능 병목·무효화 근거 없음 |
 | Redis 관리자 Refresh Token | 사용자 확정 | Accepted ADR | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md), [ADR-DATA-005](data/data-005-redis-refresh-token.md) | 관리자 JWT 재발급·폐기 |
-| Redis 일반 사용자 Refresh Token | 기술 스펙 확정, 범위 제외 | Post-MVP ADR | [ADR-AUTH-002](adr-backlog.md#adr-auth-002-일반-사용자-jwt와-refresh-token) | 일반 사용자 로그인 제외 |
+| Redis 회원 Refresh Token | 구현 범위 확정 | Accepted ADR | [ADR-AUTH-002](security/auth-002-member-jwt-refresh-token.md) | 최대 3세션·원자 회전·재사용 탐지 |
 | Redis 분산 락 | 확정 기술 용도 | Conditional ADR | [ADR-LOCK-001](adr-backlog.md#adr-lock-001-redis-분산-락-도입) | 자동 배치·다중 실행 미확정 |
 | 격리 수준·락·upsert 동시성 제어 | 조건부 | Conditional ADR | [ADR-DATA-006](adr-backlog.md#adr-data-006-동시-쓰기-충돌-제어) | 기본 격리와 `UNIQUE`로 불충분하다는 동시성 근거 필요 |
 | 관리자 Spring Security 7.1.0 + JWT | 사용자 확정 | Accepted ADR | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md) | 관리자 인증·인가 기준 |
 | 관리자 Refresh Token 보안 쿠키 | 사용자 확정 | Accepted ADR | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md), [ADR-DATA-005](data/data-005-redis-refresh-token.md) | Redis 저장·회전, HttpOnly·Secure 전달 |
 | 확인 Token 저장·소비·재시도 | 결정 완료 (2026-07-27) | Accepted ADR | [ADR-AUTH-003](security/auth-003-confirmation-token.md) | PostgreSQL 해시·후보 Snapshot, 생성과 원자적 소비, 완료 결과 재현 |
 | 관리자 등급·기능별 권한 | 범위 제외 | Post-MVP ADR | [ADR-AUTH-004](adr-backlog.md#adr-auth-004-관리자-권한-세분화) | MVP는 사전 발급 단일 `ADMIN` 역할 |
-| 일반 사용자 JWT·Refresh Token | 기술 스펙 확정, 범위 제외 | Post-MVP ADR | [ADR-AUTH-002](adr-backlog.md#adr-auth-002-일반-사용자-jwt와-refresh-token) | 회원가입·로그인 제외 |
+| 회원 JWT·Refresh Token | 구현 범위 확정 | Accepted ADR | [ADR-AUTH-002](security/auth-002-member-jwt-refresh-token.md) | 관리자 audience·principal·쿠키와 분리 |
 | springdoc-openapi 3.0.3 + Swagger UI | 고정 | Technology Policy | [ADR-FRAME-001](platform/frame-001-spring-boot.md) | 구현과 명세 대조 도구, 외부 계약 원문은 `docs/05-specs` |
 | Kakao Local REST API V2 | 확정·MVP 필요 | Accepted ADR | [ADR-EXT-001](integration/ext-001-reference-verification.md) | 관리자 맛집 장소 확인 |
 | YouTube Data API v3 | 확정·MVP 필요 | Accepted ADR | [ADR-EXT-001](integration/ext-001-reference-verification.md) | 관리자 채널·영상 확인 |
-| 자동 재시도·Circuit Breaker·비동기 이벤트·Outbox | 조건부 | Conditional ADR | [ADR-EXT-002](adr-backlog.md#adr-ext-002-자동-복원력과-신뢰성-이벤트-전달) | 수동 재시도·동기 처리로 운영 목표를 지킬 수 없다는 근거 필요 |
-| Kakao Maps JavaScript API V3 | 확정이나 범위 제외 | Post-MVP ADR | [ADR-MAP-001](adr-backlog.md#adr-map-001-지도-표시와-공간-검색) | 지도 SDK·표시 제외 |
+| 자동 재시도·Circuit Breaker·비동기 이벤트·Outbox | 조건부(회원 Action 메일 Outbox만 부분 활성화) | Conditional ADR | [ADR-EXT-002](adr-backlog.md#adr-ext-002-자동-복원력과-신뢰성-이벤트-전달), 회원 Action 메일은 [ADR-AUTH-005](security/auth-005-member-action-mail-outbox.md) | 그 밖의 외부 Adapter·Circuit Breaker·이벤트는 수동 재시도·동기 처리로 운영 목표를 지킬 수 없다는 근거 필요 |
+| Kakao Maps JavaScript API V3 | 구현 범위 확정 | Accepted ADR | [ADR-MAP-001](integration/map-001-map-bounds-search.md) | 지도 SDK와 bounds 조회를 1차 확장에 포함하고 현재 위치·길찾기는 제외 |
 | Kakao Mobility Directions API V1 | 확정이나 범위 제외 | Post-MVP ADR | [ADR-ROUTE-001](adr-backlog.md#adr-route-001-kakao-mobility와-동선-추천) | 동선·코스 추천 제외 |
 | Java + Jsoup | 확정이나 자동화 제외 | Post-MVP ADR | [ADR-AUTO-001](adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) | 자동 수집 제외 |
 | Playwright | 필요 시 | Conditional ADR | [ADR-CRAWL-001](adr-backlog.md#adr-crawl-001-playwright-도입) | JS 렌더링 필요 검증 후 도입 |
 | n8n | 확정이나 자동화 제외 | Post-MVP ADR | [ADR-AUTO-001](adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) | 자동 수집·동기화 제외 |
-| Spring Scheduler | 확정이나 자동화 제외 | Post-MVP ADR | [ADR-AUTO-001](adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) | 자동 주기 실행 제외 |
+| Spring Scheduler | 최근 기록 보존에 한해 채택 | Accepted ADR | [ADR-DATA-010](data/data-010-recent-view-retention-cleanup.md) | `recent_restaurant_view` 30일 cleanup Command만 하루 한 번 이상 실행; 자동 수집·동기화 제외 |
 | Spring Batch 6.0.4 | 고정이나 자동화 제외 | Post-MVP ADR | [ADR-AUTO-001](adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) | 이력·재시작 배치 범위 없음 |
-| 하루 1회 새벽 배치 | 확정 설정이나 기능 제외 | Operational Configuration | [ADR-AUTO-001](adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) | 활성화되지 않은 실행 주기 |
+| 하루 1회 이상 최근 기록 cleanup | 1차 확장 적용 | Operational Configuration | [ADR-DATA-010](data/data-010-recent-view-retention-cleanup.md) | 신규 조회와 독립된 30일 경과 `recent_restaurant_view` 물리 삭제; 실패 관측·재시도 |
 | Spring AI 2.0.0 | 고정이나 범위 제외 | Post-MVP ADR | [ADR-AI-001](adr-backlog.md#adr-ai-001-spring-ai와-gemini-영상-정보-추출) | AI 영상 추출 제외 |
 | `gemini-3-flash-preview` | 승인된 Preview이나 범위 제외 | Post-MVP ADR | [ADR-AI-001](adr-backlog.md#adr-ai-001-spring-ai와-gemini-영상-정보-추출) | AI 기능 활성화 전 사용 금지 |
 | JSON Schema + Prompt Template | 확정이나 범위 제외 | Post-MVP ADR | [ADR-AI-001](adr-backlog.md#adr-ai-001-spring-ai와-gemini-영상-정보-추출) | AI 추출 계약은 기능과 함께 활성화 |
@@ -126,7 +127,7 @@ related_documents:
 | [NFR-DEPLOYMENT-001](../01-requirements/non-functional-requirements.md#nfr-deployment-001-재현-가능한-빌드와-환경-분리)~[NFR-DEPLOYMENT-002](../01-requirements/non-functional-requirements.md#nfr-deployment-002-배포-전후-검증) | [ADR-BUILD-001](platform/build-001-gradle-groovy.md), [ADR-WEB-003](platform/web-003-routing-boundary.md), [ADR-RUNTIME-001](platform/runtime-001-docker.md), [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | 재현 빌드, 로컬 통합과 초기 운영 배포 검증 |
 | [NFR-DEPLOYMENT-003](../01-requirements/non-functional-requirements.md#nfr-deployment-003-버전-추적과-복구-절차)~[NFR-DEPLOYMENT-004](../01-requirements/non-functional-requirements.md#nfr-deployment-004-단계별-실행-및-초기-운영-배포-복잡도-제한) | [ADR-DATA-004](data/data-004-flyway.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | 단계별 실행과 초기 운영 배포 복구·복잡도 |
 | [NFR-MAINTAINABILITY-001](../01-requirements/non-functional-requirements.md#nfr-maintainability-001-책임과-의존성-경계)~[NFR-MAINTAINABILITY-003](../01-requirements/non-functional-requirements.md#nfr-maintainability-003-추적성과-운영-복잡도) | [ADR-ARCH-001](architecture/arch-001-domain-monolith.md), [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md), [ADR-ARCH-003](adr-backlog.md#adr-arch-003-조회-확장-패턴), [ADR-ARCH-004](adr-backlog.md#adr-arch-004-멀티모듈독립-배포-전환) | 책임 경계, 조회 확장, 배포 경계와 운영 복잡도 제한 |
-| [NFR-PRIVACY-001](../01-requirements/non-functional-requirements.md#nfr-privacy-001-mvp-개인정보-최소화)~[NFR-PRIVACY-003](../01-requirements/non-functional-requirements.md#nfr-privacy-003-회원-기능-도입-시-재검토) | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md), [ADR-AUTH-002](adr-backlog.md#adr-auth-002-일반-사용자-jwt와-refresh-token), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 일반 사용자 계정 제외와 비밀 보호 |
+| [NFR-PRIVACY-001](../01-requirements/non-functional-requirements.md#nfr-privacy-001-mvp-개인정보-최소화)~[NFR-PRIVACY-004](../01-requirements/non-functional-requirements.md#nfr-privacy-004-위치와-행동-데이터-최소화) | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md), [ADR-AUTH-002](security/auth-002-member-jwt-refresh-token.md), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md), [ADR-DATA-010](data/data-010-recent-view-retention-cleanup.md) | 회원 데이터 최소화·탈퇴 파기·최근 기록 30일 cleanup과 비밀 보호 |
 
 ## 4. API → ADR 매핑
 
@@ -148,8 +149,9 @@ related_documents:
 | 동시 쓰기 충돌 | [ADR-DATA-006](adr-backlog.md#adr-data-006-동시-쓰기-충돌-제어), [ADR-LOCK-001](adr-backlog.md#adr-lock-001-redis-분산-락-도입) | 기본 `UNIQUE` 이후 강화는 통합 테스트 근거 필요 |
 | 내부 식별자 | [ADR-DATA-007](data/data-007-uuid-v4-identifiers.md) | Accepted; UUID v4와 PostgreSQL `uuid` |
 | 공개·삭제 생명주기 | [ADR-DATA-008](data/data-008-publication-lifecycle-soft-delete.md) | Accepted; 상태 분리·논리 삭제·FK RESTRICT |
-| 공간·벡터 데이터 | [ADR-MAP-001](adr-backlog.md#adr-map-001-지도-표시와-공간-검색), [ADR-SEARCH-002](adr-backlog.md#adr-search-002-pgvector-자연어-검색rag) | 현재 모델·확장 설치 금지 |
-| 사용자·토큰·기기 데이터 | [ADR-AUTH-002](adr-backlog.md#adr-auth-002-일반-사용자-jwt와-refresh-token), [ADR-NOTIFY-001](adr-backlog.md#adr-notify-001-fcm-푸시-알림) | 현재 MVP 모델에 추가 금지 |
+| 공간·벡터 데이터 | [ADR-MAP-001](integration/map-001-map-bounds-search.md), [ADR-SEARCH-002](adr-backlog.md#adr-search-002-pgvector-자연어-검색rag) | 1차 확장은 nullable WGS84 좌표와 bounds 조회만 허용, PostGIS·pgvector는 금지 |
+| 사용자·토큰·기기 데이터 | [ADR-AUTH-002](security/auth-002-member-jwt-refresh-token.md), [ADR-NOTIFY-001](adr-backlog.md#adr-notify-001-fcm-푸시-알림) | 회원·세션 데이터만 1차 확장 범위, 알림은 제외 |
+| 최근 본 맛집 보존 | [ADR-DATA-010](data/data-010-recent-view-retention-cleanup.md) | 30일 경과 행의 독립 cleanup과 GET 읽기 전용 경계 |
 
 ## 6. Workstream → ADR 매핑
 
@@ -168,7 +170,7 @@ related_documents:
 | 고정 버전·BOM·범위 버전 금지 | [ADR-LANG-001](platform/lang-001-java-21-runtime.md), [ADR-BUILD-001](platform/build-001-gradle-groovy.md), [ADR-FRAME-001](platform/frame-001-spring-boot.md), [ADR-WEB-001](platform/web-001-frontend-platform.md), [ADR-DATA-004](data/data-004-flyway.md) |
 | 개발·테스트·운영 분리 | [ADR-DATA-002](data/data-002-database-placement.md), [ADR-RUNTIME-001](platform/runtime-001-docker.md), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) |
 | DB 스키마 변경 | [ADR-DATA-004](data/data-004-flyway.md) |
-| Redis 역할 선확정 | [ADR-CACHE-001](adr-backlog.md#adr-cache-001-redis-캐시-도입), [ADR-LOCK-001](adr-backlog.md#adr-lock-001-redis-분산-락-도입), [ADR-AUTH-002](adr-backlog.md#adr-auth-002-일반-사용자-jwt와-refresh-token) |
+| Redis 역할 선확정 | [ADR-CACHE-001](adr-backlog.md#adr-cache-001-redis-캐시-도입), [ADR-LOCK-001](adr-backlog.md#adr-lock-001-redis-분산-락-도입), [ADR-AUTH-002](security/auth-002-member-jwt-refresh-token.md) |
 | 동시성 강화 선확정 | [ADR-DATA-006](adr-backlog.md#adr-data-006-동시-쓰기-충돌-제어), [ADR-LOCK-001](adr-backlog.md#adr-lock-001-redis-분산-락-도입) |
 | 조회 저장소·물리적 CQRS 선확정 | [ADR-ARCH-003](adr-backlog.md#adr-arch-003-조회-확장-패턴), [ADR-CACHE-001](adr-backlog.md#adr-cache-001-redis-캐시-도입) |
 | 자동 복원력·비동기 전달 선확정 | [ADR-EXT-002](adr-backlog.md#adr-ext-002-자동-복원력과-신뢰성-이벤트-전달) |
@@ -190,7 +192,7 @@ related_documents:
 
 - `UNIQUE` 이후 격리 수준·락·upsert 도입 기준
 - 캐시·별도 읽기 저장소·물리적 CQRS 전환 기준
-- 자동 재시도·Circuit Breaker·비동기 이벤트·Transactional Outbox 도입 기준
+- 자동 재시도·Circuit Breaker·비동기 이벤트 도입 기준 (Transactional Outbox는 회원 Action 메일에 한해 [ADR-AUTH-005](security/auth-005-member-action-mail-outbox.md)로 확정, 나머지는 미결정)
 - 멀티모듈·독립 배포와 세분화된 관리자 권한의 전환 기준
 - Jsoup, n8n, k6 등 정확한 버전이 없는 의존성
 - 현재 구현 전 필수 팀 결정은 없다. ALB·Blue-Green 전환 자동화는 토폴로지 확장 시 새 ADR로 결정한다.

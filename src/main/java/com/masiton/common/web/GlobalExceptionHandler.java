@@ -2,6 +2,7 @@ package com.masiton.common.web;
 
 import java.util.List;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import com.masiton.common.observability.TraceIdFilter;
@@ -27,31 +29,42 @@ import com.masiton.common.observability.TraceIdFilter;
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final String PRIVATE_NO_STORE = "private, no-store";
 
     @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException exception) {
+    public ResponseEntity<ErrorResponse> handleBusinessException(
+            BusinessException exception,
+            HttpServletRequest request
+    ) {
         log.warn("business error: code={}", exception.code());
-        return ResponseEntity.status(exception.status())
-                .body(ErrorResponse.of(exception.code(), exception.getMessage(), exception.fieldErrors(), traceId()));
+        ResponseEntity.BodyBuilder response = response(exception.status(), request);
+        if (exception.retryAfterSeconds() != null) {
+            response.header(HttpHeaders.RETRY_AFTER, String.valueOf(exception.retryAfterSeconds()));
+        }
+        return response.body(ErrorResponse.of(exception.code(), exception.getMessage(), exception.fieldErrors(), traceId()));
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleTypeMismatch(
-            MethodArgumentTypeMismatchException exception
+            MethodArgumentTypeMismatchException exception,
+            HttpServletRequest request
     ) {
         ErrorCode errorCode = ErrorCode.INVALID_FIELD_VALUE;
         List<ErrorResponse.FieldError> errors = List.of(
                 new ErrorResponse.FieldError(exception.getName(), "허용되지 않는 값입니다.")
         );
-        return ResponseEntity.status(errorCode.status())
+        return response(errorCode.status(), request)
                 .body(ErrorResponse.of(errorCode.name(), errorCode.defaultMessage(), errors, traceId()));
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleUnexpectedException(Exception exception) {
+    public ResponseEntity<ErrorResponse> handleUnexpectedException(
+            Exception exception,
+            HttpServletRequest request
+    ) {
         log.error("unhandled error: type={}", exception.getClass().getSimpleName());
         ErrorCode errorCode = ErrorCode.INTERNAL_SERVER_ERROR;
-        return ResponseEntity.status(errorCode.status())
+        return response(errorCode.status(), request)
                 .body(ErrorResponse.of(errorCode.name(), errorCode.defaultMessage(), traceId()));
     }
 
@@ -66,7 +79,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         List<ErrorResponse.FieldError> errors = exception.getBindingResult().getFieldErrors().stream()
                 .map(error -> new ErrorResponse.FieldError(error.getField(), error.getDefaultMessage()))
                 .toList();
-        return ResponseEntity.status(errorCode.status())
+        return response(errorCode.status(), request)
                 .body(ErrorResponse.of(errorCode.name(), errorCode.defaultMessage(), errors, traceId()));
     }
 
@@ -81,7 +94,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         List<ErrorResponse.FieldError> errors = List.of(
                 new ErrorResponse.FieldError(exception.getParameterName(), "필수 요청 값이 누락되었습니다.")
         );
-        return ResponseEntity.status(errorCode.status())
+        return response(errorCode.status(), request)
                 .body(ErrorResponse.of(errorCode.name(), errorCode.defaultMessage(), errors, traceId()));
     }
 
@@ -97,7 +110,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         if (statusCode.is5xxServerError()) {
             log.error("unhandled framework error: type={}", exception.getClass().getSimpleName());
         }
-        return ResponseEntity.status(statusCode)
+        return response(statusCode, request)
                 .body(ErrorResponse.of(errorCode.name(), errorCode.defaultMessage(), traceId()));
     }
 
@@ -113,5 +126,25 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     private String traceId() {
         return MDC.get(TraceIdFilter.TRACE_ID_MDC_KEY);
+    }
+
+    private ResponseEntity.BodyBuilder response(HttpStatusCode status, HttpServletRequest request) {
+        ResponseEntity.BodyBuilder response = ResponseEntity.status(status);
+        if (isMemberPrivatePath(request)) {
+            response.header(HttpHeaders.CACHE_CONTROL, PRIVATE_NO_STORE);
+        }
+        return response;
+    }
+
+    private ResponseEntity.BodyBuilder response(HttpStatusCode status, WebRequest request) {
+        if (request instanceof ServletWebRequest servletWebRequest) {
+            return response(status, servletWebRequest.getRequest());
+        }
+        return ResponseEntity.status(status);
+    }
+
+    private boolean isMemberPrivatePath(HttpServletRequest request) {
+        String requestUri = request.getRequestURI();
+        return requestUri.equals("/api/me") || requestUri.startsWith("/api/me/");
     }
 }

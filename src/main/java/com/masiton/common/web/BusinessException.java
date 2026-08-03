@@ -9,6 +9,7 @@ public class BusinessException extends RuntimeException {
     private final HttpStatus status;
     private final String code;
     private final List<ErrorResponse.FieldError> fieldErrors;
+    private final Long retryAfterSeconds;
 
     public BusinessException(ErrorCode errorCode) {
         this(errorCode.status(), errorCode.name(), errorCode.defaultMessage(), List.of());
@@ -31,12 +32,22 @@ public class BusinessException extends RuntimeException {
         this(status, code, message, List.of());
     }
 
+    /** retryAfterSeconds가 있으면 응답에 Retry-After 헤더(초 단위)를 추가한다. */
+    public BusinessException(HttpStatus status, String code, String message, long retryAfterSeconds) {
+        super(message);
+        this.status = status;
+        this.code = code;
+        this.fieldErrors = List.of();
+        this.retryAfterSeconds = retryAfterSeconds;
+    }
+
     public BusinessException(
             HttpStatus status, String code, String message, List<ErrorResponse.FieldError> fieldErrors) {
         super(message);
         this.status = status;
         this.code = code;
         this.fieldErrors = List.copyOf(fieldErrors);
+        this.retryAfterSeconds = null;
     }
 
     public HttpStatus status() {
@@ -49,5 +60,9 @@ public class BusinessException extends RuntimeException {
 
     public List<ErrorResponse.FieldError> fieldErrors() {
         return fieldErrors;
+    }
+
+    public Long retryAfterSeconds() {
+        return retryAfterSeconds;
     }
 }

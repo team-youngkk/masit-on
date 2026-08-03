@@ -40,8 +40,9 @@ class RestaurantPersistenceAdapter implements RestaurantRepositoryPort {
                         """
                         insert into restaurant (
                             id, region_id, food_category_id, name, kakao_place_id, kakao_place_url,
-                            road_address, detail_address, phone_number, publication_status, lifecycle_status
-                        ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            road_address, detail_address, phone_number, latitude, longitude,
+                            publication_status, lifecycle_status
+                        ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         on conflict (kakao_place_id) do nothing
                         returning id
                         """,
@@ -55,6 +56,8 @@ class RestaurantPersistenceAdapter implements RestaurantRepositoryPort {
                         restaurant.getRoadAddress(),
                         restaurant.getDetailAddress(),
                         restaurant.getPhoneNumber(),
+                        restaurant.getLatitude(),
+                        restaurant.getLongitude(),
                         restaurant.getPublicationStatus().name(),
                         restaurant.getLifecycleStatus().name());
         return id == null ? Optional.empty() : findById(id);

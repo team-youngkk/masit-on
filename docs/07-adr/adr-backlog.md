@@ -50,10 +50,11 @@ related_documents:
 
 ### ADR-EXT-002 자동 복원력과 신뢰성 이벤트 전달
 
-- 현재 상태: Conditional
-- 현재 결정: 외부 호출은 timeout과 오류 분류만 적용하고 관리자가 수동 재시도한다. 도메인 이벤트·메시지 브로커·비동기 Worker·Transactional Outbox는 도입하지 않는다.
+- 현재 상태: Conditional (회원 Action 메일 발송 한 가지 사례만 부분 활성화, 아래 참고)
+- 현재 결정: 외부 호출은 timeout과 오류 분류만 적용하고 관리자가 수동 재시도한다. 도메인 이벤트·메시지 브로커·비동기 Worker·범용 Circuit Breaker는 도입하지 않는다.
+- 부분 활성화: 회원 가입 인증·비밀번호 재설정 메일은 "DB 커밋 뒤 유실되어서는 안 되는 후속 작업"에 해당해 [ADR-AUTH-005](security/auth-005-member-action-mail-outbox.md)(Accepted, 2026-07-31)로 Transactional Outbox를 좁게 승인했다. Kakao·YouTube 등 다른 외부 Adapter와 Circuit Breaker·메시지 브로커·도메인 이벤트는 이 활성화에 포함되지 않으며 아래 활성화 조건을 그대로 따른다.
 - 활성화 조건: 측정된 외부 실패율·호출량 때문에 수동 재시도로 운영 목표를 지킬 수 없거나, DB 커밋 뒤 유실되어서는 안 되는 알림·외부 동기화·후속 작업이 승인된다.
-- 도입 전 확인: 자동 재시도 대상과 최대 횟수·backoff·jitter·전체 시간 예산·429 처리·멱등성, Circuit Breaker 상태·임계값·fallback, 이벤트 전달 보장·순서·중복 소비, Outbox 스키마·발행기·정리·재처리·DLQ
+- 도입 전 확인: 자동 재시도 대상과 최대 횟수·backoff·jitter·전체 시간 예산·429 처리·멱등성, Circuit Breaker 상태·임계값·fallback, 이벤트 전달 보장·순서·중복 소비, Outbox 스키마·발행기·정리·재처리·DLQ(회원 Action 메일 Outbox는 ADR-AUTH-005가 이미 확정)
 - 영향: 외부 Adapter, 트랜잭션·이벤트 경계, 저장소·Queue, 장애 복구, 관측성·통합 테스트
 
 ### ADR-SEARCH-001 QueryDSL 도입
@@ -100,11 +101,10 @@ related_documents:
 
 ### ADR-MAP-001 지도 표시와 공간 검색
 
-- 현재 상태: Post-MVP
-- 현재 결정: Kakao Maps JavaScript API V3와 PostGIS를 도입하지 않는다. MVP는 도로명주소와 카카오 장소 링크만 제공한다.
-- 활성화 조건: 지도 기반 탐색·현재 위치·거리 또는 반경 검색이 범위 변경으로 승인된다.
-- 도입 전 확인: 위치 개인정보, 좌표 모델, RDS 확장 지원, 지도 API 계약·비용, 공간 쿼리 성능
-- 영향: 프론트엔드, 데이터 모델·DB 확장, 외부 연동
+- 현재 상태: Accepted로 이동
+- 현재 결정: [ADR-MAP-001](integration/map-001-map-bounds-search.md)에 따라 1차 확장은 Kakao Maps JavaScript API V3와 nullable WGS84 좌표의 bounds 조회를 사용한다. PostGIS, 현재 위치, 거리·반경 검색은 도입하지 않는다.
+- 재검토 조건: 현재 위치·거리·반경·다각형 검색 또는 PostGIS가 범위에 들어온다.
+- 영향: 프론트엔드, Restaurant 좌표 모델, bounds 조회 API, 외부 지도 SDK
 
 ### ADR-ROUTE-001 Kakao Mobility와 동선 추천
 
@@ -130,18 +130,11 @@ related_documents:
 - 도입 전 확인: 검색 품질 기준, 임베딩 모델, RDS 확장 지원, 색인·재생성·비용
 - 영향: DB 확장·스키마, AI 연동, 검색 API
 
-### ADR-AUTH-002 일반 사용자 JWT와 Refresh Token
-
-- 현재 상태: Post-MVP
-- 현재 결정: 일반 사용자는 로그인하지 않는다. JWT, Refresh Token과 Redis 토큰 저장을 구현하지 않는다.
-- 활성화 조건: 1차 확장 회원가입·로그인이 승인되고 개인정보·세션 요구사항이 확정된다.
-- 도입 전 확인: 토큰 수명·폐기·회전, 브라우저 전달, Redis 필요성, 개인정보·보안 위협 모델
-- 영향: API 인증, Redis, 프론트엔드, 개인정보
-
 ### ADR-AUTO-001 자동 수집과 배치 처리
 
 - 현재 상태: Post-MVP
-- 현재 결정: Jsoup, n8n, Spring Scheduler, Spring Batch 6.0.4와 자동 주기 동기화를 도입하지 않는다.
+- 현재 결정: Jsoup, n8n, Spring Scheduler, Spring Batch 6.0.4와 자동 주기 수집·동기화를 도입하지 않는다.
+- 분리된 결정: 최근 본 맛집의 30일 보존을 집행하는 제한적 Scheduler는 자동 수집과 다른 문제이므로 [ADR-DATA-010](data/data-010-recent-view-retention-cleanup.md)에서 Accepted 결정으로 관리한다.
 - 활성화 조건: 관리자 확인 없는 자동 등록과 구분되는 승인된 수집·검수 흐름이 범위에 포함된다.
 - 도입 전 확인: n8n·Scheduler·Batch 책임 경계, 정확한 n8n·Jsoup 버전, 실행 이력·재시작·중복 방지, 외부 API 비용
 - 영향: 운영 구성요소, Redis 락, 테스트, 관리자 흐름

@@ -66,7 +66,9 @@ public class CreatorRegistrationService implements CreatorRegistrationUseCase {
                     candidate(existing.get()),
                     existing(existing.get()));
         }
-        ChannelSnapshot snapshot = new ChannelSnapshot(channel.externalChannelId(), channel.channelName(), channel.channelUrl(), channel.checkedAt());
+        ChannelSnapshot snapshot = new ChannelSnapshot(
+                channel.externalChannelId(), channel.channelName(), channel.channelUrl(),
+                channel.profileImageUrl(), channel.description(), channel.handle(), channel.checkedAt());
         IssuedConfirmationToken token = confirmationTokenUseCase.issue(new ConfirmationTokenIssueCommand(
                 adminId, ConfirmationTokenResourceType.CREATOR, SNAPSHOT_SCHEMA_VERSION, channel.externalChannelId(), serialize(snapshot)));
         return new CreatorPreviewResult(CreatorPreviewResult.Decision.READY, token.rawToken(), token.expiresAt(), candidate(snapshot, null), null);
@@ -89,6 +91,7 @@ public class CreatorRegistrationService implements CreatorRegistrationUseCase {
             return new CreatorCreationResult(candidate(existing.get()), false, true);
         }
         Creator candidate = new Creator(UUID.randomUUID(), snapshot.externalChannelId(), snapshot.channelName(), snapshot.channelUrl(),
+                blankToNull(snapshot.profileImageUrl()), blankToNull(snapshot.description()), blankToNull(snapshot.handle()),
                 PublicationStatus.PUBLIC, LifecycleStatus.ACTIVE, ExternalAvailabilityStatus.AVAILABLE,
                 snapshot.checkedAt(), null, null, null);
         Optional<Creator> inserted = creatorRepository.insertIfAbsent(candidate);
@@ -146,5 +149,28 @@ public class CreatorRegistrationService implements CreatorRegistrationUseCase {
     private CreatorCandidate candidate(ChannelSnapshot s, UUID id) { return new CreatorCandidate(id, s.channelName(), s.channelUrl()); }
     private CreatorCandidate candidate(Creator c) { return new CreatorCandidate(c.getId(), c.getChannelName(), c.getChannelUrl()); }
     private ExistingCreator existing(Creator c) { return new ExistingCreator(c.getId(), c.getChannelName(), c.getChannelUrl()); }
-    private record ChannelSnapshot(String externalChannelId, String channelName, String channelUrl, OffsetDateTime checkedAt) { }
+
+    /**
+     * 저장 직전 방어적 정규화다. YouTubeChannelVerificationAdapter가 snippet 추출 단계에서
+     * 이미 공백을 null로 정리하지만, creator.profile_image_url·description·handle의 DB
+     * CHECK(빈 문자열 금지)를 지키는 최종 책임은 저장을 수행하는 이 Application Service가
+     * 진다. RestaurantRegistrationService.optional()과 같은 위치(Application)·같은 방식
+     * (trim 후 빈 문자열이면 null)으로 정규화해 이 저장소의 기존 관례를 따른다.
+     */
+    private String blankToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private record ChannelSnapshot(
+            String externalChannelId,
+            String channelName,
+            String channelUrl,
+            String profileImageUrl,
+            String description,
+            String handle,
+            OffsetDateTime checkedAt) { }
 }

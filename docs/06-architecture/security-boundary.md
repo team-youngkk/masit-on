@@ -51,11 +51,13 @@ URL matcher는 다음 순서로 평가한다.
 1. `POST /api/admin/auth/tokens`: 로그인 자격 증명
 2. `POST /api/admin/auth/tokens/refresh`: Refresh Token 쿠키
 3. `DELETE /api/admin/auth/tokens`: Bearer JWT + Refresh Token 쿠키
-4. 공개 `GET /api/restaurants`, `GET /api/restaurants/{restaurantId}`, `GET /api/creators`: 무인증
+4. 공개 `GET /api/restaurants`, `GET /api/restaurants/{restaurantId}`, `GET /api/creators`, `GET /api/creators/{creatorId}`, `GET /api/creators/{creatorId}/restaurants`, `GET /api/creators/{creatorId}/videos`: 무인증. 단, 맛집 상세는 유효한 회원 Bearer Token이 있을 때 최근 기록용 문맥만 선택적으로 사용한다. 유튜버 상세 세 조회는 회원 문맥을 쓰지 않으므로 Bearer Token을 해석하지 않는다.
 5. 나머지 `/api/admin/**`: Bearer JWT + `ADMIN`
 6. 정의되지 않은 `/api/**`: 기본 거부
 
 `/internal/health/live`, `/internal/health/ready`, `/internal/health/dependencies`는 애플리케이션 인증 없이 호출할 수 있지만, 인증 예외보다 앞선 네트워크 경계에서 인터넷 Nginx 전달을 차단하고 EC2 내부 Agent·컨테이너에서만 호출한다. 그 밖의 `/internal/**`은 허용하지 않는다.
+
+회원 인증은 관리자와 별도 JWT audience(`masit-on-member-api`), `MEMBER` authority, `MemberPrincipal(memberId, sessionId)`를 사용한다. 공개 회원 인증 메서드를 제외한 `/api/auth/**`와 `/api/me/**`에는 회원 decoder만, `/api/admin/**`에는 관리자 decoder만 적용해 교차 audience를 인증 단계에서 거부한다. `GET /api/restaurants/{restaurantId}`는 `permitAll`을 유지하며, 선택적 회원 Token 해석기는 유효한 회원 Token에서만 최근 기록용 문맥을 제공한다. 유튜버 상세 세 조회는 회원 부수효과가 없어 Token 해석 대상에서 제외한다. 만료·변조·다른 audience Token이 섞여 들어와도 401 없이 공개 응답을 반환해야 공개 계약이 인증 상태에 종속되지 않는다. 누락·만료·변조·폐기·교차 audience Token, 회원 인증 상태 조회 실패와 최근 기록 저장 실패는 principal·오류 응답을 만들지 않고 익명 공개 조회와 최근 기록 생략으로 끝낸다.
 
 ### Presentation
 
@@ -167,6 +169,8 @@ URL은 HTTPS와 허용 호스트를 검증하고 리디렉션 최종 호스트�
 ## 10. 보안 테스트
 
 - 공개 GET 무인증 성공, 나머지 `/api/admin/**` 무인증 401
+- 공개 맛집 상세는 유효 회원 Token일 때만 최근 기록을 시도하고, 누락·만료·변조·교차 audience Token 및 회원 인증·개인화 저장소 장애에서는 익명 `200`과 기록 생략을 검증
+- 유튜버 상세 세 조회는 Token 없음과 검증할 수 없는 Token 모두에서 401이 아니며, 정의되지 않은 하위 경로는 기본 거부를 검증
 - 로그인·재발급 matcher가 포괄 관리자 matcher보다 먼저 적용
 - 로그아웃은 JWT와 Refresh Token 쿠키를 모두 검증
 - 메모리 Access Token 소실 뒤 재발급 성공·실패와 단일 재시도 제한

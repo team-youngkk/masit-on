@@ -21,6 +21,8 @@ final class RestaurantMapper {
                 entity.getRoadAddress(),
                 entity.getDetailAddress(),
                 entity.getPhoneNumber(),
+                entity.getLatitude(),
+                entity.getLongitude(),
                 entity.getPublicationStatus(),
                 entity.getLifecycleStatus(),
                 entity.getCreatedAt(),
@@ -39,6 +41,8 @@ final class RestaurantMapper {
                 domain.getRoadAddress(),
                 domain.getDetailAddress(),
                 domain.getPhoneNumber(),
+                domain.getLatitude(),
+                domain.getLongitude(),
                 domain.getPublicationStatus(),
                 domain.getLifecycleStatus(),
                 domain.getDeletedAt());
