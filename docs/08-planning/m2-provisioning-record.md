@@ -945,7 +945,7 @@ Kakao place ID와 YouTube channel/video ID는 관리자 API 응답에 노출되�
 
 **화면에 오류가 뜨지 않고 `미리보기 확인 중…`에서 멈춘 것도 같은 원인이다.** [`auth.ts`](../../frontend/lib/admin/auth.ts)의 `authenticatedFetch`는 `401`을 받으면 곧바로 재발급을 호출하는데, 미리보기 POST 3건에 재발급 POST가 0건이었다. `401`이 앱 코드까지 전달되지 않아 `fetch`가 끝나지 않았고 mutation이 pending에 머물렀다. Nginx가 돌려준 `WWW-Authenticate: Basic` 챌린지를 브라우저가 자체 처리로 붙잡기 때문이다.
 
-수정은 `location /api/`의 `auth_basic`을 변수로 받아 요청별로 판정한다([`01-masiton-api-auth-map.conf`](../../deploy/nginx/01-masiton-api-auth-map.conf)). `/api/admin/**`에 Bearer를 실은 요청만 Basic을 면제하고, 그 요청은 백엔드가 JWT와 `ADMIN`을 검증한다.
+당시 수정은 `location /api/`의 `auth_basic`을 변수로 받아 요청별로 판정했다. `/api/admin/**`에 Bearer를 실은 요청만 Basic을 면제하고, 그 요청은 백엔드가 JWT와 `ADMIN`을 검증했다. 이 임시 map 파일은 `E1-T13` 쿠키 세션 전환에서 제거했다.
 
 **로그인과 재발급은 JWT를 요구하지 않는 무인증 경로여서 Bearer 유무와 무관하게 Basic을 계속 요구한다.** 면제하면 Bearer를 임의로 붙여 인터넷에서 자격 증명 시도를 반복할 수 있고, 로그인 실패 5회 차단이 전원을 잠그는 수단이 된다(13.7절).
 
