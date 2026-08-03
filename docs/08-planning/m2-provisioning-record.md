@@ -319,6 +319,17 @@ PR 브랜치는 AWS 자격 증명을 받지 못한다. **이미지 빌드와 검
 
 `frontend/.dockerignore`를 추가해 `node_modules`와 `.env`가 빌드 컨텍스트에 들어가지 않게 했다. 루트 `.dockerignore`에는 `frontend`를 넣어 백엔드 빌드 컨텍스트에서 프론트엔드 `node_modules` 전송을 없앴다.
 
+**Kakao Maps JavaScript 키는 이미지 빌드 시점에 주입한다.** `NEXT_PUBLIC_` 접두사 값은 `next build`가 클라이언트 번들에 박아 넣으므로 컨테이너 환경 변수로는 바뀌지 않는다. 1차 확장 배포에서 이 경로가 없어 지도가 SDK 오류 상태로 나갔다. 배포 자체는 성공으로 끝나고 지도 화면만 죽는 형태였다.
+
+| 항목 | 값 |
+|---|---|
+| 저장소 변수 | `NEXT_PUBLIC_KAKAO_MAPS_JS_KEY` (GitHub Actions variable) |
+| 전달 경로 | `ci.yml` 프론트엔드 이미지 빌드 step의 `--build-arg` |
+| 비어 있으면 | 빌드를 중단한다. 통과시키면 지도만 죽은 이미지가 배포된다 |
+| 허용 도메인 | Kakao 콘솔 Web 플랫폼에 `https://masiton.click` 등록 |
+
+Secret이 아니라 변수를 쓴다. [ADR-MAP-001 6.5](../07-adr/integration/map-001-map-bounds-search.md#65-키-비용과-외부-서비스-경계)가 이 키를 브라우저 노출 식별자로 분류하고 허용 도메인 제한을 보호 수단으로 삼기 때문이다. **서버용 Kakao Local REST API 키는 같은 ADR이 비밀정보로 분류하므로 이 경로로 넘기지 않는다.** build arg는 이미지 히스토리에 남는다. REST 키는 Parameter Store `/masiton/integration/kakao/rest-api-key`를 그대로 쓴다.
+
 ### 6.6. 워크플로 — 해소됨
 
 이 절은 작성 시점에 **GitHub Actions 워크플로가 저장소에 없다**는 사실을 기록했다. ADR-CI-001(Accepted), ADR-DEPLOY-002 4절, [M2 계획](m2-deployment-plan.md) 8절, `M2-06` 작업 항목이 모두 워크플로를 전제하는데 구현된 적이 없었다.

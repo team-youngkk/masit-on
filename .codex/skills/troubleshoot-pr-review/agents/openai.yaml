@@ -1,0 +1,4 @@
+interface:
+  display_name: "Troubleshoot PR Review"
+  short_description: "Resolve PR feedback and preserve troubleshooting knowledge"
+  default_prompt: "Use $troubleshoot-pr-review to address unresolved feedback on my PR and document the diagnosis, fix, and verification."

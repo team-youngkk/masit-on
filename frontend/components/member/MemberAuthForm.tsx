@@ -5,25 +5,14 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Field } from '@/components/ui/Field'
 import { memberLogin, memberRegister, requestPasswordReset, confirmPasswordReset, resendMemberEmailVerification } from '@/lib/member/auth'
+import { safeMemberReturnTo } from '@/lib/member/auth-navigation'
 import styles from '@/components/admin/admin.module.css'
 
 type Mode = 'login' | 'signup' | 'request-reset' | 'confirm-reset'
 
 function getSafeReturnTo(): string {
   const returnTo = new URLSearchParams(window.location.search).get('returnTo')
-  if (!returnTo?.startsWith('/') || returnTo.startsWith('//')) {
-    return '/me'
-  }
-
-  try {
-    const destination = new URL(returnTo, window.location.origin)
-    if (destination.origin !== window.location.origin) {
-      return '/me'
-    }
-    return `${destination.pathname}${destination.search}${destination.hash}`
-  } catch {
-    return '/me'
-  }
+  return safeMemberReturnTo(returnTo) ?? '/me'
 }
 
 export function MemberAuthForm({ mode }: { mode: Mode }) {
