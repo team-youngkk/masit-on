@@ -15,15 +15,15 @@ related_documents:
 | PR | [#124 가입 이메일 인증 8자 코드 전환](https://github.com/team-youngkk/masit-on/pull/124) |
 | 작성자 | inan0226 |
 | 처리 일자 | 2026-08-03 |
-| 범위 | Redis 제출 제한 Lua, 이메일 인증 요청 검증 위치, 프론트엔드 코드 붙여넣기 리뷰 3건 |
+| 범위 | Redis 제출 제한 Lua, 이메일 인증 요청 검증 위치, 프론트엔드 코드 붙여넣기 리뷰 5건(중복 지적 2건 포함) |
 
 ## 2. 리뷰 스레드 처리 결과
 
 | 스레드 | 요청 요약 | 판단 | 처리 결과 | 근거/검증 |
 |---|---|---|---|---|
-| [Redis Lua 도달 불가능 분기](https://github.com/team-youngkk/masit-on/pull/124#discussion_r3703584564) | 제출 횟수 증가 뒤의 중복 초과 분기 제거 검토 | 수정 필요 | 원자적 Lua에서 도달할 수 없는 두 번째 초과 분기를 제거 | 10회 허용·11번째 차단 Redis 통합 테스트로 경계 유지 확인 |
+| [Redis Lua 도달 불가능 분기](https://github.com/team-youngkk/masit-on/pull/124#discussion_r3703584564), [같은 중복 지적](https://github.com/team-youngkk/masit-on/pull/124#discussion_r3703639349) | 제출 횟수 증가 뒤의 중복 초과 분기 제거 검토 | 수정 필요 / 이미 해결 | 첫 지적에 따라 원자적 Lua에서 도달할 수 없는 두 번째 초과 분기를 제거했고, 뒤에 등록된 같은 요청은 현재 커밋에서 충족됨을 확인 | 10회 허용·11번째 차단 Redis 통합 테스트로 경계 유지 확인 |
 | [Controller Token 길이 상한](https://github.com/team-youngkk/masit-on/pull/124#discussion_r3703584569) | `@Valid` 제거로 `@Size(max = 200)`도 사라진 것이 의도인지 확인 | 수정 불필요 | Controller 길이 검증을 복원하지 않음 | 출처 제한을 모든 제출에 먼저 적용한 뒤 Application의 `^[A-HJ-NP-Z2-9]{8}$`로 정확한 계약 형식을 검증함 |
-| [정규화 전 브라우저 잘림](https://github.com/team-youngkk/masit-on/pull/124#discussion_r3703598743) | 앞뒤 공백이 있는 8자 코드를 붙여넣어도 코드가 잘리지 않게 수정 | 수정 필요 | 입력의 `maxLength={8}`을 제거하고 공백 포함 붙여넣기 회귀 예시를 테스트에 추가 | 정규화 함수가 ` AB7K9M2Q `를 `AB7K9M2Q`로 보존함을 프론트 테스트로 확인 |
+| [정규화 전 브라우저 잘림](https://github.com/team-youngkk/masit-on/pull/124#discussion_r3703598743), [같은 중복 지적](https://github.com/team-youngkk/masit-on/pull/124#discussion_r3703639342) | 앞뒤 공백이 있는 8자 코드를 붙여넣어도 코드가 잘리지 않게 수정 | 수정 필요 / 이미 해결 | 첫 지적에 따라 입력의 `maxLength={8}`을 제거하고 회귀 예시를 추가했으며, 뒤에 등록된 같은 요청은 현재 커밋에서 충족됨을 확인 | 정규화 함수가 ` AB7K9M2Q `를 `AB7K9M2Q`로 보존함을 프론트 테스트로 확인 |
 
 ## 3. 문제 현상
 
