@@ -38,6 +38,7 @@ out/
 
 # 로컬 환경 값
 .env
+.env.local
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*

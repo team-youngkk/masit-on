@@ -184,8 +184,27 @@ jobs:
             *) echo "ADR-LANG-001이 요구하는 ${expected}가 아니다"; exit 1 ;;
           esac
 
+      # Kakao Maps JavaScript 키는 빌드 시점에 클라이언트 번들로 들어간다. 런타임
+      # 환경 변수로는 바뀌지 않으므로 여기서 넘기지 않으면 지도가 항상 오류 상태로
+      # 배포된다. 값이 비면 빌드를 멈춘다. 조용히 통과하면 배포는 성공으로 끝나고
+      # 지도만 죽은 이미지가 나간다.
+      #
+      # Secret이 아니라 변수를 쓴다. ADR-MAP-001 6.5가 이 키를 브라우저 노출
+      # 식별자로 분류하고 허용 도메인 제한을 보호 수단으로 삼는다. Secret으로 두면
+      # 로그 마스킹이 붙어 값이 맞는지 확인할 수단만 사라진다.
       - name: 프론트엔드 이미지 빌드
-        run: docker build -t "masiton-frontend:${IMAGE_TAG}" -f frontend/Dockerfile frontend
+        env:
+          KAKAO_MAPS_JS_KEY: ${{ vars.NEXT_PUBLIC_KAKAO_MAPS_JS_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${KAKAO_MAPS_JS_KEY}" ]; then
+            echo '저장소 변수 NEXT_PUBLIC_KAKAO_MAPS_JS_KEY가 비어 있다.'
+            echo '이 값 없이 빌드하면 지도 화면이 SDK 오류 상태로 배포된다.'
+            exit 1
+          fi
+          docker build \
+            --build-arg "NEXT_PUBLIC_KAKAO_MAPS_JS_KEY=${KAKAO_MAPS_JS_KEY}" \
+            -t "masiton-frontend:${IMAGE_TAG}" -f frontend/Dockerfile frontend
 
       # ADR-RUNTIME-001 13절: 이미지에 평문 비밀값이나 .env가 포함되지 않았는지 검사한다.
       # 하나라도 걸리면 push에 도달하지 않는다.
