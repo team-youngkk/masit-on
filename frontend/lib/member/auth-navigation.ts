@@ -15,11 +15,23 @@ export function safeMemberReturnTo(returnTo: string | null | undefined): string 
   }
 }
 
-export function memberSignupHref(returnTo: string | null | undefined): string {
+function memberAuthHref(pathname: '/login' | '/signup' | '/verify-email', returnTo: string | null | undefined): string {
   const safeReturnTo = safeMemberReturnTo(returnTo)
   if (!safeReturnTo) {
-    return '/signup'
+    return pathname
   }
 
-  return `/signup?${new URLSearchParams({ returnTo: safeReturnTo }).toString()}`
+  return `${pathname}?${new URLSearchParams({ returnTo: safeReturnTo }).toString()}`
+}
+
+export function memberLoginHref(returnTo: string | null | undefined): string {
+  return memberAuthHref('/login', returnTo)
+}
+
+export function memberSignupHref(returnTo: string | null | undefined): string {
+  return memberAuthHref('/signup', returnTo)
+}
+
+export function memberVerifyEmailHref(returnTo: string | null | undefined): string {
+  return memberAuthHref('/verify-email', returnTo)
 }
