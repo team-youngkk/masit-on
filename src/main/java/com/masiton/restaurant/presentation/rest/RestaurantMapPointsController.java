@@ -1,6 +1,5 @@
 package com.masiton.restaurant.presentation.rest;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Set;
 
@@ -19,7 +18,7 @@ import com.masiton.restaurant.application.port.in.SearchRestaurantMapPointsUseCa
 import com.masiton.restaurant.infrastructure.web.MapClientAddressResolver;
 
 /**
- * API-MAP-001 지도 영역 맛집 조회.
+ * API-MAP-001 지도 맛집 마커 조회.
  * 근거: docs/05-specs/api/discovery/map-discovery-api.md,
  * docs/05-specs/api/common/{coordinate-contract.md, filtering-contract.md}
  */
@@ -27,10 +26,8 @@ import com.masiton.restaurant.infrastructure.web.MapClientAddressResolver;
 @RequestMapping("/api/restaurants")
 public class RestaurantMapPointsController {
 
-    private static final Set<String> KNOWN_FIELDS =
-            Set.of("south", "west", "north", "east", "query", "district", "category", "creatorId");
+    private static final Set<String> KNOWN_FIELDS = Set.of("query", "district", "category", "creatorId");
     private static final Set<String> ARRAY_STYLE_FILTER_FIELDS = Set.of("district", "category", "creatorId");
-    private static final Set<String> REQUIRED_BOUND_FIELDS = Set.of("south", "west", "north", "east");
 
     private final SearchRestaurantMapPointsUseCase searchRestaurantMapPointsUseCase;
     private final MapClientAddressResolver clientAddressResolver;
@@ -48,15 +45,8 @@ public class RestaurantMapPointsController {
         validateParamNames(queryParams);
         validateSingleValue(queryParams);
         validateNoCommaList(queryParams);
-        validateRequiredBounds(queryParams);
-
-        BigDecimal south = parseDecimal(queryParams.getFirst("south"), "south");
-        BigDecimal west = parseDecimal(queryParams.getFirst("west"), "west");
-        BigDecimal north = parseDecimal(queryParams.getFirst("north"), "north");
-        BigDecimal east = parseDecimal(queryParams.getFirst("east"), "east");
 
         RestaurantMapPointsResult result = searchRestaurantMapPointsUseCase.search(new SearchRestaurantMapPointsCommand(
-                south, west, north, east,
                 queryParams.getFirst("query"),
                 queryParams.getFirst("district"),
                 queryParams.getFirst("category"),
@@ -98,19 +88,4 @@ public class RestaurantMapPointsController {
         }
     }
 
-    private void validateRequiredBounds(MultiValueMap<String, String> queryParams) {
-        for (String field : REQUIRED_BOUND_FIELDS) {
-            if (queryParams.getFirst(field) == null) {
-                throw new BusinessException(ErrorCode.MISSING_REQUIRED_FIELD, field, field + "은 필수입니다.");
-            }
-        }
-    }
-
-    private BigDecimal parseDecimal(String raw, String field) {
-        try {
-            return new BigDecimal(raw.trim());
-        } catch (NumberFormatException exception) {
-            throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, field, "decimal 값만 허용합니다.");
-        }
-    }
 }
