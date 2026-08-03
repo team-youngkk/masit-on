@@ -30,6 +30,7 @@ export function VerifyEmail({ loginHref }: { loginHref: string }) {
   const [verifying, setVerifying] = useState(false)
   const [resending, setResending] = useState(false)
   const [verified, setVerified] = useState(false)
+  const [showResend, setShowResend] = useState(false)
   const tokenHintId = useId()
   const resendHintId = useId()
   const singleFlight = useRef(createEmailVerificationSingleFlight()).current
@@ -43,6 +44,7 @@ export function VerifyEmail({ loginHref }: { loginHref: string }) {
       setVerifying(true)
       setVerificationFeedback(null)
       setResendFeedback(null)
+      setShowResend(false)
 
       try {
         const result = await submitEmailVerification({
@@ -52,6 +54,7 @@ export function VerifyEmail({ loginHref }: { loginHref: string }) {
         })
 
         setVerified(result.verified)
+        setShowResend(result.shouldOfferResend)
         setVerificationFeedback(result.feedback)
       } finally {
         setVerifying(false)
@@ -104,6 +107,7 @@ export function VerifyEmail({ loginHref }: { loginHref: string }) {
                 setToken(event.target.value)
                 if (verificationFeedback?.kind === 'alert') {
                   setVerificationFeedback(null)
+                  setShowResend(false)
                 }
               }}
               aria-describedby={tokenHintId}
@@ -153,7 +157,7 @@ export function VerifyEmail({ loginHref }: { loginHref: string }) {
         )}
       </section>
 
-      {verificationFeedback?.kind === 'alert' ? (
+      {showResend ? (
         <section className={styles.card} aria-labelledby="resend-title">
           <div className={styles.sectionHeader}>
             <h2 id="resend-title" className={styles.sectionTitle}>

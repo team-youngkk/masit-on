@@ -7,6 +7,11 @@ import { Button } from '@/components/ui/Button'
 import { Field } from '@/components/ui/Field'
 import { memberLogin, memberRegister, requestPasswordReset, confirmPasswordReset, resendMemberEmailVerification } from '@/lib/member/auth'
 import { memberVerifyEmailHref, safeMemberReturnTo } from '@/lib/member/auth-navigation'
+import {
+  acceptMemberRegistration,
+  type AcceptedMemberRegistration,
+  resendAcceptedMemberRegistration,
+} from './member-auth-form-coordination'
 import styles from '@/components/admin/admin.module.css'
 
 type Mode = 'login' | 'signup' | 'request-reset' | 'confirm-reset'
@@ -29,6 +34,7 @@ export function MemberAuthForm({ mode, returnTo }: { mode: Mode; returnTo?: stri
   const [message, setMessage] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [registrationAccepted, setRegistrationAccepted] = useState(false)
+  const [acceptedRegistration, setAcceptedRegistration] = useState<AcceptedMemberRegistration | null>(null)
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); setMessage(null); setSubmitting(true)
@@ -39,9 +45,11 @@ export function MemberAuthForm({ mode, returnTo }: { mode: Mode; returnTo?: stri
       }
       if (mode === 'login') { await memberLogin(email, password); router.replace(getSafeReturnTo()) }
       if (mode === 'signup') {
-        await memberRegister(email, password)
+        const submittedEmail = email
+        await memberRegister(submittedEmail, password)
         setPassword('')
         setPasswordConfirmation('')
+        setAcceptedRegistration(acceptMemberRegistration(submittedEmail))
         setRegistrationAccepted(true)
         setMessage('Check your email to verify the account.')
       }
@@ -58,10 +66,17 @@ export function MemberAuthForm({ mode, returnTo }: { mode: Mode; returnTo?: stri
   }
 
   async function resendVerificationEmail() {
+    if (!acceptedRegistration) {
+      return
+    }
+
     setMessage(null)
     setSubmitting(true)
     try {
-      await resendMemberEmailVerification(email)
+      await resendAcceptedMemberRegistration(
+        acceptedRegistration,
+        resendMemberEmailVerification,
+      )
       setMessage('If the account is eligible, a verification email has been sent.')
     } catch {
       setMessage('Request could not be completed.')
@@ -75,7 +90,7 @@ export function MemberAuthForm({ mode, returnTo }: { mode: Mode; returnTo?: stri
   const needsPassword = (mode === 'login' || mode === 'confirm-reset') || (mode === 'signup' && showSignupInputs)
   const needsPasswordConfirmation = mode === 'confirm-reset' || (mode === 'signup' && showSignupInputs)
   return <form className={styles.form} onSubmit={submit} noValidate>
-    {needsEmail ? <Field label="Email" name="email" type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} required /> : null}
+    {needsEmail ? <Field label="Email" name="email" type="email" autoComplete="email" value={acceptedRegistration?.email ?? email} onChange={event => setEmail(event.target.value)} readOnly={acceptedRegistration?.emailReadOnly ?? false} required /> : null}
     {mode === 'confirm-reset' ? <Field label="Reset token" name="token" value={token} onChange={event => setToken(event.target.value)} required /> : null}
     {needsPassword ? <Field label="Password" name="password" type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={event => setPassword(event.target.value)} required /> : null}
     {needsPasswordConfirmation ? <Field label="Confirm password" name="passwordConfirmation" type="password" autoComplete="new-password" value={passwordConfirmation} onChange={event => setPasswordConfirmation(event.target.value)} required /> : null}
