@@ -7,6 +7,8 @@ const {
   authenticatedMemberFetch,
   memberLogin,
   memberLogout,
+  resendMemberEmailVerification,
+  verifyMemberEmail,
 } = require('./auth.ts')
 
 class SerialLockManager {
@@ -176,4 +178,41 @@ memberAuthTest('메모리 토큰이 없어도 refresh 후 서버 로그아웃을
     'DELETE /api/auth/tokens',
   ])
   memberAuthAssert.equal(hasMemberAccessToken(), false)
+})
+
+memberAuthTest('이메일 인증 토큰은 URL이 아닌 JSON 본문으로만 전송한다', async () => {
+  const token = 'opaque-secret-token'
+  let requestedUrl = ''
+  let requestInit: RequestInit | undefined
+
+  globalThis.fetch = async (input, init) => {
+    requestedUrl = String(input)
+    requestInit = init
+    return new Response(null, { status: 204 })
+  }
+
+  await verifyMemberEmail(token)
+
+  memberAuthAssert.equal(requestedUrl, '/api/auth/email-verifications')
+  memberAuthAssert.equal(requestedUrl.includes(token), false)
+  memberAuthAssert.equal(requestInit?.method, 'POST')
+  memberAuthAssert.deepEqual(JSON.parse(String(requestInit?.body)), { token })
+})
+
+memberAuthTest('인증 메일 재발송은 이메일만 JSON 본문으로 전송한다', async () => {
+  const email = 'member@example.com'
+  let requestedUrl = ''
+  let requestInit: RequestInit | undefined
+
+  globalThis.fetch = async (input, init) => {
+    requestedUrl = String(input)
+    requestInit = init
+    return new Response(null, { status: 202 })
+  }
+
+  await resendMemberEmailVerification(email)
+
+  memberAuthAssert.equal(requestedUrl, '/api/auth/email-verifications/resend')
+  memberAuthAssert.equal(requestInit?.method, 'POST')
+  memberAuthAssert.deepEqual(JSON.parse(String(requestInit?.body)), { email })
 })
