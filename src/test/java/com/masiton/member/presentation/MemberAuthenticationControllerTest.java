@@ -98,6 +98,28 @@ class MemberAuthenticationControllerTest {
     }
 
     @Test
+    @DisplayName("이메일 인증은 요청 출처를 전달하고 429의 Retry-After를 보존한다")
+    void 이메일인증_출처전달과RetryAfter보존() throws Exception {
+        doThrow(new BusinessException(
+                HttpStatus.TOO_MANY_REQUESTS,
+                "RATE_LIMIT_EXCEEDED",
+                "Too many email verification attempts",
+                600
+        )).when(service).verifyEmail("ab7k9m2q", "127.0.0.1");
+
+        mockMvc.perform(post("/api/auth/email-verifications")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"token":"ab7k9m2q"}
+                                """))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.code").value("RATE_LIMIT_EXCEEDED"))
+                .andExpect(header().string(HttpHeaders.RETRY_AFTER, "600"));
+
+        verify(service).verifyEmail("ab7k9m2q", "127.0.0.1");
+    }
+
+    @Test
     @DisplayName("로그인은 Refresh Cookie를 보안 속성과 함께 발급한다")
     void 로그인_성공_RefreshCookie계약반환() {
         when(service.login(any(), any(), any())).thenReturn(new MemberAuthenticationResult("access", "refresh", 1800));

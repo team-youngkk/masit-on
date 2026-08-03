@@ -25,8 +25,13 @@ public class MemberActionTokenMailAdapter implements MemberActionTokenDeliveryPo
         }
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);
-        message.setSubject(purpose == MemberActionPurpose.EMAIL_VERIFICATION ? "Verify your Masit-on email" : "Reset your Masit-on password");
-        message.setText("Enter this one-time token in the Masit-on verification screen:\n" + rawToken);
+        if (purpose == MemberActionPurpose.EMAIL_VERIFICATION) {
+            message.setSubject("Verify your Masit-on email");
+            message.setText("Enter this 8-character verification code in the Masit-on verification screen:\n" + rawToken);
+        } else {
+            message.setSubject("Reset your Masit-on password");
+            message.setText("Enter this password reset token in the Masit-on password reset screen:\n" + rawToken);
+        }
         try {
             mailSender.send(message);
         } catch (RuntimeException exception) {

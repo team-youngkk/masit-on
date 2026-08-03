@@ -54,8 +54,11 @@ public class MemberAuthenticationController {
     }
 
     @PostMapping("/email-verifications")
-    public ResponseEntity<Void> verifyEmail(@Valid @RequestBody TokenRequest request) {
-        service.verifyEmail(request.token());
+    public ResponseEntity<Void> verifyEmail(@RequestBody(required = false) TokenRequest request, HttpServletRequest servletRequest) {
+        if (request == null || request.token() == null) {
+            throw new BusinessException(ErrorCode.MISSING_REQUIRED_FIELD, "token", "필수 요청 값이 누락되었습니다.");
+        }
+        service.verifyEmail(request.token(), clientAddressResolver.resolve(servletRequest));
         return ResponseEntity.noContent().build();
     }
 
@@ -112,6 +115,9 @@ public class MemberAuthenticationController {
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException exception, HttpServletRequest request) {
         ResponseEntity.BodyBuilder response = ResponseEntity.status(exception.status());
+        if (exception.retryAfterSeconds() != null) {
+            response.header(HttpHeaders.RETRY_AFTER, String.valueOf(exception.retryAfterSeconds()));
+        }
         if (shouldExpireRefreshCookie(request, exception)) {
             response.header(HttpHeaders.SET_COOKIE, expiredRefreshCookie().toString());
         }
@@ -172,7 +178,7 @@ public class MemberAuthenticationController {
     public record EmailRequest(@NotBlank @Email @Size(max = 320) String email) { }
     public record CredentialsRequest(@NotBlank @Email @Size(max = 320) String email,
             @NotBlank @Size(min = 12, max = 64) String password) { }
-    public record TokenRequest(@NotBlank @Size(max = 200) String token) { }
+    public record TokenRequest(String token) { }
     public record ResetPasswordRequest(@NotBlank @Size(max = 200) String token,
             @NotBlank @Size(min = 12, max = 64) String newPassword) { }
     public record AccessTokenResponse(String accessToken, String tokenType, long expiresInSeconds) { }
