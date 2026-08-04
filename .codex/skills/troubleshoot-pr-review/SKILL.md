@@ -1,6 +1,6 @@
 ---
 name: troubleshoot-pr-review
-description: Resolve unresolved review threads on the current user's pull request by verifying each request, diagnosing the symptom and root cause, implementing minimal fixes, testing them, replying to and resolving eligible threads, and writing a reusable Korean troubleshooting record. Use when asked to address PR review feedback, resolve requested-change threads, explain what was wrong and how it was fixed, or preserve review-driven fixes as team documentation. Do not use for reviewing someone else's PR or for a review-only summary with no troubleshooting work.
+description: Resolve unresolved review threads on the current user's pull request by verifying each request, diagnosing the symptom and root cause, implementing minimal fixes, testing them, replying to and resolving eligible threads, and writing or updating a reusable Korean troubleshooting record with issue classification and follow-up metrics. Use when asked to address PR review feedback, resolve requested-change threads, explain what was wrong and how it was fixed, or preserve review-driven fixes as team documentation. Do not use for reviewing someone else's PR or for a review-only summary with no troubleshooting work.
 ---
 
 # Troubleshoot PR Review
@@ -14,15 +14,27 @@ description: Resolve unresolved review threads on the current user's pull reques
 3. 미해결 리뷰 스레드, 인라인 문맥, 요청자, 링크, 최신 답글과 PR diff를 가져온다. 연결된 GitHub 도구가 있으면 사용하고, 없으면 `gh`를 사용한다.
 4. 이미 반영됐거나 outdated인 의견도 버리지 말고 현재 코드에서 해결 여부를 확인한다.
 5. 저장소의 계약 문서와 소유권 규칙을 먼저 읽는다. API·DB·요구사항 변경이나 범위 확대가 필요한 의견은 임의로 적용하지 않는다.
+6. 새로 조사하기 전에 저장소의 트러블슈팅 인덱스와 문서를 검색해 같은 증상·오류 메시지·환경·원인의 기존 기록이 있는지 확인한다. 적용한 기존 해결책과 이번 결과를 기록하고, 맞지 않았다면 차이도 남긴다.
 
 ## 2. 스레드별 판단
 
-각 스레드를 다음 중 하나로 분류하고 근거를 남긴다.
+각 스레드의 처리 판단과 문제 유형을 각각 분류하고 근거를 남긴다.
+
+처리 판단은 다음 중 하나를 사용한다.
 
 - `수정 필요`: 현재 코드에서 문제가 재현되거나 계약 위반이 확인됨
 - `이미 해결`: 현재 PR 코드가 요청을 충족함
 - `수정 불필요`: 오해·취향·범위 밖 요청이며 코드와 계약으로 반증 가능함
 - `결정 필요`: 계약 변경, 소유자 합의, 추가 권한 또는 사용자 선택이 필요함
+
+문제 유형은 주된 원인을 기준으로 다음 중 하나를 사용한다.
+
+- `Git`: 브랜치, 병합, 커밋, 원격 저장소, GitHub 작업 흐름 문제
+- `애플리케이션`: 코드, 설정, 빌드, 테스트, 런타임 동작 문제
+- `데이터베이스`: 스키마, 마이그레이션, 쿼리, 트랜잭션, 데이터 정합성 문제
+- `배포`: 패키징, 릴리즈, 배포 절차, 롤백 문제
+- `인프라`: 컨테이너, 네트워크, 런타임 플랫폼, 외부 자원 문제
+- `기타`: 위 분류에 속하지 않는 문제. 선택 이유를 함께 기록함
 
 리뷰 문구만으로 결론 내리지 않는다. 관련 코드 경로, 입력과 관찰 결과, 실패 조건을 찾아 증상과 근본 원인을 구분한다. 근본 원인을 입증할 수 없으면 `추정`으로 표시한다.
 
@@ -38,16 +50,28 @@ description: Resolve unresolved review threads on the current user's pull reques
 
 ## 4. 트러블슈팅 문서 작성
 
-`assets/troubleshooting-record-template.md`를 복사해 저장소 문서 규칙에 맞는 위치와 이름으로 작성한다. 저장소가 위치를 정하지 않았다면 `docs/troubleshooting/pr-{number}-{slug}.md`를 사용하고, 새 디렉터리의 인덱스 문서가 필요한 규칙도 따른다. 같은 PR의 기록이 이미 있으면 새 파일을 만들지 말고 갱신한다.
+`assets/troubleshooting-record-template.md`를 복사해 저장소 문서 규칙에 맞는 위치와 이름으로 작성한다. 저장소가 위치를 정하지 않았다면 `docs/troubleshooting/pr-{number}-{slug}.md`를 사용하고, 새 디렉터리의 인덱스 문서가 필요한 규칙도 따른다.
+
+문제를 해결한 작업자가 기록을 작성한다. 같은 PR 또는 같은 문제의 기록이 이미 있으면 결과와 새 증거를 기존 문서에 추가하거나 잘못된 내용을 수정한다. 기존 문서와 별도 사건으로 남겨야 할 때만 새 문서를 만들고 서로 링크한다.
+
+모든 스레드는 처리 결과 표에 남긴다. 다음 중 하나라도 해당하면 상세 트러블슈팅 기록을 작성한다.
+
+- 개발 과정에서 재발 가능성이 있음
+- 원인 파악이나 해결에 일정 시간이 소요됨
+- 팀이 다시 사용할 수 있는 진단 가치가 있음
 
 문서는 다음을 만족해야 한다.
 
 - PR과 리뷰 스레드 링크를 남겨 원문을 역추적할 수 있게 한다.
-- 문제 현상, 재현 조건, 기대 결과, 근본 원인과 증거를 분리한다.
-- 선택한 해결 방법, 대안, 변경 파일과 검증 명령·결과를 기록한다.
+- 문제 유형, 문제 현상과 필요한 오류 메시지, 발생 환경·조건, 기대 결과와 영향 범위를 기록한다.
+- 근본 원인과 증거를 증상과 분리하고, 확정할 수 없으면 `추정`으로 표시한다.
+- 확인한 항목, 시도한 방법, 각 결과를 성공 여부와 관계없이 간결히 기록해 같은 조사를 반복하지 않게 한다.
+- 최종 해결 방법, 선택 이유, 대안, 변경 파일과 검증 명령·결과를 기록한다.
 - 여러 스레드가 같은 원인이면 하나의 원인 아래 묶되 각 스레드의 처리 결과를 남긴다.
 - 단순 오탈자·포맷 수정은 처리 표에만 간결히 남기고, 재사용할 진단 가치가 있는 문제만 상세히 서술한다.
-- 재발 방지 항목은 실제로 적용했거나 담당자·추적 이슈가 있는 것만 쓴다. 근거 없는 교훈이나 막연한 TODO를 만들지 않는다.
+- 재발 방지와 다음 확인 사항은 실제로 적용했거나 담당자·추적 이슈가 있는 것만 쓴다. 근거 없는 교훈이나 막연한 TODO를 만들지 않는다.
+- 효과를 수치로 확인할 수 있는 변경은 도입 전 기준 지표와 측정 방법을 남기고, 배포 확장 이후 같은 기준으로 도입 후 지표를 확인해 비교 결과를 갱신한다. PR 처리 시점에 측정할 수 없다면 담당자, 확인 시점과 추적 이슈를 남긴다.
+- 비교 지표가 의미 없는 문제는 `해당 없음`과 이유를 기록한다. 확인하지 않은 수치를 추정하거나 성공으로 기록하지 않는다.
 - 개인정보, 토큰, 내부 URL, 전체 스택 트레이스 같은 민감정보를 제거한다.
 
 ## 5. 답글과 스레드 해결
@@ -70,8 +94,10 @@ description: Resolve unresolved review threads on the current user's pull reques
 마지막에 다음을 확인한다.
 
 - 모든 최초 미해결 스레드에 분류와 근거가 있음
+- 새 조사 전에 기존 트러블슈팅 문서를 확인했고 재사용·갱신 결과가 기록됨
 - 수정 diff와 문서가 리뷰 요청 범위를 벗어나지 않음
 - 최종 코드 기준 검증 결과가 문서와 일치함
+- 적용 가능한 변경의 도입 전 지표와 배포 확장 후 확인 계획 또는 비교 결과가 있음
 - 해결 처리한 스레드는 실제 PR 변경으로 확인 가능함
 - 남은 스레드는 사유와 다음 결정 주체가 명확함
 
