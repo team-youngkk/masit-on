@@ -55,7 +55,10 @@ class MemberDeletionCleanupServiceTest {
 
         assertThat(appender.list).anySatisfy(event -> {
             assertThat(event.getLevel().toString()).isEqualTo("ERROR");
-            assertThat(event.getFormattedMessage()).contains("requires operations intervention");
+            assertThat(event.getFormattedMessage())
+                    .contains("requires operations intervention")
+                    .contains("failureType=IllegalStateException")
+                    .doesNotContain(memberId.toString());
         });
         verify(jobs).reschedule(memberId, NOW);
     }

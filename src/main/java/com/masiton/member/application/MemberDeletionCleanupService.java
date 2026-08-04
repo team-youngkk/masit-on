@@ -32,9 +32,11 @@ public class MemberDeletionCleanupService {
             try {
                 cleanupCommands.cleanup(memberId);
             } catch (RuntimeException exception) {
-                log.warn("member deletion cleanup failed: memberId={}", memberId);
+                log.warn("member deletion cleanup failed: failureType={}",
+                        exception.getClass().getSimpleName());
                 if (jobs.hasExceededOneHour(memberId, now)) {
-                    log.error("member deletion cleanup requires operations intervention: memberId={}", memberId);
+                    log.error("member deletion cleanup requires operations intervention: failureType={}",
+                            exception.getClass().getSimpleName());
                 }
                 jobs.reschedule(memberId, now);
             }
