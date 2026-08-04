@@ -64,7 +64,7 @@ class VerificationSessionControllerTest {
                         containsString("Max-Age=604800"),
                         containsString("Secure"),
                         containsString("HttpOnly"),
-                        containsString("SameSite=Strict"),
+                        containsString("SameSite=Lax"),
                         not(containsString("Domain=")))));
     }
 
