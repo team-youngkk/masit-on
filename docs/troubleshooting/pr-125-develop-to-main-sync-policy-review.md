@@ -25,6 +25,7 @@ related_documents:
 | [정상 릴리즈의 역동기화 계획 제거](https://github.com/team-youngkk/masit-on/pull/125#discussion_r3708634603) | PR 본문 "병합 후 할 일"의 `main → develop` 역동기화 계획이, 같은 PR이 재확인하는 정책(정상 릴리즈는 커밋 수 차이만으로 역동기화하지 않는다)과 모순되므로 삭제해 달라는 요청 | 수정 필요 | 해당 항목을 삭제하고 "정상 승격이므로 역동기화 PR을 만들지 않는다"로 대체 | `.github/PULL_REQUEST_TEMPLATE.md:77`, `CLAUDE.md` 9절과 대조해 모순 확인, 수정 후 재대조로 일치 확인 |
 | [승격 범위를 고정한 뒤 PR 본문과 대조](https://github.com/team-youngkk/masit-on/pull/125#discussion_r3708865561) | head가 `develop`이라 PR #127이 그 사이 병합되면서 diff·검토 범위가 계속 늘었는데, PR 본문의 "포함하는 병합"·변경 목적은 여전히 #121~#124만 서술한다는 지적. 배포 대상 SHA를 동결하고 그 범위에 #127 포함 여부를 명시해 달라는 요청 | 수정 필요 | "승격 대상 고정" 절을 추가해 리뷰·검증 체크포인트 SHA(`fe88bf7`, PR #127 병합 커밋)를 명시하고, "포함하는 병합"·"주요 변경"·"테스트 결과"에 #127을 추가. 이 체크포인트가 기술적으로 diff를 멈추지 못한다는 점과, 이후 커밋이 쌓이면 병합자가 재확인해야 한다는 점도 본문에 명시 | `git rev-parse origin/develop`로 SHA 확인, `gh pr view 127 --json state,mergedAt`로 병합 여부 확인 |
 | [자기참조 리뷰 건수 대신 검증 기준점을 고정](https://github.com/team-youngkk/masit-on/pull/125#discussion_r3708865567) | `pr-127-troubleshooting-record-related-docs-review.md`가 PR #127 자신의 리뷰 스레드 수를 정확한 숫자로 계속 갱신하는데, 이 문서를 고칠 때마다 새 스레드가 생겨 숫자가 다시 틀리는 구조적 문제라는 지적. 정확한 총건수 표기를 제거하거나 기준점(커밋 SHA 등)을 고정해 달라는 요청 | 수정 필요 | `pr-127-*.md` 1절 "범위"를 병합 커밋(`fe88bf7`) 기준 체크포인트 서술로 교체하고, 이 문서는 더 갱신하지 않기로 8절에 명시. 이 문서(`pr-125-*.md`) 자체의 "범위"도 같은 문제를 피하도록 건수 표기를 제거 | `pr-127-*.md` 수정 diff 확인, 이 문서의 "범위" 표기 방식 변경 확인 |
+| [움직이는 develop 대신 고정 승격 브랜치로 전환](https://github.com/team-youngkk/masit-on/pull/125#discussion_r3709129331) (이우람, [독립 재검토](https://github.com/team-youngkk/masit-on/pull/125#discussion_r3709132985)로 김인안 동의) | head가 `develop`이라 리뷰 도중 발생한 후속 병합(#127, #128)마다 diff·검토 범위가 계속 늘어 검토를 닫고 `main`에 안정적으로 병합할 수 없다는 P1 지적. 검증 SHA에서 고정 승격 브랜치를 만들어 head를 교체하거나 PR을 닫고 새로 열어 달라는 요청 | 수정 필요 | 리뷰 시점의 `develop` SHA(`eaea216`, PR #128 병합 커밋)에서 고정 브랜치 `build/promote-v0.2.3`를 만들어 push하고, 그 브랜치를 head로 [PR #129](https://github.com/team-youngkk/masit-on/pull/129)를 새로 열었다. 이 PR(#125)은 닫는다 | `git rev-parse origin/develop`(`eaea216`)과 새 브랜치 커밋 일치 확인, `git diff --stat origin/main origin/develop`로 실제 승격 대상과 PR #129 본문 일치 확인 |
 
 ## 3. 문제 현상
 
@@ -49,6 +50,13 @@ related_documents:
 - 기대 결과: 자기참조적 문서는 "지금까지 몇 건"을 계속 갱신하는 방식이 아니라, 특정 시점(커밋 SHA 등)을 기준점으로 고정하고 그 이후는 별도 기록으로 분리해야 한다.
 - 영향 범위: 문서 서술 정확성과 리뷰 라운드 종료 가능성. 각 스레드의 판단·해결 내용 자체에는 변화가 없다.
 
+### 3.4 움직이는 `develop`을 head로 쓴 승격 PR이 검토를 닫지 못함
+
+- 재현 조건: PR #125 리뷰 도중 `develop`에 PR #127, #128이 차례로 병합된 상태에서 PR #125의 head SHA와 본문의 체크포인트 SHA를 대조한다.
+- 실제 결과: PR #125 head는 이미 `eaea216`(PR #128 병합 커밋)이었지만 본문 체크포인트는 `fe88bf7`(PR #127 병합 커밋)에 머물러 있었다. #128이 추가한 `.claude/`·`.codex/` 스킬 파일 13개가 실제 diff에는 포함됐지만 "포함하는 병합"·주요 변경·검증에는 없었다. 본문을 갱신해 재리뷰를 받는 방식 자체가, 그 갱신 커밋이 다시 `develop`에 반영되면서 다음 병합을 또 끌어들이는 구조라 검토 범위를 확정할 수 없었다.
+- 기대 결과: 승격 PR은 검토 시점에 diff가 고정돼야 리뷰어가 승인 시점과 병합 시점의 범위가 같다고 신뢰할 수 있다.
+- 영향 범위: 이 PR뿐 아니라 향후 모든 `develop → main` 승격 PR의 검토 신뢰성. 3.2에서 이미 "이번 PR 범위를 벗어나는 워크플로 결정"으로 8절에 남겨뒀던 사항이 실제로 재발해 P1으로 지적됐다.
+
 ## 4. 근본 원인
 
 3.1은 이전 승격 PR([#101](https://github.com/team-youngkk/masit-on/pull/101))의 "병합 후 할 일" 문구를 참고해 PR #125를 작성하면서, #101의 역동기화 계획 문구를 그대로 옮겨 적은 것이 원인이다. #101 작성 시점의 맥락은 확인하지 않았고, 이번 PR이 재확인·명문화하는 "정상 릴리즈는 역동기화하지 않는다"는 정책과 대조하지 않아 PR 본문 안에서 자기모순이 생겼다.
@@ -57,15 +65,20 @@ related_documents:
 
 3.3은 `pr-127-*.md`가 자기 자신의 리뷰를 다루는 자기참조적 문서인데도, 처리 건수를 절대 숫자로 기록하는 기존 트러블슈팅 기록 템플릿의 관행을 그대로 따른 것이 원인이다. 이 문서 유형에는 그 관행이 구조적으로 맞지 않았다.
 
+3.4는 3.2와 같은 근본 원인(움직이는 `develop`을 head로 쓰는 관행)을 공유하지만, 3.2에서는 PR 본문 서술을 diff에 맞춰 갱신하는 임시 대응으로 넘어갔다. 그 임시 대응은 후속 병합이 한 번 더 생기면 다시 깨지는 구조였고, 실제로 #128이 병합되며 재발했다. 근본 원인은 승격 PR의 head가 리뷰 기간 내내 고정되지 않는다는 것이다.
+
 ## 5. 해결
 
 - 변경 내용:
   - PR #125 본문 "병합 후 할 일"의 마지막 항목 "배포 후 `main`의 병합 커밋을 `develop`으로 역류한다"를 삭제하고, "이 PR은 정상적인 `develop → main` 승격이며 `main` 전용 Hotfix가 아니므로, 병합 후 커밋 수 차이만을 이유로 한 `main → develop` 역동기화 PR은 만들지 않는다"로 대체(3.1).
   - PR #125 본문에 "승격 대상 고정" 절을 추가해 리뷰·검증 체크포인트 SHA(`fe88bf7`, PR #127 병합 커밋)를 명시하고, 이 체크포인트가 기술적으로 diff를 멈추지 못하며 이후 커밋이 쌓이면 병합자가 재확인해야 한다는 점도 함께 서술. "포함하는 병합"·"주요 변경"·"테스트 결과"·"리뷰 요청"에 #127 추가(3.2).
   - `pr-127-troubleshooting-record-related-docs-review.md` 1절 "범위"를 병합 커밋(`fe88bf7`) 기준 체크포인트 서술로 교체하고, 8절에 이 문서를 더 갱신하지 않는다고 명시. 이 문서(`pr-125-*.md`)의 "범위"도 건수 표기 없이 "2절 표에 나열된 스레드"로 서술 방식을 바꿈(3.3).
-- 선택 이유: 3.1·3.2는 PR 본문을 실제 상태(정책·diff)와 일치시키는 최소 수정이다. 3.3은 "숫자를 계속 맞추는" 미봉책이 이미 두 차례 반복된 뒤라, 리뷰가 제안한 대로 기준점 고정 방식으로 구조를 바꿔 재발 가능성 자체를 없앴다.
-- 변경 파일: PR #125 본문(GitHub GraphQL로 직접 정정, 별도 커밋 없음), `docs/troubleshooting/pr-127-troubleshooting-record-related-docs-review.md`, `docs/troubleshooting/pr-125-develop-to-main-sync-policy-review.md`(이 문서 자체)
-- 고려한 대안: 3.3에서 건수를 계속 정확히 맞추는 방식을 한 번 더 시도하는 대안을 검토했으나, 같은 문제가 이미 두 차례(4건→5건) 재발했고 리뷰도 구조적 문제로 지목해 채택하지 않았다.
+  - 리뷰 시점의 `develop` SHA(`eaea216`)에서 고정 브랜치 `build/promote-v0.2.3`를 만들고, 그 브랜치를 head로 [PR #129](https://github.com/team-youngkk/masit-on/pull/129)를 새로 열었다. PR #129 본문의 "포함하는 병합"·주요 변경·테스트 결과에 #128까지 포함해 실제 diff와 일치시키고, "고정 승격 브랜치로 전환" 절에서 이 브랜치가 이후 `develop`을 따라가지 않는다는 것과 후속 변경은 별도 승격 PR로 분리한다는 것을 명시했다. PR #125는 닫았다(3.4).
+- 선택 이유: 3.1·3.2는 PR 본문을 실제 상태(정책·diff)와 일치시키는 최소 수정이다. 3.3은 "숫자를 계속 맞추는" 미봉책이 이미 두 차례 반복된 뒤라, 리뷰가 제안한 대로 기준점 고정 방식으로 구조를 바꿔 재발 가능성 자체를 없앴다. 3.4는 "PR 본문을 diff에 맞춰 계속 갱신"하는 3.2식 임시 대응을 한 번 더 시도하는 대신, 두 리뷰어가 공통으로 제시한 고정 브랜치 전환을 그대로 채택했다 — 같은 임시 대응이 이미 한 번 재발했으므로 반복하지 않았다.
+- 변경 파일: PR #125 본문(GitHub GraphQL로 직접 정정, 별도 커밋 없음), `docs/troubleshooting/pr-127-troubleshooting-record-related-docs-review.md`, `docs/troubleshooting/pr-125-develop-to-main-sync-policy-review.md`(이 문서 자체), 신규 브랜치 `build/promote-v0.2.3`, [PR #129](https://github.com/team-youngkk/masit-on/pull/129)
+- 고려한 대안:
+  - 3.3에서 건수를 계속 정확히 맞추는 방식을 한 번 더 시도하는 대안을 검토했으나, 같은 문제가 이미 두 차례(4건→5건) 재발했고 리뷰도 구조적 문제로 지목해 채택하지 않았다.
+  - 3.4에서 PR #125를 유지하며 head만 고정 브랜치로 바꾸는 방법(GitHub REST API의 PR head 변경)을 검토했으나, GitHub는 같은 저장소 PR이라도 head ref 교체를 API로 지원하지 않아 채택할 수 없었다. 두 리뷰어가 제시한 "PR을 닫고 고정 브랜치에서 새로 연다" 방식을 그대로 따랐다.
 
 ## 6. 검증
 
@@ -76,14 +89,18 @@ related_documents:
 | `git rev-parse origin/develop` | 통과 | 체크포인트로 기록한 SHA(`fe88bf7`)가 실제 `develop` HEAD와 일치함을 확인 |
 | `gh pr view 127 --json state,mergedAt` | 통과 | PR #127이 `fe88bf7`로 병합됐음을 확인 |
 | `pr-127-*.md`, `pr-125-*.md`의 "범위" 서술 재확인 | 통과 | 두 문서 모두 절대 건수 대신 체크포인트·표 참조 방식으로 바뀌었음을 확인 |
+| `git rev-parse origin/develop` | 통과 | `eaea216`이 PR #129 본문의 체크포인트 SHA와 일치함을 확인 |
+| `git diff --stat origin/main origin/develop` | 통과 | 실제 승격 대상 파일이 PR #129 본문의 "포함하는 병합"·테스트 결과와 일치함을 확인 |
+| `gh pr view 128 --json state,mergedAt,mergeCommit` | 통과 | PR #128이 `eaea216`으로 병합됐음을 확인 |
 
 ## 7. 재발 방지
 
 - 과거 PR 본문을 참고 템플릿으로 재사용할 때, 문구를 그대로 옮기지 않고 현재 PR이 실제로 어떤 정책 조건(정상 릴리즈 vs. Hotfix)에 해당하는지 먼저 확인한다.
 - `develop`을 head로 쓰는 승격 PR은 리뷰 도중 `develop`에 추가 병합이 생길 수 있음을 전제하고, 병합 직전 `git log origin/main..origin/develop`로 체크포인트 이후 새 커밋이 없는지 반드시 재확인한다.
 - 자기참조적 문서(자기 자신의 리뷰를 다루는 트러블슈팅 기록)를 쓸 때는 처음부터 절대 건수를 기록하지 않고, 커밋 SHA 등 고정 기준점으로 범위를 서술한다.
-- 위 항목들이 다음 작업에서 자동으로 적용되도록 스킬을 함께 고쳤다(`.claude/`·`.codex/` 양쪽). `implement-review-workflow`는 구현 전에 이 디렉터리의 기록을 읽어 재발 방지 항목을 제약으로 삼고, PR에 리뷰를 남길 때는 `assets/review-thread-comment-template.md` 형식의 인라인 스레드로만 남긴다. `troubleshoot-pr-review`는 답글을 원래 스레드의 인라인 답글로만 달고 응답 템플릿 항목을 임의로 빼지 않는다.
+- 위 항목들이 다음 작업에서 자동으로 적용되도록 스킬을 함께 고쳤다(`.claude/`·`.codex/` 양쪽). `implement-review-workflow`는 구현 전에 이 디렉터리의 기록을 읽어 재발 방지 항목을 회귀 위험 점검 목록으로 쓰고(단, 현재 계약과 충돌하면 계약이 우선한다 — PR #128 리뷰 참고), PR에 리뷰를 남길 때는 `assets/review-thread-comment-template.md` 형식의 인라인 스레드로만 남긴다. `troubleshoot-pr-review`는 답글을 원래 스레드의 인라인 답글로만 달고 응답 템플릿 항목을 임의로 빼지 않는다.
+- `develop → main` 승격 PR은 **head를 움직이는 `develop`으로 두지 않고**, 리뷰 시작 시점에 `build/promote-{버전}` 같은 고정 브랜치를 만들어 head로 쓴다(3.4). 리뷰 도중 `develop`에 새 병합이 필요하면 그 고정 브랜치를 갱신하지 않고 별도 후속 승격 PR로 분리한다.
 
 ## 8. 남은 사항
 
-- `develop`을 승격 PR의 head로 직접 쓰는 현재 관행 자체(고정 릴리즈 브랜치나 태그를 쓰는 방식으로 바꿀지)는 이번 PR 범위를 벗어나는 워크플로 결정이라, 팀 논의가 필요하면 별도로 다룬다.
+- `develop`을 승격 PR의 head로 직접 쓰는 관행은 3.4에서 실제로 재발이 확인돼 고정 브랜치 방식으로 전환했다(PR #129). 다만 이번 전환은 PR #125~#129의 개별 사례 대응이며, 모든 `develop → main` 승격에 고정 브랜치를 표준 절차로 강제할지(예: 구현 컨벤션 문서에 명문화)는 팀 결정이 필요해 이번 기록의 범위를 벗어난다.
