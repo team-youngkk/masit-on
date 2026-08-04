@@ -27,7 +27,7 @@ related_documents:
 
 | 스레드 | 요청 요약 | 문제 유형 | 판단 | 처리 결과 | 근거/검증 |
 |---|---|---|---|---|---|
-| [새 세션 경계 검증 후에만 Basic Auth를 제거](https://github.com/team-youngkk/masit-on/pull/129#discussion_r3709174205) (P1, 이우람) — [재리뷰로 잔여 문제 재지적](https://github.com/team-youngkk/masit-on/pull/129#discussion_r3709465122) | `nginx-install.sh`가 새 백엔드의 `/internal/verification/session` 경계 상태와 무관하게 Basic Auth drop-in을 즉시 삭제하고 새 gate로 전환해, 백엔드가 준비되지 않은 채 실행하면 제한 공개 전체가 중단될 수 있다는 지적. 1차 반영(사전 401 확인) 후 재리뷰에서 "삭제·교체 자체가 여전히 백업·롤백 없이 진행돼, `nginx -t`나 재시작이 실패하면 Basic Auth 구성 파일이 이미 사라진 상태로 남을 수 있다"는 잔여 문제를 재지적 | 배포 | 수정 필요 | 1차: Basic Auth 제거 전에 `curl`로 401을 확인하고 실패 시 중단하도록 추가. 2차(재리뷰 반영): drop-in·auth map·site conf를 지우거나 덮어쓰기 전에 임시 디렉터리에 백업하고, `nginx -t` 또는 재시작(`systemctl is-active` 확인 포함) 실패 시 백업본으로 복구한 뒤 기존 구성으로 Nginx를 다시 기동하는 `rollback_basic_auth`를 추가 | `bash -n`로 구문 확인. `app-deploy.sh`의 기존 헬스체크 패턴과 동일한 방식임을 대조 확인. 임시 디렉터리에 같은 백업·롤백 로직을 재현해 파일 3종이 실제로 복원되는지, 백업 대상 파일이 없는 최초 설치 시나리오에서 `set -e`로 스크립트가 조기 종료되지 않는지 샌드박스에서 실행해 확인(5절) |
+| [새 세션 경계 검증 후에만 Basic Auth를 제거](https://github.com/team-youngkk/masit-on/pull/129#discussion_r3709174205) (P1, 이우람) — [1차 재리뷰로 백업·롤백 부재 재지적](https://github.com/team-youngkk/masit-on/pull/129#discussion_r3709465122) — [2차 재리뷰: 컷오버 구간 전체가 아니라 nginx -t·재시작만 감쌈](https://github.com/team-youngkk/masit-on/pull/129#discussion_r3709681513) | `nginx-install.sh`가 새 백엔드의 `/internal/verification/session` 경계 상태와 무관하게 Basic Auth drop-in을 즉시 삭제하고 새 gate로 전환해, 백엔드가 준비되지 않은 채 실행하면 제한 공개 전체가 중단될 수 있다는 지적. 1차 반영(사전 401 확인) 후 재리뷰에서 "삭제·교체 자체가 백업·롤백 없이 진행돼 실패 시 복구 불가"를 재지적, 2차 반영(nginx -t·재시작만 감싼 백업·롤백) 후 다시 재리뷰에서 "`rm -f` 직후부터 `nginx -t` 이전까지의 `tls-deploy-cert.sh`·`install`·`systemctl daemon-reload`/`enable` 등은 여전히 `set -e`로 롤백 없이 종료된다"를 재지적 | 배포 | 수정 필요 | 1차: 사전 401 확인 추가. 2차: `nginx -t`·재시작만 감싼 백업·롤백 추가. 3차(이번): `rm -f "$BASIC_AUTH_DROPIN"` 직후부터 Nginx `active` 확인까지 전체 컷오버 구간을 `trap on_cutover_failure ERR`로 감싸, 구간 내 어떤 명령이 실패해도 자동으로 `rollback_basic_auth`가 실행되게 함. 롤백 대상에 `nginx.conf`·`00-masiton-upgrade-map.conf`도 추가. 컷오버 성공 확인 후에는 `trap - ERR`로 해제해 이후 실패(타이머 설치 등)가 Basic Auth를 되돌리지 않게 함 | `bash -n`로 구문 확인. 임시 디렉터리에 같은 로직을 재현해 (1) `nginx -t` 이전 임의 명령(예: 인증서 배포) 실패 시 5개 파일 모두 백업본으로 복구되는지, (2) 컷오버 성공 확정 후의 무관한 실패가 Basic Auth를 되돌리지 않는지 두 시나리오를 직접 실행해 확인(5절) |
 | [token 필드 누락은 이메일 인증 제출 제한을 소모하지 않음](https://github.com/team-youngkk/masit-on/pull/129#discussion_r3709202984) (should-fix, 박진영) | 컨트롤러가 `token` 필드 부재를 서비스 호출(rate limiter 포함) 전에 걸러내, 필드를 생략한 반복 요청이 10분/10회 제한을 전혀 소모하지 않는다는 지적 | 애플리케이션 | 수정 필요 | 컨트롤러의 사전 검증을 제거하고 `null`을 서비스로 그대로 전달. 서비스가 rate limiter를 통과시킨 뒤 `token == null`을 확인해 같은 `MISSING_REQUIRED_FIELD`를 던지도록 이동 | `MemberAuthenticationServiceTest`·`MemberAuthenticationControllerTest`에 회귀 테스트 추가, `./gradlew test` 통과 |
 | [isBlocked==true(429) 분기 테스트 없음](https://github.com/team-youngkk/masit-on/pull/129#discussion_r3709202967) (should-fix, 박진영) | fail-closed가 핵심 속성인데 차단 임계치 도달 시나리오를 검증하는 테스트가 없다는 지적 | 애플리케이션 | 수정 필요 | `VerificationSessionServiceTest`에 `isBlocked=true` 시 자격 증명 확인 없이 429를 반환하는 테스트 추가 | 새 테스트 실행 통과 |
 | [revoke 실제 경로·Testcontainers 통합 테스트 없음](https://github.com/team-youngkk/masit-on/pull/129#discussion_r3709202972) (should-fix, 박진영) | 쿠키가 있는 로그아웃(성공/Redis 장애) 경로가 테스트되지 않고, `RedisVerificationAccessStore`가 Member 쪽과 달리 Testcontainers 통합 테스트 없이 Mock으로만 검증된다는 지적 | 애플리케이션·테스트 | 수정 필요 | `VerificationSessionServiceTest`·`VerificationSessionControllerTest`에 실제 세션 ID revoke·Redis 장애 케이스 추가. `RedisMemberRateLimitStoreIntegrationTest`와 같은 형태로 `RedisVerificationAccessStoreIntegrationTest`(Testcontainers) 신설 | 신설 테스트 4건 포함 전체 실행 통과 |
@@ -37,6 +37,7 @@ related_documents:
 | [CLAUDE.md 병합 방식 정책 전환의 근거 불명확](https://github.com/team-youngkk/masit-on/pull/129#discussion_r3709202987) (should-fix, 박진영) | 병합 방식이 기존 정책에서 뒤바뀐 형태로 바뀌었는데 트러블슈팅 기록·ADR 어디에도 이 전환 자체의 근거가 없고, 실제 GitHub ruleset이 문서와 일치하도록 재설정됐는지 확인이 필요하다는 요청 | 문서·거버넌스 | 수정 필요(결정 완료) | 실제 ruleset(`Protect develop`=squash, `Protect main`=merge)이 현재 문서와 일치함을 이미 확인. PR #129 작성자가 사용자와 함께 별도 ADR 작성을 결정해 [ADR-GIT-001](../07-adr/platform/git-001-branch-merge-strategy.md)을 신설하고 `adr-index.md`에 등록 | `gh api repos/.../rulesets/19533356`·`19533400`으로 `allowed_merge_methods` 재조회, 신설 ADR의 절 구성을 기존 ADR-CI-001 템플릿과 대조 |
 | [bounds 검증 제거 후 Javadoc이 옛 순서를 서술](https://github.com/team-youngkk/masit-on/pull/129#discussion_r3709202990) (minor, 박진영) | bounds 검증 단계를 제거했는데 Javadoc은 여전히 "BR-MAP-002~004 순서(호출 제한 -> 기존 필터 AND)"로 남아 있어, BR-MAP-003(결과 상한)이 실제로는 Query Port 호출 이후 결과 건수로 판정된다는 사실과 어긋난다는 지적 | 문서 | 수정 필요 | Javadoc을 실제 순서(호출 제한 확인 → BR-MAP-002 조건으로 Query Port 호출 → BR-MAP-003 초과 여부를 결과 건수로 판정)로 재작성 | `business-rules.md`의 BR-MAP-002~004 서술과 실제 코드 순서를 대조해 일치 확인 |
 | [addressSummary 필드 설명이 무관하게 변경됨](https://github.com/team-youngkk/masit-on/pull/129#discussion_r3709202992) (minor, 박진영) | 이번 PR 목적(지도 뷰포트 비종속 조회)과 무관해 보이는 응답 필드 설명·예시 변경("저장된 전체 도로명주소" → "주소 요약")이 실제 매핑 코드에서 검증되지 않았다는 지적 | 문서 | 수정 필요 | `RestaurantMapQueryAdapter.java:60`이 `road_address`를 그대로 `address_summary`로 select함을 확인 — 코드는 바뀌지 않았고 문서만 잘못 바뀐 드리프트였다. 설명·예시를 원래 값("저장된 전체 도로명주소", "서울특별시 마포구 월드컵로 1")으로 되돌림 | `grep`으로 SQL의 `road_address AS address_summary` 확인. 프론트엔드 테스트 픽스처(`map-points-response.test.ts:9`)가 이미 전체 주소 예시를 쓰고 있어 원복이 실제 동작과 일치함을 재확인 |
+| [컷오버 구간의 모든 실패에서 백업 복구를 실행](https://github.com/team-youngkk/masit-on/pull/129#discussion_r3709684609) (P1, 김인안) | 44행의 `EXIT` trap은 백업 디렉터리만 삭제하고, `rollback_basic_auth`는 `nginx -t`·재시작 실패 분기에서만 명시적으로 호출돼, 그 사이 `tls-deploy-cert.sh`·`install`(설정 파일)·`systemctl daemon-reload`/`enable` 중 하나라도 실패하면 백업이 있어도 복구되지 않는다는 지적. 롤백 대상에 같은 구간에서 덮어쓰는 `nginx.conf`·`00-masiton-upgrade-map.conf`도 포함해야 그 파일 때문에 `nginx -t`가 실패한 경우도 실제로 기존 구성으로 재기동할 수 있다는 지적도 포함 | 배포 | 수정 필요 | 이우람의 2차 재리뷰와 같은 근본 원인이라 같은 커밋(`a2cb9c7`)으로 함께 반영 — 위 행 참고 | 위 행과 동일 |
 
 ## 3. 문제 현상과 발생 조건
 
@@ -85,6 +86,15 @@ related_documents:
 - 기대 결과: [E1-T13 배포 전환](../08-planning/expansion-1-task-breakdown.md) 178행의 "실패 시 직전 Basic 구성으로 복구" 계약은 사전 확인 단계뿐 아니라 실제 파일 교체 단계에도 적용돼야 한다.
 - 영향 범위: 운영 배포 절차. 사전 확인을 통과한 뒤에도 `nginx -t`·재시작 단계에서 실패하면 제한 공개 서비스가 복구 불가능한 상태로 중단될 수 있다.
 
+### 3.6 백업·롤백이 nginx -t·재시작 실패만 감싸고 그 사이 구간을 놓침 (2차 재리뷰 재지적)
+
+- 오류 메시지: 없음(발생 전 발견)
+- 발생 환경: 운영 EC2, `deploy/scripts/nginx-install.sh` — 3.5 반영(백업 추가) 이후 버전
+- 재현 조건: `rm -f "$BASIC_AUTH_DROPIN"`로 Basic Auth 경계를 제거한 뒤, `nginx -t`에 도달하기 **전** 단계인 `tls-deploy-cert.sh`(인증서 배포), `install`(설정 파일 교체), `systemctl daemon-reload`/`enable` 중 하나가 실패하는 경우. 예: 인증서 다운로드가 일시적으로 실패.
+- 실제 결과: 3.5에서 추가한 백업·`rollback_basic_auth`는 `nginx -t` 실패와 재시작 실패 두 분기에서만 명시적으로 호출됐다. 그 사이의 명령이 실패하면 `set -euo pipefail`이 스크립트를 즉시 종료시키고, `EXIT` trap은 백업 디렉터리 삭제만 수행할 뿐 `rollback_basic_auth`를 부르지 않았다. 백업은 있었지만 실제로 복구가 실행되지 않아 Basic Auth drop-in이 제거된 채로 스크립트가 끝났다.
+- 기대 결과: 백업 시점부터 Nginx가 새 설정으로 `active` 상태임이 확인되는 시점까지, 그 구간의 **모든** 실패가 복구를 트리거해야 한다. 또한 같은 구간에서 덮어쓰는 `nginx.conf`·`00-masiton-upgrade-map.conf`도 롤백 대상에 포함해야, 이 파일들의 문제로 `nginx -t`가 실패한 경우에도 복구 후 재시작이 실제로 성공한다.
+- 영향 범위: 운영 배포 절차. `nginx -t`·재시작 두 지점만 방어하는 것으로는 컷오버 구간의 다른 실패를 막지 못해, 여전히 "직전 Basic 구성으로 복구" 계약을 부분적으로만 충족했다.
+
 ## 4. 근본 원인
 
 3.1은 `nginx-install.sh`가 "배포 전환" 계약(문서에만 서술된 운영 절차)을 스크립트 수준에서 강제하지 않고, 운영자가 올바른 순서(백엔드 먼저)로 스크립트를 실행할 것이라고만 가정한 것이 원인이다.
@@ -96,6 +106,8 @@ related_documents:
 3.4는 PR #122가 bounds 검증 제거라는 코드 변경에 집중하면서, 그 변경이 만드는 문서·주석 파급 범위를 전부 추적하지 않은 것이 원인이다. 특히 `addressSummary` 예시 변경은 이번 PR의 목적과 무관해, 검토 없이 우발적으로 들어간 것으로 보인다(추정 — 원 작성자 의도를 직접 확인하지는 못했다).
 
 3.5는 3.1을 반영할 때 "백엔드가 준비됐는지"만 확인하면 충분하다고 판단하고, 그 확인을 통과한 뒤의 파일 삭제·덮어쓰기 자체가 여전히 되돌릴 수 없는 편도 연산이라는 점을 놓친 것이 원인이다. 사전 확인(3.1)과 실행 중 실패 복구(3.5)는 서로 다른 실패 지점을 막는 별개의 안전장치인데, 하나를 추가하고 나머지 하나를 다뤘다고 여겼다.
+
+3.6은 3.5를 반영할 때 "실패할 수 있는 지점"을 `nginx -t`와 재시작 두 곳으로 미리 한정하고, 그 사이의 다른 명령들은 실패하지 않을 것이라고 암묵적으로 가정한 것이 원인이다. `set -euo pipefail` 스크립트에서는 어떤 명령이든 실패하면 즉시 종료되므로, "복구가 필요한 구간"을 개별 명령 단위로 나열하는 대신 구간 전체를 하나의 단위로 감싸야 한다는 점을 처음에는 고려하지 않았다.
 
 ## 5. 확인 및 시도
 
@@ -109,12 +121,15 @@ related_documents:
 | `SameSite=Strict`를 `Lax`로 바꾸는 코드·테스트 변경을 실제로 적용해봄 | 컴파일·테스트는 통과했으나 값이 [ADR-DEPLOY-003](../07-adr/platform/deploy-003-validation-cookie-session.md)·[API 계약](../05-specs/api/common/validation-access-contract.md)에 명시된 Accepted 계약값임을 뒤늦게 확인 | CLAUDE.md 7절(계약 변경은 소유자 사전 합의)에 따라 일단 되돌리고 "결정 필요"로 분류했다가, 팀 결정: `Lax`로 전환한다. ADR·API 계약을 함께 갱신하고 코드·테스트를 다시 적용 |
 | Redis 다중 키 원자성 — Member 도메인의 `RECORD_LOGIN_FAILURE` Lua 스크립트 패턴 확인 | 동일한 `for _, key in ipairs(KEYS)` 구조로 이미 검증된 패턴 | 새 스크립트를 만들지 않고 그대로 재사용 |
 | 백업·롤백 로직을 임시 디렉터리 대상으로 재현해 실제 실행(EC2 없이 샌드박스) | (1) `nginx -t` 실패를 흉내낸 케이스에서 drop-in·auth map·site conf 3개 파일이 백업본 내용으로 정확히 복원됨을 확인. (2) 백업 대상 파일이 아예 없는 최초 설치 시나리오에서 `[ -f "$X" ] && cp ...` 형태가 `set -e` 아래서 조기 종료를 일으키는 것을 발견 | (2)의 문제를 `if [ -f "$X" ]; then cp ...; fi`로 교체해 해결. 두 시나리오 모두 재실행해 통과 확인 |
+| ERR trap 방식을 임시 디렉터리 대상으로 재현 — `nginx -t` **이전** 명령(예: 인증서 배포)이 실패하는 시나리오 | 개별 `if !` 분기로는 이 경로를 막지 못함을 재확인. `trap on_cutover_failure ERR`로 감싼 뒤에는 `false`로 임의 실패를 흉내내도 5개 파일(drop-in·auth map·site conf·upgrade map·nginx.conf) 모두 백업본으로 복원됨을 확인 | 개별 `if !` 방식을 버리고 구간 전체를 ERR trap으로 감싸는 방식으로 교체 |
+| 같은 샌드박스에서 컷오버 "성공" 확정 후 무관한 실패(예: 타이머 서비스 설치) 시나리오 | `trap - ERR`로 해제한 뒤의 실패는 `rollback_basic_auth`를 호출하지 않고 Basic Auth 제거 상태가 그대로 유지됨을 확인 | 성공 확정 시점에 트랩을 반드시 해제해야 함을 재확인 |
 
 ## 6. 최종 해결
 
 - 변경 내용:
   - `deploy/scripts/nginx-install.sh`: Basic Auth 제거 전에 `curl`로 `/internal/verification/session`이 401을 응답하는지 확인하는 사전 검사를 추가. 실패 시 기존 Basic Auth 구성을 그대로 두고 중단(3.1).
-  - `deploy/scripts/nginx-install.sh`(재리뷰 반영): drop-in·auth map·site conf를 지우거나 덮어쓰기 전에 임시 디렉터리(`ROLLBACK_DIR`)에 백업한다. `nginx -t` 실패 또는 `systemctl restart nginx` 실패·비활성(`systemctl is-active` 확인)이면 `rollback_basic_auth`가 백업본으로 세 파일을 복원하고 기존 구성으로 Nginx를 다시 기동한다(3.5).
+  - `deploy/scripts/nginx-install.sh`(1차 재리뷰 반영): drop-in·auth map·site conf를 지우거나 덮어쓰기 전에 임시 디렉터리(`ROLLBACK_DIR`)에 백업한다. `nginx -t` 실패 또는 `systemctl restart nginx` 실패·비활성(`systemctl is-active` 확인)이면 `rollback_basic_auth`가 백업본으로 세 파일을 복원하고 기존 구성으로 Nginx를 다시 기동한다(3.5).
+  - `deploy/scripts/nginx-install.sh`(2차 재리뷰 반영): `rm -f "$BASIC_AUTH_DROPIN"`부터 Nginx `active` 확인까지 전체 컷오버 구간을 `trap on_cutover_failure ERR`로 감싼다. 백업 대상에 `nginx.conf`·`00-masiton-upgrade-map.conf`를 추가해 5개 파일 모두 롤백한다. 컷오버 성공을 확인한 뒤에는 `trap - ERR`로 해제해 이후(타이머 서비스 설치 등) 실패가 Basic Auth를 되돌리지 않게 한다(3.6).
   - `MemberAuthenticationController.verifyEmail`/`MemberAuthenticationService.verifyEmail`: 컨트롤러의 사전 null 검사를 제거하고 서비스로 `token`을 그대로 전달. 서비스가 rate limiter를 통과시킨 뒤 `null` 여부를 확인해 같은 `MISSING_REQUIRED_FIELD`를 던지도록 순서를 바꿈(3.2).
   - `VerificationSessionServiceTest`·`VerificationSessionControllerTest`: 429(차단) 분기, 실제 세션 ID를 사용한 revoke 성공·Redis 장애 경로 테스트 추가(3.3).
   - 신규 `RedisVerificationAccessStoreIntegrationTest`: Testcontainers 기반으로 해시 저장, 로그인/출처별 차단 임계치, 실패 기록 정리를 실제 Redis로 검증(3.3).
@@ -129,6 +144,7 @@ related_documents:
 - 고려한 대안:
   - 3.2에서 컨트롤러가 직접 rate limiter를 호출하는 대안도 검토했으나, Presentation이 Infrastructure(rate limiter)를 직접 다루게 돼 계층 경계를 어기므로 기각하고 서비스 내부에서 순서만 바꾸는 방식을 채택했다.
   - `SameSite=Lax`와 ADR 작성 여부는 리뷰 스레드에서 곧바로 결정하지 않고 "결정 필요"로 분류해 사용자에게 명시적으로 확인을 받은 뒤 반영했다(5절 참고).
+  - 3.6에서 `nginx -t`·재시작 실패 분기마다 개별 `rollback_basic_auth` 호출을 계속 늘려가는 방식(예: `tls-deploy-cert.sh` 실패 분기 추가, `install` 실패 분기 추가 …)도 검토했으나, 앞으로 컷오버 구간에 명령이 추가될 때마다 같은 실수가 반복될 수 있어 기각했다. 구간 전체를 `ERR` trap으로 감싸 "이 구간의 어떤 실패든 복구한다"는 불변 조건을 코드로 표현하는 방식을 채택했다.
 
 ## 7. 검증
 
@@ -144,6 +160,9 @@ related_documents:
 | `gh api .../rulesets/19533356`·`19533400` | 통과 | 실제 ruleset이 문서와 일치 |
 | `./gradlew test --tests VerificationSessionControllerTest`(SameSite=Lax 반영 후) | 통과 | 쿠키 속성이 `Lax`로 바뀐 테스트 포함 4건 통과 |
 | `./gradlew clean build`(2차, SameSite·ADR-GIT-001 반영 후) | 통과 | `BUILD SUCCESSFUL in 6m 27s`, 9 actionable tasks, 실패한 테스트 0건 |
+| `bash -n deploy/scripts/nginx-install.sh`(ERR trap 반영 후 재확인) | 통과 | 구문 오류 없음 |
+| 샌드박스에서 ERR trap 실행(1) — `nginx -t` 이전 명령 실패 시나리오 | 통과 | drop-in·auth map·site conf·upgrade map·nginx.conf 5개 파일 모두 백업본으로 복원됨 |
+| 샌드박스에서 ERR trap 실행(2) — 컷오버 성공 확정 후 무관한 실패 시나리오 | 통과 | Basic Auth 관련 파일이 되돌아가지 않고 제거된 상태로 유지됨(트랩 해제가 의도대로 동작) |
 
 ## 8. 재발 방지 및 다음 확인
 
@@ -154,6 +173,7 @@ related_documents:
   - 파일을 삭제·덮어쓰는 배포 스크립트를 고칠 때는 "사전 조건 확인"과 "실행 중 실패 시 복구"를 별개의 안전장치로 취급한다. 하나를 추가했다고 다른 하나가 저절로 해결되지 않는다.
   - `set -euo pipefail` 스크립트에서 `[ -f "$X" ] && cmd` 형태는 파일이 없을 때 전체 문장이 비정상 종료를 유발한다. `if [ -f "$X" ]; then cmd; fi`로 쓴다.
   - 실제 인프라(EC2, nginx)에서 테스트할 수 없는 파괴적 스크립트 로직은 병합 전에 임시 디렉터리로 흉내 낸 샌드박스에서 실제로 실행해 확인한다. `bash -n` 구문 검사만으로는 이런 런타임 동작(백업·롤백, `set -e` 조기 종료)의 결함을 잡지 못한다.
+  - "실패할 수 있는 지점"을 특정 명령 몇 개로 미리 한정하고 그 지점에만 개별적으로 `if ! ...; then rollback; fi`를 붙이지 않는다. `set -euo pipefail` 스크립트에서 되돌려야 하는 구간이 있다면, 그 구간 전체를 `trap ... ERR`로 감싸 "이 구간의 어떤 실패든 복구한다"를 보장하고, 성공이 확인된 뒤에만 트랩을 해제한다.
 - 다음 확인:
   - `deploy/nginx/masiton.click.conf` 변경은 로컬에 `nginx` 바이너리가 없어 `nginx -t`로 직접 검증하지 못했다. 배포 전 운영 환경 또는 CI의 Nginx 검증 단계에서 확인이 필요하다.
 
@@ -162,7 +182,7 @@ related_documents:
 | 지표 | 도입 전 기준값 | 측정 방법·기간 | 배포 확장 후 값 | 비교 결과 | 담당자·확인 시점/이슈 |
 |---|---|---|---|---|---|
 | 이메일 인증 제출 제한 우회 가능 여부 | 가능(필드 누락 시 무제한) | 코드 리뷰·단위 테스트로 확인 | 불가능(모든 제출이 제한 소모) | 개선 — 배포 후 실제 트래픽에서 429 발생 빈도 변화는 별도 모니터링 대상 | OPS-VALIDATION 담당(이우람), 다음 운영 모니터링 주기에 확인 |
-| Basic Auth → 세션 게이트 전환 시 자동 안전장치 | 없음(운영자 수동 순서 의존, 실패 시 복구 불가) | 스크립트 코드 리뷰·샌드박스 실행 | 있음(백엔드 헬스체크 실패 시 자동 중단 + `nginx -t`·재시작 실패 시 백업본으로 자동 복구) | 개선 | 실제 배포 시점에 담당자가 로그로 헬스체크·복구 동작 여부 확인 |
+| Basic Auth → 세션 게이트 전환 시 자동 안전장치 | 없음(운영자 수동 순서 의존, 실패 시 복구 불가) | 스크립트 코드 리뷰·샌드박스 실행 | 있음(백엔드 헬스체크 실패 시 자동 중단 + 컷오버 구간 전체 ERR trap으로 임의 실패 시 5개 파일 백업본 자동 복구) | 개선 | 실제 배포 시점에 담당자가 로그로 헬스체크·복구 동작 여부 확인 |
 
 그 외 항목(Redis 원자성, Nginx 헤더 일관성, 문서 정확성)은 수치로 비교할 성능·오류율 지표가 아니라 정확성 수정이므로 `해당 없음`이다.
 
