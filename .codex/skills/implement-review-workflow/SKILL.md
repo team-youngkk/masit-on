@@ -13,6 +13,9 @@ Deliver the requested code change, not merely a plan or review report. Keep the 
 2. Translate the request into explicit acceptance criteria.
 3. Preserve unrelated user changes. Do not let agents revert or overwrite work outside their ownership.
 4. Identify risky areas such as authentication, authorization, secrets, data loss, migrations, concurrency, public APIs, and deployment behavior.
+5. **Read the existing troubleshooting records before implementing.** If the repository keeps them (in this repository, `docs/troubleshooting/` with an index at `docs/troubleshooting/README.md`), find every record that touches the same files, domain, or contract as this task and treat its "근본 원인" and "재발 방지" items as binding constraints on this implementation. Do not repeat a mistake the team has already diagnosed and recorded.
+
+Carry the constraints found in step 5 into each delegation prompt explicitly — subagents do not share this conversation's context and will not find those records on their own.
 
 ## 2. Choose an Execution Shape
 
@@ -71,9 +74,19 @@ Ask the reviewer to focus on:
 - maintainability issues that materially affect the change;
 - missing or weak tests.
 
-Require findings to include severity, evidence, file and line references where possible, and a concrete recommended fix. The reviewer must not edit files during this pass.
+Require findings to include severity, evidence, file and line references where possible, and a concrete recommended fix. The reviewer must not edit files during this pass. Give the reviewer the troubleshooting records found in step 5 of Establish Scope so it can check whether a previously recorded mistake has recurred.
 
 For security-sensitive changes, additionally invoke `security-auditor`. For substantial test gaps, use `test-automator` to add focused regression coverage with explicit file ownership.
+
+### Posting review findings to a GitHub PR
+
+This skill reviews local changes by default. When asked to review someone else's PR, or when local review findings must be published to a PR, follow these rules:
+
+- **Post every finding as an inline review thread**, anchored to a line in the target file's diff, via `gh api graphql`'s `addPullRequestReviewThread` (or the equivalent connected GitHub tool). Findings left as PR-body or conversation comments cannot be resolved individually by the author.
+- **Follow `assets/review-thread-comment-template.md` exactly.** Fill in the priority tag and all three sections (`문제 상황`, `영향`, `개선 제안`); never post with placeholders remaining.
+- One finding per thread. Do not bundle multiple requests into a single thread.
+- Only findings that cannot be anchored to any changed file belong in the review summary body, and the reason must be stated there.
+- The review summary (`submitPullRequestReview` body) states how many findings were left and where — it does not restate the findings themselves.
 
 ## 6. Resolve Findings
 

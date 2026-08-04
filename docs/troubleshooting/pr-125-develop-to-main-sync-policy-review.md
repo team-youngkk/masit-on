@@ -82,6 +82,7 @@ related_documents:
 - 과거 PR 본문을 참고 템플릿으로 재사용할 때, 문구를 그대로 옮기지 않고 현재 PR이 실제로 어떤 정책 조건(정상 릴리즈 vs. Hotfix)에 해당하는지 먼저 확인한다.
 - `develop`을 head로 쓰는 승격 PR은 리뷰 도중 `develop`에 추가 병합이 생길 수 있음을 전제하고, 병합 직전 `git log origin/main..origin/develop`로 체크포인트 이후 새 커밋이 없는지 반드시 재확인한다.
 - 자기참조적 문서(자기 자신의 리뷰를 다루는 트러블슈팅 기록)를 쓸 때는 처음부터 절대 건수를 기록하지 않고, 커밋 SHA 등 고정 기준점으로 범위를 서술한다.
+- 위 항목들이 다음 작업에서 자동으로 적용되도록 스킬을 함께 고쳤다(`.claude/`·`.codex/` 양쪽). `implement-review-workflow`는 구현 전에 이 디렉터리의 기록을 읽어 재발 방지 항목을 제약으로 삼고, PR에 리뷰를 남길 때는 `assets/review-thread-comment-template.md` 형식의 인라인 스레드로만 남긴다. `troubleshoot-pr-review`는 답글을 원래 스레드의 인라인 답글로만 달고 응답 템플릿 항목을 임의로 빼지 않는다.
 
 ## 8. 남은 사항
 

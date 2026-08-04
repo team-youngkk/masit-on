@@ -52,7 +52,9 @@ description: Resolve unresolved review threads on the current user's pull reques
 
 ## 5. 답글과 스레드 해결
 
-`assets/review-thread-response-template.md`에서 판단에 맞는 템플릿을 골라 스레드 답글을 짧고 검증 가능하게 작성한다. 모든 자리표시자를 실제 값으로 바꾸고 해당 없는 선택 항목은 삭제한다. 템플릿을 근거 없이 그대로 게시하지 않는다.
+`assets/review-thread-response-template.md`에서 판단에 맞는 템플릿을 골라 스레드 답글을 짧고 검증 가능하게 작성한다. 모든 자리표시자를 실제 값으로 바꾸고 해당 없는 선택 항목은 삭제한다. 템플릿을 근거 없이 그대로 게시하지 않는다. 템플릿의 항목을 임의로 빼거나 순서를 바꾸지 않는다 — 요청자가 원인·변경·검증을 같은 자리에서 대조할 수 있어야 한다.
+
+**답글은 반드시 원래 스레드의 인라인 답글로 단다.** `gh api graphql`의 `addPullRequestReviewThreadReply`(또는 연결된 GitHub 도구의 동등 기능)에 대상 스레드 ID를 넘긴다. PR 본문·대화에 새 코멘트를 만들어 답하면 지적과 대응이 분리되고 스레드를 해결 처리할 수 없다.
 
 1. 원인이 무엇이었는지 한 문장으로 설명한다.
 2. 무엇을 어떻게 바꿨는지와 관련 파일을 적는다.
