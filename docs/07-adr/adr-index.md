@@ -24,6 +24,9 @@ related_documents:
   - data/data-007-uuid-v4-identifiers.md
   - data/data-008-publication-lifecycle-soft-delete.md
   - data/data-010-recent-view-retention-cleanup.md
+  - data/data-011-popular-restaurant-request-time-aggregation.md
+  - data/data-012-second-expansion-retention-cleanup.md
+  - integration/notify-002-in-app-notification-reliability.md
   - integration/ext-001-reference-verification.md
   - integration/map-001-map-bounds-search.md
   - quality/test-001-automation-strategy.md
@@ -32,6 +35,8 @@ related_documents:
   - platform/runtime-001-docker.md
   - platform/ci-001-github-actions-quality-gate.md
   - platform/deploy-001-release-sequencing.md
+  - platform/deploy-003-validation-cookie-session.md
+  - platform/git-001-branch-merge-strategy.md
 ---
 
 # 맛잇온 ADR 인덱스
@@ -58,13 +63,18 @@ related_documents:
 | [ADR-DATA-007](data/data-007-uuid-v4-identifiers.md) | 애플리케이션 생성 UUID v4 내부 식별자 | Accepted | High | Java UUID, PostgreSQL uuid | 전체 영속 데이터 | [문서](data/data-007-uuid-v4-identifiers.md) |
 | [ADR-DATA-008](data/data-008-publication-lifecycle-soft-delete.md) | 공개 상태와 논리 삭제 생명주기 분리 | Accepted | Critical | PostgreSQL CHECK, partial index | 핵심 공개 데이터 | [문서](data/data-008-publication-lifecycle-soft-delete.md) |
 | [ADR-EXT-001](integration/ext-001-reference-verification.md) | 관리자 외부 기준정보 확인 서비스 | Accepted | High | Kakao Local REST API V2, YouTube Data API v3 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 등록 | [문서](integration/ext-001-reference-verification.md) |
-| [ADR-MAP-001](integration/map-001-map-bounds-search.md) | Kakao 지도 표시와 WGS84 영역 조회 | Accepted | High | Kakao Maps JavaScript API V3, WGS84 bounds, PostgreSQL 좌표 컬럼 | [WS-07](../02-analysis/first-expansion-workstreams.md#6-ws-07-지도-탐색) 지도 탐색 | [문서](integration/map-001-map-bounds-search.md) |
+| [ADR-MAP-001](integration/map-001-map-bounds-search.md) | Kakao 지도 표시와 뷰포트 비종속 마커 조회 | Accepted | High | Kakao Maps JavaScript API V3, WGS84 좌표, 필터 기반 마커 조회 | [WS-07](../02-analysis/first-expansion-workstreams.md#6-ws-07-지도-탐색) 지도 탐색 | [문서](integration/map-001-map-bounds-search.md) |
 | [ADR-TEST-001](quality/test-001-automation-strategy.md) | 계층별 자동화 테스트 전략 | Accepted | Critical | JUnit 5, Mockito, Spring Boot Test, Testcontainers 2.0.5, WireMock | 전체 Workstream | [문서](quality/test-001-automation-strategy.md) |
 | [ADR-OBS-001](quality/obs-001-logging-observability.md) | 애플리케이션 로그와 운영 관측 기준 | Accepted | High | SLF4J, Logback, Actuator, CloudWatch | 전체 운영 | [문서](quality/obs-001-logging-observability.md) |
 | [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 비밀정보와 AWS 워크로드 인증 | Accepted | Critical | Parameter Store, KMS, IAM Role, GitHub OIDC | 운영·CI·외부 연동 | [문서](security/sec-001-secrets-workload-identity.md) |
 | [ADR-DATA-009](data/data-009-pre-release-migration-consolidation.md) | 운영 배포 전 마이그레이션 통합 범위 | Accepted | High | Flyway | 마이그레이션 파일과 모든 환경 스키마 | [문서](data/data-009-pre-release-migration-consolidation.md) |
 | [ADR-DATA-010](data/data-010-recent-view-retention-cleanup.md) | 최근 본 맛집 보존 기간 정리 실행 | Accepted | High | Spring Scheduler, PostgreSQL | [WS-06](../02-analysis/first-expansion-workstreams.md#5-ws-06-개인-맛집-관리) 최근 기록 생명주기 | [문서](data/data-010-recent-view-retention-cleanup.md) |
+| [ADR-DATA-011](data/data-011-popular-restaurant-request-time-aggregation.md) | 인기 맛집 요청 시점 실시간 집계 | Accepted | High | PostgreSQL 집계·인덱스 | [WS-10](../02-analysis/second-expansion-workstreams.md#5-ws-10-인기-맛집) 인기 맛집 | [문서](data/data-011-popular-restaurant-request-time-aggregation.md) |
+| [ADR-DATA-012](data/data-012-second-expansion-retention-cleanup.md) | 2차 확장 보존 정책 정리 실행 | Accepted | High | Spring Scheduler, PostgreSQL | [WS-12](../02-analysis/second-expansion-workstreams.md#7-ws-12-제보신고-검토)·[WS-13](../02-analysis/second-expansion-workstreams.md#8-ws-13-사용자-알림) 보존 | [문서](data/data-012-second-expansion-retention-cleanup.md) |
+| [ADR-NOTIFY-002](integration/notify-002-in-app-notification-reliability.md) | 서비스 내 사용자 알림의 저장 신뢰성 경계 | Accepted | Critical | PostgreSQL 단일 트랜잭션 | [WS-12](../02-analysis/second-expansion-workstreams.md#7-ws-12-제보신고-검토)·[WS-13](../02-analysis/second-expansion-workstreams.md#8-ws-13-사용자-알림) | [문서](integration/notify-002-in-app-notification-reliability.md) |
 | [ADR-RUNTIME-001](platform/runtime-001-docker.md) | Docker 기반 실행 환경 | Accepted | High | Docker | 개발·테스트·배포 산출물 | [문서](platform/runtime-001-docker.md) |
 | [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md) | GitHub Actions 빌드·테스트 품질 게이트 | Accepted | Critical | GitHub Actions | 전체 배포 후보 | [문서](platform/ci-001-github-actions-quality-gate.md) |
+| [ADR-GIT-001](platform/git-001-branch-merge-strategy.md) | 브랜치 병합 방식과 역동기화 정책 | Accepted | High | GitHub ruleset(Squash/Merge Commit) | 전체 PR 병합 | [문서](platform/git-001-branch-merge-strategy.md) |
 | [ADR-DEPLOY-001](platform/deploy-001-release-sequencing.md) | 단계별 로컬 검증과 최종 AWS 배포 순서 | Superseded | Critical | Docker, AWS | 전체 단계 및 최종 배포 | [문서](platform/deploy-001-release-sequencing.md) |
 | [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | 초기 운영 배포 선행과 확장 단계별 인프라 반영 | Accepted | Critical | Docker, AWS | M2 초기 운영 배포 및 이후 확장 | [문서](platform/deploy-002-validation-deployment-before-expansion.md) |
+| [ADR-DEPLOY-003](platform/deploy-003-validation-cookie-session.md) | 검증 참여자 제한 공개 쿠키 세션 | Accepted | Critical | Nginx `auth_request`, Spring Boot, Redis, HttpOnly Cookie | 정식 공개 전 검증 참여자 제한 공개 | [문서](platform/deploy-003-validation-cookie-session.md) |

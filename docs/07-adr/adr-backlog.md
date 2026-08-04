@@ -16,6 +16,9 @@ related_documents:
   - data/data-005-redis-refresh-token.md
   - data/data-007-uuid-v4-identifiers.md
   - data/data-008-publication-lifecycle-soft-delete.md
+  - data/data-011-popular-restaurant-request-time-aggregation.md
+  - data/data-012-second-expansion-retention-cleanup.md
+  - integration/notify-002-in-app-notification-reliability.md
 ---
 
 # 맛잇온 ADR Backlog
@@ -53,6 +56,7 @@ related_documents:
 - 현재 상태: Conditional (회원 Action 메일 발송 한 가지 사례만 부분 활성화, 아래 참고)
 - 현재 결정: 외부 호출은 timeout과 오류 분류만 적용하고 관리자가 수동 재시도한다. 도메인 이벤트·메시지 브로커·비동기 Worker·범용 Circuit Breaker는 도입하지 않는다.
 - 부분 활성화: 회원 가입 인증·비밀번호 재설정 메일은 "DB 커밋 뒤 유실되어서는 안 되는 후속 작업"에 해당해 [ADR-AUTH-005](security/auth-005-member-action-mail-outbox.md)(Accepted, 2026-07-31)로 Transactional Outbox를 좁게 승인했다. Kakao·YouTube 등 다른 외부 Adapter와 Circuit Breaker·메시지 브로커·도메인 이벤트는 이 활성화에 포함되지 않으며 아래 활성화 조건을 그대로 따른다.
+- 분리된 결정: 2차 확장 사용자 알림은 외부 전달이 아니라 같은 DB 트랜잭션의 최종 기록이므로 [ADR-NOTIFY-002](integration/notify-002-in-app-notification-reliability.md)에서 Outbox·Worker 없이 확정했다. 이는 외부 전달 활성화가 아니다.
 - 활성화 조건: 측정된 외부 실패율·호출량 때문에 수동 재시도로 운영 목표를 지킬 수 없거나, DB 커밋 뒤 유실되어서는 안 되는 알림·외부 동기화·후속 작업이 승인된다.
 - 도입 전 확인: 자동 재시도 대상과 최대 횟수·backoff·jitter·전체 시간 예산·429 처리·멱등성, Circuit Breaker 상태·임계값·fallback, 이벤트 전달 보장·순서·중복 소비, Outbox 스키마·발행기·정리·재처리·DLQ(회원 Action 메일 Outbox는 ADR-AUTH-005가 이미 확정)
 - 영향: 외부 Adapter, 트랜잭션·이벤트 경계, 저장소·Queue, 장애 복구, 관측성·통합 테스트
@@ -102,9 +106,9 @@ related_documents:
 ### ADR-MAP-001 지도 표시와 공간 검색
 
 - 현재 상태: Accepted로 이동
-- 현재 결정: [ADR-MAP-001](integration/map-001-map-bounds-search.md)에 따라 1차 확장은 Kakao Maps JavaScript API V3와 nullable WGS84 좌표의 bounds 조회를 사용한다. PostGIS, 현재 위치, 거리·반경 검색은 도입하지 않는다.
+- 현재 결정: [ADR-MAP-001](integration/map-001-map-bounds-search.md)에 따라 1차 확장은 Kakao Maps JavaScript API V3와 nullable WGS84 좌표의 필터 기반 마커 조회를 사용한다. 지도 뷰포트 서버 조건, PostGIS, 현재 위치, 거리·반경 검색은 도입하지 않는다.
 - 재검토 조건: 현재 위치·거리·반경·다각형 검색 또는 PostGIS가 범위에 들어온다.
-- 영향: 프론트엔드, Restaurant 좌표 모델, bounds 조회 API, 외부 지도 SDK
+- 영향: 프론트엔드, Restaurant 좌표 모델, 필터 기반 마커 조회 API, 외부 지도 SDK
 
 ### ADR-ROUTE-001 Kakao Mobility와 동선 추천
 
@@ -134,7 +138,7 @@ related_documents:
 
 - 현재 상태: Post-MVP
 - 현재 결정: Jsoup, n8n, Spring Scheduler, Spring Batch 6.0.4와 자동 주기 수집·동기화를 도입하지 않는다.
-- 분리된 결정: 최근 본 맛집의 30일 보존을 집행하는 제한적 Scheduler는 자동 수집과 다른 문제이므로 [ADR-DATA-010](data/data-010-recent-view-retention-cleanup.md)에서 Accepted 결정으로 관리한다.
+- 분리된 결정: 최근 본 맛집 30일 보존은 [ADR-DATA-010](data/data-010-recent-view-retention-cleanup.md), 2차 확장 보존 정리는 [ADR-DATA-012](data/data-012-second-expansion-retention-cleanup.md)에서 제한적 Scheduler로 관리한다. 둘 다 자동 수집·집계·동기화를 허용하지 않는다.
 - 활성화 조건: 관리자 확인 없는 자동 등록과 구분되는 승인된 수집·검수 흐름이 범위에 포함된다.
 - 도입 전 확인: n8n·Scheduler·Batch 책임 경계, 정확한 n8n·Jsoup 버전, 실행 이력·재시작·중복 방지, 외부 API 비용
 - 영향: 운영 구성요소, Redis 락, 테스트, 관리자 흐름
@@ -142,10 +146,10 @@ related_documents:
 ### ADR-NOTIFY-001 FCM 푸시 알림
 
 - 현재 상태: Post-MVP
-- 현재 결정: Firebase Cloud Messaging HTTP v1을 도입하지 않는다.
-- 활성화 조건: 2차 확장 알림과 사용자 식별·동의·토큰 수명주기가 승인된다.
-- 도입 전 확인: 알림 이벤트, 기기 토큰, 동의·해지, 실패·재시도, 비밀정보
-- 영향: 사용자 데이터, 외부 API, 비동기 처리
+- 현재 결정: [ADR-NOTIFY-002](integration/notify-002-in-app-notification-reliability.md)에 따라 2차 확장은 서비스 내 DB 저장 알림만 제공하고 Firebase Cloud Messaging HTTP v1을 도입하지 않는다.
+- 활성화 조건: 외부 푸시 채널의 사용자 가치와 전달 SLA가 범위로 승인되고, 사용자 식별·채널별 동의·해지·기기 Token 수명주기와 비용 책임이 확정된다.
+- 도입 전 확인: 알림 이벤트와 민감정보 최소화, Token 등록·회전·폐기·탈퇴, 플랫폼별 동의, 전달 의미, 실패·재시도·backoff·중복, Outbox·DLQ·재처리, FCM 비밀정보와 비용
+- 영향: 사용자 데이터, API·스키마, 외부 API, 비동기 처리, 개인정보·운영
 
 ### ADR-MEDIA-001 S3 사용자 이미지 저장
 
@@ -182,7 +186,7 @@ related_documents:
 | Kakao Mobility | Post-MVP | 동선·코스 추천 3차 확장 | 추천 범위 변경 |
 | Spring AI·Gemini | Post-MVP | AI 영상 추출 3차 확장 | 검수·품질·비용 기준 승인 |
 | pgvector | Post-MVP | 자연어 검색·RAG 제외 | 검색 범위 변경 |
-| FCM | Post-MVP | 사용자 알림 제외 | 계정·동의·알림 범위 변경 |
+| FCM | Post-MVP | 서비스 내 알림만 승인, 외부 푸시·동의·DeviceToken 제외 | 채널·동의·Token·전달 SLA 승인 |
 | S3 이미지 저장 | Post-MVP | 현재 이미지 업로드·사용자 이미지 요구사항 없음 | 이미지 기능 범위 변경 |
 | Redis 캐시 | 조건부 도입 | 캐시 필요성을 입증한 성능 측정 없음 | 병목과 무효화 전략 확인 |
 | Redis 관리자 Refresh Token | 범위 일치 | 관리자 JWT 재발급·폐기에 사용 | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md)·[ADR-DATA-005](data/data-005-redis-refresh-token.md) 적용 |
@@ -191,7 +195,7 @@ related_documents:
 | 확인 Token 저장·서명·단일 사용 | 결정 완료 (2026-07-27) | PostgreSQL 저장형 불투명 Token, 해시·후보 Snapshot, 원자적 소비와 결과 재현 | [ADR-AUTH-003](security/auth-003-confirmation-token.md) 적용 |
 | `UNIQUE` 이후 일반 동시성 제어 | 조건부 도입 | 기본 격리+고유 제약으로 시작하며 확인 Token의 제한된 conflict 처리는 별도 확정 | [ADR-DATA-006](#adr-data-006-동시-쓰기-충돌-제어)의 격리·락·일반 upsert 대안 검토 |
 | 캐시·읽기 저장소·물리적 CQRS | 조건부 도입 | 현재 동일 PostgreSQL Projection으로 NFR 미검증 | [ADR-ARCH-003](#adr-arch-003-조회-확장-패턴)의 일관성·동기화·복구 결정 |
-| 자동 재시도·Circuit Breaker·비동기 이벤트·Outbox | 조건부 도입 | 저빈도 관리자 호출은 수동 재시도, 유실 불가 후속 이벤트 없음 | [ADR-EXT-002](#adr-ext-002-자동-복원력과-신뢰성-이벤트-전달)의 실패·전달 보장 결정 |
+| 자동 재시도·Circuit Breaker·비동기 이벤트·Outbox | 조건부 도입 | 회원 Action 메일만 ADR-AUTH-005 Outbox, 서비스 내 알림은 ADR-NOTIFY-002 직접 저장 | [ADR-EXT-002](#adr-ext-002-자동-복원력과-신뢰성-이벤트-전달)의 외부 실패·전달 보장 결정 |
 | n8n·Batch·크롤링 | Post-MVP | 관리자 수동 확인·등록, 자동 수집 제외 | 승인된 자동화 범위 정의 |
 | 멀티모듈·독립 배포 | Post-MVP | 단일 모듈·단일 애플리케이션 배포로 MVP 복잡도 제한 | [ADR-ARCH-004](#adr-arch-004-멀티모듈독립-배포-전환)의 경계·이전 전략 결정 |
 | 세분화된 관리자 권한 | Post-MVP | 사전 발급 단일 `ADMIN` 역할만 범위에 포함 | [ADR-AUTH-004](#adr-auth-004-관리자-권한-세분화)의 권한 모델·이전 결정 |

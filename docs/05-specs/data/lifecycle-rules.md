@@ -10,6 +10,8 @@ related_documents:
   - physical-data-model.md
   - constraint-mapping.md
   - ../../07-adr/data/data-008-publication-lifecycle-soft-delete.md
+  - second-expansion-data-contract.md
+  - ../../07-adr/data/data-012-second-expansion-retention-cleanup.md
 ---
 
 # 맛잇온 데이터 생명주기
@@ -106,3 +108,14 @@ related_documents:
 - 채널명·영상 제목 등 외부 표시 정보는 최신값만 유지하고 변경 이력을 별도로 저장하지 않는다.
 - 상태 변경 감사 로그에는 행위자·대상·이전/이후 상태·사유·traceId를 남긴다.
 - Region·FoodCategory를 비활성화해도 기존 Restaurant는 해당 이름을 계속 표시하고 신규 연결만 금지한다.
+
+## 11. 2차 확장 생명주기
+
+- 개인 컬렉션·구성은 사용자 삭제와 회원 탈퇴에서 물리 삭제한다.
+- 인기 순위는 저장하지 않아 별도 보존·삭제·재계산 생명주기가 없다.
+- 큐레이션은 `DRAFT/PUBLISHED`를 전환하고 삭제 API 없이 보존한다. 구성 맛집 비공개·삭제는 관계를 유지하고 공개 결과에서 숨긴다.
+- 제보·신고는 종료 후 1년 또는 탈퇴 시 회원 FK를 `NULL`로 바꿔 식별 연결을 제거한다. 비식별 요청·ModerationHistory는 자동 purge하지 않는다.
+- 알림은 생성 90일 이내이거나 회원별 최신 200개이면 유지하고 두 조건을 모두 벗어나면 물리 삭제한다. 탈퇴 시 모두 삭제한다.
+- 멱등 성공 기록은 24시간 뒤 물리 삭제한다.
+
+정확한 FK 삭제 정책과 cleanup 인덱스는 [2차 확장 데이터 계약](second-expansion-data-contract.md)을 따른다.

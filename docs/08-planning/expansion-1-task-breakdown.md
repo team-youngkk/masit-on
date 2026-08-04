@@ -16,9 +16,9 @@ related_documents:
 
 ## 1. 목적과 사용 규칙
 
-이 문서는 [1차 확장 구현 계획](expansion-1-implementation-plan.md)의 단계별 `FE-*` 작업 묶음을 실행 가능한 `E1-T01`~`E1-T10` Task로 분해한다. 이 문서의 `E1-T*`가 구현·PR·검증 진행 상태를 기록하는 최종 Task ID이며, `FE-*`는 일정·통합 순서를 설명하는 상위 묶음으로만 유지한다.
+이 문서는 [1차 확장 구현 계획](expansion-1-implementation-plan.md)의 단계별 `FE-*` 작업 묶음을 실행 가능한 `E1-T01`~`E1-T13` Task로 분해한다. 이 문서의 `E1-T*`가 구현·PR·검증 진행 상태를 기록하는 최종 Task ID이며, `FE-*`는 일정·통합 순서를 설명하는 상위 묶음으로만 유지한다. `E1-T11`~`E1-T13`은 2026-08-03 승인된 지도 UX, 가입 이메일 인증 코드와 제한 공개 인증 계약 변경을 현재 구현에 반영하는 후속 정합화 Task다.
 
-담당자와 기본 리뷰어는 [1차 확장 Workstream](../02-analysis/first-expansion-workstreams.md)의 확정 배정을 사용한다. 소유권 변경, 공통 파일 병합 책임 변경, 또는 API·데이터·ADR 계약 변경은 이 문서만 고쳐서는 안 되며 팀 합의와 상위 계약 갱신을 먼저 거친다.
+담당자와 기본 리뷰어는 [1차 확장 Workstream](../02-analysis/first-expansion-workstreams.md)의 확정 배정을 사용한다. `E1-T13`은 같은 문서의 [OPS-VALIDATION 공통 운영·배포 트랙](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙)이 소유한다. 소유권 변경, 공통 파일 병합 책임 변경, 또는 API·데이터·ADR 계약 변경은 이 문서만 고쳐서는 안 되며 팀 합의와 상위 계약 갱신을 먼저 거친다.
 
 ## 2. 전체 Task 표
 
@@ -30,10 +30,13 @@ related_documents:
 | `E1-T04` | 회원 계정·인증 사용자 여정 | 김인안 / 이우람 | `E1-T03` | `E1-T05`와 가능 | L |
 | `E1-T05` | 찜·최근 본 데이터·API | 박진영 / 김인안 | `E1-T03` | `E1-T04`와 가능 | L |
 | `E1-T06` | 찜·최근 본 화면 통합 | 박진영 / 김인안 | `E1-T04`, `E1-T05` | 아니오 | M |
-| `E1-T07` | 지도 좌표·영역 조회 | 양성훈 / 박진영 | `E1-T01` | 회원·Creator 경로와 가능 | L |
+| `E1-T07` | 지도 좌표·영역 조회(과거 계약) | 양성훈 / 박진영 | `E1-T01` | 회원·Creator 경로와 가능 | L |
 | `E1-T08` | 지도 화면·접근성 통합 | 양성훈 / 박진영 | `E1-T07` | `E1-T09`와 가능 | M |
 | `E1-T09` | 유튜버 상세 수직 슬라이스 | 이우람 / 박진영 | `E1-T01` | 지도·회원 경로와 가능 | L |
 | `E1-T10` | 1차 확장 교차 인수·회귀 | 전원 / 상호 교차 리뷰 | `E1-T02`, `E1-T04`, `E1-T06`, `E1-T08`, `E1-T09` | 아니오 | L |
+| `E1-T11` | 지도 뷰포트 비종속 조회 전환 | 양성훈 / 박진영 | `E1-T07`, `E1-T08` | `E1-T09`와 가능 | M |
+| `E1-T12` | 가입 이메일 인증 8자 코드 전환 | 김인안 / 이우람 | `E1-T03`, `E1-T04` | `E1-T11`과 가능 | M |
+| `E1-T13` | 검증 참여자 제한 공개 쿠키 세션 전환 | 이우람 / 김인안 | M2-11, `E1-T04` | `E1-T11`, `E1-T12`와 가능 | L |
 
 크기는 한 명이 하나의 PR로 다룰 수 있는 작업량 기준으로 `S`(반일 이하), `M`(1일), `L`(1일 초과 또는 여러 계층 통합)이다. `L` Task는 내부에서 테스트·마이그레이션·화면 작업을 나눌 수 있지만, 아래 완료 조건이 충족될 때만 완료 처리한다.
 
@@ -101,6 +104,7 @@ related_documents:
 
 ### E1-T07 지도 좌표·영역 조회
 
+- 계약 변경: 이 Task의 bounds 조회 부분은 2026-08-03 결정으로 철회됐으며 `E1-T11`에서 뷰포트 비종속 조회로 교체한다. 좌표 저장·공개 상태·200개 상한은 유지한다.
 - 담당자 / 리뷰어: 양성훈 / 박진영
 - 관련 계약: `FR-MAP-001`~`002`; `PRD-DISCOVERY-003`; [지도 탐색 API](../05-specs/api/discovery/map-discovery-api.md); [ADR-MAP-001](../07-adr/integration/map-001-map-bounds-search.md)
 - 테이블·ADR: V4 `restaurant.latitude`, `restaurant.longitude`; [Flyway ADR](../07-adr/data/data-004-flyway.md), [좌표 계약](../05-specs/api/common/coordinate-contract.md)
@@ -116,8 +120,8 @@ related_documents:
 - 테이블·ADR: `restaurant.latitude`, `restaurant.longitude`; [외부 SDK 보안 경계](../06-architecture/security-boundary.md), [ADR-WEB-001](../07-adr/platform/web-001-frontend-platform.md)
 - 수정 예상 영역: 지도 Route·Kakao Maps SDK loader, 마커·대체 목록·선택 동기화, 키·로그 경계, 모바일·키보드 접근성
 - 선행 / 병렬 / 크기: `E1-T07` / `E1-T09`와 가능 / M
-- 테스트 범위: 지원 브라우저, 360px, 키보드·스크린 리더·터치, SDK 실패, bounds 원문 로그 제외
-- 완료 조건: 지도 장애가 대체 목록과 다른 공개 조회를 막지 않으며, 마커와 목록 선택이 양방향으로 동기화된다.
+- 테스트 범위: 지원 브라우저, 360px, 키보드·스크린 리더·터치, SDK 실패, 사용자 위치 비수집. 뷰포트 비종속 동작은 `E1-T11`에서 검증한다.
+- 완료 조건: 지도 장애가 대체 목록과 다른 공개 조회를 막지 않으며, 마커와 목록 선택이 양방향으로 동기화된다. 지도 이동 결과 유지의 최종 완료는 `E1-T11` 뒤 판정한다.
 
 ### E1-T09 유튜버 상세 수직 슬라이스
 
@@ -137,7 +141,43 @@ related_documents:
 - 수정 예상 영역: 교차 인수 테스트·브라우저 테스트·CI 결과, 추적표와 완료 기록. 기능 계약을 새로 결정하거나 범위를 확장하지 않는다.
 - 선행 / 병렬 / 크기: `E1-T02`, `E1-T04`, `E1-T06`, `E1-T08`, `E1-T09` / 아니오 / L
 - 테스트 범위: V1→V6 업그레이드, 인증·탈퇴·개인화, 지도 SDK·접근성, Creator 공개 상태, 성능 NFR, CI 전체 회귀
-- 완료 조건: 모든 1차 확장 FR이 주 PRD·API 또는 화면·데이터·ADR·Workstream·테스트·`E1-T*`로 추적되고, Conditional/Post-MVP 기술의 무단 도입이 없다.
+- 완료 조건: 모든 1차 확장 FR이 주 PRD·API 또는 화면·데이터·ADR·Workstream·테스트·`E1-T*`로 추적되고, Conditional/Post-MVP 기술의 무단 도입이 없다. `E1-T11` 병합 뒤 지도 회귀 범위는 다시 실행한다.
+
+### E1-T11 지도 뷰포트 비종속 조회 전환
+
+- 현재 상태: 구현 완료, PR 리뷰 대기 — `E1-T10` 지도 회귀는 병합 후 재실행한다.
+- 담당자 / 리뷰어: 양성훈 / 박진영
+- 승인 근거: WS-07 소유자 양성훈의 2026-08-03 UX 변경 승인
+- 관련 계약: `FR-MAP-001`~`002`, `BR-MAP-002`~`004`; [지도 탐색 PRD](../04-product/prd/discovery/map-discovery.md), [지도 API](../05-specs/api/discovery/map-discovery-api.md), [ADR-MAP-001](../07-adr/integration/map-001-map-bounds-search.md)
+- 수정 예상 영역: `map-points`의 bounds 요청·검증·SQL 조건, Application Command/Criteria, 프론트 Query Key·fetch 파라미터, Kakao `idle` 재조회, 관련 백엔드·프론트 테스트
+- 선행 / 병렬 / 크기: `E1-T07`, `E1-T08` / `E1-T09`와 가능 / M
+- 테스트 범위: bounds 없는 API, 네 URL 필터 AND, 200/201개, 지도 이동 전후 추가 요청 0건, 마커·대체 목록·선택 유지, 필터 변경 시 재조회, 뷰포트 비전송·비로그
+- 완료 조건: 지도 이동·확대·축소만으로 API가 재호출되지 않고 검색 결과 목록이 사라지지 않는다. `south`·`west`·`north`·`east`는 서버 계약과 Query Key에서 제거되고 `E1-T10`의 지도 회귀가 다시 통과한다.
+
+### E1-T12 가입 이메일 인증 8자 코드 전환
+
+- 현재 상태: 구현 완료, PR 리뷰 대기 — `E1-T10` 회원 인증 회귀를 이 구현 PR에서 재실행한다.
+- 담당자 / 리뷰어: 김인안 / 이우람
+- 관련 계약: `FR-MEMBER-002`, `BR-MEMBER-003`, `BR-AUTH-008`, `NFR-SECURITY-004`; [회원 계정·인증 PRD](../04-product/prd/account/member-authentication.md), [회원 계정·인증 API](../05-specs/api/account/member-authentication-api.md), [ADR-AUTH-002](../07-adr/security/auth-002-member-jwt-refresh-token.md), [ADR-AUTH-005](../07-adr/security/auth-005-member-action-mail-outbox.md)
+- 수정 예상 영역: 이메일 인증 코드 생성기·해시 조회, 인증 API 입력 정규화·형식 검증·제출 제한, 메일 템플릿, 인증 입력 UI, Outbox·서비스·Controller·브라우저 테스트. 비밀번호 재설정·Access·Refresh Token 생성기는 변경하지 않는다.
+- 데이터 경계: 기존 `member_action_token.token_hash`와 암호화 Outbox를 재사용하며 기존 Flyway 파일이나 컬럼을 수정하지 않는다.
+- 선행 / 병렬 / 크기: `E1-T03`, `E1-T04` / `E1-T11`과 가능 / M
+- 테스트 범위: 허용 문자만 사용하는 8자 CSPRNG 코드, 40-bit 탐색 공간, 소문자·앞뒤 공백 정규화, 길이·금지 문자 거부, 24시간·최신 1개·단일 소비·동시 요청, 10분 10회·`429`, 해시 저장·원문 비로그, 메일·브라우저 입력, `400`/`503` Token 정리·보존 정책 회귀
+- 완료 조건: 가입·재발송 메일과 인증 API·화면이 동일한 8자 코드 계약을 사용하고, 비밀번호 재설정 Token 형식과 기존 인증 수명주기·Outbox 보장은 변하지 않으며 `E1-T10` 회원 인증 회귀가 다시 통과한다.
+
+### E1-T13 검증 참여자 제한 공개 쿠키 세션 전환
+
+- 현재 상태: Planned — 문서 계약 승인, 코드·운영 미반영
+- 담당자 / 리뷰어: 이우람 / 김인안
+- 소유 트랙: [OPS-VALIDATION 공통 운영·배포](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙)
+- 관련 계약: `NFR-SECURITY-001`, `NFR-SECURITY-003`, `NFR-DEPLOYMENT-002`, `NFR-DEPLOYMENT-004`; [검증 참여자 API 계약](../05-specs/api/common/validation-access-contract.md), [ADR-DEPLOY-003](../07-adr/platform/deploy-003-validation-cookie-session.md), [M2 배포 계획](m2-deployment-plan.md)
+- 수정 예상 영역: 검증 로그인 화면, 세션 생성·종료·내부 검증 Adapter, Redis 세션·실패 제한, Parameter Store 주입, Nginx `auth_request`·오류 분기, Basic Auth·`htpasswd` 설치/렌더링 제거, 배포·CloudWatch·브라우저 테스트
+- 인증 경계: `__Host-masiton-verification`은 제한 공개 진입만 허용한다. 회원·관리자 Access/Refresh Token, Principal, 로그인·로그아웃 코드는 변경하지 않는다.
+- 선행 / 병렬 / 크기: M2-11 운영 기준선, `E1-T04` / `E1-T11`, `E1-T12`와 가능 / L
+- 테스트 범위: 최초 로그인·7일 고정 만료·종료, 쿠키 속성, Redis 해시·장애 fail-closed, 출처/ID별 15분 5회, 화면 redirect와 API JSON 401 분리, 회원 `/api/me`·찜·최근 기록과 관리자 등록 Bearer 동시 사용, 페이지 이동·새로고침 반복 인증창 0회, 비밀정보 로그 0건
+- 배포 전환: 새 세션 경계를 먼저 배포·검증한 뒤 Nginx Basic Auth와 `htpasswd` 렌더링을 제거한다. 실패 시 직전 Basic 구성으로 복구하되 Bearer 충돌이 재발하는 임시 상태임을 운영자에게 표시한다.
+- 정식 공개 제거 조건: Nginx 검증 subrequest, 로그인 화면/API, 쿠키·Redis namespace, Parameter Store 비밀과 제한 공개 전용 테스트·알람을 한 Task에서 제거하고 회원·관리자 회귀를 실행한다.
+- 완료 조건: 검증 참여자는 브라우저당 한 번 로그인한 뒤 만료 전까지 모든 화면과 회원·관리자 흐름에서 재인증창 없이 이동하며, 무세션 접근은 차단되고 회원·관리자 인증 계약은 그대로 동작한다.
 
 ## 4. 변경 통제와 리뷰 순서
 

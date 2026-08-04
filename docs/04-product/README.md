@@ -16,13 +16,20 @@ related_documents:
   - ../01-requirements/non-functional-requirements.md
   - ../03-team/ownership.md
   - wireframes/README.md
+  - prd/personal/personal-collection.md
+  - prd/discovery/popular-restaurants.md
+  - prd/curation/admin-curation.md
+  - prd/participation/user-submission-report.md
+  - prd/notification/user-notification.md
+  - user-flows/second-expansion-user-flows.md
+  - wireframes/second-expansion-wireframes.md
 ---
 
 # 맛잇온 제품 문서
 
 ## 1. 디렉터리 목적
 
-이 디렉터리는 맛잇온 MVP의 제품 방향과 기능별 사용자 가치를 계층적으로 관리한다. 범위의 기준은 [프로젝트 범위](../00-overview/scope.md)이며, PRD는 구현 방식이 아니라 사용자 문제, 제품 동작, 성공 기준과 책임 경계를 설명한다.
+이 디렉터리는 맛잇온 MVP와 단계별 확장의 제품 방향 및 기능별 사용자 가치를 계층적으로 관리한다. 범위의 기준은 [프로젝트 범위](../00-overview/scope.md)이며, PRD는 구현 방식이 아니라 사용자 문제, 제품 동작, 성공 기준과 책임 경계를 설명한다.
 
 ## 2. PRD 계층 구조
 
@@ -40,10 +47,19 @@ related_documents:
 | [유튜버 기반 탐색](prd/discovery/creator-discovery.md) | 특정 유튜버의 실제 방문 맛집 찾기 | [WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) | 이우람 |
 | [맛집 상세 및 콘텐츠 조회](prd/detail/restaurant-detail.md) | 맛집 기본 정보와 방문 콘텐츠를 한 흐름에서 확인 | [WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) | 박진영 |
 | [관리자 데이터 등록](prd/admin/admin-data-management.md) | 검증된 기본 데이터와 방문 관계를 순서대로 등록 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 김인안 |
+| [개인 컬렉션](prd/personal/personal-collection.md) | 회원이 목적별 비공개 맛집 목록 구성 | WS-09 | 박진영 |
+| [인기 맛집](prd/discovery/popular-restaurants.md) | 현재 찜 기반 공개 탐색 | WS-10 | 양성훈 |
+| [관리자 큐레이션](prd/curation/admin-curation.md) | 관리자 편집 주제별 공개 목록 | WS-11 | 김인안 |
+| [사용자 제보와 신고](prd/participation/user-submission-report.md) | 신규 후보 제안과 기존 정보 문제 처리 | WS-12 | 김인안 |
+| [사용자 알림](prd/notification/user-notification.md) | 제보·신고 처리 결과 확인 | WS-13 | 이우람 |
+| [2차 확장 사용자 흐름](user-flows/second-expansion-user-flows.md) | 기능 간 정상·예외·상태 전이 연결 | WS-09~WS-13 | 각 WS 담당자 |
+| [2차 확장 와이어프레임](wireframes/second-expansion-wireframes.md) | 2차 확장 화면 정보 구조와 상태 | WS-09~WS-13 | 각 WS 담당자 |
 | [PRD 추적성](traceability.md) | 기준 문서와 PRD의 매핑 및 변경 영향 | 전체 | 김인안(PRD 조율) |
 | [와이어프레임 적용 기준](wireframes/README.md) | 단계별 화면 참조와 MVP UI 적용·제외 기준 | 전체 | 양성훈·김인안 |
 
 유튜버 조건은 독립된 관계 판정과 [WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 책임이 있으므로 별도 PRD로 둔다. 상세와 방문 콘텐츠는 한 화면의 완결된 흐름이며 [WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)가 최종 조합을 책임하므로 통합한다. 기본 데이터와 방문 관계 등록은 하나의 [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록)가 선행 순서부터 조회 반영까지 책임하므로 하나의 관리자 PRD로 관리한다.
+
+2차 확장은 다섯 PRD로 관리한다. 인기와 큐레이션은 공개 탐색 진입면을 공유하지만 생성 주체·도메인·최종 책임자가 달라 별도 PRD와 Workstream으로 분리한다.
 
 ## 4. 문서별 책임 범위
 

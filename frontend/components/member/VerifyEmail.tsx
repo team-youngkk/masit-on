@@ -9,6 +9,7 @@ import {
 } from '@/lib/member/auth'
 import {
   createEmailVerificationSingleFlight,
+  normalizeEmailVerificationCodeInput,
   resendEmailVerification,
   submitEmailVerification,
 } from '@/lib/member/email-verification-coordination'
@@ -38,7 +39,8 @@ export function VerifyEmail({ loginHref }: { loginHref: string }) {
 
   async function submitVerification(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const submittedToken = token
+    const submittedToken = normalizeEmailVerificationCodeInput(token)
+    setToken(submittedToken)
 
     await singleFlight.run(async () => {
       setVerifying(true)
@@ -92,19 +94,19 @@ export function VerifyEmail({ loginHref }: { loginHref: string }) {
             이메일 인증
           </h1>
           <p className={styles.description}>
-            이메일로 받은 인증 토큰을 직접 입력해 가입을 완료하세요. 토큰은 이
-            화면의 주소나 기록에 저장되지 않습니다.
+            이메일로 받은 8자 인증 코드를 입력해 가입을 완료하세요. 앞뒤 공백은
+            자동으로 제거되고 영문은 대문자로 입력됩니다.
           </p>
         </header>
 
         {!verified ? (
           <form className={styles.form} onSubmit={submitVerification}>
             <Field
-              label="인증 토큰"
+              label="8자 인증 코드"
               name="token"
               value={token}
               onChange={event => {
-                setToken(event.target.value)
+                setToken(normalizeEmailVerificationCodeInput(event.target.value))
                 if (verificationFeedback?.kind === 'alert') {
                   setVerificationFeedback(null)
                   setShowResend(false)
@@ -112,13 +114,15 @@ export function VerifyEmail({ loginHref }: { loginHref: string }) {
               }}
               aria-describedby={tokenHintId}
               autoComplete="one-time-code"
-              autoCapitalize="none"
+              autoCapitalize="characters"
+              inputMode="text"
+              placeholder="AB7K9M2Q"
               spellCheck={false}
               disabled={busy}
               required
             />
             <p id={tokenHintId} className={styles.help}>
-              메일 본문에 포함된 토큰을 그대로 붙여넣어 주세요.
+              메일 본문에 포함된 8자 코드를 입력해 주세요.
             </p>
 
             {verificationFeedback ? (

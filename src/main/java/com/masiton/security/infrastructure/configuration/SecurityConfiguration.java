@@ -52,6 +52,8 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.POST, "/api/admin/auth/tokens").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/admin/auth/tokens/refresh").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/verification/sessions").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/api/verification/sessions").permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/auth/registrations",
                                 "/api/auth/email-verifications",
@@ -69,6 +71,9 @@ public class SecurityConfiguration {
                                 "/api/creators/*/videos").permitAll()
                         .requestMatchers("/internal/health/live", "/internal/health/ready", "/internal/health/dependencies")
                         .permitAll()
+                        .requestMatchers("/internal/verification/session",
+                                "/internal/verification/access-required",
+                                "/internal/verification/unavailable").permitAll()
                         .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/auth/tokens").hasAuthority("MEMBER")
                         .requestMatchers("/api/me", "/api/me/**").hasAuthority("MEMBER")

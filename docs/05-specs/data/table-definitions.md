@@ -5,6 +5,7 @@ related_documents:
   - constraint-mapping.md
   - index-strategy.md
   - migration-plan.md
+  - second-expansion-data-contract.md
 ---
 
 # 맛잇온 테이블 정의
@@ -167,7 +168,7 @@ related_documents:
 
 ## 11. `member_action_token`
 
-이메일 인증과 비밀번호 재설정은 SHA-256 해시만 저장하는 1회용 Token을 사용한다. Token은 `ISSUED`, `USED`, `REVOKED` 상태와 완료 시각을 가지며, `(member_id, purpose)`별 `ISSUED` Token은 하나만 허용한다. 재발급할 때 기존 Token을 `REVOKED`로 완료 처리해 새 Token과 구분한다.
+이메일 인증과 비밀번호 재설정은 SHA-256 해시만 저장하는 1회용 Token을 사용한다. `EMAIL_VERIFICATION` 원문은 32자 문자 집합에서 CSPRNG로 생성한 8자 코드이고, `PASSWORD_RESET` 원문은 기존 고엔트로피 불투명 값이다. 형식 차이는 원문 생성·입력 검증 경계에만 적용하며 테이블에는 두 용도 모두 동일한 고정 길이 해시를 저장한다. Token은 `ISSUED`, `USED`, `REVOKED` 상태와 완료 시각을 가지며, `(member_id, purpose)`별 `ISSUED` Token은 하나만 허용한다. 재발급할 때 기존 Token을 `REVOKED`로 완료 처리해 새 Token과 구분한다.
 
 ## 12. `member_session_revocation`
 
@@ -257,7 +258,13 @@ Redis 세션 변경 뒤 PostgreSQL `sid` 폐기 표식을 기록하지 못한 �
 
 기존 `channel_name`, `channel_url`과 위 세 필드는 공개 상세 응답의 `channelName`, `channelUrl`, `profileImageUrl`, `description`, `handle`에 대응한다.
 
-## 14. Redis 경계
+## 15. 2차 확장 테이블
+
+2차 확장은 `personal_collection`, `collection_restaurant`, `curation`, `curation_restaurant`, `submission`, `report`, `moderation_history`, `notification`, `idempotency_record`를 추가한다. 전체 컬럼·타입·PK·FK·CHECK와 비저장 개념은 [2차 확장 데이터 계약](second-expansion-data-contract.md)에 정의한다.
+
+`PopularityMetric`, `PopularitySnapshot`, `NotificationPreference`, `DeviceToken`과 알림 Outbox는 만들지 않는다. 인기 조회는 기존 `favorite`를 집계하고 알림은 요청 상태 전이와 같은 트랜잭션에서 `notification`에 직접 저장한다.
+
+## 16. Redis 경계
 
 `AdminRefreshToken`은 Redis 8.8에만 저장한다. PostgreSQL `admin_account.id` 문자열을 Redis 값의 관리자 참조로 사용하되 DB FK 같은 원자성은 제공하지 않는다. Redis 키·검증값·14일 TTL·회전·재사용 탐지와 로그인 실패 제한은 [관리자 인증 API](../api/admin/authentication-api.md)와 [보안 경계](../../06-architecture/security-boundary.md)의 확정 계약을 따른다. Redis 구조는 이 문서의 PostgreSQL 스키마와 Flyway 대상이 아니다.
 

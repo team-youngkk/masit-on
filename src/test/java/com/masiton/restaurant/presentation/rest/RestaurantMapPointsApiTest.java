@@ -26,14 +26,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * API-MAP-001 지도 영역 맛집 조회의 Controller-PostgreSQL-Redis 인수 테스트다.
+ * API-MAP-001 지도 맛집 마커 조회의 Controller-PostgreSQL-Redis 인수 테스트다.
  * 근거: docs/05-specs/api/discovery/map-discovery-api.md
  */
 @SpringBootTest
 @com.masiton.test.TestProfile
 @AutoConfigureMockMvc
 @Testcontainers
-@DisplayName("지도 영역 맛집 조회 API")
+@DisplayName("지도 맛집 마커 조회 API")
 class RestaurantMapPointsApiTest {
 
     private static final UUID MAPO_REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000014");
@@ -79,9 +79,7 @@ class RestaurantMapPointsApiTest {
         UUID restaurantId = insertRestaurant("마포 맛집", "37.5665", "126.9780");
 
         // when & then
-        mockMvc.perform(get("/api/restaurants/map-points")
-                        .param("south", "37.5").param("west", "126.9")
-                        .param("north", "37.6").param("east", "127.0"))
+        mockMvc.perform(get("/api/restaurants/map-points"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultStatus").value("AVAILABLE"))
                 .andExpect(jsonPath("$.limit").value(200))
@@ -94,58 +92,33 @@ class RestaurantMapPointsApiTest {
     }
 
     @Test
-    @DisplayName("영역 밖 좌표와 좌표 없는 맛집은 결과에서 제외한다")
-    void mapPoints_영역밖과좌표없음_결과에서제외한다() throws Exception {
+    @DisplayName("좌표 없는 맛집은 결과에서 제외하고 좌표가 있는 맛집은 위치와 무관하게 포함한다")
+    void mapPoints_좌표없는맛집_결과에서제외한다() throws Exception {
         // given
-        insertRestaurant("영역 밖 맛집", "37.9", "127.5");
+        UUID farRestaurantId = insertRestaurant("멀리 있는 맛집", "37.9", "127.5");
         insertRestaurant("좌표 없는 맛집", null, null);
 
         // when & then
+        mockMvc.perform(get("/api/restaurants/map-points"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].id").value(farRestaurantId.toString()));
+    }
+
+    @Test
+    @DisplayName("south·west·north·east를 보내면 400 INVALID_REQUEST를 반환한다")
+    void mapPoints_bounds파라미터전송_400INVALID_REQUEST를반환한다() throws Exception {
         mockMvc.perform(get("/api/restaurants/map-points")
                         .param("south", "37.5").param("west", "126.9")
                         .param("north", "37.6").param("east", "127.0"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.items").isEmpty());
-    }
-
-    @Test
-    @DisplayName("영역 값이 하나라도 없으면 400 MISSING_REQUIRED_FIELD를 반환한다")
-    void mapPoints_영역값누락_400MISSING_REQUIRED_FIELD를반환한다() throws Exception {
-        mockMvc.perform(get("/api/restaurants/map-points")
-                        .param("west", "126.9").param("north", "37.6").param("east", "127.0"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("MISSING_REQUIRED_FIELD"))
-                .andExpect(jsonPath("$.errors[0].field").value("south"));
-    }
-
-    @Test
-    @DisplayName("영역 값이 decimal 형식이 아니면 400 INVALID_FIELD_VALUE를 반환한다")
-    void mapPoints_영역값형식오류_400INVALID_FIELD_VALUE를반환한다() throws Exception {
-        mockMvc.perform(get("/api/restaurants/map-points")
-                        .param("south", "not-a-number").param("west", "126.9")
-                        .param("north", "37.6").param("east", "127.0"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("INVALID_FIELD_VALUE"))
-                .andExpect(jsonPath("$.errors[0].field").value("south"));
-    }
-
-    @Test
-    @DisplayName("south가 north보다 크거나 같으면 400 INVALID_FIELD_VALUE(north)를 반환한다")
-    void mapPoints_south가north이상_400INVALID_FIELD_VALUE를반환한다() throws Exception {
-        mockMvc.perform(get("/api/restaurants/map-points")
-                        .param("south", "37.7").param("west", "126.9")
-                        .param("north", "37.6").param("east", "127.0"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("INVALID_FIELD_VALUE"))
-                .andExpect(jsonPath("$.errors[0].field").value("north"));
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
     }
 
     @Test
     @DisplayName("creatorId가 UUID 형식이 아니면 400 INVALID_IDENTIFIER를 반환한다")
     void mapPoints_creatorId형식오류_400INVALID_IDENTIFIER를반환한다() throws Exception {
         mockMvc.perform(get("/api/restaurants/map-points")
-                        .param("south", "37.5").param("west", "126.9")
-                        .param("north", "37.6").param("east", "127.0")
                         .param("creatorId", "not-a-uuid"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_IDENTIFIER"))
@@ -156,8 +129,6 @@ class RestaurantMapPointsApiTest {
     @DisplayName("정의되지 않은 쿼리 파라미터는 400 INVALID_REQUEST를 반환한다")
     void mapPoints_정의되지않은파라미터_400INVALID_REQUEST를반환한다() throws Exception {
         mockMvc.perform(get("/api/restaurants/map-points")
-                        .param("south", "37.5").param("west", "126.9")
-                        .param("north", "37.6").param("east", "127.0")
                         .param("sort", "asc"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
@@ -172,9 +143,7 @@ class RestaurantMapPointsApiTest {
         }
 
         // when & then
-        mockMvc.perform(get("/api/restaurants/map-points")
-                        .param("south", "37.5").param("west", "126.9")
-                        .param("north", "37.6").param("east", "127.0"))
+        mockMvc.perform(get("/api/restaurants/map-points"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultStatus").value("AVAILABLE"))
                 .andExpect(jsonPath("$.limit").value(200))
@@ -190,9 +159,7 @@ class RestaurantMapPointsApiTest {
         }
 
         // when & then
-        mockMvc.perform(get("/api/restaurants/map-points")
-                        .param("south", "37.5").param("west", "126.9")
-                        .param("north", "37.6").param("east", "127.0"))
+        mockMvc.perform(get("/api/restaurants/map-points"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultStatus").value("TOO_MANY_RESULTS"))
                 .andExpect(jsonPath("$.limit").value(200))
@@ -203,15 +170,11 @@ class RestaurantMapPointsApiTest {
     @DisplayName("클라이언트 출처당 초당 4회를 초과하면 429와 Retry-After를 반환한다")
     void mapPoints_초당4회초과_429와RetryAfter를반환한다() throws Exception {
         for (int attempt = 0; attempt < 4; attempt++) {
-            mockMvc.perform(get("/api/restaurants/map-points")
-                            .param("south", "37.5").param("west", "126.9")
-                            .param("north", "37.6").param("east", "127.0"))
+            mockMvc.perform(get("/api/restaurants/map-points"))
                     .andExpect(status().isOk());
         }
 
-        mockMvc.perform(get("/api/restaurants/map-points")
-                        .param("south", "37.5").param("west", "126.9")
-                        .param("north", "37.6").param("east", "127.0"))
+        mockMvc.perform(get("/api/restaurants/map-points"))
                 .andExpect(status().isTooManyRequests())
                 .andExpect(jsonPath("$.code").value("RATE_LIMIT_EXCEEDED"))
                 .andExpect(header().string("Retry-After", "1"));

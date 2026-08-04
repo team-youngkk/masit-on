@@ -8,21 +8,25 @@ related_documents:
   - api-review.md
   - ../00-overview/scope.md
   - ../02-analysis/mvp-workstreams.md
+  - ../02-analysis/second-expansion-workstreams.md
+  - data/second-expansion-data-contract.md
 ---
 
 # 맛잇온 명세 문서
 
 ## 1. 디렉터리 목적
 
-`docs/05-specs/`는 확정된 MVP 제품 동작을 구현 가능한 외부 계약으로 구체화한다. 이 문서는 내부 클래스, 데이터베이스, 프레임워크 또는 배포 구성을 정의하지 않는다.
+`docs/05-specs/`는 확정된 MVP와 확장 단계의 제품 동작을 구현 가능한 API·데이터 계약으로 구체화한다. 이 진입 문서는 내부 클래스나 프레임워크 구현을 정의하지 않는다.
 
 ## 2. 명세 문서 구성
 
 - `api/`: 클라이언트와 서버 사이의 공통·기능별 API 계약
 - [api-traceability.md](api-traceability.md): PRD, 요구사항, 규칙, Workstream과 API의 연결
 - [api-review.md](api-review.md): 계약 확정을 막거나 후속 결정이 필요한 항목
+- [data/README.md](data/README.md): 논리·물리 데이터 명세 진입점
+- [2차 확장 데이터 계약](data/second-expansion-data-contract.md): 2차 확장의 소유권·제약·생명주기·인덱스·V3 계획
 
-PRD는 사용자 동작과 제품 범위를, API 계약은 클라이언트와 서버 사이의 외부 인터페이스를, 후속 데이터 모델은 내부 저장 구조와 정합성을 정의한다.
+PRD는 사용자 동작과 제품 범위를, API 계약은 클라이언트와 서버 사이의 외부 인터페이스를, 데이터 모델은 내부 저장 구조와 정합성을 정의한다.
 
 ## 3. 문서 참조 순서
 

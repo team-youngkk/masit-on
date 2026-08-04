@@ -328,7 +328,7 @@ PR 브랜치는 AWS 자격 증명을 받지 못한다. **이미지 빌드와 검
 | 비어 있으면 | 빌드를 중단한다. 통과시키면 지도만 죽은 이미지가 배포된다 |
 | 허용 도메인 | Kakao 콘솔 Web 플랫폼에 `https://masiton.click` 등록 |
 
-Secret이 아니라 변수를 쓴다. [ADR-MAP-001 6.5](../07-adr/integration/map-001-map-bounds-search.md#65-키-비용과-외부-서비스-경계)가 이 키를 브라우저 노출 식별자로 분류하고 허용 도메인 제한을 보호 수단으로 삼기 때문이다. **서버용 Kakao Local REST API 키는 같은 ADR이 비밀정보로 분류하므로 이 경로로 넘기지 않는다.** build arg는 이미지 히스토리에 남는다. REST 키는 Parameter Store `/masiton/integration/kakao/rest-api-key`를 그대로 쓴다.
+Secret이 아니라 변수를 쓴다. [ADR-MAP-001 외부 서비스 경계](../07-adr/integration/map-001-map-bounds-search.md#45-외부-서비스와-장애)가 이 키를 브라우저 노출 식별자로 분류하고 허용 도메인 제한을 보호 수단으로 삼기 때문이다. **서버용 Kakao Local REST API 키는 같은 ADR이 비밀정보로 분류하므로 이 경로로 넘기지 않는다.** build arg는 이미지 히스토리에 남는다. REST 키는 Parameter Store `/masiton/integration/kakao/rest-api-key`를 그대로 쓴다.
 
 ### 6.6. 워크플로 — 해소됨
 
@@ -709,6 +709,8 @@ https://masiton.click/internal/health/live -> 404
 
 구성 일시 2026-07-30. 방식은 [계획 4절](m2-deployment-plan.md) 결정에 따라 Nginx Basic Auth다.
 
+> 이 절은 적용 당시 운영 이력이다. 2026-08-03 Basic과 회원·관리자 Bearer의 `Authorization` 충돌로 반복 인증창이 확인되어 [ADR-DEPLOY-003](../07-adr/platform/deploy-003-validation-cookie-session.md)이 쿠키 세션 전환을 승인했다. 현재 구현 차이는 `E1-T13`에서 추적하며, 전환 뒤 이 절의 `htpasswd`·`auth_basic` 구성은 제거 대상이다.
+
 | 항목 | 값 |
 |---|---|
 | 자격 증명 | `/masiton/access/basic-auth-username`(`String`, `masiton-verify`), `/masiton/access/basic-auth-password`(`SecureString`) |
@@ -943,7 +945,7 @@ Kakao place ID와 YouTube channel/video ID는 관리자 API 응답에 노출되�
 
 **화면에 오류가 뜨지 않고 `미리보기 확인 중…`에서 멈춘 것도 같은 원인이다.** [`auth.ts`](../../frontend/lib/admin/auth.ts)의 `authenticatedFetch`는 `401`을 받으면 곧바로 재발급을 호출하는데, 미리보기 POST 3건에 재발급 POST가 0건이었다. `401`이 앱 코드까지 전달되지 않아 `fetch`가 끝나지 않았고 mutation이 pending에 머물렀다. Nginx가 돌려준 `WWW-Authenticate: Basic` 챌린지를 브라우저가 자체 처리로 붙잡기 때문이다.
 
-수정은 `location /api/`의 `auth_basic`을 변수로 받아 요청별로 판정한다([`01-masiton-api-auth-map.conf`](../../deploy/nginx/01-masiton-api-auth-map.conf)). `/api/admin/**`에 Bearer를 실은 요청만 Basic을 면제하고, 그 요청은 백엔드가 JWT와 `ADMIN`을 검증한다.
+당시 수정은 `location /api/`의 `auth_basic`을 변수로 받아 요청별로 판정했다. `/api/admin/**`에 Bearer를 실은 요청만 Basic을 면제하고, 그 요청은 백엔드가 JWT와 `ADMIN`을 검증했다. 이 임시 map 파일은 `E1-T13` 쿠키 세션 전환에서 제거했다.
 
 **로그인과 재발급은 JWT를 요구하지 않는 무인증 경로여서 Bearer 유무와 무관하게 Basic을 계속 요구한다.** 면제하면 Bearer를 임의로 붙여 인터넷에서 자격 증명 시도를 반복할 수 있고, 로그인 실패 5회 차단이 전원을 잠그는 수단이 된다(13.7절).
 
@@ -965,6 +967,8 @@ Kakao place ID와 YouTube channel/video ID는 관리자 API 응답에 노출되�
 **브라우저에서도 확인했다.** 관리자 화면에서 이미 등록된 `서울집`의 카카오 장소 URL로 미리보기를 요청해 `이미 등록된 맛집입니다`와 기존 자원 정보를 3초 안에 받았다. 50초 넘게 끝나지 않던 동작이다. 중복 판정이라 자원은 만들어지지 않았고, 브라우저부터 Kakao 호출까지 전체 경로가 동작하는 것을 확인했다.
 
 **교훈은 인터넷 진입점을 경유하지 않은 검증이 화면 흐름을 보장하지 않는다는 것이다.** 12.2~12.4절이 모두 통과했는데도 Nginx가 앞에 있는 실제 경로에서는 관리자 흐름이 성립하지 않았다. 12.1절의 "스텁이 계약이 아니다"와 같은 유형이다. 검증 경로가 사용자 경로와 다르면 통과가 통과가 아니다.
+
+후속 회원 인증에서도 같은 헤더 충돌이 재발했다. `/api/me/**`와 선택적 회원 인증 요청은 Bearer를 사용하지만 M2-12의 Nginx 예외는 관리자 경로만 다뤄 `401 + WWW-Authenticate: Basic`을 반환했다. 경로별 Bearer 면제를 계속 추가하면 가짜 Bearer로 공개 API 제한을 우회할 수 있으므로, 2026-08-03 결정은 Basic Auth 자체를 검증 참여자 전용 쿠키 세션으로 교체한다.
 
 ### 12.6. 남은 항목
 

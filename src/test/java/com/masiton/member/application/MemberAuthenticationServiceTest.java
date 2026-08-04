@@ -7,10 +7,12 @@ import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -50,6 +52,9 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 class MemberAuthenticationServiceTest {
 
     private static final Instant NOW = Instant.parse("2026-07-30T03:10:00Z");
+    private static final Pattern EMAIL_VERIFICATION_CODE_PATTERN = Pattern.compile("^[A-HJ-NP-Z2-9]{8}$");
+    private static final Pattern PASSWORD_RESET_TOKEN_PATTERN =
+            Pattern.compile("^[0-9a-f\\-]{36}-[0-9a-f\\-]{36}$");
 
     @Mock
     private MemberAccountRepository accounts;
@@ -166,6 +171,87 @@ class MemberAuthenticationServiceTest {
     }
 
     @Test
+    @DisplayName("이메일 인증은 ASCII 공백과 소문자를 정규화한 뒤 사용한다")
+    void 이메일인증_ASCII공백소문자_정규화후사용() {
+        UUID memberId = UUID.randomUUID();
+        given(rateLimits.acquireEmailVerificationAttempt("127.0.0.1"))
+                .willReturn(MemberRateLimitStore.VerificationAttemptResult.permit());
+        given(actionTokens.consume("AB7K9M2Q", MemberActionPurpose.EMAIL_VERIFICATION, NOW))
+                .willReturn(Optional.of(new MemberActionToken(
+                        memberId, new byte[] {1}, MemberActionPurpose.EMAIL_VERIFICATION, NOW.plusSeconds(60))));
+
+        service().verifyEmail("  ab7k9m2q  ", "127.0.0.1");
+
+        verify(rateLimits).acquireEmailVerificationAttempt("127.0.0.1");
+        verify(actionTokens).consume("AB7K9M2Q", MemberActionPurpose.EMAIL_VERIFICATION, NOW);
+        verify(accounts).activate(memberId, NOW);
+    }
+
+    @Test
+    @DisplayName("이메일 인증 제출은 형식 검증 전에 출처 제한을 먼저 적용한다")
+    void 이메일인증_형식검증전_출처제한적용() {
+        given(rateLimits.acquireEmailVerificationAttempt("127.0.0.1"))
+                .willReturn(MemberRateLimitStore.VerificationAttemptResult.permit());
+
+        assertThatThrownBy(() -> service().verifyEmail(" invalid-token ", "127.0.0.1"))
+                .isInstanceOfSatisfying(BusinessException.class, exception -> {
+                    assertThat(exception.status()).isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST);
+                    assertThat(exception.code()).isEqualTo("INVALID_EMAIL_VERIFICATION_TOKEN");
+                });
+
+        verify(rateLimits).acquireEmailVerificationAttempt("127.0.0.1");
+        verifyNoInteractions(actionTokens, accounts);
+    }
+
+    @Test
+    @DisplayName("이메일 인증 제출은 token 필드가 없어도 출처 제한을 소모한다")
+    void 이메일인증_token필드누락_출처제한을소모한다() {
+        given(rateLimits.acquireEmailVerificationAttempt("127.0.0.1"))
+                .willReturn(MemberRateLimitStore.VerificationAttemptResult.permit());
+
+        assertThatThrownBy(() -> service().verifyEmail(null, "127.0.0.1"))
+                .isInstanceOfSatisfying(BusinessException.class, exception -> {
+                    assertThat(exception.status()).isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST);
+                    assertThat(exception.code()).isEqualTo("MISSING_REQUIRED_FIELD");
+                });
+
+        verify(rateLimits).acquireEmailVerificationAttempt("127.0.0.1");
+        verifyNoInteractions(actionTokens, accounts);
+    }
+
+    @Test
+    @DisplayName("이메일 인증 제출 제한을 초과하면 429와 Retry-After를 반환한다")
+    void 이메일인증_제출제한초과_429RetryAfter반환() {
+        given(rateLimits.acquireEmailVerificationAttempt("127.0.0.1"))
+                .willReturn(MemberRateLimitStore.VerificationAttemptResult.reject(600));
+
+        assertThatThrownBy(() -> service().verifyEmail("AB7K9M2Q", "127.0.0.1"))
+                .isInstanceOfSatisfying(BusinessException.class, exception -> {
+                    assertThat(exception.status()).isEqualTo(org.springframework.http.HttpStatus.TOO_MANY_REQUESTS);
+                    assertThat(exception.code()).isEqualTo("RATE_LIMIT_EXCEEDED");
+                    assertThat(exception.retryAfterSeconds()).isEqualTo(600);
+                });
+
+        verify(rateLimits).acquireEmailVerificationAttempt("127.0.0.1");
+        verifyNoInteractions(actionTokens, accounts);
+    }
+
+    @Test
+    @DisplayName("이메일 인증 경로의 Redis 또는 DB 장애는 503으로 변환한다")
+    void 이메일인증_Redis또는DB장애_503반환() {
+        given(rateLimits.acquireEmailVerificationAttempt("127.0.0.1"))
+                .willReturn(MemberRateLimitStore.VerificationAttemptResult.permit());
+        given(actionTokens.consume("AB7K9M2Q", MemberActionPurpose.EMAIL_VERIFICATION, NOW))
+                .willThrow(new IllegalStateException("database unavailable"));
+
+        assertThatThrownBy(() -> service().verifyEmail("AB7K9M2Q", "127.0.0.1"))
+                .isInstanceOfSatisfying(BusinessException.class, exception -> {
+                    assertThat(exception.status()).isEqualTo(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE);
+                    assertThat(exception.code()).isEqualTo("AUTHENTICATION_SERVICE_UNAVAILABLE");
+                });
+    }
+
+    @Test
     @DisplayName("로그인_계정저장소장애면인증서비스이용불가로변환한다")
     void 로그인_계정저장소장애면인증서비스이용불가로변환한다() {
         // given
@@ -201,6 +287,25 @@ class MemberAuthenticationServiceTest {
     }
 
     @Test
+    @DisplayName("회원가입 이메일 인증 코드는 혼동 문자를 제외한 8자 코드로 발급한다")
+    void 회원가입_이메일인증코드_8자허용문자발급() {
+        MemberAccount account = new MemberAccount(UUID.randomUUID(), "member@example.com", "password-hash",
+                MemberStatus.PENDING_VERIFICATION, null, null, NOW);
+        given(rateLimits.tryAcquireAccountActionRequest("member@example.com", "127.0.0.1")).willReturn(true);
+        given(passwordEncoder.encode("correct horse battery staple")).willReturn("password-hash");
+        given(accounts.createIfAbsent("member@example.com", "password-hash", NOW)).willReturn(Optional.of(account));
+        given(actionTokenCipher.encrypt(any(), any(), any())).willReturn(
+                new MemberActionTokenCipher.EncryptedToken(new byte[17], new byte[12], "test-1"));
+
+        service().register("member@example.com", "correct horse battery staple", "127.0.0.1");
+
+        ArgumentCaptor<String> rawTokenCaptor = ArgumentCaptor.forClass(String.class);
+        verify(actionTokenCipher).encrypt(any(), org.mockito.ArgumentMatchers.eq(MemberActionPurpose.EMAIL_VERIFICATION),
+                rawTokenCaptor.capture());
+        assertThat(rawTokenCaptor.getValue()).matches(EMAIL_VERIFICATION_CODE_PATTERN);
+    }
+
+    @Test
     @DisplayName("인증 메일 재발송은 이메일 전용 제한기를 사용하고 출처 제한기는 사용하지 않는다")
     void 인증메일재발송_이메일전용제한기_사용() {
         MemberAccount account = new MemberAccount(UUID.randomUUID(), "member@example.com", "password-hash",
@@ -232,6 +337,23 @@ class MemberAuthenticationServiceTest {
         verify(actionTokens).replace(any(MemberActionToken.class), org.mockito.ArgumentMatchers.eq(NOW));
         verify(actionMailOutbox).enqueue(any(MemberActionMailOutbox.class), org.mockito.ArgumentMatchers.eq(NOW));
         verifyNoInteractions(actionTokenDelivery);
+    }
+
+    @Test
+    @DisplayName("비밀번호 재설정 토큰은 기존 UUID-UUID 불투명 형식을 유지한다")
+    void 비밀번호재설정요청_UUID_UUID형식유지() {
+        MemberAccount account = activeAccount(UUID.randomUUID());
+        given(rateLimits.tryAcquireAccountActionRequest("member@example.com", "127.0.0.1")).willReturn(true);
+        given(accounts.findByEmail("member@example.com")).willReturn(Optional.of(account));
+        given(actionTokenCipher.encrypt(any(), any(), any())).willReturn(
+                new MemberActionTokenCipher.EncryptedToken(new byte[17], new byte[12], "test-1"));
+
+        service().requestPasswordReset("member@example.com", "127.0.0.1");
+
+        ArgumentCaptor<String> rawTokenCaptor = ArgumentCaptor.forClass(String.class);
+        verify(actionTokenCipher).encrypt(any(), org.mockito.ArgumentMatchers.eq(MemberActionPurpose.PASSWORD_RESET),
+                rawTokenCaptor.capture());
+        assertThat(rawTokenCaptor.getValue()).matches(PASSWORD_RESET_TOKEN_PATTERN);
     }
 
     @Test

@@ -7,6 +7,8 @@ related_documents:
   - index-strategy.md
   - seed-data-plan.md
   - ../../07-adr/data/data-004-flyway.md
+  - ../../07-adr/data/data-009-pre-release-migration-consolidation.md
+  - second-expansion-data-contract.md
 ---
 
 # 맛잇온 Flyway 마이그레이션 계획
@@ -138,15 +140,29 @@ Flyway undo 파일과 하향 migration은 기본 경로로 사용하지 않는�
 | V2 | 회원 계정·보안 기반 | `member_account`, `member_action_token`, `member_session_revocation`과 회원 보안 인덱스 | V1 공개·관리자 데이터 불변, V1→V2 적용 |
 | V3 | 회원 인증 강화 | 키 식별자와 AES-GCM 암호문을 가진 Action Token 메일 아웃박스, 탈퇴 재시도 작업, Redis↔PostgreSQL 세션 폐기 복구 작업과 dispatch 인덱스 | V2 회원 데이터는 유지, 원문 Token·이메일·클라이언트 주소를 새 테이블에 추가하지 않음 |
 | V4 | 개인 맛집 관계 | `favorite`, `recent_restaurant_view`, 복합 PK·FK·회원 목록 인덱스·최근 기록 만료 cleanup 인덱스 | 빈 개인화 관계로 적용, V1→V4 적용과 중복 찜/upsert·30일 cleanup 실행계획 검증 |
-| V5 | 맛집 좌표 | nullable `restaurant.latitude`, `restaurant.longitude`, null 쌍·범위 CHECK, 지도 partial B-tree | 기존 Restaurant 좌표는 모두 `NULL`, V1→V5 bounds 검증 |
+| V5 | 맛집 좌표 | nullable `restaurant.latitude`, `restaurant.longitude`, null 쌍·범위 CHECK, 지도 partial B-tree | 기존 Restaurant 좌표는 모두 `NULL`. 과거 bounds 계약용 인덱스는 적용 이력으로 유지하고 현재 필터 기반 마커 조회 실행계획을 검증 |
 | V6 | Creator 상세 표시 열 | `creator.profile_image_url`, `description`, `handle` | 기존 Creator 선택 표시값은 `NULL`, V1→V6 공개 상세 null 표현 검증 |
 
 통합 후에는 위 다섯 구간을 가리키는 옛 파일명을 문서·코드 어디에도 남기지 않는다. 구간 이름만으로 참조하며, 실제 내용은 `V2__add_expansion_1_schema.sql` 안의 순서로 확인한다.
 
 V3 구간 아웃박스는 Action Token만 FK로 참조한다. 수신자는 `member_action_token.member_id → member_account` 조인으로만 결정하므로 다른 회원의 Token을 전달할 수 없다. 탈퇴 작업은 Action Token을 먼저 지워 CASCADE로 아웃박스를 제거한다. 탈퇴·세션 복구 작업은 회원 FK를 두지 않아 정리 실행 중에도 재시도 상태를 유지하고, 성공 시 명시적으로 제거한다. V4 구간의 회원 FK는 `ON DELETE CASCADE`, 맛집 FK는 `ON DELETE RESTRICT`로 생성한다. 따라서 회원 물리 파기는 관계를 함께 제거하고, 맛집 물리 삭제는 관계를 먼저 정리하는 명시적 Command가 선행되어야 한다. V5와 V6 구간은 기존 행을 백필하거나 외부 API를 호출하지 않는다.
 
-## 10. 향후 변경 번호
+## 10. V3 2차 확장 스키마 계획
 
-초기 스키마 baseline 다음 변경은 `V2`로 적용됐고, 1차 확장 변경은 2.3절 통합 이후 다시 `V2` 하나로 적용됐다. 이후 변경은 다음 비어 있는 버전 번호인 `V3`부터 사용한다.
+기존 `V1__create_initial_schema.sql`과 `V2__add_expansion_1_schema.sql`은 수정하지 않는다. 2차 확장은 새 `V3__add_expansion_2_schema.sql`로 계획하며 상세 순서는 [2차 확장 데이터 계약](second-expansion-data-contract.md#10-flyway-계획)을 따른다.
 
-`V1`과 `V2`는 각각 적용된 시점부터 수정하지 않고 `V3` 이상의 새 migration을 추가한다. 운영 배포 전 통합은 2.1절 강제 규칙을 모두 증명한 경우에만 허용되는 예외이며, 같은 버전 구간(`V2`~`V6`)은 다시 통합하지 않는다.
+| 순서 | 변경 | 선행 |
+|---:|---|---|
+| 1 | 개인 컬렉션·구성 | `member_account`, `restaurant` |
+| 2 | 큐레이션·구성 | `admin_account`, `restaurant` |
+| 3 | 제보·신고·검토 이력 | 회원·관리자와 핵심 대상 |
+| 4 | 알림·멱등 성공 기록 | 제보·신고 |
+| 5 | 인기 집계와 신규 조회·고유·cleanup 인덱스 | 1~4, 기존 `favorite` |
+
+기존 데이터 backfill, 기준 데이터, 외부 호출과 destructive DDL은 없다. V2→V3 업그레이드와 빈 DB 전체 적용을 모두 CI에서 검증한다.
+
+## 11. 향후 변경 번호
+
+초기 스키마 baseline 다음 변경은 `V2`로 적용됐고, 1차 확장 변경은 2.3절 통합 이후 다시 `V2` 하나로 적용됐다. 2차 확장은 다음 비어 있는 `V3`를 사용하고 이후 변경은 `V4`부터 사용한다.
+
+`V1`과 `V2`는 각각 적용된 시점부터 수정하지 않는다. 운영 배포 전 V3 통합은 2.1절과 ADR-DATA-009의 강제 규칙을 모두 증명한 경우에만 허용되는 예외이며, 이미 적용된 파일은 통합·수정하지 않는다.

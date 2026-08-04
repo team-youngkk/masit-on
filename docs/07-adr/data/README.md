@@ -11,6 +11,8 @@ related_documents:
   - data-008-publication-lifecycle-soft-delete.md
   - data-009-pre-release-migration-consolidation.md
   - data-010-recent-view-retention-cleanup.md
+  - data-011-popular-restaurant-request-time-aggregation.md
+  - data-012-second-expansion-retention-cleanup.md
 ---
 
 # 데이터 ADR
@@ -28,3 +30,5 @@ related_documents:
 | [ADR-DATA-008](data-008-publication-lifecycle-soft-delete.md) | 공개 상태와 논리 삭제 생명주기 분리 |
 | [ADR-DATA-009](data-009-pre-release-migration-consolidation.md) | 운영 배포 전 마이그레이션 통합 범위 |
 | [ADR-DATA-010](data-010-recent-view-retention-cleanup.md) | 최근 본 맛집 보존 기간 정리 실행 |
+| [ADR-DATA-011](data-011-popular-restaurant-request-time-aggregation.md) | 인기 맛집 요청 시점 실시간 집계 |
+| [ADR-DATA-012](data-012-second-expansion-retention-cleanup.md) | 2차 확장 보존 정책 정리 실행 |

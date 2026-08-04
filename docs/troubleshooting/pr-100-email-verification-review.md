@@ -2,6 +2,7 @@
 related_documents:
   - README.md
   - ../04-product/prd/account/member-authentication.md
+  - ../04-product/user-flows/first-expansion-user-flows.md
   - ../05-specs/api/account/member-authentication-api.md
 ---
 
@@ -14,14 +15,18 @@ related_documents:
 | PR | [#100 회원가입 이메일 인증 토큰 입력 흐름 추가](https://github.com/team-youngkk/masit-on/pull/100) |
 | 작성자 | 김인안 (`inan0226`) |
 | 처리 일자 | 2026-08-03 |
-| 범위 | 가입 접수 이메일 재발송 고정과 이메일 인증 장애 분류 |
+| 범위 | 가입 접수 이메일·비밀번호 정리와 이메일 인증 Token 장애별 보존 정책 |
+
+최신 구현의 클라이언트 정리 정책은 다음과 같다. 회원가입 접수 성공 시 비밀번호와 비밀번호 확인 값을 정리한다. 이메일 인증 성공 또는 확정된 `400` 오류에서는 인증 Token을 정리한다. `503`·그 밖의 일시적 HTTP 오류·네트워크 오류에서는 재시도를 위해 Token을 보존한다.
+
+2026-08-03 승인된 [E1-T12](../08-planning/expansion-1-task-breakdown.md#e1-t12-가입-이메일-인증-8자-코드-전환)는 이메일 인증 Token의 표시·입력 형식을 8자 코드로 바꾸지만 이 장애별 정리 정책은 유지한다. `429` 제한과 `503`·네트워크 오류에서는 코드를 보존하고, 인증 성공 또는 확정된 `400`에서만 정리한다.
 
 ## 2. 리뷰 스레드 처리 결과
 
 | 스레드 | 요청 요약 | 판단 | 처리 결과 | 근거/검증 |
 |---|---|---|---|---|
 | [가입 접수 시 사용한 이메일을 재발송 대상으로 고정](https://github.com/team-youngkk/masit-on/pull/100#discussion_r3701430980) | 가입 성공 후 변경된 이메일로 재발송되지 않게 함 | 수정 필요 | 접수 이메일을 별도 상태로 보존하고 입력을 읽기 전용으로 전환 | 상태 전환·재발송 대상 회귀 테스트 통과 |
-| [일시 장애를 잘못된 토큰으로 처리하지 않음](https://github.com/team-youngkk/masit-on/pull/100#discussion_r3701458148) | 확정된 토큰 오류와 재시도 가능한 장애를 구분 | 수정 필요 | `400`에서만 토큰 정리·재발송 안내, `503`·네트워크 오류에서는 토큰 보존·재시도 안내 | 오류 유형별 회귀 테스트 통과 |
+| [일시 장애를 잘못된 토큰으로 처리하지 않음](https://github.com/team-youngkk/masit-on/pull/100#discussion_r3701458148) | 확정된 토큰 오류와 재시도 가능한 장애를 구분 | 수정 필요 | 인증 성공·확정된 `400`에서 Token 정리, `503`·기타 일시적 HTTP·네트워크 오류에서는 Token 보존·재시도 안내 | 오류 유형별 회귀 테스트 통과 |
 
 ## 3. 문제 현상
 
@@ -41,23 +46,36 @@ related_documents:
 
 ## 5. 해결
 
-- 변경 내용: 가입 접수 이메일과 읽기 전용 전환 상태를 `AcceptedMemberRegistration`에 보존하고 재발송은 이 상태의 이메일만 사용한다.
-- 변경 내용: 이메일 인증 성공과 `400`에서만 Token을 정리한다. 그 외 HTTP 상태와 네트워크 오류에서는 Token을 보존하고 일반 재시도 안내를 표시하며 재발송 화면을 열지 않는다.
+- 변경 내용: 회원가입 접수 성공 시 비밀번호와 비밀번호 확인 값을 즉시 정리한다. 가입 접수 이메일과 읽기 전용 전환 상태는 `AcceptedMemberRegistration`에 보존하고 재발송은 이 상태의 이메일만 사용한다.
+- 변경 내용: 이메일 인증 성공과 확정된 `400`에서만 Token을 정리한다. `503`을 포함한 그 밖의 일시적 HTTP 상태와 네트워크 오류에서는 Token을 보존하고 일반 재시도 안내를 표시하며 재발송 화면을 열지 않는다.
 - 선택 이유: 기존 API 계약을 바꾸지 않으면서 사용자가 시작한 가입과 재발송 대상을 일치시키고, 재시도 가능한 장애에서 유효 Token을 잃지 않게 하기 위해서다.
 - 변경 파일: `frontend/components/member/MemberAuthForm.tsx`, `frontend/components/member/member-auth-form-coordination.ts`, `frontend/components/member/member-auth-form-coordination.test.ts`, `frontend/components/member/VerifyEmail.tsx`, `frontend/lib/member/email-verification-coordination.ts`, `frontend/lib/member/email-verification-coordination.test.ts`
+
+### 5.1 클라이언트 정리 기준
+
+| 사건 | 비밀번호 입력 | 이메일 인증 Token 입력 | 사용자 다음 행동 |
+|---|---|---|---|
+| 회원가입 접수 성공 | 비밀번호·확인 값 정리 | 해당 없음 | 접수 이메일 확인 또는 재발송 |
+| 이메일 인증 성공 | 해당 없음 | 정리 | 로그인 화면으로 이동 |
+| 확정된 `400` Token 오류 | 해당 없음 | 정리 | Token 확인 또는 인증 메일 재발송 |
+| `503`·기타 일시적 HTTP 오류 | 해당 없음 | 보존 | 같은 Token으로 잠시 후 재시도 |
+| 네트워크 오류 | 해당 없음 | 보존 | 연결 복구 후 같은 Token으로 재시도 |
+
+여기서 정리는 브라우저 폼 상태의 민감 입력 제거를 뜻한다. 서버의 해시 Token 상태와 회원 비밀번호 해시 생명주기는 API·데이터 계약을 따른다.
 
 ## 6. 검증
 
 | 검증 | 결과 | 확인한 내용 |
 |---|---|---|
-| `npm.cmd --prefix frontend test` | 통과 | 프런트엔드 테스트 65건, 접수 이메일 고정과 `400`·`503`·네트워크 오류 분기 포함 |
+| `npm.cmd --prefix frontend test` | 통과 | 프런트엔드 테스트 65건, 회원가입 성공 시 비밀번호 정리와 인증 성공·`400` 정리, `503`·네트워크 오류 Token 보존 분기 포함 |
 | `npm.cmd --prefix frontend run typecheck` | 통과 | TypeScript 오류 없음 |
 | `npm.cmd --prefix frontend run build` | 통과 | Next.js 프로덕션 빌드와 전체 프런트엔드 테스트 통과 |
 
 ## 7. 재발 방지
 
 - 가입 접수 후 입력 상태와 재발송 요청 대상이 달라지지 않는 회귀 테스트를 추가했다.
-- 인증 오류를 확정 실패와 재시도 가능 장애로 나눠 Token 정리 여부와 재발송 노출 여부를 검증한다.
+- 회원가입 접수 성공 시 비밀번호·확인 값이 정리되는지 검증한다.
+- 인증 성공·확정된 `400`과 재시도 가능한 `503`·네트워크 오류를 나눠 Token 정리 여부와 재발송 노출 여부를 검증한다.
 
 ## 8. 남은 사항
 

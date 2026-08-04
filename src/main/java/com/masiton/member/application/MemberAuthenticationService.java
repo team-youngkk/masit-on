@@ -1,11 +1,13 @@
 package com.masiton.member.application;
 
 import java.security.MessageDigest;
+import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -39,8 +41,12 @@ public class MemberAuthenticationService {
     private static final Duration REFRESH_TOKEN_TTL = Duration.ofDays(14);
     private static final Duration EMAIL_VERIFICATION_TOKEN_TTL = Duration.ofHours(24);
     private static final Duration PASSWORD_RESET_TOKEN_TTL = Duration.ofMinutes(30);
+    private static final String EMAIL_VERIFICATION_TOKEN_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    private static final int EMAIL_VERIFICATION_TOKEN_LENGTH = 8;
+    private static final Pattern EMAIL_VERIFICATION_TOKEN_PATTERN = Pattern.compile("^[A-HJ-NP-Z2-9]{8}$");
     private static final String DUMMY_PASSWORD_HASH =
             "$2a$10$7EqJtq98hPqEX7fNZaFWoOhi.0P8EIw1PhqcoUL24TJnS0W9TuP.2";
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final MemberAccountRepository accounts;
     private final MemberActionTokenRepository actionTokens;
@@ -91,8 +97,26 @@ public class MemberAuthenticationService {
     }
 
     @Transactional
-    public void verifyEmail(String rawToken) {
-        accounts.activate(consume(rawToken, MemberActionPurpose.EMAIL_VERIFICATION).memberId(), Instant.now(clock));
+    public void verifyEmail(String rawToken, String source) {
+        try {
+            MemberRateLimitStore.VerificationAttemptResult attempt = rateLimits.acquireEmailVerificationAttempt(source);
+            if (!attempt.allowed()) {
+                throw new BusinessException(
+                        HttpStatus.TOO_MANY_REQUESTS,
+                        "RATE_LIMIT_EXCEEDED",
+                        "Too many email verification attempts",
+                        attempt.retryAfterSeconds());
+            }
+            if (rawToken == null) {
+                throw new BusinessException(ErrorCode.MISSING_REQUIRED_FIELD, "token", "필수 요청 값이 누락되었습니다.");
+            }
+            String normalizedToken = normalizeEmailVerificationToken(rawToken);
+            accounts.activate(consume(normalizedToken, MemberActionPurpose.EMAIL_VERIFICATION).memberId(), Instant.now(clock));
+        } catch (BusinessException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            throw authenticationServiceUnavailable();
+        }
     }
 
     @Transactional
@@ -222,7 +246,7 @@ public class MemberAuthenticationService {
     }
 
     private void issueActionToken(MemberAccount account, MemberActionPurpose purpose) {
-        String rawToken = UUID.randomUUID() + "-" + UUID.randomUUID();
+        String rawToken = generateActionToken(purpose);
         Instant now = Instant.now(clock);
         Duration ttl = purpose == MemberActionPurpose.EMAIL_VERIFICATION
                 ? EMAIL_VERIFICATION_TOKEN_TTL
@@ -312,5 +336,28 @@ public class MemberAuthenticationService {
         } catch (java.security.NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 is unavailable", exception);
         }
+    }
+
+    private String generateActionToken(MemberActionPurpose purpose) {
+        if (purpose == MemberActionPurpose.EMAIL_VERIFICATION) {
+            StringBuilder builder = new StringBuilder(EMAIL_VERIFICATION_TOKEN_LENGTH);
+            for (int index = 0; index < EMAIL_VERIFICATION_TOKEN_LENGTH; index++) {
+                builder.append(EMAIL_VERIFICATION_TOKEN_ALPHABET.charAt(
+                        SECURE_RANDOM.nextInt(EMAIL_VERIFICATION_TOKEN_ALPHABET.length())));
+            }
+            return builder.toString();
+        }
+        return UUID.randomUUID() + "-" + UUID.randomUUID();
+    }
+
+    private String normalizeEmailVerificationToken(String rawToken) {
+        String normalizedToken = rawToken.trim().toUpperCase(Locale.ROOT);
+        if (!EMAIL_VERIFICATION_TOKEN_PATTERN.matcher(normalizedToken).matches()) {
+            throw new BusinessException(
+                    HttpStatus.BAD_REQUEST,
+                    "INVALID_EMAIL_VERIFICATION_TOKEN",
+                    "The action token is invalid");
+        }
+        return normalizedToken;
     }
 }

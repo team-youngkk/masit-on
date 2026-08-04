@@ -11,11 +11,10 @@ import styles from './KakaoMapView.module.css'
 
 /*
  * 브라우저에 노출되는 식별자이며 비밀키가 아니다. 허용 도메인 제한은 Kakao 콘솔에서
- * 적용한다(ADR-MAP-001 6.5). 커밋된 기본값을 두지 않는다.
+ * 적용한다(ADR-MAP-001 4.5). 커밋된 기본값을 두지 않는다.
  */
 const KAKAO_MAPS_JS_KEY = process.env.NEXT_PUBLIC_KAKAO_MAPS_JS_KEY
 const SDK_LOAD_TIMEOUT_MS = 10_000
-const IDLE_DEBOUNCE_MS = 300
 const SCRIPT_ELEMENT_ID = 'kakao-maps-sdk'
 
 declare global {
@@ -29,7 +28,6 @@ type KakaoMapViewProps = {
   selectedId: string | null
   fallbackBounds: MapBounds
   onSelect: (id: string) => void
-  onBoundsChange: (bounds: MapBounds) => void
 }
 
 function loadKakaoMapsSdk(key: string, timeoutMs: number): Promise<KakaoGlobal> {
@@ -77,18 +75,6 @@ function loadKakaoMapsSdk(key: string, timeoutMs: number): Promise<KakaoGlobal> 
   })
 }
 
-function toMapBounds(map: KakaoMap): MapBounds {
-  const bounds = map.getBounds()
-  const southWest = bounds.getSouthWest()
-  const northEast = bounds.getNorthEast()
-  return {
-    south: southWest.getLat(),
-    west: southWest.getLng(),
-    north: northEast.getLat(),
-    east: northEast.getLng(),
-  }
-}
-
 /* 기본 마커와 선택 마커를 구분하는 최소 SVG 핀. 외부 이미지 자산을 추가하지 않는다. */
 function createMarkerImage(kakaoGlobal: KakaoGlobal, selected: boolean): KakaoMarkerImage {
   const fill = selected ? '%2316a34a' : '%236f6a63'
@@ -106,7 +92,6 @@ export function KakaoMapView({
   selectedId,
   fallbackBounds,
   onSelect,
-  onBoundsChange,
 }: KakaoMapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<KakaoMap | null>(null)
@@ -114,15 +99,12 @@ export function KakaoMapView({
   const markersRef = useRef<KakaoMarker[]>([])
   const markersByIdRef = useRef<Map<string, KakaoMarker>>(new Map())
   const previousSelectedIdRef = useRef<string | null>(null)
-  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const onSelectRef = useRef(onSelect)
-  const onBoundsChangeRef = useRef(onBoundsChange)
   const selectedIdRef = useRef(selectedId)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [retryCount, setRetryCount] = useState(0)
 
   onSelectRef.current = onSelect
-  onBoundsChangeRef.current = onBoundsChange
   selectedIdRef.current = selectedId
 
   useEffect(() => {
@@ -151,18 +133,7 @@ export function KakaoMapView({
         })
         mapRef.current = map
 
-        const handleIdle = () => {
-          if (idleTimerRef.current) {
-            clearTimeout(idleTimerRef.current)
-          }
-          idleTimerRef.current = setTimeout(() => {
-            onBoundsChangeRef.current(toMapBounds(map))
-          }, IDLE_DEBOUNCE_MS)
-        }
-
-        kakaoGlobal.maps.event.addListener(map, 'idle', handleIdle)
         setStatus('ready')
-        handleIdle()
       })
       .catch(() => {
         if (!cancelled) {
@@ -172,9 +143,6 @@ export function KakaoMapView({
 
     return () => {
       cancelled = true
-      if (idleTimerRef.current) {
-        clearTimeout(idleTimerRef.current)
-      }
     }
     // fallbackBounds는 최초 중심 좌표 계산에만 쓰고 이후 변경에는 반응하지 않는다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -234,7 +202,7 @@ export function KakaoMapView({
   /*
    * selectedId가 바뀔 때만 실행되어, 이전 선택 마커는 기본 이미지로 되돌리고 새 선택
    * 마커만 선택 이미지로 바꾼다. 마커 전체를 다시 만들지 않으므로 깜빡임이 없다(Finding C).
-   * bounds 변경으로 선택된 맛집이 현재 items에서 빠진 뒤에도 selectedId가 남아있을 수
+   * 필터 변경으로 선택된 맛집이 새 items에서 빠진 뒤에도 selectedId가 남아있을 수
    * 있으므로, 마커를 찾지 못하면 조용히 무시한다.
    */
   useEffect(() => {

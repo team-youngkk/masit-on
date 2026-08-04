@@ -16,7 +16,7 @@ related_documents:
 
 ## 1. 목적
 
-이 문서는 확정된 1차 확장 기능을 독립적인 사용자 목표 단위로 나누고 WS-05~WS-08의 최종 책임, 의존성과 완료 경계를 정의한다. WS-01~WS-04의 MVP 책임은 [MVP Workstream](mvp-workstreams.md)이 계속 소유한다.
+이 문서는 확정된 1차 확장 기능을 독립적인 사용자 목표 단위로 나누고 WS-05~WS-08의 최종 책임, 의존성과 완료 경계를 정의한다. WS-01~WS-04의 MVP 책임은 [MVP Workstream](mvp-workstreams.md)이 계속 소유한다. 제품 기능이 아닌 제한 공개 진입 경계는 번호형 WS를 추가하지 않고 `OPS-VALIDATION` 공통 운영·배포 트랙으로 관리한다.
 
 ## 2. 구성과 확정 배정
 
@@ -24,10 +24,24 @@ related_documents:
 |---|---|---|---|---|---|
 | [WS-05](first-expansion-workstreams.md#4-ws-05-사용자-계정인증) 사용자 계정·인증 | 개인화 데이터를 여러 기기에서 안전하게 사용 | `FR-MEMBER-001`~`005`, `FR-AUTH-001`~`003` | 김인안 | 이우람 | 확정 |
 | [WS-06](first-expansion-workstreams.md#5-ws-06-개인-맛집-관리) 개인 맛집 관리 | 다시 찾을 맛집과 이전에 본 맛집으로 복귀 | `FR-FAVORITE-001`~`004`, `FR-RECENT-001`~`003` | 박진영 | 김인안 | 확정 |
-| [WS-07](first-expansion-workstreams.md#6-ws-07-지도-탐색) 지도 탐색 | 현재 지도 영역의 맛집 위치와 분포 탐색 | `FR-MAP-001`~`002` | 양성훈 | 박진영 | 확정 |
+| [WS-07](first-expansion-workstreams.md#6-ws-07-지도-탐색) 지도 탐색 | 필터 결과를 유지하는 맛집 위치와 분포 탐색 | `FR-MAP-001`~`002` | 양성훈 | 박진영 | 확정 |
 | [WS-08](first-expansion-workstreams.md#7-ws-08-유튜버-상세) 유튜버 상세 | 채널·방문 맛집·근거 영상을 한곳에서 탐색 | `FR-CREATOR-004`~`006` | 이우람 | 박진영 | 확정 |
 
 각 기능 요구사항은 하나의 확장 Workstream만 완료 책임을 가진다. 기존 Workstream은 필요한 공개 데이터와 판정 계약을 제공하되 확장 기능의 최종 사용자 인수 책임을 중복 소유하지 않는다.
+
+### OPS-VALIDATION 공통 운영·배포 트랙
+
+`OPS-VALIDATION`은 사용자 가치 단위의 제품 Workstream이 아니라 정식 공개 전까지만 존재하는 교차 운영 트랙이다. 따라서 WS-09 이후의 제품 Workstream 번호를 소비하지 않는다.
+
+| 구분 | 확정 내용 |
+|---|---|
+| 최종 책임자 / 기본 리뷰어 | 이우람 / 김인안 |
+| 소유 계약 | `NFR-SECURITY-001`, `NFR-SECURITY-003`, `NFR-DEPLOYMENT-002`, `NFR-DEPLOYMENT-004`; [검증 참여자 API 계약](../05-specs/api/common/validation-access-contract.md); [ADR-DEPLOY-003](../07-adr/platform/deploy-003-validation-cookie-session.md) |
+| 구현·검증 Task | [FE-12](../08-planning/expansion-1-implementation-plan.md#8-전체-task-표), [E1-T13](../08-planning/expansion-1-task-breakdown.md#e1-t13-검증-참여자-제한-공개-쿠키-세션-전환) |
+| 구현 경계 | 검증 로그인 화면·세션 API·내부 검증 Adapter, Redis `auth:verification:` namespace와 실패 제한, Parameter Store 비밀 주입, Nginx `auth_request`, Basic Auth 제거, 배포·관측·브라우저 회귀 |
+| 협업 경계 | WS-05의 회원·관리자 Bearer 인증 계약은 변경하지 않고 동시 동작만 회귀 검증한다. M2 운영 기준선과 Nginx·Redis·비밀정보 구성을 사용한다. |
+| 완료 판단 | 최초 검증 로그인 뒤 7일 동안 페이지 이동·새로고침·회원 로그인에서 반복 인증창 0회, 무세션·Redis 장애 fail-closed, 비밀정보 로그 0건, 정식 공개 제거 리허설 통과 |
+| 종료 조건 | 정식 공개 Task에서 로그인 화면/API, 쿠키, Redis key, Parameter Store 값, Nginx subrequest와 전용 테스트·알람을 함께 제거한다. |
 
 ## 3. 공통 선행 작업
 
@@ -39,6 +53,7 @@ related_documents:
 | Kakao Maps SDK 키·오류·호출량 경계 | 양성훈 | WS-07 | 외부 연동 계약과 브라우저 검증 계획 승인 |
 | Creator 상세 표시 정보와 관계 목록 계약 | 이우람 | WS-08, WS-03, WS-04 | API·데이터 계약과 관리자 확인 흐름 승인 |
 | 공통 인증 만료·권한·빈·비공개·삭제 화면 상태 | 양성훈 | WS-05~WS-08 | 사용자 흐름·와이어프레임 인수 리뷰 완료 |
+| 검증 참여자 쿠키 세션·Nginx·Redis 진입 경계 | 이우람 | OPS-VALIDATION, WS-05 | API·ADR·M2 계약 승인과 `E1-T13` 브라우저·보안·제거 회귀 완료 |
 
 ## 4. WS-05 사용자 계정·인증
 
@@ -84,8 +99,9 @@ related_documents:
 
 - Kakao 지도, 공개 맛집 마커와 키보드 접근 가능한 대체 목록
 - 마커·목록 선택 동기화, 요약과 상세 이동
-- 현재 지도 영역과 기존 탐색 조건의 AND 결합
-- 좌표 없음, 빈 영역, 200개 초과, 호출 제한과 SDK 장애 화면
+- URL의 이름·자치구·카테고리·유튜버 탐색 조건 AND 결합
+- 지도 이동·확대·축소 중 기존 마커·목록·선택 유지와 서버 비재조회
+- 좌표 없음, 빈 결과, 200개 초과, 호출 제한과 SDK 장애 화면
 
 ### 의존성
 
@@ -124,6 +140,7 @@ related_documents:
 3. 좌표 계약과 backfill 계획을 확정한 뒤 WS-07을 WS-01·WS-03 결과와 통합한다.
 4. Creator 표시·관계 계약을 확정한 뒤 WS-08을 WS-02·WS-03·WS-04와 통합한다.
 5. 공통 사용자 흐름에서 인증 장애가 공개 지도·유튜버 상세에 전파되지 않는지 교차 검증한다.
+6. `OPS-VALIDATION`은 WS-05 회원 인증과 독립된 진입 경계로 통합하고, `E1-T13` 완료 증거를 2차 확장 `E2-T01` 기준선에 인계한다.
 
 WS-07과 WS-08은 WS-05 완료를 기다리지 않고 공개 조회 계약을 기준으로 병렬 개발할 수 있다. WS-06은 WS-05의 실제 구현 전에도 인증 주체 계약 Stub으로 내부 규칙을 검증할 수 있다.
 
@@ -133,6 +150,7 @@ WS-07과 WS-08은 WS-05 완료를 기다리지 않고 공개 조회 계약을 �
 - WS-06: 김인안 기본 리뷰, 공개 맛집 화면 계약은 양성훈 추가 리뷰
 - WS-07: 박진영 기본 리뷰, 외부 연동·장애 격리는 이우람 추가 리뷰
 - WS-08: 박진영 기본 리뷰, 목록·화면 계약은 양성훈 추가 리뷰
+- OPS-VALIDATION: 김인안 기본 리뷰, Nginx·Redis·Parameter Store·배포 복구 변경은 박진영 추가 리뷰
 - 공통 인증, 핵심 관계, 좌표 마이그레이션과 개인정보 정책 변경은 영향받는 책임자 공동 리뷰를 거친다.
 - API·데이터·ADR 미확정 사항은 각 후속 문서에서 승인하며 이 문서에서 구현 세부를 새로 확정하지 않는다.
 - 각 Workstream의 구현은 해당 API 계약 승인 뒤 시작한다. 회원·인증 API를 우선 작성하고 계정 상태·메일 장애의 동일 응답, 인증 전달, Redis 장애와 로그아웃 성공 조건을 확정한 뒤 WS-05·WS-06을 통합한다.

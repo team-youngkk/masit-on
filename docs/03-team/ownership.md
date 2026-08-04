@@ -4,6 +4,9 @@ related_documents:
   - ../01-requirements/business-rules.md
   - ../01-requirements/non-functional-requirements.md
   - ../02-analysis/mvp-workstreams.md
+  - ../02-analysis/first-expansion-workstreams.md
+  - ../02-analysis/second-expansion-domain-boundaries.md
+  - ../02-analysis/second-expansion-workstreams.md
   - roles.md
   - ../04-product/traceability.md
   - ../05-specs/api-traceability.md
@@ -19,9 +22,9 @@ related_documents:
 
 ## 1. 문서 목적
 
-이 문서는 맛잇온 MVP의 Workstream, 기능 요구사항, 비즈니스 규칙, 비기능 요구사항, 공통 작업과 문서의 최종 책임자를 추적한다. 소유자는 담당 항목의 요구사항 구체화, 계약, 구현, 테스트, 문서화와 통합 완료를 책임진다.
+이 문서는 맛잇온 MVP와 단계별 확장의 Workstream, 기능 요구사항, 비즈니스 규칙, 비기능 요구사항, 공통 작업과 문서의 최종 책임자를 추적한다. 소유자는 담당 항목의 요구사항 구체화, 계약, 구현, 테스트, 문서화와 통합 완료를 책임진다.
 
-현재 배정은 2026-07-27 승인된 Workstream 구조와 책임 균형 기준안이다. 일정 차단이나 지속적인 부담 불균형이 확인될 때만 11장의 절차로 조정하며, 조정 중에도 각 Workstream과 기능 요구사항의 최종 책임자는 한 명만 유지한다.
+MVP 배정은 2026-07-27, 1차 확장 WS-05~WS-08과 2차 확장 WS-09~WS-13 배정은 2026-08-03에 확정한 책임 균형 기준안이다. 같은 날 제한 공개 인증은 번호형 제품 WS와 구분되는 `OPS-VALIDATION` 공통 운영·배포 트랙으로 확정했다. 일정 차단이나 지속적인 부담 불균형이 확인될 때만 11장의 절차로 조정하며, 조정 중에도 각 Workstream과 기능 요구사항의 최종 책임자는 한 명만 유지한다.
 
 ## 2. 소유권 원칙
 
@@ -44,6 +47,24 @@ related_documents:
 | [WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) 맛집 상세 및 콘텐츠 조회 | 박진영 | 이우람 | 양성훈, 김인안 | 배정 완료 |
 | [WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 유튜버 기반 탐색 | 이우람 | 박진영 | 양성훈, 김인안 | 배정 완료 |
 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 관리자 데이터 등록 | 김인안 | 박진영 | 이우람, 양성훈 | 배정 완료 |
+| [WS-05](../02-analysis/first-expansion-workstreams.md#4-ws-05-사용자-계정인증) 사용자 계정·인증 | 김인안 | 이우람 | 박진영, 양성훈 | 배정 완료 |
+| [WS-06](../02-analysis/first-expansion-workstreams.md#5-ws-06-개인-맛집-관리) 개인 맛집 관리 | 박진영 | 김인안 | 양성훈 | 배정 완료 |
+| [WS-07](../02-analysis/first-expansion-workstreams.md#6-ws-07-지도-탐색) 지도 탐색 | 양성훈 | 박진영 | 이우람 | 배정 완료 |
+| [WS-08](../02-analysis/first-expansion-workstreams.md#7-ws-08-유튜버-상세) 유튜버 상세 | 이우람 | 박진영 | 양성훈, 김인안 | 배정 완료 |
+| [OPS-VALIDATION](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙) 공통 운영·배포 | 이우람 | 김인안 | 박진영, WS-05 담당자 | 배정 완료 — 정식 공개 시 종료 |
+| [WS-09](../02-analysis/second-expansion-workstreams.md#4-ws-09-개인-컬렉션) 개인 컬렉션 | 박진영 | 김인안 | 양성훈 | 배정 완료 |
+| [WS-10](../02-analysis/second-expansion-workstreams.md#5-ws-10-인기-맛집) 인기 맛집 | 양성훈 | 박진영 | 김인안 | 배정 완료 |
+| [WS-11](../02-analysis/second-expansion-workstreams.md#6-ws-11-관리자-큐레이션) 관리자 큐레이션 | 김인안 | 양성훈 | 박진영 | 배정 완료 |
+| [WS-12](../02-analysis/second-expansion-workstreams.md#7-ws-12-제보신고-검토) 제보·신고 검토 | 김인안 | 이우람 | 박진영 | 배정 완료 |
+| [WS-13](../02-analysis/second-expansion-workstreams.md#8-ws-13-사용자-알림) 사용자 알림 | 이우람 | 김인안 | 박진영 | 배정 완료 |
+
+### 2차 확장 배정 근거
+
+- WS-09는 기존 개인 맛집 관리와 데이터 생명주기의 연속성을 위해 박진영이 소유하고 인증 담당 김인안이 리뷰한다.
+- WS-10은 공개 Restaurant 조회·정렬·성능의 연속성을 위해 양성훈이 소유하고 Favorite 데이터 담당 박진영이 리뷰한다.
+- WS-11과 WS-12는 관리자 인증·데이터 조치의 연속성을 위해 김인안이 소유한다. 서로 다른 Workstream으로 유지하고 각각 양성훈·이우람이 독립 리뷰한다.
+- WS-13은 공통 아키텍처·운영 장애 경계의 연속성을 위해 이우람이 소유하고 상태 전이 제공자인 김인안이 리뷰한다.
+- 인기와 큐레이션, 컬렉션과 큐레이션은 각각 다른 책임이다. 같은 PRD·Aggregate 또는 저장소로 합쳐 최종 책임을 흐리지 않는다.
 
 ### Workstream 복잡도 분석
 
@@ -101,7 +122,7 @@ related_documents:
 | [FR-ADMIN-004](../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록) | 영상 정보 등록 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 김인안 | 박진영 | 배정 완료 |
 | [FR-VISIT-001](../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록) | 맛집·유튜버·영상 방문 관계 등록 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 김인안 | 이우람 | 배정 완료 |
 
-기능 요구사항 20개는 모두 정확히 하나의 Workstream과 최종 책임자에게 배정되었다. 리뷰 담당자는 기능 책임자와 분리했으며 관계·조회·등록 계약에 따라 교차 배정했다.
+MVP 기능 요구사항 20개는 모두 정확히 하나의 Workstream과 최종 책임자에게 배정되었다. 리뷰 담당자는 기능 책임자와 분리했으며 관계·조회·등록 계약에 따라 교차 배정했다.
 
 ## 5. 비즈니스 규칙 소유권
 
@@ -205,7 +226,7 @@ related_documents:
 | NFR ID | 요구사항 | 적용 유형 | 구현 책임자 | 준수 책임자 | 리뷰 담당 | 상태 |
 |---|---|---|---|---|---|---|
 | [NFR-SECURITY-001](../01-requirements/non-functional-requirements.md#nfr-security-001-공개-조회와-관리자-접근-통제) | 공개 조회와 관리자 접근 통제 | 공통 기반형 | 김인안 | 전체 팀 | 이우람 | 배정 완료 |
-| [NFR-SECURITY-003](../01-requirements/non-functional-requirements.md#nfr-security-003-비밀정보와-오류-정보-보호) | 비밀정보와 오류 정보 보호 | 공통 기반형 | 이우람 | 전체 팀 | 김인안 | 배정 완료 |
+| [NFR-SECURITY-003](../01-requirements/non-functional-requirements.md#nfr-security-003-비밀정보와-오류-정보-보호) | 비밀정보와 오류 정보 보호 | 공통 기반형 | 이우람 | 전체 팀, 제한 공개는 [OPS-VALIDATION](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙) | 김인안 | 배정 완료 |
 | [NFR-RELIABILITY-001](../01-requirements/non-functional-requirements.md#nfr-reliability-001-오류-격리와-공통-오류-정책) | 오류 격리와 공통 오류 정책 | 공통 기반형 | 양성훈 | 전체 팀 | 박진영 | 배정 완료 |
 | [NFR-AVAILABILITY-001](../01-requirements/non-functional-requirements.md#nfr-availability-001-상태-확인과-장애-구분) | 상태 확인과 장애 구분 | 공통 기반형 | 이우람 | 전체 팀 | 박진영 | 배정 완료 |
 | [NFR-AVAILABILITY-002](../01-requirements/non-functional-requirements.md#nfr-availability-002-초기-운영-배포-가용성과-수동-복구) | 초기 운영 배포 가용성과 수동 복구 | 운영 배포형 | 이우람 | 전체 팀 | 박진영 | 배정 완료 |
@@ -215,9 +236,9 @@ related_documents:
 | [NFR-COMPATIBILITY-002](../01-requirements/non-functional-requirements.md#nfr-compatibility-002-응답-형식과-문자-처리) | 응답 형식과 문자 처리 | 공통 기반형 | 양성훈 | 전체 팀 | 김인안 | 배정 완료 |
 | [NFR-TEST-003](../01-requirements/non-functional-requirements.md#nfr-test-003-배포-품질-게이트) | 배포 품질 게이트 | 공통 기반형 | 이우람 | 전체 팀 | 박진영 | 배정 완료 |
 | [NFR-DEPLOYMENT-001](../01-requirements/non-functional-requirements.md#nfr-deployment-001-재현-가능한-빌드와-환경-분리) | 재현 가능한 빌드와 환경 분리 | 공통 기반형 | 이우람 | 전체 팀 | 김인안 | 배정 완료 |
-| [NFR-DEPLOYMENT-002](../01-requirements/non-functional-requirements.md#nfr-deployment-002-배포-전후-검증) | 배포 전후 검증 | 공통 기반형 | 이우람 | 전체 팀 | 박진영 | 배정 완료 |
+| [NFR-DEPLOYMENT-002](../01-requirements/non-functional-requirements.md#nfr-deployment-002-배포-전후-검증) | 배포 전후 검증 | 공통 기반형 | 이우람 | 전체 팀, 제한 공개는 [OPS-VALIDATION](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙) | 박진영 | 배정 완료 |
 | [NFR-DEPLOYMENT-003](../01-requirements/non-functional-requirements.md#nfr-deployment-003-버전-추적과-복구-절차) | 버전 추적과 복구 절차 | 공통 기반형 | 이우람 | 전체 팀 | 박진영 | 배정 완료 |
-| [NFR-DEPLOYMENT-004](../01-requirements/non-functional-requirements.md#nfr-deployment-004-단계별-실행-및-초기-운영-배포-복잡도-제한) | 단계별 실행 및 초기 운영 배포 복잡도 제한 | 공통 기반형 | 이우람 | 전체 팀 | 김인안 | 배정 완료 |
+| [NFR-DEPLOYMENT-004](../01-requirements/non-functional-requirements.md#nfr-deployment-004-단계별-실행-및-초기-운영-배포-복잡도-제한) | 단계별 실행 및 초기 운영 배포 복잡도 제한 | 공통 기반형 | 이우람 | 전체 팀, 제한 공개는 [OPS-VALIDATION](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙) | 김인안 | 배정 완료 |
 | [NFR-PRIVACY-002](../01-requirements/non-functional-requirements.md#nfr-privacy-002-인증정보와-외부-키-보호) | 인증정보와 외부 키 보호 | 공통 기반형 | 이우람 | 김인안 및 외부 연동 담당자 | 김인안 | 배정 완료 |
 
 아직 후속 설계가 필요한 기준만 `팀 결정 필요`로 유지한다. 2026-07-27 확정된 부하·데이터·브라우저·배포·알림 기준은 `배정 완료`로 관리한다.
@@ -238,6 +259,7 @@ related_documents:
 | CI 검증 | 팀 공동 | 이우람 | 박진영 | 첫 통합 전 | 배정 완료 |
 | 배포 및 헬스체크 | 팀 공동 | 이우람 | 박진영 | 전체 인수 전 | 배정 완료 |
 | 환경별 설정 및 비밀정보 관리 | 팀 공동 | 이우람 | 김인안 | 배포 설계 전 | 배정 완료 |
+| 검증 참여자 쿠키 세션·제한 공개 진입 경계 | 팀 승인, [OPS-VALIDATION](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙) | 이우람 | 김인안, 배포 복구는 박진영 | `E1-T13` 및 정식 공개 제거 시 | 배정 완료 — 임시 트랙 |
 | AI 기능·활용 및 연동 기준 | 김인안·이우람·양성훈 주도, 영향받는 담당자 공동 | 관련 티켓 담당자 | 박진영 및 영향받는 담당자 | AI 작업 전 | 배정 완료 |
 | 프론트엔드 구조·사용자 흐름·백엔드 연동 기준 | 양성훈·김인안 주도, 영향받는 담당자 공동 | 관련 티켓 담당자 | 이우람, 박진영 | 프론트엔드 구현 전 | 배정 완료 |
 | 발표자료 제작 및 발표 리허설 | 팀 공동 | 영크크(팀 공동) | 전체 팀 | 발표 전 | 배정 완료 |
@@ -284,6 +306,11 @@ related_documents:
 | [WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) 박진영 | 김인안 | Visit 판정 변경은 이우람, 목록 공통 필드 변경은 양성훈 |
 | [WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 이우람 | 양성훈 | 상세 관계 결과 변경은 박진영, 등록 관계 변경은 김인안 |
 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 김인안 | 박진영 | 인증·공통 계약은 이우람, 목록 반영은 양성훈 |
+| [WS-05](../02-analysis/first-expansion-workstreams.md#4-ws-05-사용자-계정인증) 김인안 | 이우람 | 개인정보·데이터 정리는 박진영 |
+| [WS-06](../02-analysis/first-expansion-workstreams.md#5-ws-06-개인-맛집-관리) 박진영 | 김인안 | 공개 맛집 화면 계약은 양성훈 |
+| [WS-07](../02-analysis/first-expansion-workstreams.md#6-ws-07-지도-탐색) 양성훈 | 박진영 | 외부 연동·장애 격리는 이우람 |
+| [WS-08](../02-analysis/first-expansion-workstreams.md#7-ws-08-유튜버-상세) 이우람 | 박진영 | 목록·화면 계약은 양성훈 |
+| [OPS-VALIDATION](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙) 이우람 | 김인안 | 배포·복구는 박진영, 회원 Bearer 회귀는 WS-05 담당자 |
 
 - 자신의 코드와 문서는 본인이 최종 승인하지 않는다.
 - 다른 Workstream 담당자 한 명 이상이 코드와 관련 문서를 함께 리뷰한다.
@@ -300,9 +327,10 @@ related_documents:
 
 - 팀원 4명 모두 하나의 주요 기능 Workstream을 소유한다.
 - 프로젝트 리더 이우람도 [WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)의 최종 책임자다.
-- 네 Workstream과 기능 요구사항 20개에 최종 책임자 한 명이 지정되어 있으며 중복 최종 책임자는 없다.
+- `WS-01`~`WS-13`의 13개 제품 Workstream과 MVP 20개·1차 확장 20개·2차 확장 21개, 총 61개 기능 요구사항에 각각 최종 책임자 한 명이 지정되어 있다. `OPS-*`는 제품 Workstream 수와 별도로 관리한다.
 - 역할은 기술 계층별로 분리하지 않았다.
 - 공통 작업은 결정 책임과 구현 책임을 구분했다.
+- 제한 공개 진입 경계는 [OPS-VALIDATION](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙)이 `API-VALIDATION-001~002`, `ADR-DEPLOY-003`, `FE-12`, `E1-T13`을 단일 책임선으로 소유하고 정식 공개 시 종료한다.
 - High Workstream 담당자에게 공통 책임이 일부 배정되지만 이우람이 Medium Workstream과 공통 인프라를 맡아 부담을 완화했다.
 - 김인안의 [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록)는 단순 CRUD가 아니라 인증, 검증, 등록 순서, 정합성과 세 조회 흐름 반영까지 포함한다.
 - Visit, Creator, Video, Restaurant 통합은 [WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) 조합, [WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 판정과 [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 등록 책임으로 구분했다.

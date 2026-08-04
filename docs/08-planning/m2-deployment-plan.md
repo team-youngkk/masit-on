@@ -79,7 +79,7 @@ related_documents:
 | 월 인프라 예산 목표 | 150,000원 | ADR 추적표 |
 | 목표 완료일 | 2026-07-31 | [M2 마일스톤](https://github.com/team-youngkk/masit-on/milestone/2) |
 
-브랜치 전략은 **이 마일스톤 한정 예외다.** [CLAUDE.md](../../CLAUDE.md) 9절의 기본 흐름(`feature` → `develop` → `main`)은 그대로 유지하고, M2 이후 작업은 다시 `develop`을 거친다. `main` 병합 후 `deploy/m2`를 `develop`에도 back-merge해 `develop`이 뒤처지지 않게 한다.
+브랜치 전략은 **이 마일스톤 한정 예외다.** M2 당시에는 `deploy/m2`가 `develop`을 거치지 않고 `main`으로 직접 들어갔으므로, 병합 후 같은 변경을 `develop`에도 back-merge해야 했다. 2026-08-03 이후 일반 흐름은 작업 브랜치 → `develop` Squash Merge, `develop` → `main` Merge Commit이며, 정상적인 승격 뒤에는 커밋 수 차이만을 이유로 역동기화하지 않는다. `main` 전용 Hotfix처럼 `develop`에 없는 내용이 생긴 경우에만 별도 PR로 역동기화한다.
 
 목표 완료일까지 여유가 크지 않다. 도메인 구입과 DNS 전파, RDS·Redis 생성처럼 대기 시간이 고정된 Task가 있으므로 M2-01을 먼저 끝내고 M2-02·M2-03을 같은 날 착수한다.
 
@@ -91,19 +91,14 @@ related_documents:
 |---|---|---|
 | 도메인명 | M2-02 | **결정** — `masiton.click` (2026-07-29 등록, 자동 갱신 끔) |
 | HTTPS 인증서 발급 방식 | M2-08 (4.1절) | **결정** — ACM exportable public certificate를 EC2 Nginx에 배포 (2026-07-30, 4.1절) |
-| 검증 참여자 제한 공개 방식 | M2-11 | **결정** — Nginx Basic Auth (2026-07-30) |
+| 검증 참여자 제한 공개 방식 | M2-11, `E1-T13` | **변경 결정** — 2026-07-30 Nginx Basic Auth 적용 후 Bearer 충돌을 확인해 2026-08-03 전용 쿠키 세션으로 전환 ([ADR-DEPLOY-003](../07-adr/platform/deploy-003-validation-cookie-session.md)) |
 | EC2 인스턴스 타입 | M2-03 | **결정** — `t4g.medium` ([사양·비용 산정](m2-cost-and-sizing.md) 3·7절) |
 | RDS 인스턴스 클래스 | M2-04 | **결정** — `db.t4g.micro` ([사양·비용 산정](m2-cost-and-sizing.md) 4·7절) |
 | Redis 인스턴스 사양 | M2-05 | **결정** — ElastiCache 미사용, 앱 EC2 동거 ([사양·비용 산정](m2-cost-and-sizing.md) 5.4절). ADR-DATA-005 6절 배치 표현 개정 완료 — 4.2절 |
 
-**제한 공개 방식**은 ADR-DEPLOY-002가 "검증 참여자에게만 제한 공개"만 규정하고 방식을 정하지 않았다. **2026-07-30에 Nginx Basic Auth로 결정했다.** 검증 참여자가 4개 WS 담당자를 포함해 여러 명이고 각자 공인 IP가 고정돼 있지 않으므로, 보안 그룹 IP allowlist는 IP가 바뀔 때마다 규칙을 갱신해야 하고 그 사이 검증이 끊긴다. Basic Auth는 자격 증명 배포만으로 참여자를 늘릴 수 있다.
+**제한 공개 방식**은 2026-07-30 M2-11에서 Nginx Basic Auth로 시작했다. 이후 회원·관리자 Bearer JWT와 같은 `Authorization` 헤더가 충돌해 페이지 이동과 회원 로그인 중 검증 참여자 인증창이 반복되는 운영 결함을 확인했다. 2026-08-03 [ADR-DEPLOY-003](../07-adr/platform/deploy-003-validation-cookie-session.md)으로 검증 참여자 전용 7일 HttpOnly 쿠키 세션, Redis 해시 저장과 Nginx `auth_request` 방식으로 변경했다.
 
-Basic Auth 적용 시 지켜야 할 것은 두 가지다.
-
-- 자격 증명은 [ADR-SEC-001](../07-adr/security/sec-001-secrets-workload-identity.md)에 따라 Parameter Store SecureString에 두고 `htpasswd` 파일을 EC2에서 생성한다. 저장소·이미지에 남기지 않는다.
-- Basic Auth는 HTTPS 뒤에서만 쓴다. HTTP 요청은 인증 확인 전에 HTTPS로 리다이렉트한다(4.1절 구성과 같은 server block).
-
-Basic Auth는 제한 공개 수단이며 관리자 인증을 대체하지 않는다. `/api/admin/**`의 JWT·`ADMIN` 검증은 그대로 유지한다([NFR-SECURITY-001](../01-requirements/non-functional-requirements.md#nfr-security-001-공개-조회와-관리자-접근-통제)).
+쿠키 세션은 제한 공개 진입만 허용하며 회원·관리자 identity나 권한을 만들지 않는다. 자격 증명과 세션 원문은 저장소·이미지·로그에 남기지 않고, 정식 공개 시 전용 로그인·세션·쿠키·Redis key·Parameter Store 값을 함께 제거한다. [OPS-VALIDATION 공통 운영·배포 트랙](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙)이 경계를 소유하고 구현·운영 전환은 [E1-T13](expansion-1-task-breakdown.md#e1-t13-검증-참여자-제한-공개-쿠키-세션-전환)에서 수행한다.
 
 **인스턴스 사양과 월 예상 비용**은 `M2-01`에서 산정했다. 결과는 [M2 인스턴스 사양과 월 비용 산정](m2-cost-and-sizing.md)에 있다. 단가는 AWS Price List API로 `ap-northeast-2` 값을 실측했다. 채택 구성의 월 예상 비용은 90,100원(예산의 60%)이고 RDS를 한 단계 올려도 118,000원(79%)으로 예산 목표 150,000원 이내이며, NAT Gateway와 인터페이스 VPC 엔드포인트는 예산 비중이 커서 M2 구성에서 제외한다.
 
@@ -234,12 +229,13 @@ Basic Auth는 제한 공개 수단이며 관리자 인증을 대체하지 않는
 - 완료 조건: 시험 알람이 Slack에 실제로 도달하고, PostgreSQL·Redis 연결 실패가 각각 저장소 장애 알림을 발생시키며, 로그에 비밀번호·JWT·API 키 원문이 없다
 - 근거: ADR-OBS-001, RV-NFR-009, RV-NFR-013, NFR-OBSERVABILITY-003
 
-### M2-11 검증 참여자 제한 공개 설정
+### M2-11 검증 참여자 제한 공개 설정(과거 Basic Auth 계약)
 
 - 작업: Nginx Basic Auth 적용(`htpasswd` 파일을 EC2에서 생성, 자격 증명은 Parameter Store SecureString), 검증 참여자에게 접근 정보 전달
 - 선행: M2-08
 - 완료 조건: 검증 참여자만 접근하고 그 외 접근이 차단되며, 자격 증명이 저장소·이미지에 남지 않는다
 - 주의: Basic Auth는 제한 공개 수단이며 `/api/admin/**`의 JWT·`ADMIN` 검증을 대체하지 않는다(4절)
+- 후속 변경: 이 완료 기록의 Basic Auth 방식은 [ADR-DEPLOY-003](../07-adr/platform/deploy-003-validation-cookie-session.md)과 `E1-T13`에서 쿠키 세션으로 교체한다. 제한 공개 목적 자체는 유지한다.
 
 ### M2-12 배포 후 기능 검증
 

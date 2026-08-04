@@ -6,6 +6,7 @@ related_documents:
   - ../prd/detail/restaurant-detail.md
   - ../prd/admin/admin-data-management.md
   - ../../05-specs/data/entity-definitions.md
+  - second-expansion-wireframes.md
 ---
 
 # 맛잇온 와이어프레임 적용 기준
@@ -39,6 +40,8 @@ related_documents:
 - 방문 관계 등록 화면: 맛집·유튜버·영상 선택과 등록 결과 확인
 
 관리자 화면의 별도 와이어프레임은 없으므로 공개 화면과 같은 색상, 타이포그래피, 입력 필드와 버튼 규칙을 사용한다.
+
+2차 확장 화면의 정보 구조와 상태는 [2차 확장 와이어프레임](second-expansion-wireframes.md)에서 관리한다. 해당 문서는 초안이며 Workstream·담당자 승인 전 구현 기준으로 확정하지 않는다.
 
 ## 4. MVP 시각 규칙
 

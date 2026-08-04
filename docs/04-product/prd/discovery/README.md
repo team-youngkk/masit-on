@@ -3,6 +3,7 @@ related_documents:
   - ../00-product-overview.md
   - restaurant-discovery.md
   - creator-discovery.md
+  - popular-restaurants.md
   - ../../../01-requirements/functional-requirements.md
   - ../../../01-requirements/business-rules.md
   - ../../../05-specs/api/discovery/README.md
@@ -16,19 +17,20 @@ related_documents:
 
 ## 1. 영역 목적
 
-일반 사용자가 계정 없이 공개 맛집을 탐색하고 원하는 조건으로 후보를 좁히는 제품 가치를 관리한다.
+일반 사용자가 계정 없이 공개 맛집을 조건, 인기 신호 또는 관리자 편집 주제로 탐색하는 제품 가치를 관리한다.
 
 ## 2. 포함 기능
 
 - 맛집 목록, 이름 검색, 지역·음식 카테고리 조건, 페이지와 기본 정렬
 - 유효 방문 관계에 근거한 유튜버 조건
 - 서로 다른 탐색 조건의 AND 조합과 빈 결과 처리
+- 현재 찜 수 기반 인기 맛집과 관리자 편집형 공개 큐레이션
 
 ## 3. 제외 기능
 
 - 맛집 상세와 방문 콘텐츠 표시
 - 관리자 데이터 등록
-- 지도·추천·자연어 검색·복수 값 필터·유튜버 상세
+- 추천 알고리즘·자연어 검색·복수 값 필터·유튜버 상세
 
 ## 4. 하위 PRD
 
@@ -36,10 +38,13 @@ related_documents:
 |---|---|---|
 | [맛집 탐색](restaurant-discovery.md) | [WS-01](../../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색) | 양성훈 |
 | [유튜버 기반 탐색](creator-discovery.md) | [WS-03](../../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) | 이우람 |
+| [인기 맛집](popular-restaurants.md) | [WS-10](../../../02-analysis/second-expansion-workstreams.md#5-ws-10-인기-맛집) | 양성훈 |
 
 ## 5. PRD 간 경계
 
 [WS-03](../../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)은 선택한 유튜버와 공개·유효 방문 관계를 판정해 고유 맛집 식별 결과를 제공한다. [WS-01](../../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)은 이 결과를 이름·지역·카테고리 조건과 결합하고 정렬·페이지를 적용해 최종 목록을 완성한다. 관계 판정 규칙을 [WS-01](../../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)에 복제하지 않는다.
+
+인기와 큐레이션은 공개 탐색 진입면을 공유하지만, 인기 산정은 찜 데이터 계약에 의존하고 큐레이션 생성은 관리자 권한을 요구한다. 따라서 [인기 맛집 PRD](popular-restaurants.md)와 [관리자 큐레이션 PRD](../curation/admin-curation.md), WS-10과 WS-11로 분리한다.
 
 ## 6. 공통 요구사항 및 규칙
 

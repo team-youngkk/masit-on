@@ -26,16 +26,26 @@ export type ResendEmailVerificationResult = {
   feedback: EmailVerificationFeedback
 }
 
+export const EMAIL_VERIFICATION_CODE_LENGTH = 8
+
 const VERIFICATION_SUCCESS_MESSAGE =
-  '이메일 인증이 완료되었습니다. 자동 로그인되지 않으므로 로그인 화면에서 다시 로그인해 주세요.'
+  '이메일 인증이 완료되었습니다. 로그인 화면에서 다시 로그인해 주세요.'
 const VERIFICATION_FAILURE_MESSAGE =
-  '이메일 인증을 완료하지 못했습니다. 토큰을 다시 확인하거나 아래에서 인증 메일을 다시 요청해 주세요.'
+  '8자 인증 코드를 확인하거나 아래에서 인증 메일을 다시 요청해 주세요.'
 const VERIFICATION_RETRY_MESSAGE =
-  '이메일 인증 요청을 처리하지 못했습니다. 입력한 토큰을 유지했으니 잠시 후 다시 시도해 주세요.'
+  '인증 요청을 처리하지 못했습니다. 입력한 8자 코드를 유지했으니 잠시 후 다시 시도해 주세요.'
 const RESEND_SUCCESS_MESSAGE =
   '인증 메일 재발송 요청을 접수했습니다. 계정 상태나 실제 발송 여부와 관계없이 같은 안내를 제공합니다.'
 const RESEND_FAILURE_MESSAGE =
   '인증 메일 재발송 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.'
+
+const ASCII_SURROUNDING_WHITESPACE = /^[\t\n\f\r ]+|[\t\n\f\r ]+$/g
+
+export function normalizeEmailVerificationCodeInput(value: string): string {
+  return value
+    .replace(ASCII_SURROUNDING_WHITESPACE, '')
+    .toUpperCase()
+}
 
 export function createEmailVerificationSingleFlight(): {
   run<T>(action: SingleFlightAction<T>): Promise<T>

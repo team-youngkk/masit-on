@@ -14,6 +14,7 @@ related_documents:
   - ../../01-requirements/non-functional-requirements.md
   - physical-data-model.md
   - constraint-mapping.md
+  - second-expansion-data-contract.md
 ---
 
 # 맛잇온 데이터 제약조건
@@ -103,6 +104,7 @@ related_documents:
 
 - 적용 데이터: MemberActionToken
 - 제약: `(member, purpose)`별 `ISSUED` Token은 하나만 존재하고, 같은 Token 해시는 한 번만 저장한다.
+- 형식: `EMAIL_VERIFICATION`은 CSPRNG 8자 코드의 SHA-256 해시, `PASSWORD_RESET`은 기존 고엔트로피 불투명 값의 SHA-256 해시를 저장하며 원문 형식은 DB 제약으로 판정하지 않는다.
 - 보장 수준: 저장소 필수, 애플리케이션 필수
 - 위반 시 처리: 기존 `ISSUED` Token을 `REVOKED`로 완료 처리한 뒤 새 Token을 발급한다.
 - 관련 규칙/API: [BR-AUTH-006](../../01-requirements/business-rules.md#br-auth-006-로그아웃과-폐기), [API-MEMBER-AUTH-002](../api/account/member-authentication-api.md#api-member-auth-002-가입-이메일-인증), [API-MEMBER-AUTH-005](../api/account/member-authentication-api.md#api-member-auth-005-비밀번호-재설정-완료)
@@ -222,3 +224,12 @@ related_documents:
 - 삭제·비공개 전환은 별도 운영 명령으로 수행하고 논리 삭제 데이터는 자동 purge 없이 보존한다.
 - Redis의 계정당 활성 Refresh Token 하나와 회전·재사용 탐지는 `auth:refresh:{adminId}` 원자 연산으로 보장한다.
 - 외부 URL·표시 메타데이터 변경 이력은 저장하지 않고 검색 인덱스는 성능 실측으로 튜닝한다.
+
+## 11. 2차 확장 제약
+
+2차 확장의 소유권, 컬렉션·큐레이션 상한, 열린 요청 중복, 상태 전이, 알림 고유성과 다형 FK XOR 제약은 [2차 확장 데이터 계약](second-expansion-data-contract.md)을 따른다.
+
+- DB 고유 제약: 컬렉션 맛집, 큐레이션 맛집·표시 위치, 게시 메인 위치, 열린 제보·신고, 요청·상태 알림과 상태 이력, `idempotency_record(actor_type, actor_id, api_scope, key_hash)`
+- DB CHECK: 상태 허용값, 큐레이션 게시 상태·위치, `ck_moderation_history__exactly_one_request`, `ck_notification__exactly_one_request`, 완료 결과 필드 조합
+- 애플리케이션+행 잠금: 회원당 컬렉션 20개, 컬렉션당 맛집 100개, 제보·신고 합산 일일 5건, Curation 구성 20개와 허용 상태 전이
+- 같은 트랜잭션: 요청 상태, ModerationHistory, 처리 결과 Notification
