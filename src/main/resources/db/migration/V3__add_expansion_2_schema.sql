@@ -132,7 +132,8 @@ CREATE TABLE submission
             AND result_target_type IS NULL AND result_target_id IS NULL)
     ),
     CONSTRAINT ck_submission__member_unlinked CHECK (
-        member_id IS NULL OR member_unlinked_at IS NULL
+        (member_id IS NULL AND member_unlinked_at IS NOT NULL)
+        OR (member_id IS NOT NULL AND member_unlinked_at IS NULL)
     )
 );
 
@@ -190,9 +191,34 @@ CREATE TABLE report
             AND result_target_type IS NULL AND result_target_id IS NULL)
     ),
     CONSTRAINT ck_report__member_unlinked CHECK (
-        member_id IS NULL OR member_unlinked_at IS NULL
+        (member_id IS NULL AND member_unlinked_at IS NOT NULL)
+        OR (member_id IS NOT NULL AND member_unlinked_at IS NULL)
     )
 );
+
+CREATE FUNCTION unlink_expansion_requests_before_member_delete()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    UPDATE submission
+       SET member_id = NULL,
+           member_unlinked_at = CURRENT_TIMESTAMP
+     WHERE member_id = OLD.id;
+
+    UPDATE report
+       SET member_id = NULL,
+           member_unlinked_at = CURRENT_TIMESTAMP
+     WHERE member_id = OLD.id;
+
+    RETURN OLD;
+END;
+$$;
+
+CREATE TRIGGER tr_member_account__unlink_expansion_requests
+BEFORE DELETE ON member_account
+FOR EACH ROW
+EXECUTE FUNCTION unlink_expansion_requests_before_member_delete();
 
 CREATE TABLE moderation_history
 (

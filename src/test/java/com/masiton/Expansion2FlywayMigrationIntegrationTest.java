@@ -113,6 +113,11 @@ class Expansion2FlywayMigrationIntegrationTest {
                 UUID.randomUUID(), fixture.memberId(), fingerprint))
                 .isInstanceOf(DataAccessException.class);
 
+        assertThatThrownBy(() -> jdbcTemplate.update(
+                "UPDATE submission SET member_id = NULL WHERE id = ?",
+                submissionId))
+                .isInstanceOf(DataAccessException.class);
+
         jdbcTemplate.update(
                 "UPDATE submission SET status = 'REJECTED', member_reason = '반려', terminal_at = now() WHERE id = ?",
                 submissionId);
@@ -140,6 +145,7 @@ class Expansion2FlywayMigrationIntegrationTest {
                 "INSERT INTO collection_restaurant (collection_id, restaurant_id) VALUES (?, ?)",
                 collectionId, fixture.restaurantId());
         UUID submissionId = insertSubmission(jdbcTemplate, fixture.memberId(), new byte[32], "RECEIVED");
+        UUID reportId = insertReport(jdbcTemplate, fixture.memberId(), fixture.restaurantId());
 
         // when & then: 맛집은 관계가 먼저 정리되기 전에는 삭제할 수 없다.
         assertThatThrownBy(() -> jdbcTemplate.update("DELETE FROM restaurant WHERE id = ?", fixture.restaurantId()))
@@ -151,12 +157,17 @@ class Expansion2FlywayMigrationIntegrationTest {
         // then
         Integer collectionCount = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM personal_collection WHERE id = ?", Integer.class, collectionId);
-        Boolean submissionUnlinked = jdbcTemplate.queryForObject(
-                "SELECT member_id IS NULL FROM submission WHERE id = ?",
+        Boolean submissionUnlinkedWithTimestamp = jdbcTemplate.queryForObject(
+                "SELECT member_id IS NULL AND member_unlinked_at IS NOT NULL FROM submission WHERE id = ?",
                 Boolean.class,
                 submissionId);
+        Boolean reportUnlinkedWithTimestamp = jdbcTemplate.queryForObject(
+                "SELECT member_id IS NULL AND member_unlinked_at IS NOT NULL FROM report WHERE id = ?",
+                Boolean.class,
+                reportId);
         assertThat(collectionCount).isZero();
-        assertThat(submissionUnlinked).isTrue();
+        assertThat(submissionUnlinkedWithTimestamp).isTrue();
+        assertThat(reportUnlinkedWithTimestamp).isTrue();
     }
 
     @Test
@@ -272,6 +283,15 @@ class Expansion2FlywayMigrationIntegrationTest {
                         + "description, status) VALUES (?, ?, 'RESTAURANT', '{}'::jsonb, ?, "
                         + "'열 글자 이상인 제보 설명입니다', ?)",
                 id, memberId, fingerprint, status);
+        return id;
+    }
+
+    private UUID insertReport(JdbcTemplate jdbcTemplate, UUID memberId, UUID targetId) {
+        UUID id = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO report (id, member_id, target_type, target_id, report_type, description) "
+                        + "VALUES (?, ?, 'RESTAURANT', ?, 'ERROR', '열 글자 이상인 신고 설명입니다')",
+                id, memberId, targetId);
         return id;
     }
 
