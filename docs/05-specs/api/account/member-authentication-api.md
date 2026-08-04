@@ -1,7 +1,7 @@
 ---
 id: API-MEMBER-AUTH-001
 title: 일반 회원 계정·인증 API
-status: draft
+status: approved
 related_prd:
   - PRD-ACCOUNT-001
 workstream: WS-05

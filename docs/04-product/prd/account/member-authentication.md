@@ -1,7 +1,7 @@
 ---
 id: PRD-ACCOUNT-001
 title: 사용자 계정·인증
-status: draft
+status: approved
 workstream: WS-05
 owner: 김인안
 reviewers:

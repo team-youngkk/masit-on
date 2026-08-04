@@ -1,7 +1,7 @@
 ---
 status: Review
 review_date: 2026-08-04
-baseline_commit: f79444c
+baseline_commit: 1621ad5
 related_documents:
   - README.md
   - expansion-1-task-breakdown.md
@@ -34,8 +34,8 @@ related_documents:
 |---|---|
 | 조사일 | 2026-08-04 |
 | 브랜치 | `develop` |
-| 기준 커밋 | `f79444c` |
-| 작업 트리 | 조사 시작 시 변경 없음 |
+| 기준 커밋 | `1621ad5` |
+| 작업 트리 | 조사 시작 시 Nginx 내부 검증 요청의 `Host` 전달 수정 3줄 |
 | 1차 확장 Task 기준 | [1차 확장 최종 Task 분해](expansion-1-task-breakdown.md#2-전체-task-표)의 `E1-T01`~`E1-T13` |
 | 판정 우선순위 | 현재 코드·마이그레이션·테스트 → 병합 이력 → 계약 문서 → 계획의 과거 상태 |
 
@@ -43,12 +43,12 @@ related_documents:
 
 | 확인 사항 | 판정 | 근거와 영향 |
 |---|---|---|
-| 1차 확장 계약이 확정됐는가 | **부분 충족** | 기능 요구사항은 1차 확장을 확정 범위로 선언하고 구현 계획·Task 분해는 `Ready`, 인증·데이터 ADR은 `Accepted`다. 그러나 회원·개인화 PRD와 API 명세 frontmatter는 여전히 `draft`다. 문서 owner가 상태를 확인하고 추적표와 함께 동기화하기 전에는 2차 확장이 이 계약을 최종 선행 계약으로 인용할 수 없다. |
+| 1차 확장 계약이 확정됐는가 | **충족** | 사용자가 회원·개인화 네 계약의 확정을 명시적으로 승인해 PRD와 API 명세 frontmatter를 저장소 관례인 `approved`로 전환했다. 기능 요구사항, 구현 계획·Task 분해, 인증·데이터 ADR과 제품·API·데이터·ADR 추적표 연결도 확인했다. |
 | `E1-T03` 회원 기반이 구현됐는가 | **구현 근거 있음** | `member_account`, Action Token·메일 Outbox, 세션 폐기·복구와 Redis 회원 세션 경계가 V2 마이그레이션과 `member`·`security` 코드에 존재한다. `E1-T10` 교차 인수 PR이 병합됐고 README가 1차 확장 완료 상태를 선언한다. |
 | `E1-T04` 회원 인증이 구현됐는가 | **구현 근거 있음** | 가입·이메일 인증·로그인·재발급·로그아웃·비밀번호 재설정·탈퇴 API와 화면이 존재하며 운영 `prod` 프로파일의 SMTP·회원 비밀정보 주입도 기록돼 있다. |
-| `E1-T11` 지도 뷰포트 비종속 조회가 구현됐는가 | **구현 근거 있음 / 운영 회귀 필요** | PR #122가 `28363aa`로 병합됐다. 백엔드 요청·SQL과 프론트 Query Key에서 bounds를 제거했고, 프론트 자동 테스트는 네 필터만 전송하며 `south`·`west`·`north`·`east`를 만들지 않는 계약을 통과했다. 실제 운영 지도 이동·확대·축소 시 추가 요청 0건과 결과·선택 유지 증거는 E2-T01 운영 회귀에 남는다. |
+| `E1-T11` 지도 뷰포트 비종속 조회가 구현됐는가 | **충족** | PR #122가 `28363aa`로 병합됐다. 백엔드 요청·SQL과 프론트 Query Key에서 bounds를 제거했고, 프론트 자동 테스트는 네 필터만 전송하며 `south`·`west`·`north`·`east`를 만들지 않는 계약을 통과했다. 2026-08-04 운영 지도에서 새로고침 직후 `map-points` 요청 1건을 기준으로 이동·확대·축소 뒤에도 요청 수가 1건 그대로이고 결과·선택 상태가 유지됨을 사용자가 확인했다. |
 | `E1-T12` 가입 이메일 인증 8자 코드가 구현됐는가 | **코드·통합 회귀 충족** | PR #124가 `f79444c`로 병합됐다. 가입·재발송은 허용 문자 32자의 8자 CSPRNG 코드를 발급하고, API·화면은 입력 정규화와 요청 출처당 10분 10회 제출 제한을 적용한다. Docker 기반 PostgreSQL·Redis 통합 테스트를 포함한 백엔드 전체 테스트가 통과했다. |
-| [OPS-VALIDATION](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙)의 `E1-T13` 검증 참여자 쿠키 세션이 구현됐는가 | **저장소 구현 근거 있음 / 운영 전환 증거 필요** | PR #123이 `19dee1b`로 병합됐다. 검증 로그인·7일 쿠키 세션·Redis fail-closed·Nginx `auth_request`와 API 401/화면 redirect 분리가 코드와 배포 설정에 존재하고 관련 단위 테스트가 통과했다. 다만 운영 환경에서 Basic Auth 제거, 반복 인증창 0회, 회원·관리자 Bearer 동시 사용을 다시 확인한 실행 기록이 없어 기준선은 아직 통과하지 않는다. |
+| [OPS-VALIDATION](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙)의 `E1-T13` 검증 참여자 쿠키 세션이 구현됐는가 | **충족** | PR #123이 `19dee1b`로 병합됐고 검증 로그인·7일 쿠키 세션·Redis fail-closed·Nginx `auth_request`와 API 401/화면 redirect 분리가 코드·설정·단위 테스트에 존재한다. 2026-08-04 운영 브라우저에서 Basic Auth 인증창 없이 검증 참여자 쿠키로 진입한 뒤 회원 찜·최근 본 목록과 관리자 맛집·유튜버·영상·Visit 네 등록 화면이 모두 렌더링됨을 직접 확인했으며, 회원·관리자 Bearer를 사용하는 전체 기능 흐름은 사용자가 확인했다. |
 | 맛집 공개 상태를 재사용할 수 있는가 | **충족** | `publication_status`와 `lifecycle_status`가 공개 목록·상세 및 개인화 조회 경계에 적용돼 있다. 컬렉션·큐레이션·인기 결과도 같은 공개 판정을 사용한다는 계약은 각 기능 문서에서 다시 명시해야 한다. |
 | 인기 집계용 행동 데이터가 있는가 | **부분 충족** | 찜과 최근 본 맛집 데이터는 구현돼 있다. 다만 최근 기록은 회원·맛집별 최신 1건, 최신 50건 상한, 30일 보존 구조이므로 반복 조회 횟수나 전체 조회 이벤트를 나타내지 않는다. 현재 데이터만으로 `조회수 기반 인기`를 정의해서는 안 된다. |
 | 비동기 작업을 운용할 수 있는가 | **제한적으로 충족** | 단일 EC2 애플리케이션에서 Spring `@Scheduled`, PostgreSQL `SKIP LOCKED` Outbox, 재시도 작업을 운용하고 있다. 이는 회원 Action 메일 등 승인된 좁은 사례에 한정되며 범용 이벤트·메시지 브로커의 승인을 뜻하지 않는다. |
@@ -68,14 +68,14 @@ related_documents:
 
 ### 5.1 1차 확장 계약 상태 동기화
 
-다음 문서는 본문에서 기능과 세부 결정을 확정하고 실제 구현·교차 인수까지 완료했지만 frontmatter가 `draft`다.
+다음 문서는 본문에서 기능과 세부 결정을 확정하고 실제 구현·교차 인수까지 완료했지만 재판정 전 frontmatter가 `draft`였다.
 
 - [사용자 계정·인증 PRD](../04-product/prd/account/member-authentication.md)
 - [개인 맛집 관리 PRD](../04-product/prd/personal/personal-restaurant-management.md)
 - [일반 회원 계정·인증 API](../05-specs/api/account/member-authentication-api.md)
 - [개인 맛집 관리 API](../05-specs/api/personal/personal-restaurant-api.md)
 
-각 owner가 `draft` 유지가 의도인지 확인해야 한다. 확정 전환에 합의하면 해당 문서의 상태, 제품·API·데이터·ADR 추적표, 1차 확장 완료 기록을 같은 문서 변경 범위에서 동기화한다.
+2026-08-04 사용자가 네 계약의 확정 전환을 명시적으로 승인했다. 이에 따라 네 문서의 frontmatter를 저장소 확정 상태 표기 관례인 `approved`로 동기화했다. 제품·API 추적표에는 이미 네 계약과 요구사항·Workstream 연결이 있고, 데이터·ADR 추적표에는 회원·개인화 물리 계약과 인증 결정을 역추적할 수 있는 연결이 존재함을 확인했다.
 
 ### 5.2 인기 맛집의 행동 신호
 
@@ -116,12 +116,18 @@ FCM을 선택하면 [ADR-NOTIFY-001](../07-adr/adr-backlog.md#adr-notify-001-fcm
 5. 사용자 알림의 채널·동의·해지·전달 보장과 운영 토폴로지를 확정하고 필요한 ADR을 활성화한다.
 6. 확정 계약을 제품·API·데이터·ADR 추적표에서 역추적할 수 있게 연결한다.
 
+2026-08-04 재판정에서 조건 2~6은 확정된 2차 확장 요구사항·범위·PRD owner, 현재 찜 기반 인기 집계와 보존·개인정보 기준, 제보·신고 상태와 결과 알림, 서비스 내 알림의 전달·운영 결정, 네 추적표 연결로 모두 충족했다. 조건 1도 회원·개인화 네 계약의 `approved` 전환, `E1-T11` 운영 지도 네트워크 계측, `E1-T12` 회귀와 `E1-T13` 운영 확인까지 충족해 전체 착수 게이트를 통과한다.
+
 ## 7. 검증 결과와 제약
 
 - 소스·V2 마이그레이션·화면과 `E1-T10` 교차 인수 및 1차 확장 운영 배포 병합 이력에서 `E1-T03`·`E1-T04` 구현 근거를 확인했다.
 - `MemberAuthenticationServiceTest`, `MemberAuthenticationControllerTest`, `MemberActionMailOutboxServiceTest`를 실행해 회원 인증·API 응답·메일 Outbox 관련 테스트가 통과하는 것을 확인했다.
 - 2026-08-04 `f79444c`에서 Docker Desktop을 실행한 뒤 `.\gradlew.bat --no-daemon clean build`를 실행했다. PostgreSQL 17.10·Redis 8.8·WireMock Testcontainers 통합 테스트를 포함한 492개 테스트가 모두 통과했고 `ClassNotFoundException`은 0건이었다.
-- 프론트 `npm run build`는 자동 테스트 77개, `tsc --noEmit`, Next.js 16.2.11 프로덕션 빌드를 모두 통과했다. 로컬 Node는 저장소 고정값 24.18.0이 아닌 24.14.0이었으므로, 고정 런타임 CI 결과를 최종 증거로 다시 대조한다.
+- PR #126의 고정 런타임 CI에서 프론트 자동 테스트 77개, `tsc --noEmit`, Next.js 16.2.11 프로덕션 빌드가 모두 통과했다. 당시 로컬 Node는 저장소 고정값 24.18.0이 아닌 24.14.0이었으므로 프로덕션 빌드 완료 판정은 CI 결과를 근거로 한다.
 - 이 검증에서 `auth-navigation.test.ts`가 스크립트로 해석돼 다른 테스트와 전역 변수가 충돌하는 결함을 확인했고 ES module import로 수정했다.
-- PR #122~#124의 구현 병합은 확인했지만, 회원·개인화 PRD/API 4개의 `draft` 상태와 운영 환경의 지도·검증 세션·Bearer·복구 재검증이 남아 있어 `implementation_gate: Blocked`를 유지한다.
+- [M2 운영 프로비저닝 기록 13절](m2-provisioning-record.md#13-m2-13-복구-리허설-52)에 2026-07-30 RDS 스냅샷 복구, Redis 재기동·fail-closed·복구, 직전 이미지 롤백·복귀, 인스턴스 재기동 전체 리허설과 복구 시간이 기록돼 있다. 이 기존 실행 증거를 E2-T01의 운영 복구 선행 근거로 인용한다.
+- 2026-08-04 운영 브라우저에서 Basic Auth 인증창 없이 검증 참여자 쿠키로 진입하고, 회원 찜·최근 본 목록과 관리자 맛집·유튜버·영상·Visit 네 등록 화면을 차례로 열었다. 이 직접 관찰은 검증 쿠키 상태의 페이지 렌더링 근거이며, 회원·관리자 Bearer를 사용하는 전체 기능 흐름의 정상 동작은 사용자가 별도로 확인했다.
+- 2026-08-04 운영 지도에서 새로고침 직후 `map-points` 요청 1건을 기준으로 이동·확대·축소 뒤에도 요청 수가 1건 그대로 유지되고 결과·선택 상태가 유지됨을 사용자가 개발자 도구 Network에서 확인했다. 자동 테스트의 뷰포트 파라미터 제거와 운영 계측 결과가 일치한다.
+- 후속 변경에서 백엔드 검증 세션·보안 경계·회원·개인화·지도·관리자 인수 대상 테스트와 프론트 자동 테스트 77건, `tsc --noEmit`이 통과했다. 로컬 `next build`는 설치된 TypeScript 7.0.2를 Next.js가 감지하지 못해 재설치를 시도하다 현재 환경의 npm 쓰기 권한으로 중단됐으며, 프론트 소스가 바뀌지 않은 PR #126의 고정 런타임 CI 빌드 성공을 기준선 증거로 유지하고 후속 PR CI에서 다시 확인한다.
+- 회원·개인화 네 계약의 `approved` 전환과 운영 지도·세션·회원·관리자·복구 근거로 기존 차단 사유가 모두 해소돼 `implementation_gate: Ready`로 판정한다.
 - 기존 운영 기록은 단일 EC2, PostgreSQL, Redis, SMTP, Scheduler, CloudWatch·Slack 운영 알림의 운용 근거만 제공한다. FCM, 사용자 알림 저장소, 범용 Queue·Worker가 준비됐다는 근거로 사용하지 않는다.
