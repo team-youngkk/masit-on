@@ -28,7 +28,7 @@ related_documents:
 | 스레드 | 요청 요약 | 문제 유형 | 판단 | 처리 결과 | 근거/검증 |
 |---|---|---|---|---|---|
 | [식별 제거 시각을 함께 강제](https://github.com/team-youngkk/masit-on/pull/131#discussion_r3709828086) (P2, 이우람) | 부모 회원을 직접 삭제해도 `member_id=NULL`과 `member_unlinked_at=now`가 함께 기록되게 함 | 데이터베이스 | 수정 필요 | `submission`·`report`의 두 열을 정확한 쌍으로 강제하고, 회원 삭제 전 두 요청을 unlink하는 PostgreSQL 트리거를 추가했다. 직접 회원 삭제와 잘못된 단독 NULL 갱신 회귀 테스트를 보강했다. | `Expansion2FlywayMigrationIntegrationTest`, `MemberDeletionCleanupPostgreSqlIntegrationTest` 통과 |
-| [E2-T01 구현 게이트를 먼저 통과](https://github.com/team-youngkk/masit-on/pull/131#discussion_r3709848370) (P1, 김인안) | 선행 운영 검증과 owner 승인 뒤 권위 문서를 통과 상태로 동기화하거나 그 전까지 구현 PR 병합을 중단 | Git·운영 게이트 | 결정 필요 | 코드나 계약 상태를 임의로 변경하지 않고 스레드를 미해결로 유지한다. | `implementation_gate: Blocked`, PR #126 본문의 Blocked 판정, 4개 선행 PRD/API의 `status: draft`를 확인 |
+| [E2-T01 구현 게이트를 먼저 통과](https://github.com/team-youngkk/masit-on/pull/131#discussion_r3709848370) (P1, 김인안) | 선행 운영 검증과 owner 승인 뒤 권위 문서를 통과 상태로 동기화하거나 그 전까지 구현 PR 병합을 중단 | Git·운영 게이트 | 결정 필요 | PR을 Draft로 전환해 병합을 차단하고, 코드나 계약 상태를 임의로 변경하지 않은 채 스레드를 미해결로 유지한다. | `implementation_gate: Blocked`, PR #126 본문의 Blocked 판정, 4개 선행 PRD/API의 `status: draft`와 PR Draft 상태를 확인 |
 | [main 전용 변경을 별도 develop 역동기화 PR로 분리](https://github.com/team-youngkk/masit-on/pull/131#discussion_r3710043566) (P2, 김인안) | PR #129의 배포·인증·ADR·문서 변경을 E2-T02 PR에서 제거하고 최신 develop 기준으로 기능 범위를 재구성 | Git | 수정 필요 | 정리 전 HEAD를 로컬 백업하고 `origin/develop`에서 E2-T02·CI·리뷰 수정만 다시 적용했다. main 전용 대표 파일 네 경로가 diff에서 0건임을 확인하고 PR 본문을 현재 범위에 맞게 갱신한다. | `git diff --name-only origin/develop...HEAD` 45개, main 전용 대표 경로 diff 0개 |
 
 ## 3. 문제 현상과 발생 조건
@@ -76,6 +76,7 @@ related_documents:
 | FK를 `RESTRICT`로 바꾸는 대안 검토 | 데이터 계약이 `ON DELETE SET NULL`을 명시 | 계약 변경이므로 기각하고 삭제 전 트리거 채택 |
 | Application 탈퇴 Command만 유지하는 대안 검토 | 직접 부모 삭제와 FK 경로에서는 시각 누락 | 모든 DB 삭제 경로를 보장하지 못해 기각 |
 | PR #126, 이슈 #105, 기준선 문서, 선행 PRD/API 상태 확인 | 이슈는 닫혔지만 PR과 문서는 명시적으로 Blocked, 네 문서는 draft | 게이트를 임의 통과시키지 않고 결정 필요로 유지 |
+| 최신 `origin/develop`과 PR #131 상태 재확인 | 게이트 통과 커밋·운영 증거·owner 승인은 없고 PR만 Ready 상태 | PR을 Draft로 전환하고 승인 주체의 선행 변경을 기다림 |
 | PR #125·#126 트러블슈팅 기록 확인 | 실제 diff와 PR 서술의 일치, 이슈 종료와 게이트 통과의 분리 원칙을 확인 | 3.2·3.3 판단에 재사용 |
 | merge commit `52d5d83`의 부모와 `origin/develop..HEAD` 그래프 확인 | main 전용 PR #129 커밋들이 기능 브랜치의 고유 커밋으로 포함됨 | 최신 develop에서 허용 커밋만 재구성 |
 | merge commit을 revert하는 대안 검토 | 내용은 제거할 수 있지만 main 계보와 범위 밖 merge commit이 PR 이력에 남음 | 리뷰 요청인 범위·추적성 회복에 부족해 기각 |
@@ -86,6 +87,7 @@ related_documents:
 - 변경 내용: `member_account` 삭제 전에 두 요청 테이블을 `member_id=NULL`, `member_unlinked_at=CURRENT_TIMESTAMP`로 갱신하는 트리거를 V3에 추가했다.
 - 변경 내용: 직접 회원 삭제 뒤 제보·신고 모두 제거 시각이 존재하는지, 시각 없이 `member_id`만 NULL로 바꾸면 거부되는지 PostgreSQL 테스트를 추가했다.
 - 변경 내용: E2-T01은 문서 owner와 운영 담당자의 증거가 필요한 외부 결정이므로 스레드를 미해결 상태로 유지한다.
+- 변경 내용: 게이트가 Blocked인 동안 병합 가능한 Ready 상태로 보이지 않도록 PR #131을 Draft로 전환했다.
 - 변경 내용: 정리 전 HEAD `e58a6bc`를 로컬 `backup/pr-131-before-scope-cleanup`에 보존하고, `origin/develop`에서 E2-T02·CI·리뷰 수정만 다시 적용했다. merge commit `52d5d83`과 PR #129 main 전용 변경은 새 이력에서 제외했다.
 - 선택 이유: 트리거는 확정된 `ON DELETE SET NULL` 계약을 바꾸지 않으면서 Application Command와 직접 FK 삭제 모두 같은 불변 조건을 지킨다. 게이트는 구현자가 자체 승인할 수 없는 선행 통제이므로 변경하지 않는다. 브랜치 재구성은 범위 밖 파일뿐 아니라 잘못 포함된 계보까지 제거해 PR squash 추적성을 회복한다.
 - 변경 파일: `src/main/resources/db/migration/V3__add_expansion_2_schema.sql`, `src/test/java/com/masiton/Expansion2FlywayMigrationIntegrationTest.java`, `src/test/java/com/masiton/common/idempotency/IdempotencyPostgreSqlIntegrationTest.java`, `docs/troubleshooting/README.md`, 이 문서와 PR 본문
@@ -118,4 +120,4 @@ related_documents:
 ## 10. 남은 사항
 
 - E2-T01 게이트 스레드는 문서 owner 승인과 운영 검증 증거가 없어 해결 처리하지 않는다.
-- 게이트가 통과될 때까지 PR #131은 병합하지 않는다.
+- 게이트가 통과될 때까지 PR #131은 Draft로 유지하고 병합하지 않는다.
