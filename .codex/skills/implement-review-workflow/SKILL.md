@@ -13,9 +13,11 @@ Deliver the requested code change, not merely a plan or review report. Keep the 
 2. Translate the request into explicit acceptance criteria.
 3. Preserve unrelated user changes. Do not let agents revert or overwrite work outside their ownership.
 4. Identify risky areas such as authentication, authorization, secrets, data loss, migrations, concurrency, public APIs, and deployment behavior.
-5. **Read the existing troubleshooting records before implementing.** If the repository keeps them (in this repository, `docs/troubleshooting/` with an index at `docs/troubleshooting/README.md`), find every record that touches the same files, domain, or contract as this task and treat its "근본 원인" and "재발 방지" items as binding constraints on this implementation. Do not repeat a mistake the team has already diagnosed and recorded.
+5. **Read the existing troubleshooting records before implementing.** If the repository keeps them (in this repository, `docs/troubleshooting/` with an index at `docs/troubleshooting/README.md`), find every record that touches the same files, domain, or contract as this task and use its "근본 원인" and "재발 방지" items as a **regression-risk checklist**. Do not repeat a mistake the team has already diagnosed and recorded.
 
-Carry the constraints found in step 5 into each delegation prompt explicitly — subagents do not share this conversation's context and will not find those records on their own.
+   Troubleshooting records are not part of the repository's document authority order (`AGENTS.md` §2, items 1–6); they are non-contract review material. Cross-check each 재발 방지 item against the current requirements, Accepted ADRs, API/data contracts, and architecture, and treat **only the items still valid** as constraints on this implementation. Where a record conflicts with a current contract, the authority order wins and the record is discarded. Report a genuine document conflict as such, but do not stall the implementation over a stale record.
+
+Carry only the cross-checked, still-valid constraints from step 5 into each delegation prompt — subagents do not share this conversation's context and will not find those records on their own. Never forward unverified past advice as a constraint.
 
 ## 2. Choose an Execution Shape
 
