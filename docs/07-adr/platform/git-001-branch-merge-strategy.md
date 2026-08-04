@@ -67,7 +67,7 @@ MVP 초기 정책은 반대였다 — 기능·수정 브랜치에서 `develop`�
 
 ## 9. 적용 범위
 
-`masiton-on` 저장소의 모든 브랜치 병합에 적용한다. `feature/**`, `fix/**`, `docs/**`, `chore/**`, `build/**`, `ci/**`, `test/**`, `refactor/**` 등 작업 브랜치 전체가 대상이며, 예외는 운영 Hotfix의 `main` 직접 승격뿐이다.
+`masit-on` 저장소의 모든 브랜치 병합에 적용한다. `feature/**`, `fix/**`, `docs/**`, `chore/**`, `build/**`, `ci/**`, `test/**`, `refactor/**` 등 작업 브랜치 전체가 대상이며, 예외는 운영 Hotfix의 `main` 직접 승격뿐이다.
 
 ## 10. 강제 규칙
 
