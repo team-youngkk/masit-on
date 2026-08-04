@@ -1,11 +1,12 @@
-const assert = require('node:assert/strict')
-const test = require('node:test')
-const {
+import assert from 'node:assert/strict'
+import test from 'node:test'
+
+import {
   memberLoginHref,
   memberSignupHref,
   memberVerifyEmailHref,
   safeMemberReturnTo,
-} = require('./auth-navigation.ts')
+} from './auth-navigation.ts'
 
 test('로그인 링크는 기본 로그인 화면으로 이동한다', () => {
   assert.equal(memberLoginHref(undefined), '/login')
