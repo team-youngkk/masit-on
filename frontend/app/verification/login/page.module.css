@@ -1,0 +1,49 @@
+.page {
+  display: grid;
+  min-height: calc(100vh - 12rem);
+  place-items: center;
+  padding: var(--space-6) 0;
+}
+
+.card {
+  display: grid;
+  width: min(100%, 30rem);
+  gap: var(--space-6);
+  padding: clamp(1.5rem, 5vw, 2.5rem);
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.card h1,
+.description,
+.eyebrow,
+.error {
+  margin: 0;
+}
+
+.card h1 {
+  font-size: var(--font-size-2xl);
+}
+
+.eyebrow {
+  color: var(--color-primary-strong);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.description {
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
+.form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.error {
+  color: var(--color-danger);
+  line-height: 1.5;
+}

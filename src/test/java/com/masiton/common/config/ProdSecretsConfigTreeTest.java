@@ -54,6 +54,16 @@ class ProdSecretsConfigTreeTest {
             assertThat(environment.getProperty("masiton.member.rate-limit.secret")).isEqualTo("member-rate-secret");
             assertThat(environment.getProperty("spring.mail.username")).isEqualTo("smtp-user");
             assertThat(environment.getProperty("spring.mail.password")).isEqualTo("smtp-password");
+            assertThat(environment.getProperty("masiton.security.verification.login-id"))
+                    .isEqualTo("verification-participant");
+            assertThat(environment.getProperty("masiton.security.verification.password-hash"))
+                    .isEqualTo("verification-bcrypt-hash");
+            assertThat(environment.getProperty("masiton.security.verification.public-base-url"))
+                    .isEqualTo("https://masiton.click");
+            assertThat(environment.getProperty("masiton.security.verification.trusted-proxy-addresses"))
+                    .isEqualTo("127.0.0.1");
+            assertThat(environment.getProperty("masiton.security.verification.reverse-proxy-enabled"))
+                    .isEqualTo("true");
         });
     }
 
@@ -137,6 +147,9 @@ class ProdSecretsConfigTreeTest {
                         "MAIL_HOST=smtp.example.invalid",
                         "MAIL_PORT=587",
                         "MEMBER_PUBLIC_BASE_URL=https://masiton.click",
+                        "VERIFICATION_PUBLIC_BASE_URL=https://masiton.click",
+                        "VERIFICATION_TRUSTED_PROXY_ADDRESSES=127.0.0.1",
+                        "VERIFICATION_REVERSE_PROXY_ENABLED=true",
                         "MEMBER_TRUSTED_PROXY_ADDRESSES=127.0.0.1",
                         "MEMBER_REVERSE_PROXY_ENABLED=true",
                         "RESTAURANT_MAP_TRUSTED_PROXY_ADDRESSES=127.0.0.1",
@@ -155,6 +168,8 @@ class ProdSecretsConfigTreeTest {
         write(secrets, "masiton.member.rate-limit.secret", "member-rate-secret");
         write(secrets, "spring.mail.username", "smtp-user");
         write(secrets, "spring.mail.password", "smtp-password");
+        write(secrets, "masiton.security.verification.login-id", "verification-participant");
+        write(secrets, "masiton.security.verification.password-hash", "verification-bcrypt-hash");
         write(secrets, "masiton.integration.kakao.rest-api-key", "kakao-key-value");
         write(secrets, "masiton.integration.youtube.api-key", "youtube-key-value");
     }
