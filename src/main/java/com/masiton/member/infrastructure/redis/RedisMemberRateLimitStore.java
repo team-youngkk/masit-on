@@ -23,6 +23,7 @@ public class RedisMemberRateLimitStore implements MemberRateLimitStore {
     private static final String EMAIL_COOLDOWN_PREFIX = PREFIX + "email-cooldown:";
     private static final String EMAIL_DAILY_PREFIX = PREFIX + "email-daily:";
     private static final String ACCOUNT_ACTION_SOURCE_PREFIX = PREFIX + "account-action-source:";
+    private static final String EMAIL_VERIFICATION_SOURCE_PREFIX = PREFIX + "email-verification-source:";
     private static final String LOGIN_EMAIL_SOURCE_PREFIX = PREFIX + "login-email-source:";
     private static final String LOGIN_EMAIL_PREFIX = PREFIX + "login-email:";
     private static final String LOGIN_SOURCE_PREFIX = PREFIX + "login-source:";
@@ -30,9 +31,11 @@ public class RedisMemberRateLimitStore implements MemberRateLimitStore {
     private static final Duration EMAIL_COOLDOWN_TTL = Duration.ofSeconds(60);
     private static final Duration EMAIL_DAILY_TTL = Duration.ofDays(1);
     private static final Duration ACCOUNT_ACTION_SOURCE_TTL = Duration.ofHours(1);
+    private static final Duration EMAIL_VERIFICATION_SOURCE_TTL = Duration.ofMinutes(10);
     private static final Duration LOGIN_FAILURE_TTL = Duration.ofMinutes(15);
     private static final int EMAIL_DAILY_LIMIT = 5;
     private static final int ACCOUNT_ACTION_SOURCE_LIMIT = 20;
+    private static final int EMAIL_VERIFICATION_SOURCE_LIMIT = 10;
     private static final int LOGIN_EMAIL_SOURCE_LIMIT = 5;
     private static final int LOGIN_EMAIL_LIMIT = 10;
     private static final int LOGIN_SOURCE_LIMIT = 50;
@@ -84,6 +87,22 @@ public class RedisMemberRateLimitStore implements MemberRateLimitStore {
               end
             end
             return 0
+            """, Long.class);
+
+    private static final DefaultRedisScript<Long> ACQUIRE_EMAIL_VERIFICATION_ATTEMPT = new DefaultRedisScript<>("""
+            local attempts = tonumber(redis.call('GET', KEYS[1]) or '0')
+            if attempts >= tonumber(ARGV[1]) then
+              local ttl = tonumber(redis.call('TTL', KEYS[1]) or '-1')
+              if ttl < 1 then
+                ttl = tonumber(ARGV[2])
+              end
+              return -ttl
+            end
+            attempts = redis.call('INCR', KEYS[1])
+            if attempts == 1 then
+              redis.call('EXPIRE', KEYS[1], ARGV[2])
+            end
+            return 1
             """, Long.class);
 
     private static final DefaultRedisScript<Long> RECORD_LOGIN_FAILURE = new DefaultRedisScript<>("""
@@ -143,6 +162,23 @@ public class RedisMemberRateLimitStore implements MemberRateLimitStore {
     }
 
     @Override
+    public VerificationAttemptResult acquireEmailVerificationAttempt(String source) {
+        Long result = redisTemplate.execute(
+                ACQUIRE_EMAIL_VERIFICATION_ATTEMPT,
+                List.of(emailVerificationAttemptKey(source)),
+                String.valueOf(EMAIL_VERIFICATION_SOURCE_LIMIT),
+                seconds(EMAIL_VERIFICATION_SOURCE_TTL)
+        );
+        if (result == null) {
+            throw new IllegalStateException("Email verification rate-limit script returned no result");
+        }
+        if (result < 0) {
+            return VerificationAttemptResult.reject(Math.max(1, -result));
+        }
+        return VerificationAttemptResult.permit();
+    }
+
+    @Override
     public void recordLoginFailure(String normalizedEmail, String source) {
         redisTemplate.execute(
                 RECORD_LOGIN_FAILURE,
@@ -161,6 +197,10 @@ public class RedisMemberRateLimitStore implements MemberRateLimitStore {
 
     private String accountActionSourceKey(String source) {
         return ACCOUNT_ACTION_SOURCE_PREFIX + hash(source);
+    }
+
+    private String emailVerificationAttemptKey(String source) {
+        return EMAIL_VERIFICATION_SOURCE_PREFIX + hash(source);
     }
 
     private String loginEmailSourceKey(String normalizedEmail, String source) {

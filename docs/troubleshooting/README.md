@@ -10,6 +10,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #124 가입 이메일 인증 코드 리뷰 반영](pr-124-email-verification-code-review.md)
 - [PR #123 검증 참여자 세션 리뷰 반영](pr-123-verification-session-review.md)
 - [PR #122 지도 뷰포트 비종속 조회 문서·테스트 반영](pr-122-map-viewport-independent-query-review.md)
 - [PR #100 이메일 인증 후속 흐름 리뷰 반영](pr-100-email-verification-review.md)

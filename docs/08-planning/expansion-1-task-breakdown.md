@@ -156,7 +156,7 @@ related_documents:
 
 ### E1-T12 가입 이메일 인증 8자 코드 전환
 
-- 현재 상태: Planned — 문서 계약 승인, 코드·테스트 미반영
+- 현재 상태: 구현 완료, PR 리뷰 대기 — `E1-T10` 회원 인증 회귀를 이 구현 PR에서 재실행한다.
 - 담당자 / 리뷰어: 김인안 / 이우람
 - 관련 계약: `FR-MEMBER-002`, `BR-MEMBER-003`, `BR-AUTH-008`, `NFR-SECURITY-004`; [회원 계정·인증 PRD](../04-product/prd/account/member-authentication.md), [회원 계정·인증 API](../05-specs/api/account/member-authentication-api.md), [ADR-AUTH-002](../07-adr/security/auth-002-member-jwt-refresh-token.md), [ADR-AUTH-005](../07-adr/security/auth-005-member-action-mail-outbox.md)
 - 수정 예상 영역: 이메일 인증 코드 생성기·해시 조회, 인증 API 입력 정규화·형식 검증·제출 제한, 메일 템플릿, 인증 입력 UI, Outbox·서비스·Controller·브라우저 테스트. 비밀번호 재설정·Access·Refresh Token 생성기는 변경하지 않는다.
