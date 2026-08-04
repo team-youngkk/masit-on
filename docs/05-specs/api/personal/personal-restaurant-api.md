@@ -1,7 +1,7 @@
 ---
 id: API-PERSONAL-001
 title: 개인 맛집 관리 API
-status: draft
+status: approved
 related_prd:
   - PRD-PERSONAL-001
   - PRD-ACCOUNT-001

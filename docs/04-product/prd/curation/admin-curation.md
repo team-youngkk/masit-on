@@ -1,7 +1,7 @@
 ---
 id: PRD-CURATION-001
 title: 관리자 큐레이션
-status: draft
+status: approved
 workstream: WS-11
 owner: 김인안
 reviewers:

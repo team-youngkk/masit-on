@@ -1,7 +1,7 @@
 ---
 id: PRD-PERSONAL-001
 title: 개인 맛집 관리
-status: draft
+status: approved
 workstream: WS-06
 owner: 박진영
 reviewers:

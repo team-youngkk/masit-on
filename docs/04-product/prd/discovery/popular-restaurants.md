@@ -1,7 +1,7 @@
 ---
 id: PRD-DISCOVERY-004
 title: 인기 맛집
-status: draft
+status: approved
 workstream: WS-10
 owner: 양성훈
 reviewers:
