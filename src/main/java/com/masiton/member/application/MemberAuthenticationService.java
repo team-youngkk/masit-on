@@ -107,6 +107,9 @@ public class MemberAuthenticationService {
                         "Too many email verification attempts",
                         attempt.retryAfterSeconds());
             }
+            if (rawToken == null) {
+                throw new BusinessException(ErrorCode.MISSING_REQUIRED_FIELD, "token", "필수 요청 값이 누락되었습니다.");
+            }
             String normalizedToken = normalizeEmailVerificationToken(rawToken);
             accounts.activate(consume(normalizedToken, MemberActionPurpose.EMAIL_VERIFICATION).memberId(), Instant.now(clock));
         } catch (BusinessException exception) {

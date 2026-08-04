@@ -23,7 +23,8 @@ import com.masiton.visit.application.port.in.FindDistinctValidRestaurantIdsByCre
 
 /**
  * API-MAP-001 지도 맛집 마커 조회를 처리한다.
- * BR-MAP-002~004 순서(호출 제한 -> 기존 필터 AND)로 검증한 뒤 Query Port를 호출한다.
+ * BR-MAP-004(호출 제한)를 먼저 확인하고 BR-MAP-002 조건(이름·자치구·카테고리·유튜버 AND, 뷰포트 비종속)으로
+ * Query Port를 호출한 뒤, BR-MAP-003(최대 200건) 초과 여부를 결과 건수로 판정한다.
  */
 @Service
 public class RestaurantMapPointsQueryService implements SearchRestaurantMapPointsUseCase {

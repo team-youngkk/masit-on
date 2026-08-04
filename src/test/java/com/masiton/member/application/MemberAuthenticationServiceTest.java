@@ -204,6 +204,22 @@ class MemberAuthenticationServiceTest {
     }
 
     @Test
+    @DisplayName("이메일 인증 제출은 token 필드가 없어도 출처 제한을 소모한다")
+    void 이메일인증_token필드누락_출처제한을소모한다() {
+        given(rateLimits.acquireEmailVerificationAttempt("127.0.0.1"))
+                .willReturn(MemberRateLimitStore.VerificationAttemptResult.permit());
+
+        assertThatThrownBy(() -> service().verifyEmail(null, "127.0.0.1"))
+                .isInstanceOfSatisfying(BusinessException.class, exception -> {
+                    assertThat(exception.status()).isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST);
+                    assertThat(exception.code()).isEqualTo("MISSING_REQUIRED_FIELD");
+                });
+
+        verify(rateLimits).acquireEmailVerificationAttempt("127.0.0.1");
+        verifyNoInteractions(actionTokens, accounts);
+    }
+
+    @Test
     @DisplayName("이메일 인증 제출 제한을 초과하면 429와 Retry-After를 반환한다")
     void 이메일인증_제출제한초과_429RetryAfter반환() {
         given(rateLimits.acquireEmailVerificationAttempt("127.0.0.1"))

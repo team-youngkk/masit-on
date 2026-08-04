@@ -55,10 +55,8 @@ public class MemberAuthenticationController {
 
     @PostMapping("/email-verifications")
     public ResponseEntity<Void> verifyEmail(@RequestBody(required = false) TokenRequest request, HttpServletRequest servletRequest) {
-        if (request == null || request.token() == null) {
-            throw new BusinessException(ErrorCode.MISSING_REQUIRED_FIELD, "token", "필수 요청 값이 누락되었습니다.");
-        }
-        service.verifyEmail(request.token(), clientAddressResolver.resolve(servletRequest));
+        String token = request == null ? null : request.token();
+        service.verifyEmail(token, clientAddressResolver.resolve(servletRequest));
         return ResponseEntity.noContent().build();
     }
 

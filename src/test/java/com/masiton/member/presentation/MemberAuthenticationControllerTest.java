@@ -120,6 +120,22 @@ class MemberAuthenticationControllerTest {
     }
 
     @Test
+    @DisplayName("이메일 인증은 token 필드가 없어도 서비스에 null을 전달해 제한을 소모하게 한다")
+    void 이메일인증_token필드누락_서비스에null전달() throws Exception {
+        doThrow(new BusinessException(
+                com.masiton.common.web.ErrorCode.MISSING_REQUIRED_FIELD, "token", "필수 요청 값이 누락되었습니다."
+        )).when(service).verifyEmail(null, "127.0.0.1");
+
+        mockMvc.perform(post("/api/auth/email-verifications")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("MISSING_REQUIRED_FIELD"));
+
+        verify(service).verifyEmail(null, "127.0.0.1");
+    }
+
+    @Test
     @DisplayName("로그인은 Refresh Cookie를 보안 속성과 함께 발급한다")
     void 로그인_성공_RefreshCookie계약반환() {
         when(service.login(any(), any(), any())).thenReturn(new MemberAuthenticationResult("access", "refresh", 1800));
