@@ -57,7 +57,7 @@ related_documents:
 - 발생 환경: `feature/e2-t02-common-foundation` → `develop`, merge commit `52d5d83`
 - 재현 조건: `main`을 기능 브랜치에 직접 병합한 뒤 `origin/develop...HEAD` diff를 확인한다.
 - 실제 결과: PR #129의 Nginx 배포 스크립트, 검증 세션·회원 인증, 병합 방식 ADR, 트러블슈팅 기록이 E2-T02와 함께 표시돼 diff가 43개에서 63개 파일로 늘었다.
-- 기대 결과: 기능 브랜치는 최신 `develop`을 기준으로 E2-T02와 해당 리뷰 수정만 포함하고, main 전용 Hotfix는 별도 역동기화 PR이 담당해야 한다.
+- 기대 결과: 기능 브랜치는 최신 `develop`을 기준으로 E2-T02와 해당 리뷰 수정만 포함한다. PR #129 역동기화가 필요하면 다른 담당자의 별도 작업에서 처리하며, 이 PR은 혼입 제거까지만 담당한다.
 - 영향 범위: PR 소유권, 리뷰 범위, squash commit의 추적성
 
 ## 4. 근본 원인
@@ -104,7 +104,7 @@ related_documents:
 ## 8. 재발 방지 및 다음 확인
 
 - 재발 방지: 부모 삭제 정책 테스트가 nullable FK뿐 아니라 연동되는 감사·시각 열의 불변 조건도 함께 검증한다.
-- 재발 방지: 기능 브랜치 갱신 기준은 `origin/develop`로 고정하고, main 전용 변경은 별도 역동기화 PR로만 전달한다.
+- 재발 방지: 기능 브랜치 갱신 기준은 `origin/develop`로 고정한다. main 전용 변경의 역동기화 여부와 실행은 별도 담당자 범위로 남기고, PR #131에서는 해당 변경을 가져오지 않는다.
 - 다음 확인: E2-T01 담당자 이우람과 기본 리뷰어 김인안, 회원·개인화 계약 owner가 운영 검증 및 문서 상태를 승인한 뒤 `implementation_gate`와 추적표를 별도 선행 변경에서 동기화한다. 추적 대상은 [이슈 #105](https://github.com/team-youngkk/masit-on/issues/105)다.
 
 ## 9. 도입 전후 비교 지표
