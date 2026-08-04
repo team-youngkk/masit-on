@@ -37,35 +37,46 @@ if [ "$verification_status" != "401" ]; then
   exit 1
 fi
 
-# 이제부터 Basic Auth 구성을 제거·교체한다. nginx -t나 재시작이 실패하면
-# 직전 Basic 구성으로 복구해야 하므로(expansion-1-task-breakdown.md 178행),
-# 지우거나 덮어쓰기 전에 각 파일을 백업해 둔다.
+# 이제부터 Basic Auth 구성을 제거·교체하는 컷오버 구간이다. nginx -t나
+# 재시작뿐 아니라 이 구간의 어떤 명령이라도 실패하면 직전 Basic 구성으로
+# 복구해야 하므로(expansion-1-task-breakdown.md 178행), 지우거나 덮어쓰는
+# 모든 파일을 먼저 백업하고 ERR trap으로 구간 전체를 감싼다.
 ROLLBACK_DIR=$(mktemp -d)
-trap 'rm -rf "$ROLLBACK_DIR"' EXIT
 BASIC_AUTH_DROPIN=/etc/systemd/system/nginx.service.d/10-masiton-basic-auth.conf
 OLD_AUTH_MAP=/etc/nginx/conf.d/01-masiton-api-auth-map.conf
 SITE_CONF=/etc/nginx/conf.d/masiton.click.conf
+UPGRADE_MAP_CONF=/etc/nginx/conf.d/00-masiton-upgrade-map.conf
+NGINX_CONF=/etc/nginx/nginx.conf
 
 if [ -f "$BASIC_AUTH_DROPIN" ]; then cp -p "$BASIC_AUTH_DROPIN" "$ROLLBACK_DIR/basic-auth-dropin.conf"; fi
 if [ -f "$OLD_AUTH_MAP" ]; then cp -p "$OLD_AUTH_MAP" "$ROLLBACK_DIR/auth-map.conf"; fi
 if [ -f "$SITE_CONF" ]; then cp -p "$SITE_CONF" "$ROLLBACK_DIR/masiton.click.conf"; fi
+if [ -f "$UPGRADE_MAP_CONF" ]; then cp -p "$UPGRADE_MAP_CONF" "$ROLLBACK_DIR/00-masiton-upgrade-map.conf"; fi
+if [ -f "$NGINX_CONF" ]; then cp -p "$NGINX_CONF" "$ROLLBACK_DIR/nginx.conf"; fi
+
+restore_or_remove() {
+  if [ -f "$ROLLBACK_DIR/$1" ]; then install -m 0644 "$ROLLBACK_DIR/$1" "$2"; else rm -f "$2"; fi
+}
 
 rollback_basic_auth() {
-  echo "새 설정 적용에 실패했다. 백업한 직전 Basic Auth 구성으로 복구한다." >&2
-  if [ -f "$ROLLBACK_DIR/basic-auth-dropin.conf" ]; then
-    install -m 0644 "$ROLLBACK_DIR/basic-auth-dropin.conf" "$BASIC_AUTH_DROPIN"
-  fi
-  if [ -f "$ROLLBACK_DIR/auth-map.conf" ]; then
-    install -m 0644 "$ROLLBACK_DIR/auth-map.conf" "$OLD_AUTH_MAP"
-  fi
-  if [ -f "$ROLLBACK_DIR/masiton.click.conf" ]; then
-    install -m 0644 "$ROLLBACK_DIR/masiton.click.conf" "$SITE_CONF"
-  else
-    rm -f "$SITE_CONF"
-  fi
+  trap - ERR
+  echo "컷오버 구간에서 실패했다. 백업한 직전 Basic Auth 구성으로 복구한다." >&2
+  restore_or_remove basic-auth-dropin.conf "$BASIC_AUTH_DROPIN"
+  restore_or_remove auth-map.conf "$OLD_AUTH_MAP"
+  restore_or_remove masiton.click.conf "$SITE_CONF"
+  restore_or_remove 00-masiton-upgrade-map.conf "$UPGRADE_MAP_CONF"
+  if [ -f "$ROLLBACK_DIR/nginx.conf" ]; then install -m 0644 "$ROLLBACK_DIR/nginx.conf" "$NGINX_CONF"; fi
   systemctl daemon-reload
   systemctl restart nginx || echo "복구 후 재시작도 실패했다. 운영자가 직접 확인해야 한다." >&2
 }
+
+on_cutover_failure() {
+  local status=$?
+  rollback_basic_auth
+  rm -rf "$ROLLBACK_DIR"
+  exit "$status"
+}
+trap on_cutover_failure ERR
 
 # M2-11 Basic Auth의 systemd 사전 실행 경계를 제거한다. 이전 설치의 drop-in이
 # 남아 있으면 삭제한 렌더러를 계속 호출해 Nginx 재기동이 실패한다.
@@ -75,7 +86,7 @@ rm -f "$BASIC_AUTH_DROPIN"
 # 설정 검사부터 실패한다.
 AWS_REGION="${AWS_REGION:-ap-northeast-2}" "$OPT_DIR/bin/tls-deploy-cert.sh"
 
-install -m 0644 "$STAGE/00-masiton-upgrade-map.conf" /etc/nginx/conf.d/00-masiton-upgrade-map.conf
+install -m 0644 "$STAGE/00-masiton-upgrade-map.conf" "$UPGRADE_MAP_CONF"
 rm -f "$OLD_AUTH_MAP"
 install -m 0644 "$STAGE/masiton.click.conf" "$SITE_CONF"
 
@@ -85,19 +96,23 @@ install -m 0644 "$STAGE/masiton.click.conf" "$SITE_CONF"
 if [ ! -f /etc/nginx/nginx.conf.masiton-orig ]; then
   cp -p /etc/nginx/nginx.conf /etc/nginx/nginx.conf.masiton-orig
 fi
-install -m 0644 "$STAGE/nginx.conf" /etc/nginx/nginx.conf
+install -m 0644 "$STAGE/nginx.conf" "$NGINX_CONF"
 
-if ! nginx -t; then
-  rollback_basic_auth
-  exit 1
-fi
+nginx -t
 # 이전 Basic Auth drop-in을 제거했으므로 systemd 상태도 다시 읽는다.
 systemctl daemon-reload
 systemctl enable nginx >/dev/null
-if ! systemctl restart nginx || [ "$(systemctl is-active nginx)" != "active" ]; then
+systemctl restart nginx
+if [ "$(systemctl is-active nginx)" != "active" ]; then
+  echo "Nginx 재시작이 active 상태로 확인되지 않았다." >&2
   rollback_basic_auth
+  rm -rf "$ROLLBACK_DIR"
   exit 1
 fi
+
+# 컷오버가 성공했으므로 이 시점부터는 실패해도 Basic Auth를 되돌리지 않는다.
+trap - ERR
+rm -rf "$ROLLBACK_DIR"
 
 install -m 0644 "$STAGE/masiton-tls-renew.service" /etc/systemd/system/masiton-tls-renew.service
 install -m 0644 "$STAGE/masiton-tls-renew.timer" /etc/systemd/system/masiton-tls-renew.timer
