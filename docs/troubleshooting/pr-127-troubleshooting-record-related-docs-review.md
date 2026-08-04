@@ -13,7 +13,7 @@ related_documents:
 | PR | [#127 PR #125 develop→main 승격 리뷰 트러블슈팅 기록 추가](https://github.com/team-youngkk/masit-on/pull/127) |
 | 작성자 | tjdgns0618 |
 | 처리 일자 | 2026-08-04 |
-| 범위 | 변경 파일 인라인 리뷰 스레드 5건(3.1~3.5) |
+| 범위 | 병합 커밋 [`fe88bf7`](https://github.com/team-youngkk/masit-on/commit/fe88bf7f3dcac2d0c161e5a36c6e59e33a9cf79f)(PR #127) 시점까지 제기된 변경 파일 인라인 리뷰 스레드(2절 표에 모두 나열). 이 기록은 이 시점 이후로 갱신하지 않으며, 병합 이후 제기된 지적은 [pr-125-develop-to-main-sync-policy-review.md](pr-125-develop-to-main-sync-policy-review.md)에서 별도로 다룬다 |
 
 ## 2. 리뷰 스레드 처리 결과
 
@@ -107,4 +107,4 @@ related_documents:
 
 ## 8. 남은 사항
 
-- 없음.
+- 없음. PR #125 재리뷰에서 이 문서의 자기참조적 건수 갱신이 구조적으로 끝나지 않는다는 지적(정확한 총건수 대신 검증 기준점을 고정해 달라는 요청)이 나와, 1절 "범위"를 병합 커밋 기준 고정 표현으로 바꾸고 이 문서는 더 갱신하지 않기로 했다. 처리 과정은 [pr-125-develop-to-main-sync-policy-review.md](pr-125-develop-to-main-sync-policy-review.md)에 남긴다.
