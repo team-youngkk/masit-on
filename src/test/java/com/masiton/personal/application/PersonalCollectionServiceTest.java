@@ -1,0 +1,73 @@
+package com.masiton.personal.application;
+
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.Optional;
+import java.util.UUID;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import com.masiton.common.idempotency.application.port.in.IdempotentCreationUseCase;
+import com.masiton.common.web.BusinessException;
+import com.masiton.personal.application.port.out.PersonalCollectionStore;
+import com.masiton.restaurant.application.port.in.FindRestaurantReferenceUseCase;
+
+import tools.jackson.databind.ObjectMapper;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@DisplayName("개인 컬렉션 서비스")
+class PersonalCollectionServiceTest {
+
+    private final PersonalCollectionStore store = mock(PersonalCollectionStore.class);
+    private final FindRestaurantReferenceUseCase references = mock(FindRestaurantReferenceUseCase.class);
+    private final PersonalCollectionService service = new PersonalCollectionService(store, references,
+            mock(IdempotentCreationUseCase.class), new ObjectMapper(),
+            Clock.fixed(Instant.parse("2026-08-03T10:00:00Z"), ZoneOffset.UTC));
+
+    @Test
+    @DisplayName("이름은 앞뒤 공백을 제거한 뒤 저장소에 전달한다")
+    void rename_공백이있는이름_trim후변경한다() {
+        UUID memberId = UUID.randomUUID();
+        UUID collectionId = UUID.randomUUID();
+        when(store.rename(eq(memberId), eq(collectionId), eq("가족과 갈 곳"), any()))
+                .thenReturn(Optional.of(mock(
+                        com.masiton.personal.application.port.in.PersonalCollectionUseCase.CollectionSummary.class)));
+
+        service.rename(memberId, collectionId, "  가족과 갈 곳  ");
+
+        verify(store).rename(eq(memberId), eq(collectionId), eq("가족과 갈 곳"), any());
+    }
+
+    @Test
+    @DisplayName("50자를 넘는 이름은 저장 전에 거부한다")
+    void rename_51자이름_INVALID_FIELD_VALUE를반환한다() {
+        assertThatThrownBy(() -> service.rename(UUID.randomUUID(), UUID.randomUUID(), "가".repeat(51)))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        error -> assertThat(error.code()).isEqualTo("INVALID_FIELD_VALUE"));
+        verify(store, never()).rename(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("비공개 맛집은 컬렉션에 추가하지 않는다")
+    void addRestaurant_비공개맛집_RESTAURANT_NOT_FOUND를반환한다() {
+        UUID restaurantId = UUID.randomUUID();
+        when(references.findRestaurantReference(restaurantId)).thenReturn(Optional.of(
+                new FindRestaurantReferenceUseCase.RestaurantReference(restaurantId, false)));
+
+        assertThatThrownBy(() -> service.addRestaurant(
+                UUID.randomUUID(), UUID.randomUUID(), restaurantId))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        error -> assertThat(error.code()).isEqualTo("RESTAURANT_NOT_FOUND"));
+        verify(store, never()).addRestaurant(any(), any(), any(), any());
+    }
+}
