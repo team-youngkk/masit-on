@@ -3,6 +3,7 @@ related_documents:
   - README.md
   - ../06-architecture/implementation-conventions.md
   - ../../.github/PULL_REQUEST_TEMPLATE.md
+  - ../../CLAUDE.md
 ---
 
 # PR #125 리뷰 트러블슈팅: develop→main 승격 PR의 역동기화 계획 정정
