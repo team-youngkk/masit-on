@@ -148,6 +148,28 @@ class IdempotentCreationServiceTest {
     }
 
     @Test
+    @DisplayName("생성 동작이 자연 키 경합에서 실패해도 같은 멱등 키 승자가 있으면 응답을 재생한다")
+    void 동시최초요청_생성동작경합실패_승자기록을재생한다() {
+        // given
+        IdempotencyRequest request = request(IdempotencyActorType.MEMBER, UUID.randomUUID(),
+                IdempotencyApiScope.MEMBER_SUBMISSIONS, hash(8));
+        IdempotencyResponse response = response();
+        IdempotencyRecord winner = record(request, response, NOW.plusHours(24));
+        when(store.find(request)).thenReturn(Optional.empty(), Optional.of(winner));
+
+        // when
+        IdempotencyExecutionResult result = service.execute(request, () -> {
+            throw new IllegalStateException("natural key conflict");
+        });
+
+        // then
+        assertThat(result.replayed()).isTrue();
+        assertThat(result.response()).isEqualTo(response);
+        verify(store, times(2)).find(request);
+        verify(transactionManager).rollback(transactionStatus);
+    }
+
+    @Test
     @DisplayName("주체 또는 API scope가 다르면 같은 키도 별도 범위로 전달한다")
     void 격리키_주체또는Scope다름_별도요청으로처리한다() {
         // given

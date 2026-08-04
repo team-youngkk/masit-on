@@ -43,6 +43,13 @@ public class IdempotentCreationService implements IdempotentCreationUseCase {
             return requireResult(transactions.execute(status -> executeInTransaction(request, action)));
         } catch (IdempotencyRecordAlreadyExistsException exception) {
             return requireResult(transactions.execute(status -> replayWinner(request)));
+        } catch (RuntimeException actionFailure) {
+            Optional<IdempotencyExecutionResult> winner = transactions.execute(
+                    status -> replayWinnerIfPresent(request));
+            if (winner != null && winner.isPresent()) {
+                return winner.orElseThrow();
+            }
+            throw actionFailure;
         }
     }
 
@@ -78,6 +85,18 @@ public class IdempotentCreationService implements IdempotentCreationUseCase {
                 .orElseThrow(() -> new IllegalStateException(
                         "Winning idempotency record was not available after a unique-key conflict"));
         return resolve(winner, request);
+    }
+
+    /**
+     * A creation action can lose a natural-key or rate-limit race after another transaction with
+     * the same idempotency key has committed. Recheck the winner after rolling the failed action
+     * back so the loser replays the committed response instead of leaking the internal race.
+     */
+    private Optional<IdempotencyExecutionResult> replayWinnerIfPresent(IdempotencyRequest request) {
+        OffsetDateTime now = OffsetDateTime.now(clock);
+        return store.find(request)
+                .filter(record -> !record.isExpiredAt(now))
+                .map(record -> resolve(record, request));
     }
 
     private IdempotencyExecutionResult resolve(

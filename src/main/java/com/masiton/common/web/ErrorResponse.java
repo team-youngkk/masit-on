@@ -13,6 +13,9 @@ public record ErrorResponse(
     public record FieldError(String field, String reason) {
     }
 
+    public record ResourceReference(String requestId, String status) {
+    }
+
     public static ErrorResponse of(String code, String message, String traceId) {
         return new ErrorResponse(code, message, List.of(), null, traceId);
     }
