@@ -112,8 +112,8 @@ class IdempotencyPostgreSqlIntegrationTest extends FullContextIntegrationTest {
     }
 
     @Test
-    @DisplayName("만료 경계 기록은 cleanup 전에도 재생하지 않고 새 기록으로 교체한다")
-    void 만료기록_현재시각이하_cleanup전에도교체한다() {
+    @DisplayName("만료 기록은 cleanup 전에도 재생하지 않고 새 기록으로 교체한다")
+    void 만료기록_cleanup전에도교체한다() {
         // given
         IdempotencyRequest request = request(
                 UUID.randomUUID(), IdempotencyApiScope.MEMBER_SUBMISSIONS, hash(3));
@@ -121,7 +121,7 @@ class IdempotencyPostgreSqlIntegrationTest extends FullContextIntegrationTest {
         jdbcTemplate.update("""
                 UPDATE idempotency_record
                    SET created_at = CURRENT_TIMESTAMP - INTERVAL '25 hours',
-                       expires_at = CURRENT_TIMESTAMP
+                       expires_at = CURRENT_TIMESTAMP - INTERVAL '1 hour'
                 """);
 
         // when
