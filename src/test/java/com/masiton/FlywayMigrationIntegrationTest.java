@@ -25,7 +25,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * 빈 PostgreSQL에 V1 baseline과 V2(1차 확장 통합 스키마)가 순서대로 성공적으로 적용되고,
+ * 빈 PostgreSQL에 V1 baseline, V2(1차 확장 통합 스키마), V3(2차 확장 스키마)가
+ * 순서대로 성공적으로 적용되고,
  * ddl-auto=validate로 컨텍스트가 기동하며, Region·FoodCategory 기준 데이터가
  * seed-data-plan.md 2~4·6절 기준과 일치하는지 확인한다.
  *
@@ -60,9 +61,9 @@ class FlywayMigrationIntegrationTest {
     private MemberSessionRevocationStore memberSessionRevocationStore;
 
     @Test
-    @DisplayName("빈 데이터베이스에 V1과 V2(1차 확장 통합)가 계약된 순서와 파일명으로 성공 기록된다")
-    void 마이그레이션적용_빈데이터베이스_V1과V2가계약된순서와파일명으로성공기록된다() {
-        // given: 컨텍스트 기동 시점에 Flyway가 V1 baseline과 V2(1차 확장 통합) 변경을 적용했다.
+    @DisplayName("빈 데이터베이스에 V1부터 V3까지 계약된 순서와 파일명으로 성공 기록된다")
+    void 마이그레이션적용_빈데이터베이스_V1부터V3까지계약된순서와파일명으로성공기록된다() {
+        // given: 컨텍스트 기동 시점에 Flyway가 V1부터 V3까지 변경을 적용했다.
 
         // when
         List<AppliedMigration> appliedMigrations = jdbcTemplate.query(
@@ -80,7 +81,9 @@ class FlywayMigrationIntegrationTest {
         assertThat(appliedMigrations).containsExactly(
                 new AppliedMigration("1", "create initial schema", "SQL", "V1__create_initial_schema.sql", true),
                 new AppliedMigration("2", "add expansion 1 schema", "SQL",
-                        "V2__add_expansion_1_schema.sql", true)
+                        "V2__add_expansion_1_schema.sql", true),
+                new AppliedMigration("3", "add expansion 2 schema", "SQL",
+                        "V3__add_expansion_2_schema.sql", true)
         );
     }
 
