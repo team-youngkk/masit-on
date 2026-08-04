@@ -1,5 +1,6 @@
 package com.masiton.test;
 
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
@@ -9,6 +10,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 @TestProfile
 @Testcontainers
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public abstract class FullContextIntegrationTest {
 
     private static final int REDIS_PORT = 6379;

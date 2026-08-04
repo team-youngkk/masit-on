@@ -204,6 +204,27 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
     }
 
     @Test
+    @DisplayName("유효한 회원 principal만 /api/me 경계를 통과하고 관리자 principal은 같은 경계에서 거부된다")
+    void memberBoundary_본인Principal만통과_관리자Audience거부() throws Exception {
+        String memberId = UUID.randomUUID().toString();
+        String sessionId = UUID.randomUUID().toString();
+        String memberToken = memberTokenIssuer.issueAccessToken(new MemberPrincipal(memberId, sessionId));
+        String adminToken = signedToken("test-key-20260727", "masit-on", "masit-on-admin-api");
+        given(memberSessionAccessChecker.check(memberId, sessionId))
+                .willReturn(MemberSessionAccessChecker.AccessDecision.ALLOWED);
+
+        mockMvc.perform(get("/api/me/boundary")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken))
+                .andExpect(status().isNotFound())
+                .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "private, no-store"));
+        mockMvc.perform(get("/api/me/boundary")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+                .andExpect(status().isUnauthorized());
+
+        verify(memberSessionAccessChecker).check(memberId, sessionId);
+    }
+
+    @Test
     @DisplayName("회원 공개 인증 경로는 계약된 POST 메서드만 허용한다")
     void memberAuthenticationPublicRoutes_계약경로만허용() throws Exception {
         String[] publicPaths = {

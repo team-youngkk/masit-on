@@ -23,6 +23,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import com.masiton.member.application.port.out.MemberDeletionJobStore;
 import com.masiton.member.infrastructure.persistence.JdbcMemberDeletionJobStore;
+import com.masiton.orchestration.application.retention.RetentionCleanupBatchCommand;
 import com.masiton.test.TestProfile;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -66,6 +67,9 @@ class MemberDeletionCleanupPostgreSqlIntegrationTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private RetentionCleanupBatchCommand retentionCleanupBatch;
+
     @Test
     @DisplayName("작업을 등록하고 청구한 뒤 재예약 및 완료 상태를 PostgreSQL에 반영한다")
     void 작업_등록_청구_재예약_완료_상태를_반영한다() {
@@ -102,9 +106,12 @@ class MemberDeletionCleanupPostgreSqlIntegrationTest {
         // given
         UUID memberId = UUID.randomUUID();
         UUID restaurantId = insertRestaurant();
+        UUID submissionId = UUID.randomUUID();
+        UUID reportId = UUID.randomUUID();
         Instant now = Instant.now();
         insertDeletionPendingMember(memberId, now);
         insertActionToken(memberId, now);
+        insertParticipation(memberId, restaurantId, submissionId, reportId, now);
         jdbcTemplate.update("INSERT INTO favorite (member_id, restaurant_id, favorited_at) VALUES (?, ?, ?)",
                 memberId, restaurantId, asOffsetDateTime(now));
         jdbcTemplate.update("INSERT INTO recent_restaurant_view (member_id, restaurant_id, last_viewed_at) VALUES (?, ?, ?)",
@@ -119,6 +126,10 @@ class MemberDeletionCleanupPostgreSqlIntegrationTest {
         assertThat(count("member_action_token", memberId)).isZero();
         assertThat(count("favorite", memberId)).isZero();
         assertThat(count("recent_restaurant_view", memberId)).isZero();
+        assertThat(participationMemberId("submission", submissionId)).isNull();
+        assertThat(participationMemberId("report", reportId)).isNull();
+        assertThat(participationUnlinkedAt("submission", submissionId)).isNotNull();
+        assertThat(participationUnlinkedAt("report", reportId)).isNotNull();
         assertThat(count("member_deletion_job", memberId)).isZero();
     }
 
@@ -128,9 +139,12 @@ class MemberDeletionCleanupPostgreSqlIntegrationTest {
         // given
         UUID memberId = UUID.randomUUID();
         UUID restaurantId = insertRestaurant();
+        UUID submissionId = UUID.randomUUID();
+        UUID reportId = UUID.randomUUID();
         Instant now = Instant.now();
         insertDeletionPendingMember(memberId, now);
         insertActionToken(memberId, now);
+        insertParticipation(memberId, restaurantId, submissionId, reportId, now);
         jdbcTemplate.update("INSERT INTO favorite (member_id, restaurant_id, favorited_at) VALUES (?, ?, ?)",
                 memberId, restaurantId, asOffsetDateTime(now));
         jdbcTemplate.update("INSERT INTO recent_restaurant_view (member_id, restaurant_id, last_viewed_at) VALUES (?, ?, ?)",
@@ -152,7 +166,56 @@ class MemberDeletionCleanupPostgreSqlIntegrationTest {
         assertThat(count("member_action_token", memberId)).isEqualTo(1);
         assertThat(count("favorite", memberId)).isEqualTo(1);
         assertThat(count("recent_restaurant_view", memberId)).isEqualTo(1);
+        assertThat(participationMemberId("submission", submissionId)).isEqualTo(memberId);
+        assertThat(participationMemberId("report", reportId)).isEqualTo(memberId);
+        assertThat(participationUnlinkedAt("submission", submissionId)).isNull();
+        assertThat(participationUnlinkedAt("report", reportId)).isNull();
         assertThat(count("member_deletion_job", memberId)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("종료 1년 cutoff와 알림 90일·최신 200개 경계를 PostgreSQL에서 정리한다")
+    void 보존정리_cutoff와_최신200개_경계() {
+        // given
+        UUID memberId = UUID.randomUUID();
+        Instant now = Instant.parse("2028-03-01T00:00:00Z");
+        OffsetDateTime unlinkCutoff = asOffsetDateTime(now.minusSeconds(365L * 24 * 60 * 60));
+        OffsetDateTime notificationCutoff = asOffsetDateTime(now.minusSeconds(90L * 24 * 60 * 60));
+        insertDeletionPendingMember(memberId, now);
+        UUID expiredSubmissionId = insertRejectedSubmission(memberId, unlinkCutoff, 0);
+        UUID boundaryReportId = insertRejectedReport(memberId, UUID.randomUUID(), unlinkCutoff, 0);
+        UUID futureSubmissionId = insertRejectedSubmission(memberId, unlinkCutoff.plusNanos(1_000), 1);
+
+        UUID oldestNotificationId = null;
+        UUID boundaryNotificationId = null;
+        for (int index = 0; index < 201; index++) {
+            UUID submissionId = insertRejectedSubmission(memberId, asOffsetDateTime(now), index + 10);
+            UUID notificationId = UUID.randomUUID();
+            OffsetDateTime createdAt = index == 0
+                    ? notificationCutoff.minusSeconds(1)
+                    : notificationCutoff.plusSeconds(index - 1L);
+            insertNotification(memberId, submissionId, notificationId, createdAt);
+            if (index == 0) {
+                oldestNotificationId = notificationId;
+            } else if (index == 1) {
+                boundaryNotificationId = notificationId;
+            }
+        }
+
+        // when
+        int unlinkedSubmissions = retentionCleanupBatch.unlinkExpiredSubmissionMembers(unlinkCutoff, asOffsetDateTime(now));
+        int unlinkedReports = retentionCleanupBatch.unlinkExpiredReportMembers(unlinkCutoff, asOffsetDateTime(now));
+        int deletedNotifications = retentionCleanupBatch.deleteExpiredNotifications(notificationCutoff);
+
+        // then
+        assertThat(unlinkedSubmissions).isEqualTo(1);
+        assertThat(unlinkedReports).isEqualTo(1);
+        assertThat(participationMemberId("submission", expiredSubmissionId)).isNull();
+        assertThat(participationMemberId("report", boundaryReportId)).isNull();
+        assertThat(participationMemberId("submission", futureSubmissionId)).isEqualTo(memberId);
+        assertThat(deletedNotifications).isEqualTo(1);
+        assertThat(rowCount("notification", oldestNotificationId)).isZero();
+        assertThat(rowCount("notification", boundaryNotificationId)).isEqualTo(1);
     }
 
     private UUID insertRestaurant() {
@@ -178,6 +241,64 @@ class MemberDeletionCleanupPostgreSqlIntegrationTest {
         jdbcTemplate.update("INSERT INTO member_action_token (id, member_id, token_hash, purpose, status, issued_at, expires_at) "
                         + "VALUES (?, ?, ?, 'PASSWORD_RESET', 'ISSUED', ?, ?)",
                 UUID.randomUUID(), memberId, tokenHash, asOffsetDateTime(now), asOffsetDateTime(now.plusSeconds(60)));
+    }
+
+    private void insertParticipation(
+            UUID memberId,
+            UUID restaurantId,
+            UUID submissionId,
+            UUID reportId,
+            Instant now
+    ) {
+        jdbcTemplate.update("INSERT INTO submission (id, member_id, target_type, candidate, target_fingerprint, "
+                        + "description, status, created_at, updated_at) VALUES (?, ?, 'RESTAURANT', '{}'::jsonb, ?, "
+                        + "'탈퇴 연결 제거 테스트 제보입니다', 'RECEIVED', ?, ?)",
+                submissionId, memberId, new byte[32], asOffsetDateTime(now), asOffsetDateTime(now));
+        jdbcTemplate.update("INSERT INTO report (id, member_id, target_type, target_id, report_type, description, "
+                        + "status, created_at, updated_at) VALUES (?, ?, 'RESTAURANT', ?, 'ERROR', "
+                        + "'탈퇴 연결 제거 테스트 신고입니다', 'RECEIVED', ?, ?)",
+                reportId, memberId, restaurantId, asOffsetDateTime(now), asOffsetDateTime(now));
+    }
+
+    private UUID insertRejectedSubmission(UUID memberId, OffsetDateTime terminalAt, int fingerprintSeed) {
+        UUID id = UUID.randomUUID();
+        byte[] fingerprint = new byte[32];
+        java.nio.ByteBuffer.wrap(fingerprint).putInt(fingerprintSeed);
+        jdbcTemplate.update("INSERT INTO submission (id, member_id, target_type, candidate, target_fingerprint, "
+                        + "description, status, member_reason, created_at, updated_at, terminal_at) VALUES "
+                        + "(?, ?, 'RESTAURANT', '{}'::jsonb, ?, '보존 경계 테스트 제보입니다', 'REJECTED', "
+                        + "'검토 종료', ?, ?, ?)",
+                id, memberId, fingerprint, terminalAt, terminalAt, terminalAt);
+        return id;
+    }
+
+    private UUID insertRejectedReport(UUID memberId, UUID targetId, OffsetDateTime terminalAt, int suffix) {
+        UUID id = UUID.randomUUID();
+        jdbcTemplate.update("INSERT INTO report (id, member_id, target_type, target_id, report_type, description, "
+                        + "status, member_reason, created_at, updated_at, terminal_at) VALUES "
+                        + "(?, ?, 'RESTAURANT', ?, 'ERROR', ?, 'REJECTED', '검토 종료', ?, ?, ?)",
+                id, memberId, targetId, "보존 경계 테스트 신고입니다 " + suffix, terminalAt, terminalAt, terminalAt);
+        return id;
+    }
+
+    private void insertNotification(UUID memberId, UUID submissionId, UUID notificationId, OffsetDateTime createdAt) {
+        jdbcTemplate.update("INSERT INTO notification (id, member_id, submission_id, status, title, message, created_at) "
+                        + "VALUES (?, ?, ?, 'REJECTED', '처리 결과', '처리 결과를 확인하세요', ?)",
+                notificationId, memberId, submissionId, createdAt);
+    }
+
+    private UUID participationMemberId(String tableName, UUID id) {
+        return jdbcTemplate.queryForObject("SELECT member_id FROM " + tableName + " WHERE id = ?",
+                (resultSet, rowNum) -> resultSet.getObject(1, UUID.class), id);
+    }
+
+    private OffsetDateTime participationUnlinkedAt(String tableName, UUID id) {
+        return jdbcTemplate.queryForObject("SELECT member_unlinked_at FROM " + tableName + " WHERE id = ?",
+                (resultSet, rowNum) -> resultSet.getObject(1, OffsetDateTime.class), id);
+    }
+
+    private long rowCount(String tableName, UUID id) {
+        return jdbcTemplate.queryForObject("SELECT count(*) FROM " + tableName + " WHERE id = ?", Long.class, id);
     }
 
     private long count(String tableName, UUID memberId) {
