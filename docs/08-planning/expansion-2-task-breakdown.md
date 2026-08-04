@@ -1,7 +1,7 @@
 ---
 status: Planned
 plan_date: 2026-08-03
-implementation_gate: Blocked
+implementation_gate: Ready
 related_documents:
   - expansion-2-implementation-plan.md
   - second-expansion-baseline-review.md
@@ -19,7 +19,9 @@ related_documents:
 
 이 문서의 `E2-T*`는 2차 확장 구현·PR·검증 상태를 기록하는 최종 Task ID다. 상위 계약은 이 Task에서 임의로 바꾸지 않으며, 각 Task는 주 테스트 묶음과 완료 증거를 PR에 연결한 뒤 완료한다.
 
-이 문서는 착수 전 계획과 담당자 사전 배정을 위한 Task 분해다. frontmatter의 `implementation_gate: Blocked`는 문서·이슈 준비를 막는 값이 아니라, [E2-T01](#e2-t01-기준선-확인)의 게이트를 통과하기 전 구현 브랜치 생성·코드 작성·구현 PR을 시작할 수 없다는 실행 통제다.
+이 문서는 착수 전 계획과 담당자 사전 배정을 위한 Task 분해다. frontmatter의 `implementation_gate`는 [E2-T01](#e2-t01-기준선-확인)의 실행 증거 판정에 따라 2차 확장 구현 브랜치 생성·코드 작성·구현 PR의 착수 가능 여부를 통제한다.
+
+2026-08-04 기준 회원·개인화 네 계약의 확정 상태 전환, 계약 전체 게이트 조건 2~6, 검증 참여자 쿠키 접근, 회원 찜·최근 본 목록과 관리자 네 등록 화면 렌더링, 사용자 확인에 따른 회원·관리자 전체 흐름, 기존 M2 복구 리허설 근거를 충족했다. 운영 지도에서도 새로고침 직후 `map-points` 요청 1건을 기준으로 이동·확대·축소 뒤 요청 수가 1건 그대로 유지되고 결과·선택 상태가 유지됨을 확인해 `implementation_gate`를 `Ready`로 전환한다.
 
 현재 범위는 서비스 내 알림만 포함하므로 푸시 Adapter용 `E2-T12`는 생성하지 않는다. 번호는 향후 조건부 푸시 Task와 기존 후속 Task의 의미를 구분하기 위해 예약한다.
 
@@ -46,6 +48,8 @@ related_documents:
 ### E2-T01 기준선 확인
 
 - [선행 상태 검토](second-expansion-baseline-review.md)의 회원·인증·찜·관리자·운영 조건과 `E1-T11` 지도, `E1-T12` 인증 코드, [OPS-VALIDATION](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙)의 `E1-T13` 제한 공개 세션 정합화를 실제 실행 증거로 판정한다.
+- 운영 복구 선행은 [M2 운영 프로비저닝 기록 13절](m2-provisioning-record.md#13-m2-13-복구-리허설-52)의 2026-07-30 RDS·Redis·직전 이미지 롤백·인스턴스 재기동 전체 리허설을 인용한다.
+- 2026-08-04 운영 브라우저에서 Basic Auth 인증창 없이 검증 참여자 쿠키로 진입한 뒤 회원 찜·최근 본 목록과 관리자 맛집·유튜버·영상·Visit 네 등록 화면이 모두 렌더링됨을 직접 확인했다. 회원·관리자 Bearer를 사용하는 전체 기능 흐름과 지도 이동·확대·축소 전후 `map-points` 요청 1건 유지는 사용자가 확인했다.
 - `E1-T01`의 백엔드 테스트가 class loading을 지나 실제 테스트를 수행해야 한다. 선행 미완료는 2차 기능 Task의 우회 구현으로 해소하지 않는다.
 
 ### E2-T02 공통 기반

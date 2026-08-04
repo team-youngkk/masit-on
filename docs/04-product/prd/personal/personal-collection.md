@@ -1,7 +1,7 @@
 ---
 id: PRD-COLLECTION-001
 title: 개인 컬렉션
-status: draft
+status: approved
 workstream: WS-09
 owner: 박진영
 reviewers:

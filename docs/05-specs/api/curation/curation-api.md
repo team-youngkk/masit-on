@@ -1,7 +1,7 @@
 ---
 id: API-CURATION-001
 title: 큐레이션 API
-status: draft
+status: approved
 related_prd:
   - PRD-CURATION-001
 workstream: WS-11

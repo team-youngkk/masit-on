@@ -1,7 +1,7 @@
 ---
 id: API-NOTIFICATION-001
 title: 사용자 알림 API
-status: draft
+status: approved
 related_prd:
   - PRD-NOTIFICATION-001
 workstream: WS-13

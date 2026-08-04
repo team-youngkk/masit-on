@@ -1,7 +1,7 @@
 ---
 status: Review
 review_date: 2026-08-04
-baseline_commit: f79444c
+baseline_commit: 1621ad5
 related_documents:
   - README.md
   - expansion-1-task-breakdown.md
@@ -34,8 +34,8 @@ related_documents:
 |---|---|
 | 조사일 | 2026-08-04 |
 | 브랜치 | `develop` |
-| 기준 커밋 | `f79444c` |
-| 작업 트리 | 조사 시작 시 변경 없음 |
+| 기준 커밋 | `1621ad5` |
+| 작업 트리 | 조사 시작 시 Nginx 내부 검증 요청의 `Host` 전달 수정 3줄 |
 | 1차 확장 Task 기준 | [1차 확장 최종 Task 분해](expansion-1-task-breakdown.md#2-전체-task-표)의 `E1-T01`~`E1-T13` |
 | 판정 우선순위 | 현재 코드·마이그레이션·테스트 → 병합 이력 → 계약 문서 → 계획의 과거 상태 |
 
@@ -43,67 +43,77 @@ related_documents:
 
 | 확인 사항 | 판정 | 근거와 영향 |
 |---|---|---|
-| 1차 확장 계약이 확정됐는가 | **부분 충족** | 기능 요구사항은 1차 확장을 확정 범위로 선언하고 구현 계획·Task 분해는 `Ready`, 인증·데이터 ADR은 `Accepted`다. 그러나 회원·개인화 PRD와 API 명세 frontmatter는 여전히 `draft`다. 문서 owner가 상태를 확인하고 추적표와 함께 동기화하기 전에는 2차 확장이 이 계약을 최종 선행 계약으로 인용할 수 없다. |
+| 1차 확장 계약이 확정됐는가 | **충족** | 사용자가 회원·개인화 네 계약의 확정을 명시적으로 승인해 PRD와 API 명세 frontmatter를 저장소 관례인 `approved`로 전환했다. 기능 요구사항, 구현 계획·Task 분해, 인증·데이터 ADR과 제품·API·데이터·ADR 추적표 연결도 확인했다. |
 | `E1-T03` 회원 기반이 구현됐는가 | **구현 근거 있음** | `member_account`, Action Token·메일 Outbox, 세션 폐기·복구와 Redis 회원 세션 경계가 V2 마이그레이션과 `member`·`security` 코드에 존재한다. `E1-T10` 교차 인수 PR이 병합됐고 README가 1차 확장 완료 상태를 선언한다. |
 | `E1-T04` 회원 인증이 구현됐는가 | **구현 근거 있음** | 가입·이메일 인증·로그인·재발급·로그아웃·비밀번호 재설정·탈퇴 API와 화면이 존재하며 운영 `prod` 프로파일의 SMTP·회원 비밀정보 주입도 기록돼 있다. |
-| `E1-T11` 지도 뷰포트 비종속 조회가 구현됐는가 | **구현 근거 있음 / 운영 회귀 필요** | PR #122가 `28363aa`로 병합됐다. 백엔드 요청·SQL과 프론트 Query Key에서 bounds를 제거했고, 프론트 자동 테스트는 네 필터만 전송하며 `south`·`west`·`north`·`east`를 만들지 않는 계약을 통과했다. 실제 운영 지도 이동·확대·축소 시 추가 요청 0건과 결과·선택 유지 증거는 E2-T01 운영 회귀에 남는다. |
+| `E1-T11` 지도 뷰포트 비종속 조회가 구현됐는가 | **충족** | PR #122가 `28363aa`로 병합됐다. 백엔드 요청·SQL과 프론트 Query Key에서 bounds를 제거했고, 프론트 자동 테스트는 네 필터만 전송하며 `south`·`west`·`north`·`east`를 만들지 않는 계약을 통과했다. 2026-08-04 운영 지도에서 새로고침 직후 `map-points` 요청 1건을 기준으로 이동·확대·축소 뒤에도 요청 수가 1건 그대로이고 결과·선택 상태가 유지됨을 사용자가 확인했다. |
 | `E1-T12` 가입 이메일 인증 8자 코드가 구현됐는가 | **코드·통합 회귀 충족** | PR #124가 `f79444c`로 병합됐다. 가입·재발송은 허용 문자 32자의 8자 CSPRNG 코드를 발급하고, API·화면은 입력 정규화와 요청 출처당 10분 10회 제출 제한을 적용한다. Docker 기반 PostgreSQL·Redis 통합 테스트를 포함한 백엔드 전체 테스트가 통과했다. |
-| [OPS-VALIDATION](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙)의 `E1-T13` 검증 참여자 쿠키 세션이 구현됐는가 | **저장소 구현 근거 있음 / 운영 전환 증거 필요** | PR #123이 `19dee1b`로 병합됐다. 검증 로그인·7일 쿠키 세션·Redis fail-closed·Nginx `auth_request`와 API 401/화면 redirect 분리가 코드와 배포 설정에 존재하고 관련 단위 테스트가 통과했다. 다만 운영 환경에서 Basic Auth 제거, 반복 인증창 0회, 회원·관리자 Bearer 동시 사용을 다시 확인한 실행 기록이 없어 기준선은 아직 통과하지 않는다. |
+| [OPS-VALIDATION](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙)의 `E1-T13` 검증 참여자 쿠키 세션이 구현됐는가 | **충족** | PR #123이 `19dee1b`로 병합됐고 검증 로그인·7일 쿠키 세션·Redis fail-closed·Nginx `auth_request`와 API 401/화면 redirect 분리가 코드·설정·단위 테스트에 존재한다. 2026-08-04 운영 브라우저에서 Basic Auth 인증창 없이 검증 참여자 쿠키로 진입한 뒤 회원 찜·최근 본 목록과 관리자 맛집·유튜버·영상·Visit 네 등록 화면이 모두 렌더링됨을 직접 확인했으며, 회원·관리자 Bearer를 사용하는 전체 기능 흐름은 사용자가 확인했다. |
 | 맛집 공개 상태를 재사용할 수 있는가 | **충족** | `publication_status`와 `lifecycle_status`가 공개 목록·상세 및 개인화 조회 경계에 적용돼 있다. 컬렉션·큐레이션·인기 결과도 같은 공개 판정을 사용한다는 계약은 각 기능 문서에서 다시 명시해야 한다. |
 | 인기 집계용 행동 데이터가 있는가 | **부분 충족** | 찜과 최근 본 맛집 데이터는 구현돼 있다. 다만 최근 기록은 회원·맛집별 최신 1건, 최신 50건 상한, 30일 보존 구조이므로 반복 조회 횟수나 전체 조회 이벤트를 나타내지 않는다. 현재 데이터만으로 `조회수 기반 인기`를 정의해서는 안 된다. |
 | 비동기 작업을 운용할 수 있는가 | **제한적으로 충족** | 단일 EC2 애플리케이션에서 Spring `@Scheduled`, PostgreSQL `SKIP LOCKED` Outbox, 재시도 작업을 운용하고 있다. 이는 회원 Action 메일 등 승인된 좁은 사례에 한정되며 범용 이벤트·메시지 브로커의 승인을 뜻하지 않는다. |
-| 사용자 알림을 운용할 수 있는가 | **미충족** | 운영 SMTP와 CloudWatch→Slack 운영 알림은 있으나 일반 사용자 알림 채널은 아니다. FCM은 `Post-MVP`, 범용 비동기 이벤트·Outbox는 `Conditional` 상태다. 사용자 식별·동의·해지·토큰 수명주기·실패 처리를 승인하고 관련 ADR을 활성화해야 한다. |
+| 사용자 알림을 운용할 수 있는가 | **충족 (범위 한정)** | [ADR-NOTIFY-002](../07-adr/integration/notify-002-in-app-notification-reliability.md)에 따라 서비스 내 DB 알림(알림함)으로 범위를 확정했다. FCM·이메일·웹 푸시·동의/해지·외부 전달 재시도는 범위 밖이다. 현재 PostgreSQL과 회원 인증 기반으로 알림 저장·목록·읽음·보존을 운용할 수 있다. |
+
+> **재판정 (2026-08-04)**: 초기 조사 시 범용 사용자 알림 채널이 없어 미충족으로 판정했으나, 이후 ADR-NOTIFY-002가 Accepted되어 서비스 내 DB 알림으로 범위가 확정됐다. FCM·이메일 등 외부 채널은 [ADR-NOTIFY-001](../07-adr/adr-backlog.md#adr-notify-001-fcm-푸시-알림)에서 Post-MVP로 분류돼 2차 확장 범위에 포함하지 않는다.
 
 ## 4. 기능별 선행 관계
 
 | 2차 확장 기능 | 1차 확장 선행 요소 | 현재 판정 | 구현 Task 착수 조건 |
 |---|---|---|---|
-| 개인 컬렉션 | 회원 인증, 맛집 공개 상태 | 기반 구현 있음 / 계약 상태 동기화 필요 | 컬렉션 소유권·공개 범위·항목 중복·정렬·탈퇴 정리 계약 확정 |
-| 인기 맛집 | 찜·조회 등 집계 기준으로 사용할 행동 데이터 | 찜·최근 기록 있음 / 집계 의미 미확정 | 집계 신호, 기간, 가중치, 중복 제거, 비공개 전환, 최소 표본과 갱신 주기 확정 |
-| 큐레이션 | 관리자 인증, 맛집 공개 상태 | 기반 구현 있음 | 큐레이션 작성·게시·정렬·회수 권한과 비공개 맛집 처리 확정 |
-| 제보·신고 | 회원 인증, 관리자 처리 흐름 | 회원 인증만 구현됨 | 제보와 신고의 대상·증거·상태·중복·오남용 제한·관리자 처리·보존 정책 확정 |
-| 사용자 알림 | 회원 식별, 동의·해지, 제보·신고 처리 결과 | 회원 식별만 구현됨 | 알림 이벤트·채널·동의·해지·읽음·보존·재시도·토큰 및 비밀정보 수명주기 확정 |
+| 개인 컬렉션 | 회원 인증, 맛집 공개 상태 | **충족** | ~~컬렉션 소유권·공개 범위·항목 중복·정렬·탈퇴 정리 계약 확정~~ → [개인 컬렉션 PRD](../04-product/prd/personal/personal-collection.md)·[API](../05-specs/api/personal/personal-collection-api.md) 확정 완료 |
+| 인기 맛집 | 찜·조회 등 집계 기준으로 사용할 행동 데이터 | **충족** | ~~집계 신호, 기간, 가중치, 중복 제거, 비공개 전환, 최소 표본과 갱신 주기 확정~~ → [ADR-DATA-011](../07-adr/data/data-011-popular-restaurant-request-time-aggregation.md): 전체 기간 현재 찜 실시간 집계. [인기 맛집 PRD](../04-product/prd/discovery/popular-restaurants.md)·[API](../05-specs/api/discovery/popular-restaurant-api.md) 확정 완료 |
+| 큐레이션 | 관리자 인증, 맛집 공개 상태 | **충족** | ~~큐레이션 작성·게시·정렬·회수 권한과 비공개 맛집 처리 확정~~ → [관리자 큐레이션 PRD](../04-product/prd/curation/admin-curation.md)·[API](../05-specs/api/curation/curation-api.md) 확정 완료 |
+| 제보·신고 | 회원 인증, 관리자 처리 흐름 | **충족** | ~~제보와 신고의 대상·증거·상태·중복·오남용 제한·관리자 처리·보존 정책 확정~~ → [제보·신고 PRD](../04-product/prd/participation/user-submission-report.md)·[API](../05-specs/api/participation/submission-report-api.md) 확정 완료 |
+| 사용자 알림 | 회원 식별, 제보·신고 처리 결과 | **충족 (범위 한정)** | ~~알림 이벤트·채널·동의·해지·읽음·보존·재시도·토큰 및 비밀정보 수명주기 확정~~ → [ADR-NOTIFY-002](../07-adr/integration/notify-002-in-app-notification-reliability.md): 서비스 내 DB 알림만. [사용자 알림 PRD](../04-product/prd/notification/user-notification.md)·[API](../05-specs/api/notification/notification-api.md) 확정 완료 |
+
+> **재판정 (2026-08-04)**: 초기 조사 시 기반 구현만 확인하고 계약 확정을 착수 조건으로 두었으나, 이후 다섯 기능 모두 PRD·API·데이터·ADR 계약이 확정됐다. 인기 맛집은 전체 기간 현재 찜 실시간 집계(ADR-DATA-011), 사용자 알림은 서비스 내 DB 알림(ADR-NOTIFY-002)으로 범위가 좁혀져 외부 채널·동의/해지·토큰 수명주기는 착수 조건에서 제외된다.
 
 ## 5. 구현 전에 필요한 결정
 
 ### 5.1 1차 확장 계약 상태 동기화
 
-다음 문서는 본문에서 기능과 세부 결정을 확정하고 실제 구현·교차 인수까지 완료했지만 frontmatter가 `draft`다.
+다음 문서는 본문에서 기능과 세부 결정을 확정하고 실제 구현·교차 인수까지 완료했지만 재판정 전 frontmatter가 `draft`였다.
 
 - [사용자 계정·인증 PRD](../04-product/prd/account/member-authentication.md)
 - [개인 맛집 관리 PRD](../04-product/prd/personal/personal-restaurant-management.md)
 - [일반 회원 계정·인증 API](../05-specs/api/account/member-authentication-api.md)
 - [개인 맛집 관리 API](../05-specs/api/personal/personal-restaurant-api.md)
 
-각 owner가 `draft` 유지가 의도인지 확인해야 한다. 확정 전환에 합의하면 해당 문서의 상태, 제품·API·데이터·ADR 추적표, 1차 확장 완료 기록을 같은 문서 변경 범위에서 동기화한다.
+2026-08-04 사용자가 네 계약의 확정 전환을 명시적으로 승인했다. 이에 따라 네 문서의 frontmatter를 저장소 확정 상태 표기 관례인 `approved`로 동기화했다. 제품·API 추적표에는 이미 네 계약과 요구사항·Workstream 연결이 있고, 데이터·ADR 추적표에는 회원·개인화 물리 계약과 인증 결정을 역추적할 수 있는 연결이 존재함을 확인했다.
 
 ### 5.2 인기 맛집의 행동 신호
 
-다음 중 무엇을 인기 집계의 원천으로 사용할지 제품 계약에서 먼저 결정한다.
+~~다음 중 무엇을 인기 집계의 원천으로 사용할지 제품 계약에서 먼저 결정한다.~~
 
 - 찜 수: 현재 `favorite`로 집계할 수 있지만 누적값인지 기간 내 신규 찜인지 정해야 한다.
 - 최근 본 회원 수: 현재 `recent_restaurant_view`로 제한된 기간의 고유 회원 근사치는 만들 수 있으나, 최신 50건 상한과 삭제가 집계 결과를 왜곡할 수 있다.
 - 조회 횟수: 현재 저장소에는 조회 이벤트 이력이 없으므로 별도 행동 이벤트 계약·수집·보존·개인정보 기준이 필요하다.
 - 복합 점수: 각 신호의 가중치, 시간 감쇠, 최소 표본과 동률 정렬을 확정해야 한다.
 
-결정 전에는 현재 최근 기록을 `조회수`로 이름만 바꾸거나 반복 조회 횟수로 해석하지 않는다.
+~~결정 전에는 현재 최근 기록을 `조회수`로 이름만 바꾸거나 반복 조회 횟수로 해석하지 않는다.~~
+
+> **재판정 (2026-08-04)**: [ADR-DATA-011](../07-adr/data/data-011-popular-restaurant-request-time-aggregation.md)에서 **전체 기간의 현재 찜 관계를 요청 시점에 집계**하는 방식으로 확정했다. Snapshot·Batch·Redis 캐시·재계산 작업은 만들지 않는다. 조회 횟수·복합 점수·시간 감쇠는 도입하지 않으므로 위 목록의 행동 이벤트 계약은 불필요하다. [인기 맛집 PRD](../04-product/prd/discovery/popular-restaurants.md)와 [인기 맛집 API](../05-specs/api/discovery/popular-restaurant-api.md)가 `approved`로 전환됐다.
 
 ### 5.3 비동기 작업과 사용자 알림
 
-[ADR-AUTH-005](../07-adr/security/auth-005-member-action-mail-outbox.md)는 회원 Action Token에 종속된 메일 한 종류에만 PostgreSQL Outbox를 허용하며, 단일 소비 Token으로 중복 전달을 흡수할 수 없는 향후 알림에는 재사용을 금지한다. 따라서 제보·신고 처리 알림은 다음을 별도로 결정해야 한다.
+[ADR-AUTH-005](../07-adr/security/auth-005-member-action-mail-outbox.md)는 회원 Action Token에 종속된 메일 한 종류에만 PostgreSQL Outbox를 허용하며, 단일 소비 Token으로 중복 전달을 흡수할 수 없는 향후 알림에는 재사용을 금지한다. ~~따라서 제보·신고 처리 알림은 다음을 별도로 결정해야 한다.~~
 
-- 알림 채널: 서비스 내 알림, 이메일, FCM 중 MVP 기능 범위
-- 수신 동의와 해지 단위, 기본값, 변경 이력
-- 알림 이벤트와 처리 결과 Snapshot, 중복 전달의 사용자 영향
-- at-most-once / at-least-once 등 전달 의미와 멱등성 key
-- 재시도, 만료, 실패 보관, 운영자 확인과 개인정보 삭제
-- 단일 EC2 Scheduler 유지 또는 별도 Queue·Worker 도입 여부와 비용·관측성
+- ~~알림 채널: 서비스 내 알림, 이메일, FCM 중 MVP 기능 범위~~
+- ~~수신 동의와 해지 단위, 기본값, 변경 이력~~
+- ~~알림 이벤트와 처리 결과 Snapshot, 중복 전달의 사용자 영향~~
+- ~~at-most-once / at-least-once 등 전달 의미와 멱등성 key~~
+- ~~재시도, 만료, 실패 보관, 운영자 확인과 개인정보 삭제~~
+- ~~단일 EC2 Scheduler 유지 또는 별도 Queue·Worker 도입 여부와 비용·관측성~~
 
-FCM을 선택하면 [ADR-NOTIFY-001](../07-adr/adr-backlog.md#adr-notify-001-fcm-푸시-알림)을 활성화한다. 유실 방지 후속 이벤트나 범용 Outbox·Queue가 필요하면 ADR Backlog의 자동 복원력 결정을 별도 활성화하고 기존 회원 Action 메일 ADR의 범위를 넓히지 않는다.
+~~FCM을 선택하면 [ADR-NOTIFY-001](../07-adr/adr-backlog.md#adr-notify-001-fcm-푸시-알림)을 활성화한다. 유실 방지 후속 이벤트나 범용 Outbox·Queue가 필요하면 ADR Backlog의 자동 복원력 결정을 별도 활성화하고 기존 회원 Action 메일 ADR의 범위를 넓히지 않는다.~~
+
+> **재판정 (2026-08-04)**: [ADR-NOTIFY-002](../07-adr/integration/notify-002-in-app-notification-reliability.md)에서 **서비스 내 DB 알림(알림함)만** 2차 확장 범위로 확정했다. 알림 설정·동의·해지, 이메일·웹 푸시·FCM, 외부 전달 재시도는 범위 밖이다. 제보·신고 처리 결과는 관리자 상태 전이 트랜잭션 안에서 알림 레코드를 함께 저장한다(E2-T11). FCM은 [ADR-NOTIFY-001](../07-adr/adr-backlog.md#adr-notify-001-fcm-푸시-알림)에서 Post-MVP로 유지되며, 범용 Outbox·Queue 도입 없이 단일 DB 트랜잭션으로 신뢰성을 보장한다. [사용자 알림 PRD](../04-product/prd/notification/user-notification.md)와 [알림 API](../05-specs/api/notification/notification-api.md)가 `approved`로 전환됐다.
 
 ### 5.4 제보·신고 관리자 처리 흐름
 
-현재 관리자 인증과 데이터 등록 흐름은 제보·신고 접수함이나 처리 상태 머신을 제공하지 않는다. 접수, 중복 판정, 담당자 확인, 승인·기각·보완 요청, 처리 결과 통지, 감사 이력, 신고 대상의 임시 노출 제한을 하나의 사용자·관리자 흐름으로 먼저 확정한다.
+~~현재 관리자 인증과 데이터 등록 흐름은 제보·신고 접수함이나 처리 상태 머신을 제공하지 않는다. 접수, 중복 판정, 담당자 확인, 승인·기각·보완 요청, 처리 결과 통지, 감사 이력, 신고 대상의 임시 노출 제한을 하나의 사용자·관리자 흐름으로 먼저 확정한다.~~
+
+> **재판정 (2026-08-04)**: [제보·신고 PRD](../04-product/prd/participation/user-submission-report.md)와 [API](../05-specs/api/participation/submission-report-api.md)에서 접수·본인 조회·중복·합산 일일 5건·입력 보안(E2-T08)과 관리자 상태 전이·감사 이력·`ACCEPTED`/`COMPLETED` 분리(E2-T09)를 확정했다. 신고 수만으로 자동 비공개하지 않으며, 처리 결과 알림은 서비스 내 DB 알림으로 E2-T11에서 연결한다. 두 계약이 `approved`로 전환됐다.
 
 ## 6. 착수 게이트
 
@@ -116,12 +126,18 @@ FCM을 선택하면 [ADR-NOTIFY-001](../07-adr/adr-backlog.md#adr-notify-001-fcm
 5. 사용자 알림의 채널·동의·해지·전달 보장과 운영 토폴로지를 확정하고 필요한 ADR을 활성화한다.
 6. 확정 계약을 제품·API·데이터·ADR 추적표에서 역추적할 수 있게 연결한다.
 
+2026-08-04 재판정에서 조건 2~6은 확정된 2차 확장 요구사항·범위·PRD owner, 현재 찜 기반 인기 집계와 보존·개인정보 기준(ADR-DATA-011), 제보·신고 상태와 결과 알림(PRD·API 확정), 서비스 내 알림의 전달·운영 결정(ADR-NOTIFY-002), 네 추적표 연결로 모두 충족했다. 2차 확장 PRD 5개, API 계약 6개, 데이터 계약 1개를 각 owner 승인 전제 아래 `approved`로 전환했다. 조건 1도 회원·개인화 네 계약의 `approved` 전환, `E1-T11` 운영 지도 네트워크 계측, `E1-T12` 회귀와 `E1-T13` 운영 확인까지 충족해 전체 착수 게이트를 통과한다.
+
 ## 7. 검증 결과와 제약
 
 - 소스·V2 마이그레이션·화면과 `E1-T10` 교차 인수 및 1차 확장 운영 배포 병합 이력에서 `E1-T03`·`E1-T04` 구현 근거를 확인했다.
 - `MemberAuthenticationServiceTest`, `MemberAuthenticationControllerTest`, `MemberActionMailOutboxServiceTest`를 실행해 회원 인증·API 응답·메일 Outbox 관련 테스트가 통과하는 것을 확인했다.
 - 2026-08-04 `f79444c`에서 Docker Desktop을 실행한 뒤 `.\gradlew.bat --no-daemon clean build`를 실행했다. PostgreSQL 17.10·Redis 8.8·WireMock Testcontainers 통합 테스트를 포함한 492개 테스트가 모두 통과했고 `ClassNotFoundException`은 0건이었다.
-- 프론트 `npm run build`는 자동 테스트 77개, `tsc --noEmit`, Next.js 16.2.11 프로덕션 빌드를 모두 통과했다. 로컬 Node는 저장소 고정값 24.18.0이 아닌 24.14.0이었으므로, 고정 런타임 CI 결과를 최종 증거로 다시 대조한다.
+- PR #126의 고정 런타임 CI에서 프론트 자동 테스트 77개, `tsc --noEmit`, Next.js 16.2.11 프로덕션 빌드가 모두 통과했다. 당시 로컬 Node는 저장소 고정값 24.18.0이 아닌 24.14.0이었으므로 프로덕션 빌드 완료 판정은 CI 결과를 근거로 한다.
 - 이 검증에서 `auth-navigation.test.ts`가 스크립트로 해석돼 다른 테스트와 전역 변수가 충돌하는 결함을 확인했고 ES module import로 수정했다.
-- PR #122~#124의 구현 병합은 확인했지만, 회원·개인화 PRD/API 4개의 `draft` 상태와 운영 환경의 지도·검증 세션·Bearer·복구 재검증이 남아 있어 `implementation_gate: Blocked`를 유지한다.
+- [M2 운영 프로비저닝 기록 13절](m2-provisioning-record.md#13-m2-13-복구-리허설-52)에 2026-07-30 RDS 스냅샷 복구, Redis 재기동·fail-closed·복구, 직전 이미지 롤백·복귀, 인스턴스 재기동 전체 리허설과 복구 시간이 기록돼 있다. 이 기존 실행 증거를 E2-T01의 운영 복구 선행 근거로 인용한다.
+- 2026-08-04 운영 브라우저에서 Basic Auth 인증창 없이 검증 참여자 쿠키로 진입하고, 회원 찜·최근 본 목록과 관리자 맛집·유튜버·영상·Visit 네 등록 화면을 차례로 열었다. 이 직접 관찰은 검증 쿠키 상태의 페이지 렌더링 근거이며, 회원·관리자 Bearer를 사용하는 전체 기능 흐름의 정상 동작은 사용자가 별도로 확인했다.
+- 2026-08-04 운영 지도에서 새로고침 직후 `map-points` 요청 1건을 기준으로 이동·확대·축소 뒤에도 요청 수가 1건 그대로 유지되고 결과·선택 상태가 유지됨을 사용자가 개발자 도구 Network에서 확인했다. 자동 테스트의 뷰포트 파라미터 제거와 운영 계측 결과가 일치한다.
+- 후속 변경에서 백엔드 검증 세션·보안 경계·회원·개인화·지도·관리자 인수 대상 테스트와 프론트 자동 테스트 77건, `tsc --noEmit`이 통과했다. 로컬 `next build`는 설치된 TypeScript 7.0.2를 Next.js가 감지하지 못해 재설치를 시도하다 현재 환경의 npm 쓰기 권한으로 중단됐으며, 프론트 소스가 바뀌지 않은 PR #126의 고정 런타임 CI 빌드 성공을 기준선 증거로 유지하고 후속 PR CI에서 다시 확인한다.
+- 회원·개인화 네 계약의 `approved` 전환과 운영 지도·세션·회원·관리자·복구 근거로 기존 차단 사유가 모두 해소돼 `implementation_gate: Ready`로 판정한다.
 - 기존 운영 기록은 단일 EC2, PostgreSQL, Redis, SMTP, Scheduler, CloudWatch·Slack 운영 알림의 운용 근거만 제공한다. FCM, 사용자 알림 저장소, 범용 Queue·Worker가 준비됐다는 근거로 사용하지 않는다.
