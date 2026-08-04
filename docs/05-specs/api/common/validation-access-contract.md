@@ -30,7 +30,7 @@ related_documents:
 }
 ```
 
-성공은 `204 No Content`이며 `__Host-masiton-verification` 쿠키를 발급한다. 쿠키는 `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/`, 7일 고정 만료이고 `Domain`을 지정하지 않는다. 응답 본문에 세션 ID를 넣지 않는다.
+성공은 `204 No Content`이며 `__Host-masiton-verification` 쿠키를 발급한다. 쿠키는 `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, 7일 고정 만료이고 `Domain`을 지정하지 않는다. 응답 본문에 세션 ID를 넣지 않는다.
 
 잘못된 자격 증명은 `401 INVALID_VALIDATION_CREDENTIALS`, 출처 또는 ID별 15분 5회 초과는 `429 RATE_LIMIT_EXCEEDED`, Redis 장애는 `503 VALIDATION_SESSION_UNAVAILABLE`이다. 오류는 검증 참여자 등록 여부를 구분하지 않는다.
 

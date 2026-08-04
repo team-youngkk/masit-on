@@ -48,7 +48,7 @@ M2-11은 전체 사이트에 Nginx Basic Auth를 적용했다. Basic과 회원·
 - 화면: `GET /verification/login`
 - 세션 생성: `POST /api/verification/sessions`
 - 세션 종료: `DELETE /api/verification/sessions`
-- 쿠키: `__Host-masiton-verification`; `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/`, `Domain` 미지정
+- 쿠키: `__Host-masiton-verification`; `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, `Domain` 미지정. CSRF는 세션 생성·종료 API의 Origin 검사(4.2절)로 막으므로, `SameSite=Strict` 대신 `Lax`를 써서 이메일 링크 등 외부에서 시작하는 top-level 이동에서도 세션 쿠키가 전달돼 재로그인을 유발하지 않는다([PR #129 리뷰](../../troubleshooting/pr-129-deploy-cutover-and-rate-limit-review.md)).
 - 수명: 발급 시점부터 7일 고정 만료. 활동에 따른 연장과 Refresh Token은 두지 않는다.
 - 세션 원문: CSPRNG 128-bit 이상. 응답 본문·로그·URL·Redis에 남기지 않는다.
 - Redis: `auth:verification:session:{sha256(sessionId)}`에 최소 상태와 만료만 저장한다.

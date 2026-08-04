@@ -50,7 +50,7 @@ URL 탐색 조건에 맞는 공개 맛집의 위치·요약을 지도 마커와 
       "id": "restaurant-id",
       "name": "맛집 이름",
       "category": "한식",
-      "addressSummary": "서울특별시 마포구",
+      "addressSummary": "서울특별시 마포구 월드컵로 1",
       "coordinate": {
         "latitude": 37.5665,
         "longitude": 126.978
@@ -68,7 +68,7 @@ URL 탐색 조건에 맞는 공개 맛집의 위치·요약을 지도 마커와 
 | `items[].id` | Identifier | 예 | 맛집 식별자 |
 | `items[].name` | string | 예 | 맛집 이름 |
 | `items[].category` | string | 예 | 대표 음식 카테고리 |
-| `items[].addressSummary` | string | 예 | 주소 요약 |
+| `items[].addressSummary` | string | 예 | 저장된 전체 도로명주소 |
 | `items[].coordinate.latitude` | number | 예 | WGS84 위도 |
 | `items[].coordinate.longitude` | number | 예 | WGS84 경도 |
 

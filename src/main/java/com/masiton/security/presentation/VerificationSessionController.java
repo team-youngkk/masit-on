@@ -80,12 +80,12 @@ public class VerificationSessionController {
 
     private ResponseCookie sessionCookie(String value) {
         return ResponseCookie.from(properties.getCookieName(), value).httpOnly(true).secure(true)
-                .sameSite("Strict").path("/").maxAge(properties.getSessionTtl()).build();
+                .sameSite("Lax").path("/").maxAge(properties.getSessionTtl()).build();
     }
 
     private ResponseCookie expiredCookie() {
         return ResponseCookie.from(properties.getCookieName(), "").httpOnly(true).secure(true)
-                .sameSite("Strict").path("/").maxAge(Duration.ZERO).build();
+                .sameSite("Lax").path("/").maxAge(Duration.ZERO).build();
     }
 
     private String sessionId(HttpServletRequest request) {
