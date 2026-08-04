@@ -25,8 +25,21 @@ echo "nginx: $(nginx -v 2>&1)"
 install -d -m 0755 "$OPT_DIR/bin"
 install -m 0750 "$STAGE/tls-deploy-cert.sh" "$OPT_DIR/bin/tls-deploy-cert.sh"
 
-# M2-11 Basic Auth의 systemd 사전 실행 경계를 제거한다. 이전 설치의 drop-in이
-# 남아 있으면 삭제한 렌더러를 계속 호출해 Nginx 재기동이 실패한다.
+# E1-T13 배포 전환: 새 검증 세션 경계를 먼저 배포·검증한 뒤에만 Basic Auth를
+# 제거한다(expansion-1-task-breakdown.md). 백엔드가 아직 이전 버전이거나
+# 기동하지 않았으면 여기서 중단하고 기존 Basic Auth 구성을 그대로 둔다 —
+# 세션 쿠키 없는 요청은 계약상 401이어야 하며, 다른 응답은 새 경계가 아직
+# 준비되지 않았다는 뜻이다.
+verification_status=$(curl -sS -m 5 -o /dev/null -w '%{http_code}' \
+  http://127.0.0.1:8080/internal/verification/session || echo "000")
+if [ "$verification_status" != "401" ]; then
+  echo "새 검증 세션 경계가 준비되지 않았다(HTTP $verification_status). app-deploy.sh로 백엔드를 먼저 배포·검증한 뒤 다시 실행한다. 기존 Basic Auth 구성은 그대로 둔다." >&2
+  exit 1
+fi
+
+# 위 확인을 통과했을 때만 M2-11 Basic Auth의 systemd 사전 실행 경계를 제거한다.
+# 이전 설치의 drop-in이 남아 있으면 삭제한 렌더러를 계속 호출해 Nginx 재기동이
+# 실패한다.
 rm -f /etc/systemd/system/nginx.service.d/10-masiton-basic-auth.conf
 
 # 인증서를 먼저 내려받아야 Nginx가 기동한다. ssl_certificate 파일이 없으면

@@ -23,10 +23,14 @@ public class RedisVerificationAccessStore implements VerificationAccessStore {
     private static final String SESSION_PREFIX = "auth:verification:session:";
     private static final String LOGIN_PREFIX = "auth:verification:failure:login-id:";
     private static final String SOURCE_PREFIX = "auth:verification:failure:source:";
-    private static final DefaultRedisScript<Long> INCREMENT_WITH_TTL = new DefaultRedisScript<>("""
-            local attempts = redis.call('INCR', KEYS[1])
-            if attempts == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end
-            return attempts
+    private static final DefaultRedisScript<Long> RECORD_FAILURE = new DefaultRedisScript<>("""
+            for _, key in ipairs(KEYS) do
+              local attempts = redis.call('INCR', key)
+              if attempts == 1 then
+                redis.call('EXPIRE', key, ARGV[1])
+              end
+            end
+            return 1
             """, Long.class);
 
     private final StringRedisTemplate redis;
@@ -56,10 +60,7 @@ public class RedisVerificationAccessStore implements VerificationAccessStore {
 
     public void recordFailure(String loginId, String source) {
         String ttl = String.valueOf(properties.getFailureTtl().toSeconds());
-        execute(() -> {
-            redis.execute(INCREMENT_WITH_TTL, List.of(loginKey(loginId)), ttl);
-            redis.execute(INCREMENT_WITH_TTL, List.of(sourceKey(source)), ttl);
-        });
+        execute(() -> redis.execute(RECORD_FAILURE, List.of(loginKey(loginId), sourceKey(source)), ttl));
     }
 
     public void clearFailures(String loginId, String source) {

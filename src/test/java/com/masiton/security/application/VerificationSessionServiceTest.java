@@ -76,4 +76,40 @@ class VerificationSessionServiceTest {
                     assertThat(exception.status().value()).isEqualTo(503);
                 });
     }
+
+    @Test
+    @DisplayName("출처·로그인 ID 제한 초과는 자격 증명을 확인하지 않고 429로 차단한다")
+    void 세션생성_제한초과_자격증명확인없이429로차단한다() {
+        when(store.isBlocked("participant", "127.0.0.1")).thenReturn(true);
+        when(settings.failureTtl()).thenReturn(Duration.ofMinutes(15));
+
+        assertThatThrownBy(() -> service.create("participant", "secret", "127.0.0.1"))
+                .isInstanceOfSatisfying(BusinessException.class, exception -> {
+                    assertThat(exception.code()).isEqualTo("RATE_LIMIT_EXCEEDED");
+                    assertThat(exception.status().value()).isEqualTo(429);
+                });
+        verify(credentialVerifier, never()).matches(anyString(), anyString());
+        verify(store, never()).recordFailure(anyString(), anyString());
+    }
+
+    @Test
+    @DisplayName("세션 종료는 쿠키의 원문 세션 ID로 저장소 항목을 삭제한다")
+    void 세션종료_쿠키의세션ID로저장소항목을삭제한다() {
+        service.revoke("raw-session");
+
+        verify(store).delete("raw-session");
+    }
+
+    @Test
+    @DisplayName("세션 종료 중 Redis 장애는 검증 세션 장애 503으로 닫힌다")
+    void 세션종료_Redis장애_503으로차단한다() {
+        org.mockito.Mockito.doThrow(new VerificationStoreUnavailableException(new RuntimeException("down")))
+                .when(store).delete("raw-session");
+
+        assertThatThrownBy(() -> service.revoke("raw-session"))
+                .isInstanceOfSatisfying(BusinessException.class, exception -> {
+                    assertThat(exception.code()).isEqualTo("VALIDATION_SESSION_UNAVAILABLE");
+                    assertThat(exception.status().value()).isEqualTo(503);
+                });
+    }
 }

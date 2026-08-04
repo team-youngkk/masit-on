@@ -10,6 +10,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #129 Basic Auth 전환 안전장치와 이메일 인증 rate limit 우회](pr-129-deploy-cutover-and-rate-limit-review.md)
 - [PR #128 트러블슈팅 기록의 권위 등급과 기록 생성 단위](pr-128-skill-troubleshooting-authority-review.md)
 - [PR #127 트러블슈팅 기록의 related_documents 누락 보완](pr-127-troubleshooting-record-related-docs-review.md)
 - [PR #125 develop→main 승격 PR의 역동기화 계획 정정](pr-125-develop-to-main-sync-policy-review.md)
