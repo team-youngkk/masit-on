@@ -1,7 +1,7 @@
 ---
 id: API-COLLECTION-001
 title: 개인 컬렉션 API
-status: draft
+status: approved
 related_prd:
   - PRD-COLLECTION-001
 workstream: WS-09

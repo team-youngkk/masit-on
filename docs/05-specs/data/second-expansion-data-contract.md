@@ -1,7 +1,7 @@
 ---
 id: DATA-E2-001
 title: 2차 확장 데이터 계약
-status: draft
+status: approved
 related_documents:
   - README.md
   - ../../01-requirements/functional-requirements.md

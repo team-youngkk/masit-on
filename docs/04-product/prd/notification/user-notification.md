@@ -1,7 +1,7 @@
 ---
 id: PRD-NOTIFICATION-001
 title: 사용자 알림
-status: draft
+status: approved
 workstream: WS-13
 owner: 이우람
 reviewers:

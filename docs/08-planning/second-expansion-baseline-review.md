@@ -52,17 +52,21 @@ related_documents:
 | 맛집 공개 상태를 재사용할 수 있는가 | **충족** | `publication_status`와 `lifecycle_status`가 공개 목록·상세 및 개인화 조회 경계에 적용돼 있다. 컬렉션·큐레이션·인기 결과도 같은 공개 판정을 사용한다는 계약은 각 기능 문서에서 다시 명시해야 한다. |
 | 인기 집계용 행동 데이터가 있는가 | **부분 충족** | 찜과 최근 본 맛집 데이터는 구현돼 있다. 다만 최근 기록은 회원·맛집별 최신 1건, 최신 50건 상한, 30일 보존 구조이므로 반복 조회 횟수나 전체 조회 이벤트를 나타내지 않는다. 현재 데이터만으로 `조회수 기반 인기`를 정의해서는 안 된다. |
 | 비동기 작업을 운용할 수 있는가 | **제한적으로 충족** | 단일 EC2 애플리케이션에서 Spring `@Scheduled`, PostgreSQL `SKIP LOCKED` Outbox, 재시도 작업을 운용하고 있다. 이는 회원 Action 메일 등 승인된 좁은 사례에 한정되며 범용 이벤트·메시지 브로커의 승인을 뜻하지 않는다. |
-| 사용자 알림을 운용할 수 있는가 | **미충족** | 운영 SMTP와 CloudWatch→Slack 운영 알림은 있으나 일반 사용자 알림 채널은 아니다. FCM은 `Post-MVP`, 범용 비동기 이벤트·Outbox는 `Conditional` 상태다. 사용자 식별·동의·해지·토큰 수명주기·실패 처리를 승인하고 관련 ADR을 활성화해야 한다. |
+| 사용자 알림을 운용할 수 있는가 | **충족 (범위 한정)** | [ADR-NOTIFY-002](../07-adr/integration/notify-002-in-app-notification-reliability.md)에 따라 서비스 내 DB 알림(알림함)으로 범위를 확정했다. FCM·이메일·웹 푸시·동의/해지·외부 전달 재시도는 범위 밖이다. 현재 PostgreSQL과 회원 인증 기반으로 알림 저장·목록·읽음·보존을 운용할 수 있다. |
+
+> **재판정 (2026-08-04)**: 초기 조사 시 범용 사용자 알림 채널이 없어 미충족으로 판정했으나, 이후 ADR-NOTIFY-002가 Accepted되어 서비스 내 DB 알림으로 범위가 확정됐다. FCM·이메일 등 외부 채널은 [ADR-NOTIFY-001](../07-adr/adr-backlog.md#adr-notify-001-fcm-푸시-알림)에서 Post-MVP로 분류돼 2차 확장 범위에 포함하지 않는다.
 
 ## 4. 기능별 선행 관계
 
 | 2차 확장 기능 | 1차 확장 선행 요소 | 현재 판정 | 구현 Task 착수 조건 |
 |---|---|---|---|
-| 개인 컬렉션 | 회원 인증, 맛집 공개 상태 | 기반 구현 있음 / 계약 상태 동기화 필요 | 컬렉션 소유권·공개 범위·항목 중복·정렬·탈퇴 정리 계약 확정 |
-| 인기 맛집 | 찜·조회 등 집계 기준으로 사용할 행동 데이터 | 찜·최근 기록 있음 / 집계 의미 미확정 | 집계 신호, 기간, 가중치, 중복 제거, 비공개 전환, 최소 표본과 갱신 주기 확정 |
-| 큐레이션 | 관리자 인증, 맛집 공개 상태 | 기반 구현 있음 | 큐레이션 작성·게시·정렬·회수 권한과 비공개 맛집 처리 확정 |
-| 제보·신고 | 회원 인증, 관리자 처리 흐름 | 회원 인증만 구현됨 | 제보와 신고의 대상·증거·상태·중복·오남용 제한·관리자 처리·보존 정책 확정 |
-| 사용자 알림 | 회원 식별, 동의·해지, 제보·신고 처리 결과 | 회원 식별만 구현됨 | 알림 이벤트·채널·동의·해지·읽음·보존·재시도·토큰 및 비밀정보 수명주기 확정 |
+| 개인 컬렉션 | 회원 인증, 맛집 공개 상태 | **충족** | ~~컬렉션 소유권·공개 범위·항목 중복·정렬·탈퇴 정리 계약 확정~~ → [개인 컬렉션 PRD](../04-product/prd/personal/personal-collection.md)·[API](../05-specs/api/personal/personal-collection-api.md) 확정 완료 |
+| 인기 맛집 | 찜·조회 등 집계 기준으로 사용할 행동 데이터 | **충족** | ~~집계 신호, 기간, 가중치, 중복 제거, 비공개 전환, 최소 표본과 갱신 주기 확정~~ → [ADR-DATA-011](../07-adr/data/data-011-popular-restaurant-request-time-aggregation.md): 전체 기간 현재 찜 실시간 집계. [인기 맛집 PRD](../04-product/prd/discovery/popular-restaurants.md)·[API](../05-specs/api/discovery/popular-restaurant-api.md) 확정 완료 |
+| 큐레이션 | 관리자 인증, 맛집 공개 상태 | **충족** | ~~큐레이션 작성·게시·정렬·회수 권한과 비공개 맛집 처리 확정~~ → [관리자 큐레이션 PRD](../04-product/prd/curation/admin-curation.md)·[API](../05-specs/api/curation/curation-api.md) 확정 완료 |
+| 제보·신고 | 회원 인증, 관리자 처리 흐름 | **충족** | ~~제보와 신고의 대상·증거·상태·중복·오남용 제한·관리자 처리·보존 정책 확정~~ → [제보·신고 PRD](../04-product/prd/participation/user-submission-report.md)·[API](../05-specs/api/participation/submission-report-api.md) 확정 완료 |
+| 사용자 알림 | 회원 식별, 제보·신고 처리 결과 | **충족 (범위 한정)** | ~~알림 이벤트·채널·동의·해지·읽음·보존·재시도·토큰 및 비밀정보 수명주기 확정~~ → [ADR-NOTIFY-002](../07-adr/integration/notify-002-in-app-notification-reliability.md): 서비스 내 DB 알림만. [사용자 알림 PRD](../04-product/prd/notification/user-notification.md)·[API](../05-specs/api/notification/notification-api.md) 확정 완료 |
+
+> **재판정 (2026-08-04)**: 초기 조사 시 기반 구현만 확인하고 계약 확정을 착수 조건으로 두었으나, 이후 다섯 기능 모두 PRD·API·데이터·ADR 계약이 확정됐다. 인기 맛집은 전체 기간 현재 찜 실시간 집계(ADR-DATA-011), 사용자 알림은 서비스 내 DB 알림(ADR-NOTIFY-002)으로 범위가 좁혀져 외부 채널·동의/해지·토큰 수명주기는 착수 조건에서 제외된다.
 
 ## 5. 구현 전에 필요한 결정
 
@@ -79,31 +83,37 @@ related_documents:
 
 ### 5.2 인기 맛집의 행동 신호
 
-다음 중 무엇을 인기 집계의 원천으로 사용할지 제품 계약에서 먼저 결정한다.
+~~다음 중 무엇을 인기 집계의 원천으로 사용할지 제품 계약에서 먼저 결정한다.~~
 
 - 찜 수: 현재 `favorite`로 집계할 수 있지만 누적값인지 기간 내 신규 찜인지 정해야 한다.
 - 최근 본 회원 수: 현재 `recent_restaurant_view`로 제한된 기간의 고유 회원 근사치는 만들 수 있으나, 최신 50건 상한과 삭제가 집계 결과를 왜곡할 수 있다.
 - 조회 횟수: 현재 저장소에는 조회 이벤트 이력이 없으므로 별도 행동 이벤트 계약·수집·보존·개인정보 기준이 필요하다.
 - 복합 점수: 각 신호의 가중치, 시간 감쇠, 최소 표본과 동률 정렬을 확정해야 한다.
 
-결정 전에는 현재 최근 기록을 `조회수`로 이름만 바꾸거나 반복 조회 횟수로 해석하지 않는다.
+~~결정 전에는 현재 최근 기록을 `조회수`로 이름만 바꾸거나 반복 조회 횟수로 해석하지 않는다.~~
+
+> **재판정 (2026-08-04)**: [ADR-DATA-011](../07-adr/data/data-011-popular-restaurant-request-time-aggregation.md)에서 **전체 기간의 현재 찜 관계를 요청 시점에 집계**하는 방식으로 확정했다. Snapshot·Batch·Redis 캐시·재계산 작업은 만들지 않는다. 조회 횟수·복합 점수·시간 감쇠는 도입하지 않으므로 위 목록의 행동 이벤트 계약은 불필요하다. [인기 맛집 PRD](../04-product/prd/discovery/popular-restaurants.md)와 [인기 맛집 API](../05-specs/api/discovery/popular-restaurant-api.md)가 `approved`로 전환됐다.
 
 ### 5.3 비동기 작업과 사용자 알림
 
-[ADR-AUTH-005](../07-adr/security/auth-005-member-action-mail-outbox.md)는 회원 Action Token에 종속된 메일 한 종류에만 PostgreSQL Outbox를 허용하며, 단일 소비 Token으로 중복 전달을 흡수할 수 없는 향후 알림에는 재사용을 금지한다. 따라서 제보·신고 처리 알림은 다음을 별도로 결정해야 한다.
+[ADR-AUTH-005](../07-adr/security/auth-005-member-action-mail-outbox.md)는 회원 Action Token에 종속된 메일 한 종류에만 PostgreSQL Outbox를 허용하며, 단일 소비 Token으로 중복 전달을 흡수할 수 없는 향후 알림에는 재사용을 금지한다. ~~따라서 제보·신고 처리 알림은 다음을 별도로 결정해야 한다.~~
 
-- 알림 채널: 서비스 내 알림, 이메일, FCM 중 MVP 기능 범위
-- 수신 동의와 해지 단위, 기본값, 변경 이력
-- 알림 이벤트와 처리 결과 Snapshot, 중복 전달의 사용자 영향
-- at-most-once / at-least-once 등 전달 의미와 멱등성 key
-- 재시도, 만료, 실패 보관, 운영자 확인과 개인정보 삭제
-- 단일 EC2 Scheduler 유지 또는 별도 Queue·Worker 도입 여부와 비용·관측성
+- ~~알림 채널: 서비스 내 알림, 이메일, FCM 중 MVP 기능 범위~~
+- ~~수신 동의와 해지 단위, 기본값, 변경 이력~~
+- ~~알림 이벤트와 처리 결과 Snapshot, 중복 전달의 사용자 영향~~
+- ~~at-most-once / at-least-once 등 전달 의미와 멱등성 key~~
+- ~~재시도, 만료, 실패 보관, 운영자 확인과 개인정보 삭제~~
+- ~~단일 EC2 Scheduler 유지 또는 별도 Queue·Worker 도입 여부와 비용·관측성~~
 
-FCM을 선택하면 [ADR-NOTIFY-001](../07-adr/adr-backlog.md#adr-notify-001-fcm-푸시-알림)을 활성화한다. 유실 방지 후속 이벤트나 범용 Outbox·Queue가 필요하면 ADR Backlog의 자동 복원력 결정을 별도 활성화하고 기존 회원 Action 메일 ADR의 범위를 넓히지 않는다.
+~~FCM을 선택하면 [ADR-NOTIFY-001](../07-adr/adr-backlog.md#adr-notify-001-fcm-푸시-알림)을 활성화한다. 유실 방지 후속 이벤트나 범용 Outbox·Queue가 필요하면 ADR Backlog의 자동 복원력 결정을 별도 활성화하고 기존 회원 Action 메일 ADR의 범위를 넓히지 않는다.~~
+
+> **재판정 (2026-08-04)**: [ADR-NOTIFY-002](../07-adr/integration/notify-002-in-app-notification-reliability.md)에서 **서비스 내 DB 알림(알림함)만** 2차 확장 범위로 확정했다. 알림 설정·동의·해지, 이메일·웹 푸시·FCM, 외부 전달 재시도는 범위 밖이다. 제보·신고 처리 결과는 관리자 상태 전이 트랜잭션 안에서 알림 레코드를 함께 저장한다(E2-T11). FCM은 [ADR-NOTIFY-001](../07-adr/adr-backlog.md#adr-notify-001-fcm-푸시-알림)에서 Post-MVP로 유지되며, 범용 Outbox·Queue 도입 없이 단일 DB 트랜잭션으로 신뢰성을 보장한다. [사용자 알림 PRD](../04-product/prd/notification/user-notification.md)와 [알림 API](../05-specs/api/notification/notification-api.md)가 `approved`로 전환됐다.
 
 ### 5.4 제보·신고 관리자 처리 흐름
 
-현재 관리자 인증과 데이터 등록 흐름은 제보·신고 접수함이나 처리 상태 머신을 제공하지 않는다. 접수, 중복 판정, 담당자 확인, 승인·기각·보완 요청, 처리 결과 통지, 감사 이력, 신고 대상의 임시 노출 제한을 하나의 사용자·관리자 흐름으로 먼저 확정한다.
+~~현재 관리자 인증과 데이터 등록 흐름은 제보·신고 접수함이나 처리 상태 머신을 제공하지 않는다. 접수, 중복 판정, 담당자 확인, 승인·기각·보완 요청, 처리 결과 통지, 감사 이력, 신고 대상의 임시 노출 제한을 하나의 사용자·관리자 흐름으로 먼저 확정한다.~~
+
+> **재판정 (2026-08-04)**: [제보·신고 PRD](../04-product/prd/participation/user-submission-report.md)와 [API](../05-specs/api/participation/submission-report-api.md)에서 접수·본인 조회·중복·합산 일일 5건·입력 보안(E2-T08)과 관리자 상태 전이·감사 이력·`ACCEPTED`/`COMPLETED` 분리(E2-T09)를 확정했다. 신고 수만으로 자동 비공개하지 않으며, 처리 결과 알림은 서비스 내 DB 알림으로 E2-T11에서 연결한다. 두 계약이 `approved`로 전환됐다.
 
 ## 6. 착수 게이트
 
@@ -116,7 +126,7 @@ FCM을 선택하면 [ADR-NOTIFY-001](../07-adr/adr-backlog.md#adr-notify-001-fcm
 5. 사용자 알림의 채널·동의·해지·전달 보장과 운영 토폴로지를 확정하고 필요한 ADR을 활성화한다.
 6. 확정 계약을 제품·API·데이터·ADR 추적표에서 역추적할 수 있게 연결한다.
 
-2026-08-04 재판정에서 조건 2~6은 확정된 2차 확장 요구사항·범위·PRD owner, 현재 찜 기반 인기 집계와 보존·개인정보 기준, 제보·신고 상태와 결과 알림, 서비스 내 알림의 전달·운영 결정, 네 추적표 연결로 모두 충족했다. 조건 1도 회원·개인화 네 계약의 `approved` 전환, `E1-T11` 운영 지도 네트워크 계측, `E1-T12` 회귀와 `E1-T13` 운영 확인까지 충족해 전체 착수 게이트를 통과한다.
+2026-08-04 재판정에서 조건 2~6은 확정된 2차 확장 요구사항·범위·PRD owner, 현재 찜 기반 인기 집계와 보존·개인정보 기준(ADR-DATA-011), 제보·신고 상태와 결과 알림(PRD·API 확정), 서비스 내 알림의 전달·운영 결정(ADR-NOTIFY-002), 네 추적표 연결로 모두 충족했다. 2차 확장 PRD 5개, API 계약 6개, 데이터 계약 1개를 각 owner 승인 전제 아래 `approved`로 전환했다. 조건 1도 회원·개인화 네 계약의 `approved` 전환, `E1-T11` 운영 지도 네트워크 계측, `E1-T12` 회귀와 `E1-T13` 운영 확인까지 충족해 전체 착수 게이트를 통과한다.
 
 ## 7. 검증 결과와 제약
 
