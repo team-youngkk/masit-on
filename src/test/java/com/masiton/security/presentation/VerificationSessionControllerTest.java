@@ -64,7 +64,7 @@ class VerificationSessionControllerTest {
                         containsString("Max-Age=604800"),
                         containsString("Secure"),
                         containsString("HttpOnly"),
-                        containsString("SameSite=Strict"),
+                        containsString("SameSite=Lax"),
                         not(containsString("Domain=")))));
     }
 
@@ -87,6 +87,32 @@ class VerificationSessionControllerTest {
                 .andExpect(header().string(HttpHeaders.SET_COOKIE,
                         containsString("Max-Age=0")));
         verify(service).revoke(null);
+    }
+
+    @Test
+    @DisplayName("쿠키가 있는 종료는 그 세션 ID로 서비스를 호출하고 쿠키를 만료한다")
+    void 세션종료_쿠키있음_해당세션ID로서비스호출() throws Exception {
+        mockMvc.perform(delete("/api/verification/sessions")
+                        .header(HttpHeaders.ORIGIN, "http://localhost:3000")
+                        .cookie(new jakarta.servlet.http.Cookie("__Host-masiton-verification", "raw-session")))
+                .andExpect(status().isNoContent())
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("Max-Age=0")));
+        verify(service).revoke("raw-session");
+    }
+
+    @Test
+    @DisplayName("종료 중 Redis 장애는 503 JSON으로 응답한다")
+    void 세션종료_Redis장애_503JSON반환() throws Exception {
+        org.mockito.Mockito.doThrow(new com.masiton.common.web.BusinessException(
+                        org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,
+                        "VALIDATION_SESSION_UNAVAILABLE", "검증 세션을 확인할 수 없습니다."))
+                .when(service).revoke("raw-session");
+
+        mockMvc.perform(delete("/api/verification/sessions")
+                        .header(HttpHeaders.ORIGIN, "http://localhost:3000")
+                        .cookie(new jakarta.servlet.http.Cookie("__Host-masiton-verification", "raw-session")))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("VALIDATION_SESSION_UNAVAILABLE"));
     }
 
     @Test

@@ -36,6 +36,7 @@ related_documents:
   - platform/ci-001-github-actions-quality-gate.md
   - platform/deploy-001-release-sequencing.md
   - platform/deploy-003-validation-cookie-session.md
+  - platform/git-001-branch-merge-strategy.md
 ---
 
 # 맛잇온 ADR 인덱스
@@ -73,6 +74,7 @@ related_documents:
 | [ADR-NOTIFY-002](integration/notify-002-in-app-notification-reliability.md) | 서비스 내 사용자 알림의 저장 신뢰성 경계 | Accepted | Critical | PostgreSQL 단일 트랜잭션 | [WS-12](../02-analysis/second-expansion-workstreams.md#7-ws-12-제보신고-검토)·[WS-13](../02-analysis/second-expansion-workstreams.md#8-ws-13-사용자-알림) | [문서](integration/notify-002-in-app-notification-reliability.md) |
 | [ADR-RUNTIME-001](platform/runtime-001-docker.md) | Docker 기반 실행 환경 | Accepted | High | Docker | 개발·테스트·배포 산출물 | [문서](platform/runtime-001-docker.md) |
 | [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md) | GitHub Actions 빌드·테스트 품질 게이트 | Accepted | Critical | GitHub Actions | 전체 배포 후보 | [문서](platform/ci-001-github-actions-quality-gate.md) |
+| [ADR-GIT-001](platform/git-001-branch-merge-strategy.md) | 브랜치 병합 방식과 역동기화 정책 | Accepted | High | GitHub ruleset(Squash/Merge Commit) | 전체 PR 병합 | [문서](platform/git-001-branch-merge-strategy.md) |
 | [ADR-DEPLOY-001](platform/deploy-001-release-sequencing.md) | 단계별 로컬 검증과 최종 AWS 배포 순서 | Superseded | Critical | Docker, AWS | 전체 단계 및 최종 배포 | [문서](platform/deploy-001-release-sequencing.md) |
 | [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | 초기 운영 배포 선행과 확장 단계별 인프라 반영 | Accepted | Critical | Docker, AWS | M2 초기 운영 배포 및 이후 확장 | [문서](platform/deploy-002-validation-deployment-before-expansion.md) |
 | [ADR-DEPLOY-003](platform/deploy-003-validation-cookie-session.md) | 검증 참여자 제한 공개 쿠키 세션 | Accepted | Critical | Nginx `auth_request`, Spring Boot, Redis, HttpOnly Cookie | 정식 공개 전 검증 참여자 제한 공개 | [문서](platform/deploy-003-validation-cookie-session.md) |
