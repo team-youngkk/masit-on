@@ -3,6 +3,7 @@ import test from 'node:test'
 
 import {
   allowedReportTypes,
+  parseParticipationError,
   participationErrorMessage,
   participationPayloadKey,
   participationTargetDetails,
@@ -45,4 +46,26 @@ test('제보와 신고 대상은 목록 요약과 상세 필드를 구분해 제
     targetId: 'video-id',
     reportType: 'UNAVAILABLE',
   }), [['대상 식별자', 'video-id'], ['신고 유형', 'UNAVAILABLE']])
+})
+
+test('Response 오류는 traceId를 포함한 계약 본문을 함께 반환한다', async () => {
+  const response = new Response(
+    JSON.stringify({ code: 'PARTICIPATION_TARGET_NOT_FOUND', message: '대상을 찾을 수 없습니다.', traceId: 'trace-1' }),
+    { status: 404 },
+  )
+  const parsed = await parseParticipationError(response)
+  assert.deepEqual(parsed, {
+    status: 404,
+    contract: { code: 'PARTICIPATION_TARGET_NOT_FOUND', message: '대상을 찾을 수 없습니다.', traceId: 'trace-1' },
+  })
+})
+
+test('JSON이 아닌 오류 본문은 상태 코드만 담고 빈 계약으로 대체한다', async () => {
+  const response = new Response('not-json', { status: 502 })
+  const parsed = await parseParticipationError(response)
+  assert.deepEqual(parsed, { status: 502, contract: {} })
+})
+
+test('Response가 아닌 원인은 네트워크 오류로 간주해 null을 반환한다', async () => {
+  assert.equal(await parseParticipationError(new TypeError('network down')), null)
 })

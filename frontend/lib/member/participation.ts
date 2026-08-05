@@ -3,11 +3,12 @@
 import { authenticatedMemberFetch } from '@/lib/member/auth'
 import {
   ParticipationContractError,
+  parseParticipationError,
   participationErrorMessage,
   participationPayloadKey,
 } from './participation-coordination'
 
-export { participationErrorMessage, participationPayloadKey }
+export { parseParticipationError, participationErrorMessage, participationPayloadKey }
 
 export type RequestKind = 'submission' | 'report'
 export type TargetType = 'RESTAURANT' | 'CREATOR' | 'VIDEO' | 'VISIT_RELATIONSHIP'

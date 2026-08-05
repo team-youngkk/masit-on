@@ -1,7 +1,26 @@
 export type ParticipationContractError = {
   code?: string
   message?: string
+  traceId?: string
   resource?: { requestId?: string; status?: string } | null
+}
+
+export type ParticipationErrorDetails = { status: number; contract: ParticipationContractError }
+
+/**
+ * createParticipation/getParticipations/getParticipationDetail은 실패 시
+ * 원본 Response를 던진다. 호출부(ParticipationRequestScreen)가 매번 같은
+ * 파싱을 반복하지 않도록 status/traceId/code/message를 여기서 뽑아낸다.
+ */
+export async function parseParticipationError(reason: unknown): Promise<ParticipationErrorDetails | null> {
+  if (!(reason instanceof Response)) return null
+  let contract: ParticipationContractError = {}
+  try {
+    contract = (await reason.json()) as ParticipationContractError
+  } catch {
+    contract = {}
+  }
+  return { status: reason.status, contract }
 }
 
 export function participationErrorMessage(status: number, error: ParticipationContractError): string {
