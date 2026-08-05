@@ -8,11 +8,13 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.masiton.common.idempotency.application.IdempotencyExecutionResult;
+import com.masiton.common.idempotency.application.IdempotencyRequest;
 import com.masiton.common.idempotency.application.port.in.IdempotentCreationUseCase;
 import com.masiton.common.web.GlobalExceptionHandler;
 import com.masiton.participation.application.ParticipationView;
@@ -22,9 +24,12 @@ import com.masiton.participation.domain.ParticipationTargetType;
 import com.masiton.security.infrastructure.web.MemberPrivateCacheFilter;
 import tools.jackson.databind.ObjectMapper;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -116,6 +121,55 @@ class ParticipationControllerApiTest {
         mockMvc.perform(get("/api/me/reports").principal(authentication()).queryParam("size", "30"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_FIELD_VALUE"));
+    }
+
+    @Test
+    @DisplayName("상세 경로의 잘못된 식별자는 자원별 404 계약을 반환한다")
+    void 상세조회_잘못된식별자_기능404를반환한다() throws Exception {
+        mockMvc.perform(get("/api/me/submissions/not-an-id").principal(authentication()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("SUBMISSION_NOT_FOUND"));
+
+        mockMvc.perform(get("/api/me/reports/not-an-id").principal(authentication()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("REPORT_NOT_FOUND"));
+    }
+
+    @Test
+    @DisplayName("멱등 요청 해시는 JSON null의 타입과 중첩 객체 키 순서를 보존한다")
+    void 접수_멱등본문해시_null타입과중첩키순서를구분한다() throws Exception {
+        UUID requestId = UUID.randomUUID();
+        OffsetDateTime now = OffsetDateTime.parse("2026-08-04T12:00:00+09:00");
+        given(useCase.createSubmission(any(), any())).willReturn(new ParticipationView.Submission(
+                requestId, ParticipationTargetType.RESTAURANT, Map.of("name", "새 맛집"),
+                "새로운 맛집 등록을 제안합니다.", null,
+                ParticipationStatus.RECEIVED, null, now, now));
+
+        postSubmission("hash-key-0001", "null", "{\"outer\":{\"b\":2,\"a\":1}}");
+        postSubmission("hash-key-0002", "\"null\"", "{\"outer\":{\"a\":1,\"b\":2}}");
+
+        ArgumentCaptor<IdempotencyRequest> requests = ArgumentCaptor.forClass(IdempotencyRequest.class);
+        verify(idempotency, times(2)).execute(requests.capture(), any());
+        assertThat(requests.getAllValues().get(0).requestHash())
+                .isNotEqualTo(requests.getAllValues().get(1).requestHash());
+
+        postSubmission("hash-key-0003", "null", "{\"outer\":{\"b\":2,\"a\":1}}");
+        postSubmission("hash-key-0004", "null", "{\"outer\":{\"a\":1,\"b\":2}}");
+        verify(idempotency, times(4)).execute(requests.capture(), any());
+        assertThat(requests.getAllValues().get(4).requestHash())
+                .isEqualTo(requests.getAllValues().get(5).requestHash());
+    }
+
+    private void postSubmission(String key, String evidenceUrl, String candidate) throws Exception {
+        mockMvc.perform(post("/api/me/submissions")
+                        .principal(authentication())
+                        .header("Idempotency-Key", key)
+                        .contentType("application/json")
+                        .content("""
+                                {"targetType":"RESTAURANT","candidate":%s,
+                                 "description":"새로운 맛집 등록을 제안합니다.","evidenceUrl":%s}
+                                """.formatted(candidate, evidenceUrl)))
+                .andExpect(status().isCreated());
     }
 
     private UsernamePasswordAuthenticationToken authentication() {

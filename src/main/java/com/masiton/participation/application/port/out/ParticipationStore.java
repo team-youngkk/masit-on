@@ -31,8 +31,6 @@ public interface ParticipationStore {
             UUID id, UUID memberId, ParticipationTargetType targetType, UUID targetId,
             ReportType reportType, String description, String evidenceUrl, OffsetDateTime now);
 
-    boolean targetExists(ParticipationTargetType targetType, UUID targetId);
-
     List<ParticipationView.Submission> findSubmissions(
             UUID memberId, ParticipationStatus status, int limit, long offset);
 

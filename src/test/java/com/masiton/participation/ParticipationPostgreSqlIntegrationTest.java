@@ -88,7 +88,7 @@ class ParticipationPostgreSqlIntegrationTest extends FullContextIntegrationTest 
                     ready.countDown();
                     start.await(10, TimeUnit.SECONDS);
                     try {
-                        createSubmission(memberId, sequence);
+                        createSubmissionDirect(memberId, sequence);
                         return true;
                     } catch (BusinessException exception) {
                         assertThat(exception.code()).isEqualTo("DAILY_REQUEST_LIMIT_EXCEEDED");
@@ -188,6 +188,15 @@ class ParticipationPostgreSqlIntegrationTest extends FullContextIntegrationTest 
         return createSubmission(memberId, Map.of(
                 "name", "새 맛집 " + sequence,
                 "roadAddress", "서울특별시 테스트로 " + sequence));
+    }
+
+    private ParticipationView.Submission createSubmissionDirect(UUID memberId, int sequence) {
+        return useCase.createSubmission(memberId, new ParticipationRequest.Submission(
+                ParticipationTargetType.RESTAURANT,
+                Map.of("name", "동시 접수 맛집 " + sequence,
+                        "roadAddress", "서울특별시 동시접수로 " + sequence),
+                "동시 접수 원자성을 검증하는 제보입니다.",
+                null));
     }
 
     private ParticipationView.Submission createSubmission(UUID memberId, Map<String, Object> candidate) {

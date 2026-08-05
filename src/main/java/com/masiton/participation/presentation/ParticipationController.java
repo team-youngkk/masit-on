@@ -2,6 +2,7 @@ package com.masiton.participation.presentation;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,6 +32,7 @@ import com.masiton.common.idempotency.application.IdempotencyResponse;
 import com.masiton.common.idempotency.application.port.in.IdempotentCreationUseCase;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
+import com.masiton.participation.application.ParticipationException;
 import com.masiton.participation.application.ParticipationRequest;
 import com.masiton.participation.application.ParticipationView;
 import com.masiton.participation.application.port.in.ParticipationUseCase;
@@ -112,7 +114,9 @@ public class ParticipationController {
     public ResponseEntity<ParticipationView.Submission> submission(
             Authentication authentication, @PathVariable String requestId
     ) {
-        return privateOk(useCase.getSubmission(memberId(authentication), identifier(requestId)));
+        return privateOk(useCase.getSubmission(
+                memberId(authentication),
+                requestIdentifier(requestId, "SUBMISSION_NOT_FOUND", "제보를 찾을 수 없습니다.")));
     }
 
     @GetMapping("/reports")
@@ -129,7 +133,9 @@ public class ParticipationController {
     public ResponseEntity<ParticipationView.Report> report(
             Authentication authentication, @PathVariable String requestId
     ) {
-        return privateOk(useCase.getReport(memberId(authentication), identifier(requestId)));
+        return privateOk(useCase.getReport(
+                memberId(authentication),
+                requestIdentifier(requestId, "REPORT_NOT_FOUND", "신고를 찾을 수 없습니다.")));
     }
 
     private IdempotencyExecutionResult execute(
@@ -168,20 +174,34 @@ public class ParticipationController {
     }
 
     private Object canonical(SubmissionBody body) {
-        return Map.of(
-                "targetType", String.valueOf(body.targetType()),
-                "candidate", body.candidate() == null ? Map.of() : new TreeMap<>(body.candidate()),
-                "description", String.valueOf(body.description()),
-                "evidenceUrl", String.valueOf(body.evidenceUrl()));
+        Map<String, Object> value = new LinkedHashMap<>();
+        value.put("targetType", body.targetType());
+        value.put("candidate", body.candidate());
+        value.put("description", body.description());
+        value.put("evidenceUrl", body.evidenceUrl());
+        return canonicalValue(value);
     }
 
     private Object canonical(ReportBody body) {
-        return Map.of(
-                "targetType", String.valueOf(body.targetType()),
-                "targetId", String.valueOf(body.targetId()),
-                "reportType", String.valueOf(body.reportType()),
-                "description", String.valueOf(body.description()),
-                "evidenceUrl", String.valueOf(body.evidenceUrl()));
+        Map<String, Object> value = new LinkedHashMap<>();
+        value.put("targetType", body.targetType());
+        value.put("targetId", body.targetId());
+        value.put("reportType", body.reportType());
+        value.put("description", body.description());
+        value.put("evidenceUrl", body.evidenceUrl());
+        return canonicalValue(value);
+    }
+
+    private Object canonicalValue(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            Map<String, Object> sorted = new TreeMap<>();
+            map.forEach((key, nested) -> sorted.put(String.valueOf(key), canonicalValue(nested)));
+            return sorted;
+        }
+        if (value instanceof List<?> list) {
+            return list.stream().map(this::canonicalValue).toList();
+        }
+        return value;
     }
 
     private byte[] hash(Object value) {
@@ -208,6 +228,14 @@ public class ParticipationController {
             return UUID.fromString(value);
         } catch (RuntimeException exception) {
             throw new BusinessException(ErrorCode.INVALID_IDENTIFIER);
+        }
+    }
+
+    private UUID requestIdentifier(String value, String code, String message) {
+        try {
+            return UUID.fromString(value);
+        } catch (RuntimeException exception) {
+            throw new ParticipationException(HttpStatus.NOT_FOUND, code, message);
         }
     }
 

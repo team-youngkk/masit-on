@@ -14,7 +14,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.regex.Pattern;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
@@ -26,6 +25,7 @@ import com.masiton.common.web.ErrorCode;
 import com.masiton.common.web.ErrorResponse;
 import com.masiton.participation.application.port.in.ParticipationUseCase;
 import com.masiton.participation.application.port.out.ParticipationStore;
+import com.masiton.participation.application.port.out.ParticipationTargetReader;
 import com.masiton.participation.domain.ParticipationStatus;
 import com.masiton.participation.domain.ParticipationTargetType;
 
@@ -33,18 +33,24 @@ import com.masiton.participation.domain.ParticipationTargetType;
 public class ParticipationService implements ParticipationUseCase {
 
     private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
-    private static final Pattern SCRIPT = Pattern.compile("(?i)<\\s*/?\\s*script\\b|javascript\\s*:");
     private static final int DAILY_LIMIT = 5;
 
     private final ParticipationStore store;
+    private final ParticipationTargetReader targetReader;
     private final Clock clock;
 
-    public ParticipationService(ParticipationStore store, @Qualifier("participationClock") Clock clock) {
+    public ParticipationService(
+            ParticipationStore store,
+            ParticipationTargetReader targetReader,
+            @Qualifier("participationClock") Clock clock
+    ) {
         this.store = store;
+        this.targetReader = targetReader;
         this.clock = clock;
     }
 
     @Override
+    @Transactional
     public ParticipationView.Submission createSubmission(
             UUID memberId,
             ParticipationRequest.Submission request
@@ -67,13 +73,14 @@ public class ParticipationService implements ParticipationUseCase {
     }
 
     @Override
+    @Transactional
     public ParticipationView.Report createReport(UUID memberId, ParticipationRequest.Report request) {
         requireRequest(request);
         store.lockMember(memberId);
         if (!request.reportType().supports(request.targetType())) {
             throw invalid("reportType", "대상 유형과 맞지 않는 신고 유형입니다.");
         }
-        if (!store.targetExists(request.targetType(), request.targetId())) {
+        if (!targetReader.targetExists(request.targetType(), request.targetId())) {
             throw new ParticipationException(
                     HttpStatus.NOT_FOUND, "PARTICIPATION_TARGET_NOT_FOUND", "신고 대상을 찾을 수 없습니다.");
         }
@@ -269,7 +276,8 @@ public class ParticipationService implements ParticipationUseCase {
             throw invalid(field, "필수 입력값입니다.");
         }
         String value = raw.trim();
-        if (SCRIPT.matcher(value).find() || value.codePoints().anyMatch(this::isForbiddenControl)) {
+        if (value.indexOf('<') >= 0 || value.indexOf('>') >= 0
+                || value.codePoints().anyMatch(this::isForbiddenControl)) {
             throw invalid(field, "실행성 문자열이나 제어 문자는 입력할 수 없습니다.");
         }
         return value;

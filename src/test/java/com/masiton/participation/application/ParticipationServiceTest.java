@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 
 import com.masiton.common.web.BusinessException;
 import com.masiton.participation.application.port.out.ParticipationStore;
+import com.masiton.participation.application.port.out.ParticipationTargetReader;
 import com.masiton.participation.domain.ParticipationStatus;
 import com.masiton.participation.domain.ParticipationTargetType;
 import com.masiton.participation.domain.ReportType;
@@ -40,12 +41,14 @@ class ParticipationServiceTest {
     private static final Instant NOW = Instant.parse("2026-08-04T03:00:00Z");
 
     private ParticipationStore store;
+    private ParticipationTargetReader targetReader;
     private ParticipationService service;
 
     @BeforeEach
     void setUp() {
         store = mock(ParticipationStore.class);
-        service = new ParticipationService(store, Clock.fixed(NOW, ZoneOffset.UTC));
+        targetReader = mock(ParticipationTargetReader.class);
+        service = new ParticipationService(store, targetReader, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     @Test
@@ -118,7 +121,7 @@ class ParticipationServiceTest {
         assertThatThrownBy(() -> service.createReport(MEMBER_ID, request))
                 .isInstanceOfSatisfying(BusinessException.class,
                         exception -> assertThat(exception.code()).isEqualTo("INVALID_FIELD_VALUE"));
-        verify(store, never()).targetExists(any(), any());
+        verify(targetReader, never()).targetExists(any(), any());
     }
 
     @Test
@@ -128,14 +131,27 @@ class ParticipationServiceTest {
         ParticipationRequest.Report request = new ParticipationRequest.Report(
                 ParticipationTargetType.RESTAURANT, targetId, ReportType.ERROR,
                 "잘못된 맛집 정보라고 생각합니다.", null);
-        given(store.targetExists(ParticipationTargetType.RESTAURANT, targetId)).willReturn(false);
+        given(targetReader.targetExists(ParticipationTargetType.RESTAURANT, targetId)).willReturn(false);
 
         assertThatThrownBy(() -> service.createReport(MEMBER_ID, request))
                 .isInstanceOf(ParticipationException.class);
 
-        InOrder order = inOrder(store);
+        InOrder order = inOrder(store, targetReader);
         order.verify(store).lockMember(MEMBER_ID);
-        order.verify(store).targetExists(ParticipationTargetType.RESTAURANT, targetId);
+        order.verify(targetReader).targetExists(ParticipationTargetType.RESTAURANT, targetId);
+    }
+
+    @Test
+    @DisplayName("이벤트 핸들러가 포함된 HTML과 SVG 입력은 필드 오류로 거부한다")
+    void 제보접수_우회스크립트입력_거부한다() {
+        assertThatThrownBy(() -> service.createSubmission(
+                MEMBER_ID, submission("<img src=x onerror=alert(1)> 설명입니다.")))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.code()).isEqualTo("INVALID_FIELD_VALUE"));
+        assertThatThrownBy(() -> service.createSubmission(
+                MEMBER_ID, submission("<svg onload=alert(1)> 설명입니다.")))
+                .isInstanceOf(BusinessException.class);
+        verify(store, never()).lockMember(any());
     }
 
     @Test

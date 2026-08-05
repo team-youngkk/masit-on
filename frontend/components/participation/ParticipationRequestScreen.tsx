@@ -19,7 +19,12 @@ import {
   SubmissionInput,
   TargetType,
 } from '@/lib/member/participation'
-import { allowedReportTypes } from '@/lib/member/participation-coordination'
+import {
+  allowedReportTypes,
+  participationTargetDetails,
+  participationTargetSummary,
+  updateParticipationListQuery,
+} from '@/lib/member/participation-coordination'
 
 import styles from './ParticipationRequestScreen.module.css'
 
@@ -37,6 +42,9 @@ export function ParticipationRequestScreen() {
   const [evidenceUrl, setEvidenceUrl] = useState('')
   const [filter, setFilter] = useState<RequestStatus | ''>('')
   const [items, setItems] = useState<ParticipationItem[]>([])
+  const [pageNumber, setPageNumber] = useState(1)
+  const [totalPages, setTotalPages] = useState(0)
+  const [hasNext, setHasNext] = useState(false)
   const [selected, setSelected] = useState<ParticipationItem | null>(null)
   const [message, setMessage] = useState('')
   const [error, setError] = useState(false)
@@ -47,8 +55,11 @@ export function ParticipationRequestScreen() {
     if (session !== 'authenticated') return
     setBusy(true)
     try {
-      const page = await getParticipations(kind, filter)
+      const page = await getParticipations(kind, filter, pageNumber)
       setItems(page.items)
+      setPageNumber(page.page.number)
+      setTotalPages(page.page.totalPages)
+      setHasNext(page.page.hasNext)
       setError(false)
       setMessage(page.items.length ? '' : '아직 접수한 요청이 없습니다.')
     } catch {
@@ -57,7 +68,7 @@ export function ParticipationRequestScreen() {
     } finally {
       setBusy(false)
     }
-  }, [filter, kind, session])
+  }, [filter, kind, pageNumber, session])
 
   useEffect(() => { void load() }, [load])
 
@@ -70,6 +81,14 @@ export function ParticipationRequestScreen() {
     const nextReportTypes = allowedReportTypes(next) as ReportType[]
     if (!nextReportTypes.includes(reportType)) setReportType(nextReportTypes[0])
     retry.current = null
+  }
+
+  function resetPageForFilters(nextKind: RequestKind, nextFilter: RequestStatus | '') {
+    const next = updateParticipationListQuery(
+      { kind, status: filter, page: pageNumber },
+      { kind: nextKind, status: nextFilter },
+    )
+    setPageNumber(next.page)
   }
 
   async function submit(event: React.FormEvent) {
@@ -92,7 +111,8 @@ export function ParticipationRequestScreen() {
       setDescription('')
       setEvidenceUrl('')
       setMessage('요청을 접수했습니다. 접수만으로 공개 데이터가 변경되거나 숨겨지지 않습니다.')
-      await load()
+      if (pageNumber === 1) await load()
+      else setPageNumber(1)
     } catch (reason) {
       let contract: ContractError = {}
       if (reason instanceof Response) {
@@ -101,6 +121,7 @@ export function ParticipationRequestScreen() {
         if ((contract.code === 'DUPLICATE_OPEN_SUBMISSION' || contract.code === 'DUPLICATE_OPEN_REPORT')
           && contract.resource?.requestId) {
           setFilter('')
+          setPageNumber(1)
           try { setSelected(await getParticipationDetail(kind, contract.resource.requestId)) } catch { /* 목록에서 재확인 */ }
         }
       } else {
@@ -134,8 +155,8 @@ export function ParticipationRequestScreen() {
     </header>
 
     <div className={styles.tabs} role="tablist" aria-label="요청 종류">
-      <button type="button" role="tab" aria-selected={kind === 'submission'} onClick={() => { setKind('submission'); setSelected(null); retry.current = null }}>제보: 새 정보 제안</button>
-      <button type="button" role="tab" aria-selected={kind === 'report'} onClick={() => { setKind('report'); setSelected(null); retry.current = null }}>신고: 기존 정보 문제</button>
+      <button type="button" role="tab" aria-selected={kind === 'submission'} onClick={() => { resetPageForFilters('submission', filter); setKind('submission'); setSelected(null); retry.current = null }}>제보: 새 정보 제안</button>
+      <button type="button" role="tab" aria-selected={kind === 'report'} onClick={() => { resetPageForFilters('report', filter); setKind('report'); setSelected(null); retry.current = null }}>신고: 기존 정보 문제</button>
     </div>
 
     <form className={styles.form} onSubmit={event => void submit(event)}>
@@ -168,7 +189,11 @@ export function ParticipationRequestScreen() {
     <section>
       <div className={styles.filters}>
         <h2>내 요청 목록</h2>
-        <label>상태 <select value={filter} onChange={event => setFilter(event.target.value as RequestStatus | '')}>
+        <label>상태 <select value={filter} onChange={event => {
+          const nextFilter = event.target.value as RequestStatus | ''
+          resetPageForFilters(kind, nextFilter)
+          setFilter(nextFilter)
+        }}>
           <option value="">전체</option>
           {STATUSES.map(value => <option key={value}>{value}</option>)}
         </select></label>
@@ -177,17 +202,23 @@ export function ParticipationRequestScreen() {
       <ul className={styles.list}>
         {items.map(item => <li key={item.requestId}>
           <button className={styles.item} type="button" onClick={() => void openDetail(item)}>
-            <strong>{item.targetType}</strong> · {item.status}<br />
+            <strong>{participationTargetSummary(item)}</strong> · {item.status}<br />
             <span>{item.description}</span>
           </button>
         </li>)}
       </ul>
+      <nav className={styles.actions} aria-label="내 요청 페이지">
+        <Button variant="secondary" disabled={busy || pageNumber <= 1} onClick={() => setPageNumber(pageNumber - 1)}>이전</Button>
+        <span>{pageNumber} / {Math.max(totalPages, 1)} 페이지</span>
+        <Button variant="secondary" disabled={busy || !hasNext} onClick={() => setPageNumber(pageNumber + 1)}>다음</Button>
+      </nav>
     </section>
 
     {selected ? <section className={styles.detail} aria-live="polite">
       <h2>요청 상세</h2>
       <p><strong>상태:</strong> {selected.status}</p>
       <p><strong>대상:</strong> {selected.targetType}</p>
+      {participationTargetDetails(selected).map(([label, value]) => <p key={label}><strong>{label}:</strong> {value}</p>)}
       <p>{selected.description}</p>
       {selected.memberReason ? <p><strong>처리 사유:</strong> {selected.memberReason}</p> : null}
       {selected.evidenceUrl ? <p><a href={selected.evidenceUrl} target="_blank" rel="noreferrer">근거 URL 열기</a></p> : null}

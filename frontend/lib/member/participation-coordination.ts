@@ -27,6 +27,46 @@ export function allowedReportTypes(targetType: string): string[] {
   return common
 }
 
+type ParticipationTarget = {
+  targetType: string
+  candidate?: Record<string, unknown>
+  targetId?: string
+  reportType?: string
+}
+
+export function participationTargetDetails(item: ParticipationTarget): Array<[string, string]> {
+  if (item.candidate) {
+    return Object.entries(item.candidate)
+      .filter((entry): entry is [string, string | number | boolean] =>
+        ['string', 'number', 'boolean'].includes(typeof entry[1]))
+      .map(([key, value]) => [key, String(value)])
+  }
+  return [
+    ...(item.targetId ? [['대상 식별자', item.targetId] as [string, string]] : []),
+    ...(item.reportType ? [['신고 유형', item.reportType] as [string, string]] : []),
+  ]
+}
+
+export function participationTargetSummary(item: ParticipationTarget): string {
+  const values = participationTargetDetails(item).map(([, value]) => value)
+  return values.length ? `${item.targetType} · ${values.join(' · ')}` : item.targetType
+}
+
+export type ParticipationListQuery = {
+  kind: string
+  status: string
+  page: number
+}
+
+export function updateParticipationListQuery(
+  current: ParticipationListQuery,
+  change: Partial<ParticipationListQuery>,
+): ParticipationListQuery {
+  const next = { ...current, ...change }
+  const filterChanged = next.kind !== current.kind || next.status !== current.status
+  return { ...next, page: filterChanged ? 1 : next.page }
+}
+
 function stableStringify(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`
   if (value !== null && typeof value === 'object') {
