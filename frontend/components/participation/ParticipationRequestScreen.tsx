@@ -1,15 +1,18 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useMemberSession } from '@/components/member/MemberSessionProvider'
 import { Button } from '@/components/ui/Button'
+import { memberLoginHref } from '@/lib/member/auth-navigation'
 import {
   ContractError,
   createParticipation,
   getParticipationDetail,
   getParticipations,
   ParticipationItem,
+  parseParticipationError,
   participationErrorMessage,
   participationPayloadKey,
   ReportInput,
@@ -27,6 +30,8 @@ import {
 } from '@/lib/member/participation-coordination'
 
 import styles from './ParticipationRequestScreen.module.css'
+
+const RETURN_TO = '/me/requests'
 
 const TARGETS: TargetType[] = ['RESTAURANT', 'CREATOR', 'VIDEO', 'VISIT_RELATIONSHIP']
 const STATUSES: RequestStatus[] = ['RECEIVED', 'IN_REVIEW', 'ACCEPTED', 'REJECTED', 'COMPLETED']
@@ -48,25 +53,47 @@ export function ParticipationRequestScreen() {
   const [selected, setSelected] = useState<ParticipationItem | null>(null)
   const [message, setMessage] = useState('')
   const [error, setError] = useState(false)
+  const [errorTraceId, setErrorTraceId] = useState<string | undefined>(undefined)
+  const [unauthorized, setUnauthorized] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [loaded, setLoaded] = useState(false)
   const retry = useRef<{ fingerprint: string; key: string } | null>(null)
+  const listRequest = useRef(0)
+  const detailRequest = useRef(0)
 
   const load = useCallback(async () => {
     if (session !== 'authenticated') return
+    const request = ++listRequest.current
     setBusy(true)
     try {
       const page = await getParticipations(kind, filter, pageNumber)
+      if (request !== listRequest.current) return
       setItems(page.items)
       setPageNumber(page.page.number)
       setTotalPages(page.page.totalPages)
       setHasNext(page.page.hasNext)
       setError(false)
-      setMessage(page.items.length ? '' : '아직 접수한 요청이 없습니다.')
-    } catch {
-      setError(true)
-      setMessage('내 요청을 불러오지 못했습니다. 다시 시도해 주세요.')
+      setErrorTraceId(undefined)
+      setUnauthorized(false)
+      setMessage('')
+    } catch (reason) {
+      const parsed = await parseParticipationError(reason)
+      if (request !== listRequest.current) return
+      setErrorTraceId(parsed?.contract.traceId)
+      if (parsed?.status === 401) {
+        setUnauthorized(true)
+        setError(false)
+        setMessage('')
+      } else {
+        setUnauthorized(false)
+        setError(true)
+        setMessage(parsed?.contract.message || '내 요청을 불러오지 못했습니다. 다시 시도해 주세요.')
+      }
     } finally {
-      setBusy(false)
+      if (request === listRequest.current) {
+        setBusy(false)
+        setLoaded(true)
+      }
     }
   }, [filter, kind, pageNumber, session])
 
@@ -104,6 +131,7 @@ export function ParticipationRequestScreen() {
     setBusy(true)
     setMessage('접수 중입니다...')
     setError(false)
+    setErrorTraceId(undefined)
     try {
       const created = await createParticipation(kind, payload, retry.current.key)
       retry.current = null
@@ -114,10 +142,11 @@ export function ParticipationRequestScreen() {
       if (pageNumber === 1) await load()
       else setPageNumber(1)
     } catch (reason) {
-      let contract: ContractError = {}
-      if (reason instanceof Response) {
-        try { contract = (await reason.json()) as ContractError } catch { contract = {} }
-        setMessage(participationErrorMessage(reason.status, contract))
+      const parsed = await parseParticipationError(reason)
+      if (parsed) {
+        const contract: ContractError = parsed.contract
+        setMessage(participationErrorMessage(parsed.status, contract))
+        setErrorTraceId(contract.traceId)
         if ((contract.code === 'DUPLICATE_OPEN_SUBMISSION' || contract.code === 'DUPLICATE_OPEN_REPORT')
           && contract.resource?.requestId) {
           setFilter('')
@@ -126,6 +155,7 @@ export function ParticipationRequestScreen() {
         }
       } else {
         setMessage('네트워크 오류가 발생했습니다. 같은 요청으로 다시 시도해 주세요.')
+        setErrorTraceId(undefined)
       }
       setError(true)
     } finally {
@@ -134,19 +164,41 @@ export function ParticipationRequestScreen() {
   }
 
   async function openDetail(item: ParticipationItem) {
+    const request = ++detailRequest.current
     setBusy(true)
     try {
-      setSelected(await getParticipationDetail(kind, item.requestId))
-    } catch {
-      setError(true)
-      setMessage('요청 상세를 불러오지 못했습니다.')
+      const detail = await getParticipationDetail(kind, item.requestId)
+      if (request !== detailRequest.current) return
+      setSelected(detail)
+      setError(false)
+      setErrorTraceId(undefined)
+      setUnauthorized(false)
+      setMessage('')
+    } catch (reason) {
+      const parsed = await parseParticipationError(reason)
+      if (request !== detailRequest.current) return
+      setErrorTraceId(parsed?.contract.traceId)
+      if (parsed?.status === 401) {
+        setUnauthorized(true)
+        setError(false)
+        setMessage('')
+      } else {
+        setUnauthorized(false)
+        setError(true)
+        setMessage(parsed?.contract.message || '요청 상세를 불러오지 못했습니다.')
+      }
     } finally {
-      setBusy(false)
+      if (request === detailRequest.current) setBusy(false)
     }
   }
 
   if (session === 'loading') return <p role="status">로그인 상태를 확인하고 있습니다.</p>
-  if (session === 'anonymous') return <p role="alert">제보와 신고는 로그인 후 이용할 수 있습니다.</p>
+  if (session === 'anonymous') return (
+    <p role="alert">
+      제보와 신고는 로그인 후 이용할 수 있습니다.{' '}
+      <Link href={memberLoginHref(RETURN_TO)}>로그인하기</Link>
+    </p>
+  )
 
   return <section className={styles.screen}>
     <header>
@@ -155,10 +207,11 @@ export function ParticipationRequestScreen() {
     </header>
 
     <div className={styles.tabs} role="tablist" aria-label="요청 종류">
-      <button type="button" role="tab" aria-selected={kind === 'submission'} onClick={() => { resetPageForFilters('submission', filter); setKind('submission'); setSelected(null); retry.current = null }}>제보: 새 정보 제안</button>
-      <button type="button" role="tab" aria-selected={kind === 'report'} onClick={() => { resetPageForFilters('report', filter); setKind('report'); setSelected(null); retry.current = null }}>신고: 기존 정보 문제</button>
+      <button id="tab-submission" type="button" role="tab" aria-selected={kind === 'submission'} aria-controls="participation-tabpanel" onClick={() => { resetPageForFilters('submission', filter); setKind('submission'); setSelected(null); retry.current = null }}>제보: 새 정보 제안</button>
+      <button id="tab-report" type="button" role="tab" aria-selected={kind === 'report'} aria-controls="participation-tabpanel" onClick={() => { resetPageForFilters('report', filter); setKind('report'); setSelected(null); retry.current = null }}>신고: 기존 정보 문제</button>
     </div>
 
+    <div id="participation-tabpanel" role="tabpanel" aria-labelledby={kind === 'submission' ? 'tab-submission' : 'tab-report'} className={styles.tabpanel}>
     <form className={styles.form} onSubmit={event => void submit(event)}>
       <h2>{kind === 'submission' ? '새 제보 접수' : '새 신고 접수'}</h2>
       <label>대상 유형
@@ -199,14 +252,23 @@ export function ParticipationRequestScreen() {
         </select></label>
         <Button variant="secondary" disabled={busy} onClick={() => void load()}>새로고침</Button>
       </div>
-      <ul className={styles.list}>
-        {items.map(item => <li key={item.requestId}>
-          <button className={styles.item} type="button" onClick={() => void openDetail(item)}>
-            <strong>{participationTargetSummary(item)}</strong> · {item.status}<br />
-            <span>{item.description}</span>
-          </button>
-        </li>)}
-      </ul>
+      {unauthorized ? (
+        <p role="alert">
+          로그인이 필요합니다. <Link href={memberLoginHref(RETURN_TO)}>로그인하기</Link>
+          {errorTraceId ? <span className={styles.traceId}>traceId: {errorTraceId}</span> : null}
+        </p>
+      ) : loaded && items.length === 0 && !error && !busy ? (
+        <p className={styles.muted} role="status">아직 접수한 요청이 없습니다.</p>
+      ) : (
+        <ul className={styles.list}>
+          {items.map(item => <li key={item.requestId}>
+            <button className={styles.item} type="button" onClick={() => void openDetail(item)}>
+              <strong>{participationTargetSummary(item)}</strong> · {item.status}<br />
+              <span>{item.description}</span>
+            </button>
+          </li>)}
+        </ul>
+      )}
       <nav className={styles.actions} aria-label="내 요청 페이지">
         <Button variant="secondary" disabled={busy || pageNumber <= 1} onClick={() => setPageNumber(pageNumber - 1)}>이전</Button>
         <span>{pageNumber} / {Math.max(totalPages, 1)} 페이지</span>
@@ -223,7 +285,20 @@ export function ParticipationRequestScreen() {
       {selected.memberReason ? <p><strong>처리 사유:</strong> {selected.memberReason}</p> : null}
       {selected.evidenceUrl ? <p><a href={selected.evidenceUrl} target="_blank" rel="noreferrer">근거 URL 열기</a></p> : null}
       {selected.status === 'ACCEPTED' ? <p>승인됐으며 실제 반영을 기다리고 있습니다.</p> : null}
+      {kind === 'report' && selected.targetId && (selected.targetType === 'RESTAURANT' || selected.targetType === 'CREATOR')
+        ? <p>
+          <Link href={selected.targetType === 'RESTAURANT'
+            ? `/restaurants/${encodeURIComponent(selected.targetId)}`
+            : `/creators/${encodeURIComponent(selected.targetId)}`}>
+            관련 데이터 보러 가기
+          </Link>
+        </p>
+        : null}
     </section> : null}
-    {message ? <p className={error ? styles.error : undefined} role={error ? 'alert' : 'status'}>{message}</p> : null}
+    </div>
+    {message ? <p className={error ? styles.error : undefined} role={error ? 'alert' : 'status'}>
+      {message}
+      {errorTraceId ? <span className={styles.traceId}>traceId: {errorTraceId}</span> : null}
+    </p> : null}
   </section>
 }

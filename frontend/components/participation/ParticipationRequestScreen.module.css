@@ -9,3 +9,5 @@
 .detail { padding: 1rem; border-left: 4px solid #1f8f55; background: #f5faf7; overflow-wrap: anywhere; }
 .error { color: #a01818; }
 .muted { color: #555; }
+.tabpanel { display: grid; gap: 2rem; }
+.traceId { display: block; color: #555; font-size: .85rem; overflow-wrap: anywhere; }

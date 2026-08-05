@@ -85,6 +85,9 @@ export function SiteHeader() {
                 <Link href="/me/recent-restaurants" onClick={closeMemberMenu}>
                   최근 본 맛집
                 </Link>
+                <Link href="/me/collections" onClick={closeMemberMenu}>
+                  내 컬렉션
+                </Link>
                 <Link href="/me/requests" onClick={closeMemberMenu}>
                   내 제보·신고
                 </Link>

@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/Card'
 import { fetchPopularRestaurants } from '@/lib/popular-restaurants-api'
 
 import styles from './popular.module.css'
+import { RetryButton } from './RetryButton'
 
 /*
  * 인기 맛집은 검색·필터·페이지가 없는 고정 목록이라 URL 쿼리 상태를 두지 않는다
@@ -26,6 +27,8 @@ export default async function PopularRestaurantsPage() {
           {result.traceId ? (
             <span className={styles.traceId}>traceId: {result.traceId}</span>
           ) : null}
+          <br />
+          <RetryButton />
         </p>
       ) : items.length === 0 ? (
         <p className={styles.state}>현재 찜한 공개 맛집이 없습니다.</p>
