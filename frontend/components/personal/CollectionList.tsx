@@ -6,6 +6,7 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { useMemberSession } from '@/components/member/MemberSessionProvider'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { CollectionScreenState } from './CollectionScreenState'
 import {
   collectionNameError,
   creationAttemptFor,
@@ -116,18 +117,23 @@ export function CollectionList() {
       </header>
 
       {status === 'loading' || (loading && !items) ? (
-        <p className={styles.state} aria-live="polite">컬렉션을 불러오는 중입니다.</p>
+        <CollectionScreenState state="loading" className={styles.state} message="컬렉션을 불러오는 중입니다." />
       ) : unauthenticated ? (
-        <div className={styles.state} role="alert">
-          <p>로그인이 필요합니다.</p>
-          <Link className={styles.cta} href={loginHref}>로그인하기</Link>
-        </div>
+        <CollectionScreenState
+          state="authentication"
+          className={styles.state}
+          message="로그인이 필요합니다."
+          action={<Link className={styles.cta} href={loginHref}>로그인하기</Link>}
+        />
       ) : loadError ? (
-        <div className={styles.error} role="alert">
-          <p>{loadError.message}</p>
-          {loadError.traceId ? <p className={styles.traceId}>traceId: {loadError.traceId}</p> : null}
-          <Button variant="secondary" onClick={() => void load()}>다시 시도</Button>
-        </div>
+        <CollectionScreenState
+          state="error"
+          className={styles.error}
+          traceClassName={styles.traceId}
+          message={loadError.message}
+          traceId={loadError.traceId}
+          action={<Button variant="secondary" onClick={() => void load()}>다시 시도</Button>}
+        />
       ) : (
         <>
           <form className={styles.form} onSubmit={submit}>
@@ -161,10 +167,12 @@ export function CollectionList() {
           </form>
 
           {items?.length === 0 ? (
-            <div className={styles.state}>
-              <p>아직 만든 컬렉션이 없습니다.</p>
-              <p>이름을 입력해 첫 컬렉션을 만들어 보세요.</p>
-            </div>
+            <CollectionScreenState
+              state="empty"
+              className={styles.state}
+              message="아직 만든 컬렉션이 없습니다."
+              action={<p>이름을 입력해 첫 컬렉션을 만들어 보세요.</p>}
+            />
           ) : (
             <ul className={styles.list} aria-busy={loading}>
               {items?.map((item) => (

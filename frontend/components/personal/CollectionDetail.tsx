@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { useMemberSession } from '@/components/member/MemberSessionProvider'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { CollectionScreenState } from './CollectionScreenState'
 import {
   collectionNameError,
   previousCollectionPageAfterRemoval,
@@ -156,18 +157,23 @@ export function CollectionDetail({ collectionId, page, size }: {
     <section className={styles.page}>
       <Link className={styles.back} href="/me/collections">← 내 컬렉션</Link>
       {status === 'loading' || (loading && !data) ? (
-        <p className={styles.state} aria-live="polite">컬렉션을 불러오는 중입니다.</p>
+        <CollectionScreenState state="loading" className={styles.state} message="컬렉션을 불러오는 중입니다." />
       ) : unauthenticated ? (
-        <div className={styles.state} role="alert">
-          <p>로그인이 필요합니다.</p>
-          <Link className={styles.cta} href={loginHref}>로그인하기</Link>
-        </div>
+        <CollectionScreenState
+          state="authentication"
+          className={styles.state}
+          message="로그인이 필요합니다."
+          action={<Link className={styles.cta} href={loginHref}>로그인하기</Link>}
+        />
       ) : error ? (
-        <div className={styles.error} role="alert">
-          <p>{error.status === 404 ? '컬렉션을 찾을 수 없습니다.' : error.message}</p>
-          {error.traceId ? <p className={styles.traceId}>traceId: {error.traceId}</p> : null}
-          <Button variant="secondary" onClick={() => void load()}>다시 시도</Button>
-        </div>
+        <CollectionScreenState
+          state={error.status === 404 ? 'not-found' : 'error'}
+          className={styles.error}
+          traceClassName={styles.traceId}
+          message={error.status === 404 ? '컬렉션을 찾을 수 없습니다.' : error.message}
+          traceId={error.traceId}
+          action={error.status === 404 ? undefined : <Button variant="secondary" onClick={() => void load()}>다시 시도</Button>}
+        />
       ) : data ? (
         <>
           <header className={styles.header}>
@@ -217,10 +223,12 @@ export function CollectionDetail({ collectionId, page, size }: {
           ) : null}
 
           {data.restaurantCount === 0 ? (
-            <div className={styles.state}>
-              <p>이 컬렉션에서 볼 수 있는 맛집이 없습니다.</p>
-              <Link className={styles.cta} href="/restaurants">맛집 탐색하기</Link>
-            </div>
+            <CollectionScreenState
+              state="empty"
+              className={styles.state}
+              message="이 컬렉션에서 볼 수 있는 맛집이 없습니다."
+              action={<Link className={styles.cta} href="/restaurants">맛집 탐색하기</Link>}
+            />
           ) : data.items.length > 0 ? (
             <ul className={styles.list} aria-busy={loading}>
               {data.items.map((item) => (

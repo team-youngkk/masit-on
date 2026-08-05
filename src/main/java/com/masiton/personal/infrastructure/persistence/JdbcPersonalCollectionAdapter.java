@@ -12,6 +12,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import com.masiton.common.web.BusinessException;
+import com.masiton.common.web.ErrorCode;
 import com.masiton.personal.application.port.in.PersonalCollectionUseCase.CollectionDetail;
 import com.masiton.personal.application.port.in.PersonalCollectionUseCase.CollectionRestaurant;
 import com.masiton.personal.application.port.in.PersonalCollectionUseCase.CollectionSummary;
@@ -32,8 +33,12 @@ public class JdbcPersonalCollectionAdapter implements PersonalCollectionStore {
 
     @Override
     public CollectionSummary create(UUID memberId, UUID collectionId, String name, OffsetDateTime now) {
-        jdbcTemplate.queryForObject("SELECT id FROM member_account WHERE id = ? FOR UPDATE",
-                UUID.class, memberId);
+        boolean memberExists = !jdbcTemplate.query(
+                "SELECT id FROM member_account WHERE id = ? FOR UPDATE",
+                (rs, row) -> rs.getObject("id", UUID.class), memberId).isEmpty();
+        if (!memberExists) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
         Long count = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM personal_collection WHERE member_id = ?", Long.class, memberId);
         if (count != null && count >= COLLECTION_LIMIT) {

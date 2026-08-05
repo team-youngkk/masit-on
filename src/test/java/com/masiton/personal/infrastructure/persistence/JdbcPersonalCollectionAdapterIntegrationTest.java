@@ -224,6 +224,21 @@ class JdbcPersonalCollectionAdapterIntegrationTest {
 
     @Test
     @Transactional
+    @DisplayName("회원 행이 없으면 생성 요청을 인증 오류로 거부한다")
+    void create_없는회원_AUTHENTICATION_REQUIRED를반환한다() {
+        // given
+        UUID deletedMemberId = UUID.randomUUID();
+
+        // when & then
+        assertThatThrownBy(() -> adapter.create(
+                deletedMemberId, UUID.randomUUID(), "만들 수 없는 목록", NOW))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        error -> assertThat(error.code()).isEqualTo("AUTHENTICATION_REQUIRED"));
+        assertThat(count("personal_collection", "member_id", deletedMemberId)).isZero();
+    }
+
+    @Test
+    @Transactional
     @DisplayName("회원 행 잠금 뒤 20개 상한을 검사한다")
     void create_컬렉션20개_추가생성을거부한다() {
         UUID memberId = insertMember();
