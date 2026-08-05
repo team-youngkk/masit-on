@@ -1,0 +1,11 @@
+.screen { display: grid; gap: 2rem; }
+.tabs, .filters, .actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+.tabs button[aria-selected='true'] { font-weight: 700; text-decoration: underline; }
+.form { display: grid; gap: 1rem; max-width: 48rem; padding: 1.25rem; border: 1px solid #ddd; border-radius: 12px; }
+.form label { display: grid; gap: .4rem; }
+.form input, .form select, .form textarea { width: 100%; padding: .7rem; border: 1px solid #aaa; border-radius: 8px; font: inherit; }
+.list { display: grid; gap: .75rem; padding: 0; list-style: none; }
+.item { width: 100%; text-align: left; padding: 1rem; border: 1px solid #ddd; border-radius: 10px; background: #fff; }
+.detail { padding: 1rem; border-left: 4px solid #1f8f55; background: #f5faf7; overflow-wrap: anywhere; }
+.error { color: #a01818; }
+.muted { color: #555; }
