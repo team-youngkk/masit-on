@@ -41,7 +41,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         if (exception.retryAfterSeconds() != null) {
             response.header(HttpHeaders.RETRY_AFTER, String.valueOf(exception.retryAfterSeconds()));
         }
-        return response.body(ErrorResponse.of(exception.code(), exception.getMessage(), exception.fieldErrors(), traceId()));
+        return response.body(new ErrorResponse(
+                exception.code(), exception.getMessage(), exception.fieldErrors(), exception.resource(), traceId()));
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
