@@ -60,6 +60,20 @@ test('상세 404 중 CURATION_NOT_FOUND만 게시 종료 상태로 구분한다'
   })
 })
 
+test('상세 INVALID_IDENTIFIER는 찾을 수 없음 상태로 구분한다', async (t) => {
+  t.mock.method(globalThis, 'fetch', async () =>
+    Response.json(
+      { code: 'INVALID_IDENTIFIER', message: '잘못된 식별자', traceId: 'trace-invalid' },
+      { status: 400 },
+    ),
+  )
+
+  assert.deepEqual(await fetchPublicCuration('not-an-identifier'), {
+    ok: false,
+    kind: 'not-found',
+  })
+})
+
 test('다른 코드의 상세 404는 traceId가 있는 서버 오류로 유지한다', async (t) => {
   t.mock.method(globalThis, 'fetch', async () =>
     Response.json(

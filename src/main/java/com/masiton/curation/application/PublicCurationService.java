@@ -1,9 +1,11 @@
 package com.masiton.curation.application;
 
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,14 +58,14 @@ public class PublicCurationService implements PublicCurationUseCase {
                 .distinct()
                 .toList());
         Map<UUID, List<StoredCurationRestaurant>> relationsByCuration = relations.stream()
-                .collect(java.util.stream.Collectors.groupingBy(StoredCurationRestaurant::curationId));
+                .collect(Collectors.groupingBy(StoredCurationRestaurant::curationId));
 
         return curations.stream().map(curation -> new PublicCuration(
                 curation.id(),
                 curation.title(),
                 curation.description(),
                 relationsByCuration.getOrDefault(curation.id(), List.of()).stream()
-                        .sorted(java.util.Comparator.comparingInt(StoredCurationRestaurant::position))
+                        .sorted(Comparator.comparingInt(StoredCurationRestaurant::position))
                         .map(relation -> references.get(relation.restaurantId()))
                         .filter(this::isPublic)
                         .map(reference -> new RestaurantItem(

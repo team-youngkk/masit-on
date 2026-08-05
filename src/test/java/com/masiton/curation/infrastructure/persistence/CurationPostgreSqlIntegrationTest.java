@@ -153,7 +153,7 @@ class CurationPostgreSqlIntegrationTest {
     }
 
     @Test
-    @DisplayName("공개 목록과 상세은 게시·메인·구성 순서를 지키고 비공개 또는 삭제 맛집을 숨긴다")
+    @DisplayName("공개 목록과 상세는 게시·메인·구성 순서를 지키고 비공개 또는 삭제 맛집을 숨긴다")
     void 공개조회_게시와공개상태필터_순서와빈구성유지() {
         UUID adminId = insertAdmin();
         UUID firstCurationId = insertDraft(adminId);

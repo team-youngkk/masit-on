@@ -91,6 +91,10 @@ export async function fetchPublicCuration(
     if (response.status === 404 && body?.code === 'CURATION_NOT_FOUND') {
       return { ok: false, kind: 'not-found' }
     }
+    // 공개 화면은 내부 식별자 형식을 전제하지 않으므로 영구적인 형식 오류도 미존재와 같이 닫는다.
+    if (response.status === 400 && body?.code === 'INVALID_IDENTIFIER') {
+      return { ok: false, kind: 'not-found' }
+    }
     return {
       ok: false,
       kind: 'error',

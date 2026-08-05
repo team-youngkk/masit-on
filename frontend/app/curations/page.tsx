@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/Card'
 import { fetchPublicCurations } from '@/lib/curations-api'
 
 import styles from './curations.module.css'
+import { RetryButton } from './RetryButton'
 
 const PREVIEW_LIMIT = 3
 
@@ -83,9 +84,7 @@ function ErrorState({ message, traceId }: { message: string; traceId?: string })
       <h2>큐레이션을 불러올 수 없습니다</h2>
       <p>{message}</p>
       {traceId ? <p className={styles.traceId}>traceId: {traceId}</p> : null}
-      <Link href="/curations" className={styles.actionLink}>
-        다시 시도
-      </Link>
+      <RetryButton />
     </div>
   )
 }

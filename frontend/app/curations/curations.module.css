@@ -6,7 +6,9 @@
 
 .pageHeader h1,
 .pageHeader p,
+.state h1,
 .state h2,
+.state h3,
 .state p {
   margin: 0;
 }
@@ -90,6 +92,18 @@
 
 .detailLink {
   margin-top: auto;
+}
+
+.retryButton {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.retryButton:disabled {
+  cursor: wait;
+  opacity: 0.7;
 }
 
 .state {

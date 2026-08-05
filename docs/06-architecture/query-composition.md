@@ -71,10 +71,15 @@ Restaurant Domain 객체가 Visit, Creator, Video를 조회하지 않는다. Con
 |---|---|
 | 후보 ID 집합으로 다른 조건과 결합하는 목록 필터(맛집 목록의 `creatorId`) | Visit 도메인의 공개 Query가 후보 집합을 소유하고, 목록 Adapter는 유효성을 다시 판정하지 않는다(6절). |
 | 여러 테이블의 표시 정보를 한 번에 읽는 상세 Projection(맛집 상세 콘텐츠, 유튜버 상세의 방문 맛집·근거 영상) | orchestration Query Adapter가 확정 조건을 JOIN SQL로 적용한다. |
+| 소유 Aggregate와 다른 도메인의 최소 표시 정보를 조합하는 제한 목록(관리자·공개 큐레이션) | 소유 도메인 Application이 다른 도메인의 공개 입력 Port를 일괄 호출한다. 다른 도메인 테이블을 직접 읽거나 공개 상태를 재판정하지 않는다. |
 
 상세 Projection을 후보 ID 조회로 대체하면 표시 필드를 얻기 위해 도메인별 조회를 다시 해야 해
 6절의 쿼리 수 목표를 지킬 수 없다. 두 경우 모두 조건 자체는 Visit가 정하며 Adapter가 조건을
 바꾸면 규칙 소유가 깨진다.
+
+큐레이션 목록·상세는 Curation 저장소가 자기 Aggregate와 관계만 읽고, Restaurant의 이름·주소·공개
+판정은 `FindRestaurantReferenceUseCase`를 한 번 일괄 호출해 조합한다. 이는 여러 소유 테이블을 직접
+JOIN하는 상세 Projection과 구분하며, 큐레이션마다 또는 구성마다 Port를 반복 호출하지 않는다.
 
 ### 기본 정보
 

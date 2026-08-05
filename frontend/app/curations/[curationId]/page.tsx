@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { Card } from '@/components/ui/Card'
 import { fetchPublicCuration } from '@/lib/curations-api'
 
+import { RetryButton } from '../RetryButton'
 import styles from '../curations.module.css'
 
 type PublicCurationDetailPageProps = {
@@ -29,9 +30,7 @@ export default async function PublicCurationDetailPage({
           {result.traceId ? (
             <p className={styles.traceId}>traceId: {result.traceId}</p>
           ) : null}
-          <Link href={`/curations/${encodeURIComponent(curationId)}`} className={styles.actionLink}>
-            다시 시도
-          </Link>
+          <RetryButton />
           <Link href="/curations" className={styles.backLink}>
             큐레이션 탐색으로 돌아가기
           </Link>

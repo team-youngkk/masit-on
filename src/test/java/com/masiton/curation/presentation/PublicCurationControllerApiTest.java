@@ -4,6 +4,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.OffsetDateTime;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
+import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -51,12 +53,24 @@ class PublicCurationControllerApiTest {
 
         mockMvc.perform(get("/api/curations"))
                 .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
                 .andExpect(jsonPath("$.items[0].curationId").value(curationId.toString()))
                 .andExpect(jsonPath("$.items[0].items[0].restaurantId").value(restaurantId.toString()))
                 .andExpect(jsonPath("$.items[0].items[0].name").value("공개 맛집"))
                 .andExpect(jsonPath("$.items[0].items[0].roadAddress").value("서울 테스트로 1"))
                 .andExpect(jsonPath("$.items[0].publishedAt").exists())
                 .andExpect(jsonPath("$.items[0].updatedAt").exists());
+    }
+
+    @Test
+    @DisplayName("게시 중인 큐레이션이 없으면 빈 items를 반환한다")
+    void 목록_게시없음_빈items반환() throws Exception {
+        when(useCase.getPublishedCurations()).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/curations"))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
+                .andExpect(jsonPath("$.items").isEmpty());
     }
 
     @Test
@@ -69,6 +83,7 @@ class PublicCurationControllerApiTest {
 
         mockMvc.perform(get("/api/curations/{curationId}", curationId))
                 .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
                 .andExpect(jsonPath("$.curationId").value(curationId.toString()))
                 .andExpect(jsonPath("$.items").isEmpty())
                 .andExpect(jsonPath("$.status").doesNotExist());

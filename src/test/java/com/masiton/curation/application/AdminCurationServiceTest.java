@@ -179,7 +179,7 @@ class AdminCurationServiceTest {
         when(store.findRestaurants(CURATION_ID)).thenReturn(List.of(new StoredRestaurant(restaurantId, 1)));
         when(restaurantReferences.findRestaurantReferences(List.of(restaurantId))).thenReturn(List.of(
                 new FindRestaurantReferenceUseCase.RestaurantReference(
-                        restaurantId, "맛집", "PRIVATE", false)));
+                        restaurantId, "맛집", "서울 테스트로 1", "PRIVATE", false)));
 
         var detail = service.getCuration(CURATION_ID);
 
