@@ -1,5 +1,7 @@
 package com.masiton.restaurant.application.port.in;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -8,5 +10,11 @@ public interface FindRestaurantReferenceUseCase {
 
     Optional<RestaurantReference> findRestaurantReference(UUID restaurantId);
 
-    record RestaurantReference(UUID id, boolean publiclyVisible) { }
+    List<RestaurantReference> findRestaurantReferences(Collection<UUID> restaurantIds);
+
+    record RestaurantReference(UUID id, String name, String availability, boolean publiclyVisible) {
+        public RestaurantReference(UUID id, boolean publiclyVisible) {
+            this(id, null, publiclyVisible ? "PUBLIC" : "PRIVATE", publiclyVisible);
+        }
+    }
 }

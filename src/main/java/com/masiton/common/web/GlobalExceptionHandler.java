@@ -131,7 +131,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     private ResponseEntity.BodyBuilder response(HttpStatusCode status, HttpServletRequest request) {
         ResponseEntity.BodyBuilder response = ResponseEntity.status(status);
-        if (isMemberPrivatePath(request)) {
+        if (isPrivatePath(request)) {
             response.header(HttpHeaders.CACHE_CONTROL, PRIVATE_NO_STORE);
         }
         return response;
@@ -144,8 +144,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.status(status);
     }
 
-    private boolean isMemberPrivatePath(HttpServletRequest request) {
+    private boolean isPrivatePath(HttpServletRequest request) {
         String requestUri = request.getRequestURI();
-        return requestUri.equals("/api/me") || requestUri.startsWith("/api/me/");
+        return requestUri.equals("/api/me") || requestUri.startsWith("/api/me/")
+                || requestUri.equals("/api/admin") || requestUri.startsWith("/api/admin/");
     }
 }

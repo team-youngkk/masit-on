@@ -134,7 +134,7 @@ Popularity 테이블, 알림 Outbox·전달 작업, 추천 점수와 수신 설�
 | `ix_curation__admin_updated` | `(publication_status, updated_at DESC, id)` | 관리자 목록 |
 | `ix_curation_restaurant__restaurant` | `(restaurant_id, curation_id)` | 맛집 상태 변경 경고·삭제 영향 |
 
-편집·구성 교체·게시·순서 변경은 대상 큐레이션 행을 잠그며 메인 순서 교체는 게시 행 전체를 ID 순으로 잠근다. 관리자 변경은 기존 공통 운영 감사 로그에 행위자·대상·변경 종류·이전/이후 값·사유·traceId를 기록하고 별도 CurationHistory 테이블은 만들지 않는다.
+편집·구성 교체·게시·순서 변경은 대상 큐레이션 행을 잠그며 메인 순서 교체는 게시 행 전체를 ID 순으로 잠근다. 관리자 변경은 공통 `OPERATION_AUDIT` 로그에 행위자·대상·변경 종류·이전/이후 값 또는 안전한 변경 메타데이터·요청에 사유가 있는 경우 그 사유·traceId를 기록하고 별도 CurationHistory 테이블은 만들지 않는다. 큐레이션 제목·설명 원문은 로그에 남기지 않고 이전/이후 길이 구간만 기록한다. 구성과 메인 순서는 식별자 순서를, 게시 상태는 상태와 메인 위치를 이전/이후 값으로 기록한다.
 
 ## 6. 제보·신고
 
