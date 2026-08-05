@@ -20,6 +20,7 @@ import com.masiton.common.idempotency.application.IdempotencyRequest;
 import com.masiton.common.idempotency.application.IdempotencyResponse;
 import com.masiton.common.idempotency.application.port.in.IdempotentCreationUseCase;
 import com.masiton.common.web.BusinessException;
+import com.masiton.personal.application.port.in.CollectionOption;
 import com.masiton.personal.application.port.in.PersonalCollectionUseCase;
 import com.masiton.personal.application.port.out.PersonalCollectionStore;
 import com.masiton.restaurant.application.port.in.FindRestaurantReferenceUseCase;
@@ -62,6 +63,13 @@ public class PersonalCollectionService implements PersonalCollectionUseCase {
     @Transactional(readOnly = true)
     public List<CollectionSummary> getCollections(UUID memberId) {
         return store.findAll(memberId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CollectionOption> getCollectionOptions(UUID memberId, UUID restaurantId) {
+        requirePublicRestaurant(restaurantId);
+        return store.findOptions(memberId, restaurantId);
     }
 
     @Override

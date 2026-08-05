@@ -13,6 +13,8 @@ import org.springframework.stereotype.Repository;
 
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
+import com.masiton.personal.application.port.in.CollectionOption;
+import com.masiton.personal.application.port.in.CollectionOption.AdditionStatus;
 import com.masiton.personal.application.port.in.PersonalCollectionUseCase.CollectionDetail;
 import com.masiton.personal.application.port.in.PersonalCollectionUseCase.CollectionRestaurant;
 import com.masiton.personal.application.port.in.PersonalCollectionUseCase.CollectionSummary;
@@ -66,6 +68,29 @@ public class JdbcPersonalCollectionAdapter implements PersonalCollectionStore {
                  ORDER BY pc.updated_at DESC, pc.id ASC
                  LIMIT 20
                 """, this::summary, memberId);
+    }
+
+    @Override
+    public List<CollectionOption> findOptions(UUID memberId, UUID restaurantId) {
+        return jdbcTemplate.query("""
+                SELECT pc.id, pc.name,
+                       count(r.id) AS public_restaurant_count,
+                       count(cr.restaurant_id) AS actual_restaurant_count,
+                       count(*) FILTER (WHERE cr.restaurant_id = ?) > 0 AS already_included
+                  FROM personal_collection pc
+                  LEFT JOIN collection_restaurant cr ON cr.collection_id = pc.id
+                  LEFT JOIN restaurant r ON r.id = cr.restaurant_id
+                    AND r.publication_status = 'PUBLIC' AND r.lifecycle_status = 'ACTIVE'
+                 WHERE pc.member_id = ?
+                 GROUP BY pc.id, pc.name, pc.updated_at
+                 ORDER BY pc.updated_at DESC, pc.id ASC
+                 LIMIT 20
+                """, (rs, row) -> new CollectionOption(
+                        rs.getObject("id", UUID.class), rs.getString("name"),
+                        rs.getLong("public_restaurant_count"), additionStatus(
+                                rs.getBoolean("already_included"),
+                                rs.getLong("actual_restaurant_count"))),
+                restaurantId, memberId);
     }
 
     @Override
@@ -205,6 +230,16 @@ public class JdbcPersonalCollectionAdapter implements PersonalCollectionStore {
         return new CollectionRestaurant(rs.getObject("collection_id", UUID.class),
                 rs.getObject("restaurant_id", UUID.class),
                 rs.getObject("added_at", OffsetDateTime.class));
+    }
+
+    private AdditionStatus additionStatus(boolean alreadyIncluded, long actualRestaurantCount) {
+        if (alreadyIncluded) {
+            return AdditionStatus.ALREADY_INCLUDED;
+        }
+        if (actualRestaurantCount >= RESTAURANT_LIMIT) {
+            return AdditionStatus.LIMIT_REACHED;
+        }
+        return AdditionStatus.AVAILABLE;
     }
 
     private record CollectionHeader(UUID id, String name, OffsetDateTime updatedAt,

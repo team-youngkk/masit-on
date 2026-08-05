@@ -1,16 +1,21 @@
 package com.masiton.personal.application;
 
+import java.lang.reflect.Method;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.masiton.common.idempotency.application.port.in.IdempotentCreationUseCase;
 import com.masiton.common.web.BusinessException;
+import com.masiton.personal.application.port.in.CollectionOption;
+import com.masiton.personal.application.port.in.CollectionOption.AdditionStatus;
 import com.masiton.personal.application.port.out.PersonalCollectionStore;
 import com.masiton.restaurant.application.port.in.FindRestaurantReferenceUseCase;
 
@@ -69,5 +74,48 @@ class PersonalCollectionServiceTest {
                 .isInstanceOfSatisfying(BusinessException.class,
                         error -> assertThat(error.code()).isEqualTo("RESTAURANT_NOT_FOUND"));
         verify(store, never()).addRestaurant(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("공개·활성 맛집의 컬렉션 추가 옵션을 조회한다")
+    void getCollectionOptions_공개활성맛집_저장소조회결과를반환한다() {
+        UUID memberId = UUID.randomUUID();
+        UUID restaurantId = UUID.randomUUID();
+        CollectionOption option = new CollectionOption(
+                UUID.randomUUID(), "가고 싶은 곳", 3, AdditionStatus.AVAILABLE);
+        when(references.findRestaurantReference(restaurantId)).thenReturn(Optional.of(
+                new FindRestaurantReferenceUseCase.RestaurantReference(restaurantId, true)));
+        when(store.findOptions(memberId, restaurantId)).thenReturn(List.of(option));
+
+        List<CollectionOption> result = service.getCollectionOptions(memberId, restaurantId);
+
+        assertThat(result).containsExactly(option);
+        verify(store).findOptions(memberId, restaurantId);
+    }
+
+    @Test
+    @DisplayName("비공개 맛집은 컬렉션 추가 옵션을 조회할 수 없다")
+    void getCollectionOptions_비공개맛집_RESTAURANT_NOT_FOUND를반환한다() {
+        UUID memberId = UUID.randomUUID();
+        UUID restaurantId = UUID.randomUUID();
+        when(references.findRestaurantReference(restaurantId)).thenReturn(Optional.of(
+                new FindRestaurantReferenceUseCase.RestaurantReference(restaurantId, false)));
+
+        assertThatThrownBy(() -> service.getCollectionOptions(memberId, restaurantId))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        error -> assertThat(error.code()).isEqualTo("RESTAURANT_NOT_FOUND"));
+        verify(store, never()).findOptions(any(), any());
+    }
+
+    @Test
+    @DisplayName("컬렉션 추가 옵션 조회는 읽기 전용 트랜잭션이다")
+    void getCollectionOptions_조회메서드_readOnly트랜잭션이다() throws NoSuchMethodException {
+        Method method = PersonalCollectionService.class.getMethod(
+                "getCollectionOptions", UUID.class, UUID.class);
+
+        Transactional transactional = method.getAnnotation(Transactional.class);
+
+        assertThat(transactional).isNotNull();
+        assertThat(transactional.readOnly()).isTrue();
     }
 }

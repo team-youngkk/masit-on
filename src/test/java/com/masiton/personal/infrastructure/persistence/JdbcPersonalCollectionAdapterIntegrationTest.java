@@ -27,6 +27,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import com.masiton.common.web.BusinessException;
 import com.masiton.personal.application.PersonalCollectionService;
+import com.masiton.personal.application.port.in.CollectionOption.AdditionStatus;
 
 import tools.jackson.databind.ObjectMapper;
 
@@ -271,6 +272,96 @@ class JdbcPersonalCollectionAdapterIntegrationTest {
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM collection_restaurant WHERE collection_id = ?", Long.class, collectionId))
                 .isEqualTo(1L);
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("옵션 조회는 공개 개수와 실제 상한 및 이미 포함 우선순위를 반영한다")
+    void findOptions_공개개수와실제관계수_추가상태를계산한다() {
+        // given
+        UUID memberId = insertMember();
+        UUID targetRestaurantId = insertRestaurant();
+        UUID availableCollectionId = UUID.randomUUID();
+        UUID includedCollectionId = UUID.randomUUID();
+        UUID limitedCollectionId = UUID.randomUUID();
+        adapter.create(memberId, availableCollectionId, "추가 가능", NOW);
+        adapter.create(memberId, includedCollectionId, "이미 포함", NOW.plusSeconds(1));
+        adapter.create(memberId, limitedCollectionId, "상한 도달", NOW.plusSeconds(2));
+
+        UUID visibleRestaurantId = insertRestaurant();
+        jdbcTemplate.update("""
+                INSERT INTO collection_restaurant (collection_id, restaurant_id, added_at)
+                VALUES (?, ?, ?), (?, ?, ?)
+                """, availableCollectionId, visibleRestaurantId, NOW,
+                includedCollectionId, targetRestaurantId, NOW);
+
+        List<UUID> limitedRestaurantIds = new ArrayList<>();
+        for (int index = 0; index < 100; index++) {
+            UUID restaurantId = insertRestaurant();
+            limitedRestaurantIds.add(restaurantId);
+            jdbcTemplate.update("""
+                    INSERT INTO collection_restaurant (collection_id, restaurant_id, added_at)
+                    VALUES (?, ?, ?)
+                    """, limitedCollectionId, restaurantId, NOW.plusSeconds(index));
+        }
+        for (int index = 1; index < limitedRestaurantIds.size(); index++) {
+            jdbcTemplate.update("UPDATE restaurant SET publication_status = 'PRIVATE' WHERE id = ?",
+                    limitedRestaurantIds.get(index));
+            jdbcTemplate.update("""
+                    INSERT INTO collection_restaurant (collection_id, restaurant_id, added_at)
+                    VALUES (?, ?, ?)
+                    """, includedCollectionId, limitedRestaurantIds.get(index), NOW.plusSeconds(index));
+        }
+
+        // when
+        var options = service.getCollectionOptions(memberId, targetRestaurantId);
+
+        // then
+        assertThat(options).filteredOn(option -> option.collectionId().equals(availableCollectionId))
+                .singleElement().satisfies(option -> {
+                    assertThat(option.restaurantCount()).isEqualTo(1);
+                    assertThat(option.additionStatus()).isEqualTo(AdditionStatus.AVAILABLE);
+                });
+        assertThat(options).filteredOn(option -> option.collectionId().equals(includedCollectionId))
+                .singleElement().satisfies(option -> {
+                    assertThat(option.restaurantCount()).isEqualTo(1);
+                    assertThat(option.additionStatus()).isEqualTo(AdditionStatus.ALREADY_INCLUDED);
+                });
+        assertThat(options).filteredOn(option -> option.collectionId().equals(limitedCollectionId))
+                .singleElement().satisfies(option -> {
+                    assertThat(option.restaurantCount()).isEqualTo(1);
+                    assertThat(option.additionStatus()).isEqualTo(AdditionStatus.LIMIT_REACHED);
+                });
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("비공개 맛집은 옵션 조회에서 RESTAURANT_NOT_FOUND를 반환한다")
+    void findOptions_비공개맛집_RESTAURANT_NOT_FOUND를반환한다() {
+        UUID memberId = insertMember();
+        UUID restaurantId = insertRestaurant();
+        jdbcTemplate.update("UPDATE restaurant SET publication_status = 'PRIVATE' WHERE id = ?", restaurantId);
+
+        assertThatThrownBy(() -> service.getCollectionOptions(memberId, restaurantId))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        error -> assertThat(error.code()).isEqualTo("RESTAURANT_NOT_FOUND"));
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("삭제된 맛집은 옵션 조회에서 RESTAURANT_NOT_FOUND를 반환한다")
+    void findOptions_삭제된맛집_RESTAURANT_NOT_FOUND를반환한다() {
+        UUID memberId = insertMember();
+        UUID restaurantId = insertRestaurant();
+        jdbcTemplate.update("""
+                UPDATE restaurant
+                   SET publication_status = 'PRIVATE', lifecycle_status = 'DELETED', deleted_at = ?
+                 WHERE id = ?
+                """, NOW, restaurantId);
+
+        assertThatThrownBy(() -> service.getCollectionOptions(memberId, restaurantId))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        error -> assertThat(error.code()).isEqualTo("RESTAURANT_NOT_FOUND"));
     }
 
     private UUID insertMember() {

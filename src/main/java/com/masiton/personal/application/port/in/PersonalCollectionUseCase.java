@@ -10,6 +10,8 @@ public interface PersonalCollectionUseCase {
 
     List<CollectionSummary> getCollections(UUID memberId);
 
+    List<CollectionOption> getCollectionOptions(UUID memberId, UUID restaurantId);
+
     CollectionDetail getCollection(UUID memberId, UUID collectionId, int page, int size);
 
     CollectionSummary rename(UUID memberId, UUID collectionId, String name);
