@@ -5,6 +5,7 @@ import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Base64;
 import java.util.UUID;
@@ -32,6 +33,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.masiton.test.FullContextIntegrationTest;
 import com.masiton.common.security.MemberSessionAccessChecker;
+import com.masiton.curation.application.port.in.PublicCurationUseCase;
 import com.masiton.member.application.MemberPrincipal;
 import com.masiton.member.application.port.out.MemberTokenIssuer;
 import com.masiton.orchestration.application.port.in.GetRestaurantDetailQuery;
@@ -82,6 +84,9 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
 
     @MockitoBean
     private RecordRecentRestaurantViewUseCase recordRecentRestaurantViewUseCase;
+
+    @MockitoBean
+    private PublicCurationUseCase publicCurationUseCase;
 
     @DynamicPropertySource
     static void securityProperties(DynamicPropertyRegistry registry) {
@@ -136,6 +141,34 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
     void 공개목록_무인증_401이아님() throws Exception {
         mockMvc.perform(get("/api/restaurants"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("공개 큐레이션 GET은 인증과 Bearer 해석 없이 허용한다")
+    void 공개큐레이션_GET_익명접근허용() throws Exception {
+        UUID curationId = UUID.randomUUID();
+        String invalidToken = signedToken("retired-key");
+        OffsetDateTime now = OffsetDateTime.parse("2026-08-05T00:00:00Z");
+        given(publicCurationUseCase.getPublishedCurations()).willReturn(List.of());
+        given(publicCurationUseCase.getPublishedCuration(curationId)).willReturn(
+                new PublicCurationUseCase.PublicCuration(curationId, "제목", "", List.of(), now, now));
+
+        mockMvc.perform(get("/api/curations")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + invalidToken))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/curations/{curationId}", curationId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + invalidToken))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("공개 큐레이션 경로의 계약되지 않은 메서드는 거부한다")
+    void 공개큐레이션_POST_미인증거부() throws Exception {
+        mockMvc.perform(post("/api/curations")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
     }
 
     @Test

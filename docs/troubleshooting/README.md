@@ -10,6 +10,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #142 공개 큐레이션 조회 계약과 화면 상태 보완](pr-142-public-curation-review.md)
 - [PR #140 제보·신고 알림 연결 및 원자성 롤백 테스트 보완](pr-140-participation-notification-review.md)
 - [PR #141 관리자 큐레이션 입력·조회 경계와 계약 불일치](pr-141-admin-curation-review.md)
 - [PR #135 개인 컬렉션 완료 조건과 저장 오류](pr-135-personal-collection-review.md)

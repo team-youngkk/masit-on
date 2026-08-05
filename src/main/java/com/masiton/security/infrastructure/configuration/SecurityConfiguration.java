@@ -65,6 +65,8 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET,
                                 "/api/restaurants",
                                 "/api/restaurants/*",
+                                "/api/curations",
+                                "/api/curations/*",
                                 "/api/creators",
                                 "/api/creators/*",
                                 "/api/creators/*/restaurants",
@@ -146,8 +148,21 @@ public class SecurityConfiguration {
         String requestUri = request.getRequestURI();
         return requestUri.equals("/api/restaurants")
                 || requestUri.equals("/api/restaurants/popular")
+                || isCurationPublicReadRequest(requestUri)
                 || requestUri.equals("/api/creators")
                 || isCreatorDetailReadRequest(requestUri);
+    }
+
+    private boolean isCurationPublicReadRequest(String requestUri) {
+        String detailPrefix = "/api/curations/";
+        if (requestUri.equals("/api/curations")) {
+            return true;
+        }
+        if (!requestUri.startsWith(detailPrefix)) {
+            return false;
+        }
+        String curationId = requestUri.substring(detailPrefix.length());
+        return !curationId.isEmpty() && !curationId.contains("/");
     }
 
     /**

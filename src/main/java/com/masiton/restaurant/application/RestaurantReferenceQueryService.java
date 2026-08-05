@@ -42,6 +42,7 @@ class RestaurantReferenceQueryService implements FindRestaurantReferenceUseCase 
         String availability = restaurant.getLifecycleStatus() == LifecycleStatus.ACTIVE
                 ? restaurant.getPublicationStatus().name()
                 : "INACTIVE";
-        return new RestaurantReference(restaurant.getId(), restaurant.getName(), availability, publiclyVisible);
+        return new RestaurantReference(restaurant.getId(), restaurant.getName(), restaurant.getRoadAddress(),
+                availability, publiclyVisible);
     }
 }

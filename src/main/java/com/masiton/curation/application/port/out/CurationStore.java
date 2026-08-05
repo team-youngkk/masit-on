@@ -12,6 +12,8 @@ import com.masiton.curation.domain.model.CurationStatus;
 public interface CurationStore {
     void create(UUID id, String title, String description, UUID adminId, OffsetDateTime now);
     Optional<StoredCuration> find(UUID id, boolean lock);
+    List<StoredCuration> findPublished(int limit);
+    Optional<StoredCuration> findPublished(UUID id);
     List<CurationSummary> findPage(CurationStatus status, int limit, long offset);
     long count(CurationStatus status);
     List<StoredRestaurant> findRestaurants(UUID curationId);
