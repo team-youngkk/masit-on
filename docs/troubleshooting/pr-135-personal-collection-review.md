@@ -27,7 +27,7 @@ related_documents:
 | [완료 조건 검증](https://github.com/team-youngkk/masit-on/pull/135#discussion_r3712311679) | 정상·빈 상태·인증·타 회원 404·API 오류 재시도를 브라우저 또는 컴포넌트 수준에서 검증 | 애플리케이션 | 수정 필요 | 실제 목록·상세 화면이 공유하는 상태 컴포넌트와 5개 회귀 테스트 추가 | `npm.cmd test` 88개 통과 |
 | [상세 이름 maxLength](https://github.com/team-youngkk/masit-on/pull/135#discussion_r3712320621) | `maxLength`를 100에서 50으로 변경 | 애플리케이션 | 수정 불필요 | 100을 유지 | HTML 길이는 UTF-16 코드 단위, 계약과 검증은 유니코드 코드 포인트 기준이다. 50개 보조 평면 문자는 100 코드 단위가 필요하며 51개 입력은 제출 검증이 차단한다. |
 | [목록 이름 maxLength](https://github.com/team-youngkk/masit-on/pull/135#discussion_r3712321812) | `maxLength`를 100에서 50으로 변경 | 애플리케이션 | 수정 불필요 | 100을 유지 | 위와 동일하며 `collections-coordination.test.ts`가 50/51 코드 포인트 경계를 검증한다. |
-| [누락 회원 잠금](https://github.com/team-youngkk/masit-on/pull/135#discussion_r3712322794) | 없는 회원 조회가 JDBC 예외로 500이 되지 않도록 처리 | 데이터베이스 | 수정 필요 | 잠금 조회 결과가 비면 `AUTHENTICATION_REQUIRED`를 반환하도록 변경하고 통합 테스트 추가 | 소스·테스트 컴파일 통과, Testcontainers 실행은 Docker 미기동으로 제한 |
+| [누락 회원 잠금](https://github.com/team-youngkk/masit-on/pull/135#discussion_r3712322794) | 없는 회원 조회가 JDBC 예외로 500이 되지 않도록 처리 | 데이터베이스 | 수정 필요 | 잠금 조회 결과가 비면 `AUTHENTICATION_REQUIRED`를 반환하도록 변경하고 통합 테스트 추가 | GitHub Actions 백엔드 전체 빌드·테스트 통과 |
 | [맛집별 컬렉션 상태](https://github.com/team-youngkk/masit-on/pull/135#discussion_r3717026163) | 각 컬렉션의 포함 여부·개수·추가 가능 여부를 표시하고 중복 추가를 막음 | 애플리케이션 | 결정 필요 | 계약 변경 없이 구현하지 않고 스레드 유지 | 승인 API 목록 응답에는 현재 맛집 포함 여부가 없고 공개 `restaurantCount`는 비공개 관계를 제외하므로 정확한 추가 가능 여부를 계산할 수 없다. |
 
 ## 3. 문제 현상과 발생 조건
@@ -67,6 +67,7 @@ related_documents:
 | `npm.cmd run typecheck` | 통과 | 신규 컴포넌트 및 연결부 타입 |
 | `.\gradlew.bat compileJava compileTestJava` | 통과 | 백엔드 구현과 통합 테스트 컴파일 |
 | `.\gradlew.bat test --tests com.masiton.personal.infrastructure.persistence.JdbcPersonalCollectionAdapterIntegrationTest` | 실패 | 코드 실패가 아니라 Docker Desktop 미기동으로 Testcontainers 초기화 실패 |
+| [GitHub Actions 백엔드 빌드·테스트](https://github.com/team-youngkk/masit-on/actions/runs/30963100332) | 통과 | PostgreSQL 통합 테스트를 포함한 전체 자동화 검증 |
 
 ## 8. 재발 방지 및 다음 확인
 
@@ -78,9 +79,9 @@ related_documents:
 | 지표 | 도입 전 기준값 | 측정 방법·기간 | 배포 확장 후 값 | 비교 결과 | 담당자·확인 시점/이슈 |
 |---|---|---|---|---|---|
 | 화면 완료 상태 자동 검증 | 0개 | PR 테스트 실행 | 5개 | 정상·빈 상태·인증·404·재시도를 자동 검증 | PR #135 작성자, CI 완료 시 |
-| 없는 회원 생성의 미변환 JDBC 예외 경로 | 1개 | 저장소 통합 테스트 | 0개 예상 | 인증 오류로 변환 | PR #135 작성자, CI 완료 시 |
+| 없는 회원 생성의 미변환 JDBC 예외 경로 | 1개 | 저장소 통합 테스트 | 0개 | 인증 오류로 변환하고 CI 통과 | PR #135 작성자, 2026-08-05 |
 
 ## 10. 남은 사항
 
 - 맛집별 컬렉션 포함 상태·추가 가능 여부는 승인 API 계약에 필요한 정보가 없어 결정 필요 상태로 남긴다.
-- 로컬 Docker가 실행되지 않아 신규 PostgreSQL 통합 테스트의 실제 실행 결과는 PR CI에서 확인해야 한다.
+- 로컬 Docker가 실행되지 않아 타깃 통합 테스트를 직접 재실행하지 못했지만, PR CI의 백엔드 전체 빌드·테스트는 통과했다.
