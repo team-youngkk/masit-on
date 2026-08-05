@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 import { useMemberSession } from '@/components/member/MemberSessionProvider'
-import { formatUnreadBadge, getUnreadCount } from '@/lib/member/notifications'
+import { NOTIFICATIONS_CHANGED_EVENT, formatUnreadBadge, getUnreadCount } from '@/lib/member/notifications'
 
 import styles from './SiteHeader.module.css'
 
@@ -22,16 +22,22 @@ export function NotificationBell() {
       return
     }
 
-    const current = ++request.current
-    void (async () => {
-      try {
-        const count = await getUnreadCount()
-        if (current === request.current) setUnreadCount(count)
-      } catch {
-        // 헤더는 알림 조회 실패를 시끄럽게 보여줄 자리가 아니다 — 배지만 숨긴다.
-        if (current === request.current) setUnreadCount(0)
-      }
-    })()
+    function refresh() {
+      const current = ++request.current
+      void (async () => {
+        try {
+          const count = await getUnreadCount()
+          if (current === request.current) setUnreadCount(count)
+        } catch {
+          // 헤더는 알림 조회 실패를 시끄럽게 보여줄 자리가 아니다 — 배지만 숨긴다.
+          if (current === request.current) setUnreadCount(0)
+        }
+      })()
+    }
+
+    refresh()
+    window.addEventListener(NOTIFICATIONS_CHANGED_EVENT, refresh)
+    return () => window.removeEventListener(NOTIFICATIONS_CHANGED_EVENT, refresh)
   }, [status, pathname])
 
   if (status !== 'authenticated') return null

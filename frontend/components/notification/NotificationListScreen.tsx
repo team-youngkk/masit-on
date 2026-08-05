@@ -46,6 +46,7 @@ export function NotificationListScreen() {
   const [pageNumber, setPageNumber] = useState(1)
   const [totalPages, setTotalPages] = useState(0)
   const [hasNext, setHasNext] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
   const [listBusy, setListBusy] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [listError, setListError] = useState<Notice | null>(null)
@@ -80,6 +81,7 @@ export function NotificationListScreen() {
       setPageNumber(page.page.number)
       setTotalPages(page.page.totalPages)
       setHasNext(page.page.hasNext)
+      setUnreadCount(page.unreadCount)
       setListError(null)
       setUnauthorized(false)
     } catch (reason) {
@@ -109,8 +111,10 @@ export function NotificationListScreen() {
   useEffect(() => { void load() }, [load])
 
   async function markRead(item: NotificationItem) {
+    if (item.read) return
     setItems((prev) => prev.map((existing) =>
       existing.notificationId === item.notificationId ? { ...existing, read: true } : existing))
+    setUnreadCount((prev) => Math.max(0, prev - 1))
     setPendingReadIds((prev) => new Set(prev).add(item.notificationId))
     setItemNotices((prev) => {
       if (!(item.notificationId in prev)) return prev
@@ -123,6 +127,7 @@ export function NotificationListScreen() {
     } catch (reason) {
       setItems((prev) => prev.map((existing) =>
         existing.notificationId === item.notificationId ? { ...existing, read: false } : existing))
+      setUnreadCount((prev) => prev + 1)
       const parsed = await parseNotificationError(reason)
       setItemNotices((prev) => ({
         ...prev,
@@ -147,8 +152,10 @@ export function NotificationListScreen() {
     setMarkAllBusy(true)
     setMarkAllNotice({ text: '처리 중입니다...', isError: false })
     try {
-      await markAllNotificationsRead()
+      const result = await markAllNotificationsRead()
       setItems((prev) => prev.map((item) => ({ ...item, read: true })))
+      setUnreadCount(result.unreadCount)
+      setItemNotices({})
       setMarkAllNotice({ text: '모든 알림을 읽음으로 표시했습니다.', isError: false })
     } catch (reason) {
       const parsed = await parseNotificationError(reason)
@@ -183,16 +190,22 @@ export function NotificationListScreen() {
       if (request !== detailRequest.current) return
       setDetailItem(detail)
     } catch (reason) {
-      if (request !== detailRequest.current) return
       if (reason instanceof Response && reason.status === 404) {
+        if (request !== detailRequest.current) return
         setDetailUnavailable(true)
       } else {
         const parsed = await parseParticipationError(reason)
-        setDetailError({
-          text: parsed?.contract.message || '관련 요청 상세를 불러오지 못했습니다.',
-          isError: true,
-          traceId: parsed?.contract.traceId,
-        })
+        if (request !== detailRequest.current) return
+        if (parsed?.status === 401) {
+          setUnauthorized(true)
+          setExpandedId(null)
+        } else {
+          setDetailError({
+            text: parsed?.contract.message || '관련 요청 상세를 불러오지 못했습니다.',
+            isError: true,
+            traceId: parsed?.contract.traceId,
+          })
+        }
       }
     } finally {
       if (request === detailRequest.current) setDetailBusy(false)
@@ -215,15 +228,13 @@ export function NotificationListScreen() {
     )
   }
 
-  const hasUnread = items.some((item) => !item.read)
-
   return (
     <section className={styles.screen}>
       <header className={styles.header}>
         <h1>알림</h1>
         <Button
           variant="secondary"
-          disabled={markAllBusy || !hasUnread}
+          disabled={markAllBusy || unreadCount <= 0}
           onClick={() => void handleMarkAllRead()}
         >
           {markAllBusy ? '처리 중...' : '모두 읽음으로 표시'}

@@ -53,6 +53,12 @@ export type ReadAllState = {
 
 export type ContractError = NotificationContractError
 
+export const NOTIFICATIONS_CHANGED_EVENT = 'masit-on:notifications-changed'
+
+function notifyNotificationsChanged(): void {
+  window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED_EVENT))
+}
+
 async function json<T>(response: Response): Promise<T> {
   if (!response.ok) throw response
   return (await response.json()) as T
@@ -75,15 +81,19 @@ export async function getUnreadCount(): Promise<number> {
 }
 
 export async function markNotificationRead(notificationId: string): Promise<ReadState> {
-  return json<ReadState>(await authenticatedMemberFetch(
+  const result = await json<ReadState>(await authenticatedMemberFetch(
     `/api/me/notifications/${encodeURIComponent(notificationId)}/read`,
     { method: 'PUT' },
   ))
+  notifyNotificationsChanged()
+  return result
 }
 
 export async function markAllNotificationsRead(): Promise<ReadAllState> {
-  return json<ReadAllState>(await authenticatedMemberFetch(
+  const result = await json<ReadAllState>(await authenticatedMemberFetch(
     '/api/me/notifications/read-all',
     { method: 'PUT' },
   ))
+  notifyNotificationsChanged()
+  return result
 }
