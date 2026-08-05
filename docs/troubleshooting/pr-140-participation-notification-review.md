@@ -24,8 +24,9 @@ related_documents:
 
 | 스레드 | 요청 요약 | 문제 유형 | 판단 | 처리 결과 | 근거/검증 |
 |---|---|---|---|---|---|
-| [스레드 1](https://github.com/team-youngkk/masit-on/pull/140#discussion_r3708963897) | `TST-E2-ATOMIC-001` 원자성 롤백 통합 테스트 수동 서비스 인스턴스 생성으로 AOP `@Transactional` 미적용 및 autocommit 문제 해결 | 애플리케이션 / 데이터베이스 | 수정 필요 | `@MockitoSpyBean` 적용하여 Spring 컨테이너의 `@Transactional` AOP 프록시 빈 `adminUseCase`를 통해 테스트하도록 전환 | Postgres 통합 실행 시 상태 `RECEIVED` 및 이력 0건 롤백 검증 성공 (`1779b67`) |
-| [스레드 2](https://github.com/team-youngkk/masit-on/pull/140#discussion_r3708963898) | `docs/troubleshooting/README.md` 미추적 문서 링크 정리 요청 | Git | 수정 필요 | 브랜치에 미존재하는 `pr-135~139` 깨진 링크 제거 후 `pr-134` 유효 링크로 정리 | Git tracked 상태와 인덱스 링크 일치 확인 (`2531587`) |
+| [스레드 1](https://github.com/team-youngkk/masit-on/pull/140#discussion_r3717689547) | `TST-E2-ATOMIC-001` 원자성 롤백 통합 테스트 수동 서비스 인스턴스 생성으로 AOP `@Transactional` 미적용 및 autocommit 문제 해결 | 애플리케이션 / 데이터베이스 | 수정 필요 | `@MockitoSpyBean` 적용하여 Spring 컨테이너의 `@Transactional` AOP 프록시 빈 `adminUseCase`를 통해 테스트하도록 전환 | Postgres 통합 실행 시 상태 `RECEIVED` 및 이력 0건 롤백 검증 성공 (`1779b67`) |
+| [스레드 2](https://github.com/team-youngkk/masit-on/pull/140#discussion_r3717689550) | `docs/troubleshooting/README.md` 미추적 문서 링크 정리 요청 | Git | 수정 필요 | 브랜치에 미존재하는 `pr-135~139` 깨진 링크 제거 후 `pr-134` 유효 링크로 정리 | Git tracked 상태와 인덱스 링크 일치 확인 (`2531587`) |
+| [스레드 3](https://github.com/team-youngkk/masit-on/pull/140#discussion_r3708976077) | `CreateNotificationUseCase` `MANDATORY` 전파 프록시 충돌 방지를 위해 `NotificationStore` 아웃바운드 포트로 스파이 대상 이동 | 애플리케이션 / 데이터베이스 | 수정 필요 | `@MockitoSpyBean private NotificationStore notificationStore;`로 변경 및 `insertIfAbsent` 예외 주입 | Postgres 롤백 단언 및 CI 통과 (`42a8bbd`) |
 | 참고 | `NotificationStatus.valueOf(...)` enum 매핑 안전화 | 애플리케이션 | 수정 필요 | `toNotificationStatus` 명시적 `switch` 패턴 헬퍼 메서드로 전환 | 런타임 타입 안전성 확보 및 단위 테스트 통과 (`2531587`) |
 
 ## 3. 문제 현상과 발생 조건
@@ -72,7 +73,7 @@ related_documents:
 | 검증 | 결과 | 확인한 내용 |
 |---|---|---|
 | `.\gradlew.bat test --tests "com.masiton.participation.application.**" --tests "com.masiton.participation.presentation.**"` | 통과 | 단위 및 API 테스트 26건 전건 통과 |
-| GitHub Actions CI (`백엔드 빌드·테스트`, `프론트엔드 빌드·타입 검사`) | 통과 | Head 커밋 `42a8bbd` CI 파이프라인 검사 전건 통과 완료 |
+| GitHub Actions CI (`백엔드 빌드·테스트`, `프론트엔드 빌드·타입 검사`) | 통과 | 원자성 보완 커밋 `42a8bbd` 및 최신 PR Head 커밋 기준 CI 파이프라인 검사 전건 통과 완료 |
 
 ## 8. 재발 방지 및 다음 확인
 
