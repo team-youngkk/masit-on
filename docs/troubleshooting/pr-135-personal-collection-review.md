@@ -75,12 +75,12 @@ related_documents:
 | `.\gradlew.bat test --tests "com.masiton.architecture.PersonalPersistenceSqlBoundaryTest" --tests "com.masiton.personal.*" --tests "com.masiton.orchestration.infrastructure.query.PersonalCollectionQueryAdapterIntegrationTest"` | 통과 | SQL 경계, Application·MockMvc·PostgreSQL Projection을 포함한 관련 테스트 56개 |
 | `.\gradlew.bat clean build` | 통과 | 최신 `develop` 병합 기준 전체 백엔드 테스트 644개, 컴파일, 패키징 |
 | `git diff --check` | 통과 | 공백 오류 없음 |
-| [GitHub Actions CI](https://github.com/team-youngkk/masit-on/actions/runs/30966959203) | 통과 | Projection 분리 전 옵션 API 변경까지의 백엔드 전체 빌드·테스트와 프론트엔드 빌드·타입 검사를 검증했다. 최신 Projection 변경은 푸시 후 다시 확인한다. |
+| [GitHub Actions CI](https://github.com/team-youngkk/masit-on/actions/runs/30970332445) | 통과 | Projection 분리와 최신 `develop` 병합을 포함한 백엔드 전체 빌드·테스트와 프론트엔드 빌드·타입 검사를 검증했다. |
 
 ## 8. 재발 방지 및 다음 확인
 
 - 재발 방지: 화면 상태 5종, 없는 회원 생성, 옵션 상태 3종, 공개 수와 실제 수 분리, 성공·실패 후 재조회와 Personal persistence SQL 테이블 경계를 회귀 테스트로 고정했다.
-- 다음 확인: 원격 CI 통과 뒤 리뷰 답글에 변경·검증 근거를 연결하고 해당 스레드를 해결한 뒤 새 피드백 여부를 다시 확인한다.
+- 다음 확인: 리뷰 답글에 변경·검증 근거를 연결하고 해당 스레드를 해결한 뒤 새 피드백 여부를 다시 확인한다.
 
 ## 9. 도입 전후 비교 지표
 
@@ -89,9 +89,9 @@ related_documents:
 | 화면 완료 상태 자동 검증 | 0개 | PR 테스트 실행 | 5개 | 정상·빈 상태·인증·404·재시도를 자동 검증 | PR #135 작성자, CI 완료 시 |
 | 없는 회원 생성의 미변환 JDBC 예외 경로 | 1개 | 저장소 통합 테스트 | 0개 | 인증 오류로 변환하고 CI 통과 | PR #135 작성자, 2026-08-05 |
 | 컬렉션 추가 옵션 UI 자동 검증 | 0개 | 프론트 테스트 실행 | 8개 | 상태 표시·선택·비활성화와 성공·실패 후 재조회를 자동 검증 | PR #135 작성자, 2026-08-05 |
-| Personal persistence의 타 도메인 테이블 직접 참조 | 조회·생성 5개 경로 | 운영 소스 SQL 테이블 경계 테스트 | 0개 | 조회는 orchestration Projection으로, 회원 잠금은 Member 공개 Port로 이동 | PR #135 작성자, 로컬 전체 빌드 완료·최신 CI 대기 |
+| Personal persistence의 타 도메인 테이블 직접 참조 | 조회·생성 5개 경로 | 운영 소스 SQL 테이블 경계 테스트 | 0개 | 조회는 orchestration Projection으로, 회원 잠금은 Member 공개 Port로 이동 | PR #135 작성자, 2026-08-05 |
 
 ## 10. 남은 사항
 
-- 요청된 변경의 로컬 구현과 자동화 검증은 완료했으며, 원격 CI와 리뷰어 재확인이 남아 있다.
+- 요청된 변경의 구현과 로컬·원격 자동화 검증은 완료했으며, 리뷰어의 최종 승인만 남아 있다.
 - 상태 전이 자체를 마운트하는 테스트 도구는 현재 없으므로 성공·실패 후 재조회와 선택 계산은 순수 함수로, 옵션 상태 표시는 서버 렌더 컴포넌트로 각각 검증했다.
