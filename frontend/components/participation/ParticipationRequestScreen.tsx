@@ -35,6 +35,9 @@ const RETURN_TO = '/me/requests'
 
 const TARGETS: TargetType[] = ['RESTAURANT', 'CREATOR', 'VIDEO', 'VISIT_RELATIONSHIP']
 const STATUSES: RequestStatus[] = ['RECEIVED', 'IN_REVIEW', 'ACCEPTED', 'REJECTED', 'COMPLETED']
+const TAB_ORDER: RequestKind[] = ['submission', 'report']
+
+type SubmitNotice = { text: string; isError: boolean; traceId?: string }
 
 export function ParticipationRequestScreen() {
   const { status: session } = useMemberSession()
@@ -53,13 +56,17 @@ export function ParticipationRequestScreen() {
   const [selected, setSelected] = useState<ParticipationItem | null>(null)
   const [message, setMessage] = useState('')
   const [error, setError] = useState(false)
+  const [listError, setListError] = useState(false)
   const [errorTraceId, setErrorTraceId] = useState<string | undefined>(undefined)
   const [unauthorized, setUnauthorized] = useState(false)
+  const [submitNotice, setSubmitNotice] = useState<SubmitNotice | null>(null)
   const [busy, setBusy] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const retry = useRef<{ fingerprint: string; key: string } | null>(null)
   const listRequest = useRef(0)
   const detailRequest = useRef(0)
+  const submissionTabRef = useRef<HTMLButtonElement>(null)
+  const reportTabRef = useRef<HTMLButtonElement>(null)
 
   const load = useCallback(async () => {
     if (session !== 'authenticated') return
@@ -73,6 +80,7 @@ export function ParticipationRequestScreen() {
       setTotalPages(page.page.totalPages)
       setHasNext(page.page.hasNext)
       setError(false)
+      setListError(false)
       setErrorTraceId(undefined)
       setUnauthorized(false)
       setMessage('')
@@ -83,10 +91,12 @@ export function ParticipationRequestScreen() {
       if (parsed?.status === 401) {
         setUnauthorized(true)
         setError(false)
+        setListError(false)
         setMessage('')
       } else {
         setUnauthorized(false)
         setError(true)
+        setListError(true)
         setMessage(parsed?.contract.message || '내 요청을 불러오지 못했습니다. 다시 시도해 주세요.')
       }
     } finally {
@@ -118,6 +128,28 @@ export function ParticipationRequestScreen() {
     setPageNumber(next.page)
   }
 
+  function switchTab(nextKind: RequestKind) {
+    detailRequest.current += 1
+    resetPageForFilters(nextKind, filter)
+    setKind(nextKind)
+    setSelected(null)
+    retry.current = null
+  }
+
+  function handleTabListKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    const currentIndex = TAB_ORDER.indexOf(kind)
+    let nextIndex: number | null = null
+    if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + TAB_ORDER.length) % TAB_ORDER.length
+    else if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % TAB_ORDER.length
+    else if (event.key === 'Home') nextIndex = 0
+    else if (event.key === 'End') nextIndex = TAB_ORDER.length - 1
+    if (nextIndex === null) return
+    event.preventDefault()
+    const nextKind = TAB_ORDER[nextIndex]
+    switchTab(nextKind)
+    ;(nextKind === 'submission' ? submissionTabRef : reportTabRef).current?.focus()
+  }
+
   async function submit(event: React.FormEvent) {
     event.preventDefault()
     const base = { targetType, description, ...(evidenceUrl ? { evidenceUrl } : {}) }
@@ -129,24 +161,27 @@ export function ParticipationRequestScreen() {
       retry.current = { fingerprint, key: crypto.randomUUID() }
     }
     setBusy(true)
-    setMessage('접수 중입니다...')
-    setError(false)
-    setErrorTraceId(undefined)
+    setSubmitNotice({ text: '접수 중입니다...', isError: false })
     try {
       const created = await createParticipation(kind, payload, retry.current.key)
       retry.current = null
       setSelected(created)
       setDescription('')
       setEvidenceUrl('')
-      setMessage('요청을 접수했습니다. 접수만으로 공개 데이터가 변경되거나 숨겨지지 않습니다.')
+      setSubmitNotice({ text: '요청을 접수했습니다. 접수만으로 공개 데이터가 변경되거나 숨겨지지 않습니다.', isError: false })
       if (pageNumber === 1) await load()
       else setPageNumber(1)
     } catch (reason) {
       const parsed = await parseParticipationError(reason)
-      if (parsed) {
+      if (parsed?.status === 401) {
+        setUnauthorized(true)
+        setError(false)
+        setMessage('')
+        setErrorTraceId(parsed.contract.traceId)
+        setSubmitNotice(null)
+      } else if (parsed) {
         const contract: ContractError = parsed.contract
-        setMessage(participationErrorMessage(parsed.status, contract))
-        setErrorTraceId(contract.traceId)
+        setSubmitNotice({ text: participationErrorMessage(parsed.status, contract), isError: true, traceId: contract.traceId })
         if ((contract.code === 'DUPLICATE_OPEN_SUBMISSION' || contract.code === 'DUPLICATE_OPEN_REPORT')
           && contract.resource?.requestId) {
           setFilter('')
@@ -154,10 +189,8 @@ export function ParticipationRequestScreen() {
           try { setSelected(await getParticipationDetail(kind, contract.resource.requestId)) } catch { /* 목록에서 재확인 */ }
         }
       } else {
-        setMessage('네트워크 오류가 발생했습니다. 같은 요청으로 다시 시도해 주세요.')
-        setErrorTraceId(undefined)
+        setSubmitNotice({ text: '네트워크 오류가 발생했습니다. 같은 요청으로 다시 시도해 주세요.', isError: true })
       }
-      setError(true)
     } finally {
       setBusy(false)
     }
@@ -206,9 +239,9 @@ export function ParticipationRequestScreen() {
       <p>새 정보는 제보하고, 기존 정보의 문제는 신고해 주세요. 하루 합산 5건까지 접수할 수 있습니다.</p>
     </header>
 
-    <div className={styles.tabs} role="tablist" aria-label="요청 종류">
-      <button id="tab-submission" type="button" role="tab" aria-selected={kind === 'submission'} aria-controls="participation-tabpanel" onClick={() => { resetPageForFilters('submission', filter); setKind('submission'); setSelected(null); retry.current = null }}>제보: 새 정보 제안</button>
-      <button id="tab-report" type="button" role="tab" aria-selected={kind === 'report'} aria-controls="participation-tabpanel" onClick={() => { resetPageForFilters('report', filter); setKind('report'); setSelected(null); retry.current = null }}>신고: 기존 정보 문제</button>
+    <div className={styles.tabs} role="tablist" aria-label="요청 종류" onKeyDown={handleTabListKeyDown}>
+      <button id="tab-submission" ref={submissionTabRef} type="button" role="tab" aria-selected={kind === 'submission'} aria-controls="participation-tabpanel" onClick={() => switchTab('submission')}>제보: 새 정보 제안</button>
+      <button id="tab-report" ref={reportTabRef} type="button" role="tab" aria-selected={kind === 'report'} aria-controls="participation-tabpanel" onClick={() => switchTab('report')}>신고: 기존 정보 문제</button>
     </div>
 
     <div id="participation-tabpanel" role="tabpanel" aria-labelledby={kind === 'submission' ? 'tab-submission' : 'tab-report'} className={styles.tabpanel}>
@@ -239,6 +272,13 @@ export function ParticipationRequestScreen() {
       <Button disabled={busy}>{busy ? '처리 중...' : '접수하기'}</Button>
     </form>
 
+    {submitNotice ? (
+      <p className={submitNotice.isError ? styles.error : undefined} role={submitNotice.isError ? 'alert' : 'status'}>
+        {submitNotice.text}
+        {submitNotice.traceId ? <span className={styles.traceId}>traceId: {submitNotice.traceId}</span> : null}
+      </p>
+    ) : null}
+
     <section>
       <div className={styles.filters}>
         <h2>내 요청 목록</h2>
@@ -257,7 +297,7 @@ export function ParticipationRequestScreen() {
           로그인이 필요합니다. <Link href={memberLoginHref(RETURN_TO)}>로그인하기</Link>
           {errorTraceId ? <span className={styles.traceId}>traceId: {errorTraceId}</span> : null}
         </p>
-      ) : loaded && items.length === 0 && !error && !busy ? (
+      ) : loaded && items.length === 0 && !listError ? (
         <p className={styles.muted} role="status">아직 접수한 요청이 없습니다.</p>
       ) : (
         <ul className={styles.list}>

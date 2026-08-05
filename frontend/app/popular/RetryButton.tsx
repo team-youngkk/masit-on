@@ -14,6 +14,7 @@ export function RetryButton() {
       type="button"
       className={styles.retryButton}
       disabled={pending}
+      aria-live="polite"
       onClick={() => startTransition(() => router.refresh())}
     >
       {pending ? '다시 시도 중' : '다시 시도'}
