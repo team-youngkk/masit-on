@@ -129,10 +129,12 @@ export function ParticipationRequestScreen() {
   }
 
   function switchTab(nextKind: RequestKind) {
+    if (nextKind === kind) return
     detailRequest.current += 1
     resetPageForFilters(nextKind, filter)
     setKind(nextKind)
     setSelected(null)
+    setSubmitNotice(null)
     retry.current = null
   }
 
