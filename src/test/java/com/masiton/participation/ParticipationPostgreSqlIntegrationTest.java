@@ -26,12 +26,15 @@ import com.masiton.common.idempotency.application.IdempotencyRequest;
 import com.masiton.common.idempotency.application.IdempotencyResponse;
 import com.masiton.common.idempotency.application.port.in.IdempotentCreationUseCase;
 import com.masiton.common.web.BusinessException;
-import com.masiton.participation.application.ParticipationException;
+import com.masiton.participation.application.AdminParticipationService;
 import com.masiton.participation.application.AdminParticipationView;
+import com.masiton.participation.application.ParticipationException;
 import com.masiton.participation.application.ParticipationRequest;
 import com.masiton.participation.application.ParticipationView;
 import com.masiton.participation.application.port.in.AdminParticipationUseCase;
 import com.masiton.participation.application.port.in.ParticipationUseCase;
+import com.masiton.participation.application.port.out.AdminParticipationStore;
+import com.masiton.participation.application.port.out.ParticipationCompletionReader;
 import com.masiton.participation.domain.ModerationActionType;
 import com.masiton.participation.domain.ParticipationStatus;
 import com.masiton.participation.domain.ParticipationTargetType;
@@ -53,6 +56,10 @@ class ParticipationPostgreSqlIntegrationTest extends FullContextIntegrationTest 
     @Autowired
     private AdminParticipationUseCase adminUseCase;
     @Autowired
+    private AdminParticipationStore store;
+    @Autowired
+    private ParticipationCompletionReader completionReader;
+    @Autowired
     private IdempotentCreationUseCase idempotency;
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -63,10 +70,11 @@ class ParticipationPostgreSqlIntegrationTest extends FullContextIntegrationTest 
     }
 
     @Test
-    @DisplayName("관리자 상태 전이는 요청과 감사 이력을 같은 트랜잭션에 저장한다")
-    void 관리자검토_정상전이_감사이력을저장한다() {
+    @DisplayName("관리자 상태 전이는 요청과 감사 이력 및 알림을 같은 트랜잭션에 저장한다")
+    void 관리자검토_정상전이_감사이력과알림을저장한다() {
         UUID adminId = insertAdmin();
-        UUID submissionId = createSubmission(insertMember(), 91).requestId();
+        UUID memberId = insertMember();
+        UUID submissionId = createSubmission(memberId, 91).requestId();
 
         adminUseCase.updateSubmission(submissionId, adminId,
                 new AdminParticipationUseCase.UpdateStatusCommand(
@@ -75,8 +83,46 @@ class ParticipationPostgreSqlIntegrationTest extends FullContextIntegrationTest 
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM moderation_history WHERE submission_id = ? AND to_status = 'IN_REVIEW'",
                 Long.class, submissionId)).isEqualTo(1L);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM notification WHERE submission_id = ? AND status = 'IN_REVIEW' AND member_id = ?",
+                Long.class, submissionId, memberId)).isEqualTo(1L);
         assertThat(adminUseCase.getSubmission(submissionId).moderationHistory())
                 .singleElement().satisfies(history -> assertThat(history.traceId()).isEqualTo("trace-audit"));
+    }
+
+    @Test
+    @DisplayName("TST-E2-ATOMIC-001: 알림 저장 실패 주입 시 상태 변경과 이력이 함께 롤백된다")
+    void TST_E2_ATOMIC_001_알림저장실패_전체롤백된다() {
+        UUID adminId = insertAdmin();
+        UUID memberId = insertMember();
+        UUID submissionId = createSubmission(memberId, 91).requestId();
+
+        com.masiton.notification.application.port.in.CreateNotificationUseCase failingUseCase =
+                (mId, reqType, reqId, status) -> {
+                    throw new RuntimeException("Simulated Notification Storage Failure");
+                };
+
+        AdminParticipationService failingService = new AdminParticipationService(
+                store, completionReader, failingUseCase, java.time.Clock.systemUTC());
+
+        assertThatThrownBy(() -> failingService.updateSubmission(submissionId, adminId,
+                new AdminParticipationUseCase.UpdateStatusCommand(
+                        ParticipationStatus.IN_REVIEW, null, "검토 시작", null), "trace-fail"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Simulated Notification Storage Failure");
+
+        // Verify state transition rolled back to RECEIVED
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM submission WHERE id = ?", String.class, submissionId))
+                .isEqualTo("RECEIVED");
+        // Verify moderation_history rolled back (0 rows)
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM moderation_history WHERE submission_id = ?",
+                Long.class, submissionId)).isEqualTo(0L);
+        // Verify notification rolled back (0 rows)
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM notification WHERE submission_id = ?",
+                Long.class, submissionId)).isEqualTo(0L);
     }
 
     @Test

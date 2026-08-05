@@ -126,15 +126,15 @@ class ParticipationControllerApiTest {
     }
 
     @Test
-    @DisplayName("상세 경로의 형식이 잘못된 식별자는 공통 400 계약을 반환한다")
-    void 상세조회_잘못된식별자_400INVALID_IDENTIFIER를반환한다() throws Exception {
+    @DisplayName("상세 경로의 형식이 잘못된 식별자는 404 식별자 없음 계약을 반환한다")
+    void 상세조회_잘못된식별자_404를반환한다() throws Exception {
         mockMvc.perform(get("/api/me/submissions/not-an-id").principal(authentication()))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("INVALID_IDENTIFIER"));
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("SUBMISSION_NOT_FOUND"));
 
         mockMvc.perform(get("/api/me/reports/not-an-id").principal(authentication()))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("INVALID_IDENTIFIER"));
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("REPORT_NOT_FOUND"));
     }
 
     @Test
