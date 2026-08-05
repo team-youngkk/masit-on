@@ -104,6 +104,21 @@ class SecurityBoundaryApiTest extends FullContextIntegrationTest {
         }
     }
 
+    /*
+     * API-POPULAR-001도 유튜버 상세와 같은 회원 문맥 없는 완전 공개 조회다. 검증할 수 없는
+     * Bearer Token이 섞여 들어와도 Token을 해석하는 순간 401이 되는 회귀를 이 값으로 잡는다.
+     */
+    @Test
+    @DisplayName("인기 맛집 공개 조회는 검증할 수 없는 Bearer Token이 있어도 401을 반환하지 않는다")
+    void 인기맛집공개조회_검증불가Bearer토큰_401을반환하지않는다() throws Exception {
+        List<String> tokens = List.of("not-a-valid-token", UNVERIFIABLE_JWT);
+
+        for (String token : tokens) {
+            mockMvc.perform(get("/api/restaurants/popular").header("Authorization", "Bearer " + token))
+                    .andExpect(status().isOk());
+        }
+    }
+
     @Test
     @DisplayName("정의되지 않은 유튜버 하위 경로는 기본 거부한다")
     void 유튜버하위경로_정의되지않음_미인증_401공통오류를반환한다() throws Exception {
