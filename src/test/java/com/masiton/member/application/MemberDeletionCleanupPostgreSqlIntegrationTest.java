@@ -116,6 +116,7 @@ class MemberDeletionCleanupPostgreSqlIntegrationTest {
                 memberId, restaurantId, asOffsetDateTime(now));
         jdbcTemplate.update("INSERT INTO recent_restaurant_view (member_id, restaurant_id, last_viewed_at) VALUES (?, ?, ?)",
                 memberId, restaurantId, asOffsetDateTime(now));
+        insertNotification(memberId, submissionId, UUID.randomUUID(), asOffsetDateTime(now));
         jobs.enqueue(memberId, now);
 
         // when
@@ -131,6 +132,9 @@ class MemberDeletionCleanupPostgreSqlIntegrationTest {
         assertThat(participationUnlinkedAt("submission", submissionId)).isNotNull();
         assertThat(participationUnlinkedAt("report", reportId)).isNotNull();
         assertThat(count("member_deletion_job", memberId)).isZero();
+        assertThat(count("notification", memberId))
+                .as("member_id CASCADE로 알림이 삭제되어야 한다")
+                .isZero();
     }
 
     @Test
@@ -149,6 +153,7 @@ class MemberDeletionCleanupPostgreSqlIntegrationTest {
                 memberId, restaurantId, asOffsetDateTime(now));
         jdbcTemplate.update("INSERT INTO recent_restaurant_view (member_id, restaurant_id, last_viewed_at) VALUES (?, ?, ?)",
                 memberId, restaurantId, asOffsetDateTime(now));
+        insertNotification(memberId, submissionId, UUID.randomUUID(), asOffsetDateTime(now));
         jobs.enqueue(memberId, now);
         lateFailureJobs.failAfterCompleting(memberId);
 
@@ -171,6 +176,9 @@ class MemberDeletionCleanupPostgreSqlIntegrationTest {
         assertThat(participationUnlinkedAt("submission", submissionId)).isNull();
         assertThat(participationUnlinkedAt("report", reportId)).isNull();
         assertThat(count("member_deletion_job", memberId)).isEqualTo(1);
+        assertThat(count("notification", memberId))
+                .as("롤백되면 알림도 삭제되지 않고 그대로 남아야 한다")
+                .isEqualTo(1);
     }
 
     @Test
