@@ -27,9 +27,13 @@ import com.masiton.common.idempotency.application.IdempotencyResponse;
 import com.masiton.common.idempotency.application.port.in.IdempotentCreationUseCase;
 import com.masiton.common.web.BusinessException;
 import com.masiton.participation.application.ParticipationException;
+import com.masiton.participation.application.AdminParticipationView;
 import com.masiton.participation.application.ParticipationRequest;
 import com.masiton.participation.application.ParticipationView;
+import com.masiton.participation.application.port.in.AdminParticipationUseCase;
 import com.masiton.participation.application.port.in.ParticipationUseCase;
+import com.masiton.participation.domain.ModerationActionType;
+import com.masiton.participation.domain.ParticipationStatus;
 import com.masiton.participation.domain.ParticipationTargetType;
 import com.masiton.participation.domain.ReportType;
 import com.masiton.test.FullContextIntegrationTest;
@@ -47,6 +51,8 @@ class ParticipationPostgreSqlIntegrationTest extends FullContextIntegrationTest 
     @Autowired
     private ParticipationUseCase useCase;
     @Autowired
+    private AdminParticipationUseCase adminUseCase;
+    @Autowired
     private IdempotentCreationUseCase idempotency;
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -54,6 +60,104 @@ class ParticipationPostgreSqlIntegrationTest extends FullContextIntegrationTest 
     @BeforeEach
     void clearRequests() {
         jdbcTemplate.execute("TRUNCATE TABLE idempotency_record, notification, moderation_history, report, submission CASCADE");
+    }
+
+    @Test
+    @DisplayName("관리자 상태 전이는 요청과 감사 이력을 같은 트랜잭션에 저장한다")
+    void 관리자검토_정상전이_감사이력을저장한다() {
+        UUID adminId = insertAdmin();
+        UUID submissionId = createSubmission(insertMember(), 91).requestId();
+
+        adminUseCase.updateSubmission(submissionId, adminId,
+                new AdminParticipationUseCase.UpdateStatusCommand(
+                        ParticipationStatus.IN_REVIEW, null, "검토를 시작합니다", null), "trace-audit");
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM moderation_history WHERE submission_id = ? AND to_status = 'IN_REVIEW'",
+                Long.class, submissionId)).isEqualTo(1L);
+        assertThat(adminUseCase.getSubmission(submissionId).moderationHistory())
+                .singleElement().satisfies(history -> assertThat(history.traceId()).isEqualTo("trace-audit"));
+    }
+
+    @Test
+    @DisplayName("동시 경쟁 상태 전이는 하나만 성공하고 원본 데이터는 변경하지 않는다")
+    void 관리자검토_동시경쟁전이_하나만성공한다() throws Exception {
+        UUID adminId = insertAdmin();
+        UUID restaurantId = insertRestaurant();
+        ParticipationView.Report report = createReport(insertMember(), new ParticipationRequest.Report(
+                ParticipationTargetType.RESTAURANT, restaurantId, ReportType.ERROR,
+                "동시 검토 전이를 확인하기 위한 신고입니다", null));
+        adminUseCase.updateReport(report.requestId(), adminId,
+                new AdminParticipationUseCase.UpdateStatusCommand(
+                        ParticipationStatus.IN_REVIEW, null, null, null), "trace-start");
+        CountDownLatch start = new CountDownLatch(1);
+        try (ExecutorService executor = Executors.newFixedThreadPool(2)) {
+            Future<Boolean> accepted = executor.submit(() -> transitionReport(
+                    report.requestId(), adminId, ParticipationStatus.ACCEPTED, null, start));
+            Future<Boolean> rejected = executor.submit(() -> transitionReport(
+                    report.requestId(), adminId, ParticipationStatus.REJECTED, "처리하지 않습니다", start));
+            start.countDown();
+            assertThat(List.of(accepted.get(10, TimeUnit.SECONDS), rejected.get(10, TimeUnit.SECONDS)))
+                    .containsExactlyInAnyOrder(true, false);
+        }
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT publication_status FROM restaurant WHERE id = ?", String.class, restaurantId))
+                .isEqualTo("PUBLIC");
+    }
+
+    @Test
+    @DisplayName("완료는 실제 원본 상태와 신고 대상 일치를 검증한다")
+    void 관리자완료_원본조치검증_확인된결과만허용한다() {
+        UUID adminId = insertAdmin();
+        UUID restaurantId = insertRestaurant();
+        ParticipationView.Report report = createReport(insertMember(), new ParticipationRequest.Report(
+                ParticipationTargetType.RESTAURANT, restaurantId, ReportType.ERROR,
+                "비공개 조치 완료 여부를 확인하기 위한 신고입니다", null));
+        adminUseCase.updateReport(report.requestId(), adminId,
+                new AdminParticipationUseCase.UpdateStatusCommand(ParticipationStatus.IN_REVIEW, null, null, null), "t1");
+        adminUseCase.updateReport(report.requestId(), adminId,
+                new AdminParticipationUseCase.UpdateStatusCommand(ParticipationStatus.ACCEPTED, null, null, null), "t2");
+        AdminParticipationView.Result result = new AdminParticipationView.Result(
+                ModerationActionType.HIDDEN, ParticipationTargetType.RESTAURANT, restaurantId);
+
+        assertThatThrownBy(() -> adminUseCase.updateReport(report.requestId(), adminId,
+                new AdminParticipationUseCase.UpdateStatusCommand(
+                        ParticipationStatus.COMPLETED, "숨김 처리했습니다", null, result), "t3"))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        error -> assertThat(error.code()).isEqualTo("SOURCE_ACTION_NOT_COMPLETED"));
+        jdbcTemplate.update("UPDATE restaurant SET publication_status = 'PRIVATE', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                restaurantId);
+        assertThat(adminUseCase.updateReport(report.requestId(), adminId,
+                new AdminParticipationUseCase.UpdateStatusCommand(
+                        ParticipationStatus.COMPLETED, "숨김 처리했습니다", null, result), "t4").status())
+                .isEqualTo(ParticipationStatus.COMPLETED);
+    }
+
+    @Test
+    @DisplayName("제보 완료는 결과 행이 접수 후보와 연결된 경우에만 허용한다")
+    void 관리자제보완료_후보불일치_원본조치미완료를반환한다() {
+        UUID adminId = insertAdmin();
+        ParticipationView.Submission submission = createSubmission(insertMember(), Map.of(
+                "name", "후보 연결 맛집", "roadAddress", "서울시 후보로 1"));
+        adminUseCase.updateSubmission(submission.requestId(), adminId,
+                new AdminParticipationUseCase.UpdateStatusCommand(ParticipationStatus.IN_REVIEW, null, null, null), "s1");
+        adminUseCase.updateSubmission(submission.requestId(), adminId,
+                new AdminParticipationUseCase.UpdateStatusCommand(ParticipationStatus.ACCEPTED, null, null, null), "s2");
+        UUID restaurantId = insertRestaurant();
+        AdminParticipationView.Result result = new AdminParticipationView.Result(
+                ModerationActionType.CREATED, ParticipationTargetType.RESTAURANT, restaurantId);
+
+        assertThatThrownBy(() -> adminUseCase.updateSubmission(submission.requestId(), adminId,
+                new AdminParticipationUseCase.UpdateStatusCommand(
+                        ParticipationStatus.COMPLETED, "등록을 완료했습니다", null, result), "s3"))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        error -> assertThat(error.code()).isEqualTo("SOURCE_ACTION_NOT_COMPLETED"));
+        jdbcTemplate.update("UPDATE restaurant SET name = ?, road_address = ? WHERE id = ?",
+                "후보 연결 맛집", "서울시 후보로 1", restaurantId);
+        assertThat(adminUseCase.updateSubmission(submission.requestId(), adminId,
+                new AdminParticipationUseCase.UpdateStatusCommand(
+                        ParticipationStatus.COMPLETED, "등록을 완료했습니다", null, result), "s4").status())
+                .isEqualTo(ParticipationStatus.COMPLETED);
     }
 
     @Test
@@ -244,6 +348,28 @@ class ParticipationPostgreSqlIntegrationTest extends FullContextIntegrationTest 
                 VALUES (?, ?, 'password-hash', CURRENT_TIMESTAMP, 'ACTIVE')
                 """, id, id + "@example.com");
         return id;
+    }
+
+    private UUID insertAdmin() {
+        UUID id = UUID.randomUUID();
+        jdbcTemplate.update("INSERT INTO admin_account (id, login_id, password_hash) VALUES (?, ?, 'hash')",
+                id, "admin-" + id);
+        return id;
+    }
+
+    private boolean transitionReport(
+            UUID requestId, UUID adminId, ParticipationStatus status, String reason, CountDownLatch start)
+            throws InterruptedException {
+        start.await(10, TimeUnit.SECONDS);
+        try {
+            adminUseCase.updateReport(requestId, adminId,
+                    new AdminParticipationUseCase.UpdateStatusCommand(status, reason, null, null),
+                    "trace-" + status);
+            return true;
+        } catch (BusinessException exception) {
+            assertThat(exception.code()).isEqualTo("INVALID_STATUS_TRANSITION");
+            return false;
+        }
     }
 
     private UUID insertRestaurant() {
