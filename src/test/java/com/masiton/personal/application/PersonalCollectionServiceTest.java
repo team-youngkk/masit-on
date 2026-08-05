@@ -73,15 +73,36 @@ class PersonalCollectionServiceTest {
     void rename_공백이있는이름_trim후변경한다() {
         UUID memberId = UUID.randomUUID();
         UUID collectionId = UUID.randomUUID();
-        CollectionSummary summary = mock(CollectionSummary.class);
         when(store.rename(eq(memberId), eq(collectionId), eq("가족과 갈 곳"), any()))
                 .thenReturn(true);
-        when(queries.findSummary(memberId, collectionId)).thenReturn(Optional.of(summary));
 
         service.rename(memberId, collectionId, "  가족과 갈 곳  ");
 
         verify(store).rename(eq(memberId), eq(collectionId), eq("가족과 갈 곳"), any());
-        verify(queries).findSummary(memberId, collectionId);
+    }
+
+    @Test
+    @DisplayName("이름 변경 Command는 교차 도메인 조회 Projection을 호출하지 않는다")
+    void rename_성공_교차도메인프로젝션을호출하지않는다() {
+        UUID memberId = UUID.randomUUID();
+        UUID collectionId = UUID.randomUUID();
+        when(store.rename(eq(memberId), eq(collectionId), eq("가족과 갈 곳"), any()))
+                .thenReturn(true);
+
+        service.rename(memberId, collectionId, "가족과 갈 곳");
+
+        verify(queries, never()).findSummary(any(), any());
+    }
+
+    @Test
+    @DisplayName("요약 조회는 교차 도메인 조회 Projection에 위임한다")
+    void getSummary_존재하는컬렉션_조회Projection결과를반환한다() {
+        UUID memberId = UUID.randomUUID();
+        UUID collectionId = UUID.randomUUID();
+        CollectionSummary summary = mock(CollectionSummary.class);
+        when(queries.findSummary(memberId, collectionId)).thenReturn(Optional.of(summary));
+
+        assertThat(service.getSummary(memberId, collectionId)).isEqualTo(summary);
     }
 
     @Test

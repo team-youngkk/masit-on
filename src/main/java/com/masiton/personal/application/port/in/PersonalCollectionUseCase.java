@@ -14,7 +14,9 @@ public interface PersonalCollectionUseCase {
 
     CollectionDetail getCollection(UUID memberId, UUID collectionId, int page, int size);
 
-    CollectionSummary rename(UUID memberId, UUID collectionId, String name);
+    void rename(UUID memberId, UUID collectionId, String name);
+
+    CollectionSummary getSummary(UUID memberId, UUID collectionId);
 
     void delete(UUID memberId, UUID collectionId);
 

@@ -88,10 +88,15 @@ public class PersonalCollectionService implements PersonalCollectionUseCase {
 
     @Override
     @Transactional
-    public CollectionSummary rename(UUID memberId, UUID collectionId, String name) {
+    public void rename(UUID memberId, UUID collectionId, String name) {
         if (!store.rename(memberId, collectionId, normalizeName(name), now())) {
             throw notFound();
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CollectionSummary getSummary(UUID memberId, UUID collectionId) {
         return queries.findSummary(memberId, collectionId).orElseThrow(this::notFound);
     }
 

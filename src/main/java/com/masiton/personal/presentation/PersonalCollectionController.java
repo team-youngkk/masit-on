@@ -70,7 +70,10 @@ public class PersonalCollectionController {
     @PatchMapping("/{collectionId}")
     public ResponseEntity<CollectionSummary> rename(Authentication authentication,
             @PathVariable String collectionId, @RequestBody NameRequest request) {
-        return ok(useCase.rename(memberId(authentication), identifier(collectionId), request.name()));
+        UUID memberId = memberId(authentication);
+        UUID id = identifier(collectionId);
+        useCase.rename(memberId, id, request.name());
+        return ok(useCase.getSummary(memberId, id));
     }
 
     @DeleteMapping("/{collectionId}")

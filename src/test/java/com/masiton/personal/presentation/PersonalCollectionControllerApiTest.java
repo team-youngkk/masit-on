@@ -16,11 +16,13 @@ import com.masiton.personal.application.port.in.PersonalCollectionUseCase.Collec
 import com.masiton.personal.application.port.in.PersonalCollectionUseCase.RestaurantItem;
 import com.masiton.security.infrastructure.web.MemberPrivateCacheFilter;
 
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -68,6 +70,25 @@ class PersonalCollectionControllerApiTest {
                 .andExpect(jsonPath("$.items[0].restaurantId").value(restaurantId.toString()))
                 .andExpect(jsonPath("$.page.number").value(1))
                 .andExpect(jsonPath("$.restaurantCount").value(1));
+    }
+
+    @Test
+    @DisplayName("이름 변경은 Command 완료 후 별도 조회로 최신 요약을 반환한다")
+    void rename_유효한요청_write후조회로요약을반환한다() throws Exception {
+        UUID collectionId = UUID.randomUUID();
+        OffsetDateTime now = OffsetDateTime.parse("2026-08-03T10:00:00Z");
+        when(useCase.getSummary(memberId, collectionId)).thenReturn(
+                new PersonalCollectionUseCase.CollectionSummary(collectionId, "다시 갈 곳", 1, now, now));
+
+        mockMvc.perform(patch("/api/me/collections/{id}", collectionId).principal(authentication())
+                        .contentType("application/json").content("{\"name\":\"다시 갈 곳\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("다시 갈 곳"))
+                .andExpect(jsonPath("$.restaurantCount").value(1));
+
+        var ordered = inOrder(useCase);
+        ordered.verify(useCase).rename(memberId, collectionId, "다시 갈 곳");
+        ordered.verify(useCase).getSummary(memberId, collectionId);
     }
 
     @Test

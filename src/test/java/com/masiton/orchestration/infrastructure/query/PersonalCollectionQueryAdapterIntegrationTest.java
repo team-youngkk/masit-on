@@ -78,7 +78,8 @@ class PersonalCollectionQueryAdapterIntegrationTest {
 
         var all = queries.findAll(memberId);
         var summary = queries.findSummary(memberId, collectionId).orElseThrow();
-        var renamed = service.rename(memberId, collectionId, "다시 갈 곳");
+        service.rename(memberId, collectionId, "다시 갈 곳");
+        var renamed = service.getSummary(memberId, collectionId);
 
         assertThat(all).singleElement().satisfies(item -> {
             assertThat(item.collectionId()).isEqualTo(collectionId);
