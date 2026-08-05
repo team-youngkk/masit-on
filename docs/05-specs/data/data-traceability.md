@@ -162,7 +162,7 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 
 | 범위 | 요구사항·API | 저장·파생 데이터 | 핵심 제약·생명주기 | Workstream |
 |---|---|---|---|---|
-| 개인 컬렉션 | `FR-COLLECTION-001~006`, `API-COLLECTION-001~007` | `personal_collection`, `collection_restaurant` | 회원 소유, 복합 PK, 20/100 상한, 고정 정렬, 탈퇴 CASCADE | WS-09 |
+| 개인 컬렉션 | `FR-COLLECTION-001~006`, `API-COLLECTION-001~008` | `personal_collection`, `collection_restaurant` | 회원 소유, 복합 PK, 20/100 상한, 고정 정렬, 탈퇴 CASCADE | WS-09 |
 | 인기 맛집 | `FR-POPULAR-001`, `API-POPULAR-001` | 기존 `favorite` 실시간 집계, 순위 비저장 | 현재 찜 1건 이상, 상위 20, Restaurant 공개 상태 | WS-10 |
 | 큐레이션 | `FR-CURATION-001~004`, `API-CURATION-001~009` | `curation`, `curation_restaurant` | `DRAFT/PUBLISHED`, 메인 5·구성 20, 위치 고유, 관리자 감사 | WS-11 |
 | 제보 | `FR-SUBMISSION-001~003`, 회원·관리자 제보 API | `submission`, `moderation_history` | 열린 지문 중복, 합산 일일 제한, 상태 이력, 1년 뒤 회원 연결 제거 | WS-12 |
@@ -176,7 +176,7 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 
 | 데이터 범위 | 소유 요구사항·API | ADR 또는 명시적 보류 | Workstream | 테스트 | E2 Task |
 |---|---|---|---|---|---|
-| `personal_collection`, `collection_restaurant` | `FR-COLLECTION-001~006`, `API-COLLECTION-001~007` | 기존 인증·PostgreSQL·Flyway ADR; 공유·순서 열 제외 | WS-09 | [`TST-E2-COL-001`](../../08-planning/second-expansion-test-matrix.md), `TST-E2-LIFE-001` | [`E2-T01`](../../08-planning/expansion-2-task-breakdown.md)~`E2-T03`, `E2-T14` |
+| `personal_collection`, `collection_restaurant` | `FR-COLLECTION-001~006`, `API-COLLECTION-001~008` | 기존 인증·PostgreSQL·Flyway ADR; 공유·순서 열 제외 | WS-09 | [`TST-E2-COL-001`](../../08-planning/second-expansion-test-matrix.md), `TST-E2-LIFE-001` | [`E2-T01`](../../08-planning/expansion-2-task-breakdown.md)~`E2-T03`, `E2-T14` |
 | 기존 `favorite` 요청 시 집계 | `FR-POPULAR-001`, `API-POPULAR-001` | [ADR-DATA-011](../../07-adr/data/data-011-popular-restaurant-request-time-aggregation.md); 집계 테이블·Snapshot·캐시 비저장 | WS-10 | [`TST-E2-POP-001`](../../08-planning/second-expansion-test-matrix.md), `TST-E2-PERF-001` | [`E2-T01`](../../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T04`, `E2-T05`, `E2-T14` |
 | `curation`, `curation_restaurant` | `FR-CURATION-001~004`, `API-CURATION-001~009` | 기존 관리자 인증·PostgreSQL ADR; 예약·추천·이미지 열 제외 | WS-11 | [`TST-E2-CUR-001`](../../08-planning/second-expansion-test-matrix.md), `TST-E2-PERF-001` | [`E2-T01`](../../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T06`, `E2-T07`, `E2-T14` |
 | `submission`, `moderation_history` | `FR-SUBMISSION-001~003`, 회원·관리자 제보 API | [ADR-DATA-012](../../07-adr/data/data-012-second-expansion-retention-cleanup.md), [ADR-NOTIFY-002](../../07-adr/integration/notify-002-in-app-notification-reliability.md) | WS-12 | [`TST-E2-SUB-001`](../../08-planning/second-expansion-test-matrix.md), `TST-E2-ATOMIC-001`, `TST-E2-LIFE-001` | [`E2-T01`](../../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T08`, `E2-T09`, `E2-T11`, `E2-T14` |

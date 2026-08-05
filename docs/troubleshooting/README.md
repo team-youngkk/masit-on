@@ -10,6 +10,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #135 개인 컬렉션 완료 조건과 저장 오류](pr-135-personal-collection-review.md)
 - [PR #139 인기 맛집 공개 조회의 회원 인증·세션 경계 오분류](pr-139-popular-restaurant-security-boundary.md)
 - [PR #134 사용자 제보·신고 접수 리뷰 반영](pr-134-participation-request-review.md)
 - [PR #131 2차 확장 식별 제거와 착수 게이트 리뷰](pr-131-expansion-foundation-review.md)
