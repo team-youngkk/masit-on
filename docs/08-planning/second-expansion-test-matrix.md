@@ -44,9 +44,9 @@ related_documents:
 | `FR-REPORT-002` | 본인 목록·상세·신고자 비노출·다른 회원 은닉 | `TST-E2-REP-001` | `E2-T08` |
 | `FR-REPORT-003` | 관리자 상태 전이·자동 비공개 금지·감사 이력 | `TST-E2-REP-001`, `TST-E2-ATOMIC-001` | `E2-T09`, `E2-T11` |
 | `FR-NOTIFICATION-001` | 상태·이력·알림 단일 트랜잭션·요청/상태 중복 방지 | `TST-E2-ATOMIC-001` | `E2-T11` |
-| `FR-NOTIFICATION-002` | 본인 목록·페이지·정확한 미읽음 수·90일/200개 경계 | `TST-E2-NOT-001` | `E2-T10` |
-| `FR-NOTIFICATION-003` | 본인 개별 읽음·멱등성·타 회원 은닉 | `TST-E2-NOT-001` | `E2-T10` |
-| `FR-NOTIFICATION-004` | 전체 읽음 원자성·멱등성·정확한 미읽음 수 | `TST-E2-NOT-001` | `E2-T10` |
+| `FR-NOTIFICATION-002` | 본인 목록·페이지·정확한 미읽음 수·90일/200개 경계 | `TST-E2-NOT-001` | `E2-T10`, `E2-T14` |
+| `FR-NOTIFICATION-003` | 본인 개별 읽음·멱등성·타 회원 은닉 | `TST-E2-NOT-001` | `E2-T10`, `E2-T14` |
+| `FR-NOTIFICATION-004` | 전체 읽음 원자성·멱등성·정확한 미읽음 수 | `TST-E2-NOT-001` | `E2-T10`, `E2-T14` |
 
 ## 3. 비즈니스 규칙·NFR 교차 검증
 
