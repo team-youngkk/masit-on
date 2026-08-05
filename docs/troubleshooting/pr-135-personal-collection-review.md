@@ -76,7 +76,7 @@ related_documents:
 | `.\gradlew.bat clean build` | 통과 | 알림 기능 PR #137 병합 기준 전체 백엔드 테스트 644개, 컴파일, 패키징 |
 | `.\gradlew.bat compileJava compileTestJava test --tests ...` | 통과 | 관리자 검토 PR #138 병합 뒤 컴파일과 관련 테스트 56개 재검증 |
 | `git diff --check` | 통과 | 공백 오류 없음 |
-| [GitHub Actions CI](https://github.com/team-youngkk/masit-on/actions/runs/30970332445) | 통과 | Projection 분리와 최신 `develop` 병합을 포함한 백엔드 전체 빌드·테스트와 프론트엔드 빌드·타입 검사를 검증했다. |
+| [GitHub Actions CI](https://github.com/team-youngkk/masit-on/actions/runs/30970898205) | 통과 | Projection 분리, 최신 `develop` 병합과 충돌 해결을 포함한 최종 HEAD에서 백엔드 전체 빌드·테스트와 프론트엔드 빌드·타입 검사를 검증했다. |
 
 ## 8. 재발 방지 및 다음 확인
 
