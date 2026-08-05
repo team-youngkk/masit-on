@@ -81,6 +81,7 @@ related_documents:
 | `./gradlew assemble test --tests ...AdminCurationServiceTest --tests ...AdminCurationControllerApiTest --tests ...CurationPostgreSqlIntegrationTest --tests ...RestaurantReferenceQueryServiceTest --tests ...ArchitectureTest` | 통과 | 배포 산출물 생성과 관련 테스트 30건 |
 | `npm run build` | 통과 | 프론트 테스트 110건, 타입 검사, Next.js 운영 빌드와 25개 페이지 생성 |
 | `./gradlew build` | 미완료 | 전체 테스트 실행 종료 단계에서 기존 Spring scheduling 비데몬 스레드가 남아 제한 시간 안에 프로세스가 종료되지 않았다. 관련 테스트와 `assemble`은 별도 실행으로 통과했다. |
+| [GitHub Actions CI](https://github.com/team-youngkk/masit-on/actions/runs/30978323804) | 통과 | 프론트 빌드·타입 검사와 백엔드 전체 빌드·자동화 테스트 |
 
 ## 8. 재발 방지 및 다음 확인
 
@@ -97,5 +98,4 @@ related_documents:
 
 ## 10. 남은 사항
 
-- 원격 CI 통과 후 모든 리뷰 스레드에 검증 근거를 답변하고 해결 처리한다.
 - 로컬 전체 테스트 종료 시 여러 `scheduling-1` 비데몬 스레드가 남는 기존 테스트 환경 문제는 이번 큐레이션 변경과 분리해 추적할 필요가 있다.
