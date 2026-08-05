@@ -61,6 +61,11 @@ public class MemberSessionRevocationFilter extends OncePerRequestFilter {
                 || (requestUri.equals("/api/auth/tokens") && HttpMethod.DELETE.matches(method));
     }
 
+    /**
+     * API-POPULAR-001은 회원 문맥을 쓰지 않는 완전 공개 조회이므로 이 회원 세션 확인 대상에서
+     * 제외한다. 제외하지 않으면 유효한 회원 JWT를 들고 온 요청마다 공개 목록 조회에 불필요한
+     * 세션 저장소 조회가 붙는다.
+     */
     private boolean isOptionalRestaurantDetailRequest(HttpServletRequest request) {
         if (!HttpMethod.GET.matches(request.getMethod())) {
             return false;
@@ -71,6 +76,6 @@ public class MemberSessionRevocationFilter extends OncePerRequestFilter {
             return false;
         }
         String restaurantId = requestUri.substring(detailPrefix.length());
-        return !restaurantId.isEmpty() && !restaurantId.contains("/");
+        return !restaurantId.isEmpty() && !restaurantId.contains("/") && !"popular".equals(restaurantId);
     }
 }
