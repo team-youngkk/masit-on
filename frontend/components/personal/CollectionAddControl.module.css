@@ -12,7 +12,7 @@
 
 .row select {
   min-height: var(--control-min-height);
-  min-width: 12rem;
+  min-width: min(100%, 22rem);
   max-width: 100%;
 }
 

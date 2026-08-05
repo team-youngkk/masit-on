@@ -9,6 +9,18 @@ export type CollectionSummary = {
   updatedAt: string
 }
 
+export type CollectionAdditionStatus =
+  | 'AVAILABLE'
+  | 'ALREADY_INCLUDED'
+  | 'LIMIT_REACHED'
+
+export type CollectionOption = {
+  collectionId: string
+  name: string
+  restaurantCount: number
+  additionStatus: CollectionAdditionStatus
+}
+
 export type CollectionRestaurant = {
   restaurantId: string
   name: string
@@ -76,6 +88,19 @@ export async function getCollections(): Promise<CollectionSummary[]> {
     await authenticatedMemberFetch('/api/me/collections', { cache: 'no-store' }),
   )
   return ((await response.json()) as { items: CollectionSummary[] }).items
+}
+
+export async function getCollectionOptions(
+  restaurantId: string,
+  signal?: AbortSignal,
+): Promise<CollectionOption[]> {
+  const response = await requireResponse(
+    await authenticatedMemberFetch(
+      `/api/me/collection-options?restaurantId=${encodeURIComponent(restaurantId)}`,
+      { cache: 'no-store', signal },
+    ),
+  )
+  return ((await response.json()) as { items: CollectionOption[] }).items
 }
 
 export async function createCollection(
@@ -147,11 +172,12 @@ export async function removeRestaurantFromCollection(
 export async function addRestaurantToCollection(
   collectionId: string,
   restaurantId: string,
+  signal?: AbortSignal,
 ): Promise<{ collectionId: string; restaurantId: string; addedAt: string }> {
   const response = await requireResponse(
     await authenticatedMemberFetch(
       `${collectionPath(collectionId)}/restaurants/${encodeURIComponent(restaurantId)}`,
-      { method: 'PUT' },
+      { method: 'PUT', signal },
     ),
   )
   return (await response.json()) as {

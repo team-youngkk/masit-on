@@ -25,6 +25,51 @@ export function collectionAddErrorMessage(code: string | undefined): string {
   return '맛집을 컬렉션에 담지 못했습니다. 다시 시도해 주세요.'
 }
 
+export type CollectionOptionStatus =
+  | 'AVAILABLE'
+  | 'ALREADY_INCLUDED'
+  | 'LIMIT_REACHED'
+
+export function collectionOptionStatusLabel(status: CollectionOptionStatus): string {
+  if (status === 'ALREADY_INCLUDED') return '이미 담김'
+  if (status === 'LIMIT_REACHED') return '100곳 상한 도달'
+  return '추가 가능'
+}
+
+export function isCollectionOptionDisabled(status: CollectionOptionStatus): boolean {
+  return status !== 'AVAILABLE'
+}
+
+type SelectableCollectionOption = {
+  collectionId: string
+  additionStatus: CollectionOptionStatus
+}
+
+export function collectionOptionSelection(
+  items: SelectableCollectionOption[],
+  current: string,
+): string {
+  if (items.some((item) => item.collectionId === current)) return current
+  return items.find((item) => item.additionStatus === 'AVAILABLE')?.collectionId
+    ?? items[0]?.collectionId
+    ?? ''
+}
+
+export async function addThenRefreshCollectionOptions<T>(
+  add: () => Promise<unknown>,
+  refresh: () => Promise<T>,
+): Promise<{ options: T; additionError: unknown | null }> {
+  let additionError: unknown | null = null
+  try {
+    await add()
+  } catch (reason) {
+    additionError = reason
+  }
+
+  const options = await refresh()
+  return { options, additionError }
+}
+
 export function creationAttemptFor(
   current: CollectionCreationAttempt | null,
   name: string,
