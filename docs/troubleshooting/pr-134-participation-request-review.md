@@ -27,7 +27,7 @@ related_documents:
 
 | 스레드 | 요청 요약 | 문제 유형 | 판단 | 처리 결과 | 근거/검증 |
 |---|---|---|---|---|---|
-| [CUD 트랜잭션과 동시성 원자성](https://github.com/team-youngkk/masit-on/pull/134#discussion_r3712294863) | 접수 public 메서드에 트랜잭션 경계를 두고 회원 잠금부터 저장까지 원자화 | 데이터베이스 | 수정 필요 | 두 생성 메서드에 `@Transactional`을 추가하고, 동시성 통합 테스트가 멱등 서비스 바깥에서 Application Port를 직접 호출하게 바꿨다. | 관련 단위 테스트 통과, PostgreSQL 통합 테스트는 로컬 Docker 미실행으로 미실행 상태이며 CI에서 재확인 |
+| [CUD 트랜잭션과 동시성 원자성](https://github.com/team-youngkk/masit-on/pull/134#discussion_r3712294863) | 접수 public 메서드에 트랜잭션 경계를 두고 회원 잠금부터 저장까지 원자화 | 데이터베이스 | 수정 필요 | 두 생성 메서드에 `@Transactional`을 추가하고, 동시성 통합 테스트가 멱등 서비스 바깥에서 Application Port를 직접 호출하게 바꿨다. | 관련 단위 테스트와 GitHub Actions 백엔드 전체 빌드·자동화 테스트 통과 |
 | [상세 식별자 404 계약](https://github.com/team-youngkk/masit-on/pull/134#discussion_r3712294869) | 잘못된 상세 경로 식별자도 자원별 404 반환 | 애플리케이션 | 수정 필요 | 생성 신고 대상의 잘못된 식별자는 400을 유지하고, 회원 상세 경로만 `SUBMISSION_NOT_FOUND`·`REPORT_NOT_FOUND` 404로 분리했다. | `ParticipationControllerApiTest` 통과 |
 | [재귀 canonicalize](https://github.com/team-youngkk/masit-on/pull/134#discussion_r3712294875) | 중첩 Map 키도 안정적으로 정렬 | 애플리케이션 | 수정 필요 | Map은 모든 깊이에서 키 정렬, List는 순서 보존, 원시값은 타입 보존하는 재귀 canonicalize로 통합했다. | 중첩 키 순서가 다른 본문의 해시 동일 테스트 통과 |
 | [JSON null 타입 보존](https://github.com/team-youngkk/masit-on/pull/134#discussion_r3717041911) | JSON `null`과 문자열 `"null"`을 다른 본문으로 해시 | 애플리케이션 | 수정 필요 | `String.valueOf` 변환을 제거하고 null을 JSON null로 직렬화해 SHA-256 입력 타입을 보존했다. | 두 본문의 요청 해시 불일치 테스트 통과 |
@@ -60,7 +60,7 @@ related_documents:
 | 프론트 목록 호출과 응답 타입 대조 | API는 페이지 객체와 대상 필드를 주지만 화면이 사용하지 않음 | 페이지 상태·이동과 대상 표현을 연결 |
 | 도메인 경계·패키지 구조와 raw SQL 위치 대조 | 다중 도메인 Projection은 orchestration 인프라 책임 | Participation 소유 Port와 orchestration Adapter로 분리 |
 | 기존 script 정규식에 `img onerror`, `svg onload` 입력 | 정규식을 통과함 | 계약이 HTML 텍스트 처리이므로 꺾쇠 자체를 거부 |
-| PostgreSQL 통합 테스트 실행 | Docker 환경을 찾지 못해 Testcontainers 초기화 실패 | 원격 CI에서 Docker 기반 통합 테스트 재검증 |
+| PostgreSQL 통합 테스트 실행 | 로컬은 Docker 환경을 찾지 못해 Testcontainers 초기화 실패, GitHub Actions 백엔드 작업은 통과 | 원격 CI가 Docker 기반 통합 테스트와 전체 회귀를 보완 |
 
 ## 6. 최종 해결
 
@@ -79,13 +79,14 @@ related_documents:
 | `npm.cmd test` | 통과, 82건 | 페이지 상태 초기화, 대상 표현과 기존 프론트 회귀 |
 | `npm.cmd run typecheck` | 통과 | TypeScript 정적 타입 |
 | `gradlew.bat test --tests ParticipationPostgreSqlIntegrationTest --rerun-tasks --no-daemon` | 미실행 | Docker Desktop 미실행으로 Testcontainers 초기화 실패, 테스트 본문 진입 전 종료 |
+| [GitHub Actions CI #30965001217](https://github.com/team-youngkk/masit-on/actions/runs/30965001217) | 통과 | 백엔드 전체 빌드·자동화 테스트와 프론트 프로덕션 빌드·타입 검사 |
 | `git diff --check` | 통과 | 공백 오류 없음 |
 
 ## 8. 재발 방지 및 다음 확인
 
 - 재발 방지: JSON null 타입·중첩 Map 순서, HTML 이벤트 벡터, 잘못된 상세 식별자, 페이지 필터 초기화, 대상 표시 회귀 테스트를 추가했다.
 - 재발 방지: 동시성 통합 테스트가 공통 멱등 트랜잭션에 기대지 않고 `ParticipationUseCase`를 직접 동시 호출한다.
-- 다음 확인: PR #134 GitHub Actions에서 PostgreSQL Testcontainers 동시 접수 시나리오와 전체 빌드를 확인한다.
+- 다음 확인: 없음. PR #134 GitHub Actions에서 PostgreSQL Testcontainers 동시 접수 시나리오와 전체 빌드 통과를 확인했다.
 
 ## 9. 도입 전후 비교 지표
 
@@ -93,8 +94,8 @@ related_documents:
 |---|---|---|---|---|---|
 | 멱등 null 타입 구분 | JSON null과 문자열 `null` 해시 동일 | Controller API 회귀 테스트 | 해시 불일치 | 계약 위반 차단 | 김인안, PR #134 검증 시점 |
 | 20건 초과 목록 접근 | 1페이지만 접근 가능 | 프론트 페이지 상태 전이 테스트 | 이전·다음 이동 가능 | 조회 흐름 완결 | 김인안, PR #134 검증 시점 |
-| 직접 동시 접수 상한 | 기존 테스트가 공통 멱등 트랜잭션 안에서만 측정 | 6개 직접 동시 호출 후 저장 수 확인 | CI 확인 예정 | 로컬 Docker 제약으로 비교 대기 | 김인안, PR #134 CI |
+| 직접 동시 접수 상한 | 기존 테스트가 공통 멱등 트랜잭션 안에서만 측정 | 6개 직접 동시 호출 후 저장 수 확인 | 5건 저장, 1건 `DAILY_REQUEST_LIMIT_EXCEEDED` | Application Service 트랜잭션 경계에서 상한 수렴 | 김인안, PR #134 CI |
 
 ## 10. 남은 사항
 
-- 로컬 Docker Desktop이 실행되지 않아 PostgreSQL 통합 테스트는 GitHub Actions 결과로 보완한다.
+- 없음. 로컬 Docker Desktop 미실행 제약은 GitHub Actions의 백엔드 전체 테스트 통과로 보완했다.
