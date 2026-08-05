@@ -28,6 +28,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import com.masiton.common.web.BusinessException;
 import com.masiton.curation.application.AdminCurationService;
+import com.masiton.curation.application.PublicCurationService;
 import com.masiton.curation.application.port.out.CurationStore;
 import com.masiton.curation.domain.model.CurationStatus;
 
@@ -55,6 +56,7 @@ class CurationPostgreSqlIntegrationTest {
     @Autowired JdbcTemplate jdbcTemplate;
     @Autowired JdbcCurationStore store;
     @Autowired AdminCurationService service;
+    @Autowired PublicCurationService publicService;
     @Autowired PlatformTransactionManager transactionManager;
 
     @BeforeEach
@@ -150,6 +152,45 @@ class CurationPostgreSqlIntegrationTest {
                 Long.class, curationId)).isEqualTo(1L);
     }
 
+    @Test
+    @DisplayName("공개 목록과 상세은 게시·메인·구성 순서를 지키고 비공개 또는 삭제 맛집을 숨긴다")
+    void 공개조회_게시와공개상태필터_순서와빈구성유지() {
+        UUID adminId = insertAdmin();
+        UUID firstCurationId = insertDraft(adminId);
+        UUID secondCurationId = insertDraft(adminId);
+        UUID draftCurationId = insertDraft(adminId);
+        service.setPublication(firstCurationId, adminId, CurationStatus.PUBLISHED, "trace-publish-1");
+        service.setPublication(secondCurationId, adminId, CurationStatus.PUBLISHED, "trace-publish-2");
+        UUID firstRestaurantId = insertRestaurant("첫 맛집", "서울 첫길 1");
+        UUID privateRestaurantId = insertRestaurant("비공개 맛집", "서울 숨김길 2");
+        UUID lastRestaurantId = insertRestaurant("마지막 맛집", "서울 마지막길 3");
+        service.replaceRestaurants(firstCurationId, adminId,
+                List.of(firstRestaurantId, privateRestaurantId, lastRestaurantId), "trace-items");
+        jdbcTemplate.update("UPDATE restaurant SET publication_status = 'PRIVATE' WHERE id = ?",
+                privateRestaurantId);
+
+        var list = publicService.getPublishedCurations();
+
+        assertThat(list).extracting(item -> item.curationId())
+                .containsExactly(firstCurationId, secondCurationId);
+        assertThat(list.getFirst().items()).extracting(item -> item.restaurantId())
+                .containsExactly(firstRestaurantId, lastRestaurantId);
+        assertThat(list.getFirst().items()).extracting(item -> item.roadAddress())
+                .containsExactly("서울 첫길 1", "서울 마지막길 3");
+        assertThat(list.get(1).items()).isEmpty();
+
+        jdbcTemplate.update("UPDATE restaurant SET publication_status = 'PRIVATE', "
+                        + "lifecycle_status = 'DELETED', deleted_at = ? WHERE id IN (?, ?)",
+                NOW, firstRestaurantId, lastRestaurantId);
+        assertThat(publicService.getPublishedCuration(firstCurationId).items()).isEmpty();
+        assertThatThrownBy(() -> publicService.getPublishedCuration(draftCurationId))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        error -> assertThat(error.code()).isEqualTo("CURATION_NOT_FOUND"));
+        assertThatThrownBy(() -> publicService.getPublishedCuration(UUID.randomUUID()))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        error -> assertThat(error.code()).isEqualTo("CURATION_NOT_FOUND"));
+    }
+
     private void publishAfter(CountDownLatch start, UUID curationId, UUID adminId, String traceId) {
         try {
             if (!start.await(10, TimeUnit.SECONDS)) throw new IllegalStateException("start timeout");
@@ -180,11 +221,15 @@ class CurationPostgreSqlIntegrationTest {
     }
 
     private UUID insertRestaurant() {
+        return insertRestaurant("테스트 맛집", "서울 테스트로 1");
+    }
+
+    private UUID insertRestaurant(String name, String roadAddress) {
         UUID id = UUID.randomUUID();
         jdbcTemplate.update("INSERT INTO restaurant (id, region_id, food_category_id, name, kakao_place_id, "
                         + "kakao_place_url, road_address, phone_number, publication_status, lifecycle_status) "
-                        + "VALUES (?, ?, ?, '테스트 맛집', ?, ?, '서울 테스트로 1', '02-1234-5678', 'PUBLIC', 'ACTIVE')",
-                id, REGION_ID, CATEGORY_ID, "KAKAO-" + id, "https://example.com/" + id);
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, '02-1234-5678', 'PUBLIC', 'ACTIVE')",
+                id, REGION_ID, CATEGORY_ID, name, "KAKAO-" + id, "https://example.com/" + id, roadAddress);
         return id;
     }
 }

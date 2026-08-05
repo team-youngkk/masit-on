@@ -1,0 +1,158 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.pageHeader h1,
+.pageHeader p,
+.state h2,
+.state p {
+  margin: 0;
+}
+
+.pageHeader p {
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.curationList,
+.restaurantList {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.curationList {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.curationList > li,
+.curationList article {
+  min-width: 0;
+  height: 100%;
+}
+
+.description {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.preview {
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
+.preview h3,
+.preview p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.preview ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
+  padding: 0;
+  list-style: none;
+}
+
+.preview li {
+  max-width: 100%;
+  padding: var(--space-1) var(--space-2);
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-soft);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.emptyPreview,
+.loading {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.detailLink,
+.actionLink,
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-min-height);
+  color: var(--color-primary-strong);
+  font-weight: 600;
+}
+
+.detailLink {
+  margin-top: auto;
+}
+
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-8) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.traceId {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.detailHeader h1,
+.detailHeader p {
+  margin: 0;
+}
+
+.detailHeader h1 {
+  margin-top: var(--space-2);
+  overflow-wrap: anywhere;
+}
+
+.detailDescription {
+  margin-top: var(--space-2) !important;
+  color: var(--color-text-muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.restaurantList {
+  counter-reset: curation-restaurant;
+}
+
+.restaurantList > li {
+  position: relative;
+  padding-left: var(--space-8);
+  counter-increment: curation-restaurant;
+}
+
+.restaurantList > li::before {
+  position: absolute;
+  top: var(--space-4);
+  left: 0;
+  width: var(--space-6);
+  color: var(--color-text-muted);
+  font-weight: 700;
+  text-align: center;
+  content: counter(curation-restaurant);
+}
+
+@media (max-width: 640px) {
+  .curationList {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .state {
+    padding: var(--space-6) var(--space-4);
+  }
+}

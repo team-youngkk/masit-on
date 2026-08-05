@@ -42,6 +42,21 @@ public class JdbcCurationStore implements CurationStore {
     }
 
     @Override
+    public List<StoredCuration> findPublished(int limit) {
+        return jdbcTemplate.query("SELECT " + COLUMNS + " FROM curation "
+                        + "WHERE publication_status = 'PUBLISHED' "
+                        + "ORDER BY main_position ASC LIMIT ?",
+                this::curation, limit);
+    }
+
+    @Override
+    public Optional<StoredCuration> findPublished(UUID id) {
+        return jdbcTemplate.query("SELECT " + COLUMNS + " FROM curation "
+                        + "WHERE id = ? AND publication_status = 'PUBLISHED'",
+                this::curation, id).stream().findFirst();
+    }
+
+    @Override
     public List<CurationSummary> findPage(CurationStatus status, int limit, long offset) {
         List<Object> args = new ArrayList<>();
         String where = "";

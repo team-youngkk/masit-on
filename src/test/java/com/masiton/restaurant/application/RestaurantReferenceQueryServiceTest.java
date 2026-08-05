@@ -47,6 +47,7 @@ class RestaurantReferenceQueryServiceTest {
         assertThat(references).extracting(reference -> reference.id())
                 .containsExactly(publicId, inactiveId);
         assertThat(references.get(0).name()).isEqualTo("공개 맛집");
+        assertThat(references.get(0).roadAddress()).isEqualTo("서울 테스트로 1");
         assertThat(references.get(0).publiclyVisible()).isTrue();
         assertThat(references.get(1).availability()).isEqualTo("INACTIVE");
         assertThat(references.get(1).publiclyVisible()).isFalse();
@@ -57,6 +58,7 @@ class RestaurantReferenceQueryServiceTest {
         Restaurant restaurant = org.mockito.Mockito.mock(Restaurant.class);
         when(restaurant.getId()).thenReturn(id);
         when(restaurant.getName()).thenReturn(name);
+        when(restaurant.getRoadAddress()).thenReturn("서울 테스트로 1");
         when(restaurant.getPublicationStatus()).thenReturn(publicationStatus);
         when(restaurant.getLifecycleStatus()).thenReturn(lifecycleStatus);
         return restaurant;

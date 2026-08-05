@@ -12,9 +12,19 @@ public interface FindRestaurantReferenceUseCase {
 
     List<RestaurantReference> findRestaurantReferences(Collection<UUID> restaurantIds);
 
-    record RestaurantReference(UUID id, String name, String availability, boolean publiclyVisible) {
+    record RestaurantReference(
+            UUID id,
+            String name,
+            String roadAddress,
+            String availability,
+            boolean publiclyVisible
+    ) {
+        public RestaurantReference(UUID id, String name, String availability, boolean publiclyVisible) {
+            this(id, name, null, availability, publiclyVisible);
+        }
+
         public RestaurantReference(UUID id, boolean publiclyVisible) {
-            this(id, null, publiclyVisible ? "PUBLIC" : "PRIVATE", publiclyVisible);
+            this(id, null, null, publiclyVisible ? "PUBLIC" : "PRIVATE", publiclyVisible);
         }
     }
 }
