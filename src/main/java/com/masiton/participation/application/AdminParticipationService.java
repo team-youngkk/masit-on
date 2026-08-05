@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,7 +25,8 @@ public class AdminParticipationService implements AdminParticipationUseCase {
     private final Clock clock;
 
     public AdminParticipationService(
-            AdminParticipationStore store, ParticipationCompletionReader completionReader, Clock clock) {
+            AdminParticipationStore store, ParticipationCompletionReader completionReader,
+            @Qualifier("participationClock") Clock clock) {
         this.store = store;
         this.completionReader = completionReader;
         this.clock = clock;
