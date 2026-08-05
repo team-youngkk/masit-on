@@ -27,6 +27,6 @@ related_documents:
 | [2차 확장 범위와 용어 결정](second-expansion-scope-and-terminology.md) | 컬렉션·인기·큐레이션·제보·신고·사용자 알림의 승인된 초기 범위와 제외 범위 정의 |
 | [2차 확장 테스트 추적표](second-expansion-test-matrix.md) | 21개 기능 요구사항과 BR·NFR을 자동화·인수 테스트 묶음으로 연결 |
 | [2차 확장 구현 계획](expansion-2-implementation-plan.md) | 상위 계약 이후 기준선·병렬 기능 경로·알림·통합의 구현 순서 정의 |
-| [2차 확장 최종 Task 분해](expansion-2-task-breakdown.md) | `E2-T01`~`E2-T14` 실행 Task와 선행·병렬·완료 조건 정의. 범위 밖 푸시 `E2-T12`는 미생성 |
+| [2차 확장 최종 Task 분해](expansion-2-task-breakdown.md) | `E2-T01`~`E2-T15` 실행 Task와 선행·병렬·완료 조건 정의. 범위 밖 푸시 `E2-T12`는 미생성 |
 
 구현 계획은 제품 범위, 요구사항, API·데이터 명세와 ADR을 변경하지 않는다. 상위 문서가 바뀌면 영향받는 Task와 완료 조건을 함께 갱신한다.
