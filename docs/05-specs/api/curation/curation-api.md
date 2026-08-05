@@ -25,6 +25,7 @@ related_nfr:
 related_documents:
   - ../../../04-product/prd/curation/admin-curation.md
   - ../common/second-expansion-contract.md
+  - ../common/identifier-contract.md
   - ../../data/second-expansion-data-contract.md
 ---
 
@@ -84,7 +85,52 @@ related_documents:
 관리 응답은 각 관계를 다음처럼 표현해 공개 상태 변경을 경고한다.
 
 ```json
-{ "restaurantId": "01K4RESTAURANT00000000001", "position": 1, "availability": "PRIVATE", "warning": "공개 조회에서 숨김" }
+{
+  "restaurantId": "01K4RESTAURANT00000000001",
+  "position": 1,
+  "name": "맛집",
+  "availability": "PRIVATE",
+  "warning": "공개 조회에서 숨김"
+}
+```
+
+관리 목록의 각 항목은 구성 수와 공개 조회에서 숨겨질 맛집의 포함 여부를 요약한다.
+관리자 계정 식별자는 응답에 포함하지 않는다.
+
+```json
+{
+  "curationId": "01K4CURATION000000000001",
+  "title": "비 오는 날 국물 맛집",
+  "description": "관리자가 고른 목록",
+  "status": "DRAFT",
+  "mainPosition": null,
+  "restaurantCount": 2,
+  "hasHiddenRestaurants": true,
+  "publishedAt": null,
+  "updatedAt": "2026-08-03T10:00:00+09:00"
+}
+```
+
+관리 상세와 생성·편집·구성·게시 변경의 성공 응답은 같은 기본 필드와 관계 `items`를
+반환한다. `mainPosition`은 `DRAFT`이면 `null`, `PUBLISHED`이면 1~5다.
+
+```json
+{
+  "curationId": "01K4CURATION000000000001",
+  "title": "비 오는 날 국물 맛집",
+  "description": "관리자가 고른 목록",
+  "status": "DRAFT",
+  "mainPosition": null,
+  "publishedAt": null,
+  "updatedAt": "2026-08-03T10:00:00+09:00",
+  "items": [{
+    "restaurantId": "01K4RESTAURANT00000000001",
+    "position": 1,
+    "name": "맛집",
+    "availability": "PRIVATE",
+    "warning": "공개 조회에서 숨김"
+  }]
+}
 ```
 
 ## 4. 게시와 메인 순서

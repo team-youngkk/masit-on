@@ -81,7 +81,7 @@ public class AdminCurationController {
             @RequestBody(required = false) RestaurantOrderRequest request) {
         if (request == null) throw new BusinessException(ErrorCode.INVALID_REQUEST);
         return ok(useCase.replaceRestaurants(identifier(curationId), adminId(authentication),
-                request.restaurantIds(), traceId(servletRequest)));
+                identifiers(request.restaurantIds(), "restaurantIds"), traceId(servletRequest)));
     }
 
     @PutMapping("/{curationId}/publication")
@@ -97,8 +97,8 @@ public class AdminCurationController {
     public ResponseEntity<CurationListResponse> mainOrder(Authentication authentication,
             HttpServletRequest servletRequest, @RequestBody(required = false) MainOrderRequest request) {
         if (request == null) throw new BusinessException(ErrorCode.INVALID_REQUEST);
-        return ok(new CurationListResponse(useCase.replaceMainOrder(adminId(authentication), request.curationIds(),
-                traceId(servletRequest))));
+        return ok(new CurationListResponse(useCase.replaceMainOrder(
+                adminId(authentication), identifiers(request.curationIds(), "curationIds"), traceId(servletRequest))));
     }
 
     private PageRequest page(MultiValueMap<String, String> query) {
@@ -123,6 +123,7 @@ public class AdminCurationController {
     }
 
     private CurationStatus status(String value, String field) {
+        if (value == null) throw missing(field);
         try { return CurationStatus.valueOf(value); }
         catch (RuntimeException exception) { throw invalid(field, "DRAFT, PUBLISHED 중 하나여야 합니다."); }
     }
@@ -130,6 +131,11 @@ public class AdminCurationController {
     private UUID identifier(String value) {
         try { return UUID.fromString(value); }
         catch (RuntimeException exception) { throw new BusinessException(ErrorCode.INVALID_IDENTIFIER); }
+    }
+
+    private List<UUID> identifiers(List<String> values, String field) {
+        if (values == null) throw missing(field);
+        return values.stream().map(this::identifier).toList();
     }
 
     private UUID adminId(Authentication authentication) {
@@ -147,14 +153,17 @@ public class AdminCurationController {
     private BusinessException invalid(String field, String reason) {
         return new BusinessException(ErrorCode.INVALID_FIELD_VALUE, field, reason);
     }
+    private BusinessException missing(String field) {
+        return new BusinessException(ErrorCode.MISSING_REQUIRED_FIELD, field, "필수 입력값입니다.");
+    }
     private <T> ResponseEntity<T> ok(T body) {
         return ResponseEntity.ok().header(HttpHeaders.CACHE_CONTROL, PRIVATE_NO_STORE).body(body);
     }
 
     public record ContentRequest(String title, String description) { }
-    public record RestaurantOrderRequest(List<UUID> restaurantIds) { }
+    public record RestaurantOrderRequest(List<String> restaurantIds) { }
     public record PublicationRequest(String status) { }
-    public record MainOrderRequest(List<UUID> curationIds) { }
+    public record MainOrderRequest(List<String> curationIds) { }
     public record CurationListResponse(List<CurationSummary> items) { }
     public record CurationPageResponse(List<CurationSummary> items, PageMetadata page) { }
     public record PageMetadata(int number, int size, long totalElements, int totalPages, boolean hasNext) { }

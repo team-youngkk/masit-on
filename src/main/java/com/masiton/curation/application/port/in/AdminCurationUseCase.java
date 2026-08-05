@@ -19,11 +19,11 @@ public interface AdminCurationUseCase {
     record CreationResult(String responseBody) { }
     record CurationSummary(UUID curationId, String title, String description, CurationStatus status,
             Integer mainPosition, int restaurantCount, boolean hasHiddenRestaurants,
-            OffsetDateTime publishedAt, OffsetDateTime createdAt, OffsetDateTime updatedAt) { }
+            OffsetDateTime publishedAt, OffsetDateTime updatedAt) { }
     record RestaurantItem(UUID restaurantId, int position, String name, String availability, String warning) { }
     record CurationDetail(UUID curationId, String title, String description, CurationStatus status,
-            Integer mainPosition, UUID createdBy, UUID updatedBy, OffsetDateTime publishedAt,
-            OffsetDateTime createdAt, OffsetDateTime updatedAt, List<RestaurantItem> items) { }
+            Integer mainPosition, OffsetDateTime publishedAt, OffsetDateTime updatedAt,
+            List<RestaurantItem> items) { }
     record Page<T>(List<T> items, int number, int size, long totalElements, int totalPages, boolean hasNext) {
         public Page(List<T> items, int number, int size, long totalElements) {
             this(List.copyOf(items), number, size, totalElements,

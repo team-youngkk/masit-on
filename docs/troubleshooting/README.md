@@ -10,6 +10,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #141 관리자 큐레이션 입력·조회 경계와 계약 불일치](pr-141-admin-curation-review.md)
 - [PR #135 개인 컬렉션 완료 조건과 저장 오류](pr-135-personal-collection-review.md)
 - [PR #139 인기 맛집 공개 조회의 회원 인증·세션 경계 오분류](pr-139-popular-restaurant-security-boundary.md)
 - [PR #134 사용자 제보·신고 접수 리뷰 반영](pr-134-participation-request-review.md)

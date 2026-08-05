@@ -1,5 +1,7 @@
 package com.masiton.restaurant.infrastructure.persistence;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -66,6 +68,13 @@ class RestaurantPersistenceAdapter implements RestaurantRepositoryPort {
     @Override
     public Optional<Restaurant> findById(UUID id) {
         return springDataRestaurantRepository.findById(id).map(RestaurantMapper::toDomain);
+    }
+
+    @Override
+    public List<Restaurant> findAllByIds(Collection<UUID> ids) {
+        return springDataRestaurantRepository.findAllById(ids).stream()
+                .map(RestaurantMapper::toDomain)
+                .toList();
     }
 
     @Override

@@ -27,14 +27,11 @@ export function validateCurationText(title: string, description: string): string
   return errors
 }
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-
 export function parseRestaurantIds(value: string): { ids: string[]; errors: string[] } {
   const ids = value.split(/\r?\n/).map((id) => id.trim()).filter(Boolean)
   const errors: string[] = []
   if (ids.length > 20) errors.push('맛집은 최대 20개까지 구성할 수 있습니다.')
-  if (new Set(ids).size !== ids.length) errors.push('중복된 맛집 UUID를 제거해 주세요.')
-  if (ids.some((id) => !UUID.test(id))) errors.push('맛집 식별자는 UUID 형식이어야 합니다.')
+  if (new Set(ids).size !== ids.length) errors.push('중복된 맛집 식별자를 제거해 주세요.')
   return { ids, errors }
 }
 
@@ -44,14 +41,4 @@ export function moveItem<T>(items: readonly T[], index: number, offset: -1 | 1):
   const next = [...items]
   ;[next[index], next[destination]] = [next[destination], next[index]]
   return next
-}
-
-export function validateMainOrder(selectedIds: readonly string[], publishedIds: readonly string[]): string[] {
-  if (new Set(selectedIds).size !== selectedIds.length) return ['메인 순서에 중복된 큐레이션이 있습니다.']
-  if (selectedIds.length > 5) return ['메인에는 최대 5개까지 게시할 수 있습니다.']
-  if (selectedIds.length !== publishedIds.length
-    || selectedIds.some((id) => !publishedIds.includes(id))) {
-    return ['현재 게시 중인 큐레이션 전체를 빠짐없이 순서대로 선택해 주세요.']
-  }
-  return []
 }

@@ -64,16 +64,16 @@ export function AdminCurationDetail({ curationId }: { curationId: string }) {
 
     <form className={`${styles.form} ${styles.panel}`} onSubmit={(event) => { event.preventDefault(); const errors = validateCurationText(title, description); if (errors.length) { setError(true); setNotice(errors.join(' ')); return } void run(() => updateAdminCuration(curationId, title, description), '제목과 설명을 저장했습니다.') }}>
       <h2>기본 정보</h2>
-      <label>제목 <span>1~100자</span><input maxLength={200} value={title} onChange={(event) => setTitle(event.target.value)} /></label>
-      <label>설명 <span>0~1000자</span><textarea rows={5} maxLength={2000} value={description} onChange={(event) => setDescription(event.target.value)} /></label>
+      <label>제목 <span>1~100자</span><input maxLength={100} value={title} onChange={(event) => setTitle(event.target.value)} /></label>
+      <label>설명 <span>0~1000자</span><textarea rows={5} maxLength={1000} value={description} onChange={(event) => setDescription(event.target.value)} /></label>
       <Button type="submit" disabled={busy}>기본 정보 저장</Button>
     </form>
 
     <section className={styles.panel} aria-labelledby="restaurants-heading">
       <h2 id="restaurants-heading">맛집 구성과 순서 ({restaurantIds.length}/20)</h2>
-      <p className={styles.hint}>공개·활성 맛집 UUID만 저장할 수 있습니다. 저장하면 현재 서버 구성을 아래 목록 전체로 교체합니다.</p>
+      <p className={styles.hint}>공개·활성 맛집 식별자만 저장할 수 있습니다. 저장하면 현재 서버 구성을 아래 목록 전체로 교체합니다.</p>
       <div className={styles.actions}>
-        <label>추가할 맛집 UUID<input value={newRestaurantId} onChange={(event) => setNewRestaurantId(event.target.value)} /></label>
+        <label>추가할 맛집 식별자<input value={newRestaurantId} onChange={(event) => setNewRestaurantId(event.target.value)} /></label>
         <Button variant="secondary" disabled={busy || !newRestaurantId.trim()} onClick={addRestaurant}>목록에 추가</Button>
       </div>
       {restaurantIds.length ? <ol className={styles.orderList}>{restaurantIds.map((id, index) => <li className={styles.restaurantRow} key={id}>

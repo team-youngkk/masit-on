@@ -1,6 +1,7 @@
 package com.masiton.curation.application.port.out;
 
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -14,6 +15,7 @@ public interface CurationStore {
     List<CurationSummary> findPage(CurationStatus status, int limit, long offset);
     long count(CurationStatus status);
     List<StoredRestaurant> findRestaurants(UUID curationId);
+    List<StoredCurationRestaurant> findRestaurants(Collection<UUID> curationIds);
     void updateContent(UUID id, String title, String description, UUID adminId, OffsetDateTime now);
     void replaceRestaurants(UUID id, List<UUID> restaurantIds, UUID adminId, OffsetDateTime now);
     void lockMainOrder();
@@ -26,4 +28,5 @@ public interface CurationStore {
             Integer mainPosition, UUID createdBy, UUID updatedBy, OffsetDateTime publishedAt,
             OffsetDateTime createdAt, OffsetDateTime updatedAt) { }
     record StoredRestaurant(UUID restaurantId, int position) { }
+    record StoredCurationRestaurant(UUID curationId, UUID restaurantId, int position) { }
 }

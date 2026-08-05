@@ -6,6 +6,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
 import static org.mockito.ArgumentMatchers.any;
 
 import java.time.Clock;
@@ -26,7 +27,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.masiton.common.idempotency.application.port.in.IdempotentCreationUseCase;
 import com.masiton.common.web.BusinessException;
-import com.masiton.curation.application.port.out.CurationRestaurantQueryPort;
 import com.masiton.curation.application.port.out.CurationStore;
 import com.masiton.curation.application.port.out.CurationStore.StoredCuration;
 import com.masiton.curation.application.port.out.CurationStore.StoredRestaurant;
@@ -43,14 +43,13 @@ class AdminCurationServiceTest {
     private static final OffsetDateTime NOW = OffsetDateTime.parse("2026-08-05T00:00:00Z");
 
     @Mock CurationStore store;
-    @Mock CurationRestaurantQueryPort restaurantQueries;
     @Mock FindRestaurantReferenceUseCase restaurantReferences;
     @Mock IdempotentCreationUseCase idempotentCreation;
     private AdminCurationService service;
 
     @BeforeEach
     void setUp() {
-        service = new AdminCurationService(store, restaurantQueries, restaurantReferences, idempotentCreation,
+        service = new AdminCurationService(store, restaurantReferences, idempotentCreation,
                 new ObjectMapper(), Clock.fixed(Instant.parse("2026-08-05T00:00:00Z"), ZoneOffset.UTC));
     }
 
@@ -75,13 +74,68 @@ class AdminCurationServiceTest {
     void 구성교체_비공개맛집_맛집없음() {
         UUID restaurantId = UUID.randomUUID();
         when(store.find(CURATION_ID, true)).thenReturn(Optional.of(draft()));
-        when(restaurantReferences.findRestaurantReference(restaurantId))
-                .thenReturn(Optional.of(new FindRestaurantReferenceUseCase.RestaurantReference(restaurantId, false)));
+        when(restaurantReferences.findRestaurantReferences(List.of(restaurantId)))
+                .thenReturn(List.of(new FindRestaurantReferenceUseCase.RestaurantReference(restaurantId, false)));
 
         assertThatThrownBy(() -> service.replaceRestaurants(CURATION_ID, ADMIN_ID,
                 List.of(restaurantId), "trace-1"))
                 .isInstanceOfSatisfying(BusinessException.class,
                         exception -> assertThat(exception.code()).isEqualTo("RESTAURANT_NOT_FOUND"));
+    }
+
+    @Test
+    @DisplayName("구성 맛집 공개 여부는 식별자 수와 무관하게 한 번에 조회한다")
+    void 구성교체_복수맛집_일괄조회() {
+        UUID publicRestaurantId = UUID.randomUUID();
+        UUID privateRestaurantId = UUID.randomUUID();
+        List<UUID> restaurantIds = List.of(publicRestaurantId, privateRestaurantId);
+        when(store.find(CURATION_ID, true)).thenReturn(Optional.of(draft()));
+        when(restaurantReferences.findRestaurantReferences(restaurantIds)).thenReturn(List.of(
+                new FindRestaurantReferenceUseCase.RestaurantReference(publicRestaurantId, true),
+                new FindRestaurantReferenceUseCase.RestaurantReference(privateRestaurantId, false)));
+
+        assertThatThrownBy(() -> service.replaceRestaurants(
+                CURATION_ID, ADMIN_ID, restaurantIds, "trace-batch"))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.code()).isEqualTo("RESTAURANT_NOT_FOUND"));
+
+        verify(restaurantReferences, times(1)).findRestaurantReferences(restaurantIds);
+        verify(store, never()).replaceRestaurants(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("구성 맛집이 20개를 초과하면 저장하지 않는다")
+    void 구성교체_21개맛집_상한오류() {
+        List<UUID> restaurantIds = java.util.stream.IntStream.range(0, 21)
+                .mapToObj(index -> UUID.randomUUID())
+                .toList();
+        when(store.find(CURATION_ID, true)).thenReturn(Optional.of(draft()));
+
+        assertThatThrownBy(() -> service.replaceRestaurants(
+                CURATION_ID, ADMIN_ID, restaurantIds, "trace-limit"))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.code())
+                                .isEqualTo("CURATION_RESTAURANT_LIMIT_EXCEEDED"));
+
+        verify(store, never()).replaceRestaurants(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("게시 큐레이션이 5개이면 새 게시를 저장하지 않는다")
+    void 게시_5개게시중_상한오류() {
+        List<StoredCuration> published = java.util.stream.IntStream.rangeClosed(1, 5)
+                .mapToObj(position -> published(UUID.randomUUID(), position))
+                .toList();
+        when(store.find(CURATION_ID, true)).thenReturn(Optional.of(draft()));
+        when(store.lockPublished()).thenReturn(published);
+
+        assertThatThrownBy(() -> service.setPublication(
+                CURATION_ID, ADMIN_ID, CurationStatus.PUBLISHED, "trace-limit"))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.code())
+                                .isEqualTo("PUBLISHED_CURATION_LIMIT_EXCEEDED"));
+
+        verify(store, never()).publish(any(), org.mockito.ArgumentMatchers.anyInt(), any(), any());
     }
 
     @Test
@@ -106,7 +160,6 @@ class AdminCurationServiceTest {
         when(store.lockPublished()).thenReturn(List.of());
         when(store.find(CURATION_ID, false)).thenReturn(Optional.of(published(CURATION_ID, 1)));
         when(store.findRestaurants(CURATION_ID)).thenReturn(List.of());
-        when(restaurantQueries.findAll(List.of())).thenReturn(List.of());
 
         service.setPublication(CURATION_ID, ADMIN_ID, CurationStatus.PUBLISHED, "trace-1");
 
@@ -124,8 +177,9 @@ class AdminCurationServiceTest {
         UUID restaurantId = UUID.randomUUID();
         when(store.find(CURATION_ID, false)).thenReturn(Optional.of(draft()));
         when(store.findRestaurants(CURATION_ID)).thenReturn(List.of(new StoredRestaurant(restaurantId, 1)));
-        when(restaurantQueries.findAll(List.of(restaurantId))).thenReturn(List.of(
-                new CurationRestaurantQueryPort.RestaurantProjection(restaurantId, "맛집", "PRIVATE", "ACTIVE")));
+        when(restaurantReferences.findRestaurantReferences(List.of(restaurantId))).thenReturn(List.of(
+                new FindRestaurantReferenceUseCase.RestaurantReference(
+                        restaurantId, "맛집", "PRIVATE", false)));
 
         var detail = service.getCuration(CURATION_ID);
 

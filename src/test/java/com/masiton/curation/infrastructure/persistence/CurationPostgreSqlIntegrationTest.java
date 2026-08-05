@@ -134,8 +134,10 @@ class CurationPostgreSqlIntegrationTest {
 
         var detail = service.getCuration(curationId);
 
-        assertThat(detail.createdBy()).isEqualTo(creator);
-        assertThat(detail.updatedBy()).isEqualTo(editor);
+        assertThat(store.find(curationId, false)).hasValueSatisfying(stored -> {
+            assertThat(stored.createdBy()).isEqualTo(creator);
+            assertThat(stored.updatedBy()).isEqualTo(editor);
+        });
         assertThat(detail.items()).singleElement().satisfies(item -> {
             assertThat(item.availability()).isEqualTo("PRIVATE");
             assertThat(item.warning()).isNotBlank();

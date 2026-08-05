@@ -58,7 +58,7 @@ class AdminCurationControllerApiTest {
     void 목록_게시상태필터_페이지반환() throws Exception {
         OffsetDateTime now = OffsetDateTime.parse("2026-08-05T00:00:00Z");
         CurationSummary item = new CurationSummary(UUID.randomUUID(), "제목", "", CurationStatus.PUBLISHED,
-                1, 2, true, now, now, now);
+                1, 2, true, now, now);
         given(useCase.getCurations(CurationStatus.PUBLISHED, 1, 20))
                 .willReturn(new AdminCurationUseCase.Page<>(List.of(item), 1, 20, 1));
 
@@ -73,6 +73,41 @@ class AdminCurationControllerApiTest {
     }
 
     @Test
+    @DisplayName("구성 식별자 형식 오류는 공통 식별자 오류로 반환한다")
+    void 구성교체_잘못된식별자_400반환() throws Exception {
+        UUID curationId = UUID.randomUUID();
+
+        mockMvc.perform(put("/api/admin/curations/{id}/restaurants", curationId)
+                        .principal(new UsernamePasswordAuthenticationToken(adminId.toString(), "", List.of()))
+                        .requestAttr(TraceIdFilter.TRACE_ID_REQUEST_ATTRIBUTE, "server-trace")
+                        .contentType("application/json")
+                        .content("{\"restaurantIds\":[\"opaque-but-not-currently-valid\"]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_IDENTIFIER"))
+                .andExpect(jsonPath("$.traceId").value("server-trace"));
+    }
+
+    @Test
+    @DisplayName("게시 상태와 메인 순서 필드 누락은 필수값 오류로 반환한다")
+    void 게시와메인순서_필드누락_400반환() throws Exception {
+        UUID curationId = UUID.randomUUID();
+        var principal = new UsernamePasswordAuthenticationToken(adminId.toString(), "", List.of());
+
+        mockMvc.perform(put("/api/admin/curations/{id}/publication", curationId).principal(principal)
+                        .requestAttr(TraceIdFilter.TRACE_ID_REQUEST_ATTRIBUTE, "server-trace")
+                        .contentType("application/json").content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("MISSING_REQUIRED_FIELD"))
+                .andExpect(jsonPath("$.errors[0].field").value("status"));
+        mockMvc.perform(put("/api/admin/curations/main-order").principal(principal)
+                        .requestAttr(TraceIdFilter.TRACE_ID_REQUEST_ATTRIBUTE, "server-trace")
+                        .contentType("application/json").content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("MISSING_REQUIRED_FIELD"))
+                .andExpect(jsonPath("$.errors[0].field").value("curationIds"));
+    }
+
+    @Test
     @DisplayName("편집은 인증 관리자 ID와 서버 traceId를 유스케이스에 전달한다")
     void 편집_관리자와추적식별자_전달() throws Exception {
         UUID curationId = UUID.randomUUID();
@@ -83,7 +118,9 @@ class AdminCurationControllerApiTest {
                         .requestAttr(TraceIdFilter.TRACE_ID_REQUEST_ATTRIBUTE, "server-trace")
                         .contentType("application/json").content("{\"title\":\" 새 제목 \"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.curationId").value(curationId.toString()));
+                .andExpect(jsonPath("$.curationId").value(curationId.toString()))
+                .andExpect(jsonPath("$.createdBy").doesNotExist())
+                .andExpect(jsonPath("$.updatedBy").doesNotExist());
 
         ArgumentCaptor<UUID> actor = ArgumentCaptor.forClass(UUID.class);
         ArgumentCaptor<String> trace = ArgumentCaptor.forClass(String.class);
@@ -155,6 +192,6 @@ class AdminCurationControllerApiTest {
     private CurationDetail detail(UUID id) {
         OffsetDateTime now = OffsetDateTime.parse("2026-08-05T00:00:00Z");
         return new CurationDetail(id, "새 제목", "", CurationStatus.DRAFT, null,
-                adminId, adminId, null, now, now, List.of());
+                null, now, List.of());
     }
 }

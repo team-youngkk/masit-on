@@ -8,10 +8,9 @@ export type { CurationStatus }
 export type AdminCurationRestaurant = {
   restaurantId: string
   position: number
-  name?: string
-  roadAddress?: string
-  availability?: string
-  warning?: string
+  name: string | null
+  availability: string
+  warning: string | null
 }
 
 export type AdminCuration = {
@@ -19,10 +18,10 @@ export type AdminCuration = {
   title: string
   description: string
   status: CurationStatus
-  mainPosition?: number | null
-  restaurantCount?: number
-  hasHiddenRestaurants?: boolean
-  publishedAt?: string | null
+  mainPosition: number | null
+  restaurantCount: number
+  hasHiddenRestaurants: boolean
+  publishedAt: string | null
   updatedAt: string
   items: AdminCurationRestaurant[]
 }
@@ -32,38 +31,40 @@ export type AdminCurationPage = {
   page: { number: number; size: number; totalElements: number; totalPages: number; hasNext: boolean }
 }
 
-type RawCuration = Omit<AdminCuration, 'items'> & {
-  items?: AdminCurationRestaurant[]
-  restaurants?: AdminCurationRestaurant[]
-  publicationStatus?: CurationStatus
+type RawCurationSummary = Omit<AdminCuration, 'items'>
+type RawCurationDetail = Omit<AdminCuration, 'restaurantCount' | 'hasHiddenRestaurants'> & {
+  items: AdminCurationRestaurant[]
 }
 
-function normalize(raw: RawCuration): AdminCuration {
+function normalizeSummary(raw: RawCurationSummary): AdminCuration {
   return {
     ...raw,
-    status: raw.status ?? raw.publicationStatus ?? 'DRAFT',
-    description: raw.description ?? '',
-    restaurantCount: raw.restaurantCount ?? (raw.items ?? raw.restaurants ?? []).length,
-    hasHiddenRestaurants: raw.hasHiddenRestaurants
-      ?? (raw.items ?? raw.restaurants ?? []).some((item) => Boolean(item.warning)
-        || Boolean(item.availability && item.availability !== 'PUBLIC')),
-    items: (raw.items ?? raw.restaurants ?? []).map((item, index) => ({ ...item, position: item.position ?? index + 1 })),
+    items: [],
+  }
+}
+
+function normalizeDetail(raw: RawCurationDetail): AdminCuration {
+  return {
+    ...raw,
+    restaurantCount: raw.items.length,
+    hasHiddenRestaurants: raw.items.some((item) => Boolean(item.warning)
+      || Boolean(item.availability && item.availability !== 'PUBLIC')),
   }
 }
 
 export async function getAdminCurations(page: number, status: CurationStatus | ''): Promise<AdminCurationPage> {
   const query = new URLSearchParams({ page: String(page), size: '20' })
   if (status) query.set('status', status)
-  const response = await adminJson<{ items: RawCuration[]; page: AdminCurationPage['page'] }>(`/api/admin/curations?${query}`, { cache: 'no-store' })
-  return { ...response, items: response.items.map(normalize) }
+  const response = await adminJson<{ items: RawCurationSummary[]; page: AdminCurationPage['page'] }>(`/api/admin/curations?${query}`, { cache: 'no-store' })
+  return { ...response, items: response.items.map(normalizeSummary) }
 }
 
 export async function getAdminCuration(id: string): Promise<AdminCuration> {
-  return normalize(await adminJson<RawCuration>(`/api/admin/curations/${encodeURIComponent(id)}`, { cache: 'no-store' }))
+  return normalizeDetail(await adminJson<RawCurationDetail>(`/api/admin/curations/${encodeURIComponent(id)}`, { cache: 'no-store' }))
 }
 
 export async function createAdminCuration(title: string, description: string, idempotencyKey: string): Promise<AdminCuration> {
-  return normalize(await adminJson<RawCuration>('/api/admin/curations', {
+  return normalizeDetail(await adminJson<RawCurationDetail>('/api/admin/curations', {
     method: 'POST',
     headers: { 'Idempotency-Key': idempotencyKey },
     body: JSON.stringify({ title: title.trim(), description: description.trim() }),
@@ -71,19 +72,19 @@ export async function createAdminCuration(title: string, description: string, id
 }
 
 export async function updateAdminCuration(id: string, title: string, description: string): Promise<AdminCuration> {
-  return normalize(await adminJson<RawCuration>(`/api/admin/curations/${encodeURIComponent(id)}`, {
+  return normalizeDetail(await adminJson<RawCurationDetail>(`/api/admin/curations/${encodeURIComponent(id)}`, {
     method: 'PATCH', body: JSON.stringify({ title: title.trim(), description: description.trim() }),
   }))
 }
 
 export async function replaceCurationRestaurants(id: string, restaurantIds: string[]): Promise<AdminCuration> {
-  return normalize(await adminJson<RawCuration>(`/api/admin/curations/${encodeURIComponent(id)}/restaurants`, {
+  return normalizeDetail(await adminJson<RawCurationDetail>(`/api/admin/curations/${encodeURIComponent(id)}/restaurants`, {
     method: 'PUT', body: JSON.stringify({ restaurantIds }),
   }))
 }
 
 export async function setCurationPublication(id: string, status: CurationStatus): Promise<AdminCuration> {
-  return normalize(await adminJson<RawCuration>(`/api/admin/curations/${encodeURIComponent(id)}/publication`, {
+  return normalizeDetail(await adminJson<RawCurationDetail>(`/api/admin/curations/${encodeURIComponent(id)}/publication`, {
     method: 'PUT', body: JSON.stringify({ status }),
   }))
 }

@@ -12,28 +12,26 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.masiton.common.idempotency.application.IdempotencyActorType;
 import com.masiton.common.idempotency.application.IdempotencyApiScope;
 import com.masiton.common.idempotency.application.IdempotencyRequest;
 import com.masiton.common.idempotency.application.IdempotencyResponse;
 import com.masiton.common.idempotency.application.port.in.IdempotentCreationUseCase;
+import com.masiton.common.observability.OperationAuditLogger;
+import com.masiton.common.observability.OperationAuditLogger.Entry;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
 import com.masiton.curation.application.port.in.AdminCurationUseCase;
-import com.masiton.curation.application.port.out.CurationRestaurantQueryPort;
-import com.masiton.curation.application.port.out.CurationRestaurantQueryPort.RestaurantProjection;
 import com.masiton.curation.application.port.out.CurationStore;
 import com.masiton.curation.application.port.out.CurationStore.StoredCuration;
+import com.masiton.curation.application.port.out.CurationStore.StoredCurationRestaurant;
 import com.masiton.curation.domain.model.CurationStatus;
 import com.masiton.restaurant.application.port.in.FindRestaurantReferenceUseCase;
+import com.masiton.restaurant.application.port.in.FindRestaurantReferenceUseCase.RestaurantReference;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
@@ -41,22 +39,19 @@ import tools.jackson.databind.ObjectMapper;
 @Service
 public class AdminCurationService implements AdminCurationUseCase {
 
-    private static final Logger audit = LoggerFactory.getLogger("OPERATION_AUDIT");
     private static final int RESTAURANT_LIMIT = 20;
     private static final int PUBLISHED_LIMIT = 5;
 
     private final CurationStore store;
-    private final CurationRestaurantQueryPort restaurantQueries;
     private final FindRestaurantReferenceUseCase restaurantReferences;
     private final IdempotentCreationUseCase idempotentCreation;
     private final ObjectMapper objectMapper;
     private final Clock clock;
 
-    public AdminCurationService(CurationStore store, CurationRestaurantQueryPort restaurantQueries,
+    public AdminCurationService(CurationStore store,
             FindRestaurantReferenceUseCase restaurantReferences, IdempotentCreationUseCase idempotentCreation,
             ObjectMapper objectMapper, @Qualifier("curationClock") Clock clock) {
         this.store = store;
-        this.restaurantQueries = restaurantQueries;
         this.restaurantReferences = restaurantReferences;
         this.idempotentCreation = idempotentCreation;
         this.objectMapper = objectMapper;
@@ -86,7 +81,21 @@ public class AdminCurationService implements AdminCurationUseCase {
     @Override
     @Transactional(readOnly = true)
     public Page<CurationSummary> getCurations(CurationStatus status, int page, int size) {
-        return new Page<>(store.findPage(status, size, (long) (page - 1) * size), page, size, store.count(status));
+        List<CurationSummary> summaries = store.findPage(status, size, (long) (page - 1) * size);
+        List<StoredCurationRestaurant> relations = store.findRestaurants(
+                summaries.stream().map(CurationSummary::curationId).toList());
+        Map<UUID, RestaurantReference> references = references(
+                relations.stream().map(StoredCurationRestaurant::restaurantId).distinct().toList());
+        Set<UUID> hiddenCurations = relations.stream()
+                .filter(relation -> !isPublic(references.get(relation.restaurantId())))
+                .map(StoredCurationRestaurant::curationId)
+                .collect(java.util.stream.Collectors.toSet());
+        List<CurationSummary> items = summaries.stream()
+                .map(summary -> new CurationSummary(summary.curationId(), summary.title(), summary.description(),
+                        summary.status(), summary.mainPosition(), summary.restaurantCount(),
+                        hiddenCurations.contains(summary.curationId()), summary.publishedAt(), summary.updatedAt()))
+                .toList();
+        return new Page<>(items, page, size, store.count(status));
     }
 
     @Override
@@ -124,10 +133,9 @@ public class AdminCurationService implements AdminCurationUseCase {
         if (ids.size() > RESTAURANT_LIMIT) throw CurationException.restaurantLimit();
         if (ids.stream().anyMatch(java.util.Objects::isNull)) throw CurationException.restaurantNotFound();
         if (new HashSet<>(ids).size() != ids.size()) throw CurationException.duplicateRestaurant();
-        for (UUID restaurantId : ids) {
-            boolean visible = restaurantReferences.findRestaurantReference(restaurantId)
-                    .map(FindRestaurantReferenceUseCase.RestaurantReference::publiclyVisible).orElse(false);
-            if (!visible) throw CurationException.restaurantNotFound();
+        Map<UUID, RestaurantReference> references = references(ids);
+        if (references.size() != ids.size() || ids.stream().anyMatch(id -> !isPublic(references.get(id)))) {
+            throw CurationException.restaurantNotFound();
         }
         List<UUID> beforeIds = store.findRestaurants(curationId).stream()
                 .map(CurationStore.StoredRestaurant::restaurantId).toList();
@@ -180,7 +188,7 @@ public class AdminCurationService implements AdminCurationUseCase {
         store.replaceMainOrder(curationIds, actor, OffsetDateTime.now(clock));
         log("MAIN_ORDER_REPLACE", actor, "MAIN_ORDER", before, orderedIds(curationIds),
                 curationIds.size(), requiredTraceId(traceId));
-        return store.findPage(CurationStatus.PUBLISHED, PUBLISHED_LIMIT, 0).stream()
+        return getCurations(CurationStatus.PUBLISHED, 1, PUBLISHED_LIMIT).items().stream()
                 .sorted(java.util.Comparator.comparing(CurationSummary::mainPosition)).toList();
     }
 
@@ -190,19 +198,29 @@ public class AdminCurationService implements AdminCurationUseCase {
 
     private CurationDetail detail(StoredCuration value) {
         List<CurationStore.StoredRestaurant> relations = store.findRestaurants(value.id());
-        Map<UUID, RestaurantProjection> projections = new HashMap<>();
-        restaurantQueries.findAll(relations.stream().map(CurationStore.StoredRestaurant::restaurantId).toList())
-                .forEach(item -> projections.put(item.id(), item));
+        Map<UUID, RestaurantReference> projections = references(
+                relations.stream().map(CurationStore.StoredRestaurant::restaurantId).toList());
         List<RestaurantItem> items = relations.stream().map(relation -> {
-            RestaurantProjection restaurant = projections.get(relation.restaurantId());
+            RestaurantReference restaurant = projections.get(relation.restaurantId());
             String availability = restaurant == null ? "INACTIVE" : restaurant.availability();
             String name = restaurant == null ? null : restaurant.name();
-            String warning = restaurant != null && restaurant.publiclyVisible() ? null : "공개 조회에서 숨김";
+            String warning = isPublic(restaurant) ? null : "공개 조회에서 숨김";
             return new RestaurantItem(relation.restaurantId(), relation.position(), name, availability, warning);
         }).toList();
         return new CurationDetail(value.id(), value.title(), value.description(), value.status(),
-                value.mainPosition(), value.createdBy(), value.updatedBy(), value.publishedAt(),
-                value.createdAt(), value.updatedAt(), items);
+                value.mainPosition(), value.publishedAt(), value.updatedAt(), items);
+    }
+
+    private Map<UUID, RestaurantReference> references(List<UUID> restaurantIds) {
+        Map<UUID, RestaurantReference> references = new HashMap<>();
+        if (restaurantIds.isEmpty()) return references;
+        restaurantReferences.findRestaurantReferences(restaurantIds)
+                .forEach(reference -> references.put(reference.id(), reference));
+        return references;
+    }
+
+    private boolean isPublic(RestaurantReference reference) {
+        return reference != null && reference.publiclyVisible();
     }
 
     private String title(String value) { return normalized(value, "title", 1, 100); }
@@ -239,18 +257,7 @@ public class AdminCurationService implements AdminCurationUseCase {
     }
     private void log(String action, UUID adminId, Object targetId, String before, String after,
             Integer count, String traceId) {
-        Runnable entry = () -> audit.info("action={} actorType=ADMIN actorId={} targetType=CURATION targetId={} "
-                        + "before={} after={} restaurantCount={} traceId={}",
-                action, adminId, targetId, before, after, count, traceId);
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    entry.run();
-                }
-            });
-            return;
-        }
-        entry.run();
+        OperationAuditLogger.write(new Entry(action, "ADMIN", adminId, "CURATION", targetId,
+                before, after, null, count, traceId));
     }
 }

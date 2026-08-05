@@ -4,6 +4,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -52,15 +54,9 @@ public class JdbcCurationStore implements CurationStore {
         return jdbcTemplate.query("SELECT " + COLUMNS
                         + ", (SELECT count(*) FROM curation_restaurant cr WHERE cr.curation_id = curation.id)"
                         + " AS restaurant_count"
-                        + ", EXISTS (SELECT 1 FROM curation_restaurant cr"
-                        + " JOIN restaurant r ON r.id = cr.restaurant_id"
-                        + " WHERE cr.curation_id = curation.id"
-                        + " AND (r.publication_status <> 'PUBLIC' OR r.lifecycle_status <> 'ACTIVE'))"
-                        + " AS has_hidden_restaurants"
                         + " FROM curation" + where
                         + " ORDER BY updated_at DESC, id ASC LIMIT ? OFFSET ?",
-                (rs, row) -> summary(curation(rs, row), rs.getInt("restaurant_count"),
-                        rs.getBoolean("has_hidden_restaurants")), args.toArray());
+                (rs, row) -> summary(curation(rs, row), rs.getInt("restaurant_count"), false), args.toArray());
     }
 
     @Override
@@ -78,6 +74,19 @@ public class JdbcCurationStore implements CurationStore {
                         + "WHERE curation_id = ? ORDER BY position ASC",
                 (rs, row) -> new StoredRestaurant(rs.getObject("restaurant_id", UUID.class),
                         rs.getInt("position")), curationId);
+    }
+
+    @Override
+    public List<StoredCurationRestaurant> findRestaurants(Collection<UUID> curationIds) {
+        if (curationIds.isEmpty()) return List.of();
+        String placeholders = String.join(",", Collections.nCopies(curationIds.size(), "?"));
+        return jdbcTemplate.query("SELECT curation_id, restaurant_id, position FROM curation_restaurant "
+                        + "WHERE curation_id IN (" + placeholders + ") ORDER BY curation_id, position",
+                (rs, row) -> new StoredCurationRestaurant(
+                        rs.getObject("curation_id", UUID.class),
+                        rs.getObject("restaurant_id", UUID.class),
+                        rs.getInt("position")),
+                curationIds.toArray());
     }
 
     @Override
@@ -148,6 +157,6 @@ public class JdbcCurationStore implements CurationStore {
     private CurationSummary summary(StoredCuration value, int restaurantCount, boolean hasHiddenRestaurants) {
         return new CurationSummary(value.id(), value.title(), value.description(), value.status(),
                 value.mainPosition(), restaurantCount, hasHiddenRestaurants,
-                value.publishedAt(), value.createdAt(), value.updatedAt());
+                value.publishedAt(), value.updatedAt());
     }
 }

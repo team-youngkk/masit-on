@@ -32,8 +32,8 @@ export function AdminCurationCreate() {
 
   return <form className={styles.form} onSubmit={(event) => void submit(event)}>
     <p className={styles.hint}>새 큐레이션은 항상 초안으로 생성됩니다. 같은 제출의 중복 생성은 멱등 키로 방지합니다.</p>
-    <label>제목 <span>1~100자</span><input required maxLength={200} value={title} onChange={(event) => setTitle(event.target.value)} /></label>
-    <label>설명 <span>0~1000자</span><textarea rows={6} maxLength={2000} value={description} onChange={(event) => setDescription(event.target.value)} /></label>
+    <label>제목 <span>1~100자</span><input required maxLength={100} value={title} onChange={(event) => setTitle(event.target.value)} /></label>
+    <label>설명 <span>0~1000자</span><textarea rows={6} maxLength={1000} value={description} onChange={(event) => setDescription(event.target.value)} /></label>
     <Button type="submit" disabled={busy}>초안 만들기</Button>
     {notice ? <p className={busy ? styles.notice : styles.error} role={busy ? 'status' : 'alert'}>{notice}</p> : null}
   </form>
