@@ -11,6 +11,7 @@ related_documents:
 ## PR 리뷰
 
 - [PR #140 제보·신고 알림 연결 및 원자성 롤백 테스트 보완](pr-140-participation-notification-review.md)
+- [PR #139 인기 맛집 공개 조회의 회원 인증·세션 경계 오분류](pr-139-popular-restaurant-security-boundary.md)
 - [PR #134 사용자 제보·신고 접수 리뷰 반영](pr-134-participation-request-review.md)
 - [PR #131 2차 확장 식별 제거와 착수 게이트 리뷰](pr-131-expansion-foundation-review.md)
 - [PR #129 Basic Auth 전환 안전장치와 이메일 인증 rate limit 우회](pr-129-deploy-cutover-and-rate-limit-review.md)
