@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button'
 import styles from './admin.module.css'
 
 const items = [
+  { href: '/admin/participation', label: '제보·신고 검토' },
   { href: '/admin/restaurants/new', label: '맛집 등록' },
   { href: '/admin/creators/new', label: '유튜버 등록' },
   { href: '/admin/videos/new', label: '영상 등록' },
