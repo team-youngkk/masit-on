@@ -63,21 +63,21 @@ related_documents:
   4. `AdminParticipationService`에서 `toNotificationStatus` 명시적 `switch` 패턴 매핑 적용.
 - 선택 이유: Application layer의 `MANDATORY` 프록시는 그대로 유지한 채 아웃바운드 저장소 어댑터 단에서 예외를 주입하여 PostgreSQL 런타임 간의 원자성 롤백을 가장 정합하게 검증하기 위함.
 - 변경 파일:
-  - [AdminParticipationService.java](file:///c:/Users/woo_lam/IdeaProjects/masit-on/src/main/java/com/masiton/participation/application/AdminParticipationService.java)
-  - [ParticipationPostgreSqlIntegrationTest.java](file:///c:/Users/woo_lam/IdeaProjects/masit-on/src/test/java/com/masiton/participation/ParticipationPostgreSqlIntegrationTest.java)
-  - [README.md](file:///c:/Users/woo_lam/IdeaProjects/masit-on/docs/troubleshooting/README.md)
+  - [AdminParticipationService.java](../../src/main/java/com/masiton/participation/application/AdminParticipationService.java)
+  - [ParticipationPostgreSqlIntegrationTest.java](../../src/test/java/com/masiton/participation/ParticipationPostgreSqlIntegrationTest.java)
+  - [README.md](README.md)
 
 ## 7. 검증
 
 | 검증 | 결과 | 확인한 내용 |
 |---|---|---|
 | `.\gradlew.bat test --tests "com.masiton.participation.application.**" --tests "com.masiton.participation.presentation.**"` | 통과 | 단위 및 API 테스트 26건 전건 통과 |
-| GitHub Actions CI (`백엔드 빌드·테스트`) | 진행 중 | 커밋 `1779b67` CI 검사 수렴 중 |
+| GitHub Actions CI (`백엔드 빌드·테스트`, `프론트엔드 빌드·타입 검사`) | 통과 | Head 커밋 `42a8bbd` CI 파이프라인 검사 전건 통과 완료 |
 
 ## 8. 재발 방지 및 다음 확인
 
 - 재발 방지: 트랜잭션 롤백을 검증하는 통합 테스트 작성 시 `new` 수동 객체 생성을 금지하고, 반드시 Spring 컨테이너의 AOP 프록시 빈과 `@MockitoSpyBean` 구체 클래스를 활용하도록 규칙 준수.
-- 다음 확인: CI 빌드 완료 후 PR #140 최종 병합.
+- 다음 확인: CI 빌드 전건 통과 완료에 따른 리뷰어 최종 승인 후 `develop` 병합 진행.
 
 ## 9. 도입 전후 비교 지표
 
