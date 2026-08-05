@@ -1,0 +1,27 @@
+.control {
+  display: grid;
+  gap: var(--space-2);
+  min-width: min(100%, 18rem);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.row select {
+  min-height: var(--control-min-height);
+  min-width: min(100%, 22rem);
+  max-width: 100%;
+}
+
+.message,
+.error {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+.error {
+  color: var(--color-danger);
+}

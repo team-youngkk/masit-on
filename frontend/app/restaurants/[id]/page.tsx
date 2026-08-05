@@ -3,6 +3,7 @@ import Link from 'next/link'
 
 import { Card } from '@/components/ui/Card'
 import { FavoriteButton } from '@/components/personal/FavoriteButton'
+import { CollectionAddControl } from '@/components/personal/CollectionAddControl'
 import { RecentViewRecorder } from '@/components/personal/RecentViewRecorder'
 import {
   RestaurantDetailUnavailableError,
@@ -69,11 +70,17 @@ export default async function RestaurantDetailPage({
           <h1 className={styles.name}>{restaurant.name}</h1>
           <p className={styles.category}>{restaurant.category}</p>
         </div>
-        <FavoriteButton
-          restaurantId={restaurant.id}
-          restaurantName={restaurant.name}
-          returnTo={`/restaurants/${encodeURIComponent(restaurant.id)}`}
-        />
+        <div className={styles.personalActions}>
+          <FavoriteButton
+            restaurantId={restaurant.id}
+            restaurantName={restaurant.name}
+            returnTo={`/restaurants/${encodeURIComponent(restaurant.id)}`}
+          />
+          <CollectionAddControl
+            restaurantId={restaurant.id}
+            returnTo={`/restaurants/${encodeURIComponent(restaurant.id)}`}
+          />
+        </div>
       </header>
 
       <section className={styles.infoSection} aria-label="기본 정보">

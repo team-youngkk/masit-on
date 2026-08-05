@@ -30,7 +30,7 @@ related_documents:
 | `FR-COLLECTION-002` | 본인 소유 이름 변경·입력 검증·존재 은닉 | `TST-E2-COL-001` | `E2-T03` |
 | `FR-COLLECTION-003` | 본인 소유 삭제·구성 관계 연쇄 삭제·반복 요청 | `TST-E2-COL-001` | `E2-T03` |
 | `FR-COLLECTION-004` | 목록·상세 고정 정렬·비공개 맛집 숨김 | `TST-E2-COL-001` | `E2-T03` |
-| `FR-COLLECTION-005` | 공개 맛집만 추가·중복 멱등·100개 동시 상한 | `TST-E2-COL-001` | `E2-T03` |
+| `FR-COLLECTION-005` | 공개 맛집만 추가·컬렉션별 추가 상태·중복 멱등·100개 동시 상한·성공/실패 후 재조회 | `TST-E2-COL-001` | `E2-T03` |
 | `FR-COLLECTION-006` | 관계 제거·반복 제거·다른 컬렉션 무영향 | `TST-E2-COL-001` | `E2-T03` |
 | `FR-POPULAR-001` | 현재 찜 집계·공개 상태·상위 20·동점 안정 정렬 | `TST-E2-POP-001` | `E2-T04`, `E2-T05` |
 | `FR-CURATION-001` | 관리자 생성·DRAFT·구성/메인 상한·감사 이력 | `TST-E2-CUR-001` | `E2-T06` |
