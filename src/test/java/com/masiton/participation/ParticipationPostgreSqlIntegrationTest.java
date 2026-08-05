@@ -41,9 +41,10 @@ import com.masiton.participation.domain.ParticipationTargetType;
 import com.masiton.participation.domain.ReportType;
 import com.masiton.test.FullContextIntegrationTest;
 
+import org.mockito.Mockito;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
-import com.masiton.notification.application.port.in.CreateNotificationUseCase;
+import com.masiton.notification.application.NotificationService;
 import com.masiton.notification.domain.model.NotificationRequestType;
 import com.masiton.notification.domain.model.NotificationStatus;
 
@@ -70,10 +71,11 @@ class ParticipationPostgreSqlIntegrationTest extends FullContextIntegrationTest 
     private JdbcTemplate jdbcTemplate;
 
     @MockitoSpyBean
-    private CreateNotificationUseCase createNotificationUseCase;
+    private NotificationService notificationService;
 
     @BeforeEach
     void clearRequests() {
+        Mockito.reset(notificationService);
         jdbcTemplate.execute("TRUNCATE TABLE idempotency_record, notification, moderation_history, report, submission CASCADE");
     }
 
@@ -96,7 +98,7 @@ class ParticipationPostgreSqlIntegrationTest extends FullContextIntegrationTest 
                 Long.class, submissionId, memberId)).isEqualTo(1L);
         assertThat(adminUseCase.getSubmission(submissionId).moderationHistory())
                 .singleElement().satisfies(history -> assertThat(history.traceId()).isEqualTo("trace-audit"));
-        verify(createNotificationUseCase).create(
+        verify(notificationService).create(
                 memberId, NotificationRequestType.SUBMISSION, submissionId, NotificationStatus.IN_REVIEW);
     }
 
@@ -108,7 +110,7 @@ class ParticipationPostgreSqlIntegrationTest extends FullContextIntegrationTest 
         UUID submissionId = createSubmission(memberId, 91).requestId();
 
         doThrow(new RuntimeException("Simulated Notification Storage Failure"))
-                .when(createNotificationUseCase).create(any(), any(), any(), any());
+                .when(notificationService).create(any(), any(), any(), any());
 
         assertThatThrownBy(() -> adminUseCase.updateSubmission(submissionId, adminId,
                 new AdminParticipationUseCase.UpdateStatusCommand(
