@@ -136,7 +136,7 @@ public class SecurityConfiguration {
             return false;
         }
         String restaurantId = requestUri.substring(detailPrefix.length());
-        return !restaurantId.isEmpty() && !restaurantId.contains("/");
+        return !restaurantId.isEmpty() && !restaurantId.contains("/") && !"popular".equals(restaurantId);
     }
 
     private boolean isAnonymousPublicReadRequest(HttpServletRequest request) {
@@ -145,6 +145,7 @@ public class SecurityConfiguration {
         }
         String requestUri = request.getRequestURI();
         return requestUri.equals("/api/restaurants")
+                || requestUri.equals("/api/restaurants/popular")
                 || requestUri.equals("/api/creators")
                 || isCreatorDetailReadRequest(requestUri);
     }

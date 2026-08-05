@@ -60,6 +60,7 @@ export function SiteHeader() {
         </Link>
         <nav className={styles.nav} aria-label="주요 메뉴">
           <Link href="/restaurants">맛집 탐색</Link>
+          <Link href="/popular">인기</Link>
           <Suspense fallback={<Link href="/map">지도</Link>}>
             <MapNavigationLink />
           </Suspense>
