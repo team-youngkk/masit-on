@@ -6,8 +6,8 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.masiton.restaurant.application.port.in.GetPopularRestaurantsQuery;
 import com.masiton.restaurant.application.port.in.PopularRestaurantSummary;
+import com.masiton.restaurant.application.port.in.PopularRestaurantUseCase;
 import com.masiton.restaurant.application.port.out.PopularRestaurantQueryPort;
 import com.masiton.restaurant.application.port.out.PopularRestaurantRow;
 
@@ -17,7 +17,7 @@ import com.masiton.restaurant.application.port.out.PopularRestaurantRow;
  * 순위는 Query Port가 보장한 안정 정렬 순서에서 1부터 파생한다.
  */
 @Service
-public class PopularRestaurantQueryService implements GetPopularRestaurantsQuery {
+public class PopularRestaurantQueryService implements PopularRestaurantUseCase {
 
     private static final int RESULT_LIMIT = 20;
 

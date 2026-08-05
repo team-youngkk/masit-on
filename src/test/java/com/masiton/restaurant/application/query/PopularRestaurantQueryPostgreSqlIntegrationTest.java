@@ -22,8 +22,8 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
-import com.masiton.restaurant.application.port.in.GetPopularRestaurantsQuery;
 import com.masiton.restaurant.application.port.in.PopularRestaurantSummary;
+import com.masiton.restaurant.application.port.in.PopularRestaurantUseCase;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -56,7 +56,7 @@ class PopularRestaurantQueryPostgreSqlIntegrationTest {
     private JdbcTemplate jdbcTemplate;
 
     @Autowired
-    private GetPopularRestaurantsQuery query;
+    private PopularRestaurantUseCase query;
 
     /**
      * 맛집·회원 행까지 정리해 각 테스트가 스스로 만든 데이터만 보게 한다.
@@ -339,6 +339,39 @@ class PopularRestaurantQueryPostgreSqlIntegrationTest {
 
         // then
         assertThat(afterCount).isEqualTo(beforeCount);
+    }
+
+    @Test
+    @DisplayName("탈퇴 요청 전이만으로는 집계가 줄지 않고 찜 관계를 정리한 시점에 줄어든다")
+    void findPopularRestaurants_탈퇴요청전이와정리_정리시점에집계가줄어든다() {
+        // given
+        UUID stayingMemberId = UUID.randomUUID();
+        UUID withdrawingMemberId = UUID.randomUUID();
+        insertMember(stayingMemberId);
+        insertMember(withdrawingMemberId);
+        UUID restaurantId = UUID.randomUUID();
+        insertRestaurant(restaurantId, "PUBLIC", "ACTIVE");
+        OffsetDateTime favoritedAt = OffsetDateTime.parse("2026-07-01T00:00:00Z");
+        insertFavorite(stayingMemberId, restaurantId, favoritedAt);
+        insertFavorite(withdrawingMemberId, restaurantId, favoritedAt);
+
+        // when
+        jdbcTemplate.update("""
+                UPDATE member_account
+                   SET status = 'DELETION_PENDING', deletion_requested_at = CURRENT_TIMESTAMP
+                 WHERE id = ?
+                """, withdrawingMemberId);
+        List<PopularRestaurantSummary> afterDeletionRequest = query.findPopularRestaurants();
+        jdbcTemplate.update("DELETE FROM member_account WHERE id = ?", withdrawingMemberId);
+        List<PopularRestaurantSummary> afterCleanup = query.findPopularRestaurants();
+
+        // then
+        assertThat(afterDeletionRequest.getFirst().favoriteCount())
+                .as("ADR-DATA-011 5·7절: 집계는 회원 상태를 조인하지 않고 찜 관계 존재만 판정한다")
+                .isEqualTo(2L);
+        assertThat(afterCleanup.getFirst().favoriteCount())
+                .as("BR-POPULAR-003의 '해당 트랜잭션'은 찜 관계를 제거하는 정리 트랜잭션이다")
+                .isEqualTo(1L);
     }
 
     @Test
