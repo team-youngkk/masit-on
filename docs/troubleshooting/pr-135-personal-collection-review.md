@@ -71,9 +71,10 @@ related_documents:
 
 | 검증 | 결과 | 확인한 내용 |
 |---|---|---|
-| `npm.cmd run build` | 통과 | 병합된 참여 요청을 포함한 프론트 101개 테스트, TypeScript 검사, Next.js 프로덕션 빌드 |
+| `npm.cmd run build` | 통과 | 관리자 검토 충돌 해결까지 포함한 프론트 105개 테스트, TypeScript 검사, Next.js 프로덕션 빌드 |
 | `.\gradlew.bat test --tests "com.masiton.architecture.PersonalPersistenceSqlBoundaryTest" --tests "com.masiton.personal.*" --tests "com.masiton.orchestration.infrastructure.query.PersonalCollectionQueryAdapterIntegrationTest"` | 통과 | SQL 경계, Application·MockMvc·PostgreSQL Projection을 포함한 관련 테스트 56개 |
-| `.\gradlew.bat clean build` | 통과 | 최신 `develop` 병합 기준 전체 백엔드 테스트 644개, 컴파일, 패키징 |
+| `.\gradlew.bat clean build` | 통과 | 알림 기능 PR #137 병합 기준 전체 백엔드 테스트 644개, 컴파일, 패키징 |
+| `.\gradlew.bat compileJava compileTestJava test --tests ...` | 통과 | 관리자 검토 PR #138 병합 뒤 컴파일과 관련 테스트 56개 재검증 |
 | `git diff --check` | 통과 | 공백 오류 없음 |
 | [GitHub Actions CI](https://github.com/team-youngkk/masit-on/actions/runs/30970332445) | 통과 | Projection 분리와 최신 `develop` 병합을 포함한 백엔드 전체 빌드·테스트와 프론트엔드 빌드·타입 검사를 검증했다. |
 
