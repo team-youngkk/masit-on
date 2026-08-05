@@ -10,6 +10,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #135 개인 컬렉션 완료 조건과 저장 오류](pr-135-personal-collection-review.md)
 - [PR #131 2차 확장 식별 제거와 착수 게이트 리뷰](pr-131-expansion-foundation-review.md)
 - [PR #129 Basic Auth 전환 안전장치와 이메일 인증 rate limit 우회](pr-129-deploy-cutover-and-rate-limit-review.md)
 - [PR #126 E2-T01 완료 참조 리뷰 반영](pr-126-e2-t01-completion-reference-review.md)
