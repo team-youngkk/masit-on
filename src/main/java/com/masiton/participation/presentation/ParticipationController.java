@@ -32,7 +32,6 @@ import com.masiton.common.idempotency.application.IdempotencyResponse;
 import com.masiton.common.idempotency.application.port.in.IdempotentCreationUseCase;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
-import com.masiton.participation.application.ParticipationException;
 import com.masiton.participation.application.ParticipationRequest;
 import com.masiton.participation.application.ParticipationView;
 import com.masiton.participation.application.port.in.ParticipationUseCase;
@@ -115,8 +114,7 @@ public class ParticipationController {
             Authentication authentication, @PathVariable String requestId
     ) {
         return privateOk(useCase.getSubmission(
-                memberId(authentication),
-                requestIdentifier(requestId, "SUBMISSION_NOT_FOUND", "제보를 찾을 수 없습니다.")));
+                memberId(authentication), identifier(requestId)));
     }
 
     @GetMapping("/reports")
@@ -134,8 +132,7 @@ public class ParticipationController {
             Authentication authentication, @PathVariable String requestId
     ) {
         return privateOk(useCase.getReport(
-                memberId(authentication),
-                requestIdentifier(requestId, "REPORT_NOT_FOUND", "신고를 찾을 수 없습니다.")));
+                memberId(authentication), identifier(requestId)));
     }
 
     private IdempotencyExecutionResult execute(
@@ -228,14 +225,6 @@ public class ParticipationController {
             return UUID.fromString(value);
         } catch (RuntimeException exception) {
             throw new BusinessException(ErrorCode.INVALID_IDENTIFIER);
-        }
-    }
-
-    private UUID requestIdentifier(String value, String code, String message) {
-        try {
-            return UUID.fromString(value);
-        } catch (RuntimeException exception) {
-            throw new ParticipationException(HttpStatus.NOT_FOUND, code, message);
         }
     }
 

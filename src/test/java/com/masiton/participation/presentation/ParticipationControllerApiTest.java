@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -17,6 +18,7 @@ import com.masiton.common.idempotency.application.IdempotencyExecutionResult;
 import com.masiton.common.idempotency.application.IdempotencyRequest;
 import com.masiton.common.idempotency.application.port.in.IdempotentCreationUseCase;
 import com.masiton.common.web.GlobalExceptionHandler;
+import com.masiton.participation.application.ParticipationException;
 import com.masiton.participation.application.ParticipationView;
 import com.masiton.participation.application.port.in.ParticipationUseCase;
 import com.masiton.participation.domain.ParticipationStatus;
@@ -124,13 +126,36 @@ class ParticipationControllerApiTest {
     }
 
     @Test
-    @DisplayName("상세 경로의 잘못된 식별자는 자원별 404 계약을 반환한다")
-    void 상세조회_잘못된식별자_기능404를반환한다() throws Exception {
+    @DisplayName("상세 경로의 형식이 잘못된 식별자는 공통 400 계약을 반환한다")
+    void 상세조회_잘못된식별자_400INVALID_IDENTIFIER를반환한다() throws Exception {
         mockMvc.perform(get("/api/me/submissions/not-an-id").principal(authentication()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_IDENTIFIER"));
+
+        mockMvc.perform(get("/api/me/reports/not-an-id").principal(authentication()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_IDENTIFIER"));
+    }
+
+    @Test
+    @DisplayName("상세 경로의 유효한 식별자에 자원이 없으면 기능별 404를 반환한다")
+    void 상세조회_유효한식별자에자원없음_기능404를반환한다() throws Exception {
+        UUID submissionId = UUID.randomUUID();
+        UUID reportId = UUID.randomUUID();
+        given(useCase.getSubmission(memberId, submissionId)).willThrow(new ParticipationException(
+                HttpStatus.NOT_FOUND,
+                "SUBMISSION_NOT_FOUND",
+                "제보를 찾을 수 없습니다."));
+        given(useCase.getReport(memberId, reportId)).willThrow(new ParticipationException(
+                HttpStatus.NOT_FOUND,
+                "REPORT_NOT_FOUND",
+                "신고를 찾을 수 없습니다."));
+
+        mockMvc.perform(get("/api/me/submissions/{requestId}", submissionId).principal(authentication()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("SUBMISSION_NOT_FOUND"));
 
-        mockMvc.perform(get("/api/me/reports/not-an-id").principal(authentication()))
+        mockMvc.perform(get("/api/me/reports/{requestId}", reportId).principal(authentication()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("REPORT_NOT_FOUND"));
     }
