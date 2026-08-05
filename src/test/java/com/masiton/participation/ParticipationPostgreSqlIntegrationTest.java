@@ -41,8 +41,17 @@ import com.masiton.participation.domain.ParticipationTargetType;
 import com.masiton.participation.domain.ReportType;
 import com.masiton.test.FullContextIntegrationTest;
 
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+
+import com.masiton.notification.application.port.in.CreateNotificationUseCase;
+import com.masiton.notification.domain.model.NotificationRequestType;
+import com.masiton.notification.domain.model.NotificationStatus;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 
 @SpringBootTest
 @DisplayName("회원 제보·신고 PostgreSQL 통합")
@@ -56,13 +65,12 @@ class ParticipationPostgreSqlIntegrationTest extends FullContextIntegrationTest 
     @Autowired
     private AdminParticipationUseCase adminUseCase;
     @Autowired
-    private AdminParticipationStore store;
-    @Autowired
-    private ParticipationCompletionReader completionReader;
-    @Autowired
     private IdempotentCreationUseCase idempotency;
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @MockitoSpyBean
+    private CreateNotificationUseCase createNotificationUseCase;
 
     @BeforeEach
     void clearRequests() {
@@ -88,6 +96,8 @@ class ParticipationPostgreSqlIntegrationTest extends FullContextIntegrationTest 
                 Long.class, submissionId, memberId)).isEqualTo(1L);
         assertThat(adminUseCase.getSubmission(submissionId).moderationHistory())
                 .singleElement().satisfies(history -> assertThat(history.traceId()).isEqualTo("trace-audit"));
+        verify(createNotificationUseCase).create(
+                memberId, NotificationRequestType.SUBMISSION, submissionId, NotificationStatus.IN_REVIEW);
     }
 
     @Test
@@ -97,15 +107,10 @@ class ParticipationPostgreSqlIntegrationTest extends FullContextIntegrationTest 
         UUID memberId = insertMember();
         UUID submissionId = createSubmission(memberId, 91).requestId();
 
-        com.masiton.notification.application.port.in.CreateNotificationUseCase failingUseCase =
-                (mId, reqType, reqId, status) -> {
-                    throw new RuntimeException("Simulated Notification Storage Failure");
-                };
+        doThrow(new RuntimeException("Simulated Notification Storage Failure"))
+                .when(createNotificationUseCase).create(any(), any(), any(), any());
 
-        AdminParticipationService failingService = new AdminParticipationService(
-                store, completionReader, failingUseCase, java.time.Clock.systemUTC());
-
-        assertThatThrownBy(() -> failingService.updateSubmission(submissionId, adminId,
+        assertThatThrownBy(() -> adminUseCase.updateSubmission(submissionId, adminId,
                 new AdminParticipationUseCase.UpdateStatusCommand(
                         ParticipationStatus.IN_REVIEW, null, "검토 시작", null), "trace-fail"))
                 .isInstanceOf(RuntimeException.class)

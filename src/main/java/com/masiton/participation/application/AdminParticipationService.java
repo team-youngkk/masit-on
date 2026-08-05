@@ -91,7 +91,7 @@ public class AdminParticipationService implements AdminParticipationUseCase {
                     current.memberId(),
                     NotificationRequestType.SUBMISSION,
                     requestId,
-                    NotificationStatus.valueOf(command.status().name()));
+                    toNotificationStatus(command.status()));
         }
         return store.findSubmission(requestId, false).orElseThrow(this::submissionNotFound);
     }
@@ -118,9 +118,19 @@ public class AdminParticipationService implements AdminParticipationUseCase {
                     current.memberId(),
                     NotificationRequestType.REPORT,
                     requestId,
-                    NotificationStatus.valueOf(command.status().name()));
+                    toNotificationStatus(command.status()));
         }
         return store.findReport(requestId, false).orElseThrow(this::reportNotFound);
+    }
+
+    private NotificationStatus toNotificationStatus(ParticipationStatus status) {
+        return switch (status) {
+            case IN_REVIEW -> NotificationStatus.IN_REVIEW;
+            case ACCEPTED -> NotificationStatus.ACCEPTED;
+            case REJECTED -> NotificationStatus.REJECTED;
+            case COMPLETED -> NotificationStatus.COMPLETED;
+            case RECEIVED -> throw new IllegalArgumentException("RECEIVED 상태는 알림을 만들지 않습니다.");
+        };
     }
 
     private ValidatedUpdate validateUpdate(

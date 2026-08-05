@@ -10,11 +10,7 @@ related_documents:
 
 ## PR 리뷰
 
-- [PR #139 인기 맛집 API 및 화면 구현 리뷰](pr-139-popular-restaurant-screen-review.md)
-- [PR #138 관리자 제보·신고 검토 및 상태 전이 처리 리뷰](pr-138-admin-participation-review.md)
-- [PR #136 인기 맛집 현재 찜 실시간 집계 기반 리뷰](pr-136-popular-restaurant-aggregation-review.md)
-- [PR #135 개인 컬렉션 수직 슬라이스 구현 리뷰](pr-135-personal-collection-review.md)
-- [PR #134 사용자 제보·신고 접수 구현 리뷰](pr-134-user-submission-report-review.md)
+- [PR #134 사용자 제보·신고 접수 리뷰 반영](pr-134-participation-request-review.md)
 - [PR #131 2차 확장 식별 제거와 착수 게이트 리뷰](pr-131-expansion-foundation-review.md)
 - [PR #129 Basic Auth 전환 안전장치와 이메일 인증 rate limit 우회](pr-129-deploy-cutover-and-rate-limit-review.md)
 - [PR #126 E2-T01 완료 참조 리뷰 반영](pr-126-e2-t01-completion-reference-review.md)
