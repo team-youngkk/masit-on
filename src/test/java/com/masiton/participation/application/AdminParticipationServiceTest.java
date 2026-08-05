@@ -21,6 +21,10 @@ import com.masiton.participation.domain.ModerationActionType;
 import com.masiton.participation.domain.ParticipationStatus;
 import com.masiton.participation.domain.ParticipationTargetType;
 
+import com.masiton.notification.application.port.in.CreateNotificationUseCase;
+import com.masiton.notification.domain.model.NotificationRequestType;
+import com.masiton.notification.domain.model.NotificationStatus;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -35,17 +39,20 @@ class AdminParticipationServiceTest {
     private static final UUID REQUEST_ID = UUID.fromString("10000000-0000-4000-8000-000000000001");
     private static final UUID ADMIN_ID = UUID.fromString("20000000-0000-4000-8000-000000000002");
     private static final UUID TARGET_ID = UUID.fromString("30000000-0000-4000-8000-000000000003");
+    private static final UUID MEMBER_ID = UUID.fromString("40000000-0000-4000-8000-000000000004");
     private static final OffsetDateTime NOW = OffsetDateTime.parse("2026-08-05T12:00:00Z");
 
     private AdminParticipationStore store;
     private ParticipationCompletionReader completionReader;
+    private CreateNotificationUseCase createNotificationUseCase;
     private AdminParticipationService service;
 
     @BeforeEach
     void setUp() {
         store = mock(AdminParticipationStore.class);
         completionReader = mock(ParticipationCompletionReader.class);
-        service = new AdminParticipationService(store, completionReader,
+        createNotificationUseCase = mock(CreateNotificationUseCase.class);
+        service = new AdminParticipationService(store, completionReader, createNotificationUseCase,
                 Clock.fixed(Instant.parse("2026-08-05T12:00:00Z"), ZoneOffset.UTC));
     }
 
@@ -144,14 +151,43 @@ class AdminParticipationServiceTest {
                         error -> assertThat(error.code()).isEqualTo("INVALID_FIELD_VALUE"));
     }
 
+    @Test
+    @DisplayName("상태 변경 성공 시 알림 생성을 호출한다")
+    void 상태변경_성공_알림생성을호출한다() {
+        AdminParticipationView.Submission current = submission(ParticipationStatus.RECEIVED);
+        given(store.findSubmission(REQUEST_ID, true)).willReturn(Optional.of(current));
+        given(store.findSubmission(REQUEST_ID, false)).willReturn(Optional.of(submission(ParticipationStatus.IN_REVIEW)));
+
+        service.updateSubmission(REQUEST_ID, ADMIN_ID,
+                new UpdateStatusCommand(ParticipationStatus.IN_REVIEW, null, "검토 시작", null), "trace");
+
+        verify(createNotificationUseCase).create(
+                current.memberId(), NotificationRequestType.SUBMISSION, REQUEST_ID, NotificationStatus.IN_REVIEW);
+    }
+
+    @Test
+    @DisplayName("회원 연결이 없는 요청은 알림 생성을 호출하지 않는다")
+    void 상태변경_회원연결없음_알림생성을호출하지않는다() {
+        AdminParticipationView.Submission submissionNoMember = new AdminParticipationView.Submission(
+                REQUEST_ID, null, ParticipationTargetType.RESTAURANT, Map.of("name", "후보"),
+                "설명입니다 충분합니다", null, ParticipationStatus.RECEIVED, null, null, null, NOW, NOW, List.of());
+        given(store.findSubmission(REQUEST_ID, true)).willReturn(Optional.of(submissionNoMember));
+        given(store.findSubmission(REQUEST_ID, false)).willReturn(Optional.of(submissionNoMember));
+
+        service.updateSubmission(REQUEST_ID, ADMIN_ID,
+                new UpdateStatusCommand(ParticipationStatus.IN_REVIEW, null, "검토 시작", null), "trace");
+
+        verify(createNotificationUseCase, never()).create(any(), any(), any(), any());
+    }
+
     private AdminParticipationView.Submission submission(ParticipationStatus status) {
-        return new AdminParticipationView.Submission(REQUEST_ID, UUID.randomUUID(),
+        return new AdminParticipationView.Submission(REQUEST_ID, MEMBER_ID,
                 ParticipationTargetType.RESTAURANT, Map.of("name", "후보"), "설명입니다 충분합니다",
                 null, status, null, null, null, NOW, NOW, List.of());
     }
 
     private AdminParticipationView.Report report(ParticipationStatus status) {
-        return new AdminParticipationView.Report(REQUEST_ID, UUID.randomUUID(),
+        return new AdminParticipationView.Report(REQUEST_ID, MEMBER_ID,
                 ParticipationTargetType.RESTAURANT, TARGET_ID, com.masiton.participation.domain.ReportType.ERROR,
                 "설명입니다 충분합니다", null, status, null, null, null, NOW, NOW, List.of());
     }

@@ -114,7 +114,7 @@ public class ParticipationController {
             Authentication authentication, @PathVariable String requestId
     ) {
         return privateOk(useCase.getSubmission(
-                memberId(authentication), identifier(requestId)));
+                memberId(authentication), submissionId(requestId)));
     }
 
     @GetMapping("/reports")
@@ -132,7 +132,7 @@ public class ParticipationController {
             Authentication authentication, @PathVariable String requestId
     ) {
         return privateOk(useCase.getReport(
-                memberId(authentication), identifier(requestId)));
+                memberId(authentication), reportId(requestId)));
     }
 
     private IdempotencyExecutionResult execute(
@@ -225,6 +225,24 @@ public class ParticipationController {
             return UUID.fromString(value);
         } catch (RuntimeException exception) {
             throw new BusinessException(ErrorCode.INVALID_IDENTIFIER);
+        }
+    }
+
+    private UUID submissionId(String value) {
+        try {
+            return UUID.fromString(value);
+        } catch (RuntimeException exception) {
+            throw new BusinessException(
+                    HttpStatus.NOT_FOUND, "SUBMISSION_NOT_FOUND", "제보를 찾을 수 없습니다.");
+        }
+    }
+
+    private UUID reportId(String value) {
+        try {
+            return UUID.fromString(value);
+        } catch (RuntimeException exception) {
+            throw new BusinessException(
+                    HttpStatus.NOT_FOUND, "REPORT_NOT_FOUND", "신고를 찾을 수 없습니다.");
         }
     }
 

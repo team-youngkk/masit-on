@@ -11,6 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
+import com.masiton.notification.application.port.in.CreateNotificationUseCase;
+import com.masiton.notification.domain.model.NotificationRequestType;
+import com.masiton.notification.domain.model.NotificationStatus;
 import com.masiton.participation.application.port.in.AdminParticipationUseCase;
 import com.masiton.participation.application.port.out.AdminParticipationStore;
 import com.masiton.participation.application.port.out.ParticipationCompletionReader;
@@ -22,13 +25,17 @@ public class AdminParticipationService implements AdminParticipationUseCase {
 
     private final AdminParticipationStore store;
     private final ParticipationCompletionReader completionReader;
+    private final CreateNotificationUseCase createNotificationUseCase;
     private final Clock clock;
 
     public AdminParticipationService(
-            AdminParticipationStore store, ParticipationCompletionReader completionReader,
+            AdminParticipationStore store,
+            ParticipationCompletionReader completionReader,
+            CreateNotificationUseCase createNotificationUseCase,
             @Qualifier("participationClock") Clock clock) {
         this.store = store;
         this.completionReader = completionReader;
+        this.createNotificationUseCase = createNotificationUseCase;
         this.clock = clock;
     }
 
@@ -79,6 +86,13 @@ public class AdminParticipationService implements AdminParticipationUseCase {
                 update.result(), now, terminalAt(command.status(), now));
         store.insertSubmissionHistory(requestId, requiredAdmin(adminId), current.status(), command.status(),
                 update.memberReason(), update.internalNote(), update.result(), requiredTraceId(traceId), now);
+        if (current.memberId() != null) {
+            createNotificationUseCase.create(
+                    current.memberId(),
+                    NotificationRequestType.SUBMISSION,
+                    requestId,
+                    toNotificationStatus(command.status()));
+        }
         return store.findSubmission(requestId, false).orElseThrow(this::submissionNotFound);
     }
 
@@ -99,7 +113,24 @@ public class AdminParticipationService implements AdminParticipationUseCase {
                 update.result(), now, terminalAt(command.status(), now));
         store.insertReportHistory(requestId, requiredAdmin(adminId), current.status(), command.status(),
                 update.memberReason(), update.internalNote(), update.result(), requiredTraceId(traceId), now);
+        if (current.memberId() != null) {
+            createNotificationUseCase.create(
+                    current.memberId(),
+                    NotificationRequestType.REPORT,
+                    requestId,
+                    toNotificationStatus(command.status()));
+        }
         return store.findReport(requestId, false).orElseThrow(this::reportNotFound);
+    }
+
+    private NotificationStatus toNotificationStatus(ParticipationStatus status) {
+        return switch (status) {
+            case IN_REVIEW -> NotificationStatus.IN_REVIEW;
+            case ACCEPTED -> NotificationStatus.ACCEPTED;
+            case REJECTED -> NotificationStatus.REJECTED;
+            case COMPLETED -> NotificationStatus.COMPLETED;
+            case RECEIVED -> throw new IllegalArgumentException("RECEIVED 상태는 알림을 만들지 않습니다.");
+        };
     }
 
     private ValidatedUpdate validateUpdate(
