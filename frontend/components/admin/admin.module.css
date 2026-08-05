@@ -33,8 +33,10 @@
 .link:hover { background: var(--color-surface-muted); }
 .activeLink { background: var(--color-primary-soft); color: var(--color-primary-strong); font-weight: 700; }
 
+.content, .wideContent { width: 100%; }
 .content { max-width: 680px; }
-.content h1 { margin: 0 0 var(--space-6); font-size: var(--font-size-2xl); }
+.wideContent { max-width: 1040px; }
+.content h1, .wideContent h1 { margin: 0 0 var(--space-6); font-size: var(--font-size-2xl); }
 .form, .flow { display: grid; gap: var(--space-4); }
 .form { padding: var(--space-6); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
 .result, .success { padding: var(--space-4); border-radius: var(--radius-md); background: var(--color-surface-muted); }
