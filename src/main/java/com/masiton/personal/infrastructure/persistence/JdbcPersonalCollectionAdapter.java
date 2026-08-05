@@ -12,13 +12,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import com.masiton.common.web.BusinessException;
-import com.masiton.common.web.ErrorCode;
-import com.masiton.personal.application.port.in.CollectionOption;
-import com.masiton.personal.application.port.in.CollectionOption.AdditionStatus;
-import com.masiton.personal.application.port.in.PersonalCollectionUseCase.CollectionDetail;
 import com.masiton.personal.application.port.in.PersonalCollectionUseCase.CollectionRestaurant;
 import com.masiton.personal.application.port.in.PersonalCollectionUseCase.CollectionSummary;
-import com.masiton.personal.application.port.in.PersonalCollectionUseCase.RestaurantItem;
 import com.masiton.personal.application.port.out.PersonalCollectionStore;
 
 @Repository
@@ -35,12 +30,6 @@ public class JdbcPersonalCollectionAdapter implements PersonalCollectionStore {
 
     @Override
     public CollectionSummary create(UUID memberId, UUID collectionId, String name, OffsetDateTime now) {
-        boolean memberExists = !jdbcTemplate.query(
-                "SELECT id FROM member_account WHERE id = ? FOR UPDATE",
-                (rs, row) -> rs.getObject("id", UUID.class), memberId).isEmpty();
-        if (!memberExists) {
-            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
-        }
         Long count = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM personal_collection WHERE member_id = ?", Long.class, memberId);
         if (count != null && count >= COLLECTION_LIMIT) {
@@ -55,93 +44,19 @@ public class JdbcPersonalCollectionAdapter implements PersonalCollectionStore {
     }
 
     @Override
-    public List<CollectionSummary> findAll(UUID memberId) {
-        return jdbcTemplate.query("""
-                SELECT pc.id, pc.name, pc.created_at, pc.updated_at,
-                       count(r.id) AS restaurant_count
-                  FROM personal_collection pc
-                  LEFT JOIN collection_restaurant cr ON cr.collection_id = pc.id
-                  LEFT JOIN restaurant r ON r.id = cr.restaurant_id
-                    AND r.publication_status = 'PUBLIC' AND r.lifecycle_status = 'ACTIVE'
-                 WHERE pc.member_id = ?
-                 GROUP BY pc.id, pc.name, pc.created_at, pc.updated_at
-                 ORDER BY pc.updated_at DESC, pc.id ASC
-                 LIMIT 20
-                """, this::summary, memberId);
-    }
-
-    @Override
-    public List<CollectionOption> findOptions(UUID memberId, UUID restaurantId) {
-        return jdbcTemplate.query("""
-                SELECT pc.id, pc.name,
-                       count(r.id) AS public_restaurant_count,
-                       count(cr.restaurant_id) AS actual_restaurant_count,
-                       count(*) FILTER (WHERE cr.restaurant_id = ?) > 0 AS already_included
-                  FROM personal_collection pc
-                  LEFT JOIN collection_restaurant cr ON cr.collection_id = pc.id
-                  LEFT JOIN restaurant r ON r.id = cr.restaurant_id
-                    AND r.publication_status = 'PUBLIC' AND r.lifecycle_status = 'ACTIVE'
-                 WHERE pc.member_id = ?
-                 GROUP BY pc.id, pc.name, pc.updated_at
-                 ORDER BY pc.updated_at DESC, pc.id ASC
-                 LIMIT 20
-                """, (rs, row) -> new CollectionOption(
-                        rs.getObject("id", UUID.class), rs.getString("name"),
-                        rs.getLong("public_restaurant_count"), additionStatus(
-                                rs.getBoolean("already_included"),
-                                rs.getLong("actual_restaurant_count"))),
-                restaurantId, memberId);
-    }
-
-    @Override
-    public Optional<CollectionDetail> findDetail(UUID memberId, UUID collectionId, int page, int size) {
-        List<CollectionHeader> headers = jdbcTemplate.query("""
-                SELECT pc.id, pc.name, pc.updated_at, count(r.id) AS restaurant_count
-                  FROM personal_collection pc
-                  LEFT JOIN collection_restaurant cr ON cr.collection_id = pc.id
-                  LEFT JOIN restaurant r ON r.id = cr.restaurant_id
-                    AND r.publication_status = 'PUBLIC' AND r.lifecycle_status = 'ACTIVE'
-                 WHERE pc.id = ? AND pc.member_id = ?
-                 GROUP BY pc.id, pc.name, pc.updated_at
-                """, (rs, row) -> new CollectionHeader(rs.getObject("id", UUID.class),
-                        rs.getString("name"), rs.getObject("updated_at", OffsetDateTime.class),
-                        rs.getLong("restaurant_count")), collectionId, memberId);
-        if (headers.isEmpty()) {
-            return Optional.empty();
-        }
-        CollectionHeader header = headers.getFirst();
-        List<RestaurantItem> items = jdbcTemplate.query("""
-                SELECT r.id, r.name, r.road_address, cr.added_at
-                  FROM collection_restaurant cr JOIN restaurant r ON r.id = cr.restaurant_id
-                 WHERE cr.collection_id = ?
-                   AND r.publication_status = 'PUBLIC' AND r.lifecycle_status = 'ACTIVE'
-                 ORDER BY cr.added_at DESC, r.id ASC
-                 LIMIT ? OFFSET ?
-                """, (rs, row) -> new RestaurantItem(rs.getObject("id", UUID.class),
-                        rs.getString("name"), rs.getString("road_address"),
-                        rs.getObject("added_at", OffsetDateTime.class)),
-                collectionId, size, (long) (page - 1) * size);
-        long total = header.restaurantCount();
-        int totalPages = total == 0 ? 0 : (int) ((total + size - 1) / size);
-        return Optional.of(new CollectionDetail(header.id(), header.name(), total,
-                header.updatedAt(), items, page, size, total, totalPages, page < totalPages));
-    }
-
-    @Override
-    public Optional<CollectionSummary> rename(
+    public boolean rename(
             UUID memberId, UUID collectionId, String name, OffsetDateTime now) {
-        List<CollectionSummary> current = lockedSummary(memberId, collectionId);
+        List<CollectionMetadata> current = lockedMetadata(memberId, collectionId);
         if (current.isEmpty()) {
-            return Optional.empty();
+            return false;
         }
-        CollectionSummary value = current.getFirst();
+        CollectionMetadata value = current.getFirst();
         if (value.name().equals(name)) {
-            return Optional.of(value);
+            return true;
         }
         jdbcTemplate.update("UPDATE personal_collection SET name = ?, updated_at = ? WHERE id = ?",
                 name, now, collectionId);
-        return Optional.of(new CollectionSummary(collectionId, name, value.restaurantCount(),
-                value.createdAt(), now));
+        return true;
     }
 
     @Override
@@ -203,15 +118,14 @@ public class JdbcPersonalCollectionAdapter implements PersonalCollectionStore {
         }
     }
 
-    private List<CollectionSummary> lockedSummary(UUID memberId, UUID collectionId) {
+    private List<CollectionMetadata> lockedMetadata(UUID memberId, UUID collectionId) {
         return jdbcTemplate.query("""
-                SELECT pc.id, pc.name, pc.created_at, pc.updated_at,
-                       (SELECT count(*) FROM collection_restaurant cr JOIN restaurant r
-                          ON r.id = cr.restaurant_id
-                         AND r.publication_status = 'PUBLIC' AND r.lifecycle_status = 'ACTIVE'
-                         WHERE cr.collection_id = pc.id) AS restaurant_count
-                  FROM personal_collection pc WHERE pc.id = ? AND pc.member_id = ? FOR UPDATE
-                """, this::summary, collectionId, memberId);
+                SELECT id, name
+                  FROM personal_collection
+                 WHERE id = ? AND member_id = ?
+                 FOR UPDATE
+                """, (rs, row) -> new CollectionMetadata(
+                        rs.getObject("id", UUID.class), rs.getString("name")), collectionId, memberId);
     }
 
     private boolean lockOwnedCollection(UUID memberId, UUID collectionId) {
@@ -220,29 +134,12 @@ public class JdbcPersonalCollectionAdapter implements PersonalCollectionStore {
                 """, (rs, row) -> rs.getObject("id", UUID.class), collectionId, memberId).isEmpty();
     }
 
-    private CollectionSummary summary(ResultSet rs, int row) throws SQLException {
-        return new CollectionSummary(rs.getObject("id", UUID.class), rs.getString("name"),
-                rs.getLong("restaurant_count"), rs.getObject("created_at", OffsetDateTime.class),
-                rs.getObject("updated_at", OffsetDateTime.class));
-    }
-
     private CollectionRestaurant relation(ResultSet rs, int row) throws SQLException {
         return new CollectionRestaurant(rs.getObject("collection_id", UUID.class),
                 rs.getObject("restaurant_id", UUID.class),
                 rs.getObject("added_at", OffsetDateTime.class));
     }
 
-    private AdditionStatus additionStatus(boolean alreadyIncluded, long actualRestaurantCount) {
-        if (alreadyIncluded) {
-            return AdditionStatus.ALREADY_INCLUDED;
-        }
-        if (actualRestaurantCount >= RESTAURANT_LIMIT) {
-            return AdditionStatus.LIMIT_REACHED;
-        }
-        return AdditionStatus.AVAILABLE;
-    }
-
-    private record CollectionHeader(UUID id, String name, OffsetDateTime updatedAt,
-                                    long restaurantCount) {
+    private record CollectionMetadata(UUID id, String name) {
     }
 }

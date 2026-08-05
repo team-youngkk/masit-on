@@ -28,6 +28,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import com.masiton.common.web.BusinessException;
 import com.masiton.personal.application.PersonalCollectionService;
 import com.masiton.personal.application.port.in.CollectionOption.AdditionStatus;
+import com.masiton.personal.application.port.out.PersonalCollectionQueryPort;
 
 import tools.jackson.databind.ObjectMapper;
 
@@ -62,6 +63,9 @@ class JdbcPersonalCollectionAdapterIntegrationTest {
     JdbcPersonalCollectionAdapter adapter;
 
     @Autowired
+    PersonalCollectionQueryPort queries;
+
+    @Autowired
     PersonalCollectionService service;
 
     @Autowired
@@ -82,21 +86,19 @@ class JdbcPersonalCollectionAdapterIntegrationTest {
     void create_19개에서동시요청_정확히20개까지만생성한다() throws Exception {
         // given
         UUID memberId = insertMember();
-        inTransaction(() -> {
-            for (int index = 0; index < 19; index++) {
-                adapter.create(memberId, UUID.randomUUID(), "목록 " + index, NOW.plusSeconds(index));
-            }
-        });
+        for (int index = 0; index < 19; index++) {
+            service.create(memberId, "initial-collection-" + index, "목록 " + index);
+        }
 
         // when
-        List<String> results = runConcurrently(8, index -> inTransactionResult(() -> {
+        List<String> results = runConcurrently(8, index -> {
             try {
-                adapter.create(memberId, UUID.randomUUID(), "동시 목록 " + index, NOW.plusMinutes(1));
+                service.create(memberId, "concurrent-collection-" + index, "동시 목록 " + index);
                 return "CREATED";
             } catch (BusinessException exception) {
                 return exception.code();
             }
-        }));
+        });
 
         // then
         assertThat(results).filteredOn("CREATED"::equals).hasSize(1);
@@ -150,14 +152,14 @@ class JdbcPersonalCollectionAdapterIntegrationTest {
         adapter.addRestaurant(ownerId, collectionId, restaurantId, NOW);
 
         // when & then
-        assertThat(adapter.findDetail(strangerId, collectionId, 1, 20)).isEmpty();
-        assertThat(adapter.rename(strangerId, collectionId, "탈취 시도", NOW.plusMinutes(1))).isEmpty();
+        assertThat(queries.findDetail(strangerId, collectionId, 1, 20)).isEmpty();
+        assertThat(adapter.rename(strangerId, collectionId, "탈취 시도", NOW.plusMinutes(1))).isFalse();
         assertThat(adapter.addRestaurant(strangerId, collectionId, insertRestaurant(), NOW.plusMinutes(1))).isEmpty();
 
         adapter.removeRestaurant(strangerId, collectionId, restaurantId, NOW.plusMinutes(1));
         adapter.delete(strangerId, collectionId);
 
-        assertThat(adapter.findDetail(ownerId, collectionId, 1, 20)).isPresent();
+        assertThat(queries.findDetail(ownerId, collectionId, 1, 20)).isPresent();
         assertThat(adapter.findRestaurant(ownerId, collectionId, restaurantId)).isPresent();
     }
 
@@ -224,32 +226,42 @@ class JdbcPersonalCollectionAdapterIntegrationTest {
     }
 
     @Test
-    @Transactional
     @DisplayName("회원 행이 없으면 생성 요청을 인증 오류로 거부한다")
     void create_없는회원_AUTHENTICATION_REQUIRED를반환한다() {
         // given
         UUID deletedMemberId = UUID.randomUUID();
 
         // when & then
-        assertThatThrownBy(() -> adapter.create(
-                deletedMemberId, UUID.randomUUID(), "만들 수 없는 목록", NOW))
+        assertThatThrownBy(() -> service.create(
+                deletedMemberId, "missing-member-collection", "만들 수 없는 목록"))
                 .isInstanceOfSatisfying(BusinessException.class,
                         error -> assertThat(error.code()).isEqualTo("AUTHENTICATION_REQUIRED"));
         assertThat(count("personal_collection", "member_id", deletedMemberId)).isZero();
     }
 
     @Test
-    @Transactional
     @DisplayName("회원 행 잠금 뒤 20개 상한을 검사한다")
     void create_컬렉션20개_추가생성을거부한다() {
         UUID memberId = insertMember();
         for (int index = 0; index < 20; index++) {
-            adapter.create(memberId, UUID.randomUUID(), "목록 " + index, NOW.plusSeconds(index));
+            service.create(memberId, "limit-collection-" + index, "목록 " + index);
         }
 
-        assertThatThrownBy(() -> adapter.create(memberId, UUID.randomUUID(), "초과", NOW.plusMinutes(1)))
+        assertThatThrownBy(() -> service.create(memberId, "limit-collection-overflow", "초과"))
                 .isInstanceOfSatisfying(BusinessException.class,
                         error -> assertThat(error.code()).isEqualTo("COLLECTION_LIMIT_EXCEEDED"));
+    }
+
+    @Test
+    @DisplayName("비활성 회원은 컬렉션을 생성할 수 없다")
+    void create_비활성회원_AUTHENTICATION_REQUIRED를반환한다() {
+        UUID disabledMemberId = insertMember("DISABLED");
+
+        assertThatThrownBy(() -> service.create(
+                disabledMemberId, "disabled-member-collection", "만들 수 없는 목록"))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        error -> assertThat(error.code()).isEqualTo("AUTHENTICATION_REQUIRED"));
+        assertThat(count("personal_collection", "member_id", disabledMemberId)).isZero();
     }
 
     @Test
@@ -266,7 +278,7 @@ class JdbcPersonalCollectionAdapterIntegrationTest {
 
         assertThat(replay.orElseThrow().addedAt()).isEqualTo(first.orElseThrow().addedAt());
         jdbcTemplate.update("UPDATE restaurant SET publication_status = 'PRIVATE' WHERE id = ?", restaurantId);
-        var detail = adapter.findDetail(memberId, collectionId, 1, 20).orElseThrow();
+        var detail = queries.findDetail(memberId, collectionId, 1, 20).orElseThrow();
         assertThat(detail.items()).isEmpty();
         assertThat(detail.restaurantCount()).isZero();
         assertThat(jdbcTemplate.queryForObject(
@@ -365,11 +377,15 @@ class JdbcPersonalCollectionAdapterIntegrationTest {
     }
 
     private UUID insertMember() {
+        return insertMember("ACTIVE");
+    }
+
+    private UUID insertMember(String status) {
         UUID id = UUID.randomUUID();
         jdbcTemplate.update("""
                 INSERT INTO member_account (id, email, password_hash, email_verified_at, status)
-                VALUES (?, ?, 'password-hash', CURRENT_TIMESTAMP, 'ACTIVE')
-                """, id, id + "@example.com");
+                VALUES (?, ?, 'password-hash', CURRENT_TIMESTAMP, ?)
+                """, id, id + "@example.com", status);
         return id;
     }
 

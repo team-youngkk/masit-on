@@ -20,8 +20,10 @@ import com.masiton.common.idempotency.application.IdempotencyRequest;
 import com.masiton.common.idempotency.application.IdempotencyResponse;
 import com.masiton.common.idempotency.application.port.in.IdempotentCreationUseCase;
 import com.masiton.common.web.BusinessException;
+import com.masiton.member.application.port.in.LockActiveMemberUseCase;
 import com.masiton.personal.application.port.in.CollectionOption;
 import com.masiton.personal.application.port.in.PersonalCollectionUseCase;
+import com.masiton.personal.application.port.out.PersonalCollectionQueryPort;
 import com.masiton.personal.application.port.out.PersonalCollectionStore;
 import com.masiton.restaurant.application.port.in.FindRestaurantReferenceUseCase;
 
@@ -32,16 +34,21 @@ import tools.jackson.databind.ObjectMapper;
 public class PersonalCollectionService implements PersonalCollectionUseCase {
 
     private final PersonalCollectionStore store;
+    private final PersonalCollectionQueryPort queries;
+    private final LockActiveMemberUseCase activeMembers;
     private final FindRestaurantReferenceUseCase restaurantReferences;
     private final IdempotentCreationUseCase idempotentCreation;
     private final ObjectMapper objectMapper;
     private final Clock clock;
 
-    public PersonalCollectionService(PersonalCollectionStore store,
+    public PersonalCollectionService(PersonalCollectionStore store, PersonalCollectionQueryPort queries,
+            LockActiveMemberUseCase activeMembers,
             FindRestaurantReferenceUseCase restaurantReferences,
             IdempotentCreationUseCase idempotentCreation, ObjectMapper objectMapper,
             @Qualifier("personalizationClock") Clock clock) {
         this.store = store;
+        this.queries = queries;
+        this.activeMembers = activeMembers;
         this.restaurantReferences = restaurantReferences;
         this.idempotentCreation = idempotentCreation;
         this.objectMapper = objectMapper;
@@ -54,6 +61,7 @@ public class PersonalCollectionService implements PersonalCollectionUseCase {
         IdempotencyRequest request = IdempotencyRequest.of(IdempotencyActorType.MEMBER, memberId,
                 IdempotencyApiScope.MEMBER_COLLECTIONS, idempotencyKey, hash(normalizedName));
         return new CreationResult(idempotentCreation.execute(request, () -> {
+            activeMembers.lockActiveMember(memberId);
             CollectionSummary created = store.create(memberId, UUID.randomUUID(), normalizedName, now());
             return new IdempotencyResponse(201, serialize(created), created.collectionId());
         }).response().body());
@@ -62,26 +70,29 @@ public class PersonalCollectionService implements PersonalCollectionUseCase {
     @Override
     @Transactional(readOnly = true)
     public List<CollectionSummary> getCollections(UUID memberId) {
-        return store.findAll(memberId);
+        return queries.findAll(memberId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<CollectionOption> getCollectionOptions(UUID memberId, UUID restaurantId) {
         requirePublicRestaurant(restaurantId);
-        return store.findOptions(memberId, restaurantId);
+        return queries.findOptions(memberId, restaurantId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public CollectionDetail getCollection(UUID memberId, UUID collectionId, int page, int size) {
-        return store.findDetail(memberId, collectionId, page, size).orElseThrow(this::notFound);
+        return queries.findDetail(memberId, collectionId, page, size).orElseThrow(this::notFound);
     }
 
     @Override
     @Transactional
     public CollectionSummary rename(UUID memberId, UUID collectionId, String name) {
-        return store.rename(memberId, collectionId, normalizeName(name), now()).orElseThrow(this::notFound);
+        if (!store.rename(memberId, collectionId, normalizeName(name), now())) {
+            throw notFound();
+        }
+        return queries.findSummary(memberId, collectionId).orElseThrow(this::notFound);
     }
 
     @Override
