@@ -1,5 +1,7 @@
 package com.masiton.restaurant.application.port.out;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -20,6 +22,8 @@ public interface RestaurantRepositoryPort {
     Optional<Restaurant> insertIfAbsent(Restaurant restaurant);
 
     Optional<Restaurant> findById(UUID id);
+
+    List<Restaurant> findAllByIds(Collection<UUID> ids);
 
     Optional<Restaurant> findByKakaoPlaceId(String kakaoPlaceId);
 }

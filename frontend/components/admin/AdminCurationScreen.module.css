@@ -1,0 +1,27 @@
+.screen, .stack, .form, .list, .orderList { display: grid; gap: var(--space-4); }
+.toolbar, .actions, .pagination, .rowActions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.toolbar { justify-content: space-between; }
+.toolbar label, .form label { display: grid; gap: var(--space-2); font-size: var(--font-size-sm); font-weight: 600; }
+.toolbar select, .form input, .form textarea { min-height: var(--control-min-height); padding: var(--space-2) var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); font: inherit; }
+.form textarea { resize: vertical; }
+.panel, .card { padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
+.panel h2, .card h2, .card h3 { margin-top: 0; }
+.list, .orderList { padding: 0; list-style: none; }
+.card { display: grid; gap: var(--space-2); }
+.card p { margin: 0; overflow-wrap: anywhere; }
+.meta, .hint { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.badge { width: fit-content; padding: 0.2rem 0.55rem; border-radius: 999px; background: var(--color-primary-soft); font-size: var(--font-size-sm); font-weight: 700; }
+.linkButton { min-height: var(--control-min-height); display: inline-flex; align-items: center; justify-content: center; padding: 0 var(--space-4); border-radius: var(--radius-md); background: var(--color-primary); color: white; font-weight: 700; }
+.warning { margin: 0; padding: var(--space-3); border-left: 4px solid var(--color-danger); background: var(--color-surface-muted); color: var(--color-danger); }
+.notice, .error { margin: 0; padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-surface-muted); }
+.error { color: var(--color-danger); }
+.pagination { justify-content: center; }
+.restaurantRow { display: grid; grid-template-columns: 3rem minmax(0, 1fr) auto; gap: var(--space-3); align-items: center; padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.restaurantRow code { overflow-wrap: anywhere; }
+.dangerZone { border-color: var(--color-danger); }
+@media (max-width: 640px) {
+  .toolbar, .actions { align-items: stretch; flex-direction: column; }
+  .toolbar > *, .actions > * { width: 100%; }
+  .restaurantRow { grid-template-columns: 2rem minmax(0, 1fr); }
+  .restaurantRow .rowActions { grid-column: 1 / -1; }
+}
