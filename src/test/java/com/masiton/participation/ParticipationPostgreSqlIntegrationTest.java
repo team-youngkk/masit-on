@@ -44,9 +44,7 @@ import com.masiton.test.FullContextIntegrationTest;
 import org.mockito.Mockito;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
-import com.masiton.notification.application.NotificationService;
-import com.masiton.notification.domain.model.NotificationRequestType;
-import com.masiton.notification.domain.model.NotificationStatus;
+import com.masiton.notification.application.port.out.NotificationStore;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -71,11 +69,11 @@ class ParticipationPostgreSqlIntegrationTest extends FullContextIntegrationTest 
     private JdbcTemplate jdbcTemplate;
 
     @MockitoSpyBean
-    private NotificationService notificationService;
+    private NotificationStore notificationStore;
 
     @BeforeEach
     void clearRequests() {
-        Mockito.reset(notificationService);
+        Mockito.reset(notificationStore);
         jdbcTemplate.execute("TRUNCATE TABLE idempotency_record, notification, moderation_history, report, submission CASCADE");
     }
 
@@ -98,8 +96,8 @@ class ParticipationPostgreSqlIntegrationTest extends FullContextIntegrationTest 
                 Long.class, submissionId, memberId)).isEqualTo(1L);
         assertThat(adminUseCase.getSubmission(submissionId).moderationHistory())
                 .singleElement().satisfies(history -> assertThat(history.traceId()).isEqualTo("trace-audit"));
-        verify(notificationService).create(
-                memberId, NotificationRequestType.SUBMISSION, submissionId, NotificationStatus.IN_REVIEW);
+        verify(notificationStore).insertIfAbsent(
+                any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -110,7 +108,7 @@ class ParticipationPostgreSqlIntegrationTest extends FullContextIntegrationTest 
         UUID submissionId = createSubmission(memberId, 91).requestId();
 
         doThrow(new RuntimeException("Simulated Notification Storage Failure"))
-                .when(notificationService).create(any(), any(), any(), any());
+                .when(notificationStore).insertIfAbsent(any(), any(), any(), any(), any(), any(), any(), any());
 
         assertThatThrownBy(() -> adminUseCase.updateSubmission(submissionId, adminId,
                 new AdminParticipationUseCase.UpdateStatusCommand(

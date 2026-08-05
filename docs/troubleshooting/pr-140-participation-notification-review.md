@@ -44,24 +44,24 @@ related_documents:
 ## 4. 근본 원인
 
 1. **Spring AOP 프록시 미적용**: 클래스 상단의 `@Transactional`은 Spring 컨테이너가 생성한 빈(Bean) 프록시에서만 동작함. `new AdminParticipationService(...)`로 직접 생성한 객체는 프록시 래퍼가 없어 트랜잭션 경계가 형성되지 않음.
-2. **Spring Boot 3.4 `@MockitoSpyBean` 인터페이스 스파이 특성**: 인터페이스(`CreateNotificationUseCase`)에 `@MockitoSpyBean`을 붙이면 구체 클래스 구현체 빈(`NotificationService`)으로 메서드 호출이 위임되지 않아 테스트 간 간섭 및 무응답(null) 현상이 발생함.
+2. **`MANDATORY` 트랜잭션 전파 규칙 및 인터페이스 스파이 특성**: `CreateNotificationUseCase.create(...)` 진입점에는 `@Transactional(propagation = Propagation.MANDATORY)`가 설정되어 있어, 인터페이스나 `NotificationService` 진입점을 spy할 경우 `when(...)` 스텁 설정 시점에 트랜잭션 밖 호출로 인한 `IllegalTransactionStateException`이 발생하거나 프록시 위임에 문제가 생김.
 
 ## 5. 확인 및 시도
 
 | 확인하거나 시도한 방법 | 결과 | 판단과 다음 단계 |
 |---|---|---|
 | `new AdminParticipationService(...)` 직접 수동 생성 | `@Transactional` 미작동으로 PostgreSQL autocommit 발생하여 롤백 실패 | 기각: Spring 컨테이너 빈(`adminUseCase`)을 이용해야 함 |
-| `CreateNotificationUseCase` 인터페이스에 `@MockitoSpyBean` 적용 | 인터페이스 스파이가 구체 클래스 구현체로 호출을 위임하지 않아 테스트 실패 | 기각: 구체 구현 클래스 빈에 적용해야 함 |
-| `NotificationService` 구체 클래스 빈에 `@MockitoSpyBean` 적용 및 `@BeforeEach` `Mockito.reset` | Spring `@Transactional` 프록시 작동으로 Postgres 롤백 성공 및 단위/통합 테스트 전건 통과 | 채택: 최종 해결책으로 구성 |
+| `CreateNotificationUseCase` / `NotificationService` 진입점 spy | `MANDATORY` 트랜잭션 전파 규칙 충돌로 `IllegalTransactionStateException` 발생 | 기각: 하위 아웃바운드 포트/어댑터를 spy해야 함 |
+| `NotificationStore` 아웃바운드 포트 빈에 `@MockitoSpyBean` 적용 및 `@BeforeEach` `Mockito.reset` | `insertIfAbsent` 예외 주입 시 Spring `@Transactional` 프록시 작동으로 Postgres 상태·감사 이력·알림 전체 롤백 성공 | 채택: 최종 해결책으로 구성 |
 
 ## 6. 최종 해결
 
 - 변경 내용:
-  1. `ParticipationPostgreSqlIntegrationTest`에서 `@MockitoSpyBean private NotificationService notificationService;`로 변경 및 `@BeforeEach`에서 `Mockito.reset(notificationService)` 실행.
-  2. `TST-E2-ATOMIC-001`에서 Spring 관리 빈 `adminUseCase.updateSubmission(...)`을 호출하여 `@Transactional` 롤백 검증.
+  1. `ParticipationPostgreSqlIntegrationTest`에서 `@MockitoSpyBean private NotificationStore notificationStore;`로 스파이 대상을 하위 아웃바운드 포트로 지정하고, `@BeforeEach`에서 `Mockito.reset(notificationStore)` 실행.
+  2. `TST-E2-ATOMIC-001`에서 `doThrow(...).when(notificationStore).insertIfAbsent(...)`로 저장 예외를 주입하고 Spring 관리 빈 `adminUseCase.updateSubmission(...)`을 호출하여 PostgreSQL 트랜잭션 롤백(상태 `RECEIVED`, 이력 0건, 알림 0건) 검증.
   3. `docs/troubleshooting/README.md`에서 브랜치에 없는 미추적 파일 링크 정리.
   4. `AdminParticipationService`에서 `toNotificationStatus` 명시적 `switch` 패턴 매핑 적용.
-- 선택 이유: Spring AOP 트랜잭션 인터셉터와 Testcontainers PostgreSQL 런타임 간의 실제 롤백 원자성을 가장 정합하게 검증하기 위함.
+- 선택 이유: Application layer의 `MANDATORY` 프록시는 그대로 유지한 채 아웃바운드 저장소 어댑터 단에서 예외를 주입하여 PostgreSQL 런타임 간의 원자성 롤백을 가장 정합하게 검증하기 위함.
 - 변경 파일:
   - [AdminParticipationService.java](file:///c:/Users/woo_lam/IdeaProjects/masit-on/src/main/java/com/masiton/participation/application/AdminParticipationService.java)
   - [ParticipationPostgreSqlIntegrationTest.java](file:///c:/Users/woo_lam/IdeaProjects/masit-on/src/test/java/com/masiton/participation/ParticipationPostgreSqlIntegrationTest.java)
