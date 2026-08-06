@@ -77,8 +77,9 @@ set -e; for f in perf/seed/*.sql; do docker exec -i masiton-postgres psql -U mas
 
 ## 검증된 사실
 
-`postgres:17.10-alpine`에 `V1`~`V3`를 적용한 DB에서 전 파일 실행을 확인했다.
+`postgres:17.10-alpine`에 `V1`~`V3`를 적용한 DB에서 `00-cleanup.sql` → `01`~`09` 전 파일 재실행(2026-08-06)을 검증했다.
 
 - 적재 건수: `restaurant=1000`, `creator=200`, `video=5000`, `visit=10000`, `member_account=1000`, `favorite=20000`, `curation=5`, `curation_restaurant=100`
-- 재실행 시 추가 적재 0건 (멱등)
-- `00-cleanup.sql` 실행 후 `region=25`, `food_category=10`만 남고 재적재 시 같은 건수로 복원
+- `SELECT restaurant_id, count(*) FROM favorite GROUP BY 1 ORDER BY 2 DESC, 1 LIMIT 20;` 실측 집계 결과: 상위 20개 인기 맛집이 225건(1위)~206건(20위)으로 서로 다른 찜 수로 정렬됨 확인
+- 재실행 시 추가 적재 0건 (멱등성 확인)
+- `00-cleanup.sql` 실행 후 `region=25`, `food_category=10`만 남고 재적재 시 동일 건수 및 식별자로 복원됨 확인
