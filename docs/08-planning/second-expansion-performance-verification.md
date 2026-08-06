@@ -86,8 +86,6 @@ related_documents:
 
 이 시드는 마이그레이션이 아니다. `src/main/resources/db/migration/`에 추가하지 않는다.
 
-### 5.2. 부하 실행
-
 ### 5.2. 직접 실행 절차
 
 **대상과 같은 VPC 안에서 k6를 직접 실행한다.** 이것이 판정에 쓰는 방식이다.
@@ -96,11 +94,15 @@ k6 설치 시 기술 정책 3절에 따라 `latest`를 사용하지 않고 버�
 
 ```bash
 K6_VERSION="2.1.0"
-# 아키텍처별 SHA-256
-# linux-amd64 : 295d961ebfca306f295f1133068dcd403a8171c87f387928f5f30b0fbcff858a
-# linux-arm64 : 8868f0f046b4122d6451e5e29a99793130d220803dd08bd7c1f8075f824cf472
 ARCH="amd64" # t4g 등 arm64 인스턴스에서는 "arm64"
-K6_SHA256="295d961ebfca306f295f1133068dcd403a8171c87f387928f5f30b0fbcff858a"
+
+# linux-amd64 : 295d961ebfca306f295f1133068dcd403a8171c87f387928f5f30b0fbcff858a
+# linux-arm64 : 191fa8d89512a4e5083f3fabcb4c3828af9f5b9eee016de8443f6473c029ffb5
+if [ "$ARCH" = "arm64" ]; then
+  K6_SHA256="191fa8d89512a4e5083f3fabcb4c3828af9f5b9eee016de8443f6473c029ffb5"
+else
+  K6_SHA256="295d961ebfca306f295f1133068dcd403a8171c87f387928f5f30b0fbcff858a"
+fi
 
 asset="k6-v${K6_VERSION}-linux-${ARCH}"
 curl -fsSL -o k6.tar.gz "https://github.com/grafana/k6/releases/download/v${K6_VERSION}/${asset}.tar.gz"
