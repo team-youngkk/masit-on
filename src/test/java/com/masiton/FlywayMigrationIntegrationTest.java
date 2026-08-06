@@ -170,8 +170,8 @@ class FlywayMigrationIntegrationTest {
     }
 
     @Test
-    @DisplayName("V4 회원 개인화 관계 테이블을 전진 적용한다")
-    void V4_회원개인화관계_테이블생성() {
+    @DisplayName("V2 회원 개인화 관계 테이블을 전진 적용한다")
+    void V2_회원개인화관계_테이블생성() {
         Integer personalTables = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' "
                         + "AND table_name IN ('favorite', 'recent_restaurant_view')", Integer.class);

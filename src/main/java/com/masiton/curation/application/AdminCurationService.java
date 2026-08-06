@@ -226,7 +226,7 @@ public class AdminCurationService implements AdminCurationUseCase {
     private String title(String value) { return normalized(value, "title", 1, 100); }
     private String description(String value) { return normalized(value == null ? "" : value, "description", 0, 1000); }
     private String normalized(String value, String field, int min, int max) {
-        String normalized = value == null ? "" : value.trim();
+        String normalized = com.masiton.common.web.SafeTextPolicy.requireSafe(value, field);
         int length = normalized.codePointCount(0, normalized.length());
         if (length < min || length > max) {
             throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, field,

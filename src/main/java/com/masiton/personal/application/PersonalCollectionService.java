@@ -120,7 +120,7 @@ public class PersonalCollectionService implements PersonalCollectionUseCase {
     }
 
     private String normalizeName(String name) {
-        String normalized = name == null ? "" : name.trim();
+        String normalized = com.masiton.common.web.SafeTextPolicy.requireSafe(name, "name");
         int length = normalized.codePointCount(0, normalized.length());
         if (length < 1 || length > 50) {
             throw new BusinessException(com.masiton.common.web.ErrorCode.INVALID_FIELD_VALUE,
