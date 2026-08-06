@@ -25,6 +25,7 @@ class RestaurantPathClassifierTest {
     void 기타경로_상세조회아님() {
         assertThat(RestaurantPathClassifier.isRestaurantDetailPath("/api/restaurants")).isFalse();
         assertThat(RestaurantPathClassifier.isRestaurantDetailPath("/api/restaurants/")).isFalse();
+        assertThat(RestaurantPathClassifier.isRestaurantDetailPath("/api/restaurants/x/y")).isFalse();
         assertThat(RestaurantPathClassifier.isRestaurantDetailPath("/api/creators")).isFalse();
     }
 }
