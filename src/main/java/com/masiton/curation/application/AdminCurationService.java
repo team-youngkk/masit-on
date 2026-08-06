@@ -25,6 +25,7 @@ import com.masiton.common.observability.OperationAuditLogger;
 import com.masiton.common.observability.OperationAuditLogger.Entry;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
+import com.masiton.common.web.SafeTextPolicy;
 import com.masiton.curation.application.port.in.AdminCurationUseCase;
 import com.masiton.curation.application.port.out.CurationStore;
 import com.masiton.curation.application.port.out.CurationStore.StoredCuration;
@@ -226,7 +227,7 @@ public class AdminCurationService implements AdminCurationUseCase {
     private String title(String value) { return normalized(value, "title", 1, 100); }
     private String description(String value) { return normalized(value == null ? "" : value, "description", 0, 1000); }
     private String normalized(String value, String field, int min, int max) {
-        String normalized = com.masiton.common.web.SafeTextPolicy.requireSafe(value, field);
+        String normalized = SafeTextPolicy.requireSafe(value, field);
         int length = normalized.codePointCount(0, normalized.length());
         if (length < min || length > max) {
             throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, field,
