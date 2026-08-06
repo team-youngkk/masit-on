@@ -1,7 +1,7 @@
 ---
 id: API-NOTIFICATION-001
 title: 사용자 알림 API
-status: draft
+status: approved
 related_prd:
   - PRD-NOTIFICATION-001
 workstream: WS-13
@@ -80,7 +80,7 @@ related_documents:
 { "notificationId": "01K4NOTIFICATION000000001", "read": true, "readAt": "2026-08-03T10:05:00+09:00" }
 ```
 
-이미 읽은 알림은 최초 `readAt`을 유지한다. 타 회원 또는 없는 알림은 `404 NOTIFICATION_NOT_FOUND`다.
+이미 읽은 알림은 최초 `readAt`을 유지한다. 타 회원 또는 없는 알림은 `404 NOTIFICATION_NOT_FOUND`다. 형식이 맞지 않는 `notificationId`도 같은 `404`로 통일하며 `400`으로 구분하지 않는다(식별자 계약 4절 회원 본인 전용 자원 규칙).
 
 전체 읽음은 본문 없는 `PUT`이며 요청 시점에 보존 중인 현재 회원의 미읽음 전체를 한 번에 처리한다.
 

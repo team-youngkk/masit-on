@@ -10,6 +10,7 @@ related_documents:
   - platform/web-001-frontend-platform.md
   - platform/web-002-data-state.md
   - platform/web-003-routing-boundary.md
+  - platform/web-004-supported-browser-matrix.md
   - ../02-analysis/mvp-workstreams.md
   - architecture/arch-001-domain-monolith.md
   - architecture/arch-002-external-ports-adapters.md
@@ -31,6 +32,7 @@ related_documents:
   - integration/map-001-map-bounds-search.md
   - quality/test-001-automation-strategy.md
   - quality/obs-001-logging-observability.md
+  - quality/perf-001-k6-load-testing.md
   - security/sec-001-secrets-workload-identity.md
   - platform/runtime-001-docker.md
   - platform/ci-001-github-actions-quality-gate.md
@@ -49,6 +51,7 @@ related_documents:
 | [ADR-WEB-001](platform/web-001-frontend-platform.md) | 프론트엔드 런타임과 프레임워크 기준 | Accepted | High | Node.js 24.18.0, Next.js 16.2.11, TypeScript 7.0.2 | 전체 웹 UI | [문서](platform/web-001-frontend-platform.md) |
 | [ADR-WEB-002](platform/web-002-data-state.md) | 프론트엔드 데이터와 상태 책임 분리 | Accepted | Medium | Server Components `fetch`, TanStack Query, URL Query Parameter, `useState` | [WS-01](../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)~[WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 웹 UI | [문서](platform/web-002-data-state.md) |
 | [ADR-WEB-003](platform/web-003-routing-boundary.md) | 웹 화면·API·운영 경로 경계 | Accepted | Critical | Next.js App Router, Nginx, Spring Security, `/api`, `/internal` | 전체 웹·API·운영 진입점 | [문서](platform/web-003-routing-boundary.md) |
+| [ADR-WEB-004](platform/web-004-supported-browser-matrix.md) | 지원 브라우저 매트릭스와 iPhone Safari 지원 수준 | Accepted | High | PC Chrome·Edge, Android Chrome, 화면 폭 5종 | 전체 웹 UI 인수 판정 | [문서](platform/web-004-supported-browser-matrix.md) |
 | [ADR-ARCH-001](architecture/arch-001-domain-monolith.md) | 단일 모듈 도메인 중심 모놀리스 | Accepted | Critical | 단일 모듈, 계층형 모놀리스 | 전체 Workstream | [문서](architecture/arch-001-domain-monolith.md) |
 | [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md) | 외부 연동 Port/Adapter 경계 | Accepted | High | Port/Adapter | [WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)~[WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록), 외부 연동 | [문서](architecture/arch-002-external-ports-adapters.md) |
 | [ADR-DATA-001](data/data-001-postgresql.md) | PostgreSQL 17.10 주 데이터베이스 | Accepted | Critical | PostgreSQL 17.10 | 전체 영속 데이터 | [문서](data/data-001-postgresql.md) |
@@ -66,6 +69,7 @@ related_documents:
 | [ADR-MAP-001](integration/map-001-map-bounds-search.md) | Kakao 지도 표시와 뷰포트 비종속 마커 조회 | Accepted | High | Kakao Maps JavaScript API V3, WGS84 좌표, 필터 기반 마커 조회 | [WS-07](../02-analysis/first-expansion-workstreams.md#6-ws-07-지도-탐색) 지도 탐색 | [문서](integration/map-001-map-bounds-search.md) |
 | [ADR-TEST-001](quality/test-001-automation-strategy.md) | 계층별 자동화 테스트 전략 | Accepted | Critical | JUnit 5, Mockito, Spring Boot Test, Testcontainers 2.0.5, WireMock | 전체 Workstream | [문서](quality/test-001-automation-strategy.md) |
 | [ADR-OBS-001](quality/obs-001-logging-observability.md) | 애플리케이션 로그와 운영 관측 기준 | Accepted | High | SLF4J, Logback, Actuator, CloudWatch | 전체 운영 | [문서](quality/obs-001-logging-observability.md) |
+| [ADR-PERF-001](quality/perf-001-k6-load-testing.md) | k6 부하 테스트 도구와 실행 체계 | Accepted | High | k6 v2.1.0, GitHub Actions `workflow_dispatch` | 2차 확장 공개 조회 성능 검증 | [문서](quality/perf-001-k6-load-testing.md) |
 | [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 비밀정보와 AWS 워크로드 인증 | Accepted | Critical | Parameter Store, KMS, IAM Role, GitHub OIDC | 운영·CI·외부 연동 | [문서](security/sec-001-secrets-workload-identity.md) |
 | [ADR-DATA-009](data/data-009-pre-release-migration-consolidation.md) | 운영 배포 전 마이그레이션 통합 범위 | Accepted | High | Flyway | 마이그레이션 파일과 모든 환경 스키마 | [문서](data/data-009-pre-release-migration-consolidation.md) |
 | [ADR-DATA-010](data/data-010-recent-view-retention-cleanup.md) | 최근 본 맛집 보존 기간 정리 실행 | Accepted | High | Spring Scheduler, PostgreSQL | [WS-06](../02-analysis/first-expansion-workstreams.md#5-ws-06-개인-맛집-관리) 최근 기록 생명주기 | [문서](data/data-010-recent-view-retention-cleanup.md) |

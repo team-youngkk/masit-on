@@ -1,7 +1,7 @@
 ---
 id: PRD-PARTICIPATION-001
 title: 사용자 제보와 신고
-status: draft
+status: approved
 workstream: WS-12
 owner: 김인안
 reviewers:

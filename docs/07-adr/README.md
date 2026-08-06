@@ -47,6 +47,7 @@ related_documents:
 | `EXT` | 외부 서비스 연동 |
 | `NOTIFY` | 사용자 알림 저장·전달 |
 | `TEST` | 테스트 전략 |
+| `PERF` | 성능 측정 도구·실행 체계 |
 | `OBS` | 로그·관측성 |
 | `SEC` | 비밀정보·워크로드 인증 |
 | `RUNTIME` | 실행·컨테이너 환경 |
@@ -76,7 +77,7 @@ docs/07-adr/
 | `data/` | 데이터베이스, ORM, 마이그레이션, 데이터 저장소 | DATA |
 | `security/` | 인증·인가, 비밀정보, 워크로드 신원 | AUTH, SEC |
 | `integration/` | 외부 서비스·제공자 연동과 사용자 알림 전달 | EXT, NOTIFY |
-| `quality/` | 테스트, 로그, 관측성 | TEST, OBS |
+| `quality/` | 테스트, 성능 측정, 로그, 관측성 | TEST, PERF, OBS |
 
 각 하위 디렉터리의 `README.md`는 해당 영역의 탐색용 목록이다. 전체 상태·우선순위·공식 경로는 루트 [adr-index.md](adr-index.md)만을 기준으로 한다.
 

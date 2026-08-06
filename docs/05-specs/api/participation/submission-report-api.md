@@ -1,7 +1,7 @@
 ---
 id: API-PARTICIPATION-001
 title: 사용자 제보·신고 API
-status: draft
+status: approved
 related_prd:
   - PRD-PARTICIPATION-001
 workstream: WS-12

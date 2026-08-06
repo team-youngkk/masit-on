@@ -75,7 +75,7 @@ MVP와 확장 단계의 PRD, 기능 요구사항, 비즈니스 규칙, NFR, Work
 
 | PRD ID | 기능 PRD | 주 API 문서 | 관련 API ID | Workstream | 담당자 |
 |---|---|---|---|---|---|
-| [PRD-COLLECTION-001](../04-product/prd/personal/personal-collection.md) | 개인 컬렉션 | [개인 컬렉션 API](api/personal/personal-collection-api.md) | API-COLLECTION-001~007 | [WS-09](../02-analysis/second-expansion-workstreams.md#4-ws-09-개인-컬렉션) | 박진영 |
+| [PRD-COLLECTION-001](../04-product/prd/personal/personal-collection.md) | 개인 컬렉션 | [개인 컬렉션 API](api/personal/personal-collection-api.md) | API-COLLECTION-001~008 | [WS-09](../02-analysis/second-expansion-workstreams.md#4-ws-09-개인-컬렉션) | 박진영 |
 | [PRD-DISCOVERY-004](../04-product/prd/discovery/popular-restaurants.md) | 인기 맛집 | [인기 맛집 API](api/discovery/popular-restaurant-api.md) | API-POPULAR-001 | [WS-10](../02-analysis/second-expansion-workstreams.md#5-ws-10-인기-맛집) | 양성훈 |
 | [PRD-CURATION-001](../04-product/prd/curation/admin-curation.md) | 관리자 큐레이션 | [큐레이션 API](api/curation/curation-api.md) | API-CURATION-001~009 | [WS-11](../02-analysis/second-expansion-workstreams.md#6-ws-11-관리자-큐레이션) | 김인안 |
 | [PRD-PARTICIPATION-001](../04-product/prd/participation/user-submission-report.md) | 사용자 제보·신고 | [사용자 제보·신고 API](api/participation/submission-report-api.md) | API-SUBMISSION-001~003, API-REPORT-001~003, 관리자 검토 API | [WS-12](../02-analysis/second-expansion-workstreams.md#7-ws-12-제보신고-검토) | 김인안 |
@@ -139,7 +139,7 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 |---|---|---|---|
 | FR-COLLECTION-001~003 | API-COLLECTION-001, 004~005 | 멱등 생성·20개 상한·이름 변경·연쇄 삭제 계약 테스트 | 박진영 |
 | FR-COLLECTION-004 | API-COLLECTION-002~003 | 소유권 은닉·고정 정렬·비공개 맛집 숨김 테스트 | 박진영 |
-| FR-COLLECTION-005~006 | API-COLLECTION-006~007 | 공개 상태·중복·100개 상한·반복 제거 테스트 | 박진영 |
+| FR-COLLECTION-005~006 | API-COLLECTION-006~008 | 공개 상태·추가 옵션·중복·100개 상한·실패 후 재조회·반복 제거 테스트 | 박진영 |
 | FR-POPULAR-001 | API-POPULAR-001 | 현재 찜 수·최소 1·상위 20·동점 안정 정렬 테스트 | 양성훈 |
 | FR-CURATION-001~003 | API-CURATION-003~009 | 관리자 권한·20/5개 상한·완전 교체·게시 전이·감사 테스트 | 김인안 |
 | FR-CURATION-004 | API-CURATION-001~002 | 비게시 404·구성 순서·비공개 항목 숨김 테스트 | 김인안 |
@@ -154,14 +154,14 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 
 | API 계약군 | 데이터 | ADR 또는 명시적 보류 | Workstream | 테스트 | E2 Task |
 |---|---|---|---|---|---|
-| `API-COLLECTION-001~007` | `personal_collection`, `collection_restaurant`, `idempotency_record` | 기존 인증·PostgreSQL·Flyway ADR; 공유·직접 정렬 제외 | WS-09 | [`TST-E2-COL-001`](../08-planning/second-expansion-test-matrix.md) | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md)~`E2-T03`, `E2-T13`, `E2-T14` |
-| `API-POPULAR-001` | 기존 `favorite`, 결과 비저장 | [ADR-DATA-011](../07-adr/data/data-011-popular-restaurant-request-time-aggregation.md); Snapshot·Batch·Redis 비활성 | WS-10 | [`TST-E2-POP-001`](../08-planning/second-expansion-test-matrix.md), `TST-E2-PERF-001` | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T04`, `E2-T05`, `E2-T13`, `E2-T14` |
-| `API-CURATION-001~009` | `curation`, `curation_restaurant` | 기존 관리자 인증·PostgreSQL ADR; 예약·추천·이미지 제외 | WS-11 | [`TST-E2-CUR-001`](../08-planning/second-expansion-test-matrix.md), `TST-E2-PERF-001` | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T06`, `E2-T07`, `E2-T13`, `E2-T14` |
-| `API-SUBMISSION-*`, `API-ADMIN-SUBMISSION-*` | `submission`, `moderation_history`, `idempotency_record` | [ADR-DATA-012](../07-adr/data/data-012-second-expansion-retention-cleanup.md), [ADR-NOTIFY-002](../07-adr/integration/notify-002-in-app-notification-reliability.md) | WS-12 | [`TST-E2-SUB-001`](../08-planning/second-expansion-test-matrix.md), `TST-E2-ATOMIC-001`, `TST-E2-LIFE-001` | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T08`, `E2-T09`, `E2-T11`, `E2-T13`, `E2-T14` |
-| `API-REPORT-*`, `API-ADMIN-REPORT-*` | `report`, `moderation_history`, `idempotency_record` | [ADR-DATA-012](../07-adr/data/data-012-second-expansion-retention-cleanup.md), [ADR-NOTIFY-002](../07-adr/integration/notify-002-in-app-notification-reliability.md) | WS-12 | [`TST-E2-REP-001`](../08-planning/second-expansion-test-matrix.md), `TST-E2-ATOMIC-001`, `TST-E2-LIFE-001` | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T08`, `E2-T09`, `E2-T11`, `E2-T13`, `E2-T14` |
-| 상태 전이 내부 생성, `API-NOTIFICATION-001~004` | `notification` | [ADR-NOTIFY-002](../07-adr/integration/notify-002-in-app-notification-reliability.md), [ADR-DATA-012](../07-adr/data/data-012-second-expansion-retention-cleanup.md); FCM Post-MVP | WS-12·WS-13 | [`TST-E2-ATOMIC-001`](../08-planning/second-expansion-test-matrix.md), `TST-E2-NOT-001`, `TST-E2-LIFE-001` | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T10`, `E2-T11`, `E2-T13`, `E2-T14` |
+| `API-COLLECTION-001~008` | `personal_collection`, `collection_restaurant`, `idempotency_record` | 기존 인증·PostgreSQL·Flyway ADR; 공유·직접 정렬 제외 | WS-09 | [`TST-E2-COL-001`](../08-planning/second-expansion-test-matrix.md), `TST-E2-SEC-001` | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md)~`E2-T03`, `E2-T13`, `E2-T15` |
+| `API-POPULAR-001` | 기존 `favorite`, 결과 비저장 | [ADR-DATA-011](../07-adr/data/data-011-popular-restaurant-request-time-aggregation.md); Snapshot·Batch·Redis 비활성 | WS-10 | [`TST-E2-POP-001`](../08-planning/second-expansion-test-matrix.md), `TST-E2-PERF-001` | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T04`, `E2-T05`, `E2-T13`, `E2-T15` |
+| `API-CURATION-001~009` | `curation`, `curation_restaurant` | 기존 관리자 인증·PostgreSQL ADR; 예약·추천·이미지 제외 | WS-11 | [`TST-E2-CUR-001`](../08-planning/second-expansion-test-matrix.md), `TST-E2-PERF-001`, `TST-E2-SEC-001` | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T06`, `E2-T07`, `E2-T13`, `E2-T15` |
+| `API-SUBMISSION-*`, `API-ADMIN-SUBMISSION-*` | `submission`, `moderation_history`, `idempotency_record` | [ADR-DATA-012](../07-adr/data/data-012-second-expansion-retention-cleanup.md), [ADR-NOTIFY-002](../07-adr/integration/notify-002-in-app-notification-reliability.md) | WS-12 | [`TST-E2-SUB-001`](../08-planning/second-expansion-test-matrix.md), `TST-E2-ATOMIC-001`, `TST-E2-LIFE-001` | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T08`, `E2-T09`, `E2-T11`, `E2-T13`, `E2-T15` |
+| `API-REPORT-*`, `API-ADMIN-REPORT-*` | `report`, `moderation_history`, `idempotency_record` | [ADR-DATA-012](../07-adr/data/data-012-second-expansion-retention-cleanup.md), [ADR-NOTIFY-002](../07-adr/integration/notify-002-in-app-notification-reliability.md) | WS-12 | [`TST-E2-REP-001`](../08-planning/second-expansion-test-matrix.md), `TST-E2-ATOMIC-001`, `TST-E2-LIFE-001` | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T08`, `E2-T09`, `E2-T11`, `E2-T13`, `E2-T15` |
+| 상태 전이 내부 생성, `API-NOTIFICATION-001~004` | `notification` | [ADR-NOTIFY-002](../07-adr/integration/notify-002-in-app-notification-reliability.md), [ADR-DATA-012](../07-adr/data/data-012-second-expansion-retention-cleanup.md); FCM Post-MVP | WS-12·WS-13 | [`TST-E2-ATOMIC-001`](../08-planning/second-expansion-test-matrix.md), `TST-E2-NOT-001`, `TST-E2-LIFE-001` | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T10`, `E2-T11`, `E2-T13`, `E2-T14`, `E2-T15` |
 
-전체 계약군은 `TST-E2-SEC-001`, `TST-E2-E2E-001`과 `E2-T13`, `E2-T14`의 교차 회귀 대상이다. 외부 푸시 API와 `E2-T12`는 현재 없다.
+전체 계약군은 `TST-E2-SEC-001`, `TST-E2-E2E-001`과 `E2-T13`, `E2-T14`, `E2-T15`의 교차 회귀 대상이다. 외부 푸시 API와 `E2-T12`는 현재 없다.
 
 ## 4. 비즈니스 규칙 → API 매핑
 
@@ -183,7 +183,7 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 
 | 규칙 ID | 적용 API | 핵심 검증 | 담당자 |
 |---|---|---|---|
-| BR-COLLECTION-001~005 | API-COLLECTION-001~007 | 소유권 은닉, 20/100 상한, 고정 정렬, 공개 상태, 탈퇴 정리 | 박진영 |
+| BR-COLLECTION-001~005 | API-COLLECTION-001~008 | 소유권 은닉, 20/100 상한, 추가 상태, 고정 정렬, 공개 상태, 탈퇴 정리 | 박진영 |
 | BR-POPULAR-001~003 | API-POPULAR-001 | 현재 찜 한 신호, 상위 20 안정 정렬, 커밋 후 반영 | 양성훈 |
 | BR-CURATION-001~004 | API-CURATION-001~009 | 관리자 경계, 5/20 상한, 수동 순서, 공개 숨김, 원자적 즉시 반영 | 김인안 |
 | BR-SUBMISSION-001~004 | 제보 회원·관리자 API | 유형별 대상, 열린 중복, 합산 5건, 상태·보존 | 김인안 |
@@ -213,7 +213,7 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 | NFR | 관련 API | 검증 방식 | 책임 |
 |---|---|---|---|
 | NFR-PERFORMANCE-006 | API-POPULAR-001, API-CURATION-001~002 | 현재 데이터 집계와 공개 목록 최대 조건 부하 테스트 | WS-10·11 |
-| NFR-SECURITY-006 | 제보·신고 API | 악성 입력·URL·일일 제한·동시 우회 테스트 | WS-12 |
+| NFR-SECURITY-006 | 제보·신고 API, 개인 컬렉션 API, 큐레이션 API | 악성 입력·URL·일일 제한·동시 우회 테스트, `SafeTextPolicy` 거부 회귀 | WS-09·11·12 |
 | NFR-INTEGRITY-005 | 관리자 상태 전이, 알림 생성 | 상태와 알림 동일 트랜잭션 실패 주입·고유성 테스트 | WS-12·13 |
 | NFR-RELIABILITY-004 | 인기·알림 API | 현재 찜 일관성·보존 작업 실패 격리 테스트 | WS-10·13 |
 | NFR-OBSERVABILITY-004 | 큐레이션·제보·신고 관리자 API | 감사 이력과 traceId 상관관계 검사 | WS-11·12 |
@@ -229,7 +229,7 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 | [WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) | [API-CREATOR-DISCOVERY-001](api/discovery/creator-discovery-api.md#api-creator-discovery-001-유튜버-필터-선택-목록), [API-DISCOVERY-001](api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색)의 `creatorId` 의미 | [WS-01](../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)이 정렬·페이지·다른 조건 조합 |
 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | [API-ADMIN-AUTH-001](api/admin/authentication-api.md#api-admin-auth-001-관리자-로그인)~[API-ADMIN-AUTH-003](api/admin/authentication-api.md#api-admin-auth-003-관리자-로그아웃), 기본 데이터 미리보기·생성 API, [API-ADMIN-VISIT-001](api/admin/visit-registration-api.md#api-admin-visit-001-방문-관계-등록) | 등록 결과를 [WS-01](../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)~[WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)이 인수 검증 |
 | [OPS-VALIDATION](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙) | [API-VALIDATION-001](api/common/validation-access-contract.md#api-validation-001-검증-참여자-로그인)~[API-VALIDATION-002](api/common/validation-access-contract.md#api-validation-002-검증-참여자-세션-종료) | 모든 제품 API보다 앞선 임시 진입 경계이며 정식 공개 시 전체 제거 |
-| [WS-09](../02-analysis/second-expansion-workstreams.md#4-ws-09-개인-컬렉션) | API-COLLECTION-001~007 | 회원·Restaurant 공개 상태·탈퇴 생명주기 사용 |
+| [WS-09](../02-analysis/second-expansion-workstreams.md#4-ws-09-개인-컬렉션) | API-COLLECTION-001~008 | 회원·Restaurant 공개 상태·탈퇴 생명주기 사용 |
 | [WS-10](../02-analysis/second-expansion-workstreams.md#5-ws-10-인기-맛집) | API-POPULAR-001 | WS-06 Favorite 원본을 읽고 변경하지 않음 |
 | [WS-11](../02-analysis/second-expansion-workstreams.md#6-ws-11-관리자-큐레이션) | API-CURATION-001~009 | 관리자 인증과 Restaurant 공개 판정 사용 |
 | [WS-12](../02-analysis/second-expansion-workstreams.md#7-ws-12-제보신고-검토) | 제보·신고 회원·관리자 API | WS-13 알림과 같은 트랜잭션, 기존 관리자 실제 조치 흐름 사용 |
@@ -240,7 +240,7 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 | 담당자 | 최종 책임 API | 기본 리뷰 관계 |
 |---|---|---|
 | 양성훈 | [API-DISCOVERY-001](api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색), API-POPULAR-001 | MVP 탐색은 이우람, 인기는 박진영 리뷰 |
-| 박진영 | [API-DETAIL-001](api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회), API-COLLECTION-001~007 | 김인안 리뷰 |
+| 박진영 | [API-DETAIL-001](api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회), API-COLLECTION-001~008 | 김인안 리뷰 |
 | 이우람 | [API-CREATOR-DISCOVERY-001](api/discovery/creator-discovery-api.md#api-creator-discovery-001-유튜버-필터-선택-목록), `creatorId` 판정 계약, API-NOTIFICATION-001~004, API-VALIDATION-001~002 | 탐색은 양성훈, 알림·검증 세션은 김인안 리뷰 |
 | 김인안 | 관리자 인증·검증 미리보기·생성·방문 관계, API-CURATION-001~009, 제보·신고 회원·관리자 API | 인증·제보·신고는 이우람, 등록은 박진영, 큐레이션은 양성훈 리뷰 |
 

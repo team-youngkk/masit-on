@@ -66,6 +66,32 @@ class MemberSessionRevocationFilterTest {
         verifyNoInteractions(filterChain);
     }
 
+    @Test
+    @DisplayName("인기 맛집 공개 조회는 유효한 회원 인증이 있어도 세션 상태 저장소를 조회하지 않는다")
+    void 인기맛집공개조회_유효한회원인증_세션상태저장소를조회하지않는다() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(authentication("member-id", "session-id"));
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/restaurants/popular");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain filterChain = mock(FilterChain.class);
+
+        filter.doFilter(request, response, filterChain);
+
+        verifyNoInteractions(accessChecker);
+    }
+
+    @Test
+    @DisplayName("지도 맛집 좌표 공개 조회는 유효한 회원 인증이 있어도 세션 상태 저장소를 조회하지 않는다")
+    void 지도좌표공개조회_유효한회원인증_세션상태저장소를조회하지않는다() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(authentication("member-id", "session-id"));
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/restaurants/map-points");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain filterChain = mock(FilterChain.class);
+
+        filter.doFilter(request, response, filterChain);
+
+        verifyNoInteractions(accessChecker);
+    }
+
     private JwtAuthenticationToken authentication(String memberId, String sessionId) {
         Instant now = Instant.now();
         Jwt jwt = new Jwt(

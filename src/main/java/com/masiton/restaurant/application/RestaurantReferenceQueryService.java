@@ -1,5 +1,7 @@
 package com.masiton.restaurant.application;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -24,9 +26,23 @@ class RestaurantReferenceQueryService implements FindRestaurantReferenceUseCase 
     @Override
     public Optional<RestaurantReference> findRestaurantReference(UUID restaurantId) {
         return restaurantRepository.findById(restaurantId)
-                .map(restaurant -> new RestaurantReference(
-                        restaurant.getId(),
-                        restaurant.getPublicationStatus() == PublicationStatus.PUBLIC
-                                && restaurant.getLifecycleStatus() == LifecycleStatus.ACTIVE));
+                .map(this::reference);
+    }
+
+    @Override
+    public List<RestaurantReference> findRestaurantReferences(Collection<UUID> restaurantIds) {
+        return restaurantRepository.findAllByIds(restaurantIds).stream()
+                .map(this::reference)
+                .toList();
+    }
+
+    private RestaurantReference reference(com.masiton.restaurant.domain.model.Restaurant restaurant) {
+        boolean publiclyVisible = restaurant.getPublicationStatus() == PublicationStatus.PUBLIC
+                && restaurant.getLifecycleStatus() == LifecycleStatus.ACTIVE;
+        String availability = restaurant.getLifecycleStatus() == LifecycleStatus.ACTIVE
+                ? restaurant.getPublicationStatus().name()
+                : "INACTIVE";
+        return new RestaurantReference(restaurant.getId(), restaurant.getName(), restaurant.getRoadAddress(),
+                availability, publiclyVisible);
     }
 }

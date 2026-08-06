@@ -4,6 +4,7 @@ related_documents:
   - ../../01-requirements/non-functional-requirements.md
   - test-001-automation-strategy.md
   - obs-001-logging-observability.md
+  - perf-001-k6-load-testing.md
 ---
 
 # 품질 ADR
@@ -14,4 +15,5 @@ related_documents:
 |---|---|
 | [ADR-TEST-001](test-001-automation-strategy.md) | 계층별 자동화 테스트 전략 |
 | [ADR-OBS-001](obs-001-logging-observability.md) | 애플리케이션 로그와 운영 관측 기준 |
+| [ADR-PERF-001](perf-001-k6-load-testing.md) | k6 부하 테스트 도구와 실행 체계 |
 

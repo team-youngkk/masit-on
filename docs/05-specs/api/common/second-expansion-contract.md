@@ -1,7 +1,7 @@
 ---
 id: API-COMMON-E2-001
 title: 2차 확장 공통 API 계약
-status: draft
+status: approved
 related_documents:
   - ../README.md
   - authentication-contract.md

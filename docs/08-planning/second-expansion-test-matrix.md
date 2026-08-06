@@ -5,6 +5,10 @@ related_documents:
   - expansion-2-implementation-plan.md
   - expansion-2-task-breakdown.md
   - second-expansion-baseline-review.md
+  - second-expansion-performance-verification.md
+  - second-expansion-browser-verification.md
+  - ../07-adr/quality/perf-001-k6-load-testing.md
+  - ../07-adr/platform/web-004-supported-browser-matrix.md
   - ../01-requirements/functional-requirements.md
   - ../01-requirements/business-rules.md
   - ../01-requirements/non-functional-requirements.md
@@ -30,7 +34,7 @@ related_documents:
 | `FR-COLLECTION-002` | 본인 소유 이름 변경·입력 검증·존재 은닉 | `TST-E2-COL-001` | `E2-T03` |
 | `FR-COLLECTION-003` | 본인 소유 삭제·구성 관계 연쇄 삭제·반복 요청 | `TST-E2-COL-001` | `E2-T03` |
 | `FR-COLLECTION-004` | 목록·상세 고정 정렬·비공개 맛집 숨김 | `TST-E2-COL-001` | `E2-T03` |
-| `FR-COLLECTION-005` | 공개 맛집만 추가·중복 멱등·100개 동시 상한 | `TST-E2-COL-001` | `E2-T03` |
+| `FR-COLLECTION-005` | 공개 맛집만 추가·컬렉션별 추가 상태·중복 멱등·100개 동시 상한·성공/실패 후 재조회 | `TST-E2-COL-001` | `E2-T03` |
 | `FR-COLLECTION-006` | 관계 제거·반복 제거·다른 컬렉션 무영향 | `TST-E2-COL-001` | `E2-T03` |
 | `FR-POPULAR-001` | 현재 찜 집계·공개 상태·상위 20·동점 안정 정렬 | `TST-E2-POP-001` | `E2-T04`, `E2-T05` |
 | `FR-CURATION-001` | 관리자 생성·DRAFT·구성/메인 상한·감사 이력 | `TST-E2-CUR-001` | `E2-T06` |
@@ -44,26 +48,66 @@ related_documents:
 | `FR-REPORT-002` | 본인 목록·상세·신고자 비노출·다른 회원 은닉 | `TST-E2-REP-001` | `E2-T08` |
 | `FR-REPORT-003` | 관리자 상태 전이·자동 비공개 금지·감사 이력 | `TST-E2-REP-001`, `TST-E2-ATOMIC-001` | `E2-T09`, `E2-T11` |
 | `FR-NOTIFICATION-001` | 상태·이력·알림 단일 트랜잭션·요청/상태 중복 방지 | `TST-E2-ATOMIC-001` | `E2-T11` |
-| `FR-NOTIFICATION-002` | 본인 목록·페이지·정확한 미읽음 수·90일/200개 경계 | `TST-E2-NOT-001` | `E2-T10` |
-| `FR-NOTIFICATION-003` | 본인 개별 읽음·멱등성·타 회원 은닉 | `TST-E2-NOT-001` | `E2-T10` |
-| `FR-NOTIFICATION-004` | 전체 읽음 원자성·멱등성·정확한 미읽음 수 | `TST-E2-NOT-001` | `E2-T10` |
+| `FR-NOTIFICATION-002` | 본인 목록·페이지·정확한 미읽음 수·90일/200개 경계 | `TST-E2-NOT-001` | `E2-T10`, `E2-T14` |
+| `FR-NOTIFICATION-003` | 본인 개별 읽음·멱등성·타 회원 은닉 | `TST-E2-NOT-001` | `E2-T10`, `E2-T14` |
+| `FR-NOTIFICATION-004` | 전체 읽음 원자성·멱등성·정확한 미읽음 수 | `TST-E2-NOT-001` | `E2-T10`, `E2-T14` |
 
 ## 3. 비즈니스 규칙·NFR 교차 검증
 
 | 테스트 묶음 | 적용 계약 | 필수 계층·증거 | 완료 Task |
 |---|---|---|---|
 | `TST-E2-COL-001` | `BR-COLLECTION-001~005` | 단위, MockMvc, PostgreSQL 동시성, 브라우저 소유권·빈 상태 | `E2-T03` |
-| `TST-E2-POP-001` | `BR-POPULAR-001~003`, `NFR-PERFORMANCE-006`, `NFR-RELIABILITY-004` | PostgreSQL 실행계획·부하, 공개 API 계약, 변경 후 다음 조회 반영 | `E2-T04`, `E2-T05`, `E2-T14` |
+| `TST-E2-POP-001` | `BR-POPULAR-001~003`, `NFR-PERFORMANCE-006`, `NFR-RELIABILITY-004` | PostgreSQL 실행계획·부하, 공개 API 계약, 변경 후 다음 조회 반영 | `E2-T04`, `E2-T05`, `E2-T15` |
 | `TST-E2-CUR-001` | `BR-CURATION-001~004`, `NFR-OBSERVABILITY-004` | 관리자/공개 API, PostgreSQL 원자성, 브라우저 편집·공개 흐름 | `E2-T06`, `E2-T07` |
-| `TST-E2-SUB-001` | `BR-SUBMISSION-001~004`, `NFR-SECURITY-006` | 입력 fuzz·rate limit·중복 동시성, 회원/관리자 API·브라우저 | `E2-T08`, `E2-T09`, `E2-T14` |
-| `TST-E2-REP-001` | `BR-REPORT-001~004`, `NFR-SECURITY-006` | 입력 fuzz·rate limit·중복 동시성, 자동 비공개 부재, API·브라우저 | `E2-T08`, `E2-T09`, `E2-T14` |
-| `TST-E2-NOT-001` | `BR-NOTIFICATION-002~004` | API 계약, 읽음 동시성, 알림함·`99+` 브라우저 표시 | `E2-T10` |
-| `TST-E2-ATOMIC-001` | `BR-NOTIFICATION-001`, `NFR-INTEGRITY-005`, `NFR-RELIABILITY-004` | 상태·이력·알림 각 저장 지점 실패 주입과 전체 rollback | `E2-T11`, `E2-T14` |
-| `TST-E2-LIFE-001` | `NFR-PRIVACY-005`, `ADR-DATA-012` | 시간 경계, 재실행, 부분 실패, 회원 탈퇴, 식별 제거 통합 테스트 | `E2-T02`, `E2-T10`, `E2-T14` |
-| `TST-E2-SEC-001` | `NFR-SECURITY-006`, `NFR-TEST-005` | 회원/관리자 audience 교차 거부, 타 회원 자원, 악성 입력 회귀 | `E2-T14` |
-| `TST-E2-PERF-001` | `NFR-PERFORMANCE-006`, `NFR-TEST-005`, `ADR-DATA-011` | 공개 조회 p95·쿼리 수·실행계획·대표 데이터 부하 증거 | `E2-T14` |
-| `TST-E2-E2E-001` | 2차 확장 전체 FR·BR·NFR | 지원 브라우저·360px·접근성·V3 전진 migration·CI 전체 회귀 | `E2-T13`, `E2-T14` |
+| `TST-E2-SUB-001` | `BR-SUBMISSION-001~004`, `NFR-SECURITY-006` | 입력 fuzz·rate limit·중복 동시성, 회원/관리자 API·브라우저 | `E2-T08`, `E2-T09`, `E2-T15` |
+| `TST-E2-REP-001` | `BR-REPORT-001~004`, `NFR-SECURITY-006` | 입력 fuzz·rate limit·중복 동시성, 자동 비공개 부재, API·브라우저 | `E2-T08`, `E2-T09`, `E2-T15` |
+| `TST-E2-NOT-001` | `BR-NOTIFICATION-002~004` | API 계약, 읽음 동시성, 알림함·`99+` 브라우저 표시 | `E2-T10`, `E2-T14` |
+| `TST-E2-ATOMIC-001` | `BR-NOTIFICATION-001`, `NFR-INTEGRITY-005`, `NFR-RELIABILITY-004` | 상태·이력·알림 각 저장 지점 실패 주입과 전체 rollback | `E2-T11`, `E2-T15` |
+| `TST-E2-LIFE-001` | `NFR-PRIVACY-005`, `ADR-DATA-012` | 시간 경계, 재실행, 부분 실패, 회원 탈퇴, 식별 제거 통합 테스트 | `E2-T02`, `E2-T10`, `E2-T15` |
+| `TST-E2-SEC-001` | `NFR-SECURITY-006`, `NFR-TEST-005` | 회원/관리자 audience 교차 거부, 타 회원 자원, 악성 입력 회귀 | `E2-T15` |
+| `TST-E2-PERF-001` | `NFR-PERFORMANCE-006`, `NFR-TEST-005`, `ADR-DATA-011` | 공개 조회 p95·쿼리 수·실행계획·대표 데이터 부하 증거 | `E2-T15` |
+| `TST-E2-E2E-001` | 2차 확장 전체 FR·BR·NFR | 지원 브라우저·360px·접근성·V3 전진 migration·CI 전체 회귀 | `E2-T13`, `E2-T14`, `E2-T15` |
 
 ## 4. 범위 밖 검증
 
 `FCM`, 이메일·웹 푸시, `DeviceToken`, `NotificationPreference`, 인기 Snapshot·Batch·Redis 캐시, 컬렉션 공유·직접 정렬, 큐레이션 예약 게시·추천 알고리즘은 현재 테스트 완료 조건이 아니다. 구현 흔적이 생기면 테스트를 추가하는 방식으로 정당화하지 않고 먼저 범위와 ADR을 변경한다.
+
+## 5. E2-T15 시점 보류 검증 항목
+
+`E2-T15`(#117)의 완료 조건은 "보안·성능·CI·운영 기준이 통과하고 **미완료·차단 항목이 명시된다**"이고, 같은 이슈가 "미결정 기술을 완료 조건으로 추가하지 않는다"를 함께 규정한다. 아래 항목들은 그 규정에 따라 `E2-T15` 완료 판정에서 분리하고 후속 Task로 넘겼다. 3절의 계약 자체는 낮추지 않는다. 확정 기준(p95 500ms 이하, 오류율 1% 미만, 지원 브라우저 매트릭스)은 그대로 유지하고 **판정 시점만** 옮긴다.
+
+| 보류 항목 | 소속 묶음 | 차단 사유 | 해제 조건 | 후속 |
+|---|---|---|---|---|
+| 정상 부하 50명·20 RPS p95·오류율 측정 (여전히 보류) | `TST-E2-PERF-001` | ~~자동 반복 실행 도구가 미결정이다~~ 도구 차단은 해소됐다([ADR-PERF-001](../07-adr/quality/perf-001-k6-load-testing.md) Accepted, 2026-08-06). **현재 사유는 팀이 실측을 3차 확장 이후로 연기하기로 결정한 것이다(2026-08-06)** | 3차 확장 이후 실측 수행. 시나리오·기준 데이터·절차는 이미 준비돼 있다 | [#148](https://github.com/team-youngkk/masit-on/issues/148) |
+| 최대 부하 200명·80 RPS 측정 | `TST-E2-PERF-001` | 시나리오를 아직 만들지 않았다. `RV-NFR-011`이 "정상 부하와 최대 부하를 각각 실행한다"로 이미 확정한 항목이라 범위 밖이 아니다 | 시나리오 작성 후 정상 부하와 같은 환경에서 측정 | 후속 이슈 |
+| ~~지원 브라우저 매트릭스 중 iPhone Safari~~ | `TST-E2-E2E-001` | 해제됨. 2026-08-06 [ADR-WEB-004](../07-adr/platform/web-004-supported-browser-matrix.md)가 iPhone Safari를 "검증 없이 지원 표방하지 않음"으로 낮춰 `TST-E2-E2E-001` 판정 대상에서 제외했다 | — | [#149](https://github.com/team-youngkk/masit-on/issues/149)에서 처리 완료 |
+| 지원 브라우저 매트릭스 중 PC Chrome·Edge, Android Chrome | `TST-E2-E2E-001` | **2차 확장 화면이 아직 운영에 배포되지 않아 실브라우저로 확인할 수 없다.** 2026-08-06 팀이 배포 이후 수행으로 정했다. 배포본(1차 확장)의 실브라우저 확인과 2차 확장 화면의 로컬 화면 폭 확인은 [2차 확장 브라우저 검증 기록](second-expansion-browser-verification.md)에 있다 | 2차 확장 운영 배포 후 세 브라우저 실빌드에서 화면 폭 5종을 포함해 수동 검증 | [#149](https://github.com/team-youngkk/masit-on/issues/149) |
+
+### iPhone Safari 검증 공백 — 2026-08-06 결정
+
+iPhone Safari는 [범위](../00-overview/scope.md), [비기능 요구사항](../01-requirements/non-functional-requirements.md), [ADR-WEB-001](../07-adr/platform/web-001-frontend-platform.md)이 모두 지원 대상으로 확정했던 브라우저다. 팀에 실단말이 없어 MVP 최종 검증에서도 확인하지 못했고([로컬 실행·회귀 검증 결과](mvp-local-verification.md)), 2차 확장에서도 같은 상태였다. 담당자 배정으로 해소되지 않는 공백이므로 팀이 세 경로 중 하나를 결정해야 했고, [#149](https://github.com/team-youngkk/masit-on/issues/149)에서 **매트릭스 조정**을 선택했다.
+
+[ADR-WEB-004](../07-adr/platform/web-004-supported-browser-matrix.md)가 결정 원문이다. iPhone Safari는 매트릭스에서 완전히 삭제하지 않고 "검증 없이 지원 표방하지 않음"으로 낮췄다. 위 계약 문서 세 곳도 같은 결정에 맞춰 개정했다.
+
+- `TST-E2-E2E-001`의 지원 브라우저 판정 대상은 PC Chrome·Edge, Android Chrome이다.
+- iPhone Safari는 인수 시나리오 통과율 계산에서 제외한다. 의도적 차단·기능 제거·User-Agent 분기는 넣지 않는다.
+- iPhone Safari 동작은 여전히 **검증되지 않은 상태**다. 다른 Blink 계열 브라우저 확인 결과로 대체하지 않고 검증했다고 보고하지 않는다.
+- 실단말이나 원격 실단말 환경이 확보되면 ADR-WEB-004 7절 해제 조건에 따라 매트릭스로 되돌린다.
+
+확인 환경과 결과는 [2차 확장 브라우저 검증 기록](second-expansion-browser-verification.md)이 증거 문서다.
+
+### 성능 측정 보류 사유 변경 (2026-08-06)
+
+`ADR-PERF-001`이 Accepted가 되면서 **도구 미결정이라는 차단 사유는 없어졌다.** 확정된 내용은 k6 v2.1.0, `perf/k6/` 시나리오, `perf/seed/` 기준 데이터, `workflow_dispatch` 전용 실행, 측정 전용 임시 EC2다. 판정 기준(p95 500ms 이하, 오류율 1% 미만)은 `NFR-PERFORMANCE-006` 원문 그대로이며 낮추지 않았다.
+
+그러나 같은 날 팀이 **실측을 3차 확장 이후로 연기**하기로 결정했다. 구현에 우선순위를 두기 위한 판단이며, 측정 수단은 이미 준비돼 있어 언제든 실행할 수 있는 상태다. 즉 보류 사유가 "수단이 없다"에서 "수단은 있으나 지금 실행하지 않기로 했다"로 바뀐 것이지, 보류가 풀린 것이 아니다.
+
+**보류 사유가 바뀐 것과 측정이 끝난 것은 다르다.** 실제 수행 여부와 수치는 [2차 확장 성능 검증 결과](second-expansion-performance-verification.md)를 확인한다. 그 문서에 결과가 기록되기 전까지 `NFR-PERFORMANCE-006`의 정상 부하 조건은 **미측정 상태**이며, 측정했다고 보고하지 않는다.
+
+연기로 남는 위험은 하나 분명하다. [ADR-DATA-011](../07-adr/data/data-011-popular-restaurant-request-time-aggregation.md)이 인기 맛집에 캐시·Snapshot·Batch를 두지 않기로 한 근거가 "필요하다는 측정 근거가 없다"인데, 요청마다 `favorite` 전량을 집계하는 구조가 p95 500ms를 지키는지는 **실측 전까지 확인되지 않는다.** 해당 코드는 이미 제한 공개로 나가 있다.
+
+부하 측정이 실제로 수행되기 전까지 회귀 탐지는 다음 셋이 담당한다. 셋 다 쿼리 수와 실행계획의 구조적 악화는 잡지만 부하 하의 p95 악화는 잡지 못한다.
+
+- `PublicCurationQueryCountApiTest`, `PopularRestaurantQueryCountApiTest` — 공개 조회 쿼리 수 상수 가드
+- `CurationPublicQueryPlanPostgreSqlIntegrationTest` — PostgreSQL 실행계획(`loops=1`) 검증
+- `PublicCurationPerformanceIntegrationTest` — 순차 내부 처리 latency 측정. CI 러너 편차로 인한 flaky를 피하려고 `@Disabled` 상태이며 수동 실행용이다

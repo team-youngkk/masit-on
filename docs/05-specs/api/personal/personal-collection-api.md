@@ -1,7 +1,7 @@
 ---
 id: API-COLLECTION-001
 title: 개인 컬렉션 API
-status: draft
+status: approved
 related_prd:
   - PRD-COLLECTION-001
 workstream: WS-09
@@ -46,6 +46,7 @@ related_documents:
 | API-COLLECTION-005 | DELETE | `/api/me/collections/{collectionId}` | 컬렉션 삭제 |
 | API-COLLECTION-006 | PUT | `/api/me/collections/{collectionId}/restaurants/{restaurantId}` | 맛집 추가 |
 | API-COLLECTION-007 | DELETE | `/api/me/collections/{collectionId}/restaurants/{restaurantId}` | 맛집 제거 |
+| API-COLLECTION-008 | GET | `/api/me/collection-options?restaurantId={restaurantId}` | 맛집 문맥의 컬렉션 추가 옵션 조회 |
 
 ## 2. 생성·수정
 
@@ -55,7 +56,7 @@ related_documents:
 { "name": "가족과 갈 곳" }
 ```
 
-`name`은 앞뒤 공백 제거 후 1~50자이며 빈 문자열은 허용하지 않는다. 생성은 `201 Created`, 이름 변경은 같은 본문의 `PATCH`와 `200 OK`를 사용한다.
+`name`은 앞뒤 공백 제거 후 1~50자이며 빈 문자열은 허용하지 않는다. NFR-SECURITY-006에 따라 `SafeTextPolicy`가 적용되어, ISO 제어 문자나 실행성 문자(`<`, `>`)가 포함된 입력은 `400 INVALID_FIELD_VALUE`로 거부된다. 생성은 `201 Created`, 이름 변경은 같은 본문의 `PATCH`와 `200 OK`를 사용한다.
 
 ```json
 {
@@ -89,6 +90,39 @@ related_documents:
   "page": { "number": 1, "size": 20, "totalElements": 1, "totalPages": 1, "hasNext": false }
 }
 ```
+
+### 3.1 맛집 문맥의 컬렉션 추가 옵션
+
+`GET /api/me/collection-options?restaurantId={restaurantId}`는 공개 맛집 상세에서 현재 회원의
+컬렉션별 추가 상태를 조회한다. `restaurantId`는 한 번만 지정하는 필수 식별자이며, 맛집이 없거나
+공개·활성 상태가 아니면 `404 RESTAURANT_NOT_FOUND`를 반환한다. 응답 정렬은 컬렉션 목록과 같은
+최근 수정 시각 내림차순, 컬렉션 ID 오름차순이다.
+
+```json
+{
+  "items": [
+    {
+      "collectionId": "01K4COLLECTION000000000001",
+      "name": "가족과 갈 곳",
+      "restaurantCount": 3,
+      "additionStatus": "AVAILABLE"
+    }
+  ]
+}
+```
+
+`restaurantCount`는 공개·활성 관계 수다. 서버는 비공개 관계를 포함한 실제 관계 수를 100개 상한
+판정에만 사용하며 응답에 노출하지 않는다. `additionStatus`는 다음 세 값만 사용한다.
+
+| 값 | 의미 |
+|---|---|
+| `AVAILABLE` | 현재 맛집을 추가할 수 있음 |
+| `ALREADY_INCLUDED` | 현재 맛집이 이미 포함되어 추가 요청을 만들지 않음 |
+| `LIMIT_REACHED` | 실제 관계가 100개에 도달해 추가할 수 없음 |
+
+현재 맛집이 이미 포함되어 있고 컬렉션도 상한에 도달한 경우 `ALREADY_INCLUDED`를 우선한다.
+화면은 `ALREADY_INCLUDED`와 `LIMIT_REACHED`의 추가 요청을 비활성화한다. 맛집 추가 성공뿐 아니라
+상한 충돌이나 맛집 공개 상태 변경으로 실패한 뒤에도 이 API를 다시 조회해 서버 상태와 동기화한다.
 
 ## 4. 맛집 추가·제거와 삭제
 

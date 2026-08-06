@@ -81,7 +81,7 @@ Starter와 BOM을 우선 사용하고 명시 버전이 필요한 예외는 ADR�
 
 ## 13. 검증 방법
 
-의존성 해석 결과, BOM 중복 선언과 전체 Spring Boot 통합 테스트를 검사한다. 구체적으로는 `./gradlew dependencies`로 Spring Boot BOM 버전이 정확히 `4.1.0`으로 해석되는지, Spring Security가 BOM이 지정하는 `7.1.0`과 일치하는지 확인하고, `build.gradle`에 BOM 관리 대상 라이브러리의 개별 버전이 중복 선언되어 있지 않은지 검사한다. Spring Boot Test 기반 통합 테스트([ADR-TEST-001](../quality/test-001-automation-strategy.md))가 애플리케이션 컨텍스트 로딩에 성공하면 통과로 본다. 이 검증은 의존성 조합의 일관성 확인이 목적이며, p95 응답 시간 등 성능 기준([RV-NFR-004](../../01-requirements/non-functional-requirements.md#rv-nfr-004-목표-응답-시간과-허용-오류율))은 별도 성능 테스트([ADR-PERF-001](../adr-backlog.md#adr-perf-001-k6-성능-테스트-체계), 활성화 조건 미충족)에서 다룬다.
+의존성 해석 결과, BOM 중복 선언과 전체 Spring Boot 통합 테스트를 검사한다. 구체적으로는 `./gradlew dependencies`로 Spring Boot BOM 버전이 정확히 `4.1.0`으로 해석되는지, Spring Security가 BOM이 지정하는 `7.1.0`과 일치하는지 확인하고, `build.gradle`에 BOM 관리 대상 라이브러리의 개별 버전이 중복 선언되어 있지 않은지 검사한다. Spring Boot Test 기반 통합 테스트([ADR-TEST-001](../quality/test-001-automation-strategy.md))가 애플리케이션 컨텍스트 로딩에 성공하면 통과로 본다. 이 검증은 의존성 조합의 일관성 확인이 목적이며, p95 응답 시간 등 성능 기준([RV-NFR-004](../../01-requirements/non-functional-requirements.md#rv-nfr-004-목표-응답-시간과-허용-오류율))은 별도 성능 테스트([ADR-PERF-001](../quality/perf-001-k6-load-testing.md))에서 다룬다.
 
 ## 14. 재검토 조건
 

@@ -41,7 +41,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         if (exception.retryAfterSeconds() != null) {
             response.header(HttpHeaders.RETRY_AFTER, String.valueOf(exception.retryAfterSeconds()));
         }
-        return response.body(ErrorResponse.of(exception.code(), exception.getMessage(), exception.fieldErrors(), traceId()));
+        return response.body(new ErrorResponse(
+                exception.code(), exception.getMessage(), exception.fieldErrors(), exception.resource(), traceId()));
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
@@ -130,7 +131,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     private ResponseEntity.BodyBuilder response(HttpStatusCode status, HttpServletRequest request) {
         ResponseEntity.BodyBuilder response = ResponseEntity.status(status);
-        if (isMemberPrivatePath(request)) {
+        if (isPrivatePath(request)) {
             response.header(HttpHeaders.CACHE_CONTROL, PRIVATE_NO_STORE);
         }
         return response;
@@ -143,8 +144,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.status(status);
     }
 
-    private boolean isMemberPrivatePath(HttpServletRequest request) {
+    private boolean isPrivatePath(HttpServletRequest request) {
         String requestUri = request.getRequestURI();
-        return requestUri.equals("/api/me") || requestUri.startsWith("/api/me/");
+        return requestUri.equals("/api/me") || requestUri.startsWith("/api/me/")
+                || requestUri.equals("/api/admin") || requestUri.startsWith("/api/admin/");
     }
 }

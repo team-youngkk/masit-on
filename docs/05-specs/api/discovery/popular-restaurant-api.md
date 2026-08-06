@@ -1,7 +1,7 @@
 ---
 id: API-POPULAR-001
 title: 인기 맛집 API
-status: draft
+status: approved
 related_prd:
   - PRD-DISCOVERY-004
 workstream: WS-10

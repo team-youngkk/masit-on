@@ -18,6 +18,19 @@
   gap: var(--space-2);
 }
 
+.personalActions {
+  display: grid;
+  justify-items: end;
+  gap: var(--space-2);
+}
+
+@media (max-width: 48rem) {
+  .personalActions {
+    justify-items: stretch;
+    width: 100%;
+  }
+}
+
 .name {
   margin: 0;
   font-size: var(--font-size-2xl);
