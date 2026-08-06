@@ -67,3 +67,18 @@ related_documents:
 ## 4. 범위 밖 검증
 
 `FCM`, 이메일·웹 푸시, `DeviceToken`, `NotificationPreference`, 인기 Snapshot·Batch·Redis 캐시, 컬렉션 공유·직접 정렬, 큐레이션 예약 게시·추천 알고리즘은 현재 테스트 완료 조건이 아니다. 구현 흔적이 생기면 테스트를 추가하는 방식으로 정당화하지 않고 먼저 범위와 ADR을 변경한다.
+
+## 5. E2-T15 시점 보류 검증 항목
+
+`E2-T15`(#117)의 완료 조건은 "보안·성능·CI·운영 기준이 통과하고 **미완료·차단 항목이 명시된다**"이고, 같은 이슈가 "미결정 기술을 완료 조건으로 추가하지 않는다"를 함께 규정한다. 아래 두 항목은 그 규정에 따라 `E2-T15` 완료 판정에서 분리하고 후속 Task로 넘긴다. 3절의 계약 자체는 낮추지 않는다. 확정 기준(p95 500ms 이하, 오류율 1% 미만, 지원 브라우저 매트릭스)은 그대로 유지하고 **판정 시점만** 옮긴다.
+
+| 보류 항목 | 소속 묶음 | 차단 사유 | 해제 조건 | 후속 |
+|---|---|---|---|---|
+| 정상 부하 50명·20 RPS p95·오류율 측정 | `TST-E2-PERF-001` | 자동 반복 실행 도구가 미결정이다. [ADR-PERF-001 k6 성능 테스트 체계](../07-adr/adr-backlog.md)가 백로그이며 활성화 조건인 k6 버전·CI 비용 승인이 아직 없다 | ADR-PERF-001 Accepted 후 운영 동급 환경에서 측정 | 후속 이슈 |
+| 실단말·지원 브라우저 매트릭스(PC Chrome/Edge, Mobile Safari) | `TST-E2-E2E-001` | 실단말 수동 확인이 필요하며 자동화 수단이 확정돼 있지 않다 | 실단말 보유자 배정 후 수동 검증 | 후속 이슈 |
+
+`E2-T15` 시점에 남긴 성능 회귀 방어선은 다음 세 가지다. 부하 측정을 보류하는 동안 회귀 탐지는 이 셋이 담당한다.
+
+- `PublicCurationQueryCountApiTest`, `PopularRestaurantQueryCountApiTest` — 공개 조회 쿼리 수 상수 가드
+- `CurationPublicQueryPlanPostgreSqlIntegrationTest` — PostgreSQL 실행계획(`loops=1`) 검증
+- `PublicCurationPerformanceIntegrationTest` — 순차 내부 처리 latency 측정. CI 러너 편차로 인한 flaky를 피하려고 `@Disabled` 상태이며 수동 실행용이다
