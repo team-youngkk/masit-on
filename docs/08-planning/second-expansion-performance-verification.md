@@ -88,7 +88,30 @@ related_documents:
 
 ### 5.2. 부하 실행
 
+### 5.2. 직접 실행 절차
+
 **대상과 같은 VPC 안에서 k6를 직접 실행한다.** 이것이 판정에 쓰는 방식이다.
+
+k6 설치 시 기술 정책 3절에 따라 `latest`를 사용하지 않고 버전 **v2.1.0**을 고정한다. 실행기 아키텍처(amd64/arm64)에 맞춰 체크섬(SHA-256)을 검증 후 설치한다.
+
+```bash
+K6_VERSION="2.1.0"
+# 아키텍처별 SHA-256
+# linux-amd64 : 295d961ebfca306f295f1133068dcd403a8171c87f387928f5f30b0fbcff858a
+# linux-arm64 : 8868f0f046b4122d6451e5e29a99793130d220803dd08bd7c1f8075f824cf472
+ARCH="amd64" # t4g 등 arm64 인스턴스에서는 "arm64"
+K6_SHA256="295d961ebfca306f295f1133068dcd403a8171c87f387928f5f30b0fbcff858a"
+
+asset="k6-v${K6_VERSION}-linux-${ARCH}"
+curl -fsSL -o k6.tar.gz "https://github.com/grafana/k6/releases/download/v${K6_VERSION}/${asset}.tar.gz"
+echo "${K6_SHA256}  k6.tar.gz" | sha256sum -c -
+tar -xzf k6.tar.gz
+sudo install -m 0755 "${asset}/k6" /usr/local/bin/k6
+rm -rf k6.tar.gz "${asset}"
+k6 version
+```
+
+시나리오 실행:
 
 ```bash
 BASE_URL=http://<측정-대상>:8080 k6 run perf/k6/normal-load-public-read.js
@@ -131,6 +154,8 @@ k6는 `thresholds` 위반 시 0이 아닌 종료 코드로 끝난다. 통과·�
 | 측정자 | 미정 |
 | 워크플로 실행 | 미실행 |
 | 애플리케이션 커밋 SHA | 미정 |
+| k6 버전 | v2.1.0 |
+| 부하 생성기 아키텍처 | 미정 (linux-amd64 / linux-arm64) |
 | 적재 확인 건수 | 미확인 |
 
 ## 7. 알려진 제약
