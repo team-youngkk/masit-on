@@ -271,7 +271,7 @@ export function ParticipationRequestScreen() {
         <input type="url" pattern="https://.*" value={evidenceUrl} onChange={event => { setEvidenceUrl(event.target.value); retry.current = null }} />
       </label>
       <p className={styles.muted}>개인정보를 입력하지 마세요. 파일 첨부와 익명 접수는 지원하지 않습니다.</p>
-      <Button disabled={busy}>{busy ? '처리 중...' : '접수하기'}</Button>
+      <Button type="submit" disabled={busy}>{busy ? '처리 중...' : '접수하기'}</Button>
     </form>
 
     {submitNotice ? (
