@@ -9,6 +9,7 @@ related_documents:
   - ../07-adr/quality/test-001-automation-strategy.md
   - ../07-adr/quality/obs-001-logging-observability.md
   - ../07-adr/platform/deploy-002-validation-deployment-before-expansion.md
+  - ../07-adr/platform/web-004-supported-browser-matrix.md
   - ../08-planning/second-expansion-scope-and-terminology.md
 ---
 
@@ -415,8 +416,9 @@ related_documents:
   - 일반 사용자 웹 화면과 API
 - 목표 기준:
   - 합의된 브라우저·화면 크기 조합의 핵심 인수 시나리오 통과율 100%
-  - PC Chrome·Edge, Android Chrome, iPhone Safari의 테스트 시점 최신 및 직전 안정 버전
+  - PC Chrome·Edge, Android Chrome의 테스트 시점 최신 및 직전 안정 버전
   - 대표 화면 폭 360px, 390px, 768px, 1280px, 1440px
+  - iPhone Safari는 [ADR-WEB-004](../07-adr/platform/web-004-supported-browser-matrix.md)에 따라 통과율 계산과 인수 판정에서 제외한다. 지원 대상으로 표방하지 않되 의도적으로 차단하지 않는다
 - 검증 방법:
   - 지원 매트릭스 기반 PC·모바일 브라우저 인수 테스트
 - 중요도:
@@ -1022,10 +1024,11 @@ related_documents:
 
 ### RV-NFR-006 지원 브라우저 범위
 
-- 현재 상태: 결정 완료 (2026-07-27)
+- 현재 상태: 결정 완료 (2026-07-27), iPhone Safari 항목 개정 (2026-08-06)
 - 결정 내용:
-  - PC Chrome·Edge와 Android Chrome, iPhone Safari의 테스트 시점 최신 안정 버전 및 직전 안정 버전을 지원한다.
+  - PC Chrome·Edge와 Android Chrome의 테스트 시점 최신 안정 버전 및 직전 안정 버전을 지원한다.
   - 대표 화면 폭은 360px, 390px, 768px, 1280px, 1440px로 검증한다.
+  - iPhone Safari는 2026-07-27 결정에서 지원 대상이었으나, 팀에 실단말이 없어 한 번도 검증하지 못했다. 2026-08-06 [ADR-WEB-004](../07-adr/platform/web-004-supported-browser-matrix.md)가 이 항목을 "검증 없이 지원 표방하지 않음"으로 개정했다. 해제 조건과 되돌리는 절차는 해당 ADR 7절에 있다.
 - 영향:
   - 프론트엔드 구현 및 인수 테스트 매트릭스
 - 결정 시점:

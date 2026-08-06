@@ -19,6 +19,7 @@ related_documents:
   - platform/web-001-frontend-platform.md
   - platform/web-002-data-state.md
   - platform/web-003-routing-boundary.md
+  - platform/web-004-supported-browser-matrix.md
   - platform/deploy-003-validation-cookie-session.md
   - architecture/arch-001-domain-monolith.md
   - architecture/arch-002-external-ports-adapters.md
@@ -62,6 +63,8 @@ related_documents:
 | Server Components `fetch` + TanStack Query 5.101.4 | 확정 | Accepted ADR | [ADR-WEB-002](platform/web-002-data-state.md) | 초기·상호작용 데이터 책임 분리, 정확한 버전 고정 |
 | URL Query Parameter | 확정 | Accepted ADR | [ADR-WEB-002](platform/web-002-data-state.md) | 검색 상태의 공유·재현 |
 | React `useState` | 확정 | Duplicate or Derived Rule | [ADR-WEB-002](platform/web-002-data-state.md) | 화면 지역 상태 구현 규칙 |
+| 지원 브라우저 PC Chrome·Edge, Android Chrome | 확정 | Accepted ADR | [ADR-WEB-004](platform/web-004-supported-browser-matrix.md) | 인수 판정 대상 브라우저 매트릭스 |
+| iPhone Safari | 검증 없이 지원 표방하지 않음 | Accepted ADR | [ADR-WEB-004](platform/web-004-supported-browser-matrix.md) | 실단말 검증 수단이 없어 지원 표방을 낮추고 해제 조건을 남김 |
 | MVP 단일 모듈 | 확정 | Accepted ADR | [ADR-ARCH-001](architecture/arch-001-domain-monolith.md) | 초기 배포·테스트 단순화 |
 | 도메인 중심 계층형 모놀리스 | 확정 | Accepted ADR | [ADR-ARCH-001](architecture/arch-001-domain-monolith.md) | 단일 모듈과 같은 구조 결정 문제 |
 | Gradle 멀티모듈·독립 배포 | 범위 제외 | Post-MVP ADR | [ADR-ARCH-004](adr-backlog.md#adr-arch-004-멀티모듈독립-배포-전환) | 독립 확장·배포·소유권 근거가 생길 때 전환 |
@@ -141,6 +144,7 @@ related_documents:
 | [NFR-PERFORMANCE-006](../01-requirements/non-functional-requirements.md#nfr-performance-006-2차-확장-공개-조회와-인기-집계-성능) | [ADR-DATA-011](data/data-011-popular-restaurant-request-time-aggregation.md), [ADR-PERF-001](quality/perf-001-k6-load-testing.md) | 실시간 PostgreSQL 집계·실행계획·부하 기준, 선제 캐시 금지, k6 v2.1.0 정상 부하 판정 |
 | [NFR-INTEGRITY-005](../01-requirements/non-functional-requirements.md#nfr-integrity-005-처리-상태와-알림-원자성)·[NFR-RELIABILITY-004](../01-requirements/non-functional-requirements.md#nfr-reliability-004-실시간-집계와-서비스-내-알림-복구-경계) | [ADR-DATA-011](data/data-011-popular-restaurant-request-time-aggregation.md), [ADR-NOTIFY-002](integration/notify-002-in-app-notification-reliability.md) | 과거 순위 fallback 없음, 상태·이력·알림 같은 트랜잭션, Outbox 없음 |
 | [NFR-PRIVACY-005](../01-requirements/non-functional-requirements.md#nfr-privacy-005-2차-확장-개인정보-보존과-회원-탈퇴) | [ADR-DATA-012](data/data-012-second-expansion-retention-cleanup.md), [ADR-NOTIFY-002](integration/notify-002-in-app-notification-reliability.md) | 식별 제거·알림 보존·탈퇴, Preference·DeviceToken 미저장 |
+| [NFR-COMPATIBILITY-001](../01-requirements/non-functional-requirements.md#nfr-compatibility-001-웹모바일-브라우저-호환성) | [ADR-WEB-001](platform/web-001-frontend-platform.md), [ADR-WEB-004](platform/web-004-supported-browser-matrix.md) | 지원 표방 브라우저 3종과 화면 폭 5종, iPhone Safari 지원 표방 보류 |
 
 ## 4. API → ADR 매핑
 
@@ -246,6 +250,6 @@ Accepted 세 건은 현재 요구사항을 구현하는 최소 구조만 승인�
 | 제보·신고 보존 | `FR-SUBMISSION-001~003`, `FR-REPORT-001~003`, 요청·이력·멱등 데이터 | [ADR-DATA-012](data/data-012-second-expansion-retention-cleanup.md) Accepted | WS-12 | [`TST-E2-SUB-001`](../08-planning/second-expansion-test-matrix.md), `TST-E2-REP-001`, `TST-E2-LIFE-001` | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T08`, `E2-T09`, `E2-T11`, `E2-T15` |
 | 상태 전이·서비스 내 알림 | `FR-NOTIFICATION-001~004`, `notification` | [ADR-NOTIFY-002](integration/notify-002-in-app-notification-reliability.md) Accepted; FCM·Outbox·DLQ 비활성 | WS-12·WS-13 | [`TST-E2-ATOMIC-001`](../08-planning/second-expansion-test-matrix.md), `TST-E2-NOT-001`, `TST-E2-LIFE-001` | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T10`, `E2-T11`, `E2-T14`, `E2-T15` |
 | 외부 알림 채널 | 현재 FR 없음, Preference·DeviceToken 비저장 | [ADR-NOTIFY-001](adr-backlog.md#adr-notify-001-fcm-푸시-알림) Post-MVP, [ADR-EXT-002](adr-backlog.md#adr-ext-002-자동-복원력과-신뢰성-이벤트-전달) Conditional | WS-13 향후 재승인 | 현재 테스트·Task 없음 | 현재 E2 Task 없음 |
-| 2차 확장 전체 품질 | `NFR-TEST-005` | [ADR-TEST-001](quality/test-001-automation-strategy.md), [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md) | WS-09~WS-13 | [`TST-E2-SEC-001`](../08-planning/second-expansion-test-matrix.md), `TST-E2-E2E-001` | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md), `E2-T13`, `E2-T14`, `E2-T15` |
+| 2차 확장 전체 품질 | `NFR-TEST-005` | [ADR-TEST-001](quality/test-001-automation-strategy.md), [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md), [ADR-WEB-004](platform/web-004-supported-browser-matrix.md) | WS-09~WS-13 | [`TST-E2-SEC-001`](../08-planning/second-expansion-test-matrix.md), `TST-E2-E2E-001` | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md), `E2-T13`, `E2-T14`, `E2-T15` |
 
 `ADR 또는 명시적 보류` 칸이 비어 있는 2차 확장 기능은 없다. 외부 푸시용 `E2-T12`는 현재 생성하지 않는다. 새 캐시·Batch·외부 채널·저장 개념이 필요해지면 이 표와 상위 범위를 먼저 변경하고 별도 Task를 승인한다.
