@@ -6,7 +6,9 @@ related_documents:
   - expansion-2-task-breakdown.md
   - second-expansion-baseline-review.md
   - second-expansion-performance-verification.md
+  - second-expansion-browser-verification.md
   - ../07-adr/quality/perf-001-k6-load-testing.md
+  - ../07-adr/platform/web-004-supported-browser-matrix.md
   - ../01-requirements/functional-requirements.md
   - ../01-requirements/business-rules.md
   - ../01-requirements/non-functional-requirements.md
@@ -78,18 +80,14 @@ related_documents:
 |---|---|---|---|---|
 | 정상 부하 50명·20 RPS p95·오류율 측정 (여전히 보류) | `TST-E2-PERF-001` | ~~자동 반복 실행 도구가 미결정이다~~ 도구 차단은 해소됐다([ADR-PERF-001](../07-adr/quality/perf-001-k6-load-testing.md) Accepted, 2026-08-06). **현재 사유는 팀이 실측을 3차 확장 이후로 연기하기로 결정한 것이다(2026-08-06)** | 3차 확장 이후 실측 수행. 시나리오·기준 데이터·절차는 이미 준비돼 있다 | [#148](https://github.com/team-youngkk/masit-on/issues/148) |
 | 최대 부하 200명·80 RPS 측정 | `TST-E2-PERF-001` | 시나리오를 아직 만들지 않았다. `RV-NFR-011`이 "정상 부하와 최대 부하를 각각 실행한다"로 이미 확정한 항목이라 범위 밖이 아니다 | 시나리오 작성 후 정상 부하와 같은 환경에서 측정 | 후속 이슈 |
-| 지원 브라우저 매트릭스 중 iPhone Safari | `TST-E2-E2E-001` | **팀에 iPhone 실단말이 없어 검증 수단 자체가 없다.** 담당자 배정으로 해소되지 않는다 | 아래 세 경로 중 하나를 팀이 선택해야 한다 | 후속 이슈 |
-| 지원 브라우저 매트릭스 중 PC Chrome·Edge, Android Chrome | `TST-E2-E2E-001` | 실단말 수동 확인이 필요하며 자동화 수단이 확정돼 있지 않다 | 실단말 보유자 배정 후 수동 검증 | 후속 이슈 |
+| ~~지원 브라우저 매트릭스 중 iPhone Safari~~ | `TST-E2-E2E-001` | 해제됨. 2026-08-06 [ADR-WEB-004](../07-adr/platform/web-004-supported-browser-matrix.md)가 iPhone Safari를 "검증 없이 지원 표방하지 않음"으로 낮춰 `TST-E2-E2E-001` 판정 대상에서 제외했다 | — | [#149](https://github.com/team-youngkk/masit-on/issues/149)에서 처리 완료 |
+| 지원 브라우저 매트릭스 중 PC Chrome·Edge, Android Chrome | `TST-E2-E2E-001` | **2차 확장 화면이 아직 운영에 배포되지 않아 실브라우저로 확인할 수 없다.** 2026-08-06 팀이 배포 이후 수행으로 정했다. 배포본(1차 확장)의 실브라우저 확인과 2차 확장 화면의 로컬 화면 폭 확인은 [2차 확장 브라우저 검증 기록](second-expansion-browser-verification.md)에 있다 | 2차 확장 운영 배포 후 세 브라우저 실빌드에서 화면 폭 5종을 포함해 수동 검증 | [#149](https://github.com/team-youngkk/masit-on/issues/149) |
 
-### iPhone Safari 검증 공백
+### iPhone Safari 검증 공백 — 2026-08-06 결정
 
-iPhone Safari는 [범위](../00-overview/scope.md), [비기능 요구사항](../01-requirements/non-functional-requirements.md), [ADR-WEB-001](../07-adr/platform/web-001-frontend-platform.md)이 모두 지원 대상으로 확정한 브라우저다. 팀에 실단말이 없어 MVP 최종 검증에서도 확인하지 못했고([로컬 실행·회귀 검증 결과](mvp-local-verification.md)), 2차 확장에서도 같은 상태다. 담당자 배정으로는 해소되지 않으므로 팀이 다음 중 하나를 결정해야 한다.
+2026-08-06 [ADR-WEB-004](../07-adr/platform/web-004-supported-browser-matrix.md)가 Accepted가 되면서 iPhone Safari는 **"검증 없이 지원을 표방하지 않는 환경"**으로 조율됐다. 2차 확장 검증 대상(`TST-E2-E2E-001`)에서 완전히 제외되며, `E2-T15` 완료를 막는 보류 항목에서도 제거됐다.
 
-1. 실단말을 확보한다. 팀원 개인 기기나 대여를 사용하고 검증 환경을 기록한다.
-2. 원격 실단말 서비스를 도입한다. 미결정 기술이므로 도구·비용·CI 연동을 정하는 ADR을 먼저 올린다.
-3. 지원 브라우저 매트릭스에서 iPhone Safari를 제외하거나 "검증 없이 지원 표방하지 않음"으로 낮춘다. 위 세 계약 문서를 모두 바꾸는 결정이므로 소유자 합의가 필요하다.
-
-결정 전까지 iPhone Safari 동작은 **검증되지 않은 상태**로 남는다. 검증했다고 보고하지 않는다.
+해제 사유·대응 절차·이슈 연동은 [2차 확장 브라우저 검증 기록](second-expansion-browser-verification.md) 7절에 있다.
 
 ### 성능 측정 보류 사유 변경 (2026-08-06)
 
@@ -101,7 +99,7 @@ iPhone Safari는 [범위](../00-overview/scope.md), [비기능 요구사항](../
 
 연기로 남는 위험은 하나 분명하다. [ADR-DATA-011](../07-adr/data/data-011-popular-restaurant-request-time-aggregation.md)이 인기 맛집에 캐시·Snapshot·Batch를 두지 않기로 한 근거가 "필요하다는 측정 근거가 없다"인데, 요청마다 `favorite` 전량을 집계하는 구조가 p95 500ms를 지키는지는 **실측 전까지 확인되지 않는다.** 해당 코드는 이미 제한 공개로 나가 있다.
 
-`E2-T15` 시점에 남긴 성능 회귀 방어선은 다음 세 가지다. 부하 측정이 실제로 수행되기 전까지 회귀 탐지는 이 셋이 담당한다.
+부하 측정이 실제로 수행되기 전까지 회귀 탐지는 다음 셋이 담당한다. 셋 다 쿼리 수와 실행계획의 구조적 악화는 잡지만 부하 하의 p95 악화는 잡지 못한다.
 
 - `PublicCurationQueryCountApiTest`, `PopularRestaurantQueryCountApiTest` — 공개 조회 쿼리 수 상수 가드
 - `CurationPublicQueryPlanPostgreSqlIntegrationTest` — PostgreSQL 실행계획(`loops=1`) 검증
