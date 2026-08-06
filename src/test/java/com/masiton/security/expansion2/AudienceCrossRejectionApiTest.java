@@ -20,12 +20,15 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.masiton.member.application.MemberPrincipal;
 import com.masiton.member.application.port.out.MemberTokenIssuer;
+import com.masiton.common.security.MemberSessionAccessChecker;
 import com.masiton.test.FullContextIntegrationTest;
 
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -138,6 +141,9 @@ class AudienceCrossRejectionApiTest extends FullContextIntegrationTest {
                 .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
     }
 
+    @MockitoBean
+    private MemberSessionAccessChecker accessChecker;
+
     @Test
     @DisplayName("공개 맛집 경로(map-points, popular)는 회원 토큰이 포함되어도 세션 조회를 거치지 않고 200 OK로 처리된다")
     void 공개맛집경로_회원토큰동반시_정상200응답() throws Exception {
@@ -148,6 +154,8 @@ class AudienceCrossRejectionApiTest extends FullContextIntegrationTest {
 
         mockMvc.perform(get("/api/restaurants/popular").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk());
+
+        verifyNoInteractions(accessChecker);
     }
 
     private String memberToken() {
