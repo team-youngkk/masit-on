@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
 import com.masiton.common.web.ErrorResponse;
+import com.masiton.common.web.SafeTextPolicy;
 import com.masiton.participation.application.port.in.ParticipationUseCase;
 import com.masiton.participation.application.port.out.ParticipationStore;
 import com.masiton.participation.application.port.out.ParticipationTargetReader;
@@ -275,7 +276,7 @@ public class ParticipationService implements ParticipationUseCase {
         if (raw == null) {
             throw invalid(field, "필수 입력값입니다.");
         }
-        return com.masiton.common.web.SafeTextPolicy.requireSafe(raw, field);
+        return SafeTextPolicy.requireSafe(raw, field);
     }
 
     private byte[] fingerprint(ParticipationTargetType type, Map<String, Object> candidate) {

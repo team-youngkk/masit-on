@@ -20,6 +20,7 @@ import com.masiton.common.idempotency.application.IdempotencyRequest;
 import com.masiton.common.idempotency.application.IdempotencyResponse;
 import com.masiton.common.idempotency.application.port.in.IdempotentCreationUseCase;
 import com.masiton.common.web.BusinessException;
+import com.masiton.common.web.SafeTextPolicy;
 import com.masiton.member.application.port.in.LockActiveMemberUseCase;
 import com.masiton.personal.application.port.in.CollectionOption;
 import com.masiton.personal.application.port.in.PersonalCollectionUseCase;
@@ -120,7 +121,7 @@ public class PersonalCollectionService implements PersonalCollectionUseCase {
     }
 
     private String normalizeName(String name) {
-        String normalized = com.masiton.common.web.SafeTextPolicy.requireSafe(name, "name");
+        String normalized = SafeTextPolicy.requireSafe(name, "name");
         int length = normalized.codePointCount(0, normalized.length());
         if (length < 1 || length > 50) {
             throw new BusinessException(com.masiton.common.web.ErrorCode.INVALID_FIELD_VALUE,
