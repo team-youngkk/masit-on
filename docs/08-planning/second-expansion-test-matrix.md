@@ -44,25 +44,25 @@ related_documents:
 | `FR-REPORT-002` | 본인 목록·상세·신고자 비노출·다른 회원 은닉 | `TST-E2-REP-001` | `E2-T08` |
 | `FR-REPORT-003` | 관리자 상태 전이·자동 비공개 금지·감사 이력 | `TST-E2-REP-001`, `TST-E2-ATOMIC-001` | `E2-T09`, `E2-T11` |
 | `FR-NOTIFICATION-001` | 상태·이력·알림 단일 트랜잭션·요청/상태 중복 방지 | `TST-E2-ATOMIC-001` | `E2-T11` |
-| `FR-NOTIFICATION-002` | 본인 목록·페이지·정확한 미읽음 수·90일/200개 경계 | `TST-E2-NOT-001` | `E2-T10` |
-| `FR-NOTIFICATION-003` | 본인 개별 읽음·멱등성·타 회원 은닉 | `TST-E2-NOT-001` | `E2-T10` |
-| `FR-NOTIFICATION-004` | 전체 읽음 원자성·멱등성·정확한 미읽음 수 | `TST-E2-NOT-001` | `E2-T10` |
+| `FR-NOTIFICATION-002` | 본인 목록·페이지·정확한 미읽음 수·90일/200개 경계 | `TST-E2-NOT-001` | `E2-T10`, `E2-T14` |
+| `FR-NOTIFICATION-003` | 본인 개별 읽음·멱등성·타 회원 은닉 | `TST-E2-NOT-001` | `E2-T10`, `E2-T14` |
+| `FR-NOTIFICATION-004` | 전체 읽음 원자성·멱등성·정확한 미읽음 수 | `TST-E2-NOT-001` | `E2-T10`, `E2-T14` |
 
 ## 3. 비즈니스 규칙·NFR 교차 검증
 
 | 테스트 묶음 | 적용 계약 | 필수 계층·증거 | 완료 Task |
 |---|---|---|---|
 | `TST-E2-COL-001` | `BR-COLLECTION-001~005` | 단위, MockMvc, PostgreSQL 동시성, 브라우저 소유권·빈 상태 | `E2-T03` |
-| `TST-E2-POP-001` | `BR-POPULAR-001~003`, `NFR-PERFORMANCE-006`, `NFR-RELIABILITY-004` | PostgreSQL 실행계획·부하, 공개 API 계약, 변경 후 다음 조회 반영 | `E2-T04`, `E2-T05`, `E2-T14` |
+| `TST-E2-POP-001` | `BR-POPULAR-001~003`, `NFR-PERFORMANCE-006`, `NFR-RELIABILITY-004` | PostgreSQL 실행계획·부하, 공개 API 계약, 변경 후 다음 조회 반영 | `E2-T04`, `E2-T05`, `E2-T15` |
 | `TST-E2-CUR-001` | `BR-CURATION-001~004`, `NFR-OBSERVABILITY-004` | 관리자/공개 API, PostgreSQL 원자성, 브라우저 편집·공개 흐름 | `E2-T06`, `E2-T07` |
-| `TST-E2-SUB-001` | `BR-SUBMISSION-001~004`, `NFR-SECURITY-006` | 입력 fuzz·rate limit·중복 동시성, 회원/관리자 API·브라우저 | `E2-T08`, `E2-T09`, `E2-T14` |
-| `TST-E2-REP-001` | `BR-REPORT-001~004`, `NFR-SECURITY-006` | 입력 fuzz·rate limit·중복 동시성, 자동 비공개 부재, API·브라우저 | `E2-T08`, `E2-T09`, `E2-T14` |
-| `TST-E2-NOT-001` | `BR-NOTIFICATION-002~004` | API 계약, 읽음 동시성, 알림함·`99+` 브라우저 표시 | `E2-T10` |
-| `TST-E2-ATOMIC-001` | `BR-NOTIFICATION-001`, `NFR-INTEGRITY-005`, `NFR-RELIABILITY-004` | 상태·이력·알림 각 저장 지점 실패 주입과 전체 rollback | `E2-T11`, `E2-T14` |
-| `TST-E2-LIFE-001` | `NFR-PRIVACY-005`, `ADR-DATA-012` | 시간 경계, 재실행, 부분 실패, 회원 탈퇴, 식별 제거 통합 테스트 | `E2-T02`, `E2-T10`, `E2-T14` |
-| `TST-E2-SEC-001` | `NFR-SECURITY-006`, `NFR-TEST-005` | 회원/관리자 audience 교차 거부, 타 회원 자원, 악성 입력 회귀 | `E2-T14` |
-| `TST-E2-PERF-001` | `NFR-PERFORMANCE-006`, `NFR-TEST-005`, `ADR-DATA-011` | 공개 조회 p95·쿼리 수·실행계획·대표 데이터 부하 증거 | `E2-T14` |
-| `TST-E2-E2E-001` | 2차 확장 전체 FR·BR·NFR | 지원 브라우저·360px·접근성·V3 전진 migration·CI 전체 회귀 | `E2-T13`, `E2-T14` |
+| `TST-E2-SUB-001` | `BR-SUBMISSION-001~004`, `NFR-SECURITY-006` | 입력 fuzz·rate limit·중복 동시성, 회원/관리자 API·브라우저 | `E2-T08`, `E2-T09`, `E2-T15` |
+| `TST-E2-REP-001` | `BR-REPORT-001~004`, `NFR-SECURITY-006` | 입력 fuzz·rate limit·중복 동시성, 자동 비공개 부재, API·브라우저 | `E2-T08`, `E2-T09`, `E2-T15` |
+| `TST-E2-NOT-001` | `BR-NOTIFICATION-002~004` | API 계약, 읽음 동시성, 알림함·`99+` 브라우저 표시 | `E2-T10`, `E2-T14` |
+| `TST-E2-ATOMIC-001` | `BR-NOTIFICATION-001`, `NFR-INTEGRITY-005`, `NFR-RELIABILITY-004` | 상태·이력·알림 각 저장 지점 실패 주입과 전체 rollback | `E2-T11`, `E2-T15` |
+| `TST-E2-LIFE-001` | `NFR-PRIVACY-005`, `ADR-DATA-012` | 시간 경계, 재실행, 부분 실패, 회원 탈퇴, 식별 제거 통합 테스트 | `E2-T02`, `E2-T10`, `E2-T15` |
+| `TST-E2-SEC-001` | `NFR-SECURITY-006`, `NFR-TEST-005` | 회원/관리자 audience 교차 거부, 타 회원 자원, 악성 입력 회귀 | `E2-T15` |
+| `TST-E2-PERF-001` | `NFR-PERFORMANCE-006`, `NFR-TEST-005`, `ADR-DATA-011` | 공개 조회 p95·쿼리 수·실행계획·대표 데이터 부하 증거 | `E2-T15` |
+| `TST-E2-E2E-001` | 2차 확장 전체 FR·BR·NFR | 지원 브라우저·360px·접근성·V3 전진 migration·CI 전체 회귀 | `E2-T13`, `E2-T14`, `E2-T15` |
 
 ## 4. 범위 밖 검증
 
