@@ -1,7 +1,8 @@
 ---
-status: Partial
+status: In Progress
 verification_date: 2026-08-06
-owner: 양성훈
+owners:
+  - 양성훈
 related_documents:
   - second-expansion-test-matrix.md
   - mvp-local-verification.md
@@ -22,7 +23,7 @@ related_documents:
 
 판정 대상 매트릭스는 [ADR-WEB-004](../07-adr/platform/web-004-supported-browser-matrix.md) 6.1절의 PC Chrome, PC Edge, Android Chrome과 대표 화면 폭 360px, 390px, 768px, 1280px, 1440px다. iPhone Safari는 같은 ADR에 따라 판정 대상이 아니며 이 문서에서도 **미검증**으로 남긴다.
 
-**이 문서의 상태는 Partial이다.** 확인한 항목과 확인하지 못한 항목을 5절에서 구분한다. 확인하지 못한 항목을 통과로 적지 않는다.
+**이 문서는 부분 검증 상태다.** 확인한 항목과 확인하지 못한 항목을 5절에서 구분한다. 확인하지 못한 항목을 통과로 적지 않는다. 5절이 비워질 때 상태를 `Verified`로 바꾼다.
 
 ## 2. 확인 환경
 

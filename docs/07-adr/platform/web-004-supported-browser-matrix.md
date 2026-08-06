@@ -28,7 +28,9 @@ superseded_by: null
 
 ## 1. 상태
 
-Accepted. 2026-08-06 iPhone Safari 검증 수단이 없는 상태를 계약과 일치시키기 위해 [RV-NFR-006](../../01-requirements/non-functional-requirements.md#rv-nfr-006-지원-브라우저-범위)의 iPhone Safari 항목을 개정했다. 이 결정은 [프론트엔드 최종 책임자](../../03-team/ownership.md) 양성훈·김인안이 소유하고, 팀 합의는 이 문서를 포함한 PR의 소유자 2인 승인으로 확정한다. 적용 추적은 [#149](https://github.com/team-youngkk/masit-on/issues/149)에서 한다.
+Accepted. 2026-08-06 iPhone Safari 검증 수단이 없는 상태를 계약과 일치시키기 위해 [RV-NFR-006](../../01-requirements/non-functional-requirements.md#rv-nfr-006-지원-브라우저-범위)의 iPhone Safari 항목을 개정했다.
+
+원 결정인 RV-NFR-006이 2026-07-27 팀 4인 합의였으므로 그 개정도 같은 범위에서 확인한다. 이 결정은 [프론트엔드 최종 책임자](../../03-team/ownership.md) 양성훈·김인안이 소유하고, 이 ADR이 전체 웹 UI 인수 판정 기준을 바꾸므로 박진영·이우람도 결정 당사자로 본다. 팀 합의는 이 문서를 포함한 PR에서 팀 4인 확인으로 확정한다. 적용 추적은 [#149](https://github.com/team-youngkk/masit-on/issues/149)에서 한다.
 
 ## 2. 결정 요약
 
