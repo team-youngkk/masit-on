@@ -5,6 +5,7 @@ related_documents:
   - second-expansion-baseline-review.md
   - second-expansion-scope-and-terminology.md
   - second-expansion-test-matrix.md
+  - second-expansion-browser-verification.md
   - expansion-2-implementation-plan.md
   - expansion-2-task-breakdown.md
   - ../00-overview/scope.md
@@ -28,5 +29,6 @@ related_documents:
 | [2차 확장 테스트 추적표](second-expansion-test-matrix.md) | 21개 기능 요구사항과 BR·NFR을 자동화·인수 테스트 묶음으로 연결 |
 | [2차 확장 구현 계획](expansion-2-implementation-plan.md) | 상위 계약 이후 기준선·병렬 기능 경로·알림·통합의 구현 순서 정의 |
 | [2차 확장 최종 Task 분해](expansion-2-task-breakdown.md) | `E2-T01`~`E2-T15` 실행 Task와 선행·병렬·완료 조건 정의. 범위 밖 푸시 `E2-T12`는 미생성 |
+| [2차 확장 브라우저 검증 기록](second-expansion-browser-verification.md) | `TST-E2-E2E-001`의 확인 환경·화면 폭·접근성 결과와 미검증으로 남는 항목 |
 
 구현 계획은 제품 범위, 요구사항, API·데이터 명세와 ADR을 변경하지 않는다. 상위 문서가 바뀌면 영향받는 Task와 완료 조건을 함께 갱신한다.

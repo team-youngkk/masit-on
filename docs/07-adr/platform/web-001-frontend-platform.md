@@ -15,6 +15,7 @@ related_documents:
   - ../../04-product/prd/00-product-overview.md
   - ../../05-specs/api/README.md
   - web-003-routing-boundary.md
+  - web-004-supported-browser-matrix.md
   - ../../06-architecture/technology-policy.md
   - web-002-data-state.md
   - ../security/auth-001-spring-security-jwt.md
@@ -102,7 +103,7 @@ Node.js 24.18.0, Next.js 16.2.11, TypeScript 7.0.2를 정확히 고정한다.
 
 ## 12. 구현 및 운영 영향
 
-개발 환경, CI([ADR-CI-001](ci-001-github-actions-quality-gate.md))와 컨테이너 빌드가 동일한 Node 24.18.0 기준을 사용해야 하며, 이는 GitHub Actions에서 검증된다. PC Chrome·Edge, Android Chrome, iPhone Safari의 테스트 시점 최신 및 직전 안정 버전을 지원하고 360px, 390px, 768px, 1280px, 1440px 화면 폭을 검증한다.
+개발 환경, CI([ADR-CI-001](ci-001-github-actions-quality-gate.md))와 컨테이너 빌드가 동일한 Node 24.18.0 기준을 사용해야 하며, 이는 GitHub Actions에서 검증된다. 지원 브라우저 매트릭스는 [ADR-WEB-004](web-004-supported-browser-matrix.md)가 소유한다. PC Chrome·Edge, Android Chrome의 테스트 시점 최신 및 직전 안정 버전을 지원하고 360px, 390px, 768px, 1280px, 1440px 화면 폭을 검증한다. iPhone Safari는 같은 ADR에 따라 지원 대상으로 표방하지 않는다.
 
 ## 13. 검증 방법
 
