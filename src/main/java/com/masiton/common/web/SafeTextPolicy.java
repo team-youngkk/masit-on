@@ -11,6 +11,9 @@ package com.masiton.common.web;
  * {@link com.masiton.curation.application.AdminCurationService},
  * {@link com.masiton.participation.application.ParticipationService}
  *
+ * <p>{@code AdminParticipationService.safeText}(관리자 검토 내용)는 길이 검사와 결합돼 있어 아직
+ * 자체 구현이다. 거부 문자 집합을 바꿀 때 함께 갱신한다.
+ *
  * <p>제어 문자를 거부하는 이유는 두 가지다. 로그 위조(개행 주입)를 막고, PostgreSQL이 문자열 파라미터의
  * NUL을 거부해 `500`으로 새는 경로를 `400 INVALID_FIELD_VALUE`로 되돌린다.
  */
