@@ -1,0 +1,148 @@
+# NFR-PERFORMANCE-006 정상 부하 성능 검증 (#148).
+#
+# 수동 트리거 전용이다. pull_request·push·schedule 트리거를 붙이지 않는다.
+# 저장소 ruleset이 필수 상태 검사로 요구하는 이름은 `백엔드 빌드·테스트`와
+# `프론트엔드 빌드·타입 검사` 둘뿐이다. 이 워크플로가 PR에 붙으면 새 검사 이름이
+# PR 체크 목록에 나타나 병합 게이트의 판단 기준이 흐트러진다. 또 부하 테스트는
+# 운영 동급 임시 환경(EC2 t4g.medium, RDS db.t4g.micro)을 대상으로 하므로 PR마다
+# 돌릴 수 있는 성격이 아니다. 측정할 준비가 된 시점에 사람이 직접 실행한다.
+#
+# 측정 대상 환경은 Kakao·YouTube 외부 연동을 WireMock Stub으로 대체한 상태여야 한다.
+# 실제 외부 API를 호출하는 환경을 base_url로 넣지 않는다.
+#
+# 주의: 이 저장소는 공개 저장소다. workflow_dispatch 입력값은 실행 페이지에 그대로
+# 표시되고 Secret처럼 마스킹되지 않는다. 즉 여기에 넣은 base_url은 누구나 볼 수 있다.
+# 게다가 GitHub 호스티드 러너에는 고정 egress IP가 없어, 러너가 대상에 도달하려면
+# 보안 그룹을 넓게 열어야 한다. 측정 인스턴스는 운영과 달리 Nginx 검증 게이트 없이
+# 애플리케이션 8080이 그대로 노출된 상태다.
+#
+# 따라서 RV-NFR-011이 요구하는 운영 동급 측정은 이 워크플로가 아니라 대상과 같은 VPC
+# 안에서 k6를 직접 실행하는 방식을 쓴다. 절차는 ADR-PERF-001 6.3절과
+# docs/08-planning/second-expansion-performance-verification.md 5절에 있다.
+# 이 워크플로는 인터넷에 노출해도 되는 임시 환경을 상대로 시나리오가 도는지 확인하는
+# 보조 수단이다.
+name: 성능
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: '측정 대상 애플리케이션 URL (예: http://10.0.1.10:8080)'
+        required: true
+        type: string
+      notes:
+        description: '실행 메모 (측정 환경·데이터 상태 등). 결과 요약에 남는다'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: performance-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  load-test:
+    name: 성능 부하 테스트
+    runs-on: ubuntu-24.04
+    env:
+      # 팀이 확정한 부하 도구 버전이다. 기술 정책 3절에 따라 `latest`를 쓰지 않는다.
+      K6_VERSION: '2.1.0'
+      BASE_URL: ${{ inputs.base_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # 서드파티 setup 액션을 쓰지 않는다. 공식 릴리즈 tarball을 버전 고정해 받는 쪽이
+      # 의존성이 적고 무엇이 설치되는지 워크플로 안에서 그대로 읽힌다.
+      #
+      # 체크섬은 같은 릴리즈의 checksums 파일이 아니라 워크플로에 박은 리터럴로 대조한다.
+      # 릴리즈 자산이 바뀌면 checksums 파일도 같이 바뀌므로 그 파일과의 대조는 전송 중
+      # 손상만 잡고 자산 교체는 잡지 못한다. 값이 저장소에 있으면 변경이 diff로 드러난다.
+      # K6_VERSION을 올릴 때 이 값도 같이 바꾼다.
+      - name: k6 설치 (버전 고정)
+        env:
+          K6_SHA256: '295d961ebfca306f295f1133068dcd403a8171c87f387928f5f30b0fbcff858a'
+        run: |
+          set -euo pipefail
+          asset="k6-v${K6_VERSION}-linux-amd64"
+          curl -fsSL -o k6.tar.gz \
+            "https://github.com/grafana/k6/releases/download/v${K6_VERSION}/${asset}.tar.gz"
+          echo "${K6_SHA256}  k6.tar.gz" | sha256sum -c -
+          tar -xzf k6.tar.gz
+          sudo install -m 0755 "${asset}/k6" /usr/local/bin/k6
+          rm -rf k6.tar.gz "${asset}"
+          installed=$(k6 version)
+          echo "설치된 k6: ${installed}"
+          case "$installed" in
+            *"v${K6_VERSION}"*) ;;
+            *) echo "요구 버전 v${K6_VERSION}이 아니다"; exit 1 ;;
+          esac
+
+      # 대상 URL은 자유 문자열 입력이라 쉘 명령으로 흘러 들어가기 전에 형식을 검사한다.
+      #
+      # 운영 대상 차단은 오타·착각으로 제한 공개 인스턴스에 7,000건 넘는 요청이 들어가는
+      # 것을 막는다. 운영 도메인은 Nginx 검증 게이트가 앞에 있어 시나리오가 setup에서
+      # 중단되지만, 오리진(EC2 주소:8080)을 직접 넣으면 게이트를 건너뛴다. 도메인만으로는
+      # 그 경로를 막을 수 없으므로 운영 오리진이 확정되면 여기에 함께 추가한다.
+      - name: 측정 대상 URL 검증
+        run: |
+          set -euo pipefail
+          case "$BASE_URL" in
+            http://*|https://*) ;;
+            *) echo "base_url은 http:// 또는 https://로 시작해야 한다" >&2; exit 1 ;;
+          esac
+          case "$BASE_URL" in
+            *[[:space:]]*|*'`'*|*'$'*|*';'*|*'&'*|*'|'*)
+              echo "base_url에 허용되지 않는 문자가 있다" >&2; exit 1 ;;
+          esac
+          case "$BASE_URL" in
+            *masiton.click*)
+              echo "제한 공개 운영 환경은 부하 대상이 아니다(ADR-PERF-001 6.4절)" >&2; exit 1 ;;
+          esac
+          echo "형식 검증 통과"
+
+      # threshold를 위반하면 k6가 종료 코드 99로 끝나고 이 step이 실패하므로 job도
+      # 실패한다. 사람 판단 없이 통과·실패가 갈리는 것이 이 워크플로의 목적이다.
+      - name: 정상 부하 시나리오 실행 (50명 / 20 RPS)
+        run: k6 run perf/k6/normal-load-public-read.js
+        env:
+          BASE_URL: ${{ inputs.base_url }}
+          RESULT_DIR: perf/k6/results
+
+      - name: 결과 요약 기록
+        if: always()
+        run: |
+          set -euo pipefail
+          # 대상 주소를 여기에 적지 않는다. 공개 저장소의 실행 요약과 아티팩트는 누구나
+          # 읽으므로, 게이트 없이 8080을 노출한 측정 인스턴스의 주소를 남기지 않는다.
+          # 어느 환경을 쟀는지는 검증 결과 문서에 기록한다.
+          {
+            echo '## NFR-PERFORMANCE-006 정상 부하 결과'
+            echo
+            echo "- k6: v${K6_VERSION}"
+            echo "- 메모: ${NOTES:-(없음)}"
+            echo
+            if [ -f perf/k6/results/summary.txt ]; then
+              echo '```text'
+              cat perf/k6/results/summary.txt
+              echo '```'
+            else
+              echo '요약 파일이 생성되지 않았다. 실행 로그를 확인한다.'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          NOTES: ${{ inputs.notes }}
+
+      # 실패한 실행의 결과가 더 필요하므로 항상 보관한다.
+      # 보관 기간은 ci.yml의 테스트 리포트와 같은 14일로 맞춘다.
+      - name: 결과 보관
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-normal-load-results
+          path: |
+            perf/k6/results/summary.json
+            perf/k6/results/summary.txt
+          retention-days: 14
+          if-no-files-found: warn

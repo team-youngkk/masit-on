@@ -20,6 +20,7 @@ related_documents:
   - ../../03-team/roles.md
   - ../adr-traceability.md
   - ../adr-backlog.md
+  - perf-001-k6-load-testing.md
 supersedes: []
 superseded_by: null
 ---
@@ -98,15 +99,16 @@ Accepted
 
 - 도메인 정합성: [NFR-INTEGRITY-001](../../01-requirements/non-functional-requirements.md#nfr-integrity-001-참조-및-필수값-정합성)~[NFR-INTEGRITY-004](../../01-requirements/non-functional-requirements.md#nfr-integrity-004-외부-링크와-내부-데이터-분리)에 대응하는 통합 테스트(필수값·참조 무결성, 중복·동시 등록, 등록 원자성, 외부 링크 실패와 내부 데이터 분리)가 존재하고 통과해야 한다. 구체적으로 [scope.md](../../00-overview/scope.md) 3.4의 중복 판정 기준(동일 place id, 동일 채널 id, 동일 영상 id, 동일 (맛집, 유튜버, 영상) 조합)을 각각 재현하는 테스트가 있어야 한다.
 - 외부 장애 격리: WireMock으로 Kakao·YouTube 응답 지연·실패·계약 변경을 재현했을 때, 이미 저장된 맛집의 목록·상세 기본 정보 조회가 계속 성공하는지 확인한다([scope.md](../../00-overview/scope.md), [NFR-EXTERNAL-001](../../01-requirements/non-functional-requirements.md#nfr-external-001-영상-원본과-외부-링크-분리)).
-- 성능·오류율 기준: 계약·통합 테스트는 일반 조회 p95 500ms, 검색·필터 조합 p95 800ms, 관리자 등록(외부 대기 제외) p95 1초, 정상 부하 서버 오류율 1% 미만이라는 기준을 위반하는 회귀를 탐지해야 한다. 운영 동급 단일 EC2, 기준 데이터 100%, WireMock 외부 Stub, 정상 부하 50명·20 RPS와 최대 부하 200명·80 RPS를 사용한다. 부하 생성 도구 채택은 [ADR-PERF-001](../adr-backlog.md#adr-perf-001-k6-성능-테스트-체계)에서 별도로 다룬다.
+- 성능·오류율 기준: 계약·통합 테스트는 일반 조회 p95 500ms, 검색·필터 조합 p95 800ms, 관리자 등록(외부 대기 제외) p95 1초, 정상 부하 서버 오류율 1% 미만이라는 기준을 위반하는 회귀를 탐지해야 한다. 운영 동급 단일 EC2, 기준 데이터 100%, WireMock 외부 Stub, 정상 부하 50명·20 RPS와 최대 부하 200명·80 RPS를 사용한다. 부하 생성 도구와 실행 체계는 [ADR-PERF-001](perf-001-k6-load-testing.md)이 소유한다(k6 v2.1.0, `perf/k6/` 시나리오, `workflow_dispatch` 전용 실행).
 - 배포 게이트: 필수 빌드·테스트가 실패한 변경은 운영 배포 후보로 승인되지 않는다([NFR-TEST-003](../../01-requirements/non-functional-requirements.md#nfr-test-003-배포-품질-게이트)).
 
 ## 14. 재검토 조건
 
-테스트 실행 시간이 각 워크스트림 담당자의 독립적 개발 속도를 지속적으로 저해할 때, 초기 기준 데이터 규모나 목표 부하가 변경될 때, 또는 [ADR-PERF-001](../adr-backlog.md#adr-perf-001-k6-성능-테스트-체계)에 따라 새로운 성능 테스트 도구·계층이 승인될 때 재검토한다.
+테스트 실행 시간이 각 워크스트림 담당자의 독립적 개발 속도를 지속적으로 저해할 때, 초기 기준 데이터 규모나 목표 부하가 변경될 때, 또는 [ADR-PERF-001](perf-001-k6-load-testing.md)이 정한 도구·버전·부하 모델이 바뀔 때 재검토한다.
 
 ## 15. 관련 문서
 
 - [NFR](../../01-requirements/non-functional-requirements.md)
 - [CI ADR](../platform/ci-001-github-actions-quality-gate.md)
 - [외부 기준정보 확인 ADR](../integration/ext-001-reference-verification.md)
+- [ADR-PERF-001 k6 부하 테스트 도구와 실행 체계](perf-001-k6-load-testing.md)

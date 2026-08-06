@@ -26,6 +26,7 @@ related_documents:
 | [2차 확장 선행 상태 검토](second-expansion-baseline-review.md) | 1차 확장 계약·구현과 행동 데이터·비동기 알림 운영 기반을 확인하고 2차 확장 구현 착수 게이트 정의 |
 | [2차 확장 범위와 용어 결정](second-expansion-scope-and-terminology.md) | 컬렉션·인기·큐레이션·제보·신고·사용자 알림의 승인된 초기 범위와 제외 범위 정의 |
 | [2차 확장 테스트 추적표](second-expansion-test-matrix.md) | 21개 기능 요구사항과 BR·NFR을 자동화·인수 테스트 묶음으로 연결 |
+| [2차 확장 성능 검증 결과](second-expansion-performance-verification.md) | `NFR-PERFORMANCE-006` 정상 부하 측정의 환경·기준 데이터·재현 절차와 판정 결과 |
 | [2차 확장 구현 계획](expansion-2-implementation-plan.md) | 상위 계약 이후 기준선·병렬 기능 경로·알림·통합의 구현 순서 정의 |
 | [2차 확장 최종 Task 분해](expansion-2-task-breakdown.md) | `E2-T01`~`E2-T15` 실행 Task와 선행·병렬·완료 조건 정의. 범위 밖 푸시 `E2-T12`는 미생성 |
 
