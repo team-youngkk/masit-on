@@ -34,7 +34,7 @@ Accepted. 2026-08-06 iPhone Safari 검증 수단이 없는 상태를 계약과 �
 
 ## 2. 결정 요약
 
-지원을 표방하는 브라우저 매트릭스는 **PC Chrome, PC Edge, Android Chrome**의 테스트 시점 최신 및 직전 안정 버전이다. 대표 화면 폭 360px, 390px, 768px, 1280px, 1440px 검증 기준은 바꾸지 않는다.
+지원을 표방하는 브라우저 매트릭스는 **PC Chrome·Edge, Android Chrome**의 테스트 시점 최신 및 직전 안정 버전이다. 대표 화면 폭 360px, 390px, 768px, 1280px, 1440px 검증 기준은 바꾸지 않는다.
 
 iPhone Safari는 매트릭스에서 **"검증 없이 지원 표방하지 않음"** 수준으로 낮춘다. 지원 대상으로 표방하지 않고 인수 판정 대상에도 넣지 않되, 의도적으로 차단하거나 기능을 제거하지 않는다. 매트릭스에서 완전히 삭제하지 않고 해제 조건(7절)을 가진 보류 상태로 남긴다.
 
@@ -63,9 +63,10 @@ iPhone Safari는 2026-07-27 RV-NFR-006에서 지원 대상으로 확정됐고 [�
 
 ### 6.1 지원 표방 매트릭스
 
-- PC Chrome, PC Edge, Android Chrome의 테스트 시점 최신 및 직전 안정 버전
+- PC Chrome·Edge, Android Chrome의 테스트 시점 최신 및 직전 안정 버전
 - 대표 화면 폭 360px, 390px, 768px, 1280px, 1440px
 - 이 조합의 핵심 인수 시나리오 통과율 100%가 `NFR-COMPATIBILITY-001` 판정 기준이다
+- 문서에서 이 매트릭스를 가리킬 때는 기존 계약 문서와 같은 `PC Chrome·Edge, Android Chrome` 표기를 쓴다. `PC Chrome, PC Edge`처럼 나눠 쓰면 같은 대상을 두 표기로 검색해야 한다
 
 ### 6.2 iPhone Safari 취급
 

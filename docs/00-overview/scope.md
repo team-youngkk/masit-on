@@ -8,6 +8,7 @@ related_documents:
   - ../01-requirements/business-rules.md
   - ../04-product/prd/00-product-overview.md
   - ../07-adr/platform/web-004-supported-browser-matrix.md
+  - ../08-planning/mvp-local-verification.md
 ---
 
 # 맛잇온 프로젝트 범위
@@ -528,7 +529,7 @@ related_documents:
 - 관리자가 등록한 맛집 정보가 사용자 목록, 검색, 필터 및 상세 조회에 정상적으로 반영된다.
 - 관리자가 등록한 방문 관계가 유튜버별 필터와 맛집 상세의 유튜버·영상 정보에 정상적으로 반영된다.
 - YouTube 영상 원본을 저장하거나 재배포하지 않고 원본 링크와 필요한 메타데이터만 제공한다.
-- 핵심 사용자 흐름이 PC Chrome·Edge, Android Chrome의 최신 안정 버전에서 처음부터 끝까지 동작한다.
+- 핵심 사용자 흐름이 PC Chrome·Edge, Android Chrome의 최신 안정 버전에서 처음부터 끝까지 동작한다. iPhone Safari는 2026-08-06 [ADR-WEB-004](../07-adr/platform/web-004-supported-browser-matrix.md)로 이 기준에서 제외했다. MVP 완료 선언 시점에도 실단말이 없어 검증하지 못한 항목으로 남아 있었고([로컬 실행·회귀 검증 결과](../08-planning/mvp-local-verification.md) 10절), 그 사실을 계약에 반영한 것이다. 의도적으로 차단하지 않으며 실단말 또는 원격 실단말 환경이 확보되면 매트릭스로 되돌린다.
 - 회원, 찜, 최근 본 맛집, 지도 기반 탐색, 추천·큐레이션, 사용자 참여, AI, 예약·결제 등 MVP 제외 기능이 일반 사용자 화면이나 API에 포함되지 않는다.
 - EC2, ECR, RDS, CloudWatch와 AWS 운영 배포는 MVP 구현 완료 조건과 분리된 M2 초기 운영 배포 완료 조건으로 관리한다.
 

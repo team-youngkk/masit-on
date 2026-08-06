@@ -86,7 +86,7 @@ iPhone Safari는 [범위](../00-overview/scope.md), [비기능 요구사항](../
 
 [ADR-WEB-004](../07-adr/platform/web-004-supported-browser-matrix.md)가 결정 원문이다. iPhone Safari는 매트릭스에서 완전히 삭제하지 않고 "검증 없이 지원 표방하지 않음"으로 낮췄다. 위 계약 문서 세 곳도 같은 결정에 맞춰 개정했다.
 
-- `TST-E2-E2E-001`의 지원 브라우저 판정 대상은 PC Chrome, PC Edge, Android Chrome이다.
+- `TST-E2-E2E-001`의 지원 브라우저 판정 대상은 PC Chrome·Edge, Android Chrome이다.
 - iPhone Safari는 인수 시나리오 통과율 계산에서 제외한다. 의도적 차단·기능 제거·User-Agent 분기는 넣지 않는다.
 - iPhone Safari 동작은 여전히 **검증되지 않은 상태**다. 다른 Blink 계열 브라우저 확인 결과로 대체하지 않고 검증했다고 보고하지 않는다.
 - 실단말이나 원격 실단말 환경이 확보되면 ADR-WEB-004 7절 해제 조건에 따라 매트릭스로 되돌린다.
