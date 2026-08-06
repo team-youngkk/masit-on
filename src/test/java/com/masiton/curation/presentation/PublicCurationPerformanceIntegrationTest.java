@@ -34,13 +34,16 @@ import org.junit.jupiter.api.DisplayName;
  *
  * <p><b>한계(반드시 읽을 것)</b>: 이 테스트는 단일 프로세스·순차 MockMvc 호출로 p95를 추정한다.
  * NFR-PERFORMANCE-006과 ADR-DATA-011 10절이 요구하는 "정상 부하 50명·20 RPS 동시 부하 테스트"를
- * 대체하지 못한다. k6 같은 부하 도구는 ADR-PERF-001이 아직 미승인 상태라 도입하지 않았고(이슈가
- * "미결정 기술을 완료 조건으로 추가하지 않는다"고 못박음), 동시 접속·네트워크 계층 지연도 재현하지
- * 않는다. 여기서 측정하는 값은 "MockMvc 디스패치를 포함한 순차 처리 시간"이며 CI 머신 성능에 따라
- * 흔들릴 수 있는 flaky 후보다. 앞쪽 호출을 warm-up으로 버리고 표본을 50회 이상 확보해 흔들림을
- * 줄였을 뿐, 절대 기준으로 신뢰하지 않는다.
+ * 대체하지 못한다. 동시 접속·네트워크 계층 지연을 재현하지 않기 때문이다. 여기서 측정하는 값은
+ * "MockMvc 디스패치를 포함한 순차 처리 시간"이며 CI 머신 성능에 따라 흔들릴 수 있는 flaky
+ * 후보다. 앞쪽 호출을 warm-up으로 버리고 표본을 50회 이상 확보해 흔들림을 줄였을 뿐, 절대
+ * 기준으로 신뢰하지 않는다.
+ *
+ * <p>정상 부하 판정은 ADR-PERF-001(Accepted, 2026-08-06)이 정한 k6 시나리오
+ * {@code perf/k6/normal-load-public-read.js}가 담당한다. 그 측정이 실제로 수행되기 전까지
+ * 이 테스트는 ADR-PERF-001 8절이 명시한 세 회귀 방어선 중 하나로 남는다. 삭제하지 않는다.
  */
-@Disabled("NFR-PERFORMANCE-006 부하 검증은 ADR-PERF-001 승인 후 k6로 대체한다. 수동 실행용")
+@Disabled("정상 부하 판정은 ADR-PERF-001의 k6 시나리오가 담당한다. 이 테스트는 수동 실행용 보조 지표")
 @SpringBootTest
 @com.masiton.test.TestProfile
 @AutoConfigureMockMvc

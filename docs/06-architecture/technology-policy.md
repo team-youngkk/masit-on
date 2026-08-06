@@ -55,6 +55,7 @@ related_documents:
 | 백엔드 컨테이너 베이스 이미지 | `amazoncorretto:21.0.12-alpine` (digest 고정) | `M2-06`에서 고정. eclipse-temurin이 21.0.12 이미지를 배포하지 않아 [ADR-LANG-001](../07-adr/platform/lang-001-java-21-runtime.md)의 패치 일치를 지키려면 다른 벤더가 필요했다. temurin이 21.0.12를 배포하면 되돌린다 |
 | 프론트엔드 컨테이너 베이스 이미지 | `node:24.18.0-alpine` (digest 고정) | `M2-06`에서 고정 |
 | 컨테이너 취약점 스캐너 | `aquasec/trivy:0.72.0` (digest 고정) | `M2-06`에서 고정. CI 전용이며 운영 이미지에 포함되지 않는다. 차단 기준은 수정 버전이 있는 `CRITICAL`·`HIGH` |
+| 부하 테스트 도구 | k6 v2.1.0 | [ADR-PERF-001](../07-adr/quality/perf-001-k6-load-testing.md)에서 고정. 측정 시점에만 설치하는 외부 바이너리이며 `build.gradle`·`package.json` 어디에도 의존성으로 넣지 않는다 |
 | sharp | 0.35.0 | `M2-06`에서 npm `overrides`로 고정. Next.js 16.2.11이 끌어오는 0.34.5에 libvips CVE 4건(GHSA-f88m-g3jw-g9cj, HIGH)이 있어 올렸다. Next이 이 버전 이상을 끌어오면 override를 제거한다 |
 | Spring Batch | 6.0.4, Spring Boot BOM 관리 | Post-MVP |
 

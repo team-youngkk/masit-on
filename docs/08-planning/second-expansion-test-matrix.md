@@ -3,10 +3,12 @@ status: Ready
 plan_date: 2026-08-03
 related_documents:
   - expansion-2-implementation-plan.md
-  - second-expansion-browser-verification.md
-  - ../07-adr/platform/web-004-supported-browser-matrix.md
   - expansion-2-task-breakdown.md
   - second-expansion-baseline-review.md
+  - second-expansion-performance-verification.md
+  - second-expansion-browser-verification.md
+  - ../07-adr/quality/perf-001-k6-load-testing.md
+  - ../07-adr/platform/web-004-supported-browser-matrix.md
   - ../01-requirements/functional-requirements.md
   - ../01-requirements/business-rules.md
   - ../01-requirements/non-functional-requirements.md
@@ -72,11 +74,12 @@ related_documents:
 
 ## 5. E2-T15 시점 보류 검증 항목
 
-`E2-T15`(#117)의 완료 조건은 "보안·성능·CI·운영 기준이 통과하고 **미완료·차단 항목이 명시된다**"이고, 같은 이슈가 "미결정 기술을 완료 조건으로 추가하지 않는다"를 함께 규정한다. 아래 두 항목은 그 규정에 따라 `E2-T15` 완료 판정에서 분리하고 후속 Task로 넘긴다. 3절의 계약 자체는 낮추지 않는다. 확정 기준(p95 500ms 이하, 오류율 1% 미만, 지원 브라우저 매트릭스)은 그대로 유지하고 **판정 시점만** 옮긴다.
+`E2-T15`(#117)의 완료 조건은 "보안·성능·CI·운영 기준이 통과하고 **미완료·차단 항목이 명시된다**"이고, 같은 이슈가 "미결정 기술을 완료 조건으로 추가하지 않는다"를 함께 규정한다. 아래 항목들은 그 규정에 따라 `E2-T15` 완료 판정에서 분리하고 후속 Task로 넘겼다. 3절의 계약 자체는 낮추지 않는다. 확정 기준(p95 500ms 이하, 오류율 1% 미만, 지원 브라우저 매트릭스)은 그대로 유지하고 **판정 시점만** 옮긴다.
 
 | 보류 항목 | 소속 묶음 | 차단 사유 | 해제 조건 | 후속 |
 |---|---|---|---|---|
-| 정상 부하 50명·20 RPS p95·오류율 측정 | `TST-E2-PERF-001` | 자동 반복 실행 도구가 미결정이다. [ADR-PERF-001 k6 성능 테스트 체계](../07-adr/adr-backlog.md)가 백로그이며 활성화 조건인 k6 버전·CI 비용 승인이 아직 없다 | ADR-PERF-001 Accepted 후 운영 동급 환경에서 측정 | 후속 이슈 |
+| 정상 부하 50명·20 RPS p95·오류율 측정 (여전히 보류) | `TST-E2-PERF-001` | ~~자동 반복 실행 도구가 미결정이다~~ 도구 차단은 해소됐다([ADR-PERF-001](../07-adr/quality/perf-001-k6-load-testing.md) Accepted, 2026-08-06). **현재 사유는 팀이 실측을 3차 확장 이후로 연기하기로 결정한 것이다(2026-08-06)** | 3차 확장 이후 실측 수행. 시나리오·기준 데이터·절차는 이미 준비돼 있다 | [#148](https://github.com/team-youngkk/masit-on/issues/148) |
+| 최대 부하 200명·80 RPS 측정 | `TST-E2-PERF-001` | 시나리오를 아직 만들지 않았다. `RV-NFR-011`이 "정상 부하와 최대 부하를 각각 실행한다"로 이미 확정한 항목이라 범위 밖이 아니다 | 시나리오 작성 후 정상 부하와 같은 환경에서 측정 | 후속 이슈 |
 | ~~지원 브라우저 매트릭스 중 iPhone Safari~~ | `TST-E2-E2E-001` | 해제됨. 2026-08-06 [ADR-WEB-004](../07-adr/platform/web-004-supported-browser-matrix.md)가 iPhone Safari를 "검증 없이 지원 표방하지 않음"으로 낮춰 `TST-E2-E2E-001` 판정 대상에서 제외했다 | — | [#149](https://github.com/team-youngkk/masit-on/issues/149)에서 처리 완료 |
 | 지원 브라우저 매트릭스 중 PC Chrome·Edge, Android Chrome | `TST-E2-E2E-001` | **2차 확장 화면이 아직 운영에 배포되지 않아 실브라우저로 확인할 수 없다.** 2026-08-06 팀이 배포 이후 수행으로 정했다. 배포본(1차 확장)의 실브라우저 확인과 2차 확장 화면의 로컬 화면 폭 확인은 [2차 확장 브라우저 검증 기록](second-expansion-browser-verification.md)에 있다 | 2차 확장 운영 배포 후 세 브라우저 실빌드에서 화면 폭 5종을 포함해 수동 검증 | [#149](https://github.com/team-youngkk/masit-on/issues/149) |
 
@@ -93,7 +96,17 @@ iPhone Safari는 [범위](../00-overview/scope.md), [비기능 요구사항](../
 
 확인 환경과 결과는 [2차 확장 브라우저 검증 기록](second-expansion-browser-verification.md)이 증거 문서다.
 
-`E2-T15` 시점에 남긴 성능 회귀 방어선은 다음 세 가지다. 부하 측정을 보류하는 동안 회귀 탐지는 이 셋이 담당한다.
+### 성능 측정 보류 사유 변경 (2026-08-06)
+
+`ADR-PERF-001`이 Accepted가 되면서 **도구 미결정이라는 차단 사유는 없어졌다.** 확정된 내용은 k6 v2.1.0, `perf/k6/` 시나리오, `perf/seed/` 기준 데이터, `workflow_dispatch` 전용 실행, 측정 전용 임시 EC2다. 판정 기준(p95 500ms 이하, 오류율 1% 미만)은 `NFR-PERFORMANCE-006` 원문 그대로이며 낮추지 않았다.
+
+그러나 같은 날 팀이 **실측을 3차 확장 이후로 연기**하기로 결정했다. 구현에 우선순위를 두기 위한 판단이며, 측정 수단은 이미 준비돼 있어 언제든 실행할 수 있는 상태다. 즉 보류 사유가 "수단이 없다"에서 "수단은 있으나 지금 실행하지 않기로 했다"로 바뀐 것이지, 보류가 풀린 것이 아니다.
+
+**보류 사유가 바뀐 것과 측정이 끝난 것은 다르다.** 실제 수행 여부와 수치는 [2차 확장 성능 검증 결과](second-expansion-performance-verification.md)를 확인한다. 그 문서에 결과가 기록되기 전까지 `NFR-PERFORMANCE-006`의 정상 부하 조건은 **미측정 상태**이며, 측정했다고 보고하지 않는다.
+
+연기로 남는 위험은 하나 분명하다. [ADR-DATA-011](../07-adr/data/data-011-popular-restaurant-request-time-aggregation.md)이 인기 맛집에 캐시·Snapshot·Batch를 두지 않기로 한 근거가 "필요하다는 측정 근거가 없다"인데, 요청마다 `favorite` 전량을 집계하는 구조가 p95 500ms를 지키는지는 **실측 전까지 확인되지 않는다.** 해당 코드는 이미 제한 공개로 나가 있다.
+
+부하 측정이 실제로 수행되기 전까지 회귀 탐지는 다음 셋이 담당한다. 셋 다 쿼리 수와 실행계획의 구조적 악화는 잡지만 부하 하의 p95 악화는 잡지 못한다.
 
 - `PublicCurationQueryCountApiTest`, `PopularRestaurantQueryCountApiTest` — 공개 조회 쿼리 수 상수 가드
 - `CurationPublicQueryPlanPostgreSqlIntegrationTest` — PostgreSQL 실행계획(`loops=1`) 검증
