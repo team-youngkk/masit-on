@@ -62,9 +62,10 @@ DELETE FROM visit
      SELECT id FROM video WHERE external_video_id LIKE 'PERFSEEDVID%'
  );
 
--- 시드 관리자가 만든 큐레이션. curation.title은 관리자가 화면에서 자유롭게 입력하는
--- 값이라 제목만으로 좁히면 같은 접두사를 쓴 실제 큐레이션까지 지울 수 있다. 다른 마커
--- 5종은 외부 제공자가 발급하거나 앱이 만들 수 없는 값이라 그런 위험이 없다.
+-- 시드 관리자가 만든 큐레이션 및 관계. 상단에서 시드 맛집 참조 관계는 이미 삭제되었으나,
+-- 향후 시드 큐레이션이 시드 외 맛집을 참조하는 구조 변경에 대비해 방어적으로 중복 처리한다.
+-- curation.title은 관리자가 화면에서 자유롭게 입력하는 값이라 제목만으로 좁히면 같은
+-- 접두사를 쓴 실제 큐레이션까지 지울 수 있으므로 admin_account 마커와 조합해 지운다.
 DELETE FROM curation_restaurant
  WHERE curation_id IN (
      SELECT id FROM curation

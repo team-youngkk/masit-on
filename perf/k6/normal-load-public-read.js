@@ -191,7 +191,7 @@ function evaluate(response, endpoint, trend, record) {
         [`${endpoint} 200 응답`]: (r) => r.status === 200,
     });
     if (!ok) {
-        unexpectedStatus.add(1, { endpoint });
+        unexpectedStatus.add(1, { endpoint, phase: record ? 'measured' : 'warmup' });
     }
 
     if (!record) {
@@ -250,7 +250,8 @@ function renderText(data) {
     lines.push('');
     lines.push('[오류·부하 조건]');
     lines.push(`  서버 오류율(5xx): ${pct(get(data, 'server_error_rate', 'rate'))} ${verdict(data.metrics.server_error_rate)}`);
-    lines.push(`  http_req_failed: ${pct(get(data, 'http_req_failed', 'rate'))}`);
+    lines.push(`  http_req_failed (측정 구간): ${pct(get(data, 'http_req_failed{phase:measured}', 'rate'))} ${verdict(data.metrics['http_req_failed{phase:measured}'])}`);
+    lines.push(`  http_req_failed (전체): ${pct(get(data, 'http_req_failed', 'rate'))}`);
     lines.push(`  200 아닌 응답: ${get(data, 'unexpected_status_count', 'count')}건`);
     lines.push(`  dropped_iterations: ${get(data, 'dropped_iterations', 'count')}건 ${verdict(data.metrics.dropped_iterations)}`);
     lines.push('');
