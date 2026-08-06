@@ -7,6 +7,7 @@ related_documents:
   - ../01-requirements/functional-requirements.md
   - ../01-requirements/business-rules.md
   - ../04-product/prd/00-product-overview.md
+  - ../07-adr/platform/web-004-supported-browser-matrix.md
 ---
 
 # 맛잇온 프로젝트 범위
@@ -527,7 +528,7 @@ related_documents:
 - 관리자가 등록한 맛집 정보가 사용자 목록, 검색, 필터 및 상세 조회에 정상적으로 반영된다.
 - 관리자가 등록한 방문 관계가 유튜버별 필터와 맛집 상세의 유튜버·영상 정보에 정상적으로 반영된다.
 - YouTube 영상 원본을 저장하거나 재배포하지 않고 원본 링크와 필요한 메타데이터만 제공한다.
-- 핵심 사용자 흐름이 PC Chrome·Edge, Android Chrome, iPhone Safari의 최신 안정 버전에서 처음부터 끝까지 동작한다.
+- 핵심 사용자 흐름이 PC Chrome·Edge, Android Chrome의 최신 안정 버전에서 처음부터 끝까지 동작한다.
 - 회원, 찜, 최근 본 맛집, 지도 기반 탐색, 추천·큐레이션, 사용자 참여, AI, 예약·결제 등 MVP 제외 기능이 일반 사용자 화면이나 API에 포함되지 않는다.
 - EC2, ECR, RDS, CloudWatch와 AWS 운영 배포는 MVP 구현 완료 조건과 분리된 M2 초기 운영 배포 완료 조건으로 관리한다.
 
@@ -537,4 +538,4 @@ related_documents:
 
 - 카카오·YouTube 정보는 등록 시 확인 Token의 10분 후보 Snapshot에만 임시 저장하고, 등록 뒤 자동 갱신하거나 표시 메타데이터 변경 이력을 별도로 저장하지 않는다. 외부 API 장애 시 부분 저장 없이 실패시키고 관리자가 수동 재시도한다.
 - 관리자 계정은 별도 운영 명령으로 발급·비활성화·비밀번호 재설정하며, 서비스 계정 관리·복구 API는 MVP에 포함하지 않는다.
-- PC Chrome·Edge, Android Chrome, iPhone Safari의 테스트 시점 최신 및 직전 안정 버전을 지원하고 360px, 390px, 768px, 1280px, 1440px 화면 폭을 검증한다.
+- PC Chrome·Edge, Android Chrome의 테스트 시점 최신 및 직전 안정 버전을 지원하고 360px, 390px, 768px, 1280px, 1440px 화면 폭을 검증한다. iPhone Safari는 2026-08-06 [ADR-WEB-004](../07-adr/platform/web-004-supported-browser-matrix.md)에 따라 검증 수단이 없어 지원 대상으로 표방하지 않는다. 의도적으로 차단하지 않으며 실단말 또는 원격 실단말 환경이 확보되면 매트릭스로 되돌린다.

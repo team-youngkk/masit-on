@@ -3,6 +3,8 @@ status: Ready
 plan_date: 2026-08-03
 related_documents:
   - expansion-2-implementation-plan.md
+  - second-expansion-browser-verification.md
+  - ../07-adr/platform/web-004-supported-browser-matrix.md
   - expansion-2-task-breakdown.md
   - second-expansion-baseline-review.md
   - ../01-requirements/functional-requirements.md
@@ -75,18 +77,21 @@ related_documents:
 | 보류 항목 | 소속 묶음 | 차단 사유 | 해제 조건 | 후속 |
 |---|---|---|---|---|
 | 정상 부하 50명·20 RPS p95·오류율 측정 | `TST-E2-PERF-001` | 자동 반복 실행 도구가 미결정이다. [ADR-PERF-001 k6 성능 테스트 체계](../07-adr/adr-backlog.md)가 백로그이며 활성화 조건인 k6 버전·CI 비용 승인이 아직 없다 | ADR-PERF-001 Accepted 후 운영 동급 환경에서 측정 | 후속 이슈 |
-| 지원 브라우저 매트릭스 중 iPhone Safari | `TST-E2-E2E-001` | **팀에 iPhone 실단말이 없어 검증 수단 자체가 없다.** 담당자 배정으로 해소되지 않는다 | 아래 세 경로 중 하나를 팀이 선택해야 한다 | 후속 이슈 |
-| 지원 브라우저 매트릭스 중 PC Chrome·Edge, Android Chrome | `TST-E2-E2E-001` | 실단말 수동 확인이 필요하며 자동화 수단이 확정돼 있지 않다 | 실단말 보유자 배정 후 수동 검증 | 후속 이슈 |
+| ~~지원 브라우저 매트릭스 중 iPhone Safari~~ | `TST-E2-E2E-001` | 해제됨. 2026-08-06 [ADR-WEB-004](../07-adr/platform/web-004-supported-browser-matrix.md)가 iPhone Safari를 "검증 없이 지원 표방하지 않음"으로 낮춰 `TST-E2-E2E-001` 판정 대상에서 제외했다 | — | [#149](https://github.com/team-youngkk/masit-on/issues/149)에서 처리 완료 |
+| 지원 브라우저 매트릭스 중 PC Chrome·Edge, Android Chrome | `TST-E2-E2E-001` | **2차 확장 화면이 아직 운영에 배포되지 않아 실브라우저로 확인할 수 없다.** 2026-08-06 팀이 배포 이후 수행으로 정했다. 배포본(1차 확장)의 실브라우저 확인과 2차 확장 화면의 로컬 화면 폭 확인은 [2차 확장 브라우저 검증 기록](second-expansion-browser-verification.md)에 있다 | 2차 확장 운영 배포 후 세 브라우저 실빌드에서 화면 폭 5종을 포함해 수동 검증 | [#149](https://github.com/team-youngkk/masit-on/issues/149) |
 
-### iPhone Safari 검증 공백
+### iPhone Safari 검증 공백 — 2026-08-06 결정
 
-iPhone Safari는 [범위](../00-overview/scope.md), [비기능 요구사항](../01-requirements/non-functional-requirements.md), [ADR-WEB-001](../07-adr/platform/web-001-frontend-platform.md)이 모두 지원 대상으로 확정한 브라우저다. 팀에 실단말이 없어 MVP 최종 검증에서도 확인하지 못했고([로컬 실행·회귀 검증 결과](mvp-local-verification.md)), 2차 확장에서도 같은 상태다. 담당자 배정으로는 해소되지 않으므로 팀이 다음 중 하나를 결정해야 한다.
+iPhone Safari는 [범위](../00-overview/scope.md), [비기능 요구사항](../01-requirements/non-functional-requirements.md), [ADR-WEB-001](../07-adr/platform/web-001-frontend-platform.md)이 모두 지원 대상으로 확정했던 브라우저다. 팀에 실단말이 없어 MVP 최종 검증에서도 확인하지 못했고([로컬 실행·회귀 검증 결과](mvp-local-verification.md)), 2차 확장에서도 같은 상태였다. 담당자 배정으로 해소되지 않는 공백이므로 팀이 세 경로 중 하나를 결정해야 했고, [#149](https://github.com/team-youngkk/masit-on/issues/149)에서 **매트릭스 조정**을 선택했다.
 
-1. 실단말을 확보한다. 팀원 개인 기기나 대여를 사용하고 검증 환경을 기록한다.
-2. 원격 실단말 서비스를 도입한다. 미결정 기술이므로 도구·비용·CI 연동을 정하는 ADR을 먼저 올린다.
-3. 지원 브라우저 매트릭스에서 iPhone Safari를 제외하거나 "검증 없이 지원 표방하지 않음"으로 낮춘다. 위 세 계약 문서를 모두 바꾸는 결정이므로 소유자 합의가 필요하다.
+[ADR-WEB-004](../07-adr/platform/web-004-supported-browser-matrix.md)가 결정 원문이다. iPhone Safari는 매트릭스에서 완전히 삭제하지 않고 "검증 없이 지원 표방하지 않음"으로 낮췄다. 위 계약 문서 세 곳도 같은 결정에 맞춰 개정했다.
 
-결정 전까지 iPhone Safari 동작은 **검증되지 않은 상태**로 남는다. 검증했다고 보고하지 않는다.
+- `TST-E2-E2E-001`의 지원 브라우저 판정 대상은 PC Chrome, PC Edge, Android Chrome이다.
+- iPhone Safari는 인수 시나리오 통과율 계산에서 제외한다. 의도적 차단·기능 제거·User-Agent 분기는 넣지 않는다.
+- iPhone Safari 동작은 여전히 **검증되지 않은 상태**다. 다른 Blink 계열 브라우저 확인 결과로 대체하지 않고 검증했다고 보고하지 않는다.
+- 실단말이나 원격 실단말 환경이 확보되면 ADR-WEB-004 7절 해제 조건에 따라 매트릭스로 되돌린다.
+
+확인 환경과 결과는 [2차 확장 브라우저 검증 기록](second-expansion-browser-verification.md)이 증거 문서다.
 
 `E2-T15` 시점에 남긴 성능 회귀 방어선은 다음 세 가지다. 부하 측정을 보류하는 동안 회귀 탐지는 이 셋이 담당한다.
 
