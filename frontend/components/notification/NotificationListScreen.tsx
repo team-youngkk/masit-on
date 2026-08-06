@@ -319,6 +319,8 @@ export function NotificationListScreen() {
                   <div
                     id={`notification-detail-${item.notificationId}`}
                     className={styles.detail}
+                    aria-live="polite"
+                    aria-busy={detailBusy}
                   >
                     {detailBusy ? (
                       <p role="status">관련 요청을 불러오는 중입니다.</p>
@@ -330,7 +332,7 @@ export function NotificationListScreen() {
                         {detailError.traceId ? <span className={styles.traceId}>traceId: {detailError.traceId}</span> : null}
                       </p>
                     ) : detailItem ? (
-                      <div role="status">
+                      <>
                         <p><strong>대상:</strong> {participationTargetSummary(detailItem)}</p>
                         <p><strong>상태:</strong> {detailItem.status}</p>
                         {participationTargetDetails(detailItem).map(([label, value]) => (
@@ -338,7 +340,7 @@ export function NotificationListScreen() {
                         ))}
                         <p>{detailItem.description}</p>
                         {detailItem.memberReason ? <p><strong>처리 사유:</strong> {detailItem.memberReason}</p> : null}
-                      </div>
+                      </>
                     ) : null}
                   </div>
                 ) : null}
