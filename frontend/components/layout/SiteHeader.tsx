@@ -8,6 +8,7 @@ import { useMemberSession } from '@/components/member/MemberSessionProvider'
 import { buildMapNavigationHref } from '@/lib/map/map-navigation'
 
 import { Brand } from './Brand'
+import { NotificationBell } from './NotificationBell'
 import styles from './SiteHeader.module.css'
 
 function MapNavigationLink() {
@@ -72,33 +73,36 @@ export function SiteHeader() {
           ) : null}
           {status === 'anonymous' ? <Link href="/login">로그인</Link> : null}
           {status === 'authenticated' ? (
-            <details
-              className={styles.memberMenu}
-              ref={menuRef}
-              onKeyDown={handleMemberMenuKeyDown}
-            >
-              <summary>내 메뉴</summary>
-              <div className={styles.memberMenuItems}>
-                <Link href="/me/favorites" onClick={closeMemberMenu}>
-                  내 찜
-                </Link>
-                <Link href="/me/recent-restaurants" onClick={closeMemberMenu}>
-                  최근 본 맛집
-                </Link>
-                <Link href="/me/collections" onClick={closeMemberMenu}>
-                  내 컬렉션
-                </Link>
-                <Link href="/me/requests" onClick={closeMemberMenu}>
-                  내 제보·신고
-                </Link>
-                <Link href="/me" onClick={closeMemberMenu}>
-                  내 계정
-                </Link>
-                <button type="button" onClick={() => void handleLogout()}>
-                  로그아웃
-                </button>
-              </div>
-            </details>
+            <>
+              <NotificationBell />
+              <details
+                className={styles.memberMenu}
+                ref={menuRef}
+                onKeyDown={handleMemberMenuKeyDown}
+              >
+                <summary>내 메뉴</summary>
+                <div className={styles.memberMenuItems}>
+                  <Link href="/me/favorites" onClick={closeMemberMenu}>
+                    내 찜
+                  </Link>
+                  <Link href="/me/recent-restaurants" onClick={closeMemberMenu}>
+                    최근 본 맛집
+                  </Link>
+                  <Link href="/me/collections" onClick={closeMemberMenu}>
+                    내 컬렉션
+                  </Link>
+                  <Link href="/me/requests" onClick={closeMemberMenu}>
+                    내 제보·신고
+                  </Link>
+                  <Link href="/me" onClick={closeMemberMenu}>
+                    내 계정
+                  </Link>
+                  <button type="button" onClick={() => void handleLogout()}>
+                    로그아웃
+                  </button>
+                </div>
+              </details>
+            </>
           ) : null}
           {logoutFailed ? (
             <div className={styles.logoutError} role="alert">

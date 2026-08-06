@@ -1,3 +1,5 @@
+import { parseContractError, type ParsedContractError } from './contract-error.ts'
+
 export type ParticipationContractError = {
   code?: string
   message?: string
@@ -5,7 +7,7 @@ export type ParticipationContractError = {
   resource?: { requestId?: string; status?: string } | null
 }
 
-export type ParticipationErrorDetails = { status: number; contract: ParticipationContractError }
+export type ParticipationErrorDetails = ParsedContractError<ParticipationContractError>
 
 /**
  * createParticipation/getParticipations/getParticipationDetail은 실패 시
@@ -13,14 +15,7 @@ export type ParticipationErrorDetails = { status: number; contract: Participatio
  * 파싱을 반복하지 않도록 status/traceId/code/message를 여기서 뽑아낸다.
  */
 export async function parseParticipationError(reason: unknown): Promise<ParticipationErrorDetails | null> {
-  if (!(reason instanceof Response)) return null
-  let contract: ParticipationContractError = {}
-  try {
-    contract = (await reason.json()) as ParticipationContractError
-  } catch {
-    contract = {}
-  }
-  return { status: reason.status, contract }
+  return parseContractError<ParticipationContractError>(reason)
 }
 
 export function participationErrorMessage(status: number, error: ParticipationContractError): string {
