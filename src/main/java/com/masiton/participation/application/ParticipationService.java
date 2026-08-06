@@ -275,16 +275,7 @@ public class ParticipationService implements ParticipationUseCase {
         if (raw == null) {
             throw invalid(field, "필수 입력값입니다.");
         }
-        String value = raw.trim();
-        if (value.indexOf('<') >= 0 || value.indexOf('>') >= 0
-                || value.codePoints().anyMatch(this::isForbiddenControl)) {
-            throw invalid(field, "실행성 문자열이나 제어 문자는 입력할 수 없습니다.");
-        }
-        return value;
-    }
-
-    private boolean isForbiddenControl(int codePoint) {
-        return Character.isISOControl(codePoint);
+        return com.masiton.common.web.SafeTextPolicy.requireSafe(raw, field);
     }
 
     private byte[] fingerprint(ParticipationTargetType type, Map<String, Object> candidate) {

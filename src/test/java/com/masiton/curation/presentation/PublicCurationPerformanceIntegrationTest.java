@@ -26,6 +26,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.DisplayName;
+
 /**
  * TST-E2-PERF-001(3) NFR-PERFORMANCE-006 공개 큐레이션 조회 내부 처리 p95 500ms 이하 검증이다.
  *
@@ -37,6 +40,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 흔들릴 수 있는 flaky 후보다. 앞쪽 호출을 warm-up으로 버리고 표본을 50회 이상 확보해 흔들림을
  * 줄였을 뿐, 절대 기준으로 신뢰하지 않는다.
  */
+@Disabled("NFR-PERFORMANCE-006 부하 검증은 ADR-PERF-001 승인 후 k6로 대체한다. 수동 실행용")
 @SpringBootTest
 @com.masiton.test.TestProfile
 @AutoConfigureMockMvc

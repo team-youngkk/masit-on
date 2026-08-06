@@ -42,13 +42,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 제보·신고의 description/evidenceUrl은 {@code ParticipationService.safeText}·
  * {@code validateHttps}가 이미 이 정책을 구현하므로 아래 테스트는 통과해야 한다.
  *
- * <p><b>알려진 프로덕션 결함:</b> {@code PersonalCollectionService.normalizeName}
- * (src/main/java/com/masiton/personal/application/PersonalCollectionService.java:122-130)과
- * {@code AdminCurationService.normalized}
- * (src/main/java/com/masiton/curation/application/AdminCurationService.java:228-236)는
- * 길이만 검증하고 {@code <}·{@code >}·제어 문자를 거부하지 않는다. 아래 컬렉션 이름·큐레이션
- * title/description에 대한 악성 입력 거부 테스트는 이 결함으로 인해 현재 코드에서 실패한다.
- * 프로덕션 코드는 고치지 않고 결함으로만 보고한다.</p>
+ * <p>개인 컬렉션 이름과 큐레이션 제목·설명은 {@link SafeTextPolicy}가 적용되어
+ * {@code <}·{@code >}·ISO 제어 문자를 {@code INVALID_FIELD_VALUE}로 정상 거부한다.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -76,7 +71,7 @@ class MaliciousInputRegressionApiTest extends FullContextIntegrationTest {
     }
 
     @Test
-    @DisplayName("정상 컬렉션 이름은 생성되지만 스크립트 태그가 섞인 이름은 거부해야 한다 (알려진 결함)")
+    @DisplayName("정상 컬렉션 이름은 생성되고 스크립트 태그가 섞인 이름은 거부해야 한다")
     void 컬렉션이름_정상과스크립트태그_정상은통과하고스크립트는거부해야한다() throws Exception {
         UUID memberId = insertMember();
         String token = memberToken(memberId);
@@ -88,7 +83,6 @@ class MaliciousInputRegressionApiTest extends FullContextIntegrationTest {
                         .content("{\"name\":\"주말 맛집 모음\"}"))
                 .andExpect(status().isCreated());
 
-        // 알려진 결함: normalizeName은 길이만 검증하고 <, > 를 거부하지 않는다.
         mockMvc.perform(post("/api/me/collections")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .header("Idempotency-Key", "collection-xss-" + UUID.randomUUID())
@@ -99,12 +93,11 @@ class MaliciousInputRegressionApiTest extends FullContextIntegrationTest {
     }
 
     @Test
-    @DisplayName("제어 문자가 섞인 컬렉션 이름은 거부해야 한다 (알려진 결함)")
+    @DisplayName("제어 문자가 섞인 컬렉션 이름은 거부해야 한다")
     void 컬렉션이름_제어문자_거부해야한다() throws Exception {
         UUID memberId = insertMember();
         String token = memberToken(memberId);
 
-        // 알려진 결함: normalizeName은 ISO 제어 문자를 거부하지 않는다.
         mockMvc.perform(post("/api/me/collections")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .header("Idempotency-Key", "collection-control-" + UUID.randomUUID())
@@ -115,7 +108,7 @@ class MaliciousInputRegressionApiTest extends FullContextIntegrationTest {
     }
 
     @Test
-    @DisplayName("정상 큐레이션은 생성되지만 스크립트 태그가 섞인 제목·설명은 거부해야 한다 (알려진 결함)")
+    @DisplayName("정상 큐레이션은 생성되고 스크립트 태그가 섞인 제목·설명은 거부해야 한다")
     void 큐레이션_정상과스크립트태그_정상은통과하고스크립트는거부해야한다() throws Exception {
         UUID adminId = insertAdmin();
         String token = adminToken(adminId);
@@ -127,7 +120,6 @@ class MaliciousInputRegressionApiTest extends FullContextIntegrationTest {
                         .content("{\"title\":\"여름 맛집 큐레이션\",\"description\":\"정상 설명입니다\"}"))
                 .andExpect(status().isCreated());
 
-        // 알려진 결함: AdminCurationService.normalized는 길이만 검증하고 <, > 를 거부하지 않는다.
         mockMvc.perform(post("/api/admin/curations")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .header("Idempotency-Key", "curation-xss-title-" + UUID.randomUUID())

@@ -138,6 +138,18 @@ class AudienceCrossRejectionApiTest extends FullContextIntegrationTest {
                 .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
     }
 
+    @Test
+    @DisplayName("공개 맛집 경로(map-points, popular)는 회원 토큰이 포함되어도 세션 조회를 거치지 않고 200 OK로 처리된다")
+    void 공개맛집경로_회원토큰동반시_정상200응답() throws Exception {
+        String token = memberToken();
+
+        mockMvc.perform(get("/api/restaurants/map-points").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/restaurants/popular").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk());
+    }
+
     private String memberToken() {
         return memberTokenIssuer.issueAccessToken(
                 new MemberPrincipal(UUID.randomUUID().toString(), UUID.randomUUID().toString()));
