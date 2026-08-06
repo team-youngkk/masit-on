@@ -67,3 +67,29 @@ related_documents:
 ## 4. 범위 밖 검증
 
 `FCM`, 이메일·웹 푸시, `DeviceToken`, `NotificationPreference`, 인기 Snapshot·Batch·Redis 캐시, 컬렉션 공유·직접 정렬, 큐레이션 예약 게시·추천 알고리즘은 현재 테스트 완료 조건이 아니다. 구현 흔적이 생기면 테스트를 추가하는 방식으로 정당화하지 않고 먼저 범위와 ADR을 변경한다.
+
+## 5. E2-T15 시점 보류 검증 항목
+
+`E2-T15`(#117)의 완료 조건은 "보안·성능·CI·운영 기준이 통과하고 **미완료·차단 항목이 명시된다**"이고, 같은 이슈가 "미결정 기술을 완료 조건으로 추가하지 않는다"를 함께 규정한다. 아래 두 항목은 그 규정에 따라 `E2-T15` 완료 판정에서 분리하고 후속 Task로 넘긴다. 3절의 계약 자체는 낮추지 않는다. 확정 기준(p95 500ms 이하, 오류율 1% 미만, 지원 브라우저 매트릭스)은 그대로 유지하고 **판정 시점만** 옮긴다.
+
+| 보류 항목 | 소속 묶음 | 차단 사유 | 해제 조건 | 후속 |
+|---|---|---|---|---|
+| 정상 부하 50명·20 RPS p95·오류율 측정 | `TST-E2-PERF-001` | 자동 반복 실행 도구가 미결정이다. [ADR-PERF-001 k6 성능 테스트 체계](../07-adr/adr-backlog.md)가 백로그이며 활성화 조건인 k6 버전·CI 비용 승인이 아직 없다 | ADR-PERF-001 Accepted 후 운영 동급 환경에서 측정 | 후속 이슈 |
+| 지원 브라우저 매트릭스 중 iPhone Safari | `TST-E2-E2E-001` | **팀에 iPhone 실단말이 없어 검증 수단 자체가 없다.** 담당자 배정으로 해소되지 않는다 | 아래 세 경로 중 하나를 팀이 선택해야 한다 | 후속 이슈 |
+| 지원 브라우저 매트릭스 중 PC Chrome·Edge, Android Chrome | `TST-E2-E2E-001` | 실단말 수동 확인이 필요하며 자동화 수단이 확정돼 있지 않다 | 실단말 보유자 배정 후 수동 검증 | 후속 이슈 |
+
+### iPhone Safari 검증 공백
+
+iPhone Safari는 [범위](../00-overview/scope.md), [비기능 요구사항](../01-requirements/non-functional-requirements.md), [ADR-WEB-001](../07-adr/platform/web-001-frontend-platform.md)이 모두 지원 대상으로 확정한 브라우저다. 팀에 실단말이 없어 MVP 최종 검증에서도 확인하지 못했고([로컬 실행·회귀 검증 결과](mvp-local-verification.md)), 2차 확장에서도 같은 상태다. 담당자 배정으로는 해소되지 않으므로 팀이 다음 중 하나를 결정해야 한다.
+
+1. 실단말을 확보한다. 팀원 개인 기기나 대여를 사용하고 검증 환경을 기록한다.
+2. 원격 실단말 서비스를 도입한다. 미결정 기술이므로 도구·비용·CI 연동을 정하는 ADR을 먼저 올린다.
+3. 지원 브라우저 매트릭스에서 iPhone Safari를 제외하거나 "검증 없이 지원 표방하지 않음"으로 낮춘다. 위 세 계약 문서를 모두 바꾸는 결정이므로 소유자 합의가 필요하다.
+
+결정 전까지 iPhone Safari 동작은 **검증되지 않은 상태**로 남는다. 검증했다고 보고하지 않는다.
+
+`E2-T15` 시점에 남긴 성능 회귀 방어선은 다음 세 가지다. 부하 측정을 보류하는 동안 회귀 탐지는 이 셋이 담당한다.
+
+- `PublicCurationQueryCountApiTest`, `PopularRestaurantQueryCountApiTest` — 공개 조회 쿼리 수 상수 가드
+- `CurationPublicQueryPlanPostgreSqlIntegrationTest` — PostgreSQL 실행계획(`loops=1`) 검증
+- `PublicCurationPerformanceIntegrationTest` — 순차 내부 처리 latency 측정. CI 러너 편차로 인한 flaky를 피하려고 `@Disabled` 상태이며 수동 실행용이다

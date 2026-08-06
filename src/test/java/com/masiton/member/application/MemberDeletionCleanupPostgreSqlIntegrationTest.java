@@ -117,6 +117,7 @@ class MemberDeletionCleanupPostgreSqlIntegrationTest {
         jdbcTemplate.update("INSERT INTO recent_restaurant_view (member_id, restaurant_id, last_viewed_at) VALUES (?, ?, ?)",
                 memberId, restaurantId, asOffsetDateTime(now));
         insertNotification(memberId, submissionId, UUID.randomUUID(), asOffsetDateTime(now));
+        UUID collectionId = insertPersonalCollection(memberId, restaurantId, now);
         jobs.enqueue(memberId, now);
 
         // when
@@ -134,6 +135,12 @@ class MemberDeletionCleanupPostgreSqlIntegrationTest {
         assertThat(count("member_deletion_job", memberId)).isZero();
         assertThat(count("notification", memberId))
                 .as("member_id CASCADE로 알림이 삭제되어야 한다")
+                .isZero();
+        assertThat(rowCount("personal_collection", collectionId))
+                .as("member_id CASCADE로 개인 컬렉션이 삭제되어야 한다")
+                .isZero();
+        assertThat(count("collection_restaurant", "collection_id", collectionId))
+                .as("컬렉션이 CASCADE로 삭제되면 컬렉션-맛집 관계도 함께 삭제되어야 한다")
                 .isZero();
     }
 
@@ -154,6 +161,7 @@ class MemberDeletionCleanupPostgreSqlIntegrationTest {
         jdbcTemplate.update("INSERT INTO recent_restaurant_view (member_id, restaurant_id, last_viewed_at) VALUES (?, ?, ?)",
                 memberId, restaurantId, asOffsetDateTime(now));
         insertNotification(memberId, submissionId, UUID.randomUUID(), asOffsetDateTime(now));
+        UUID collectionId = insertPersonalCollection(memberId, restaurantId, now);
         jobs.enqueue(memberId, now);
         lateFailureJobs.failAfterCompleting(memberId);
 
@@ -178,6 +186,12 @@ class MemberDeletionCleanupPostgreSqlIntegrationTest {
         assertThat(count("member_deletion_job", memberId)).isEqualTo(1);
         assertThat(count("notification", memberId))
                 .as("롤백되면 알림도 삭제되지 않고 그대로 남아야 한다")
+                .isEqualTo(1);
+        assertThat(rowCount("personal_collection", collectionId))
+                .as("롤백되면 개인 컬렉션도 삭제되지 않고 그대로 남아야 한다")
+                .isEqualTo(1);
+        assertThat(count("collection_restaurant", "collection_id", collectionId))
+                .as("롤백되면 컬렉션-맛집 관계도 삭제되지 않고 그대로 남아야 한다")
                 .isEqualTo(1);
     }
 
@@ -289,6 +303,16 @@ class MemberDeletionCleanupPostgreSqlIntegrationTest {
         return id;
     }
 
+    private UUID insertPersonalCollection(UUID memberId, UUID restaurantId, Instant now) {
+        UUID collectionId = UUID.randomUUID();
+        jdbcTemplate.update("INSERT INTO personal_collection (id, member_id, name, created_at, updated_at) "
+                        + "VALUES (?, ?, '탈퇴 정리 테스트 컬렉션', ?, ?)",
+                collectionId, memberId, asOffsetDateTime(now), asOffsetDateTime(now));
+        jdbcTemplate.update("INSERT INTO collection_restaurant (collection_id, restaurant_id, added_at) VALUES (?, ?, ?)",
+                collectionId, restaurantId, asOffsetDateTime(now));
+        return collectionId;
+    }
+
     private void insertNotification(UUID memberId, UUID submissionId, UUID notificationId, OffsetDateTime createdAt) {
         jdbcTemplate.update("INSERT INTO notification (id, member_id, submission_id, status, title, message, created_at) "
                         + "VALUES (?, ?, ?, 'REJECTED', '처리 결과', '처리 결과를 확인하세요', ?)",
@@ -311,6 +335,11 @@ class MemberDeletionCleanupPostgreSqlIntegrationTest {
 
     private long count(String tableName, UUID memberId) {
         return jdbcTemplate.queryForObject("SELECT count(*) FROM " + tableName + " WHERE member_id = ?", Long.class, memberId);
+    }
+
+    private long count(String tableName, String columnName, UUID id) {
+        return jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM " + tableName + " WHERE " + columnName + " = ?", Long.class, id);
     }
 
     private long memberAccountCount(UUID memberId) {

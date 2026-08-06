@@ -28,6 +28,7 @@ import org.springframework.security.authentication.AuthenticationManagerResolver
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import com.masiton.security.infrastructure.RestaurantPathClassifier;
 import com.masiton.security.infrastructure.web.SecurityErrorWriter;
 import com.masiton.security.infrastructure.web.MemberSessionRevocationFilter;
 
@@ -132,13 +133,7 @@ public class SecurityConfiguration {
         if (!HttpMethod.GET.matches(request.getMethod())) {
             return false;
         }
-        String detailPrefix = "/api/restaurants/";
-        String requestUri = request.getRequestURI();
-        if (!requestUri.startsWith(detailPrefix)) {
-            return false;
-        }
-        String restaurantId = requestUri.substring(detailPrefix.length());
-        return !restaurantId.isEmpty() && !restaurantId.contains("/") && !"popular".equals(restaurantId);
+        return RestaurantPathClassifier.isRestaurantDetailPath(request.getRequestURI());
     }
 
     private boolean isAnonymousPublicReadRequest(HttpServletRequest request) {
@@ -147,7 +142,7 @@ public class SecurityConfiguration {
         }
         String requestUri = request.getRequestURI();
         return requestUri.equals("/api/restaurants")
-                || requestUri.equals("/api/restaurants/popular")
+                || RestaurantPathClassifier.isNonIdentifierPublicPath(requestUri)
                 || isCurationPublicReadRequest(requestUri)
                 || requestUri.equals("/api/creators")
                 || isCreatorDetailReadRequest(requestUri);

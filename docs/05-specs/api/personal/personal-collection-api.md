@@ -56,7 +56,7 @@ related_documents:
 { "name": "가족과 갈 곳" }
 ```
 
-`name`은 앞뒤 공백 제거 후 1~50자이며 빈 문자열은 허용하지 않는다. 생성은 `201 Created`, 이름 변경은 같은 본문의 `PATCH`와 `200 OK`를 사용한다.
+`name`은 앞뒤 공백 제거 후 1~50자이며 빈 문자열은 허용하지 않는다. NFR-SECURITY-006에 따라 `SafeTextPolicy`가 적용되어, ISO 제어 문자나 실행성 문자(`<`, `>`)가 포함된 입력은 `400 INVALID_FIELD_VALUE`로 거부된다. 생성은 `201 Created`, 이름 변경은 같은 본문의 `PATCH`와 `200 OK`를 사용한다.
 
 ```json
 {

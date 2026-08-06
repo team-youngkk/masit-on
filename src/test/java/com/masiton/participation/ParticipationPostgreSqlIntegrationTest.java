@@ -71,9 +71,13 @@ class ParticipationPostgreSqlIntegrationTest extends FullContextIntegrationTest 
     @MockitoSpyBean
     private NotificationStore notificationStore;
 
+    @MockitoSpyBean
+    private AdminParticipationStore adminParticipationStore;
+
     @BeforeEach
     void clearRequests() {
         Mockito.reset(notificationStore);
+        Mockito.reset(adminParticipationStore);
         jdbcTemplate.execute("TRUNCATE TABLE idempotency_record, notification, moderation_history, report, submission CASCADE");
     }
 
@@ -115,6 +119,68 @@ class ParticipationPostgreSqlIntegrationTest extends FullContextIntegrationTest 
                         ParticipationStatus.IN_REVIEW, null, "검토 시작", null), "trace-fail"))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("Simulated Notification Storage Failure");
+
+        // Verify state transition rolled back to RECEIVED
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM submission WHERE id = ?", String.class, submissionId))
+                .isEqualTo("RECEIVED");
+        // Verify moderation_history rolled back (0 rows)
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM moderation_history WHERE submission_id = ?",
+                Long.class, submissionId)).isEqualTo(0L);
+        // Verify notification rolled back (0 rows)
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM notification WHERE submission_id = ?",
+                Long.class, submissionId)).isEqualTo(0L);
+    }
+
+    @Test
+    @DisplayName("TST-E2-ATOMIC-001: 감사 이력 저장 실패 주입 시 상태 변경과 알림이 함께 롤백된다")
+    void TST_E2_ATOMIC_001_이력저장실패_전체롤백된다() {
+        UUID adminId = insertAdmin();
+        UUID memberId = insertMember();
+        UUID submissionId = createSubmission(memberId, 92).requestId();
+
+        doThrow(new RuntimeException("Simulated Moderation History Storage Failure"))
+                .when(adminParticipationStore).insertSubmissionHistory(
+                        any(), any(), any(), any(), any(), any(), any(), any(), any());
+
+        assertThatThrownBy(() -> adminUseCase.updateSubmission(submissionId, adminId,
+                new AdminParticipationUseCase.UpdateStatusCommand(
+                        ParticipationStatus.IN_REVIEW, null, "검토 시작", null), "trace-history-fail"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Simulated Moderation History Storage Failure");
+
+        // Verify state transition rolled back to RECEIVED
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM submission WHERE id = ?", String.class, submissionId))
+                .isEqualTo("RECEIVED");
+        // Verify moderation_history rolled back (0 rows)
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM moderation_history WHERE submission_id = ?",
+                Long.class, submissionId)).isEqualTo(0L);
+        // Verify notification rolled back (0 rows)
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM notification WHERE submission_id = ?",
+                Long.class, submissionId)).isEqualTo(0L);
+    }
+
+    @Test
+    @DisplayName("TST-E2-ATOMIC-001: 요청 상태 갱신 실패 주입 시 이력과 알림이 함께 롤백된다")
+    void TST_E2_ATOMIC_001_상태갱신실패_전체롤백된다() {
+        UUID adminId = insertAdmin();
+        UUID memberId = insertMember();
+        UUID submissionId = createSubmission(memberId, 93).requestId();
+
+        doThrow(new RuntimeException("Simulated Submission Status Update Failure"))
+                .when(adminParticipationStore).updateSubmission(
+                        any(), any(), any(), any(), any(), any(), any());
+
+        assertThatThrownBy(() -> adminUseCase.updateSubmission(submissionId, adminId,
+                new AdminParticipationUseCase.UpdateStatusCommand(
+                        ParticipationStatus.IN_REVIEW, null, "검토 시작", null), "trace-status-fail"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Simulated Submission Status Update Failure");
 
         // Verify state transition rolled back to RECEIVED
         assertThat(jdbcTemplate.queryForObject(

@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.masiton.common.security.MemberSessionAccessChecker;
+import com.masiton.security.infrastructure.RestaurantPathClassifier;
 
 @Component
 public class MemberSessionRevocationFilter extends OncePerRequestFilter {
@@ -62,20 +63,12 @@ public class MemberSessionRevocationFilter extends OncePerRequestFilter {
     }
 
     /**
-     * API-POPULAR-001은 회원 문맥을 쓰지 않는 완전 공개 조회이므로 이 회원 세션 확인 대상에서
-     * 제외한다. 제외하지 않으면 유효한 회원 JWT를 들고 온 요청마다 공개 목록 조회에 불필요한
-     * 세션 저장소 조회가 붙는다.
+     * API-POPULAR-001·API-MAP-001은 회원 문맥을 쓰지 않는 완전 공개 조회이므로 이 회원 세션 확인
+     * 대상에서 제외한다. 제외하지 않으면 유효한 회원 JWT를 들고 온 요청마다 공개 조회에 불필요한
+     * 세션 저장소 조회가 붙는다. 판정은 {@link RestaurantPathClassifier}가 보안 설정과 공유한다.
      */
     private boolean isOptionalRestaurantDetailRequest(HttpServletRequest request) {
-        if (!HttpMethod.GET.matches(request.getMethod())) {
-            return false;
-        }
-        String detailPrefix = "/api/restaurants/";
-        String requestUri = request.getRequestURI();
-        if (!requestUri.startsWith(detailPrefix)) {
-            return false;
-        }
-        String restaurantId = requestUri.substring(detailPrefix.length());
-        return !restaurantId.isEmpty() && !restaurantId.contains("/") && !"popular".equals(restaurantId);
+        return HttpMethod.GET.matches(request.getMethod())
+                && RestaurantPathClassifier.isRestaurantDetailPath(request.getRequestURI());
     }
 }

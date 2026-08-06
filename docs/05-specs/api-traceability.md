@@ -154,9 +154,9 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 
 | API 계약군 | 데이터 | ADR 또는 명시적 보류 | Workstream | 테스트 | E2 Task |
 |---|---|---|---|---|---|
-| `API-COLLECTION-001~008` | `personal_collection`, `collection_restaurant`, `idempotency_record` | 기존 인증·PostgreSQL·Flyway ADR; 공유·직접 정렬 제외 | WS-09 | [`TST-E2-COL-001`](../08-planning/second-expansion-test-matrix.md) | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md)~`E2-T03`, `E2-T13`, `E2-T15` |
+| `API-COLLECTION-001~008` | `personal_collection`, `collection_restaurant`, `idempotency_record` | 기존 인증·PostgreSQL·Flyway ADR; 공유·직접 정렬 제외 | WS-09 | [`TST-E2-COL-001`](../08-planning/second-expansion-test-matrix.md), `TST-E2-SEC-001` | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md)~`E2-T03`, `E2-T13`, `E2-T15` |
 | `API-POPULAR-001` | 기존 `favorite`, 결과 비저장 | [ADR-DATA-011](../07-adr/data/data-011-popular-restaurant-request-time-aggregation.md); Snapshot·Batch·Redis 비활성 | WS-10 | [`TST-E2-POP-001`](../08-planning/second-expansion-test-matrix.md), `TST-E2-PERF-001` | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T04`, `E2-T05`, `E2-T13`, `E2-T15` |
-| `API-CURATION-001~009` | `curation`, `curation_restaurant` | 기존 관리자 인증·PostgreSQL ADR; 예약·추천·이미지 제외 | WS-11 | [`TST-E2-CUR-001`](../08-planning/second-expansion-test-matrix.md), `TST-E2-PERF-001` | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T06`, `E2-T07`, `E2-T13`, `E2-T15` |
+| `API-CURATION-001~009` | `curation`, `curation_restaurant` | 기존 관리자 인증·PostgreSQL ADR; 예약·추천·이미지 제외 | WS-11 | [`TST-E2-CUR-001`](../08-planning/second-expansion-test-matrix.md), `TST-E2-PERF-001`, `TST-E2-SEC-001` | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T06`, `E2-T07`, `E2-T13`, `E2-T15` |
 | `API-SUBMISSION-*`, `API-ADMIN-SUBMISSION-*` | `submission`, `moderation_history`, `idempotency_record` | [ADR-DATA-012](../07-adr/data/data-012-second-expansion-retention-cleanup.md), [ADR-NOTIFY-002](../07-adr/integration/notify-002-in-app-notification-reliability.md) | WS-12 | [`TST-E2-SUB-001`](../08-planning/second-expansion-test-matrix.md), `TST-E2-ATOMIC-001`, `TST-E2-LIFE-001` | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T08`, `E2-T09`, `E2-T11`, `E2-T13`, `E2-T15` |
 | `API-REPORT-*`, `API-ADMIN-REPORT-*` | `report`, `moderation_history`, `idempotency_record` | [ADR-DATA-012](../07-adr/data/data-012-second-expansion-retention-cleanup.md), [ADR-NOTIFY-002](../07-adr/integration/notify-002-in-app-notification-reliability.md) | WS-12 | [`TST-E2-REP-001`](../08-planning/second-expansion-test-matrix.md), `TST-E2-ATOMIC-001`, `TST-E2-LIFE-001` | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T08`, `E2-T09`, `E2-T11`, `E2-T13`, `E2-T15` |
 | 상태 전이 내부 생성, `API-NOTIFICATION-001~004` | `notification` | [ADR-NOTIFY-002](../07-adr/integration/notify-002-in-app-notification-reliability.md), [ADR-DATA-012](../07-adr/data/data-012-second-expansion-retention-cleanup.md); FCM Post-MVP | WS-12·WS-13 | [`TST-E2-ATOMIC-001`](../08-planning/second-expansion-test-matrix.md), `TST-E2-NOT-001`, `TST-E2-LIFE-001` | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T10`, `E2-T11`, `E2-T13`, `E2-T14`, `E2-T15` |
@@ -213,7 +213,7 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 | NFR | 관련 API | 검증 방식 | 책임 |
 |---|---|---|---|
 | NFR-PERFORMANCE-006 | API-POPULAR-001, API-CURATION-001~002 | 현재 데이터 집계와 공개 목록 최대 조건 부하 테스트 | WS-10·11 |
-| NFR-SECURITY-006 | 제보·신고 API | 악성 입력·URL·일일 제한·동시 우회 테스트 | WS-12 |
+| NFR-SECURITY-006 | 제보·신고 API, 개인 컬렉션 API, 큐레이션 API | 악성 입력·URL·일일 제한·동시 우회 테스트, `SafeTextPolicy` 거부 회귀 | WS-09·11·12 |
 | NFR-INTEGRITY-005 | 관리자 상태 전이, 알림 생성 | 상태와 알림 동일 트랜잭션 실패 주입·고유성 테스트 | WS-12·13 |
 | NFR-RELIABILITY-004 | 인기·알림 API | 현재 찜 일관성·보존 작업 실패 격리 테스트 | WS-10·13 |
 | NFR-OBSERVABILITY-004 | 큐레이션·제보·신고 관리자 API | 감사 이력과 traceId 상관관계 검사 | WS-11·12 |

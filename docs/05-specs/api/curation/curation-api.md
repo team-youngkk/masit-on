@@ -72,7 +72,7 @@ related_documents:
 { "title": "비 오는 날 국물 맛집", "description": "관리자가 고른 목록" }
 ```
 
-`title`은 공백 제거 후 1~100자, `description`은 공백 제거 후 0~1000자다. `PATCH`는 둘 중 하나 이상을 받아 목표값을 설정하며 `200 OK`다.
+`title`은 공백 제거 후 1~100자, `description`은 공백 제거 후 0~1000자다. NFR-SECURITY-006에 따라 `SafeTextPolicy`가 적용되어, ISO 제어 문자나 실행성 문자(`<`, `>`)가 포함된 입력은 `400 INVALID_FIELD_VALUE`로 거부된다. `PATCH`는 둘 중 하나 이상을 받아 목표값을 설정하며 `200 OK`다.
 
 구성 교체는 배열 순서가 표시 순서인 완전 교체 계약이다.
 

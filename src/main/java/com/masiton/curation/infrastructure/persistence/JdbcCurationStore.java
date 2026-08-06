@@ -22,6 +22,16 @@ public class JdbcCurationStore implements CurationStore {
 
     private static final String COLUMNS = "id, title, description, publication_status, main_position, "
             + "created_by, updated_by, published_at, created_at, updated_at";
+
+    /**
+     * TST-E2-PERF-001 실행계획 검증이 실제 실행 SQL을 EXPLAIN하도록 상수로 노출한다.
+     * {@code %s}는 curationIds 개수만큼의 {@code ?} 자리표시자다. 쿼리 의미는 기존과 동일하게
+     * {@code curation_restaurant} PK(curation_id, restaurant_id)의 선두 컬럼으로 IN 조건을 건다.
+     */
+    static final String FIND_RESTAURANTS_BY_CURATION_IDS_SQL_TEMPLATE =
+            "SELECT curation_id, restaurant_id, position FROM curation_restaurant "
+                    + "WHERE curation_id IN (%s) ORDER BY curation_id, position";
+
     private final JdbcTemplate jdbcTemplate;
 
     public JdbcCurationStore(JdbcTemplate jdbcTemplate) {
@@ -95,8 +105,7 @@ public class JdbcCurationStore implements CurationStore {
     public List<StoredCurationRestaurant> findRestaurants(Collection<UUID> curationIds) {
         if (curationIds.isEmpty()) return List.of();
         String placeholders = String.join(",", Collections.nCopies(curationIds.size(), "?"));
-        return jdbcTemplate.query("SELECT curation_id, restaurant_id, position FROM curation_restaurant "
-                        + "WHERE curation_id IN (" + placeholders + ") ORDER BY curation_id, position",
+        return jdbcTemplate.query(FIND_RESTAURANTS_BY_CURATION_IDS_SQL_TEMPLATE.formatted(placeholders),
                 (rs, row) -> new StoredCurationRestaurant(
                         rs.getObject("curation_id", UUID.class),
                         rs.getObject("restaurant_id", UUID.class),
