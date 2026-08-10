@@ -50,14 +50,14 @@ Accepted
 
 ## 4. 결정 문제
 
-MVP 등록 과정에서 장소와 YouTube 자원의 존재·동일성을 어떤 외부 기준으로 확인할 것인가. 이 결정은 다음 제약 안에서 이루어져야 한다: [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록)는 김인안 한 명이 등록 순서·중복·원자성까지 끝까지 책임지고([roles.md](../../03-team/roles.md)), 4명의 백엔드 개발자가 각자 MVP 기간 내에 독립적으로 개발·검증할 수 있어야 하며([scope.md](../../00-overview/scope.md) 6번 경계 규칙), AI 기반 자동 판정과 크롤링은 이미 MVP 제외 범위로 결정되어 있다([scope.md](../../00-overview/scope.md) 4.5절, [ADR-AI-001](../adr-backlog.md#adr-ai-001-spring-ai와-gemini-영상-정보-추출), [ADR-AUTO-001](../adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) Post-MVP).
+MVP 등록 과정에서 장소와 YouTube 자원의 존재·동일성을 어떤 외부 기준으로 확인할 것인가. 이 결정은 다음 제약 안에서 이루어져야 한다: [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록)는 김인안 한 명이 등록 순서·중복·원자성까지 끝까지 책임지고([roles.md](../../03-team/roles.md)), 4명의 백엔드 개발자가 각자 MVP 기간 내에 독립적으로 개발·검증할 수 있어야 하며([scope.md](../../00-overview/scope.md) 6번 경계 규칙), AI 기반 자동 판정과 크롤링은 MVP 범위에서 제외되어 있다([scope.md](../../00-overview/scope.md) 4.5절, [ADR-AI-001](ai-001-video-extraction-candidate-boundary.md), [ADR-AUTO-001](../adr-backlog.md#adr-auto-001-자동-수집과-배치-처리)). 이 ADR의 관리자 확인 의무는 MVP 수동 등록(`WS-04`)에만 적용하며, 3차 AI 자동 등록은 [ADR-AI-001](ai-001-video-extraction-candidate-boundary.md)의 자동 검증·무승인 공개 경계를 따른다.
 
 부수적으로, 확인 실패·지연을 어디에서 얼마나 감당할 것인가도 함께 결정해야 한다. 관리자 등록은 관리자 한 명이 트리거하는 저빈도 작업이므로, 이 결정 문제는 "완벽한 가용성을 보장하는 복원력 체계를 구축할 것인가" 대신 "이 정도 호출 빈도에 비례하는 최소한의 실패 처리로 충분한가"를 묻는다.
 
 ## 5. 고려한 선택지
 
 - **관리자 자유 입력만 사용**: 외부 식별자 없이 관리자가 입력한 이름·주소·채널명만으로 중복을 판단해야 한다. 그런데 [scope.md](../../00-overview/scope.md)의 중복 판단 기준은 "카카오에서 동일한 장소" "동일한 YouTube 채널·영상"처럼 외부 제공자 식별자를 전제로 정의되어 있어, 자유 입력만으로는 이 기준 자체를 구현할 수 없다. 관리자 계정은 모두 동일한 등록 권한을 가지며 별도의 교차 검수 단계가 없으므로([scope.md](../../00-overview/scope.md) 3.4 "관리자 접근"), 등록 건수가 늘어날수록 이름만으로 동일 장소·동일 채널 여부를 관리자가 기억에 의존해 판단하는 것은 [NFR-INTEGRITY-002](../../01-requirements/non-functional-requirements.md#nfr-integrity-002-중복-및-동시-등록-방지)(중복 및 동시 등록 방지, Critical)를 만족시키기 어렵다.
-- **크롤링·AI 자동 판정**: 관리자 확인 없이 자동으로 존재·동일성을 판정하는 방식이다. [scope.md](../../00-overview/scope.md) 4.5절은 "AI 또는 외부 데이터 수집을 통한 자동 등록"과 "관리자 확인 없는 자동 등록"을 MVP 제외 범위로 명시하며, [ADR-AUTO-001](../adr-backlog.md#adr-auto-001-자동-수집과-배치-처리)(Jsoup·n8n·Scheduler·Batch)과 [ADR-AI-001](../adr-backlog.md#adr-ai-001-spring-ai와-gemini-영상-정보-추출)(Spring AI·Gemini)은 이미 Post-MVP로 분류되어 있다. 지금 이 방식을 채택하면 별도의 범위 변경 절차 없이 제외 범위를 구현 범위로 끌어오는 것이 되어 채택할 수 없다.
+- **크롤링·AI 자동 판정**: 관리자 확인 없이 자동으로 존재·동일성을 판정하는 방식이다. [scope.md](../../00-overview/scope.md) 4.5절은 이를 MVP에서 제외한다. [ADR-AUTO-001](../adr-backlog.md#adr-auto-001-자동-수집과-배치-처리)(Jsoup·n8n·Scheduler·Batch)은 MVP 등록에서 채택하지 않는다. 3차 AI 기능의 자동 검증·무승인 공개 여부는 이 MVP ADR이 아니라 [ADR-AI-001](ai-001-video-extraction-candidate-boundary.md)이 결정한다.
 - **Kakao Local·YouTube 공식 API 조회 + 관리자 확인**: 관리자가 채널 링크·원본 링크를 입력하면 API로 존재·현재 표시 정보를 조회하고, 그 결과를 관리자가 확인한 뒤 저장한다([RV-NFR-008](../../01-requirements/non-functional-requirements.md#rv-nfr-008-외부-youtube-api-사용-여부), [RV-NFR-016](../../01-requirements/non-functional-requirements.md#rv-nfr-016-외부-링크-상태-확인-정책) 결정 완료). 이 방식만이 [scope.md](../../00-overview/scope.md)가 요구하는 외부 식별자 기반 동일성 판단과 "관리자 확인 후 저장"이라는 두 조건을 동시에 만족한다.
 
 ## 6. 결정
@@ -83,11 +83,11 @@ Kakao 어댑터와 YouTube 어댑터는 동일한 Port 계약(존재 확인, 현
 ## 9. 적용 범위
 
 - 포함: [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 맛집 등록의 카카오 장소 일치 확인, 유튜버 등록의 채널 존재·채널명 확인, 영상 등록의 존재·제목·썸네일·게시 채널 확인.
-- 제외: 일반 사용자 조회 API(이 Port/Adapter를 호출하지 않으며 저장된 데이터만 사용, [RV-NFR-016](../../01-requirements/non-functional-requirements.md#rv-nfr-016-외부-링크-상태-확인-정책)), 등록 이후의 주기적 재확인(11장 금지 사항), 지도 표시·길찾기 등 Kakao·YouTube의 다른 API 기능([ADR-MAP-001](../adr-backlog.md#adr-map-001-지도-표시와-공간-검색), [ADR-ROUTE-001](../adr-backlog.md#adr-route-001-kakao-mobility와-동선-추천) Post-MVP).
+- 제외: 일반 사용자 조회 API(이 Port/Adapter를 호출하지 않으며 저장된 데이터만 사용, [RV-NFR-016](../../01-requirements/non-functional-requirements.md#rv-nfr-016-외부-링크-상태-확인-정책)), 등록 이후의 주기적 재확인(11장 금지 사항), 지도 표시·길찾기 등 Kakao·YouTube의 다른 API 기능([ADR-MAP-001](../adr-backlog.md#adr-map-001-지도-표시와-공간-검색), [ADR-ROUTE-001](route-001-kakao-mobility-course-routing.md) Proposed).
 
 ## 10. 강제 규칙
 
-- 관리자 확인을 필수로 하고, 관리자가 확인하지 않은 조회 결과는 저장하지 않는다. 관리자 화면에는 현재 표시 정보와 정규화 URL(장소명·주소, 채널명, 영상 제목·썸네일)을 노출한다. 제공자 원본 식별자(Kakao place ID, YouTube channel/video ID)는 서버의 동일성 판정과 저장소 유일 키로만 사용하며 API·화면에 노출하지 않는다.
+- MVP `WS-04` 관리자 등록에서는 관리자 확인을 필수로 하고, 관리자가 확인하지 않은 조회 결과는 저장하지 않는다. 관리자 화면에는 현재 표시 정보와 정규화 URL(장소명·주소, 채널명, 영상 제목·썸네일)을 노출한다. 제공자 원본 식별자(Kakao place ID, YouTube channel/video ID)는 서버의 동일성 판정과 저장소 유일 키로만 사용하며 API·화면에 노출하지 않는다.
 - 제공자 원본 ID를 동일성 기준으로 사용한다. 구체적으로 동일 카카오 place id는 중복 맛집, 동일 YouTube 채널 id는 중복 유튜버, 동일 YouTube 영상 id는 중복 영상, 동일한 (맛집, 유튜버, 영상) id 조합은 중복 방문 관계로 판단한다([scope.md](../../00-overview/scope.md) 3.4).
 - 제공자 원본 ID는 비밀정보는 아니지만 내부 구현 정보로 분류해 일반·관리자 응답과 업무 로그에서 제외한다.
 - 상호명이 같아도 카카오 place id가 다르면 별도 지점으로 등록할 수 있다([scope.md](../../00-overview/scope.md) 명시 규칙).
@@ -96,9 +96,9 @@ Kakao 어댑터와 YouTube 어댑터는 동일한 Port 계약(존재 확인, 현
 ## 11. 금지 사항
 
 - 자동 주기 동기화: 등록 이후 Kakao·YouTube 정보를 주기적으로 재확인하지 않는다([RV-NFR-016](../../01-requirements/non-functional-requirements.md#rv-nfr-016-외부-링크-상태-확인-정책) 결정, 자동 주기 확인은 MVP 제외).
-- 관리자 확인 없는 저장: 조회 결과를 관리자가 확인하기 전에 내부 데이터로 확정하지 않는다([NFR-INTEGRITY-001](../../01-requirements/non-functional-requirements.md#nfr-integrity-001-참조-및-필수값-정합성)).
+- MVP 관리자 확인 없는 저장: `WS-04` 조회 결과를 관리자가 확인하기 전에 내부 데이터로 확정하지 않는다([NFR-INTEGRITY-001](../../01-requirements/non-functional-requirements.md#nfr-integrity-001-참조-및-필수값-정합성)). 3차 AI 자동 등록은 별도 [ADR-AI-001](ai-001-video-extraction-candidate-boundary.md)의 자동 검증 게이트를 사용한다.
 - 공개 조회의 실시간 외부 호출: 일반 사용자 요청이 Kakao·YouTube를 직접 호출하지 않는다([NFR-EXTERNAL-003](../../01-requirements/non-functional-requirements.md#nfr-external-003-링크-검증과-외부-인증정보), 응답 시간·비용 보호).
-- Maps·Mobility·AI 기능 확장: 지도 SDK([ADR-MAP-001](../adr-backlog.md#adr-map-001-지도-표시와-공간-검색)), 길찾기([ADR-ROUTE-001](../adr-backlog.md#adr-route-001-kakao-mobility와-동선-추천)), AI 자동 추출([ADR-AI-001](../adr-backlog.md#adr-ai-001-spring-ai와-gemini-영상-정보-추출))은 이미 Post-MVP로 분류되어 있으므로 이 ADR의 범위로 끌어오지 않는다.
+- Maps·Mobility·AI 기능 확장: 지도 SDK([ADR-MAP-001](../adr-backlog.md#adr-map-001-지도-표시와-공간-검색)), 길찾기([ADR-ROUTE-001](route-001-kakao-mobility-course-routing.md)), AI 자동 추출([ADR-AI-001](ai-001-video-extraction-candidate-boundary.md))은 이 MVP 등록 ADR의 범위가 아니다. 3차 확장에서는 각 ADR과 자동 검증·예외 보정 경계를 별도로 따른다.
 
 ## 12. 구현 및 운영 영향
 
@@ -121,7 +121,7 @@ WireMock으로 다음 시나리오별 등록 분기를 검증한다: 정상 응�
 
 ## 14. 재검토 조건
 
-제공자 API 종료·계약 변경, 초기 월 150,000원 인프라 예산 목표 대비 API 호출 비용이 한계를 넘어설 때, 또는 범위가 자동 수집·AI 자동 판정으로 변경 승인될 때([scope.md](../../00-overview/scope.md) 4.5절 범위 변경 절차 완료, [ADR-AI-001](../adr-backlog.md#adr-ai-001-spring-ai와-gemini-영상-정보-추출)·[ADR-AUTO-001](../adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) 활성화 조건 충족 시) 재검토한다.
+제공자 API 종료·계약 변경, 초기 월 150,000원 인프라 예산 목표 대비 API 호출 비용이 한계를 넘어설 때, 또는 범위가 자동 수집·AI 자동 판정으로 변경 승인될 때([scope.md](../../00-overview/scope.md) 4.5절 범위 변경 절차 완료, [ADR-AI-001](ai-001-video-extraction-candidate-boundary.md)·[ADR-AUTO-001](../adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) 활성화 조건 충족 시) 재검토한다.
 
 ## 15. 관련 문서
 

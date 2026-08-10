@@ -2,10 +2,12 @@
 related_documents:
   - first-expansion-user-flows.md
   - second-expansion-user-flows.md
+  - third-expansion-user-flows.md
   - ../wireframes/first-expansion-wireframes.md
   - ../README.md
   - ../../00-overview/scope.md
   - ../../02-analysis/first-expansion-workstreams.md
+  - ../../02-analysis/third-expansion-workstreams.md
 ---
 
 # 사용자 흐름
@@ -20,6 +22,7 @@ related_documents:
 |---|---|---|
 | [1차 확장 사용자 흐름](first-expansion-user-flows.md) | 회원가입·로그인, 찜, 최근 본 맛집, 지도, 유튜버 상세와 공통 인증·자원 상태 | 확정 |
 | [2차 확장 사용자 흐름](second-expansion-user-flows.md) | 개인 컬렉션, 인기·큐레이션, 제보·신고, 알림과 공통 상태 전이 | 초안 |
+| [3차 확장 사용자 흐름](third-expansion-user-flows.md) | 자연어 검색, AI 자동 등록·예외 보정, 코스 경로와 외부 장애 복구 | 승인 |
 
 ## 3. 작성 원칙
 

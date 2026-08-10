@@ -4,7 +4,9 @@ related_documents:
   - mvp-workstreams.md
   - first-expansion-workstreams.md
   - second-expansion-domain-boundaries.md
+  - third-expansion-domain-boundaries.md
   - second-expansion-workstreams.md
+  - third-expansion-workstreams.md
   - ../01-requirements/functional-requirements.md
   - ../01-requirements/business-rules.md
   - ../03-team/roles.md
@@ -31,6 +33,8 @@ related_documents:
 3. [1차 확장 Workstream](first-expansion-workstreams.md): WS-05~WS-08의 회원·개인화·지도·유튜버 상세 책임과 `OPS-VALIDATION` 공통 운영·배포 트랙
 4. [2차 확장 도메인 경계](second-expansion-domain-boundaries.md): 컬렉션·인기·큐레이션·참여·알림 책임과 패키지 결정 게이트
 5. [2차 확장 Workstream](second-expansion-workstreams.md): WS-09~WS-13의 범위와 담당자·리뷰어
+6. [3차 확장 도메인 경계](third-expansion-domain-boundaries.md): 기존 도메인과 자연어·AI 후보·코스·평가 경계의 연결
+7. [3차 확장 Workstream](third-expansion-workstreams.md): WS-14~WS-16과 `QUALITY-EVAL`의 기능·평가 책임, 담당자·리뷰어
 
 `mvp-workstreams.md`는 `domain-boundaries.md`를 입력으로 사용한다. 순서를 바꿔 읽으면 Workstream이 왜 그렇게 잘렸는지 이해하기 어렵다.
 
@@ -39,6 +43,7 @@ related_documents:
 | 문서 | 답하는 질문 | 다루지 않는 내용 |
 |---|---|---|
 | `domain-boundaries.md` | 이 데이터와 규칙은 어느 도메인이 소유하는가? | 팀원 배정과 작업 순서 |
+| `third-expansion-domain-boundaries.md` | 3차 확장 데이터·후보·조회 결과는 어느 경계가 소유하는가? | 물리 패키지·테이블·API 확정 |
 | `mvp-workstreams.md` | 이 기능은 누가 어디까지 책임지고 완성하는가? | 도메인 내부의 규칙 소유권 |
 
 ## 4. Workstream 요약
@@ -59,6 +64,10 @@ related_documents:
 | [WS-11](second-expansion-workstreams.md#6-ws-11-관리자-큐레이션) | 관리자 큐레이션 | 김인안 |
 | [WS-12](second-expansion-workstreams.md#7-ws-12-제보신고-검토) | 제보·신고 검토 | 김인안 |
 | [WS-13](second-expansion-workstreams.md#8-ws-13-사용자-알림) | 사용자 알림 | 이우람 |
+| [WS-14](third-expansion-workstreams.md#5-ws-14-자연어-맛집-탐색) | 자연어 맛집 탐색 | 양성훈 |
+| [WS-15](third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | AI 영상 정보 추출 | 김인안 |
+| [WS-16](third-expansion-workstreams.md#7-ws-16-맛집-코스-추천) | 맛집 코스 추천 | 이우람 |
+| [QUALITY-EVAL](third-expansion-workstreams.md#8-quality-eval-교차-품질-트랙) | 3차 EDD Dataset·평가기·릴리즈 게이트 | 박진영 |
 
 ## 5. 사용 시 주의
 
@@ -71,5 +80,7 @@ related_documents:
 | 다음 문서 | 이 디렉터리에서 이어받는 것 |
 |---|---|
 | [역할](../03-team/roles.md) · [소유권](../03-team/ownership.md) | Workstream별 최종 책임자 |
+| [3차 확장 도메인 경계](third-expansion-domain-boundaries.md) | 기존 도메인과 AI 후보·조회 책임의 연결 |
+| [3차 확장 Workstream](third-expansion-workstreams.md) | WS-14~WS-16·`QUALITY-EVAL`의 구현·평가 책임 |
 | [모듈 경계](../06-architecture/module-boundaries.md) | 도메인 경계의 코드 구조 반영 |
 | [MVP 구현 계획](../08-planning/mvp-2day-implementation-plan.md) | Workstream별 Task 분해와 통합 순서 |

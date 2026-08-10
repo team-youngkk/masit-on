@@ -98,6 +98,7 @@ related_documents:
 | `district` | string | 아니요 | 없음 | 서울특별시 자치구 1개 | 서울 자치구 이름만 허용, 반복 불가 |
 | `category` | string | 아니요 | 없음 | 대표 음식 카테고리 1개 | 공통 계약의 10개 값만 허용, 반복 불가 |
 | `creatorId` | Identifier | 아니요 | 없음 | 유튜버 1명의 식별자 | 공개 유튜버만 허용, 반복 불가 |
+| `tag` | string | 아니요 | 없음 | 활성 관리자 확정 태그 코드 1개 | 공개·유효 Visit에 연결된 활성 태그만 허용, 반복 불가 |
 | `page` | integer | 아니요 | `1` | 요청 페이지 | 1 이상. 첫 페이지는 1 |
 | `size` | integer | 아니요 | `20` | 페이지 크기 | `10`, `20`, `50`만 허용 |
 
@@ -106,6 +107,7 @@ related_documents:
 - 검색과 서로 다른 필터는 AND로 적용하고 미지정 조건은 적용하지 않는다.
 - `creatorId` 조건의 유효 관계 판정은 [WS-03](../../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 계약을 따르며 최종 조합·정렬·페이지는 [WS-01](../../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)이 수행한다.
 - 비공개·삭제 맛집과 무효 관계는 제외한다. 영상 관계가 없는 공개 맛집은 유튜버 조건이 없을 때 포함한다.
+- `tag` 조건은 공개·유효 Visit에 연결된 확정 태그가 있는 맛집만 포함하며, 같은 맛집에 여러 관계가 있어도 한 번만 반환한다.
 - 같은 맛집에 여러 관계가 있어도 한 번만 반환한다.
 - 검색·필터 변경 시 클라이언트는 첫 페이지를 요청한다.
 
@@ -163,13 +165,13 @@ related_documents:
 | 오류 코드 | HTTP 상태 | 발생 조건 |
 |---|---:|---|
 | `INVALID_REQUEST` | 400 | 지원하지 않는 쿼리 파라미터 |
-| `INVALID_FIELD_VALUE` | 400 | 자치구·카테고리·유튜버·페이지·크기가 유효하지 않거나, 같은 필터를 반복·배열·쉼표 목록 등 복수 값 형식으로 전달함([필터링 계약](../common/filtering-contract.md) 2절) |
+| `INVALID_FIELD_VALUE` | 400 | 자치구·카테고리·유튜버·태그·페이지·크기가 유효하지 않거나, 같은 필터를 반복·배열·쉼표 목록 등 복수 값 형식으로 전달함([필터링 계약](../common/filtering-contract.md) 2절) |
 | `INVALID_IDENTIFIER` | 400 | `creatorId` 형식이 잘못됨 |
 | `INTERNAL_SERVER_ERROR` | 500 | 예상하지 못한 내부 오류 |
 
 ## 6. 검색·필터 조합 규칙
 
-`query`, `district`, `category`, `creatorId`는 모두 선택이며 지정한 조건을 모두 만족해야 한다. 같은 종류의 복수 값은 지원하지 않는다. 유효한 조건의 무결과는 `200`과 빈 목록이다.
+`query`, `district`, `category`, `creatorId`, `tag`는 모두 선택이며 지정한 조건을 모두 만족해야 한다. 같은 종류의 복수 값은 지원하지 않는다. 유효한 조건의 무결과는 `200`과 빈 목록이다. 여러 태그의 AND 조합은 자연어 탐색 API의 `filters.tags`를 사용한다.
 
 ## 7. 정렬 및 페이지네이션
 
@@ -185,7 +187,7 @@ related_documents:
 
 ## 10. 예제
 
-`GET /api/restaurants?query=식당&district=마포구&category=한식&creatorId=creator-id&page=1&size=20`
+`GET /api/restaurants?query=식당&district=마포구&category=한식&creatorId=creator-id&tag=MENU_NAENGMYEON&page=1&size=20`
 
 이 요청은 네 탐색 조건을 모두 만족하는 공개 맛집의 첫 페이지를 요청한다.
 

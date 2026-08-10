@@ -17,11 +17,17 @@ related_documents:
   - migration-plan.md
   - seed-data-plan.md
   - second-expansion-data-contract.md
+  - third-expansion-ai-video-data-contract.md
+  - ../api/admin/ai-video-extraction-api.md
+  - ../../02-analysis/third-expansion-workstreams.md
+  - ../../04-product/prd/admin/ai-video-information-extraction.md
   - ../diagrams/erd-spec.md
   - ../../00-overview/scope.md
   - ../../07-adr/security/auth-003-confirmation-token.md
   - ../../07-adr/data/data-007-uuid-v4-identifiers.md
   - ../../07-adr/data/data-008-publication-lifecycle-soft-delete.md
+  - ../../08-planning/third-expansion-test-matrix.md
+  - ../../08-planning/third-expansion-task-breakdown.md
 ---
 
 # 맛잇온 데이터 명세
@@ -48,6 +54,7 @@ related_documents:
 | [migration-plan.md](migration-plan.md) | Flyway 파일 순서·배포·복구 계획 |
 | [seed-data-plan.md](seed-data-plan.md) | Region·FoodCategory 기준 데이터 계획 |
 | [second-expansion-data-contract.md](second-expansion-data-contract.md) | 2차 확장 논리 개념·테이블·제약·생명주기·인덱스·마이그레이션 계약 |
+| [third-expansion-ai-video-data-contract.md](third-expansion-ai-video-data-contract.md) | 3차 확장 AI 추출 Job·후보 Snapshot·통제 태그·확정 VisitTag·시도 이력·YouTube 채널 감시 데이터 계약 |
 | [../diagrams/erd-spec.md](../diagrams/erd-spec.md) | ERD 포함 범위와 표기 명세 |
 | `../diagrams/erd.mmd` | 논리 모델의 Mermaid 시각화 |
 
@@ -58,6 +65,8 @@ related_documents:
 UUID 내부 식별자와 논리 삭제 정책은 각각 [ADR-DATA-007](../../07-adr/data/data-007-uuid-v4-identifiers.md), [ADR-DATA-008](../../07-adr/data/data-008-publication-lifecycle-soft-delete.md)로 확정됐다.
 
 2차 확장은 기존 명세를 반복하지 않고 [2차 확장 데이터 계약](second-expansion-data-contract.md)을 진입점으로 사용한다. 인기 순위·알림 수신 설정·Device Token은 현재 범위에서 영속 데이터가 아니다.
+
+3차 확장 AI 영상 추출은 [AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)을 진입점으로 사용한다. 원본 영상·전체 자막·Gemini 원문 응답은 저장하지 않으며, 후보와 검수 이력은 관리자 전용으로 1년 보존한다. 통제 태그 정의와 확정 `VisitTag`만 기존 등록 흐름 성공 뒤 공개 검색에 연결한다.
 
 검증 미리보기의 확인 Token은 PostgreSQL 단기 기술 테이블로 확정됐지만 핵심 도메인 엔티티나 논리 ERD에는 포함하지 않는다. Token 해시·관리자·자원 종류·후보 스키마 버전·JSONB Snapshot과 결과 상태만 저장하며 세부 정책은 [ADR-AUTH-003](../../07-adr/security/auth-003-confirmation-token.md)을 따른다. 저장 위치가 미정인 로그인 제한 카운터 같은 기술 아티팩트도 핵심 엔티티로 만들지 않는다.
 

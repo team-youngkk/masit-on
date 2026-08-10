@@ -40,6 +40,19 @@ related_documents:
   - seed-data-plan.md
   - ../../07-adr/data/data-007-uuid-v4-identifiers.md
   - ../../07-adr/data/data-008-publication-lifecycle-soft-delete.md
+  - third-expansion-ai-video-data-contract.md
+  - ../api/admin/ai-video-extraction-api.md
+  - ../api/discovery/natural-language-restaurant-discovery-api.md
+  - ../api/discovery/restaurant-course-recommendation-api.md
+  - ../../02-analysis/third-expansion-workstreams.md
+  - ../../04-product/prd/admin/ai-video-information-extraction.md
+  - ../../07-adr/integration/ai-001-video-extraction-candidate-boundary.md
+  - ../../07-adr/integration/ext-003-ai-extraction-async-reliability.md
+  - ../../07-adr/architecture/arch-005-natural-language-filter-interpretation.md
+  - ../../07-adr/integration/route-001-kakao-mobility-course-routing.md
+  - ../../08-planning/third-expansion-evaluation-strategy.md
+  - ../../08-planning/third-expansion-test-matrix.md
+  - ../../08-planning/third-expansion-task-breakdown.md
 ---
 
 # 맛잇온 데이터 추적성
@@ -56,6 +69,9 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 | [PRD-DISCOVERY-002](../../04-product/prd/discovery/creator-discovery.md) | 유튜버 선택 및 방문 맛집 탐색 | Creator | Visit, Restaurant, Video 공개 유효성 |
 | [PRD-DETAIL-001](../../04-product/prd/detail/restaurant-detail.md) | 맛집 기본 정보와 방문 콘텐츠 | Restaurant | Region, FoodCategory, Visit, Creator, Video |
 | [PRD-ADMIN-001](../../04-product/prd/admin/admin-data-management.md) | 인증된 관리자 검증·등록 | AdminAccount, AdminRefreshToken | Restaurant, Creator, Video, Visit |
+| [PRD-ADMIN-002](../../04-product/prd/admin/ai-video-information-extraction.md) | AI 추출·상태 조회·자동 등록·예외 보정 | `ai_extraction_job`, `ai_candidate_snapshot`, `ai_extraction_attempt`, `youtube_channel_watch` | 자동 검증 통과 시 기존 Restaurant, Creator, Video, Visit와 VisitTag를 무승인 연결·공개 |
+| [PRD-DISCOVERY-005](../../04-product/prd/discovery/natural-language-restaurant-discovery.md) | 자연어 조건 해석·기존 목록 조회 | 신규 영속 데이터 없음 | Restaurant, Region, FoodCategory, Creator, Visit 기존 조회 조합 |
+| [PRD-DISCOVERY-006](../../04-product/prd/discovery/restaurant-course-recommendation.md) | 선택 맛집의 자동차 순서·경로 조회 | 신규 영속 데이터 없음 | Restaurant 좌표 조회·Route Provider 응답 조합 |
 
 ## 3. 기능 요구사항 → 데이터 개념 매핑
 
@@ -73,6 +89,13 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 | [FR-ADMIN-003](../../01-requirements/functional-requirements.md#fr-admin-003-유튜버-정보-등록) | Creator | 외부 채널 ID 유일, 채널 단위 생성 |
 | [FR-ADMIN-004](../../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록) | Video, Creator | 외부 영상 ID 유일, 게시 채널 필수, 원본 미저장 |
 | [FR-VISIT-001](../../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록) | Visit, Restaurant, Creator, Video | 세 참조·실제 근거·채널 일치·복합 유일·원자성 |
+| [FR-AIEXTRACT-001](../../01-requirements/functional-requirements.md#fr-aiextract-001-ai-영상-추출-작업-요청)·[FR-AIEXTRACT-002](../../01-requirements/functional-requirements.md#fr-aiextract-002-추출-상태와-결과-조회)·[FR-AIEXTRACT-003](../../01-requirements/functional-requirements.md#fr-aiextract-003-자동-확정예외-보정폐기)·[FR-AIEXTRACT-007](../../01-requirements/functional-requirements.md#fr-aiextract-007-ai-태그-후보-생성과-확정) | `ai_extraction_job`, `ai_candidate_snapshot`, `ai_extraction_attempt`, `tag_definition`, `visit_tag` | Job 상태·후보 버전·태그 후보·근거 구간·자동 등록 상태·시도 이력·자동 확정 Visit 연결 |
+| [FR-AIEXTRACT-004](../../01-requirements/functional-requirements.md#fr-aiextract-004-신규-영상-webhook-감지와-작업-등록)·[FR-AIEXTRACT-005](../../01-requirements/functional-requirements.md#fr-aiextract-005-관리자-신규-영상-추가) | `ai_extraction_job`, `youtube_channel_watch` | Webhook·관리자 요청 수렴, URL·입력 hash·Provider/Prompt/Schema 버전 멱등성 |
+| [FR-AIEXTRACT-006](../../01-requirements/functional-requirements.md#fr-aiextract-006-webhook-감시-채널-관리) | `youtube_channel_watch` | Creator·YouTube channel 고유성, 활성·구독·갱신·오류 상태 |
+| [FR-NLSEARCH-001](../../01-requirements/functional-requirements.md#fr-nlsearch-001-자연어-검색-요청과-결과-조회)·[FR-NLSEARCH-002](../../01-requirements/functional-requirements.md#fr-nlsearch-002-자연어-조건과-직접-필터-조합)·[FR-NLSEARCH-004](../../01-requirements/functional-requirements.md#fr-nlsearch-004-확정-태그-조건과-결과-조회) | `tag_definition`, `visit_tag` 조회 | 해석 조건은 요청 범위 값이며 기존 Restaurant·Region·FoodCategory·Creator·Visit와 확정 태그 조회를 사용 |
+| [FR-NLSEARCH-003](../../01-requirements/functional-requirements.md#fr-nlsearch-003-빈-결과와-해석-실패) | 신규 검색 이력 없음 | `APPLIED·PARTIAL·FAILED`와 빈 목록은 응답 파생값, 원문·검색 이력 비저장 |
+| [FR-COURSE-001](../../01-requirements/functional-requirements.md#fr-course-001-코스-후보-입력)·[FR-COURSE-002](../../01-requirements/functional-requirements.md#fr-course-002-이동-순서와-경로-조회) | 신규 영속 데이터 없음 | 공개 Restaurant 좌표 조회와 외부 Route 응답을 요청 범위에서 조합 |
+| [FR-COURSE-003](../../01-requirements/functional-requirements.md#fr-course-003-외부-경로-실패-시-대체-결과) | 신규 영속 데이터 없음 | 실패 범주·입력 순서·최소 표시 정보만 오류 응답으로 반환 |
 
 ## 4. 비즈니스 규칙 → 제약조건 매핑
 
@@ -91,6 +114,10 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 | [BR-VISIT-006](../../01-requirements/business-rules.md#br-visit-006-방문-날짜-관리-제외)·[BR-VISIT-007](../../01-requirements/business-rules.md#br-visit-007-등록-완료와-검증-상태) | 방문일·검증 상태 제외 | 속성 미생성, 생성 완료가 검증 완료 | 해당 없음 | 필요 |
 | [BR-ADMIN-003](../../01-requirements/business-rules.md#br-admin-003-등록-정합성-검증)·[BR-ADMIN-007](../../01-requirements/business-rules.md#br-admin-007-동시-등록의-고유성) | 정합성·동시성 | 유일·참조·원자성 | 필요 | 필요 |
 | [BR-ADMIN-008](../../01-requirements/business-rules.md#br-admin-008-보류-요청의-처리) | 보류 요청 | 핵심 엔티티·보류 레코드 미생성 | 해당 없음 | 필요 |
+| [BR-AIEXTRACT-001](../../01-requirements/business-rules.md#br-aiextract-001-ai-후보-생성-범위)·[BR-AIEXTRACT-002](../../01-requirements/business-rules.md#br-aiextract-002-자동-검증-없는-정식-저장-금지) | AI 후보와 자동 등록 경계 | 자동 검증 전 Snapshot만 저장, 통과 시 핵심 Entity와 VisitTag 원자 생성 | 자동 등록 상태 CHECK, 통과 시 기존 등록 흐름 | 필요 |
+| [BR-AIEXTRACT-003](../../01-requirements/business-rules.md#br-aiextract-003-동일-영상-중복-추출)·[BR-AIEXTRACT-004](../../01-requirements/business-rules.md#br-aiextract-004-모델prompt결과-schema-버전) | 중복·버전 관리 | Job 멱등 unique, Attempt·Snapshot 버전 이력 | 복합 unique, 버전 NN | 필요 |
+| [BR-AIEXTRACT-005](../../01-requirements/business-rules.md#br-aiextract-005-영상-유입-경로와-작업-수렴)·[BR-AIEXTRACT-006](../../01-requirements/business-rules.md#br-aiextract-006-webhook-감시-채널-상태)·[BR-AIEXTRACT-007](../../01-requirements/business-rules.md#br-aiextract-007-gemini-영상-입력과-fallback) | 유입 경로·채널·Gemini fallback | Job source/priority, ChannelWatch, 원문 비저장 | lease·활성 상태·Provider 시도 이력 | 필요 |
+| [BR-AIEXTRACT-008](../../01-requirements/business-rules.md#br-aiextract-008-태그-후보-자동-등록과-공개) | 태그 후보 통제·공개 | TagDefinition 허용 코드, VisitTag 확정 연결 | 태그 코드·Visit 연결 unique, 공개 상태 조합 | 필요 |
 
 ## 5. API 요청 → 데이터 변경 매핑
 
@@ -106,6 +133,10 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 | [API-ADMIN-VIDEO-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-video-preview-001-영상-등록-검증-미리보기) | 외부 영상·게시 채널 검증 | 핵심 Entity 변경 없음, `READY`이면 ConfirmationToken 기술 행 생성 | 게시 채널 후보 | Token 발급 행 하나 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
 | [API-ADMIN-VIDEO-001](../api/admin/reference-data-api.md#api-admin-video-001-영상-등록-확정) | Video 생성 | Video와 게시 채널 외부 식별 | 없음(내부 Creator 연결 선택) | Video 한 건 전체 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) / Video |
 | [API-ADMIN-VISIT-001](../api/admin/visit-registration-api.md#api-admin-visit-001-방문-관계-등록) | 방문 관계 생성 | Visit, 필요 시 Video.Creator 연결 | Restaurant, Creator, Video | 채널 연결 해소·검증·복합 중복·저장 전체 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) / Visit |
+| API-ADMIN-AIEXTRACT-001 | 관리자 신규 영상 추가·조회·재시도·자동 등록·예외 보정 | `ai_extraction_job`, `ai_candidate_snapshot`, `ai_extraction_attempt` | 자동 검증 통과 뒤 기존 Creator·Restaurant·Video·Visit와 VisitTag로 연결 | Job·Snapshot·정식 Entity 경계를 분리하고 통과 시 원자 생성 | [WS-15](../../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) |
+| API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | YouTube 구독 확인·신규 영상 알림 | `youtube_channel_watch`, 필요 시 `ai_extraction_job` | 등록된 Creator·channel watch | 검증·중복 Job 접수만 원자 처리, AI·정식 등록 호출 없음 | [WS-15](../../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) |
+| [API-DISCOVERY-NL-001](../api/discovery/natural-language-restaurant-discovery-api.md) | 자연어 해석·기존 목록 조회 | 신규 영속 데이터 없음 | Restaurant·Region·FoodCategory·Creator·Visit 공개 조회 | 해석 조건·충돌·상태는 요청 응답 파생값 | [WS-14](../../02-analysis/third-expansion-workstreams.md#5-ws-14-자연어-맛집-탐색) |
+| [API-DISCOVERY-COURSE-001](../api/discovery/restaurant-course-recommendation-api.md) | 선택 맛집 경로 계산 | 신규 영속 데이터 없음 | 공개 Restaurant 좌표·Kakao Mobility 응답 | 순서·구간·거리·시간·만료는 요청 응답 파생값 | [WS-16](../../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천) |
 
 확인 Token은 PostgreSQL에 SHA-256 해시·관리자·자원 종류·후보 스키마 버전·JSONB Snapshot과 결과 상태를 저장한다. 10분 만료, 원자적 소비와 완료·만료 결과 24시간 재현은 [ADR-AUTH-003](../../07-adr/security/auth-003-confirmation-token.md)을 따른다. `REVIEW_REQUIRED`는 등록 요청으로 저장하지 않는다.
 
@@ -121,6 +152,10 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 | API-ADMIN-*-PREVIEW-001 | 후보·중복 판정 | 외부 확인 결과 | 기존 핵심 데이터 | `decision`, token, expiry, candidate DTO | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
 | API-ADMIN-*-001 | 생성 결과 | 생성 엔티티 | 표준 표시값 | 응답 DTO 조합 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록)와 소유 도메인 |
 | [API-ADMIN-AUTH-001](../api/admin/authentication-api.md#api-admin-auth-001-관리자-로그인)·[API-ADMIN-AUTH-002](../api/admin/authentication-api.md#api-admin-auth-002-관리자-토큰-재발급) | 인증·재발급 | AdminRefreshToken | AdminAccount 활성 여부 | JWT Access Token, 만료 시간 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
+| [API-DISCOVERY-NL-001](../api/discovery/natural-language-restaurant-discovery-api.md) | 자연어 해석 결과·목록 | 기존 Restaurant 조회 조합 | Region, FoodCategory, Creator, Visit | `interpretation.status`, 적용·무시·충돌 조건, page | [WS-14](../../02-analysis/third-expansion-workstreams.md#5-ws-14-자연어-맛집-탐색) |
+| [API-DISCOVERY-COURSE-001](../api/discovery/restaurant-course-recommendation-api.md) | 코스 경로 결과 | 기존 Restaurant 조회 | 좌표·Route Provider 결과 | 순서·segments·total distance/time·generatedAt·expiresAt | [WS-16](../../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천) |
+| API-ADMIN-AIEXTRACT-001 | AI 작업 목록·상세·자동 등록·예외 보정 결과 | `ai_extraction_job`, `ai_candidate_snapshot`, `ai_extraction_attempt` | 후보 필드·근거·오류·자동 등록 상태 | `resultCompleteness`, `reviewStatus`, `attemptCount`, 상태별 목록 | [WS-15](../../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) |
+| API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | Webhook 접수 결과 | `youtube_channel_watch`, `ai_extraction_job` | channel·video 외부 식별자 | `204 No Content`, traceId는 로그·운영 추적에만 사용 | [WS-15](../../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) |
 
 `contentStatus`, 페이지 메타데이터, 후보 `decision`, `remainingVisitedByCount`는 엔티티에 저장하지 않는다.
 
@@ -132,6 +167,7 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 | [WS-02](../../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) 상세 및 콘텐츠 | 상세 조합 | Restaurant, Visit, Creator, Video | 기본 데이터와 관계를 임의 변경하지 않음 |
 | [WS-03](../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 유튜버 기반 탐색 | Visit 관계 판정 계약 | Creator, Video, Restaurant 상태 | 최종 Restaurant 페이지 조합은 [WS-01](../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색) |
 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 관리자 등록 | 인증·등록 흐름 조율 | AdminAccount·AdminRefreshToken 및 네 소유 도메인 | 도메인 고유·정합성 규칙을 우회하지 않음 |
+| [WS-15](../../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) AI 영상 정보 추출 | `ai_extraction_job`, `ai_candidate_snapshot`, `ai_extraction_attempt`, `youtube_channel_watch` | 기존 등록 Entity와 외부 Provider 결과를 직접 소유하지 않음 | 후보·정식 저장·Worker lease 경계 소유 |
 
 ## 8. 물리 설계 라우팅
 
@@ -156,7 +192,7 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 | 유튜버 상세 | `FR-CREATOR-004`~`006`, `API-CREATOR-DETAIL-001`~`003` | `creator.profile_image_url`, `description`, `handle`과 기존 Creator·Visit·Video | 선택값은 null 또는 유효한 값, 사용자 조회 중 외부 API 호출 없음 | WS-08 |
 | 검증 참여자 제한 공개 | `API-VALIDATION-001`~`002`, `ADR-DEPLOY-003` | Redis `auth:verification:` 세션·실패 제한 | 128-bit 이상 세션 원문의 SHA-256 해시, 7일 고정 만료, 회원·관리자 인증과 분리, 정식 공개 시 전체 제거 | [OPS-VALIDATION](../../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙) |
 
-각 물리 계약은 [테이블 정의](table-definitions.md#13-1차-확장-v3v5-데이터-계약), [제약조건](constraints.md), [인덱스 전략](index-strategy.md#5-1차-확장-인덱스), [생명주기 규칙](lifecycle-rules.md#101-회원-개인화-관계-정리), [마이그레이션 계획](migration-plan.md#9-1차-확장-전진-마이그레이션-순서)을 함께 따른다.
+각 물리 계약은 [테이블 정의](table-definitions.md#13-v3-회원-인증-하드닝-데이터-계약), [제약조건](constraints.md), [인덱스 전략](index-strategy.md#5-1차-확장-인덱스), [생명주기 규칙](lifecycle-rules.md#101-회원-개인화-관계-정리), [마이그레이션 계획](migration-plan.md#9-1차-확장-마이그레이션-구성-통합-이전-구간별-기록)을 함께 따른다.
 
 ## 10. 2차 확장 데이터 추적
 
@@ -186,14 +222,39 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 
 V3 전진 적용과 전체 FK·UNIQUE·CHECK·인덱스는 `TST-E2-E2E-001`, `E2-T14`, `E2-T15`에서 최종 회귀한다. `DeviceToken`·`NotificationPreference`와 푸시용 `E2-T12`는 현재 없다.
 
-## 11. 미매핑 항목
+## 11. 3차 확장 데이터 추적
+
+| 데이터 범위 | 소유 요구사항·API | 계약·보류 | Workstream | 다음 검증 |
+|---|---|---|---|---|
+| `ai_extraction_job` | FR-AIEXTRACT-001~007, API-ADMIN-AIEXTRACT-001 | [AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md), Gemini P1/S1·모델·보존 정책 Accepted | WS-15 | 중복 접수·lease 복구·재시도·원자성 |
+| `ai_extraction_temporary_input` | BR-AIEXTRACT-007, NFR-PRIVACY-006 | 관리자 보완 텍스트 암호화 임시 저장, 작업 종료 후 24시간 이내 삭제, Webhook 작업 미생성 | WS-15 | 재시작 복구·암호화·자동 삭제·재시도 입력 재사용 금지 |
+| `ai_candidate_snapshot` | FR-AIEXTRACT-002~003·007, BR-AIEXTRACT-001~004·008 | 필드·태그 후보 Schema·근거·자동 등록 상태 버전 보존, 정식 Entity와 분리 | WS-15 | 부분 추출·환각·태그 오분류·자동 차단·폐기 |
+| `ai_candidate_tag_review` | BR-AIEXTRACT-008, API-ADMIN-AIEXTRACT-001 | 후보 태그별 자동 판단·사후 보정 append-only 이력, `UNKNOWN` AI 근거 확정 금지 | WS-15 | 자동 판단·사후 보정 이력·VisitTag 연결 |
+| `ai_extraction_attempt` | BR-AIEXTRACT-004·007, NFR-EXTERNAL-005 | Provider request 식별·오류 분류·토큰·무료 quota 사용량 집계만 저장, 원문 미저장 | WS-15 | timeout·429·5xx·무료 quota hard stop |
+| `youtube_channel_watch` | FR-AIEXTRACT-004·006, API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | Creator·channel unique, 구독·갱신·오류 상태 | WS-15 | 구독 확인·중복 알림·해지·renewal 실패 |
+| `tag_definition` | FR-AIEXTRACT-007, BR-AIEXTRACT-008, API-ADMIN-AIEXTRACT-001 | `MENU/TASTE/OCCASION/ATMOSPHERE` 통제 코드·별칭·활성 상태 | WS-15 | 별칭 충돌·폐기·후보 허용값 |
+| `visit_tag` | FR-AIEXTRACT-007·FR-NLSEARCH-004, BR-AIEXTRACT-008·BR-NLSEARCH-003, API-ADMIN-AIEXTRACT-001·API-DISCOVERY-NL-001 | 자동 확정 또는 관리자 사후 보정 태그와 Visit 연결, `(visit_id, tag_definition_id)` unique | WS-15 생성·WS-14 조회 | 자동 검증 전 공개 금지·태그 AND·Visit 비공개 전파 |
+| 자연어 해석 결과 | FR-NLSEARCH-001~004, API-DISCOVERY-NL-001 | 검색 이력·원문·임베딩 비저장, 기존 조회와 확정 태그만 사용 | WS-14 | 해석 상태·조건 병합·로그 마스킹·기존 목록 격리 |
+| 코스 경로 결과 | FR-COURSE-001~003, API-DISCOVERY-COURSE-001 | `Course`·Route 결과·현재 위치·선택 이력 비저장, 요청 시점 응답만 반환 | WS-16 | 좌표·외부 실패·30km·TTL·quota·호출 1회 |
+
+정확한 SQL 컬럼·FK·partial index·Flyway 순서는 [AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)의 Accepted 논리 계약을 따라 물리 명세와 migration 계획에 반영한다. 자연어 검색 요청·해석 이력은 저장하지 않지만, 검색 대상인 통제 태그와 확정 Visit 연결은 AI 후보 데이터 계약의 영속 범위에 포함한다. 코스 추천은 별도 영속 데이터 계약을 만들지 않고 기존 좌표 데이터와 요청 범위 외부 응답을 조합한다.
+
+### 11.1 3차 확장 데이터 → ADR·평가·테스트 검증
+
+| 데이터 범위 | 근거 문서 | 품질·운영 검증 | 책임 |
+|---|---|---|---|
+| Job·Snapshot·Attempt | [ADR-AI-001](../../07-adr/integration/ai-001-video-extraction-candidate-boundary.md), [ADR-EXT-003](../../07-adr/integration/ext-003-ai-extraction-async-reliability.md) | `TST-E3-AI-002~004`, `TST-E3-DATA-001`, [3차 확장 평가 전략](../../08-planning/third-expansion-evaluation-strategy.md)의 `EVAL-AI-001~010` | WS-15, `E3-T03~08`, `E3-T11`, `E3-T13` |
+| Channel Watch·Webhook | [AI 영상 추출 API](../api/admin/ai-video-extraction-api.md) | `TST-E3-AI-001`, `TST-E3-AI-004`, Atom 유효성·중복·Token·대형 Payload·AI 호출 격리 | WS-15, `E3-T04~05` |
+| 자연어 검색·코스 응답 | [자연어 맛집 탐색 API](../api/discovery/natural-language-restaurant-discovery-api.md), [맛집 코스 추천 API](../api/discovery/restaurant-course-recommendation-api.md) | `TST-E3-NL-*`, `TST-E3-COURSE-*`, 별도 저장 없음·기존 조회/좌표 데이터와 외부 응답 조합·실패 격리, 운영 ACTIVE·공개 맛집 좌표 보강률 읽기 전용 측정 | WS-14·WS-16, `E3-T01~02`, `E3-T09~10`, `E3-T13` |
+
+## 12. 미매핑 항목
 
 - Restaurant 설명·대표 이미지·영업 정보는 확정 요구사항/API가 없어 저장 모델에서 제외했다.
 - Creator 구독자 수·조회 수 같은 통계와 Video 게시일의 외부 API 노출, Visit 방문일·검증 상태·검증자는 저장 모델에서 제외하거나 선택 데이터다. V6 상세 표시 필드인 Creator 프로필 이미지·소개·handle은 저장 계약에 포함한다.
 - 수정·삭제·승인·보류 목록 API가 없으므로 관련 운영 전환은 API 변경으로 만들지 않았다.
 - 로그인 실패 제한 카운터는 저장 방식이 미정이다. 확인 Token은 PostgreSQL 단기 기술 테이블로 확정됐지만 핵심 도메인 ERD에는 포함하지 않는다.
 
-## 12. 변경 영향 추적
+## 13. 변경 영향 추적
 
 - 지역 단계·범위 변경: Region, Restaurant, 탐색/등록 API와 [BR-RESTAURANT-005](../../01-requirements/business-rules.md#br-restaurant-005-맛집의-지역-소속)를 함께 검토한다.
 - 다중 카테고리 변경: Restaurant–FoodCategory 카디널리티, 필터 API와 [BR-RESTAURANT-004](../../01-requirements/business-rules.md#br-restaurant-004-대표-음식-카테고리)를 함께 변경한다.
@@ -201,3 +262,13 @@ V3 전진 적용과 전체 FK·UNIQUE·CHECK·인덱스는 `TST-E2-E2E-001`, `E2
 - 복수 근거·방문일 도입: Visit 모델, 복합 유일성, 관리자 요청과 상세 응답을 재검토한다.
 - 공개·삭제 정책 변경: 네 핵심 데이터, 모든 공개 조회와 운영 정정 흐름을 함께 검토한다.
 - 외부 동기화 도입: Creator·Video 상태·이력, 외부 호출 NFR과 운영 책임을 추가한다.
+
+## 14. 3차 확장 데이터 → 테스트·Task 완료 추적
+
+| 데이터·경계 | 테스트 묶음 | Task | 완료 판정 |
+|---|---|---|---|
+| AI Job·Snapshot·Attempt·Tag Review | `TST-E3-AI-002~004`, `TST-E3-DATA-001`, `EVAL-AI-001~010` | `E3-T03~08`, `E3-T11`, `E3-T13` | lease·버전·보존·정식 저장 0건·원자성·태그 공개 경계 증거 |
+| TagDefinition·VisitTag | `TST-E3-NL-001`, `TST-E3-AI-003`, `TST-E3-DATA-001` | `E3-T01`, `E3-T06` | 허용 태그·근거·중복·공개 Visit·태그 AND 증거 |
+| 자연어·코스 파생 응답 | `TST-E3-NL-*`, `TST-E3-COURSE-*`, `TST-E3-PERF-001` | `E3-T01~02`, `E3-T09~10`, `E3-T13` | 원문·코스 결과 비저장, 공개 상태·좌표·TTL·외부 실패, 운영 좌표 보강률 측정·조치·재측정 증거 |
+
+물리 migration·테이블 정의·제약·인덱스 문서가 실제 `V4`와 일치하는지 확인한 뒤 데이터 Task를 완료한다. 논리 계약 Accepted와 물리 실행 증거는 별도로 판정한다.

@@ -5,6 +5,8 @@ related_documents:
   - ../01-requirements/business-rules.md
   - ../01-requirements/non-functional-requirements.md
   - ../02-analysis/mvp-workstreams.md
+  - ../02-analysis/third-expansion-workstreams.md
+  - ../02-analysis/third-expansion-domain-boundaries.md
   - ../03-team/ownership.md
   - prd/00-product-overview.md
   - ../05-specs/api-traceability.md
@@ -29,6 +31,19 @@ related_documents:
   - ../08-planning/second-expansion-test-matrix.md
   - ../08-planning/expansion-2-implementation-plan.md
   - ../08-planning/expansion-2-task-breakdown.md
+  - prd/discovery/natural-language-restaurant-discovery.md
+  - prd/admin/ai-video-information-extraction.md
+  - prd/discovery/restaurant-course-recommendation.md
+  - user-flows/third-expansion-user-flows.md
+  - wireframes/third-expansion-wireframes.md
+  - ../08-planning/third-expansion-scope-and-terminology.md
+  - ../08-planning/third-expansion-evaluation-strategy.md
+  - ../08-planning/third-expansion-test-matrix.md
+  - ../08-planning/third-expansion-task-breakdown.md
+  - ../07-adr/architecture/arch-005-natural-language-filter-interpretation.md
+  - ../07-adr/integration/ai-001-video-extraction-candidate-boundary.md
+  - ../07-adr/integration/ext-003-ai-extraction-async-reliability.md
+  - ../07-adr/integration/route-001-kakao-mobility-course-routing.md
 ---
 
 # 맛잇온 PRD 추적성
@@ -45,6 +60,9 @@ related_documents:
 | [PRD-DETAIL-001](prd/detail/restaurant-detail.md) | [맛집 상세 및 콘텐츠 조회](prd/detail/restaurant-detail.md) | [WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) | 박진영 | 김인안 |
 | [PRD-DISCOVERY-002](prd/discovery/creator-discovery.md) | [유튜버 기반 탐색](prd/discovery/creator-discovery.md) | [WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) | 이우람 | 양성훈 |
 | [PRD-ADMIN-001](prd/admin/admin-data-management.md) | [관리자 데이터 등록](prd/admin/admin-data-management.md) | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 김인안 | 박진영 |
+| [PRD-DISCOVERY-005](prd/discovery/natural-language-restaurant-discovery.md) | [자연어 맛집 탐색](prd/discovery/natural-language-restaurant-discovery.md) | [WS-14](../02-analysis/third-expansion-workstreams.md#5-ws-14-자연어-맛집-탐색) | 양성훈 | 이우람 |
+| [PRD-ADMIN-002](prd/admin/ai-video-information-extraction.md) | [AI 영상 정보 추출](prd/admin/ai-video-information-extraction.md) | [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | 김인안 | 박진영 |
+| [PRD-DISCOVERY-006](prd/discovery/restaurant-course-recommendation.md) | [맛집 코스 추천](prd/discovery/restaurant-course-recommendation.md) | [WS-16](../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천) | 이우람 | 양성훈 |
 
 ## 3. 요구사항 → PRD 매핑
 
@@ -102,7 +120,7 @@ related_documents:
 | [FR-RECENT-002](../01-requirements/functional-requirements.md#fr-recent-002-최근-본-맛집-목록-조회) | 최근 본 맛집 목록 조회 | [PRD-PERSONAL-001](prd/personal/personal-restaurant-management.md) | 없음 | [WS-06](../02-analysis/first-expansion-workstreams.md#5-ws-06-개인-맛집-관리) | 박진영 |
 | [FR-RECENT-003](../01-requirements/functional-requirements.md#fr-recent-003-최근-본-맛집-개별-삭제) | 최근 본 맛집 개별 삭제 | [PRD-PERSONAL-001](prd/personal/personal-restaurant-management.md) | 없음 | [WS-06](../02-analysis/first-expansion-workstreams.md#5-ws-06-개인-맛집-관리) | 박진영 |
 | [FR-MAP-001](../01-requirements/functional-requirements.md#fr-map-001-kakao-지도와-맛집-마커-표시) | Kakao 지도와 맛집 마커 표시 | [PRD-DISCOVERY-003](prd/discovery/map-discovery.md) | [PRD-DISCOVERY-001](prd/discovery/restaurant-discovery.md) | [WS-07](../02-analysis/first-expansion-workstreams.md#6-ws-07-지도-탐색) | 양성훈 |
-| [FR-MAP-002](../01-requirements/functional-requirements.md#fr-map-002-지도-영역과-탐색-조건-조합-조회) | 지도 이동과 탐색 결과 유지 | [PRD-DISCOVERY-003](prd/discovery/map-discovery.md) | [PRD-DISCOVERY-001](prd/discovery/restaurant-discovery.md), [PRD-DISCOVERY-002](prd/discovery/creator-discovery.md) | [WS-07](../02-analysis/first-expansion-workstreams.md#6-ws-07-지도-탐색) | 양성훈 |
+| [FR-MAP-002](../01-requirements/functional-requirements.md#fr-map-002-지도-이동과-탐색-결과-유지) | 지도 이동과 탐색 결과 유지 | [PRD-DISCOVERY-003](prd/discovery/map-discovery.md) | [PRD-DISCOVERY-001](prd/discovery/restaurant-discovery.md), [PRD-DISCOVERY-002](prd/discovery/creator-discovery.md) | [WS-07](../02-analysis/first-expansion-workstreams.md#6-ws-07-지도-탐색) | 양성훈 |
 | [FR-CREATOR-004](../01-requirements/functional-requirements.md#fr-creator-004-유튜버-상세-정보-조회) | 유튜버 상세 정보 조회 | [PRD-DETAIL-002](prd/detail/creator-detail.md) | [PRD-DISCOVERY-002](prd/discovery/creator-discovery.md) | [WS-08](../02-analysis/first-expansion-workstreams.md#7-ws-08-유튜버-상세) | 이우람 |
 | [FR-CREATOR-005](../01-requirements/functional-requirements.md#fr-creator-005-유튜버의-방문-맛집-목록-조회) | 유튜버의 방문 맛집 목록 조회 | [PRD-DETAIL-002](prd/detail/creator-detail.md) | [PRD-DETAIL-001](prd/detail/restaurant-detail.md) | [WS-08](../02-analysis/first-expansion-workstreams.md#7-ws-08-유튜버-상세) | 이우람 |
 | [FR-CREATOR-006](../01-requirements/functional-requirements.md#fr-creator-006-유튜버의-근거-영상-목록-조회) | 유튜버의 근거 영상 목록 조회 | [PRD-DETAIL-002](prd/detail/creator-detail.md) | [PRD-DETAIL-001](prd/detail/restaurant-detail.md) | [WS-08](../02-analysis/first-expansion-workstreams.md#7-ws-08-유튜버-상세) | 이우람 |
@@ -148,6 +166,35 @@ related_documents:
 | [FR-NOTIFICATION-004](../01-requirements/functional-requirements.md#fr-notification-004-사용자-알림-전체-읽음) | 사용자 알림 전체 읽음 | [PRD-NOTIFICATION-001](prd/notification/user-notification.md) | 없음 | WS-13 | 이우람 |
 
 2차 확장 기능 요구사항 21개는 각각 정확히 하나의 주 PRD에 배정됐다.
+
+### 3.5 3차 확장 PRD 목록
+
+| PRD ID | 문서 | Workstream | 담당자 | 기본 리뷰어 |
+|---|---|---|---|---|
+| [PRD-DISCOVERY-005](prd/discovery/natural-language-restaurant-discovery.md) | [자연어 맛집 탐색](prd/discovery/natural-language-restaurant-discovery.md) | [WS-14](../02-analysis/third-expansion-workstreams.md#5-ws-14-자연어-맛집-탐색) | 양성훈 | 이우람 |
+| [PRD-ADMIN-002](prd/admin/ai-video-information-extraction.md) | [AI 영상 정보 추출](prd/admin/ai-video-information-extraction.md) | [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | 김인안 | 박진영 |
+| [PRD-DISCOVERY-006](prd/discovery/restaurant-course-recommendation.md) | [맛집 코스 추천](prd/discovery/restaurant-course-recommendation.md) | [WS-16](../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천) | 이우람 | 양성훈 |
+
+### 3.6 3차 확장 요구사항 → PRD 매핑
+
+| 요구사항 ID | 기능 | 주 PRD | 보조 PRD | Workstream | 담당자 |
+|---|---|---|---|---|---|
+| [FR-NLSEARCH-001](../01-requirements/functional-requirements.md#fr-nlsearch-001-자연어-검색-요청과-결과-조회) | 자연어 검색 요청과 결과 조회 | [PRD-DISCOVERY-005](prd/discovery/natural-language-restaurant-discovery.md) | [PRD-DISCOVERY-001](prd/discovery/restaurant-discovery.md) | [WS-14](../02-analysis/third-expansion-workstreams.md#5-ws-14-자연어-맛집-탐색) | 양성훈 |
+| [FR-NLSEARCH-002](../01-requirements/functional-requirements.md#fr-nlsearch-002-자연어-조건과-직접-필터-조합) | 자연어 조건과 직접 필터 조합 | [PRD-DISCOVERY-005](prd/discovery/natural-language-restaurant-discovery.md) | [PRD-DISCOVERY-001](prd/discovery/restaurant-discovery.md) | [WS-14](../02-analysis/third-expansion-workstreams.md#5-ws-14-자연어-맛집-탐색) | 양성훈 |
+| [FR-NLSEARCH-003](../01-requirements/functional-requirements.md#fr-nlsearch-003-빈-결과와-해석-실패) | 빈 결과와 해석 실패 | [PRD-DISCOVERY-005](prd/discovery/natural-language-restaurant-discovery.md) | 없음 | [WS-14](../02-analysis/third-expansion-workstreams.md#5-ws-14-자연어-맛집-탐색) | 양성훈 |
+| [FR-NLSEARCH-004](../01-requirements/functional-requirements.md#fr-nlsearch-004-확정-태그-조건과-결과-조회) | 확정 태그 조건과 결과 조회 | [PRD-DISCOVERY-005](prd/discovery/natural-language-restaurant-discovery.md) | [PRD-DISCOVERY-001](prd/discovery/restaurant-discovery.md) | [WS-14](../02-analysis/third-expansion-workstreams.md#5-ws-14-자연어-맛집-탐색) | 양성훈 |
+| [FR-AIEXTRACT-001](../01-requirements/functional-requirements.md#fr-aiextract-001-ai-영상-추출-작업-요청) | AI 영상 추출 작업 요청 | [PRD-ADMIN-002](prd/admin/ai-video-information-extraction.md) | [PRD-ADMIN-001](prd/admin/admin-data-management.md) | [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | 김인안 |
+| [FR-AIEXTRACT-002](../01-requirements/functional-requirements.md#fr-aiextract-002-추출-상태와-결과-조회) | 추출 상태와 결과 조회 | [PRD-ADMIN-002](prd/admin/ai-video-information-extraction.md) | 없음 | [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | 김인안 |
+| [FR-AIEXTRACT-003](../01-requirements/functional-requirements.md#fr-aiextract-003-자동-확정예외-보정폐기) | 자동 확정·예외 보정·폐기 | [PRD-ADMIN-002](prd/admin/ai-video-information-extraction.md) | [PRD-ADMIN-001](prd/admin/admin-data-management.md) | [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | 김인안 |
+| [FR-AIEXTRACT-004](../01-requirements/functional-requirements.md#fr-aiextract-004-신규-영상-webhook-감지와-작업-등록) | 신규 영상 Webhook 감지와 작업 등록 | [PRD-ADMIN-002](prd/admin/ai-video-information-extraction.md) | 없음 | [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | 김인안 |
+| [FR-AIEXTRACT-005](../01-requirements/functional-requirements.md#fr-aiextract-005-관리자-신규-영상-추가) | 관리자 신규 영상 추가 | [PRD-ADMIN-002](prd/admin/ai-video-information-extraction.md) | [PRD-ADMIN-001](prd/admin/admin-data-management.md) | [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | 김인안 |
+| [FR-AIEXTRACT-006](../01-requirements/functional-requirements.md#fr-aiextract-006-webhook-감시-채널-관리) | Webhook 감시 채널 관리 | [PRD-ADMIN-002](prd/admin/ai-video-information-extraction.md) | [PRD-ADMIN-001](prd/admin/admin-data-management.md) | [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | 김인안 |
+| [FR-AIEXTRACT-007](../01-requirements/functional-requirements.md#fr-aiextract-007-ai-태그-후보-생성과-확정) | AI 태그 후보 생성과 확정 | [PRD-ADMIN-002](prd/admin/ai-video-information-extraction.md) | [PRD-DISCOVERY-005](prd/discovery/natural-language-restaurant-discovery.md) | [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | 김인안 |
+| [FR-COURSE-001](../01-requirements/functional-requirements.md#fr-course-001-코스-후보-입력) | 코스 후보 입력 | [PRD-DISCOVERY-006](prd/discovery/restaurant-course-recommendation.md) | [PRD-DISCOVERY-001](prd/discovery/restaurant-discovery.md) | [WS-16](../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천) | 이우람 |
+| [FR-COURSE-002](../01-requirements/functional-requirements.md#fr-course-002-이동-순서와-경로-조회) | 이동 순서와 경로 조회 | [PRD-DISCOVERY-006](prd/discovery/restaurant-course-recommendation.md) | 없음 | [WS-16](../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천) | 이우람 |
+| [FR-COURSE-003](../01-requirements/functional-requirements.md#fr-course-003-외부-경로-실패-시-대체-결과) | 외부 경로 실패 시 대체 결과 | [PRD-DISCOVERY-006](prd/discovery/restaurant-course-recommendation.md) | 없음 | [WS-16](../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천) | 이우람 |
+
+3차 확장 기능 요구사항 14개는 각각 정확히 하나의 주 PRD와 WS-14~WS-16에 배정됐다.
 
 ## 4. 비즈니스 규칙 → PRD 매핑
 
@@ -246,6 +293,28 @@ related_documents:
 
 2차 확장 비즈니스 규칙 24개도 각각 정확히 하나의 주 PRD에 배정됐다.
 
+### 4.2 3차 확장 비즈니스 규칙 → PRD 매핑
+
+| 규칙 ID | 규칙 | 주 PRD | 영향 PRD | 담당자 |
+|---|---|---|---|---|
+| [BR-NLSEARCH-001](../01-requirements/business-rules.md#br-nlsearch-001-직접-지정-필터-우선) | 직접 지정 필터 우선 | [PRD-DISCOVERY-005](prd/discovery/natural-language-restaurant-discovery.md) | [PRD-DISCOVERY-001](prd/discovery/restaurant-discovery.md) | 양성훈 |
+| [BR-NLSEARCH-002](../01-requirements/business-rules.md#br-nlsearch-002-검색-결과의-공개와-생명주기) | 검색 결과의 공개와 생명주기 | [PRD-DISCOVERY-005](prd/discovery/natural-language-restaurant-discovery.md) | [PRD-DISCOVERY-001](prd/discovery/restaurant-discovery.md) | 양성훈 |
+| [BR-NLSEARCH-003](../01-requirements/business-rules.md#br-nlsearch-003-태그-검색과-공개-visit-기준) | 태그 검색과 공개 Visit 기준 | [PRD-DISCOVERY-005](prd/discovery/natural-language-restaurant-discovery.md) | [PRD-DISCOVERY-001](prd/discovery/restaurant-discovery.md) | 양성훈 |
+| [BR-AIEXTRACT-001](../01-requirements/business-rules.md#br-aiextract-001-ai-후보-생성-범위) | AI 후보 생성 범위 | [PRD-ADMIN-002](prd/admin/ai-video-information-extraction.md) | [PRD-ADMIN-001](prd/admin/admin-data-management.md) | 김인안 |
+| [BR-AIEXTRACT-002](../01-requirements/business-rules.md#br-aiextract-002-자동-검증-없는-정식-저장-금지) | 자동 검증 없는 정식 저장 금지·통과 시 무승인 공개 | [PRD-ADMIN-002](prd/admin/ai-video-information-extraction.md) | [PRD-ADMIN-001](prd/admin/admin-data-management.md) | 김인안 |
+| [BR-AIEXTRACT-003](../01-requirements/business-rules.md#br-aiextract-003-동일-영상-중복-추출) | 동일 영상 중복 추출 | [PRD-ADMIN-002](prd/admin/ai-video-information-extraction.md) | 없음 | 김인안 |
+| [BR-AIEXTRACT-004](../01-requirements/business-rules.md#br-aiextract-004-모델prompt결과-schema-버전) | 모델·Prompt·결과 Schema 버전 | [PRD-ADMIN-002](prd/admin/ai-video-information-extraction.md) | 없음 | 김인안 |
+| [BR-AIEXTRACT-005](../01-requirements/business-rules.md#br-aiextract-005-영상-유입-경로와-작업-수렴) | 영상 유입 경로와 작업 수렴 | [PRD-ADMIN-002](prd/admin/ai-video-information-extraction.md) | 없음 | 김인안 |
+| [BR-AIEXTRACT-006](../01-requirements/business-rules.md#br-aiextract-006-webhook-감시-채널-상태) | Webhook 감시 채널 상태 | [PRD-ADMIN-002](prd/admin/ai-video-information-extraction.md) | [PRD-ADMIN-001](prd/admin/admin-data-management.md) | 김인안 |
+| [BR-AIEXTRACT-007](../01-requirements/business-rules.md#br-aiextract-007-gemini-영상-입력과-fallback) | Gemini 영상 입력과 fallback | [PRD-ADMIN-002](prd/admin/ai-video-information-extraction.md) | 없음 | 김인안 |
+| [BR-AIEXTRACT-008](../01-requirements/business-rules.md#br-aiextract-008-태그-후보-자동-등록과-공개) | 태그 후보 통제와 공개 | [PRD-ADMIN-002](prd/admin/ai-video-information-extraction.md) | [PRD-DISCOVERY-005](prd/discovery/natural-language-restaurant-discovery.md) | 김인안 |
+| [BR-COURSE-001](../01-requirements/business-rules.md#br-course-001-코스-맛집-수와-출발점) | 코스 맛집 수와 출발점 | [PRD-DISCOVERY-006](prd/discovery/restaurant-course-recommendation.md) | 없음 | 이우람 |
+| [BR-COURSE-002](../01-requirements/business-rules.md#br-course-002-좌표-없는-맛집-처리) | 좌표 없는 맛집 처리 | [PRD-DISCOVERY-006](prd/discovery/restaurant-course-recommendation.md) | [PRD-DISCOVERY-001](prd/discovery/restaurant-discovery.md) | 이우람 |
+| [BR-COURSE-003](../01-requirements/business-rules.md#br-course-003-경로-결과-만료와-재조회) | 경로 결과 만료와 재조회 | [PRD-DISCOVERY-006](prd/discovery/restaurant-course-recommendation.md) | 없음 | 이우람 |
+| [BR-COURSE-004](../01-requirements/business-rules.md#br-course-004-외부-api-실패와-부분-결과) | 외부 API 실패와 부분 결과 | [PRD-DISCOVERY-006](prd/discovery/restaurant-course-recommendation.md) | 없음 | 이우람 |
+
+3차 확장 비즈니스 규칙 10개도 각각 정확히 하나의 주 PRD에 배정됐다.
+
 ## 5. NFR → PRD 매핑
 
 | NFR ID | 품질 요구사항 | 공통 적용 여부 | 적용 PRD | 검증 책임 |
@@ -296,8 +365,20 @@ related_documents:
 | [NFR-OBSERVABILITY-004](../01-requirements/non-functional-requirements.md#nfr-observability-004-관리자-검토-감사-이력) | 관리자 검토 감사 이력 | 아니요 | [PRD-CURATION-001](prd/curation/admin-curation.md), [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md) | WS-11·WS-12 김인안 |
 | [NFR-PRIVACY-005](../01-requirements/non-functional-requirements.md#nfr-privacy-005-2차-확장-개인정보-보존과-회원-탈퇴) | 2차 확장 개인정보 보존과 회원 탈퇴 | 아니요 | [PRD-COLLECTION-001](prd/personal/personal-collection.md), [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md), [PRD-NOTIFICATION-001](prd/notification/user-notification.md) | WS-09 박진영·WS-12 김인안·WS-13 이우람 |
 | [NFR-TEST-005](../01-requirements/non-functional-requirements.md#nfr-test-005-2차-확장-보안정합성성능-검증) | 2차 확장 보안·정합성·성능 검증 | 예 | 2차 확장 기능 PRD 전체 | WS-09~WS-13 담당자 |
+| [NFR-ACCURACY-001](../01-requirements/non-functional-requirements.md#nfr-accuracy-001-자연어-검색-정확도와-평가-데이터) | 자연어 검색 정확도와 평가 데이터 | 아니요 | [PRD-DISCOVERY-005](prd/discovery/natural-language-restaurant-discovery.md) | 양성훈, 박진영(품질 검증) |
+| [NFR-ACCURACY-002](../01-requirements/non-functional-requirements.md#nfr-accuracy-002-ai-추출-정확도재현율자동-등록-정밀도) | AI 추출 정확도·재현율·자동 등록 정밀도 | 아니요 | [PRD-ADMIN-002](prd/admin/ai-video-information-extraction.md) | 김인안, 박진영(품질 검증) |
+| [NFR-INTEGRITY-006](../01-requirements/non-functional-requirements.md#nfr-integrity-006-ai-환각과-잘못된-장소-연결-방지) | AI 환각과 잘못된 장소 연결 방지 | 아니요 | [PRD-ADMIN-002](prd/admin/ai-video-information-extraction.md) | 김인안, 박진영(품질 검증) |
+| [NFR-SECURITY-007](../01-requirements/non-functional-requirements.md#nfr-security-007-prompt-injection과-악성-ai-입력-방어) | Prompt Injection과 악성 AI 입력 방어 | 아니요 | [PRD-DISCOVERY-005](prd/discovery/natural-language-restaurant-discovery.md), [PRD-ADMIN-002](prd/admin/ai-video-information-extraction.md) | 양성훈·김인안, 박진영(평가 검증) |
+| [NFR-PRIVACY-006](../01-requirements/non-functional-requirements.md#nfr-privacy-006-ai-입력저작권자막-보존-경계) | AI 입력·저작권·자막 보존 경계 | 예 | 3차 확장 기능 PRD 전체 | WS-14~WS-16 담당자, 김인안(개인정보 검토) |
+| [NFR-COST-001](../01-requirements/non-functional-requirements.md#nfr-cost-001-ai임베딩mobility-호출-비용-상한) | AI·임베딩·Mobility 호출 비용 상한 | 예 | 3차 확장 기능 PRD 전체 | 김인안·이우람, 박진영(출시 게이트) |
+| [NFR-EXTERNAL-005](../01-requirements/non-functional-requirements.md#nfr-external-005-ai와-mobility-timeoutrate-limit재시도) | AI와 Mobility timeout·rate limit·재시도 | 아니요 | [PRD-ADMIN-002](prd/admin/ai-video-information-extraction.md), [PRD-DISCOVERY-006](prd/discovery/restaurant-course-recommendation.md) | 김인안·이우람, 박진영(검증) |
+| [NFR-PERFORMANCE-007](../01-requirements/non-functional-requirements.md#nfr-performance-007-자연어-검색과-경로-응답-시간) | 자연어 검색과 경로 응답 시간 | 예 | 3차 확장 기능 PRD 전체 | 양성훈·이우람, 박진영(성능 검증) |
+| [NFR-RELIABILITY-005](../01-requirements/non-functional-requirements.md#nfr-reliability-005-ai-비동기-작업-복구) | AI 비동기 작업 복구 | 아니요 | [PRD-ADMIN-002](prd/admin/ai-video-information-extraction.md) | 김인안, 이우람(인프라 리뷰) |
+| [NFR-AVAILABILITY-003](../01-requirements/non-functional-requirements.md#nfr-availability-003-ai-모델외부-api-장애-격리) | AI 모델·외부 API 장애 격리 | 예 | 3차 확장 기능 PRD 전체 | 김인안·이우람, 박진영(출시 게이트) |
+| [NFR-OBSERVABILITY-005](../01-requirements/non-functional-requirements.md#nfr-observability-005-ai검색경로-로그-민감정보-차단) | AI·검색·경로 로그 민감정보 차단 | 예 | 3차 확장 기능 PRD 전체 | 이우람, 김인안(민감정보 검토) |
+| [NFR-TEST-006](../01-requirements/non-functional-requirements.md#nfr-test-006-3차-확장-품질과-완료-게이트) | 3차 확장 품질과 완료 게이트 | 예 | 3차 확장 기능 PRD 전체 | 박진영, WS-14~WS-16 담당자 |
 
-공통 NFR의 주 문서는 [PRD-PRODUCT-001](prd/00-product-overview.md)이다. `전체 조회 PRD`는 [API-DISCOVERY-001](../05-specs/api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색), [DISCOVERY-002](prd/discovery/creator-discovery.md)와 [API-DETAIL-001](../05-specs/api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회)을 뜻한다. `전체 기능 PRD`는 MVP 기능 PRD를, `2차 확장 기능 PRD 전체`는 3.3절의 다섯 PRD를 뜻한다.
+공통 NFR의 주 문서는 [PRD-PRODUCT-001](prd/00-product-overview.md)이다. `전체 조회 PRD`는 [API-DISCOVERY-001](../05-specs/api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색), [DISCOVERY-002](prd/discovery/creator-discovery.md)와 [API-DETAIL-001](../05-specs/api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회)을 뜻한다. `전체 기능 PRD`는 MVP 기능 PRD를, `2차 확장 기능 PRD 전체`는 3.3절의 다섯 PRD를, `3차 확장 기능 PRD 전체`는 3.5절의 세 PRD를 뜻한다.
 
 ## 6. Workstream → PRD 매핑
 
@@ -318,6 +399,16 @@ related_documents:
 | [WS-12](../02-analysis/second-expansion-workstreams.md#7-ws-12-제보신고-검토) | [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md) | 접수·검토·처리 상태 | [PRD-ACCOUNT-001](prd/account/member-authentication.md), [PRD-ADMIN-001](prd/admin/admin-data-management.md), [PRD-NOTIFICATION-001](prd/notification/user-notification.md) |
 | [WS-13](../02-analysis/second-expansion-workstreams.md#8-ws-13-사용자-알림) | [PRD-NOTIFICATION-001](prd/notification/user-notification.md) | 처리 상태 알림·읽음 | [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md) |
 
+### 6.2 3차 확장 Workstream
+
+| Workstream | 주 PRD | 제공 계약 | 의존 PRD |
+|---|---|---|---|
+| [WS-14](../02-analysis/third-expansion-workstreams.md#5-ws-14-자연어-맛집-탐색) | [PRD-DISCOVERY-005](prd/discovery/natural-language-restaurant-discovery.md) | 자연어 조건 해석·적용 조건 요약 | [PRD-DISCOVERY-001](prd/discovery/restaurant-discovery.md) |
+| [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | [PRD-ADMIN-002](prd/admin/ai-video-information-extraction.md) | 비동기 추출·자동 등록·예외 보정 | [PRD-ADMIN-001](prd/admin/admin-data-management.md) |
+| [WS-16](../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천) | [PRD-DISCOVERY-006](prd/discovery/restaurant-course-recommendation.md) | 선택 맛집의 자동차 순서·경로 | [PRD-DISCOVERY-001](prd/discovery/restaurant-discovery.md) |
+
+교차 품질 검증과 최종 출시 증거는 제품 기능 Workstream과 분리한 [QUALITY-EVAL](../02-analysis/third-expansion-workstreams.md#8-quality-eval-교차-품질-트랙)이 소유한다.
+
 ## 7. 담당자 → PRD 매핑
 
 | 담당자 | 최종 책임 PRD | 협업·리뷰 PRD |
@@ -336,11 +427,20 @@ related_documents:
 | 김인안 | [PRD-CURATION-001](prd/curation/admin-curation.md), [PRD-PARTICIPATION-001](prd/participation/user-submission-report.md) | 양성훈·이우람 기본 리뷰 |
 | 이우람 | [PRD-NOTIFICATION-001](prd/notification/user-notification.md) | 김인안 기본 리뷰 |
 
+### 7.2 3차 확장 담당자
+
+| 담당자 | 최종 책임 PRD·트랙 | 협업·리뷰 책임 |
+|---|---|---|
+| 양성훈 | [PRD-DISCOVERY-005](prd/discovery/natural-language-restaurant-discovery.md), WS-14 | WS-16 기본 리뷰, 자연어 골든 데이터 정답 작성 |
+| 김인안 | [PRD-ADMIN-002](prd/admin/ai-video-information-extraction.md), WS-15 | 자동 등록 예외 보정·개인정보 경계, AI 추출 정답 작성 |
+| 이우람 | [PRD-DISCOVERY-006](prd/discovery/restaurant-course-recommendation.md), WS-16 | WS-14 기본 리뷰, 외부 연동·비동기 복구 검토 |
+| 박진영 | [QUALITY-EVAL](../02-analysis/third-expansion-workstreams.md#8-quality-eval-교차-품질-트랙) | WS-15 기본 리뷰, 골든 데이터·성능·출시 게이트 독립 검증 |
+
 ## 8. 미매핑 항목 검토
 
-- 주 PRD 없는 MVP·1차·2차 확장 기능 요구사항: 없음 (3.2절과 3.4절에서 확장 FR을 확인)
+- 주 PRD 없는 MVP·1차·2차·3차 확장 기능 요구사항: 없음 (3.2절·3.4절·3.6절에서 확장 FR을 확인)
 - 여러 주 PRD에 중복 배정된 요구사항: 없음
-- 담당자 또는 Workstream 없는 기능 PRD: 없음
+- 담당자 또는 Workstream 없는 기능 PRD: 없음. 3차 확장 PRD는 WS-14~WS-16과 담당자·기본 리뷰어가 배정됐다.
 - 기능 요구사항 없이 생성된 기능 PRD: 없음
 - MVP 제외 기능을 구현 대상으로 포함한 PRD: 없음. [NFR-PRIVACY-003](../01-requirements/non-functional-requirements.md#nfr-privacy-003-회원-개인정보-최소-수집과-생명주기)과 [NFR-PRIVACY-004](../01-requirements/non-functional-requirements.md#nfr-privacy-004-위치와-행동-데이터-최소화)은 1차 확장 회원·개인화·지도 범위의 완료 기준으로 추적한다.
 - 상위 제품 PRD와 기능 PRD 범위 충돌: 없음
@@ -383,3 +483,13 @@ related_documents:
 | 서비스 내 사용자 알림 | `FR-NOTIFICATION-001~004`, `BR-NOTIFICATION-001~004`, `NFR-INTEGRITY-005`, `NFR-RELIABILITY-004`, `NFR-PRIVACY-005` | [PRD-NOTIFICATION-001](prd/notification/user-notification.md) | [알림 API](../05-specs/api/notification/notification-api.md) | `notification`; `NotificationPreference`·`DeviceToken` 비저장 | [ADR-NOTIFY-002](../07-adr/integration/notify-002-in-app-notification-reliability.md), [ADR-DATA-012](../07-adr/data/data-012-second-expansion-retention-cleanup.md); FCM은 [ADR-NOTIFY-001](../07-adr/adr-backlog.md#adr-notify-001-fcm-푸시-알림) Post-MVP | [WS-13](../02-analysis/second-expansion-workstreams.md#8-ws-13-사용자-알림) | [`TST-E2-NOT-001`](../08-planning/second-expansion-test-matrix.md), `TST-E2-ATOMIC-001`, `TST-E2-LIFE-001` | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md), `E2-T02`, `E2-T10`, `E2-T11`, `E2-T13`, `E2-T14`, `E2-T15` |
 
 공통 `NFR-TEST-005`는 모든 행에 적용하며 `TST-E2-SEC-001`, `TST-E2-E2E-001`과 `E2-T13`, `E2-T14`, `E2-T15`에서 최종 판정한다. 푸시용 `E2-T12`는 현재 생성하지 않는다. 따라서 2차 확장 21개 FR은 모두 `Scope → 요구사항 → PRD → API → 데이터 → ADR/보류 → Workstream → 테스트 → E2 Task` 경로를 가진다.
+
+## 11. 3차 확장 제품 추적 기준선
+
+| Scope 기능 | FR·BR·주요 NFR | 주 PRD | 사용자 흐름 | 와이어프레임 | 평가·테스트 | API·데이터·ADR·Task |
+|---|---|---|---|---|---|---|
+| 자연어 맛집 탐색 | `FR-NLSEARCH-001~004`, `BR-NLSEARCH-001~003`, `NFR-ACCURACY-001`, `NFR-PERFORMANCE-007` | [PRD-DISCOVERY-005](prd/discovery/natural-language-restaurant-discovery.md) | [3차 확장 사용자 흐름 2절](user-flows/third-expansion-user-flows.md#2-자연어-맛집-탐색) | [3차 확장 와이어프레임 3절](wireframes/third-expansion-wireframes.md#3-자연어-맛집-탐색) | [`EVAL-NL-*`](../08-planning/third-expansion-evaluation-strategy.md#31-자연어-맛집-탐색), [`TST-E3-NL-*`](../08-planning/third-expansion-test-matrix.md), `E3-T01~02`, `E3-T11~13` | [자연어 API](../05-specs/api/discovery/natural-language-restaurant-discovery-api.md), [해석 ADR](../07-adr/architecture/arch-005-natural-language-filter-interpretation.md), [`E3-T01~02`, `E3-T11~13`](../08-planning/third-expansion-task-breakdown.md) |
+| AI 영상 정보 추출 | `FR-AIEXTRACT-001~007`, `BR-AIEXTRACT-001~008`, `NFR-ACCURACY-002`, `NFR-INTEGRITY-006`, `NFR-RELIABILITY-005` | [PRD-ADMIN-002](prd/admin/ai-video-information-extraction.md) | [3차 확장 사용자 흐름 3절](user-flows/third-expansion-user-flows.md#3-ai-영상-정보-추출과-자동-등록예외-보정) | [3차 확장 와이어프레임 4절](wireframes/third-expansion-wireframes.md#4-ai-영상-추출-자동-등록예외-보정) | [`EVAL-AI-*`](../08-planning/third-expansion-evaluation-strategy.md#32-ai-영상-정보-추출), [`TST-E3-AI-*`](../08-planning/third-expansion-test-matrix.md), `E3-T03~08`, `E3-T11~13` | [AI API](../05-specs/api/admin/ai-video-extraction-api.md), [AI 데이터 계약](../05-specs/data/third-expansion-ai-video-data-contract.md), [AI·비동기 ADR](../07-adr/integration/ai-001-video-extraction-candidate-boundary.md), [`E3-T03~08`, `E3-T11~13`](../08-planning/third-expansion-task-breakdown.md) |
+| 맛집 코스 추천 | `FR-COURSE-001~003`, `BR-COURSE-001~004`, `NFR-EXTERNAL-005`, `NFR-PERFORMANCE-007` | [PRD-DISCOVERY-006](prd/discovery/restaurant-course-recommendation.md) | [3차 확장 사용자 흐름 4절](user-flows/third-expansion-user-flows.md#4-맛집-코스-추천) | [3차 확장 와이어프레임 5절](wireframes/third-expansion-wireframes.md#5-맛집-코스-추천) | [`EVAL-COURSE-*`](../08-planning/third-expansion-evaluation-strategy.md#33-맛집-코스-추천), [`TST-E3-COURSE-*`](../08-planning/third-expansion-test-matrix.md), `E3-T09~13` | [코스 API](../05-specs/api/discovery/restaurant-course-recommendation-api.md), [Mobility ADR](../07-adr/integration/route-001-kakao-mobility-course-routing.md), [`E3-T09~13`](../08-planning/third-expansion-task-breakdown.md) |
+
+세 기능은 `Scope → 요구사항 → PRD → 사용자 흐름 → 와이어프레임 → API·데이터·ADR → 평가·테스트 → E3 Task`까지 구조적으로 연결됐다. 실제 계약 테스트·평가 실행·브라우저 인수·외부 계정 연결·부하 측정이 최종 완료 증거이며, 문서 승인 상태를 구현 완료로 해석하지 않는다.

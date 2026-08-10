@@ -11,6 +11,18 @@ related_documents:
   - common/pagination-contract.md
   - common/authentication-contract.md
   - common/second-expansion-contract.md
+  - admin/ai-video-extraction-api.md
+  - ../data/third-expansion-ai-video-data-contract.md
+  - ../02-analysis/third-expansion-workstreams.md
+  - ../04-product/prd/admin/ai-video-information-extraction.md
+  - discovery/natural-language-restaurant-discovery-api.md
+  - discovery/restaurant-course-recommendation-api.md
+  - ../04-product/prd/discovery/natural-language-restaurant-discovery.md
+  - ../04-product/prd/discovery/restaurant-course-recommendation.md
+  - ../07-adr/architecture/arch-005-natural-language-filter-interpretation.md
+  - ../07-adr/integration/route-001-kakao-mobility-course-routing.md
+  - ../08-planning/third-expansion-test-matrix.md
+  - ../08-planning/third-expansion-task-breakdown.md
 ---
 
 # 맛잇온 API 계약
@@ -61,7 +73,17 @@ related_documents:
 
 컬렉션 직접 순서 변경은 승인 범위가 아니므로 경로를 제공하지 않는다. 제보·신고 처리 결과 알림은 회원이 시작한 요청의 필수 서비스 내 고지이므로 알림 설정 변경·동의·해지 경로도 제공하지 않는다.
 
-## 5. 변경 절차
+## 5. 3차 확장 API
+
+| 기능 | 문서 | Workstream |
+|---|---|---|
+| AI 영상 추출·YouTube Webhook·자동 등록·예외 보정 | [관리자 AI 영상 추출 API](admin/ai-video-extraction-api.md) | WS-15 |
+| 자연어 맛집 탐색 | [자연어 맛집 탐색 API](discovery/natural-language-restaurant-discovery-api.md) | WS-14 |
+| 맛집 코스 추천 | [맛집 코스 추천 API](discovery/restaurant-course-recommendation-api.md) | WS-16 |
+
+3차 확장의 세 기능 API 계약은 정책 승인 상태다. AI 영상 추출 API는 관리자 신규 영상 추가와 채널 감시 Webhook을 같은 비동기 작업 경계로 수렴시키며, 자연어·코스 API는 각각 P1 규칙 기반 해석과 Kakao Mobility Port를 재사용한다. Gemini는 `gemini-3-flash-preview`, 자연어 P1 seed·규칙, Mobility TTL·순서 알고리즘은 관련 계약에 고정하며 구현 전 계약 테스트를 요구한다.
+
+## 6. 변경 절차
 
 1. 범위와 PRD를 확인한다.
 2. 기능 요구사항·비즈니스 규칙을 먼저 수정한다.

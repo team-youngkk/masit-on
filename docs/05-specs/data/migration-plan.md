@@ -161,8 +161,22 @@ V3 구간 아웃박스는 Action Token만 FK로 참조한다. 수신자는 `memb
 
 기존 데이터 backfill, 기준 데이터, 외부 호출과 destructive DDL은 없다. V2→V3 업그레이드와 빈 DB 전체 적용을 모두 CI에서 검증한다.
 
-## 11. 향후 변경 번호
+## 11. V4 3차 확장 AI 영상 추출 스키마
 
-초기 스키마 baseline 다음 변경은 `V2`로 적용됐고, 1차 확장 변경은 2.3절 통합 이후 다시 `V2` 하나로 적용됐다. 2차 확장은 다음 비어 있는 `V3`를 사용하고 이후 변경은 `V4`부터 사용한다.
+`V4__create_third_expansion_ai_schema.sql`은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)과 [ADR-EXT-003](../../07-adr/integration/ext-003-ai-extraction-async-reliability.md)의 물리 구현이다. 기존 `V1`~`V3`를 수정하지 않고, 빈 DB 전체 적용과 `V3→V4` 전진 적용을 모두 검증한다.
+
+| 순서 | 변경 | 검증 경계 |
+|---:|---|---|
+| 1 | `ai_extraction_job`, `ai_extraction_temporary_input`과 임시 입력 만료·Worker lease 제약 | Webhook·관리자 멱등성, 관리자 보완 텍스트 암호화·24시간 이내 삭제, QUEUED/RUNNING/terminal 상태 조합 |
+| 2 | `ai_candidate_snapshot`, `ai_candidate_tag_review`와 JSON Schema 검증 함수·Trigger | Snapshot 버전·근거 유형·신뢰도·태그 후보·append-only 검수 이력 |
+| 3 | `tag_definition`, `visit_tag`와 18개 통제 태그 기준 데이터 | ACTIVE 태그만 신규 검색·후보에 사용, Visit별 태그 중복·AI 근거 경계 |
+| 4 | `ai_extraction_attempt`, `youtube_channel_watch` | 재시도·오류·quota 메타데이터, 채널별 감시 고유성·갱신 실패 상태 |
+| 5 | Worker claim·lease recovery·관리자 검수·태그 조회 인덱스 | `FOR UPDATE SKIP LOCKED` 경로, 만료 lease 복구, 공개 태그 조회 |
+
+이 마이그레이션은 원본 영상·전체 자막·Provider 응답 전문을 저장하지 않으며 외부 API를 호출하지 않는다. 실제 3차 완료 판정은 [3차 확장 테스트 추적표](../../08-planning/third-expansion-test-matrix.md), 평가 결과, Worker·quota·브라우저 증거까지 연결해 수행한다.
+
+## 12. 향후 변경 번호
+
+초기 스키마 baseline 다음 변경은 `V2`로 적용됐고, 1차 확장 변경은 2.3절 통합 이후 다시 `V2` 하나로 적용됐다. 2차 확장은 `V3`, 3차 확장 AI 영상 추출은 `V4`를 사용한다. 이후 변경은 `V5`부터 사용한다.
 
 `V1`과 `V2`는 각각 적용된 시점부터 수정하지 않는다. 운영 배포 전 V3 통합은 2.1절과 ADR-DATA-009의 강제 규칙을 모두 증명한 경우에만 허용되는 예외이며, 이미 적용된 파일은 통합·수정하지 않는다.

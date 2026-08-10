@@ -2,6 +2,9 @@
 related_documents:
   - ../02-analysis/domain-boundaries.md
   - ../02-analysis/mvp-workstreams.md
+  - ../02-analysis/first-expansion-workstreams.md
+  - ../02-analysis/second-expansion-workstreams.md
+  - ../02-analysis/third-expansion-workstreams.md
   - ownership.md
   - ../04-product/traceability.md
   - ../01-requirements/functional-requirements.md
@@ -11,9 +14,9 @@ related_documents:
 
 ## 1. 문서 목적
 
-이 문서는 맛잇온 MVP의 네 Workstream을 팀원별 책임으로 연결하고, 각 팀원의 주요 책임, 결정 권한, 산출물과 협업 관계를 정의한다. 역할은 기술 계층이 아니라 사용자 가치와 관리자 업무 흐름을 끝까지 완성하는 기능 소유권을 기준으로 한다.
+이 문서는 맛잇온 MVP와 단계별 확장 Workstream을 팀원별 책임으로 연결하고, 각 팀원의 주요 책임, 결정 권한, 산출물과 협업 관계를 정의한다. 역할은 기술 계층이 아니라 사용자 가치와 관리자 업무 흐름을 끝까지 완성하는 기능 소유권을 기준으로 한다.
 
-현재 배정은 2026-07-27 승인된 Workstream 복잡도, 의존성, 통합 지점과 공통 책임 부담 기준안이다. 일정 차단이나 지속적인 부담 불균형이 확인될 때만 소유권 변경 절차로 조정하며 각 Workstream의 최종 책임자는 한 명으로 유지한다.
+현재 배정은 2026-07-27 MVP, 2026-08-03 1·2차 확장과 2026-08-10 3차 확장의 Workstream 복잡도, 의존성, 통합 지점과 공통 책임 부담 기준안이다. 일정 차단이나 지속적인 부담 불균형이 확인될 때만 소유권 변경 절차로 조정하며 각 Workstream의 최종 책임자는 한 명으로 유지한다.
 
 ## 2. 역할 배정 원칙
 
@@ -32,10 +35,10 @@ related_documents:
 
 | 팀원 | 주요 역할 | 주 Workstream | 보조 책임 | 주요 협업 대상 |
 |---|---|---|---|---|
-| 이우람 | 프로젝트 리더 및 관계 기반 탐색 기능 소유자 | [WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 유튜버 기반 탐색 | AI·인프라 기술 의사결정, 아키텍처·배포 조율 | 전체 팀, 특히 양성훈·박진영 |
-| 양성훈 | 맛집 탐색 기능 소유자 | [WS-01](../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색) 맛집 탐색 | AI·백엔드·프론트엔드 기술 의사결정 | 이우람·박진영·김인안 |
-| 박진영 | 맛집 상세 조합 기능 소유자 | [WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) 맛집 상세 및 콘텐츠 조회 | 백엔드 기술 의사결정, 관계 정합성·통합 테스트 | 이우람·양성훈·김인안 |
-| 김인안 | 관리자 등록 기능 소유자 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 관리자 데이터 등록 | AI·프론트엔드 기술 의사결정, 관리자 인증 적용 | 전체 팀, 특히 양성훈·박진영 |
+| 이우람 | 프로젝트 리더·관계 탐색·외부 경로 소유자 | WS-03·08·13·16 | AI·인프라 기술 의사결정, 아키텍처·배포 조율, QUALITY-EVAL 리뷰 | 전체 팀, 특히 양성훈·박진영 |
+| 양성훈 | 맛집·자연어 탐색 기능 소유자 | WS-01·07·10·14 | AI·백엔드·프론트엔드 기술 의사결정, 코스 공개 UX 리뷰 | 이우람·박진영·김인안 |
+| 박진영 | 상세 조합·데이터 정합성·평가 품질 소유자 | WS-02·06·09, QUALITY-EVAL | 백엔드 기술 의사결정, 관계 정합성·통합 테스트, EDD 최종 품질 판정 | 이우람·양성훈·김인안 |
+| 김인안 | 관리자 등록·검수·AI 추출 기능 소유자 | WS-04·05·11·12·15 | AI·프론트엔드 기술 의사결정, 관리자 인증·검수 적용 | 전체 팀, 특히 이우람·박진영 |
 
 ### 횡단 역할과 기술 의사결정 담당
 
@@ -55,6 +58,15 @@ related_documents:
 - 영역 담당자는 해당 영역의 구현을 전담하거나 다른 팀원의 수정을 제한하는 사람이 아니다.
 - 영역 담당자는 기준과 선택지를 먼저 정리하고, 영향받는 팀원과 함께 기술 결정을 내리도록 회의를 주도한다.
 - Workstream 최종 책임자는 횡단 역할과 별개로 담당 기능의 문서, 구현, 테스트와 통합 완료 책임을 유지한다.
+
+### 3차 확장 역할 추가
+
+| 팀원 | 3차 최종 책임 | 기본 리뷰·보조 책임 |
+|---|---|---|
+| 양성훈 | [WS-14](../02-analysis/third-expansion-workstreams.md#5-ws-14-자연어-맛집-탐색) 자연어 맛집 탐색 | WS-16 공개 코스 UX·좌표·탐색 계약 리뷰 |
+| 김인안 | [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) AI 영상 정보 추출 | AI 정답·관리자 검수·개인정보 경계 |
+| 이우람 | [WS-16](../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천) 맛집 코스 추천 | WS-14 관계 판정, WS-15 AI·비동기·외부 장애, QUALITY-EVAL 기본 리뷰 |
+| 박진영 | [QUALITY-EVAL](../02-analysis/third-expansion-workstreams.md#8-quality-eval-교차-품질-트랙) EDD 교차 품질 트랙 | WS-15 기본 리뷰, 데이터·Flyway·통합 테스트·최종 품질 판정 |
 
 ### Workstream 복잡도와 배정 판단
 
@@ -79,6 +91,7 @@ related_documents:
 ### 소유 Workstream
 
 - [WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 유튜버 기반 탐색
+- [WS-16](../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천) 맛집 코스 추천
 
 ### 핵심 책임
 
@@ -153,6 +166,7 @@ related_documents:
 ### 소유 Workstream
 
 - [WS-01](../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색) 맛집 탐색
+- [WS-14](../02-analysis/third-expansion-workstreams.md#5-ws-14-자연어-맛집-탐색) 자연어 맛집 탐색
 
 ### 핵심 책임
 
@@ -222,6 +236,7 @@ related_documents:
 ### 소유 Workstream
 
 - [WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) 맛집 상세 및 콘텐츠 조회
+- [QUALITY-EVAL](../02-analysis/third-expansion-workstreams.md#8-quality-eval-교차-품질-트랙) 3차 확장 교차 품질 검증
 
 ### 핵심 책임
 
@@ -290,6 +305,7 @@ related_documents:
 ### 소유 Workstream
 
 - [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 관리자 데이터 등록
+- [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) AI 영상 정보 추출
 
 ### 핵심 책임
 
@@ -464,11 +480,11 @@ related_documents:
 
 ### RV-ROLE-004 프론트엔드 AI 작업 범위
 
-- 현재 상태: 결정 완료 (2026-07-27)
-- 관련 Workstream: [WS-01](../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색) ~ [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록)
+- 현재 상태: 3차 확장 승인 반영 (2026-08-10)
+- 관련 Workstream: [WS-01](../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)~[WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록), [WS-14](../02-analysis/third-expansion-workstreams.md#5-ws-14-자연어-맛집-탐색)~[WS-16](../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천)
 - 현재 권장 담당자: AI는 김인안·이우람·양성훈, 프론트엔드는 양성훈·김인안이 의사결정을 주도하고 각 Workstream 담당자가 자기 화면을 검증
-- 결정: 양성훈·김인안이 프론트엔드 공통 구조와 계약 의사결정을 주도하고 각 Workstream 담당자가 자기 화면의 구현·API 연동·인수 검증을 완료한다. AI 기능은 MVP 제외이므로 김인안·이우람·양성훈의 AI 역할은 범위 변경 검토에만 적용하고 구현하지 않는다.
-- 영향: [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 일정, 계약 변경 절차와 인수 테스트
+- 결정: 양성훈·김인안이 프론트엔드 공통 구조와 계약 의사결정을 주도하고 각 Workstream 담당자가 자기 화면의 구현·API 연동·인수 검증을 완료한다. AI 기능은 MVP에서는 제외하지만 승인된 3차 확장 범위에서는 WS-14·WS-15의 계약과 평가 게이트 안에서 구현할 수 있다. 김인안은 AI 추출·관리자 검수를, 양성훈은 자연어 탐색을, 이우람은 외부 연동·운영 경계를 주도한다.
+- 영향: WS-14·WS-15 일정, 계약 변경 절차, 평가 게이트와 인수 테스트
 - 결정 시점: 프론트엔드 구현 시작 전
 
 ### RV-ROLE-005 리뷰 담당자 순환

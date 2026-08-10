@@ -269,3 +269,20 @@ Redis 세션 변경 뒤 PostgreSQL `sid` 폐기 표식을 기록하지 못한 �
 `AdminRefreshToken`은 Redis 8.8에만 저장한다. PostgreSQL `admin_account.id` 문자열을 Redis 값의 관리자 참조로 사용하되 DB FK 같은 원자성은 제공하지 않는다. Redis 키·검증값·14일 TTL·회전·재사용 탐지와 로그인 실패 제한은 [관리자 인증 API](../api/admin/authentication-api.md)와 [보안 경계](../../06-architecture/security-boundary.md)의 확정 계약을 따른다. Redis 구조는 이 문서의 PostgreSQL 스키마와 Flyway 대상이 아니다.
 
 회원 세션은 `auth:member:` namespace만 사용하며 관리자 `auth:refresh:` 키와 공유하지 않는다. 세션 ID별 Refresh Token 해시와 회원별 정렬 집합을 함께 저장해 최대 세 세션을 유지한다. 회전과 재사용 탐지는 Lua 스크립트로 원자 처리하며 Redis를 읽거나 쓰지 못하면 발급·재발급을 허용하지 않는다.
+
+## 17. 3차 확장 AI 영상 추출 테이블
+
+3차 확장 물리 테이블과 컬럼별 계약은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)의 표를 정본으로 사용하고, 실제 DDL은 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql)에 둔다.
+
+| 테이블 | 역할 | 핵심 무결성 |
+|---|---|---|
+| `ai_extraction_job` | Webhook·관리자 AI 작업과 Worker 상태 | 입력·버전 조합 멱등성, 상태·lease·시각 조합 |
+| `ai_extraction_temporary_input` | 관리자 보완 텍스트 암호문 임시 보관 | 작업 FK, 관리자 텍스트 경계, 종료 후 24시간 만료 |
+| `ai_candidate_snapshot` | 버전별 후보와 근거 | 작업·버전 unique, JSON object/array·근거 Schema |
+| `ai_candidate_tag_review` | 후보 태그 자동 판단·사후 보정 이력 | Snapshot FK, decision·actor·replacement 조합 |
+| `tag_definition` | 통제 태그 정의·18개 초기 기준 데이터 | 코드 unique, 유형·상태·별칭·생성 근거 |
+| `visit_tag` | 확정 Visit와 태그 연결 | `(visit_id, tag_definition_id)` unique, AI 근거 경계 |
+| `ai_extraction_attempt` | Provider 시도·오류·비용 메타데이터 | `(job_id, attempt_no)` unique, 결과·오류 조합 |
+| `youtube_channel_watch` | YouTube 채널 감시·갱신 상태 | Creator·채널별 unique, 구독 상태 |
+
+정식 Restaurant·Creator·Video·Visit 저장은 이 후보 테이블과 별도의 애플리케이션 원자성·외부 검증 규칙을 따른다. 후보가 실패하거나 외부 검증이 실패하면 정식 Entity는 0건이어야 한다.
