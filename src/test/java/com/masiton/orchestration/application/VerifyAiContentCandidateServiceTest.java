@@ -110,6 +110,19 @@ class VerifyAiContentCandidateServiceTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = {"제가 맛집을 소개받고 다른 곳을 방문했습니다",
+            "제가 맛집은 아니고 다른 곳을 방문했습니다",
+            "제가 맛집을 언급한 뒤 다른 곳을 방문했습니다"})
+    @DisplayName("앞 절에서만 언급된 맛집은 실제 방문 대상으로 확정하지 않는다")
+    void verify_앞절에서만언급된맛집_방문대상으로확정하지않는다(String value) {
+        given(restaurantReference.resolve(anyString(), anyString(), any(), anyString()))
+                .willReturn(Optional.of(restaurant()));
+        given(videoVerification.resolve(any())).willReturn(Optional.of(video()));
+
+        assertThat(service.verify(command(value, timestamp())).isVerified()).isFalse();
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {"방문", "단순 언급", "방문 추천", "방문했을 것 같다", "직접 방문하지 않았습니다",
             "직접 방문했을까요?", "방문할 예정입니다", "방문함", "친구가 방문했습니다",
             "다른 사람이 다녀왔습니다", "유명인이 직접 방문했습니다", "친구가 맛집을 방문했습니다",

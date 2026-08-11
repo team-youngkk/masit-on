@@ -113,7 +113,7 @@ class VerifyAiContentCandidateService implements VerifyAiContentCandidateUseCase
         String prefix = phrase.substring(0, visitVerb.start()).trim();
         String target = normalizeClaim(verifiedRestaurantName);
         String compactPrefix = normalizeClaim(prefix);
-        int targetIndex = compactPrefix.indexOf(target);
+        int targetIndex = compactPrefix.lastIndexOf(target);
         if (target.isBlank() || targetIndex < 0 || !hasTargetBoundary(compactPrefix, targetIndex, target)) {
             return false;
         }
@@ -140,33 +140,13 @@ class VerifyAiContentCandidateService implements VerifyAiContentCandidateUseCase
                 || afterTarget.startsWith("제외")) {
             return false;
         }
-        return afterTarget.isEmpty()
-                || afterTarget.startsWith("을")
-                || afterTarget.startsWith("를")
-                || afterTarget.startsWith("이")
-                || afterTarget.startsWith("가")
-                || afterTarget.startsWith("은")
-                || afterTarget.startsWith("는")
-                || afterTarget.startsWith("에")
-                || afterTarget.startsWith("에서")
-                || afterTarget.startsWith("으로")
-                || afterTarget.startsWith("로")
-                || afterTarget.startsWith("만")
-                || afterTarget.startsWith("도")
-                || afterTarget.startsWith("까지")
-                || afterTarget.startsWith("방문")
-                || afterTarget.startsWith("다녀")
-                || afterTarget.startsWith("찾아")
-                || afterTarget.startsWith("들렀")
-                || afterTarget.startsWith("먹어봤")
-                || afterTarget.startsWith("visited")
-                || afterTarget.startsWith("atehere")
-                || afterTarget.startsWith("wentthere")
-                || afterTarget.startsWith("stoppedby");
+        return afterTarget.matches(
+                "(?:을|를|이|가|은|는|에|에서|으로|로|만|도|까지)?"
+                        + "(?:직접|정말|진짜|바로|다시|오늘|어제|또|한번|한번더)?");
     }
 
     private boolean hasThirdPartySubjectBeforeTarget(String compactPrefix, String target) {
-        int targetIndex = compactPrefix.indexOf(target);
+        int targetIndex = compactPrefix.lastIndexOf(target);
         if (targetIndex <= 0) {
             return false;
         }

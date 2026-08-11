@@ -59,13 +59,14 @@ related_documents:
 | `PRRT_kwDOTf2xKc6YN7TV` | 영문 `i/we` 주어의 토큰 경계 보장 | 애플리케이션 | 수정 필요 | `i(?=\s|$)`·`we(?=\s|$)`로 접두어 오인식을 차단하고 `impostor`·`weird` 회귀 테스트 추가 | `VerifyAiContentCandidateServiceTest` |
 | `PRRT_kwDOTf2xKc6YN7TZ` | 부정·대조된 맛집명을 방문 대상처럼 인정하는 문제 | 애플리케이션 | 수정 필요 | 검증된 맛집명 뒤의 `아닌/아니라/제외`와 앞뒤 대상 경계를 확인하고 부정·대조 문장 회귀 테스트 추가 | `VerifyAiContentCandidateServiceTest` |
 | `PRRT_kwDOTf2xKc6YN7Tc` | 태그만 누락된 `PARTIAL` 결과의 자동 확정 | 애플리케이션 | 수정 필요 | `PARTIAL` 자체가 아닌 필수 필드·메뉴 누락만 본문을 차단하도록 변경하고 Validator·Processor 회귀 테스트 추가 | `AiCandidateValidatorTest`, `AiExtractionResultProcessorServiceTest` |
+| [#3758551384](https://github.com/team-youngkk/masit-on/pull/173#discussion_r3758551384) | 맛집명과 방문 동사의 동일 절·목적어 관계 확인 | 애플리케이션 | 수정 필요 | 방문 동사 직전 목적어 구간에 검증된 맛집명이 직접 연결된 경우만 확정하고 앞 절 언급은 차단 | 코드·테스트·기록 반영; 원격 반영 후 답글·해결 필요 |
 
 ## 3. 문제 현상과 발생 조건
 
 - 오류 메시지: `AUTO_MERGE` replacement 누락, `result_completeness` CHECK 위반, `FOOD_CATEGORY_REQUIRED`, 외부 검증 불일치 오판정, 방문 근거 미확정 상태의 정식 등록, 계약상 `TEXT_RANGE`의 자동 차단.
 - 발생 환경: `feature/t-159-ai-candidate-auto-registration`, Spring Boot 4.1.0, PostgreSQL V4 AI 스키마, PR #173 미해결 리뷰 상태.
 - 재현 조건: 냉면 같은 메뉴 표현 입력, 주소가 다른 지점의 접두어인 경우, 한글 신규 태그, `missingFields=["tag"]`, 유효하지 않은 완결성 값, 정식 등록 중 예외, `visitEvidence`가 언급·추천·추정·부정·의문·가정 문구이거나 `UNKNOWN` 근거인 경우, 유효한 `TEXT_RANGE` 근거인 경우, 동사 앞 `안`·`못`·`들렀`, 영문 `impostor/weird` 접두어, 부정·대조된 맛집명, 검증된 맛집과 연결되지 않은 장소·제3자 방문 문구인 경우.
-- 실제 결과: 메뉴 표현이 카테고리 이름으로 직접 조회됐고, 장소 동일성에 부분 문자열이 사용됐다. 태그 한 건의 거부가 전체 후보를 거부했으며, 차단 경로에서 `AUTO_MERGE`가 저장될 수 있었다. 외부 검증과 등록 예외가 같은 application catch 경계에 섞였고, Processor가 방문 근거를 검증하지 않은 채 `true`를 전달했다. 이후 추가된 방문 판정은 긍정 문구를 부분 문자열로 매칭해 부정·의문 문구를 통과시켰고, Validator와 orchestration이 계약상 `TEXT_RANGE`를 차단했다. 첫 보완의 고정 허용 목록은 반대로 `제가 직접 방문했습니다.` 같은 자연스러운 문장까지 차단했다. 후속 문장 패턴은 임의의 주어를 허용해 제3자의 방문을 현재 영상 채널의 방문으로 오인할 수 있었다. 최신 구현은 `들렀` 부정형·영문 접두어 오인식·부정된 맛집명 대상·태그 전용 `PARTIAL`을 별도로 차단하지 못했다.
+- 실제 결과: 메뉴 표현이 카테고리 이름으로 직접 조회됐고, 장소 동일성에 부분 문자열이 사용됐다. 태그 한 건의 거부가 전체 후보를 거부했으며, 차단 경로에서 `AUTO_MERGE`가 저장될 수 있었다. 외부 검증과 등록 예외가 같은 application catch 경계에 섞였고, Processor가 방문 근거를 검증하지 않은 채 `true`를 전달했다. 이후 추가된 방문 판정은 긍정 문구를 부분 문자열로 매칭해 부정·의문 문구를 통과시켰고, Validator와 orchestration이 계약상 `TEXT_RANGE`를 차단했다. 첫 보완의 고정 허용 목록은 반대로 `제가 직접 방문했습니다.` 같은 자연스러운 문장까지 차단했다. 후속 문장 패턴은 임의의 주어를 허용해 제3자의 방문을 현재 영상 채널의 방문으로 오인할 수 있었다. 최신 구현은 `들렀` 부정형·영문 접두어 오인식·부정된 맛집명 대상·태그 전용 `PARTIAL`을 별도로 차단하지 못했고, 맛집명이 앞 절에서만 언급되어도 최종 방문 동사의 대상처럼 처리했다.
 - 기대 결과: 대표 카테고리와 외부 참조는 각 도메인 경계에서 검증하고, 태그 실패는 태그에 국한하며, 정식 등록·후속 작업 완료는 하나의 DB 트랜잭션으로 원자 처리해야 한다.
 - 영향 범위: 잘못된 음식 카테고리 등록, 다른 지점 오인 등록, 태그·VisitTag 불일치, 작업 stuck 또는 재시도 불가, 도메인 의존성 규칙 위반, 부정문·타 장소 방문의 정식 관계 오등록, 방문 실패 사유 감사성 저하.
 
@@ -77,11 +78,11 @@ related_documents:
 
 ## 5. 확인 및 시도
 
-최신 미해결 지적의 원인은 방문 동사 앞 전체 문자열에서 `SUBJECT_PARTICLE`를 검색해 다절 1인칭 문장을 과차단한 것, 위치 조사만 확인해 검증되지 않은 일반 대상을 허용한 것, 방문 동사 뒤 부정 패턴만 사용해 `안/못 방문`을 놓친 것, 그리고 `Optional.empty()` 하나로 외부 기준정보 불일치와 방문 근거 부족을 표현한 것이다. 이번 4건은 `들렀` 어간과 영문 주어 토큰 경계가 허술하고, 검증된 맛집명이 부정·대조된 대상인지 확인하지 않으며, `PARTIAL` 상태 자체를 선택 태그 누락과 필수값 누락에 동일하게 적용한 문제였다.
+최신 미해결 지적의 원인은 방문 동사 앞 전체 문자열에서 `SUBJECT_PARTICLE`를 검색해 다절 1인칭 문장을 과차단한 것, 위치 조사만 확인해 검증되지 않은 일반 대상을 허용한 것, 방문 동사 뒤 부정 패턴만 사용해 `안/못 방문`을 놓친 것, 그리고 `Optional.empty()` 하나로 외부 기준정보 불일치와 방문 근거 부족을 표현한 것이다. 이번 4건은 `들렀` 어간과 영문 주어 토큰 경계가 허술하고, 검증된 맛집명이 부정·대조된 대상인지 확인하지 않으며, `PARTIAL` 상태 자체를 선택 태그 누락과 필수값 누락에 동일하게 적용한 문제였다. 추가로 방문 동사 직전 목적어를 제한하지 않아 앞 절의 맛집명 언급이 실제 방문 증거로 오인될 수 있었다.
 
 | 확인하거나 시도한 방법 | 결과 | 판단과 다음 단계 |
 |---|---|---|
-| PR #173 미해결 review thread 34건과 현재 head 대조 | 기존 30건에 `들렀` 부정형·영문 주어 토큰·맛집명 부정 대상·태그 전용 `PARTIAL` 처리 4건이 추가된 상태로 확인 | 원인별 단일 수정으로 묶고 모든 원문 스레드에 개별 답글 작성 |
+| PR #173 미해결 review thread 35건과 현재 head 대조 | 기존 30건에 후속 5건과 방문 대상 관계 지적 1건이 추가된 상태로 확인 | 원인별 단일 수정으로 묶고 원격 반영 후 원문 스레드에 개별 답글 작성 |
 | AI 데이터 계약·대표 카테고리 seed·ADR-AI-001 대조 | 대표 카테고리 10종, 외부 검증 조합 경계, AI 작업 CHECK가 계약으로 확정 | 계약 변경 없이 application/orchestration 경계와 매핑 로직 보완 |
 | `ArchitectureTest` 실행 | 도메인 간 persistence 직접 의존과 orchestration Entity 소유 금지 통과 | 외부 검증 조합을 orchestration Port로 이동 |
 | `docker info` 확인 | Docker Desktop Linux engine pipe에 연결할 수 없음 | 로컬 실행은 실패로 기록하고 Docker가 제공되는 CI에서 재검증 |
@@ -106,6 +107,7 @@ related_documents:
   - 방문 동사 직전 `안`·`못`을 `들러`·`들렀`를 포함한 lookahead로 차단해 선행 부정문이 긍정 방문 패턴으로 통과하지 않도록 했다.
   - 영문 1인칭 주어 `i`·`we`에는 공백/문장 끝 토큰 경계를 적용해 `impostor`·`weird` 같은 접두어 오인식을 차단했다.
   - 검증된 맛집명 앞뒤의 `아닌`·`아니라`·`제외` 문맥과 조사·방문동사 경계를 확인해 다른 대상을 방문한 문장을 등록 근거로 사용하지 않도록 했다.
+  - 방문 동사 직전 목적어 구간에서만 검증된 맛집명을 인정하고, 맛집명 뒤에는 조사와 제한된 방문 수식어만 허용해 `소개받고`, `언급한 뒤`, `아니고` 뒤의 다른 장소 방문을 차단했다. 같은 문장에 맛집명이 반복되면 방문 동사에 가장 가까운 이름을 기준으로 판정한다.
   - `PARTIAL`은 결과 상태로만 기록하고, 필수 필드·메뉴 누락일 때만 본문 자동 등록을 차단해 태그만 누락된 후보는 외부 검증·정식 등록까지 진행하도록 했다.
   - 외부 검증 결과를 `VerificationResult`로 바꿔 성공 콘텐츠와 실패 사유를 구분하고, 방문 근거 실패는 `VISIT_EVIDENCE_REQUIRED`로 Snapshot 감사 이력에 전달했다. 성공 콘텐츠의 항상 `true`였던 `visitEvidenceConfirmed` accessor와 Processor의 dead branch는 제거했다.
   - AI 후보 Validator와 orchestration 모두 유효한 `TEXT_RANGE`(`startOffset`·`endOffset`·`sourceHash`)를 방문 근거로 허용하고, 범위·source hash가 불완전한 근거는 차단했다.
@@ -136,11 +138,12 @@ related_documents:
 | 추가 `VerifyAiContentCandidateServiceTest` 방문 대상·선행 부정어·다절 문장 회귀 | 통과 | 검증된 맛집 대상만 허용, `안/못` 선행 부정 차단, 다절 1인칭 문장 과차단 방지 |
 | `VerificationResult` 실패 사유 전파 테스트 | 통과 | 방문 근거 부족을 `VISIT_EVIDENCE_REQUIRED`로 Snapshot 커밋 명령에 전달 |
 | `.\gradlew.bat test --tests com.masiton.orchestration.application.VerifyAiContentCandidateServiceTest --tests com.masiton.ai.application.AiCandidateValidatorTest --tests com.masiton.ai.application.AiExtractionResultProcessorServiceTest` | 통과 | 50 tests, 0 failures; `들렀` 부정형·영문 주어 토큰·부정 대상 문맥·태그 전용 `PARTIAL` 자동 확정 회귀 |
+| `.\gradlew.bat test --tests com.masiton.orchestration.application.VerifyAiContentCandidateServiceTest --no-daemon --console=plain` | 통과 | 41 tests, 0 failures; 방문 동사 직전 목적어 관계와 리뷰 제시 다절 문장 3건을 포함한 기존 방문 판정 회귀 |
 
 ## 8. 재발 방지 및 다음 확인
 
 - 재발 방지: 메뉴 표현→대표 카테고리, 접두어 주소, 한글 신규 태그, 선택 태그 누락, invalid completeness, 차단 태그 결정, 외부 예외 경계, 실제 방문 문구·근거 구간·방문 대상·선행 부정어·실패 사유 게이트를 회귀 테스트로 고정했다. PostgreSQL 원자성은 Testcontainers 테스트로 실제 제약과 트랜잭션을 확인했다.
-- 다음 확인: 없음. 최신 4개 스레드를 포함한 전체 34개 스레드에 원문 답글을 남기고 모두 해결했으며, PR head `bed20c8` 기준 focused suite·아키텍처·테스트 컴파일을 확인했다. 원격 전체 CI는 `workflow_dispatch` job 조건으로 실행되지 않았고 Docker/Testcontainers 통합 검증은 기존 성공 CI 기록과 로컬 환경 제약을 함께 보존한다.
+- 다음 확인: 현재 로컬 수정과 focused suite·공백 검사는 완료했다. 원격 브랜치 반영 후 최신 방문 대상 관계 스레드에 inline 답글을 남기고 해결 처리해야 하며, 원격 전체 CI와 Docker/Testcontainers 통합 검증도 확인해야 한다.
 
 ## 9. 도입 전후 비교 지표
 
@@ -153,7 +156,8 @@ related_documents:
 | 추가 리뷰 미해결 스레드(4차) | 1건 | PR #173 스레드 API, 2026-08-11 | 0건 | 임의의 주어를 허용한 방문 패턴을 1인칭·장소 대상 맥락으로 제한하고 제3자 주어를 차단한 뒤 원문 답글·해결 처리 | PR 작성자, PR #173 |
 | 추가 리뷰 미해결 스레드(5차) | 4건 | PR #173 스레드 API, 2026-08-11 | 0건 | 다절 문장·방문 대상·선행 부정어·실패 사유 4건을 수정·검증 후 원문 답글·해결 처리 | PR 작성자, PR #173 |
 | 추가 리뷰 미해결 스레드(6차) | 4건 | PR #173 스레드 API, 2026-08-11 | 0건 | `들렀` 부정형·영문 토큰·부정 대상·태그 전용 `PARTIAL` 4건을 수정·검증 후 원문 답글·해결 처리 | PR 작성자, PR #173 |
-| 전체 리뷰 미해결 스레드 | 34건 | PR #173 스레드 API, 2026-08-11 | 0건 | 기존·추가 리뷰 34건에 원문 답글을 남기고 모두 해결 처리 | PR 작성자, PR #173 |
+| 추가 리뷰 미해결 스레드(7차) | 1건 | PR #173 스레드 API, 2026-08-11 | 원격 반영 전 1건 | 앞 절에서만 언급된 맛집이 최종 방문 대상처럼 처리되는 문제를 목적어 구간 제한과 3개 회귀 테스트로 수정·검증 | PR 작성자, PR #173 |
+| 전체 리뷰 미해결 스레드 | 35건 | PR #173 스레드 API, 2026-08-11 | 원격 반영 전 1건 | 기존·추가 리뷰 35건 중 기존 34건은 해결됐고 최신 1건은 코드·테스트 반영 후 원격 답글·해결 대기 | PR 작성자, PR #173 |
 | orchestration 직접 테스트 스위트 | 0개 | PR #173 추가 리뷰 시점 | 1개 | 장소·YouTube·방문 근거 게이트 시나리오를 직접 검증 | PR #173 |
 | PostgreSQL 원자성 회귀 실행 | 0회 | Testcontainers 통합 테스트 | 통과 | 백엔드 CI에서 원자성 회귀 포함 전체 테스트 성공 확인 | CI runs 31477603456, 31484115720, 31486331945 |
 | 메뉴 표현의 대표 카테고리 매핑 | 직접 이름 조회 | 매핑 단위 테스트 | 냉면→한식 등 매핑 통과 | 표현과 저장 카테고리 책임 분리 | WS-04, PR #173 |
@@ -161,4 +165,4 @@ related_documents:
 ## 10. 남은 사항
 
 - 로컬 Docker Desktop 데몬은 꺼져 있어 동일 테스트의 로컬 실행은 불가했지만, Docker가 제공되는 백엔드 CI에서 통과했다.
-- 코드·문서 수정, focused 테스트, 최신 4개를 포함한 전체 34개 리뷰 스레드의 원문 inline 답글·해결 처리를 완료했다. 현재 커밋의 원격 전체 CI는 workflow 조건상 실행되지 않았고, 로컬 Docker Desktop 데몬 부재로 Testcontainers의 로컬 재실행도 환경 제약으로 남는다.
+- 코드·문서 수정과 focused 테스트는 완료했지만, Git push 권한을 별도로 받지 않아 최신 1개 리뷰 스레드는 아직 원격 답글·해결 처리하지 않았다. 원격 전체 CI는 workflow 조건상 실행되지 않았고, 로컬 Docker Desktop 데몬 부재로 Testcontainers의 로컬 재실행도 환경 제약으로 남는다.
