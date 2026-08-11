@@ -84,6 +84,7 @@ render_required "masiton.security.verification.login-id"  /masiton/access/verifi
 render_required "masiton.security.verification.password-hash" /masiton/access/verification-password-hash
 render_optional "masiton.integration.kakao.rest-api-key" /masiton/integration/kakao/rest-api-key
 render_optional "masiton.integration.youtube.api-key"    /masiton/integration/youtube/api-key
+render_optional "masiton.integration.kakao-mobility.rest-api-key" /masiton/integration/kakao-mobility/rest-api-key
 render_optional "masiton.ai.provider.gemini.api-key"      /masiton/ai/gemini/api-key
 render_optional "masiton.ai.youtube-webhook.secret"       /masiton/ai/youtube-webhook/secret
 render_optional "masiton.ai.temporary-input.active-key-id" /masiton/ai/temporary-input/active-key-id

@@ -103,7 +103,7 @@ related_documents:
 | 비공개·삭제·비활성 맛집 포함 | `422 RESTAURANT_NOT_PUBLIC` |
 | 위도·경도 중 하나라도 없거나 범위 오류 | `422 RESTAURANT_COORDINATE_REQUIRED` |
 
-좌표가 없는 맛집을 조용히 제외하지 않고 전체 요청을 거부한다. 입력 순서와 문제 식별자의 최소 표시 정보는 오류 `resource`에 포함할 수 있다.
+좌표가 없는 맛집을 조용히 제외하지 않고 전체 요청을 거부한다. 입력 검증 오류는 공통 오류 계약의 `errors`로 표현하며, 기존 자원 참조가 아니므로 `resource`를 사용하지 않는다.
 
 ### Success Response
 
@@ -195,11 +195,43 @@ related_documents:
 | `RESTAURANT_COORDINATE_REQUIRED` | 422 | 좌표 누락 또는 좌표 범위 오류 |
 | `COURSE_DISTANCE_LIMIT_EXCEEDED` | 422 | 실제 경로 합계 30km 초과 |
 | `COURSE_ROUTE_PARTIAL_FAILURE` | 502 | 일부 구간만 계산됨. 정상 거리·시간을 반환하지 않음 |
-| `COURSE_ROUTE_PROVIDER_UNAVAILABLE` | 502 | timeout·429·5xx·quota 차단 등 외부 경로 실패 |
+| `COURSE_ROUTE_PROVIDER_UNAVAILABLE` | 502 | timeout·provider의 429·5xx·quota 차단 등 외부 경로 실패 |
 | `COURSE_ROUTE_RATE_LIMITED` | 429 | 서비스 자체 요청 제한 초과 |
 | `INTERNAL_SERVER_ERROR` | 500 | 예상하지 못한 내부 오류 |
 
 외부·부분 실패의 오류 본문은 선택 맛집의 최소 표시 정보, 입력 순서, 실패 범주와 재시도 안내만 제공한다. 계산되지 않은 구간의 거리·시간·전체 합계는 제공하지 않는다.
+
+이때 공통 오류 봉투의 `details`를 사용하며 `resource`는 생략한다.
+
+```json
+{
+  "code": "COURSE_ROUTE_PARTIAL_FAILURE",
+  "message": "일부 구간의 경로 계산에 실패했습니다.",
+  "errors": [],
+  "details": {
+    "selectedRestaurants": [
+      {
+        "restaurantId": "restaurant-id-1",
+        "name": "출발 맛집",
+        "inputOrder": 1
+      },
+      {
+        "restaurantId": "restaurant-id-2",
+        "name": "도착 맛집",
+        "inputOrder": 2
+      }
+    ],
+    "failureCategory": "PARTIAL",
+    "retryGuidance": {
+      "action": "RESELECT_OR_RETRY",
+      "message": "선택 맛집을 바꾸거나 잠시 후 다시 조회해 주세요."
+    }
+  },
+  "traceId": "01K123ABC456DEF789GHJKMNPQ"
+}
+```
+
+`details.selectedRestaurants`는 요청 배열 순서의 최소 표시 정보만 담는다. `failureCategory`의 공개 값은 `PARTIAL`, `PROVIDER_UNAVAILABLE`, `SERVICE_RATE_LIMIT`이며, Adapter 내부의 `TIMEOUT`, `SCHEMA`, `PROVIDER_BLOCKED` 같은 세부 범주는 외부에 노출하지 않고 `PROVIDER_UNAVAILABLE`로 통합한다.
 
 ## 7. 비용·보안·운영 계약
 

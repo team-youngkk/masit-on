@@ -63,6 +63,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       KAKAO_BASE_URL: http://wiremock:8080
+      KAKAO_MOBILITY_BASE_URL: http://wiremock:8080
       YOUTUBE_BASE_URL: http://wiremock:8080
       JWT_KEY_ID: ${JWT_KEY_ID}
       JWT_PRIVATE_KEY_PEM: ${JWT_PRIVATE_KEY_PEM}

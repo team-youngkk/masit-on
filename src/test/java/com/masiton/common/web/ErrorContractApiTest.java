@@ -11,6 +11,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -46,7 +47,7 @@ class ErrorContractApiTest extends FullContextIntegrationTest {
     @Test
     @DisplayName("검증 실패는 400과 필드 오류 목록을 반환한다")
     void 요청검증_필수값누락_400과필드오류를반환한다() throws Exception {
-        mockMvc.perform(post("/test-support/echo")
+        MvcResult result = mockMvc.perform(post("/test-support/echo")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"\"}"))
                 .andExpect(status().isBadRequest())
@@ -54,7 +55,12 @@ class ErrorContractApiTest extends FullContextIntegrationTest {
                 .andExpect(jsonPath("$.errors[0].field").value("name"))
                 .andExpect(jsonPath("$.errors").isArray())
                 .andExpect(jsonPath("$.resource").doesNotExist())
-                .andExpect(jsonPath("$.traceId").value(not(emptyString())));
+                .andExpect(jsonPath("$.details").doesNotExist())
+                .andExpect(jsonPath("$.traceId").value(not(emptyString())))
+                .andReturn();
+
+        String body = result.getResponse().getContentAsString();
+        assertThat(body).doesNotContain("\"details\"");
     }
 
     @Test
