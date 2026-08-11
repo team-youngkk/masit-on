@@ -119,6 +119,8 @@ related_documents:
 | 이전 백엔드·프론트엔드 CI 실행 | 통과 | 커밋 `8d45b6a` 기준 백엔드 전체 빌드·테스트와 프론트엔드 타입 검사·프로덕션 빌드 성공; 추가 방문 근거·orchestration 테스트 포함 |
 | [최신 백엔드·프론트엔드 CI 실행](https://github.com/team-youngkk/masit-on/actions/runs/31486331945) | 통과 | 커밋 `d3d2b62` 기준 자연어 방문 문구·1인칭/장소 대상 맥락·제3자 주어 차단과 TIMESTAMP/TEXT_RANGE 검증을 포함한 백엔드 전체 빌드·테스트 및 프론트엔드 타입 검사·프로덕션 빌드 성공 |
 | `git diff --check` | 통과 | 공백·패치 형식 오류 없음 |
+| `.\gradlew.bat test --tests com.masiton.orchestration.application.VerifyAiContentCandidateServiceTest --tests com.masiton.ai.application.AiExtractionResultProcessorServiceTest --tests com.masiton.architecture.ArchitectureTest --no-daemon --console=plain` | 통과 | 현재 커밋의 방문 대상·선행 부정어·다절 문장·실패 사유 전파와 아키텍처 경계 |
+| `gh workflow run ci.yml --ref feature/t-159-ai-candidate-auto-registration` | 환경상 미검증 | `workflow_dispatch`에서 백엔드 job을 skip하는 조건으로 실행되어 현재 커밋의 원격 전체 CI 결과는 생성되지 않음 |
 | 추가 focused Gradle 테스트: `AiCandidateValidatorTest`, `VerifyAiContentCandidateServiceTest`, `AiExtractionResultProcessorServiceTest`, `GeminiHttpVideoExtractionAdapterTest` | 통과 | 부정·의문·가정 문구 차단, TIMESTAMP/TEXT_RANGE 근거 검증, 방문 근거 전달과 정식 등록 미호출 회귀 |
 | 추가 `VerifyAiContentCandidateServiceTest` 자연어 변형 시나리오 | 통과 | 조사·어미가 포함된 실제 방문 주장 3종과 부정·의문·추정 문구의 판정 |
 | 추가 `VerifyAiContentCandidateServiceTest` 방문 주체 시나리오 | 통과 | 주체·장소 맥락 없는 `방문함`과 친구·다른 사람·유명인 제3자 주어의 차단 |
@@ -129,7 +131,7 @@ related_documents:
 ## 8. 재발 방지 및 다음 확인
 
 - 재발 방지: 메뉴 표현→대표 카테고리, 접두어 주소, 한글 신규 태그, 선택 태그 누락, invalid completeness, 차단 태그 결정, 외부 예외 경계, 실제 방문 문구·근거 구간·방문 대상·선행 부정어·실패 사유 게이트를 회귀 테스트로 고정했다. PostgreSQL 원자성은 Testcontainers 테스트로 실제 제약과 트랜잭션을 확인했다.
-- 다음 확인: 이번 변경 커밋의 백엔드·프론트엔드 CI 성공과 전체 30개 review thread의 원문 답글·해결 처리를 확인한다.
+- 다음 확인: 없음. 현재 커밋의 focused suite·아키텍처·테스트 컴파일 통과와 전체 30개 review thread의 원문 답글·해결 처리를 확인했다. 원격 전체 CI는 `workflow_dispatch` job 조건으로 실행되지 않았으며, Docker/Testcontainers 통합 검증은 기존 성공 CI 기록과 로컬 환경 제약을 함께 보존한다.
 
 ## 9. 도입 전후 비교 지표
 
@@ -149,4 +151,4 @@ related_documents:
 ## 10. 남은 사항
 
 - 로컬 Docker Desktop 데몬은 꺼져 있어 동일 테스트의 로컬 실행은 불가했지만, Docker가 제공되는 백엔드 CI에서 통과했다.
-- 코드·문서 수정과 focused 테스트를 완료했다. 원격 CI 확인 후 전체 30개 리뷰 스레드의 원문 inline 답글·해결 처리를 진행한다. 로컬 Docker Desktop 데몬 부재로 Testcontainers의 로컬 재실행은 환경 제약으로 남는다.
+- 코드·문서 수정, focused 테스트, 전체 30개 리뷰 스레드의 원문 inline 답글·해결 처리를 완료했다. 현재 커밋의 원격 전체 CI는 workflow 조건상 실행되지 않았고, 로컬 Docker Desktop 데몬 부재로 Testcontainers의 로컬 재실행도 환경 제약으로 남는다.
