@@ -10,6 +10,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #172 AI Worker 운영·복구 경계](pr-172-ai-worker-key-rotation-review.md)
 - [PR #170 AI 영상 추출 Provider·Webhook 리뷰와 CI 실패 반영](pr-170-ai-video-extraction-review.md)
 - [PR #169 자연어 검색 입력·조건·요청 출처 경계](pr-169-natural-language-search-review.md)
 - [PR #168 AI V4 인덱스 검증 회귀와 테스트 형식](pr-168-ai-schema-verification-review.md)
