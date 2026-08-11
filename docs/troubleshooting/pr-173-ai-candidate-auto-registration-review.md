@@ -107,7 +107,7 @@ related_documents:
 | `docker info --format '{{.ServerVersion}}'` | 실패 | `dockerDesktopLinuxEngine` named pipe에 연결할 수 없음 |
 | [백엔드 CI 실행](https://github.com/team-youngkk/masit-on/actions/runs/31477603456) | 통과 | 970 tests, 0 failures, 2 skipped; PostgreSQL 원자성 회귀 포함 |
 | 이전 백엔드·프론트엔드 CI 실행 | 통과 | 커밋 `8d45b6a` 기준 백엔드 전체 빌드·테스트와 프론트엔드 타입 검사·프로덕션 빌드 성공; 추가 방문 근거·orchestration 테스트 포함 |
-| [최신 백엔드·프론트엔드 CI 실행](https://github.com/team-youngkk/masit-on/actions/runs/31484115720) | 통과 | 커밋 `39c3d08` 기준 부정·의문·가정 문구 차단과 TIMESTAMP/TEXT_RANGE 검증을 포함한 백엔드 전체 빌드·테스트 및 프론트엔드 타입 검사·프로덕션 빌드 성공 |
+| [최신 백엔드·프론트엔드 CI 실행](https://github.com/team-youngkk/masit-on/actions/runs/31486331945) | 통과 | 커밋 `d3d2b62` 기준 자연어 방문 문구·1인칭/장소 대상 맥락·제3자 주어 차단과 TIMESTAMP/TEXT_RANGE 검증을 포함한 백엔드 전체 빌드·테스트 및 프론트엔드 타입 검사·프로덕션 빌드 성공 |
 | `git diff --check` | 통과 | 공백·패치 형식 오류 없음 |
 | 추가 focused Gradle 테스트: `AiCandidateValidatorTest`, `VerifyAiContentCandidateServiceTest`, `AiExtractionResultProcessorServiceTest`, `GeminiHttpVideoExtractionAdapterTest` | 통과 | 부정·의문·가정 문구 차단, TIMESTAMP/TEXT_RANGE 근거 검증, 방문 근거 전달과 정식 등록 미호출 회귀 |
 | 추가 `VerifyAiContentCandidateServiceTest` 자연어 변형 시나리오 | 통과 | 조사·어미가 포함된 실제 방문 주장 3종과 부정·의문·추정 문구의 판정 |
@@ -117,7 +117,7 @@ related_documents:
 ## 8. 재발 방지 및 다음 확인
 
 - 재발 방지: 메뉴 표현→대표 카테고리, 접두어 주소, 한글 신규 태그, 선택 태그 누락, invalid completeness, 차단 태그 결정, 외부 예외 경계, 실제 방문 문구·근거 구간 게이트를 회귀 테스트로 고정했다. PostgreSQL 원자성은 Testcontainers 테스트로 실제 제약과 트랜잭션을 확인했다.
-- 다음 확인: 새 패치를 push한 뒤 백엔드·프론트엔드 CI를 확인하고, 방문 주체 P1 원문 스레드에 답글을 남긴 뒤 해결 처리한다.
+- 다음 확인: 없음. 커밋 `d3d2b62`의 백엔드·프론트엔드 CI 성공과 전체 26개 review thread의 원문 답글·해결 처리를 확인했다.
 
 ## 9. 도입 전후 비교 지표
 
@@ -128,11 +128,12 @@ related_documents:
 | 추가 리뷰 미해결 스레드(2차) | 2건 | PR #173 스레드 API, 2026-08-11 | 0건 | 부정·의문 문구와 TEXT_RANGE 계약 불일치 2건을 수정·검증 후 원문 답글·해결 처리 | PR 작성자, PR #173 |
 | 추가 리뷰 미해결 스레드(3차) | 1건 | PR #173 스레드 API, 2026-08-11 | 0건 | 자연스러운 실제 방문 문구를 과도하게 차단한 고정 목록을 문장 패턴으로 교체하고 원문 답글·해결 처리 | PR 작성자, PR #173 |
 | 추가 리뷰 미해결 스레드(4차) | 1건 | PR #173 스레드 API, 2026-08-11 | 0건 | 임의의 주어를 허용한 방문 패턴을 1인칭·장소 대상 맥락으로 제한하고 제3자 주어를 차단한 뒤 원문 답글·해결 처리 | PR 작성자, PR #173 |
+| 전체 리뷰 미해결 스레드 | 26건 | PR #173 스레드 API, 2026-08-11 | 0건 | 기존·추가 리뷰 26건에 원문 답글을 남기고 모두 해결 처리 | PR 작성자, PR #173 |
 | orchestration 직접 테스트 스위트 | 0개 | PR #173 추가 리뷰 시점 | 1개 | 장소·YouTube·방문 근거 게이트 시나리오를 직접 검증 | PR #173 |
-| PostgreSQL 원자성 회귀 실행 | 0회 | Testcontainers 통합 테스트 | 통과 | 백엔드 CI에서 원자성 회귀 포함 전체 테스트 성공 확인 | CI runs 31477603456, 31484115720 |
+| PostgreSQL 원자성 회귀 실행 | 0회 | Testcontainers 통합 테스트 | 통과 | 백엔드 CI에서 원자성 회귀 포함 전체 테스트 성공 확인 | CI runs 31477603456, 31484115720, 31486331945 |
 | 메뉴 표현의 대표 카테고리 매핑 | 직접 이름 조회 | 매핑 단위 테스트 | 냉면→한식 등 매핑 통과 | 표현과 저장 카테고리 책임 분리 | WS-04, PR #173 |
 
 ## 10. 남은 사항
 
 - 로컬 Docker Desktop 데몬은 꺼져 있어 동일 테스트의 로컬 실행은 불가했지만, Docker가 제공되는 백엔드 CI에서 통과했다.
-- 코드·문서 수정과 focused 테스트는 완료했다. 새 패치의 원격 CI 확인 및 방문 주체 관련 미해결 1개 스레드의 원문 inline 답글·해결 처리가 남아 있다.
+- 코드·문서 수정, focused 테스트, 원격 CI 확인과 전체 26개 리뷰 스레드의 원문 inline 답글·해결 처리를 완료했다. 로컬 Docker Desktop 데몬 부재로 Testcontainers의 로컬 재실행만 남은 환경 제약이다.
