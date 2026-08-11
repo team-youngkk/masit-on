@@ -32,14 +32,20 @@ public final class RestaurantCourseException extends BusinessException {
         return new RestaurantCourseException(HttpStatus.NOT_FOUND, "RESTAURANT_NOT_FOUND", "선택한 맛집을 찾을 수 없습니다.");
     }
 
-    public static RestaurantCourseException restaurantNotPublic() {
+    public static RestaurantCourseException restaurantNotPublic(RestaurantCourseSelectionDetails details) {
         return new RestaurantCourseException(
-                HttpStatus.UNPROCESSABLE_ENTITY, "RESTAURANT_NOT_PUBLIC", "공개 상태가 아닌 맛집은 코스에 포함할 수 없습니다.");
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                "RESTAURANT_NOT_PUBLIC",
+                "공개 상태가 아닌 맛집은 코스에 포함할 수 없습니다.",
+                details);
     }
 
-    public static RestaurantCourseException coordinateRequired() {
+    public static RestaurantCourseException coordinateRequired(RestaurantCourseSelectionDetails details) {
         return new RestaurantCourseException(
-                HttpStatus.UNPROCESSABLE_ENTITY, "RESTAURANT_COORDINATE_REQUIRED", "좌표가 없거나 올바르지 않은 맛집은 코스에 포함할 수 없습니다.");
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                "RESTAURANT_COORDINATE_REQUIRED",
+                "좌표가 없거나 올바르지 않은 맛집은 코스에 포함할 수 없습니다.",
+                details);
     }
 
     public static RestaurantCourseException distanceLimitExceeded() {
