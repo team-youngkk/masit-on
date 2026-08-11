@@ -89,8 +89,11 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
                             new VerifyAiContentCandidateUseCase.VerificationCommand(
                                     job.get().channelId(), job.get().videoId(), job.get().videoUrl(),
                                     candidate.restaurantName().value(), candidate.address().value(),
-                                    kakaoPlaceUrl, candidate.menu().value()))
+                                    kakaoPlaceUrl, candidate.menu().value(), visitEvidence(candidate.visitEvidence())))
                     .orElseThrow(() -> new CandidateBlockedException("EXTERNAL_REFERENCE_MISMATCH"));
+            if (!verified.visitEvidenceConfirmed()) {
+                throw new CandidateBlockedException("VISIT_EVIDENCE_REQUIRED");
+            }
             List<AiExtractionResultCommitService.AiTagCandidate> tags = resolveTags(candidate.tags());
             AutoRegisterVerifiedContentUseCase.VerifiedContentCommand registration = new AutoRegisterVerifiedContentUseCase.VerifiedContentCommand(
                     new AutoRegisterVerifiedContentUseCase.RestaurantCandidate(
@@ -102,7 +105,7 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
                     new AutoRegisterVerifiedContentUseCase.VideoCandidate(
                             verified.videoId(), verified.channelId(), verified.videoTitle(), verified.videoSourceUrl(),
                             verified.videoThumbnailUrl(), verified.publishedAt(), verified.checkedAt()),
-                    true);
+                    verified.visitEvidenceConfirmed());
             // Registration defects and infrastructure failures must not be mistaken for a blocked candidate.
             return commitService.persistConfirmed(withTags(base, tags), registration);
         } catch (CandidateBlockedException exception) {
@@ -152,7 +155,7 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
                 ? rawCompleteness : "PARTIAL";
         return new ParsedCandidate(completeness, fields, tagsJson,
                 confidences, evidence, missing, tags, parsedFields.get("restaurantName"), parsedFields.get("menu"),
-                parsedFields.get("address"), parsedFields.get("location"), reason,
+                parsedFields.get("address"), parsedFields.get("location"), parsedFields.get("visitEvidence"), reason,
                 validation.isAutoRejected() ? "AUTO_REJECTED" : "AUTO_BLOCKED");
     }
 
@@ -253,6 +256,33 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
         return target;
     }
 
+    private VerifyAiContentCandidateUseCase.VisitEvidenceCandidate visitEvidence(ParsedField field) {
+        if (field == null) {
+            return null;
+        }
+        AiCandidateValidationResult.Evidence source = candidateEvidence(field.evidence());
+        return new VerifyAiContentCandidateUseCase.VisitEvidenceCandidate(
+                field.value(), field.confidence().doubleValue(), new VerifyAiContentCandidateUseCase.Evidence(
+                        source.type() == AiCandidateValidationResult.EvidenceType.TIMESTAMP
+                                ? VerifyAiContentCandidateUseCase.EvidenceType.TIMESTAMP
+                                : source.type() == AiCandidateValidationResult.EvidenceType.TEXT_RANGE
+                                ? VerifyAiContentCandidateUseCase.EvidenceType.TEXT_RANGE
+                                : VerifyAiContentCandidateUseCase.EvidenceType.UNKNOWN,
+                        source.startMs(), source.endMs(), source.startOffset(), source.endOffset(), source.sourceHash()));
+    }
+
+    private AiCandidateValidationResult.Evidence candidateEvidence(JsonNode evidence) {
+        String type = evidence.path("type").asText();
+        return switch (type) {
+            case "TIMESTAMP" -> AiCandidateValidationResult.Evidence.timestamp(
+                    evidence.path("startMs").asLong(), evidence.path("endMs").asLong());
+            case "TEXT_RANGE" -> AiCandidateValidationResult.Evidence.textRange(
+                    evidence.path("startOffset").asLong(), evidence.path("endOffset").asLong(),
+                    evidence.path("sourceHash").asText());
+            default -> AiCandidateValidationResult.Evidence.unknown();
+        };
+    }
+
     private boolean containsIgnoreCase(String value, String word) {
         return value.toLowerCase(Locale.ROOT).contains(word.toLowerCase(Locale.ROOT));
     }
@@ -290,6 +320,7 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
             ParsedField menu,
             ParsedField address,
             ParsedField location,
+            ParsedField visitEvidence,
             String blockReason,
             String reviewStatus) {
     }

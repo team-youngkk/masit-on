@@ -18,8 +18,22 @@ public interface VerifyAiContentCandidateUseCase {
             String restaurantName,
             String candidateAddress,
             URI kakaoPlaceUrl,
-            String menuExpression
+            String menuExpression,
+            VisitEvidenceCandidate visitEvidence
     ) {
+    }
+
+    record VisitEvidenceCandidate(String value, double confidence, Evidence evidence) {
+    }
+
+    record Evidence(EvidenceType type, Long startMs, Long endMs, Long startOffset, Long endOffset,
+                    String sourceHash) {
+    }
+
+    enum EvidenceType {
+        TIMESTAMP,
+        TEXT_RANGE,
+        UNKNOWN
     }
 
     record VerifiedContent(
@@ -40,7 +54,8 @@ public interface VerifyAiContentCandidateUseCase {
             String videoSourceUrl,
             String videoThumbnailUrl,
             OffsetDateTime publishedAt,
-            OffsetDateTime checkedAt
+            OffsetDateTime checkedAt,
+            boolean visitEvidenceConfirmed
     ) {
     }
 }

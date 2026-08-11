@@ -5,6 +5,7 @@ import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
@@ -50,7 +51,7 @@ class AiExtractionResultProcessorServiceTest {
                 "서울특별시 마포구 월드컵로 1", "02-1234-5678", java.math.BigDecimal.valueOf(126.9),
                 java.math.BigDecimal.valueOf(37.5), "channel-1", "채널", "https://www.youtube.com/channel/channel-1",
                 "video-1", "영상 제목", "https://www.youtube.com/watch?v=video-1",
-                "https://img.youtube.com/vi/video-1/0.jpg", finishedAt, finishedAt)));
+                "https://img.youtube.com/vi/video-1/0.jpg", finishedAt, finishedAt, true)));
         given(resultStore.findTag("MENU_NAENGMYEON")).willReturn(Optional.of(
                 new AiExtractionResultStore.TagDefinition(UUID.randomUUID(), "MENU_NAENGMYEON", "MENU", "냉면",
                         "[]", "ACTIVE")));
@@ -72,7 +73,46 @@ class AiExtractionResultProcessorServiceTest {
         // Then
         assertThat(processed).isTrue();
         verify(commitService).persistConfirmed(any(), any());
-        verify(contentVerification).verify(any());
+        var verificationCommand = forClass(VerifyAiContentCandidateUseCase.VerificationCommand.class);
+        verify(contentVerification).verify(verificationCommand.capture());
+        assertThat(verificationCommand.getValue().visitEvidence().value()).isEqualTo("방문함");
+        assertThat(verificationCommand.getValue().visitEvidence().evidence().type())
+                .isEqualTo(VerifyAiContentCandidateUseCase.EvidenceType.TIMESTAMP);
+    }
+
+    @Test
+    @DisplayName("외부 검증이 실제 방문 근거를 확정하지 않으면 정식 등록을 호출하지 않는다")
+    void process_외부방문근거미확정_정식등록하지않는다() throws Exception {
+        // Given
+        UUID jobId = UUID.randomUUID();
+        OffsetDateTime finishedAt = OffsetDateTime.parse("2026-08-11T00:00:10Z");
+        given(resultStore.lockProcessingJob(jobId, "worker-1", 1))
+                .willReturn(Optional.of(new AiExtractionResultStore.ProcessingJob(
+                        jobId, "channel-1", "video-1", URI.create("https://www.youtube.com/watch?v=video-1"))));
+        given(contentVerification.verify(any())).willReturn(Optional.of(new VerifyAiContentCandidateUseCase.VerifiedContent(
+                UUID.randomUUID(), UUID.randomUUID(), "맛집", "kakao-1", "https://place.map.kakao.com/123",
+                "서울특별시 마포구 월드컵로 1", "02-1234-5678", java.math.BigDecimal.valueOf(126.9),
+                java.math.BigDecimal.valueOf(37.5), "channel-1", "채널", "https://www.youtube.com/channel/channel-1",
+                "video-1", "영상 제목", "https://www.youtube.com/watch?v=video-1",
+                "https://img.youtube.com/vi/video-1/0.jpg", finishedAt, finishedAt, false)));
+        given(commitService.persistBlocked(any())).willReturn(true);
+
+        // When
+        boolean processed = processor.process(jobId, "worker-1", 1, finishedAt.minusSeconds(5), finishedAt,
+                result("""
+                        {"resultCompleteness":"COMPLETE","candidates":[
+                          {"field":"restaurantName","value":"맛집","confidence":0.95,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}},
+                          {"field":"menu","value":"냉면","confidence":0.90,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}},
+                          {"field":"address","value":"서울특별시 마포구 월드컵로 1","confidence":0.90,"evidence":{"type":"TEXT_RANGE","startOffset":1,"endOffset":5,"sourceHash":"hash"}},
+                          {"field":"location","value":"https://place.map.kakao.com/123","confidence":0.90,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}},
+                          {"field":"visitEvidence","value":"방문함","confidence":0.90,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}}
+                        ],"missingFields":[]}
+                        """));
+
+        // Then
+        assertThat(processed).isTrue();
+        verify(commitService).persistBlocked(any());
+        verify(commitService, never()).persistConfirmed(any(), any());
     }
 
     @Test
