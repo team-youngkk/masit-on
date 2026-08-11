@@ -89,7 +89,7 @@ class AiExtractionResultCommitServicePostgreSqlIntegrationTest extends FullConte
                         new AutoRegisterVerifiedContentUseCase.RestaurantCandidate(
                                 REGION_ID, FOOD_CATEGORY_ID, "원자성 맛집", kakaoPlaceId,
                                 "https://place.map.kakao.com/" + jobId, "서울특별시 마포구 월드컵로 1", null,
-                                "02-1234-5678", BigDecimal.valueOf(126.9), BigDecimal.valueOf(37.5)),
+                                "02-1234-5678", BigDecimal.valueOf(37.5), BigDecimal.valueOf(126.9)),
                         new AutoRegisterVerifiedContentUseCase.CreatorCandidate(
                                 channelId, "원자성 채널", "https://www.youtube.com/channel/" + channelId),
                         new AutoRegisterVerifiedContentUseCase.VideoCandidate(
