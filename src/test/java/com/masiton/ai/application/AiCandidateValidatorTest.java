@@ -193,7 +193,7 @@ class AiCandidateValidatorTest {
         // Given
         JsonNode payload = payload("""
                 {
-                  "resultCompleteness": "COMPLETE",
+                  "resultCompleteness": "PARTIAL",
                   "candidates": [
                     {"field":"restaurantName","value":"맛집","confidence":0.95,"evidence":{"type":"TIMESTAMP","startMs":100,"endMs":200}},
                     {"field":"address","value":"서울시","confidence":0.90,"evidence":{"type":"TIMESTAMP","startMs":100,"endMs":200}},
@@ -211,6 +211,7 @@ class AiCandidateValidatorTest {
         // Then
         assertThat(result.decision()).isEqualTo(Decision.AUTO_CONFIRMED);
         assertThat(result.missingFields()).containsExactly("tag");
+        assertThat(result.reasonCodes()).contains("PARTIAL_RESULT");
     }
 
     private JsonNode payload(String candidates) throws Exception {

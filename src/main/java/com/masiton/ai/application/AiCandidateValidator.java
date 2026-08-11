@@ -74,8 +74,8 @@ public final class AiCandidateValidator {
         Map<String, List<Candidate>> candidatesByField = new LinkedHashMap<>();
         List<TagCandidate> connectableTags = new ArrayList<>();
         List<TagCandidate> rejectedTags = new ArrayList<>();
-        boolean blocked = "PARTIAL".equals(resultCompleteness)
-                || declaredMissing.stream().anyMatch(field -> REQUIRED_FIELDS.contains(field) || "menu".equals(field));
+        boolean blocked = declaredMissing.stream()
+                .anyMatch(field -> REQUIRED_FIELDS.contains(field) || "menu".equals(field));
         if ("PARTIAL".equals(resultCompleteness)) {
             issues.add(issue("PARTIAL_RESULT", null));
         }

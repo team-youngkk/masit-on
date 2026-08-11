@@ -26,14 +26,14 @@ class VerifyAiContentCandidateService implements VerifyAiContentCandidateUseCase
                     + "|먹어봤(?:다|습니다|어요|어)|visited|directlyvisited|atehere|wentthere|stoppedby)$",
             Pattern.CASE_INSENSITIVE);
     private static final Pattern PRE_VERB_NEGATION = Pattern.compile(
-            "(?:안|못)(?=방문|다녀|찾아|들러|먹어)");
+            "(?:안|못)(?=방문|다녀|찾아|들러|들렀|먹어)");
     private static final Pattern BLOCKING_VISIT_CONTEXT = Pattern.compile(
-            "(?:방문|다녀|찾아|들러|먹어).*(?:않|안|못|아니|을까|을까요|나요|습니까|일까|일까요"
+            "(?:방문|다녀|찾아|들러|들렀|먹어).*(?:않|안|못|아니|을까|을까요|나요|습니까|일까|일까요"
                     + "|것같|듯|추정|예정|계획|가능|추천|언급|소개|아마)");
     private static final Pattern VISIT_VERB = Pattern.compile(
             "방문|다녀|찾아갔|들렀|먹어봤|visited|atehere|wentthere|stoppedby");
     private static final Pattern FIRSTHAND_SUBJECT = Pattern.compile(
-            "^(?:제가|저희가|저는|나는|내가|우리가|우리는|저희는|i|we)\\s*");
+            "^(?:제가|저희가|저는|나는|내가|우리가|우리는|저희는|i(?=\\s|$)|we(?=\\s|$))\\s*");
     private static final Pattern SUBJECT_PARTICLE = Pattern.compile("[가-힣]+(?:가|이|은|는)");
     private static final Pattern SUBJECT_BEFORE_DIRECT = Pattern.compile(
             "(?:^|\\s)[가-힣]+(?:가|이|은|는)\\s+직접$");
@@ -113,7 +113,8 @@ class VerifyAiContentCandidateService implements VerifyAiContentCandidateUseCase
         String prefix = phrase.substring(0, visitVerb.start()).trim();
         String target = normalizeClaim(verifiedRestaurantName);
         String compactPrefix = normalizeClaim(prefix);
-        if (target.isBlank() || !compactPrefix.contains(target)) {
+        int targetIndex = compactPrefix.indexOf(target);
+        if (target.isBlank() || targetIndex < 0 || !hasTargetBoundary(compactPrefix, targetIndex, target)) {
             return false;
         }
         var firsthandSubject = FIRSTHAND_SUBJECT.matcher(prefix);
@@ -125,6 +126,43 @@ class VerifyAiContentCandidateService implements VerifyAiContentCandidateUseCase
         }
         String subjectRemainder = prefix.substring(firsthandSubject.end()).trim();
         return !SUBJECT_BEFORE_DIRECT.matcher(subjectRemainder).find();
+    }
+
+    private boolean hasTargetBoundary(String compactPrefix, int targetIndex, String target) {
+        String beforeTarget = compactPrefix.substring(0, targetIndex);
+        String afterTarget = compactPrefix.substring(targetIndex + target.length());
+        if (beforeTarget.endsWith("아닌") || beforeTarget.endsWith("아니라") || beforeTarget.endsWith("제외")) {
+            return false;
+        }
+        if (afterTarget.startsWith("이아닌") || afterTarget.startsWith("아닌")
+                || afterTarget.startsWith("이아니라") || afterTarget.startsWith("아니라")
+                || afterTarget.startsWith("을제외") || afterTarget.startsWith("를제외")
+                || afterTarget.startsWith("제외")) {
+            return false;
+        }
+        return afterTarget.isEmpty()
+                || afterTarget.startsWith("을")
+                || afterTarget.startsWith("를")
+                || afterTarget.startsWith("이")
+                || afterTarget.startsWith("가")
+                || afterTarget.startsWith("은")
+                || afterTarget.startsWith("는")
+                || afterTarget.startsWith("에")
+                || afterTarget.startsWith("에서")
+                || afterTarget.startsWith("으로")
+                || afterTarget.startsWith("로")
+                || afterTarget.startsWith("만")
+                || afterTarget.startsWith("도")
+                || afterTarget.startsWith("까지")
+                || afterTarget.startsWith("방문")
+                || afterTarget.startsWith("다녀")
+                || afterTarget.startsWith("찾아")
+                || afterTarget.startsWith("들렀")
+                || afterTarget.startsWith("먹어봤")
+                || afterTarget.startsWith("visited")
+                || afterTarget.startsWith("atehere")
+                || afterTarget.startsWith("wentthere")
+                || afterTarget.startsWith("stoppedby");
     }
 
     private boolean hasThirdPartySubjectBeforeTarget(String compactPrefix, String target) {

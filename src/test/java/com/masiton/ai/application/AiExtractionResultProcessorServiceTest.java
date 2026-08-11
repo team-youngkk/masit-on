@@ -35,8 +35,8 @@ class AiExtractionResultProcessorServiceTest {
             resultStore, commitService, contentVerification, objectMapper);
 
     @Test
-    @DisplayName("필수 후보와 외부 검증이 통과하면 등록 커밋으로 전달한다")
-    void process_필수후보와외부검증통과_원자등록커밋으로전달한다() throws Exception {
+    @DisplayName("PARTIAL에서 태그만 누락돼도 필수 후보와 외부 검증을 통과하면 등록 커밋으로 전달한다")
+    void process_PARTIAL태그만누락_원자등록커밋으로전달한다() throws Exception {
         // Given
         UUID jobId = UUID.randomUUID();
         String workerId = "worker-1";
@@ -53,22 +53,18 @@ class AiExtractionResultProcessorServiceTest {
                 java.math.BigDecimal.valueOf(37.5), "channel-1", "채널", "https://www.youtube.com/channel/channel-1",
                 "video-1", "영상 제목", "https://www.youtube.com/watch?v=video-1",
                 "https://img.youtube.com/vi/video-1/0.jpg", finishedAt, finishedAt)));
-        given(resultStore.findTag("MENU_NAENGMYEON")).willReturn(Optional.of(
-                new AiExtractionResultStore.TagDefinition(UUID.randomUUID(), "MENU_NAENGMYEON", "MENU", "냉면",
-                        "[]", "ACTIVE")));
         given(commitService.persistConfirmed(any(), any())).willReturn(true);
 
         // When
         boolean processed = processor.process(jobId, workerId, 1, finishedAt.minusSeconds(5), finishedAt,
                 result("""
-                        {"resultCompleteness":"COMPLETE","candidates":[
+                        {"resultCompleteness":"PARTIAL","candidates":[
                           {"field":"restaurantName","value":"맛집","confidence":0.95,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}},
                           {"field":"menu","value":"냉면","confidence":0.90,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}},
                           {"field":"address","value":"서울특별시 마포구 월드컵로 1","confidence":0.90,"evidence":{"type":"TEXT_RANGE","startOffset":1,"endOffset":5,"sourceHash":"hash"}},
                           {"field":"location","value":"https://place.map.kakao.com/123","confidence":0.90,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}},
-                          {"field":"visitEvidence","value":"직접 방문","confidence":0.90,"evidence":{"type":"TEXT_RANGE","startOffset":1,"endOffset":5,"sourceHash":"visit-hash"}},
-                          {"field":"tag","candidateTagId":"tag-1","tagType":"MENU","rawLabel":"냉면","normalizedCode":"MENU_NAENGMYEON","label":"냉면","confidence":0.9,"evidence":{"type":"TIMESTAMP","startMs":2,"endMs":3}}
-                        ],"missingFields":[]}
+                          {"field":"visitEvidence","value":"직접 방문","confidence":0.90,"evidence":{"type":"TEXT_RANGE","startOffset":1,"endOffset":5,"sourceHash":"visit-hash"}}
+                        ],"missingFields":["tag"]}
                         """));
 
         // Then

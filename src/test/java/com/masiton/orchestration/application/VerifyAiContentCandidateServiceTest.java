@@ -99,7 +99,7 @@ class VerifyAiContentCandidateServiceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"제가 맛집을 직접 방문했습니다.", "제가 맛집에 다녀왔습니다"})
+    @ValueSource(strings = {"제가 맛집을 직접 방문했습니다.", "제가 맛집에 다녀왔습니다", "i 맛집 visited", "we 맛집 visited"})
     @DisplayName("자연스러운 실제 방문 주장도 전체 문장 기준으로 확정한다")
     void verify_자연스러운실제방문주장_확정결과를조합한다(String value) {
         given(restaurantReference.resolve(anyString(), anyString(), any(), anyString()))
@@ -115,6 +115,10 @@ class VerifyAiContentCandidateServiceTest {
             "다른 사람이 다녀왔습니다", "유명인이 직접 방문했습니다", "친구가 맛집을 방문했습니다",
             "회사에 다녀왔습니다", "맛집을 방문했습니다", "직접 안 방문했습니다", "직접 못 다녀왔습니다",
             "제가 안 방문했습니다", "제가 못 다녀왔습니다", "저는 안 방문했어요",
+            "제가 맛집에 안 들렀습니다", "제가 맛집에 못 들렀어요",
+            "impostor 맛집 visited", "weird 맛집 wentthere",
+            "제가 맛집이 아닌 곳을 방문했습니다", "제가 맛집이 아니라 다른 곳에 다녀왔습니다",
+            "제가 맛집을 제외하고 다른 곳을 방문했습니다",
             "저는 진짜 이집이 맛있어서 직접 방문했습니다"})
     @DisplayName("언급·추천·추정·부정·의문·가정 방문 후보는 확정하지 않는다")
     void verify_확정할수없는방문후보_확정하지않는다(String value) {
