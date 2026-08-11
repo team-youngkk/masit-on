@@ -165,4 +165,4 @@ related_documents:
 ## 10. 남은 사항
 
 - 로컬 Docker Desktop 데몬은 꺼져 있어 동일 테스트의 로컬 실행은 불가했지만, Docker가 제공되는 백엔드 CI에서 통과했다.
-- 코드·문서 수정과 focused 테스트는 완료했지만, Git push 권한을 별도로 받지 않아 최신 1개 리뷰 스레드는 아직 원격 답글·해결 처리하지 않았다. 원격 전체 CI는 workflow 조건상 실행되지 않았고, 로컬 Docker Desktop 데몬 부재로 Testcontainers의 로컬 재실행도 환경 제약으로 남는다.
+- 코드·문서 수정과 focused 테스트를 커밋 `28ebb34`로 원격 브랜치에 반영했다. 최신 1개 리뷰 스레드는 인라인 답글·해결 처리 전이며, 원격 전체 CI는 workflow 조건상 실행되지 않았고 로컬 Docker Desktop 데몬 부재로 Testcontainers의 로컬 재실행도 환경 제약으로 남는다.
