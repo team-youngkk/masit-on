@@ -49,6 +49,9 @@ public final class NaturalLanguageRestaurantParser {
 
     public NaturalLanguageParseResult parse(String sentence, NaturalLanguageFilters directFilters) {
         String normalizedSentence = normalizeSentence(sentence);
+        if (SUSPICIOUS_INPUT.matcher(normalizedSentence).find()) {
+            return failedForSuspiciousInput();
+        }
         NaturalLanguageFilters direct = directFilters == null ? NaturalLanguageFilters.empty() : directFilters;
         List<IgnoredCondition> ignored = new ArrayList<>();
         List<NaturalLanguageConflict> conflicts = new ArrayList<>();
@@ -74,6 +77,18 @@ public final class NaturalLanguageRestaurantParser {
                 merged.appliedFilters(),
                 ignored,
                 conflicts,
+                PARSER_VERSION);
+        return new NaturalLanguageParseResult(interpretation);
+    }
+
+    private NaturalLanguageParseResult failedForSuspiciousInput() {
+        NaturalLanguageInterpretation interpretation = new NaturalLanguageInterpretation(
+                InterpretationStatus.FAILED,
+                NaturalLanguageFilters.empty(),
+                NaturalLanguageFilters.empty(),
+                List.of(new IgnoredCondition(
+                        IgnoredConditionType.UNSUPPORTED, "지원하지 않는 입력", "SUSPICIOUS_INPUT")),
+                List.of(),
                 PARSER_VERSION);
         return new NaturalLanguageParseResult(interpretation);
     }
@@ -319,11 +334,6 @@ public final class NaturalLanguageRestaurantParser {
             EnumMap<ConditionField, Extraction> extractions,
             List<IgnoredCondition> ignored) {
         if (sentence.isEmpty()) {
-            return;
-        }
-        Matcher suspicious = SUSPICIOUS_INPUT.matcher(sentence);
-        if (suspicious.find()) {
-            ignored.add(new IgnoredCondition(IgnoredConditionType.UNSUPPORTED, "지원하지 않는 입력", "UNSUPPORTED_CONDITION"));
             return;
         }
         Matcher unsupported = UNSUPPORTED_CONDITION.matcher(sentence);

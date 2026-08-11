@@ -14,6 +14,7 @@ import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
 import com.masiton.restaurant.application.naturallanguage.NaturalLanguageSearchService;
 import com.masiton.restaurant.application.port.in.NaturalLanguageSearchCommand;
+import com.masiton.restaurant.infrastructure.web.MapClientAddressResolver;
 
 @RestController
 @RequestMapping("/api/restaurants")
@@ -22,9 +23,14 @@ public class NaturalLanguageSearchController {
     private static final Set<Integer> ALLOWED_SIZES = Set.of(10, 20, 50);
 
     private final NaturalLanguageSearchService service;
+    private final MapClientAddressResolver clientAddressResolver;
 
-    public NaturalLanguageSearchController(NaturalLanguageSearchService service) {
+    public NaturalLanguageSearchController(
+            NaturalLanguageSearchService service,
+            MapClientAddressResolver clientAddressResolver
+    ) {
         this.service = service;
+        this.clientAddressResolver = clientAddressResolver;
     }
 
     @PostMapping("/natural-language-search")
@@ -50,7 +56,7 @@ public class NaturalLanguageSearchController {
                 tags,
                 page,
                 size,
-                httpRequest.getRemoteAddr())));
+                clientAddressResolver.resolve(httpRequest))));
     }
 
     private String requiredSentence(String raw) {

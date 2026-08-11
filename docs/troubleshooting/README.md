@@ -10,6 +10,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #169 자연어 검색 입력·조건·요청 출처 경계](pr-169-natural-language-search-review.md)
 - [PR #168 AI V4 인덱스 검증 회귀와 테스트 형식](pr-168-ai-schema-verification-review.md)
 - [PR #146 제보·신고 접수 버튼 type 수정 PR 본문 정정](pr-146-participation-submit-button-type-review.md)
 - [PR #142 공개 큐레이션 조회 계약과 화면 상태 보완](pr-142-public-curation-review.md)

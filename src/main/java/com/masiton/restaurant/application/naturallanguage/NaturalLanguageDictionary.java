@@ -9,7 +9,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 
 /**
  * P1 parser가 사용하는 명시적 alias 사전이다. Creator는 DB를 조회하지 않고 호출자가
@@ -98,7 +97,6 @@ public final class NaturalLanguageDictionary {
                 .tag("ATMOSPHERE_BAR", "바 분위기", "포차 분위기");
 
         creatorAliases.forEach((creatorId, alias) -> {
-            UUID.fromString(creatorId);
             builder.creator(creatorId, alias);
         });
 

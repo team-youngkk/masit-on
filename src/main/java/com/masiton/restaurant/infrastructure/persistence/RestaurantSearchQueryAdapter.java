@@ -82,7 +82,7 @@ class RestaurantSearchQueryAdapter implements RestaurantSearchQueryPort {
         }
         if (!criteria.tags().isEmpty()) {
             where.append("""
-                    AND r.id IN (
+                     AND r.id IN (
                         SELECT v.restaurant_id
                         FROM visit v
                         JOIN visit_tag vt ON vt.visit_id = v.id

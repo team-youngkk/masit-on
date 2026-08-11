@@ -3,6 +3,8 @@ package com.masiton.restaurant.application.naturallanguage;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -59,8 +61,11 @@ public class NaturalLanguageSearchService {
         if (parsed == null) {
             throw unavailable();
         }
+        parsed = excludeInactiveNaturalTags(parsed);
 
-        MergedConditions merged = parsed.status() == NaturalLanguageInterpretation.Status.FAILED
+        MergedConditions merged = isSuspiciousInput(parsed)
+                ? new MergedConditions(NaturalLanguageInterpretation.AppliedConditions.empty(), List.of())
+                : parsed.status() == NaturalLanguageInterpretation.Status.FAILED
                 ? new MergedConditions(directConditions(command), List.of())
                 : merge(parsed, command);
         RestaurantSearchResult result = merged.conditions().hasAny()
@@ -87,6 +92,35 @@ public class NaturalLanguageSearchService {
                     "filters.tags",
                     "활성 상태의 태그 코드만 사용할 수 있습니다.");
         }
+    }
+
+    private NaturalLanguageInterpretation excludeInactiveNaturalTags(NaturalLanguageInterpretation parsed) {
+        List<String> tags = parsed.appliedConditions().tags();
+        if (tags.isEmpty()) {
+            return parsed;
+        }
+        Set<String> activeTags = restaurantSearchQueryPort.findActiveTagCodes(tags);
+        if (activeTags.size() == new HashSet<>(tags).size()) {
+            return parsed;
+        }
+        List<String> applicableTags = tags.stream().filter(activeTags::contains).toList();
+        NaturalLanguageInterpretation.AppliedConditions conditions = parsed.appliedConditions();
+        NaturalLanguageInterpretation.AppliedConditions filtered = new NaturalLanguageInterpretation.AppliedConditions(
+                conditions.query(), conditions.district(), conditions.category(), conditions.creatorId(), applicableTags);
+        List<NaturalLanguageInterpretation.IgnoredCondition> ignored = new ArrayList<>(parsed.ignoredConditions());
+        ignored.add(new NaturalLanguageInterpretation.IgnoredCondition(
+                NaturalLanguageInterpretation.IgnoredCondition.Kind.UNRESOLVED,
+                "현재 사용할 수 없는 태그 조건",
+                "INACTIVE_TAG"));
+        NaturalLanguageInterpretation.Status status = filtered.hasAny()
+                ? NaturalLanguageInterpretation.Status.PARTIAL
+                : NaturalLanguageInterpretation.Status.FAILED;
+        return new NaturalLanguageInterpretation(status, filtered, ignored, parsed.conflicts(), parsed.parserVersion());
+    }
+
+    private boolean isSuspiciousInput(NaturalLanguageInterpretation parsed) {
+        return parsed.ignoredConditions().stream()
+                .anyMatch(condition -> "SUSPICIOUS_INPUT".equals(condition.reason()));
     }
 
     private MergedConditions merge(NaturalLanguageInterpretation parsed, NaturalLanguageSearchCommand command) {
@@ -122,7 +156,7 @@ public class NaturalLanguageSearchService {
         if (direct == null) {
             return natural;
         }
-        if (natural != null) {
+        if (natural != null && !Objects.equals(direct, natural)) {
             conflicts.add(new NaturalLanguageInterpretation.Conflict(
                     NaturalLanguageInterpretation.Conflict.Field.valueOf(field),
                     NaturalLanguageInterpretation.Conflict.Resolution.DIRECT_FILTER_WON));
@@ -138,7 +172,8 @@ public class NaturalLanguageSearchService {
         if (direct == null || direct.isEmpty()) {
             return natural;
         }
-        if (natural != null && !natural.isEmpty()) {
+        if (natural != null && !natural.isEmpty()
+                && !new HashSet<>(direct).equals(new HashSet<>(natural))) {
             conflicts.add(new NaturalLanguageInterpretation.Conflict(
                     NaturalLanguageInterpretation.Conflict.Field.tags,
                     NaturalLanguageInterpretation.Conflict.Resolution.DIRECT_FILTER_WON));
