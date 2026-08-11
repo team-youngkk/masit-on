@@ -67,7 +67,8 @@ related_documents:
 | PR #173 미해결 review thread 20건과 현재 head 대조 | 메뉴·주소·태그·경계·원자성·정리 요청이 현재 코드에 존재하거나 테스트 공백으로 확인 | 중복은 원인별 단일 수정으로 묶고 모든 원문 스레드에 개별 답글 작성 |
 | AI 데이터 계약·대표 카테고리 seed·ADR-AI-001 대조 | 대표 카테고리 10종, 외부 검증 조합 경계, AI 작업 CHECK가 계약으로 확정 | 계약 변경 없이 application/orchestration 경계와 매핑 로직 보완 |
 | `ArchitectureTest` 실행 | 도메인 간 persistence 직접 의존과 orchestration Entity 소유 금지 통과 | 외부 검증 조합을 orchestration Port로 이동 |
-| `docker info` 확인 | Docker Desktop Linux engine pipe에 연결할 수 없음 | Testcontainers 테스트는 추가하되 로컬 실행은 실패로 기록하고 CI에서 재검증 |
+| `docker info` 확인 | Docker Desktop Linux engine pipe에 연결할 수 없음 | 로컬 실행은 실패로 기록하고 Docker가 제공되는 CI에서 재검증 |
+| [백엔드 CI 실행](https://github.com/team-youngkk/masit-on/actions/runs/31477603456) | 970 tests, 0 failures, 2 skipped | Testcontainers 원자성 테스트 포함 전체 백엔드 빌드·테스트 통과 |
 | `git diff --check` 실행 | 공백 오류 없음 | 커밋 전 정적 확인 완료 |
 
 ## 6. 최종 해결
@@ -90,24 +91,25 @@ related_documents:
 |---|---|---|
 | `.\gradlew.bat test --tests com.masiton.ai.application.AiCandidateValidatorTest --tests com.masiton.ai.application.AiTagPolicyTest --tests com.masiton.ai.application.AiExtractionResultCommitServiceTest --tests com.masiton.ai.application.AiExtractionResultProcessorServiceTest --tests com.masiton.restaurant.application.ResolveVerifiedRestaurantReferenceServiceTest --tests com.masiton.architecture.ArchitectureTest --no-daemon --console=plain` | 통과 | 후보 결정·태그 정책·차단 커밋·완결성 정규화·메뉴/주소 매핑·아키텍처 경계 |
 | `.\gradlew.bat testClasses --no-daemon --console=plain` | 통과 | PostgreSQL Testcontainers 통합 테스트를 포함한 테스트 소스 컴파일 |
-| `.\gradlew.bat test --tests com.masiton.ai.application.AiExtractionResultCommitServicePostgreSqlIntegrationTest --no-daemon --console=plain` | 미실행 | Docker Desktop 데몬 부재로 Testcontainers initializationError; CI에서 재실행 필요 |
+| `.\gradlew.bat test --tests com.masiton.ai.application.AiExtractionResultCommitServicePostgreSqlIntegrationTest --no-daemon --console=plain` | 환경상 실패 | Docker Desktop 데몬 부재로 Testcontainers initializationError; 동일 테스트는 백엔드 CI에서 통과 |
 | `docker info --format '{{.ServerVersion}}'` | 실패 | `dockerDesktopLinuxEngine` named pipe에 연결할 수 없음 |
+| [백엔드 CI 실행](https://github.com/team-youngkk/masit-on/actions/runs/31477603456) | 통과 | 970 tests, 0 failures, 2 skipped; PostgreSQL 원자성 회귀 포함 |
 | `git diff --check` | 통과 | 공백·패치 형식 오류 없음 |
 
 ## 8. 재발 방지 및 다음 확인
 
-- 재발 방지: 메뉴 표현→대표 카테고리, 접두어 주소, 한글 신규 태그, 선택 태그 누락, invalid completeness, 차단 태그 결정, 외부 예외 경계를 회귀 테스트로 고정했다. PostgreSQL 원자성은 Testcontainers 테스트를 추가해 CI에서 실제 제약과 트랜잭션을 확인한다.
-- 다음 확인: Docker가 가능한 CI에서 `AiExtractionResultCommitServicePostgreSqlIntegrationTest`를 실행해 Snapshot·정식 Entity·Visit/VisitTag·attempt/job 상태가 모두 롤백되는지 확인한다. 실패 시 해당 스레드는 해결 처리하지 않는다.
+- 재발 방지: 메뉴 표현→대표 카테고리, 접두어 주소, 한글 신규 태그, 선택 태그 누락, invalid completeness, 차단 태그 결정, 외부 예외 경계를 회귀 테스트로 고정했다. PostgreSQL 원자성은 Testcontainers 테스트로 실제 제약과 트랜잭션을 확인했다.
+- 다음 확인: 없음. 백엔드 CI에서 `AiExtractionResultCommitServicePostgreSqlIntegrationTest`를 통과했고, 해당 스레드를 해결 처리했다.
 
 ## 9. 도입 전후 비교 지표
 
 | 지표 | 도입 전 기준값 | 측정 방법·기간 | 배포 확장 후 값 | 비교 결과 | 담당자·확인 시점/이슈 |
 |---|---|---|---|---|---|
-| PR 리뷰 미해결 스레드 | 20건 | PR #173 스레드 API, 2026-08-11 | 답글·검증 후 재조회 | 코드 반영 완료 수와 CI 검증 수로 확정 | PR 작성자, PR #173 |
-| PostgreSQL 원자성 회귀 실행 | 0회 | Testcontainers 통합 테스트 | CI 실행 예정 | 로컬 Docker 제약으로 아직 비교 불가 | CI 실행 시점, PR #173 |
+| PR 리뷰 미해결 스레드 | 20건 | PR #173 스레드 API, 2026-08-11 | 0건 | 20건 모두 원문 답글·해결 처리 완료 | PR 작성자, PR #173 |
+| PostgreSQL 원자성 회귀 실행 | 0회 | Testcontainers 통합 테스트 | 1회 통과 | 백엔드 CI에서 970 tests·0 failures 확인 | CI run 31477603456 |
 | 메뉴 표현의 대표 카테고리 매핑 | 직접 이름 조회 | 매핑 단위 테스트 | 냉면→한식 등 매핑 통과 | 표현과 저장 카테고리 책임 분리 | WS-04, PR #173 |
 
 ## 10. 남은 사항
 
-- 로컬 Docker Desktop 데몬이 꺼져 있어 PostgreSQL Testcontainers 통합 테스트는 실행하지 못했다. CI 결과 확인 전까지 해당 원자성 스레드는 해결 처리하지 않는다.
-- 나머지 코드·단위 테스트·아키텍처 스레드는 변경 commit push 후 원문 inline 답글과 함께 해결 처리한다.
+- 로컬 Docker Desktop 데몬은 꺼져 있어 동일 테스트의 로컬 실행은 불가했지만, Docker가 제공되는 백엔드 CI에서 통과했다.
+- 미해결 스레드는 없다. PR #173의 20개 리뷰 스레드에 원문 inline 답글을 남기고 모두 해결 처리했다.
