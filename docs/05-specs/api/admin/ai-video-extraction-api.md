@@ -236,9 +236,11 @@ YouTube 구독 확인 요청의 `hub.challenge`를 검증한 뒤 동일 값을 `
 ### 4.2 API-ADMIN-AIEXTRACT-WEBHOOK-002 `POST /api/webhooks/youtube/channel-updates` 신규 영상 알림
 
 - `Content-Type: application/atom+xml`을 허용한다.
+- YouTube 구독 시 협상한 공용 `hub.secret`으로 raw payload의 HMAC을 검증한다. `X-Hub-Signature-256: sha256=<hex>`를 우선 사용하고, 호환을 위해 `X-Hub-Signature: sha1=<hex>`도 허용한다.
+- 서명 검증은 XML 파싱과 작업 접수보다 먼저 수행하며, 비밀값이 없거나 헤더가 누락·불일치하면 `403 AIEXTRACT_WEBHOOK_SIGNATURE_INVALID`으로 거부한다.
 - Atom Payload에서 채널 ID와 영상 ID를 읽고, 활성화된 감시 채널인지 확인한다.
 - 동일 영상의 반복 알림은 같은 작업으로 수렴한다.
-- 처리 순서: 형식 검증 → 채널·영상 식별 검증 → 작업 등록 → `204 No Content` 응답
+- 처리 순서: 크기 제한 → HMAC 서명 검증 → Atom 형식·채널·영상 식별 검증 → 작업 등록 → `204 No Content` 응답
 - 처리기 안에서 Gemini, Kakao, 정식 등록 API를 호출하지 않는다.
 - 알림이 유효하지 않으면 작업을 만들지 않고 오류 범주만 기록한다.
 
@@ -254,6 +256,7 @@ Webhook 수신 경로는 공개 인터넷 진입점이므로 Nginx·Spring Secur
 | `AIEXTRACT_RETRY_BLOCKED` | 409 | 상태상 재시도 불가 |
 | `AIEXTRACT_PROVIDER_BLOCKED` | 429 | Gemini Free Tier quota 소진·결제 연결 요구·무료 정책 미검증 |
 | `AIEXTRACT_WEBHOOK_REJECTED` | 403 | 구독 채널·검증 Token 불일치 |
+| `AIEXTRACT_WEBHOOK_SIGNATURE_INVALID` | 403 | Webhook HMAC 비밀값·헤더 누락 또는 서명 불일치 |
 | `AIEXTRACT_VALIDATION_CONFLICT` | 422 | 자동 검증 중 기존 Kakao·YouTube·Visit 검증 실패 |
 
 모든 오류는 서버 생성 `traceId`를 포함하며 입력 원문·Gemini 응답·비밀정보를 메시지에 포함하지 않는다.

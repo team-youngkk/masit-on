@@ -86,6 +86,23 @@ class AutoRegisterVerifiedContentServiceTest {
         verify(creatorRegistration, never()).register(any());
     }
 
+    @Test
+    @DisplayName("후속 정식 등록 Port가 실패하면 이후 Visit 등록을 시도하지 않는다")
+    void register_후속등록Port실패_이후등록을시도하지않는다() {
+        UUID creatorId = UUID.randomUUID();
+        UUID restaurantId = UUID.randomUUID();
+        when(creatorRegistration.register(any())).thenReturn(
+                new VerifiedCreatorRegistrationUseCase.RegistrationResult(creatorId, true));
+        when(restaurantRegistration.register(any())).thenReturn(
+                new VerifiedRestaurantRegistrationUseCase.RegistrationResult(restaurantId, true));
+        when(videoRegistration.register(any())).thenThrow(new IllegalStateException("video registration failed"));
+
+        assertThatThrownBy(() -> service.register(command(true)))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("video registration failed");
+        verify(visitRegistration, never()).register(any());
+    }
+
     private AutoRegisterVerifiedContentUseCase.VerifiedContentCommand command(boolean evidenceConfirmed) {
         return new AutoRegisterVerifiedContentUseCase.VerifiedContentCommand(
                 new AutoRegisterVerifiedContentUseCase.RestaurantCandidate(

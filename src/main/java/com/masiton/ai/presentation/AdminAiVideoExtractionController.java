@@ -40,19 +40,24 @@ public class AdminAiVideoExtractionController {
             String source,
             YoutubeReference youtube,
             String executionStatus,
+            String resultCompleteness,
+            String reviewStatus,
             String provider,
             String modelVersion,
             String promptVersion,
             String schemaVersion,
             int attemptCount,
             java.time.OffsetDateTime createdAt,
+            java.time.OffsetDateTime startedAt,
+            java.time.OffsetDateTime finishedAt,
             boolean reused
     ) {
         static AiExtractionJobResponse from(AiExtractionJobView view) {
             return new AiExtractionJobResponse(view.jobId(), view.source(),
                     new YoutubeReference(view.channelId(), view.videoId(), view.videoUrl()),
-                    view.executionStatus(), view.provider(), view.modelVersion(), view.promptVersion(),
-                    view.schemaVersion(), view.attemptCount(), view.createdAt(), view.reused());
+                    view.executionStatus(), view.resultCompleteness(), view.reviewStatus(), view.provider(),
+                    view.modelVersion(), view.promptVersion(), view.schemaVersion(), view.attemptCount(),
+                    view.createdAt(), view.startedAt(), view.finishedAt(), view.reused());
         }
     }
 

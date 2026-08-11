@@ -1,23 +1,20 @@
 package com.masiton.ai.infrastructure.persistence;
 
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import com.masiton.ai.application.port.out.AiExtractionJobStore;
+import com.masiton.ai.application.AiTemporaryInputCleanupService;
 
 @Component
 public class AiTemporaryInputCleanupScheduler {
-    private final AiExtractionJobStore store;
+    private final AiTemporaryInputCleanupService cleanupService;
 
-    public AiTemporaryInputCleanupScheduler(AiExtractionJobStore store) {
-        this.store = store;
+    public AiTemporaryInputCleanupScheduler(AiTemporaryInputCleanupService cleanupService) {
+        this.cleanupService = cleanupService;
     }
 
     @Scheduled(fixedDelayString = "PT15M")
     public void deleteExpiredInputs() {
-        store.deleteExpiredTemporaryInputs(OffsetDateTime.now(ZoneOffset.UTC));
+        cleanupService.deleteExpiredInputs();
     }
 }

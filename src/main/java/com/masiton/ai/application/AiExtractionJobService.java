@@ -47,6 +47,7 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
     @Override
     public AiExtractionJobView submitAdmin(String rawVideoUrl, String rawSupplementText, String idempotencyKey) {
         URI requestedUrl = youtubeUrl(rawVideoUrl);
+        URI canonicalRequestedUrl = canonicalYoutubeUrl(videoIdFrom(requestedUrl));
         String supplement = rawSupplementText == null ? "" : rawSupplementText.trim();
         if (supplement.length() > 20_000) {
             throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, "supplementText", "supplementText is too long.");
@@ -54,16 +55,31 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
         if (idempotencyKey != null && idempotencyKey.length() > 200) {
             throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, "idempotencyKey", "idempotencyKey is too long.");
         }
+        String requestedVideoId = videoIdFrom(requestedUrl);
+        String inputMode = supplement.isBlank() ? "GEMINI_VIDEO_URL" : "ADMIN_TEXT";
+        Optional<AiExtractionJobView> existing = inputMode.equals("GEMINI_VIDEO_URL")
+                ? persistence.findByVideoIdAndInputMode(requestedVideoId, inputMode,
+                        AiExtractionContract.PROVIDER, AiExtractionContract.MODEL_VERSION,
+                        AiExtractionContract.PROMPT_VERSION, AiExtractionContract.SCHEMA_VERSION)
+                : Optional.empty();
+        byte[] inputHash = hash(canonicalRequestedUrl.toString(), supplement);
+        if (existing.isEmpty()) {
+            existing = persistence.findByVideoIdAndInputHash(requestedVideoId, inputHash,
+                    AiExtractionContract.PROVIDER, AiExtractionContract.MODEL_VERSION,
+                    AiExtractionContract.PROMPT_VERSION, AiExtractionContract.SCHEMA_VERSION);
+        }
+        if (existing.isPresent()) {
+            return existing.get();
+        }
         VerifiedVideo verified = verifiedVideoResolver.resolve(requestedUrl)
                 .orElseThrow(() -> new BusinessException(ErrorCode.REFERENCE_NOT_PUBLIC));
-        String videoUrl = youtubeUrl(verified.sourceUrl()).toString();
         String channelId = requiredId(verified.publisherExternalChannelId(), "channelId");
         String videoId = requiredId(verified.externalVideoId(), "videoId");
-        String inputMode = supplement.isBlank() ? "GEMINI_VIDEO_URL" : "ADMIN_TEXT";
+        URI videoUrl = canonicalYoutubeUrl(videoId);
         Optional<EncryptedInput> encrypted = supplement.isBlank()
                 ? Optional.empty()
                 : Optional.of(temporaryInputCipher.encrypt(supplement));
-        return create("ADMIN", "BACKFILL", channelId, videoId, URI.create(videoUrl), inputMode, supplement, encrypted);
+        return create("ADMIN", "BACKFILL", channelId, videoId, videoUrl, inputMode, supplement, encrypted);
     }
 
     @Override
@@ -74,12 +90,13 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
         if (!normalizedVideoId.equals(videoIdFrom(normalizedUrl))) {
             throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, "videoUrl", "videoUrl does not match videoId.");
         }
+        URI canonicalVideoUrl = canonicalYoutubeUrl(normalizedVideoId);
         YoutubeChannelWatchStore.Watch watch = watchStore.find(normalizedChannelId).orElse(null);
         if (watch == null || !watch.acceptsNotifications()) {
             return Optional.empty();
         }
         return Optional.of(create("WEBHOOK", "REALTIME", normalizedChannelId, normalizedVideoId,
-                normalizedUrl, "GEMINI_VIDEO_URL", "", Optional.empty()));
+                canonicalVideoUrl, "GEMINI_VIDEO_URL", "", Optional.empty()));
     }
 
     @Override
@@ -123,6 +140,14 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
         } catch (IllegalArgumentException exception) {
             throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE);
         }
+    }
+
+    private URI canonicalYoutubeUrl(String videoId) {
+        String normalizedVideoId = validId(videoId);
+        if (normalizedVideoId == null) {
+            throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, "videoUrl", "videoUrl is invalid.");
+        }
+        return URI.create("https://www.youtube.com/watch?v=" + normalizedVideoId);
     }
 
     private String videoIdFrom(URI uri) {

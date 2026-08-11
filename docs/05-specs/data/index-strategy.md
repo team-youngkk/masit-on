@@ -97,7 +97,7 @@ Creator 필터는 `visit`에서 고유 Restaurant ID를 구한 뒤 Restaurant의
 
 ## 7. 3차 확장 AI 영상 추출 인덱스
 
-3차 확장 인덱스의 정확한 SQL은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)과 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql)을 따른다.
+3차 확장 인덱스의 정확한 SQL은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md), [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql), [`V5__add_ai_extraction_reuse_indexes.sql`](../../../src/main/resources/db/migration/V5__add_ai_extraction_reuse_indexes.sql)을 따른다.
 
 | 인덱스 | 대상 경로 | 목적 |
 |---|---|---|
@@ -107,6 +107,9 @@ Creator 필터는 `visit`에서 고유 Restaurant ID를 구한 뒤 Restaurant의
 | `ix_ai_snapshot__review` | Snapshot review_status·created_at·id | 후보 검수 목록 |
 | `ix_ai_tag_review__candidate` | Snapshot·candidate_tag_id·reviewed_at·id | 최신 태그 판단 이력 |
 | `ix_visit_tag__tag_lookup` | tag_definition_id·visit_id | 태그 기반 공개 맛집 조회 |
+| `ix_ai_job__video_input_versions` | youtube_video_id·input_hash·Provider/Model/Prompt/Schema 버전 | 외부 검증 전 관리자 작업 재사용 조회 |
+| `ix_ai_job__video_mode_versions` | youtube_video_id·input_mode·Provider/Model/Prompt/Schema 버전 | 기존 Webhook 작업 호환 재사용 조회 |
+| `ix_ai_temporary_input__expires_at` | expires_at·job_id | 만료 임시 입력 cleanup 선택 |
 
 멱등성·Snapshot·시도·채널 감시의 unique 제약은 보조 인덱스를 별도로 중복 생성하지 않는다. 실제 운영 성능은 Worker claim·공개 태그 조회와 3차 성능 Task의 실행계획·부하 결과로 검증한다.
 

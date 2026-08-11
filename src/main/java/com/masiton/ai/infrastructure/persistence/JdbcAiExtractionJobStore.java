@@ -16,6 +16,21 @@ import com.masiton.ai.application.port.out.dto.AiExtractionJobView;
 @Repository
 public class JdbcAiExtractionJobStore implements AiExtractionJobStore {
 
+    private static final String BASE_SELECT = """
+            SELECT job.id, job.source, job.youtube_channel_id, job.youtube_video_id, job.video_url,
+                   job.execution_status, job.result_completeness, snapshot.review_status,
+                   job.provider, job.model_version, job.prompt_version, job.schema_version,
+                   job.attempt_count, job.created_at, job.started_at, job.finished_at
+              FROM ai_extraction_job job
+              LEFT JOIN LATERAL (
+                    SELECT review_status
+                      FROM ai_candidate_snapshot
+                     WHERE job_id = job.id
+                     ORDER BY snapshot_version DESC, created_at DESC, id DESC
+                     LIMIT 1
+              ) snapshot ON true
+            """;
+
     private final JdbcTemplate jdbcTemplate;
 
     public JdbcAiExtractionJobStore(JdbcTemplate jdbcTemplate) {
@@ -23,16 +38,39 @@ public class JdbcAiExtractionJobStore implements AiExtractionJobStore {
     }
 
     @Override
+    public Optional<AiExtractionJobView> findByVideoIdAndInputMode(String videoId, String inputMode,
+                                                                    String provider, String modelVersion,
+                                                                    String promptVersion, String schemaVersion) {
+        List<AiExtractionJobView> rows = jdbcTemplate.query(BASE_SELECT + """
+                 WHERE job.youtube_video_id = ? AND job.input_mode = ?
+                   AND job.provider = ? AND job.model_version = ? AND job.prompt_version = ? AND job.schema_version = ?
+                 ORDER BY job.created_at DESC, job.id DESC
+                 LIMIT 1
+                """, this::map, videoId, inputMode, provider, modelVersion, promptVersion, schemaVersion);
+        return rows.stream().findFirst();
+    }
+
+    @Override
+    public Optional<AiExtractionJobView> findByVideoIdAndInputHash(String videoId, byte[] inputHash,
+                                                                    String provider, String modelVersion,
+                                                                    String promptVersion, String schemaVersion) {
+        List<AiExtractionJobView> rows = jdbcTemplate.query(BASE_SELECT + """
+                 WHERE job.youtube_video_id = ? AND job.input_hash = ?
+                   AND job.provider = ? AND job.model_version = ? AND job.prompt_version = ? AND job.schema_version = ?
+                 ORDER BY job.created_at DESC, job.id DESC
+                 LIMIT 1
+                """, this::map, videoId, inputHash, provider, modelVersion, promptVersion, schemaVersion);
+        return rows.stream().findFirst();
+    }
+
+    @Override
     public Optional<AiExtractionJobView> find(String channelId, String videoId, byte[] inputHash,
                                                String provider, String modelVersion, String promptVersion,
                                                String schemaVersion) {
-        List<AiExtractionJobView> rows = jdbcTemplate.query("""
-                SELECT id, source, youtube_channel_id, youtube_video_id, video_url,
-                       execution_status, provider, model_version, prompt_version,
-                       schema_version, attempt_count, created_at
-                  FROM ai_extraction_job
-                 WHERE youtube_channel_id = ? AND youtube_video_id = ? AND input_hash = ?
-                   AND provider = ? AND model_version = ? AND prompt_version = ? AND schema_version = ?
+        List<AiExtractionJobView> rows = jdbcTemplate.query(BASE_SELECT + """
+                 WHERE job.youtube_channel_id = ? AND job.youtube_video_id = ? AND job.input_hash = ?
+                   AND job.provider = ? AND job.model_version = ? AND job.prompt_version = ? AND job.schema_version = ?
+                 LIMIT 1
                 """, this::map, channelId, videoId, inputHash, provider, modelVersion, promptVersion, schemaVersion);
         return rows.stream().findFirst();
     }
@@ -51,8 +89,8 @@ public class JdbcAiExtractionJobStore implements AiExtractionJobStore {
                 draft.modelVersion(), draft.promptVersion(), draft.schemaVersion(), draft.createdAt());
         if (inserted == 0) return Optional.empty();
         return Optional.of(new AiExtractionJobView(draft.jobId(), draft.source(), draft.channelId(), draft.videoId(),
-                draft.videoUrl().toString(), "QUEUED", draft.provider(), draft.modelVersion(),
-                draft.promptVersion(), draft.schemaVersion(), 0, draft.createdAt(), false));
+                draft.videoUrl().toString(), "QUEUED", null, null, draft.provider(), draft.modelVersion(),
+                draft.promptVersion(), draft.schemaVersion(), 0, draft.createdAt(), null, null, false));
     }
 
     @Override
@@ -82,8 +120,10 @@ public class JdbcAiExtractionJobStore implements AiExtractionJobStore {
     private AiExtractionJobView map(ResultSet rs, int rowNum) throws SQLException {
         return new AiExtractionJobView(rs.getObject("id", UUID.class), rs.getString("source"),
                 rs.getString("youtube_channel_id"), rs.getString("youtube_video_id"), rs.getString("video_url"),
-                rs.getString("execution_status"), rs.getString("provider"), rs.getString("model_version"),
-                rs.getString("prompt_version"), rs.getString("schema_version"), rs.getInt("attempt_count"),
-                rs.getObject("created_at", OffsetDateTime.class), false);
+                rs.getString("execution_status"), rs.getString("result_completeness"), rs.getString("review_status"),
+                rs.getString("provider"), rs.getString("model_version"), rs.getString("prompt_version"),
+                rs.getString("schema_version"), rs.getInt("attempt_count"),
+                rs.getObject("created_at", OffsetDateTime.class), rs.getObject("started_at", OffsetDateTime.class),
+                rs.getObject("finished_at", OffsetDateTime.class), false);
     }
 }

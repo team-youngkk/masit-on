@@ -242,8 +242,9 @@ Creator 등록만으로 `enabled=true`가 되지 않는다. 감시 중지·구�
 | `ux_tag_definition__code` | `tag_code` unique | 통제 태그 코드 고유성 |
 | `ux_visit_tag__visit_tag` | `(visit_id, tag_definition_id)` unique | 같은 Visit의 태그 중복 방지 |
 | `ix_visit_tag__tag_lookup` | `tag_definition_id`, 공개 Visit 상태 조합 | 태그 기반 맛집 조회 |
+| `ix_ai_temporary_input__expires_at` | `expires_at`, `job_id` | 만료 임시 입력 cleanup 선택 |
 
-정확한 PostgreSQL partial index·FK 삭제 동작·lease claim SQL은 [ADR-EXT-003](../../07-adr/integration/ext-003-ai-extraction-async-reliability.md), [테이블 정의](table-definitions.md), [제약조건](constraints.md), [인덱스 전략](index-strategy.md), [Flyway 계획](migration-plan.md)과 `V4` DDL의 대응으로 확인한다.
+정확한 PostgreSQL partial index·FK 삭제 동작·lease claim SQL은 [ADR-EXT-003](../../07-adr/integration/ext-003-ai-extraction-async-reliability.md), [테이블 정의](table-definitions.md), [제약조건](constraints.md), [인덱스 전략](index-strategy.md), [Flyway 계획](migration-plan.md)과 `V4`·`V5` DDL의 대응으로 확인한다.
 
 ## 12. 생명주기와 보존
 

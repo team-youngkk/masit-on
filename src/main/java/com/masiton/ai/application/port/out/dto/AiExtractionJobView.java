@@ -10,12 +10,16 @@ public record AiExtractionJobView(
         String videoId,
         String videoUrl,
         String executionStatus,
+        String resultCompleteness,
+        String reviewStatus,
         String provider,
         String modelVersion,
         String promptVersion,
         String schemaVersion,
         int attemptCount,
         OffsetDateTime createdAt,
+        OffsetDateTime startedAt,
+        OffsetDateTime finishedAt,
         boolean reused
 ) {
 }

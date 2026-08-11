@@ -7,6 +7,14 @@ import java.util.UUID;
 import com.masiton.ai.application.port.out.dto.AiExtractionJobView;
 
 public interface AiExtractionJobStore {
+    Optional<AiExtractionJobView> findByVideoIdAndInputMode(String videoId, String inputMode,
+                                                            String provider, String modelVersion,
+                                                            String promptVersion, String schemaVersion);
+
+    Optional<AiExtractionJobView> findByVideoIdAndInputHash(String videoId, byte[] inputHash,
+                                                            String provider, String modelVersion,
+                                                            String promptVersion, String schemaVersion);
+
     Optional<AiExtractionJobView> find(String channelId, String videoId, byte[] inputHash,
                                        String provider, String modelVersion, String promptVersion, String schemaVersion);
 

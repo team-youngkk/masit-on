@@ -19,6 +19,22 @@ public class AiExtractionJobPersistenceService {
         this.store = store;
     }
 
+    @Transactional(readOnly = true)
+    public Optional<AiExtractionJobView> findByVideoIdAndInputMode(String videoId, String inputMode,
+                                                                    String provider, String modelVersion,
+                                                                    String promptVersion, String schemaVersion) {
+        return store.findByVideoIdAndInputMode(videoId, inputMode, provider, modelVersion, promptVersion, schemaVersion)
+                .map(this::reused);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<AiExtractionJobView> findByVideoIdAndInputHash(String videoId, byte[] inputHash,
+                                                                    String provider, String modelVersion,
+                                                                    String promptVersion, String schemaVersion) {
+        return store.findByVideoIdAndInputHash(videoId, inputHash, provider, modelVersion, promptVersion, schemaVersion)
+                .map(this::reused);
+    }
+
     @Transactional
     public AiExtractionJobView create(AiExtractionJobStore.AiExtractionJobDraft draft,
                                       Optional<EncryptedInput> temporaryInput) {
@@ -44,7 +60,8 @@ public class AiExtractionJobPersistenceService {
 
     private AiExtractionJobView reused(AiExtractionJobView view) {
         return new AiExtractionJobView(view.jobId(), view.source(), view.channelId(), view.videoId(), view.videoUrl(),
-                view.executionStatus(), view.provider(), view.modelVersion(), view.promptVersion(), view.schemaVersion(),
-                view.attemptCount(), view.createdAt(), true);
+                view.executionStatus(), view.resultCompleteness(), view.reviewStatus(), view.provider(),
+                view.modelVersion(), view.promptVersion(), view.schemaVersion(), view.attemptCount(),
+                view.createdAt(), view.startedAt(), view.finishedAt(), true);
     }
 }

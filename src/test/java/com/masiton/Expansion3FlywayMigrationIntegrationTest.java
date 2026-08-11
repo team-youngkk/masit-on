@@ -74,13 +74,15 @@ class Expansion3FlywayMigrationIntegrationTest {
         Integer indexCount = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM pg_indexes WHERE schemaname = current_schema() AND indexname IN "
                         + "('ix_ai_job__claim', 'ix_ai_job__expired_lease_claim', 'ix_ai_job__review', "
-                        + "'ix_ai_snapshot__review', 'ix_ai_tag_review__candidate', 'ix_visit_tag__tag_lookup')",
+                        + "'ix_ai_snapshot__review', 'ix_ai_tag_review__candidate', 'ix_visit_tag__tag_lookup', "
+                        + "'ix_ai_job__video_input_versions', 'ix_ai_job__video_mode_versions', "
+                        + "'ix_ai_temporary_input__expires_at')",
                 Integer.class);
 
-        assertThat(versions).containsExactly("1", "2", "3", "4");
+        assertThat(versions).containsExactly("1", "2", "3", "4", "5");
         assertThat(aiTableCount).isEqualTo(8);
         assertThat(seededTagCount).isEqualTo(18);
-        assertThat(indexCount).isEqualTo(6);
+        assertThat(indexCount).isEqualTo(9);
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM admin_account WHERE id = ?", Integer.class, existingAdminId)).isEqualTo(1);
     }

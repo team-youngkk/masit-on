@@ -60,6 +60,7 @@ masiton:
   ai:
     youtube-webhook:
       max-payload-bytes: ${YOUTUBE_WEBHOOK_MAX_PAYLOAD_BYTES:65536}
+      secret: ${YOUTUBE_WEBHOOK_SECRET:}
     temporary-input:
       active-key-id: ${AI_TEMPORARY_INPUT_KEY_ID:}
       active-key: ${AI_TEMPORARY_INPUT_KEY:}

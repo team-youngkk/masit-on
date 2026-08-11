@@ -31,6 +31,7 @@ Restaurant, Creator, Video, Visit는 각각 데이터, 불변 조건과 변경 �
 | Creator | YouTube 채널 단위 Creator, 외부 채널 ID, 표시 정보, 공개·외부 가용 상태 | Creator Snapshot 조회, 선택 목록 조회, Creator 등록 | 외부 DTO, Repository, 채널 동일성 구현 | 채널 동일성·표시·상태 정책 변경 |
 | Video | 외부 영상 ID, 제목·썸네일·원본 링크, 게시 채널 ID, 공개·외부 가용 상태 | Video Snapshot 조회, Video 등록 | 외부 DTO, Repository, 원본 영상 중복 판정 구현 | 영상 메타데이터·동일성·가용성 정책 변경 |
 | Visit | Restaurant·Creator·Video 식별자의 검증된 삼항 관계, 관계 공개·유효성·복합 중복 | Visit 생성 판정·저장, 관계 기반 식별자 조회 | 다른 도메인의 Entity, 관계 Repository, 중복·근거 판정 구현 | 방문 근거·채널 일치·중복·노출 정책 변경 |
+| AI | AI 영상 추출 작업·후보 Snapshot·Webhook 감시 상태 | 작업 접수, 후보 조회, Webhook 검증 | Provider 원문·정식 Entity 저장 규칙 | 추출·검수·자동 등록 정책 변경 |
 
 ## 3. 경계별 공개 계약 예시
 
@@ -108,6 +109,7 @@ JPA 매핑에서도 다른 도메인의 Entity 객체를 `@ManyToOne`으로 직�
 | Restaurant 탐색 Query | Visit 관계 | 읽기 전용 식별자/Projection | Creator 조건에 맞는 Restaurant 필터 |
 | Visit Domain | 외부 도메인 | 전달받은 식별자와 Snapshot 값 | 채널 ID 일치, 근거 확인 값 판정 |
 | Presentation | Application | 입력 Port | 요청 변환과 응답 매핑 |
+| AI Application | Video Application | `video.application.port.in.ResolveVerifiedVideoUseCase` | 관리자 AI 작업 접수 전 YouTube 영상 공개·동일성 검증 |
 
 ## 6. 금지되는 직접 참조
 
