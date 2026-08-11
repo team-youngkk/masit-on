@@ -68,7 +68,7 @@ related_documents:
 
 ## 6. 공통 오류
 
-모든 오류는 [오류 계약](error-contract.md)의 `code`, `message`, `errors`, `resource`, `traceId`를 따른다.
+모든 오류는 [오류 계약](error-contract.md)의 `code`, `message`, `errors`, 선택 `resource`·`details`, `traceId`를 따른다.
 
 | HTTP | 코드 | 조건 |
 |---:|---|---|

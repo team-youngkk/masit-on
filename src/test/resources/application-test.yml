@@ -25,6 +25,12 @@ masiton:
     youtube:
       base-url: http://localhost:1
       api-key: test-only-non-secret-key
+    kakao-mobility:
+      enabled: true
+      free-tier-verified: true
+      rest-api-key: test-only-non-secret-key
+      base-url: http://localhost:1
+      local-base-url-allowed: true
   security:
     jwt:
       # 로컬 테스트 전용 RSA 픽스처다. 테스트 밖에서는 절대 사용하지 않는다.

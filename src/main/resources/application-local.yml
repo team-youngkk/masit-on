@@ -23,3 +23,9 @@ masiton:
     youtube:
       base-url: ${YOUTUBE_BASE_URL:http://localhost:8081}
       api-key: local-wiremock-key
+    kakao-mobility:
+      enabled: true
+      free-tier-verified: true
+      rest-api-key: local-wiremock-key
+      base-url: ${KAKAO_MOBILITY_BASE_URL:http://localhost:8081}
+      local-base-url-allowed: true

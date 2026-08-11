@@ -1,0 +1,15 @@
+{
+  "routes": [
+    {
+      "result_code": 0,
+      "result_msg": "길찾기 성공",
+      "summary": {
+        "distance": 4200,
+        "duration": 780
+      },
+      "sections": [
+        { "distance": 4200, "duration": 780 }
+      ]
+    }
+  ]
+}
