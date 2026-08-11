@@ -1,0 +1,3499 @@
+{
+  "cases": [
+    {
+      "caseId": "COURSE-DEV-001",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-001"
+      ],
+      "boundary": "선택 맛집 1개(하한 미만)",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 0,
+      "providerMode": "NOT_INVOKED",
+      "providerLegs": [],
+      "providerFailureCategory": null,
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "INVALID_COURSE_SIZE",
+      "expectedHttpStatus": "BAD_REQUEST",
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000000101"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-DEV-002",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-001"
+      ],
+      "boundary": "선택 맛집 6개(상한 초과)",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 0,
+      "providerMode": "NOT_INVOKED",
+      "providerLegs": [],
+      "providerFailureCategory": null,
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "INVALID_COURSE_SIZE",
+      "expectedHttpStatus": "BAD_REQUEST",
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000000201",
+        "00000000-0000-4000-8000-000000000202",
+        "00000000-0000-4000-8000-000000000203",
+        "00000000-0000-4000-8000-000000000204",
+        "00000000-0000-4000-8000-000000000205",
+        "00000000-0000-4000-8000-000000000206"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000000201",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000202",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000203",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.502,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000204",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.503,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000205",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.504,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000206",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.505,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-DEV-003",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-001"
+      ],
+      "boundary": "동일 식별자 중복 선택",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 0,
+      "providerMode": "NOT_INVOKED",
+      "providerLegs": [],
+      "providerFailureCategory": null,
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "DUPLICATE_RESTAURANT_IN_COURSE",
+      "expectedHttpStatus": "BAD_REQUEST",
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000000301",
+        "00000000-0000-4000-8000-000000000301"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000000301",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000302",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-DEV-004",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-001"
+      ],
+      "boundary": "비공개 맛집 포함",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 0,
+      "providerMode": "NOT_INVOKED",
+      "providerLegs": [],
+      "providerFailureCategory": null,
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "RESTAURANT_NOT_PUBLIC",
+      "expectedHttpStatus": "UNPROCESSABLE_ENTITY",
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000000401",
+        "00000000-0000-4000-8000-000000000402"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000000401",
+          "publicationStatus": "PRIVATE",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000402",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-DEV-005",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-001"
+      ],
+      "boundary": "좌표 없는 맛집 포함",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 0,
+      "providerMode": "NOT_INVOKED",
+      "providerLegs": [],
+      "providerFailureCategory": null,
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "RESTAURANT_COORDINATE_REQUIRED",
+      "expectedHttpStatus": "UNPROCESSABLE_ENTITY",
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000000501",
+        "00000000-0000-4000-8000-000000000502"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000000501",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": null,
+          "longitude": null
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000502",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-DEV-006",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-001",
+        "EVAL-COURSE-002"
+      ],
+      "boundary": "선택 맛집 2개(하한 경계) 정상",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "SUCCESS",
+      "providerLegs": [
+        {
+          "distanceMeters": 1000,
+          "durationSeconds": 120
+        }
+      ],
+      "providerFailureCategory": null,
+      "expectedStopOrder": [
+        "00000000-0000-4000-8000-000000000601",
+        "00000000-0000-4000-8000-000000000602"
+      ],
+      "expectedRoles": [
+        "START",
+        "DESTINATION"
+      ],
+      "expectedTotalDistanceMeters": 1000,
+      "expectedTotalDurationSeconds": 120,
+      "expectedExpiresAtPlusMinutes": 5,
+      "expectedErrorCode": null,
+      "expectedHttpStatus": null,
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000000601",
+        "00000000-0000-4000-8000-000000000602"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000000601",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000602",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "SUCCESS"
+    },
+    {
+      "caseId": "COURSE-DEV-007",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-001",
+        "EVAL-COURSE-002"
+      ],
+      "boundary": "선택 맛집 5개(상한 경계) 정상",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "SUCCESS",
+      "providerLegs": [
+        {
+          "distanceMeters": 500,
+          "durationSeconds": 60
+        },
+        {
+          "distanceMeters": 500,
+          "durationSeconds": 60
+        },
+        {
+          "distanceMeters": 500,
+          "durationSeconds": 60
+        },
+        {
+          "distanceMeters": 500,
+          "durationSeconds": 60
+        }
+      ],
+      "providerFailureCategory": null,
+      "expectedStopOrder": [
+        "00000000-0000-4000-8000-000000000701",
+        "00000000-0000-4000-8000-000000000702",
+        "00000000-0000-4000-8000-000000000703",
+        "00000000-0000-4000-8000-000000000704",
+        "00000000-0000-4000-8000-000000000705"
+      ],
+      "expectedRoles": [
+        "START",
+        "WAYPOINT",
+        "WAYPOINT",
+        "WAYPOINT",
+        "DESTINATION"
+      ],
+      "expectedTotalDistanceMeters": 2000,
+      "expectedTotalDurationSeconds": 240,
+      "expectedExpiresAtPlusMinutes": 5,
+      "expectedErrorCode": null,
+      "expectedHttpStatus": null,
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000000701",
+        "00000000-0000-4000-8000-000000000702",
+        "00000000-0000-4000-8000-000000000703",
+        "00000000-0000-4000-8000-000000000704",
+        "00000000-0000-4000-8000-000000000705"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000000701",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000702",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000703",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.502,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000704",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.503,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000705",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.504,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "SUCCESS"
+    },
+    {
+      "caseId": "COURSE-DEV-008",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-002"
+      ],
+      "boundary": "전체 거리 정확히 30,000m(경계 포함) 정상",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "SUCCESS",
+      "providerLegs": [
+        {
+          "distanceMeters": 30000,
+          "durationSeconds": 1500
+        }
+      ],
+      "providerFailureCategory": null,
+      "expectedStopOrder": [
+        "00000000-0000-4000-8000-000000000801",
+        "00000000-0000-4000-8000-000000000802"
+      ],
+      "expectedRoles": [
+        "START",
+        "DESTINATION"
+      ],
+      "expectedTotalDistanceMeters": 30000,
+      "expectedTotalDurationSeconds": 1500,
+      "expectedExpiresAtPlusMinutes": 5,
+      "expectedErrorCode": null,
+      "expectedHttpStatus": null,
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000000801",
+        "00000000-0000-4000-8000-000000000802"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000000801",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000802",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "SUCCESS"
+    },
+    {
+      "caseId": "COURSE-DEV-009",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-002"
+      ],
+      "boundary": "전체 거리 30,001m(경계 초과)",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "SUCCESS",
+      "providerLegs": [
+        {
+          "distanceMeters": 30001,
+          "durationSeconds": 1500
+        }
+      ],
+      "providerFailureCategory": null,
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "COURSE_DISTANCE_LIMIT_EXCEEDED",
+      "expectedHttpStatus": "UNPROCESSABLE_ENTITY",
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000000901",
+        "00000000-0000-4000-8000-000000000902"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000000901",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000902",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-DEV-010",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-002",
+        "EVAL-COURSE-003"
+      ],
+      "boundary": "외부 경로 계산 timeout",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "THROW",
+      "providerLegs": [],
+      "providerFailureCategory": "TIMEOUT",
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "COURSE_ROUTE_PROVIDER_UNAVAILABLE",
+      "expectedHttpStatus": "BAD_GATEWAY",
+      "expectedFailureCategoryPublic": "PROVIDER_UNAVAILABLE",
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000001001",
+        "00000000-0000-4000-8000-000000001002"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000001001",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000001002",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-DEV-011",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-002",
+        "EVAL-COURSE-003"
+      ],
+      "boundary": "구간 계산 결과가 stop 수보다 부족한 부분 실패",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "PARTIAL_LEGS",
+      "providerLegs": [
+        {
+          "distanceMeters": 1000,
+          "durationSeconds": 120
+        }
+      ],
+      "providerFailureCategory": null,
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "COURSE_ROUTE_PARTIAL_FAILURE",
+      "expectedHttpStatus": "BAD_GATEWAY",
+      "expectedFailureCategoryPublic": "PARTIAL",
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000001101",
+        "00000000-0000-4000-8000-000000001102",
+        "00000000-0000-4000-8000-000000001103"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000001101",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000001102",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000001103",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.502,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-DEV-012",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-003",
+        "EVAL-COURSE-004",
+        "EVAL-COURSE-005"
+      ],
+      "boundary": "월 quota 소진으로 provider가 차단(PROVIDER_BLOCKED)되고, 동일 조합 재조회도 매 요청 1회만 호출한다",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 2,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "THROW",
+      "providerLegs": [],
+      "providerFailureCategory": "PROVIDER_BLOCKED",
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "COURSE_ROUTE_PROVIDER_UNAVAILABLE",
+      "expectedHttpStatus": "BAD_GATEWAY",
+      "expectedFailureCategoryPublic": "PROVIDER_UNAVAILABLE",
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000001201",
+        "00000000-0000-4000-8000-000000001202"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000001201",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000001202",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-DEV-013",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-001"
+      ],
+      "boundary": "삭제된 맛집 포함",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 0,
+      "providerMode": "NOT_INVOKED",
+      "providerLegs": [],
+      "providerFailureCategory": null,
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "RESTAURANT_NOT_PUBLIC",
+      "expectedHttpStatus": "UNPROCESSABLE_ENTITY",
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000003701",
+        "00000000-0000-4000-8000-000000003702"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000003701",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "DELETED",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000003702",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-DEV-014",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-001"
+      ],
+      "boundary": "존재하지 않는 맛집 식별자 포함(조회 결과 부족)",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 0,
+      "providerMode": "NOT_INVOKED",
+      "providerLegs": [],
+      "providerFailureCategory": null,
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "RESTAURANT_NOT_FOUND",
+      "expectedHttpStatus": "NOT_FOUND",
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000003801",
+        "00000000-0000-4000-8000-000000003802"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000003801",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-DEV-015",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-001"
+      ],
+      "boundary": "위도가 90을 초과하는 좌표 범위 오류",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 0,
+      "providerMode": "NOT_INVOKED",
+      "providerLegs": [],
+      "providerFailureCategory": null,
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "RESTAURANT_COORDINATE_REQUIRED",
+      "expectedHttpStatus": "UNPROCESSABLE_ENTITY",
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000003901",
+        "00000000-0000-4000-8000-000000003902"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000003901",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 91,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000003902",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-DEV-016",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-001"
+      ],
+      "boundary": "경도가 -180 미만인 좌표 범위 오류",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 0,
+      "providerMode": "NOT_INVOKED",
+      "providerLegs": [],
+      "providerFailureCategory": null,
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "RESTAURANT_COORDINATE_REQUIRED",
+      "expectedHttpStatus": "UNPROCESSABLE_ENTITY",
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000004001",
+        "00000000-0000-4000-8000-000000004002"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000004001",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": -181
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000004002",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-DEV-017",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-001",
+        "EVAL-COURSE-002"
+      ],
+      "boundary": "첫 출발점을 좌표상 반대쪽 끝으로 변경 - 최근접 이웃 역순 방문",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "SUCCESS",
+      "providerLegs": [
+        {
+          "distanceMeters": 800,
+          "durationSeconds": 90
+        },
+        {
+          "distanceMeters": 900,
+          "durationSeconds": 100
+        }
+      ],
+      "providerFailureCategory": null,
+      "expectedStopOrder": [
+        "00000000-0000-4000-8000-000000004103",
+        "00000000-0000-4000-8000-000000004102",
+        "00000000-0000-4000-8000-000000004101"
+      ],
+      "expectedRoles": [
+        "START",
+        "WAYPOINT",
+        "DESTINATION"
+      ],
+      "expectedTotalDistanceMeters": 1700,
+      "expectedTotalDurationSeconds": 190,
+      "expectedExpiresAtPlusMinutes": 5,
+      "expectedErrorCode": null,
+      "expectedHttpStatus": null,
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000004103",
+        "00000000-0000-4000-8000-000000004101",
+        "00000000-0000-4000-8000-000000004102"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000004101",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000004102",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000004103",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.502,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "SUCCESS"
+    },
+    {
+      "caseId": "COURSE-DEV-018",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-001",
+        "EVAL-COURSE-002"
+      ],
+      "boundary": "첫 출발점을 좌표상 중간 지점으로 변경 - 최근접 이웃 순서로 재배열",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "SUCCESS",
+      "providerLegs": [
+        {
+          "distanceMeters": 200,
+          "durationSeconds": 30
+        },
+        {
+          "distanceMeters": 200,
+          "durationSeconds": 30
+        },
+        {
+          "distanceMeters": 200,
+          "durationSeconds": 30
+        },
+        {
+          "distanceMeters": 200,
+          "durationSeconds": 30
+        }
+      ],
+      "providerFailureCategory": null,
+      "expectedStopOrder": [
+        "00000000-0000-4000-8000-000000004203",
+        "00000000-0000-4000-8000-000000004202",
+        "00000000-0000-4000-8000-000000004201",
+        "00000000-0000-4000-8000-000000004204",
+        "00000000-0000-4000-8000-000000004205"
+      ],
+      "expectedRoles": [
+        "START",
+        "WAYPOINT",
+        "WAYPOINT",
+        "WAYPOINT",
+        "DESTINATION"
+      ],
+      "expectedTotalDistanceMeters": 800,
+      "expectedTotalDurationSeconds": 120,
+      "expectedExpiresAtPlusMinutes": 5,
+      "expectedErrorCode": null,
+      "expectedHttpStatus": null,
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000004203",
+        "00000000-0000-4000-8000-000000004201",
+        "00000000-0000-4000-8000-000000004202",
+        "00000000-0000-4000-8000-000000004204",
+        "00000000-0000-4000-8000-000000004205"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000004201",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000004202",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000004203",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.503,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000004204",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.506,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000004205",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.51,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "SUCCESS"
+    },
+    {
+      "caseId": "COURSE-DEV-019",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-001"
+      ],
+      "boundary": "5개 중 서로 떨어진 위치의 동일 식별자 중복",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 0,
+      "providerMode": "NOT_INVOKED",
+      "providerLegs": [],
+      "providerFailureCategory": null,
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "DUPLICATE_RESTAURANT_IN_COURSE",
+      "expectedHttpStatus": "BAD_REQUEST",
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000004301",
+        "00000000-0000-4000-8000-000000004302",
+        "00000000-0000-4000-8000-000000004303",
+        "00000000-0000-4000-8000-000000004301"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000004301",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000004302",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000004303",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.502,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000004304",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.503,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-DEV-020",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-002"
+      ],
+      "boundary": "전체 거리 29,999m(경계 이하) 정상",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "SUCCESS",
+      "providerLegs": [
+        {
+          "distanceMeters": 29999,
+          "durationSeconds": 1499
+        }
+      ],
+      "providerFailureCategory": null,
+      "expectedStopOrder": [
+        "00000000-0000-4000-8000-000000004401",
+        "00000000-0000-4000-8000-000000004402"
+      ],
+      "expectedRoles": [
+        "START",
+        "DESTINATION"
+      ],
+      "expectedTotalDistanceMeters": 29999,
+      "expectedTotalDurationSeconds": 1499,
+      "expectedExpiresAtPlusMinutes": 5,
+      "expectedErrorCode": null,
+      "expectedHttpStatus": null,
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000004401",
+        "00000000-0000-4000-8000-000000004402"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000004401",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000004402",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "SUCCESS"
+    },
+    {
+      "caseId": "COURSE-DEV-021",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-002"
+      ],
+      "boundary": "맛집 5개 코스의 전체 거리 합계가 정확히 30,000m",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "SUCCESS",
+      "providerLegs": [
+        {
+          "distanceMeters": 7500,
+          "durationSeconds": 375
+        },
+        {
+          "distanceMeters": 7500,
+          "durationSeconds": 375
+        },
+        {
+          "distanceMeters": 7500,
+          "durationSeconds": 375
+        },
+        {
+          "distanceMeters": 7500,
+          "durationSeconds": 375
+        }
+      ],
+      "providerFailureCategory": null,
+      "expectedStopOrder": [
+        "00000000-0000-4000-8000-000000004501",
+        "00000000-0000-4000-8000-000000004502",
+        "00000000-0000-4000-8000-000000004503",
+        "00000000-0000-4000-8000-000000004504",
+        "00000000-0000-4000-8000-000000004505"
+      ],
+      "expectedRoles": [
+        "START",
+        "WAYPOINT",
+        "WAYPOINT",
+        "WAYPOINT",
+        "DESTINATION"
+      ],
+      "expectedTotalDistanceMeters": 30000,
+      "expectedTotalDurationSeconds": 1500,
+      "expectedExpiresAtPlusMinutes": 5,
+      "expectedErrorCode": null,
+      "expectedHttpStatus": null,
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000004501",
+        "00000000-0000-4000-8000-000000004502",
+        "00000000-0000-4000-8000-000000004503",
+        "00000000-0000-4000-8000-000000004504",
+        "00000000-0000-4000-8000-000000004505"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000004501",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000004502",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000004503",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.502,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000004504",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.503,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000004505",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.504,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "SUCCESS"
+    },
+    {
+      "caseId": "COURSE-DEV-022",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-002"
+      ],
+      "boundary": "맛집 5개 코스의 전체 거리 합계가 30,001m로 상한 초과",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "SUCCESS",
+      "providerLegs": [
+        {
+          "distanceMeters": 7500,
+          "durationSeconds": 300
+        },
+        {
+          "distanceMeters": 7500,
+          "durationSeconds": 300
+        },
+        {
+          "distanceMeters": 7500,
+          "durationSeconds": 300
+        },
+        {
+          "distanceMeters": 7501,
+          "durationSeconds": 300
+        }
+      ],
+      "providerFailureCategory": null,
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "COURSE_DISTANCE_LIMIT_EXCEEDED",
+      "expectedHttpStatus": "UNPROCESSABLE_ENTITY",
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000004601",
+        "00000000-0000-4000-8000-000000004602",
+        "00000000-0000-4000-8000-000000004603",
+        "00000000-0000-4000-8000-000000004604",
+        "00000000-0000-4000-8000-000000004605"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000004601",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000004602",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000004603",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.502,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000004604",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.503,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000004605",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.504,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-DEV-023",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-003"
+      ],
+      "boundary": "Kakao Mobility 자체 429 응답(RATE_LIMIT 범주)",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "THROW",
+      "providerLegs": [],
+      "providerFailureCategory": "RATE_LIMIT",
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "COURSE_ROUTE_PROVIDER_UNAVAILABLE",
+      "expectedHttpStatus": "BAD_GATEWAY",
+      "expectedFailureCategoryPublic": "PROVIDER_UNAVAILABLE",
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000004701",
+        "00000000-0000-4000-8000-000000004702"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000004701",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000004702",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-DEV-024",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-003"
+      ],
+      "boundary": "Kakao Mobility 5xx 응답(UPSTREAM 범주)",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "THROW",
+      "providerLegs": [],
+      "providerFailureCategory": "UPSTREAM",
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "COURSE_ROUTE_PROVIDER_UNAVAILABLE",
+      "expectedHttpStatus": "BAD_GATEWAY",
+      "expectedFailureCategoryPublic": "PROVIDER_UNAVAILABLE",
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000004801",
+        "00000000-0000-4000-8000-000000004802"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000004801",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000004802",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-DEV-025",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-003"
+      ],
+      "boundary": "Kakao Mobility 응답 Schema 이탈(SCHEMA 범주)",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "THROW",
+      "providerLegs": [],
+      "providerFailureCategory": "SCHEMA",
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "COURSE_ROUTE_PROVIDER_UNAVAILABLE",
+      "expectedHttpStatus": "BAD_GATEWAY",
+      "expectedFailureCategoryPublic": "PROVIDER_UNAVAILABLE",
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000004901",
+        "00000000-0000-4000-8000-000000004902"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000004901",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000004902",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-DEV-026",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-002",
+        "EVAL-COURSE-003"
+      ],
+      "boundary": "서비스 자체 요청률 제한(SERVICE_RATE_LIMIT 범주)",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "THROW",
+      "providerLegs": [],
+      "providerFailureCategory": "SERVICE_RATE_LIMIT",
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "COURSE_ROUTE_RATE_LIMITED",
+      "expectedHttpStatus": "TOO_MANY_REQUESTS",
+      "expectedFailureCategoryPublic": "SERVICE_RATE_LIMIT",
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000005001",
+        "00000000-0000-4000-8000-000000005002"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000005001",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000005002",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-DEV-027",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-003"
+      ],
+      "boundary": "Provider가 PARTIAL 실패를 명시적으로 던짐",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "THROW",
+      "providerLegs": [],
+      "providerFailureCategory": "PARTIAL",
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "COURSE_ROUTE_PARTIAL_FAILURE",
+      "expectedHttpStatus": "BAD_GATEWAY",
+      "expectedFailureCategoryPublic": "PARTIAL",
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000005101",
+        "00000000-0000-4000-8000-000000005102"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000005101",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000005102",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-DEV-028",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-003",
+        "EVAL-COURSE-005"
+      ],
+      "boundary": "5개 맛집 코스에서도 quota 차단은 외부 호출 1회로 종료",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "THROW",
+      "providerLegs": [],
+      "providerFailureCategory": "PROVIDER_BLOCKED",
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "COURSE_ROUTE_PROVIDER_UNAVAILABLE",
+      "expectedHttpStatus": "BAD_GATEWAY",
+      "expectedFailureCategoryPublic": "PROVIDER_UNAVAILABLE",
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000005201",
+        "00000000-0000-4000-8000-000000005202",
+        "00000000-0000-4000-8000-000000005203",
+        "00000000-0000-4000-8000-000000005204",
+        "00000000-0000-4000-8000-000000005205"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000005201",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000005202",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000005203",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.502,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000005204",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.503,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000005205",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.504,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-DEV-029",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-004"
+      ],
+      "boundary": "만료 시각이 자정을 넘어가는 경계(판정 Clock UTC 23:57:00 -> +5분)",
+      "clockInstant": "2026-08-10T23:57:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "SUCCESS",
+      "providerLegs": [
+        {
+          "distanceMeters": 1000,
+          "durationSeconds": 120
+        }
+      ],
+      "providerFailureCategory": null,
+      "expectedStopOrder": [
+        "00000000-0000-4000-8000-000000005301",
+        "00000000-0000-4000-8000-000000005302"
+      ],
+      "expectedRoles": [
+        "START",
+        "DESTINATION"
+      ],
+      "expectedTotalDistanceMeters": 1000,
+      "expectedTotalDurationSeconds": 120,
+      "expectedExpiresAtPlusMinutes": 5,
+      "expectedErrorCode": null,
+      "expectedHttpStatus": null,
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000005301",
+        "00000000-0000-4000-8000-000000005302"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000005301",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000005302",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "SUCCESS"
+    },
+    {
+      "caseId": "COURSE-DEV-030",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-004"
+      ],
+      "boundary": "생성 시각이 5분 단위 정각과 정확히 일치하는 경계",
+      "clockInstant": "2026-08-10T15:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "SUCCESS",
+      "providerLegs": [
+        {
+          "distanceMeters": 1000,
+          "durationSeconds": 120
+        }
+      ],
+      "providerFailureCategory": null,
+      "expectedStopOrder": [
+        "00000000-0000-4000-8000-000000005401",
+        "00000000-0000-4000-8000-000000005402"
+      ],
+      "expectedRoles": [
+        "START",
+        "DESTINATION"
+      ],
+      "expectedTotalDistanceMeters": 1000,
+      "expectedTotalDurationSeconds": 120,
+      "expectedExpiresAtPlusMinutes": 5,
+      "expectedErrorCode": null,
+      "expectedHttpStatus": null,
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000005401",
+        "00000000-0000-4000-8000-000000005402"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000005401",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000005402",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "SUCCESS"
+    },
+    {
+      "caseId": "COURSE-DEV-031",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-004"
+      ],
+      "boundary": "생성 시각이 5분 단위 정각 직후(1초 경과) 경계",
+      "clockInstant": "2026-08-10T15:00:01Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "SUCCESS",
+      "providerLegs": [
+        {
+          "distanceMeters": 1000,
+          "durationSeconds": 120
+        }
+      ],
+      "providerFailureCategory": null,
+      "expectedStopOrder": [
+        "00000000-0000-4000-8000-000000005501",
+        "00000000-0000-4000-8000-000000005502"
+      ],
+      "expectedRoles": [
+        "START",
+        "DESTINATION"
+      ],
+      "expectedTotalDistanceMeters": 1000,
+      "expectedTotalDurationSeconds": 120,
+      "expectedExpiresAtPlusMinutes": 5,
+      "expectedErrorCode": null,
+      "expectedHttpStatus": null,
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000005501",
+        "00000000-0000-4000-8000-000000005502"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000005501",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000005502",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "SUCCESS"
+    },
+    {
+      "caseId": "COURSE-DEV-032",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-004",
+        "EVAL-COURSE-005"
+      ],
+      "boundary": "5개 맛집 코스를 동일 조합으로 2회 재조회 - 매 요청 1회씩 호출",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 2,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "SUCCESS",
+      "providerLegs": [
+        {
+          "distanceMeters": 500,
+          "durationSeconds": 60
+        },
+        {
+          "distanceMeters": 500,
+          "durationSeconds": 60
+        },
+        {
+          "distanceMeters": 500,
+          "durationSeconds": 60
+        },
+        {
+          "distanceMeters": 500,
+          "durationSeconds": 60
+        }
+      ],
+      "providerFailureCategory": null,
+      "expectedStopOrder": [
+        "00000000-0000-4000-8000-000000005601",
+        "00000000-0000-4000-8000-000000005602",
+        "00000000-0000-4000-8000-000000005603",
+        "00000000-0000-4000-8000-000000005604",
+        "00000000-0000-4000-8000-000000005605"
+      ],
+      "expectedRoles": [
+        "START",
+        "WAYPOINT",
+        "WAYPOINT",
+        "WAYPOINT",
+        "DESTINATION"
+      ],
+      "expectedTotalDistanceMeters": 2000,
+      "expectedTotalDurationSeconds": 240,
+      "expectedExpiresAtPlusMinutes": 5,
+      "expectedErrorCode": null,
+      "expectedHttpStatus": null,
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000005601",
+        "00000000-0000-4000-8000-000000005602",
+        "00000000-0000-4000-8000-000000005603",
+        "00000000-0000-4000-8000-000000005604",
+        "00000000-0000-4000-8000-000000005605"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000005601",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000005602",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000005603",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.502,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000005604",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.503,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000005605",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.504,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "SUCCESS"
+    },
+    {
+      "caseId": "COURSE-DEV-033",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-005"
+      ],
+      "boundary": "동일 조합을 3회 연속 재조회해도 매 요청 정확히 1회만 외부 호출",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 3,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "SUCCESS",
+      "providerLegs": [
+        {
+          "distanceMeters": 1000,
+          "durationSeconds": 120
+        }
+      ],
+      "providerFailureCategory": null,
+      "expectedStopOrder": [
+        "00000000-0000-4000-8000-000000005701",
+        "00000000-0000-4000-8000-000000005702"
+      ],
+      "expectedRoles": [
+        "START",
+        "DESTINATION"
+      ],
+      "expectedTotalDistanceMeters": 1000,
+      "expectedTotalDurationSeconds": 120,
+      "expectedExpiresAtPlusMinutes": 5,
+      "expectedErrorCode": null,
+      "expectedHttpStatus": null,
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000005701",
+        "00000000-0000-4000-8000-000000005702"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000005701",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000005702",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "SUCCESS"
+    },
+    {
+      "caseId": "COURSE-DEV-034",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-001",
+        "EVAL-COURSE-002"
+      ],
+      "boundary": "2개 맛집 코스에서 두 번째 맛집을 첫 출발점으로 지정",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "SUCCESS",
+      "providerLegs": [
+        {
+          "distanceMeters": 1000,
+          "durationSeconds": 120
+        }
+      ],
+      "providerFailureCategory": null,
+      "expectedStopOrder": [
+        "00000000-0000-4000-8000-000000005802",
+        "00000000-0000-4000-8000-000000005801"
+      ],
+      "expectedRoles": [
+        "START",
+        "DESTINATION"
+      ],
+      "expectedTotalDistanceMeters": 1000,
+      "expectedTotalDurationSeconds": 120,
+      "expectedExpiresAtPlusMinutes": 5,
+      "expectedErrorCode": null,
+      "expectedHttpStatus": null,
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000005802",
+        "00000000-0000-4000-8000-000000005801"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000005801",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000005802",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "SUCCESS"
+    },
+    {
+      "caseId": "COURSE-DEV-035",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-001"
+      ],
+      "boundary": "위도 90/경도 180의 정확한 유효 경계 좌표 정상 처리",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "SUCCESS",
+      "providerLegs": [
+        {
+          "distanceMeters": 1000,
+          "durationSeconds": 120
+        }
+      ],
+      "providerFailureCategory": null,
+      "expectedStopOrder": [
+        "00000000-0000-4000-8000-000000005901",
+        "00000000-0000-4000-8000-000000005902"
+      ],
+      "expectedRoles": [
+        "START",
+        "DESTINATION"
+      ],
+      "expectedTotalDistanceMeters": 1000,
+      "expectedTotalDurationSeconds": 120,
+      "expectedExpiresAtPlusMinutes": 5,
+      "expectedErrorCode": null,
+      "expectedHttpStatus": null,
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000005901",
+        "00000000-0000-4000-8000-000000005902"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000005901",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 90,
+          "longitude": 180
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000005902",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 89.999,
+          "longitude": 179.999
+        }
+      ],
+      "expectedOutcome": "SUCCESS"
+    },
+    {
+      "caseId": "COURSE-DEV-036",
+      "split": "DEVELOPMENT",
+      "evalIds": [
+        "EVAL-COURSE-001"
+      ],
+      "boundary": "위도 -90/경도 -180의 정확한 유효 경계 좌표 정상 처리",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "SUCCESS",
+      "providerLegs": [
+        {
+          "distanceMeters": 1000,
+          "durationSeconds": 120
+        }
+      ],
+      "providerFailureCategory": null,
+      "expectedStopOrder": [
+        "00000000-0000-4000-8000-000000006001",
+        "00000000-0000-4000-8000-000000006002"
+      ],
+      "expectedRoles": [
+        "START",
+        "DESTINATION"
+      ],
+      "expectedTotalDistanceMeters": 1000,
+      "expectedTotalDurationSeconds": 120,
+      "expectedExpiresAtPlusMinutes": 5,
+      "expectedErrorCode": null,
+      "expectedHttpStatus": null,
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000006001",
+        "00000000-0000-4000-8000-000000006002"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000006001",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": -90,
+          "longitude": -180
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000006002",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": -89.999,
+          "longitude": -179.999
+        }
+      ],
+      "expectedOutcome": "SUCCESS"
+    },
+    {
+      "caseId": "COURSE-CAL-001",
+      "split": "CALIBRATION",
+      "evalIds": [
+        "EVAL-COURSE-001"
+      ],
+      "boundary": "선택 맛집 0개(하한 미만, 빈 배열)",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 0,
+      "providerMode": "NOT_INVOKED",
+      "providerLegs": [],
+      "providerFailureCategory": null,
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "INVALID_COURSE_SIZE",
+      "expectedHttpStatus": "BAD_REQUEST",
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [],
+      "restaurants": [],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-CAL-002",
+      "split": "CALIBRATION",
+      "evalIds": [
+        "EVAL-COURSE-001"
+      ],
+      "boundary": "선택 맛집 7개(상한 초과, DEVELOPMENT의 6개 초과와 다른 폭)",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 0,
+      "providerMode": "NOT_INVOKED",
+      "providerLegs": [],
+      "providerFailureCategory": null,
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "INVALID_COURSE_SIZE",
+      "expectedHttpStatus": "BAD_REQUEST",
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000007101",
+        "00000000-0000-4000-8000-000000007102",
+        "00000000-0000-4000-8000-000000007103",
+        "00000000-0000-4000-8000-000000007104",
+        "00000000-0000-4000-8000-000000007105",
+        "00000000-0000-4000-8000-000000007106",
+        "00000000-0000-4000-8000-000000007107"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000007101",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000007102",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000007103",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.502,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000007104",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.503,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000007105",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.504,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000007106",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.505,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000007107",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.506,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-CAL-003",
+      "split": "CALIBRATION",
+      "evalIds": [
+        "EVAL-COURSE-001"
+      ],
+      "boundary": "3개 중 첫째·셋째가 동일한 비인접 중복 선택",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 0,
+      "providerMode": "NOT_INVOKED",
+      "providerLegs": [],
+      "providerFailureCategory": null,
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "DUPLICATE_RESTAURANT_IN_COURSE",
+      "expectedHttpStatus": "BAD_REQUEST",
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000007201",
+        "00000000-0000-4000-8000-000000007202",
+        "00000000-0000-4000-8000-000000007201"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000007201",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000007202",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-CAL-004",
+      "split": "CALIBRATION",
+      "evalIds": [
+        "EVAL-COURSE-001"
+      ],
+      "boundary": "3개 중 두 번째가 비공개인 맛집 포함",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 0,
+      "providerMode": "NOT_INVOKED",
+      "providerLegs": [],
+      "providerFailureCategory": null,
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "RESTAURANT_NOT_PUBLIC",
+      "expectedHttpStatus": "UNPROCESSABLE_ENTITY",
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000007301",
+        "00000000-0000-4000-8000-000000007302",
+        "00000000-0000-4000-8000-000000007303"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000007301",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000007302",
+          "publicationStatus": "PRIVATE",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000007303",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.502,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-CAL-005",
+      "split": "CALIBRATION",
+      "evalIds": [
+        "EVAL-COURSE-001"
+      ],
+      "boundary": "경도만 없는 맛집 포함(위도만 없는 DEVELOPMENT 경계와 반대 축)",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 0,
+      "providerMode": "NOT_INVOKED",
+      "providerLegs": [],
+      "providerFailureCategory": null,
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "RESTAURANT_COORDINATE_REQUIRED",
+      "expectedHttpStatus": "UNPROCESSABLE_ENTITY",
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000007401",
+        "00000000-0000-4000-8000-000000007402"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000007401",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": null
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000007402",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-CAL-006",
+      "split": "CALIBRATION",
+      "evalIds": [
+        "EVAL-COURSE-001",
+        "EVAL-COURSE-002"
+      ],
+      "boundary": "선택 맛집 2개(하한 경계) 정상, 구간 거리 2,500m",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "SUCCESS",
+      "providerLegs": [
+        {
+          "distanceMeters": 2500,
+          "durationSeconds": 300
+        }
+      ],
+      "providerFailureCategory": null,
+      "expectedStopOrder": [
+        "00000000-0000-4000-8000-000000007501",
+        "00000000-0000-4000-8000-000000007502"
+      ],
+      "expectedRoles": [
+        "START",
+        "DESTINATION"
+      ],
+      "expectedTotalDistanceMeters": 2500,
+      "expectedTotalDurationSeconds": 300,
+      "expectedExpiresAtPlusMinutes": 5,
+      "expectedErrorCode": null,
+      "expectedHttpStatus": null,
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000007501",
+        "00000000-0000-4000-8000-000000007502"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000007501",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000007502",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.52,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "SUCCESS"
+    },
+    {
+      "caseId": "COURSE-CAL-007",
+      "split": "CALIBRATION",
+      "evalIds": [
+        "EVAL-COURSE-001",
+        "EVAL-COURSE-002"
+      ],
+      "boundary": "선택 맛집 5개(상한 경계) 정상, 불균등 구간 거리",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "SUCCESS",
+      "providerLegs": [
+        {
+          "distanceMeters": 300,
+          "durationSeconds": 40
+        },
+        {
+          "distanceMeters": 700,
+          "durationSeconds": 90
+        },
+        {
+          "distanceMeters": 900,
+          "durationSeconds": 110
+        },
+        {
+          "distanceMeters": 600,
+          "durationSeconds": 70
+        }
+      ],
+      "providerFailureCategory": null,
+      "expectedStopOrder": [
+        "00000000-0000-4000-8000-000000007601",
+        "00000000-0000-4000-8000-000000007602",
+        "00000000-0000-4000-8000-000000007603",
+        "00000000-0000-4000-8000-000000007604",
+        "00000000-0000-4000-8000-000000007605"
+      ],
+      "expectedRoles": [
+        "START",
+        "WAYPOINT",
+        "WAYPOINT",
+        "WAYPOINT",
+        "DESTINATION"
+      ],
+      "expectedTotalDistanceMeters": 2500,
+      "expectedTotalDurationSeconds": 310,
+      "expectedExpiresAtPlusMinutes": 5,
+      "expectedErrorCode": null,
+      "expectedHttpStatus": null,
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000007601",
+        "00000000-0000-4000-8000-000000007602",
+        "00000000-0000-4000-8000-000000007603",
+        "00000000-0000-4000-8000-000000007604",
+        "00000000-0000-4000-8000-000000007605"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000007601",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000007602",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.503,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000007603",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.508,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000007604",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.515,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000007605",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.524,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "SUCCESS"
+    },
+    {
+      "caseId": "COURSE-CAL-008",
+      "split": "CALIBRATION",
+      "evalIds": [
+        "EVAL-COURSE-002"
+      ],
+      "boundary": "3개 맛집 코스의 전체 거리 합계가 정확히 30,000m(경계 포함) 정상",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "SUCCESS",
+      "providerLegs": [
+        {
+          "distanceMeters": 15000,
+          "durationSeconds": 750
+        },
+        {
+          "distanceMeters": 15000,
+          "durationSeconds": 750
+        }
+      ],
+      "providerFailureCategory": null,
+      "expectedStopOrder": [
+        "00000000-0000-4000-8000-000000007701",
+        "00000000-0000-4000-8000-000000007702",
+        "00000000-0000-4000-8000-000000007703"
+      ],
+      "expectedRoles": [
+        "START",
+        "WAYPOINT",
+        "DESTINATION"
+      ],
+      "expectedTotalDistanceMeters": 30000,
+      "expectedTotalDurationSeconds": 1500,
+      "expectedExpiresAtPlusMinutes": 5,
+      "expectedErrorCode": null,
+      "expectedHttpStatus": null,
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000007701",
+        "00000000-0000-4000-8000-000000007702",
+        "00000000-0000-4000-8000-000000007703"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000007701",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000007702",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.55,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000007703",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.6,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "SUCCESS"
+    },
+    {
+      "caseId": "COURSE-CAL-009",
+      "split": "CALIBRATION",
+      "evalIds": [
+        "EVAL-COURSE-002"
+      ],
+      "boundary": "3개 맛집 코스의 전체 거리 합계가 30,001m로 상한 초과",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "SUCCESS",
+      "providerLegs": [
+        {
+          "distanceMeters": 15000,
+          "durationSeconds": 750
+        },
+        {
+          "distanceMeters": 15001,
+          "durationSeconds": 751
+        }
+      ],
+      "providerFailureCategory": null,
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "COURSE_DISTANCE_LIMIT_EXCEEDED",
+      "expectedHttpStatus": "UNPROCESSABLE_ENTITY",
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000007801",
+        "00000000-0000-4000-8000-000000007802",
+        "00000000-0000-4000-8000-000000007803"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000007801",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000007802",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.55,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000007803",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.6,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-CAL-010",
+      "split": "CALIBRATION",
+      "evalIds": [
+        "EVAL-COURSE-002",
+        "EVAL-COURSE-003"
+      ],
+      "boundary": "3개 맛집 코스에서 Kakao Mobility 자체 429 응답(RATE_LIMIT 범주)",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "THROW",
+      "providerLegs": [],
+      "providerFailureCategory": "RATE_LIMIT",
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "COURSE_ROUTE_PROVIDER_UNAVAILABLE",
+      "expectedHttpStatus": "BAD_GATEWAY",
+      "expectedFailureCategoryPublic": "PROVIDER_UNAVAILABLE",
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000007901",
+        "00000000-0000-4000-8000-000000007902",
+        "00000000-0000-4000-8000-000000007903"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000007901",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000007902",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000007903",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.502,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-CAL-011",
+      "split": "CALIBRATION",
+      "evalIds": [
+        "EVAL-COURSE-002",
+        "EVAL-COURSE-003"
+      ],
+      "boundary": "4개 맛집 코스에서 구간이 2개만 반환돼 부족한 부분 실패(3개 필요)",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "PARTIAL_LEGS",
+      "providerLegs": [
+        {
+          "distanceMeters": 1000,
+          "durationSeconds": 120
+        },
+        {
+          "distanceMeters": 1000,
+          "durationSeconds": 120
+        }
+      ],
+      "providerFailureCategory": null,
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "COURSE_ROUTE_PARTIAL_FAILURE",
+      "expectedHttpStatus": "BAD_GATEWAY",
+      "expectedFailureCategoryPublic": "PARTIAL",
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000008001",
+        "00000000-0000-4000-8000-000000008002",
+        "00000000-0000-4000-8000-000000008003",
+        "00000000-0000-4000-8000-000000008004"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000008001",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000008002",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000008003",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.502,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000008004",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.503,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-CAL-012",
+      "split": "CALIBRATION",
+      "evalIds": [
+        "EVAL-COURSE-003",
+        "EVAL-COURSE-004",
+        "EVAL-COURSE-005"
+      ],
+      "boundary": "4개 맛집 코스에서 월 quota 소진(PROVIDER_BLOCKED)되고, 동일 조합 재조회도 매 요청 1회만 호출한다",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 2,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "THROW",
+      "providerLegs": [],
+      "providerFailureCategory": "PROVIDER_BLOCKED",
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "COURSE_ROUTE_PROVIDER_UNAVAILABLE",
+      "expectedHttpStatus": "BAD_GATEWAY",
+      "expectedFailureCategoryPublic": "PROVIDER_UNAVAILABLE",
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000008101",
+        "00000000-0000-4000-8000-000000008102",
+        "00000000-0000-4000-8000-000000008103",
+        "00000000-0000-4000-8000-000000008104"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000008101",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000008102",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000008103",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.502,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000008104",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.503,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-REL-001",
+      "split": "RELEASE_HOLDOUT",
+      "evalIds": [
+        "EVAL-COURSE-001"
+      ],
+      "boundary": "선택 맛집 1개(하한 미만), 좌표 유효 경계값을 가진 맛집",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 0,
+      "providerMode": "NOT_INVOKED",
+      "providerLegs": [],
+      "providerFailureCategory": null,
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "INVALID_COURSE_SIZE",
+      "expectedHttpStatus": "BAD_REQUEST",
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000009101"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000009101",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 90,
+          "longitude": 180
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-REL-002",
+      "split": "RELEASE_HOLDOUT",
+      "evalIds": [
+        "EVAL-COURSE-001"
+      ],
+      "boundary": "선택 맛집 8개(상한 초과, 최대 폭)",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 0,
+      "providerMode": "NOT_INVOKED",
+      "providerLegs": [],
+      "providerFailureCategory": null,
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "INVALID_COURSE_SIZE",
+      "expectedHttpStatus": "BAD_REQUEST",
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000009201",
+        "00000000-0000-4000-8000-000000009202",
+        "00000000-0000-4000-8000-000000009203",
+        "00000000-0000-4000-8000-000000009204",
+        "00000000-0000-4000-8000-000000009205",
+        "00000000-0000-4000-8000-000000009206",
+        "00000000-0000-4000-8000-000000009207",
+        "00000000-0000-4000-8000-000000009208"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000009201",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000009202",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000009203",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.502,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000009204",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.503,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000009205",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.504,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000009206",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.505,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000009207",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.506,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000009208",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.507,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-REL-003",
+      "split": "RELEASE_HOLDOUT",
+      "evalIds": [
+        "EVAL-COURSE-001"
+      ],
+      "boundary": "4개 중 둘째·넷째가 동일한 비인접 중복 선택",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 0,
+      "providerMode": "NOT_INVOKED",
+      "providerLegs": [],
+      "providerFailureCategory": null,
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "DUPLICATE_RESTAURANT_IN_COURSE",
+      "expectedHttpStatus": "BAD_REQUEST",
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000009301",
+        "00000000-0000-4000-8000-000000009302",
+        "00000000-0000-4000-8000-000000009303",
+        "00000000-0000-4000-8000-000000009302"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000009301",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000009302",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000009303",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.502,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-REL-004",
+      "split": "RELEASE_HOLDOUT",
+      "evalIds": [
+        "EVAL-COURSE-001"
+      ],
+      "boundary": "3개 중 셋째가 비공개인 맛집 포함",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 0,
+      "providerMode": "NOT_INVOKED",
+      "providerLegs": [],
+      "providerFailureCategory": null,
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "RESTAURANT_NOT_PUBLIC",
+      "expectedHttpStatus": "UNPROCESSABLE_ENTITY",
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000009401",
+        "00000000-0000-4000-8000-000000009402",
+        "00000000-0000-4000-8000-000000009403"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000009401",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000009402",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000009403",
+          "publicationStatus": "PRIVATE",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.502,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-REL-005",
+      "split": "RELEASE_HOLDOUT",
+      "evalIds": [
+        "EVAL-COURSE-001"
+      ],
+      "boundary": "위도만 없는 맛집 포함",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 0,
+      "providerMode": "NOT_INVOKED",
+      "providerLegs": [],
+      "providerFailureCategory": null,
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "RESTAURANT_COORDINATE_REQUIRED",
+      "expectedHttpStatus": "UNPROCESSABLE_ENTITY",
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000009501",
+        "00000000-0000-4000-8000-000000009502"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000009501",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": null,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000009502",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-REL-006",
+      "split": "RELEASE_HOLDOUT",
+      "evalIds": [
+        "EVAL-COURSE-001",
+        "EVAL-COURSE-002"
+      ],
+      "boundary": "선택 맛집 2개(하한 경계) 정상, 구간 거리 500m",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "SUCCESS",
+      "providerLegs": [
+        {
+          "distanceMeters": 500,
+          "durationSeconds": 60
+        }
+      ],
+      "providerFailureCategory": null,
+      "expectedStopOrder": [
+        "00000000-0000-4000-8000-000000009601",
+        "00000000-0000-4000-8000-000000009602"
+      ],
+      "expectedRoles": [
+        "START",
+        "DESTINATION"
+      ],
+      "expectedTotalDistanceMeters": 500,
+      "expectedTotalDurationSeconds": 60,
+      "expectedExpiresAtPlusMinutes": 5,
+      "expectedErrorCode": null,
+      "expectedHttpStatus": null,
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000009601",
+        "00000000-0000-4000-8000-000000009602"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000009601",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000009602",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "SUCCESS"
+    },
+    {
+      "caseId": "COURSE-REL-007",
+      "split": "RELEASE_HOLDOUT",
+      "evalIds": [
+        "EVAL-COURSE-001",
+        "EVAL-COURSE-002"
+      ],
+      "boundary": "선택 맛집 5개(상한 경계) 정상, 첫 출발점을 좌표상 반대쪽 끝으로 지정",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "SUCCESS",
+      "providerLegs": [
+        {
+          "distanceMeters": 900,
+          "durationSeconds": 90
+        },
+        {
+          "distanceMeters": 700,
+          "durationSeconds": 80
+        },
+        {
+          "distanceMeters": 500,
+          "durationSeconds": 60
+        },
+        {
+          "distanceMeters": 300,
+          "durationSeconds": 40
+        }
+      ],
+      "providerFailureCategory": null,
+      "expectedStopOrder": [
+        "00000000-0000-4000-8000-000000009705",
+        "00000000-0000-4000-8000-000000009704",
+        "00000000-0000-4000-8000-000000009703",
+        "00000000-0000-4000-8000-000000009702",
+        "00000000-0000-4000-8000-000000009701"
+      ],
+      "expectedRoles": [
+        "START",
+        "WAYPOINT",
+        "WAYPOINT",
+        "WAYPOINT",
+        "DESTINATION"
+      ],
+      "expectedTotalDistanceMeters": 2400,
+      "expectedTotalDurationSeconds": 270,
+      "expectedExpiresAtPlusMinutes": 5,
+      "expectedErrorCode": null,
+      "expectedHttpStatus": null,
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000009705",
+        "00000000-0000-4000-8000-000000009701",
+        "00000000-0000-4000-8000-000000009702",
+        "00000000-0000-4000-8000-000000009703",
+        "00000000-0000-4000-8000-000000009704"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000009701",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000009702",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.503,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000009703",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.508,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000009704",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.515,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000009705",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.524,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "SUCCESS"
+    },
+    {
+      "caseId": "COURSE-REL-008",
+      "split": "RELEASE_HOLDOUT",
+      "evalIds": [
+        "EVAL-COURSE-002"
+      ],
+      "boundary": "4개 맛집 코스의 전체 거리 합계가 정확히 30,000m(경계 포함) 정상",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "SUCCESS",
+      "providerLegs": [
+        {
+          "distanceMeters": 10000,
+          "durationSeconds": 500
+        },
+        {
+          "distanceMeters": 10000,
+          "durationSeconds": 500
+        },
+        {
+          "distanceMeters": 10000,
+          "durationSeconds": 500
+        }
+      ],
+      "providerFailureCategory": null,
+      "expectedStopOrder": [
+        "00000000-0000-4000-8000-000000009801",
+        "00000000-0000-4000-8000-000000009802",
+        "00000000-0000-4000-8000-000000009803",
+        "00000000-0000-4000-8000-000000009804"
+      ],
+      "expectedRoles": [
+        "START",
+        "WAYPOINT",
+        "WAYPOINT",
+        "DESTINATION"
+      ],
+      "expectedTotalDistanceMeters": 30000,
+      "expectedTotalDurationSeconds": 1500,
+      "expectedExpiresAtPlusMinutes": 5,
+      "expectedErrorCode": null,
+      "expectedHttpStatus": null,
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000009801",
+        "00000000-0000-4000-8000-000000009802",
+        "00000000-0000-4000-8000-000000009803",
+        "00000000-0000-4000-8000-000000009804"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000009801",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000009802",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.55,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000009803",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.6,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000009804",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.65,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "SUCCESS"
+    },
+    {
+      "caseId": "COURSE-REL-009",
+      "split": "RELEASE_HOLDOUT",
+      "evalIds": [
+        "EVAL-COURSE-002"
+      ],
+      "boundary": "4개 맛집 코스의 전체 거리 합계가 30,001m로 상한 초과",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "SUCCESS",
+      "providerLegs": [
+        {
+          "distanceMeters": 10000,
+          "durationSeconds": 500
+        },
+        {
+          "distanceMeters": 10000,
+          "durationSeconds": 500
+        },
+        {
+          "distanceMeters": 10001,
+          "durationSeconds": 501
+        }
+      ],
+      "providerFailureCategory": null,
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "COURSE_DISTANCE_LIMIT_EXCEEDED",
+      "expectedHttpStatus": "UNPROCESSABLE_ENTITY",
+      "expectedFailureCategoryPublic": null,
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-000000009901",
+        "00000000-0000-4000-8000-000000009902",
+        "00000000-0000-4000-8000-000000009903",
+        "00000000-0000-4000-8000-000000009904"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-000000009901",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000009902",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.55,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000009903",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.6,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000009904",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.65,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-REL-010",
+      "split": "RELEASE_HOLDOUT",
+      "evalIds": [
+        "EVAL-COURSE-002",
+        "EVAL-COURSE-003"
+      ],
+      "boundary": "3개 맛집 코스에서 Kakao Mobility 5xx 응답(UPSTREAM 범주)",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "THROW",
+      "providerLegs": [],
+      "providerFailureCategory": "UPSTREAM",
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "COURSE_ROUTE_PROVIDER_UNAVAILABLE",
+      "expectedHttpStatus": "BAD_GATEWAY",
+      "expectedFailureCategoryPublic": "PROVIDER_UNAVAILABLE",
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-00000000a001",
+        "00000000-0000-4000-8000-00000000a002",
+        "00000000-0000-4000-8000-00000000a003"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-00000000a001",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000a002",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000a003",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.502,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-REL-011",
+      "split": "RELEASE_HOLDOUT",
+      "evalIds": [
+        "EVAL-COURSE-002",
+        "EVAL-COURSE-003"
+      ],
+      "boundary": "5개 맛집 코스에서 구간이 3개만 반환돼 부족한 부분 실패(4개 필요)",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 1,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "PARTIAL_LEGS",
+      "providerLegs": [
+        {
+          "distanceMeters": 500,
+          "durationSeconds": 60
+        },
+        {
+          "distanceMeters": 500,
+          "durationSeconds": 60
+        },
+        {
+          "distanceMeters": 500,
+          "durationSeconds": 60
+        }
+      ],
+      "providerFailureCategory": null,
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "COURSE_ROUTE_PARTIAL_FAILURE",
+      "expectedHttpStatus": "BAD_GATEWAY",
+      "expectedFailureCategoryPublic": "PARTIAL",
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-00000000a101",
+        "00000000-0000-4000-8000-00000000a102",
+        "00000000-0000-4000-8000-00000000a103",
+        "00000000-0000-4000-8000-00000000a104",
+        "00000000-0000-4000-8000-00000000a105"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-00000000a101",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000a102",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000a103",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.502,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000a104",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.503,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000a105",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.504,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    },
+    {
+      "caseId": "COURSE-REL-012",
+      "split": "RELEASE_HOLDOUT",
+      "evalIds": [
+        "EVAL-COURSE-003",
+        "EVAL-COURSE-004",
+        "EVAL-COURSE-005"
+      ],
+      "boundary": "3개 맛집 코스에서 월 quota 소진(PROVIDER_BLOCKED)되고, 동일 조합을 3회 재조회해도 매 요청 정확히 1회만 호출한다",
+      "clockInstant": "2026-08-10T03:00:00Z",
+      "requeryCount": 3,
+      "expectedProviderCallCountPerRequest": 1,
+      "providerMode": "THROW",
+      "providerLegs": [],
+      "providerFailureCategory": "PROVIDER_BLOCKED",
+      "expectedStopOrder": null,
+      "expectedRoles": null,
+      "expectedTotalDistanceMeters": null,
+      "expectedTotalDurationSeconds": null,
+      "expectedExpiresAtPlusMinutes": null,
+      "expectedErrorCode": "COURSE_ROUTE_PROVIDER_UNAVAILABLE",
+      "expectedHttpStatus": "BAD_GATEWAY",
+      "expectedFailureCategoryPublic": "PROVIDER_UNAVAILABLE",
+      "requestedRestaurantIds": [
+        "00000000-0000-4000-8000-00000000a201",
+        "00000000-0000-4000-8000-00000000a202",
+        "00000000-0000-4000-8000-00000000a203"
+      ],
+      "restaurants": [
+        {
+          "id": "00000000-0000-4000-8000-00000000a201",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.5,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000a202",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.501,
+          "longitude": 127.0
+        },
+        {
+          "id": "00000000-0000-4000-8000-00000000a203",
+          "publicationStatus": "PUBLIC",
+          "lifecycleStatus": "ACTIVE",
+          "latitude": 37.502,
+          "longitude": 127.0
+        }
+      ],
+      "expectedOutcome": "ERROR"
+    }
+  ]
+}

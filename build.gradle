@@ -67,6 +67,11 @@ tasks.named('test') {
     testLogging {
         events 'passed', 'skipped', 'failed'
     }
+    // EVAL-COURSE Fixture 평가(CourseFixtureEvaluationTest)의 RELEASE_HOLDOUT 분할은
+    // 변경 튜닝에 사용하지 않고 출시 판정 시에만 실행한다(third-expansion-evaluation-strategy.md 4.3절).
+    // 기본 실행은 이 프로퍼티를 전달하지 않으므로 forked 테스트 JVM에서 false로 평가돼 제외되고,
+    // -Dmasiton.eval.releaseHoldout=true로 실행하면 값이 그대로 전달돼 포함된다.
+    systemProperty 'masiton.eval.releaseHoldout', System.getProperty('masiton.eval.releaseHoldout', 'false')
 }
 
 tasks.named('bootRun') {
