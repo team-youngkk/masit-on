@@ -12,7 +12,7 @@ test('빈 값·미지정 조건은 쿼리에 넣지 않고 page·size는 항상 
   assert.equal(params.toString(), 'page=1&size=20')
 })
 
-test('page 踰덉샂???좎뒗 寃곌낵瑜?諛쏆쓣 ???덈떎', () => {
+test('page 번호를 지정하면 해당 페이지를 받는다', () => {
   const params = buildCourseSearchParams({ query: '맛집' }, 2)
   assert.equal(params.get('page'), '2')
   assert.equal(params.get('size'), '20')

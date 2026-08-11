@@ -40,7 +40,7 @@
     {
       "version": "1.0.0",
       "date": "2026-08-11",
-      "change": "최초 작성. E3-T10 / EVAL-COURSE-001~005 판정을 위한 60건이며 Development 36건·Calibration 12건·Release holdout 12건을 서로 독립한 변형(다른 stop 수, 다른 좌표 배치·정밀도, 다른 실패 조합, 다른 재조회 횟수)으로 구성했다. Release holdout은 기본 테스트 실행에서 제외하고 releaseHoldoutExecution의 opt-in으로만 판정한다. 출시 판정에 사용한 적이 없는 초기 버전이므로 작성 중 반영한 리뷰 수정은 별도 개정으로 기록하지 않는다."
+      "change": "최초 작성. E3-T10 / EVAL-COURSE-001~005 판정을 위한 60건이며 Development 36건·Calibration 12건·Release holdout 12건을 서로 독립한 변형(다른 stop 수, 다른 좌표 배치·정밀도, 다른 실패 조합, 다른 재조회 횟수)으로 구성했다. Release holdout은 기본 테스트 실행에서 제외하고 releaseHoldoutExecution의 opt-in으로만 판정한다. 출시 판정에 사용하지 않은 초기 버전이고 새 실패 유형·사례를 추가하지 않았으므로 Dataset ID는 v1.0.0을 유지한다. 리뷰 반영으로 RESTAURANT_NOT_PUBLIC·RESTAURANT_COORDINATE_REQUIRED 422 응답의 문제 맛집 inputOrder 기대값과 ID·이름 검증을 평가기에 추가했다."
     }
   ]
 }

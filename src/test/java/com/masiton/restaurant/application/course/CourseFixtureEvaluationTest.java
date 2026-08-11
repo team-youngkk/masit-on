@@ -133,6 +133,7 @@ class CourseFixtureEvaluationTest {
                 nullableText(node.get("expectedErrorCode")),
                 nullableText(node.get("expectedHttpStatus")),
                 nullableText(node.get("expectedFailureCategoryPublic")),
+                nullableInt(node.get("expectedInvalidInputOrder")),
                 requestedIds,
                 restaurants);
     }
@@ -445,6 +446,36 @@ class CourseFixtureEvaluationTest {
                     // 놓칠 수 있으므로 직렬화 결과를 기준으로 판정한다).
                     violations.addAll(assertNoDistanceOrDurationExposed(attempt, failureDetails));
                 }
+            } else if (testCase.expectedInvalidInputOrder() != null) {
+                Object details = e.details();
+                if (!(details instanceof RestaurantCourseSelectionDetails selectionDetails)) {
+                    violations.add("attempt=" + attempt
+                            + ": 문제 맛집 식별 정보가 있어야 하지만 details가 없습니다.");
+                } else if (selectionDetails.selectedRestaurants().size() != 1) {
+                    violations.add("attempt=" + attempt + ": 문제 맛집 식별 정보는 정확히 한 건이어야 합니다. actual="
+                            + selectionDetails.selectedRestaurants());
+                } else {
+                    RestaurantCourseFailureDetails.SelectedRestaurant selected =
+                            selectionDetails.selectedRestaurants().getFirst();
+                    int expectedInputOrder = testCase.expectedInvalidInputOrder();
+                    if (expectedInputOrder < 1 || expectedInputOrder > testCase.requestedRestaurantIds().size()) {
+                        violations.add("attempt=" + attempt + ": Fixture의 expectedInvalidInputOrder 범위가 잘못됐습니다: "
+                                + expectedInputOrder);
+                    } else {
+                        String expectedRestaurantId = testCase.requestedRestaurantIds().get(expectedInputOrder - 1);
+                        if (!expectedRestaurantId.equals(selected.restaurantId())) {
+                            violations.add("attempt=" + attempt + ": 문제 맛집 ID 불일치. expected="
+                                    + expectedRestaurantId + ", actual=" + selected.restaurantId());
+                        }
+                    }
+                    if (selected.inputOrder() != expectedInputOrder) {
+                        violations.add("attempt=" + attempt + ": 문제 맛집 입력 순서 불일치. expected="
+                                + expectedInputOrder + ", actual=" + selected.inputOrder());
+                    }
+                    if (selected.name() == null || selected.name().isBlank()) {
+                        violations.add("attempt=" + attempt + ": 문제 맛집 이름이 누락됐습니다.");
+                    }
+                }
             } else if (e.details() != null) {
                 violations.add("attempt=" + attempt + ": details가 없어야 하는 오류인데 details가 포함돼 있습니다: " + e.details());
             }
@@ -522,6 +553,7 @@ class CourseFixtureEvaluationTest {
             String expectedErrorCode,
             String expectedHttpStatus,
             String expectedFailureCategoryPublic,
+            Integer expectedInvalidInputOrder,
             List<String> requestedRestaurantIds,
             List<FixtureRestaurant> restaurants) {
     }

@@ -39,12 +39,19 @@ import styles from './course.module.css'
 /* 만료 여부를 반영하기 위해 이 주기로 현재 시각을 다시 읽는다. 실시간 카운트다운은 아니다. */
 const EXPIRY_CHECK_INTERVAL_MS = 15_000
 
+type SearchFilters = {
+  query: string
+  district: string
+  category: string
+}
+
 type SearchState = {
   status: 'idle' | 'loading' | 'loaded' | 'error'
   items: CourseSearchItem[]
   page: number
   hasNext: boolean
   loadingMore: boolean
+  filters: SearchFilters
   message?: string
   traceId?: string
 }
@@ -60,6 +67,7 @@ export function CourseScreen() {
     page: 1,
     hasNext: false,
     loadingMore: false,
+    filters: { query: '', district: '', category: '' },
   })
   const [outcome, setOutcome] = useState<CourseRouteOutcome | null>(null)
   const [calculating, setCalculating] = useState(false)
@@ -107,14 +115,15 @@ export function CourseScreen() {
   )
 
   async function runSearch() {
+    const filters = { query, district, category }
     searchAbortController.current?.abort()
     const controller = new AbortController()
     const requestId = ++searchRequestId.current
     searchAbortController.current = controller
-    setSearch({ status: 'loading', items: [], page: 1, hasNext: false, loadingMore: false })
+    setSearch({ status: 'loading', items: [], page: 1, hasNext: false, loadingMore: false, filters })
     try {
       const result = await searchCourseCandidates(
-        { query, district, category },
+        filters,
         controller.signal,
       )
       if (searchRequestId.current !== requestId) {
@@ -127,6 +136,7 @@ export function CourseScreen() {
           page: result.page.number,
           hasNext: result.page.hasNext,
           loadingMore: false,
+          filters,
         })
       } else {
         setSearch({
@@ -135,6 +145,7 @@ export function CourseScreen() {
           page: 1,
           hasNext: false,
           loadingMore: false,
+          filters,
           message: result.message,
           traceId: result.traceId,
         })
@@ -147,6 +158,7 @@ export function CourseScreen() {
           page: 1,
           hasNext: false,
           loadingMore: false,
+          filters,
           message: '맛집 검색을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.',
         })
       }
@@ -164,6 +176,7 @@ export function CourseScreen() {
 
     const requestId = searchRequestId.current
     const nextPage = search.page + 1
+    const filters = search.filters
     searchAbortController.current?.abort()
     const controller = new AbortController()
     searchAbortController.current = controller
@@ -171,7 +184,7 @@ export function CourseScreen() {
 
     try {
       const result = await searchCourseCandidates(
-        { query, district, category },
+        filters,
         controller.signal,
         nextPage,
       )
