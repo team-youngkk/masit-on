@@ -98,6 +98,7 @@ related_documents:
 | `.\gradlew.bat test --tests com.masiton.ai.application.AiExtractionResultCommitServicePostgreSqlIntegrationTest --no-daemon --console=plain` | 환경상 실패 | Docker Desktop 데몬 부재로 Testcontainers initializationError; 동일 테스트는 백엔드 CI에서 통과 |
 | `docker info --format '{{.ServerVersion}}'` | 실패 | `dockerDesktopLinuxEngine` named pipe에 연결할 수 없음 |
 | [백엔드 CI 실행](https://github.com/team-youngkk/masit-on/actions/runs/31477603456) | 통과 | 970 tests, 0 failures, 2 skipped; PostgreSQL 원자성 회귀 포함 |
+| [최신 백엔드·프론트엔드 CI 실행](https://github.com/team-youngkk/masit-on/actions/runs/31481855748) | 통과 | 최신 커밋 `8d45b6a` 기준 백엔드 전체 빌드·테스트와 프론트엔드 타입 검사·프로덕션 빌드 성공; 추가 방문 근거·orchestration 테스트 포함 |
 | `git diff --check` | 통과 | 공백·패치 형식 오류 없음 |
 
 | 추가 focused Gradle 테스트: `VerifyAiContentCandidateServiceTest`, `AiExtractionResultProcessorServiceTest`, `GeminiHttpVideoExtractionAdapterTest` | 통과 | 방문 근거 전달·게이트·외부 검증 조합·Provider 지시와 정식 등록 미호출 회귀 |
@@ -105,7 +106,7 @@ related_documents:
 ## 8. 재발 방지 및 다음 확인
 
 - 재발 방지: 메뉴 표현→대표 카테고리, 접두어 주소, 한글 신규 태그, 선택 태그 누락, invalid completeness, 차단 태그 결정, 외부 예외 경계, 실제 방문 문구·근거 구간 게이트를 회귀 테스트로 고정했다. PostgreSQL 원자성은 Testcontainers 테스트로 실제 제약과 트랜잭션을 확인했다.
-- 다음 확인: 없음. 백엔드 CI에서 `AiExtractionResultCommitServicePostgreSqlIntegrationTest`를 통과했고, 해당 스레드를 해결 처리했다.
+- 다음 확인: 없음. 최신 백엔드·프론트엔드 CI에서 추가 방문 근거·orchestration 테스트를 포함한 검증을 통과했고, 해당 스레드를 해결 처리했다.
 
 ## 9. 도입 전후 비교 지표
 
