@@ -95,13 +95,31 @@ Creator 필터는 `visit`에서 고유 Restaurant ID를 구한 뒤 Restaurant의
 - 알림은 요청·상태 partial unique, 회원 최신순·미읽음 partial·cleanup 인덱스를 둔다.
 - 멱등 기록은 만료 시각 인덱스를 둔다.
 
-## 7. 통계와 검증
+## 7. 3차 확장 AI 영상 추출 인덱스
+
+3차 확장 인덱스의 정확한 SQL은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md), [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql), [`V5__add_ai_extraction_reuse_indexes.sql`](../../../src/main/resources/db/migration/V5__add_ai_extraction_reuse_indexes.sql)을 따른다.
+
+| 인덱스 | 대상 경로 | 목적 |
+|---|---|---|
+| `ix_ai_job__claim` | `QUEUED`의 priority·created_at·id | 실시간 우선 Worker claim |
+| `ix_ai_job__expired_lease_claim` | `RUNNING`의 lease_expires_at·priority·created_at·id | 만료 lease 복구 claim |
+| `ix_ai_job__review` | `SUCCEEDED`의 created_at·id | 관리자 검수 목록 |
+| `ix_ai_snapshot__review` | Snapshot review_status·created_at·id | 후보 검수 목록 |
+| `ix_ai_tag_review__candidate` | Snapshot·candidate_tag_id·reviewed_at·id | 최신 태그 판단 이력 |
+| `ix_visit_tag__tag_lookup` | tag_definition_id·visit_id | 태그 기반 공개 맛집 조회 |
+| `ix_ai_job__video_input_versions` | youtube_video_id·input_hash·Provider/Model/Prompt/Schema 버전 | 외부 검증 전 관리자 작업 재사용 조회 |
+| `ix_ai_job__video_mode_versions` | youtube_video_id·input_mode·Provider/Model/Prompt/Schema 버전 | 기존 Webhook 작업 호환 재사용 조회 |
+| `ix_ai_temporary_input__expires_at` | expires_at·job_id | 만료 임시 입력 cleanup 선택 |
+
+멱등성·Snapshot·시도·채널 감시의 unique 제약은 보조 인덱스를 별도로 중복 생성하지 않는다. 실제 운영 성능은 Worker claim·공개 태그 조회와 3차 성능 Task의 실행계획·부하 결과로 검증한다.
+
+## 8. 통계와 검증
 
 - Flyway 적용 후 `ANALYZE`를 수동 DDL로 넣지 않는다. 테스트 fixture 적재 뒤 테스트가 명시적으로 `ANALYZE`한다.
 - CI 성능 smoke test는 공개/비공개, 관계 없음, Creator당 복수 Video, Video당 복수 Restaurant를 포함한다.
 - 핵심 쿼리는 예상 인덱스 이름만 단정하지 않고 결과·쿼리 수·상한 시간과 실행계획의 sequential scan 규모를 함께 검토한다.
 - 초기 데이터가 작아 planner가 sequential scan을 고르는 것은 오류가 아니다.
 
-## 8. 운영 점검
+## 9. 운영 점검
 
 출시 후 `pg_stat_user_indexes`로 사용 횟수와 크기를 확인한다. 장기간 미사용 인덱스도 즉시 삭제하지 않고 쿼리 빈도·FK 보조 역할을 확인한 뒤 전진 마이그레이션으로 제거한다. 인덱스 추가·제거는 운영 수동 DDL이 아니라 Flyway만 사용한다.

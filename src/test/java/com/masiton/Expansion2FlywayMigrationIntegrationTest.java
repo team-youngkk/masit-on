@@ -253,6 +253,9 @@ class Expansion2FlywayMigrationIntegrationTest {
                 .defaultSchema(schema);
         if (target != null) {
             configuration.target(target);
+        } else {
+            // 이 테스트는 2차 확장 계약(V3)만 검증하므로 후속 V4는 의도적으로 제외한다.
+            configuration.target(MigrationVersion.fromVersion("3"));
         }
         configuration.load().migrate();
     }

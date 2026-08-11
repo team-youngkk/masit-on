@@ -3,8 +3,11 @@ related_documents:
   - ../00-overview/scope.md
   - functional-requirements.md
   - business-rules.md
+  - non-functional-requirements.md
   - ../05-specs/api-review.md
   - ../05-specs/data/data-review.md
+  - ../08-planning/third-expansion-scope-and-terminology.md
+  - ../08-planning/third-expansion-evaluation-strategy.md
 ---
 
 # 맛잇온 요구사항 검토 결과
@@ -166,3 +169,41 @@ related_documents:
 - 자동 주기 동기화 도입 시점과 외부 링크 상태 확인 주기
 - 문자열 정렬 방식과 최종 정렬 안정성 보장 방식
 - 페이지 요청·응답의 구체적인 API 표현
+
+## 4. 3차 확장 확정 결정과 실행 게이트
+
+### RV-BR-016 경로 결과 만료 시간
+
+- 상태: 결정 완료
+- 결정:
+  - 모든 경로 결과는 생성 시각과 만료 시각을 가진다.
+  - 만료 뒤에는 기존 거리·시간을 정상 결과로 재사용하지 않고 새 경로를 조회한다.
+  - `expiresAt`은 `generatedAt`으로부터 5분 뒤로 정한다.
+  - 초기에는 캐시를 사용하지 않으며, 만료 전에도 서버는 결과를 저장·재사용하지 않는다.
+- 영향:
+  - 코스 API 응답, 캐시 키·TTL, 외부 호출 비용과 재조회 UX
+
+### RV-NFR-017 자연어·AI 품질 목표값
+
+- 상태: 결정 완료
+- 결정:
+  - 자연어 Dataset은 240건, AI Dataset은 중복 영상 그룹을 제거한 120건, 코스 Fixture는 60건으로 고정한다.
+  - 세 Dataset은 Development 60%, Calibration 20%, Release holdout 20%로 분할한다. 동일 영상·맛집·문장 변형 그룹은 하나의 분할에만 둔다.
+  - 자연어 조건 집합 exact match는 90% 이상, 지원 조건 재현율은 95% 이상, 미지원 조건 오적용은 0건으로 한다.
+  - AI 맛집·주소 후보 정밀도는 90% 이상, 방문 근거 재현율은 80% 이상, 자동 등록 정밀도는 90% 이상으로 한다. 잘못된 장소 연결과 자동 검증 우회는 0건이어야 한다.
+  - AI 태그 후보 정밀도는 90% 이상, 재현율은 80% 이상으로 하며, 미확정·근거 없는 태그의 공개는 0건으로 한다.
+  - Critical 오류는 평균 점수와 무관하게 0건이어야 한다. 정답 충돌은 Critical 100%, 일반 사례 20%를 교차 검토한다.
+- 영향:
+  - 모델·Prompt 활성화 게이트, 회귀 테스트와 자동 차단·예외 보정 작업량
+
+### RV-NFR-018 AI·Mobility timeout과 재시도 수치
+
+- 상태: 결정 완료
+- 결정:
+  - 연결·응답·전체 작업 timeout, 동시 처리·rate limit, 최대 재시도 횟수와 전체 시간 예산을 모두 유한값으로 둔다.
+  - 429·quota·비용 상한은 fail-closed로 처리하고, 재시도로 비용 상한을 우회하지 않는다.
+  - Gemini 호출은 연결 5초·응답 90초·시도 전체 120초, 최대 2회 재시도(총 3회), backoff 5초·30초를 사용한다.
+  - Gemini 정책 거부·입력 오류·Schema 오류는 재시도하지 않는다.
+  - Kakao Mobility는 연결 1초·응답 4초·요청 전체 5초, 자동 재시도 0회로 한다. 실패하면 즉시 부분·실패 결과를 반환한다.
+- 영향:
+  - 비동기 작업 복구, 코스 응답 시간, 비용 hard stop과 운영 경보

@@ -7,6 +7,9 @@ related_documents:
   - ../02-analysis/first-expansion-workstreams.md
   - ../02-analysis/second-expansion-domain-boundaries.md
   - ../02-analysis/second-expansion-workstreams.md
+  - ../02-analysis/third-expansion-workstreams.md
+  - ../02-analysis/third-expansion-domain-boundaries.md
+  - ../08-planning/third-expansion-evaluation-strategy.md
   - roles.md
   - ../04-product/traceability.md
   - ../05-specs/api-traceability.md
@@ -24,7 +27,7 @@ related_documents:
 
 이 문서는 맛잇온 MVP와 단계별 확장의 Workstream, 기능 요구사항, 비즈니스 규칙, 비기능 요구사항, 공통 작업과 문서의 최종 책임자를 추적한다. 소유자는 담당 항목의 요구사항 구체화, 계약, 구현, 테스트, 문서화와 통합 완료를 책임진다.
 
-MVP 배정은 2026-07-27, 1차 확장 WS-05~WS-08과 2차 확장 WS-09~WS-13 배정은 2026-08-03에 확정한 책임 균형 기준안이다. 같은 날 제한 공개 인증은 번호형 제품 WS와 구분되는 `OPS-VALIDATION` 공통 운영·배포 트랙으로 확정했다. 일정 차단이나 지속적인 부담 불균형이 확인될 때만 11장의 절차로 조정하며, 조정 중에도 각 Workstream과 기능 요구사항의 최종 책임자는 한 명만 유지한다.
+MVP 배정은 2026-07-27, 1·2차 확장 WS-05~WS-13 배정은 2026-08-03, 3차 확장 WS-14~WS-16과 `QUALITY-EVAL` 배정은 2026-08-10에 확정한 책임 균형 기준안이다. 제한 공개 인증은 번호형 제품 WS와 구분되는 `OPS-VALIDATION`, 3차 EDD 평가는 `QUALITY-EVAL` 교차 트랙으로 관리한다. 일정 차단이나 지속적인 부담 불균형이 확인될 때만 11장의 절차로 조정하며, 조정 중에도 각 Workstream과 기능 요구사항의 최종 책임자는 한 명만 유지한다.
 
 ## 2. 소유권 원칙
 
@@ -57,6 +60,10 @@ MVP 배정은 2026-07-27, 1차 확장 WS-05~WS-08과 2차 확장 WS-09~WS-13 배
 | [WS-11](../02-analysis/second-expansion-workstreams.md#6-ws-11-관리자-큐레이션) 관리자 큐레이션 | 김인안 | 양성훈 | 박진영 | 배정 완료 |
 | [WS-12](../02-analysis/second-expansion-workstreams.md#7-ws-12-제보신고-검토) 제보·신고 검토 | 김인안 | 이우람 | 박진영 | 배정 완료 |
 | [WS-13](../02-analysis/second-expansion-workstreams.md#8-ws-13-사용자-알림) 사용자 알림 | 이우람 | 김인안 | 박진영 | 배정 완료 |
+| [WS-14](../02-analysis/third-expansion-workstreams.md#5-ws-14-자연어-맛집-탐색) 자연어 맛집 탐색 | 양성훈 | 이우람 | 박진영, 김인안 | 배정 완료 |
+| [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) AI 영상 정보 추출 | 김인안 | 박진영 | 이우람, 양성훈 | 배정 완료 |
+| [WS-16](../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천) 맛집 코스 추천 | 이우람 | 양성훈 | 박진영, 김인안 | 배정 완료 |
+| [QUALITY-EVAL](../02-analysis/third-expansion-workstreams.md#8-quality-eval-교차-품질-트랙) EDD 평가 | 박진영 | 이우람 | WS-14~WS-16 담당자 | 배정 완료 — 교차 품질 트랙 |
 
 ### 2차 확장 배정 근거
 
@@ -65,6 +72,13 @@ MVP 배정은 2026-07-27, 1차 확장 WS-05~WS-08과 2차 확장 WS-09~WS-13 배
 - WS-11과 WS-12는 관리자 인증·데이터 조치의 연속성을 위해 김인안이 소유한다. 서로 다른 Workstream으로 유지하고 각각 양성훈·이우람이 독립 리뷰한다.
 - WS-13은 공통 아키텍처·운영 장애 경계의 연속성을 위해 이우람이 소유하고 상태 전이 제공자인 김인안이 리뷰한다.
 - 인기와 큐레이션, 컬렉션과 큐레이션은 각각 다른 책임이다. 같은 PRD·Aggregate 또는 저장소로 합쳐 최종 책임을 흐리지 않는다.
+
+### 3차 확장 배정 근거
+
+- WS-14는 WS-01·WS-10의 검색·공개 탐색 계약을 재사용하므로 양성훈이 소유하고 이우람이 관계 판정을 리뷰한다.
+- WS-15는 WS-04·WS-11·WS-12의 관리자 검수·데이터 조치의 연속성을 위해 김인안이 소유하고 박진영이 후보·감사·원자성을 리뷰한다.
+- WS-16은 Mobility 외부 연동·비용·장애·단일 EC2 운영 책임의 연속성을 위해 이우람이 소유하고 양성훈이 탐색·좌표·화면을 리뷰한다.
+- QUALITY-EVAL은 기능을 소유하지 않는 독립 품질 트랙으로 두고, 통합 테스트·데이터 정합성 책임자인 박진영이 최종 평가 증거를 소유한다.
 
 ### Workstream 복잡도 분석
 
@@ -123,6 +137,16 @@ MVP 배정은 2026-07-27, 1차 확장 WS-05~WS-08과 2차 확장 WS-09~WS-13 배
 | [FR-VISIT-001](../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록) | 맛집·유튜버·영상 방문 관계 등록 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 김인안 | 이우람 | 배정 완료 |
 
 MVP 기능 요구사항 20개는 모두 정확히 하나의 Workstream과 최종 책임자에게 배정되었다. 리뷰 담당자는 기능 책임자와 분리했으며 관계·조회·등록 계약에 따라 교차 배정했다.
+
+### 3차 확장 기능 요구사항
+
+| 요구사항 묶음 | 기능 | Workstream | 최종 책임자 | 리뷰 담당 | 상태 |
+|---|---|---|---|---|---|
+| `FR-NLSEARCH-001~004` | 자연어 검색·필터·확정 태그 조합·실패 처리 | [WS-14](../02-analysis/third-expansion-workstreams.md#5-ws-14-자연어-맛집-탐색) | 양성훈 | 이우람 | 배정 완료 |
+| `FR-AIEXTRACT-001~007` | AI 추출·태그 후보·관리자 검수 | [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | 김인안 | 박진영 | 배정 완료 |
+| `FR-COURSE-001~003` | 코스 입력·경로·외부 실패 대체 | [WS-16](../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천) | 이우람 | 양성훈 | 배정 완료 |
+
+개별 요구사항 링크와 보조 PRD는 [제품 추적표 3.6절](../04-product/traceability.md#36-3차-확장-요구사항--prd-매핑)에서 관리한다.
 
 ## 5. 비즈니스 규칙 소유권
 
@@ -188,6 +212,14 @@ MVP 기능 요구사항 20개는 모두 정확히 하나의 Workstream과 최종
 | [BR-PUBLICATION-007](../01-requirements/business-rules.md#br-publication-007-외부-영상-삭제의-영향-범위) | 외부 영상 삭제의 영향 범위 | Video | 박진영 | 이우람, 김인안 | 공동 검토 필요 |
 | [BR-PUBLICATION-008](../01-requirements/business-rules.md#br-publication-008-상태-변경의-일관성) | 상태 변경의 일관성 | 공통 공개 정책 | 김인안 | 전체 팀 | 공동 검토 필요 |
 
+### 3차 확장 비즈니스 규칙
+
+| 규칙 묶음 | 규칙 범위 | 최종 책임자 | 협업 담당 | 상태 |
+|---|---|---|---|---|
+| `BR-NLSEARCH-001~003` | 직접 필터 우선·태그·공개 생명주기 | 양성훈 | 이우람, 김인안 | 배정 완료 |
+| `BR-AIEXTRACT-001~008` | 후보·태그 범위·검수 전 저장 금지·중복·버전 | 김인안 | 박진영, 이우람 | 배정 완료 |
+| `BR-COURSE-001~004` | 입력 수·좌표·TTL·부분 실패 | 이우람 | 양성훈, 박진영 | 배정 완료 |
+
 공동 검토가 필요한 규칙도 최종 책임자는 한 명이다. 해당 상태는 소유권 미배정이 아니라 여러 Workstream의 공개 상태, 데이터 관계 또는 조회 결과에 영향을 주므로 변경 시 공동 리뷰가 필요하다는 뜻이다.
 
 ## 6. 비기능 요구사항 소유권
@@ -241,6 +273,16 @@ MVP 기능 요구사항 20개는 모두 정확히 하나의 Workstream과 최종
 | [NFR-DEPLOYMENT-004](../01-requirements/non-functional-requirements.md#nfr-deployment-004-단계별-실행-및-초기-운영-배포-복잡도-제한) | 단계별 실행 및 초기 운영 배포 복잡도 제한 | 공통 기반형 | 이우람 | 전체 팀, 제한 공개는 [OPS-VALIDATION](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙) | 김인안 | 배정 완료 |
 | [NFR-PRIVACY-002](../01-requirements/non-functional-requirements.md#nfr-privacy-002-인증정보와-외부-키-보호) | 인증정보와 외부 키 보호 | 공통 기반형 | 이우람 | 김인안 및 외부 연동 담당자 | 김인안 | 배정 완료 |
 
+### 3차 확장 NFR
+
+| NFR 묶음 | 구현·준수 책임 | 독립 검증·리뷰 | 상태 |
+|---|---|---|---|
+| `NFR-ACCURACY-001`, `NFR-PERFORMANCE-007` 자연어 적용 | WS-14 양성훈 | 박진영, 이우람 | 배정 완료 |
+| `NFR-ACCURACY-002`, `NFR-INTEGRITY-006`, `NFR-RELIABILITY-005` | WS-15 김인안 | 박진영, 복구는 이우람 | 배정 완료 |
+| `NFR-EXTERNAL-005`, `NFR-PERFORMANCE-007` 코스 적용 | WS-16 이우람 | 박진영, 양성훈 | 배정 완료 |
+| `NFR-SECURITY-007`, `NFR-PRIVACY-006`, `NFR-COST-001`, `NFR-AVAILABILITY-003`, `NFR-OBSERVABILITY-005` | 영향받는 WS-14~WS-16 담당자 | 박진영, 개인정보는 김인안 | 배정 완료 |
+| `NFR-TEST-006` 3차 품질·완료 게이트 | [QUALITY-EVAL](../02-analysis/third-expansion-workstreams.md#8-quality-eval-교차-품질-트랙) 박진영, 각 WS | 이우람, 영향 WS | 배정 완료 |
+
 아직 후속 설계가 필요한 기준만 `팀 결정 필요`로 유지한다. 2026-07-27 확정된 부하·데이터·브라우저·배포·알림 기준은 `배정 완료`로 관리한다.
 
 ## 7. 공통 작업 소유권
@@ -261,6 +303,9 @@ MVP 기능 요구사항 20개는 모두 정확히 하나의 Workstream과 최종
 | 환경별 설정 및 비밀정보 관리 | 팀 공동 | 이우람 | 김인안 | 배포 설계 전 | 배정 완료 |
 | 검증 참여자 쿠키 세션·제한 공개 진입 경계 | 팀 승인, [OPS-VALIDATION](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙) | 이우람 | 김인안, 배포 복구는 박진영 | `E1-T13` 및 정식 공개 제거 시 | 배정 완료 — 임시 트랙 |
 | AI 기능·활용 및 연동 기준 | 김인안·이우람·양성훈 주도, 영향받는 담당자 공동 | 관련 티켓 담당자 | 박진영 및 영향받는 담당자 | AI 작업 전 | 배정 완료 |
+| 3차 EDD Dataset·평가기·출시 게이트 | 팀 승인, [QUALITY-EVAL](../02-analysis/third-expansion-workstreams.md#8-quality-eval-교차-품질-트랙) | 박진영, 기능별 평가 코드는 각 WS | 이우람, WS-14~WS-16 담당자 | Dataset 작성 전부터 릴리즈까지 | 배정 완료 |
+| AI 비동기·외부 제공자 공통 기반 | 팀 승인, 이우람 조율 | WS-15, 공통 설정은 이우람 | 박진영, 김인안 | AI 작업·제공자 ADR 전 | 배정 완료 |
+| Kakao Mobility·경로 비용·장애 기준 | 팀 승인, 이우람 조율 | WS-16 | 양성훈, 박진영 | Mobility ADR·API 전 | 배정 완료 |
 | 프론트엔드 구조·사용자 흐름·백엔드 연동 기준 | 양성훈·김인안 주도, 영향받는 담당자 공동 | 관련 티켓 담당자 | 이우람, 박진영 | 프론트엔드 구현 전 | 배정 완료 |
 | 발표자료 제작 및 발표 리허설 | 팀 공동 | 영크크(팀 공동) | 전체 팀 | 발표 전 | 배정 완료 |
 | 회의록 정리 | 팀 공동 | 영크크(팀 공동) | 전체 팀 | 회의 직후 | 배정 완료 |
@@ -280,10 +325,13 @@ MVP 기능 요구사항 20개는 모두 정확히 하나의 Workstream과 최종
 | [non-functional-requirements.md](../01-requirements/non-functional-requirements.md) | 이우람 | 각 NFR 구현·준수 책임자 | 팀 공동 | 배정 완료 |
 | [domain-boundaries.md](../02-analysis/domain-boundaries.md) | 박진영 | 변경 제안자 | 팀 공동 | 배정 완료 |
 | [mvp-workstreams.md](../02-analysis/mvp-workstreams.md) | 이우람 | 각 Workstream 담당자 | 팀 공동 | 배정 완료 |
+| [third-expansion-workstreams.md](../02-analysis/third-expansion-workstreams.md) | 이우람 | WS-14~WS-16·QUALITY-EVAL 담당자 | 팀 공동 | 배정 완료 |
+| [third-expansion-evaluation-strategy.md](../08-planning/third-expansion-evaluation-strategy.md) | 박진영 | QUALITY-EVAL, 각 WS 정답 책임자 | 이우람, 영향 WS | 배정 완료·평가 기준 `approved` |
 | [roles.md](roles.md) | 이우람 | 역할 변경 제안자 | 팀 공동 | 배정 완료 |
 | [ownership.md](ownership.md) | 양성훈 | 각 소유권 책임자 | 팀 공동 | 배정 완료 |
 | [README.md](../../README.md) | 영크크(팀 공동) | 전체 팀 | 팀 공동 | 배정 완료 |
-| PRD | 김인안 | 각 Workstream 담당자 | 이우람 및 영향받는 담당자 | 후속 단계 배정 |
+| MVP·1·2차 PRD | 김인안 | 각 Workstream 담당자 | 이우람 및 영향받는 담당자 | 배정 완료 |
+| 3차 확장 PRD | 김인안 | WS-14~WS-16 담당자 | 각 PRD 기본 리뷰어 및 영향받는 담당자 | 배정 완료 |
 | 기능별 API 명세 | 각 Workstream 담당자 | 각 Workstream 담당자 | 다른 Workstream 담당자 | 후속 단계 배정 |
 | 데이터 모델 및 ERD | 박진영 | 각 데이터 책임 변경 제안자 | 팀 공동 | 후속 단계 배정 |
 | ADR | 이우람 | 결정 제안자 | 팀 공동 | 후속 단계 배정 |
@@ -327,7 +375,7 @@ MVP 기능 요구사항 20개는 모두 정확히 하나의 Workstream과 최종
 
 - 팀원 4명 모두 하나의 주요 기능 Workstream을 소유한다.
 - 프로젝트 리더 이우람도 [WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)의 최종 책임자다.
-- `WS-01`~`WS-13`의 13개 제품 Workstream과 MVP 20개·1차 확장 20개·2차 확장 21개, 총 61개 기능 요구사항에 각각 최종 책임자 한 명이 지정되어 있다. `OPS-*`는 제품 Workstream 수와 별도로 관리한다.
+- `WS-01`~`WS-16`의 16개 제품 Workstream과 MVP 20개·1차 확장 20개·2차 확장 21개·3차 확장 9개, 총 70개 기능 요구사항에 각각 최종 책임자 한 명이 지정되어 있다. `OPS-*`와 `QUALITY-EVAL`은 제품 Workstream 수와 별도로 관리한다.
 - 역할은 기술 계층별로 분리하지 않았다.
 - 공통 작업은 결정 책임과 구현 책임을 구분했다.
 - 제한 공개 진입 경계는 [OPS-VALIDATION](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙)이 `API-VALIDATION-001~002`, `ADR-DEPLOY-003`, `FE-12`, `E1-T13`을 단일 책임선으로 소유하고 정식 공개 시 종료한다.
@@ -433,7 +481,7 @@ MVP 기능 요구사항 20개는 모두 정확히 하나의 Workstream과 최종
   - AI는 김인안·이우람·양성훈, 프론트엔드는 양성훈·김인안이 의사결정을 주도하고 각 Workstream 담당자가 연동 검증
 - 결정 내용:
   - 양성훈·김인안이 프론트엔드 공통 구조와 API 계약 의사결정을 주도하고 각 Workstream 담당자가 자기 화면의 직접 구현·연동·인수 테스트를 소유한다.
-  - AI 기능은 MVP에서 구현하지 않고 범위 변경 검토가 승인될 때만 AI 담당 역할을 활성화한다.
+  - AI 기능은 MVP에서는 구현하지 않는다. 승인된 3차 확장에서는 WS-14·WS-15와 `QUALITY-EVAL`의 범위·검수·평가 게이트를 충족하는 조건으로 AI 담당 역할을 활성화한다.
 - 영향:
   - [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 부담
   - API 변경 통제

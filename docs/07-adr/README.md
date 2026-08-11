@@ -3,6 +3,11 @@ related_documents:
   - ../00-overview/scope.md
   - ../05-specs/README.md
   - ../06-architecture/technology-policy.md
+  - ../02-analysis/third-expansion-domain-boundaries.md
+  - ../02-analysis/third-expansion-workstreams.md
+  - ../08-planning/third-expansion-evaluation-strategy.md
+  - ../08-planning/third-expansion-test-matrix.md
+  - ../08-planning/third-expansion-task-breakdown.md
   - adr-index.md
   - adr-backlog.md
   - adr-traceability.md
@@ -49,6 +54,9 @@ related_documents:
 | `TEST` | 테스트 전략 |
 | `PERF` | 성능 측정 도구·실행 체계 |
 | `OBS` | 로그·관측성 |
+| `AI` | AI 제공자·모델·Prompt·후보 경계 |
+| `SEARCH` | 검색·조회 해석 전략 |
+| `ROUTE` | 경로·Mobility 연동 |
 | `SEC` | 비밀정보·워크로드 인증 |
 | `RUNTIME` | 실행·컨테이너 환경 |
 | `CI` | 지속적 통합·배포 검증 |

@@ -57,6 +57,27 @@ logging:
     com.masiton: ${LOG_LEVEL_APP:INFO}
 
 masiton:
+  ai:
+    youtube-webhook:
+      max-payload-bytes: ${YOUTUBE_WEBHOOK_MAX_PAYLOAD_BYTES:65536}
+      secret: ${YOUTUBE_WEBHOOK_SECRET:}
+    temporary-input:
+      active-key-id: ${AI_TEMPORARY_INPUT_KEY_ID:}
+      active-key: ${AI_TEMPORARY_INPUT_KEY:}
+    provider:
+      gemini:
+        # Calls remain blocked unless an environment explicitly verifies the Free Tier gate.
+        enabled: ${GEMINI_ENABLED:false}
+        free-tier-verified: ${GEMINI_FREE_TIER_VERIFIED:false}
+        paid-billing-enabled: ${GEMINI_PAID_BILLING_ENABLED:false}
+        # Production credentials are supplied by the existing configtree secret mount, never a URL or default profile.
+        api-key:
+        base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
+        model: gemini-3-flash-preview
+        prompt-version: P1
+        schema-version: S1
+        connect-timeout: PT5S
+        response-timeout: PT90S
   personalization:
     recent-cleanup:
       cron: ${RECENT_RESTAURANT_CLEANUP_CRON:0 0 3 * * *}

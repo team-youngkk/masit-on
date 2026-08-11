@@ -77,6 +77,8 @@ com/masiton/
 
 `presentation`, `application`, `domain`, `infrastructure`를 전체 최상위로 두지 않는다. 같은 이름은 각 도메인 안에서만 반복한다.
 
+현재 3차 AI 추출 구현은 `com.masiton.ai` 기술 경계를 사용한다. 이 경계는 AI Job·Provider·Webhook·임시 입력 저장을 담당하지만 Restaurant·Creator·Video·Visit Entity를 소유하지 않는다. 자연어 Parser와 Mobility Route Adapter의 최종 패키지 위치는 [아키텍처 개요](architecture-overview.md)의 3차 확장 경계 결정과 구현 전 리뷰를 따른다.
+
 Visit는 현재 MVP에서 독립 공개 HTTP 자원이 없으므로 `visit.presentation`에 구현할 Controller가 없을 수 있다. 교차 도메인 Visit 등록 Controller는 `orchestration.presentation.visit`에 둔다. 패키지는 빈 디렉터리를 미리 만들지 않고 실제 컴포넌트가 생길 때 생성한다.
 
 ## 3. 패키지별 책임
@@ -164,16 +166,16 @@ restaurant/infrastructure/persistence/
 
 ## 8. 현재 경로에서 목표 경로로의 매핑
 
-`T-01`이 소스 경로와 진입점, 제한된 `common`을 만들었다. 네 도메인과 `orchestration`, `security`는 아직 클래스가 없으므로 클래스별 매핑도 없다.
+현재 저장소에는 `restaurant`, `creator`, `video`, `visit`, `orchestration`, `security`, `member`, `participation`, `notification`, `curation`, `ai`의 실제 클래스가 있다. 다만 3차 자연어·코스 경계와 전체 ArchUnit·계약 증거는 구현 Task에서 계속 검증한다.
 
 | 현재 | 목표 | 전환 |
 |---|---|---|
 | `src/main/java/com/masiton/MasitOnApplication.java` | 동일 | `T-01`에서 생성 완료 |
 | `src/main/java/com/masiton/common/{web,observability}` | 동일 | 공통 오류·traceId 기반만 포함 |
-| 도메인 패키지 없음 | `src/main/java/com/masiton/{restaurant,creator,video,visit,orchestration,security}/...` | 각 Workstream의 첫 실제 클래스와 함께 생성 |
+| 기존 도메인·기술 패키지 | `src/main/java/com/masiton/{restaurant,creator,video,visit,orchestration,security,ai}/...` | 기존 소유권을 유지하고 3차 경계는 별도 리뷰 후 확장 |
 | `src/test/java/com/masiton/...` | 동일 | 운영 패키지 구조를 반영 |
-| `src/main/resources/db/migration/` (비어 있음) | 동일 | `T-03`이 초기 스키마를 추가하고 이후 단일 baseline으로 통합 |
-| `src/test/java/com/masiton/architecture` | 동일 | `T-01`에서 ArchUnit 규칙 적용 완료 |
+| `src/main/resources/db/migration/` | 동일 | `V1`~`V4` 전진 마이그레이션과 빈 DB 검증 |
+| `src/test/java/com/masiton/architecture` | 동일 | 기존 ArchUnit·SQL 경계 테스트에 3차 규칙을 추가 검증 |
 
 ## 9. 단계적 이전 방법
 

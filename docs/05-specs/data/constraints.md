@@ -233,3 +233,14 @@ related_documents:
 - DB CHECK: 상태 허용값, 큐레이션 게시 상태·위치, `ck_moderation_history__exactly_one_request`, `ck_notification__exactly_one_request`, 완료 결과 필드 조합
 - 애플리케이션+행 잠금: 회원당 컬렉션 20개, 컬렉션당 맛집 100개, 제보·신고 합산 일일 5건, Curation 구성 20개와 허용 상태 전이
 - 같은 트랜잭션: 요청 상태, ModerationHistory, 처리 결과 Notification
+
+## 12. 3차 확장 AI 영상 추출 제약
+
+3차 확장 제약의 상세 필드·상태 조합은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)과 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql)의 `CHECK`, `FK`, `UNIQUE`, Trigger를 함께 따른다.
+
+- 작업: YouTube URL·외부 식별자·Provider·모델·Prompt·Schema 버전과 입력 해시의 멱등성, `QUEUED/RUNNING/SUCCEEDED/FAILED` 상태별 lease·시각·결과 조합을 강제한다.
+- 임시 입력: `ADMIN/ADMIN_TEXT` 작업만 암호문을 가질 수 있고, 평문은 저장하지 않으며 작업 종료 뒤 24시간 이내 만료되어야 한다.
+- 후보·검수: Snapshot 버전·JSON 구조·근거 유형·신뢰도 범위를 검증하고, 태그 검수 이력의 보정 주체와 대체 TagDefinition 조합을 강제한다.
+- 태그·정식 데이터: `TagDefinition` 코드와 `VisitTag` 관계를 중복 없이 유지하고, `UNKNOWN` 근거는 `AI_AUTO_CONFIRMED` VisitTag가 될 수 없다.
+- 시도·감시: 작업별 시도 번호, 오류 결과 필수값, Creator·YouTube 채널 감시 설정의 고유성을 저장소에서 보장한다.
+- 원자성: 후보·Provider 장애·외부 검증 실패 시 정식 Restaurant·Creator·Video·Visit 저장은 0건이어야 하며, 이 조건은 DB 제약만으로 대체하지 않고 통합 테스트로 검증한다.

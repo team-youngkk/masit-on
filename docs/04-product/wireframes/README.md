@@ -7,6 +7,7 @@ related_documents:
   - ../prd/admin/admin-data-management.md
   - ../../05-specs/data/entity-definitions.md
   - second-expansion-wireframes.md
+  - third-expansion-wireframes.md
 ---
 
 # 맛잇온 와이어프레임 적용 기준
@@ -42,6 +43,8 @@ related_documents:
 관리자 화면의 별도 와이어프레임은 없으므로 공개 화면과 같은 색상, 타이포그래피, 입력 필드와 버튼 규칙을 사용한다.
 
 2차 확장 화면의 정보 구조와 상태는 [2차 확장 와이어프레임](second-expansion-wireframes.md)에서 관리한다. 해당 문서는 초안이며 Workstream·담당자 승인 전 구현 기준으로 확정하지 않는다.
+
+3차 확장 화면의 정보 구조와 상태는 [3차 확장 와이어프레임](third-expansion-wireframes.md)에서 관리한다. 특히 AI 영상 추출은 일반 사용자 화면이 아니라 자동 등록 결과와 관리자 예외 보정 화면의 정상·부분·오류·검증 충돌 상태를 우선한다. WS-14~WS-16과 담당자가 배정됐고 관련 API·데이터 계약이 승인됐으므로 화면 정책은 승인 상태다. 실제 브라우저 인수 결과는 [3차 확장 테스트 추적표](../../08-planning/third-expansion-test-matrix.md)와 E3 Task 증거로 별도 판정한다.
 
 ## 4. MVP 시각 규칙
 

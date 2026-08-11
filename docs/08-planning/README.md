@@ -6,6 +6,12 @@ related_documents:
   - second-expansion-scope-and-terminology.md
   - second-expansion-test-matrix.md
   - second-expansion-browser-verification.md
+  - third-expansion-baseline-review.md
+  - third-expansion-scope-and-terminology.md
+  - third-expansion-evaluation-strategy.md
+  - third-expansion-test-matrix.md
+  - third-expansion-implementation-plan.md
+  - third-expansion-task-breakdown.md
   - expansion-2-implementation-plan.md
   - expansion-2-task-breakdown.md
   - ../00-overview/scope.md
@@ -31,5 +37,11 @@ related_documents:
 | [2차 확장 구현 계획](expansion-2-implementation-plan.md) | 상위 계약 이후 기준선·병렬 기능 경로·알림·통합의 구현 순서 정의 |
 | [2차 확장 최종 Task 분해](expansion-2-task-breakdown.md) | `E2-T01`~`E2-T15` 실행 Task와 선행·병렬·완료 조건 정의. 범위 밖 푸시 `E2-T12`는 미생성 |
 | [2차 확장 브라우저 검증 기록](second-expansion-browser-verification.md) | `TST-E2-E2E-001`의 확인 환경·화면 폭·접근성 결과와 미검증으로 남는 항목 |
+| [3차 확장 선행 상태 검토](third-expansion-baseline-review.md) | 1·2차 확장 운영·데이터·외부 비용·비동기 기반과 2차 성능 미측정의 3차 완료 게이트 승계 검토 |
+| [3차 확장 범위와 용어 결정](third-expansion-scope-and-terminology.md) | 자연어 검색·AI 영상 정보 추출·동선 및 코스 추천의 초기 포함·제외 범위와 용어 확정 |
+| [3차 확장 평가 주도 개발 전략](third-expansion-evaluation-strategy.md) | 기능별 평가, 골든 데이터, 정답 판정, 품질 목표, 활성화·롤백과 개인정보 보호 환류 기준 |
+| [3차 확장 테스트 추적표](third-expansion-test-matrix.md) | `FR`·`BR`·`NFR`·`EVAL`을 자동화·브라우저·운영 증거와 연결 |
+| [3차 확장 구현 계획](third-expansion-implementation-plan.md) | AI 자동 등록·태그 생성·예외 보정·Worker·평가·운영 게이트의 구현 순서와 Task |
+| [3차 확장 E3 Task 분해](third-expansion-task-breakdown.md) | WS-14~WS-16·QUALITY-EVAL·OPS의 담당·선행·테스트·완료 증거 |
 
 구현 계획은 제품 범위, 요구사항, API·데이터 명세와 ADR을 변경하지 않는다. 상위 문서가 바뀌면 영향받는 Task와 완료 조건을 함께 갱신한다.

@@ -30,6 +30,10 @@
 #   masiton.security.verification.password-hash
 #   masiton.integration.kakao.rest-api-key   (선택)
 #   masiton.integration.youtube.api-key      (선택)
+#   masiton.ai.provider.gemini.api-key       (선택)
+#   masiton.ai.youtube-webhook.secret       (선택)
+#   masiton.ai.temporary-input.active-key-id (선택)
+#   masiton.ai.temporary-input.active-key    (선택)
 #
 # `optional:`을 붙이지 않는다. 디렉터리가 없으면 기동이 실패해야 한다. 조용히 넘어가면
 # 접속값 없이 뜨거나 공통 설정의 빈 기본값으로 붙는다.

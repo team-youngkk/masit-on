@@ -53,6 +53,8 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.POST, "/api/admin/auth/tokens").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/admin/auth/tokens/refresh").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/webhooks/youtube/channel-updates").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/webhooks/youtube/channel-updates").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/verification/sessions").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/api/verification/sessions").permitAll()
                         .requestMatchers(HttpMethod.POST,

@@ -43,6 +43,17 @@ related_documents:
   - api/participation/submission-report-api.md
   - ../04-product/prd/notification/user-notification.md
   - api/notification/notification-api.md
+  - ../04-product/prd/admin/ai-video-information-extraction.md
+  - api/admin/ai-video-extraction-api.md
+  - api/discovery/natural-language-restaurant-discovery-api.md
+  - api/discovery/restaurant-course-recommendation-api.md
+  - data/third-expansion-ai-video-data-contract.md
+  - ../02-analysis/third-expansion-workstreams.md
+  - ../07-adr/integration/ai-001-video-extraction-candidate-boundary.md
+  - ../07-adr/integration/ext-003-ai-extraction-async-reliability.md
+  - ../08-planning/third-expansion-evaluation-strategy.md
+  - ../08-planning/third-expansion-test-matrix.md
+  - ../08-planning/third-expansion-task-breakdown.md
 ---
 
 # 맛잇온 API 추적성
@@ -80,6 +91,16 @@ MVP와 확장 단계의 PRD, 기능 요구사항, 비즈니스 규칙, NFR, Work
 | [PRD-CURATION-001](../04-product/prd/curation/admin-curation.md) | 관리자 큐레이션 | [큐레이션 API](api/curation/curation-api.md) | API-CURATION-001~009 | [WS-11](../02-analysis/second-expansion-workstreams.md#6-ws-11-관리자-큐레이션) | 김인안 |
 | [PRD-PARTICIPATION-001](../04-product/prd/participation/user-submission-report.md) | 사용자 제보·신고 | [사용자 제보·신고 API](api/participation/submission-report-api.md) | API-SUBMISSION-001~003, API-REPORT-001~003, 관리자 검토 API | [WS-12](../02-analysis/second-expansion-workstreams.md#7-ws-12-제보신고-검토) | 김인안 |
 | [PRD-NOTIFICATION-001](../04-product/prd/notification/user-notification.md) | 사용자 알림 | [사용자 알림 API](api/notification/notification-api.md) | API-NOTIFICATION-001~004 | [WS-13](../02-analysis/second-expansion-workstreams.md#8-ws-13-사용자-알림) | 이우람 |
+
+### 2.3 3차 확장 PRD → API 매핑
+
+| PRD ID | 기능 PRD | 주 API 문서 | 관련 API ID | Workstream | 담당자 |
+|---|---|---|---|---|---|
+| [PRD-DISCOVERY-005](../04-product/prd/discovery/natural-language-restaurant-discovery.md) | 자연어 맛집 탐색 | [자연어 맛집 탐색 API](api/discovery/natural-language-restaurant-discovery-api.md) | API-DISCOVERY-NL-001 | [WS-14](../02-analysis/third-expansion-workstreams.md#5-ws-14-자연어-맛집-탐색) | 양성훈 |
+| [PRD-ADMIN-002](../04-product/prd/admin/ai-video-information-extraction.md) | AI 영상 정보 추출 | [관리자 AI 영상 추출 API](api/admin/ai-video-extraction-api.md) | API-ADMIN-AIEXTRACT-001, API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | 김인안 |
+| [PRD-DISCOVERY-006](../04-product/prd/discovery/restaurant-course-recommendation.md) | 맛집 코스 추천 | [맛집 코스 추천 API](api/discovery/restaurant-course-recommendation-api.md) | API-DISCOVERY-COURSE-001 | [WS-16](../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천) | 이우람 |
+
+3차 확장 세 기능의 API 계약은 Accepted 상태로 연결됐다. 실제 구현 전에는 각 기능의 계약 테스트·외부 계정 연결·평가·운영 게이트 증거를 확보한다.
 
 ## 3. 기능 요구사항 → API 매핑
 
@@ -150,7 +171,25 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 
 컬렉션 직접 순서 변경과 알림 설정 변경은 승인 범위에서 제외돼 API에 매핑하지 않는다.
 
-### 3.3 2차 확장 API → 데이터·ADR·테스트·Task 검증
+### 3.3 3차 확장 요구사항 → API 매핑
+
+| 요구사항 ID | 주 API | 보조 API | 검증 방식 | 담당자 |
+|---|---|---|---|---|
+| FR-AIEXTRACT-001·FR-AIEXTRACT-005 | API-ADMIN-AIEXTRACT-001 | API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | URL 검증·관리자 신규 추가·멱등 접수·202 응답 계약 테스트 | 김인안 |
+| FR-AIEXTRACT-002 | API-ADMIN-AIEXTRACT-001 | 없음 | 목록·상세·부분 결과·실패·페이지 계약 테스트 | 김인안 |
+| FR-AIEXTRACT-003 | API-ADMIN-AIEXTRACT-001 | 기존 관리자 등록·방문 API | 자동 확정·자동 차단·사후 보정·롤백·정식 Entity 원자성 테스트 | 김인안 |
+| FR-AIEXTRACT-004 | API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | API-ADMIN-AIEXTRACT-001 | 구독 확인·신규 영상 Atom·중복 알림·AI 호출 격리 테스트 | 김인안 |
+| FR-AIEXTRACT-006 | API-ADMIN-AIEXTRACT-001 | API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | 채널 활성화·해지·renewal 실패 상태 테스트 | 김인안 |
+| FR-NLSEARCH-001 | API-DISCOVERY-NL-001 | API-DISCOVERY-001 | 자연어 해석·적용 조건·기존 목록 응답 계약 테스트 | 양성훈 |
+| FR-NLSEARCH-002 | API-DISCOVERY-NL-001 | API-DISCOVERY-001 | 직접 필터 우선·AND 조합·충돌 요약 테스트 | 양성훈 |
+| FR-NLSEARCH-003 | API-DISCOVERY-NL-001 | 없음 | 빈 결과·`PARTIAL`·`FAILED`·전체 목록 대체 금지 테스트 | 양성훈 |
+| FR-NLSEARCH-004 | API-DISCOVERY-NL-001 | API-DISCOVERY-001 | 확정 태그 코드·Visit 공개 상태·여러 태그 AND 계약 테스트 | 양성훈 |
+| FR-AIEXTRACT-007 | API-ADMIN-AIEXTRACT-001 | API-DISCOVERY-NL-001 | 태그 후보 자동 판단·사후 보정·`VisitTag` 연결·검증 전 검색 제외 테스트 | 김인안 |
+| FR-COURSE-001 | API-DISCOVERY-COURSE-001 | API-DISCOVERY-001 | 2~5개·중복·공개·좌표·출발점 검증 테스트 | 이우람 |
+| FR-COURSE-002 | API-DISCOVERY-COURSE-001 | 없음 | 자동차 순서·구간 거리/시간·30km·만료 테스트 | 이우람 |
+| FR-COURSE-003 | API-DISCOVERY-COURSE-001 | 없음 | timeout·429·5xx·부분 실패·추정 금지 테스트 | 이우람 |
+
+### 3.4 2차 확장 API → 데이터·ADR·테스트·Task 검증
 
 | API 계약군 | 데이터 | ADR 또는 명시적 보류 | Workstream | 테스트 | E2 Task |
 |---|---|---|---|---|---|
@@ -190,6 +229,17 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 | BR-REPORT-001~004 | 신고 회원·관리자 API | 기존 대상, 신고 유형, 자동 비공개 없음, 상태·보존 | 김인안 |
 | BR-NOTIFICATION-001~004 | 관리자 상태 전이, API-NOTIFICATION-001~004 | 원자 생성, 고유성, 소유권, 읽음, 보존, 채널 제외 | 이우람 |
 
+### 4.2 3차 확장 비즈니스 규칙 → API 매핑
+
+| 규칙 ID | 적용 API | 핵심 검증 | 담당자 |
+|---|---|---|---|
+| BR-AIEXTRACT-001~004·008 | API-ADMIN-AIEXTRACT-001 | 후보·태그 범위·자동 검증 전 저장 금지·통과 후 무승인 공개·동일 영상 멱등성·Provider/Prompt/Schema 버전 | WS-15 |
+| BR-AIEXTRACT-005~007 | API-ADMIN-AIEXTRACT-001·API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | 유입 경로 수렴·채널 상태·Gemini URL 입력과 관리자 텍스트 fallback | WS-15 |
+| BR-NLSEARCH-001~003 | API-DISCOVERY-NL-001·API-DISCOVERY-001 | 직접 필터 우선·태그 AND·공개·활성 결과·전체 목록 대체 금지 | WS-14 |
+| BR-NLSEARCH-003 | API-DISCOVERY-NL-001·API-DISCOVERY-001 | 활성 TagDefinition·확정 VisitTag·공개 Visit·태그 AND·중복 제거 | WS-14 |
+| BR-AIEXTRACT-008 | API-ADMIN-AIEXTRACT-001 | 허용 태그 정의·근거·자동 결정·사후 보정·검증 전 공개 금지 | WS-15 |
+| BR-COURSE-001~004 | API-DISCOVERY-COURSE-001 | 2~5개·첫 출발점 고정·좌표 필수·30km·만료·부분 결과 금지 | WS-16 |
+
 ## 5. NFR → API 검증 매핑
 
 | NFR ID | 품질 요구사항 | 적용 API | 검증 방법 | 검증 책임 |
@@ -220,6 +270,17 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 | NFR-PRIVACY-005 | 컬렉션·제보·신고·알림 | 타 회원 접근·보존·식별 제거·탈퇴 정리 테스트 | WS-09·12·13 |
 | NFR-TEST-005 | 2차 확장 전체 API | 계약·통합·동시성·권한 회귀 테스트 | WS-09~13 |
 
+### 5.2 3차 확장 NFR → API 검증 매핑
+
+| NFR | 관련 API | 검증 방식 | 책임 |
+|---|---|---|---|
+| NFR-ACCURACY-002·NFR-INTEGRITY-006 | API-ADMIN-AIEXTRACT-001 | 골든 데이터 정확도·재현율·환각·잘못된 장소 연결·자동 등록 정밀도 평가 | WS-15·QUALITY-EVAL |
+| NFR-PRIVACY-006 | API-ADMIN-AIEXTRACT-001·API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | 원문·자막·Provider 응답·비밀정보 비저장과 로그 마스킹 검사 | WS-15 |
+| NFR-EXTERNAL-005 | API-ADMIN-AIEXTRACT-001 | Gemini timeout·429·5xx·비용 hard stop·재시도·fallback 테스트 | WS-15 |
+| NFR-RELIABILITY-005·NFR-AVAILABILITY-003 | API-ADMIN-AIEXTRACT-001·API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | lease 만료 복구·중복 Webhook·Provider 장애 격리·기존 탐색 회귀 테스트 | WS-15·인프라 리뷰 |
+| NFR-ACCURACY-001·NFR-PERFORMANCE-007 | API-DISCOVERY-NL-001·API-DISCOVERY-001 | 골든 데이터 exact match·재현율·p95·기존 탐색 회귀 테스트 | WS-14·QUALITY-EVAL |
+| NFR-COST-001·NFR-EXTERNAL-005·NFR-AVAILABILITY-003 | API-DISCOVERY-COURSE-001 | quota hard stop·요청당 호출 1회·timeout·429·5xx·기능 격리 테스트 | WS-16·인프라 리뷰 |
+
 ## 6. Workstream → API 매핑
 
 | Workstream | 소유 API | 협업 경계 |
@@ -235,6 +296,10 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 | [WS-12](../02-analysis/second-expansion-workstreams.md#7-ws-12-제보신고-검토) | 제보·신고 회원·관리자 API | WS-13 알림과 같은 트랜잭션, 기존 관리자 실제 조치 흐름 사용 |
 | [WS-13](../02-analysis/second-expansion-workstreams.md#8-ws-13-사용자-알림) | API-NOTIFICATION-001~004 | WS-12 상태를 변경하지 않고 알림 생성·읽음 소유 |
 
+| [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | API-ADMIN-AIEXTRACT-001·API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | 비동기 Job·후보 Snapshot·자동 등록·예외 보정·채널 감시 소유 |
+| [WS-14](../02-analysis/third-expansion-workstreams.md#5-ws-14-자연어-맛집-탐색) | API-DISCOVERY-NL-001 | 기존 API-DISCOVERY-001에 구조화 조건을 전달하고 해석 실패를 격리 |
+| [WS-16](../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천) | API-DISCOVERY-COURSE-001 | 선택 맛집 좌표를 Route Provider Port로 전달하고 결과를 비저장 반환 |
+
 ## 7. 담당자 → API 매핑
 
 | 담당자 | 최종 책임 API | 기본 리뷰 관계 |
@@ -246,7 +311,7 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 
 ## 8. 미매핑 항목
 
-- MVP 기능 요구사항 20개, 1차 확장 20개와 2차 확장 21개(3.2절) 모두 주 API 또는 명시된 내부 생성 계약에 매핑됐다.
+- MVP 기능 요구사항 20개, 1차 확장 20개와 2차 확장 21개(3.2절)는 주 API 또는 명시된 내부 생성 계약에 매핑됐다. 3차 확장 요구사항도 Accepted 자연어·AI·코스 API에 매핑됐으며, 계약 테스트·평가·외부 Provider 계정 연결·물리 migration은 실행 게이트다.
 - MVP 제외 기능은 API에 매핑하지 않았다.
 - [PRD-PRODUCT-001](../04-product/prd/00-product-overview.md)은 전체 범위 문서라 개별 API 주 매핑이 없다.
 - Critical 차단 항목이었던 식별자 타입, 인증 전달, 방문 관계 경로, 외부 확인 흐름과 후속 화면·API 라우팅 경계는 확정돼 매핑에 반영됐다.
@@ -254,3 +319,13 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 ## 9. 변경 영향 추적
 
 요구사항·규칙 ID가 추가·삭제·변경되면 이 문서의 주 API, 보조 API, 검증 방식과 담당자를 함께 갱신한다. API 필드·경로·상태 코드 변경은 해당 PRD와 프론트엔드, 소비·제공 Workstream, 계약 테스트와 후속 데이터 모델 영향을 검토한다.
+
+## 10. 3차 확장 API → 테스트·Task 추적
+
+| API | 핵심 테스트 | 평가·운영 증거 | E3 Task |
+|---|---|---|---|
+| [API-DISCOVERY-NL-001](api/discovery/natural-language-restaurant-discovery-api.md) | `TST-E3-NL-001~002`, `TST-E3-SEC-001`, `TST-E3-E2E-001` | `EVAL-NL-001~007`, p95·로그 마스킹 | `E3-T01~02`, `E3-T11~13` |
+| [API-ADMIN-AIEXTRACT-001](api/admin/ai-video-extraction-api.md), Webhook `001~002` | `TST-E3-AI-001~004`, `TST-E3-DATA-001`, `TST-E3-SEC-001` | `EVAL-AI-001~010`, Worker·quota·정식 저장 0건 | `E3-T03~08`, `E3-T11~13` |
+| [API-DISCOVERY-COURSE-001](api/discovery/restaurant-course-recommendation-api.md) | `TST-E3-COURSE-001~003`, `TST-E3-PERF-001`, `TST-E3-E2E-001` | `EVAL-COURSE-001~005`, Mobility quota·호출 수 | `E3-T09~13` |
+
+세 API의 계약 상태는 Accepted지만 테스트·외부 계정·운영 증거가 연결되기 전에는 API 구현 완료로 판정하지 않는다.
