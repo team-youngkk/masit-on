@@ -14,6 +14,8 @@ import com.masiton.restaurant.infrastructure.redis.RedisCourseRouteQuota;
 
 import java.time.Clock;
 
+import io.micrometer.core.instrument.MeterRegistry;
+
 import tools.jackson.databind.ObjectMapper;
 
 @Configuration
@@ -37,8 +39,9 @@ public class KakaoMobilityConfiguration {
     CourseRouteQuotaPort kakaoMobilityCourseRouteQuota(
             StringRedisTemplate redisTemplate,
             KakaoMobilityProperties properties,
-            @Qualifier("restaurantCourseClock") Clock clock
+            @Qualifier("restaurantCourseClock") Clock clock,
+            MeterRegistry meterRegistry
     ) {
-        return new RedisCourseRouteQuota(redisTemplate, properties, clock);
+        return new RedisCourseRouteQuota(redisTemplate, properties, clock, meterRegistry);
     }
 }

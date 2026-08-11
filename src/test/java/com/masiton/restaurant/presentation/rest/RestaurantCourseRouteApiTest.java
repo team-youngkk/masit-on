@@ -252,6 +252,21 @@ class RestaurantCourseRouteApiTest {
     }
 
     @Test
+    @DisplayName("정의하지 않은 현재 위치 필드가 포함되면 400 INVALID_REQUEST를 반환하고 외부를 호출하지 않는다")
+    void courseRoute_정의하지않은현재위치필드_400INVALID_REQUEST를반환한다() throws Exception {
+        mockMvc.perform(post(COURSE_ROUTES_PATH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"restaurantIds\":[\"" + UUID.randomUUID()
+                                + "\",\"" + UUID.randomUUID()
+                                + "\"],\"currentLocation\":{\"latitude\":37.5,\"longitude\":127.0}}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
+                .andExpect(jsonPath("$.traceId").value(not(emptyString())));
+
+        verifyNoInteractions(courseRouteProviderPort);
+    }
+
+    @Test
     @DisplayName("존재하지 않는 맛집을 선택하면 404 RESTAURANT_NOT_FOUND를 반환하고 외부를 호출하지 않는다")
     void courseRoute_존재하지않는맛집선택_404RESTAURANT_NOT_FOUND를반환한다() throws Exception {
         mockMvc.perform(post(COURSE_ROUTES_PATH)

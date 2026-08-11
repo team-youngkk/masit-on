@@ -64,7 +64,7 @@ final class KakaoMobilityCourseRouteAdapter implements CourseRouteProviderPort {
         }
         try {
             if (!quotaPort.tryAcquireMonthlyPermit()) {
-                throw new CourseRouteProviderException(CourseRouteFailureCategory.SERVICE_RATE_LIMIT);
+                throw new CourseRouteProviderException(CourseRouteFailureCategory.PROVIDER_BLOCKED);
             }
             HttpRequest httpRequest = HttpRequest.newBuilder(requestUri(stops))
                     .timeout(properties.getResponseTimeout())
@@ -120,6 +120,7 @@ final class KakaoMobilityCourseRouteAdapter implements CourseRouteProviderPort {
             query.append("&waypoints=").append(encode(waypoints));
         }
         query.append("&priority=RECOMMEND");
+        query.append("&summary=true");
         return URI.create(baseUrl + "/v1/directions?" + query);
     }
 

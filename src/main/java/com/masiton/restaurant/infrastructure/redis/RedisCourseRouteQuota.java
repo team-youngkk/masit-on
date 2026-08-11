@@ -6,9 +6,17 @@ import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
+
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
 
 import com.masiton.restaurant.application.port.out.CourseRouteQuotaPort;
 import com.masiton.restaurant.infrastructure.external.config.KakaoMobilityProperties;
@@ -18,6 +26,8 @@ import com.masiton.restaurant.infrastructure.external.config.KakaoMobilityProper
  * Redis 장애도 유료·quota 초과를 막기 위해 permit 거부로 처리한다.
  */
 public final class RedisCourseRouteQuota implements CourseRouteQuotaPort {
+
+    private static final Logger log = LoggerFactory.getLogger(RedisCourseRouteQuota.class);
 
     private static final String KEY_PREFIX = "restaurant:course-route:quota:";
     private static final String RATE_KEY_PREFIX = "restaurant:course-route:rate:";
@@ -31,7 +41,7 @@ public final class RedisCourseRouteQuota implements CourseRouteQuotaPort {
             end
             if count > tonumber(ARGV[1]) then
               redis.call('DECR', KEYS[1])
-              return 0
+              return -tonumber(ARGV[1])
             end
             return 1
             """, Long.class);
@@ -41,14 +51,17 @@ public final class RedisCourseRouteQuota implements CourseRouteQuotaPort {
               redis.call('EXPIRE', KEYS[1], 2)
             end
             local in_flight = redis.call('INCR', KEYS[2])
-            if in_flight == 1 then
-              redis.call('EXPIRE', KEYS[2], ARGV[3])
-            end
-            if rate > tonumber(ARGV[1]) or in_flight > tonumber(ARGV[2]) then
+            if rate > tonumber(ARGV[1]) then
               redis.call('DECR', KEYS[1])
               redis.call('DECR', KEYS[2])
-              return 0
+              return -1
             end
+            if in_flight > tonumber(ARGV[2]) then
+              redis.call('DECR', KEYS[1])
+              redis.call('DECR', KEYS[2])
+              return -2
+            end
+            redis.call('EXPIRE', KEYS[2], ARGV[3])
             return 1
             """, Long.class);
     private static final DefaultRedisScript<Long> RELEASE_REQUEST = new DefaultRedisScript<>("""
@@ -66,14 +79,37 @@ public final class RedisCourseRouteQuota implements CourseRouteQuotaPort {
     private final StringRedisTemplate redisTemplate;
     private final KakaoMobilityProperties properties;
     private final Clock clock;
+    private final Counter calls;
+    private final Counter monthlyBlocked;
+    private final Counter requestRateBlocked;
+    private final Counter requestConcurrencyBlocked;
+    private final Counter redisBlocked;
+    private final AtomicInteger monthlyUsage = new AtomicInteger();
+    private final AtomicInteger monthlyRemaining = new AtomicInteger();
+    private final AtomicReference<YearMonth> warnedMonth = new AtomicReference<>();
 
     public RedisCourseRouteQuota(
             StringRedisTemplate redisTemplate,
             KakaoMobilityProperties properties,
-            Clock clock) {
+            Clock clock,
+            MeterRegistry meterRegistry) {
         this.redisTemplate = redisTemplate;
         this.properties = properties;
         this.clock = clock;
+        this.calls = Counter.builder("masiton.restaurant.course.route.calls")
+                .description("Kakao Mobility course route call permits acquired")
+                .register(meterRegistry);
+        this.monthlyBlocked = blockedCounter(meterRegistry, "monthly");
+        this.requestRateBlocked = blockedCounter(meterRegistry, "request_rate");
+        this.requestConcurrencyBlocked = blockedCounter(meterRegistry, "request_concurrency");
+        this.redisBlocked = blockedCounter(meterRegistry, "redis");
+        Gauge.builder("masiton.restaurant.course.route.monthly.quota.usage", monthlyUsage, AtomicInteger::get)
+                .description("Current Kakao Mobility monthly quota usage")
+                .register(meterRegistry);
+        Gauge.builder("masiton.restaurant.course.route.monthly.quota.remaining", monthlyRemaining, AtomicInteger::get)
+                .description("Remaining Kakao Mobility monthly quota")
+                .register(meterRegistry);
+        monthlyRemaining.set(properties.getMonthlyQuota());
     }
 
     @Override
@@ -90,8 +126,20 @@ public final class RedisCourseRouteQuota implements CourseRouteQuotaPort {
                     List.of(KEY_PREFIX + month),
                     String.valueOf(properties.getMonthlyQuota()),
                     String.valueOf(secondsUntilNextMonth));
-            return Long.valueOf(1).equals(acquired);
+            if (acquired == null) {
+                redisBlocked.increment();
+                return false;
+            }
+            int usage = acquired < 0 ? properties.getMonthlyQuota() : acquired.intValue();
+            recordMonthlyUsage(month, usage);
+            if (acquired < 0) {
+                monthlyBlocked.increment();
+                return false;
+            }
+            calls.increment();
+            return true;
         } catch (RuntimeException exception) {
+            redisBlocked.increment();
             return false;
         }
     }
@@ -106,8 +154,19 @@ public final class RedisCourseRouteQuota implements CourseRouteQuotaPort {
                     String.valueOf(properties.getRequestsPerSecond()),
                     String.valueOf(properties.getMaxConcurrentRequests()),
                     String.valueOf(IN_FLIGHT_TTL_SECONDS));
-            return Long.valueOf(1).equals(acquired);
+            if (Long.valueOf(1).equals(acquired)) {
+                return true;
+            }
+            if (Long.valueOf(-1).equals(acquired)) {
+                requestRateBlocked.increment();
+            } else if (Long.valueOf(-2).equals(acquired)) {
+                requestConcurrencyBlocked.increment();
+            } else {
+                redisBlocked.increment();
+            }
+            return false;
         } catch (RuntimeException exception) {
+            redisBlocked.increment();
             return false;
         }
     }
@@ -118,6 +177,23 @@ public final class RedisCourseRouteQuota implements CourseRouteQuotaPort {
             redisTemplate.execute(RELEASE_REQUEST, List.of(IN_FLIGHT_KEY));
         } catch (RuntimeException ignored) {
             // TTL keeps a crashed request from holding the permit forever.
+        }
+    }
+
+    private Counter blockedCounter(MeterRegistry meterRegistry, String reason) {
+        return Counter.builder("masiton.restaurant.course.route.blocked")
+                .description("Kakao Mobility course route requests blocked")
+                .tag("reason", reason)
+                .register(meterRegistry);
+    }
+
+    private void recordMonthlyUsage(YearMonth month, int usage) {
+        monthlyUsage.set(usage);
+        monthlyRemaining.set(Math.max(0, properties.getMonthlyQuota() - usage));
+        int warningThreshold = (int) Math.ceil(properties.getMonthlyQuota() * 0.8);
+        if (usage >= warningThreshold && !month.equals(warnedMonth.getAndSet(month))) {
+            log.warn("Kakao Mobility monthly quota reached warning threshold: usage={}/{}",
+                    usage, properties.getMonthlyQuota());
         }
     }
 }

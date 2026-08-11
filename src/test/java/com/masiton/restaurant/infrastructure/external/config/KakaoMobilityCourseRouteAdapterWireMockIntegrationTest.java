@@ -104,11 +104,12 @@ class KakaoMobilityCourseRouteAdapterWireMockIntegrationTest {
         JsonNode request = requests.get(0);
         assertThat(request.path("url").asText()).startsWith("/v1/directions?");
         Map<String, String> params = queryParams(request);
-        assertThat(params).containsOnlyKeys("origin", "destination", "waypoints", "priority");
+        assertThat(params).containsOnlyKeys("origin", "destination", "waypoints", "priority", "summary");
         assertThat(params.get("origin")).isEqualTo("127.200200,37.100100");
         assertThat(params.get("destination")).isEqualTo("127.400400,37.300300");
         assertThat(params.get("waypoints")).isEqualTo("127.300300,37.200200");
         assertThat(params.get("priority")).isEqualTo("RECOMMEND");
+        assertThat(params.get("summary")).isEqualTo("true");
         assertThat(request.path("headers").path("Authorization").asText()).isEqualTo("KakaoAK " + API_KEY);
     }
 
@@ -124,8 +125,9 @@ class KakaoMobilityCourseRouteAdapterWireMockIntegrationTest {
         List<JsonNode> requests = directionsRequests();
         assertThat(requests).hasSize(1);
         Map<String, String> params = queryParams(requests.get(0));
-        assertThat(params).containsOnlyKeys("origin", "destination", "priority");
+        assertThat(params).containsOnlyKeys("origin", "destination", "priority", "summary");
         assertThat(params).doesNotContainKey("waypoints");
+        assertThat(params.get("summary")).isEqualTo("true");
     }
 
     @Test
@@ -284,8 +286,35 @@ class KakaoMobilityCourseRouteAdapterWireMockIntegrationTest {
     }
 
     @Test
-    @DisplayName("서비스 quota permit을 얻지 못하면 외부 호출 없이 SERVICE_RATE_LIMIT으로 실패한다")
-    void 코스경로계산_quotaPermit거부_SERVICE_RATE_LIMIT으로실패하고요청이없다() throws Exception {
+    @DisplayName("서비스 요청 제한 permit을 얻지 못하면 외부 호출 없이 SERVICE_RATE_LIMIT으로 실패한다")
+    void 코스경로계산_서비스요청제한Permit거부_SERVICE_RATE_LIMIT으로실패하고요청이없다() throws Exception {
+        KakaoMobilityProperties properties = properties(true, true, API_KEY, Duration.ofSeconds(4));
+        KakaoMobilityCourseRouteAdapter adapter = new KakaoMobilityCourseRouteAdapter(
+                HttpClient.newBuilder().connectTimeout(properties.getConnectTimeout()).build(),
+                objectMapper,
+                properties,
+                new com.masiton.restaurant.application.port.out.CourseRouteQuotaPort() {
+                    @Override
+                    public boolean tryAcquireMonthlyPermit() {
+                        return true;
+                    }
+
+                    @Override
+                    public boolean tryAcquireRequestPermit() {
+                        return false;
+                    }
+                });
+
+        CourseRouteProviderException exception = catchThrowableOfType(
+                CourseRouteProviderException.class, () -> adapter.calculate(twoStopRequest()));
+
+        assertThat(exception.category()).isEqualTo(CourseRouteFailureCategory.SERVICE_RATE_LIMIT);
+        assertThat(directionsRequests()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("월 quota permit을 얻지 못하면 외부 호출 없이 PROVIDER_BLOCKED로 실패한다")
+    void 코스경로계산_월QuotaPermit거부_PROVIDER_BLOCKED로실패하고요청이없다() throws Exception {
         KakaoMobilityProperties properties = properties(true, true, API_KEY, Duration.ofSeconds(4));
         KakaoMobilityCourseRouteAdapter adapter = new KakaoMobilityCourseRouteAdapter(
                 HttpClient.newBuilder().connectTimeout(properties.getConnectTimeout()).build(),
@@ -296,7 +325,7 @@ class KakaoMobilityCourseRouteAdapterWireMockIntegrationTest {
         CourseRouteProviderException exception = catchThrowableOfType(
                 CourseRouteProviderException.class, () -> adapter.calculate(twoStopRequest()));
 
-        assertThat(exception.category()).isEqualTo(CourseRouteFailureCategory.SERVICE_RATE_LIMIT);
+        assertThat(exception.category()).isEqualTo(CourseRouteFailureCategory.PROVIDER_BLOCKED);
         assertThat(directionsRequests()).isEmpty();
     }
 
