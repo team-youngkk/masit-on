@@ -8,10 +8,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 class RestaurantPathClassifierTest {
 
     @Test
-    @DisplayName("popular와 map-points 경로 세그먼트는 맛집 상세 조회가 아니다")
+    @DisplayName("공개 리터럴 경로 세그먼트는 맛집 상세 조회가 아니다")
     void 리터럴공개경로_상세조회아님() {
         assertThat(RestaurantPathClassifier.isRestaurantDetailPath("/api/restaurants/popular")).isFalse();
         assertThat(RestaurantPathClassifier.isRestaurantDetailPath("/api/restaurants/map-points")).isFalse();
+        assertThat(RestaurantPathClassifier.isRestaurantDetailPath("/api/restaurants/natural-language-search")).isFalse();
+        assertThat(RestaurantPathClassifier.isNonIdentifierPublicPath(
+                "/api/restaurants/natural-language-search")).isTrue();
     }
 
     @Test
