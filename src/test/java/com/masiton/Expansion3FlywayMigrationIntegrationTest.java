@@ -1,5 +1,6 @@
 package com.masiton;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -80,11 +81,14 @@ class Expansion3FlywayMigrationIntegrationTest {
     @Test
     @DisplayName("빈 데이터베이스를 최신 버전까지 마이그레이션하면 V4 스키마와 V5 인덱스가 모두 적용된다")
     void 빈데이터베이스_최신버전마이그레이션_V4스키마와V5인덱스적용() {
+        // given
         SchemaDatabase database = createSchemaDatabase();
         JdbcTemplate jdbcTemplate = new JdbcTemplate(database.dataSource());
 
+        // when
         migrate(database.dataSource(), database.schema(), null);
 
+        // then
         assertThat(jdbcTemplate.queryForList(
                 "SELECT version FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank", String.class))
                 .containsExactly("1", "2", "3", "4", "5");
@@ -101,6 +105,12 @@ class Expansion3FlywayMigrationIntegrationTest {
                 Integer.class, schema)).isEqualTo(8);
         assertThat(jdbcTemplate.queryForList("SELECT tag_code FROM tag_definition WHERE source='SEED' AND status='ACTIVE' "
                 + "ORDER BY tag_code", String.class)).containsExactlyInAnyOrderElementsOf(EXPECTED_TAG_CODES);
+        assertThat(jdbcTemplate.queryForList("SELECT indexname FROM pg_indexes WHERE schemaname=current_schema() "
+                + "AND indexname IN ('ix_ai_job__claim','ix_ai_job__expired_lease_claim','ix_ai_job__review',"
+                + "'ix_ai_snapshot__review','ix_ai_tag_review__candidate','ix_visit_tag__tag_lookup')",
+                String.class)).containsExactlyInAnyOrder(
+                        "ix_ai_job__claim", "ix_ai_job__expired_lease_claim", "ix_ai_job__review",
+                        "ix_ai_snapshot__review", "ix_ai_tag_review__candidate", "ix_visit_tag__tag_lookup");
         String aiTables = "('ai_extraction_job'::regclass,'ai_extraction_temporary_input'::regclass,'ai_candidate_snapshot'::regclass,"
                 + "'ai_candidate_tag_review'::regclass,'tag_definition'::regclass,'visit_tag'::regclass,'ai_extraction_attempt'::regclass,'youtube_channel_watch'::regclass)";
         assertThat(jdbcTemplate.queryForList("SELECT conname FROM pg_constraint WHERE connamespace=current_schema()::regnamespace "
@@ -118,7 +128,7 @@ class Expansion3FlywayMigrationIntegrationTest {
                         + "WHERE connamespace=current_schema()::regnamespace AND contype='f' AND conrelid IN "
                         + aiTables,
                 rs -> {
-                    Map<String, String> values = new java.util.HashMap<>();
+                    Map<String, String> values = new HashMap<>();
                     while (rs.next()) {
                         values.put(rs.getString(1), rs.getString(2));
                     }
