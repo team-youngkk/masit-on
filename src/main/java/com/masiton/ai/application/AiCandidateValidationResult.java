@@ -6,7 +6,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 
 /**
  * S1 payload validation output. It contains only validated candidate fields and evidence metadata;
@@ -118,48 +117,8 @@ public record AiCandidateValidationResult(
         return decision == Decision.AUTO_CONFIRMED;
     }
 
-    public boolean canAutoConfirm() {
-        return isAutoConfirmable();
-    }
-
-    public boolean isAutoBlocked() {
-        return decision == Decision.AUTO_BLOCKED;
-    }
-
     public boolean isAutoRejected() {
         return decision == Decision.AUTO_REJECTED;
-    }
-
-    public Decision status() {
-        return decision;
-    }
-
-    public Decision validationStatus() {
-        return decision;
-    }
-
-    public Map<String, Candidate> fieldCandidates() {
-        return candidates;
-    }
-
-    public Optional<Candidate> candidate(String field) {
-        return Optional.ofNullable(candidates.get(field));
-    }
-
-    public Optional<String> foodCategory() {
-        return Optional.ofNullable(foodCategoryName);
-    }
-
-    public boolean hasFoodCategoryName() {
-        return foodCategoryName != null;
-    }
-
-    public boolean isFoodCategoryMissing() {
-        return foodCategoryName == null;
-    }
-
-    public List<TagCandidate> connectableTags() {
-        return tags;
     }
 
     public List<TagCandidate> allTags() {

@@ -39,11 +39,9 @@ final class AiTagPolicy {
     static boolean isNewTagCandidate(String tagType, String rawLabel, String label, String normalizedCode) {
         String normalizedLabel = normalize(label);
         String normalizedRawLabel = normalize(rawLabel);
-        String suffix = normalizedLabel.toUpperCase(Locale.ROOT)
-                .replaceAll("[^A-Z0-9]+", "_")
-                .replaceAll("^_+|_+$", "");
-        return !suffix.isBlank() && normalizedLabel.equals(normalizedRawLabel)
-                && normalizedCode.equals(tagType + "_" + suffix);
+        return !normalizedLabel.isBlank() && normalizedLabel.equals(normalizedRawLabel)
+                && normalizedCode != null
+                && normalizedCode.matches(java.util.regex.Pattern.quote(tagType) + "_[A-Z0-9][A-Z0-9_]{0,63}");
     }
 
     private static String normalize(String value) {

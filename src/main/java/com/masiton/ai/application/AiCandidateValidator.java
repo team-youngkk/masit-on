@@ -74,7 +74,8 @@ public final class AiCandidateValidator {
         Map<String, List<Candidate>> candidatesByField = new LinkedHashMap<>();
         List<TagCandidate> connectableTags = new ArrayList<>();
         List<TagCandidate> rejectedTags = new ArrayList<>();
-        boolean blocked = "PARTIAL".equals(resultCompleteness) || !declaredMissing.isEmpty();
+        boolean blocked = "PARTIAL".equals(resultCompleteness)
+                || declaredMissing.stream().anyMatch(field -> REQUIRED_FIELDS.contains(field) || "menu".equals(field));
         if ("PARTIAL".equals(resultCompleteness)) {
             issues.add(issue("PARTIAL_RESULT", null));
         }
@@ -165,7 +166,7 @@ public final class AiCandidateValidator {
         }
 
         Decision decision;
-        if (structurallyInvalid || !rejectedTags.isEmpty()) {
+        if (structurallyInvalid) {
             decision = Decision.AUTO_REJECTED;
         } else if (blocked) {
             decision = Decision.AUTO_BLOCKED;
@@ -175,10 +176,6 @@ public final class AiCandidateValidator {
 
         return new AiCandidateValidationResult(decision, selectedCandidates, foodCategoryName,
                 connectableTags, rejectedTags, new ArrayList<>(missingFields), issues);
-    }
-
-    public AiCandidateValidationResult validatePayload(JsonNode payload) {
-        return validate(payload);
     }
 
     private CandidateParseResult parseCandidate(JsonNode node, String field, List<ValidationIssue> issues) {

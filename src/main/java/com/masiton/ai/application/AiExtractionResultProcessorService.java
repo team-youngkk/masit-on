@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Service;
@@ -20,12 +19,7 @@ import com.masiton.ai.application.port.out.AiExtractionResultProcessor;
 import com.masiton.ai.application.port.out.AiExtractionResultStore;
 import com.masiton.ai.application.port.out.dto.AiVideoExtractionResult;
 import com.masiton.orchestration.application.port.in.AutoRegisterVerifiedContentUseCase;
-import com.masiton.restaurant.application.port.out.FoodCategoryRepositoryPort;
-import com.masiton.restaurant.application.port.out.PlaceVerificationPort;
-import com.masiton.restaurant.application.port.out.RegionRepositoryPort;
-import com.masiton.restaurant.application.port.out.VerifiedPlace;
-import com.masiton.video.application.port.in.ResolveVerifiedVideoUseCase;
-import com.masiton.video.application.port.out.VerifiedVideo;
+import com.masiton.orchestration.application.port.in.VerifyAiContentCandidateUseCase;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
@@ -40,7 +34,6 @@ import tools.jackson.databind.node.ObjectNode;
 @Service
 class AiExtractionResultProcessorService implements AiExtractionResultProcessor {
 
-    private static final Pattern DISTRICT = Pattern.compile("^서울특별시\\s+([^\\s]+구)\\s+.+$");
     private static final Pattern KAKAO_PLACE_URL = Pattern.compile(
             "https://place\\.map\\.kakao\\.com/[^/?#]+", Pattern.CASE_INSENSITIVE);
     private static final Pattern TAG_CODE = Pattern.compile("[A-Z0-9_]{1,64}");
@@ -50,27 +43,18 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
 
     private final AiExtractionResultStore resultStore;
     private final AiExtractionResultCommitService commitService;
-    private final PlaceVerificationPort placeVerification;
-    private final ResolveVerifiedVideoUseCase videoVerification;
-    private final RegionRepositoryPort regionRepository;
-    private final FoodCategoryRepositoryPort foodCategoryRepository;
+    private final VerifyAiContentCandidateUseCase contentVerification;
     private final ObjectMapper objectMapper;
     private final AiCandidateValidator candidateValidator = new AiCandidateValidator();
 
     AiExtractionResultProcessorService(
             AiExtractionResultStore resultStore,
             AiExtractionResultCommitService commitService,
-            PlaceVerificationPort placeVerification,
-            ResolveVerifiedVideoUseCase videoVerification,
-            RegionRepositoryPort regionRepository,
-            FoodCategoryRepositoryPort foodCategoryRepository,
+            VerifyAiContentCandidateUseCase contentVerification,
             ObjectMapper objectMapper) {
         this.resultStore = resultStore;
         this.commitService = commitService;
-        this.placeVerification = placeVerification;
-        this.videoVerification = videoVerification;
-        this.regionRepository = regionRepository;
-        this.foodCategoryRepository = foodCategoryRepository;
+        this.contentVerification = contentVerification;
         this.objectMapper = objectMapper;
     }
 
@@ -93,45 +77,36 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
             return persistBlocked(withReason(base, "KAKAO_LOCATION_REQUIRED"), candidate);
         }
 
+        URI kakaoPlaceUrl;
         try {
-            VerifiedVideo verifiedVideo = videoVerification.resolve(job.get().videoUrl())
-                    .orElseThrow(() -> new CandidateBlockedException("YOUTUBE_VIDEO_NOT_FOUND"));
-            validateVideo(job.get(), verifiedVideo);
+            kakaoPlaceUrl = URI.create(candidate.location().value());
+        } catch (IllegalArgumentException exception) {
+            return persistBlocked(withReason(base, "KAKAO_LOCATION_REQUIRED"), candidate);
+        }
 
-            VerifiedPlace place = placeVerification.verify(
-                            candidate.restaurantName().value(), URI.create(candidate.location().value()), null)
-                    .orElseThrow(() -> new CandidateBlockedException("KAKAO_PLACE_NOT_FOUND"));
-            validatePlace(candidate, place);
-
-            String district = districtOf(place.roadAddress());
-            var region = regionRepository.findByName(district)
-                    .filter(value -> value.isActive())
-                    .orElseThrow(() -> new CandidateBlockedException("REGION_NOT_FOUND"));
-            var foodCategory = foodCategoryRepository.findByName(candidate.menu().value())
-                    .filter(value -> value.isActive())
-                    .orElseThrow(() -> new CandidateBlockedException("FOOD_CATEGORY_NOT_FOUND"));
-
+        try {
+            VerifyAiContentCandidateUseCase.VerifiedContent verified = contentVerification.verify(
+                            new VerifyAiContentCandidateUseCase.VerificationCommand(
+                                    job.get().channelId(), job.get().videoId(), job.get().videoUrl(),
+                                    candidate.restaurantName().value(), candidate.address().value(),
+                                    kakaoPlaceUrl, candidate.menu().value()))
+                    .orElseThrow(() -> new CandidateBlockedException("EXTERNAL_REFERENCE_MISMATCH"));
             List<AiExtractionResultCommitService.AiTagCandidate> tags = resolveTags(candidate.tags());
             AutoRegisterVerifiedContentUseCase.VerifiedContentCommand registration = new AutoRegisterVerifiedContentUseCase.VerifiedContentCommand(
                     new AutoRegisterVerifiedContentUseCase.RestaurantCandidate(
-                            region.getId(), foodCategory.getId(), place.name(), place.identityKey(),
-                            place.kakaoPlaceUrl(), place.roadAddress(), null, place.phoneNumber(),
-                            place.latitude(), place.longitude()),
+                            verified.regionId(), verified.foodCategoryId(), verified.restaurantName(),
+                            verified.kakaoPlaceId(), verified.kakaoPlaceUrl(), verified.roadAddress(), null,
+                            verified.phoneNumber(), verified.latitude(), verified.longitude()),
                     new AutoRegisterVerifiedContentUseCase.CreatorCandidate(
-                            verifiedVideo.publisherExternalChannelId(), verifiedVideo.channelName(),
-                            youtubeChannelUrl(verifiedVideo.publisherExternalChannelId())),
+                            verified.channelId(), verified.channelName(), verified.channelUrl()),
                     new AutoRegisterVerifiedContentUseCase.VideoCandidate(
-                            verifiedVideo.externalVideoId(), verifiedVideo.publisherExternalChannelId(),
-                            verifiedVideo.title(), verifiedVideo.sourceUrl(), verifiedVideo.thumbnailUrl(),
-                            verifiedVideo.publishedAt(), verifiedVideo.checkedAt()),
+                            verified.videoId(), verified.channelId(), verified.videoTitle(), verified.videoSourceUrl(),
+                            verified.videoThumbnailUrl(), verified.publishedAt(), verified.checkedAt()),
                     true);
+            // Registration defects and infrastructure failures must not be mistaken for a blocked candidate.
             return commitService.persistConfirmed(withTags(base, tags), registration);
-        } catch (CandidateBlockedException | IllegalArgumentException exception) {
+        } catch (CandidateBlockedException exception) {
             return persistBlocked(withReason(base, exception.getMessage()), candidate);
-        } catch (RuntimeException exception) {
-            // Database or other infrastructure failures must remain retryable and must not be
-            // converted into a successful but blocked candidate.
-            throw exception;
         }
     }
 
@@ -172,7 +147,10 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
 
         String reason = validation.isAutoConfirmable() && validation.foodCategoryName() != null
                 ? null : validation.reasonCodes().stream().findFirst().orElse("FOOD_CATEGORY_REQUIRED");
-        return new ParsedCandidate(root.path("resultCompleteness").asText("PARTIAL"), fields, tagsJson,
+        String rawCompleteness = root.path("resultCompleteness").asText();
+        String completeness = "COMPLETE".equals(rawCompleteness) || "PARTIAL".equals(rawCompleteness)
+                ? rawCompleteness : "PARTIAL";
+        return new ParsedCandidate(completeness, fields, tagsJson,
                 confidences, evidence, missing, tags, parsedFields.get("restaurantName"), parsedFields.get("menu"),
                 parsedFields.get("address"), parsedFields.get("location"), reason,
                 validation.isAutoRejected() ? "AUTO_REJECTED" : "AUTO_BLOCKED");
@@ -222,44 +200,19 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
                                                                    boolean autoConnectable, UUID existingId) {
         return new AiExtractionResultCommitService.AiTagCandidate(
                 tag.candidateTagId(), tag.tagType(), tag.normalizedCode(), tag.label(), tag.confidence(),
-                json(tag.evidence()), aliases(tag.rawLabel(), tag.label()),
+                json(tag.evidence()), aliases(tag.label()),
                 AiExtractionContract.MODEL_VERSION + "/" + AiExtractionContract.PROMPT_VERSION + "/"
                         + AiExtractionContract.SCHEMA_VERSION,
                 decision, reason, autoConnectable, existingId);
     }
 
-    private void validateVideo(AiExtractionResultStore.ProcessingJob job, VerifiedVideo video) {
-        if (!job.videoId().equals(video.externalVideoId())
-                || !job.channelId().equals(video.publisherExternalChannelId())
-                || blank(video.channelName()) || blank(video.title()) || blank(video.sourceUrl())
-                || blank(video.thumbnailUrl())) {
-            throw new CandidateBlockedException("YOUTUBE_METADATA_MISMATCH");
-        }
-    }
-
-    private void validatePlace(ParsedCandidate candidate, VerifiedPlace place) {
-        if (blank(place.identityKey()) || blank(place.name()) || blank(place.kakaoPlaceUrl())
-                || blank(place.roadAddress()) || blank(place.phoneNumber())
-                || !sameText(candidate.restaurantName().value(), place.name())
-                || !sameAddress(candidate.address().value(), place.roadAddress())) {
-            throw new CandidateBlockedException("KAKAO_PLACE_MISMATCH");
-        }
-    }
-
     private AiExtractionResultCommitService.ProcessCommand command(
             UUID jobId, String workerId, int attemptNo, OffsetDateTime attemptStartedAt,
             OffsetDateTime finishedAt, AiVideoExtractionResult result, ParsedCandidate candidate) {
-        List<AiExtractionResultCommitService.AiTagCandidate> basicTags = candidate.tags().stream()
-                .map(tag -> {
-                    boolean connectable = isTagAutoConnectable(tag);
-                    return toTag(tag, connectable ? "AUTO_ACCEPT" : "AUTO_REJECT",
-                            connectable ? null : "TAG_POLICY", connectable, null);
-                })
-                .toList();
         return new AiExtractionResultCommitService.ProcessCommand(jobId, workerId, attemptNo, attemptStartedAt,
                 finishedAt, result.providerRequestId(), candidate.completeness(), json(candidate.fields()),
                 json(candidate.tagsJson()), json(candidate.confidences()), json(candidate.evidence()),
-                json(candidate.missing()), candidate.blockReason(), candidate.reviewStatus(), basicTags);
+                json(candidate.missing()), candidate.blockReason(), candidate.reviewStatus(), List.of());
     }
 
     private AiExtractionResultCommitService.ProcessCommand withTags(
@@ -300,39 +253,8 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
         return target;
     }
 
-    private String districtOf(String roadAddress) {
-        Matcher matcher = DISTRICT.matcher(roadAddress == null ? "" : roadAddress.trim());
-        if (!matcher.matches()) throw new CandidateBlockedException("REGION_NOT_FOUND");
-        return matcher.group(1);
-    }
-
-    private boolean sameText(String left, String right) {
-        return containsEither(normalize(left), normalize(right));
-    }
-
-    private boolean sameAddress(String left, String right) {
-        return containsEither(normalize(left), normalize(right));
-    }
-
-    private boolean containsEither(String left, String right) {
-        return !left.isBlank() && !right.isBlank() && (left.equals(right)
-                || left.contains(right) || right.contains(left));
-    }
-
-    private String normalize(String value) {
-        return value == null ? "" : value.replaceAll("\\s+", "").toLowerCase(Locale.ROOT);
-    }
-
-    private String youtubeChannelUrl(String channelId) {
-        return "https://www.youtube.com/channel/" + channelId;
-    }
-
     private boolean containsIgnoreCase(String value, String word) {
         return value.toLowerCase(Locale.ROOT).contains(word.toLowerCase(Locale.ROOT));
-    }
-
-    private boolean blank(String value) {
-        return value == null || value.isBlank();
     }
 
     private String json(JsonNode node) {
@@ -343,7 +265,7 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
         }
     }
 
-    private String aliases(String rawLabel, String label) {
+    private String aliases(String label) {
         ArrayNode aliases = objectMapper.createArrayNode();
         aliases.add(label);
         return json(aliases);

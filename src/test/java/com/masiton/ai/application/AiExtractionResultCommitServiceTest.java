@@ -57,6 +57,31 @@ class AiExtractionResultCommitServiceTest {
     }
 
     @Test
+    @DisplayName("차단 후보의 태그는 자동 병합이 아닌 자동 거부로 기록한다")
+    void persistBlocked_기존태그가있어도_자동거부로기록한다() {
+        // Given
+        UUID tagId = UUID.randomUUID();
+        AiExtractionResultCommitService.AiTagCandidate tag = new AiExtractionResultCommitService.AiTagCandidate(
+                "tag-1", "MENU", "MENU_NAENGMYEON", "냉면", BigDecimal.valueOf(0.9),
+                "{\"type\":\"TIMESTAMP\",\"startMs\":1,\"endMs\":2}", "[\"냉면\"]",
+                "gemini-3-flash-preview/P1/S1", "AUTO_MERGE", null, true, tagId);
+        AiExtractionResultCommitService.ProcessCommand command = command(List.of(tag));
+        given(resultStore.lockProcessingJob(jobId, "worker-1", 1)).willReturn(Optional.of(job()));
+        given(resultStore.nextSnapshotVersion(jobId)).willReturn(1);
+        UUID snapshotId = UUID.randomUUID();
+        given(resultStore.insertSnapshot(any(), anyInt(), anyString(), anyString(), anyString(), anyString(),
+                anyString(), eq("AUTO_BLOCKED"), anyString(), any(), any())).willReturn(snapshotId);
+
+        // When
+        assertThat(service.persistBlocked(command)).isTrue();
+
+        // Then
+        verify(resultStore).insertTagReview(eq(snapshotId), eq("tag-1"), eq("AUTO_REJECT"), eq(null),
+                eq("CANDIDATE_BLOCKED"), eq(finishedAt));
+        verify(resultStore, never()).insertVisitTag(any(), any(), any(), anyString(), anyString(), any());
+    }
+
+    @Test
     @DisplayName("검증 성공은 정식 등록과 VisitTag를 같은 결과 커밋으로 연결한다")
     void persistConfirmed_검증성공_정식등록과VisitTag를연결한다() {
         // Given

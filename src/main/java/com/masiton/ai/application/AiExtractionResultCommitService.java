@@ -74,8 +74,9 @@ class AiExtractionResultCommitService {
 
     private void insertTagReviews(UUID snapshotId, List<AiTagCandidate> tags, OffsetDateTime reviewedAt) {
         for (AiTagCandidate tag : tags) {
-            resultStore.insertTagReview(snapshotId, tag.candidateTagId(), tag.decision(), null,
-                    tag.reason(), reviewedAt);
+            String reason = tag.reason() == null ? "CANDIDATE_BLOCKED" : tag.reason();
+            resultStore.insertTagReview(snapshotId, tag.candidateTagId(), "AUTO_REJECT", null,
+                    reason, reviewedAt);
         }
     }
 

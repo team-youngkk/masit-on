@@ -158,7 +158,7 @@ class AiCandidateValidatorTest {
         AiCandidateValidationResult result = validator.validate(payload);
 
         // Then
-        assertThat(result.decision()).isEqualTo(Decision.AUTO_REJECTED);
+        assertThat(result.decision()).isEqualTo(Decision.AUTO_CONFIRMED);
         assertThat(result.tags()).isEmpty();
         assertThat(result.rejectedTags()).singleElement().satisfies(tag -> {
             assertThat(tag.decision()).isEqualTo(AiCandidateValidationResult.TagDecision.AUTO_REJECTED);
@@ -185,6 +185,32 @@ class AiCandidateValidatorTest {
             assertThat(tag.isAutoConnectable()).isTrue();
             assertThat(tag.normalizedCode()).isEqualTo("TASTE_LIGHT");
         });
+    }
+
+    @Test
+    @DisplayName("선택 태그만 누락되면 본문 후보는 자동 확정 가능으로 판정한다")
+    void validate_선택태그누락_본문후보는자동확정가능으로판정한다() throws Exception {
+        // Given
+        JsonNode payload = payload("""
+                {
+                  "resultCompleteness": "COMPLETE",
+                  "candidates": [
+                    {"field":"restaurantName","value":"맛집","confidence":0.95,"evidence":{"type":"TIMESTAMP","startMs":100,"endMs":200}},
+                    {"field":"address","value":"서울시","confidence":0.90,"evidence":{"type":"TIMESTAMP","startMs":100,"endMs":200}},
+                    {"field":"location","value":"마포구","confidence":0.88,"evidence":{"type":"TIMESTAMP","startMs":100,"endMs":200}},
+                    {"field":"visitEvidence","value":"직접 방문","confidence":0.91,"evidence":{"type":"TIMESTAMP","startMs":100,"endMs":200}},
+                    {"field":"menu","value":"냉면","confidence":0.80,"evidence":{"type":"TIMESTAMP","startMs":300,"endMs":400}}
+                  ],
+                  "missingFields": ["tag"]
+                }
+                """);
+
+        // When
+        AiCandidateValidationResult result = validator.validate(payload);
+
+        // Then
+        assertThat(result.decision()).isEqualTo(Decision.AUTO_CONFIRMED);
+        assertThat(result.missingFields()).containsExactly("tag");
     }
 
     private JsonNode payload(String candidates) throws Exception {
