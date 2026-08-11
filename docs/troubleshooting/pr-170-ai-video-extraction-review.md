@@ -53,6 +53,7 @@ related_documents:
 |---|---|---|
 | GitHub review thread GraphQL 조회 | 미해결 스레드 7개 확인 | 모두 이번 변경 범위로 판단하고 코드·테스트에 반영 |
 | GitHub Actions 로그와 `backend-test-results` XML 확인 | WireMock 통합 테스트 1건만 실패, Adapter 197행 `SCHEMA` | Fixture 응답의 `Content-Type` 누락으로 원인 확정 |
+| 동일 PR head의 후속 CI 재실행과 XML 확인 | `PopularRestaurantQueryCountApiTest`의 쿼리 수 assertion 1건이 최초 실행에서만 실패하고 재실행에서 통과 | 코드 변경 회귀가 아닌 일시적인 Testcontainers/DB 환경 변동으로 판단하고 실패 job을 재실행 |
 | Gemini adapter 요청·응답 코드와 S1 검증기 대조 | Schema 필드와 검증 허용 집합 불일치 확인 | 요청 Schema·지시·검증기를 같은 허용 목록으로 정렬 |
 | NFR-SECURITY-007·AI 추출 PRD·AI 후보 경계 ADR 대조 | 관리자 보완 텍스트는 신뢰하지 않는 입력이며 후보 확정 전 근거·검증 경계가 필요 | `systemInstruction`/사용자 콘텐츠 분리와 근거 없는 후보 테스트 적용 |
 | 로컬 Docker 상태 확인 | Docker daemon을 사용할 수 없어 Testcontainers WireMock 통합 테스트는 로컬 실행 불가 | Docker가 제공되는 GitHub Actions 재실행으로 최종 검증 |
@@ -71,7 +72,7 @@ related_documents:
 |---|---|---|
 | `git diff --check` | 통과 | 공백·패치 형식 오류 없음 |
 | `.\gradlew.bat test --tests "com.masiton.ai.infrastructure.provider.config.GeminiHttpVideoExtractionAdapterTest" --tests "com.masiton.ai.presentation.webhook.YoutubeAtomNotificationParserTest" --tests "com.masiton.ai.presentation.webhook.YouTubeChannelWebhookControllerTest" --no-daemon --console=plain` | 통과 | Gemini adapter·Webhook parser·Controller 관련 테스트 전부 통과 |
-| [GitHub Actions PR CI](https://github.com/team-youngkk/masit-on/actions/runs/31456581903) | 통과 | 원격 Docker에서 `800 tests`, `0 failures`, `0 errors`, `2 skipped`; WireMock 통합 테스트 포함 |
+| [GitHub Actions PR CI](https://github.com/team-youngkk/masit-on/actions/runs/31456973310) | 통과 | 최초 실행에서 `PopularRestaurantQueryCountApiTest` 1건이 일시 실패했으나 실패 backend job 재실행에서 `800 tests`, `0 failures`, `0 errors`, `2 skipped`; WireMock 통합 테스트 포함 |
 
 로컬 환경에서는 Docker daemon이 없어 Testcontainers 통합 테스트를 실행하지 못했으나, GitHub Actions Ubuntu Docker runner에서 최종 PR head의 전체 백엔드 job을 통과했다. 자동 PR CI가 늦게 생성되는 동안 수동 실행에 임시로 사용한 `workflow_dispatch` 테스트 opt-in은 검증 후 revert했으며 최종 PR 소스에는 남기지 않았다.
 
@@ -87,7 +88,7 @@ related_documents:
 | 지표 | 도입 전 기준값 | 측정 방법·기간 | 비교 결과 | 해석 |
 |---|---:|---|---|---|
 | 관련 회귀 테스트 실패 | CI 1건 실패 | PR #170 CI 및 targeted Gradle test | 최종 PR CI 백엔드 800건 중 실패 0건 | WireMock 응답 계약과 adapter media type 검증의 일치 확인 |
-| 미해결 리뷰 스레드 | 7개 | PR #170 review threads | 답글·resolve 진행 후 0개 확인 예정 | 리뷰 요청의 코드·테스트 반영 여부 확인 |
+| 미해결 리뷰 스레드 | 7개 | PR #170 review threads | 답글·resolve 진행 후 0개 | 리뷰 요청의 코드·테스트 반영 여부 확인 |
 
 ## 10. 남은 사항
 
