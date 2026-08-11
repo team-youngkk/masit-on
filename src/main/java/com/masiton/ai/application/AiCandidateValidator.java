@@ -144,8 +144,8 @@ public final class AiCandidateValidator {
                     blocked = true;
                 }
                 if ("visitEvidence".equals(requiredField)
-                        && candidate.evidence().type() != EvidenceType.TIMESTAMP) {
-                    issues.add(issue("VISIT_TIMESTAMP_REQUIRED", requiredField));
+                        && candidate.evidence().type() == EvidenceType.UNKNOWN) {
+                    issues.add(issue("VISIT_EVIDENCE_REQUIRED", requiredField));
                     blocked = true;
                 }
             }

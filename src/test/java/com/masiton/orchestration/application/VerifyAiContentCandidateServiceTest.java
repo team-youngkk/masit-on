@@ -85,10 +85,24 @@ class VerifyAiContentCandidateServiceTest {
         order.verify(videoVerification).resolve(any());
     }
 
+    @Test
+    @DisplayName("유효한 TEXT_RANGE 실제 방문 근거도 확정 결과에 포함한다")
+    void verify_유효한텍스트근거_확정결과를조합한다() {
+        given(restaurantReference.resolve(anyString(), anyString(), any(), anyString()))
+                .willReturn(Optional.of(restaurant()));
+        given(videoVerification.resolve(any())).willReturn(Optional.of(video()));
+
+        var result = service.verify(command("직접 방문", textRange()));
+
+        assertThat(result).isPresent();
+        assertThat(result.orElseThrow().visitEvidenceConfirmed()).isTrue();
+    }
+
     @ParameterizedTest
-    @ValueSource(strings = {"단순 언급", "방문 추천", "방문했을 것 같다"})
-    @DisplayName("언급·추천·추정만 있는 방문 후보는 확정하지 않는다")
-    void verify_언급추천추정후보_확정하지않는다(String value) {
+    @ValueSource(strings = {"방문", "단순 언급", "방문 추천", "방문했을 것 같다", "직접 방문하지 않았습니다",
+            "직접 방문했을까요?", "방문할 예정입니다"})
+    @DisplayName("언급·추천·추정·부정·의문·가정 방문 후보는 확정하지 않는다")
+    void verify_확정할수없는방문후보_확정하지않는다(String value) {
         given(restaurantReference.resolve(anyString(), anyString(), any(), anyString()))
                 .willReturn(Optional.of(restaurant()));
         given(videoVerification.resolve(any())).willReturn(Optional.of(video()));
@@ -107,6 +121,19 @@ class VerifyAiContentCandidateServiceTest {
                 VerifyAiContentCandidateUseCase.EvidenceType.UNKNOWN, null, null, null, null, null)))).isEmpty();
     }
 
+    @Test
+    @DisplayName("TEXT_RANGE의 범위나 source hash가 불완전하면 확정하지 않는다")
+    void verify_텍스트근거범위불완전_확정하지않는다() {
+        given(restaurantReference.resolve(anyString(), anyString(), any(), anyString()))
+                .willReturn(Optional.of(restaurant()));
+        given(videoVerification.resolve(any())).willReturn(Optional.of(video()));
+
+        assertThat(service.verify(command("직접 방문", new VerifyAiContentCandidateUseCase.Evidence(
+                VerifyAiContentCandidateUseCase.EvidenceType.TEXT_RANGE, null, null, 10L, 9L, "hash")))).isEmpty();
+        assertThat(service.verify(command("직접 방문", new VerifyAiContentCandidateUseCase.Evidence(
+                VerifyAiContentCandidateUseCase.EvidenceType.TEXT_RANGE, null, null, 10L, 20L, "")))).isEmpty();
+    }
+
     private VerifyAiContentCandidateUseCase.VerificationCommand command(
             String evidenceValue, VerifyAiContentCandidateUseCase.Evidence evidence) {
         return new VerifyAiContentCandidateUseCase.VerificationCommand(
@@ -119,6 +146,11 @@ class VerifyAiContentCandidateServiceTest {
     private VerifyAiContentCandidateUseCase.Evidence timestamp() {
         return new VerifyAiContentCandidateUseCase.Evidence(
                 VerifyAiContentCandidateUseCase.EvidenceType.TIMESTAMP, 100L, 200L, null, null, null);
+    }
+
+    private VerifyAiContentCandidateUseCase.Evidence textRange() {
+        return new VerifyAiContentCandidateUseCase.Evidence(
+                VerifyAiContentCandidateUseCase.EvidenceType.TEXT_RANGE, null, null, 10L, 20L, "hash-1");
     }
 
     private ResolveVerifiedRestaurantReferenceUseCase.VerifiedRestaurantReference restaurant() {

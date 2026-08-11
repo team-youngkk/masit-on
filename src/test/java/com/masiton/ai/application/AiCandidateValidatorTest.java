@@ -44,8 +44,8 @@ class AiCandidateValidatorTest {
     }
 
     @Test
-    @DisplayName("방문 근거가 영상 타임스탬프가 아니면 자동 확정하지 않는다")
-    void validate_방문근거가텍스트구간이면_자동확정하지않는다() throws Exception {
+    @DisplayName("방문 근거가 유효한 텍스트 구간이면 자동 확정 가능으로 판정한다")
+    void validate_방문근거가유효한텍스트구간이면_자동확정가능으로판정한다() throws Exception {
         // Given
         JsonNode payload = payload("""
                 {
@@ -64,8 +64,8 @@ class AiCandidateValidatorTest {
         AiCandidateValidationResult result = validator.validate(payload);
 
         // Then
-        assertThat(result.decision()).isEqualTo(Decision.AUTO_BLOCKED);
-        assertThat(result.reasonCodes()).contains("VISIT_TIMESTAMP_REQUIRED");
+        assertThat(result.decision()).isEqualTo(Decision.AUTO_CONFIRMED);
+        assertThat(result.isAutoConfirmable()).isTrue();
     }
 
     @Test

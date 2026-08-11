@@ -2,7 +2,7 @@ package com.masiton.orchestration.application;
 
 import java.util.Locale;
 import java.util.Optional;
-import java.util.regex.Pattern;
+import java.util.Set;
 
 import org.springframework.stereotype.Service;
 
@@ -15,13 +15,19 @@ import com.masiton.video.application.port.out.VerifiedVideo;
 @Service
 class VerifyAiContentCandidateService implements VerifyAiContentCandidateUseCase {
 
-    private static final Pattern EXPLICIT_ACTUAL_VISIT = Pattern.compile(
-            "(직접방문|직접다녀|직접찾아|직접들러|방문(함|했|했다|한|하여|해서)|다녀왔|찾아갔|들렀|먹어봤|먹었|"
-                    + "visited|ateat|wentto|stoppedby)", Pattern.CASE_INSENSITIVE);
-    private static final String[] AMBIGUOUS_OR_NEGATIVE = {
-        "추천", "언급", "소개", "추정", "아마", "싶", "것같", "예정", "가능", "방문여부", "안갔", "못갔",
-        "recommend", "mentioned", "suggest", "guess", "maybe", "planned", "notvisited"
-    };
+    /**
+     * Candidate value is a short structured claim, not a source transcript. Requiring a complete
+     * normalized claim prevents a positive substring from turning a negation or question into proof.
+     */
+    private static final Set<String> EXPLICIT_ACTUAL_VISIT_CLAIMS = Set.of(
+            "방문함", "방문했음", "방문했다", "방문했습니다",
+            "직접방문", "직접방문함", "직접방문했음", "직접방문했다", "직접방문했습니다",
+            "제가방문했다", "제가방문했습니다", "제가직접방문했다", "제가직접방문했습니다",
+            "저희가방문했다", "저희가방문했습니다", "다녀옴", "다녀왔다", "다녀왔습니다",
+            "직접다녀옴", "직접다녀왔다", "직접다녀왔습니다", "찾아갔다", "찾아갔습니다",
+            "직접찾아갔다", "직접찾아갔습니다", "들렀다", "들렀습니다", "직접들렀다",
+            "직접들렀습니다", "먹어봤다", "먹어봤습니다", "visited", "ivisited",
+            "directlyvisited", "atehere", "wentthere", "stoppedby");
 
     private final ResolveVerifiedRestaurantReferenceUseCase restaurantReference;
     private final ResolveVerifiedVideoUseCase videoVerification;
@@ -61,24 +67,31 @@ class VerifyAiContentCandidateService implements VerifyAiContentCandidateUseCase
     }
 
     private boolean confirmsActualVisit(VisitEvidenceCandidate candidate) {
-        if (candidate == null || blank(candidate.value()) || !Double.isFinite(candidate.confidence())
+        if (candidate == null || !nonBlank(candidate.value()) || !Double.isFinite(candidate.confidence())
                 || candidate.confidence() < 0 || candidate.confidence() > 1) {
             return false;
         }
         Evidence evidence = candidate.evidence();
-        if (evidence == null || evidence.type() != EvidenceType.TIMESTAMP
-                || evidence.startMs() == null || evidence.endMs() == null
-                || evidence.startMs() < 0 || evidence.endMs() < evidence.startMs()) {
+        if (!validEvidence(evidence)) {
             return false;
         }
 
         String normalized = candidate.value().replaceAll("\\s+", "").toLowerCase(Locale.ROOT);
-        for (String ambiguous : AMBIGUOUS_OR_NEGATIVE) {
-            if (normalized.contains(ambiguous.toLowerCase(Locale.ROOT))) {
-                return false;
-            }
+        return EXPLICIT_ACTUAL_VISIT_CLAIMS.contains(normalized);
+    }
+
+    private boolean validEvidence(Evidence evidence) {
+        if (evidence == null || evidence.type() == EvidenceType.UNKNOWN) {
+            return false;
         }
-        return EXPLICIT_ACTUAL_VISIT.matcher(normalized).find();
+        if (evidence.type() == EvidenceType.TIMESTAMP) {
+            return validRange(evidence.startMs(), evidence.endMs());
+        }
+        return validRange(evidence.startOffset(), evidence.endOffset()) && nonBlank(evidence.sourceHash());
+    }
+
+    private boolean validRange(Long start, Long end) {
+        return start != null && end != null && start >= 0 && end >= start;
     }
 
     private boolean matchesVideo(VerificationCommand command, VerifiedVideo video) {
@@ -90,9 +103,5 @@ class VerifyAiContentCandidateService implements VerifyAiContentCandidateUseCase
 
     private boolean nonBlank(String value) {
         return value != null && !value.isBlank();
-    }
-
-    private boolean blank(String value) {
-        return value == null || value.isBlank();
     }
 }
