@@ -6,6 +6,7 @@ import { Suspense, useEffect, useRef, useState } from 'react'
 
 import { useMemberSession } from '@/components/member/MemberSessionProvider'
 import { buildMapNavigationHref } from '@/lib/map/map-navigation'
+import { COURSE_NAVIGATION } from '@/lib/course/course-navigation'
 
 import { Brand } from './Brand'
 import { NotificationBell } from './NotificationBell'
@@ -61,6 +62,7 @@ export function SiteHeader() {
         </Link>
         <nav className={styles.nav} aria-label="주요 메뉴">
           <Link href="/restaurants">맛집 탐색</Link>
+          <Link href={COURSE_NAVIGATION.href}>{COURSE_NAVIGATION.label}</Link>
           <Link href="/popular">인기</Link>
           <Link href="/curations">큐레이션</Link>
           <Suspense fallback={<Link href="/map">지도</Link>}>

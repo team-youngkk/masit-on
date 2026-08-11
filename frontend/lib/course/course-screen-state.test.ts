@@ -13,6 +13,28 @@ import {
 } from './course-screen-state.ts'
 import { addCourseCandidate } from './course-selection.ts'
 
+test('502 실패 응답의 selectedRestaurants는 입력 순서와 이름을 보존한다', () => {
+  const outcome = classifyCourseRouteError({
+    code: 'COURSE_ROUTE_PARTIAL_FAILURE',
+    message: '경로 계산에 실패했습니다.',
+    details: {
+      failureCategory: 'PARTIAL',
+      selectedRestaurants: [
+        { restaurantId: 'r-2', name: '두 번째 맛집', inputOrder: 2 },
+        { restaurantId: 'r-1', name: '첫 번째 맛집', inputOrder: 1 },
+      ],
+    },
+  })
+
+  assert.equal(outcome.kind, 'failure')
+  if (outcome.kind === 'failure') {
+    assert.deepEqual(outcome.selectedRestaurants, [
+      { restaurantId: 'r-2', name: '두 번째 맛집', inputOrder: 2 },
+      { restaurantId: 'r-1', name: '첫 번째 맛집', inputOrder: 1 },
+    ])
+  }
+})
+
 test('선택 개수·중복·존재하지 않음·비공개·좌표·거리 오류 코드는 invalid로 분류한다', () => {
   const codes = [
     'INVALID_COURSE_SIZE',

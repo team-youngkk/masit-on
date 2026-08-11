@@ -56,6 +56,12 @@ const INVALID_CATEGORIES: ReadonlySet<string> = new Set<CourseInvalidCategory>([
 /* 502/429: 선택은 유효했으나 외부 경로 계산이 실패한 오류. */
 export type CourseFailureCategory = 'PARTIAL' | 'PROVIDER_UNAVAILABLE' | 'SERVICE_RATE_LIMIT'
 
+export type CourseSelectedRestaurant = {
+  restaurantId: string
+  name: string
+  inputOrder: number
+}
+
 const FAILURE_CATEGORIES: ReadonlySet<string> = new Set<CourseFailureCategory>([
   'PARTIAL',
   'PROVIDER_UNAVAILABLE',
@@ -69,6 +75,7 @@ export type CourseRouteOutcome =
       category: CourseInvalidCategory
       message: string
       traceId?: string
+      selectedRestaurants?: CourseSelectedRestaurant[]
     }
   | {
       kind: 'failure'
@@ -76,6 +83,7 @@ export type CourseRouteOutcome =
       message: string
       traceId?: string
       retryAllowed: boolean
+      selectedRestaurants?: CourseSelectedRestaurant[]
     }
   | { kind: 'error'; message: string; traceId?: string }
 
@@ -84,6 +92,7 @@ export type CourseErrorBody = {
   message?: string
   traceId?: string
   details?: {
+    selectedRestaurants?: unknown
     failureCategory?: string
     retryGuidance?: {
       action?: string
@@ -108,14 +117,40 @@ function resolveRetryAllowed(body: CourseErrorBody | null): boolean {
   return typeof action === 'string' && action.toUpperCase().includes('RETRY')
 }
 
+function readSelectedRestaurants(body: CourseErrorBody | null): CourseSelectedRestaurant[] | undefined {
+  if (!Array.isArray(body?.details?.selectedRestaurants)) {
+    return undefined
+  }
+
+  const selectedRestaurants = body.details.selectedRestaurants.filter((item): item is CourseSelectedRestaurant => {
+    if (typeof item !== 'object' || item === null) {
+      return false
+    }
+    const restaurant = item as Record<string, unknown>
+    return (
+      typeof restaurant.restaurantId === 'string' &&
+      restaurant.restaurantId.length > 0 &&
+      typeof restaurant.name === 'string' &&
+      restaurant.name.length > 0 &&
+      typeof restaurant.inputOrder === 'number' &&
+      Number.isInteger(restaurant.inputOrder) &&
+      restaurant.inputOrder > 0
+    )
+  })
+
+  return selectedRestaurants.length > 0 ? selectedRestaurants : undefined
+}
+
 export function classifyCourseRouteError(body: CourseErrorBody | null): CourseRouteOutcome {
   const code = body?.code
+  const selectedRestaurants = readSelectedRestaurants(body)
   if (typeof code === 'string' && INVALID_CATEGORIES.has(code)) {
     return {
       kind: 'invalid',
       category: code as CourseInvalidCategory,
       message: body?.message ?? FALLBACK_ERROR_MESSAGE,
       traceId: body?.traceId,
+      ...(selectedRestaurants ? { selectedRestaurants } : {}),
     }
   }
 
@@ -127,6 +162,7 @@ export function classifyCourseRouteError(body: CourseErrorBody | null): CourseRo
       message: body?.message ?? FALLBACK_ERROR_MESSAGE,
       traceId: body?.traceId,
       retryAllowed: resolveRetryAllowed(body),
+      ...(selectedRestaurants ? { selectedRestaurants } : {}),
     }
   }
 

@@ -28,8 +28,14 @@ export type CourseSearchFilters = {
   category?: string
 }
 
+export type CourseSearchPage = {
+  number: number
+  size: number
+  hasNext: boolean
+}
+
 export type CourseSearchResult =
-  | { ok: true; items: CourseSearchItem[] }
+  | { ok: true; items: CourseSearchItem[]; page: CourseSearchPage }
   | { ok: false; message: string; traceId?: string }
 
 type ApiErrorBody = {
@@ -40,6 +46,7 @@ type ApiErrorBody = {
 /* restaurant-discovery-api.md 5절 쿼리 계약: 빈 값·미지정 조건은 보내지 않는다. */
 export function buildCourseSearchParams(
   filters: CourseSearchFilters,
+  page = 1,
 ): URLSearchParams {
   const params = new URLSearchParams()
 
@@ -54,7 +61,7 @@ export function buildCourseSearchParams(
     params.set('category', filters.category)
   }
 
-  params.set('page', '1')
+  params.set('page', String(Math.max(1, Math.floor(page))))
   params.set('size', SEARCH_PAGE_SIZE)
 
   return params
@@ -93,8 +100,9 @@ export function normalizeCourseSearchItems(rawItems: unknown[]): CourseSearchIte
 export async function searchCourseCandidates(
   filters: CourseSearchFilters,
   signal?: AbortSignal,
+  page = 1,
 ): Promise<CourseSearchResult> {
-  const params = buildCourseSearchParams(filters)
+  const params = buildCourseSearchParams(filters, page)
 
   let response: Response
   try {
@@ -119,13 +127,36 @@ export async function searchCourseCandidates(
   }
 
   try {
-    const data = (await response.json()) as { items?: unknown }
+    const data = (await response.json()) as { items?: unknown; page?: unknown }
     if (!Array.isArray(data.items)) {
       return { ok: false, message: FALLBACK_ERROR_MESSAGE }
     }
-    return { ok: true, items: normalizeCourseSearchItems(data.items) }
+    return {
+      ok: true,
+      items: normalizeCourseSearchItems(data.items),
+      page: normalizeCourseSearchPage(data.page, page),
+    }
   } catch {
     return { ok: false, message: FALLBACK_ERROR_MESSAGE }
+  }
+}
+
+function normalizeCourseSearchPage(rawPage: unknown, requestedPage: number): CourseSearchPage {
+  if (typeof rawPage !== 'object' || rawPage === null) {
+    return { number: requestedPage, size: Number(SEARCH_PAGE_SIZE), hasNext: false }
+  }
+
+  const page = rawPage as Record<string, unknown>
+  return {
+    number:
+      typeof page.number === 'number' && Number.isInteger(page.number) && page.number > 0
+        ? page.number
+        : requestedPage,
+    size:
+      typeof page.size === 'number' && Number.isInteger(page.size) && page.size > 0
+        ? page.size
+        : Number(SEARCH_PAGE_SIZE),
+    hasNext: page.hasNext === true,
   }
 }
 

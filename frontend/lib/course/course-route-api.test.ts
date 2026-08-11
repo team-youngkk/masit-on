@@ -31,13 +31,15 @@ test('정상 응답은 restaurantIds를 순서대로 담아 요청하고 결과�
     },
   )
 
-  const result = await requestCourseRoute(['r1', 'r2'])
+  const controller = new AbortController()
+  const result = await requestCourseRoute(['r1', 'r2'], controller.signal)
 
   assert.deepEqual(result, { kind: 'success', route: SUCCESS_BODY })
   assert.equal(requestedUrl, '/api/restaurants/course-routes')
   assert.equal(requestedInit?.method, 'POST')
   assert.equal(requestedInit?.body, JSON.stringify({ restaurantIds: ['r1', 'r2'] }))
   assert.equal(requestedInit?.cache, 'no-store')
+  assert.equal(requestedInit?.signal, controller.signal)
 })
 
 test('400 INVALID_COURSE_SIZE는 invalid 상태로 분류한다', async (t) => {

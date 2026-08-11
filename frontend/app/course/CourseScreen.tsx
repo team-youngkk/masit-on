@@ -42,6 +42,9 @@ const EXPIRY_CHECK_INTERVAL_MS = 15_000
 type SearchState = {
   status: 'idle' | 'loading' | 'loaded' | 'error'
   items: CourseSearchItem[]
+  page: number
+  hasNext: boolean
+  loadingMore: boolean
   message?: string
   traceId?: string
 }
@@ -51,13 +54,21 @@ export function CourseScreen() {
   const [query, setQuery] = useState('')
   const [district, setDistrict] = useState('')
   const [category, setCategory] = useState('')
-  const [search, setSearch] = useState<SearchState>({ status: 'idle', items: [] })
+  const [search, setSearch] = useState<SearchState>({
+    status: 'idle',
+    items: [],
+    page: 1,
+    hasNext: false,
+    loadingMore: false,
+  })
   const [outcome, setOutcome] = useState<CourseRouteOutcome | null>(null)
   const [calculating, setCalculating] = useState(false)
   const [now, setNow] = useState(() => Date.now())
 
   const searchRequestId = useRef(0)
   const routeRequestId = useRef(0)
+  const searchAbortController = useRef<AbortController | null>(null)
+  const routeAbortController = useRef<AbortController | null>(null)
   /* 같은 tick에 연속으로 발생한 선택 변경이 서로를 덮어쓰지 않도록 최신 목록을 따로 들고 있는다. */
   const selectedRef = useRef<CourseCandidate[]>(selected)
 
@@ -89,33 +100,111 @@ export function CourseScreen() {
     () => () => {
       searchRequestId.current += 1
       routeRequestId.current += 1
+      searchAbortController.current?.abort()
+      routeAbortController.current?.abort()
     },
     [],
   )
 
   async function runSearch() {
+    searchAbortController.current?.abort()
+    const controller = new AbortController()
     const requestId = ++searchRequestId.current
-    setSearch({ status: 'loading', items: [] })
-    let settled = false
+    searchAbortController.current = controller
+    setSearch({ status: 'loading', items: [], page: 1, hasNext: false, loadingMore: false })
     try {
-      const result = await searchCourseCandidates({ query, district, category })
+      const result = await searchCourseCandidates(
+        { query, district, category },
+        controller.signal,
+      )
       if (searchRequestId.current !== requestId) {
         return
       }
-      settled = true
       if (result.ok) {
-        setSearch({ status: 'loaded', items: result.items })
+        setSearch({
+          status: 'loaded',
+          items: result.items,
+          page: result.page.number,
+          hasNext: result.page.hasNext,
+          loadingMore: false,
+        })
       } else {
-        setSearch({ status: 'error', items: [], message: result.message, traceId: result.traceId })
+        setSearch({
+          status: 'error',
+          items: [],
+          page: 1,
+          hasNext: false,
+          loadingMore: false,
+          message: result.message,
+          traceId: result.traceId,
+        })
+      }
+    } catch (error) {
+      if (!isAbortError(error) && searchRequestId.current === requestId) {
+        setSearch({
+          status: 'error',
+          items: [],
+          page: 1,
+          hasNext: false,
+          loadingMore: false,
+          message: '맛집 검색을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+        })
       }
     } finally {
-      /*
-       * 정상 흐름은 위에서 이미 loaded·error로 상태를 옮겼으므로(settled === true) 여기서는
-       * 아무 것도 하지 않는다. searchCourseCandidates가 의도적으로 rethrow하는
-       * AbortError(예외)로 함수가 중간에 빠져나갈 때만 이 블록이 "검색 중…" 고착을 막는다.
-       */
-      if (!settled && searchRequestId.current === requestId) {
-        setSearch({ status: 'idle', items: [] })
+      if (searchAbortController.current === controller) {
+        searchAbortController.current = null
+      }
+    }
+  }
+
+  async function loadMoreSearchResults() {
+    if (search.status !== 'loaded' || !search.hasNext || search.loadingMore) {
+      return
+    }
+
+    const requestId = searchRequestId.current
+    const nextPage = search.page + 1
+    searchAbortController.current?.abort()
+    const controller = new AbortController()
+    searchAbortController.current = controller
+    setSearch((current) => ({ ...current, loadingMore: true, message: undefined, traceId: undefined }))
+
+    try {
+      const result = await searchCourseCandidates(
+        { query, district, category },
+        controller.signal,
+        nextPage,
+      )
+      if (searchRequestId.current !== requestId) {
+        return
+      }
+      if (result.ok) {
+        setSearch((current) => ({
+          ...current,
+          items: [...current.items, ...result.items],
+          page: result.page.number,
+          hasNext: result.page.hasNext,
+          loadingMore: false,
+        }))
+      } else {
+        setSearch((current) => ({
+          ...current,
+          loadingMore: false,
+          message: result.message,
+          traceId: result.traceId,
+        }))
+      }
+    } catch (error) {
+      if (!isAbortError(error) && searchRequestId.current === requestId) {
+        setSearch((current) => ({
+          ...current,
+          loadingMore: false,
+          message: '맛집 검색을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+        }))
+      }
+    } finally {
+      if (searchAbortController.current === controller) {
+        searchAbortController.current = null
       }
     }
   }
@@ -138,7 +227,9 @@ export function CourseScreen() {
       return
     }
     selectedRef.current = next
+    routeAbortController.current?.abort()
     routeRequestId.current += 1
+    setCalculating(false)
     setOutcome(null)
     setSelected(next)
   }
@@ -159,17 +250,30 @@ export function CourseScreen() {
     if (!canCalculateCourse(selected) || calculating) {
       return
     }
+    routeAbortController.current?.abort()
+    const controller = new AbortController()
+    routeAbortController.current = controller
     const requestId = ++routeRequestId.current
     setCalculating(true)
     try {
-      const result = await requestCourseRoute(toCourseRestaurantIds(selected))
+      const result = await requestCourseRoute(toCourseRestaurantIds(selected), controller.signal)
       if (routeRequestId.current !== requestId) {
         return
       }
       setNow(Date.now())
       setOutcome(result)
+    } catch (error) {
+      if (!isAbortError(error) && routeRequestId.current === requestId) {
+        setOutcome({
+          kind: 'error',
+          message: '코스 경로를 계산하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+        })
+      }
     } finally {
       setCalculating(false)
+      if (routeAbortController.current === controller) {
+        routeAbortController.current = null
+      }
     }
   }
 
@@ -178,11 +282,14 @@ export function CourseScreen() {
    * 도착하더라도 이 시점 이후의 결과로 되살아나지 않도록 요청 ID도 함께 무효화한다.
    */
   function backToBuilder() {
+    routeAbortController.current?.abort()
     routeRequestId.current += 1
+    setCalculating(false)
     setOutcome(null)
   }
 
   const sizeGuidance = courseSizeGuidance(selected)
+  const calculateGuidance = sizeGuidance?.code === 'BELOW_MINIMUM' ? sizeGuidance : null
   const calculateDisabled = !canCalculateCourse(selected) || calculating
   const showResult = outcome?.kind === 'success'
   const expired = showResult && isCourseRouteExpired(outcome.route.expiresAt, now)
@@ -247,7 +354,7 @@ export function CourseScreen() {
           </Button>
         </form>
 
-        {search.status === 'error' ? (
+        {search.status === 'error' || (search.status === 'loaded' && search.message) ? (
           <p className={styles.error} role="alert">
             {search.message}
             {search.traceId ? <span className={styles.traceId}>traceId: {search.traceId}</span> : null}
@@ -285,6 +392,17 @@ export function CourseScreen() {
               )
             })}
           </ul>
+        ) : null}
+
+        {search.status === 'loaded' && search.hasNext ? (
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={search.loadingMore}
+            onClick={() => void loadMoreSearchResults()}
+          >
+            {search.loadingMore ? '더 불러오는 중' : '더 보기'}
+          </Button>
         ) : null}
 
         {isCourseFull(selected) ? (
@@ -358,14 +476,14 @@ export function CourseScreen() {
           <Button
             type="button"
             disabled={calculateDisabled}
-            aria-describedby={sizeGuidance ? 'course-size-guidance' : undefined}
+            aria-describedby={calculateGuidance ? 'course-size-guidance' : undefined}
             onClick={() => void calculateCourse()}
           >
             {calculating ? '계산 중…' : '코스 계산'}
           </Button>
-          {sizeGuidance ? (
+          {calculateGuidance ? (
             <p id="course-size-guidance" className={styles.selectHint}>
-              {sizeGuidance.message}
+              {calculateGuidance.message}
             </p>
           ) : null}
         </div>
@@ -487,6 +605,7 @@ function CourseProblem({
    * 보여주지 않는다. failure(5xx/429)만 서버가 허용을 밝혔거나 일시 오류일 때 다시 시도를 보여준다.
    */
   const showRetry = outcome.kind === 'error' || (outcome.kind === 'failure' && outcome.retryAllowed)
+  const selectedRestaurants = 'selectedRestaurants' in outcome ? outcome.selectedRestaurants : undefined
 
   return (
     <div role="alert">
@@ -495,6 +614,19 @@ function CourseProblem({
       <p>{outcome.message}</p>
       {outcome.traceId ? (
         <p className={styles.traceId}>traceId: {outcome.traceId}</p>
+      ) : null}
+      {selectedRestaurants?.length ? (
+        <>
+          <p className={styles.selectHint}>확인이 필요한 맛집</p>
+          <ol className={styles.selectionList} aria-label="확인이 필요한 맛집 목록">
+            {selectedRestaurants.map((restaurant) => (
+              <li key={restaurant.restaurantId} className={styles.selectionItem}>
+                <span className={styles.selectionOrder}>{restaurant.inputOrder}</span>
+                <p className={styles.selectionName}>{restaurant.name}</p>
+              </li>
+            ))}
+          </ol>
+        </>
       ) : null}
       {outcome.kind === 'failure' && !outcome.retryAllowed ? (
         <p className={styles.selectHint} id="course-retry-guidance">
@@ -529,4 +661,8 @@ function formatTimestamp(isoValue: string): string {
     month: 'long',
     day: 'numeric',
   })
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'AbortError'
 }

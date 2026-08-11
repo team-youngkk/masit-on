@@ -137,22 +137,26 @@ public class RestaurantCourseRecommendationService implements RecommendRestauran
     }
 
     private void requirePublic(List<Restaurant> restaurants) {
-        for (Restaurant restaurant : restaurants) {
+        for (int i = 0; i < restaurants.size(); i++) {
+            Restaurant restaurant = restaurants.get(i);
             if (restaurant.getPublicationStatus() != PublicationStatus.PUBLIC
                     || restaurant.getLifecycleStatus() != LifecycleStatus.ACTIVE) {
-                throw RestaurantCourseException.restaurantNotPublic();
+                throw RestaurantCourseException.restaurantNotPublic(
+                        RestaurantCourseSelectionDetails.of(restaurant, i + 1));
             }
         }
     }
 
     private void requireValidCoordinates(List<Restaurant> restaurants) {
-        for (Restaurant restaurant : restaurants) {
+        for (int i = 0; i < restaurants.size(); i++) {
+            Restaurant restaurant = restaurants.get(i);
             BigDecimal latitude = restaurant.getLatitude();
             BigDecimal longitude = restaurant.getLongitude();
             if (latitude == null || longitude == null
                     || latitude.compareTo(MIN_LATITUDE) < 0 || latitude.compareTo(MAX_LATITUDE) > 0
                     || longitude.compareTo(MIN_LONGITUDE) < 0 || longitude.compareTo(MAX_LONGITUDE) > 0) {
-                throw RestaurantCourseException.coordinateRequired();
+                throw RestaurantCourseException.coordinateRequired(
+                        RestaurantCourseSelectionDetails.of(restaurant, i + 1));
             }
         }
     }

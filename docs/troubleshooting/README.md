@@ -10,6 +10,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #174 코스 공개 진입점·실패 식별·검색 상태 리뷰 반영](pr-174-course-public-screen-review.md)
 - [PR #171 코스 경로 외부 연동·quota 경계 리뷰 반영](pr-171-course-route-review.md)
 - [PR #170 AI 영상 추출 Provider·Webhook 리뷰와 CI 실패 반영](pr-170-ai-video-extraction-review.md)
 - [PR #169 자연어 검색 입력·조건·요청 출처 경계](pr-169-natural-language-search-review.md)

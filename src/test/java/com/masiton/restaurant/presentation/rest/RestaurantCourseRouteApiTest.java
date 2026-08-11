@@ -290,6 +290,8 @@ class RestaurantCourseRouteApiTest {
                         .content(courseRequestJson(publicId, privateId)))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.code").value("RESTAURANT_NOT_PUBLIC"))
+                .andExpect(jsonPath("$.details.selectedRestaurants[0].name").value("비공개 맛집"))
+                .andExpect(jsonPath("$.details.selectedRestaurants[0].inputOrder").value(2))
                 .andExpect(jsonPath("$.traceId").value(not(emptyString())));
 
         verifyNoInteractions(courseRouteProviderPort);
@@ -306,6 +308,8 @@ class RestaurantCourseRouteApiTest {
                         .content(courseRequestJson(publicId, deletedId)))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.code").value("RESTAURANT_NOT_PUBLIC"))
+                .andExpect(jsonPath("$.details.selectedRestaurants[0].name").value("삭제된 맛집"))
+                .andExpect(jsonPath("$.details.selectedRestaurants[0].inputOrder").value(2))
                 .andExpect(jsonPath("$.traceId").value(not(emptyString())));
 
         verifyNoInteractions(courseRouteProviderPort);
@@ -322,6 +326,8 @@ class RestaurantCourseRouteApiTest {
                         .content(courseRequestJson(withCoordinateId, withoutCoordinateId)))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.code").value("RESTAURANT_COORDINATE_REQUIRED"))
+                .andExpect(jsonPath("$.details.selectedRestaurants[0].name").value("좌표 없는 맛집"))
+                .andExpect(jsonPath("$.details.selectedRestaurants[0].inputOrder").value(2))
                 .andExpect(jsonPath("$.traceId").value(not(emptyString())));
 
         verifyNoInteractions(courseRouteProviderPort);

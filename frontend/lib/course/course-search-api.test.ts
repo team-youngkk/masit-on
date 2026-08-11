@@ -12,6 +12,12 @@ test('빈 값·미지정 조건은 쿼리에 넣지 않고 page·size는 항상 
   assert.equal(params.toString(), 'page=1&size=20')
 })
 
+test('page 踰덉샂???좎뒗 寃곌낵瑜?諛쏆쓣 ???덈떎', () => {
+  const params = buildCourseSearchParams({ query: '맛집' }, 2)
+  assert.equal(params.get('page'), '2')
+  assert.equal(params.get('size'), '20')
+})
+
 test('공백을 제거한 검색어와 지정한 필터를 쿼리에 담는다', () => {
   const params = buildCourseSearchParams({ query: ' 냉면 ', district: '마포구', category: '한식' })
   assert.equal(params.get('query'), '냉면')
@@ -54,6 +60,7 @@ test('상대 경로로 조회하고 정상 응답을 정규화한다', async (t)
   assert.deepEqual(result, {
     ok: true,
     items: [{ id: 'r1', name: '식당 A', district: '성동구', category: '한식' }],
+    page: { number: 1, size: 20, hasNext: false },
   })
   assert.equal(requestedUrl, '/api/restaurants?query=%EB%83%89%EB%A9%B4&page=1&size=20')
   assert.equal(requestedInit?.cache, 'no-store')

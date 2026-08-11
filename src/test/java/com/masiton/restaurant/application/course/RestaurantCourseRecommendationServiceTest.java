@@ -136,7 +136,11 @@ class RestaurantCourseRecommendationServiceTest {
         RestaurantCourseCommand command = new RestaurantCourseCommand(List.of(ID_1, ID_2));
 
         // when & then
-        assertCourseException(() -> service.recommend(command), "RESTAURANT_NOT_PUBLIC", HttpStatus.UNPROCESSABLE_ENTITY);
+        RestaurantCourseException exception = assertCourseException(
+                () -> service.recommend(command), "RESTAURANT_NOT_PUBLIC", HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(((RestaurantCourseSelectionDetails) exception.details()).selectedRestaurants())
+                .containsExactly(new RestaurantCourseFailureDetails.SelectedRestaurant(
+                        ID_1.toString(), privateRestaurant.getName(), 1));
         verifyNoInteractions(courseRouteProviderPort);
     }
 
@@ -153,7 +157,11 @@ class RestaurantCourseRecommendationServiceTest {
         RestaurantCourseCommand command = new RestaurantCourseCommand(List.of(ID_1, ID_2));
 
         // when & then
-        assertCourseException(() -> service.recommend(command), "RESTAURANT_NOT_PUBLIC", HttpStatus.UNPROCESSABLE_ENTITY);
+        RestaurantCourseException exception = assertCourseException(
+                () -> service.recommend(command), "RESTAURANT_NOT_PUBLIC", HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(((RestaurantCourseSelectionDetails) exception.details()).selectedRestaurants())
+                .containsExactly(new RestaurantCourseFailureDetails.SelectedRestaurant(
+                        ID_1.toString(), deletedRestaurant.getName(), 1));
         verifyNoInteractions(courseRouteProviderPort);
     }
 
@@ -169,8 +177,11 @@ class RestaurantCourseRecommendationServiceTest {
         RestaurantCourseCommand command = new RestaurantCourseCommand(List.of(ID_1, ID_2));
 
         // when & then
-        assertCourseException(
+        RestaurantCourseException exception = assertCourseException(
                 () -> service.recommend(command), "RESTAURANT_COORDINATE_REQUIRED", HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(((RestaurantCourseSelectionDetails) exception.details()).selectedRestaurants())
+                .containsExactly(new RestaurantCourseFailureDetails.SelectedRestaurant(
+                        ID_1.toString(), missingLatitude.getName(), 1));
         verifyNoInteractions(courseRouteProviderPort);
     }
 
@@ -187,8 +198,11 @@ class RestaurantCourseRecommendationServiceTest {
         RestaurantCourseCommand command = new RestaurantCourseCommand(List.of(ID_1, ID_2));
 
         // when & then
-        assertCourseException(
+        RestaurantCourseException exception = assertCourseException(
                 () -> service.recommend(command), "RESTAURANT_COORDINATE_REQUIRED", HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(((RestaurantCourseSelectionDetails) exception.details()).selectedRestaurants())
+                .containsExactly(new RestaurantCourseFailureDetails.SelectedRestaurant(
+                        ID_1.toString(), outOfRangeLatitude.getName(), 1));
         verifyNoInteractions(courseRouteProviderPort);
     }
 
@@ -556,15 +570,16 @@ class RestaurantCourseRecommendationServiceTest {
         return new RestaurantCourseCommand(List.of(ID_1, ID_2));
     }
 
-    private void assertCourseException(
+    private RestaurantCourseException assertCourseException(
             ThrowingCallable callable, String expectedCode, HttpStatus expectedStatus) {
-        assertThatThrownBy(callable)
+        return (RestaurantCourseException) assertThatThrownBy(callable)
                 .isInstanceOf(RestaurantCourseException.class)
                 .satisfies(exception -> {
                     RestaurantCourseException courseException = (RestaurantCourseException) exception;
                     assertThat(courseException.code()).isEqualTo(expectedCode);
                     assertThat(courseException.status()).isEqualTo(expectedStatus);
-                });
+                })
+                .actual();
     }
 
     private Restaurant activeRestaurant(UUID restaurantId, double latitude, double longitude) {
