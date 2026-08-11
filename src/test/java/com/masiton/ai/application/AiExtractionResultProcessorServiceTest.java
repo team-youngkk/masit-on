@@ -46,12 +46,13 @@ class AiExtractionResultProcessorServiceTest {
                         jobId, "channel-1", "video-1", URI.create("https://www.youtube.com/watch?v=video-1"))));
         UUID regionId = UUID.randomUUID();
         UUID foodCategoryId = UUID.randomUUID();
-        given(contentVerification.verify(any())).willReturn(Optional.of(new VerifyAiContentCandidateUseCase.VerifiedContent(
+        given(contentVerification.verify(any())).willReturn(VerifyAiContentCandidateUseCase.VerificationResult.verified(
+                new VerifyAiContentCandidateUseCase.VerifiedContent(
                 regionId, foodCategoryId, "맛집", "kakao-1", "https://place.map.kakao.com/123",
                 "서울특별시 마포구 월드컵로 1", "02-1234-5678", java.math.BigDecimal.valueOf(126.9),
                 java.math.BigDecimal.valueOf(37.5), "channel-1", "채널", "https://www.youtube.com/channel/channel-1",
                 "video-1", "영상 제목", "https://www.youtube.com/watch?v=video-1",
-                "https://img.youtube.com/vi/video-1/0.jpg", finishedAt, finishedAt, true)));
+                "https://img.youtube.com/vi/video-1/0.jpg", finishedAt, finishedAt)));
         given(resultStore.findTag("MENU_NAENGMYEON")).willReturn(Optional.of(
                 new AiExtractionResultStore.TagDefinition(UUID.randomUUID(), "MENU_NAENGMYEON", "MENU", "냉면",
                         "[]", "ACTIVE")));
@@ -89,12 +90,8 @@ class AiExtractionResultProcessorServiceTest {
         given(resultStore.lockProcessingJob(jobId, "worker-1", 1))
                 .willReturn(Optional.of(new AiExtractionResultStore.ProcessingJob(
                         jobId, "channel-1", "video-1", URI.create("https://www.youtube.com/watch?v=video-1"))));
-        given(contentVerification.verify(any())).willReturn(Optional.of(new VerifyAiContentCandidateUseCase.VerifiedContent(
-                UUID.randomUUID(), UUID.randomUUID(), "맛집", "kakao-1", "https://place.map.kakao.com/123",
-                "서울특별시 마포구 월드컵로 1", "02-1234-5678", java.math.BigDecimal.valueOf(126.9),
-                java.math.BigDecimal.valueOf(37.5), "channel-1", "채널", "https://www.youtube.com/channel/channel-1",
-                "video-1", "영상 제목", "https://www.youtube.com/watch?v=video-1",
-                "https://img.youtube.com/vi/video-1/0.jpg", finishedAt, finishedAt, false)));
+        given(contentVerification.verify(any())).willReturn(
+                VerifyAiContentCandidateUseCase.VerificationResult.blocked("VISIT_EVIDENCE_REQUIRED"));
         given(commitService.persistBlocked(any())).willReturn(true);
 
         // When
@@ -111,7 +108,9 @@ class AiExtractionResultProcessorServiceTest {
 
         // Then
         assertThat(processed).isTrue();
-        verify(commitService).persistBlocked(any());
+        var blockedCommand = forClass(AiExtractionResultCommitService.ProcessCommand.class);
+        verify(commitService).persistBlocked(blockedCommand.capture());
+        assertThat(blockedCommand.getValue().blockReason()).isEqualTo("VISIT_EVIDENCE_REQUIRED");
         verify(commitService, never()).persistConfirmed(any(), any());
     }
 

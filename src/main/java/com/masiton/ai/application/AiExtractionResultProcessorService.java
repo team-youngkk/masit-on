@@ -85,15 +85,15 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
         }
 
         try {
-            VerifyAiContentCandidateUseCase.VerifiedContent verified = contentVerification.verify(
-                            new VerifyAiContentCandidateUseCase.VerificationCommand(
-                                    job.get().channelId(), job.get().videoId(), job.get().videoUrl(),
-                                    candidate.restaurantName().value(), candidate.address().value(),
-                                    kakaoPlaceUrl, candidate.menu().value(), visitEvidence(candidate.visitEvidence())))
-                    .orElseThrow(() -> new CandidateBlockedException("EXTERNAL_REFERENCE_MISMATCH"));
-            if (!verified.visitEvidenceConfirmed()) {
-                throw new CandidateBlockedException("VISIT_EVIDENCE_REQUIRED");
+            VerifyAiContentCandidateUseCase.VerificationResult verification = contentVerification.verify(
+                    new VerifyAiContentCandidateUseCase.VerificationCommand(
+                            job.get().channelId(), job.get().videoId(), job.get().videoUrl(),
+                            candidate.restaurantName().value(), candidate.address().value(),
+                            kakaoPlaceUrl, candidate.menu().value(), visitEvidence(candidate.visitEvidence())));
+            if (!verification.isVerified()) {
+                throw new CandidateBlockedException(verification.failureReason());
             }
+            VerifyAiContentCandidateUseCase.VerifiedContent verified = verification.content();
             List<AiExtractionResultCommitService.AiTagCandidate> tags = resolveTags(candidate.tags());
             AutoRegisterVerifiedContentUseCase.VerifiedContentCommand registration = new AutoRegisterVerifiedContentUseCase.VerifiedContentCommand(
                     new AutoRegisterVerifiedContentUseCase.RestaurantCandidate(
@@ -105,7 +105,7 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
                     new AutoRegisterVerifiedContentUseCase.VideoCandidate(
                             verified.videoId(), verified.channelId(), verified.videoTitle(), verified.videoSourceUrl(),
                             verified.videoThumbnailUrl(), verified.publishedAt(), verified.checkedAt()),
-                    verified.visitEvidenceConfirmed());
+                    true);
             // Registration defects and infrastructure failures must not be mistaken for a blocked candidate.
             return commitService.persistConfirmed(withTags(base, tags), registration);
         } catch (CandidateBlockedException exception) {

@@ -1,7 +1,7 @@
 package com.masiton.orchestration.application;
 
 import java.util.Locale;
-import java.util.Optional;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Service;
@@ -20,20 +20,23 @@ class VerifyAiContentCandidateService implements VerifyAiContentCandidateUseCase
      * normalized claim so a positive verb cannot turn a negation or question into proof.
      */
     private static final Pattern EXPLICIT_ACTUAL_VISIT_CLAIM = Pattern.compile(
-            "^(?:직접방문|(?:[가-힣a-z0-9]+)*(?:직접)?(?:방문(?:함|했(?:음|다|습니다|어요|어))"
+            "^.*(?:방문(?:함|했(?:음|다|습니다|어요|어))"
                     + "|다녀(?:옴|왔(?:음|다|습니다|어요|어))"
                     + "|찾아갔(?:다|습니다|어요|어)|들렀(?:다|습니다|어요|어)"
-                    + "|먹어봤(?:다|습니다|어요|어)|visited|directlyvisited|atehere|wentthere|stoppedby))$",
+                    + "|먹어봤(?:다|습니다|어요|어)|visited|directlyvisited|atehere|wentthere|stoppedby)$",
             Pattern.CASE_INSENSITIVE);
+    private static final Pattern PRE_VERB_NEGATION = Pattern.compile(
+            "(?:안|못)(?=방문|다녀|찾아|들러|먹어)");
     private static final Pattern BLOCKING_VISIT_CONTEXT = Pattern.compile(
             "(?:방문|다녀|찾아|들러|먹어).*(?:않|안|못|아니|을까|을까요|나요|습니까|일까|일까요"
                     + "|것같|듯|추정|예정|계획|가능|추천|언급|소개|아마)");
     private static final Pattern VISIT_VERB = Pattern.compile(
             "방문|다녀|찾아갔|들렀|먹어봤|visited|atehere|wentthere|stoppedby");
     private static final Pattern FIRSTHAND_SUBJECT = Pattern.compile(
-            "^(?:제가|저희가|저는|나는|내가|우리가|우리는|저희는|i|we)");
+            "^(?:제가|저희가|저는|나는|내가|우리가|우리는|저희는|i|we)\\s*");
     private static final Pattern SUBJECT_PARTICLE = Pattern.compile("[가-힣]+(?:가|이|은|는)");
-    private static final Pattern LOCATION_TARGET = Pattern.compile("[가-힣]+(?:을|를|에|에서)");
+    private static final Pattern SUBJECT_BEFORE_DIRECT = Pattern.compile(
+            "(?:^|\\s)[가-힣]+(?:가|이|은|는)\\s+직접$");
 
     private final ResolveVerifiedRestaurantReferenceUseCase restaurantReference;
     private final ResolveVerifiedVideoUseCase videoVerification;
@@ -45,23 +48,22 @@ class VerifyAiContentCandidateService implements VerifyAiContentCandidateUseCase
     }
 
     @Override
-    public Optional<VerifiedContent> verify(VerificationCommand command) {
-        Optional<ResolveVerifiedRestaurantReferenceUseCase.VerifiedRestaurantReference> restaurant =
-                restaurantReference.resolve(command.restaurantName(), command.candidateAddress(),
-                        command.kakaoPlaceUrl(), command.menuExpression());
+    public VerificationResult verify(VerificationCommand command) {
+        var restaurant = restaurantReference.resolve(command.restaurantName(), command.candidateAddress(),
+                command.kakaoPlaceUrl(), command.menuExpression());
         if (restaurant.isEmpty()) {
-            return Optional.empty();
+            return VerificationResult.blocked("EXTERNAL_REFERENCE_MISMATCH");
         }
-        Optional<VerifiedVideo> video = videoVerification.resolve(command.videoUrl());
+        var verifiedRestaurant = restaurant.get();
+        var video = videoVerification.resolve(command.videoUrl());
         if (video.isEmpty() || !matchesVideo(command, video.get())) {
-            return Optional.empty();
+            return VerificationResult.blocked("EXTERNAL_REFERENCE_MISMATCH");
         }
-        if (!confirmsActualVisit(command.visitEvidence())) {
-            return Optional.empty();
+        if (!confirmsActualVisit(command.visitEvidence(), verifiedRestaurant.name())) {
+            return VerificationResult.blocked("VISIT_EVIDENCE_REQUIRED");
         }
         VerifiedVideo verifiedVideo = video.get();
-        var verifiedRestaurant = restaurant.get();
-        return Optional.of(new VerifiedContent(
+        return VerificationResult.verified(new VerifiedContent(
                 verifiedRestaurant.regionId(), verifiedRestaurant.foodCategoryId(), verifiedRestaurant.name(),
                 verifiedRestaurant.kakaoPlaceId(), verifiedRestaurant.kakaoPlaceUrl(),
                 verifiedRestaurant.roadAddress(), verifiedRestaurant.phoneNumber(),
@@ -69,10 +71,10 @@ class VerifyAiContentCandidateService implements VerifyAiContentCandidateUseCase
                 verifiedVideo.publisherExternalChannelId(), verifiedVideo.channelName(),
                 "https://www.youtube.com/channel/" + verifiedVideo.publisherExternalChannelId(),
                 verifiedVideo.externalVideoId(), verifiedVideo.title(), verifiedVideo.sourceUrl(),
-                verifiedVideo.thumbnailUrl(), verifiedVideo.publishedAt(), verifiedVideo.checkedAt(), true));
+                verifiedVideo.thumbnailUrl(), verifiedVideo.publishedAt(), verifiedVideo.checkedAt()));
     }
 
-    private boolean confirmsActualVisit(VisitEvidenceCandidate candidate) {
+    private boolean confirmsActualVisit(VisitEvidenceCandidate candidate, String verifiedRestaurantName) {
         if (candidate == null || !nonBlank(candidate.value()) || !Double.isFinite(candidate.confidence())
                 || candidate.confidence() < 0 || candidate.confidence() > 1) {
             return false;
@@ -83,33 +85,66 @@ class VerifyAiContentCandidateService implements VerifyAiContentCandidateUseCase
         }
 
         String normalized = normalizeClaim(candidate.value());
-        return !hasBlockingVisitContext(normalized) && EXPLICIT_ACTUAL_VISIT_CLAIM.matcher(normalized).matches();
+        return !hasBlockingVisitContext(normalized)
+                && EXPLICIT_ACTUAL_VISIT_CLAIM.matcher(normalized).matches()
+                && hasFirsthandVisitContext(normalizePhrase(candidate.value()), verifiedRestaurantName);
     }
 
     private String normalizeClaim(String value) {
-        return value.trim().replaceAll("\\s+", "").replaceFirst("[.。]+$", "").toLowerCase(Locale.ROOT);
+        return normalizeText(value).replaceAll("\\s+", "").replaceFirst("[.。]+$", "");
+    }
+
+    private String normalizePhrase(String value) {
+        return value.trim().replaceAll("\\s+", " ").replaceFirst("[.。]+$", "").toLowerCase(Locale.ROOT);
     }
 
     private boolean hasBlockingVisitContext(String normalized) {
         return normalized.indexOf('?') >= 0 || normalized.indexOf('？') >= 0
                 || normalized.indexOf('!') >= 0 || normalized.indexOf('！') >= 0
-                || BLOCKING_VISIT_CONTEXT.matcher(normalized).find()
-                || !hasFirsthandVisitContext(normalized);
+                || PRE_VERB_NEGATION.matcher(normalized).find()
+                || BLOCKING_VISIT_CONTEXT.matcher(normalized).find();
     }
 
-    private boolean hasFirsthandVisitContext(String normalized) {
-        var visitVerb = VISIT_VERB.matcher(normalized);
+    private boolean hasFirsthandVisitContext(String phrase, String verifiedRestaurantName) {
+        var visitVerb = VISIT_VERB.matcher(phrase);
         if (!visitVerb.find()) {
             return false;
         }
-        String prefix = normalized.substring(0, visitVerb.start());
-        var firsthandSubject = FIRSTHAND_SUBJECT.matcher(prefix);
-        String subjectRemainder = firsthandSubject.lookingAt() ? prefix.substring(firsthandSubject.end()) : prefix;
-        if (SUBJECT_PARTICLE.matcher(subjectRemainder).find()) {
+        String prefix = phrase.substring(0, visitVerb.start()).trim();
+        String target = normalizeClaim(verifiedRestaurantName);
+        String compactPrefix = normalizeClaim(prefix);
+        if (target.isBlank() || !compactPrefix.contains(target)) {
             return false;
         }
-        return firsthandSubject.lookingAt() || prefix.contains("직접") || prefix.contains("directly")
-                || LOCATION_TARGET.matcher(prefix).find();
+        var firsthandSubject = FIRSTHAND_SUBJECT.matcher(prefix);
+        if (!firsthandSubject.lookingAt()) {
+            return false;
+        }
+        if (hasThirdPartySubjectBeforeTarget(compactPrefix, target)) {
+            return false;
+        }
+        String subjectRemainder = prefix.substring(firsthandSubject.end()).trim();
+        return !SUBJECT_BEFORE_DIRECT.matcher(subjectRemainder).find();
+    }
+
+    private boolean hasThirdPartySubjectBeforeTarget(String compactPrefix, String target) {
+        int targetIndex = compactPrefix.indexOf(target);
+        if (targetIndex <= 0) {
+            return false;
+        }
+        Matcher subject = SUBJECT_PARTICLE.matcher(compactPrefix.substring(0, targetIndex));
+        String lastSubject = null;
+        while (subject.find()) {
+            lastSubject = subject.group();
+        }
+        return lastSubject != null && !isFirsthandSubject(lastSubject);
+    }
+
+    private boolean isFirsthandSubject(String subject) {
+        return switch (subject) {
+            case "제가", "저희가", "저는", "나는", "내가", "우리가", "우리는", "저희는" -> true;
+            default -> false;
+        };
     }
 
     private boolean validEvidence(Evidence evidence) {
@@ -135,5 +170,9 @@ class VerifyAiContentCandidateService implements VerifyAiContentCandidateUseCase
 
     private boolean nonBlank(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private String normalizeText(String value) {
+        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
     }
 }

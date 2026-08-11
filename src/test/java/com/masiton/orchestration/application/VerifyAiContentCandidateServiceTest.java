@@ -40,7 +40,9 @@ class VerifyAiContentCandidateServiceTest {
         given(restaurantReference.resolve(anyString(), anyString(), any(), anyString()))
                 .willReturn(Optional.empty());
 
-        assertThat(service.verify(command("직접 방문", timestamp()))).isEmpty();
+        var result = service.verify(command("직접 방문", timestamp()));
+        assertThat(result.isVerified()).isFalse();
+        assertThat(result.failureReason()).isEqualTo("EXTERNAL_REFERENCE_MISMATCH");
         verifyNoInteractions(videoVerification);
     }
 
@@ -53,7 +55,7 @@ class VerifyAiContentCandidateServiceTest {
                 "other-video", "channel-1", "영상 제목", "https://img.youtube.com/vi/other/0.jpg",
                 "채널", "https://www.youtube.com/watch?v=other-video", now(), now())));
 
-        assertThat(service.verify(command("직접 방문", timestamp()))).isEmpty();
+        assertThat(service.verify(command("직접 방문", timestamp())).isVerified()).isFalse();
     }
 
     @Test
@@ -65,7 +67,7 @@ class VerifyAiContentCandidateServiceTest {
                 "video-1", "channel-1", "", "https://img.youtube.com/vi/video-1/0.jpg",
                 "채널", "https://www.youtube.com/watch?v=video-1", now(), now())));
 
-        assertThat(service.verify(command("직접 방문", timestamp()))).isEmpty();
+        assertThat(service.verify(command("직접 방문", timestamp())).isVerified()).isFalse();
     }
 
     @Test
@@ -75,11 +77,10 @@ class VerifyAiContentCandidateServiceTest {
                 .willReturn(Optional.of(restaurant()));
         given(videoVerification.resolve(any())).willReturn(Optional.of(video()));
 
-        var result = service.verify(command("직접 방문", timestamp()));
+        var result = service.verify(command("제가 맛집을 직접 방문했습니다", timestamp()));
 
-        assertThat(result).isPresent();
-        assertThat(result.orElseThrow().visitEvidenceConfirmed()).isTrue();
-        assertThat(result.orElseThrow().videoId()).isEqualTo("video-1");
+        assertThat(result.isVerified()).isTrue();
+        assertThat(result.content().videoId()).isEqualTo("video-1");
         InOrder order = inOrder(restaurantReference, videoVerification);
         order.verify(restaurantReference).resolve(anyString(), anyString(), any(), anyString());
         order.verify(videoVerification).resolve(any());
@@ -92,34 +93,36 @@ class VerifyAiContentCandidateServiceTest {
                 .willReturn(Optional.of(restaurant()));
         given(videoVerification.resolve(any())).willReturn(Optional.of(video()));
 
-        var result = service.verify(command("직접 방문", textRange()));
+        var result = service.verify(command("제가 맛집을 직접 방문했습니다", textRange()));
 
-        assertThat(result).isPresent();
-        assertThat(result.orElseThrow().visitEvidenceConfirmed()).isTrue();
+        assertThat(result.isVerified()).isTrue();
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"제가 직접 방문했습니다.", "제가 이 식당에 다녀왔습니다", "이곳을 방문했어요"})
+    @ValueSource(strings = {"제가 맛집을 직접 방문했습니다.", "제가 맛집에 다녀왔습니다"})
     @DisplayName("자연스러운 실제 방문 주장도 전체 문장 기준으로 확정한다")
     void verify_자연스러운실제방문주장_확정결과를조합한다(String value) {
         given(restaurantReference.resolve(anyString(), anyString(), any(), anyString()))
                 .willReturn(Optional.of(restaurant()));
         given(videoVerification.resolve(any())).willReturn(Optional.of(video()));
 
-        assertThat(service.verify(command(value, timestamp()))).isPresent();
+        assertThat(service.verify(command(value, timestamp())).isVerified()).isTrue();
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"방문", "단순 언급", "방문 추천", "방문했을 것 같다", "직접 방문하지 않았습니다",
             "직접 방문했을까요?", "방문할 예정입니다", "방문함", "친구가 방문했습니다",
-            "다른 사람이 다녀왔습니다", "유명인이 직접 방문했습니다"})
+            "다른 사람이 다녀왔습니다", "유명인이 직접 방문했습니다", "친구가 맛집을 방문했습니다",
+            "회사에 다녀왔습니다", "맛집을 방문했습니다", "직접 안 방문했습니다", "직접 못 다녀왔습니다",
+            "제가 안 방문했습니다", "제가 못 다녀왔습니다", "저는 안 방문했어요",
+            "저는 진짜 이집이 맛있어서 직접 방문했습니다"})
     @DisplayName("언급·추천·추정·부정·의문·가정 방문 후보는 확정하지 않는다")
     void verify_확정할수없는방문후보_확정하지않는다(String value) {
         given(restaurantReference.resolve(anyString(), anyString(), any(), anyString()))
                 .willReturn(Optional.of(restaurant()));
         given(videoVerification.resolve(any())).willReturn(Optional.of(video()));
 
-        assertThat(service.verify(command(value, timestamp()))).isEmpty();
+        assertThat(service.verify(command(value, timestamp())).isVerified()).isFalse();
     }
 
     @Test
@@ -129,8 +132,10 @@ class VerifyAiContentCandidateServiceTest {
                 .willReturn(Optional.of(restaurant()));
         given(videoVerification.resolve(any())).willReturn(Optional.of(video()));
 
-        assertThat(service.verify(command("직접 방문", new VerifyAiContentCandidateUseCase.Evidence(
-                VerifyAiContentCandidateUseCase.EvidenceType.UNKNOWN, null, null, null, null, null)))).isEmpty();
+        var result = service.verify(command("직접 방문", new VerifyAiContentCandidateUseCase.Evidence(
+                VerifyAiContentCandidateUseCase.EvidenceType.UNKNOWN, null, null, null, null, null)));
+        assertThat(result.isVerified()).isFalse();
+        assertThat(result.failureReason()).isEqualTo("VISIT_EVIDENCE_REQUIRED");
     }
 
     @Test
@@ -141,9 +146,11 @@ class VerifyAiContentCandidateServiceTest {
         given(videoVerification.resolve(any())).willReturn(Optional.of(video()));
 
         assertThat(service.verify(command("직접 방문", new VerifyAiContentCandidateUseCase.Evidence(
-                VerifyAiContentCandidateUseCase.EvidenceType.TEXT_RANGE, null, null, 10L, 9L, "hash")))).isEmpty();
+                VerifyAiContentCandidateUseCase.EvidenceType.TEXT_RANGE, null, null, 10L, 9L, "hash"))).isVerified())
+                .isFalse();
         assertThat(service.verify(command("직접 방문", new VerifyAiContentCandidateUseCase.Evidence(
-                VerifyAiContentCandidateUseCase.EvidenceType.TEXT_RANGE, null, null, 10L, 20L, "")))).isEmpty();
+                VerifyAiContentCandidateUseCase.EvidenceType.TEXT_RANGE, null, null, 10L, 20L, ""))).isVerified())
+                .isFalse();
     }
 
     private VerifyAiContentCandidateUseCase.VerificationCommand command(
