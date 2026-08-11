@@ -34,6 +34,7 @@ related_documents:
 | [4xx 분류](https://github.com/team-youngkk/masit-on/pull/170#discussion_r3755012321) | quota 차단과 요청 오류를 다른 범주로 분류 | 외부 연동 | 수정 필요 | `401`·`403`·`429`는 `PROVIDER_BLOCKED`, 그 밖의 4xx는 `UPSTREAM`, `408`은 `TIMEOUT`으로 분류 | 401·403·429·400·404·415 테스트 통과 |
 | [`429` RATE_LIMIT](https://github.com/team-youngkk/masit-on/pull/170#discussion_r3755128406) | quota 일시 제한은 재시도 가능한 `RATE_LIMIT`으로 유지 | 외부 연동·신뢰성 | 수정 필요 | `429`를 `RATE_LIMIT`으로 분리하고 `401`·`403`만 `PROVIDER_BLOCKED`로 유지 | Provider 상태 분류 회귀 테스트 통과 |
 | [관리자 영상 URL 오류 코드](https://github.com/team-youngkk/masit-on/pull/170#discussion_r3755128412) | URL 형식 오류와 공개 영상 확인 실패를 API 계약의 400 코드로 통일 | API·애플리케이션 | 수정 필요 | `AIEXTRACT_INVALID_VIDEO_URL` 400을 형식 검증·공개 영상 resolver 실패에 적용하고 Controller 계약 테스트 추가 | 서비스·Controller 테스트 통과 |
+| [공백 `videoUrl` 검증 경계](https://github.com/team-youngkk/masit-on/pull/170#discussion_r3755357583) | 공백 URL도 `AIEXTRACT_INVALID_VIDEO_URL`로 반환 | 애플리케이션 | 수정 필요 | `@NotBlank` 선행 검증을 제거해 공백 값은 서비스 URL 검증으로 위임하고, 누락 필드는 `MISSING_REQUIRED_FIELD`로 분리 | Controller API 5건 및 AI 관련 테스트 통과 |
 
 ## 3. 문제 현상과 발생 조건
 
@@ -43,6 +44,7 @@ related_documents:
 - 코드 현상: 빈 응답 본문에 대한 `readTree` 결과와 S1 payload 결과를 null-safe하게 처리하지 않았고, 관리자 보완 텍스트를 시스템 지시 문자열 뒤에 직접 이어 붙였다.
 - 계약 불일치: `evidenceSchema()`와 `missingFields` Schema가 실제 `validEvidence()`·`isAllowedMissingField()` 검증보다 느슨하거나 다른 필드를 선언했다. Webhook parser는 공식 Atom payload의 `http` alternate를 거부했고, provider의 모든 4xx를 차단으로 표시했다.
 - 후속 리뷰에서 `429`를 영구 차단으로 분류하면 재시도 경계가 사라지는 문제와, 관리자 영상 URL의 형식·공개 확인 실패가 API 계약의 `AIEXTRACT_INVALID_VIDEO_URL` 400이 아닌 공통 오류로 노출되는 문제가 추가로 확인됐다.
+- 최신 재리뷰에서 공백 `videoUrl`은 Controller의 `@NotBlank`가 서비스의 URL 오류 코드보다 먼저 실행되어 `INVALID_FIELD_VALUE`로 응답되는 문제가 확인됐다.
 
 ## 4. 근본 원인
 
@@ -51,6 +53,8 @@ related_documents:
 또한 관리자 보완 텍스트의 목적을 단순 문자열 보완으로만 취급해 시스템 지시와 같은 Gemini text part에 결합했다. 그 결과 NFR-SECURITY-007의 비신뢰 입력 경계가 요청 구조에 드러나지 않았다. Webhook URL은 `https`만 허용하는 보수적 검증이 실제 PubSubHubbub payload 변형과 어긋났고, HTTP 상태 분류는 요청 오류와 quota 차단을 구분하지 않았다.
 
 후속 리뷰 시점에는 `429`가 이미 존재하는 `RATE_LIMIT` 범주 대신 `PROVIDER_BLOCKED`로 들어가 Worker의 재시도 가능성을 잃고 있었다. 또한 관리자 접수 서비스가 URL 파싱 실패와 공개 영상 resolver의 빈 결과를 각각 `INVALID_FIELD_VALUE`·`REFERENCE_NOT_PUBLIC`로 반환해 API 명세의 `AIEXTRACT_INVALID_VIDEO_URL` 400 계약과 어긋났다.
+
+공백 `videoUrl` 문제의 근본 원인은 Controller DTO의 범용 `@NotBlank`가 기능별 URL 계약보다 먼저 동작하는 검증 순서였다. 서비스의 `youtubeUrl()`은 null·공백·형식 오류를 모두 `AIEXTRACT_INVALID_VIDEO_URL`로 처리할 수 있었지만, 공백 입력이 그 경계에 도달하지 못했다.
 
 ## 5. 확인 및 시도
 
@@ -62,6 +66,7 @@ related_documents:
 | Gemini adapter 요청·응답 코드와 S1 검증기 대조 | Schema 필드와 검증 허용 집합 불일치 확인 | 요청 Schema·지시·검증기를 같은 허용 목록으로 정렬 |
 | NFR-SECURITY-007·AI 추출 PRD·AI 후보 경계 ADR 대조 | 관리자 보완 텍스트는 신뢰하지 않는 입력이며 후보 확정 전 근거·검증 경계가 필요 | `systemInstruction`/사용자 콘텐츠 분리와 근거 없는 후보 테스트 적용 |
 | 로컬 Docker 상태 확인 | Docker daemon을 사용할 수 없어 Testcontainers WireMock 통합 테스트는 로컬 실행 불가 | Docker가 제공되는 GitHub Actions 재실행으로 최종 검증 |
+| 최신 미해결 스레드와 Controller·서비스 검증 순서 대조 | 공백 입력이 `@NotBlank`에서 공통 `INVALID_FIELD_VALUE`로 종료됨을 확인 | 공백은 서비스로 위임하고 null 누락만 Controller에서 별도 오류로 처리 |
 
 ## 6. 최종 해결
 
@@ -72,6 +77,7 @@ related_documents:
 - WireMock mapping 응답에 `Content-Type: application/json`을 명시했다.
 - `429`는 `RATE_LIMIT`, `401`·`403`은 `PROVIDER_BLOCKED`로 분리하고 Provider 회귀 테스트를 보강했다.
 - 관리자 접수의 YouTube URL 형식 오류와 공개 영상 확인 실패를 `400 AIEXTRACT_INVALID_VIDEO_URL`로 통일하고 서비스·Controller 계약 테스트를 추가했다.
+- Controller의 `@NotBlank`를 제거해 공백 `videoUrl`은 서비스 URL 검증으로 위임하고, null 필드 누락은 `MISSING_REQUIRED_FIELD`로 명시적으로 반환하도록 변경했다.
 
 ## 7. 검증
 
@@ -92,14 +98,16 @@ related_documents:
 - 관리자 보완 텍스트는 시스템 지시와 분리된 비신뢰 콘텐츠로만 전달하고, 후보 확정에는 영상 근거와 후속 검증을 요구한다.
 - Provider 상태 코드는 quota 일시 제한(`RATE_LIMIT`)과 영구 설정·권한 차단(`PROVIDER_BLOCKED`)을 구분해 재시도 정책이 범주를 잃지 않도록 유지한다.
 - 관리자 API의 입력 형식·공개성 오류는 기능별 계약 코드로 고정하고, 공통 `INVALID_FIELD_VALUE`·`REFERENCE_NOT_PUBLIC`로 회귀하지 않도록 Controller 계약 테스트를 유지한다.
-- 원격 전체 백엔드 job 통과를 확인했으며, 7개 리뷰 스레드에 수정 내용·검증 결과를 답글로 남긴 뒤 resolve한다.
+- 관리자 Controller는 공백 URL을 서비스의 `AIEXTRACT_INVALID_VIDEO_URL` 검증으로 위임하고, 필드 누락은 `MISSING_REQUIRED_FIELD`로 분리하는 회귀 테스트를 유지한다.
+- 원격 전체 백엔드 job 통과를 확인했으며, 최신 미해결 스레드에 수정 내용·검증 결과를 답글로 남긴 뒤 resolve한다.
 
 ## 9. 도입 전후 비교 지표
 
 | 지표 | 도입 전 기준값 | 측정 방법·기간 | 비교 결과 | 해석 |
 |---|---:|---|---|---|
 | 관련 회귀 테스트 실패 | CI 1건 실패 | PR #170 CI 및 targeted Gradle test | 최종 PR CI 백엔드 803건 중 실패 0건 | WireMock 응답 계약과 adapter media type 검증, 후속 Provider·URL 오류 계약의 일치 확인 |
-| 미해결 리뷰 스레드 | 9개 | PR #170 review threads | 답글·resolve 진행 후 0개 | 리뷰 요청의 코드·테스트 반영 여부 확인 |
+| 공백 `videoUrl` 오류 코드 | `INVALID_FIELD_VALUE` | MockMvc에 `{"videoUrl":"   "}` 요청 | `AIEXTRACT_INVALID_VIDEO_URL` | URL 형식 오류가 기능별 계약 코드로 유지됨 |
+| 미해결 리뷰 스레드 | 10개 | PR #170 review threads | 답글·resolve 진행 후 0개 | 리뷰 요청의 코드·테스트 반영 여부 확인 |
 
 ## 10. 남은 사항
 

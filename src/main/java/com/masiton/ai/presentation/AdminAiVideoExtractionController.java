@@ -1,7 +1,5 @@
 package com.masiton.ai.presentation;
 
-import jakarta.validation.Valid;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -10,6 +8,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.masiton.ai.application.port.in.AiExtractionJobUseCase;
 import com.masiton.ai.application.port.out.dto.AiExtractionJobView;
+import com.masiton.common.web.BusinessException;
+import com.masiton.common.web.ErrorCode;
 
 @RestController
 @RequestMapping("/api/admin/ai/video-extractions")
@@ -22,13 +22,16 @@ public class AdminAiVideoExtractionController {
     }
 
     @PostMapping
-    public ResponseEntity<AiExtractionJobResponse> submit(@Valid @RequestBody SubmitRequest request) {
+    public ResponseEntity<AiExtractionJobResponse> submit(@RequestBody SubmitRequest request) {
+        if (request.videoUrl() == null) {
+            throw new BusinessException(ErrorCode.MISSING_REQUIRED_FIELD, "videoUrl", "videoUrl is required.");
+        }
         AiExtractionJobView view = useCase.submitAdmin(request.videoUrl(), request.supplementText(), request.idempotencyKey());
         return ResponseEntity.status(view.reused() ? 200 : 202).body(AiExtractionJobResponse.from(view));
     }
 
     public record SubmitRequest(
-            @jakarta.validation.constraints.NotBlank String videoUrl,
+            String videoUrl,
             String supplementText,
             String idempotencyKey
     ) {

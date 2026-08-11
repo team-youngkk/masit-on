@@ -3,6 +3,7 @@ package com.masiton.ai.presentation;
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -129,5 +130,32 @@ class AdminAiVideoExtractionControllerApiTest {
                         .content("{\"videoUrl\":\"https://www.youtube.com/watch?v=video-id\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("AIEXTRACT_INVALID_VIDEO_URL"));
+    }
+
+    @Test
+    @DisplayName("공백 videoUrl도 400 AIEXTRACT_INVALID_VIDEO_URL로 반환한다")
+    void submit_공백videoUrl_400과계약코드를반환한다() throws Exception {
+        when(useCase.submitAdmin(any(), any(), any()))
+                .thenThrow(new BusinessException(HttpStatus.BAD_REQUEST,
+                        "AIEXTRACT_INVALID_VIDEO_URL", "YouTube videoUrl is invalid."));
+
+        mockMvc.perform(post("/api/admin/ai/video-extractions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"videoUrl\":\"   \"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("AIEXTRACT_INVALID_VIDEO_URL"));
+
+        verify(useCase).submitAdmin("   ", null, null);
+    }
+
+    @Test
+    @DisplayName("videoUrl 필드가 누락되면 400 MISSING_REQUIRED_FIELD로 반환한다")
+    void submit_videoUrl누락_400필수값오류를반환한다() throws Exception {
+        mockMvc.perform(post("/api/admin/ai/video-extractions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("MISSING_REQUIRED_FIELD"))
+                .andExpect(jsonPath("$.errors[0].field").value("videoUrl"));
     }
 }
