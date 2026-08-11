@@ -18,6 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
@@ -26,6 +27,7 @@ import com.masiton.test.FullContextIntegrationTest;
 import com.masiton.visit.application.port.in.RegisterVisitUseCase;
 
 @DisplayName("AI 추출 결과 커밋 PostgreSQL 원자성")
+@SpringBootTest
 class AiExtractionResultCommitServicePostgreSqlIntegrationTest extends FullContextIntegrationTest {
 
     private static final UUID REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000001");
