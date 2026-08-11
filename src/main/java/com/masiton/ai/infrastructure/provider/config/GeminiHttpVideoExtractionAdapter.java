@@ -214,7 +214,7 @@ final class GeminiHttpVideoExtractionAdapter implements AiVideoExtractionProvide
             throw new AiProviderException(AiProviderFailureCategory.RATE_LIMIT);
         }
         if (statusCode >= 400 && statusCode < 500) {
-            throw new AiProviderException(AiProviderFailureCategory.UPSTREAM);
+            throw new AiProviderException(AiProviderFailureCategory.UPSTREAM, false);
         }
         if (statusCode < 200 || statusCode >= 300) {
             throw new AiProviderException(AiProviderFailureCategory.UPSTREAM);

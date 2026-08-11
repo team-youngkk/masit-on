@@ -52,4 +52,32 @@ public class AesGcmTemporaryInputCipher implements TemporaryInputCipher {
             throw new IllegalStateException("AI temporary input encryption failed.", exception);
         }
     }
+
+    @Override
+    public String decrypt(EncryptedInput encryptedInput) {
+        try {
+            if (encryptedInput == null || !properties.getActiveKeyId().equals(encryptedInput.keyId())) {
+                throw unavailable();
+            }
+            byte[] key = Base64.getDecoder().decode(properties.getActiveKey());
+            byte[] ciphertext = encryptedInput.ciphertext();
+            if (key.length != 32 || ciphertext == null || ciphertext.length <= NONCE_BYTES) {
+                throw unavailable();
+            }
+            byte[] nonce = java.util.Arrays.copyOfRange(ciphertext, 0, NONCE_BYTES);
+            byte[] encrypted = java.util.Arrays.copyOfRange(ciphertext, NONCE_BYTES, ciphertext.length);
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, "AES"), new GCMParameterSpec(TAG_BITS, nonce));
+            return new String(cipher.doFinal(encrypted), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (BusinessException exception) {
+            throw exception;
+        } catch (IllegalArgumentException | GeneralSecurityException exception) {
+            throw unavailable();
+        }
+    }
+
+    private BusinessException unavailable() {
+        return new BusinessException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,
+                "AIEXTRACT_TEMPORARY_INPUT_UNAVAILABLE", "Temporary input encryption is not configured.");
+    }
 }

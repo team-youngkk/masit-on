@@ -58,6 +58,20 @@ logging:
 
 masiton:
   ai:
+    worker:
+      enabled: ${AI_WORKER_ENABLED:false}
+      poll-interval: PT5S
+      lease-duration: PT120S
+      heartbeat-interval: PT30S
+      drain-timeout: PT30S
+      max-attempts: 3
+      first-backoff: PT5S
+      second-backoff: PT30S
+      quota-window: ${AI_WORKER_QUOTA_WINDOW:P1D}
+      # Both limits must be verified from the active model/account before enabling the worker.
+      provider-quota-limit: ${AI_WORKER_PROVIDER_QUOTA_LIMIT:0}
+      application-quota-limit: ${AI_WORKER_APPLICATION_QUOTA_LIMIT:0}
+      quota-warning-percent: 80
     youtube-webhook:
       max-payload-bytes: ${YOUTUBE_WEBHOOK_MAX_PAYLOAD_BYTES:65536}
       secret: ${YOUTUBE_WEBHOOK_SECRET:}
