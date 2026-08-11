@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.masiton.test.FullContextIntegrationTest;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -117,6 +118,18 @@ class SecurityBoundaryApiTest extends FullContextIntegrationTest {
             mockMvc.perform(get("/api/restaurants/popular").header("Authorization", "Bearer " + token))
                     .andExpect(status().isOk());
         }
+    }
+
+    @Test
+    @DisplayName("자연어 맛집 공개 조회는 검증할 수 없는 Bearer Token이 있어도 401을 반환하지 않는다")
+    void 자연어맛집공개조회_검증불가Bearer토큰_401을반환하지않는다() throws Exception {
+        mockMvc.perform(post("/api/restaurants/natural-language-search")
+                        .header("Authorization", "Bearer " + UNVERIFIABLE_JWT)
+                        .contentType("application/json")
+                        .content("{\"sentence\":\"\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("NATURAL_LANGUAGE_EMPTY"))
+                .andExpect(jsonPath("$.traceId").isNotEmpty());
     }
 
     @Test
