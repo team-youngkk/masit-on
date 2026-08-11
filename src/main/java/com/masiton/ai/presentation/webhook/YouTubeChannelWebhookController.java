@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
+import java.util.regex.Pattern;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -15,6 +16,7 @@ import javax.crypto.spec.SecretKeySpec;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,6 +30,12 @@ import com.masiton.ai.application.port.in.AiExtractionJobUseCase;
 @RestController
 @RequestMapping("/api/webhooks/youtube/channel-updates")
 public class YouTubeChannelWebhookController {
+
+    private static final String YOUTUBE_TOPIC_HOST = "www.youtube.com";
+    private static final String YOUTUBE_TOPIC_PATH = "/xml/feeds/videos.xml";
+    private static final Pattern CHANNEL_ID_PATTERN = Pattern.compile("[A-Za-z0-9_-]{1,128}");
+    private static final int SHA256_HEX_LENGTH = 64;
+    private static final int SHA1_HEX_LENGTH = 40;
 
     private final YoutubeAtomNotificationParser parser;
     private final YoutubeWebhookProperties properties;
@@ -50,7 +58,7 @@ public class YouTubeChannelWebhookController {
         return ResponseEntity.ok(useCase.verifyChallenge(channelId, verifyToken, challenge));
     }
 
-    @PostMapping(consumes = "application/atom+xml")
+    @PostMapping(consumes = MediaType.APPLICATION_ATOM_XML_VALUE)
     public ResponseEntity<Void> receive(
             HttpServletRequest request,
             @RequestHeader(name = "X-Hub-Signature-256", required = false) String signature256,
@@ -76,17 +84,20 @@ public class YouTubeChannelWebhookController {
         String trimmedSignature = signature.trim();
         String algorithm;
         String expectedPrefix;
+        int expectedHexLength;
         if (trimmedSignature.startsWith("sha256=")) {
             algorithm = "HmacSHA256";
             expectedPrefix = "sha256=";
+            expectedHexLength = SHA256_HEX_LENGTH;
         } else if (trimmedSignature.startsWith("sha1=")) {
             algorithm = "HmacSHA1";
             expectedPrefix = "sha1=";
+            expectedHexLength = SHA1_HEX_LENGTH;
         } else {
             throw invalidSignature();
         }
         String suppliedHex = trimmedSignature.substring(expectedPrefix.length());
-        if (!suppliedHex.matches("[0-9a-fA-F]+")) {
+        if (suppliedHex.length() != expectedHexLength || !suppliedHex.matches("[0-9a-fA-F]+")) {
             throw invalidSignature();
         }
         try {
@@ -119,9 +130,10 @@ public class YouTubeChannelWebhookController {
     }
 
     private byte[] readBounded(InputStream input) throws IOException {
-        ByteArrayOutputStream output = new ByteArrayOutputStream(Math.min(properties.getMaxPayloadBytes(), 8192));
+        int maxPayloadBytes = properties.getMaxPayloadBytes();
+        ByteArrayOutputStream output = new ByteArrayOutputStream(Math.min(maxPayloadBytes, 8192));
         byte[] buffer = new byte[8192];
-        int total = 0;
+        long total = 0;
         int read;
         while ((read = input.read(buffer)) != -1) {
             total += read;
@@ -143,14 +155,31 @@ public class YouTubeChannelWebhookController {
 
     private String channelIdFromTopic(String topic) {
         try {
+            if (topic == null || topic.length() > 2_048) {
+                throw new IllegalArgumentException();
+            }
             URI uri = URI.create(topic);
-            if (!"https".equalsIgnoreCase(uri.getScheme()) || uri.getQuery() == null) throw new IllegalArgumentException();
-            for (String part : uri.getQuery().split("&")) {
-                int separator = part.indexOf('=');
-                if (separator > 0 && "channel_id".equals(URLDecoder.decode(part.substring(0, separator), StandardCharsets.UTF_8))) {
-                    String value = URLDecoder.decode(part.substring(separator + 1), StandardCharsets.UTF_8);
-                    if (!value.isBlank()) return value;
-                }
+            if (!"https".equalsIgnoreCase(uri.getScheme())
+                    || !YOUTUBE_TOPIC_HOST.equalsIgnoreCase(uri.getHost())
+                    || uri.getPort() != -1
+                    || uri.getUserInfo() != null
+                    || !YOUTUBE_TOPIC_PATH.equals(uri.getPath())
+                    || uri.getRawQuery() == null
+                    || uri.getRawFragment() != null) {
+                throw new IllegalArgumentException();
+            }
+            String[] parts = uri.getRawQuery().split("&", -1);
+            if (parts.length != 1) {
+                throw new IllegalArgumentException();
+            }
+            int separator = parts[0].indexOf('=');
+            if (separator <= 0
+                    || !"channel_id".equals(URLDecoder.decode(parts[0].substring(0, separator), StandardCharsets.UTF_8))) {
+                throw new IllegalArgumentException();
+            }
+            String value = URLDecoder.decode(parts[0].substring(separator + 1), StandardCharsets.UTF_8);
+            if (CHANNEL_ID_PATTERN.matcher(value).matches()) {
+                return value;
             }
         } catch (IllegalArgumentException exception) {
             // The common exception handler returns the traceId without echoing the topic.

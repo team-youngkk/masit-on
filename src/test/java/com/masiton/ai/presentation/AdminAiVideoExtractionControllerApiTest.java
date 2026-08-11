@@ -3,6 +3,7 @@ package com.masiton.ai.presentation;
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -13,19 +14,24 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.masiton.ai.application.port.in.AiExtractionJobUseCase;
 import com.masiton.ai.application.port.out.dto.AiExtractionJobView;
+import com.masiton.common.web.BusinessException;
+import com.masiton.common.web.GlobalExceptionHandler;
 
 @DisplayName("관리자 AI 영상 추출 Controller API")
 class AdminAiVideoExtractionControllerApiTest {
 
     private final AiExtractionJobUseCase useCase = mock(AiExtractionJobUseCase.class);
     private final MockMvc mockMvc = MockMvcBuilders.standaloneSetup(
-            new AdminAiVideoExtractionController(useCase)).build();
+            new AdminAiVideoExtractionController(useCase))
+            .setControllerAdvice(new GlobalExceptionHandler())
+            .build();
 
     @Test
     @DisplayName("신규 접수는 202와 공통 필드 null 키를 포함한다")
@@ -110,5 +116,46 @@ class AdminAiVideoExtractionControllerApiTest {
                 .andExpect(jsonPath("$.startedAt").value("2026-08-11T00:01:00Z"))
                 .andExpect(jsonPath("$.finishedAt").value("2026-08-11T00:03:00Z"))
                 .andExpect(jsonPath("$.reused").value(true));
+    }
+
+    @Test
+    @DisplayName("영상 URL 검증 실패는 400 AIEXTRACT_INVALID_VIDEO_URL을 반환한다")
+    void submit_영상URL검증실패_400과계약코드를반환한다() throws Exception {
+        when(useCase.submitAdmin(any(), any(), any()))
+                .thenThrow(new BusinessException(HttpStatus.BAD_REQUEST,
+                        "AIEXTRACT_INVALID_VIDEO_URL", "YouTube videoUrl is invalid."));
+
+        mockMvc.perform(post("/api/admin/ai/video-extractions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"videoUrl\":\"https://www.youtube.com/watch?v=video-id\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("AIEXTRACT_INVALID_VIDEO_URL"));
+    }
+
+    @Test
+    @DisplayName("공백 videoUrl도 400 AIEXTRACT_INVALID_VIDEO_URL로 반환한다")
+    void submit_공백videoUrl_400과계약코드를반환한다() throws Exception {
+        when(useCase.submitAdmin(any(), any(), any()))
+                .thenThrow(new BusinessException(HttpStatus.BAD_REQUEST,
+                        "AIEXTRACT_INVALID_VIDEO_URL", "YouTube videoUrl is invalid."));
+
+        mockMvc.perform(post("/api/admin/ai/video-extractions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"videoUrl\":\"   \"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("AIEXTRACT_INVALID_VIDEO_URL"));
+
+        verify(useCase).submitAdmin("   ", null, null);
+    }
+
+    @Test
+    @DisplayName("videoUrl 필드가 누락되면 400 MISSING_REQUIRED_FIELD로 반환한다")
+    void submit_videoUrl누락_400필수값오류를반환한다() throws Exception {
+        mockMvc.perform(post("/api/admin/ai/video-extractions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("MISSING_REQUIRED_FIELD"))
+                .andExpect(jsonPath("$.errors[0].field").value("videoUrl"));
     }
 }

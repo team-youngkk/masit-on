@@ -53,7 +53,10 @@ class GeminiHttpVideoExtractionAdapterWireMockIntegrationTest {
                         "headers", Map.of("x-goog-api-key", Map.of("equalTo", API_KEY)),
                         "bodyPatterns", List.of(Map.of("matchesJsonPath",
                                 "$.contents[0].parts[?(@.fileData.fileUri == 'https://www.youtube.com/watch?v=video-id') ]"))),
-                "response", Map.of("status", 200, "jsonBody", payload)));
+                "response", Map.of(
+                        "status", 200,
+                        "headers", Map.of("Content-Type", "application/json"),
+                        "jsonBody", payload)));
         admin("POST", "/__admin/mappings", mapping);
 
         AiVideoExtractionResult result = adapter().extract(
@@ -70,7 +73,7 @@ class GeminiHttpVideoExtractionAdapterWireMockIntegrationTest {
         properties.setApiKey(API_KEY);
         properties.setBaseUrl("http://%s:%d".formatted(WIREMOCK.getHost(), WIREMOCK.getMappedPort(WIREMOCK_PORT)));
         properties.setResponseTimeout(Duration.ofSeconds(2));
-        return new GeminiHttpVideoExtractionAdapter(HttpClient.newHttpClient(), objectMapper, properties);
+        return new GeminiHttpVideoExtractionAdapter(HttpClient.newHttpClient(), objectMapper, properties, true);
     }
 
     private void admin(String method, String path, String body) throws Exception {

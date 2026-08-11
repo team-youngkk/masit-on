@@ -28,6 +28,7 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
 
     private static final Pattern CHANNEL_ID_PATTERN = Pattern.compile("[A-Za-z0-9_-]{1,128}");
     private static final Pattern VIDEO_ID_PATTERN = Pattern.compile("[A-Za-z0-9_-]{1,128}");
+    private static final String INVALID_VIDEO_URL_CODE = "AIEXTRACT_INVALID_VIDEO_URL";
 
     private final ResolveVerifiedVideoUseCase verifiedVideoResolver;
     private final AiExtractionJobPersistenceService persistence;
@@ -52,18 +53,23 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
         if (supplement.length() > 20_000) {
             throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, "supplementText", "supplementText is too long.");
         }
-        if (idempotencyKey != null && idempotencyKey.length() > 200) {
+        String normalizedIdempotencyKey = idempotencyKey == null ? "" : idempotencyKey.trim();
+        if (normalizedIdempotencyKey.length() > 200) {
             throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, "idempotencyKey", "idempotencyKey is too long.");
         }
         String requestedVideoId = videoIdFrom(requestedUrl);
         String inputMode = supplement.isBlank() ? "GEMINI_VIDEO_URL" : "ADMIN_TEXT";
-        Optional<AiExtractionJobView> existing = inputMode.equals("GEMINI_VIDEO_URL")
-                ? persistence.findByVideoIdAndInputMode(requestedVideoId, inputMode,
-                        AiExtractionContract.PROVIDER, AiExtractionContract.MODEL_VERSION,
-                        AiExtractionContract.PROMPT_VERSION, AiExtractionContract.SCHEMA_VERSION)
-                : Optional.empty();
         byte[] inputHash = hash(canonicalRequestedUrl.toString(), supplement);
+        Optional<AiExtractionJobView> existing = Optional.empty();
+        if (normalizedIdempotencyKey.isEmpty() && inputMode.equals("GEMINI_VIDEO_URL")) {
+            existing = persistence.findByVideoIdAndInputMode(requestedVideoId, inputMode,
+                    AiExtractionContract.PROVIDER, AiExtractionContract.MODEL_VERSION,
+                    AiExtractionContract.PROMPT_VERSION, AiExtractionContract.SCHEMA_VERSION);
+        }
         if (existing.isEmpty()) {
+            // Keep inputHash independent from the client key so ADMIN and WEBHOOK share one job.
+            // A keyed request must use the exact normalized payload hash and cannot use the
+            // input-mode shortcut, which could otherwise replay a different payload.
             existing = persistence.findByVideoIdAndInputHash(requestedVideoId, inputHash,
                     AiExtractionContract.PROVIDER, AiExtractionContract.MODEL_VERSION,
                     AiExtractionContract.PROMPT_VERSION, AiExtractionContract.SCHEMA_VERSION);
@@ -72,7 +78,7 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
             return existing.get();
         }
         VerifiedVideo verified = verifiedVideoResolver.resolve(requestedUrl)
-                .orElseThrow(() -> new BusinessException(ErrorCode.REFERENCE_NOT_PUBLIC));
+                .orElseThrow(this::invalidVideoUrl);
         String channelId = requiredId(verified.publisherExternalChannelId(), "channelId");
         String videoId = requiredId(verified.externalVideoId(), "videoId");
         URI videoUrl = canonicalYoutubeUrl(videoId);
@@ -125,21 +131,33 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
     }
 
     private URI youtubeUrl(String value) {
-        if (value == null || value.isBlank() || value.length() > 2_048) {
-            throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE);
+        if (value == null || value.isBlank()) {
+            throw invalidVideoUrl();
         }
         try {
-            URI uri = URI.create(value.trim());
+            String trimmed = value.trim();
+            if (trimmed.length() > 2_048) {
+                throw new IllegalArgumentException();
+            }
+            URI uri = URI.create(trimmed);
             String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase();
             if (!"https".equalsIgnoreCase(uri.getScheme())
+                    || uri.getPort() != -1
+                    || uri.getRawUserInfo() != null
+                    || uri.getRawFragment() != null
                     || !(host.equals("youtu.be") || host.equals("youtube.com") || host.equals("www.youtube.com"))
                     || videoIdFrom(uri) == null) {
                 throw new IllegalArgumentException();
             }
             return uri;
         } catch (IllegalArgumentException exception) {
-            throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE);
+            throw invalidVideoUrl();
         }
+    }
+
+    private BusinessException invalidVideoUrl() {
+        return new BusinessException(HttpStatus.BAD_REQUEST, INVALID_VIDEO_URL_CODE,
+                "YouTube videoUrl is invalid.");
     }
 
     private URI canonicalYoutubeUrl(String videoId) {
@@ -153,22 +171,33 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
     private String videoIdFrom(URI uri) {
         String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase();
         if (host.equals("youtu.be")) {
-            return segment(uri.getPath(), 1);
+            return segment(uri.getPath(), 1, 2);
         }
         if ("/watch".equals(uri.getPath()) && uri.getQuery() != null) {
+            String videoId = null;
             for (String part : uri.getQuery().split("&")) {
-                if (part.startsWith("v=") && part.length() > 2) return validId(part.substring(2));
+                if (part.startsWith("v=") && part.length() > 2) {
+                    if (videoId != null) {
+                        return null;
+                    }
+                    videoId = validId(part.substring(2));
+                }
             }
+            return videoId;
         }
-        if (uri.getPath() != null && uri.getPath().startsWith("/shorts/")) return validId(segment(uri.getPath(), 2));
-        if (uri.getPath() != null && uri.getPath().startsWith("/embed/")) return validId(segment(uri.getPath(), 2));
+        if (uri.getPath() != null && uri.getPath().startsWith("/shorts/")) {
+            return segment(uri.getPath(), 2, 3);
+        }
+        if (uri.getPath() != null && uri.getPath().startsWith("/embed/")) {
+            return segment(uri.getPath(), 2, 3);
+        }
         return null;
     }
 
-    private String segment(String path, int index) {
+    private String segment(String path, int index, int expectedSegmentCount) {
         if (path == null) return null;
-        String[] segments = path.split("/");
-        return segments.length > index ? validId(segments[index]) : null;
+        String[] segments = path.split("/", -1);
+        return segments.length == expectedSegmentCount ? validId(segments[index]) : null;
     }
 
     private String validId(String value) {

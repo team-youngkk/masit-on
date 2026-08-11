@@ -29,7 +29,7 @@ class YouTubeChannelWebhookControllerTest {
                   xmlns:yt="http://www.youtube.com/xml/schemas/2015">
               <yt:channelId>channel-1</yt:channelId>
               <yt:videoId>video-1</yt:videoId>
-              <link rel="alternate" href="https://www.youtube.com/watch?v=video-1"/>
+              <link rel="alternate" href="http://www.youtube.com/watch?v=video-1"/>
             </feed>
             """;
 
@@ -50,6 +50,31 @@ class YouTubeChannelWebhookControllerTest {
 
         verify(useCase).submitWebhook("channel-1", "video-1",
                 java.net.URI.create("https://www.youtube.com/watch?v=video-1"));
+    }
+
+    @Test
+    @DisplayName("SHA-1 호환 서명도 유효한 webhook으로 접수한다")
+    void receive_SHA1호환서명_작업을전달한다() throws Exception {
+        when(useCase.submitWebhook("channel-1", "video-1",
+                java.net.URI.create("https://www.youtube.com/watch?v=video-1")))
+                .thenReturn(java.util.Optional.empty());
+
+        assertThatCode(() -> controller.receive(request(PAYLOAD), null, hmac("HmacSHA1", "sha1=")))
+                .doesNotThrowAnyException();
+
+        verify(useCase).submitWebhook("channel-1", "video-1",
+                java.net.URI.create("https://www.youtube.com/watch?v=video-1"));
+    }
+
+    @Test
+    @DisplayName("YouTube topic의 호스트와 경로가 다르면 구독 확인을 거부한다")
+    void verify_잘못된Topic_거부한다() {
+        assertThatThrownBy(() -> controller.verify(
+                "https://evil.example/xml/feeds/videos.xml?channel_id=channel-1", "token", "challenge"))
+                .isInstanceOf(BusinessException.class)
+                .extracting(exception -> ((BusinessException) exception).code())
+                .isEqualTo("AIEXTRACT_INVALID_WEBHOOK_TOPIC");
+        verifyNoInteractions(useCase);
     }
 
     @Test
