@@ -74,6 +74,7 @@ public class SecurityConfiguration {
                                 "/api/creators/*",
                                 "/api/creators/*/restaurants",
                                 "/api/creators/*/videos").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/restaurants/natural-language-search").permitAll()
                         .requestMatchers("/internal/health/live", "/internal/health/ready", "/internal/health/dependencies")
                         .permitAll()
                         .requestMatchers("/internal/verification/session",
@@ -195,7 +196,8 @@ public class SecurityConfiguration {
                 || requestUri.equals("/api/auth/password-resets/requests")
                 || requestUri.equals("/api/auth/password-resets/confirmations")
                 || requestUri.equals("/api/auth/tokens")
-                || requestUri.equals("/api/auth/tokens/refresh");
+                || requestUri.equals("/api/auth/tokens/refresh")
+                || requestUri.equals("/api/restaurants/natural-language-search");
     }
 
     private Authentication authenticatePublicRequest(

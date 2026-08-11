@@ -42,6 +42,8 @@ class RestaurantSearchQueryAdapterIntegrationTest {
     private static final UUID GANGNAM_REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000023");
     private static final UUID KOREAN_CATEGORY_ID = UUID.fromString("20000000-0000-4000-8000-000000000001");
     private static final UUID JAPANESE_CATEGORY_ID = UUID.fromString("20000000-0000-4000-8000-000000000003");
+    private static final String NOODLE_TAG_CODE = "MENU_NAENGMYEON";
+    private static final String SOLO_TAG_CODE = "OCCASION_SOLO";
 
     @Container
     static final PostgreSQLContainer POSTGRES =
@@ -201,6 +203,80 @@ class RestaurantSearchQueryAdapterIntegrationTest {
     }
 
     @Test
+    @DisplayName("태그가 비어 있으면 기존 조건과 같은 공개·활성 맛집 목록을 반환한다")
+    void search_태그없음_기존목록과같은결과를반환한다() {
+        // given
+        UUID publicRestaurantId = insertRestaurant("공개맛집", MAPO_REGION_ID, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
+        insertRestaurant("비공개맛집", MAPO_REGION_ID, KOREAN_CATEGORY_ID, "PRIVATE", "ACTIVE");
+
+        // when
+        RestaurantSearchQueryResult result = restaurantSearchQueryPort.search(
+                new RestaurantSearchCriteria(null, null, null, null, Set.of(), 1, 20));
+
+        // then
+        assertThat(result.totalElements()).isEqualTo(1);
+        assertThat(result.rows()).extracting(RestaurantSearchRow::id).containsExactly(publicRestaurantId);
+    }
+
+    @Test
+    @DisplayName("여러 태그는 같은 공개·활성·유효 Visit에 모두 연결된 맛집만 중복 없이 반환한다")
+    void search_여러태그_같은유효Visit에모두연결된맛집만중복없이반환한다() {
+        // given
+        UUID matchingRestaurantId = insertRestaurant("모든 태그 맛집", MAPO_REGION_ID, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
+        UUID splitAcrossVisitsRestaurantId =
+                insertRestaurant("서로 다른 방문 태그 맛집", MAPO_REGION_ID, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
+        UUID creatorId = insertCreator("공개채널", "PUBLIC", "ACTIVE", "AVAILABLE");
+        UUID videoId1 = insertVideo(creatorId, channelIdOf(creatorId), "PUBLIC", "ACTIVE", "AVAILABLE");
+        UUID videoId2 = insertVideo(creatorId, channelIdOf(creatorId), "PUBLIC", "ACTIVE", "AVAILABLE");
+        UUID matchingVisitId = insertVisit(matchingRestaurantId, creatorId, videoId1, "PUBLIC", "ACTIVE");
+        UUID firstSplitVisitId = insertVisit(splitAcrossVisitsRestaurantId, creatorId, videoId1, "PUBLIC", "ACTIVE");
+        UUID secondSplitVisitId = insertVisit(splitAcrossVisitsRestaurantId, creatorId, videoId2, "PUBLIC", "ACTIVE");
+        insertVisitTag(matchingVisitId, NOODLE_TAG_CODE);
+        insertVisitTag(matchingVisitId, SOLO_TAG_CODE);
+        insertVisitTag(firstSplitVisitId, NOODLE_TAG_CODE);
+        insertVisitTag(secondSplitVisitId, SOLO_TAG_CODE);
+
+        // when
+        RestaurantSearchQueryResult result = restaurantSearchQueryPort.search(
+                new RestaurantSearchCriteria(
+                        null, null, null, null, Set.of(NOODLE_TAG_CODE, SOLO_TAG_CODE), 1, 20));
+
+        // then
+        assertThat(result.totalElements()).isEqualTo(1);
+        assertThat(result.rows()).extracting(RestaurantSearchRow::id).containsExactly(matchingRestaurantId);
+    }
+
+    @Test
+    @DisplayName("비활성 태그 정의와 비공개·무효 Visit 태그는 검색에서 제외한다")
+    void search_비활성태그와비공개무효Visit_검색에서제외한다() {
+        // given
+        UUID inactiveTagId = insertTagDefinition("TEST_INACTIVE_TAG", "DEPRECATED");
+        UUID inactiveTagRestaurantId =
+                insertRestaurant("비활성 태그 맛집", MAPO_REGION_ID, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
+        UUID hiddenVisitRestaurantId =
+                insertRestaurant("비공개 방문 맛집", MAPO_REGION_ID, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
+        UUID creatorId = insertCreator("공개채널", "PUBLIC", "ACTIVE", "AVAILABLE");
+        UUID videoId = insertVideo(creatorId, channelIdOf(creatorId), "PUBLIC", "ACTIVE", "AVAILABLE");
+        UUID inactiveTagVisitId = insertVisit(inactiveTagRestaurantId, creatorId, videoId, "PUBLIC", "ACTIVE");
+        UUID hiddenVisitId = insertVisit(hiddenVisitRestaurantId, creatorId, videoId, "PRIVATE", "ACTIVE");
+        insertVisitTag(inactiveTagVisitId, inactiveTagId);
+        insertVisitTag(hiddenVisitId, NOODLE_TAG_CODE);
+
+        // when
+        RestaurantSearchQueryResult result = restaurantSearchQueryPort.search(
+                new RestaurantSearchCriteria(null, null, null, null, Set.of(NOODLE_TAG_CODE), 1, 20));
+        RestaurantSearchQueryResult inactiveTagResult = restaurantSearchQueryPort.search(
+                new RestaurantSearchCriteria(null, null, null, null, Set.of("TEST_INACTIVE_TAG"), 1, 20));
+
+        // then
+        assertThat(result.rows()).extracting(RestaurantSearchRow::id)
+                .doesNotContain(inactiveTagRestaurantId, hiddenVisitRestaurantId);
+        assertThat(result.totalElements()).isZero();
+        assertThat(inactiveTagResult.rows()).isEmpty();
+        assertThat(inactiveTagResult.totalElements()).isZero();
+    }
+
+    @Test
     @DisplayName("모든 조건을 조합하면 AND로 모두 만족하는 맛집만 반환한다")
     void search_전체조건조합_AND로모두만족하는맛집만반환한다() {
         // given
@@ -282,6 +358,33 @@ class RestaurantSearchQueryAdapterIntegrationTest {
             int page,
             int size) {
         return new RestaurantSearchCriteria(query, regionId, foodCategoryId, candidateRestaurantIds, page, size);
+    }
+
+    private UUID insertTagDefinition(String tagCode, String status) {
+        UUID id = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO tag_definition "
+                        + "(id, tag_code, tag_type, display_name, aliases, status, source) "
+                        + "VALUES (?, ?, 'MENU', ?, '[]'::jsonb, ?, 'MANUAL_OVERRIDE')",
+                id, tagCode, tagCode, status);
+        return id;
+    }
+
+    private void insertVisitTag(UUID visitId, String tagCode) {
+        jdbcTemplate.update(
+                "INSERT INTO visit_tag "
+                        + "(id, visit_id, tag_definition_id, source, evidence) "
+                        + "SELECT ?, ?, id, 'ADMIN_OVERRIDE', '{}'::jsonb "
+                        + "FROM tag_definition WHERE tag_code = ?",
+                UUID.randomUUID(), visitId, tagCode);
+    }
+
+    private void insertVisitTag(UUID visitId, UUID tagDefinitionId) {
+        jdbcTemplate.update(
+                "INSERT INTO visit_tag "
+                        + "(id, visit_id, tag_definition_id, source, evidence) "
+                        + "VALUES (?, ?, ?, 'ADMIN_OVERRIDE', '{}'::jsonb)",
+                UUID.randomUUID(), visitId, tagDefinitionId);
     }
 
     private UUID insertRestaurant(

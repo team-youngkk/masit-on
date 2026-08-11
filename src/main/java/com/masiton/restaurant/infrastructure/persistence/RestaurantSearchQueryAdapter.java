@@ -1,6 +1,9 @@
 package com.masiton.restaurant.infrastructure.persistence;
 
 import java.util.List;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -77,6 +80,28 @@ class RestaurantSearchQueryAdapter implements RestaurantSearchQueryPort {
                 params.addValue("candidateRestaurantIds", criteria.candidateRestaurantIds());
             }
         }
+        if (!criteria.tags().isEmpty()) {
+            where.append("""
+                    AND r.id IN (
+                        SELECT v.restaurant_id
+                        FROM visit v
+                        JOIN visit_tag vt ON vt.visit_id = v.id
+                        JOIN tag_definition td ON td.id = vt.tag_definition_id
+                        JOIN creator c ON c.id = v.creator_id
+                        JOIN video vi ON vi.id = v.video_id
+                        WHERE v.publication_status = 'PUBLIC' AND v.lifecycle_status = 'ACTIVE'
+                          AND c.publication_status = 'PUBLIC' AND c.lifecycle_status = 'ACTIVE'
+                          AND c.external_availability_status = 'AVAILABLE'
+                          AND vi.publication_status = 'PUBLIC' AND vi.lifecycle_status = 'ACTIVE'
+                          AND vi.external_availability_status = 'AVAILABLE'
+                          AND td.status = 'ACTIVE'
+                          AND td.tag_code IN (:tags)
+                        GROUP BY v.restaurant_id, v.id
+                        HAVING COUNT(DISTINCT td.tag_code) = :tagCount
+                    )""");
+            params.addValue("tags", criteria.tags());
+            params.addValue("tagCount", criteria.tags().size());
+        }
 
         Long totalElements = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM restaurant r WHERE " + where, params, Long.class);
@@ -115,6 +140,17 @@ class RestaurantSearchQueryAdapter implements RestaurantSearchQueryPort {
                         resultSet.getObject("restaurant_id", UUID.class),
                         resultSet.getObject("creator_id", UUID.class),
                         resultSet.getString("channel_name")));
+    }
+
+    @Override
+    public Set<String> findActiveTagCodes(Collection<String> tagCodes) {
+        if (tagCodes.isEmpty()) {
+            return Set.of();
+        }
+        return new LinkedHashSet<>(jdbcTemplate.queryForList(
+                "SELECT tag_code FROM tag_definition WHERE status = 'ACTIVE' AND tag_code IN (:tagCodes)",
+                new MapSqlParameterSource("tagCodes", tagCodes),
+                String.class));
     }
 
     /** LIKE 와일드카드(%, _)와 이스케이프 문자 자체를 리터럴로 취급하도록 이스케이프한다. */

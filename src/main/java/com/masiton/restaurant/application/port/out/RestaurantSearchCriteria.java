@@ -12,6 +12,22 @@ public record RestaurantSearchCriteria(
         UUID regionId,
         UUID foodCategoryId,
         Set<UUID> candidateRestaurantIds,
+        Set<String> tags,
         int page,
         int size) {
+
+    /** 기존 목록 조건 호출과의 호환성을 유지한다. */
+    public RestaurantSearchCriteria(
+            String normalizedQuery,
+            UUID regionId,
+            UUID foodCategoryId,
+            Set<UUID> candidateRestaurantIds,
+            int page,
+            int size) {
+        this(normalizedQuery, regionId, foodCategoryId, candidateRestaurantIds, Set.of(), page, size);
+    }
+
+    public RestaurantSearchCriteria {
+        tags = tags == null ? Set.of() : Set.copyOf(tags);
+    }
 }
