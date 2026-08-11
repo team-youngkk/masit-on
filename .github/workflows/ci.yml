@@ -26,11 +26,6 @@ on:
         description: '배포할 커밋 SHA 40자. 비우면 선택한 브랜치의 현재 커밋을 배포한다'
         required: false
         type: string
-      run_backend_tests:
-        description: '배포 없이 백엔드 빌드·테스트 job만 실행한다'
-        required: false
-        default: false
-        type: boolean
 
 permissions:
   contents: read
@@ -51,7 +46,7 @@ jobs:
   # 문제라서 하는 것이므로 그 검사를 기다리게 하면 복구만 몇 분 늦어진다.
   backend:
     name: 백엔드 빌드·테스트
-    if: github.event_name != 'workflow_dispatch' || inputs.run_backend_tests
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
