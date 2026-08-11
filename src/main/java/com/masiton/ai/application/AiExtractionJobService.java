@@ -28,6 +28,7 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
 
     private static final Pattern CHANNEL_ID_PATTERN = Pattern.compile("[A-Za-z0-9_-]{1,128}");
     private static final Pattern VIDEO_ID_PATTERN = Pattern.compile("[A-Za-z0-9_-]{1,128}");
+    private static final String INVALID_VIDEO_URL_CODE = "AIEXTRACT_INVALID_VIDEO_URL";
 
     private final ResolveVerifiedVideoUseCase verifiedVideoResolver;
     private final AiExtractionJobPersistenceService persistence;
@@ -77,7 +78,7 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
             return existing.get();
         }
         VerifiedVideo verified = verifiedVideoResolver.resolve(requestedUrl)
-                .orElseThrow(() -> new BusinessException(ErrorCode.REFERENCE_NOT_PUBLIC));
+                .orElseThrow(this::invalidVideoUrl);
         String channelId = requiredId(verified.publisherExternalChannelId(), "channelId");
         String videoId = requiredId(verified.externalVideoId(), "videoId");
         URI videoUrl = canonicalYoutubeUrl(videoId);
@@ -131,7 +132,7 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
 
     private URI youtubeUrl(String value) {
         if (value == null || value.isBlank()) {
-            throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE);
+            throw invalidVideoUrl();
         }
         try {
             String trimmed = value.trim();
@@ -150,8 +151,13 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
             }
             return uri;
         } catch (IllegalArgumentException exception) {
-            throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE);
+            throw invalidVideoUrl();
         }
+    }
+
+    private BusinessException invalidVideoUrl() {
+        return new BusinessException(HttpStatus.BAD_REQUEST, INVALID_VIDEO_URL_CODE,
+                "YouTube videoUrl is invalid.");
     }
 
     private URI canonicalYoutubeUrl(String videoId) {

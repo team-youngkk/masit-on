@@ -145,11 +145,17 @@ class GeminiHttpVideoExtractionAdapterTest {
     }
 
     @Test
-    @DisplayName("인증·권한·Free Tier quota 차단을 PROVIDER_BLOCKED로 정규화한다")
-    void 추출_인증권한Quota차단_PROVIDER_BLOCKED로정규화한다() throws Exception {
-        for (int status : new int[]{401, 403, 429}) {
+    @DisplayName("인증·권한 차단을 PROVIDER_BLOCKED로 정규화한다")
+    void 추출_인증권한차단_PROVIDER_BLOCKED로정규화한다() throws Exception {
+        for (int status : new int[]{401, 403}) {
             assertStatusFailure(status, AiProviderFailureCategory.PROVIDER_BLOCKED);
         }
+    }
+
+    @Test
+    @DisplayName("Free Tier quota 제한은 RATE_LIMIT으로 정규화한다")
+    void 추출_FreeTierQuota제한_RATE_LIMIT으로정규화한다() throws Exception {
+        assertStatusFailure(429, AiProviderFailureCategory.RATE_LIMIT);
     }
 
     @Test

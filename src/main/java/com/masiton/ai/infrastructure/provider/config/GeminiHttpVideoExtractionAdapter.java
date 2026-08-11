@@ -207,8 +207,11 @@ final class GeminiHttpVideoExtractionAdapter implements AiVideoExtractionProvide
         if (statusCode == 408) {
             throw new AiProviderException(AiProviderFailureCategory.TIMEOUT);
         }
-        if (statusCode == 401 || statusCode == 403 || statusCode == 429) {
+        if (statusCode == 401 || statusCode == 403) {
             throw new AiProviderException(AiProviderFailureCategory.PROVIDER_BLOCKED);
+        }
+        if (statusCode == 429) {
+            throw new AiProviderException(AiProviderFailureCategory.RATE_LIMIT);
         }
         if (statusCode >= 400 && statusCode < 500) {
             throw new AiProviderException(AiProviderFailureCategory.UPSTREAM);

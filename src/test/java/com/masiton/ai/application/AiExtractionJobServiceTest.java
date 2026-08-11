@@ -17,6 +17,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.http.HttpStatus;
 
 import com.masiton.ai.application.port.out.AiExtractionJobStore;
 import com.masiton.ai.application.port.out.TemporaryInputCipher;
@@ -122,17 +123,38 @@ class AiExtractionJobServiceTest {
     @Test
     @DisplayName("HTTP·비 YouTube·포트가 있는 URL은 공개 영상 URL로 인정하지 않는다")
     void submitAdmin_공개HTTPSYouTubeURL아님_거부한다() {
-        assertThatThrownBy(() -> service.submitAdmin("http://www.youtube.com/watch?v=video-id", null, null))
-                .isInstanceOf(com.masiton.common.web.BusinessException.class);
-        assertThatThrownBy(() -> service.submitAdmin("https://evil.example/watch?v=video-id", null, null))
-                .isInstanceOf(com.masiton.common.web.BusinessException.class);
-        assertThatThrownBy(() -> service.submitAdmin("https://www.youtube.com:443/watch?v=video-id", null, null))
-                .isInstanceOf(com.masiton.common.web.BusinessException.class);
-        assertThatThrownBy(() -> service.submitAdmin("https://youtu.be/video-id/extra", null, null))
-                .isInstanceOf(com.masiton.common.web.BusinessException.class);
-        assertThatThrownBy(() -> service.submitAdmin("https://www.youtube.com/shorts/video-id/extra", null, null))
-                .isInstanceOf(com.masiton.common.web.BusinessException.class);
+        for (String invalidUrl : new String[]{
+                "http://www.youtube.com/watch?v=video-id",
+                "https://evil.example/watch?v=video-id",
+                "https://www.youtube.com:443/watch?v=video-id",
+                "https://youtu.be/video-id/extra",
+                "https://www.youtube.com/shorts/video-id/extra"}) {
+            assertThatThrownBy(() -> service.submitAdmin(invalidUrl, null, null))
+                    .isInstanceOf(com.masiton.common.web.BusinessException.class)
+                    .satisfies(exception -> {
+                        com.masiton.common.web.BusinessException businessException =
+                                (com.masiton.common.web.BusinessException) exception;
+                        assertThat(businessException.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+                        assertThat(businessException.code()).isEqualTo("AIEXTRACT_INVALID_VIDEO_URL");
+                    });
+        }
         verifyNoInteractions(resolver, store, cipher);
+    }
+
+    @Test
+    @DisplayName("공개 영상 확인에 실패하면 AIEXTRACT_INVALID_VIDEO_URL 400을 반환한다")
+    void submitAdmin_공개영상확인실패_400AIEXTRACT_INVALID_VIDEO_URL을던진다() {
+        when(resolver.resolve(any())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.submitAdmin("https://www.youtube.com/watch?v=video-id", null, null))
+                .isInstanceOf(com.masiton.common.web.BusinessException.class)
+                .satisfies(exception -> {
+                    com.masiton.common.web.BusinessException businessException =
+                            (com.masiton.common.web.BusinessException) exception;
+                    assertThat(businessException.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+                    assertThat(businessException.code()).isEqualTo("AIEXTRACT_INVALID_VIDEO_URL");
+                });
+        verifyNoInteractions(cipher);
     }
 
     @Test
