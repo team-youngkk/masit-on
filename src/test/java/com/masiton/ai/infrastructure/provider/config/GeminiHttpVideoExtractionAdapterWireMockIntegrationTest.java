@@ -53,7 +53,10 @@ class GeminiHttpVideoExtractionAdapterWireMockIntegrationTest {
                         "headers", Map.of("x-goog-api-key", Map.of("equalTo", API_KEY)),
                         "bodyPatterns", List.of(Map.of("matchesJsonPath",
                                 "$.contents[0].parts[?(@.fileData.fileUri == 'https://www.youtube.com/watch?v=video-id') ]"))),
-                "response", Map.of("status", 200, "jsonBody", payload)));
+                "response", Map.of(
+                        "status", 200,
+                        "headers", Map.of("Content-Type", "application/json"),
+                        "jsonBody", payload)));
         admin("POST", "/__admin/mappings", mapping);
 
         AiVideoExtractionResult result = adapter().extract(

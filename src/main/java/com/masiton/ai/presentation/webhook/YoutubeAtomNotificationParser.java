@@ -50,7 +50,7 @@ final class YoutubeAtomNotificationParser {
             if (!videoId.equals(videoIdFrom(videoUrl))) {
                 throw invalidPayload();
             }
-            return new YoutubeAtomNotification(channelId, videoId, videoUrl);
+            return new YoutubeAtomNotification(channelId, videoId, canonicalVideoUrl(videoId));
         } catch (BusinessException exception) {
             throw exception;
         } catch (Exception exception) {
@@ -93,7 +93,7 @@ final class YoutubeAtomNotificationParser {
     private String videoIdFrom(String rawVideoUrl) {
         try {
             URI uri = URI.create(rawVideoUrl.trim());
-            if (!"https".equalsIgnoreCase(uri.getScheme())
+            if (!("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()))
                     || uri.getUserInfo() != null
                     || uri.getPort() != -1
                     || uri.getFragment() != null) {
@@ -120,6 +120,10 @@ final class YoutubeAtomNotificationParser {
             throw invalidPayload();
         }
         throw invalidPayload();
+    }
+
+    private String canonicalVideoUrl(String videoId) {
+        return "https://www.youtube.com/watch?v=" + videoId;
     }
 
     private String videoIdFromQuery(String rawQuery) {

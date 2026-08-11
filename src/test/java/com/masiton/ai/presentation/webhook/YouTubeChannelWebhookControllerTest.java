@@ -29,7 +29,7 @@ class YouTubeChannelWebhookControllerTest {
                   xmlns:yt="http://www.youtube.com/xml/schemas/2015">
               <yt:channelId>channel-1</yt:channelId>
               <yt:videoId>video-1</yt:videoId>
-              <link rel="alternate" href="https://www.youtube.com/watch?v=video-1"/>
+              <link rel="alternate" href="http://www.youtube.com/watch?v=video-1"/>
             </feed>
             """;
 
