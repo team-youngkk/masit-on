@@ -99,6 +99,17 @@ class VerifyAiContentCandidateServiceTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = {"제가 직접 방문했습니다.", "제가 이 식당에 다녀왔습니다", "이곳을 방문했어요"})
+    @DisplayName("자연스러운 실제 방문 주장도 전체 문장 기준으로 확정한다")
+    void verify_자연스러운실제방문주장_확정결과를조합한다(String value) {
+        given(restaurantReference.resolve(anyString(), anyString(), any(), anyString()))
+                .willReturn(Optional.of(restaurant()));
+        given(videoVerification.resolve(any())).willReturn(Optional.of(video()));
+
+        assertThat(service.verify(command(value, timestamp()))).isPresent();
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {"방문", "단순 언급", "방문 추천", "방문했을 것 같다", "직접 방문하지 않았습니다",
             "직접 방문했을까요?", "방문할 예정입니다"})
     @DisplayName("언급·추천·추정·부정·의문·가정 방문 후보는 확정하지 않는다")

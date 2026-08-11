@@ -2,7 +2,7 @@ package com.masiton.orchestration.application;
 
 import java.util.Locale;
 import java.util.Optional;
-import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Service;
 
@@ -16,18 +16,18 @@ import com.masiton.video.application.port.out.VerifiedVideo;
 class VerifyAiContentCandidateService implements VerifyAiContentCandidateUseCase {
 
     /**
-     * Candidate value is a short structured claim, not a source transcript. Requiring a complete
-     * normalized claim prevents a positive substring from turning a negation or question into proof.
+     * Candidate value is a short structured claim, not a source transcript. Match the complete
+     * normalized claim so a positive verb cannot turn a negation or question into proof.
      */
-    private static final Set<String> EXPLICIT_ACTUAL_VISIT_CLAIMS = Set.of(
-            "방문함", "방문했음", "방문했다", "방문했습니다",
-            "직접방문", "직접방문함", "직접방문했음", "직접방문했다", "직접방문했습니다",
-            "제가방문했다", "제가방문했습니다", "제가직접방문했다", "제가직접방문했습니다",
-            "저희가방문했다", "저희가방문했습니다", "다녀옴", "다녀왔다", "다녀왔습니다",
-            "직접다녀옴", "직접다녀왔다", "직접다녀왔습니다", "찾아갔다", "찾아갔습니다",
-            "직접찾아갔다", "직접찾아갔습니다", "들렀다", "들렀습니다", "직접들렀다",
-            "직접들렀습니다", "먹어봤다", "먹어봤습니다", "visited", "ivisited",
-            "directlyvisited", "atehere", "wentthere", "stoppedby");
+    private static final Pattern EXPLICIT_ACTUAL_VISIT_CLAIM = Pattern.compile(
+            "^(?:직접방문|(?:[가-힣a-z0-9]+)*(?:직접)?(?:방문(?:함|했(?:음|다|습니다|어요|어))"
+                    + "|다녀(?:옴|왔(?:음|다|습니다|어요|어))"
+                    + "|찾아갔(?:다|습니다|어요|어)|들렀(?:다|습니다|어요|어)"
+                    + "|먹어봤(?:다|습니다|어요|어)|visited|directlyvisited|atehere|wentthere|stoppedby))$",
+            Pattern.CASE_INSENSITIVE);
+    private static final Pattern BLOCKING_VISIT_CONTEXT = Pattern.compile(
+            "(?:방문|다녀|찾아|들러|먹어).*(?:않|안|못|아니|을까|을까요|나요|습니까|일까|일까요"
+                    + "|것같|듯|추정|예정|계획|가능|추천|언급|소개|아마)");
 
     private final ResolveVerifiedRestaurantReferenceUseCase restaurantReference;
     private final ResolveVerifiedVideoUseCase videoVerification;
@@ -76,8 +76,18 @@ class VerifyAiContentCandidateService implements VerifyAiContentCandidateUseCase
             return false;
         }
 
-        String normalized = candidate.value().replaceAll("\\s+", "").toLowerCase(Locale.ROOT);
-        return EXPLICIT_ACTUAL_VISIT_CLAIMS.contains(normalized);
+        String normalized = normalizeClaim(candidate.value());
+        return !hasBlockingVisitContext(normalized) && EXPLICIT_ACTUAL_VISIT_CLAIM.matcher(normalized).matches();
+    }
+
+    private String normalizeClaim(String value) {
+        return value.trim().replaceAll("\\s+", "").replaceFirst("[.。]+$", "").toLowerCase(Locale.ROOT);
+    }
+
+    private boolean hasBlockingVisitContext(String normalized) {
+        return normalized.indexOf('?') >= 0 || normalized.indexOf('？') >= 0
+                || normalized.indexOf('!') >= 0 || normalized.indexOf('！') >= 0
+                || BLOCKING_VISIT_CONTEXT.matcher(normalized).find();
     }
 
     private boolean validEvidence(Evidence evidence) {
