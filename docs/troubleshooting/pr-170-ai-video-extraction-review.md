@@ -71,24 +71,24 @@ related_documents:
 |---|---|---|
 | `git diff --check` | 통과 | 공백·패치 형식 오류 없음 |
 | `.\gradlew.bat test --tests "com.masiton.ai.infrastructure.provider.config.GeminiHttpVideoExtractionAdapterTest" --tests "com.masiton.ai.presentation.webhook.YoutubeAtomNotificationParserTest" --tests "com.masiton.ai.presentation.webhook.YouTubeChannelWebhookControllerTest" --no-daemon --console=plain` | 통과 | Gemini adapter·Webhook parser·Controller 관련 테스트 전부 통과 |
-| GitHub Actions `백엔드 빌드·테스트` 재실행 | 반영 후 확인 | Docker/Testcontainers WireMock 통합 테스트와 전체 CI 결과를 push 후 확인 |
+| [GitHub Actions 수동 백엔드 실행](https://github.com/team-youngkk/masit-on/actions/runs/31456121367) | 통과 | 원격 Docker에서 `799 tests`, `0 failures`, `0 errors`, `2 skipped`; WireMock 통합 테스트 포함 |
 
-로컬 환경에서는 Docker daemon이 없어 Testcontainers 통합 테스트를 실행하지 못했다. 따라서 WireMock fixture 수정의 최종 증거는 push 후 GitHub Actions 재실행으로 확인한다.
+로컬 환경에서는 Docker daemon이 없어 Testcontainers 통합 테스트를 실행하지 못했으나, GitHub Actions Ubuntu Docker runner에서 전체 백엔드 job을 통과했다. 수동 실행을 위해 임시로 추가한 `workflow_dispatch` 테스트 opt-in은 검증 후 revert했으며 최종 PR 소스에는 남기지 않았다.
 
 ## 8. 재발 방지 및 다음 확인
 
 - 요청 Schema와 응답 정규화 검증기가 같은 허용 필드·근거 타입을 선언하도록 관련 회귀 테스트를 유지한다.
 - 외부 Provider fixture는 성공 상태, JSON media type, 실제 요청 계약을 함께 명시한다.
 - 관리자 보완 텍스트는 시스템 지시와 분리된 비신뢰 콘텐츠로만 전달하고, 후보 확정에는 영상 근거와 후속 검증을 요구한다.
-- push 후 GitHub Actions 전체 백엔드 job이 통과하는지 확인하고, 7개 리뷰 스레드에 수정 내용·검증 결과를 답글로 남긴 뒤 resolve한다.
+- 원격 전체 백엔드 job 통과를 확인했으며, 7개 리뷰 스레드에 수정 내용·검증 결과를 답글로 남긴 뒤 resolve한다.
 
 ## 9. 도입 전후 비교 지표
 
 | 지표 | 도입 전 기준값 | 측정 방법·기간 | 비교 결과 | 해석 |
 |---|---:|---|---|---|
-| 관련 회귀 테스트 실패 | CI 1건 실패 | PR #170 CI 및 targeted Gradle test | 수정 후 CI 재실행에서 확인 예정 | WireMock 응답 계약과 adapter media type 검증의 일치 여부 확인 |
-| 미해결 리뷰 스레드 | 7개 | PR #170 review threads | 수정 후 답글·resolve에서 확인 예정 | 리뷰 요청의 코드·테스트 반영 여부 확인 |
+| 관련 회귀 테스트 실패 | CI 1건 실패 | PR #170 CI 및 targeted Gradle test | 원격 백엔드 799건 중 실패 0건 | WireMock 응답 계약과 adapter media type 검증의 일치 확인 |
+| 미해결 리뷰 스레드 | 7개 | PR #170 review threads | 답글·resolve 진행 후 0개 확인 예정 | 리뷰 요청의 코드·테스트 반영 여부 확인 |
 
 ## 10. 남은 사항
 
-로컬 Docker 제약으로 Testcontainers 테스트는 미실행 상태다. push 후 CI가 통과하면 남은 사항을 없음으로 갱신한다.
+없음. 로컬 Docker 제약은 있었지만 원격 Docker CI에서 전체 백엔드 테스트와 WireMock 통합 테스트를 통과했다.
