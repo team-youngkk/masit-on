@@ -65,7 +65,7 @@ class AiExtractionResultProcessorServiceTest {
                           {"field":"menu","value":"냉면","confidence":0.90,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}},
                           {"field":"address","value":"서울특별시 마포구 월드컵로 1","confidence":0.90,"evidence":{"type":"TEXT_RANGE","startOffset":1,"endOffset":5,"sourceHash":"hash"}},
                           {"field":"location","value":"https://place.map.kakao.com/123","confidence":0.90,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}},
-                          {"field":"visitEvidence","value":"방문함","confidence":0.90,"evidence":{"type":"TEXT_RANGE","startOffset":1,"endOffset":5,"sourceHash":"visit-hash"}},
+                          {"field":"visitEvidence","value":"직접 방문","confidence":0.90,"evidence":{"type":"TEXT_RANGE","startOffset":1,"endOffset":5,"sourceHash":"visit-hash"}},
                           {"field":"tag","candidateTagId":"tag-1","tagType":"MENU","rawLabel":"냉면","normalizedCode":"MENU_NAENGMYEON","label":"냉면","confidence":0.9,"evidence":{"type":"TIMESTAMP","startMs":2,"endMs":3}}
                         ],"missingFields":[]}
                         """));
@@ -75,7 +75,7 @@ class AiExtractionResultProcessorServiceTest {
         verify(commitService).persistConfirmed(any(), any());
         var verificationCommand = forClass(VerifyAiContentCandidateUseCase.VerificationCommand.class);
         verify(contentVerification).verify(verificationCommand.capture());
-        assertThat(verificationCommand.getValue().visitEvidence().value()).isEqualTo("방문함");
+        assertThat(verificationCommand.getValue().visitEvidence().value()).isEqualTo("직접 방문");
         assertThat(verificationCommand.getValue().visitEvidence().evidence().type())
                 .isEqualTo(VerifyAiContentCandidateUseCase.EvidenceType.TEXT_RANGE);
     }
@@ -105,7 +105,7 @@ class AiExtractionResultProcessorServiceTest {
                           {"field":"menu","value":"냉면","confidence":0.90,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}},
                           {"field":"address","value":"서울특별시 마포구 월드컵로 1","confidence":0.90,"evidence":{"type":"TEXT_RANGE","startOffset":1,"endOffset":5,"sourceHash":"hash"}},
                           {"field":"location","value":"https://place.map.kakao.com/123","confidence":0.90,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}},
-                          {"field":"visitEvidence","value":"방문함","confidence":0.90,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}}
+                          {"field":"visitEvidence","value":"직접 방문","confidence":0.90,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}}
                         ],"missingFields":[]}
                         """));
 

@@ -111,7 +111,8 @@ class VerifyAiContentCandidateServiceTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"방문", "단순 언급", "방문 추천", "방문했을 것 같다", "직접 방문하지 않았습니다",
-            "직접 방문했을까요?", "방문할 예정입니다"})
+            "직접 방문했을까요?", "방문할 예정입니다", "방문함", "친구가 방문했습니다",
+            "다른 사람이 다녀왔습니다", "유명인이 직접 방문했습니다"})
     @DisplayName("언급·추천·추정·부정·의문·가정 방문 후보는 확정하지 않는다")
     void verify_확정할수없는방문후보_확정하지않는다(String value) {
         given(restaurantReference.resolve(anyString(), anyString(), any(), anyString()))

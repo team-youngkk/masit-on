@@ -28,6 +28,12 @@ class VerifyAiContentCandidateService implements VerifyAiContentCandidateUseCase
     private static final Pattern BLOCKING_VISIT_CONTEXT = Pattern.compile(
             "(?:방문|다녀|찾아|들러|먹어).*(?:않|안|못|아니|을까|을까요|나요|습니까|일까|일까요"
                     + "|것같|듯|추정|예정|계획|가능|추천|언급|소개|아마)");
+    private static final Pattern VISIT_VERB = Pattern.compile(
+            "방문|다녀|찾아갔|들렀|먹어봤|visited|atehere|wentthere|stoppedby");
+    private static final Pattern FIRSTHAND_SUBJECT = Pattern.compile(
+            "^(?:제가|저희가|저는|나는|내가|우리가|우리는|저희는|i|we)");
+    private static final Pattern SUBJECT_PARTICLE = Pattern.compile("[가-힣]+(?:가|이|은|는)");
+    private static final Pattern LOCATION_TARGET = Pattern.compile("[가-힣]+(?:을|를|에|에서)");
 
     private final ResolveVerifiedRestaurantReferenceUseCase restaurantReference;
     private final ResolveVerifiedVideoUseCase videoVerification;
@@ -87,7 +93,23 @@ class VerifyAiContentCandidateService implements VerifyAiContentCandidateUseCase
     private boolean hasBlockingVisitContext(String normalized) {
         return normalized.indexOf('?') >= 0 || normalized.indexOf('？') >= 0
                 || normalized.indexOf('!') >= 0 || normalized.indexOf('！') >= 0
-                || BLOCKING_VISIT_CONTEXT.matcher(normalized).find();
+                || BLOCKING_VISIT_CONTEXT.matcher(normalized).find()
+                || !hasFirsthandVisitContext(normalized);
+    }
+
+    private boolean hasFirsthandVisitContext(String normalized) {
+        var visitVerb = VISIT_VERB.matcher(normalized);
+        if (!visitVerb.find()) {
+            return false;
+        }
+        String prefix = normalized.substring(0, visitVerb.start());
+        var firsthandSubject = FIRSTHAND_SUBJECT.matcher(prefix);
+        String subjectRemainder = firsthandSubject.lookingAt() ? prefix.substring(firsthandSubject.end()) : prefix;
+        if (SUBJECT_PARTICLE.matcher(subjectRemainder).find()) {
+            return false;
+        }
+        return firsthandSubject.lookingAt() || prefix.contains("직접") || prefix.contains("directly")
+                || LOCATION_TARGET.matcher(prefix).find();
     }
 
     private boolean validEvidence(Evidence evidence) {
