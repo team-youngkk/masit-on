@@ -156,6 +156,7 @@ class GeminiHttpVideoExtractionAdapterTest {
     @DisplayName("Free Tier quota 제한은 RATE_LIMIT으로 정규화한다")
     void 추출_FreeTierQuota제한_RATE_LIMIT으로정규화한다() throws Exception {
         assertStatusFailure(429, AiProviderFailureCategory.RATE_LIMIT);
+        assertStatusRetryable(429, true);
     }
 
     @Test
@@ -163,6 +164,7 @@ class GeminiHttpVideoExtractionAdapterTest {
     void 추출_요청오류4xx_UPSTREAM으로정규화한다() throws Exception {
         for (int status : new int[]{400, 404, 415}) {
             assertStatusFailure(status, AiProviderFailureCategory.UPSTREAM);
+            assertStatusRetryable(status, false);
         }
     }
 
@@ -172,6 +174,10 @@ class GeminiHttpVideoExtractionAdapterTest {
         startServer(exchange -> respond(exchange, 503, "{\"error\":{}}"));
 
         assertFailure(AiProviderFailureCategory.UPSTREAM);
+        assertThatThrownBy(() -> adapter(serverUrl()).extract(request()))
+                .isInstanceOf(AiProviderException.class)
+                .extracting(exception -> ((AiProviderException) exception).retryable())
+                .isEqualTo(true);
     }
 
     @Test
@@ -289,6 +295,19 @@ class GeminiHttpVideoExtractionAdapterTest {
         startServer(exchange -> respond(exchange, status, "{\"error\":{}}"));
         try {
             assertFailure(expectedCategory);
+        } finally {
+            server.stop(0);
+            server = null;
+        }
+    }
+
+    private void assertStatusRetryable(int status, boolean expectedRetryable) throws Exception {
+        startServer(exchange -> respond(exchange, status, "{\"error\":{}}"));
+        try {
+            assertThatThrownBy(() -> adapter(serverUrl()).extract(request()))
+                    .isInstanceOf(AiProviderException.class)
+                    .extracting(exception -> ((AiProviderException) exception).retryable())
+                    .isEqualTo(expectedRetryable);
         } finally {
             server.stop(0);
             server = null;
