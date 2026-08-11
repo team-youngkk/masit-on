@@ -15,6 +15,11 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: validate
+  task:
+    scheduling:
+      # AI polling은 별도 aiWorkerTaskScheduler를 사용하고, 나머지 예약 작업은 이 기본 풀을 사용한다.
+      pool:
+        size: 1
 
 server:
   port: ${SERVER_PORT:8080}

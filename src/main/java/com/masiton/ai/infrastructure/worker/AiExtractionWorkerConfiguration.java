@@ -3,6 +3,7 @@ package com.masiton.ai.infrastructure.worker;
 import java.time.Clock;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.task.ThreadPoolTaskSchedulerBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -39,5 +40,10 @@ public class AiExtractionWorkerConfiguration {
         scheduler.setPoolSize(1);
         scheduler.setThreadNamePrefix("ai-worker-poll-");
         return scheduler;
+    }
+
+    @Bean(name = "taskScheduler")
+    ThreadPoolTaskScheduler taskScheduler(ThreadPoolTaskSchedulerBuilder builder) {
+        return builder.build();
     }
 }
