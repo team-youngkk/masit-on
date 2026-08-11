@@ -100,8 +100,9 @@ Worker 애플리케이션 설정을 추가하면서 운영 컨테이너의 SSM�
 | 활성 키 교체 후 과거 임시 입력 복호화 성공 | 0/1 | 두 키 fixture 단위 테스트 | 1/1 | 로컬 회귀 테스트 기준 복구 성공 | WS-15 운영자, E3-T13 |
 | quota 100% 대기 작업 상태 | `QUEUED` 유지 | Worker 서비스·PostgreSQL 통합 테스트 | `FAILED/QUOTA_HARD_STOP` | 수동 등록 fallback 판단 가능한 종단 상태 | WS-15 운영자, E3-T13 |
 | 검증된 Store 정상 쓰기 경로 | claim 2종 중심 | PostgreSQL Testcontainers | lease 소진·실패 완료·재시도 기록·무시도 실패·quota 집계 포함 | 리뷰에서 지적된 미검증 SQL 경로 자동화 | PR #172 |
-| 미해결 리뷰 스레드 | 11개 | GitHub review thread 조회 | 답글·해결 처리 예정 | 원격 반영 후 갱신 | PR 작성자, PR #172 |
+| 미해결 리뷰 스레드 | 11개 | GitHub review thread 재조회 | 0개 | 원인·변경·검증·기록 답글 후 11개 해결 | PR 작성자, PR #172 |
 
 ## 10. 남은 사항
 
-- 원격 push, 인라인 답글과 스레드 해결 처리가 남아 있다.
+- 미해결 리뷰 스레드는 없다.
+- 기존 `CHANGES_REQUESTED` review 판정은 리뷰어 재검토가 필요하다. 프런트엔드 CI는 통과했고 백엔드 CI는 이 기록 갱신 시점에 실행 중이다.
