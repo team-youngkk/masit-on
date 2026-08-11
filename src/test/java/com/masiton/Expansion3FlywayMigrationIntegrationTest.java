@@ -1,6 +1,7 @@
 package com.masiton;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.net.URI;
 import java.time.OffsetDateTime;
@@ -35,6 +36,11 @@ class Expansion3FlywayMigrationIntegrationTest {
     private static final UUID CATEGORY_ID = UUID.fromString("20000000-0000-4000-8000-000000000001");
     private static final UUID SEEDED_TAG_ID = UUID.fromString("30000000-0000-4000-8000-000000000001");
     private static final AtomicInteger SCHEMA_SEQUENCE = new AtomicInteger();
+    private static final List<String> EXPECTED_TAG_CODES = List.of(
+            "MENU_NAENGMYEON", "MENU_GUKBAP", "MENU_RAMEN", "MENU_SUSHI", "MENU_PIZZA", "MENU_SAMGYEOPSAL",
+            "TASTE_SPICY", "TASTE_SWEET", "TASTE_SAVORY", "TASTE_LIGHT", "OCCASION_SOLO", "OCCASION_DATE",
+            "OCCASION_GROUP", "OCCASION_LATE_NIGHT", "ATMOSPHERE_CASUAL", "ATMOSPHERE_QUIET",
+            "ATMOSPHERE_LIVELY", "ATMOSPHERE_BAR");
 
     @Container
     static final PostgreSQLContainer POSTGRES =
@@ -56,35 +62,194 @@ class Expansion3FlywayMigrationIntegrationTest {
                 existingAdminId, "admin-" + existingAdminId);
 
         // when
-        migrate(database.dataSource(), database.schema(), null);
+        migrate(database.dataSource(), database.schema(), MigrationVersion.fromVersion("4"));
 
         // then
         List<String> versions = jdbcTemplate.queryForList(
                 "SELECT version FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank",
                 String.class);
-        Integer aiTableCount = jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM information_schema.tables WHERE table_schema = ? AND table_name IN "
-                        + "('ai_extraction_job', 'ai_extraction_temporary_input', 'ai_candidate_snapshot', "
-                        + "'ai_candidate_tag_review', 'tag_definition', 'visit_tag', 'ai_extraction_attempt', "
-                        + "'youtube_channel_watch')",
-                Integer.class,
-                database.schema());
-        Integer seededTagCount = jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM tag_definition WHERE source = 'SEED' AND status = 'ACTIVE'", Integer.class);
-        Integer indexCount = jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM pg_indexes WHERE schemaname = current_schema() AND indexname IN "
-                        + "('ix_ai_job__claim', 'ix_ai_job__expired_lease_claim', 'ix_ai_job__review', "
-                        + "'ix_ai_snapshot__review', 'ix_ai_tag_review__candidate', 'ix_visit_tag__tag_lookup', "
-                        + "'ix_ai_job__video_input_versions', 'ix_ai_job__video_mode_versions', "
-                        + "'ix_ai_temporary_input__expires_at')",
-                Integer.class);
-
-        assertThat(versions).containsExactly("1", "2", "3", "4", "5");
-        assertThat(aiTableCount).isEqualTo(8);
-        assertThat(seededTagCount).isEqualTo(18);
-        assertThat(indexCount).isEqualTo(9);
+        assertThat(versions).containsExactly("1", "2", "3", "4");
+        assertAiSchemaAndContracts(jdbcTemplate, database.schema());
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM pg_indexes WHERE schemaname = current_schema() "
+                + "AND indexname IN ('ix_ai_job__video_input_versions', 'ix_ai_job__video_mode_versions', "
+                + "'ix_ai_temporary_input__expires_at')", Integer.class)).isZero();
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM admin_account WHERE id = ?", Integer.class, existingAdminId)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("빈 데이터베이스를 최신 버전까지 마이그레이션하면 V4 스키마와 V5 인덱스가 모두 적용된다")
+    void 빈데이터베이스_최신버전마이그레이션_V4스키마와V5인덱스적용() {
+        SchemaDatabase database = createSchemaDatabase();
+        JdbcTemplate jdbcTemplate = new JdbcTemplate(database.dataSource());
+
+        migrate(database.dataSource(), database.schema(), null);
+
+        assertThat(jdbcTemplate.queryForList(
+                "SELECT version FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank", String.class))
+                .containsExactly("1", "2", "3", "4", "5");
+        assertAiSchemaAndContracts(jdbcTemplate, database.schema());
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM pg_indexes WHERE schemaname = current_schema() "
+                + "AND indexname IN ('ix_ai_job__video_input_versions', 'ix_ai_job__video_mode_versions', "
+                + "'ix_ai_temporary_input__expires_at')", Integer.class)).isEqualTo(3);
+    }
+
+    private void assertAiSchemaAndContracts(JdbcTemplate jdbcTemplate, String schema) {
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM information_schema.tables WHERE table_schema = ? "
+                + "AND table_name IN ('ai_extraction_job','ai_extraction_temporary_input','ai_candidate_snapshot',"
+                + "'ai_candidate_tag_review','tag_definition','visit_tag','ai_extraction_attempt','youtube_channel_watch')",
+                Integer.class, schema)).isEqualTo(8);
+        assertThat(jdbcTemplate.queryForList("SELECT tag_code FROM tag_definition WHERE source='SEED' AND status='ACTIVE' "
+                + "ORDER BY tag_code", String.class)).containsExactlyInAnyOrderElementsOf(EXPECTED_TAG_CODES);
+        String aiTables = "('ai_extraction_job'::regclass,'ai_extraction_temporary_input'::regclass,'ai_candidate_snapshot'::regclass,"
+                + "'ai_candidate_tag_review'::regclass,'tag_definition'::regclass,'visit_tag'::regclass,'ai_extraction_attempt'::regclass,'youtube_channel_watch'::regclass)";
+        assertThat(jdbcTemplate.queryForList("SELECT conname FROM pg_constraint WHERE connamespace=current_schema()::regnamespace "
+                + "AND contype='p' AND conrelid IN " + aiTables + " ORDER BY conname", String.class)).containsExactlyInAnyOrder(
+                "pk_ai_extraction_job", "pk_ai_extraction_temporary_input", "pk_ai_candidate_snapshot",
+                "pk_ai_candidate_tag_review", "pk_tag_definition", "pk_visit_tag", "pk_ai_extraction_attempt",
+                "pk_youtube_channel_watch");
+        assertThat(jdbcTemplate.queryForList("SELECT conname FROM pg_constraint WHERE connamespace=current_schema()::regnamespace "
+                + "AND contype='u' AND conrelid IN " + aiTables + " ORDER BY conname", String.class)).containsExactlyInAnyOrder(
+                "ux_ai_job__idempotency", "ux_ai_snapshot__job_version", "ux_tag_definition__code",
+                "ux_visit_tag__visit_tag", "ux_ai_attempt__job_no", "ux_channel_watch__creator",
+                "ux_channel_watch__youtube_channel");
+        Map<String, String> foreignKeys = jdbcTemplate.query(
+                "SELECT conname, pg_get_constraintdef(oid) FROM pg_constraint "
+                        + "WHERE connamespace=current_schema()::regnamespace AND contype='f' AND conrelid IN "
+                        + aiTables,
+                rs -> {
+                    Map<String, String> values = new java.util.HashMap<>();
+                    while (rs.next()) {
+                        values.put(rs.getString(1), rs.getString(2));
+                    }
+                    return values;
+                });
+        Map<String, List<String>> expectedForeignKeys = Map.ofEntries(
+                Map.entry("fk_ai_extraction_temporary_input__job",
+                        List.of("FOREIGN KEY (job_id)", "REFERENCES ai_extraction_job(id)",
+                                "ON UPDATE RESTRICT", "ON DELETE CASCADE")),
+                Map.entry("fk_ai_candidate_snapshot__job",
+                        List.of("FOREIGN KEY (job_id)", "REFERENCES ai_extraction_job(id)",
+                                "ON UPDATE RESTRICT", "ON DELETE CASCADE")),
+                Map.entry("fk_ai_candidate_snapshot__reviewed_by",
+                        List.of("FOREIGN KEY (reviewed_by)", "REFERENCES admin_account(id)",
+                                "ON UPDATE RESTRICT", "ON DELETE RESTRICT")),
+                Map.entry("fk_tag_definition__created_from_snapshot",
+                        List.of("FOREIGN KEY (created_from_snapshot_id)", "REFERENCES ai_candidate_snapshot(id)",
+                                "ON UPDATE RESTRICT", "ON DELETE RESTRICT")),
+                Map.entry("fk_ai_candidate_tag_review__snapshot",
+                        List.of("FOREIGN KEY (snapshot_id)", "REFERENCES ai_candidate_snapshot(id)",
+                                "ON UPDATE RESTRICT", "ON DELETE CASCADE")),
+                Map.entry("fk_ai_candidate_tag_review__replacement_tag_definition",
+                        List.of("FOREIGN KEY (replacement_tag_definition_id)", "REFERENCES tag_definition(id)",
+                                "ON UPDATE RESTRICT", "ON DELETE RESTRICT")),
+                Map.entry("fk_ai_candidate_tag_review__reviewed_by",
+                        List.of("FOREIGN KEY (reviewed_by)", "REFERENCES admin_account(id)",
+                                "ON UPDATE RESTRICT", "ON DELETE RESTRICT")),
+                Map.entry("fk_visit_tag__visit",
+                        List.of("FOREIGN KEY (visit_id)", "REFERENCES visit(id)",
+                                "ON UPDATE RESTRICT", "ON DELETE RESTRICT")),
+                Map.entry("fk_visit_tag__tag_definition",
+                        List.of("FOREIGN KEY (tag_definition_id)", "REFERENCES tag_definition(id)",
+                                "ON UPDATE RESTRICT", "ON DELETE RESTRICT")),
+                Map.entry("fk_ai_extraction_attempt__job",
+                        List.of("FOREIGN KEY (job_id)", "REFERENCES ai_extraction_job(id)",
+                                "ON UPDATE RESTRICT", "ON DELETE CASCADE")),
+                Map.entry("fk_youtube_channel_watch__creator",
+                        List.of("FOREIGN KEY (creator_id)", "REFERENCES creator(id)",
+                                "ON UPDATE RESTRICT", "ON DELETE RESTRICT")));
+        assertThat(foreignKeys).containsOnlyKeys(expectedForeignKeys.keySet());
+        expectedForeignKeys.forEach((name, fragments) -> assertThat(foreignKeys.get(name))
+                .as(name)
+                .contains(fragments.toArray(String[]::new)));
+
+        Map<String, List<String>> expectedChecks = Map.of(
+                "ai_extraction_job", List.of(
+                        "ck_ai_extraction_job__source", "ck_ai_extraction_job__priority",
+                        "ck_ai_extraction_job__youtube_channel_id_not_blank",
+                        "ck_ai_extraction_job__youtube_video_id_not_blank", "ck_ai_extraction_job__video_url",
+                        "ck_ai_extraction_job__input_mode", "ck_ai_extraction_job__source_input_mode",
+                        "ck_ai_extraction_job__input_hash_length", "ck_ai_extraction_job__provider",
+                        "ck_ai_extraction_job__model_version", "ck_ai_extraction_job__prompt_version_not_blank",
+                        "ck_ai_extraction_job__schema_version_not_blank", "ck_ai_extraction_job__execution_status",
+                        "ck_ai_extraction_job__result_completeness", "ck_ai_extraction_job__attempt_count",
+                        "ck_ai_extraction_job__lease_pair", "ck_ai_extraction_job__state_timestamps",
+                        "ck_ai_extraction_job__started_after_created"),
+                "ai_extraction_temporary_input", List.of(
+                        "ck_ai_extraction_temporary_input__ciphertext_not_empty",
+                        "ck_ai_extraction_temporary_input__key_id_not_blank",
+                        "ck_ai_extraction_temporary_input__expires_after_created"),
+                "ai_candidate_snapshot", List.of(
+                        "ck_ai_candidate_snapshot__version", "ck_ai_candidate_snapshot__candidate_fields_object",
+                        "ck_ai_candidate_snapshot__candidate_tags_array",
+                        "ck_ai_candidate_snapshot__field_confidences_object",
+                        "ck_ai_candidate_snapshot__evidence_object", "ck_ai_candidate_snapshot__missing_fields_array",
+                        "ck_ai_candidate_snapshot__review_status", "ck_ai_candidate_snapshot__review_state",
+                        "ck_ai_candidate_snapshot__reviewed_after_created"),
+                "ai_candidate_tag_review", List.of(
+                        "ck_ai_candidate_tag_review__candidate_tag_id_not_blank",
+                        "ck_ai_candidate_tag_review__decision", "ck_ai_candidate_tag_review__decision_source",
+                        "ck_ai_candidate_tag_review__decision_pair", "ck_ai_candidate_tag_review__decision_actor"),
+                "tag_definition", List.of(
+                        "ck_tag_definition__code_not_blank", "ck_tag_definition__type",
+                        "ck_tag_definition__display_name_not_blank", "ck_tag_definition__aliases_array",
+                        "ck_tag_definition__aliases_text_unique", "ck_tag_definition__status",
+                        "ck_tag_definition__source", "ck_tag_definition__snapshot_source",
+                        "ck_tag_definition__updated_after_created"),
+                "visit_tag", List.of(
+                        "ck_visit_tag__source", "ck_visit_tag__confidence", "ck_visit_tag__evidence_object",
+                        "ck_visit_tag__ai_evidence"),
+                "ai_extraction_attempt", List.of(
+                        "ck_ai_extraction_attempt__number", "ck_ai_extraction_attempt__provider_request_id_not_blank",
+                        "ck_ai_extraction_attempt__timestamps", "ck_ai_extraction_attempt__outcome",
+                        "ck_ai_extraction_attempt__error", "ck_ai_extraction_attempt__input_tokens",
+                        "ck_ai_extraction_attempt__output_tokens", "ck_ai_extraction_attempt__estimated_cost"),
+                "youtube_channel_watch", List.of(
+                        "ck_youtube_channel_watch__channel_id_not_blank",
+                        "ck_youtube_channel_watch__subscription_status",
+                        "ck_youtube_channel_watch__token_hash_not_empty",
+                        "ck_youtube_channel_watch__last_error_not_blank",
+                        "ck_youtube_channel_watch__updated_after_created"));
+        expectedChecks.forEach((table, names) -> assertThat(jdbcTemplate.queryForList(
+                "SELECT conname FROM pg_constraint WHERE connamespace=current_schema()::regnamespace "
+                        + "AND contype='c' AND conrelid=?::regclass",
+                String.class, table)).as(table).containsExactlyInAnyOrderElementsOf(names));
+
+        Map<String, List<String>> expectedColumns = Map.of(
+                "ai_extraction_job", List.of(
+                        "id", "source", "priority", "youtube_channel_id", "youtube_video_id", "video_url",
+                        "input_mode", "input_hash", "provider", "model_version", "prompt_version", "schema_version",
+                        "execution_status", "result_completeness", "attempt_count", "lease_owner",
+                        "lease_expires_at", "error_category", "created_at", "started_at", "finished_at"),
+                "ai_extraction_temporary_input", List.of(
+                        "job_id", "ciphertext", "encryption_key_id", "expires_at", "created_at"),
+                "ai_candidate_snapshot", List.of(
+                        "id", "job_id", "snapshot_version", "candidate_fields", "candidate_tags",
+                        "field_confidences", "evidence", "missing_fields", "review_status", "reviewed_by",
+                        "review_reason", "reviewed_at", "created_at"),
+                "ai_candidate_tag_review", List.of(
+                        "id", "snapshot_id", "candidate_tag_id", "decision", "replacement_tag_definition_id",
+                        "reason", "decision_source", "reviewed_by", "reviewed_at"),
+                "tag_definition", List.of(
+                        "id", "tag_code", "tag_type", "display_name", "aliases", "status", "source",
+                        "created_from_snapshot_id", "created_at", "updated_at"),
+                "visit_tag", List.of(
+                        "id", "visit_id", "tag_definition_id", "source", "confidence", "evidence",
+                        "extractor_version", "created_at"),
+                "ai_extraction_attempt", List.of(
+                        "id", "job_id", "attempt_no", "provider_request_id", "started_at", "finished_at",
+                        "outcome", "error_category", "input_tokens", "output_tokens", "estimated_cost_minor"),
+                "youtube_channel_watch", List.of(
+                        "id", "creator_id", "youtube_channel_id", "enabled", "subscription_status",
+                        "subscription_token_hash", "last_notification_at", "last_renewed_at", "last_error_category",
+                        "created_at", "updated_at"));
+        expectedColumns.forEach((table, columns) -> assertThat(jdbcTemplate.queryForList(
+                "SELECT column_name FROM information_schema.columns WHERE table_schema=? AND table_name=? "
+                        + "ORDER BY ordinal_position",
+                String.class, schema, table)).as(table).containsExactlyElementsOf(columns));
+        assertThat(jdbcTemplate.queryForObject("SELECT data_type FROM information_schema.columns WHERE table_schema=? "
+                + "AND table_name='ai_extraction_temporary_input' AND column_name='ciphertext'", String.class, schema))
+                .isEqualTo("bytea");
     }
 
     @Test
