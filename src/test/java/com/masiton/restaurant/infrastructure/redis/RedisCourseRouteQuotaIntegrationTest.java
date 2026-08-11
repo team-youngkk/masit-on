@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.concurrent.TimeUnit;
 
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -122,19 +123,33 @@ class RedisCourseRouteQuotaIntegrationTest {
     }
 
     @Test
-    @DisplayName("전체 timeout보다 긴 lease를 사용하고 만료된 이전 요청은 새 세대 permit을 감소시키지 않는다")
-    void 전체Timeout보다긴Lease_이전요청의Release가새세대를감소시키지않는다() {
+    @DisplayName("전체 timeout보다 긴 lease를 사용한다")
+    void 전체Timeout보다긴Lease를사용한다() {
         KakaoMobilityProperties properties = properties();
         properties.setTotalTimeout(Duration.ofSeconds(11));
+        properties.setMaxConcurrentRequests(1);
+        RedisCourseRouteQuota quota = quota(properties, new SimpleMeterRegistry());
+
+        assertThat(quota.tryAcquireRequestPermit()).isTrue();
+        assertThat(redisTemplate.getExpire(IN_FLIGHT_KEY, TimeUnit.SECONDS)).isGreaterThanOrEqualTo(11);
+        quota.releaseRequestPermit();
+    }
+
+    @Test
+    @DisplayName("10초 이상 유지된 이전 요청의 release는 새 세대 permit을 감소시키지 않는다")
+    void 십초이상유지된이전요청의Release가새세대를감소시키지않는다() {
+        KakaoMobilityProperties properties = properties();
         properties.setMaxConcurrentRequests(1);
         RedisCourseRouteQuota firstRequest = quota(properties, new SimpleMeterRegistry());
         RedisCourseRouteQuota secondRequest = quota(properties, new SimpleMeterRegistry());
 
         assertThat(firstRequest.tryAcquireRequestPermit()).isTrue();
-        assertThat(redisTemplate.getExpire(IN_FLIGHT_KEY, TimeUnit.SECONDS)).isGreaterThanOrEqualTo(11);
 
-        redisTemplate.delete(IN_FLIGHT_KEY);
-        redisTemplate.delete(LEASE_KEY);
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(12))
+                .pollInterval(Duration.ofMillis(100))
+                .until(() -> redisTemplate.getExpire(IN_FLIGHT_KEY, TimeUnit.SECONDS) < 0
+                        && redisTemplate.getExpire(LEASE_KEY, TimeUnit.SECONDS) < 0);
         assertThat(secondRequest.tryAcquireRequestPermit()).isTrue();
 
         firstRequest.releaseRequestPermit();
