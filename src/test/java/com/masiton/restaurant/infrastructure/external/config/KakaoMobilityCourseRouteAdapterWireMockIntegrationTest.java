@@ -313,6 +313,34 @@ class KakaoMobilityCourseRouteAdapterWireMockIntegrationTest {
     }
 
     @Test
+    @DisplayName("Redis quota 저장소 장애는 외부 호출 없이 PROVIDER_BLOCKED로 실패한다")
+    void 코스경로계산_RedisQuota저장소장애_PROVIDER_BLOCKED로실패하고요청이없다() throws Exception {
+        KakaoMobilityProperties properties = properties(true, true, API_KEY, Duration.ofSeconds(4));
+        KakaoMobilityCourseRouteAdapter adapter = new KakaoMobilityCourseRouteAdapter(
+                HttpClient.newBuilder().connectTimeout(properties.getConnectTimeout()).build(),
+                objectMapper,
+                properties,
+                new com.masiton.restaurant.application.port.out.CourseRouteQuotaPort() {
+                    @Override
+                    public boolean tryAcquireMonthlyPermit() {
+                        return true;
+                    }
+
+                    @Override
+                    public boolean tryAcquireRequestPermit() {
+                        throw new com.masiton.restaurant.application.port.out.CourseRouteQuotaUnavailableException(
+                                new IllegalStateException("redis unavailable"));
+                    }
+                });
+
+        CourseRouteProviderException exception = catchThrowableOfType(
+                CourseRouteProviderException.class, () -> adapter.calculate(twoStopRequest()));
+
+        assertThat(exception.category()).isEqualTo(CourseRouteFailureCategory.PROVIDER_BLOCKED);
+        assertThat(directionsRequests()).isEmpty();
+    }
+
+    @Test
     @DisplayName("월 quota permit을 얻지 못하면 외부 호출 없이 PROVIDER_BLOCKED로 실패한다")
     void 코스경로계산_월QuotaPermit거부_PROVIDER_BLOCKED로실패하고요청이없다() throws Exception {
         KakaoMobilityProperties properties = properties(true, true, API_KEY, Duration.ofSeconds(4));

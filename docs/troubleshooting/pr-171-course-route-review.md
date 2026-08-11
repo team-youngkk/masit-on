@@ -32,6 +32,11 @@ related_documents:
 | [3755133999](https://github.com/team-youngkk/masit-on/pull/171#discussion_r3755133999) | Kakao 요청에 `summary=true` 명시 | 애플리케이션 | 수정 필요 | query parameter 추가 | WireMock 요청 journal 검증 |
 | [3755368863](https://github.com/team-youngkk/masit-on/pull/171#discussion_r3755368863) | 성공적인 in-flight permit마다 TTL 갱신 | 인프라 | 수정 필요 | Lua가 매 성공 획득마다 TTL을 갱신하고 rate·concurrency 실패를 구분 | 실제 Redis TTL 회귀 테스트 |
 | [3755368870](https://github.com/team-youngkk/masit-on/pull/171#discussion_r3755368870) | 80% 경보와 호출·차단·잔여 quota 계측 | 인프라 | 수정 필요 | Lua 사용량 반환, Micrometer counter/gauge, 월별 1회 warning 추가 | quota 경계·지표·로그 회귀 테스트 |
+| [3755610638](https://github.com/team-youngkk/masit-on/pull/171#discussion_r3755610638) | SSM gate 누락 시 전체 백엔드 종료 | 배포 | 수정 필요 | 선택 조회와 명시적 false fallback 추가 | 운영 스크립트 계약 테스트 |
+| [3755613043](https://github.com/team-youngkk/masit-on/pull/171#discussion_r3755613043) | 같은 SSM gate 누락 경로의 중복 지적 | 배포 | 수정 필요 | 위와 동일하게 반영 | 운영 스크립트 계약 테스트 |
+| [3755612965](https://github.com/team-youngkk/masit-on/pull/171#discussion_r3755612965) | quota 성공 count와 80% 경계 계측 | 인프라 | 수정 필요 | Lua가 누적 count를 반환하고 80% 성공 시점을 검증 | Redis quota 경계 테스트 |
+| [3755642386](https://github.com/team-youngkk/masit-on/pull/171#discussion_r3755642386) | Redis request permit 장애를 429와 분리 | 애플리케이션 / 인프라 | 수정 필요 | quota 저장소 unavailable 예외를 provider unavailable로 매핑 | Adapter·API 회귀 테스트 |
+| [3755642391](https://github.com/team-youngkk/masit-on/pull/171#discussion_r3755642391) | 오래된 요청 release의 세대 혼선 방지 | 인프라 | 수정 필요 | 요청별 lease token과 timeout 초과 lease 보장 추가 | Redis lease 세대 회귀 테스트 |
 
 ## 3. 문제 현상과 발생 조건
 
@@ -44,7 +49,7 @@ related_documents:
 
 ## 4. 근본 원인
 
-배포 설정은 `application-prod.yml`의 fail-closed 기본값을 전제로 하지만 Compose와 `app-run.sh`가 Mobility 관련 비밀이 아닌 설정을 전달하지 않았다. Adapter는 월 quota permit과 서비스 요청 permit을 같은 `false` 값으로 받아 월 비용 차단을 서비스 rate limit으로 분류했다. Redis Lua는 최초 in-flight 증가 때만 TTL을 설정했고, quota Lua의 사용량 반환값과 계측 계층이 없었다. 또한 Jackson 3 경로에서는 DTO에 추가한 Jackson 2 annotation이 unknown field를 거부하지 않아 요청 DTO 경계가 실제로 보장되지 않았다.
+배포 설정은 `application-prod.yml`의 fail-closed 기본값을 전제로 하지만, gate를 필수 SSM 조회로 추가하면 값이 없는 환경에서 `set -e`가 전체 백엔드 실행을 중단한다. Adapter는 월 quota permit과 서비스 요청 permit을 같은 `false` 값으로 받아 월 비용 차단을 서비스 rate limit으로 분류했고, Redis request permit 장애도 같은 경로로 노출했다. Redis Lua는 최초 in-flight 증가 때만 TTL을 설정했고, 공유 counter release에 요청 소유권이 없었으며, quota Lua의 사용량 반환값과 계측 경계도 충분하지 않았다. 또한 Jackson 3 경로에서는 DTO에 추가한 Jackson 2 annotation이 unknown field를 거부하지 않아 요청 DTO 경계가 실제로 보장되지 않았다.
 
 ## 5. 확인 및 시도
 
@@ -58,6 +63,7 @@ related_documents:
 ## 6. 최종 해결
 
 - 변경 내용: Compose app에 WireMock Mobility 주소를 추가하고, 운영 실행 스크립트에서 Mobility gate 두 값을 읽어 전달한다. 월 quota 거부는 provider 차단으로 매핑하고, 요청 DTO의 허용 필드를 명시적으로 검사한다. Kakao 요청에 `summary=true`를 추가한다. Redis Lua는 사용량·차단 원인을 반환하고 성공 permit마다 in-flight TTL을 갱신하며, Micrometer 지표와 월 80% warning을 기록한다.
+- 후속 변경: 운영 gate는 선택 SSM 조회와 `false` fallback으로 바꿔 누락 시 코스만 fail-closed되게 했다. quota Lua는 성공 count를 반환하고 80%에 도달한 성공 호출에서 gauge·warning을 갱신한다. Redis 장애는 `CourseRouteQuotaUnavailableException`으로 분리해 provider unavailable로 매핑하며, request별 lease token을 Redis hash에 기록해 이전 세대 release가 새 counter를 감소시키지 못하게 했다.
 - 선택 이유: API 오류 계약과 NFR-COST-001을 바꾸지 않고 현재 Port/Adapter·Redis 경계에서 문제를 해결하며, provider 호출 전 차단과 기존 기능 격리를 유지한다.
 - 변경 파일: `docker-compose.yml`, `deploy/scripts/app-run.sh`, `src/main/java/com/masiton/restaurant/presentation/rest/RestaurantCourseRouteController.java`, `src/main/java/com/masiton/restaurant/infrastructure/external/config/KakaoMobilityCourseRouteAdapter.java`, `src/main/java/com/masiton/restaurant/infrastructure/external/config/KakaoMobilityConfiguration.java`, `src/main/java/com/masiton/restaurant/infrastructure/redis/RedisCourseRouteQuota.java`, 관련 WireMock·API·Redis 테스트.
 - 고려한 대안: provider quota 전용 새 오류 범주를 추가하는 방법도 있었지만 기존 `PROVIDER_BLOCKED`가 무료 quota 미확인·유료 호출 차단을 이미 표현하고 Application의 502 매핑도 갖고 있어 범위를 늘리지 않았다.
@@ -68,11 +74,12 @@ related_documents:
 |---|---|---|
 | `./gradlew.bat test --tests ...KakaoMobilityCourseRouteAdapterWireMockIntegrationTest --tests ...RestaurantCourseRouteApiTest --tests ...RedisCourseRouteQuotaIntegrationTest --no-daemon` | 통과 | Adapter 21건, API 19건, Redis quota 2건. summary, 502 분류, unknown field, TTL, quota 지표·경보를 확인했다. |
 | `./gradlew.bat test --tests ...RestaurantCourseRouteApiTest --no-daemon` | 통과 | API 19건 재검증. |
+| `./gradlew.bat test --tests ...KakaoMobilityCourseRouteAdapterWireMockIntegrationTest --tests ...RedisCourseRouteQuotaIntegrationTest --tests ...RestaurantCourseRouteApiTest --tests com.masiton.deploy.AppRunScriptContractTest --no-daemon --max-workers=1` | 통과 | 새 리뷰 반영 후 Adapter 22건, Redis quota 3건, API 19건, app-run 계약 1건을 확인했다. |
 | `docker compose config` 및 `rg`로 Compose·운영 전달 경로 대조 | 통과 | app의 `http://wiremock:8080`, SSM gate 읽기, `docker run -e` 전달을 확인했다. |
 
 ## 8. 재발 방지 및 다음 확인
 
-- 재발 방지: WireMock query contract, API unknown-field, provider quota category, Redis TTL, quota 경계·Micrometer 지표·warning 테스트를 추가했다.
+- 재발 방지: WireMock query contract, API unknown-field, provider quota category, Redis TTL·lease 세대, quota 경계·Micrometer 지표·warning, 운영 gate 누락 fallback 테스트를 추가했다.
 - 다음 확인: Mobility 실제 Free Tier quota와 운영 SSM 값은 기능 활성화 직전 소유자가 확인한다. 실제 quota 대조·부하 측정은 3차 확장 최종 게이트에서 수행한다.
 
 ## 9. 도입 전후 비교 지표
@@ -85,6 +92,6 @@ related_documents:
 
 ## 10. 남은 사항
 
-- 미해결 스레드: 없음. 모든 요청사항을 반영하고 원격 브랜치 검증 후 인라인 답글로 처리한다.
+- 미해결 스레드: 새 리뷰 5건을 반영하고 원격 브랜치 검증 후 인라인 답글로 처리한다.
 - 필요한 결정: 없음.
 - 검증 제약: 실제 Kakao Mobility 계정 quota와 AWS SSM은 로컬 테스트에서 접근하지 않으며, 운영 활성화 전 별도 확인한다.

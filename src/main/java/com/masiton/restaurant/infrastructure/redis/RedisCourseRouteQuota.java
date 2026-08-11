@@ -6,6 +6,7 @@ import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -19,6 +20,7 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 
 import com.masiton.restaurant.application.port.out.CourseRouteQuotaPort;
+import com.masiton.restaurant.application.port.out.CourseRouteQuotaUnavailableException;
 import com.masiton.restaurant.infrastructure.external.config.KakaoMobilityProperties;
 
 /**
@@ -32,7 +34,8 @@ public final class RedisCourseRouteQuota implements CourseRouteQuotaPort {
     private static final String KEY_PREFIX = "restaurant:course-route:quota:";
     private static final String RATE_KEY_PREFIX = "restaurant:course-route:rate:";
     private static final String IN_FLIGHT_KEY = "restaurant:course-route:in-flight";
-    private static final int IN_FLIGHT_TTL_SECONDS = 10;
+    private static final int MIN_IN_FLIGHT_TTL_SECONDS = 10;
+    private static final String LEASE_KEY = "restaurant:course-route:in-flight:leases";
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Seoul");
     private static final DefaultRedisScript<Long> TRY_ACQUIRE = new DefaultRedisScript<>("""
             local count = redis.call('INCR', KEYS[1])
@@ -43,7 +46,7 @@ public final class RedisCourseRouteQuota implements CourseRouteQuotaPort {
               redis.call('DECR', KEYS[1])
               return -tonumber(ARGV[1])
             end
-            return 1
+            return count
             """, Long.class);
     private static final DefaultRedisScript<Long> TRY_ACQUIRE_REQUEST = new DefaultRedisScript<>("""
             local rate = redis.call('INCR', KEYS[1])
@@ -61,10 +64,16 @@ public final class RedisCourseRouteQuota implements CourseRouteQuotaPort {
               redis.call('DECR', KEYS[2])
               return -2
             end
+            redis.call('HSET', KEYS[3], ARGV[4], '1')
             redis.call('EXPIRE', KEYS[2], ARGV[3])
+            redis.call('EXPIRE', KEYS[3], ARGV[3])
             return 1
             """, Long.class);
     private static final DefaultRedisScript<Long> RELEASE_REQUEST = new DefaultRedisScript<>("""
+            if redis.call('HEXISTS', KEYS[2], ARGV[1]) == 0 then
+              return 0
+            end
+            redis.call('HDEL', KEYS[2], ARGV[1])
             local current = redis.call('GET', KEYS[1])
             if not current then
               return 0
@@ -87,6 +96,7 @@ public final class RedisCourseRouteQuota implements CourseRouteQuotaPort {
     private final AtomicInteger monthlyUsage = new AtomicInteger();
     private final AtomicInteger monthlyRemaining = new AtomicInteger();
     private final AtomicReference<YearMonth> warnedMonth = new AtomicReference<>();
+    private final ThreadLocal<String> requestLeaseToken = new ThreadLocal<>();
 
     public RedisCourseRouteQuota(
             StringRedisTemplate redisTemplate,
@@ -127,8 +137,7 @@ public final class RedisCourseRouteQuota implements CourseRouteQuotaPort {
                     String.valueOf(properties.getMonthlyQuota()),
                     String.valueOf(secondsUntilNextMonth));
             if (acquired == null) {
-                redisBlocked.increment();
-                return false;
+                throw unavailable(null);
             }
             int usage = acquired < 0 ? properties.getMonthlyQuota() : acquired.intValue();
             recordMonthlyUsage(month, usage);
@@ -139,8 +148,10 @@ public final class RedisCourseRouteQuota implements CourseRouteQuotaPort {
             calls.increment();
             return true;
         } catch (RuntimeException exception) {
-            redisBlocked.increment();
-            return false;
+            if (exception instanceof CourseRouteQuotaUnavailableException unavailable) {
+                throw unavailable;
+            }
+            throw unavailable(exception);
         }
     }
 
@@ -148,36 +159,57 @@ public final class RedisCourseRouteQuota implements CourseRouteQuotaPort {
     public boolean tryAcquireRequestPermit() {
         try {
             long second = ZonedDateTime.now(clock.withZone(BUSINESS_ZONE)).toEpochSecond();
+            String leaseToken = UUID.randomUUID().toString();
             Long acquired = redisTemplate.execute(
                     TRY_ACQUIRE_REQUEST,
-                    List.of(RATE_KEY_PREFIX + second, IN_FLIGHT_KEY),
+                    List.of(RATE_KEY_PREFIX + second, IN_FLIGHT_KEY, LEASE_KEY),
                     String.valueOf(properties.getRequestsPerSecond()),
                     String.valueOf(properties.getMaxConcurrentRequests()),
-                    String.valueOf(IN_FLIGHT_TTL_SECONDS));
+                    String.valueOf(inFlightTtlSeconds()),
+                    leaseToken);
             if (Long.valueOf(1).equals(acquired)) {
+                requestLeaseToken.set(leaseToken);
                 return true;
             }
             if (Long.valueOf(-1).equals(acquired)) {
                 requestRateBlocked.increment();
             } else if (Long.valueOf(-2).equals(acquired)) {
                 requestConcurrencyBlocked.increment();
+            } else if (acquired == null) {
+                throw unavailable(null);
             } else {
-                redisBlocked.increment();
+                throw unavailable(null);
             }
             return false;
         } catch (RuntimeException exception) {
-            redisBlocked.increment();
-            return false;
+            requestLeaseToken.remove();
+            throw unavailable(exception);
         }
     }
 
     @Override
     public void releaseRequestPermit() {
+        String leaseToken = requestLeaseToken.get();
+        if (leaseToken == null) {
+            return;
+        }
         try {
-            redisTemplate.execute(RELEASE_REQUEST, List.of(IN_FLIGHT_KEY));
+            redisTemplate.execute(RELEASE_REQUEST, List.of(IN_FLIGHT_KEY, LEASE_KEY), leaseToken);
         } catch (RuntimeException ignored) {
             // TTL keeps a crashed request from holding the permit forever.
+        } finally {
+            requestLeaseToken.remove();
         }
+    }
+
+    private int inFlightTtlSeconds() {
+        long totalTimeoutSeconds = properties.getTotalTimeout().toSeconds();
+        return Math.toIntExact(Math.max(MIN_IN_FLIGHT_TTL_SECONDS, totalTimeoutSeconds + 1));
+    }
+
+    private CourseRouteQuotaUnavailableException unavailable(Throwable cause) {
+        redisBlocked.increment();
+        return new CourseRouteQuotaUnavailableException(cause);
     }
 
     private Counter blockedCounter(MeterRegistry meterRegistry, String reason) {

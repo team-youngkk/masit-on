@@ -17,6 +17,7 @@ import com.masiton.restaurant.application.port.out.CourseRouteLeg;
 import com.masiton.restaurant.application.port.out.CourseRouteProviderException;
 import com.masiton.restaurant.application.port.out.CourseRouteProviderPort;
 import com.masiton.restaurant.application.port.out.CourseRouteQuotaPort;
+import com.masiton.restaurant.application.port.out.CourseRouteQuotaUnavailableException;
 import com.masiton.restaurant.application.port.out.CourseRouteRequest;
 import com.masiton.restaurant.application.port.out.CourseRouteResult;
 import com.masiton.restaurant.application.port.out.CourseRouteWaypoint;
@@ -59,10 +60,10 @@ final class KakaoMobilityCourseRouteAdapter implements CourseRouteProviderPort {
     public CourseRouteResult calculate(CourseRouteRequest request) {
         List<CourseRouteWaypoint> stops = validatedStops(request);
         assertFreeTierCallAllowed();
-        if (!quotaPort.tryAcquireRequestPermit()) {
-            throw new CourseRouteProviderException(CourseRouteFailureCategory.SERVICE_RATE_LIMIT);
-        }
         try {
+            if (!quotaPort.tryAcquireRequestPermit()) {
+                throw new CourseRouteProviderException(CourseRouteFailureCategory.SERVICE_RATE_LIMIT);
+            }
             if (!quotaPort.tryAcquireMonthlyPermit()) {
                 throw new CourseRouteProviderException(CourseRouteFailureCategory.PROVIDER_BLOCKED);
             }
@@ -88,6 +89,8 @@ final class KakaoMobilityCourseRouteAdapter implements CourseRouteProviderPort {
             throw new CourseRouteProviderException(CourseRouteFailureCategory.TIMEOUT, exception);
         } catch (JacksonException exception) {
             throw new CourseRouteProviderException(CourseRouteFailureCategory.SCHEMA, exception);
+        } catch (CourseRouteQuotaUnavailableException exception) {
+            throw new CourseRouteProviderException(CourseRouteFailureCategory.PROVIDER_BLOCKED, exception);
         } finally {
             quotaPort.releaseRequestPermit();
         }

@@ -38,6 +38,12 @@ optional_param() {
   aws ssm get-parameter --region "$REGION" --name "$1" --with-decryption \
     --query 'Parameter.Value' --output text 2>/dev/null || printf ''
 }
+optional_bool_param() {
+  case "$(optional_param "$1")" in
+    true|TRUE|True|1) printf 'true' ;;
+    *) printf 'false' ;;
+  esac
+}
 
 case "$component" in
   backend)
@@ -46,8 +52,8 @@ case "$component" in
     export SPRING_PROFILES_ACTIVE=prod
     DB_URL=$(param /masiton/db/url); export DB_URL
     DB_USERNAME=$(param /masiton/db/username); export DB_USERNAME
-    KAKAO_MOBILITY_ENABLED=$(param /masiton/integration/kakao-mobility/enabled); export KAKAO_MOBILITY_ENABLED
-    KAKAO_MOBILITY_FREE_TIER_VERIFIED=$(param /masiton/integration/kakao-mobility/free-tier-verified); export KAKAO_MOBILITY_FREE_TIER_VERIFIED
+    KAKAO_MOBILITY_ENABLED=$(optional_bool_param /masiton/integration/kakao-mobility/enabled); export KAKAO_MOBILITY_ENABLED
+    KAKAO_MOBILITY_FREE_TIER_VERIFIED=$(optional_bool_param /masiton/integration/kakao-mobility/free-tier-verified); export KAKAO_MOBILITY_FREE_TIER_VERIFIED
     export REDIS_HOST=127.0.0.1
     export REDIS_PORT=6379
     MAIL_HOST=$(param /masiton/mail/host); export MAIL_HOST

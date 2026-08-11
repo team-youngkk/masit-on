@@ -39,6 +39,7 @@ class RedisCourseRouteQuotaIntegrationTest {
 
     private static final int REDIS_PORT = 6379;
     private static final String IN_FLIGHT_KEY = "restaurant:course-route:in-flight";
+    private static final String LEASE_KEY = "restaurant:course-route:in-flight:leases";
 
     @Container
     static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17.10-alpine")
@@ -72,23 +73,32 @@ class RedisCourseRouteQuotaIntegrationTest {
     @DisplayName("월 quota가 80% 경고·100% 차단을 적용하고 호출·차단 지표를 기록한다")
     void 월Quota_80퍼센트경고와100퍼센트차단_호출차단지표를기록한다(CapturedOutput output) {
         KakaoMobilityProperties properties = properties();
-        properties.setMonthlyQuota(3);
+        properties.setMonthlyQuota(5);
         MeterRegistry meterRegistry = new SimpleMeterRegistry();
         RedisCourseRouteQuota quota = quota(properties, meterRegistry);
 
         assertThat(quota.tryAcquireMonthlyPermit()).isTrue();
         assertThat(quota.tryAcquireMonthlyPermit()).isTrue();
         assertThat(quota.tryAcquireMonthlyPermit()).isTrue();
+        assertThat(quota.tryAcquireMonthlyPermit()).isTrue();
+
+        assertThat(meterRegistry.get("masiton.restaurant.course.route.calls").counter().count()).isEqualTo(4);
+        assertThat(meterRegistry.get("masiton.restaurant.course.route.monthly.quota.usage").gauge().value())
+                .isEqualTo(4);
+        assertThat(meterRegistry.get("masiton.restaurant.course.route.monthly.quota.remaining").gauge().value())
+                .isEqualTo(1);
+        assertThat(output).contains("monthly quota reached warning threshold");
+
+        assertThat(quota.tryAcquireMonthlyPermit()).isTrue();
         assertThat(quota.tryAcquireMonthlyPermit()).isFalse();
 
-        assertThat(meterRegistry.get("masiton.restaurant.course.route.calls").counter().count()).isEqualTo(3);
+        assertThat(meterRegistry.get("masiton.restaurant.course.route.calls").counter().count()).isEqualTo(5);
         assertThat(meterRegistry.get("masiton.restaurant.course.route.blocked")
                 .tag("reason", "monthly").counter().count()).isEqualTo(1);
         assertThat(meterRegistry.get("masiton.restaurant.course.route.monthly.quota.usage").gauge().value())
-                .isEqualTo(3);
+                .isEqualTo(5);
         assertThat(meterRegistry.get("masiton.restaurant.course.route.monthly.quota.remaining").gauge().value())
                 .isEqualTo(0);
-        assertThat(output).contains("monthly quota reached warning threshold");
     }
 
     @Test
@@ -109,6 +119,28 @@ class RedisCourseRouteQuotaIntegrationTest {
         assertThat(refreshedTtl).isGreaterThan(shortenedTtl);
         quota.releaseRequestPermit();
         quota.releaseRequestPermit();
+    }
+
+    @Test
+    @DisplayName("전체 timeout보다 긴 lease를 사용하고 만료된 이전 요청은 새 세대 permit을 감소시키지 않는다")
+    void 전체Timeout보다긴Lease_이전요청의Release가새세대를감소시키지않는다() {
+        KakaoMobilityProperties properties = properties();
+        properties.setTotalTimeout(Duration.ofSeconds(11));
+        properties.setMaxConcurrentRequests(1);
+        RedisCourseRouteQuota firstRequest = quota(properties, new SimpleMeterRegistry());
+        RedisCourseRouteQuota secondRequest = quota(properties, new SimpleMeterRegistry());
+
+        assertThat(firstRequest.tryAcquireRequestPermit()).isTrue();
+        assertThat(redisTemplate.getExpire(IN_FLIGHT_KEY, TimeUnit.SECONDS)).isGreaterThanOrEqualTo(11);
+
+        redisTemplate.delete(IN_FLIGHT_KEY);
+        redisTemplate.delete(LEASE_KEY);
+        assertThat(secondRequest.tryAcquireRequestPermit()).isTrue();
+
+        firstRequest.releaseRequestPermit();
+
+        assertThat(redisTemplate.opsForValue().get(IN_FLIGHT_KEY)).isEqualTo("1");
+        secondRequest.releaseRequestPermit();
     }
 
     private RedisCourseRouteQuota quota(KakaoMobilityProperties properties, MeterRegistry meterRegistry) {
