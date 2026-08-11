@@ -140,7 +140,7 @@ related_documents:
 ## 8. 재발 방지 및 다음 확인
 
 - 재발 방지: 메뉴 표현→대표 카테고리, 접두어 주소, 한글 신규 태그, 선택 태그 누락, invalid completeness, 차단 태그 결정, 외부 예외 경계, 실제 방문 문구·근거 구간·방문 대상·선행 부정어·실패 사유 게이트를 회귀 테스트로 고정했다. PostgreSQL 원자성은 Testcontainers 테스트로 실제 제약과 트랜잭션을 확인했다.
-- 다음 확인: 최신 4개 스레드에 대한 원격 답글·해결 상태를 반영한다. 현재 커밋의 focused suite·아키텍처·테스트 컴파일은 통과했으며, 원격 전체 CI는 `workflow_dispatch` job 조건으로 실행되지 않았고 Docker/Testcontainers 통합 검증은 기존 성공 CI 기록과 로컬 환경 제약을 함께 보존한다.
+- 다음 확인: 없음. 최신 4개 스레드를 포함한 전체 34개 스레드에 원문 답글을 남기고 모두 해결했으며, PR head `bed20c8` 기준 focused suite·아키텍처·테스트 컴파일을 확인했다. 원격 전체 CI는 `workflow_dispatch` job 조건으로 실행되지 않았고 Docker/Testcontainers 통합 검증은 기존 성공 CI 기록과 로컬 환경 제약을 함께 보존한다.
 
 ## 9. 도입 전후 비교 지표
 
@@ -161,4 +161,4 @@ related_documents:
 ## 10. 남은 사항
 
 - 로컬 Docker Desktop 데몬은 꺼져 있어 동일 테스트의 로컬 실행은 불가했지만, Docker가 제공되는 백엔드 CI에서 통과했다.
-- 코드·문서 수정과 focused 테스트를 완료했으며, 최신 4개 스레드의 원문 inline 답글·해결 처리는 원격 반영 후 진행한다. 현재 커밋의 원격 전체 CI는 workflow 조건상 실행되지 않았고, 로컬 Docker Desktop 데몬 부재로 Testcontainers의 로컬 재실행도 환경 제약으로 남는다.
+- 코드·문서 수정, focused 테스트, 최신 4개를 포함한 전체 34개 리뷰 스레드의 원문 inline 답글·해결 처리를 완료했다. 현재 커밋의 원격 전체 CI는 workflow 조건상 실행되지 않았고, 로컬 Docker Desktop 데몬 부재로 Testcontainers의 로컬 재실행도 환경 제약으로 남는다.
