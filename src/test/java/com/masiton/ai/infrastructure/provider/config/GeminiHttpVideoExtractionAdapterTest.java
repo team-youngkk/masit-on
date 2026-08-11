@@ -74,6 +74,19 @@ class GeminiHttpVideoExtractionAdapterTest {
     }
 
     @Test
+    @DisplayName("JSON charset은 허용하지만 다른 media type은 SCHEMA로 정규화한다")
+    void 추출_JSONMediaType_정확히검증한다() throws Exception {
+        startServer(exchange -> respond(exchange, 200, geminiEnvelope("COMPLETE"), "application/json; charset=UTF-8"));
+        assertThat(adapter(serverUrl()).extract(request()).candidates().path("resultCompleteness").asText())
+                .isEqualTo("COMPLETE");
+
+        server.stop(0);
+        server = null;
+        startServer(exchange -> respond(exchange, 200, geminiEnvelope("COMPLETE"), "application/jsonp"));
+        assertFailure(AiProviderFailureCategory.SCHEMA);
+    }
+
+    @Test
     @DisplayName("응답 시간 초과를 TIMEOUT으로 정규화한다")
     void 추출_응답시간초과_TIMEOUT으로정규화한다() throws Exception {
         try (ServerSocket timeoutServer = new ServerSocket(0)) {
@@ -141,6 +154,18 @@ class GeminiHttpVideoExtractionAdapterTest {
     }
 
     @Test
+    @DisplayName("S1 문자열 필드에 숫자나 boolean이 오면 SCHEMA로 정규화한다")
+    void 추출_문자열필드타입오류_SCHEMA로정규화한다() throws Exception {
+        startServer(exchange -> respond(exchange, 200, geminiEnvelopeWithPayload(
+                "{\"resultCompleteness\":\"COMPLETE\",\"candidates\":["
+                        + "{\"field\":\"restaurantName\",\"value\":123,\"confidence\":0.9,"
+                        + "\"evidence\":{\"type\":\"TIMESTAMP\",\"startMs\":1,\"endMs\":2}}"
+                        + "],\"missingFields\":[]}")));
+
+        assertFailure(AiProviderFailureCategory.SCHEMA);
+    }
+
+    @Test
     @DisplayName("UNKNOWN 근거에 위치 정보가 있으면 SCHEMA로 정규화한다")
     void 추출_UNKNOWN근거위치정보포함_SCHEMA로정규화한다() throws Exception {
         startServer(exchange -> respond(exchange, 200, geminiEnvelopeWithPayload(
@@ -158,7 +183,7 @@ class GeminiHttpVideoExtractionAdapterTest {
         GeminiProviderProperties properties = properties("http://localhost:1", Duration.ofSeconds(1));
         properties.setFreeTierVerified(false);
         GeminiHttpVideoExtractionAdapter adapter = new GeminiHttpVideoExtractionAdapter(
-                HttpClient.newHttpClient(), objectMapper, properties);
+                HttpClient.newHttpClient(), objectMapper, properties, true);
 
         assertThatThrownBy(() -> adapter.extract(request()))
                 .isInstanceOf(AiProviderException.class)
@@ -178,7 +203,8 @@ class GeminiHttpVideoExtractionAdapterTest {
     }
 
     private GeminiHttpVideoExtractionAdapter adapter(String baseUrl, Duration responseTimeout) {
-        return new GeminiHttpVideoExtractionAdapter(HttpClient.newHttpClient(), objectMapper, properties(baseUrl, responseTimeout));
+        return new GeminiHttpVideoExtractionAdapter(
+                HttpClient.newHttpClient(), objectMapper, properties(baseUrl, responseTimeout), true);
     }
 
     private GeminiProviderProperties properties(String baseUrl, Duration responseTimeout) {
@@ -219,8 +245,12 @@ class GeminiHttpVideoExtractionAdapterTest {
     }
 
     private void respond(HttpExchange exchange, int status, String body) throws IOException {
+        respond(exchange, status, body, "application/json");
+    }
+
+    private void respond(HttpExchange exchange, int status, String body, String contentType) throws IOException {
         byte[] response = body.getBytes(StandardCharsets.UTF_8);
-        exchange.getResponseHeaders().add("Content-Type", "application/json");
+        exchange.getResponseHeaders().add("Content-Type", contentType);
         exchange.sendResponseHeaders(status, response.length);
         exchange.getResponseBody().write(response);
         exchange.close();

@@ -1,7 +1,6 @@
 package com.masiton.ai.presentation;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Size;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,8 +29,8 @@ public class AdminAiVideoExtractionController {
 
     public record SubmitRequest(
             @jakarta.validation.constraints.NotBlank String videoUrl,
-            @Size(max = 20_000) String supplementText,
-            @Size(max = 200) String idempotencyKey
+            String supplementText,
+            String idempotencyKey
     ) {
     }
 

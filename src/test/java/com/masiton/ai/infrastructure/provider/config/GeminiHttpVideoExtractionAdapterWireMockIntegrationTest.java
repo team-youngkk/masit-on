@@ -70,7 +70,7 @@ class GeminiHttpVideoExtractionAdapterWireMockIntegrationTest {
         properties.setApiKey(API_KEY);
         properties.setBaseUrl("http://%s:%d".formatted(WIREMOCK.getHost(), WIREMOCK.getMappedPort(WIREMOCK_PORT)));
         properties.setResponseTimeout(Duration.ofSeconds(2));
-        return new GeminiHttpVideoExtractionAdapter(HttpClient.newHttpClient(), objectMapper, properties);
+        return new GeminiHttpVideoExtractionAdapter(HttpClient.newHttpClient(), objectMapper, properties, true);
     }
 
     private void admin(String method, String path, String body) throws Exception {
