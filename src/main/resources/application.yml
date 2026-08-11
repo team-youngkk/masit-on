@@ -15,6 +15,11 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: validate
+  task:
+    scheduling:
+      # AI polling은 별도 aiWorkerTaskScheduler를 사용하고, 나머지 예약 작업은 이 기본 풀을 사용한다.
+      pool:
+        size: 1
 
 server:
   port: ${SERVER_PORT:8080}
@@ -58,12 +63,27 @@ logging:
 
 masiton:
   ai:
+    worker:
+      enabled: ${AI_WORKER_ENABLED:false}
+      poll-interval: PT5S
+      lease-duration: PT120S
+      heartbeat-interval: PT30S
+      drain-timeout: PT30S
+      max-attempts: 3
+      first-backoff: PT5S
+      second-backoff: PT30S
+      quota-window: ${AI_WORKER_QUOTA_WINDOW:P1D}
+      # Both limits must be verified from the active model/account before enabling the worker.
+      provider-quota-limit: ${AI_WORKER_PROVIDER_QUOTA_LIMIT:0}
+      application-quota-limit: ${AI_WORKER_APPLICATION_QUOTA_LIMIT:0}
+      quota-warning-percent: 80
     youtube-webhook:
       max-payload-bytes: ${YOUTUBE_WEBHOOK_MAX_PAYLOAD_BYTES:65536}
       secret: ${YOUTUBE_WEBHOOK_SECRET:}
     temporary-input:
       active-key-id: ${AI_TEMPORARY_INPUT_KEY_ID:}
       active-key: ${AI_TEMPORARY_INPUT_KEY:}
+      # 키 교체 중에는 외부 설정의 keys.<key-id>에 미종결 작업용 과거 키를 함께 유지한다.
     provider:
       gemini:
         # Calls remain blocked unless an environment explicitly verifies the Free Tier gate.
