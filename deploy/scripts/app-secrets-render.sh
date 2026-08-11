@@ -55,6 +55,23 @@ render_optional() {
   write_secret "$property" "$value"
 }
 
+# 키 교체 중인 선택 키링. Parameter 이름의 마지막 구간을 key id로 사용한다.
+# 미종결 QUEUED/RUNNING 작업이 더는 참조하지 않을 때 해당 Parameter를 폐기한다.
+render_optional_keyring() {
+  local parameter_path="$1"
+  local found=false
+  while IFS=$'\t' read -r parameter value; do
+    [ -n "$parameter" ] || continue
+    local key_id="${parameter##*/}"
+    write_secret "masiton.ai.temporary-input.keys.$key_id" "$value"
+    found=true
+  done < <(aws ssm get-parameters-by-path --region "$REGION" --path "$parameter_path" \
+    --recursive --with-decryption --query 'Parameters[].[Name,Value]' --output text 2>/dev/null || true)
+  if [ "$found" = false ]; then
+    echo "  masiton.ai.temporary-input.keys: 없음 (선택 값)"
+  fi
+}
+
 write_secret() {
   local property="$1" value="$2"
   local path="$SECRETS_DIR/$property"
@@ -89,5 +106,6 @@ render_optional "masiton.ai.provider.gemini.api-key"      /masiton/ai/gemini/api
 render_optional "masiton.ai.youtube-webhook.secret"       /masiton/ai/youtube-webhook/secret
 render_optional "masiton.ai.temporary-input.active-key-id" /masiton/ai/temporary-input/active-key-id
 render_optional "masiton.ai.temporary-input.active-key"    /masiton/ai/temporary-input/active-key
+render_optional_keyring /masiton/ai/temporary-input/keys
 
 echo "렌더링 완료: $SECRETS_DIR ($(find "$SECRETS_DIR" -type f | wc -l)개 파일)"
