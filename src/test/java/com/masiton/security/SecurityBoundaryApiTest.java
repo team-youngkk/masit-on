@@ -124,6 +124,18 @@ class SecurityBoundaryApiTest extends FullContextIntegrationTest {
     }
 
     @Test
+    @DisplayName("자연어 맛집 공개 조회는 검증할 수 없는 Bearer Token이 있어도 401을 반환하지 않는다")
+    void 자연어맛집공개조회_검증불가Bearer토큰_401을반환하지않는다() throws Exception {
+        mockMvc.perform(post("/api/restaurants/natural-language-search")
+                        .header("Authorization", "Bearer " + UNVERIFIABLE_JWT)
+                        .contentType("application/json")
+                        .content("{\"sentence\":\"\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("NATURAL_LANGUAGE_EMPTY"))
+                .andExpect(jsonPath("$.traceId").isNotEmpty());
+    }
+
+    @Test
     @DisplayName("정의되지 않은 유튜버 하위 경로는 기본 거부한다")
     void 유튜버하위경로_정의되지않음_미인증_401공통오류를반환한다() throws Exception {
         mockMvc.perform(get("/api/creators/" + UNKNOWN_CREATOR_ID + "/subscribers"))

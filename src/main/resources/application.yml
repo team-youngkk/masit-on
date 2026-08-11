@@ -72,7 +72,7 @@ masiton:
         paid-billing-enabled: ${GEMINI_PAID_BILLING_ENABLED:false}
         # Production credentials are supplied by the existing configtree secret mount, never a URL or default profile.
         api-key:
-        base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
+        base-url: https://generativelanguage.googleapis.com
         model: gemini-3-flash-preview
         prompt-version: P1
         schema-version: S1

@@ -1,6 +1,8 @@
 package com.masiton.restaurant.application.port.out;
 
 import java.util.List;
+import java.util.Collection;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -18,4 +20,7 @@ public interface RestaurantSearchQueryPort {
      * 정렬·상위 3명 제한·remainingVisitedByCount 계산은 Application이 수행한다.
      */
     List<VisitedByRow> findVisitedByRestaurantIds(List<UUID> restaurantIds);
+
+    /** 요청된 태그 코드 중 현재 검색에 허용되는 ACTIVE 정의를 반환한다. */
+    Set<String> findActiveTagCodes(Collection<String> tagCodes);
 }

@@ -173,6 +173,22 @@ class RestaurantSearchQueryServiceTest {
     }
 
     @Test
+    @DisplayName("태그 조건을 기존 목록 Query Criteria에 그대로 전달한다")
+    void search_태그조건지정_Criteria에전달한다() {
+        // given
+        when(restaurantSearchQueryPort.search(any()))
+                .thenReturn(new RestaurantSearchQueryResult(List.of(), 0));
+
+        // when
+        service.search(new SearchRestaurantsCommand(
+                null, null, null, null, List.of("MENU_NAENGMYEON", "OCCASION_SOLO"), 1, 20));
+
+        // then
+        verify(restaurantSearchQueryPort).search(argThatCriteria(criteria ->
+                criteria.tags().equals(Set.of("MENU_NAENGMYEON", "OCCASION_SOLO"))));
+    }
+
+    @Test
     @DisplayName("creatorId가 없으면 후보 제한 없음(null)을 Criteria에 전달한다")
     void search_creatorId없음_후보제한없음을전달한다() {
         // given

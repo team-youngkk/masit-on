@@ -1,5 +1,7 @@
 package com.masiton.restaurant.application.port.in;
 
+import java.util.List;
+
 /**
  * Presentation이 정규화하지 않은 원본 값을 그대로 전달한다.
  * trim, 존재 확인과 식별자 파싱은 Application이 수행한다. page·size는 Presentation이
@@ -10,6 +12,22 @@ public record SearchRestaurantsCommand(
         String district,
         String category,
         String creatorId,
+        List<String> tags,
         int page,
         int size) {
+
+    public SearchRestaurantsCommand(
+            String query,
+            String district,
+            String category,
+            String creatorId,
+            int page,
+            int size
+    ) {
+        this(query, district, category, creatorId, List.of(), page, size);
+    }
+
+    public SearchRestaurantsCommand {
+        tags = tags == null ? List.of() : List.copyOf(tags);
+    }
 }

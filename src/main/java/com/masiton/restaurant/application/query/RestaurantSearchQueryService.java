@@ -26,7 +26,7 @@ import com.masiton.visit.application.port.in.FindDistinctValidRestaurantIdsByCre
 
 /**
  * API-DISCOVERY-001 맛집 목록 및 조건 검색을 처리한다.
- * BR-SEARCH-001~009 순서(검색어 정규화 -> district -> category -> creatorId)로 검증한 뒤
+ * BR-SEARCH-001~009 순서(검색어 정규화 -> district -> category -> creatorId -> tags)로 검증한 뒤
  * Query Port를 호출하고, 방문 유튜버는 배치 조회 후 이 계층에서 정렬·상위 3명 제한을 계산한다.
  */
 @Service
@@ -61,6 +61,7 @@ public class RestaurantSearchQueryService implements SearchRestaurantsUseCase {
                         regionId,
                         foodCategoryId,
                         candidateRestaurantIds,
+                        Set.copyOf(command.tags()),
                         command.page(),
                         command.size()));
 
@@ -76,6 +77,15 @@ public class RestaurantSearchQueryService implements SearchRestaurantsUseCase {
 
         return new RestaurantSearchResult(
                 items, command.page(), command.size(), queryResult.totalElements(), totalPages, hasNext);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public void validateFilters(SearchRestaurantsCommand command) {
+        filterResolver.normalizeQuery(command.query());
+        filterResolver.resolveRegionId(command.district());
+        filterResolver.resolveFoodCategoryId(command.category());
+        filterResolver.resolveCandidateRestaurantIds(command.creatorId());
     }
 
     private Map<UUID, List<VisitedByRow>> loadVisitedBy(List<RestaurantSearchRow> rows) {
