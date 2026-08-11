@@ -40,7 +40,6 @@ class RedisCourseRouteQuotaIntegrationTest {
 
     private static final int REDIS_PORT = 6379;
     private static final String IN_FLIGHT_KEY = "restaurant:course-route:in-flight";
-    private static final String LEASE_KEY = "restaurant:course-route:in-flight:leases";
 
     @Container
     static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17.10-alpine")
@@ -148,14 +147,33 @@ class RedisCourseRouteQuotaIntegrationTest {
         Awaitility.await()
                 .atMost(Duration.ofSeconds(12))
                 .pollInterval(Duration.ofMillis(100))
-                .until(() -> redisTemplate.getExpire(IN_FLIGHT_KEY, TimeUnit.SECONDS) < 0
-                        && redisTemplate.getExpire(LEASE_KEY, TimeUnit.SECONDS) < 0);
+                .until(() -> redisTemplate.getExpire(IN_FLIGHT_KEY, TimeUnit.SECONDS) < 0);
         assertThat(secondRequest.tryAcquireRequestPermit()).isTrue();
 
         firstRequest.releaseRequestPermit();
 
-        assertThat(redisTemplate.opsForValue().get(IN_FLIGHT_KEY)).isEqualTo("1");
+        assertThat(redisTemplate.opsForZSet().size(IN_FLIGHT_KEY)).isEqualTo(1);
         secondRequest.releaseRequestPermit();
+    }
+
+    @Test
+    @DisplayName("정상 요청이 계속 들어와도 만료된 stale lease를 원자적으로 정리한다")
+    void 정상요청이지속되는동안만료된StaleLease를정리한다() {
+        KakaoMobilityProperties properties = properties();
+        properties.setMaxConcurrentRequests(2);
+        RedisCourseRouteQuota staleRequest = quota(properties, new SimpleMeterRegistry());
+        RedisCourseRouteQuota liveRequest = quota(properties, new SimpleMeterRegistry());
+
+        assertThat(staleRequest.tryAcquireRequestPermit()).isTrue();
+
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(13))
+                .pollInterval(Duration.ofMillis(100))
+                .untilAsserted(() -> {
+                    assertThat(liveRequest.tryAcquireRequestPermit()).isTrue();
+                    liveRequest.releaseRequestPermit();
+                    assertThat(redisTemplate.hasKey(IN_FLIGHT_KEY)).isFalse();
+                });
     }
 
     private RedisCourseRouteQuota quota(KakaoMobilityProperties properties, MeterRegistry meterRegistry) {

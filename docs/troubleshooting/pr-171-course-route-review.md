@@ -17,7 +17,7 @@ related_documents:
 | PR | [#171 맛집 코스 추천 경로 조회](https://github.com/team-youngkk/masit-on/pull/171) |
 | 작성자 | w00lam |
 | 처리 일자 | 2026-08-11 |
-| 범위 | Compose·운영 설정 전달, provider quota 오류 계약, 요청 입력 경계, Kakao 요청 payload, Redis 동시성·quota 관측성 리뷰 7건 |
+| 범위 | Compose·운영 설정 전달, provider quota 오류 계약, 요청 입력 경계, Kakao 요청 payload, Redis 동시성·quota 관측성 리뷰 13건 |
 | 주 문제 유형 | 애플리케이션 / 배포 / 인프라 |
 | 기존 기록 | [PR #129 배포 전환·rate limit 리뷰](pr-129-deploy-cutover-and-rate-limit-review.md), [PR #123 검증 세션 리뷰](pr-123-verification-session-review.md)를 확인했으며, 이번 Mobility 경계에 맞춘 기록을 새로 남긴다. |
 
@@ -37,13 +37,14 @@ related_documents:
 | [3755612965](https://github.com/team-youngkk/masit-on/pull/171#discussion_r3755612965) | quota 성공 count와 80% 경계 계측 | 인프라 | 수정 필요 | Lua가 누적 count를 반환하고 80% 성공 시점을 검증 | Redis quota 경계 테스트 |
 | [3755642386](https://github.com/team-youngkk/masit-on/pull/171#discussion_r3755642386) | Redis request permit 장애를 429와 분리 | 애플리케이션 / 인프라 | 수정 필요 | quota 저장소 unavailable 예외를 provider unavailable로 매핑 | Adapter·API 회귀 테스트 |
 | [3755642391](https://github.com/team-youngkk/masit-on/pull/171#discussion_r3755642391) | 오래된 요청 release의 세대 혼선 방지 | 인프라 | 수정 필요 | 요청별 lease token과 timeout 초과 lease 보장 추가 | Redis lease 세대 회귀 테스트 |
+| [3755746305](https://github.com/team-youngkk/masit-on/pull/171#discussion_r3755746305) | hash 전체 TTL 갱신으로 stale token이 남을 가능성 | 인프라 | 수정 필요 | 만료 시각 score sorted set과 획득 시 원자적 stale lease 정리로 변경 | Redis 지속 트래픽 stale lease 회귀 테스트 |
 
 ## 3. 문제 현상과 발생 조건
 
 - 오류 메시지: Compose에서는 Mobility base URL이 `localhost:8081`로 남고, 운영에서는 gate 환경 변수가 비어 `PROVIDER_BLOCKED`가 된다. 월 quota 거부는 `SERVICE_RATE_LIMIT`으로 매핑됐다.
 - 발생 환경: `feature/ws-16-course-route-recommendation`, Docker Compose local, SSM 값을 `app-run.sh`에서 읽는 prod 배포, Redis 8.8.
 - 재현 조건: Compose app에서 Mobility base URL을 전달하지 않거나, 운영 gate를 전달하지 않거나, quota를 소진하거나, in-flight 키가 최초 획득 후 10초를 넘긴다.
-- 실제 결과: 정상 local 경로가 WireMock 대신 app 자신에게 연결되고, 운영 경로가 항상 차단되며, quota hard stop이 429로 노출되고, in-flight 상한과 사용량을 안정적으로 관측할 수 없다. unknown 필드는 유효한 요청으로 진행됐다.
++ 실제 결과: 정상 local 경로가 WireMock 대신 app 자신에게 연결되고, 운영 경로가 항상 차단되며, quota hard stop이 429로 노출되고, in-flight 상한과 사용량을 안정적으로 관측할 수 없다. 비정상 종료 요청의 token이 정상 요청으로 hash TTL을 계속 연장할 수 있다. unknown 필드는 유효한 요청으로 진행됐다.
 - 기대 결과: 컨테이너 간 주소가 분리되고 운영 gate가 전달되며, provider 비용 차단은 502 `COURSE_ROUTE_PROVIDER_UNAVAILABLE`, 서비스 요청률·동시성만 429, unknown 필드는 400, quota 경계는 관측 가능해야 한다.
 - 영향 범위: 코스 추천 외부 호출과 운영 비용·가용성에만 영향이 있고 기존 맛집 탐색·저장 데이터에는 영향을 주지 않는다.
 
@@ -63,7 +64,7 @@ related_documents:
 ## 6. 최종 해결
 
 - 변경 내용: Compose app에 WireMock Mobility 주소를 추가하고, 운영 실행 스크립트에서 Mobility gate 두 값을 읽어 전달한다. 월 quota 거부는 provider 차단으로 매핑하고, 요청 DTO의 허용 필드를 명시적으로 검사한다. Kakao 요청에 `summary=true`를 추가한다. Redis Lua는 사용량·차단 원인을 반환하고 성공 permit마다 in-flight TTL을 갱신하며, Micrometer 지표와 월 80% warning을 기록한다.
-- 후속 변경: 운영 gate는 선택 SSM 조회와 `false` fallback으로 바꿔 누락 시 코스만 fail-closed되게 했다. quota Lua는 성공 count를 반환하고 80%에 도달한 성공 호출에서 gauge·warning을 갱신한다. Redis 장애는 `CourseRouteQuotaUnavailableException`으로 분리해 provider unavailable로 매핑하며, request별 lease token을 Redis hash에 기록해 이전 세대 release가 새 counter를 감소시키지 못하게 했다.
++ 후속 변경: 운영 gate는 선택 SSM 조회와 `false` fallback으로 바꿔 누락 시 코스만 fail-closed되게 했다. quota Lua는 성공 count를 반환하고 80%에 도달한 성공 호출에서 gauge·warning을 갱신한다. Redis 장애는 `CourseRouteQuotaUnavailableException`으로 분리해 provider unavailable로 매핑하며, in-flight lease를 만료 시각 score sorted set으로 저장하고 매 획득 시 stale lease를 원자적으로 정리해 정상 요청이 계속 들어와도 고아 permit이 남지 않게 했다. 요청별 token release는 이전 세대 lease가 새 세대 permit을 감소시키지 않도록 유지했다.
 - 선택 이유: API 오류 계약과 NFR-COST-001을 바꾸지 않고 현재 Port/Adapter·Redis 경계에서 문제를 해결하며, provider 호출 전 차단과 기존 기능 격리를 유지한다.
 - 변경 파일: `docker-compose.yml`, `deploy/scripts/app-run.sh`, `src/main/java/com/masiton/restaurant/presentation/rest/RestaurantCourseRouteController.java`, `src/main/java/com/masiton/restaurant/infrastructure/external/config/KakaoMobilityCourseRouteAdapter.java`, `src/main/java/com/masiton/restaurant/infrastructure/external/config/KakaoMobilityConfiguration.java`, `src/main/java/com/masiton/restaurant/infrastructure/redis/RedisCourseRouteQuota.java`, 관련 WireMock·API·Redis 테스트.
 - 고려한 대안: provider quota 전용 새 오류 범주를 추가하는 방법도 있었지만 기존 `PROVIDER_BLOCKED`가 무료 quota 미확인·유료 호출 차단을 이미 표현하고 Application의 502 매핑도 갖고 있어 범위를 늘리지 않았다.
@@ -74,12 +75,12 @@ related_documents:
 |---|---|---|
 | `./gradlew.bat test --tests ...KakaoMobilityCourseRouteAdapterWireMockIntegrationTest --tests ...RestaurantCourseRouteApiTest --tests ...RedisCourseRouteQuotaIntegrationTest --no-daemon` | 통과 | Adapter 21건, API 19건, Redis quota 2건. summary, 502 분류, unknown field, TTL, quota 지표·경보를 확인했다. |
 | `./gradlew.bat test --tests ...RestaurantCourseRouteApiTest --no-daemon` | 통과 | API 19건 재검증. |
-| `./gradlew.bat test --tests ...KakaoMobilityCourseRouteAdapterWireMockIntegrationTest --tests ...RedisCourseRouteQuotaIntegrationTest --tests ...RestaurantCourseRouteApiTest --tests com.masiton.deploy.AppRunScriptContractTest --no-daemon --max-workers=1` | 통과 | 새 리뷰 반영 후 Adapter 22건, Redis quota 3건, API 19건, app-run 계약 1건을 확인했다. |
+| `./gradlew.bat test --tests ...KakaoMobilityCourseRouteAdapterWireMockIntegrationTest --tests ...RedisCourseRouteQuotaIntegrationTest --tests ...RestaurantCourseRouteApiTest --tests com.masiton.deploy.AppRunScriptContractTest --no-daemon --max-workers=1` | 통과 | 새 리뷰 반영 후 Adapter 22건, Redis quota 5건, API 19건, app-run 계약 1건을 확인했다. |
 | `docker compose config` 및 `rg`로 Compose·운영 전달 경로 대조 | 통과 | app의 `http://wiremock:8080`, SSM gate 읽기, `docker run -e` 전달을 확인했다. |
 
 ## 8. 재발 방지 및 다음 확인
 
-- 재발 방지: WireMock query contract, API unknown-field, provider quota category, Redis TTL·lease 세대, quota 경계·Micrometer 지표·warning, 운영 gate 누락 fallback 테스트를 추가했다.
++ 재발 방지: WireMock query contract, API unknown-field, provider quota category, Redis TTL·lease 세대·stale lease 정리, quota 경계·Micrometer 지표·warning, 운영 gate 누락 fallback 테스트를 추가했다.
 - 다음 확인: Mobility 실제 Free Tier quota와 운영 SSM 값은 기능 활성화 직전 소유자가 확인한다. 실제 quota 대조·부하 측정은 3차 확장 최종 게이트에서 수행한다.
 
 ## 9. 도입 전후 비교 지표
@@ -92,6 +93,7 @@ related_documents:
 
 ## 10. 남은 사항
 
-- 미해결 스레드: 없음. 추가 리뷰 5건까지 반영하고 인라인 답글과 해결 처리를 완료했다.
+- 추가 리뷰 3755746305: hash 전체 TTL 갱신으로 stale token이 남을 수 있다는 지적을 반영해, 만료 시각 score sorted set과 획득 시 원자적 stale lease 정리를 적용했다. 정상 요청이 계속 들어오는 회귀 테스트를 추가했다.
+- 미해결 스레드: 없음. 추가 리뷰 6건까지 반영하고 인라인 답글과 해결 처리를 완료했다.
 - 필요한 결정: 없음.
 - 검증 제약: 실제 Kakao Mobility 계정 quota와 AWS SSM은 로컬 테스트에서 접근하지 않으며, 운영 활성화 전 별도 확인한다.

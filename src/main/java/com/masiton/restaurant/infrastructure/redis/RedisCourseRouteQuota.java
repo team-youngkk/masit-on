@@ -35,7 +35,6 @@ public final class RedisCourseRouteQuota implements CourseRouteQuotaPort {
     private static final String RATE_KEY_PREFIX = "restaurant:course-route:rate:";
     private static final String IN_FLIGHT_KEY = "restaurant:course-route:in-flight";
     private static final int MIN_IN_FLIGHT_TTL_SECONDS = 10;
-    private static final String LEASE_KEY = "restaurant:course-route:in-flight:leases";
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Seoul");
     private static final DefaultRedisScript<Long> TRY_ACQUIRE = new DefaultRedisScript<>("""
             local count = redis.call('INCR', KEYS[1])
@@ -53,33 +52,26 @@ public final class RedisCourseRouteQuota implements CourseRouteQuotaPort {
             if rate == 1 then
               redis.call('EXPIRE', KEYS[1], 2)
             end
-            local in_flight = redis.call('INCR', KEYS[2])
+            local now = tonumber(redis.call('TIME')[1])
+            redis.call('ZREMRANGEBYSCORE', KEYS[2], '-inf', now)
+            local in_flight = redis.call('ZCARD', KEYS[2])
             if rate > tonumber(ARGV[1]) then
               redis.call('DECR', KEYS[1])
-              redis.call('DECR', KEYS[2])
               return -1
             end
-            if in_flight > tonumber(ARGV[2]) then
+            if in_flight >= tonumber(ARGV[2]) then
               redis.call('DECR', KEYS[1])
-              redis.call('DECR', KEYS[2])
               return -2
             end
-            redis.call('HSET', KEYS[3], ARGV[4], '1')
+            redis.call('ZADD', KEYS[2], now + tonumber(ARGV[3]), ARGV[4])
             redis.call('EXPIRE', KEYS[2], ARGV[3])
-            redis.call('EXPIRE', KEYS[3], ARGV[3])
             return 1
             """, Long.class);
     private static final DefaultRedisScript<Long> RELEASE_REQUEST = new DefaultRedisScript<>("""
-            if redis.call('HEXISTS', KEYS[2], ARGV[1]) == 0 then
+            if redis.call('ZREM', KEYS[1], ARGV[1]) == 0 then
               return 0
             end
-            redis.call('HDEL', KEYS[2], ARGV[1])
-            local current = redis.call('GET', KEYS[1])
-            if not current then
-              return 0
-            end
-            local remaining = redis.call('DECR', KEYS[1])
-            if remaining <= 0 then
+            if redis.call('ZCARD', KEYS[1]) == 0 then
               redis.call('DEL', KEYS[1])
             end
             return 1
@@ -162,7 +154,7 @@ public final class RedisCourseRouteQuota implements CourseRouteQuotaPort {
             String leaseToken = UUID.randomUUID().toString();
             Long acquired = redisTemplate.execute(
                     TRY_ACQUIRE_REQUEST,
-                    List.of(RATE_KEY_PREFIX + second, IN_FLIGHT_KEY, LEASE_KEY),
+                    List.of(RATE_KEY_PREFIX + second, IN_FLIGHT_KEY),
                     String.valueOf(properties.getRequestsPerSecond()),
                     String.valueOf(properties.getMaxConcurrentRequests()),
                     String.valueOf(inFlightTtlSeconds()),
@@ -194,7 +186,7 @@ public final class RedisCourseRouteQuota implements CourseRouteQuotaPort {
             return;
         }
         try {
-            redisTemplate.execute(RELEASE_REQUEST, List.of(IN_FLIGHT_KEY, LEASE_KEY), leaseToken);
+            redisTemplate.execute(RELEASE_REQUEST, List.of(IN_FLIGHT_KEY), leaseToken);
         } catch (RuntimeException ignored) {
             // TTL keeps a crashed request from holding the permit forever.
         } finally {
