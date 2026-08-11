@@ -81,6 +81,7 @@ related_documents:
 | `.\gradlew.bat test --tests "com.masiton.ai.infrastructure.provider.config.GeminiHttpVideoExtractionAdapterTest" --tests "com.masiton.ai.presentation.webhook.YoutubeAtomNotificationParserTest" --tests "com.masiton.ai.presentation.webhook.YouTubeChannelWebhookControllerTest" --no-daemon --console=plain` | 통과 | Gemini adapter·Webhook parser·Controller 관련 테스트 전부 통과 |
 | `.\gradlew.bat test --tests "com.masiton.ai.infrastructure.provider.config.GeminiHttpVideoExtractionAdapterTest" --tests "com.masiton.ai.application.AiExtractionJobServiceTest" --tests "com.masiton.ai.presentation.AdminAiVideoExtractionControllerApiTest" --no-daemon --console=plain` | 통과 | `429` 재시도 범주, 관리자 URL 오류 코드, Controller 응답 계약 회귀 검증 |
 | [GitHub Actions PR CI](https://github.com/team-youngkk/masit-on/actions/runs/31456973310) | 통과 | 최초 실행에서 `PopularRestaurantQueryCountApiTest` 1건이 일시 실패했으나 실패 backend job 재실행에서 `800 tests`, `0 failures`, `0 errors`, `2 skipped`; WireMock 통합 테스트 포함 |
+| [GitHub Actions 후속 리뷰 반영 CI](https://github.com/team-youngkk/masit-on/actions/runs/31458458945) | 통과 | 후속 리뷰 반영 후 원격 Docker에서 `803 tests`, `0 failures`, `0 errors`, `2 skipped`; Provider·관리자 URL 계약 회귀 테스트 포함 |
 
 로컬 환경에서는 Docker daemon이 없어 Testcontainers 통합 테스트를 실행하지 못했으나, GitHub Actions Ubuntu Docker runner에서 최종 PR head의 전체 백엔드 job을 통과했다. 자동 PR CI가 늦게 생성되는 동안 수동 실행에 임시로 사용한 `workflow_dispatch` 테스트 opt-in은 검증 후 revert했으며 최종 PR 소스에는 남기지 않았다.
 
@@ -97,7 +98,7 @@ related_documents:
 
 | 지표 | 도입 전 기준값 | 측정 방법·기간 | 비교 결과 | 해석 |
 |---|---:|---|---|---|
-| 관련 회귀 테스트 실패 | CI 1건 실패 | PR #170 CI 및 targeted Gradle test | 최종 PR CI 백엔드 800건 중 실패 0건 | WireMock 응답 계약과 adapter media type 검증의 일치 확인 |
+| 관련 회귀 테스트 실패 | CI 1건 실패 | PR #170 CI 및 targeted Gradle test | 최종 PR CI 백엔드 803건 중 실패 0건 | WireMock 응답 계약과 adapter media type 검증, 후속 Provider·URL 오류 계약의 일치 확인 |
 | 미해결 리뷰 스레드 | 9개 | PR #170 review threads | 답글·resolve 진행 후 0개 | 리뷰 요청의 코드·테스트 반영 여부 확인 |
 
 ## 10. 남은 사항
