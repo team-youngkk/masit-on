@@ -11,10 +11,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.masiton.common.web.BusinessException;
+import com.masiton.common.web.ClientAddressResolver;
 import com.masiton.common.web.ErrorCode;
 import com.masiton.restaurant.application.naturallanguage.NaturalLanguageSearchService;
 import com.masiton.restaurant.application.port.in.NaturalLanguageSearchCommand;
-import com.masiton.restaurant.infrastructure.web.MapClientAddressResolver;
 
 @RestController
 @RequestMapping("/api/restaurants")
@@ -23,11 +23,11 @@ public class NaturalLanguageSearchController {
     private static final Set<Integer> ALLOWED_SIZES = Set.of(10, 20, 50);
 
     private final NaturalLanguageSearchService service;
-    private final MapClientAddressResolver clientAddressResolver;
+    private final ClientAddressResolver clientAddressResolver;
 
     public NaturalLanguageSearchController(
             NaturalLanguageSearchService service,
-            MapClientAddressResolver clientAddressResolver
+            ClientAddressResolver clientAddressResolver
     ) {
         this.service = service;
         this.clientAddressResolver = clientAddressResolver;

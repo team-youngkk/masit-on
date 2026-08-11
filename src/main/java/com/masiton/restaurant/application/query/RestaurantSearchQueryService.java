@@ -79,6 +79,15 @@ public class RestaurantSearchQueryService implements SearchRestaurantsUseCase {
                 items, command.page(), command.size(), queryResult.totalElements(), totalPages, hasNext);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public void validateFilters(SearchRestaurantsCommand command) {
+        filterResolver.normalizeQuery(command.query());
+        filterResolver.resolveRegionId(command.district());
+        filterResolver.resolveFoodCategoryId(command.category());
+        filterResolver.resolveCandidateRestaurantIds(command.creatorId());
+    }
+
     private Map<UUID, List<VisitedByRow>> loadVisitedBy(List<RestaurantSearchRow> rows) {
         if (rows.isEmpty()) {
             return Map.of();

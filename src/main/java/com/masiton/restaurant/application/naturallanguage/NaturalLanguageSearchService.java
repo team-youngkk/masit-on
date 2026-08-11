@@ -68,16 +68,14 @@ public class NaturalLanguageSearchService {
                 : parsed.status() == NaturalLanguageInterpretation.Status.FAILED
                 ? new MergedConditions(directConditions(command), List.of())
                 : merge(parsed, command);
-        RestaurantSearchResult result = merged.conditions().hasAny()
-                ? searchRestaurantsUseCase.search(new SearchRestaurantsCommand(
-                        merged.conditions().query(),
-                        merged.conditions().district(),
-                        merged.conditions().category(),
-                        merged.conditions().creatorId(),
-                        merged.conditions().tags(),
-                        command.page(),
-                        command.size()))
-                : emptyResult(command.page(), command.size());
+        RestaurantSearchResult result;
+        if (merged.conditions().hasAny()) {
+            result = searchRestaurantsUseCase.search(toSearchCommand(merged.conditions(), command));
+        } else {
+            // 조회를 건너뛰는 경로에서도 직접 지정 필터 검증 결과는 같아야 한다.
+            searchRestaurantsUseCase.validateFilters(toSearchCommand(directConditions(command), command));
+            result = emptyResult(command.page(), command.size());
+        }
 
         return new NaturalLanguageSearchResult(toView(parsed, merged), result);
     }
@@ -136,6 +134,20 @@ public class NaturalLanguageSearchService {
         return new MergedConditions(
                 new NaturalLanguageInterpretation.AppliedConditions(query, district, category, creatorId, tags),
                 conflicts);
+    }
+
+    private SearchRestaurantsCommand toSearchCommand(
+            NaturalLanguageInterpretation.AppliedConditions conditions,
+            NaturalLanguageSearchCommand command
+    ) {
+        return new SearchRestaurantsCommand(
+                conditions.query(),
+                conditions.district(),
+                conditions.category(),
+                conditions.creatorId(),
+                conditions.tags(),
+                command.page(),
+                command.size());
     }
 
     private NaturalLanguageInterpretation.AppliedConditions directConditions(NaturalLanguageSearchCommand command) {
