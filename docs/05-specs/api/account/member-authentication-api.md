@@ -348,7 +348,7 @@ Bearer JWT가 없거나 유효하지 않음, Refresh 쿠키 누락 또는 두 �
 
 ## 9. 오류 계약
 
-모든 오류는 [공통 오류 계약](../common/error-contract.md)의 `code`, `message`, `errors`, 선택 `resource`, 서버 생성 `traceId` 구조를 사용한다. 비밀번호, 이메일 인증·재설정·Access·Refresh Token 원문, Cookie·Authorization 헤더, 계정 상태와 내부 제한 key를 오류·로그에 넣지 않는다.
+모든 오류는 [공통 오류 계약](../common/error-contract.md)의 `code`, `message`, `errors`, 선택 `resource`·`details`, 서버 생성 `traceId` 구조를 사용한다. 비밀번호, 이메일 인증·재설정·Access·Refresh Token 원문, Cookie·Authorization 헤더, 계정 상태와 내부 제한 key를 오류·로그에 넣지 않는다.
 
 | HTTP | 코드 | 적용 조건 |
 |---:|---|---|

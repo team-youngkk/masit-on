@@ -30,6 +30,7 @@
 #   masiton.security.verification.password-hash
 #   masiton.integration.kakao.rest-api-key   (선택)
 #   masiton.integration.youtube.api-key      (선택)
+#   masiton.integration.kakao-mobility.rest-api-key (선택)
 #   masiton.ai.provider.gemini.api-key       (선택)
 #   masiton.ai.youtube-webhook.secret       (선택)
 #   masiton.ai.temporary-input.active-key-id (선택)
@@ -71,3 +72,10 @@ masiton:
       base-url: ${KAKAO_BASE_URL:https://dapi.kakao.com}
     youtube:
       base-url: ${YOUTUBE_BASE_URL:https://www.googleapis.com}
+    kakao-mobility:
+      # quota·계약 확인 전에는 기본값으로 hard stop한다(ADR-ROUTE-001 9절, NFR-COST-001).
+      enabled: ${KAKAO_MOBILITY_ENABLED:false}
+      free-tier-verified: ${KAKAO_MOBILITY_FREE_TIER_VERIFIED:false}
+      paid-billing-enabled: false
+      base-url: ${KAKAO_MOBILITY_BASE_URL:https://apis-navi.kakaomobility.com}
+      local-base-url-allowed: false

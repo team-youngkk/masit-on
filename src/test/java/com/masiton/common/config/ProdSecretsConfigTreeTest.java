@@ -110,6 +110,7 @@ class ProdSecretsConfigTreeTest {
         writeSecrets(secrets);
         Files.deleteIfExists(secrets.resolve("masiton.integration.kakao.rest-api-key"));
         Files.deleteIfExists(secrets.resolve("masiton.integration.youtube.api-key"));
+        Files.deleteIfExists(secrets.resolve("masiton.integration.kakao-mobility.rest-api-key"));
         Files.deleteIfExists(secrets.resolve("masiton.ai.provider.gemini.api-key"));
         Files.deleteIfExists(secrets.resolve("masiton.ai.temporary-input.active-key-id"));
         Files.deleteIfExists(secrets.resolve("masiton.ai.temporary-input.active-key"));
@@ -125,6 +126,7 @@ class ProdSecretsConfigTreeTest {
             Environment environment = context.getEnvironment();
             assertThat(environment.getProperty("masiton.integration.kakao.rest-api-key")).isNull();
             assertThat(environment.getProperty("masiton.integration.youtube.api-key")).isNull();
+            assertThat(environment.getProperty("masiton.integration.kakao-mobility.rest-api-key")).isBlank();
         });
     }
 
@@ -137,6 +139,8 @@ class ProdSecretsConfigTreeTest {
             Environment environment = context.getEnvironment();
             assertThat(environment.getProperty("masiton.integration.kakao.rest-api-key")).isEqualTo("kakao-key-value");
             assertThat(environment.getProperty("masiton.integration.youtube.api-key")).isEqualTo("youtube-key-value");
+            assertThat(environment.getProperty("masiton.integration.kakao-mobility.rest-api-key"))
+                    .isEqualTo("kakao-mobility-key-value");
         });
     }
 
@@ -245,6 +249,7 @@ class ProdSecretsConfigTreeTest {
         write(secrets, "masiton.security.verification.password-hash", "verification-bcrypt-hash");
         write(secrets, "masiton.integration.kakao.rest-api-key", "kakao-key-value");
         write(secrets, "masiton.integration.youtube.api-key", "youtube-key-value");
+        write(secrets, "masiton.integration.kakao-mobility.rest-api-key", "kakao-mobility-key-value");
         write(secrets, "masiton.ai.provider.gemini.api-key", "test-gemini-api-key");
         write(secrets, "masiton.ai.temporary-input.active-key-id", "test-temporary-input-key-1");
         write(secrets, "masiton.ai.temporary-input.active-key", "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=");

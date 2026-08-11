@@ -7,12 +7,16 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import com.masiton.test.FullContextIntegrationTest;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -126,5 +130,32 @@ class SecurityBoundaryApiTest extends FullContextIntegrationTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"))
                 .andExpect(jsonPath("$.traceId").isNotEmpty());
+    }
+
+    /*
+     * PR #139 재발 방지: API-DISCOVERY-COURSE-001도 회원 문맥이 없는 완전 공개 POST 조회다.
+     * 검증할 수 없는 Bearer Token이 섞여 들어와도 Token을 해석하는 순간 401이 되는 회귀를 이 값으로 잡는다.
+     */
+    @Test
+    @DisplayName("맛집 코스 추천 공개 조회는 검증할 수 없는 Bearer Token이 있어도 401을 반환하지 않는다")
+    void 코스추천공개조회_검증불가Bearer토큰_401을반환하지않는다() throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/restaurants/course-routes")
+                        .header("Authorization", "Bearer " + UNVERIFIABLE_JWT)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andReturn();
+
+        assertThat(result.getResponse().getStatus()).isNotIn(401, 403);
+    }
+
+    @Test
+    @DisplayName("맛집 코스 추천 공개 조회는 인증 헤더가 없어도 401 또는 403을 반환하지 않는다")
+    void 코스추천공개조회_인증헤더없음_401또는403을반환하지않는다() throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/restaurants/course-routes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andReturn();
+
+        assertThat(result.getResponse().getStatus()).isNotIn(401, 403);
     }
 }

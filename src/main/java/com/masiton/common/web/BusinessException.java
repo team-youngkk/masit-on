@@ -10,6 +10,7 @@ public class BusinessException extends RuntimeException {
     private final String code;
     private final List<ErrorResponse.FieldError> fieldErrors;
     private final ErrorResponse.ResourceReference resource;
+    private final Object details;
     private final Long retryAfterSeconds;
 
     public BusinessException(ErrorCode errorCode) {
@@ -40,6 +41,7 @@ public class BusinessException extends RuntimeException {
         this.code = code;
         this.fieldErrors = List.of();
         this.resource = null;
+        this.details = null;
         this.retryAfterSeconds = retryAfterSeconds;
     }
 
@@ -50,6 +52,7 @@ public class BusinessException extends RuntimeException {
         this.code = code;
         this.fieldErrors = List.copyOf(fieldErrors);
         this.resource = null;
+        this.details = null;
         this.retryAfterSeconds = null;
     }
 
@@ -64,6 +67,17 @@ public class BusinessException extends RuntimeException {
         this.code = code;
         this.fieldErrors = List.of();
         this.resource = resource;
+        this.details = null;
+        this.retryAfterSeconds = null;
+    }
+
+    public BusinessException(HttpStatus status, String code, String message, Object details) {
+        super(message);
+        this.status = status;
+        this.code = code;
+        this.fieldErrors = List.of();
+        this.resource = null;
+        this.details = details;
         this.retryAfterSeconds = null;
     }
 
@@ -85,5 +99,9 @@ public class BusinessException extends RuntimeException {
 
     public ErrorResponse.ResourceReference resource() {
         return resource;
+    }
+
+    public Object details() {
+        return details;
     }
 }

@@ -78,6 +78,21 @@ masiton:
         schema-version: S1
         connect-timeout: PT5S
         response-timeout: PT90S
+  integration:
+    kakao-mobility:
+      # ADR-ROUTE-001 9절·NFR-COST-001: quota·계약이 확인되지 않으면 기본값으로 hard stop한다.
+      enabled: ${KAKAO_MOBILITY_ENABLED:false}
+      free-tier-verified: ${KAKAO_MOBILITY_FREE_TIER_VERIFIED:false}
+      paid-billing-enabled: false
+      rest-api-key: ${KAKAO_MOBILITY_REST_API_KEY:}
+      base-url: ${KAKAO_MOBILITY_BASE_URL:https://apis-navi.kakaomobility.com}
+      connect-timeout: PT1S
+      response-timeout: PT4S
+      total-timeout: PT5S
+      monthly-quota: ${KAKAO_MOBILITY_MONTHLY_QUOTA:1000}
+      requests-per-second: ${KAKAO_MOBILITY_REQUESTS_PER_SECOND:20}
+      max-concurrent-requests: ${KAKAO_MOBILITY_MAX_CONCURRENT_REQUESTS:20}
+      local-base-url-allowed: false
   personalization:
     recent-cleanup:
       cron: ${RECENT_RESTAURANT_CLEANUP_CRON:0 0 3 * * *}

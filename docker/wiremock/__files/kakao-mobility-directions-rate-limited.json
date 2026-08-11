@@ -1,0 +1,4 @@
+{
+  "errorType": "RequestThrottled",
+  "message": "Fixture rate limit exceeded"
+}
