@@ -25,6 +25,7 @@ import com.masiton.ai.application.port.out.AiProviderException;
 import com.masiton.ai.application.port.out.AiExtractionResultProcessor;
 import com.masiton.ai.application.port.out.AiVideoExtractionProvider;
 import com.masiton.ai.application.port.out.TemporaryInputCipher;
+import com.masiton.ai.application.port.out.TemporaryInputDecryptionException;
 import com.masiton.ai.application.port.out.dto.AiVideoExtractionRequest;
 import com.masiton.ai.application.port.out.dto.AiVideoExtractionResult;
 
@@ -42,6 +43,8 @@ public class AiExtractionWorkerService {
     private final String workerId = "ai-worker-" + UUID.randomUUID();
     private final AtomicBoolean acceptingClaims = new AtomicBoolean(true);
     private final AtomicBoolean inFlight = new AtomicBoolean(false);
+    private final AtomicBoolean quotaWarningLogged = new AtomicBoolean(false);
+    private final AtomicBoolean quotaHardStopLogged = new AtomicBoolean(false);
     private final Object drainMonitor = new Object();
     private final ScheduledExecutorService heartbeatExecutor = Executors.newSingleThreadScheduledExecutor(runnable -> {
         Thread thread = new Thread(runnable, "ai-extraction-heartbeat");
@@ -76,19 +79,28 @@ public class AiExtractionWorkerService {
             OffsetDateTime quotaWindowStart = now.minus(properties.getQuotaWindow());
             long quotaUsage = store.quotaUsage(quotaWindowStart);
             if (quotaUsage >= properties.getApplicationQuotaLimit()) {
-                log.warn("AI extraction quota hard stop is active: usage={}, limit={}",
-                        quotaUsage, properties.getApplicationQuotaLimit());
+                int failedJobs = store.failQueuedForQuota(now);
+                quotaWarningLogged.set(false);
+                if (quotaHardStopLogged.compareAndSet(false, true)) {
+                    log.warn("AI extraction quota hard stop entered: usage={}, limit={}, failedQueuedJobs={}",
+                            quotaUsage, properties.getApplicationQuotaLimit(), failedJobs);
+                }
                 return;
             }
+            quotaHardStopLogged.set(false);
             if (quotaUsage * 100 >= properties.getApplicationQuotaLimit() * properties.getQuotaWarningPercent()) {
-                log.warn("AI extraction quota warning: usage={}, limit={}",
-                        quotaUsage, properties.getApplicationQuotaLimit());
+                if (quotaWarningLogged.compareAndSet(false, true)) {
+                    log.warn("AI extraction quota warning entered: usage={}, limit={}",
+                            quotaUsage, properties.getApplicationQuotaLimit());
+                }
+            } else {
+                quotaWarningLogged.set(false);
             }
             store.claim(workerId, now, now.plus(properties.getLeaseDuration()), properties.getMaxAttempts(),
                             quotaWindowStart, properties.getApplicationQuotaLimit())
                     .ifPresent(this::execute);
         } catch (RuntimeException exception) {
-            log.warn("AI extraction worker polling failed");
+            log.warn("AI extraction worker polling failed", exception);
         } finally {
             inFlight.set(false);
             synchronized (drainMonitor) {
@@ -144,8 +156,17 @@ public class AiExtractionWorkerService {
                         return;
                     }
                     attemptNo = nextAttempt.get();
-                } catch (RuntimeException exception) {
+                } catch (TemporaryInputDecryptionException exception) {
+                    if (exception.retryable()) {
+                        log.warn("AI extraction temporary input key unavailable; lease recovery will retry: jobId={}",
+                                job.jobId(), exception);
+                        return;
+                    }
                     store.completeFailure(job.jobId(), workerId, attemptNo, attemptStartedAt, now(), "INPUT");
+                    return;
+                } catch (RuntimeException exception) {
+                    log.warn("AI extraction execution failed unexpectedly; lease recovery will retry: jobId={}",
+                            job.jobId(), exception);
                     return;
                 }
             }
@@ -161,7 +182,7 @@ public class AiExtractionWorkerService {
                 log.warn("AI extraction heartbeat lost lease ownership: jobId={}", jobId);
             }
         } catch (RuntimeException exception) {
-            log.warn("AI extraction heartbeat failed: jobId={}", jobId);
+            log.warn("AI extraction heartbeat failed: jobId={}", jobId, exception);
         }
     }
 

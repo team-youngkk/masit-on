@@ -34,6 +34,7 @@
 #   masiton.ai.youtube-webhook.secret       (선택)
 #   masiton.ai.temporary-input.active-key-id (선택)
 #   masiton.ai.temporary-input.active-key    (선택)
+#   masiton.ai.temporary-input.keys.<key-id> (키 교체 중 미종결 작업용 과거 키, 선택·prefix 렌더링)
 #
 # `optional:`을 붙이지 않는다. 디렉터리가 없으면 기동이 실패해야 한다. 조용히 넘어가면
 # 접속값 없이 뜨거나 공통 설정의 빈 기본값으로 붙는다.

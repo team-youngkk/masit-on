@@ -1,5 +1,8 @@
 package com.masiton.ai.application;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -15,6 +18,7 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
 import com.masiton.ai.application.port.out.*;
 import com.masiton.ai.application.port.out.dto.*;
@@ -73,13 +77,102 @@ class AiExtractionWorkerServiceTest {
 
     @Test
     @DisplayName("애플리케이션 쿼터 초과 시 제공자를 호출하지 않는다")
-    void poll_quotaExceeded_클레임과제공자호출을중단한다() {
+    void poll_quotaExceeded_대기작업을실패시키고제공자를호출하지않는다() {
         when(store.quotaUsage(any())).thenReturn(properties.getApplicationQuotaLimit());
 
         service.poll();
 
+        verify(store).failQueuedForQuota(any());
         verify(store, never()).claim(any(), any(), any(), anyInt(), any(), anyLong());
         verifyNoInteractions(provider);
+    }
+
+    @Test
+    @DisplayName("quota hard stop 경고는 상태 진입 시 한 번만 기록한다")
+    void poll_quotaHardStop반복_경고를한번만기록한다() {
+        when(store.quotaUsage(any())).thenReturn(properties.getApplicationQuotaLimit());
+        Logger logger = (Logger) LoggerFactory.getLogger(AiExtractionWorkerService.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            service.poll();
+            service.poll();
+        } finally {
+            logger.detachAppender(appender);
+        }
+
+        assertThat(appender.list)
+                .filteredOn(event -> event.getFormattedMessage().contains("quota hard stop entered"))
+                .hasSize(1);
+    }
+
+    @Test
+    @DisplayName("결과 처리기가 없으면 claim과 Provider 호출을 하지 않는다")
+    void poll_결과처리기없음_claim과제공자호출을하지않는다() {
+        AiExtractionWorkerService failClosed = new AiExtractionWorkerService(store, provider,
+                Optional.empty(), cipher, properties,
+                Clock.fixed(Instant.parse("2026-08-11T00:00:00Z"), ZoneOffset.UTC), delay);
+
+        failClosed.poll();
+
+        verifyNoInteractions(store, provider);
+    }
+
+    @Test
+    @DisplayName("임시 입력이 변조되면 입력 오류로 종단 실패시킨다")
+    void poll_임시입력변조_INPUT으로실패시킨다() {
+        when(store.quotaUsage(any())).thenReturn(0L);
+        UUID jobId = UUID.randomUUID();
+        TemporaryInputCipher.EncryptedInput input = new TemporaryInputCipher.EncryptedInput(
+                new byte[] { 1 }, "key-1");
+        doReturn(Optional.of(new AiExtractionWorkerStore.ClaimedJob(jobId,
+                URI.create("https://www.youtube.com/watch?v=video-id"), input, 1)))
+                .when(store).claim(any(), any(), any(), anyInt(), any(), anyLong());
+        when(cipher.decrypt(input)).thenThrow(TemporaryInputDecryptionException.invalidInput(null));
+
+        service.poll();
+
+        verify(store).completeFailure(eq(jobId), any(), eq(1), any(), any(), eq("INPUT"));
+        verifyNoInteractions(provider);
+    }
+
+    @Test
+    @DisplayName("임시 입력 키를 사용할 수 없으면 종단 실패시키지 않고 lease 복구에 맡긴다")
+    void poll_임시입력키없음_종단실패시키지않는다() {
+        when(store.quotaUsage(any())).thenReturn(0L);
+        UUID jobId = UUID.randomUUID();
+        TemporaryInputCipher.EncryptedInput input = new TemporaryInputCipher.EncryptedInput(
+                new byte[] { 1 }, "retired-key");
+        doReturn(Optional.of(new AiExtractionWorkerStore.ClaimedJob(jobId,
+                URI.create("https://www.youtube.com/watch?v=video-id"), input, 1)))
+                .when(store).claim(any(), any(), any(), anyInt(), any(), anyLong());
+        when(cipher.decrypt(input)).thenThrow(TemporaryInputDecryptionException.keyUnavailable(null));
+
+        service.poll();
+
+        verify(store, never()).completeFailure(any(), any(), anyInt(), any(), any(), any());
+        verifyNoInteractions(provider);
+    }
+
+    @Test
+    @DisplayName("키 설정과 결과 저장 같은 인프라 오류는 종단 실패시키지 않고 lease 복구에 맡긴다")
+    void poll_인프라오류_종단실패시키지않는다() throws Exception {
+        when(store.quotaUsage(any())).thenReturn(0L);
+        UUID jobId = UUID.randomUUID();
+        doReturn(Optional.of(new AiExtractionWorkerStore.ClaimedJob(jobId,
+                URI.create("https://www.youtube.com/watch?v=video-id"), null, 1)))
+                .when(store).claim(any(), any(), any(), anyInt(), any(), anyLong());
+        AiVideoExtractionResult result = new AiVideoExtractionResult(
+                new ObjectMapper().readTree("{\"resultCompleteness\":\"COMPLETE\"}"), "req-1");
+        when(provider.extract(any())).thenReturn(result);
+        when(processor.process(eq(jobId), any(), eq(1), any(), any(), eq(result)))
+                .thenThrow(new IllegalStateException("database unavailable"));
+
+        service.poll();
+
+        verify(store, never()).completeFailure(any(), any(), anyInt(), any(), any(), any());
+        verify(store, never()).recordRetryableFailure(any(), any(), anyInt(), any(), any(), any());
     }
 
     @Test

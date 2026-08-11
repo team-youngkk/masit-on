@@ -6,6 +6,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 import com.masiton.ai.application.AiWorkerDelay;
 
@@ -30,5 +31,13 @@ public class AiExtractionWorkerConfiguration {
                 return false;
             }
         };
+    }
+
+    @Bean(name = "aiWorkerTaskScheduler")
+    ThreadPoolTaskScheduler aiWorkerTaskScheduler() {
+        ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
+        scheduler.setPoolSize(1);
+        scheduler.setThreadNamePrefix("ai-worker-poll-");
+        return scheduler;
     }
 }

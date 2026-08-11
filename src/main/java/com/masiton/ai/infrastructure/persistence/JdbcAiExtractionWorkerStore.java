@@ -157,6 +157,16 @@ public class JdbcAiExtractionWorkerStore implements AiExtractionWorkerStore {
     }
 
     @Override
+    public int failQueuedForQuota(OffsetDateTime finishedAt) {
+        return jdbcTemplate.update("""
+                UPDATE ai_extraction_job
+                   SET execution_status = 'FAILED', started_at = ?, finished_at = ?,
+                       error_category = 'QUOTA_HARD_STOP'
+                 WHERE execution_status = 'QUEUED'
+                """, finishedAt, finishedAt);
+    }
+
+    @Override
     public int failExpiredExhausted(OffsetDateTime now, int maxAttempts) {
         Integer changed = jdbcTemplate.queryForObject("""
                 WITH exhausted AS (

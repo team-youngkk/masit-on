@@ -26,6 +26,8 @@ public interface AiExtractionWorkerStore {
 
     boolean failWithoutAttempt(UUID jobId, String workerId, OffsetDateTime finishedAt, String errorCategory);
 
+    int failQueuedForQuota(OffsetDateTime finishedAt);
+
     int failExpiredExhausted(OffsetDateTime now, int maxAttempts);
 
     long quotaUsage(OffsetDateTime quotaWindowStart);

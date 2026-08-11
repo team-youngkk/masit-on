@@ -16,6 +16,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 
 import com.masiton.ai.application.port.out.AiVideoExtractionProvider;
 import com.masiton.ai.infrastructure.persistence.AesGcmTemporaryInputCipher;
+import com.masiton.ai.infrastructure.persistence.TemporaryInputEncryptionProperties;
 import com.masiton.ai.infrastructure.provider.config.GeminiProviderConfiguration;
 import com.masiton.ai.infrastructure.provider.config.GeminiProviderProperties;
 import com.masiton.common.web.BusinessException;
@@ -72,6 +73,8 @@ class ProdSecretsConfigTreeTest {
                     .isEqualTo("test-temporary-input-key-1");
             assertThat(environment.getProperty("masiton.ai.temporary-input.active-key"))
                     .isEqualTo("MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=");
+            assertThat(context.getBean(TemporaryInputEncryptionProperties.class).getKeys())
+                    .containsEntry("retired-1", "ZmVkY2JhOTg3NjU0MzIxMGZlZGNiYTk4NzY1NDMyMTA=");
             assertThat(environment.getProperty("masiton.ai.youtube-webhook.secret"))
                     .isEqualTo("test-youtube-webhook-secret");
             assertThat(environment.getProperty("masiton.security.verification.public-base-url"))
@@ -248,6 +251,8 @@ class ProdSecretsConfigTreeTest {
         write(secrets, "masiton.ai.provider.gemini.api-key", "test-gemini-api-key");
         write(secrets, "masiton.ai.temporary-input.active-key-id", "test-temporary-input-key-1");
         write(secrets, "masiton.ai.temporary-input.active-key", "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=");
+        write(secrets, "masiton.ai.temporary-input.keys.retired-1",
+                "ZmVkY2JhOTg3NjU0MzIxMGZlZGNiYTk4NzY1NDMyMTA=");
         write(secrets, "masiton.ai.youtube-webhook.secret", "test-youtube-webhook-secret");
     }
 

@@ -122,6 +122,168 @@ class JdbcAiExtractionWorkerStoreIntegrationTest {
                 """, String.class, jobId)).isEqualTo("worker-new");
     }
 
+    @Test
+    @DisplayName("시도를 소진한 만료 lease는 마지막 시도를 기록하고 작업을 실패 처리한다")
+    void failExpiredExhausted_시도소진Lease만료_작업과마지막시도를실패처리한다() {
+        // given
+        OffsetDateTime now = OffsetDateTime.parse("2026-08-11T00:05:00Z");
+        UUID jobId = insertRunning("video-exhausted", now.minusMinutes(3), now.minusSeconds(1));
+        jdbcTemplate.update("UPDATE ai_extraction_job SET attempt_count = 3 WHERE id = ?", jobId);
+
+        // when
+        int changed = store.failExpiredExhausted(now, 3);
+
+        // then
+        assertThat(changed).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForMap("""
+                SELECT execution_status, error_category, lease_owner, lease_expires_at
+                  FROM ai_extraction_job WHERE id = ?
+                """, jobId))
+                .containsEntry("execution_status", "FAILED")
+                .containsEntry("error_category", "LEASE_EXPIRED")
+                .containsEntry("lease_owner", null)
+                .containsEntry("lease_expires_at", null);
+        assertThat(jdbcTemplate.queryForMap("""
+                SELECT attempt_no, outcome, error_category
+                  FROM ai_extraction_attempt WHERE job_id = ?
+                """, jobId))
+                .containsEntry("attempt_no", 3)
+                .containsEntry("outcome", "FAILED")
+                .containsEntry("error_category", "LEASE_EXPIRED");
+    }
+
+    @Test
+    @DisplayName("lease 보유 Worker는 작업 실패와 provider request id 없는 시도를 함께 기록한다")
+    void completeFailure_lease보유Worker_작업과시도를함께기록한다() {
+        // given
+        OffsetDateTime now = OffsetDateTime.parse("2026-08-11T00:05:00Z");
+        UUID jobId = insertQueued("video-failure", "REALTIME", now.minusSeconds(1));
+        ClaimedJob claimed = store.claim("worker-owner", now, now.plusSeconds(120), 3,
+                now.minusDays(1), 100).orElseThrow();
+
+        // when
+        boolean completed = store.completeFailure(claimed.jobId(), "worker-owner", claimed.attemptNo(),
+                now, now.plusSeconds(2), "SCHEMA");
+
+        // then
+        assertThat(completed).isTrue();
+        assertThat(jobId).isEqualTo(claimed.jobId());
+        assertThat(jdbcTemplate.queryForMap("""
+                SELECT execution_status, error_category FROM ai_extraction_job WHERE id = ?
+                """, jobId))
+                .containsEntry("execution_status", "FAILED")
+                .containsEntry("error_category", "SCHEMA");
+        assertThat(jdbcTemplate.queryForMap("""
+                SELECT attempt_no, provider_request_id, outcome, error_category
+                  FROM ai_extraction_attempt WHERE job_id = ?
+                """, jobId))
+                .containsEntry("attempt_no", 1)
+                .containsEntry("provider_request_id", null)
+                .containsEntry("outcome", "FAILED")
+                .containsEntry("error_category", "SCHEMA");
+    }
+
+    @Test
+    @DisplayName("재시도 가능한 실패는 lease 소유권을 유지하며 시도 행을 기록한다")
+    void recordRetryableFailure_lease보유Worker_시도를기록한다() {
+        // given
+        OffsetDateTime now = OffsetDateTime.parse("2026-08-11T00:05:00Z");
+        UUID jobId = insertQueued("video-retryable", "REALTIME", now.minusSeconds(1));
+        ClaimedJob claimed = store.claim("worker-owner", now, now.plusSeconds(120), 3,
+                now.minusDays(1), 100).orElseThrow();
+
+        // when
+        boolean recorded = store.recordRetryableFailure(claimed.jobId(), "worker-owner", 1,
+                now, now.plusSeconds(2), "TIMEOUT");
+
+        // then
+        assertThat(recorded).isTrue();
+        assertThat(claimed.jobId()).isEqualTo(jobId);
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT execution_status FROM ai_extraction_job WHERE id = ?
+                """, String.class, jobId)).isEqualTo("RUNNING");
+        assertThat(jdbcTemplate.queryForMap("""
+                SELECT attempt_no, provider_request_id, outcome, error_category
+                  FROM ai_extraction_attempt WHERE job_id = ?
+                """, jobId))
+                .containsEntry("attempt_no", 1)
+                .containsEntry("provider_request_id", null)
+                .containsEntry("outcome", "FAILED")
+                .containsEntry("error_category", "TIMEOUT");
+    }
+
+    @Test
+    @DisplayName("quota hard stop은 lease 보유 작업을 새 시도 없이 실패 처리한다")
+    void failWithoutAttempt_lease보유Worker_시도없이실패처리한다() {
+        // given
+        OffsetDateTime now = OffsetDateTime.parse("2026-08-11T00:05:00Z");
+        UUID jobId = insertQueued("video-retry-quota", "REALTIME", now.minusSeconds(1));
+        ClaimedJob claimed = store.claim("worker-owner", now, now.plusSeconds(120), 3,
+                now.minusDays(1), 100).orElseThrow();
+
+        // when
+        boolean failed = store.failWithoutAttempt(claimed.jobId(), "worker-owner",
+                now.plusSeconds(2), "QUOTA_HARD_STOP");
+
+        // then
+        assertThat(failed).isTrue();
+        assertThat(claimed.jobId()).isEqualTo(jobId);
+        assertThat(jdbcTemplate.queryForMap("""
+                SELECT execution_status, error_category FROM ai_extraction_job WHERE id = ?
+                """, jobId))
+                .containsEntry("execution_status", "FAILED")
+                .containsEntry("error_category", "QUOTA_HARD_STOP");
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT count(*) FROM ai_extraction_attempt WHERE job_id = ?
+                """, Integer.class, jobId)).isZero();
+    }
+
+    @Test
+    @DisplayName("quota 사용량은 창 안의 완료 시도와 아직 기록되지 않은 진행 시도를 합산한다")
+    void quotaUsage_완료시도와진행시도_창안건수를합산한다() {
+        // given
+        OffsetDateTime now = OffsetDateTime.parse("2026-08-11T00:05:00Z");
+        UUID completedJob = insertQueued("video-completed", "REALTIME", now.minusSeconds(2));
+        ClaimedJob completed = store.claim("worker-completed", now, now.plusSeconds(120), 3,
+                now.minusDays(1), 100).orElseThrow();
+        assertThat(completed.jobId()).isEqualTo(completedJob);
+        assertThat(store.completeFailure(completed.jobId(), "worker-completed", 1,
+                now, now.plusSeconds(1), "SCHEMA")).isTrue();
+
+        UUID runningJob = insertQueued("video-running", "REALTIME", now.plusSeconds(2));
+        ClaimedJob running = store.claim("worker-running", now.plusSeconds(3), now.plusSeconds(123), 3,
+                now.minusDays(1), 100).orElseThrow();
+        assertThat(running.jobId()).isEqualTo(runningJob);
+
+        // when & then
+        assertThat(store.quotaUsage(now.minusDays(1))).isEqualTo(2);
+        assertThat(store.quotaUsage(now.plusSeconds(2))).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("quota hard stop은 대기 작업을 Provider 시도 없이 실패 처리한다")
+    void failQueuedForQuota_대기작업_시도없이실패처리한다() {
+        // given
+        OffsetDateTime now = OffsetDateTime.parse("2026-08-11T00:05:00Z");
+        UUID jobId = insertQueued("video-quota", "REALTIME", now.minusSeconds(1));
+
+        // when
+        int changed = store.failQueuedForQuota(now);
+
+        // then
+        assertThat(changed).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForMap("""
+                SELECT execution_status, error_category, finished_at
+                  FROM ai_extraction_job WHERE id = ?
+                """, jobId))
+                .containsEntry("execution_status", "FAILED")
+                .containsEntry("error_category", "QUOTA_HARD_STOP")
+                .containsKey("finished_at");
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT count(*) FROM ai_extraction_attempt WHERE job_id = ?
+                """, Integer.class, jobId)).isZero();
+    }
+
     private UUID insertQueued(String videoId, String priority, OffsetDateTime createdAt) {
         UUID id = UUID.randomUUID();
         jdbcTemplate.update("""

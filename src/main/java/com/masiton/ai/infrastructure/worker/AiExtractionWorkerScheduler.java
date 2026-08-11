@@ -14,7 +14,8 @@ public class AiExtractionWorkerScheduler {
         this.worker = worker;
     }
 
-    @Scheduled(fixedDelayString = "${masiton.ai.worker.poll-interval:PT5S}")
+    @Scheduled(scheduler = "aiWorkerTaskScheduler",
+            fixedDelayString = "${masiton.ai.worker.poll-interval:PT5S}")
     public void poll() {
         worker.poll();
     }
