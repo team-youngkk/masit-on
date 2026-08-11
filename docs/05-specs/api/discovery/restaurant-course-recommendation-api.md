@@ -105,6 +105,28 @@ related_documents:
 
 좌표가 없는 맛집을 조용히 제외하지 않고 전체 요청을 거부한다. 입력 검증 오류는 공통 오류 계약의 `errors`로 표현하며, 기존 자원 참조가 아니므로 `resource`를 사용하지 않는다.
 
+### Validation Error Details
+
+`RESTAURANT_NOT_PUBLIC`와 `RESTAURANT_COORDINATE_REQUIRED` 응답은 `details.selectedRestaurants`에 문제가 된 맛집의 `restaurantId`, `name`, `inputOrder`만 담는다. 좌표와 내부 상태값은 노출하지 않으며, `inputOrder`는 요청 배열 기준 1부터 시작한다.
+
+```json
+{
+  "code": "RESTAURANT_COORDINATE_REQUIRED",
+  "message": "좌표가 없거나 올바르지 않은 맛집은 코스에 포함할 수 없습니다.",
+  "errors": [],
+  "details": {
+    "selectedRestaurants": [
+      {
+        "restaurantId": "restaurant-id-2",
+        "name": "좌표 없는 맛집",
+        "inputOrder": 2
+      }
+    ]
+  },
+  "traceId": "01K123ABC456DEF789GHJKMNPQ"
+}
+```
+
 ### Success Response
 
 ```json
