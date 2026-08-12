@@ -7,6 +7,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 import org.springframework.http.HttpStatus;
@@ -47,6 +48,16 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
 
     @Override
     public AiExtractionJobView submitAdmin(String rawVideoUrl, String rawSupplementText, String idempotencyKey) {
+        return submitAdmin(rawVideoUrl, rawSupplementText, idempotencyKey, null);
+    }
+
+    @Override
+    public AiExtractionJobView submitRetry(String rawVideoUrl, String rawSupplementText) {
+        return submitAdmin(rawVideoUrl, rawSupplementText, null, UUID.randomUUID().toString());
+    }
+
+    private AiExtractionJobView submitAdmin(String rawVideoUrl, String rawSupplementText, String idempotencyKey,
+                                            String retryNonce) {
         URI requestedUrl = youtubeUrl(rawVideoUrl);
         URI canonicalRequestedUrl = canonicalYoutubeUrl(videoIdFrom(requestedUrl));
         String supplement = rawSupplementText == null ? "" : rawSupplementText.trim();
@@ -59,7 +70,7 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
         }
         String requestedVideoId = videoIdFrom(requestedUrl);
         String inputMode = supplement.isBlank() ? "GEMINI_VIDEO_URL" : "ADMIN_TEXT";
-        byte[] inputHash = hash(canonicalRequestedUrl.toString(), supplement);
+        byte[] inputHash = hash(canonicalRequestedUrl.toString(), supplement, retryNonce);
         Optional<AiExtractionJobView> existing = Optional.empty();
         if (normalizedIdempotencyKey.isEmpty() && inputMode.equals("GEMINI_VIDEO_URL")) {
             existing = persistence.findByVideoIdAndInputMode(requestedVideoId, inputMode,
@@ -85,7 +96,7 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
         Optional<EncryptedInput> encrypted = supplement.isBlank()
                 ? Optional.empty()
                 : Optional.of(temporaryInputCipher.encrypt(supplement));
-        return create("ADMIN", "BACKFILL", channelId, videoId, videoUrl, inputMode, supplement, encrypted);
+        return create("ADMIN", "BACKFILL", channelId, videoId, videoUrl, inputMode, inputHash, encrypted);
     }
 
     @Override
@@ -102,7 +113,7 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
             return Optional.empty();
         }
         return Optional.of(create("WEBHOOK", "REALTIME", normalizedChannelId, normalizedVideoId,
-                canonicalVideoUrl, "GEMINI_VIDEO_URL", "", Optional.empty()));
+                canonicalVideoUrl, "GEMINI_VIDEO_URL", hash(canonicalVideoUrl.toString(), "", null), Optional.empty()));
     }
 
     @Override
@@ -118,13 +129,12 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
         }
         return challenge;
     }
-
     private AiExtractionJobView create(String source, String priority, String channelId, String videoId,
-                                       URI videoUrl, String inputMode, String supplement,
+                                       URI videoUrl, String inputMode, byte[] inputHash,
                                        Optional<EncryptedInput> encrypted) {
         AiExtractionJobStore.AiExtractionJobDraft draft = new AiExtractionJobStore.AiExtractionJobDraft(
                 java.util.UUID.randomUUID(), source, priority, channelId, videoId, videoUrl, inputMode,
-                hash(videoUrl.toString(), supplement), AiExtractionContract.PROVIDER,
+                inputHash, AiExtractionContract.PROVIDER,
                 AiExtractionContract.MODEL_VERSION, AiExtractionContract.PROMPT_VERSION,
                 AiExtractionContract.SCHEMA_VERSION, OffsetDateTime.now(ZoneOffset.UTC));
         return persistence.create(draft, encrypted);
@@ -211,10 +221,11 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
         return value;
     }
 
-    private byte[] hash(String videoUrl, String supplement) {
+    private byte[] hash(String videoUrl, String supplement, String nonce) {
         try {
+            String suffix = nonce == null ? "" : "\nretry:" + nonce;
             return MessageDigest.getInstance("SHA-256")
-                    .digest((videoUrl.trim() + "\n" + supplement.trim()).getBytes(StandardCharsets.UTF_8));
+                    .digest((videoUrl.trim() + "\n" + supplement.trim() + suffix).getBytes(StandardCharsets.UTF_8));
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 is unavailable.", exception);
         }

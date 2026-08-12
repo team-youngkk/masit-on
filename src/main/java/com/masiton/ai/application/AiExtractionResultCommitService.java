@@ -58,6 +58,9 @@ class AiExtractionResultCommitService {
         }
         UUID snapshotId = insertSnapshot(command, "AUTO_CONFIRMED", null);
         AutoRegisterVerifiedContentUseCase.RegistrationResult registration = autoRegister.register(registrationCommand);
+        resultStore.markRegisteredContent(snapshotId, registration.restaurantId(), registration.restaurantCreated(),
+                registration.creatorId(), registration.creatorCreated(), registration.videoId(), registration.videoCreated(),
+                registration.visitId(), registration.visitCreated());
         insertTagReviewsAndVisitTags(snapshotId, command.tags(), registration.visitId(), command.finishedAt());
         resultStore.completeSuccess(command.jobId(), command.workerId(), command.attemptNo(),
                 command.resultCompleteness(), command.attemptStartedAt(), command.finishedAt(),

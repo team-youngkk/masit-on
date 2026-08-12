@@ -79,8 +79,8 @@ class Expansion3FlywayMigrationIntegrationTest {
     }
 
     @Test
-    @DisplayName("빈 데이터베이스를 최신 버전까지 마이그레이션하면 V4 스키마와 V5 인덱스가 모두 적용된다")
-    void 빈데이터베이스_최신버전마이그레이션_V4스키마와V5인덱스적용() {
+    @DisplayName("빈 데이터베이스를 최신 버전까지 마이그레이션하면 V4~V6 AI 관리 스키마가 모두 적용된다")
+    void 빈데이터베이스_최신버전마이그레이션_V4부터V6관리스키마적용() {
         // given
         SchemaDatabase database = createSchemaDatabase();
         JdbcTemplate jdbcTemplate = new JdbcTemplate(database.dataSource());
@@ -91,11 +91,31 @@ class Expansion3FlywayMigrationIntegrationTest {
         // then
         assertThat(jdbcTemplate.queryForList(
                 "SELECT version FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank", String.class))
-                .containsExactly("1", "2", "3", "4", "5");
-        assertAiSchemaAndContracts(jdbcTemplate, database.schema());
+                .containsExactly("1", "2", "3", "4", "5", "6");
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM pg_indexes WHERE schemaname = current_schema() "
                 + "AND indexname IN ('ix_ai_job__video_input_versions', 'ix_ai_job__video_mode_versions', "
                 + "'ix_ai_temporary_input__expires_at')", Integer.class)).isEqualTo(3);
+        assertManualReviewSchema(jdbcTemplate, database.schema());
+    }
+
+    private void assertManualReviewSchema(JdbcTemplate jdbcTemplate, String schema) {
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM information_schema.tables "
+                + "WHERE table_schema=? AND table_name='ai_extraction_manual_review'", Integer.class, schema)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForList("SELECT column_name FROM information_schema.columns "
+                + "WHERE table_schema=? AND table_name='ai_candidate_snapshot' "
+                + "AND column_name LIKE 'registered_%' OR table_schema=? AND table_name='ai_candidate_snapshot' "
+                + "AND column_name LIKE '%_created' ORDER BY column_name", String.class, schema, schema))
+                .containsExactlyInAnyOrder("registered_creator_id", "registered_restaurant_id", "registered_video_id",
+                        "registered_visit_id", "creator_created", "restaurant_created", "video_created", "visit_created");
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM information_schema.columns "
+                + "WHERE table_schema=? AND table_name='ai_candidate_tag_review' AND column_name='manual_tag_code'",
+                Integer.class, schema)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM pg_constraint "
+                + "WHERE connamespace=current_schema()::regnamespace AND conname='ck_ai_snapshot__registration_flags'",
+                Integer.class)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM pg_constraint "
+                + "WHERE connamespace=current_schema()::regnamespace AND conname='ck_ai_candidate_tag_review__manual_tag_code'",
+                Integer.class)).isEqualTo(1);
     }
 
     private void assertAiSchemaAndContracts(JdbcTemplate jdbcTemplate, String schema) {

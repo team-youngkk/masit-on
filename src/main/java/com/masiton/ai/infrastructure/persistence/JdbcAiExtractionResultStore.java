@@ -128,6 +128,21 @@ class JdbcAiExtractionResultStore implements AiExtractionResultStore {
     }
 
     @Override
+    public void markRegisteredContent(UUID snapshotId, UUID restaurantId, boolean restaurantCreated,
+                                      UUID creatorId, boolean creatorCreated, UUID videoId, boolean videoCreated,
+                                      UUID visitId, boolean visitCreated) {
+        jdbcTemplate.update("""
+                UPDATE ai_candidate_snapshot
+                   SET registered_restaurant_id = ?, restaurant_created = ?,
+                       registered_creator_id = ?, creator_created = ?,
+                       registered_video_id = ?, video_created = ?,
+                       registered_visit_id = ?, visit_created = ?
+                 WHERE id = ?
+                """, restaurantId, restaurantCreated, creatorId, creatorCreated, videoId, videoCreated,
+                visitId, visitCreated, snapshotId);
+    }
+
+    @Override
     public void completeSuccess(UUID jobId, String workerId, int attemptNo, String resultCompleteness,
                                 OffsetDateTime attemptStartedAt, OffsetDateTime finishedAt,
                                 String providerRequestId) {

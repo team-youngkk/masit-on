@@ -36,6 +36,10 @@ public interface AiExtractionResultStore {
     void insertVisitTag(UUID visitId, UUID tagDefinitionId, java.math.BigDecimal confidence, String evidence,
                         String extractorVersion, OffsetDateTime createdAt);
 
+    void markRegisteredContent(UUID snapshotId, UUID restaurantId, boolean restaurantCreated,
+                               UUID creatorId, boolean creatorCreated, UUID videoId, boolean videoCreated,
+                               UUID visitId, boolean visitCreated);
+
     void completeSuccess(UUID jobId, String workerId, int attemptNo, String resultCompleteness,
                          OffsetDateTime attemptStartedAt, OffsetDateTime finishedAt, String providerRequestId);
 

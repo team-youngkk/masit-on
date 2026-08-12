@@ -8,6 +8,8 @@ import com.masiton.ai.application.port.out.dto.AiExtractionJobView;
 public interface AiExtractionJobUseCase {
     AiExtractionJobView submitAdmin(String videoUrl, String supplementText, String idempotencyKey);
 
+    AiExtractionJobView submitRetry(String videoUrl, String supplementText);
+
     Optional<AiExtractionJobView> submitWebhook(String channelId, String videoId, URI videoUrl);
 
     String verifyChallenge(String channelId, String verifyToken, String challenge);
