@@ -80,6 +80,7 @@ related_documents:
 | `./gradlew.bat test --tests "com.masiton.architecture.ArchitectureTest" --no-daemon --console=plain` | 통과 | 계층·패키지 경계 |
 | `./gradlew.bat test --tests "com.masiton.security.infrastructure.redis.RedisRefreshTokenStoreIntegrationTest" --no-daemon --console=plain` | 통과 | Redis `TIME`과 레거시 세션 복구 큐 경계 |
 | `./gradlew.bat clean build --no-daemon --console=plain` | 시간 초과 | 5분 제한 안에 전체 Testcontainers 빌드가 종료되지 않아 성공 여부를 확인하지 못함 |
+| [GitHub Actions CI #31594979628](https://github.com/team-youngkk/masit-on/actions/runs/31594979628) | 통과 | 원격 백엔드 전체 빌드·테스트와 프런트엔드 빌드·타입 검사 |
 | `git diff --check` | 통과 | 공백 오류 없음 |
 
 ## 8. 재발 방지 및 다음 확인
@@ -96,4 +97,4 @@ related_documents:
 ## 10. 남은 사항
 
 - 실제 YouTube 외부 구독 생성·갱신 Adapter는 endpoint·인증·운영 callback 계약 확정 후 별도 작업으로 남아 있다. 이 PR에서는 외부 확인 전 `UNKNOWN`과 Webhook 차단, 비활성 Watch challenge 거부로 안전한 상태를 보장한다.
-- 로컬 전체 `clean build`는 5분 제한으로 완료하지 못했으며, 변경을 푸시한 뒤 필수 GitHub Actions 백엔드 CI 결과로 최종 확인한다.
+- 로컬 전체 `clean build`는 5분 제한으로 완료하지 못했지만, 변경을 푸시한 뒤 필수 [GitHub Actions 백엔드·프런트엔드 CI](https://github.com/team-youngkk/masit-on/actions/runs/31594979628)가 모두 통과했다.
