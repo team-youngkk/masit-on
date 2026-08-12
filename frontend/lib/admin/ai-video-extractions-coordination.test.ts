@@ -3,7 +3,9 @@ import test from 'node:test'
 
 import {
   aiExtractionMessageForCode,
+  aiExtractionSubmissionFieldErrors,
   aiExtractionSubmissionAttempt,
+  aiExtractionSubmissionPresentation,
   nextAiExtractionFilters,
   reviewActionsFor,
   reviewRequest,
@@ -18,6 +20,25 @@ test('신규 접수는 빈 URL과 trim 후 보완 텍스트 길이를 클라이�
     '보완 텍스트는 공백을 제외하고 20,000자 이하로 입력해 주세요.',
   ])
   assert.deepEqual(validateAiExtractionSubmission('https://youtu.be/video-id', ` ${'a'.repeat(20_000)} `), [])
+})
+
+test('신규 접수 입력 오류는 각 필드에 연결할 수 있는 형태로 반환한다', () => {
+  assert.deepEqual(aiExtractionSubmissionFieldErrors('   ', 'a'.repeat(20_001)), {
+    videoUrl: 'YouTube 영상 URL을 입력해 주세요.',
+    supplementText: '보완 텍스트는 공백을 제외하고 20,000자 이하로 입력해 주세요.',
+  })
+  assert.deepEqual(aiExtractionSubmissionFieldErrors('https://youtu.be/video-id', ''), {})
+})
+
+test('재사용 접수 결과는 기존 작업 ID와 상태를 표시하고 기존 작업 링크를 사용한다', () => {
+  assert.deepEqual(aiExtractionSubmissionPresentation({ jobId: 'job-1', executionStatus: 'RUNNING', reused: true }), {
+    linkLabel: '기존 작업 보기',
+    statusLabel: '기존 작업 ID job-1 · 현재 상태 RUNNING',
+  })
+  assert.deepEqual(aiExtractionSubmissionPresentation({ jobId: 'job-2', executionStatus: 'QUEUED', reused: false }), {
+    linkLabel: '작업 상세 보기',
+    statusLabel: undefined,
+  })
 })
 
 test('동일한 정규화 입력은 멱등 키를 재사용하고 입력이 바뀌면 새 키를 만든다', () => {

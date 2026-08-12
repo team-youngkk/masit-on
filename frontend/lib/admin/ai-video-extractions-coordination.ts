@@ -1,4 +1,4 @@
-import type { AiExecutionStatus, AiExtractionJob, AiExtractionReviewStatus, AiExtractionSource } from './ai-video-extractions'
+import type { AiExecutionStatus, AiExtractionJob, AiExtractionReviewStatus, AiExtractionSource, AiExtractionSubmissionResult } from './ai-video-extractions'
 
 export type AiExtractionFilters = {
   executionStatus: AiExecutionStatus | ''
@@ -8,6 +8,7 @@ export type AiExtractionFilters = {
 }
 
 export type AiExtractionSubmissionAttempt = { fingerprint: string; key: string }
+export type AiExtractionSubmissionFieldErrors = { videoUrl?: string; supplementText?: string }
 
 export function aiExtractionSubmissionAttempt(
   previous: AiExtractionSubmissionAttempt | null,
@@ -17,11 +18,24 @@ export function aiExtractionSubmissionAttempt(
   return previous?.fingerprint === fingerprint ? previous : { fingerprint, key: generate() }
 }
 
+export function aiExtractionSubmissionFieldErrors(videoUrl: string, supplementText: string): AiExtractionSubmissionFieldErrors {
+  return {
+    ...(videoUrl.trim().length ? {} : { videoUrl: 'YouTube 영상 URL을 입력해 주세요.' }),
+    ...(supplementText.trim().length <= 20_000 ? {} : { supplementText: '보완 텍스트는 공백을 제외하고 20,000자 이하로 입력해 주세요.' }),
+  }
+}
+
 export function validateAiExtractionSubmission(videoUrl: string, supplementText: string): string[] {
-  const errors: string[] = []
-  if (!videoUrl.trim().length) errors.push('YouTube 영상 URL을 입력해 주세요.')
-  if (supplementText.trim().length > 20_000) errors.push('보완 텍스트는 공백을 제외하고 20,000자 이하로 입력해 주세요.')
-  return errors
+  return Object.values(aiExtractionSubmissionFieldErrors(videoUrl, supplementText))
+}
+
+export function aiExtractionSubmissionPresentation(
+  result: Pick<AiExtractionSubmissionResult, 'jobId' | 'executionStatus' | 'reused'>,
+) {
+  return {
+    linkLabel: result.reused ? '기존 작업 보기' : '작업 상세 보기',
+    statusLabel: result.reused ? `기존 작업 ID ${result.jobId} · 현재 상태 ${result.executionStatus}` : undefined,
+  }
 }
 
 export function nextAiExtractionFilters(

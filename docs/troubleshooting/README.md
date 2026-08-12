@@ -10,6 +10,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #182 관리자 AI 영상 접수 리뷰 반영](pr-182-admin-ai-video-intake-review.md)
 - [PR #178 3차 확장 통합 회귀 테스트 리뷰 반영](pr-178-third-expansion-integration-review.md)
 
 - [PR #177 AI 평가 자산의 증거 범위·분할·Critical 경계](pr-177-ai-evaluation-review.md)
