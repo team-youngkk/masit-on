@@ -83,6 +83,42 @@ class Expansion3FlywayMigrationIntegrationTest {
     }
 
     @Test
+    @DisplayName("V1 데이터와 스키마를 보존하면서 V4 AI 후보 스키마와 18개 통제 태그를 전진 적용한다")
+    void V4적용_V1스키마존재_기존데이터와AI후보스키마를전진적용한다() {
+        // given
+        SchemaDatabase database = createSchemaDatabase();
+        migrate(database.dataSource(), database.schema(), MigrationVersion.fromVersion("1"));
+        JdbcTemplate jdbcTemplate = new JdbcTemplate(database.dataSource());
+        UUID existingRestaurantId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO restaurant (id, region_id, food_category_id, name, kakao_place_id, kakao_place_url, "
+                        + "road_address, phone_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                existingRestaurantId, REGION_ID, CATEGORY_ID, "기존 맛집", "kakao-v1-" + existingRestaurantId,
+                "https://example.com/place/" + existingRestaurantId, "서울특별시 테스트로 1", "02-1234-5678");
+
+        // when
+        migrate(database.dataSource(), database.schema(), MigrationVersion.fromVersion("4"));
+
+        // then
+        assertThat(jdbcTemplate.queryForList(
+                "SELECT version FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank",
+                String.class)).containsExactly("1", "2", "3", "4");
+        assertAiSchemaAndContracts(jdbcTemplate, database.schema());
+        assertThat(jdbcTemplate.queryForMap(
+                "SELECT id::text, region_id::text, food_category_id::text, name, kakao_place_id, "
+                        + "kakao_place_url, road_address, phone_number FROM restaurant WHERE id = ?",
+                existingRestaurantId))
+                .containsEntry("id", existingRestaurantId.toString())
+                .containsEntry("region_id", REGION_ID.toString())
+                .containsEntry("food_category_id", CATEGORY_ID.toString())
+                .containsEntry("name", "기존 맛집")
+                .containsEntry("kakao_place_id", "kakao-v1-" + existingRestaurantId)
+                .containsEntry("kakao_place_url", "https://example.com/place/" + existingRestaurantId)
+                .containsEntry("road_address", "서울특별시 테스트로 1")
+                .containsEntry("phone_number", "02-1234-5678");
+    }
+
+    @Test
     @DisplayName("빈 데이터베이스를 최신 버전까지 마이그레이션하면 V4~V7 AI 관리 스키마가 모두 적용된다")
     void 빈데이터베이스_최신버전마이그레이션_V4부터V7관리스키마적용() {
         // given
