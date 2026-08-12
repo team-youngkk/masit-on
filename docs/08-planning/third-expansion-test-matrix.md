@@ -9,6 +9,7 @@ related_documents:
   - third-expansion-ai-evaluation-result.md
   - third-expansion-implementation-plan.md
   - third-expansion-task-breakdown.md
+  - third-expansion-browser-verification.md
   - ../01-requirements/functional-requirements.md
   - ../01-requirements/business-rules.md
   - ../01-requirements/non-functional-requirements.md
@@ -82,7 +83,7 @@ related_documents:
 
 | 증거 | 판정 내용 | 현재 상태 | 완료 조건 |
 |---|---|---|---|
-| 브라우저 인수 | 공개 자연어·코스, 관리자 AI 작업·예외 보정의 정상·빈·오류·복구 | 미실행 | `TST-E3-E2E-001` 화면 캡처·환경·접근성 결과 기록 |
+| 브라우저 인수 | 공개 자연어·코스, 관리자 AI 작업·예외 보정의 정상·빈·오류·복구 | 부분 실행. 내장 Chromium에서 화면 폭 5종·키보드·정상·빈·오류·복구를 확인했고 지원 브라우저 실빌드는 미검증이다([3차 확장 브라우저 검증 기록](third-expansion-browser-verification.md)) | `TST-E3-E2E-001` 화면 캡처·환경·접근성 결과 기록 |
 | AI Worker 운영 | 단일 EC2 CPU·메모리·DB·backlog·처리시간·재기동·quota | 미실행 | `E3-T13` 측정 보고서와 장애 복구 결과 |
 | Mobility 운영 | quota·호출 수·timeout·비용 hard stop | 미실행 | `E3-T13` WireMock 및 운영 계정 검증 |
 | 코스 좌표 적합성 | 운영 ACTIVE·공개 맛집 좌표 보강률 | 미측정 | `E3-T13` 읽기 전용 측정 결과·조치·재측정 기록 |
