@@ -58,7 +58,7 @@ class GenerateLocalJwt {
     }
 }
 
-function New-LocalMemberActionMailKey {
+function New-LocalAesKey {
     $key = [byte[]]::new(32)
     $generator = [System.Security.Cryptography.RandomNumberGenerator]::Create()
     try {
@@ -103,8 +103,20 @@ if ([string]::IsNullOrWhiteSpace($memberActionMailKeyId)) {
 
 $memberActionMailKey = Get-EnvValue $content 'MEMBER_ACTION_MAIL_ACTIVE_KEY'
 if ([string]::IsNullOrWhiteSpace($memberActionMailKey)) {
-    $memberActionMailKey = New-LocalMemberActionMailKey
+    $memberActionMailKey = New-LocalAesKey
     $content = Set-EnvValue $content 'MEMBER_ACTION_MAIL_ACTIVE_KEY' $memberActionMailKey
+}
+
+$aiTemporaryInputKeyId = Get-EnvValue $content 'AI_TEMPORARY_INPUT_KEY_ID'
+if ([string]::IsNullOrWhiteSpace($aiTemporaryInputKeyId)) {
+    $aiTemporaryInputKeyId = 'local-1'
+    $content = Set-EnvValue $content 'AI_TEMPORARY_INPUT_KEY_ID' $aiTemporaryInputKeyId
+}
+
+$aiTemporaryInputKey = Get-EnvValue $content 'AI_TEMPORARY_INPUT_KEY'
+if ([string]::IsNullOrWhiteSpace($aiTemporaryInputKey)) {
+    $aiTemporaryInputKey = New-LocalAesKey
+    $content = Set-EnvValue $content 'AI_TEMPORARY_INPUT_KEY' $aiTemporaryInputKey
 }
 
 [System.IO.File]::WriteAllText(
@@ -118,5 +130,7 @@ $env:JWT_PRIVATE_KEY_PEM = $privateKey
 $env:JWT_PUBLIC_KEY_PEM = $publicKey
 $env:MEMBER_ACTION_MAIL_ACTIVE_KEY_ID = $memberActionMailKeyId
 $env:MEMBER_ACTION_MAIL_ACTIVE_KEY = $memberActionMailKey
+$env:AI_TEMPORARY_INPUT_KEY_ID = $aiTemporaryInputKeyId
+$env:AI_TEMPORARY_INPUT_KEY = $aiTemporaryInputKey
 
-Write-Host '로컬 JWT와 회원 Action 메일 AES 키를 준비했고 현재 PowerShell 세션에 설정했습니다.'
+Write-Host '로컬 JWT와 회원 Action 메일·AI 보완 텍스트 AES 키를 준비했고 현재 PowerShell 세션에 설정했습니다.'

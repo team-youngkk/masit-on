@@ -65,11 +65,11 @@ related_documents:
 | 자연어 탐색 `/restaurants` (결과 표시 상태) | 통과 | 통과 | 통과 | 통과 | 통과 |
 | 맛집 코스 `/course` (경로 결과 표시 상태) | 통과 | 통과 | 통과 | 통과 | 통과 |
 | AI 작업 목록 `/admin/ai` | 통과 | 통과 | 통과 | 통과 | 통과 |
-| AI 작업 상세 `/admin/ai/{jobId}` | 조건부 | 조건부 | 조건부 | 조건부 | 조건부 |
+| AI 작업 상세 `/admin/ai/{jobId}` | 통과 | 통과 | 통과 | 통과 | 통과 |
 
 전 조합에서 가로 스크롤 0건, viewport 초과 요소 0건, 접근 이름 없는 링크·버튼 0건, `alt` 속성 없는 이미지 0건이었다. 제목 계층은 네 화면 모두 `h1` 하나로 시작하고 단계를 건너뛰지 않는다.
 
-`조건부`는 조작 대상 크기 항목만 미달이라는 뜻이다. AI 작업 상세의 `태그 코드 보정` 입력이 전 폭에서 177×21px이라 24px 최소 크기를 넘지 못한다. 인라인 예외에 해당하지 않는 독립 폼 컨트롤이므로 5.3절에 결함으로 기록한다.
+AI 작업 상세의 `태그 코드 보정` 입력은 첫 측정에서 전 폭 177×21px로 24px 최소 조작 크기를 넘지 못했다. 5.3절에서 고친 뒤 재측정해 207×44px이 됐고 전 폭에서 24px 미만 조작 대상이 0건이다.
 
 자연어 탐색에서 검출된 21px 높이 요소는 오류·빈 결과 안내 문장 안의 `기존 필터 검색으로 이동` 링크다. 문장 안에 있는 인라인 링크는 최소 크기 예외 대상이라 통과로 판정했다.
 
@@ -129,15 +129,19 @@ java.lang.IllegalStateException: Kakao Mobility base URL is not an allowed provi
 
 [CLAUDE.md 5절](../../CLAUDE.md)이 통합 실행 명령으로 안내하는 경로가 현재 `develop`에서 동작하지 않는다. 이 검증은 `./gradlew bootRun`으로 우회했다. 조치 대상은 `docker-compose.yml`(이우람 소유) 또는 허용 목록(WS-16)이며 이 문서에서 고치지 않는다.
 
-### 5.2 AI 재시도의 보완 텍스트 암호화 키가 로컬 설정에 없다
+### 5.2 AI 재시도의 보완 텍스트 암호화 키가 로컬 설정에 없었다 (수정함)
 
 `FAILED` 작업 재시도는 보완 텍스트가 필수(`required`)라 항상 `ADMIN_TEXT` 입력 모드로 동작하고, 저장 전에 `AI_TEMPORARY_INPUT_KEY_ID`·`AI_TEMPORARY_INPUT_KEY`로 암호화한다. 두 값은 `.env.example`, `docker-compose.yml`, `scripts/Initialize-LocalJwt.ps1`, 문서 어디에도 없다.
 
-기본 로컬 설정에서 재시도를 누르면 `503 AIEXTRACT_TEMPORARY_INPUT_UNAVAILABLE`이 나고 새 작업이 만들어지지 않는다. 이 검증은 두 환경 변수를 로컬 임시값으로 주입해 재시도 여정을 확인했다. `.env.example`과 로컬 실행 문서에 두 값을 추가할지 판단이 필요하다.
+기본 로컬 설정에서 재시도를 누르면 `503 AIEXTRACT_TEMPORARY_INPUT_UNAVAILABLE`이 나고 새 작업이 만들어지지 않는다.
 
-### 5.3 AI 작업 상세의 `태그 코드 보정` 입력이 24px보다 작다
+같은 변경 단위에서 회원 Action 메일 키와 같은 방식으로 맞췄다. `.env.example`에 두 항목을 추가하고, `scripts/Initialize-LocalJwt.ps1`이 32-byte AES 키를 만들어 `.env`와 현재 세션에 넣고, `docker-compose.yml`이 앱 컨테이너로 넘기고, [README](../../README.md)가 두 값을 안내한다. 로컬·운영 모두 저장소에 값을 두지 않는 원칙은 그대로다.
 
-전 폭에서 177×21px이다. 문장 안의 인라인 링크가 아니라 독립 폼 컨트롤이므로 최소 크기 예외에 해당하지 않는다. 관리자 화면 전용이며 조작은 가능하지만 정밀 조작이 필요하다. 수정 대상은 `frontend/components/admin/AiVideoExtractionScreen.module.css`(WS-15, 김인안)다.
+### 5.3 AI 작업 상세의 `태그 코드 보정` 입력이 24px보다 작았다 (수정함)
+
+첫 측정에서 전 폭 177×21px이었다. 문장 안의 인라인 링크가 아니라 독립 폼 컨트롤이므로 최소 크기 예외에 해당하지 않는다.
+
+`AiVideoExtractionScreen.module.css`의 `min-height: var(--control-min-height)`가 `.filterRow select`, `.retryForm input`, `.retryForm textarea`에만 걸려 있고 후보 카드 안의 입력은 빠져 있었다. 셀렉터에 `.candidate input`을 더해 207×44px이 됐고 3절 재측정에서 전 폭이 통과한다.
 
 ### 5.4 관측만 한 항목
 
@@ -171,7 +175,7 @@ Tab 순회로 세 화면의 초점 이동을 기록했다.
 ## 8. 재현 절차
 
 1. `docker compose up -d postgres redis wiremock`
-2. `.env`에 [README](../../README.md)의 로컬 JWT·메일·Rate limit 값이 모두 있어야 한다. AI 재시도까지 확인하려면 `AI_TEMPORARY_INPUT_KEY_ID`와 base64 32바이트 `AI_TEMPORARY_INPUT_KEY`를 추가로 넘긴다(5.2절).
+2. `.env`에 [README](../../README.md)의 로컬 JWT·메일·AI 보완 텍스트·Rate limit 값이 모두 있어야 한다. 예전 `.env`를 그대로 쓰면 `AI_TEMPORARY_INPUT_*` 줄이 없어 초기화 스크립트가 값을 채우지 못하고 AI 재시도가 실패한다(5.2절).
 3. `./gradlew bootRun --args='--spring.profiles.active=local'` 후 `/internal/health/ready`가 `200`인지 확인한다. `.env`는 Docker Compose만 읽으므로 값을 셸 환경 변수로 넘겨야 한다.
 4. 2.1절 Fixture를 넣는다. 확정 태그 연결, Mobility stub 좌표에 맞춘 맛집, AI 작업·Snapshot·실행 시도가 있어야 4절 여정을 모두 볼 수 있다.
 5. `scripts/New-LocalAdmin.ps1`로 로컬 `ADMIN` 계정을 만든다. PATH의 `java`가 JDK 21이어야 한다.
