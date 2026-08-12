@@ -66,13 +66,13 @@ export function AiVideoExtractionList() {
     }
 
     submitInFlight.current = true
-    const fingerprint = `${videoUrl.trim()}\n${supplementText.trim()}`
-    const attempt = aiExtractionSubmissionAttempt(submissionAttempt.current, fingerprint, () => crypto.randomUUID())
-    submissionAttempt.current = attempt
     setSubmitBusy(true)
-    setSubmitError(false)
-    setSubmitNotice('AI 영상 추출 작업을 접수하는 중입니다.')
     try {
+      const fingerprint = `${videoUrl.trim()}\n${supplementText.trim()}`
+      const attempt = aiExtractionSubmissionAttempt(submissionAttempt.current, fingerprint, () => crypto.randomUUID())
+      submissionAttempt.current = attempt
+      setSubmitError(false)
+      setSubmitNotice('AI 영상 추출 작업을 접수하는 중입니다.')
       const result = await createAiVideoExtraction(videoUrl, supplementText, attempt.key)
       setSubmitNotice(result.reused
         ? '기존 AI 영상 추출 작업을 다시 안내했습니다. 작업 목록에서 최신 상태를 확인해 주세요.'
@@ -84,9 +84,11 @@ export function AiVideoExtractionList() {
       setRefreshVersion((current) => current + 1)
     } catch (reason) {
       setSubmitError(true)
-      setSubmitNotice(aiExtractionMessageFor(reason, 'submission'))
+      const message = aiExtractionMessageFor(reason, 'submission')
+      setSubmitNotice(message)
       if (reason instanceof AdminApiError && reason.code === 'AIEXTRACT_INVALID_VIDEO_URL') {
-        setFieldErrors({ videoUrl: aiExtractionMessageFor(reason, 'submission') })
+        setFieldErrors({ videoUrl: message })
+        videoUrlInput.current?.focus()
       }
     } finally {
       submitInFlight.current = false

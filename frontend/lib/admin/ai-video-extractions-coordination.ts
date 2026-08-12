@@ -26,10 +26,6 @@ export function aiExtractionSubmissionFieldErrors(videoUrl: string, supplementTe
   }
 }
 
-export function validateAiExtractionSubmission(videoUrl: string, supplementText: string): string[] {
-  return Object.values(aiExtractionSubmissionFieldErrors(videoUrl, supplementText))
-}
-
 export function aiExtractionSubmissionPresentation(
   result: Pick<AiExtractionSubmissionResult, 'jobId' | 'executionStatus' | 'reused'>,
 ) {

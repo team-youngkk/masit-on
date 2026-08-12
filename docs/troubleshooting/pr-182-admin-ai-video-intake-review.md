@@ -16,7 +16,7 @@ related_documents:
 | PR | [#182](https://github.com/team-youngkk/masit-on/pull/182) |
 | 작성자 | 김인안 |
 | 처리 일자 | 2026-08-12 |
-| 범위 | 관리자 AI 영상 신규 접수 화면의 비동기 상태·개인정보 안내·재사용 결과·필드 오류·필터 재조회 |
+| 범위 | 관리자 AI 영상 신규 접수 화면 리뷰 반영과 Redis 통합 테스트 CI 안정화 |
 | 주 문제 유형 | 프론트엔드 상태 / 접근성 / 개인정보 / 테스트·CI |
 | 기존 기록 | [PR #170 AI 영상 추출 Provider·Webhook 리뷰와 CI 실패 반영](pr-170-ai-video-extraction-review.md) 확인 |
 
@@ -31,12 +31,15 @@ related_documents:
 | `AiVideoExtractionList.tsx:74` | 필터 변경 중 접수 완료 재조회가 이전 필터를 사용할 수 있음 | 프론트엔드 경합 | 수정 필요 | 접수 완료·수동 새로고침을 현재 필터를 읽는 effect 재실행으로 전환 | requestId 보호 코드와 typecheck 확인 |
 | `AiVideoExtractionList.tsx:104` | `role=alert`에 `aria-live=polite`가 함께 지정됨 | 접근성 | 수정 필요 | 오류 상태에서는 `aria-live`를 제거해 alert의 assertive 동작을 보존 | `npm.cmd run typecheck` |
 | `AiVideoExtractionList.tsx:50` | 상태 반영 전 빠른 중복 submit이 동시에 POST할 수 있음 | 프론트엔드 상태 | 수정 필요 | ref 기반 동기 in-flight guard와 기존 멱등키를 함께 적용 | `npm.cmd test` |
+| `AiVideoExtractionList.tsx:68` | 멱등키 생성 예외 시 `submitInFlight`가 영구 잠길 수 있음 | 프론트엔드 상태 | 수정 필요 | fingerprint·멱등키 생성까지 `try/finally` 범위에 포함해 예외 뒤에도 잠금 해제 | 프론트 테스트·typecheck |
+| `AiVideoExtractionList.tsx:89` | 서버 URL 오류에서 URL 입력으로 포커스가 이동하지 않음 | 접근성 | 수정 필요 | 오류 메시지 설정과 함께 URL 입력에 포커스 | 프론트 typecheck |
+| `ai-video-extractions-coordination.ts:29` | 프로덕션에서 사용하지 않는 검증 함수가 남아 있음 | 유지보수 | 수정 필요 | 함수와 전용 테스트를 제거하고 필드 오류 함수를 단일 경로로 유지 | 프론트 테스트 |
 | `ai-video-extractions-coordination.ts:13` 외 | 멱등키 생성 로직이 도메인별로 중복됨 | 구조 / 유지보수 | 수정 필요 | `frontend/lib/idempotency.ts`로 공용화하고 관리자·컬렉션 흐름에서 재사용 | `npm.cmd test`, `npm.cmd run typecheck` |
 | `ai-video-extractions.ts:129` | 관리 화면과 접수 화면 오류 매핑 함수가 중복됨 | 구조 / 유지보수 | 수정 필요 | context 인자를 받는 `aiExtractionMessageFor` 하나로 통합 | AI 접수 API 테스트 |
 | `AiVideoExtractionScreen.module.css:5` | 접수 폼 입력 스타일이 재시도 폼과 중복됨 | CSS / 유지보수 | 수정 필요 | 공통 선택자 그룹으로 통합 | `npm.cmd run build` |
 | `ai-video-extractions-coordination.ts:22` | UTF-16 길이 검증이 다른 프론트 검증기와 다름 | 계약 검토 | 수정 불필요 | 백엔드 Java `String.length()`와 20,000자 계약이 일치해 이번 범위에서 유지 | 백엔드 계약·기존 경계 테스트 대조 |
 | `AiVideoExtractionList.tsx:74` | 새 작업과 무관한 필터에서도 성공 후 목록을 재조회함 | 효율성 | 수정 불필요 | 현재 필터를 기준으로 최신 목록을 보장하는 의도된 동작이며 기능 정확성 변경과 분리 | 새 필터 effect 경로 확인 |
-| CI `31587344320` | 백엔드 전체 테스트에서 레거시 세션 테스트 1건과 PostgreSQL 연결 거부가 발생함 | CI / 환경 | 수정 불필요 | PR 변경 영역과 무관한 기존 백엔드 통합 환경 실패로 기록하고, 새 head CI 결과를 확인 | 프론트엔드 job은 통과, 백엔드 로그는 Redis 세션 실패 후 DB 연결 거부 |
+| CI `31590500905` | 백엔드 전체 테스트에서 레거시 세션 복구 큐 테스트가 실패함 | CI / 테스트 격리 | 수정 필요 | 테스트 스케줄러를 격리하고 Redis 실제 시각에 맞는 만료 테스트 시각을 사용 | 로컬에서 동일 실패 재현 후 수정 |
 
 ## 3. 문제 현상과 발생 조건
 
@@ -52,7 +55,7 @@ related_documents:
 
 컴포넌트가 비동기 요청의 입력·필터 스냅샷과 현재 화면 상태를 분리해 관리하지 않았다. 입력은 요청 완료 시 무조건 초기화했고, 목록 재조회는 submit 함수가 생성된 시점의 `load`를 사용했다. 또한 API 결과 객체 중 `jobId`만 상태로 보존했으며, 검증 결과는 문자열 배열로만 반환해 필드 연결 정보를 잃었다. 개인정보 안내도 PRD·와이어프레임의 전송·보존 계약을 화면에 모두 반영하지 못했다.
 
-추가로 오류 알림의 암묵적 assertive semantics를 명시적 polite live region이 덮었고, React state의 다음 렌더 반영을 기다리는 동안 중복 submit을 즉시 차단하지 않았다. 멱등키·오류 문구·입력 스타일을 각 도메인에 복사해 두어 동일 규칙의 수정 비용도 커지고 있었다.
+추가로 오류 알림의 암묵적 assertive semantics를 명시적 polite live region이 덮었고, React state의 다음 렌더 반영을 기다리는 동안 중복 submit을 즉시 차단하지 않았다. 멱등키·오류 문구·입력 스타일을 각 도메인에 복사해 두어 동일 규칙의 수정 비용도 커지고 있었다. 제출 fingerprint와 멱등키 생성이 guard 설정 이후 `try` 바깥에 있어 생성기 예외가 발생하면 `finally`에 도달하지 못했고, URL 오류 경로도 필드 오류만 설정해 포커스를 이동하지 않았다. Redis 통합 테스트는 전역 스케줄러가 테스트 큐를 경쟁적으로 소비할 수 있었고, `revokeAll`이 Redis 실제 시각으로 TTL을 판정하는데 테스트가 고정된 과거 만료 시각을 사용해 실행일에 따라 정상 큐 항목이 만료될 수 있었다.
 
 ## 5. 확인 및 시도
 
@@ -62,7 +65,7 @@ related_documents:
 | `docs/00-overview/scope.md` 및 3차 확장 와이어프레임 대조 | Gemini 영상 입력, 보완 텍스트의 암호화 임시 저장·24시간 이내 삭제, 원본·전체 자막·전체 응답 미보존 계약 확인 | 제출 전 안내 문구에 계약을 요약해 반영 |
 | `npm.cmd test` | 182개 기존·신규 coordination 테스트와 3개 AI 접수 API 테스트 통과 | field error·재사용 결과 회귀 검증 완료 |
 | `npm.cmd run typecheck` | 통과 | 컴포넌트·API·coordination 타입 연결 확인 |
-| CI run `31587344320` job·로그 확인 | 프론트엔드 빌드·타입 검사는 통과. 백엔드는 `RedisRefreshTokenStoreIntegrationTest` 실패 뒤 PostgreSQL `Connection refused`로 종료 | 백엔드 코드 변경 없이 환경/레거시 실패로 기록. 새 PR head CI를 재확인 |
+| CI run `31590500905` job·로그 확인 | 프론트엔드 빌드·타입 검사는 통과. 백엔드는 `RedisRefreshTokenStoreIntegrationTest.memberSession_레거시만료시각_전체폐기_복구큐선적재`에서 실제 결과 `[]`와 기대 세션 ID가 달라 실패 | 로컬에서 동일 실패를 재현. 테스트 컨텍스트에서 스케줄러 bean을 mock하고, Redis 실제 시각보다 충분히 미래인 실행 시점 기반 TTL을 사용 |
 
 ## 6. 최종 해결
 
@@ -72,16 +75,19 @@ related_documents:
 - 입력 검증 결과를 `videoUrl`·`supplementText` 필드 오류로 구조화하고 `aria-invalid`·`aria-describedby`와 필드 하단 오류를 렌더링한다. 서버의 공개 YouTube URL 오류도 URL 필드에 연결한다.
 - 제출 전 안내에 Google Gemini 전송 입력 범위, 보완 텍스트의 암호화 임시 보존 및 작업 종료 후 24시간 이내 삭제, 원본 영상·전체 자막·Provider 응답 전문 미보존을 명시한다.
 - `role=alert` 오류에는 `aria-live`를 덧붙이지 않고, 정상 상태에만 `aria-live=polite`를 사용한다. 제출 시작 전 ref guard를 세워 빠른 중복 POST를 차단한다.
+- 제출 fingerprint·멱등키 생성과 API 호출을 모두 `try/catch/finally` 안에 두어 생성 예외에도 in-flight guard가 해제되도록 하고, 서버 URL 오류는 오류 표시와 함께 URL 입력으로 포커스를 이동한다.
+- Redis 저장소 통합 테스트에서는 복구 큐를 소비하는 전역 스케줄러 bean을 mock하고, Redis 실제 시각과 어긋나는 고정 과거 TTL 픽스처를 사용하지 않는다.
 - 멱등키 생성은 `frontend/lib/idempotency.ts`로 공용화하고, 오류 메시지는 context 인자로 관리·접수 문구를 분기하며, 접수·재시도 폼의 공통 CSS를 묶었다.
 
 ## 7. 검증
 
 | 검증 | 결과 | 확인한 내용 |
 |---|---|---|
-| `npm.cmd test` | 통과 | 전체 프론트 테스트 182개와 AI 접수 API 테스트 3개 통과 |
+| `npm.cmd test` | 통과 | 전체 프론트 테스트 181개와 AI 접수 API 테스트 3개 통과 |
 | `npm.cmd run typecheck` | 통과 | Next.js TypeScript 컴파일 오류 없음 |
-| `npm.cmd run build` | 통과 | 최종 리뷰 반영 head `adbc17f`에서 테스트·타입 검사·Next.js production build 성공 |
-| GitHub Actions run `31589880762` | 진행 중 | 최종 리뷰 반영 head의 프론트엔드 job은 성공, 백엔드 job은 확인 시점에 실행 중 |
+| `npm.cmd run build` | 통과 | 프론트 테스트·타입 검사·Next.js production build 성공 |
+| `gradlew.bat test --tests RedisRefreshTokenStoreIntegrationTest` | 통과 | Redis 통합 테스트 18개 모두 통과 |
+| GitHub Actions run `31590500905` | 실패 | 프론트엔드 job은 성공했지만 백엔드는 Redis 복구 큐 테스트에서 실패했다. 수정 push 후 새 head CI를 확인한다 |
 
 ## 8. 재발 방지 및 다음 확인
 
@@ -102,5 +108,4 @@ related_documents:
 
 ## 10. 남은 사항
 
-- 리뷰 반영 코드의 로컬 프론트 테스트와 typecheck는 통과했다.
-- GitHub Actions run `31589880762`의 백엔드 빌드·테스트가 완료되면 최종 상태를 확인한다. 이전 run `31587344320`의 백엔드 실패는 프론트엔드 변경과 직접 관련 없는 Redis 세션 통합 테스트 및 PostgreSQL 연결 거부로 분리 기록했다.
+- 리뷰 반영 코드의 로컬 프론트 테스트, typecheck, Redis 통합 테스트와 새 head GitHub Actions 결과를 최종 확인한다.

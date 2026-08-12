@@ -9,18 +9,7 @@ import {
   nextAiExtractionFilters,
   reviewActionsFor,
   reviewRequest,
-  validateAiExtractionSubmission,
 } from './ai-video-extractions-coordination.ts'
-
-test('신규 접수는 빈 URL과 trim 후 보완 텍스트 길이를 클라이언트에서 검증한다', () => {
-  assert.deepEqual(validateAiExtractionSubmission('', ''), ['YouTube 영상 URL을 입력해 주세요.'])
-  assert.deepEqual(validateAiExtractionSubmission('   ', ''), ['YouTube 영상 URL을 입력해 주세요.'])
-  assert.deepEqual(validateAiExtractionSubmission('   ', 'a'.repeat(20_001)), [
-    'YouTube 영상 URL을 입력해 주세요.',
-    '보완 텍스트는 공백을 제외하고 20,000자 이하로 입력해 주세요.',
-  ])
-  assert.deepEqual(validateAiExtractionSubmission('https://youtu.be/video-id', ` ${'a'.repeat(20_000)} `), [])
-})
 
 test('신규 접수 입력 오류는 각 필드에 연결할 수 있는 형태로 반환한다', () => {
   assert.deepEqual(aiExtractionSubmissionFieldErrors('   ', 'a'.repeat(20_001)), {
