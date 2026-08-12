@@ -1,6 +1,7 @@
 package com.masiton.orchestration.application;
 
 import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -37,6 +38,7 @@ class VerifyAiContentCandidateService implements VerifyAiContentCandidateUseCase
     private static final Pattern SUBJECT_PARTICLE = Pattern.compile("[가-힣]+(?:가|이|은|는)");
     private static final Pattern SUBJECT_BEFORE_DIRECT = Pattern.compile(
             "(?:^|\\s)[가-힣]+(?:가|이|은|는)\\s+직접$");
+    private static final Set<String> IMPLICIT_PLACE_PREFIXES = Set.of("", "이", "그", "저", "해당");
 
     private final ResolveVerifiedRestaurantReferenceUseCase restaurantReference;
     private final ResolveVerifiedVideoUseCase videoVerification;
@@ -117,15 +119,20 @@ class VerifyAiContentCandidateService implements VerifyAiContentCandidateUseCase
         if (target.isBlank() || targetIndex < 0 || !hasTargetBoundary(compactPrefix, targetIndex, target)) {
             return false;
         }
-        var firsthandSubject = FIRSTHAND_SUBJECT.matcher(prefix);
-        if (!firsthandSubject.lookingAt()) {
-            return false;
-        }
         if (hasThirdPartySubjectBeforeTarget(compactPrefix, target)) {
             return false;
         }
+        var firsthandSubject = FIRSTHAND_SUBJECT.matcher(prefix);
+        if (!firsthandSubject.lookingAt()) {
+            return hasImplicitPlaceTarget(compactPrefix, target);
+        }
         String subjectRemainder = prefix.substring(firsthandSubject.end()).trim();
         return !SUBJECT_BEFORE_DIRECT.matcher(subjectRemainder).find();
+    }
+
+    private boolean hasImplicitPlaceTarget(String compactPrefix, String target) {
+        int targetIndex = compactPrefix.lastIndexOf(target);
+        return IMPLICIT_PLACE_PREFIXES.contains(compactPrefix.substring(0, targetIndex));
     }
 
     private boolean hasTargetBoundary(String compactPrefix, int targetIndex, String target) {
