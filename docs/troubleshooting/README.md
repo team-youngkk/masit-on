@@ -10,6 +10,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #179 브라우저 인수 캡처 증거 보존](pr-179-browser-capture-evidence-review.md)
 - [PR #178 3차 확장 통합 회귀 테스트 리뷰 반영](pr-178-third-expansion-integration-review.md)
 
 - [PR #177 AI 평가 자산의 증거 범위·분할·Critical 경계](pr-177-ai-evaluation-review.md)

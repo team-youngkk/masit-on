@@ -31,7 +31,8 @@ related_documents:
 
 | 항목 | 값 |
 |---|---|
-| 브라우저 | Chromium(Claude Code 내장) Chrome 148.0.7778.280 / Electron 42.7.0 |
+| 브라우저(측정·여정) | Chromium(Claude Code 내장) Chrome 148.0.7778.280 / Electron 42.7.0 |
+| 브라우저(캡처) | PC Chrome 151.0.7922.76, PC Edge 151.0.4129.78 실빌드 headless |
 | OS | Windows 11 Home 26200 |
 | 프런트엔드 | `npm --prefix frontend run dev`, Node.js 24.18.0, `http://localhost:3000` |
 | 백엔드 | `./gradlew bootRun --args='--spring.profiles.active=local'`, `http://localhost:8080` |
@@ -72,6 +73,21 @@ related_documents:
 AI 작업 상세의 `태그 코드 보정` 입력은 첫 측정에서 전 폭 177×21px로 24px 최소 조작 크기를 넘지 못했다. 5.3절에서 고친 뒤 재측정해 207×44px이 됐고 전 폭에서 24px 미만 조작 대상이 0건이다.
 
 자연어 탐색에서 검출된 21px 높이 요소는 오류·빈 결과 안내 문장 안의 `기존 필터 검색으로 이동` 링크다. 문장 안에 있는 인라인 링크는 최소 크기 예외 대상이라 통과로 판정했다.
+
+### 3.1 화면 캡처
+
+공개 화면 초기 상태를 [`assets/e3-t12`](assets/e3-t12)에 보존한다. 3절 측정과 같은 실행(기준 커밋 `35d0f94`, 2.1절 Fixture)에서 찍었다.
+
+| 화면 | 360px | 390px | 768px | 1280px | 1440px |
+|---|---|---|---|---|---|
+| 자연어 탐색 `/restaurants` | [PNG](assets/e3-t12/chrome-restaurants-360.png) | [PNG](assets/e3-t12/chrome-restaurants-390.png) | [PNG](assets/e3-t12/chrome-restaurants-768.png) | [PNG](assets/e3-t12/chrome-restaurants-1280.png) | [PNG](assets/e3-t12/chrome-restaurants-1440.png) |
+| 맛집 코스 `/course` | [PNG](assets/e3-t12/chrome-course-360.png) | [PNG](assets/e3-t12/chrome-course-390.png) | [PNG](assets/e3-t12/chrome-course-768.png) | [PNG](assets/e3-t12/chrome-course-1280.png) | [PNG](assets/e3-t12/chrome-course-1440.png) |
+
+교차 브라우저 참고로 PC Edge 실빌드의 1280px 캡처를 함께 둔다. [자연어 탐색](assets/e3-t12/edge-restaurants-1280.png) · [맛집 코스](assets/e3-t12/edge-course-1280.png).
+
+캡처는 PC Chrome 151.0.7922.76과 PC Edge 151.0.4129.78 실빌드의 headless 모드로 찍었다. **Windows의 Chromium은 창 너비를 500px 미만으로 줄이지 못한다.** `--window-size=360`을 주면 레이아웃은 500px로 잡히고 이미지만 360px로 잘려 실제 화면과 다른 결과가 나온다. 360px과 390px은 500px 창 안에서 해당 폭의 iframe으로 문서를 그린 뒤 그 폭만큼 잘라 저장했다. 문서를 그린 폭은 이미지 폭과 같다.
+
+이 캡처는 초기 상태만 담는다. 4절의 여정 상태와 관리자 화면은 로그인·입력·외부 응답이 필요해 URL 로드만으로 재현되지 않으므로 캡처가 없다. 6절에 미검증으로 남긴다.
 
 ## 4. 사용자 여정
 
@@ -169,7 +185,8 @@ java.lang.IllegalStateException: Kakao Mobility base URL is not an allowed provi
 
 | 항목 | 상태 | 이유 | 다음 단계 |
 |---|---|---|---|
-| PC Chrome·Edge 실빌드 | 미검증 | 내장 Chromium 하나만 구동할 수 있다. Blink 계열이지만 Chrome·Edge 실빌드가 아니다 | 담당자가 각 브라우저에서 3절 화면과 4절 여정을 확인한다 |
+| 여정 상태와 관리자 화면의 캡처 | 미검증 | 3.1절 캡처는 URL 로드로 재현되는 초기 상태만 담는다. 4절 여정과 관리자 화면은 로그인·입력·외부 응답이 필요해 headless URL 로드로 찍을 수 없다 | 담당자가 실브라우저에서 4절 여정을 재현해 캡처를 `assets/e3-t12`에 추가한다 |
+| PC Chrome·Edge 실빌드의 여정 확인 | 미검증 | 3.1절 캡처로 두 실빌드의 초기 화면 렌더링은 확인했으나, 4절 여정은 내장 Chromium에서만 실행했다 | 담당자가 각 브라우저에서 4절 여정을 확인한다 |
 | Android Chrome | 미검증 | 실단말 확인을 하지 않았다 | 담당자 단말로 확인한다 |
 | iPhone Safari | 미검증(판정 대상 아님) | [ADR-WEB-004](../07-adr/platform/web-004-supported-browser-matrix.md) | 해제 조건 충족 시 매트릭스로 되돌린다 |
 | 배포 환경(`masiton.click`)의 3차 확장 화면 | 미검증 | 이 검증은 로컬 `develop` 기준이다 | 3차 확장 배포 후 같은 여정을 확인한다 |
@@ -197,4 +214,5 @@ Tab 순회로 세 화면의 초점 이동을 기록했다.
 4. 2.1절 Fixture를 넣는다. 확정 태그 연결, Mobility stub 좌표에 맞춘 맛집, AI 작업·Snapshot·실행 시도가 있어야 4절 여정을 모두 볼 수 있다.
 5. `scripts/New-LocalAdmin.ps1`로 로컬 `ADMIN` 계정을 만든다. PATH의 `java`가 JDK 21이어야 한다.
 6. `npm --prefix frontend run dev` 후 각 폭에서 3절 화면과 4절 여정을 확인한다.
+7. 캡처는 Chrome·Edge 실빌드의 `--headless=new --screenshot`으로 만든다. 768px 이상은 `--window-size`를 그대로 쓰고, 360·390px은 3.1절대로 500px 창 안의 iframe으로 그린 뒤 해당 폭만큼 잘라 저장한다.
 7. 오류·복구 여정은 백엔드를 내렸다 올려 확인한다. 코스 외부 장애는 stub이 429를 주는 좌표를 출발 맛집으로 두면 재현된다.
