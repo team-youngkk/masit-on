@@ -22,20 +22,20 @@ related_documents:
 
 | 스레드 | 요청 요약 | 문제 유형 | 판단 | 처리 결과 | 근거/검증 |
 |---|---|---|---|---|---|
-| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / `ThirdExpansionIntegrationRegressionTest.java` | numeric 컬럼에 문자열 fixture 바인딩 | 데이터베이스 | 수정 필요 | `BigDecimal` 바인딩으로 변경 | `compileTestJava` 통과 |
-| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / `AiExtractionCommitProjectionIntegrationTest.java` | numeric 컬럼에 문자열 fixture 바인딩 | 데이터베이스 | 수정 필요 | `BigDecimal` 바인딩으로 변경 | `compileTestJava` 통과 |
-| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / 두 통합 테스트의 `CASCADE` 정리 | V4 시드 태그가 삭제될 수 있음 | 데이터베이스 | 수정 필요 | 시드 보존 + FK 역순 명시 삭제로 변경 | 코드 검토, 컴파일 통과 |
-| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / 자연어 검색 fixture | 태그 없는 맛집 비교 부족 | 테스트 | 수정 필요 | 태그 없는 맛집을 추가하고 `totalElements = 1` 검증 | 코드 검토, 컴파일 통과 |
-| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / 코스 TIMEOUT 시나리오 | 기존 코스 실패 테스트와 중복 | 테스트 | 수정 필요 | 실패 후 AI 태그 자연어 검색을 확인하는 교차 검증으로 변경 | 코드 검토, 컴파일 통과 |
-| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / AI 실행 job 정리 | 테스트 후 job·snapshot 잔존 가능 | 데이터베이스 | 수정 필요 | audit·snapshot·attempt·temporary input·job 정리 추가 | 코드 검토, 컴파일 통과 |
-| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / SHA-256 helper 중복 | 테스트 유틸리티 공유 요청 | 테스트 | 수정 필요 | `IntegrationTestFixtures.sha256`로 통합 | `compileTestJava` 통과 |
-| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / course request JSON helper 중복 | 요청 JSON helper 공유 요청 | 테스트 | 수정 필요 | `IntegrationTestFixtures.courseRequestJson`으로 추출 | `compileTestJava` 통과 |
+| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / `ThirdExpansionIntegrationRegressionTest.java` | numeric 컬럼에 문자열 fixture 바인딩 | 데이터베이스 | 수정 필요 | `BigDecimal` 바인딩으로 변경 | CI #421 및 Docker 로컬 회귀 묶음 통과 |
+| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / `AiExtractionCommitProjectionIntegrationTest.java` | numeric 컬럼에 문자열 fixture 바인딩 | 데이터베이스 | 수정 필요 | `BigDecimal` 바인딩으로 변경 | CI #421 및 Docker 로컬 회귀 묶음 통과 |
+| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / 두 통합 테스트의 `CASCADE` 정리 | V4 시드 태그가 삭제될 수 있음 | 데이터베이스 | 수정 필요 | 시드 보존 + FK 역순 명시 삭제로 변경 | CI #421 및 Docker 로컬 회귀 묶음 통과 |
+| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / 자연어 검색 fixture | 태그 없는 맛집 비교 부족 | 테스트 | 수정 필요 | 태그 없는 맛집을 추가하고 `totalElements = 1` 검증 | CI #421 및 Docker 로컬 회귀 묶음 통과 |
+| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / 코스 TIMEOUT 시나리오 | 기존 코스 실패 테스트와 중복 | 테스트 | 수정 필요 | 실패 후 AI 태그 자연어 검색을 확인하는 교차 검증으로 변경 | CI #421 및 Docker 로컬 회귀 묶음 통과 |
+| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / AI 실행 job 정리 | 테스트 후 job·snapshot 잔존 가능 | 데이터베이스 | 수정 필요 | audit·snapshot·attempt·temporary input·job 정리 추가 | CI #421 및 Docker 로컬 회귀 묶음 통과 |
+| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / SHA-256 helper 중복 | 테스트 유틸리티 공유 요청 | 테스트 | 수정 필요 | `IntegrationTestFixtures.sha256`로 통합 | CI #421 및 `compileTestJava` 통과 |
+| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / course request JSON helper 중복 | 요청 JSON helper 공유 요청 | 테스트 | 수정 필요 | `IntegrationTestFixtures.courseRequestJson`으로 추출 | CI #421 및 `compileTestJava` 통과 |
 | [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / 별도 AI 통합 테스트 클래스 | 기존 원자성 테스트와의 중복 검토 | 테스트 | 수정 불필요 | 기존 테스트는 실패 롤백, 신규 테스트는 성공 provenance와 공개 자연어 API 경로를 검증해 목적이 다름 | 기존 테스트와 신규 assertion 비교 |
 
 ## 3. 문제 현상과 발생 조건
 
 - 오류 메시지: `column "latitude" is of type numeric but expression is of type character varying`
-- 발생 환경: Windows, Java 21, `feature/t-164-integration-regression`, PostgreSQL Testcontainers
+- 발생 환경: Windows, Java 21, `feature/t-164-integration-regression`, PostgreSQL Testcontainers; 이후 GitHub Actions Ubuntu 24.04 및 Docker 가동 로컬 환경에서 재검증
 - 재현 조건: JDBC fixture가 `latitude`, `longitude`에 문자열을 바인딩하거나, 테스트 시작 시 `TRUNCATE ... CASCADE`를 실행하는 경우
 - 실제 결과: fixture 삽입 전에 PostgreSQL 타입 오류가 발생하고, CASCADE 정리는 V4 SEED 태그까지 삭제할 수 있음
 - 기대 결과: fixture가 실제 스키마 타입으로 삽입되고, 테스트 정리가 시드 데이터와 다른 테스트의 감사 상태를 보존해야 함
@@ -51,7 +51,8 @@ related_documents:
 |---|---|---|
 | 관련 V4/V6/V7 migration의 FK·트리거 확인 | `tag_definition`은 snapshot을 참조하고, audit review는 append-only DELETE trigger를 가짐 | audit table은 `TRUNCATE`하고 나머지는 FK 순서대로 명시 삭제 |
 | `./gradlew.bat compileTestJava --no-daemon --console=plain` | 통과 | 소스·fixture 타입 수정 완료 |
-| 대상 통합 테스트 실행 | Docker 환경 초기화에서 실패 | Testcontainers 실행은 Docker Desktop을 사용할 수 있는 환경에서 재확인 필요 |
+| [`CI #421`](https://github.com/team-youngkk/masit-on/actions/runs/31570268267) 백엔드 `./gradlew --no-daemon clean build` | 통과 | Flyway·AI 원자성·AI worker·코스 회귀를 포함한 전체 백엔드 빌드·테스트 통과 |
+| Docker 가동 로컬 회귀 묶음 | 통과 | 신규 3개 통합 테스트와 수정된 Flyway·AI 원자성·AI worker·코스 회귀 테스트 통과를 리뷰에서 확인 |
 
 ## 6. 최종 해결
 
@@ -65,19 +66,20 @@ related_documents:
 | 검증 | 결과 | 확인한 내용 |
 |---|---|---|
 | `./gradlew.bat compileTestJava --no-daemon --console=plain` | 통과 | 리뷰 반영 테스트 소스 컴파일 |
-| `./gradlew.bat test --tests com.masiton.ThirdExpansionIntegrationRegressionTest --tests com.masiton.ai.application.AiExtractionCommitProjectionIntegrationTest --tests com.masiton.Expansion3FlywayMigrationIntegrationTest --no-daemon --console=plain` | 미실행 | Testcontainers가 `Could not find a valid Docker environment`로 초기화 실패해 테스트 본문 미진입 |
+| [`CI #421`](https://github.com/team-youngkk/masit-on/actions/runs/31570268267) 백엔드 `./gradlew --no-daemon clean build` | 통과 | 백엔드 전체 자동화 테스트와 빌드 성공 |
+| Docker 가동 로컬 회귀 묶음 | 통과 | 신규 3개 통합 테스트와 수정된 Flyway·AI 원자성·AI worker·코스 회귀 테스트 성공 |
 
 ## 8. 재발 방지 및 다음 확인
 
 - 재발 방지: 통합 fixture는 JDBC 타입을 스키마와 맞추고, 테스트 정리는 시드·감사 데이터의 보존 정책을 명시한다. 자연어 결과는 태그 없는 비교 fixture와 결과 개수까지 검증한다.
-- 다음 확인: Docker Desktop Linux daemon이 실행된 CI 또는 로컬 환경에서 대상 통합 테스트 3개를 재실행한다.
+- 다음 확인: 없음. PR head 기준 CI와 Docker 가동 로컬 회귀 묶음 검증이 완료되었다.
 
 ## 9. 도입 전후 비교 지표
 
 | 지표 | 도입 전 기준값 | 측정 방법·기간 | 배포 확장 후 값 | 비교 결과 | 담당자·확인 시점/이슈 |
 |---|---|---|---|---|---|
-| 통합 테스트 fixture 타입·정리 오류 | 리뷰에서 2종 오류 지적 | 대상 테스트 실행 | Docker 환경에서 재실행 예정 | 현재 컴파일 통과, 본문 검증 대기 | PR #178 담당자 / Docker 사용 가능 시점 |
+| 통합 테스트 fixture 타입·정리 오류 | 리뷰에서 2종 오류 지적 | CI #421 및 Docker 가동 로컬 회귀 묶음 | 전체 통과 | fixture 타입·정리 오류 재현 없이 성공 | PR #178 / 2026-08-12 |
 
 ## 10. 남은 사항
 
-- Docker 환경 부재로 Testcontainers 기반 통합 테스트 본문은 아직 통과 확인하지 못했다.
+- 남은 사항 없음. 현재 Codex 실행 환경에서는 Docker 재실행을 추가로 수행하지 못했지만, PR head의 CI 전체 빌드·테스트와 리뷰에서 확인된 Docker 가동 로컬 회귀 묶음은 통과했다.
