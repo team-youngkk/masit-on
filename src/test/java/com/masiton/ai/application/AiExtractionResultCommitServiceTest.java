@@ -78,7 +78,7 @@ class AiExtractionResultCommitServiceTest {
         // Then
         verify(resultStore).insertTagReview(eq(snapshotId), eq("tag-1"), eq("AUTO_REJECT"), eq(null),
                 eq("CANDIDATE_BLOCKED"), eq(finishedAt));
-        verify(resultStore, never()).insertVisitTag(any(), any(), any(), anyString(), anyString(), any());
+        verify(resultStore, never()).insertVisitTag(any(), any(), any(), any(), anyString(), anyString(), any());
     }
 
     @Test
@@ -109,7 +109,7 @@ class AiExtractionResultCommitServiceTest {
         // Then
         assertThat(committed).isTrue();
         verify(autoRegister).register(any());
-        verify(resultStore).insertVisitTag(eq(visitId), eq(tagId), eq(BigDecimal.valueOf(0.9)), anyString(),
+        verify(resultStore).insertVisitTag(any(), eq(visitId), eq(tagId), eq(BigDecimal.valueOf(0.9)), anyString(),
                 eq("gemini-3-flash-preview/P1/S1"), eq(finishedAt));
         verify(resultStore).completeSuccess(eq(jobId), eq("worker-1"), eq(1), eq("COMPLETE"), any(), eq(finishedAt),
                 eq("request-1"));
@@ -131,7 +131,7 @@ class AiExtractionResultCommitServiceTest {
                 mock(AutoRegisterVerifiedContentUseCase.VerifiedContentCommand.class)))
                 .isInstanceOf(IllegalStateException.class);
         verify(resultStore, never()).completeSuccess(any(), anyString(), anyInt(), anyString(), any(), any(), any());
-        verify(resultStore, never()).insertVisitTag(any(), any(), any(), anyString(), anyString(), any());
+        verify(resultStore, never()).insertVisitTag(any(), any(), any(), any(), anyString(), anyString(), any());
     }
 
     private AiExtractionResultStore.ProcessingJob job() {

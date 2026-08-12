@@ -8,6 +8,7 @@ public interface RollbackAiRegisteredContentUseCase {
     void rollback(RegistrationReference reference);
 
     record RegistrationReference(
+            UUID snapshotId,
             UUID restaurantId, boolean restaurantCreated,
             UUID creatorId, boolean creatorCreated,
             UUID videoId, boolean videoCreated,

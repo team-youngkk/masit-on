@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -17,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import com.masiton.ai.application.port.out.AiExtractionAdminQueryPort;
 import com.masiton.orchestration.application.port.in.AutoRegisterVerifiedContentUseCase;
 import com.masiton.orchestration.application.port.in.RollbackAiRegisteredContentUseCase;
+import com.masiton.common.web.BusinessException;
 
 @DisplayName("관리자 AI 추출 검토 커밋 서비스")
 class AdminAiExtractionReviewCommitServiceTest {
@@ -48,5 +50,22 @@ class AdminAiExtractionReviewCommitServiceTest {
         service.confirm(jobId, "AUTO_BLOCKED", adminId, "확인", List.of(), null);
 
         verify(port).appendTagOverrides(overrideSnapshotId, adminId, "확인", attached);
+    }
+
+    @Test
+    @DisplayName("재사용된 Visit은 공개 상태와 태그 소유권이 모호하므로 롤백하지 않는다")
+    void rollback_재사용Visit_409로거부하고롤백을호출하지않는다() {
+        UUID jobId = UUID.randomUUID();
+        AiExtractionAdminQueryPort.ReviewTarget target = new AiExtractionAdminQueryPort.ReviewTarget(
+                UUID.randomUUID(), "AUTO_CONFIRMED", jobId, "channel", "video", "https://www.youtube.com/watch?v=video",
+                null, null, null, null, new AiExtractionAdminQueryPort.RegisteredContent(
+                        null, false, null, false, null, false, UUID.randomUUID(), false));
+        when(port.reviewTarget(jobId)).thenReturn(Optional.of(target));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                        service.rollback(jobId, "AUTO_CONFIRMED", UUID.randomUUID(), "오등록", List.of()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("reused");
+        verify(rollback, never()).rollback(any());
     }
 }

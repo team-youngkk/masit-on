@@ -180,6 +180,7 @@ related_documents:
 
 - 응답은 `202 Accepted`와 새 작업 ID를 반환한다.
 - 이전 후보를 덮어쓰지 않고 새 입력 해시·버전 후보를 만든다.
+- `reason`은 trim 후 1,000자 이내 필수 값이며 새 작업의 `retry_reason`으로 보존한다.
 - 무료 quota 소진·결제 연결 요구·설정 미검증 상태에서는 `429` 또는 공통 오류 계약의 제공자 차단 오류를 반환하고 수동 등록 fallback을 안내한다.
 
 ### 3.5 `POST /api/admin/ai/video-extractions/{jobId}/review` 사후 보정·롤백

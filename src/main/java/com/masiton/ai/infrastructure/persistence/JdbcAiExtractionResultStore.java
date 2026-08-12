@@ -115,16 +115,16 @@ class JdbcAiExtractionResultStore implements AiExtractionResultStore {
     }
 
     @Override
-    public void insertVisitTag(UUID visitId, UUID tagDefinitionId, java.math.BigDecimal confidence,
+    public void insertVisitTag(UUID snapshotId, UUID visitId, UUID tagDefinitionId, java.math.BigDecimal confidence,
                                String evidence, String extractorVersion, OffsetDateTime createdAt) {
         jdbcTemplate.update("""
                 INSERT INTO visit_tag (
                     id, visit_id, tag_definition_id, source, confidence, evidence,
-                    extractor_version, created_at
-                ) VALUES (?, ?, ?, 'AI_AUTO_CONFIRMED', ?, ?::jsonb, ?, ?)
+                    extractor_version, created_at, created_from_snapshot_id
+                ) VALUES (?, ?, ?, 'AI_AUTO_CONFIRMED', ?, ?::jsonb, ?, ?, ?)
                 ON CONFLICT (visit_id, tag_definition_id) DO NOTHING
                 """, UUID.randomUUID(), visitId, tagDefinitionId, confidence, evidence,
-                extractorVersion, createdAt);
+                extractorVersion, createdAt, snapshotId);
     }
 
     @Override

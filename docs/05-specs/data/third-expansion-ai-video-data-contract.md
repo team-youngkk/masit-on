@@ -76,6 +76,7 @@ related_documents:
 | `model_version` | `varchar(128)` | NN | `gemini-3-flash-preview` | 모델 버전 |
 | `prompt_version` | `varchar(64)` | NN | 빈 값 금지 | Prompt 버전 |
 | `schema_version` | `varchar(64)` | NN | 빈 값 금지 | 결과 Schema 버전 |
+| `retry_reason` | `varchar(1000)` | Yes | 관리자 재시도 작업에서만 non-blank | 해당 작업을 다시 요청한 사유 |
 | `execution_status` | `varchar(16)` | NN | 상태 CHECK | `QUEUED/RUNNING/SUCCEEDED/FAILED` |
 | `result_completeness` | `varchar(16)` | Yes | 성공 상태와 조합 | `COMPLETE/PARTIAL` |
 | `attempt_count` | `smallint` | NN | 0 이상 | 실행 시도 횟수 |
@@ -190,6 +191,7 @@ AI·자연어 파서는 `ACTIVE` 정의만 사용한다. `DEPRECATED` 태그는 
 | `confidence` | `numeric(5,4)` | Yes | 0 이상 1 이하 | AI 후보 신뢰도, 관리자 직접 입력이면 null 가능 |
 | `evidence` | `jsonb` | NN | AI 확정은 `TIMESTAMP`·`TEXT_RANGE`, 관리자 확정은 계약된 근거 Schema | 최소 근거 메타데이터 |
 | `extractor_version` | `varchar(128)` | Yes | 버전 조합 | AI 모델·Prompt·Schema 또는 수동 입력 버전 |
+| `created_from_snapshot_id` | `uuid` | Yes | FK → `ai_candidate_snapshot.id` | AI 자동 확정·수동 보정 연결의 원인 Snapshot |
 | `created_at` | 시간 | NN | 기본 현재 시각 | 연결 시각 |
 
 `(visit_id, tag_definition_id)`는 unique다. 공개 검색은 공개·유효 `Visit`, `ACTIVE` `TagDefinition`, 자동 검증 완료 `VisitTag`만 사용하며, Visit가 비공개·삭제·무효가 되면 연결은 이력으로 남아도 검색에서 제외한다.

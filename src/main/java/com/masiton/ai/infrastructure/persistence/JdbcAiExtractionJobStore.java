@@ -80,13 +80,13 @@ public class JdbcAiExtractionJobStore implements AiExtractionJobStore {
         int inserted = jdbcTemplate.update("""
                 INSERT INTO ai_extraction_job (
                     id, source, priority, youtube_channel_id, youtube_video_id, video_url,
-                    input_mode, input_hash, provider, model_version, prompt_version, schema_version, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    input_mode, input_hash, provider, model_version, prompt_version, schema_version, retry_reason, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (youtube_channel_id, youtube_video_id, input_hash, provider,
                              model_version, prompt_version, schema_version) DO NOTHING
                 """, draft.jobId(), draft.source(), draft.priority(), draft.channelId(), draft.videoId(),
                 draft.videoUrl().toString(), draft.inputMode(), draft.inputHash(), draft.provider(),
-                draft.modelVersion(), draft.promptVersion(), draft.schemaVersion(), draft.createdAt());
+                draft.modelVersion(), draft.promptVersion(), draft.schemaVersion(), draft.retryReason(), draft.createdAt());
         if (inserted == 0) return Optional.empty();
         return Optional.of(new AiExtractionJobView(draft.jobId(), draft.source(), draft.channelId(), draft.videoId(),
                 draft.videoUrl().toString(), "QUEUED", null, null, draft.provider(), draft.modelVersion(),

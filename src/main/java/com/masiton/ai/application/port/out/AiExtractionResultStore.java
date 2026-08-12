@@ -33,7 +33,7 @@ public interface AiExtractionResultStore {
     void insertTagReview(UUID snapshotId, String candidateTagId, String decision, UUID replacementTagDefinitionId,
                          String reason, OffsetDateTime reviewedAt);
 
-    void insertVisitTag(UUID visitId, UUID tagDefinitionId, java.math.BigDecimal confidence, String evidence,
+    void insertVisitTag(UUID snapshotId, UUID visitId, UUID tagDefinitionId, java.math.BigDecimal confidence, String evidence,
                         String extractorVersion, OffsetDateTime createdAt);
 
     void markRegisteredContent(UUID snapshotId, UUID restaurantId, boolean restaurantCreated,

@@ -12,6 +12,7 @@ public interface AiExtractionAdminQueryPort {
     Page list(String executionStatus, String source, String reviewStatus, int offset, int size);
     Optional<Detail> detail(UUID jobId);
     Optional<RetryTarget> retryTarget(UUID jobId);
+    Optional<ReviewTarget> reviewSnapshot(UUID jobId);
     Optional<ReviewTarget> reviewTarget(UUID jobId);
     UUID override(UUID snapshotId, String expectedStatus, UUID adminId, String reason, String decision);
     void markRegisteredContent(UUID snapshotId, RegisteredContent content);

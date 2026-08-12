@@ -78,4 +78,49 @@ related_documents:
 
 ## 10. 남은 사항
 
-GitHub inline thread는 조회되지 않아 답글·resolve 대상이 없었다. Docker 기반 동시성 통합 테스트는 CI 환경에서 확인해야 한다.
+이 문서의 최초 기록 이후 PR #175에 추가된 inline 리뷰 19건을 다시 코드·계약 기준으로 확인했다. 중복 지적은 하나의 수정으로 묶었고, 비블로킹 제안 중 근거가 있는 항목도 반영했다. 답글과 resolve는 원격 브랜치에 수정 커밋을 푸시하고 CI 결과를 확인한 뒤 처리한다. Docker 기반 PostgreSQL 테스트는 로컬 엔진 부재로 CI에서 확인한다.
+
+## 11. 추가 리뷰 반영: 목록 SQL·롤백 소유권·계약 오류·재시도 추적
+
+### 11.1 스레드별 판단
+
+| 스레드 | 문제 유형 | 판단 | 처리 |
+|---|---|---|---|
+| [3762975863](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3762975863) | 데이터베이스 | 수정 필요 | 목록용 SELECT를 상세 snapshot SELECT와 분리하고 PostgreSQL Adapter 목록 회귀 테스트를 추가했다. |
+| [3762984474](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3762984474) | 데이터베이스 | 수정 필요 | `visit_tag.created_from_snapshot_id`를 V7로 추가하고 해당 Snapshot의 AI 태그만 삭제한다. `visitCreated=false` 롤백은 `AIEXTRACT_DUPLICATE_CONFLICT` 409로 거부한다. |
+| [3762984476](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3762984476) | 애플리케이션 | 수정 필요 | 상세·재시도·검수 오류를 API 계약의 `AIEXTRACT_JOB_NOT_FOUND`, `AIEXTRACT_RETRY_BLOCKED`, `AIEXTRACT_DUPLICATE_CONFLICT`, `AIEXTRACT_VALIDATION_CONFLICT`로 통일했다. |
+| [3762984477](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3762984477) | 애플리케이션 | 수정 필요 | Controller API 테스트의 존재하지 않는 오류 코드를 계약 코드로 교체하고 실제 서비스의 롤백 거부 경로를 단위 테스트했다. |
+| [3762984482](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3762984482) | 애플리케이션 | 수정 필요 | 프론트 오류 안내를 HTTP 409 일괄 처리에서 `AdminApiError.code`별 계약 안내로 변경하고 409·422 분기 테스트를 추가했다. |
+| [3762984485](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3762984485) | 데이터베이스 | 수정 필요 | 외부 검증 전 조회는 `reviewSnapshot()` 무잠금 경로를 사용하고, 커밋 트랜잭션만 `reviewTarget()` 부모 작업·최신 snapshot 잠금을 사용한다. |
+| [3762984487](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3762984487) | 애플리케이션 | 수정 필요 | Controller의 null queryService 우회 생성자와 불필요한 `@Autowired`를 제거했다. |
+| [3762984490](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3762984490) | 데이터베이스 | 수정 필요 | 재시도 `reason`을 trim·길이 검증 후 새 작업의 `retry_reason`으로 저장하도록 V7·Port·Service·Store를 동기화했다. |
+| [3762984494](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3762984494) | 애플리케이션 | 수정 필요 | Adapter와 QueryService의 압축된 메서드·조건문을 NAVER Java 컨벤션에 맞게 줄바꿈하고 중괄호를 추가했다. |
+| [3763035310](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3763035310) | 데이터베이스 | 이미 해결 | 위 목록 전용 SELECT 분리와 PostgreSQL 회귀 테스트로 같은 P1을 함께 해결했다. |
+| [3763035313](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3763035313) | 데이터베이스 | 이미 해결 | 위 `retry_reason` 저장 및 입력 검증으로 같은 추적성 지적을 함께 해결했다. |
+| [3763035321](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3763035321) | 데이터베이스 | 수정 필요 | 최신 마이그레이션 테스트에서 `assertAiSchemaAndContracts`를 복원하고 V7 존재 여부에 따라 V4/V7 계약을 검증하게 했다. |
+| [3763035326](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3763035326) | 데이터베이스 | 수정 필요 | 검수 전 조회는 무잠금 `reviewSnapshot`, 커밋 경계만 잠금 `reviewTarget`을 사용해 무의미한 autocommit 잠금을 제거했다. ROLLBACK/DISCARD의 최신 상태 재검증 왕복은 의도적으로 유지했다. |
+| [3763035328](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3763035328) | 데이터베이스 | 수정 필요 | 후보 태그 코드의 ACTIVE 정의를 한 번에 조회해 후보별 `tag_definition` SELECT를 제거했다. |
+| [3763035335](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3763035335) | 데이터베이스 | 수정 불필요 | override의 다음 버전 계산은 부모 작업 잠금과 최신성 조건을 같은 원자 SQL에 유지해야 하므로 다른 Adapter의 조회 Port로 분리하지 않았다. |
+| [3763035338](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3763035338) | 애플리케이션 | 수정 불필요 | 워커는 typed parsed candidate를 사용하지만 관리자 검수는 저장된 Snapshot JSON을 재검증해야 하므로 매핑 경계를 공유하면 계약·책임이 넓어진다. 이번 범위에서는 중복을 유지했다. |
+| [3763035341](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3763035341) | 애플리케이션 | 수정 필요 | override 내부의 감사 INSERT를 `appendManualReviewAudit`로 분리해 동시성 복사와 감사 책임을 나눴다. |
+| [3763035344](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3763035344) | 애플리케이션 | 수정 필요 | `permitted` 재할당을 제거하고 CONFIRM/ROLLBACK/DISCARD 허용 전이를 인접한 early-return 분기로 정리했다. |
+| [3763035346](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3763035346) | 애플리케이션 | 이미 해결 | null `queryService`를 만드는 단일 인자 생성자를 제거했다. |
+
+### 11.2 근본 원인과 선택 이유
+
+- 목록 Adapter가 상세 조회용 snapshot 컬럼을 목록 LATERAL 별칭에 그대로 적용해, 실제로는 존재하지 않는 컬럼을 PostgreSQL이 해석하게 했다. 목록 응답에 필요하지 않은 JSON 컬럼을 제거하는 별도 SELECT가 변경 범위를 가장 작게 유지한다.
+- Visit 재사용 여부와 관계없이 공개 Visit을 private으로 바꾸는 기존 롤백 계약으로는 `visit_tag`의 소유권을 판별할 수 없었다. source만으로 기존 AI·관리자 태그를 지우면 다른 작업의 태그를 침범하므로 Snapshot FK provenance를 선택했다.
+- 검수 전 외부 검증 호출은 DB 트랜잭션을 열지 않는 구조여야 하므로 무잠금 pre-read와 커밋 전용 잠금 read를 분리했다.
+- 재시도 사유는 API 문서에 이미 필수 입력으로 정의되어 있어 제거하지 않고 작업 행의 nullable `retry_reason`으로 보존했다. 기존 작업은 null로 유지된다.
+
+### 11.3 검증 결과
+
+| 검증 | 결과 |
+|---|---|
+| `gradlew.bat compileJava compileTestJava` | 통과 |
+| AI 관련 단위 테스트 23건 | 통과 |
+| 프론트 `node --test lib/admin/ai-video-extractions-coordination.test.ts` | 4건 통과 |
+| PostgreSQL Testcontainers Adapter·롤백·Flyway V7 테스트 | 로컬 Docker 엔진 부재로 미실행, CI 확인 필요 |
+| 프론트 전체 `npm test` | 기존 의존성/Node strip-only 환경 문제로 3개 파일 실패; 새 AI coordination 테스트는 별도 실행 통과 |
+
+변경 파일은 V7 migration, AI 작업·검수·롤백 Port/Service/Adapter, Controller, 프론트 오류 안내·테스트, 관련 데이터/API 계약 문서와 Flyway 회귀 테스트다. 정량 지표는 기존 PR에서 측정하지 않아 이번에도 추정하지 않았으며, CI에서 목록 SQL 성공·Snapshot 태그 삭제 수·기존 태그 잔존 수를 fixture 기준으로 확인한다.

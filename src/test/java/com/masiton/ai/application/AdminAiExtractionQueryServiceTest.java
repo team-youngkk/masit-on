@@ -22,7 +22,7 @@ class AdminAiExtractionQueryServiceTest {
     @DisplayName("롤백 요청은 등록 콘텐츠 커밋 경계로 위임한다")
     void review_자동확정상태_롤백커밋경계로위임한다() {
         UUID jobId = UUID.randomUUID();
-        when(port.reviewTarget(jobId)).thenReturn(java.util.Optional.of(new AiExtractionAdminQueryPort.ReviewTarget(
+        when(port.reviewSnapshot(jobId)).thenReturn(java.util.Optional.of(new AiExtractionAdminQueryPort.ReviewTarget(
                 UUID.randomUUID(), "AUTO_CONFIRMED", jobId, "channel", "video", "https://www.youtube.com/watch?v=video",
                 null, null, null, null, new AiExtractionAdminQueryPort.RegisteredContent(null, false, null, false, null, false, null, false))));
         UUID adminId = UUID.randomUUID();

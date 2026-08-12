@@ -6,7 +6,6 @@ import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,10 +32,6 @@ public class AdminAiVideoExtractionController {
     private final AiExtractionJobUseCase useCase;
     private final AdminAiExtractionQueryService queryService;
 
-    public AdminAiVideoExtractionController(AiExtractionJobUseCase useCase) {
-        this(useCase, null);
-    }
-    @Autowired
     public AdminAiVideoExtractionController(AiExtractionJobUseCase useCase, AdminAiExtractionQueryService queryService) {
         this.useCase = useCase; this.queryService = queryService;
     }
@@ -65,8 +60,9 @@ public class AdminAiVideoExtractionController {
     public ResponseEntity<AiExtractionJobResponse> retry(@PathVariable UUID jobId, @RequestBody RetryRequest request) {
         String url = queryService.retryUrl(jobId);
         if (request.supplementText() == null || request.supplementText().isBlank()) throw new BusinessException(ErrorCode.MISSING_REQUIRED_FIELD, "supplementText", "supplementText is required.");
+        if (request.reason() == null || request.reason().isBlank() || request.reason().trim().length() > 1_000) throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, "reason", "reason is required and must be at most 1,000 characters.");
         // This is deliberately a fresh submit: no temporary input from the original job is read.
-        return ResponseEntity.accepted().body(AiExtractionJobResponse.from(useCase.submitRetry(url, request.supplementText())));
+        return ResponseEntity.accepted().body(AiExtractionJobResponse.from(useCase.submitRetry(url, request.supplementText(), request.reason())));
     }
     @PostMapping("/{jobId}/review")
     public ResponseEntity<Void> review(Authentication authentication, @PathVariable UUID jobId, @RequestBody ReviewRequest request) {

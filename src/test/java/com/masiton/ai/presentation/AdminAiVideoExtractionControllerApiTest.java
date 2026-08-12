@@ -180,21 +180,21 @@ class AdminAiVideoExtractionControllerApiTest {
     void retry_허용작업_새보완텍스트로접수한다() throws Exception {
         UUID jobId = UUID.fromString("44444444-4444-4444-8444-444444444444");
         when(queryService.retryUrl(jobId)).thenReturn("https://www.youtube.com/watch?v=video-id");
-        when(useCase.submitRetry("https://www.youtube.com/watch?v=video-id", "새 입력")).thenReturn(new AiExtractionJobView(jobId,"ADMIN","c","v","https://www.youtube.com/watch?v=v","QUEUED",null,null,"GOOGLE_GEMINI","gemini-3-flash-preview","P1","S1",0,OffsetDateTime.now(),null,null,false));
+        when(useCase.submitRetry("https://www.youtube.com/watch?v=video-id", "새 입력", "누락 보완")).thenReturn(new AiExtractionJobView(jobId,"ADMIN","c","v","https://www.youtube.com/watch?v=v","QUEUED",null,null,"GOOGLE_GEMINI","gemini-3-flash-preview","P1","S1",0,OffsetDateTime.now(),null,null,false));
         mockMvc.perform(post("/api/admin/ai/video-extractions/{jobId}/retry", jobId).contentType(MediaType.APPLICATION_JSON).content("{\"supplementText\":\"새 입력\",\"reason\":\"누락 보완\"}"))
                 .andExpect(status().isAccepted());
-        verify(useCase).submitRetry("https://www.youtube.com/watch?v=video-id", "새 입력");
+        verify(useCase).submitRetry("https://www.youtube.com/watch?v=video-id", "새 입력", "누락 보완");
     }
 
     @Test
     @DisplayName("검토 효과 경계가 없으면 409을 반환한다")
     void review_효과경계없음_409을반환한다() throws Exception {
         UUID jobId = UUID.fromString("55555555-5555-4555-8555-555555555555");
-        doThrow(new BusinessException(HttpStatus.CONFLICT, "AIEXTRACT_REVIEW_EFFECT_UNAVAILABLE", "effect unavailable"))
+        doThrow(new BusinessException(HttpStatus.CONFLICT, "AIEXTRACT_DUPLICATE_CONFLICT", "effect unavailable"))
                 .when(queryService).review(org.mockito.ArgumentMatchers.eq(jobId), org.mockito.ArgumentMatchers.eq("ROLLBACK"), org.mockito.ArgumentMatchers.eq("AUTO_CONFIRMED"), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq("오등록"), org.mockito.ArgumentMatchers.anyList());
         mockMvc.perform(post("/api/admin/ai/video-extractions/{jobId}/review", jobId)
                         .principal(new UsernamePasswordAuthenticationToken("55555555-5555-4555-8555-555555555556", "n/a"))
                         .contentType(MediaType.APPLICATION_JSON).content("{\"decision\":\"ROLLBACK\",\"expectedReviewStatus\":\"AUTO_CONFIRMED\",\"reason\":\"오등록\"}"))
-                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("AIEXTRACT_REVIEW_EFFECT_UNAVAILABLE"));
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("AIEXTRACT_DUPLICATE_CONFLICT"));
     }
 }

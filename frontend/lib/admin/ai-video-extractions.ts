@@ -1,6 +1,7 @@
 'use client'
 
 import { adminJson, AdminApiError, messageFor } from './api'
+import { aiExtractionMessageForCode } from './ai-video-extractions-coordination'
 
 export type AiExecutionStatus = 'QUEUED' | 'RUNNING' | 'SUCCEEDED' | 'FAILED'
 export type AiExtractionSource = 'WEBHOOK' | 'ADMIN'
@@ -99,7 +100,9 @@ export async function reviewAiVideoExtraction(
 }
 
 export function aiExtractionMessageFor(error: unknown): string {
-  if (error instanceof AdminApiError && error.status === 409) return '다른 검수 변경과 충돌했습니다. 최신 작업 상태를 다시 조회한 뒤 진행해 주세요.'
+  if (error instanceof AdminApiError) {
+    return aiExtractionMessageForCode(error.code) ?? messageFor(error)
+  }
   return messageFor(error)
 }
 

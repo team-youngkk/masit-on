@@ -48,16 +48,20 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
 
     @Override
     public AiExtractionJobView submitAdmin(String rawVideoUrl, String rawSupplementText, String idempotencyKey) {
-        return submitAdmin(rawVideoUrl, rawSupplementText, idempotencyKey, null);
+        return submitAdmin(rawVideoUrl, rawSupplementText, idempotencyKey, null, null);
     }
 
     @Override
-    public AiExtractionJobView submitRetry(String rawVideoUrl, String rawSupplementText) {
-        return submitAdmin(rawVideoUrl, rawSupplementText, null, UUID.randomUUID().toString());
+    public AiExtractionJobView submitRetry(String rawVideoUrl, String rawSupplementText, String rawReason) {
+        String reason = rawReason == null ? "" : rawReason.trim();
+        if (reason.isBlank() || reason.length() > 1_000) {
+            throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, "reason", "reason is required and must be at most 1,000 characters.");
+        }
+        return submitAdmin(rawVideoUrl, rawSupplementText, null, UUID.randomUUID().toString(), reason);
     }
 
     private AiExtractionJobView submitAdmin(String rawVideoUrl, String rawSupplementText, String idempotencyKey,
-                                            String retryNonce) {
+                                            String retryNonce, String retryReason) {
         URI requestedUrl = youtubeUrl(rawVideoUrl);
         URI canonicalRequestedUrl = canonicalYoutubeUrl(videoIdFrom(requestedUrl));
         String supplement = rawSupplementText == null ? "" : rawSupplementText.trim();
@@ -96,7 +100,7 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
         Optional<EncryptedInput> encrypted = supplement.isBlank()
                 ? Optional.empty()
                 : Optional.of(temporaryInputCipher.encrypt(supplement));
-        return create("ADMIN", "BACKFILL", channelId, videoId, videoUrl, inputMode, inputHash, encrypted);
+        return create("ADMIN", "BACKFILL", channelId, videoId, videoUrl, inputMode, inputHash, encrypted, retryReason);
     }
 
     @Override
@@ -113,7 +117,7 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
             return Optional.empty();
         }
         return Optional.of(create("WEBHOOK", "REALTIME", normalizedChannelId, normalizedVideoId,
-                canonicalVideoUrl, "GEMINI_VIDEO_URL", hash(canonicalVideoUrl.toString(), "", null), Optional.empty()));
+                canonicalVideoUrl, "GEMINI_VIDEO_URL", hash(canonicalVideoUrl.toString(), "", null), Optional.empty(), null));
     }
 
     @Override
@@ -131,12 +135,12 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
     }
     private AiExtractionJobView create(String source, String priority, String channelId, String videoId,
                                        URI videoUrl, String inputMode, byte[] inputHash,
-                                       Optional<EncryptedInput> encrypted) {
+                                       Optional<EncryptedInput> encrypted, String retryReason) {
         AiExtractionJobStore.AiExtractionJobDraft draft = new AiExtractionJobStore.AiExtractionJobDraft(
                 java.util.UUID.randomUUID(), source, priority, channelId, videoId, videoUrl, inputMode,
                 inputHash, AiExtractionContract.PROVIDER,
                 AiExtractionContract.MODEL_VERSION, AiExtractionContract.PROMPT_VERSION,
-                AiExtractionContract.SCHEMA_VERSION, OffsetDateTime.now(ZoneOffset.UTC));
+                AiExtractionContract.SCHEMA_VERSION, OffsetDateTime.now(ZoneOffset.UTC), retryReason);
         return persistence.create(draft, encrypted);
     }
 

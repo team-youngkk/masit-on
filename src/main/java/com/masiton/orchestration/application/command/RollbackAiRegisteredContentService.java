@@ -17,7 +17,7 @@ public class RollbackAiRegisteredContentService implements RollbackAiRegisteredC
     @Override
     @Transactional
     public void rollback(RegistrationReference reference) {
-        store.makePrivateIfCreated(reference.restaurantId(), reference.restaurantCreated(),
+        store.makePrivateIfCreated(reference.snapshotId(), reference.restaurantId(), reference.restaurantCreated(),
                 reference.creatorId(), reference.creatorCreated(), reference.videoId(), reference.videoCreated(),
                 reference.visitId(), reference.visitCreated());
     }

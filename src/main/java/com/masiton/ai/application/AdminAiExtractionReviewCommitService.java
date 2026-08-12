@@ -46,11 +46,11 @@ public class AdminAiExtractionReviewCommitService {
                          List<AiExtractionAdminQueryPort.TagDecision> tags) {
         AiExtractionAdminQueryPort.ReviewTarget target = current(jobId, expected);
         AiExtractionAdminQueryPort.RegisteredContent registered = target.registeredContent();
-        if (registered == null || registered.visitId() == null) {
-            throw new BusinessException(HttpStatus.CONFLICT, "AIEXTRACT_ROLLBACK_TARGET_UNAVAILABLE", "The registered AI content cannot be rolled back.");
+        if (registered == null || registered.visitId() == null || !registered.visitCreated()) {
+            throw new BusinessException(HttpStatus.CONFLICT, "AIEXTRACT_DUPLICATE_CONFLICT", "The registered Visit was reused and cannot be rolled back safely.");
         }
         rollback.rollback(new RollbackAiRegisteredContentUseCase.RegistrationReference(
-                registered.restaurantId(), registered.restaurantCreated(), registered.creatorId(), registered.creatorCreated(),
+                target.snapshotId(), registered.restaurantId(), registered.restaurantCreated(), registered.creatorId(), registered.creatorCreated(),
                 registered.videoId(), registered.videoCreated(), registered.visitId(), registered.visitCreated()));
         complete(target, expected, adminId, reason, "ROLLBACK", tags);
     }
@@ -64,9 +64,9 @@ public class AdminAiExtractionReviewCommitService {
 
     private AiExtractionAdminQueryPort.ReviewTarget current(UUID jobId, String expected) {
         AiExtractionAdminQueryPort.ReviewTarget target = port.reviewTarget(jobId)
-                .orElseThrow(() -> new BusinessException(com.masiton.common.web.ErrorCode.RESOURCE_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "AIEXTRACT_JOB_NOT_FOUND", "The AI extraction job was not found."));
         if (!expected.equals(target.reviewStatus())) {
-            throw new BusinessException(HttpStatus.CONFLICT, "AIEXTRACT_REVIEW_STALE", "Review status is stale.");
+            throw new BusinessException(HttpStatus.CONFLICT, "AIEXTRACT_DUPLICATE_CONFLICT", "Review status is stale.");
         }
         return target;
     }
@@ -75,7 +75,7 @@ public class AdminAiExtractionReviewCommitService {
                           String reason, String decision, List<AiExtractionAdminQueryPort.TagDecision> tags) {
         UUID overrideSnapshotId = port.override(target.snapshotId(), expected, adminId, reason, decision);
         if (overrideSnapshotId == null) {
-            throw new BusinessException(HttpStatus.CONFLICT, "AIEXTRACT_REVIEW_STALE", "Review status is stale.");
+            throw new BusinessException(HttpStatus.CONFLICT, "AIEXTRACT_DUPLICATE_CONFLICT", "Review status is stale.");
         }
         port.appendTagOverrides(overrideSnapshotId, adminId, reason, tags);
     }

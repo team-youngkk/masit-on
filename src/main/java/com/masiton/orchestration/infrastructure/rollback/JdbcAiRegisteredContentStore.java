@@ -17,12 +17,13 @@ public class JdbcAiRegisteredContentStore implements AiRegisteredContentStore {
     }
 
     @Override
-    public void makePrivateIfCreated(UUID restaurantId, boolean restaurantCreated,
+    public void makePrivateIfCreated(UUID snapshotId, UUID restaurantId, boolean restaurantCreated,
                                      UUID creatorId, boolean creatorCreated,
                                      UUID videoId, boolean videoCreated,
                                      UUID visitId, boolean visitCreated) {
         if (visitCreated && visitId != null) {
             jdbcTemplate.update("UPDATE visit SET publication_status = 'PRIVATE' WHERE id = ?", visitId);
+            jdbcTemplate.update("DELETE FROM visit_tag WHERE visit_id = ? AND created_from_snapshot_id = ?", visitId, snapshotId);
         }
         if (videoCreated && videoId != null) {
             jdbcTemplate.update("UPDATE video SET publication_status = 'PRIVATE' WHERE id = ?", videoId);

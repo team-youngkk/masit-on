@@ -118,7 +118,7 @@ class AiExtractionResultCommitService {
             String decision = merged ? "AUTO_MERGE" : "AUTO_ACCEPT";
             resultStore.insertTagReview(snapshotId, tag.candidateTagId(), decision,
                     "AUTO_MERGE".equals(decision) ? definition.id() : null, tag.reason(), reviewedAt);
-            resultStore.insertVisitTag(visitId, definition.id(), tag.confidence(), tag.evidenceJson(),
+            resultStore.insertVisitTag(snapshotId, visitId, definition.id(), tag.confidence(), tag.evidenceJson(),
                     tag.extractorVersion(), reviewedAt);
         }
     }
