@@ -325,7 +325,7 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 | API | 핵심 테스트 | 평가·운영 증거 | E3 Task |
 |---|---|---|---|
 | [API-DISCOVERY-NL-001](api/discovery/natural-language-restaurant-discovery-api.md) | `TST-E3-NL-001~002`, `TST-E3-SEC-001`, `TST-E3-E2E-001` | `EVAL-NL-001~007`, p95·로그 마스킹 | `E3-T01~02`, `E3-T11~13` |
-| [API-ADMIN-AIEXTRACT-001](api/admin/ai-video-extraction-api.md), Webhook `001~002` | `TST-E3-AI-001~004`, `TST-E3-DATA-001`, `TST-E3-SEC-001` | [`EVAL-AI-001~010` 자산·평가기·HOLD 결과](../08-planning/third-expansion-ai-evaluation-result.md), Worker·quota·정식 저장 0건 | `E3-T03~08`, `E3-T11~13` |
+| [API-ADMIN-AIEXTRACT-001](api/admin/ai-video-extraction-api.md), Webhook `001~002` | `TST-E3-AI-001~004`, `TST-E3-DATA-001`, `TST-E3-SEC-001` | [`EVAL-AI-001~010` 계약 자산·dry-run·HOLD 기록](../08-planning/third-expansion-ai-evaluation-result.md), Worker·quota·정식 저장 0건 | `E3-T03~08`, `E3-T11~13` |
 | [API-DISCOVERY-COURSE-001](api/discovery/restaurant-course-recommendation-api.md) | `TST-E3-COURSE-001~003`, `TST-E3-PERF-001`, `TST-E3-E2E-001` | `EVAL-COURSE-001~005`, Mobility quota·호출 수 | `E3-T09~13` |
 
 세 API의 계약 상태는 Accepted지만 테스트·외부 계정·운영 증거가 연결되기 전에는 API 구현 완료로 판정하지 않는다.

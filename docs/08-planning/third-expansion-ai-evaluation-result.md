@@ -49,24 +49,24 @@ related_documents:
 | 비식별 평가 사례 | [`src/test/resources/eval/aiextract-golden-v1.0.0/cases.json`](../../src/test/resources/eval/aiextract-golden-v1.0.0/cases.json) |
 | 프로그램 평가기 | [`AiExtractionGoldenEvaluationTest`](../../src/test/java/com/masiton/ai/application/AiExtractionGoldenEvaluationTest.java) — 합성 S1 validator dry-run과 자산 계약 검사 전용 |
 
-합성 S1 dry-run은 기본 실행에서 Release holdout 사례를 제외하고 명시적 opt-in일 때 120건의 validator 배선만 검사한다. 이 dry-run은 실제 Gemini 출력이나 Release 품질 측정 증거가 아니다. 별도의 실제 Release 실행 결과에는 실행 커밋, Dataset·모델·Prompt·Schema 버전, 분할별 집계, 실패 유형, 인간 판정 기록의 식별자만 남긴다. 원본 URL·자막·근거 본문·Provider 응답 전문·Prompt 전문·개인정보·비밀은 이 문서와 일반 로그에 기록하지 않는다.
+합성 S1 dry-run은 기본 실행에서 Release holdout 사례를 제외하고 명시적 opt-in일 때 120건의 validator 배선만 검사한다. Manifest의 규모·분할·평가 ID와 cases의 일치, validator 결정·후보·태그·사유, `UNKNOWN_EVIDENCE`의 대상 필드, Critical 위험 합성 사례의 자동 확정 차단을 회귀 검증한다. 이 dry-run은 실제 Gemini 출력이나 Release 품질 측정 증거가 아니다. 별도의 실제 Release 실행 결과에는 실행 커밋, Dataset·모델·Prompt·Schema 버전, 분할별 집계, 실패 유형, 인간 판정 기록의 식별자만 남긴다. 원본 URL·자막·근거 본문·Provider 응답 전문·Prompt 전문·개인정보·비밀은 이 문서와 일반 로그에 기록하지 않는다.
 
 ## 3. `EVAL-AI-001~010` 증거 경로와 현재 상태
 
 | 평가 ID | 판정 대상 | 준비된 증거 경로 | 현재 상태 |
 |---|---|---|---|
 | `EVAL-AI-001` | S1 Schema·필수 메타데이터·버전 | Manifest·cases·프로그램 평가기 | 자산 검증 대상, Release `HOLD` |
-| `EVAL-AI-002` | 맛집·주소 후보 precision | cases 정답과 프로그램 집계·인간 판정 기록 | Release 측정·승인 미수행 |
-| `EVAL-AI-003` | 방문 근거 recall | cases 정답과 프로그램 집계·인간 판정 기록 | Release 측정·승인 미수행 |
+| `EVAL-AI-002` | 맛집·주소 후보 precision | cases 정답 Schema와 실제 제공자 실행·인간 판정 기록 | Release 측정·승인 미수행 |
+| `EVAL-AI-003` | 방문 근거 recall | cases 정답 Schema와 실제 제공자 실행·인간 판정 기록 | Release 측정·승인 미수행 |
 | `EVAL-AI-004` | 근거 충실성·Critical 오연결 | 인간 사후 판정 기록과 100% 교차 검토 | 미수행 |
-| `EVAL-AI-005` | `UNKNOWN`·보수 후보 처리 | cases 경계 사례·프로그램 집계·인간 판정 기록 | Release 측정·승인 미수행 |
-| `EVAL-AI-006` | 자동 검증·정식 Entity 원자성 | 프로그램 평가기와 `TST-E3-AI-003`·`TST-E3-DATA-001` | Release 종합 판정 대기 |
-| `EVAL-AI-007` | 자동 확정·차단 precision과 사유 | 프로그램 집계·인간 사후 판정 기록 | Release 측정·승인 미수행 |
-| `EVAL-AI-008` | 중복·재시도·재기동·동시 claim | 프로그램 평가기와 `TST-E3-AI-004` | `E3-T13` 운영 증거 대기 |
-| `EVAL-AI-009` | 공개 영상 입력·timestamp 근거 | 프로그램 평가기·별도 제공자 통합 증거·인간 판정 기록 | 제공자 실행·승인 미수행 |
-| `EVAL-AI-010` | 태그 precision·recall·공개 경계 | cases 정답과 프로그램 집계·인간 판정 기록 | Release 측정·승인 미수행 |
+| `EVAL-AI-005` | `UNKNOWN`·보수 후보 처리 | 합성 validator 경계 회귀와 실제 제공자 실행·인간 판정 기록 | Release 측정·승인 미수행 |
+| `EVAL-AI-006` | 자동 검증·정식 Entity 원자성 | 합성 validator 회귀와 `TST-E3-AI-003`·`TST-E3-DATA-001` | Release 종합 판정 대기 |
+| `EVAL-AI-007` | 자동 확정·차단 precision과 사유 | cases 판정 Schema와 실제 제공자 실행·인간 사후 판정 기록 | Release 측정·승인 미수행 |
+| `EVAL-AI-008` | 중복·재시도·재기동·동시 claim | `TST-E3-AI-004` 연결 증거 | `E3-T13` 운영 증거 대기 |
+| `EVAL-AI-009` | 공개 영상 입력·timestamp 근거 | 합성 timestamp Schema 회귀·별도 제공자 통합 증거·인간 판정 기록 | 제공자 실행·승인 미수행 |
+| `EVAL-AI-010` | 태그 precision·recall·공개 경계 | cases 정답 Schema와 실제 제공자 실행·인간 판정 기록 | Release 측정·승인 미수행 |
 
-Manifest·cases·평가기의 세 경로가 `EVAL-AI-001~010`의 공통 재현 경로다. 인간 판정이 필요한 차원은 프로그램 결과만으로 통과 처리하지 않으며, 비동기·원자성·보안·운영 경계는 [3차 확장 테스트 추적표](third-expansion-test-matrix.md)의 대응 `TST-E3-*` 증거와 함께 판정한다.
+Manifest·cases·합성 validator dry-run은 평가 입력·정답 Schema와 회귀 배선을 재현하는 공통 준비 경로다. precision·recall·Critical 0건은 실제 제공자 출력과 인간 판정 없이는 산출하지 않는다. 비동기·원자성·보안·운영 경계는 사례별 선언값이 아니라 [3차 확장 테스트 추적표](third-expansion-test-matrix.md)의 대응 `TST-E3-*` 실행 증거로 판정한다.
 
 ## 4. 자동 확정·차단 인간 사후 판정 기록 형식
 
@@ -101,7 +101,7 @@ Release 승인 전에는 다음을 모두 확인한다.
 
 다음 조건을 모두 충족하기 전에는 `E3-T08`의 출시 판정을 통과로 바꾸지 않는다.
 
-- Release holdout 24건을 명시적 opt-in으로 실행하고 `EVAL-AI-001~010` 집계를 재현할 수 있다.
+- Release holdout 24건에 실제 제공자 후보 출력을 연결해 명시적 opt-in으로 실행하고 `EVAL-AI-001~010` 집계를 재현할 수 있다.
 - 맛집·주소 precision 90%, 방문 근거 recall 80%, 자동 등록 precision 90%, 태그 precision 90%·recall 80% 이상이며 Critical 오연결이 0건이다.
 - 자동 확정·차단 표본과 모든 Critical 후보를 지정 인간 판정자와 검증자가 판정·교차 검토하고 승인한다.
 - rollback readiness 검증과 연결 증거가 통과한다.
