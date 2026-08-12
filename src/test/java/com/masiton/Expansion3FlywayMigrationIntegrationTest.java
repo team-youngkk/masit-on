@@ -159,9 +159,9 @@ class Expansion3FlywayMigrationIntegrationTest {
         UUID originalSnapshotId = UUID.randomUUID();
         jdbcTemplate.update(
                 "INSERT INTO ai_candidate_snapshot (id, job_id, snapshot_version, candidate_fields, candidate_tags, "
-                        + "field_confidences, evidence, missing_fields, review_status, registered_visit_id, visit_created) "
+                        + "field_confidences, evidence, missing_fields, review_status, reviewed_at, registered_visit_id, visit_created) "
                         + "VALUES (?, ?, 1, '{}'::jsonb, '[]'::jsonb, '{}'::jsonb, '{}'::jsonb, '[]'::jsonb, "
-                        + "'AUTO_CONFIRMED', ?, true)",
+                        + "'AUTO_CONFIRMED', now(), ?, true)",
                 originalSnapshotId, jobId, fixture.visitId());
         jdbcTemplate.update(
                 "INSERT INTO visit_tag (id, visit_id, tag_definition_id, source, confidence, evidence, "
@@ -391,7 +391,7 @@ class Expansion3FlywayMigrationIntegrationTest {
                         "review_reason", "reviewed_at", "created_at"),
                 "ai_candidate_tag_review", List.of(
                         "id", "snapshot_id", "candidate_tag_id", "decision", "replacement_tag_definition_id",
-                        "reason", "decision_source", "reviewed_by", "reviewed_at"),
+                        "reason", "decision_source", "reviewed_by", "reviewed_at", "manual_tag_code"),
                 "tag_definition", List.of(
                         "id", "tag_code", "tag_type", "display_name", "aliases", "status", "source",
                         "created_from_snapshot_id", "created_at", "updated_at"),
@@ -405,11 +405,15 @@ class Expansion3FlywayMigrationIntegrationTest {
                         "id", "creator_id", "youtube_channel_id", "enabled", "subscription_status",
                         "subscription_token_hash", "last_notification_at", "last_renewed_at", "last_error_category",
                         "created_at", "updated_at")));
+        if (!includesV6) {
+            expectedColumns.put("ai_candidate_tag_review", expectedColumns.get("ai_candidate_tag_review").stream()
+                    .filter(column -> !column.equals("manual_tag_code")).toList());
+        }
         if (!includesV7) {
-            expectedColumns.put("ai_extraction_job", expectedColumns.get("ai_extraction_job").subList(0,
-                    expectedColumns.get("ai_extraction_job").size() - 1));
-            expectedColumns.put("visit_tag", expectedColumns.get("visit_tag").subList(0,
-                    expectedColumns.get("visit_tag").size() - 1));
+            expectedColumns.put("ai_extraction_job", expectedColumns.get("ai_extraction_job").stream()
+                    .filter(column -> !column.equals("retry_reason")).toList());
+            expectedColumns.put("visit_tag", expectedColumns.get("visit_tag").stream()
+                    .filter(column -> !column.equals("created_from_snapshot_id")).toList());
         }
         expectedColumns.forEach((table, columns) -> assertThat(jdbcTemplate.queryForList(
                 "SELECT column_name FROM information_schema.columns WHERE table_schema=? AND table_name=? "
