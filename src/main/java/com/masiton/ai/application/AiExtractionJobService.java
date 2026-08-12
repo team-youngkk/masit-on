@@ -12,6 +12,7 @@ import java.util.regex.Pattern;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.masiton.ai.application.port.in.AiExtractionJobUseCase;
 import com.masiton.ai.application.port.out.AiExtractionJobStore;
@@ -104,6 +105,7 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
     }
 
     @Override
+    @Transactional
     public Optional<AiExtractionJobView> submitWebhook(String channelId, String videoId, URI videoUrl) {
         String normalizedChannelId = requiredId(channelId, "channelId");
         String normalizedVideoId = requiredId(videoId, "videoId");
@@ -112,12 +114,14 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
             throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, "videoUrl", "videoUrl does not match videoId.");
         }
         URI canonicalVideoUrl = canonicalYoutubeUrl(normalizedVideoId);
-        YoutubeChannelWatchStore.Watch watch = watchStore.find(normalizedChannelId).orElse(null);
+        YoutubeChannelWatchStore.Watch watch = watchStore.findForUpdate(normalizedChannelId).orElse(null);
         if (watch == null || !watch.acceptsNotifications()) {
             return Optional.empty();
         }
-        return Optional.of(create("WEBHOOK", "REALTIME", normalizedChannelId, normalizedVideoId,
-                canonicalVideoUrl, "GEMINI_VIDEO_URL", hash(canonicalVideoUrl.toString(), "", null), Optional.empty(), null));
+        AiExtractionJobView job = create("WEBHOOK", "REALTIME", normalizedChannelId, normalizedVideoId,
+                canonicalVideoUrl, "GEMINI_VIDEO_URL", hash(canonicalVideoUrl.toString(), "", null), Optional.empty(), null);
+        watchStore.markNotificationReceived(normalizedChannelId, OffsetDateTime.now(ZoneOffset.UTC));
+        return Optional.of(job);
     }
 
     @Override
