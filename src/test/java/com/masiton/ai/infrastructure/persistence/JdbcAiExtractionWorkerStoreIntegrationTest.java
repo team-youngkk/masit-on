@@ -1,6 +1,7 @@
 package com.masiton.ai.infrastructure.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static com.masiton.test.IntegrationTestFixtures.sha256;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -293,7 +294,7 @@ class JdbcAiExtractionWorkerStoreIntegrationTest {
                 ) VALUES (?, 'WEBHOOK', ?, 'channel-id', ?, ?, 'GEMINI_VIDEO_URL', ?,
                           'GOOGLE_GEMINI', 'gemini-3-flash-preview', 'P1', 'S1', ?)
                 """, id, priority, videoId, "https://www.youtube.com/watch?v=" + videoId,
-                hash(videoId), createdAt);
+                sha256(videoId), createdAt);
         return id;
     }
 
@@ -308,12 +309,4 @@ class JdbcAiExtractionWorkerStoreIntegrationTest {
         return id;
     }
 
-    private byte[] hash(String value) {
-        try {
-            return java.security.MessageDigest.getInstance("SHA-256")
-                    .digest(value.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-        } catch (java.security.NoSuchAlgorithmException exception) {
-            throw new AssertionError(exception);
-        }
-    }
 }

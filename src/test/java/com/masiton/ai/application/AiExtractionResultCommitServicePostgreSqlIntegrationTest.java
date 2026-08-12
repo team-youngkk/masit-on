@@ -4,11 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.willThrow;
+import static com.masiton.test.IntegrationTestFixtures.sha256;
 
 import java.math.BigDecimal;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -62,7 +61,7 @@ class AiExtractionResultCommitServicePostgreSqlIntegrationTest extends FullConte
                           'GOOGLE_GEMINI', 'gemini-3-flash-preview', 'P1', 'S1',
                           'RUNNING', 1, 'worker-1', ?, ?, ?)
                 """, jobId, channelId, videoId, "https://www.youtube.com/watch?v=" + videoId,
-                hash(jobId.toString()), OffsetDateTime.now().plusMinutes(5), startedAt.minusSeconds(1), startedAt);
+                sha256(jobId.toString()), OffsetDateTime.now().plusMinutes(5), startedAt.minusSeconds(1), startedAt);
     }
 
     @AfterEach
@@ -118,14 +117,6 @@ class AiExtractionResultCommitServicePostgreSqlIntegrationTest extends FullConte
     private int count(String table, String predicate, Object... args) {
         return jdbcTemplate.queryForObject("SELECT count(*) FROM " + table + " WHERE " + predicate,
                 Integer.class, args);
-    }
-
-    private byte[] hash(String value) {
-        try {
-            return MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));
-        } catch (Exception exception) {
-            throw new AssertionError(exception);
-        }
     }
 
     private String suffix() {

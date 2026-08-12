@@ -1,12 +1,12 @@
 package com.masiton.restaurant.presentation.rest;
 
+import static com.masiton.test.IntegrationTestFixtures.courseRequestJson;
+
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.OffsetDateTime;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -302,13 +302,6 @@ class CourseRouteFailureIsolationApiTest {
 
     private CourseRouteResult singleLegResult(int distanceMeters, int durationSeconds) {
         return new CourseRouteResult(List.of(new CourseRouteLeg(distanceMeters, durationSeconds)));
-    }
-
-    private String courseRequestJson(UUID... restaurantIds) {
-        String ids = Arrays.stream(restaurantIds)
-                .map(id -> "\"" + id + "\"")
-                .collect(Collectors.joining(","));
-        return "{\"restaurantIds\":[" + ids + "]}";
     }
 
     private UUID insertPublicRestaurant(String name, String latitude, String longitude) {
