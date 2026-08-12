@@ -5,7 +5,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -18,8 +20,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
 import com.masiton.ai.application.port.in.AiExtractionJobUseCase;
+import com.masiton.ai.application.AdminAiExtractionQueryService;
+import com.masiton.ai.application.port.out.AiExtractionAdminQueryPort;
 import com.masiton.ai.application.port.out.dto.AiExtractionJobView;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.GlobalExceptionHandler;
@@ -28,8 +33,9 @@ import com.masiton.common.web.GlobalExceptionHandler;
 class AdminAiVideoExtractionControllerApiTest {
 
     private final AiExtractionJobUseCase useCase = mock(AiExtractionJobUseCase.class);
+    private final AdminAiExtractionQueryService queryService = mock(AdminAiExtractionQueryService.class);
     private final MockMvc mockMvc = MockMvcBuilders.standaloneSetup(
-            new AdminAiVideoExtractionController(useCase))
+            new AdminAiVideoExtractionController(useCase, queryService))
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
 
@@ -157,5 +163,38 @@ class AdminAiVideoExtractionControllerApiTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("MISSING_REQUIRED_FIELD"))
                 .andExpect(jsonPath("$.errors[0].field").value("videoUrl"));
+    }
+
+    @Test
+    @DisplayName("목록은 1-base 메타데이터와 안정 정렬 결과를 반환한다")
+    void list_필터페이지_메타데이터를반환한다() throws Exception {
+        when(queryService.list("FAILED", "ADMIN", null, 2, 20)).thenReturn(new AiExtractionAdminQueryPort.Page(
+                java.util.List.of(new AiExtractionJobView(UUID.fromString("33333333-3333-4333-8333-333333333333"), "ADMIN", "c", "v", "https://www.youtube.com/watch?v=v", "FAILED", null, null, "GOOGLE_GEMINI", "gemini-3-flash-preview", "P1", "S1", 1, OffsetDateTime.parse("2026-08-11T00:00:00Z"), null, OffsetDateTime.parse("2026-08-11T00:01:00Z"), false)), 41));
+        mockMvc.perform(get("/api/admin/ai/video-extractions?executionStatus=FAILED&source=ADMIN&page=2&size=20"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.items[0].jobId").value("33333333-3333-4333-8333-333333333333"))
+                .andExpect(jsonPath("$.page.number").value(2)).andExpect(jsonPath("$.page.totalPages").value(3)).andExpect(jsonPath("$.page.hasNext").value(true));
+    }
+
+    @Test
+    @DisplayName("재시도는 원본 작업 URL과 새 보완 텍스트만으로 새 작업을 접수한다")
+    void retry_허용작업_새보완텍스트로접수한다() throws Exception {
+        UUID jobId = UUID.fromString("44444444-4444-4444-8444-444444444444");
+        when(queryService.retryUrl(jobId)).thenReturn("https://www.youtube.com/watch?v=video-id");
+        when(useCase.submitRetry("https://www.youtube.com/watch?v=video-id", "새 입력", "누락 보완")).thenReturn(new AiExtractionJobView(jobId,"ADMIN","c","v","https://www.youtube.com/watch?v=v","QUEUED",null,null,"GOOGLE_GEMINI","gemini-3-flash-preview","P1","S1",0,OffsetDateTime.now(),null,null,false));
+        mockMvc.perform(post("/api/admin/ai/video-extractions/{jobId}/retry", jobId).contentType(MediaType.APPLICATION_JSON).content("{\"supplementText\":\"새 입력\",\"reason\":\"누락 보완\"}"))
+                .andExpect(status().isAccepted());
+        verify(useCase).submitRetry("https://www.youtube.com/watch?v=video-id", "새 입력", "누락 보완");
+    }
+
+    @Test
+    @DisplayName("검토 효과 경계가 없으면 409을 반환한다")
+    void review_효과경계없음_409을반환한다() throws Exception {
+        UUID jobId = UUID.fromString("55555555-5555-4555-8555-555555555555");
+        doThrow(new BusinessException(HttpStatus.CONFLICT, "AIEXTRACT_DUPLICATE_CONFLICT", "effect unavailable"))
+                .when(queryService).review(org.mockito.ArgumentMatchers.eq(jobId), org.mockito.ArgumentMatchers.eq("ROLLBACK"), org.mockito.ArgumentMatchers.eq("AUTO_CONFIRMED"), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq("오등록"), org.mockito.ArgumentMatchers.anyList());
+        mockMvc.perform(post("/api/admin/ai/video-extractions/{jobId}/review", jobId)
+                        .principal(new UsernamePasswordAuthenticationToken("55555555-5555-4555-8555-555555555556", "n/a"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"decision\":\"ROLLBACK\",\"expectedReviewStatus\":\"AUTO_CONFIRMED\",\"reason\":\"오등록\"}"))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("AIEXTRACT_DUPLICATE_CONFLICT"));
     }
 }

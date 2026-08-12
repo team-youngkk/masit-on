@@ -68,6 +68,7 @@ class RestaurantSearchQueryAdapterIntegrationTest {
     @BeforeEach
     void cleanUpTransactionalTables() {
         jdbcTemplate.execute("TRUNCATE TABLE visit, video, creator, restaurant CASCADE");
+        restoreSeedTags();
     }
 
     @Test
@@ -377,6 +378,16 @@ class RestaurantSearchQueryAdapterIntegrationTest {
                         + "SELECT ?, ?, id, 'ADMIN_OVERRIDE', '{}'::jsonb "
                         + "FROM tag_definition WHERE tag_code = ?",
                 UUID.randomUUID(), visitId, tagCode);
+    }
+
+    private void restoreSeedTags() {
+        jdbcTemplate.update("""
+                INSERT INTO tag_definition (id, tag_code, tag_type, display_name, aliases, status, source)
+                VALUES
+                    ('30000000-0000-4000-8000-000000000001', 'MENU_NAENGMYEON', 'MENU', '냉면', '[]'::jsonb, 'ACTIVE', 'SEED'),
+                    ('30000000-0000-4000-8000-000000000011', 'OCCASION_SOLO', 'OCCASION', '혼밥', '[]'::jsonb, 'ACTIVE', 'SEED')
+                ON CONFLICT (tag_code) DO UPDATE SET status = 'ACTIVE'
+                """);
     }
 
     private void insertVisitTag(UUID visitId, UUID tagDefinitionId) {

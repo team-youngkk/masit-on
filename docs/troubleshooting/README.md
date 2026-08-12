@@ -10,6 +10,8 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #175 관리자 AI 검수 동시성·태그 감사 후속](pr-175-ai-admin-review-follow-up.md)
+
 - [PR #173 AI 후보 자동 등록 리뷰 반영](pr-173-ai-candidate-auto-registration-review.md)
 - [PR #174 코스 공개 진입점·실패 식별·검색 상태 리뷰 반영](pr-174-course-public-screen-review.md)
 - [PR #172 AI Worker 운영·복구 경계](pr-172-ai-worker-key-rotation-review.md)

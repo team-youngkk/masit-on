@@ -29,6 +29,13 @@ public interface AiExtractionJobStore {
     record AiExtractionJobDraft(UUID jobId, String source, String priority, String channelId, String videoId,
                                 URI videoUrl, String inputMode, byte[] inputHash, String provider,
                                 String modelVersion, String promptVersion, String schemaVersion,
-                                java.time.OffsetDateTime createdAt) {
+                                java.time.OffsetDateTime createdAt, String retryReason) {
+        public AiExtractionJobDraft(UUID jobId, String source, String priority, String channelId, String videoId,
+                                    URI videoUrl, String inputMode, byte[] inputHash, String provider,
+                                    String modelVersion, String promptVersion, String schemaVersion,
+                                    java.time.OffsetDateTime createdAt) {
+            this(jobId, source, priority, channelId, videoId, videoUrl, inputMode, inputHash, provider,
+                    modelVersion, promptVersion, schemaVersion, createdAt, null);
+        }
     }
 }

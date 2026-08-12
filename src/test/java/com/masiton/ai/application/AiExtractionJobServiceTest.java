@@ -109,6 +109,22 @@ class AiExtractionJobServiceTest {
     }
 
     @Test
+    @DisplayName("수동 재시도 사유는 trim 후 새 작업 draft에 보존한다")
+    void submitRetry_사유trim_새작업에보존한다() {
+        when(resolver.resolve(any())).thenReturn(Optional.of(verifiedVideo()));
+        when(cipher.encrypt("새 입력")).thenReturn(new TemporaryInputCipher.EncryptedInput(new byte[]{1, 2}, "key-1"));
+        AiExtractionJobView created = queuedJob("https://www.youtube.com/watch?v=video-id");
+        when(store.insert(any())).thenReturn(Optional.of(created));
+
+        service.submitRetry("https://www.youtube.com/watch?v=video-id", " 새 입력 ", " 누락 보완 ");
+
+        ArgumentCaptor<AiExtractionJobStore.AiExtractionJobDraft> draft =
+                ArgumentCaptor.forClass(AiExtractionJobStore.AiExtractionJobDraft.class);
+        verify(store).insert(draft.capture());
+        assertThat(draft.getValue().retryReason()).isEqualTo("누락 보완");
+    }
+
+    @Test
     @DisplayName("보완 텍스트가 trim 후 2만 자를 초과하면 작업을 만들지 않고 거부한다")
     void submitAdmin_보완텍스트trim후초과길이_작업을만들지않고거부한다() {
         assertThatThrownBy(() -> service.submitAdmin(

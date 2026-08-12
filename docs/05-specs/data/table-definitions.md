@@ -272,7 +272,7 @@ Redis 세션 변경 뒤 PostgreSQL `sid` 폐기 표식을 기록하지 못한 �
 
 ## 17. 3차 확장 AI 영상 추출 테이블
 
-3차 확장 물리 테이블과 컬럼별 계약은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)의 표를 정본으로 사용하고, 실제 테이블 DDL은 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql), 재사용 조회 인덱스는 [`V5__add_ai_extraction_reuse_indexes.sql`](../../../src/main/resources/db/migration/V5__add_ai_extraction_reuse_indexes.sql)에 둔다.
+3차 확장 물리 테이블과 컬럼별 계약은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)의 표를 정본으로 사용하고, 실제 테이블 DDL은 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql), 재사용 조회 인덱스는 [`V5__add_ai_extraction_reuse_indexes.sql`](../../../src/main/resources/db/migration/V5__add_ai_extraction_reuse_indexes.sql), 재시도 사유·태그 롤백 provenance는 [`V7__add_ai_retry_and_tag_rollback_provenance.sql`](../../../src/main/resources/db/migration/V7__add_ai_retry_and_tag_rollback_provenance.sql)에 둔다.
 
 | 테이블 | 역할 | 핵심 무결성 |
 |---|---|---|
@@ -281,7 +281,7 @@ Redis 세션 변경 뒤 PostgreSQL `sid` 폐기 표식을 기록하지 못한 �
 | `ai_candidate_snapshot` | 버전별 후보와 근거 | 작업·버전 unique, JSON object/array·근거 Schema |
 | `ai_candidate_tag_review` | 후보 태그 자동 판단·사후 보정 이력 | Snapshot FK, decision·actor·replacement 조합 |
 | `tag_definition` | 통제 태그 정의·18개 초기 기준 데이터 | 코드 unique, 유형·상태·별칭·생성 근거 |
-| `visit_tag` | 확정 Visit와 태그 연결 | `(visit_id, tag_definition_id)` unique, AI 근거 경계 |
+| `visit_tag` | 확정 Visit와 태그 연결 | `(visit_id, tag_definition_id)` unique, AI 근거·Snapshot provenance |
 | `ai_extraction_attempt` | Provider 시도·오류·비용 메타데이터 | `(job_id, attempt_no)` unique, 결과·오류 조합 |
 | `youtube_channel_watch` | YouTube 채널 감시·갱신 상태 | Creator·채널별 unique, 구독 상태 |
 
