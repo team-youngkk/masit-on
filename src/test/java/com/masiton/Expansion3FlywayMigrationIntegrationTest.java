@@ -166,6 +166,9 @@ class Expansion3FlywayMigrationIntegrationTest {
     }
 
     private void assertAiSchemaAndContracts(JdbcTemplate jdbcTemplate, String schema) {
+        boolean includesV6 = jdbcTemplate.queryForObject("SELECT count(*) FROM information_schema.columns "
+                + "WHERE table_schema=? AND table_name='ai_candidate_snapshot' "
+                + "AND column_name='registered_restaurant_id'", Integer.class, schema) == 1;
         boolean includesV7 = jdbcTemplate.queryForObject("SELECT count(*) FROM information_schema.columns "
                 + "WHERE table_schema=? AND table_name='ai_extraction_job' AND column_name='retry_reason'",
                 Integer.class, schema) == 1;
@@ -256,6 +259,12 @@ class Expansion3FlywayMigrationIntegrationTest {
         if (!includesV7) {
             expectedForeignKeys.remove("fk_visit_tag__created_from_snapshot");
         }
+        if (!includesV6) {
+            expectedForeignKeys.remove("fk_ai_snapshot__registered_restaurant");
+            expectedForeignKeys.remove("fk_ai_snapshot__registered_creator");
+            expectedForeignKeys.remove("fk_ai_snapshot__registered_video");
+            expectedForeignKeys.remove("fk_ai_snapshot__registered_visit");
+        }
         assertThat(foreignKeys).containsOnlyKeys(expectedForeignKeys.keySet());
         expectedForeignKeys.forEach((name, fragments) -> assertThat(foreignKeys.get(name))
                 .as(name)
@@ -285,9 +294,10 @@ class Expansion3FlywayMigrationIntegrationTest {
                         "ck_ai_candidate_snapshot__review_status", "ck_ai_candidate_snapshot__review_state",
                         "ck_ai_candidate_snapshot__reviewed_after_created"),
                 "ai_candidate_tag_review", List.of(
-                        "ck_ai_candidate_tag_review__candidate_tag_id_not_blank",
-                        "ck_ai_candidate_tag_review__decision", "ck_ai_candidate_tag_review__decision_source",
-                        "ck_ai_candidate_tag_review__decision_pair", "ck_ai_candidate_tag_review__decision_actor"),
+                         "ck_ai_candidate_tag_review__candidate_tag_id_not_blank",
+                         "ck_ai_candidate_tag_review__decision", "ck_ai_candidate_tag_review__decision_source",
+                         "ck_ai_candidate_tag_review__decision_pair", "ck_ai_candidate_tag_review__decision_actor",
+                         "ck_ai_candidate_tag_review__manual_tag_code"),
                 "tag_definition", List.of(
                         "ck_tag_definition__code_not_blank", "ck_tag_definition__type",
                         "ck_tag_definition__display_name_not_blank", "ck_tag_definition__aliases_array",
@@ -311,6 +321,10 @@ class Expansion3FlywayMigrationIntegrationTest {
         if (!includesV7) {
             expectedChecks.put("ai_extraction_job", expectedChecks.get("ai_extraction_job").subList(0,
                     expectedChecks.get("ai_extraction_job").size() - 1));
+        }
+        if (!includesV6) {
+            expectedChecks.put("ai_candidate_tag_review", expectedChecks.get("ai_candidate_tag_review").subList(0,
+                    expectedChecks.get("ai_candidate_tag_review").size() - 1));
         }
         expectedChecks.forEach((table, names) -> assertThat(jdbcTemplate.queryForList(
                 "SELECT conname FROM pg_constraint WHERE connamespace=current_schema()::regnamespace "
