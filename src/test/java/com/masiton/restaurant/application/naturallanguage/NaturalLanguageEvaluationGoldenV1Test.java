@@ -125,6 +125,16 @@ class NaturalLanguageEvaluationGoldenV1Test {
                 violations.add(testCase.caseId() + " ignoredReasons expected=" + testCase.expectedIgnoredReasons()
                         + " actual=" + actualReasons);
             }
+            if (testCase.evalIds().contains("EVAL-NL-003")) {
+                Set<String> actualIgnoredTexts = actual.interpretation().ignoredConditions().stream()
+                        .filter(condition -> testCase.expectedIgnoredReasons().contains(condition.reason()))
+                        .map(IgnoredCondition::text)
+                        .collect(Collectors.toSet());
+                if (!actualIgnoredTexts.containsAll(testCase.expectedIgnoredTexts())) {
+                    violations.add(testCase.caseId() + " ignoredTexts expected=" + testCase.expectedIgnoredTexts()
+                            + " actual=" + actualIgnoredTexts);
+                }
+            }
             Set<String> actualConflictFields = actual.interpretation().conflicts().stream()
                     .map(conflict -> conflict.field().name())
                     .collect(Collectors.toSet());
@@ -171,14 +181,6 @@ class NaturalLanguageEvaluationGoldenV1Test {
                 Set<String> unexpected = atoms(actual);
                 unexpected.removeAll(atoms(expected));
                 unsupportedFalseApplications += unexpected.size();
-                Set<String> ignoredUnsupportedTexts = parseResult.interpretation().ignoredConditions().stream()
-                        .filter(condition -> testCase.expectedIgnoredReasons().contains(condition.reason()))
-                        .map(IgnoredCondition::text)
-                        .collect(Collectors.toSet());
-                if (parseResult.status() != testCase.expectedStatus()
-                        || !ignoredUnsupportedTexts.containsAll(testCase.expectedIgnoredTexts())) {
-                    unsupportedFalseApplications++;
-                }
             }
         }
         return new EvaluationStats(

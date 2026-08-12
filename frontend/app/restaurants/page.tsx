@@ -70,6 +70,7 @@ export default async function RestaurantsPage({
 
       <NaturalLanguageRestaurantSearch
         structuredFormId="structured-restaurant-search"
+        creatorLabels={creatorsResult.ok ? Object.fromEntries(creatorsResult.data.items.map((creator) => [creator.id, creator.channelName])) : {}}
         filters={{
           query: currentQuery.trim() || null,
           district: currentDistrict || null,

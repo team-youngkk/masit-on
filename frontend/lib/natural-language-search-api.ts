@@ -8,6 +8,28 @@ export type NaturalLanguageRestaurant = { id: string; name: string; district: st
 export type NaturalLanguageResult = { interpretation: { status: 'APPLIED' | 'PARTIAL' | 'FAILED'; appliedConditions: NaturalLanguageCondition; ignoredConditions: Array<{ type: string; text: string; reason: string }>; conflicts: Array<{ field: string; resolution: string }>; parserVersion: string }; results: { items: NaturalLanguageRestaurant[]; page: { number: number; size: number; totalElements: number; totalPages: number; hasNext: boolean } } }
 export type NaturalLanguageSearchOutcome = { kind: 'success'; result: NaturalLanguageResult } | { kind: 'invalid'; message: string; traceId?: string } | { kind: 'rateLimited'; message: string; traceId?: string; retryAvailableAt: number | null } | { kind: 'unavailable'; message: string; traceId?: string } | { kind: 'error'; message: string; traceId?: string; retryAllowed: boolean }
 
+const CONDITION_LABELS: Record<keyof NaturalLanguageCondition, string> = { query: '이름', district: '자치구', category: '음식 종류', creatorId: '유튜버', tags: '태그' }
+const TAG_LABELS: Record<string, string> = {
+  MENU_NAENGMYEON: '냉면', MENU_GUKBAP: '국밥', MENU_RAMEN: '라멘', MENU_SUSHI: '스시', MENU_PIZZA: '피자', MENU_SAMGYEOPSAL: '삼겹살',
+  TASTE_SPICY: '매운맛', TASTE_SWEET: '단맛', TASTE_SAVORY: '감칠맛', TASTE_LIGHT: '담백한 맛',
+  OCCASION_SOLO: '혼밥', OCCASION_DATE: '데이트', OCCASION_GROUP: '모임', OCCASION_LATE_NIGHT: '야식',
+  ATMOSPHERE_CASUAL: '캐주얼', ATMOSPHERE_QUIET: '조용한', ATMOSPHERE_LIVELY: '활기찬', ATMOSPHERE_BAR: '바',
+}
+
+export function naturalLanguageConditionLabel(field: string): string {
+  const normalized = field.replaceAll('_', '').toLowerCase()
+  return Object.entries(CONDITION_LABELS).find(([key]) => key.toLowerCase() === normalized)?.[1] ?? field
+}
+
+export function formatNaturalLanguageAppliedConditions(conditions: NaturalLanguageCondition, creatorLabels: Record<string, string>): string[] {
+  return Object.entries(conditions).flatMap(([field, value]) => {
+    if (field === 'tags' && Array.isArray(value)) return value.length ? [`태그: ${value.map((tag) => TAG_LABELS[tag] ?? '알 수 없는 태그').join(', ')}`] : []
+    if (!value || Array.isArray(value)) return []
+    const displayValue = field === 'creatorId' ? creatorLabels[value] ?? '선택한 유튜버' : value
+    return [`${naturalLanguageConditionLabel(field)}: ${displayValue}`]
+  })
+}
+
 export function naturalLanguageFiltersFromFormData(data: FormData, tags: string[] = []): NaturalLanguageSearchFilters {
   const value = (name: string) => {
     const entry = data.get(name)
@@ -44,6 +66,8 @@ export function decodeNaturalLanguageResult(value: unknown): NaturalLanguageResu
 }
 
 export function isNaturalLanguageRetryAllowed(outcome: NaturalLanguageSearchOutcome): boolean { return outcome.kind === 'rateLimited' || outcome.kind === 'unavailable' || (outcome.kind === 'error' && outcome.retryAllowed) }
+
+export function naturalLanguageRetryDelay(retryAvailableAt: number, responseTime: number): number { return Math.max(0, retryAvailableAt - responseTime) }
 
 export async function searchRestaurantsByNaturalLanguage(sentence: string, filters: NaturalLanguageSearchFilters, page = 1, signal?: AbortSignal): Promise<NaturalLanguageSearchOutcome> {
   let response: Response
