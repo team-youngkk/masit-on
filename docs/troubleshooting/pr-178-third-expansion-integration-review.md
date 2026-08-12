@@ -51,7 +51,7 @@ related_documents:
 |---|---|---|
 | 관련 V4/V6/V7 migration의 FK·트리거 확인 | `tag_definition`은 snapshot을 참조하고, audit review는 append-only DELETE trigger를 가짐 | audit table은 `TRUNCATE`하고 나머지는 FK 순서대로 명시 삭제 |
 | `./gradlew.bat compileTestJava --no-daemon --console=plain` | 통과 | 소스·fixture 타입 수정 완료 |
-| 대상 통합 테스트 실행 | Docker 환경 초기화에서 실패 | Testcontainers 실행은 Docker Desktop이 उपलब्ध한 환경에서 재확인 필요 |
+| 대상 통합 테스트 실행 | Docker 환경 초기화에서 실패 | Testcontainers 실행은 Docker Desktop을 사용할 수 있는 환경에서 재확인 필요 |
 
 ## 6. 최종 해결
 
