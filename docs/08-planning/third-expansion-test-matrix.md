@@ -6,6 +6,7 @@ related_documents:
   - third-expansion-baseline-review.md
   - third-expansion-scope-and-terminology.md
   - third-expansion-evaluation-strategy.md
+  - third-expansion-ai-evaluation-result.md
   - third-expansion-implementation-plan.md
   - third-expansion-task-breakdown.md
   - ../01-requirements/functional-requirements.md
@@ -72,10 +73,10 @@ related_documents:
 | 평가 ID 범위 | 평가 대상 | 연결 테스트 | 연결 Task |
 |---|---|---|---|
 | `EVAL-NL-001~007` | 조건 정확성·미지원 안전성·직접 필터·공개·복구·태그 AND | `TST-E3-NL-001~002`, `TST-E3-E2E-001` | `E3-T02`, `E3-T12` |
-| `EVAL-AI-001~010` | Schema·장소·방문 근거·불확실성·원자성·복구·영상 입력·태그 | `TST-E3-AI-001~004`, `TST-E3-DATA-001`, `TST-E3-SEC-001` | `E3-T08`, `E3-T11`, `E3-T13` |
+| `EVAL-AI-001~010` | Schema·장소·방문 근거·불확실성·원자성·복구·영상 입력·태그 | `TST-E3-AI-001~004`, `TST-E3-DATA-001`, `TST-E3-SEC-001`; [manifest](../../src/test/resources/eval/aiextract-golden-v1.0.0/manifest.json)·[cases](../../src/test/resources/eval/aiextract-golden-v1.0.0/cases.json)·[평가기](../../src/test/java/com/masiton/ai/application/AiExtractionGoldenEvaluationTest.java)·[HOLD 판정](third-expansion-ai-evaluation-result.md#3-eval-ai-001010-증거-경로와-현재-상태) | `E3-T08`, `E3-T11`, `E3-T13` |
 | `EVAL-COURSE-001~005` | 입력 경계·경로·실패 안전성·만료·호출·비용 | `TST-E3-COURSE-001~003`, `TST-E3-PERF-001` | `E3-T10`, `E3-T13` |
 
-자연어 Dataset 240건, AI Dataset 120건, 코스 Fixture 60건의 분할·정답·판정 기준은 평가 전략을 따른다. 이 문서는 Dataset 내용을 복제하지 않고 실행 묶음과 구현 Task만 연결한다.
+자연어 Dataset 240건, AI Dataset 120건, 코스 Fixture 60건의 분할·정답·판정 기준은 평가 전략을 따른다. AI 120건은 Development 72건·Calibration 24건·Release holdout 24건이며, 실제 Release holdout과 인간 판정 승인 전 상태는 [`HOLD`](third-expansion-ai-evaluation-result.md)다. 이 문서는 Dataset 내용을 복제하지 않고 실행 묶음과 구현 Task만 연결한다.
 
 ## 5. 브라우저·운영·성능 증거
 
