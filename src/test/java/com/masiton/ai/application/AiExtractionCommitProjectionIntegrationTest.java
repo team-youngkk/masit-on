@@ -6,10 +6,9 @@ import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static com.masiton.test.IntegrationTestFixtures.sha256;
 
 import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -55,7 +54,17 @@ class AiExtractionCommitProjectionIntegrationTest extends FullContextIntegration
 
     @BeforeEach
     void cleanUpState() {
-        jdbcTemplate.execute("TRUNCATE TABLE visit_tag, visit, video, creator, restaurant CASCADE");
+        jdbcTemplate.execute("TRUNCATE TABLE ai_candidate_tag_review, ai_extraction_manual_review");
+        jdbcTemplate.execute("DELETE FROM visit_tag");
+        jdbcTemplate.execute("DELETE FROM tag_definition WHERE source <> 'SEED'");
+        jdbcTemplate.execute("DELETE FROM ai_candidate_snapshot");
+        jdbcTemplate.execute("DELETE FROM ai_extraction_attempt");
+        jdbcTemplate.execute("DELETE FROM ai_extraction_temporary_input");
+        jdbcTemplate.execute("DELETE FROM ai_extraction_job");
+        jdbcTemplate.execute("DELETE FROM visit");
+        jdbcTemplate.execute("DELETE FROM video");
+        jdbcTemplate.execute("DELETE FROM creator");
+        jdbcTemplate.execute("DELETE FROM restaurant");
         given(naturalLanguageRateLimitPort.tryAcquire(any())).willReturn(true);
     }
 
@@ -121,7 +130,7 @@ class AiExtractionCommitProjectionIntegrationTest extends FullContextIntegration
                         + "road_address, phone_number, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 restaurantId, REGION_ID, CATEGORY_ID, "기존 AI 맛집", "kakao-existing-" + restaurantId,
                 "https://example.com/place/" + restaurantId, "서울특별시 마포구 테스트로 1", "02-1234-5678",
-                "37.566500", "126.978000");
+                BigDecimal.valueOf(37.5665), BigDecimal.valueOf(126.978));
         UUID creatorId = UUID.randomUUID();
         jdbcTemplate.update(
                 "INSERT INTO creator (id, external_channel_id, channel_name, channel_url, "
@@ -153,17 +162,9 @@ class AiExtractionCommitProjectionIntegrationTest extends FullContextIntegration
                 ) VALUES (?, 'ADMIN', 'REALTIME', 'ai-commit-channel', ?, ?, 'ADMIN_TEXT', ?,
                           'GOOGLE_GEMINI', 'gemini-3-flash-preview', 'P1', 'S1',
                           'RUNNING', 1, 'worker-1', ?, ?, ?)
-                """, jobId, videoId, "https://www.youtube.com/watch?v=" + videoId, hash(jobId.toString()),
+                """, jobId, videoId, "https://www.youtube.com/watch?v=" + videoId, sha256(jobId.toString()),
                 startedAt.plusMinutes(5), startedAt.minusSeconds(1), startedAt);
         return jobId;
-    }
-
-    private byte[] hash(String value) {
-        try {
-            return MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));
-        } catch (Exception exception) {
-            throw new AssertionError(exception);
-        }
     }
 
     private record Fixture(UUID restaurantId, UUID creatorId, UUID videoId, UUID visitId) {
