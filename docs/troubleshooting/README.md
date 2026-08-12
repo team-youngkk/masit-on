@@ -10,6 +10,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #173 AI 후보 자동 등록 리뷰 반영](pr-173-ai-candidate-auto-registration-review.md)
 - [PR #174 코스 공개 진입점·실패 식별·검색 상태 리뷰 반영](pr-174-course-public-screen-review.md)
 - [PR #172 AI Worker 운영·복구 경계](pr-172-ai-worker-key-rotation-review.md)
 - [PR #171 코스 경로 외부 연동·quota 경계 리뷰 반영](pr-171-course-route-review.md)
