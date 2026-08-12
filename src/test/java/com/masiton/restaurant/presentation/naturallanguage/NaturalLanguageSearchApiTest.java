@@ -74,6 +74,11 @@ class NaturalLanguageSearchApiTest {
     @BeforeEach
     void cleanUpTransactionalTables() {
         jdbcTemplate.execute("TRUNCATE TABLE visit, video, creator, restaurant CASCADE");
+        jdbcTemplate.update("""
+                INSERT INTO tag_definition (id, tag_code, tag_type, display_name, aliases, status, source)
+                VALUES ('30000000-0000-4000-8000-000000000001', 'MENU_NAENGMYEON', 'MENU', '냉면', '[]'::jsonb, 'ACTIVE', 'SEED')
+                ON CONFLICT (tag_code) DO UPDATE SET status = 'ACTIVE'
+                """);
         jdbcTemplate.update("UPDATE tag_definition SET status = 'ACTIVE' WHERE tag_code = 'MENU_NAENGMYEON'");
         when(rateLimitPort.tryAcquire("127.0.0.1")).thenReturn(true);
     }

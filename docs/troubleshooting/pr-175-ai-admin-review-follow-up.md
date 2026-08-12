@@ -148,5 +148,15 @@ related_documents:
 | `gradlew.bat compileJava compileTestJava` | 통과 |
 | AI 검수 서비스·QueryService·Controller 대상 테스트 | 통과 |
 | 원본 provenance 전달 단위 테스트 | 통과 |
-| CONFIRM→ROLLBACK PostgreSQL 통합 테스트 | 코드 추가, 로컬 Docker 엔진 부재로 미실행 |
-| GitHub Actions 최신 백엔드 | V6 CHECK 누락 수정 후 재실행 대기 |
+| CONFIRM→ROLLBACK PostgreSQL 통합 테스트 | 통과 |
+| GitHub Actions 최신 백엔드 | `31559691332`에서 1094건 중 3건 실패; 아래 12.4의 테스트 fixture 보완 후 재실행 예정 |
+
+### 12.4 CI 후속 실패와 fixture 보완
+
+`V6`·`V7` 추가로 `TRUNCATE ... CASCADE`의 의존 경로가 확장되면서 일부 통합 테스트의 기준 태그가 함께 정리되는 것을 확인했다. 테스트가 Flyway 기준 태그가 항상 존재한다고 가정해 직접 `INSERT ... ON CONFLICT`로 필요한 `MENU_NAENGMYEON`·`OCCASION_SOLO`를 복원하도록 보완했다. 같은 실행에서 확인된 최신 마이그레이션 컬럼 계약에는 V6 등록 ID·생성 여부 컬럼 8개를 추가하고, 구버전 단계에서는 컬럼명 기준으로 제외하도록 수정했다.
+
+로컬에서 다음 세 회귀 테스트를 재실행해 통과를 확인했다.
+
+- 최신 V4~V7 마이그레이션 컬럼 계약
+- 여러 태그가 같은 Visit에 연결된 맛집 검색
+- 동일한 자연어·직접 필터의 `APPLIED` 응답

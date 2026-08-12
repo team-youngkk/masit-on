@@ -388,7 +388,9 @@ class Expansion3FlywayMigrationIntegrationTest {
                 "ai_candidate_snapshot", List.of(
                         "id", "job_id", "snapshot_version", "candidate_fields", "candidate_tags",
                         "field_confidences", "evidence", "missing_fields", "review_status", "reviewed_by",
-                        "review_reason", "reviewed_at", "created_at"),
+                        "review_reason", "reviewed_at", "created_at", "registered_restaurant_id",
+                        "registered_creator_id", "registered_video_id", "registered_visit_id",
+                        "restaurant_created", "creator_created", "video_created", "visit_created"),
                 "ai_candidate_tag_review", List.of(
                         "id", "snapshot_id", "candidate_tag_id", "decision", "replacement_tag_definition_id",
                         "reason", "decision_source", "reviewed_by", "reviewed_at", "manual_tag_code"),
@@ -406,6 +408,11 @@ class Expansion3FlywayMigrationIntegrationTest {
                         "subscription_token_hash", "last_notification_at", "last_renewed_at", "last_error_category",
                         "created_at", "updated_at")));
         if (!includesV6) {
+            List<String> v6SnapshotColumns = List.of(
+                    "registered_restaurant_id", "registered_creator_id", "registered_video_id", "registered_visit_id",
+                    "restaurant_created", "creator_created", "video_created", "visit_created");
+            expectedColumns.put("ai_candidate_snapshot", expectedColumns.get("ai_candidate_snapshot").stream()
+                    .filter(column -> !v6SnapshotColumns.contains(column)).toList());
             expectedColumns.put("ai_candidate_tag_review", expectedColumns.get("ai_candidate_tag_review").stream()
                     .filter(column -> !column.equals("manual_tag_code")).toList());
         }
