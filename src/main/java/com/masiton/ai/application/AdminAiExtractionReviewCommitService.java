@@ -46,11 +46,12 @@ public class AdminAiExtractionReviewCommitService {
                          List<AiExtractionAdminQueryPort.TagDecision> tags) {
         AiExtractionAdminQueryPort.ReviewTarget target = current(jobId, expected);
         AiExtractionAdminQueryPort.RegisteredContent registered = target.registeredContent();
-        if (registered == null || registered.visitId() == null || !registered.visitCreated()) {
+        if (registered == null || registered.registrationSnapshotId() == null || registered.visitId() == null
+                || !registered.visitCreated()) {
             throw new BusinessException(HttpStatus.CONFLICT, "AIEXTRACT_DUPLICATE_CONFLICT", "The registered Visit was reused and cannot be rolled back safely.");
         }
         rollback.rollback(new RollbackAiRegisteredContentUseCase.RegistrationReference(
-                target.snapshotId(), registered.restaurantId(), registered.restaurantCreated(), registered.creatorId(), registered.creatorCreated(),
+                registered.registrationSnapshotId(), registered.restaurantId(), registered.restaurantCreated(), registered.creatorId(), registered.creatorCreated(),
                 registered.videoId(), registered.videoCreated(), registered.visitId(), registered.visitCreated()));
         complete(target, expected, adminId, reason, "ROLLBACK", tags);
     }

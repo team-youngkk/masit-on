@@ -29,6 +29,13 @@ public interface AiExtractionAdminQueryPort {
                         String videoUrl, JsonNode candidateFields, JsonNode candidateTags, JsonNode fieldConfidences, JsonNode evidence,
                         RegisteredContent registeredContent) { }
     record RegisteredContent(UUID restaurantId, boolean restaurantCreated, UUID creatorId, boolean creatorCreated,
-                             UUID videoId, boolean videoCreated, UUID visitId, boolean visitCreated) { }
+                             UUID videoId, boolean videoCreated, UUID visitId, boolean visitCreated,
+                             UUID registrationSnapshotId) {
+        public RegisteredContent(UUID restaurantId, boolean restaurantCreated, UUID creatorId, boolean creatorCreated,
+                                 UUID videoId, boolean videoCreated, UUID visitId, boolean visitCreated) {
+            this(restaurantId, restaurantCreated, creatorId, creatorCreated, videoId, videoCreated, visitId,
+                    visitCreated, null);
+        }
+    }
     record TagDecision(String candidateTagId, String decision, String tagCode) { }
 }

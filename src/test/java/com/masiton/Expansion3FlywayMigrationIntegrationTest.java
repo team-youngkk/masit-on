@@ -23,6 +23,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import com.masiton.ai.application.AiExtractionContract;
+import com.masiton.ai.application.port.out.AiExtractionAdminQueryPort;
 import com.masiton.ai.application.port.out.AiExtractionJobStore;
 import com.masiton.ai.infrastructure.persistence.JdbcAiExtractionJobStore;
 import com.masiton.ai.infrastructure.persistence.JdbcAiExtractionAdminQueryAdapter;
@@ -143,6 +144,47 @@ class Expansion3FlywayMigrationIntegrationTest {
                 Integer.class, fixture.visitId(), snapshotId)).isZero();
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM visit_tag WHERE visit_id=? AND created_from_snapshot_id IS NULL",
                 Integer.class, fixture.visitId())).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("CONFIRM 후 ROLLBACK은 원본 등록 Snapshot의 VisitTag provenance를 사용한다")
+    void 관리자확정후롤백_원본등록SnapshotProvenance를사용한다() {
+        JdbcTemplate jdbcTemplate = migratedJdbcTemplate();
+        Fixture fixture = insertFixture(jdbcTemplate);
+        UUID jobId = insertJob(jdbcTemplate, "ADMIN", "ADMIN_TEXT", "confirm-rollback-video", bytes(33));
+        UUID adminId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO admin_account (id, login_id, password_hash) VALUES (?, ?, 'password-hash')",
+                adminId, "admin-" + adminId);
+        UUID originalSnapshotId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO ai_candidate_snapshot (id, job_id, snapshot_version, candidate_fields, candidate_tags, "
+                        + "field_confidences, evidence, missing_fields, review_status, registered_visit_id, visit_created) "
+                        + "VALUES (?, ?, 1, '{}'::jsonb, '[]'::jsonb, '{}'::jsonb, '{}'::jsonb, '[]'::jsonb, "
+                        + "'AUTO_CONFIRMED', ?, true)",
+                originalSnapshotId, jobId, fixture.visitId());
+        jdbcTemplate.update(
+                "INSERT INTO visit_tag (id, visit_id, tag_definition_id, source, confidence, evidence, "
+                        + "extractor_version, created_from_snapshot_id) VALUES (?, ?, ?, 'AI_AUTO_CONFIRMED', "
+                        + "0.9000, '{\"type\":\"TIMESTAMP\",\"startMs\":1,\"endMs\":2}'::jsonb, 'P1/S1', ?)",
+                UUID.randomUUID(), fixture.visitId(), SEEDED_TAG_ID, originalSnapshotId);
+
+        JdbcAiExtractionAdminQueryAdapter adapter = new JdbcAiExtractionAdminQueryAdapter(jdbcTemplate, new ObjectMapper());
+        UUID overrideSnapshotId = adapter.override(originalSnapshotId, "AUTO_CONFIRMED", adminId, "확인", "CONFIRM");
+        AiExtractionAdminQueryPort.ReviewTarget target = adapter.reviewTarget(jobId).orElseThrow();
+
+        assertThat(overrideSnapshotId).isEqualTo(target.snapshotId());
+        assertThat(target.registeredContent().registrationSnapshotId()).isEqualTo(originalSnapshotId);
+
+        new JdbcAiRegisteredContentStore(jdbcTemplate).makePrivateIfCreated(
+                target.registeredContent().registrationSnapshotId(), null, false, null, false, null, false,
+                target.registeredContent().visitId(), target.registeredContent().visitCreated());
+
+        assertThat(jdbcTemplate.queryForObject("SELECT publication_status FROM visit WHERE id=?", String.class,
+                fixture.visitId())).isEqualTo("PRIVATE");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM visit_tag WHERE visit_id=? AND created_from_snapshot_id=?", Integer.class,
+                fixture.visitId(), originalSnapshotId)).isZero();
     }
 
     private void assertManualReviewSchema(JdbcTemplate jdbcTemplate, String schema) {
@@ -292,12 +334,14 @@ class Expansion3FlywayMigrationIntegrationTest {
                         "ck_ai_candidate_snapshot__field_confidences_object",
                         "ck_ai_candidate_snapshot__evidence_object", "ck_ai_candidate_snapshot__missing_fields_array",
                         "ck_ai_candidate_snapshot__review_status", "ck_ai_candidate_snapshot__review_state",
-                        "ck_ai_candidate_snapshot__reviewed_after_created"),
+                        "ck_ai_candidate_snapshot__reviewed_after_created",
+                        "ck_ai_snapshot__registration_flags", "ck_ai_snapshot__registration_flags_creator",
+                        "ck_ai_snapshot__registration_flags_video", "ck_ai_snapshot__registration_flags_visit"),
                 "ai_candidate_tag_review", List.of(
-                         "ck_ai_candidate_tag_review__candidate_tag_id_not_blank",
-                         "ck_ai_candidate_tag_review__decision", "ck_ai_candidate_tag_review__decision_source",
-                         "ck_ai_candidate_tag_review__decision_pair", "ck_ai_candidate_tag_review__decision_actor",
-                         "ck_ai_candidate_tag_review__manual_tag_code"),
+                        "ck_ai_candidate_tag_review__candidate_tag_id_not_blank",
+                        "ck_ai_candidate_tag_review__decision", "ck_ai_candidate_tag_review__decision_source",
+                        "ck_ai_candidate_tag_review__decision_pair", "ck_ai_candidate_tag_review__decision_actor",
+                        "ck_ai_candidate_tag_review__manual_tag_code"),
                 "tag_definition", List.of(
                         "ck_tag_definition__code_not_blank", "ck_tag_definition__type",
                         "ck_tag_definition__display_name_not_blank", "ck_tag_definition__aliases_array",
@@ -319,12 +363,14 @@ class Expansion3FlywayMigrationIntegrationTest {
                         "ck_youtube_channel_watch__last_error_not_blank",
                         "ck_youtube_channel_watch__updated_after_created")));
         if (!includesV7) {
-            expectedChecks.put("ai_extraction_job", expectedChecks.get("ai_extraction_job").subList(0,
-                    expectedChecks.get("ai_extraction_job").size() - 1));
+            expectedChecks.put("ai_extraction_job", expectedChecks.get("ai_extraction_job").stream()
+                    .filter(name -> !name.equals("ck_ai_extraction_job__retry_reason")).toList());
         }
         if (!includesV6) {
-            expectedChecks.put("ai_candidate_tag_review", expectedChecks.get("ai_candidate_tag_review").subList(0,
-                    expectedChecks.get("ai_candidate_tag_review").size() - 1));
+            expectedChecks.put("ai_candidate_snapshot", expectedChecks.get("ai_candidate_snapshot").stream()
+                    .filter(name -> !name.startsWith("ck_ai_snapshot__registration_flags")).toList());
+            expectedChecks.put("ai_candidate_tag_review", expectedChecks.get("ai_candidate_tag_review").stream()
+                    .filter(name -> !name.equals("ck_ai_candidate_tag_review__manual_tag_code")).toList());
         }
         expectedChecks.forEach((table, names) -> assertThat(jdbcTemplate.queryForList(
                 "SELECT conname FROM pg_constraint WHERE connamespace=current_schema()::regnamespace "

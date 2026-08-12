@@ -124,3 +124,29 @@ related_documents:
 | 프론트 전체 `npm test` | 기존 의존성/Node strip-only 환경 문제로 3개 파일 실패; 새 AI coordination 테스트는 별도 실행 통과 |
 
 변경 파일은 V7 migration, AI 작업·검수·롤백 Port/Service/Adapter, Controller, 프론트 오류 안내·테스트, 관련 데이터/API 계약 문서와 Flyway 회귀 테스트다. 정량 지표는 기존 PR에서 측정하지 않아 이번에도 추정하지 않았으며, CI에서 목록 SQL 성공·Snapshot 태그 삭제 수·기존 태그 잔존 수를 fixture 기준으로 확인한다.
+
+## 12. 최신 리뷰 반영: V6 계약 기대와 CONFIRM→ROLLBACK provenance
+
+### 12.1 스레드별 판단
+
+| 스레드 | 문제 유형 | 판단 | 처리 |
+|---|---|---|---|
+| [3763195109](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3763195109) | 데이터베이스 | 수정 필요 | 최신 Snapshot 계약 기대 목록에 V6 등록 플래그 CHECK 4개를 추가하고, V6 미적용 단계에서는 이름 기준으로 제외하도록 보완했다. |
+| [3763204542](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3763204542) | 데이터베이스 | 수정 필요 | 위 V6 CHECK 누락과 같은 CI 실패를 재현 로그로 확인했으며, V6/V7 제약 제거를 위치가 아닌 제약명 기준으로 바꿨다. |
+| [3763206935](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3763206935) | 데이터베이스 | 수정 필요 | CONFIRM override Snapshot이 원본 등록 Snapshot의 ID를 보존해 ROLLBACK이 원본 `created_from_snapshot_id`를 사용하도록 수정했다. |
+
+### 12.2 원인과 해결
+
+- V6 마이그레이션은 `ai_candidate_snapshot`에 등록 플래그 CHECK 4개를 추가했지만, 최신 단계 계약 테스트의 기대 목록에는 해당 제약이 빠져 있었다. V4 단계와 V6 이상 단계를 `includesV6`로 구분하고, `includesV6=false`일 때 제약명을 필터링하도록 했다.
+- CONFIRM은 등록 정보를 최신 Snapshot으로 복사하지만 VisitTag provenance는 최초 등록 Snapshot ID로 저장한다. 이후 ROLLBACK이 최신 MANUAL_OVERRIDE Snapshot ID를 전달해 삭제 대상 태그를 찾지 못하는 문제가 있었다.
+- Adapter가 작업 내 등록 정보가 처음 기록된 Snapshot을 오름차순으로 조회해 `registrationSnapshotId`로 반환하고, 커밋 서비스가 해당 ID를 롤백 Port에 전달하도록 변경했다. 원본 ID가 없으면 안전하게 409로 거부한다.
+
+### 12.3 검증
+
+| 검증 | 결과 |
+|---|---|
+| `gradlew.bat compileJava compileTestJava` | 통과 |
+| AI 검수 서비스·QueryService·Controller 대상 테스트 | 통과 |
+| 원본 provenance 전달 단위 테스트 | 통과 |
+| CONFIRM→ROLLBACK PostgreSQL 통합 테스트 | 코드 추가, 로컬 Docker 엔진 부재로 미실행 |
+| GitHub Actions 최신 백엔드 | V6 CHECK 누락 수정 후 재실행 대기 |

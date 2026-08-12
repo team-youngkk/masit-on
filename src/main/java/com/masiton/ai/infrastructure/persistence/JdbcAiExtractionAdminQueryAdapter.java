@@ -72,7 +72,17 @@ public class JdbcAiExtractionAdminQueryAdapter implements AiExtractionAdminQuery
                        snapshot.registered_restaurant_id, snapshot.restaurant_created,
                        snapshot.registered_creator_id, snapshot.creator_created,
                        snapshot.registered_video_id, snapshot.video_created,
-                       snapshot.registered_visit_id, snapshot.visit_created
+                       snapshot.registered_visit_id, snapshot.visit_created,
+                       (SELECT registration_snapshot.id
+                          FROM ai_candidate_snapshot registration_snapshot
+                         WHERE registration_snapshot.job_id = snapshot.job_id
+                           AND (registration_snapshot.registered_restaurant_id IS NOT NULL
+                                OR registration_snapshot.registered_creator_id IS NOT NULL
+                                OR registration_snapshot.registered_video_id IS NOT NULL
+                                OR registration_snapshot.registered_visit_id IS NOT NULL)
+                         ORDER BY registration_snapshot.snapshot_version ASC,
+                                  registration_snapshot.created_at ASC, registration_snapshot.id ASC
+                         LIMIT 1) AS registration_snapshot_id
                   FROM ai_candidate_snapshot snapshot
                   JOIN ai_extraction_job job ON job.id = snapshot.job_id
                  WHERE snapshot.job_id=?
@@ -93,7 +103,17 @@ public class JdbcAiExtractionAdminQueryAdapter implements AiExtractionAdminQuery
                        snapshot.registered_restaurant_id, snapshot.restaurant_created,
                        snapshot.registered_creator_id, snapshot.creator_created,
                        snapshot.registered_video_id, snapshot.video_created,
-                       snapshot.registered_visit_id, snapshot.visit_created
+                       snapshot.registered_visit_id, snapshot.visit_created,
+                       (SELECT registration_snapshot.id
+                          FROM ai_candidate_snapshot registration_snapshot
+                         WHERE registration_snapshot.job_id = snapshot.job_id
+                           AND (registration_snapshot.registered_restaurant_id IS NOT NULL
+                                OR registration_snapshot.registered_creator_id IS NOT NULL
+                                OR registration_snapshot.registered_video_id IS NOT NULL
+                                OR registration_snapshot.registered_visit_id IS NOT NULL)
+                         ORDER BY registration_snapshot.snapshot_version ASC,
+                                  registration_snapshot.created_at ASC, registration_snapshot.id ASC
+                         LIMIT 1) AS registration_snapshot_id
                   FROM ai_candidate_snapshot snapshot
                   JOIN ai_extraction_job job ON job.id = snapshot.job_id
                  WHERE snapshot.job_id=?
@@ -336,6 +356,7 @@ public class JdbcAiExtractionAdminQueryAdapter implements AiExtractionAdminQuery
         return new RegisteredContent(restaurantId, Boolean.TRUE.equals(rs.getObject("restaurant_created", Boolean.class)),
                 creatorId, Boolean.TRUE.equals(rs.getObject("creator_created", Boolean.class)), videoId,
                 Boolean.TRUE.equals(rs.getObject("video_created", Boolean.class)), visitId,
-                Boolean.TRUE.equals(rs.getObject("visit_created", Boolean.class)));
+                Boolean.TRUE.equals(rs.getObject("visit_created", Boolean.class)),
+                rs.getObject("registration_snapshot_id", UUID.class));
     }
 }

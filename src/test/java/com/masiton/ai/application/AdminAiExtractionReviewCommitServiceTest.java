@@ -68,4 +68,26 @@ class AdminAiExtractionReviewCommitServiceTest {
                 .hasMessageContaining("reused");
         verify(rollback, never()).rollback(any());
     }
+
+    @Test
+    @DisplayName("수동 확정 Snapshot에서 롤백할 때 원본 등록 Snapshot provenance를 전달한다")
+    void rollback_수동확정Snapshot_원본등록Snapshot을롤백에전달한다() {
+        UUID jobId = UUID.randomUUID();
+        UUID originalSnapshotId = UUID.randomUUID();
+        UUID overrideSnapshotId = UUID.randomUUID();
+        UUID visitId = UUID.randomUUID();
+        UUID adminId = UUID.randomUUID();
+        AiExtractionAdminQueryPort.ReviewTarget target = new AiExtractionAdminQueryPort.ReviewTarget(
+                overrideSnapshotId, "AUTO_CONFIRMED", jobId, "channel", "video", "https://www.youtube.com/watch?v=video",
+                null, null, null, null, new AiExtractionAdminQueryPort.RegisteredContent(
+                        null, false, null, false, null, false, visitId, true, originalSnapshotId));
+        when(port.reviewTarget(jobId)).thenReturn(Optional.of(target));
+        when(port.override(overrideSnapshotId, "AUTO_CONFIRMED", adminId, "오등록", "ROLLBACK"))
+                .thenReturn(UUID.randomUUID());
+
+        service.rollback(jobId, "AUTO_CONFIRMED", adminId, "오등록", List.of());
+
+        verify(rollback).rollback(new RollbackAiRegisteredContentUseCase.RegistrationReference(
+                originalSnapshotId, null, false, null, false, null, false, visitId, true));
+    }
 }
