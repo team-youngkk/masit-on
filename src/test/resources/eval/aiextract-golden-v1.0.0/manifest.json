@@ -1,0 +1,88 @@
+{
+  "datasetId": "aiextract-golden-v1.0.0",
+  "createdAt": "2026-08-12",
+  "scope": "AI 영상 정보 추출 S1 후보 검증 및 출시 준비",
+  "caseCount": 120,
+  "answerSchemaVersion": "AI-EVAL-S1",
+  "runtimeContract": {
+    "provider": "GOOGLE_GEMINI",
+    "modelVersion": "gemini-3-flash-preview",
+    "promptVersion": "P1",
+    "schemaVersion": "S1"
+  },
+  "splits": {
+    "DEVELOPMENT": 72,
+    "CALIBRATION": 24,
+    "RELEASE_HOLDOUT": 24
+  },
+  "evalIds": [
+    "EVAL-AI-001",
+    "EVAL-AI-002",
+    "EVAL-AI-003",
+    "EVAL-AI-004",
+    "EVAL-AI-005",
+    "EVAL-AI-006",
+    "EVAL-AI-007",
+    "EVAL-AI-008",
+    "EVAL-AI-009",
+    "EVAL-AI-010"
+  ],
+  "thresholds": {
+    "restaurantAndAddressPrecision": 0.90,
+    "visitEvidenceRecall": 0.80,
+    "automaticRegistrationPrecision": 0.90,
+    "tagPrecision": 0.90,
+    "tagRecall": 0.80,
+    "criticalWrongPlaceCount": 0
+  },
+  "provenance": {
+    "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
+    "usageCondition": "PRIVATE_EVALUATION_ONLY",
+    "retention": "DELETE_AFTER_ONE_YEAR",
+    "containsOriginalUrls": false,
+    "containsOriginalVideo": false,
+    "containsTranscriptOrCaption": false,
+    "containsProviderResponseBody": false,
+    "containsPromptBody": false,
+    "containsPersonalData": false,
+    "containsSecrets": false
+  },
+  "humanAdjudication": {
+    "groundTruthAuthorRole": "AI_DOMAIN_GROUND_TRUTH_OWNER",
+    "crossValidatorRole": "AI_DOMAIN_CROSS_REVIEWER",
+    "finalJudgeRole": "QUALITY_EVAL_FINAL_JUDGE",
+    "requiredFields": ["sampleType", "status", "judgeRole", "reason", "judgedAt", "disagreementStatus"],
+    "allowedStatuses": ["PENDING", "COMPLETED"],
+    "pendingForcesReleaseHold": true,
+    "completedHumanApprovalClaimed": false
+  },
+  "evaluationPolicy": {
+    "llmJudgeEnabled": false,
+    "syntheticValidatorDryRunIsReleaseEvidence": false,
+    "qualityMetricsStatus": "UNMEASURED",
+    "criticalMislinkStatus": "UNADJUDICATED",
+    "releaseHoldoutDefaultEnabled": false,
+    "releaseHoldoutSystemProperty": "masiton.eval.releaseHoldout",
+    "productionProviderCallsAllowed": false,
+    "productionActivationAllowed": false,
+    "activationGateTask": "E3-T13",
+    "releaseDecision": "HOLD",
+    "releaseDecisionReasons": [
+      "HUMAN_ADJUDICATION_PENDING",
+      "E3_T13_OPERATIONAL_GATE_PENDING"
+    ]
+  },
+  "rollbackReadiness": {
+    "stopNewCalls": true,
+    "usePreviousApprovedVersionOrNonAiFallback": true,
+    "deleteExistingEntitiesAutomatically": false,
+    "unfinishedJobsHandledExplicitly": true,
+    "status": "READY_FOR_E3_T13_VERIFICATION"
+  },
+  "changeLog": [
+    {
+      "version": "1.0.0",
+      "reason": "E3-T08 최초 합성·비식별 고정 평가 데이터셋"
+    }
+  ]
+}
