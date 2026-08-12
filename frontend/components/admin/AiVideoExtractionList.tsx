@@ -5,9 +5,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/Button'
 import { AdminApiError } from '@/lib/admin/api'
-import { createAiVideoExtraction, getAiVideoExtractions, aiExtractionSubmissionMessageFor, type AiExtractionJob, type AiExtractionPage, type AiExecutionStatus, type AiExtractionReviewStatus, type AiExtractionSource, type AiExtractionSubmissionResult } from '@/lib/admin/ai-video-extractions'
+import { createAiVideoExtraction, getAiVideoExtractions, aiExtractionMessageFor, type AiExtractionJob, type AiExtractionPage, type AiExecutionStatus, type AiExtractionReviewStatus, type AiExtractionSource, type AiExtractionSubmissionResult } from '@/lib/admin/ai-video-extractions'
 import { aiExtractionSubmissionAttempt, aiExtractionSubmissionFieldErrors, aiExtractionSubmissionPresentation, nextAiExtractionFilters, type AiExtractionFilters, type AiExtractionSubmissionAttempt, type AiExtractionSubmissionFieldErrors } from '@/lib/admin/ai-video-extractions-coordination'
-import { aiExtractionMessageFor } from '@/lib/admin/ai-video-extractions'
 
 import styles from './AiVideoExtractionScreen.module.css'
 
@@ -26,7 +25,10 @@ export function AiVideoExtractionList() {
   const [submitError, setSubmitError] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<AiExtractionSubmissionFieldErrors>({})
   const [submittedResult, setSubmittedResult] = useState<AiExtractionSubmissionResult | null>(null)
+  const videoUrlInput = useRef<HTMLInputElement>(null)
+  const supplementTextInput = useRef<HTMLTextAreaElement>(null)
   const submissionAttempt = useRef<AiExtractionSubmissionAttempt | null>(null)
+  const submitInFlight = useRef(false)
   const requestId = useRef(0)
   const [refreshVersion, setRefreshVersion] = useState(0)
 
@@ -50,6 +52,7 @@ export function AiVideoExtractionList() {
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
+    if (submitInFlight.current) return
     setSubmittedResult(null)
     setFieldErrors({})
     const nextFieldErrors = aiExtractionSubmissionFieldErrors(videoUrl, supplementText)
@@ -57,9 +60,12 @@ export function AiVideoExtractionList() {
       setFieldErrors(nextFieldErrors)
       setSubmitError(true)
       setSubmitNotice('입력값을 확인해 주세요.')
+      if (nextFieldErrors.videoUrl) videoUrlInput.current?.focus()
+      else supplementTextInput.current?.focus()
       return
     }
 
+    submitInFlight.current = true
     const fingerprint = `${videoUrl.trim()}\n${supplementText.trim()}`
     const attempt = aiExtractionSubmissionAttempt(submissionAttempt.current, fingerprint, () => crypto.randomUUID())
     submissionAttempt.current = attempt
@@ -68,7 +74,6 @@ export function AiVideoExtractionList() {
     setSubmitNotice('AI 영상 추출 작업을 접수하는 중입니다.')
     try {
       const result = await createAiVideoExtraction(videoUrl, supplementText, attempt.key)
-      setSubmitError(false)
       setSubmitNotice(result.reused
         ? '기존 AI 영상 추출 작업을 다시 안내했습니다. 작업 목록에서 최신 상태를 확인해 주세요.'
         : 'AI 영상 추출 작업을 접수했습니다. 작업 목록에서 진행 상태를 확인해 주세요.')
@@ -79,11 +84,12 @@ export function AiVideoExtractionList() {
       setRefreshVersion((current) => current + 1)
     } catch (reason) {
       setSubmitError(true)
-      setSubmitNotice(aiExtractionSubmissionMessageFor(reason))
+      setSubmitNotice(aiExtractionMessageFor(reason, 'submission'))
       if (reason instanceof AdminApiError && reason.code === 'AIEXTRACT_INVALID_VIDEO_URL') {
-        setFieldErrors({ videoUrl: aiExtractionSubmissionMessageFor(reason) })
+        setFieldErrors({ videoUrl: aiExtractionMessageFor(reason, 'submission') })
       }
     } finally {
+      submitInFlight.current = false
       setSubmitBusy(false)
     }
   }
@@ -94,14 +100,14 @@ export function AiVideoExtractionList() {
       <p className={styles.hint}>전송 범위: 공개 YouTube 영상 URL과 관리자가 입력한 보완 텍스트만 Google Gemini로 전송됩니다. 보완 텍스트는 암호화된 임시 입력으로 보존될 수 있으며 작업 종료 후 24시간 이내 삭제됩니다. 원본 영상·전체 자막·Provider 응답 전문은 저장하거나 화면에 다시 표시하지 않습니다.</p>
       <form className={styles.form} onSubmit={(event) => void submit(event)}>
         <label htmlFor="ai-video-url">YouTube 영상 URL</label>
-        <input id="ai-video-url" name="videoUrl" type="text" inputMode="url" required value={videoUrl} disabled={submitBusy} aria-invalid={fieldErrors.videoUrl ? 'true' : undefined} aria-describedby={fieldErrors.videoUrl ? 'ai-video-url-error' : undefined} onChange={(event) => { setVideoUrl(event.target.value); setFieldErrors((current) => ({ ...current, videoUrl: undefined })) }} autoComplete="url" />
+        <input ref={videoUrlInput} id="ai-video-url" name="videoUrl" type="text" inputMode="url" required value={videoUrl} disabled={submitBusy} aria-invalid={fieldErrors.videoUrl ? 'true' : undefined} aria-describedby={fieldErrors.videoUrl ? 'ai-video-url-error' : undefined} onChange={(event) => { setVideoUrl(event.target.value); setFieldErrors((current) => ({ ...current, videoUrl: undefined })) }} autoComplete="url" />
         {fieldErrors.videoUrl ? <p id="ai-video-url-error" className={styles.fieldError} role="alert">{fieldErrors.videoUrl}</p> : null}
         <label htmlFor="ai-supplement-text">보완 텍스트 <span className={styles.meta}>(선택, 최대 20,000자)</span></label>
-        <textarea id="ai-supplement-text" name="supplementText" rows={5} value={supplementText} disabled={submitBusy} aria-invalid={fieldErrors.supplementText ? 'true' : undefined} aria-describedby={fieldErrors.supplementText ? 'ai-supplement-text-error' : undefined} onChange={(event) => { setSupplementText(event.target.value); setFieldErrors((current) => ({ ...current, supplementText: undefined })) }} />
+        <textarea ref={supplementTextInput} id="ai-supplement-text" name="supplementText" rows={5} value={supplementText} disabled={submitBusy} aria-invalid={fieldErrors.supplementText ? 'true' : undefined} aria-describedby={fieldErrors.supplementText ? 'ai-supplement-text-error' : undefined} onChange={(event) => { setSupplementText(event.target.value); setFieldErrors((current) => ({ ...current, supplementText: undefined })) }} />
         {fieldErrors.supplementText ? <p id="ai-supplement-text-error" className={styles.fieldError} role="alert">{fieldErrors.supplementText}</p> : null}
         <Button type="submit" disabled={submitBusy}>{submitBusy ? '접수 중…' : '추출 작업 접수'}</Button>
       </form>
-      {submitNotice ? <p className={submitError ? styles.error : styles.notice} role={submitError ? 'alert' : 'status'} aria-live="polite">{submitNotice}</p> : null}
+      {submitNotice ? <p className={submitError ? styles.error : styles.notice} role={submitError ? 'alert' : 'status'} aria-live={submitError ? undefined : 'polite'}>{submitNotice}</p> : null}
       {submittedResult ? (() => {
         const presentation = aiExtractionSubmissionPresentation(submittedResult)
         return <>

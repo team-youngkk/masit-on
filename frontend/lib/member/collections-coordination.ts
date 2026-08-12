@@ -1,3 +1,5 @@
+import { idempotencyAttempt } from '../idempotency.ts'
+
 export type CollectionCreationAttempt = {
   normalizedName: string
   idempotencyKey: string
@@ -77,7 +79,12 @@ export function creationAttemptFor(
 ): CollectionCreationAttempt {
   const normalizedName = normalizeCollectionName(name)
   if (current?.normalizedName === normalizedName) return current
-  return { normalizedName, idempotencyKey: createKey() }
+  const attempt = idempotencyAttempt(
+    current ? { fingerprint: current.normalizedName, key: current.idempotencyKey } : null,
+    normalizedName,
+    createKey,
+  )
+  return { normalizedName: attempt.fingerprint, idempotencyKey: attempt.key }
 }
 
 export function positiveCollectionPage(value: string | undefined): number {

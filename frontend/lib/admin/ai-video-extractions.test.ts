@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { clearAccessToken, login } from './auth.ts'
-import { createAiVideoExtraction, aiExtractionSubmissionMessageFor } from './ai-video-extractions.ts'
+import { createAiVideoExtraction, aiExtractionMessageFor } from './ai-video-extractions.ts'
 
 const job = (reused: boolean) => ({
   jobId: reused ? 'job-reused' : 'job-new',
@@ -90,7 +90,7 @@ test('신규 접수 API 오류는 계약 코드별 안전한 안내로 변환한
     } catch (caught) {
       reason = caught
     }
-    assert.equal(aiExtractionSubmissionMessageFor(reason), '공개 YouTube 영상 URL을 확인해 주세요.')
+    assert.equal(aiExtractionMessageFor(reason, 'submission'), '공개 YouTube 영상 URL을 확인해 주세요.')
   } finally {
     clearAccessToken()
     globalThis.fetch = previousFetch

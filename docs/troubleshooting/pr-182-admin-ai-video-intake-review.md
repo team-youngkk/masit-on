@@ -29,6 +29,13 @@ related_documents:
 | `AiVideoExtractionList.tsx:67` | `reused=true` 응답에 기존 작업 ID·상태·기존 작업 링크가 필요함 | 프론트엔드 계약 | 수정 필요 | 응답 객체를 보존하고 기존 ID·실행 상태·링크 라벨을 표시 | 신규 coordination 테스트 |
 | `AiVideoExtractionList.tsx:94` | 입력 오류를 필드 바로 아래에 연결하고 보조기술에 노출해야 함 | 접근성 | 수정 필요 | 필드별 오류, `aria-invalid`, `aria-describedby`, `role=alert` 추가 | 신규 field-error 테스트 및 typecheck |
 | `AiVideoExtractionList.tsx:74` | 필터 변경 중 접수 완료 재조회가 이전 필터를 사용할 수 있음 | 프론트엔드 경합 | 수정 필요 | 접수 완료·수동 새로고침을 현재 필터를 읽는 effect 재실행으로 전환 | requestId 보호 코드와 typecheck 확인 |
+| `AiVideoExtractionList.tsx:104` | `role=alert`에 `aria-live=polite`가 함께 지정됨 | 접근성 | 수정 필요 | 오류 상태에서는 `aria-live`를 제거해 alert의 assertive 동작을 보존 | `npm.cmd run typecheck` |
+| `AiVideoExtractionList.tsx:50` | 상태 반영 전 빠른 중복 submit이 동시에 POST할 수 있음 | 프론트엔드 상태 | 수정 필요 | ref 기반 동기 in-flight guard와 기존 멱등키를 함께 적용 | `npm.cmd test` |
+| `ai-video-extractions-coordination.ts:13` 외 | 멱등키 생성 로직이 도메인별로 중복됨 | 구조 / 유지보수 | 수정 필요 | `frontend/lib/idempotency.ts`로 공용화하고 관리자·컬렉션 흐름에서 재사용 | `npm.cmd test`, `npm.cmd run typecheck` |
+| `ai-video-extractions.ts:129` | 관리 화면과 접수 화면 오류 매핑 함수가 중복됨 | 구조 / 유지보수 | 수정 필요 | context 인자를 받는 `aiExtractionMessageFor` 하나로 통합 | AI 접수 API 테스트 |
+| `AiVideoExtractionScreen.module.css:5` | 접수 폼 입력 스타일이 재시도 폼과 중복됨 | CSS / 유지보수 | 수정 필요 | 공통 선택자 그룹으로 통합 | `npm.cmd run build` |
+| `ai-video-extractions-coordination.ts:22` | UTF-16 길이 검증이 다른 프론트 검증기와 다름 | 계약 검토 | 수정 불필요 | 백엔드 Java `String.length()`와 20,000자 계약이 일치해 이번 범위에서 유지 | 백엔드 계약·기존 경계 테스트 대조 |
+| `AiVideoExtractionList.tsx:74` | 새 작업과 무관한 필터에서도 성공 후 목록을 재조회함 | 효율성 | 수정 불필요 | 현재 필터를 기준으로 최신 목록을 보장하는 의도된 동작이며 기능 정확성 변경과 분리 | 새 필터 effect 경로 확인 |
 | CI `31587344320` | 백엔드 전체 테스트에서 레거시 세션 테스트 1건과 PostgreSQL 연결 거부가 발생함 | CI / 환경 | 수정 불필요 | PR 변경 영역과 무관한 기존 백엔드 통합 환경 실패로 기록하고, 새 head CI 결과를 확인 | 프론트엔드 job은 통과, 백엔드 로그는 Redis 세션 실패 후 DB 연결 거부 |
 
 ## 3. 문제 현상과 발생 조건
@@ -38,10 +45,14 @@ related_documents:
 - URL과 보완 텍스트 검증 오류를 한 문장으로 합쳐 form-level 안내만 표시해 어느 필드를 수정해야 하는지, 보조기술이 오류와 입력을 어떻게 연결해야 하는지 알 수 없었다.
 - 접수 성공 시 렌더링에 캡처된 `load`를 직접 호출해, 요청 중 실행 상태가 바뀐 필터와 다른 필터로 목록이 갱신될 수 있었다.
 - 제출 전 안내가 보완 텍스트를 결과 화면에 다시 표시하지 않는다는 내용에 그쳐 Google Gemini 전송 범위와 임시 보존 정책을 알리지 않았다.
+- 오류 안내의 `role=alert`와 `aria-live=polite`가 충돌했고, 상태 갱신 전 빠른 중복 submit을 막는 동기 ref guard가 없었다.
+- 멱등키 생성과 오류 메시지 매핑, 입력 CSS에 동일한 로직·선언이 반복되어 변경 지점이 분산되어 있었다.
 
 ## 4. 근본 원인
 
 컴포넌트가 비동기 요청의 입력·필터 스냅샷과 현재 화면 상태를 분리해 관리하지 않았다. 입력은 요청 완료 시 무조건 초기화했고, 목록 재조회는 submit 함수가 생성된 시점의 `load`를 사용했다. 또한 API 결과 객체 중 `jobId`만 상태로 보존했으며, 검증 결과는 문자열 배열로만 반환해 필드 연결 정보를 잃었다. 개인정보 안내도 PRD·와이어프레임의 전송·보존 계약을 화면에 모두 반영하지 못했다.
+
+추가로 오류 알림의 암묵적 assertive semantics를 명시적 polite live region이 덮었고, React state의 다음 렌더 반영을 기다리는 동안 중복 submit을 즉시 차단하지 않았다. 멱등키·오류 문구·입력 스타일을 각 도메인에 복사해 두어 동일 규칙의 수정 비용도 커지고 있었다.
 
 ## 5. 확인 및 시도
 
@@ -60,6 +71,8 @@ related_documents:
 - `AiExtractionSubmissionResult` 전체를 보존해 재사용 응답이면 기존 작업 ID, 현재 실행 상태, `기존 작업 보기` 링크를 표시한다.
 - 입력 검증 결과를 `videoUrl`·`supplementText` 필드 오류로 구조화하고 `aria-invalid`·`aria-describedby`와 필드 하단 오류를 렌더링한다. 서버의 공개 YouTube URL 오류도 URL 필드에 연결한다.
 - 제출 전 안내에 Google Gemini 전송 입력 범위, 보완 텍스트의 암호화 임시 보존 및 작업 종료 후 24시간 이내 삭제, 원본 영상·전체 자막·Provider 응답 전문 미보존을 명시한다.
+- `role=alert` 오류에는 `aria-live`를 덧붙이지 않고, 정상 상태에만 `aria-live=polite`를 사용한다. 제출 시작 전 ref guard를 세워 빠른 중복 POST를 차단한다.
+- 멱등키 생성은 `frontend/lib/idempotency.ts`로 공용화하고, 오류 메시지는 context 인자로 관리·접수 문구를 분기하며, 접수·재시도 폼의 공통 CSS를 묶었다.
 
 ## 7. 검증
 
@@ -67,12 +80,14 @@ related_documents:
 |---|---|---|
 | `npm.cmd test` | 통과 | 전체 프론트 테스트 182개와 AI 접수 API 테스트 3개 통과 |
 | `npm.cmd run typecheck` | 통과 | Next.js TypeScript 컴파일 오류 없음 |
-| `npm.cmd run build` | 후속 실행 필요 | 리뷰 반영 후 최종 head에서 재실행 |
+| `npm.cmd run build` | 이전 리뷰 반영 head에서 통과 | 추가 구조 정리 후 최종 head에서 재실행 |
 | GitHub Actions run `31587344320` | 부분 통과 | 프론트엔드 job 성공, 백엔드 job은 기존 레거시 Redis 세션 실패 및 PostgreSQL 연결 거부 |
 
 ## 8. 재발 방지 및 다음 확인
 
 - 비동기 form은 요청 시작 시 입력 잠금 또는 제출 fingerprint guard 중 하나를 명시하고, 결과 반영 시 현재 화면 상태를 덮어쓰지 않는 회귀 시나리오를 유지한다.
+- 비동기 form은 state 반영 전에도 ref 기반 in-flight guard로 중복 요청을 차단하고, `alert`의 암묵적 assertive semantics를 polite live region으로 덮지 않는다.
+- 멱등키·오류 매핑·공통 입력 스타일은 재사용 가능한 모듈을 우선 사용해 도메인별 복사 구현을 만들지 않는다.
 - 목록 재조회는 캡처된 필터를 직접 호출하지 않고 현재 필터 effect와 request generation을 통해 실행한다.
 - 외부 AI 입력 화면은 요청 전에 전송 범위·보존 기간·삭제 시점·미보존 데이터를 함께 표시하고, 계약 문구가 바뀌면 PRD·와이어프레임과 화면을 대조한다.
 - 새 head push 뒤 프론트·백엔드 CI를 다시 확인한다. 백엔드 실패가 계속되면 실패 테스트와 인프라 연결 오류를 분리해 후속 PR로 처리한다.

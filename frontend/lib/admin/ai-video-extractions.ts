@@ -119,16 +119,9 @@ export async function reviewAiVideoExtraction(
   })
 }
 
-export function aiExtractionMessageFor(error: unknown): string {
+export function aiExtractionMessageFor(error: unknown, context: 'manage' | 'submission' = 'manage'): string {
   if (error instanceof AdminApiError) {
-    return aiExtractionMessageForCode(error.code) ?? messageFor(error)
-  }
-  return messageFor(error)
-}
-
-export function aiExtractionSubmissionMessageFor(error: unknown): string {
-  if (error instanceof AdminApiError) {
-    return aiExtractionMessageForCode(error.code, 'submission') ?? messageFor(error)
+    return aiExtractionMessageForCode(error.code, context) ?? messageFor(error)
   }
   return messageFor(error)
 }

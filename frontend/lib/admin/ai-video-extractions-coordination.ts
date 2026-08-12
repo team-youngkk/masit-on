@@ -1,4 +1,5 @@
 import type { AiExecutionStatus, AiExtractionJob, AiExtractionReviewStatus, AiExtractionSource, AiExtractionSubmissionResult } from './ai-video-extractions'
+import { idempotencyAttempt, type IdempotencyAttempt } from '../idempotency.ts'
 
 export type AiExtractionFilters = {
   executionStatus: AiExecutionStatus | ''
@@ -7,7 +8,7 @@ export type AiExtractionFilters = {
   page: number
 }
 
-export type AiExtractionSubmissionAttempt = { fingerprint: string; key: string }
+export type AiExtractionSubmissionAttempt = IdempotencyAttempt
 export type AiExtractionSubmissionFieldErrors = { videoUrl?: string; supplementText?: string }
 
 export function aiExtractionSubmissionAttempt(
@@ -15,7 +16,7 @@ export function aiExtractionSubmissionAttempt(
   fingerprint: string,
   generate: () => string,
 ): AiExtractionSubmissionAttempt {
-  return previous?.fingerprint === fingerprint ? previous : { fingerprint, key: generate() }
+  return idempotencyAttempt(previous, fingerprint, generate)
 }
 
 export function aiExtractionSubmissionFieldErrors(videoUrl: string, supplementText: string): AiExtractionSubmissionFieldErrors {
