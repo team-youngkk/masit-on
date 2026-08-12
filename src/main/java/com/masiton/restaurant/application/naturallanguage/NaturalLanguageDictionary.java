@@ -111,8 +111,8 @@ public final class NaturalLanguageDictionary {
         builder.district(district, aliases);
     }
 
-    private static String compact(String value) {
-        return value == null ? "" : value.trim().replaceAll("\\s+", "").toLowerCase(Locale.ROOT);
+    private static String normalizeAlias(String value) {
+        return value == null ? "" : value.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
     }
 
     public static final class Builder {
@@ -156,7 +156,7 @@ public final class NaturalLanguageDictionary {
                             java.util.stream.Stream.of(normalizedValue), java.util.Arrays.stream(rawAliases))
                             .toList();
             for (String rawAlias : allAliases) {
-                String alias = compact(Objects.requireNonNull(rawAlias));
+                String alias = normalizeAlias(Objects.requireNonNull(rawAlias));
                 if (alias.isEmpty()) {
                     continue;
                 }

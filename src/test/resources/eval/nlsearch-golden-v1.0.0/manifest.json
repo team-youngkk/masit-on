@@ -1,0 +1,52 @@
+{
+  "datasetId": "nlsearch-golden-v1.0.0",
+  "createdAt": "2026-08-12",
+  "parserVersion": "P1",
+  "answerSchemaVersion": "1.1.0",
+  "scope": "WS-14 자연어 맛집 탐색의 조건 집합 정확성, 지원 조건 재현율, 미지원 안전성, 직접 필터 우선, 확정 태그 AND를 프로그램으로 평가한다.",
+  "caseCount": 240,
+  "semanticGroupCount": 40,
+  "caseExpansion": "40개 의미 그룹마다 명시적인 한국어 문장 변형 6개를 두어 총 240건으로 확장한다.",
+  "split": {
+    "DEVELOPMENT": 144,
+    "CALIBRATION": 48,
+    "RELEASE_HOLDOUT": 48
+  },
+  "qualityGate": {
+    "conditionSetExactMatchMinimum": 0.90,
+    "supportedAtomicConditionRecallMinimum": 0.95,
+    "unsupportedFalseApplicationMaximum": 0
+  },
+  "programmaticEvalIds": [
+    "EVAL-NL-001",
+    "EVAL-NL-002",
+    "EVAL-NL-003",
+    "EVAL-NL-004",
+    "EVAL-NL-007"
+  ],
+  "linkedEvidence": {
+    "EVAL-NL-005": "RestaurantSearchQueryAdapterIntegrationTest와 NaturalLanguageSearchApiTest의 공개·생명주기 회귀",
+    "EVAL-NL-006": "자연어 공개 화면의 정상·빈·PARTIAL·FAILED·오류·복구 상태와 E3-T12 브라우저 인수"
+  },
+  "coveredVocabulary": {
+    "districts": 25,
+    "categories": 10,
+    "tags": 18,
+    "opaqueCreatorAliases": true,
+    "quotedRestaurantNames": true
+  },
+  "sourceAndUsageTerms": "전량 팀 작성 합성 문장과 공개 서비스 어휘다. 운영 사용자 검색 원문, 개인정보, 실제 회원·사업장 식별자, 비밀정보를 포함하지 않는다.",
+  "sensitiveDataScanResult": "PASS - 합성 맛집명과 합성 opaque Creator ID만 사용하며 이메일·전화번호·주소·API Key·현재 위치가 없다.",
+  "releaseHoldoutExecution": {
+    "policy": "RELEASE_HOLDOUT 48건은 변경 튜닝에 사용하지 않고 출시 판정 시에만 포함한다.",
+    "optInSystemProperty": "masiton.eval.releaseHoldout=true",
+    "optInCommand": ".\\gradlew.bat '-Dmasiton.eval.releaseHoldout=true' test --tests 'com.masiton.restaurant.application.naturallanguage.NaturalLanguageEvaluationGoldenV1Test' --no-daemon --console=plain"
+  },
+  "changeLog": [
+    {
+      "version": "1.0.0",
+      "date": "2026-08-12",
+      "change": "최초 작성. 25개 자치구, 10개 카테고리, 18개 확정 태그, 맛집명, opaque Creator, 직접 필터, 미지원·악성 입력을 40개 독립 의미 그룹과 240개 문장으로 고정했다."
+    }
+  ]
+}

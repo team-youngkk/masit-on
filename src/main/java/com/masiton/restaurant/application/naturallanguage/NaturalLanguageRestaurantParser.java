@@ -368,6 +368,7 @@ public final class NaturalLanguageRestaurantParser {
             String compactCandidate = compact(candidate);
             boolean known = Arrays.stream(ConditionField.values())
                     .flatMap(field -> dictionary.aliasesFor(field).keySet().stream())
+                    .map(NaturalLanguageRestaurantParser::compact)
                     .anyMatch(alias -> compactCandidate.contains(alias) || alias.contains(compactCandidate));
             if (!known && !compactBeforeMarker.equals(compactCandidate)) {
                 return true;
@@ -392,7 +393,12 @@ public final class NaturalLanguageRestaurantParser {
     }
 
     private static boolean containsAlias(String sentence, String alias) {
-        return compact(sentence).contains(alias);
+        String normalizedSentence = cleanText(sentence).toLowerCase(Locale.ROOT);
+        String normalizedAlias = cleanText(alias).toLowerCase(Locale.ROOT);
+        if (normalizedSentence.contains(normalizedAlias)) {
+            return true;
+        }
+        return normalizedAlias.contains(" ") && compact(sentence).contains(compact(normalizedAlias));
     }
 
     private static String normalizeSentence(String sentence) {
