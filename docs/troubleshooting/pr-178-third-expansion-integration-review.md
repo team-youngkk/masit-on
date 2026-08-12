@@ -23,16 +23,16 @@ related_documents:
 
 | 스레드 | 요청 요약 | 문제 유형 | 판단 | 처리 결과 | 근거/검증 |
 |---|---|---|---|---|---|
-| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / `ThirdExpansionIntegrationRegressionTest.java` | numeric 컬럼에 문자열 fixture 바인딩 | 데이터베이스 | 수정 필요 | `BigDecimal` 바인딩으로 변경 | CI #421 및 Docker 로컬 회귀 묶음 통과 |
-| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / `AiExtractionCommitProjectionIntegrationTest.java` | numeric 컬럼에 문자열 fixture 바인딩 | 데이터베이스 | 수정 필요 | `BigDecimal` 바인딩으로 변경 | CI #421 및 Docker 로컬 회귀 묶음 통과 |
-| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / 두 통합 테스트의 `CASCADE` 정리 | V4 시드 태그가 삭제될 수 있음 | 데이터베이스 | 수정 필요 | 시드 보존 + FK 역순 명시 삭제로 변경 | CI #421 및 Docker 로컬 회귀 묶음 통과 |
-| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / 자연어 검색 fixture | 태그 없는 맛집 비교 부족 | 테스트 | 수정 필요 | 태그 없는 맛집을 추가하고 `totalElements = 1` 검증 | CI #421 및 Docker 로컬 회귀 묶음 통과 |
-| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / 코스 TIMEOUT 시나리오 | 기존 코스 실패 테스트와 중복 | 테스트 | 수정 필요 | 실패 후 AI 태그 자연어 검색을 확인하는 교차 검증으로 변경 | CI #421 및 Docker 로컬 회귀 묶음 통과 |
-| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / AI 실행 job 정리 | 테스트 후 job·snapshot 잔존 가능 | 데이터베이스 | 수정 필요 | audit·snapshot·attempt·temporary input·job 정리 추가 | CI #421 및 Docker 로컬 회귀 묶음 통과 |
-| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / SHA-256 helper 중복 | 테스트 유틸리티 공유 요청 | 테스트 | 수정 필요 | `IntegrationTestFixtures.sha256`로 통합 | CI #421 및 `compileTestJava` 통과 |
-| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / course request JSON helper 중복 | 요청 JSON helper 공유 요청 | 테스트 | 수정 필요 | `IntegrationTestFixtures.courseRequestJson`으로 추출 | CI #421 및 `compileTestJava` 통과 |
+| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / `ThirdExpansionIntegrationRegressionTest.java` | numeric 컬럼에 문자열 fixture 바인딩 | 데이터베이스 | 수정 필요 | `BigDecimal` 바인딩으로 변경 | CI #423 및 Docker 로컬 회귀 묶음 통과 |
+| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / `AiExtractionCommitProjectionIntegrationTest.java` | numeric 컬럼에 문자열 fixture 바인딩 | 데이터베이스 | 수정 필요 | `BigDecimal` 바인딩으로 변경 | CI #423 및 Docker 로컬 회귀 묶음 통과 |
+| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / 두 통합 테스트의 `CASCADE` 정리 | V4 시드 태그가 삭제될 수 있음 | 데이터베이스 | 수정 필요 | 시드 보존 + FK 역순 명시 삭제로 변경 | CI #423 및 Docker 로컬 회귀 묶음 통과 |
+| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / 자연어 검색 fixture | 태그 없는 맛집 비교 부족 | 테스트 | 수정 필요 | 태그 없는 맛집을 추가하고 `totalElements = 1` 검증 | CI #423 및 Docker 로컬 회귀 묶음 통과 |
+| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / 코스 TIMEOUT 시나리오 | 기존 코스 실패 테스트와 중복 | 테스트 | 수정 필요 | 실패 후 AI 태그 자연어 검색을 확인하는 교차 검증으로 변경 | CI #423 및 Docker 로컬 회귀 묶음 통과 |
+| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / AI 실행 job 정리 | 테스트 후 job·snapshot 잔존 가능 | 데이터베이스 | 수정 필요 | audit·snapshot·attempt·temporary input·job 정리 추가 | CI #423 및 Docker 로컬 회귀 묶음 통과 |
+| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / SHA-256 helper 중복 | 테스트 유틸리티 공유 요청 | 테스트 | 수정 필요 | `IntegrationTestFixtures.sha256`로 통합 | CI #423 및 `compileTestJava` 통과 |
+| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / course request JSON helper 중복 | 요청 JSON helper 공유 요청 | 테스트 | 수정 필요 | `IntegrationTestFixtures.courseRequestJson`으로 추출 | CI #423 및 `compileTestJava` 통과 |
 | [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / 별도 AI 통합 테스트 클래스 | 기존 원자성 테스트와의 중복 검토 | 테스트 | 수정 불필요 | 기존 테스트는 실패 롤백, 신규 테스트는 성공 provenance와 공개 자연어 API 경로를 검증해 목적이 다름 | 기존 테스트와 신규 assertion 비교 |
-| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / 검증 기록 최신화 | 후속 실행 결과와 문서·PR 본문 불일치 | 기타 | 수정 필요 | PR #122의 재발 방지 규칙을 현재 기록과 PR 본문에 반영 | CI #421·Docker 로컬 결과와 문서 대조 |
+| [PR #178](https://github.com/team-youngkk/masit-on/pull/178) / 검증 기록 최신화 | 후속 실행 결과와 문서·PR 본문 불일치 | 기타 | 수정 필요 | PR #122의 재발 방지 규칙을 현재 기록과 PR 본문에 반영 | CI #423·Docker 로컬 결과와 문서 대조 |
 
 ## 3. 문제 현상과 발생 조건
 
@@ -54,7 +54,7 @@ related_documents:
 |---|---|---|
 | 관련 V4/V6/V7 migration의 FK·트리거 확인 | `tag_definition`은 snapshot을 참조하고, audit review는 append-only DELETE trigger를 가짐 | audit table은 `TRUNCATE`하고 나머지는 FK 순서대로 명시 삭제 |
 | `./gradlew.bat compileTestJava --no-daemon --console=plain` | 통과 | 소스·fixture 타입 수정 완료 |
-| [`CI #421`](https://github.com/team-youngkk/masit-on/actions/runs/31570268267) 백엔드 `./gradlew --no-daemon clean build` | 통과 | Flyway·AI 원자성·AI worker·코스 회귀를 포함한 전체 백엔드 빌드·테스트 통과 |
+| [`CI #423`](https://github.com/team-youngkk/masit-on/actions/runs/31572131501) 백엔드 `./gradlew --no-daemon clean build` | 통과 | 최신 PR head `8c13522`에서 Flyway·AI 원자성·AI worker·코스 회귀를 포함한 전체 백엔드 빌드·테스트 통과 |
 | Docker 가동 로컬 회귀 묶음 | 통과 | 신규 3개 통합 테스트와 수정된 Flyway·AI 원자성·AI worker·코스 회귀 테스트 통과를 리뷰에서 확인 |
 | [PR #122 테스트 결과 최신화 기록](pr-122-map-viewport-independent-query-review.md)과 현재 문서 대조 | 반영 | 후속 커밋·CI·Docker 실행 결과를 문서와 PR 본문에 동기화하는 재발 방지 절차를 재사용 |
 
@@ -71,7 +71,7 @@ related_documents:
 | 검증 | 결과 | 확인한 내용 |
 |---|---|---|
 | `./gradlew.bat compileTestJava --no-daemon --console=plain` | 통과 | 리뷰 반영 테스트 소스 컴파일 |
-| [`CI #421`](https://github.com/team-youngkk/masit-on/actions/runs/31570268267) 백엔드 `./gradlew --no-daemon clean build` | 통과 | 백엔드 전체 자동화 테스트와 빌드 성공 |
+| [`CI #423`](https://github.com/team-youngkk/masit-on/actions/runs/31572131501) 백엔드 `./gradlew --no-daemon clean build` | 통과 | 최신 PR head `8c13522`의 백엔드 전체 자동화 테스트와 빌드 성공 |
 | Docker 가동 로컬 회귀 묶음 | 통과 | 신규 3개 통합 테스트와 수정된 Flyway·AI 원자성·AI worker·코스 회귀 테스트 성공 |
 
 ## 8. 재발 방지 및 다음 확인
@@ -84,7 +84,7 @@ related_documents:
 
 | 지표 | 도입 전 기준값 | 측정 방법·기간 | 배포 확장 후 값 | 비교 결과 | 담당자·확인 시점/이슈 |
 |---|---|---|---|---|---|
-| 통합 테스트 fixture 타입·정리 오류 | 리뷰에서 2종 오류 지적 | CI #421 및 Docker 가동 로컬 회귀 묶음 | 전체 통과 | fixture 타입·정리 오류 재현 없이 성공 | PR #178 / 2026-08-12 |
+| 통합 테스트 fixture 타입·정리 오류 | 리뷰에서 2종 오류 지적 | CI #423 및 Docker 가동 로컬 회귀 묶음 | 전체 통과 | fixture 타입·정리 오류 재현 없이 성공 | PR #178 / 2026-08-12 |
 | 검증 결과 문서·PR 본문 동기화 | 후속 실행 결과 반영 누락 | 각 후속 커밋 후 실제 출력·CI 결과와 문서 대조 | 현재 head 기준 일치 | PR #122 재발 방지 절차를 PR #178에 적용 | PR #178 / 2026-08-12 |
 
 ## 10. 남은 사항
