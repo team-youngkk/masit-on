@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Field } from '@/components/ui/Field'
 import { FavoriteButton } from '@/components/personal/FavoriteButton'
+import { NaturalLanguageRestaurantSearch } from '@/components/restaurants/NaturalLanguageRestaurantSearch'
 import { cn } from '@/lib/cn'
 import {
   CATEGORY_OPTIONS,
@@ -67,7 +68,25 @@ export default async function RestaurantsPage({
     <section>
       <h1>맛집 탐색</h1>
 
-      <form method="get" className={styles.filters} aria-label="맛집 검색 조건">
+      <NaturalLanguageRestaurantSearch
+        structuredFormId="structured-restaurant-search"
+        creatorLabels={creatorsResult.ok ? Object.fromEntries(creatorsResult.data.items.map((creator) => [creator.id, creator.channelName])) : {}}
+        filters={{
+          query: currentQuery.trim() || null,
+          district: currentDistrict || null,
+          category: currentCategory || null,
+          creatorId: currentCreatorId ?? null,
+          tags: [],
+        }}
+        returnTo={currentRoute}
+      />
+
+      <form
+        id="structured-restaurant-search"
+        method="get"
+        className={styles.filters}
+        aria-label="맛집 검색 조건"
+      >
         <Field
           label="맛집 이름"
           name="query"

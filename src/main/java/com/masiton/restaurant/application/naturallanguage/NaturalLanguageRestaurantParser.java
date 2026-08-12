@@ -55,7 +55,8 @@ public final class NaturalLanguageRestaurantParser {
         NaturalLanguageFilters direct = directFilters == null ? NaturalLanguageFilters.empty() : directFilters;
         List<IgnoredCondition> ignored = new ArrayList<>();
         List<NaturalLanguageConflict> conflicts = new ArrayList<>();
-        EnumMap<ConditionField, Extraction> extractions = extractFields(normalizedSentence, ignored);
+        String aliasSentence = normalizedSentence.toLowerCase(Locale.ROOT);
+        EnumMap<ConditionField, Extraction> extractions = extractFields(normalizedSentence, aliasSentence, ignored);
         NaturalLanguageFilters parsed = toParsedFilters(extractions);
         MergeState merged = merge(parsed, extractions, direct, ignored, conflicts);
         addUnsupportedSummary(normalizedSentence, extractions, ignored);
@@ -95,17 +96,18 @@ public final class NaturalLanguageRestaurantParser {
 
     private EnumMap<ConditionField, Extraction> extractFields(
             String sentence,
+            String aliasSentence,
             List<IgnoredCondition> ignored) {
         EnumMap<ConditionField, Extraction> result = new EnumMap<>(ConditionField.class);
         for (ConditionField field : ConditionField.values()) {
             if (field == ConditionField.TAGS) {
-                result.put(field, extractTags(sentence, ignored));
+                result.put(field, extractTags(aliasSentence, ignored));
             } else if (field == ConditionField.QUERY) {
-                result.put(field, extractQuery(sentence, ignored));
+                result.put(field, extractQuery(sentence, aliasSentence, ignored));
             } else if (field == ConditionField.CREATOR_ID) {
-                result.put(field, extractCreatorId(sentence, ignored));
+                result.put(field, extractCreatorId(sentence, aliasSentence, ignored));
             } else {
-                result.put(field, extractScalar(field, sentence, ignored));
+                result.put(field, extractScalar(field, aliasSentence, ignored));
             }
         }
         return result;
@@ -130,8 +132,8 @@ public final class NaturalLanguageRestaurantParser {
         return extraction;
     }
 
-    private Extraction extractCreatorId(String sentence, List<IgnoredCondition> ignored) {
-        Extraction aliases = extractCreatorAliases(sentence, ignored);
+    private Extraction extractCreatorId(String sentence, String aliasSentence, List<IgnoredCondition> ignored) {
+        Extraction aliases = extractCreatorAliases(aliasSentence, ignored);
         Matcher matcher = CREATOR_ID.matcher(sentence);
         Set<String> values = new LinkedHashSet<>(aliases.values());
         List<String> matches = new ArrayList<>(aliases.matchedAliases());
@@ -216,8 +218,8 @@ public final class NaturalLanguageRestaurantParser {
         return extraction;
     }
 
-    private Extraction extractQuery(String sentence, List<IgnoredCondition> ignored) {
-        Extraction dictionaryQuery = extractScalar(ConditionField.QUERY, sentence, ignored);
+    private Extraction extractQuery(String sentence, String aliasSentence, List<IgnoredCondition> ignored) {
+        Extraction dictionaryQuery = extractScalar(ConditionField.QUERY, aliasSentence, ignored);
         Matcher matcher = QUOTED_QUERY.matcher(sentence);
         List<String> quoted = new ArrayList<>();
         while (matcher.find()) {
@@ -359,7 +361,6 @@ public final class NaturalLanguageRestaurantParser {
             return false;
         }
         String beforeMarker = sentence.substring(0, tagMarker);
-        String compactBeforeMarker = compact(beforeMarker);
         for (String token : beforeMarker.split(" ")) {
             String candidate = cleanText(token).replaceAll("[과와및,]$", "");
             if (candidate.isEmpty() || IGNORED_WORDS.stream().anyMatch(candidate::equals)) {
@@ -368,8 +369,9 @@ public final class NaturalLanguageRestaurantParser {
             String compactCandidate = compact(candidate);
             boolean known = Arrays.stream(ConditionField.values())
                     .flatMap(field -> dictionary.aliasesFor(field).keySet().stream())
+                    .map(NaturalLanguageRestaurantParser::compact)
                     .anyMatch(alias -> compactCandidate.contains(alias) || alias.contains(compactCandidate));
-            if (!known && !compactBeforeMarker.equals(compactCandidate)) {
+            if (!known) {
                 return true;
             }
         }
@@ -392,7 +394,33 @@ public final class NaturalLanguageRestaurantParser {
     }
 
     private static boolean containsAlias(String sentence, String alias) {
-        return compact(sentence).contains(alias);
+        String[] parts = alias.split(" ");
+        int searchFrom = 0;
+        while (searchFrom < sentence.length()) {
+            int start = sentence.indexOf(parts[0], searchFrom);
+            if (start < 0) {
+                return false;
+            }
+            boolean startsAtBoundary = start == 0
+                    || !Character.isLetterOrDigit(sentence.codePointBefore(start));
+            int cursor = start + parts[0].length();
+            boolean matches = startsAtBoundary;
+            for (int index = 1; matches && index < parts.length; index++) {
+                while (cursor < sentence.length() && Character.isWhitespace(sentence.charAt(cursor))) {
+                    cursor++;
+                }
+                if (!sentence.startsWith(parts[index], cursor)) {
+                    matches = false;
+                } else {
+                    cursor += parts[index].length();
+                }
+            }
+            if (matches) {
+                return true;
+            }
+            searchFrom = start + parts[0].length();
+        }
+        return false;
     }
 
     private static String normalizeSentence(String sentence) {
