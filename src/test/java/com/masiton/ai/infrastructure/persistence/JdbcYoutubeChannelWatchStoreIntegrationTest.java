@@ -1,15 +1,21 @@
 package com.masiton.ai.infrastructure.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.junit.jupiter.Container;
@@ -44,9 +50,12 @@ class JdbcYoutubeChannelWatchStoreIntegrationTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private org.springframework.transaction.PlatformTransactionManager transactionManager;
+
     @Test
-    @DisplayName("PUBLIC·ACTIVE·AVAILABLE Creator의 Watch를 활성화하면 알림을 수락한다")
-    void upsert_공개활성가용Creator에활성Watch_알림을수락한다() {
+    @DisplayName("PUBLIC·ACTIVE·AVAILABLE Creator의 Watch를 활성화하면 외부 확인 전 UNKNOWN으로 둔다")
+    void upsert_공개활성가용Creator에활성Watch_외부확인전UNKNOWN으로둔다() {
         // given
         UUID creatorId = UUID.randomUUID();
         String channelId = "channel-" + UUID.randomUUID();
@@ -58,9 +67,9 @@ class JdbcYoutubeChannelWatchStoreIntegrationTest {
 
             // then
             YoutubeChannelWatchStore.Watch watch = store.find(channelId).orElseThrow();
-            assertThat(watch.acceptsNotifications()).isTrue();
+            assertThat(watch.acceptsNotifications()).isFalse();
             assertThat(watch.enabled()).isTrue();
-            assertThat(watch.subscriptionStatus()).isEqualTo("ACTIVE");
+            assertThat(watch.subscriptionStatus()).isEqualTo("UNKNOWN");
         } finally {
             deleteFixture(creatorId, channelId);
         }
@@ -96,35 +105,78 @@ class JdbcYoutubeChannelWatchStoreIntegrationTest {
     }
 
     @Test
-    @DisplayName("활성 Watch만 알림 수신 시각을 갱신하고 비활성 Watch는 유지한다")
-    void markNotificationReceived_활성행과비활성행_활성만갱신한다() {
+    @DisplayName("활성 Watch의 알림 수신 시각을 갱신한다")
+    void markNotificationReceived_활성행_수신시각을갱신한다() {
         // given
         UUID activeCreatorId = UUID.randomUUID();
-        UUID inactiveCreatorId = UUID.randomUUID();
         String activeChannelId = "channel-" + UUID.randomUUID();
-        String inactiveChannelId = "channel-" + UUID.randomUUID();
         OffsetDateTime previousAt = OffsetDateTime.parse("2026-08-11T03:04:05Z");
         OffsetDateTime receivedAt = OffsetDateTime.parse("2026-08-12T03:04:05Z");
         insertCreator(activeCreatorId, activeChannelId);
-        insertCreator(inactiveCreatorId, inactiveChannelId);
         insertWatch(activeCreatorId, activeChannelId, null, previousAt, null, null);
-        insertWatch(inactiveCreatorId, inactiveChannelId, null, previousAt, null, null);
-        jdbcTemplate.update(
-                "UPDATE youtube_channel_watch SET enabled = false, subscription_status = 'INACTIVE' "
-                        + "WHERE creator_id = ?",
-                inactiveCreatorId);
 
         try {
             // when
             store.markNotificationReceived(activeChannelId, receivedAt);
-            store.markNotificationReceived(inactiveChannelId, receivedAt);
 
             // then
             assertThat(readLastNotificationAt(activeChannelId)).isEqualTo(receivedAt);
-            assertThat(readLastNotificationAt(inactiveChannelId)).isEqualTo(previousAt);
         } finally {
             deleteFixture(activeCreatorId, activeChannelId);
-            deleteFixture(inactiveCreatorId, inactiveChannelId);
+        }
+    }
+
+    @Test
+    @DisplayName("Webhook의 Watch 행 잠금이 끝나기 전 감시 비활성화는 대기한다")
+    void findForUpdate_동시비활성화_기존트랜잭션종료까지대기한다() throws Exception {
+        UUID creatorId = UUID.randomUUID();
+        String channelId = "channel-" + UUID.randomUUID();
+        insertCreator(creatorId, channelId);
+        insertWatch(creatorId, channelId, null, null, null, null);
+        CountDownLatch lockAcquired = new CountDownLatch(1);
+        CountDownLatch releaseLock = new CountDownLatch(1);
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var webhook = executor.submit(() -> transaction.execute(status -> {
+                assertThat(store.findForUpdate(channelId)).isPresent();
+                lockAcquired.countDown();
+                await(releaseLock);
+                store.markNotificationReceived(channelId, OffsetDateTime.parse("2026-08-12T03:04:05Z"));
+                return null;
+            }));
+            assertThat(lockAcquired.await(5, TimeUnit.SECONDS)).isTrue();
+
+            var disable = executor.submit(() -> transaction.execute(status -> {
+                jdbcTemplate.update("""
+                        UPDATE youtube_channel_watch
+                           SET enabled = false, subscription_status = 'INACTIVE'
+                         WHERE youtube_channel_id = ?
+                        """, channelId);
+                return null;
+            }));
+            assertThatThrownBy(() -> disable.get(100, TimeUnit.MILLISECONDS))
+                    .isInstanceOf(TimeoutException.class);
+
+            releaseLock.countDown();
+            webhook.get(5, TimeUnit.SECONDS);
+            disable.get(5, TimeUnit.SECONDS);
+            assertThat(jdbcTemplate.queryForObject(
+                    "SELECT enabled FROM youtube_channel_watch WHERE youtube_channel_id = ?",
+                    Boolean.class, channelId)).isFalse();
+        } finally {
+            deleteFixture(creatorId, channelId);
+        }
+    }
+
+    private void await(CountDownLatch latch) {
+        try {
+            if (!latch.await(5, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("Timed out waiting for Watch row lock");
+            }
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while waiting for Watch row lock", exception);
         }
     }
 

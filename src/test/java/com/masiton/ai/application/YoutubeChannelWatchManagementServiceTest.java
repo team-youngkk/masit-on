@@ -29,20 +29,20 @@ class YoutubeChannelWatchManagementServiceTest {
             creatorReferences, watchStore);
 
     @Test
-    @DisplayName("검증된 Creator 감시를 활성화하면 ACTIVE 상태를 저장하고 메타데이터를 반환한다")
-    void 감시설정_검증된Creator활성화_ACTIVE상태를저장하고메타데이터를반환한다() {
+    @DisplayName("검증된 Creator 감시를 활성화하면 외부 확인 전 UNKNOWN 상태를 저장한다")
+    void 감시설정_검증된Creator활성화_외부확인전UNKNOWN상태를저장한다() {
         UUID creatorId = UUID.randomUUID();
         when(creatorReferences.findCreatorReference(creatorId)).thenReturn(Optional.of(creator(creatorId, true, true)));
         OffsetDateTime notifiedAt = OffsetDateTime.parse("2026-08-12T01:00:00Z");
-        when(watchStore.upsert(creatorId, "channel-id", true, "ACTIVE")).thenReturn(
-                new YoutubeChannelWatchStore.WatchDetail(true, "ACTIVE", notifiedAt, null, null));
+        when(watchStore.upsert(creatorId, "channel-id", true, "UNKNOWN")).thenReturn(
+                new YoutubeChannelWatchStore.WatchDetail(true, "UNKNOWN", notifiedAt, null, null));
 
         var result = service.setEnabled(creatorId, true);
 
         assertThat(result.enabled()).isTrue();
-        assertThat(result.subscriptionStatus()).isEqualTo("ACTIVE");
+        assertThat(result.subscriptionStatus()).isEqualTo("UNKNOWN");
         assertThat(result.lastNotificationAt()).isEqualTo(notifiedAt);
-        verify(watchStore).upsert(creatorId, "channel-id", true, "ACTIVE");
+        verify(watchStore).upsert(creatorId, "channel-id", true, "UNKNOWN");
     }
 
     @Test

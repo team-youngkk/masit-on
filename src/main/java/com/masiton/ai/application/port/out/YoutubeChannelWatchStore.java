@@ -13,6 +13,8 @@ public interface YoutubeChannelWatchStore {
 
     void markNotificationReceived(String channelId, OffsetDateTime receivedAt);
 
+    void markSubscriptionVerified(String channelId, OffsetDateTime verifiedAt);
+
     record Watch(String channelId, boolean enabled, String subscriptionStatus, byte[] subscriptionTokenHash) {
         public boolean acceptsNotifications() {
             return enabled && "ACTIVE".equals(subscriptionStatus);

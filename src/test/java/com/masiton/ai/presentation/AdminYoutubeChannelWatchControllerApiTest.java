@@ -32,14 +32,14 @@ class AdminYoutubeChannelWatchControllerApiTest {
     void 감시설정_활성화요청_상태와nullable메타데이터를반환한다() throws Exception {
         UUID creatorId = UUID.randomUUID();
         when(useCase.setEnabled(creatorId, true)).thenReturn(new YoutubeChannelWatchManagementUseCase.WatchStatus(
-                true, "ACTIVE", OffsetDateTime.parse("2026-08-12T01:00:00Z"), null, null));
+                true, "UNKNOWN", OffsetDateTime.parse("2026-08-12T01:00:00Z"), null, null));
 
         mockMvc.perform(put("/api/admin/ai/youtube-channel-watches/{creatorId}", creatorId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"enabled\":true}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.enabled").value(true))
-                .andExpect(jsonPath("$.subscriptionStatus").value("ACTIVE"))
+                .andExpect(jsonPath("$.subscriptionStatus").value("UNKNOWN"))
                 .andExpect(jsonPath("$.lastNotificationAt").value("2026-08-12T01:00:00Z"))
                 .andExpect(jsonPath("$.lastRenewedAt").isEmpty())
                 .andExpect(jsonPath("$.lastErrorCategory").isEmpty());

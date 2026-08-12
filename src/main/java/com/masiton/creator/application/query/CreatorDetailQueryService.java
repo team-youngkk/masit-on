@@ -2,11 +2,10 @@ package com.masiton.creator.application.query;
 
 import java.util.UUID;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.masiton.common.web.BusinessException;
+import com.masiton.creator.application.CreatorReferenceExceptionFactory;
 import com.masiton.creator.application.port.in.GetPublicCreatorDetailUseCase;
 import com.masiton.creator.application.port.out.CreatorRepositoryPort;
 import com.masiton.creator.domain.model.Creator;
@@ -40,8 +39,7 @@ public class CreatorDetailQueryService implements GetPublicCreatorDetailUseCase 
     public CreatorDetailResult getPublicCreatorDetail(UUID creatorId) {
         Creator creator = creatorRepository.findById(creatorId)
                 .filter(this::isPubliclyVisible)
-                .orElseThrow(() -> new BusinessException(
-                        HttpStatus.NOT_FOUND, "CREATOR_NOT_FOUND", "요청한 유튜버를 찾을 수 없습니다."));
+                .orElseThrow(CreatorReferenceExceptionFactory::notFound);
         return new CreatorDetailResult(
                 creator.getId(),
                 creator.getChannelName(),

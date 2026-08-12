@@ -186,6 +186,19 @@ class AiExtractionJobServiceTest {
     }
 
     @Test
+    @DisplayName("외부 challenge 전 UNKNOWN 채널 webhook은 작업을 만들지 않는다")
+    void submitWebhook_EXTERNALCHALLENGE전UNKNOWN채널_작업을만들지않는다() {
+        when(watchStore.findForUpdate("channel-id")).thenReturn(Optional.of(
+                new YoutubeChannelWatchStore.Watch("channel-id", true, "UNKNOWN", null)));
+
+        Optional<AiExtractionJobView> result = service.submitWebhook("channel-id", "video-id",
+                URI.create("https://www.youtube.com/watch?v=video-id"));
+
+        assertThat(result).isEmpty();
+        verifyNoInteractions(store);
+    }
+
+    @Test
     @DisplayName("활성 채널 webhook은 작업을 접수한다")
     void submitWebhook_활성채널_작업을접수한다() {
         when(watchStore.findForUpdate("channel-id")).thenReturn(Optional.of(
@@ -205,6 +218,18 @@ class AiExtractionJobServiceTest {
         assertThat(result).contains(accepted);
         verify(store).insert(any());
         verify(watchStore).markNotificationReceived(eq("channel-id"), any());
+    }
+
+    @Test
+    @DisplayName("challenge 검증에 성공하면 구독을 ACTIVE로 전환하고 갱신 시각을 기록한다")
+    void verifyChallenge_토큰검증성공_구독을ACTIVE로전환한다() {
+        when(watchStore.findForUpdate("channel-id")).thenReturn(Optional.of(
+                new YoutubeChannelWatchStore.Watch("channel-id", true, "UNKNOWN", tokenHash("verify-token"))));
+
+        assertThat(service.verifyChallenge("channel-id", "verify-token", "challenge"))
+                .isEqualTo("challenge");
+
+        verify(watchStore).markSubscriptionVerified(eq("channel-id"), any());
     }
 
     @Test
@@ -279,6 +304,15 @@ class AiExtractionJobServiceTest {
         try {
             return java.security.MessageDigest.getInstance("SHA-256")
                     .digest((videoUrl + "\n" + supplement).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        } catch (java.security.NoSuchAlgorithmException exception) {
+            throw new AssertionError(exception);
+        }
+    }
+
+    private byte[] tokenHash(String token) {
+        try {
+            return java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(token.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         } catch (java.security.NoSuchAlgorithmException exception) {
             throw new AssertionError(exception);
         }

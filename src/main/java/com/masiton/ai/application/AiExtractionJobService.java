@@ -105,7 +105,7 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
     }
 
     @Override
-    @Transactional
+    @Transactional(timeout = 5)
     public Optional<AiExtractionJobView> submitWebhook(String channelId, String videoId, URI videoUrl) {
         String normalizedChannelId = requiredId(channelId, "channelId");
         String normalizedVideoId = requiredId(videoId, "videoId");
@@ -125,16 +125,18 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
     }
 
     @Override
+    @Transactional(timeout = 5)
     public String verifyChallenge(String channelId, String verifyToken, String challenge) {
         String normalizedChannelId = requiredId(channelId, "channelId");
         if (challenge == null || challenge.isBlank() || challenge.length() > 512) {
             throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, "hub.challenge", "hub.challenge is invalid.");
         }
-        YoutubeChannelWatchStore.Watch watch = watchStore.find(normalizedChannelId)
+        YoutubeChannelWatchStore.Watch watch = watchStore.findForUpdate(normalizedChannelId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
         if (verifyToken == null || !constantTimeHashEquals(watch.subscriptionTokenHash(), verifyToken)) {
             throw new BusinessException(HttpStatus.FORBIDDEN, "AIEXTRACT_WEBHOOK_TOKEN_INVALID", "Webhook token is invalid.");
         }
+        watchStore.markSubscriptionVerified(normalizedChannelId, OffsetDateTime.now(ZoneOffset.UTC));
         return challenge;
     }
     private AiExtractionJobView create(String source, String priority, String channelId, String videoId,

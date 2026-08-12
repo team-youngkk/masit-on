@@ -220,6 +220,7 @@ related_documents:
 
 - 검증된 Creator의 YouTube 채널만 활성화할 수 있다.
 - 응답에는 `enabled`, `subscriptionStatus`, `lastNotificationAt`, `lastRenewedAt`, `lastErrorCategory`를 포함한다.
+- `enabled=true`는 감시 활성화 의도만 저장하며, 외부 구독 challenge가 성공하기 전까지 `subscriptionStatus=UNKNOWN`으로 반환하고 Webhook을 수락하지 않는다. challenge 성공 시 `ACTIVE`와 `lastRenewedAt`을 기록한다.
 - Creator 등록만으로 자동 활성화하지 않는다.
 - 비활성화는 이미 접수된 작업·후보·정식 데이터를 삭제하지 않고 신규 Webhook 접수만 중지한다.
 
@@ -254,6 +255,7 @@ Webhook 수신 경로는 공개 인터넷 진입점이므로 Nginx·Spring Secur
 | `AIEXTRACT_INVALID_VIDEO_URL` | 400 | YouTube URL 형식·호스트·식별자 오류 |
 | `AIEXTRACT_DUPLICATE_CONFLICT` | 409 | 기존 정식 데이터 또는 동시 검수 충돌 |
 | `AIEXTRACT_JOB_NOT_FOUND` | 404 | 작업 ID 없음 또는 접근 불가 |
+| `CREATOR_NOT_FOUND` | 404 | Creator 없음·비공개·삭제·외부 이용 불가 또는 감시 활성화 대상이 아님 |
 | `AIEXTRACT_RETRY_BLOCKED` | 409 | 상태상 재시도 불가 |
 | `AIEXTRACT_PROVIDER_BLOCKED` | 429 | Gemini Free Tier quota 소진·결제 연결 요구·무료 정책 미검증 |
 | `AIEXTRACT_WEBHOOK_REJECTED` | 403 | 구독 채널·검증 Token 불일치 |

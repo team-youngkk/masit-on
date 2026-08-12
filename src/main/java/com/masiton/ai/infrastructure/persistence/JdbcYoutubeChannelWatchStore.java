@@ -14,6 +14,8 @@ import com.masiton.ai.application.port.out.YoutubeChannelWatchStore;
 
 @Repository
 public class JdbcYoutubeChannelWatchStore implements YoutubeChannelWatchStore {
+    private static final int WATCH_LOCK_QUERY_TIMEOUT_SECONDS = 5;
+
     private final JdbcTemplate jdbcTemplate;
 
     public JdbcYoutubeChannelWatchStore(JdbcTemplate jdbcTemplate) {
@@ -22,26 +24,34 @@ public class JdbcYoutubeChannelWatchStore implements YoutubeChannelWatchStore {
 
     @Override
     public Optional<Watch> find(String channelId) {
-        return find(channelId, false);
-    }
-
-    @Override
-    public Optional<Watch> findForUpdate(String channelId) {
-        return find(channelId, true);
-    }
-
-    private Optional<Watch> find(String channelId, boolean forUpdate) {
-        String lockClause = forUpdate ? " FOR UPDATE" : "";
         List<Watch> rows = jdbcTemplate.query("""
                 SELECT youtube_channel_id, enabled, subscription_status, subscription_token_hash
                   FROM youtube_channel_watch
                  WHERE youtube_channel_id = ?
-                """ + lockClause, this::map, channelId);
+                """, this::map, channelId);
+        return rows.stream().findFirst();
+    }
+
+    @Override
+    public Optional<Watch> findForUpdate(String channelId) {
+        String sql = """
+                SELECT youtube_channel_id, enabled, subscription_status, subscription_token_hash
+                  FROM youtube_channel_watch
+                 WHERE youtube_channel_id = ?
+                 FOR UPDATE
+                """;
+        List<Watch> rows = jdbcTemplate.query(connection -> {
+            var statement = connection.prepareStatement(sql);
+            statement.setQueryTimeout(WATCH_LOCK_QUERY_TIMEOUT_SECONDS);
+            statement.setString(1, channelId);
+            return statement;
+        }, this::map);
         return rows.stream().findFirst();
     }
 
     @Override
     public WatchDetail upsert(UUID creatorId, String channelId, boolean enabled, String subscriptionStatus) {
+        String requestedStatus = enabled && "ACTIVE".equals(subscriptionStatus) ? "UNKNOWN" : subscriptionStatus;
         return jdbcTemplate.queryForObject("""
                 INSERT INTO youtube_channel_watch (
                     id, creator_id, youtube_channel_id, enabled, subscription_status, updated_at
@@ -49,10 +59,16 @@ public class JdbcYoutubeChannelWatchStore implements YoutubeChannelWatchStore {
                 ON CONFLICT (creator_id) DO UPDATE
                    SET youtube_channel_id = EXCLUDED.youtube_channel_id,
                        enabled = EXCLUDED.enabled,
-                       subscription_status = EXCLUDED.subscription_status,
+                       subscription_status = CASE
+                           WHEN EXCLUDED.enabled
+                                AND youtube_channel_watch.subscription_status = 'ACTIVE'
+                                AND youtube_channel_watch.subscription_token_hash IS NOT NULL
+                           THEN 'ACTIVE'
+                           ELSE EXCLUDED.subscription_status
+                       END,
                        updated_at = CURRENT_TIMESTAMP
                 RETURNING enabled, subscription_status, last_notification_at, last_renewed_at, last_error_category
-                """, this::mapDetail, UUID.randomUUID(), creatorId, channelId, enabled, subscriptionStatus);
+                """, this::mapDetail, UUID.randomUUID(), creatorId, channelId, enabled, requestedStatus);
     }
 
     @Override
@@ -61,9 +77,20 @@ public class JdbcYoutubeChannelWatchStore implements YoutubeChannelWatchStore {
                 UPDATE youtube_channel_watch
                    SET last_notification_at = ?, updated_at = CURRENT_TIMESTAMP
                  WHERE youtube_channel_id = ?
-                   AND enabled = true
-                   AND subscription_status = 'ACTIVE'
                 """, receivedAt, channelId);
+    }
+
+    @Override
+    public void markSubscriptionVerified(String channelId, OffsetDateTime verifiedAt) {
+        jdbcTemplate.update("""
+                UPDATE youtube_channel_watch
+                   SET subscription_status = 'ACTIVE',
+                       last_renewed_at = ?,
+                       last_error_category = NULL,
+                       updated_at = CURRENT_TIMESTAMP
+                 WHERE youtube_channel_id = ?
+                   AND enabled = true
+                """, verifiedAt, channelId);
     }
 
     private Watch map(ResultSet rs, int rowNum) throws SQLException {

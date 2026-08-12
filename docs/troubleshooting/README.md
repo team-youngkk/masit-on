@@ -10,6 +10,8 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #184 YouTube 채널 감시 상태·동시성 경계 리뷰 반영](pr-184-youtube-channel-watch-review.md)
+
 - [PR #178 3차 확장 통합 회귀 테스트 리뷰 반영](pr-178-third-expansion-integration-review.md)
 
 - [PR #177 AI 평가 자산의 증거 범위·분할·Critical 경계](pr-177-ai-evaluation-review.md)

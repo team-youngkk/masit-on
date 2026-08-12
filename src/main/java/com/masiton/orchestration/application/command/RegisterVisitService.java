@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
+import com.masiton.creator.application.CreatorReferenceExceptionFactory;
 import com.masiton.creator.application.port.in.FindCreatorReferenceUseCase;
 import com.masiton.orchestration.application.port.in.RegisterVisitRelationshipUseCase;
 import com.masiton.restaurant.application.port.in.FindRestaurantReferenceUseCase;
@@ -53,7 +54,7 @@ public class RegisterVisitService implements RegisterVisitRelationshipUseCase {
                 .orElseThrow(() -> failure(HttpStatus.NOT_FOUND, "RESTAURANT_NOT_FOUND"));
         FindCreatorReferenceUseCase.CreatorReference creator = creatorReferences
                 .findCreatorReference(command.creatorId())
-                .orElseThrow(() -> failure(HttpStatus.NOT_FOUND, "CREATOR_NOT_FOUND"));
+                .orElseThrow(CreatorReferenceExceptionFactory::notFound);
         FindVideoReferenceUseCase.VideoReference video = videoReferences
                 .findVideoReference(command.videoId())
                 .orElseThrow(() -> failure(HttpStatus.NOT_FOUND, "VIDEO_NOT_FOUND"));
@@ -98,7 +99,6 @@ public class RegisterVisitService implements RegisterVisitRelationshipUseCase {
     private BusinessException failure(HttpStatus status, String code) {
         return new BusinessException(status, code, switch (code) {
             case "RESTAURANT_NOT_FOUND" -> "요청한 맛집을 찾을 수 없습니다.";
-            case "CREATOR_NOT_FOUND" -> "요청한 유튜버를 찾을 수 없습니다.";
             case "VIDEO_NOT_FOUND" -> "요청한 영상을 찾을 수 없습니다.";
             case "VIDEO_CHANNEL_MISMATCH" -> "영상의 게시 채널과 유튜버 채널이 일치하지 않습니다.";
             case "DUPLICATE_VISIT_RELATIONSHIP" -> "동일한 방문 관계가 이미 등록되어 있습니다.";
