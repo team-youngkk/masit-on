@@ -80,8 +80,8 @@ related_documents:
 |---|---|---|
 | `npm.cmd test` | 통과 | 전체 프론트 테스트 182개와 AI 접수 API 테스트 3개 통과 |
 | `npm.cmd run typecheck` | 통과 | Next.js TypeScript 컴파일 오류 없음 |
-| `npm.cmd run build` | 이전 리뷰 반영 head에서 통과 | 추가 구조 정리 후 최종 head에서 재실행 |
-| GitHub Actions run `31587344320` | 부분 통과 | 프론트엔드 job 성공, 백엔드 job은 기존 레거시 Redis 세션 실패 및 PostgreSQL 연결 거부 |
+| `npm.cmd run build` | 통과 | 최종 리뷰 반영 head `adbc17f`에서 테스트·타입 검사·Next.js production build 성공 |
+| GitHub Actions run `31589880762` | 진행 중 | 최종 리뷰 반영 head의 프론트엔드 job은 성공, 백엔드 job은 확인 시점에 실행 중 |
 
 ## 8. 재발 방지 및 다음 확인
 
@@ -103,4 +103,4 @@ related_documents:
 ## 10. 남은 사항
 
 - 리뷰 반영 코드의 로컬 프론트 테스트와 typecheck는 통과했다.
-- 최종 커밋 push 후 GitHub Actions에서 새 head의 백엔드 빌드·테스트를 재확인해야 한다. 현재 확인된 이전 run `31587344320`의 백엔드 실패는 프론트엔드 변경과 직접 관련 없는 Redis 세션 통합 테스트 및 PostgreSQL 연결 거부로 분리 기록했다.
+- GitHub Actions run `31589880762`의 백엔드 빌드·테스트가 완료되면 최종 상태를 확인한다. 이전 run `31587344320`의 백엔드 실패는 프론트엔드 변경과 직접 관련 없는 Redis 세션 통합 테스트 및 PostgreSQL 연결 거부로 분리 기록했다.
