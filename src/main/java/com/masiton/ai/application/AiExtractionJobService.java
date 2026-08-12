@@ -133,6 +133,9 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
         }
         YoutubeChannelWatchStore.Watch watch = watchStore.findForUpdate(normalizedChannelId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+        if (!watch.enabled()) {
+            throw new BusinessException(HttpStatus.FORBIDDEN, "AIEXTRACT_WEBHOOK_TOKEN_INVALID", "Webhook token is invalid.");
+        }
         if (verifyToken == null || !constantTimeHashEquals(watch.subscriptionTokenHash(), verifyToken)) {
             throw new BusinessException(HttpStatus.FORBIDDEN, "AIEXTRACT_WEBHOOK_TOKEN_INVALID", "Webhook token is invalid.");
         }

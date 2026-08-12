@@ -390,7 +390,7 @@ class RedisRefreshTokenStoreIntegrationTest {
     @Test
     @DisplayName("레거시 회원 세션 전체 폐기도 복구 큐에 적재한다")
     void memberSession_레거시만료시각_전체폐기_복구큐선적재() {
-        Instant now = Instant.parse("2026-07-29T10:00:00Z");
+        Instant now = Instant.now().plus(Duration.ofDays(1));
         when(memberSessionClock.instant()).thenReturn(now);
 
         MemberSession issued = memberSessionStore.issue("member-a", Duration.ofDays(14));

@@ -8,7 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
-import com.masiton.creator.application.CreatorReferenceExceptionFactory;
+import com.masiton.creator.application.port.in.CreatorReferenceExceptionFactory;
 import com.masiton.creator.application.port.in.FindCreatorReferenceUseCase;
 import com.masiton.orchestration.application.port.in.RegisterVisitRelationshipUseCase;
 import com.masiton.restaurant.application.port.in.FindRestaurantReferenceUseCase;

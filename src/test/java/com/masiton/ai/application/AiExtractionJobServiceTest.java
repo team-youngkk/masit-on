@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -230,6 +231,24 @@ class AiExtractionJobServiceTest {
                 .isEqualTo("challenge");
 
         verify(watchStore).markSubscriptionVerified(eq("channel-id"), any());
+    }
+
+    @Test
+    @DisplayName("비활성 채널 challenge는 토큰이 일치해도 거부한다")
+    void verifyChallenge_비활성채널_토큰일치해도거부한다() {
+        when(watchStore.findForUpdate("channel-id")).thenReturn(Optional.of(
+                new YoutubeChannelWatchStore.Watch("channel-id", false, "INACTIVE", tokenHash("verify-token"))));
+
+        assertThatThrownBy(() -> service.verifyChallenge("channel-id", "verify-token", "challenge"))
+                .isInstanceOf(com.masiton.common.web.BusinessException.class)
+                .satisfies(exception -> {
+                    com.masiton.common.web.BusinessException businessException =
+                            (com.masiton.common.web.BusinessException) exception;
+                    assertThat(businessException.status()).isEqualTo(HttpStatus.FORBIDDEN);
+                    assertThat(businessException.code()).isEqualTo("AIEXTRACT_WEBHOOK_TOKEN_INVALID");
+                });
+
+        verify(watchStore, never()).markSubscriptionVerified(any(), any());
     }
 
     @Test

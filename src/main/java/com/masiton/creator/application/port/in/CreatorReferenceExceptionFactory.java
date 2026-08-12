@@ -1,4 +1,4 @@
-package com.masiton.creator.application;
+package com.masiton.creator.application.port.in;
 
 import org.springframework.http.HttpStatus;
 

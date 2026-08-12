@@ -8,7 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.masiton.ai.application.port.in.YoutubeChannelWatchManagementUseCase;
 import com.masiton.ai.application.port.out.YoutubeChannelWatchStore;
 import com.masiton.common.web.BusinessException;
-import com.masiton.creator.application.CreatorReferenceExceptionFactory;
+import com.masiton.creator.application.port.in.CreatorReferenceExceptionFactory;
 import com.masiton.creator.application.port.in.FindCreatorReferenceUseCase;
 
 @Service
