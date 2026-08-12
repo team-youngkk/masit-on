@@ -7,7 +7,7 @@
   "cases": [
     {
       "caseId": "ai-dev-001",
-      "groupId": "ai-synthetic-group-001",
+      "groupId": "ai-dev-supported-visit",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -23,7 +23,7 @@
         "fixtureId": "synthetic-ai-input-001",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000001",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000001",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -61,19 +61,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-002",
-      "groupId": "ai-synthetic-group-002",
+      "groupId": "ai-dev-duplicate-retry",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -85,7 +77,7 @@
         "fixtureId": "synthetic-ai-input-002",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000002",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000002",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -117,19 +109,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-003",
-      "groupId": "ai-synthetic-group-003",
+      "groupId": "ai-dev-ambiguous-address",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-002",
@@ -141,7 +125,7 @@
         "fixtureId": "synthetic-ai-input-003",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000003",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000003",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -175,19 +159,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-004",
-      "groupId": "ai-synthetic-group-004",
+      "groupId": "ai-dev-same-name-place",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-002",
@@ -198,7 +174,7 @@
         "fixtureId": "synthetic-ai-input-004",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000004",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000004",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -209,7 +185,7 @@
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
         "restaurantName": "합성맛집-004",
-        "address": "서울특별시 합성구 평가로 4",
+        "address": null,
         "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
@@ -223,7 +199,7 @@
         "visited": true,
         "allowedTagCodes": [],
         "automaticRegistrationExpected": false,
-        "criticalWrongPlace": false
+        "criticalWrongPlace": true
       },
       "humanReview": {
         "sampleType": "AUTO_BLOCKED_SAMPLE",
@@ -232,19 +208,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-005",
-      "groupId": "ai-synthetic-group-005",
+      "groupId": "ai-dev-false-address",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-002",
@@ -256,7 +224,7 @@
         "fixtureId": "synthetic-ai-input-005",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000005",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000005",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -282,7 +250,7 @@
         "visited": true,
         "allowedTagCodes": [],
         "automaticRegistrationExpected": false,
-        "criticalWrongPlace": false
+        "criticalWrongPlace": true
       },
       "humanReview": {
         "sampleType": "AUTO_BLOCKED_SAMPLE",
@@ -291,19 +259,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-006",
-      "groupId": "ai-synthetic-group-006",
+      "groupId": "ai-dev-indirect-mention",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-003",
@@ -316,7 +276,7 @@
         "fixtureId": "synthetic-ai-input-006",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000006",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000006",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -351,19 +311,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-007",
-      "groupId": "ai-synthetic-group-007",
+      "groupId": "ai-dev-not-visited",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-003",
@@ -375,7 +327,7 @@
         "fixtureId": "synthetic-ai-input-007",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000007",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000007",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -410,19 +362,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-008",
-      "groupId": "ai-synthetic-group-008",
+      "groupId": "ai-dev-multiple-restaurants",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-002",
@@ -434,7 +378,7 @@
         "fixtureId": "synthetic-ai-input-008",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000008",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000008",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -444,7 +388,7 @@
       "fixtureOrdinal": 8,
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
-        "restaurantName": "합성맛집-008",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 8",
         "visitEvidencePresent": true,
         "connectableTagCodes": [],
@@ -468,19 +412,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-009",
-      "groupId": "ai-synthetic-group-009",
+      "groupId": "ai-dev-schema-deviation",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -491,12 +427,12 @@
         "fixtureId": "synthetic-ai-input-009",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000009",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000009",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
       },
-      "scenario": "PROMPT_INJECTION_SCHEMA_DEVIATION",
+      "scenario": "SCHEMA_DEVIATION_UNEXPECTED_ROOT_FIELD",
       "payloadVariant": "INVALID_ROOT_FIELD",
       "fixtureOrdinal": 9,
       "expected": {
@@ -525,19 +461,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-010",
-      "groupId": "ai-synthetic-group-010",
+      "groupId": "ai-dev-tag-without-evidence",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -549,7 +477,7 @@
         "fixtureId": "synthetic-ai-input-010",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000000a",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000000a",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -585,19 +513,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-011",
-      "groupId": "ai-synthetic-group-011",
+      "groupId": "ai-dev-malformed-candidate",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -608,7 +528,7 @@
         "fixtureId": "synthetic-ai-input-011",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000000b",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000000b",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -618,9 +538,9 @@
       "fixtureOrdinal": 11,
       "expected": {
         "validatorDecision": "AUTO_REJECTED",
-        "restaurantName": "합성맛집-011",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 11",
-        "visitEvidencePresent": false,
+        "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
         "requiredIssueCodes": [
@@ -642,19 +562,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-012",
-      "groupId": "ai-synthetic-group-012",
+      "groupId": "ai-dev-missing-required-field",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -668,7 +580,7 @@
         "fixtureId": "synthetic-ai-input-012",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000000c",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000000c",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -678,9 +590,9 @@
       "fixtureOrdinal": 12,
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
-        "restaurantName": "합성맛집-012",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 12",
-        "visitEvidencePresent": false,
+        "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
         "requiredIssueCodes": [
@@ -703,19 +615,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-013",
-      "groupId": "ai-synthetic-group-013",
+      "groupId": "ai-dev-supported-visit",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -731,7 +635,7 @@
         "fixtureId": "synthetic-ai-input-013",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000000d",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000000d",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -769,19 +673,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-014",
-      "groupId": "ai-synthetic-group-014",
+      "groupId": "ai-dev-duplicate-retry",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -793,7 +689,7 @@
         "fixtureId": "synthetic-ai-input-014",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000000e",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000000e",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -825,19 +721,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-015",
-      "groupId": "ai-synthetic-group-015",
+      "groupId": "ai-dev-ambiguous-address",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-002",
@@ -849,7 +737,7 @@
         "fixtureId": "synthetic-ai-input-015",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000000f",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000000f",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -883,19 +771,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-016",
-      "groupId": "ai-synthetic-group-016",
+      "groupId": "ai-dev-same-name-place",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-002",
@@ -906,7 +786,7 @@
         "fixtureId": "synthetic-ai-input-016",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000010",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000010",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -917,7 +797,7 @@
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
         "restaurantName": "합성맛집-016",
-        "address": "서울특별시 합성구 평가로 16",
+        "address": null,
         "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
@@ -931,7 +811,7 @@
         "visited": true,
         "allowedTagCodes": [],
         "automaticRegistrationExpected": false,
-        "criticalWrongPlace": false
+        "criticalWrongPlace": true
       },
       "humanReview": {
         "sampleType": "AUTO_BLOCKED_SAMPLE",
@@ -940,19 +820,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-017",
-      "groupId": "ai-synthetic-group-017",
+      "groupId": "ai-dev-false-address",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-002",
@@ -964,7 +836,7 @@
         "fixtureId": "synthetic-ai-input-017",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000011",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000011",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -990,7 +862,7 @@
         "visited": true,
         "allowedTagCodes": [],
         "automaticRegistrationExpected": false,
-        "criticalWrongPlace": false
+        "criticalWrongPlace": true
       },
       "humanReview": {
         "sampleType": "AUTO_BLOCKED_SAMPLE",
@@ -999,19 +871,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-018",
-      "groupId": "ai-synthetic-group-018",
+      "groupId": "ai-dev-indirect-mention",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-003",
@@ -1024,7 +888,7 @@
         "fixtureId": "synthetic-ai-input-018",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000012",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000012",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -1059,19 +923,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-019",
-      "groupId": "ai-synthetic-group-019",
+      "groupId": "ai-dev-not-visited",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-003",
@@ -1083,7 +939,7 @@
         "fixtureId": "synthetic-ai-input-019",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000013",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000013",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -1118,19 +974,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-020",
-      "groupId": "ai-synthetic-group-020",
+      "groupId": "ai-dev-multiple-restaurants",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-002",
@@ -1142,7 +990,7 @@
         "fixtureId": "synthetic-ai-input-020",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000014",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000014",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -1152,7 +1000,7 @@
       "fixtureOrdinal": 20,
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
-        "restaurantName": "합성맛집-020",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 20",
         "visitEvidencePresent": true,
         "connectableTagCodes": [],
@@ -1176,19 +1024,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-021",
-      "groupId": "ai-synthetic-group-021",
+      "groupId": "ai-dev-schema-deviation",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -1199,12 +1039,12 @@
         "fixtureId": "synthetic-ai-input-021",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000015",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000015",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
       },
-      "scenario": "PROMPT_INJECTION_SCHEMA_DEVIATION",
+      "scenario": "SCHEMA_DEVIATION_UNEXPECTED_ROOT_FIELD",
       "payloadVariant": "INVALID_ROOT_FIELD",
       "fixtureOrdinal": 21,
       "expected": {
@@ -1233,19 +1073,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-022",
-      "groupId": "ai-synthetic-group-022",
+      "groupId": "ai-dev-tag-without-evidence",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -1257,7 +1089,7 @@
         "fixtureId": "synthetic-ai-input-022",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000016",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000016",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -1293,19 +1125,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-023",
-      "groupId": "ai-synthetic-group-023",
+      "groupId": "ai-dev-malformed-candidate",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -1316,7 +1140,7 @@
         "fixtureId": "synthetic-ai-input-023",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000017",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000017",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -1326,9 +1150,9 @@
       "fixtureOrdinal": 23,
       "expected": {
         "validatorDecision": "AUTO_REJECTED",
-        "restaurantName": "합성맛집-023",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 23",
-        "visitEvidencePresent": false,
+        "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
         "requiredIssueCodes": [
@@ -1350,19 +1174,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-024",
-      "groupId": "ai-synthetic-group-024",
+      "groupId": "ai-dev-missing-required-field",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -1376,7 +1192,7 @@
         "fixtureId": "synthetic-ai-input-024",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000018",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000018",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -1386,9 +1202,9 @@
       "fixtureOrdinal": 24,
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
-        "restaurantName": "합성맛집-024",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 24",
-        "visitEvidencePresent": false,
+        "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
         "requiredIssueCodes": [
@@ -1411,19 +1227,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-025",
-      "groupId": "ai-synthetic-group-025",
+      "groupId": "ai-dev-supported-visit",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -1439,7 +1247,7 @@
         "fixtureId": "synthetic-ai-input-025",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000019",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000019",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -1477,19 +1285,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-026",
-      "groupId": "ai-synthetic-group-026",
+      "groupId": "ai-dev-duplicate-retry",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -1501,7 +1301,7 @@
         "fixtureId": "synthetic-ai-input-026",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000001a",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000001a",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -1533,19 +1333,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-027",
-      "groupId": "ai-synthetic-group-027",
+      "groupId": "ai-dev-ambiguous-address",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-002",
@@ -1557,7 +1349,7 @@
         "fixtureId": "synthetic-ai-input-027",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000001b",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000001b",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -1591,19 +1383,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-028",
-      "groupId": "ai-synthetic-group-028",
+      "groupId": "ai-dev-same-name-place",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-002",
@@ -1614,7 +1398,7 @@
         "fixtureId": "synthetic-ai-input-028",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000001c",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000001c",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -1625,7 +1409,7 @@
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
         "restaurantName": "합성맛집-028",
-        "address": "서울특별시 합성구 평가로 28",
+        "address": null,
         "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
@@ -1639,7 +1423,7 @@
         "visited": true,
         "allowedTagCodes": [],
         "automaticRegistrationExpected": false,
-        "criticalWrongPlace": false
+        "criticalWrongPlace": true
       },
       "humanReview": {
         "sampleType": "AUTO_BLOCKED_SAMPLE",
@@ -1648,19 +1432,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-029",
-      "groupId": "ai-synthetic-group-029",
+      "groupId": "ai-dev-false-address",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-002",
@@ -1672,7 +1448,7 @@
         "fixtureId": "synthetic-ai-input-029",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000001d",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000001d",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -1698,7 +1474,7 @@
         "visited": true,
         "allowedTagCodes": [],
         "automaticRegistrationExpected": false,
-        "criticalWrongPlace": false
+        "criticalWrongPlace": true
       },
       "humanReview": {
         "sampleType": "AUTO_BLOCKED_SAMPLE",
@@ -1707,19 +1483,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-030",
-      "groupId": "ai-synthetic-group-030",
+      "groupId": "ai-dev-indirect-mention",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-003",
@@ -1732,7 +1500,7 @@
         "fixtureId": "synthetic-ai-input-030",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000001e",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000001e",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -1767,19 +1535,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-031",
-      "groupId": "ai-synthetic-group-031",
+      "groupId": "ai-dev-not-visited",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-003",
@@ -1791,7 +1551,7 @@
         "fixtureId": "synthetic-ai-input-031",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000001f",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000001f",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -1826,19 +1586,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-032",
-      "groupId": "ai-synthetic-group-032",
+      "groupId": "ai-dev-multiple-restaurants",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-002",
@@ -1850,7 +1602,7 @@
         "fixtureId": "synthetic-ai-input-032",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000020",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000020",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -1860,7 +1612,7 @@
       "fixtureOrdinal": 32,
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
-        "restaurantName": "합성맛집-032",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 32",
         "visitEvidencePresent": true,
         "connectableTagCodes": [],
@@ -1884,19 +1636,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-033",
-      "groupId": "ai-synthetic-group-033",
+      "groupId": "ai-dev-schema-deviation",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -1907,12 +1651,12 @@
         "fixtureId": "synthetic-ai-input-033",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000021",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000021",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
       },
-      "scenario": "PROMPT_INJECTION_SCHEMA_DEVIATION",
+      "scenario": "SCHEMA_DEVIATION_UNEXPECTED_ROOT_FIELD",
       "payloadVariant": "INVALID_ROOT_FIELD",
       "fixtureOrdinal": 33,
       "expected": {
@@ -1941,19 +1685,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-034",
-      "groupId": "ai-synthetic-group-034",
+      "groupId": "ai-dev-tag-without-evidence",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -1965,7 +1701,7 @@
         "fixtureId": "synthetic-ai-input-034",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000022",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000022",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -2001,19 +1737,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-035",
-      "groupId": "ai-synthetic-group-035",
+      "groupId": "ai-dev-malformed-candidate",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -2024,7 +1752,7 @@
         "fixtureId": "synthetic-ai-input-035",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000023",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000023",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -2034,9 +1762,9 @@
       "fixtureOrdinal": 35,
       "expected": {
         "validatorDecision": "AUTO_REJECTED",
-        "restaurantName": "합성맛집-035",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 35",
-        "visitEvidencePresent": false,
+        "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
         "requiredIssueCodes": [
@@ -2058,19 +1786,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-036",
-      "groupId": "ai-synthetic-group-036",
+      "groupId": "ai-dev-missing-required-field",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -2084,7 +1804,7 @@
         "fixtureId": "synthetic-ai-input-036",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000024",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000024",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -2094,9 +1814,9 @@
       "fixtureOrdinal": 36,
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
-        "restaurantName": "합성맛집-036",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 36",
-        "visitEvidencePresent": false,
+        "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
         "requiredIssueCodes": [
@@ -2119,19 +1839,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-037",
-      "groupId": "ai-synthetic-group-037",
+      "groupId": "ai-dev-supported-visit",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -2147,7 +1859,7 @@
         "fixtureId": "synthetic-ai-input-037",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000025",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000025",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -2185,19 +1897,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-038",
-      "groupId": "ai-synthetic-group-038",
+      "groupId": "ai-dev-duplicate-retry",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -2209,7 +1913,7 @@
         "fixtureId": "synthetic-ai-input-038",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000026",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000026",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -2241,19 +1945,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-039",
-      "groupId": "ai-synthetic-group-039",
+      "groupId": "ai-dev-ambiguous-address",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-002",
@@ -2265,7 +1961,7 @@
         "fixtureId": "synthetic-ai-input-039",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000027",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000027",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -2299,19 +1995,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-040",
-      "groupId": "ai-synthetic-group-040",
+      "groupId": "ai-dev-same-name-place",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-002",
@@ -2322,7 +2010,7 @@
         "fixtureId": "synthetic-ai-input-040",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000028",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000028",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -2333,7 +2021,7 @@
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
         "restaurantName": "합성맛집-040",
-        "address": "서울특별시 합성구 평가로 40",
+        "address": null,
         "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
@@ -2347,7 +2035,7 @@
         "visited": true,
         "allowedTagCodes": [],
         "automaticRegistrationExpected": false,
-        "criticalWrongPlace": false
+        "criticalWrongPlace": true
       },
       "humanReview": {
         "sampleType": "AUTO_BLOCKED_SAMPLE",
@@ -2356,19 +2044,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-041",
-      "groupId": "ai-synthetic-group-041",
+      "groupId": "ai-dev-false-address",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-002",
@@ -2380,7 +2060,7 @@
         "fixtureId": "synthetic-ai-input-041",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000029",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000029",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -2406,7 +2086,7 @@
         "visited": true,
         "allowedTagCodes": [],
         "automaticRegistrationExpected": false,
-        "criticalWrongPlace": false
+        "criticalWrongPlace": true
       },
       "humanReview": {
         "sampleType": "AUTO_BLOCKED_SAMPLE",
@@ -2415,19 +2095,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-042",
-      "groupId": "ai-synthetic-group-042",
+      "groupId": "ai-dev-indirect-mention",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-003",
@@ -2440,7 +2112,7 @@
         "fixtureId": "synthetic-ai-input-042",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000002a",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000002a",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -2475,19 +2147,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-043",
-      "groupId": "ai-synthetic-group-043",
+      "groupId": "ai-dev-not-visited",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-003",
@@ -2499,7 +2163,7 @@
         "fixtureId": "synthetic-ai-input-043",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000002b",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000002b",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -2534,19 +2198,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-044",
-      "groupId": "ai-synthetic-group-044",
+      "groupId": "ai-dev-multiple-restaurants",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-002",
@@ -2558,7 +2214,7 @@
         "fixtureId": "synthetic-ai-input-044",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000002c",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000002c",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -2568,7 +2224,7 @@
       "fixtureOrdinal": 44,
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
-        "restaurantName": "합성맛집-044",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 44",
         "visitEvidencePresent": true,
         "connectableTagCodes": [],
@@ -2592,19 +2248,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-045",
-      "groupId": "ai-synthetic-group-045",
+      "groupId": "ai-dev-schema-deviation",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -2615,12 +2263,12 @@
         "fixtureId": "synthetic-ai-input-045",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000002d",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000002d",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
       },
-      "scenario": "PROMPT_INJECTION_SCHEMA_DEVIATION",
+      "scenario": "SCHEMA_DEVIATION_UNEXPECTED_ROOT_FIELD",
       "payloadVariant": "INVALID_ROOT_FIELD",
       "fixtureOrdinal": 45,
       "expected": {
@@ -2649,19 +2297,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-046",
-      "groupId": "ai-synthetic-group-046",
+      "groupId": "ai-dev-tag-without-evidence",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -2673,7 +2313,7 @@
         "fixtureId": "synthetic-ai-input-046",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000002e",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000002e",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -2709,19 +2349,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-047",
-      "groupId": "ai-synthetic-group-047",
+      "groupId": "ai-dev-malformed-candidate",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -2732,7 +2364,7 @@
         "fixtureId": "synthetic-ai-input-047",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000002f",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000002f",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -2742,9 +2374,9 @@
       "fixtureOrdinal": 47,
       "expected": {
         "validatorDecision": "AUTO_REJECTED",
-        "restaurantName": "합성맛집-047",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 47",
-        "visitEvidencePresent": false,
+        "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
         "requiredIssueCodes": [
@@ -2766,19 +2398,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-048",
-      "groupId": "ai-synthetic-group-048",
+      "groupId": "ai-dev-missing-required-field",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -2792,7 +2416,7 @@
         "fixtureId": "synthetic-ai-input-048",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000030",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000030",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -2802,9 +2426,9 @@
       "fixtureOrdinal": 48,
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
-        "restaurantName": "합성맛집-048",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 48",
-        "visitEvidencePresent": false,
+        "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
         "requiredIssueCodes": [
@@ -2827,19 +2451,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-049",
-      "groupId": "ai-synthetic-group-049",
+      "groupId": "ai-dev-supported-visit",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -2855,7 +2471,7 @@
         "fixtureId": "synthetic-ai-input-049",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000031",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000031",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -2893,19 +2509,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-050",
-      "groupId": "ai-synthetic-group-050",
+      "groupId": "ai-dev-duplicate-retry",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -2917,7 +2525,7 @@
         "fixtureId": "synthetic-ai-input-050",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000032",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000032",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -2949,19 +2557,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-051",
-      "groupId": "ai-synthetic-group-051",
+      "groupId": "ai-dev-ambiguous-address",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-002",
@@ -2973,7 +2573,7 @@
         "fixtureId": "synthetic-ai-input-051",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000033",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000033",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -3007,19 +2607,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-052",
-      "groupId": "ai-synthetic-group-052",
+      "groupId": "ai-dev-same-name-place",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-002",
@@ -3030,7 +2622,7 @@
         "fixtureId": "synthetic-ai-input-052",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000034",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000034",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -3041,7 +2633,7 @@
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
         "restaurantName": "합성맛집-052",
-        "address": "서울특별시 합성구 평가로 52",
+        "address": null,
         "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
@@ -3055,7 +2647,7 @@
         "visited": true,
         "allowedTagCodes": [],
         "automaticRegistrationExpected": false,
-        "criticalWrongPlace": false
+        "criticalWrongPlace": true
       },
       "humanReview": {
         "sampleType": "AUTO_BLOCKED_SAMPLE",
@@ -3064,19 +2656,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-053",
-      "groupId": "ai-synthetic-group-053",
+      "groupId": "ai-dev-false-address",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-002",
@@ -3088,7 +2672,7 @@
         "fixtureId": "synthetic-ai-input-053",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000035",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000035",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -3114,7 +2698,7 @@
         "visited": true,
         "allowedTagCodes": [],
         "automaticRegistrationExpected": false,
-        "criticalWrongPlace": false
+        "criticalWrongPlace": true
       },
       "humanReview": {
         "sampleType": "AUTO_BLOCKED_SAMPLE",
@@ -3123,19 +2707,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-054",
-      "groupId": "ai-synthetic-group-054",
+      "groupId": "ai-dev-indirect-mention",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-003",
@@ -3148,7 +2724,7 @@
         "fixtureId": "synthetic-ai-input-054",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000036",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000036",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -3183,19 +2759,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-055",
-      "groupId": "ai-synthetic-group-055",
+      "groupId": "ai-dev-not-visited",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-003",
@@ -3207,7 +2775,7 @@
         "fixtureId": "synthetic-ai-input-055",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000037",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000037",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -3242,19 +2810,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-056",
-      "groupId": "ai-synthetic-group-056",
+      "groupId": "ai-dev-multiple-restaurants",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-002",
@@ -3266,7 +2826,7 @@
         "fixtureId": "synthetic-ai-input-056",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000038",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000038",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -3276,7 +2836,7 @@
       "fixtureOrdinal": 56,
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
-        "restaurantName": "합성맛집-056",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 56",
         "visitEvidencePresent": true,
         "connectableTagCodes": [],
@@ -3300,19 +2860,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-057",
-      "groupId": "ai-synthetic-group-057",
+      "groupId": "ai-dev-schema-deviation",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -3323,12 +2875,12 @@
         "fixtureId": "synthetic-ai-input-057",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000039",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000039",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
       },
-      "scenario": "PROMPT_INJECTION_SCHEMA_DEVIATION",
+      "scenario": "SCHEMA_DEVIATION_UNEXPECTED_ROOT_FIELD",
       "payloadVariant": "INVALID_ROOT_FIELD",
       "fixtureOrdinal": 57,
       "expected": {
@@ -3357,19 +2909,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-058",
-      "groupId": "ai-synthetic-group-058",
+      "groupId": "ai-dev-tag-without-evidence",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -3381,7 +2925,7 @@
         "fixtureId": "synthetic-ai-input-058",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000003a",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000003a",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -3417,19 +2961,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-059",
-      "groupId": "ai-synthetic-group-059",
+      "groupId": "ai-dev-malformed-candidate",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -3440,7 +2976,7 @@
         "fixtureId": "synthetic-ai-input-059",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000003b",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000003b",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -3450,9 +2986,9 @@
       "fixtureOrdinal": 59,
       "expected": {
         "validatorDecision": "AUTO_REJECTED",
-        "restaurantName": "합성맛집-059",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 59",
-        "visitEvidencePresent": false,
+        "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
         "requiredIssueCodes": [
@@ -3474,19 +3010,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-060",
-      "groupId": "ai-synthetic-group-060",
+      "groupId": "ai-dev-missing-required-field",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -3500,7 +3028,7 @@
         "fixtureId": "synthetic-ai-input-060",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000003c",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000003c",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -3510,9 +3038,9 @@
       "fixtureOrdinal": 60,
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
-        "restaurantName": "합성맛집-060",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 60",
-        "visitEvidencePresent": false,
+        "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
         "requiredIssueCodes": [
@@ -3535,19 +3063,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-061",
-      "groupId": "ai-synthetic-group-061",
+      "groupId": "ai-dev-supported-visit",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -3563,7 +3083,7 @@
         "fixtureId": "synthetic-ai-input-061",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000003d",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000003d",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -3601,19 +3121,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-062",
-      "groupId": "ai-synthetic-group-062",
+      "groupId": "ai-dev-duplicate-retry",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -3625,7 +3137,7 @@
         "fixtureId": "synthetic-ai-input-062",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000003e",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000003e",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -3657,19 +3169,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-063",
-      "groupId": "ai-synthetic-group-063",
+      "groupId": "ai-dev-ambiguous-address",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-002",
@@ -3681,7 +3185,7 @@
         "fixtureId": "synthetic-ai-input-063",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000003f",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000003f",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -3715,19 +3219,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-064",
-      "groupId": "ai-synthetic-group-064",
+      "groupId": "ai-dev-same-name-place",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-002",
@@ -3738,7 +3234,7 @@
         "fixtureId": "synthetic-ai-input-064",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000040",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000040",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -3749,7 +3245,7 @@
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
         "restaurantName": "합성맛집-064",
-        "address": "서울특별시 합성구 평가로 64",
+        "address": null,
         "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
@@ -3763,7 +3259,7 @@
         "visited": true,
         "allowedTagCodes": [],
         "automaticRegistrationExpected": false,
-        "criticalWrongPlace": false
+        "criticalWrongPlace": true
       },
       "humanReview": {
         "sampleType": "AUTO_BLOCKED_SAMPLE",
@@ -3772,19 +3268,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-065",
-      "groupId": "ai-synthetic-group-065",
+      "groupId": "ai-dev-false-address",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-002",
@@ -3796,7 +3284,7 @@
         "fixtureId": "synthetic-ai-input-065",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000041",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000041",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -3822,7 +3310,7 @@
         "visited": true,
         "allowedTagCodes": [],
         "automaticRegistrationExpected": false,
-        "criticalWrongPlace": false
+        "criticalWrongPlace": true
       },
       "humanReview": {
         "sampleType": "AUTO_BLOCKED_SAMPLE",
@@ -3831,19 +3319,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-066",
-      "groupId": "ai-synthetic-group-066",
+      "groupId": "ai-dev-indirect-mention",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-003",
@@ -3856,7 +3336,7 @@
         "fixtureId": "synthetic-ai-input-066",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000042",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000042",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -3891,19 +3371,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-067",
-      "groupId": "ai-synthetic-group-067",
+      "groupId": "ai-dev-not-visited",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-003",
@@ -3915,7 +3387,7 @@
         "fixtureId": "synthetic-ai-input-067",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000043",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000043",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -3950,19 +3422,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-068",
-      "groupId": "ai-synthetic-group-068",
+      "groupId": "ai-dev-multiple-restaurants",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-002",
@@ -3974,7 +3438,7 @@
         "fixtureId": "synthetic-ai-input-068",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000044",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000044",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -3984,7 +3448,7 @@
       "fixtureOrdinal": 68,
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
-        "restaurantName": "합성맛집-068",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 68",
         "visitEvidencePresent": true,
         "connectableTagCodes": [],
@@ -4008,19 +3472,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-069",
-      "groupId": "ai-synthetic-group-069",
+      "groupId": "ai-dev-schema-deviation",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -4031,12 +3487,12 @@
         "fixtureId": "synthetic-ai-input-069",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000045",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000045",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
       },
-      "scenario": "PROMPT_INJECTION_SCHEMA_DEVIATION",
+      "scenario": "SCHEMA_DEVIATION_UNEXPECTED_ROOT_FIELD",
       "payloadVariant": "INVALID_ROOT_FIELD",
       "fixtureOrdinal": 69,
       "expected": {
@@ -4065,19 +3521,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-070",
-      "groupId": "ai-synthetic-group-070",
+      "groupId": "ai-dev-tag-without-evidence",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -4089,7 +3537,7 @@
         "fixtureId": "synthetic-ai-input-070",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000046",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000046",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -4125,19 +3573,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-071",
-      "groupId": "ai-synthetic-group-071",
+      "groupId": "ai-dev-malformed-candidate",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -4148,7 +3588,7 @@
         "fixtureId": "synthetic-ai-input-071",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000047",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000047",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -4158,9 +3598,9 @@
       "fixtureOrdinal": 71,
       "expected": {
         "validatorDecision": "AUTO_REJECTED",
-        "restaurantName": "합성맛집-071",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 71",
-        "visitEvidencePresent": false,
+        "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
         "requiredIssueCodes": [
@@ -4182,19 +3622,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-dev-072",
-      "groupId": "ai-synthetic-group-072",
+      "groupId": "ai-dev-missing-required-field",
       "split": "DEVELOPMENT",
       "evalIds": [
         "EVAL-AI-001",
@@ -4208,7 +3640,7 @@
         "fixtureId": "synthetic-ai-input-072",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000048",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000048",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -4218,9 +3650,9 @@
       "fixtureOrdinal": 72,
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
-        "restaurantName": "합성맛집-072",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 72",
-        "visitEvidencePresent": false,
+        "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
         "requiredIssueCodes": [
@@ -4243,19 +3675,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-cal-001",
-      "groupId": "ai-synthetic-group-073",
+      "groupId": "ai-cal-supported-visit",
       "split": "CALIBRATION",
       "evalIds": [
         "EVAL-AI-001",
@@ -4271,7 +3695,7 @@
         "fixtureId": "synthetic-ai-input-073",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000049",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000049",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -4309,19 +3733,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-cal-002",
-      "groupId": "ai-synthetic-group-074",
+      "groupId": "ai-cal-duplicate-retry",
       "split": "CALIBRATION",
       "evalIds": [
         "EVAL-AI-001",
@@ -4333,7 +3749,7 @@
         "fixtureId": "synthetic-ai-input-074",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000004a",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000004a",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -4365,19 +3781,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-cal-003",
-      "groupId": "ai-synthetic-group-075",
+      "groupId": "ai-cal-ambiguous-address",
       "split": "CALIBRATION",
       "evalIds": [
         "EVAL-AI-002",
@@ -4389,7 +3797,7 @@
         "fixtureId": "synthetic-ai-input-075",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000004b",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000004b",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -4423,19 +3831,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-cal-004",
-      "groupId": "ai-synthetic-group-076",
+      "groupId": "ai-cal-same-name-place",
       "split": "CALIBRATION",
       "evalIds": [
         "EVAL-AI-002",
@@ -4446,7 +3846,7 @@
         "fixtureId": "synthetic-ai-input-076",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000004c",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000004c",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -4457,7 +3857,7 @@
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
         "restaurantName": "합성맛집-076",
-        "address": "서울특별시 합성구 평가로 76",
+        "address": null,
         "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
@@ -4471,7 +3871,7 @@
         "visited": true,
         "allowedTagCodes": [],
         "automaticRegistrationExpected": false,
-        "criticalWrongPlace": false
+        "criticalWrongPlace": true
       },
       "humanReview": {
         "sampleType": "AUTO_BLOCKED_SAMPLE",
@@ -4480,19 +3880,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-cal-005",
-      "groupId": "ai-synthetic-group-077",
+      "groupId": "ai-cal-false-address",
       "split": "CALIBRATION",
       "evalIds": [
         "EVAL-AI-002",
@@ -4504,7 +3896,7 @@
         "fixtureId": "synthetic-ai-input-077",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000004d",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000004d",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -4530,7 +3922,7 @@
         "visited": true,
         "allowedTagCodes": [],
         "automaticRegistrationExpected": false,
-        "criticalWrongPlace": false
+        "criticalWrongPlace": true
       },
       "humanReview": {
         "sampleType": "AUTO_BLOCKED_SAMPLE",
@@ -4539,19 +3931,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-cal-006",
-      "groupId": "ai-synthetic-group-078",
+      "groupId": "ai-cal-indirect-mention",
       "split": "CALIBRATION",
       "evalIds": [
         "EVAL-AI-003",
@@ -4564,7 +3948,7 @@
         "fixtureId": "synthetic-ai-input-078",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000004e",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000004e",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -4599,19 +3983,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-cal-007",
-      "groupId": "ai-synthetic-group-079",
+      "groupId": "ai-cal-not-visited",
       "split": "CALIBRATION",
       "evalIds": [
         "EVAL-AI-003",
@@ -4623,7 +3999,7 @@
         "fixtureId": "synthetic-ai-input-079",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000004f",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000004f",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -4658,19 +4034,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-cal-008",
-      "groupId": "ai-synthetic-group-080",
+      "groupId": "ai-cal-multiple-restaurants",
       "split": "CALIBRATION",
       "evalIds": [
         "EVAL-AI-002",
@@ -4682,7 +4050,7 @@
         "fixtureId": "synthetic-ai-input-080",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000050",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000050",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -4692,7 +4060,7 @@
       "fixtureOrdinal": 80,
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
-        "restaurantName": "합성맛집-080",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 80",
         "visitEvidencePresent": true,
         "connectableTagCodes": [],
@@ -4716,19 +4084,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-cal-009",
-      "groupId": "ai-synthetic-group-081",
+      "groupId": "ai-cal-schema-deviation",
       "split": "CALIBRATION",
       "evalIds": [
         "EVAL-AI-001",
@@ -4739,12 +4099,12 @@
         "fixtureId": "synthetic-ai-input-081",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000051",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000051",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
       },
-      "scenario": "PROMPT_INJECTION_SCHEMA_DEVIATION",
+      "scenario": "SCHEMA_DEVIATION_UNEXPECTED_ROOT_FIELD",
       "payloadVariant": "INVALID_ROOT_FIELD",
       "fixtureOrdinal": 81,
       "expected": {
@@ -4773,19 +4133,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-cal-010",
-      "groupId": "ai-synthetic-group-082",
+      "groupId": "ai-cal-tag-without-evidence",
       "split": "CALIBRATION",
       "evalIds": [
         "EVAL-AI-001",
@@ -4797,7 +4149,7 @@
         "fixtureId": "synthetic-ai-input-082",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000052",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000052",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -4833,19 +4185,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-cal-011",
-      "groupId": "ai-synthetic-group-083",
+      "groupId": "ai-cal-malformed-candidate",
       "split": "CALIBRATION",
       "evalIds": [
         "EVAL-AI-001",
@@ -4856,7 +4200,7 @@
         "fixtureId": "synthetic-ai-input-083",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000053",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000053",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -4866,9 +4210,9 @@
       "fixtureOrdinal": 83,
       "expected": {
         "validatorDecision": "AUTO_REJECTED",
-        "restaurantName": "합성맛집-083",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 83",
-        "visitEvidencePresent": false,
+        "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
         "requiredIssueCodes": [
@@ -4890,19 +4234,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-cal-012",
-      "groupId": "ai-synthetic-group-084",
+      "groupId": "ai-cal-missing-required-field",
       "split": "CALIBRATION",
       "evalIds": [
         "EVAL-AI-001",
@@ -4916,7 +4252,7 @@
         "fixtureId": "synthetic-ai-input-084",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000054",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000054",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -4926,9 +4262,9 @@
       "fixtureOrdinal": 84,
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
-        "restaurantName": "합성맛집-084",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 84",
-        "visitEvidencePresent": false,
+        "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
         "requiredIssueCodes": [
@@ -4951,19 +4287,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-cal-013",
-      "groupId": "ai-synthetic-group-085",
+      "groupId": "ai-cal-supported-visit",
       "split": "CALIBRATION",
       "evalIds": [
         "EVAL-AI-001",
@@ -4979,7 +4307,7 @@
         "fixtureId": "synthetic-ai-input-085",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000055",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000055",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -5017,19 +4345,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-cal-014",
-      "groupId": "ai-synthetic-group-086",
+      "groupId": "ai-cal-duplicate-retry",
       "split": "CALIBRATION",
       "evalIds": [
         "EVAL-AI-001",
@@ -5041,7 +4361,7 @@
         "fixtureId": "synthetic-ai-input-086",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000056",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000056",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -5073,19 +4393,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-cal-015",
-      "groupId": "ai-synthetic-group-087",
+      "groupId": "ai-cal-ambiguous-address",
       "split": "CALIBRATION",
       "evalIds": [
         "EVAL-AI-002",
@@ -5097,7 +4409,7 @@
         "fixtureId": "synthetic-ai-input-087",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000057",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000057",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -5131,19 +4443,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-cal-016",
-      "groupId": "ai-synthetic-group-088",
+      "groupId": "ai-cal-same-name-place",
       "split": "CALIBRATION",
       "evalIds": [
         "EVAL-AI-002",
@@ -5154,7 +4458,7 @@
         "fixtureId": "synthetic-ai-input-088",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000058",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000058",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -5165,7 +4469,7 @@
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
         "restaurantName": "합성맛집-088",
-        "address": "서울특별시 합성구 평가로 88",
+        "address": null,
         "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
@@ -5179,7 +4483,7 @@
         "visited": true,
         "allowedTagCodes": [],
         "automaticRegistrationExpected": false,
-        "criticalWrongPlace": false
+        "criticalWrongPlace": true
       },
       "humanReview": {
         "sampleType": "AUTO_BLOCKED_SAMPLE",
@@ -5188,19 +4492,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-cal-017",
-      "groupId": "ai-synthetic-group-089",
+      "groupId": "ai-cal-false-address",
       "split": "CALIBRATION",
       "evalIds": [
         "EVAL-AI-002",
@@ -5212,7 +4508,7 @@
         "fixtureId": "synthetic-ai-input-089",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000059",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000059",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -5238,7 +4534,7 @@
         "visited": true,
         "allowedTagCodes": [],
         "automaticRegistrationExpected": false,
-        "criticalWrongPlace": false
+        "criticalWrongPlace": true
       },
       "humanReview": {
         "sampleType": "AUTO_BLOCKED_SAMPLE",
@@ -5247,19 +4543,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-cal-018",
-      "groupId": "ai-synthetic-group-090",
+      "groupId": "ai-cal-indirect-mention",
       "split": "CALIBRATION",
       "evalIds": [
         "EVAL-AI-003",
@@ -5272,7 +4560,7 @@
         "fixtureId": "synthetic-ai-input-090",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000005a",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000005a",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -5307,19 +4595,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-cal-019",
-      "groupId": "ai-synthetic-group-091",
+      "groupId": "ai-cal-not-visited",
       "split": "CALIBRATION",
       "evalIds": [
         "EVAL-AI-003",
@@ -5331,7 +4611,7 @@
         "fixtureId": "synthetic-ai-input-091",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000005b",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000005b",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -5366,19 +4646,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-cal-020",
-      "groupId": "ai-synthetic-group-092",
+      "groupId": "ai-cal-multiple-restaurants",
       "split": "CALIBRATION",
       "evalIds": [
         "EVAL-AI-002",
@@ -5390,7 +4662,7 @@
         "fixtureId": "synthetic-ai-input-092",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000005c",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000005c",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -5400,7 +4672,7 @@
       "fixtureOrdinal": 92,
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
-        "restaurantName": "합성맛집-092",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 92",
         "visitEvidencePresent": true,
         "connectableTagCodes": [],
@@ -5424,19 +4696,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-cal-021",
-      "groupId": "ai-synthetic-group-093",
+      "groupId": "ai-cal-schema-deviation",
       "split": "CALIBRATION",
       "evalIds": [
         "EVAL-AI-001",
@@ -5447,12 +4711,12 @@
         "fixtureId": "synthetic-ai-input-093",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000005d",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000005d",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
       },
-      "scenario": "PROMPT_INJECTION_SCHEMA_DEVIATION",
+      "scenario": "SCHEMA_DEVIATION_UNEXPECTED_ROOT_FIELD",
       "payloadVariant": "INVALID_ROOT_FIELD",
       "fixtureOrdinal": 93,
       "expected": {
@@ -5481,19 +4745,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-cal-022",
-      "groupId": "ai-synthetic-group-094",
+      "groupId": "ai-cal-tag-without-evidence",
       "split": "CALIBRATION",
       "evalIds": [
         "EVAL-AI-001",
@@ -5505,7 +4761,7 @@
         "fixtureId": "synthetic-ai-input-094",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000005e",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000005e",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -5541,19 +4797,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-cal-023",
-      "groupId": "ai-synthetic-group-095",
+      "groupId": "ai-cal-malformed-candidate",
       "split": "CALIBRATION",
       "evalIds": [
         "EVAL-AI-001",
@@ -5564,7 +4812,7 @@
         "fixtureId": "synthetic-ai-input-095",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000005f",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000005f",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -5574,9 +4822,9 @@
       "fixtureOrdinal": 95,
       "expected": {
         "validatorDecision": "AUTO_REJECTED",
-        "restaurantName": "합성맛집-095",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 95",
-        "visitEvidencePresent": false,
+        "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
         "requiredIssueCodes": [
@@ -5598,19 +4846,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-cal-024",
-      "groupId": "ai-synthetic-group-096",
+      "groupId": "ai-cal-missing-required-field",
       "split": "CALIBRATION",
       "evalIds": [
         "EVAL-AI-001",
@@ -5624,7 +4864,7 @@
         "fixtureId": "synthetic-ai-input-096",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000060",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000060",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -5634,9 +4874,9 @@
       "fixtureOrdinal": 96,
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
-        "restaurantName": "합성맛집-096",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 96",
-        "visitEvidencePresent": false,
+        "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
         "requiredIssueCodes": [
@@ -5659,19 +4899,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-hold-001",
-      "groupId": "ai-synthetic-group-097",
+      "groupId": "ai-holdout-supported-visit",
       "split": "RELEASE_HOLDOUT",
       "evalIds": [
         "EVAL-AI-001",
@@ -5687,7 +4919,7 @@
         "fixtureId": "synthetic-ai-input-097",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000061",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000061",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -5725,19 +4957,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-hold-002",
-      "groupId": "ai-synthetic-group-098",
+      "groupId": "ai-holdout-duplicate-retry",
       "split": "RELEASE_HOLDOUT",
       "evalIds": [
         "EVAL-AI-001",
@@ -5749,7 +4973,7 @@
         "fixtureId": "synthetic-ai-input-098",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000062",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000062",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -5781,19 +5005,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-hold-003",
-      "groupId": "ai-synthetic-group-099",
+      "groupId": "ai-holdout-ambiguous-address",
       "split": "RELEASE_HOLDOUT",
       "evalIds": [
         "EVAL-AI-002",
@@ -5805,7 +5021,7 @@
         "fixtureId": "synthetic-ai-input-099",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000063",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000063",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -5839,19 +5055,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-hold-004",
-      "groupId": "ai-synthetic-group-100",
+      "groupId": "ai-holdout-same-name-place",
       "split": "RELEASE_HOLDOUT",
       "evalIds": [
         "EVAL-AI-002",
@@ -5862,7 +5070,7 @@
         "fixtureId": "synthetic-ai-input-100",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000064",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000064",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -5873,7 +5081,7 @@
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
         "restaurantName": "합성맛집-100",
-        "address": "서울특별시 합성구 평가로 100",
+        "address": null,
         "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
@@ -5887,7 +5095,7 @@
         "visited": true,
         "allowedTagCodes": [],
         "automaticRegistrationExpected": false,
-        "criticalWrongPlace": false
+        "criticalWrongPlace": true
       },
       "humanReview": {
         "sampleType": "AUTO_BLOCKED_SAMPLE",
@@ -5896,19 +5104,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-hold-005",
-      "groupId": "ai-synthetic-group-101",
+      "groupId": "ai-holdout-false-address",
       "split": "RELEASE_HOLDOUT",
       "evalIds": [
         "EVAL-AI-002",
@@ -5920,7 +5120,7 @@
         "fixtureId": "synthetic-ai-input-101",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000065",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000065",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -5946,7 +5146,7 @@
         "visited": true,
         "allowedTagCodes": [],
         "automaticRegistrationExpected": false,
-        "criticalWrongPlace": false
+        "criticalWrongPlace": true
       },
       "humanReview": {
         "sampleType": "AUTO_BLOCKED_SAMPLE",
@@ -5955,19 +5155,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-hold-006",
-      "groupId": "ai-synthetic-group-102",
+      "groupId": "ai-holdout-indirect-mention",
       "split": "RELEASE_HOLDOUT",
       "evalIds": [
         "EVAL-AI-003",
@@ -5980,7 +5172,7 @@
         "fixtureId": "synthetic-ai-input-102",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000066",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000066",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -6015,19 +5207,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-hold-007",
-      "groupId": "ai-synthetic-group-103",
+      "groupId": "ai-holdout-not-visited",
       "split": "RELEASE_HOLDOUT",
       "evalIds": [
         "EVAL-AI-003",
@@ -6039,7 +5223,7 @@
         "fixtureId": "synthetic-ai-input-103",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000067",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000067",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -6074,19 +5258,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-hold-008",
-      "groupId": "ai-synthetic-group-104",
+      "groupId": "ai-holdout-multiple-restaurants",
       "split": "RELEASE_HOLDOUT",
       "evalIds": [
         "EVAL-AI-002",
@@ -6098,7 +5274,7 @@
         "fixtureId": "synthetic-ai-input-104",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000068",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000068",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -6108,7 +5284,7 @@
       "fixtureOrdinal": 104,
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
-        "restaurantName": "합성맛집-104",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 104",
         "visitEvidencePresent": true,
         "connectableTagCodes": [],
@@ -6132,19 +5308,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-hold-009",
-      "groupId": "ai-synthetic-group-105",
+      "groupId": "ai-holdout-schema-deviation",
       "split": "RELEASE_HOLDOUT",
       "evalIds": [
         "EVAL-AI-001",
@@ -6155,12 +5323,12 @@
         "fixtureId": "synthetic-ai-input-105",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000069",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000069",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
       },
-      "scenario": "PROMPT_INJECTION_SCHEMA_DEVIATION",
+      "scenario": "SCHEMA_DEVIATION_UNEXPECTED_ROOT_FIELD",
       "payloadVariant": "INVALID_ROOT_FIELD",
       "fixtureOrdinal": 105,
       "expected": {
@@ -6189,19 +5357,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-hold-010",
-      "groupId": "ai-synthetic-group-106",
+      "groupId": "ai-holdout-tag-without-evidence",
       "split": "RELEASE_HOLDOUT",
       "evalIds": [
         "EVAL-AI-001",
@@ -6213,7 +5373,7 @@
         "fixtureId": "synthetic-ai-input-106",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000006a",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000006a",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -6249,19 +5409,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-hold-011",
-      "groupId": "ai-synthetic-group-107",
+      "groupId": "ai-holdout-malformed-candidate",
       "split": "RELEASE_HOLDOUT",
       "evalIds": [
         "EVAL-AI-001",
@@ -6272,7 +5424,7 @@
         "fixtureId": "synthetic-ai-input-107",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000006b",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000006b",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -6282,9 +5434,9 @@
       "fixtureOrdinal": 107,
       "expected": {
         "validatorDecision": "AUTO_REJECTED",
-        "restaurantName": "합성맛집-107",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 107",
-        "visitEvidencePresent": false,
+        "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
         "requiredIssueCodes": [
@@ -6306,19 +5458,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-hold-012",
-      "groupId": "ai-synthetic-group-108",
+      "groupId": "ai-holdout-missing-required-field",
       "split": "RELEASE_HOLDOUT",
       "evalIds": [
         "EVAL-AI-001",
@@ -6332,7 +5476,7 @@
         "fixtureId": "synthetic-ai-input-108",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000006c",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000006c",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -6342,9 +5486,9 @@
       "fixtureOrdinal": 108,
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
-        "restaurantName": "합성맛집-108",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 108",
-        "visitEvidencePresent": false,
+        "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
         "requiredIssueCodes": [
@@ -6367,19 +5511,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-hold-013",
-      "groupId": "ai-synthetic-group-109",
+      "groupId": "ai-holdout-supported-visit",
       "split": "RELEASE_HOLDOUT",
       "evalIds": [
         "EVAL-AI-001",
@@ -6395,7 +5531,7 @@
         "fixtureId": "synthetic-ai-input-109",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000006d",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000006d",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -6433,19 +5569,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-hold-014",
-      "groupId": "ai-synthetic-group-110",
+      "groupId": "ai-holdout-duplicate-retry",
       "split": "RELEASE_HOLDOUT",
       "evalIds": [
         "EVAL-AI-001",
@@ -6457,7 +5585,7 @@
         "fixtureId": "synthetic-ai-input-110",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000006e",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000006e",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -6489,19 +5617,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-hold-015",
-      "groupId": "ai-synthetic-group-111",
+      "groupId": "ai-holdout-ambiguous-address",
       "split": "RELEASE_HOLDOUT",
       "evalIds": [
         "EVAL-AI-002",
@@ -6513,7 +5633,7 @@
         "fixtureId": "synthetic-ai-input-111",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "000000000000000000000000000000000000000000000000000000000000006f",
+        "fixtureRef": "000000000000000000000000000000000000000000000000000000000000006f",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -6547,19 +5667,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-hold-016",
-      "groupId": "ai-synthetic-group-112",
+      "groupId": "ai-holdout-same-name-place",
       "split": "RELEASE_HOLDOUT",
       "evalIds": [
         "EVAL-AI-002",
@@ -6570,7 +5682,7 @@
         "fixtureId": "synthetic-ai-input-112",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000070",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000070",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -6581,7 +5693,7 @@
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
         "restaurantName": "합성맛집-112",
-        "address": "서울특별시 합성구 평가로 112",
+        "address": null,
         "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
@@ -6595,7 +5707,7 @@
         "visited": true,
         "allowedTagCodes": [],
         "automaticRegistrationExpected": false,
-        "criticalWrongPlace": false
+        "criticalWrongPlace": true
       },
       "humanReview": {
         "sampleType": "AUTO_BLOCKED_SAMPLE",
@@ -6604,19 +5716,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-hold-017",
-      "groupId": "ai-synthetic-group-113",
+      "groupId": "ai-holdout-false-address",
       "split": "RELEASE_HOLDOUT",
       "evalIds": [
         "EVAL-AI-002",
@@ -6628,7 +5732,7 @@
         "fixtureId": "synthetic-ai-input-113",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000071",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000071",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -6654,7 +5758,7 @@
         "visited": true,
         "allowedTagCodes": [],
         "automaticRegistrationExpected": false,
-        "criticalWrongPlace": false
+        "criticalWrongPlace": true
       },
       "humanReview": {
         "sampleType": "AUTO_BLOCKED_SAMPLE",
@@ -6663,19 +5767,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-hold-018",
-      "groupId": "ai-synthetic-group-114",
+      "groupId": "ai-holdout-indirect-mention",
       "split": "RELEASE_HOLDOUT",
       "evalIds": [
         "EVAL-AI-003",
@@ -6688,7 +5784,7 @@
         "fixtureId": "synthetic-ai-input-114",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000072",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000072",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -6723,19 +5819,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-hold-019",
-      "groupId": "ai-synthetic-group-115",
+      "groupId": "ai-holdout-not-visited",
       "split": "RELEASE_HOLDOUT",
       "evalIds": [
         "EVAL-AI-003",
@@ -6747,7 +5835,7 @@
         "fixtureId": "synthetic-ai-input-115",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000073",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000073",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -6782,19 +5870,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-hold-020",
-      "groupId": "ai-synthetic-group-116",
+      "groupId": "ai-holdout-multiple-restaurants",
       "split": "RELEASE_HOLDOUT",
       "evalIds": [
         "EVAL-AI-002",
@@ -6806,7 +5886,7 @@
         "fixtureId": "synthetic-ai-input-116",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000074",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000074",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -6816,7 +5896,7 @@
       "fixtureOrdinal": 116,
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
-        "restaurantName": "합성맛집-116",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 116",
         "visitEvidencePresent": true,
         "connectableTagCodes": [],
@@ -6840,19 +5920,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-hold-021",
-      "groupId": "ai-synthetic-group-117",
+      "groupId": "ai-holdout-schema-deviation",
       "split": "RELEASE_HOLDOUT",
       "evalIds": [
         "EVAL-AI-001",
@@ -6863,12 +5935,12 @@
         "fixtureId": "synthetic-ai-input-117",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000075",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000075",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
       },
-      "scenario": "PROMPT_INJECTION_SCHEMA_DEVIATION",
+      "scenario": "SCHEMA_DEVIATION_UNEXPECTED_ROOT_FIELD",
       "payloadVariant": "INVALID_ROOT_FIELD",
       "fixtureOrdinal": 117,
       "expected": {
@@ -6897,19 +5969,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-hold-022",
-      "groupId": "ai-synthetic-group-118",
+      "groupId": "ai-holdout-tag-without-evidence",
       "split": "RELEASE_HOLDOUT",
       "evalIds": [
         "EVAL-AI-001",
@@ -6921,7 +5985,7 @@
         "fixtureId": "synthetic-ai-input-118",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000076",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000076",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -6957,19 +6021,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-hold-023",
-      "groupId": "ai-synthetic-group-119",
+      "groupId": "ai-holdout-malformed-candidate",
       "split": "RELEASE_HOLDOUT",
       "evalIds": [
         "EVAL-AI-001",
@@ -6980,7 +6036,7 @@
         "fixtureId": "synthetic-ai-input-119",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000077",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000077",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -6990,9 +6046,9 @@
       "fixtureOrdinal": 119,
       "expected": {
         "validatorDecision": "AUTO_REJECTED",
-        "restaurantName": "합성맛집-119",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 119",
-        "visitEvidencePresent": false,
+        "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
         "requiredIssueCodes": [
@@ -7014,19 +6070,11 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     },
     {
       "caseId": "ai-hold-024",
-      "groupId": "ai-synthetic-group-120",
+      "groupId": "ai-holdout-missing-required-field",
       "split": "RELEASE_HOLDOUT",
       "evalIds": [
         "EVAL-AI-001",
@@ -7040,7 +6088,7 @@
         "fixtureId": "synthetic-ai-input-120",
         "sourceClassification": "TEAM_AUTHORED_SYNTHETIC",
         "usageCondition": "PRIVATE_EVALUATION_ONLY",
-        "inputHash": "0000000000000000000000000000000000000000000000000000000000000078",
+        "fixtureRef": "0000000000000000000000000000000000000000000000000000000000000078",
         "originalUrlStored": false,
         "originalVideoStored": false,
         "transcriptStored": false
@@ -7050,9 +6098,9 @@
       "fixtureOrdinal": 120,
       "expected": {
         "validatorDecision": "AUTO_BLOCKED",
-        "restaurantName": "합성맛집-120",
+        "restaurantName": null,
         "address": "서울특별시 합성구 평가로 120",
-        "visitEvidencePresent": false,
+        "visitEvidencePresent": true,
         "connectableTagCodes": [],
         "rejectedTagCodes": [],
         "requiredIssueCodes": [
@@ -7075,14 +6123,6 @@
         "reason": "독립 인간 사후 판정 대기",
         "judgedAt": null,
         "disagreementStatus": "UNRESOLVED"
-      },
-      "operationalExpectations": {
-        "formalEntityCreatedBeforeValidation": false,
-        "atomicRegistrationRequired": true,
-        "duplicateConverges": true,
-        "retryRecoveryRequired": true,
-        "evidenceUsesMetadataOnly": true,
-        "unconfirmedTagPublished": false
       }
     }
   ]

@@ -8,8 +8,10 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.DisplayName;
@@ -32,22 +34,31 @@ class AiExtractionGoldenEvaluationTest {
     private static final AiCandidateValidator VALIDATOR = new AiCandidateValidator();
 
     @Test
-    @DisplayName("데이터셋은 합성 120건이고 72대24대24 분할과 유일 키를 지킨다")
+    @DisplayName("데이터셋 규모와 분할, 평가 ID는 manifest 계약과 일치한다")
     void 데이터셋은_120건이고_분할과유일키를_지킨다() {
+        JsonNode manifest = readJson("manifest.json");
         List<EvaluationCase> cases = loadCases();
+        Map<String, Long> actualSplits = countBy(cases, EvaluationCase::split);
+        Set<String> actualEvalIds = cases.stream()
+                .flatMap(testCase -> testCase.evalIds().stream())
+                .collect(Collectors.toSet());
 
-        assertThat(cases).hasSize(120);
-        assertThat(countBy(cases, EvaluationCase::split))
-                .containsEntry("DEVELOPMENT", 72L)
-                .containsEntry("CALIBRATION", 24L)
-                .containsEntry(RELEASE_HOLDOUT, 24L);
+        assertThat(cases).hasSize(manifest.get("caseCount").asInt());
+        manifest.get("splits").properties().forEach(entry ->
+                assertThat(actualSplits).containsEntry(entry.getKey(), entry.getValue().asLong()));
+        assertThat(actualSplits).hasSize(manifest.get("splits").size());
+        assertThat(actualEvalIds).containsExactlyInAnyOrderElementsOf(textList(manifest.get("evalIds")));
+        assertThat(cases.stream().map(EvaluationCase::groupId).distinct().count())
+                .isEqualTo(manifest.get("semanticGroupCount").asLong());
+        assertThat(cases.stream().map(EvaluationCase::payloadVariant).distinct().count())
+                .isEqualTo(manifest.get("distinctPayloadVariants").asLong());
         assertUnique(cases, EvaluationCase::caseId, "caseId");
-        assertUnique(cases, EvaluationCase::groupId, "groupId");
-        assertUnique(cases, EvaluationCase::inputHash, "inputHash");
+        assertUnique(cases, EvaluationCase::fixtureRef, "fixtureRef");
         assertThat(cases).allSatisfy(testCase -> {
-            assertThat(testCase.inputHash()).matches("[0-9a-f]{64}");
+            assertThat(testCase.fixtureRef()).matches("[0-9a-f]{64}");
             assertThat(testCase.sourceClassification()).isEqualTo("TEAM_AUTHORED_SYNTHETIC");
         });
+        assertThat(manifest.get("fixtureReference").get("contentHashClaimed").asBoolean()).isFalse();
     }
 
     @Test
@@ -56,7 +67,7 @@ class AiExtractionGoldenEvaluationTest {
         List<EvaluationCase> cases = loadCases();
 
         assertSingleSplitPerValue(cases, EvaluationCase::groupId, "groupId");
-        assertSingleSplitPerValue(cases, EvaluationCase::restaurantName, "restaurantName");
+        assertSingleSplitPerValue(cases, EvaluationCase::groundTruthRestaurantName, "restaurantName");
     }
 
     @Test
@@ -71,7 +82,7 @@ class AiExtractionGoldenEvaluationTest {
                 "INDIRECT_RESTAURANT_MENTION",
                 "EXPLICIT_NOT_VISITED",
                 "MULTIPLE_RESTAURANTS_IN_ONE_INPUT",
-                "PROMPT_INJECTION_SCHEMA_DEVIATION",
+                "SCHEMA_DEVIATION_UNEXPECTED_ROOT_FIELD",
                 "AMBIGUOUS_ADDRESS_WITHOUT_EVIDENCE");
         for (int number = 1; number <= 10; number++) {
             String evalId = "EVAL-AI-%03d".formatted(number);
@@ -165,6 +176,49 @@ class AiExtractionGoldenEvaluationTest {
             if (!Set.copyOf(testCase.expectedRejectedTags()).equals(tagCodes(result.rejectedTags()))) {
                 violations.add(testCase.caseId() + ": rejected tag 불일치");
             }
+            if (!Objects.equals(testCase.expectedRestaurantName(), candidateValue(result, "restaurantName"))) {
+                violations.add(testCase.caseId() + ": expected restaurantName 불일치");
+            }
+            if (!Objects.equals(testCase.expectedAddress(), candidateValue(result, "address"))) {
+                violations.add(testCase.caseId() + ": expected address 불일치");
+            }
+            boolean visitEvidencePresent = result.candidates().containsKey("visitEvidence")
+                    && result.candidates().get("visitEvidence").evidence().type()
+                    != AiCandidateValidationResult.EvidenceType.UNKNOWN;
+            if (testCase.expectedVisitEvidencePresent() != visitEvidencePresent) {
+                violations.add(testCase.caseId() + ": expected visitEvidencePresent 불일치");
+            }
+            if (!Set.copyOf(testCase.expectedTags()).equals(Set.copyOf(testCase.allowedTags()))
+                    || testCase.automaticRegistrationExpected()
+                    != "AUTO_CONFIRMED".equals(testCase.expectedDecision())) {
+                violations.add(testCase.caseId() + ": expected-groundTruth 계약 불일치");
+            }
+            if ((testCase.expectedRestaurantName() != null
+                    && !Objects.equals(testCase.expectedRestaurantName(), testCase.groundTruthRestaurantName()))
+                    || (testCase.expectedAddress() != null
+                    && !Objects.equals(testCase.expectedAddress(), testCase.groundTruthAddress()))) {
+                violations.add(testCase.caseId() + ": validator 후보와 groundTruth 값 불일치");
+            }
+            boolean incompleteGroundTruth = testCase.groundTruthRestaurantName() == null
+                    || testCase.groundTruthAddress() == null
+                    || !testCase.groundTruthVisited();
+            if (incompleteGroundTruth && testCase.automaticRegistrationExpected()) {
+                violations.add(testCase.caseId() + ": 불완전 groundTruth가 자동 등록 기대값을 가짐");
+            }
+            if (testCase.criticalWrongPlace() && result.isAutoConfirmable()) {
+                violations.add(testCase.caseId() + ": Critical 위험 사례가 자동 확정됨");
+            }
+            if ("ADDRESS_UNKNOWN".equals(testCase.payloadVariant())) {
+                boolean hasAddressUnknown = result.issues().stream()
+                        .anyMatch(issue -> "UNKNOWN_EVIDENCE".equals(issue.code())
+                                && "address".equals(issue.field()));
+                boolean hasLocationUnknown = result.issues().stream()
+                        .anyMatch(issue -> "UNKNOWN_EVIDENCE".equals(issue.code())
+                                && "location".equals(issue.field()));
+                if (!hasAddressUnknown || hasLocationUnknown) {
+                    violations.add(testCase.caseId() + ": UNKNOWN_EVIDENCE field 불일치");
+                }
+            }
         }
 
         assertThat(evaluated).hasSize(releaseHoldoutEnabled() ? 120 : 96);
@@ -174,6 +228,16 @@ class AiExtractionGoldenEvaluationTest {
         assertThat(policy.get("qualityMetricsStatus").asText()).isEqualTo("UNMEASURED");
         assertThat(policy.get("criticalMislinkStatus").asText()).isEqualTo("UNADJUDICATED");
         assertThat(policy.get("releaseDecision").asText()).isEqualTo("HOLD");
+        JsonNode manifest = readJson("manifest.json");
+        long criticalCases = loadCases().stream().filter(EvaluationCase::criticalWrongPlace).count();
+        assertThat(criticalCases)
+                .isEqualTo(manifest.get("criticalRiskGroundTruth").get("positiveCaseCount").asLong());
+        assertThat(manifest.get("criticalRiskGroundTruth")
+                .get("syntheticDetectionIsReleaseQualityEvidence").asBoolean()).isFalse();
+        assertThat(textList(manifest.get("linkedRegressionEvidence").get("EVAL-AI-006")))
+                .containsExactly("TST-E3-AI-003", "TST-E3-DATA-001");
+        assertThat(textList(manifest.get("linkedRegressionEvidence").get("EVAL-AI-008")))
+                .containsExactly("TST-E3-AI-004");
     }
 
     private static JsonNode buildPayload(EvaluationCase testCase) {
@@ -190,8 +254,8 @@ class AiExtractionGoldenEvaluationTest {
         String json = switch (testCase.payloadVariant()) {
             case "AUTO_CONFIRMED_WITH_TAGS" -> payload("COMPLETE", validCandidates + "," + validTags(number), "");
             case "AUTO_CONFIRMED_NO_TAG" -> payload("COMPLETE", validCandidates, "");
-            case "ADDRESS_UNKNOWN" -> payload("COMPLETE", validCandidates.replace(
-                    "{\"type\":\"TIMESTAMP\",\"startMs\":181,\"endMs\":260}",
+            case "ADDRESS_UNKNOWN" -> payload("COMPLETE", validCandidates.replaceFirst(Pattern.quote(
+                    "{\"type\":\"TIMESTAMP\",\"startMs\":181,\"endMs\":260}"),
                     "{\"type\":\"UNKNOWN\"}"), "");
             case "MULTIPLE_ADDRESS_CANDIDATES" -> payload("COMPLETE", validCandidates + ","
                     + candidate("address", "서울특별시 다른구 후보로 " + number, 350, 420), "");
@@ -249,6 +313,11 @@ class AiExtractionGoldenEvaluationTest {
                 .collect(Collectors.toSet());
     }
 
+    private static String candidateValue(AiCandidateValidationResult result, String field) {
+        AiCandidateValidationResult.Candidate candidate = result.candidates().get(field);
+        return candidate == null ? null : candidate.value();
+    }
+
     private static boolean releaseHoldoutEnabled() {
         return Boolean.getBoolean(RELEASE_HOLDOUT_PROPERTY);
     }
@@ -263,12 +332,15 @@ class AiExtractionGoldenEvaluationTest {
             cases.add(new EvaluationCase(
                     node.get("caseId").asText(), node.get("groupId").asText(), node.get("split").asText(),
                     textList(node.get("evalIds")), node.get("scenario").asText(), node.get("payloadVariant").asText(),
-                    node.get("fixtureOrdinal").asInt(), input.get("inputHash").asText(),
+                    node.get("fixtureOrdinal").asInt(), input.get("fixtureRef").asText(),
                     input.get("sourceClassification").asText(), expected.get("validatorDecision").asText(),
+                    nullableText(expected.get("restaurantName")), nullableText(expected.get("address")),
+                    expected.get("visitEvidencePresent").asBoolean(),
                     textList(expected.get("connectableTagCodes")), textList(expected.get("rejectedTagCodes")),
                     textList(expected.get("requiredIssueCodes")), nullableText(truth.get("restaurantName")),
                     nullableText(truth.get("address")), truth.get("visited").asBoolean(),
                     textList(truth.get("allowedTagCodes")), truth.get("automaticRegistrationExpected").asBoolean(),
+                    truth.get("criticalWrongPlace").asBoolean(),
                     human.get("status").asText(), human.get("judgeRole").asText(), human.get("reason").asText(),
                     nullableText(human.get("judgedAt")), human.get("disagreementStatus").asText()));
         }
@@ -327,17 +399,21 @@ class AiExtractionGoldenEvaluationTest {
             String scenario,
             String payloadVariant,
             int fixtureOrdinal,
-            String inputHash,
+            String fixtureRef,
             String sourceClassification,
             String expectedDecision,
+            String expectedRestaurantName,
+            String expectedAddress,
+            boolean expectedVisitEvidencePresent,
             List<String> expectedTags,
             List<String> expectedRejectedTags,
             List<String> requiredIssueCodes,
-            String restaurantName,
-            String address,
-            boolean visited,
+            String groundTruthRestaurantName,
+            String groundTruthAddress,
+            boolean groundTruthVisited,
             List<String> allowedTags,
             boolean automaticRegistrationExpected,
+            boolean criticalWrongPlace,
             String humanStatus,
             String judgeRole,
             String humanReason,

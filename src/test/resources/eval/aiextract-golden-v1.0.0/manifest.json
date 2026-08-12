@@ -3,6 +3,8 @@
   "createdAt": "2026-08-12",
   "scope": "AI 영상 정보 추출 S1 후보 검증 및 출시 준비",
   "caseCount": 120,
+  "semanticGroupCount": 36,
+  "distinctPayloadVariants": 11,
   "answerSchemaVersion": "AI-EVAL-S1",
   "runtimeContract": {
     "provider": "GOOGLE_GEMINI",
@@ -27,6 +29,23 @@
     "EVAL-AI-009",
     "EVAL-AI-010"
   ],
+  "fixtureReference": {
+    "field": "inputFixture.fixtureRef",
+    "format": "64-character zero-padded lowercase hexadecimal synthetic fixture ordinal",
+    "contentHashClaimed": false
+  },
+  "criticalRiskGroundTruth": {
+    "positiveCaseCount": 20,
+    "positiveScenarios": [
+      "SAME_NAME_MULTIPLE_PLACE_CANDIDATES",
+      "SYNTHETIC_FALSE_ADDRESS_WITHHELD"
+    ],
+    "syntheticDetectionIsReleaseQualityEvidence": false
+  },
+  "linkedRegressionEvidence": {
+    "EVAL-AI-006": ["TST-E3-AI-003", "TST-E3-DATA-001"],
+    "EVAL-AI-008": ["TST-E3-AI-004"]
+  },
   "thresholds": {
     "restaurantAndAddressPrecision": 0.90,
     "visitEvidenceRecall": 0.80,
