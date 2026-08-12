@@ -87,7 +87,7 @@ related_documents:
 | `npm.cmd run typecheck` | 통과 | Next.js TypeScript 컴파일 오류 없음 |
 | `npm.cmd run build` | 통과 | 프론트 테스트·타입 검사·Next.js production build 성공 |
 | `gradlew.bat test --tests RedisRefreshTokenStoreIntegrationTest` | 통과 | Redis 통합 테스트 18개 모두 통과 |
-| GitHub Actions run `31593764992` | 통과 | 프론트엔드 빌드·타입 검사와 백엔드 빌드·자동화 테스트가 모두 성공했다 |
+| GitHub Actions run `31594381412` | 통과 | 최신 head `0e7dc9bc` 기준 프론트엔드 빌드·타입 검사와 백엔드 빌드·자동화 테스트가 모두 성공했다 |
 
 ## 8. 재발 방지 및 다음 확인
 
@@ -108,4 +108,4 @@ related_documents:
 
 ## 10. 남은 사항
 
-- 로컬 프론트 테스트·typecheck·production build와 Redis 통합 테스트를 통과했고, GitHub Actions run `31593764992`의 프론트·백엔드 job도 모두 성공했다.
+- 로컬 프론트 테스트·typecheck·production build와 Redis 통합 테스트를 통과했고, 최신 head `0e7dc9bc`의 GitHub Actions run `31594381412`에서 프론트·백엔드 job도 모두 성공했다.
