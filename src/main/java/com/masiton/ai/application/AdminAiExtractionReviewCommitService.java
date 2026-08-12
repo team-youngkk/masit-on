@@ -36,8 +36,9 @@ public class AdminAiExtractionReviewCommitService {
         port.markRegisteredContent(target.snapshotId(), new AiExtractionAdminQueryPort.RegisteredContent(
                 registration.restaurantId(), registration.restaurantCreated(), registration.creatorId(), registration.creatorCreated(),
                 registration.videoId(), registration.videoCreated(), registration.visitId(), registration.visitCreated()));
-        port.connectConfirmedTags(target.snapshotId(), registration.visitId(), tags);
-        complete(target, expected, adminId, reason, "CONFIRM", tags);
+        List<AiExtractionAdminQueryPort.TagDecision> attachedTags =
+                port.connectConfirmedTags(target.snapshotId(), registration.visitId(), tags);
+        complete(target, expected, adminId, reason, "CONFIRM", attachedTags);
     }
 
     @Transactional

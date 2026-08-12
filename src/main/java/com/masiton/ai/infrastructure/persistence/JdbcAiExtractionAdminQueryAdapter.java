@@ -39,6 +39,9 @@ public class JdbcAiExtractionAdminQueryAdapter implements AiExtractionAdminQuery
     }
     @Override public Optional<RetryTarget> retryTarget(UUID id) { return jdbc.query("SELECT video_url, execution_status, result_completeness FROM ai_extraction_job WHERE id=?", (rs,n)->new RetryTarget(rs.getString(1),rs.getString(2),rs.getString(3)), id).stream().findFirst(); }
     @Override public Optional<ReviewTarget> reviewTarget(UUID id) {
+        List<UUID> lockedJobs = jdbc.query("SELECT id FROM ai_extraction_job WHERE id=? FOR UPDATE",
+                (rs, n) -> rs.getObject(1, UUID.class), id);
+        if (lockedJobs.isEmpty()) return Optional.empty();
         return jdbc.query("""
                 SELECT snapshot.id, snapshot.review_status, job.id, job.youtube_channel_id, job.youtube_video_id,
                        job.video_url, snapshot.candidate_fields, snapshot.candidate_tags, snapshot.field_confidences, snapshot.evidence,
@@ -65,7 +68,8 @@ public class JdbcAiExtractionAdminQueryAdapter implements AiExtractionAdminQuery
                 """, content.restaurantId(), content.restaurantCreated(), content.creatorId(), content.creatorCreated(),
                 content.videoId(), content.videoCreated(), content.visitId(), content.visitCreated(), snapshotId);
     }
-    @Override public void connectConfirmedTags(UUID snapshotId, UUID visitId, List<TagDecision> decisions) {
+    @Override public List<TagDecision> connectConfirmedTags(UUID snapshotId, UUID visitId, List<TagDecision> decisions) {
+        List<TagDecision> attached = new ArrayList<>();
         java.util.Map<String, TagDecision> replacements = new java.util.HashMap<>();
         for (TagDecision decision : decisions) replacements.put(decision.candidateTagId(), decision);
         List<java.util.Map<String, Object>> candidates = jdbc.query("""
@@ -108,10 +112,11 @@ public class JdbcAiExtractionAdminQueryAdapter implements AiExtractionAdminQuery
                     INSERT INTO visit_tag(id, visit_id, tag_definition_id, source, confidence, evidence, extractor_version)
                     VALUES (?, ?, ?, ?, ?, COALESCE(?::jsonb, '{}'::jsonb), ?)
                     ON CONFLICT (visit_id, tag_definition_id) DO NOTHING
-                    """, UUID.randomUUID(), visitId, definitions.getFirst(),
-                    manualDecision == null ? "AI_AUTO_CONFIRMED" : "ADMIN_OVERRIDE", candidate.get("confidence"),
-                    evidence, candidate.get("version"));
+                    """, UUID.randomUUID(), visitId, definitions.getFirst(), "ADMIN_OVERRIDE",
+                    candidate.get("confidence"), evidence, candidate.get("version"));
+            attached.add(new TagDecision(candidateId, "MANUAL_OVERRIDE", code));
         }
+        return attached;
     }
 
     private boolean hasConnectableEvidence(String evidence) {
@@ -132,7 +137,15 @@ public class JdbcAiExtractionAdminQueryAdapter implements AiExtractionAdminQuery
                                           FROM ai_candidate_snapshot next_snapshot
                                          WHERE next_snapshot.job_id = snapshot.job_id) AS next_version
                       FROM ai_candidate_snapshot snapshot
-                     WHERE snapshot.id = ? AND snapshot.review_status = ?
+                     WHERE snapshot.id = ?
+                       AND snapshot.review_status = ?
+                       AND snapshot.id = (
+                           SELECT latest.id
+                             FROM ai_candidate_snapshot latest
+                            WHERE latest.job_id = snapshot.job_id
+                            ORDER BY latest.snapshot_version DESC, latest.created_at DESC, latest.id DESC
+                            LIMIT 1
+                       )
                 )
                 INSERT INTO ai_candidate_snapshot (
                     id, job_id, snapshot_version, candidate_fields, candidate_tags, field_confidences, evidence,

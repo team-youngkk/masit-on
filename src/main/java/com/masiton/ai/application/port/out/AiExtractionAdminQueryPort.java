@@ -15,7 +15,7 @@ public interface AiExtractionAdminQueryPort {
     Optional<ReviewTarget> reviewTarget(UUID jobId);
     UUID override(UUID snapshotId, String expectedStatus, UUID adminId, String reason, String decision);
     void markRegisteredContent(UUID snapshotId, RegisteredContent content);
-    void connectConfirmedTags(UUID snapshotId, UUID visitId, List<TagDecision> decisions);
+    List<TagDecision> connectConfirmedTags(UUID snapshotId, UUID visitId, List<TagDecision> decisions);
     void appendTagOverrides(UUID snapshotId, UUID adminId, String reason, List<TagDecision> decisions);
 
     record Page(List<AiExtractionJobView> items, long totalElements) { }
