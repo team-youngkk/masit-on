@@ -176,13 +176,35 @@ class AiExtractionJobServiceTest {
     @Test
     @DisplayName("비활성 채널 webhook은 작업을 만들지 않는다")
     void submitWebhook_비활성채널_작업을만들지않는다() {
-        when(watchStore.find("channel-id")).thenReturn(Optional.of(
+        when(watchStore.findForUpdate("channel-id")).thenReturn(Optional.of(
                 new YoutubeChannelWatchStore.Watch("channel-id", false, "INACTIVE", null)));
 
         Optional<AiExtractionJobView> result = service.submitWebhook("channel-id", "video-id",
                 URI.create("https://www.youtube.com/watch?v=video-id"));
 
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("활성 채널 webhook은 작업을 접수한다")
+    void submitWebhook_활성채널_작업을접수한다() {
+        when(watchStore.findForUpdate("channel-id")).thenReturn(Optional.of(
+                new YoutubeChannelWatchStore.Watch("channel-id", true, "ACTIVE", null)));
+        AiExtractionJobView accepted = new AiExtractionJobView(
+                UUID.randomUUID(), "WEBHOOK", "channel-id", "video-id",
+                "https://www.youtube.com/watch?v=video-id", "QUEUED", null, null,
+                AiExtractionContract.PROVIDER, AiExtractionContract.MODEL_VERSION,
+                AiExtractionContract.PROMPT_VERSION, AiExtractionContract.SCHEMA_VERSION,
+                0, OffsetDateTime.parse("2026-08-12T00:00:00Z"), null, null, false);
+        when(store.find(any(), any(), any(), any(), any(), any(), any())).thenReturn(Optional.empty());
+        when(store.insert(any())).thenReturn(Optional.of(accepted));
+
+        Optional<AiExtractionJobView> result = service.submitWebhook("channel-id", "video-id",
+                URI.create("https://www.youtube.com/watch?v=video-id"));
+
+        assertThat(result).contains(accepted);
+        verify(store).insert(any());
+        verify(watchStore).markNotificationReceived(eq("channel-id"), any());
     }
 
     @Test
