@@ -1,6 +1,6 @@
 'use client'
 
-import { authenticatedFetch } from './auth'
+import { authenticatedFetch } from './auth.ts'
 
 export type ApiFieldError = {
   field: string

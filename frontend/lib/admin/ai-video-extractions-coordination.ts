@@ -7,6 +7,23 @@ export type AiExtractionFilters = {
   page: number
 }
 
+export type AiExtractionSubmissionAttempt = { fingerprint: string; key: string }
+
+export function aiExtractionSubmissionAttempt(
+  previous: AiExtractionSubmissionAttempt | null,
+  fingerprint: string,
+  generate: () => string,
+): AiExtractionSubmissionAttempt {
+  return previous?.fingerprint === fingerprint ? previous : { fingerprint, key: generate() }
+}
+
+export function validateAiExtractionSubmission(videoUrl: string, supplementText: string): string[] {
+  const errors: string[] = []
+  if (!videoUrl.trim().length) errors.push('YouTube 영상 URL을 입력해 주세요.')
+  if (supplementText.trim().length > 20_000) errors.push('보완 텍스트는 공백을 제외하고 20,000자 이하로 입력해 주세요.')
+  return errors
+}
+
 export function nextAiExtractionFilters(
   current: AiExtractionFilters,
   change: Partial<AiExtractionFilters>,
@@ -31,10 +48,14 @@ export function reviewRequest(decision: 'CONFIRM' | 'DISCARD' | 'ROLLBACK', expe
   return { decision, expectedReviewStatus }
 }
 
-export function aiExtractionMessageForCode(code?: string): string | undefined {
+export function aiExtractionMessageForCode(code?: string, context: 'manage' | 'submission' = 'manage'): string | undefined {
   switch (code) {
+    case 'AIEXTRACT_INVALID_VIDEO_URL':
+      return '공개 YouTube 영상 URL을 확인해 주세요.'
     case 'AIEXTRACT_DUPLICATE_CONFLICT':
-      return '다른 검수 변경과 충돌했습니다. 최신 작업 상태를 다시 조회한 뒤 진행해 주세요.'
+      return context === 'submission'
+        ? '이미 정식 등록된 영상과 충돌해 작업을 접수하지 못했습니다.'
+        : '다른 검수 변경과 충돌했습니다. 최신 작업 상태를 다시 조회한 뒤 진행해 주세요.'
     case 'AIEXTRACT_RETRY_BLOCKED':
       return '현재 작업 상태에서는 재시도할 수 없습니다.'
     case 'AIEXTRACT_VALIDATION_CONFLICT':

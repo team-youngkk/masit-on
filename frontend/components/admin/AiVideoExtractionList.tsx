@@ -4,8 +4,8 @@ import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/Button'
-import { getAiVideoExtractions, type AiExtractionJob, type AiExtractionPage, type AiExecutionStatus, type AiExtractionReviewStatus, type AiExtractionSource } from '@/lib/admin/ai-video-extractions'
-import { nextAiExtractionFilters, type AiExtractionFilters } from '@/lib/admin/ai-video-extractions-coordination'
+import { createAiVideoExtraction, getAiVideoExtractions, aiExtractionSubmissionMessageFor, type AiExtractionJob, type AiExtractionPage, type AiExecutionStatus, type AiExtractionReviewStatus, type AiExtractionSource } from '@/lib/admin/ai-video-extractions'
+import { aiExtractionSubmissionAttempt, nextAiExtractionFilters, type AiExtractionFilters, type AiExtractionSubmissionAttempt, validateAiExtractionSubmission } from '@/lib/admin/ai-video-extractions-coordination'
 import { aiExtractionMessageFor } from '@/lib/admin/ai-video-extractions'
 
 import styles from './AiVideoExtractionScreen.module.css'
@@ -18,6 +18,13 @@ export function AiVideoExtractionList() {
   const [busy, setBusy] = useState(true)
   const [notice, setNotice] = useState('')
   const [error, setError] = useState(false)
+  const [videoUrl, setVideoUrl] = useState('')
+  const [supplementText, setSupplementText] = useState('')
+  const [submitBusy, setSubmitBusy] = useState(false)
+  const [submitNotice, setSubmitNotice] = useState('')
+  const [submitError, setSubmitError] = useState(false)
+  const [submittedJobId, setSubmittedJobId] = useState<string | null>(null)
+  const submissionAttempt = useRef<AiExtractionSubmissionAttempt | null>(null)
   const requestId = useRef(0)
 
   const load = useCallback(async () => {
@@ -38,7 +45,55 @@ export function AiVideoExtractionList() {
   function change(change: Partial<AiExtractionFilters>) { setFilters((current) => nextAiExtractionFilters(current, change)) }
   function formatDate(value: string | null) { return value ? new Date(value).toLocaleString('ko-KR') : '—' }
 
+  async function submit(event: React.FormEvent) {
+    event.preventDefault()
+    setSubmittedJobId(null)
+    const validationErrors = validateAiExtractionSubmission(videoUrl, supplementText)
+    if (validationErrors.length) {
+      setSubmitError(true)
+      setSubmitNotice(validationErrors.join(' '))
+      return
+    }
+
+    const fingerprint = `${videoUrl.trim()}\n${supplementText.trim()}`
+    const attempt = aiExtractionSubmissionAttempt(submissionAttempt.current, fingerprint, () => crypto.randomUUID())
+    submissionAttempt.current = attempt
+    setSubmitBusy(true)
+    setSubmitError(false)
+    setSubmitNotice('AI 영상 추출 작업을 접수하는 중입니다.')
+    try {
+      const result = await createAiVideoExtraction(videoUrl, supplementText, attempt.key)
+      setSubmitError(false)
+      setSubmitNotice(result.reused
+        ? '기존 AI 영상 추출 작업을 다시 안내했습니다. 작업 목록에서 최신 상태를 확인해 주세요.'
+        : 'AI 영상 추출 작업을 접수했습니다. 작업 목록에서 진행 상태를 확인해 주세요.')
+      setSubmittedJobId(result.jobId)
+      setVideoUrl('')
+      setSupplementText('')
+      submissionAttempt.current = null
+      void load().catch(() => undefined)
+    } catch (reason) {
+      setSubmitError(true)
+      setSubmitNotice(aiExtractionSubmissionMessageFor(reason))
+    } finally {
+      setSubmitBusy(false)
+    }
+  }
+
   return <div className={styles.screen}>
+    <section className={styles.panel} aria-labelledby="new-ai-extraction-heading">
+      <h2 id="new-ai-extraction-heading">신규 영상 추가</h2>
+      <p className={styles.hint}>공개 YouTube 영상 URL을 제출하면 비동기 추출 작업이 시작됩니다. 보완 텍스트는 처리에만 사용하며 결과 화면에 다시 표시하지 않습니다.</p>
+      <form className={styles.form} onSubmit={(event) => void submit(event)}>
+        <label htmlFor="ai-video-url">YouTube 영상 URL</label>
+        <input id="ai-video-url" name="videoUrl" type="text" inputMode="url" required value={videoUrl} onChange={(event) => setVideoUrl(event.target.value)} autoComplete="url" />
+        <label htmlFor="ai-supplement-text">보완 텍스트 <span className={styles.meta}>(선택, 최대 20,000자)</span></label>
+        <textarea id="ai-supplement-text" name="supplementText" rows={5} value={supplementText} onChange={(event) => setSupplementText(event.target.value)} />
+        <Button type="submit" disabled={submitBusy}>{submitBusy ? '접수 중…' : '추출 작업 접수'}</Button>
+      </form>
+      {submitNotice ? <p className={submitError ? styles.error : styles.notice} role={submitError ? 'alert' : 'status'} aria-live="polite">{submitNotice}</p> : null}
+      {submittedJobId ? <Link className={styles.resultLink} href={`/admin/ai/${encodeURIComponent(submittedJobId)}`}>작업 상세 보기</Link> : null}
+    </section>
     <div className={styles.toolbar}>
       <div className={styles.filterRow} aria-label="작업 목록 필터">
         <label>실행 상태<select value={filters.executionStatus} disabled={busy} onChange={(event) => change({ executionStatus: event.target.value as AiExecutionStatus | '' })}>
