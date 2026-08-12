@@ -149,7 +149,7 @@ related_documents:
 | AI 검수 서비스·QueryService·Controller 대상 테스트 | 통과 |
 | 원본 provenance 전달 단위 테스트 | 통과 |
 | CONFIRM→ROLLBACK PostgreSQL 통합 테스트 | 통과 |
-| GitHub Actions 최신 백엔드 | `31559691332`에서 1094건 중 3건 실패; 아래 12.4의 테스트 fixture 보완 후 재실행 예정 |
+| GitHub Actions 최신 백엔드 | `31560632028` 재실행 통과 (백엔드·프론트 전체 CI 성공) |
 
 ### 12.4 CI 후속 실패와 fixture 보완
 
