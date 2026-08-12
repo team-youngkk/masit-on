@@ -1,5 +1,7 @@
 package com.masiton.restaurant.presentation.rest;
 
+import static com.masiton.test.IntegrationTestFixtures.courseRequestJson;
+
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.OffsetDateTime;
@@ -475,11 +477,6 @@ class RestaurantCourseRouteApiTest {
 
     private CourseRouteResult singleLegResult(int distanceMeters, int durationSeconds) {
         return new CourseRouteResult(List.of(new CourseRouteLeg(distanceMeters, durationSeconds)));
-    }
-
-    private String courseRequestJson(UUID... restaurantIds) {
-        String[] rawIds = Arrays.stream(restaurantIds).map(UUID::toString).toArray(String[]::new);
-        return courseRequestJsonRaw(rawIds);
     }
 
     private String courseRequestJsonRaw(String... restaurantIds) {

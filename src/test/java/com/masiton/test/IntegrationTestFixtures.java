@@ -3,7 +3,9 @@ package com.masiton.test;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public final class IntegrationTestFixtures {
 
@@ -18,7 +20,10 @@ public final class IntegrationTestFixtures {
         }
     }
 
-    public static String courseRequestJson(UUID startId, UUID destinationId) {
-        return "{\"restaurantIds\":[\"" + startId + "\",\"" + destinationId + "\"]}";
+    public static String courseRequestJson(UUID... restaurantIds) {
+        String ids = Arrays.stream(restaurantIds)
+                .map(id -> "\"" + id + "\"")
+                .collect(Collectors.joining(","));
+        return "{\"restaurantIds\":[" + ids + "]}";
     }
 }
