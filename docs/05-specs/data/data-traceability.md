@@ -243,7 +243,7 @@ V3 전진 적용과 전체 FK·UNIQUE·CHECK·인덱스는 `TST-E2-E2E-001`, `E2
 
 | 데이터 범위 | 근거 문서 | 품질·운영 검증 | 책임 |
 |---|---|---|---|
-| Job·Snapshot·Attempt | [ADR-AI-001](../../07-adr/integration/ai-001-video-extraction-candidate-boundary.md), [ADR-EXT-003](../../07-adr/integration/ext-003-ai-extraction-async-reliability.md) | `TST-E3-AI-002~004`, `TST-E3-DATA-001`, [3차 확장 평가 전략](../../08-planning/third-expansion-evaluation-strategy.md)의 `EVAL-AI-001~010` | WS-15, `E3-T03~08`, `E3-T11`, `E3-T13` |
+| Job·Snapshot·Attempt | [ADR-AI-001](../../07-adr/integration/ai-001-video-extraction-candidate-boundary.md), [ADR-EXT-003](../../07-adr/integration/ext-003-ai-extraction-async-reliability.md) | `TST-E3-AI-002~004`, `TST-E3-DATA-001`, [3차 확장 평가 전략](../../08-planning/third-expansion-evaluation-strategy.md)의 `EVAL-AI-001~010`, [120건 자산·평가기·HOLD 결과](../../08-planning/third-expansion-ai-evaluation-result.md) | WS-15, `E3-T03~08`, `E3-T11`, `E3-T13` |
 | Channel Watch·Webhook | [AI 영상 추출 API](../api/admin/ai-video-extraction-api.md) | `TST-E3-AI-001`, `TST-E3-AI-004`, Atom 유효성·중복·Token·대형 Payload·AI 호출 격리 | WS-15, `E3-T04~05` |
 | 자연어 검색·코스 응답 | [자연어 맛집 탐색 API](../api/discovery/natural-language-restaurant-discovery-api.md), [맛집 코스 추천 API](../api/discovery/restaurant-course-recommendation-api.md) | `TST-E3-NL-*`, `TST-E3-COURSE-*`, 별도 저장 없음·기존 조회/좌표 데이터와 외부 응답 조합·실패 격리, 운영 ACTIVE·공개 맛집 좌표 보강률 읽기 전용 측정 | WS-14·WS-16, `E3-T01~02`, `E3-T09~10`, `E3-T13` |
 
@@ -267,7 +267,7 @@ V3 전진 적용과 전체 FK·UNIQUE·CHECK·인덱스는 `TST-E2-E2E-001`, `E2
 
 | 데이터·경계 | 테스트 묶음 | Task | 완료 판정 |
 |---|---|---|---|
-| AI Job·Snapshot·Attempt·Tag Review | `TST-E3-AI-002~004`, `TST-E3-DATA-001`, `EVAL-AI-001~010` | `E3-T03~08`, `E3-T11`, `E3-T13` | lease·버전·보존·정식 저장 0건·원자성·태그 공개 경계 증거 |
+| AI Job·Snapshot·Attempt·Tag Review | `TST-E3-AI-002~004`, `TST-E3-DATA-001`, [`EVAL-AI-001~010` 자산·평가기·HOLD 결과](../../08-planning/third-expansion-ai-evaluation-result.md) | `E3-T03~08`, `E3-T11`, `E3-T13` | lease·버전·보존·정식 저장 0건·원자성·태그 공개 경계 증거 |
 | TagDefinition·VisitTag | `TST-E3-NL-001`, `TST-E3-AI-003`, `TST-E3-DATA-001` | `E3-T01`, `E3-T06` | 허용 태그·근거·중복·공개 Visit·태그 AND 증거 |
 | 자연어·코스 파생 응답 | `TST-E3-NL-*`, `TST-E3-COURSE-*`, `TST-E3-PERF-001` | `E3-T01~02`, `E3-T09~10`, `E3-T13` | 원문·코스 결과 비저장, 공개 상태·좌표·TTL·외부 실패, 운영 좌표 보강률 측정·조치·재측정 증거 |
 
