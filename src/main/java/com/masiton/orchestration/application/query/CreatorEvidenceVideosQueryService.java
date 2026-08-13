@@ -3,11 +3,10 @@ package com.masiton.orchestration.application.query;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.masiton.common.web.BusinessException;
+import com.masiton.creator.application.port.in.CreatorReferenceExceptionFactory;
 import com.masiton.creator.application.port.in.FindCreatorReferenceUseCase;
 import com.masiton.orchestration.application.port.in.CreatorEvidenceVideoItem;
 import com.masiton.orchestration.application.port.in.CreatorEvidenceVideosResult;
@@ -46,8 +45,7 @@ public class CreatorEvidenceVideosQueryService implements GetCreatorEvidenceVide
     @Override
     public CreatorEvidenceVideosResult getEvidenceVideos(UUID creatorId, int page, int size) {
         if (!isPubliclyVisibleCreator(creatorId)) {
-            throw new BusinessException(
-                    HttpStatus.NOT_FOUND, "CREATOR_NOT_FOUND", "요청한 유튜버를 찾을 수 없습니다.");
+            throw CreatorReferenceExceptionFactory.notFound();
         }
 
         CreatorEvidenceVideoPageResult pageResult = creatorEvidenceVideoQueryPort.findPage(creatorId, page, size);

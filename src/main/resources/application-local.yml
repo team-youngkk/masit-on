@@ -9,6 +9,11 @@ spring:
       port: ${REDIS_PORT:6379}
 
 masiton:
+  ai:
+    youtube-webhook:
+      secret: local-youtube-hub-secret
+      subscription-hub-url: ${YOUTUBE_SUBSCRIPTION_HUB_URL:http://localhost:8081/subscribe}
+      callback-url: ${YOUTUBE_WEBHOOK_CALLBACK_URL:http://localhost:8080/api/webhooks/youtube/channel-updates}
   integration:
     # 로컬 프로파일은 실제 Kakao/YouTube 호스트에 접근하지 않는다. WireMock이
     # docker/wiremock/mappings에 정의된 매핑으로 이 경로들을 대신 응답한다.

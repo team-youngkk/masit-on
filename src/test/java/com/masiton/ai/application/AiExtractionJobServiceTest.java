@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -22,6 +23,7 @@ import org.springframework.http.HttpStatus;
 import com.masiton.ai.application.port.out.AiExtractionJobStore;
 import com.masiton.ai.application.port.out.TemporaryInputCipher;
 import com.masiton.ai.application.port.out.YoutubeChannelWatchStore;
+import com.masiton.common.web.BusinessException;
 import com.masiton.ai.application.port.out.dto.AiExtractionJobView;
 import com.masiton.video.application.port.in.ResolveVerifiedVideoUseCase;
 import com.masiton.video.application.port.out.VerifiedVideo;
@@ -176,13 +178,95 @@ class AiExtractionJobServiceTest {
     @Test
     @DisplayName("비활성 채널 webhook은 작업을 만들지 않는다")
     void submitWebhook_비활성채널_작업을만들지않는다() {
-        when(watchStore.find("channel-id")).thenReturn(Optional.of(
+        when(watchStore.findForUpdate("channel-id")).thenReturn(Optional.of(
                 new YoutubeChannelWatchStore.Watch("channel-id", false, "INACTIVE", null)));
 
         Optional<AiExtractionJobView> result = service.submitWebhook("channel-id", "video-id",
                 URI.create("https://www.youtube.com/watch?v=video-id"));
 
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("외부 challenge 전 UNKNOWN 채널 webhook은 작업을 만들지 않는다")
+    void submitWebhook_EXTERNALCHALLENGE전UNKNOWN채널_작업을만들지않는다() {
+        when(watchStore.findForUpdate("channel-id")).thenReturn(Optional.of(
+                new YoutubeChannelWatchStore.Watch("channel-id", true, "UNKNOWN", null)));
+
+        Optional<AiExtractionJobView> result = service.submitWebhook("channel-id", "video-id",
+                URI.create("https://www.youtube.com/watch?v=video-id"));
+
+        assertThat(result).isEmpty();
+        verifyNoInteractions(store);
+    }
+
+    @Test
+    @DisplayName("활성 채널 webhook은 작업을 접수한다")
+    void submitWebhook_활성채널_작업을접수한다() {
+        when(watchStore.findForUpdate("channel-id")).thenReturn(Optional.of(
+                new YoutubeChannelWatchStore.Watch("channel-id", true, "ACTIVE", null)));
+        AiExtractionJobView accepted = new AiExtractionJobView(
+                UUID.randomUUID(), "WEBHOOK", "channel-id", "video-id",
+                "https://www.youtube.com/watch?v=video-id", "QUEUED", null, null,
+                AiExtractionContract.PROVIDER, AiExtractionContract.MODEL_VERSION,
+                AiExtractionContract.PROMPT_VERSION, AiExtractionContract.SCHEMA_VERSION,
+                0, OffsetDateTime.parse("2026-08-12T00:00:00Z"), null, null, false);
+        when(store.find(any(), any(), any(), any(), any(), any(), any())).thenReturn(Optional.empty());
+        when(store.insert(any())).thenReturn(Optional.of(accepted));
+
+        Optional<AiExtractionJobView> result = service.submitWebhook("channel-id", "video-id",
+                URI.create("https://www.youtube.com/watch?v=video-id"));
+
+        assertThat(result).contains(accepted);
+        verify(store).insert(any());
+        verify(watchStore).markNotificationReceived(eq("channel-id"), any());
+    }
+
+    @Test
+    @DisplayName("challenge 검증에 성공하면 구독을 ACTIVE로 전환하고 갱신 시각을 기록한다")
+    void verifyChallenge_토큰검증성공_구독을ACTIVE로전환한다() {
+        when(watchStore.findForUpdate("channel-id")).thenReturn(Optional.of(
+                new YoutubeChannelWatchStore.Watch("channel-id", true, "UNKNOWN", tokenHash("verify-token"))));
+
+        assertThat(service.verifyChallenge("channel-id", "verify-token", "challenge"))
+                .isEqualTo("challenge");
+
+        verify(watchStore).markSubscriptionVerified(eq("channel-id"), any());
+    }
+
+    @Test
+    @DisplayName("비활성 채널 challenge는 토큰이 일치해도 거부한다")
+    void verifyChallenge_비활성채널_토큰일치해도거부한다() {
+        when(watchStore.findForUpdate("channel-id")).thenReturn(Optional.of(
+                new YoutubeChannelWatchStore.Watch("channel-id", false, "INACTIVE", tokenHash("verify-token"))));
+
+        assertThatThrownBy(() -> service.verifyChallenge("channel-id", "verify-token", "challenge"))
+                .isInstanceOf(com.masiton.common.web.BusinessException.class)
+                .satisfies(exception -> {
+                    com.masiton.common.web.BusinessException businessException =
+                            (com.masiton.common.web.BusinessException) exception;
+                    assertThat(businessException.status()).isEqualTo(HttpStatus.FORBIDDEN);
+                    assertThat(businessException.code()).isEqualTo("AIEXTRACT_WEBHOOK_TOKEN_INVALID");
+                });
+
+        verify(watchStore, never()).markSubscriptionVerified(any(), any());
+    }
+
+    @Test
+    @DisplayName("구독 실패 채널 challenge는 토큰이 일치해도 거부한다")
+    void verifyChallenge_RENEWAL_FAILED채널_토큰일치해도거부한다() {
+        when(watchStore.findForUpdate("channel-id")).thenReturn(Optional.of(
+                new YoutubeChannelWatchStore.Watch("channel-id", true, "RENEWAL_FAILED", tokenHash("verify-token"))));
+
+        assertThatThrownBy(() -> service.verifyChallenge("channel-id", "verify-token", "challenge"))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(exception -> {
+                    BusinessException businessException = (BusinessException) exception;
+                    assertThat(businessException.status()).isEqualTo(HttpStatus.FORBIDDEN);
+                    assertThat(businessException.code()).isEqualTo("AIEXTRACT_WEBHOOK_TOKEN_INVALID");
+                });
+
+        verify(watchStore, never()).markSubscriptionVerified(any(), any());
     }
 
     @Test
@@ -257,6 +341,15 @@ class AiExtractionJobServiceTest {
         try {
             return java.security.MessageDigest.getInstance("SHA-256")
                     .digest((videoUrl + "\n" + supplement).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        } catch (java.security.NoSuchAlgorithmException exception) {
+            throw new AssertionError(exception);
+        }
+    }
+
+    private byte[] tokenHash(String token) {
+        try {
+            return java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(token.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         } catch (java.security.NoSuchAlgorithmException exception) {
             throw new AssertionError(exception);
         }
