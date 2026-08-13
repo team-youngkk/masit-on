@@ -110,8 +110,8 @@ related_documents:
 | 스레드 | 요청 | 문제 유형 | 판단 | 처리 결과 |
 |---|---|---|---|---|
 | [r3772017364](https://github.com/team-youngkk/masit-on/pull/179#discussion_r3772017364) | 4절 여정·관리자 화면 증거 추가 | 기타 | 이미 해결 | 9절 여정 캡처로 충족. 지적 시점이 캡처 커밋 이전이었다 |
-| [r3772155701](https://github.com/team-youngkk/masit-on/pull/179#discussion_r3772155701) | PR 본문 잔여 두 줄 정정 | 기타 | 수정 필요 | 실빌드 줄을 `Android Chrome 실단말`로 좁히고 접수 경로 공백 줄을 Webhook 항목으로 대체 |
-| [r3772102462·후속](https://github.com/team-youngkk/masit-on/pull/179#discussion_r3772102462) | `모든 여정에 캡처가 하나씩 대응` 서술이 표와 불일치 | 기타 | 수정 필요 | 검수 사유 누락 거부 캡처를 추가하고, 재시도 2장·신규 영상 추가 화면 때문에 일대일이 아님을 명시 |
-| [r3772155709·후속](https://github.com/team-youngkk/masit-on/pull/179#discussion_r3772155709) | 트러블슈팅 9절 수치 갱신 | 기타 | 수정 필요 | 수치를 지우고 검증 기록 3.2절 표를 단일 출처로 지정 |
+| [r3772226586](https://github.com/team-youngkk/masit-on/pull/179#discussion_r3772226586) | PR 본문 잔여 두 줄 정정 | 기타 | 수정 필요 | 실빌드 줄을 `Android Chrome 실단말`로 좁히고 접수 경로 공백 줄을 Webhook 항목으로 대체 |
+| [r3772226584](https://github.com/team-youngkk/masit-on/pull/179#discussion_r3772226584) | `모든 여정에 캡처가 하나씩 대응` 서술이 표와 불일치 | 기타 | 수정 필요 | 검수 사유 누락 거부 캡처를 추가하고, 재시도 2장·신규 영상 추가 화면 때문에 일대일이 아님을 명시 |
+| [r3772226591](https://github.com/team-youngkk/masit-on/pull/179#discussion_r3772226591) | 트러블슈팅 9절 수치 갱신 | 기타 | 수정 필요 | 수치를 지우고 검증 기록 3.2절 표를 단일 출처로 지정 |
 
 `모든 여정에 캡처가 하나씩 대응한다`는 문장은 코스 누락을 고치면서 넣었지만, 관리자 오류(검수 사유 누락) 여정이 빠져 있어 성립하지 않았다. 그 상태를 재현해 캡처를 추가하고 대응 관계 서술을 사실에 맞게 좁혔다. 6절 미검증 표의 `Android Chrome` 행이 중복이던 것도 함께 정리했다.
