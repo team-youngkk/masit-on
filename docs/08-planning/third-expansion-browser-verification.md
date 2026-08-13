@@ -1,6 +1,6 @@
 ---
 status: In Progress
-verification_date: 2026-08-12
+verification_date: 2026-08-13
 owners:
   - 양성훈
   - 이우람
@@ -38,7 +38,8 @@ related_documents:
 | 백엔드 | `./gradlew bootRun --args='--spring.profiles.active=local'`, `http://localhost:8080` |
 | 의존 서비스 | `docker compose up -d postgres redis wiremock` |
 | 스키마 | Flyway `V1`~`V7` 적용 |
-| 기준 커밋 | `develop` `35d0f94` |
+| 기준 커밋(3절 측정·4절 여정·3.1절 초기 화면 캡처) | `develop` `35d0f94`, 2026-08-12 |
+| 기준 커밋(3.2절 여정 캡처) | `#182`·`#184` 병합 이후 이 브랜치 HEAD, 2026-08-13 |
 | 화면 폭 | 브라우저 viewport를 360·390·768·1280·1440px으로 지정 |
 
 화면 폭 측정값은 세로 스크롤바를 뺀 `documentElement.clientWidth`이므로 768px은 753px, 1280px은 1265px, 1440px은 1425px으로 관측된다.
@@ -89,7 +90,7 @@ AI 작업 상세의 `태그 코드 보정` 입력은 첫 측정에서 전 폭 17
 
 ### 3.2 여정 상태 캡처
 
-4절 여정을 실제로 재현하며 상태별로 캡처했다. 화면 폭은 1280px이고, 대표 화면 하나는 390px도 함께 남겼다.
+4절 여정을 실제로 재현하며 상태별로 캡처했다. 4절 표의 모든 여정에 캡처가 하나씩 대응한다. 화면 폭은 1280px이고, 대표 화면 하나는 390px도 함께 남겼다.
 
 | 구분 | 상태 | 캡처 |
 |---|---|---|
@@ -98,6 +99,8 @@ AI 작업 상세의 `태그 코드 보정` 입력은 첫 측정에서 전 폭 17
 | 자연어 | 해석 실패 | [1280px](assets/e3-t12/journey-nl-failed-1280.png) |
 | 자연어 | 백엔드 장애 | [1280px](assets/e3-t12/journey-nl-error-1280.png) |
 | 자연어 | 다시 시도 복구 | [1280px](assets/e3-t12/journey-nl-recovered-1280.png) |
+| 코스 | 빈 결과 | [1280px](assets/e3-t12/journey-course-empty-1280.png) |
+| 코스 | 입력 부족(1개 선택) | [1280px](assets/e3-t12/journey-course-below-minimum-1280.png) |
 | 코스 | 맛집 3개 선택 | [1280px](assets/e3-t12/journey-course-selected-1280.png) |
 | 코스 | 추천 이동 순서 | [1280px](assets/e3-t12/journey-course-normal-1280.png) |
 | 코스 | 외부 장애(429) | [1280px](assets/e3-t12/journey-course-provider-error-1280.png) |
@@ -226,7 +229,7 @@ java.lang.IllegalStateException: Kakao Mobility base URL is not an allowed provi
 | 색 대비, 보조기기 낭독 | 미검증 | 이번 확인은 DOM 측정과 키보드 순회 기반이며 대비 계산과 실제 보조기기 확인을 포함하지 않는다 | 담당자가 수동 확인 범위를 정한다 |
 | 컨테이너 통합 실행에서의 동일 여정 | 미검증 | 5.1절 결함으로 앱 컨테이너가 기동하지 못한다 | 5.1절 조치 후 재확인한다 |
 | AI Worker가 실제로 도는 상태의 여정 | 미검증 | Worker와 Gemini 게이트가 모두 `false`다. 작업 상태는 Fixture로 만들었다 | `E3-T13` 운영 측정에서 확인한다 |
-| 관리자 신규 영상 추가 여정 | 미검증 | 검증 시점에는 접수 화면이 없었고, [#182](https://github.com/team-youngkk/masit-on/pull/182)로 구현된 화면은 이 문서의 측정·여정 실행 이후에 병합됐다(5.4절) | 담당자가 병합본에서 3절 측정과 4절 여정을 같은 기준으로 확인한다 |
+| 관리자 신규 영상 추가 화면의 폭 측정과 여정 판정 | 미검증 | 화면 캡처는 3.2절에 있으나, 3절 폭 측정과 4절 여정은 [#182](https://github.com/team-youngkk/masit-on/pull/182) 병합 전 기준 커밋에서 수행해 이 화면을 포함하지 않는다 | 담당자가 병합본에서 3절 측정과 4절 여정을 같은 기준으로 확인한다 |
 | Webhook 신규 영상 접수 여정 | 미검증 | 검증 시점에는 채널 감시를 등록할 수단이 없었고, [#184](https://github.com/team-youngkk/masit-on/pull/184)로 구현된 API는 이 문서의 실행 이후에 병합됐다(5.4절) | 담당자가 감시 채널을 활성화한 뒤 알림 접수까지 확인한다 |
 
 ## 7. 키보드 확인
@@ -249,4 +252,4 @@ Tab 순회로 세 화면의 초점 이동을 기록했다.
 6. `npm --prefix frontend run dev` 후 각 폭에서 3절 화면과 4절 여정을 확인한다.
 7. 3.1절 초기 화면 캡처는 Chrome·Edge 실빌드의 `--headless=new --screenshot`으로 만든다. 768px 이상은 `--window-size`를 그대로 쓰고, 360·390px은 3.1절대로 500px 창 안의 iframe으로 그린 뒤 해당 폭만큼 잘라 저장한다.
 8. 3.2절 여정 캡처는 Chrome을 `--headless=new --remote-debugging-port=9222`로 띄운 뒤 DevTools Protocol로 조작한다. `Emulation.setDeviceMetricsOverride`로 폭을 지정하면 최소 창 너비 제약을 받지 않는다. React 제어 입력은 native setter로 값을 넣고 `input` 이벤트를 보내야 상태가 갱신된다. 화면은 `Page.captureScreenshot`으로 저장한다.
-7. 오류·복구 여정은 백엔드를 내렸다 올려 확인한다. 코스 외부 장애는 stub이 429를 주는 좌표를 출발 맛집으로 두면 재현된다.
+9. 오류·복구 여정은 백엔드를 내렸다 올려 확인한다. 코스 외부 장애는 stub이 429를 주는 좌표를 출발 맛집으로 두면 재현된다.

@@ -16,7 +16,15 @@ function Get-EnvValue([string]$Content, [string]$Name) {
 }
 
 function Set-EnvValue([string]$Content, [string]$Name, [string]$Value) {
-    return [regex]::Replace($Content, "(?m)^$([regex]::Escape($Name))=.*$", "$Name=$Value")
+    $pattern = "(?m)^$([regex]::Escape($Name))=.*$"
+    # 대상 줄이 없으면 치환은 조용히 아무것도 하지 않는다. 그러면 세션 변수만 채워져
+    # bootRun은 되고 .env만 읽는 docker compose는 빈 값으로 기동해 원인을 찾기 어렵다.
+    # 예전 .env처럼 줄이 없는 경우를 위해 끝에 추가한다.
+    if (-not [regex]::IsMatch($Content, $pattern)) {
+        $separator = if ($Content.EndsWith("`n")) { '' } else { "`n" }
+        return $Content + $separator + "$Name=$Value`n"
+    }
+    return [regex]::Replace($Content, $pattern, "$Name=$Value")
 }
 
 function New-LocalJwtKeyPair {
