@@ -107,6 +107,27 @@ class YoutubeChannelWatchManagementServiceTest {
     }
 
     @Test
+    @DisplayName("Hub 구독 실패는 오류 범주를 기록하고 신규 Watch를 저장하지 않는다")
+    void 감시설정_Hub구독실패_오류범주를기록하고Watch를저장하지않는다() {
+        UUID creatorId = UUID.randomUUID();
+        when(creatorReferences.findCreatorReference(creatorId)).thenReturn(Optional.of(creator(creatorId, true, true)));
+        when(watchPersistence.preserveActive(creatorId, "channel-id")).thenReturn(Optional.empty());
+        when(verificationTokens.issue("channel-id")).thenReturn("verify-token");
+        when(watchPersistence.recordSubscriptionFailure("channel-id", "SUBSCRIPTION_5XX"))
+                .thenReturn(Optional.empty());
+        org.mockito.Mockito.doThrow(new YoutubeChannelWatchSubscriptionFailedException("SUBSCRIPTION_5XX"))
+                .when(subscriptions).subscribe("channel-id", "verify-token");
+
+        assertThatThrownBy(() -> service.setEnabled(creatorId, true))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(exception -> assertThat(((BusinessException) exception).code())
+                        .isEqualTo("EXTERNAL_SERVICE_ERROR"));
+
+        verify(watchPersistence).recordSubscriptionFailure("channel-id", "SUBSCRIPTION_5XX");
+        verify(watchPersistence, never()).prepareActivation(any(), any(), any());
+    }
+
+    @Test
     @DisplayName("감시를 비활성화하면 기존 메타데이터를 보존한 INACTIVE 상태를 저장한다")
     void 감시설정_비활성화_기존메타데이터를보존한INACTIVE상태를저장한다() {
         UUID creatorId = UUID.randomUUID();

@@ -2,9 +2,18 @@ package com.masiton.ai.application;
 
 public class YoutubeChannelWatchSubscriptionFailedException extends RuntimeException {
 
-    public YoutubeChannelWatchSubscriptionFailedException(Throwable cause) {
-        super(cause);
+    private final String category;
+
+    public YoutubeChannelWatchSubscriptionFailedException(String category) {
+        this(category, null);
     }
 
-    public YoutubeChannelWatchSubscriptionFailedException() { }
+    public YoutubeChannelWatchSubscriptionFailedException(String category, Throwable cause) {
+        super(cause);
+        this.category = category;
+    }
+
+    public String category() {
+        return category;
+    }
 }

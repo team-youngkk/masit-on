@@ -1,6 +1,7 @@
 package com.masiton.ai.infrastructure.external;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.net.URI;
 import java.net.URLDecoder;
@@ -63,6 +64,44 @@ class PubSubHubbubYoutubeChannelWatchSubscriptionAdapterWireMockIntegrationTest 
                 .containsEntry("hub.secret", properties.getSecret());
     }
 
+    @Test
+    @DisplayName("Hub 4xx 응답은 정규화된 실패 범주로 변환한다")
+    void 구독요청_Hub4xx_정규화된실패범주로변환한다() throws Exception {
+        stubSubscription(400);
+        assertThatThrownBy(() -> adapter().subscribe("UCchannel123", "verify-token"))
+                .isInstanceOfSatisfying(com.masiton.ai.application.YoutubeChannelWatchSubscriptionFailedException.class,
+                        exception -> assertThat(exception.category()).isEqualTo("SUBSCRIPTION_4XX"));
+    }
+
+    @Test
+    @DisplayName("Hub 5xx 응답은 정규화된 실패 범주로 변환한다")
+    void 구독요청_Hub5xx_정규화된실패범주로변환한다() throws Exception {
+        stubSubscription(503);
+        assertThatThrownBy(() -> adapter().subscribe("UCchannel123", "verify-token"))
+                .isInstanceOfSatisfying(com.masiton.ai.application.YoutubeChannelWatchSubscriptionFailedException.class,
+                        exception -> assertThat(exception.category()).isEqualTo("SUBSCRIPTION_5XX"));
+    }
+
+    @Test
+    @DisplayName("Hub 응답 timeout은 정규화된 timeout 범주로 변환한다")
+    void 구독요청_Hub응답timeout_정규화된timeout범주로변환한다() throws Exception {
+        stubSubscriptionWithDelay(202, 250);
+        assertThatThrownBy(() -> adapter(new YoutubeWebhookProperties(), Duration.ofMillis(50))
+                .subscribe("UCchannel123", "verify-token"))
+                .isInstanceOfSatisfying(com.masiton.ai.application.YoutubeChannelWatchSubscriptionFailedException.class,
+                        exception -> assertThat(exception.category()).isEqualTo("SUBSCRIPTION_TIMEOUT"));
+    }
+
+    private PubSubHubbubYoutubeChannelWatchSubscriptionAdapter adapter() {
+        return new PubSubHubbubYoutubeChannelWatchSubscriptionAdapter(HttpClient.newHttpClient(), properties());
+    }
+
+    private PubSubHubbubYoutubeChannelWatchSubscriptionAdapter adapter(YoutubeWebhookProperties properties,
+                                                                       Duration timeout) {
+        properties.setSubscriptionHubUrl(baseUrl() + "/subscribe");
+        return new PubSubHubbubYoutubeChannelWatchSubscriptionAdapter(HttpClient.newHttpClient(), properties, timeout);
+    }
+
     private YoutubeWebhookProperties properties() {
         YoutubeWebhookProperties properties = new YoutubeWebhookProperties();
         properties.setSubscriptionHubUrl(baseUrl() + "/subscribe");
@@ -75,6 +114,13 @@ class PubSubHubbubYoutubeChannelWatchSubscriptionAdapterWireMockIntegrationTest 
         Map<String, Object> mapping = Map.of(
                 "request", Map.of("method", "POST", "urlPath", "/subscribe"),
                 "response", Map.of("status", status));
+        admin("POST", "/__admin/mappings", objectMapper.writeValueAsString(mapping));
+    }
+
+    private void stubSubscriptionWithDelay(int status, int delayMillis) throws Exception {
+        Map<String, Object> mapping = Map.of(
+                "request", Map.of("method", "POST", "urlPath", "/subscribe"),
+                "response", Map.of("status", status, "fixedDelayMilliseconds", delayMillis));
         admin("POST", "/__admin/mappings", objectMapper.writeValueAsString(mapping));
     }
 

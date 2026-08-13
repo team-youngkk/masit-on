@@ -47,6 +47,12 @@ public class YoutubeChannelWatchPersistenceService {
         return watchStore.upsert(creatorId, channelId, false, "INACTIVE", null);
     }
 
+    @Transactional
+    public Optional<YoutubeChannelWatchStore.WatchDetail> recordSubscriptionFailure(
+            String channelId, String errorCategory) {
+        return watchStore.markSubscriptionFailed(channelId, errorCategory);
+    }
+
     public record ActivationPreparation(YoutubeChannelWatchStore.WatchDetail detail,
                                         boolean subscriptionRequestRequired) { }
 }

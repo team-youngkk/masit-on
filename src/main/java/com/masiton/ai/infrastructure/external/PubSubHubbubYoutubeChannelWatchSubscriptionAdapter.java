@@ -6,6 +6,7 @@ import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
@@ -25,36 +26,55 @@ public class PubSubHubbubYoutubeChannelWatchSubscriptionAdapter implements Youtu
 
     private final HttpClient httpClient;
     private final YoutubeWebhookProperties properties;
+    private final Duration responseTimeout;
 
     @Autowired
     public PubSubHubbubYoutubeChannelWatchSubscriptionAdapter(YoutubeWebhookProperties properties) {
-        this(HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build(), properties);
+        this(HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build(), properties, RESPONSE_TIMEOUT);
     }
 
     PubSubHubbubYoutubeChannelWatchSubscriptionAdapter(HttpClient httpClient, YoutubeWebhookProperties properties) {
+        this(httpClient, properties, RESPONSE_TIMEOUT);
+    }
+
+    PubSubHubbubYoutubeChannelWatchSubscriptionAdapter(HttpClient httpClient, YoutubeWebhookProperties properties,
+                                                       Duration responseTimeout) {
         this.httpClient = httpClient;
         this.properties = properties;
+        this.responseTimeout = responseTimeout;
     }
 
     @Override
     public void subscribe(String channelId, String verificationToken) {
         String form = formBody(channelId, verificationToken);
         HttpRequest request = HttpRequest.newBuilder(URI.create(properties.getSubscriptionHubUrl()))
-                .timeout(RESPONSE_TIMEOUT)
+                .timeout(responseTimeout)
                 .header("Content-Type", "application/x-www-form-urlencoded")
                 .POST(HttpRequest.BodyPublishers.ofString(form))
                 .build();
         try {
             HttpResponse<Void> response = httpClient.send(request, HttpResponse.BodyHandlers.discarding());
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                throw new YoutubeChannelWatchSubscriptionFailedException();
+                throw new YoutubeChannelWatchSubscriptionFailedException(statusCategory(response.statusCode()));
             }
+        } catch (HttpTimeoutException exception) {
+            throw new YoutubeChannelWatchSubscriptionFailedException("SUBSCRIPTION_TIMEOUT", exception);
         } catch (IOException | InterruptedException exception) {
             if (exception instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
-            throw new YoutubeChannelWatchSubscriptionFailedException(exception);
+            throw new YoutubeChannelWatchSubscriptionFailedException("SUBSCRIPTION_UPSTREAM", exception);
         }
+    }
+
+    private String statusCategory(int statusCode) {
+        if (statusCode >= 400 && statusCode < 500) {
+            return "SUBSCRIPTION_4XX";
+        }
+        if (statusCode >= 500) {
+            return "SUBSCRIPTION_5XX";
+        }
+        return "SUBSCRIPTION_UNEXPECTED_STATUS";
     }
 
     private String formBody(String channelId, String verificationToken) {

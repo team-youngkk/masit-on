@@ -107,6 +107,20 @@ public class JdbcYoutubeChannelWatchStore implements YoutubeChannelWatchStore {
                 """, verifiedAt, channelId);
     }
 
+    @Override
+    public Optional<WatchDetail> markSubscriptionFailed(String channelId, String errorCategory) {
+        List<WatchDetail> rows = jdbcTemplate.query("""
+                UPDATE youtube_channel_watch
+                   SET enabled = true,
+                       subscription_status = 'RENEWAL_FAILED',
+                       last_error_category = ?,
+                       updated_at = CURRENT_TIMESTAMP
+                 WHERE youtube_channel_id = ?
+                RETURNING enabled, subscription_status, last_notification_at, last_renewed_at, last_error_category
+                """, this::mapDetail, errorCategory, channelId);
+        return rows.stream().findFirst();
+    }
+
     private Watch map(ResultSet rs, int rowNum) throws SQLException {
         return new Watch(rs.getString("youtube_channel_id"), rs.getBoolean("enabled"),
                 rs.getString("subscription_status"), rs.getBytes("subscription_token_hash"));

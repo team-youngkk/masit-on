@@ -50,15 +50,14 @@ public class YoutubeChannelWatchManagementService implements YoutubeChannelWatch
             return status(active.get());
         }
         String verificationToken = verificationTokens.issue(creator.externalChannelId());
+        try {
+            subscriptions.subscribe(creator.externalChannelId(), verificationToken);
+        } catch (YoutubeChannelWatchSubscriptionFailedException exception) {
+            watchPersistence.recordSubscriptionFailure(creator.externalChannelId(), exception.category());
+            throw new BusinessException(ErrorCode.EXTERNAL_SERVICE_ERROR);
+        }
         YoutubeChannelWatchPersistenceService.ActivationPreparation preparation =
                 watchPersistence.prepareActivation(creator.id(), creator.externalChannelId(), hashToken(verificationToken));
-        if (preparation.subscriptionRequestRequired()) {
-            try {
-                subscriptions.subscribe(creator.externalChannelId(), verificationToken);
-            } catch (YoutubeChannelWatchSubscriptionFailedException exception) {
-                throw new BusinessException(ErrorCode.EXTERNAL_SERVICE_ERROR);
-            }
-        }
         return status(preparation.detail());
     }
 

@@ -197,6 +197,26 @@ class JdbcYoutubeChannelWatchStoreIntegrationTest {
         }
     }
 
+    @Test
+    @DisplayName("구독 실패는 Watch를 RENEWAL_FAILED와 오류 범주로 기록한다")
+    void markSubscriptionFailed_기존Watch_실패상태와오류범주를기록한다() {
+        UUID creatorId = UUID.randomUUID();
+        String channelId = "channel-" + UUID.randomUUID();
+        insertCreator(creatorId, channelId);
+        insertWatch(creatorId, channelId, IntegrationTestFixtures.sha256("old-token"), null, null, null);
+
+        try {
+            YoutubeChannelWatchStore.WatchDetail detail = store.markSubscriptionFailed(
+                    channelId, "SUBSCRIPTION_5XX").orElseThrow();
+
+            assertThat(detail.enabled()).isTrue();
+            assertThat(detail.subscriptionStatus()).isEqualTo("RENEWAL_FAILED");
+            assertThat(detail.lastErrorCategory()).isEqualTo("SUBSCRIPTION_5XX");
+        } finally {
+            deleteFixture(creatorId, channelId);
+        }
+    }
+
     private void await(CountDownLatch latch) {
         try {
             if (!latch.await(5, TimeUnit.SECONDS)) {
