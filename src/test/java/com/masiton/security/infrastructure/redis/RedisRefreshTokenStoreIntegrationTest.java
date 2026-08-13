@@ -400,6 +400,7 @@ class RedisRefreshTokenStoreIntegrationTest {
     void memberSession_레거시만료시각_전체폐기_복구큐선적재() {
         // REVOKE_ALL_SCRIPT는 memberSessionClock이 아닌 Redis TIME으로 만료를 판정하므로
         // 실제 Redis 시각에 맞춘 fixture를 사용해야 레거시 세션이 테스트 실행일에 만료되지 않는다.
+        // 복구 큐 score도 Redis TIME이므로 JVM 시각과의 오차를 흡수할 상한 여유가 필요하다.
         Instant now = Instant.now();
         when(memberSessionClock.instant()).thenReturn(now);
 

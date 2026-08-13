@@ -46,12 +46,13 @@ related_documents:
 | `AiVideoExtractionList.tsx:74` | 새 작업과 무관한 필터에서도 성공 후 목록을 재조회함 | 효율성 | 수정 불필요 | 현재 필터를 기준으로 최신 목록을 보장하는 의도된 동작이며 기능 정확성 변경과 분리 | 새 필터 effect 경로 확인 |
 | CI `31590500905` | 백엔드 전체 테스트에서 레거시 세션 복구 큐 테스트가 실패함 | CI / 테스트 격리 | 수정 필요 | 테스트 스케줄러를 격리하고 Redis 실제 시각에 맞는 만료 테스트 시각을 사용 | 로컬에서 동일 실패 재현 후 수정 |
 | [백엔드 테스트 범위](https://github.com/team-youngkk/masit-on/pull/182#discussion_r3771213551) | Redis 테스트 격리 변경이 프론트 PR 범위와 분리되지 않고 본문에도 누락됨 | Git | 수정 필요 | 이번 PR에 CI 차단 원인과 백엔드 테스트 변경을 명시하고, 별도 PR로 나누지 않은 이유를 본문에 반영 | PR 본문 갱신 및 CI run `31654186738` 통과 |
-| [Redis 시각 픽스처](https://github.com/team-youngkk/masit-on/pull/182#discussion_r3771213558) | `Instant.now().minusSeconds(5)`와 `plusSeconds(10)`의 근거가 없고 자매 테스트와 기준이 다름 | 애플리케이션 | 수정 필요 | `REVOKE_ALL_SCRIPT`의 Redis 실제 시각 사용을 주석으로 설명하고 `Instant.now()` 기준으로 단순화 | Docker 미사용 환경에서는 Testcontainers 초기화 단계에서 실행 불가 |
+| [Redis 시각 픽스처](https://github.com/team-youngkk/masit-on/pull/182#discussion_r3771213558) | `Instant.now().minusSeconds(5)`와 `plusSeconds(10)`의 근거가 없고 자매 테스트와 기준이 다름 | 애플리케이션 | 수정 필요 | `minusSeconds(5)`만 제거하고, `REVOKE_ALL_SCRIPT`의 Redis 실제 시각 및 `claimDue` 상한 여유의 필요성을 주석으로 설명 | Docker 미사용 환경에서는 Testcontainers 초기화 단계에서 실행 불가 |
 | [Node 실험 플래그](https://github.com/team-youngkk/masit-on/pull/182#discussion_r3771213562) | 필수 CI 경로가 `--experimental-transform-types`에 의존함 | 애플리케이션 | 수정 필요 | `AdminApiError` parameter property를 명시적 필드 대입으로 바꾸고 API 테스트를 기존 Node 테스트 프로세스에 통합 | `npm.cmd test`, `npm.cmd run typecheck` |
 | [테스트 수치](https://github.com/team-youngkk/masit-on/pull/182#discussion_r3771213567) | 기록의 테스트 수치가 실행 결과와 불일치함 | 기타 | 수정 필요 | coordination·API 테스트를 합산한 실제 결과 184개로 통일 | `npm.cmd test` 결과 `184 pass` |
 | [컬렉션 멱등키](https://github.com/team-youngkk/masit-on/pull/182#discussion_r3771213570) | 공용 helper를 호출하기 전에 동일 fingerprint 조기 반환으로 규칙이 중복됨 | 애플리케이션 | 수정 필요 | helper 결과를 단일 판정 경로로 사용하되 기존 객체 재사용 동작은 보존 | `npm.cmd test`의 컬렉션 재시도 시나리오 |
 | [빈 URL 검증](https://github.com/team-youngkk/masit-on/pull/182#discussion_r3771213573) | `required`의 브라우저 검증이 필드별 커스텀 오류·ARIA 경로를 우회함 | 애플리케이션 | 수정 필요 | `noValidate`로 커스텀 필드 검증 경로를 단일화하고 빈 문자열·공백 회귀 검증 추가 | `npm.cmd test`, `npm.cmd run typecheck` |
 | [보완 텍스트 오류 문구](https://github.com/team-youngkk/masit-on/pull/182#discussion_r3771213576) | `trim()` 검증을 “공백 제외”로 안내해 중간 공백까지 제거하는 것으로 오해할 수 있음 | 애플리케이션 | 수정 필요 | “앞뒤 공백을 제외하고”로 API 계약과 문구를 일치 | coordination 테스트 통과 |
+| [Redis 시각 답글·기록 정합성](https://github.com/team-youngkk/masit-on/pull/182#discussion_r3771564785) | `plusSeconds(10)`은 코드에 남아 있는데 답글과 기록이 제거했다고 잘못 서술함 | 기타 | 수정 필요 | 코드는 유지하고 Redis ZSET score와 JVM `claimDue` 상한의 시각 오차 흡수 목적을 주석·기록에 반영 | `git diff --check`, 후속 CI run 확인 |
 
 ## 3. 문제 현상과 발생 조건
 
@@ -73,7 +74,7 @@ related_documents:
 
 추가로 오류 알림의 암묵적 assertive semantics를 명시적 polite live region이 덮었고, React state의 다음 렌더 반영을 기다리는 동안 중복 submit을 즉시 차단하지 않았다. 멱등키·오류 문구·입력 스타일을 각 도메인에 복사해 두어 동일 규칙의 수정 비용도 커지고 있었다. 제출 fingerprint와 멱등키 생성이 guard 설정 이후 `try` 바깥에 있어 생성기 예외가 발생하면 `finally`에 도달하지 못했고, URL 오류 경로도 필드 오류만 설정해 포커스를 이동하지 않았다. Redis 통합 테스트는 전역 스케줄러가 테스트 큐를 경쟁적으로 소비할 수 있었고, `revokeAll`이 Redis 실제 시각으로 TTL을 판정하는데 테스트가 고정된 과거 만료 시각을 사용해 실행일에 따라 정상 큐 항목이 만료될 수 있었다.
 
-후속 리뷰에서 확인된 근본 원인은 공용 helper 도입이 반환 객체 형태와 기존 reference identity까지 고려하지 않은 채 적용된 점, 브라우저 기본 constraint validation과 애플리케이션 오류 계약을 동시에 활성화한 점, Node의 strip-only TypeScript 실행 제약을 기술 정책과 테스트 스크립트에서 분리해 설명하지 않은 점이다. Redis 전체 폐기 경로는 애플리케이션 `Clock`이 아니라 Redis Lua의 `TIME`을 사용하므로, 이 경로만 실제 실행 시점에 맞춘 fixture가 필요하다. 이는 ISSUE·ROTATE 경로의 고정 시각 자매 테스트와 다른 원인이다.
+후속 리뷰에서 확인된 근본 원인은 공용 helper 도입이 반환 객체 형태와 기존 reference identity까지 고려하지 않은 채 적용된 점, 브라우저 기본 constraint validation과 애플리케이션 오류 계약을 동시에 활성화한 점, Node의 strip-only TypeScript 실행 제약을 기술 정책과 테스트 스크립트에서 분리해 설명하지 않은 점이다. Redis 전체 폐기 경로는 애플리케이션 `Clock`이 아니라 Redis Lua의 `TIME`을 사용하므로, 이 경로만 실제 실행 시점에 맞춘 fixture가 필요하다. 또한 복구 큐의 ZSET score는 Redis 시각으로 기록되고 `claimDue` 상한은 JVM 시각을 사용하므로, `plusSeconds(10)`은 두 시계의 오차를 흡수하는 의도적인 여유다. 이는 ISSUE·ROTATE 경로의 고정 시각 자매 테스트와 다른 원인이다.
 
 ## 5. 확인 및 시도
 
@@ -87,6 +88,7 @@ related_documents:
 | `node --test` 플래그 제거 전후 실행 | `AdminApiError` parameter property 때문에 실험 플래그가 필요했으나 명시적 필드 대입 후 일반 strip-only 실행이 통과 | 테스트 파일을 별도 프로세스로 유지할 이유가 없어 기존 테스트 명령에 통합 |
 | Redis 통합 테스트 로컬 실행 | 테스트 코드가 실행되기 전에 Testcontainers가 Docker 환경을 찾지 못해 초기화 실패 | 코드 변경 검증은 완료하지 못했으며 Docker가 있는 CI 재실행이 필요 |
 | PR 본문·현재 diff 대조 | 백엔드 테스트 변경과 Gradle 검증 명령이 PR 본문에는 누락 | 본문에 변경 범위·분리하지 않은 이유·Gradle 결과를 추가하고 원격 반영 완료 |
+| 최신 Redis 재리뷰 대조 | `plusSeconds(10)`이 코드에 유지되는데 이전 답글·기록이 제거했다고 서술한 불일치 확인 | 코드 동작은 유지하고 주석·기록·답글을 실제 의도에 맞게 정정 |
 
 ## 6. 최종 해결
 
@@ -97,7 +99,7 @@ related_documents:
 - 제출 전 안내에 Google Gemini 전송 입력 범위, 보완 텍스트의 암호화 임시 보존 및 작업 종료 후 24시간 이내 삭제, 원본 영상·전체 자막·Provider 응답 전문 미보존을 명시한다.
 - `role=alert` 오류에는 `aria-live`를 덧붙이지 않고, 정상 상태에만 `aria-live=polite`를 사용한다. 제출 시작 전 ref guard를 세워 빠른 중복 POST를 차단한다.
 - 제출 fingerprint·멱등키 생성과 API 호출을 모두 `try/catch/finally` 안에 두어 생성 예외에도 in-flight guard가 해제되도록 하고, 서버 URL 오류는 오류 표시와 함께 URL 입력으로 포커스를 이동한다.
-- Redis 저장소 통합 테스트에서는 복구 큐를 소비하는 전역 스케줄러 bean을 mock하고, Redis 실제 시각과 어긋나는 고정 과거 TTL 픽스처를 사용하지 않는다.
+- Redis 저장소 통합 테스트에서는 복구 큐를 소비하는 전역 스케줄러 bean을 mock하고, `REVOKE_ALL_SCRIPT`의 Redis 시각과 `claimDue`의 JVM 시각 차이를 흡수하는 `plusSeconds(10)` 상한 여유를 유지한다.
 - 멱등키 생성은 `frontend/lib/idempotency.ts`로 공용화하고, 오류 메시지는 context 인자로 관리·접수 문구를 분기하며, 접수·재시도 폼의 공통 CSS를 묶었다.
 - 컬렉션 멱등키는 공용 helper가 동일 fingerprint를 판정하도록 하고, 반환 객체 변환 뒤에도 기존 재시도 객체 재사용 동작을 회귀 테스트로 보존한다.
 - HTML constraint validation을 사용하지 않는 커스텀 오류 계약에서는 `noValidate`와 빈 문자열·공백 입력 테스트를 함께 유지한다.
@@ -135,7 +137,8 @@ related_documents:
 | Node 실험 플래그 의존 | 1개 필수 CI 스크립트 | `frontend/package.json`과 일반 `node --test` 실행 비교 | 0개 | 고정 런타임에서 실험 플래그 없이 테스트 가능 | PR #182 / 2026-08-13 |
 | 테스트 프로세스 분리 | 2개 Node test 명령 | `npm.cmd test` 스크립트 검토·실행 | 1개 | API 테스트를 일반 테스트 게이트에 통합 | PR #182 / 2026-08-13 |
 | Redis 통합 테스트 통과율 | 측정 불가: 로컬 Docker 미사용 | Testcontainers 초기화 단계에서 중단 | 측정 대기 | Docker가 있는 CI에서 동일 명령 확인 필요 | PR #182 / CI 재실행 |
+| Redis 시각 설명 정합성 | 1개: `plusSeconds(10)` 제거 오기록 | 코드·답글·기록 대조 | 0개 | 시각 오차 흡수 의도와 실제 코드 일치 | PR #182 / 2026-08-13 |
 
 ## 10. 남은 사항
 
-- 로컬 프론트 테스트·typecheck·production build와 원격 CI run `31654186738`의 프론트·백엔드 필수 job이 통과했다. Redis 통합 테스트의 로컬 실행은 Docker 부재로 확인하지 못했지만 CI에서 통과했다. 후속 리뷰 7개 스레드에 인라인 답글을 남기고 모두 resolve했으며, PR 본문도 변경 범위와 검증 결과에 맞춰 갱신했다.
+- 로컬 프론트 테스트·typecheck·production build와 원격 CI run `31654800330`의 프론트·백엔드 필수 job이 통과했다. Redis 통합 테스트의 로컬 실행은 Docker 부재로 확인하지 못했지만 CI에서 통과했다. 후속 리뷰 8개 스레드에 인라인 답글을 남기고 모두 resolve했으며, PR 본문도 변경 범위와 검증 결과에 맞춰 갱신했다.
