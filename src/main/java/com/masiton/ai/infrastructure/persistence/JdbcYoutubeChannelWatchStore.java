@@ -61,8 +61,20 @@ public class JdbcYoutubeChannelWatchStore implements YoutubeChannelWatchStore {
                 ON CONFLICT (creator_id) DO UPDATE
                    SET youtube_channel_id = EXCLUDED.youtube_channel_id,
                        enabled = EXCLUDED.enabled,
-                       subscription_status = EXCLUDED.subscription_status,
+                       subscription_status = CASE
+                           WHEN youtube_channel_watch.enabled
+                                AND youtube_channel_watch.subscription_status = 'ACTIVE'
+                                AND youtube_channel_watch.subscription_token_hash IS NOT NULL
+                                AND EXCLUDED.enabled
+                           THEN youtube_channel_watch.subscription_status
+                           ELSE EXCLUDED.subscription_status
+                       END,
                        subscription_token_hash = CASE
+                           WHEN youtube_channel_watch.enabled
+                                AND youtube_channel_watch.subscription_status = 'ACTIVE'
+                                AND youtube_channel_watch.subscription_token_hash IS NOT NULL
+                                AND EXCLUDED.enabled
+                           THEN youtube_channel_watch.subscription_token_hash
                            WHEN EXCLUDED.enabled AND EXCLUDED.subscription_token_hash IS NOT NULL
                            THEN EXCLUDED.subscription_token_hash
                            ELSE youtube_channel_watch.subscription_token_hash

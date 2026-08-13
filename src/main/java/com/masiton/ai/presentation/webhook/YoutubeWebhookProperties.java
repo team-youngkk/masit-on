@@ -7,6 +7,8 @@ public class YoutubeWebhookProperties {
 
     private int maxPayloadBytes = 65_536;
     private String secret = "";
+    private String subscriptionHubUrl = "https://pubsubhubbub.appspot.com/subscribe";
+    private String callbackUrl = "http://localhost:8080/api/webhooks/youtube/channel-updates";
 
     public int getMaxPayloadBytes() {
         return maxPayloadBytes;
@@ -22,5 +24,21 @@ public class YoutubeWebhookProperties {
 
     public void setSecret(String secret) {
         this.secret = secret;
+    }
+
+    public String getSubscriptionHubUrl() {
+        return subscriptionHubUrl;
+    }
+
+    public void setSubscriptionHubUrl(String subscriptionHubUrl) {
+        this.subscriptionHubUrl = subscriptionHubUrl;
+    }
+
+    public String getCallbackUrl() {
+        return callbackUrl;
+    }
+
+    public void setCallbackUrl(String callbackUrl) {
+        this.callbackUrl = callbackUrl;
     }
 }

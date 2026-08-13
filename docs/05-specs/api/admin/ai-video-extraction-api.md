@@ -221,6 +221,8 @@ related_documents:
 - 검증된 Creator의 YouTube 채널만 활성화할 수 있다.
 - 응답에는 `enabled`, `subscriptionStatus`, `lastNotificationAt`, `lastRenewedAt`, `lastErrorCategory`를 포함한다.
 - `enabled=true`는 감시 활성화 의도만 저장하며, 외부 구독 challenge가 성공하기 전까지 `subscriptionStatus=UNKNOWN`으로 반환하고 Webhook을 수락하지 않는다. challenge 성공 시 `ACTIVE`와 `lastRenewedAt`을 기록한다.
+- `enabled=true` 요청은 `hub.mode=subscribe`와 발급한 검증 Token을 YouTube PubSubHubbub 구독 요청에 전달한다. 구독 확인 요청이 성공하기 전에는 계속 `UNKNOWN`으로 둔다.
+- 이미 `ACTIVE`이고 검증 Token 해시가 유효한 채널에 대한 중복 `enabled=true` 요청은 기존 상태·Token을 유지하고 외부 재구독을 요청하지 않는다.
 - Creator 등록만으로 자동 활성화하지 않는다.
 - 비활성화는 이미 접수된 작업·후보·정식 데이터를 삭제하지 않고 신규 Webhook 접수만 중지한다.
 

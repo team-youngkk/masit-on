@@ -23,6 +23,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import com.masiton.ai.application.port.out.YoutubeChannelWatchStore;
+import com.masiton.ai.application.YoutubeChannelWatchPersistenceService;
 import com.masiton.test.IntegrationTestFixtures;
 
 @SpringBootTest
@@ -46,6 +47,9 @@ class JdbcYoutubeChannelWatchStoreIntegrationTest {
 
     @Autowired
     private YoutubeChannelWatchStore store;
+
+    @Autowired
+    private YoutubeChannelWatchPersistenceService watchPersistence;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -166,6 +170,28 @@ class JdbcYoutubeChannelWatchStoreIntegrationTest {
             assertThat(jdbcTemplate.queryForObject(
                     "SELECT enabled FROM youtube_channel_watch WHERE youtube_channel_id = ?",
                     Boolean.class, channelId)).isFalse();
+        } finally {
+            deleteFixture(creatorId, channelId);
+        }
+    }
+
+    @Test
+    @DisplayName("ACTIVE Watch瑜 중복 활성화해도 기존 상태와 검증 Token 해시를 유지한다")
+    void prepareActivation_기존ACTIVE중복활성화_기존상태와토큰해시를유지한다() {
+        UUID creatorId = UUID.randomUUID();
+        String channelId = "channel-" + UUID.randomUUID();
+        byte[] existingHash = IntegrationTestFixtures.sha256("existing-token");
+        byte[] newHash = IntegrationTestFixtures.sha256("new-token");
+        insertCreator(creatorId, channelId);
+        insertWatch(creatorId, channelId, existingHash, null, OffsetDateTime.parse("2026-08-11T02:03:04Z"), null);
+
+        try {
+            YoutubeChannelWatchPersistenceService.ActivationPreparation preparation =
+                    watchPersistence.prepareActivation(creatorId, channelId, newHash);
+
+            assertThat(preparation.subscriptionRequestRequired()).isFalse();
+            assertThat(preparation.detail().subscriptionStatus()).isEqualTo("ACTIVE");
+            assertThat(readTokenHash(channelId)).containsExactly(existingHash);
         } finally {
             deleteFixture(creatorId, channelId);
         }

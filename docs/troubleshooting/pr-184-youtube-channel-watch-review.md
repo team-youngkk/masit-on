@@ -38,7 +38,8 @@ related_documents:
 | [Creator Application 내부 참조](https://github.com/team-youngkk/masit-on/pull/184#discussion_r3766088937), [공개 Port 경계](https://github.com/team-youngkk/masit-on/pull/184#discussion_r3766111422) | 다른 도메인이 Creator Application 루트 구현을 직접 import하지 않도록 수정 | 애플리케이션 | 수정 필요 | Creator 오류 팩토리를 `creator.application.port.in` 공개 경계로 이동하고 참조를 치환 | `ArchitectureTest`, 컴파일 통과 |
 | [비활성 Watch challenge](https://github.com/team-youngkk/masit-on/pull/184#discussion_r3766088942) | 비활성화 뒤 기존 Token으로 challenge를 성공시키지 않도록 차단 | 애플리케이션 | 수정 필요 | `enabled=false` Watch는 Token 일치 여부와 무관하게 403으로 거부하고 회귀 테스트 추가 | `AiExtractionJobServiceTest` 통과 |
 | [Redis 시간 의존 CI 실패](https://github.com/team-youngkk/masit-on/pull/184#discussion_r3766107081) | 고정 과거 시각 때문에 Redis `TIME` 기준 만료 세션이 복구 큐에 적재되지 않음 | 인프라 | 수정 필요 | 테스트 기준 시각을 실행 시점보다 하루 뒤로 설정해 Redis 서버 시계와 만료 경계를 분리 | `RedisRefreshTokenStoreIntegrationTest` 통과 |
-| [활성화 Token 저장 경로](https://github.com/team-youngkk/masit-on/pull/184#discussion_r3766428856), [동일 P1 재제기](https://github.com/team-youngkk/masit-on/pull/184#discussion_r3766571023), [Token 해시 미저장](https://github.com/team-youngkk/masit-on/pull/184#discussion_r3766638006) | 활성화부터 challenge까지 실제 Token 생성·해시 저장 경로가 없음 | 애플리케이션 / 데이터베이스 | 수정 필요 | 검증 Token Port와 SecureRandom Adapter를 추가하고 활성화 시 원문 없이 SHA-256 해시만 저장. 저장된 해시로 실제 `verifyChallenge` 성공까지 회귀 테스트 | `YoutubeChannelWatchManagementServiceTest`, `JdbcYoutubeChannelWatchStoreIntegrationTest` 통과 |
+| [활성화 Token 저장 경로](https://github.com/team-youngkk/masit-on/pull/184#discussion_r3766428856), [동일 P1 재제기](https://github.com/team-youngkk/masit-on/pull/184#discussion_r3766571023), [Token 해시 미저장](https://github.com/team-youngkk/masit-on/pull/184#discussion_r3766638006) | 활성화부터 challenge까지 실제 Token 생성·해시 저장·외부 전달 경로가 없음 | 애플리케이션 / 데이터베이스 / 외부 연동 | 수정 필요 | 검증 Token Port와 SecureRandom Adapter, PubSubHubbub 구독 Port·Adapter를 연결하고 활성화 시 원문 없이 SHA-256 해시만 저장. WireMock에서 동일 Token 전달을 검증하고 저장된 해시로 `verifyChallenge` 성공까지 회귀 테스트 | `YoutubeChannelWatchManagementServiceTest`, `JdbcYoutubeChannelWatchStoreIntegrationTest`, `PubSubHubbubYoutubeChannelWatchSubscriptionAdapterWireMockIntegrationTest` 통과 |
+| [활성화 회귀](https://github.com/team-youngkk/masit-on/pull/184#discussion_r3771463100) | 이미 `ACTIVE`인 채널의 중복 활성화가 상태를 `UNKNOWN`으로 되돌리고 검증 Token을 교체함 | 애플리케이션 / 데이터베이스 | 수정 필요 | `FOR UPDATE`로 기존 유효 구독을 확인하고 `ACTIVE` 상태·해시를 보존하며 외부 재구독을 생략 | `prepareActivation_기존ACTIVE중복활성화_기존상태와토큰해시를유지한다` 통과 |
 
 ## 3. 문제 현상과 발생 조건
 
@@ -48,7 +49,7 @@ related_documents:
 - 실제 결과: 외부 구독 생성·challenge 검증 없이 ACTIVE가 저장될 수 있고, 비활성화한 채널의 challenge가 외부 구독자에게 성공 응답으로 보일 수 있었다. 같은 Watch 행에 대한 요청은 잠금이 끝날 때까지 무제한 대기할 수 있었으며, 고정된 2026-07-29 시각의 세션은 현재 Redis 시각 기준 이미 만료되어 복구 큐 검증이 실패했다.
 - 기대 결과: 외부 확인 전에는 Webhook을 받지 않으며, 동시 상태 변경은 유한한 시간 안에 종료되어야 한다.
 - 영향 범위: 신규 영상 Webhook의 오접수·미접수, 관리자 API의 상태 오표시, DB 연결 점유 위험.
-- 추가 관찰: 수정 전 신규 `setEnabled(true)`는 `subscription_token_hash`가 없는 `UNKNOWN` 행을 저장하고, `verifyChallenge`는 null 해시를 거부했다. 수정 후 활성화 경로가 Token Port를 통해 해시를 저장하고 같은 해시로 challenge 성공까지 이어진다. 실제 YouTube Hub 구독 HTTP 요청은 외부 callback·운영 계약이 확정된 별도 Adapter로 남긴다.
+- 추가 관찰: 수정 전 신규 `setEnabled(true)`는 `subscription_token_hash`가 없는 `UNKNOWN` 행을 저장하고, `verifyChallenge`는 null 해시를 거부했다. 또한 후속 수정에서 이미 `ACTIVE`인 채널의 상태·해시를 새 요청으로 덮어쓰는 회귀가 생겼다. 현재는 DB에 `UNKNOWN + 해시`를 먼저 준비한 뒤 발급한 원문 Token을 PubSubHubbub Adapter에 전달하고, 기존 `ACTIVE + 유효 해시`는 그대로 유지한다.
 
 ## 4. 근본 원인
 
@@ -65,7 +66,7 @@ related_documents:
 | 도메인 간 import와 공개 Port 패키지 대조 | AI·Orchestration이 `creator.application` 루트의 팩토리를 직접 참조함 | 팩토리를 `creator.application.port.in`으로 이동해 허용된 공개 경계만 참조 |
 | 비활성 Watch의 challenge 단위 재현 | Token 해시가 일치하면 `enabled=false`여도 challenge가 반환됨 | 검증 전에 `enabled`를 확인하고 동일한 403 오류로 fail-closed 처리 |
 | Redis Lua 스크립트와 테스트 Clock 대조 | `REVOKE_ALL_SCRIPT`는 Redis `TIME`, 테스트는 2026-07-29 고정 Clock을 사용함 | 실행 시점보다 충분히 미래인 테스트 만료 시각을 사용하고 통합 테스트 재실행 |
-| P2 작업 계획·API·데이터 계약 대조 | P2-01은 관리자/Webhook API, P2-02는 YouTube 구독·갱신·검증 Adapter로 분리되어 있고 외부 endpoint·인증·callback 세부 계약은 확정되지 않음 | 외부 HTTP 호출은 임의로 추가하지 않고 명시적 Token Port와 저장·challenge 경로를 먼저 연결 |
+| P2 작업 계획·API·데이터 계약 대조 | P2-01은 관리자/Webhook API, P2-02는 YouTube 구독·갱신·검증 Adapter로 분리되어 있음 | P2-02 범위를 이 PR에 포함하고 Hub URL·callback URL을 설정으로 명시해 구독 Port·Adapter와 WireMock 계약을 연결 |
 
 ## 6. 최종 해결
 
@@ -92,7 +93,7 @@ related_documents:
 ## 8. 재발 방지 및 다음 확인
 
 - 재발 방지: 외부 challenge 전 `UNKNOWN`·Webhook 차단과 비활성 Watch challenge 거부 회귀 테스트, PostgreSQL 동시 잠금 테스트를 추가했다. Creator 도메인 외부 참조는 공개 `application.port.in` 경계로 고정했고, Redis 테스트는 서버 시계와 충돌하지 않는 미래 만료 시각을 사용한다. API 오류 계약 표도 같은 변경에서 갱신한다.
-- 다음 확인: 실제 YouTube Hub 구독·갱신 HTTP Adapter는 endpoint·인증·callback 운영 계약 확정 후 별도 연결한다. 이때 현재 Token Port가 발급한 원문을 외부 요청에 사용하고 WireMock 계약 테스트를 추가한다.
+- 다음 확인: 운영 환경의 `YOUTUBE_SUBSCRIPTION_HUB_URL`, `YOUTUBE_WEBHOOK_CALLBACK_URL`, `YOUTUBE_WEBHOOK_SECRET` 값을 배포 계약에 맞게 주입하고, Hub의 실제 challenge·renewal 응답을 운영 Sandbox에서 확인한다. 코드 경계와 WireMock 계약은 이번 PR에 반영했다.
 
 ## 9. 도입 전후 비교 지표
 
@@ -102,6 +103,6 @@ related_documents:
 
 ## 10. 남은 사항
 
-- 실제 YouTube 외부 구독 생성·갱신 Adapter는 endpoint·인증·운영 callback 계약 확정 후 별도 작업으로 남아 있다. 이 PR에서는 외부 확인 전 `UNKNOWN`과 Webhook 차단, 비활성 Watch challenge 거부로 안전한 상태를 보장한다.
+- 실제 YouTube 외부 구독 생성 Adapter는 `PubSubHubbubYoutubeChannelWatchSubscriptionAdapter`로 연결했다. 활성화 전 DB에 `UNKNOWN + 해시`를 준비하고 같은 원문 Token으로 Hub 구독을 요청하며, challenge 성공 전 Webhook은 계속 차단한다. 갱신 스케줄러와 운영 Sandbox 검증은 후속 운영 작업이다.
 - 로컬 전체 `clean build`는 5분 제한으로 완료하지 못했지만, 변경을 푸시한 뒤 필수 [GitHub Actions 백엔드·프런트엔드 CI](https://github.com/team-youngkk/masit-on/actions/runs/31594979628)가 모두 통과했다.
 - 신규 P1 스레드 3건은 동일 원인으로 묶어 반영했으며, 스레드 답글만 작성하고 해결 처리는 하지 않는다.

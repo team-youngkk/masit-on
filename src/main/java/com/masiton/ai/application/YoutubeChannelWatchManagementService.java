@@ -3,15 +3,16 @@ package com.masiton.ai.application;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.masiton.ai.application.port.in.YoutubeChannelWatchManagementUseCase;
-import com.masiton.ai.application.port.out.YoutubeChannelWatchStore;
+import com.masiton.ai.application.port.out.YoutubeChannelWatchSubscriptionPort;
 import com.masiton.ai.application.port.out.YoutubeChannelWatchVerificationTokenPort;
 import com.masiton.common.web.BusinessException;
+import com.masiton.common.web.ErrorCode;
 import com.masiton.creator.application.port.in.CreatorReferenceExceptionFactory;
 import com.masiton.creator.application.port.in.FindCreatorReferenceUseCase;
 
@@ -19,37 +20,55 @@ import com.masiton.creator.application.port.in.FindCreatorReferenceUseCase;
 public class YoutubeChannelWatchManagementService implements YoutubeChannelWatchManagementUseCase {
 
     private final FindCreatorReferenceUseCase creatorReferences;
-    private final YoutubeChannelWatchStore watchStore;
+    private final YoutubeChannelWatchPersistenceService watchPersistence;
     private final YoutubeChannelWatchVerificationTokenPort verificationTokens;
+    private final YoutubeChannelWatchSubscriptionPort subscriptions;
 
     public YoutubeChannelWatchManagementService(FindCreatorReferenceUseCase creatorReferences,
-                                                YoutubeChannelWatchStore watchStore,
-                                                YoutubeChannelWatchVerificationTokenPort verificationTokens) {
+                                                YoutubeChannelWatchPersistenceService watchPersistence,
+                                                YoutubeChannelWatchVerificationTokenPort verificationTokens,
+                                                YoutubeChannelWatchSubscriptionPort subscriptions) {
         this.creatorReferences = creatorReferences;
-        this.watchStore = watchStore;
+        this.watchPersistence = watchPersistence;
         this.verificationTokens = verificationTokens;
+        this.subscriptions = subscriptions;
     }
 
     @Override
-    @Transactional
     public WatchStatus setEnabled(UUID creatorId, boolean enabled) {
         FindCreatorReferenceUseCase.CreatorReference creator = creatorReferences.findCreatorReference(creatorId)
                 .orElseThrow(this::creatorNotFound);
         if (enabled && (!creator.publiclyVisible() || !creator.externallyAvailable())) {
             throw creatorNotFound();
         }
-        String subscriptionStatus = enabled ? "UNKNOWN" : "INACTIVE";
-        byte[] subscriptionTokenHash = enabled
-                ? hashToken(verificationTokens.issue(creator.externalChannelId()))
-                : null;
-        YoutubeChannelWatchStore.WatchDetail watch = watchStore.upsert(
-                creator.id(), creator.externalChannelId(), enabled, subscriptionStatus, subscriptionTokenHash);
-        return new WatchStatus(watch.enabled(), watch.subscriptionStatus(), watch.lastNotificationAt(),
-                watch.lastRenewedAt(), watch.lastErrorCategory());
+        if (!enabled) {
+            return status(watchPersistence.disable(creator.id(), creator.externalChannelId()));
+        }
+        Optional<com.masiton.ai.application.port.out.YoutubeChannelWatchStore.WatchDetail> active =
+                watchPersistence.preserveActive(creator.id(), creator.externalChannelId());
+        if (active.isPresent()) {
+            return status(active.get());
+        }
+        String verificationToken = verificationTokens.issue(creator.externalChannelId());
+        YoutubeChannelWatchPersistenceService.ActivationPreparation preparation =
+                watchPersistence.prepareActivation(creator.id(), creator.externalChannelId(), hashToken(verificationToken));
+        if (preparation.subscriptionRequestRequired()) {
+            try {
+                subscriptions.subscribe(creator.externalChannelId(), verificationToken);
+            } catch (YoutubeChannelWatchSubscriptionFailedException exception) {
+                throw new BusinessException(ErrorCode.EXTERNAL_SERVICE_ERROR);
+            }
+        }
+        return status(preparation.detail());
     }
 
     private BusinessException creatorNotFound() {
         return CreatorReferenceExceptionFactory.notFound();
+    }
+
+    private WatchStatus status(com.masiton.ai.application.port.out.YoutubeChannelWatchStore.WatchDetail watch) {
+        return new WatchStatus(watch.enabled(), watch.subscriptionStatus(), watch.lastNotificationAt(),
+                watch.lastRenewedAt(), watch.lastErrorCategory());
     }
 
     private byte[] hashToken(String token) {
