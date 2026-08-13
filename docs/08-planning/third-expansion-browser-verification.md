@@ -159,11 +159,11 @@ java.lang.IllegalStateException: Kakao Mobility base URL is not an allowed provi
 
 `AiVideoExtractionScreen.module.css`의 `min-height: var(--control-min-height)`가 `.filterRow select`, `.retryForm input`, `.retryForm textarea`에만 걸려 있고 후보 카드 안의 입력은 빠져 있었다. 셀렉터에 `.candidate input`을 더해 207×44px이 됐고 3절 재측정에서 전 폭이 통과한다.
 
-### 5.4 AI 작업 접수 경로가 계약대로 열려 있지 않다
+### 5.4 AI 작업 접수 경로가 계약대로 열려 있지 않았다 (후속 구현으로 해소)
 
-검증 중 관리자가 새 추출 작업을 요청할 방법을 찾다가 확인했다. 두 항목 모두 계약에는 있고 구현이 없다.
+검증 중 관리자가 새 추출 작업을 요청할 방법을 찾다가 확인했다. 검증 시점(기준 커밋 `35d0f94`)에는 두 항목 모두 계약에는 있고 구현이 없었다.
 
-| 항목 | 계약 | 백엔드 | 프런트엔드 |
+| 항목 | 계약 | 검증 시점 백엔드 | 검증 시점 프런트엔드 |
 |---|---|---|---|
 | 신규 영상 추가·추출 요청 | [API 3.1](../05-specs/api/admin/ai-video-extraction-api.md) `POST /api/admin/ai/video-extractions`, `PR-AIEXTRACT-001` | 있음 | **없음** |
 | 채널 감시 활성화·중지 | [API 3.6](../05-specs/api/admin/ai-video-extraction-api.md) `PUT /api/admin/ai/youtube-channel-watches/{creatorId}`, `PR-AIEXTRACT-008` | **없음** | **없음** |
@@ -172,7 +172,9 @@ java.lang.IllegalStateException: Kakao Mobility base URL is not an allowed provi
 
 `YoutubeChannelWatchStore`에는 `find`만 있고 쓰기 메서드가 없다. `youtube_channel_watch` 테이블은 `V4`에 있지만 행을 넣는 코드가 애플리케이션에 없어 감시 채널을 등록할 수단이 API에도 화면에도 없다. Webhook 접수 자체는 구현돼 있으나 구독을 열 수 없어 실제 알림 경로가 끝까지 이어지지 않는다.
 
-두 항목은 `E3-T12` 범위 밖이며 [#180](https://github.com/team-youngkk/masit-on/issues/180) 채널 감시 설정 API와 [#181](https://github.com/team-youngkk/masit-on/issues/181) 신규 영상 추가 화면으로 분리했다. `E3-T13` 활성화 판정 전에 해소 여부를 확인해야 한다.
+두 항목은 `E3-T12` 범위 밖이며 [#180](https://github.com/team-youngkk/masit-on/issues/180) 채널 감시 설정 API와 [#181](https://github.com/team-youngkk/masit-on/issues/181) 신규 영상 추가 화면으로 분리했다.
+
+두 이슈는 각각 [#184](https://github.com/team-youngkk/masit-on/pull/184)와 [#182](https://github.com/team-youngkk/masit-on/pull/182)로 구현돼 `develop`에 병합됐고, 이 브랜치도 병합본을 포함한다. `AdminYoutubeChannelWatchController`와 관리자 접수 폼이 생겨 위 공백은 해소됐다. **다만 이 문서의 3절 측정과 4절 여정은 병합 전 기준 커밋에서 수행했으므로 두 신규 화면·API는 검증 대상에 없다.** 6절에 미검증으로 남긴다.
 
 ### 5.5 관측만 한 항목
 
@@ -193,8 +195,8 @@ java.lang.IllegalStateException: Kakao Mobility base URL is not an allowed provi
 | 색 대비, 보조기기 낭독 | 미검증 | 이번 확인은 DOM 측정과 키보드 순회 기반이며 대비 계산과 실제 보조기기 확인을 포함하지 않는다 | 담당자가 수동 확인 범위를 정한다 |
 | 컨테이너 통합 실행에서의 동일 여정 | 미검증 | 5.1절 결함으로 앱 컨테이너가 기동하지 못한다 | 5.1절 조치 후 재확인한다 |
 | AI Worker가 실제로 도는 상태의 여정 | 미검증 | Worker와 Gemini 게이트가 모두 `false`다. 작업 상태는 Fixture로 만들었다 | `E3-T13` 운영 측정에서 확인한다 |
-| 관리자 신규 영상 추가 여정 | 미검증 | 접수 화면이 없다(5.4절) | [#181](https://github.com/team-youngkk/masit-on/issues/181) 구현 후 확인한다 |
-| Webhook 신규 영상 접수 여정 | 미검증 | 채널 감시를 등록할 수단이 없어 알림이 작업으로 접수되지 않는다(5.4절) | [#180](https://github.com/team-youngkk/masit-on/issues/180) 구현 후 확인한다 |
+| 관리자 신규 영상 추가 여정 | 미검증 | 검증 시점에는 접수 화면이 없었고, [#182](https://github.com/team-youngkk/masit-on/pull/182)로 구현된 화면은 이 문서의 측정·여정 실행 이후에 병합됐다(5.4절) | 담당자가 병합본에서 3절 측정과 4절 여정을 같은 기준으로 확인한다 |
+| Webhook 신규 영상 접수 여정 | 미검증 | 검증 시점에는 채널 감시를 등록할 수단이 없었고, [#184](https://github.com/team-youngkk/masit-on/pull/184)로 구현된 API는 이 문서의 실행 이후에 병합됐다(5.4절) | 담당자가 감시 채널을 활성화한 뒤 알림 접수까지 확인한다 |
 
 ## 7. 키보드 확인
 

@@ -12,6 +12,7 @@ import java.util.regex.Pattern;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.masiton.ai.application.port.in.AiExtractionJobUseCase;
 import com.masiton.ai.application.port.out.AiExtractionJobStore;
@@ -104,6 +105,7 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
     }
 
     @Override
+    @Transactional(timeout = 5)
     public Optional<AiExtractionJobView> submitWebhook(String channelId, String videoId, URI videoUrl) {
         String normalizedChannelId = requiredId(channelId, "channelId");
         String normalizedVideoId = requiredId(videoId, "videoId");
@@ -112,25 +114,33 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
             throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, "videoUrl", "videoUrl does not match videoId.");
         }
         URI canonicalVideoUrl = canonicalYoutubeUrl(normalizedVideoId);
-        YoutubeChannelWatchStore.Watch watch = watchStore.find(normalizedChannelId).orElse(null);
+        YoutubeChannelWatchStore.Watch watch = watchStore.findForUpdate(normalizedChannelId).orElse(null);
         if (watch == null || !watch.acceptsNotifications()) {
             return Optional.empty();
         }
-        return Optional.of(create("WEBHOOK", "REALTIME", normalizedChannelId, normalizedVideoId,
-                canonicalVideoUrl, "GEMINI_VIDEO_URL", hash(canonicalVideoUrl.toString(), "", null), Optional.empty(), null));
+        AiExtractionJobView job = create("WEBHOOK", "REALTIME", normalizedChannelId, normalizedVideoId,
+                canonicalVideoUrl, "GEMINI_VIDEO_URL", hash(canonicalVideoUrl.toString(), "", null), Optional.empty(), null);
+        watchStore.markNotificationReceived(normalizedChannelId, OffsetDateTime.now(ZoneOffset.UTC));
+        return Optional.of(job);
     }
 
     @Override
+    @Transactional(timeout = 5)
     public String verifyChallenge(String channelId, String verifyToken, String challenge) {
         String normalizedChannelId = requiredId(channelId, "channelId");
         if (challenge == null || challenge.isBlank() || challenge.length() > 512) {
             throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, "hub.challenge", "hub.challenge is invalid.");
         }
-        YoutubeChannelWatchStore.Watch watch = watchStore.find(normalizedChannelId)
+        YoutubeChannelWatchStore.Watch watch = watchStore.findForUpdate(normalizedChannelId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+        if (!watch.enabled() || "INACTIVE".equals(watch.subscriptionStatus())
+                || "RENEWAL_FAILED".equals(watch.subscriptionStatus())) {
+            throw new BusinessException(HttpStatus.FORBIDDEN, "AIEXTRACT_WEBHOOK_TOKEN_INVALID", "Webhook token is invalid.");
+        }
         if (verifyToken == null || !constantTimeHashEquals(watch.subscriptionTokenHash(), verifyToken)) {
             throw new BusinessException(HttpStatus.FORBIDDEN, "AIEXTRACT_WEBHOOK_TOKEN_INVALID", "Webhook token is invalid.");
         }
+        watchStore.markSubscriptionVerified(normalizedChannelId, OffsetDateTime.now(ZoneOffset.UTC));
         return challenge;
     }
     private AiExtractionJobView create(String source, String priority, String channelId, String videoId,

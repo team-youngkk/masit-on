@@ -1,16 +1,20 @@
-.screen, .filters, .list, .detail, .candidates, .actions, .retryForm { display: grid; gap: var(--space-4); }
+.screen, .filters, .list, .detail, .candidates, .actions, .retryForm, .form { display: grid; gap: var(--space-4); }
 .toolbar, .filterRow, .pagination, .meta, .actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
 .toolbar { justify-content: space-between; }
 .filterRow label, .retryForm label { display: grid; gap: var(--space-2); font-size: var(--font-size-sm); font-weight: 600; }
-.filterRow select, .retryForm input, .retryForm textarea, .candidate input { min-height: var(--control-min-height); padding: var(--space-2) var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); font: inherit; }
-.retryForm textarea { resize: vertical; }
+.filterRow select, .retryForm input, .retryForm textarea, .form input, .form textarea, .candidate input { min-height: var(--control-min-height); padding: var(--space-2) var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); font: inherit; }
+.retryForm textarea, .form textarea { resize: vertical; }
 .panel, .card, .candidate { padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
+.form label { font-size: var(--font-size-sm); font-weight: 600; }
+.form input, .form textarea { width: 100%; }
+.resultLink { width: fit-content; font-weight: 700; }
 .panel h2, .card h2, .candidate h3 { margin: 0; }
 .list, .candidates { padding: 0; list-style: none; }
 .card, .candidate { display: grid; gap: var(--space-2); }
 .card p, .candidate p { margin: 0; overflow-wrap: anywhere; }
 .badge { width: fit-content; padding: .2rem .55rem; border-radius: 999px; background: var(--color-primary-soft); font-size: var(--font-size-sm); font-weight: 700; }
 .meta, .hint { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.fieldError { margin: calc(var(--space-2) * -1) 0 0; color: var(--color-danger); font-size: var(--font-size-sm); }
 .meta code { overflow-wrap: anywhere; }
 .notice, .error, .warning { margin: 0; padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-surface-muted); }
 .error { color: var(--color-danger); }
@@ -20,4 +24,5 @@
   .toolbar, .filterRow { align-items: stretch; flex-direction: column; }
   .toolbar > *, .filterRow > * { width: 100%; }
   .actions > * { flex: 1 1 100%; }
+  .form button { width: 100%; }
 }
