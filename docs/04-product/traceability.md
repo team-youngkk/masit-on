@@ -496,4 +496,4 @@ related_documents:
 
 ### 11.1 E3-T13 최종 게이트 증거
 
-현재 기준 커밋의 자동화 회귀·부하 시나리오 자산·운영 및 평가 보류 사유는 [E3-T13 최종 게이트 판정](../08-planning/third-expansion-final-gate-result.md)에 기록한다. 실제 Release 평가, 운영 계정·quota, 좌표 보강률, 브라우저·부하 결과가 연결되기 전까지 제품 활성화 판정은 `NO-GO`다.
+현재 기준 커밋의 자동화 회귀·부하 시나리오 자산·운영 및 평가 보류 사유는 [E3-T13 최종 게이트 판정](../08-planning/third-expansion-final-gate-result.md)에 기록한다. 같은 문서 1.1절 개정에 따라 제한 공개 범위의 활성화는 증거 수집을 위해 허용하고, 실제 Release 평가, 운영 계정·quota, 좌표 보강률, 브라우저·부하 결과가 연결되기 전까지 **일반 공개 판정은 `HOLD`**다.
