@@ -286,3 +286,7 @@ Accepted 세 건은 현재 요구사항을 구현하는 최소 구조만 승인�
 | [ADR-TEST-001](quality/test-001-automation-strategy.md), [ADR-PERF-001](quality/perf-001-k6-load-testing.md) | 테스트 계층·WireMock·Testcontainers·부하 실행 | `TST-E3-DATA-001`, `TST-E3-E2E-001`, `TST-E3-PERF-001` | `E3-T11~13` |
 
 3차 확장 ADR은 Accepted 정책이지만, 각 행의 테스트·평가·운영 증거가 없으면 해당 ADR을 근거로 기능 완료를 선언하지 않는다. 조건부·Post-MVP ADR은 이 추적표의 3차 완료 Task에 포함하지 않는다.
+
+### 11.1 E3-T13 최종 게이트 증거
+
+Accepted ADR의 자동화 검증 결과와 실제 운영·평가·부하 증거의 보류 상태는 [E3-T13 최종 게이트 판정](../08-planning/third-expansion-final-gate-result.md)에 기록한다. ADR 승인 자체는 AI·Mobility 호출 활성화나 3차 확장 출시 승인을 의미하지 않는다.

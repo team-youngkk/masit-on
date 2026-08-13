@@ -493,3 +493,7 @@ related_documents:
 | 맛집 코스 추천 | `FR-COURSE-001~003`, `BR-COURSE-001~004`, `NFR-EXTERNAL-005`, `NFR-PERFORMANCE-007` | [PRD-DISCOVERY-006](prd/discovery/restaurant-course-recommendation.md) | [3차 확장 사용자 흐름 4절](user-flows/third-expansion-user-flows.md#4-맛집-코스-추천) | [3차 확장 와이어프레임 5절](wireframes/third-expansion-wireframes.md#5-맛집-코스-추천) | [`EVAL-COURSE-*`](../08-planning/third-expansion-evaluation-strategy.md#33-맛집-코스-추천), [`TST-E3-COURSE-*`](../08-planning/third-expansion-test-matrix.md), `E3-T09~13` | [코스 API](../05-specs/api/discovery/restaurant-course-recommendation-api.md), [Mobility ADR](../07-adr/integration/route-001-kakao-mobility-course-routing.md), [`E3-T09~13`](../08-planning/third-expansion-task-breakdown.md) |
 
 세 기능은 `Scope → 요구사항 → PRD → 사용자 흐름 → 와이어프레임 → API·데이터·ADR → 평가·테스트 → E3 Task`까지 구조적으로 연결됐다. 실제 계약 테스트·평가 실행·브라우저 인수·외부 계정 연결·부하 측정이 최종 완료 증거이며, 문서 승인 상태를 구현 완료로 해석하지 않는다.
+
+### 11.1 E3-T13 최종 게이트 증거
+
+현재 기준 커밋의 자동화 회귀·부하 시나리오 자산·운영 및 평가 보류 사유는 [E3-T13 최종 게이트 판정](../08-planning/third-expansion-final-gate-result.md)에 기록한다. 실제 Release 평가, 운영 계정·quota, 좌표 보강률, 브라우저·부하 결과가 연결되기 전까지 제품 활성화 판정은 `NO-GO`다.

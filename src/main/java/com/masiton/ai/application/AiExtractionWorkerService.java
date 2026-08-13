@@ -100,7 +100,7 @@ public class AiExtractionWorkerService {
                             quotaWindowStart, properties.getApplicationQuotaLimit())
                     .ifPresent(this::execute);
         } catch (RuntimeException exception) {
-            log.warn("AI extraction worker polling failed", exception);
+            log.warn("AI extraction worker polling failed: category=INFRASTRUCTURE");
         } finally {
             inFlight.set(false);
             synchronized (drainMonitor) {
@@ -158,15 +158,15 @@ public class AiExtractionWorkerService {
                     attemptNo = nextAttempt.get();
                 } catch (TemporaryInputDecryptionException exception) {
                     if (exception.retryable()) {
-                        log.warn("AI extraction temporary input key unavailable; lease recovery will retry: jobId={}",
-                                job.jobId(), exception);
+                        log.warn("AI extraction temporary input key unavailable; lease recovery will retry: jobId={}, category=KEY_UNAVAILABLE",
+                                job.jobId());
                         return;
                     }
                     store.completeFailure(job.jobId(), workerId, attemptNo, attemptStartedAt, now(), "INPUT");
                     return;
                 } catch (RuntimeException exception) {
-                    log.warn("AI extraction execution failed unexpectedly; lease recovery will retry: jobId={}",
-                            job.jobId(), exception);
+                    log.warn("AI extraction execution failed unexpectedly; lease recovery will retry: jobId={}, category=INFRASTRUCTURE",
+                            job.jobId());
                     return;
                 }
             }
@@ -182,7 +182,7 @@ public class AiExtractionWorkerService {
                 log.warn("AI extraction heartbeat lost lease ownership: jobId={}", jobId);
             }
         } catch (RuntimeException exception) {
-            log.warn("AI extraction heartbeat failed: jobId={}", jobId, exception);
+            log.warn("AI extraction heartbeat failed: jobId={}, category=INFRASTRUCTURE", jobId);
         }
     }
 

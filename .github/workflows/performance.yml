@@ -1,4 +1,4 @@
-# NFR-PERFORMANCE-006 정상 부하 성능 검증 (#148).
+# NFR-PERFORMANCE-006 공개 조회 및 NFR-PERFORMANCE-007 3차 확장 성능 검증.
 #
 # 수동 트리거 전용이다. pull_request·push·schedule 트리거를 붙이지 않는다.
 # 저장소 ruleset이 필수 상태 검사로 요구하는 이름은 `백엔드 빌드·테스트`와
@@ -30,6 +30,26 @@ on:
         description: '측정 대상 애플리케이션 URL (예: http://10.0.1.10:8080)'
         required: true
         type: string
+      scenario:
+        description: '실행할 부하 시나리오'
+        required: true
+        default: normal
+        type: choice
+        options:
+          - normal
+          - max
+      course_metric_mode:
+        description: '코스 측정 프로필. internal(무지연 Stub)과 external(외부 지연 포함 Stub)을 별도 실행한다'
+        required: true
+        default: internal
+        type: choice
+        options:
+          - internal
+          - external
+      course_restaurant_ids:
+        description: '좌표가 준비된 공개 맛집 ID 2~5개(쉼표 구분, 코스 경로 측정용)'
+        required: true
+        type: string
       notes:
         description: '실행 메모 (측정 환경·데이터 상태 등). 결과 요약에 남는다'
         required: false
@@ -50,6 +70,7 @@ jobs:
       # 팀이 확정한 부하 도구 버전이다. 기술 정책 3절에 따라 `latest`를 쓰지 않는다.
       K6_VERSION: '2.1.0'
       BASE_URL: ${{ inputs.base_url }}
+      LOAD_PROFILE: ${{ inputs.scenario }}
     steps:
       - uses: actions/checkout@v4
 
@@ -72,6 +93,10 @@ jobs:
           case "$BASE_URL" in
             *[[:space:]]*|*'`'*|*'$'*|*';'*|*'&'*|*'|'*)
               echo "base_url에 허용되지 않는 문자가 있다" >&2; exit 1 ;;
+          esac
+          case "$BASE_URL" in
+            *'@'*|*'?'*|*'#'*)
+              echo "base_url에는 user-info, query, fragment를 넣을 수 없다" >&2; exit 1 ;;
           esac
           case "$BASE_URL" in
             *masiton.click*)
@@ -107,11 +132,22 @@ jobs:
 
       # threshold를 위반하면 k6가 종료 코드 99로 끝나고 이 step이 실패하므로 job도
       # 실패한다. 사람 판단 없이 통과·실패가 갈리는 것이 이 워크플로의 목적이다.
-      - name: 정상 부하 시나리오 실행 (50명 / 20 RPS)
+      # LOAD_PROFILE은 workflow_dispatch의 choice 입력으로만 정한다.
+      - name: 공개 조회 시나리오 실행 (${{ inputs.scenario }})
         run: k6 run perf/k6/normal-load-public-read.js
         env:
           BASE_URL: ${{ inputs.base_url }}
-          RESULT_DIR: perf/k6/results
+          LOAD_PROFILE: ${{ inputs.scenario }}
+          RESULT_DIR: perf/k6/results/${{ inputs.scenario }}/public-read
+
+      - name: 3차 확장 시나리오 실행 (${{ inputs.scenario }} / ${{ inputs.course_metric_mode }})
+        run: k6 run perf/k6/third-expansion-load.js
+        env:
+          BASE_URL: ${{ inputs.base_url }}
+          LOAD_PROFILE: ${{ inputs.scenario }}
+          COURSE_METRIC_MODE: ${{ inputs.course_metric_mode }}
+          COURSE_RESTAURANT_IDS: ${{ inputs.course_restaurant_ids }}
+          RESULT_DIR: perf/k6/results/${{ inputs.scenario }}/third-expansion/${{ inputs.course_metric_mode }}
 
       - name: 결과 요약 기록
         if: always()
@@ -121,18 +157,22 @@ jobs:
           # 읽으므로, 게이트 없이 8080을 노출한 측정 인스턴스의 주소를 남기지 않는다.
           # 어느 환경을 쟀는지는 검증 결과 문서에 기록한다.
           {
-            echo '## NFR-PERFORMANCE-006 정상 부하 결과'
+            echo "## 성능 결과 (${LOAD_PROFILE})"
             echo
             echo "- k6: v${K6_VERSION}"
             echo "- 메모: ${NOTES:-(없음)}"
             echo
-            if [ -f perf/k6/results/summary.txt ]; then
-              echo '```text'
-              cat perf/k6/results/summary.txt
-              echo '```'
-            else
-              echo '요약 파일이 생성되지 않았다. 실행 로그를 확인한다.'
-            fi
+            for summary in \
+              "perf/k6/results/${LOAD_PROFILE}/public-read/summary.txt" \
+              "perf/k6/results/${LOAD_PROFILE}/third-expansion/${{ inputs.course_metric_mode }}/summary.txt"; do
+              if [ -f "$summary" ]; then
+                echo '```text'
+                cat "$summary"
+                echo '```'
+              else
+                echo "요약 파일이 생성되지 않았다: $summary"
+              fi
+            done
           } >> "$GITHUB_STEP_SUMMARY"
         env:
           NOTES: ${{ inputs.notes }}
@@ -143,9 +183,11 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: k6-normal-load-results
+          name: k6-${{ inputs.scenario }}-load-results
           path: |
-            perf/k6/results/summary.json
-            perf/k6/results/summary.txt
+            perf/k6/results/${{ inputs.scenario }}/public-read/summary.json
+            perf/k6/results/${{ inputs.scenario }}/public-read/summary.txt
+            perf/k6/results/${{ inputs.scenario }}/third-expansion/${{ inputs.course_metric_mode }}/summary.json
+            perf/k6/results/${{ inputs.scenario }}/third-expansion/${{ inputs.course_metric_mode }}/summary.txt
           retention-days: 14
           if-no-files-found: warn

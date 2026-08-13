@@ -1,7 +1,7 @@
 ---
-status: Planned
+status: In Progress
 plan_date: 2026-08-10
-implementation_gate: Pending evidence
+implementation_gate: HOLD — E3-T13 운영·평가 증거 수집 중
 related_documents:
   - third-expansion-baseline-review.md
   - third-expansion-scope-and-terminology.md
@@ -10,6 +10,7 @@ related_documents:
   - third-expansion-implementation-plan.md
   - third-expansion-task-breakdown.md
   - third-expansion-browser-verification.md
+  - third-expansion-final-gate-result.md
   - ../01-requirements/functional-requirements.md
   - ../01-requirements/business-rules.md
   - ../01-requirements/non-functional-requirements.md
@@ -84,10 +85,10 @@ related_documents:
 | 증거 | 판정 내용 | 현재 상태 | 완료 조건 |
 |---|---|---|---|
 | 브라우저 인수 | 공개 자연어·코스, 관리자 AI 작업·예외 보정의 정상·빈·오류·복구 | 부분 실행. 내장 Chromium에서 화면 폭 5종·키보드·정상·빈·오류·복구를 확인했고, 공개 화면 초기 상태 캡처는 Chrome·Edge 실빌드로 보존했다. 여정·관리자 화면 캡처와 실빌드 여정 확인은 미검증이다([3차 확장 브라우저 검증 기록](third-expansion-browser-verification.md)) | `TST-E3-E2E-001` 화면 캡처·환경·접근성 결과 기록 |
-| AI Worker 운영 | 단일 EC2 CPU·메모리·DB·backlog·처리시간·재기동·quota | 미실행 | `E3-T13` 측정 보고서와 장애 복구 결과 |
-| Mobility 운영 | quota·호출 수·timeout·비용 hard stop | 미실행 | `E3-T13` WireMock 및 운영 계정 검증 |
-| 코스 좌표 적합성 | 운영 ACTIVE·공개 맛집 좌표 보강률 | 미측정 | `E3-T13` 읽기 전용 측정 결과·조치·재측정 기록 |
-| 2차 승계 부하 | 정상 50명/20 RPS, 최대 200명/80 RPS | 미측정 | `E3-T13` 결과와 3차 완료 판정 |
+| AI Worker 운영 | 단일 EC2 CPU·메모리·DB·backlog·처리시간·재기동·quota | 미실행 | [E3-T13 최종 게이트 판정](third-expansion-final-gate-result.md)과 장애 복구 결과 |
+| Mobility 운영 | quota·호출 수·timeout·비용 hard stop | 미실행 | [E3-T13 최종 게이트 판정](third-expansion-final-gate-result.md), WireMock 및 운영 계정 검증 |
+| 코스 좌표 적합성 | 운영 ACTIVE·공개 맛집 좌표 보강률 | 미측정 | [E3-T13 최종 게이트 판정](third-expansion-final-gate-result.md)의 읽기 전용 측정·조치·재측정 기록 |
+| 2차 승계 부하 | 정상 50명/20 RPS, 최대 200명/80 RPS | 시나리오 준비·실측 미실행 | [E3-T13 최종 게이트 판정](third-expansion-final-gate-result.md) 결과와 3차 완료 판정 |
 
 실행 증거가 없으면 해당 요구사항을 통과했다고 보고하지 않는다. 팀이 측정을 연기한 항목은 보류 사유와 해제 조건을 기록하되 판정 기준을 낮추지 않는다.
 
@@ -104,4 +105,4 @@ related_documents:
 - [ ] 브라우저 인수, AI Worker 운영 측정, Mobility quota 검증, 운영 ACTIVE·공개 맛집 좌표 보강률 측정·조치·재측정과 2차 승계 부하 결과가 기록된다.
 - [ ] 제품·API·데이터·ADR 추적표와 E3 Task 분해가 동일한 ID를 사용한다.
 
-이 문서는 테스트 기준과 추적을 완료하기 위한 계획이다. 체크되지 않은 항목이 남아 있는 동안 3차 확장 최종 완료를 선언하지 않는다.
+이 문서는 테스트 기준과 추적을 완료하기 위한 계획이다. 현재 실행 결과와 보류 사유는 [E3-T13 최종 게이트 판정](third-expansion-final-gate-result.md)에 기록한다. 체크되지 않은 항목이 남아 있는 동안 3차 확장 최종 완료를 선언하지 않는다.

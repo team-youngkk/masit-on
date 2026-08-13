@@ -1,7 +1,7 @@
-// NFR-PERFORMANCE-006 정상 부하(동시 사용자 50명, 20 RPS) 검증 시나리오.
+// NFR-PERFORMANCE-006 공개 조회 부하 검증 시나리오.
 // 대상은 이슈 #148 완료 조건인 공개 조회 2종(인기 맛집, 공개 큐레이션)이며,
 // 큐레이션은 목록·상세가 별도 경로라 실제로 호출하는 엔드포인트는 셋이다.
-// 최대 부하(200명·80 RPS)는 이 이슈의 완료 조건이 아니므로 여기서 다루지 않는다.
+// LOAD_PROFILE=normal은 50명·20 RPS, LOAD_PROFILE=max는 200명·80 RPS다.
 //
 // 판정 기준은 NFR-PERFORMANCE-006이 원문이다.
 //   - 엔드포인트별 p95 500ms 이하
@@ -25,6 +25,15 @@ import { Counter, Rate, Trend } from 'k6/metrics';
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
 const RESULT_DIR = __ENV.RESULT_DIR || 'perf/k6/results';
+const LOAD_PROFILE = __ENV.LOAD_PROFILE || 'normal';
+const LOAD = {
+    normal: { label: '정상 부하', rate: 20, vus: 50 },
+    max: { label: '최대 부하', rate: 80, vus: 200 },
+}[LOAD_PROFILE];
+
+if (!LOAD) {
+    throw new Error(`지원하지 않는 LOAD_PROFILE=${LOAD_PROFILE}. normal 또는 max를 사용한다.`);
+}
 
 // 엔드포인트별로 따로 판정해야 하므로 Trend를 엔드포인트마다 둔다. 세 경로의 비용이
 // 서로 달라 하나로 합치면 느린 쪽이 빠른 쪽에 가려진다.
@@ -48,21 +57,22 @@ const unexpectedStatus = new Counter('unexpected_status_count');
 const measuredSamples = new Counter('measured_samples');
 
 export const options = {
-    // 계약값은 "정상 부하 50명·20 RPS"(RV-NFR-011)다. 이 둘을 문자 그대로 동시에
-    // 성립시킬 수는 없다. 도착률 20/s에서 동시 활성 VU는 Little's law로
-    // 20 × 평균 응답시간이라, 활성 VU가 50이 되려면 평균 응답이 2.5초여야 하는데
-    // 그건 이미 p95 500ms 기준을 위반한 상태다. 즉 기준을 지키는 한 활성 VU는
-    // 50보다 훨씬 적다.
+    // 계약값은 RV-NFR-011의 정상 부하 50명·20 RPS 또는 최대 부하 200명·80 RPS다.
+    // 두 값을 문자 그대로 동시에
+    // 성립시킬 수는 없다. 도착률과 동시 활성 VU의 관계는 Little's law로
+    // `LOAD.rate × 평균 응답시간`이다. 활성 VU 상한을 모두 채우려면 평균 응답이
+    // p95 기준보다 훨씬 커질 수 있으므로, 이 모델은 동시 처리 사용자 수를
+    // 그대로 재현한다고 해석하지 않는다.
     //
-    // 그래서 이 모델이 실제로 고정하는 것은 **요청률 20 RPS와 동시성 상한 50**이다.
-    // 50명을 "동시에 요청을 처리 중인 사용자 수"가 아니라 "부하를 만드는 가상 사용자
-    // 풀의 크기"로 해석한다. 결과를 "동시 사용자 50명을 검증했다"로 읽지 않는다.
+    // 그래서 이 모델이 실제로 고정하는 것은 **요청률과 동시성 상한**이다.
+    // VU 상한을 "동시에 요청을 처리 중인 사용자 수"가 아니라 "부하를 만드는 가상
+    // 사용자 풀의 크기"로 해석한다. 결과를 활성 동시 사용자 수 검증으로 읽지 않는다.
     //
-    // constant-arrival-rate를 쓰는 이유는 도착률을 서버 응답 속도와 무관하게 20/s로
+    // constant-arrival-rate를 쓰는 이유는 도착률을 서버 응답 속도와 무관하게
     // 유지하기 때문이다. constant-vus는 서버가 느려지면 RPS가 같이 떨어져 계약값을
     // 재지 못한다.
     //
-    // preAllocatedVUs와 maxVUs를 같은 50으로 둔다. maxVUs를 크게 잡으면 서버가
+    // preAllocatedVUs와 maxVUs를 같은 값으로 둔다. maxVUs를 크게 잡으면 서버가
     // 느려질 때 k6가 VU를 늘려 부하 조건이 조용히 상한을 넘는다. 50에 묶어 두면
     // 대신 dropped_iterations가 쌓이므로, 요청률을 만들어내지 못했다는 사실이
     // 지표로 드러난다. 그래서 dropped_iterations도 판정 대상이다.
@@ -71,21 +81,21 @@ export const options = {
         // 끌어올려 p95를 오염시킨다. 같은 부하로 먼저 돌리되 지표는 버린다.
         warm_up: {
             executor: 'constant-arrival-rate',
-            rate: 20,
+            rate: LOAD.rate,
             timeUnit: '1s',
             duration: '60s',
-            preAllocatedVUs: 50,
-            maxVUs: 50,
+            preAllocatedVUs: LOAD.vus,
+            maxVUs: LOAD.vus,
             exec: 'warmUp',
             tags: { phase: 'warmup' },
         },
         measured: {
             executor: 'constant-arrival-rate',
-            rate: 20,
+            rate: LOAD.rate,
             timeUnit: '1s',
             duration: '5m',
-            preAllocatedVUs: 50,
-            maxVUs: 50,
+            preAllocatedVUs: LOAD.vus,
+            maxVUs: LOAD.vus,
             // 워밍업이 끝난 뒤 시작한다. 두 구간이 겹치면 도착률이 40/s가 된다.
             startTime: '60s',
             exec: 'measured',
@@ -93,9 +103,16 @@ export const options = {
         },
     },
     thresholds: {
-        'duration_restaurants_popular': ['p(95)<500'],
-        'duration_curations_list': ['p(95)<500'],
-        'duration_curations_detail': ['p(95)<500'],
+        // NFR-PERFORMANCE-006의 p95 합격 기준은 정상 부하에 적용한다.
+        // 최대 부하는 RV-NFR-001의 용량·오류 확산 확인이므로 p95를 같은 합격
+        // 기준으로 강제하지 않고 결과 수치만 보존한다.
+        ...(LOAD_PROFILE === 'normal'
+            ? {
+                  duration_restaurants_popular: ['p(95)<500'],
+                  duration_curations_list: ['p(95)<500'],
+                  duration_curations_detail: ['p(95)<500'],
+              }
+            : {}),
         'server_error_rate': ['rate<0.01'],
         'http_req_failed{phase:measured}': ['rate<0.01'],
         'dropped_iterations': ['count==0'],
@@ -142,7 +159,7 @@ export function measured(data) {
     runOneRequest(data, true);
 }
 
-// 한 iteration에서 세 엔드포인트를 모두 호출하면 도착률 20/s가 실제로는 60 RPS가
+// 한 iteration에서 세 엔드포인트를 모두 호출하면 도착률이 실제로는 세 배의 RPS가
 // 된다. 계약이 정한 20 RPS를 지키기 위해 iteration마다 한 경로만 호출하고 세 경로를
 // 균등하게 번갈아 돈다.
 function runOneRequest(data, record) {
@@ -216,7 +233,7 @@ export function handleSummary(data) {
 
 function renderText(data) {
     const lines = [];
-    lines.push('NFR-PERFORMANCE-006 정상 부하(요청률 20 RPS / 동시성 상한 50) 결과');
+    lines.push(`NFR-PERFORMANCE-006 ${LOAD.label}(요청률 ${LOAD.rate} RPS / 동시성 상한 ${LOAD.vus}) 결과`);
 
     // 표본이 없으면 threshold는 위반할 값이 없어 전부 [통과]로 찍힌다. 그 출력을
     // 그대로 검증 결과 문서에 옮기면 측정하지 않은 것을 통과로 기록하게 된다.

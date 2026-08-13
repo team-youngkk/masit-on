@@ -1,12 +1,13 @@
 ---
-status: Planned
+status: In Progress
 plan_date: 2026-08-10
-implementation_gate: Pending evidence
+implementation_gate: HOLD — E3-T13 운영·평가 증거 수집 중
 related_documents:
   - third-expansion-baseline-review.md
   - third-expansion-scope-and-terminology.md
   - third-expansion-evaluation-strategy.md
   - third-expansion-test-matrix.md
+  - third-expansion-final-gate-result.md
   - third-expansion-implementation-plan.md
   - ../02-analysis/third-expansion-workstreams.md
   - ../02-analysis/third-expansion-domain-boundaries.md
@@ -27,7 +28,7 @@ related_documents:
 
 [선행 상태 검토](third-expansion-baseline-review.md)와 범위·요구사항·PRD·API·데이터·ADR·테스트·추적표·구현 계획의 정합화는 이 Task 분해 전에 수행하는 문서화 게이트다. 따라서 기준선 확인과 계약 정합화를 별도 `E3-T*`로 만들지 않는다. 다만 문서에 `미확인`·`미실행`·`미측정`으로 남은 운영 증거는 완료로 간주하지 않고 `E3-T13`에서 실행·판정한다.
 
-`implementation_gate: Pending evidence`는 계약이 미승인이라는 뜻이 아니다. 실제 계약 테스트, Dataset 평가, 브라우저·운영·성능 결과와 owner/reviewer 판정이 연결되기 전까지 구현 완료·출시 가능으로 보지 않는다는 뜻이다.
+`implementation_gate: HOLD — E3-T13 운영·평가 증거 수집 중`은 계약이 미승인이라는 뜻이 아니다. 실제 계약 테스트, Dataset 평가, 브라우저·운영·성능 결과와 owner/reviewer 판정이 연결되기 전까지 구현 완료·출시 가능으로 보지 않는다는 뜻이다.
 
 ## 2. 전체 Task 표
 
@@ -90,4 +91,4 @@ related_documents:
 
 Task 완료 시 [테스트 추적표](third-expansion-test-matrix.md), [제품 추적표](../04-product/traceability.md), [API 추적표](../05-specs/api-traceability.md), [데이터 추적표](../05-specs/data/data-traceability.md), [ADR 추적표](../07-adr/adr-traceability.md)를 같은 변경 단위에서 갱신한다.
 
-이 문서의 모든 체크가 완료되기 전까지 3차 확장 최종 완료나 출시 가능 상태를 선언하지 않는다.
+현재 E3-T13 실행 결과와 활성화 판정은 [최종 게이트 판정](third-expansion-final-gate-result.md)에 기록한다. 이 문서의 모든 체크가 완료되기 전까지 3차 확장 최종 완료나 출시 가능 상태를 선언하지 않는다.

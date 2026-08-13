@@ -329,3 +329,7 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 | [API-DISCOVERY-COURSE-001](api/discovery/restaurant-course-recommendation-api.md) | `TST-E3-COURSE-001~003`, `TST-E3-PERF-001`, `TST-E3-E2E-001` | `EVAL-COURSE-001~005`, Mobility quota·호출 수 | `E3-T09~13` |
 
 세 API의 계약 상태는 Accepted지만 테스트·외부 계정·운영 증거가 연결되기 전에는 API 구현 완료로 판정하지 않는다.
+
+### 10.1 E3-T13 최종 게이트 증거
+
+세 API의 보안 자동화와 성능 시나리오 준비·실행 보류 상태는 [E3-T13 최종 게이트 판정](../08-planning/third-expansion-final-gate-result.md)에 기록한다. 자연어·코스의 운영 동급 부하 결과와 AI 외부 계정·quota 증거가 연결되기 전에는 운영 활성화를 판정하지 않는다.
