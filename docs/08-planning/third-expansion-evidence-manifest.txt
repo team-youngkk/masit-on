@@ -1,12 +1,14 @@
 E3-T13 evidence manifest
 comparison_commit: 47b90c6
 captured_at: 2026-08-13T14:42:00+09:00
+recaptured_at: 2026-08-13T19:10:00+09:00
+recapture_reason: final-gate 1.1 revision changed docs/04-product/traceability.md and docs/05-specs/api-traceability.md; hashes and aggregate re-taken so the manifest matches HEAD
 file_hash_algorithm: SHA-256
 aggregate_algorithm: UTF-8 bytes of LF-joined lines in the exact order below; no final LF; each line is relative-path<TAB>lowercase-file-SHA256
 
 .github/workflows/performance.yml	c062eee7e49a5e2bf3304df4b813c23d3facbeae1dd78894062f1f402ec73731
-docs/04-product/traceability.md	e4b42cab6ad87437115efa3bc11b30a3b2e42aa72255a0b24be475f8aa702a1a
-docs/05-specs/api-traceability.md	b19e301abe3459867d198b254f6fa6bcd67df503e16985e20069315f0027568f
+docs/04-product/traceability.md	e74ab3837c81b49f7fabbedc11e6d5b11a1561463772dccc60632a283cbbfd0f
+docs/05-specs/api-traceability.md	7cb73231774a5ed6f22e1f9a5010ae4a37ba3f844c97563750265120ea69eb62
 docs/05-specs/data/data-traceability.md	3534c1077db48ef31343e3271a0d49df707099519a122423dad69073db925bbd
 docs/07-adr/adr-traceability.md	3bdc461a29ca0d832bd9ffc101118b93d9058acb99c519e4a9dfda6d2080f587
 docs/08-planning/second-expansion-performance-verification.md	4e176d86e922da3c0beb96bba26535ec100a6da0b157fd28a438701433d3cb2e
@@ -20,5 +22,5 @@ scripts/verify-third-expansion-evidence.ps1	777dfcd69c24dace1687902b5bf20d6736ff
 src/main/java/com/masiton/ai/application/AiExtractionWorkerService.java	ebd1714fb1e16e46dbadb7f2753adc534a75e2ecac48a7a01c64f9cc1f37c99d
 src/test/java/com/masiton/ai/application/AiExtractionWorkerServiceTest.java	572f5d6a4bc3bfd0262e4dff46f9263318ef91dd57f0e7627f55e15c6aad051b
 
-aggregate_sha256: f6cc13d6d89a7f1b21455c9ce45275a646506c5f88b3e85e347ae0dceb53b57b
+aggregate_sha256: 863f2ccb22fc2a51866643d3921a67021dad885832619c458c59efa1ebc0a142
 reproduce_powershell: "$paths = Get-Content docs/08-planning/third-expansion-evidence-manifest.txt | Where-Object { $_ -match '^[^#].*\t[0-9a-f]{64}$' } | ForEach-Object { ($_ -split \"\t\")[0] }; $manifest = ($paths | ForEach-Object { \"$_`t$((Get-FileHash -Algorithm SHA256 -LiteralPath $_).Hash.ToLowerInvariant())\" }) -join \"`n\"; $digest = [Security.Cryptography.SHA256]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($manifest)); ([BitConverter]::ToString($digest) -replace '-', '').ToLowerInvariant()"

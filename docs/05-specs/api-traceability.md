@@ -332,4 +332,4 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 
 ### 10.1 E3-T13 최종 게이트 증거
 
-세 API의 보안 자동화와 성능 시나리오 준비·실행 보류 상태는 [E3-T13 최종 게이트 판정](../08-planning/third-expansion-final-gate-result.md)에 기록한다. 자연어·코스의 운영 동급 부하 결과와 AI 외부 계정·quota 증거가 연결되기 전에는 운영 활성화를 판정하지 않는다.
+세 API의 보안 자동화와 성능 시나리오 준비·실행 보류 상태는 [E3-T13 최종 게이트 판정](../08-planning/third-expansion-final-gate-result.md)에 기록한다. 같은 문서 1.1절 개정에 따라 제한 공개 범위의 활성화는 증거 수집을 위해 허용하며, 자연어·코스의 운영 동급 부하 결과와 AI 외부 계정·quota 증거가 연결되기 전에는 일반 공개 활성화를 판정하지 않는다.
