@@ -24,11 +24,11 @@ public class YoutubeChannelWatchPersistenceService {
                 && existing.get().subscriptionTokenHash() != null) {
             YoutubeChannelWatchStore.WatchDetail detail = watchStore.upsert(
                     creatorId, channelId, true, "ACTIVE", existing.get().subscriptionTokenHash());
-            return new ActivationPreparation(detail, false);
+            return new ActivationPreparation(detail, false, existing, tokenHash);
         }
         YoutubeChannelWatchStore.WatchDetail detail = watchStore.upsert(
                 creatorId, channelId, true, "UNKNOWN", tokenHash);
-        return new ActivationPreparation(detail, true);
+        return new ActivationPreparation(detail, true, existing, tokenHash);
     }
 
     @Transactional
@@ -49,10 +49,22 @@ public class YoutubeChannelWatchPersistenceService {
 
     @Transactional
     public Optional<YoutubeChannelWatchStore.WatchDetail> recordSubscriptionFailure(
-            String channelId, String errorCategory) {
-        return watchStore.markSubscriptionFailed(channelId, errorCategory);
+            String channelId, String errorCategory, byte[] expectedTokenHash) {
+        return watchStore.markSubscriptionFailed(channelId, errorCategory, expectedTokenHash);
+    }
+
+    @Transactional
+    public void compensateExplicitFailure(UUID creatorId, String channelId, ActivationPreparation preparation) {
+        if (preparation.previous().isPresent()) {
+            watchStore.restoreActivation(creatorId, channelId, preparation.previous().get(),
+                    preparation.pendingTokenHash());
+        } else {
+            watchStore.deletePending(channelId, preparation.pendingTokenHash());
+        }
     }
 
     public record ActivationPreparation(YoutubeChannelWatchStore.WatchDetail detail,
-                                        boolean subscriptionRequestRequired) { }
+                                        boolean subscriptionRequestRequired,
+                                        Optional<YoutubeChannelWatchStore.Watch> previous,
+                                        byte[] pendingTokenHash) { }
 }

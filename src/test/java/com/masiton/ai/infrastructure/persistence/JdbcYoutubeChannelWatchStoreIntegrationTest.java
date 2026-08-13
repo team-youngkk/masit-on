@@ -204,14 +204,110 @@ class JdbcYoutubeChannelWatchStoreIntegrationTest {
         String channelId = "channel-" + UUID.randomUUID();
         insertCreator(creatorId, channelId);
         insertWatch(creatorId, channelId, IntegrationTestFixtures.sha256("old-token"), null, null, null);
+        jdbcTemplate.update("UPDATE youtube_channel_watch SET subscription_status = 'UNKNOWN' WHERE youtube_channel_id = ?",
+                channelId);
 
         try {
             YoutubeChannelWatchStore.WatchDetail detail = store.markSubscriptionFailed(
-                    channelId, "SUBSCRIPTION_5XX").orElseThrow();
+                    channelId, "SUBSCRIPTION_5XX", IntegrationTestFixtures.sha256("old-token")).orElseThrow();
 
             assertThat(detail.enabled()).isTrue();
             assertThat(detail.subscriptionStatus()).isEqualTo("RENEWAL_FAILED");
             assertThat(detail.lastErrorCategory()).isEqualTo("SUBSCRIPTION_5XX");
+        } finally {
+            deleteFixture(creatorId, channelId);
+        }
+    }
+
+    @Test
+    @DisplayName("명시적 구독 실패는 신규 pending Watch를 삭제한다")
+    void compensateExplicitFailure_신규pendingWatch_삭제한다() {
+        UUID creatorId = UUID.randomUUID();
+        String channelId = "channel-" + UUID.randomUUID();
+        byte[] pendingHash = IntegrationTestFixtures.sha256("pending-token");
+        insertCreator(creatorId, channelId);
+
+        try {
+            YoutubeChannelWatchPersistenceService.ActivationPreparation preparation =
+                    watchPersistence.prepareActivation(creatorId, channelId, pendingHash);
+
+            watchPersistence.compensateExplicitFailure(creatorId, channelId, preparation);
+
+            assertThat(store.find(channelId)).isEmpty();
+        } finally {
+            deleteFixture(creatorId, channelId);
+        }
+    }
+
+    @Test
+    @DisplayName("명시적 구독 실패는 기존 pending Watch 상태와 토큰 해시를 복원한다")
+    void compensateExplicitFailure_기존pendingWatch_상태와토큰해시를복원한다() {
+        UUID creatorId = UUID.randomUUID();
+        String channelId = "channel-" + UUID.randomUUID();
+        byte[] previousHash = IntegrationTestFixtures.sha256("previous-token");
+        byte[] pendingHash = IntegrationTestFixtures.sha256("pending-token");
+        insertCreator(creatorId, channelId);
+        insertWatch(creatorId, channelId, previousHash, null, null, "OLD_ERROR");
+        jdbcTemplate.update("UPDATE youtube_channel_watch SET subscription_status = 'UNKNOWN' WHERE youtube_channel_id = ?",
+                channelId);
+
+        try {
+            YoutubeChannelWatchPersistenceService.ActivationPreparation preparation =
+                    watchPersistence.prepareActivation(creatorId, channelId, pendingHash);
+
+            watchPersistence.compensateExplicitFailure(creatorId, channelId, preparation);
+
+            YoutubeChannelWatchStore.Watch restored = store.find(channelId).orElseThrow();
+            assertThat(restored.subscriptionStatus()).isEqualTo("UNKNOWN");
+            assertThat(restored.subscriptionTokenHash()).containsExactly(previousHash);
+        } finally {
+            deleteFixture(creatorId, channelId);
+        }
+    }
+
+    @Test
+    @DisplayName("비활성화가 선행되면 timeout 보상이 Watch를 다시 활성화하지 않는다")
+    void markSubscriptionFailed_비활성화선행_pending보상은상태를보존한다() {
+        UUID creatorId = UUID.randomUUID();
+        String channelId = "channel-" + UUID.randomUUID();
+        byte[] pendingHash = IntegrationTestFixtures.sha256("pending-token");
+        insertCreator(creatorId, channelId);
+
+        try {
+            watchPersistence.prepareActivation(creatorId, channelId, pendingHash);
+            store.upsert(creatorId, channelId, false, "INACTIVE", null);
+
+            assertThat(store.markSubscriptionFailed(channelId, "SUBSCRIPTION_TIMEOUT", pendingHash)).isEmpty();
+            YoutubeChannelWatchStore.Watch watch = store.find(channelId).orElseThrow();
+            assertThat(watch.enabled()).isFalse();
+            assertThat(watch.subscriptionStatus()).isEqualTo("INACTIVE");
+        } finally {
+            deleteFixture(creatorId, channelId);
+        }
+    }
+
+    @Test
+    @DisplayName("비활성화가 선행되면 명시적 실패 보상이 상태를 복원하지 않는다")
+    void compensateExplicitFailure_비활성화선행_pending보상은상태를보존한다() {
+        UUID creatorId = UUID.randomUUID();
+        String channelId = "channel-" + UUID.randomUUID();
+        byte[] previousHash = IntegrationTestFixtures.sha256("previous-token");
+        byte[] pendingHash = IntegrationTestFixtures.sha256("pending-token");
+        insertCreator(creatorId, channelId);
+        insertWatch(creatorId, channelId, previousHash, null, null, null);
+        jdbcTemplate.update("UPDATE youtube_channel_watch SET subscription_status = 'UNKNOWN' WHERE youtube_channel_id = ?",
+                channelId);
+
+        try {
+            YoutubeChannelWatchPersistenceService.ActivationPreparation preparation =
+                    watchPersistence.prepareActivation(creatorId, channelId, pendingHash);
+            store.upsert(creatorId, channelId, false, "INACTIVE", null);
+
+            watchPersistence.compensateExplicitFailure(creatorId, channelId, preparation);
+
+            YoutubeChannelWatchStore.Watch watch = store.find(channelId).orElseThrow();
+            assertThat(watch.enabled()).isFalse();
+            assertThat(watch.subscriptionStatus()).isEqualTo("INACTIVE");
         } finally {
             deleteFixture(creatorId, channelId);
         }

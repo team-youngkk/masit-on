@@ -23,6 +23,7 @@ import org.springframework.http.HttpStatus;
 import com.masiton.ai.application.port.out.AiExtractionJobStore;
 import com.masiton.ai.application.port.out.TemporaryInputCipher;
 import com.masiton.ai.application.port.out.YoutubeChannelWatchStore;
+import com.masiton.common.web.BusinessException;
 import com.masiton.ai.application.port.out.dto.AiExtractionJobView;
 import com.masiton.video.application.port.in.ResolveVerifiedVideoUseCase;
 import com.masiton.video.application.port.out.VerifiedVideo;
@@ -244,6 +245,23 @@ class AiExtractionJobServiceTest {
                 .satisfies(exception -> {
                     com.masiton.common.web.BusinessException businessException =
                             (com.masiton.common.web.BusinessException) exception;
+                    assertThat(businessException.status()).isEqualTo(HttpStatus.FORBIDDEN);
+                    assertThat(businessException.code()).isEqualTo("AIEXTRACT_WEBHOOK_TOKEN_INVALID");
+                });
+
+        verify(watchStore, never()).markSubscriptionVerified(any(), any());
+    }
+
+    @Test
+    @DisplayName("구독 실패 채널 challenge는 토큰이 일치해도 거부한다")
+    void verifyChallenge_RENEWAL_FAILED채널_토큰일치해도거부한다() {
+        when(watchStore.findForUpdate("channel-id")).thenReturn(Optional.of(
+                new YoutubeChannelWatchStore.Watch("channel-id", true, "RENEWAL_FAILED", tokenHash("verify-token"))));
+
+        assertThatThrownBy(() -> service.verifyChallenge("channel-id", "verify-token", "challenge"))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(exception -> {
+                    BusinessException businessException = (BusinessException) exception;
                     assertThat(businessException.status()).isEqualTo(HttpStatus.FORBIDDEN);
                     assertThat(businessException.code()).isEqualTo("AIEXTRACT_WEBHOOK_TOKEN_INVALID");
                 });

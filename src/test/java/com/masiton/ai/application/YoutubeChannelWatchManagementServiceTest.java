@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -17,6 +18,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.springframework.http.HttpStatus;
 
 import com.masiton.ai.application.port.in.YoutubeChannelWatchManagementUseCase;
@@ -50,7 +52,8 @@ class YoutubeChannelWatchManagementServiceTest {
         OffsetDateTime notifiedAt = OffsetDateTime.parse("2026-08-12T01:00:00Z");
         when(watchPersistence.prepareActivation(eq(creatorId), eq("channel-id"), any())).thenReturn(
                 new YoutubeChannelWatchPersistenceService.ActivationPreparation(
-                        new YoutubeChannelWatchStore.WatchDetail(true, "UNKNOWN", notifiedAt, null, null), true));
+                        new YoutubeChannelWatchStore.WatchDetail(true, "UNKNOWN", notifiedAt, null, null), true,
+                        Optional.empty(), hashToken("verify-token")));
 
         var result = service.setEnabled(creatorId, true);
 
@@ -59,6 +62,9 @@ class YoutubeChannelWatchManagementServiceTest {
         assertThat(result.lastNotificationAt()).isEqualTo(notifiedAt);
         verify(watchPersistence).prepareActivation(eq(creatorId), eq("channel-id"), eq(hashToken("verify-token")));
         verify(subscriptions).subscribe("channel-id", "verify-token");
+        InOrder order = inOrder(watchPersistence, subscriptions);
+        order.verify(watchPersistence).prepareActivation(eq(creatorId), eq("channel-id"), any());
+        order.verify(subscriptions).subscribe("channel-id", "verify-token");
     }
 
     @Test
@@ -69,7 +75,8 @@ class YoutubeChannelWatchManagementServiceTest {
         when(verificationTokens.issue("channel-id")).thenReturn("verify-token");
         when(watchPersistence.prepareActivation(eq(creatorId), eq("channel-id"), any()))
                 .thenReturn(new YoutubeChannelWatchPersistenceService.ActivationPreparation(
-                        new YoutubeChannelWatchStore.WatchDetail(true, "UNKNOWN", null, null, null), true));
+                        new YoutubeChannelWatchStore.WatchDetail(true, "UNKNOWN", null, null, null), true,
+                        Optional.empty(), hashToken("verify-token")));
 
         service.setEnabled(creatorId, true);
 
@@ -113,8 +120,10 @@ class YoutubeChannelWatchManagementServiceTest {
         when(creatorReferences.findCreatorReference(creatorId)).thenReturn(Optional.of(creator(creatorId, true, true)));
         when(watchPersistence.preserveActive(creatorId, "channel-id")).thenReturn(Optional.empty());
         when(verificationTokens.issue("channel-id")).thenReturn("verify-token");
-        when(watchPersistence.recordSubscriptionFailure("channel-id", "SUBSCRIPTION_5XX"))
-                .thenReturn(Optional.empty());
+        when(watchPersistence.prepareActivation(eq(creatorId), eq("channel-id"), any()))
+                .thenReturn(new YoutubeChannelWatchPersistenceService.ActivationPreparation(
+                        new YoutubeChannelWatchStore.WatchDetail(true, "UNKNOWN", null, null, null), true,
+                        Optional.empty(), hashToken("verify-token")));
         org.mockito.Mockito.doThrow(new YoutubeChannelWatchSubscriptionFailedException("SUBSCRIPTION_5XX"))
                 .when(subscriptions).subscribe("channel-id", "verify-token");
 
@@ -123,8 +132,29 @@ class YoutubeChannelWatchManagementServiceTest {
                 .satisfies(exception -> assertThat(((BusinessException) exception).code())
                         .isEqualTo("EXTERNAL_SERVICE_ERROR"));
 
-        verify(watchPersistence).recordSubscriptionFailure("channel-id", "SUBSCRIPTION_5XX");
-        verify(watchPersistence, never()).prepareActivation(any(), any(), any());
+        verify(watchPersistence).compensateExplicitFailure(eq(creatorId), eq("channel-id"), any());
+        verify(watchPersistence, never()).recordSubscriptionFailure(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Hub timeout은 pending Watch를 재조정 대기 실패 상태로 남긴다")
+    void 감시설정_Hubtimeout_pendingWatch를RENEWAL_FAILED로남긴다() {
+        UUID creatorId = UUID.randomUUID();
+        when(creatorReferences.findCreatorReference(creatorId)).thenReturn(Optional.of(creator(creatorId, true, true)));
+        when(watchPersistence.preserveActive(creatorId, "channel-id")).thenReturn(Optional.empty());
+        when(verificationTokens.issue("channel-id")).thenReturn("verify-token");
+        when(watchPersistence.prepareActivation(eq(creatorId), eq("channel-id"), any()))
+                .thenReturn(new YoutubeChannelWatchPersistenceService.ActivationPreparation(
+                        new YoutubeChannelWatchStore.WatchDetail(true, "UNKNOWN", null, null, null), true,
+                        Optional.empty(), hashToken("verify-token")));
+        org.mockito.Mockito.doThrow(new YoutubeChannelWatchSubscriptionFailedException("SUBSCRIPTION_TIMEOUT"))
+                .when(subscriptions).subscribe("channel-id", "verify-token");
+
+        assertThatThrownBy(() -> service.setEnabled(creatorId, true))
+                .isInstanceOf(BusinessException.class);
+
+        verify(watchPersistence).recordSubscriptionFailure(eq("channel-id"), eq("SUBSCRIPTION_TIMEOUT"), any());
+        verify(watchPersistence, never()).compensateExplicitFailure(any(), any(), any());
     }
 
     @Test

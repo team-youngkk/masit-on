@@ -108,7 +108,8 @@ public class JdbcYoutubeChannelWatchStore implements YoutubeChannelWatchStore {
     }
 
     @Override
-    public Optional<WatchDetail> markSubscriptionFailed(String channelId, String errorCategory) {
+    public Optional<WatchDetail> markSubscriptionFailed(String channelId, String errorCategory,
+                                                         byte[] expectedTokenHash) {
         List<WatchDetail> rows = jdbcTemplate.query("""
                 UPDATE youtube_channel_watch
                    SET enabled = true,
@@ -116,8 +117,52 @@ public class JdbcYoutubeChannelWatchStore implements YoutubeChannelWatchStore {
                        last_error_category = ?,
                        updated_at = CURRENT_TIMESTAMP
                  WHERE youtube_channel_id = ?
+                   AND subscription_token_hash = ?
+                   AND enabled = true
+                   AND subscription_status = 'UNKNOWN'
                 RETURNING enabled, subscription_status, last_notification_at, last_renewed_at, last_error_category
-                """, this::mapDetail, errorCategory, channelId);
+                """, this::mapDetail, errorCategory, channelId, expectedTokenHash);
+        return rows.stream().findFirst();
+    }
+
+    @Override
+    public void deletePending(String channelId, byte[] expectedTokenHash) {
+        jdbcTemplate.update("""
+                DELETE FROM youtube_channel_watch
+                 WHERE youtube_channel_id = ?
+                   AND subscription_token_hash = ?
+                   AND enabled = true
+                   AND subscription_status = 'UNKNOWN'
+                """, channelId, expectedTokenHash);
+    }
+
+    @Override
+    public Optional<WatchDetail> restoreActivation(UUID creatorId, String channelId, Watch previous,
+                                                    byte[] expectedTokenHash) {
+        int updated = jdbcTemplate.update("""
+                UPDATE youtube_channel_watch
+                   SET enabled = ?,
+                       subscription_status = ?,
+                       subscription_token_hash = ?,
+                       updated_at = CURRENT_TIMESTAMP
+                 WHERE youtube_channel_id = ?
+                   AND subscription_token_hash = ?
+                   AND enabled = true
+                   AND subscription_status = 'UNKNOWN'
+                """, previous.enabled(), previous.subscriptionStatus(), previous.subscriptionTokenHash(),
+                channelId, expectedTokenHash);
+        if (updated == 0) {
+            return Optional.empty();
+        }
+        return findDetail(channelId);
+    }
+
+    private Optional<WatchDetail> findDetail(String channelId) {
+        List<WatchDetail> rows = jdbcTemplate.query("""
+                SELECT enabled, subscription_status, last_notification_at, last_renewed_at, last_error_category
+                  FROM youtube_channel_watch
+                 WHERE youtube_channel_id = ?
+                """, this::mapDetail, channelId);
         return rows.stream().findFirst();
     }
 

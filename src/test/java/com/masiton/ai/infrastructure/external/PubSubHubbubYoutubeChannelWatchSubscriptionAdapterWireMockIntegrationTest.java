@@ -83,6 +83,15 @@ class PubSubHubbubYoutubeChannelWatchSubscriptionAdapterWireMockIntegrationTest 
     }
 
     @Test
+    @DisplayName("Hub 3xx 응답은 결과 불명확 범주로 변환한다")
+    void 구독요청_Hub3xx_결과불명확범주로변환한다() throws Exception {
+        stubSubscription(302);
+        assertThatThrownBy(() -> adapter().subscribe("UCchannel123", "verify-token"))
+                .isInstanceOfSatisfying(com.masiton.ai.application.YoutubeChannelWatchSubscriptionFailedException.class,
+                        exception -> assertThat(exception.category()).isEqualTo("SUBSCRIPTION_UNEXPECTED_STATUS"));
+    }
+
+    @Test
     @DisplayName("Hub 응답 timeout은 정규화된 timeout 범주로 변환한다")
     void 구독요청_Hub응답timeout_정규화된timeout범주로변환한다() throws Exception {
         stubSubscriptionWithDelay(202, 250);

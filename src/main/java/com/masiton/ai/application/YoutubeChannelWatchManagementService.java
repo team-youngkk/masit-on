@@ -50,15 +50,29 @@ public class YoutubeChannelWatchManagementService implements YoutubeChannelWatch
             return status(active.get());
         }
         String verificationToken = verificationTokens.issue(creator.externalChannelId());
+        byte[] tokenHash = hashToken(verificationToken);
+        YoutubeChannelWatchPersistenceService.ActivationPreparation preparation =
+                watchPersistence.prepareActivation(creator.id(), creator.externalChannelId(), tokenHash);
+        if (!preparation.subscriptionRequestRequired()) {
+            return status(preparation.detail());
+        }
         try {
             subscriptions.subscribe(creator.externalChannelId(), verificationToken);
         } catch (YoutubeChannelWatchSubscriptionFailedException exception) {
-            watchPersistence.recordSubscriptionFailure(creator.externalChannelId(), exception.category());
+            if (isDefinitiveFailure(exception.category())) {
+                watchPersistence.compensateExplicitFailure(creator.id(), creator.externalChannelId(), preparation);
+            } else {
+                watchPersistence.recordSubscriptionFailure(creator.externalChannelId(), exception.category(), tokenHash);
+            }
             throw new BusinessException(ErrorCode.EXTERNAL_SERVICE_ERROR);
         }
-        YoutubeChannelWatchPersistenceService.ActivationPreparation preparation =
-                watchPersistence.prepareActivation(creator.id(), creator.externalChannelId(), hashToken(verificationToken));
         return status(preparation.detail());
+    }
+
+    private boolean isDefinitiveFailure(String category) {
+        return "SUBSCRIPTION_4XX".equals(category)
+                || "SUBSCRIPTION_5XX".equals(category)
+                || "SUBSCRIPTION_UNEXPECTED_STATUS".equals(category);
     }
 
     private BusinessException creatorNotFound() {

@@ -16,7 +16,13 @@ public interface YoutubeChannelWatchStore {
 
     void markSubscriptionVerified(String channelId, OffsetDateTime verifiedAt);
 
-    Optional<WatchDetail> markSubscriptionFailed(String channelId, String errorCategory);
+    Optional<WatchDetail> markSubscriptionFailed(String channelId, String errorCategory,
+                                                  byte[] expectedTokenHash);
+
+    void deletePending(String channelId, byte[] expectedTokenHash);
+
+    Optional<WatchDetail> restoreActivation(UUID creatorId, String channelId, Watch previous,
+                                            byte[] expectedTokenHash);
 
     record Watch(String channelId, boolean enabled, String subscriptionStatus, byte[] subscriptionTokenHash) {
         public boolean acceptsNotifications() {
