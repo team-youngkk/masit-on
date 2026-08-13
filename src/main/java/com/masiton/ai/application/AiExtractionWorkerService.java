@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.Executors;
@@ -100,7 +101,8 @@ public class AiExtractionWorkerService {
                             quotaWindowStart, properties.getApplicationQuotaLimit())
                     .ifPresent(this::execute);
         } catch (RuntimeException exception) {
-            log.warn("AI extraction worker polling failed", exception);
+            log.warn("AI extraction worker polling failed: category=INFRASTRUCTURE, exceptionType={}, stackTrace={}",
+                    exception.getClass().getName(), sanitizedStackTrace(exception));
         } finally {
             inFlight.set(false);
             synchronized (drainMonitor) {
@@ -158,15 +160,17 @@ public class AiExtractionWorkerService {
                     attemptNo = nextAttempt.get();
                 } catch (TemporaryInputDecryptionException exception) {
                     if (exception.retryable()) {
-                        log.warn("AI extraction temporary input key unavailable; lease recovery will retry: jobId={}",
-                                job.jobId(), exception);
+                        log.warn("AI extraction temporary input key unavailable; lease recovery will retry: jobId={}, "
+                                        + "category=KEY_UNAVAILABLE, exceptionType={}, stackTrace={}",
+                                job.jobId(), exception.getClass().getName(), sanitizedStackTrace(exception));
                         return;
                     }
                     store.completeFailure(job.jobId(), workerId, attemptNo, attemptStartedAt, now(), "INPUT");
                     return;
                 } catch (RuntimeException exception) {
-                    log.warn("AI extraction execution failed unexpectedly; lease recovery will retry: jobId={}",
-                            job.jobId(), exception);
+                    log.warn("AI extraction execution failed unexpectedly; lease recovery will retry: jobId={}, "
+                                    + "category=INFRASTRUCTURE, exceptionType={}, stackTrace={}",
+                            job.jobId(), exception.getClass().getName(), sanitizedStackTrace(exception));
                     return;
                 }
             }
@@ -175,15 +179,23 @@ public class AiExtractionWorkerService {
         }
     }
 
-    private void heartbeat(UUID jobId) {
+    void heartbeat(UUID jobId) {
         try {
             OffsetDateTime now = now();
             if (!store.heartbeat(jobId, workerId, now, now.plus(properties.getLeaseDuration()))) {
                 log.warn("AI extraction heartbeat lost lease ownership: jobId={}", jobId);
             }
         } catch (RuntimeException exception) {
-            log.warn("AI extraction heartbeat failed: jobId={}", jobId, exception);
+            log.warn("AI extraction heartbeat failed: jobId={}, category=INFRASTRUCTURE, exceptionType={}, stackTrace={}",
+                    jobId, exception.getClass().getName(), sanitizedStackTrace(exception));
         }
+    }
+
+    private static String sanitizedStackTrace(RuntimeException exception) {
+        return Arrays.stream(exception.getStackTrace())
+                .map(StackTraceElement::toString)
+                .reduce((first, second) -> first + " <- " + second)
+                .orElse("empty");
     }
 
     private OffsetDateTime now() {

@@ -272,3 +272,7 @@ V3 전진 적용과 전체 FK·UNIQUE·CHECK·인덱스는 `TST-E2-E2E-001`, `E2
 | 자연어·코스 파생 응답 | `TST-E3-NL-*`, `TST-E3-COURSE-*`, `TST-E3-PERF-001` | `E3-T01~02`, `E3-T09~10`, `E3-T13` | 원문·코스 결과 비저장, 공개 상태·좌표·TTL·외부 실패, 운영 좌표 보강률 측정·조치·재측정 증거 |
 
 물리 migration·테이블 정의·제약·인덱스 문서가 실제 `V4`와 일치하는지 확인한 뒤 데이터 Task를 완료한다. 논리 계약 Accepted와 물리 실행 증거는 별도로 판정한다.
+
+### 14.1 E3-T13 최종 게이트 증거
+
+자연어·코스의 비저장 경계, 공개 좌표 데이터 의존성, AI Worker lease·quota 경계에 대한 자동화 결과와 운영 측정 보류 사유는 [E3-T13 최종 게이트 판정](../../08-planning/third-expansion-final-gate-result.md)에 기록한다. 운영 좌표 보강률과 Worker·Mobility 측정이 없으면 데이터·운영 완료로 판정하지 않는다.

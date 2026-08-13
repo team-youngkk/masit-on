@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.List;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -147,12 +148,23 @@ class AiExtractionWorkerServiceTest {
         doReturn(Optional.of(new AiExtractionWorkerStore.ClaimedJob(jobId,
                 URI.create("https://www.youtube.com/watch?v=video-id"), input, 1)))
                 .when(store).claim(any(), any(), any(), anyInt(), any(), anyLong());
-        when(cipher.decrypt(input)).thenThrow(TemporaryInputDecryptionException.keyUnavailable(null));
+        when(cipher.decrypt(input)).thenThrow(TemporaryInputDecryptionException.keyUnavailable(
+                new IllegalStateException("KEY_SENTINEL")));
 
-        service.poll();
+        List<ILoggingEvent> events = captureLogs(service::poll);
 
         verify(store, never()).completeFailure(any(), any(), anyInt(), any(), any(), any());
         verifyNoInteractions(provider);
+        assertSanitized(events, "temporary input key unavailable", "KEY_UNAVAILABLE", "KEY_SENTINEL");
+        assertInfrastructureDiagnostics(events, "temporary input key unavailable",
+                "com.masiton.ai.application.port.out.TemporaryInputDecryptionException",
+                "com.masiton.ai.application.AiExtractionWorkerService.execute");
+        assertThat(events.stream()
+                .filter(event -> event.getFormattedMessage().contains("temporary input key unavailable"))
+                .findFirst()
+                .orElseThrow()
+                .getFormattedMessage())
+                .doesNotContain("AI temporary input decryption key is unavailable.");
     }
 
     @Test
@@ -176,6 +188,70 @@ class AiExtractionWorkerServiceTest {
     }
 
     @Test
+    @DisplayName("예상하지 못한 예외의 원문과 원인은 일반 로그에 남기지 않는다")
+    void poll_예상하지못한예외_정규화범주만로그에남긴다() throws Exception {
+        when(store.quotaUsage(any(java.time.OffsetDateTime.class))).thenReturn(0L);
+        UUID jobId = UUID.randomUUID();
+        doReturn(Optional.of(new AiExtractionWorkerStore.ClaimedJob(jobId,
+                URI.create("https://www.youtube.com/watch?v=video-id"), null, 1)))
+                .when(store).claim(any(), any(), any(), anyInt(), any(), anyLong());
+        AiVideoExtractionResult result = new AiVideoExtractionResult(
+                new ObjectMapper().readTree("{\"resultCompleteness\":\"COMPLETE\"}"), "req-1");
+        when(provider.extract(any())).thenReturn(result);
+        when(processor.process(any(), any(), anyInt(), any(), any(), any()))
+                .thenThrow(new IllegalStateException("PROVIDER_RESPONSE_SENTINEL",
+                        new IllegalArgumentException("CAUSE_SENTINEL")));
+
+        Logger logger = (Logger) LoggerFactory.getLogger(AiExtractionWorkerService.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            service.poll();
+        } finally {
+            logger.detachAppender(appender);
+        }
+
+        ILoggingEvent event = appender.list.stream()
+                .filter(item -> item.getFormattedMessage().contains("execution failed unexpectedly"))
+                .findFirst()
+                .orElseThrow();
+        assertThat(event.getFormattedMessage())
+                .contains("category=INFRASTRUCTURE")
+                .contains("exceptionType=java.lang.IllegalStateException")
+                .contains("stackTrace=com.masiton.ai.application.AiExtractionWorkerService.execute")
+                .doesNotContain("PROVIDER_RESPONSE_SENTINEL", "CAUSE_SENTINEL");
+        assertThat(event.getThrowableProxy()).isNull();
+    }
+
+    @Test
+    @DisplayName("폴링 인프라 예외의 원문과 원인은 일반 로그에 남기지 않는다")
+    void poll_폴링예외_정규화범주만로그에남긴다() {
+        when(store.quotaUsage(any(java.time.OffsetDateTime.class)))
+                .thenThrow(new IllegalStateException("POLL_SENTINEL",
+                        new IllegalArgumentException("CAUSE_SENTINEL")));
+
+        List<ILoggingEvent> events = captureLogs(service::poll);
+
+        assertSanitized(events, "polling failed", "INFRASTRUCTURE", "POLL_SENTINEL");
+        assertInfrastructureDiagnostics(events, "polling failed", "com.masiton.ai.application.AiExtractionWorkerService.poll");
+    }
+
+    @Test
+    @DisplayName("heartbeat 예외의 원문과 원인은 일반 로그에 남기지 않는다")
+    void heartbeat_예외_정규화범주만로그에남긴다() {
+        when(store.heartbeat(any(), any(), any(), any()))
+                .thenThrow(new IllegalStateException("HEARTBEAT_SENTINEL",
+                        new IllegalArgumentException("CAUSE_SENTINEL")));
+
+        List<ILoggingEvent> events = captureLogs(() -> service.heartbeat(UUID.randomUUID()));
+
+        assertSanitized(events, "heartbeat failed", "INFRASTRUCTURE", "HEARTBEAT_SENTINEL");
+        assertInfrastructureDiagnostics(events, "heartbeat failed",
+                "com.masiton.ai.application.AiExtractionWorkerService.heartbeat");
+    }
+
+    @Test
     @DisplayName("정상 결과는 결과 프로세서와 성공 완료를 호출한다")
     void poll_success_결과처리후성공완료한다() throws Exception {
         when(store.quotaUsage(any(java.time.OffsetDateTime.class))).thenReturn(0L);
@@ -194,6 +270,47 @@ class AiExtractionWorkerServiceTest {
 
     private static AiExtractionWorkerStore.ClaimedJob job(int attempt) {
         return new AiExtractionWorkerStore.ClaimedJob(UUID.randomUUID(), URI.create("https://www.youtube.com/watch?v=video-id"), null, attempt);
+    }
+
+    private static List<ILoggingEvent> captureLogs(Runnable action) {
+        Logger logger = (Logger) LoggerFactory.getLogger(AiExtractionWorkerService.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            action.run();
+        } finally {
+            logger.detachAppender(appender);
+        }
+        return List.copyOf(appender.list);
+    }
+
+    private static void assertSanitized(List<ILoggingEvent> events, String message,
+                                        String category, String sentinel) {
+        ILoggingEvent event = events.stream()
+                .filter(item -> item.getFormattedMessage().contains(message))
+                .findFirst()
+                .orElseThrow();
+        assertThat(event.getFormattedMessage())
+                .contains("category=" + category)
+                .doesNotContain(sentinel);
+        assertThat(event.getThrowableProxy()).isNull();
+    }
+
+    private static void assertInfrastructureDiagnostics(List<ILoggingEvent> events, String message,
+                                                        String stackTraceFrame) {
+        assertInfrastructureDiagnostics(events, message, "java.lang.IllegalStateException", stackTraceFrame);
+    }
+
+    private static void assertInfrastructureDiagnostics(List<ILoggingEvent> events, String message,
+                                                        String exceptionType, String stackTraceFrame) {
+        ILoggingEvent event = events.stream()
+                .filter(item -> item.getFormattedMessage().contains(message))
+                .findFirst()
+                .orElseThrow();
+        assertThat(event.getFormattedMessage())
+                .contains("exceptionType=" + exceptionType, "stackTrace=" + stackTraceFrame)
+                .doesNotContain("CAUSE_SENTINEL");
     }
 
     private static AiExtractionWorkerProperties properties() {
