@@ -87,7 +87,38 @@ AI 작업 상세의 `태그 코드 보정` 입력은 첫 측정에서 전 폭 17
 
 캡처는 PC Chrome 151.0.7922.76과 PC Edge 151.0.4129.78 실빌드의 headless 모드로 찍었다. **Windows의 Chromium은 창 너비를 500px 미만으로 줄이지 못한다.** `--window-size=360`을 주면 레이아웃은 500px로 잡히고 이미지만 360px로 잘려 실제 화면과 다른 결과가 나온다. 360px과 390px은 500px 창 안에서 해당 폭의 iframe으로 문서를 그린 뒤 그 폭만큼 잘라 저장했다. 문서를 그린 폭은 이미지 폭과 같다.
 
-이 캡처는 초기 상태만 담는다. 4절의 여정 상태와 관리자 화면은 로그인·입력·외부 응답이 필요해 URL 로드만으로 재현되지 않으므로 캡처가 없다. 6절에 미검증으로 남긴다.
+### 3.2 여정 상태 캡처
+
+4절 여정을 실제로 재현하며 상태별로 캡처했다. 화면 폭은 1280px이고, 대표 화면 하나는 390px도 함께 남겼다.
+
+| 구분 | 상태 | 캡처 |
+|---|---|---|
+| 자연어 | 조건 적용 완료 | [1280px](assets/e3-t12/journey-nl-normal-1280.png) · [390px](assets/e3-t12/journey-nl-normal-390.png) |
+| 자연어 | 총 0건 | [1280px](assets/e3-t12/journey-nl-empty-1280.png) |
+| 자연어 | 해석 실패 | [1280px](assets/e3-t12/journey-nl-failed-1280.png) |
+| 자연어 | 백엔드 장애 | [1280px](assets/e3-t12/journey-nl-error-1280.png) |
+| 자연어 | 다시 시도 복구 | [1280px](assets/e3-t12/journey-nl-recovered-1280.png) |
+| 코스 | 맛집 3개 선택 | [1280px](assets/e3-t12/journey-course-selected-1280.png) |
+| 코스 | 추천 이동 순서 | [1280px](assets/e3-t12/journey-course-normal-1280.png) |
+| 코스 | 외부 장애(429) | [1280px](assets/e3-t12/journey-course-provider-error-1280.png) |
+| 코스 | 부분 실패 | [1280px](assets/e3-t12/journey-course-partial-1280.png) |
+| 코스 | 선택 변경 복구 | [1280px](assets/e3-t12/journey-course-recovered-1280.png) |
+| 코스 | 5분 만료 | [1280px](assets/e3-t12/journey-course-expired-1280.png) |
+| 관리자 AI | 작업 목록 | [1280px](assets/e3-t12/journey-admin-list-1280.png) |
+| 관리자 AI | 빈 목록 | [1280px](assets/e3-t12/journey-admin-list-empty-1280.png) |
+| 관리자 AI | 신규 영상 추가 입력 | [1280px](assets/e3-t12/journey-admin-submit-form-1280.png) |
+| 관리자 AI | 신규 영상 접수 결과 | [1280px](assets/e3-t12/journey-admin-submit-done-1280.png) |
+| 관리자 AI | 자동 확정 상세 | [1280px](assets/e3-t12/journey-admin-detail-confirmed-1280.png) |
+| 관리자 AI | 롤백 완료 | [1280px](assets/e3-t12/journey-admin-rollback-done-1280.png) |
+| 관리자 AI | 자동 차단 상세 | [1280px](assets/e3-t12/journey-admin-detail-blocked-1280.png) |
+| 관리자 AI | 자동 차단 후보 확정 거부 | [1280px](assets/e3-t12/journey-admin-confirm-rejected-1280.png) |
+| 관리자 AI | 사후 폐기 완료 | [1280px](assets/e3-t12/journey-admin-discard-done-1280.png) |
+| 관리자 AI | 재시도 입력 | [1280px](assets/e3-t12/journey-admin-retry-form-1280.png) |
+| 관리자 AI | 재시도 새 작업 생성 | [1280px](assets/e3-t12/journey-admin-retry-done-1280.png) |
+
+여정 캡처는 설치된 PC Chrome을 `--remote-debugging-port`로 띄우고 DevTools Protocol로 화면 폭 지정·입력·클릭·캡처를 보내 만들었다. 새 라이브러리는 추가하지 않았고 harness는 저장소에 두지 않았다. 재현 절차는 8절에 있다.
+
+자연어 장애·복구는 백엔드를 내렸다 올려 만들었고, 코스 만료는 경로 생성 후 5분이 지난 뒤 찍었다. 관리자 신규 영상 추가 화면은 [#182](https://github.com/team-youngkk/masit-on/pull/182) 병합본 기준이다.
 
 ## 4. 사용자 여정
 
@@ -187,8 +218,8 @@ java.lang.IllegalStateException: Kakao Mobility base URL is not an allowed provi
 
 | 항목 | 상태 | 이유 | 다음 단계 |
 |---|---|---|---|
-| 여정 상태와 관리자 화면의 캡처 | 미검증 | 3.1절 캡처는 URL 로드로 재현되는 초기 상태만 담는다. 4절 여정과 관리자 화면은 로그인·입력·외부 응답이 필요해 headless URL 로드로 찍을 수 없다 | 담당자가 실브라우저에서 4절 여정을 재현해 캡처를 `assets/e3-t12`에 추가한다 |
-| PC Chrome·Edge 실빌드의 여정 확인 | 미검증 | 3.1절 캡처로 두 실빌드의 초기 화면 렌더링은 확인했으나, 4절 여정은 내장 Chromium에서만 실행했다 | 담당자가 각 브라우저에서 4절 여정을 확인한다 |
+| Android Chrome·삼성 인터넷 등 모바일 실단말의 여정 | 미검증 | 3.2절 여정은 PC Chrome 실빌드에서 실행했고 모바일 폭은 화면 렌더링만 확인했다 | 담당자가 실단말에서 4절 여정을 확인한다 |
+| PC Edge 실빌드의 여정 확인 | 미검증 | Edge는 3.1절 초기 화면 캡처만 남겼고 4절 여정은 실행하지 않았다 | 담당자가 Edge에서 4절 여정을 확인한다 |
 | Android Chrome | 미검증 | 실단말 확인을 하지 않았다 | 담당자 단말로 확인한다 |
 | iPhone Safari | 미검증(판정 대상 아님) | [ADR-WEB-004](../07-adr/platform/web-004-supported-browser-matrix.md) | 해제 조건 충족 시 매트릭스로 되돌린다 |
 | 배포 환경(`masiton.click`)의 3차 확장 화면 | 미검증 | 이 검증은 로컬 `develop` 기준이다 | 3차 확장 배포 후 같은 여정을 확인한다 |
@@ -216,5 +247,6 @@ Tab 순회로 세 화면의 초점 이동을 기록했다.
 4. 2.1절 Fixture를 넣는다. 확정 태그 연결, Mobility stub 좌표에 맞춘 맛집, AI 작업·Snapshot·실행 시도가 있어야 4절 여정을 모두 볼 수 있다.
 5. `scripts/New-LocalAdmin.ps1`로 로컬 `ADMIN` 계정을 만든다. PATH의 `java`가 JDK 21이어야 한다.
 6. `npm --prefix frontend run dev` 후 각 폭에서 3절 화면과 4절 여정을 확인한다.
-7. 캡처는 Chrome·Edge 실빌드의 `--headless=new --screenshot`으로 만든다. 768px 이상은 `--window-size`를 그대로 쓰고, 360·390px은 3.1절대로 500px 창 안의 iframe으로 그린 뒤 해당 폭만큼 잘라 저장한다.
+7. 3.1절 초기 화면 캡처는 Chrome·Edge 실빌드의 `--headless=new --screenshot`으로 만든다. 768px 이상은 `--window-size`를 그대로 쓰고, 360·390px은 3.1절대로 500px 창 안의 iframe으로 그린 뒤 해당 폭만큼 잘라 저장한다.
+8. 3.2절 여정 캡처는 Chrome을 `--headless=new --remote-debugging-port=9222`로 띄운 뒤 DevTools Protocol로 조작한다. `Emulation.setDeviceMetricsOverride`로 폭을 지정하면 최소 창 너비 제약을 받지 않는다. React 제어 입력은 native setter로 값을 넣고 `input` 이벤트를 보내야 상태가 갱신된다. 화면은 `Page.captureScreenshot`으로 저장한다.
 7. 오류·복구 여정은 백엔드를 내렸다 올려 확인한다. 코스 외부 장애는 stub이 429를 주는 좌표를 출발 맛집으로 두면 재현된다.
