@@ -22,7 +22,7 @@ export function aiExtractionSubmissionAttempt(
 export function aiExtractionSubmissionFieldErrors(videoUrl: string, supplementText: string): AiExtractionSubmissionFieldErrors {
   return {
     ...(videoUrl.trim().length ? {} : { videoUrl: 'YouTube 영상 URL을 입력해 주세요.' }),
-    ...(supplementText.trim().length <= 20_000 ? {} : { supplementText: '보완 텍스트는 공백을 제외하고 20,000자 이하로 입력해 주세요.' }),
+    ...(supplementText.trim().length <= 20_000 ? {} : { supplementText: '보완 텍스트는 앞뒤 공백을 제외하고 20,000자 이하로 입력해 주세요.' }),
   }
 }
 

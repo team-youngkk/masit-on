@@ -78,12 +78,13 @@ export function creationAttemptFor(
   createKey: () => string,
 ): CollectionCreationAttempt {
   const normalizedName = normalizeCollectionName(name)
-  if (current?.normalizedName === normalizedName) return current
+  const previous = current ? { fingerprint: current.normalizedName, key: current.idempotencyKey } : null
   const attempt = idempotencyAttempt(
-    current ? { fingerprint: current.normalizedName, key: current.idempotencyKey } : null,
+    previous,
     normalizedName,
     createKey,
   )
+  if (current && attempt === previous) return current
   return { normalizedName: attempt.fingerprint, idempotencyKey: attempt.key }
 }
 

@@ -398,7 +398,9 @@ class RedisRefreshTokenStoreIntegrationTest {
     @Test
     @DisplayName("레거시 회원 세션 전체 폐기도 복구 큐에 적재한다")
     void memberSession_레거시만료시각_전체폐기_복구큐선적재() {
-        Instant now = Instant.now().minusSeconds(5);
+        // REVOKE_ALL_SCRIPT는 memberSessionClock이 아닌 Redis TIME으로 만료를 판정하므로
+        // 실제 Redis 시각에 맞춘 fixture를 사용해야 레거시 세션이 테스트 실행일에 만료되지 않는다.
+        Instant now = Instant.now();
         when(memberSessionClock.instant()).thenReturn(now);
 
         MemberSession issued = memberSessionStore.issue("member-a", Duration.ofDays(14));

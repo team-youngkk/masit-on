@@ -100,7 +100,7 @@ export function AiVideoExtractionList() {
     <section className={styles.panel} aria-labelledby="new-ai-extraction-heading">
       <h2 id="new-ai-extraction-heading">신규 영상 추가</h2>
       <p className={styles.hint}>전송 범위: 공개 YouTube 영상 URL과 관리자가 입력한 보완 텍스트만 Google Gemini로 전송됩니다. 보완 텍스트는 암호화된 임시 입력으로 보존될 수 있으며 작업 종료 후 24시간 이내 삭제됩니다. 원본 영상·전체 자막·Provider 응답 전문은 저장하거나 화면에 다시 표시하지 않습니다.</p>
-      <form className={styles.form} onSubmit={(event) => void submit(event)}>
+      <form className={styles.form} noValidate onSubmit={(event) => void submit(event)}>
         <label htmlFor="ai-video-url">YouTube 영상 URL</label>
         <input ref={videoUrlInput} id="ai-video-url" name="videoUrl" type="text" inputMode="url" required value={videoUrl} disabled={submitBusy} aria-invalid={fieldErrors.videoUrl ? 'true' : undefined} aria-describedby={fieldErrors.videoUrl ? 'ai-video-url-error' : undefined} onChange={(event) => { setVideoUrl(event.target.value); setFieldErrors((current) => ({ ...current, videoUrl: undefined })) }} autoComplete="url" />
         {fieldErrors.videoUrl ? <p id="ai-video-url-error" className={styles.fieldError} role="alert">{fieldErrors.videoUrl}</p> : null}

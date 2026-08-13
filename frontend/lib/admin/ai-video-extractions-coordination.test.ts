@@ -12,10 +12,12 @@ import {
 } from './ai-video-extractions-coordination.ts'
 
 test('신규 접수 입력 오류는 각 필드에 연결할 수 있는 형태로 반환한다', () => {
-  assert.deepEqual(aiExtractionSubmissionFieldErrors('   ', 'a'.repeat(20_001)), {
+  const expected = {
     videoUrl: 'YouTube 영상 URL을 입력해 주세요.',
-    supplementText: '보완 텍스트는 공백을 제외하고 20,000자 이하로 입력해 주세요.',
-  })
+    supplementText: '보완 텍스트는 앞뒤 공백을 제외하고 20,000자 이하로 입력해 주세요.',
+  }
+  assert.deepEqual(aiExtractionSubmissionFieldErrors('', 'a'.repeat(20_001)), expected)
+  assert.deepEqual(aiExtractionSubmissionFieldErrors('   ', 'a'.repeat(20_001)), expected)
   assert.deepEqual(aiExtractionSubmissionFieldErrors('https://youtu.be/video-id', ''), {})
 })
 

@@ -15,15 +15,18 @@ type ApiErrorBody = {
 }
 
 export class AdminApiError extends Error {
-  constructor(
-    readonly status: number,
-    readonly code?: string,
-    readonly fieldErrors: ApiFieldError[] = [],
-    readonly traceId?: string,
-    message = '요청을 처리하지 못했습니다.',
-  ) {
+  readonly status: number
+  readonly code?: string
+  readonly fieldErrors: ApiFieldError[]
+  readonly traceId?: string
+
+  constructor(status: number, code?: string, fieldErrors: ApiFieldError[] = [], traceId?: string, message = '요청을 처리하지 못했습니다.') {
     super(message)
     this.name = 'AdminApiError'
+    this.status = status
+    this.code = code
+    this.fieldErrors = fieldErrors
+    this.traceId = traceId
   }
 }
 
