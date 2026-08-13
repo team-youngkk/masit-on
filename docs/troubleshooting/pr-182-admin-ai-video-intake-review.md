@@ -141,4 +141,4 @@ related_documents:
 
 ## 10. 남은 사항
 
-- 로컬 프론트 테스트·typecheck·production build와 원격 CI run `31654800330`의 프론트·백엔드 필수 job이 통과했다. Redis 통합 테스트의 로컬 실행은 Docker 부재로 확인하지 못했지만 CI에서 통과했다. 후속 리뷰 8개 스레드에 인라인 답글을 남기고 모두 resolve했으며, PR 본문도 변경 범위와 검증 결과에 맞춰 갱신했다.
+- 로컬 프론트 테스트·typecheck·production build와 원격 CI run `31656740149`의 프론트·백엔드 필수 job이 통과했다. Redis 통합 테스트의 로컬 실행은 Docker 부재로 확인하지 못했지만 CI에서 통과했다. 후속 리뷰 8개 스레드에 인라인 답글을 남기고 모두 resolve했으며, PR 본문도 변경 범위와 검증 결과에 맞춰 갱신했다.
