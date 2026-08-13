@@ -23,6 +23,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
+import com.masiton.member.application.MemberDeletionCleanupService;
 import com.masiton.security.application.InvalidRefreshTokenException;
 import com.masiton.security.application.RefreshTokenRotation;
 import com.masiton.security.application.port.out.LoginFailureStore;
@@ -30,6 +31,7 @@ import com.masiton.security.application.port.out.RefreshTokenStore;
 import com.masiton.member.application.InvalidMemberSessionException;
 import com.masiton.member.application.MemberSession;
 import com.masiton.member.application.MemberSessionRevocation;
+import com.masiton.member.application.MemberSessionRevocationRecoveryService;
 import com.masiton.member.application.port.out.MemberSessionRevocationRecoveryQueue;
 import com.masiton.member.application.port.out.MemberSessionStore;
 import com.masiton.member.application.port.out.MemberRateLimitStore;
@@ -91,6 +93,12 @@ class RedisRefreshTokenStoreIntegrationTest {
 
     @MockitoBean
     private Clock memberSessionClock;
+
+    @MockitoBean
+    private MemberDeletionCleanupService memberDeletionCleanupService;
+
+    @MockitoBean
+    private MemberSessionRevocationRecoveryService memberSessionRevocationRecoveryService;
 
     @BeforeEach
     void clearRedis() {
@@ -390,14 +398,17 @@ class RedisRefreshTokenStoreIntegrationTest {
     @Test
     @DisplayName("레거시 회원 세션 전체 폐기도 복구 큐에 적재한다")
     void memberSession_레거시만료시각_전체폐기_복구큐선적재() {
-        Instant now = Instant.now().plus(Duration.ofDays(1));
+        // REVOKE_ALL_SCRIPT는 memberSessionClock이 아닌 Redis TIME으로 만료를 판정하므로
+        // 실제 Redis 시각에 맞춘 fixture를 사용해야 레거시 세션이 테스트 실행일에 만료되지 않는다.
+        // 복구 큐 score도 Redis TIME이므로 JVM 시각과의 오차를 흡수할 상한 여유가 필요하다.
+        Instant now = Instant.now();
         when(memberSessionClock.instant()).thenReturn(now);
 
         MemberSession issued = memberSessionStore.issue("member-a", Duration.ofDays(14));
         replaceWithLegacySessionRecord(issued);
 
         assertThat(memberSessionStore.revokeAll("member-a")).containsExactly(issued.sessionId());
-        assertThat(memberSessionRevocationRecoveryQueue.claimDue(Instant.now().plusSeconds(1), 50))
+        assertThat(memberSessionRevocationRecoveryQueue.claimDue(now.plusSeconds(10), 50))
                 .extracting(MemberSessionRevocation::sessionId)
                 .containsExactly(java.util.UUID.fromString(issued.sessionId()));
     }

@@ -1,7 +1,7 @@
 'use client'
 
-import { adminJson, AdminApiError, messageFor } from './api'
-import { aiExtractionMessageForCode } from './ai-video-extractions-coordination'
+import { adminJson, AdminApiError, messageFor } from './api.ts'
+import { aiExtractionMessageForCode } from './ai-video-extractions-coordination.ts'
 
 export type AiExecutionStatus = 'QUEUED' | 'RUNNING' | 'SUCCEEDED' | 'FAILED'
 export type AiExtractionSource = 'WEBHOOK' | 'ADMIN'
@@ -23,7 +23,10 @@ export type AiExtractionJob = {
   createdAt: string
   startedAt: string | null
   finishedAt: string | null
+  reused?: boolean
 }
+
+export type AiExtractionSubmissionResult = AiExtractionJob & { reused: boolean }
 
 export type AiEvidence =
   | { type: 'TIMESTAMP'; startMs: number; endMs: number }
@@ -81,6 +84,23 @@ export async function getAiVideoExtraction(jobId: string): Promise<AiExtractionD
   return normalizeDetail(raw)
 }
 
+export async function createAiVideoExtraction(
+  videoUrl: string,
+  supplementText: string,
+  idempotencyKey: string,
+): Promise<AiExtractionSubmissionResult> {
+  const normalizedSupplementText = supplementText.trim()
+  const raw = await adminJson<AiExtractionSubmissionResult>('/api/admin/ai/video-extractions', {
+    method: 'POST',
+    body: JSON.stringify({
+      videoUrl: videoUrl.trim(),
+      ...(normalizedSupplementText ? { supplementText: normalizedSupplementText } : {}),
+      ...(idempotencyKey ? { idempotencyKey } : {}),
+    }),
+  })
+  return { ...raw, reused: raw.reused === true }
+}
+
 export async function retryAiVideoExtraction(jobId: string, supplementText: string, reason: string): Promise<AiExtractionJob> {
   return adminJson<AiExtractionJob>(`/api/admin/ai/video-extractions/${encodeURIComponent(jobId)}/retry`, {
     method: 'POST', body: JSON.stringify({ supplementText: supplementText.trim(), reason: reason.trim() }),
@@ -99,9 +119,9 @@ export async function reviewAiVideoExtraction(
   })
 }
 
-export function aiExtractionMessageFor(error: unknown): string {
+export function aiExtractionMessageFor(error: unknown, context: 'manage' | 'submission' = 'manage'): string {
   if (error instanceof AdminApiError) {
-    return aiExtractionMessageForCode(error.code) ?? messageFor(error)
+    return aiExtractionMessageForCode(error.code, context) ?? messageFor(error)
   }
   return messageFor(error)
 }

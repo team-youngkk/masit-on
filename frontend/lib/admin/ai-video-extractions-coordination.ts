@@ -1,10 +1,38 @@
-import type { AiExecutionStatus, AiExtractionJob, AiExtractionReviewStatus, AiExtractionSource } from './ai-video-extractions'
+import type { AiExecutionStatus, AiExtractionJob, AiExtractionReviewStatus, AiExtractionSource, AiExtractionSubmissionResult } from './ai-video-extractions'
+import { idempotencyAttempt, type IdempotencyAttempt } from '../idempotency.ts'
 
 export type AiExtractionFilters = {
   executionStatus: AiExecutionStatus | ''
   source: AiExtractionSource | ''
   reviewStatus: AiExtractionReviewStatus | ''
   page: number
+}
+
+export type AiExtractionSubmissionAttempt = IdempotencyAttempt
+export type AiExtractionSubmissionFieldErrors = { videoUrl?: string; supplementText?: string }
+
+export function aiExtractionSubmissionAttempt(
+  previous: AiExtractionSubmissionAttempt | null,
+  fingerprint: string,
+  generate: () => string,
+): AiExtractionSubmissionAttempt {
+  return idempotencyAttempt(previous, fingerprint, generate)
+}
+
+export function aiExtractionSubmissionFieldErrors(videoUrl: string, supplementText: string): AiExtractionSubmissionFieldErrors {
+  return {
+    ...(videoUrl.trim().length ? {} : { videoUrl: 'YouTube 영상 URL을 입력해 주세요.' }),
+    ...(supplementText.trim().length <= 20_000 ? {} : { supplementText: '보완 텍스트는 앞뒤 공백을 제외하고 20,000자 이하로 입력해 주세요.' }),
+  }
+}
+
+export function aiExtractionSubmissionPresentation(
+  result: Pick<AiExtractionSubmissionResult, 'jobId' | 'executionStatus' | 'reused'>,
+) {
+  return {
+    linkLabel: result.reused ? '기존 작업 보기' : '작업 상세 보기',
+    statusLabel: result.reused ? `기존 작업 ID ${result.jobId} · 현재 상태 ${result.executionStatus}` : undefined,
+  }
 }
 
 export function nextAiExtractionFilters(
@@ -31,10 +59,14 @@ export function reviewRequest(decision: 'CONFIRM' | 'DISCARD' | 'ROLLBACK', expe
   return { decision, expectedReviewStatus }
 }
 
-export function aiExtractionMessageForCode(code?: string): string | undefined {
+export function aiExtractionMessageForCode(code?: string, context: 'manage' | 'submission' = 'manage'): string | undefined {
   switch (code) {
+    case 'AIEXTRACT_INVALID_VIDEO_URL':
+      return '공개 YouTube 영상 URL을 확인해 주세요.'
     case 'AIEXTRACT_DUPLICATE_CONFLICT':
-      return '다른 검수 변경과 충돌했습니다. 최신 작업 상태를 다시 조회한 뒤 진행해 주세요.'
+      return context === 'submission'
+        ? '이미 정식 등록된 영상과 충돌해 작업을 접수하지 못했습니다.'
+        : '다른 검수 변경과 충돌했습니다. 최신 작업 상태를 다시 조회한 뒤 진행해 주세요.'
     case 'AIEXTRACT_RETRY_BLOCKED':
       return '현재 작업 상태에서는 재시도할 수 없습니다.'
     case 'AIEXTRACT_VALIDATION_CONFLICT':

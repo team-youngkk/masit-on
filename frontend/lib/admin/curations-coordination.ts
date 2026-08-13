@@ -1,14 +1,8 @@
+import { idempotencyAttempt } from '../idempotency.ts'
+export { idempotencyAttempt }
+export type { IdempotencyAttempt } from '../idempotency.ts'
+
 export type CurationStatus = 'DRAFT' | 'PUBLISHED'
-
-export type IdempotencyAttempt = { fingerprint: string; key: string }
-
-export function idempotencyAttempt(
-  previous: IdempotencyAttempt | null,
-  fingerprint: string,
-  generate: () => string,
-): IdempotencyAttempt {
-  return previous?.fingerprint === fingerprint ? previous : { fingerprint, key: generate() }
-}
 
 export function nextCurationPage(
   current: { status: CurationStatus | ''; page: number },
