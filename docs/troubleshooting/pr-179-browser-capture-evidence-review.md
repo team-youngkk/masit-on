@@ -92,3 +92,15 @@ related_documents:
 - 부수 효과: `setDeviceMetricsOverride`는 4절의 500px 최소 창 너비 제약을 받지 않는다. 검증 기록 3.1절의 iframe 우회로 만든 초기 화면 캡처는 그대로 두었고, 앞으로 좁은 폭 캡처는 이 경로가 더 간단하다.
 - 범위: 자연어 5종, 코스 6종, 관리자 11종에 390px 대표 1종을 더해 23장을 `assets/e3-t12`에 추가했다. 자연어 장애·복구는 백엔드를 내렸다 올려 만들었고, 코스 만료는 생성 5분 뒤에 찍었다.
 - harness는 일회성 검증 도구라 저장소에 두지 않고 절차만 검증 기록 8절에 남겼다.
+
+## 10. 후속 리뷰 반영
+
+| 스레드 | 요청 | 문제 유형 | 판단 | 처리 결과 |
+|---|---|---|---|---|
+| [r3772142965](https://github.com/team-youngkk/masit-on/pull/179#discussion_r3772142965) | 코스 `빈 결과`·`입력 부족` 캡처 추가 또는 미검증 명시 | 기타 | 수정 필요 | 두 상태를 재현해 캡처 2장 추가. 4절 여정과 3.2절 표가 일대일 대응 |
+| [r3772155697](https://github.com/team-youngkk/masit-on/pull/179#discussion_r3772155697) | `Set-EnvValue`가 대상 줄이 없을 때 실패하거나 줄을 추가하도록 | 애플리케이션 | 수정 필요 | 줄이 없으면 파일 끝에 추가하도록 변경 |
+| [r3772155701](https://github.com/team-youngkk/masit-on/pull/179#discussion_r3772155701) | PR 본문을 문서 5.4절 갱신에 맞춰 정정 | 기타 | 수정 필요 | 본문 접수 경로 절과 미검증 목록을 문서와 일치시킴 |
+| [r3772155709](https://github.com/team-youngkk/masit-on/pull/179#discussion_r3772155709) | 3.2절 캡처의 실행 기준을 2절·6절과 구분 | 기타 | 수정 필요 | 2절에 기준 커밋 두 행 분리, `verification_date` 갱신, 6절 문구 축소 |
+| [r3772155713](https://github.com/team-youngkk/masit-on/pull/179#discussion_r3772155713) | 8절 단계 번호 중복 정정 | 기타 | 수정 필요 | 마지막 단계를 `9.`로 수정 |
+
+`Set-EnvValue`는 중단 대신 추가를 택했다. 중단은 실패를 드러내기만 하고 `.env`를 다시 복사해야 하지만, 추가는 `docker compose`가 읽는 파일을 실제로 채워 원인 자체를 없앤다. `JWT_*` 네 줄만 있는 `.env`로 실행해 네 항목이 추가되는 것과, 재실행 시 중복이 생기지 않는 것을 확인했다.
