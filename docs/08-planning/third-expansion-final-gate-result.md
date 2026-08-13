@@ -5,7 +5,7 @@ decision_date: 2026-08-13
 issue: 166
 task: E3-T13
 baseline_commit: 47b90c6
-evidence_fingerprint: 0abc669dcc32b704d89ed48ce29ddbb18589b954662059eab79345dd066f1afe
+evidence_fingerprint: 3b829b25bffb7a8122ca3985556f218cfa9a33a1db7f84f46b1f2e41108de5f8
 evidence_manifest: third-expansion-evidence-manifest.txt
 evidence_fingerprint_scope: "manifest에 고정한 E3-T13 구현·추적표 파일; manifest와 이 결과 문서 자체는 집계에서 제외"
 evidence_captured_at: 2026-08-13T14:42:00+09:00
@@ -71,7 +71,7 @@ related_documents:
 
 1. AI Release holdout 24건을 명시적 opt-in으로 실행하고 지정 인간 판정자·검증자의 합의를 기록한다. 실제 제공자 품질 수치나 합성 dry-run을 Release 통과로 대체하지 않는다.
 2. 병합된 최신 HEAD에서 E3-T12의 Edge 여정·관리자 신규 화면·Webhook 여정과 지원 범위 내 브라우저 검증을 재실행한다. 실단말·배포 환경 검증은 실행하지 않았다면 미검증으로 남긴다.
-3. 측정 전용 환경에서 자연어와 기존 공개 조회를 정상 `50/20`, 최대 `200/80`으로 실행한다. 코스는 Kakao Mobility production monthly quota `1,000`과 requests-per-second 기본값 `20`을 전제로 별도 quota-safe 실행을 한다. 실행 전에 읽기 전용으로 Redis의 현재 `YearMonth` quota 키(`restaurant:course-route:quota:<YearMonth>`) 또는 `masiton.restaurant.course.route.monthly.quota.usage`·`masiton.restaurant.course.route.monthly.quota.remaining` 지표를 확인하고, `남은 quota >= preflight·warmup·measured 실행 예산`일 때만 시작한다. 월별 키는 `YearMonth`로 누적되며 provider 호출 전에 permit을 소비하므로, 이후 timeout·429·5xx가 발생한 요청과 같은 달의 재시도·재실행·다른 트래픽도 잔여량을 차감한다. 잔여량이 부족하면 월별 quota 키를 임의로 초기화하지 말고, quota 키가 격리된 측정 전용 환경에서만 실행하거나 다음 달로 연기한다. 실행마다 시작·종료 사용량, 잔여량, 실제 요청 예산과 재실행 여부를 기록한다. preflight·warmup·measured 합계는 quota 미만이어야 하고, 코스 max 프로필도 provider 제한을 넘지 않는 별도 요청률을 사용하므로 `80 RPS` 전체 코스 부하의 증거로 해석하지 않는다. 코스에서 provider 차단·429 rate-limit 응답이 발생하면 성능 통과가 아니라 운영 선행조건 미충족으로 판정한다. threshold를 낮추거나 운영 인스턴스에 직접 부하를 걸지 않는다.
+3. 측정 전용 환경에서 자연어와 기존 공개 조회를 정상 `50/20`, 최대 `200/80`으로 실행한다. 코스는 Kakao Mobility production monthly quota `1,000`과 requests-per-second 기본값 `20`을 전제로 별도 quota-safe 실행을 한다. 실행 전에 KST 기준 현재 `YearMonth`의 Redis quota 키(`restaurant:course-route:quota:<YearMonth>`)를 읽기 전용으로 확인하고, 그 키를 권위 있는 사용량 기준으로 삼아 `남은 quota >= preflight·warmup·measured 실행 예산`일 때만 시작한다. `masiton.restaurant.course.route.monthly.quota.usage`·`masiton.restaurant.course.route.monthly.quota.remaining` 지표는 해당 Redis 키와 대조한 경우에만 보조 증거로 사용한다. 월별 키는 `YearMonth`로 누적되며 provider 호출 전에 permit을 소비하므로, 이후 timeout·429·5xx가 발생한 요청과 같은 달의 재시도·재실행·다른 트래픽도 잔여량을 차감한다. 잔여량이 부족하면 월별 quota 키를 임의로 초기화하지 말고, quota 키가 격리된 측정 전용 환경에서만 실행하거나 다음 달로 연기한다. 실행마다 시작·종료 사용량, 잔여량, 실제 요청 예산과 재실행 여부를 기록한다. preflight·warmup·measured 합계는 quota 미만이어야 하고, 코스 max 프로필도 provider 제한을 넘지 않는 별도 요청률을 사용하므로 `80 RPS` 전체 코스 부하의 증거로 해석하지 않는다. 코스에서 provider 차단·429 rate-limit 응답이 발생하면 성능 통과가 아니라 운영 선행조건 미충족으로 판정한다. threshold를 낮추거나 운영 인스턴스에 직접 부하를 걸지 않는다.
 4. 운영 DB에서 ACTIVE·공개 맛집의 좌표 보유율을 읽기 전용으로 집계하고, 부족하면 좌표 소유 Workstream의 조치 후 동일 쿼리로 재측정한다.
 5. 단일 EC2 Worker의 CPU·메모리·DB·backlog·처리시간·재기동과 Gemini/Mobility quota·비용 hard stop 증거를 비밀정보 없이 기록한다.
 6. 위 결과의 실행 커밋·명령·환경·artifact 식별자를 제품·API·데이터·ADR 추적표와 연결한다. 현재는 k6 `inspect`·JavaScript 구문/차이 검토만 수행했으며 실제 setup/request 실행 결과는 없으므로 성능 통과로 기록하지 않는다.

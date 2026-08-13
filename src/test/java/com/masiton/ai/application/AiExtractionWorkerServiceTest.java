@@ -159,6 +159,12 @@ class AiExtractionWorkerServiceTest {
         assertInfrastructureDiagnostics(events, "temporary input key unavailable",
                 "com.masiton.ai.application.port.out.TemporaryInputDecryptionException",
                 "com.masiton.ai.application.AiExtractionWorkerService.execute");
+        assertThat(events.stream()
+                .filter(event -> event.getFormattedMessage().contains("temporary input key unavailable"))
+                .findFirst()
+                .orElseThrow()
+                .getFormattedMessage())
+                .doesNotContain("AI temporary input decryption key is unavailable.");
     }
 
     @Test

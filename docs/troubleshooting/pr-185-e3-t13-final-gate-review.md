@@ -42,6 +42,8 @@ related_documents:
 | 복호화 진단 로그 | `AiExtractionWorkerService.java` · `PRRT_kwDOTf2xKc6Y2OKq` | 수정 필요 | retryable `TemporaryInputDecryptionException` 경로에도 예외 타입과 sanitized stack trace만 기록하고 원문 message·cause는 남기지 않도록 보강했다. 기존 key sentinel 테스트에 진단 stack frame 검증을 추가했다. |
 | auto-discovery 입력 | `performance.yml` · `PRRT_kwDOTf2xKc6Y2OKu` | 수정 필요 | course ID가 완전히 비어 있거나 공백이면 입력 검증을 건너뛰고 k6 setup의 공개 목록 auto-discovery를 사용한다. 값이 있으면 기존 2~5개·trim·빈 토큰 검증을 유지한다. |
 | artifact 증거 분리 | `performance.yml` · `PRRT_kwDOTf2xKc6Y2OKx` | 수정 필요 | natural-language와 course 결과를 별도 upload-artifact step과 artifact 이름으로 분리해 한쪽 결과 누락이 다른 쪽 결과 존재로 가려지지 않게 했다. |
+| quota 기준 신뢰성 | `third-expansion-final-gate-result.md` · 독립 재리뷰 P1 | 수정 필요 | 재기동 후 stale할 수 있는 Micrometer gauge가 아니라 KST `YearMonth` Redis quota 키를 권위 있는 사전 점검 기준으로 명시하고, gauge는 키 대조 후 보조 증거로 제한했다. |
+| 복호화 원문 회귀 | `AiExtractionWorkerServiceTest.java` · 독립 재리뷰 P2 | 수정 필요 | retryable 복호화 로그가 실제 예외 message(`AI temporary input decryption key is unavailable.`)를 포함하지 않는다는 assertion을 추가했다. |
 
 ## 3. 검증
 
