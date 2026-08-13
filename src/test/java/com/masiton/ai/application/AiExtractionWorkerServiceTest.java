@@ -156,6 +156,9 @@ class AiExtractionWorkerServiceTest {
         verify(store, never()).completeFailure(any(), any(), anyInt(), any(), any(), any());
         verifyNoInteractions(provider);
         assertSanitized(events, "temporary input key unavailable", "KEY_UNAVAILABLE", "KEY_SENTINEL");
+        assertInfrastructureDiagnostics(events, "temporary input key unavailable",
+                "com.masiton.ai.application.port.out.TemporaryInputDecryptionException",
+                "com.masiton.ai.application.AiExtractionWorkerService.execute");
     }
 
     @Test
@@ -290,12 +293,17 @@ class AiExtractionWorkerServiceTest {
 
     private static void assertInfrastructureDiagnostics(List<ILoggingEvent> events, String message,
                                                         String stackTraceFrame) {
+        assertInfrastructureDiagnostics(events, message, "java.lang.IllegalStateException", stackTraceFrame);
+    }
+
+    private static void assertInfrastructureDiagnostics(List<ILoggingEvent> events, String message,
+                                                        String exceptionType, String stackTraceFrame) {
         ILoggingEvent event = events.stream()
                 .filter(item -> item.getFormattedMessage().contains(message))
                 .findFirst()
                 .orElseThrow();
         assertThat(event.getFormattedMessage())
-                .contains("exceptionType=java.lang.IllegalStateException", "stackTrace=" + stackTraceFrame)
+                .contains("exceptionType=" + exceptionType, "stackTrace=" + stackTraceFrame)
                 .doesNotContain("CAUSE_SENTINEL");
     }
 

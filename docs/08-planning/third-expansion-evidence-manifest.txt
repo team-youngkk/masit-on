@@ -4,21 +4,21 @@ captured_at: 2026-08-13T14:42:00+09:00
 file_hash_algorithm: SHA-256
 aggregate_algorithm: UTF-8 bytes of LF-joined lines in the exact order below; no final LF; each line is relative-path<TAB>lowercase-file-SHA256
 
-.github/workflows/performance.yml	f926b3efd0248f119b5d4f78467de8d06d31794330632642a4058bdec934fe05
+.github/workflows/performance.yml	c062eee7e49a5e2bf3304df4b813c23d3facbeae1dd78894062f1f402ec73731
 docs/04-product/traceability.md	e4b42cab6ad87437115efa3bc11b30a3b2e42aa72255a0b24be475f8aa702a1a
 docs/05-specs/api-traceability.md	b19e301abe3459867d198b254f6fa6bcd67df503e16985e20069315f0027568f
 docs/05-specs/data/data-traceability.md	3534c1077db48ef31343e3271a0d49df707099519a122423dad69073db925bbd
 docs/07-adr/adr-traceability.md	3bdc461a29ca0d832bd9ffc101118b93d9058acb99c519e4a9dfda6d2080f587
-docs/08-planning/second-expansion-performance-verification.md	3ea658836f88606cb22e26856b82d501d8ee8777aa392231a9eb03b93d10ad7a
+docs/08-planning/second-expansion-performance-verification.md	4e176d86e922da3c0beb96bba26535ec100a6da0b157fd28a438701433d3cb2e
 docs/08-planning/third-expansion-task-breakdown.md	af17687b49ae34ec62ac12c3db9dee4a70a74a693da89d22121797da0bd5217b
 docs/08-planning/third-expansion-test-matrix.md	c13f02a5b7e907a54f161ec3552c1f34d4e2240e1074cea99623a3ab2b77d448
-docs/troubleshooting/pr-185-e3-t13-final-gate-review.md	8d1595959720c8f1338b68e24a9cfb4cbd55e339a1044f99f46e3d56472d5dff
+docs/troubleshooting/pr-185-e3-t13-final-gate-review.md	0bb14b19e5ee5966edf6afcfbe98c1c55437fcdfa27bca7c2cb80d2692c3a262
 perf/k6/load-profile.js	f720d1d3b594e1ed048ca7466f0c31d85bb84ce2071f2a906a73fbec147ecd88
 perf/k6/normal-load-public-read.js	eed70e9b92dfa896410379b0f93eeeb0b13ed870ad2c00dd01c57dcdc9d71329
 perf/k6/third-expansion-load.js	4e4b514caf29504c73e6c62aedf093f863fd2d85ac118ae9c906dd4def4f9810
 scripts/verify-third-expansion-evidence.ps1	777dfcd69c24dace1687902b5bf20d6736ff0730268fa0fbb9c4ea7e3133288a
-src/main/java/com/masiton/ai/application/AiExtractionWorkerService.java	b166a9445ab925f1437088ce39ff9e08e6f326639fe55c435d4594821170711a
-src/test/java/com/masiton/ai/application/AiExtractionWorkerServiceTest.java	d941c466874910dbb51f43a6061b6d89576998aed5476b97bbb907c092faf909
+src/main/java/com/masiton/ai/application/AiExtractionWorkerService.java	ebd1714fb1e16e46dbadb7f2753adc534a75e2ecac48a7a01c64f9cc1f37c99d
+src/test/java/com/masiton/ai/application/AiExtractionWorkerServiceTest.java	1fd9e373ce43ac996b9ec90bb241b4705d38b052c41fd764257cc6d1c83bfe09
 
-aggregate_sha256: 95a41e6a7d1a1f5cc77c819cbb4ca176da73fc6d91d49221d1576662d04efcf5
+aggregate_sha256: 0abc669dcc32b704d89ed48ce29ddbb18589b954662059eab79345dd066f1afe
 reproduce_powershell: "$paths = Get-Content docs/08-planning/third-expansion-evidence-manifest.txt | Where-Object { $_ -match '^[^#].*\t[0-9a-f]{64}$' } | ForEach-Object { ($_ -split \"\t\")[0] }; $manifest = ($paths | ForEach-Object { \"$_`t$((Get-FileHash -Algorithm SHA256 -LiteralPath $_).Hash.ToLowerInvariant())\" }) -join \"`n\"; $digest = [Security.Cryptography.SHA256]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($manifest)); ([BitConverter]::ToString($digest) -replace '-', '').ToLowerInvariant()"

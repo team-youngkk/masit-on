@@ -124,6 +124,10 @@ jobs:
           COURSE_RESTAURANT_IDS: ${{ inputs.course_restaurant_ids }}
         run: |
           set -euo pipefail
+          if [ -z "${COURSE_RESTAURANT_IDS//[[:space:]]/}" ]; then
+            echo "course_restaurant_ids가 비어 있어 k6 setup의 auto-discovery를 사용한다"
+            exit 0
+          fi
           if [[ "$COURSE_RESTAURANT_IDS" == ,* || "$COURSE_RESTAURANT_IDS" == *, || "$COURSE_RESTAURANT_IDS" == *,,* ]]; then
             echo "course_restaurant_ids에 빈 ID가 있다" >&2
             exit 1
@@ -261,14 +265,23 @@ jobs:
           retention-days: 14
           if-no-files-found: error
 
-      - name: 3차 확장 결과 보관
+      - name: 3차 확장 자연어 결과 보관
         if: ${{ always() && (inputs.scenario == 'third-expansion' || inputs.scenario == 'all') }}
         uses: actions/upload-artifact@v4
         with:
-          name: k6-${{ inputs.load_profile }}-third-expansion-${{ inputs.course_metric_mode }}-results
+          name: k6-${{ inputs.load_profile }}-third-expansion-natural-language-results
           path: |
             perf/k6/results/${{ inputs.load_profile }}/third-expansion/natural-language/summary.json
             perf/k6/results/${{ inputs.load_profile }}/third-expansion/natural-language/summary.txt
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: 3차 확장 코스 결과 보관
+        if: ${{ always() && (inputs.scenario == 'third-expansion' || inputs.scenario == 'all') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-${{ inputs.load_profile }}-third-expansion-course-${{ inputs.course_metric_mode }}-results
+          path: |
             perf/k6/results/${{ inputs.load_profile }}/third-expansion/course/${{ inputs.course_metric_mode }}/summary.json
             perf/k6/results/${{ inputs.load_profile }}/third-expansion/course/${{ inputs.course_metric_mode }}/summary.txt
           retention-days: 14

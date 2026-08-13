@@ -160,8 +160,9 @@ public class AiExtractionWorkerService {
                     attemptNo = nextAttempt.get();
                 } catch (TemporaryInputDecryptionException exception) {
                     if (exception.retryable()) {
-                        log.warn("AI extraction temporary input key unavailable; lease recovery will retry: jobId={}, category=KEY_UNAVAILABLE",
-                                job.jobId());
+                        log.warn("AI extraction temporary input key unavailable; lease recovery will retry: jobId={}, "
+                                        + "category=KEY_UNAVAILABLE, exceptionType={}, stackTrace={}",
+                                job.jobId(), exception.getClass().getName(), sanitizedStackTrace(exception));
                         return;
                     }
                     store.completeFailure(job.jobId(), workerId, attemptNo, attemptStartedAt, now(), "INPUT");

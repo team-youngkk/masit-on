@@ -38,12 +38,16 @@ related_documents:
 | 최종 게이트 선행조건 | `third-expansion-final-gate-result.md` · `PRRT_kwDOTf2xKc6Y1KOD` | 수정 필요 | quota-safe 코스 측정, 20 RPS 운영 기본값, max 코스가 80 RPS 전체 코스 부하를 의미하지 않는다는 점, quota/rate-limit 발생 시 성능 통과가 아니라 blocker라는 점, 현재 inspect만 수행했다는 점을 명시했다. |
 | 문서 표현 | `normal-load-public-read.js` · `PRRT_kwDOTf2xKc6Y1KOF` | 수정 필요 | 고정 수치 주석을 `LOAD.rate`·`LOAD.vus` 중심으로 일반화했다. |
 | 낡은 artifact 경로 | `second-expansion-performance-verification.md` 리뷰 본문 | 수정 필요 | 현재 workflow의 profile·scenario별 artifact 이름과 결과 경로로 문서를 동기화했다. |
+| 월별 quota 잔여량 | `third-expansion-final-gate-result.md` · `PRRT_kwDOTf2xKc6Y16m_` | 수정 필요 | Redis `YearMonth` quota 키 또는 usage/remaining 지표를 실행 전에 읽고, 잔여량이 전체 예산 이상일 때만 실행하도록 했다. permit은 provider 호출 전에 소비되므로 timeout·429·5xx와 재시도·재실행도 같은 달 잔여량을 차감하며, 부족하면 키를 초기화하지 않고 격리 환경 또는 다음 달을 사용한다. |
+| 복호화 진단 로그 | `AiExtractionWorkerService.java` · `PRRT_kwDOTf2xKc6Y2OKq` | 수정 필요 | retryable `TemporaryInputDecryptionException` 경로에도 예외 타입과 sanitized stack trace만 기록하고 원문 message·cause는 남기지 않도록 보강했다. 기존 key sentinel 테스트에 진단 stack frame 검증을 추가했다. |
+| auto-discovery 입력 | `performance.yml` · `PRRT_kwDOTf2xKc6Y2OKu` | 수정 필요 | course ID가 완전히 비어 있거나 공백이면 입력 검증을 건너뛰고 k6 setup의 공개 목록 auto-discovery를 사용한다. 값이 있으면 기존 2~5개·trim·빈 토큰 검증을 유지한다. |
+| artifact 증거 분리 | `performance.yml` · `PRRT_kwDOTf2xKc6Y2OKx` | 수정 필요 | natural-language와 course 결과를 별도 upload-artifact step과 artifact 이름으로 분리해 한쪽 결과 누락이 다른 쪽 결과 존재로 가려지지 않게 했다. |
 
 ## 3. 검증
 
 다음 검증을 수행했다.
 
-- `.\gradlew.bat test --tests com.masiton.ai.application.AiExtractionWorkerServiceTest` — 12개 통과
+- `.\gradlew.bat test --tests com.masiton.ai.application.AiExtractionWorkerServiceTest` — 12개 통과(복호화 retryable 로그 진단 검증 포함)
 - `node --check perf/k6/load-profile.js`
 - `node --check perf/k6/normal-load-public-read.js`
 - `node --check perf/k6/third-expansion-load.js`
