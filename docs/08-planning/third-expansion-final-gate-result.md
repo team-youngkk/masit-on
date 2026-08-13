@@ -5,7 +5,7 @@ decision_date: 2026-08-13
 issue: 166
 task: E3-T13
 baseline_commit: 47b90c6
-evidence_fingerprint: 3b829b25bffb7a8122ca3985556f218cfa9a33a1db7f84f46b1f2e41108de5f8
+evidence_fingerprint: f6cc13d6d89a7f1b21455c9ce45275a646506c5f88b3e85e347ae0dceb53b57b
 evidence_manifest: third-expansion-evidence-manifest.txt
 evidence_fingerprint_scope: "manifest에 고정한 E3-T13 구현·추적표 파일; manifest와 이 결과 문서 자체는 집계에서 제외"
 evidence_captured_at: 2026-08-13T14:42:00+09:00

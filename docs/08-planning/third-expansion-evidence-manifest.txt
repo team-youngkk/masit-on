@@ -12,13 +12,13 @@ docs/07-adr/adr-traceability.md	3bdc461a29ca0d832bd9ffc101118b93d9058acb99c519e4
 docs/08-planning/second-expansion-performance-verification.md	4e176d86e922da3c0beb96bba26535ec100a6da0b157fd28a438701433d3cb2e
 docs/08-planning/third-expansion-task-breakdown.md	af17687b49ae34ec62ac12c3db9dee4a70a74a693da89d22121797da0bd5217b
 docs/08-planning/third-expansion-test-matrix.md	c13f02a5b7e907a54f161ec3552c1f34d4e2240e1074cea99623a3ab2b77d448
-docs/troubleshooting/pr-185-e3-t13-final-gate-review.md	1ebb191e5b7620ad31206733c21104e3a8f0df20e24567381b743b5e5ab516eb
+docs/troubleshooting/pr-185-e3-t13-final-gate-review.md	608cd11f455630e9173464737233e41683753e00a73c4689802ee3166240dc15
 perf/k6/load-profile.js	f720d1d3b594e1ed048ca7466f0c31d85bb84ce2071f2a906a73fbec147ecd88
 perf/k6/normal-load-public-read.js	eed70e9b92dfa896410379b0f93eeeb0b13ed870ad2c00dd01c57dcdc9d71329
-perf/k6/third-expansion-load.js	4e4b514caf29504c73e6c62aedf093f863fd2d85ac118ae9c906dd4def4f9810
+perf/k6/third-expansion-load.js	5bdca1172f775ec023b4ca5dfc428ff6bb51e7e6157e9f8a4bd4738809c3cb9f
 scripts/verify-third-expansion-evidence.ps1	777dfcd69c24dace1687902b5bf20d6736ff0730268fa0fbb9c4ea7e3133288a
 src/main/java/com/masiton/ai/application/AiExtractionWorkerService.java	ebd1714fb1e16e46dbadb7f2753adc534a75e2ecac48a7a01c64f9cc1f37c99d
 src/test/java/com/masiton/ai/application/AiExtractionWorkerServiceTest.java	572f5d6a4bc3bfd0262e4dff46f9263318ef91dd57f0e7627f55e15c6aad051b
 
-aggregate_sha256: 3b829b25bffb7a8122ca3985556f218cfa9a33a1db7f84f46b1f2e41108de5f8
+aggregate_sha256: f6cc13d6d89a7f1b21455c9ce45275a646506c5f88b3e85e347ae0dceb53b57b
 reproduce_powershell: "$paths = Get-Content docs/08-planning/third-expansion-evidence-manifest.txt | Where-Object { $_ -match '^[^#].*\t[0-9a-f]{64}$' } | ForEach-Object { ($_ -split \"\t\")[0] }; $manifest = ($paths | ForEach-Object { \"$_`t$((Get-FileHash -Algorithm SHA256 -LiteralPath $_).Hash.ToLowerInvariant())\" }) -join \"`n\"; $digest = [Security.Cryptography.SHA256]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($manifest)); ([BitConverter]::ToString($digest) -replace '-', '').ToLowerInvariant()"

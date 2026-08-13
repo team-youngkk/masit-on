@@ -44,6 +44,7 @@ related_documents:
 | artifact 증거 분리 | `performance.yml` · `PRRT_kwDOTf2xKc6Y2OKx` | 수정 필요 | natural-language와 course 결과를 별도 upload-artifact step과 artifact 이름으로 분리해 한쪽 결과 누락이 다른 쪽 결과 존재로 가려지지 않게 했다. |
 | quota 기준 신뢰성 | `third-expansion-final-gate-result.md` · 독립 재리뷰 P1 | 수정 필요 | 재기동 후 stale할 수 있는 Micrometer gauge가 아니라 KST `YearMonth` Redis quota 키를 권위 있는 사전 점검 기준으로 명시하고, gauge는 키 대조 후 보조 증거로 제한했다. |
 | 복호화 원문 회귀 | `AiExtractionWorkerServiceTest.java` · 독립 재리뷰 P2 | 수정 필요 | retryable 복호화 로그가 실제 예외 message(`AI temporary input decryption key is unavailable.`)를 포함하지 않는다는 assertion을 추가했다. |
+| auto-discovery 좌표 보장 | `third-expansion-load.js` · 독립 최종 재리뷰 P2 | 수정 필요 | 목록 응답에는 좌표가 없어 첫 ID 자동 선택이 코스 422를 만들 수 있었다. 자동 선택 경로를 좌표가 계약상 포함된 `/api/restaurants/map-points` 응답으로 바꾸고 좌표가 있는 ID만 선택하도록 했다. |
 
 ## 3. 검증
 

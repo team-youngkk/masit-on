@@ -6,7 +6,8 @@
 // course는 POST /api/restaurants/course-routes만 호출하며, 측정 전용 예산으로
 // Mobility production quota·rate-limit 설정을 완화하지 않고 실행량만 제한한다.
 // Kakao Mobility는 측정 대상 환경의 WireMock Stub이어야 한다. 실제 Kakao·YouTube
-// API나 계약에 없는 내부 메트릭·health endpoint를 호출하지 않는다.
+// API나 계약에 없는 내부 메트릭·health endpoint를 호출하지 않는다. course ID를
+// 생략하면 좌표가 계약상 포함된 공개 map-points 응답에서 자동 선택한다.
 import http from 'k6/http';
 import { check } from 'k6';
 import { Counter, Rate, Trend } from 'k6/metrics';
@@ -143,13 +144,15 @@ export function setup() {
         return {};
     }
 
-    const listResponse = http.get(`${BASE_URL}/api/restaurants?page=1&size=50`);
-    if (listResponse.status !== 200) {
-        throw new Error(`공개 맛집 목록 조회 실패 (status ${listResponse.status}). 측정 대상 환경을 확인한다.`);
+    const mapPointsResponse = http.get(`${BASE_URL}/api/restaurants/map-points`);
+    if (mapPointsResponse.status !== 200) {
+        throw new Error(`좌표 포함 공개 맛집 조회 실패 (status ${mapPointsResponse.status}). 측정 대상 환경을 확인한다.`);
     }
 
-    const items = listResponse.json('items') || [];
-    const listedIds = items.map((item) => item.id).filter(Boolean);
+    const items = mapPointsResponse.json('items') || [];
+    const listedIds = items
+        .filter((item) => item.id && item.coordinate?.latitude && item.coordinate?.longitude)
+        .map((item) => item.id);
     const configuredIds = (__ENV.COURSE_RESTAURANT_IDS || '')
         .split(',')
         .map((id) => id.trim())
