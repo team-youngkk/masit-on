@@ -90,7 +90,9 @@ AI 작업 상세의 `태그 코드 보정` 입력은 첫 측정에서 전 폭 17
 
 ### 3.2 여정 상태 캡처
 
-4절 여정을 실제로 재현하며 상태별로 캡처했다. 4절 표의 모든 여정에 캡처가 하나씩 대응한다. 화면 폭은 1280px이고, 대표 화면 하나는 390px도 함께 남겼다.
+4절 여정을 실제로 재현하며 상태별로 캡처했다. 4절 표의 모든 여정에 캡처가 있다. 여정 하나에 캡처가 둘인 경우(관리자 재시도는 입력·결과)와, 4절 표에 없는 화면 캡처(신규 영상 추가 입력·접수 결과)가 있어 일대일 대응은 아니다. 신규 영상 추가는 4절 여정 실행 이후 병합된 화면이라 3.2절에만 있고 4절 판정 대상이 아니다.
+
+화면 폭은 1280px이고, 대표 화면 하나는 390px도 함께 남겼다.
 
 | 구분 | 상태 | 캡처 |
 |---|---|---|
@@ -112,6 +114,7 @@ AI 작업 상세의 `태그 코드 보정` 입력은 첫 측정에서 전 폭 17
 | 관리자 AI | 신규 영상 추가 입력 | [1280px](assets/e3-t12/journey-admin-submit-form-1280.png) |
 | 관리자 AI | 신규 영상 접수 결과 | [1280px](assets/e3-t12/journey-admin-submit-done-1280.png) |
 | 관리자 AI | 자동 확정 상세 | [1280px](assets/e3-t12/journey-admin-detail-confirmed-1280.png) |
+| 관리자 AI | 검수 사유 누락 거부 | [1280px](assets/e3-t12/journey-admin-reason-missing-1280.png) |
 | 관리자 AI | 롤백 완료 | [1280px](assets/e3-t12/journey-admin-rollback-done-1280.png) |
 | 관리자 AI | 자동 차단 상세 | [1280px](assets/e3-t12/journey-admin-detail-blocked-1280.png) |
 | 관리자 AI | 자동 차단 후보 확정 거부 | [1280px](assets/e3-t12/journey-admin-confirm-rejected-1280.png) |
@@ -221,9 +224,8 @@ java.lang.IllegalStateException: Kakao Mobility base URL is not an allowed provi
 
 | 항목 | 상태 | 이유 | 다음 단계 |
 |---|---|---|---|
-| Android Chrome·삼성 인터넷 등 모바일 실단말의 여정 | 미검증 | 3.2절 여정은 PC Chrome 실빌드에서 실행했고 모바일 폭은 화면 렌더링만 확인했다 | 담당자가 실단말에서 4절 여정을 확인한다 |
+| Android Chrome 등 모바일 실단말의 화면과 여정 | 미검증 | 실단말 확인을 하지 않았다. 3.1·3.2절 캡처는 PC Chrome·Edge 실빌드의 좁은 폭 렌더링이며 실단말 동작이 아니다 | 담당자가 실단말에서 3절 화면과 4절 여정을 확인한다 |
 | PC Edge 실빌드의 여정 확인 | 미검증 | Edge는 3.1절 초기 화면 캡처만 남겼고 4절 여정은 실행하지 않았다 | 담당자가 Edge에서 4절 여정을 확인한다 |
-| Android Chrome | 미검증 | 실단말 확인을 하지 않았다 | 담당자 단말로 확인한다 |
 | iPhone Safari | 미검증(판정 대상 아님) | [ADR-WEB-004](../07-adr/platform/web-004-supported-browser-matrix.md) | 해제 조건 충족 시 매트릭스로 되돌린다 |
 | 배포 환경(`masiton.click`)의 3차 확장 화면 | 미검증 | 이 검증은 로컬 `develop` 기준이다 | 3차 확장 배포 후 같은 여정을 확인한다 |
 | 색 대비, 보조기기 낭독 | 미검증 | 이번 확인은 DOM 측정과 키보드 순회 기반이며 대비 계산과 실제 보조기기 확인을 포함하지 않는다 | 담당자가 수동 확인 범위를 정한다 |

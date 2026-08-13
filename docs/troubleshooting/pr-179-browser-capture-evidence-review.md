@@ -90,17 +90,28 @@ related_documents:
 - 제약: 여정 상태는 로그인·입력·외부 응답이 있어야 하고, `--screenshot` 한 방으로는 만들 수 없다. Playwright를 넣으면 되지만 devDependency 추가는 기술 정책상 합의 대상이라 배제했다.
 - 해결: 설치된 PC Chrome을 `--remote-debugging-port=9222`로 띄우고 Node 내장 `WebSocket`으로 DevTools Protocol을 직접 호출했다. `Emulation.setDeviceMetricsOverride`로 폭을 지정하고, React 제어 입력은 native setter + `input` 이벤트로 채우고, `Page.captureScreenshot`으로 저장했다. 새 의존성이 없다.
 - 부수 효과: `setDeviceMetricsOverride`는 4절의 500px 최소 창 너비 제약을 받지 않는다. 검증 기록 3.1절의 iframe 우회로 만든 초기 화면 캡처는 그대로 두었고, 앞으로 좁은 폭 캡처는 이 경로가 더 간단하다.
-- 범위: 자연어 5종, 코스 6종, 관리자 11종에 390px 대표 1종을 더해 23장을 `assets/e3-t12`에 추가했다. 자연어 장애·복구는 백엔드를 내렸다 올려 만들었고, 코스 만료는 생성 5분 뒤에 찍었다.
+- 범위: 여정 캡처 목록은 검증 기록 3.2절 표를 단일 출처로 삼는다. 후속 리뷰 반영분(코스 빈 결과·입력 부족, 관리자 검수 사유 누락 거부)을 포함해 `assets/e3-t12`에 여정 캡처 26장이 있다. 자연어 장애·복구는 백엔드를 내렸다 올려 만들었고, 코스 만료는 생성 5분 뒤에 찍었다.
 - harness는 일회성 검증 도구라 저장소에 두지 않고 절차만 검증 기록 8절에 남겼다.
 
 ## 10. 후속 리뷰 반영
 
 | 스레드 | 요청 | 문제 유형 | 판단 | 처리 결과 |
 |---|---|---|---|---|
-| [r3772142965](https://github.com/team-youngkk/masit-on/pull/179#discussion_r3772142965) | 코스 `빈 결과`·`입력 부족` 캡처 추가 또는 미검증 명시 | 기타 | 수정 필요 | 두 상태를 재현해 캡처 2장 추가. 4절 여정과 3.2절 표가 일대일 대응 |
+| [r3772142965](https://github.com/team-youngkk/masit-on/pull/179#discussion_r3772142965) | 코스 `빈 결과`·`입력 부족` 캡처 추가 또는 미검증 명시 | 기타 | 수정 필요 | 두 상태를 재현해 캡처 2장 추가 |
 | [r3772155697](https://github.com/team-youngkk/masit-on/pull/179#discussion_r3772155697) | `Set-EnvValue`가 대상 줄이 없을 때 실패하거나 줄을 추가하도록 | 애플리케이션 | 수정 필요 | 줄이 없으면 파일 끝에 추가하도록 변경 |
 | [r3772155701](https://github.com/team-youngkk/masit-on/pull/179#discussion_r3772155701) | PR 본문을 문서 5.4절 갱신에 맞춰 정정 | 기타 | 수정 필요 | 본문 접수 경로 절과 미검증 목록을 문서와 일치시킴 |
 | [r3772155709](https://github.com/team-youngkk/masit-on/pull/179#discussion_r3772155709) | 3.2절 캡처의 실행 기준을 2절·6절과 구분 | 기타 | 수정 필요 | 2절에 기준 커밋 두 행 분리, `verification_date` 갱신, 6절 문구 축소 |
 | [r3772155713](https://github.com/team-youngkk/masit-on/pull/179#discussion_r3772155713) | 8절 단계 번호 중복 정정 | 기타 | 수정 필요 | 마지막 단계를 `9.`로 수정 |
 
 `Set-EnvValue`는 중단 대신 추가를 택했다. 중단은 실패를 드러내기만 하고 `.env`를 다시 복사해야 하지만, 추가는 `docker compose`가 읽는 파일을 실제로 채워 원인 자체를 없앤다. `JWT_*` 네 줄만 있는 `.env`로 실행해 네 항목이 추가되는 것과, 재실행 시 중복이 생기지 않는 것을 확인했다.
+
+## 11. 3차 리뷰 반영
+
+| 스레드 | 요청 | 문제 유형 | 판단 | 처리 결과 |
+|---|---|---|---|---|
+| [r3772017364](https://github.com/team-youngkk/masit-on/pull/179#discussion_r3772017364) | 4절 여정·관리자 화면 증거 추가 | 기타 | 이미 해결 | 9절 여정 캡처로 충족. 지적 시점이 캡처 커밋 이전이었다 |
+| [r3772155701](https://github.com/team-youngkk/masit-on/pull/179#discussion_r3772155701) | PR 본문 잔여 두 줄 정정 | 기타 | 수정 필요 | 실빌드 줄을 `Android Chrome 실단말`로 좁히고 접수 경로 공백 줄을 Webhook 항목으로 대체 |
+| [r3772102462·후속](https://github.com/team-youngkk/masit-on/pull/179#discussion_r3772102462) | `모든 여정에 캡처가 하나씩 대응` 서술이 표와 불일치 | 기타 | 수정 필요 | 검수 사유 누락 거부 캡처를 추가하고, 재시도 2장·신규 영상 추가 화면 때문에 일대일이 아님을 명시 |
+| [r3772155709·후속](https://github.com/team-youngkk/masit-on/pull/179#discussion_r3772155709) | 트러블슈팅 9절 수치 갱신 | 기타 | 수정 필요 | 수치를 지우고 검증 기록 3.2절 표를 단일 출처로 지정 |
+
+`모든 여정에 캡처가 하나씩 대응한다`는 문장은 코스 누락을 고치면서 넣었지만, 관리자 오류(검수 사유 누락) 여정이 빠져 있어 성립하지 않았다. 그 상태를 재현해 캡처를 추가하고 대응 관계 서술을 사실에 맞게 좁혔다. 6절 미검증 표의 `Android Chrome` 행이 중복이던 것도 함께 정리했다.
