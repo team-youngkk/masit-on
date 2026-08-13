@@ -1,6 +1,6 @@
 ---
 status: approved
-last_reviewed: 2026-08-03
+last_reviewed: 2026-08-13
 owner: 이우람
 related_documents:
   - ../../../01-requirements/non-functional-requirements.md
@@ -44,17 +44,36 @@ related_documents:
 
 서버 세션을 폐기하고 같은 속성으로 쿠키를 만료한 뒤 `204 No Content`를 반환한다. 이미 없거나 만료된 세션도 외부에는 같은 결과를 제공한다.
 
-## 4. 내부 검증
+## 4. 세션 gate 제외 경로
+
+제외를 허용하는 **조건**은 [ADR-DEPLOY-003](../../../07-adr/platform/deploy-003-validation-cookie-session.md) 4.3절이 정한다. 이 절은 그 조건을 충족해 실제로 제외된 경로의 **목록**을 소유한다. 제한 공개 gate(`auth_request /_verification/session`)는 `/api/`와 `/` 두 prefix `location`에 걸리며, 아래 네 경로가 그보다 먼저 매칭돼 gate를 거치지 않는다. **목록에 없는 경로는 전부 gate를 통과해야 한다.**
+
+| 경로 | 매칭 | Method | 제외 이유 | 이 경로의 인증 수단 |
+|---|---|---|---|---|
+| `/verification/login` | exact | `GET` | 세션 생성 화면 자체가 세션을 요구하면 로그인이 불가능하다 | 없다. 화면만 제공하며 세션은 이 화면에서 생성한다 |
+| `/_next/static/` | prefix | `GET` | 로그인 화면이 동작하는 데 필요한 정적 자산이다. Next.js가 경로를 빌드 시점에 정하므로 exact-match로 열거할 수 없다 | 없다. 비밀을 담지 않는 빌드 산출물만 제공한다 |
+| `/api/verification/sessions` | exact | `POST`, `DELETE` | 이 계약 자체의 진입점이므로 gate 안에 둘 수 없다 | 자격 증명(`POST`), 검증 세션 쿠키(`DELETE`) |
+| `/api/webhooks/youtube/channel-updates` | exact | `GET`, `POST` | PubSubHubbub 허브는 브라우저가 아니어서 검증 세션 쿠키를 보낼 수 없다. gate 안에 두면 구독 확인 `GET`이 `hub.challenge`를 되돌려주지 못해 구독이 성립하지 않는다 | [AI 영상 추출 API](../admin/ai-video-extraction-api.md) 4.1·4.2절이 정한다 |
+
+`/_next/static/`을 뺀 나머지는 exact-match `location`으로 둔다. **새로 추가하는 `/api/**` 제외는 exact-match만 허용한다.** prefix로 열면 그 아래 경로가 함께 열려 gate를 우회한다.
+
+Bearer 자격 증명은 어느 제외 경로에서도 백엔드로 전달하지 않는다. Nginx가 `Authorization`을 비운다. 검증 세션 쿠키는 `/api/verification/sessions`만 전달받으며(3절에 따라 Backend가 직접 폐기한다), 외부 시스템이 호출하는 `/api/webhooks/youtube/channel-updates`는 `Cookie`도 비운다.
+
+`/api/**` 제외 경로는 무인증 요청이 백엔드에 도달하므로 Nginx에서 허용 메서드, 본문 크기, 호출률을 함께 제한한다. `/api/webhooks/youtube/channel-updates`의 현재 값은 `GET`·`POST`, 128KB, 출처 IP별 10r/s(burst 20)이며 초과는 `429`다.
+
+`/api/webhooks/youtube/channel-updates`의 제외는 제한 공개 범위를 넓히지 않는다. 알림 `POST`는 공유 비밀 HMAC 없이 통과하지 못하고, 구독 확인 `GET`은 서버가 구독을 시작할 때 발급한 검증 Token을 아는 호출자만 통과한다. **다만 `GET`의 방어는 검증 Token 하나에만 의존한다.** 서명 검증과 달리 페이로드 무결성 검사가 없으므로 Token 유출은 곧 구독 확인 위조를 뜻한다.
+
+## 5. 내부 검증
 
 Nginx `auth_request` 전용 검증 경로는 외부 API가 아니다. 인터넷에서 직접 접근할 수 없는 `internal` location을 통해 Spring Boot Adapter에 전달한다. 유효 세션은 `204`, 누락·변조·만료는 `401`, Redis 장애는 `503`으로 구분하며 응답 본문과 헤더에 세션 정보를 넣지 않는다.
 
-## 5. 접근 실패 표현
+## 6. 접근 실패 표현
 
 - 화면 요청: 원래 상대 경로를 안전한 서버 측 값으로 보존하고 `/verification/login`으로 이동한다.
 - API 요청: `401 VALIDATION_ACCESS_REQUIRED` 공통 JSON 오류를 반환하며 로그인 HTML로 redirect하지 않는다.
 - Basic Auth challenge와 `WWW-Authenticate: Basic`은 반환하지 않는다.
 
-## 6. 완료 조건
+## 7. 완료 조건
 
 - 한 번 로그인한 브라우저에서 7일 동안 페이지 이동·새로고침·회원 및 관리자 Bearer 요청에 검증 로그인을 다시 요구하지 않는다.
 - 회원·관리자 로그인·로그아웃은 검증 쿠키를 변경하지 않는다.
