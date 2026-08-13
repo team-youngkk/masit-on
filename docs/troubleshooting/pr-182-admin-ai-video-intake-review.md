@@ -45,7 +45,7 @@ related_documents:
 | `ai-video-extractions-coordination.ts:22` | UTF-16 길이 검증이 다른 프론트 검증기와 다름 | 계약 검토 | 수정 불필요 | 백엔드 Java `String.length()`와 20,000자 계약이 일치해 이번 범위에서 유지 | 백엔드 계약·기존 경계 테스트 대조 |
 | `AiVideoExtractionList.tsx:74` | 새 작업과 무관한 필터에서도 성공 후 목록을 재조회함 | 효율성 | 수정 불필요 | 현재 필터를 기준으로 최신 목록을 보장하는 의도된 동작이며 기능 정확성 변경과 분리 | 새 필터 effect 경로 확인 |
 | CI `31590500905` | 백엔드 전체 테스트에서 레거시 세션 복구 큐 테스트가 실패함 | CI / 테스트 격리 | 수정 필요 | 테스트 스케줄러를 격리하고 Redis 실제 시각에 맞는 만료 테스트 시각을 사용 | 로컬에서 동일 실패 재현 후 수정 |
-| [백엔드 테스트 범위](https://github.com/team-youngkk/masit-on/pull/182#discussion_r3771213551) | Redis 테스트 격리 변경이 프론트 PR 범위와 분리되지 않고 본문에도 누락됨 | Git | 수정 필요 | 이번 PR에 CI 차단 원인과 백엔드 테스트 변경을 명시하고, 별도 PR로 나누지 않은 이유를 본문에 반영 | PR 본문 갱신 필요; 로컬 변경은 `RedisRefreshTokenStoreIntegrationTest`에 한정 |
+| [백엔드 테스트 범위](https://github.com/team-youngkk/masit-on/pull/182#discussion_r3771213551) | Redis 테스트 격리 변경이 프론트 PR 범위와 분리되지 않고 본문에도 누락됨 | Git | 수정 필요 | 이번 PR에 CI 차단 원인과 백엔드 테스트 변경을 명시하고, 별도 PR로 나누지 않은 이유를 본문에 반영 | PR 본문 갱신 및 CI run `31654186738` 통과 |
 | [Redis 시각 픽스처](https://github.com/team-youngkk/masit-on/pull/182#discussion_r3771213558) | `Instant.now().minusSeconds(5)`와 `plusSeconds(10)`의 근거가 없고 자매 테스트와 기준이 다름 | 애플리케이션 | 수정 필요 | `REVOKE_ALL_SCRIPT`의 Redis 실제 시각 사용을 주석으로 설명하고 `Instant.now()` 기준으로 단순화 | Docker 미사용 환경에서는 Testcontainers 초기화 단계에서 실행 불가 |
 | [Node 실험 플래그](https://github.com/team-youngkk/masit-on/pull/182#discussion_r3771213562) | 필수 CI 경로가 `--experimental-transform-types`에 의존함 | 애플리케이션 | 수정 필요 | `AdminApiError` parameter property를 명시적 필드 대입으로 바꾸고 API 테스트를 기존 Node 테스트 프로세스에 통합 | `npm.cmd test`, `npm.cmd run typecheck` |
 | [테스트 수치](https://github.com/team-youngkk/masit-on/pull/182#discussion_r3771213567) | 기록의 테스트 수치가 실행 결과와 불일치함 | 기타 | 수정 필요 | coordination·API 테스트를 합산한 실제 결과 184개로 통일 | `npm.cmd test` 결과 `184 pass` |
@@ -86,7 +86,7 @@ related_documents:
 | CI run `31590500905` job·로그 확인 | 프론트엔드 빌드·타입 검사는 통과. 백엔드는 `RedisRefreshTokenStoreIntegrationTest.memberSession_레거시만료시각_전체폐기_복구큐선적재`에서 실제 결과 `[]`와 기대 세션 ID가 달라 실패 | 로컬에서 동일 실패를 재현. 테스트 컨텍스트에서 스케줄러 bean을 mock하고, Redis 실제 시각보다 충분히 미래인 실행 시점 기반 TTL을 사용 |
 | `node --test` 플래그 제거 전후 실행 | `AdminApiError` parameter property 때문에 실험 플래그가 필요했으나 명시적 필드 대입 후 일반 strip-only 실행이 통과 | 테스트 파일을 별도 프로세스로 유지할 이유가 없어 기존 테스트 명령에 통합 |
 | Redis 통합 테스트 로컬 실행 | 테스트 코드가 실행되기 전에 Testcontainers가 Docker 환경을 찾지 못해 초기화 실패 | 코드 변경 검증은 완료하지 못했으며 Docker가 있는 CI 재실행이 필요 |
-| PR 본문·현재 diff 대조 | 백엔드 테스트 변경과 Gradle 검증 명령이 PR 본문에는 누락 | 본문에 변경 범위·분리하지 않은 이유·Gradle 결과를 추가해야 함 |
+| PR 본문·현재 diff 대조 | 백엔드 테스트 변경과 Gradle 검증 명령이 PR 본문에는 누락 | 본문에 변경 범위·분리하지 않은 이유·Gradle 결과를 추가하고 원격 반영 완료 |
 
 ## 6. 최종 해결
 
@@ -113,7 +113,7 @@ related_documents:
 | `npm.cmd run build` | 통과 | 테스트 184개·타입 검사·Next.js production build 성공; 로컬 Node 24.14.0으로 `engines` 경고가 있어 고정 CI 런타임 재확인 필요 |
 | `gradlew.bat test --tests RedisRefreshTokenStoreIntegrationTest` | 실행 불가 | Testcontainers가 로컬 Docker 환경을 찾지 못해 초기화 단계에서 실패; 테스트 코드 실패와 구분 |
 | `git diff --check` | 통과 | 변경 파일 공백 오류 없음 |
-| 기존 head의 GitHub Actions run `31599577086` | 통과 | 현재 로컬 후속 변경 전 head 기준 결과이며, 새 변경 push 후 CI 재확인 필요 |
+| GitHub Actions run `31654186738` | 통과 | 후속 커밋 `d4a54ca` 기준 프론트엔드·백엔드 필수 job 모두 성공 |
 
 ## 8. 재발 방지 및 다음 확인
 
@@ -122,7 +122,7 @@ related_documents:
 - 멱등키·오류 매핑·공통 입력 스타일은 재사용 가능한 모듈을 우선 사용해 도메인별 복사 구현을 만들지 않는다.
 - 목록 재조회는 캡처된 필터를 직접 호출하지 않고 현재 필터 effect와 request generation을 통해 실행한다.
 - 외부 AI 입력 화면은 요청 전에 전송 범위·보존 기간·삭제 시점·미보존 데이터를 함께 표시하고, 계약 문구가 바뀌면 PRD·와이어프레임과 화면을 대조한다.
-- 새 head push 뒤 프론트·백엔드 CI를 다시 확인한다. 백엔드 실패가 계속되면 실패 테스트와 인프라 연결 오류를 분리해 후속 PR로 처리한다.
+- 새 head push 뒤 프론트·백엔드 CI를 다시 확인한다. 백엔드 실패가 계속되면 실패 테스트와 인프라 연결 오류를 분리해 후속 PR로 처리한다. 이번 후속 커밋에서는 run `31654186738`로 확인했다.
 - 로컬 Docker가 없는 경우 Redis Testcontainers 결과를 코드 수정 실패로 해석하지 않고, CI 또는 Docker가 활성화된 환경에서 동일 명령을 재실행한다.
 
 ## 9. 도입 전후 비교 지표
@@ -138,4 +138,4 @@ related_documents:
 
 ## 10. 남은 사항
 
-- 로컬 프론트 테스트·typecheck·production build는 통과했다. Redis 통합 테스트는 로컬 Docker 부재로 실행하지 못했다. 현재 변경을 원격에 반영한 뒤 PR 본문 갱신, 스레드 답글·resolve와 GitHub Actions 재실행이 남아 있다.
+- 로컬 프론트 테스트·typecheck·production build와 원격 CI run `31654186738`의 프론트·백엔드 필수 job이 통과했다. Redis 통합 테스트의 로컬 실행은 Docker 부재로 확인하지 못했지만 CI에서 통과했다. 후속 리뷰 7개 스레드에 인라인 답글을 남기고 모두 resolve했으며, PR 본문도 변경 범위와 검증 결과에 맞춰 갱신했다.
