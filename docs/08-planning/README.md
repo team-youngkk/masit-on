@@ -12,6 +12,7 @@ related_documents:
   - third-expansion-test-matrix.md
   - third-expansion-implementation-plan.md
   - third-expansion-task-breakdown.md
+  - third-expansion-browser-verification.md
   - expansion-2-implementation-plan.md
   - expansion-2-task-breakdown.md
   - ../00-overview/scope.md
@@ -43,5 +44,6 @@ related_documents:
 | [3차 확장 테스트 추적표](third-expansion-test-matrix.md) | `FR`·`BR`·`NFR`·`EVAL`을 자동화·브라우저·운영 증거와 연결 |
 | [3차 확장 구현 계획](third-expansion-implementation-plan.md) | AI 자동 등록·태그 생성·예외 보정·Worker·평가·운영 게이트의 구현 순서와 Task |
 | [3차 확장 E3 Task 분해](third-expansion-task-breakdown.md) | WS-14~WS-16·QUALITY-EVAL·OPS의 담당·선행·테스트·완료 증거 |
+| [3차 확장 브라우저 검증 기록](third-expansion-browser-verification.md) | `TST-E3-E2E-001`의 확인 환경·화면 폭·키보드·사용자 여정 결과와 미검증으로 남는 항목 |
 
 구현 계획은 제품 범위, 요구사항, API·데이터 명세와 ADR을 변경하지 않는다. 상위 문서가 바뀌면 영향받는 Task와 완료 조건을 함께 갱신한다.

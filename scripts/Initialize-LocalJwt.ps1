@@ -16,7 +16,15 @@ function Get-EnvValue([string]$Content, [string]$Name) {
 }
 
 function Set-EnvValue([string]$Content, [string]$Name, [string]$Value) {
-    return [regex]::Replace($Content, "(?m)^$([regex]::Escape($Name))=.*$", "$Name=$Value")
+    $pattern = "(?m)^$([regex]::Escape($Name))=.*$"
+    # 대상 줄이 없으면 치환은 조용히 아무것도 하지 않는다. 그러면 세션 변수만 채워져
+    # bootRun은 되고 .env만 읽는 docker compose는 빈 값으로 기동해 원인을 찾기 어렵다.
+    # 예전 .env처럼 줄이 없는 경우를 위해 끝에 추가한다.
+    if (-not [regex]::IsMatch($Content, $pattern)) {
+        $separator = if ($Content.EndsWith("`n")) { '' } else { "`n" }
+        return $Content + $separator + "$Name=$Value`n"
+    }
+    return [regex]::Replace($Content, $pattern, "$Name=$Value")
 }
 
 function New-LocalJwtKeyPair {
@@ -58,7 +66,7 @@ class GenerateLocalJwt {
     }
 }
 
-function New-LocalMemberActionMailKey {
+function New-LocalAesKey {
     $key = [byte[]]::new(32)
     $generator = [System.Security.Cryptography.RandomNumberGenerator]::Create()
     try {
@@ -103,8 +111,20 @@ if ([string]::IsNullOrWhiteSpace($memberActionMailKeyId)) {
 
 $memberActionMailKey = Get-EnvValue $content 'MEMBER_ACTION_MAIL_ACTIVE_KEY'
 if ([string]::IsNullOrWhiteSpace($memberActionMailKey)) {
-    $memberActionMailKey = New-LocalMemberActionMailKey
+    $memberActionMailKey = New-LocalAesKey
     $content = Set-EnvValue $content 'MEMBER_ACTION_MAIL_ACTIVE_KEY' $memberActionMailKey
+}
+
+$aiTemporaryInputKeyId = Get-EnvValue $content 'AI_TEMPORARY_INPUT_KEY_ID'
+if ([string]::IsNullOrWhiteSpace($aiTemporaryInputKeyId)) {
+    $aiTemporaryInputKeyId = 'local-1'
+    $content = Set-EnvValue $content 'AI_TEMPORARY_INPUT_KEY_ID' $aiTemporaryInputKeyId
+}
+
+$aiTemporaryInputKey = Get-EnvValue $content 'AI_TEMPORARY_INPUT_KEY'
+if ([string]::IsNullOrWhiteSpace($aiTemporaryInputKey)) {
+    $aiTemporaryInputKey = New-LocalAesKey
+    $content = Set-EnvValue $content 'AI_TEMPORARY_INPUT_KEY' $aiTemporaryInputKey
 }
 
 [System.IO.File]::WriteAllText(
@@ -118,5 +138,7 @@ $env:JWT_PRIVATE_KEY_PEM = $privateKey
 $env:JWT_PUBLIC_KEY_PEM = $publicKey
 $env:MEMBER_ACTION_MAIL_ACTIVE_KEY_ID = $memberActionMailKeyId
 $env:MEMBER_ACTION_MAIL_ACTIVE_KEY = $memberActionMailKey
+$env:AI_TEMPORARY_INPUT_KEY_ID = $aiTemporaryInputKeyId
+$env:AI_TEMPORARY_INPUT_KEY = $aiTemporaryInputKey
 
-Write-Host '로컬 JWT와 회원 Action 메일 AES 키를 준비했고 현재 PowerShell 세션에 설정했습니다.'
+Write-Host '로컬 JWT와 회원 Action 메일·AI 보완 텍스트 AES 키를 준비했고 현재 PowerShell 세션에 설정했습니다.'

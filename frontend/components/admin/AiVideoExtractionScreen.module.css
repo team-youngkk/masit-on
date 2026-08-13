@@ -2,7 +2,7 @@
 .toolbar, .filterRow, .pagination, .meta, .actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
 .toolbar { justify-content: space-between; }
 .filterRow label, .retryForm label { display: grid; gap: var(--space-2); font-size: var(--font-size-sm); font-weight: 600; }
-.filterRow select, .retryForm input, .retryForm textarea, .form input, .form textarea { min-height: var(--control-min-height); padding: var(--space-2) var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); font: inherit; }
+.filterRow select, .retryForm input, .retryForm textarea, .form input, .form textarea, .candidate input { min-height: var(--control-min-height); padding: var(--space-2) var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); font: inherit; }
 .retryForm textarea, .form textarea { resize: vertical; }
 .panel, .card, .candidate { padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
 .form label { font-size: var(--font-size-sm); font-weight: 600; }
