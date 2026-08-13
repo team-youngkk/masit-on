@@ -9,7 +9,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import java.net.URI;
-import java.lang.reflect.Method;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -191,7 +190,8 @@ class AiExtractionWorkerServiceTest {
                 new ObjectMapper().readTree("{\"resultCompleteness\":\"COMPLETE\"}"), "req-1");
         when(provider.extract(any())).thenReturn(result);
         when(processor.process(any(), any(), anyInt(), any(), any(), any()))
-                .thenThrow(new IllegalStateException("PROVIDER_RESPONSE_SENTINEL"));
+                .thenThrow(new IllegalStateException("PROVIDER_RESPONSE_SENTINEL",
+                        new IllegalArgumentException("CAUSE_SENTINEL")));
 
         Logger logger = (Logger) LoggerFactory.getLogger(AiExtractionWorkerService.class);
         ListAppender<ILoggingEvent> appender = new ListAppender<>();
@@ -209,7 +209,9 @@ class AiExtractionWorkerServiceTest {
                 .orElseThrow();
         assertThat(event.getFormattedMessage())
                 .contains("category=INFRASTRUCTURE")
-                .doesNotContain("PROVIDER_RESPONSE_SENTINEL");
+                .contains("exceptionType=java.lang.IllegalStateException")
+                .contains("stackTrace=com.masiton.ai.application.AiExtractionWorkerService.execute")
+                .doesNotContain("PROVIDER_RESPONSE_SENTINEL", "CAUSE_SENTINEL");
         assertThat(event.getThrowableProxy()).isNull();
     }
 
@@ -217,22 +219,27 @@ class AiExtractionWorkerServiceTest {
     @DisplayName("폴링 인프라 예외의 원문과 원인은 일반 로그에 남기지 않는다")
     void poll_폴링예외_정규화범주만로그에남긴다() {
         when(store.quotaUsage(any(java.time.OffsetDateTime.class)))
-                .thenThrow(new IllegalStateException("POLL_SENTINEL"));
+                .thenThrow(new IllegalStateException("POLL_SENTINEL",
+                        new IllegalArgumentException("CAUSE_SENTINEL")));
 
         List<ILoggingEvent> events = captureLogs(service::poll);
 
         assertSanitized(events, "polling failed", "INFRASTRUCTURE", "POLL_SENTINEL");
+        assertInfrastructureDiagnostics(events, "polling failed", "com.masiton.ai.application.AiExtractionWorkerService.poll");
     }
 
     @Test
     @DisplayName("heartbeat 예외의 원문과 원인은 일반 로그에 남기지 않는다")
     void heartbeat_예외_정규화범주만로그에남긴다() {
         when(store.heartbeat(any(), any(), any(), any()))
-                .thenThrow(new IllegalStateException("HEARTBEAT_SENTINEL"));
+                .thenThrow(new IllegalStateException("HEARTBEAT_SENTINEL",
+                        new IllegalArgumentException("CAUSE_SENTINEL")));
 
-        List<ILoggingEvent> events = captureLogs(() -> invokeHeartbeat(UUID.randomUUID()));
+        List<ILoggingEvent> events = captureLogs(() -> service.heartbeat(UUID.randomUUID()));
 
         assertSanitized(events, "heartbeat failed", "INFRASTRUCTURE", "HEARTBEAT_SENTINEL");
+        assertInfrastructureDiagnostics(events, "heartbeat failed",
+                "com.masiton.ai.application.AiExtractionWorkerService.heartbeat");
     }
 
     @Test
@@ -281,14 +288,15 @@ class AiExtractionWorkerServiceTest {
         assertThat(event.getThrowableProxy()).isNull();
     }
 
-    private void invokeHeartbeat(UUID jobId) {
-        try {
-            Method method = AiExtractionWorkerService.class.getDeclaredMethod("heartbeat", UUID.class);
-            method.setAccessible(true);
-            method.invoke(service, jobId);
-        } catch (ReflectiveOperationException exception) {
-            throw new AssertionError(exception);
-        }
+    private static void assertInfrastructureDiagnostics(List<ILoggingEvent> events, String message,
+                                                        String stackTraceFrame) {
+        ILoggingEvent event = events.stream()
+                .filter(item -> item.getFormattedMessage().contains(message))
+                .findFirst()
+                .orElseThrow();
+        assertThat(event.getFormattedMessage())
+                .contains("exceptionType=java.lang.IllegalStateException", "stackTrace=" + stackTraceFrame)
+                .doesNotContain("CAUSE_SENTINEL");
     }
 
     private static AiExtractionWorkerProperties properties() {

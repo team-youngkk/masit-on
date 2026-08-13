@@ -31,7 +31,16 @@ on:
         required: true
         type: string
       scenario:
-        description: '실행할 부하 시나리오'
+        description: '실행할 성능 시나리오'
+        required: true
+        default: all
+        type: choice
+        options:
+          - public-read
+          - third-expansion
+          - all
+      load_profile:
+        description: '부하 프로필'
         required: true
         default: normal
         type: choice
@@ -48,7 +57,7 @@ on:
           - external
       course_restaurant_ids:
         description: '좌표가 준비된 공개 맛집 ID 2~5개(쉼표 구분, 코스 경로 측정용)'
-        required: true
+        required: false
         type: string
       notes:
         description: '실행 메모 (측정 환경·데이터 상태 등). 결과 요약에 남는다'
@@ -70,9 +79,14 @@ jobs:
       # 팀이 확정한 부하 도구 버전이다. 기술 정책 3절에 따라 `latest`를 쓰지 않는다.
       K6_VERSION: '2.1.0'
       BASE_URL: ${{ inputs.base_url }}
-      LOAD_PROFILE: ${{ inputs.scenario }}
+      LOAD_PROFILE: ${{ inputs.load_profile }}
+      RUN_SCENARIO: ${{ inputs.scenario }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: 3차 확장 증적 manifest 정적 검증
+        shell: pwsh
+        run: pwsh -NoLogo -NoProfile -File ./scripts/verify-third-expansion-evidence.ps1 -RepositoryRoot "$env:GITHUB_WORKSPACE"
 
       # 대상 URL은 자유 문자열 입력이라 쉘 명령으로 흘러 들어가기 전에 형식을 검사한다.
       # `checkout` 직후에 검증하여 잘못된 입력이나 제한 공개 운영 환경 대상 실행을
@@ -104,6 +118,30 @@ jobs:
           esac
           echo "형식 검증 통과"
 
+      - name: 코스 측정 입력 검증
+        if: ${{ inputs.scenario == 'third-expansion' || inputs.scenario == 'all' }}
+        env:
+          COURSE_RESTAURANT_IDS: ${{ inputs.course_restaurant_ids }}
+        run: |
+          set -euo pipefail
+          if [[ "$COURSE_RESTAURANT_IDS" == ,* || "$COURSE_RESTAURANT_IDS" == *, || "$COURSE_RESTAURANT_IDS" == *,,* ]]; then
+            echo "course_restaurant_ids에 빈 ID가 있다" >&2
+            exit 1
+          fi
+          IFS=',' read -r -a course_ids <<< "$COURSE_RESTAURANT_IDS"
+          if [ "${#course_ids[@]}" -lt 2 ] || [ "${#course_ids[@]}" -gt 5 ]; then
+            echo "course_restaurant_ids는 2~5개의 공개 맛집 ID를 쉼표로 구분해 입력해야 한다" >&2
+            exit 1
+          fi
+          for raw_id in "${course_ids[@]}"; do
+            trimmed_id="$(printf '%s' "$raw_id" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+            if [ -z "$trimmed_id" ]; then
+              echo "course_restaurant_ids에 빈 ID가 있다" >&2
+              exit 1
+            fi
+          done
+          echo "코스 측정 입력 검증 통과 (${#course_ids[@]}개)"
+
       # 서드파티 setup 액션을 쓰지 않는다. 공식 릴리즈 tarball을 버전 고정해 받는 쪽이
       # 의존성이 적고 무엇이 설치되는지 워크플로 안에서 그대로 읽힌다.
       #
@@ -133,21 +171,33 @@ jobs:
       # threshold를 위반하면 k6가 종료 코드 99로 끝나고 이 step이 실패하므로 job도
       # 실패한다. 사람 판단 없이 통과·실패가 갈리는 것이 이 워크플로의 목적이다.
       # LOAD_PROFILE은 workflow_dispatch의 choice 입력으로만 정한다.
-      - name: 공개 조회 시나리오 실행 (${{ inputs.scenario }})
-        run: k6 run perf/k6/normal-load-public-read.js
+      - name: 공개 조회 시나리오 실행 (${{ inputs.load_profile }})
+        if: ${{ inputs.scenario == 'public-read' || inputs.scenario == 'all' }}
+        run: k6 run --env BASE_URL="$BASE_URL" --env LOAD_PROFILE="$LOAD_PROFILE" --env RESULT_DIR="perf/k6/results/${{ inputs.load_profile }}/public-read" perf/k6/normal-load-public-read.js
         env:
           BASE_URL: ${{ inputs.base_url }}
-          LOAD_PROFILE: ${{ inputs.scenario }}
-          RESULT_DIR: perf/k6/results/${{ inputs.scenario }}/public-read
+          LOAD_PROFILE: ${{ inputs.load_profile }}
+          RESULT_DIR: perf/k6/results/${{ inputs.load_profile }}/public-read
 
-      - name: 3차 확장 시나리오 실행 (${{ inputs.scenario }} / ${{ inputs.course_metric_mode }})
-        run: k6 run perf/k6/third-expansion-load.js
+      - name: 3차 확장 자연어 시나리오 실행 (${{ inputs.load_profile }})
+        if: ${{ inputs.scenario == 'third-expansion' || inputs.scenario == 'all' }}
+        run: k6 run --env BASE_URL="$BASE_URL" --env LOAD_PROFILE="$LOAD_PROFILE" --env SCENARIO=public-read --env RESULT_DIR="perf/k6/results/${{ inputs.load_profile }}/third-expansion/natural-language" perf/k6/third-expansion-load.js
         env:
           BASE_URL: ${{ inputs.base_url }}
-          LOAD_PROFILE: ${{ inputs.scenario }}
+          LOAD_PROFILE: ${{ inputs.load_profile }}
+          SCENARIO: public-read
+          RESULT_DIR: perf/k6/results/${{ inputs.load_profile }}/third-expansion/natural-language
+
+      - name: 3차 확장 코스 시나리오 실행 (${{ inputs.load_profile }} / ${{ inputs.course_metric_mode }})
+        if: ${{ inputs.scenario == 'third-expansion' || inputs.scenario == 'all' }}
+        run: k6 run --env BASE_URL="$BASE_URL" --env LOAD_PROFILE="$LOAD_PROFILE" --env SCENARIO=course --env COURSE_METRIC_MODE="$COURSE_METRIC_MODE" --env COURSE_RESTAURANT_IDS="$COURSE_RESTAURANT_IDS" --env RESULT_DIR="perf/k6/results/${{ inputs.load_profile }}/third-expansion/course/${{ inputs.course_metric_mode }}" perf/k6/third-expansion-load.js
+        env:
+          BASE_URL: ${{ inputs.base_url }}
+          LOAD_PROFILE: ${{ inputs.load_profile }}
+          SCENARIO: course
           COURSE_METRIC_MODE: ${{ inputs.course_metric_mode }}
           COURSE_RESTAURANT_IDS: ${{ inputs.course_restaurant_ids }}
-          RESULT_DIR: perf/k6/results/${{ inputs.scenario }}/third-expansion/${{ inputs.course_metric_mode }}
+          RESULT_DIR: perf/k6/results/${{ inputs.load_profile }}/third-expansion/course/${{ inputs.course_metric_mode }}
 
       - name: 결과 요약 기록
         if: always()
@@ -157,14 +207,34 @@ jobs:
           # 읽으므로, 게이트 없이 8080을 노출한 측정 인스턴스의 주소를 남기지 않는다.
           # 어느 환경을 쟀는지는 검증 결과 문서에 기록한다.
           {
-            echo "## 성능 결과 (${LOAD_PROFILE})"
+            echo "## 성능 결과 (${LOAD_PROFILE}; ${RUN_SCENARIO})"
             echo
             echo "- k6: v${K6_VERSION}"
             echo "- 메모: ${NOTES:-(없음)}"
             echo
-            for summary in \
-              "perf/k6/results/${LOAD_PROFILE}/public-read/summary.txt" \
-              "perf/k6/results/${LOAD_PROFILE}/third-expansion/${{ inputs.course_metric_mode }}/summary.txt"; do
+            case "$RUN_SCENARIO" in
+              public-read)
+                summaries=("perf/k6/results/${LOAD_PROFILE}/public-read/summary.txt")
+                ;;
+              third-expansion)
+                summaries=(
+                  "perf/k6/results/${LOAD_PROFILE}/third-expansion/natural-language/summary.txt"
+                  "perf/k6/results/${LOAD_PROFILE}/third-expansion/course/${{ inputs.course_metric_mode }}/summary.txt"
+                )
+                ;;
+              all)
+                summaries=(
+                  "perf/k6/results/${LOAD_PROFILE}/public-read/summary.txt"
+                  "perf/k6/results/${LOAD_PROFILE}/third-expansion/natural-language/summary.txt"
+                  "perf/k6/results/${LOAD_PROFILE}/third-expansion/course/${{ inputs.course_metric_mode }}/summary.txt"
+                )
+                ;;
+              *)
+                echo "지원하지 않는 실행 시나리오: $RUN_SCENARIO" >&2
+                exit 1
+                ;;
+            esac
+            for summary in "${summaries[@]}"; do
               if [ -f "$summary" ]; then
                 echo '```text'
                 cat "$summary"
@@ -177,17 +247,29 @@ jobs:
         env:
           NOTES: ${{ inputs.notes }}
 
-      # 실패한 실행의 결과가 더 필요하므로 항상 보관한다.
+      # 선택한 실행의 결과만 보관한다. 선택하지 않은 실행의 파일이 없는 것은
+      # 정상적인 workflow_dispatch 경로이므로 해당 upload step 자체를 건너뛴다.
       # 보관 기간은 ci.yml의 테스트 리포트와 같은 14일로 맞춘다.
-      - name: 결과 보관
-        if: always()
+      - name: 공개 조회 결과 보관
+        if: ${{ always() && (inputs.scenario == 'public-read' || inputs.scenario == 'all') }}
         uses: actions/upload-artifact@v4
         with:
-          name: k6-${{ inputs.scenario }}-load-results
+          name: k6-${{ inputs.load_profile }}-public-read-results
           path: |
-            perf/k6/results/${{ inputs.scenario }}/public-read/summary.json
-            perf/k6/results/${{ inputs.scenario }}/public-read/summary.txt
-            perf/k6/results/${{ inputs.scenario }}/third-expansion/${{ inputs.course_metric_mode }}/summary.json
-            perf/k6/results/${{ inputs.scenario }}/third-expansion/${{ inputs.course_metric_mode }}/summary.txt
+            perf/k6/results/${{ inputs.load_profile }}/public-read/summary.json
+            perf/k6/results/${{ inputs.load_profile }}/public-read/summary.txt
           retention-days: 14
-          if-no-files-found: warn
+          if-no-files-found: error
+
+      - name: 3차 확장 결과 보관
+        if: ${{ always() && (inputs.scenario == 'third-expansion' || inputs.scenario == 'all') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-${{ inputs.load_profile }}-third-expansion-${{ inputs.course_metric_mode }}-results
+          path: |
+            perf/k6/results/${{ inputs.load_profile }}/third-expansion/natural-language/summary.json
+            perf/k6/results/${{ inputs.load_profile }}/third-expansion/natural-language/summary.txt
+            perf/k6/results/${{ inputs.load_profile }}/third-expansion/course/${{ inputs.course_metric_mode }}/summary.json
+            perf/k6/results/${{ inputs.load_profile }}/third-expansion/course/${{ inputs.course_metric_mode }}/summary.txt
+          retention-days: 14
+          if-no-files-found: error

@@ -1,12 +1,12 @@
 // NFR-PERFORMANCE-006 공개 조회 부하 검증 시나리오.
 // 대상은 이슈 #148 완료 조건인 공개 조회 2종(인기 맛집, 공개 큐레이션)이며,
 // 큐레이션은 목록·상세가 별도 경로라 실제로 호출하는 엔드포인트는 셋이다.
-// LOAD_PROFILE=normal은 50명·20 RPS, LOAD_PROFILE=max는 200명·80 RPS다.
+// 부하 프로필의 요청률·VU 상한은 공용 LOAD.rate·LOAD.vus에서 선택한다.
 //
 // 판정 기준은 NFR-PERFORMANCE-006이 원문이다.
 //   - 엔드포인트별 p95 500ms 이하
 //   - 서버 오류율(5xx) 1% 미만
-// 부하 모델(50명·20 RPS)과 측정 환경은 RV-NFR-011, 기준 데이터 규모는 RV-NFR-002가 정한다.
+// 부하 모델(프로필별 LOAD.vus·LOAD.rate)과 측정 환경은 RV-NFR-011, 기준 데이터 규모는 RV-NFR-002가 정한다.
 //
 // p95 측정 대상은 "애플리케이션 서버 내부 처리" 시간이다. 이 스크립트가 재는
 // http_req_duration은 DNS·TCP·TLS를 제외한 값이긴 하나 요청 전송과 응답 수신의
@@ -22,19 +22,19 @@ import http from 'k6/http';
 import exec from 'k6/execution';
 import { check } from 'k6';
 import { Counter, Rate, Trend } from 'k6/metrics';
+import {
+    LOAD,
+    LOAD_PROFILE,
+    loadScenarios,
+    metricValue,
+    formatMetric,
+    formatPercent,
+    thresholdVerdict,
+    writeSummary,
+} from './load-profile.js';
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
 const RESULT_DIR = __ENV.RESULT_DIR || 'perf/k6/results';
-const LOAD_PROFILE = __ENV.LOAD_PROFILE || 'normal';
-const LOAD = {
-    normal: { label: '정상 부하', rate: 20, vus: 50 },
-    max: { label: '최대 부하', rate: 80, vus: 200 },
-}[LOAD_PROFILE];
-
-if (!LOAD) {
-    throw new Error(`지원하지 않는 LOAD_PROFILE=${LOAD_PROFILE}. normal 또는 max를 사용한다.`);
-}
-
 // 엔드포인트별로 따로 판정해야 하므로 Trend를 엔드포인트마다 둔다. 세 경로의 비용이
 // 서로 달라 하나로 합치면 느린 쪽이 빠른 쪽에 가려진다.
 // 워밍업 구간에서는 이 Trend에 값을 넣지 않는다. threshold 판정 대상을 측정 구간으로
@@ -57,7 +57,7 @@ const unexpectedStatus = new Counter('unexpected_status_count');
 const measuredSamples = new Counter('measured_samples');
 
 export const options = {
-    // 계약값은 RV-NFR-011의 정상 부하 50명·20 RPS 또는 최대 부하 200명·80 RPS다.
+    // 계약값은 RV-NFR-011의 LOAD.vus·LOAD.rate 프로필이다.
     // 두 값을 문자 그대로 동시에
     // 성립시킬 수는 없다. 도착률과 동시 활성 VU의 관계는 Little's law로
     // `LOAD.rate × 평균 응답시간`이다. 활성 VU 상한을 모두 채우려면 평균 응답이
@@ -73,35 +73,12 @@ export const options = {
     // 재지 못한다.
     //
     // preAllocatedVUs와 maxVUs를 같은 값으로 둔다. maxVUs를 크게 잡으면 서버가
-    // 느려질 때 k6가 VU를 늘려 부하 조건이 조용히 상한을 넘는다. 50에 묶어 두면
+    // 느려질 때 k6가 VU를 늘려 부하 조건이 조용히 상한을 넘는다. LOAD.vus에 묶어 두면
     // 대신 dropped_iterations가 쌓이므로, 요청률을 만들어내지 못했다는 사실이
     // 지표로 드러난다. 그래서 dropped_iterations도 판정 대상이다.
-    scenarios: {
-        // JIT 컴파일, 커넥션 풀·JPA 2차 준비, 캐시 초기 적재가 초반 응답 시간을
-        // 끌어올려 p95를 오염시킨다. 같은 부하로 먼저 돌리되 지표는 버린다.
-        warm_up: {
-            executor: 'constant-arrival-rate',
-            rate: LOAD.rate,
-            timeUnit: '1s',
-            duration: '60s',
-            preAllocatedVUs: LOAD.vus,
-            maxVUs: LOAD.vus,
-            exec: 'warmUp',
-            tags: { phase: 'warmup' },
-        },
-        measured: {
-            executor: 'constant-arrival-rate',
-            rate: LOAD.rate,
-            timeUnit: '1s',
-            duration: '5m',
-            preAllocatedVUs: LOAD.vus,
-            maxVUs: LOAD.vus,
-            // 워밍업이 끝난 뒤 시작한다. 두 구간이 겹치면 도착률이 40/s가 된다.
-            startTime: '60s',
-            exec: 'measured',
-            tags: { phase: 'measured' },
-        },
-    },
+    // JIT 컴파일, 커넥션 풀·JPA 2차 준비, 캐시 초기 적재가 초반 응답 시간을
+    // 끌어올려 p95를 오염시킨다. 같은 부하로 먼저 돌리되 지표는 버린다.
+    scenarios: loadScenarios(),
     thresholds: {
         // NFR-PERFORMANCE-006의 p95 합격 기준은 정상 부하에 적용한다.
         // 최대 부하는 RV-NFR-001의 용량·오류 확산 확인이므로 p95를 같은 합격
@@ -160,7 +137,7 @@ export function measured(data) {
 }
 
 // 한 iteration에서 세 엔드포인트를 모두 호출하면 도착률이 실제로는 세 배의 RPS가
-// 된다. 계약이 정한 20 RPS를 지키기 위해 iteration마다 한 경로만 호출하고 세 경로를
+// 된다. 계약이 정한 LOAD.rate를 지키기 위해 iteration마다 한 경로만 호출하고 세 경로를
 // 균등하게 번갈아 돈다.
 function runOneRequest(data, record) {
     const slot = exec.scenario.iterationInTest % 3;
@@ -223,12 +200,7 @@ function evaluate(response, endpoint, trend, record) {
 }
 
 export function handleSummary(data) {
-    const text = renderText(data);
-    return {
-        stdout: text,
-        [`${RESULT_DIR}/summary.json`]: JSON.stringify(data, null, 2),
-        [`${RESULT_DIR}/summary.txt`]: text,
-    };
+    return writeSummary(data, RESULT_DIR, renderText);
 }
 
 function renderText(data) {
@@ -237,7 +209,7 @@ function renderText(data) {
 
     // 표본이 없으면 threshold는 위반할 값이 없어 전부 [통과]로 찍힌다. 그 출력을
     // 그대로 검증 결과 문서에 옮기면 측정하지 않은 것을 통과로 기록하게 된다.
-    if (get(data, 'measured_samples', 'count') === 0) {
+    if (metricValue(data, 'measured_samples', 'count') === 0) {
         lines.push('');
         lines.push('*** 측정 구간 표본이 0건이다. 측정이 성립하지 않았으므로 아래 [통과] 표기를');
         lines.push('*** 판정 근거로 쓰지 않는다. 실행 로그에서 중단 원인을 확인한다.');
@@ -259,44 +231,20 @@ function renderText(data) {
         }
         const v = metric.values;
         lines.push(
-            `  ${label}: avg=${fmt(v.avg)}ms med=${fmt(v.med)}ms p95=${fmt(v['p(95)'])}ms max=${fmt(v.max)}ms ${verdict(metric)}`
+            `  ${label}: avg=${formatMetric(v.avg)}ms med=${formatMetric(v.med)}ms p95=${formatMetric(v['p(95)'])}ms max=${formatMetric(v.max)}ms ${thresholdVerdict(metric)}`
         );
     }
-    const samples = get(data, 'measured_samples', 'count');
+    const samples = metricValue(data, 'measured_samples', 'count');
     lines.push(`  측정 구간 표본: 합계 ${samples}건 (엔드포인트당 약 ${Math.floor(samples / 3)}건)`);
     lines.push('');
     lines.push('[오류·부하 조건]');
-    lines.push(`  서버 오류율(5xx): ${pct(get(data, 'server_error_rate', 'rate'))} ${verdict(data.metrics.server_error_rate)}`);
-    lines.push(`  http_req_failed (측정 구간): ${pct(get(data, 'http_req_failed{phase:measured}', 'rate'))} ${verdict(data.metrics['http_req_failed{phase:measured}'])}`);
-    lines.push(`  http_req_failed (전체): ${pct(get(data, 'http_req_failed', 'rate'))}`);
-    lines.push(`  200 아닌 응답: ${get(data, 'unexpected_status_count', 'count')}건`);
-    lines.push(`  dropped_iterations: ${get(data, 'dropped_iterations', 'count')}건 ${verdict(data.metrics.dropped_iterations)}`);
+    lines.push(`  서버 오류율(5xx): ${formatPercent(metricValue(data, 'server_error_rate', 'rate'))} ${thresholdVerdict(data.metrics.server_error_rate)}`);
+    lines.push(`  http_req_failed (측정 구간): ${formatPercent(metricValue(data, 'http_req_failed{phase:measured}', 'rate'))} ${thresholdVerdict(data.metrics['http_req_failed{phase:measured}'])}`);
+    lines.push(`  http_req_failed (전체): ${formatPercent(metricValue(data, 'http_req_failed', 'rate'))}`);
+    lines.push(`  200 아닌 응답: ${metricValue(data, 'unexpected_status_count', 'count')}건`);
+    lines.push(`  dropped_iterations: ${metricValue(data, 'dropped_iterations', 'count')}건 ${thresholdVerdict(data.metrics.dropped_iterations)}`);
     lines.push('');
     lines.push('threshold를 하나라도 위반하면 k6는 종료 코드 99로 끝난다.');
     lines.push('');
     return lines.join('\n');
-}
-
-function get(data, metric, key) {
-    const found = data.metrics[metric];
-    if (!found || found.values[key] === undefined) {
-        return 0;
-    }
-    return found.values[key];
-}
-
-function fmt(value) {
-    return value === undefined ? '-' : value.toFixed(1);
-}
-
-function pct(value) {
-    return `${(value * 100).toFixed(3)}%`;
-}
-
-function verdict(metric) {
-    if (!metric || !metric.thresholds) {
-        return '';
-    }
-    const failed = Object.keys(metric.thresholds).filter((key) => !metric.thresholds[key].ok);
-    return failed.length === 0 ? '[통과]' : `[위반: ${failed.join(', ')}]`;
 }

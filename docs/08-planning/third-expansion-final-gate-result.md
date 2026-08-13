@@ -5,7 +5,7 @@ decision_date: 2026-08-13
 issue: 166
 task: E3-T13
 baseline_commit: 47b90c6
-evidence_fingerprint: 39bbb7f9253487e10202edc03a6e592093eb7a61e8719b35a5d4dc442beab1a0
+evidence_fingerprint: 95a41e6a7d1a1f5cc77c819cbb4ca176da73fc6d91d49221d1576662d04efcf5
 evidence_manifest: third-expansion-evidence-manifest.txt
 evidence_fingerprint_scope: "manifest에 고정한 E3-T13 구현·추적표 파일; manifest와 이 결과 문서 자체는 집계에서 제외"
 evidence_captured_at: 2026-08-13T14:42:00+09:00
@@ -61,8 +61,8 @@ related_documents:
 ### 3.2 부하 시나리오 자산
 
 - `perf/k6/normal-load-public-read.js`에 `LOAD_PROFILE=normal|max`를 추가해 50/20과 200/80을 선택할 수 있게 했다.
-- `perf/k6/third-expansion-load.js`에 자연어 검색과 코스 경로의 p95·오류율 threshold를 추가했다. 코스 내부 관측(`internal`, 무지연 WireMock)과 외부 호출 포함(`external`, 지연 WireMock)은 같은 실행에서 섞지 않고 별도 프로필로 실행하도록 했다. 외부 포함 요청은 단 한 건이라도 5초를 넘으면 `course_timeout_violations == 0` threshold로 실패한다.
-- `.github/workflows/performance.yml`은 기존 `workflow_dispatch` 전용을 유지하며 시나리오별 결과 artifact를 분리한다.
+- `perf/k6/third-expansion-load.js`에 자연어 검색과 코스 경로를 별도 시나리오로 분리하고 p95·오류율 threshold를 추가했다. 코스 내부 관측(`internal`, 무지연 WireMock)과 외부 호출 포함(`external`, 지연 WireMock)은 같은 실행에서 섞지 않고 별도 프로필로 실행한다. 코스 실행은 preflight·warmup·measured 합계가 Mobility monthly quota 1,000 미만인 측정 전용 예산으로 제한하며, production quota와 requests-per-second 설정을 변경하지 않는다. 외부 포함 요청은 단 한 건이라도 5초를 넘으면 `course_timeout_violations == 0` threshold로 실패하고, provider 차단·서비스 rate-limit 응답도 별도 counter로 실패시킨다.
+- `.github/workflows/performance.yml`은 기존 `workflow_dispatch` 전용을 유지하며 공개 조회·자연어·코스 시나리오별 결과 artifact를 분리한다. 실행 전 `third-expansion-evidence-manifest.txt`의 파일별 SHA-256과 aggregate를 검증한다.
 - 로컬 k6 inspect와 JavaScript 구문 검사, `git diff --check`는 통과했다.
 
 실제 판정에는 ADR-PERF-001에 따라 측정 전용 EC2·RDS, 초기 기준 데이터, WireMock Stub, k6 v2.1.0이 필요하다. 현재 실행 결과 JSON·수치·artifact는 없으므로 성능 통과로 기록하지 않는다.
@@ -71,10 +71,10 @@ related_documents:
 
 1. AI Release holdout 24건을 명시적 opt-in으로 실행하고 지정 인간 판정자·검증자의 합의를 기록한다. 실제 제공자 품질 수치나 합성 dry-run을 Release 통과로 대체하지 않는다.
 2. 병합된 최신 HEAD에서 E3-T12의 Edge 여정·관리자 신규 화면·Webhook 여정과 지원 범위 내 브라우저 검증을 재실행한다. 실단말·배포 환경 검증은 실행하지 않았다면 미검증으로 남긴다.
-3. 측정 전용 환경에서 자연어·코스와 기존 공개 조회를 정상 `50/20`, 최대 `200/80`으로 각각 실행한다. threshold를 낮추거나 운영 인스턴스에 직접 부하를 걸지 않는다.
+3. 측정 전용 환경에서 자연어와 기존 공개 조회를 정상 `50/20`, 최대 `200/80`으로 실행한다. 코스는 Kakao Mobility production monthly quota `1,000`과 requests-per-second 기본값 `20`을 전제로 별도 quota-safe 실행을 한다. preflight·warmup·measured 합계는 quota 미만이어야 하고, 코스 max 프로필도 provider 제한을 넘지 않는 별도 요청률을 사용하므로 `80 RPS` 전체 코스 부하의 증거로 해석하지 않는다. 코스에서 provider 차단·429 rate-limit 응답이 발생하면 성능 통과가 아니라 운영 선행조건 미충족으로 판정한다. threshold를 낮추거나 운영 인스턴스에 직접 부하를 걸지 않는다.
 4. 운영 DB에서 ACTIVE·공개 맛집의 좌표 보유율을 읽기 전용으로 집계하고, 부족하면 좌표 소유 Workstream의 조치 후 동일 쿼리로 재측정한다.
 5. 단일 EC2 Worker의 CPU·메모리·DB·backlog·처리시간·재기동과 Gemini/Mobility quota·비용 hard stop 증거를 비밀정보 없이 기록한다.
-6. 위 결과의 실행 커밋·명령·환경·artifact 식별자를 제품·API·데이터·ADR 추적표와 연결한다.
+6. 위 결과의 실행 커밋·명령·환경·artifact 식별자를 제품·API·데이터·ADR 추적표와 연결한다. 현재는 k6 `inspect`·JavaScript 구문/차이 검토만 수행했으며 실제 setup/request 실행 결과는 없으므로 성능 통과로 기록하지 않는다.
 
 ## 5. 활성화 판정
 
