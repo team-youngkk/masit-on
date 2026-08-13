@@ -2,6 +2,8 @@ package com.masiton.ai.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -13,28 +15,36 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpStatus;
 
 import com.masiton.ai.application.port.in.YoutubeChannelWatchManagementUseCase;
+import com.masiton.ai.application.port.out.AiExtractionJobStore;
+import com.masiton.ai.application.port.out.TemporaryInputCipher;
 import com.masiton.ai.application.port.out.YoutubeChannelWatchStore;
+import com.masiton.ai.application.port.out.YoutubeChannelWatchVerificationTokenPort;
 import com.masiton.common.web.BusinessException;
 import com.masiton.creator.application.port.in.FindCreatorReferenceUseCase;
+import com.masiton.video.application.port.in.ResolveVerifiedVideoUseCase;
 
 @DisplayName("YouTube 채널 감시 관리 서비스")
 class YoutubeChannelWatchManagementServiceTest {
 
     private final FindCreatorReferenceUseCase creatorReferences = mock(FindCreatorReferenceUseCase.class);
     private final YoutubeChannelWatchStore watchStore = mock(YoutubeChannelWatchStore.class);
+    private final YoutubeChannelWatchVerificationTokenPort verificationTokens = mock(
+            YoutubeChannelWatchVerificationTokenPort.class);
     private final YoutubeChannelWatchManagementService service = new YoutubeChannelWatchManagementService(
-            creatorReferences, watchStore);
+            creatorReferences, watchStore, verificationTokens);
 
     @Test
     @DisplayName("검증된 Creator 감시를 활성화하면 외부 확인 전 UNKNOWN 상태를 저장한다")
     void 감시설정_검증된Creator활성화_외부확인전UNKNOWN상태를저장한다() {
         UUID creatorId = UUID.randomUUID();
         when(creatorReferences.findCreatorReference(creatorId)).thenReturn(Optional.of(creator(creatorId, true, true)));
+        when(verificationTokens.issue("channel-id")).thenReturn("verify-token");
         OffsetDateTime notifiedAt = OffsetDateTime.parse("2026-08-12T01:00:00Z");
-        when(watchStore.upsert(creatorId, "channel-id", true, "UNKNOWN")).thenReturn(
+        when(watchStore.upsert(eq(creatorId), eq("channel-id"), eq(true), eq("UNKNOWN"), any())).thenReturn(
                 new YoutubeChannelWatchStore.WatchDetail(true, "UNKNOWN", notifiedAt, null, null));
 
         var result = service.setEnabled(creatorId, true);
@@ -42,7 +52,35 @@ class YoutubeChannelWatchManagementServiceTest {
         assertThat(result.enabled()).isTrue();
         assertThat(result.subscriptionStatus()).isEqualTo("UNKNOWN");
         assertThat(result.lastNotificationAt()).isEqualTo(notifiedAt);
-        verify(watchStore).upsert(creatorId, "channel-id", true, "UNKNOWN");
+        verify(watchStore).upsert(eq(creatorId), eq("channel-id"), eq(true), eq("UNKNOWN"),
+                eq(hashToken("verify-token")));
+    }
+
+    @Test
+    @DisplayName("활성화한 채널은 저장된 해시로 challenge 검증까지 성공한다")
+    void 감시설정_활성화후challenge_저장된해시로ACTIVE전환한다() {
+        UUID creatorId = UUID.randomUUID();
+        when(creatorReferences.findCreatorReference(creatorId)).thenReturn(Optional.of(creator(creatorId, true, true)));
+        when(verificationTokens.issue("channel-id")).thenReturn("verify-token");
+        when(watchStore.upsert(eq(creatorId), eq("channel-id"), eq(true), eq("UNKNOWN"), any()))
+                .thenReturn(new YoutubeChannelWatchStore.WatchDetail(true, "UNKNOWN", null, null, null));
+
+        service.setEnabled(creatorId, true);
+
+        ArgumentCaptor<byte[]> hash = ArgumentCaptor.forClass(byte[].class);
+        verify(watchStore).upsert(eq(creatorId), eq("channel-id"), eq(true), eq("UNKNOWN"), hash.capture());
+        when(watchStore.findForUpdate("channel-id")).thenReturn(
+                Optional.of(new YoutubeChannelWatchStore.Watch("channel-id", true, "UNKNOWN", hash.getValue())));
+
+        AiExtractionJobService jobService = new AiExtractionJobService(
+                mock(ResolveVerifiedVideoUseCase.class),
+                new AiExtractionJobPersistenceService(mock(AiExtractionJobStore.class)),
+                watchStore,
+                mock(TemporaryInputCipher.class));
+
+        assertThat(jobService.verifyChallenge("channel-id", "verify-token", "challenge"))
+                .isEqualTo("challenge");
+        verify(watchStore).markSubscriptionVerified(eq("channel-id"), any());
     }
 
     @Test
@@ -51,7 +89,7 @@ class YoutubeChannelWatchManagementServiceTest {
         UUID creatorId = UUID.randomUUID();
         when(creatorReferences.findCreatorReference(creatorId)).thenReturn(Optional.of(creator(creatorId, true, true)));
         OffsetDateTime renewedAt = OffsetDateTime.parse("2026-08-12T01:00:00Z");
-        when(watchStore.upsert(creatorId, "channel-id", false, "INACTIVE")).thenReturn(
+        when(watchStore.upsert(creatorId, "channel-id", false, "INACTIVE", null)).thenReturn(
                 new YoutubeChannelWatchStore.WatchDetail(false, "INACTIVE", null, renewedAt, "RENEWAL_FAILED"));
 
         var result = service.setEnabled(creatorId, false);
@@ -84,18 +122,27 @@ class YoutubeChannelWatchManagementServiceTest {
     void 감시설정_검증상태변경Creator_비활성화할수있다() {
         UUID creatorId = UUID.randomUUID();
         when(creatorReferences.findCreatorReference(creatorId)).thenReturn(Optional.of(creator(creatorId, false, false)));
-        when(watchStore.upsert(creatorId, "channel-id", false, "INACTIVE"))
+        when(watchStore.upsert(creatorId, "channel-id", false, "INACTIVE", null))
                 .thenReturn(new YoutubeChannelWatchStore.WatchDetail(false, "INACTIVE", null, null, null));
 
         YoutubeChannelWatchManagementUseCase.WatchStatus result = service.setEnabled(creatorId, false);
 
         assertThat(result.enabled()).isFalse();
-        verify(watchStore).upsert(creatorId, "channel-id", false, "INACTIVE");
+        verify(watchStore).upsert(creatorId, "channel-id", false, "INACTIVE", null);
     }
 
     private FindCreatorReferenceUseCase.CreatorReference creator(UUID id, boolean publiclyVisible,
                                                                    boolean externallyAvailable) {
         return new FindCreatorReferenceUseCase.CreatorReference(id, "channel-id", publiclyVisible,
                 externallyAvailable);
+    }
+
+    private byte[] hashToken(String token) {
+        try {
+            return java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(token.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        } catch (java.security.NoSuchAlgorithmException exception) {
+            throw new AssertionError(exception);
+        }
     }
 }

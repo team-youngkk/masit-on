@@ -50,25 +50,27 @@ public class JdbcYoutubeChannelWatchStore implements YoutubeChannelWatchStore {
     }
 
     @Override
-    public WatchDetail upsert(UUID creatorId, String channelId, boolean enabled, String subscriptionStatus) {
+    public WatchDetail upsert(UUID creatorId, String channelId, boolean enabled, String subscriptionStatus,
+                              byte[] subscriptionTokenHash) {
         String requestedStatus = enabled && "ACTIVE".equals(subscriptionStatus) ? "UNKNOWN" : subscriptionStatus;
         return jdbcTemplate.queryForObject("""
                 INSERT INTO youtube_channel_watch (
-                    id, creator_id, youtube_channel_id, enabled, subscription_status, updated_at
-                ) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    id, creator_id, youtube_channel_id, enabled, subscription_status,
+                    subscription_token_hash, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
                 ON CONFLICT (creator_id) DO UPDATE
                    SET youtube_channel_id = EXCLUDED.youtube_channel_id,
                        enabled = EXCLUDED.enabled,
-                       subscription_status = CASE
-                           WHEN EXCLUDED.enabled
-                                AND youtube_channel_watch.subscription_status = 'ACTIVE'
-                                AND youtube_channel_watch.subscription_token_hash IS NOT NULL
-                           THEN 'ACTIVE'
-                           ELSE EXCLUDED.subscription_status
+                       subscription_status = EXCLUDED.subscription_status,
+                       subscription_token_hash = CASE
+                           WHEN EXCLUDED.enabled AND EXCLUDED.subscription_token_hash IS NOT NULL
+                           THEN EXCLUDED.subscription_token_hash
+                           ELSE youtube_channel_watch.subscription_token_hash
                        END,
                        updated_at = CURRENT_TIMESTAMP
                 RETURNING enabled, subscription_status, last_notification_at, last_renewed_at, last_error_category
-                """, this::mapDetail, UUID.randomUUID(), creatorId, channelId, enabled, requestedStatus);
+                """, this::mapDetail, UUID.randomUUID(), creatorId, channelId, enabled, requestedStatus,
+                subscriptionTokenHash);
     }
 
     @Override

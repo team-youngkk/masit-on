@@ -9,7 +9,8 @@ public interface YoutubeChannelWatchStore {
 
     Optional<Watch> findForUpdate(String channelId);
 
-    WatchDetail upsert(UUID creatorId, String channelId, boolean enabled, String subscriptionStatus);
+    WatchDetail upsert(UUID creatorId, String channelId, boolean enabled, String subscriptionStatus,
+                       byte[] subscriptionTokenHash);
 
     void markNotificationReceived(String channelId, OffsetDateTime receivedAt);
 

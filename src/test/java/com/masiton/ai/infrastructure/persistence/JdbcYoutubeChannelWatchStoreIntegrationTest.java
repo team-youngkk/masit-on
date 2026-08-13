@@ -63,13 +63,15 @@ class JdbcYoutubeChannelWatchStoreIntegrationTest {
 
         try {
             // when
-            store.upsert(creatorId, channelId, true, "ACTIVE");
+            store.upsert(creatorId, channelId, true, "ACTIVE", IntegrationTestFixtures.sha256("verify-token"));
 
             // then
             YoutubeChannelWatchStore.Watch watch = store.find(channelId).orElseThrow();
             assertThat(watch.acceptsNotifications()).isFalse();
             assertThat(watch.enabled()).isTrue();
             assertThat(watch.subscriptionStatus()).isEqualTo("UNKNOWN");
+            assertThat(readTokenHash(channelId))
+                    .containsExactly(IntegrationTestFixtures.sha256("verify-token"));
         } finally {
             deleteFixture(creatorId, channelId);
         }
@@ -90,7 +92,7 @@ class JdbcYoutubeChannelWatchStoreIntegrationTest {
         try {
             // when
             YoutubeChannelWatchStore.WatchDetail detail = store.upsert(
-                    creatorId, channelId, false, "INACTIVE");
+                    creatorId, channelId, false, "INACTIVE", null);
 
             // then
             assertThat(detail.enabled()).isFalse();
