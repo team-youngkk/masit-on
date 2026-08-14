@@ -148,7 +148,7 @@ WHERE lifecycle_status = 'ACTIVE';
 
 ### 7.1. AI 제공자
 
-기준선 검토 시점에는 AI 제공자·모델·리전·보존 정책이 정해지지 않았고 코드나 환경 설정에도 AI 호출이 없었다. 이후 팀 결정으로 Google Gemini API Free Tier의 `gemini-3-flash-preview`, global endpoint, 유료 호출 금지 정책을 선택했다. 실제 모델별 무료 quota와 billing 미연결 여부는 구현 전 연결 검증에서 확인한다. 무료 tier를 사용할 수 없으면 AI 기능은 호출하지 않고 기존 수동 등록으로 대체한다.
+기준선 검토 시점에는 AI 제공자·모델·리전·보존 정책이 정해지지 않았고 코드나 환경 설정에도 AI 호출이 없었다. 이후 과거 검증 당시 Google Gemini API Free Tier의 `gemini-3-flash-preview`를 smoke test 후보로 사용했지만, 현재 운영 선택은 `gemini-3.5-flash-lite`이며 데이터베이스에는 V5 제약으로 해당 모델만 저장한다. 실제 모델별 무료 quota와 billing 미연결 여부는 구현 전 연결 검증에서 확인한다. 무료 tier를 사용할 수 없으면 AI 기능은 호출하지 않고 기존 수동 등록으로 대체한다.
 
 #### 7.1.1 연결 검증 기록
 
@@ -156,7 +156,7 @@ WHERE lifecycle_status = 'ACTIVE';
 
 | 검증 항목 | 결과 | 증거 |
 |---|---|---|
-| `gemini-3-flash-preview` 텍스트 호출 | 통과 | `generateContent` 성공, 입력 16·출력 5 Token 메타데이터 확인 |
+| 과거 후보 `gemini-3-flash-preview` 텍스트 호출 | 통과 | `generateContent` 성공, 입력 16·출력 5 Token 메타데이터 확인 |
 | 공개 YouTube URL 영상 입력 | 통과 | 공개 영상 URL을 `file_data.file_uri`로 전달해 `generateContent` 성공, 입력 13,589·출력 15 Token 메타데이터 확인 |
 | 구조화 출력 | 통과 | `videoAccessible`·`evidenceTimestamp` JSON 필드 파싱 성공 |
 | 원문·응답 보존 | 통과 | 테스트 출력에 응답 본문·API 키를 남기지 않음 |
@@ -168,7 +168,7 @@ WHERE lifecycle_status = 'ACTIVE';
 
 | 결정 항목 | 필요한 값 |
 |---|---|
-| 모델 | `gemini-3-flash-preview`, 영상·구조화 출력 지원, Prompt `P1`, Schema `S1` |
+| 현재 운영 모델 | `gemini-3.5-flash-lite`, 영상·구조화 출력 지원, Prompt `P1`, Schema `S1` |
 | 비용 | AI·Mobility 유료 호출 금지, Free Tier quota의 80% 경보·100% hard stop |
 | 호출 제한 | 시도 전체 120초, 최대 2회 재시도, 인스턴스당 Worker 1개, quota 미확인 시 호출 차단 |
 | 데이터 경계 | Free Tier global endpoint, File API·context caching·원문 저장 미사용, 관리자 전용 근거 메타데이터만 보존 |

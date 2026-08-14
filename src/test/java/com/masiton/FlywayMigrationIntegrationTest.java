@@ -26,7 +26,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * 빈 PostgreSQL에 V1 baseline, V2(1차 확장 통합 스키마), V3(2차 확장 스키마),
- * V4(통합 3차 확장 AI 후보 스키마와 Gemini 모델 제약)가
+ * V4(통합 3차 확장 AI 후보 스키마와 Gemini 모델 제약), V5(Preview 모델 차단)가
  * 순서대로 성공적으로 적용되고,
  * ddl-auto=validate로 컨텍스트가 기동하며, Region·FoodCategory 기준 데이터가
  * seed-data-plan.md 2~4·6절 기준과 일치하는지 확인한다.
@@ -62,9 +62,9 @@ class FlywayMigrationIntegrationTest {
     private MemberSessionRevocationStore memberSessionRevocationStore;
 
     @Test
-    @DisplayName("빈 데이터베이스에 V1부터 V4까지 계약된 순서와 파일명으로 성공 기록된다")
-    void 마이그레이션적용_빈데이터베이스_V1부터V4까지계약된순서와파일명으로성공기록된다() {
-        // given: 컨텍스트 기동 시점에 Flyway가 V1부터 V4 변경을 적용했다.
+    @DisplayName("빈 데이터베이스에 V1부터 V5까지 계약된 순서와 파일명으로 성공 기록된다")
+    void 마이그레이션적용_빈데이터베이스_V1부터V5까지계약된순서와파일명으로성공기록된다() {
+        // given: 컨텍스트 기동 시점에 Flyway가 V1부터 V5 변경을 적용했다.
 
         // when
         List<AppliedMigration> appliedMigrations = jdbcTemplate.query(
@@ -86,7 +86,9 @@ class FlywayMigrationIntegrationTest {
                 new AppliedMigration("3", "add expansion 2 schema", "SQL",
                         "V3__add_expansion_2_schema.sql", true),
                 new AppliedMigration("4", "create third expansion ai schema", "SQL",
-                        "V4__create_third_expansion_ai_schema.sql", true)
+                        "V4__create_third_expansion_ai_schema.sql", true),
+                new AppliedMigration("5", "restrict ai extraction job model version to gemini 3 5 flash lite", "SQL",
+                        "V5__restrict_ai_extraction_job_model_version_to_gemini_3_5_flash_lite.sql", true)
         );
     }
 

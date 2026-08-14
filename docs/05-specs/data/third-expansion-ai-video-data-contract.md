@@ -27,7 +27,7 @@ related_documents:
 
 ## 1. 결정 상태와 범위
 
-이 문서는 AI 영상 추출 작업, 후보 Snapshot, 통제 태그, Gemini 영상 입력 이력과 YouTube 채널 감시 상태의 논리·물리 데이터 경계를 정의하는 Accepted 계약이다. Google Gemini API는 `gemini-3.5-flash-lite`, Gemini Developer API global endpoint, Free Tier 전용·유료 호출 금지, Prompt `P1`, 결과 Schema `S1`을 사용한다. 컬럼·제약·인덱스의 정본은 이 문서와 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql)의 대응을 검증하는 방식으로 관리한다.
+이 문서는 AI 영상 추출 작업, 후보 Snapshot, 통제 태그, Gemini 영상 입력 이력과 YouTube 채널 감시 상태의 논리·물리 데이터 경계를 정의하는 Accepted 계약이다. Google Gemini API는 `gemini-3.5-flash-lite`, Gemini Developer API global endpoint, Free Tier 전용·유료 호출 금지, Prompt `P1`, 결과 Schema `S1`을 사용한다. 컬럼·제약·인덱스의 정본은 이 문서와 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql), [`V5__restrict_ai_extraction_job_model_version_to_gemini_3_5_flash_lite.sql`](../../../src/main/resources/db/migration/V5__restrict_ai_extraction_job_model_version_to_gemini_3_5_flash_lite.sql)의 대응을 검증하는 방식으로 관리한다.
 
 - AI 후보 데이터는 기존 `Restaurant`, `Creator`, `Video`, `Visit`의 정식 데이터를 대체하지 않는다.
 - 자동 검증과 기존 외부 검증 전에는 정식 Entity를 생성·수정·공개하지 않는다. 관리자 사전 승인은 요구하지 않는다.
@@ -73,7 +73,7 @@ related_documents:
 | `input_mode` | `varchar(24)` | NN | `GEMINI_VIDEO_URL/ADMIN_TEXT` | AI 입력 경로 |
 | `input_hash` | `bytea` | NN | SHA-256 32 byte | 입력 동일성 |
 | `provider` | `varchar(32)` | NN | `GOOGLE_GEMINI` 후보 | 제공자 |
-| `model_version` | `varchar(128)` | NN | 신규 작업은 `gemini-3.5-flash-lite`, 기존 이력은 `gemini-3-flash-preview` 허용 | 모델 버전 |
+| `model_version` | `varchar(128)` | NN | `gemini-3.5-flash-lite` 고정 | 모델 버전 |
 | `prompt_version` | `varchar(64)` | NN | 빈 값 금지 | Prompt 버전 |
 | `schema_version` | `varchar(64)` | NN | 빈 값 금지 | 결과 Schema 버전 |
 | `retry_reason` | `varchar(1000)` | Yes | 관리자 재시도 작업에서만 non-blank | 해당 작업을 다시 요청한 사유 |

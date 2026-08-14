@@ -131,7 +131,7 @@ class Expansion3FlywayMigrationIntegrationTest {
         // then
         assertThat(jdbcTemplate.queryForList(
                 "SELECT version FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank", String.class))
-                .containsExactly("1", "2", "3", "4");
+                .containsExactly("1", "2", "3", "4", "5");
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM pg_indexes WHERE schemaname = current_schema() "
                 + "AND indexname IN ('ix_ai_job__video_input_versions', 'ix_ai_job__video_mode_versions', "
                 + "'ix_ai_temporary_input__expires_at', 'ix_visit_tag__created_from_snapshot')", Integer.class)).isEqualTo(4);
@@ -141,17 +141,20 @@ class Expansion3FlywayMigrationIntegrationTest {
                 "SELECT pg_get_constraintdef(oid) FROM pg_constraint "
                         + "WHERE connamespace = current_schema()::regnamespace "
                         + "AND conname = 'ck_ai_extraction_job__model_version'", String.class))
-                .contains("gemini-3-flash-preview", "gemini-3.5-flash-lite");
+                .contains("gemini-3.5-flash-lite")
+                .doesNotContain("gemini-3-flash-preview");
     }
 
     @Test
-    @DisplayName("AI 작업 모델 제약은 기존 Preview와 신규 Lite만 허용한다")
-    void AI작업모델_기존Preview와신규Lite만허용한다() {
+    @DisplayName("AI 작업 모델 제약은 신규 Lite만 허용한다")
+    void AI작업모델_신규Lite만허용한다() {
         JdbcTemplate jdbcTemplate = migratedJdbcTemplate();
 
-        insertJobWithModel(jdbcTemplate, "legacy-model-video", bytes(34), "gemini-3-flash-preview");
         insertJobWithModel(jdbcTemplate, "lite-model-video", bytes(35), "gemini-3.5-flash-lite");
 
+        assertThatThrownBy(() -> insertJobWithModel(
+                jdbcTemplate, "preview-model-video", bytes(34), "gemini-3-flash-preview"))
+                .isInstanceOf(DataAccessException.class);
         assertThatThrownBy(() -> insertJobWithModel(
                 jdbcTemplate, "unsupported-model-video", bytes(36), "unsupported-model"))
                 .isInstanceOf(DataAccessException.class);
@@ -473,7 +476,7 @@ class Expansion3FlywayMigrationIntegrationTest {
                         + "execution_status, started_at, finished_at, result_completeness, created_at) "
                         + "VALUES (?, 'ADMIN', 'REALTIME', 'channel-completed', 'video-completed', "
                         + "'https://www.youtube.com/watch?v=video-completed', 'ADMIN_TEXT', ?, 'GOOGLE_GEMINI', "
-                        + "'gemini-3-flash-preview', 'P1', 'S1', 'SUCCEEDED', now() - interval '2 hours', now(), 'COMPLETE', "
+                        + "'gemini-3.5-flash-lite', 'P1', 'S1', 'SUCCEEDED', now() - interval '2 hours', now(), 'COMPLETE', "
                         + "now() - interval '3 hours')",
                 completedJobId, bytes(3));
         assertThatThrownBy(() -> jdbcTemplate.update(
@@ -578,7 +581,7 @@ class Expansion3FlywayMigrationIntegrationTest {
                     video_url, input_mode, input_hash, provider, model_version, prompt_version, schema_version,
                     created_at) VALUES (?, 'ADMIN', 'BACKFILL', 'late-channel', 'late-video',
                     'https://www.youtube.com/watch?v=late-video', 'ADMIN_TEXT', ?, 'GOOGLE_GEMINI',
-                    'gemini-3-flash-preview', 'P1', 'S1', ?)
+                    'gemini-3.5-flash-lite', 'P1', 'S1', ?)
                 """, queuedJobId, bytes(21), now.minusDays(2));
         jdbcTemplate.update("""
                 INSERT INTO ai_extraction_temporary_input (job_id, ciphertext, encryption_key_id, expires_at, created_at)
@@ -642,7 +645,7 @@ class Expansion3FlywayMigrationIntegrationTest {
 
     private UUID insertJob(
             JdbcTemplate jdbcTemplate, String source, String inputMode, String videoId, byte[] inputHash) {
-        return insertJobWithModel(jdbcTemplate, source, inputMode, videoId, inputHash, "gemini-3-flash-preview");
+        return insertJobWithModel(jdbcTemplate, source, inputMode, videoId, inputHash, "gemini-3.5-flash-lite");
     }
 
     private UUID insertJobWithModel(JdbcTemplate jdbcTemplate, String videoId, byte[] inputHash,
