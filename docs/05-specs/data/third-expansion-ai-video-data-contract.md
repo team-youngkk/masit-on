@@ -246,7 +246,7 @@ Creator 등록만으로 `enabled=true`가 되지 않는다. 감시 중지·구�
 | `ix_visit_tag__tag_lookup` | `tag_definition_id`, 공개 Visit 상태 조합 | 태그 기반 맛집 조회 |
 | `ix_ai_temporary_input__expires_at` | `expires_at`, `job_id` | 만료 임시 입력 cleanup 선택 |
 
-정확한 PostgreSQL partial index·FK 삭제 동작·lease claim SQL은 [ADR-EXT-003](../../07-adr/integration/ext-003-ai-extraction-async-reliability.md), [테이블 정의](table-definitions.md), [제약조건](constraints.md), [인덱스 전략](index-strategy.md), [Flyway 계획](migration-plan.md)과 통합 `V4` DDL의 대응으로 확인한다. Gemini 모델 CHECK 제약의 변경은 `V8__allow_gemini_3_5_flash_lite_model_version.sql`의 대응으로 확인한다.
+정확한 PostgreSQL partial index·FK 삭제 동작·lease claim SQL과 Gemini 모델 CHECK 제약은 [ADR-EXT-003](../../07-adr/integration/ext-003-ai-extraction-async-reliability.md), [테이블 정의](table-definitions.md), [제약조건](constraints.md), [인덱스 전략](index-strategy.md), [Flyway 계획](migration-plan.md)과 통합 `V4` DDL의 대응으로 확인한다.
 
 ## 12. 생명주기와 보존
 

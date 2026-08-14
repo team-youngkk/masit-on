@@ -53,7 +53,9 @@ CREATE TABLE ai_extraction_job
     ),
     CONSTRAINT ck_ai_extraction_job__input_hash_length CHECK (octet_length(input_hash) = 32),
     CONSTRAINT ck_ai_extraction_job__provider CHECK (provider = 'GOOGLE_GEMINI'),
-    CONSTRAINT ck_ai_extraction_job__model_version CHECK (model_version = 'gemini-3-flash-preview'),
+    CONSTRAINT ck_ai_extraction_job__model_version CHECK (
+        model_version IN ('gemini-3-flash-preview', 'gemini-3.5-flash-lite')
+    ),
     CONSTRAINT ck_ai_extraction_job__prompt_version_not_blank CHECK (btrim(prompt_version) <> ''),
     CONSTRAINT ck_ai_extraction_job__schema_version_not_blank CHECK (btrim(schema_version) <> ''),
     CONSTRAINT ck_ai_extraction_job__execution_status

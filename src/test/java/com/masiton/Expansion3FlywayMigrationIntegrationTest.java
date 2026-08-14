@@ -119,8 +119,8 @@ class Expansion3FlywayMigrationIntegrationTest {
     }
 
     @Test
-    @DisplayName("빈 데이터베이스를 최신 버전까지 마이그레이션하면 통합 AI 관리 스키마와 V8 모델 제약이 적용된다")
-    void 빈데이터베이스_최신버전마이그레이션_통합AI스키마와V8모델제약적용() {
+    @DisplayName("빈 데이터베이스를 최신 버전까지 마이그레이션하면 통합 AI 관리 스키마와 모델 제약이 적용된다")
+    void 빈데이터베이스_최신버전마이그레이션_통합AI스키마와모델제약적용() {
         // given
         SchemaDatabase database = createSchemaDatabase();
         JdbcTemplate jdbcTemplate = new JdbcTemplate(database.dataSource());
@@ -131,7 +131,7 @@ class Expansion3FlywayMigrationIntegrationTest {
         // then
         assertThat(jdbcTemplate.queryForList(
                 "SELECT version FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank", String.class))
-                .containsExactly("1", "2", "3", "4", "8");
+                .containsExactly("1", "2", "3", "4");
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM pg_indexes WHERE schemaname = current_schema() "
                 + "AND indexname IN ('ix_ai_job__video_input_versions', 'ix_ai_job__video_mode_versions', "
                 + "'ix_ai_temporary_input__expires_at', 'ix_visit_tag__created_from_snapshot')", Integer.class)).isEqualTo(4);
@@ -154,29 +154,6 @@ class Expansion3FlywayMigrationIntegrationTest {
 
         assertThatThrownBy(() -> insertJobWithModel(
                 jdbcTemplate, "unsupported-model-video", bytes(36), "unsupported-model"))
-                .isInstanceOf(DataAccessException.class);
-    }
-
-    @Test
-    @DisplayName("V4에서 V8로 전진 적용해도 기존 Preview 작업은 보존되고 신규 Lite를 허용한다")
-    void V4에서V8전진적용_기존Preview작업을보존하고신규Lite를허용한다() {
-        // given
-        SchemaDatabase database = createSchemaDatabase();
-        JdbcTemplate jdbcTemplate = new JdbcTemplate(database.dataSource());
-        migrate(database.dataSource(), database.schema(), MigrationVersion.fromVersion("4"));
-        UUID legacyJobId = insertJobWithModel(
-                jdbcTemplate, "legacy-preview-video", bytes(37), "gemini-3-flash-preview");
-
-        // when
-        migrate(database.dataSource(), database.schema(), MigrationVersion.fromVersion("8"));
-
-        // then
-        assertThat(jdbcTemplate.queryForObject(
-                "SELECT model_version FROM ai_extraction_job WHERE id = ?", String.class, legacyJobId))
-                .isEqualTo("gemini-3-flash-preview");
-        insertJobWithModel(jdbcTemplate, "upgraded-lite-video", bytes(38), "gemini-3.5-flash-lite");
-        assertThatThrownBy(() -> insertJobWithModel(
-                jdbcTemplate, "unsupported-after-v8-video", bytes(39), "unsupported-model"))
                 .isInstanceOf(DataAccessException.class);
     }
 
