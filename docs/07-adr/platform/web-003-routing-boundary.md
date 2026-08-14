@@ -67,7 +67,7 @@ Accepted
 
 Nginx는 경로 접두사만으로 목적지를 정하며 요청 헤더, 사용자 에이전트나 응답 형식으로 프론트엔드와 백엔드를 구분하지 않는다.
 
-정식 공개 전에는 [ADR-DEPLOY-003](deploy-003-validation-cookie-session.md)의 검증 참여자 쿠키 세션을 이 라우팅보다 먼저 확인한다. 무세션 허용 조건은 [ADR-DEPLOY-003](deploy-003-validation-cookie-session.md) 4.3절이 정하고 허용 경로 목록은 [검증 참여자 제한 공개 API 계약](../../05-specs/api/common/validation-access-contract.md)이 소유한다. 그 목록에 없는 화면·API는 Nginx `auth_request`를 통과해야 한다. 이 진입 검증은 회원·관리자 Bearer 인증과 독립이며 정식 공개 시 제거한다.
+정식 공개 전에는 [ADR-DEPLOY-003](deploy-003-validation-cookie-session.md)의 검증 참여자 쿠키 세션을 보호 화면·API 라우팅보다 먼저 확인한다. 비관리자 공개 제품 API는 Spring Security의 `permitAll` 경로·Method와 일치하는 경우 gate 전에 백엔드로 전달하며, 관리자·미정의 API와 공개 경로의 비허용 Method는 검증 세션을 요구한다. 무세션 허용 조건은 ADR-DEPLOY-003 4.3절이 정하고 허용 경로 목록은 [검증 참여자 제한 공개 API 계약](../../05-specs/api/common/validation-access-contract.md)이 소유한다. 이 진입 검증은 회원·관리자 Bearer 인증과 독립이며 정식 공개 시 제거한다.
 
 ### 6.2 화면 경로
 
@@ -93,7 +93,7 @@ Nginx는 경로 접두사만으로 목적지를 정하며 요청 헤더, 사용�
 2. `POST /api/admin/auth/tokens/refresh`: Refresh Token 보안 쿠키만 검증하고 Bearer JWT를 요구하지 않는다.
 3. `DELETE /api/admin/auth/tokens`: Bearer JWT와 Refresh Token 보안 쿠키를 모두 요구한다.
 4. 나머지 `/api/admin/**`: Bearer JWT와 `ADMIN` 권한을 요구한다.
-5. `GET /api/restaurants`, `GET /api/restaurants/{restaurantId}`, `GET /api/creators`, `GET /api/creators/{creatorId}`, `GET /api/creators/{creatorId}/restaurants`, `GET /api/creators/{creatorId}/videos`: 인증 없이 허용한다. 유튜버 상세 세 조회는 회원 문맥을 쓰지 않으므로 Bearer Token을 해석하지 않는다.
+5. 각 제품 API 계약과 Spring Security가 비관리자에게 `permitAll`로 공개한 경로·Method는 인증 없이 허용한다. 검증 세션 gate 제외 목록은 [검증 참여자 제한 공개 API 계약](../../05-specs/api/common/validation-access-contract.md) 4.2절과 동기화하며, 선택적 회원 문맥을 쓰는 API의 Bearer·쿠키는 Backend가 계속 해석한다.
 6. 정의되지 않은 API 요청: 기본 거부한다.
 
 구체적인 matcher는 더 구체적인 경로와 HTTP Method를 먼저 선언하고 포괄적인 `/api/admin/**` 규칙을 뒤에 둔다.
@@ -126,7 +126,7 @@ Docker Healthcheck는 `live`, 배포 후 Smoke Test는 `ready`, CloudWatch Agent
 
 ## 8. 트레이드오프
 
-기존 API 계약의 모든 경로와 클라이언트 호출부를 `/api` 기준으로 함께 변경해야 한다. 상태 확인은 Nginx 외부 경로에서 직접 호출할 수 없으므로 EC2 내부 Agent나 컨테이너 네트워크를 통해 점검해야 한다. 메모리 Access Token은 새로고침마다 Redis 재발급 호출을 발생시키며 Redis 장애 시 관리자 화면 복구가 실패한다.
+기존 API 계약의 모든 경로와 클라이언트 호출부를 `/api` 기준으로 함께 변경해야 한다. 비관리자 공개 API가 추가·변경되면 Spring Security와 Nginx 경로·Method allowlist도 함께 갱신해야 하므로 두 경계 사이 드리프트 위험이 있다. 상태 확인은 Nginx 외부 경로에서 직접 호출할 수 없으므로 EC2 내부 Agent나 컨테이너 네트워크를 통해 점검해야 한다. 메모리 Access Token은 새로고침마다 Redis 재발급 호출을 발생시키며 Redis 장애 시 관리자 화면 복구가 실패한다.
 
 ## 9. 적용 범위
 
@@ -152,7 +152,8 @@ API 계약, 프론트엔드 API Client Base URL, Spring Security matcher, Refres
 ## 13. 검증 방법
 
 - 화면 deep link와 새로고침이 Next.js로 전달되는지 확인한다.
-- 13개 API가 `/api` 아래에서만 백엔드로 전달되는지 확인한다.
+- 외부 API가 `/api` 아래에서만 백엔드로 전달되는지 확인한다.
+- 비관리자 공개 API의 허용 경로·Method는 검증 쿠키 없이 Backend 응답에 도달하고, 같은 경로의 비허용 Method와 관리자·미정의 API는 검증 gate를 통과하는지 확인한다.
 - 로그인·재발급 예외와 나머지 관리자 API의 `401`·`403`을 검증한다.
 - 메모리 Token 소실 뒤 재발급 성공·실패와 단일 재시도 제한을 검증한다.
 - `/internal/**` 외부 요청이 차단되고 컨테이너 내부에서는 세 상태 확인이 가능한지 검증한다.
