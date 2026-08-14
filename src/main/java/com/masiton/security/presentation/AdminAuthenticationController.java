@@ -5,7 +5,6 @@ import java.time.Duration;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -39,17 +38,6 @@ public class AdminAuthenticationController {
     private final SecurityProperties properties;
     private final AdminClientAddressResolver clientAddressResolver;
 
-    public AdminAuthenticationController(
-            LoginAdminUseCase loginAdminUseCase,
-            RefreshAdminTokenUseCase refreshAdminTokenUseCase,
-            LogoutAdminUseCase logoutAdminUseCase,
-            SecurityProperties properties
-    ) {
-        this(loginAdminUseCase, refreshAdminTokenUseCase, logoutAdminUseCase, properties,
-                new AdminClientAddressResolver(properties));
-    }
-
-    @Autowired
     public AdminAuthenticationController(
             LoginAdminUseCase loginAdminUseCase,
             RefreshAdminTokenUseCase refreshAdminTokenUseCase,

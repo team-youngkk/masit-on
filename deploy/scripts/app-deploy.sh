@@ -126,12 +126,13 @@ admin_trusted_proxies=$(printf '%s\n' "$backend_env" | awk -F= '$1 == "ADMIN_LOG
 # app-deploy는 nginx-install보다 먼저 실행될 수 있다. Nginx가 이미 설치·활성화된
 # 호스트에서는 실제 설정을 검사하고 public API 경계를 확인한다. 무세션 요청은
 # verification gate에 걸리는 것이 정상(401)이므로 로그인 성공을 요구하지 않는다.
-if command -v nginx >/dev/null 2>&1; then
+nginx_site_conf=/etc/nginx/conf.d/masiton.click.conf
+if command -v nginx >/dev/null 2>&1 && [ -f "$nginx_site_conf" ]; then
   nginx -t
 else
-  echo "Nginx 설정 smoke 스킵: nginx 명령이 설치되지 않았다(nginx-install 단계에서 검증한다)."
+  echo "Nginx 설정 smoke 스킵: 설치된 masit-on site 설정이 없다(nginx-install 단계에서 검증한다)."
 fi
-if systemctl is-active --quiet nginx; then
+if [ -f "$nginx_site_conf" ] && systemctl is-active --quiet nginx; then
   public_admin_status=$(curl -k -sS -m 5 -o /dev/null -w '%{http_code}' \
     --resolve masiton.click:443:127.0.0.1 \
     -H 'X-Forwarded-For: 198.51.100.99' \
@@ -142,7 +143,7 @@ if systemctl is-active --quiet nginx; then
     exit 1
   }
 else
-  echo "public Nginx 경로 smoke 스킵: Nginx가 활성 상태가 아니다(nginx-install 단계에서 검증한다)."
+  echo "public Nginx 경로 smoke 스킵: 설치된 masit-on site 설정이 없거나 Nginx가 비활성 상태다(nginx-install 단계에서 검증한다)."
 fi
 
 # 운영 Origin이 주입됐는지 확인한다. 유효한 Origin과 Token 없는 요청은 인증 실패(401)여야

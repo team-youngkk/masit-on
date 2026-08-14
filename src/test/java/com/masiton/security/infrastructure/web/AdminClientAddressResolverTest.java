@@ -43,6 +43,15 @@ class AdminClientAddressResolverTest {
     }
 
     @Test
+    @DisplayName("같은 전달 헤더가 여러 줄이면 peer 주소를 사용한다")
+    void resolve_다중헤더_peer주소사용() {
+        MockHttpServletRequest request = request("10.0.0.2", "198.51.100.20");
+        request.addHeader("X-Forwarded-For", "198.51.100.21");
+
+        assertThat(resolver(true, "10.0.0.2").resolve(request)).isEqualTo("10.0.0.2");
+    }
+
+    @Test
     @DisplayName("프록시 모드에 신뢰 주소가 없으면 기동을 거부한다")
     void 설정검증_프록시모드_신뢰주소없음_거부() {
         SecurityProperties properties = new SecurityProperties();
