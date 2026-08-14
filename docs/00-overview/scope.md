@@ -486,7 +486,7 @@ related_documents:
 | 제외 범위 | 영상·전체 자막 원본 자동 수집·저장·재배포, 자동 검증 없는 공개, 전체 채널 무차별 감시, 무제한 재처리와 공개 AI 요약을 제외한다. 자동 검증을 통과한 AI 기반 Restaurant·Creator·Video·Visit 생성·공개는 포함한다. |
 | 선행 기능 | 관리자 인증, 기존 등록 명령의 원자성·중복 규칙, Kakao 장소 검증, YouTube 메타데이터 검증과 Visit 등록 규칙이 선행한다. Webhook은 명시적으로 활성화한 채널만 대상으로 하며, 공개 YouTube URL은 Google Gemini API의 영상 입력으로 사용하고 관리자 보완 텍스트를 fallback으로 둔다. |
 | 개인정보 영향 | 원본 영상·자동 수집 전체 자막·전체 모델 응답을 애플리케이션에 저장하거나 공개하지 않는다. 관리자가 직접 입력한 보완 텍스트는 암호화된 임시 입력으로 작업 종료 후 24시간 이내 삭제하며, 후보와 근거 위치·해시만 장기 보존한다. Google Gemini Free Tier의 데이터 사용·보존 경계를 확인한 뒤에만 호출을 활성화한다. |
-| 외부 API와 AI 모델 | 기존 Kakao·YouTube 검증과 Google Gemini API Free Tier의 `gemini-3.5-flash-lite`를 사용한다. Gemini Developer API의 global endpoint를 사용하고 자동 failover·File API·context caching은 사용하지 않는다. 모델 ID를 자동 교체하지 않으며 Prompt `P1`, 결과 Schema `S1`을 고정한다. 모델이 Free Tier에서 제공되지 않거나 결제 연결을 요구하면 호출하지 않는다. |
+| 외부 API와 AI 모델 | 기존 Kakao·YouTube 검증과 Google Gemini API Free Tier의 `gemini-3.5-flash-lite`를 사용한다. Gemini Developer API의 global endpoint를 사용하고 자동 failover·File API·context caching은 사용하지 않는다. 모델 ID를 자동 교체하지 않으며 현재 운영 계약은 Prompt `P2`, 결과 Schema `S1`로 고정한다. 모델이 Free Tier에서 제공되지 않거나 결제 연결을 요구하면 호출하지 않는다. |
 | 비용 상한 | AI와 Mobility의 유료 호출은 모두 금지한다. 공급자 Free Tier quota와 애플리케이션 자체 호출 상한 중 더 낮은 기준을 적용하고, quota 확인 실패·소진·결제 연결 요구 시 즉시 hard stop한다. |
 | 운영자 작업량 | 정상 조건에서는 건별 승인을 하지 않는다. 운영자는 채널 활성화·중지, 실패·보류 작업, 자동 등록 롤백과 태그 중복 정책을 관리하며, 자동 처리 Worker는 인스턴스당 1개로 제한한다. |
 | 실패 대체 동작 | AI 실패·시간 초과·quota 초과·장소 모호·근거 부족은 제한 재시도 후 자동 보류·실패로 남긴다. 자동 등록하지 않고 기존 수동 등록 흐름으로 복구할 수 있다. |

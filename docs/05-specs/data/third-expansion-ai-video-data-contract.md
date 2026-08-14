@@ -27,7 +27,7 @@ related_documents:
 
 ## 1. 결정 상태와 범위
 
-이 문서는 AI 영상 추출 작업, 후보 Snapshot, 통제 태그, Gemini 영상 입력 이력과 YouTube 채널 감시 상태의 논리·물리 데이터 경계를 정의하는 Accepted 계약이다. Google Gemini API는 `gemini-3.5-flash-lite`, Gemini Developer API global endpoint, Free Tier 전용·유료 호출 금지, Prompt `P1`, 결과 Schema `S1`을 사용한다. 컬럼·제약·인덱스의 정본은 이 문서와 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql)의 대응을 검증하는 방식으로 관리한다.
+이 문서는 AI 영상 추출 작업, 후보 Snapshot, 통제 태그, Gemini 영상 입력 이력과 YouTube 채널 감시 상태의 논리·물리 데이터 경계를 정의하는 Accepted 계약이다. Google Gemini API는 `gemini-3.5-flash-lite`, Gemini Developer API global endpoint, Free Tier 전용·유료 호출 금지, 현재 Prompt `P2`, 결과 Schema `S1`을 사용한다. 기존 Prompt `P1` 작업과 Snapshot은 재현성을 위한 역사적 이력으로만 보존한다. 컬럼·제약·인덱스의 정본은 이 문서와 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql)의 대응을 검증하는 방식으로 관리한다.
 
 - AI 후보 데이터는 기존 `Restaurant`, `Creator`, `Video`, `Visit`의 정식 데이터를 대체하지 않는다.
 - 자동 검증과 기존 외부 검증 전에는 정식 Entity를 생성·수정·공개하지 않는다. 관리자 사전 승인은 요구하지 않는다.
@@ -123,6 +123,17 @@ related_documents:
 | `created_at` | 시간 | NN | 기본 현재 시각 | Snapshot 생성 시각 |
 
 `candidate_fields`는 자동 검증 전 후보 Schema다. 외부 검증 실패·모호한 장소·근거 부족 시 Snapshot을 유지하고 정식 Entity 행은 0건이어야 한다. `AUTO_CONFIRMED` 전환은 자동 등록 명령의 성공을 의미하므로 정식 등록 결과와 롤백 메타데이터를 별도 감사 또는 작업 결과로 연결한다.
+
+`candidate_fields`는 필드 이름을 키로 갖는 object이며, 값은 그 필드에 남은 후보 수에 따라 두 형태를 가진다. `BR-AIEXTRACT-001`이 "하나의 장소로 판정할 수 없으면 확정하지 않고 복수 후보로 남긴다"를 요구하므로 후보가 여럿인 필드도 폐기하지 않고 보존한다.
+
+| 후보 수 | `candidate_fields[필드]` | `field_confidences[필드]`·`evidence[필드]` |
+|---|---|---|
+| 1건 | 후보 값 문자열 | 각각 신뢰도와 근거를 기록한다 |
+| 2건 이상 | `{ "value", "confidence", "evidence" }` 항목의 배열 | **키를 기록하지 않는다** |
+
+후보가 여럿인 필드를 `field_confidences`·`evidence`에서 생략하는 것은 선택이 아니라 제약이다. `tr_ai_candidate_snapshot__json_contract` 트리거가 `field_confidences`의 모든 값을 0~1 숫자로, `evidence`의 모든 값을 단일 근거 object로 강제하므로 그 두 컬럼에는 배열을 담을 수 없다. 반면 `candidate_fields`에는 최상위 `jsonb_typeof = 'object'` CHECK만 걸려 있어 값 위치의 배열이 허용된다. 이 규칙 덕분에 복수 후보 보존에 스키마 변경이 필요하지 않다.
+
+따라서 `candidate_fields`의 키가 있다고 해서 `field_confidences`·`evidence`에 같은 키가 있다고 가정할 수 없다. 후보를 읽는 쪽은 값이 문자열인지 배열인지 먼저 확인해야 한다. 후보가 여럿인 필드는 자동 확정 대상이 아니므로 관리자 사후 보정에서도 시스템이 임의로 하나를 고르지 않는다.
 
 `candidate_tags`의 각 항목은 `candidateTagId`, `tagType`, `rawLabel`, `normalizedCode`, `label`, `confidence`, `evidence`를 가진다. `normalizedCode`가 기존 정의와 통합되지 않는 경우 자동 등록 규칙을 통과하면 새 `TagDefinition`을 만든다.
 

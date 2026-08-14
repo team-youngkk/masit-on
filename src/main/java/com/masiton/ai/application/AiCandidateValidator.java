@@ -125,7 +125,7 @@ public final class AiCandidateValidator {
             }
         }
 
-        Map<String, Candidate> selectedCandidates = new LinkedHashMap<>();
+        Map<String, List<Candidate>> selectedCandidates = new LinkedHashMap<>();
         LinkedHashSet<String> missingFields = new LinkedHashSet<>(declaredMissing);
         for (String requiredField : REQUIRED_FIELDS) {
             List<Candidate> fieldCandidates = candidatesByField.getOrDefault(requiredField, List.of());
@@ -136,9 +136,10 @@ public final class AiCandidateValidator {
             } else if (fieldCandidates.size() > 1) {
                 issues.add(issue("MULTIPLE_CANDIDATES", requiredField));
                 blocked = true;
+                selectedCandidates.put(requiredField, fieldCandidates);
             } else {
                 Candidate candidate = fieldCandidates.get(0);
-                selectedCandidates.put(requiredField, candidate);
+                selectedCandidates.put(requiredField, fieldCandidates);
                 if (candidate.evidence().type() == EvidenceType.UNKNOWN) {
                     issues.add(issue("UNKNOWN_EVIDENCE", requiredField));
                     blocked = true;
@@ -156,13 +157,15 @@ public final class AiCandidateValidator {
         if (menuCandidates.size() > 1) {
             issues.add(issue("MULTIPLE_CANDIDATES", "menu"));
             blocked = true;
+            selectedCandidates.put("menu", menuCandidates);
         } else if (menuCandidates.size() == 1 && menuCandidates.get(0).evidence().type() != EvidenceType.UNKNOWN) {
             // This is only the extracted menu expression. No food-category mapping is performed here.
             foodCategoryName = menuCandidates.get(0).value();
-            selectedCandidates.put("menu", menuCandidates.get(0));
+            selectedCandidates.put("menu", menuCandidates);
         } else if (menuCandidates.size() == 1) {
             issues.add(issue("UNKNOWN_EVIDENCE", "menu"));
             blocked = true;
+            selectedCandidates.put("menu", menuCandidates);
         }
 
         Decision decision;
@@ -332,7 +335,7 @@ public final class AiCandidateValidator {
     }
 
     private AiCandidateValidationResult rejected(
-            Map<String, Candidate> candidates,
+            Map<String, List<Candidate>> candidates,
             String foodCategoryName,
             List<TagCandidate> tags,
             List<TagCandidate> rejectedTags,

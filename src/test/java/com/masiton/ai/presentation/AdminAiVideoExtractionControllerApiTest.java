@@ -29,6 +29,8 @@ import com.masiton.ai.application.port.out.dto.AiExtractionJobView;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.GlobalExceptionHandler;
 
+import tools.jackson.databind.ObjectMapper;
+
 @DisplayName("관리자 AI 영상 추출 Controller API")
 class AdminAiVideoExtractionControllerApiTest {
 
@@ -38,6 +40,7 @@ class AdminAiVideoExtractionControllerApiTest {
             new AdminAiVideoExtractionController(useCase, queryService))
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
     @DisplayName("신규 접수는 202와 공통 필드 null 키를 포함한다")
@@ -184,6 +187,46 @@ class AdminAiVideoExtractionControllerApiTest {
         mockMvc.perform(post("/api/admin/ai/video-extractions/{jobId}/retry", jobId).contentType(MediaType.APPLICATION_JSON).content("{\"supplementText\":\"새 입력\",\"reason\":\"누락 보완\"}"))
                 .andExpect(status().isAccepted());
         verify(useCase).submitRetry("https://www.youtube.com/watch?v=video-id", "새 입력", "누락 보완");
+    }
+
+    @Test
+    @DisplayName("같은 필드에 복수 후보가 남으면 상세 조회 응답에 후보가 전부 노출된다")
+    void detail_같은필드복수후보_상세조회응답에후보가전부노출된다() throws Exception {
+        UUID jobId = UUID.fromString("66666666-6666-4666-8666-666666666666");
+        AiExtractionJobView job = new AiExtractionJobView(jobId, "ADMIN", "channel-id", "video-id",
+                "https://www.youtube.com/watch?v=video-id", "SUCCEEDED", "COMPLETE", "AUTO_BLOCKED",
+                "GOOGLE_GEMINI", "gemini-3.5-flash-lite", "P1", "S1", 1,
+                OffsetDateTime.parse("2026-08-11T00:00:00Z"), OffsetDateTime.parse("2026-08-11T00:01:00Z"),
+                OffsetDateTime.parse("2026-08-11T00:02:00Z"), false);
+        AiExtractionAdminQueryPort.Detail detail = new AiExtractionAdminQueryPort.Detail(job,
+                objectMapper.readTree("""
+                        {
+                          "restaurantName": [
+                            {"value":"첫 맛집","confidence":0.95,"evidence":{"type":"TIMESTAMP","startMs":10,"endMs":20}},
+                            {"value":"둘째 맛집","confidence":0.94,"evidence":{"type":"TIMESTAMP","startMs":30,"endMs":40}}
+                          ],
+                          "address": "서울시"
+                        }
+                        """),
+                objectMapper.createArrayNode(),
+                objectMapper.readTree("""
+                        {"address": 0.90}
+                        """),
+                objectMapper.readTree("""
+                        {"address": {"type":"TIMESTAMP","startMs":10,"endMs":20}}
+                        """),
+                objectMapper.createArrayNode(), null, null, java.util.List.of());
+        when(queryService.detail(jobId)).thenReturn(detail);
+
+        mockMvc.perform(get("/api/admin/ai/video-extractions/{jobId}", jobId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.candidates.length()").value(3))
+                .andExpect(jsonPath("$.candidates[0].field").value("restaurantName"))
+                .andExpect(jsonPath("$.candidates[0].value").value("첫 맛집"))
+                .andExpect(jsonPath("$.candidates[1].field").value("restaurantName"))
+                .andExpect(jsonPath("$.candidates[1].value").value("둘째 맛집"))
+                .andExpect(jsonPath("$.candidates[2].field").value("address"))
+                .andExpect(jsonPath("$.candidates[2].value").value("서울시"));
     }
 
     @Test
