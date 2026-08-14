@@ -1,11 +1,12 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { Button } from '@/components/ui/Button'
 import { Field } from '@/components/ui/Field'
 import { adminJson, fieldErrorsFor, messageFor } from '@/lib/admin/api'
+import { registrationStepDecision } from '@/lib/admin/registration-progression'
 
 import styles from './admin.module.css'
 
@@ -14,6 +15,8 @@ type Input = {
   label: string
   type?: 'text' | 'url' | 'tel'
   required?: boolean
+  /* 지정하면 자유 입력 대신 select로 렌더링한다. */
+  options?: string[]
 }
 
 type Preview = {
@@ -29,6 +32,10 @@ type RegistrationFlowProps = {
   previewPath: string
   createPath: string
   resourceName: string
+  /* 넘기지 않으면 빈 값에서 시작하는 기존 동작과 같다. */
+  initialValues?: Record<string, string>
+  /* READY 확정 생성 또는 DUPLICATE 판정으로 자원 id가 정해지면 호출한다. */
+  onCompleted?: (resourceId: string, kind: 'created' | 'duplicate') => void
 }
 
 function formatRecord(record: Record<string, unknown> | null): string | null {
@@ -47,14 +54,19 @@ export function RegistrationFlow({
   previewPath,
   createPath,
   resourceName,
+  initialValues,
+  onCompleted,
 }: RegistrationFlowProps) {
   const queryClient = useQueryClient()
-  const [values, setValues] = useState<Record<string, string>>({})
+  const fieldIdPrefix = useId()
+  const [values, setValues] = useState<Record<string, string>>(() => initialValues ?? {})
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   const [preview, setPreview] = useState<Preview | null>(null)
   const [created, setCreated] = useState<Record<string, unknown> | null>(null)
   const previewGeneration = useRef(0)
+  const previewInFlight = useRef(false)
+  const createInFlight = useRef(false)
 
   const previewMutation = useMutation({
     mutationFn: (body: Record<string, string | null>) =>
@@ -70,10 +82,6 @@ export function RegistrationFlow({
         method: 'POST',
         body: JSON.stringify({ confirmationToken }),
       }),
-    onSuccess: (result) => {
-      setCreated(result)
-      void queryClient.invalidateQueries({ queryKey: ['admin'] })
-    },
   })
 
   function updateValue(name: string, value: string) {
@@ -100,6 +108,10 @@ export function RegistrationFlow({
 
   function handlePreview(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (previewInFlight.current) {
+      return
+    }
+    previewInFlight.current = true
     setError(null)
     setFieldErrors({})
     setPreview(null)
@@ -114,6 +126,12 @@ export function RegistrationFlow({
         }
         setPreview(result)
         setCreated(null)
+        if (onCompleted) {
+          const decision = registrationStepDecision(result)
+          if (decision.action === 'skip') {
+            onCompleted(decision.existingId, 'duplicate')
+          }
+        }
       },
       onError: (reason) => {
         if (generation !== previewGeneration.current) {
@@ -122,20 +140,41 @@ export function RegistrationFlow({
         setFieldErrors(fieldErrorsFor(reason))
         setError(messageFor(reason))
       },
+      onSettled: () => {
+        previewInFlight.current = false
+      },
     })
   }
 
   function handleCreate() {
-    if (!preview?.confirmationToken) {
+    if (!preview?.confirmationToken || createInFlight.current) {
       return
     }
+    createInFlight.current = true
+    const generation = previewGeneration.current
 
     setError(null)
     setFieldErrors({})
     createMutation.mutate(preview.confirmationToken, {
+      onSuccess: (result) => {
+        if (generation !== previewGeneration.current) {
+          return
+        }
+        setCreated(result)
+        void queryClient.invalidateQueries({ queryKey: ['admin'] })
+        if (onCompleted && typeof result.id === 'string') {
+          onCompleted(result.id, 'created')
+        }
+      },
       onError: (reason) => {
+        if (generation !== previewGeneration.current) {
+          return
+        }
         setFieldErrors(fieldErrorsFor(reason))
         setError(messageFor(reason))
+      },
+      onSettled: () => {
+        createInFlight.current = false
       },
     })
   }
@@ -147,18 +186,44 @@ export function RegistrationFlow({
   return (
     <div className={styles.flow}>
       <form className={styles.form} onSubmit={handlePreview} noValidate>
-        {inputs.map((input) => (
-          <Field
-            key={input.name}
-            label={input.label}
-            name={input.name}
-            type={input.type ?? 'text'}
-            value={values[input.name] ?? ''}
-            onChange={(event) => updateValue(input.name, event.target.value)}
-            error={fieldErrors[input.name]}
-            required={input.required ?? true}
-          />
-        ))}
+        {inputs.map((input) => {
+          const fieldId = `${fieldIdPrefix}-${input.name}`
+          const errorId = `${fieldId}-error`
+
+          return input.options ? (
+            <div key={input.name} className={styles.selectField}>
+              <label htmlFor={fieldId}>{input.label}</label>
+              <select
+                id={fieldId}
+                name={input.name}
+                value={values[input.name] ?? ''}
+                onChange={(event) => updateValue(input.name, event.target.value)}
+                required={input.required ?? true}
+                aria-invalid={fieldErrors[input.name] ? true : undefined}
+                aria-describedby={fieldErrors[input.name] ? errorId : undefined}
+              >
+                <option value="">선택하세요</option>
+                {input.options.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+              {fieldErrors[input.name] ? <small id={errorId} className={styles.error}>{fieldErrors[input.name]}</small> : null}
+            </div>
+          ) : (
+            <Field
+              key={input.name}
+              label={input.label}
+              name={input.name}
+              type={input.type ?? 'text'}
+              value={values[input.name] ?? ''}
+              onChange={(event) => updateValue(input.name, event.target.value)}
+              error={fieldErrors[input.name]}
+              required={input.required ?? true}
+            />
+          )
+        })}
         {error ? <p className={styles.error} role="alert">{error}</p> : null}
         <Button type="submit" disabled={previewMutation.isPending}>
           {previewMutation.isPending ? '미리보기 확인 중…' : '미리보기 확인'}
