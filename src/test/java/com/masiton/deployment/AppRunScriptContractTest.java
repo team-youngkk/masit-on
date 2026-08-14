@@ -147,7 +147,7 @@ class AppRunScriptContractTest {
      * 콜백 URL을 넘기는 것만으로는 허브가 도달하지 못한다. prefix {@code location /api/}가
      * 검증 세션 {@code auth_request}를 강제하므로, 쿠키를 보내지 않는 허브는 구독 확인
      * GET에서 401을 받고 구독 자체가 성립하지 않는다. 제외는 exact-match {@code location}으로만
-     * 유효하다. 제외를 허용하는 조건은 ADR-DEPLOY-003 4.3절, 제외 경로 목록과 제한값은
+     * 유효하다. 제외를 허용하는 조건은 ADR-DEPLOY-004 6.2절, 제외 경로 목록과 제한값은
      * 검증 참여자 제한 공개 API 계약의 "세션 gate 제외 경로" 절이 소유한다.
      */
     @Test

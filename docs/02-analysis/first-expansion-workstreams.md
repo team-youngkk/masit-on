@@ -36,7 +36,7 @@ related_documents:
 | 구분 | 확정 내용 |
 |---|---|
 | 최종 책임자 / 기본 리뷰어 | 이우람 / 김인안 |
-| 소유 계약 | `NFR-SECURITY-001`, `NFR-SECURITY-003`, `NFR-DEPLOYMENT-002`, `NFR-DEPLOYMENT-004`; [검증 참여자 API 계약](../05-specs/api/common/validation-access-contract.md); [ADR-DEPLOY-003](../07-adr/platform/deploy-003-validation-cookie-session.md) |
+| 소유 계약 | `NFR-SECURITY-001`, `NFR-SECURITY-003`, `NFR-DEPLOYMENT-002`, `NFR-DEPLOYMENT-004`; [검증 참여자 API 계약](../05-specs/api/common/validation-access-contract.md); [ADR-DEPLOY-004](../07-adr/platform/deploy-004-public-api-validation-gate-boundary.md) |
 | 구현·검증 Task | [FE-12](../08-planning/expansion-1-implementation-plan.md#8-전체-task-표), [E1-T13](../08-planning/expansion-1-task-breakdown.md#e1-t13-검증-참여자-제한-공개-쿠키-세션-전환) |
 | 구현 경계 | 검증 로그인 화면·세션 API·내부 검증 Adapter, Redis `auth:verification:` namespace와 실패 제한, Parameter Store 비밀 주입, Nginx `auth_request`, Basic Auth 제거, 배포·관측·브라우저 회귀 |
 | 협업 경계 | WS-05의 회원·관리자 Bearer 인증 계약은 변경하지 않고 동시 동작만 회귀 검증한다. M2 운영 기준선과 Nginx·Redis·비밀정보 구성을 사용한다. |

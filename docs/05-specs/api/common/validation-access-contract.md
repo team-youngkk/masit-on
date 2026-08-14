@@ -5,7 +5,7 @@ owner: 이우람
 related_documents:
   - ../../../01-requirements/non-functional-requirements.md
   - ../../../06-architecture/security-boundary.md
-  - ../../../07-adr/platform/deploy-003-validation-cookie-session.md
+  - ../../../07-adr/platform/deploy-004-public-api-validation-gate-boundary.md
   - ../../../08-planning/expansion-1-task-breakdown.md
 ---
 
@@ -46,7 +46,7 @@ related_documents:
 
 ## 4. 세션 gate 제외 경로
 
-제외를 허용하는 **조건**은 [ADR-DEPLOY-003](../../../07-adr/platform/deploy-003-validation-cookie-session.md) 4.3절이 정한다. 이 절은 그 조건을 충족해 실제로 제외된 경로의 **목록**을 소유한다. 2026-08-13 승인 계약의 후속 결정에 따라, Nginx 제한 공개 gate의 제품 API 제외 목록을 Spring Security가 비관리자에게 `permitAll`로 공개한 계약과 동기화한다. 제한 공개 gate(`auth_request /_verification/session`)는 `/api/`와 `/` 두 prefix `location`에 걸리며, 아래 경로와 메서드만 별도 규칙으로 처리한다. **`/api/**`는 목록에 없거나 경로는 같아도 Method가 다른 요청이면 전부 gate를 통과해야 한다.** 프론트 진입점의 Method 처리는 4.1절이 별도로 정한다.
+제외를 허용하는 **조건**은 [ADR-DEPLOY-004](../../../07-adr/platform/deploy-004-public-api-validation-gate-boundary.md) 6.2절이 정한다. 이 절은 그 조건을 충족해 실제로 제외된 경로의 **목록**을 소유한다. 2026-08-13 승인 계약의 후속 결정에 따라, Nginx 제한 공개 gate의 제품 API 제외 목록을 Spring Security가 비관리자에게 `permitAll`로 공개한 계약과 동기화한다. 제한 공개 gate(`auth_request /_verification/session`)는 `/api/`와 `/` 두 prefix `location`에 걸리며, 아래 경로와 메서드만 별도 규칙으로 처리한다. **`/api/**`는 목록에 없거나 경로는 같아도 Method가 다른 요청이면 전부 gate를 통과해야 한다.** 프론트 진입점의 Method 처리는 4.1절이 별도로 정한다.
 
 ### 4.1 운영 진입점과 외부 callback
 

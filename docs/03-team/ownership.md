@@ -378,7 +378,7 @@ MVP 기능 요구사항 20개는 모두 정확히 하나의 Workstream과 최종
 - `WS-01`~`WS-16`의 16개 제품 Workstream과 MVP 20개·1차 확장 20개·2차 확장 21개·3차 확장 9개, 총 70개 기능 요구사항에 각각 최종 책임자 한 명이 지정되어 있다. `OPS-*`와 `QUALITY-EVAL`은 제품 Workstream 수와 별도로 관리한다.
 - 역할은 기술 계층별로 분리하지 않았다.
 - 공통 작업은 결정 책임과 구현 책임을 구분했다.
-- 제한 공개 진입 경계는 [OPS-VALIDATION](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙)이 `API-VALIDATION-001~002`, `ADR-DEPLOY-003`, `FE-12`, `E1-T13`을 단일 책임선으로 소유하고 정식 공개 시 종료한다.
+- 제한 공개 진입 경계는 [OPS-VALIDATION](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙)이 `API-VALIDATION-001~002`, `ADR-DEPLOY-004`, `FE-12`, `E1-T13`을 단일 책임선으로 소유하고 정식 공개 시 종료한다.
 - High Workstream 담당자에게 공통 책임이 일부 배정되지만 이우람이 Medium Workstream과 공통 인프라를 맡아 부담을 완화했다.
 - 김인안의 [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록)는 단순 CRUD가 아니라 인증, 검증, 등록 순서, 정합성과 세 조회 흐름 반영까지 포함한다.
 - Visit, Creator, Video, Restaurant 통합은 [WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) 조합, [WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 판정과 [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 등록 책임으로 구분했다.
