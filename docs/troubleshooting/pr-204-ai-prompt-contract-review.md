@@ -88,8 +88,9 @@ Prompt 버전을 P2로 올린 변경이 런타임 상수와 ADR 중심으로 적
 |---|---|---|---|---|---|
 | 독립 Prompt 버전 상수 정의 | 2곳 | `PROMPT_VERSION` 선언과 참조 검색 | 1개 정본 + Provider 별칭 1개 | Provider가 정본을 참조해 독립 변경 경로 제거 | PR 작성자, PR #204 반영 시점 |
 | 후보 내부 목록 변경 가능 경로 | 원본 목록 변경과 반환 목록 `add` 모두 가능 | 회귀 테스트에서 두 변경 경로 실행 | 원본 변경 영향 없음, 반환 목록 변경은 예외 | 검증 결과의 생성 후 불변성 확보 | PR 작성자, PR #204 반영 시점 |
-| 미해결 리뷰 스레드 | 6건 | GitHub review thread GraphQL 조회 | 답글·해결 후 재측정 | 확인 예정 | PR 작성자, PR #204 리뷰 반영 시점 |
+| 미해결 리뷰 스레드 | 6건 | GitHub review thread GraphQL 조회 | 0건 | 원인·변경·검증·기록 답글 후 6건 모두 해결 | PR 작성자, PR #204 리뷰 반영 시점 |
 
 ## 10. 남은 사항
 
-- 원격 브랜치 반영 뒤 CI의 전체 `clean build` 결과와 6개 스레드 답글·해결 상태를 확인한다.
+- 최초 미해결 리뷰 스레드 6건은 모두 원문 인라인 답글을 남기고 해결 처리했으며, GraphQL 재조회에서 0건을 확인했다.
+- 로컬 전체 `clean build`는 7절의 Testcontainers 환경 제약으로 완료하지 못했다. 원격 [GitHub Actions run 31780861858](https://github.com/team-youngkk/masit-on/actions/runs/31780861858)의 백엔드 빌드·테스트에서 전체 결과를 확인한다.
