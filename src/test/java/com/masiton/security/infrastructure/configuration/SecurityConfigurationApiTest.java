@@ -40,9 +40,8 @@ import com.masiton.orchestration.application.port.in.GetRestaurantDetailQuery;
 import com.masiton.orchestration.application.query.ContentStatus;
 import com.masiton.orchestration.application.query.RestaurantDetailResult;
 import com.masiton.personal.application.port.in.RecordRecentRestaurantViewUseCase;
+import com.masiton.security.application.AdminAuthenticationService;
 import com.masiton.security.application.AuthenticationResult;
-import com.masiton.security.application.port.in.LogoutAdminUseCase;
-import com.masiton.security.application.port.in.RefreshAdminTokenUseCase;
 
 import static org.hamcrest.Matchers.emptyString;
 import static org.hamcrest.Matchers.not;
@@ -92,10 +91,7 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
     private PublicCurationUseCase publicCurationUseCase;
 
     @MockitoBean
-    private RefreshAdminTokenUseCase refreshAdminTokenUseCase;
-
-    @MockitoBean
-    private LogoutAdminUseCase logoutAdminUseCase;
+    private AdminAuthenticationService adminAuthenticationService;
 
     @DynamicPropertySource
     static void securityProperties(DynamicPropertyRegistry registry) {
@@ -145,13 +141,13 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"))
                 .andExpect(jsonPath("$.traceId").value(not(emptyString())));
-        verify(refreshAdminTokenUseCase, never()).refresh(any());
+        verify(adminAuthenticationService, never()).refresh(any());
     }
 
     @Test
     @DisplayName("관리자 Refresh는 허용 Origin만 쿠키와 use case까지 전달한다")
     void adminRefresh_허용Origin_정상흐름유지() throws Exception {
-        given(refreshAdminTokenUseCase.refresh("refresh-token"))
+        given(adminAuthenticationService.refresh("refresh-token"))
                 .willReturn(new AuthenticationResult("access", "rotated-refresh", 1800));
 
         mockMvc.perform(post("/api/admin/auth/tokens/refresh")
@@ -160,7 +156,7 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.SET_COOKIE, org.hamcrest.Matchers.containsString("masit_on_refresh=rotated-refresh")));
 
-        verify(refreshAdminTokenUseCase).refresh("refresh-token");
+        verify(adminAuthenticationService).refresh("refresh-token");
     }
 
     @Test
@@ -176,7 +172,7 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
                 .andExpect(header().string(HttpHeaders.SET_COOKIE,
                         org.hamcrest.Matchers.containsString("Max-Age=0")));
 
-        verify(logoutAdminUseCase).logout("admin-id", "refresh-token");
+        verify(adminAuthenticationService).logout("admin-id", "refresh-token");
     }
 
     @Test
@@ -198,8 +194,8 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"));
 
-        verify(refreshAdminTokenUseCase, never()).refresh(any());
-        verify(logoutAdminUseCase, never()).logout(any(), any());
+        verify(adminAuthenticationService, never()).refresh(any());
+        verify(adminAuthenticationService, never()).logout(any(), any());
     }
 
     @Test
@@ -209,7 +205,7 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"))
                 .andExpect(jsonPath("$.traceId").value(not(emptyString())));
-        verify(logoutAdminUseCase, never()).logout(any(), any());
+        verify(adminAuthenticationService, never()).logout(any(), any());
     }
 
     @Test
