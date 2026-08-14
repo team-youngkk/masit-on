@@ -74,7 +74,7 @@ PR은 관리자 Filter에서 `getHeaders`를 사용했지만 회원 Controller�
 ## 8. 재발 방지 및 다음 확인
 
 - 재발 방지: 공통 resolver·canonicalizer 단위 테스트, 회원 Refresh·Logout 다중 Origin·동등 Origin 테스트, 회원 설정 fail-fast, ADR index·traceability 연결을 유지한다.
-- 다음 확인: 현재 변경은 로컬 작업 트리에 반영되어 있다. PR 브랜치에 push한 뒤 네 개 원본 review thread에 변경·검증·기록 링크로 답변하고 해결 처리한다.
+- 다음 확인: 커밋 `5dd4451`을 PR 브랜치에 push하고 원본 review thread 3건에 변경·검증·기록 링크로 답변한 뒤 모두 해결 처리했다. 최신 커밋의 GitHub Actions 결과는 별도로 확인한다.
 
 ## 9. 도입 전후 비교 지표
 
@@ -85,5 +85,5 @@ PR은 관리자 Filter에서 `getHeaders`를 사용했지만 회원 Controller�
 
 ## 10. 남은 사항
 
-- 로컬 집중·설정 경계 테스트를 통과했다. 전체 테스트는 기존 PR HEAD에서 통과한 기록이 있으며, 이번 로컬 수정분은 아직 push하지 않았으므로 PR 브랜치 push 후 GitHub Actions에서 전체 빌드·테스트를 다시 확인해야 한다.
-- 현재는 커밋·push 권한을 별도로 요청받지 않아 원격 review thread 답변·해결 처리는 보류한다.
+- 로컬 집중·설정 경계 테스트와 `clean build`를 통과했고, 커밋 `5dd4451`을 PR 브랜치에 push했다. 원본 review thread 3건에 답변·해결 처리를 완료했다.
+- 최신 커밋 기준 GitHub Actions 백엔드·프론트엔드 결과는 실행 후 확인한다. 실제 운영 Origin 설정과 브라우저 환경의 수동 검증은 배포 전 운영 점검 항목으로 남긴다.
