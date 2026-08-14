@@ -153,9 +153,9 @@ Flyway undo 파일과 하향 migration은 기본 경로로 사용하지 않는�
 
 V3 구간 아웃박스는 Action Token만 FK로 참조한다. 수신자는 `member_action_token.member_id → member_account` 조인으로만 결정하므로 다른 회원의 Token을 전달할 수 없다. 탈퇴 작업은 Action Token을 먼저 지워 CASCADE로 아웃박스를 제거한다. 탈퇴·세션 복구 작업은 회원 FK를 두지 않아 정리 실행 중에도 재시도 상태를 유지하고, 성공 시 명시적으로 제거한다. V4 구간의 회원 FK는 `ON DELETE CASCADE`, 맛집 FK는 `ON DELETE RESTRICT`로 생성한다. 따라서 회원 물리 파기는 관계를 함께 제거하고, 맛집 물리 삭제는 관계를 먼저 정리하는 명시적 Command가 선행되어야 한다. V5와 V6 구간은 기존 행을 백필하거나 외부 API를 호출하지 않는다.
 
-## 10. V3 2차 확장 스키마 계획
+## 10. V3 2차 확장 스키마
 
-기존 `V1__create_initial_schema.sql`과 `V2__add_expansion_1_schema.sql`은 수정하지 않는다. 2차 확장은 새 `V3__add_expansion_2_schema.sql`로 계획하며 상세 순서는 [2차 확장 데이터 계약](second-expansion-data-contract.md#10-flyway-계획)을 따른다.
+기존 `V1__create_initial_schema.sql`과 `V2__add_expansion_1_schema.sql`은 수정하지 않는다. 2차 확장은 현행 `V3__add_expansion_2_schema.sql` 하나로 구현·적용하며 상세 순서는 [2차 확장 데이터 계약](second-expansion-data-contract.md#10-flyway-계획)을 따른다.
 
 | 순서 | 변경 | 선행 |
 |---:|---|---|

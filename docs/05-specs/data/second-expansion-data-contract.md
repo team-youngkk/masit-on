@@ -293,7 +293,7 @@ Scheduler·Batch·락 선택과 재검토 조건은 [ADR-DATA-012](../../07-adr/
 
 ## 10. Flyway 계획
 
-기존 `V1__create_initial_schema.sql`과 `V2__add_expansion_1_schema.sql`은 수정하지 않는다. 다음 비어 있는 버전인 `V3__add_expansion_2_schema.sql` 하나를 새로 계획한다.
+기존 `V1__create_initial_schema.sql`과 `V2__add_expansion_1_schema.sql`은 수정하지 않는다. 2차 확장은 현행 `V3__add_expansion_2_schema.sql` 하나로 적용한다.
 
 1. `personal_collection`, `collection_restaurant`
 2. `curation`, `curation_restaurant`
