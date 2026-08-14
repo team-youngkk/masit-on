@@ -11,7 +11,11 @@ import {
   type MapPointsFilters,
 } from '@/lib/map/map-points-query'
 import type { MapPointsViewState } from '@/lib/map/map-points-response'
-import { initialMapRateLimitedUntil } from '@/lib/map/rate-limit-state'
+import {
+  createMapRateLimitState,
+  getMapRateLimitedUntil,
+  setMapRateLimitedUntil,
+} from '@/lib/map/rate-limit-state'
 import { findSelectedMapPoint, toggleMapSelection } from '@/lib/map/selection-sync'
 import type { FetchCreatorsResult } from '@/lib/restaurants-api'
 
@@ -78,15 +82,17 @@ export function MapScreen({ initialFilters, creatorsResult }: MapScreenProps) {
   )
 
   /*
-   * HydrationBoundary가 복원한 서버 prefetch 결과를 useQuery 실행 전에 직접 읽는다.
-   * 최초 응답이 이미 429였다면 같은 queryKey의 클라이언트 mount 재요청을 대기 시각까지 막는다.
+   * HydrationBoundary가 복원한 서버 prefetch 결과를 useQuery 실행 전에 직접 읽고, 429 대기를
+   * queryKey별로 보관한다. 필터를 바꾸면 새 key는 즉시 조회하되 이전 key로 돌아오면 남은 대기를
+   * 다시 적용한다.
    */
-  const [rateLimitedUntil, setRateLimitedUntil] = useState<number | null>(
+  const [rateLimitState, setRateLimitState] = useState(
     () => {
       const hydratedData = queryClient.getQueryData<MapPointsFetchResult>(queryKey)
-      return initialMapRateLimitedUntil(hydratedData)
+      return createMapRateLimitState(queryKey, hydratedData)
     },
   )
+  const rateLimitedUntil = getMapRateLimitedUntil(rateLimitState, queryKey)
 
   const isRateLimited = rateLimitedUntil !== null && Date.now() < rateLimitedUntil
 
@@ -114,10 +120,12 @@ export function MapScreen({ initialFilters, creatorsResult }: MapScreenProps) {
     if (data?.kind === 'ok') {
       setLastGoodView(data.view)
       setBanner(null)
-      setRateLimitedUntil(null)
+      setRateLimitState((current) => setMapRateLimitedUntil(current, queryKey, null))
     } else if (data?.kind === 'rateLimited') {
       setBanner({ kind: 'rateLimited', message: data.message, traceId: data.traceId })
-      setRateLimitedUntil(data.retryAvailableAt)
+      setRateLimitState((current) => (
+        setMapRateLimitedUntil(current, queryKey, data.retryAvailableAt)
+      ))
     } else if (data) {
       setBanner({ kind: data.kind, message: data.message, traceId: data.traceId })
     }
@@ -130,12 +138,12 @@ export function MapScreen({ initialFilters, creatorsResult }: MapScreenProps) {
 
     const delay = rateLimitedUntil - Date.now()
     if (delay <= 0) {
-      setRateLimitedUntil(null)
+      setRateLimitState((current) => setMapRateLimitedUntil(current, queryKey, null))
       return
     }
 
     const timer = setTimeout(() => {
-      setRateLimitedUntil(null)
+      setRateLimitState((current) => setMapRateLimitedUntil(current, queryKey, null))
       void queryClient.invalidateQueries({ queryKey })
     }, delay)
 

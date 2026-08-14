@@ -25,3 +25,12 @@ retryAfterTest('빈 값이거나 숫자가 아니거나 음수면 fallback 재�
 retryAfterTest('0초는 즉시 재조회 가능한 시각으로 변환한다', () => {
   retryAfterAssert.equal(parseRetryAfterHeader('0', 1_000), 1_000)
 })
+
+retryAfterTest('브라우저 타이머 최대 지연은 재조회 가능 시각으로 변환한다', () => {
+  retryAfterAssert.equal(parseRetryAfterHeader('2147483.647', 1_000), 2_147_484_647)
+})
+
+retryAfterTest('브라우저 타이머 상한 초과와 곱셈 overflow는 fallback 처리한다', () => {
+  retryAfterAssert.equal(parseRetryAfterHeader('2147483.648', 1_000), 2_000)
+  retryAfterAssert.equal(parseRetryAfterHeader('1e308', 1_000), 2_000)
+})
