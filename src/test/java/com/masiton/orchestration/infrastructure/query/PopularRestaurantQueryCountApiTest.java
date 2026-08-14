@@ -72,7 +72,7 @@ class PopularRestaurantQueryCountApiTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    // The global query counter must observe only the two measured MockMvc requests.
+    // 전역 쿼리 카운터가 측정 대상인 두 MockMvc 요청만 관측하도록 모든 DB 예약 작업을 대체한다.
     @MockitoBean
     private AiExtractionWorkerScheduler aiExtractionWorkerScheduler;
 
