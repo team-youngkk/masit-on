@@ -19,7 +19,14 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
+import com.masiton.ai.infrastructure.persistence.AiTemporaryInputCleanupScheduler;
+import com.masiton.ai.infrastructure.worker.AiExtractionWorkerScheduler;
+import com.masiton.common.idempotency.infrastructure.scheduling.IdempotencyRecordCleanupScheduler;
+import com.masiton.member.application.MemberActionMailOutboxService;
+import com.masiton.member.application.MemberDeletionCleanupService;
 import com.masiton.member.application.MemberSessionRevocationRecoveryService;
+import com.masiton.orchestration.infrastructure.retention.RetentionCleanupScheduler;
+import com.masiton.personal.infrastructure.scheduling.RecentRestaurantViewCleanupScheduler;
 import com.masiton.test.QueryCountingDataSourceConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -65,8 +72,30 @@ class PopularRestaurantQueryCountApiTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    // The global query counter must observe only the two measured MockMvc requests.
+    @MockitoBean
+    private AiExtractionWorkerScheduler aiExtractionWorkerScheduler;
+
+    @MockitoBean
+    private AiTemporaryInputCleanupScheduler aiTemporaryInputCleanupScheduler;
+
+    @MockitoBean
+    private IdempotencyRecordCleanupScheduler idempotencyRecordCleanupScheduler;
+
+    @MockitoBean
+    private MemberActionMailOutboxService memberActionMailOutboxService;
+
+    @MockitoBean
+    private MemberDeletionCleanupService memberDeletionCleanupService;
+
     @MockitoBean
     private MemberSessionRevocationRecoveryService memberSessionRevocationRecoveryService;
+
+    @MockitoBean
+    private RecentRestaurantViewCleanupScheduler recentRestaurantViewCleanupScheduler;
+
+    @MockitoBean
+    private RetentionCleanupScheduler retentionCleanupScheduler;
 
     @Test
     @DisplayName("인기 맛집 조회는 찜 건수와 공개 맛집 건수가 늘어도 쿼리 수가 같다")
@@ -76,9 +105,7 @@ class PopularRestaurantQueryCountApiTest {
         UUID smallRestaurantId = insertRestaurant();
         insertFavorite(smallMemberId, smallRestaurantId);
 
-        // 이 테스트가 재는 것은 데이터 규모에 따른 쿼리 수 증가다. 그런데 측정 구간의 첫 요청은
-        // Hikari가 커넥션을 처음 열면서 만드는 구문까지 함께 잡혀, 데이터가 적은 쪽이 오히려 더
-        // 큰 값으로 측정된다. 두 측정을 같은 조건에 두기 위해 측정 전에 한 번 호출해 풀을 채운다.
+        // 두 측정의 Hikari 커넥션 풀 상태를 동일하게 맞추기 위해 측정 전에 한 번 호출한다.
         mockMvc.perform(get("/api/restaurants/popular")).andExpect(status().isOk());
 
         QueryCountingDataSourceConfiguration.reset();
