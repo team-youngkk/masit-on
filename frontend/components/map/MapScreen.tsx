@@ -11,6 +11,7 @@ import {
   type MapPointsFilters,
 } from '@/lib/map/map-points-query'
 import type { MapPointsViewState } from '@/lib/map/map-points-response'
+import { initialMapRateLimitedUntil } from '@/lib/map/rate-limit-state'
 import { findSelectedMapPoint, toggleMapSelection } from '@/lib/map/selection-sync'
 import type { FetchCreatorsResult } from '@/lib/restaurants-api'
 
@@ -70,17 +71,21 @@ export function MapScreen({ initialFilters, creatorsResult }: MapScreenProps) {
   const filters = initialFilters
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
-  /*
-   * hydrated 결과가 우연히 rateLimited였는지는 useQuery를 호출하기 전에는 알 수 없어
-   * (아래 enabled 계산과 순환 참조가 생긴다) 초기값은 null로 둔다. 실제로 그 상태였다면
-   * useQuery가 즉시 재조회해 서버가 다시 429를 반환하는 순간 정상적으로 rateLimitedUntil이
-   * 설정되어 이후 호출을 막는다.
-   */
-  const [rateLimitedUntil, setRateLimitedUntil] = useState<number | null>(null)
 
   const queryKey = useMemo(
     () => buildMapPointsQueryKey(filters),
     [filters.category, filters.creatorId, filters.district, filters.query],
+  )
+
+  /*
+   * HydrationBoundary가 복원한 서버 prefetch 결과를 useQuery 실행 전에 직접 읽는다.
+   * 최초 응답이 이미 429였다면 같은 queryKey의 클라이언트 mount 재요청을 대기 시각까지 막는다.
+   */
+  const [rateLimitedUntil, setRateLimitedUntil] = useState<number | null>(
+    () => {
+      const hydratedData = queryClient.getQueryData<MapPointsFetchResult>(queryKey)
+      return initialMapRateLimitedUntil(hydratedData)
+    },
   )
 
   const isRateLimited = rateLimitedUntil !== null && Date.now() < rateLimitedUntil
