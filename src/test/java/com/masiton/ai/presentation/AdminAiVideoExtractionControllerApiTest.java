@@ -52,7 +52,7 @@ class AdminAiVideoExtractionControllerApiTest {
                 null,
                 null,
                 "GOOGLE_GEMINI",
-                "gemini-3-flash-preview",
+                "gemini-3.5-flash-lite",
                 "P1",
                 "S1",
                 0,
@@ -97,7 +97,7 @@ class AdminAiVideoExtractionControllerApiTest {
                 "PARTIAL",
                 "AUTO_BLOCKED",
                 "GOOGLE_GEMINI",
-                "gemini-3-flash-preview",
+                "gemini-3.5-flash-lite",
                 "P1",
                 "S1",
                 2,
@@ -169,7 +169,7 @@ class AdminAiVideoExtractionControllerApiTest {
     @DisplayName("목록은 1-base 메타데이터와 안정 정렬 결과를 반환한다")
     void list_필터페이지_메타데이터를반환한다() throws Exception {
         when(queryService.list("FAILED", "ADMIN", null, 2, 20)).thenReturn(new AiExtractionAdminQueryPort.Page(
-                java.util.List.of(new AiExtractionJobView(UUID.fromString("33333333-3333-4333-8333-333333333333"), "ADMIN", "c", "v", "https://www.youtube.com/watch?v=v", "FAILED", null, null, "GOOGLE_GEMINI", "gemini-3-flash-preview", "P1", "S1", 1, OffsetDateTime.parse("2026-08-11T00:00:00Z"), null, OffsetDateTime.parse("2026-08-11T00:01:00Z"), false)), 41));
+                java.util.List.of(new AiExtractionJobView(UUID.fromString("33333333-3333-4333-8333-333333333333"), "ADMIN", "c", "v", "https://www.youtube.com/watch?v=v", "FAILED", null, null, "GOOGLE_GEMINI", "gemini-3.5-flash-lite", "P1", "S1", 1, OffsetDateTime.parse("2026-08-11T00:00:00Z"), null, OffsetDateTime.parse("2026-08-11T00:01:00Z"), false)), 41));
         mockMvc.perform(get("/api/admin/ai/video-extractions?executionStatus=FAILED&source=ADMIN&page=2&size=20"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.items[0].jobId").value("33333333-3333-4333-8333-333333333333"))
                 .andExpect(jsonPath("$.page.number").value(2)).andExpect(jsonPath("$.page.totalPages").value(3)).andExpect(jsonPath("$.page.hasNext").value(true));
@@ -180,7 +180,7 @@ class AdminAiVideoExtractionControllerApiTest {
     void retry_허용작업_새보완텍스트로접수한다() throws Exception {
         UUID jobId = UUID.fromString("44444444-4444-4444-8444-444444444444");
         when(queryService.retryUrl(jobId)).thenReturn("https://www.youtube.com/watch?v=video-id");
-        when(useCase.submitRetry("https://www.youtube.com/watch?v=video-id", "새 입력", "누락 보완")).thenReturn(new AiExtractionJobView(jobId,"ADMIN","c","v","https://www.youtube.com/watch?v=v","QUEUED",null,null,"GOOGLE_GEMINI","gemini-3-flash-preview","P1","S1",0,OffsetDateTime.now(),null,null,false));
+        when(useCase.submitRetry("https://www.youtube.com/watch?v=video-id", "새 입력", "누락 보완")).thenReturn(new AiExtractionJobView(jobId,"ADMIN","c","v","https://www.youtube.com/watch?v=v","QUEUED",null,null,"GOOGLE_GEMINI","gemini-3.5-flash-lite","P1","S1",0,OffsetDateTime.now(),null,null,false));
         mockMvc.perform(post("/api/admin/ai/video-extractions/{jobId}/retry", jobId).contentType(MediaType.APPLICATION_JSON).content("{\"supplementText\":\"새 입력\",\"reason\":\"누락 보완\"}"))
                 .andExpect(status().isAccepted());
         verify(useCase).submitRetry("https://www.youtube.com/watch?v=video-id", "새 입력", "누락 보완");

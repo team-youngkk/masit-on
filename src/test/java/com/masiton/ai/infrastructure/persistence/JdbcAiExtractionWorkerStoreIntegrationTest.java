@@ -292,7 +292,7 @@ class JdbcAiExtractionWorkerStoreIntegrationTest {
                     id, source, priority, youtube_channel_id, youtube_video_id, video_url,
                     input_mode, input_hash, provider, model_version, prompt_version, schema_version, created_at
                 ) VALUES (?, 'WEBHOOK', ?, 'channel-id', ?, ?, 'GEMINI_VIDEO_URL', ?,
-                          'GOOGLE_GEMINI', 'gemini-3-flash-preview', 'P1', 'S1', ?)
+                          'GOOGLE_GEMINI', 'gemini-3.5-flash-lite', 'P1', 'S1', ?)
                 """, id, priority, videoId, "https://www.youtube.com/watch?v=" + videoId,
                 sha256(videoId), createdAt);
         return id;

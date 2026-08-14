@@ -66,7 +66,7 @@ related_documents:
 |---|---|---|---|---|
 | 자연어·AI 골든 Dataset과 평가 보고서 | 박진영 | 박진영, 각 WS 정답 책임자 | 이우람, 영향 WS | 평가 전략 완료 조건과 Dataset 승인 |
 | 자연어 해석 방식·태그 별칭·오류 계약 | 양성훈 | WS-14 | 이우람, 박진영 | 검색 ADR·API·평가 기준 승인 |
-| AI 제공자·모델·Prompt·Schema | 김인안 | WS-15 | 이우람, 양성훈, 박진영 | `gemini-3-flash-preview`·P1·S1·무료 quota·결제 차단 계약 테스트 |
+| AI 제공자·모델·Prompt·Schema | 김인안 | WS-15 | 이우람, 양성훈, 박진영 | `gemini-3.5-flash-lite`·P1·S1·무료 quota·결제 차단 계약 테스트 |
 | AI 비동기 작업·복구·단일 EC2 한계 | 이우람 | WS-15, 공통 설정은 이우람 | 박진영, 김인안 | lease·retry·복구 계약과 최종 부하 증거 승인 |
 | AI 후보·태그·검수·감사 데이터와 Flyway 순서 | 박진영 | WS-15 | 이우람 | 데이터 계약·마이그레이션 계획 승인 |
 | Kakao Mobility `/v1/directions`·quota·TTL | 이우람 | WS-16 | 양성훈, 박진영 | 5분 TTL·캐시 없음·월 1,000건과 계정 연결 검증 |

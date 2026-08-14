@@ -596,3 +596,11 @@ VALUES
     ('30000000-0000-4000-8000-000000000016', 'ATMOSPHERE_QUIET', 'ATMOSPHERE', '조용한', '[]'::jsonb, 'ACTIVE', 'SEED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
     ('30000000-0000-4000-8000-000000000017', 'ATMOSPHERE_LIVELY', 'ATMOSPHERE', '활기찬', '[]'::jsonb, 'ACTIVE', 'SEED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
     ('30000000-0000-4000-8000-000000000018', 'ATMOSPHERE_BAR', 'ATMOSPHERE', '바', '[]'::jsonb, 'ACTIVE', 'SEED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+-- Gemini 모델 전환과 기존 작업 이력 보존
+-- 기존 작업의 모델 버전은 변경하지 않고 신규 모델을 허용한다.
+
+ALTER TABLE ai_extraction_job
+    DROP CONSTRAINT ck_ai_extraction_job__model_version,
+    ADD CONSTRAINT ck_ai_extraction_job__model_version CHECK (
+        model_version IN ('gemini-3-flash-preview', 'gemini-3.5-flash-lite')

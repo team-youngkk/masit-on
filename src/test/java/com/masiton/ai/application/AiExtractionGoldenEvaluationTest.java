@@ -123,7 +123,7 @@ class AiExtractionGoldenEvaluationTest {
         JsonNode runtime = manifest.get("runtimeContract");
 
         assertThat(runtime.get("provider").asText()).isEqualTo(AiExtractionContract.PROVIDER);
-        assertThat(runtime.get("modelVersion").asText()).isEqualTo(AiExtractionContract.MODEL_VERSION);
+        assertThat(runtime.get("modelVersion").asText()).isEqualTo("gemini-3-flash-preview");
         assertThat(runtime.get("promptVersion").asText()).isEqualTo(AiExtractionContract.PROMPT_VERSION);
         assertThat(runtime.get("schemaVersion").asText()).isEqualTo(AiExtractionContract.SCHEMA_VERSION);
         assertThat(cases).allSatisfy(testCase -> {

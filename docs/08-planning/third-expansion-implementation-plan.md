@@ -92,7 +92,7 @@ flowchart LR
 | 체크포인트 | 내용 | 담당 | 선행 | 완료 조건 |
 |---|---|---|---|---|
 | `P0-01` | API Key가 코드·로그에 노출되지 않는 환경 변수/Secret 경계 확인 | 김인안 | 없음 | 로컬·테스트·운영 설정에서 비밀값 비노출 확인 |
-| `P0-02` | Gemini `gemini-3-flash-preview` 영상 입력·구조화 출력·Free Tier 호출 확인 | 김인안 | `P0-01` | 공개 YouTube URL과 보완 텍스트 정상·실패 Fixture가 준비됨 |
+| `P0-02` | Gemini `gemini-3.5-flash-lite` 영상 입력·구조화 출력·Free Tier 호출 확인 | 김인안 | `P0-01` | 공개 YouTube URL과 보완 텍스트 정상·실패 Fixture가 준비됨 |
 | `P0-03` | 기존 Restaurant·Creator·Video·Visit 등록 명령의 원자성·멱등성 확인 | 박진영 | 없음 | 자동 등록 orchestration이 호출할 Port와 실패 시 0건 저장 증거 확정 |
 | `P0-04` | Webhook 검증 Token·구독 채널·중복 식별자 계약 확정 | 이우람 | 없음 | 잘못된 채널·반복 알림·대형 Payload 테스트 입력 확정 |
 
