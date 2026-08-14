@@ -1,0 +1,175 @@
+---
+status: ACCEPTED
+analysis_date: 2026-08-14
+workstream: WS-15
+scope: AI 영상 추출 후보 손실 결함 분석
+related_documents:
+  - third-expansion-ai-evaluation-result.md
+  - third-expansion-evaluation-strategy.md
+  - third-expansion-task-breakdown.md
+  - ../01-requirements/business-rules.md
+  - ../01-requirements/functional-requirements.md
+  - ../04-product/prd/admin/ai-video-information-extraction.md
+  - ../05-specs/api/admin/ai-video-extraction-api.md
+  - ../05-specs/api/admin/reference-data-api.md
+  - ../05-specs/api/admin/visit-registration-api.md
+  - ../05-specs/data/third-expansion-ai-video-data-contract.md
+  - ../07-adr/integration/ai-001-video-extraction-candidate-boundary.md
+---
+
+# 3차 확장 AI 영상 추출 후보 손실 분석
+
+## 1. 문서 목적
+
+운영 배포된 AI 영상 추출이 성공 상태로 끝나는데도 맛집이 한 건도 등록되지 않는 현상의 원인을 확정하고, 계약 위반에 해당하는 결함과 별도 결정이 필요한 항목을 분리한다. 이 문서는 결함 분석과 수정 범위 확정까지를 다루며, 장소 동일성 판정 기준 변경은 결정 대상으로만 남긴다.
+
+## 2. 요약
+
+운영에서 접수한 AI 추출 작업 2건이 모두 등록 0건으로 끝났다.
+
+| 작업 | 영상 | 실행 상태 | 결과 | 검수 | 등록 |
+|---|---|---|---|---|---|
+| `e6e7e3e2` | `1o-fwu6Nv2s` | `FAILED` | 미완료 | 미정 | 0건 |
+| `6a710cde` | `wjejRtf9Ako` | `SUCCEEDED` | `PARTIAL` | `AUTO_BLOCKED` | 0건 |
+
+두 작업의 실패 원인은 서로 다르며, 둘 다 Provider 품질 문제가 아니라 애플리케이션 계약 결함이다. Gemini는 두 영상 모두에서 근거를 갖춘 후보를 정상 반환했다.
+
+- **결함 A** — Gemini에 보내는 태그 JSON Schema가 API 계약과 다르다. 태그를 하나라도 추출한 영상은 응답 검증에서 `SCHEMA`로 실패한다.
+- **결함 B** — 같은 필드에 후보가 2개 이상이면 후보를 Snapshot에 남기지 않고 폐기한다. `BR-AIEXTRACT-001` 위반이다.
+- **결정 C** — AI 후보의 `location`에 카카오 장소 URL을 요구한다. 근거 문서가 없고 `BR-AIEXTRACT-001`의 "위치 표현" 정의와 어긋나지만, 대안이 장소 동일성 판정 기준 변경이므로 별도 결정으로 분리한다.
+
+결함 A와 B는 계약 준수 수정이므로 이번 범위에 포함한다. 결정 C는 이번 범위에서 제외한다.
+
+## 3. 실측 근거
+
+배포본과 동일한 계약(`gemini-3.5-flash-lite`, Prompt `P1`, Schema `S1`, global endpoint)으로 두 영상을 직접 호출해 응답 구조를 확인했다. 응답 전문은 `ADR-AI-001` 5.1절에 따라 보존하지 않으며, 아래 집계와 최소 표본만 기록한다.
+
+| 항목 | 영상 A `wjejRtf9Ako` | 영상 B `1o-fwu6Nv2s` |
+|---|---|---|
+| HTTP 상태 | 200 | 200 |
+| 응답 소요 | 69초 | 18초 |
+| `VIDEO` modality 토큰 | 355,169 | 70,006 |
+| `resultCompleteness` | `COMPLETE` | `COMPLETE` |
+| `missingFields` | 없음 | 없음 |
+| 후보 총계 | 131건 | 42건 |
+| 후보 구성 | 맛집명 56 · 메뉴 53 · 주소 22 | 맛집명·메뉴·주소·위치·방문근거·태그 각 7 |
+| 근거 유형 | 전건 `TIMESTAMP` | 전건 `TIMESTAMP` |
+
+영상 B 표본이다. 7개 장소 전부에 상호명·주소·방문 근거와 timestamp가 붙었다.
+
+```
+능이버섯백숙  서울 영등포구 문래동4가 9-2   "능이버섯 삼계탕을 주문했고요"
+경성모밀      서울 동작구 동작대로29가길 6  "저는 돈까스와 판모밀 세트로 주문했고요"
+미타우동      서울 송파구 송파대로49길 31   "텐뿌라 부카케 우동이랑 온센 타마고를 주문했습니다"
+```
+
+세 가지가 확인된다.
+
+1. Gemini는 공개 YouTube URL 입력으로 영상을 실제로 분석한다. 프롬프트 토큰의 99.9%가 `VIDEO` modality이고 근거 timestamp가 영상 길이 전체에 분포한다.
+2. 두 영상 모두 `COMPLETE`이며 필수 필드 누락이 없다. 운영 작업이 `PARTIAL`·`AUTO_BLOCKED`로 끝난 것은 응답 품질 때문이 아니다.
+3. 맛집 소개 영상은 한 영상에 장소가 여러 곳 등장하는 것이 정상이다. 영상 A는 56곳, 영상 B는 7곳이다.
+
+## 4. 결함 A — 태그 outbound Schema가 API 계약과 다르다
+
+### 4.1 증상
+
+태그 후보를 반환한 영상 B는 응답 검증에서 `SCHEMA`로 실패한다. 운영 작업 `e6e7e3e2`의 `실패 범주: SCHEMA · 재시도 불가`가 이에 해당한다.
+
+### 4.2 원인
+
+[API 계약 3.3절](../05-specs/api/admin/ai-video-extraction-api.md)이 정의한 태그 후보는 `value`를 갖지 않고 `rawLabel`·`normalizedCode`·`label`을 갖는다. 수신 검증기(`GeminiHttpVideoExtractionAdapter.validTagCandidate`)와 후보 검증기(`AiCandidateValidator.parseTag`)는 이 계약을 정확히 구현한다.
+
+그러나 Gemini에 전송하는 `responseJsonSchema`는 `value`를 공용 속성으로 선언하고 `rawLabel`·`normalizedCode`·`label`을 필수로 걸지 않는다. 모델은 전송된 Schema를 지켜 태그 후보에 `value`를 담고 나머지 셋을 생략했고, 수신 검증기는 허용 필드 집합 위반으로 응답 전체를 기각했다.
+
+즉 **같은 Schema `S1`을 송신 측과 수신 측이 다르게 표현하고 있다.** 계약 원문은 API 계약 문서이므로 수정 대상은 송신 Schema와 시스템 프롬프트다. 수신 검증기와 API 계약은 바꾸지 않는다.
+
+### 4.3 영향
+
+태그를 추출할 수 있는 모든 영상이 `SCHEMA`로 실패하고 재시도가 불가능하다. 태그를 우연히 추출하지 못한 영상만 다음 단계로 진행한다.
+
+## 5. 결함 B — 복수 후보를 폐기한다
+
+### 5.1 근거 규칙
+
+`BR-AIEXTRACT-001` AI 후보 생성 범위는 다음을 요구한다.
+
+> 근거 구간이 없거나 하나의 장소로 판정할 수 없으면 추정값을 확정하지 않고 `UNKNOWN` 또는 복수 후보로 남긴다.
+
+요구사항은 두 가지를 분리해 규정한다. 확정하지 않는 것과, 후보를 남기는 것이다.
+
+### 5.2 현재 동작
+
+`AiCandidateValidator`는 필수 필드 후보가 2개 이상이면 `MULTIPLE_CANDIDATES` 사유로 자동 확정을 차단한다. 차단은 요구사항에 맞다. 그러나 같은 분기에서 후보를 `selectedCandidates`에 담지 않아 Snapshot의 `candidate_fields`에서 사라진다.
+
+결과적으로 관리자 상세 화면과 `GET /api/admin/ai/video-extractions/{jobId}` 응답의 `candidates`가 빈 배열이 된다. 운영 작업 `6a710cde`가 후보 0건으로 보이는 이유이며, 화면에서 사후 보정할 대상이 존재하지 않는다.
+
+`missingFields`에도 남지 않는다. 후보가 없어서 차단된 것이 아니라 여럿이어서 차단됐기 때문이다. 그래서 상세 화면은 "후보도 없고 누락도 아닌" 상태를 보여준다.
+
+### 5.3 부수 영향
+
+`AdminAiExtractionQueryService.registrationCommand`는 `CONFIRM` 시 저장된 `candidate_fields`를 다시 읽어 등록 명령을 만든다. 후보가 비어 있으면 `location` 값이 없어 `URI.create`에서 실패하거나 외부 검증에서 기각된다. 즉 관리자가 `AUTO_BLOCKED` 결과를 사후 보정하는 경로 자체가 동작하지 않는다.
+
+### 5.4 계약 영향
+
+- 응답 계약: `candidates`는 이미 배열이며 계약 예시도 항목이 둘이다. 같은 `field`가 여러 번 나타나는 것을 금지하는 규칙이 없다. **응답 계약 변경 없음.**
+- 데이터 계약: `candidate_fields`의 DB 제약은 `jsonb_typeof(candidate_fields) = 'object'`뿐이다. **스키마 변경 없음.**
+- 자동 확정 경로: 단일 후보일 때의 `AUTO_CONFIRMED` 동작은 그대로 유지한다. **동작 변경 없음.**
+
+## 6. 결정 C — AI 경로의 장소 확정 전제
+
+이번 범위에서 제외하되 기록으로 남긴다.
+
+`AiExtractionResultProcessorService`는 AI가 반환한 `location` 값이 `https://place.map.kakao.com/{id}` 형식일 것을 요구한다. 확인 결과 이 요구를 규정한 문서는 없다. 카카오 장소 URL 제약의 근거는 [관리자 기본 데이터 API](../05-specs/api/admin/reference-data-api.md)의 수동 등록 경로이며, 관리자가 직접 확인한 링크를 제출하는 것을 전제로 한다.
+
+`BR-AIEXTRACT-001`은 AI 산출물을 "주소·위치 표현"으로 정의한다. 실측에서 Gemini가 반환한 `여의도역`·`영등포구`는 이 정의에 부합하며, 모델이 카카오 장소 식별자를 알 수 있는 경로는 없다.
+
+같은 경로에 통과 불가 조건이 두 개 더 있다.
+
+| 조건 | 구현 | 실측 값 | 결과 |
+|---|---|---|---|
+| 메뉴 → 대표 카테고리 | 고정 키워드 완전일치 (`ResolveVerifiedRestaurantReferenceService.MENU_CATEGORY`) | `능이버섯 삼계탕`, `장어덮밥`, `쌀국수`, `간짜장` | 매칭 0건 |
+| 후보 주소 대조 | 공백 제거 후 완전일치 | 지번 표기 vs 카카오 도로명 | 불일치 |
+
+카카오 Adapter는 이미 상호명으로 `keyword.json`을 검색하고 URL은 검색 결과 선택에만 사용한다. 따라서 이름·주소 기반 선택으로 바꾸는 것은 구현상 가능하지만, [ADR-AI-001](../07-adr/integration/ai-001-video-extraction-candidate-boundary.md) 5.3절 "Kakao 장소 동일성 검증"의 판정 기준을 바꾸는 결정이므로 restaurant 도메인 소유자 합의가 필요하다.
+
+## 7. 이번 범위와 등록 완료 경로
+
+### 7.1 이번 범위
+
+| 항목 | 대상 | 계약 변경 | 합의 |
+|---|---|---|---|
+| 결함 A | Gemini 송신 Schema·시스템 프롬프트 | 없음 | 불필요 |
+| 결함 B | 후보 검증기·결과 프로세서·상세 응답 매핑 | 없음 | 불필요 |
+
+### 7.2 등록 완료 경로
+
+결함 B를 수정하면 관리자 상세 화면에 후보가 노출된다. 이후 정식 등록은 AI 검수 API를 확장하지 않고 기존 관리자 등록 API를 재사용한다.
+
+```
+후보 목록에서 1곳 선택
+  → POST /api/admin/restaurant-registration-previews  (상호명·주소 프리필, 카카오 URL·전화번호는 관리자 입력)
+  → POST /api/admin/restaurants
+  → POST /api/admin/creator-registration-previews → POST /api/admin/creators
+  → POST /api/admin/video-registration-previews   → POST /api/admin/videos
+  → POST /api/admin/visit-relationships           (visitEvidenceConfirmed = true)
+```
+
+이 경로는 관리자가 장소를 확정하므로 결정 C를 우회한다. AI는 "이 영상에 이 장소들이 등장한다"까지만 담당하고 장소 동일성은 사람이 판정한다. `POST /api/admin/ai/video-extractions/{jobId}/review`의 요청 계약을 바꾸지 않는다.
+
+한계를 명시한다. 이 경로로 등록하면 해당 작업의 `registered_restaurant_id`가 `null`로 남고 작업은 `DISCARD`로 종결된다. 후보·검수 이력은 `ADR-AI-001` 5.1절대로 1년 보존되지만, 등록된 정식 데이터와 AI 작업의 연결은 남지 않는다. 추적성이 필요해지면 `review` 계약에 등록 결과를 연결하는 별도 작업으로 다룬다.
+
+프론트엔드 후보 선택 화면은 이 문서 범위에 포함하지 않고 후속 작업으로 분리한다. 백엔드가 후보를 반환하는 것이 선행 조건이다.
+
+## 8. 검증 방법
+
+- 태그 후보를 포함한 `S1` 응답이 `SCHEMA` 실패 없이 후보로 변환되는 것을 WireMock으로 검증한다.
+- 같은 필드에 후보가 여러 개인 응답이 `AUTO_BLOCKED`로 차단되면서도 `candidate_fields`에 전부 보존되는 것을 검증한다.
+- 단일 후보 응답의 `AUTO_CONFIRMED` 자동 등록 동작이 회귀하지 않는 것을 검증한다.
+- 상세 조회 응답의 `candidates`에 같은 `field`가 여러 번 나타나는 것을 검증한다.
+- 로컬·자동화 테스트에서 실제 Gemini·Kakao·YouTube API를 호출하지 않는다.
+
+## 9. 남은 결정
+
+- 결정 C의 장소 동일성 판정 기준 변경 여부. restaurant 도메인 소유자 합의 대상이다.
+- 메뉴 표현과 대표 카테고리 매핑 방식. 고정 키워드 완전일치를 유지할지 기준정보로 옮길지 판단이 필요하다.
+- 관리자 수동 등록 결과와 AI 작업의 연결 보존 여부.
