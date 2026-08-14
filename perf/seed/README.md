@@ -2,6 +2,8 @@
 
 `NFR-PERFORMANCE-006` 정상 부하 측정에 쓰는 기준 데이터를 적재한다. [ADR-PERF-001](../../docs/07-adr/quality/perf-001-k6-load-testing.md) 6.5절이 소유하는 산출물이다.
 
+검증 참여자 제한 공개 중인 운영 DB에는 전체 시드를 적재하지 않는다. 운영 직접 검증은 [ADR-PERF-002](../../docs/07-adr/quality/perf-002-operational-participant-load-testing.md)의 `perf/operational-fixture/`를 사용한다.
+
 **이 SQL은 Flyway 마이그레이션이 아니다.** `src/main/resources/db/migration/`에 옮기지 않는다. 측정 환경에만 적재하는 별도 스크립트다.
 
 ## 선행 조건
