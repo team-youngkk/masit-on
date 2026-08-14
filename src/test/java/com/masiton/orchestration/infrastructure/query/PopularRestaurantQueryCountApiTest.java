@@ -13,11 +13,20 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
+import com.masiton.ai.infrastructure.persistence.AiTemporaryInputCleanupScheduler;
+import com.masiton.ai.infrastructure.worker.AiExtractionWorkerScheduler;
+import com.masiton.common.idempotency.infrastructure.scheduling.IdempotencyRecordCleanupScheduler;
+import com.masiton.member.application.MemberActionMailOutboxService;
+import com.masiton.member.application.MemberDeletionCleanupService;
+import com.masiton.member.application.MemberSessionRevocationRecoveryService;
+import com.masiton.orchestration.infrastructure.retention.RetentionCleanupScheduler;
+import com.masiton.personal.infrastructure.scheduling.RecentRestaurantViewCleanupScheduler;
 import com.masiton.test.QueryCountingDataSourceConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -63,6 +72,31 @@ class PopularRestaurantQueryCountApiTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    // 전역 쿼리 카운터가 측정 대상인 두 MockMvc 요청만 관측하도록 모든 DB 예약 작업을 대체한다.
+    @MockitoBean
+    private AiExtractionWorkerScheduler aiExtractionWorkerScheduler;
+
+    @MockitoBean
+    private AiTemporaryInputCleanupScheduler aiTemporaryInputCleanupScheduler;
+
+    @MockitoBean
+    private IdempotencyRecordCleanupScheduler idempotencyRecordCleanupScheduler;
+
+    @MockitoBean
+    private MemberActionMailOutboxService memberActionMailOutboxService;
+
+    @MockitoBean
+    private MemberDeletionCleanupService memberDeletionCleanupService;
+
+    @MockitoBean
+    private MemberSessionRevocationRecoveryService memberSessionRevocationRecoveryService;
+
+    @MockitoBean
+    private RecentRestaurantViewCleanupScheduler recentRestaurantViewCleanupScheduler;
+
+    @MockitoBean
+    private RetentionCleanupScheduler retentionCleanupScheduler;
+
     @Test
     @DisplayName("인기 맛집 조회는 찜 건수와 공개 맛집 건수가 늘어도 쿼리 수가 같다")
     void 인기맛집조회_찜과맛집건수증가_쿼리수상수() throws Exception {
@@ -70,6 +104,9 @@ class PopularRestaurantQueryCountApiTest {
         UUID smallMemberId = insertMember();
         UUID smallRestaurantId = insertRestaurant();
         insertFavorite(smallMemberId, smallRestaurantId);
+
+        // 두 측정의 Hikari 커넥션 풀 상태를 동일하게 맞추기 위해 측정 전에 한 번 호출한다.
+        mockMvc.perform(get("/api/restaurants/popular")).andExpect(status().isOk());
 
         QueryCountingDataSourceConfiguration.reset();
         mockMvc.perform(get("/api/restaurants/popular")).andExpect(status().isOk());
