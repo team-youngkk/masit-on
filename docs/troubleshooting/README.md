@@ -11,6 +11,7 @@ related_documents:
 ## PR 리뷰
 
 - [PR #206 Nginx 공개 API smoke·Accepted ADR 정합화](pr-206-nginx-public-api-gate-review.md)
+- [PR #204 Prompt P2 계약 동기화와 후보 결과 불변성](pr-204-ai-prompt-contract-review.md)
 - [PR #192 V8 통합 범위와 최종 Gemini 모델 계약](pr-192-flyway-model-contract-review.md)
 - [PR #191 Gemini 모델 전환 리뷰 반영](pr-191-gemini-model-transition-review.md)
 - [PR #184 YouTube 채널 감시 상태·동시성 경계 리뷰 반영](pr-184-youtube-channel-watch-review.md)

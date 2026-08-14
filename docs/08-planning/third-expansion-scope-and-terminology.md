@@ -54,7 +54,7 @@ approved_decisions:
 | 기능 | 초기 범위 | 초기 제외 | 후속 검증 |
 |---|---|---|---|
 | 자연어 검색 | 사용자의 자연어 문장을 기존 맛집 검색 조건과 자동 확정·사후 보정 태그 조건으로 해석하고 기존 맛집 목록을 반환한다. 태그 18종 seed와 자동 생성 태그, 태그 AND, P1 parserVersion을 사용한다. | 임베딩 유사도 검색, RAG 답변, 자유 형식 챗봇, 자동 검증 전 AI 후보·원문 메뉴·분위기 검색, 예약·결제 연결 | 평가 Dataset 240건 실행과 API 통합 검증 |
-| AI 영상 정보 추출 | 관리자 화면의 신규 영상 추가와 관리자가 활성화한 YouTube 채널의 Webhook 신규 영상 감지를 같은 비동기 추출 흐름으로 처리한다. Gemini API global endpoint의 `gemini-3.5-flash-lite`, Prompt P1, Schema S1로 맛집·메뉴·주소·방문·태그 후보를 추출하고, 자동 검증 통과 결과는 관리자 승인 없이 정식 등록·공개한다. | 원본 영상·전체 자막 자동 수집·로컬 저장·재배포, 자동 검증 전 공개, 자동 failover, 무제한 자동 재처리·전체 채널 무차별 감시 | 운영 계정 billing·quota 연결, Webhook 구독 갱신과 평가 Dataset 120건 실행 |
+| AI 영상 정보 추출 | 관리자 화면의 신규 영상 추가와 관리자가 활성화한 YouTube 채널의 Webhook 신규 영상 감지를 같은 비동기 추출 흐름으로 처리한다. Gemini API global endpoint의 `gemini-3.5-flash-lite`, 현재 Prompt P2, Schema S1로 맛집·메뉴·주소·방문·태그 후보를 추출하고, 자동 검증 통과 결과는 관리자 승인 없이 정식 등록·공개한다. 기존 P1 작업은 이력으로 보존한다. | 원본 영상·전체 자막 자동 수집·로컬 저장·재배포, 자동 검증 전 공개, 자동 failover, 무제한 자동 재처리·전체 채널 무차별 감시 | 운영 계정 billing·quota 연결, Webhook 구독 갱신과 평가 Dataset 120건 실행 |
 | 동선 및 코스 추천 | 사용자가 고른 공개·활성 맛집 2~5개의 좌표로 자동차 이동 순서를 제안하고 경로 요약을 제공한다. 첫 장소 출발·최근접 이웃·동률 ID 오름차순·TTL 5분·캐시 없음·코스당 1회 호출을 사용한다. | 자동 맛집 선정, 현재 위치, 별도 출발·도착지, 도보·대중교통, 실시간 교통 판단, 영업 가능 여부, 저장·공유 | 운영 계정 quota 연결과 Kakao 응답 계약 통합 검증 |
 
 ## 3. 공통 범위 경계
@@ -71,7 +71,7 @@ approved_decisions:
 - AI는 검색 조건 해석 또는 자동 등록을 위한 후보 생성에 사용한다.
 - AI가 만든 문장이나 추정만으로 공개 사실, 방문 관계, 예약 가능 여부 또는 영업 상태를 확정하지 않는다.
 - AI 결과를 공개 Entity로 반영하는 기능은 자동 필수값·근거·정규화·중복·Kakao·YouTube·Visit 검증을 모두 통과한 뒤에만 허용한다. 관리자의 사전 확인은 요구하지 않는다.
-- AI 영상 후보에는 Google Gemini API Free Tier의 `gemini-3.5-flash-lite` global endpoint, Prompt `P1`, Schema `S1`만 사용한다. 유료 호출·자동 모델 전환은 하지 않는다. 모델이 무료 tier에서 제공되지 않거나 결제 연결을 요구하면 수동 등록 fallback으로 전환한다.
+- 신규 AI 영상 후보에는 Google Gemini API Free Tier의 `gemini-3.5-flash-lite` global endpoint, Prompt `P2`, Schema `S1`만 사용한다. 기존 Prompt `P1` 작업과 Snapshot은 역사적 이력으로 보존한다. 유료 호출·자동 모델 전환은 하지 않는다. 모델이 무료 tier에서 제공되지 않거나 결제 연결을 요구하면 수동 등록 fallback으로 전환한다.
 - Webhook은 신규 영상의 채널·영상 식별과 작업 접수에 사용하며, Webhook 수신만으로 정식 `Video`·`Visit`를 생성하거나 공개하지 않는다.
 - 관리자는 신규 영상 추가 화면에서 URL과 보완 텍스트를 제출할 수 있다. Webhook 경로는 공개 YouTube URL의 Gemini 직접 영상 입력을 우선 사용하고, 접근 불가·분석 실패·부분 추출 시 관리자 보완 텍스트를 fallback으로 사용한다.
 
@@ -177,7 +177,7 @@ AI 추출 후보와 `Restaurant`, `Creator`, `Video`, `Visit`는 같은 의미�
 ### 5.6. 확정 계약과 검증 항목
 
 - 기존 모델의 Google Gemini API Free Tier global endpoint 모델·영상 입력·구조화 출력 smoke test는 통과했지만, `gemini-3.5-flash-lite`로 전환한 새 모델의 smoke test와 운영 billing·quota 확인은 별도 실행이 필요하다. 새 모델은 유료 전환·자동 failover 없이 고정하고, 검증 전에는 호출하지 않는다.
-- 후보 Snapshot은 P1/S1·18개 통제 태그·근거 유형(`TIMESTAMP`, `TEXT_RANGE`, `UNKNOWN`)·입력 해시를 저장하고, 원본·전체 자막·전체 응답은 저장하지 않는다.
+- 신규 후보 Snapshot은 P2/S1·18개 통제 태그·근거 유형(`TIMESTAMP`, `TEXT_RANGE`, `UNKNOWN`)·입력 해시를 저장하고, 기존 P1/S1 Snapshot은 생성 당시 계약 이력으로 보존한다. 원본·전체 자막·전체 응답은 저장하지 않는다.
 - Gemini timeout은 5초/90초/120초, 최대 2회 재시도·5초/30초 backoff이며 정책·입력·Schema 오류는 즉시 실패한다.
 - 관리자 후보 검수 후 Kakao 장소·YouTube 메타데이터·Visit 검증을 순서대로 수행하고, 실패 시 정식 Entity 0건으로 보류한다.
 - 동일 영상·입력 해시·모델·Prompt·Schema 조합은 멱등 처리하고, 버전 변경은 새 후보·평가 후 명시적 재처리만 허용한다.
