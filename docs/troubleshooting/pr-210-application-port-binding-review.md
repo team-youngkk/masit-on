@@ -65,7 +65,7 @@ PR 구현 과정에서 운영 포트 loopback 바인딩을 기존 라우팅 ADR�
 | 검증 | 결과 | 확인한 내용 |
 |---|---|---|
 | `git diff --check` | 통과 | 문서·frontmatter·링크 변경에 공백 오류 없음 |
-| `./gradlew.bat test --tests "com.masiton.deployment.AppRunScriptContractTest" --no-daemon --console=plain` | 실행 후 결과 기록 | 운영 프로파일 loopback, 실행 네트워크, Nginx·상태 지표 대상 계약 회귀 확인 |
+| `./gradlew.bat test --tests "com.masiton.deployment.AppRunScriptContractTest" --no-daemon --console=plain` | 통과 | 운영 프로파일 loopback, 실행 네트워크, Nginx·상태 지표 대상 계약 회귀 4건 통과, BUILD SUCCESSFUL |
 | ADR·README 링크 대조 | 통과 | ADR-WEB-003 ↔ ADR-WEB-005 대체 관계, ADR 인덱스·추적표·하위 README 경로 일치 |
 
 ## 8. 재발 방지 및 다음 확인
