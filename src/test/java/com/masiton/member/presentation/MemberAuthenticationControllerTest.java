@@ -36,6 +36,7 @@ import com.masiton.member.infrastructure.configuration.MemberRateLimitProperties
 import com.masiton.member.infrastructure.web.MemberClientAddressResolver;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -188,6 +189,48 @@ class MemberAuthenticationControllerTest {
     }
 
     @Test
+    @DisplayName("Origin 헤더가 여러 개인 회원 Refresh 요청은 403이고 서비스를 호출하지 않는다")
+    void refresh_다중Origin_403과서비스미호출() throws Exception {
+        mockMvc.perform(post("/api/auth/tokens/refresh")
+                        .header(HttpHeaders.ORIGIN, cookieSettings.publicBaseUrl())
+                        .header(HttpHeaders.ORIGIN, "https://evil.test")
+                        .cookie(new Cookie(cookieSettings.cookieName(), "refresh-token")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                .andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE));
+
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    @DisplayName("회원 Refresh는 대소문자와 기본 포트가 다른 동등 Origin을 허용한다")
+    void refresh_동등한Origin_허용() throws Exception {
+        MemberCookieSettings canonicalSettings = memberCookieSettings("HTTPS://EXAMPLE.TEST:443");
+        MemberAuthenticationService canonicalService = mock(MemberAuthenticationService.class);
+        when(canonicalService.refresh("refresh-token"))
+                .thenReturn(new MemberAuthenticationResult("access", "refresh", 1800));
+        MockMvc canonicalMockMvc = MockMvcBuilders.standaloneSetup(new MemberAuthenticationController(
+                canonicalService,
+                canonicalSettings,
+                addressResolver()
+        )).build();
+
+        canonicalMockMvc.perform(post("/api/auth/tokens/refresh")
+                        .header(HttpHeaders.ORIGIN, "https://example.test")
+                        .cookie(new Cookie(canonicalSettings.cookieName(), "refresh-token")))
+                .andExpect(status().isOk());
+
+        verify(canonicalService).refresh("refresh-token");
+    }
+
+    @Test
+    @DisplayName("회원 공개 Origin 설정에 경로가 포함되면 즉시 실패한다")
+    void 회원공개Origin_경로포함_설정실패() {
+        assertThatIllegalStateException()
+                .isThrownBy(() -> memberCookieSettings("https://example.test/path"));
+    }
+
+    @Test
     @DisplayName("Refresh Token이 유효하지 않으면 Refresh Cookie를 즉시 만료한다")
     void refresh_무효Token_만료Cookie반환() throws Exception {
         when(service.refresh("refresh-token")).thenThrow(new BusinessException(
@@ -281,6 +324,52 @@ class MemberAuthenticationControllerTest {
         assertThat(cookie)
                 .contains(cookieSettings.cookieName() + "=")
                 .contains("Path=" + cookieSettings.path(), "Max-Age=0", "HttpOnly", "Secure", "SameSite=Strict");
+    }
+
+    @Test
+    @DisplayName("Origin 헤더가 여러 개인 회원 로그아웃은 403이고 서비스를 호출하지 않는다")
+    void 로그아웃_다중Origin_403과서비스미호출() throws Exception {
+        mockMvc.perform(delete("/api/auth/tokens")
+                        .header(HttpHeaders.ORIGIN, cookieSettings.publicBaseUrl())
+                        .header(HttpHeaders.ORIGIN, "https://evil.test")
+                        .cookie(new Cookie(cookieSettings.cookieName(), "refresh-token"))
+                        .principal(authentication()))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                .andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE));
+
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    @DisplayName("회원 로그아웃은 대소문자와 기본 포트가 다른 동등 Origin을 허용한다")
+    void 로그아웃_동등한Origin_허용() throws Exception {
+        MemberCookieSettings canonicalSettings = memberCookieSettings("HTTPS://EXAMPLE.TEST:443");
+        MemberAuthenticationService canonicalService = mock(MemberAuthenticationService.class);
+        MockMvc canonicalMockMvc = MockMvcBuilders.standaloneSetup(new MemberAuthenticationController(
+                canonicalService,
+                canonicalSettings,
+                addressResolver()
+        )).build();
+
+        canonicalMockMvc.perform(delete("/api/auth/tokens")
+                        .header(HttpHeaders.ORIGIN, "https://example.test")
+                        .cookie(new Cookie(canonicalSettings.cookieName(), "refresh-token"))
+                        .principal(authentication()))
+                .andExpect(status().isNoContent());
+
+        verify(canonicalService).logout(any(), any(), any());
+    }
+
+    private static MemberCookieSettings memberCookieSettings(String publicBaseUrl) {
+        return new MemberCookieSettings(
+                "__Secure-masiton-member-refresh",
+                Duration.ofDays(14),
+                "/api/auth/tokens",
+                true,
+                "Strict",
+                publicBaseUrl
+        );
     }
 
     private static MemberClientAddressResolver addressResolver() {

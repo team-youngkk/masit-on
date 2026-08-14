@@ -40,6 +40,8 @@ import com.masiton.orchestration.application.port.in.GetRestaurantDetailQuery;
 import com.masiton.orchestration.application.query.ContentStatus;
 import com.masiton.orchestration.application.query.RestaurantDetailResult;
 import com.masiton.personal.application.port.in.RecordRecentRestaurantViewUseCase;
+import com.masiton.security.application.AdminAuthenticationService;
+import com.masiton.security.application.AuthenticationResult;
 
 import static org.hamcrest.Matchers.emptyString;
 import static org.hamcrest.Matchers.not;
@@ -88,6 +90,9 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
     @MockitoBean
     private PublicCurationUseCase publicCurationUseCase;
 
+    @MockitoBean
+    private AdminAuthenticationService adminAuthenticationService;
+
     @DynamicPropertySource
     static void securityProperties(DynamicPropertyRegistry registry) {
         registry.add("masiton.security.jwt.key-id", () -> "test-key-20260727");
@@ -113,6 +118,15 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"))
                 .andExpect(jsonPath("$.traceId").value(not(emptyString())));
+    }
+
+    @Test
+    @DisplayName("일반 관리자 Bearer API는 Origin 없이도 Origin 필터를 적용하지 않는다")
+    void 일반관리자BearerAPI_Origin없음_Origin필터를적용하지않는다() throws Exception {
+        mockMvc.perform(get("/api/admin/origin-filter-is-not-applied")
+                        .with(SecurityMockMvcRequestPostProcessors.jwt()
+                                .authorities(new SimpleGrantedAuthority("ADMIN"))))
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -148,16 +162,74 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
                 .andExpect(status().isBadRequest());
 
         mockMvc.perform(post("/api/admin/auth/tokens/refresh"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.traceId").value(not(emptyString())));
+        verify(adminAuthenticationService, never()).refresh(any());
     }
 
     @Test
-    @DisplayName("로그아웃 matcher는 JWT와 Refresh Cookie를 모두 요구한다")
-    void 로그아웃_JWT없음_401() throws Exception {
+    @DisplayName("관리자 Refresh는 허용 Origin만 쿠키와 use case까지 전달한다")
+    void adminRefresh_허용Origin_정상흐름유지() throws Exception {
+        given(adminAuthenticationService.refresh("refresh-token"))
+                .willReturn(new AuthenticationResult("access", "rotated-refresh", 1800));
+
+        mockMvc.perform(post("/api/admin/auth/tokens/refresh")
+                        .header(HttpHeaders.ORIGIN, "http://localhost:3000")
+                        .cookie(new jakarta.servlet.http.Cookie("masit_on_refresh", "refresh-token")))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, org.hamcrest.Matchers.containsString("masit_on_refresh=rotated-refresh")));
+
+        verify(adminAuthenticationService).refresh("refresh-token");
+    }
+
+    @Test
+    @DisplayName("관리자 Logout은 허용 Origin에서 기존 JWT·Refresh Cookie 흐름을 유지한다")
+    void adminLogout_허용Origin_정상흐름유지() throws Exception {
+        mockMvc.perform(delete("/api/admin/auth/tokens")
+                        .header(HttpHeaders.ORIGIN, "http://localhost:3000")
+                        .cookie(new jakarta.servlet.http.Cookie("masit_on_refresh", "refresh-token"))
+                        .with(SecurityMockMvcRequestPostProcessors.jwt()
+                                .jwt(jwt -> jwt.subject("admin-id"))
+                                .authorities(new SimpleGrantedAuthority("ADMIN"))))
+                .andExpect(status().isNoContent())
+                .andExpect(header().string(HttpHeaders.SET_COOKIE,
+                        org.hamcrest.Matchers.containsString("Max-Age=0")));
+
+        verify(adminAuthenticationService).logout("admin-id", "refresh-token");
+    }
+
+    @Test
+    @DisplayName("관리자 Cookie 경계는 불허 또는 다중 Origin을 JWT와 use case보다 먼저 403으로 거부한다")
+    void adminCookieOrigin_불허또는다중Origin_JWT와UseCase전403거부() throws Exception {
+        String unverifiableToken = signedToken("retired-key");
+
+        mockMvc.perform(delete("/api/admin/auth/tokens")
+                        .header(HttpHeaders.ORIGIN, "https://untrusted.example")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + unverifiableToken)
+                        .cookie(new jakarta.servlet.http.Cookie("masit_on_refresh", "refresh-token")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.traceId").value(not(emptyString())));
+        mockMvc.perform(post("/api/admin/auth/tokens/refresh")
+                        .header(HttpHeaders.ORIGIN, "http://localhost:3000")
+                        .header(HttpHeaders.ORIGIN, "https://untrusted.example")
+                        .cookie(new jakarta.servlet.http.Cookie("masit_on_refresh", "refresh-token")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+
+        verify(adminAuthenticationService, never()).refresh(any());
+        verify(adminAuthenticationService, never()).logout(any(), any());
+    }
+
+    @Test
+    @DisplayName("로그아웃은 Origin 검증을 JWT보다 먼저 적용한다")
+    void 로그아웃_Origin누락_403() throws Exception {
         mockMvc.perform(delete("/api/admin/auth/tokens"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.traceId").value(not(emptyString())));
+        verify(adminAuthenticationService, never()).logout(any(), any());
     }
 
     @Test

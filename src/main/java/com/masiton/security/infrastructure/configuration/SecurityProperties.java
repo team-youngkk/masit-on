@@ -10,6 +10,8 @@ import java.util.stream.Collectors;
 import jakarta.annotation.PostConstruct;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import com.masiton.common.web.OriginCanonicalizer;
+
 @ConfigurationProperties("masiton.security")
 public class SecurityProperties {
 
@@ -19,6 +21,7 @@ public class SecurityProperties {
     private boolean secure = true;
     private String sameSite = "Strict";
     private String path = "/api/admin/auth";
+    private String publicBaseUrl = "http://localhost:3000";
     private final Member member = new Member();
     private final LoginFailure loginFailure = new LoginFailure();
 
@@ -66,6 +69,14 @@ public class SecurityProperties {
         this.path = path;
     }
 
+    public String getPublicBaseUrl() {
+        return publicBaseUrl;
+    }
+
+    public void setPublicBaseUrl(String publicBaseUrl) {
+        this.publicBaseUrl = publicBaseUrl;
+    }
+
     public LoginFailure getLoginFailure() {
         return loginFailure;
     }
@@ -77,6 +88,28 @@ public class SecurityProperties {
     @PostConstruct
     public void validateLoginFailureProxyBoundary() {
         loginFailure.validateProxyBoundary();
+        validateAdminPublicBaseUrl();
+        validateMemberPublicBaseUrl();
+    }
+
+    public void validateAdminPublicBaseUrl() {
+        try {
+            publicBaseUrl = OriginCanonicalizer.canonicalize(publicBaseUrl);
+        } catch (IllegalArgumentException exception) {
+            throw new IllegalStateException("Admin public base URL must be an HTTP(S) origin", exception);
+        }
+    }
+
+    public void validateMemberPublicBaseUrl() {
+        try {
+            member.publicBaseUrl = OriginCanonicalizer.canonicalize(member.publicBaseUrl);
+        } catch (IllegalArgumentException exception) {
+            throw new IllegalStateException("Member public base URL must be an HTTP(S) origin", exception);
+        }
+    }
+
+    public boolean isAllowedPublicOrigin(String candidate) {
+        return OriginCanonicalizer.matches(candidate, publicBaseUrl);
     }
 
     public static class Jwt {
