@@ -73,7 +73,7 @@ Testcontainers 기반 자동화 테스트는 매 실행 시 빈 데이터베이�
 
 3차 확장 AI 스키마는 통합 전 `V4` 기본 스키마, 구 `V5` 재사용 조회 인덱스, 구 `V6` 관리자 검수 감사·재시도 사유, 구 `V7` 태그 롤백 provenance로 구성됐다. 운영 배포 전 누적 변경의 SQL 순서와 의미를 보존해 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql) 하나의 1~8절로 통합했다. 통합본의 6~8절 주석에는 통합 전 구간을 표시하고, 통합 전후 SQL은 주석·공백을 제외한 정규화 본문이 동일하다.
 
-운영 RDS가 존재하는 현재 환경에서는 통합 대상 버전이 운영 `flyway_schema_history`에 없음을 읽기 전용 조회 결과로 확인해야 한다. PR #192에서는 이 조회를 실행할 운영 접속 권한이 없어 결과를 아직 기록하지 않았으며, `V4`~`V7` 미적용 결과가 확보되기 전에는 이 통합을 병합하지 않는다. 통합 대상을 이미 적용한 개발·공유 데이터베이스는 `docker compose down -v`로 재생성해야 하며, 같은 AI 버전 구간은 다시 통합하지 않는다.
+운영 RDS가 존재하는 현재 환경에서는 통합 대상 버전이 운영 `flyway_schema_history`에 없음을 읽기 전용 조회 결과로 확인해야 한다. PR #192에서는 2026-08-14 11:18 KST 서울 리전 `ap-northeast-2`의 RDS `masiton-db`를 SSM `i-0b451f18bca827cc9` 경유로 읽기 전용 조회했고, `V1`·`V2`·`V3`만 존재하며 `V4`~`V7`은 없음을 확인했다. 실제 운영 배포와 마이그레이션 적용은 수행하지 않았다. 통합 대상을 이미 적용한 개발·공유 데이터베이스는 `docker compose down -v`로 재생성해야 하며, 같은 AI 버전 구간은 다시 통합하지 않는다.
 
 ## 3. 관리자 계정 부트스트랩
 
@@ -187,8 +187,12 @@ AI 영상 추출 스키마·재사용 조회 인덱스·수동 검수 감사·�
 
 통합된 V4는 관리자 재시도 사유와 Snapshot 기반 `visit_tag` provenance를 추가한다. 기존 작업·태그 행의 provenance는 nullable로 유지하며, 새 자동 확정·수동 보정 연결부터 Snapshot ID를 기록해 롤백 시 해당 작업의 연결만 삭제한다.
 
+### 11.2 V8 Gemini 모델 전환 제약
+
+`V8__allow_gemini_3_5_flash_lite_model_version.sql`은 이미 적용된 통합 V4를 수정하지 않고 모델 CHECK 제약만 갱신한다. 기존 `gemini-3-flash-preview` 작업 행은 보존하고, 신규 작업은 애플리케이션 계약의 `gemini-3.5-flash-lite`로 생성한다. 통합 V4의 기존 스키마·인덱스·감사·provenance 계약은 변경하지 않는다.
+
 ## 12. 향후 변경 번호
 
-초기 스키마 baseline 다음 변경은 `V2`로 적용됐고, 1차 확장 변경은 2.3절 통합 이후 다시 `V2` 하나로 적용됐다. 2차 확장은 `V3`, 3차 확장 AI 영상 추출과 누적 AI 변경은 `V4`를 사용한다.
+초기 스키마 baseline 다음 변경은 `V2`로 적용됐고, 1차 확장 변경은 2.3절 통합 이후 다시 `V2` 하나로 적용됐다. 2차 확장은 `V3`, 3차 확장 AI 영상 추출과 누적 AI 변경은 통합 `V4`, Gemini 모델 전환 제약은 `V8`을 사용한다.
 
 `V1`과 `V2`는 각각 적용된 시점부터 수정하지 않는다. 현행 `V3__add_expansion_2_schema.sql` 또는 `V4__create_third_expansion_ai_schema.sql`을 향후 통합하려면 2.1절과 ADR-DATA-009의 강제 규칙을 모두 증명해야 하며, 이미 운영에 적용된 파일은 통합·수정하지 않는다.

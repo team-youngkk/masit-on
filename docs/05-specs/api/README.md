@@ -81,7 +81,7 @@ related_documents:
 | 자연어 맛집 탐색 | [자연어 맛집 탐색 API](discovery/natural-language-restaurant-discovery-api.md) | WS-14 |
 | 맛집 코스 추천 | [맛집 코스 추천 API](discovery/restaurant-course-recommendation-api.md) | WS-16 |
 
-3차 확장의 세 기능 API 계약은 정책 승인 상태다. AI 영상 추출 API는 관리자 신규 영상 추가와 채널 감시 Webhook을 같은 비동기 작업 경계로 수렴시키며, 자연어·코스 API는 각각 P1 규칙 기반 해석과 Kakao Mobility Port를 재사용한다. Gemini는 `gemini-3-flash-preview`, 자연어 P1 seed·규칙, Mobility TTL·순서 알고리즘은 관련 계약에 고정하며 구현 전 계약 테스트를 요구한다.
+3차 확장의 세 기능 API 계약은 정책 승인 상태다. AI 영상 추출 API는 관리자 신규 영상 추가와 채널 감시 Webhook을 같은 비동기 작업 경계로 수렴시키며, 자연어·코스 API는 각각 P1 규칙 기반 해석과 Kakao Mobility Port를 재사용한다. Gemini는 `gemini-3.5-flash-lite`, 자연어 P1 seed·규칙, Mobility TTL·순서 알고리즘은 관련 계약에 고정하며 구현 전 계약 테스트를 요구한다.
 
 ## 6. 변경 절차
 

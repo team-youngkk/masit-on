@@ -49,8 +49,11 @@ class GeminiHttpVideoExtractionAdapterWireMockIntegrationTest {
         String mapping = objectMapper.writeValueAsString(Map.of(
                 "request", Map.of(
                         "method", "POST",
-                        "urlPath", "/v1beta/models/gemini-3-flash-preview:generateContent",
-                        "headers", Map.of("x-goog-api-key", Map.of("equalTo", API_KEY)),
+                        "urlPath", "/v1beta/models/gemini-3.5-flash-lite:generateContent",
+                        "headers", Map.of(
+                                "x-goog-api-key", Map.of("equalTo", API_KEY),
+                                "Content-Type", Map.of("equalTo", "application/json"),
+                                "Accept", Map.of("equalTo", "application/json")),
                         "bodyPatterns", List.of(Map.of("matchesJsonPath",
                                 "$.contents[0].parts[?(@.fileData.fileUri == 'https://www.youtube.com/watch?v=video-id') ]"))),
                 "response", Map.of(

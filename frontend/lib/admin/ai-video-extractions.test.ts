@@ -12,7 +12,7 @@ const job = (reused: boolean) => ({
   resultCompleteness: null,
   reviewStatus: null,
   provider: 'GOOGLE_GEMINI',
-  modelVersion: 'gemini-3-flash-preview',
+  modelVersion: 'gemini-3.5-flash-lite',
   promptVersion: 'P1',
   schemaVersion: 'S1',
   attemptCount: 0,

@@ -106,7 +106,7 @@ related_documents:
 | Spring Scheduler | 보존 cleanup에 한해 채택 | Accepted ADR | [ADR-DATA-010](data/data-010-recent-view-retention-cleanup.md), [ADR-DATA-012](data/data-012-second-expansion-retention-cleanup.md) | 최근 기록과 2차 확장 보존 Command만 실행; 자동 수집·집계·동기화 제외 |
 | Spring Batch 6.0.4 | 고정이나 자동화 제외 | Post-MVP ADR | [ADR-AUTO-001](adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) | 이력·재시작 배치 범위 없음 |
 | 하루 1회 이상 최근 기록 cleanup | 1차 확장 적용 | Operational Configuration | [ADR-DATA-010](data/data-010-recent-view-retention-cleanup.md) | 신규 조회와 독립된 30일 경과 `recent_restaurant_view` 물리 삭제; 실패 관측·재시도 |
-| AI 제공자·모델 | Gemini Free Tier global endpoint, `gemini-3-flash-preview` | Accepted ADR | [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md) | 공개 YouTube URL 입력, 후보·검수·무료 quota·보존 기준 |
+| AI 제공자·모델 | Gemini Free Tier global endpoint, `gemini-3.5-flash-lite` | Accepted ADR | [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md) | 공개 YouTube URL 입력, 후보·검수·무료 quota·보존 기준 |
 | JSON Schema + Prompt Template | Prompt `P1`, 결과 Schema `S1` | Accepted ADR | [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md) | AI 후보 계약과 평가 기준에 연결 |
 | 자연어 조건 해석 | P1 규칙 기반·태그 18종·태그 AND·`UNRESOLVED` | Accepted ADR | [ADR-ARCH-005](architecture/arch-005-natural-language-filter-interpretation.md) | 임베딩·RAG 없이 WS-14 조회 애플리케이션에서 처리 |
 | AI 추출 비동기 Worker | Worker 1개/인스턴스·lease 120초·polling 5초·재시도 고정, 용량 실측은 최종 게이트 | Accepted ADR | [ADR-EXT-003](integration/ext-003-ai-extraction-async-reliability.md) | 작업 상태·복구·비용 격리 |

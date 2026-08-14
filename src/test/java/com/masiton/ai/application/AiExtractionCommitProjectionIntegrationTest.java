@@ -160,7 +160,7 @@ class AiExtractionCommitProjectionIntegrationTest extends FullContextIntegration
                     input_mode, input_hash, provider, model_version, prompt_version, schema_version,
                     execution_status, attempt_count, lease_owner, lease_expires_at, created_at, started_at
                 ) VALUES (?, 'ADMIN', 'REALTIME', 'ai-commit-channel', ?, ?, 'ADMIN_TEXT', ?,
-                          'GOOGLE_GEMINI', 'gemini-3-flash-preview', 'P1', 'S1',
+                          'GOOGLE_GEMINI', 'gemini-3.5-flash-lite', 'P1', 'S1',
                           'RUNNING', 1, 'worker-1', ?, ?, ?)
                 """, jobId, videoId, "https://www.youtube.com/watch?v=" + videoId, sha256(jobId.toString()),
                 startedAt.plusMinutes(5), startedAt.minusSeconds(1), startedAt);

@@ -57,7 +57,7 @@ related_documents:
 
 - 대상: 인증된 관리자
 - 선행 조건: 기존 관리자 인증, 관리자 활성화 채널의 Webhook 또는 관리자 신규 영상 추가, YouTube URL 확인, Kakao 장소 검증, Creator·Video·Visit 등록·중복·원자성 규칙
-- 입력: Webhook이 전달한 공개 YouTube URL을 Google Gemini API의 `gemini-3-flash-preview` 영상 입력으로 사용하거나, 관리자 화면의 YouTube URL과 최대 20,000자의 선택적 보완 텍스트를 사용한다.
+- 입력: Webhook이 전달한 공개 YouTube URL을 Google Gemini API의 `gemini-3.5-flash-lite` 영상 입력으로 사용하거나, 관리자 화면의 YouTube URL과 최대 20,000자의 선택적 보완 텍스트를 사용한다.
 - 시스템은 원본 영상이나 전체 YouTube 자막·전사를 자동 수집·저장하지 않는다.
 - Gemini 영상 입력 실패·접근 제한·부분 추출 시 관리자가 보완 텍스트를 추가해 재시도할 수 있다.
 - 구현은 [WS-15](../../../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출)가 담당하며 최종 책임자는 김인안, 기본 리뷰어는 박진영이다.
@@ -76,7 +76,7 @@ related_documents:
 
 - 관리자 추출 작업 요청과 중복 작업 안내
 - 관리자 신규 영상 추가와 Webhook 신규 영상 감지
-- Google Gemini API `gemini-3-flash-preview` 공개 YouTube URL 입력과 관리자 보완 텍스트 fallback
+- Google Gemini API `gemini-3.5-flash-lite` 공개 YouTube URL 입력과 관리자 보완 텍스트 fallback
 - 관리자 Webhook 감시 채널 활성화·중지와 구독 상태 확인
 - 비동기 작업 상태 `QUEUED`, `RUNNING`, `SUCCEEDED`, `FAILED`
 - 성공 결과의 완전·부분 추출 표시
@@ -160,7 +160,7 @@ related_documents:
 - 원본 영상과 전체 자막·전사 원문을 저장·재배포하지 않는다.
 - 관리자가 직접 입력한 보완 텍스트는 비동기 Worker 재시작 복구를 위해 암호화된 임시 입력으로만 저장하고, 작업 종료 후 24시간 이내 삭제한다. 관리자 재시도는 새 텍스트를 다시 제출한다.
 - 검수에 필요한 최소 근거 구간과 입력 해시만 관리자 전용으로 보존한다.
-- Google Gemini API Free Tier의 global endpoint를 사용하며, Free Tier에서 입력·응답이 제품 개선에 사용될 수 있다는 정책과 원문 전송 범위를 활성화 전에 확인한다. `gemini-3-flash-preview`가 Free Tier에서 제공되지 않거나 billing account·결제수단 연결을 요구하면 호출하지 않는다. File API·context caching·자동 저장은 사용하지 않는다.
+- Google Gemini API Free Tier의 global endpoint를 사용하며, Free Tier에서 입력·응답이 제품 개선에 사용될 수 있다는 정책과 원문 전송 범위를 활성화 전에 확인한다. `gemini-3.5-flash-lite`가 Free Tier에서 제공되지 않거나 billing account·결제수단 연결을 요구하면 호출하지 않는다. File API·context caching·자동 저장은 사용하지 않는다.
 - 유료 호출·자동 유료 tier 승격·무료 quota 초과 후 과금 fallback은 금지한다. 모델·계정별 Free Tier quota의 80%에서 경보하고 100%에서 새 호출을 차단하며, 관리자 수동 등록 fallback을 제공한다.
 - 입력 원문·Prompt 전문·AI 응답 본문·외부 인증정보를 일반 로그에 남기지 않는다.
 
@@ -184,7 +184,7 @@ related_documents:
 
 ## 13. 운영 리스크와 변경 게이트
 
-- Preview 모델 종료·quota·장애 시 자동 모델 교체 없이 실패·수동 등록으로 전환한다.
-- `gemini-3-flash-preview`·Prompt `P1`·Schema `S1` 변경은 새 후보 버전과 평가 보고서를 만든다.
+- 모델 종료·quota·장애 시 자동 모델 교체 없이 실패·수동 등록으로 전환한다.
+- `gemini-3.5-flash-lite`·Prompt `P1`·Schema `S1` 변경은 새 후보 버전과 평가 보고서를 만든다.
 - 예외 보정 처리량이 추출 요청량을 따라가지 못하는 경우 BACKFILL 작업을 먼저 중지하고 Webhook 실시간 작업을 우선한다.
 - 태그 정의·별칭·근거 정책 변경은 데이터 계약과 평가 Dataset 버전을 함께 올린다.

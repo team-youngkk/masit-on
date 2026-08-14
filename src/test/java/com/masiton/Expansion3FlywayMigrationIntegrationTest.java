@@ -119,8 +119,8 @@ class Expansion3FlywayMigrationIntegrationTest {
     }
 
     @Test
-    @DisplayName("빈 데이터베이스를 최신 버전까지 마이그레이션하면 통합 AI 관리 스키마가 적용된다")
-    void 빈데이터베이스_최신버전마이그레이션_통합AI관리스키마적용() {
+    @DisplayName("빈 데이터베이스를 최신 버전까지 마이그레이션하면 통합 AI 관리 스키마와 V8 모델 제약이 적용된다")
+    void 빈데이터베이스_최신버전마이그레이션_통합AI스키마와V8모델제약적용() {
         // given
         SchemaDatabase database = createSchemaDatabase();
         JdbcTemplate jdbcTemplate = new JdbcTemplate(database.dataSource());
@@ -131,12 +131,53 @@ class Expansion3FlywayMigrationIntegrationTest {
         // then
         assertThat(jdbcTemplate.queryForList(
                 "SELECT version FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank", String.class))
-                .containsExactly("1", "2", "3", "4");
+                .containsExactly("1", "2", "3", "4", "8");
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM pg_indexes WHERE schemaname = current_schema() "
                 + "AND indexname IN ('ix_ai_job__video_input_versions', 'ix_ai_job__video_mode_versions', "
                 + "'ix_ai_temporary_input__expires_at', 'ix_visit_tag__created_from_snapshot')", Integer.class)).isEqualTo(4);
         assertAiSchemaAndContracts(jdbcTemplate, database.schema());
         assertManualReviewSchema(jdbcTemplate, database.schema());
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT pg_get_constraintdef(oid) FROM pg_constraint "
+                        + "WHERE connamespace = current_schema()::regnamespace "
+                        + "AND conname = 'ck_ai_extraction_job__model_version'", String.class))
+                .contains("gemini-3-flash-preview", "gemini-3.5-flash-lite");
+    }
+
+    @Test
+    @DisplayName("AI 작업 모델 제약은 기존 Preview와 신규 Lite만 허용한다")
+    void AI작업모델_기존Preview와신규Lite만허용한다() {
+        JdbcTemplate jdbcTemplate = migratedJdbcTemplate();
+
+        insertJobWithModel(jdbcTemplate, "legacy-model-video", bytes(34), "gemini-3-flash-preview");
+        insertJobWithModel(jdbcTemplate, "lite-model-video", bytes(35), "gemini-3.5-flash-lite");
+
+        assertThatThrownBy(() -> insertJobWithModel(
+                jdbcTemplate, "unsupported-model-video", bytes(36), "unsupported-model"))
+                .isInstanceOf(DataAccessException.class);
+    }
+
+    @Test
+    @DisplayName("V4에서 V8로 전진 적용해도 기존 Preview 작업은 보존되고 신규 Lite를 허용한다")
+    void V4에서V8전진적용_기존Preview작업을보존하고신규Lite를허용한다() {
+        // given
+        SchemaDatabase database = createSchemaDatabase();
+        JdbcTemplate jdbcTemplate = new JdbcTemplate(database.dataSource());
+        migrate(database.dataSource(), database.schema(), MigrationVersion.fromVersion("4"));
+        UUID legacyJobId = insertJobWithModel(
+                jdbcTemplate, "legacy-preview-video", bytes(37), "gemini-3-flash-preview");
+
+        // when
+        migrate(database.dataSource(), database.schema(), MigrationVersion.fromVersion("8"));
+
+        // then
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT model_version FROM ai_extraction_job WHERE id = ?", String.class, legacyJobId))
+                .isEqualTo("gemini-3-flash-preview");
+        insertJobWithModel(jdbcTemplate, "upgraded-lite-video", bytes(38), "gemini-3.5-flash-lite");
+        assertThatThrownBy(() -> insertJobWithModel(
+                jdbcTemplate, "unsupported-after-v8-video", bytes(39), "unsupported-model"))
+                .isInstanceOf(DataAccessException.class);
     }
 
     @Test
@@ -624,13 +665,25 @@ class Expansion3FlywayMigrationIntegrationTest {
 
     private UUID insertJob(
             JdbcTemplate jdbcTemplate, String source, String inputMode, String videoId, byte[] inputHash) {
+        return insertJobWithModel(jdbcTemplate, source, inputMode, videoId, inputHash, "gemini-3-flash-preview");
+    }
+
+    private UUID insertJobWithModel(JdbcTemplate jdbcTemplate, String videoId, byte[] inputHash,
+            String modelVersion) {
+        return insertJobWithModel(jdbcTemplate, "ADMIN", "ADMIN_TEXT", videoId, inputHash, modelVersion);
+    }
+
+    private UUID insertJobWithModel(
+            JdbcTemplate jdbcTemplate, String source, String inputMode, String videoId, byte[] inputHash,
+            String modelVersion) {
         UUID id = UUID.randomUUID();
         jdbcTemplate.update(
                 "INSERT INTO ai_extraction_job (id, source, priority, youtube_channel_id, youtube_video_id, video_url, "
                         + "input_mode, input_hash, provider, model_version, prompt_version, schema_version) "
                         + "VALUES (?, ?, 'REALTIME', 'channel-1', ?, ?, ?, ?, 'GOOGLE_GEMINI', "
-                        + "'gemini-3-flash-preview', 'P1', 'S1')",
-                id, source, videoId, "https://www.youtube.com/watch?v=" + videoId, inputMode, inputHash);
+                        + "?, 'P1', 'S1')",
+                id, source, videoId, "https://www.youtube.com/watch?v=" + videoId, inputMode, inputHash,
+                modelVersion);
         return id;
     }
 
