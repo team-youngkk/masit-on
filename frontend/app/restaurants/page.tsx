@@ -6,6 +6,7 @@ import { Field } from '@/components/ui/Field'
 import { FavoriteButton } from '@/components/personal/FavoriteButton'
 import { NaturalLanguageRestaurantSearch } from '@/components/restaurants/NaturalLanguageRestaurantSearch'
 import { cn } from '@/lib/cn'
+import { naturalLanguageFiltersKey } from '@/lib/natural-language-filters-key'
 import {
   CATEGORY_OPTIONS,
   DISTRICT_OPTIONS,
@@ -59,6 +60,19 @@ export default async function RestaurantsPage({
     return `/restaurants?${next.toString()}`
   })()
 
+  /* URL이 소유한 직접 필터. 이 값이 바뀌면 key가 달라져 자연어 검색 영역이 재마운트되고
+   * 이전 문장·태그·결과가 남지 않는다. 구조화 폼 GET 제출은 전체 문서 이동이라 이미 초기화되지만,
+   * 유튜버 필터 해제·페이지 링크 같은 클라이언트 내비게이션은 컴포넌트를 유지한다. */
+  const naturalLanguageFilters = {
+    query: currentQuery.trim() || null,
+    district: currentDistrict || null,
+    category: currentCategory || null,
+    creatorId: currentCreatorId ?? null,
+    /* 목록 API는 태그 1개(`tag`)만 받고 여러 태그 AND는 자연어 API의 filters.tags가 담당한다.
+     * 직접 태그 선택은 자연어 검색 영역이 소유하므로 초기값만 비어 있는 상태로 넘긴다. */
+    tags: [],
+  }
+
   const items = result.ok ? result.data.items : []
   const page = result.ok ? result.data.page : null
   const pageNumbers = page ? buildPageNumbers(page.number, page.totalPages) : []
@@ -69,15 +83,10 @@ export default async function RestaurantsPage({
       <h1>맛집 탐색</h1>
 
       <NaturalLanguageRestaurantSearch
+        key={naturalLanguageFiltersKey(naturalLanguageFilters)}
         structuredFormId="structured-restaurant-search"
         creatorLabels={creatorsResult.ok ? Object.fromEntries(creatorsResult.data.items.map((creator) => [creator.id, creator.channelName])) : {}}
-        filters={{
-          query: currentQuery.trim() || null,
-          district: currentDistrict || null,
-          category: currentCategory || null,
-          creatorId: currentCreatorId ?? null,
-          tags: [],
-        }}
+        filters={naturalLanguageFilters}
         returnTo={currentRoute}
       />
 
