@@ -4,6 +4,7 @@ const {
   createMapRateLimitState,
   getMapRateLimitedUntil,
   initialMapRateLimitedUntil,
+  mergeHydratedMapRateLimitState,
   setMapRateLimitedUntil,
 } = require('./rate-limit-state.ts')
 
@@ -45,6 +46,18 @@ rateLimitStateTest('필터를 바꿨다가 돌아오면 원래 query key의 대�
 
   rateLimitStateAssert.equal(getMapRateLimitedUntil(state, queryKeyB), null)
   rateLimitStateAssert.equal(getMapRateLimitedUntil(state, queryKeyA), 5_000)
+})
+
+rateLimitStateTest('새 query key의 hydrate 429를 병합하면서 기존 key의 대기를 유지한다', () => {
+  const state = setMapRateLimitedUntil({}, queryKeyA, 5_000)
+  const merged = mergeHydratedMapRateLimitState(state, queryKeyB, {
+    kind: 'rateLimited',
+    retryAvailableAt: 6_000,
+    message: '잠시 후 다시 시도해 주세요.',
+  })
+
+  rateLimitStateAssert.equal(getMapRateLimitedUntil(merged, queryKeyB), 6_000)
+  rateLimitStateAssert.equal(getMapRateLimitedUntil(merged, queryKeyA), 5_000)
 })
 
 rateLimitStateTest('대기 만료는 해당 query key만 제거한다', () => {

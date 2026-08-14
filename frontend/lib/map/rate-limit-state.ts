@@ -17,10 +17,18 @@ export function createMapRateLimitState(
   queryKey: readonly unknown[],
   hydratedData: MapPointsFetchResult | undefined,
 ): MapRateLimitState {
+  return mergeHydratedMapRateLimitState({}, queryKey, hydratedData)
+}
+
+export function mergeHydratedMapRateLimitState(
+  state: MapRateLimitState,
+  queryKey: readonly unknown[],
+  hydratedData: MapPointsFetchResult | undefined,
+): MapRateLimitState {
   const retryAvailableAt = initialMapRateLimitedUntil(hydratedData)
   return retryAvailableAt === null
-    ? {}
-    : { [rateLimitStateKey(queryKey)]: retryAvailableAt }
+    ? state
+    : setMapRateLimitedUntil(state, queryKey, retryAvailableAt)
 }
 
 export function getMapRateLimitedUntil(
@@ -37,6 +45,9 @@ export function setMapRateLimitedUntil(
 ): MapRateLimitState {
   const key = rateLimitStateKey(queryKey)
   if (retryAvailableAt !== null) {
+    if (state[key] === retryAvailableAt) {
+      return state
+    }
     return { ...state, [key]: retryAvailableAt }
   }
   if (!(key in state)) {

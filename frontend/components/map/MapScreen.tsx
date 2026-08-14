@@ -14,6 +14,7 @@ import type { MapPointsViewState } from '@/lib/map/map-points-response'
 import {
   createMapRateLimitState,
   getMapRateLimitedUntil,
+  mergeHydratedMapRateLimitState,
   setMapRateLimitedUntil,
 } from '@/lib/map/rate-limit-state'
 import { findSelectedMapPoint, toggleMapSelection } from '@/lib/map/selection-sync'
@@ -92,7 +93,13 @@ export function MapScreen({ initialFilters, creatorsResult }: MapScreenProps) {
       return createMapRateLimitState(queryKey, hydratedData)
     },
   )
-  const rateLimitedUntil = getMapRateLimitedUntil(rateLimitState, queryKey)
+  const hydratedData = queryClient.getQueryData<MapPointsFetchResult>(queryKey)
+  const currentRateLimitState = mergeHydratedMapRateLimitState(
+    rateLimitState,
+    queryKey,
+    hydratedData,
+  )
+  const rateLimitedUntil = getMapRateLimitedUntil(currentRateLimitState, queryKey)
 
   const isRateLimited = rateLimitedUntil !== null && Date.now() < rateLimitedUntil
 
@@ -101,6 +108,13 @@ export function MapScreen({ initialFilters, creatorsResult }: MapScreenProps) {
     queryFn: ({ signal }) => fetchMapPoints(filters, signal),
     enabled: !isRateLimited,
   })
+
+  useEffect(() => {
+    setRateLimitState((current) => {
+      const currentHydratedData = queryClient.getQueryData<MapPointsFetchResult>(queryKey)
+      return mergeHydratedMapRateLimitState(current, queryKey, currentHydratedData)
+    })
+  }, [queryClient, queryKey])
 
   /*
    * page.tsx가 서버에서 미리 조회해 hydrate한 결과를 최초 렌더부터 그대로 보여줘야 한다
