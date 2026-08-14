@@ -1,9 +1,13 @@
 package com.masiton.security.infrastructure.configuration;
 
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
+import jakarta.annotation.PostConstruct;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties("masiton.security")
@@ -68,6 +72,11 @@ public class SecurityProperties {
 
     public Member getMember() {
         return member;
+    }
+
+    @PostConstruct
+    public void validateLoginFailureProxyBoundary() {
+        loginFailure.validateProxyBoundary();
     }
 
     public static class Jwt {
@@ -208,6 +217,8 @@ public class SecurityProperties {
 
         private int maxAttempts = 5;
         private Duration ttl = Duration.ofMinutes(15);
+        private String trustedProxyAddresses = "";
+        private boolean reverseProxyEnabled;
 
         public int getMaxAttempts() {
             return maxAttempts;
@@ -223,6 +234,32 @@ public class SecurityProperties {
 
         public void setTtl(Duration ttl) {
             this.ttl = ttl;
+        }
+
+        public Set<String> trustedProxyAddresses() {
+            return Arrays.stream(trustedProxyAddresses.split(","))
+                    .map(String::trim)
+                    .filter(value -> !value.isEmpty())
+                    .collect(Collectors.toUnmodifiableSet());
+        }
+
+        public void setTrustedProxyAddresses(String trustedProxyAddresses) {
+            this.trustedProxyAddresses = trustedProxyAddresses;
+        }
+
+        public boolean isReverseProxyEnabled() {
+            return reverseProxyEnabled;
+        }
+
+        public void setReverseProxyEnabled(boolean reverseProxyEnabled) {
+            this.reverseProxyEnabled = reverseProxyEnabled;
+        }
+
+        public void validateProxyBoundary() {
+            if (reverseProxyEnabled && trustedProxyAddresses().isEmpty()) {
+                throw new IllegalStateException(
+                        "Trusted admin login proxy addresses are required when reverse proxy mode is enabled");
+            }
         }
     }
 }
