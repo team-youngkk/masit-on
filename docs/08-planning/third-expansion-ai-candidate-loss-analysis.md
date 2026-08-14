@@ -42,7 +42,7 @@ related_documents:
 
 ## 3. 실측 근거
 
-배포본과 동일한 계약(`gemini-3.5-flash-lite`, Prompt `P1`, Schema `S1`, global endpoint)으로 두 영상을 직접 호출해 응답 구조를 확인했다. 응답 전문은 `ADR-AI-001` 5.1절에 따라 보존하지 않으며, 아래 집계와 최소 표본만 기록한다.
+Prompt `P2` 변경 전 배포본과 동일한 역사적 계약(`gemini-3.5-flash-lite`, Prompt `P1`, Schema `S1`, global endpoint)으로 두 영상을 직접 호출해 응답 구조를 확인했다. 이 결과는 P1 기준의 사전 실측 증거이며 현재 P2 배포 검증 결과가 아니다. 응답 전문은 `ADR-AI-001` 5.1절에 따라 보존하지 않으며, 아래 집계와 최소 표본만 기록한다.
 
 | 항목 | 영상 A `wjejRtf9Ako` | 영상 B `1o-fwu6Nv2s` |
 |---|---|---|

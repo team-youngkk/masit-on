@@ -70,7 +70,7 @@ related_documents:
   "reviewStatus": null,
   "provider": "GOOGLE_GEMINI",
   "modelVersion": "gemini-3.5-flash-lite",
-  "promptVersion": "P1",
+  "promptVersion": "P2",
   "schemaVersion": "S1",
   "attemptCount": 0,
   "createdAt": "2026-08-10T12:00:00+09:00",

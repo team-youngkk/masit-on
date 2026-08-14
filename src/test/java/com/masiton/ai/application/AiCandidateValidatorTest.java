@@ -1,11 +1,19 @@
 package com.masiton.ai.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.masiton.ai.application.AiCandidateValidationResult.Decision;
+import com.masiton.ai.application.AiCandidateValidationResult.Candidate;
+import com.masiton.ai.application.AiCandidateValidationResult.Evidence;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -14,6 +22,27 @@ class AiCandidateValidatorTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final AiCandidateValidator validator = new AiCandidateValidator();
+
+    @Test
+    @DisplayName("검증 결과의 후보 목록은 원본 변경과 외부 수정을 허용하지 않는다")
+    void validationResult_후보목록_깊은불변성을보장한다() {
+        // Given
+        Candidate candidate = new Candidate(
+                "restaurantName", "맛집", 0.95, Evidence.timestamp(100, 200));
+        List<Candidate> sourceCandidates = new ArrayList<>(List.of(candidate));
+        Map<String, List<Candidate>> source = new LinkedHashMap<>();
+        source.put("restaurantName", sourceCandidates);
+
+        // When
+        AiCandidateValidationResult result = new AiCandidateValidationResult(
+                Decision.AUTO_CONFIRMED, source, null, List.of(), List.of(), List.of(), List.of());
+        sourceCandidates.clear();
+
+        // Then
+        assertThat(result.candidates().get("restaurantName")).containsExactly(candidate);
+        assertThatThrownBy(() -> result.candidates().get("restaurantName").add(candidate))
+                .isInstanceOf(UnsupportedOperationException.class);
+    }
 
     @Test
     @DisplayName("필수 후보와 메뉴가 단일 위치 근거를 가지면 자동 확정 가능으로 판정한다")
