@@ -150,12 +150,13 @@ related_documents:
 - 제한 공개 인증은 [ADR-DEPLOY-004](../07-adr/platform/deploy-004-public-api-validation-gate-boundary.md)의 검증 참여자 전용 HttpOnly 쿠키 세션과 공개 API gate 경계를 사용한다. 회원·관리자 Bearer/Refresh 인증과 분리하고 정식 공개 시 제한 공개 경계만 제거한다.
 - 초기 운영 배포는 단일 EC2 인스턴스(Nginx 리버스 프록시 + Next.js 프론트엔드 + Spring Boot 백엔드)를 사용하며 다중 리전·다중 인스턴스 고가용성 구성을 필수로 하지 않는다.
 - Nginx는 `/api/**`를 Spring Boot, 나머지 외부 경로를 Next.js로 전달하며 `/internal/**`은 인터넷에서 차단한다. 세부 경로와 인증 matcher는 [ADR-WEB-003](../07-adr/platform/web-003-routing-boundary.md)을 따른다.
+- 운영 애플리케이션 포트는 loopback에만 바인딩해 인스턴스 밖에서 직접 연결할 수 없게 한다. 백엔드 `server.address`와 프론트엔드 `HOSTNAME`을 `127.0.0.1`로 고정하고 이 값을 넓히는 환경 변수를 컨테이너에 전달하지 않는다([ADR-WEB-005](../07-adr/platform/web-005-application-port-binding.md)).
 - 장애 발생 시 운영자가 인스턴스를 수동으로 재기동·교체하는 절차를 사용하며, ASG 기반 자동 복구는 도입하지 않는다.
 - ALB·Blue-Green·ASG 다중 인스턴스 자동화는 3차 확장 이후 배포 고도화 단계에서 도입을 검토한다. 착수 시점은 2026-07-28 팀 4인 전원이 합의했으나 비용·일정 영향 검토가 남아 있어 도입이 확정된 상태는 아니다([ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md) 3.1절). 그때까지 초기 운영 배포의 단일 인스턴스·수동 복구 구성을 유지하며, 토폴로지·전환 절차·비용과 Nginx의 경로 라우팅 책임을 ALB가 대체할지는 착수 시점의 별도 ADR에서 확정한다.
 - GitHub Actions 빌드·테스트 품질 게이트는 전 단계에 적용하고, ECR push·EC2 승인 배포·Smoke Test는 초기 운영 배포부터 활성화한다.
 - 초기 운영 배포부터 GitHub Actions → ECR → EC2 경로를 사용한다. ALB·Blue-Green 전환 자동화 범위는 배포 고도화 단계에서 별도로 설계한다.
 - 초기 운영 배포부터 로그는 14일 보관하고, DB 백업은 일 1회 자동 스냅샷 후 7일 보관(RPO 최대 24시간)하며, 운영 알림은 CloudWatch 알람을 Slack으로 담당자 1명에게 통지한다. 팀 상시 채널이 Slack뿐이고 운영 이메일 수신 체계가 없어 Slack Webhook만 사용한다([RV-NFR-013](../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준)).
-- 관련: [ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md), [ADR-WEB-003](../07-adr/platform/web-003-routing-boundary.md), [docs/07-adr/adr-backlog.md](../07-adr/adr-backlog.md) 범위 충돌 검토, [RV-NFR-005](../01-requirements/non-functional-requirements.md#rv-nfr-005-목표-가용성과-복구-시간)·[RV-NFR-009](../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간)·[RV-NFR-010](../01-requirements/non-functional-requirements.md#rv-nfr-010-백업-주기와-복구-범위)·[RV-NFR-013](../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준).
+- 관련: [ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md), [ADR-WEB-003](../07-adr/platform/web-003-routing-boundary.md), [ADR-WEB-005](../07-adr/platform/web-005-application-port-binding.md), [docs/07-adr/adr-backlog.md](../07-adr/adr-backlog.md) 범위 충돌 검토, [RV-NFR-005](../01-requirements/non-functional-requirements.md#rv-nfr-005-목표-가용성과-복구-시간)·[RV-NFR-009](../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간)·[RV-NFR-010](../01-requirements/non-functional-requirements.md#rv-nfr-010-백업-주기와-복구-범위)·[RV-NFR-013](../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준).
 
 ## 14. 위반 검증 방법
 

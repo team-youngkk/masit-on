@@ -11,6 +11,12 @@ import {
   type MapPointsFilters,
 } from '@/lib/map/map-points-query'
 import type { MapPointsViewState } from '@/lib/map/map-points-response'
+import {
+  createMapRateLimitState,
+  getMapRateLimitedUntil,
+  mergeHydratedMapRateLimitState,
+  setMapRateLimitedUntil,
+} from '@/lib/map/rate-limit-state'
 import { findSelectedMapPoint, toggleMapSelection } from '@/lib/map/selection-sync'
 import type { FetchCreatorsResult } from '@/lib/restaurants-api'
 
@@ -70,18 +76,30 @@ export function MapScreen({ initialFilters, creatorsResult }: MapScreenProps) {
   const filters = initialFilters
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
-  /*
-   * hydrated 결과가 우연히 rateLimited였는지는 useQuery를 호출하기 전에는 알 수 없어
-   * (아래 enabled 계산과 순환 참조가 생긴다) 초기값은 null로 둔다. 실제로 그 상태였다면
-   * useQuery가 즉시 재조회해 서버가 다시 429를 반환하는 순간 정상적으로 rateLimitedUntil이
-   * 설정되어 이후 호출을 막는다.
-   */
-  const [rateLimitedUntil, setRateLimitedUntil] = useState<number | null>(null)
 
   const queryKey = useMemo(
     () => buildMapPointsQueryKey(filters),
     [filters.category, filters.creatorId, filters.district, filters.query],
   )
+
+  /*
+   * HydrationBoundary가 복원한 서버 prefetch 결과를 useQuery 실행 전에 직접 읽고, 429 대기를
+   * queryKey별로 보관한다. 필터를 바꾸면 새 key는 즉시 조회하되 이전 key로 돌아오면 남은 대기를
+   * 다시 적용한다.
+   */
+  const [rateLimitState, setRateLimitState] = useState(
+    () => {
+      const hydratedData = queryClient.getQueryData<MapPointsFetchResult>(queryKey)
+      return createMapRateLimitState(queryKey, hydratedData)
+    },
+  )
+  const hydratedData = queryClient.getQueryData<MapPointsFetchResult>(queryKey)
+  const currentRateLimitState = mergeHydratedMapRateLimitState(
+    rateLimitState,
+    queryKey,
+    hydratedData,
+  )
+  const rateLimitedUntil = getMapRateLimitedUntil(currentRateLimitState, queryKey)
 
   const isRateLimited = rateLimitedUntil !== null && Date.now() < rateLimitedUntil
 
@@ -90,6 +108,13 @@ export function MapScreen({ initialFilters, creatorsResult }: MapScreenProps) {
     queryFn: ({ signal }) => fetchMapPoints(filters, signal),
     enabled: !isRateLimited,
   })
+
+  useEffect(() => {
+    setRateLimitState((current) => {
+      const currentHydratedData = queryClient.getQueryData<MapPointsFetchResult>(queryKey)
+      return mergeHydratedMapRateLimitState(current, queryKey, currentHydratedData)
+    })
+  }, [queryClient, queryKey])
 
   /*
    * page.tsx가 서버에서 미리 조회해 hydrate한 결과를 최초 렌더부터 그대로 보여줘야 한다
@@ -109,10 +134,12 @@ export function MapScreen({ initialFilters, creatorsResult }: MapScreenProps) {
     if (data?.kind === 'ok') {
       setLastGoodView(data.view)
       setBanner(null)
-      setRateLimitedUntil(null)
+      setRateLimitState((current) => setMapRateLimitedUntil(current, queryKey, null))
     } else if (data?.kind === 'rateLimited') {
       setBanner({ kind: 'rateLimited', message: data.message, traceId: data.traceId })
-      setRateLimitedUntil(data.retryAvailableAt)
+      setRateLimitState((current) => (
+        setMapRateLimitedUntil(current, queryKey, data.retryAvailableAt)
+      ))
     } else if (data) {
       setBanner({ kind: data.kind, message: data.message, traceId: data.traceId })
     }
@@ -125,12 +152,12 @@ export function MapScreen({ initialFilters, creatorsResult }: MapScreenProps) {
 
     const delay = rateLimitedUntil - Date.now()
     if (delay <= 0) {
-      setRateLimitedUntil(null)
+      setRateLimitState((current) => setMapRateLimitedUntil(current, queryKey, null))
       return
     }
 
     const timer = setTimeout(() => {
-      setRateLimitedUntil(null)
+      setRateLimitState((current) => setMapRateLimitedUntil(current, queryKey, null))
       void queryClient.invalidateQueries({ queryKey })
     }, delay)
 
