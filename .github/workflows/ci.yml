@@ -485,37 +485,63 @@ jobs:
           set -euo pipefail
           python3 - <<'PY' > command.json
           import base64
+          import io
           import json
           import os
+          import tarfile
 
           files = [
               "deploy/scripts/app-deploy.sh",
               "deploy/scripts/app-run.sh",
               "deploy/scripts/app-secrets-render.sh",
+              "deploy/scripts/nginx-install.sh",
+              "deploy/scripts/nginx-smoke.sh",
+              "deploy/scripts/tls-deploy-cert.sh",
               "deploy/app/masiton-backend.service",
               "deploy/app/masiton-frontend.service",
+              "deploy/nginx/nginx.conf",
+              "deploy/nginx/masiton.click.conf",
+              "deploy/nginx/00-masiton-upgrade-map.conf",
+              "deploy/nginx/masiton-tls-renew.service",
+              "deploy/nginx/masiton-tls-renew.timer",
           ]
 
+          archive = io.BytesIO()
+          with tarfile.open(fileobj=archive, mode="w:gz", compresslevel=9) as bundle:
+              for path in files:
+                  with open(path, "rb") as handle:
+                      content = handle.read().replace(b"\r\n", b"\n")
+                  info = tarfile.TarInfo(os.path.basename(path))
+                  info.size = len(content)
+                  info.mode = 0o644
+                  info.mtime = 0
+                  bundle.addfile(info, io.BytesIO(content))
+
+          encoded = base64.b64encode(archive.getvalue()).decode("ascii")
           lines = [
               "set -euo pipefail",
               "STAGE=/tmp/masiton-deploy",
               'rm -rf "$STAGE"',
               'mkdir -p "$STAGE"',
           ]
-          for path in files:
-              with open(path, "rb") as handle:
-                  encoded = base64.b64encode(handle.read().replace(b"\r\n", b"\n")).decode("ascii")
-              name = os.path.basename(path)
-              for index in range(0, len(encoded), 400):
-                  redirect = ">" if index == 0 else ">>"
-                  lines.append(f'printf %s "{encoded[index:index + 400]}" {redirect} "$STAGE/{name}.b64"')
-              lines.append(f'base64 -d "$STAGE/{name}.b64" > "$STAGE/{name}"')
-              lines.append(f'rm -f "$STAGE/{name}.b64"')
-          lines.append('chmod +x "$STAGE/app-deploy.sh" "$STAGE/app-run.sh" "$STAGE/app-secrets-render.sh"')
+          for index in range(0, len(encoded), 400):
+              redirect = ">" if index == 0 else ">>"
+              lines.append(f'printf %s "{encoded[index:index + 400]}" {redirect} "$STAGE/deploy-bundle.tar.gz.b64"')
+          lines.append('base64 -d "$STAGE/deploy-bundle.tar.gz.b64" > "$STAGE/deploy-bundle.tar.gz"')
+          lines.append('tar -xzf "$STAGE/deploy-bundle.tar.gz" -C "$STAGE"')
+          lines.append('rm -f "$STAGE/deploy-bundle.tar.gz.b64" "$STAGE/deploy-bundle.tar.gz"')
+          lines.append('chmod +x "$STAGE/app-deploy.sh" "$STAGE/app-run.sh" "$STAGE/app-secrets-render.sh" "$STAGE/nginx-install.sh" "$STAGE/nginx-smoke.sh" "$STAGE/tls-deploy-cert.sh"')
           lines.append(f'"$STAGE/app-deploy.sh" "{os.environ["IMAGE_TAG"]}" "$STAGE"')
+          lines.append('"$STAGE/nginx-install.sh" "$STAGE"')
 
           payload = {"commands": ["\n".join(lines)], "executionTimeout": ["1800"]}
-          print(json.dumps(payload, ensure_ascii=True))
+          serialized = json.dumps(payload, ensure_ascii=True)
+          max_ssm_command_bytes = 64 * 1024
+          payload_bytes = len(serialized.encode("utf-8"))
+          if payload_bytes > max_ssm_command_bytes:
+              raise SystemExit(
+                  f"SSM 명령 JSON이 64KB 제한을 넘었다: {payload_bytes} > {max_ssm_command_bytes}")
+          print(serialized)
           PY
           echo "명령 크기: $(wc -c < command.json)바이트"
 

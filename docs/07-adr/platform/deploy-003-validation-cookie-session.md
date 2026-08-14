@@ -1,7 +1,7 @@
 ---
 id: ADR-DEPLOY-003
 title: 검증 참여자 제한 공개 쿠키 세션
-status: Accepted
+status: Superseded
 decision_date: 2026-08-03
 owners:
   - 이우람
@@ -20,14 +20,16 @@ related_documents:
   - ../security/sec-001-secrets-workload-identity.md
 supersedes: []
 supersedes_decision: M2-11 Nginx Basic Auth 제한 공개
-superseded_by: null
+superseded_by: ADR-DEPLOY-004
 ---
 
 # ADR-DEPLOY-003 검증 참여자 제한 공개 쿠키 세션
 
 ## 1. 상태
 
-Accepted. 2026-08-03 제한 공개의 반복 인증창 문제를 해결하기 위해 기존 Nginx Basic Auth 결정을 변경했다. [OPS-VALIDATION 공통 운영·배포 트랙](../../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙)이 결정 적용을 소유하고, 구현과 운영 전환은 [E1-T13](../../08-planning/expansion-1-task-breakdown.md#e1-t13-검증-참여자-제한-공개-쿠키-세션-전환)에서 추적한다.
+Superseded by [ADR-DEPLOY-004](deploy-004-public-api-validation-gate-boundary.md).
+
+2026-08-03 제한 공개의 반복 인증창 문제를 해결하기 위해 기존 Nginx Basic Auth 결정을 변경했다. [OPS-VALIDATION 공통 운영·배포 트랙](../../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙)이 결정 적용을 소유하고, 구현과 운영 전환은 [E1-T13](../../08-planning/expansion-1-task-breakdown.md#e1-t13-검증-참여자-제한-공개-쿠키-세션-전환)에서 추적한다. 비관리자 공개 API의 후속 gate 범위 결정은 ADR-DEPLOY-004가 대체한다.
 
 ## 2. 결정 요약
 
