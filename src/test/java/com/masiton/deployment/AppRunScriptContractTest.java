@@ -23,6 +23,7 @@ class AppRunScriptContractTest {
     private static final Path NGINX_MAIN = Path.of("deploy/nginx/nginx.conf");
     private static final Path NGINX_INSTALL_SCRIPT = Path.of("deploy/scripts/nginx-install.sh");
     private static final Path NGINX_SMOKE_SCRIPT = Path.of("deploy/scripts/nginx-smoke.sh");
+    private static final Path CI_WORKFLOW = Path.of(".github/workflows/ci.yml");
     private static final Path SECURITY_CONFIGURATION = Path.of(
             "src/main/java/com/masiton/security/infrastructure/configuration/SecurityConfiguration.java");
     private static final Path COMMON_PROFILE = Path.of("src/main/resources/application.yml");
@@ -336,6 +337,36 @@ class AppRunScriptContractTest {
         assertThat(locationBySelector(locations, "^~ /_next/static/").body())
                 .as("정적 파일은 GET 외 메서드를 프론트엔드로 전달하지 않아야 한다")
                 .contains("limit_except GET", "deny all;");
+    }
+
+    @Test
+    @DisplayName("SSM 배포 번들에 Nginx 설치 산출물을 싣고 백엔드 배포 뒤 설치한다")
+    void ci_SSM번들로nginx산출물을전달하고_백엔드배포뒤설치한다() throws IOException {
+        String workflow = Files.readString(CI_WORKFLOW);
+
+        assertThat(workflow).contains(
+                "deploy/scripts/nginx-install.sh",
+                "deploy/scripts/nginx-smoke.sh",
+                "deploy/scripts/tls-deploy-cert.sh",
+                "deploy/nginx/nginx.conf",
+                "deploy/nginx/masiton.click.conf",
+                "deploy/nginx/00-masiton-upgrade-map.conf",
+                "deploy/nginx/masiton-tls-renew.service",
+                "deploy/nginx/masiton-tls-renew.timer",
+                "with tarfile.open(fileobj=archive, mode=\"w:gz\", compresslevel=9) as bundle:",
+                "tar -xzf \"$STAGE/deploy-bundle.tar.gz\" -C \"$STAGE\"",
+                "max_ssm_command_bytes = 64 * 1024",
+                "payload_bytes = len(serialized.encode(\"utf-8\"))",
+                "if payload_bytes > max_ssm_command_bytes:",
+                "chmod +x \"$STAGE/app-deploy.sh\" \"$STAGE/app-run.sh\" \"$STAGE/app-secrets-render.sh\" "
+                        + "\"$STAGE/nginx-install.sh\" \"$STAGE/nginx-smoke.sh\" \"$STAGE/tls-deploy-cert.sh\"");
+
+        int appDeploy = workflow.indexOf("lines.append(f'\"$STAGE/app-deploy.sh\"");
+        int nginxInstall = workflow.indexOf("lines.append('\"$STAGE/nginx-install.sh\" \"$STAGE\"')");
+        assertThat(appDeploy).isNotNegative();
+        assertThat(nginxInstall)
+                .as("새 backend 검증 세션 경계가 준비된 뒤 Nginx 컷오버를 실행해야 한다")
+                .isGreaterThan(appDeploy);
     }
 
     @Test
