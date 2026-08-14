@@ -31,7 +31,7 @@ related_documents:
 ## 3. 문제 현상과 발생 조건
 
 - 오류 메시지: 없음. 문서 완료 조건 미충족이다.
-- 발생 환경: `feature/t-165-third-expansion-browser-verification`, 기준 커밋 `35d0f94`, Windows 11, Node.js 24.18.0, Flyway `V1`~`V4`.
+- 발생 환경: `feature/t-165-third-expansion-browser-verification`, 기준 커밋 `35d0f94`, Windows 11, Node.js 24.18.0, 검증 시점 Flyway `V1`~`V7`(현재 `#192` 통합 후 적용 결과 스키마 동일).
 - 재현 조건: [3차 확장 테스트 추적표](../08-planning/third-expansion-test-matrix.md) 5절이 브라우저 인수 완료 조건을 "`TST-E3-E2E-001` 화면 캡처·환경·접근성 결과 기록"으로 정하고, 이슈 [#165](https://github.com/team-youngkk/masit-on/issues/165)도 "브라우저 캡처·환경·접근성 증거"를 요구한다.
 - 실제 결과: 검증 기록에 DOM 측정값과 여정 서술만 있고 캡처나 보존 가능한 아티팩트가 없어 제3자가 재검증할 수 없었다.
 - 기대 결과: 대표 화면 폭의 렌더링을 확인할 수 있는 캡처가 저장소에 남아 문서에서 연결된다.

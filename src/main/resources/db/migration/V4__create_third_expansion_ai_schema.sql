@@ -1,8 +1,6 @@
 -- V4: 3차 확장 AI 스키마와 배포 전 누적 변경 통합본
 
--- 기존 AI 누적 SQL의 순서와 의미를 보존한다.
-
--- V4: 3차 확장 AI 영상 추출 후보·작업 스키마
+-- 기존 V4 AI 스키마와 구 V5~V7 누적 변경을 적용 순서와 의미 그대로 보존한다.
 -- 근거: docs/05-specs/data/third-expansion-ai-video-data-contract.md,
 --       docs/07-adr/integration/ext-003-ai-extraction-async-reliability.md
 --
@@ -601,6 +599,9 @@ VALUES
     ('30000000-0000-4000-8000-000000000017', 'ATMOSPHERE_LIVELY', 'ATMOSPHERE', '활기찬', '[]'::jsonb, 'ACTIVE', 'SEED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
     ('30000000-0000-4000-8000-000000000018', 'ATMOSPHERE_BAR', 'ATMOSPHERE', '바', '[]'::jsonb, 'ACTIVE', 'SEED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
+-- ---------------------------------------------------------------------------
+-- 6. AI 작업 재사용 조회 인덱스 (구 V5)
+-- ---------------------------------------------------------------------------
 -- AI 작업 사전 멱등 조회 인덱스
 -- 근거: 관리자 재접수는 외부 YouTube 검증 전에 기존 작업을 조회해야 한다.
 
@@ -619,6 +620,9 @@ CREATE INDEX ix_ai_job__video_mode_versions
 CREATE INDEX ix_ai_temporary_input__expires_at
     ON ai_extraction_temporary_input (expires_at, job_id);
 
+-- ---------------------------------------------------------------------------
+-- 7. 관리자 검수 감사·재시도 사유 (구 V6)
+-- ---------------------------------------------------------------------------
 ALTER TABLE ai_candidate_snapshot
     ADD COLUMN registered_restaurant_id uuid,
     ADD COLUMN registered_creator_id uuid,
@@ -677,6 +681,9 @@ ALTER TABLE ai_extraction_job
     ADD CONSTRAINT ck_ai_extraction_job__retry_reason
         CHECK (retry_reason IS NULL OR (source = 'ADMIN' AND btrim(retry_reason) <> ''));
 
+-- ---------------------------------------------------------------------------
+-- 8. 태그 롤백 provenance (구 V7)
+-- ---------------------------------------------------------------------------
 ALTER TABLE visit_tag
     ADD COLUMN created_from_snapshot_id uuid,
     ADD CONSTRAINT fk_visit_tag__created_from_snapshot

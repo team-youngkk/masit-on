@@ -87,17 +87,17 @@ related_documents:
 | 스레드 | 문제 유형 | 판단 | 처리 |
 |---|---|---|---|
 | [3762975863](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3762975863) | 데이터베이스 | 수정 필요 | 목록용 SELECT를 상세 snapshot SELECT와 분리하고 PostgreSQL Adapter 목록 회귀 테스트를 추가했다. |
-| [3762984474](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3762984474) | 데이터베이스 | 수정 필요 | `visit_tag.created_from_snapshot_id`를 V7로 추가하고 해당 Snapshot의 AI 태그만 삭제한다. `visitCreated=false` 롤백은 `AIEXTRACT_DUPLICATE_CONFLICT` 409로 거부한다. |
+| [3762984474](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3762984474) | 데이터베이스 | 수정 필요 | `visit_tag.created_from_snapshot_id`를 통합 AI 스키마에 추가하고 해당 Snapshot의 AI 태그만 삭제한다. `visitCreated=false` 롤백은 `AIEXTRACT_DUPLICATE_CONFLICT` 409로 거부한다. |
 | [3762984476](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3762984476) | 애플리케이션 | 수정 필요 | 상세·재시도·검수 오류를 API 계약의 `AIEXTRACT_JOB_NOT_FOUND`, `AIEXTRACT_RETRY_BLOCKED`, `AIEXTRACT_DUPLICATE_CONFLICT`, `AIEXTRACT_VALIDATION_CONFLICT`로 통일했다. |
 | [3762984477](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3762984477) | 애플리케이션 | 수정 필요 | Controller API 테스트의 존재하지 않는 오류 코드를 계약 코드로 교체하고 실제 서비스의 롤백 거부 경로를 단위 테스트했다. |
 | [3762984482](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3762984482) | 애플리케이션 | 수정 필요 | 프론트 오류 안내를 HTTP 409 일괄 처리에서 `AdminApiError.code`별 계약 안내로 변경하고 409·422 분기 테스트를 추가했다. |
 | [3762984485](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3762984485) | 데이터베이스 | 수정 필요 | 외부 검증 전 조회는 `reviewSnapshot()` 무잠금 경로를 사용하고, 커밋 트랜잭션만 `reviewTarget()` 부모 작업·최신 snapshot 잠금을 사용한다. |
 | [3762984487](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3762984487) | 애플리케이션 | 수정 필요 | Controller의 null queryService 우회 생성자와 불필요한 `@Autowired`를 제거했다. |
-| [3762984490](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3762984490) | 데이터베이스 | 수정 필요 | 재시도 `reason`을 trim·길이 검증 후 새 작업의 `retry_reason`으로 저장하도록 V7·Port·Service·Store를 동기화했다. |
+| [3762984490](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3762984490) | 데이터베이스 | 수정 필요 | 재시도 `reason`을 trim·길이 검증 후 새 작업의 `retry_reason`으로 저장하도록 통합 AI migration·Port·Service·Store를 동기화했다. |
 | [3762984494](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3762984494) | 애플리케이션 | 수정 필요 | Adapter와 QueryService의 압축된 메서드·조건문을 NAVER Java 컨벤션에 맞게 줄바꿈하고 중괄호를 추가했다. |
 | [3763035310](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3763035310) | 데이터베이스 | 이미 해결 | 위 목록 전용 SELECT 분리와 PostgreSQL 회귀 테스트로 같은 P1을 함께 해결했다. |
 | [3763035313](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3763035313) | 데이터베이스 | 이미 해결 | 위 `retry_reason` 저장 및 입력 검증으로 같은 추적성 지적을 함께 해결했다. |
-| [3763035321](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3763035321) | 데이터베이스 | 수정 필요 | 최신 마이그레이션 테스트에서 `assertAiSchemaAndContracts`를 복원하고 V7 존재 여부에 따라 V4/V7 계약을 검증하게 했다. |
+| [3763035321](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3763035321) | 데이터베이스 | 수정 필요 | 최신 통합 마이그레이션 테스트에서 `assertAiSchemaAndContracts`를 복원하고 최종 통합 AI 계약을 직접 검증하게 했다. |
 | [3763035326](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3763035326) | 데이터베이스 | 수정 필요 | 검수 전 조회는 무잠금 `reviewSnapshot`, 커밋 경계만 잠금 `reviewTarget`을 사용해 무의미한 autocommit 잠금을 제거했다. ROLLBACK/DISCARD의 최신 상태 재검증 왕복은 의도적으로 유지했다. |
 | [3763035328](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3763035328) | 데이터베이스 | 수정 필요 | 후보 태그 코드의 ACTIVE 정의를 한 번에 조회해 후보별 `tag_definition` SELECT를 제거했다. |
 | [3763035335](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3763035335) | 데이터베이스 | 수정 불필요 | override의 다음 버전 계산은 부모 작업 잠금과 최신성 조건을 같은 원자 SQL에 유지해야 하므로 다른 Adapter의 조회 Port로 분리하지 않았다. |
@@ -120,12 +120,12 @@ related_documents:
 | `gradlew.bat compileJava compileTestJava` | 통과 |
 | AI 관련 단위 테스트 23건 | 통과 |
 | 프론트 `node --test lib/admin/ai-video-extractions-coordination.test.ts` | 4건 통과 |
-| PostgreSQL Testcontainers Adapter·롤백·Flyway V7 테스트 | 로컬 Docker 엔진 부재로 미실행, CI 확인 필요 |
+| PostgreSQL Testcontainers Adapter·롤백·Flyway 통합 테스트 | 로컬 Docker 엔진 부재로 미실행, CI 확인 필요 |
 | 프론트 전체 `npm test` | 기존 의존성/Node strip-only 환경 문제로 3개 파일 실패; 새 AI coordination 테스트는 별도 실행 통과 |
 
 변경 파일은 통합 AI migration, AI 작업·검수·롤백 Port/Service/Adapter, Controller, 프론트 오류 안내·테스트, 관련 데이터/API 계약 문서와 Flyway 회귀 테스트다. 정량 지표는 기존 PR에서 측정하지 않아 이번에도 추정하지 않았으며, CI에서 목록 SQL 성공·Snapshot 태그 삭제 수·기존 태그 잔존 수를 fixture 기준으로 확인한다.
 
-## 12. 최신 리뷰 반영: V6 계약 기대와 CONFIRM→ROLLBACK provenance
+## 12. 최신 리뷰 반영: 통합 AI 계약 기대와 CONFIRM→ROLLBACK provenance
 
 ### 12.1 스레드별 판단
 
