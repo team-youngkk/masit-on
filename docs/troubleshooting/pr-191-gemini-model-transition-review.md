@@ -69,7 +69,7 @@ related_documents:
 | `./gradlew.bat test --tests "com.masiton.ai.application.AiExtractionGoldenEvaluationTest" --no-daemon --console=plain` | 통과 | 8개 골든 평가·게이트 테스트 통과 |
 | `./gradlew.bat test --tests "com.masiton.Expansion3FlywayMigrationIntegrationTest" --no-daemon --console=plain` | 통과 | V1~V8 전진 적용, 기존 Preview·신규 Lite 허용, 미지원 모델 거부 검증 |
 | `./gradlew.bat test --tests "com.masiton.FlywayMigrationIntegrationTest" --no-daemon --console=plain` | 통과 | 전체 migration history에 V8과 기준 데이터 적용 검증 |
-| `./gradlew.bat clean build --no-daemon --console=plain` | 시간 초과 | 5분 제한 내 완료되지 않아 성공으로 판정하지 않음. 관련 타깃 테스트는 모두 통과 |
+| `./gradlew.bat clean build --no-daemon --console=plain` | 로컬 시간 초과 | 로컬 5분 제한 내 완료되지 않았지만, [GitHub Actions CI run 31761800910](https://github.com/team-youngkk/masit-on/actions/runs/31761800910)의 동일한 `clean build`와 전체 자동화 테스트는 통과 |
 
 ## 8. 재발 방지와 다음 확인
 
@@ -85,5 +85,5 @@ related_documents:
 
 ## 10. 남은 사항
 
-- 전체 `clean build`는 로컬 5분 제한 내 완료되지 않았다. 병합 전 CI 전체 빌드 결과를 추가 확인한다.
+- 전체 `clean build`는 로컬 5분 제한 내 완료되지 않았으나, GitHub Actions CI run 31761800910에서 동일 검증이 통과했다.
 - 실제 Gemini 운영 quota·응답 품질은 이 PR의 코드 검증 대상이 아니며, 활성화 전 별도 운영 점검이 필요하다.
