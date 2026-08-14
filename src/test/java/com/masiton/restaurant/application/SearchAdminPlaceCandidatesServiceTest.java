@@ -71,6 +71,30 @@ class SearchAdminPlaceCandidatesServiceTest {
     }
 
     @Test
+    @DisplayName("roadAddressHint는 정규화 후 255자까지 허용한다")
+    void 검색_roadAddressHint255자_외부검색을호출한다() {
+        when(placeSearchPort.search(any())).thenReturn(List.of());
+
+        service.search(new SearchAdminPlaceCandidatesUseCase.SearchAdminPlaceCandidatesCommand(
+                "아코", "가".repeat(255)));
+
+        verify(placeSearchPort).search("아코");
+    }
+
+    @Test
+    @DisplayName("roadAddressHint가 정규화 후 255자를 넘으면 INVALID_FIELD_VALUE를 던지고 외부 검색을 호출하지 않는다")
+    void 검색_roadAddressHint256자_예외를던지고외부검색을호출하지않는다() {
+        assertThatThrownBy(() -> service.search(
+                new SearchAdminPlaceCandidatesUseCase.SearchAdminPlaceCandidatesCommand(
+                        "아코", "가".repeat(256))))
+                .isInstanceOf(BusinessException.class)
+                .extracting(exception -> ((BusinessException) exception).code())
+                .isEqualTo(ErrorCode.INVALID_FIELD_VALUE.name());
+
+        verifyNoInteractions(placeSearchPort);
+    }
+
+    @Test
     @DisplayName("카카오 검색이 실패하면 EXTERNAL_SERVICE_ERROR를 던진다")
     void 검색_카카오검색실패_예외를던진다() {
         when(placeSearchPort.search(any())).thenThrow(new PlaceSearchFailedException());

@@ -220,7 +220,7 @@ Token 소비와 Entity 생성 또는 동시 중복 완료는 한 PostgreSQL 트�
 | 필드 | 타입 | 필수 | 설명 | 검증·빈 값 규칙 |
 |---|---|---:|---|---|
 | `name` | string | 예 | 검색할 상호명 | 앞뒤 공백 제거 후 1~100자 |
-| `roadAddressHint` | string 또는 null | 예 | 후보 정렬에 쓰는 주소 표현 | 없으면 `null` |
+| `roadAddressHint` | string 또는 null | 예 | 후보 정렬에 쓰는 주소 표현 | 없으면 `null`, 정규화 후 1~255자 |
 
 #### Success Response
 
@@ -247,7 +247,7 @@ Token 소비와 Entity 생성 또는 동시 중복 완료는 한 PostgreSQL 트�
 | 오류 코드 | HTTP | 조건 |
 |---|---:|---|
 | `MISSING_REQUIRED_FIELD` | 400 | `name` 누락 |
-| `INVALID_FIELD_VALUE` | 400 | `name` 길이 위반 |
+| `INVALID_FIELD_VALUE` | 400 | `name` 또는 `roadAddressHint` 길이 위반 |
 | `EXTERNAL_SERVICE_ERROR` | 502 | 카카오 조회 실패·시간 초과·할당량 초과 |
 
 ## 6. 유튜버 등록

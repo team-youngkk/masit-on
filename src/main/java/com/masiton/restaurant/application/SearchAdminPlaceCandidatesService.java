@@ -19,6 +19,7 @@ import com.masiton.restaurant.application.port.out.PlaceSearchPort;
 @Service
 class SearchAdminPlaceCandidatesService implements SearchAdminPlaceCandidatesUseCase {
 
+    private static final int MAX_ROAD_ADDRESS_LENGTH = 255;
     private static final Pattern SEOUL_ROAD_ADDRESS = Pattern.compile("^서울특별시\\s+([^\\s]+구)\\s+.+$");
 
     private final PlaceSearchPort placeSearchPort;
@@ -90,6 +91,9 @@ class SearchAdminPlaceCandidatesService implements SearchAdminPlaceCandidatesUse
         String normalized = SeoulRoadAddressNormalizer.normalize(roadAddressHint);
         if (normalized.isEmpty()) {
             return null;
+        }
+        if (normalized.length() > MAX_ROAD_ADDRESS_LENGTH) {
+            throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, "roadAddressHint is invalid.");
         }
         return normalized;
     }
