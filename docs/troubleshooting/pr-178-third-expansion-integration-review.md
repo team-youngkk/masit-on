@@ -52,7 +52,7 @@ related_documents:
 
 | 확인하거나 시도한 방법 | 결과 | 판단과 다음 단계 |
 |---|---|---|
-| 관련 V4/V6/V7 migration의 FK·트리거 확인 | `tag_definition`은 snapshot을 참조하고, audit review는 append-only DELETE trigger를 가짐 | audit table은 `TRUNCATE`하고 나머지는 FK 순서대로 명시 삭제 |
+| 통합 AI migration의 FK·트리거 확인 | `tag_definition`은 snapshot을 참조하고, audit review는 append-only DELETE trigger를 가짐 | audit table은 `TRUNCATE`하고 나머지는 FK 순서대로 명시 삭제 |
 | `./gradlew.bat compileTestJava --no-daemon --console=plain` | 통과 | 소스·fixture 타입 수정 완료 |
 | [`CI #423`](https://github.com/team-youngkk/masit-on/actions/runs/31572131501) 백엔드 `./gradlew --no-daemon clean build` | 통과 | 최신 PR head `8c13522`에서 Flyway·AI 원자성·AI worker·코스 회귀를 포함한 전체 백엔드 빌드·테스트 통과 |
 | Docker 가동 로컬 회귀 묶음 | 통과 | 신규 3개 통합 테스트와 수정된 Flyway·AI 원자성·AI worker·코스 회귀 테스트 통과를 리뷰에서 확인 |

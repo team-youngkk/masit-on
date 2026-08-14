@@ -36,14 +36,14 @@ related_documents:
 
 - 오류 메시지: 없음. 테스트가 통과하면서 V4 인덱스 누락·개명을 감지하지 못하는 검증 공백이었다.
 - 발생 환경: Windows, Java 21, PostgreSQL 17.10 Testcontainers, `feature/t-156-ai-extraction-schema`
-- 재현 조건: 변경 전 `assertAiSchemaAndContracts`와 두 마이그레이션 경로에서 조회하는 인덱스 이름을 V4·V5 DDL과 대조한다.
-- 실제 결과: V5 인덱스 3개만 검증하고 V4 인덱스 6개는 저장소 테스트 어디에서도 참조하지 않았다. 신규 테스트에는 Given-When-Then 구분이 없고 `HashMap`만 완전 수식명을 사용했다.
-- 기대 결과: V4 공통 스키마 검증이 V4 인덱스 6개를 항상 확인하고, 신규 테스트와 import가 프로젝트 형식을 따른다.
+- 재현 조건: 변경 전 `assertAiSchemaAndContracts`와 빈 DB·전진 적용 경로에서 조회하는 인덱스 이름을 통합 전 AI DDL과 대조한다.
+- 실제 결과: 통합 전 AI 인덱스 9개 중 재사용 조회 인덱스 3개만 검증하고 나머지 6개는 저장소 테스트 어디에서도 참조하지 않았다. 신규 테스트에는 Given-When-Then 구분이 없고 `HashMap`만 완전 수식명을 사용했다.
+- 기대 결과: 통합 AI 스키마 검증이 9개 인덱스의 정확한 이름 집합을 항상 확인하고, 신규 테스트와 import가 프로젝트 형식을 따른다.
 - 영향 범위: Worker claim, 관리자 검수, 태그 조회 인덱스의 마이그레이션 회귀 감지와 테스트 코드 유지보수성
 
 ## 4. 근본 원인
 
-V3→V4와 빈 DB→V5 검증을 분리하면서 기존 9개 인덱스 집계에서 V5 인덱스 3개만 각 테스트로 옮겼고, V4 인덱스 6개를 공통 검증으로 이전하지 않았다. 스키마 helper가 PK·UK·FK·CHECK·컬럼을 넓게 검증하므로 물리 계약 전체를 포괄한다고 잘못 판단한 것이 원인이다.
+통합 전 AI 변경과 빈 DB 적용 검증을 분리하면서 기존 9개 인덱스 집계에서 재사용 조회 인덱스 3개만 각 테스트로 옮겼고, 나머지 6개를 공통 검증으로 이전하지 않았다. 스키마 helper가 PK·UK·FK·CHECK·컬럼을 넓게 검증하므로 물리 계약 전체를 포괄한다고 잘못 판단한 것이 원인이다.
 
 두 형식 문제는 큰 카탈로그 검증 helper를 한 번에 추가하면서 신규 테스트 본문 구조와 import 정리를 기존 파일 스타일에 대조하지 않은 데서 발생했다.
 
@@ -51,7 +51,7 @@ V3→V4와 빈 DB→V5 검증을 분리하면서 기존 9개 인덱스 집계에
 
 | 확인하거나 시도한 방법 | 결과 | 판단과 다음 단계 |
 |---|---|---|
-| V4·V5 DDL과 변경 전후 인덱스 단언 대조 | 기존 9개 중 V4 6개 단언이 사라지고 V5 3개만 남음 | 리뷰 지적 재현, V4 공통 helper에 정확한 이름 집합 추가 |
+| 통합 전 AI DDL과 변경 전후 인덱스 단언 대조 | 기존 9개 중 6개 단언이 사라지고 재사용 조회 인덱스 3개만 남음 | 리뷰 지적 재현, 통합 AI 공통 helper에 정확한 이름 집합 추가 |
 | `src/test` 전체에서 V4 인덱스 이름 검색 | 다른 검증 없음 | 현재 테스트에서 누락을 복원해야 함 |
 | 데이터 계약과 인덱스 전략 확인 | 여섯 인덱스의 조회 목적과 이름이 현재 Accepted 계약에 존재 | 계약 변경 없이 테스트만 보강 |
 | PR #131·#142 트러블슈팅 확인 | DB 직접 검증과 일반 import 통일 원칙이 현재 계약과 일치 | 기존 해결 원칙 재사용 |
@@ -62,15 +62,15 @@ V3→V4와 빈 DB→V5 검증을 분리하면서 기존 9개 인덱스 집계에
 - 변경 내용: `assertAiSchemaAndContracts`가 V4 인덱스 6개의 이름을 `containsExactlyInAnyOrder`로 검증하게 했다.
 - 변경 내용: 빈 DB 테스트에 `// given`, `// when`, `// then` 구분을 추가했다.
 - 변경 내용: `java.util.HashMap`을 import하고 완전 수식명을 제거했다.
-- 선택 이유: V4와 V5의 책임 분리를 유지하면서 두 마이그레이션 경로가 같은 V4 공통 계약을 재사용하는 최소 변경이다.
+- 선택 이유: 통합 AI migration의 두 적용 경로가 같은 공통 계약을 재사용하는 최소 변경이다.
 - 변경 파일: `src/test/java/com/masiton/Expansion3FlywayMigrationIntegrationTest.java`, `docs/troubleshooting/README.md`, 이 문서
-- 고려한 대안: 인덱스 개수만 다시 9개로 합치면 V4·V5 책임이 섞이고 잘못된 이름을 구분하기 어려워 채택하지 않았다.
+- 고려한 대안: 인덱스 개수만 다시 9개로 합치면 정확한 이름과 책임을 검증하기 어려워 채택하지 않았다.
 
 ## 7. 검증
 
 | 검증 | 결과 | 확인한 내용 |
 |---|---|---|
-| `.\gradlew.bat test --tests com.masiton.Expansion3FlywayMigrationIntegrationTest --rerun-tasks --no-daemon --console=plain` | 통과, 6건 | V3→V4와 빈 DB→V5, V4 인덱스 6개, V5 인덱스 3개와 기존 제약 회귀 |
+| `.\gradlew.bat test --tests com.masiton.Expansion3FlywayMigrationIntegrationTest --rerun-tasks --no-daemon --console=plain` | 통과, 6건 | 통합 AI 스키마와 빈 DB 적용, AI 인덱스와 기존 제약 회귀 |
 | `git diff --check` | 통과 | 공백·줄 끝 오류 없음 |
 
 ## 8. 재발 방지 및 다음 확인

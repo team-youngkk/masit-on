@@ -97,7 +97,7 @@ Creator 필터는 `visit`에서 고유 Restaurant ID를 구한 뒤 Restaurant의
 
 ## 7. 3차 확장 AI 영상 추출 인덱스
 
-3차 확장 인덱스의 정확한 SQL은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md), [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql), [`V5__add_ai_extraction_reuse_indexes.sql`](../../../src/main/resources/db/migration/V5__add_ai_extraction_reuse_indexes.sql)을 따른다.
+3차 확장 인덱스의 정확한 SQL은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)과 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql)을 따른다.
 
 | 인덱스 | 대상 경로 | 목적 |
 |---|---|---|

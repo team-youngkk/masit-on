@@ -37,7 +37,8 @@ related_documents:
 | 프런트엔드 | `npm --prefix frontend run dev`, Node.js 24.18.0, `http://localhost:3000` |
 | 백엔드 | `./gradlew bootRun --args='--spring.profiles.active=local'`, `http://localhost:8080` |
 | 의존 서비스 | `docker compose up -d postgres redis wiremock` |
-| 스키마 | Flyway `V1`~`V7` 적용 |
+| 스키마 | 검증 당시 Flyway `V1`~`V4` 적용 (`#192` 통합 후; Lite 단일 제약을 포함한 최종 V4 반영 전) |
+| 기준 커밋 당시 스키마 | Flyway `V1`~`V7` 적용 (`35d0f94` 검증 시점) |
 | 기준 커밋(3절 측정·4절 여정·3.1절 초기 화면 캡처) | `develop` `35d0f94`, 2026-08-12 |
 | 기준 커밋(3.2절 여정 캡처) | `#182`·`#184` 병합 이후 이 브랜치 HEAD, 2026-08-13 |
 | 화면 폭 | 브라우저 viewport를 360·390·768·1280·1440px으로 지정 |
@@ -77,7 +78,7 @@ AI 작업 상세의 `태그 코드 보정` 입력은 첫 측정에서 전 폭 17
 
 ### 3.1 화면 캡처
 
-공개 화면 초기 상태를 [`assets/e3-t12`](assets/e3-t12)에 보존한다. 3절 측정과 같은 실행(기준 커밋 `35d0f94`, 2.1절 Fixture)에서 찍었다.
+공개 화면 초기 상태를 [`assets/e3-t12`](assets/e3-t12)에 보존한다. 3절 측정과 같은 실행(기준 커밋 `35d0f94`, 검증 시점 Flyway `V1`~`V7`, `#192` 통합 후 적용 결과 스키마 동일, 2.1절 Fixture)에서 찍었다.
 
 | 화면 | 360px | 390px | 768px | 1280px | 1440px |
 |---|---|---|---|---|---|

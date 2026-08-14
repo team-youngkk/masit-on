@@ -10,6 +10,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #192 V8 통합 범위와 최종 Gemini 모델 계약](pr-192-flyway-model-contract-review.md)
 - [PR #191 Gemini 모델 전환 리뷰 반영](pr-191-gemini-model-transition-review.md)
 - [PR #184 YouTube 채널 감시 상태·동시성 경계 리뷰 반영](pr-184-youtube-channel-watch-review.md)
 - [PR #182 관리자 AI 영상 접수 리뷰 반영](pr-182-admin-ai-video-intake-review.md)
