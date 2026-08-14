@@ -5,6 +5,7 @@ related_documents:
   - auth-001-spring-security-jwt.md
   - auth-002-member-jwt-refresh-token.md
   - auth-003-confirmation-token.md
+  - auth-006-cookie-origin-defense.md
   - sec-001-secrets-workload-identity.md
 ---
 
@@ -17,4 +18,5 @@ related_documents:
 | [ADR-AUTH-001](auth-001-spring-security-jwt.md) | 관리자 Spring Security JWT 인증·인가 |
 | [ADR-AUTH-002](auth-002-member-jwt-refresh-token.md) | 회원 JWT와 Refresh Token |
 | [ADR-AUTH-003](auth-003-confirmation-token.md) | 관리자 등록 확인 Token의 저장·소비·재시도 |
+| [ADR-AUTH-006](auth-006-cookie-origin-defense.md) | 쿠키 기반 Refresh·Logout Origin 방어 |
 | [ADR-SEC-001](sec-001-secrets-workload-identity.md) | 비밀정보와 AWS 워크로드 인증 |

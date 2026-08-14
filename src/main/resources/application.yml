@@ -157,6 +157,7 @@ masiton:
     secure: true
     same-site: Strict
     path: /api/admin/auth
+    public-base-url: ${ADMIN_PUBLIC_BASE_URL:http://localhost:3000}
     member:
       refresh-token-ttl: P14D
       cookie-name: __Secure-masiton-member-refresh

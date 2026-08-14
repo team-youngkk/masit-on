@@ -22,6 +22,7 @@ related_documents:
   - security/auth-001-spring-security-jwt.md
   - security/auth-002-member-jwt-refresh-token.md
   - security/auth-003-confirmation-token.md
+  - security/auth-006-cookie-origin-defense.md
   - data/data-005-redis-refresh-token.md
   - data/data-007-uuid-v4-identifiers.md
   - data/data-008-publication-lifecycle-soft-delete.md
@@ -70,6 +71,7 @@ related_documents:
 | [ADR-AUTH-002](security/auth-002-member-jwt-refresh-token.md) | 회원 JWT와 Refresh Token | Accepted | Critical | Spring Security 7.1.0, JWT, Redis 8.8 Refresh Token | 회원 계정·인증 | [문서](security/auth-002-member-jwt-refresh-token.md) |
 | [ADR-AUTH-003](security/auth-003-confirmation-token.md) | 관리자 등록 확인 Token의 저장·소비·재시도 | Accepted | Critical | PostgreSQL, SHA-256, 불투명 Token, JSONB Snapshot | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 기준정보 등록 | [문서](security/auth-003-confirmation-token.md) |
 | [ADR-AUTH-005](security/auth-005-member-action-mail-outbox.md) | 회원 Action 메일의 신뢰성 있는 전달 (Outbox) | Accepted | High | PostgreSQL, AES-GCM, `@Scheduled` Worker | 회원 가입 인증·비밀번호 재설정 | [문서](security/auth-005-member-action-mail-outbox.md) |
+| [ADR-AUTH-006](security/auth-006-cookie-origin-defense.md) | 쿠키 기반 Refresh·Logout Origin 방어 | Accepted | High | 단일 Origin 헤더, Origin allowlist | 회원·관리자 Refresh·Logout | [문서](security/auth-006-cookie-origin-defense.md) |
 | [ADR-DATA-005](data/data-005-redis-refresh-token.md) | Redis 8.8 관리자 Refresh Token 저장소 | Accepted | Critical | Redis Open Source 8.8 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 인증·운영 | [문서](data/data-005-redis-refresh-token.md) |
 | [ADR-DATA-007](data/data-007-uuid-v4-identifiers.md) | 애플리케이션 생성 UUID v4 내부 식별자 | Accepted | High | Java UUID, PostgreSQL uuid | 전체 영속 데이터 | [문서](data/data-007-uuid-v4-identifiers.md) |
 | [ADR-DATA-008](data/data-008-publication-lifecycle-soft-delete.md) | 공개 상태와 논리 삭제 생명주기 분리 | Accepted | Critical | PostgreSQL CHECK, partial index | 핵심 공개 데이터 | [문서](data/data-008-publication-lifecycle-soft-delete.md) |

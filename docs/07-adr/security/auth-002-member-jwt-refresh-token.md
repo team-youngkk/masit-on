@@ -30,6 +30,7 @@ related_documents:
   - ../../06-architecture/security-boundary.md
   - ../platform/web-003-routing-boundary.md
   - auth-001-spring-security-jwt.md
+  - auth-006-cookie-origin-defense.md
   - ../data/data-005-redis-refresh-token.md
 supersedes: []
 superseded_by: null

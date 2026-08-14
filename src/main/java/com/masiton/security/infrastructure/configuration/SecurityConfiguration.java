@@ -29,6 +29,7 @@ import org.springframework.security.authentication.AuthenticationManagerResolver
 import jakarta.servlet.http.HttpServletRequest;
 
 import com.masiton.security.infrastructure.RestaurantPathClassifier;
+import com.masiton.security.infrastructure.web.AdminCookieOriginFilter;
 import com.masiton.security.infrastructure.web.SecurityErrorWriter;
 import com.masiton.security.infrastructure.web.MemberSessionRevocationFilter;
 
@@ -40,6 +41,7 @@ public class SecurityConfiguration {
             HttpSecurity http,
             Converter<Jwt, ? extends AbstractAuthenticationToken> jwtAuthenticationConverter,
             SecurityErrorWriter securityErrorWriter,
+            AdminCookieOriginFilter adminCookieOriginFilter,
             MemberSessionRevocationFilter memberSessionRevocationFilter,
             JwtDecoder jwtDecoder,
             @Qualifier("memberJwtDecoder") JwtDecoder memberJwtDecoder
@@ -95,6 +97,7 @@ public class SecurityConfiguration {
                                 jwtDecoder,
                                 memberJwtDecoder,
                                 jwtAuthenticationConverter)))
+                .addFilterBefore(adminCookieOriginFilter, BearerTokenAuthenticationFilter.class)
                 .addFilterAfter(memberSessionRevocationFilter, BearerTokenAuthenticationFilter.class)
                 .build();
     }
