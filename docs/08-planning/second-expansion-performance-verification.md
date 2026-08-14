@@ -11,6 +11,7 @@ related_documents:
   - m2-cost-and-sizing.md
   - ../01-requirements/non-functional-requirements.md
   - ../07-adr/quality/perf-001-k6-load-testing.md
+  - ../07-adr/quality/perf-002-operational-participant-load-testing.md
   - ../07-adr/quality/test-001-automation-strategy.md
   - ../07-adr/data/data-011-popular-restaurant-request-time-aggregation.md
   - ../05-specs/api/discovery/popular-restaurant-api.md
@@ -21,7 +22,7 @@ related_documents:
 
 `NFR-PERFORMANCE-006`의 정상 부하 조건을 측정하고 판정한 기록이다. `TST-E2-PERF-001`의 부하 증거로 연결한다.
 
-**현재 상태: 미측정.** 측정 수단([ADR-PERF-001](../07-adr/quality/perf-001-k6-load-testing.md))은 2026-08-06에 확정됐고 시나리오·기준 데이터·실행 절차가 저장소에 있다. 같은 날 팀이 **실측을 3차 확장 이후로 연기**하기로 결정했다. 구현에 우선순위를 두기 위한 판단이며, 수단이 없어서가 아니다.
+**현재 상태: 미측정.** 기본 측정 수단([ADR-PERF-001](../07-adr/quality/perf-001-k6-load-testing.md))은 2026-08-06에 확정됐고, 이슈 #190에는 검증 참여자 전용 운영 직접 검증 예외([ADR-PERF-002](../07-adr/quality/perf-002-operational-participant-load-testing.md))를 적용하기로 했다. 운영 fixture 결과가 기록되기 전까지 이 문서의 성능 조건은 여전히 미측정이다.
 
 **측정 전까지 `NFR-PERFORMANCE-006`의 정상 부하 조건은 충족 여부를 알 수 없는 상태이고, 충족했다고 보고하지 않는다.**
 
