@@ -34,7 +34,7 @@ related_documents:
 | [Accepted ADR과 공개 범위 불일치](https://github.com/team-youngkk/masit-on/pull/206#discussion_r3782022095) | Issue #197의 공개 API gate 제외 결정과 상위 ADR 동기화 | 기타(계약 문서 정합성) | 수정 필요 | 후속 ADR-DEPLOY-004에 결정·조건·트레이드오프·검증을 정의 | 상충 문구 제거, 문서 링크·diff 검사 통과 |
 | [Accepted ADR 대체 절차 누락](https://github.com/team-youngkk/masit-on/pull/206#discussion_r3782123250) | 기존 Accepted ADR 결론을 직접 수정하지 말고 새 ADR과 인덱스·추적표로 대체 | 기타(ADR 거버넌스) | 수정 필요 | ADR-DEPLOY-003을 원결정으로 복원해 Superseded 처리하고 ADR-DEPLOY-004 신설, 인덱스·추적표·기술 정책 갱신 | `superseded_by`·`supersedes` 양방향 연결과 현재 계약 링크 확인 |
 | [ADR 대체 절차 중복 재지적](https://github.com/team-youngkk/masit-on/pull/206#discussion_r3782145129) | 후속 ADR 분리와 대체 메타데이터·인덱스·추적표 갱신 | 기타(ADR 거버넌스) | 이미 해결 | 앞선 대체 절차 지적과 같은 원인이며 ADR-DEPLOY-004 반영 커밋이 현재 PR head에 존재 | 원격 head와 양방향 메타데이터·인덱스·추적표 재확인 |
-| [Nginx smoke 배포 번들 누락](https://github.com/team-youngkk/masit-on/pull/206#discussion_r3782279672) | 신규 smoke와 Nginx 설치 산출물을 실제 SSM 배포 번들에 포함 | 배포 | 수정 필요 | CI가 Nginx 산출물 8개를 압축 전송하고 백엔드 배포 성공 뒤 `nginx-install.sh`를 실행하도록 변경 | 실제 CI 명령 JSON 27,361/65,536바이트, `AppRunScriptContractTest`, `bash -n` 통과 |
+| [Nginx smoke 배포 번들 누락](https://github.com/team-youngkk/masit-on/pull/206#discussion_r3782279672) | 신규 smoke와 Nginx 설치 산출물을 실제 SSM 배포 번들에 포함 | 배포 | 수정 필요 | CI가 Nginx 산출물 8개를 압축 전송하고 백엔드 배포 성공 뒤 `nginx-install.sh`를 실행하도록 변경 | 실제 CI 명령 JSON 28,706/65,536바이트, `AppRunScriptContractTest`, `bash -n` 통과 |
 
 ## 3. 문제 현상과 발생 조건
 
@@ -88,7 +88,7 @@ Nginx smoke를 설치 스크립트에 연결하면서 소비자(`nginx-install.s
 | 변경 문서의 상대 링크 해석 검사 | 통과 | 수정 ADR와 트러블슈팅 문서 링크가 모두 존재 |
 | `nginx:1.30.3-alpine nginx -t` | 통과 | 저장소 `nginx.conf`·upgrade map·site 설정을 함께 적재해 구문 정상 확인 |
 | ADR 대체 메타데이터·인덱스·추적표 검사 | 통과 | ADR-DEPLOY-003 `Superseded`↔ADR-DEPLOY-004 `Accepted` 양방향 연결과 현재 참조 확인 |
-| CI SSM 명령 JSON 로컬 재현 | 통과 | 압축 내 Nginx 산출물 8개, 실행 권한 부여, 앱 배포 뒤 Nginx 설치 호출, 27,361/65,536바이트 확인 |
+| CI SSM 명령 JSON 로컬 재현 | 통과 | 압축 내 Nginx 산출물 8개, 실행 권한 부여, 앱 배포 뒤 Nginx 설치 호출, 28,706/65,536바이트 확인 |
 
 ## 8. 재발 방지 및 다음 확인
 
@@ -102,7 +102,7 @@ Nginx smoke를 설치 스크립트에 연결하면서 소비자(`nginx-install.s
 | 공개 API 3xx false green 허용 여부 | 허용 | 302 응답을 공통 판정식에 대입하고 정적 계약 테스트로 지속 확인 | 로컬 기준 거부, 운영 확인 예정 | 로컬 개선 확인 | OPS-VALIDATION 이우람, Issue #197 운영 배포 직후 |
 | Accepted ADR과 공개 API gate 계약의 상충 | ADR-DEPLOY-003의 기존 문구 1곳과 하위 계약 상충 | 현재 Accepted ADR의 결정·트레이드오프·검증 절과 API 계약 4절을 PR 리뷰 때 대조 | ADR-DEPLOY-004 기준 상충 문구 0곳 | 문서 기준 해소 | 필수 리뷰어 승인 시 확정 |
 | Nginx 설치 필수 산출물의 SSM 전달률 | 0/8 | CI `files` 배열과 `nginx-install.sh` 필수 파일 목록을 정적 계약 테스트로 대조 | 8/8 | 로컬 개선 확인 | CI 성공 시 확정 |
-| Nginx 산출물 추가 후 SSM 명령 JSON 크기 | 개별 base64 추가 시 약 92KB | CI 내장 Python을 그대로 실행해 UTF-8 직렬화 크기 측정 | 27,361/65,536바이트 | 제한 이내로 개선 | CI 성공 시 확정 |
+| Nginx 산출물 추가 후 SSM 명령 JSON 크기 | 개별 base64 추가 시 약 92KB | CI 내장 Python을 그대로 실행해 UTF-8 직렬화 크기 측정 | 28,706/65,536바이트 | 제한 이내로 개선 | CI 성공 시 확정 |
 
 ## 10. 남은 사항
 
