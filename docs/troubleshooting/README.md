@@ -10,6 +10,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #209 AI 후보 등록 입력·비동기·외부 연동 경계](pr-209-ai-candidate-registration-review.md)
 - [PR #206 Nginx 공개 API smoke·Accepted ADR 정합화](pr-206-nginx-public-api-gate-review.md)
 - [PR #208 운영 fixture cleanup 참조 보호와 성능 추적성](pr-208-operational-performance-review.md)
 - [PR #205 관리자 로그인 trusted proxy 출처 해석 리뷰 반영](pr-205-admin-login-trusted-proxy-review.md)
