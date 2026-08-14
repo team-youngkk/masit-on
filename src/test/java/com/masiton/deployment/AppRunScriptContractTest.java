@@ -3,6 +3,8 @@ package com.masiton.deployment;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -19,6 +21,10 @@ class AppRunScriptContractTest {
     private static final Path APP_RUN_SCRIPT = Path.of("deploy/scripts/app-run.sh");
     private static final Path NGINX_SITE = Path.of("deploy/nginx/masiton.click.conf");
     private static final Path NGINX_MAIN = Path.of("deploy/nginx/nginx.conf");
+    private static final Path NGINX_INSTALL_SCRIPT = Path.of("deploy/scripts/nginx-install.sh");
+    private static final Path NGINX_SMOKE_SCRIPT = Path.of("deploy/scripts/nginx-smoke.sh");
+    private static final Path SECURITY_CONFIGURATION = Path.of(
+            "src/main/java/com/masiton/security/infrastructure/configuration/SecurityConfiguration.java");
     private static final Path COMMON_PROFILE = Path.of("src/main/resources/application.yml");
     private static final Path PROD_PROFILE = Path.of("src/main/resources/application-prod.yml");
 
@@ -50,8 +56,32 @@ class AppRunScriptContractTest {
     private static final Pattern CALLBACK_EXPORT = Pattern.compile(
             "(?<![\\w-])export\\s+YOUTUBE_WEBHOOK_CALLBACK_URL=\"?([^\"\\s]+)\"?");
 
-    /** 이 저장소의 Nginx 파일은 server 지시어를 4칸, location 안 지시어를 8칸 들여쓴다. */
-    private static final Pattern SERVER_LEVEL_AUTH_REQUEST = Pattern.compile("^ {4}auth_request\\b", Pattern.MULTILINE);
+    private static final Pattern METHOD_PERMIT_ALL = Pattern.compile(
+            "requestMatchers\\(HttpMethod\\.(GET|POST|DELETE),([^)]*)\\)\\.permitAll\\(\\)",
+            Pattern.DOTALL);
+    private static final Pattern STRING_LITERAL = Pattern.compile("\"([^\"]+)\"");
+    private static final Pattern LOCATION = Pattern.compile(
+            "^ {4}location\\s+(.+?)\\s*\\{\\R(.*?)^ {4}}", Pattern.MULTILINE | Pattern.DOTALL);
+
+    private static final List<ApiRoute> PUBLIC_API_ROUTES = List.of(
+            new ApiRoute("GET", "/api/restaurants", "/api/restaurants"),
+            new ApiRoute("GET", "/api/restaurants/*", "/api/restaurants/opaque-id"),
+            new ApiRoute("GET", "/api/curations", "/api/curations"),
+            new ApiRoute("GET", "/api/curations/*", "/api/curations/opaque-id"),
+            new ApiRoute("GET", "/api/creators", "/api/creators"),
+            new ApiRoute("GET", "/api/creators/*", "/api/creators/opaque-id"),
+            new ApiRoute("GET", "/api/creators/*/restaurants", "/api/creators/opaque-id/restaurants"),
+            new ApiRoute("GET", "/api/creators/*/videos", "/api/creators/opaque-id/videos"),
+            new ApiRoute("POST", "/api/auth/registrations", "/api/auth/registrations"),
+            new ApiRoute("POST", "/api/auth/email-verifications", "/api/auth/email-verifications"),
+            new ApiRoute("POST", "/api/auth/email-verifications/resend", "/api/auth/email-verifications/resend"),
+            new ApiRoute("POST", "/api/auth/password-resets/requests", "/api/auth/password-resets/requests"),
+            new ApiRoute("POST", "/api/auth/password-resets/confirmations", "/api/auth/password-resets/confirmations"),
+            new ApiRoute("POST", "/api/auth/tokens", "/api/auth/tokens"),
+            new ApiRoute("POST", "/api/auth/tokens/refresh", "/api/auth/tokens/refresh"),
+            new ApiRoute("POST", "/api/restaurants/course-routes", "/api/restaurants/course-routes"),
+            new ApiRoute("POST", "/api/restaurants/natural-language-search",
+                    "/api/restaurants/natural-language-search"));
 
     @Test
     @DisplayName("AI Worker와 Gemini Free Tier 게이트를 SSM에서 읽어 backend 컨테이너에 전달한다")
@@ -139,7 +169,7 @@ class AppRunScriptContractTest {
                 .contains("location = " + CALLBACK_PATH + " {");
 
         // gate가 server 컨텍스트에 있으면 location 본문이 비어 있어도 상속돼 제외가 무효가 된다.
-        assertThat(SERVER_LEVEL_AUTH_REQUEST.matcher(site).find())
+        assertThat(hasServerLevelAuthRequest(site))
                 .as("auth_request를 server 컨텍스트에 두면 제외 location도 상속해 gate에 걸린다")
                 .isFalse();
 
@@ -154,7 +184,9 @@ class AppRunScriptContractTest {
         assertThat(body)
                 .as("무인증 요청이 백엔드에 도달하므로 유량·메서드·본문 제한이 함께 있어야 한다")
                 .contains("limit_req zone=masiton_ungated")
-                .contains("limit_except GET POST")
+                .contains("error_page 419 = @verification_webhook;")
+                .contains("if ($request_method !~ ^(GET|POST)$)")
+                .contains("return 419;")
                 .contains("client_max_body_size 128k;");
         assertThat(body)
                 .as("생략하면 Nginx 기본 60s가 적용돼 상위 location보다 오래 커넥션을 점유한다")
@@ -165,6 +197,196 @@ class AppRunScriptContractTest {
         assertThat(Files.readString(NGINX_MAIN))
                 .as("limit_req zone은 http 컨텍스트에 선언해야 한다")
                 .contains("limit_req_zone $binary_remote_addr zone=masiton_ungated:");
+
+        String webhookGate = locationBySelector(nginxLocations(site), "@verification_webhook").body();
+        assertThat(webhookGate)
+                .as("Webhook 비허용 메서드는 gate 뒤에도 외부 자격 증명을 backend로 전달하지 않아야 한다")
+                .contains(GATE_DIRECTIVE)
+                .contains("error_page 401 = /_verification/access-required;")
+                .contains("error_page 500 503 = /_verification/unavailable;")
+                .contains("proxy_pass http://masiton_backend;")
+                .contains("proxy_set_header Authorization \"\";")
+                .contains("proxy_set_header Cookie \"\";");
+    }
+
+    @Test
+    @DisplayName("Spring Security 공개 API 매트릭스와 Nginx 경로·메서드 예외를 일치시킨다")
+    void nginx_공개API매트릭스를_SpringSecurity와경로메서드단위로일치시킨다() throws IOException {
+        String security = stripComments(Files.readString(SECURITY_CONFIGURATION));
+        Set<String> actualPermits = methodPermitAllRoutes(security);
+        Set<String> expectedPermits = new TreeSet<>();
+        PUBLIC_API_ROUTES.forEach(route -> expectedPermits.add(route.method() + " " + route.securityPattern()));
+        expectedPermits.add("GET " + CALLBACK_PATH);
+        expectedPermits.add("POST " + CALLBACK_PATH);
+        expectedPermits.add("POST /api/verification/sessions");
+        expectedPermits.add("DELETE /api/verification/sessions");
+        // 관리자 로그인은 Spring Security에서는 무인증이지만 제한 공개 Nginx gate는 유지한다.
+        expectedPermits.add("POST /api/admin/auth/tokens");
+        expectedPermits.add("POST /api/admin/auth/tokens/refresh");
+
+        assertThat(actualPermits)
+                .as("SecurityConfiguration의 메서드별 permitAll 목록이 공개 경계 계약과 같아야 한다")
+                .containsExactlyElementsOf(expectedPermits);
+
+        String site = Files.readString(NGINX_SITE);
+        List<NginxLocation> locations = nginxLocations(site);
+        assertThat(hasServerLevelAuthRequest(site))
+                .as("server 수준 auth_request는 공개 location에도 상속돼 예외를 무효화한다")
+                .isFalse();
+
+        String publicProxy = locationBySelector(locations, "@public_api").body();
+        String verificationProxy = locationBySelector(locations, "@verification_api").body();
+        String httpsServer = httpsApplicationServer(site);
+        assertThat(publicProxy)
+                .as("일반 공개 API는 선택 회원 인증과 refresh cookie 계약을 위해 자격 증명을 보존해야 한다")
+                .doesNotContain(GATE_DIRECTIVE)
+                .doesNotContain("proxy_set_header Authorization \"\";")
+                .doesNotContain("proxy_set_header Cookie \"\";")
+                .contains("proxy_pass http://masiton_backend;");
+        assertThat(serverLevelDirectiveCount(httpsServer, "recursive_error_pages on;"))
+                .as("첫 418/419 전환 전에 적용되도록 HTTPS server 범위에서 재귀 오류 처리를 한 번만 켜야 한다")
+                .isEqualTo(1);
+        assertThat(verificationProxy)
+                .as("418/419 내부 redirect 뒤의 gate 오류도 공통 JSON adapter로 다시 처리해야 한다")
+                .contains(GATE_DIRECTIVE)
+                .contains("error_page 401 = /_verification/access-required;")
+                .contains("error_page 500 503 = /_verification/unavailable;")
+                .contains("proxy_pass http://masiton_backend;");
+        assertThat(locationBySelector(locations, "= /_verification/access-required").body())
+                .as("401 종착 adapter가 error_page를 다시 적용하면 내부 redirect가 순환한다")
+                .doesNotContain("error_page", "recursive_error_pages");
+        assertThat(locationBySelector(locations, "= /_verification/unavailable").body())
+                .as("503 종착 adapter가 error_page를 다시 적용하면 내부 redirect가 순환한다")
+                .doesNotContain("error_page", "recursive_error_pages");
+
+        for (ApiRoute route : PUBLIC_API_ROUTES) {
+            NginxLocation location = resolveLocation(locations, route.examplePath());
+            assertThat(location.body())
+                    .as("%s %s만 공개 proxy로 보내야 한다", route.method(), route.examplePath())
+                    .contains("error_page 418 = @public_api;")
+                    .contains("error_page 419 = @verification_api;")
+                    .contains("if ($request_method = " + route.method() + ") { return 418; }")
+                    .contains("return 419;")
+                    .doesNotContain(GATE_DIRECTIVE);
+        }
+    }
+
+    @Test
+    @DisplayName("공개 상세 정규식은 불투명 단일 segment에서 끝나고 다른 메서드와 하위 경로는 gate를 유지한다")
+    void nginx_공개상세정규식을_anchor하고_비공개요청은gate로보낸다() throws IOException {
+        List<NginxLocation> locations = nginxLocations(Files.readString(NGINX_SITE));
+
+        for (String path : List.of(
+                "/api/restaurants/opaque-id",
+                "/api/curations/opaque-id",
+                "/api/creators/opaque-id",
+                "/api/creators/opaque-id/restaurants",
+                "/api/creators/opaque-id/videos")) {
+            NginxLocation location = resolveLocation(locations, path);
+            assertThat(location.selector())
+                    .as("%s 상세 location은 시작·끝 anchor와 단일 segment 규칙을 가져야 한다", path)
+                    .startsWith("~ ^")
+                    .contains("[^/]+")
+                    .endsWith("$");
+            assertThat(location.body())
+                    .as("공개 path의 비공개 메서드는 @verification_api로 보내야 한다")
+                    .contains("error_page 419 = @verification_api;")
+                    .contains("return 419;");
+        }
+
+        for (String path : List.of(
+                "/api/restaurants/opaque-id/extra",
+                "/api/curations/opaque-id/extra",
+                "/api/creators/opaque-id/extra",
+                "/api/creators/opaque-id/restaurants/extra",
+                "/api/creators/opaque-id/videos/extra")) {
+            assertThat(resolveLocation(locations, path).body())
+                    .as("anchor 밖 하위 경로 %s는 기본 API gate로 돌아가야 한다", path)
+                    .contains(GATE_DIRECTIVE);
+        }
+    }
+
+    @Test
+    @DisplayName("검증 세션만 POST DELETE를 제외하고 관리자 미정의 API와 internal 경계는 닫는다")
+    void nginx_검증세션_관리자_미정의API_internal경계를유지한다() throws IOException {
+        List<NginxLocation> locations = nginxLocations(Files.readString(NGINX_SITE));
+        NginxLocation sessions = resolveLocation(locations, "/api/verification/sessions");
+        assertThat(sessions.selector()).isEqualTo("= /api/verification/sessions");
+        assertThat(sessions.body())
+                .contains("if ($request_method !~ ^(POST|DELETE)$)")
+                .contains("error_page 419 = @verification_api;")
+                .contains("proxy_pass http://masiton_backend;")
+                .contains("proxy_set_header Authorization \"\";")
+                .doesNotContain(GATE_DIRECTIVE);
+
+        assertThat(resolveLocation(locations, "/api/admin/auth/tokens").body()).contains(GATE_DIRECTIVE);
+        assertThat(resolveLocation(locations, "/api/admin/anything").body()).contains(GATE_DIRECTIVE);
+        assertThat(resolveLocation(locations, "/api/not-defined").body()).contains(GATE_DIRECTIVE);
+
+        NginxLocation internalRoot = resolveLocation(locations, "/internal");
+        NginxLocation internalChild = resolveLocation(locations, "/internal/health/live");
+        assertThat(internalRoot.selector()).isEqualTo("= /internal");
+        assertThat(internalRoot.body()).contains("return 404;").doesNotContain("proxy_pass");
+        assertThat(internalChild.selector()).isEqualTo("^~ /internal/");
+        assertThat(internalChild.body()).contains("return 404;").doesNotContain("proxy_pass");
+
+        assertThat(locationBySelector(locations, "= /verification/login").body())
+                .as("로그인 화면은 GET 외 메서드를 프론트엔드로 전달하지 않아야 한다")
+                .contains("limit_except GET", "deny all;");
+        assertThat(locationBySelector(locations, "^~ /_next/static/").body())
+                .as("정적 파일은 GET 외 메서드를 프론트엔드로 전달하지 않아야 한다")
+                .contains("limit_except GET", "deny all;");
+    }
+
+    @Test
+    @DisplayName("Nginx 재기동 smoke 실패를 컷오버 rollback 범위에서 처리한다")
+    void nginx_smoke를재기동직후rollback범위에서실행한다() throws IOException {
+        String install = Files.readString(NGINX_INSTALL_SCRIPT);
+        String smoke = Files.readString(NGINX_SMOKE_SCRIPT);
+        int smokeRun = install.indexOf("bash \"$STAGE/nginx-smoke.sh\"");
+        int restart = install.lastIndexOf("systemctl restart nginx", smokeRun);
+        int rollbackTrapRelease = install.indexOf("trap - ERR", smokeRun);
+
+        assertThat(install)
+                .contains("tls-deploy-cert.sh nginx-smoke.sh")
+                .contains("bash \"$STAGE/nginx-smoke.sh\"")
+                .doesNotContain("$OPT_DIR/bin/nginx-smoke.sh");
+        assertThat(restart).isNotNegative();
+        assertThat(smokeRun).as("재기동 뒤 smoke를 실행해야 한다").isGreaterThan(restart);
+        assertThat(rollbackTrapRelease).as("smoke 성공 뒤에만 rollback ERR trap을 해제해야 한다").isGreaterThan(smokeRun);
+
+        assertThat(smoke)
+                .startsWith("#!/usr/bin/env bash")
+                .contains("set -euo pipefail")
+                .contains("VALIDATION_ACCESS_REQUIRED")
+                .contains("if [ \"$method\" = \"HEAD\" ]; then")
+                .contains("curl_args+=(--head)")
+                .contains("curl_args+=(--request \"$method\")")
+                .contains("assert_validation_gate POST /api/admin/auth/tokens '{}'")
+                .contains("assert_validation_gate GET /api/nginx-smoke-unknown")
+                .contains("assert_validation_gate PATCH /api/restaurants")
+                .contains("assert_validation_gate GET /api/verification/sessions")
+                .contains("assert_validation_gate_status HEAD /api/webhooks/youtube/channel-updates")
+                .contains("assert_validation_gate PATCH /api/webhooks/youtube/channel-updates")
+                .contains("assert_not_validation_access_error POST /api/verification/sessions '{}' \"$PUBLIC_ORIGIN\"")
+                .contains("assert_status 204 DELETE /api/verification/sessions '' \"$PUBLIC_ORIGIN\"")
+                .contains("assert_error_code 401 INVALID_REFRESH_TOKEN POST /api/auth/tokens/refresh '' \"$PUBLIC_ORIGIN\"")
+                .contains("assert_not_validation_access_error POST \"$path\" '{'")
+                .contains("assert_status 404 GET /internal")
+                .contains("assert_status 404 GET /internal/health/live")
+                .contains("assert_not_validation_access_error GET /api/webhooks/youtube/channel-updates")
+                .contains("assert_not_validation_access_error POST /api/webhooks/youtube/channel-updates")
+                .doesNotContain("--cookie", "Authorization:");
+        PUBLIC_API_ROUTES.stream()
+                .filter(route -> route.method().equals("GET"))
+                .forEach(route -> assertThat(smoke)
+                        .as("공개 GET 운영 smoke 누락: %s", route.examplePath())
+                        .contains(route.examplePath().replace("opaque-id", "${opaque_segment}")));
+        PUBLIC_API_ROUTES.stream()
+                .filter(route -> route.method().equals("POST"))
+                .forEach(route -> assertThat(smoke)
+                        .as("공개 POST 운영 smoke 누락: %s", route.examplePath())
+                        .contains(route.examplePath()));
     }
 
     /**
@@ -188,6 +410,142 @@ class AppRunScriptContractTest {
             names.add(normalize(matcher.group(1)));
         }
         return names;
+    }
+
+    private static Set<String> methodPermitAllRoutes(String securityConfiguration) {
+        Set<String> routes = new TreeSet<>();
+        Matcher matcher = METHOD_PERMIT_ALL.matcher(securityConfiguration);
+        while (matcher.find()) {
+            String method = matcher.group(1);
+            Matcher pathMatcher = STRING_LITERAL.matcher(matcher.group(2));
+            while (pathMatcher.find()) {
+                routes.add(method + " " + pathMatcher.group(1));
+            }
+        }
+        return routes;
+    }
+
+    private static List<NginxLocation> nginxLocations(String site) {
+        List<NginxLocation> locations = new ArrayList<>();
+        Matcher matcher = LOCATION.matcher(site);
+        while (matcher.find()) {
+            locations.add(new NginxLocation(matcher.group(1).trim(), matcher.group(2)));
+        }
+        assertThat(locations).as("TLS server의 location을 찾지 못했다").isNotEmpty();
+        return locations;
+    }
+
+    /** 들여쓰기와 무관하게 최상위 블록(server)의 직계 auth_request만 찾는다. */
+    private static boolean hasServerLevelAuthRequest(String site) {
+        int depth = 0;
+        for (String rawLine : site.split("\\R")) {
+            String line = rawLine.replaceFirst("#.*$", "").trim();
+            if (depth == 1 && line.matches("auth_request\\b.*")) {
+                return true;
+            }
+            depth += count(line, '{') - count(line, '}');
+        }
+        return false;
+    }
+
+    private static String httpsApplicationServer(String site) {
+        int searchFrom = 0;
+        while (true) {
+            int start = site.indexOf("server {", searchFrom);
+            if (start < 0) {
+                throw new AssertionError("masiton.click HTTPS server 블록을 찾지 못했다");
+            }
+            int depth = 0;
+            for (int index = start; index < site.length(); index++) {
+                char current = site.charAt(index);
+                if (current == '{') {
+                    depth++;
+                } else if (current == '}' && --depth == 0) {
+                    String server = site.substring(start, index + 1);
+                    if (server.contains("listen 443 ssl;") && server.contains("server_name masiton.click;")) {
+                        return server;
+                    }
+                    searchFrom = index + 1;
+                    break;
+                }
+            }
+        }
+    }
+
+    private static int serverLevelDirectiveCount(String server, String directive) {
+        int depth = 0;
+        int matches = 0;
+        for (String rawLine : server.split("\\R")) {
+            String line = rawLine.replaceFirst("#.*$", "").trim();
+            if (depth == 1 && line.equals(directive)) {
+                matches++;
+            }
+            depth += count(line, '{') - count(line, '}');
+        }
+        return matches;
+    }
+
+    private static int count(String value, char expected) {
+        int count = 0;
+        for (int index = 0; index < value.length(); index++) {
+            if (value.charAt(index) == expected) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private static NginxLocation locationBySelector(List<NginxLocation> locations, String selector) {
+        return locations.stream()
+                .filter(location -> location.selector().equals(selector))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Nginx location을 찾지 못했다: " + selector));
+    }
+
+    /** exact, {@code ^~} prefix, 선언 순서 regex, 일반 prefix 순으로 Nginx location 선택을 모사한다. */
+    private static NginxLocation resolveLocation(List<NginxLocation> locations, String path) {
+        for (NginxLocation location : locations) {
+            if (location.selector().startsWith("= ") && path.equals(location.selector().substring(2))) {
+                return location;
+            }
+        }
+
+        NginxLocation longestPrefix = null;
+        for (NginxLocation location : locations) {
+            String selector = location.selector();
+            String prefix = selector.startsWith("^~ ") ? selector.substring(3)
+                    : isPlainPrefix(selector) ? selector : null;
+            if (prefix != null && path.startsWith(prefix)
+                    && (longestPrefix == null || prefix.length() > prefixOf(longestPrefix).length())) {
+                longestPrefix = location;
+            }
+        }
+        if (longestPrefix != null && longestPrefix.selector().startsWith("^~ ")) {
+            return longestPrefix;
+        }
+
+        for (NginxLocation location : locations) {
+            String selector = location.selector();
+            if (selector.startsWith("~ ") && Pattern.compile(selector.substring(2)).matcher(path).find()) {
+                return location;
+            }
+            if (selector.startsWith("~* ")
+                    && Pattern.compile(selector.substring(3), Pattern.CASE_INSENSITIVE).matcher(path).find()) {
+                return location;
+            }
+        }
+        if (longestPrefix != null) {
+            return longestPrefix;
+        }
+        throw new AssertionError("Nginx location과 일치하지 않는 경로: " + path);
+    }
+
+    private static boolean isPlainPrefix(String selector) {
+        return selector.startsWith("/");
+    }
+
+    private static String prefixOf(NginxLocation location) {
+        return location.selector().startsWith("^~ ") ? location.selector().substring(3) : location.selector();
     }
 
     /** Spring relaxed binding이 환경 변수로 해석하는 형태로 맞춘다. */
@@ -235,5 +593,11 @@ class AppRunScriptContractTest {
                 .matcher(site);
         assertThat(matcher.find()).as("gate 제외 location 본문을 찾지 못했다").isTrue();
         return matcher.group(1);
+    }
+
+    private record ApiRoute(String method, String securityPattern, String examplePath) {
+    }
+
+    private record NginxLocation(String selector, String body) {
     }
 }
