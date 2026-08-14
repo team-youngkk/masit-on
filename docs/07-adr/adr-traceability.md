@@ -39,6 +39,11 @@ related_documents:
   - platform/runtime-001-docker.md
   - platform/ci-001-github-actions-quality-gate.md
   - ../02-analysis/second-expansion-workstreams.md
+  - ../02-analysis/third-expansion-domain-boundaries.md
+  - ../02-analysis/third-expansion-workstreams.md
+  - ../08-planning/third-expansion-evaluation-strategy.md
+  - ../08-planning/third-expansion-test-matrix.md
+  - ../08-planning/third-expansion-task-breakdown.md
   - data/data-011-popular-restaurant-request-time-aggregation.md
   - data/data-012-second-expansion-retention-cleanup.md
   - integration/notify-002-in-app-notification-reliability.md
@@ -94,16 +99,17 @@ related_documents:
 | YouTube Data API v3 | 확정·MVP 필요 | Accepted ADR | [ADR-EXT-001](integration/ext-001-reference-verification.md) | 관리자 채널·영상 확인 |
 | 자동 재시도·Circuit Breaker·비동기 이벤트·Outbox | 조건부(회원 Action 메일만 Outbox) | Conditional ADR | [ADR-EXT-002](adr-backlog.md#adr-ext-002-자동-복원력과-신뢰성-이벤트-전달), 메일은 [ADR-AUTH-005](security/auth-005-member-action-mail-outbox.md), 서비스 내 알림은 [ADR-NOTIFY-002](integration/notify-002-in-app-notification-reliability.md) | 사용자 알림은 DB 직접 저장, 그 밖의 외부 전달은 측정·SLA 승인 전 금지 |
 | Kakao Maps JavaScript API V3 | 구현 범위 확정 | Accepted ADR | [ADR-MAP-001](integration/map-001-map-bounds-search.md) | 지도 SDK와 필터 기반 마커 조회를 포함하고 뷰포트 서버 조회·현재 위치·길찾기는 제외 |
-| Kakao Mobility Directions API V1 | 확정이나 범위 제외 | Post-MVP ADR | [ADR-ROUTE-001](adr-backlog.md#adr-route-001-kakao-mobility와-동선-추천) | 동선·코스 추천 제외 |
+| Kakao Mobility 자동차 경로 API | `/v1/directions`, 자동차 경로, 5분 TTL·캐시 없음·코스당 1회 호출 | Accepted ADR | [ADR-ROUTE-001](integration/route-001-kakao-mobility-course-routing.md) | WS-16 코스 추천의 외부 경계 |
 | Java + Jsoup | 확정이나 자동화 제외 | Post-MVP ADR | [ADR-AUTO-001](adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) | 자동 수집 제외 |
 | Playwright | 필요 시 | Conditional ADR | [ADR-CRAWL-001](adr-backlog.md#adr-crawl-001-playwright-도입) | JS 렌더링 필요 검증 후 도입 |
 | n8n | 확정이나 자동화 제외 | Post-MVP ADR | [ADR-AUTO-001](adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) | 자동 수집·동기화 제외 |
 | Spring Scheduler | 보존 cleanup에 한해 채택 | Accepted ADR | [ADR-DATA-010](data/data-010-recent-view-retention-cleanup.md), [ADR-DATA-012](data/data-012-second-expansion-retention-cleanup.md) | 최근 기록과 2차 확장 보존 Command만 실행; 자동 수집·집계·동기화 제외 |
 | Spring Batch 6.0.4 | 고정이나 자동화 제외 | Post-MVP ADR | [ADR-AUTO-001](adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) | 이력·재시작 배치 범위 없음 |
 | 하루 1회 이상 최근 기록 cleanup | 1차 확장 적용 | Operational Configuration | [ADR-DATA-010](data/data-010-recent-view-retention-cleanup.md) | 신규 조회와 독립된 30일 경과 `recent_restaurant_view` 물리 삭제; 실패 관측·재시도 |
-| Spring AI 2.0.0 | 고정이나 범위 제외 | Post-MVP ADR | [ADR-AI-001](adr-backlog.md#adr-ai-001-spring-ai와-gemini-영상-정보-추출) | AI 영상 추출 제외 |
-| `gemini-3-flash-preview` | 승인된 Preview이나 범위 제외 | Post-MVP ADR | [ADR-AI-001](adr-backlog.md#adr-ai-001-spring-ai와-gemini-영상-정보-추출) | AI 기능 활성화 전 사용 금지 |
-| JSON Schema + Prompt Template | 확정이나 범위 제외 | Post-MVP ADR | [ADR-AI-001](adr-backlog.md#adr-ai-001-spring-ai와-gemini-영상-정보-추출) | AI 추출 계약은 기능과 함께 활성화 |
+| AI 제공자·모델 | Gemini Free Tier global endpoint, `gemini-3.5-flash-lite` | Accepted ADR | [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md) | 공개 YouTube URL 입력, 후보·검수·무료 quota·보존 기준 |
+| JSON Schema + Prompt Template | Prompt `P1`, 결과 Schema `S1` | Accepted ADR | [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md) | AI 후보 계약과 평가 기준에 연결 |
+| 자연어 조건 해석 | P1 규칙 기반·태그 18종·태그 AND·`UNRESOLVED` | Accepted ADR | [ADR-ARCH-005](architecture/arch-005-natural-language-filter-interpretation.md) | 임베딩·RAG 없이 WS-14 조회 애플리케이션에서 처리 |
+| AI 추출 비동기 Worker | Worker 1개/인스턴스·lease 120초·polling 5초·재시도 고정, 용량 실측은 최종 게이트 | Accepted ADR | [ADR-EXT-003](integration/ext-003-ai-extraction-async-reliability.md) | 작업 상태·복구·비용 격리 |
 | JUnit 5 + Mockito | 확정 | Accepted ADR | [ADR-TEST-001](quality/test-001-automation-strategy.md) | 단위 테스트 기준 |
 | Spring Boot Test + Testcontainers 2.0.5 | 고정 | Accepted ADR | [ADR-TEST-001](quality/test-001-automation-strategy.md) | 실제 저장소 통합 검증 |
 | WireMock | 확정 | Accepted ADR | [ADR-TEST-001](quality/test-001-automation-strategy.md) | 외부 API 장애·계약 격리 |
@@ -135,6 +141,12 @@ related_documents:
 | [NFR-RELIABILITY-001](../01-requirements/non-functional-requirements.md#nfr-reliability-001-오류-격리와-공통-오류-정책)~[NFR-RELIABILITY-003](../01-requirements/non-functional-requirements.md#nfr-reliability-003-사용자-오류-메시지와-기능-분리) | [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md), [ADR-EXT-002](adr-backlog.md#adr-ext-002-자동-복원력과-신뢰성-이벤트-전달), [ADR-TEST-001](quality/test-001-automation-strategy.md) | 오류 경계, 재시도·회로 차단·이벤트 전달, 장애 검증 |
 | [NFR-AVAILABILITY-001](../01-requirements/non-functional-requirements.md#nfr-availability-001-상태-확인과-장애-구분)~[NFR-AVAILABILITY-002](../01-requirements/non-functional-requirements.md#nfr-availability-002-초기-운영-배포-가용성과-수동-복구) | [ADR-WEB-003](platform/web-003-routing-boundary.md), [ADR-OBS-001](quality/obs-001-logging-observability.md), [ADR-RUNTIME-001](platform/runtime-001-docker.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | 로컬 상태 확인과 초기 운영 배포 수동 복구 |
 | [NFR-EXTERNAL-001](../01-requirements/non-functional-requirements.md#nfr-external-001-영상-원본과-외부-링크-분리)~[NFR-EXTERNAL-003](../01-requirements/non-functional-requirements.md#nfr-external-003-링크-검증과-외부-인증정보) | [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md), [ADR-EXT-001](integration/ext-001-reference-verification.md), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 원본 미저장, 외부 호출 격리, 키 보호 |
+| [NFR-ACCURACY-001](../01-requirements/non-functional-requirements.md#nfr-accuracy-001-자연어-검색-정확도와-평가-데이터)·[NFR-PERFORMANCE-007](../01-requirements/non-functional-requirements.md#nfr-performance-007-자연어-검색과-경로-응답-시간) | [ADR-ARCH-005](architecture/arch-005-natural-language-filter-interpretation.md), [ADR-ROUTE-001](integration/route-001-kakao-mobility-course-routing.md) | 자연어 구조화 조건과 코스 외부 호출의 품질·응답 경계 |
+| [NFR-ACCURACY-002](../01-requirements/non-functional-requirements.md#nfr-accuracy-002-ai-추출-정확도재현율자동-등록-정밀도)·[NFR-INTEGRITY-006](../01-requirements/non-functional-requirements.md#nfr-integrity-006-ai-환각과-잘못된-장소-연결-방지) | [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md), [ADR-EXT-003](integration/ext-003-ai-extraction-async-reliability.md) | 후보 격리·자동 등록·예외 보정·정식 등록 0건·비동기 재현성 |
+| [NFR-RELIABILITY-005](../01-requirements/non-functional-requirements.md#nfr-reliability-005-ai-비동기-작업-복구)·[NFR-EXTERNAL-005](../01-requirements/non-functional-requirements.md#nfr-external-005-ai와-mobility-timeoutrate-limit재시도)·[NFR-AVAILABILITY-003](../01-requirements/non-functional-requirements.md#nfr-availability-003-ai-모델외부-api-장애-격리) | [ADR-EXT-003](integration/ext-003-ai-extraction-async-reliability.md), [ADR-ROUTE-001](integration/route-001-kakao-mobility-course-routing.md), [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md) | timeout·rate limit·복구·기존 기능 격리 |
+| [NFR-SECURITY-007](../01-requirements/non-functional-requirements.md#nfr-security-007-prompt-injection과-악성-ai-입력-방어)·[NFR-PRIVACY-006](../01-requirements/non-functional-requirements.md#nfr-privacy-006-ai-입력저작권자막-보존-경계) | [ADR-ARCH-005](architecture/arch-005-natural-language-filter-interpretation.md), [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 악성 입력·원문·자막·외부 키·보존·접근 경계 |
+| [NFR-COST-001](../01-requirements/non-functional-requirements.md#nfr-cost-001-ai임베딩mobility-호출-비용-상한) | [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md), [ADR-EXT-003](integration/ext-003-ai-extraction-async-reliability.md), [ADR-ROUTE-001](integration/route-001-kakao-mobility-course-routing.md) | AI·Mobility quota·retry·비용 hard stop |
+| [NFR-TEST-006](../01-requirements/non-functional-requirements.md#nfr-test-006-3차-확장-품질과-완료-게이트) | [ADR-TEST-001](quality/test-001-automation-strategy.md), [ADR-PERF-001](quality/perf-001-k6-load-testing.md), 3차 Accepted ADR 전체 | 기능 평가·장애·복구·2차 부하 승계 게이트 |
 | [NFR-OBSERVABILITY-001](../01-requirements/non-functional-requirements.md#nfr-observability-001-요청-추적과-오류-분류)~[NFR-OBSERVABILITY-003](../01-requirements/non-functional-requirements.md#nfr-observability-003-로그-품질과-민감정보-차단) | [ADR-OBS-001](quality/obs-001-logging-observability.md), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 요청 추적·지표·민감정보 차단 |
 | [NFR-TEST-001](../01-requirements/non-functional-requirements.md#nfr-test-001-자동화-테스트-계층)~[NFR-TEST-003](../01-requirements/non-functional-requirements.md#nfr-test-003-배포-품질-게이트) | [ADR-TEST-001](quality/test-001-automation-strategy.md), [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md) | 테스트 계층과 배포 품질 게이트 |
 | [NFR-DEPLOYMENT-001](../01-requirements/non-functional-requirements.md#nfr-deployment-001-재현-가능한-빌드와-환경-분리)~[NFR-DEPLOYMENT-002](../01-requirements/non-functional-requirements.md#nfr-deployment-002-배포-전후-검증) | [ADR-BUILD-001](platform/build-001-gradle-groovy.md), [ADR-WEB-003](platform/web-003-routing-boundary.md), [ADR-RUNTIME-001](platform/runtime-001-docker.md), [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | 재현 빌드, 로컬 통합과 초기 운영 배포 검증 |
@@ -157,6 +169,9 @@ related_documents:
 | 전체 API | [ADR-WEB-003](platform/web-003-routing-boundary.md), [ADR-TEST-001](quality/test-001-automation-strategy.md), [ADR-OBS-001](quality/obs-001-logging-observability.md) | `/api` 전달, 계약·장애 테스트와 요청 추적 |
 | 인기 맛집 API | [ADR-DATA-011](data/data-011-popular-restaurant-request-time-aggregation.md) | 현재 Favorite 요청 시 집계, Snapshot·Batch·Redis 캐시 없음 |
 | 제보·신고 상태와 사용자 알림 API | [ADR-NOTIFY-002](integration/notify-002-in-app-notification-reliability.md), [ADR-DATA-012](data/data-012-second-expansion-retention-cleanup.md) | 상태·이력·알림 원자 저장, 외부 전달 없음, 독립 보존 cleanup |
+| 자연어 검색 API | [ADR-ARCH-005](architecture/arch-005-natural-language-filter-interpretation.md), [ADR-WEB-002](platform/web-002-data-state.md), [ADR-ARCH-001](architecture/arch-001-domain-monolith.md) | 구조화 조건·직접 필터 우선·기존 목록 계약 재사용 |
+| AI 추출 작업·자동 등록 API | [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md), [ADR-EXT-003](integration/ext-003-ai-extraction-async-reliability.md), [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md) | 후보 상태·비동기 작업·자동 검증·예외 보정·정식 등록 |
+| 맛집 코스·경로 API | [ADR-ROUTE-001](integration/route-001-kakao-mobility-course-routing.md), [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md) | 선택 맛집 좌표·자동차 경로·외부 실패·초기 비저장 |
 
 ## 5. 데이터 모델 → ADR 매핑
 
@@ -173,6 +188,8 @@ related_documents:
 | 사용자·토큰·기기 데이터 | [ADR-AUTH-002](security/auth-002-member-jwt-refresh-token.md), [ADR-NOTIFY-002](integration/notify-002-in-app-notification-reliability.md), [ADR-NOTIFY-001](adr-backlog.md#adr-notify-001-fcm-푸시-알림) | 서비스 내 Notification만 저장; Preference·DeviceToken은 Post-MVP |
 | 최근 본 맛집 보존 | [ADR-DATA-010](data/data-010-recent-view-retention-cleanup.md) | 30일 경과 행의 독립 cleanup과 GET 읽기 전용 경계 |
 | 2차 확장 집계·보존 | [ADR-DATA-011](data/data-011-popular-restaurant-request-time-aggregation.md), [ADR-DATA-012](data/data-012-second-expansion-retention-cleanup.md) | 인기 결과 비저장, 제보·신고·알림·멱등 기록 독립 cleanup |
+| AI 작업·후보·자동 등록 상태 | [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md), [ADR-EXT-003](integration/ext-003-ai-extraction-async-reliability.md), [ADR-DATA-001](data/data-001-postgresql.md), [ADR-DATA-004](data/data-004-flyway.md) | Snapshot·작업 상태·보존·중복·claim·예외 보정 데이터 계약은 Accepted 논리 계약 |
+| 코스 경로 결과·캐시 | [ADR-ROUTE-001](integration/route-001-kakao-mobility-course-routing.md), [ADR-CACHE-001](adr-backlog.md#adr-cache-001-redis-캐시-도입) | 초기 비저장·캐시 조건부, TTL·무효화는 후속 계약 |
 
 ## 6. Workstream → ADR 매핑
 
@@ -188,6 +205,10 @@ related_documents:
 | [WS-11](../02-analysis/second-expansion-workstreams.md#6-ws-11-관리자-큐레이션) | 기존 인증·PostgreSQL ADR | 관리자 편집형 저장 모델, 추천·이미지·캐시 제외 |
 | [WS-12](../02-analysis/second-expansion-workstreams.md#7-ws-12-제보신고-검토) | [ADR-NOTIFY-002](integration/notify-002-in-app-notification-reliability.md), [ADR-DATA-012](data/data-012-second-expansion-retention-cleanup.md) | 상태 트랜잭션과 식별 제거 소유 |
 | [WS-13](../02-analysis/second-expansion-workstreams.md#8-ws-13-사용자-알림) | [ADR-NOTIFY-002](integration/notify-002-in-app-notification-reliability.md), [ADR-DATA-012](data/data-012-second-expansion-retention-cleanup.md), [ADR-NOTIFY-001](adr-backlog.md#adr-notify-001-fcm-푸시-알림) | DB 알림·읽음·보존 소유, FCM 비활성 |
+| [WS-14](../02-analysis/third-expansion-workstreams.md#5-ws-14-자연어-맛집-탐색) | [ADR-ARCH-005](architecture/arch-005-natural-language-filter-interpretation.md), [ADR-ARCH-001](architecture/arch-001-domain-monolith.md), [ADR-TEST-001](quality/test-001-automation-strategy.md) | 자연어 조건 해석·기존 검색 계약·평가 회귀 |
+| [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md), [ADR-EXT-003](integration/ext-003-ai-extraction-async-reliability.md), [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | AI 후보·자동 등록·예외 보정·비동기·제공자·비용·복구 |
+| [WS-16](../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천) | [ADR-ROUTE-001](integration/route-001-kakao-mobility-course-routing.md), [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md), [ADR-TEST-001](quality/test-001-automation-strategy.md) | Mobility 자동차 경로·좌표·부분 실패·비용 |
+| [QUALITY-EVAL](../02-analysis/third-expansion-workstreams.md#8-quality-eval-교차-품질-트랙) | [ADR-TEST-001](quality/test-001-automation-strategy.md), [ADR-PERF-001](quality/perf-001-k6-load-testing.md), 3차 Accepted ADR 전체 | 골든 Dataset·Evaluator·2차 부하 승계·출시 게이트 |
 | 전체 | [ADR-LANG-001](platform/lang-001-java-21-runtime.md), [ADR-BUILD-001](platform/build-001-gradle-groovy.md), [ADR-FRAME-001](platform/frame-001-spring-boot.md), [ADR-OBS-001](quality/obs-001-logging-observability.md), [ADR-RUNTIME-001](platform/runtime-001-docker.md), [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md) | 공통 구현·운영 기준 |
 
 ## 7. 기술 정책 → ADR 매핑
@@ -253,3 +274,19 @@ Accepted 세 건은 현재 요구사항을 구현하는 최소 구조만 승인�
 | 2차 확장 전체 품질 | `NFR-TEST-005` | [ADR-TEST-001](quality/test-001-automation-strategy.md), [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md), [ADR-WEB-004](platform/web-004-supported-browser-matrix.md) | WS-09~WS-13 | [`TST-E2-SEC-001`](../08-planning/second-expansion-test-matrix.md), `TST-E2-E2E-001` | [`E2-T01`](../08-planning/expansion-2-task-breakdown.md), `E2-T13`, `E2-T14`, `E2-T15` |
 
 `ADR 또는 명시적 보류` 칸이 비어 있는 2차 확장 기능은 없다. 외부 푸시용 `E2-T12`는 현재 생성하지 않는다. 새 캐시·Batch·외부 채널·저장 개념이 필요해지면 이 표와 상위 범위를 먼저 변경하고 별도 Task를 승인한다.
+
+## 11. 3차 확장 ADR → 테스트·Task 추적
+
+| ADR | 결정 경계 | 테스트·평가 | E3 Task |
+|---|---|---|---|
+| [ADR-ARCH-005](architecture/arch-005-natural-language-filter-interpretation.md) | P1 규칙·사전·기존 목록 Query·태그 AND·해석 실패 | `TST-E3-NL-001~002`, `EVAL-NL-001~007` | `E3-T01~02` |
+| [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md) | Gemini P1/S1·후보 Snapshot·근거·자동 검증·무료 quota | `TST-E3-AI-001~003`, `TST-E3-SEC-001`, [`EVAL-AI-001~010` 계약 자산·dry-run·HOLD 기록](../08-planning/third-expansion-ai-evaluation-result.md) | `E3-T03~08` |
+| [ADR-EXT-003](integration/ext-003-ai-extraction-async-reliability.md) | PostgreSQL claim·lease·heartbeat·retry·재기동·단일 EC2 | `TST-E3-AI-004`, `TST-E3-DATA-001`, `E3-T13` 증거 | `E3-T04~05`, `E3-T13` |
+| [ADR-ROUTE-001](integration/route-001-kakao-mobility-course-routing.md) | Mobility `/v1/directions`·순서·TTL·캐시 없음·호출/비용 | `TST-E3-COURSE-001~003`, `EVAL-COURSE-001~005`, `E3-T13` 증거 | `E3-T09~10`, `E3-T13` |
+| [ADR-TEST-001](quality/test-001-automation-strategy.md), [ADR-PERF-001](quality/perf-001-k6-load-testing.md) | 테스트 계층·WireMock·Testcontainers·부하 실행 | `TST-E3-DATA-001`, `TST-E3-E2E-001`, `TST-E3-PERF-001` | `E3-T11~13` |
+
+3차 확장 ADR은 Accepted 정책이지만, 각 행의 테스트·평가·운영 증거가 없으면 해당 ADR을 근거로 기능 완료를 선언하지 않는다. 조건부·Post-MVP ADR은 이 추적표의 3차 완료 Task에 포함하지 않는다.
+
+### 11.1 E3-T13 최종 게이트 증거
+
+Accepted ADR의 자동화 검증 결과와 실제 운영·평가·부하 증거의 보류 상태는 [E3-T13 최종 게이트 판정](../08-planning/third-expansion-final-gate-result.md)에 기록한다. ADR 승인 자체는 AI·Mobility 호출 활성화나 3차 확장 출시 승인을 의미하지 않는다.

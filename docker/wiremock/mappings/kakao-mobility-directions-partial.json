@@ -1,0 +1,14 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/v1/directions",
+    "queryParameters": {
+      "origin": { "equalTo": "127.200200,37.200200" }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json; charset=utf-8" },
+    "bodyFileName": "kakao-mobility-directions-partial.json"
+  }
+}

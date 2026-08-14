@@ -67,7 +67,7 @@ Accepted
 
 Nginx는 경로 접두사만으로 목적지를 정하며 요청 헤더, 사용자 에이전트나 응답 형식으로 프론트엔드와 백엔드를 구분하지 않는다.
 
-정식 공개 전에는 [ADR-DEPLOY-003](deploy-003-validation-cookie-session.md)의 검증 참여자 쿠키 세션을 이 라우팅보다 먼저 확인한다. `/verification/login`, `/api/verification/sessions`와 로그인에 필요한 정적 자산만 무세션으로 허용하고, 다른 화면·API는 Nginx `auth_request`를 통과해야 한다. 이 진입 검증은 회원·관리자 Bearer 인증과 독립이며 정식 공개 시 제거한다.
+정식 공개 전에는 [ADR-DEPLOY-003](deploy-003-validation-cookie-session.md)의 검증 참여자 쿠키 세션을 이 라우팅보다 먼저 확인한다. 무세션 허용 조건은 [ADR-DEPLOY-003](deploy-003-validation-cookie-session.md) 4.3절이 정하고 허용 경로 목록은 [검증 참여자 제한 공개 API 계약](../../05-specs/api/common/validation-access-contract.md)이 소유한다. 그 목록에 없는 화면·API는 Nginx `auth_request`를 통과해야 한다. 이 진입 검증은 회원·관리자 Bearer 인증과 독립이며 정식 공개 시 제거한다.
 
 ### 6.2 화면 경로
 

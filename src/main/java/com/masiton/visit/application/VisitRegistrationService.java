@@ -54,6 +54,9 @@ class VisitRegistrationService implements RegisterVisitUseCase {
     private VisitRegistrationResult insert(Visit visit) {
         return visitRepository.insertIfAbsent(visit)
                 .map(saved -> new VisitRegistrationResult(saved.getId(), true))
-                .orElseGet(() -> new VisitRegistrationResult(null, false));
+                .orElseGet(() -> visitRepository.findByRestaurantIdAndCreatorIdAndVideoId(
+                                visit.getRestaurantId(), visit.getCreatorId(), visit.getVideoId())
+                        .map(existing -> new VisitRegistrationResult(existing.getId(), false))
+                        .orElseThrow(() -> new IllegalStateException("Concurrent visit result was not found.")));
     }
 }

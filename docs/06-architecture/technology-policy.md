@@ -45,7 +45,7 @@ related_documents:
 | PostgreSQL | 17.10 | MVP Accepted |
 | Redis | Redis Open Source 8.8 | 관리자 Refresh Token 저장에 적용, 캐시·락은 조건부 |
 | Spring AI | 2.0.0 | Post-MVP |
-| Gemini | `gemini-3-flash-preview` | Post-MVP, 승인된 유일한 Preview 예외 |
+| Gemini | `gemini-3.5-flash-lite` | Post-MVP, Free Tier 전용 |
 | springdoc-openapi | 3.0.3 | MVP Accepted |
 | Testcontainers | 2.0.5 | MVP Accepted |
 | ArchUnit | archunit-junit5 1.4.1 | MVP Accepted, `T-01`에서 고정 (Spring Boot BOM 관리 대상 아님) |
@@ -119,7 +119,7 @@ related_documents:
 
 ## 10. Preview 및 실험 기술 정책
 
-- `gemini-3-flash-preview`는 사용자가 승인한 유일한 Preview 예외지만 AI 영상 추출이 Post-MVP이므로 현재 의존성이나 운영 설정에 추가하지 않는다.
+- `gemini-3.5-flash-lite`는 AI 영상 추출 전용 모델이며 현재 의존성이나 운영 설정에 자동으로 추가하지 않는다.
 - 모델 ID를 정식·신규·다른 Preview 모델로 자동 교체하지 않는다.
 - 실험 기술은 운영 경로와 분리하고 삭제 조건, 검증 범위와 비용 한도를 기록한다.
 - 실험 성공만으로 Accepted 상태로 승격하지 않으며 범위 변경과 ADR 승인이 필요하다.

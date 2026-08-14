@@ -7,6 +7,7 @@ related_documents:
   - prd/discovery/README.md
   - prd/discovery/restaurant-discovery.md
   - ../02-analysis/mvp-workstreams.md
+  - ../02-analysis/third-expansion-workstreams.md
   - prd/discovery/creator-discovery.md
   - prd/detail/restaurant-detail.md
   - prd/admin/admin-data-management.md
@@ -23,6 +24,11 @@ related_documents:
   - prd/notification/user-notification.md
   - user-flows/second-expansion-user-flows.md
   - wireframes/second-expansion-wireframes.md
+  - prd/discovery/natural-language-restaurant-discovery.md
+  - prd/admin/ai-video-information-extraction.md
+  - prd/discovery/restaurant-course-recommendation.md
+  - user-flows/third-expansion-user-flows.md
+  - wireframes/third-expansion-wireframes.md
 ---
 
 # 맛잇온 제품 문서
@@ -54,12 +60,19 @@ related_documents:
 | [사용자 알림](prd/notification/user-notification.md) | 제보·신고 처리 결과 확인 | WS-13 | 이우람 |
 | [2차 확장 사용자 흐름](user-flows/second-expansion-user-flows.md) | 기능 간 정상·예외·상태 전이 연결 | WS-09~WS-13 | 각 WS 담당자 |
 | [2차 확장 와이어프레임](wireframes/second-expansion-wireframes.md) | 2차 확장 화면 정보 구조와 상태 | WS-09~WS-13 | 각 WS 담당자 |
+| [자연어 맛집 탐색](prd/discovery/natural-language-restaurant-discovery.md) | 자연어 조건 해석과 기존 필터 기반 공개 맛집 탐색 | [WS-14](../02-analysis/third-expansion-workstreams.md#5-ws-14-자연어-맛집-탐색) | 양성훈 |
+| [AI 영상 정보 추출](prd/admin/ai-video-information-extraction.md) | 비동기 추출·자동 등록·예외 보정·기존 등록 연결 | [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | 김인안 |
+| [맛집 코스 추천](prd/discovery/restaurant-course-recommendation.md) | 선택 맛집의 자동차 이동 순서와 경로 | [WS-16](../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천) | 이우람 |
+| [3차 확장 사용자 흐름](user-flows/third-expansion-user-flows.md) | 자연어·AI 자동 등록·예외 보정·코스의 정상·부분·오류·복구 흐름 | WS-14~WS-16 | 각 WS 담당자 |
+| [3차 확장 와이어프레임](wireframes/third-expansion-wireframes.md) | 3차 확장 화면 구조, 특히 AI 자동 등록·예외 보정 상태 | WS-14~WS-16 | 각 WS 담당자 |
 | [PRD 추적성](traceability.md) | 기준 문서와 PRD의 매핑 및 변경 영향 | 전체 | 김인안(PRD 조율) |
 | [와이어프레임 적용 기준](wireframes/README.md) | 단계별 화면 참조와 MVP UI 적용·제외 기준 | 전체 | 양성훈·김인안 |
 
 유튜버 조건은 독립된 관계 판정과 [WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 책임이 있으므로 별도 PRD로 둔다. 상세와 방문 콘텐츠는 한 화면의 완결된 흐름이며 [WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)가 최종 조합을 책임하므로 통합한다. 기본 데이터와 방문 관계 등록은 하나의 [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록)가 선행 순서부터 조회 반영까지 책임하므로 하나의 관리자 PRD로 관리한다.
 
 2차 확장은 다섯 PRD로 관리한다. 인기와 큐레이션은 공개 탐색 진입면을 공유하지만 생성 주체·도메인·최종 책임자가 달라 별도 PRD와 Workstream으로 분리한다.
+
+3차 확장은 자연어 맛집 탐색, AI 영상 정보 추출과 맛집 코스 추천의 세 PRD로 관리한다. 자연어·코스는 공개 탐색 진입면을 공유하지만 조건 해석과 외부 경로 계산의 정책·장애·비용 경계가 달라 분리하며, AI 추출은 일반 사용자 화면 없이 자동 등록과 관리자 예외 보정 흐름으로 분리한다. Workstream과 담당자는 [3차 확장 Workstream과 소유권](../02-analysis/third-expansion-workstreams.md)에서 확정한다.
 
 ## 4. 문서별 책임 범위
 
@@ -102,4 +115,4 @@ related_documents:
 
 ## 7. 신규 기능 PRD 생성 기준
 
-독립된 사용자·관리자 목표와 시작·완료 흐름이 있고, 별도 책임자·비즈니스 규칙·완료 조건을 가지며 독립 검증 가능한 경우에만 새 PRD를 만든다. 동일 흐름에서 항상 함께 쓰이고 책임자가 같으며 분리 시 중복만 늘어나는 작은 기능은 기존 PRD에 통합한다. 엔티티 이름만으로 분리하지 않으며, 새 PRD를 만들기 전 [scope.md](../00-overview/scope.md), Workstream, 주 요구사항과 최종 책임자가 모두 확정되었는지 확인한다.
+독립된 사용자·관리자 목표와 시작·완료 흐름이 있고, 별도 비즈니스 규칙·완료 조건으로 독립 검증 가능한 경우에만 새 PRD를 만든다. 동일 흐름에서 항상 함께 쓰이고 책임자가 같으며 분리 시 중복만 늘어나는 작은 기능은 기존 PRD에 통합한다. 엔티티 이름만으로 분리하지 않는다. [scope.md](../00-overview/scope.md)와 주 요구사항이 승인되면 PRD 초안을 만들 수 있지만, Workstream·최종 책임자·기본 리뷰어가 미확정이면 `draft`와 `pending`을 명시한다. PRD를 승인 상태로 바꾸기 전에는 이 배정과 후속 계약 소유권을 모두 확정한다.

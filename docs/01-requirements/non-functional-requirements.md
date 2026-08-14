@@ -1,5 +1,6 @@
 ---
 related_documents:
+  - ../02-analysis/third-expansion-workstreams.md
   - ../00-overview/scope.md
   - ../00-overview/glossary.md
   - functional-requirements.md
@@ -11,6 +12,8 @@ related_documents:
   - ../07-adr/platform/deploy-002-validation-deployment-before-expansion.md
   - ../07-adr/platform/web-004-supported-browser-matrix.md
   - ../08-planning/second-expansion-scope-and-terminology.md
+  - ../08-planning/third-expansion-scope-and-terminology.md
+  - ../08-planning/third-expansion-evaluation-strategy.md
 ---
 
 # 맛잇온 비기능 요구사항
@@ -906,7 +909,223 @@ related_documents:
 - 결정 상태:
   - 확정
 
-## 17. 우선순위 및 측정 계획
+## 17. 3차 확장 품질 기준
+
+<a id="nfr-accuracy-001-자연어-검색-정확도와-평가-데이터"></a>
+
+### NFR-ACCURACY-001 자연어 검색 정확도와 평가 데이터
+
+- 요구사항:
+  - 맛집 이름·서울 자치구·음식 카테고리·유튜버·확정 태그의 단일·복합 표현, 직접 필터 충돌과 미지원 조건을 포함한 고정 평가 데이터로 조건 해석 품질을 측정해야 한다.
+  - 규칙·동의어 사전·태그 정의 변경 전후에 같은 평가 데이터를 실행하고 조건 집합 exact match와 지원 조건 재현율, 미지원 조건 오적용 건수를 기록해야 한다.
+- 목표 기준:
+  - 중복을 제거한 한국어 평가 문장 240개. Development 144개, Calibration 48개, Release holdout 48개로 분할한다.
+  - 적용 조건 집합 exact match 90% 이상, 지원 조건 재현율 95% 이상
+  - 미지원 조건을 지원 조건으로 조용히 적용한 건수 0건
+- 검증 방법:
+  - 버전 고정 평가 데이터셋과 해석 결과 자동 비교, 변경 전후 회귀 보고서
+- 중요도:
+  - High
+- 결정 상태:
+  - 확정
+
+<a id="nfr-accuracy-002-ai-추출-정확도재현율자동-등록-정밀도"></a>
+
+### NFR-ACCURACY-002 AI 추출 정확도·재현율·자동 등록 정밀도
+
+- 요구사항:
+  - 사람 판정 정답이 있는 공개 YouTube 영상 URL·관리자 보완 텍스트 데이터 120건으로 맛집·주소·태그 후보 정밀도, 방문 근거 재현율과 자동 등록 정밀도를 Gemini 모델·Prompt·Schema 버전별 측정해야 한다.
+  - 평가 데이터와 운영 검수 결과를 섞지 않고 데이터 출처·정답 작성자·평가 버전을 기록해야 한다.
+- 목표 기준:
+  - 중복 영상을 제거한 평가 입력 120건. Development 72건, Calibration 24건, Release holdout 24건으로 분할한다.
+  - 맛집·주소 후보 정밀도 90% 이상, 방문 근거 재현율 80% 이상, 자동 등록 정밀도 90% 이상, 태그 후보 정밀도 90% 이상·재현율 80% 이상
+  - 기준 미달 버전의 자동 활성화 금지
+- 검증 방법:
+  - 고정 평가 데이터셋 자동 평가와 자동 확정·자동 차단 표본의 인간 사후 판정, 버전별 품질 보고서
+- 중요도:
+  - High
+- 결정 상태:
+  - 확정
+
+<a id="nfr-integrity-006-ai-환각과-잘못된-장소-연결-방지"></a>
+
+### NFR-INTEGRITY-006 AI 환각과 잘못된 장소 연결 방지
+
+- 요구사항:
+  - 근거 구간이 없거나 장소가 모호한 값은 `UNKNOWN` 또는 복수 후보로 남기고 정식 사실로 확정하지 않아야 한다.
+  - 자동 필수값·근거·중복·Kakao·YouTube·Visit 검증 전에는 AI 후보가 정식 Entity나 공개 관계를 생성·수정하지 않아야 하며, 모든 검증 통과 후에는 관리자 승인 없이 생성·공개할 수 있어야 한다.
+  - 검증 실패 시 부분 저장은 0건이어야 하며 기존 공개 데이터는 유지돼야 한다.
+- 적용 대상:
+  - AI 추출 후보, 자동 등록과 예외 보정 연결
+- 검증 방법:
+  - 근거 없음·동명 장소·허위 주소·검증 실패·부분 저장 실패 주입과 공개 조회 검사
+- 중요도:
+  - Critical
+- 결정 상태:
+  - 확정
+
+<a id="nfr-security-007-prompt-injection과-악성-ai-입력-방어"></a>
+
+### NFR-SECURITY-007 Prompt Injection과 악성 AI 입력 방어
+
+- 요구사항:
+  - 자연어 검색 문장과 관리자 제공 텍스트는 명령이 아니라 신뢰하지 않는 데이터로 처리해야 한다.
+  - 입력 안의 시스템 지시·도구 호출·비밀정보 요청·출력 Schema 변경 요구를 실행하지 않고 허용된 후보 필드와 Schema로만 결과를 받아야 한다.
+  - 길이·문자·URL·구조 제한과 출력 Schema 검증을 통과하지 못한 요청·응답은 실패로 종료하고 재시도 입력으로 그대로 연결하지 않아야 한다.
+- 적용 대상:
+  - 자연어 조건 해석, AI 영상 정보 추출, 관리자 검수 화면
+- 검증 방법:
+  - Prompt Injection·간접 지시·Schema 이탈·과대 입력·로그 위조 문자열 보안 테스트
+- 중요도:
+  - Critical
+- 결정 상태:
+  - 확정
+
+<a id="nfr-privacy-006-ai-입력저작권자막-보존-경계"></a>
+
+### NFR-PRIVACY-006 AI 입력·저작권·자막 보존 경계
+
+- 요구사항:
+  - YouTube 원본 영상과 전체 자막·전사 원문을 저장·재배포하지 않아야 한다.
+  - 자동 수집 자막·전사 원문은 저장하지 않는다. 관리자가 직접 제출한 보완 텍스트는 비동기 작업 복구에 필요한 동안 암호화된 임시 입력으로만 보존하고, 작업 종료 후 24시간 이내 삭제해야 한다. 후보 검수에는 최소 근거 구간·입력 해시만 관리자 전용 데이터로 보존해야 한다.
+  - AI 제공자 전송 범위·리전·보존·학습 사용 여부·삭제 조건을 계약으로 승인하기 전에는 외부 AI 호출을 활성화하지 않아야 한다.
+  - Google Gemini의 공개 YouTube URL 영상 입력을 사용하더라도 애플리케이션은 원본 영상·전체 자막·전사를 저장하거나 일반 로그에 남기지 않아야 한다.
+  - 자연어 검색 원문, 현재 위치와 개인 이동 이력은 저장하지 않아야 한다.
+- 적용 대상:
+  - 자연어 검색, AI 추출 입력·후보·관리자 검수, 코스 요청
+- 검증 방법:
+  - DB·객체 저장소·로그·외부 요청 Payload 검사와 관리자 접근 통제 테스트
+- 중요도:
+  - Critical
+- 결정 상태:
+  - 확정
+
+<a id="nfr-cost-001-ai임베딩mobility-호출-비용-상한"></a>
+
+### NFR-COST-001 AI·임베딩·Mobility 호출 비용 상한
+
+- 요구사항:
+  - AI와 Mobility는 공급자 Free Tier에서만 사용하며 유료 호출과 결제 전환을 금지한다. Free Tier quota는 모델·계정별로 AI Studio와 제공자 콘솔에서 확인하고, 확인된 quota의 80%에서 경보하며 100%에서 새 호출을 차단한다.
+  - 앱 자체 상한은 AI 작업의 공급자별 무료 quota보다 낮게 설정하고, Mobility 코스 호출은 월 1,000건·코스당 최대 1회로 제한한다. 무료 quota·계약·결제 미연결 상태를 확인할 수 없으면 호출하지 않는다.
+  - 임베딩 의미 검색은 제외 범위이므로 임베딩 모델 호출과 임베딩 저장 건수는 모두 0건이어야 한다.
+  - 제공자·기능·작업별 요청 수, Token 또는 과금 단위, 재시도와 캐시 적중을 계측하고 재시도로 상한을 우회하지 않아야 한다.
+  - Webhook 구독 확인·보정 조회와 신규 영상 추출 호출도 채널·작업별 quota 집계에 포함하고, 초기 데이터 적립이 실시간 신규 영상 처리 한도를 잠식하지 않도록 별도 상한을 둬야 한다.
+  - 결제수단·billing account 연결, 유료 tier 자동 승격, 무료 quota 초과 후 과금 fallback을 운영 설정에서 차단하고, 해당 설정을 검증하지 못하면 기능을 비활성화해야 한다.
+- 적용 대상:
+  - 자연어 해석에 외부 모델을 쓰는 경우, AI 영상 추출, Kakao Mobility 경로 계산
+- 검증 방법:
+  - quota 경계·동시 요청·재시도·설정 누락·비용 차단 테스트와 월 사용량 대조
+- 중요도:
+  - Critical
+- 결정 상태:
+  - 확정
+
+<a id="nfr-external-005-ai와-mobility-timeoutrate-limit재시도"></a>
+
+### NFR-EXTERNAL-005 AI와 Mobility timeout·rate limit·재시도
+
+- 요구사항:
+  - 모든 AI·Mobility 호출은 연결·응답·전체 작업 timeout, 동시 처리 수와 요청 rate limit을 명시적으로 설정해야 한다.
+  - 자동 재시도는 멱등한 작업에만 유한 횟수로 수행하고 429의 제공자 재시도 시각, 지수 backoff와 전체 시간 예산을 따라야 한다. Gemini는 연결 5초·응답 90초·시도 전체 120초·최대 2회 재시도, Mobility는 연결 1초·응답 4초·전체 5초·자동 재시도 0회로 고정한다.
+  - 설정이 없거나 quota·비용 상한을 확인할 수 없으면 fail-closed로 호출하지 않아야 한다.
+- 적용 대상:
+  - 비동기 AI 추출 작업과 동기 경로 계산 호출
+- 검증 방법:
+  - 지연·timeout·429·5xx·연결 실패·동시 요청 WireMock 테스트와 시도 횟수·전체 시간 검사
+- 중요도:
+  - Critical
+- 결정 상태:
+  - 확정
+
+<a id="nfr-performance-007-자연어-검색과-경로-응답-시간"></a>
+
+### NFR-PERFORMANCE-007 자연어 검색과 경로 응답 시간
+
+- 요구사항:
+  - 자연어 조건 해석과 기존 목록 조회는 정상 부하에서 애플리케이션 내부 처리 p95 800ms 이하, 서버 오류율 1% 미만이어야 한다.
+  - 코스 입력 검증·응답 조합의 내부 처리 p95는 외부 호출 대기 제외 500ms 이하이고, 외부 경로 호출을 포함한 요청은 5초 안에 정상 결과 또는 명시적 실패를 반환해야 한다.
+  - AI 작업 요청·상태 조회의 내부 처리 p95는 1초 이하이며 실제 추출 시간은 비동기 작업 지표로 분리해야 한다.
+- 적용 대상:
+  - 자연어 검색, 코스 경로 조회, AI 작업 요청·상태 조회
+- 검증 방법:
+  - 정상 부하 50명·20 RPS와 최대 부하 200명·80 RPS 부하 테스트, 외부 지연 분리 메트릭
+- 중요도:
+  - High
+- 결정 상태:
+  - 확정
+
+<a id="nfr-reliability-005-ai-비동기-작업-복구"></a>
+
+### NFR-RELIABILITY-005 AI 비동기 작업 복구
+
+- 요구사항:
+  - 추출 작업 상태와 시도 횟수는 영속화하고 Worker·단일 EC2 재시작 뒤 미종결 작업을 중복 정식 등록 없이 다시 claim하거나 명시적 실패로 종결해야 한다.
+  - 작업 claim은 소유권과 만료를 가져야 하며 동일 작업을 둘 이상의 실행기가 동시에 확정하지 못해야 한다.
+  - Webhook 수신, 관리자 추가, 초기 데이터 적립이 동시에 같은 영상을 가리켜도 하나의 멱등 작업으로 수렴해야 하며, Webhook 수신 처리는 AI 실행 Worker와 분리된 짧은 경로여야 한다.
+  - 재시도 상한을 넘긴 작업은 실패 상태와 오류 범주를 보존하고 관리자 수동 재시도를 허용해야 한다.
+  - 초기 Worker는 인스턴스당 1개로 실행하며, 작업 claim lease는 120초, heartbeat는 30초, polling 주기는 5초로 고정한다. 초기 운영은 1개 인스턴스이며, 다중 인스턴스에서는 DB lease로 중복 claim을 방지한다.
+- 적용 대상:
+  - AI 추출 작업 생성·실행·후보 저장·관리자 재시도
+- 검증 방법:
+  - 프로세스 강제 종료·claim 만료·동시 Worker·DB rollback·재기동 복구 통합 테스트
+- 중요도:
+  - Critical
+- 결정 상태:
+  - 확정
+
+<a id="nfr-availability-003-ai모델외부-api-장애-격리"></a>
+
+### NFR-AVAILABILITY-003 AI 모델·외부 API 장애 격리
+
+- 요구사항:
+  - AI 제공자 장애는 기존 관리자 수동 등록과 공개 맛집 목록·필터·상세를 중단시키지 않아야 한다.
+  - Webhook 장애·누락·구독 만료는 관리자 신규 영상 추가와 기존 수동 등록으로 대체할 수 있어야 하며, 기존 공개 탐색 기능으로 전파되지 않아야 한다.
+  - Mobility 장애는 코스 경로 기능만 실패시키고 자연어 조건 해석과 기존 탐색·회원·관리자 기능으로 전파되지 않아야 한다.
+  - 외부 장애 중 생성한 추정값·오래된 부분 결과를 정상 결과로 표시하지 않아야 한다.
+- 적용 대상:
+  - AI 추출, 경로 계산과 기존 공개·관리자 기능
+- 검증 방법:
+  - 제공자별 장애·DNS 실패·timeout·429 주입 후 기존 API 가용성과 데이터 무변경 검사
+- 중요도:
+  - Critical
+- 결정 상태:
+  - 확정
+
+<a id="nfr-observability-005-ai검색경로-로그-민감정보-차단"></a>
+
+### NFR-OBSERVABILITY-005 AI·검색·경로 로그 민감정보 차단
+
+- 요구사항:
+  - 자연어 검색 원문, 전체 자막·전사, 근거 구간 본문, Prompt 전문, AI 응답 본문, 현재 위치와 외부 API 키·인증 Header를 일반 로그에 남기지 않아야 한다.
+  - 로그와 지표에는 작업·요청 식별자, 입력 해시, 모델·Prompt·Schema 버전, 상태, 처리 시간, Token·호출 수와 정규화된 오류 범주만 기록해야 한다.
+  - 관리자 감사 데이터와 일반 운영 로그를 분리하고 후보 내용 접근은 관리자 권한으로 제한해야 한다.
+- 적용 대상:
+  - 자연어 검색, AI 작업·검수, Mobility 호출과 비용 계측
+- 검증 방법:
+  - 정상·오류·재시도 로그 표본과 비밀정보 탐지, 권한별 감사 데이터 접근 검사
+- 중요도:
+  - Critical
+- 결정 상태:
+  - 확정
+
+<a id="nfr-test-006-3차-확장-품질과-완료-게이트"></a>
+
+### NFR-TEST-006 3차 확장 품질과 완료 게이트
+
+- 요구사항:
+  - 자연어 조건 정확도, AI 후보 품질·검수 경계, Prompt Injection, 중복·버전·복구, 코스 입력·경로 실패·비용 차단을 정상·예외·경계·동시성 시나리오로 검증해야 한다.
+  - 자동화 테스트는 실제 AI·Kakao Mobility를 호출하지 않고 제공자 응답·지연·오류·quota를 재현해야 한다.
+  - 3차 확장 최종 완료 전에 미측정 2차 확장 정상 부하 50명·20 RPS와 최대 부하 200명·80 RPS 결과를 같은 완료 증거에 포함해야 한다.
+- 적용 대상:
+  - 3차 확장 API·데이터·비동기 작업·관리자 검수·운영 설정과 2차 성능 승계 게이트
+- 검증 방법:
+  - 단위·계약·Testcontainers·WireMock·브라우저·보안·부하·복구 테스트와 요구사항 추적 검토
+- 중요도:
+  - Critical
+- 결정 상태:
+  - 확정
+
+## 18. 우선순위 및 측정 계획
 
 | ID | 요구사항 | 중요도 | 측정 방법 | 결정 상태 | 결정·검증 시점 |
 |---|---|---|---|---|---|
@@ -962,8 +1181,20 @@ related_documents:
 | [NFR-OBSERVABILITY-004](non-functional-requirements.md#nfr-observability-004-관리자-검토-감사-이력) | 관리자 검토 감사 이력 | Critical | 감사 이력·로그 검사 | 확정 | 구현에서 검증 |
 | [NFR-PRIVACY-005](non-functional-requirements.md#nfr-privacy-005-2차-확장-개인정보-보존과-회원-탈퇴) | 2차 확장 개인정보 보존과 회원 탈퇴 | Critical | 보존·탈퇴 통합 테스트 | 확정 | 데이터 모델링 전 확정 |
 | [NFR-TEST-005](non-functional-requirements.md#nfr-test-005-2차-확장-보안정합성성능-검증) | 2차 확장 보안·정합성·성능 검증 | Critical | 자동화·부하·브라우저 테스트 | 확정 | 단계 완료 전 검증 |
+| [NFR-ACCURACY-001](non-functional-requirements.md#nfr-accuracy-001-자연어-검색-정확도와-평가-데이터) | 자연어 검색 정확도와 평가 데이터 | High | 고정 평가 데이터 회귀 | 확정 | Release holdout 실행 |
+| [NFR-ACCURACY-002](non-functional-requirements.md#nfr-accuracy-002-ai-추출-정확도재현율자동-등록-정밀도) | AI 추출 정확도·재현율·자동 등록 정밀도 | High | 버전별 평가·자동 확정/차단 표본 사후 판정 | 확정 | Release holdout 실행 |
+| [NFR-INTEGRITY-006](non-functional-requirements.md#nfr-integrity-006-ai-환각과-잘못된-장소-연결-방지) | AI 환각과 잘못된 장소 연결 방지 | Critical | 실패 주입·공개 경계 검사 | 확정 | 데이터 모델링 전 확정 |
+| [NFR-SECURITY-007](non-functional-requirements.md#nfr-security-007-prompt-injection과-악성-ai-입력-방어) | Prompt Injection과 악성 AI 입력 방어 | Critical | 악성 입력·Schema 검사 | 확정 | 구현에서 검증 |
+| [NFR-PRIVACY-006](non-functional-requirements.md#nfr-privacy-006-ai-입력저작권자막-보존-경계) | AI 입력·저작권·자막 보존 경계 | Critical | 저장·외부 전송·권한 검사 | 확정 | 제공자 계약 전 확정 |
+| [NFR-COST-001](non-functional-requirements.md#nfr-cost-001-ai임베딩mobility-호출-비용-상한) | AI·임베딩·Mobility 호출 비용 상한 | Critical | quota·비용 hard stop | 확정 | 외부 연동 활성화 전 검증 |
+| [NFR-EXTERNAL-005](non-functional-requirements.md#nfr-external-005-ai와-mobility-timeoutrate-limit재시도) | AI와 Mobility timeout·rate limit·재시도 | Critical | 외부 장애·시도 횟수 검사 | 확정 | Gemini 5/90/120초·2회 재시도, Mobility 1/4/5초·무재시도 실행 |
+| [NFR-PERFORMANCE-007](non-functional-requirements.md#nfr-performance-007-자연어-검색과-경로-응답-시간) | 자연어 검색과 경로 응답 시간 | High | 부하·외부 지연 분리 | 확정 | 단계 완료 전 검증 |
+| [NFR-RELIABILITY-005](non-functional-requirements.md#nfr-reliability-005-ai-비동기-작업-복구) | AI 비동기 작업 복구 | Critical | 재기동·동시 claim 검사 | 확정 | 운영 배포 전 검증 |
+| [NFR-AVAILABILITY-003](non-functional-requirements.md#nfr-availability-003-ai모델외부-api-장애-격리) | AI 모델·외부 API 장애 격리 | Critical | 장애 주입·기존 기능 검사 | 확정 | 단계 완료 전 검증 |
+| [NFR-OBSERVABILITY-005](non-functional-requirements.md#nfr-observability-005-ai검색경로-로그-민감정보-차단) | AI·검색·경로 로그 민감정보 차단 | Critical | 로그·감사 권한 검사 | 확정 | 운영 배포 전 검증 |
+| [NFR-TEST-006](non-functional-requirements.md#nfr-test-006-3차-확장-품질과-완료-게이트) | 3차 확장 품질과 완료 게이트 | Critical | 자동화·부하·복구·추적 검토 | 확정 | 단계 완료 전 검증 |
 
-## 18. 검토 결정 기록
+## 19. 검토 결정 기록
 
 ### RV-NFR-001 목표 동시 사용자 수
 

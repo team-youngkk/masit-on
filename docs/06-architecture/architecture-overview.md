@@ -7,6 +7,11 @@ related_documents:
   - diagrams/component-overview.md
   - ../07-adr/architecture/arch-001-domain-monolith.md
   - ../07-adr/architecture/arch-002-external-ports-adapters.md
+  - ../07-adr/architecture/arch-005-natural-language-filter-interpretation.md
+  - ../07-adr/integration/ai-001-video-extraction-candidate-boundary.md
+  - ../07-adr/integration/ext-003-ai-extraction-async-reliability.md
+  - ../07-adr/integration/route-001-kakao-mobility-course-routing.md
+  - ../08-planning/third-expansion-task-breakdown.md
   - ../07-adr/platform/web-003-routing-boundary.md
 ---
 
@@ -19,6 +24,8 @@ related_documents:
 여러 도메인의 공개 계약을 한 유스케이스에서 조정해야 할 때는 비즈니스 도메인이 아닌 `orchestration` 애플리케이션 경계를 사용한다. `orchestration`은 상세 조회 조합과 방문 관계 등록처럼 교차 도메인 순서·실패·트랜잭션을 관리하지만, 엔티티·Repository·도메인 규칙은 소유하지 않는다.
 
 이 구조는 [ADR-ARCH-001](../07-adr/architecture/arch-001-domain-monolith.md)의 단일 모듈·도메인 중심 패키지 결정을 구체화한다. 외부 Kakao·YouTube 호출은 [ADR-ARCH-002](../07-adr/architecture/arch-002-external-ports-adapters.md)에 따라 애플리케이션 Port와 인프라 Adapter로 격리한다.
+
+3차 확장에서는 자연어 검색을 기존 공개 목록 Query 조합으로 제한하고, AI 영상 추출을 후보·검수 경계에 격리하며, 코스 추천은 요청 범위의 Route Provider 응답으로 조합한다. AI 후보 저장·Worker·검수는 정식 Restaurant·Creator·Video·Visit Entity의 소유권을 가져가지 않으며, 코스 결과도 영속 캐시를 만들지 않는다. 세 경계의 실행 순서는 [3차 확장 E3 Task 분해](../08-planning/third-expansion-task-breakdown.md)와 각 Accepted ADR을 따른다.
 
 ## 2. 기술 계층 중심 구조와의 비교
 
@@ -42,6 +49,9 @@ related_documents:
 8. 쓰기 원자성은 유스케이스 단위 트랜잭션과 DB 제약을 함께 사용한다.
 9. 조회 전용 Projection은 도메인 Entity와 분리하고 필요한 테이블을 읽을 수 있지만 쓰기는 금지한다.
 10. `common`은 기술적으로 범용이고 소유 도메인이 없는 코드만 허용한다.
+11. 자연어 해석은 통제 태그·기존 필터 조건으로만 구조화하고, 원문 검색 이력을 저장하지 않는다.
+12. AI Provider 호출은 `ai.application.port.out` 뒤에 두고 후보·시도·검수 상태만 저장하며, 정식 Entity 연결은 검증된 Orchestration Command로 한정한다.
+13. 코스 경로는 `route` Port/Adapter와 요청 단위 응답으로 처리하고, 현재 위치 수집·경로 영속 캐시를 도입하지 않는다.
 
 ## 4. 상위 컴포넌트 관계
 
@@ -64,15 +74,15 @@ related_documents:
 
 | 항목 | 현재 저장소에서 확인한 상태 | 목표 상태 |
 |---|---|---|
-| 애플리케이션 소스 | `src/` 없음 | Java 21/Spring Boot 단일 모듈 |
-| 빌드 설정 | Gradle 파일·Wrapper 없음 | ADR에 고정된 Gradle Groovy DSL |
-| 도메인 클래스 | 확인할 수 없음 | Restaurant·Creator·Video·Visit 경계 |
+| 애플리케이션 소스 | `src/main/java/com/masiton`에 MVP·1/2차와 AI 추출 일부 구현 확인 | Java 21/Spring Boot 단일 모듈과 3차 WS-14·WS-16 구현 |
+| 빌드 설정 | Gradle Wrapper·단일 모듈 확인 | ADR에 고정된 Gradle Groovy DSL |
+| 도메인 클래스 | Restaurant·Creator·Video·Visit·orchestration 및 `ai` 기술 경계 일부 존재 | 3차 계약에 맞는 자연어·코스 Port/Adapter와 경계 검증 |
 | 패키지명 | `com.masiton` | [패키지 구조](package-structure.md)의 패턴 적용 |
-| 트랜잭션 코드 | 없음 | Application 유스케이스 단위 |
-| 외부 Adapter | 없음 | Kakao·YouTube Port/Adapter |
-| 아키텍처 검증 | 없음 | ArchUnit과 통합 테스트 |
+| 트랜잭션 코드 | 기존 등록·조회·AI Job 일부 구현 | 모든 3차 Command·외부 실패 원자성 |
+| 외부 Adapter | YouTube·Gemini 일부 확인, 자연어·Mobility 구현 미확인 | Kakao·YouTube·Gemini·Mobility Port/Adapter |
+| 아키텍처 검증 | 기존 ArchUnit·SQL 경계 테스트 확인 | 3차 AI·검색·코스 경계와 회귀 증거 |
 
-현재 구현과 ADR 사이의 코드 차이를 판단할 수는 없다. 확인 가능한 차이는 **ADR은 목표를 정했지만 이를 구현한 소스·빌드 구조가 아직 존재하지 않는다**는 점이다.
+문서 승인과 구현 완료는 구분한다. 현재 확인 가능한 공백은 자연어 검색·코스 추천의 구현·계약 테스트·브라우저·성능 증거이며, AI 추출은 소스와 Flyway가 일부 존재하더라도 전체 E3 완료 게이트를 통과한 것으로 보지 않는다.
 
 ## 7. 확정, 제안과 추가 결정
 
@@ -90,6 +100,13 @@ related_documents:
 - 맛집 상세는 `orchestration.application.query`의 전용 Query Service가 조합
 - 방문 등록은 `orchestration.application.command`의 유스케이스가 트랜잭션 소유
 - 교차 도메인 조회 Projection은 읽기만 허용
+
+### 3차 확장 경계
+
+- 자연어 검색: `arch-005`에 따라 Parser가 `QueryCondition`을 만들고 기존 Restaurant·Creator·Visit 공개 Query를 조합한다.
+- AI 영상 추출: `ai-001`, `ext-003`에 따라 Provider·Worker·후보 Snapshot·검수 이력을 핵심 Entity와 분리한다.
+- 코스 추천: `route-001`에 따라 선택된 공개 좌표를 결정론적으로 정렬한 뒤 Kakao Mobility Port를 코스당 한 번 호출한다.
+- `ai`·`route`를 최상위 기술 경계로 유지할지 `orchestration` 하위로 재배치할지는 구현 경계 검토에서 확정하며, 그 전까지 새 도메인 Entity를 추가하지 않는다.
 
 ### 확정된 초기 구조
 

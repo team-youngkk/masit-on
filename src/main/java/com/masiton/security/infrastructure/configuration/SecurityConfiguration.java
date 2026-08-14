@@ -53,6 +53,8 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.POST, "/api/admin/auth/tokens").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/admin/auth/tokens/refresh").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/webhooks/youtube/channel-updates").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/webhooks/youtube/channel-updates").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/verification/sessions").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/api/verification/sessions").permitAll()
                         .requestMatchers(HttpMethod.POST,
@@ -72,6 +74,9 @@ public class SecurityConfiguration {
                                 "/api/creators/*",
                                 "/api/creators/*/restaurants",
                                 "/api/creators/*/videos").permitAll()
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/restaurants/course-routes",
+                                "/api/restaurants/natural-language-search").permitAll()
                         .requestMatchers("/internal/health/live", "/internal/health/ready", "/internal/health/dependencies")
                         .permitAll()
                         .requestMatchers("/internal/verification/session",
@@ -118,7 +123,9 @@ public class SecurityConfiguration {
 
     private BearerTokenResolver optionalMemberBearerTokenResolver() {
         DefaultBearerTokenResolver delegate = new DefaultBearerTokenResolver();
-        return request -> isAnonymousPublicReadRequest(request) || isUnauthenticatedAuthenticationRequest(request)
+        return request -> isAnonymousPublicReadRequest(request)
+                || isUnauthenticatedAuthenticationRequest(request)
+                || isAnonymousPublicWriteRequest(request)
                 ? null
                 : delegate.resolve(request);
     }
@@ -180,6 +187,16 @@ public class SecurityConfiguration {
         return !creatorId.isEmpty() && ("restaurants".equals(subResource) || "videos".equals(subResource));
     }
 
+    /**
+     * API-DISCOVERY-COURSE-001은 회원 문맥이 없는 완전 공개 POST 조회다. 회원별 부수효과가 없으므로
+     * Bearer Token을 해석하지 않는다. 만료·다른 audience Token을 들고 온 요청도 401 대신 공개 응답을 받는다.
+     * 근거: docs/05-specs/api/discovery/restaurant-course-recommendation-api.md 2절
+     */
+    private boolean isAnonymousPublicWriteRequest(HttpServletRequest request) {
+        return HttpMethod.POST.matches(request.getMethod())
+                && "/api/restaurants/course-routes".equals(request.getRequestURI());
+    }
+
     private boolean isUnauthenticatedAuthenticationRequest(HttpServletRequest request) {
         if (!HttpMethod.POST.matches(request.getMethod())) {
             return false;
@@ -193,7 +210,8 @@ public class SecurityConfiguration {
                 || requestUri.equals("/api/auth/password-resets/requests")
                 || requestUri.equals("/api/auth/password-resets/confirmations")
                 || requestUri.equals("/api/auth/tokens")
-                || requestUri.equals("/api/auth/tokens/refresh");
+                || requestUri.equals("/api/auth/tokens/refresh")
+                || requestUri.equals("/api/restaurants/natural-language-search");
     }
 
     private Authentication authenticatePublicRequest(

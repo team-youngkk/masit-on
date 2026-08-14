@@ -64,8 +64,9 @@ M2-11은 전체 사이트에 Nginx Basic Auth를 적용했다. Basic과 회원·
 ### 4.3 Nginx 경계
 
 - `/verification/login`, 세션 생성·종료 Endpoint와 로그인 화면에 필요한 정적 자산은 세션 검사 전에 허용한다. 세션 종료는 Backend가 쿠키를 직접 검증하고 누락·만료도 멱등 성공으로 정리한다.
+- **외부 시스템이 호출하는 Callback 경로는 세션 검사 전에 허용한다.** 브라우저가 아닌 호출자는 검증 쿠키를 가질 수 없으므로 gate 안에 두면 기능이 성립하지 않는다. 허용 조건은 두 가지다. 경로가 자체 인증 수단(공유 비밀 서명 또는 서버가 발급한 검증 Token)으로 호출자를 확인해야 하고, 무인증 요청이 백엔드 자원에 도달하므로 Nginx에서 메서드·본문 크기·호출률을 제한해야 한다. 이 예외는 제한 공개 범위를 넓히지 않는다.
 - `/internal/**` 외부 `404` 경계는 유지한다.
-- 그 밖의 화면과 `/api/**`는 Nginx `auth_request`로 세션을 확인한다.
+- 그 밖의 화면과 `/api/**`는 Nginx `auth_request`로 세션을 확인한다. 위 두 항목에 해당하는 제외 경로의 **목록과 각 경로의 인증 수단은 [검증 참여자 제한 공개 API 계약](../../05-specs/api/common/validation-access-contract.md)의 세션 gate 제외 경로 절이 단일 목록으로 소유한다.** 이 ADR은 제외를 허용하는 조건을, 그 계약은 실제 목록을 정한다.
 - 화면 요청의 무효 세션은 로그인 화면으로 이동시키고, API 요청은 `401 VALIDATION_ACCESS_REQUIRED` JSON을 반환한다. `WWW-Authenticate: Basic`은 사용하지 않는다.
 - 내부 검증 subrequest 경로는 `internal` Nginx location으로 두어 인터넷에서 직접 호출할 수 없게 한다.
 

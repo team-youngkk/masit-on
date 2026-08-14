@@ -21,9 +21,12 @@ public final class RestaurantPathClassifier {
     /**
      * `/api/restaurants/` 하위의 리터럴 경로 세그먼트. 맛집 식별자가 아니며 완전 공개 조회다.
      * 근거: docs/05-specs/api/discovery/popular-restaurant-api.md,
-     * docs/05-specs/api/discovery/map-discovery-api.md
+     * docs/05-specs/api/discovery/map-discovery-api.md,
+     * docs/05-specs/api/discovery/restaurant-course-recommendation-api.md,
+     * docs/05-specs/api/discovery/natural-language-restaurant-discovery-api.md
      */
-    private static final Set<String> NON_IDENTIFIER_SEGMENTS = Set.of("popular", "map-points");
+    private static final Set<String> NON_IDENTIFIER_SEGMENTS =
+            Set.of("popular", "map-points", "course-routes", "natural-language-search");
 
     private RestaurantPathClassifier() {
     }

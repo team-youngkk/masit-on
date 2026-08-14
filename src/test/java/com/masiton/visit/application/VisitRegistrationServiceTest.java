@@ -1,6 +1,7 @@
 package com.masiton.visit.application;
 
 import java.util.UUID;
+import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -8,11 +9,16 @@ import org.junit.jupiter.api.Test;
 import com.masiton.common.web.BusinessException;
 import com.masiton.visit.application.port.in.RegisterVisitUseCase;
 import com.masiton.visit.application.port.out.VisitRepositoryPort;
+import com.masiton.visit.domain.model.Visit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 @DisplayName("Visit 등록 Application 서비스")
 class VisitRegistrationServiceTest {
@@ -30,5 +36,30 @@ class VisitRegistrationServiceTest {
                 .isInstanceOfSatisfying(BusinessException.class,
                         exception -> assertThat(exception.code()).isEqualTo("VISIT_EVIDENCE_INSUFFICIENT"));
         verifyNoInteractions(visitRepository);
+    }
+
+    @Test
+    @DisplayName("동시 삽입 경쟁에서 기존 Visit의 ID를 반환한다")
+    void register_동시삽입경쟁_기존VisitId를반환한다() {
+        UUID restaurantId = UUID.randomUUID();
+        UUID creatorId = UUID.randomUUID();
+        UUID videoId = UUID.randomUUID();
+        UUID existingId = UUID.randomUUID();
+        Visit existing = new Visit(
+                existingId, restaurantId, creatorId, videoId,
+                com.masiton.visit.domain.model.PublicationStatus.PUBLIC,
+                com.masiton.visit.domain.model.LifecycleStatus.ACTIVE,
+                null, null, null);
+        when(visitRepository.findByRestaurantIdAndCreatorIdAndVideoId(restaurantId, creatorId, videoId))
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(existing));
+        when(visitRepository.insertIfAbsent(any())).thenReturn(Optional.empty());
+
+        RegisterVisitUseCase.VisitRegistrationResult result = service.register(
+                new RegisterVisitUseCase.RegisterVisitCommand(restaurantId, creatorId, videoId, true));
+
+        assertThat(result).isEqualTo(new RegisterVisitUseCase.VisitRegistrationResult(existingId, false));
+        verify(visitRepository, times(2)).findByRestaurantIdAndCreatorIdAndVideoId(
+                restaurantId, creatorId, videoId);
     }
 }

@@ -38,6 +38,12 @@ optional_param() {
   aws ssm get-parameter --region "$REGION" --name "$1" --with-decryption \
     --query 'Parameter.Value' --output text 2>/dev/null || printf ''
 }
+optional_bool_param() {
+  case "$(optional_param "$1")" in
+    true|TRUE|True|1) printf 'true' ;;
+    *) printf 'false' ;;
+  esac
+}
 
 case "$component" in
   backend)
@@ -46,6 +52,8 @@ case "$component" in
     export SPRING_PROFILES_ACTIVE=prod
     DB_URL=$(param /masiton/db/url); export DB_URL
     DB_USERNAME=$(param /masiton/db/username); export DB_USERNAME
+    KAKAO_MOBILITY_ENABLED=$(optional_bool_param /masiton/integration/kakao-mobility/enabled); export KAKAO_MOBILITY_ENABLED
+    KAKAO_MOBILITY_FREE_TIER_VERIFIED=$(optional_bool_param /masiton/integration/kakao-mobility/free-tier-verified); export KAKAO_MOBILITY_FREE_TIER_VERIFIED
     export REDIS_HOST=127.0.0.1
     export REDIS_PORT=6379
     MAIL_HOST=$(param /masiton/mail/host); export MAIL_HOST
@@ -60,6 +68,17 @@ case "$component" in
     export MEMBER_REVERSE_PROXY_ENABLED=true
     export RESTAURANT_MAP_TRUSTED_PROXY_ADDRESSES=127.0.0.1
     export RESTAURANT_MAP_REVERSE_PROXY_ENABLED=true
+    # 운영 프로파일은 이 값에 기본값을 두지 않는다. PubSubHubbub 허브가 구독을 검증할 때
+    # 실제로 도달할 수 있는 주소여야 하고, localhost 기본값이 조용히 쓰이면 구독이
+    # 성립한 것처럼 보이면서 알림이 오지 않는다. 비밀이 아니므로 환경 변수로 넘긴다.
+    export YOUTUBE_WEBHOOK_CALLBACK_URL=https://masiton.click/api/webhooks/youtube/channel-updates
+    AI_WORKER_ENABLED=$(optional_param /masiton/ai/worker/enabled); export AI_WORKER_ENABLED="${AI_WORKER_ENABLED:-false}"
+    AI_WORKER_PROVIDER_QUOTA_LIMIT=$(optional_param /masiton/ai/worker/provider-quota-limit); export AI_WORKER_PROVIDER_QUOTA_LIMIT="${AI_WORKER_PROVIDER_QUOTA_LIMIT:-0}"
+    AI_WORKER_APPLICATION_QUOTA_LIMIT=$(optional_param /masiton/ai/worker/application-quota-limit); export AI_WORKER_APPLICATION_QUOTA_LIMIT="${AI_WORKER_APPLICATION_QUOTA_LIMIT:-0}"
+    AI_WORKER_QUOTA_WINDOW=$(optional_param /masiton/ai/worker/quota-window); export AI_WORKER_QUOTA_WINDOW="${AI_WORKER_QUOTA_WINDOW:-P1D}"
+    GEMINI_ENABLED=$(optional_bool_param /masiton/ai/gemini/enabled); export GEMINI_ENABLED
+    GEMINI_FREE_TIER_VERIFIED=$(optional_bool_param /masiton/ai/gemini/free-tier-verified); export GEMINI_FREE_TIER_VERIFIED
+    GEMINI_PAID_BILLING_ENABLED=$(optional_bool_param /masiton/ai/gemini/paid-billing-enabled); export GEMINI_PAID_BILLING_ENABLED
 
     [ -d "$SECRETS_DIR" ] || { echo "비밀값 디렉터리가 없다: $SECRETS_DIR" >&2; exit 1; }
 
@@ -70,12 +89,17 @@ case "$component" in
       --volume "$SECRETS_DIR":"$SECRETS_DIR":ro \
       -e SPRING_PROFILES_ACTIVE \
       -e DB_URL -e DB_USERNAME \
+      -e KAKAO_MOBILITY_ENABLED -e KAKAO_MOBILITY_FREE_TIER_VERIFIED \
       -e REDIS_HOST -e REDIS_PORT \
       -e MAIL_HOST -e MAIL_PORT -e MAIL_HEALTH_ENABLED -e DEPENDENCY_HEALTH_COMPONENTS \
       -e MEMBER_PUBLIC_BASE_URL -e VERIFICATION_PUBLIC_BASE_URL \
       -e VERIFICATION_TRUSTED_PROXY_ADDRESSES -e VERIFICATION_REVERSE_PROXY_ENABLED \
       -e MEMBER_TRUSTED_PROXY_ADDRESSES -e MEMBER_REVERSE_PROXY_ENABLED \
       -e RESTAURANT_MAP_TRUSTED_PROXY_ADDRESSES -e RESTAURANT_MAP_REVERSE_PROXY_ENABLED \
+      -e AI_WORKER_ENABLED -e AI_WORKER_PROVIDER_QUOTA_LIMIT \
+      -e AI_WORKER_APPLICATION_QUOTA_LIMIT -e AI_WORKER_QUOTA_WINDOW \
+      -e GEMINI_ENABLED -e GEMINI_FREE_TIER_VERIFIED -e GEMINI_PAID_BILLING_ENABLED \
+      -e YOUTUBE_WEBHOOK_CALLBACK_URL \
       -e SECRETS_DIR \
       "$image"
     ;;

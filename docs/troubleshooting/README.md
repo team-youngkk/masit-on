@@ -10,6 +10,23 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #192 V8 통합 범위와 최종 Gemini 모델 계약](pr-192-flyway-model-contract-review.md)
+- [PR #191 Gemini 모델 전환 리뷰 반영](pr-191-gemini-model-transition-review.md)
+- [PR #184 YouTube 채널 감시 상태·동시성 경계 리뷰 반영](pr-184-youtube-channel-watch-review.md)
+- [PR #182 관리자 AI 영상 접수 리뷰 반영](pr-182-admin-ai-video-intake-review.md)
+- [PR #179 브라우저 인수 캡처 증거 보존](pr-179-browser-capture-evidence-review.md)
+- [PR #178 3차 확장 통합 회귀 테스트 리뷰 반영](pr-178-third-expansion-integration-review.md)
+
+- [PR #177 AI 평가 자산의 증거 범위·분할·Critical 경계](pr-177-ai-evaluation-review.md)
+- [PR #175 관리자 AI 검수 동시성·태그 감사 후속](pr-175-ai-admin-review-follow-up.md)
+
+- [PR #173 AI 후보 자동 등록 리뷰 반영](pr-173-ai-candidate-auto-registration-review.md)
+- [PR #174 코스 공개 진입점·실패 식별·검색 상태 리뷰 반영](pr-174-course-public-screen-review.md)
+- [PR #172 AI Worker 운영·복구 경계](pr-172-ai-worker-key-rotation-review.md)
+- [PR #171 코스 경로 외부 연동·quota 경계 리뷰 반영](pr-171-course-route-review.md)
+- [PR #170 AI 영상 추출 Provider·Webhook 리뷰와 CI 실패 반영](pr-170-ai-video-extraction-review.md)
+- [PR #169 자연어 검색 입력·조건·요청 출처 경계](pr-169-natural-language-search-review.md)
+- [PR #168 AI V4 인덱스 검증 회귀와 테스트 형식](pr-168-ai-schema-verification-review.md)
 - [PR #146 제보·신고 접수 버튼 type 수정 PR 본문 정정](pr-146-participation-submit-button-type-review.md)
 - [PR #142 공개 큐레이션 조회 계약과 화면 상태 보완](pr-142-public-curation-review.md)
 - [PR #140 제보·신고 알림 연결 및 원자성 롤백 테스트 보완](pr-140-participation-notification-review.md)

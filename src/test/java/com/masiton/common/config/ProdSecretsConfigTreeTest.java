@@ -14,11 +14,20 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.core.env.Environment;
 import org.springframework.mail.javamail.JavaMailSender;
 
+import com.masiton.ai.application.port.out.AiVideoExtractionProvider;
+import com.masiton.ai.infrastructure.persistence.AesGcmTemporaryInputCipher;
+import com.masiton.ai.infrastructure.persistence.TemporaryInputEncryptionProperties;
+import com.masiton.ai.infrastructure.provider.config.GeminiProviderConfiguration;
+import com.masiton.ai.infrastructure.provider.config.GeminiProviderProperties;
+import com.masiton.common.web.BusinessException;
 import com.masiton.member.infrastructure.configuration.MemberActionMailConfiguration;
 import com.masiton.member.infrastructure.configuration.MemberRateLimitConfiguration;
 import com.masiton.restaurant.infrastructure.configuration.MapRateLimitConfiguration;
 
+import tools.jackson.databind.ObjectMapper;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * 운영 프로파일이 비밀값을 tmpfs 파일에서 읽는지 검증한다.
@@ -58,6 +67,16 @@ class ProdSecretsConfigTreeTest {
                     .isEqualTo("verification-participant");
             assertThat(environment.getProperty("masiton.security.verification.password-hash"))
                     .isEqualTo("verification-bcrypt-hash");
+            assertThat(environment.getProperty("masiton.ai.provider.gemini.api-key"))
+                    .isEqualTo("test-gemini-api-key");
+            assertThat(environment.getProperty("masiton.ai.temporary-input.active-key-id"))
+                    .isEqualTo("test-temporary-input-key-1");
+            assertThat(environment.getProperty("masiton.ai.temporary-input.active-key"))
+                    .isEqualTo("MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=");
+            assertThat(context.getBean(TemporaryInputEncryptionProperties.class).getKeys())
+                    .containsEntry("retired-1", "ZmVkY2JhOTg3NjU0MzIxMGZlZGNiYTk4NzY1NDMyMTA=");
+            assertThat(environment.getProperty("masiton.ai.youtube-webhook.secret"))
+                    .isEqualTo("test-youtube-webhook-secret");
             assertThat(environment.getProperty("masiton.security.verification.public-base-url"))
                     .isEqualTo("https://masiton.click");
             assertThat(environment.getProperty("masiton.security.verification.trusted-proxy-addresses"))
@@ -94,13 +113,23 @@ class ProdSecretsConfigTreeTest {
         writeSecrets(secrets);
         Files.deleteIfExists(secrets.resolve("masiton.integration.kakao.rest-api-key"));
         Files.deleteIfExists(secrets.resolve("masiton.integration.youtube.api-key"));
+        Files.deleteIfExists(secrets.resolve("masiton.integration.kakao-mobility.rest-api-key"));
+        Files.deleteIfExists(secrets.resolve("masiton.ai.provider.gemini.api-key"));
+        Files.deleteIfExists(secrets.resolve("masiton.ai.temporary-input.active-key-id"));
+        Files.deleteIfExists(secrets.resolve("masiton.ai.temporary-input.active-key"));
+        Files.deleteIfExists(secrets.resolve("masiton.ai.youtube-webhook.secret"));
 
         // 파일이 없으면 속성 자체가 없다. 어댑터가 `@Value("${...:}")`로 빈 기본값을
         // 두므로 기동은 성립하고 등록 흐름에서만 검증 호출이 실패한다.
         runner(secrets).run(context -> {
+            assertThat(context).hasNotFailed();
+            GeminiProviderProperties geminiProperties = context.getBean(GeminiProviderProperties.class);
+            assertThat(geminiProperties.isEnabled()).isFalse();
+            assertThat(geminiProperties.getApiKey()).isBlank();
             Environment environment = context.getEnvironment();
             assertThat(environment.getProperty("masiton.integration.kakao.rest-api-key")).isNull();
             assertThat(environment.getProperty("masiton.integration.youtube.api-key")).isNull();
+            assertThat(environment.getProperty("masiton.integration.kakao-mobility.rest-api-key")).isBlank();
         });
     }
 
@@ -113,6 +142,54 @@ class ProdSecretsConfigTreeTest {
             Environment environment = context.getEnvironment();
             assertThat(environment.getProperty("masiton.integration.kakao.rest-api-key")).isEqualTo("kakao-key-value");
             assertThat(environment.getProperty("masiton.integration.youtube.api-key")).isEqualTo("youtube-key-value");
+            assertThat(environment.getProperty("masiton.integration.kakao-mobility.rest-api-key"))
+                    .isEqualTo("kakao-mobility-key-value");
+        });
+    }
+
+    @Test
+    @DisplayName("Gemini 선택 비밀값과 Free Tier 확인값이 있으면 제공자가 기동한다")
+    void Gemini선택비밀값과FreeTier확인값이있으면_제공자가기동한다(@TempDir Path secrets) throws Exception {
+        writeSecrets(secrets);
+
+        runner(secrets)
+                .withPropertyValues(
+                        "GEMINI_ENABLED=true",
+                        "GEMINI_FREE_TIER_VERIFIED=true")
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    assertThat(context).hasSingleBean(AiVideoExtractionProvider.class);
+                });
+    }
+
+    @Test
+    @DisplayName("Gemini를 활성화했는데 선택 API 키가 없으면 기동을 차단한다")
+    void Gemini활성화상태에서선택API키가없으면_기동을차단한다(@TempDir Path secrets) throws Exception {
+        writeSecrets(secrets);
+        Files.deleteIfExists(secrets.resolve("masiton.ai.provider.gemini.api-key"));
+
+        runner(secrets)
+                .withPropertyValues(
+                        "GEMINI_ENABLED=true",
+                        "GEMINI_FREE_TIER_VERIFIED=true")
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(context.getStartupFailure()).isNotNull();
+                });
+    }
+
+    @Test
+    @DisplayName("임시 입력 활성 키가 없으면 암호화 요청을 fail-closed로 차단한다")
+    void 임시입력활성키가없으면_암호화요청을차단한다(@TempDir Path secrets) throws Exception {
+        writeSecrets(secrets);
+        Files.deleteIfExists(secrets.resolve("masiton.ai.temporary-input.active-key"));
+
+        runner(secrets).run(context -> {
+            assertThat(context).hasNotFailed();
+            assertThatThrownBy(() -> context.getBean(AesGcmTemporaryInputCipher.class).encrypt("보완 텍스트"))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting(exception -> ((BusinessException) exception).code())
+                    .isEqualTo("AIEXTRACT_TEMPORARY_INPUT_UNAVAILABLE");
         });
     }
 
@@ -134,9 +211,12 @@ class ProdSecretsConfigTreeTest {
                 .withInitializer(new ConfigDataApplicationContextInitializer())
                 .withConfiguration(AutoConfigurations.of(MailSenderAutoConfiguration.class))
                 .withUserConfiguration(
+                        AesGcmTemporaryInputCipher.class,
+                        GeminiProviderConfiguration.class,
                         MemberActionMailConfiguration.class,
                         MemberRateLimitConfiguration.class,
-                        MapRateLimitConfiguration.class)
+                        MapRateLimitConfiguration.class,
+                        ObjectMapperConfiguration.class)
                 .withPropertyValues(
                         "spring.profiles.active=prod",
                         "SECRETS_DIR=" + secrets.toAbsolutePath(),
@@ -172,6 +252,20 @@ class ProdSecretsConfigTreeTest {
         write(secrets, "masiton.security.verification.password-hash", "verification-bcrypt-hash");
         write(secrets, "masiton.integration.kakao.rest-api-key", "kakao-key-value");
         write(secrets, "masiton.integration.youtube.api-key", "youtube-key-value");
+        write(secrets, "masiton.integration.kakao-mobility.rest-api-key", "kakao-mobility-key-value");
+        write(secrets, "masiton.ai.provider.gemini.api-key", "test-gemini-api-key");
+        write(secrets, "masiton.ai.temporary-input.active-key-id", "test-temporary-input-key-1");
+        write(secrets, "masiton.ai.temporary-input.active-key", "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=");
+        write(secrets, "masiton.ai.temporary-input.keys.retired-1",
+                "ZmVkY2JhOTg3NjU0MzIxMGZlZGNiYTk4NzY1NDMyMTA=");
+        write(secrets, "masiton.ai.youtube-webhook.secret", "test-youtube-webhook-secret");
+    }
+
+    static class ObjectMapperConfiguration {
+        @org.springframework.context.annotation.Bean
+        ObjectMapper objectMapper() {
+            return new ObjectMapper();
+        }
     }
 
     private void write(Path directory, String name, String value) throws Exception {

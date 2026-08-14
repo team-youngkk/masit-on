@@ -8,6 +8,9 @@ related_documents:
   - ../06-architecture/external-integration.md
   - ../06-architecture/module-boundaries.md
   - ../06-architecture/security-boundary.md
+  - ../02-analysis/third-expansion-domain-boundaries.md
+  - ../02-analysis/third-expansion-workstreams.md
+  - ../08-planning/third-expansion-evaluation-strategy.md
   - README.md
   - adr-index.md
   - adr-traceability.md
@@ -27,9 +30,41 @@ related_documents:
 
 현재 확정되지 않은 구현 전 필수 결정, 조건부 결정, Post-MVP와 범위 충돌 결정을 관리한다. `Proposed` 항목은 명시된 결정 시점 전에 Accepted ADR로 확정하고, `Conditional`·`Post-MVP` 기술은 활성화 전 의존성·설정·스키마를 추가하지 않는다.
 
-## 2. 구현 전 필수 ADR
+## 2. 3차 확장 Accepted ADR 기록
 
-현재 미결정 항목은 없다. 확인 Token은 [ADR-AUTH-003](security/auth-003-confirmation-token.md), 내부 식별자는 [ADR-DATA-007](data/data-007-uuid-v4-identifiers.md), 공개·논리 삭제 생명주기는 [ADR-DATA-008](data/data-008-publication-lifecycle-soft-delete.md)로 2026-07-27 확정했다.
+MVP 구현 전 필수 결정과 3차 확장 정책 결정은 완료됐다. 아래 ADR은 구현 계약의 근거이며, 실제 계정·migration·평가·부하 증거는 각 실행 게이트에서 추가한다.
+
+### ADR-ARCH-005 자연어 조건 해석과 기존 필터 조회 경계
+
+- 현재 상태: Accepted
+- 문서: [ADR-ARCH-005](architecture/arch-005-natural-language-filter-interpretation.md)
+- 결정 시점: 자연어 API·평가 Dataset·구현 Task 작성 전
+- 핵심: 별도 검색 도메인·임베딩·RAG 없이 WS-14에서 구조화 조건으로 해석하고 기존 Restaurant·Creator·Visit 조회 계약을 재사용한다.
+- 결정 완료: 임베딩·RAG·챗봇은 도입하지 않는다. P1 규칙·태그 18종·태그 AND·`UNRESOLVED`·품질 목표를 사용한다.
+
+### ADR-AI-001 AI 영상 추출 후보 경계와 제공자 선택 기준
+
+- 현재 상태: Accepted
+- 문서: [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md)
+- 결정 시점: AI 제공자·후보 데이터·관리자 검수 API 작성 전
+- 핵심: AI 결과를 후보 Snapshot으로 격리하고, 자동 필수값·근거·중복·Kakao·YouTube·Visit 검증을 통과한 뒤 관리자 승인 없이 정식 등록·공개한다. Gemini Free Tier 전용 global endpoint의 `gemini-3.5-flash-lite`, P1/S1을 사용하며 유료 호출은 금지한다.
+- 선확정: n8n 등 외부 워크플로 도구를 초기 실행 경계에 도입하지 않고, Provider Port/Adapter와 애플리케이션 Worker를 사용한다. 원문·자막 전체는 저장하지 않는다.
+
+### ADR-EXT-003 AI 추출 비동기 작업과 단일 EC2 복구 경계
+
+- 현재 상태: Accepted
+- 문서: [ADR-EXT-003](integration/ext-003-ai-extraction-async-reliability.md)
+- 결정 시점: AI 작업 상태·Worker·복구·운영 용량 계약 작성 전
+- 핵심: PostgreSQL 작업 상태와 제한된 애플리케이션 Worker를 제안하며, 메시지 브로커·범용 Batch·Redis 분산 락은 선제 도입하지 않는다.
+- 결정 완료: n8n도 초기 실행 오케스트레이터로 사용하지 않는다. Worker 1개/인스턴스, polling 5초, lease 120초, heartbeat 30초, Gemini 최대 2회 재시도를 사용하며 단일 EC2 실제 용량은 최종 부하 게이트에서 증명한다.
+
+### ADR-ROUTE-001 Kakao Mobility 자동차 경로와 코스 결과 경계
+
+- 현재 상태: Accepted
+- 문서: [ADR-ROUTE-001](integration/route-001-kakao-mobility-course-routing.md)
+- 결정 시점: 코스 API·Mobility 제공자·비용·TTL 계약 작성 완료
+- 핵심: WS-16의 일회성 조회와 Route Provider Adapter를 사용하고, 초기에는 코스 영속 저장과 캐시를 도입하지 않는다.
+- 결정 완료: `/v1/directions`, 첫 장소 출발·최근접 이웃 순서, 코스당 1회, TTL 5분, 캐시 없음, 유료 0원·앱 월 1,000건을 사용한다.
 
 ## 3. 조건부 ADR
 
@@ -111,22 +146,6 @@ related_documents:
 - 재검토 조건: 현재 위치·거리·반경·다각형 검색 또는 PostGIS가 범위에 들어온다.
 - 영향: 프론트엔드, Restaurant 좌표 모델, 필터 기반 마커 조회 API, 외부 지도 SDK
 
-### ADR-ROUTE-001 Kakao Mobility와 동선 추천
-
-- 현재 상태: Post-MVP
-- 현재 결정: Kakao Mobility Directions API V1과 코스 모델을 도입하지 않는다.
-- 활성화 조건: 3차 확장 범위의 동선·코스 추천이 승인된다.
-- 도입 전 확인: 이동수단·추천 규칙, API 비용·제한, 위치 데이터, 실패 대체
-- 영향: 외부 API, 추천 도메인, 테스트
-
-### ADR-AI-001 Spring AI와 Gemini 영상 정보 추출
-
-- 현재 상태: Post-MVP
-- 현재 결정: Spring AI 2.0.0, `gemini-3-flash-preview`, JSON Schema·Prompt Template 런타임을 추가하지 않는다.
-- 활성화 조건: AI 기반 영상 정보 추출이 범위 변경으로 승인되고 관리자 검수·품질 기준이 정의된다.
-- 도입 전 확인: 고정 모델 유효성, 비용, 입력·출력 개인정보, 평가 데이터, 오류·재시도, 통합 테스트, 사용자 승인
-- 영향: AI BOM, 외부 호출, 데이터 모델, 관리자 검수
-
 ### ADR-SEARCH-002 pgvector 자연어 검색·RAG
 
 - 현재 상태: Post-MVP
@@ -184,8 +203,8 @@ related_documents:
 | 일반 사용자 JWT·Refresh Token | Post-MVP | 일반 사용자 로그인 제외 | 회원 기능 승인 시 별도 인증 ADR |
 | Kakao Maps·PostGIS | Post-MVP | 지도·좌표·거리 검색 제외 | 지도 기능 범위 변경 |
 | Kakao Local REST API | 범위 일치 | 관리자 맛집 등록 시 카카오 장소 확인 필요 | Port/Adapter와 장애 처리 구현 |
-| Kakao Mobility | Post-MVP | 동선·코스 추천 3차 확장 | 추천 범위 변경 |
-| Spring AI·Gemini | Post-MVP | AI 영상 추출 3차 확장 | 검수·품질·비용 기준 승인 |
+| Kakao Mobility | Accepted | `/v1/directions`, 자동차 경로, TTL 5분·캐시 없음·월 1,000건·유료 0원 | 운영 계정 quota·인증 연결 확인 |
+| Google Gemini API | Accepted | Free Tier 전용 global endpoint, `gemini-3.5-flash-lite`, P1/S1, 원문 비저장·유료 호출 금지 | 운영 계정 billing 미연결·모델별 무료 quota 확인 |
 | pgvector | Post-MVP | 자연어 검색·RAG 제외 | 검색 범위 변경 |
 | FCM | Post-MVP | 서비스 내 알림만 승인, 외부 푸시·동의·DeviceToken 제외 | 채널·동의·Token·전달 SLA 승인 |
 | S3 이미지 저장 | Post-MVP | 현재 이미지 업로드·사용자 이미지 요구사항 없음 | 이미지 기능 범위 변경 |
@@ -207,7 +226,7 @@ related_documents:
 
 ## 6. 활성화 조건
 
-Conditional·Post-MVP Backlog 항목은 다음을 모두 충족해야 활성화된다. Proposed 항목은 각 항목에 적힌 결정 시점과 검증 기준을 따른다.
+Conditional·Post-MVP Backlog 항목은 다음을 모두 충족해야 활성화된다. Accepted 3차 확장 ADR은 정책 계약으로 사용하고 별도 실행 게이트의 증거를 따른다.
 
 1. 상위 범위 변경 또는 명시된 조건 충족
 2. 관련 요구사항·NFR·API·데이터 영향 확정
@@ -223,7 +242,7 @@ Conditional·Post-MVP Backlog 항목은 다음을 모두 충족해야 활성화�
 3. [결정 완료 2026-07-24] 관리자 JWT 만료·서명 키와 Redis Refresh Token 키·회전·장애 정책 결정
 4. [결정 완료 2026-07-24] 로그 보관·운영 지표·알림 기준 결정
 5. 동시성·조회 확장·자동 복원력은 테스트·운영 근거 발생 시 검토
-6. 지도·회원·AI·RAG·알림·이미지·자동화·독립 배포·권한 세분화는 해당 확장 단계 승인 후 검토
+6. AI·Mobility 3차 확장 ADR은 Accepted 정책을 적용하고, RAG·알림·이미지·자동화·독립 배포·권한 세분화는 해당 범위 승인 후 검토
 
 ## 8. 결정 기록
 
@@ -242,5 +261,7 @@ Conditional·Post-MVP Backlog 항목은 다음을 모두 충족해야 활성화�
 | 부하 테스트 도구 | k6 v2.1.0 고정, `perf/k6/` 시나리오와 `perf/seed/` 기준 데이터, `workflow_dispatch` 전용 실행으로 정기 CI 비용 없음 |
 | 성능 측정 기준 데이터 | `RV-NFR-002` 4종에 더해 회원 1,000명·찜 20,000건(상위권 편차 분포)을 `ADR-PERF-001`이 확정 |
 | 정상 부하 실측 시점 | 2026-08-06 팀 결정으로 3차 확장 이후로 연기. 측정 수단은 준비 완료, 결과는 미측정 |
+
+| 3차 확장 ADR 상태 | 자연어·AI·비동기·Mobility 경계는 Accepted. 구현은 계약 테스트·계정 연결·평가·부하 증거 게이트를 따른다 |
 
 현재 MVP 구현 전 필수 미결정 항목은 없다. AWS 운영 세부는 M2 초기 운영 배포 문서에서 확정한다. ALB·Blue-Green 전환은 3차 확장 이후 배포 고도화 단계에서 검토한다. 착수 시점은 2026-07-28 팀 4인 전원이 합의했으나 비용·일정 영향 검토가 남아 있다([ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) 3.1절). 영향 검토가 미결정 항목으로 남으며, 토폴로지·전환 절차·비용은 착수 시점의 별도 ADR에서 확정한다.

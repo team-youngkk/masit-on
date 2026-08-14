@@ -69,6 +69,12 @@ Testcontainers 기반 자동화 테스트는 매 실행 시 빈 데이터베이�
 
 1차 확장 스키마는 원래 `V2`~`V6` 다섯 파일(회원 계정·보안 기반, 회원 인증 강화, 개인 맛집 관계, 맛집 좌표, Creator 상세 표시 열)이었다. 운영 데이터베이스(`main`)에는 이 시점까지 `V1`만 적용돼 있어 V2~V6는 운영 미적용 상태였으므로 [ADR-DATA-009](../../07-adr/data/data-009-pre-release-migration-consolidation.md) 6절 예외에 따라 `V2__add_expansion_1_schema.sql` 하나로 통합했다. 통합 전후 SQL 본문은 주석·공백을 제외하고 동일하며, 통합 대상을 적용한 개발·공유 데이터베이스는 `docker compose down -v`로 재생성해야 한다. 같은 버전 구간(V2~V6)은 다시 통합하지 않는다.
 
+### 2.4. 3차 확장 AI 마이그레이션 통합 이력 (2026-08-14)
+
+3차 확장 AI 스키마는 통합 전 `V4` 기본 스키마, 구 `V5` 재사용 조회 인덱스, 구 `V6` 관리자 검수 감사·재시도 사유, 구 `V7` 태그 롤백 provenance, 구 `V8` Gemini 모델 호환 제약으로 구성됐다. 운영 배포 전 누적 변경의 SQL 순서와 의미를 보존해 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql) 하나의 1~8절로 통합했다. 통합본의 6~8절 주석에는 통합 전 구간을 표시한다. 구 `V4`~`V7` 누적 SQL은 주석·공백을 제외한 정규화 본문이 동일하고, 구 `V8`의 Preview 호환 제약은 현재 DB가 모두 `V3` 이하라는 전제에 따라 최종 V4의 Lite 단일 제약으로 통합한 의도적 계약 변경이다.
+
+운영 RDS가 존재하는 현재 환경에서는 통합 대상 버전이 운영 `flyway_schema_history`에 없음을 읽기 전용 조회 결과로 확인해야 한다. PR #191 병합 이후인 2026-08-14 11:18 KST 서울 리전 `ap-northeast-2`의 RDS `masiton-db`를 SSM `i-0b451f18bca827cc9` 경유로 읽기 전용 조회했고, `V1`·`V2`·`V3`만 존재하며 `V4`~`V8`은 없음을 확인했다. 실제 운영 배포와 마이그레이션 적용은 수행하지 않았다. 현재 개발·공유 데이터베이스도 `V1`~`V3`까지만 적용된 상태라는 전제에서, 구 `V8`의 모델 계약 변경까지 최종 V4에 포함한다.
+
 ## 3. 관리자 계정 부트스트랩
 
 관리자 계정은 공용 seed에 넣지 않는다. 환경별 비밀번호 해시를 Git에 커밋하지 않고 다음 절차를 사용한다.
@@ -147,9 +153,9 @@ Flyway undo 파일과 하향 migration은 기본 경로로 사용하지 않는�
 
 V3 구간 아웃박스는 Action Token만 FK로 참조한다. 수신자는 `member_action_token.member_id → member_account` 조인으로만 결정하므로 다른 회원의 Token을 전달할 수 없다. 탈퇴 작업은 Action Token을 먼저 지워 CASCADE로 아웃박스를 제거한다. 탈퇴·세션 복구 작업은 회원 FK를 두지 않아 정리 실행 중에도 재시도 상태를 유지하고, 성공 시 명시적으로 제거한다. V4 구간의 회원 FK는 `ON DELETE CASCADE`, 맛집 FK는 `ON DELETE RESTRICT`로 생성한다. 따라서 회원 물리 파기는 관계를 함께 제거하고, 맛집 물리 삭제는 관계를 먼저 정리하는 명시적 Command가 선행되어야 한다. V5와 V6 구간은 기존 행을 백필하거나 외부 API를 호출하지 않는다.
 
-## 10. V3 2차 확장 스키마 계획
+## 10. V3 2차 확장 스키마
 
-기존 `V1__create_initial_schema.sql`과 `V2__add_expansion_1_schema.sql`은 수정하지 않는다. 2차 확장은 새 `V3__add_expansion_2_schema.sql`로 계획하며 상세 순서는 [2차 확장 데이터 계약](second-expansion-data-contract.md#10-flyway-계획)을 따른다.
+기존 `V1__create_initial_schema.sql`과 `V2__add_expansion_1_schema.sql`은 수정하지 않는다. 2차 확장은 현행 `V3__add_expansion_2_schema.sql` 하나로 구현·적용하며 상세 순서는 [2차 확장 데이터 계약](second-expansion-data-contract.md#10-flyway-계획)을 따른다.
 
 | 순서 | 변경 | 선행 |
 |---:|---|---|
@@ -161,8 +167,32 @@ V3 구간 아웃박스는 Action Token만 FK로 참조한다. 수신자는 `memb
 
 기존 데이터 backfill, 기준 데이터, 외부 호출과 destructive DDL은 없다. V2→V3 업그레이드와 빈 DB 전체 적용을 모두 CI에서 검증한다.
 
-## 11. 향후 변경 번호
+## 11. V4 3차 확장 AI 영상 추출 스키마
 
-초기 스키마 baseline 다음 변경은 `V2`로 적용됐고, 1차 확장 변경은 2.3절 통합 이후 다시 `V2` 하나로 적용됐다. 2차 확장은 다음 비어 있는 `V3`를 사용하고 이후 변경은 `V4`부터 사용한다.
+`V4__create_third_expansion_ai_schema.sql`은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)과 [ADR-EXT-003](../../07-adr/integration/ext-003-ai-extraction-async-reliability.md)의 물리 구현이다. 기존 `V1`~`V3`를 수정하지 않고, 빈 DB 전체 적용과 `V3→V4` 전진 적용을 모두 검증한다. 운영·개발·공유 데이터베이스에 V4가 아직 적용되지 않았으므로 Preview 차단 제약을 최종 통합 V4에 포함한다.
 
-`V1`과 `V2`는 각각 적용된 시점부터 수정하지 않는다. 운영 배포 전 V3 통합은 2.1절과 ADR-DATA-009의 강제 규칙을 모두 증명한 경우에만 허용되는 예외이며, 이미 적용된 파일은 통합·수정하지 않는다.
+| 순서 | 변경 | 검증 경계 |
+|---:|---|---|
+| 1 | `ai_extraction_job`, `ai_extraction_temporary_input`과 임시 입력 만료·Worker lease 제약 | Webhook·관리자 멱등성, 관리자 보완 텍스트 암호화·24시간 이내 삭제, QUEUED/RUNNING/terminal 상태 조합 |
+| 2 | `ai_candidate_snapshot`, `ai_candidate_tag_review`와 JSON Schema 검증 함수·Trigger | Snapshot 버전·근거 유형·신뢰도·태그 후보·append-only 검수 이력 |
+| 3 | `tag_definition`, `visit_tag`와 18개 통제 태그 기준 데이터 | ACTIVE 태그만 신규 검색·후보에 사용, Visit별 태그 중복·AI 근거 경계 |
+| 4 | `ai_extraction_attempt`, `youtube_channel_watch` | 재시도·오류·quota 메타데이터, 채널별 감시 고유성·갱신 실패 상태 |
+| 5 | Worker claim·lease recovery·관리자 검수·태그 조회 인덱스 | `FOR UPDATE SKIP LOCKED` 경로, 만료 lease 복구, 공개 태그 조회 |
+
+이 마이그레이션은 원본 영상·전체 자막·Provider 응답 전문을 저장하지 않으며 외부 API를 호출하지 않는다. 실제 3차 완료 판정은 [3차 확장 테스트 추적표](../../08-planning/third-expansion-test-matrix.md), 평가 결과, Worker·quota·브라우저 증거까지 연결해 수행한다.
+
+### 11.1 AI 누적 변경 통합 구성
+
+AI 영상 추출 스키마·재사용 조회 인덱스·수동 검수 감사·재시도 사유·태그 롤백 provenance는 `V4__create_third_expansion_ai_schema.sql`에 적용 순서대로 포함한다. 외부 YouTube 검증 전 멱등 조회 인덱스는 `youtube_video_id`와 입력 hash 또는 입력 모드·Provider/Model/Prompt/Schema 버전을 선두 조건으로 사용하며, 최신 작업 조회와 `expires_at` 만료 행 선택을 지원한다. 기존 작업·태그 행의 provenance는 nullable로 유지하고 새 자동 확정·수동 보정 연결부터 Snapshot ID를 기록한다.
+
+통합된 V4는 관리자 재시도 사유와 Snapshot 기반 `visit_tag` provenance를 추가한다. 기존 작업·태그 행의 provenance는 nullable로 유지하며, 새 자동 확정·수동 보정 연결부터 Snapshot ID를 기록해 롤백 시 해당 작업의 연결만 삭제한다.
+
+### 11.2 Gemini 모델 전환 제약
+
+운영·개발·공유 데이터베이스에 V4가 아직 적용되지 않았으므로 통합 V4의 `model_version` CHECK 제약은 `gemini-3.5-flash-lite`만 허용한다. 기존 `gemini-3-flash-preview` 평가 자산은 데이터베이스 작업 이력이 아니라 역사적 평가 fixture로 보존하며, 최종 V4에는 저장할 수 없다. 모델 계약 변경을 포함한 최종 V4는 배포 전 한 번만 적용하고, 병합 전 개발·공유 DB가 V4로 선행 적용되지 않았는지 확인한다.
+
+## 12. 향후 변경 번호
+
+초기 스키마 baseline 다음 변경은 `V2`로 적용됐고, 1차 확장 변경은 2.3절 통합 이후 다시 `V2` 하나로 적용됐다. 2차 확장은 `V3`, 3차 확장 AI 영상 추출·누적 AI 변경·Gemini 모델 전환 제약은 통합 `V4`를 사용한다.
+
+`V1`과 `V2`는 각각 적용된 시점부터 수정하지 않는다. 현행 `V3__add_expansion_2_schema.sql` 또는 `V4__create_third_expansion_ai_schema.sql`을 향후 통합하려면 2.1절과 ADR-DATA-009의 강제 규칙을 모두 증명해야 하며, 이미 운영에 적용된 파일은 통합·수정하지 않는다.
