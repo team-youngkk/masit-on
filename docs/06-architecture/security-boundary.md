@@ -12,7 +12,7 @@ related_documents:
   - ../07-adr/security/sec-001-secrets-workload-identity.md
   - ../07-adr/platform/web-003-routing-boundary.md
   - ../07-adr/platform/web-005-application-port-binding.md
-  - ../07-adr/platform/deploy-003-validation-cookie-session.md
+  - ../07-adr/platform/deploy-004-public-api-validation-gate-boundary.md
   - ../05-specs/api/common/validation-access-contract.md
 ---
 

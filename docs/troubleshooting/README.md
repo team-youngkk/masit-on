@@ -10,7 +10,9 @@ related_documents:
 
 ## PR 리뷰
 
-- [PR #210 운영 포트 결정의 ADR 분리와 문서 탐색성](pr-210-application-port-binding-review.md)
+- [PR #210 운영 애플리케이션 포트 loopback 바인딩과 보강 ADR 분리](pr-210-application-port-binding-review.md)
+- [PR #209 AI 후보 등록 입력·비동기·외부 연동 경계](pr-209-ai-candidate-registration-review.md)
+- [PR #206 Nginx 공개 API smoke·Accepted ADR 정합화](pr-206-nginx-public-api-gate-review.md)
 - [PR #208 운영 fixture cleanup 참조 보호와 성능 추적성](pr-208-operational-performance-review.md)
 - [PR #205 관리자 로그인 trusted proxy 출처 해석 리뷰 반영](pr-205-admin-login-trusted-proxy-review.md)
 - [PR #204 Prompt P2 계약 동기화와 후보 결과 불변성](pr-204-ai-prompt-contract-review.md)

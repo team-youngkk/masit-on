@@ -53,13 +53,14 @@ class ArchitectureTest {
                     .allowEmptyShould(true);
 
     @ArchTest
-    static final ArchRule application은_스프링데이터와_영속성기술에_직접_의존하지_않는다 =
+    static final ArchRule application은_영속성과_HTTP기술에_직접_의존하지_않는다 =
             noClasses().that().resideInAPackage("..application..")
                     .should().dependOnClassesThat()
                     .resideInAnyPackage(
                             "org.springframework.data.repository..",
                             "jakarta.persistence..",
-                            "org.springframework.web.client..")
+                            "org.springframework.web.client..",
+                            "java.net.http..")
                     .allowEmptyShould(true);
 
     /**
