@@ -76,6 +76,7 @@ Prompt 버전을 P2로 올린 변경이 런타임 상수와 ADR 중심으로 적
 | `./gradlew.bat test --tests "com.masiton.ai.application.AiCandidateValidatorTest" --tests "com.masiton.ai.infrastructure.provider.config.GeminiProviderPropertiesTest" --tests "com.masiton.ai.infrastructure.provider.config.GeminiHttpVideoExtractionAdapterTest" --no-daemon --console=plain` | 통과 | 후보 내부 목록 불변성, P2 고정 설정, Gemini 송신 Schema·시스템 지시 회귀 없음 |
 | `rg -n -i 'Prompt [\x60"]?P1|P1/S1|P1.*Schema \x60S1\x60|promptVersion.*P1' docs src` 결과 분류 | 통과 | 현재 계약 표기는 P2로 동기화됐고 남은 P1은 역사적 AI 자산·기존 이력, 자연어 parser 단계 또는 명시적 과거 데이터 테스트임 |
 | `./gradlew.bat clean build --no-daemon --console=plain` | 환경 제한으로 미완료 | 5분 제한 뒤 Testcontainers의 Docker 응답 대기 상태를 `jcmd`로 확인하고 남은 Gradle 프로세스를 종료했다. 코드 실패 출력은 없었으나 전체 성공으로 기록하지 않는다. |
+| [GitHub Actions run 31781013533](https://github.com/team-youngkk/masit-on/actions/runs/31781013533) | 통과 | 백엔드 전체 빌드·자동화 테스트와 프론트엔드 빌드·타입 검사 통과 |
 
 ## 8. 재발 방지 및 다음 확인
 
@@ -93,4 +94,4 @@ Prompt 버전을 P2로 올린 변경이 런타임 상수와 ADR 중심으로 적
 ## 10. 남은 사항
 
 - 최초 미해결 리뷰 스레드 6건은 모두 원문 인라인 답글을 남기고 해결 처리했으며, GraphQL 재조회에서 0건을 확인했다.
-- 로컬 전체 `clean build`는 7절의 Testcontainers 환경 제약으로 완료하지 못했다. 원격 [GitHub Actions run 31780861858](https://github.com/team-youngkk/masit-on/actions/runs/31780861858)의 백엔드 빌드·테스트에서 전체 결과를 확인한다.
+- 로컬 전체 `clean build`는 7절의 Testcontainers 환경 제약으로 완료하지 못했지만, 원격 GitHub Actions에서 백엔드·프론트엔드 전체 필수 검증이 통과했다.
