@@ -1,6 +1,7 @@
 package com.masiton.restaurant.presentation;
 
 import java.net.URI;
+import java.util.List;
 import java.util.UUID;
 
 import org.slf4j.MDC;
@@ -18,6 +19,7 @@ import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
 import com.masiton.common.web.ErrorResponse;
 import com.masiton.restaurant.application.port.in.RestaurantRegistrationUseCase;
+import com.masiton.restaurant.application.port.in.SearchAdminPlaceCandidatesUseCase;
 
 /** 관리자 확인 Token을 이용한 맛집 등록 API다. */
 @RestController
@@ -25,9 +27,14 @@ import com.masiton.restaurant.application.port.in.RestaurantRegistrationUseCase;
 public class RestaurantRegistrationController {
 
     private final RestaurantRegistrationUseCase restaurantRegistrationUseCase;
+    private final SearchAdminPlaceCandidatesUseCase searchAdminPlaceCandidatesUseCase;
 
-    public RestaurantRegistrationController(RestaurantRegistrationUseCase restaurantRegistrationUseCase) {
+    public RestaurantRegistrationController(
+            RestaurantRegistrationUseCase restaurantRegistrationUseCase,
+            SearchAdminPlaceCandidatesUseCase searchAdminPlaceCandidatesUseCase
+    ) {
         this.restaurantRegistrationUseCase = restaurantRegistrationUseCase;
+        this.searchAdminPlaceCandidatesUseCase = searchAdminPlaceCandidatesUseCase;
     }
 
     @PostMapping("/restaurant-registration-previews")
@@ -75,6 +82,16 @@ public class RestaurantRegistrationController {
                 ? ResponseEntity.created(URI.create("/api/restaurants/" + result.restaurant().id()))
                 : ResponseEntity.ok();
         return response.body(toRestaurantResponse(result.restaurant()));
+    }
+
+    @PostMapping("/restaurant-place-searches")
+    public ResponseEntity<PlaceSearchResponse> searchPlaces(
+            @RequestBody PlaceSearchRequest request
+    ) {
+        List<SearchAdminPlaceCandidatesUseCase.PlaceCandidateResult> results = searchAdminPlaceCandidatesUseCase.search(
+                new SearchAdminPlaceCandidatesUseCase.SearchAdminPlaceCandidatesCommand(
+                        request.name(), request.roadAddressHint()));
+        return ResponseEntity.ok(new PlaceSearchResponse(results.stream().map(this::toPlaceSearchItem).toList()));
     }
 
     private UUID adminAccountId(Authentication authentication) {
@@ -152,5 +169,25 @@ public class RestaurantRegistrationController {
                 candidate.detailAddress(),
                 candidate.phoneNumber(),
                 candidate.kakaoPlaceUrl());
+    }
+
+    public record PlaceSearchRequest(String name, String roadAddressHint) {
+    }
+
+    public record PlaceSearchResponse(List<PlaceSearchItem> items) {
+    }
+
+    public record PlaceSearchItem(
+            String placeName,
+            String kakaoPlaceUrl,
+            String roadAddress,
+            String phoneNumber,
+            String district) {
+    }
+
+    private PlaceSearchItem toPlaceSearchItem(SearchAdminPlaceCandidatesUseCase.PlaceCandidateResult result) {
+        return new PlaceSearchItem(
+                result.placeName(), result.kakaoPlaceUrl(), result.roadAddress(), result.phoneNumber(),
+                result.district());
     }
 }

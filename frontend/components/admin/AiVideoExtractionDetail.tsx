@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { aiExtractionMessageFor, getAiVideoExtraction, retryAiVideoExtraction, reviewAiVideoExtraction, type AiCandidate, type AiExtractionDetail, type AiTagDecision } from '@/lib/admin/ai-video-extractions'
 import { reviewActionsFor, reviewRequest } from '@/lib/admin/ai-video-extractions-coordination'
 
+import { AiCandidateRegistration } from './AiCandidateRegistration'
 import styles from './AiVideoExtractionScreen.module.css'
 
 export function AiVideoExtractionDetail({ jobId }: { jobId: string }) {
@@ -18,6 +19,7 @@ export function AiVideoExtractionDetail({ jobId }: { jobId: string }) {
   const [supplementText, setSupplementText] = useState('')
   const [reason, setReason] = useState('')
   const [tagCodes, setTagCodes] = useState<Record<string, string>>({})
+  const [selectedCandidate, setSelectedCandidate] = useState<AiCandidate | null>(null)
 
   const load = useCallback(async () => {
     const next = await getAiVideoExtraction(jobId)
@@ -81,9 +83,13 @@ export function AiVideoExtractionDetail({ jobId }: { jobId: string }) {
     <section className={styles.panel} aria-labelledby="candidate-heading">
       <h2 id="candidate-heading">후보 Snapshot</h2>
       <p className={styles.hint}>입력 원문, 보완 텍스트, Provider 응답 전문과 비밀정보는 표시하지 않습니다.</p>
-      {data.candidates.length ? <ul className={styles.candidates}>{data.candidates.map((candidate, index) => <CandidateCard key={candidate.candidateTagId ?? `${candidate.field}-${index}`} candidate={candidate} tagCode={candidate.candidateTagId ? (tagCodes[candidate.candidateTagId] ?? candidate.normalizedCode ?? '') : undefined} onTagCodeChange={candidate.candidateTagId ? (value) => setTagCodes((current) => ({ ...current, [candidate.candidateTagId!]: value })) : undefined} />)}</ul> : <p className={styles.hint}>표시할 후보가 없습니다.</p>}
+      {data.candidates.length ? <ul className={styles.candidates}>{data.candidates.map((candidate, index) => <CandidateCard key={candidate.candidateTagId ?? `${candidate.field}-${index}`} candidate={candidate} tagCode={candidate.candidateTagId ? (tagCodes[candidate.candidateTagId] ?? candidate.normalizedCode ?? '') : undefined} onTagCodeChange={candidate.candidateTagId ? (value) => setTagCodes((current) => ({ ...current, [candidate.candidateTagId!]: value })) : undefined} onSelectForRegistration={!selectedCandidate && candidate.field === 'restaurantName' ? () => setSelectedCandidate(candidate) : undefined} />)}</ul> : <p className={styles.hint}>표시할 후보가 없습니다.</p>}
       {data.missingFields.length ? <p className={styles.warning}>누락 필드: {data.missingFields.join(', ')}</p> : null}
     </section>
+
+    {selectedCandidate ? (
+      <AiCandidateRegistration detail={data} candidate={selectedCandidate} onCancel={() => setSelectedCandidate(null)} />
+    ) : null}
 
     <section className={styles.panel} aria-labelledby="attempt-heading">
       <h2 id="attempt-heading">실행 시도</h2>
@@ -111,10 +117,11 @@ export function AiVideoExtractionDetail({ jobId }: { jobId: string }) {
   </div>
 }
 
-function CandidateCard({ candidate, tagCode, onTagCodeChange }: { candidate: AiCandidate; tagCode?: string; onTagCodeChange?: (value: string) => void }) {
+function CandidateCard({ candidate, tagCode, onTagCodeChange, onSelectForRegistration }: { candidate: AiCandidate; tagCode?: string; onTagCodeChange?: (value: string) => void; onSelectForRegistration?: () => void }) {
   return <li className={styles.candidate}>
     <h3>{candidate.field}</h3>
     <p>{candidate.label ?? candidate.value ?? candidate.normalizedCode ?? '값 없음'}</p>
+    {onSelectForRegistration ? <Button variant="secondary" onClick={onSelectForRegistration}>이 후보로 등록 시작</Button> : null}
     {onTagCodeChange ? <label>태그 코드 보정<input value={tagCode ?? ''} maxLength={64} onChange={(event) => onTagCodeChange(event.target.value)} /></label> : null}
     <p className={styles.meta}>신뢰도 {(candidate.confidence * 100).toFixed(0)}% · 근거 {evidenceLabel(candidate)}</p>
   </li>

@@ -11,6 +11,7 @@ related_documents:
   - platform/web-002-data-state.md
   - platform/web-003-routing-boundary.md
   - platform/web-004-supported-browser-matrix.md
+  - platform/web-005-application-port-binding.md
   - ../02-analysis/mvp-workstreams.md
   - architecture/arch-001-domain-monolith.md
   - architecture/arch-002-external-ports-adapters.md
@@ -21,6 +22,7 @@ related_documents:
   - security/auth-001-spring-security-jwt.md
   - security/auth-002-member-jwt-refresh-token.md
   - security/auth-003-confirmation-token.md
+  - security/auth-006-cookie-origin-defense.md
   - data/data-005-redis-refresh-token.md
   - data/data-007-uuid-v4-identifiers.md
   - data/data-008-publication-lifecycle-soft-delete.md
@@ -37,11 +39,13 @@ related_documents:
   - quality/test-001-automation-strategy.md
   - quality/obs-001-logging-observability.md
   - quality/perf-001-k6-load-testing.md
+  - quality/perf-002-operational-participant-load-testing.md
   - security/sec-001-secrets-workload-identity.md
   - platform/runtime-001-docker.md
   - platform/ci-001-github-actions-quality-gate.md
   - platform/deploy-001-release-sequencing.md
   - platform/deploy-003-validation-cookie-session.md
+  - platform/deploy-004-public-api-validation-gate-boundary.md
   - platform/git-001-branch-merge-strategy.md
 ---
 
@@ -56,6 +60,7 @@ related_documents:
 | [ADR-WEB-002](platform/web-002-data-state.md) | 프론트엔드 데이터와 상태 책임 분리 | Accepted | Medium | Server Components `fetch`, TanStack Query, URL Query Parameter, `useState` | [WS-01](../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)~[WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 웹 UI | [문서](platform/web-002-data-state.md) |
 | [ADR-WEB-003](platform/web-003-routing-boundary.md) | 웹 화면·API·운영 경로 경계 | Accepted | Critical | Next.js App Router, Nginx, Spring Security, `/api`, `/internal` | 전체 웹·API·운영 진입점 | [문서](platform/web-003-routing-boundary.md) |
 | [ADR-WEB-004](platform/web-004-supported-browser-matrix.md) | 지원 브라우저 매트릭스와 iPhone Safari 지원 수준 | Accepted | High | PC Chrome·Edge, Android Chrome, 화면 폭 5종 | 전체 웹 UI 인수 판정 | [문서](platform/web-004-supported-browser-matrix.md) |
+| [ADR-WEB-005](platform/web-005-application-port-binding.md) | 운영 애플리케이션 포트 loopback 바인딩 | Accepted | Critical | Spring Boot, Next.js, Docker host network, Nginx | 운영 진입점·애플리케이션 포트 | [문서](platform/web-005-application-port-binding.md) |
 | [ADR-ARCH-001](architecture/arch-001-domain-monolith.md) | 단일 모듈 도메인 중심 모놀리스 | Accepted | Critical | 단일 모듈, 계층형 모놀리스 | 전체 Workstream | [문서](architecture/arch-001-domain-monolith.md) |
 | [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md) | 외부 연동 Port/Adapter 경계 | Accepted | High | Port/Adapter | [WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)~[WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록), 외부 연동 | [문서](architecture/arch-002-external-ports-adapters.md) |
 | [ADR-DATA-001](data/data-001-postgresql.md) | PostgreSQL 17.10 주 데이터베이스 | Accepted | Critical | PostgreSQL 17.10 | 전체 영속 데이터 | [문서](data/data-001-postgresql.md) |
@@ -66,18 +71,20 @@ related_documents:
 | [ADR-AUTH-002](security/auth-002-member-jwt-refresh-token.md) | 회원 JWT와 Refresh Token | Accepted | Critical | Spring Security 7.1.0, JWT, Redis 8.8 Refresh Token | 회원 계정·인증 | [문서](security/auth-002-member-jwt-refresh-token.md) |
 | [ADR-AUTH-003](security/auth-003-confirmation-token.md) | 관리자 등록 확인 Token의 저장·소비·재시도 | Accepted | Critical | PostgreSQL, SHA-256, 불투명 Token, JSONB Snapshot | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 기준정보 등록 | [문서](security/auth-003-confirmation-token.md) |
 | [ADR-AUTH-005](security/auth-005-member-action-mail-outbox.md) | 회원 Action 메일의 신뢰성 있는 전달 (Outbox) | Accepted | High | PostgreSQL, AES-GCM, `@Scheduled` Worker | 회원 가입 인증·비밀번호 재설정 | [문서](security/auth-005-member-action-mail-outbox.md) |
+| [ADR-AUTH-006](security/auth-006-cookie-origin-defense.md) | 쿠키 기반 Refresh·Logout Origin 방어 | Accepted | High | 단일 Origin 헤더, Origin allowlist | 회원·관리자 Refresh·Logout | [문서](security/auth-006-cookie-origin-defense.md) |
 | [ADR-DATA-005](data/data-005-redis-refresh-token.md) | Redis 8.8 관리자 Refresh Token 저장소 | Accepted | Critical | Redis Open Source 8.8 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 인증·운영 | [문서](data/data-005-redis-refresh-token.md) |
 | [ADR-DATA-007](data/data-007-uuid-v4-identifiers.md) | 애플리케이션 생성 UUID v4 내부 식별자 | Accepted | High | Java UUID, PostgreSQL uuid | 전체 영속 데이터 | [문서](data/data-007-uuid-v4-identifiers.md) |
 | [ADR-DATA-008](data/data-008-publication-lifecycle-soft-delete.md) | 공개 상태와 논리 삭제 생명주기 분리 | Accepted | Critical | PostgreSQL CHECK, partial index | 핵심 공개 데이터 | [문서](data/data-008-publication-lifecycle-soft-delete.md) |
 | [ADR-EXT-001](integration/ext-001-reference-verification.md) | 관리자 외부 기준정보 확인 서비스 | Accepted | High | Kakao Local REST API V2, YouTube Data API v3 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 등록 | [문서](integration/ext-001-reference-verification.md) |
 | [ADR-ARCH-005](architecture/arch-005-natural-language-filter-interpretation.md) | 자연어 조건 해석과 기존 필터 조회 경계 | Accepted | High | P1 규칙·사전, TagDefinition·VisitTag | [WS-14](../02-analysis/third-expansion-workstreams.md#5-ws-14-자연어-맛집-탐색) | [문서](architecture/arch-005-natural-language-filter-interpretation.md) |
-| [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md) | AI 영상 추출 후보 경계와 제공자 선택 기준 | Accepted | Critical | Gemini Free Tier 전용, `gemini-3.5-flash-lite`, P1/S1 | [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | [문서](integration/ai-001-video-extraction-candidate-boundary.md) |
+| [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md) | AI 영상 추출 후보 경계와 제공자 선택 기준 | Accepted | Critical | Gemini Free Tier 전용, `gemini-3.5-flash-lite`, 현재 P2/S1·기존 P1 이력 보존 | [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | [문서](integration/ai-001-video-extraction-candidate-boundary.md) |
 | [ADR-EXT-003](integration/ext-003-ai-extraction-async-reliability.md) | AI 추출 비동기 작업과 단일 EC2 복구 경계 | Accepted | Critical | PostgreSQL lease, 내부 Worker, Gemini retry | [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | [문서](integration/ext-003-ai-extraction-async-reliability.md) |
 | [ADR-ROUTE-001](integration/route-001-kakao-mobility-course-routing.md) | Kakao Mobility 자동차 경로와 코스 결과 경계 | Accepted | High | Kakao Mobility `/v1/directions`, 자동차 경로 | [WS-16](../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천) | [문서](integration/route-001-kakao-mobility-course-routing.md) |
 | [ADR-MAP-001](integration/map-001-map-bounds-search.md) | Kakao 지도 표시와 뷰포트 비종속 마커 조회 | Accepted | High | Kakao Maps JavaScript API V3, WGS84 좌표, 필터 기반 마커 조회 | [WS-07](../02-analysis/first-expansion-workstreams.md#6-ws-07-지도-탐색) 지도 탐색 | [문서](integration/map-001-map-bounds-search.md) |
 | [ADR-TEST-001](quality/test-001-automation-strategy.md) | 계층별 자동화 테스트 전략 | Accepted | Critical | JUnit 5, Mockito, Spring Boot Test, Testcontainers 2.0.5, WireMock | 전체 Workstream | [문서](quality/test-001-automation-strategy.md) |
 | [ADR-OBS-001](quality/obs-001-logging-observability.md) | 애플리케이션 로그와 운영 관측 기준 | Accepted | High | SLF4J, Logback, Actuator, CloudWatch | 전체 운영 | [문서](quality/obs-001-logging-observability.md) |
 | [ADR-PERF-001](quality/perf-001-k6-load-testing.md) | k6 부하 테스트 도구와 실행 체계 | Accepted | High | k6 v2.1.0, GitHub Actions `workflow_dispatch` | 2차 확장 공개 조회 성능 검증 | [문서](quality/perf-001-k6-load-testing.md) |
+| [ADR-PERF-002](quality/perf-002-operational-participant-load-testing.md) | 검증 참여자 전용 운영 직접 부하 검증 예외 | Accepted | High | k6 v2.1.0, AWS SSM, 운영 PostgreSQL·Redis | 이슈 #190 일회성 제한 공개 검증 | [문서](quality/perf-002-operational-participant-load-testing.md) |
 | [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 비밀정보와 AWS 워크로드 인증 | Accepted | Critical | Parameter Store, KMS, IAM Role, GitHub OIDC | 운영·CI·외부 연동 | [문서](security/sec-001-secrets-workload-identity.md) |
 | [ADR-DATA-009](data/data-009-pre-release-migration-consolidation.md) | 운영 배포 전 마이그레이션 통합 범위 | Accepted | High | Flyway | 마이그레이션 파일과 모든 환경 스키마 | [문서](data/data-009-pre-release-migration-consolidation.md) |
 | [ADR-DATA-010](data/data-010-recent-view-retention-cleanup.md) | 최근 본 맛집 보존 기간 정리 실행 | Accepted | High | Spring Scheduler, PostgreSQL | [WS-06](../02-analysis/first-expansion-workstreams.md#5-ws-06-개인-맛집-관리) 최근 기록 생명주기 | [문서](data/data-010-recent-view-retention-cleanup.md) |
@@ -89,4 +96,5 @@ related_documents:
 | [ADR-GIT-001](platform/git-001-branch-merge-strategy.md) | 브랜치 병합 방식과 역동기화 정책 | Accepted | High | GitHub ruleset(Squash/Merge Commit) | 전체 PR 병합 | [문서](platform/git-001-branch-merge-strategy.md) |
 | [ADR-DEPLOY-001](platform/deploy-001-release-sequencing.md) | 단계별 로컬 검증과 최종 AWS 배포 순서 | Superseded | Critical | Docker, AWS | 전체 단계 및 최종 배포 | [문서](platform/deploy-001-release-sequencing.md) |
 | [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | 초기 운영 배포 선행과 확장 단계별 인프라 반영 | Accepted | Critical | Docker, AWS | M2 초기 운영 배포 및 이후 확장 | [문서](platform/deploy-002-validation-deployment-before-expansion.md) |
-| [ADR-DEPLOY-003](platform/deploy-003-validation-cookie-session.md) | 검증 참여자 제한 공개 쿠키 세션 | Accepted | Critical | Nginx `auth_request`, Spring Boot, Redis, HttpOnly Cookie | 정식 공개 전 검증 참여자 제한 공개 | [문서](platform/deploy-003-validation-cookie-session.md) |
+| [ADR-DEPLOY-003](platform/deploy-003-validation-cookie-session.md) | 검증 참여자 제한 공개 쿠키 세션 | Superseded | Critical | Nginx `auth_request`, Spring Boot, Redis, HttpOnly Cookie | ADR-DEPLOY-004가 gate 범위를 대체 | [문서](platform/deploy-003-validation-cookie-session.md) |
+| [ADR-DEPLOY-004](platform/deploy-004-public-api-validation-gate-boundary.md) | 비관리자 공개 API 검증 세션 gate 경계 | Accepted | Critical | Nginx `auth_request`, Spring Security, 운영 smoke | 정식 공개 전 검증 참여자 제한 공개 | [문서](platform/deploy-004-public-api-validation-gate-boundary.md) |

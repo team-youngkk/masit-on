@@ -1,31 +1,23 @@
 package com.masiton.member.infrastructure.web;
 
-import java.util.Set;
-
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Component;
 
+import com.masiton.common.web.ClientAddressResolver;
+import com.masiton.common.web.TrustedProxyClientAddressResolver;
 import com.masiton.member.infrastructure.configuration.MemberRateLimitProperties;
 
 @Component
-public class MemberClientAddressResolver {
-    private final boolean reverseProxyEnabled;
-    private final Set<String> trustedProxyAddresses;
+public class MemberClientAddressResolver implements ClientAddressResolver {
+    private final ClientAddressResolver delegate;
 
     public MemberClientAddressResolver(MemberRateLimitProperties properties) {
-        this.reverseProxyEnabled = properties.isReverseProxyEnabled();
-        this.trustedProxyAddresses = properties.trustedProxyAddresses();
+        this.delegate = new TrustedProxyClientAddressResolver(
+                properties.isReverseProxyEnabled(), properties.trustedProxyAddresses());
     }
 
+    @Override
     public String resolve(HttpServletRequest request) {
-        String peerAddress = request.getRemoteAddr();
-        if (!reverseProxyEnabled || !trustedProxyAddresses.contains(peerAddress)) {
-            return peerAddress;
-        }
-        String forwardedFor = request.getHeader("X-Forwarded-For");
-        if (forwardedFor == null || forwardedFor.isBlank() || forwardedFor.contains(",")) {
-            return peerAddress;
-        }
-        return forwardedFor.trim();
+        return delegate.resolve(request);
     }
 }

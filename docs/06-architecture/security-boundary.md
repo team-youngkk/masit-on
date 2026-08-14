@@ -7,11 +7,13 @@ related_documents:
   - ../05-specs/api/admin/reference-data-api.md
   - ../05-specs/api/admin/visit-registration-api.md
   - ../07-adr/security/auth-001-spring-security-jwt.md
+  - ../07-adr/security/auth-006-cookie-origin-defense.md
   - ../07-adr/security/auth-003-confirmation-token.md
   - ../07-adr/data/data-005-redis-refresh-token.md
   - ../07-adr/security/sec-001-secrets-workload-identity.md
   - ../07-adr/platform/web-003-routing-boundary.md
-  - ../07-adr/platform/deploy-003-validation-cookie-session.md
+  - ../07-adr/platform/web-005-application-port-binding.md
+  - ../07-adr/platform/deploy-004-public-api-validation-gate-boundary.md
   - ../05-specs/api/common/validation-access-contract.md
 ---
 
@@ -60,6 +62,8 @@ URL matcher는 다음 순서로 평가한다.
 6. 정의되지 않은 `/api/**`: 기본 거부
 
 `/internal/health/live`, `/internal/health/ready`, `/internal/health/dependencies`는 애플리케이션 인증 없이 호출할 수 있지만, 인증 예외보다 앞선 네트워크 경계에서 인터넷 Nginx 전달을 차단하고 EC2 내부 Agent·컨테이너에서만 호출한다. 그 밖의 `/internal/**`은 허용하지 않는다.
+
+이 차단은 Nginx 경로 규칙 하나에 의존하지 않는다. 운영 애플리케이션은 `server.address`를 loopback으로 고정해 인스턴스 밖에서는 애플리케이션 포트에 TCP 연결 자체가 성립하지 않게 한다. 보안 그룹이나 방화벽 규칙이 애플리케이션 포트를 열어도 Nginx를 건너뛴 직결과 `/internal/**` 노출이 생기지 않는다. 이 결정은 [ADR-WEB-005](../07-adr/platform/web-005-application-port-binding.md)가 소유하고, 경계 구성과 배포 후 확인 명령은 [애플리케이션 포트 바인딩 경계](../08-planning/issue-200-application-port-binding.md)에 있다.
 
 회원 인증은 관리자와 별도 JWT audience(`masit-on-member-api`), `MEMBER` authority, `MemberPrincipal(memberId, sessionId)`를 사용한다. 공개 회원 인증 메서드를 제외한 `/api/auth/**`와 `/api/me/**`에는 회원 decoder만, `/api/admin/**`에는 관리자 decoder만 적용해 교차 audience를 인증 단계에서 거부한다. `GET /api/restaurants/{restaurantId}`는 `permitAll`을 유지하며, 선택적 회원 Token 해석기는 유효한 회원 Token에서만 최근 기록용 문맥을 제공한다. 인기 맛집·유튜버 상세 세 조회·큐레이션 두 조회는 회원 부수효과가 없어 Token 해석 대상에서 제외한다. 만료·변조·다른 audience Token이 섞여 들어와도 401 없이 공개 응답을 반환해야 공개 계약이 인증 상태에 종속되지 않는다. 누락·만료·변조·폐기·교차 audience Token, 회원 인증 상태 조회 실패와 최근 기록 저장 실패는 principal·오류 응답을 만들지 않고 익명 공개 조회와 최근 기록 생략으로 끝낸다.
 
@@ -144,10 +148,10 @@ URL은 HTTPS와 허용 호스트를 검증하고 리디렉션 최종 호스트�
 
 ## 8. Refresh Token과 Redis 장애
 
-[ADR-AUTH-001](../07-adr/security/auth-001-spring-security-jwt.md)에 따라:
+[ADR-AUTH-001](../07-adr/security/auth-001-spring-security-jwt.md) 및 [ADR-AUTH-006](../07-adr/security/auth-006-cookie-origin-defense.md)에 따라:
 
 - Access Token은 30분 만료, 프론트엔드 메모리에만 둔다.
-- Refresh Token은 14일 TTL, HttpOnly·Secure·SameSite=Strict·`Path=/api/admin/auth` 쿠키로 전달한다.
+- Refresh Token은 14일 TTL, HttpOnly·Secure·SameSite=Strict·`Path=/api/admin/auth` 쿠키로 전달한다. Refresh·Logout 요청은 단일 `Origin` 헤더가 `ADMIN_PUBLIC_BASE_URL`로 설정한 관리자 화면 Origin과 canonical form으로 정확히 일치해야 하며, 누락·다중·불일치는 `403 FORBIDDEN`으로 Bearer·Refresh Token 처리보다 먼저 차단한다. Origin 검사는 SameSite 쿠키 정책과 함께 쓰는 보조 CSRF 방어선이고 로그인·Bearer 전용 관리자 API에는 적용하지 않는다. Origin 없는 비브라우저·운영 점검 요청도 허용하지 않는다.
 - 계정당 활성 Refresh Token 하나만 허용한다.
 - 재발급마다 회전하고 재사용을 탐지해 Token 계열을 폐기한다.
 - Redis 장애 시 재발급은 fail-closed이고 재로그인을 요구한다.
@@ -159,7 +163,7 @@ URL은 HTTPS와 허용 호스트를 검증하고 리디렉션 최종 호스트�
 ### 확정 보안 세부
 
 - JWT는 RS256, `iss=masit-on`, `aud=masit-on-admin-api`를 사용하고 `kid`로 검증 키를 선택한다. 키는 90일마다 교체하며 새 검증 키 선배포 → 새 키 발급 전환 → 30분 뒤 이전 개인 키 폐기 순서를 지킨다.
-- 로그인 실패는 Redis `auth:login-failure:login-id:{loginIdHash}`와 `auth:login-failure:source:{sourceHash}` 카운터에 첫 실패부터 15분 TTL을 적용한다. 두 카운터 중 하나의 원자 증가 결과가 5 이상이면 남은 TTL 동안 차단하고 로그인 성공 시 함께 삭제한다. 현재 MVP는 서블릿 연결 원격 주소만 출처로 사용하며, 신뢰 프록시 범위가 확정되기 전에는 `X-Forwarded-For` 같은 전달 헤더를 신뢰하지 않는다.
+- 로그인 실패는 Redis `auth:login-failure:login-id:{loginIdHash}`와 `auth:login-failure:source:{sourceHash}` 카운터에 첫 실패부터 15분 TTL을 적용한다. 두 카운터 중 하나의 원자 증가 결과가 5 이상이면 남은 TTL 동안 차단하고 로그인 성공 시 함께 삭제한다. `source`는 다음 규칙으로 결정한다. `reverseProxyEnabled=true`이고 요청 peer가 설정된 trusted proxy peer 목록에 포함된 경우에만 Spring이 단일 IP 리터럴 `X-Forwarded-For` 값을 해석한다. Reverse proxy가 활성화된 환경에서는 Nginx가 외부 요청의 `X-Forwarded-For`를 `$remote_addr`로 덮어써 단일 값으로 전달한다. 요청 peer가 목록에 없거나 전달 헤더가 없거나 형식이 잘못되었거나 다중 값이면 요청 peer의 원격 주소(peer remote address)로 fallback한다. `reverseProxyEnabled=true`인데 trusted proxy peer 목록이 비어 있으면 애플리케이션은 시작 시 fail-fast한다. 운영 환경은 `ADMIN_LOGIN_REVERSE_PROXY_ENABLED=true`와 `ADMIN_LOGIN_TRUSTED_PROXY_ADDRESSES`에 Nginx와 Backend 사이의 peer 주소를 주입한다.
 - Refresh Token은 Redis `auth:refresh:{adminId}`에 SHA-256 해시·Token 계열 ID·발급 및 만료 시각을 JSON으로 저장하고 14일 TTL로 정리한다. 회전과 재사용 탐지는 원자 연산으로 수행한다.
 - Java Principal 타입은 `com.masiton.security.application.AdminPrincipal`이 소유하고 presentation·domain 패키지에는 두지 않는다.
 

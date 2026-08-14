@@ -114,6 +114,48 @@ class AiExtractionResultCommitServicePostgreSqlIntegrationTest extends FullConte
                 .isEqualTo("RUNNING");
     }
 
+    @Test
+    @DisplayName("복수 후보 배열이 CHECK 제약과 트리거를 통과해 Snapshot에 그대로 저장된다")
+    void persistBlocked_복수후보배열_CHECK제약과트리거를통과해저장된다() {
+        // Given
+        String candidateFields = """
+                {
+                  "restaurantName": [
+                    {"value":"첫 맛집","confidence":0.95,"evidence":{"type":"TIMESTAMP","startMs":10,"endMs":20}},
+                    {"value":"둘째 맛집","confidence":0.94,"evidence":{"type":"TIMESTAMP","startMs":30,"endMs":40}}
+                  ],
+                  "address": "서울특별시 마포구 월드컵로 1"
+                }
+                """;
+        String fieldConfidences = "{\"address\":0.9}";
+        String evidence = "{\"address\":{\"type\":\"TIMESTAMP\",\"startMs\":1,\"endMs\":2}}";
+        AiExtractionResultCommitService.ProcessCommand command = new AiExtractionResultCommitService.ProcessCommand(
+                jobId, "worker-1", 1, startedAt, finishedAt, "provider-request-array", "COMPLETE",
+                candidateFields, "[]", fieldConfidences, evidence, "[]", "MULTIPLE_CANDIDATES", "AUTO_BLOCKED",
+                List.of());
+
+        // When
+        boolean persisted = commitService.persistBlocked(command);
+
+        // Then
+        assertThat(persisted).isTrue();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT jsonb_typeof(candidate_fields->'restaurantName') FROM ai_candidate_snapshot WHERE job_id = ?",
+                String.class, jobId)).isEqualTo("array");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT jsonb_array_length(candidate_fields->'restaurantName') FROM ai_candidate_snapshot WHERE job_id = ?",
+                Integer.class, jobId)).isEqualTo(2);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT candidate_fields->'restaurantName'->0->>'value' FROM ai_candidate_snapshot WHERE job_id = ?",
+                String.class, jobId)).isEqualTo("첫 맛집");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT jsonb_exists(field_confidences, 'restaurantName') FROM ai_candidate_snapshot WHERE job_id = ?",
+                Boolean.class, jobId)).isFalse();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT jsonb_exists(field_confidences, 'address') FROM ai_candidate_snapshot WHERE job_id = ?",
+                Boolean.class, jobId)).isTrue();
+    }
+
     private int count(String table, String predicate, Object... args) {
         return jdbcTemplate.queryForObject("SELECT count(*) FROM " + table + " WHERE " + predicate,
                 Integer.class, args);

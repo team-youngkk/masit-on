@@ -10,6 +10,16 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #214 인기 맛집 쿼리 측정과 스케줄러 격리](pr-214-popular-restaurant-query-count-review.md)
+- [PR #213 자연어 검색 URL 필터 변경 초기화와 빈 결과 조건 제거 계약](pr-213-natural-language-filter-reset-review.md)
+- [PR #212 지도 429 query별 대기·타이머 상한 리뷰 반영](pr-212-map-rate-limit-review.md)
+- [PR #210 운영 애플리케이션 포트 loopback 바인딩과 보강 ADR 분리](pr-210-application-port-binding-review.md)
+ - [PR #211 Refresh·Logout Origin 방어](pr-211-admin-refresh-logout-origin-review.md)
+- [PR #209 AI 후보 등록 입력·비동기·외부 연동 경계](pr-209-ai-candidate-registration-review.md)
+- [PR #206 Nginx 공개 API smoke·Accepted ADR 정합화](pr-206-nginx-public-api-gate-review.md)
+- [PR #208 운영 fixture cleanup 참조 보호와 성능 추적성](pr-208-operational-performance-review.md)
+- [PR #205 관리자 로그인 trusted proxy 출처 해석 리뷰 반영](pr-205-admin-login-trusted-proxy-review.md)
+- [PR #204 Prompt P2 계약 동기화와 후보 결과 불변성](pr-204-ai-prompt-contract-review.md)
 - [PR #192 V8 통합 범위와 최종 Gemini 모델 계약](pr-192-flyway-model-contract-review.md)
 - [PR #191 Gemini 모델 전환 리뷰 반영](pr-191-gemini-model-transition-review.md)
 - [PR #184 YouTube 채널 감시 상태·동시성 경계 리뷰 반영](pr-184-youtube-channel-watch-review.md)

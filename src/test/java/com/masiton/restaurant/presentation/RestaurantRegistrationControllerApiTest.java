@@ -10,6 +10,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.masiton.restaurant.application.port.in.RestaurantRegistrationUseCase;
+import com.masiton.restaurant.application.port.in.SearchAdminPlaceCandidatesUseCase;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -23,8 +24,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class RestaurantRegistrationControllerApiTest {
 
     private final RestaurantRegistrationUseCase restaurantRegistrationUseCase = mock(RestaurantRegistrationUseCase.class);
+    private final SearchAdminPlaceCandidatesUseCase searchAdminPlaceCandidatesUseCase =
+            mock(SearchAdminPlaceCandidatesUseCase.class);
     private final MockMvc mockMvc = MockMvcBuilders.standaloneSetup(
-            new RestaurantRegistrationController(restaurantRegistrationUseCase)).build();
+            new RestaurantRegistrationController(restaurantRegistrationUseCase, searchAdminPlaceCandidatesUseCase))
+            .build();
     private final UUID adminId = UUID.randomUUID();
 
     @Test

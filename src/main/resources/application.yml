@@ -96,7 +96,7 @@ masiton:
         api-key:
         base-url: https://generativelanguage.googleapis.com
         model: gemini-3.5-flash-lite
-        prompt-version: P1
+        prompt-version: P2
         schema-version: S1
         connect-timeout: PT5S
         response-timeout: PT90S
@@ -157,6 +157,7 @@ masiton:
     secure: true
     same-site: Strict
     path: /api/admin/auth
+    public-base-url: ${ADMIN_PUBLIC_BASE_URL:http://localhost:3000}
     member:
       refresh-token-ttl: P14D
       cookie-name: __Secure-masiton-member-refresh
@@ -166,3 +167,5 @@ masiton:
     login-failure:
       max-attempts: 5
       ttl: PT15M
+      trusted-proxy-addresses: ${ADMIN_LOGIN_TRUSTED_PROXY_ADDRESSES:}
+      reverse-proxy-enabled: ${ADMIN_LOGIN_REVERSE_PROXY_ENABLED:false}
