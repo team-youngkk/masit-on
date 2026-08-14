@@ -69,6 +69,10 @@ public final class TrustedProxyClientAddressResolver implements ClientAddressRes
             return leftGroups == 8;
         }
 
+        if (sides[0].contains(".")) {
+            return false;
+        }
+
         int rightGroups = ipv6GroupCount(sides[1]);
         return rightGroups >= 0 && leftGroups + rightGroups < 8;
     }

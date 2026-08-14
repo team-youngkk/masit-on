@@ -25,6 +25,15 @@ class TrustedProxyClientAddressResolverTest {
     @DisplayName("유효하지 않은 IPv6처럼 보이는 값은 DNS 조회 없이 peer 주소로 대체한다")
     void resolve_유효하지않은IPv6_피어주소사용() {
         assertThat(resolver.resolve(request("1:2:3:4:5:6:7:8:9"))).isEqualTo("10.0.0.2");
+        assertThat(resolver.resolve(request("192.0.2.1::"))).isEqualTo("10.0.0.2");
+        assertThat(resolver.resolve(request("192.0.2.1::1"))).isEqualTo("10.0.0.2");
+    }
+
+    @Test
+    @DisplayName("IPv4가 포함된 유효한 IPv6 리터럴은 출처로 사용한다")
+    void resolve_유효한IPv4EmbeddedIPv6_출처로사용() {
+        assertThat(resolver.resolve(request("::ffff:192.0.2.1"))).isEqualTo("::ffff:192.0.2.1");
+        assertThat(resolver.resolve(request("2001:db8::192.0.2.1"))).isEqualTo("2001:db8::192.0.2.1");
     }
 
     @Test
