@@ -13,11 +13,13 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
+import com.masiton.member.application.MemberSessionRevocationRecoveryService;
 import com.masiton.test.QueryCountingDataSourceConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -62,6 +64,9 @@ class PopularRestaurantQueryCountApiTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @MockitoBean
+    private MemberSessionRevocationRecoveryService memberSessionRevocationRecoveryService;
 
     @Test
     @DisplayName("인기 맛집 조회는 찜 건수와 공개 맛집 건수가 늘어도 쿼리 수가 같다")
