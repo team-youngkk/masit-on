@@ -115,6 +115,36 @@ for _ in $(seq 1 36); do
 done
 [ -n "$front" ] || { echo "프론트엔드 응답 확인 실패" >&2; systemctl status masiton-frontend.service --no-pager -l | tail -20; exit 1; }
 
+# 관리자 로그인 rate-limit은 신뢰된 Nginx peer에서만 전달 헤더를 해석해야 한다.
+# 환경변수의 값은 출력하지 않고, 배포된 컨테이너의 실제 주입 결과만 비교한다.
+backend_env=$(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' masiton-backend)
+admin_proxy_enabled=$(printf '%s\n' "$backend_env" | awk -F= '$1 == "ADMIN_LOGIN_REVERSE_PROXY_ENABLED" { print $2; exit }')
+admin_trusted_proxies=$(printf '%s\n' "$backend_env" | awk -F= '$1 == "ADMIN_LOGIN_TRUSTED_PROXY_ADDRESSES" { print $2; exit }')
+[ "$admin_proxy_enabled" = "true" ] || { echo "관리자 reverse-proxy 환경변수 주입 실패" >&2; exit 1; }
+[ "$admin_trusted_proxies" = "127.0.0.1" ] || { echo "관리자 trusted-proxy 환경변수 주입 실패" >&2; exit 1; }
+
+# app-deploy는 nginx-install보다 먼저 실행될 수 있다. Nginx가 이미 설치·활성화된
+# 호스트에서는 실제 설정을 검사하고 public API 경계를 확인한다. 무세션 요청은
+# verification gate에 걸리는 것이 정상(401)이므로 로그인 성공을 요구하지 않는다.
+if command -v nginx >/dev/null 2>&1; then
+  nginx -t
+else
+  echo "Nginx 설정 smoke 스킵: nginx 명령이 설치되지 않았다(nginx-install 단계에서 검증한다)."
+fi
+if systemctl is-active --quiet nginx; then
+  public_admin_status=$(curl -k -sS -m 5 -o /dev/null -w '%{http_code}' \
+    --resolve masiton.click:443:127.0.0.1 \
+    -H 'X-Forwarded-For: 198.51.100.99' \
+    -H 'Content-Type: application/json' -X POST --data '{}' \
+    https://masiton.click/api/admin/auth/tokens)
+  [ "$public_admin_status" = "401" ] || {
+    echo "public Nginx 관리자 로그인 경계 확인 실패: HTTP $public_admin_status" >&2
+    exit 1
+  }
+else
+  echo "public Nginx 경로 smoke 스킵: Nginx가 활성 상태가 아니다(nginx-install 단계에서 검증한다)."
+fi
+
 # 운영 Origin이 주입됐는지 확인한다. 유효한 Origin과 Token 없는 요청은 인증 실패(401)여야
 # 하며, Origin 설정이 localhost 기본값으로 남으면 이 지점에서 403이 된다.
 refresh_status=$(curl -sS -m 5 -o /dev/null -w '%{http_code}' \
