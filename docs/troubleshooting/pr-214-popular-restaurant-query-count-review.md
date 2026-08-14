@@ -17,7 +17,7 @@ related_documents:
 | PR | [#214 인기 맛집 쿼리 수 측정을 커넥션 풀 워밍업과 분리](https://github.com/team-youngkk/masit-on/pull/214) |
 | 작성자 | w00lam |
 | 처리 일자 | 2026-08-14 |
-| 범위 | 인기 맛집 쿼리 수 회귀 테스트의 백그라운드 스케줄러 간섭 제거 |
+| 범위 | 인기 맛집 쿼리 수 회귀 테스트의 백그라운드 스케줄러 간섭 제거와 PR 본문 정합성 보완 |
 | 주 문제 유형 | 애플리케이션·인프라(테스트 격리) |
 | 기존 기록 | 없음 |
 
@@ -26,6 +26,7 @@ related_documents:
 | 스레드 | 요청 요약 | 문제 유형 | 판단 | 처리 결과 | 근거/검증 |
 |---|---|---|---|---|---|
 | [스케줄러 쿼리 격리](https://github.com/team-youngkk/masit-on/pull/214#discussion_r3783215082), [동일 요청 보강](https://github.com/team-youngkk/masit-on/pull/214#discussion_r3783226388) | 쿼리 측정 구간에서 모든 DB 예약 작업의 백그라운드 SQL을 배제 | 애플리케이션·인프라 | 수정 필요 | 테스트 컨텍스트의 모든 `@Scheduled` DB 작업을 `@MockitoBean`으로 대체 | `PopularRestaurantQueryCountApiTest` 단독 실행 통과 |
+| [PR 본문 정합성](https://github.com/team-youngkk/masit-on/pull/214#discussion_r3783445919) | 최신 원인·변경 파일·검증 상태에 맞게 PR 본문 갱신 | 문서·협업 | 수정 필요 | static 전역 카운터와 8개 DB 예약 작업 간섭을 기준으로 PR 본문 갱신 | PR 본문과 변경 파일·검증 결과 대조 |
 
 ## 3. 문제 현상과 발생 조건
 
@@ -43,7 +44,7 @@ related_documents:
 
 | 확인하거나 시도한 방법 | 결과 | 판단과 다음 단계 |
 |---|---|---|
-| PR #214의 미해결 리뷰 스레드와 현재 테스트 코드 대조 | 두 리뷰가 같은 P1 원인을 지적하고, 스레드는 미해결·미 outdated 상태였다 | 하나의 수정으로 함께 처리 |
+| PR #214의 미해결 리뷰 스레드와 현재 테스트 코드·본문 대조 | 기존 P1 두 건과 후속 P2 한 건은 테스트 격리와 PR 본문 정합성을 각각 지적했다 | 코드와 문서를 함께 갱신 |
 | `QueryCountingDataSourceConfiguration` 및 모든 `@Scheduled` DB 작업 확인 | static 전역 카운터와 즉시·지연·cron 예약 작업을 확인 | 측정 테스트 컨텍스트에서 모든 DB 예약 작업을 mock 처리 |
 | 운영 코드·API·ADR 대조 | 인기 집계는 요청 시점 단일 SQL이라는 계약이고 스케줄러 집계는 별도 기능임 | 운영 코드나 계약은 변경하지 않음 |
 | 테스트 수정 후 단독 실행 | 통과 | 측정 테스트의 회귀 조건 확인 |
@@ -79,5 +80,5 @@ related_documents:
 ## 10. 남은 사항
 
 - 코드 수정과 단독 검증은 완료했다.
-- 기존 스레드와 후속 P1 두 건·P2 한 건에 답글을 등록했고 모두 `isResolved: true` 상태를 확인했다.
-- `6d92308` push 후 새 CI가 실행되며, 리뷰어의 재검토 전까지 GitHub의 기존 `CHANGES_REQUESTED` 판정은 남을 수 있다.
+- 기존 스레드와 후속 P1 두 건·P2 두 건에 답글을 등록했고 모두 `isResolved: true` 상태를 확인했다.
+- 최신 문서 갱신 커밋 push 후 GitHub Actions 백엔드 빌드·테스트 결과와 리뷰어의 재검토를 확인한다.
