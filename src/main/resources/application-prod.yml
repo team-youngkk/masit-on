@@ -66,6 +66,27 @@ spring:
           timeout: 5000
           writetimeout: 5000
 
+server:
+  # 운영 백엔드는 `--network host`로 실행되므로(deploy/scripts/app-run.sh) 바인딩 주소를
+  # 지정하지 않으면 호스트의 모든 인터페이스에 붙는다. 그러면 보안 그룹·방화벽 규칙 하나가
+  # 8080을 여는 순간 Nginx를 건너뛴 인터넷 직결이 성립하고, 인터넷에 공개하지 않기로 한
+  # `/internal/**`까지 함께 노출된다(ADR-WEB-005 2절, ADR-WEB-003 6.5절 상태 확인 경로).
+  #
+  # 상태 확인이 이 커넥터에 함께 올라가 있어야 이 한 줄로 `/internal/**`까지 덮인다.
+  # 공통 설정이 `management.server.port`를 두지 않아 listener가 하나뿐이다. 관리 포트를
+  # 분리하면 `management.server.address`도 같이 loopback으로 고정해야 한다.
+  #
+  # loopback에만 바인딩해 그 경로를 네트워크 계층에서 없앤다. 8080에 접근하는 정당한
+  # 호출자는 모두 같은 인스턴스의 127.0.0.1이다. Nginx upstream(deploy/nginx/masiton.click.conf),
+  # 프론트엔드 `API_BASE_URL`, 상태 지표 수집(deploy/scripts/health-metrics.sh)이 그렇다.
+  # `--network host`이므로 컨테이너 안의 127.0.0.1이 호스트 loopback과 같다.
+  #
+  # 환경 변수 placeholder를 두지 않는다. 운영에서 이 값을 넓히는 것은 설정 실수로 일어날
+  # 일이 아니라 경계 변경이므로 ADR-WEB-005와 함께 바꿔야 한다. 다만 placeholder를 뺀 것만으로는
+  # 부족하다. OS 환경 변수가 이 파일보다 우선하므로 `SERVER_ADDRESS`를 컨테이너에 전달하면
+  # 값이 뒤집힌다. app-run.sh가 그것을 전달하지 않는 것까지 AppRunScriptContractTest가 고정한다.
+  address: 127.0.0.1
+
 masiton:
   ai:
     youtube-webhook:

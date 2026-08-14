@@ -12,6 +12,9 @@ import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.env.YamlPropertySourceLoader;
+import org.springframework.core.env.PropertySource;
+import org.springframework.core.io.FileSystemResource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -29,6 +32,9 @@ class AppRunScriptContractTest {
             "src/main/java/com/masiton/security/infrastructure/configuration/SecurityConfiguration.java");
     private static final Path COMMON_PROFILE = Path.of("src/main/resources/application.yml");
     private static final Path PROD_PROFILE = Path.of("src/main/resources/application-prod.yml");
+    private static final Path HEALTH_METRICS_SCRIPT = Path.of("deploy/scripts/health-metrics.sh");
+
+    private static final String LOOPBACK = "127.0.0.1";
 
     private static final String CALLBACK_PATH = "/api/webhooks/youtube/channel-updates";
     private static final String GATE_DIRECTIVE = "auth_request /_verification/session;";
@@ -47,6 +53,10 @@ class AppRunScriptContractTest {
      * 다음 분기 라벨을 경계로 쓰면 분기 안에 중첩 {@code case}가 생기는 순간 조용히 잘린다.
      */
     private static final Pattern BACKEND_BRANCH = Pattern.compile("\\n\\s*backend\\)(.*?)\\n\\s*;;", Pattern.DOTALL);
+    private static final Pattern FRONTEND_BRANCH = Pattern.compile("\\n\\s*frontend\\)(.*?)\\n\\s*;;", Pattern.DOTALL);
+
+    /** 애플리케이션 포트 바인딩을 넓힐 수 있는 설정 이름. 운영 컨테이너에 전달하지 않는다. */
+    private static final Set<String> BINDING_WIDENING_ENV = Set.of("SERVER_ADDRESS", "SERVER_PORT");
 
     /** 실제로 컨테이너를 띄우는 명령. 이 범위 밖의 {@code -e}는 전달로 세지 않는다. */
     private static final Pattern DOCKER_RUN = Pattern.compile("exec\\s+/usr/bin/docker\\s+run\\b(.*)", Pattern.DOTALL);
@@ -443,6 +453,79 @@ class AppRunScriptContractTest {
     }
 
     /**
+     * 운영 애플리케이션 포트가 loopback에만 바인딩되고, 그 loopback으로 실제 도달하는
+     * 실행·프록시 조건이 함께 유지되는지 고정한다.
+     *
+     * 백엔드는 {@code --network host}로 실행되므로 {@code server.address}가 없으면 호스트의
+     * 모든 인터페이스에 붙는다. 8080을 여는 보안 그룹·방화벽 규칙 하나로 Nginx를 건너뛴
+     * 인터넷 직결이 성립하고, 인터넷에 공개하지 않기로 한 {@code /internal/**}까지 함께
+     * 노출된다(ADR-WEB-005 2절, ADR-WEB-003 6.5절 상태 확인 경로).
+     *
+     * YAML에서 placeholder를 뺀 것만으로는 부족하다. OS 환경 변수 property source가 패키징된
+     * 프로파일보다 우선하므로 {@code -e SERVER_ADDRESS=0.0.0.0} 하나로 값이 뒤집힌다. 바인딩을
+     * 넓히는 설정 이름이 컨테이너에 전달되지 않는 것까지 확인해야 ADR-WEB-005 3절의
+     * "{@code SERVER_ADDRESS}·{@code SERVER_PORT}를 전달하지 않는다"가 실제로 성립한다.
+     * 포트도 같은 이유로 함께 본다.
+     * 주소만 고정하고 {@code SERVER_PORT}로 포트가 바뀌면 Nginx upstream과 어긋난다.
+     *
+     * {@code PASSED_ENV}는 이 스크립트가 통일해 쓰는 {@code -e NAME} 형식만 뽑는다.
+     * {@code --env NAME}이나 {@code -eNAME}으로 바꿔 전달하면 이 단정을 통과한다. 전달 형식을
+     * 바꿀 때는 {@code PASSED_ENV}를 같이 넓힌다.
+     *
+     * 반대 방향의 회귀도 같이 막는다. 바인딩만 loopback으로 좁히고 실행 네트워크를 브리지로
+     * 바꾸거나 Nginx upstream·상태 지표 수집 대상을 다른 주소로 옮기면, 인터넷 차단은
+     * 유지되지만 정상 요청과 상태 확인이 전부 끊긴다. 각 지점을 한 테스트에서 대조한다.
+     */
+    @Test
+    @DisplayName("운영 애플리케이션 포트를 loopback에만 바인딩하고 Nginx·상태 지표가 같은 주소로 도달한다")
+    void 운영_애플리케이션포트를loopback에고정하고내부경로만도달시킨다() throws IOException {
+        // given
+        String script = Files.readString(APP_RUN_SCRIPT);
+        String backend = stripComments(backendBranch(script));
+        String frontend = stripComments(frontendBranch(script));
+        String site = Files.readString(NGINX_SITE);
+
+        // when
+        PropertySource<?> prod = loadProdProfile();
+        Set<String> backendEnv = names(PASSED_ENV, dockerRunCommand(backend));
+
+        // then
+        assertThat(prod.getProperty("server.address"))
+                .as("운영 프로파일이 바인딩 주소를 선언하지 않으면 호스트의 모든 인터페이스에 붙는다")
+                .isEqualTo(LOOPBACK);
+        assertThat(backendEnv)
+                .as("환경 변수는 프로파일보다 우선하므로 전달하면 YAML의 loopback 고정이 무효가 된다")
+                .doesNotContainAnyElementsOf(BINDING_WIDENING_ENV);
+
+        assertThat(dockerRunCommand(backend))
+                .as("host 네트워크가 아니면 컨테이너 안의 %s가 호스트 loopback과 달라 Nginx가 도달하지 못한다", LOOPBACK)
+                .contains("--network host");
+        assertThat(frontend)
+                .as("HOSTNAME이 없으면 Next.js standalone 서버는 모든 인터페이스에 붙는다")
+                .contains("export HOSTNAME=" + LOOPBACK);
+        assertThat(dockerRunCommand(frontend))
+                .as("HOSTNAME을 export만 하고 전달하지 않으면 컨테이너가 받지 못한다")
+                .contains("--network host")
+                .contains("-e HOSTNAME");
+
+        assertThat(site)
+                .as("Nginx upstream이 바인딩 주소·포트와 같아야 정상 요청이 통과한다")
+                .contains("server " + LOOPBACK + ":8080;")
+                .contains("server " + LOOPBACK + ":3000;");
+
+        assertThat(stripComments(Files.readString(HEALTH_METRICS_SCRIPT)))
+                .as("상태 지표 수집도 같은 loopback으로 호출해야 알람이 유지된다")
+                .contains("HEALTH_BASE:-http://" + LOOPBACK + ":8080");
+    }
+
+    private static PropertySource<?> loadProdProfile() throws IOException {
+        List<PropertySource<?>> sources =
+                new YamlPropertySourceLoader().load("application-prod.yml", new FileSystemResource(PROD_PROFILE));
+        assertThat(sources).as("운영 프로파일은 정확히 하나의 YAML 문서여야 한다").hasSize(1);
+        return sources.get(0);
+    }
+
+    /**
      * prod가 기본값과 함께 재선언한 키는 공통 계층 선언이 이기지 못하므로 요구 대상에서 뺀다.
      */
     private static Set<String> requiredEnvironmentNames(String common, String prod) {
@@ -612,9 +695,15 @@ class AppRunScriptContractTest {
         return matcher.group(1);
     }
 
+    private static String frontendBranch(String script) {
+        Matcher matcher = FRONTEND_BRANCH.matcher(script);
+        assertThat(matcher.find()).as("app-run.sh에서 frontend 분기를 찾지 못했다").isTrue();
+        return matcher.group(1);
+    }
+
     private static String dockerRunCommand(String branch) {
         Matcher matcher = DOCKER_RUN.matcher(branch);
-        assertThat(matcher.find()).as("backend 분기에서 docker run 명령을 찾지 못했다").isTrue();
+        assertThat(matcher.find()).as("분기에서 docker run 명령을 찾지 못했다").isTrue();
         return matcher.group(1);
     }
 
