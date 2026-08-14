@@ -16,6 +16,7 @@ import com.masiton.security.infrastructure.web.AdminClientAddressResolver;
 import org.mockito.ArgumentCaptor;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
@@ -113,6 +114,50 @@ class AdminAuthenticationControllerTest {
 
         assertThat(cookie)
                 .contains("Path=/api/admin/auth", "Max-Age=0", "HttpOnly", "Secure", "SameSite=Strict");
+        verify(logoutUseCase).logout("admin-id", "refresh");
+    }
+
+    @Test
+    @DisplayName("재발급은 Refresh Cookie 값을 use case에 전달하고 새 보안 Cookie를 발급한다")
+    void 재발급_성공_RefreshCookie를회전한다() {
+        when(refreshUseCase.refresh("refresh")).thenReturn(new AuthenticationResult("access", "rotated", 1800));
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setCookies(new jakarta.servlet.http.Cookie("masit_on_refresh", "refresh"));
+
+        String cookie = controller.refresh(request).getHeaders().getFirst("Set-Cookie");
+
+        assertThat(cookie).contains("masit_on_refresh=rotated", "Path=/api/admin/auth", "Max-Age=1209600");
+        verify(refreshUseCase).refresh("refresh");
+    }
+
+    @Test
+    @DisplayName("관리자 공개 Origin 설정은 HTTP(S) Origin 형식만 허용한다")
+    void 관리자공개Origin_잘못된형식_기동검증실패() {
+        SecurityProperties properties = new SecurityProperties();
+        properties.setPublicBaseUrl("https://admin.example/path");
+
+        assertThatIllegalStateException().isThrownBy(properties::validateAdminPublicBaseUrl);
+    }
+
+    @Test
+    @DisplayName("관리자 공개 Origin은 기본 포트를 정규화해 브라우저 Origin과 비교한다")
+    void 관리자공개Origin_기본포트_정규화한다() {
+        SecurityProperties properties = new SecurityProperties();
+        properties.setPublicBaseUrl("HTTPS://ADMIN.EXAMPLE:443");
+
+        properties.validateAdminPublicBaseUrl();
+
+        assertThat(properties.getPublicBaseUrl()).isEqualTo("https://admin.example");
+        assertThat(properties.isAllowedPublicOrigin("https://admin.example:443")).isTrue();
+    }
+
+    @Test
+    @DisplayName("관리자 공개 Origin은 빈 포트를 허용하지 않는다")
+    void 관리자공개Origin_빈포트_기동검증실패() {
+        SecurityProperties properties = new SecurityProperties();
+        properties.setPublicBaseUrl("https://admin.example:");
+
+        assertThatIllegalStateException().isThrownBy(properties::validateAdminPublicBaseUrl);
     }
 
     private static SecurityProperties securityProperties() {

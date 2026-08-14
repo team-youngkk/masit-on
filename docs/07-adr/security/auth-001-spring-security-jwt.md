@@ -50,7 +50,7 @@ Accepted
 
 ## 6. 결정
 
-Spring Security Filter Chain이 Bearer JWT의 RS256 서명, `iss=masit-on`, `aud=masit-on-admin-api`, 만료와 `ADMIN` 권한을 검증한다. 모든 서명 키에 `kid`를 부여하고 90일마다 새 검증 키 선배포, 새 키 발급 전환, Access Token 최대 수명 30분 경과 뒤 이전 개인 키 폐기 순서로 교체한다. Refresh Token은 Redis에 저장하고 `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/api/admin/auth` 쿠키로만 전달하며 재발급 때 회전한다.
+Spring Security Filter Chain이 Bearer JWT의 RS256 서명, `iss=masit-on`, `aud=masit-on-admin-api`, 만료와 `ADMIN` 권한을 검증한다. 모든 서명 키에 `kid`를 부여하고 90일마다 새 검증 키 선배포, 새 키 발급 전환, Access Token 최대 수명 30분 경과 뒤 이전 개인 키 폐기 순서로 교체한다. Refresh Token은 Redis에 저장하고 `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/api/admin/auth` 쿠키로만 전달하며 재발급 때 회전한다. 쿠키를 사용하는 재발급·로그아웃은 `ADMIN_PUBLIC_BASE_URL`의 단일 관리자 화면 Origin과 정확히 일치하는 `Origin`을 요구하고, 누락·불일치는 Bearer·Refresh Token 처리 전에 `403 FORBIDDEN`으로 거부한다.
 
 Access Token 만료는 30분, Refresh Token TTL은 14일로 하며 재발급마다 회전하고 재사용을 탐지해 즉시 폐기한다. Redis 장애로 Refresh Token 조회가 불가능한 경우 재발급을 차단하는 fail-closed로 처리하여 Access Token 만료 후 관리자 재로그인을 요구한다.
 
@@ -68,7 +68,7 @@ Access Token 만료는 30분, Refresh Token TTL은 14일로 하며 재발급마�
 
 ## 10. 강제 규칙
 
-Access Token은 메모리에만 유지해 Bearer 헤더로 보내고 JWT claim은 최소화한다. Refresh Token은 JavaScript에 노출하지 않고 회전·재사용 탐지를 수행한다. 로그인 실패는 Redis 카운터에 첫 실패부터 15분 TTL을 적용하고 5회 실패 시 남은 TTL 동안 차단하며 성공 시 초기화한다.
+Access Token은 메모리에만 유지해 Bearer 헤더로 보내고 JWT claim은 최소화한다. Refresh Token은 JavaScript에 노출하지 않고 회전·재사용 탐지를 수행한다. `SameSite=Strict`, `Secure`, `HttpOnly`, cookie path와 Origin 검사는 서로 다른 계층의 보조 방어선으로 유지한다. 로그인 실패는 Redis 카운터에 첫 실패부터 15분 TTL을 적용하고 5회 실패 시 남은 TTL 동안 차단하며 성공 시 초기화한다.
 
 ## 11. 금지 사항
 
@@ -80,7 +80,7 @@ JWT 서명 키 보호·90일 교체, Redis 가용성, Token 회전·폐기·로�
 
 ## 13. 검증 방법
 
-정상·만료·변조·잘못된 issuer/audience JWT, 권한 없음, 로그인·재발급 matcher 예외, Refresh 회전·재사용·로그아웃과 비밀정보 로그 검사를 자동화한다.
+정상·만료·변조·잘못된 issuer/audience JWT, 권한 없음, 로그인·재발급 matcher 예외, 허용·누락·불허 Origin, Origin 차단의 필터 순서, Refresh 회전·재사용·로그아웃과 비밀정보 로그 검사를 자동화한다.
 
 ## 14. 재검토 조건
 

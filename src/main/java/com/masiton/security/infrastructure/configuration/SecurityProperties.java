@@ -1,8 +1,11 @@
 package com.masiton.security.infrastructure.configuration;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -19,6 +22,7 @@ public class SecurityProperties {
     private boolean secure = true;
     private String sameSite = "Strict";
     private String path = "/api/admin/auth";
+    private String publicBaseUrl = "http://localhost:3000";
     private final Member member = new Member();
     private final LoginFailure loginFailure = new LoginFailure();
 
@@ -66,6 +70,14 @@ public class SecurityProperties {
         this.path = path;
     }
 
+    public String getPublicBaseUrl() {
+        return publicBaseUrl;
+    }
+
+    public void setPublicBaseUrl(String publicBaseUrl) {
+        this.publicBaseUrl = publicBaseUrl;
+    }
+
     public LoginFailure getLoginFailure() {
         return loginFailure;
     }
@@ -77,6 +89,53 @@ public class SecurityProperties {
     @PostConstruct
     public void validateLoginFailureProxyBoundary() {
         loginFailure.validateProxyBoundary();
+        validateAdminPublicBaseUrl();
+    }
+
+    public void validateAdminPublicBaseUrl() {
+        try {
+            publicBaseUrl = canonicalOrigin(publicBaseUrl);
+        } catch (IllegalArgumentException exception) {
+            throw new IllegalStateException("Admin public base URL must be an HTTP(S) origin", exception);
+        }
+    }
+
+    public boolean isAllowedPublicOrigin(String candidate) {
+        try {
+            return publicBaseUrl.equals(canonicalOrigin(candidate));
+        } catch (IllegalArgumentException exception) {
+            return false;
+        }
+    }
+
+    private String canonicalOrigin(String value) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("Admin public base URL must be present");
+        }
+        URI origin = URI.create(value);
+        String scheme = origin.getScheme() == null ? null : origin.getScheme().toLowerCase(Locale.ROOT);
+        boolean validScheme = "http".equals(scheme) || "https".equals(scheme);
+        String rawAuthority = origin.getRawAuthority();
+        int port = origin.getPort();
+        boolean hasOnlyOriginComponents = origin.getRawUserInfo() == null
+                && (origin.getRawPath() == null || origin.getRawPath().isEmpty())
+                && origin.getRawQuery() == null
+                && origin.getRawFragment() == null;
+        boolean validPort = port >= -1 && port <= 65535
+                && rawAuthority != null
+                && !rawAuthority.endsWith(":");
+        if (!validScheme || origin.getHost() == null || !hasOnlyOriginComponents || !validPort) {
+            throw new IllegalArgumentException("Admin public base URL must be an HTTP(S) origin");
+        }
+        if (("http".equals(scheme) && port == 80) || ("https".equals(scheme) && port == 443)) {
+            port = -1;
+        }
+        try {
+            return new URI(scheme, null, origin.getHost().toLowerCase(Locale.ROOT), port, null, null, null)
+                    .toASCIIString();
+        } catch (URISyntaxException exception) {
+            throw new IllegalArgumentException("Admin public base URL must be an HTTP(S) origin", exception);
+        }
     }
 
     public static class Jwt {

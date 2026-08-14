@@ -38,7 +38,7 @@ related_documents:
 - Authorization 헤더가 없거나, 회원 Token이 만료·변조·폐기·잘못된 audience인 경우에는 회원 principal을 만들지 않고 익명 공개 조회로 계속한다.
 - 회원 계정 상태·폐기 표식 조회 또는 최근 기록 저장소에 장애가 나도 공개 상세의 정상 `200` 응답을 인증·개인화 오류로 바꾸지 않으며 최근 기록만 생략한다.
 - 이 예외는 위 한 공개 상세 경로에만 적용한다. `/api/me/**`, 회원 로그아웃과 그 밖의 회원 보호 경로는 기존 `401`/`503` fail-closed 규칙을 그대로 적용한다.
-- 재발급·로그아웃: HTTPS 동일 Origin의 `Origin` 검증과 배포 Origin allowlist 적용
+- 회원·관리자 Refresh 쿠키를 사용하는 재발급·로그아웃: HTTPS 동일 Origin의 `Origin` 검증과 배포 Origin allowlist 적용. Origin 누락·불일치는 `403 FORBIDDEN`이며 Token 회전·폐기를 시작하지 않는다.
 
 Redis 장애 중 로그인·재발급은 fail-closed다. 로그아웃은 서버 폐기를 확인한 경우에만 성공한다. 세부 요청·응답과 오류는 [회원 계정·인증 API](../account/member-authentication-api.md)를 따른다.
 

@@ -94,6 +94,7 @@ related_documents:
 - Method: `POST`
 - Path: `/api/admin/auth/tokens/refresh`
 - 인증: Refresh Token 보안 쿠키 필수
+- 요청 출처: `Origin` 헤더가 운영 allowlist의 관리자 화면 Origin과 정확히 일치해야 한다. 헤더가 없거나 불일치하면 `403 FORBIDDEN`이며 Refresh Token을 읽거나 회전하지 않는다.
 
 Redis에 저장된 활성 Token과 일치하고 계정이 활성 상태면 기존 Refresh Token을 폐기·회전하고 로그인과 같은 Access Token 응답과 새 보안 쿠키를 반환한다. 누락·만료·불일치·재사용·폐기 Token은 `401`이며 해당 토큰 계열을 폐기한다.
 
@@ -104,8 +105,11 @@ Redis에 저장된 활성 Token과 일치하고 계정이 활성 상태면 기�
 - Method: `DELETE`
 - Path: `/api/admin/auth/tokens`
 - 인증: JWT Access Token과 Refresh Token 보안 쿠키
+- 요청 출처: `Origin` 헤더가 운영 allowlist의 관리자 화면 Origin과 정확히 일치해야 한다. 헤더가 없거나 불일치하면 `403 FORBIDDEN`이며 Refresh Token을 읽거나 폐기하지 않는다.
 
 성공 시 Redis의 현재 Refresh Token을 폐기하고 쿠키를 만료시키며 `204 No Content`를 반환한다. 이미 만료된 Access Token은 자체 만료 전까지 별도 차단 목록 없이 유효할 수 있으므로 만료 시간은 보안 요구에 맞춰 짧게 결정한다.
+
+`Origin` 검사는 쿠키 기반 요청의 보조 CSRF 방어선이다. 쿠키의 `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/api/admin/auth` 설정은 유지하며, 전역 Spring Security CSRF 토큰을 활성화하거나 로그인·Bearer 전용 관리자 API에 Origin 검사를 확장하지 않는다. 브라우저가 아닌 운영 점검 요청도 `Origin`을 명시하지 않으면 같은 `403 FORBIDDEN` 정책을 적용한다.
 
 ## 7. 관리자 등록 API 적용
 
