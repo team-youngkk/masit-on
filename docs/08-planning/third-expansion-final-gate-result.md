@@ -23,6 +23,7 @@ related_documents:
   - ../05-specs/data/data-traceability.md
   - ../07-adr/adr-traceability.md
   - ../07-adr/quality/perf-001-k6-load-testing.md
+  - ../07-adr/quality/perf-002-operational-participant-load-testing.md
 ---
 
 # 맛잇온 3차 확장 최종 게이트 판정
@@ -73,7 +74,7 @@ related_documents:
 | 보안·개인정보·로그 | `TST-E3-SEC-001`, Critical 0건 | `PASS` (자동화 범위; 운영 증거는 `HOLD`) | E3 보안·AI·운영 설정 회귀 테스트 |
 | AI 품질 | Release holdout 24건 실제 실행·인간 판정·Critical 0건 | `HOLD` | [AI 평가 보류 기록](third-expansion-ai-evaluation-result.md) |
 | 브라우저·접근성 | E3-T12 전체 여정과 지원 환경 증거 | `HOLD` | [브라우저 검증 기록](third-expansion-browser-verification.md) |
-| 자연어·코스 성능 | `TST-E3-PERF-001`, 정상 50/20·최대 200/80 | `HOLD` | 시나리오 준비, 운영 동급 실측 미실행 |
+| 자연어·코스 성능 | `TST-E3-PERF-001`, 정상 50/20·최대 200/80 | `HOLD` | 표준 측정 전용 환경은 미실행. 운영 직접 관찰은 [#190 결과](issue-190-operational-performance-result.md)에 기록 |
 | 좌표 보강률 | 운영 ACTIVE·공개 맛집 읽기 전용 집계·조치·재측정 | `HOLD` | 운영 DB 읽기 전용 측정 미실행 |
 | Worker·Gemini 운영 | 단일 EC2 자원·backlog·재기동·quota | `HOLD` | 운영 계정·환경 측정 미실행 |
 | Mobility 운영 | 계정·quota·호출·timeout·비용 hard stop | `HOLD` | 운영 계정·환경 측정 미실행 |
@@ -100,7 +101,7 @@ related_documents:
 - `.github/workflows/performance.yml`은 기존 `workflow_dispatch` 전용을 유지하며 공개 조회·자연어·코스 시나리오별 결과 artifact를 분리한다. 실행 전 `third-expansion-evidence-manifest.txt`의 파일별 SHA-256과 aggregate를 검증한다.
 - 로컬 k6 inspect와 JavaScript 구문 검사, `git diff --check`는 통과했다.
 
-실제 판정에는 ADR-PERF-001에 따라 측정 전용 EC2·RDS, 초기 기준 데이터, WireMock Stub, k6 v2.1.0이 필요하다. 현재 실행 결과 JSON·수치·artifact는 없으므로 성능 통과로 기록하지 않는다.
+기본 판정에는 ADR-PERF-001에 따른 측정 전용 EC2·RDS, 초기 기준 데이터, WireMock Stub, k6 v2.1.0이 필요하다. 이슈 #190에는 ADR-PERF-002에 따라 검증 참여자 전용 운영 fixture와 운영 인스턴스 직접 측정을 적용할 수 있지만, 이는 운영 회귀·용량 관찰 증거이며 기준 데이터 규모에 대한 독립 성능 인증으로 해석하지 않는다. #190 운영 직접 관찰의 실행 수치와 결과 JSON SHA-256은 [운영 검증 결과 문서](issue-190-operational-performance-result.md)에 기록했으며, 표준 PERF-001 성능 통과로 승격하지 않는다.
 
 ## 4. 남은 조건
 
@@ -113,7 +114,7 @@ related_documents:
 3. 측정 전용 환경에서 자연어와 기존 공개 조회를 정상 `50/20`, 최대 `200/80`으로 실행한다. 코스는 Kakao Mobility production monthly quota `1,000`과 requests-per-second 기본값 `20`을 전제로 별도 quota-safe 실행을 한다. 실행 전에 KST 기준 현재 `YearMonth`의 Redis quota 키(`restaurant:course-route:quota:<YearMonth>`)를 읽기 전용으로 확인하고, 그 키를 권위 있는 사용량 기준으로 삼아 `남은 quota >= preflight·warmup·measured 실행 예산`일 때만 시작한다. `masiton.restaurant.course.route.monthly.quota.usage`·`masiton.restaurant.course.route.monthly.quota.remaining` 지표는 해당 Redis 키와 대조한 경우에만 보조 증거로 사용한다. 월별 키는 `YearMonth`로 누적되며 provider 호출 전에 permit을 소비하므로, 이후 timeout·429·5xx가 발생한 요청과 같은 달의 재시도·재실행·다른 트래픽도 잔여량을 차감한다. 잔여량이 부족하면 월별 quota 키를 임의로 초기화하지 말고, quota 키가 격리된 측정 전용 환경에서만 실행하거나 다음 달로 연기한다. 실행마다 시작·종료 사용량, 잔여량, 실제 요청 예산과 재실행 여부를 기록한다. preflight·warmup·measured 합계는 quota 미만이어야 하고, 코스 max 프로필도 provider 제한을 넘지 않는 별도 요청률을 사용하므로 `80 RPS` 전체 코스 부하의 증거로 해석하지 않는다. 코스에서 provider 차단·429 rate-limit 응답이 발생하면 성능 통과가 아니라 운영 선행조건 미충족으로 판정한다. threshold를 낮추거나 운영 인스턴스에 직접 부하를 걸지 않는다.
 4. 운영 DB에서 ACTIVE·공개 맛집의 좌표 보유율을 읽기 전용으로 집계하고, 부족하면 좌표 소유 Workstream의 조치 후 동일 쿼리로 재측정한다.
 5. 단일 EC2 Worker의 CPU·메모리·DB·backlog·처리시간·재기동과 Gemini/Mobility quota·비용 hard stop 증거를 비밀정보 없이 기록한다.
-6. 위 결과의 실행 커밋·명령·환경·artifact 식별자를 제품·API·데이터·ADR 추적표와 연결한다. 현재는 k6 `inspect`·JavaScript 구문/차이 검토만 수행했으며 실제 setup/request 실행 결과는 없으므로 성능 통과로 기록하지 않는다.
+6. 위 결과의 실행 커밋·명령·환경·artifact 식별자를 제품·API·데이터·ADR 추적표와 연결한다. #190 운영 직접 관찰은 실행 커밋·SSM 명령·summary SHA-256과 함께 [결과 문서](issue-190-operational-performance-result.md)에 연결했지만, 표준 PERF-001 측정 전용 환경 결과가 아니므로 성능 통과로 기록하지 않는다.
 
 ## 5. 활성화 판정
 
@@ -128,7 +129,7 @@ related_documents:
   맛집 코스 추천: GO (증거 수집 목적, quota·결제 미연결 확인 선행)
 
 일반 공개(v1.0.0)
-  자연어 검색:    HOLD (운영 동급 성능 미실행)
+  자연어 검색:    HOLD (표준 측정 전용 환경 미실행; 운영 직접 관찰은 rate-limit 충돌로 BLOCKED, 후속 [#207](https://github.com/team-youngkk/masit-on/issues/207))
   AI 영상 추출:   HOLD (Release holdout·인간 판정 미완료)
   맛집 코스 추천: HOLD (Mobility 운영 quota·좌표·성능 미검증)
   3차 확장 전체:  HOLD
