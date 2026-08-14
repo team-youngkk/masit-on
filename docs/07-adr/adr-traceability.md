@@ -124,7 +124,7 @@ related_documents:
 | GitHub Actions OIDC | M2부터 적용 | Accepted ADR | [ADR-SEC-001](security/sec-001-secrets-workload-identity.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | CI의 단기 AWS 자격 증명 |
 | Docker | 확정 | Accepted ADR | [ADR-RUNTIME-001](platform/runtime-001-docker.md) | 재현 가능한 실행·배포 산출물 |
 | GitHub Actions 빌드·테스트 | 확정 | Accepted ADR | [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md) | 배포 후보 품질 게이트 |
-| Nginx | 경로 경계 결정 완료 (2026-07-27) | Accepted ADR | [ADR-WEB-003](platform/web-003-routing-boundary.md), [ADR-RUNTIME-001](platform/runtime-001-docker.md) | `/api/**`는 Spring Boot, 나머지 외부 경로는 Next.js, `/internal/**`은 외부 차단 |
+| Nginx | 경로 경계 결정 완료 (2026-07-27), 포트 바인딩만 2026-08-14 대체 | Superseded ADR (경로 라우팅 유지) | [ADR-WEB-003](platform/web-003-routing-boundary.md), [ADR-WEB-005](platform/web-005-application-port-binding.md), [ADR-RUNTIME-001](platform/runtime-001-docker.md) | `/api/**`는 Spring Boot, 나머지 외부 경로는 Next.js, `/internal/**`은 외부 차단. 경로 라우팅은 ADR-WEB-003 본문을 계속 참조하고 애플리케이션 포트 바인딩은 ADR-WEB-005가 소유한다 |
 | 운영 애플리케이션 포트 loopback 바인딩 | 확정 (2026-08-14) | Accepted ADR | [ADR-WEB-005](platform/web-005-application-port-binding.md), [ADR-RUNTIME-001](platform/runtime-001-docker.md) | Nginx 우회 직결과 `/internal/**` 노출을 네트워크 계층에서 차단 |
 | 검증 참여자 제한 공개 | 쿠키 세션 전환 확정 (2026-08-03) | Accepted ADR | [ADR-DEPLOY-003](platform/deploy-003-validation-cookie-session.md) | Basic Auth를 제거하고 7일 HttpOnly 쿠키·Redis 세션·Nginx `auth_request` 사용; 정식 공개 시 전체 제거 |
 | Amazon ECR·EC2 | 기술 선택 확정, 초기 운영 배포부터 적용 | Accepted ADR | [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | M2부터 단일 EC2에 배포하고 확장 단계별 변경 반영 |

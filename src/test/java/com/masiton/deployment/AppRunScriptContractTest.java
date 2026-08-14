@@ -198,12 +198,13 @@ class AppRunScriptContractTest {
      * 백엔드는 {@code --network host}로 실행되므로 {@code server.address}가 없으면 호스트의
      * 모든 인터페이스에 붙는다. 8080을 여는 보안 그룹·방화벽 규칙 하나로 Nginx를 건너뛴
      * 인터넷 직결이 성립하고, 인터넷에 공개하지 않기로 한 {@code /internal/**}까지 함께
-     * 노출된다(ADR-WEB-003 6.1·6.5절).
+     * 노출된다(ADR-WEB-005 2절, ADR-WEB-003 6.5절 상태 확인 경로).
      *
      * YAML에서 placeholder를 뺀 것만으로는 부족하다. OS 환경 변수 property source가 패키징된
      * 프로파일보다 우선하므로 {@code -e SERVER_ADDRESS=0.0.0.0} 하나로 값이 뒤집힌다. 바인딩을
-     * 넓히는 설정 이름이 컨테이너에 전달되지 않는 것까지 확인해야 ADR-WEB-003 10절의 "환경
-     * 변수로 넓힐 수 있게 두지 않는다"가 실제로 성립한다. 포트도 같은 이유로 함께 본다.
+     * 넓히는 설정 이름이 컨테이너에 전달되지 않는 것까지 확인해야 ADR-WEB-005 3절의
+     * "{@code SERVER_ADDRESS}·{@code SERVER_PORT}를 전달하지 않는다"가 실제로 성립한다.
+     * 포트도 같은 이유로 함께 본다.
      * 주소만 고정하고 {@code SERVER_PORT}로 포트가 바뀌면 Nginx upstream과 어긋난다.
      *
      * {@code PASSED_ENV}는 이 스크립트가 통일해 쓰는 {@code -e NAME} 형식만 뽑는다.

@@ -4,6 +4,7 @@ verification_status: pending_deployment
 issue: 200
 related_documents:
   - ../06-architecture/security-boundary.md
+  - ../07-adr/platform/web-005-application-port-binding.md
   - ../07-adr/platform/web-003-routing-boundary.md
   - ../07-adr/platform/runtime-001-docker.md
   - m2-provisioning-record.md
@@ -14,6 +15,8 @@ related_documents:
 ## 1. 문서 목적
 
 운영 EC2에서 Spring Boot와 Next.js 애플리케이션 포트를 인터넷에서 도달할 수 없게 만드는 경계가 어떤 계층으로 구성되는지, 그리고 배포 후 그 경계를 어떤 명령으로 확인하는지 기록한다. 이슈 [#200](https://github.com/team-youngkk/masit-on/issues/200)의 결과 문서다.
+
+결정은 [ADR-WEB-005 운영 애플리케이션 포트 loopback 바인딩](../07-adr/platform/web-005-application-port-binding.md)이 소유하고, 이 문서는 그 결정의 경계 구성과 배포 후 확인 절차를 기록한다.
 
 이 저장소는 공개되어 있다. Elastic IP, 보안 그룹 ID, 작업자 공인 IP는 `<...>` 자리표시자로 마스킹한다. 실제 값은 AWS 콘솔에서 확인한다([운영 프로비저닝 기록](m2-provisioning-record.md) 1절과 같은 규칙이다).
 
@@ -48,7 +51,7 @@ related_documents:
 
 Redis만 방식이 다르다. 애플리케이션 두 개는 `--network host`라 프로세스 바인딩 자체를 좁혀야 하지만, Redis는 브리지 네트워크에서 `--publish 127.0.0.1:6379:6379`로 실행되므로 [redis.conf](../../deploy/redis/redis.conf)의 `bind 0.0.0.0`은 컨테이너 내부 인터페이스를 뜻하고 호스트 밖으로 나가는 경로는 loopback 하나다.
 
-`server.address`에는 환경 변수 placeholder를 두지 않는다. 이 값을 넓히는 것은 설정 실수로 일어날 일이 아니라 경계 변경이므로 ADR-WEB-003과 함께 바꿔야 한다.
+`server.address`에는 환경 변수 placeholder를 두지 않는다. 이 값을 넓히는 것은 설정 실수로 일어날 일이 아니라 경계 변경이므로 [ADR-WEB-005](../07-adr/platform/web-005-application-port-binding.md)와 함께 바꿔야 한다.
 
 **`server.address` 하나로 `/internal/**`까지 덮이는 것은 상태 확인이 애플리케이션 커넥터에 같이 올라가 있기 때문이다.** 공통 계층이 Actuator를 `base-path: /internal`로 두고 `management.server.port`를 선언하지 않으므로 listener가 하나뿐이다([application.yml](../../src/main/resources/application.yml)). 관리 포트를 분리하면 `server.address`가 그 listener를 덮지 않아 `/internal/**`이 다시 전 인터페이스에 열린다. 관리 포트를 도입하려면 `management.server.address`도 같이 loopback으로 고정한다.
 
