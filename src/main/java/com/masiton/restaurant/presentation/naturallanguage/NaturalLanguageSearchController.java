@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Set;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,7 +28,7 @@ public class NaturalLanguageSearchController {
 
     public NaturalLanguageSearchController(
             NaturalLanguageSearchService service,
-            ClientAddressResolver clientAddressResolver
+            @Qualifier("mapClientAddressResolver") ClientAddressResolver clientAddressResolver
     ) {
         this.service = service;
         this.clientAddressResolver = clientAddressResolver;

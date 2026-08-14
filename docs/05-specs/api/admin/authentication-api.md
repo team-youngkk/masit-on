@@ -85,7 +85,7 @@ related_documents:
 | `tokenType` | string | 예 | `Bearer` |
 | `expiresInSeconds` | integer | 예 | 확정된 Access Token 잔여 만료 시간 |
 
-자격 증명이 틀리거나 계정이 유효하지 않으면 원인을 구분하지 않고 `401`을 반환한다. 같은 로그인 ID 또는 네트워크 출처의 반복 실패 제한은 기존 15분 내 5회 기준을 유지한다.
+자격 증명이 틀리거나 계정이 유효하지 않으면 원인을 구분하지 않고 `401`을 반환한다. `login-id` 또는 `source` 버킷의 반복 실패 제한은 기존 15분 내 5회 기준을 유지하며, `source` 결정은 아래 확정 사항을 따른다.
 
 ## 5. 토큰 재발급
 
@@ -130,7 +130,7 @@ Spring Security Filter Chain은 HTTP Method와 세부 경로를 먼저 매칭한
 - 새 공개 키를 검증 키 목록에 먼저 배포한 뒤 새 `kid`로 발급하고, 기존 Access Token 최대 수명 30분이 지난 후 이전 개인 키를 폐기한다. 정기 교체 주기는 90일이다.
 - Refresh Token은 `auth:refresh:{adminId}`에 SHA-256 Token 해시, Token 계열 ID, 발급·만료 시각을 JSON으로 저장하며 Redis TTL 14일을 적용한다.
 - 회전·재사용 탐지와 계정당 단일 활성 Token 보장은 Redis 원자 연산으로 처리한다. 만료 데이터는 TTL로 정리하고 별도 주기 삭제 작업을 두지 않는다.
-- 로그인 실패는 `auth:login-failure:login-id:{loginIdHash}`와 `auth:login-failure:source:{sourceHash}` 카운터에 첫 실패부터 15분 TTL을 적용한다. 둘 중 하나가 5회 이상이면 남은 TTL 동안 로그인을 차단하고 성공 시 두 카운터를 삭제한다. `source`는 신뢰 프록시 설정이 없는 현재 MVP에서 연결 원격 주소를 사용하며, 조작 가능한 전달 헤더는 신뢰하지 않는다.
+- 로그인 실패는 `auth:login-failure:login-id:{loginIdHash}`와 `auth:login-failure:source:{sourceHash}` 카운터에 첫 실패부터 15분 TTL을 적용한다. 둘 중 하나가 5회 이상이면 남은 TTL 동안 로그인을 차단하고 성공 시 두 카운터를 삭제한다. `source`는 다음 규칙으로 결정한다. Reverse proxy가 활성화된 환경에서는 Nginx가 외부 요청의 `X-Forwarded-For`를 `$remote_addr`로 덮어써 단일 값으로 전달한다. Spring은 요청 peer가 설정된 trusted proxy peer 목록에 포함될 때만 단일 `X-Forwarded-For` 값을 해석한다. 요청 peer가 목록에 없거나 전달 헤더가 없거나 형식이 잘못되었거나 단일 값이 아니면 요청 피어의 원격 주소(peer remote address)로 fallback한다. Reverse proxy가 활성화되었는데 trusted proxy peer 목록이 비어 있으면 애플리케이션은 시작 시 fail-fast한다.
 
 ## 9. 관리자 계정 운영 절차
 
@@ -139,4 +139,3 @@ Spring Security Filter Chain은 HTTP Method와 세부 경로를 먼저 매칭한
 - 비밀번호 재설정: 본인 확인 뒤 운영 명령으로 임시 비밀번호를 발급하고 기존 Refresh Token을 폐기한다.
 - 모든 명령은 작업자, 대상 관리자 ID, 작업 종류, 성공 여부와 traceId를 감사 로그에 남기되 비밀번호·Token 원문은 기록하지 않는다.
 - 서비스 회원가입, 계정 관리와 비밀번호 복구 API·화면은 MVP에 포함하지 않는다.
-
