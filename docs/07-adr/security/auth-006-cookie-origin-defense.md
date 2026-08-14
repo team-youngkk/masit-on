@@ -18,9 +18,6 @@ related_documents:
   - auth-001-spring-security-jwt.md
   - auth-002-member-jwt-refresh-token.md
   - ../platform/web-003-routing-boundary.md
-supersedes:
-  - auth-001-spring-security-jwt.md
-superseded_by: null
 ---
 
 # ADR-AUTH-006 쿠키 기반 Refresh·Logout Origin 방어

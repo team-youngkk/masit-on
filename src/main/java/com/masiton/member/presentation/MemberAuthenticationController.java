@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
 import com.masiton.common.web.ErrorResponse;
+import com.masiton.common.web.OriginCanonicalizer;
 import com.masiton.common.web.TrustedOriginResolver;
 import com.masiton.common.observability.TraceIdFilter;
 import com.masiton.common.security.MemberCookieSettings;
@@ -144,7 +145,7 @@ public class MemberAuthenticationController {
 
     private void requireTrustedOrigin(HttpServletRequest request) {
         if (TrustedOriginResolver.resolveSingleOrigin(request)
-                .filter(cookieSettings.publicBaseUrl()::equals)
+                .filter(origin -> OriginCanonicalizer.matches(origin, cookieSettings.publicBaseUrl()))
                 .isEmpty()) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }

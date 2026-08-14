@@ -20,8 +20,8 @@ related_documents:
   - ../platform/web-003-routing-boundary.md
   - ../../02-analysis/mvp-workstreams.md
   - ../../06-architecture/technology-policy.md
+  - auth-006-cookie-origin-defense.md
 supersedes: []
-superseded_by: auth-006-cookie-origin-defense.md
 ---
 
 # ADR-AUTH-001 관리자 Spring Security JWT 인증·인가

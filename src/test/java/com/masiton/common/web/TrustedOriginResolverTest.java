@@ -36,4 +36,25 @@ class TrustedOriginResolverTest {
         assertThat(TrustedOriginResolver.resolveSingleOrigin(request))
                 .isEmpty();
     }
+
+    @Test
+    @DisplayName("Origin은 스킴·호스트를 소문자로 바꾸고 기본 포트를 제거한다")
+    void origin_대소문자와기본포트_정규화() {
+        assertThat(OriginCanonicalizer.canonicalize("HTTPS://EXAMPLE.TEST:443"))
+                .isEqualTo("https://example.test");
+    }
+
+    @Test
+    @DisplayName("동등한 canonical Origin은 서로 일치한다")
+    void origin_동등한canonicalOrigin_일치() {
+        assertThat(OriginCanonicalizer.matches("https://example.test", "HTTPS://EXAMPLE.TEST:443"))
+                .isTrue();
+    }
+
+    @Test
+    @DisplayName("경로가 포함된 값은 Origin으로 인정하지 않는다")
+    void origin_경로포함_불일치() {
+        assertThat(OriginCanonicalizer.matches("https://example.test/path", "https://example.test"))
+                .isFalse();
+    }
 }
