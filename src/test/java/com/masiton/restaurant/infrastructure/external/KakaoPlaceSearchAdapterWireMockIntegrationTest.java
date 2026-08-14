@@ -109,6 +109,20 @@ class KakaoPlaceSearchAdapterWireMockIntegrationTest {
     }
 
     @Test
+    @DisplayName("path가 없는 카카오 장소 링크는 결과에서 제외한다")
+    void 검색_장소링크path없음_결과에서제외한다() throws Exception {
+        stubKeywordSearch(200, Map.of("documents", List.of(Map.of(
+                "place_name", "아코",
+                "place_url", "https://place.map.kakao.com",
+                "road_address_name", "서울특별시 강동구 성내동 12-38",
+                "phone", "02-000-0000"))));
+
+        List<PlaceSearchCandidate> results = adapter().search("아코");
+
+        assertThat(results).isEmpty();
+    }
+
+    @Test
     @DisplayName("카카오 장소 host가 아닌 링크는 결과에서 제외한다")
     void 검색_다른host링크_결과에서제외한다() throws Exception {
         stubKeywordSearch(200, Map.of("documents", List.of(Map.of(

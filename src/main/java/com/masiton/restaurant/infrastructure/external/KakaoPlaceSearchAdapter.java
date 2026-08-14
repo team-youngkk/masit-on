@@ -168,7 +168,11 @@ class KakaoPlaceSearchAdapter implements PlaceSearchPort {
             if (port != -1 && port != defaultPort(scheme)) {
                 return Optional.empty();
             }
-            return Optional.of(new URI("https", null, host, -1, uri.getPath(), uri.getQuery(), uri.getFragment())
+            String path = uri.getPath();
+            if (path == null || path.isBlank()) {
+                return Optional.empty();
+            }
+            return Optional.of(new URI("https", null, host, -1, path, uri.getQuery(), uri.getFragment())
                     .toString());
         } catch (IllegalArgumentException | URISyntaxException exception) {
             return Optional.empty();

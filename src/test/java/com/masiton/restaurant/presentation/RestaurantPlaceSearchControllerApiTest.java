@@ -76,6 +76,16 @@ class RestaurantPlaceSearchControllerApiTest {
     }
 
     @Test
+    @DisplayName("요청 본문이 null이면 400 INVALID_REQUEST를 반환한다")
+    void 검색_요청본문null_400을반환한다() throws Exception {
+        mockMvc.perform(post("/api/admin/restaurant-place-searches")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("null"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+    }
+
+    @Test
     @DisplayName("name 길이를 넘으면 400 INVALID_FIELD_VALUE를 반환한다")
     void 검색_name길이위반_400을반환한다() throws Exception {
         when(searchAdminPlaceCandidatesUseCase.search(any()))
