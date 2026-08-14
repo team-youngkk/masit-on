@@ -76,7 +76,7 @@ JSON `null` 지적의 NPE/500 가정은 현재 Spring MVC 동작에는 해당하
 |---|---:|---|---:|---|---|
 | path 없는 Kakao 문서의 후보 반환 수 | 1건 | WireMock 문서 1건 입력 후 검색 결과 크기 | 0건 | 등록 불가 후보 노출 제거 | `tjdgns0618`, PR #209 검증 시점 |
 | JSON `null` 요청의 500 응답 수 | 0건 | MockMvc JSON `null` 요청 1회 | 0건 | 기존 400 경계 유지, 회귀 테스트 추가 | `tjdgns0618`, PR #209 검증 시점 |
-| 미해결 리뷰 스레드 | 2건 | GitHub review thread GraphQL 조회 | 0건 목표 | 답글·해결 처리 후 확인 | `tjdgns0618`, PR #209 리뷰 반영 시점 |
+| 미해결 리뷰 스레드 | 2건 | GitHub review thread GraphQL 조회 | 0건 | 2건 모두 원래 스레드에 답글을 남기고 해결 처리 | `tjdgns0618`, PR #209 리뷰 반영 시점 |
 
 ## 10. 남은 사항
 
