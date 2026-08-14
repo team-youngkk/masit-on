@@ -31,6 +31,7 @@ related_documents:
 | [공개 API smoke의 3xx false green](https://github.com/team-youngkk/masit-on/pull/206#discussion_r3782020737) | 공개 API가 로그인 redirect를 반환해도 smoke가 통과하는 문제 수정 | 배포 | 수정 필요 | 공통 API 라우팅 실패 판정에 모든 3xx를 추가하고 정적 계약 테스트로 고정 | `AppRunScriptContractTest`, `bash -n` 통과 |
 | [Accepted ADR과 공개 범위 불일치](https://github.com/team-youngkk/masit-on/pull/206#discussion_r3782022095) | Issue #197의 공개 API gate 제외 결정과 상위 ADR 동기화 | 기타(계약 문서 정합성) | 수정 필요 | 후속 ADR-DEPLOY-004에 결정·조건·트레이드오프·검증을 정의 | 상충 문구 제거, 문서 링크·diff 검사 통과 |
 | [Accepted ADR 대체 절차 누락](https://github.com/team-youngkk/masit-on/pull/206#discussion_r3782123250) | 기존 Accepted ADR 결론을 직접 수정하지 말고 새 ADR과 인덱스·추적표로 대체 | 기타(ADR 거버넌스) | 수정 필요 | ADR-DEPLOY-003을 원결정으로 복원해 Superseded 처리하고 ADR-DEPLOY-004 신설, 인덱스·추적표·기술 정책 갱신 | `superseded_by`·`supersedes` 양방향 연결과 현재 계약 링크 확인 |
+| [ADR 대체 절차 중복 재지적](https://github.com/team-youngkk/masit-on/pull/206#discussion_r3782145129) | 후속 ADR 분리와 대체 메타데이터·인덱스·추적표 갱신 | 기타(ADR 거버넌스) | 이미 해결 | 앞선 대체 절차 지적과 같은 원인이며 ADR-DEPLOY-004 반영 커밋이 현재 PR head에 존재 | 원격 head와 양방향 메타데이터·인덱스·추적표 재확인 |
 
 ## 3. 문제 현상과 발생 조건
 
