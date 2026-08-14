@@ -76,6 +76,8 @@ export default async function RestaurantsPage({
           district: currentDistrict || null,
           category: currentCategory || null,
           creatorId: currentCreatorId ?? null,
+          /* 목록 API는 태그 1개(`tag`)만 받고 여러 태그 AND는 자연어 API의 filters.tags가 담당한다.
+           * 직접 태그 선택은 자연어 검색 영역이 소유하므로 초기값만 비어 있는 상태로 넘긴다. */
           tags: [],
         }}
         returnTo={currentRoute}
