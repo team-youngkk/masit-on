@@ -121,7 +121,7 @@ export function setup() {
     const popularCount = (popular.json('items') || []).length;
     if (popularCount < 20) {
         throw new Error(
-            `인기 맛집 집계가 ${popularCount}건이라 측정 fixture가 준비되지 않은 환경으로 보인다. 운영은 perf/operational-fixture/의 사전 검증을 먼저 통과한다.`
+            `인기 맛집 집계가 ${popularCount}건이라 측정 fixture가 준비되지 않은 환경으로 보인다. 일반 측정 환경은 perf/seed/를, 운영 직접 검증은 perf/operational-fixture/를 먼저 준비한다.`
         );
     }
 

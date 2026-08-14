@@ -155,6 +155,60 @@ BEGIN
        OR EXISTS (SELECT 1 FROM notification WHERE member_id = ANY(fixture_members))
        OR EXISTS (SELECT 1 FROM submission WHERE member_id = ANY(fixture_members))
        OR EXISTS (SELECT 1 FROM report WHERE member_id = ANY(fixture_members))
+       OR EXISTS (
+           SELECT 1
+             FROM report
+            WHERE target_type = 'RESTAURANT'
+              AND target_id = ANY(fixture_restaurants)
+       )
+       OR EXISTS (
+           SELECT 1
+             FROM submission
+            WHERE result_target_type = 'RESTAURANT'
+              AND result_target_id = ANY(fixture_restaurants)
+       )
+       OR EXISTS (
+           SELECT 1
+             FROM report
+            WHERE result_target_type = 'RESTAURANT'
+              AND result_target_id = ANY(fixture_restaurants)
+       )
+       OR EXISTS (
+           WITH protected_submissions AS (
+               SELECT id
+                 FROM submission
+                WHERE result_target_type = 'RESTAURANT'
+                  AND result_target_id = ANY(fixture_restaurants)
+           ), protected_reports AS (
+               SELECT id
+                 FROM report
+                WHERE (target_type = 'RESTAURANT' AND target_id = ANY(fixture_restaurants))
+                   OR (result_target_type = 'RESTAURANT' AND result_target_id = ANY(fixture_restaurants))
+           )
+           SELECT 1
+             FROM moderation_history mh
+            WHERE (mh.result_target_type = 'RESTAURANT'
+                   AND mh.result_target_id = ANY(fixture_restaurants))
+               OR mh.submission_id IN (SELECT id FROM protected_submissions)
+               OR mh.report_id IN (SELECT id FROM protected_reports)
+       )
+       OR EXISTS (
+           WITH protected_submissions AS (
+               SELECT id
+                 FROM submission
+                WHERE result_target_type = 'RESTAURANT'
+                  AND result_target_id = ANY(fixture_restaurants)
+           ), protected_reports AS (
+               SELECT id
+                 FROM report
+                WHERE (target_type = 'RESTAURANT' AND target_id = ANY(fixture_restaurants))
+                   OR (result_target_type = 'RESTAURANT' AND result_target_id = ANY(fixture_restaurants))
+           )
+           SELECT 1
+             FROM notification n
+            WHERE n.submission_id IN (SELECT id FROM protected_submissions)
+               OR n.report_id IN (SELECT id FROM protected_reports)
+       )
        OR EXISTS (SELECT 1 FROM idempotency_record WHERE actor_id = ANY(fixture_members))
        OR EXISTS (SELECT 1 FROM member_deletion_job WHERE member_id = ANY(fixture_members))
        OR EXISTS (SELECT 1 FROM ai_candidate_snapshot WHERE registered_restaurant_id = ANY(fixture_restaurants)) THEN
