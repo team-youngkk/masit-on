@@ -42,13 +42,13 @@ superseded_by: null
 
 ## 1. 상태
 
-Accepted. 자동 검증·정식 등록·롤백 경계와 원문 전체 미저장, `gemini-3-flash-preview` 사용, global endpoint, Free Tier 전용·유료 호출 금지 정책을 2026-08-10 확정했다. 관리자 사전 승인은 요구하지 않는다.
+Accepted. 자동 검증·정식 등록·롤백 경계와 원문 전체 미저장, `gemini-3.5-flash-lite` 사용, global endpoint, Free Tier 전용·유료 호출 금지 정책을 2026-08-14 확정했다. 기존 `gemini-3-flash-preview` 작업 이력은 보존하고 신규 작업부터 새 모델을 사용한다. 관리자 사전 승인은 요구하지 않는다.
 
 ## 2. 결정 요약
 
 AI 영상 정보 추출은 자동 검증을 통과한 경우 기존 Restaurant·Creator·Video·Visit와 태그를 자동 생성·공개하고, 불확실한 결과만 보류하는 운영 경계로 둔다. AI 호출은 Provider Port/Adapter를 통해 격리하고, 결과와 자동 판단은 버전이 있는 구조화 Snapshot·감사 이력으로 관리한다.
 
-Google Gemini API Free Tier의 `gemini-3-flash-preview`를 사용하고 공개 YouTube URL을 영상 입력으로 전달한다. Gemini 모델 문서상 영상 입력과 구조화 출력을 지원하지만 Preview 모델이므로 자동 모델 교체는 하지 않는다. 관리자 보완 텍스트는 Gemini 접근 제한·분석 실패·부분 추출의 fallback으로 사용한다. Prompt `P1`, 결과 Schema `S1`, global endpoint, File API·context caching 미사용을 고정한다. Free Tier quota 소진·결제 연결 요구·모델의 Free Tier 미지원 시에는 호출하지 않고 실패·수동 등록 fallback으로 전환한다.
+Google Gemini API Free Tier의 `gemini-3.5-flash-lite`를 사용하고 공개 YouTube URL을 영상 입력으로 전달한다. Gemini 모델 문서상 영상 입력과 구조화 출력을 지원한다. 관리자 보완 텍스트는 Gemini 접근 제한·분석 실패·부분 추출의 fallback으로 사용한다. Prompt `P1`, 결과 Schema `S1`, global endpoint, File API·context caching 미사용을 고정한다. Free Tier quota 소진·결제 연결 요구·모델의 Free Tier 미지원 시에는 호출하지 않고 실패·수동 등록 fallback으로 전환한다.
 
 ## 3. 배경
 
@@ -126,7 +126,7 @@ Worker가 후보를 자동 확정하기 전에 orchestration이 다음 검증을
 
 ## 10. 확정 운영 규칙
 
-- 모델 `gemini-3-flash-preview`, global endpoint, Prompt `P1`, Schema `S1`을 사용한다.
-- Preview 모델 종료·quota·장애 시 자동 failover하지 않고 실패·수동 등록 fallback을 사용한다.
+- 모델 `gemini-3.5-flash-lite`, global endpoint, Prompt `P1`, Schema `S1`을 사용한다.
+- quota·장애 시 자동 failover하지 않고 실패·수동 등록 fallback을 사용한다.
 - 근거는 timestamp 또는 text range 위치·입력 hash만 저장하며 원문은 저장하지 않는다.
 - 호출 timeout·retry·hard stop은 [비동기 신뢰성 ADR](ext-003-ai-extraction-async-reliability.md)과 NFR 수치를 따른다.

@@ -23,7 +23,7 @@ related_documents:
 
 ## 1. 판정 요약
 
-`E3-T08`의 평가 자산과 판정 형식은 준비됐지만, 이 문서 작성 시점에는 Release holdout 24건의 실제 제공자 실행과 지정 인간 판정자·검증자의 사후 판정이 수행·승인되지 않았다. 따라서 출시 후보 `GOOGLE_GEMINI` / `gemini-3-flash-preview` / Prompt `P1` / Schema `S1`의 판정은 **`HOLD`**다. 아래 목표값은 승인된 기준이지 측정 결과가 아니다.
+`E3-T08`의 평가 자산과 판정 형식은 준비됐지만, 이 문서 작성 시점에는 Release holdout 24건의 실제 제공자 실행과 지정 인간 판정자·검증자의 사후 판정이 수행·승인되지 않았다. 따라서 당시 출시 후보 `GOOGLE_GEMINI` / `gemini-3-flash-preview` / Prompt `P1` / Schema `S1`의 판정은 **`HOLD`**다. 이후 운영 모델이 `gemini-3.5-flash-lite`로 변경되었으므로, 이 문서는 이전 후보의 평가 기록으로 보존하며 새 모델은 별도 평가 실행이 필요하다. 아래 목표값은 승인된 기준이지 측정 결과가 아니다.
 
 현재 자산 점검 기준 120건의 `humanReview.status`는 모두 `PENDING`이다. Release holdout의 합성 validator 기대값은 `AUTO_CONFIRMED` 6건·`AUTO_BLOCKED` 14건·`AUTO_REJECTED` 4건이다. 이 수치는 평가기 배선 검사용 기대 분포일 뿐 실제 제공자 품질 결과나 인간 판정 결과가 아니다. 24건 모두 아직 실제 제공자 실행과 인간 판정 전이다.
 

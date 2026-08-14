@@ -92,7 +92,9 @@ class FlywayMigrationIntegrationTest {
                 new AppliedMigration("6", "add ai manual review audit", "SQL",
                         "V6__add_ai_manual_review_audit.sql", true),
                 new AppliedMigration("7", "add ai retry and tag rollback provenance", "SQL",
-                        "V7__add_ai_retry_and_tag_rollback_provenance.sql", true)
+                        "V7__add_ai_retry_and_tag_rollback_provenance.sql", true),
+                new AppliedMigration("8", "allow gemini 3 5 flash lite model version", "SQL",
+                        "V8__allow_gemini_3_5_flash_lite_model_version.sql", true)
         );
     }
 

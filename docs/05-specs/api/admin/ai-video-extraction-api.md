@@ -69,7 +69,7 @@ related_documents:
   "resultCompleteness": null,
   "reviewStatus": null,
   "provider": "GOOGLE_GEMINI",
-  "modelVersion": "gemini-3-flash-preview",
+  "modelVersion": "gemini-3.5-flash-lite",
   "promptVersion": "P1",
   "schemaVersion": "S1",
   "attemptCount": 0,
@@ -79,7 +79,7 @@ related_documents:
 }
 ```
 
-`provider`는 `GOOGLE_GEMINI`, `modelVersion`은 `gemini-3-flash-preview`로 고정한다. Preview 종료·quota·장애 시 다른 모델로 자동 전환하지 않고 작업 실패와 관리자 수동 등록 fallback을 사용한다. 입력 원문, Gemini 응답 전문, 비밀정보와 전체 자막은 응답에 포함하지 않는다.
+`provider`는 `GOOGLE_GEMINI`, `modelVersion`은 `gemini-3.5-flash-lite`로 고정한다. quota·장애 시 다른 모델로 자동 전환하지 않고 작업 실패와 관리자 수동 등록 fallback을 사용한다. 입력 원문, Gemini 응답 전문, 비밀정보와 전체 자막은 응답에 포함하지 않는다.
 
 ## 3. 관리자 API
 

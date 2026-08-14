@@ -95,7 +95,7 @@ masiton:
         # Production credentials are supplied by the existing configtree secret mount, never a URL or default profile.
         api-key:
         base-url: https://generativelanguage.googleapis.com
-        model: gemini-3-flash-preview
+        model: gemini-3.5-flash-lite
         prompt-version: P1
         schema-version: S1
         connect-timeout: PT5S

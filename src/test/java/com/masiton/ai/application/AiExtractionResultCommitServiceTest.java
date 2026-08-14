@@ -64,7 +64,7 @@ class AiExtractionResultCommitServiceTest {
         AiExtractionResultCommitService.AiTagCandidate tag = new AiExtractionResultCommitService.AiTagCandidate(
                 "tag-1", "MENU", "MENU_NAENGMYEON", "냉면", BigDecimal.valueOf(0.9),
                 "{\"type\":\"TIMESTAMP\",\"startMs\":1,\"endMs\":2}", "[\"냉면\"]",
-                "gemini-3-flash-preview/P1/S1", "AUTO_MERGE", null, true, tagId);
+                "gemini-3.5-flash-lite/P1/S1", "AUTO_MERGE", null, true, tagId);
         AiExtractionResultCommitService.ProcessCommand command = command(List.of(tag));
         given(resultStore.lockProcessingJob(jobId, "worker-1", 1)).willReturn(Optional.of(job()));
         given(resultStore.nextSnapshotVersion(jobId)).willReturn(1);
@@ -90,7 +90,7 @@ class AiExtractionResultCommitServiceTest {
         AiExtractionResultCommitService.AiTagCandidate tag = new AiExtractionResultCommitService.AiTagCandidate(
                 "tag-1", "MENU", "MENU_NAENGMYEON", "냉면", BigDecimal.valueOf(0.9),
                 "{\"type\":\"TIMESTAMP\",\"startMs\":1,\"endMs\":2}",
-                "[\"냉면\"]", "gemini-3-flash-preview/P1/S1", "AUTO_MERGE", null, true, tagId);
+                "[\"냉면\"]", "gemini-3.5-flash-lite/P1/S1", "AUTO_MERGE", null, true, tagId);
         AiExtractionResultCommitService.ProcessCommand command = command(List.of(tag));
         given(resultStore.lockProcessingJob(jobId, "worker-1", 1))
                 .willReturn(Optional.of(job()));
@@ -110,7 +110,7 @@ class AiExtractionResultCommitServiceTest {
         assertThat(committed).isTrue();
         verify(autoRegister).register(any());
         verify(resultStore).insertVisitTag(any(), eq(visitId), eq(tagId), eq(BigDecimal.valueOf(0.9)), anyString(),
-                eq("gemini-3-flash-preview/P1/S1"), eq(finishedAt));
+                eq("gemini-3.5-flash-lite/P1/S1"), eq(finishedAt));
         verify(resultStore).completeSuccess(eq(jobId), eq("worker-1"), eq(1), eq("COMPLETE"), any(), eq(finishedAt),
                 eq("request-1"));
     }
