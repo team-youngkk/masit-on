@@ -37,7 +37,7 @@ related_documents:
 | 프런트엔드 | `npm --prefix frontend run dev`, Node.js 24.18.0, `http://localhost:3000` |
 | 백엔드 | `./gradlew bootRun --args='--spring.profiles.active=local'`, `http://localhost:8080` |
 | 의존 서비스 | `docker compose up -d postgres redis wiremock` |
-| 스키마 | 검증 당시 Flyway `V1`~`V4` 적용 (`#192` 통합 후; 현재 PR의 `V5` Preview 차단 migration 적용 전) |
+| 스키마 | 검증 당시 Flyway `V1`~`V4` 적용 (`#192` 통합 후; Lite 단일 제약을 포함한 최종 V4 반영 전) |
 | 기준 커밋 당시 스키마 | Flyway `V1`~`V7` 적용 (`35d0f94` 검증 시점) |
 | 기준 커밋(3절 측정·4절 여정·3.1절 초기 화면 캡처) | `develop` `35d0f94`, 2026-08-12 |
 | 기준 커밋(3.2절 여정 캡처) | `#182`·`#184` 병합 이후 이 브랜치 HEAD, 2026-08-13 |

@@ -73,9 +73,7 @@ Testcontainers 기반 자동화 테스트는 매 실행 시 빈 데이터베이�
 
 3차 확장 AI 스키마는 통합 전 `V4` 기본 스키마, 구 `V5` 재사용 조회 인덱스, 구 `V6` 관리자 검수 감사·재시도 사유, 구 `V7` 태그 롤백 provenance로 구성됐다. 운영 배포 전 누적 변경의 SQL 순서와 의미를 보존해 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql) 하나의 1~8절로 통합했다. 통합본의 6~8절 주석에는 통합 전 구간을 표시하고, 통합 전후 SQL은 주석·공백을 제외한 정규화 본문이 동일하다.
 
-통합 V4에 포함된 기존 모델 호환 제약은 통합 대상 SQL의 일부로 보존하고, Preview 차단이라는 별도 계약 변경은 `V5__restrict_ai_extraction_job_model_version_to_gemini_3_5_flash_lite.sql`로 분리한다.
-
-운영 RDS가 존재하는 현재 환경에서는 통합 대상 버전이 운영 `flyway_schema_history`에 없음을 읽기 전용 조회 결과로 확인해야 한다. PR #192에서는 2026-08-14 11:18 KST 서울 리전 `ap-northeast-2`의 RDS `masiton-db`를 SSM `i-0b451f18bca827cc9` 경유로 읽기 전용 조회했고, `V1`·`V2`·`V3`만 존재하며 `V4`~`V7`은 없음을 확인했다. 실제 운영 배포와 마이그레이션 적용은 수행하지 않았다. 통합 대상을 이미 적용한 개발·공유 데이터베이스는 `docker compose down -v`로 재생성해야 하며, 같은 AI 버전 구간은 다시 통합하지 않는다. Preview 차단은 통합 V4를 수정하지 않고 후속 `V5`로 적용한다.
+운영 RDS가 존재하는 현재 환경에서는 통합 대상 버전이 운영 `flyway_schema_history`에 없음을 읽기 전용 조회 결과로 확인해야 한다. PR #192에서는 2026-08-14 11:18 KST 서울 리전 `ap-northeast-2`의 RDS `masiton-db`를 SSM `i-0b451f18bca827cc9` 경유로 읽기 전용 조회했고, `V1`·`V2`·`V3`만 존재하며 `V4`~`V7`은 없음을 확인했다. 실제 운영 배포와 마이그레이션 적용은 수행하지 않았다. 현재 개발·공유 데이터베이스도 `V1`~`V3`까지만 적용된 상태이므로, 최종 V4에 Lite 단일 모델 제약을 포함한다.
 
 ## 3. 관리자 계정 부트스트랩
 
@@ -171,7 +169,7 @@ V3 구간 아웃박스는 Action Token만 FK로 참조한다. 수신자는 `memb
 
 ## 11. V4 3차 확장 AI 영상 추출 스키마
 
-`V4__create_third_expansion_ai_schema.sql`과 `V5__restrict_ai_extraction_job_model_version_to_gemini_3_5_flash_lite.sql`은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)과 [ADR-EXT-003](../../07-adr/integration/ext-003-ai-extraction-async-reliability.md)의 물리 구현이다. 기존 `V1`~`V3`를 수정하지 않고, 빈 DB 전체 적용과 `V3→V5` 전진 적용을 모두 검증한다.
+`V4__create_third_expansion_ai_schema.sql`은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)과 [ADR-EXT-003](../../07-adr/integration/ext-003-ai-extraction-async-reliability.md)의 물리 구현이다. 기존 `V1`~`V3`를 수정하지 않고, 빈 DB 전체 적용과 `V3→V4` 전진 적용을 모두 검증한다. 운영·개발·공유 데이터베이스에 V4가 아직 적용되지 않았으므로 Preview 차단 제약을 최종 통합 V4에 포함한다.
 
 | 순서 | 변경 | 검증 경계 |
 |---:|---|---|
@@ -191,10 +189,10 @@ AI 영상 추출 스키마·재사용 조회 인덱스·수동 검수 감사·�
 
 ### 11.2 Gemini 모델 전환 제약
 
-통합 V4는 기존 `gemini-3-flash-preview` 작업 이력과 신규 `gemini-3.5-flash-lite` 작업을 표현할 수 있도록 원래 모델 제약을 보존한다. 운영 배포 전 AI 작업 이력이 없다는 확인을 바탕으로, 후속 `V5__restrict_ai_extraction_job_model_version_to_gemini_3_5_flash_lite.sql`에서 Preview를 제거하고 애플리케이션 계약의 `gemini-3.5-flash-lite`만 허용한다. 기존 Preview 평가 자산은 데이터베이스 작업 이력이 아니라 역사적 평가 fixture로 보존한다. 통합 V4는 수정하지 않고, 모델 계약 변경은 별도 migration으로 관리한다.
+운영·개발·공유 데이터베이스에 V4가 아직 적용되지 않았으므로 통합 V4의 `model_version` CHECK 제약은 `gemini-3.5-flash-lite`만 허용한다. 기존 `gemini-3-flash-preview` 평가 자산은 데이터베이스 작업 이력이 아니라 역사적 평가 fixture로 보존하며, 최종 V4에는 저장할 수 없다. 모델 계약 변경을 포함한 최종 V4는 배포 전 한 번만 적용하고, 병합 전 개발·공유 DB가 V4로 선행 적용되지 않았는지 확인한다.
 
 ## 12. 향후 변경 번호
 
-초기 스키마 baseline 다음 변경은 `V2`로 적용됐고, 1차 확장 변경은 2.3절 통합 이후 다시 `V2` 하나로 적용됐다. 2차 확장은 `V3`, 3차 확장 AI 영상 추출과 누적 AI 변경은 통합 `V4`, Preview 모델 차단은 `V5`를 사용한다.
+초기 스키마 baseline 다음 변경은 `V2`로 적용됐고, 1차 확장 변경은 2.3절 통합 이후 다시 `V2` 하나로 적용됐다. 2차 확장은 `V3`, 3차 확장 AI 영상 추출·누적 AI 변경·Gemini 모델 전환 제약은 통합 `V4`를 사용한다.
 
 `V1`과 `V2`는 각각 적용된 시점부터 수정하지 않는다. 현행 `V3__add_expansion_2_schema.sql` 또는 `V4__create_third_expansion_ai_schema.sql`을 향후 통합하려면 2.1절과 ADR-DATA-009의 강제 규칙을 모두 증명해야 하며, 이미 운영에 적용된 파일은 통합·수정하지 않는다.

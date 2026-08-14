@@ -42,7 +42,7 @@ superseded_by: null
 
 ## 1. 상태
 
-Accepted. 자동 검증·정식 등록·롤백 경계와 원문 전체 미저장, `gemini-3.5-flash-lite` 사용, global endpoint, Free Tier 전용·유료 호출 금지 정책을 2026-08-14 확정했다. 운영 애플리케이션의 최종 데이터베이스 계약은 후속 V5 제약을 통해 `gemini-3.5-flash-lite`만 저장하도록 한다. 기존 `gemini-3-flash-preview` 평가 자산은 역사적 fixture로 보존하되 운영 작업 계약에는 포함하지 않는다. 관리자 사전 승인은 요구하지 않는다.
+Accepted. 자동 검증·정식 등록·롤백 경계와 원문 전체 미저장, `gemini-3.5-flash-lite` 사용, global endpoint, Free Tier 전용·유료 호출 금지 정책을 2026-08-14 확정했다. 운영·개발·공유 데이터베이스에 V4가 아직 적용되지 않았으므로 최종 V4 제약은 `gemini-3.5-flash-lite`만 저장하도록 한다. 기존 `gemini-3-flash-preview` 평가 자산은 역사적 fixture로 보존하되 운영 작업 계약에는 포함하지 않는다. 관리자 사전 승인은 요구하지 않는다.
 
 ## 2. 결정 요약
 

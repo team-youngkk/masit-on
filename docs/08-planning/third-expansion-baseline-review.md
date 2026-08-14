@@ -148,7 +148,7 @@ WHERE lifecycle_status = 'ACTIVE';
 
 ### 7.1. AI 제공자
 
-기준선 검토 시점에는 AI 제공자·모델·리전·보존 정책이 정해지지 않았고 코드나 환경 설정에도 AI 호출이 없었다. 이후 과거 검증 당시 Google Gemini API Free Tier의 `gemini-3-flash-preview`를 smoke test 후보로 사용했지만, 현재 운영 선택은 `gemini-3.5-flash-lite`이며 데이터베이스에는 V5 제약으로 해당 모델만 저장한다. 실제 모델별 무료 quota와 billing 미연결 여부는 구현 전 연결 검증에서 확인한다. 무료 tier를 사용할 수 없으면 AI 기능은 호출하지 않고 기존 수동 등록으로 대체한다.
+기준선 검토 시점에는 AI 제공자·모델·리전·보존 정책이 정해지지 않았고 코드나 환경 설정에도 AI 호출이 없었다. 이후 과거 검증 당시 Google Gemini API Free Tier의 `gemini-3-flash-preview`를 smoke test 후보로 사용했지만, 현재 운영 선택은 `gemini-3.5-flash-lite`이며 데이터베이스에는 통합 V4 제약으로 해당 모델만 저장한다. 실제 모델별 무료 quota와 billing 미연결 여부는 구현 전 연결 검증에서 확인한다. 무료 tier를 사용할 수 없으면 AI 기능은 호출하지 않고 기존 수동 등록으로 대체한다.
 
 #### 7.1.1 연결 검증 기록
 

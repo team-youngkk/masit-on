@@ -65,7 +65,7 @@ related_documents:
 | `TST-E3-COURSE-001` | `BR-COURSE-001`, `BR-COURSE-002`, `NFR-PRIVACY-006` | 입력 경계값·좌표·공개 상태·비저장·현재 위치 미수집 | `E3-T09` |
 | `TST-E3-COURSE-002` | `BR-COURSE-003`, `NFR-PERFORMANCE-007` | Kakao Mobility WireMock 계약, 순서·TTL 5분·코스당 1회 호출 | `E3-T09` |
 | `TST-E3-COURSE-003` | `BR-COURSE-004`, `NFR-EXTERNAL-005`, `NFR-COST-001`, `NFR-AVAILABILITY-003` | timeout·429·5xx·부분 실패·quota hard stop·기존 탐색 격리 | `E3-T10`, `E3-T13` |
-| `TST-E3-DATA-001` | `NFR-INTEGRITY-006`, `NFR-PRIVACY-006`, `NFR-TEST-006` | V1→V5·빈 DB migration, PK/UK/FK/CHECK, 보존·삭제·정식 저장 0건 | `E3-T03`, `E3-T11` |
+| `TST-E3-DATA-001` | `NFR-INTEGRITY-006`, `NFR-PRIVACY-006`, `NFR-TEST-006` | V1→V4·빈 DB migration, PK/UK/FK/CHECK, 보존·삭제·정식 저장 0건 | `E3-T03`, `E3-T11` |
 | `TST-E3-SEC-001` | `NFR-SECURITY-007`, `NFR-OBSERVABILITY-005` | 관리자/공개 audience, 악성 입력, Secret·URL·자막·Provider 응답 로그 비노출 | `E3-T01`, `E3-T04`, `E3-T13` |
 | `TST-E3-E2E-001` | 3차 확장 전체 FR·BR·NFR | 360px·390px·768px·1280px·1440px, 키보드, 정상·빈·오류·복구 브라우저 흐름 | `E3-T12` |
 | `TST-E3-PERF-001` | `NFR-PERFORMANCE-007`, `NFR-TEST-006` | 자연어 p95, 코스 외부 포함 5초, 내부 처리 500ms, 2차 승계 부하 | `E3-T13` |
