@@ -37,14 +37,20 @@ curl_request() {
   printf '%s' "$status"
 }
 
+is_api_routing_failure() {
+  local status=$1
+  [[ "$status" =~ ^(000|3[0-9][0-9]|502|503|504)$ ]]
+}
+
 assert_not_validation_gate() {
   local method=$1
   local path=$2
   local body=${3-}
   local status
   status=$(curl_request "$method" "$path" "$body")
-  if [ "$status" = "401" ] || grep -Fq 'VALIDATION_ACCESS_REQUIRED' "$RESPONSE_FILE"; then
-    echo "Nginx 공개 경로 smoke 실패: ${method} ${path}가 검증 gate에 막혔다 (HTTP ${status})." >&2
+  if [ "$status" = "401" ] || is_api_routing_failure "$status" \
+      || grep -Fq 'VALIDATION_ACCESS_REQUIRED' "$RESPONSE_FILE"; then
+    echo "Nginx 공개 경로 smoke 실패: ${method} ${path}가 backend API 응답에 도달하지 못했다 (HTTP ${status})." >&2
     exit 1
   fi
 }
@@ -57,7 +63,7 @@ assert_not_validation_access_error() {
   local status
   status=$(curl_request "$method" "$path" "$body" "$origin")
   if grep -Fq 'VALIDATION_ACCESS_REQUIRED' "$RESPONSE_FILE" \
-      || [[ "$status" =~ ^(000|502|503|504)$ ]]; then
+      || is_api_routing_failure "$status"; then
     echo "Nginx 공개 경로 smoke 실패: ${method} ${path}가 Spring 응답에 도달하지 못했다 (HTTP ${status})." >&2
     exit 1
   fi
