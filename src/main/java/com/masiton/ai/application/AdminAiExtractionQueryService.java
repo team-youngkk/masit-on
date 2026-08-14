@@ -131,12 +131,14 @@ public class AdminAiExtractionQueryService {
     }
 
     private String text(JsonNode node, String name) {
-        String value = node == null ? null : node.path(name).asText(null);
-        if (value == null || value.isBlank()) {
+        JsonNode valueNode = node == null ? null : node.path(name);
+        // A candidate with multiple values (BR-AIEXTRACT-001) is stored as an array, not a scalar.
+        // CONFIRM must not guess among them, so treat anything but a single text value as missing.
+        if (valueNode == null || !valueNode.isTextual() || valueNode.textValue().isBlank()) {
             throw new BusinessException(HttpStatus.UNPROCESSABLE_ENTITY, "AIEXTRACT_VALIDATION_CONFLICT",
                     "The candidate is missing required verification data.");
         }
-        return value;
+        return valueNode.textValue();
     }
 
     private Long longValue(JsonNode node, String name) {

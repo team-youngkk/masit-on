@@ -159,6 +159,61 @@ class AiExtractionResultProcessorServiceTest {
         assertThat(command.getValue().blockReason()).isEqualTo("INVALID_RESULT_COMPLETENESS");
     }
 
+    @Test
+    @DisplayName("같은 필드에 후보가 여러 개면 자동 보류하면서도 후보를 전부 Snapshot에 보존한다")
+    void process_같은필드복수후보_자동보류하면서도후보를전부보존한다() throws Exception {
+        // Given
+        UUID jobId = UUID.randomUUID();
+        String workerId = "worker-1";
+        OffsetDateTime finishedAt = OffsetDateTime.parse("2026-08-11T00:00:10Z");
+        given(resultStore.lockProcessingJob(jobId, workerId, 1))
+                .willReturn(Optional.of(new AiExtractionResultStore.ProcessingJob(
+                        jobId, "channel-1", "video-1", URI.create("https://www.youtube.com/watch?v=video-1"))));
+        given(commitService.persistBlocked(any())).willReturn(true);
+
+        // When
+        boolean processed = processor.process(jobId, workerId, 1, finishedAt.minusSeconds(5), finishedAt,
+                result("""
+                        {"resultCompleteness":"COMPLETE","candidates":[
+                          {"field":"restaurantName","value":"첫 맛집","confidence":0.95,"evidence":{"type":"TIMESTAMP","startMs":10,"endMs":20}},
+                          {"field":"restaurantName","value":"둘째 맛집","confidence":0.94,"evidence":{"type":"TIMESTAMP","startMs":30,"endMs":40}},
+                          {"field":"menu","value":"냉면","confidence":0.90,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}},
+                          {"field":"address","value":"서울특별시 마포구 월드컵로 1","confidence":0.90,"evidence":{"type":"TEXT_RANGE","startOffset":1,"endOffset":5,"sourceHash":"hash"}},
+                          {"field":"location","value":"https://place.map.kakao.com/123","confidence":0.90,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}},
+                          {"field":"visitEvidence","value":"직접 방문","confidence":0.90,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}}
+                        ],"missingFields":[]}
+                        """));
+
+        // Then
+        assertThat(processed).isTrue();
+        var command = forClass(AiExtractionResultCommitService.ProcessCommand.class);
+        verify(commitService).persistBlocked(command.capture());
+        assertThat(command.getValue().blockReason()).isEqualTo("MULTIPLE_CANDIDATES");
+        assertThat(command.getValue().reviewStatus()).isEqualTo("AUTO_BLOCKED");
+        JsonNode candidateFields = objectMapper.readTree(command.getValue().candidateFields());
+        assertThat(candidateFields.get("restaurantName").isArray()).isTrue();
+        assertThat(candidateFields.get("restaurantName")).hasSize(2);
+        assertThat(candidateFields.get("restaurantName").get(0).path("value").asText()).isEqualTo("첫 맛집");
+        assertThat(candidateFields.get("restaurantName").get(1).path("value").asText()).isEqualTo("둘째 맛집");
+        JsonNode fieldConfidences = objectMapper.readTree(command.getValue().fieldConfidences());
+        JsonNode evidence = objectMapper.readTree(command.getValue().evidence());
+        assertThat(fieldConfidences.has("restaurantName")).isFalse();
+        assertThat(evidence.has("restaurantName")).isFalse();
+        assertThat(candidateFields.get("menu").isTextual()).isTrue();
+        assertThat(candidateFields.get("address").isTextual()).isTrue();
+        assertThat(candidateFields.get("location").isTextual()).isTrue();
+        assertThat(candidateFields.get("visitEvidence").isTextual()).isTrue();
+        assertThat(fieldConfidences.has("menu")).isTrue();
+        assertThat(fieldConfidences.has("address")).isTrue();
+        assertThat(fieldConfidences.has("location")).isTrue();
+        assertThat(fieldConfidences.has("visitEvidence")).isTrue();
+        assertThat(evidence.has("menu")).isTrue();
+        assertThat(evidence.has("address")).isTrue();
+        assertThat(evidence.has("location")).isTrue();
+        assertThat(evidence.has("visitEvidence")).isTrue();
+        verifyNoInteractions(contentVerification);
+    }
+
     private AiVideoExtractionResult result(String json) throws Exception {
         JsonNode payload = objectMapper.readTree(json);
         return new AiVideoExtractionResult(payload, "provider-request-1");

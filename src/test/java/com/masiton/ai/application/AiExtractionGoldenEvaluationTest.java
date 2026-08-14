@@ -124,7 +124,8 @@ class AiExtractionGoldenEvaluationTest {
 
         assertThat(runtime.get("provider").asText()).isEqualTo(AiExtractionContract.PROVIDER);
         assertThat(runtime.get("modelVersion").asText()).isEqualTo("gemini-3-flash-preview");
-        assertThat(runtime.get("promptVersion").asText()).isEqualTo(AiExtractionContract.PROMPT_VERSION);
+        // 골든 자산은 gemini-3-flash-preview·P1 기준의 역사적 fixture다. 운영 계약이 P2로 올라가도 재판정 없이 보존한다.
+        assertThat(runtime.get("promptVersion").asText()).isEqualTo("P1");
         assertThat(runtime.get("schemaVersion").asText()).isEqualTo(AiExtractionContract.SCHEMA_VERSION);
         assertThat(cases).allSatisfy(testCase -> {
             assertThat(testCase.humanStatus()).isEqualTo("PENDING");
@@ -197,7 +198,8 @@ class AiExtractionGoldenEvaluationTest {
                 violations.add(testCase.caseId() + ": expected address 불일치");
             }
             boolean visitEvidencePresent = result.candidates().containsKey("visitEvidence")
-                    && result.candidates().get("visitEvidence").evidence().type()
+                    && result.candidates().get("visitEvidence").size() == 1
+                    && result.candidates().get("visitEvidence").get(0).evidence().type()
                     != AiCandidateValidationResult.EvidenceType.UNKNOWN;
             if (testCase.expectedVisitEvidencePresent() != visitEvidencePresent) {
                 violations.add(testCase.caseId() + ": expected visitEvidencePresent 불일치");
@@ -328,8 +330,8 @@ class AiExtractionGoldenEvaluationTest {
     }
 
     private static String candidateValue(AiCandidateValidationResult result, String field) {
-        AiCandidateValidationResult.Candidate candidate = result.candidates().get(field);
-        return candidate == null ? null : candidate.value();
+        List<AiCandidateValidationResult.Candidate> candidates = result.candidates().get(field);
+        return candidates == null || candidates.size() != 1 ? null : candidates.get(0).value();
     }
 
     private static boolean releaseHoldoutEnabled() {

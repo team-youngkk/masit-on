@@ -13,7 +13,7 @@ import java.util.Objects;
  */
 public record AiCandidateValidationResult(
         Decision decision,
-        Map<String, Candidate> candidates,
+        Map<String, List<Candidate>> candidates,
         String foodCategoryName,
         List<TagCandidate> tags,
         List<TagCandidate> rejectedTags,
@@ -23,7 +23,7 @@ public record AiCandidateValidationResult(
 
     public AiCandidateValidationResult {
         Objects.requireNonNull(decision, "decision must not be null");
-        candidates = immutableMap(candidates);
+        candidates = immutableCandidateMap(candidates);
         tags = immutableList(tags);
         rejectedTags = immutableList(rejectedTags);
         missingFields = immutableList(missingFields);
@@ -136,10 +136,12 @@ public record AiCandidateValidationResult(
         return values == null ? List.of() : List.copyOf(values);
     }
 
-    private static <K, V> Map<K, V> immutableMap(Map<K, V> values) {
+    private static <K, V> Map<K, List<V>> immutableCandidateMap(Map<K, List<V>> values) {
         if (values == null || values.isEmpty()) {
             return Map.of();
         }
-        return Collections.unmodifiableMap(new LinkedHashMap<>(values));
+        Map<K, List<V>> copy = new LinkedHashMap<>();
+        values.forEach((key, candidates) -> copy.put(key, List.copyOf(candidates)));
+        return Collections.unmodifiableMap(copy);
     }
 }

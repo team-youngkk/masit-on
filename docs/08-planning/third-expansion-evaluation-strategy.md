@@ -372,10 +372,10 @@ Scope
 | 평가 전략·자연어·AI·Mobility·최종 판정 책임자 | 확정: QUALITY-EVAL 박진영, 기본 리뷰어 이우람, 기능별 정답 책임자 배정 | [3차 Workstream](../02-analysis/third-expansion-workstreams.md#8-quality-eval-교차-품질-트랙) |
 | 자연어·AI·코스 목표값과 분할 비율 | 확정: 자연어 240건, AI 120건, 코스 60 fixture; 모두 60/20/20 | NFR-ACCURACY-001·002, 이 문서 4절 |
 | 자연어 P1 규칙 기반 방식 | 확정: P1, 태그 18종, 태그 AND, 모호성 `UNRESOLVED`, LLM 심판 없음 | ADR-ARCH-005·자연어 API |
-| AI 제공자·모델·리전·보존·비용 | 확정: Gemini Free Tier global endpoint, `gemini-3.5-flash-lite`, P1/S1, 원문 비저장·1년 후보 보존, 유료 호출 금지·무료 quota hard stop | ADR-AI-001·DATA-E3-AI-001 |
+| AI 제공자·모델·리전·보존·비용 | 확정: Gemini Free Tier global endpoint, `gemini-3.5-flash-lite`, 현재 P2/S1·기존 P1 이력 보존, 원문 비저장·1년 후보 보존, 유료 호출 금지·무료 quota hard stop | ADR-AI-001·DATA-E3-AI-001 |
 | LLM 심판 사용 여부 | 확정: 3차 확장 비활성, 유료 호출·출시 게이트 사용 금지 | 이 문서 6.3절 |
 | 평가 자산 저장 위치·암호화·보존·접근 | 확정: private evaluation store, 접근 통제·암호화·1년 보존, 원문·전체 자막·응답 전문 비저장 | 이 문서 4.4·10.3절 |
-| AI 근거 구간·후보 Snapshot Schema | 확정: `TIMESTAMP`·`TEXT_RANGE`·`UNKNOWN`, P1/S1, 후보는 관리자 전용 | DATA-E3-AI-001·AI API |
+| AI 근거 구간·후보 Snapshot Schema | 확정: `TIMESTAMP`·`TEXT_RANGE`·`UNKNOWN`, 현재 P2/S1·기존 P1 이력 보존, 후보는 관리자 전용 | DATA-E3-AI-001·AI API |
 | 비동기 claim·timeout·재시도·롤백 중 작업 처리 | 확정: Worker 1개/인스턴스, lease 120초, heartbeat 30초, polling 5초, Gemini 120초/최대 2회 재시도, 정책 오류 무재시도 | ADR-EXT-003 |
 | Mobility 제품·TTL·캐시·quota | 확정: `/v1/directions`, 1회 호출, TTL 5분, 캐시 없음, 유료 0원·앱 월 1,000건, Mobility 무재시도 | ADR-ROUTE-001·코스 API |
 | 단일 EC2 평가·작업 처리 한계 | 정책 확정·실측 대기: 단일 인스턴스 Worker 1개로 시작하고 50명/20 RPS·200명/80 RPS 부하 결과를 최종 완료 게이트로 요구 | 기준선 검토·성능 ADR |

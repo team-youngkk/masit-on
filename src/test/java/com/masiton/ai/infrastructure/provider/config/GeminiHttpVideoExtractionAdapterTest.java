@@ -22,6 +22,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import com.masiton.ai.application.AiCandidateValidator;
 import com.masiton.ai.application.port.out.AiProviderException;
 import com.masiton.ai.application.port.out.AiProviderFailureCategory;
 import com.masiton.ai.application.port.out.dto.AiVideoExtractionRequest;
@@ -62,13 +63,15 @@ class GeminiHttpVideoExtractionAdapterTest {
         AiVideoExtractionResult result = adapter(serverUrl()).extract(request());
 
         JsonNode sent = objectMapper.readTree(requestBody.get());
+        JsonNode schema = sent.at("/generationConfig/responseJsonSchema");
         assertThat(sent.at("/generationConfig/responseMimeType").asText()).isEqualTo("application/json");
-        assertThat(sent.at("/generationConfig/responseJsonSchema/required").toString())
+        assertThat(schema.toString())
                 .contains("resultCompleteness", "candidates", "missingFields");
-        assertThat(sent.at("/generationConfig/responseJsonSchema/properties/missingFields/items/enum").toString())
+        assertThat(schema.at("/anyOf/0/properties/missingFields/items/enum").toString())
                 .contains("restaurantName", "menu", "address", "location", "visitEvidence", "tag");
-        assertThat(sent.at("/generationConfig/responseJsonSchema/properties/candidates/items/properties/evidence/properties")
-                .toString()).contains("startMs", "endMs", "startOffset", "endOffset", "sourceHash");
+        assertThat(schema.at("/anyOf/0/properties/candidates/items").toString())
+                .contains("startMs", "endMs", "startOffset", "endOffset", "sourceHash",
+                        "candidateTagId", "tagType", "rawLabel", "normalizedCode", "label");
         assertThat(sent.at("/systemInstruction/parts/0/text").asText())
                 .contains("COMPLETE", "PARTIAL", "missingFields");
         assertThat(sent.at("/contents/0/parts/0/fileData/fileUri").asText())
@@ -262,6 +265,255 @@ class GeminiHttpVideoExtractionAdapterTest {
                         + "{\"field\":\"restaurantName\",\"value\":\"맛집\",\"confidence\":0.9,"
                         + "\"evidence\":{\"type\":\"UNKNOWN\",\"startMs\":1}}"
                         + "],\"missingFields\":[]}")));
+
+        assertFailure(AiProviderFailureCategory.SCHEMA);
+    }
+
+    @Test
+    @DisplayName("태그 후보를 포함한 정상 응답을 SCHEMA 실패 없이 후보로 변환한다")
+    void 추출_태그후보포함정상응답_S1후보페이로드를반환한다() throws Exception {
+        startServer(exchange -> respond(exchange, 200, geminiEnvelopeWithPayload(
+                "{\"resultCompleteness\":\"COMPLETE\",\"candidates\":["
+                        + "{\"field\":\"tag\",\"candidateTagId\":\"tag_1\",\"tagType\":\"TASTE\","
+                        + "\"rawLabel\":\"능이버섯 삼계탕에 포인트를 더한 곳\",\"normalizedCode\":\"TASTE_NAENGYI\","
+                        + "\"label\":\"능이버섯 삼계탕\",\"confidence\":0.9,"
+                        + "\"evidence\":{\"type\":\"TIMESTAMP\",\"startMs\":302000,\"endMs\":305000}}"
+                        + "],\"missingFields\":[]}")));
+
+        AiVideoExtractionResult result = adapter(serverUrl()).extract(request());
+
+        assertThat(result.candidates().at("/candidates/0/field").asText()).isEqualTo("tag");
+        assertThat(result.candidates().at("/candidates/0/normalizedCode").asText()).isEqualTo("TASTE_NAENGYI");
+    }
+
+    @Test
+    @DisplayName("태그 후보에 value가 있으면 SCHEMA로 정규화한다")
+    void 추출_태그후보에value포함_SCHEMA로정규화한다() throws Exception {
+        startServer(exchange -> respond(exchange, 200, geminiEnvelopeWithPayload(
+                "{\"resultCompleteness\":\"COMPLETE\",\"candidates\":["
+                        + "{\"field\":\"tag\",\"value\":\"능이버섯 삼계탕\",\"candidateTagId\":\"tag_1\",\"tagType\":\"TASTE\","
+                        + "\"rawLabel\":\"능이버섯 삼계탕\",\"normalizedCode\":\"TASTE_NAENGYI\",\"label\":\"능이버섯 삼계탕\","
+                        + "\"confidence\":0.9,\"evidence\":{\"type\":\"TIMESTAMP\",\"startMs\":1,\"endMs\":2}}"
+                        + "],\"missingFields\":[]}")));
+
+        assertFailure(AiProviderFailureCategory.SCHEMA);
+    }
+
+    @Test
+    @DisplayName("태그 후보에 rawLabel, normalizedCode, label이 빠지면 SCHEMA로 정규화한다")
+    void 추출_태그후보필수필드누락_SCHEMA로정규화한다() throws Exception {
+        startServer(exchange -> respond(exchange, 200, geminiEnvelopeWithPayload(
+                "{\"resultCompleteness\":\"COMPLETE\",\"candidates\":["
+                        + "{\"field\":\"tag\",\"candidateTagId\":\"tag_1\",\"tagType\":\"TASTE\","
+                        + "\"confidence\":0.9,\"evidence\":{\"type\":\"TIMESTAMP\",\"startMs\":1,\"endMs\":2}}"
+                        + "],\"missingFields\":[]}")));
+
+        assertFailure(AiProviderFailureCategory.SCHEMA);
+    }
+
+    @Test
+    @DisplayName("송신 Schema의 후보 허용 필드가 수신 검증기의 허용 필드 집합과 일치한다")
+    void 추출_송신스키마허용필드_수신검증기허용필드와일치한다() throws Exception {
+        AtomicReference<String> requestBody = new AtomicReference<>();
+        startServer(exchange -> {
+            requestBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            respond(exchange, 200, geminiEnvelope("COMPLETE"));
+        });
+
+        adapter(serverUrl()).extract(request());
+
+        JsonNode sent = objectMapper.readTree(requestBody.get());
+        JsonNode candidateAnyOf = sent.at(
+                "/generationConfig/responseJsonSchema/anyOf/0/properties/candidates/items/anyOf");
+        assertThat(candidateAnyOf.isArray()).isTrue();
+        java.util.Set<String> commonFields = null;
+        java.util.Set<String> tagFields = null;
+        for (JsonNode branch : candidateAnyOf) {
+            java.util.Set<String> branchFields = new java.util.HashSet<>(branch.path("properties").propertyNames());
+            boolean isTagBranch = "tag".equals(branch.at("/properties/field/enum/0").asText());
+            if (isTagBranch) {
+                tagFields = branchFields;
+            } else {
+                commonFields = branchFields;
+            }
+        }
+        assertThat(commonFields).isEqualTo(readAllowedFields(GeminiHttpVideoExtractionAdapter.class, "S1_COMMON_CANDIDATE_FIELDS"));
+        assertThat(tagFields).isEqualTo(readAllowedFields(GeminiHttpVideoExtractionAdapter.class, "S1_TAG_CANDIDATE_FIELDS"));
+        assertThat(commonFields).isEqualTo(readAllowedFields(AiCandidateValidator.class, "COMMON_CANDIDATE_FIELDS"));
+        assertThat(tagFields).isEqualTo(readAllowedFields(AiCandidateValidator.class, "TAG_CANDIDATE_FIELDS"));
+    }
+
+    @SuppressWarnings("unchecked")
+    private java.util.Set<String> readAllowedFields(Class<?> declaringClass, String fieldName) throws Exception {
+        java.lang.reflect.Field field = declaringClass.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return (java.util.Set<String>) field.get(null);
+    }
+
+    private int readMaxMissingFields() throws Exception {
+        java.lang.reflect.Field field = GeminiHttpVideoExtractionAdapter.class.getDeclaredField("MAX_MISSING_FIELDS");
+        field.setAccessible(true);
+        return field.getInt(null);
+    }
+
+    @Test
+    @DisplayName("송신 Schema가 resultCompleteness와 missingFields의 결합을 구조로 강제한다")
+    void 추출_송신스키마_완결성과누락필드결합을구조로강제한다() throws Exception {
+        AtomicReference<String> requestBody = new AtomicReference<>();
+        startServer(exchange -> {
+            requestBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            respond(exchange, 200, geminiEnvelope("COMPLETE"));
+        });
+
+        adapter(serverUrl()).extract(request());
+
+        JsonNode sent = objectMapper.readTree(requestBody.get());
+        JsonNode rootAnyOf = sent.at("/generationConfig/responseJsonSchema/anyOf");
+        assertThat(rootAnyOf.isArray()).isTrue();
+        assertThat(rootAnyOf.size()).isEqualTo(2);
+        JsonNode completeBranch = findBranch(rootAnyOf, "COMPLETE");
+        JsonNode partialBranch = findBranch(rootAnyOf, "PARTIAL");
+        assertThat(completeBranch.at("/properties/missingFields/maxItems").asInt()).isEqualTo(0);
+        assertThat(completeBranch.at("/properties/missingFields/minItems").isMissingNode()).isTrue();
+        assertThat(partialBranch.at("/properties/missingFields/minItems").asInt()).isEqualTo(1);
+        assertThat(partialBranch.at("/properties/missingFields/maxItems").asInt())
+                .isEqualTo(readMaxMissingFields());
+    }
+
+    private JsonNode findBranch(JsonNode rootAnyOf, String completenessValue) {
+        for (JsonNode branch : rootAnyOf) {
+            if (branch.at("/properties/resultCompleteness/enum/0").asText().equals(completenessValue)) {
+                return branch;
+            }
+        }
+        throw new AssertionError("no branch for " + completenessValue);
+    }
+
+    @Test
+    @DisplayName("PARTIAL과 빈 missingFields 조합은 SCHEMA로 정규화한다")
+    void 추출_PARTIAL과빈누락필드조합_SCHEMA로정규화한다() throws Exception {
+        startServer(exchange -> respond(exchange, 200, geminiEnvelopeWithPayload(
+                "{\"resultCompleteness\":\"PARTIAL\",\"candidates\":[],\"missingFields\":[]}")));
+
+        assertFailure(AiProviderFailureCategory.SCHEMA);
+    }
+
+    @Test
+    @DisplayName("송신 Schema가 태그 후보 normalizedCode에 허용 문자 패턴을 선언한다")
+    void 추출_송신스키마_normalizedCode패턴을선언한다() throws Exception {
+        AtomicReference<String> requestBody = new AtomicReference<>();
+        startServer(exchange -> {
+            requestBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            respond(exchange, 200, geminiEnvelope("COMPLETE"));
+        });
+
+        adapter(serverUrl()).extract(request());
+
+        JsonNode sent = objectMapper.readTree(requestBody.get());
+        JsonNode candidateAnyOf = sent.at(
+                "/generationConfig/responseJsonSchema/anyOf/0/properties/candidates/items/anyOf");
+        JsonNode tagBranch = null;
+        for (JsonNode branch : candidateAnyOf) {
+            if (branch.path("properties").has("normalizedCode")) {
+                tagBranch = branch;
+            }
+        }
+        assertThat(tagBranch).isNotNull();
+        assertThat(tagBranch.at("/properties/normalizedCode/pattern").asText()).isEqualTo("^[A-Z0-9_]{1,64}$");
+    }
+
+    @Test
+    @DisplayName("송신 Schema가 문자열 후보 필드에 최소·최대 길이를 선언한다")
+    void 추출_송신스키마_문자열후보필드에길이상한을선언한다() throws Exception {
+        AtomicReference<String> requestBody = new AtomicReference<>();
+        startServer(exchange -> {
+            requestBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            respond(exchange, 200, geminiEnvelope("COMPLETE"));
+        });
+
+        adapter(serverUrl()).extract(request());
+
+        JsonNode sent = objectMapper.readTree(requestBody.get());
+        JsonNode candidateAnyOf = sent.at(
+                "/generationConfig/responseJsonSchema/anyOf/0/properties/candidates/items/anyOf");
+        JsonNode commonBranch = null;
+        JsonNode tagBranch = null;
+        for (JsonNode branch : candidateAnyOf) {
+            if (branch.path("properties").has("value")) {
+                commonBranch = branch;
+            } else {
+                tagBranch = branch;
+            }
+        }
+        int maxStringLength = readMaxStringLength();
+        assertThat(commonBranch.at("/properties/value/minLength").asInt()).isEqualTo(1);
+        assertThat(commonBranch.at("/properties/value/maxLength").asInt()).isEqualTo(maxStringLength);
+        for (String field : new String[]{"candidateTagId", "rawLabel", "label"}) {
+            assertThat(tagBranch.at("/properties/" + field + "/minLength").asInt()).isEqualTo(1);
+            assertThat(tagBranch.at("/properties/" + field + "/maxLength").asInt()).isEqualTo(maxStringLength);
+        }
+    }
+
+    @Test
+    @DisplayName("문자열 필드 길이 상한을 넘는 후보 값은 SCHEMA로 정규화한다")
+    void 추출_문자열필드길이상한초과_SCHEMA로정규화한다() throws Exception {
+        String tooLong = "가".repeat(readMaxStringLength() + 1);
+        startServer(exchange -> respond(exchange, 200, geminiEnvelopeWithPayload(
+                "{\"resultCompleteness\":\"COMPLETE\",\"candidates\":["
+                        + "{\"field\":\"restaurantName\",\"value\":\"" + tooLong + "\",\"confidence\":0.9,"
+                        + "\"evidence\":{\"type\":\"TIMESTAMP\",\"startMs\":1,\"endMs\":2}}"
+                        + "],\"missingFields\":[]}")));
+
+        assertFailure(AiProviderFailureCategory.SCHEMA);
+    }
+
+    @Test
+    @DisplayName("공백 후보 값은 SCHEMA로 정규화한다")
+    void 추출_공백후보값_SCHEMA로정규화한다() throws Exception {
+        startServer(exchange -> respond(exchange, 200, geminiEnvelopeWithPayload(
+                "{\"resultCompleteness\":\"COMPLETE\",\"candidates\":["
+                        + "{\"field\":\"restaurantName\",\"value\":\"   \",\"confidence\":0.9,"
+                        + "\"evidence\":{\"type\":\"TIMESTAMP\",\"startMs\":1,\"endMs\":2}}"
+                        + "],\"missingFields\":[]}")));
+
+        assertFailure(AiProviderFailureCategory.SCHEMA);
+    }
+
+    @Test
+    @DisplayName("시스템 지시가 후보 수와 누락 필드 수의 상한을 언급한다")
+    void 추출_시스템지시_후보수상한을언급한다() throws Exception {
+        AtomicReference<String> requestBody = new AtomicReference<>();
+        startServer(exchange -> {
+            requestBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            respond(exchange, 200, geminiEnvelope("COMPLETE"));
+        });
+
+        adapter(serverUrl()).extract(request());
+
+        JsonNode sent = objectMapper.readTree(requestBody.get());
+        String systemInstruction = sent.at("/systemInstruction/parts/0/text").asText();
+        assertThat(systemInstruction)
+                .contains(String.valueOf(readMaxCandidates()))
+                .contains(String.valueOf(readMaxMissingFields()));
+    }
+
+    private int readMaxStringLength() throws Exception {
+        java.lang.reflect.Field field = GeminiHttpVideoExtractionAdapter.class.getDeclaredField("MAX_STRING_LENGTH");
+        field.setAccessible(true);
+        return field.getInt(null);
+    }
+
+    private int readMaxCandidates() throws Exception {
+        java.lang.reflect.Field field = GeminiHttpVideoExtractionAdapter.class.getDeclaredField("MAX_CANDIDATES");
+        field.setAccessible(true);
+        return field.getInt(null);
+    }
+
+    @Test
+    @DisplayName("COMPLETE와 비어있지 않은 missingFields 조합은 SCHEMA로 정규화한다")
+    void 추출_COMPLETE와비어있지않은누락필드조합_SCHEMA로정규화한다() throws Exception {
+        startServer(exchange -> respond(exchange, 200, geminiEnvelopeWithPayload(
+                "{\"resultCompleteness\":\"COMPLETE\",\"candidates\":[],\"missingFields\":[\"address\"]}")));
 
         assertFailure(AiProviderFailureCategory.SCHEMA);
     }
