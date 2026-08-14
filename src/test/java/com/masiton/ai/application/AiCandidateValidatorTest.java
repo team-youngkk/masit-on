@@ -142,6 +142,94 @@ class AiCandidateValidatorTest {
         // Then
         assertThat(result.decision()).isEqualTo(Decision.AUTO_BLOCKED);
         assertThat(result.reasonCodes()).contains("MULTIPLE_CANDIDATES");
+        assertThat(result.candidates().get("restaurantName")).extracting(
+                AiCandidateValidationResult.Candidate::value).containsExactly("첫 맛집", "둘째 맛집");
+    }
+
+    @Test
+    @DisplayName("메뉴에 복수 후보가 있으면 자동 확정하지 않으면서도 후보를 모두 보존한다")
+    void validate_메뉴복수후보_자동확정하지않으면서도후보를모두보존한다() throws Exception {
+        // Given
+        JsonNode payload = payload("""
+                {
+                  "resultCompleteness": "COMPLETE",
+                  "candidates": [
+                    {"field":"restaurantName","value":"맛집","confidence":0.95,"evidence":{"type":"TIMESTAMP","startMs":10,"endMs":20}},
+                    {"field":"address","value":"서울시","confidence":0.90,"evidence":{"type":"TIMESTAMP","startMs":10,"endMs":20}},
+                    {"field":"location","value":"마포구","confidence":0.88,"evidence":{"type":"TIMESTAMP","startMs":10,"endMs":20}},
+                    {"field":"visitEvidence","value":"직접 방문","confidence":0.91,"evidence":{"type":"TIMESTAMP","startMs":10,"endMs":20}},
+                    {"field":"menu","value":"냉면","confidence":0.80,"evidence":{"type":"TIMESTAMP","startMs":30,"endMs":40}},
+                    {"field":"menu","value":"만두","confidence":0.75,"evidence":{"type":"TIMESTAMP","startMs":50,"endMs":60}}
+                  ],
+                  "missingFields": []
+                }
+                """);
+
+        // When
+        AiCandidateValidationResult result = validator.validate(payload);
+
+        // Then
+        assertThat(result.decision()).isEqualTo(Decision.AUTO_BLOCKED);
+        assertThat(result.reasonCodes()).contains("MULTIPLE_CANDIDATES");
+        assertThat(result.foodCategoryName()).isNull();
+        assertThat(result.candidates().get("menu")).extracting(
+                AiCandidateValidationResult.Candidate::value).containsExactly("냉면", "만두");
+    }
+
+    @Test
+    @DisplayName("메뉴 후보가 단일이지만 근거가 UNKNOWN이면 자동 확정하지 않으면서도 후보를 보존한다")
+    void validate_메뉴단일후보UNKNOWN근거_자동확정하지않으면서도후보를보존한다() throws Exception {
+        // Given
+        JsonNode payload = payload("""
+                {
+                  "resultCompleteness": "COMPLETE",
+                  "candidates": [
+                    {"field":"restaurantName","value":"맛집","confidence":0.95,"evidence":{"type":"TIMESTAMP","startMs":10,"endMs":20}},
+                    {"field":"address","value":"서울시","confidence":0.90,"evidence":{"type":"TIMESTAMP","startMs":10,"endMs":20}},
+                    {"field":"location","value":"마포구","confidence":0.88,"evidence":{"type":"TIMESTAMP","startMs":10,"endMs":20}},
+                    {"field":"visitEvidence","value":"직접 방문","confidence":0.91,"evidence":{"type":"TIMESTAMP","startMs":10,"endMs":20}},
+                    {"field":"menu","value":"냉면","confidence":0.80,"evidence":{"type":"UNKNOWN"}}
+                  ],
+                  "missingFields": []
+                }
+                """);
+
+        // When
+        AiCandidateValidationResult result = validator.validate(payload);
+
+        // Then
+        assertThat(result.decision()).isEqualTo(Decision.AUTO_BLOCKED);
+        assertThat(result.reasonCodes()).contains("UNKNOWN_EVIDENCE");
+        assertThat(result.foodCategoryName()).isNull();
+        assertThat(result.missingFields()).doesNotContain("menu");
+        assertThat(result.candidates().get("menu")).extracting(
+                AiCandidateValidationResult.Candidate::value).containsExactly("냉면");
+    }
+
+    @Test
+    @DisplayName("필수 필드에 후보가 아예 없으면 여전히 missingFields에 남고 차단한다")
+    void validate_필수필드후보없음_여전히missingFields에남고차단한다() throws Exception {
+        // Given
+        JsonNode payload = payload("""
+                {
+                  "resultCompleteness": "COMPLETE",
+                  "candidates": [
+                    {"field":"restaurantName","value":"맛집","confidence":0.95,"evidence":{"type":"TIMESTAMP","startMs":10,"endMs":20}},
+                    {"field":"location","value":"마포구","confidence":0.88,"evidence":{"type":"TIMESTAMP","startMs":10,"endMs":20}},
+                    {"field":"visitEvidence","value":"직접 방문","confidence":0.91,"evidence":{"type":"TIMESTAMP","startMs":10,"endMs":20}}
+                  ],
+                  "missingFields": []
+                }
+                """);
+
+        // When
+        AiCandidateValidationResult result = validator.validate(payload);
+
+        // Then
+        assertThat(result.decision()).isEqualTo(Decision.AUTO_BLOCKED);
+        assertThat(result.missingFields()).contains("address");
+        assertThat(result.reasonCodes()).contains("MISSING_REQUIRED_FIELD");
+        assertThat(result.candidates()).doesNotContainKey("address");
     }
 
     @Test

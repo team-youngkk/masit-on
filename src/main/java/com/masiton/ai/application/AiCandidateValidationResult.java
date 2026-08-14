@@ -13,7 +13,7 @@ import java.util.Objects;
  */
 public record AiCandidateValidationResult(
         Decision decision,
-        Map<String, Candidate> candidates,
+        Map<String, List<Candidate>> candidates,
         String foodCategoryName,
         List<TagCandidate> tags,
         List<TagCandidate> rejectedTags,

@@ -96,7 +96,7 @@ masiton:
         api-key:
         base-url: https://generativelanguage.googleapis.com
         model: gemini-3.5-flash-lite
-        prompt-version: P1
+        prompt-version: P2
         schema-version: S1
         connect-timeout: PT5S
         response-timeout: PT90S

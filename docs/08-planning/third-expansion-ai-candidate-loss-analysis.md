@@ -97,6 +97,23 @@ related_documents:
 
 두 항목 모두 송신 Schema가 규칙을 구조로 표현하게 하는 것으로 해결한다. 수신 검증기와 API 계약은 바꾸지 않는다.
 
+### 4.5 Schema로 표현할 수 없는 상한과 Prompt 버전
+
+수신 검증기는 후보 수 `100`, 누락 필드 수 `20`, 문자열 길이 `4096`을 초과하면 응답 전체를 `SCHEMA`로 기각한다. 이 상한도 송신 Schema에 표현돼 있지 않았다. 실측에서 영상 A가 후보 131건을 반환했으므로 태그 모양을 고쳐도 다장소 영상은 여전히 기각된다.
+
+문자열 길이는 `minLength`·`maxLength`로 표현했고 실제 호출에서 수용됐다. 그런데 **후보 수 상한은 Schema로 표현할 수 없다.**
+
+| 시도 | 결과 |
+|---|---|
+| `missingFields`에 `maxItems` | HTTP 200 |
+| `candidates`에 `maxItems`(양쪽 루트 분기) | HTTP 400 `INVALID_ARGUMENT` |
+| `candidates`에 `maxItems`(한쪽 분기만) | HTTP 400 `INVALID_ARGUMENT` |
+| 문자열 속성에 `maxLength` | HTTP 200 |
+
+`candidates.items`가 `anyOf`이므로 `maxItems`와 조합하면 요청 자체가 거절된다. 넣으면 `SCHEMA` 실패가 `UPSTREAM`(재시도 불가) 실패로 바뀌어 악화된다. 따라서 후보 수 상한은 시스템 지시 문장으로만 전달하고, `MAX_CANDIDATES` 자체를 올리는 것은 수신 계약 변경이므로 9절 남은 결정으로 둔다. **후보가 100건을 넘는 영상은 여전히 기각될 수 있다.**
+
+시스템 지시와 요청 Schema 표현이 함께 바뀌었으므로 `PROMPT_VERSION`을 `P1`에서 `P2`로 올렸다. `BR-AIEXTRACT-004`가 버전별 재현성을 요구하고 `prompt_version`이 멱등성 키에 포함되므로 라벨을 유지하면 수정 전후 Snapshot이 같은 `P1`으로 섞이고 같은 영상 재요청이 기존 작업으로 수렴한다. 수신 계약은 바뀌지 않았으므로 `SCHEMA_VERSION`은 `S1`을 유지한다. `ADR-AI-001` 10절을 같은 PR에서 갱신했다. `aiextract-golden-v1.0.0` 평가 자산은 `gemini-3-flash-preview`·`P1` 기준 역사적 fixture로 보존한다.
+
 ## 5. 결함 B — 복수 후보를 폐기한다
 
 ### 5.1 근거 규칙
@@ -182,6 +199,9 @@ related_documents:
 
 ## 9. 남은 결정
 
-- 결정 C의 장소 동일성 판정 기준 변경 여부. restaurant 도메인 소유자 합의 대상이다.
+- 결정 C의 장소 동일성 판정 기준 변경 여부. restaurant 도메인 소유자 합의 대상이다. 관리자가 판정 주체로 남는 범위의 후속 설계는 [AI 후보 등록 보조 설계](third-expansion-ai-candidate-registration-assist.md)에 있다.
 - 메뉴 표현과 대표 카테고리 매핑 방식. 고정 키워드 완전일치를 유지할지 기준정보로 옮길지 판단이 필요하다.
 - 관리자 수동 등록 결과와 AI 작업의 연결 보존 여부.
+- `MAX_CANDIDATES` 상한 인상 여부. 실측 최대가 131건이므로 다장소 영상을 통과시키려면 상한을 올려야 하지만 수신 계약 변경이다. 응답 크기와 처리 비용도 함께 판단한다.
+- `candidate_fields`의 복수 후보 배열을 `tr_ai_candidate_snapshot__json_contract` 트리거 검사 대상에 넣을지 여부. 현재 그 컬럼은 최상위 object CHECK만 받으므로 배열 원소의 `confidence` 범위와 `evidence` 형태가 DB 방어선을 통과하지 않는다. 애플리케이션 검증기가 정상 경로를 막고 있어 재현되는 결함은 없으나 심층 방어가 한 겹 줄었다. 트리거 변경은 새 마이그레이션이 필요하므로 Flyway 순서 소유자 합의 대상이다.
+- 후보 표현 해석을 `presentation`에서 `application`으로 이관할지 여부. 현재 `AdminAiVideoExtractionController.DetailResponse.candidates()`가 스칼라·배열 두 표현을 해석한다. 이관은 응답 매핑 전체를 건드리므로 이번 결함 범위를 넘는다고 판단했다.
