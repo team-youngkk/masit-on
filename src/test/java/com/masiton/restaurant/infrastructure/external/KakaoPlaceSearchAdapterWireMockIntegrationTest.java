@@ -14,6 +14,9 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -32,6 +35,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * 실패 응답을 예외로 알리는지를 WireMock으로 검증한다. 실제 Kakao API는 호출하지 않는다.
  */
 @Testcontainers
+@ExtendWith(OutputCaptureExtension.class)
 class KakaoPlaceSearchAdapterWireMockIntegrationTest {
 
     private static final int WIREMOCK_PORT = 8080;
@@ -134,6 +138,27 @@ class KakaoPlaceSearchAdapterWireMockIntegrationTest {
         List<PlaceSearchCandidate> results = adapter().search("아코");
 
         assertThat(results).isEmpty();
+    }
+
+    @Test
+    @DisplayName("응답 문서가 모두 계약 위반이면 원문 없이 제외 사유별 경고를 기록한다")
+    void 검색_모든문서계약위반_제외사유별경고를기록한다(CapturedOutput output) throws Exception {
+        stubKeywordSearch(200, Map.of("documents", List.of(
+                Map.of(
+                        "place_name", "주소 없음",
+                        "place_url", "https://place.map.kakao.com/1"),
+                Map.of(
+                        "place_name", "잘못된 URL",
+                        "place_url", "https://place.example.com/2",
+                        "road_address_name", "서울특별시 강동구 성내동 12-38"))));
+
+        List<PlaceSearchCandidate> results = adapter().search("아코");
+
+        assertThat(results).isEmpty();
+        assertThat(output).contains(
+                "kakao place search response excluded all documents: total=2, missingRequired=1, "
+                        + "invalidPlaceUrl=1, invalidDocument=0");
+        assertThat(output).doesNotContain("주소 없음", "잘못된 URL", "place.example.com");
     }
 
     @Test

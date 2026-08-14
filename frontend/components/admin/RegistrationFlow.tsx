@@ -8,7 +8,9 @@ import { Field } from '@/components/ui/Field'
 import { adminJson, fieldErrorsFor, messageFor } from '@/lib/admin/api'
 import { registrationStepDecision } from '@/lib/admin/registration-progression'
 
+import { RegistrationDuplicateResult } from './RegistrationDuplicateResult'
 import styles from './admin.module.css'
+import buttonStyles from '../ui/Button.module.css'
 
 type Input = {
   name: string
@@ -67,6 +69,7 @@ export function RegistrationFlow({
   const previewGeneration = useRef(0)
   const previewInFlight = useRef(false)
   const createInFlight = useRef(false)
+  const duplicateCompletionInFlight = useRef(false)
 
   const previewMutation = useMutation({
     mutationFn: (body: Record<string, string | null>) =>
@@ -90,6 +93,7 @@ export function RegistrationFlow({
     setPreview(null)
     setCreated(null)
     setError(null)
+    duplicateCompletionInFlight.current = false
   }
 
   function previewPayload(): Record<string, string | null> {
@@ -116,6 +120,7 @@ export function RegistrationFlow({
     setFieldErrors({})
     setPreview(null)
     setCreated(null)
+    duplicateCompletionInFlight.current = false
 
     const generation = ++previewGeneration.current
 
@@ -126,12 +131,6 @@ export function RegistrationFlow({
         }
         setPreview(result)
         setCreated(null)
-        if (onCompleted) {
-          const decision = registrationStepDecision(result)
-          if (decision.action === 'skip') {
-            onCompleted(decision.existingId, 'duplicate')
-          }
-        }
       },
       onError: (reason) => {
         if (generation !== previewGeneration.current) {
@@ -144,6 +143,18 @@ export function RegistrationFlow({
         previewInFlight.current = false
       },
     })
+  }
+
+  function handleDuplicateContinue() {
+    if (!preview || !onCompleted || duplicateCompletionInFlight.current) {
+      return
+    }
+    const decision = registrationStepDecision(preview)
+    if (decision.action !== 'skip') {
+      return
+    }
+    duplicateCompletionInFlight.current = true
+    onCompleted(decision.existingId, 'duplicate')
   }
 
   function handleCreate() {
@@ -244,10 +255,13 @@ export function RegistrationFlow({
             </>
           ) : null}
           {preview.decision === 'DUPLICATE' ? (
-            <>
-              <p className={styles.error}>이미 등록된 {resourceName}입니다. 중복 등록할 수 없습니다.</p>
-              {existing ? <pre>{existing}</pre> : null}
-            </>
+            <RegistrationDuplicateResult
+              resourceName={resourceName}
+              existing={existing}
+              onContinue={onCompleted ? handleDuplicateContinue : undefined}
+              errorClassName={styles.error}
+              buttonClassName={`${buttonStyles.button} ${buttonStyles.secondary}`}
+            />
           ) : null}
           {preview.decision === 'REVIEW_REQUIRED' ? (
             <>

@@ -87,15 +87,9 @@ class SearchAdminPlaceCandidatesService implements SearchAdminPlaceCandidatesUse
         if (roadAddressHint == null) {
             return null;
         }
-        String normalized = roadAddressHint.trim();
+        String normalized = SeoulRoadAddressNormalizer.normalize(roadAddressHint);
         if (normalized.isEmpty()) {
             return null;
-        }
-        if (normalized.startsWith("서울특별시")) {
-            return normalized;
-        }
-        if (normalized.startsWith("서울 ")) {
-            return "서울특별시 " + normalized.substring("서울 ".length()).trim();
         }
         return normalized;
     }
@@ -104,7 +98,7 @@ class SearchAdminPlaceCandidatesService implements SearchAdminPlaceCandidatesUse
         if (name == null) {
             throw new BusinessException(ErrorCode.MISSING_REQUIRED_FIELD, "name is required.");
         }
-        String normalized = name.trim();
+        String normalized = name.strip();
         if (normalized.isEmpty() || normalized.length() > 100) {
             throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, "name is invalid.");
         }

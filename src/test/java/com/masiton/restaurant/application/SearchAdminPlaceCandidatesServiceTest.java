@@ -17,6 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -45,6 +46,18 @@ class SearchAdminPlaceCandidatesServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(exception -> ((BusinessException) exception).code())
                 .isEqualTo(ErrorCode.INVALID_FIELD_VALUE.name());
+    }
+
+    @Test
+    @DisplayName("name이 유니코드 공백뿐이면 INVALID_FIELD_VALUE를 던지고 외부 검색을 호출하지 않는다")
+    void 검색_name유니코드공백_예외를던지고외부검색을호출하지않는다() {
+        assertThatThrownBy(() -> service.search(
+                new SearchAdminPlaceCandidatesUseCase.SearchAdminPlaceCandidatesCommand("　", null)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(exception -> ((BusinessException) exception).code())
+                .isEqualTo(ErrorCode.INVALID_FIELD_VALUE.name());
+
+        verifyNoInteractions(placeSearchPort);
     }
 
     @Test

@@ -8,6 +8,11 @@ export function isCurrentAsyncRequest(
   return request.generation === currentGeneration && request.identity === currentIdentity
 }
 
+/** 검색 결과는 현재 입력 seed와 같은 identity이면 입력을 왕복 수정했어도 유효하다. */
+export function isCurrentSearchRequest(requestIdentity: string, currentIdentity: string): boolean {
+  return requestIdentity === currentIdentity
+}
+
 export function restaurantNameCandidates(candidates: AiCandidate[]): AiCandidate[] {
   return candidates.filter((candidate) => candidate.field === 'restaurantName')
 }

@@ -11,6 +11,7 @@ import {
   restaurantNameCandidates,
   visitEvidenceCandidates,
   isCurrentAsyncRequest,
+  isCurrentSearchRequest,
 } from './ai-candidate-registration-coordination.ts'
 import type { AiCandidate } from './ai-video-extractions.ts'
 
@@ -87,4 +88,11 @@ test('입력이 바뀐 뒤 도착한 장소 검색 응답은 무시한다', () =
   assert.equal(isCurrentAsyncRequest(request, 3, 'session:["아코","서울"]'), false)
   assert.equal(isCurrentAsyncRequest(request, 2, 'session:["아코","부산"]'), false)
   assert.equal(isCurrentAsyncRequest(request, 2, request.identity), true)
+})
+
+test('검색 중 입력을 바꿨다가 원래 seed로 복원하면 해당 identity 응답을 반영한다', () => {
+  const requestIdentity = 'session:["아코","서울"]'
+
+  assert.equal(isCurrentSearchRequest(requestIdentity, 'session:["아코","부산"]'), false)
+  assert.equal(isCurrentSearchRequest(requestIdentity, requestIdentity), true)
 })

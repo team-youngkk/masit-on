@@ -13,6 +13,7 @@ import {
   placeSearchSeedIdentity,
   prefillFromPlace,
   isCurrentAsyncRequest,
+  isCurrentSearchRequest,
   visitEvidenceCandidates,
 } from '@/lib/admin/ai-candidate-registration-coordination'
 import type { AiCandidate, AiExtractionDetail } from '@/lib/admin/ai-video-extractions'
@@ -35,7 +36,6 @@ type PlaceSearchSeed = ReturnType<typeof placeSearchSeed>
 
 type PlaceSearchRequest = {
   identity: string
-  generation: number
   seed: PlaceSearchSeed
 }
 
@@ -79,25 +79,26 @@ export function AiCandidateRegistration({
   const sessionIdentity = JSON.stringify([detail.jobId, candidate.candidateTagId ?? null, candidate.field, candidate.value ?? null])
   const sessionIdentityRef = useRef(sessionIdentity)
   const currentSearchIdentityRef = useRef('')
-  const searchGenerationRef = useRef(0)
   const searchInFlightRef = useRef(new Set<string>())
   const visitGenerationRef = useRef(0)
   const visitInFlightRef = useRef(false)
 
   sessionIdentityRef.current = sessionIdentity
-  currentSearchIdentityRef.current = searchIdentity(sessionIdentity, placeSearchSeed(name, addressHint))
+  if (step === 'search') {
+    currentSearchIdentityRef.current = searchIdentity(sessionIdentity, placeSearchSeed(name, addressHint))
+  }
 
   const searchMutation = useMutation({
     mutationFn: (request: PlaceSearchRequest) =>
       searchAdminPlaceCandidates(request.seed.name, request.seed.roadAddressHint),
     onSuccess: (data, request) => {
-      if (!isCurrentAsyncRequest(request, searchGenerationRef.current, currentSearchIdentityRef.current)) {
+      if (!isCurrentSearchRequest(request.identity, currentSearchIdentityRef.current)) {
         return
       }
       setSearchView({ status: 'success', identity: request.identity, data })
     },
     onError: (error, request) => {
-      if (!isCurrentAsyncRequest(request, searchGenerationRef.current, currentSearchIdentityRef.current)) {
+      if (!isCurrentSearchRequest(request.identity, currentSearchIdentityRef.current)) {
         return
       }
       setSearchView({ status: 'error', identity: request.identity, error })
@@ -137,7 +138,6 @@ export function AiCandidateRegistration({
   useEffect(() => {
     const nextAddressHint = addresses.length === 1 ? addresses[0].value?.trim() || null : null
     const nextName = candidate.value?.trim() ?? ''
-    searchGenerationRef.current += 1
     visitGenerationRef.current += 1
     visitInFlightRef.current = false
     currentSearchIdentityRef.current = searchIdentity(sessionIdentity, placeSearchSeed(nextName, nextAddressHint))
@@ -157,7 +157,7 @@ export function AiCandidateRegistration({
     setVisitPending(false)
 
     return () => {
-      searchGenerationRef.current += 1
+      currentSearchIdentityRef.current = ''
       visitGenerationRef.current += 1
       visitInFlightRef.current = false
     }
@@ -166,7 +166,6 @@ export function AiCandidateRegistration({
   }, [sessionIdentity])
 
   function updateSearchInput(nextName: string, nextAddressHint: string | null) {
-    searchGenerationRef.current += 1
     currentSearchIdentityRef.current = searchIdentity(sessionIdentity, placeSearchSeed(nextName, nextAddressHint))
     setSearchView({ status: 'idle' })
   }
@@ -180,14 +179,14 @@ export function AiCandidateRegistration({
 
     searchInFlightRef.current.add(identity)
     setPendingSearchIdentities((current) => new Set(current).add(identity))
-    const request = { identity, generation: ++searchGenerationRef.current, seed }
+    const request = { identity, seed }
     currentSearchIdentityRef.current = identity
     setSearchView({ status: 'pending', identity })
     searchMutation.mutate(request)
   }
 
   function selectPlace(place: AdminPlaceSearchResult) {
-    searchGenerationRef.current += 1
+    currentSearchIdentityRef.current = ''
     setSearchView({ status: 'idle' })
     setPlacePrefill(prefillFromPlace(place))
     setName(place.placeName.trim())
@@ -196,7 +195,7 @@ export function AiCandidateRegistration({
   }
 
   function useManualPlaceEntry() {
-    searchGenerationRef.current += 1
+    currentSearchIdentityRef.current = ''
     setSearchView({ status: 'idle' })
     setName(name.trim())
     setPlacePrefill(null)
