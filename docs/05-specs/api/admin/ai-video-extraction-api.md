@@ -70,7 +70,7 @@ related_documents:
   "reviewStatus": null,
   "provider": "GOOGLE_GEMINI",
   "modelVersion": "gemini-3.5-flash-lite",
-  "promptVersion": "P1",
+  "promptVersion": "P2",
   "schemaVersion": "S1",
   "attemptCount": 0,
   "createdAt": "2026-08-10T12:00:00+09:00",
@@ -165,6 +165,7 @@ related_documents:
 
 - `evidence.type`은 `TIMESTAMP`(`startMs`, `endMs`), `TEXT_RANGE`(`startOffset`, `endOffset`, `sourceHash`), `UNKNOWN` 후보를 사용한다.
 - `UNKNOWN` 또는 근거 없는 값은 정식 등록 확정 대상이 될 수 없다.
+- **같은 `field`가 `candidates`에 여러 번 나타날 수 있다.** 한 영상에서 장소를 하나로 판정할 수 없으면 `BR-AIEXTRACT-001`에 따라 후보를 확정하지 않고 모두 남기기 때문이다. 클라이언트는 `field`를 키로 후보를 색인하지 않는다.
 - 실패 응답은 `error.category`, `retryable`, `attemptCount`만 제공하며 외부 응답 전문은 제공하지 않는다.
 
 ### 3.4 `POST /api/admin/ai/video-extractions/{jobId}/retry` 수동 재시도
@@ -203,6 +204,7 @@ related_documents:
 ```
 
 - `CONFIRM`은 정상 자동 등록을 시작하는 명령이 아니라, `AUTO_BLOCKED` 결과를 관리자가 사후 보정해 등록하는 경우에만 사용한다.
+- 필수 필드에 후보가 둘 이상 남아 있으면 `CONFIRM`을 `422 AIEXTRACT_VALIDATION_CONFLICT`로 거절한다. 서버가 후보 중 하나를 임의로 고르지 않기 때문이며, 외부 검증을 시작하기 전에 거절하고 정식 저장은 0건이다. 이 경우 관리자는 후보를 확인해 관리자 등록 API로 등록하거나 `DISCARD`한다.
 - `tagDecisions`는 자동 태그 판단 또는 관리자 사후 보정의 append-only 이력으로 저장한다.
 - `UNKNOWN` 근거의 AI 후보는 자동 등록하지 않고, `TIMESTAMP` 또는 `TEXT_RANGE` 근거가 있는 태그만 `AI_AUTO_CONFIRMED` `VisitTag` 연결 대상이 된다.
 - 자동 확정된 태그는 정식 `Visit` 등록 성공과 함께 `VisitTag`로 연결하며, 검색 API는 그 연결만 사용한다.

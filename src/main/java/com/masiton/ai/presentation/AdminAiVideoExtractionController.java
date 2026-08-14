@@ -20,6 +20,7 @@ import com.masiton.ai.application.port.out.AiExtractionAdminQueryPort;
 import com.masiton.ai.application.port.out.dto.AiExtractionJobView;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
+import tools.jackson.databind.JsonNode;
 
 @RestController
 @RequestMapping("/api/admin/ai/video-extractions")
@@ -140,18 +141,31 @@ public class AdminAiVideoExtractionController {
             List<Object> values = new java.util.ArrayList<>();
             if (d.candidateFields() != null && d.candidateFields().isObject()) {
                 d.candidateFields().properties().forEach(entry -> {
-                    java.util.Map<String, Object> candidate = new java.util.LinkedHashMap<>();
-                    candidate.put("field", entry.getKey());
-                    candidate.put("value", entry.getValue().asText());
-                    candidate.put("confidence", d.fieldConfidences().path(entry.getKey()).asDouble(0));
-                    candidate.put("evidence", d.evidence().path(entry.getKey()));
-                    values.add(candidate);
+                    JsonNode fieldValue = entry.getValue();
+                    if (fieldValue.isArray()) {
+                        // Multiple candidates for the same field (BR-AIEXTRACT-001) are preserved as a list.
+                        fieldValue.forEach(item -> values.add(candidateOf(entry.getKey(), item.path("value").asText(),
+                                item.path("confidence").asDouble(0), item.path("evidence"))));
+                        return;
+                    }
+                    values.add(candidateOf(entry.getKey(), fieldValue.asText(),
+                            d.fieldConfidences().path(entry.getKey()).asDouble(0), d.evidence().path(entry.getKey())));
                 });
             }
             if (d.candidateTags() != null && d.candidateTags().isArray()) {
                 d.candidateTags().forEach(tag -> values.add(tag));
             }
             return values;
+        }
+
+        private static java.util.Map<String, Object> candidateOf(String field, String value, double confidence,
+                                                                   JsonNode evidence) {
+            java.util.Map<String, Object> candidate = new java.util.LinkedHashMap<>();
+            candidate.put("field", field);
+            candidate.put("value", value);
+            candidate.put("confidence", confidence);
+            candidate.put("evidence", evidence);
+            return candidate;
         }
     }
     public record Error(String category, Boolean retryable, int attemptCount) { }

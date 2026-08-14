@@ -11,6 +11,8 @@ related_documents:
 ## PR 리뷰
 
 - [PR #208 운영 fixture cleanup 참조 보호와 성능 추적성](pr-208-operational-performance-review.md)
+- [PR #205 관리자 로그인 trusted proxy 출처 해석 리뷰 반영](pr-205-admin-login-trusted-proxy-review.md)
+- [PR #204 Prompt P2 계약 동기화와 후보 결과 불변성](pr-204-ai-prompt-contract-review.md)
 - [PR #192 V8 통합 범위와 최종 Gemini 모델 계약](pr-192-flyway-model-contract-review.md)
 - [PR #191 Gemini 모델 전환 리뷰 반영](pr-191-gemini-model-transition-review.md)
 - [PR #184 YouTube 채널 감시 상태·동시성 경계 리뷰 반영](pr-184-youtube-channel-watch-review.md)

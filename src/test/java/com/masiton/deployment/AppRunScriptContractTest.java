@@ -17,6 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class AppRunScriptContractTest {
 
     private static final Path APP_RUN_SCRIPT = Path.of("deploy/scripts/app-run.sh");
+    private static final Path APP_DEPLOY_SCRIPT = Path.of("deploy/scripts/app-deploy.sh");
     private static final Path NGINX_SITE = Path.of("deploy/nginx/masiton.click.conf");
     private static final Path NGINX_MAIN = Path.of("deploy/nginx/nginx.conf");
     private static final Path COMMON_PROFILE = Path.of("src/main/resources/application.yml");
@@ -165,6 +166,18 @@ class AppRunScriptContractTest {
         assertThat(Files.readString(NGINX_MAIN))
                 .as("limit_req zone은 http 컨텍스트에 선언해야 한다")
                 .contains("limit_req_zone $binary_remote_addr zone=masiton_ungated:");
+    }
+
+    @Test
+    @DisplayName("Nginx 관리 설정이 배치된 경우에만 app-deploy가 설정 검사를 실행한다")
+    void appDeploy_관리설정이있을때만Nginx설정검사() throws IOException {
+        String script = Files.readString(APP_DEPLOY_SCRIPT);
+
+        assertThat(script)
+                .contains("nginx_site_conf=/etc/nginx/conf.d/masiton.click.conf")
+                .contains("command -v nginx >/dev/null 2>&1 && [ -f \"$nginx_site_conf\" ]")
+                .contains("[ -f \"$nginx_site_conf\" ] && systemctl is-active --quiet nginx")
+                .contains("Nginx 설정 smoke 스킵: 설치된 masit-on site 설정이 없다");
     }
 
     /**

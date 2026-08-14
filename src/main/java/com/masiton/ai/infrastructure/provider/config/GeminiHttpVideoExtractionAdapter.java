@@ -143,7 +143,16 @@ final class GeminiHttpVideoExtractionAdapter implements AiVideoExtractionProvide
                 + "actors. Do not treat a mention, recommendation, negation, question, or uncertain inference as "
                 + "visit evidence. "
                 + "Use resultCompleteness COMPLETE only when missingFields is empty; use PARTIAL only when missingFields "
-                + "contains one or more of restaurantName, menu, address, location, visitEvidence, or tag.";
+                + "contains one or more of restaurantName, menu, address, location, visitEvidence, or tag. "
+                + "A candidate with field \"tag\" never has a value field; instead it must include candidateTagId, "
+                + "tagType, rawLabel, normalizedCode, and label. normalizedCode must match [A-Z0-9_]{1,64} and start "
+                + "with tagType followed by an underscore, for example MENU_NAENGMYEON when tagType is MENU. Never "
+                + "produce a tag whose rawLabel, label, or normalizedCode expresses price, quality, rating, business "
+                + "hours, current availability, or reservation status (including 가격, 품질, 평점, 영업시간, 영업, "
+                + "방문가능, 예약, price, rating, hours, or availability). "
+                + "candidates must never contain more than " + MAX_CANDIDATES + " items and missingFields must never "
+                + "contain more than " + MAX_MISSING_FIELDS + " items. If the video covers more places than that, "
+                + "keep only the candidates and missing fields with the strongest evidence and omit the rest.";
     }
 
     private String untrustedSupplement(AiVideoExtractionRequest request) {
@@ -152,7 +161,21 @@ final class GeminiHttpVideoExtractionAdapter implements AiVideoExtractionProvide
                 + "\n</untrusted-administrator-supplement>";
     }
 
+    /**
+     * resultCompleteness and missingFields are coupled: COMPLETE requires an empty list, PARTIAL requires a
+     * non-empty one. The root schema expresses this as two branches instead of leaving the coupling to the
+     * prompt text alone, otherwise the model produces the invalid COMPLETE+non-empty or PARTIAL+empty combination
+     * that {@code validS1()} rejects.
+     */
     private ObjectNode extractionSchema() {
+        ObjectNode schema = objectMapper.createObjectNode();
+        ArrayNode anyOf = schema.putArray("anyOf");
+        anyOf.add(resultSchema("COMPLETE", false));
+        anyOf.add(resultSchema("PARTIAL", true));
+        return schema;
+    }
+
+    private ObjectNode resultSchema(String completenessValue, boolean requireNonEmptyMissingFields) {
         ObjectNode schema = objectMapper.createObjectNode();
         schema.put("type", "object");
         schema.put("additionalProperties", false);
@@ -161,51 +184,118 @@ final class GeminiHttpVideoExtractionAdapter implements AiVideoExtractionProvide
         required.add("candidates");
         required.add("missingFields");
         ObjectNode propertiesNode = schema.putObject("properties");
-        propertiesNode.putObject("resultCompleteness").put("type", "string").putArray("enum").add("COMPLETE").add("PARTIAL");
+        propertiesNode.putObject("resultCompleteness").put("type", "string").putArray("enum").add(completenessValue);
         ObjectNode candidates = propertiesNode.putObject("candidates");
         candidates.put("type", "array");
         ObjectNode candidateItems = candidates.putObject("items");
-        candidateItems.put("type", "object");
-        candidateItems.put("additionalProperties", false);
-        ArrayNode candidateRequired = candidateItems.putArray("required");
-        candidateRequired.add("field");
-        candidateRequired.add("confidence");
-        candidateRequired.add("evidence");
-        ObjectNode candidateProperties = candidateItems.putObject("properties");
-        candidateProperties.putObject("field").put("type", "string").putArray("enum")
-                .add("restaurantName").add("menu").add("address").add("location").add("visitEvidence").add("tag");
-        candidateProperties.putObject("value").put("type", "string");
-        candidateProperties.putObject("candidateTagId").put("type", "string");
-        candidateProperties.putObject("tagType").put("type", "string").putArray("enum")
-                .add("MENU").add("TASTE").add("OCCASION").add("ATMOSPHERE");
-        candidateProperties.putObject("rawLabel").put("type", "string");
-        candidateProperties.putObject("normalizedCode").put("type", "string");
-        candidateProperties.putObject("label").put("type", "string");
-        candidateProperties.putObject("confidence").put("type", "number").put("minimum", 0).put("maximum", 1);
-        candidateProperties.set("evidence", evidenceSchema());
+        ArrayNode candidateAnyOf = candidateItems.putArray("anyOf");
+        candidateAnyOf.add(commonCandidateSchema());
+        candidateAnyOf.add(tagCandidateSchema());
         ObjectNode missingFields = propertiesNode.putObject("missingFields");
         missingFields.put("type", "array");
         missingFields.putObject("items").put("type", "string").putArray("enum")
                 .add("restaurantName").add("menu").add("address").add("location")
                 .add("visitEvidence").add("tag");
+        if (requireNonEmptyMissingFields) {
+            missingFields.put("minItems", 1);
+            missingFields.put("maxItems", MAX_MISSING_FIELDS);
+        } else {
+            missingFields.put("maxItems", 0);
+        }
         return schema;
+    }
+
+    /** field in {restaurantName, menu, address, location, visitEvidence}: field, value, confidence, evidence only. */
+    private ObjectNode commonCandidateSchema() {
+        ObjectNode common = objectMapper.createObjectNode();
+        common.put("type", "object");
+        common.put("additionalProperties", false);
+        ArrayNode required = common.putArray("required");
+        required.add("field");
+        required.add("value");
+        required.add("confidence");
+        required.add("evidence");
+        ObjectNode properties = common.putObject("properties");
+        properties.putObject("field").put("type", "string").putArray("enum")
+                .add("restaurantName").add("menu").add("address").add("location").add("visitEvidence");
+        properties.putObject("value").put("type", "string").put("minLength", 1).put("maxLength", MAX_STRING_LENGTH);
+        properties.putObject("confidence").put("type", "number").put("minimum", 0).put("maximum", 1);
+        properties.set("evidence", evidenceSchema());
+        return common;
+    }
+
+    /** field is "tag": no value, requires candidateTagId, tagType, rawLabel, normalizedCode, label. */
+    private ObjectNode tagCandidateSchema() {
+        ObjectNode tag = objectMapper.createObjectNode();
+        tag.put("type", "object");
+        tag.put("additionalProperties", false);
+        ArrayNode required = tag.putArray("required");
+        required.add("field");
+        required.add("candidateTagId");
+        required.add("tagType");
+        required.add("rawLabel");
+        required.add("normalizedCode");
+        required.add("label");
+        required.add("confidence");
+        required.add("evidence");
+        ObjectNode properties = tag.putObject("properties");
+        properties.putObject("field").put("type", "string").putArray("enum").add("tag");
+        properties.putObject("candidateTagId").put("type", "string").put("minLength", 1)
+                .put("maxLength", MAX_STRING_LENGTH);
+        properties.putObject("tagType").put("type", "string").putArray("enum")
+                .add("MENU").add("TASTE").add("OCCASION").add("ATMOSPHERE");
+        properties.putObject("rawLabel").put("type", "string").put("minLength", 1)
+                .put("maxLength", MAX_STRING_LENGTH);
+        properties.putObject("normalizedCode").put("type", "string").put("pattern", "^[A-Z0-9_]{1,64}$");
+        properties.putObject("label").put("type", "string").put("minLength", 1)
+                .put("maxLength", MAX_STRING_LENGTH);
+        properties.putObject("confidence").put("type", "number").put("minimum", 0).put("maximum", 1);
+        properties.set("evidence", evidenceSchema());
+        return tag;
     }
 
     private ObjectNode evidenceSchema() {
         ObjectNode evidence = objectMapper.createObjectNode();
-        evidence.put("type", "object");
-        evidence.put("additionalProperties", false);
-        ObjectNode properties = evidence.putObject("properties");
-        properties.putObject("type").put("type", "string").putArray("enum")
-                .add("TIMESTAMP").add("TEXT_RANGE").add("UNKNOWN");
+        ArrayNode anyOf = evidence.putArray("anyOf");
+        anyOf.add(timestampEvidenceSchema());
+        anyOf.add(textRangeEvidenceSchema());
+        anyOf.add(unknownEvidenceSchema());
+        return evidence;
+    }
+
+    private ObjectNode timestampEvidenceSchema() {
+        ObjectNode timestamp = objectMapper.createObjectNode();
+        timestamp.put("type", "object");
+        timestamp.put("additionalProperties", false);
+        timestamp.putArray("required").add("type").add("startMs").add("endMs");
+        ObjectNode properties = timestamp.putObject("properties");
+        properties.putObject("type").put("type", "string").putArray("enum").add("TIMESTAMP");
         properties.putObject("startMs").put("type", "integer").put("minimum", 0);
         properties.putObject("endMs").put("type", "integer").put("minimum", 0);
+        return timestamp;
+    }
+
+    private ObjectNode textRangeEvidenceSchema() {
+        ObjectNode textRange = objectMapper.createObjectNode();
+        textRange.put("type", "object");
+        textRange.put("additionalProperties", false);
+        textRange.putArray("required").add("type").add("startOffset").add("endOffset").add("sourceHash");
+        ObjectNode properties = textRange.putObject("properties");
+        properties.putObject("type").put("type", "string").putArray("enum").add("TEXT_RANGE");
         properties.putObject("startOffset").put("type", "integer").put("minimum", 0);
         properties.putObject("endOffset").put("type", "integer").put("minimum", 0);
         properties.putObject("sourceHash").put("type", "string").put("minLength", 1)
                 .put("maxLength", MAX_STRING_LENGTH);
-        evidence.putArray("required").add("type");
-        return evidence;
+        return textRange;
+    }
+
+    private ObjectNode unknownEvidenceSchema() {
+        ObjectNode unknown = objectMapper.createObjectNode();
+        unknown.put("type", "object");
+        unknown.put("additionalProperties", false);
+        unknown.putArray("required").add("type");
+        unknown.putObject("properties").putObject("type").put("type", "string").putArray("enum").add("UNKNOWN");
+        return unknown;
     }
 
     private void classifyStatus(int statusCode) {

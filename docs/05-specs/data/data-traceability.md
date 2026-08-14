@@ -226,7 +226,7 @@ V3 전진 적용과 전체 FK·UNIQUE·CHECK·인덱스는 `TST-E2-E2E-001`, `E2
 
 | 데이터 범위 | 소유 요구사항·API | 계약·보류 | Workstream | 다음 검증 |
 |---|---|---|---|---|
-| `ai_extraction_job` | FR-AIEXTRACT-001~007, API-ADMIN-AIEXTRACT-001 | [AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md), Gemini P1/S1·모델·보존 정책 Accepted | WS-15 | 중복 접수·lease 복구·재시도·원자성 |
+| `ai_extraction_job` | FR-AIEXTRACT-001~007, API-ADMIN-AIEXTRACT-001 | [AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md), 현재 Gemini P2/S1·기존 P1 이력·모델·보존 정책 Accepted | WS-15 | 중복 접수·lease 복구·재시도·원자성 |
 | `ai_extraction_temporary_input` | BR-AIEXTRACT-007, NFR-PRIVACY-006 | 관리자 보완 텍스트 암호화 임시 저장, 작업 종료 후 24시간 이내 삭제, Webhook 작업 미생성 | WS-15 | 재시작 복구·암호화·자동 삭제·재시도 입력 재사용 금지 |
 | `ai_candidate_snapshot` | FR-AIEXTRACT-002~003·007, BR-AIEXTRACT-001~004·008 | 필드·태그 후보 Schema·근거·자동 등록 상태 버전 보존, 정식 Entity와 분리 | WS-15 | 부분 추출·환각·태그 오분류·자동 차단·폐기 |
 | `ai_candidate_tag_review` | BR-AIEXTRACT-008, API-ADMIN-AIEXTRACT-001 | 후보 태그별 자동 판단·사후 보정 append-only 이력, `UNKNOWN` AI 근거 확정 금지 | WS-15 | 자동 판단·사후 보정 이력·VisitTag 연결 |

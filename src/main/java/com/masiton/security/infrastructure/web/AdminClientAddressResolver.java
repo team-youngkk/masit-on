@@ -1,19 +1,21 @@
-package com.masiton.restaurant.infrastructure.web;
+package com.masiton.security.infrastructure.web;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Component;
 
 import com.masiton.common.web.ClientAddressResolver;
 import com.masiton.common.web.TrustedProxyClientAddressResolver;
-import com.masiton.restaurant.infrastructure.configuration.MapRateLimitProperties;
+import com.masiton.security.infrastructure.configuration.SecurityProperties;
 
 @Component
-public class MapClientAddressResolver implements ClientAddressResolver {
+public class AdminClientAddressResolver implements ClientAddressResolver {
+
     private final ClientAddressResolver delegate;
 
-    public MapClientAddressResolver(MapRateLimitProperties properties) {
+    public AdminClientAddressResolver(SecurityProperties properties) {
+        SecurityProperties.LoginFailure loginFailure = properties.getLoginFailure();
         this.delegate = new TrustedProxyClientAddressResolver(
-                properties.isReverseProxyEnabled(), properties.trustedProxyAddresses());
+                loginFailure.isReverseProxyEnabled(), loginFailure.trustedProxyAddresses());
     }
 
     @Override

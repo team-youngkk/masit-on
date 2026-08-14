@@ -122,7 +122,21 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
         ArrayNode missing = objectMapper.createArrayNode();
         Map<String, ParsedField> parsedFields = new LinkedHashMap<>();
 
-        validation.candidates().forEach((field, candidate) -> {
+        validation.candidates().forEach((field, fieldCandidates) -> {
+            if (fieldCandidates.size() > 1) {
+                // BR-AIEXTRACT-001: multiple candidates stay blocked but must still be preserved for admin review.
+                ArrayNode candidatesArray = objectMapper.createArrayNode();
+                for (AiCandidateValidationResult.Candidate candidate : fieldCandidates) {
+                    ObjectNode candidateNode = objectMapper.createObjectNode();
+                    candidateNode.put("value", candidate.value());
+                    candidateNode.put("confidence", candidate.confidence());
+                    candidateNode.set("evidence", evidenceNode(candidate.evidence()));
+                    candidatesArray.add(candidateNode);
+                }
+                fields.set(field, candidatesArray);
+                return;
+            }
+            AiCandidateValidationResult.Candidate candidate = fieldCandidates.get(0);
             fields.put(field, candidate.value());
             confidences.put(field, candidate.confidence());
             ObjectNode candidateEvidence = evidenceNode(candidate.evidence());

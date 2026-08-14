@@ -7,13 +7,15 @@ import jakarta.annotation.PostConstruct;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import com.masiton.ai.application.AiExtractionContract;
+
 @ConfigurationProperties("masiton.ai.provider.gemini")
 public class GeminiProviderProperties {
 
     public static final String GLOBAL_ENDPOINT = "https://generativelanguage.googleapis.com";
-    public static final String MODEL_VERSION = "gemini-3.5-flash-lite";
-    public static final String PROMPT_VERSION = "P1";
-    public static final String SCHEMA_VERSION = "S1";
+    public static final String MODEL_VERSION = AiExtractionContract.MODEL_VERSION;
+    public static final String PROMPT_VERSION = AiExtractionContract.PROMPT_VERSION;
+    public static final String SCHEMA_VERSION = AiExtractionContract.SCHEMA_VERSION;
     public static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
     public static final Duration RESPONSE_TIMEOUT = Duration.ofSeconds(90);
 
