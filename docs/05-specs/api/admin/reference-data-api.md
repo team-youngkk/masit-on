@@ -92,6 +92,7 @@ related_documents:
 | [API-ADMIN-CREATOR-001](reference-data-api.md#api-admin-creator-001-유튜버-등록-확정) | POST | `/api/admin/creators` | YouTube 채널 단위 유튜버 등록 |
 | [API-ADMIN-VIDEO-PREVIEW-001](reference-data-api.md#api-admin-video-preview-001-영상-등록-검증-미리보기) | POST | `/api/admin/video-registration-previews` | YouTube 영상 검증 미리보기 |
 | [API-ADMIN-VIDEO-001](reference-data-api.md#api-admin-video-001-영상-등록-확정) | POST | `/api/admin/videos` | 방문 근거 후보 영상 등록 |
+| [API-ADMIN-RESTAURANT-PLACE-SEARCH-001](reference-data-api.md#api-admin-restaurant-place-search-001-맛집-장소-검색) | POST | `/api/admin/restaurant-place-searches` | 상호명·주소 힌트로 카카오 장소 후보 검색 |
 
 등록 순서는 맛집·유튜버·영상 사이에는 강제하지 않는다. 세 대상이 모두 등록된 뒤 방문 관계를 등록한다.
 
@@ -195,6 +196,59 @@ Token 소비와 Entity 생성 또는 동시 중복 완료는 한 PostgreSQL 트�
 ```
 
 `READY` 미리보기에서 받은 유효 토큰만 허용한다. 최초 성공 시 `201 Created`, `Location: /api/restaurants/{restaurantId}`와 미리보기의 `candidate`에 `id`를 추가한 맛집 객체를 반환한다. 생성 완료 Token 재시도는 같은 객체를 `200 OK`로 반환한다. 동시 중복 완료는 `409 DUPLICATE_RESTAURANT`와 기존 맛집 ID·최소 정보를 반환한다. 성공은 관리자 확인이 완료된 공개 맛집이 생성됐음을 뜻하며 영상·관계 없이 공개 조회에 반영된다.
+
+### API-ADMIN-RESTAURANT-PLACE-SEARCH-001 맛집 장소 검색
+
+- Method: `POST`
+- Path: `/api/admin/restaurant-place-searches`
+- 인증: JWT Access Token과 `ADMIN` 권한 필수
+- 권한: 관리자 등록 권한
+- 관련 PRD: [PRD-ADMIN-001](../../../04-product/prd/admin/admin-data-management.md)
+- 관련 요구사항: [FR-ADMIN-001](../../../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근), [FR-ADMIN-002](../../../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록)
+
+관리자가 이미 카카오 장소 링크를 가지고 있다는 전제인 [API-ADMIN-RESTAURANT-PREVIEW-001](reference-data-api.md#api-admin-restaurant-preview-001-맛집-등록-검증-미리보기)과 달리, 상호명으로 카카오 장소 후보를 조회해 링크·전화번호를 얻는다. 조회이지만 상호명·주소를 query string에 싣지 않기 위해 `POST`를 쓴다. 자원을 만들지 않고 확인 Token도 발급하지 않는다.
+
+#### Request Body
+
+```json
+{
+  "name": "아코",
+  "roadAddressHint": "서울 강동구 성내동 12-38"
+}
+```
+
+| 필드 | 타입 | 필수 | 설명 | 검증·빈 값 규칙 |
+|---|---|---:|---|---|
+| `name` | string | 예 | 검색할 상호명 | 앞뒤 공백 제거 후 1~100자 |
+| `roadAddressHint` | string 또는 null | 예 | 후보 정렬에 쓰는 주소 표현 | 없으면 `null`, 정규화 후 1~255자 |
+
+#### Success Response
+
+- 상태: `200 OK`
+
+```json
+{
+  "items": [
+    {
+      "placeName": "아코",
+      "kakaoPlaceUrl": "https://place.map.kakao.com/example",
+      "roadAddress": "서울특별시 강동구 성내동 12-38",
+      "phoneNumber": "02-000-0000",
+      "district": "강동구"
+    }
+  ]
+}
+```
+
+페이지가 필요 없는 최소 선택 목록이므로 `{ "items": [...] }` 형태를 쓴다. 후보가 없어도 `200`과 빈 `items`이며 오류가 아니다. `phoneNumber`가 카카오 응답에 없는 장소는 `null`로 내보내고 관리자가 직접 입력한다. 도로명주소나 장소 링크가 없어 등록에 쓸 수 없는 문서는 `items`에서 제외한다. `district`는 도로명주소에서 파생한 서울 자치구이며, 뽑을 수 없으면 `null`이고 항목 자체는 남는다. `roadAddressHint`가 있으면 그 값과 더 잘 맞는 후보를 앞에 두며, 동점이면 카카오 응답 순서를 유지한다.
+
+#### Error Cases
+
+| 오류 코드 | HTTP | 조건 |
+|---|---:|---|
+| `MISSING_REQUIRED_FIELD` | 400 | `name` 누락 |
+| `INVALID_FIELD_VALUE` | 400 | `name` 또는 `roadAddressHint` 길이 위반 |
+| `EXTERNAL_SERVICE_ERROR` | 502 | 카카오 조회 실패·시간 초과·할당량 초과 |
 
 ## 6. 유튜버 등록
 

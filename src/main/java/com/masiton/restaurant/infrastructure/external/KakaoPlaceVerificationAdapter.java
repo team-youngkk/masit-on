@@ -1,28 +1,19 @@
 package com.masiton.restaurant.infrastructure.external;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URLEncoder;
 import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.masiton.restaurant.application.PlaceVerificationFailedException;
+import com.masiton.restaurant.application.SeoulRoadAddressNormalizer;
 import com.masiton.restaurant.application.port.out.PlaceVerificationPort;
 import com.masiton.restaurant.application.port.out.VerifiedPlace;
-import tools.jackson.core.JacksonException;
-import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -31,22 +22,11 @@ import tools.jackson.databind.ObjectMapper;
 @Component
 class KakaoPlaceVerificationAdapter implements PlaceVerificationPort {
 
-    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(2);
-    private static final Duration RESPONSE_TIMEOUT = Duration.ofSeconds(5);
-    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() { };
-
-    private final HttpClient httpClient;
-    private final ObjectMapper objectMapper;
-    private final URI baseUri;
-    private final String restApiKey;
+    private final KakaoLocalKeywordClient client;
 
     @Autowired
-    KakaoPlaceVerificationAdapter(
-            ObjectMapper objectMapper,
-            @Value("${masiton.integration.kakao.base-url:https://dapi.kakao.com}") String baseUrl,
-            @Value("${masiton.integration.kakao.rest-api-key:}") String restApiKey
-    ) {
-        this(HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build(), objectMapper, baseUrl, restApiKey);
+    KakaoPlaceVerificationAdapter(KakaoLocalKeywordClient client) {
+        this.client = client;
     }
 
     KakaoPlaceVerificationAdapter(
@@ -55,25 +35,13 @@ class KakaoPlaceVerificationAdapter implements PlaceVerificationPort {
             String baseUrl,
             String restApiKey
     ) {
-        this.httpClient = httpClient;
-        this.objectMapper = objectMapper;
-        this.baseUri = URI.create(baseUrl);
-        this.restApiKey = restApiKey;
+        this(new KakaoLocalKeywordClient(httpClient, objectMapper, baseUrl, restApiKey));
     }
 
     @Override
     public Optional<VerifiedPlace> verify(String restaurantName, URI kakaoPlaceUrl, String fallbackPhoneNumber) {
         try {
-            String query = URLEncoder.encode(restaurantName, StandardCharsets.UTF_8);
-            URI requestUri = baseUri.resolve("/v2/local/search/keyword.json?query=" + query);
-            HttpRequest.Builder request = HttpRequest.newBuilder(requestUri)
-                    .timeout(RESPONSE_TIMEOUT)
-                    .GET();
-            if (!restApiKey.isBlank()) {
-                request.header("Authorization", "KakaoAK " + restApiKey);
-            }
-
-            HttpResponse<String> response = httpClient.send(request.build(), HttpResponse.BodyHandlers.ofString());
+            KakaoLocalKeywordClient.KakaoKeywordResponse response = client.search(restaurantName);
             if (response.statusCode() == 404) {
                 return Optional.empty();
             }
@@ -81,12 +49,7 @@ class KakaoPlaceVerificationAdapter implements PlaceVerificationPort {
                 throw new PlaceVerificationFailedException();
             }
 
-            return selectPlace(response.body(), kakaoPlaceUrl, fallbackPhoneNumber);
-        } catch (IOException | InterruptedException exception) {
-            if (exception instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-            }
-            throw new PlaceVerificationFailedException(exception);
+            return selectPlace(response.documents(), kakaoPlaceUrl, fallbackPhoneNumber);
         } catch (RuntimeException exception) {
             if (exception instanceof PlaceVerificationFailedException) {
                 throw exception;
@@ -95,25 +58,17 @@ class KakaoPlaceVerificationAdapter implements PlaceVerificationPort {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private Optional<VerifiedPlace> selectPlace(String responseBody, URI submittedUrl, String fallbackPhoneNumber) {
-        try {
-            Map<String, Object> payload = objectMapper.readValue(responseBody, MAP_TYPE);
-            Object documentsValue = payload.get("documents");
-            if (!(documentsValue instanceof List<?> documents)) {
-                throw new PlaceVerificationFailedException();
-            }
-            return documents.stream()
-                    .filter(Map.class::isInstance)
-                    .map(Map.class::cast)
-                    .map(document -> toVerifiedPlace((Map<String, Object>) document, fallbackPhoneNumber))
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
-                    .filter(place -> samePlaceUrl(place.kakaoPlaceUrl(), submittedUrl))
-                    .findFirst();
-        } catch (JacksonException exception) {
-            throw new PlaceVerificationFailedException(exception);
-        }
+    private Optional<VerifiedPlace> selectPlace(
+            List<Map<String, Object>> documents,
+            URI submittedUrl,
+            String fallbackPhoneNumber
+    ) {
+        return documents.stream()
+                .map(document -> toVerifiedPlace(document, fallbackPhoneNumber))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .filter(place -> samePlaceUrl(place.kakaoPlaceUrl(), submittedUrl))
+                .findFirst();
     }
 
     private Optional<VerifiedPlace> toVerifiedPlace(Map<String, Object> document, String fallbackPhoneNumber) {
@@ -134,8 +89,10 @@ class KakaoPlaceVerificationAdapter implements PlaceVerificationPort {
             latitude = null;
             longitude = null;
         }
+        URI canonicalPlaceUrl = KakaoPlaceUrlPolicy.canonicalize(placeUrl)
+                .orElseThrow(PlaceVerificationFailedException::new);
         return Optional.of(new VerifiedPlace(
-                id, name, canonicalPlaceUrl(placeUrl), canonicalRoadAddress(roadAddress), phoneNumber,
+                id, name, canonicalPlaceUrl.toString(), SeoulRoadAddressNormalizer.normalize(roadAddress), phoneNumber,
                 latitude, longitude));
     }
 
@@ -156,67 +113,6 @@ class KakaoPlaceVerificationAdapter implements PlaceVerificationPort {
         }
     }
 
-    /**
-     * Kakao는 시도명을 축약해 {@code 서울 강남구 ...}로 준다. 도메인은 계약대로
-     * {@code 서울특별시 ...} 전체 표기를 쓰므로(reference-data-api 맛집 등록 규칙,
-     * 자치구 추출 패턴) 여기서 맞춘다. 제공자 표기를 도메인 표기로 바꾸는 것은
-     * Adapter의 책임이다.
-     *
-     * 서울 밖 주소는 바꾸지 않고 그대로 넘긴다. 등록 서비스가 자치구 추출에서
-     * 거부해야 하며, 여기서 서울로 보이게 만들면 그 판정을 무력화한다.
-     */
-    private String canonicalRoadAddress(String roadAddress) {
-        String normalized = roadAddress.trim();
-        if (normalized.startsWith("서울특별시")) {
-            return normalized;
-        }
-        if (normalized.startsWith("서울 ")) {
-            return "서울특별시 " + normalized.substring("서울 ".length()).trim();
-        }
-        return normalized;
-    }
-
-    /**
-     * Kakao 응답의 {@code place_url}은 {@code http}로 온다. 저장·노출하는 값은 https로
-     * 맞춘다. 같은 호스트가 https로 서비스하므로 scheme만 바꿔도 같은 자원을 가리킨다.
-     *
-     * <p>정규화 전에 원본을 검증한다. 검증 없이 바꾸면 {@code ftp://}처럼 허용 대상이
-     * 아닌 scheme까지 https로 바뀌어 뒤따르는 판정을 통과한다. 예상 밖 제공자 값은
-     * 계약 오류로 처리한다.
-     *
-     * <p>authority는 통째로 옮기지 않고 host만 옮긴다. authority에는 user-info와 포트가
-     * 함께 들어 있어서 {@code http://place.map.kakao.com:80/{id}}를 그대로 넘기면
-     * {@code https://place.map.kakao.com:80/{id}}가 되고, {@link #samePlaceUrl}은
-     * scheme·host·path만 비교하므로 표준 HTTPS 링크가 아닌 값이 채택된다.
-     * user-info와 비표준 포트는 계약 오류로 거부하고, 기본 포트는 표기에서 뺀다.
-     */
-    private String canonicalPlaceUrl(String placeUrl) {
-        try {
-            URI uri = URI.create(placeUrl);
-            String scheme = uri.getScheme();
-            if (scheme == null || !(scheme.equalsIgnoreCase("https") || scheme.equalsIgnoreCase("http"))) {
-                throw new PlaceVerificationFailedException();
-            }
-            // host가 null이면 authority를 host로 해석하지 못한 값이다(registry 기반이 아니거나
-            // 형식이 깨진 경우). 판정 대상으로 삼을 수 없으므로 계약 오류로 처리한다.
-            String host = uri.getHost();
-            if (host == null || uri.getUserInfo() != null) {
-                throw new PlaceVerificationFailedException();
-            }
-            int port = uri.getPort();
-            if (port != -1 && port != defaultPort(scheme)) {
-                throw new PlaceVerificationFailedException();
-            }
-            return new URI("https", null, host, -1, uri.getPath(), uri.getQuery(), uri.getFragment()).toString();
-        } catch (IllegalArgumentException | URISyntaxException exception) {
-            throw new PlaceVerificationFailedException(exception);
-        }
-    }
-
-    private int defaultPort(String scheme) {
-        return scheme.equalsIgnoreCase("https") ? 443 : 80;
-    }
-
     private boolean samePlaceUrl(String verifiedUrl, URI submittedUrl) {
         try {
             URI verifiedUri = URI.create(verifiedUrl);
@@ -231,7 +127,7 @@ class KakaoPlaceVerificationAdapter implements PlaceVerificationPort {
             // 정규화 단계가 바뀌면 판정이 조용히 느슨해지지 않게 한다.
             // 동일성 판정은 host와 path로 한다.
             return scheme.equalsIgnoreCase("https")
-                    && host.equalsIgnoreCase("place.map.kakao.com")
+                    && KakaoPlaceUrlPolicy.hasKakaoPlaceHost(verifiedUri)
                     && verifiedUri.getPath().equals(submittedUrl.getPath());
         } catch (IllegalArgumentException exception) {
             throw new PlaceVerificationFailedException(exception);
@@ -242,7 +138,7 @@ class KakaoPlaceVerificationAdapter implements PlaceVerificationPort {
         if (!(value instanceof String string)) {
             return null;
         }
-        String normalized = string.trim();
+        String normalized = string.strip();
         return normalized.isEmpty() ? null : normalized;
     }
 }

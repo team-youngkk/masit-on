@@ -130,6 +130,30 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
     }
 
     @Test
+    @DisplayName("관리자 장소 검색 API의 미인증 요청은 401 계약을 반환한다")
+    void 관리자장소검색API_미인증_401계약() throws Exception {
+        mockMvc.perform(post("/api/admin/restaurant-place-searches")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"아코\",\"roadAddressHint\":null}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"))
+                .andExpect(jsonPath("$.traceId").value(not(emptyString())));
+    }
+
+    @Test
+    @DisplayName("관리자 장소 검색 API의 ADMIN 권한 없는 요청은 403 계약을 반환한다")
+    void 관리자장소검색API_ADMIN권한없음_403계약() throws Exception {
+        mockMvc.perform(post("/api/admin/restaurant-place-searches")
+                        .with(SecurityMockMvcRequestPostProcessors.jwt()
+                                .authorities(new SimpleGrantedAuthority("CREATOR")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"아코\",\"roadAddressHint\":null}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.traceId").value(not(emptyString())));
+    }
+
+    @Test
     @DisplayName("로그인과 재발급 matcher는 포괄 관리자 matcher보다 먼저 허용한다")
     void 로그인재발급_matcher_401없이입력검증() throws Exception {
         mockMvc.perform(post("/api/admin/auth/tokens")

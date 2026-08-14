@@ -4,7 +4,7 @@
 # 저장소 파일을 인스턴스로 옮긴 스테이징 디렉터리를 인자로 받는다.
 # 스테이징에는 다음 파일이 있어야 한다.
 #   nginx.conf  masiton.click.conf  00-masiton-upgrade-map.conf
-#   masiton-tls-renew.service  masiton-tls-renew.timer  tls-deploy-cert.sh
+#   masiton-tls-renew.service  masiton-tls-renew.timer  tls-deploy-cert.sh  nginx-smoke.sh
 #
 # 사용: sudo ./nginx-install.sh [스테이징 디렉터리]
 set -euo pipefail
@@ -13,7 +13,7 @@ STAGE="${1:-/tmp/masiton-deploy}"
 OPT_DIR=/opt/masiton
 
 for f in nginx.conf masiton.click.conf 00-masiton-upgrade-map.conf \
-         masiton-tls-renew.service masiton-tls-renew.timer tls-deploy-cert.sh; do
+         masiton-tls-renew.service masiton-tls-renew.timer tls-deploy-cert.sh nginx-smoke.sh; do
   [ -f "$STAGE/$f" ] || { echo "스테이징에 $f 가 없다: $STAGE" >&2; exit 1; }
 done
 
@@ -109,6 +109,10 @@ if [ "$(systemctl is-active nginx)" != "active" ]; then
   rm -rf "$ROLLBACK_DIR"
   exit 1
 fi
+
+# 새 설정의 구문과 프로세스 상태만으로는 경로·메서드별 gate 우회를 확인할 수 없다.
+# smoke 실패도 컷오버 실패이므로 ERR trap을 해제하기 전에 실행해 직전 구성으로 복구한다.
+bash "$STAGE/nginx-smoke.sh"
 
 # 컷오버가 성공했으므로 이 시점부터는 실패해도 Basic Auth를 되돌리지 않는다.
 trap - ERR
