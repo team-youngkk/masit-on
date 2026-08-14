@@ -69,6 +69,42 @@ class AdminAuthenticationServiceTest {
     }
 
     @Test
+    @DisplayName("차단된 출처는 관리자 자격 증명 확인 전에 401로 fail-closed 처리한다")
+    void 로그인_출처차단_자격증명확인전에401() {
+        when(loginFailureStore.isBlocked("admin", "198.51.100.10")).thenReturn(true);
+
+        assertThatThrownBy(() -> service.login(new LoginCommand("admin", "correct-password", "198.51.100.10")))
+                .isInstanceOf(BusinessException.class)
+                .extracting(exception -> ((BusinessException) exception).code())
+                .isEqualTo(ErrorCode.AUTHENTICATION_REQUIRED.name());
+
+        verify(credentialVerifier, never()).authenticate(any(), any());
+        verify(loginFailureStore).recordFailure("admin", "198.51.100.10");
+        verify(refreshTokenStore, never()).issue(any(), any());
+    }
+
+    @Test
+    @DisplayName("같은 관리자라도 서로 다른 출처는 독립적으로 로그인한다")
+    void 로그인_서로다른출처_독립처리() {
+        AdminPrincipal principal = new AdminPrincipal("admin-id", Set.of(AdminRole.ADMIN));
+        when(loginFailureStore.isBlocked("admin", "198.51.100.10")).thenReturn(true);
+        when(loginFailureStore.isBlocked("admin", "203.0.113.10")).thenReturn(false);
+        when(credentialVerifier.authenticate("admin", "correct-password")).thenReturn(Optional.of(principal));
+        when(refreshTokenStore.issue("admin-id", Duration.ofDays(14)))
+                .thenReturn(new RefreshTokenRotation("admin-id", "refresh-token"));
+        when(tokenIssuer.issueAccessToken(principal)).thenReturn("access-token");
+
+        assertThatThrownBy(() -> service.login(new LoginCommand("admin", "correct-password", "198.51.100.10")))
+                .isInstanceOf(BusinessException.class);
+        AuthenticationResult result = service.login(
+                new LoginCommand("admin", "correct-password", "203.0.113.10"));
+
+        assertThat(result).isEqualTo(new AuthenticationResult("access-token", "refresh-token", 1800));
+        verify(credentialVerifier).authenticate("admin", "correct-password");
+        verify(loginFailureStore).clear("admin", "203.0.113.10");
+    }
+
+    @Test
     @DisplayName("재사용되었거나 유효하지 않은 Refresh Token은 401로 변환한다")
     void 재발급_유효하지않은RefreshToken_401() {
         when(refreshTokenStore.rotate(eq("replayed-token"), any()))

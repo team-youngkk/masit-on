@@ -166,3 +166,5 @@ masiton:
     login-failure:
       max-attempts: 5
       ttl: PT15M
+      trusted-proxy-addresses: ${ADMIN_LOGIN_TRUSTED_PROXY_ADDRESSES:}
+      reverse-proxy-enabled: ${ADMIN_LOGIN_REVERSE_PROXY_ENABLED:false}
