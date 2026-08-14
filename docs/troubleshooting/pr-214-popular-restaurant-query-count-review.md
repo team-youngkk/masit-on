@@ -79,4 +79,5 @@ related_documents:
 ## 10. 남은 사항
 
 - 코드 수정과 단독 검증은 완료했다.
-- PR 스레드 답글 및 해결 상태는 GitHub 반영 결과를 확인해야 한다.
+- PR 스레드에 답글을 등록했고 `isResolved: true` 상태를 확인했다.
+- 기존 `CHANGES_REQUESTED` 판정은 리뷰어의 재검토 전까지 남아 있으며, 수정 push 직후라 새 CI 검사는 아직 보고되지 않았다.
