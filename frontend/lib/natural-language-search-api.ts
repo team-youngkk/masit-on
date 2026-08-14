@@ -6,7 +6,8 @@ export type NaturalLanguageSearchFilters = { query: string | null; district: str
 export type NaturalLanguageCondition = NaturalLanguageSearchFilters
 export type NaturalLanguageRestaurant = { id: string; name: string; district: string; category: string; visitedBy: Array<{ id: string; channelName: string }>; remainingVisitedByCount: number }
 export type NaturalLanguageResult = { interpretation: { status: 'APPLIED' | 'PARTIAL' | 'FAILED'; appliedConditions: NaturalLanguageCondition; ignoredConditions: Array<{ type: string; text: string; reason: string }>; conflicts: Array<{ field: string; resolution: string }>; parserVersion: string }; results: { items: NaturalLanguageRestaurant[]; page: { number: number; size: number; totalElements: number; totalPages: number; hasNext: boolean } } }
-export type NaturalLanguageSearchOutcome = { kind: 'success'; result: NaturalLanguageResult } | { kind: 'invalid'; message: string; traceId?: string } | { kind: 'rateLimited'; message: string; traceId?: string; retryAvailableAt: number | null } | { kind: 'unavailable'; message: string; traceId?: string } | { kind: 'error'; message: string; traceId?: string; retryAllowed: boolean }
+export type NaturalLanguageFieldGuidance = { label: string; reason: string }
+export type NaturalLanguageSearchOutcome = { kind: 'success'; result: NaturalLanguageResult } | { kind: 'invalid'; message: string; code?: string; fieldGuidance: NaturalLanguageFieldGuidance[]; traceId?: string } | { kind: 'rateLimited'; message: string; traceId?: string; retryAvailableAt: number | null } | { kind: 'unavailable'; message: string; traceId?: string } | { kind: 'error'; message: string; traceId?: string; retryAllowed: boolean }
 
 const CONDITION_LABELS: Record<keyof NaturalLanguageCondition, string> = { query: '이름', district: '자치구', category: '음식 종류', creatorId: '유튜버', tags: '태그' }
 const TAG_LABELS: Record<string, string> = {
@@ -14,6 +15,34 @@ const TAG_LABELS: Record<string, string> = {
   TASTE_SPICY: '매운맛', TASTE_SWEET: '단맛', TASTE_SAVORY: '감칠맛', TASTE_LIGHT: '담백한 맛',
   OCCASION_SOLO: '혼밥', OCCASION_DATE: '데이트', OCCASION_GROUP: '모임', OCCASION_LATE_NIGHT: '야식',
   ATMOSPHERE_CASUAL: '캐주얼', ATMOSPHERE_QUIET: '조용한', ATMOSPHERE_LIVELY: '활기찬', ATMOSPHERE_BAR: '바',
+}
+
+/* 직접 태그 필터 선택지. 코드는 화면에 노출하지 않고 라벨만 보여준다
+ * (PR #176 리뷰 결정: docs/troubleshooting/pr-176-natural-language-review.md). */
+export const NATURAL_LANGUAGE_TAG_OPTIONS = Object.entries(TAG_LABELS).map(([code, label]) => ({ code, label }))
+/* filters.tags는 0~5개만 허용한다(API 계약 4절 Request Body). */
+export const NATURAL_LANGUAGE_TAG_LIMIT = 5
+
+/* 선택을 토글하되 계약 상한을 넘는 추가 선택은 무시한다. 서버 400을 유발하지 않고 화면에서 막는다. */
+export function toggleNaturalLanguageTag(tags: string[], code: string): string[] {
+  if (tags.includes(code)) return tags.filter((tag) => tag !== code)
+  return tags.length >= NATURAL_LANGUAGE_TAG_LIMIT ? tags : [...tags, code]
+}
+
+/* 오류 응답 errors[].field는 `sentence`, `page`처럼 최상위이거나 `filters.tags`처럼 filters 하위다. */
+const FIELD_LABELS: Record<string, string> = { ...CONDITION_LABELS, sentence: '검색 문장', page: '페이지', size: '결과 크기' }
+/* 같은 400 안에서 어떤 조건이 잘못됐는지 구분하려면 message가 아니라 code를 읽어야 한다(공통 오류 계약 2절). */
+export const NATURAL_LANGUAGE_EMPTY_MESSAGE = '자연어 검색 문장을 입력해 주세요.'
+const INVALID_MESSAGES: Record<string, string> = {
+  NATURAL_LANGUAGE_EMPTY: NATURAL_LANGUAGE_EMPTY_MESSAGE,
+  INVALID_FIELD_VALUE: '입력한 값 중 허용하지 않는 것이 있습니다.',
+  INVALID_IDENTIFIER: '선택한 유튜버 식별자가 올바르지 않습니다. 유튜버를 다시 선택해 주세요.',
+}
+
+export function naturalLanguageFieldLabel(field: string): string {
+  const name = field.startsWith('filters.') ? field.slice('filters.'.length) : field
+  /* `constructor` 같은 prototype 이름이 와도 상속 값을 문구로 쓰지 않는다. */
+  return Object.hasOwn(FIELD_LABELS, name) ? FIELD_LABELS[name] : name
 }
 
 export function naturalLanguageConditionLabel(field: string): string {
@@ -51,6 +80,12 @@ function condition(value: unknown): NaturalLanguageCondition | null {
   return { query: value.query as string | null, district: value.district as string | null, category: value.category as string | null, creatorId: value.creatorId as string | null, tags: strings(value.tags)! }
 }
 
+/* errors[].reason은 계약상 안전한 검증 실패 설명이므로 필드 라벨과 함께 그대로 표시한다. */
+export function naturalLanguageFieldGuidance(value: unknown): NaturalLanguageFieldGuidance[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((item) => isRecord(item) && typeof item.field === 'string' && typeof item.reason === 'string' ? [{ label: naturalLanguageFieldLabel(item.field), reason: item.reason }] : [])
+}
+
 export function decodeNaturalLanguageResult(value: unknown): NaturalLanguageResult | null {
   if (!isRecord(value) || !isRecord(value.interpretation) || !isRecord(value.results)) return null
   const interpretation = value.interpretation; const results = value.results; const appliedConditions = condition(interpretation.appliedConditions)
@@ -75,7 +110,8 @@ export async function searchRestaurantsByNaturalLanguage(sentence: string, filte
   let body: unknown = null; try { body = await response.json() } catch { body = null }
   if (response.ok) { const result = decodeNaturalLanguageResult(body); return result ? { kind: 'success', result } : { kind: 'error', message: FALLBACK_ERROR, retryAllowed: false } }
   const error = isRecord(body) ? body : {}; const message = typeof error.message === 'string' ? error.message : undefined; const traceId = typeof error.traceId === 'string' ? error.traceId : undefined
-  if (response.status >= 400 && response.status < 500 && response.status !== 429) return { kind: 'invalid', message: message ?? FALLBACK_INVALID, traceId }
+  const code = typeof error.code === 'string' ? error.code : undefined
+  if (response.status >= 400 && response.status < 500 && response.status !== 429) return { kind: 'invalid', code, message: (code && Object.hasOwn(INVALID_MESSAGES, code) ? INVALID_MESSAGES[code] : undefined) ?? message ?? FALLBACK_INVALID, fieldGuidance: naturalLanguageFieldGuidance(error.errors), traceId }
   if (response.status === 429) return { kind: 'rateLimited', message: message ?? FALLBACK_RATE_LIMIT, traceId, retryAvailableAt: parseRetryAfterHeader(response.headers.get('Retry-After'), Date.now()) }
   if (response.status === 503) return { kind: 'unavailable', message: message ?? FALLBACK_UNAVAILABLE, traceId }
   return { kind: 'error', message: message ?? FALLBACK_ERROR, traceId, retryAllowed: response.status >= 500 }
