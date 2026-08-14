@@ -23,6 +23,7 @@ import com.masiton.security.application.port.in.LoginAdminUseCase;
 import com.masiton.security.application.port.in.LogoutAdminUseCase;
 import com.masiton.security.application.port.in.RefreshAdminTokenUseCase;
 import com.masiton.security.infrastructure.configuration.SecurityProperties;
+import com.masiton.security.infrastructure.web.AdminClientAddressResolver;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -35,17 +36,20 @@ public class AdminAuthenticationController {
     private final RefreshAdminTokenUseCase refreshAdminTokenUseCase;
     private final LogoutAdminUseCase logoutAdminUseCase;
     private final SecurityProperties properties;
+    private final AdminClientAddressResolver clientAddressResolver;
 
     public AdminAuthenticationController(
             LoginAdminUseCase loginAdminUseCase,
             RefreshAdminTokenUseCase refreshAdminTokenUseCase,
             LogoutAdminUseCase logoutAdminUseCase,
-            SecurityProperties properties
+            SecurityProperties properties,
+            AdminClientAddressResolver clientAddressResolver
     ) {
         this.loginAdminUseCase = loginAdminUseCase;
         this.refreshAdminTokenUseCase = refreshAdminTokenUseCase;
         this.logoutAdminUseCase = logoutAdminUseCase;
         this.properties = properties;
+        this.clientAddressResolver = clientAddressResolver;
     }
 
     @PostMapping
@@ -54,7 +58,7 @@ public class AdminAuthenticationController {
             HttpServletRequest servletRequest
     ) {
         return tokenResponse(loginAdminUseCase.login(
-                new LoginAdminUseCase.LoginCommand(request.loginId(), request.password(), servletRequest.getRemoteAddr())
+                new LoginAdminUseCase.LoginCommand(request.loginId(), request.password(), clientAddressResolver.resolve(servletRequest))
         ));
     }
 
