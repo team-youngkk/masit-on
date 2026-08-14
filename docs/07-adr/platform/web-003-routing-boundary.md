@@ -1,7 +1,7 @@
 ---
 id: ADR-WEB-003
 title: 웹 화면·API·운영 경로 경계
-status: Accepted
+status: Superseded
 decision_date: 2026-07-27
 owners:
   - 양성훈
@@ -25,14 +25,16 @@ related_documents:
   - ../security/auth-001-spring-security-jwt.md
   - ../data/data-005-redis-refresh-token.md
 supersedes: []
-superseded_by: null
+superseded_by: ADR-WEB-005
 ---
 
 # ADR-WEB-003 웹 화면·API·운영 경로 경계
 
 ## 1. 상태
 
-Accepted
+Superseded by [ADR-WEB-005](web-005-application-port-binding.md)
+
+이 문서의 기존 경로 라우팅 결정은 후속 ADR에서 유지·참조한다. 운영 애플리케이션 포트 loopback 바인딩과 환경 변수 확장은 [ADR-WEB-005](web-005-application-port-binding.md)로 대체했다.
 
 ## 2. 결정 요약
 
@@ -66,8 +68,6 @@ Accepted
 - API 버전 접두사 `/v1`은 도입하지 않는다.
 
 Nginx는 경로 접두사만으로 목적지를 정하며 요청 헤더, 사용자 에이전트나 응답 형식으로 프론트엔드와 백엔드를 구분하지 않는다.
-
-경로 소유권은 Nginx가 유일한 진입점일 때만 성립한다. 운영 백엔드와 프론트엔드는 애플리케이션 포트를 loopback에만 바인딩해 인스턴스 밖에서 직접 연결할 수 없게 한다. 보안 그룹이나 방화벽에서 애플리케이션 포트가 열려도 Nginx를 건너뛴 경로가 만들어지지 않아야 하며, 특히 `/internal/**`이 그렇게 노출되지 않아야 한다.
 
 정식 공개 전에는 [ADR-DEPLOY-003](deploy-003-validation-cookie-session.md)의 검증 참여자 쿠키 세션을 이 라우팅보다 먼저 확인한다. 무세션 허용 조건은 [ADR-DEPLOY-003](deploy-003-validation-cookie-session.md) 4.3절이 정하고 허용 경로 목록은 [검증 참여자 제한 공개 API 계약](../../05-specs/api/common/validation-access-contract.md)이 소유한다. 그 목록에 없는 화면·API는 Nginx `auth_request`를 통과해야 한다. 이 진입 검증은 회원·관리자 Bearer 인증과 독립이며 정식 공개 시 제거한다.
 
@@ -140,7 +140,6 @@ Next.js App Router, Spring MVC Controller, Spring Security Filter Chain, Refresh
 - 화면 경로와 API 경로를 요청 헤더로 구분하지 않는다.
 - 인증 예외 matcher는 포괄적인 관리자 matcher보다 먼저 평가한다.
 - `/internal/**`은 인터넷 Nginx 경로로 전달하지 않는다.
-- 운영 애플리케이션 포트는 loopback에만 바인딩한다. 이 값은 환경 변수로 넓힐 수 있게 두지 않는다.
 - Refresh Token 재발급과 원래 요청 재실행은 한 번으로 제한한다.
 - 백엔드는 프론트엔드 라우트 가드와 무관하게 모든 보호 API를 검증한다.
 
@@ -159,7 +158,6 @@ API 계약, 프론트엔드 API Client Base URL, Spring Security matcher, Refres
 - 로그인·재발급 예외와 나머지 관리자 API의 `401`·`403`을 검증한다.
 - 메모리 Token 소실 뒤 재발급 성공·실패와 단일 재시도 제한을 검증한다.
 - `/internal/**` 외부 요청이 차단되고 컨테이너 내부에서는 세 상태 확인이 가능한지 검증한다.
-- 애플리케이션 포트가 loopback에만 열려 있는지, 인스턴스 밖에서 그 포트로 연결되지 않는지 확인한다([애플리케이션 포트 바인딩 경계](../../08-planning/issue-200-application-port-binding.md)).
 - PostgreSQL 장애는 `ready`와 `dependencies`, Redis 장애는 `dependencies`에서 구분되는지 확인한다.
 
 ## 14. 재검토 조건

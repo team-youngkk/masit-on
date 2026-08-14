@@ -10,6 +10,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #210 운영 포트 결정의 ADR 분리와 문서 탐색성](pr-210-application-port-binding-review.md)
 - [PR #204 Prompt P2 계약 동기화와 후보 결과 불변성](pr-204-ai-prompt-contract-review.md)
 - [PR #192 V8 통합 범위와 최종 Gemini 모델 계약](pr-192-flyway-model-contract-review.md)
 - [PR #191 Gemini 모델 전환 리뷰 반영](pr-191-gemini-model-transition-review.md)
