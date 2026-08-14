@@ -30,7 +30,7 @@ related_documents:
 ## 3. 문제 현상과 발생 조건
 
 - 오류 메시지: 없음. 동시 요청은 둘 다 `204`가 될 수 있고, 태그 감사는 응답 성공 후에도 최신 판단과 연결 결과가 달라질 수 있다.
-- 발생 환경: PR #175의 `develop` 대상 관리자 AI 검수 API, PostgreSQL V6 AI 스키마.
+- 발생 환경: PR #175의 `develop` 대상 관리자 AI 검수 API, PostgreSQL 통합 AI 스키마.
 - 재현 조건: 두 관리자가 같은 `AUTO_BLOCKED` Snapshot을 같은 `expectedReviewStatus`로 동시에 CONFIRM하거나, 후보 태그가 여러 개인 AUTO_BLOCKED 결과에서 일부 코드만 보정해 CONFIRM한다.
 - 실제 결과: 두 요청이 같은 기존 Snapshot을 stale 여부 없이 사용하거나, unchanged 태그는 `AUTO_REJECTED` 이력에 남은 채 `VisitTag`만 생성될 수 있다.
 - 기대 결과: 하나의 검수만 최신 Snapshot을 MANUAL_OVERRIDE로 전환하고 다른 요청은 409 stale이 되어야 한다. 수동 확정으로 연결된 모든 태그의 최신 감사 판단은 MANUAL_OVERRIDE여야 한다.
@@ -123,7 +123,7 @@ related_documents:
 | PostgreSQL Testcontainers Adapter·롤백·Flyway V7 테스트 | 로컬 Docker 엔진 부재로 미실행, CI 확인 필요 |
 | 프론트 전체 `npm test` | 기존 의존성/Node strip-only 환경 문제로 3개 파일 실패; 새 AI coordination 테스트는 별도 실행 통과 |
 
-변경 파일은 V7 migration, AI 작업·검수·롤백 Port/Service/Adapter, Controller, 프론트 오류 안내·테스트, 관련 데이터/API 계약 문서와 Flyway 회귀 테스트다. 정량 지표는 기존 PR에서 측정하지 않아 이번에도 추정하지 않았으며, CI에서 목록 SQL 성공·Snapshot 태그 삭제 수·기존 태그 잔존 수를 fixture 기준으로 확인한다.
+변경 파일은 통합 AI migration, AI 작업·검수·롤백 Port/Service/Adapter, Controller, 프론트 오류 안내·테스트, 관련 데이터/API 계약 문서와 Flyway 회귀 테스트다. 정량 지표는 기존 PR에서 측정하지 않아 이번에도 추정하지 않았으며, CI에서 목록 SQL 성공·Snapshot 태그 삭제 수·기존 태그 잔존 수를 fixture 기준으로 확인한다.
 
 ## 12. 최신 리뷰 반영: V6 계약 기대와 CONFIRM→ROLLBACK provenance
 
@@ -131,13 +131,13 @@ related_documents:
 
 | 스레드 | 문제 유형 | 판단 | 처리 |
 |---|---|---|---|
-| [3763195109](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3763195109) | 데이터베이스 | 수정 필요 | 최신 Snapshot 계약 기대 목록에 V6 등록 플래그 CHECK 4개를 추가하고, V6 미적용 단계에서는 이름 기준으로 제외하도록 보완했다. |
-| [3763204542](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3763204542) | 데이터베이스 | 수정 필요 | 위 V6 CHECK 누락과 같은 CI 실패를 재현 로그로 확인했으며, V6/V7 제약 제거를 위치가 아닌 제약명 기준으로 바꿨다. |
+| [3763195109](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3763195109) | 데이터베이스 | 수정 필요 | 최신 Snapshot 계약 기대 목록에 등록 플래그 CHECK 4개를 추가하고, 최종 통합 스키마의 제약명 기준으로 검증하도록 보완했다. |
+| [3763204542](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3763204542) | 데이터베이스 | 수정 필요 | 위 등록 플래그 CHECK 누락과 같은 CI 실패를 재현 로그로 확인했으며, 통합 AI 제약 제거를 위치가 아닌 제약명 기준으로 바꿨다. |
 | [3763206935](https://github.com/team-youngkk/masit-on/pull/175#discussion_r3763206935) | 데이터베이스 | 수정 필요 | CONFIRM override Snapshot이 원본 등록 Snapshot의 ID를 보존해 ROLLBACK이 원본 `created_from_snapshot_id`를 사용하도록 수정했다. |
 
 ### 12.2 원인과 해결
 
-- V6 마이그레이션은 `ai_candidate_snapshot`에 등록 플래그 CHECK 4개를 추가했지만, 최신 단계 계약 테스트의 기대 목록에는 해당 제약이 빠져 있었다. V4 단계와 V6 이상 단계를 `includesV6`로 구분하고, `includesV6=false`일 때 제약명을 필터링하도록 했다.
+- 통합 AI 마이그레이션은 `ai_candidate_snapshot`에 등록 플래그 CHECK 4개를 추가했지만, 최신 단계 계약 테스트의 기대 목록에는 해당 제약이 빠져 있었다. 적용 단계별 분기 없이 최종 통합 스키마의 기대 목록을 직접 검증하도록 했다.
 - CONFIRM은 등록 정보를 최신 Snapshot으로 복사하지만 VisitTag provenance는 최초 등록 Snapshot ID로 저장한다. 이후 ROLLBACK이 최신 MANUAL_OVERRIDE Snapshot ID를 전달해 삭제 대상 태그를 찾지 못하는 문제가 있었다.
 - Adapter가 작업 내 등록 정보가 처음 기록된 Snapshot을 오름차순으로 조회해 `registrationSnapshotId`로 반환하고, 커밋 서비스가 해당 ID를 롤백 Port에 전달하도록 변경했다. 원본 ID가 없으면 안전하게 409로 거부한다.
 
@@ -153,10 +153,10 @@ related_documents:
 
 ### 12.4 CI 후속 실패와 fixture 보완
 
-`V6`·`V7` 추가로 `TRUNCATE ... CASCADE`의 의존 경로가 확장되면서 일부 통합 테스트의 기준 태그가 함께 정리되는 것을 확인했다. 테스트가 Flyway 기준 태그가 항상 존재한다고 가정해 직접 `INSERT ... ON CONFLICT`로 필요한 `MENU_NAENGMYEON`·`OCCASION_SOLO`를 복원하도록 보완했다. 같은 실행에서 확인된 최신 마이그레이션 컬럼 계약에는 V6 등록 ID·생성 여부 컬럼 8개를 추가하고, 구버전 단계에서는 컬럼명 기준으로 제외하도록 수정했다.
+통합 AI 스키마로 `TRUNCATE ... CASCADE`의 의존 경로가 확장되면서 일부 통합 테스트의 기준 태그가 함께 정리되는 것을 확인했다. 테스트가 Flyway 기준 태그가 항상 존재한다고 가정해 직접 `INSERT ... ON CONFLICT`로 필요한 `MENU_NAENGMYEON`·`OCCASION_SOLO`를 복원하도록 보완했다. 같은 실행에서 확인된 최종 마이그레이션 컬럼 계약에는 등록 ID·생성 여부 컬럼 8개를 추가했다.
 
 로컬에서 다음 세 회귀 테스트를 재실행해 통과를 확인했다.
 
-- 최신 V4~V7 마이그레이션 컬럼 계약
+- 최신 통합 AI 마이그레이션 컬럼 계약
 - 여러 태그가 같은 Visit에 연결된 맛집 검색
 - 동일한 자연어·직접 필터의 `APPLIED` 응답

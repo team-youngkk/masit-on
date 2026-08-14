@@ -175,14 +175,14 @@ V3 구간 아웃박스는 Action Token만 FK로 참조한다. 수신자는 `memb
 
 이 마이그레이션은 원본 영상·전체 자막·Provider 응답 전문을 저장하지 않으며 외부 API를 호출하지 않는다. 실제 3차 완료 판정은 [3차 확장 테스트 추적표](../../08-planning/third-expansion-test-matrix.md), 평가 결과, Worker·quota·브라우저 증거까지 연결해 수행한다.
 
-### 11.1 V5 AI 작업 재사용 조회 인덱스
+### 11.1 AI 누적 변경 통합 구성
 
-`V5__add_ai_extraction_reuse_indexes.sql`은 기존 `V4` 작업 테이블을 수정하지 않고, 외부 YouTube 검증 전에 수행하는 관리자 멱등 조회를 지원하는 복합 인덱스와 임시 입력 만료 cleanup 인덱스를 추가한다. `youtube_video_id`와 입력 hash 또는 입력 모드·Provider/Model/Prompt/Schema 버전을 선두 조건으로 사용하며, 최신 작업 1건 조회 정렬과 `expires_at` 만료 행 선택을 지원한다. `V4` 적용 뒤 `V5`를 전진 적용하고, 기존 테이블·행은 변경하지 않는다.
+AI 영상 추출 스키마·재사용 조회 인덱스·수동 검수 감사·재시도 사유·태그 롤백 provenance는 `V4__create_third_expansion_ai_schema.sql`에 적용 순서대로 포함한다. 외부 YouTube 검증 전 멱등 조회 인덱스는 `youtube_video_id`와 입력 hash 또는 입력 모드·Provider/Model/Prompt/Schema 버전을 선두 조건으로 사용하며, 최신 작업 조회와 `expires_at` 만료 행 선택을 지원한다. 기존 작업·태그 행의 provenance는 nullable로 유지하고 새 자동 확정·수동 보정 연결부터 Snapshot ID를 기록한다.
 
-`V7__add_ai_retry_and_tag_rollback_provenance.sql`은 관리자 재시도 사유와 Snapshot 기반 `visit_tag` provenance를 추가한다. 기존 작업·태그 행의 provenance는 nullable로 유지하며, 새 자동 확정·수동 보정 연결부터 Snapshot ID를 기록해 롤백 시 해당 작업의 연결만 삭제한다.
+통합된 V4는 관리자 재시도 사유와 Snapshot 기반 `visit_tag` provenance를 추가한다. 기존 작업·태그 행의 provenance는 nullable로 유지하며, 새 자동 확정·수동 보정 연결부터 Snapshot ID를 기록해 롤백 시 해당 작업의 연결만 삭제한다.
 
 ## 12. 향후 변경 번호
 
-초기 스키마 baseline 다음 변경은 `V2`로 적용됐고, 1차 확장 변경은 2.3절 통합 이후 다시 `V2` 하나로 적용됐다. 2차 확장은 `V3`, 3차 확장 AI 영상 추출은 `V4`, AI 작업 재사용 조회 인덱스는 `V5`, 수동 검수 감사 이력은 `V6`, 재시도 사유·태그 롤백 provenance는 `V7`을 사용한다.
+초기 스키마 baseline 다음 변경은 `V2`로 적용됐고, 1차 확장 변경은 2.3절 통합 이후 다시 `V2` 하나로 적용됐다. 2차 확장은 `V3`, 3차 확장 AI 영상 추출과 누적 AI 변경은 `V4`를 사용한다.
 
 `V1`과 `V2`는 각각 적용된 시점부터 수정하지 않는다. 운영 배포 전 V3 통합은 2.1절과 ADR-DATA-009의 강제 규칙을 모두 증명한 경우에만 허용되는 예외이며, 이미 적용된 파일은 통합·수정하지 않는다.

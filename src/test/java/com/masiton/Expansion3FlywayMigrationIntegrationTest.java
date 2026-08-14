@@ -77,7 +77,7 @@ class Expansion3FlywayMigrationIntegrationTest {
         assertAiSchemaAndContracts(jdbcTemplate, database.schema());
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM pg_indexes WHERE schemaname = current_schema() "
                 + "AND indexname IN ('ix_ai_job__video_input_versions', 'ix_ai_job__video_mode_versions', "
-                + "'ix_ai_temporary_input__expires_at')", Integer.class)).isZero();
+                + "'ix_ai_temporary_input__expires_at')", Integer.class)).isEqualTo(3);
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM admin_account WHERE id = ?", Integer.class, existingAdminId)).isEqualTo(1);
     }
@@ -119,8 +119,8 @@ class Expansion3FlywayMigrationIntegrationTest {
     }
 
     @Test
-    @DisplayName("빈 데이터베이스를 최신 버전까지 마이그레이션하면 V4~V7 AI 관리 스키마가 모두 적용된다")
-    void 빈데이터베이스_최신버전마이그레이션_V4부터V7관리스키마적용() {
+    @DisplayName("빈 데이터베이스를 최신 버전까지 마이그레이션하면 통합 AI 관리 스키마가 적용된다")
+    void 빈데이터베이스_최신버전마이그레이션_통합AI관리스키마적용() {
         // given
         SchemaDatabase database = createSchemaDatabase();
         JdbcTemplate jdbcTemplate = new JdbcTemplate(database.dataSource());
@@ -131,7 +131,7 @@ class Expansion3FlywayMigrationIntegrationTest {
         // then
         assertThat(jdbcTemplate.queryForList(
                 "SELECT version FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank", String.class))
-                .containsExactly("1", "2", "3", "4", "5", "6", "7");
+                .containsExactly("1", "2", "3", "4");
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM pg_indexes WHERE schemaname = current_schema() "
                 + "AND indexname IN ('ix_ai_job__video_input_versions', 'ix_ai_job__video_mode_versions', "
                 + "'ix_ai_temporary_input__expires_at', 'ix_visit_tag__created_from_snapshot')", Integer.class)).isEqualTo(4);
@@ -244,12 +244,6 @@ class Expansion3FlywayMigrationIntegrationTest {
     }
 
     private void assertAiSchemaAndContracts(JdbcTemplate jdbcTemplate, String schema) {
-        boolean includesV6 = jdbcTemplate.queryForObject("SELECT count(*) FROM information_schema.columns "
-                + "WHERE table_schema=? AND table_name='ai_candidate_snapshot' "
-                + "AND column_name='registered_restaurant_id'", Integer.class, schema) == 1;
-        boolean includesV7 = jdbcTemplate.queryForObject("SELECT count(*) FROM information_schema.columns "
-                + "WHERE table_schema=? AND table_name='ai_extraction_job' AND column_name='retry_reason'",
-                Integer.class, schema) == 1;
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM information_schema.tables WHERE table_schema = ? "
                 + "AND table_name IN ('ai_extraction_job','ai_extraction_temporary_input','ai_candidate_snapshot',"
                 + "'ai_candidate_tag_review','tag_definition','visit_tag','ai_extraction_attempt','youtube_channel_watch')",
@@ -334,15 +328,6 @@ class Expansion3FlywayMigrationIntegrationTest {
                 Map.entry("fk_youtube_channel_watch__creator",
                         List.of("FOREIGN KEY (creator_id)", "REFERENCES creator(id)",
                                 "ON UPDATE RESTRICT", "ON DELETE RESTRICT"))));
-        if (!includesV7) {
-            expectedForeignKeys.remove("fk_visit_tag__created_from_snapshot");
-        }
-        if (!includesV6) {
-            expectedForeignKeys.remove("fk_ai_snapshot__registered_restaurant");
-            expectedForeignKeys.remove("fk_ai_snapshot__registered_creator");
-            expectedForeignKeys.remove("fk_ai_snapshot__registered_video");
-            expectedForeignKeys.remove("fk_ai_snapshot__registered_visit");
-        }
         assertThat(foreignKeys).containsOnlyKeys(expectedForeignKeys.keySet());
         expectedForeignKeys.forEach((name, fragments) -> assertThat(foreignKeys.get(name))
                 .as(name)
@@ -398,16 +383,6 @@ class Expansion3FlywayMigrationIntegrationTest {
                         "ck_youtube_channel_watch__token_hash_not_empty",
                         "ck_youtube_channel_watch__last_error_not_blank",
                         "ck_youtube_channel_watch__updated_after_created")));
-        if (!includesV7) {
-            expectedChecks.put("ai_extraction_job", expectedChecks.get("ai_extraction_job").stream()
-                    .filter(name -> !name.equals("ck_ai_extraction_job__retry_reason")).toList());
-        }
-        if (!includesV6) {
-            expectedChecks.put("ai_candidate_snapshot", expectedChecks.get("ai_candidate_snapshot").stream()
-                    .filter(name -> !name.startsWith("ck_ai_snapshot__registration_flags")).toList());
-            expectedChecks.put("ai_candidate_tag_review", expectedChecks.get("ai_candidate_tag_review").stream()
-                    .filter(name -> !name.equals("ck_ai_candidate_tag_review__manual_tag_code")).toList());
-        }
         expectedChecks.forEach((table, names) -> assertThat(jdbcTemplate.queryForList(
                 "SELECT conname FROM pg_constraint WHERE connamespace=current_schema()::regnamespace "
                         + "AND contype='c' AND conrelid=?::regclass",
@@ -443,21 +418,6 @@ class Expansion3FlywayMigrationIntegrationTest {
                         "id", "creator_id", "youtube_channel_id", "enabled", "subscription_status",
                         "subscription_token_hash", "last_notification_at", "last_renewed_at", "last_error_category",
                         "created_at", "updated_at")));
-        if (!includesV6) {
-            List<String> v6SnapshotColumns = List.of(
-                    "registered_restaurant_id", "registered_creator_id", "registered_video_id", "registered_visit_id",
-                    "restaurant_created", "creator_created", "video_created", "visit_created");
-            expectedColumns.put("ai_candidate_snapshot", expectedColumns.get("ai_candidate_snapshot").stream()
-                    .filter(column -> !v6SnapshotColumns.contains(column)).toList());
-            expectedColumns.put("ai_candidate_tag_review", expectedColumns.get("ai_candidate_tag_review").stream()
-                    .filter(column -> !column.equals("manual_tag_code")).toList());
-        }
-        if (!includesV7) {
-            expectedColumns.put("ai_extraction_job", expectedColumns.get("ai_extraction_job").stream()
-                    .filter(column -> !column.equals("retry_reason")).toList());
-            expectedColumns.put("visit_tag", expectedColumns.get("visit_tag").stream()
-                    .filter(column -> !column.equals("created_from_snapshot_id")).toList());
-        }
         expectedColumns.forEach((table, columns) -> assertThat(jdbcTemplate.queryForList(
                 "SELECT column_name FROM information_schema.columns WHERE table_schema=? AND table_name=? "
                         + "ORDER BY ordinal_position",

@@ -272,7 +272,7 @@ Redis 세션 변경 뒤 PostgreSQL `sid` 폐기 표식을 기록하지 못한 �
 
 ## 17. 3차 확장 AI 영상 추출 테이블
 
-3차 확장 물리 테이블과 컬럼별 계약은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)의 표를 정본으로 사용하고, 실제 테이블 DDL은 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql), 재사용 조회 인덱스는 [`V5__add_ai_extraction_reuse_indexes.sql`](../../../src/main/resources/db/migration/V5__add_ai_extraction_reuse_indexes.sql), 재시도 사유·태그 롤백 provenance는 [`V7__add_ai_retry_and_tag_rollback_provenance.sql`](../../../src/main/resources/db/migration/V7__add_ai_retry_and_tag_rollback_provenance.sql)에 둔다.
+3차 확장 물리 테이블·컬럼·재사용 조회 인덱스·재시도/태그 롤백 provenance의 정본은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)의 표와 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql)에 둔다.
 
 | 테이블 | 역할 | 핵심 무결성 |
 |---|---|---|
