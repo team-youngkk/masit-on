@@ -38,6 +38,7 @@ related_documents:
   - quality/test-001-automation-strategy.md
   - quality/obs-001-logging-observability.md
   - quality/perf-001-k6-load-testing.md
+  - quality/perf-002-operational-participant-load-testing.md
   - security/sec-001-secrets-workload-identity.md
   - platform/runtime-001-docker.md
   - platform/ci-001-github-actions-quality-gate.md
@@ -80,6 +81,7 @@ related_documents:
 | [ADR-TEST-001](quality/test-001-automation-strategy.md) | 계층별 자동화 테스트 전략 | Accepted | Critical | JUnit 5, Mockito, Spring Boot Test, Testcontainers 2.0.5, WireMock | 전체 Workstream | [문서](quality/test-001-automation-strategy.md) |
 | [ADR-OBS-001](quality/obs-001-logging-observability.md) | 애플리케이션 로그와 운영 관측 기준 | Accepted | High | SLF4J, Logback, Actuator, CloudWatch | 전체 운영 | [문서](quality/obs-001-logging-observability.md) |
 | [ADR-PERF-001](quality/perf-001-k6-load-testing.md) | k6 부하 테스트 도구와 실행 체계 | Accepted | High | k6 v2.1.0, GitHub Actions `workflow_dispatch` | 2차 확장 공개 조회 성능 검증 | [문서](quality/perf-001-k6-load-testing.md) |
+| [ADR-PERF-002](quality/perf-002-operational-participant-load-testing.md) | 검증 참여자 전용 운영 직접 부하 검증 예외 | Accepted | High | k6 v2.1.0, AWS SSM, 운영 PostgreSQL·Redis | 이슈 #190 일회성 제한 공개 검증 | [문서](quality/perf-002-operational-participant-load-testing.md) |
 | [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 비밀정보와 AWS 워크로드 인증 | Accepted | Critical | Parameter Store, KMS, IAM Role, GitHub OIDC | 운영·CI·외부 연동 | [문서](security/sec-001-secrets-workload-identity.md) |
 | [ADR-DATA-009](data/data-009-pre-release-migration-consolidation.md) | 운영 배포 전 마이그레이션 통합 범위 | Accepted | High | Flyway | 마이그레이션 파일과 모든 환경 스키마 | [문서](data/data-009-pre-release-migration-consolidation.md) |
 | [ADR-DATA-010](data/data-010-recent-view-retention-cleanup.md) | 최근 본 맛집 보존 기간 정리 실행 | Accepted | High | Spring Scheduler, PostgreSQL | [WS-06](../02-analysis/first-expansion-workstreams.md#5-ws-06-개인-맛집-관리) 최근 기록 생명주기 | [문서](data/data-010-recent-view-retention-cleanup.md) |
