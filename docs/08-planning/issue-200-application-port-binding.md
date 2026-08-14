@@ -52,7 +52,7 @@ Redis만 방식이 다르다. 애플리케이션 두 개는 `--network host`라 
 
 **`server.address` 하나로 `/internal/**`까지 덮이는 것은 상태 확인이 애플리케이션 커넥터에 같이 올라가 있기 때문이다.** 공통 계층이 Actuator를 `base-path: /internal`로 두고 `management.server.port`를 선언하지 않으므로 listener가 하나뿐이다([application.yml](../../src/main/resources/application.yml)). 관리 포트를 분리하면 `server.address`가 그 listener를 덮지 않아 `/internal/**`이 다시 전 인터페이스에 열린다. 관리 포트를 도입하려면 `management.server.address`도 같이 loopback으로 고정한다.
 
-운영 부하 측정에도 제약이 따른다. `app-run.sh`는 `SPRING_PROFILES_ACTIVE=prod`를 고정하므로, 배포 산출물로 띄운 인스턴스는 비loopback 주소로 8080에 도달하지 않는다. [ADR-PERF-001](../07-adr/quality/perf-001-k6-load-testing.md) 계열 문서가 기술한 `BASE_URL=http://<측정-대상>:8080` 외부 직결 측정은 이 인스턴스에 성립하지 않는다. 인스턴스 안에서 loopback으로 측정하거나([ADR-PERF-002](../07-adr/quality/perf-002-operational-participant-load-testing.md)), 측정 전용 인스턴스를 `docker-compose.yml`의 `local` 프로파일로 띄운다. **어느 쪽을 쓸지는 측정 절차 소유자가 정할 사항이며 이 변경에서 정하지 않았다.**
+운영 부하 측정에도 제약이 따른다. `app-run.sh`는 `SPRING_PROFILES_ACTIVE=prod`를 고정하므로, 배포 산출물로 띄운 인스턴스는 비loopback 주소로 8080에 도달하지 않는다. [ADR-PERF-001](../07-adr/quality/perf-001-k6-load-testing.md) 계열 문서가 기술한 `BASE_URL=http://<측정-대상>:8080` 외부 직결 측정은 이 인스턴스에 성립하지 않는다. 인스턴스 안에서 loopback으로 측정하거나(운영 참여자 전용 성능 검증 절차. [PR #208](https://github.com/team-youngkk/masit-on/pull/208)에서 도입 중이며 이 문서 작성 시점에 `develop`에 없다), 측정 전용 인스턴스를 `docker-compose.yml`의 `local` 프로파일로 띄운다. **어느 쪽을 쓸지는 측정 절차 소유자가 정할 사항이며 이 변경에서 정하지 않았다.**
 
 `--network host`이므로 컨테이너 안의 `127.0.0.1`은 호스트 loopback과 같다. 8080에 접근하는 정당한 호출자는 모두 같은 인스턴스의 loopback을 사용한다.
 
@@ -63,7 +63,7 @@ Redis만 방식이 다르다. 애플리케이션 두 개는 `--network host`라 
 | 상태 지표 수집 | `HEALTH_BASE=http://127.0.0.1:8080` ([health-metrics.sh](../../deploy/scripts/health-metrics.sh)) |
 | 배포 후 Smoke Test | `http://127.0.0.1:8080` ([app-deploy.sh](../../deploy/scripts/app-deploy.sh)) |
 | Nginx 전환 전 gate | `http://127.0.0.1:8080/internal/verification/session` ([nginx-install.sh](../../deploy/scripts/nginx-install.sh)) |
-| 운영 부하 측정 | `http://127.0.0.1:8080` ([ADR-PERF-002](../07-adr/quality/perf-002-operational-participant-load-testing.md)) |
+| 운영 부하 측정 | `http://127.0.0.1:8080` (운영 참여자 전용 성능 검증. [PR #208](https://github.com/team-youngkk/masit-on/pull/208) 병합 대기) |
 
 Nginx 전환 전 gate는 단순 호출이 아니다. 그 확인이 `401`을 받지 못하면 전환이 중단되고 Basic Auth로 되돌아간다. 바인딩이나 실행 네트워크를 바꿀 때 이 경로를 함께 확인한다.
 
@@ -79,6 +79,8 @@ Nginx 전환 전 gate는 단순 호출이 아니다. 그 확인이 `401`을 받�
 
 - `0.0.0.0`·`*`·`[::]`가 나오면 실패다.
 - **줄이 하나라도 빠지면 실패다.** 출력이 비어 있는 것은 통과가 아니다. 프로세스가 죽어 있을 때도 `0.0.0.0`이 나오지 않으므로, "위반 문자열이 없다"를 기준으로 삼으면 애플리케이션이 내려간 상태를 통과로 기록한다.
+
+`6379` 줄이 보이는 것은 Docker userland-proxy가 켜져 있어 `docker-proxy`가 `127.0.0.1:6379`를 listen하기 때문이다(기본값이며 이 인스턴스에 `daemon.json` 재정의가 없다). userland-proxy를 끄면 publish가 iptables DNAT만으로 처리돼 경계는 그대로인데 이 줄이 사라진다. 그때는 이 기준을 Redis에 대해 다시 정해야 한다.
 
 ```bash
 ss -tlnp | grep -E ':(8080|3000|6379)\s'
@@ -110,7 +112,7 @@ curl -sS -o /dev/null -w '%{http_code}\n' https://masiton.click/api/restaurants
 
 ### 4.4. 인터넷 직결 차단 확인
 
-인스턴스 밖(작업자 로컬)에서 실행한다. 두 명령 모두 연결이 성립하지 않아야 한다. **`200`이나 JSON 본문이 돌아오면 실패다.**
+인스턴스 밖(작업자 로컬)에서 실행한다. 두 명령 모두 연결이 성립하지 않아야 한다. 본문은 버리고 종료 코드로만 판정하므로 **`exit=0`이 나오면 실패다.**
 
 ```bash
 curl -sS -m 5 -o /dev/null -w 'exit=%{exitcode}\n' http://<앱 EIP>:8080/internal/health/live

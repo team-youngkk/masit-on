@@ -193,6 +193,10 @@ class AppRunScriptContractTest {
      * 변수로 넓힐 수 있게 두지 않는다"가 실제로 성립한다. 포트도 같은 이유로 함께 본다.
      * 주소만 고정하고 {@code SERVER_PORT}로 포트가 바뀌면 Nginx upstream과 어긋난다.
      *
+     * {@code PASSED_ENV}는 이 스크립트가 통일해 쓰는 {@code -e NAME} 형식만 뽑는다.
+     * {@code --env NAME}이나 {@code -eNAME}으로 바꿔 전달하면 이 단정을 통과한다. 전달 형식을
+     * 바꿀 때는 {@code PASSED_ENV}를 같이 넓힌다.
+     *
      * 반대 방향의 회귀도 같이 막는다. 바인딩만 loopback으로 좁히고 실행 네트워크를 브리지로
      * 바꾸거나 Nginx upstream·상태 지표 수집 대상을 다른 주소로 옮기면, 인터넷 차단은
      * 유지되지만 정상 요청과 상태 확인이 전부 끊긴다. 각 지점을 한 테스트에서 대조한다.
@@ -288,7 +292,7 @@ class AppRunScriptContractTest {
 
     private static String dockerRunCommand(String branch) {
         Matcher matcher = DOCKER_RUN.matcher(branch);
-        assertThat(matcher.find()).as("backend 분기에서 docker run 명령을 찾지 못했다").isTrue();
+        assertThat(matcher.find()).as("분기에서 docker run 명령을 찾지 못했다").isTrue();
         return matcher.group(1);
     }
 
