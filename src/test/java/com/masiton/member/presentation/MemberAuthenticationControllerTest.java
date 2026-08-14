@@ -188,6 +188,20 @@ class MemberAuthenticationControllerTest {
     }
 
     @Test
+    @DisplayName("Origin 헤더가 여러 개인 회원 Refresh 요청은 403이고 서비스를 호출하지 않는다")
+    void refresh_다중Origin_403과서비스미호출() throws Exception {
+        mockMvc.perform(post("/api/auth/tokens/refresh")
+                        .header(HttpHeaders.ORIGIN, cookieSettings.publicBaseUrl())
+                        .header(HttpHeaders.ORIGIN, "https://evil.test")
+                        .cookie(new Cookie(cookieSettings.cookieName(), "refresh-token")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                .andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE));
+
+        verifyNoInteractions(service);
+    }
+
+    @Test
     @DisplayName("Refresh Token이 유효하지 않으면 Refresh Cookie를 즉시 만료한다")
     void refresh_무효Token_만료Cookie반환() throws Exception {
         when(service.refresh("refresh-token")).thenThrow(new BusinessException(
@@ -281,6 +295,21 @@ class MemberAuthenticationControllerTest {
         assertThat(cookie)
                 .contains(cookieSettings.cookieName() + "=")
                 .contains("Path=" + cookieSettings.path(), "Max-Age=0", "HttpOnly", "Secure", "SameSite=Strict");
+    }
+
+    @Test
+    @DisplayName("Origin 헤더가 여러 개인 회원 로그아웃은 403이고 서비스를 호출하지 않는다")
+    void 로그아웃_다중Origin_403과서비스미호출() throws Exception {
+        mockMvc.perform(delete("/api/auth/tokens")
+                        .header(HttpHeaders.ORIGIN, cookieSettings.publicBaseUrl())
+                        .header(HttpHeaders.ORIGIN, "https://evil.test")
+                        .cookie(new Cookie(cookieSettings.cookieName(), "refresh-token"))
+                        .principal(authentication()))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                .andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE));
+
+        verifyNoInteractions(service);
     }
 
     private static MemberClientAddressResolver addressResolver() {

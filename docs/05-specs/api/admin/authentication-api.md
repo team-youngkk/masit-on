@@ -25,6 +25,7 @@ related_documents:
   - ../common/error-contract.md
   - ../../data/entity-definitions.md
   - ../../../07-adr/security/auth-001-spring-security-jwt.md
+  - ../../../07-adr/security/auth-006-cookie-origin-defense.md
   - ../../../07-adr/data/data-005-redis-refresh-token.md
   - ../../../07-adr/platform/web-003-routing-boundary.md
 ---

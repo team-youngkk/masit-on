@@ -1,8 +1,6 @@
 package com.masiton.security.infrastructure.web;
 
 import java.io.IOException;
-import java.util.Enumeration;
-
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.access.AccessDeniedException;
@@ -10,6 +8,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.masiton.security.infrastructure.configuration.SecurityProperties;
+import com.masiton.common.web.TrustedOriginResolver;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -40,13 +39,9 @@ public class AdminCookieOriginFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        Enumeration<String> origins = request.getHeaders(HttpHeaders.ORIGIN);
-        if (!origins.hasMoreElements()) {
-            reject(request, response);
-            return;
-        }
-        String origin = origins.nextElement();
-        if (origins.hasMoreElements() || !properties.isAllowedPublicOrigin(origin)) {
+        if (TrustedOriginResolver.resolveSingleOrigin(request)
+                .filter(properties::isAllowedPublicOrigin)
+                .isEmpty()) {
             reject(request, response);
             return;
         }

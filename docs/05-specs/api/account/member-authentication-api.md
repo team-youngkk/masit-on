@@ -51,6 +51,7 @@ related_documents:
   - ../common/authentication-contract.md
   - ../../../06-architecture/security-boundary.md
   - ../../../07-adr/platform/web-003-routing-boundary.md
+  - ../../../07-adr/security/auth-006-cookie-origin-defense.md
 ---
 
 # 일반 회원 계정·인증 API

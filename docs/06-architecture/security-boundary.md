@@ -7,6 +7,7 @@ related_documents:
   - ../05-specs/api/admin/reference-data-api.md
   - ../05-specs/api/admin/visit-registration-api.md
   - ../07-adr/security/auth-001-spring-security-jwt.md
+  - ../07-adr/security/auth-006-cookie-origin-defense.md
   - ../07-adr/security/auth-003-confirmation-token.md
   - ../07-adr/data/data-005-redis-refresh-token.md
   - ../07-adr/security/sec-001-secrets-workload-identity.md
@@ -144,10 +145,10 @@ URL은 HTTPS와 허용 호스트를 검증하고 리디렉션 최종 호스트�
 
 ## 8. Refresh Token과 Redis 장애
 
-[ADR-AUTH-001](../07-adr/security/auth-001-spring-security-jwt.md)에 따라:
+[ADR-AUTH-001](../07-adr/security/auth-001-spring-security-jwt.md) 및 [ADR-AUTH-006](../07-adr/security/auth-006-cookie-origin-defense.md)에 따라:
 
 - Access Token은 30분 만료, 프론트엔드 메모리에만 둔다.
-- Refresh Token은 14일 TTL, HttpOnly·Secure·SameSite=Strict·`Path=/api/admin/auth` 쿠키로 전달한다. Refresh·Logout 요청은 `Origin`이 `ADMIN_PUBLIC_BASE_URL`로 설정한 관리자 화면 Origin과 정확히 일치해야 하며, 누락·불일치는 `403 FORBIDDEN`으로 Bearer·Refresh Token 처리보다 먼저 차단한다. Origin 검사는 SameSite 쿠키 정책과 함께 쓰는 보조 CSRF 방어선이고 로그인·Bearer 전용 관리자 API에는 적용하지 않는다. Origin 없는 비브라우저·운영 점검 요청도 허용하지 않는다.
+- Refresh Token은 14일 TTL, HttpOnly·Secure·SameSite=Strict·`Path=/api/admin/auth` 쿠키로 전달한다. Refresh·Logout 요청은 단일 `Origin` 헤더가 `ADMIN_PUBLIC_BASE_URL`로 설정한 관리자 화면 Origin과 canonical form으로 정확히 일치해야 하며, 누락·다중·불일치는 `403 FORBIDDEN`으로 Bearer·Refresh Token 처리보다 먼저 차단한다. Origin 검사는 SameSite 쿠키 정책과 함께 쓰는 보조 CSRF 방어선이고 로그인·Bearer 전용 관리자 API에는 적용하지 않는다. Origin 없는 비브라우저·운영 점검 요청도 허용하지 않는다.
 - 계정당 활성 Refresh Token 하나만 허용한다.
 - 재발급마다 회전하고 재사용을 탐지해 Token 계열을 폐기한다.
 - Redis 장애 시 재발급은 fail-closed이고 재로그인을 요구한다.

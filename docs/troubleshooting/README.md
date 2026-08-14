@@ -10,6 +10,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #211 Refresh·Logout Origin 방어](pr-211-admin-refresh-logout-origin-review.md)
 - [PR #208 운영 fixture cleanup 참조 보호와 성능 추적성](pr-208-operational-performance-review.md)
 - [PR #205 관리자 로그인 trusted proxy 출처 해석 리뷰 반영](pr-205-admin-login-trusted-proxy-review.md)
 - [PR #204 Prompt P2 계약 동기화와 후보 결과 불변성](pr-204-ai-prompt-contract-review.md)
