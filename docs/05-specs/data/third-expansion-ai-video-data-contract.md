@@ -73,7 +73,7 @@ related_documents:
 | `input_mode` | `varchar(24)` | NN | `GEMINI_VIDEO_URL/ADMIN_TEXT` | AI 입력 경로 |
 | `input_hash` | `bytea` | NN | SHA-256 32 byte | 입력 동일성 |
 | `provider` | `varchar(32)` | NN | `GOOGLE_GEMINI` 후보 | 제공자 |
-| `model_version` | `varchar(128)` | NN | `gemini-3.5-flash-lite` | 모델 버전 |
+| `model_version` | `varchar(128)` | NN | 신규 작업은 `gemini-3.5-flash-lite`, 기존 이력은 `gemini-3-flash-preview` 허용 | 모델 버전 |
 | `prompt_version` | `varchar(64)` | NN | 빈 값 금지 | Prompt 버전 |
 | `schema_version` | `varchar(64)` | NN | 빈 값 금지 | 결과 Schema 버전 |
 | `retry_reason` | `varchar(1000)` | Yes | 관리자 재시도 작업에서만 non-blank | 해당 작업을 다시 요청한 사유 |
@@ -246,7 +246,7 @@ Creator 등록만으로 `enabled=true`가 되지 않는다. 감시 중지·구�
 | `ix_visit_tag__tag_lookup` | `tag_definition_id`, 공개 Visit 상태 조합 | 태그 기반 맛집 조회 |
 | `ix_ai_temporary_input__expires_at` | `expires_at`, `job_id` | 만료 임시 입력 cleanup 선택 |
 
-정확한 PostgreSQL partial index·FK 삭제 동작·lease claim SQL은 [ADR-EXT-003](../../07-adr/integration/ext-003-ai-extraction-async-reliability.md), [테이블 정의](table-definitions.md), [제약조건](constraints.md), [인덱스 전략](index-strategy.md), [Flyway 계획](migration-plan.md)과 `V4`·`V5` DDL의 대응으로 확인한다.
+정확한 PostgreSQL partial index·FK 삭제 동작·lease claim SQL은 [ADR-EXT-003](../../07-adr/integration/ext-003-ai-extraction-async-reliability.md), [테이블 정의](table-definitions.md), [제약조건](constraints.md), [인덱스 전략](index-strategy.md), [Flyway 계획](migration-plan.md)과 `V4`·`V5`·`V6`·`V7`·`V8` DDL의 대응으로 확인한다.
 
 ## 12. 생명주기와 보존
 

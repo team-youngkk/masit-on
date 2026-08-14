@@ -10,6 +10,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #191 Gemini 모델 전환 리뷰 반영](pr-191-gemini-model-transition-review.md)
 - [PR #184 YouTube 채널 감시 상태·동시성 경계 리뷰 반영](pr-184-youtube-channel-watch-review.md)
 - [PR #182 관리자 AI 영상 접수 리뷰 반영](pr-182-admin-ai-video-intake-review.md)
 - [PR #179 브라우저 인수 캡처 증거 보존](pr-179-browser-capture-evidence-review.md)

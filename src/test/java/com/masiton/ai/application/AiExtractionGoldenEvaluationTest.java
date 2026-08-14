@@ -24,7 +24,7 @@ import tools.jackson.databind.ObjectMapper;
  * E3-T08의 합성·비식별 AI 추출 골든 데이터 프로그램 평가기다.
  * 실제 운영 {@link AiCandidateValidator}에 S1 payload를 실행하되 외부 제공자 호출과 LLM 심판은 하지 않는다.
  */
-@DisplayName("AI 영상 정보 추출 골든 데이터 평가(EVAL-AI-001~010)")
+@DisplayName("기존 Preview 후보의 AI 영상 정보 추출 골든 데이터 평가(EVAL-AI-001~010)")
 class AiExtractionGoldenEvaluationTest {
 
     private static final String DATASET_ROOT = "/eval/aiextract-golden-v1.0.0/";
@@ -138,6 +138,20 @@ class AiExtractionGoldenEvaluationTest {
         assertThat(policy.get("productionProviderCallsAllowed").asBoolean()).isFalse();
         assertThat(policy.get("productionActivationAllowed").asBoolean()).isFalse();
         assertThat(policy.get("activationGateTask").asText()).isEqualTo("E3-T13");
+        assertThat(policy.get("releaseDecision").asText()).isEqualTo("HOLD");
+    }
+
+    @Test
+    @DisplayName("기존 Preview 골든 평가와 운영 모델이 다르면 활성화를 보류한다")
+    void 기존Preview골든평가와운영모델이_다르면_활성화를보류한다() {
+        JsonNode manifest = readJson("manifest.json");
+        JsonNode policy = manifest.get("evaluationPolicy");
+        JsonNode runtime = manifest.get("runtimeContract");
+
+        assertThat(runtime.get("modelVersion").asText()).isEqualTo("gemini-3-flash-preview");
+        assertThat(runtime.get("modelVersion").asText()).isNotEqualTo(AiExtractionContract.MODEL_VERSION);
+        assertThat(AiExtractionContract.MODEL_VERSION).isEqualTo("gemini-3.5-flash-lite");
+        assertThat(policy.get("productionActivationAllowed").asBoolean()).isFalse();
         assertThat(policy.get("releaseDecision").asText()).isEqualTo("HOLD");
     }
 

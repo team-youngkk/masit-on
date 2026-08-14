@@ -181,8 +181,12 @@ V3 구간 아웃박스는 Action Token만 FK로 참조한다. 수신자는 `memb
 
 `V7__add_ai_retry_and_tag_rollback_provenance.sql`은 관리자 재시도 사유와 Snapshot 기반 `visit_tag` provenance를 추가한다. 기존 작업·태그 행의 provenance는 nullable로 유지하며, 새 자동 확정·수동 보정 연결부터 Snapshot ID를 기록해 롤백 시 해당 작업의 연결만 삭제한다.
 
+### 11.2 V8 Gemini 모델 전환 제약
+
+`V8__allow_gemini_3_5_flash_lite_model_version.sql`은 이미 적용된 V4를 수정하지 않고 모델 CHECK 제약만 갱신한다. 기존 `gemini-3-flash-preview` 작업 행은 보존하고, 신규 작업은 애플리케이션 계약의 `gemini-3.5-flash-lite`로 생성한다. V4~V7의 기존 스키마·인덱스·감사·provenance 계약은 변경하지 않는다.
+
 ## 12. 향후 변경 번호
 
-초기 스키마 baseline 다음 변경은 `V2`로 적용됐고, 1차 확장 변경은 2.3절 통합 이후 다시 `V2` 하나로 적용됐다. 2차 확장은 `V3`, 3차 확장 AI 영상 추출은 `V4`, AI 작업 재사용 조회 인덱스는 `V5`, 수동 검수 감사 이력은 `V6`, 재시도 사유·태그 롤백 provenance는 `V7`을 사용한다.
+초기 스키마 baseline 다음 변경은 `V2`로 적용됐고, 1차 확장 변경은 2.3절 통합 이후 다시 `V2` 하나로 적용됐다. 2차 확장은 `V3`, 3차 확장 AI 영상 추출은 `V4`, AI 작업 재사용 조회 인덱스는 `V5`, 수동 검수 감사 이력은 `V6`, 재시도 사유·태그 롤백 provenance는 `V7`, Gemini 모델 전환 제약은 `V8`을 사용한다.
 
 `V1`과 `V2`는 각각 적용된 시점부터 수정하지 않는다. 운영 배포 전 V3 통합은 2.1절과 ADR-DATA-009의 강제 규칙을 모두 증명한 경우에만 허용되는 예외이며, 이미 적용된 파일은 통합·수정하지 않는다.
