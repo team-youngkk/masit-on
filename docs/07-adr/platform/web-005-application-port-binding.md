@@ -20,8 +20,7 @@ related_documents:
   - web-003-routing-boundary.md
   - ../adr-index.md
   - ../adr-traceability.md
-supersedes:
-  - ADR-WEB-003
+supersedes: []
 superseded_by: null
 ---
 
@@ -29,7 +28,11 @@ superseded_by: null
 
 ## 1. 상태
 
-Accepted. [ADR-WEB-003](web-003-routing-boundary.md)의 웹·API·운영 경계 결정을 대체하며, 기존 Nginx 경로 라우팅은 유지하고 운영 포트 바인딩 결정을 이 문서에서 관리한다.
+Accepted
+
+어떤 ADR도 대체하지 않는다. [ADR-WEB-003](web-003-routing-boundary.md)은 Accepted를 유지하며 경로 소유권·화면 경로·관리자 인증 순서·인증 상태 복구·상태 확인 경로를 계속 소유한다.
+
+이 문서는 그 문서의 결론을 바꾸지 않고 운영 애플리케이션 포트의 바인딩 주소라는 새 결정만 추가한다. ADR-WEB-003 6.1·6.5절이 정한 "Nginx가 유일한 외부 진입점"과 "`/internal/**`은 인터넷에 공개하지 않는다"를 Nginx 경로 규칙 하나가 아니라 네트워크 계층에서도 성립하게 만드는 보강 결정이다. 따라서 [README 9절](../README.md#9-변경-및-대체-절차)의 대체 절차 대상이 아니다.
 
 ## 2. 문제
 

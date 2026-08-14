@@ -1,7 +1,7 @@
 ---
 id: ADR-WEB-003
 title: 웹 화면·API·운영 경로 경계
-status: Superseded
+status: Accepted
 decision_date: 2026-07-27
 owners:
   - 양성훈
@@ -25,16 +25,18 @@ related_documents:
   - ../security/auth-001-spring-security-jwt.md
   - ../data/data-005-redis-refresh-token.md
 supersedes: []
-superseded_by: ADR-WEB-005
+superseded_by: null
 ---
 
 # ADR-WEB-003 웹 화면·API·운영 경로 경계
 
 ## 1. 상태
 
-Superseded by [ADR-WEB-005](web-005-application-port-binding.md)
+Accepted
 
-이 문서의 기존 경로 라우팅 결정은 후속 ADR에서 유지·참조한다. 운영 애플리케이션 포트 loopback 바인딩과 환경 변수 확장은 [ADR-WEB-005](web-005-application-port-binding.md)로 대체했다.
+이 문서는 경로 소유권(6.1), 화면 경로(6.2), 관리자 인증 순서(6.3), 인증 상태 복구(6.4)와 상태 확인 경로(6.5)를 계속 소유한다. 어느 결정도 대체되지 않았다.
+
+운영 애플리케이션 포트를 loopback에만 바인딩하는 결정은 이 문서가 아니라 [ADR-WEB-005](web-005-application-port-binding.md)가 소유한다. 그 결정은 6.1·6.5절의 경계를 네트워크 계층에서 한 겹 더 보강하며 이 문서의 결론을 바꾸지 않는다.
 
 ## 2. 결정 요약
 
