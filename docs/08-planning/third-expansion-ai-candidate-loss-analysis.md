@@ -87,6 +87,16 @@ related_documents:
 
 태그를 추출할 수 있는 모든 영상이 `SCHEMA`로 실패하고 재시도가 불가능하다. 태그를 우연히 추출하지 못한 영상만 다음 단계로 진행한다.
 
+### 4.4 같은 원인의 추가 항목
+
+태그 모양을 고친 뒤 같은 계약으로 다시 호출해 두 항목을 추가로 확인했다. 둘 다 규칙이 시스템 프롬프트 문장으로만 존재하고 송신 Schema에는 표현되지 않은 같은 원인이다.
+
+**완결성과 누락 필드의 결합.** `validS1`은 `COMPLETE`이면 `missingFields`가 비어 있고 `PARTIAL`이면 비어 있지 않을 것을 요구한다. 송신 Schema는 두 필드를 독립적으로 선언하므로 모델이 `PARTIAL`과 빈 `missingFields`를 함께 반환할 수 있고, 그 응답은 `SCHEMA`로 기각된다. 같은 요청을 반복 호출했을 때 `COMPLETE`·빈 목록이 두 번, `PARTIAL`·빈 목록이 한 번 나왔다. 간헐적으로 실패하므로 재현 조건이 드러나지 않는다.
+
+**태그 코드 규격.** `AiExtractionResultProcessorService.isTagAutoConnectable`은 `normalizedCode`가 `[A-Z0-9_]{1,64}`를 만족하고 `tagType`과 밑줄로 시작할 것을 요구한다. 이 규격은 응답 검증 대상이 아니어서 `SCHEMA` 실패로 이어지지는 않지만, 위반한 태그는 `AUTO_REJECT`·`TAG_POLICY`로 처리되어 timestamp 근거가 있는 태그가 조용히 버려진다. 실측에서 소문자와 하이픈이 섞인 로마자 표기(`MENU_NEUNGBEoseot_SAMGYETANG`, `MENU_BOKSUNG-A_BINGSU`)가 태그 22건 중 4건 나타났다.
+
+두 항목 모두 송신 Schema가 규칙을 구조로 표현하게 하는 것으로 해결한다. 수신 검증기와 API 계약은 바꾸지 않는다.
+
 ## 5. 결함 B — 복수 후보를 폐기한다
 
 ### 5.1 근거 규칙
@@ -163,6 +173,8 @@ related_documents:
 ## 8. 검증 방법
 
 - 태그 후보를 포함한 `S1` 응답이 `SCHEMA` 실패 없이 후보로 변환되는 것을 WireMock으로 검증한다.
+- 송신 Schema가 선언한 후보별 허용 필드 집합이 수신 검증기의 허용 집합과 일치하는 것을 회귀 테스트로 고정한다. `PR #170`이 같은 재발 방지 항목을 남겼으나 태그 후보 모양까지 덮지 못해 이번 결함이 재발했다.
+- 송신 Schema가 완결성과 누락 필드의 결합, 태그 코드 규격을 구조로 강제하는 것과, 결합을 위반한 응답이 여전히 `SCHEMA`로 기각되는 것을 함께 검증한다.
 - 같은 필드에 후보가 여러 개인 응답이 `AUTO_BLOCKED`로 차단되면서도 `candidate_fields`에 전부 보존되는 것을 검증한다.
 - 단일 후보 응답의 `AUTO_CONFIRMED` 자동 등록 동작이 회귀하지 않는 것을 검증한다.
 - 상세 조회 응답의 `candidates`에 같은 `field`가 여러 번 나타나는 것을 검증한다.
