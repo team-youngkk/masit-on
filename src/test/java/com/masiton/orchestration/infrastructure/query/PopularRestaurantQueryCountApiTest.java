@@ -71,6 +71,11 @@ class PopularRestaurantQueryCountApiTest {
         UUID smallRestaurantId = insertRestaurant();
         insertFavorite(smallMemberId, smallRestaurantId);
 
+        // 이 테스트가 재는 것은 데이터 규모에 따른 쿼리 수 증가다. 그런데 측정 구간의 첫 요청은
+        // Hikari가 커넥션을 처음 열면서 만드는 구문까지 함께 잡혀, 데이터가 적은 쪽이 오히려 더
+        // 큰 값으로 측정된다. 두 측정을 같은 조건에 두기 위해 측정 전에 한 번 호출해 풀을 채운다.
+        mockMvc.perform(get("/api/restaurants/popular")).andExpect(status().isOk());
+
         QueryCountingDataSourceConfiguration.reset();
         mockMvc.perform(get("/api/restaurants/popular")).andExpect(status().isOk());
         int smallScenarioQueryCount = QueryCountingDataSourceConfiguration.preparedStatementCount();
