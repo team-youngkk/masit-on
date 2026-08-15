@@ -104,6 +104,8 @@ export function CreatorVideosSection({
             <img
               src={video.thumbnailUrl}
               alt={video.title}
+              loading="lazy"
+              decoding="async"
               className={styles.thumbnail}
             />
           ) : null

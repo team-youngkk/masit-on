@@ -253,6 +253,23 @@ export default async function RestaurantsPage({
         <input type="hidden" name="size" value={currentSize} />
       </form>
 
+      <NaturalLanguageRestaurantSearch
+        key={naturalLanguageFiltersKey(naturalLanguageFilters)}
+        structuredFormId="structured-restaurant-search"
+        creatorLabels={
+          creatorsResult.ok
+            ? Object.fromEntries(
+                creatorsResult.data.items.map((creator) => [
+                  creator.id,
+                  creator.channelName,
+                ]),
+              )
+            : {}
+        }
+        filters={naturalLanguageFilters}
+        returnTo={currentRoute}
+      />
+
       {!result.ok ? (
         <StatePanel
           title="맛집을 불러올 수 없습니다"
@@ -395,26 +412,6 @@ export default async function RestaurantsPage({
           ) : null}
         </>
       )}
-      <NaturalLanguageRestaurantSearch
-        key={naturalLanguageFiltersKey(naturalLanguageFilters)}
-        structuredFormId="structured-restaurant-search"
-        creatorLabels={
-          creatorsResult.ok
-            ? Object.fromEntries(
-                creatorsResult.data.items.map((creator) => [
-                  creator.id,
-                  creator.channelName,
-                ]),
-              )
-            : {}
-        }
-        filters={naturalLanguageFilters}
-        returnTo={currentRoute}
-      />
-      <Link href={mapHref} className={styles.mobileMapCta}>
-        <span>지도에서 이어서 보기</span>
-        <span aria-hidden="true">↗</span>
-      </Link>
     </PageShell>
   )
 }

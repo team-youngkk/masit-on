@@ -191,6 +191,8 @@ function RestaurantContent({ restaurant }: { restaurant: RestaurantDetail }) {
                 <img
                   src={video.thumbnailUrl}
                   alt={video.title}
+                  loading="lazy"
+                  decoding="async"
                   className={styles.thumbnail}
                 />
               )
