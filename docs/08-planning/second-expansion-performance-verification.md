@@ -16,6 +16,7 @@ related_documents:
   - ../07-adr/data/data-011-popular-restaurant-request-time-aggregation.md
   - ../05-specs/api/discovery/popular-restaurant-api.md
   - ../05-specs/api/curation/curation-api.md
+  - issue-207-natural-language-load-model.md
 ---
 
 # 2차 확장 성능 검증 결과
@@ -131,7 +132,7 @@ k6는 `thresholds` 위반 시 0이 아닌 종료 코드로 끝난다. 통과·�
 
 ### 5.3. 결과 수집
 
-워크플로 실행은 선택한 시나리오별 결과 요약을 artifact(`k6-<load_profile>-public-read-results`, `k6-<load_profile>-third-expansion-natural-language-results`, `k6-<load_profile>-third-expansion-course-<course_metric_mode>-results`)로 14일 보관하고 job summary에도 남긴다. 결과 파일은 `perf/k6/results/<load_profile>/public-read/`, `perf/k6/results/<load_profile>/third-expansion/natural-language/`, `perf/k6/results/<load_profile>/third-expansion/course/<course_metric_mode>/`에 각각 둔다. 직접 실행한 경우에도 같은 시나리오별 경로를 사용한다. 결과 파일 자체는 커밋하지 않고, 수치는 6절 표에 옮겨 적는다.
+워크플로 실행은 선택한 시나리오별 결과 요약을 artifact(`k6-<load_profile>-public-read-results`, `k6-<load_profile>-third-expansion-natural-language-<public_read_mode>-results`, `k6-<load_profile>-third-expansion-course-<course_metric_mode>-results`)로 14일 보관하고 job summary에도 남긴다. 결과 파일은 `perf/k6/results/<load_profile>/public-read/`, `perf/k6/results/<load_profile>/third-expansion/natural-language/<public_read_mode>/`, `perf/k6/results/<load_profile>/third-expansion/course/<course_metric_mode>/`에 각각 둔다. 직접 실행한 경우에도 같은 시나리오별 경로를 사용한다. 결과 파일 자체는 커밋하지 않고, 수치는 6절 표에 옮겨 적는다.
 
 ## 6. 측정 결과
 

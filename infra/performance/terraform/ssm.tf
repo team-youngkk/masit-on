@@ -1,0 +1,7 @@
+resource "aws_ssm_parameter" "db_password" {
+  name        = "/masiton/perf-207/${var.run_id}/db/password"
+  description = "Issue #207 isolated performance RDS password"
+  type        = "SecureString"
+  value       = var.db_password
+  tier        = "Standard"
+}

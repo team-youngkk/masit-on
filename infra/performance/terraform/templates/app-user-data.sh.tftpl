@@ -1,0 +1,51 @@
+#!/bin/bash
+set -euo pipefail
+
+exec > >(tee /var/log/masiton-perf-bootstrap.log | logger -t masiton-perf-bootstrap -s 2>/dev/console) 2>&1
+
+dnf install -y docker
+systemctl enable --now docker
+
+mkdir -p /opt/masiton-perf/wiremock
+chown -R root:root /opt/masiton-perf
+
+docker pull '${wiremock_image}'
+docker pull '${redis_image}'
+
+docker rm -f masiton-perf-wiremock masiton-perf-redis 2>/dev/null || true
+
+docker run -d \
+  --name masiton-perf-wiremock \
+  --restart unless-stopped \
+  --network host \
+  -v /opt/masiton-perf/wiremock:/home/wiremock \
+  '${wiremock_image}' \
+  --port 8081 \
+  --verbose
+
+docker run -d \
+  --name masiton-perf-redis \
+  --restart unless-stopped \
+  --network host \
+  '${redis_image}' \
+  redis-server --bind 127.0.0.1 --protected-mode yes --port 6379
+
+cat >/opt/masiton-perf/runtime.env <<'RUNTIME_ENV'
+AWS_REGION=${aws_region}
+DB_HOST=${db_host}
+DB_PORT=${db_port}
+DB_NAME=${db_name}
+DB_USERNAME=${db_username}
+DB_PASSWORD_PARAMETER=${db_param_name}
+APP_IMAGE_URI=${app_image_uri}
+WIREMOCK_BASE_URL=http://127.0.0.1:8081
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+RUNTIME_ENV
+chmod 0600 /opt/masiton-perf/runtime.env
+
+cat >/opt/masiton-perf/start-backend-note.txt <<'NOTE'
+The infrastructure is ready. Start the digest-pinned backend through an audited SSM command.
+Read /opt/masiton-perf/runtime.env from the instance; retrieve DB_PASSWORD_PARAMETER with SSM SecureString.
+Do not put the password in user-data, shell history, GitHub workflow inputs, or repository files.
+NOTE
