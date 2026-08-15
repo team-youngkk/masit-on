@@ -9,7 +9,8 @@
   width: 100%;
   max-width: var(--layout-max-width);
   margin: 0 auto;
-  padding: var(--space-8) var(--layout-gutter) calc(var(--space-12) + 4rem);
+  padding: var(--space-8) var(--layout-gutter)
+    calc(var(--space-12) + 4rem + env(safe-area-inset-bottom));
 }
 
 .main.adminMain {

@@ -18,9 +18,18 @@
 }
 
 .textLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-min-height);
   color: var(--color-primary-strong);
   font-weight: 700;
   text-align: center;
 }
 
-@media (max-width: 480px) { .form { padding: var(--space-4); } }
+@media (max-width: 480px) {
+  .form { padding: var(--space-4); }
+
+  .form > button,
+  .textLink { width: 100%; }
+}

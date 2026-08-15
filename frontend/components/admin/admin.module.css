@@ -9,12 +9,13 @@
 .sidebarFooter { display: grid; gap: var(--space-2); margin-top: auto; }
 .main { min-width: 0; padding: var(--space-6); }
 .content, .wideContent { width: 100%; }
-.content { max-width: 680px; }
+.content { max-width: 800px; }
 .wideContent { max-width: 1120px; }
 .loginPage { display: grid; min-height: 100dvh; place-items: center; padding: var(--space-5); background: var(--color-surface-muted); }
+.loginPage .form { width: 100%; max-width: 28rem; margin: 0 auto; }
 .dashboard { display: grid; gap: var(--space-4); }
 .dashboardGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
-.dashboardCard { display: grid; gap: var(--space-3); min-height: 13rem; padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); color: var(--color-text); transition: border-color .15s ease, box-shadow .15s ease; }
+.dashboardCard { display: grid; gap: var(--space-3); min-height: 11rem; padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); color: var(--color-text); transition: border-color .15s ease, box-shadow .15s ease; }
 .dashboardCard:hover, .dashboardCard:focus-visible { border-color: var(--color-primary-strong); box-shadow: var(--shadow-card); }
 .dashboardCard h2, .dashboardCard p { margin: 0; }
 .dashboardCard h2 { font-size: var(--font-size-lg); }
@@ -24,8 +25,8 @@
 .form { padding: var(--space-6); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
 .result, .success { padding: var(--space-4); border-radius: var(--radius-md); background: var(--color-surface-muted); }
 .result h2, .success h2 { margin: 0 0 var(--space-2); font-size: var(--font-size-lg); }
-.result pre, .success pre { overflow-x: auto; white-space: pre-wrap; font: inherit; }
-.error { margin: 0; color: var(--color-danger); }
+.result pre, .success pre { max-width: 100%; overflow-x: auto; overflow-wrap: anywhere; white-space: pre-wrap; font: inherit; }
+.error { margin: 0; color: var(--color-danger); overflow-wrap: anywhere; }
 .notice { margin: 0; color: var(--color-text-muted); }
 .help { margin: calc(var(--space-2) * -1) 0 0; color: var(--color-text-muted); font-size: var(--font-size-sm); }
 .loading { margin: var(--space-8) 0; color: var(--color-text-muted); }
@@ -35,12 +36,14 @@
 
 @media (max-width: 640px) {
   .shell { grid-template-columns: 1fr; }
-  .sidebar { position: sticky; top: 0; z-index: 10; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-right: 0; border-bottom: 1px solid var(--color-border); }
+  .sidebar { gap: var(--space-3); padding: var(--space-3) var(--space-4); border-right: 0; border-bottom: 1px solid var(--color-border); }
   .brand { font-size: 1.2rem; }
   .brand span { display: inline; margin-left: var(--space-1); }
-  .navigation { display: flex; flex-wrap: wrap; padding-bottom: var(--space-1); }
+  .navigation { grid-template-columns: repeat(2, minmax(0, 1fr)); padding-bottom: var(--space-1); }
+  .link, .activeLink { min-width: 0; padding: 0 var(--space-2); line-height: 1.25; text-align: center; justify-content: center; }
   .sidebarFooter { margin-top: 0; }
   .sidebarFooter button { width: 100%; }
   .main { padding: var(--space-4); }
   .dashboardGrid { grid-template-columns: 1fr; }
+  .dashboardCard { min-height: 0; padding: var(--space-4); }
 }

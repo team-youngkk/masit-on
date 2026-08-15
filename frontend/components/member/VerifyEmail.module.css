@@ -53,6 +53,7 @@
 .help {
   margin: 0;
   color: var(--color-text-muted);
+  overflow-wrap: anywhere;
 }
 
 .help,
@@ -110,5 +111,10 @@
 @media (max-width: 640px) {
   .card {
     padding: var(--space-4);
+  }
+
+  .form > button,
+  .loginLink {
+    width: 100%;
   }
 }

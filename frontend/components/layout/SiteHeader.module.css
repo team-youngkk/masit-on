@@ -235,8 +235,10 @@
   }
 
   .logoutError {
-    right: var(--space-2);
-    left: var(--space-2);
+    position: fixed;
+    top: calc(64px + var(--space-2));
+    right: var(--layout-gutter);
+    left: var(--layout-gutter);
     flex-wrap: wrap;
     white-space: normal;
   }
@@ -250,6 +252,7 @@
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     min-height: 64px;
+    padding-bottom: env(safe-area-inset-bottom);
     border-top: 1px solid var(--color-border);
     background: color-mix(in srgb, var(--color-surface) 96%, transparent);
     box-shadow: 0 -8px 24px rgb(31 29 26 / 7%);

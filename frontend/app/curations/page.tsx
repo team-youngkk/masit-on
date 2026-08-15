@@ -27,6 +27,7 @@ export default async function PublicCurationsPage() {
         <StatePanel
           title="게시 중인 큐레이션이 없습니다"
           description="새로운 큐레이션이 준비되면 이곳에서 소개할게요."
+          compact
           actions={<Link href="/restaurants" className={styles.actionLink}>맛집 탐색하기</Link>}
         />
       ) : (

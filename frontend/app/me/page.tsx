@@ -114,13 +114,15 @@ export default function MePage() {
       </nav>
       {!confirmingWithdrawal
         ? <Button variant="secondary" disabled={action !== null} onClick={() => { setConfirmingWithdrawal(true); setMessage('') }}>회원 탈퇴</Button>
-        : <div role="group" aria-labelledby="withdrawal-confirmation">
+        : <div className={styles.withdrawal} role="group" aria-labelledby="withdrawal-confirmation">
           <h2 id="withdrawal-confirmation">회원 탈퇴를 진행할까요?</h2>
           <p>계정 정보, 찜, 최근 본 기록과 모든 로그인 세션이 정리됩니다.</p>
-          <Button variant="secondary" disabled={action !== null} onClick={() => { setConfirmingWithdrawal(false); setMessage('') }}>취소</Button>
-          <Button disabled={action !== null} onClick={withdraw}>
-            {action === 'withdraw' ? '처리 시작 중…' : '탈퇴 확인'}
-          </Button>
+          <div className={styles.withdrawalActions}>
+            <Button variant="secondary" disabled={action !== null} onClick={() => { setConfirmingWithdrawal(false); setMessage('') }}>취소</Button>
+            <Button disabled={action !== null} onClick={withdraw}>
+              {action === 'withdraw' ? '처리 시작 중…' : '탈퇴 확인'}
+            </Button>
+          </div>
         </div>}
     </> : null}
     {message ? <StatePanel compact tone={messageIsError ? 'danger' : 'neutral'} title={message} /> : null}

@@ -51,7 +51,7 @@
     'map'
     'summary'
     'list';
-  gap: var(--space-4);
+  gap: var(--space-5);
 }
 
 .mapArea {
@@ -80,7 +80,8 @@
   }
 
   .layout {
-    grid-template-columns: minmax(0, 1fr) minmax(17rem, 22rem);
+    /* 768px에서는 요약·목록 레일이 지도보다 넓어지지 않게 제한한다. */
+    grid-template-columns: minmax(0, 1fr) minmax(17rem, 19rem);
     grid-template-areas:
       'map summary'
       'map list';
@@ -94,6 +95,12 @@
   .summaryArea {
     position: sticky;
     top: var(--space-4);
+  }
+}
+
+@media (min-width: 1024px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) minmax(17rem, 22rem);
   }
 }
 

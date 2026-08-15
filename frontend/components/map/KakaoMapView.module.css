@@ -19,6 +19,13 @@
   }
 }
 
+@media (min-width: 768px) {
+  .container,
+  .map {
+    min-height: min(68vh, 46rem);
+  }
+}
+
 .overlay {
   position: absolute;
   inset: 0;
