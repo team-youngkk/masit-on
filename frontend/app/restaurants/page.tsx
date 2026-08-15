@@ -1,15 +1,18 @@
 import Link from 'next/link'
 
-import { Button } from '@/components/ui/Button'
-import { Card } from '@/components/ui/Card'
-import { Field } from '@/components/ui/Field'
-import { PageShell, SectionHeader } from '@/components/ui/PageShell'
-import { StatePanel } from '@/components/ui/StatePanel'
-import { StatusBadge } from '@/components/ui/StatusBadge'
 import { FavoriteButton } from '@/components/personal/FavoriteButton'
 import { NaturalLanguageRestaurantSearch } from '@/components/restaurants/NaturalLanguageRestaurantSearch'
+import { Button } from '@/components/ui/Button'
+import { PageShell } from '@/components/ui/PageShell'
+import { StatePanel } from '@/components/ui/StatePanel'
 import { cn } from '@/lib/cn'
+import { buildMapNavigationHref } from '@/lib/map/map-navigation'
 import { naturalLanguageFiltersKey } from '@/lib/natural-language-filters-key'
+import {
+  buildRestaurantFilterClearHref,
+  buildRestaurantFiltersResetHref,
+  type RestaurantStructuredFilterKey,
+} from '@/lib/restaurants-filter-navigation'
 import {
   CATEGORY_OPTIONS,
   DISTRICT_OPTIONS,
@@ -24,15 +27,14 @@ import {
 
 import styles from './restaurants.module.css'
 
-type RestaurantsPageProps = {
-  searchParams: Promise<RawSearchParams>
+type RestaurantsPageProps = { searchParams: Promise<RawSearchParams> }
+type ActiveFilter = {
+  key: RestaurantStructuredFilterKey
+  label: string
+  value: string
 }
 
-/*
- * 검색·필터·페이지 상태는 URL 쿼리로만 관리한다(PRD 8절, pagination-contract.md).
- * 폼은 GET 제출로 같은 화면에 새 쿼리를 반영하고, page는 폼에 포함하지 않아
- * 조건 변경 시 자동으로 첫 페이지를 요청한다.
- */
+/* 검색·필터·페이지 상태는 URL 쿼리로만 관리한다(PRD 8절, pagination-contract.md). */
 export default async function RestaurantsPage({
   searchParams,
 }: RestaurantsPageProps) {
@@ -43,171 +45,212 @@ export default async function RestaurantsPage({
     fetchCreators(),
   ])
 
+  /* 반복 URL 값은 API 요청과 같은 규칙으로 첫 값만 사용한다. */
   const currentQuery = toSingleValue(rawParams.query) ?? ''
   const currentDistrict = toSingleValue(rawParams.district) ?? ''
   const currentCategory = toSingleValue(rawParams.category) ?? ''
   const currentCreatorId = toSingleValue(rawParams.creatorId)
   const currentSize = apiParams.get('size') ?? '20'
-
-  /* URL의 creatorId가 현재 선택 목록에 없으면(삭제·비공개 전환 등) select에 그대로 defaultValue로
-   * 넘길 수 없다 — 일치하는 option이 없으면 브라우저가 조용히 "전체"를 선택한 것처럼 보여줘
-   * 화면과 실제 조회 조건이 어긋난다. */
+  const currentRoute = `/restaurants?${apiParams.toString()}`
+  const mapHref = buildMapNavigationHref('/restaurants', apiParams)
   const currentCreatorKnown =
     creatorsResult.ok &&
     (!currentCreatorId ||
-      creatorsResult.data.items.some((creator) => creator.id === currentCreatorId))
-  const clearCreatorIdHref = (() => {
-    const next = new URLSearchParams(apiParams)
-    next.delete('creatorId')
-    next.set('page', '1')
-    return `/restaurants?${next.toString()}`
-  })()
+      creatorsResult.data.items.some(
+        (creator) => creator.id === currentCreatorId,
+      ))
 
-  /* URL이 소유한 직접 필터. 이 값이 바뀌면 key가 달라져 자연어 검색 영역이 재마운트되고
-   * 이전 문장·태그·결과가 남지 않는다. 구조화 폼 GET 제출은 전체 문서 이동이라 이미 초기화되지만,
-   * 유튜버 필터 해제·페이지 링크 같은 클라이언트 내비게이션은 컴포넌트를 유지한다. */
+  /* 이 4개만 URL이 소유한 직접 필터다. page/size/tags는 포함하지 않는다. */
   const naturalLanguageFilters = {
     query: currentQuery.trim() || null,
     district: currentDistrict || null,
     category: currentCategory || null,
     creatorId: currentCreatorId ?? null,
-    /* 목록 API는 태그 1개(`tag`)만 받고 여러 태그 AND는 자연어 API의 filters.tags가 담당한다.
-     * 직접 태그 선택은 자연어 검색 영역이 소유하므로 초기값만 비어 있는 상태로 넘긴다. */
     tags: [],
   }
-
+  const activeFilters: ActiveFilter[] = [
+    ...(currentQuery.trim()
+      ? [{ key: 'query' as const, label: '검색어', value: currentQuery.trim() }]
+      : []),
+    ...(currentDistrict
+      ? [{ key: 'district' as const, label: '지역', value: currentDistrict }]
+      : []),
+    ...(currentCategory
+      ? [
+          {
+            key: 'category' as const,
+            label: '음식 종류',
+            value: currentCategory,
+          },
+        ]
+      : []),
+    ...(currentCreatorId
+      ? [
+          {
+            key: 'creatorId' as const,
+            label: '유튜버',
+            value: creatorsResult.ok
+              ? (creatorsResult.data.items.find(
+                  (creator) => creator.id === currentCreatorId,
+                )?.channelName ?? '선택할 수 없는 유튜버')
+              : '선택한 유튜버',
+          },
+        ]
+      : []),
+  ]
   const items = result.ok ? result.data.items : []
   const page = result.ok ? result.data.page : null
   const pageNumbers = page ? buildPageNumbers(page.number, page.totalPages) : []
-  const currentRoute = `/restaurants?${apiParams.toString()}`
 
   return (
-    <PageShell
-      title="맛집 탐색"
-      description="유튜버가 방문한 맛집을 조건 또는 문장으로 찾아보세요."
-    >
-
-      <NaturalLanguageRestaurantSearch
-        key={naturalLanguageFiltersKey(naturalLanguageFilters)}
-        structuredFormId="structured-restaurant-search"
-        creatorLabels={creatorsResult.ok ? Object.fromEntries(creatorsResult.data.items.map((creator) => [creator.id, creator.channelName])) : {}}
-        filters={naturalLanguageFilters}
-        returnTo={currentRoute}
-      />
+    <PageShell className={styles.page}>
+      <section className={styles.hero} aria-labelledby="restaurants-title">
+        <p className={styles.eyebrow}>맛집 탐색</p>
+        <h1 id="restaurants-title">유튜버가 다녀온 진짜 맛집</h1>
+        <p>이름, 지역, 음식 종류, 유튜버로 원하는 맛집을 찾아보세요.</p>
+      </section>
 
       <form
         id="structured-restaurant-search"
         method="get"
-        className={styles.filters}
+        className={styles.structuredSearch}
         aria-label="맛집 검색 조건"
       >
-        <Field
-          label="맛집 이름"
-          name="query"
-          defaultValue={currentQuery}
-          placeholder="예: 강된장"
-          maxLength={100}
-        />
-
-        <div className={styles.selectGroup}>
-          <label className={styles.selectLabel} htmlFor="district">
-            자치구
+        <div className={styles.nameSearch}>
+          <label className={styles.srOnly} htmlFor="restaurant-query">
+            맛집 이름 검색
           </label>
-          <select
-            id="district"
-            name="district"
-            defaultValue={currentDistrict}
-            className={styles.select}
-          >
-            <option value="">전체</option>
-            {DISTRICT_OPTIONS.map((district) => (
-              <option key={district} value={district}>
-                {district}
-              </option>
-            ))}
-          </select>
+          <input
+            id="restaurant-query"
+            name="query"
+            defaultValue={currentQuery}
+            placeholder="맛집 이름을 검색하세요"
+            maxLength={100}
+            className={styles.queryInput}
+          />
+          <Button type="submit" className={styles.querySubmit}>
+            검색
+          </Button>
         </div>
-
-        <div className={styles.selectGroup}>
-          <label className={styles.selectLabel} htmlFor="category">
-            대표 음식
-          </label>
-          <select
-            id="category"
-            name="category"
-            defaultValue={currentCategory}
-            className={styles.select}
-          >
-            <option value="">전체</option>
-            {CATEGORY_OPTIONS.map((category) => (
-              <option key={category} value={category}>
-                {category}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className={styles.selectGroup}>
-          <label className={styles.selectLabel} htmlFor="creatorId">
-            유튜버
-          </label>
-          {creatorsResult.ok ? (
-            <select
-              id="creatorId"
-              name="creatorId"
-              defaultValue={currentCreatorId ?? ''}
-              className={styles.select}
+        <div className={styles.toolbarWrap}>
+          <div className={styles.toolbar}>
+            <div className={styles.filterControls}>
+              <label className={styles.selectLabel} htmlFor="district">
+                <span className={styles.srOnly}>지역</span>
+                <select
+                  id="district"
+                  name="district"
+                  defaultValue={currentDistrict}
+                  className={styles.select}
+                >
+                  <option value="">지역</option>
+                  {DISTRICT_OPTIONS.map((district) => (
+                    <option key={district} value={district}>
+                      {district}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className={styles.selectLabel} htmlFor="category">
+                <span className={styles.srOnly}>음식 종류</span>
+                <select
+                  id="category"
+                  name="category"
+                  defaultValue={currentCategory}
+                  className={styles.select}
+                >
+                  <option value="">음식 종류</option>
+                  {CATEGORY_OPTIONS.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className={styles.selectLabel} htmlFor="creatorId">
+                <span className={styles.srOnly}>유튜버</span>
+                {creatorsResult.ok ? (
+                  <select
+                    id="creatorId"
+                    name="creatorId"
+                    defaultValue={currentCreatorId ?? ''}
+                    className={styles.select}
+                  >
+                    <option value="">유튜버</option>
+                    {creatorsResult.data.items.map((creator) => (
+                      <option key={creator.id} value={creator.id}>
+                        {creator.channelName}
+                      </option>
+                    ))}
+                    {!currentCreatorKnown && currentCreatorId ? (
+                      <option value={currentCreatorId}>
+                        선택할 수 없는 유튜버
+                      </option>
+                    ) : null}
+                  </select>
+                ) : (
+                  <>
+                    <select
+                      id="creatorId"
+                      defaultValue=""
+                      className={styles.select}
+                      disabled
+                    >
+                      <option value="">유튜버</option>
+                    </select>
+                    {currentCreatorId ? (
+                      <input
+                        type="hidden"
+                        name="creatorId"
+                        value={currentCreatorId}
+                      />
+                    ) : null}
+                  </>
+                )}
+              </label>
+            </div>
+            <Link
+              href={buildRestaurantFiltersResetHref(apiParams)}
+              className={styles.resetLink}
             >
-              <option value="">전체</option>
-              {creatorsResult.data.items.map((creator) => (
-                <option key={creator.id} value={creator.id}>
-                  {creator.channelName}
-                </option>
+              필터 초기화
+            </Link>
+          </div>
+          {activeFilters.length > 0 ? (
+            <div className={styles.chipStrip} aria-label="적용된 검색 조건">
+              {activeFilters.map((filter) => (
+                <Link
+                  key={filter.key}
+                  href={buildRestaurantFilterClearHref(apiParams, filter.key)}
+                  className={styles.filterChip}
+                  aria-label={`${filter.label} ${filter.value} 필터 해제`}
+                >
+                  {filter.value} <span aria-hidden="true">×</span>
+                </Link>
               ))}
-              {/* 현재 선택된 유튜버가 목록에 없으면(삭제·비공개 전환) 그 사실을 그대로
-               * 보여준다. disabled를 쓰면 폼 제출 데이터 구성 시 선택된 option이
-               * 통째로 제외돼(WHATWG HTML 4.10.5.4) creatorId가 조용히 사라지므로
-               * 활성 option으로 두고, 사용자가 "전체"나 다른 유튜버로 직접 바꿔야만
-               * 필터가 바뀌게 한다. */}
-              {!currentCreatorKnown && currentCreatorId ? (
-                <option value={currentCreatorId}>선택할 수 없는 유튜버</option>
-              ) : null}
-            </select>
-          ) : (
-            <select id="creatorId" defaultValue="" className={styles.select} disabled>
-              <option value="">전체</option>
-            </select>
-          )}
-          {/* 조회 자체가 실패하면 select로 값을 바꿀 수 없으니 기존 값을 보존하되,
-           * 사용자가 URL을 몰라도 필터를 끌 수 있게 명시적 해제 링크를 같이 준다. */}
-          {!creatorsResult.ok && currentCreatorId ? (
-            <>
-              <input type="hidden" name="creatorId" value={currentCreatorId} />
-              <Link href={clearCreatorIdHref} className={styles.selectHint}>
-                유튜버 필터 해제
-              </Link>
-            </>
-          ) : null}
-          {creatorsResult.ok && creatorsResult.data.items.length === 0 ? (
-            <p className={styles.selectHint}>등록된 유튜버가 없습니다.</p>
+            </div>
           ) : null}
           {!creatorsResult.ok ? (
-            <p className={styles.selectError} role="alert">
+            <p className={styles.creatorError} role="alert">
               {creatorsResult.message}
               {creatorsResult.traceId ? (
                 <span className={styles.traceId}>
                   traceId: {creatorsResult.traceId}
                 </span>
               ) : null}
+              {currentCreatorId ? (
+                <Link
+                  href={buildRestaurantFilterClearHref(apiParams, 'creatorId')}
+                >
+                  유튜버 필터 해제
+                </Link>
+              ) : null}
             </p>
+          ) : creatorsResult.data.items.length === 0 ? (
+            <p className={styles.creatorHint}>등록된 유튜버가 없습니다.</p>
           ) : null}
         </div>
-
         <input type="hidden" name="size" value={currentSize} />
-
-        <Button type="submit" className={styles.submit}>
-          검색
-        </Button>
       </form>
 
       {!result.ok ? (
@@ -225,32 +268,31 @@ export default async function RestaurantsPage({
         />
       ) : (
         <>
-          <SectionHeader
-            title={`검색 결과 ${page?.totalElements ?? items.length}곳`}
-            description="지역·음식 종류·방문 유튜버 정보를 확인하고 상세로 이동할 수 있어요."
-          />
+          <section
+            className={styles.resultHeader}
+            aria-labelledby="results-title"
+          >
+            <h2 id="results-title">
+              검색 결과 {page?.totalElements ?? items.length}곳
+            </h2>
+            <span
+              className={styles.staticSort}
+              aria-label="정렬 기준: 기본 정렬, 이름순"
+            >
+              기본 정렬 · 이름순
+            </span>
+          </section>
           <ul className={styles.list}>
             {items.map((restaurant) => (
-              <li key={restaurant.id}>
-                <Card
-                  title={
-                    <Link href={`/restaurants/${restaurant.id}`}>
-                      {restaurant.name}
-                    </Link>
-                  }
-                  level={2}
-                  meta={`${restaurant.district} · ${restaurant.category}`}
-                >
-                  <div className={styles.badges}>
-                    <StatusBadge tone="info">{restaurant.district}</StatusBadge>
-                    <StatusBadge>{restaurant.category}</StatusBadge>
-                    {restaurant.visitedBy.length > 0 ? (
-                      <StatusBadge tone="success">
-                        유튜버 {restaurant.visitedBy.length + restaurant.remainingVisitedByCount}명 방문
-                      </StatusBadge>
-                    ) : null}
-                  </div>
-                  <div className={styles.cardAction}>
+              <li key={restaurant.id} className={styles.listItem}>
+                <article className={styles.restaurantCard}>
+                  <div className={styles.cardHeading}>
+                    <div>
+                      <p className={styles.cardMeta}>
+                        {restaurant.district} · {restaurant.category}
+                      </p>
+                      <h3>{restaurant.name}</h3>
+                    </div>
                     <FavoriteButton
                       restaurantId={restaurant.id}
                       restaurantName={restaurant.name}
@@ -267,19 +309,37 @@ export default async function RestaurantsPage({
                         ? ` 외 ${restaurant.remainingVisitedByCount}명`
                         : ''}
                     </p>
-                  ) : null}
-                </Card>
+                  ) : (
+                    <p className={styles.visitedBy}>
+                      방문 유튜버 정보가 없습니다.
+                    </p>
+                  )}
+                  <Link
+                    href={`/restaurants/${encodeURIComponent(restaurant.id)}`}
+                    className={styles.detailLink}
+                    aria-label={`${restaurant.name} 상세 보기`}
+                  >
+                    상세 보기 <span aria-hidden="true">→</span>
+                  </Link>
+                </article>
               </li>
             ))}
           </ul>
-
+          <aside className={styles.helperPanel} aria-label="맛집 탐색 도움말">
+            <div>
+              <strong>원하는 맛집이 보이지 않나요?</strong>
+              <p>검색어나 필터를 바꾸거나 지도에서 주변 맛집을 찾아보세요.</p>
+            </div>
+            <Link href={mapHref} className={styles.mapLink}>
+              지도 보기 <span aria-hidden="true">↗</span>
+            </Link>
+          </aside>
           {page ? (
             <nav className={styles.pagination} aria-label="페이지 이동">
               <p className={styles.pageStatus}>
                 {page.number} / {Math.max(page.totalPages, 1)} 페이지 (총{' '}
                 {page.totalElements}건)
               </p>
-
               <div className={styles.pageLinks}>
                 {page.number > 1 ? (
                   <Link
@@ -296,7 +356,6 @@ export default async function RestaurantsPage({
                     이전
                   </span>
                 )}
-
                 {pageNumbers.map((pageNumber) =>
                   pageNumber === page.number ? (
                     <span
@@ -316,7 +375,6 @@ export default async function RestaurantsPage({
                     </Link>
                   ),
                 )}
-
                 {page.hasNext ? (
                   <Link
                     href={buildRestaurantsHref(apiParams, page.number + 1)}
@@ -337,6 +395,26 @@ export default async function RestaurantsPage({
           ) : null}
         </>
       )}
+      <NaturalLanguageRestaurantSearch
+        key={naturalLanguageFiltersKey(naturalLanguageFilters)}
+        structuredFormId="structured-restaurant-search"
+        creatorLabels={
+          creatorsResult.ok
+            ? Object.fromEntries(
+                creatorsResult.data.items.map((creator) => [
+                  creator.id,
+                  creator.channelName,
+                ]),
+              )
+            : {}
+        }
+        filters={naturalLanguageFilters}
+        returnTo={currentRoute}
+      />
+      <Link href={mapHref} className={styles.mobileMapCta}>
+        <span>지도에서 이어서 보기</span>
+        <span aria-hidden="true">↗</span>
+      </Link>
     </PageShell>
   )
 }
