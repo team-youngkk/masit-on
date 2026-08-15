@@ -1,6 +1,9 @@
 import Link from 'next/link'
 
 import { Card } from '@/components/ui/Card'
+import { PageShell } from '@/components/ui/PageShell'
+import { StatePanel } from '@/components/ui/StatePanel'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 import { fetchPopularRestaurants } from '@/lib/popular-restaurants-api'
 
 import styles from './popular.module.css'
@@ -16,22 +19,27 @@ export default async function PopularRestaurantsPage() {
   const items = result.ok ? result.data.items : []
 
   return (
-    <section>
-      <h1>인기 맛집</h1>
+    <PageShell
+      title="인기 맛집"
+      description="지금 가장 많은 관심을 받는 공개 맛집이에요."
+    >
       {/* 정렬 기준 설명은 상태와 무관하게 항상 표시한다(wireframe 4절 POPULAR-LIST). */}
       <p className={styles.subtitle}>현재 가장 많이 찜한 공개 맛집</p>
 
       {!result.ok ? (
-        <p className={styles.error} role="alert">
-          {result.message}
-          {result.traceId ? (
-            <span className={styles.traceId}>traceId: {result.traceId}</span>
-          ) : null}
-          <br />
-          <RetryButton />
-        </p>
+        <StatePanel
+          title="인기 맛집을 불러올 수 없습니다"
+          description={result.message}
+          tone="danger"
+          traceId={result.traceId}
+          actions={<RetryButton />}
+        />
       ) : items.length === 0 ? (
-        <p className={styles.state}>현재 찜한 공개 맛집이 없습니다.</p>
+        <StatePanel
+          title="아직 인기 맛집이 없습니다"
+          description="찜한 공개 맛집이 생기면 이곳에 순위가 표시됩니다."
+          compact
+        />
       ) : (
         <ol className={styles.list}>
           {items.map((item) => (
@@ -46,12 +54,12 @@ export default async function PopularRestaurantsPage() {
                 level={2}
                 meta={`${item.roadAddress} · ${item.category}`}
               >
-                <p className={styles.favoriteCount}>찜 {item.favoriteCount}</p>
+                <StatusBadge tone="success">찜 {item.favoriteCount}</StatusBadge>
               </Card>
             </li>
           ))}
         </ol>
       )}
-    </section>
+    </PageShell>
   )
 }

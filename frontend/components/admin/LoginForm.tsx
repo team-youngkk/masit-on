@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 
 import { Button } from '@/components/ui/Button'
 import { Field } from '@/components/ui/Field'
+import { StatePanel } from '@/components/ui/StatePanel'
 import { fieldErrorsFor, messageFor } from '@/lib/admin/api'
 import { login } from '@/lib/admin/auth'
 
@@ -92,7 +93,7 @@ export function LoginForm() {
         error={fieldErrors.password}
         required
       />
-      {error ? <p className={styles.error} role="alert">{error}</p> : null}
+      {error ? <StatePanel compact tone="danger" title="로그인에 실패했습니다" description={error} /> : null}
       <Button type="submit" disabled={submitting}>
         {submitting ? '로그인 중…' : '로그인'}
       </Button>

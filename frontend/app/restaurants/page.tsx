@@ -3,6 +3,9 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Field } from '@/components/ui/Field'
+import { PageShell, SectionHeader } from '@/components/ui/PageShell'
+import { StatePanel } from '@/components/ui/StatePanel'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 import { FavoriteButton } from '@/components/personal/FavoriteButton'
 import { NaturalLanguageRestaurantSearch } from '@/components/restaurants/NaturalLanguageRestaurantSearch'
 import { cn } from '@/lib/cn'
@@ -79,8 +82,10 @@ export default async function RestaurantsPage({
   const currentRoute = `/restaurants?${apiParams.toString()}`
 
   return (
-    <section>
-      <h1>맛집 탐색</h1>
+    <PageShell
+      title="맛집 탐색"
+      description="유튜버가 방문한 맛집을 조건 또는 문장으로 찾아보세요."
+    >
 
       <NaturalLanguageRestaurantSearch
         key={naturalLanguageFiltersKey(naturalLanguageFilters)}
@@ -206,16 +211,24 @@ export default async function RestaurantsPage({
       </form>
 
       {!result.ok ? (
-        <p className={styles.error} role="alert">
-          {result.message}
-          {result.traceId ? (
-            <span className={styles.traceId}>traceId: {result.traceId}</span>
-          ) : null}
-        </p>
+        <StatePanel
+          title="맛집을 불러올 수 없습니다"
+          description={result.message}
+          tone="danger"
+          traceId={result.traceId}
+        />
       ) : items.length === 0 ? (
-        <p className={styles.state}>조건에 맞는 맛집이 없습니다.</p>
+        <StatePanel
+          title="조건에 맞는 맛집이 없습니다"
+          description="검색어 또는 필터를 바꿔 다시 찾아보세요."
+          compact
+        />
       ) : (
         <>
+          <SectionHeader
+            title={`검색 결과 ${page?.totalElements ?? items.length}곳`}
+            description="지역·음식 종류·방문 유튜버 정보를 확인하고 상세로 이동할 수 있어요."
+          />
           <ul className={styles.list}>
             {items.map((restaurant) => (
               <li key={restaurant.id}>
@@ -228,6 +241,15 @@ export default async function RestaurantsPage({
                   level={2}
                   meta={`${restaurant.district} · ${restaurant.category}`}
                 >
+                  <div className={styles.badges}>
+                    <StatusBadge tone="info">{restaurant.district}</StatusBadge>
+                    <StatusBadge>{restaurant.category}</StatusBadge>
+                    {restaurant.visitedBy.length > 0 ? (
+                      <StatusBadge tone="success">
+                        유튜버 {restaurant.visitedBy.length + restaurant.remainingVisitedByCount}명 방문
+                      </StatusBadge>
+                    ) : null}
+                  </div>
                   <div className={styles.cardAction}>
                     <FavoriteButton
                       restaurantId={restaurant.id}
@@ -315,6 +337,6 @@ export default async function RestaurantsPage({
           ) : null}
         </>
       )}
-    </section>
+    </PageShell>
   )
 }

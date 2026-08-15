@@ -12,7 +12,7 @@ import {
   type AcceptedMemberRegistration,
   resendAcceptedMemberRegistration,
 } from './member-auth-form-coordination'
-import styles from '@/components/admin/admin.module.css'
+import styles from './MemberAuthForm.module.css'
 
 type Mode = 'login' | 'signup' | 'request-reset' | 'confirm-reset'
 
@@ -94,10 +94,10 @@ export function MemberAuthForm({ mode, returnTo }: { mode: Mode; returnTo?: stri
     {mode === 'confirm-reset' ? <Field label="Reset token" name="token" value={token} onChange={event => setToken(event.target.value)} required /> : null}
     {needsPassword ? <Field label="Password" name="password" type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={event => setPassword(event.target.value)} required /> : null}
     {needsPasswordConfirmation ? <Field label="Confirm password" name="passwordConfirmation" type="password" autoComplete="new-password" value={passwordConfirmation} onChange={event => setPasswordConfirmation(event.target.value)} required /> : null}
-    {message ? <p className={styles.error} role="alert">{message}</p> : null}
+    {message ? <p className={styles.notice} role="alert">{message}</p> : null}
     {showSignupInputs || mode !== 'signup' ? <Button type="submit" disabled={submitting}>{submitting ? 'Working...' : 'Continue'}</Button> : null}
     {mode === 'signup' && registrationAccepted ? (
-      <Link href={memberVerifyEmailHref(returnTo)}>Continue to email verification</Link>
+      <Link className={styles.textLink} href={memberVerifyEmailHref(returnTo)}>이메일 인증 계속하기</Link>
     ) : null}
     {mode === 'signup' && registrationAccepted ? <Button type="button" variant="secondary" disabled={submitting} onClick={resendVerificationEmail}>Resend verification email</Button> : null}
   </form>

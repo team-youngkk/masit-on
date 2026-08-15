@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 
 import { Card } from '@/components/ui/Card'
+import { PageShell, SectionHeader } from '@/components/ui/PageShell'
+import { StatePanel } from '@/components/ui/StatePanel'
 import { FavoriteButton } from '@/components/personal/FavoriteButton'
 import { CollectionAddControl } from '@/components/personal/CollectionAddControl'
 import { RecentViewRecorder } from '@/components/personal/RecentViewRecorder'
@@ -54,15 +56,19 @@ export default async function RestaurantDetailPage({
       error instanceof RestaurantDetailUnavailableError ? error.traceId : undefined
 
     return (
-      <section className={styles.errorState}>
-        <h1>맛집 정보를 불러올 수 없습니다</h1>
-        <p>일시적으로 정보를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.</p>
-        {traceId ? <p className={styles.traceId}>traceId: {traceId}</p> : null}
-      </section>
+      <PageShell title="맛집 상세">
+        <StatePanel
+          title="맛집 정보를 불러올 수 없습니다"
+          description="일시적으로 정보를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요."
+          tone="danger"
+          traceId={traceId}
+        />
+      </PageShell>
     )
   }
 
   return (
+    <PageShell>
     <article className={styles.page}>
       <RecentViewRecorder restaurantId={restaurant.id} />
       <header className={styles.header}>
@@ -120,10 +126,11 @@ export default async function RestaurantDetailPage({
       </section>
 
       <section className={styles.contentSection} aria-label="방문 콘텐츠">
-        <h2 className={styles.sectionTitle}>방문 콘텐츠</h2>
+        <SectionHeader title="방문 콘텐츠" />
         <RestaurantContent restaurant={restaurant} />
       </section>
     </article>
+    </PageShell>
   )
 }
 

@@ -1,5 +1,7 @@
 import { notFound } from 'next/navigation'
 
+import { PageShell, SectionHeader } from '@/components/ui/PageShell'
+import { StatePanel } from '@/components/ui/StatePanel'
 import { isSafeHttpUrl } from '@/lib/api'
 import {
   CreatorDetailUnavailableError,
@@ -67,11 +69,14 @@ export default async function CreatorDetailPage({
       error instanceof CreatorDetailUnavailableError ? error.traceId : undefined
 
     return (
-      <section className={styles.errorState}>
-        <h1>유튜버 정보를 불러올 수 없습니다</h1>
-        <p>일시적으로 정보를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.</p>
-        {traceId ? <p className={styles.traceId}>traceId: {traceId}</p> : null}
-      </section>
+      <PageShell title="유튜버 상세">
+        <StatePanel
+          title="유튜버 정보를 불러올 수 없습니다"
+          description="일시적으로 정보를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요."
+          tone="danger"
+          traceId={traceId}
+        />
+      </PageShell>
     )
   }
 
@@ -86,6 +91,7 @@ export default async function CreatorDetailPage({
   ])
 
   return (
+    <PageShell>
     <article className={styles.page}>
       <header className={styles.header}>
         {creator.profileImageUrl != null && isSafeHttpUrl(creator.profileImageUrl) ? (
@@ -124,7 +130,7 @@ export default async function CreatorDetailPage({
       </header>
 
       <section className={styles.listSection} aria-label="방문 맛집">
-        <h2 className={styles.sectionTitle}>방문 맛집</h2>
+        <SectionHeader title="방문 맛집" />
         <CreatorRestaurantsSection
           creatorId={id}
           initialPage={restaurantsPage}
@@ -133,7 +139,7 @@ export default async function CreatorDetailPage({
       </section>
 
       <section className={styles.listSection} aria-label="근거 영상">
-        <h2 className={styles.sectionTitle}>근거 영상</h2>
+        <SectionHeader title="근거 영상" />
         <CreatorVideosSection
           creatorId={id}
           initialPage={videosPage}
@@ -141,5 +147,6 @@ export default async function CreatorDetailPage({
         />
       </section>
     </article>
+    </PageShell>
   )
 }

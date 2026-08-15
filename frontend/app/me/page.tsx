@@ -1,9 +1,13 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useMemberSession } from '@/components/member/MemberSessionProvider'
 import { Button } from '@/components/ui/Button'
+import { PageShell } from '@/components/ui/PageShell'
+import { StatePanel } from '@/components/ui/StatePanel'
 import { authenticatedMemberFetch, clearMemberAccessToken, memberLogout } from '@/lib/member/auth'
+import styles from './page.module.css'
 
 type Me = { id: string; email: string }
 type Action = 'logout' | 'withdraw' | null
@@ -91,24 +95,34 @@ export default function MePage() {
     }
   }
 
-  return <section>
-    <h1>My account</h1>
+  const destinations = [
+    ['찜한 맛집', '/me/favorites', '저장한 맛집을 확인합니다.'],
+    ['최근 본 맛집', '/me/recent-restaurants', '최근 확인한 맛집을 다시 봅니다.'],
+    ['내 컬렉션', '/me/collections', '목적별로 맛집을 모아 봅니다.'],
+    ['알림', '/me/notifications', '제보·신고 처리 알림을 확인합니다.'],
+    ['제보·신고', '/me/requests', '새 정보 제안과 기존 정보 신고를 관리합니다.'],
+  ] as const
+
+  return <PageShell size="narrow" eyebrow="회원" title="내 정보" description="내 계정과 개인화 메뉴를 관리합니다.">
     {member ? <>
-      <p>{member.email}</p>
-      <Button variant="secondary" disabled={action !== null} onClick={logout}>
-        {action === 'logout' ? 'Signing out...' : 'Sign out'}
-      </Button>
+      <section className={styles.summary} aria-label="현재 로그인한 계정">
+        <strong>{member.email}</strong>
+        <Button variant="secondary" disabled={action !== null} onClick={logout}>{action === 'logout' ? '로그아웃 중…' : '로그아웃'}</Button>
+      </section>
+      <nav className={styles.menu} aria-label="내 정보 메뉴">
+        {destinations.map(([label, href, description]) => <Link key={href} href={href}><strong>{label}</strong><span>{description}</span><span aria-hidden="true">›</span></Link>)}
+      </nav>
       {!confirmingWithdrawal
-        ? <Button variant="secondary" disabled={action !== null} onClick={() => { setConfirmingWithdrawal(true); setMessage('') }}>Delete account</Button>
+        ? <Button variant="secondary" disabled={action !== null} onClick={() => { setConfirmingWithdrawal(true); setMessage('') }}>회원 탈퇴</Button>
         : <div role="group" aria-labelledby="withdrawal-confirmation">
-          <h2 id="withdrawal-confirmation">Confirm account deletion</h2>
-          <p>Your account information, favorites, recent history, and all authentication sessions will be deleted.</p>
-          <Button variant="secondary" disabled={action !== null} onClick={() => { setConfirmingWithdrawal(false); setMessage('') }}>Cancel</Button>
+          <h2 id="withdrawal-confirmation">회원 탈퇴를 진행할까요?</h2>
+          <p>계정 정보, 찜, 최근 본 기록과 모든 로그인 세션이 정리됩니다.</p>
+          <Button variant="secondary" disabled={action !== null} onClick={() => { setConfirmingWithdrawal(false); setMessage('') }}>취소</Button>
           <Button disabled={action !== null} onClick={withdraw}>
-            {action === 'withdraw' ? 'Starting deletion...' : 'Confirm deletion'}
+            {action === 'withdraw' ? '처리 시작 중…' : '탈퇴 확인'}
           </Button>
         </div>}
     </> : null}
-    {message ? <p role={messageIsError ? 'alert' : 'status'}>{message}</p> : null}
-  </section>
+    {message ? <StatePanel compact tone={messageIsError ? 'danger' : 'neutral'} title={message} /> : null}
+  </PageShell>
 }

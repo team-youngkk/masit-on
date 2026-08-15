@@ -13,9 +13,11 @@ export function MapSelectionSummary({ selected }: MapSelectionSummaryProps) {
     <section className={styles.summary} aria-live="polite">
       {selected ? (
         <>
-          <p className={styles.text}>
-            선택: {selected.name} · {selected.category} · {selected.addressSummary}
-          </p>
+          <div className={styles.content}>
+            <p className={styles.eyebrow}>선택한 맛집</p>
+            <p className={styles.name}>{selected.name}</p>
+            <p className={styles.text}>{selected.category} · {selected.addressSummary}</p>
+          </div>
           <Link
             href={`/restaurants/${encodeURIComponent(selected.id)}`}
             className={styles.detailLink}
@@ -24,7 +26,7 @@ export function MapSelectionSummary({ selected }: MapSelectionSummaryProps) {
           </Link>
         </>
       ) : (
-        <p className={styles.text}>맛집을 선택하면 여기에 요약이 표시됩니다.</p>
+        <p className={styles.empty}>지도 마커 또는 목록을 선택하면 상세 정보가 표시됩니다.</p>
       )}
     </section>
   )

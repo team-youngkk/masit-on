@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/Button'
+import { StatePanel } from '@/components/ui/StatePanel'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 import { aiExtractionMessageFor, getAiVideoExtraction, retryAiVideoExtraction, reviewAiVideoExtraction, type AiCandidate, type AiExtractionDetail, type AiTagDecision } from '@/lib/admin/ai-video-extractions'
 import { reviewActionsFor, reviewRequest } from '@/lib/admin/ai-video-extractions-coordination'
 
@@ -65,8 +67,8 @@ export function AiVideoExtractionDetail({ jobId }: { jobId: string }) {
     } finally { setBusy(false) }
   }
 
-  if (busy && !data) return <p role="status">AI 작업 상세를 불러오는 중입니다.</p>
-  if (!data) return <div className={styles.detail}><p className={styles.error} role="alert">{notice || 'AI 작업 상세를 불러오지 못했습니다.'}</p><Button variant="secondary" disabled={busy} onClick={() => void refresh()}>다시 시도</Button></div>
+  if (busy && !data) return <StatePanel title="AI 작업 상세를 불러오는 중입니다" />
+  if (!data) return <StatePanel tone="danger" title="AI 작업 상세를 불러오지 못했습니다" description={notice || '잠시 후 다시 시도해 주세요.'} actions={<Button variant="secondary" disabled={busy} onClick={() => void refresh()}>다시 시도</Button>} />
 
   const actions = reviewActionsFor(data)
   return <div className={styles.detail}>
@@ -74,7 +76,7 @@ export function AiVideoExtractionDetail({ jobId }: { jobId: string }) {
     <section className={styles.panel} aria-labelledby="job-summary-heading">
       <h2 id="job-summary-heading">작업 상태</h2>
       <p className={styles.meta}><code>{data.jobId}</code></p>
-      <p>실행 {data.executionStatus} · 결과 {data.resultCompleteness ?? '미완료'} · 검수 {data.reviewStatus ?? '미정'} · 시도 {data.attemptCount}회</p>
+      <div className={styles.meta}><StatusBadge tone={executionTone(data.executionStatus)}>{data.executionStatus}</StatusBadge><StatusBadge>{data.resultCompleteness ?? '미완료'}</StatusBadge><StatusBadge tone={reviewTone(data.reviewStatus)}>{data.reviewStatus ?? '미정'}</StatusBadge><span>시도 {data.attemptCount}회</span></div>
       <p className={styles.meta}>버전 {data.provider} / {data.modelVersion} / {data.promptVersion} / {data.schemaVersion}</p>
       {data.error ? <p className={styles.warning} role="alert">실패 범주: {data.error.category} · {data.error.retryable ? '재시도 가능' : '재시도 불가'} · 시도 {data.attemptCount}회</p> : null}
       {data.reviewStatus === 'AUTO_CONFIRMED' ? <p className={styles.notice}>자동 확정은 사전 승인 대상이 아닙니다. 필요 시 롤백만 할 수 있습니다.</p> : null}
@@ -123,8 +125,22 @@ function CandidateCard({ candidate, tagCode, onTagCodeChange, onSelectForRegistr
     <p>{candidate.label ?? candidate.value ?? candidate.normalizedCode ?? '값 없음'}</p>
     {onSelectForRegistration ? <Button variant="secondary" onClick={onSelectForRegistration}>이 후보로 등록 시작</Button> : null}
     {onTagCodeChange ? <label>태그 코드 보정<input value={tagCode ?? ''} maxLength={64} onChange={(event) => onTagCodeChange(event.target.value)} /></label> : null}
-    <p className={styles.meta}>신뢰도 {(candidate.confidence * 100).toFixed(0)}% · 근거 {evidenceLabel(candidate)}</p>
+    <p className={styles.meta}><StatusBadge tone="success">신뢰도 {(candidate.confidence * 100).toFixed(0)}%</StatusBadge> 근거 {evidenceLabel(candidate)}</p>
   </li>
+}
+
+function executionTone(status: AiExtractionDetail['executionStatus']): 'success' | 'warning' | 'danger' | 'neutral' {
+  if (status === 'SUCCEEDED') return 'success'
+  if (status === 'FAILED') return 'danger'
+  if (status === 'RUNNING') return 'warning'
+  return 'neutral'
+}
+
+function reviewTone(status: AiExtractionDetail['reviewStatus']): 'success' | 'warning' | 'danger' | 'neutral' {
+  if (status === 'AUTO_CONFIRMED' || status === 'MANUAL_OVERRIDE') return 'success'
+  if (status === 'AUTO_BLOCKED') return 'warning'
+  if (status === 'AUTO_REJECTED') return 'danger'
+  return 'neutral'
 }
 
 function evidenceLabel(candidate: AiCandidate) {

@@ -7,6 +7,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useMemberSession } from '@/components/member/MemberSessionProvider'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { PageShell } from '@/components/ui/PageShell'
+import { StatePanel } from '@/components/ui/StatePanel'
 import {
   getFavorites,
   getRecentRestaurants,
@@ -260,29 +262,18 @@ export function PersonalRestaurantList({
   }
 
   return (
-    <section>
-      <h1>{copy.title}</h1>
+    <PageShell title={copy.title} description="계정에 저장된 맛집을 관리합니다.">
 
       {status === 'loading' ? (
-        <p className={styles.state} aria-live="polite">목록을 불러오는 중입니다.</p>
+        <StatePanel title="목록을 불러오는 중입니다." />
       ) : status === 'anonymous' || error?.status === 401 ? (
-        <div className={styles.state} role="alert">
-          <p>로그인이 만료되었습니다. 다시 로그인해 주세요.</p>
-          <Link href={loginHref} className={styles.cta}>로그인하기</Link>
-        </div>
+        <StatePanel tone="warning" title="로그인이 필요합니다." description="다시 로그인해 주세요." actions={<Link href={loginHref} className={styles.cta}>로그인하기</Link>} />
       ) : loading && !data ? (
-        <p className={styles.state} aria-live="polite">목록을 불러오는 중입니다.</p>
+        <StatePanel title="목록을 불러오는 중입니다." />
       ) : error ? (
-        <div className={styles.error} role="alert">
-          <p>{error.message}</p>
-          {error.traceId ? <p className={styles.traceId}>traceId: {error.traceId}</p> : null}
-          <Button variant="secondary" onClick={() => void load()}>다시 시도</Button>
-        </div>
+        <StatePanel tone="danger" title="목록을 불러오지 못했습니다." description={error.message} traceId={error.traceId} actions={<Button variant="secondary" onClick={() => void load()}>다시 시도</Button>} />
       ) : data?.items.length === 0 ? (
-        <div className={styles.state}>
-          <p>{copy.empty}</p>
-          <Link href="/restaurants" className={styles.cta}>맛집 탐색하기</Link>
-        </div>
+        <StatePanel title={copy.empty} description="맛집을 탐색해 저장해 보세요." actions={<Link href="/restaurants" className={styles.cta}>맛집 탐색하기</Link>} />
       ) : data ? (
         <>
           <ul className={styles.list} aria-busy={loading}>
@@ -347,6 +338,6 @@ export function PersonalRestaurantList({
           ) : null}
         </>
       ) : null}
-    </section>
+    </PageShell>
   )
 }

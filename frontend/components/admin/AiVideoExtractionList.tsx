@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/Button'
+import { StatePanel } from '@/components/ui/StatePanel'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 import { AdminApiError } from '@/lib/admin/api'
 import { createAiVideoExtraction, getAiVideoExtractions, aiExtractionMessageFor, type AiExtractionJob, type AiExtractionPage, type AiExecutionStatus, type AiExtractionReviewStatus, type AiExtractionSource, type AiExtractionSubmissionResult } from '@/lib/admin/ai-video-extractions'
 import { aiExtractionSubmissionAttempt, aiExtractionSubmissionFieldErrors, aiExtractionSubmissionPresentation, nextAiExtractionFilters, type AiExtractionFilters, type AiExtractionSubmissionAttempt, type AiExtractionSubmissionFieldErrors } from '@/lib/admin/ai-video-extractions-coordination'
@@ -133,8 +135,8 @@ export function AiVideoExtractionList() {
       <Button variant="secondary" disabled={busy} onClick={() => setRefreshVersion((current) => current + 1)}>새로고침</Button>
     </div>
 
-    {busy && !data ? <p role="status">AI 작업 목록을 불러오는 중입니다.</p> : null}
-    {!busy && !error && data?.items.length === 0 ? <p className={styles.notice}>조건에 맞는 AI 작업이 없습니다.</p> : null}
+    {busy && !data ? <StatePanel compact title="AI 작업 목록을 불러오는 중입니다" /> : null}
+    {!busy && !error && data?.items.length === 0 ? <StatePanel compact title="조건에 맞는 AI 작업이 없습니다" description="필터를 바꾸거나 새로고침해 주세요." /> : null}
     {data?.items.length ? <ul className={styles.list}>{data.items.map((job) => <JobCard key={job.jobId} job={job} formatDate={formatDate} />)}</ul> : null}
     <nav className={styles.pagination} aria-label="AI 작업 목록 페이지">
       <Button variant="secondary" disabled={busy || filters.page <= 1} onClick={() => change({ page: filters.page - 1 })}>이전</Button>
@@ -147,11 +149,18 @@ export function AiVideoExtractionList() {
 
 function JobCard({ job, formatDate }: { job: AiExtractionJob; formatDate: (value: string | null) => string }) {
   return <li className={styles.card}>
-    <span className={styles.badge}>{job.executionStatus}</span>
+    <StatusBadge tone={executionTone(job.executionStatus)}>{job.executionStatus}</StatusBadge>
     <h2><Link href={`/admin/ai/${encodeURIComponent(job.jobId)}`}>작업 상세</Link></h2>
     <p className={styles.meta}><code>{job.jobId}</code></p>
     <p className={styles.meta}>유입 {job.source} · 검수 {job.reviewStatus ?? '미정'} · 결과 {job.resultCompleteness ?? '미완료'}</p>
     <p className={styles.meta}>버전 {job.modelVersion} / {job.promptVersion} / {job.schemaVersion} · 시도 {job.attemptCount}회</p>
     <p className={styles.meta}>생성 {formatDate(job.createdAt)} · 완료 {formatDate(job.finishedAt)}</p>
   </li>
+}
+
+function executionTone(status: AiExecutionStatus): 'success' | 'warning' | 'danger' | 'neutral' {
+  if (status === 'SUCCEEDED') return 'success'
+  if (status === 'FAILED') return 'danger'
+  if (status === 'RUNNING') return 'warning'
+  return 'neutral'
 }

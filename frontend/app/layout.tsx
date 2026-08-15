@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 
-import { SiteFooter } from '@/components/layout/SiteFooter'
-import { SiteHeader } from '@/components/layout/SiteHeader'
+import { AppFrame } from '@/components/layout/AppFrame'
 import { MemberSessionProvider } from '@/components/member/MemberSessionProvider'
 
 import './globals.css'
@@ -26,9 +25,7 @@ export default function RootLayout({
     <html lang="ko">
       <body className={styles.shell}>
         <MemberSessionProvider>
-          <SiteHeader />
-          <main className={styles.main}>{children}</main>
-          <SiteFooter />
+          <AppFrame>{children}</AppFrame>
         </MemberSessionProvider>
       </body>
     </html>

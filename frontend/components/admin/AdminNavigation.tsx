@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button'
 import styles from './admin.module.css'
 
 const items = [
+  { href: '/admin', label: '대시보드' },
   { href: '/admin/participation', label: '제보·신고 검토' },
   { href: '/admin/curations', label: '큐레이션 관리' },
   { href: '/admin/ai', label: 'AI 영상 추출 관리' },
@@ -35,7 +36,8 @@ export function AdminNavigation() {
   }
 
   return (
-    <header className={styles.adminHeader}>
+    <aside className={styles.sidebar}>
+      <Link className={styles.brand} href="/admin" aria-label="masit-on 관리자 대시보드">masit-on <span>Admin</span></Link>
       <nav className={styles.navigation} aria-label="관리자 메뉴">
         {items.map((item) => (
           <Link
@@ -47,12 +49,12 @@ export function AdminNavigation() {
           </Link>
         ))}
       </nav>
-      <div>
+      <div className={styles.sidebarFooter}>
         <Button variant="secondary" onClick={() => void handleLogout()}>
           로그아웃
         </Button>
         {logoutError ? <p className={styles.error} role="alert">{logoutError}</p> : null}
       </div>
-    </header>
+    </aside>
   )
 }

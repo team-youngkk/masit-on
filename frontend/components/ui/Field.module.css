@@ -17,6 +17,13 @@
   background: var(--color-surface);
   color: var(--color-text);
   font-size: var(--font-size-base);
+  outline: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.control:focus {
+  border-color: var(--color-primary-strong);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 16%, transparent);
 }
 
 .control::placeholder {

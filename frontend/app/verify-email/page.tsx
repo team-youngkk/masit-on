@@ -1,4 +1,5 @@
 import { VerifyEmail } from '@/components/member/VerifyEmail'
+import { PageShell } from '@/components/ui/PageShell'
 import { memberLoginHref } from '@/lib/member/auth-navigation'
 
 type VerifyEmailPageProps = {
@@ -10,8 +11,8 @@ export default async function VerifyEmailPage({ searchParams }: VerifyEmailPageP
   const returnTo = typeof rawReturnTo === 'string' ? rawReturnTo : undefined
 
   return (
-    <section>
+    <PageShell size="narrow">
       <VerifyEmail loginHref={memberLoginHref(returnTo)} />
-    </section>
+    </PageShell>
   )
 }

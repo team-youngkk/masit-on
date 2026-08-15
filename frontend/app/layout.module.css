@@ -9,5 +9,16 @@
   width: 100%;
   max-width: var(--layout-max-width);
   margin: 0 auto;
-  padding: var(--space-8) var(--layout-gutter) var(--space-12);
+  padding: var(--space-8) var(--layout-gutter) calc(var(--space-12) + 4rem);
+}
+
+.main.adminMain {
+  max-width: none;
+  padding: 0;
+}
+
+@media (min-width: 768px) {
+  .main {
+    padding-bottom: var(--space-12);
+  }
 }

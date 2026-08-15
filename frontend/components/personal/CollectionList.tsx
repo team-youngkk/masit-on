@@ -6,7 +6,8 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { useMemberSession } from '@/components/member/MemberSessionProvider'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
-import { CollectionScreenState } from './CollectionScreenState'
+import { PageShell, SectionHeader } from '@/components/ui/PageShell'
+import { StatePanel } from '@/components/ui/StatePanel'
 import {
   collectionNameError,
   creationAttemptFor,
@@ -107,36 +108,17 @@ export function CollectionList() {
   const atLimit = (items?.length ?? 0) >= 20
 
   return (
-    <section className={styles.page}>
-      <header className={styles.header}>
-        <div>
-          <h1>내 컬렉션</h1>
-          <p>가고 싶은 맛집을 목적별로 모아 보세요.</p>
-        </div>
-        {items ? <span className={styles.count}>{items.length} / 20</span> : null}
-      </header>
+    <PageShell className={styles.page} title="내 컬렉션" description="가고 싶은 맛집을 목적별로 모아 보세요.">
 
       {status === 'loading' || (loading && !items) ? (
-        <CollectionScreenState state="loading" className={styles.state} message="컬렉션을 불러오는 중입니다." />
+        <StatePanel title="컬렉션을 불러오는 중입니다." />
       ) : unauthenticated ? (
-        <CollectionScreenState
-          state="authentication"
-          className={styles.state}
-          message="로그인이 필요합니다."
-          action={<Link className={styles.cta} href={loginHref}>로그인하기</Link>}
-        />
+        <StatePanel tone="warning" title="로그인이 필요합니다." actions={<Link className={styles.cta} href={loginHref}>로그인하기</Link>} />
       ) : loadError ? (
-        <CollectionScreenState
-          state="error"
-          className={styles.error}
-          traceClassName={styles.traceId}
-          message={loadError.message}
-          traceId={loadError.traceId}
-          action={<Button variant="secondary" onClick={() => void load()}>다시 시도</Button>}
-        />
+        <StatePanel tone="danger" title="컬렉션을 불러오지 못했습니다." description={loadError.message} traceId={loadError.traceId} actions={<Button variant="secondary" onClick={() => void load()}>다시 시도</Button>} />
       ) : (
         <>
-          <form className={styles.form} onSubmit={submit}>
+          <section className={styles.manage}><SectionHeader title="새 컬렉션" description="이름은 나중에 바꿀 수 있습니다." /><form className={styles.form} onSubmit={submit}>
             <label htmlFor="collection-name">새 컬렉션 이름</label>
             <div className={styles.formRow}>
               <input
@@ -164,15 +146,10 @@ export function CollectionList() {
                 {createError.traceId ? <span className={styles.traceId}>traceId: {createError.traceId}</span> : null}
               </p>
             ) : null}
-          </form>
+          </form></section>
 
           {items?.length === 0 ? (
-            <CollectionScreenState
-              state="empty"
-              className={styles.state}
-              message="아직 만든 컬렉션이 없습니다."
-              action={<p>이름을 입력해 첫 컬렉션을 만들어 보세요.</p>}
-            />
+            <StatePanel title="아직 만든 컬렉션이 없습니다." description="이름을 입력해 첫 컬렉션을 만들어 보세요." />
           ) : (
             <ul className={styles.list} aria-busy={loading}>
               {items?.map((item) => (
@@ -190,6 +167,6 @@ export function CollectionList() {
           )}
         </>
       )}
-    </section>
+    </PageShell>
   )
 }

@@ -1,0 +1,7 @@
+.summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-card); }
+.menu { display: grid; overflow: hidden; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
+.menu a { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-1) var(--space-3); align-items: center; min-height: var(--control-min-height); padding: var(--space-4); color: var(--color-text); text-decoration: none; }
+.menu a + a { border-top: 1px solid var(--color-border); }
+.menu a:hover, .menu a:focus-visible { background: var(--color-primary-faint); }
+.menu span { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.menu span:last-child { grid-row: span 2; font-size: var(--font-size-xl); }

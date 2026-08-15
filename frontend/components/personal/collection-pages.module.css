@@ -58,7 +58,7 @@
   min-height: var(--control-min-height);
   padding: 0 var(--space-4);
   border-radius: var(--radius-md);
-  background: var(--color-primary);
+  background: var(--color-primary-deep);
   color: var(--color-text-on-primary);
   font-weight: 600;
 }
@@ -131,8 +131,9 @@
 }
 
 .back {
-  display: inline-block;
-  margin-bottom: var(--space-4);
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-min-height);
   color: var(--color-primary-strong);
   font-weight: 600;
 }

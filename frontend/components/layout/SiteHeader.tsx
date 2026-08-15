@@ -7,19 +7,35 @@ import { Suspense, useEffect, useRef, useState } from 'react'
 import { useMemberSession } from '@/components/member/MemberSessionProvider'
 import { buildMapNavigationHref } from '@/lib/map/map-navigation'
 import { COURSE_NAVIGATION } from '@/lib/course/course-navigation'
+import { cn } from '@/lib/cn'
 
 import { Brand } from './Brand'
 import { NotificationBell } from './NotificationBell'
 import styles from './SiteHeader.module.css'
 
-function MapNavigationLink() {
+function MapNavigationLink({
+  className,
+  children = '지도',
+}: {
+  className?: string
+  children?: React.ReactNode
+}) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  return <Link href={buildMapNavigationHref(pathname, searchParams)}>지도</Link>
+  return (
+    <Link
+      href={buildMapNavigationHref(pathname, searchParams)}
+      className={className}
+      aria-current={pathname.startsWith('/map') ? 'page' : undefined}
+    >
+      {children}
+    </Link>
+  )
 }
 
 export function SiteHeader() {
+  const pathname = usePathname()
   const { status, logout } = useMemberSession()
   const menuRef = useRef<HTMLDetailsElement>(null)
   const [logoutFailed, setLogoutFailed] = useState(false)
@@ -54,20 +70,26 @@ export function SiteHeader() {
     }
   }
 
+  function navClass(href: string): string {
+    return cn(styles.navLink, pathname === href || pathname.startsWith(`${href}/`) ? styles.active : undefined)
+  }
+
   return (
     <header className={styles.header}>
       <div className={styles.inner}>
         <Link href="/restaurants" className={styles.brandLink}>
           <Brand />
         </Link>
-        <nav className={styles.nav} aria-label="주요 메뉴">
-          <Link href="/restaurants">맛집 탐색</Link>
-          <Link href={COURSE_NAVIGATION.href}>{COURSE_NAVIGATION.label}</Link>
-          <Link href="/popular">인기</Link>
-          <Link href="/curations">큐레이션</Link>
-          <Suspense fallback={<Link href="/map">지도</Link>}>
-            <MapNavigationLink />
+        <nav className={styles.desktopNav} aria-label="주요 메뉴">
+          <Link href="/restaurants" className={navClass('/restaurants')} aria-current={pathname.startsWith('/restaurants') ? 'page' : undefined}>맛집 탐색</Link>
+          <Link href={COURSE_NAVIGATION.href} className={navClass(COURSE_NAVIGATION.href)} aria-current={pathname.startsWith(COURSE_NAVIGATION.href) ? 'page' : undefined}>{COURSE_NAVIGATION.label}</Link>
+          <Link href="/popular" className={navClass('/popular')} aria-current={pathname.startsWith('/popular') ? 'page' : undefined}>인기</Link>
+          <Link href="/curations" className={navClass('/curations')} aria-current={pathname.startsWith('/curations') ? 'page' : undefined}>큐레이션</Link>
+          <Suspense fallback={<Link href="/map" className={navClass('/map')}>지도</Link>}>
+            <MapNavigationLink className={navClass('/map')} />
           </Suspense>
+        </nav>
+        <div className={styles.accountArea}>
           {status === 'loading' ? (
             <span className={styles.sessionLoading} aria-live="polite">
               로그인 확인 중
@@ -117,8 +139,25 @@ export function SiteHeader() {
               </Link>
             </div>
           ) : null}
-        </nav>
+        </div>
       </div>
+      <nav className={styles.mobileNav} aria-label="모바일 주요 메뉴">
+        <Link href="/restaurants" className={navClass('/restaurants')} aria-current={pathname.startsWith('/restaurants') ? 'page' : undefined}>
+          <span aria-hidden="true">⌕</span><span>탐색</span>
+        </Link>
+        <Link href={COURSE_NAVIGATION.href} className={navClass(COURSE_NAVIGATION.href)} aria-current={pathname.startsWith(COURSE_NAVIGATION.href) ? 'page' : undefined}>
+          <span aria-hidden="true">↝</span><span>코스</span>
+        </Link>
+        <Link href="/popular" className={navClass('/popular')} aria-current={pathname.startsWith('/popular') ? 'page' : undefined}>
+          <span aria-hidden="true">♨</span><span>인기</span>
+        </Link>
+        <Link href="/curations" className={navClass('/curations')} aria-current={pathname.startsWith('/curations') ? 'page' : undefined}>
+          <span aria-hidden="true">▣</span><span>큐레이션</span>
+        </Link>
+        <Suspense fallback={<Link href="/map" className={navClass('/map')}><span aria-hidden="true">⌖</span><span>지도</span></Link>}>
+          <MapNavigationLink className={navClass('/map')}><span aria-hidden="true">⌖</span><span>지도</span></MapNavigationLink>
+        </Suspense>
+      </nav>
     </header>
   )
 }
