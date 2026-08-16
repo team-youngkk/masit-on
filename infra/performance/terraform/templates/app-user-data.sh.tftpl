@@ -3,11 +3,24 @@ set -euo pipefail
 
 exec > >(tee /var/log/masiton-perf-bootstrap.log | logger -t masiton-perf-bootstrap -s 2>/dev/console) 2>&1
 
-dnf install -y docker
+dnf install -y docker curl tar
 systemctl enable --now docker
 
-mkdir -p /opt/masiton-perf/wiremock
+wiremock_root=/opt/masiton-perf/wiremock
+fixture_archive=/tmp/masiton-wiremock-fixture.tar.gz
+fixture_extract_root=/tmp/masit-on-${wiremock_fixture_commit}
+mkdir -p "$wiremock_root"
 chown -R root:root /opt/masiton-perf
+
+curl --fail --location --retry 3 --silent --show-error \
+  -o "$fixture_archive" \
+  "https://codeload.github.com/team-youngkk/masit-on/tar.gz/${wiremock_fixture_commit}"
+echo "${wiremock_fixture_sha256}  $fixture_archive" | sha256sum -c -
+tar -xzf "$fixture_archive" -C /tmp
+cp -a "$fixture_extract_root/docker/wiremock/." "$wiremock_root/"
+test -s "$wiremock_root/mappings/kakao-place-normal.json"
+test -s "$wiremock_root/__files/kakao-place-normal.json"
+rm -rf "$fixture_archive" "$fixture_extract_root"
 
 docker pull '${wiremock_image}'
 docker pull '${redis_image}'

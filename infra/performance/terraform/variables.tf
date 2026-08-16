@@ -91,6 +91,28 @@ variable "wiremock_image" {
   default     = "wiremock/wiremock:3.13.2"
 }
 
+variable "wiremock_fixture_commit" {
+  description = "WireMock fixture를 내려받을 masit-on 저장소의 검토된 커밋 SHA"
+  type        = string
+  default     = "414cf7e609d939a7aca7278c4d5446353301e500"
+
+  validation {
+    condition     = can(regex("^[0-9a-f]{40}$", var.wiremock_fixture_commit))
+    error_message = "wiremock_fixture_commit은 40자리 소문자 커밋 SHA여야 한다."
+  }
+}
+
+variable "wiremock_fixture_sha256" {
+  description = "WireMock fixture archive의 SHA-256"
+  type        = string
+  default     = "c3f1c7e0699de28e3196d925d1d12d32428431183200077792de4aedfec258dc"
+
+  validation {
+    condition     = can(regex("^[0-9a-f]{64}$", var.wiremock_fixture_sha256))
+    error_message = "wiremock_fixture_sha256은 64자리 소문자 SHA-256이어야 한다."
+  }
+}
+
 variable "redis_image" {
   description = "Redis 이미지. 기술 정책의 고정 태그 사용"
   type        = string

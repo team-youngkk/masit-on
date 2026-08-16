@@ -16,7 +16,8 @@ Terraform은 기존 VPC와 서브넷을 **읽기만** 한다. 운영 EC2, 운영
 
 ## 사전 조건
 
-- Terraform 1.6 이상
+- Terraform 1.6.6
+- AWS provider 5.100.0
 - AWS CLI와 `masiton` SSO 프로파일
 - 대상과 같은 리전(`ap-northeast-2`)의 AWS 자격 증명
 - Terraform 상태를 저장할 암호화된 비공개 S3 backend와 DynamoDB locking table
@@ -68,13 +69,15 @@ backend는 S3 bucket `masiton-terraform-state-711457211155`와 DynamoDB table `m
 Terraform 출력의 `app_instance_id`로 SSM 명령을 실행해 다음 순서로 진행한다.
 
 1. 앱 인스턴스의 `/opt/masiton-perf/`에 백엔드 이미지와 성능 전용 설정을 기동한다.
-2. WireMock stub과 Redis가 정상인지 확인한다.
+2. user-data가 커밋 고정 WireMock fixture archive의 SHA-256을 검증하고 매핑 파일을 배포했는지 확인한 뒤, SSM으로 `curl -fsS http://127.0.0.1:8081/__admin/mappings | grep -q '"mappings"'`를 실행해 WireMock 매핑 로드를 확인한다. 확인에 실패하면 백엔드·부하 테스트를 시작하지 않는다.
 3. `perf/seed/`를 RDS에 적재하고 `ANALYZE`를 실행한다.
 4. 같은 VPC의 `loadgen_instance_id`에서 k6 시나리오를 실행한다.
 5. RDS·EC2·Redis·WireMock 증적과 k6 결과를 기록한다.
 6. 증적을 보존한 뒤 `terraform destroy`한다.
 
 Terraform은 백엔드 기동과 시드 적재를 자동 실행하지 않는다. 이 단계를 분리해 두어 계획·적용 중 실수로 부하가 시작되지 않도록 했다. 실제 외부 Kakao·YouTube API를 호출하지 말고 WireMock만 사용한다.
+
+WireMock fixture는 Terraform 변수 `wiremock_fixture_commit`으로 저장소 커밋을 고정하고, `wiremock_fixture_sha256`으로 GitHub archive 무결성을 검증한다. 두 값은 함께 변경하며, 검토되지 않은 fixture를 사용하지 않는다.
 
 ## 정리
 

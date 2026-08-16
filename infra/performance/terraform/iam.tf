@@ -68,8 +68,12 @@ data "aws_iam_policy_document" "app_parameter_read" {
   statement {
     effect    = "Allow"
     actions   = ["kms:Decrypt"]
-    resources = ["arn:aws:kms:${var.aws_region}:${data.aws_caller_identity.current.account_id}:alias/aws/ssm"]
+    resources = [data.aws_kms_alias.ssm.target_key_arn]
   }
+}
+
+data "aws_kms_alias" "ssm" {
+  name = "alias/aws/ssm"
 }
 
 resource "aws_iam_role_policy" "app_parameter_read" {

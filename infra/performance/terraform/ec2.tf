@@ -8,15 +8,17 @@ resource "aws_instance" "app" {
   monitoring                  = true
 
   user_data = templatefile("${path.module}/templates/app-user-data.sh.tftpl", {
-    aws_region     = var.aws_region
-    wiremock_image = var.wiremock_image
-    redis_image    = var.redis_image
-    db_host        = aws_db_instance.performance.address
-    db_port        = aws_db_instance.performance.port
-    db_name        = var.db_name
-    db_username    = var.db_username
-    db_param_name  = aws_ssm_parameter.db_password.name
-    app_image_uri  = var.app_image_uri
+    aws_region             = var.aws_region
+    wiremock_image         = var.wiremock_image
+    wiremock_fixture_commit = var.wiremock_fixture_commit
+    wiremock_fixture_sha256 = var.wiremock_fixture_sha256
+    redis_image            = var.redis_image
+    db_host                = aws_db_instance.performance.address
+    db_port                = aws_db_instance.performance.port
+    db_name                = var.db_name
+    db_username            = var.db_username
+    db_param_name          = aws_ssm_parameter.db_password.name
+    app_image_uri          = var.app_image_uri
   })
 
   user_data_replace_on_change = true

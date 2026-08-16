@@ -36,8 +36,8 @@ Terraform state는 AWS S3에 암호화·versioning으로 저장하고 DynamoDB t
 
 | 항목 | 결정 |
 |---|---|
-| Terraform | `>= 1.6.0, < 2.0.0` |
-| AWS provider | `hashicorp/aws ~> 5.0` |
+| Terraform | `1.6.6` |
+| AWS provider | `hashicorp/aws 5.100.0` |
 | S3 region | `ap-northeast-2` |
 | S3 bucket 제안 이름 | `masiton-terraform-state-711457211155` |
 | state key | `performance/issue-207/terraform.tfstate` |
