@@ -42,19 +42,22 @@ related_documents:
 | [3790933943](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3790933943) | Terraform·AWS provider 버전 정확 고정 | 인프라 | 수정 필요 | Terraform `1.6.6`, AWS provider `5.100.0`으로 소스·lock·ADR을 일치시킴 | 버전 선언·lock constraint·ADR 대조; Terraform 실행 파일 부재로 재검증 미실행 |
 | [3790982442](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3790982442) | WireMock fixture 배포와 매핑 로드 확인 | 인프라·검증 | 수정 필요 | 커밋 고정 GitHub archive를 SHA-256 검증 후 배포하고 SSM 매핑 확인 절차 추가 | archive SHA-256과 fixture 파일 추출을 로컬 확인; EC2 SSM 실행은 미실행 |
 | [3790982443](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3790982443) | KMS alias ARN을 실제 key ARN으로 수정 | 보안·인프라 | 수정 필요 | `aws_kms_alias.ssm.target_key_arn`을 IAM Resource로 사용 | Terraform 소스 대조; Terraform 실행 파일 부재로 validate 미실행 |
+| [3791400740](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3791400740) | 정확히 고정한 Terraform/provider 버전의 팀 사용 경로 | 인프라 | 수정 필요 | `infra/performance/terraform/.terraform-version`에 Terraform `1.6.6`을 기록 | 버전 선언·`.terraform-version`·README 대조 |
+| [3791400742](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3791400742) | WireMock fixture 전체 파일 무결성 확인 | 인프라·검증 | 수정 필요 | JSON 매핑 23개·응답 17개 개수를 검증 | 저장소 fixture 개수와 user-data 검증값 대조 |
+| [3791400743](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3791400743) | 이전 커밋 fixture 기본값의 의도 명시 | 인프라·문서 | 수정 필요 | 최신 HEAD와 독립된 검토 기준점임을 변수 설명·README에 명시 | fixture commit/hash와 문서 대조 |
 
 ## 3. 문제 현상과 발생 조건
 
-- 오류 메시지: Terraform `templatefile`의 vars map 미사용 키 오류, 검증 범위가 넓은 Terraform/provider 버전, WireMock fixture 미배포·loopback 미지정, arm64 WireMock pull 실패 위험, local backend state 노출 위험, KMS alias ARN 권한 오류.
+- 오류 메시지: Terraform `templatefile`의 vars map 미사용 키 오류, 검증 범위가 넓은 Terraform/provider 버전, 팀 실행 버전 기준 부재, WireMock fixture 부분 검증·미배포·loopback 미지정, arm64 WireMock pull 실패 위험, local backend state 노출 위험, KMS alias ARN 권한 오류.
 - 발생 환경: PR #218의 `test/nl-search-rate-limit-load-model`, Terraform 1.6 이상을 전제로 한 AWS arm64 격리 성능 환경.
 - 재현 조건: loadgen 템플릿에 사용하지 않는 변수를 전달하거나, public subnet의 `map_public_ip_on_launch`가 true인 환경을 false로 검증하거나, backend 없이 `terraform init`을 실행한다.
-- 실제 결과: apply 전에 Terraform 계획 단계에서 실패할 수 있고, 검증하지 않은 버전으로 plan 결과가 달라질 수 있었으며, 새 인스턴스의 WireMock이 매핑 없이 시작하거나 모든 인터페이스에 바인딩될 수 있었다. 기본 이미지가 arm64에서 pull되지 않을 수 있고, local state에 RDS 비밀번호가 남거나 KMS 복호화 권한이 동작하지 않을 수 있었다.
-- 기대 결과: 입력 환경 검증이 실제 역할과 일치하고 검증 버전이 고정되며, fixture가 무결성 검증 후 배포되고 매핑 로드가 확인돼야 한다. arm64 기본 이미지가 실행되고 WireMock은 앱 EC2 내부 loopback에서만 수신하며, state는 암호화·locking된 remote backend에만 저장돼야 한다.
+- 실제 결과: apply 전에 Terraform 계획 단계에서 실패할 수 있고, 검증하지 않은 버전으로 plan 결과가 달라질 수 있었으며, 팀원이 다른 Terraform patch 버전으로 실행할 기준이 없었다. 새 인스턴스의 WireMock이 일부 fixture만 가진 채 시작하거나 모든 인터페이스에 바인딩될 수 있었다. 기본 이미지가 arm64에서 pull되지 않을 수 있고, local state에 RDS 비밀번호가 남거나 KMS 복호화 권한이 동작하지 않을 수 있었다.
+- 기대 결과: 입력 환경 검증이 실제 역할과 일치하고 검증 버전과 실행 기준 파일이 고정되며, fixture 전체 파일 개수·무결성 검증 후 배포되고 매핑 로드가 확인돼야 한다. arm64 기본 이미지가 실행되고 WireMock은 앱 EC2 내부 loopback에서만 수신하며, state는 암호화·locking된 remote backend에만 저장돼야 한다.
 - 영향 범위: 이슈 #207 성능 검증 환경의 생성 재현성·비용·state 비밀정보 보호. 제품 API·운영 데이터에는 직접 영향이 없다.
 
 ## 4. 근본 원인
 
-Terraform 구성과 성능 결과 문서가 서로 다른 실행 기준을 가리켰다. 템플릿 변수는 본문 사용 여부를 확인하지 않고 복사됐고, public/private subnet postcondition은 복사 과정에서 boolean이 뒤집히지 않았다. Terraform/provider 제약은 검증 버전보다 넓었고, loadgen 사양과 WireMock 이미지 기본값은 실제 arm64 실행 결과와 동기화되지 않았다. WireMock fixture 전달·로드 확인 단계가 없었고, 실행 옵션에는 애플리케이션의 loopback 접근 의도가 반영되지 않았다. RDS 이름 precondition은 실행별 prefix 규칙을 고려하지 않아 항상 참이었으며, KMS 정책은 alias ARN을 key ARN 위치에 사용했다.
+Terraform 구성과 성능 결과 문서가 서로 다른 실행 기준을 가리켰다. 템플릿 변수는 본문 사용 여부를 확인하지 않고 복사됐고, public/private subnet postcondition은 복사 과정에서 boolean이 뒤집히지 않았다. Terraform/provider 제약은 검증 버전보다 넓었고 팀이 사용할 실행 기준 파일도 없었다. loadgen 사양과 WireMock 이미지 기본값은 실제 arm64 실행 결과와 동기화되지 않았다. WireMock fixture 전달·로드 확인 단계가 없었고, 전체 파일 검증 없이 대표 파일 두 개만 확인했으며, 실행 옵션에는 애플리케이션의 loopback 접근 의도가 반영되지 않았다. RDS 이름 precondition은 실행별 prefix 규칙을 고려하지 않아 항상 참이었으며, KMS 정책은 alias ARN을 key ARN 위치에 사용했다.
 
 성능 문서는 격리 실행 결과를 기록하면서 정본 문서와 상태를 갱신하지 않아 `통과`와 `Not Measured`가 동시에 남았다. 공개 저장소 증적 보호 규칙과 실행 식별자 마스킹도 결과 문서에 적용되지 않았다.
 
@@ -64,7 +67,7 @@ Terraform 도입과 egress 축소는 코드 오류가 아니라 팀 운영·보�
 
 | 확인하거나 시도한 방법 | 결과 | 판단과 다음 단계 |
 |---|---|---|
-| PR review thread와 PR diff 대조 | 초기 13개와 후속 4개 확인 | 15개는 코드·문서로 처리, Terraform ADR·egress는 결정 필요로 분리 |
+| PR review thread와 PR diff 대조 | 초기 13개와 후속 7개 확인 | 18개는 코드·문서로 처리, Terraform ADR·egress는 결정 필요로 분리 |
 | 기존 `docs/troubleshooting` 검색 | PR #208·#214의 성능 추적성 기록 확인 | 기존 기록의 증거·지표 기록 방식을 재사용하고 새 사건으로 기록 |
 | `rg`로 AWS command/instance ID 검색 | 결과 문서와 README에 원문 식별자 확인 | 공개 문서의 식별자를 placeholder로 교체 |
 | `git diff --check` | 통과 | whitespace 오류 없음 |
@@ -86,6 +89,8 @@ Terraform 도입과 egress 축소는 코드 오류가 아니라 팀 운영·보�
 | `git diff --check` | 통과 | 변경 파일 whitespace 오류 없음 |
 | `node --check perf/k6/third-expansion-load.js` | 통과 | rate-limit helper 변경 후 JavaScript 구문 정상 |
 | WireMock archive SHA-256·fixture 추출 확인 | 통과 | `414cf7e...` archive의 SHA-256과 `mappings`·`__files` 파일 존재 확인 |
+| WireMock fixture 전체 개수 대조 | 통과 | mappings JSON 23개·`__files` JSON 17개를 저장소와 user-data에 동일하게 반영 |
+| Terraform 실행 버전 기준 대조 | 통과 | `versions.tf`, `.terraform.lock.hcl`, `.terraform-version`, ADR, README가 각각 `1.6.6`·`5.100.0`을 가리킴 |
 | `terraform fmt -check` | 미실행 | Terraform 실행 파일 부재 |
 | `terraform validate` | 미실행 | Terraform 실행 파일 부재 및 AWS backend 리소스 미확인 |
 | 전체 Gradle build | 미실행 | 이번 변경은 Java·Gradle 코드가 아니며 Terraform/k6 검증 환경이 별도로 필요 |

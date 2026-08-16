@@ -20,6 +20,12 @@ tar -xzf "$fixture_archive" -C /tmp
 cp -a "$fixture_extract_root/docker/wiremock/." "$wiremock_root/"
 test -s "$wiremock_root/mappings/kakao-place-normal.json"
 test -s "$wiremock_root/__files/kakao-place-normal.json"
+expected_mapping_count=23
+expected_body_count=17
+actual_mapping_count=$(find "$wiremock_root/mappings" -maxdepth 1 -type f -name '*.json' | wc -l)
+actual_body_count=$(find "$wiremock_root/__files" -maxdepth 1 -type f -name '*.json' | wc -l)
+test "$actual_mapping_count" -eq "$expected_mapping_count"
+test "$actual_body_count" -eq "$expected_body_count"
 rm -rf "$fixture_archive" "$fixture_extract_root"
 
 docker pull '${wiremock_image}'

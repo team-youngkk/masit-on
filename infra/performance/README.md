@@ -16,7 +16,7 @@ Terraform은 기존 VPC와 서브넷을 **읽기만** 한다. 운영 EC2, 운영
 
 ## 사전 조건
 
-- Terraform 1.6.6
+- Terraform 1.6.6 (`terraform/.terraform-version` 기준)
 - AWS provider 5.100.0
 - AWS CLI와 `masiton` SSO 프로파일
 - 대상과 같은 리전(`ap-northeast-2`)의 AWS 자격 증명
@@ -77,7 +77,7 @@ Terraform 출력의 `app_instance_id`로 SSM 명령을 실행해 다음 순서�
 
 Terraform은 백엔드 기동과 시드 적재를 자동 실행하지 않는다. 이 단계를 분리해 두어 계획·적용 중 실수로 부하가 시작되지 않도록 했다. 실제 외부 Kakao·YouTube API를 호출하지 말고 WireMock만 사용한다.
 
-WireMock fixture는 Terraform 변수 `wiremock_fixture_commit`으로 저장소 커밋을 고정하고, `wiremock_fixture_sha256`으로 GitHub archive 무결성을 검증한다. 두 값은 함께 변경하며, 검토되지 않은 fixture를 사용하지 않는다.
+WireMock fixture는 최신 PR HEAD를 따라가는 대신 Terraform 변수 `wiremock_fixture_commit`으로 검토된 Issue #207 기준 커밋을 고정하고, `wiremock_fixture_sha256`으로 GitHub archive 무결성을 검증한다. fixture를 변경할 때만 두 값을 함께 갱신하며, 검토되지 않은 fixture를 사용하지 않는다.
 
 ## 정리
 

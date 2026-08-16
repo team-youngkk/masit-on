@@ -92,7 +92,7 @@ variable "wiremock_image" {
 }
 
 variable "wiremock_fixture_commit" {
-  description = "WireMock fixture를 내려받을 masit-on 저장소의 검토된 커밋 SHA"
+  description = "최신 HEAD와 독립적으로 고정한 Issue #207 기준 WireMock fixture 커밋 SHA. fixture 변경 시 checksum과 함께 갱신한다"
   type        = string
   default     = "414cf7e609d939a7aca7278c4d5446353301e500"
 
