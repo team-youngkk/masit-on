@@ -45,6 +45,7 @@ related_documents:
 | [3791400740](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3791400740) | 정확히 고정한 Terraform/provider 버전의 팀 사용 경로 | 인프라 | 수정 필요 | `infra/performance/terraform/.terraform-version`에 Terraform `1.6.6`을 기록 | 버전 선언·`.terraform-version`·README 대조 |
 | [3791400742](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3791400742) | WireMock fixture 전체 파일 무결성 확인 | 인프라·검증 | 수정 필요 | JSON 매핑 23개·응답 17개 개수를 검증 | 저장소 fixture 개수와 user-data 검증값 대조 |
 | [3791400743](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3791400743) | 이전 커밋 fixture 기본값의 의도 명시 | 인프라·문서 | 수정 필요 | 최신 HEAD와 독립된 검토 기준점임을 변수 설명·README에 명시 | fixture commit/hash와 문서 대조 |
+| [3791495613](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3791495613) | `terraform fmt` object vars map 정렬 | 인프라·형식 | 수정 필요 | 가장 긴 키 기준으로 `ec2.tf` 정렬 | `git diff --check`; Terraform 실행 파일 부재로 `fmt -check` 미실행 |
 
 ## 3. 문제 현상과 발생 조건
 
@@ -67,7 +68,7 @@ Terraform 도입과 egress 축소는 코드 오류가 아니라 팀 운영·보�
 
 | 확인하거나 시도한 방법 | 결과 | 판단과 다음 단계 |
 |---|---|---|
-| PR review thread와 PR diff 대조 | 초기 13개와 후속 7개 확인 | 18개는 코드·문서로 처리, Terraform ADR·egress는 결정 필요로 분리 |
+| PR review thread와 PR diff 대조 | 초기 13개와 후속 8개 확인 | 19개는 코드·문서로 처리, Terraform ADR·egress는 결정 필요로 분리 |
 | 기존 `docs/troubleshooting` 검색 | PR #208·#214의 성능 추적성 기록 확인 | 기존 기록의 증거·지표 기록 방식을 재사용하고 새 사건으로 기록 |
 | `rg`로 AWS command/instance ID 검색 | 결과 문서와 README에 원문 식별자 확인 | 공개 문서의 식별자를 placeholder로 교체 |
 | `git diff --check` | 통과 | whitespace 오류 없음 |
