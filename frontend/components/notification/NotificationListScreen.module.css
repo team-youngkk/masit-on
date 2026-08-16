@@ -58,6 +58,12 @@
   cursor: pointer;
 }
 
+.item strong,
+.item span,
+.detail {
+  overflow-wrap: anywhere;
+}
+
 .item time {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
@@ -95,4 +101,10 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
+}
+
+@media (max-width: 480px) {
+  .actions > button {
+    flex: 1 1 0;
+  }
 }

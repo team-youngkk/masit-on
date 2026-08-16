@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { Card } from '@/components/ui/Card'
+import { PageShell } from '@/components/ui/PageShell'
+import { StatePanel } from '@/components/ui/StatePanel'
 import { fetchPublicCuration } from '@/lib/curations-api'
 
 import { RetryButton } from '../RetryButton'
@@ -23,26 +25,23 @@ export default async function PublicCurationDetailPage({
 
   if (!result.ok) {
     return (
-      <section className={styles.page}>
-        <div className={styles.state} role="alert">
-          <h1>큐레이션을 불러올 수 없습니다</h1>
-          <p>{result.message}</p>
-          {result.traceId ? (
-            <p className={styles.traceId}>traceId: {result.traceId}</p>
-          ) : null}
-          <RetryButton />
-          <Link href="/curations" className={styles.backLink}>
-            큐레이션 탐색으로 돌아가기
-          </Link>
-        </div>
-      </section>
+      <PageShell className={styles.page} title="큐레이션">
+        <StatePanel
+          title="큐레이션을 불러올 수 없습니다"
+          description={result.message}
+          tone="danger"
+          traceId={result.traceId}
+          actions={<><RetryButton /><Link href="/curations" className={styles.backLink}>큐레이션 탐색으로 돌아가기</Link></>}
+        />
+      </PageShell>
     )
   }
 
   const curation = result.data
 
   return (
-    <article className={styles.page}>
+    <PageShell className={styles.page}>
+    <article>
       <header className={styles.detailHeader}>
         <Link href="/curations" className={styles.backLink}>
           큐레이션 목록
@@ -54,13 +53,12 @@ export default async function PublicCurationDetailPage({
       <section aria-labelledby="curation-restaurants-heading">
         <h2 id="curation-restaurants-heading">구성 맛집</h2>
         {curation.items.length === 0 ? (
-          <div className={styles.state}>
-            <h3>현재 공개 중인 구성 맛집이 없습니다</h3>
-            <p>큐레이션 설명은 계속 확인할 수 있습니다.</p>
-            <Link href="/restaurants" className={styles.actionLink}>
-              다른 맛집 탐색하기
-            </Link>
-          </div>
+          <StatePanel
+            compact
+            title="현재 공개 중인 구성 맛집이 없습니다"
+            description="큐레이션 설명은 계속 확인할 수 있습니다."
+            actions={<Link href="/restaurants" className={styles.actionLink}>다른 맛집 탐색하기</Link>}
+          />
         ) : (
           <ol className={styles.restaurantList}>
             {curation.items.map((restaurant) => (
@@ -82,5 +80,6 @@ export default async function PublicCurationDetailPage({
         )}
       </section>
     </article>
+    </PageShell>
   )
 }

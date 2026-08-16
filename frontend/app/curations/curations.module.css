@@ -4,6 +4,12 @@
   gap: var(--space-6);
 }
 
+.page > article {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
 .pageHeader h1,
 .pageHeader p,
 .state h1,
@@ -28,13 +34,25 @@
 }
 
 .curationList {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
 }
 
 .curationList > li,
 .curationList article {
   min-width: 0;
   height: 100%;
+}
+
+.curationList article {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.curationList article:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-raised);
 }
 
 .description {
@@ -138,6 +156,11 @@
   color: var(--color-text-muted);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.page > article > section > h2 {
+  margin: 0 0 var(--space-4);
+  font-size: var(--font-size-xl);
 }
 
 .restaurantList {

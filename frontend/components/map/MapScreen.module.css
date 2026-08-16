@@ -51,20 +51,22 @@
     'map'
     'summary'
     'list';
-  gap: var(--space-4);
-  margin-top: var(--space-4);
+  gap: var(--space-5);
 }
 
 .mapArea {
   grid-area: map;
+  min-width: 0;
 }
 
 .summaryArea {
   grid-area: summary;
+  min-width: 0;
 }
 
 .listArea {
   grid-area: list;
+  min-width: 0;
 }
 
 @media (min-width: 768px) {
@@ -78,9 +80,32 @@
   }
 
   .layout {
-    grid-template-columns: 2fr 1fr;
+    /* 768px에서는 요약·목록 레일이 지도보다 넓어지지 않게 제한한다. */
+    grid-template-columns: minmax(0, 1fr) minmax(17rem, 19rem);
     grid-template-areas:
-      'map list'
-      'summary summary';
+      'map summary'
+      'map list';
+    align-items: start;
+  }
+
+  .mapArea {
+    min-height: min(68vh, 46rem);
+  }
+
+  .summaryArea {
+    position: sticky;
+    top: var(--space-4);
+  }
+}
+
+@media (min-width: 1024px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) minmax(17rem, 22rem);
+  }
+}
+
+@media (min-width: 1280px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) minmax(20rem, 25rem);
   }
 }

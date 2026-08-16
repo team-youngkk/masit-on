@@ -15,6 +15,7 @@ import {
 } from '@/lib/member/email-verification-coordination'
 import { Button } from '@/components/ui/Button'
 import { Field } from '@/components/ui/Field'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 
 import styles from './VerifyEmail.module.css'
 
@@ -89,10 +90,11 @@ export function VerifyEmail({ loginHref }: { loginHref: string }) {
     <div className={styles.page}>
       <section className={styles.card} aria-labelledby="verify-email-title">
         <header className={styles.header}>
-          <p className={styles.eyebrow}>회원가입 확인</p>
+          <p className={styles.eyebrow}>회원가입</p>
           <h1 id="verify-email-title" className={styles.title}>
             이메일 인증
           </h1>
+          <div className={styles.steps} aria-label="가입 단계"><StatusBadge tone="success">1 이메일 입력</StatusBadge><StatusBadge tone="success">2 이메일 인증</StatusBadge><StatusBadge>3 가입 완료</StatusBadge></div>
           <p className={styles.description}>
             이메일로 받은 8자 인증 코드를 입력해 가입을 완료하세요. 앞뒤 공백은
             자동으로 제거되고 영문은 대문자로 입력됩니다.

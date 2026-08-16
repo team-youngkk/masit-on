@@ -1,0 +1,8 @@
+.page {
+  gap: var(--space-5);
+}
+
+.forms {
+  display: grid;
+  gap: var(--space-5);
+}

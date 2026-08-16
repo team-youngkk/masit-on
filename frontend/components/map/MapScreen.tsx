@@ -24,6 +24,7 @@ import { KakaoMapView } from './KakaoMapView'
 import { MapFilterForm } from './MapFilterForm'
 import { MapResultList } from './MapResultList'
 import { MapSelectionSummary } from './MapSelectionSummary'
+import { PageShell } from '@/components/ui/PageShell'
 
 import styles from './MapScreen.module.css'
 
@@ -185,8 +186,12 @@ export function MapScreen({ initialFilters, creatorsResult }: MapScreenProps) {
   }
 
   return (
-    <section className={styles.screen}>
-      <h1>지도 탐색</h1>
+    <PageShell
+      className={styles.screen}
+      eyebrow="지역 기반 탐색"
+      title="지도 탐색"
+      description="필터 조건에 맞는 맛집을 지도에서 확인하세요."
+    >
 
       <button
         type="button"
@@ -242,6 +247,6 @@ export function MapScreen({ initialFilters, creatorsResult }: MapScreenProps) {
           />
         </div>
       </div>
-    </section>
+    </PageShell>
   )
 }

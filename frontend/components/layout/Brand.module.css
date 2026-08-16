@@ -2,10 +2,20 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  color: var(--color-primary-deep);
+  font-weight: 800;
+  letter-spacing: -0.035em;
 }
 
 .mark {
-  color: var(--color-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.65em;
+  height: 1.65em;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-strong);
+  color: var(--color-text-on-primary);
+  font-size: 0.62em;
+  letter-spacing: 0;
 }

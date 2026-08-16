@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useMemberSession } from '@/components/member/MemberSessionProvider'
 import { Button } from '@/components/ui/Button'
+import { PageShell } from '@/components/ui/PageShell'
+import { StatePanel } from '@/components/ui/StatePanel'
 import { memberLoginHref } from '@/lib/member/auth-navigation'
 import {
   getNotifications,
@@ -232,23 +234,18 @@ export function NotificationListScreen() {
   }
 
   if (session === 'loading') {
-    return <p role="status" className={styles.state}>로그인 상태를 확인하고 있습니다.</p>
+    return <PageShell title="알림"><StatePanel title="로그인 상태를 확인하고 있습니다." /></PageShell>
   }
   if (session === 'anonymous') {
     return (
-      <p role="status" className={styles.state}>
-        알림은 로그인 후 확인할 수 있습니다. <Link href={memberLoginHref(RETURN_TO)}>로그인하기</Link>
-      </p>
+      <PageShell title="알림"><StatePanel tone="warning" title="알림은 로그인 후 확인할 수 있습니다." actions={<Link href={memberLoginHref(RETURN_TO)}>로그인하기</Link>} /></PageShell>
     )
   }
 
   const showNav = !unauthorized && loaded && totalPages > 0
 
   return (
-    <section className={styles.screen}>
-      <header className={styles.header}>
-        <h1>알림</h1>
-        {unauthorized || listError ? null : (
+    <PageShell className={styles.screen} title="알림" description="제보·신고 처리 상태를 확인합니다." actions={unauthorized || listError ? null : (
           <Button
             variant="secondary"
             disabled={markAllBusy || unreadCount <= 0}
@@ -256,8 +253,7 @@ export function NotificationListScreen() {
           >
             {markAllBusy ? '처리 중...' : '모두 읽음으로 표시'}
           </Button>
-        )}
-      </header>
+        )}>
 
       {markAllNotice ? (
         <p
@@ -270,9 +266,7 @@ export function NotificationListScreen() {
       ) : null}
 
       {unauthorized ? (
-        <p role="alert" className={styles.state}>
-          로그인이 필요합니다. <Link href={memberLoginHref(RETURN_TO)}>로그인하기</Link>
-        </p>
+        <StatePanel tone="warning" title="알림은 로그인 후 확인할 수 있습니다." actions={<Link href={memberLoginHref(RETURN_TO)}>로그인하기</Link>} />
       ) : listError ? (
         <p role="alert" className={styles.error}>
           {listError.text}
@@ -361,6 +355,6 @@ export function NotificationListScreen() {
           </Button>
         </nav>
       ) : null}
-    </section>
+    </PageShell>
   )
 }

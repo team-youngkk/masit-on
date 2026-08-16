@@ -1,6 +1,7 @@
 import Link from 'next/link'
 
 import { MemberAuthForm } from '@/components/member/MemberAuthForm'
+import { PageShell } from '@/components/ui/PageShell'
 import { memberSignupHref } from '@/lib/member/auth-navigation'
 
 import styles from './page.module.css'
@@ -14,8 +15,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const returnTo = typeof rawReturnTo === 'string' ? rawReturnTo : undefined
 
   return (
-    <section className={styles.page}>
-      <h1>Sign in</h1>
+    <PageShell className={styles.page} size="narrow" eyebrow="회원" title="로그인" description="이메일과 비밀번호로 로그인하세요.">
       <MemberAuthForm mode="login" />
       <p className={styles.signupPrompt}>
         계정이 없으신가요?{' '}
@@ -23,6 +23,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           회원가입
         </Link>
       </p>
-    </section>
+    </PageShell>
   )
 }
