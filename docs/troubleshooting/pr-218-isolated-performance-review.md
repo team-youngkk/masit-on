@@ -38,19 +38,20 @@ related_documents:
 | [3790707012](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3790707012) | 성능 정본 상태·결과 갱신 | 기타 | 수정 필요 | 정본 frontmatter·6절·실행 증거와 추적 문서를 `Verified`로 동기화 | 정상 20 RPS 결과표와 issue #207 증거 대조 |
 | [3790707013](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3790707013) | 공개 저장소 AWS 실행 식별자 마스킹 | 인프라 | 수정 필요 | SSM command ID·EC2 instance ID를 의미 있는 placeholder로 변경 | UUID·EC2 ID 정규식 재검색 |
 | [3790707014](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3790707014) | 실제 remote backend 구성 제공 | 인프라 | 수정 필요 | S3 backend·DynamoDB locking 선언, 예시 설정, bootstrap 보안 조건과 init 절차 추가 | backend 선언·README·ADR 대조; 실제 AWS profile 부재로 리소스 존재 확인은 미실행 |
+| [3790832415](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3790832415) | WireMock을 loopback에만 바인딩 | 보안·인프라 | 수정 필요 | `--bind-address 127.0.0.1` 추가 | `git diff --check`; Redis와 동일한 loopback 바인딩 정책으로 코드 대조 |
 
 ## 3. 문제 현상과 발생 조건
 
-- 오류 메시지: Terraform `templatefile`의 vars map 미사용 키 오류, arm64 WireMock pull 실패 위험, local backend state 노출 위험.
+- 오류 메시지: Terraform `templatefile`의 vars map 미사용 키 오류, arm64 WireMock pull 실패 위험, loopback 미지정에 따른 WireMock 노출 가능성, local backend state 노출 위험.
 - 발생 환경: PR #218의 `test/nl-search-rate-limit-load-model`, Terraform 1.6 이상을 전제로 한 AWS arm64 격리 성능 환경.
 - 재현 조건: loadgen 템플릿에 사용하지 않는 변수를 전달하거나, public subnet의 `map_public_ip_on_launch`가 true인 환경을 false로 검증하거나, backend 없이 `terraform init`을 실행한다.
-- 실제 결과: apply 전에 Terraform 계획 단계에서 실패할 수 있고, 기본 WireMock 이미지가 arm64에서 pull되지 않을 수 있으며, local state에 RDS 비밀번호가 남을 수 있었다.
-- 기대 결과: 입력 환경 검증이 실제 역할과 일치하고 arm64 기본 이미지가 실행되며, state는 암호화·locking된 remote backend에만 저장돼야 한다.
+- 실제 결과: apply 전에 Terraform 계획 단계에서 실패할 수 있고, 기본 WireMock 이미지가 arm64에서 pull되지 않을 수 있으며, WireMock이 모든 인터페이스에 바인딩될 수 있고, local state에 RDS 비밀번호가 남을 수 있었다.
+- 기대 결과: 입력 환경 검증이 실제 역할과 일치하고 arm64 기본 이미지가 실행되며, WireMock은 앱 EC2 내부 loopback에서만 수신하고, state는 암호화·locking된 remote backend에만 저장돼야 한다.
 - 영향 범위: 이슈 #207 성능 검증 환경의 생성 재현성·비용·state 비밀정보 보호. 제품 API·운영 데이터에는 직접 영향이 없다.
 
 ## 4. 근본 원인
 
-Terraform 구성과 성능 결과 문서가 서로 다른 실행 기준을 가리켰다. 템플릿 변수는 본문 사용 여부를 확인하지 않고 복사됐고, public/private subnet postcondition은 복사 과정에서 boolean이 뒤집히지 않았다. loadgen 사양과 WireMock 이미지 기본값은 실제 arm64 실행 결과와 동기화되지 않았다. RDS 이름 precondition은 실행별 prefix 규칙을 고려하지 않아 항상 참이었다.
+Terraform 구성과 성능 결과 문서가 서로 다른 실행 기준을 가리켰다. 템플릿 변수는 본문 사용 여부를 확인하지 않고 복사됐고, public/private subnet postcondition은 복사 과정에서 boolean이 뒤집히지 않았다. loadgen 사양과 WireMock 이미지 기본값은 실제 arm64 실행 결과와 동기화되지 않았고, WireMock 실행 옵션에는 애플리케이션의 loopback 접근 의도가 반영되지 않았다. RDS 이름 precondition은 실행별 prefix 규칙을 고려하지 않아 항상 참이었다.
 
 성능 문서는 격리 실행 결과를 기록하면서 정본 문서와 상태를 갱신하지 않아 `통과`와 `Not Measured`가 동시에 남았다. 공개 저장소 증적 보호 규칙과 실행 식별자 마스킹도 결과 문서에 적용되지 않았다.
 
@@ -60,7 +61,7 @@ Terraform 도입과 egress 축소는 코드 오류가 아니라 팀 운영·보�
 
 | 확인하거나 시도한 방법 | 결과 | 판단과 다음 단계 |
 |---|---|---|
-| PR review thread와 PR diff 대조 | 미해결 13개, outdated 아님 | 11개는 코드·문서로 처리, Terraform ADR·egress는 결정 필요로 분리 |
+| PR review thread와 PR diff 대조 | 최초 13개와 후속 1개 확인 | 12개는 코드·문서로 처리, Terraform ADR·egress는 결정 필요로 분리 |
 | 기존 `docs/troubleshooting` 검색 | PR #208·#214의 성능 추적성 기록 확인 | 기존 기록의 증거·지표 기록 방식을 재사용하고 새 사건으로 기록 |
 | `rg`로 AWS command/instance ID 검색 | 결과 문서와 README에 원문 식별자 확인 | 공개 문서의 식별자를 placeholder로 교체 |
 | `git diff --check` | 통과 | whitespace 오류 없음 |
@@ -70,7 +71,7 @@ Terraform 도입과 egress 축소는 코드 오류가 아니라 팀 운영·보�
 
 ## 6. 최종 해결
 
-- 변경 내용: Terraform 입력·이미지·사양·dead code 수정, rate-limit helper 공통화, 성능 정본과 추적 문서 갱신, AWS 실행 식별자 마스킹, S3+DynamoDB backend 설계와 Proposed ADR 추가.
+- 변경 내용: Terraform 입력·이미지·사양·dead code 수정, WireMock loopback 바인딩, rate-limit helper 공통화, 성능 정본과 추적 문서 갱신, AWS 실행 식별자 마스킹, S3+DynamoDB backend 설계와 Proposed ADR 추가.
 - 선택 이유: 확인 가능한 실행 결과와 현재 계약에 맞추고, 팀 결정이 필요한 Terraform 도입·egress를 사실과 승인 상태대로 분리하기 위해서다.
 - 변경 파일: `infra/performance/terraform/`, `infra/performance/README.md`, `perf/k6/third-expansion-load.js`, `docs/08-planning/`, `docs/07-adr/`, `docs/troubleshooting/`, `.gitignore`
 - 고려한 대안: backend가 팀에 이미 존재한다고 가정하지 않고 bucket/table 제안 이름과 bootstrap 조건을 명시했다. egress는 보안상 축소안을 검토했지만 사용자·보안 담당의 결정 없이 적용하지 않았다.
