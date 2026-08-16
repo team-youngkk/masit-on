@@ -37,7 +37,7 @@ related_documents:
 | [코스 실패 alert 범위](https://github.com/team-youngkk/masit-on/pull/217#discussion_r3790291616) | 실패 메시지와 확인 대상 맛집 목록을 하나의 alert 맥락에 포함 | 애플리케이션 | 수정 필요 | 바깥 `role="alert"`로 묶고 StatePanel은 presentation 역할로 내려 중첩 live region을 피함 | CourseScreen diff·타입 검사·빌드 |
 | [큐레이션 로딩 aria-busy](https://github.com/team-youngkk/masit-on/pull/217#discussion_r3790291618) | 목록·상세 loading에서 `aria-busy`·`aria-live` 복원 | 애플리케이션 | 수정 필요 | 두 loading 컨테이너에 `aria-busy="true" aria-live="polite"` 복원 | 두 loading 파일 diff·프로덕션 빌드 |
 | [불투명 creatorId 보존](https://github.com/team-youngkk/masit-on/pull/217#discussion_r3790707470) | 필터 해제 시 유지되는 `creatorId`를 trim하지 않음 | 애플리케이션 | 수정 필요 | 검색어·지역·카테고리만 trim하고 `creatorId`는 원문 유지 | 앞뒤 공백 URL 회귀 테스트·전체 테스트 |
-| [완료 상태 기록의 자기참조](https://github.com/team-youngkk/masit-on/pull/217#discussion_r3791102685) | 문서에 PR head SHA를 고정해 후속 문서 커밋마다 상태가 다시 낡음 | Git | 수정 필요 | 특정 head SHA 대신 코드·문서 반영과 원격 CI 성공 사실만 기록 | 문서 diff·원격 CI 성공 확인 |
+| [완료 상태 기록의 자기참조](https://github.com/team-youngkk/masit-on/pull/217#discussion_r3791102685), [추가 지적](https://github.com/team-youngkk/masit-on/pull/217#discussion_r3791136320) | 문서에 PR head SHA를 고정해 후속 문서 커밋마다 상태가 다시 낡음 | Git | 수정 필요 | 특정 head SHA 대신 코드·문서 반영과 원격 CI 성공 사실만 기록 | 문서 diff·원격 CI 성공 확인 |
 
 ## 3. 문제 현상과 발생 조건
 
