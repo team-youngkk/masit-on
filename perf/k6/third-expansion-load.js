@@ -298,19 +298,26 @@ function responseCode(response) {
 }
 
 function recordCourseFailure(response, phase) {
+    if (recordRateLimitFailure(response, phase, courseServiceRateLimitResponses, 'COURSE_ROUTE_RATE_LIMITED')) {
+        return;
+    }
     const code = responseCode(response);
-    if (response.status === 429 || code === 'COURSE_ROUTE_RATE_LIMITED') {
-        courseServiceRateLimitResponses.add(1, { phase });
-    } else if (response.status === 502 || code === 'COURSE_ROUTE_PROVIDER_UNAVAILABLE') {
+    if (response.status === 502 || code === 'COURSE_ROUTE_PROVIDER_UNAVAILABLE') {
         // 공개 API는 Mobility의 PROVIDER_BLOCKED를 provider unavailable로 통합한다.
         courseProviderBlockedResponses.add(1, { phase });
     }
 }
 
 function recordNaturalLanguageFailure(response, phase) {
-    if (response.status === 429 || responseCode(response) === 'NATURAL_LANGUAGE_RATE_LIMITED') {
-        naturalLanguageRateLimitResponses.add(1, { phase });
+    recordRateLimitFailure(response, phase, naturalLanguageRateLimitResponses, 'NATURAL_LANGUAGE_RATE_LIMITED');
+}
+
+function recordRateLimitFailure(response, phase, counter, code) {
+    if (response.status !== 429 && responseCode(response) !== code) {
+        return false;
     }
+    counter.add(1, { phase });
+    return true;
 }
 
 function evaluate(response, endpoint, trend, record) {

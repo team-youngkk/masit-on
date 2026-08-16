@@ -86,9 +86,9 @@ variable "db_username" {
 }
 
 variable "wiremock_image" {
-  description = "WireMock 이미지. 기술 정책의 고정 태그 사용"
+  description = "WireMock 이미지. arm64 호환 고정 태그 사용"
   type        = string
-  default     = "wiremock/wiremock:3.13.2-alpine"
+  default     = "wiremock/wiremock:3.13.2"
 }
 
 variable "redis_image" {

@@ -65,4 +65,5 @@ next-env.d.ts
 *.tfvars
 *.tfplan
 !terraform.tfvars.example
+infra/performance/terraform/backend.hcl
 crash.log

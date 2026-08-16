@@ -37,11 +37,4 @@ resource "aws_db_instance" "performance" {
   apply_immediately          = true
   auto_minor_version_upgrade = false
   copy_tags_to_snapshot      = true
-
-  lifecycle {
-    precondition {
-      condition     = !startswith(local.db_name, "masiton-db")
-      error_message = "운영 RDS 식별자와 겹치는 이름은 허용하지 않는다."
-    }
-  }
 }

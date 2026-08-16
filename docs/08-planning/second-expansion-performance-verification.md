@@ -1,6 +1,6 @@
 ---
-status: Not Measured
-verification_date: null
+status: Verified
+verification_date: 2026-08-15
 owners:
   - 이우람
 related_documents:
@@ -23,13 +23,13 @@ related_documents:
 
 `NFR-PERFORMANCE-006`의 정상 부하 조건을 측정하고 판정한 기록이다. `TST-E2-PERF-001`의 부하 증거로 연결한다.
 
-**현재 상태: 미측정.** 기본 측정 수단([ADR-PERF-001](../07-adr/quality/perf-001-k6-load-testing.md))은 2026-08-06에 확정됐고, 이슈 #190에는 검증 참여자 전용 운영 직접 검증 예외([ADR-PERF-002](../07-adr/quality/perf-002-operational-participant-load-testing.md))를 적용하기로 했다. 운영 fixture 결과가 기록되기 전까지 이 문서의 성능 조건은 여전히 미측정이다.
+**현재 상태: Verified.** [ADR-PERF-001](../07-adr/quality/perf-001-k6-load-testing.md)의 측정 전용 임시 환경 조건에 따라 2026-08-15 KST 이슈 #207 격리 환경에서 정상 부하를 실행했다. 운영 EC2·RDS·Redis와 실제 외부 API에는 부하를 보내지 않았다.
 
-**측정 전까지 `NFR-PERFORMANCE-006`의 정상 부하 조건은 충족 여부를 알 수 없는 상태이고, 충족했다고 보고하지 않는다.**
+정상 부하 20 RPS의 세 공개 조회 endpoint는 p95 500ms 이하, 5xx 1% 미만, dropped 0건을 모두 충족했다. 이 문서의 정상 부하 판정은 정식 측정으로 기록한다. 80 RPS 최대 부하는 별도 요구조건의 관찰 결과로 기록하며 정상 부하 판정을 대체하지 않는다.
 
-연기로 남는 위험을 명시한다. [ADR-DATA-011](../07-adr/data/data-011-popular-restaurant-request-time-aggregation.md)이 인기 맛집에 캐시·Snapshot·Batch를 배제한 근거는 "필요하다는 측정 근거가 없다"이다. 요청마다 `favorite` 전량을 집계하는 구조가 p95 500ms를 지키는지는 실측 전까지 확인되지 않으며, 해당 코드는 이미 제한 공개 환경에 배포돼 있다. 3차 확장에서 데이터가 늘어난 뒤 처음 측정해 미달이 나오면 캐시 도입 비용이 지금보다 커진다.
+이번 결과는 측정 전용 임시 환경의 증거이며 운영 인스턴스의 누적 데이터·동시 트래픽·캐시 워밍 상태를 대변하지 않는다. 3차 확장에서 데이터 규모나 배포 토폴로지가 바뀌면 동일 기준으로 재측정하고, 미달 시 [ADR-DATA-011](../07-adr/data/data-011-popular-restaurant-request-time-aggregation.md)의 후속 조치 조건을 검토한다.
 
-또한 [ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md) 3.1절의 배포 고도화(ALB·Blue-Green·다중 인스턴스)도 "3차 확장 이후" 검토 대상이다. 실측이 그 시점으로 밀리면 **2차 확장이 실제로 운영된 단일 EC2 구성을 한 번도 측정하지 못한 채 그 구성이 바뀔 수 있다.** 배포 고도화가 착수되면 `RV-NFR-011`의 "운영 동급 단일 EC2" 전제부터 다시 정해야 한다.
+또한 [ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md) 3.1절의 배포 고도화(ALB·Blue-Green·다중 인스턴스)는 "3차 확장 이후" 검토 대상이다. 이번 결과는 측정 시점의 단일 EC2 구성에 대한 증거이므로, 배포 고도화가 착수되면 `RV-NFR-011`의 "운영 동급 단일 EC2" 전제와 함께 재검토한다.
 
 ## 1. 판정 기준
 
@@ -136,38 +136,38 @@ k6는 `thresholds` 위반 시 0이 아닌 종료 코드로 끝난다. 통과·�
 
 ## 6. 측정 결과
 
-**아직 측정하지 않았다.** 팀이 2026-08-06에 실측을 3차 확장 이후로 연기했다. 측정 수행 후 이 절을 채우고 문서 frontmatter의 `status`를 `Verified` 또는 `Failed`로, `verification_date`를 실제 측정일로 바꾼다.
+2026-08-15 KST 이슈 #207 격리 성능 환경에서 실행했다. 정식 판정은 정상 부하 20 RPS 실행에 한정한다.
 
 | 대상 | p95 | 기준 | 판정 |
 |---|---|---|---|
-| `GET /api/restaurants/popular` | 미측정 | 500ms 이하 | 미판정 |
-| `GET /api/curations` | 미측정 | 500ms 이하 | 미판정 |
-| `GET /api/curations/{curationId}` | 미측정 | 500ms 이하 | 미판정 |
+| `GET /api/restaurants/popular` | 19.9ms | 500ms 이하 | 통과 |
+| `GET /api/curations` | 12.2ms | 500ms 이하 | 통과 |
+| `GET /api/curations/{curationId}` | 10.1ms | 500ms 이하 | 통과 |
 
 | 지표 | 값 | 기준 | 판정 |
 |---|---|---|---|
-| 서버 오류율(5xx) | 미측정 | 1% 미만 | 미판정 |
-| `dropped_iterations` | 미측정 | 0건 | 미판정 |
-| 실제 요청률 | 미측정 | 20 RPS | 미판정 |
+| 서버 오류율(5xx) | 0.000% | 1% 미만 | 통과 |
+| `dropped_iterations` | 0건 | 0건 | 통과 |
+| 실제 요청률 | 20 RPS | 20 RPS | 통과 |
 
 측정 실행 정보도 함께 기록한다.
 
 | 항목 | 값 |
 |---|---|
-| 측정일 | 미측정 |
-| 측정자 | 미정 |
-| 워크플로 실행 | 미실행 |
-| 애플리케이션 커밋 SHA | 미정 |
+| 측정일 | 2026-08-15 KST |
+| 측정자 | 이우람 |
+| 워크플로 실행 | 미실행 — 같은 VPC의 측정 전용 EC2에서 직접 실행 |
+| 애플리케이션 커밋 SHA | `5f251e2b9a03f660f1a44d7d94bfa1b2c465bd16` |
 | k6 버전 | v2.1.0 |
-| 부하 생성기 아키텍처 | 미정 (linux-amd64 / linux-arm64) |
-| 적재 확인 건수 | 미확인 |
+| 부하 생성기 아키텍처 | linux-arm64 |
+| 적재 확인 건수 | 맛집 1,000·유튜버 200·영상 5,000·방문 10,000·회원 1,000·찜 20,000 |
 
 ## 7. 알려진 제약
 
 - k6의 `http_req_duration`은 네트워크 왕복을 포함한다. `NFR-PERFORMANCE-006`이 말하는 "애플리케이션 서버 내부 처리"와 정확히 같지 않다. 부하 생성기를 대상과 같은 VPC에 두어 그 차이를 최소화하며, 측정 수치를 네트워크 지연 추정치로 사후 보정하지 않는다.
 - 측정 전용 임시 인스턴스를 쓰므로 운영 인스턴스의 누적 데이터·동시 트래픽·캐시 워밍 상태는 반영되지 않는다.
 - **애플리케이션 8080에 직결해 측정한다.** 운영 토폴로지는 같은 인스턴스에 Nginx·Next.js·Redis가 함께 올라가 있고 `/api`가 Nginx 뒤에 있지만, `NFR-PERFORMANCE-006`이 재라는 것은 "애플리케이션 서버 내부 처리"이므로 직결이 타당하다. 대신 이 수치에는 **Nginx 프록시 구간과 프론트엔드·Redis 동거 부하가 포함되지 않는다.**
-- 이 문서는 정상 부하 50명·20 RPS만 다룬다. [RV-NFR-011](../01-requirements/non-functional-requirements.md#rv-nfr-011-성능-테스트-환경)이 확정한 최대 부하 200명·80 RPS는 **시나리오 자체가 아직 없어 미구현·미측정 상태**다. [이슈 #148](https://github.com/team-youngkk/masit-on/issues/148)의 완료 조건은 아니지만 요구사항이 이미 요구하는 항목이므로 범위 밖이 아니며, 별도 후속 작업으로 채운다.
+- 이 문서는 정상 부하 50명·20 RPS를 정식 판정한다. [RV-NFR-011](../01-requirements/non-functional-requirements.md#rv-nfr-011-성능-테스트-환경)이 확정한 최대 부하 200명·80 RPS도 이번 격리 실행에서 관찰했지만, 정상 부하 판정을 대체하지 않는다.
 
 ## 8. 미충족 시 조치
 

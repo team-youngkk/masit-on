@@ -38,6 +38,7 @@ related_documents:
   - quality/test-001-automation-strategy.md
   - quality/perf-001-k6-load-testing.md
   - quality/perf-002-operational-participant-load-testing.md
+  - quality/perf-003-isolated-performance-terraform.md
   - quality/obs-001-logging-observability.md
   - security/sec-001-secrets-workload-identity.md
   - platform/runtime-001-docker.md
@@ -120,6 +121,7 @@ related_documents:
 | WireMock | 확정 | Accepted ADR | [ADR-TEST-001](quality/test-001-automation-strategy.md) | 외부 API 장애·계약 격리 |
 | Spring Batch Test 6.0.4 | 파생·기능 제외 | Duplicate or Derived Rule | [ADR-AUTO-001](adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) | Spring Batch 활성화에 종속 |
 | k6 v2.1.0 | 도구·버전·실행 비용 확정 (2026-08-06) | Accepted ADR | [ADR-PERF-001](quality/perf-001-k6-load-testing.md) | `perf/k6/` 시나리오, `workflow_dispatch` 전용 실행, 정기 CI 비용 증가 없음 |
+| Terraform + AWS provider | 이슈 #207 격리 성능 환경 프로비저닝과 S3/DynamoDB state locking 제안 | Proposed ADR | [ADR-PERF-003](quality/perf-003-isolated-performance-terraform.md) | 팀 리뷰·승인 전까지 Proposed 상태 |
 | SLF4J + Logback | 확정 | Accepted ADR | [ADR-OBS-001](quality/obs-001-logging-observability.md) | 애플리케이션 로그 기준 |
 | Actuator + CloudWatch | 기술 선택 확정, 적용 시점 이관 | Accepted ADR | [ADR-OBS-001](quality/obs-001-logging-observability.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | Actuator는 전 단계, CloudWatch는 초기 운영 배포부터 적용 |
 | 로그 보관 14일 | M2부터 적용 | Operational Configuration | [ADR-OBS-001](quality/obs-001-logging-observability.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | AWS 운영 시작 후 14일 유지 |
@@ -159,7 +161,7 @@ related_documents:
 | [NFR-DEPLOYMENT-003](../01-requirements/non-functional-requirements.md#nfr-deployment-003-버전-추적과-복구-절차)~[NFR-DEPLOYMENT-004](../01-requirements/non-functional-requirements.md#nfr-deployment-004-단계별-실행-및-초기-운영-배포-복잡도-제한) | [ADR-DATA-004](data/data-004-flyway.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md), [ADR-DEPLOY-004](platform/deploy-004-public-api-validation-gate-boundary.md) | 단계별 실행, 초기 운영 배포 복구·복잡도와 제한 공개 쿠키 세션 제거 가능성 |
 | [NFR-MAINTAINABILITY-001](../01-requirements/non-functional-requirements.md#nfr-maintainability-001-책임과-의존성-경계)~[NFR-MAINTAINABILITY-003](../01-requirements/non-functional-requirements.md#nfr-maintainability-003-추적성과-운영-복잡도) | [ADR-ARCH-001](architecture/arch-001-domain-monolith.md), [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md), [ADR-ARCH-003](adr-backlog.md#adr-arch-003-조회-확장-패턴), [ADR-ARCH-004](adr-backlog.md#adr-arch-004-멀티모듈독립-배포-전환) | 책임 경계, 조회 확장, 배포 경계와 운영 복잡도 제한 |
 | [NFR-PRIVACY-001](../01-requirements/non-functional-requirements.md#nfr-privacy-001-mvp-개인정보-최소화)~[NFR-PRIVACY-004](../01-requirements/non-functional-requirements.md#nfr-privacy-004-위치와-행동-데이터-최소화) | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md), [ADR-AUTH-002](security/auth-002-member-jwt-refresh-token.md), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md), [ADR-DATA-010](data/data-010-recent-view-retention-cleanup.md) | 회원 데이터 최소화·탈퇴 파기·최근 기록 30일 cleanup과 비밀 보호 |
-| [NFR-PERFORMANCE-006](../01-requirements/non-functional-requirements.md#nfr-performance-006-2차-확장-공개-조회와-인기-집계-성능) | [ADR-DATA-011](data/data-011-popular-restaurant-request-time-aggregation.md), [ADR-PERF-001](quality/perf-001-k6-load-testing.md), [ADR-PERF-002](quality/perf-002-operational-participant-load-testing.md) | 실시간 PostgreSQL 집계·실행계획·부하 기준, 선제 캐시 금지, k6 v2.1.0 정상 부하 판정과 이슈 #190 운영 직접 검증 예외 |
+| [NFR-PERFORMANCE-006](../01-requirements/non-functional-requirements.md#nfr-performance-006-2차-확장-공개-조회와-인기-집계-성능) | [ADR-DATA-011](data/data-011-popular-restaurant-request-time-aggregation.md), [ADR-PERF-001](quality/perf-001-k6-load-testing.md), [ADR-PERF-002](quality/perf-002-operational-participant-load-testing.md) | 실시간 PostgreSQL 집계·실행계획·부하 기준, 선제 캐시 금지, k6 v2.1.0 정상 부하 판정(2026-08-15 Verified)과 이슈 #190 운영 직접 검증 예외 |
 | [NFR-INTEGRITY-005](../01-requirements/non-functional-requirements.md#nfr-integrity-005-처리-상태와-알림-원자성)·[NFR-RELIABILITY-004](../01-requirements/non-functional-requirements.md#nfr-reliability-004-실시간-집계와-서비스-내-알림-복구-경계) | [ADR-DATA-011](data/data-011-popular-restaurant-request-time-aggregation.md), [ADR-NOTIFY-002](integration/notify-002-in-app-notification-reliability.md) | 과거 순위 fallback 없음, 상태·이력·알림 같은 트랜잭션, Outbox 없음 |
 | [NFR-PRIVACY-005](../01-requirements/non-functional-requirements.md#nfr-privacy-005-2차-확장-개인정보-보존과-회원-탈퇴) | [ADR-DATA-012](data/data-012-second-expansion-retention-cleanup.md), [ADR-NOTIFY-002](integration/notify-002-in-app-notification-reliability.md) | 식별 제거·알림 보존·탈퇴, Preference·DeviceToken 미저장 |
 | [NFR-COMPATIBILITY-001](../01-requirements/non-functional-requirements.md#nfr-compatibility-001-웹모바일-브라우저-호환성) | [ADR-WEB-001](platform/web-001-frontend-platform.md), [ADR-WEB-004](platform/web-004-supported-browser-matrix.md) | 지원 표방 브라우저 3종과 화면 폭 5종, iPhone Safari 지원 표방 보류 |

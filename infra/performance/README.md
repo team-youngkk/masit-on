@@ -19,7 +19,7 @@ Terraform은 기존 VPC와 서브넷을 **읽기만** 한다. 운영 EC2, 운영
 - Terraform 1.6 이상
 - AWS CLI와 `masiton` SSO 프로파일
 - 대상과 같은 리전(`ap-northeast-2`)의 AWS 자격 증명
-- Terraform 상태를 저장할 암호화된 비공개 backend
+- Terraform 상태를 저장할 암호화된 비공개 S3 backend와 DynamoDB locking table
 - 성능 전용 RDS 비밀번호를 `TF_VAR_db_password` 환경 변수로 주입
 - 기존 VPC의 ID, public subnet 1개, private subnet 2개
 - 실행할 ECR 이미지의 **digest 고정 URI**
@@ -39,20 +39,27 @@ aws configure get region --profile masiton
 ```powershell
 Set-Location infra/performance/terraform
 Copy-Item terraform.tfvars.example terraform.tfvars
+Copy-Item backend.hcl.example backend.hcl
 $env:AWS_PROFILE = 'masiton'
-terraform init
+terraform init -backend-config=backend.hcl
 terraform fmt -check
 terraform validate
-terraform plan -out issue-207.tfplan
-terraform apply issue-207.tfplan
 ```
+
+backend는 S3 bucket `masiton-terraform-state-711457211155`와 DynamoDB table `masiton-terraform-state-lock`을 사용한다. 두 리소스는 이 Terraform state와 분리된 1회성 bootstrap 대상이며, 다음 조건을 먼저 확인한다.
+
+- S3 bucket은 `ap-northeast-2`에 만들고 versioning, SSE 암호화, public access block을 켠다.
+- DynamoDB table은 `LockID` 문자열 hash key와 `PAY_PER_REQUEST` billing mode로 만든다.
+- bucket과 table이 생성·보호된 뒤에만 `terraform init -backend-config=backend.hcl`을 실행한다.
+
+`backend.hcl.example`의 이름과 실제 bootstrap 결과가 다르면 로컬 `backend.hcl`만 실제 값으로 바꾼다. `backend.hcl`에는 자격 증명을 넣지 않는다.
 
 `TF_VAR_db_password`는 비밀 관리 도구에서 읽어 현재 프로세스에만 주입한다. `terraform.tfvars`나 명령행 인자에 비밀번호를 넣지 않는다.
 
 계획에서 다음을 확인한 뒤에만 apply한다.
 
 - 변경 대상이 `masiton-perf-207-` 리소스뿐인지
-- 운영 인스턴스 ID `i-0b451f18bca827cc9`, 운영 RDS `masiton-db`, 운영 보안 그룹이 변경 대상에 없는지
+- 운영 인스턴스 ID `<production-app-instance-id>`, 운영 RDS `masiton-db`, 운영 보안 그룹이 변경 대상에 없는지
 - 앱 8080 포트는 load generator 보안 그룹에서만 허용되는지
 - RDS가 `publicly_accessible=false`인지
 
@@ -82,4 +89,4 @@ terraform apply issue-207-destroy.tfplan
 
 ## 상태와 비밀정보
 
-Terraform state에는 RDS 비밀번호와 SecureString 값이 포함될 수 있다. 로컬 state를 커밋하지 말고, 팀 공유 시에는 암호화·접근 통제가 된 remote backend를 별도로 확정한다. `terraform.tfvars`, `*.tfstate`, `.terraform/`은 저장소에 올리지 않는다.
+Terraform state에는 RDS 비밀번호와 SecureString 값이 포함될 수 있다. S3 versioning과 암호화를 유지하고, bucket·DynamoDB table 접근은 성능 검증 담당자의 AWS role로 제한한다. `backend.hcl`, `terraform.tfvars`, `*.tfstate`, `.terraform/`은 저장소에 올리지 않는다.

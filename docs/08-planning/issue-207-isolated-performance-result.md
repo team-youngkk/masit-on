@@ -34,7 +34,7 @@ throughput 결과를 NFR 성능 인증으로 해석하지 않는다. 단일 load
 | 자연어 대상 | `POST /api/restaurants/natural-language-search` |
 | 코스 대상 | `POST /api/restaurants/course-routes`; 정상 WireMock stub과 계약이 맞는 3개 stop ID 사용 |
 
-주요 측정 SSM command ID는 공개 조회 정상 `44a24ad5-140b-4a68-b212-61963f293216`, 공개 조회 최대 `e4873c27-98e6-4d65-b9a3-b351a7fa3464`, 코스 정상 internal `55e57a2c-9c48-4c9a-ab95-5d6fd8045ade`, 코스 정상 external `88cc0670-567f-42f1-9291-1f3a5bbd5726`, 코스 최대 internal `402c5e90-a9cd-4d48-82fe-f7cf5382c098`, 코스 최대 external `cf79a576-8003-4e13-8389-37ee46e3feb3`, 자연어 contract `f98878f2-6d58-482f-a00c-5f8659bf95eb`, 자연어 throughput 정상 `4d3eb7be-c3ca-47c3-8f82-b9b3c7b6dd9e`, 자연어 throughput 최대 `5dce8ca4-942d-4fd1-8b94-1feae16418e5`다. Fixture cleanup command ID는 `447e69c0-0957-423d-8ae0-8121529cb953`다.
+주요 측정 SSM command ID는 공개 조회 정상 `<public-normal-command-id>`, 공개 조회 최대 `<public-max-command-id>`, 코스 정상 internal `<course-normal-internal-command-id>`, 코스 정상 external `<course-normal-external-command-id>`, 코스 최대 internal `<course-max-internal-command-id>`, 코스 최대 external `<course-max-external-command-id>`, 자연어 contract `<natural-contract-command-id>`, 자연어 throughput 정상 `<natural-throughput-normal-command-id>`, 자연어 throughput 최대 `<natural-throughput-max-command-id>`다. Fixture cleanup command ID는 `<fixture-cleanup-command-id>`다.
 
 현재 작업 브랜치의 기존 변경(`.github/workflows/performance.yml`, `perf/k6` 등)은 보존했으며 이 검증을 위해 코드·운영 설정을 수정하지 않았다.
 
@@ -42,7 +42,7 @@ throughput 결과를 NFR 성능 인증으로 해석하지 않는다. 단일 load
 
 기존 VPC `vpc-05441ae76eaa1131c`와 SSM을 재사용하고 NAT Gateway는 만들지 않았다. 앱은 `t4g.medium` EC2, loadgen은 별도 `t4g.small` EC2, DB는 private subnet의 PostgreSQL 17.10 `db.t4g.micro` Single-AZ RDS였다. RDS·앱·loadgen 전용 SG를 사용했고 앱 8080은 loadgen SG에서만, RDS 5432는 앱 SG에서만 허용했다.
 
-WireMock은 저장소의 `wiremock/wiremock:3.13.2-alpine`이 arm64 manifest를 제공하지 않아 격리 환경에서만 `wiremock/wiremock:3.13.2`로 대체했다. 매핑과 요청 경로는 동일하며 WireMock은 8081로 실행됐다. Redis는 `redis:8.8-alpine`, `maxmemory=256mb`, `maxmemory-policy=noeviction`으로 실행했다.
+WireMock은 arm64 호환을 위해 `wiremock/wiremock:3.13.2`로 실행했다. 매핑과 요청 경로는 동일하며 WireMock은 8081로 실행됐다. Redis는 `redis:8.8-alpine`, `maxmemory=256mb`, `maxmemory-policy=noeviction`으로 실행했다.
 
 앱은 `local` profile로 실행하고 Kakao·YouTube·Mobility base URL을 `127.0.0.1:8081`로 지정했다. Gemini와 AI worker는 비활성화했고 JWT·AES·DB 비밀번호는 모두 격리용 합성 비밀이었다.
 
@@ -114,9 +114,9 @@ WireMock은 저장소의 `wiremock/wiremock:3.13.2-alpine`이 arm64 manifest를 
 
 ## 8. AWS 정리 결과
 
-RunId `20260815-01`의 앱 EC2 `i-0db0188253912605d`, loadgen EC2 `i-00f2629d8802a2d5b`는 `terminated`다. RDS `masiton-perf-207-20260815-01`와 subnet group, 전용 SG 3개, IAM role/profile, SSM SecureString parameter, 전용 CloudWatch log group은 삭제했다. 임시 root EBS volume도 잔여 없음으로 재확인했다.
+RunId `20260815-01`의 앱 EC2 `<performance-app-instance-id>`, loadgen EC2 `<performance-loadgen-instance-id>`는 `terminated`다. RDS `masiton-perf-207-20260815-01`와 subnet group, 전용 SG 3개, IAM role/profile, SSM SecureString parameter, 전용 CloudWatch log group은 삭제했다. 임시 root EBS volume도 잔여 없음으로 재확인했다.
 
-운영 리소스인 `i-0b451f18bca827cc9`, `masiton-db`, 운영 SG·parameter·budget·ECR image에는 변경을 가하지 않았다.
+운영 리소스인 `<production-app-instance-id>`, `masiton-db`, 운영 SG·parameter·budget·ECR image에는 변경을 가하지 않았다.
 
 ## 9. 남은 제약과 후속 결정
 

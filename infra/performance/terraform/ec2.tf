@@ -43,7 +43,7 @@ resource "aws_instance" "app" {
 
 resource "aws_instance" "loadgen" {
   ami                         = var.ami_id
-  instance_type               = "t4g.medium"
+  instance_type               = "t4g.small"
   subnet_id                   = data.aws_subnet.public.id
   vpc_security_group_ids      = [aws_security_group.loadgen.id]
   iam_instance_profile        = aws_iam_instance_profile.loadgen.name
@@ -51,7 +51,6 @@ resource "aws_instance" "loadgen" {
   monitoring                  = true
 
   user_data = templatefile("${path.module}/templates/loadgen-user-data.sh.tftpl", {
-    aws_region      = var.aws_region
     k6_version      = var.k6_version
     k6_arm64_sha256 = var.k6_arm64_sha256
   })

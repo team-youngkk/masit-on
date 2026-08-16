@@ -78,8 +78,8 @@ related_documents:
 
 | 보류 항목 | 소속 묶음 | 차단 사유 | 해제 조건 | 후속 |
 |---|---|---|---|---|
-| 정상 부하 50명·20 RPS p95·오류율 측정 (여전히 보류) | `TST-E2-PERF-001` | ~~자동 반복 실행 도구가 미결정이다~~ 도구 차단은 해소됐다([ADR-PERF-001](../07-adr/quality/perf-001-k6-load-testing.md) Accepted, 2026-08-06). **현재 사유는 팀이 실측을 3차 확장 이후로 연기하기로 결정한 것이다(2026-08-06)** | 3차 확장 이후 실측 수행. 시나리오·기준 데이터·절차는 이미 준비돼 있다 | [#148](https://github.com/team-youngkk/masit-on/issues/148) |
-| 최대 부하 200명·80 RPS 측정 | `TST-E2-PERF-001` | 시나리오를 아직 만들지 않았다. `RV-NFR-011`이 "정상 부하와 최대 부하를 각각 실행한다"로 이미 확정한 항목이라 범위 밖이 아니다 | 시나리오 작성 후 정상 부하와 같은 환경에서 측정 | 후속 이슈 |
+| 정상 부하 50명·20 RPS p95·오류율 측정 | `TST-E2-PERF-001` | 해제됨. 2026-08-15 이슈 #207 격리 환경에서 정식 측정하고 [정본 결과](second-expansion-performance-verification.md)에 기록했다 | — | [#148](https://github.com/team-youngkk/masit-on/issues/148) |
+| 최대 부하 200명·80 RPS 측정 | `TST-E2-PERF-001` | 2026-08-15 이슈 #207 격리 환경에서 관찰했으나 정상 부하 정식 판정을 대체하지 않는다 | 동일 기준의 별도 정식 판정이 필요하면 실행·승인 | 후속 이슈 |
 | ~~지원 브라우저 매트릭스 중 iPhone Safari~~ | `TST-E2-E2E-001` | 해제됨. 2026-08-06 [ADR-WEB-004](../07-adr/platform/web-004-supported-browser-matrix.md)가 iPhone Safari를 "검증 없이 지원 표방하지 않음"으로 낮춰 `TST-E2-E2E-001` 판정 대상에서 제외했다 | — | [#149](https://github.com/team-youngkk/masit-on/issues/149)에서 처리 완료 |
 | 지원 브라우저 매트릭스 중 PC Chrome·Edge, Android Chrome | `TST-E2-E2E-001` | **2차 확장 화면이 아직 운영에 배포되지 않아 실브라우저로 확인할 수 없다.** 2026-08-06 팀이 배포 이후 수행으로 정했다. 배포본(1차 확장)의 실브라우저 확인과 2차 확장 화면의 로컬 화면 폭 확인은 [2차 확장 브라우저 검증 기록](second-expansion-browser-verification.md)에 있다 | 2차 확장 운영 배포 후 세 브라우저 실빌드에서 화면 폭 5종을 포함해 수동 검증 | [#149](https://github.com/team-youngkk/masit-on/issues/149) |
 
@@ -96,7 +96,7 @@ iPhone Safari는 [범위](../00-overview/scope.md), [비기능 요구사항](../
 
 확인 환경과 결과는 [2차 확장 브라우저 검증 기록](second-expansion-browser-verification.md)이 증거 문서다.
 
-### 성능 측정 보류 사유 변경 (2026-08-06)
+### 성능 측정 보류 사유 변경 및 해제 (2026-08-06 ~ 2026-08-15)
 
 `ADR-PERF-001`이 Accepted가 되면서 **도구 미결정이라는 차단 사유는 없어졌다.** 확정된 내용은 k6 v2.1.0, `perf/k6/` 시나리오, `perf/seed/` 기준 데이터, `workflow_dispatch` 전용 실행, 측정 전용 임시 EC2다. 판정 기준(p95 500ms 이하, 오류율 1% 미만)은 `NFR-PERFORMANCE-006` 원문 그대로이며 낮추지 않았다.
 
@@ -104,7 +104,7 @@ iPhone Safari는 [범위](../00-overview/scope.md), [비기능 요구사항](../
 
 **보류 사유가 바뀐 것과 측정이 끝난 것은 다르다.** 실제 수행 여부와 수치는 [2차 확장 성능 검증 결과](second-expansion-performance-verification.md)를 확인한다. 그 문서에 결과가 기록되기 전까지 `NFR-PERFORMANCE-006`의 정상 부하 조건은 **미측정 상태**이며, 측정했다고 보고하지 않는다.
 
-연기로 남는 위험은 하나 분명하다. [ADR-DATA-011](../07-adr/data/data-011-popular-restaurant-request-time-aggregation.md)이 인기 맛집에 캐시·Snapshot·Batch를 두지 않기로 한 근거가 "필요하다는 측정 근거가 없다"인데, 요청마다 `favorite` 전량을 집계하는 구조가 p95 500ms를 지키는지는 **실측 전까지 확인되지 않는다.** 해당 코드는 이미 제한 공개로 나가 있다.
+연기로 남는 위험은 하나 분명하다. [ADR-DATA-011](../07-adr/data/data-011-popular-restaurant-request-time-aggregation.md)이 인기 맛집에 캐시·Snapshot·Batch를 두지 않기로 한 근거가 "필요하다는 측정 근거가 없다"였으나, 2026-08-15 격리 실행으로 정상 부하 조건을 확인했다. 최대 부하 80 RPS는 관찰 결과이며 정상 부하 정식 판정을 대체하지 않는다.
 
 부하 측정이 실제로 수행되기 전까지 회귀 탐지는 다음 셋이 담당한다. 셋 다 쿼리 수와 실행계획의 구조적 악화는 잡지만 부하 하의 p95 악화는 잡지 못한다.
 
