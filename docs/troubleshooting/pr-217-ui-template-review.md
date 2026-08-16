@@ -127,6 +127,6 @@ related_documents:
 
 ## 10. 남은 사항
 
-- 커밋 `24c9f9f`를 PR 브랜치에 푸시했고, 해당 head의 CI [#563](https://github.com/team-youngkk/masit-on/actions/runs/31928570274)가 성공했다.
+- 코드 수정 커밋 `24c9f9f`와 문서 상태 갱신 커밋 `78acc87`을 PR 브랜치에 푸시했고, 현재 PR head는 `78acc87`이다. 코드 수정 head의 CI [#563](https://github.com/team-youngkk/masit-on/actions/runs/31928570274)가 성공했다.
 - 최초 리뷰 스레드 10건은 원인·변경·검증·이 문서 링크를 답글로 남긴 뒤 모두 해결 처리했다.
 - 현재 PR 기준으로 남은 사항은 없다.
