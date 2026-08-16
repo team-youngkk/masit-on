@@ -37,6 +37,7 @@ related_documents:
 | [코스 실패 alert 범위](https://github.com/team-youngkk/masit-on/pull/217#discussion_r3790291616) | 실패 메시지와 확인 대상 맛집 목록을 하나의 alert 맥락에 포함 | 애플리케이션 | 수정 필요 | 바깥 `role="alert"`로 묶고 StatePanel은 presentation 역할로 내려 중첩 live region을 피함 | CourseScreen diff·타입 검사·빌드 |
 | [큐레이션 로딩 aria-busy](https://github.com/team-youngkk/masit-on/pull/217#discussion_r3790291618) | 목록·상세 loading에서 `aria-busy`·`aria-live` 복원 | 애플리케이션 | 수정 필요 | 두 loading 컨테이너에 `aria-busy="true" aria-live="polite"` 복원 | 두 loading 파일 diff·프로덕션 빌드 |
 | [불투명 creatorId 보존](https://github.com/team-youngkk/masit-on/pull/217#discussion_r3790707470) | 필터 해제 시 유지되는 `creatorId`를 trim하지 않음 | 애플리케이션 | 수정 필요 | 검색어·지역·카테고리만 trim하고 `creatorId`는 원문 유지 | 앞뒤 공백 URL 회귀 테스트·전체 테스트 |
+| [완료 상태 기록의 자기참조](https://github.com/team-youngkk/masit-on/pull/217#discussion_r3791102685) | 문서에 PR head SHA를 고정해 후속 문서 커밋마다 상태가 다시 낡음 | Git | 수정 필요 | 특정 head SHA 대신 코드·문서 반영과 최신 CI 성공 사실만 기록 | 문서 diff·CI #565 |
 
 ## 3. 문제 현상과 발생 조건
 
@@ -108,7 +109,7 @@ related_documents:
 | `npm.cmd run build` | 통과 | 테스트·타입 검사·Next.js 16.2.11 프로덕션 빌드와 29개 라우트 생성 |
 | `git diff --check` | 통과 | 공백·패치 형식 오류 없음 |
 
-검증 환경의 Node.js는 저장소 확정 24.18.0보다 낮은 24.14.0이었다. 테스트·타입 검사·빌드는 통과했지만, Node 24.18.0 CI에서 재확인이 필요하다. 빌드 중 기존 npm audit 경고도 표시되었으나 이번 변경으로 의존성 버전은 변경하지 않았다.
+검증 환경의 Node.js는 저장소 확정 24.18.0보다 낮은 24.14.0이었지만, 최신 원격 CI [#565](https://github.com/team-youngkk/masit-on/actions/runs/31930179789)가 성공해 지정 환경 재확인을 완료했다. 빌드 중 기존 npm audit 경고도 표시되었으나 이번 변경으로 의존성 버전은 변경하지 않았다.
 
 ## 8. 재발 방지 및 다음 확인
 
@@ -127,6 +128,6 @@ related_documents:
 
 ## 10. 남은 사항
 
-- 코드 수정 커밋 `24c9f9f`와 문서 상태 갱신 커밋 `78acc87`을 PR 브랜치에 푸시했고, 현재 PR head는 `78acc87`이다. 코드 수정 head의 CI [#563](https://github.com/team-youngkk/masit-on/actions/runs/31928570274)가 성공했다.
+- 코드 수정과 후속 트러블슈팅 문서 상태 갱신을 PR 브랜치에 푸시했고, 최신 원격 CI [#565](https://github.com/team-youngkk/masit-on/actions/runs/31930179789)가 성공했다.
 - 최초 리뷰 스레드 10건은 원인·변경·검증·이 문서 링크를 답글로 남긴 뒤 모두 해결 처리했다.
 - 현재 PR 기준으로 남은 사항은 없다.
