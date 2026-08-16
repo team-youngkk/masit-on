@@ -43,7 +43,9 @@ export function AdminNavigation() {
           <Link
             key={item.href}
             href={item.href}
-            className={pathname === item.href || pathname.startsWith(`${item.href}/`) ? styles.activeLink : styles.link}
+            className={item.href === '/admin'
+              ? pathname === item.href ? styles.activeLink : styles.link
+              : pathname === item.href || pathname.startsWith(`${item.href}/`) ? styles.activeLink : styles.link}
           >
             {item.label}
           </Link>

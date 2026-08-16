@@ -5,8 +5,10 @@ import styles from '../curations.module.css'
 
 export default function PublicCurationDetailLoading() {
   return (
-    <PageShell className={styles.page} title="큐레이션">
-      <StatePanel compact title="구성 맛집을 확인하고 있습니다" />
-    </PageShell>
+    <div aria-busy="true" aria-live="polite">
+      <PageShell className={styles.page} title="큐레이션">
+        <StatePanel compact title="구성 맛집을 확인하고 있습니다" />
+      </PageShell>
+    </div>
   )
 }

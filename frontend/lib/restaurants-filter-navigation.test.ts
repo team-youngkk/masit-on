@@ -66,6 +66,21 @@ test('반복된 검색 조건은 URLSearchParams.get이 반환하는 첫 값만 
   )
 })
 
+test('다른 필터를 해제할 때 creatorId 앞뒤 공백을 원문 그대로 유지한다', () => {
+  const current = new URLSearchParams(
+    'district=%EC%84%B1%EB%8F%99%EA%B5%AC&creatorId=%20opaque-id%20&size=50',
+  )
+
+  const next = new URL(
+    buildRestaurantFilterClearHref(current, 'district'),
+    'https://example.com',
+  )
+
+  assert.equal(next.searchParams.get('creatorId'), ' opaque-id ')
+  assert.equal(next.searchParams.get('page'), '1')
+  assert.equal(next.searchParams.get('size'), '50')
+})
+
 test('빈 구조화 필터는 전달하지 않고 빈 size는 기본값 20으로 대체한다', () => {
   const current = new URLSearchParams({
     query: '   ',

@@ -53,6 +53,7 @@
 
 .sectionHeader h2,
 .sectionHeader h3 {
+  font-size: var(--font-size-xl);
   line-height: var(--line-height-tight);
 }
 

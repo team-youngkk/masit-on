@@ -84,11 +84,6 @@
   gap: var(--space-4);
 }
 
-.sectionTitle {
-  margin: 0;
-  font-size: var(--font-size-xl);
-}
-
 .emptyState {
   margin: 0;
   padding: var(--space-6) var(--space-4);

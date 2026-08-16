@@ -79,6 +79,10 @@ export function prepareMemberAuthSubmission(values: MemberAuthFormValues): Reado
   }
 }
 
+export function isInvalidMemberCredentialsResponse(reason: unknown): boolean {
+  return reason instanceof Response && reason.status === 401
+}
+
 export function acceptMemberRegistration(email: string): AcceptedMemberRegistration {
   return { email, emailReadOnly: true }
 }

@@ -266,9 +266,7 @@ export function NotificationListScreen() {
       ) : null}
 
       {unauthorized ? (
-        <p role="alert" className={styles.state}>
-          로그인이 필요합니다. <Link href={memberLoginHref(RETURN_TO)}>로그인하기</Link>
-        </p>
+        <StatePanel tone="warning" title="알림은 로그인 후 확인할 수 있습니다." actions={<Link href={memberLoginHref(RETURN_TO)}>로그인하기</Link>} />
       ) : listError ? (
         <p role="alert" className={styles.error}>
           {listError.text}

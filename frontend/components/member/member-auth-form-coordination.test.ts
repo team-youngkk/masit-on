@@ -2,6 +2,7 @@ const memberAuthFormAssert = require('node:assert/strict')
 const memberAuthFormTest = require('node:test')
 const {
   acceptMemberRegistration,
+  isInvalidMemberCredentialsResponse,
   normalizeMemberEmail,
   prepareMemberAuthSubmission,
   resendAcceptedMemberRegistration,
@@ -107,6 +108,12 @@ memberAuthFormTest('로그인은 계정 상태 추론을 막기 위해 비밀번
     passwordConfirmation: '',
     token: '',
   }), {})
+})
+
+memberAuthFormTest('로그인 자격 증명 오류는 401 응답만 입력 오류로 구분한다', () => {
+  memberAuthFormAssert.equal(isInvalidMemberCredentialsResponse(new Response(null, { status: 401 })), true)
+  memberAuthFormAssert.equal(isInvalidMemberCredentialsResponse(new Response(null, { status: 503 })), false)
+  memberAuthFormAssert.equal(isInvalidMemberCredentialsResponse(new Error('network')), false)
 })
 
 memberAuthFormTest('가입 접수 후 입력값이 바뀌어도 재발송은 접수한 이메일을 사용한다', async () => {

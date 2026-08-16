@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { StatePanel } from '@/components/ui/StatePanel'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { aiConfidenceTone } from '@/lib/admin/ai-confidence'
 import { aiExtractionMessageFor, getAiVideoExtraction, retryAiVideoExtraction, reviewAiVideoExtraction, type AiCandidate, type AiExtractionDetail, type AiTagDecision } from '@/lib/admin/ai-video-extractions'
 import { reviewActionsFor, reviewRequest } from '@/lib/admin/ai-video-extractions-coordination'
 
@@ -125,7 +126,7 @@ function CandidateCard({ candidate, tagCode, onTagCodeChange, onSelectForRegistr
     <p>{candidate.label ?? candidate.value ?? candidate.normalizedCode ?? '값 없음'}</p>
     {onSelectForRegistration ? <Button variant="secondary" onClick={onSelectForRegistration}>이 후보로 등록 시작</Button> : null}
     {onTagCodeChange ? <label>태그 코드 보정<input value={tagCode ?? ''} maxLength={64} onChange={(event) => onTagCodeChange(event.target.value)} /></label> : null}
-    <p className={styles.meta}><StatusBadge tone="success">신뢰도 {(candidate.confidence * 100).toFixed(0)}%</StatusBadge> 근거 {evidenceLabel(candidate)}</p>
+    <p className={styles.meta}><StatusBadge tone={aiConfidenceTone(candidate.confidence)}>신뢰도 {(candidate.confidence * 100).toFixed(0)}%</StatusBadge> 근거 {evidenceLabel(candidate)}</p>
   </li>
 }
 

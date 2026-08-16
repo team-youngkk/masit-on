@@ -635,26 +635,29 @@ function CourseProblem({
 
   return (
     <div>
-      <StatePanel
-        title="경로를 만들 수 없습니다"
-        description={<><StatusBadge tone="warning">{categoryLabel}</StatusBadge><p>{outcome.message}</p></>}
-        tone="warning"
-        compact
-        traceId={outcome.traceId}
-      />
-      {selectedRestaurants?.length ? (
-        <>
-          <p className={styles.selectHint}>확인이 필요한 맛집</p>
-          <ol className={styles.selectionList} aria-label="확인이 필요한 맛집 목록">
-            {selectedRestaurants.map((restaurant) => (
-              <li key={restaurant.restaurantId} className={styles.selectionItem}>
-                <span className={styles.selectionOrder}>{restaurant.inputOrder}</span>
-                <p className={styles.selectionName}>{restaurant.name}</p>
-              </li>
-            ))}
-          </ol>
-        </>
-      ) : null}
+      <div role="alert">
+        <StatePanel
+          title="경로를 만들 수 없습니다"
+          description={<><StatusBadge tone="warning">{categoryLabel}</StatusBadge><p>{outcome.message}</p></>}
+          tone="warning"
+          role="presentation"
+          compact
+          traceId={outcome.traceId}
+        />
+        {selectedRestaurants?.length ? (
+          <>
+            <p className={styles.selectHint}>확인이 필요한 맛집</p>
+            <ol className={styles.selectionList} aria-label="확인이 필요한 맛집 목록">
+              {selectedRestaurants.map((restaurant) => (
+                <li key={restaurant.restaurantId} className={styles.selectionItem}>
+                  <span className={styles.selectionOrder}>{restaurant.inputOrder}</span>
+                  <p className={styles.selectionName}>{restaurant.name}</p>
+                </li>
+              ))}
+            </ol>
+          </>
+        ) : null}
+      </div>
       {outcome.kind === 'failure' && !outcome.retryAllowed ? (
         <p className={styles.selectHint} id="course-retry-guidance">
           지금은 다시 시도할 수 없습니다. 잠시 후 다시 방문해 주세요.

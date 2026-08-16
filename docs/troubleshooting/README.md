@@ -10,6 +10,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #217 사용자·관리자 프론트 공통 템플릿 리뷰 반영](pr-217-ui-template-review.md)
 - [PR #214 인기 맛집 쿼리 측정과 스케줄러 격리](pr-214-popular-restaurant-query-count-review.md)
 - [PR #213 자연어 검색 URL 필터 변경 초기화와 빈 결과 조건 제거 계약](pr-213-natural-language-filter-reset-review.md)
 - [PR #212 지도 429 query별 대기·타이머 상한 리뷰 반영](pr-212-map-rate-limit-review.md)

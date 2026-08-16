@@ -20,7 +20,8 @@ function buildRestaurantFilterHref(
   const next = new URLSearchParams()
 
   for (const key of STRUCTURED_FILTER_KEYS) {
-    const value = current.get(key)?.trim()
+    const rawValue = current.get(key)
+    const value = key === 'creatorId' ? rawValue : rawValue?.trim()
     if (!excludedKeys.has(key) && value) {
       next.set(key, value)
     }

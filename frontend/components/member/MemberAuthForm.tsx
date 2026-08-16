@@ -15,6 +15,7 @@ import {
   type MemberAuthMode,
   prepareMemberAuthSubmission,
   resendAcceptedMemberRegistration,
+  isInvalidMemberCredentialsResponse,
 } from './member-auth-form-coordination'
 import styles from './MemberAuthForm.module.css'
 
@@ -34,6 +35,8 @@ const CTA_LABELS: Record<MemberAuthMode, { idle: string; submitting: string }> =
   'confirm-reset': { idle: '비밀번호 변경', submitting: '비밀번호를 변경하는 중...' },
 }
 
+type AuthMessage = { tone: 'success' | 'danger'; text: string } | null
+
 export function MemberAuthForm({ mode, returnTo }: { mode: MemberAuthMode; returnTo?: string | null }) {
   const router = useRouter()
   const passwordHintId = useId()
@@ -41,8 +44,7 @@ export function MemberAuthForm({ mode, returnTo }: { mode: MemberAuthMode; retur
   const [password, setPassword] = useState('')
   const [passwordConfirmation, setPasswordConfirmation] = useState('')
   const [token, setToken] = useState('')
-  const [message, setMessage] = useState<string | null>(null)
-  const [messageTone, setMessageTone] = useState<'success' | 'danger'>('success')
+  const [message, setMessage] = useState<AuthMessage>(null)
   const [submitting, setSubmitting] = useState(false)
   const [registrationAccepted, setRegistrationAccepted] = useState(false)
   const [acceptedRegistration, setAcceptedRegistration] = useState<AcceptedMemberRegistration | null>(null)
@@ -64,8 +66,7 @@ export function MemberAuthForm({ mode, returnTo }: { mode: MemberAuthMode; retur
     })
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) {
-      setMessageTone('danger')
-      setMessage('입력 내용을 확인해 주세요.')
+      setMessage({ tone: 'danger', text: '입력 내용을 확인해 주세요.' })
       return
     }
 
@@ -79,23 +80,27 @@ export function MemberAuthForm({ mode, returnTo }: { mode: MemberAuthMode; retur
         setPasswordConfirmation('')
         setAcceptedRegistration(acceptMemberRegistration(submittedEmail))
         setRegistrationAccepted(true)
-        setMessageTone('success')
-        setMessage('가입 요청을 접수했습니다. 이메일에서 인증 안내를 확인해 주세요.')
+        setMessage({ tone: 'success', text: '가입 요청을 접수했습니다. 이메일에서 인증 안내를 확인해 주세요.' })
       }
-      if (mode === 'request-reset') { await requestPasswordReset(normalizedEmail); setMessageTone('success'); setMessage('비밀번호 재설정 요청을 접수했습니다. 이메일을 확인해 주세요.') }
+      if (mode === 'request-reset') { await requestPasswordReset(normalizedEmail); setMessage({ tone: 'success', text: '비밀번호 재설정 요청을 접수했습니다. 이메일을 확인해 주세요.' }) }
       if (mode === 'confirm-reset') {
         await confirmPasswordReset(token, password)
         setPassword('')
         setPasswordConfirmation('')
-        setMessageTone('success')
-        setMessage('비밀번호를 변경하고 기존 로그인 세션을 종료했습니다. 새 비밀번호로 로그인해 주세요.')
+        setMessage({ tone: 'success', text: '비밀번호를 변경하고 기존 로그인 세션을 종료했습니다. 새 비밀번호로 로그인해 주세요.' })
       }
     } catch (reason) {
-      setMessageTone('danger')
+      const invalidCredentials = isInvalidMemberCredentialsResponse(reason)
       if (mode === 'login') {
-        setMessage('이메일 또는 비밀번호를 확인해 주세요.')
+        setMessage({
+          tone: 'danger',
+          text: invalidCredentials ? '이메일 또는 비밀번호를 확인해 주세요.' : '로그인 요청을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+        })
       } else {
-        setMessage(reason instanceof Response ? '요청을 완료하지 못했습니다. 입력 내용을 확인하고 다시 시도해 주세요.' : '요청을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.')
+        setMessage({
+          tone: 'danger',
+          text: reason instanceof Response ? '요청을 완료하지 못했습니다. 입력 내용을 확인하고 다시 시도해 주세요.' : '요청을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+        })
       }
     } finally { setSubmitting(false) }
   }
@@ -112,11 +117,9 @@ export function MemberAuthForm({ mode, returnTo }: { mode: MemberAuthMode; retur
         acceptedRegistration,
         resendMemberEmailVerification,
       )
-      setMessageTone('success')
-      setMessage('인증 메일 재발송 요청을 접수했습니다. 이메일을 확인해 주세요.')
+      setMessage({ tone: 'success', text: '인증 메일 재발송 요청을 접수했습니다. 이메일을 확인해 주세요.' })
     } catch {
-      setMessageTone('danger')
-      setMessage('재발송 요청을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.')
+      setMessage({ tone: 'danger', text: '재발송 요청을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.' })
     } finally {
       setSubmitting(false)
     }
@@ -135,7 +138,7 @@ export function MemberAuthForm({ mode, returnTo }: { mode: MemberAuthMode; retur
       {mode !== 'login' ? <p id={passwordHintId} className={styles.hint}>비밀번호는 12자 이상 64자 이하로 입력해 주세요.</p> : null}
     </> : null}
     {needsPasswordConfirmation ? <Field label="비밀번호 확인" name="passwordConfirmation" type="password" autoComplete="new-password" value={passwordConfirmation} onChange={event => { setPasswordConfirmation(event.target.value); clearFieldError('passwordConfirmation') }} error={fieldErrors.passwordConfirmation} required /> : null}
-    {message ? <p className={cn(styles.notice, messageTone === 'danger' && styles.noticeDanger)} role="alert">{message}</p> : null}
+    {message ? <p className={cn(styles.notice, message.tone === 'danger' && styles.noticeDanger)} role="alert">{message.text}</p> : null}
     {showSignupInputs || mode !== 'signup' ? <Button type="submit" disabled={submitting}>{submitting ? cta.submitting : cta.idle}</Button> : null}
     {mode === 'signup' && registrationAccepted ? (
       <Link className={styles.textLink} href={memberVerifyEmailHref(returnTo)}>이메일 인증 계속하기</Link>

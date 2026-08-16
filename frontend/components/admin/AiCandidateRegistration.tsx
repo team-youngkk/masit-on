@@ -6,6 +6,7 @@ import { useMutation } from '@tanstack/react-query'
 import { Button } from '@/components/ui/Button'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { adminJson, fieldErrorsFor, messageFor } from '@/lib/admin/api'
+import { aiConfidenceTone } from '@/lib/admin/ai-confidence'
 import {
   addressCandidates,
   buildVisitRelationshipPayload,
@@ -391,7 +392,7 @@ export function AiCandidateRegistration({
               {visitEvidenceCandidates(detail.candidates).map((item, index) => (
                 <li key={`${item.value ?? ''}-${index}`} className={styles.candidate}>
                   <p>{item.value ?? '값 없음'}</p>
-                  <p className={styles.meta}><StatusBadge tone="success">신뢰도 {(item.confidence * 100).toFixed(0)}%</StatusBadge></p>
+                  <p className={styles.meta}><StatusBadge tone={aiConfidenceTone(item.confidence)}>신뢰도 {(item.confidence * 100).toFixed(0)}%</StatusBadge></p>
                 </li>
               ))}
             </ul>

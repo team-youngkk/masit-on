@@ -14,6 +14,7 @@ type StatePanelProps = {
   className?: string
   traceId?: string | null
   headingLevel?: 2 | 3 | 4
+  role?: 'status' | 'alert' | 'presentation'
 }
 
 export function StatePanel({
@@ -26,6 +27,7 @@ export function StatePanel({
   className,
   traceId,
   headingLevel = 2,
+  role,
 }: StatePanelProps) {
   const isAlert = tone === 'danger' || tone === 'warning'
   const Heading = `h${headingLevel}` as 'h2' | 'h3' | 'h4'
@@ -33,7 +35,7 @@ export function StatePanel({
   return (
     <section
       className={cn(styles.panel, styles[tone], compact && styles.compact, className)}
-      role={isAlert ? 'alert' : 'status'}
+      role={role ?? (isAlert ? 'alert' : 'status')}
     >
       {icon != null ? <span className={styles.icon} aria-hidden="true">{icon}</span> : null}
       <div className={styles.content}>
