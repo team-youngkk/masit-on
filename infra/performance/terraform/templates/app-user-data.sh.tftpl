@@ -20,6 +20,7 @@ docker run -d \
   --network host \
   -v /opt/masiton-perf/wiremock:/home/wiremock \
   '${wiremock_image}' \
+  --bind-address 127.0.0.1 \
   --port 8081 \
   --verbose
 
