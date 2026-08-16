@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react'
 
 import { Card } from '@/components/ui/Card'
+import { StatePanel } from '@/components/ui/StatePanel'
 import { isSafeHttpUrl } from '@/lib/api'
 import type { CreatorVideosResponse, FetchCreatorVideosResult } from '@/lib/creators-api'
 import {
@@ -55,20 +56,21 @@ export function CreatorVideosSection({
 
   if (!result.ok) {
     return (
-      <div className={styles.sectionError} role="alert">
-        <p>{result.message}</p>
-        {result.traceId ? (
-          <p className={styles.traceId}>traceId: {result.traceId}</p>
-        ) : null}
-        <button
+      <StatePanel
+        compact
+        tone="danger"
+        title="근거 영상을 불러올 수 없습니다"
+        description={result.message}
+        traceId={result.traceId}
+        actions={<button
           type="button"
           className={styles.retryLink}
           disabled={pending}
           onClick={() => void load(page)}
         >
           다시 시도
-        </button>
-      </div>
+        </button>}
+      />
     )
   }
 
@@ -77,7 +79,7 @@ export function CreatorVideosSection({
   if (items.length === 0) {
     return (
       <>
-        <p className={styles.emptyState}>공개된 근거 영상이 없습니다.</p>
+        <StatePanel compact title="공개된 근거 영상이 없습니다" />
         {pageInfo.totalElements > 0 ? (
           <CreatorPageNav
             page={pageInfo}
@@ -102,6 +104,8 @@ export function CreatorVideosSection({
             <img
               src={video.thumbnailUrl}
               alt={video.title}
+              loading="lazy"
+              decoding="async"
               className={styles.thumbnail}
             />
           ) : null

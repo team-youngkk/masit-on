@@ -7,7 +7,7 @@ import { cn } from '@/lib/cn'
 import styles from './Button.module.css'
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'primary' | 'secondary'
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger'
 }
 
 export function Button({

@@ -1,6 +1,6 @@
 .container {
   position: relative;
-  min-height: 320px;
+  min-height: clamp(22rem, 58vh, 46rem);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -9,7 +9,21 @@
 .map {
   width: 100%;
   height: 100%;
-  min-height: 320px;
+  min-height: clamp(22rem, 58vh, 46rem);
+}
+
+@media (max-width: 389px) {
+  .container,
+  .map {
+    min-height: 20rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .container,
+  .map {
+    min-height: min(68vh, 46rem);
+  }
 }
 
 .overlay {

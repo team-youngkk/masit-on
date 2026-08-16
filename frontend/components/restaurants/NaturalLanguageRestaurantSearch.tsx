@@ -6,6 +6,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { FavoriteButton } from '@/components/personal/FavoriteButton'
 import { Card } from '@/components/ui/Card'
+import { StatePanel } from '@/components/ui/StatePanel'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 import {
   NATURAL_LANGUAGE_EMPTY_MESSAGE,
   NATURAL_LANGUAGE_TAG_LIMIT,
@@ -105,17 +107,18 @@ export function NaturalLanguageRestaurantSearch({ filters, returnTo, structuredF
       {pending ? <p>입력한 조건을 확인하고 있습니다.</p> : null}
       {result ? <>
         <div className={styles.summary}>
-          <p><strong>{result.interpretation.status === 'FAILED' ? '해석 실패' : result.interpretation.status === 'PARTIAL' ? '일부 조건 적용' : '조건 적용 완료'}</strong>{applied.length ? ` · ${applied.join(' / ')}` : ''}</p>
+          <p><strong>{result.interpretation.status === 'FAILED' ? '해석 실패' : result.interpretation.status === 'PARTIAL' ? '일부 조건 적용' : '조건 적용 완료'}</strong></p>
+          {applied.length ? <div className={styles.applied}>{applied.map((condition) => <StatusBadge key={condition} tone="success">{condition}</StatusBadge>)}</div> : null}
           <p>총 {result.results.page.totalElements}건</p>
           {result.interpretation.ignoredConditions.length ? <p>적용하지 않은 조건: {result.interpretation.ignoredConditions.map((item) => item.text).join(', ')}</p> : null}
           {result.interpretation.conflicts.length ? <p>직접 필터 우선: {result.interpretation.conflicts.map((item) => naturalLanguageConditionLabel(item.field.toLowerCase())).join(', ')}</p> : null}
         </div>
-        {result.interpretation.status === 'FAILED' ? <p className={styles.failure}>문장에서 적용할 조건을 찾지 못했습니다. <a href="#structured-restaurant-search">기존 필터 검색으로 이동</a></p> : result.results.items.length === 0 ? <p className={styles.empty}>적용한 조건과 일치하는 맛집이 없습니다. 조건을 바꾸거나 <a href="#structured-restaurant-search">기존 필터 검색으로 이동</a>해 보세요.</p> : <>
+        {result.interpretation.status === 'FAILED' ? <StatePanel compact tone="warning" title="문장에서 적용할 조건을 찾지 못했습니다" description={<>문장을 수정하거나 <a href="#structured-restaurant-search">기존 필터 검색</a>을 이용해 보세요.</>} /> : result.results.items.length === 0 ? <StatePanel compact title="적용한 조건과 일치하는 맛집이 없습니다" description={<>문장·직접 필터·태그를 바꾸거나 <a href="#structured-restaurant-search">기존 필터 검색</a>을 이용해 보세요.</>} /> : <>
           <ul className={styles.results}>{result.results.items.map((restaurant) => <li key={restaurant.id}><Card title={<Link href={`/restaurants/${encodeURIComponent(restaurant.id)}`}>{restaurant.name}</Link>} level={3} meta={`${restaurant.district} · ${restaurant.category}`}><FavoriteButton restaurantId={restaurant.id} restaurantName={restaurant.name} returnTo={returnTo} />{restaurant.visitedBy.length ? <p className={styles.visitedBy}>방문 유튜버 {restaurant.visitedBy.map((creator) => creator.channelName).join(', ')}{restaurant.remainingVisitedByCount > 0 ? ` 외 ${restaurant.remainingVisitedByCount}명` : ''}</p> : null}</Card></li>)}</ul>
           {result.results.page.totalPages > 1 ? <nav className={styles.pagination} aria-label="자연어 검색 결과 페이지"><Button type="button" variant="secondary" disabled={pending || result.results.page.number <= 1} onClick={() => void submit(last.current.sentence, result.results.page.number - 1, last.current.filters)}>이전</Button><span>{result.results.page.number} / {result.results.page.totalPages}</span><Button type="button" variant="secondary" disabled={pending || !result.results.page.hasNext} onClick={() => void submit(last.current.sentence, result.results.page.number + 1, last.current.filters)}>다음</Button></nav> : null}
         </>}
       </> : null}
-      {outcome && outcome.kind !== 'success' ? <div className={styles.failure} role="alert"><p>{outcome.message}</p>{outcome.kind === 'invalid' && outcome.fieldGuidance.length ? <ul className={styles.guidance}>{outcome.fieldGuidance.map((item, index) => <li key={`${index}-${item.label}`}>{item.label}: {item.reason}</li>)}</ul> : null}{outcome.traceId ? <p className={styles.traceId}>traceId: {outcome.traceId}</p> : null}{isNaturalLanguageRetryAllowed(outcome) ? <Button type="button" variant="secondary" onClick={() => void submit(last.current.sentence, last.current.page, last.current.filters)} disabled={pending || retryBlocked}>{retryBlocked ? '잠시 후 다시 시도' : '다시 시도'}</Button> : null}<p><a href="#structured-restaurant-search">기존 필터 검색으로 이동</a></p></div> : null}
+      {outcome && outcome.kind !== 'success' ? <StatePanel tone="danger" title="검색 조건을 확인해 주세요" description={<><p>{outcome.message}</p>{outcome.kind === 'invalid' && outcome.fieldGuidance.length ? <ul className={styles.guidance}>{outcome.fieldGuidance.map((item, index) => <li key={`${index}-${item.label}`}>{item.label}: {item.reason}</li>)}</ul> : null}<p><a href="#structured-restaurant-search">기존 필터 검색으로 이동</a></p></>} traceId={outcome.traceId} actions={isNaturalLanguageRetryAllowed(outcome) ? <Button type="button" variant="secondary" onClick={() => void submit(last.current.sentence, last.current.page, last.current.filters)} disabled={pending || retryBlocked}>{retryBlocked ? '잠시 후 다시 시도' : '다시 시도'}</Button> : null} /> : null}
     </div>
   </section>
 }

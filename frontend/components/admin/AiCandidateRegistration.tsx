@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 
 import { Button } from '@/components/ui/Button'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 import { adminJson, fieldErrorsFor, messageFor } from '@/lib/admin/api'
+import { aiConfidenceTone } from '@/lib/admin/ai-confidence'
 import {
   addressCandidates,
   buildVisitRelationshipPayload,
@@ -239,8 +241,8 @@ export function AiCandidateRegistration({
       <p className={styles.meta}>선택한 후보: {candidate.value ?? '값 없음'}</p>
       <ul className={styles.actions}>
         {progress.map((item) => (
-          <li key={item.label} className={styles.badge}>
-            {item.done ? '완료' : '대기'} · {item.label}
+          <li key={item.label}>
+            <StatusBadge tone={item.done ? 'success' : 'neutral'}>{item.done ? '완료' : '대기'} · {item.label}</StatusBadge>
           </li>
         ))}
       </ul>
@@ -390,7 +392,7 @@ export function AiCandidateRegistration({
               {visitEvidenceCandidates(detail.candidates).map((item, index) => (
                 <li key={`${item.value ?? ''}-${index}`} className={styles.candidate}>
                   <p>{item.value ?? '값 없음'}</p>
-                  <p className={styles.meta}>신뢰도 {(item.confidence * 100).toFixed(0)}%</p>
+                  <p className={styles.meta}><StatusBadge tone={aiConfidenceTone(item.confidence)}>신뢰도 {(item.confidence * 100).toFixed(0)}%</StatusBadge></p>
                 </li>
               ))}
             </ul>

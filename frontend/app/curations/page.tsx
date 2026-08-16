@@ -1,6 +1,9 @@
 import Link from 'next/link'
 
 import { Card } from '@/components/ui/Card'
+import { PageShell } from '@/components/ui/PageShell'
+import { StatePanel } from '@/components/ui/StatePanel'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 import { fetchPublicCurations } from '@/lib/curations-api'
 
 import styles from './curations.module.css'
@@ -12,22 +15,21 @@ export default async function PublicCurationsPage() {
   const result = await fetchPublicCurations()
 
   return (
-    <section className={styles.page}>
-      <header className={styles.pageHeader}>
-        <h1>큐레이션</h1>
-        <p>관리자가 직접 고른 주제별 맛집을 만나보세요.</p>
-      </header>
+    <PageShell
+      className={styles.page}
+      title="큐레이션"
+      description="관리자가 직접 고른 주제별 맛집을 만나보세요."
+    >
 
       {!result.ok ? (
         <ErrorState message={result.message} traceId={result.traceId} />
       ) : result.data.items.length === 0 ? (
-        <div className={styles.state}>
-          <h2>게시 중인 큐레이션이 없습니다</h2>
-          <p>새로운 큐레이션이 준비되면 이곳에서 소개할게요.</p>
-          <Link href="/restaurants" className={styles.actionLink}>
-            맛집 탐색하기
-          </Link>
-        </div>
+        <StatePanel
+          title="게시 중인 큐레이션이 없습니다"
+          description="새로운 큐레이션이 준비되면 이곳에서 소개할게요."
+          compact
+          actions={<Link href="/restaurants" className={styles.actionLink}>맛집 탐색하기</Link>}
+        />
       ) : (
         <ul className={styles.curationList}>
           {result.data.items.map((curation) => {
@@ -47,6 +49,7 @@ export default async function PublicCurationsPage() {
                   level={2}
                 >
                   <p className={styles.description}>{curation.description}</p>
+                  <StatusBadge tone="success">공개</StatusBadge>
                   {previewItems.length === 0 ? (
                     <p className={styles.emptyPreview}>현재 공개 중인 구성 맛집이 없습니다.</p>
                   ) : (
@@ -74,17 +77,18 @@ export default async function PublicCurationsPage() {
           })}
         </ul>
       )}
-    </section>
+    </PageShell>
   )
 }
 
 function ErrorState({ message, traceId }: { message: string; traceId?: string }) {
   return (
-    <div className={styles.state} role="alert">
-      <h2>큐레이션을 불러올 수 없습니다</h2>
-      <p>{message}</p>
-      {traceId ? <p className={styles.traceId}>traceId: {traceId}</p> : null}
-      <RetryButton />
-    </div>
+    <StatePanel
+      title="큐레이션을 불러올 수 없습니다"
+      description={message}
+      tone="danger"
+      traceId={traceId}
+      actions={<RetryButton />}
+    />
   )
 }

@@ -22,6 +22,12 @@
   gap: var(--space-3);
 }
 
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
 .eyebrow {
   margin: 0;
   color: var(--color-primary-strong);
@@ -47,6 +53,7 @@
 .help {
   margin: 0;
   color: var(--color-text-muted);
+  overflow-wrap: anywhere;
 }
 
 .help,
@@ -90,7 +97,7 @@
   min-height: var(--control-min-height);
   padding: 0 var(--space-4);
   border-radius: var(--radius-md);
-  background: var(--color-primary);
+  background: var(--color-primary-deep);
   color: var(--color-text-on-primary);
   font-weight: 600;
   text-decoration: none;
@@ -104,5 +111,10 @@
 @media (max-width: 640px) {
   .card {
     padding: var(--space-4);
+  }
+
+  .form > button,
+  .loginLink {
+    width: 100%;
   }
 }

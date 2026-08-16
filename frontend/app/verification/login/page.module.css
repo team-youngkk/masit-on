@@ -47,3 +47,19 @@
   color: var(--color-danger);
   line-height: 1.5;
 }
+
+@media (max-width: 480px) {
+  .page {
+    min-height: 0;
+    padding: var(--space-4) 0;
+  }
+
+  .card {
+    gap: var(--space-4);
+    padding: var(--space-4);
+  }
+
+  .form > button {
+    width: 100%;
+  }
+}

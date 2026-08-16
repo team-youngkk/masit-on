@@ -1,9 +1,9 @@
-.screen { display: grid; gap: var(--space-6); }
+.screen { display: grid; min-width: 0; gap: var(--space-6); }
 .intro, .muted { margin: 0; color: var(--color-text-muted); }
 .tabs { display: flex; gap: var(--space-2); border-bottom: 1px solid var(--color-border); }
-.tabs button { min-height: var(--control-min-height); padding: 0 var(--space-6); border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--color-text-muted); cursor: pointer; }
+.tabs button { min-width: 0; min-height: var(--control-min-height); padding: 0 var(--space-6); border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--color-text-muted); cursor: pointer; }
 .tabs button[aria-selected='true'] { border-color: var(--color-primary-strong); color: var(--color-primary-strong); font-weight: 700; }
-.queue, .detail { padding: var(--space-6); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
+.queue, .detail { min-width: 0; padding: var(--space-6); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
 .filters, .pagination, .actions { display: flex; align-items: end; flex-wrap: wrap; gap: var(--space-3); }
 .filters label, .reviewForm label, .completion label { display: grid; gap: var(--space-2); font-size: var(--font-size-sm); font-weight: 600; }
 .filters select, .reviewForm select, .reviewForm input, .reviewForm textarea { min-height: var(--control-min-height); padding: var(--space-2) var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); font: inherit; }
@@ -33,11 +33,12 @@
 .history ol { display: grid; gap: var(--space-3); padding-left: var(--space-6); }
 .history li { display: grid; gap: var(--space-1); }
 .history li span { color: var(--color-text-muted); font-size: var(--font-size-sm); overflow-wrap: anywhere; }
-.notice { margin: 0; color: var(--color-text-muted); }
-.error { margin: 0; color: var(--color-danger); }
+.notice { margin: 0; color: var(--color-text-muted); overflow-wrap: anywhere; }
+.error { margin: 0; color: var(--color-danger); overflow-wrap: anywhere; }
 
 @media (max-width: 640px) {
   .queue, .detail { padding: var(--space-4); }
   .filters { align-items: stretch; flex-direction: column; }
   .metadata div { grid-template-columns: 1fr; gap: 0; }
+  .tabs button { flex: 1 1 0; padding: 0 var(--space-3); }
 }

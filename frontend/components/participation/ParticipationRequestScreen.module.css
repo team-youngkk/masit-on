@@ -1,13 +1,25 @@
-.screen { display: grid; gap: 2rem; }
-.tabs, .filters, .actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
-.tabs button[aria-selected='true'] { font-weight: 700; text-decoration: underline; }
-.form { display: grid; gap: 1rem; max-width: 48rem; padding: 1.25rem; border: 1px solid #ddd; border-radius: 12px; }
-.form label { display: grid; gap: .4rem; }
-.form input, .form select, .form textarea { width: 100%; padding: .7rem; border: 1px solid #aaa; border-radius: 8px; font: inherit; }
-.list { display: grid; gap: .75rem; padding: 0; list-style: none; }
-.item { width: 100%; text-align: left; padding: 1rem; border: 1px solid #ddd; border-radius: 10px; background: #fff; }
-.detail { padding: 1rem; border-left: 4px solid #1f8f55; background: #f5faf7; overflow-wrap: anywhere; }
-.error { color: #a01818; }
-.muted { color: #555; }
-.tabpanel { display: grid; gap: 2rem; }
-.traceId { display: block; color: #555; font-size: .85rem; overflow-wrap: anywhere; }
+.screen { display: grid; gap: var(--space-6); max-width: 880px; margin: 0 auto; }
+.tabs, .filters, .actions { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+.tabs button { min-height: var(--control-min-height); padding: 0 var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); cursor: pointer; }
+.tabs button[aria-selected='true'] { border-color: var(--color-primary); background: var(--color-primary-soft); color: var(--color-primary-strong); font-weight: 700; }
+.form { display: grid; gap: var(--space-4); max-width: 48rem; padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-card); }
+.form label { display: grid; gap: var(--space-2); font-weight: 600; }
+.form input, .form select, .form textarea { width: 100%; min-height: var(--control-min-height); padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); font: inherit; }
+.form textarea { min-height: 9rem; resize: vertical; }
+.list { display: grid; gap: var(--space-3); padding: 0; list-style: none; }
+.item { width: 100%; padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); color: var(--color-text); text-align: left; overflow-wrap: anywhere; cursor: pointer; }
+.detail { padding: var(--space-4); border-left: 4px solid var(--color-primary-strong); border-radius: var(--radius-md); background: var(--color-primary-faint); overflow-wrap: anywhere; }
+.error { color: var(--color-danger); overflow-wrap: anywhere; }
+.muted { color: var(--color-text-muted); }
+.tabpanel { display: grid; gap: var(--space-8); }
+.traceId { display: block; color: var(--color-text-muted); font-size: var(--font-size-sm); overflow-wrap: anywhere; }
+
+@media (max-width: 480px) {
+  .tabs > button,
+  .filters > label,
+  .filters > button,
+  .form > button,
+  .actions > button { flex: 1 1 100%; width: 100%; }
+
+  .form { padding: var(--space-4); }
+}

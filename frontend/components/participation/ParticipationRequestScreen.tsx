@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useMemberSession } from '@/components/member/MemberSessionProvider'
 import { Button } from '@/components/ui/Button'
+import { PageShell, SectionHeader } from '@/components/ui/PageShell'
+import { StatePanel } from '@/components/ui/StatePanel'
 import { memberLoginHref } from '@/lib/member/auth-navigation'
 import {
   ContractError,
@@ -227,19 +229,12 @@ export function ParticipationRequestScreen() {
     }
   }
 
-  if (session === 'loading') return <p role="status">로그인 상태를 확인하고 있습니다.</p>
+  if (session === 'loading') return <PageShell title="제보·신고"><StatePanel title="로그인 상태를 확인하고 있습니다." /></PageShell>
   if (session === 'anonymous') return (
-    <p role="alert">
-      제보와 신고는 로그인 후 이용할 수 있습니다.{' '}
-      <Link href={memberLoginHref(RETURN_TO)}>로그인하기</Link>
-    </p>
+    <PageShell title="제보·신고"><StatePanel tone="warning" title="제보와 신고는 로그인 후 이용할 수 있습니다." actions={<Link href={memberLoginHref(RETURN_TO)}>로그인하기</Link>} /></PageShell>
   )
 
-  return <section className={styles.screen}>
-    <header>
-      <h1>내 제보·신고</h1>
-      <p>새 정보는 제보하고, 기존 정보의 문제는 신고해 주세요. 하루 합산 5건까지 접수할 수 있습니다.</p>
-    </header>
+  return <PageShell className={styles.screen} title="내 제보·신고" description="새 정보는 제보하고, 기존 정보의 문제는 신고해 주세요. 하루 합산 5건까지 접수할 수 있습니다.">
 
     <div className={styles.tabs} role="tablist" aria-label="요청 종류" onKeyDown={handleTabListKeyDown}>
       <button id="tab-submission" ref={submissionTabRef} type="button" role="tab" aria-selected={kind === 'submission'} aria-controls="participation-tabpanel" onClick={() => switchTab('submission')}>제보: 새 정보 제안</button>
@@ -248,7 +243,7 @@ export function ParticipationRequestScreen() {
 
     <div id="participation-tabpanel" role="tabpanel" aria-labelledby={kind === 'submission' ? 'tab-submission' : 'tab-report'} className={styles.tabpanel}>
     <form className={styles.form} onSubmit={event => void submit(event)}>
-      <h2>{kind === 'submission' ? '새 제보 접수' : '새 신고 접수'}</h2>
+      <SectionHeader title={kind === 'submission' ? '새 제보 접수' : '새 신고 접수'} level={2} />
       <label>대상 유형
         <select value={targetType} onChange={event => changeTarget(event.target.value as TargetType)}>
           {TARGETS.map(value => <option key={value}>{value}</option>)}
@@ -342,5 +337,5 @@ export function ParticipationRequestScreen() {
       {message}
       {errorTraceId ? <span className={styles.traceId}>traceId: {errorTraceId}</span> : null}
     </p> : null}
-  </section>
+    </PageShell>
 }

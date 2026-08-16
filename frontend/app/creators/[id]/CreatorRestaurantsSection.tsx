@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useCallback, useState } from 'react'
 
 import { Card } from '@/components/ui/Card'
+import { StatePanel } from '@/components/ui/StatePanel'
 import type { CreatorRestaurantsResponse, FetchCreatorRestaurantsResult } from '@/lib/creators-api'
 import {
   loadCreatorListPage,
@@ -64,20 +65,21 @@ export function CreatorRestaurantsSection({
 
   if (!result.ok) {
     return (
-      <div className={styles.sectionError} role="alert">
-        <p>{result.message}</p>
-        {result.traceId ? (
-          <p className={styles.traceId}>traceId: {result.traceId}</p>
-        ) : null}
-        <button
+      <StatePanel
+        compact
+        tone="danger"
+        title="방문 맛집을 불러올 수 없습니다"
+        description={result.message}
+        traceId={result.traceId}
+        actions={<button
           type="button"
           className={styles.retryLink}
           disabled={pending}
           onClick={() => void load(page)}
         >
           다시 시도
-        </button>
-      </div>
+        </button>}
+      />
     )
   }
 
@@ -86,7 +88,7 @@ export function CreatorRestaurantsSection({
   if (items.length === 0) {
     return (
       <>
-        <p className={styles.emptyState}>공개된 방문 맛집이 없습니다.</p>
+        <StatePanel compact title="공개된 방문 맛집이 없습니다" />
         {pageInfo.totalElements > 0 ? (
           <CreatorPageNav
             page={pageInfo}

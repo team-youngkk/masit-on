@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 
+import { PageShell } from '@/components/ui/PageShell'
+
 import { CourseScreen } from './CourseScreen'
 import styles from './course.module.css'
 
@@ -15,15 +17,13 @@ export const metadata: Metadata = {
  */
 export default function CoursePage() {
   return (
-    <section className={styles.page}>
-      <header className={styles.pageHeader}>
-        <h1>맛집 코스</h1>
-        <p>
-          첫 맛집을 출발점으로 자동차 이동 순서를 제안합니다. 현재 위치·영업시간·실시간 교통은
-          사용하지 않습니다.
-        </p>
-      </header>
+    <PageShell
+      className={styles.page}
+      eyebrow="자동차 이동 코스"
+      title="맛집 코스"
+      description="2~5곳을 선택하면 첫 맛집을 출발점으로 자동차 이동 순서를 제안합니다."
+    >
       <CourseScreen />
-    </section>
+    </PageShell>
   )
 }
