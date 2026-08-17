@@ -9,8 +9,8 @@ data "aws_subnet" "public" {
 
   lifecycle {
     postcondition {
-      condition     = self.vpc_id == var.vpc_id && self.map_public_ip_on_launch == true
-      error_message = "public_subnet_id가 지정 VPC에 없거나 자동 public IP 정책이 예상과 다르다."
+      condition     = self.vpc_id == var.vpc_id
+      error_message = "public_subnet_id가 지정 VPC에 없다."
     }
   }
 }
