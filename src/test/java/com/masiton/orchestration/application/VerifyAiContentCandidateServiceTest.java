@@ -87,20 +87,21 @@ class VerifyAiContentCandidateServiceTest {
     }
 
     @Test
-    @DisplayName("유효한 TEXT_RANGE 실제 방문 근거도 확정 결과에 포함한다")
-    void verify_유효한텍스트근거_확정결과를조합한다() {
+    @DisplayName("형식이 유효해도 TEXT_RANGE 실제 방문 근거는 확정하지 않는다")
+    void verify_유효한텍스트근거_확정하지않는다() {
         given(restaurantReference.resolve(anyString(), anyString(), any(), anyString()))
                 .willReturn(Optional.of(restaurant()));
         given(videoVerification.resolve(any())).willReturn(Optional.of(video()));
 
         var result = service.verify(command("제가 맛집을 직접 방문했습니다", textRange()));
 
-        assertThat(result.isVerified()).isTrue();
+        assertThat(result.isVerified()).isFalse();
+        assertThat(result.failureReason()).isEqualTo("VISIT_EVIDENCE_REQUIRED");
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"제가 맛집을 직접 방문했습니다.", "제가 맛집에 다녀왔습니다", "i 맛집 visited", "we 맛집 visited",
-            "맛집을 방문했습니다", "이 맛집에 다녀왔습니다"})
+            "맛집을 방문했습니다", "이 맛집에 다녀왔습니다", "채널이 맛집을 방문했다"})
     @DisplayName("1인칭 또는 명시적 맛집 대상의 실제 방문 주장도 확정한다")
     void verify_자연스러운실제방문주장_확정결과를조합한다(String value) {
         given(restaurantReference.resolve(anyString(), anyString(), any(), anyString()))
@@ -133,7 +134,10 @@ class VerifyAiContentCandidateServiceTest {
             "impostor 맛집 visited", "weird 맛집 wentthere",
             "제가 맛집이 아닌 곳을 방문했습니다", "제가 맛집이 아니라 다른 곳에 다녀왔습니다",
             "제가 맛집을 제외하고 다른 곳을 방문했습니다",
-            "저는 진짜 이집이 맛있어서 직접 방문했습니다"})
+            "저는 진짜 이집이 맛있어서 직접 방문했습니다", "맛집을 주문했다",
+            "맛집에서 배달 주문했다", "맛집에서 포장 구매했다", "맛집 음식을 먹었다",
+            "맛집에서 친구가 방문했다", "채가 맛집을 방문했다", "제가 맛집을 방문하고 싶었습니다",
+            "맛집에서 주문하려고 합니다"})
     @DisplayName("언급·추천·추정·부정·의문·가정 방문 후보는 확정하지 않는다")
     void verify_확정할수없는방문후보_확정하지않는다(String value) {
         given(restaurantReference.resolve(anyString(), anyString(), any(), anyString()))

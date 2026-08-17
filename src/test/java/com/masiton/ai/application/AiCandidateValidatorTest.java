@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import com.masiton.ai.application.AiCandidateValidationResult.Decision;
 import com.masiton.ai.application.AiCandidateValidationResult.Candidate;
 import com.masiton.ai.application.AiCandidateValidationResult.Evidence;
+import com.masiton.ai.application.AiCandidateValidationResult.ValidationIssue;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -73,8 +74,8 @@ class AiCandidateValidatorTest {
     }
 
     @Test
-    @DisplayName("방문 근거가 유효한 텍스트 구간이면 자동 확정 가능으로 판정한다")
-    void validate_방문근거가유효한텍스트구간이면_자동확정가능으로판정한다() throws Exception {
+    @DisplayName("방문 근거가 텍스트 구간이면 자동 확정을 차단한다")
+    void validate_방문근거가텍스트구간이면_자동확정을차단한다() throws Exception {
         // Given
         JsonNode payload = payload("""
                 {
@@ -93,8 +94,10 @@ class AiCandidateValidatorTest {
         AiCandidateValidationResult result = validator.validate(payload);
 
         // Then
-        assertThat(result.decision()).isEqualTo(Decision.AUTO_CONFIRMED);
-        assertThat(result.isAutoConfirmable()).isTrue();
+        assertThat(result.decision()).isEqualTo(Decision.AUTO_BLOCKED);
+        assertThat(result.isAutoConfirmable()).isFalse();
+        assertThat(result.issues()).extracting(ValidationIssue::code)
+                .contains("VISIT_EVIDENCE_REQUIRED");
     }
 
     @Test
