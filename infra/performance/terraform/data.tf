@@ -6,6 +6,13 @@ data "aws_vpc" "existing" {
 
 data "aws_subnet" "public" {
   id = var.public_subnet_id
+
+  lifecycle {
+    postcondition {
+      condition     = self.vpc_id == var.vpc_id
+      error_message = "public_subnet_id가 지정 VPC에 속하지 않는다."
+    }
+  }
 }
 
 data "aws_route_table" "public" {
@@ -25,6 +32,13 @@ data "aws_route_table" "public" {
 data "aws_subnet" "private" {
   for_each = toset(var.private_subnet_ids)
   id       = each.value
+
+  lifecycle {
+    postcondition {
+      condition     = self.vpc_id == var.vpc_id
+      error_message = "private_subnet_ids에 지정 VPC 외 subnet이 포함됐다."
+    }
+  }
 }
 
 data "aws_route_table" "private" {
