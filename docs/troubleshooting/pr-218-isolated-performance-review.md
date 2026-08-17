@@ -51,6 +51,8 @@ related_documents:
 | [3793683608](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3793683608) | 정상 20 RPS 완료 후 문서의 미측정 상태 잔존 | 문서 계약 정합성 | 수정 필요 | 정상 부하를 `Verified`로 통일하고 최대 80 RPS만 정식 판정 보류로 분리 | 정본 결과·2차/3차 테스트 문서·ADR 추적표 대조 |
 | [3793783777](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3793783777) | public subnet 검증이 private subnet을 허용 | 인프라·네트워크 정합성 | 수정 필요 | subnet별 route table을 조회해 public은 IGW 기본 경로를, private은 IGW 기본 경로 부재를 검증 | `data.tf`·README 대조; Terraform 실행 파일 부재로 validate 미실행 |
 | [3793818107](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3793818107) | subnet과 VPC 소속 관계 검증 누락 | 인프라·네트워크 경계 | 수정 필요 | public/private `aws_subnet` data source에 입력 VPC 소속 postcondition 추가 | `data.tf`·VPC 변수 대조; Terraform 실행 파일 부재로 validate 미실행 |
+| [3793953578](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3793953578) | 증적 manifest의 15개 파일 SHA-256·aggregate 불일치 | 검증·문서 계약 | 수정 필요 | PR HEAD에서 PowerShell/.NET SHA-256으로 15개 항목과 aggregate를 재계산하고 최종 게이트 fingerprint를 동기화 | aggregate `2b15e9c4cb7a2fca3773c3a61279bad9d98405eeda3454d688b7d6c63c0afa24`; verify 스크립트 재실행 |
+| [3793953582](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3793953582) | route의 nullable `gateway_id`에 `coalesce(..., "")` 사용 | 인프라·Terraform 표현식 | 수정 필요 | null-safe conditional로 교체해 NAT·peering·TGW 등 gateway_id가 비어 있는 route도 검증 단계에서 오류 없이 처리 | `data.tf` 양쪽 route table 조건 대조; Terraform `validate` 재실행 필요 |
 
 ## 3. 문제 현상과 발생 조건
 
@@ -63,7 +65,7 @@ related_documents:
 
 ## 4. 근본 원인
 
-Terraform 구성과 성능 결과 문서가 서로 다른 실행 기준을 가리켰다. 템플릿 변수는 본문 사용 여부를 확인하지 않고 복사됐고, public/private subnet postcondition은 복사 과정에서 boolean이 뒤집히지 않았다. Terraform/provider 제약은 검증 버전보다 넓었고 팀이 사용할 실행 기준 파일도 없었다. loadgen 사양과 WireMock 이미지 기본값은 실제 arm64 실행 결과와 동기화되지 않았다. WireMock fixture 전달·로드 확인 단계가 없었고, 전체 파일 검증 없이 대표 파일 두 개만 확인했으며, 실행 옵션에는 애플리케이션의 loopback 접근 의도가 반영되지 않았다. RDS 이름 precondition은 실행별 prefix 규칙을 고려하지 않아 항상 참이었으며, KMS 정책은 alias ARN을 key ARN 위치에 사용했다.
+Terraform 구성과 성능 결과 문서가 서로 다른 실행 기준을 가리켰다. 증적 manifest는 파일별 해시와 aggregate를 수동으로 수정하는 과정에서 실제 HEAD와 어긋났고, route table 검증은 nullable `gateway_id`에 빈 문자열을 넣기 위해 `coalesce`를 사용했다. 템플릿 변수는 본문 사용 여부를 확인하지 않고 복사됐고, public/private subnet postcondition은 복사 과정에서 boolean이 뒤집히지 않았다. Terraform/provider 제약은 검증 버전보다 넓었고 팀이 사용할 실행 기준 파일도 없었다. loadgen 사양과 WireMock 이미지 기본값은 실제 arm64 실행 결과와 동기화되지 않았다. WireMock fixture 전달·로드 확인 단계가 없었고, 전체 파일 검증 없이 대표 파일 두 개만 확인했으며, 실행 옵션에는 애플리케이션의 loopback 접근 의도가 반영되지 않았다. RDS 이름 precondition은 실행별 prefix 규칙을 고려하지 않아 항상 참이었으며, KMS 정책은 alias ARN을 key ARN 위치에 사용했다.
 
 성능 문서는 격리 실행 결과를 기록하면서 정본 문서와 상태를 갱신하지 않아 `통과`와 `Not Measured`가 동시에 남았다. 공개 저장소 증적 보호 규칙과 실행 식별자 마스킹도 결과 문서에 적용되지 않았다.
 
@@ -73,7 +75,7 @@ Terraform 도입과 egress 축소는 코드 오류가 아니라 팀 운영·보�
 
 | 확인하거나 시도한 방법 | 결과 | 판단과 다음 단계 |
 |---|---|---|
-| PR review thread와 PR diff 대조 | 초기 13개와 후속 13개 확인 | 23개는 코드·문서로 처리하고, 후속 팀 결정 2건을 ADR·보안 그룹·문서에 반영 |
+| PR review thread와 PR diff 대조 | 초기 13개와 후속 15개 확인 | 25개는 코드·문서로 처리하고, 후속 팀 결정 2건을 ADR·보안 그룹·문서에 반영 |
 | 기존 `docs/troubleshooting` 검색 | PR #208·#214의 성능 추적성 기록 확인 | 기존 기록의 증거·지표 기록 방식을 재사용하고 새 사건으로 기록 |
 | `rg`로 AWS command/instance ID 검색 | 결과 문서와 README에 원문 식별자 확인 | 공개 문서의 식별자를 placeholder로 교체 |
 | `git diff --check` | 통과 | whitespace 오류 없음 |
@@ -83,7 +85,7 @@ Terraform 도입과 egress 축소는 코드 오류가 아니라 팀 운영·보�
 
 ## 6. 최종 해결
 
-- 변경 내용: Terraform 입력·버전·이미지·사양·public/private subnet의 VPC 소속·route table 검증·dead code 수정, KMS key ARN 권한 수정, 커밋 고정·체크섬 검증 WireMock fixture 배포와 loopback 바인딩, 제한된 egress 규칙, rate-limit helper 공통화, 정상 부하 `Verified`와 최대 부하 보류 상태로 성능 추적 문서 동기화, AWS 실행 식별자 마스킹, S3+DynamoDB backend 설계와 Accepted ADR 반영, ADR 승인자와 팀 결정 근거 링크 기록.
+- 변경 내용: Terraform 입력·버전·이미지·사양·public/private subnet의 VPC 소속·route table 검증·nullable route gateway 처리·dead code 수정, KMS key ARN 권한 수정, 커밋 고정·체크섬 검증 WireMock fixture 배포와 loopback 바인딩, 제한된 egress 규칙, rate-limit helper 공통화, 정상 부하 `Verified`와 최대 부하 보류 상태로 성능 추적 문서 동기화, AWS 실행 식별자 마스킹, S3+DynamoDB backend 설계와 Accepted ADR 반영, ADR 승인자와 팀 결정 근거 링크 기록.
 - 선택 이유: 확인 가능한 실행 결과와 현재 계약에 맞추고, 팀이 승인한 Terraform 도입·egress 정책을 코드·ADR·실행 문서에 일치시키기 위해서다.
 - 변경 파일: `infra/performance/terraform/`, `infra/performance/README.md`, `perf/k6/third-expansion-load.js`, `docs/08-planning/`, `docs/07-adr/`, `docs/troubleshooting/`, `.gitignore`
 - 고려한 대안: backend가 팀에 이미 존재한다고 가정하지 않고 bucket/table 제안 이름과 bootstrap 조건을 명시했다. egress는 전체 outbound 유지안과 비교한 뒤 팀 승인에 따라 축소안을 적용했다.
@@ -99,11 +101,12 @@ Terraform 도입과 egress 축소는 코드 오류가 아니라 팀 운영·보�
 | Terraform 실행 버전 기준 대조 | 통과 | `versions.tf`, `.terraform.lock.hcl`, `.terraform-version`, ADR, README가 각각 `1.6.6`·`5.100.0`을 가리킴 |
 | `terraform fmt -check` | 미실행 | Terraform 실행 파일 부재 |
 | `terraform validate` | 미실행 | Terraform 실행 파일 부재 및 AWS backend 리소스 미확인 |
+| PR HEAD 증적 manifest 재계산 | 통과 | 15개 파일 SHA-256과 LF-joined aggregate를 PowerShell/.NET으로 재계산; aggregate `2b15e9c4cb7a2fca3773c3a61279bad9d98405eeda3454d688b7d6c63c0afa24`로 최종 게이트 fingerprint와 일치 |
 | 전체 Gradle build | 미실행 | 이번 변경은 Java·Gradle 코드가 아니며 Terraform/k6 검증 환경이 별도로 필요 |
 
 ## 8. 재발 방지 및 다음 확인
 
-- 재발 방지: Terraform backend 선언·예시 설정·state 보안 조건을 문서화하고, 결과 문서의 정본 상태·실행 증거·공개 식별자 보호 규칙을 함께 갱신했다. Accepted ADR 전환 시 `status`, `reviewers`, 승인 근거 링크를 함께 확인하고, 성능 측정 상태를 갱신할 때 2차·3차 추적표와 정본 결과의 정상/최대 부하 상태를 함께 대조하고, subnet 입력을 받을 때 VPC 소속과 route table의 IGW 기본 경로를 함께 검증한다.
+- 재발 방지: Terraform backend 선언·예시 설정·state 보안 조건을 문서화하고, 결과 문서의 정본 상태·실행 증거·공개 식별자 보호 규칙을 함께 갱신했다. Accepted ADR 전환 시 `status`, `reviewers`, 승인 근거 링크를 함께 확인하고, 성능 측정 상태를 갱신할 때 2차·3차 추적표와 정본 결과의 정상/최대 부하 상태를 함께 대조하고, subnet 입력을 받을 때 VPC 소속과 route table의 IGW 기본 경로를 함께 검증한다. 증적 manifest는 수동 해시를 편집하지 않고 HEAD의 실제 파일에서 재생성하며, Terraform route 검증에서는 nullable provider attribute에 `coalesce(..., "")`를 사용하지 않는다.
 - 다음 확인: 이우람이 AWS role로 backend bucket/table을 bootstrap한 뒤 `terraform init -backend-config=backend.hcl`, `terraform fmt -check`, `terraform validate`, `terraform plan`을 실행한다. egress 변경 후 app·loadgen의 HTTPS/DNS/내부 통신과 RDS egress 없음이 plan에서 일치하는지 확인한다.
 
 ## 9. 도입 전후 비교 지표
