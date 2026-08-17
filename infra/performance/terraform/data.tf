@@ -15,8 +15,27 @@ data "aws_subnet" "public" {
   }
 }
 
+data "aws_route_tables" "public_association" {
+  vpc_id = var.vpc_id
+
+  filter {
+    name   = "association.subnet-id"
+    values = [var.public_subnet_id]
+  }
+
+  lifecycle {
+    postcondition {
+      condition     = length(self.ids) <= 1
+      error_message = "public_subnet_id에 연결된 route table이 둘 이상이다."
+    }
+  }
+}
+
 data "aws_route_table" "public" {
-  subnet_id = var.public_subnet_id
+  route_table_id = try(
+    data.aws_route_tables.public_association.ids[0],
+    data.aws_vpc.existing.main_route_table_id
+  )
 
   lifecycle {
     postcondition {
@@ -41,9 +60,30 @@ data "aws_subnet" "private" {
   }
 }
 
+data "aws_route_tables" "private_association" {
+  for_each = toset(var.private_subnet_ids)
+  vpc_id   = var.vpc_id
+
+  filter {
+    name   = "association.subnet-id"
+    values = [each.value]
+  }
+
+  lifecycle {
+    postcondition {
+      condition     = length(self.ids) <= 1
+      error_message = "private_subnet_ids의 subnet에 연결된 route table이 둘 이상이다."
+    }
+  }
+}
+
 data "aws_route_table" "private" {
-  for_each  = toset(var.private_subnet_ids)
-  subnet_id = each.value
+  for_each = toset(var.private_subnet_ids)
+
+  route_table_id = try(
+    data.aws_route_tables.private_association[each.key].ids[0],
+    data.aws_vpc.existing.main_route_table_id
+  )
 
   lifecycle {
     postcondition {
