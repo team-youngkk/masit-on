@@ -40,7 +40,7 @@ data "aws_route_table" "public" {
   lifecycle {
     postcondition {
       condition = anytrue([
-        for route in self.route :
+        for route in self.routes :
         route.cidr_block == "0.0.0.0/0" && startswith(route.gateway_id == null ? "" : route.gateway_id, "igw-")
       ])
       error_message = "public_subnet_id의 route table에 0.0.0.0/0 인터넷 게이트웨이 경로가 없다."
@@ -88,7 +88,7 @@ data "aws_route_table" "private" {
   lifecycle {
     postcondition {
       condition = alltrue([
-        for route in self.route :
+        for route in self.routes :
         !(route.cidr_block == "0.0.0.0/0" && startswith(route.gateway_id == null ? "" : route.gateway_id, "igw-"))
       ])
       error_message = "private_subnet_ids에 인터넷 게이트웨이 기본 경로가 있는 subnet이 포함됐다."
