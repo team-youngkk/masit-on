@@ -139,9 +139,9 @@ MVP 구현 전 필수 결정과 3차 확장 정책 결정은 완료됐다. 아�
 
 ### ADR-PERF-003 격리 성능 검증 환경 Terraform과 상태 저장소
 
-- 현재 상태: Proposed (2026-08-16 담당자 결정, 팀 리뷰 필요)
-- 현재 결정: [ADR-PERF-003](quality/perf-003-isolated-performance-terraform.md)에 따라 Terraform으로 이슈 #207 격리 성능 환경을 만들고, S3 backend와 DynamoDB locking을 사용한다.
-- 남은 결정: 팀이 Terraform 도입, 제안한 S3 bucket·DynamoDB table 이름, 접근 role과 bootstrap 소유자를 리뷰·승인한다.
+- 현재 상태: Accepted (2026-08-16 팀 승인)
+- 현재 결정: [ADR-PERF-003](quality/perf-003-isolated-performance-terraform.md)에 따라 Terraform으로 이슈 #207 격리 성능 환경을 만들고, S3 backend·DynamoDB locking과 제한된 egress 정책을 사용한다.
+- 남은 운영 작업: 실제 AWS bootstrap 전에 S3 bucket·DynamoDB table 이름, 접근 role과 bootstrap 소유자를 확인한다.
 - 영향: AWS 프로비저닝·state 접근 통제·성능 검증 실행 절차
 
 ## 4. Post-MVP ADR

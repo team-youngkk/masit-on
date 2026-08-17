@@ -121,7 +121,7 @@ related_documents:
 | WireMock | 확정 | Accepted ADR | [ADR-TEST-001](quality/test-001-automation-strategy.md) | 외부 API 장애·계약 격리 |
 | Spring Batch Test 6.0.4 | 파생·기능 제외 | Duplicate or Derived Rule | [ADR-AUTO-001](adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) | Spring Batch 활성화에 종속 |
 | k6 v2.1.0 | 도구·버전·실행 비용 확정 (2026-08-06) | Accepted ADR | [ADR-PERF-001](quality/perf-001-k6-load-testing.md) | `perf/k6/` 시나리오, `workflow_dispatch` 전용 실행, 정기 CI 비용 증가 없음 |
-| Terraform + AWS provider | 이슈 #207 격리 성능 환경 프로비저닝과 S3/DynamoDB state locking 제안 | Proposed ADR | [ADR-PERF-003](quality/perf-003-isolated-performance-terraform.md) | 팀 리뷰·승인 전까지 Proposed 상태 |
+| Terraform + AWS provider | 이슈 #207 격리 성능 환경 프로비저닝과 S3/DynamoDB state locking, 제한된 egress | Accepted ADR | [ADR-PERF-003](quality/perf-003-isolated-performance-terraform.md) | Terraform·egress 정책은 팀 승인; 실제 backend bootstrap은 실행 전 확인 |
 | SLF4J + Logback | 확정 | Accepted ADR | [ADR-OBS-001](quality/obs-001-logging-observability.md) | 애플리케이션 로그 기준 |
 | Actuator + CloudWatch | 기술 선택 확정, 적용 시점 이관 | Accepted ADR | [ADR-OBS-001](quality/obs-001-logging-observability.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | Actuator는 전 단계, CloudWatch는 초기 운영 배포부터 적용 |
 | 로그 보관 14일 | M2부터 적용 | Operational Configuration | [ADR-OBS-001](quality/obs-001-logging-observability.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | AWS 운영 시작 후 14일 유지 |
@@ -251,7 +251,7 @@ related_documents:
 - 외부 전달의 자동 재시도·Circuit Breaker·비동기 이벤트 도입 기준 (Transactional Outbox는 회원 Action 메일에 한해 [ADR-AUTH-005](security/auth-005-member-action-mail-outbox.md)로 확정, 서비스 내 알림은 [ADR-NOTIFY-002](integration/notify-002-in-app-notification-reliability.md)로 비동기 전달 불필요 결정)
 - 멀티모듈·독립 배포와 세분화된 관리자 권한의 전환 기준
 - Jsoup, n8n 등 정확한 버전이 없는 의존성 (k6는 [ADR-PERF-001](quality/perf-001-k6-load-testing.md)이 v2.1.0으로 고정해 2026-08-06 해소)
-- 현재 구현 전 필수 팀 결정은 없다. ALB·Blue-Green 전환 자동화는 토폴로지 확장 시 새 ADR로 결정한다.
+- 현재 구현 전 필수 팀 결정은 없다. ALB·Blue-Green 전환 자동화는 토폴로지 확장 시 새 ADR로 결정한다. ADR-PERF-003의 실제 backend bootstrap 세부는 실행 전 운영 작업으로 확인한다.
 
 ## 9. 2차 확장 ADR 검토 결과
 

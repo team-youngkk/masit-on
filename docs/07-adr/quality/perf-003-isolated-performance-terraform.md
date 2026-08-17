@@ -1,7 +1,7 @@
 ---
 id: ADR-PERF-003
 title: 격리 성능 검증 환경 Terraform과 상태 저장소
-status: Proposed
+status: Accepted
 decision_date: 2026-08-16
 owners:
   - 이우람
@@ -26,7 +26,7 @@ superseded_by: null
 
 ## 1. 상태
 
-`Proposed` — 성능 검증 담당자의 결정으로 PR에 반영했으며, 팀 리뷰·승인을 남겨 두었다.
+`Accepted` — 2026-08-16 팀 리뷰에서 Terraform 도입과 격리 환경 egress 축소안을 승인했다. S3 bucket·DynamoDB table bootstrap과 접근 role 지정은 실제 AWS 실행 전 운영 절차로 남긴다.
 
 ## 2. 결정 요약
 
@@ -38,6 +38,9 @@ Terraform state는 AWS S3에 암호화·versioning으로 저장하고 DynamoDB t
 |---|---|
 | Terraform | `1.6.6` |
 | AWS provider | `hashicorp/aws 5.100.0` |
+| app egress | HTTPS·VPC DNS·RDS 5432 |
+| loadgen egress | HTTPS·VPC DNS·app 8080 |
+| db egress | 없음. stateful 응답 트래픽만 허용 |
 | S3 region | `ap-northeast-2` |
 | S3 bucket 제안 이름 | `masiton-terraform-state-711457211155` |
 | state key | `performance/issue-207/terraform.tfstate` |
@@ -53,6 +56,7 @@ Terraform state는 AWS S3에 암호화·versioning으로 저장하고 DynamoDB t
 
 - Terraform은 선언된 변경 계획과 destroy 경로를 제공해 실행별 리소스 범위를 리뷰할 수 있다.
 - S3 backend는 state 암호화·versioning과 IAM 접근 통제를 적용할 수 있다.
+- app·loadgen은 HTTPS와 VPC DNS, 필요한 내부 대상만 egress로 허용하고 RDS SG에는 egress를 두지 않아 노출 범위를 줄인다.
 - Terraform 1.6 호환성을 유지해야 하므로 S3 native lockfile 대신 DynamoDB locking을 사용한다.
 - backend 리소스 자체는 관리 대상 state와 분리해 bootstrap한다. 같은 state로 bucket과 locking table을 만들면 초기화 순환이 생긴다.
 
@@ -66,7 +70,7 @@ Terraform state는 AWS S3에 암호화·versioning으로 저장하고 DynamoDB t
 
 ## 6. 미결정 및 승인
 
-이 ADR은 담당자 결정과 구현 방향을 기록하지만 팀의 Accepted 승인을 대체하지 않는다. 팀 리뷰에서 bucket·table 이름, 접근 role, bootstrap 소유자를 확인한 뒤 상태를 `Accepted`로 바꾼다.
+팀 리뷰에서 Terraform 도입과 egress 축소안을 승인했다. 제안한 bucket·table 이름, 접근 role, bootstrap 소유자는 실제 AWS bootstrap 전에 확인한다.
 
 ## 7. 관련 구현
 
