@@ -12,9 +12,12 @@ if (!LOAD) {
     throw new Error(`지원하지 않는 LOAD_PROFILE=${LOAD_PROFILE}. normal 또는 max를 사용한다.`);
 }
 
+// timeUnit은 요청률의 분모다. 초당 1건 미만의 저속 프로필은 rate를 0으로 내릴 수
+// 없으므로 timeUnit='1m'과 분당 요청 수로 표현한다.
 export function loadScenarios({
     rate = LOAD.rate,
     vus = LOAD.vus,
+    timeUnit = '1s',
     warmupDuration = WARMUP_DURATION,
     measuredDuration = MEASURED_DURATION,
     measuredStartTime = warmupDuration,
@@ -25,7 +28,7 @@ export function loadScenarios({
         warm_up: {
             executor: 'constant-arrival-rate',
             rate,
-            timeUnit: '1s',
+            timeUnit,
             duration: warmupDuration,
             preAllocatedVUs: vus,
             maxVUs: vus,
@@ -35,7 +38,7 @@ export function loadScenarios({
         measured: {
             executor: 'constant-arrival-rate',
             rate,
-            timeUnit: '1s',
+            timeUnit,
             duration: measuredDuration,
             preAllocatedVUs: vus,
             maxVUs: vus,

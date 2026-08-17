@@ -1,0 +1,2 @@
+bucket         = "masiton-terraform-state-711457211155"
+dynamodb_table = "masiton-terraform-state-lock"

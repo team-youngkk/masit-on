@@ -57,3 +57,13 @@ next-env.d.ts
 .idea/
 *.iml
 .vscode/
+
+# Terraform local state and provider cache
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfplan
+!terraform.tfvars.example
+infra/performance/terraform/backend.hcl
+crash.log
