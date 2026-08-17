@@ -49,6 +49,7 @@ related_documents:
 | [3793578354](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3793578354) | `Accepted` ADR의 `reviewers` 공란 | 문서 계약 | 수정 필요 | frontmatter에 박진영(`jinyp01`)을 승인자로 기록하고 팀 결정 댓글 근거 링크 추가 | ADR frontmatter·[팀 결정 댓글](https://github.com/team-youngkk/masit-on/pull/218#issuecomment-5307378530) 대조 |
 | [3793683606](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3793683606) | public subnet postcondition이 유효한 subnet 거부 | 인프라·계약 정합성 | 수정 필요 | `map_public_ip_on_launch` 필수 조건을 제거하고 지정 VPC 소속만 검증 | `data.tf`와 EC2의 `associate_public_ip_address = true` 대조; Terraform 실행 파일 부재로 validate 미실행 |
 | [3793683608](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3793683608) | 정상 20 RPS 완료 후 문서의 미측정 상태 잔존 | 문서 계약 정합성 | 수정 필요 | 정상 부하를 `Verified`로 통일하고 최대 80 RPS만 정식 판정 보류로 분리 | 정본 결과·2차/3차 테스트 문서·ADR 추적표 대조 |
+| [3793783777](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3793783777) | public subnet 검증이 private subnet을 허용 | 인프라·네트워크 정합성 | 수정 필요 | subnet별 route table을 조회해 public은 IGW 기본 경로를, private은 IGW 기본 경로 부재를 검증 | `data.tf`·README 대조; Terraform 실행 파일 부재로 validate 미실행 |
 
 ## 3. 문제 현상과 발생 조건
 
@@ -65,13 +66,13 @@ Terraform 구성과 성능 결과 문서가 서로 다른 실행 기준을 가�
 
 성능 문서는 격리 실행 결과를 기록하면서 정본 문서와 상태를 갱신하지 않아 `통과`와 `Not Measured`가 동시에 남았다. 공개 저장소 증적 보호 규칙과 실행 식별자 마스킹도 결과 문서에 적용되지 않았다.
 
-Terraform 도입과 egress 축소는 코드 오류가 아니라 팀 운영·보안 선택이었다. public subnet의 자동 public IP 설정을 public route의 필수 조건으로 오인한 검증과, 정상 부하 완료 뒤 stale 상태 문장을 남긴 문서 동기화 누락이 추가 원인이었다. Accepted ADR의 `reviewers`가 비어 있어 승인자와 결정 근거가 문서에서 끊긴 것도 별도 문서 계약 결함으로 확인했다. 2026-08-16 팀 리뷰에서 Terraform 도입과 축소 egress 정책을 승인해 ADR-PERF-003을 `Accepted`로 전환하고 구현에 반영한다. 실제 backend bucket·table bootstrap과 접근 role은 실행 전 운영 작업으로 남긴다.
+Terraform 도입과 egress 축소는 코드 오류가 아니라 팀 운영·보안 선택이었다. public subnet의 route table을 검증하지 않고 VPC 소속만 확인해 private subnet도 통과할 수 있게 된 것이 추가 원인이었다. 정상 부하 완료 뒤 stale 상태 문장을 남긴 문서 동기화 누락도 함께 확인했다. Accepted ADR의 `reviewers`가 비어 있어 승인자와 결정 근거가 문서에서 끊긴 것도 별도 문서 계약 결함으로 확인했다. 2026-08-16 팀 리뷰에서 Terraform 도입과 축소 egress 정책을 승인해 ADR-PERF-003을 `Accepted`로 전환하고 구현에 반영한다. 실제 backend bucket·table bootstrap과 접근 role은 실행 전 운영 작업으로 남긴다.
 
 ## 5. 확인 및 시도
 
 | 확인하거나 시도한 방법 | 결과 | 판단과 다음 단계 |
 |---|---|---|
-| PR review thread와 PR diff 대조 | 초기 13개와 후속 11개 확인 | 22개는 코드·문서로 처리하고, 후속 팀 결정 2건과 이번 문서 정합성 2건을 ADR·보안 그룹·문서에 반영 |
+| PR review thread와 PR diff 대조 | 초기 13개와 후속 12개 확인 | 22개는 코드·문서로 처리하고, 후속 팀 결정 2건을 ADR·보안 그룹·문서에 반영 |
 | 기존 `docs/troubleshooting` 검색 | PR #208·#214의 성능 추적성 기록 확인 | 기존 기록의 증거·지표 기록 방식을 재사용하고 새 사건으로 기록 |
 | `rg`로 AWS command/instance ID 검색 | 결과 문서와 README에 원문 식별자 확인 | 공개 문서의 식별자를 placeholder로 교체 |
 | `git diff --check` | 통과 | whitespace 오류 없음 |
@@ -81,7 +82,7 @@ Terraform 도입과 egress 축소는 코드 오류가 아니라 팀 운영·보�
 
 ## 6. 최종 해결
 
-- 변경 내용: Terraform 입력·버전·이미지·사양·public subnet 검증·dead code 수정, KMS key ARN 권한 수정, 커밋 고정·체크섬 검증 WireMock fixture 배포와 loopback 바인딩, 제한된 egress 규칙, rate-limit helper 공통화, 정상 부하 `Verified`와 최대 부하 보류 상태로 성능 추적 문서 동기화, AWS 실행 식별자 마스킹, S3+DynamoDB backend 설계와 Accepted ADR 반영, ADR 승인자와 팀 결정 근거 링크 기록.
+- 변경 내용: Terraform 입력·버전·이미지·사양·public/private subnet route table 검증·dead code 수정, KMS key ARN 권한 수정, 커밋 고정·체크섬 검증 WireMock fixture 배포와 loopback 바인딩, 제한된 egress 규칙, rate-limit helper 공통화, 정상 부하 `Verified`와 최대 부하 보류 상태로 성능 추적 문서 동기화, AWS 실행 식별자 마스킹, S3+DynamoDB backend 설계와 Accepted ADR 반영, ADR 승인자와 팀 결정 근거 링크 기록.
 - 선택 이유: 확인 가능한 실행 결과와 현재 계약에 맞추고, 팀이 승인한 Terraform 도입·egress 정책을 코드·ADR·실행 문서에 일치시키기 위해서다.
 - 변경 파일: `infra/performance/terraform/`, `infra/performance/README.md`, `perf/k6/third-expansion-load.js`, `docs/08-planning/`, `docs/07-adr/`, `docs/troubleshooting/`, `.gitignore`
 - 고려한 대안: backend가 팀에 이미 존재한다고 가정하지 않고 bucket/table 제안 이름과 bootstrap 조건을 명시했다. egress는 전체 outbound 유지안과 비교한 뒤 팀 승인에 따라 축소안을 적용했다.
@@ -101,7 +102,7 @@ Terraform 도입과 egress 축소는 코드 오류가 아니라 팀 운영·보�
 
 ## 8. 재발 방지 및 다음 확인
 
-- 재발 방지: Terraform backend 선언·예시 설정·state 보안 조건을 문서화하고, 결과 문서의 정본 상태·실행 증거·공개 식별자 보호 규칙을 함께 갱신했다. Accepted ADR 전환 시 `status`, `reviewers`, 승인 근거 링크를 함께 확인하고, 성능 측정 상태를 갱신할 때 2차·3차 추적표와 정본 결과의 정상/최대 부하 상태를 함께 대조한다.
+- 재발 방지: Terraform backend 선언·예시 설정·state 보안 조건을 문서화하고, 결과 문서의 정본 상태·실행 증거·공개 식별자 보호 규칙을 함께 갱신했다. Accepted ADR 전환 시 `status`, `reviewers`, 승인 근거 링크를 함께 확인하고, 성능 측정 상태를 갱신할 때 2차·3차 추적표와 정본 결과의 정상/최대 부하 상태를 함께 대조하고, subnet 입력을 받을 때 route table의 IGW 기본 경로를 함께 검증한다.
 - 다음 확인: 이우람이 AWS role로 backend bucket/table을 bootstrap한 뒤 `terraform init -backend-config=backend.hcl`, `terraform fmt -check`, `terraform validate`, `terraform plan`을 실행한다. egress 변경 후 app·loadgen의 HTTPS/DNS/내부 통신과 RDS egress 없음이 plan에서 일치하는지 확인한다.
 
 ## 9. 도입 전후 비교 지표
