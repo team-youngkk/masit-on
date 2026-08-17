@@ -63,6 +63,7 @@ backend는 S3 bucket `masiton-terraform-state-711457211155`와 DynamoDB table `m
 - 운영 인스턴스 ID `<production-app-instance-id>`, 운영 RDS `masiton-db`, 운영 보안 그룹이 변경 대상에 없는지
 - 앱 8080 포트는 load generator 보안 그룹에서만 허용되는지
 - app egress가 HTTPS·VPC DNS·RDS 5432만, loadgen egress가 HTTPS·VPC DNS·app 8080만 허용되는지
+- public subnet route table에 `0.0.0.0/0 -> internet gateway` 경로가 있고 private subnet route table에는 해당 IGW 기본 경로가 없는지
 - RDS 보안 그룹에 egress 규칙이 없는지
 - RDS가 `publicly_accessible=false`인지
 
