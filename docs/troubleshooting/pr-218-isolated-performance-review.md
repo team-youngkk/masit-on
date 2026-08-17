@@ -51,7 +51,7 @@ related_documents:
 | [3793683608](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3793683608) | 정상 20 RPS 완료 후 문서의 미측정 상태 잔존 | 문서 계약 정합성 | 수정 필요 | 정상 부하를 `Verified`로 통일하고 최대 80 RPS만 정식 판정 보류로 분리 | 정본 결과·2차/3차 테스트 문서·ADR 추적표 대조 |
 | [3793783777](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3793783777) | public subnet 검증이 private subnet을 허용 | 인프라·네트워크 정합성 | 수정 필요 | subnet별 route table을 조회해 public은 IGW 기본 경로를, private은 IGW 기본 경로 부재를 검증 | `data.tf`·README 대조; Terraform 실행 파일 부재로 validate 미실행 |
 | [3793818107](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3793818107) | subnet과 VPC 소속 관계 검증 누락 | 인프라·네트워크 경계 | 수정 필요 | public/private `aws_subnet` data source에 입력 VPC 소속 postcondition 추가 | `data.tf`·VPC 변수 대조; Terraform 실행 파일 부재로 validate 미실행 |
-| [3793953578](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3793953578) | 증적 manifest의 15개 파일 SHA-256·aggregate 불일치 | 검증·문서 계약 | 수정 필요 | PR HEAD에서 PowerShell/.NET SHA-256으로 15개 항목과 aggregate를 재계산하고 최종 게이트 fingerprint를 동기화 | aggregate `2b15e9c4cb7a2fca3773c3a61279bad9d98405eeda3454d688b7d6c63c0afa24`; verify 스크립트 재실행 |
+| [3793953578](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3793953578) | 증적 manifest의 15개 파일 SHA-256·aggregate 불일치 | 검증·문서 계약 | 수정 필요 | PR HEAD에서 PowerShell/.NET SHA-256으로 15개 항목과 aggregate를 재계산하고 최종 게이트 fingerprint를 동기화 | aggregate `2b15e9c4cb7a2fca3773c3a61279bad9d98405eeda3454d688b7d6c63c0afa24`; `verify-third-expansion-evidence.ps1` 통과 |
 | [3793953582](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3793953582) | route의 nullable `gateway_id`에 `coalesce(..., "")` 사용 | 인프라·Terraform 표현식 | 수정 필요 | null-safe conditional로 교체해 NAT·peering·TGW 등 gateway_id가 비어 있는 route도 검증 단계에서 오류 없이 처리 | `data.tf` 양쪽 route table 조건 대조; Terraform `validate` 재실행 필요 |
 
 ## 3. 문제 현상과 발생 조건
@@ -101,7 +101,7 @@ Terraform 도입과 egress 축소는 코드 오류가 아니라 팀 운영·보�
 | Terraform 실행 버전 기준 대조 | 통과 | `versions.tf`, `.terraform.lock.hcl`, `.terraform-version`, ADR, README가 각각 `1.6.6`·`5.100.0`을 가리킴 |
 | `terraform fmt -check` | 미실행 | Terraform 실행 파일 부재 |
 | `terraform validate` | 미실행 | Terraform 실행 파일 부재 및 AWS backend 리소스 미확인 |
-| PR HEAD 증적 manifest 재계산 | 통과 | 15개 파일 SHA-256과 LF-joined aggregate를 PowerShell/.NET으로 재계산; aggregate `2b15e9c4cb7a2fca3773c3a61279bad9d98405eeda3454d688b7d6c63c0afa24`로 최종 게이트 fingerprint와 일치 |
+| PR HEAD 증적 manifest 재계산·검증 스크립트 | 통과 | 15개 파일 SHA-256과 LF-joined aggregate를 PowerShell/.NET으로 재계산한 뒤 `scripts/verify-third-expansion-evidence.ps1` 실행; aggregate `2b15e9c4cb7a2fca3773c3a61279bad9d98405eeda3454d688b7d6c63c0afa24`와 최종 게이트 fingerprint가 일치 |
 | 전체 Gradle build | 미실행 | 이번 변경은 Java·Gradle 코드가 아니며 Terraform/k6 검증 환경이 별도로 필요 |
 
 ## 8. 재발 방지 및 다음 확인
