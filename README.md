@@ -34,7 +34,9 @@ Copy-Item .env.example .env
 
 `.env`는 로컬 전용 값이며 커밋하지 않는다. 운영 자격 증명을 넣지 않는다. 새 PowerShell 세션에서 `bootRun`을 실행할 때는 스크립트를 다시 dot-source한다.
 
-`.env`를 `.env.example`에서 새로 복사하지 않고 예전 파일을 그대로 쓰면 `JWT_*`, `MEMBER_ACTION_MAIL_*`, `AI_TEMPORARY_INPUT_*` 항목이 없어 초기화 스크립트가 값을 기록하지 못한다. 스크립트는 `.env`에 **이미 있는 줄만** 채우므로 `JWT_KEY_ID`, `JWT_PRIVATE_KEY_PEM`, `JWT_PUBLIC_KEY_PEM`, `MEMBER_ACTION_MAIL_ACTIVE_KEY_ID`, `MEMBER_ACTION_MAIL_ACTIVE_KEY`, `AI_TEMPORARY_INPUT_KEY_ID`, `AI_TEMPORARY_INPUT_KEY` 항목이 있는지 확인한다. `AI_TEMPORARY_INPUT_*`가 없으면 관리자 AI 작업 재시도가 `AIEXTRACT_TEMPORARY_INPUT_UNAVAILABLE`로 실패한다.
+예전 `.env`를 그대로 사용해 `JWT_*`, `MEMBER_ACTION_MAIL_*`, `AI_TEMPORARY_INPUT_*` 항목이 없어도 초기화 스크립트가 누락된 줄을 추가하고 값을 채운다. 다만 `.env`가 저장소의 예시와 크게 다르면 `Copy-Item .env.example .env`로 다시 만드는 편이 안전하다. `AI_TEMPORARY_INPUT_*`가 없으면 관리자 AI 작업 재시도가 `AIEXTRACT_TEMPORARY_INPUT_UNAVAILABLE`로 실패한다.
+
+AI 영상 추출은 비용과 외부 데이터 경계를 지키기 위해 기본적으로 실행되지 않는다. `docker compose up -d --build`는 `AI_WORKER_ENABLED=false`, `GEMINI_ENABLED=false`, `GEMINI_FREE_TIER_VERIFIED=false`, `GEMINI_PAID_BILLING_ENABLED=false`, provider/application quota `0`으로 시작하며 Gemini를 호출하지 않는다. 로컬에서 실제 호출을 시험할 때만 `.env`에 다음을 모두 명시적으로 설정한다: 검증된 `GEMINI_API_KEY`, `GEMINI_ENABLED=true`, `GEMINI_FREE_TIER_VERIFIED=true`, `GEMINI_PAID_BILLING_ENABLED=false`, `AI_WORKER_ENABLED=true`, 양수인 `AI_WORKER_PROVIDER_QUOTA_LIMIT`, 그보다 작은 양수인 `AI_WORKER_APPLICATION_QUOTA_LIMIT`, 그리고 `AI_WORKER_QUOTA_WINDOW=P1D`. Compose는 `GEMINI_API_KEY`를 컨테이너 내부의 Spring 표준 속성 `MASITON_AI_PROVIDER_GEMINI_API_KEY`로 전달하며 키를 로그에 남기지 않는다. 무료 quota와 결제 차단을 실제 계정에서 확인하지 않았다면 값을 바꾸지 않는다.
 
 ### 개발 루프 (의존 서비스는 컨테이너, 애플리케이션은 로컬)
 

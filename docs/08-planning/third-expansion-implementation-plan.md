@@ -116,7 +116,7 @@ P0에서 운영 billing이나 유료 tier를 활성화하지 않는다. Free Tie
 | `P2-01` | 관리자 신규 영상 추가 API와 Webhook 수신 API 구현 | 김인안 | `P1-01`, `P0-04` | `202` 작업 접수, traceId, 입력 검증, 중복 응답 계약 통과 |
 | `P2-02` | YouTube 채널 감시·구독 갱신·Webhook 검증 Adapter 구현 | 이우람 | `P0-04` | 활성 채널만 접수하고 Webhook에서 AI·정식 등록을 호출하지 않음 |
 | `P2-03` | Gemini Provider Port/Adapter와 구조화 응답 변환 구현 | 김인안 | `P0-02` | HTTP·SDK 세부 의존성이 Application 밖에 있고 오류가 정규화됨 |
-| `P2-04` | 현재 Prompt `P2`·Schema `S1`·모델 설정 버전 저장과 기존 `P1` 이력 보존 구현 | 김인안 | `P2-03` | 모든 Snapshot과 Attempt가 생성 당시 버전 조합을 재현함 |
+| `P2-04` | 현재 Prompt `P6`·Schema `S1`·모델 설정 버전 저장과 기존 `P1`·`P2`·`P3`·`P4`·`P5` 이력 보존 구현 | 김인안 | `P2-03` | 모든 Snapshot과 Attempt가 생성 당시 버전 조합을 재현함 |
 
 Webhook 수신기는 빠르게 작업만 확정한다. 외부 AI 호출과 정식 Entity 저장은 Webhook HTTP 요청 안에서 수행하지 않는다.
 

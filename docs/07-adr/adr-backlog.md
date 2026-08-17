@@ -47,7 +47,7 @@ MVP 구현 전 필수 결정과 3차 확장 정책 결정은 완료됐다. 아�
 - 현재 상태: Accepted
 - 문서: [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md)
 - 결정 시점: AI 제공자·후보 데이터·관리자 검수 API 작성 전
-- 핵심: AI 결과를 후보 Snapshot으로 격리하고, 자동 필수값·근거·중복·Kakao·YouTube·Visit 검증을 통과한 뒤 관리자 승인 없이 정식 등록·공개한다. Gemini Free Tier 전용 global endpoint의 `gemini-3.5-flash-lite`, 현재 P2/S1을 사용하며 기존 P1 이력은 보존하고 유료 호출은 금지한다.
+- 핵심: AI 결과를 후보 Snapshot으로 격리하고, 자동 필수값·근거·중복·Kakao·YouTube·Visit 검증을 통과한 뒤 관리자 승인 없이 정식 등록·공개한다. Gemini Free Tier 전용 global endpoint의 `gemini-3.5-flash-lite`, 현재 P7/S1을 사용하며 기존 P1·P2·P3·P4·P5·P6 이력은 보존하고 유료 호출은 금지한다.
 - 선확정: n8n 등 외부 워크플로 도구를 초기 실행 경계에 도입하지 않고, Provider Port/Adapter와 애플리케이션 Worker를 사용한다. 원문·자막 전체는 저장하지 않는다.
 
 ### ADR-EXT-003 AI 추출 비동기 작업과 단일 EC2 복구 경계
@@ -204,7 +204,7 @@ MVP 구현 전 필수 결정과 3차 확장 정책 결정은 완료됐다. 아�
 | Kakao Maps·PostGIS | Post-MVP | 지도·좌표·거리 검색 제외 | 지도 기능 범위 변경 |
 | Kakao Local REST API | 범위 일치 | 관리자 맛집 등록 시 카카오 장소 확인 필요 | Port/Adapter와 장애 처리 구현 |
 | Kakao Mobility | Accepted | `/v1/directions`, 자동차 경로, TTL 5분·캐시 없음·월 1,000건·유료 0원 | 운영 계정 quota·인증 연결 확인 |
-| Google Gemini API | Accepted | Free Tier 전용 global endpoint, `gemini-3.5-flash-lite`, 현재 P2/S1·기존 P1 이력 보존, 원문 비저장·유료 호출 금지 | 운영 계정 billing 미연결·모델별 무료 quota 확인 |
+| Google Gemini API | Accepted | Free Tier 전용 global endpoint, `gemini-3.5-flash-lite`, 현재 P7/S1·기존 P1·P2·P3·P4·P5·P6 이력 보존, 원문 비저장·유료 호출 금지 | 운영 계정 billing 미연결·모델별 무료 quota 확인 |
 | pgvector | Post-MVP | 자연어 검색·RAG 제외 | 검색 범위 변경 |
 | FCM | Post-MVP | 서비스 내 알림만 승인, 외부 푸시·동의·DeviceToken 제외 | 채널·동의·Token·전달 SLA 승인 |
 | S3 이미지 저장 | Post-MVP | 현재 이미지 업로드·사용자 이미지 요구사항 없음 | 이미지 기능 범위 변경 |

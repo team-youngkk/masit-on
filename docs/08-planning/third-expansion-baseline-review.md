@@ -168,7 +168,7 @@ WHERE lifecycle_status = 'ACTIVE';
 
 | 결정 항목 | 필요한 값 |
 |---|---|
-| 현재 운영 모델 | `gemini-3.5-flash-lite`, 영상·구조화 출력 지원, Prompt `P2`, Schema `S1`; 기존 P1 평가 자산은 역사적 이력으로 보존 |
+| 현재 운영 모델 | `gemini-3.5-flash-lite`, 영상·구조화 출력 지원, Prompt `P6`, Schema `S1`; 기존 P1 평가 자산과 P2·P3·P4·P5 작업은 역사적 이력으로 보존 |
 | 비용 | AI·Mobility 유료 호출 금지, Free Tier quota의 80% 경보·100% hard stop |
 | 호출 제한 | 시도 전체 120초, 최대 2회 재시도, 인스턴스당 Worker 1개, quota 미확인 시 호출 차단 |
 | 데이터 경계 | Free Tier global endpoint, File API·context caching·원문 저장 미사용, 관리자 전용 근거 메타데이터만 보존 |
@@ -261,7 +261,7 @@ M2 운영 구성은 단일 EC2 `t4g.medium`에 Nginx·Next.js·Spring Boot·Redi
 |---|---|---|
 | G3-01 운영 기준선 | 1·2차 기능의 실제 운영 배포, 현재 행 수, 2차 운영 검증 기록 | 2차 릴리즈 계보는 있으나 후속 운영 데이터 검증 기록 부족 |
 | G3-02 검색 데이터 | 자연어 검색 대상 필드, P1 규칙·사전, 근거 표시, 공개 상태 필터 | 대상은 이름·지역·카테고리·유튜버로 확정. 전문 검색·임베딩·근거 생성 없음. 세부 사전·오류 응답은 API 계약에서 관리 |
-| G3-03 AI 검수 | AI 결과 Snapshot, 관리자 검수 상태, 정식 Entity 반영 경계, 개인정보·보존 | 정책 확정: 현재 P2/S1 후보·기존 P1 이력 보존·관리자 검수·정식 Entity 0건·원문 비저장·1년 보존. API·migration 증거 필요 |
+| G3-03 AI 검수 | AI 결과 Snapshot, 관리자 검수 상태, 정식 Entity 반영 경계, 개인정보·보존 | 정책 확정: 현재 P6/S1 후보·기존 P1·P2·P3·P4·P5 이력 보존·관리자 검수·정식 Entity 반영 경계·원문 비저장·1년 보존. API·migration 증거 필요 |
 | G3-04 좌표 | 운영 ACTIVE 맛집의 좌표 보강률과 좌표 없는 데이터 처리 | 미확인. 읽기 전용 SQL 필요 |
 | G3-05 Mobility | `/v1/directions`, quota·가격·캐시·경유지 상한·실패 처리 | 정책 확정: 코스당 1회·TTL 5분·캐시 없음·유료 0원·앱 월 1,000건. 운영 계정 연결 증거 필요 |
 | G3-06 비동기 | 단일 EC2 수용량, 작업 저장·claim·재시도·멱등성·관측 방식 | 정책 확정: DB lease·Worker 1개/인스턴스·polling 5초·lease 120초·heartbeat 30초. 용량 실측 필요 |
