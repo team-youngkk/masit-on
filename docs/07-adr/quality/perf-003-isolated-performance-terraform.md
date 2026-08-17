@@ -5,7 +5,8 @@ status: Accepted
 decision_date: 2026-08-16
 owners:
   - 이우람
-reviewers: []
+reviewers:
+  - 박진영
 related_requirements:
   - NFR-TEST-002
   - RV-NFR-011
@@ -26,7 +27,7 @@ superseded_by: null
 
 ## 1. 상태
 
-`Accepted` — 2026-08-16 팀 리뷰에서 Terraform 도입과 격리 환경 egress 축소안을 승인했다. S3 bucket·DynamoDB table bootstrap과 접근 role 지정은 실제 AWS 실행 전 운영 절차로 남긴다.
+`Accepted` — 2026-08-16 팀 리뷰에서 Terraform 도입과 격리 환경 egress 축소안을 승인했다. PR #218의 [팀 결정 댓글](https://github.com/team-youngkk/masit-on/pull/218#issuecomment-5307378530)에서 박진영(`jinyp01`)이 두 항목 모두 옵션 1을 승인·추천했고, 반영 후에도 승인 리뷰를 남겼다. S3 bucket·DynamoDB table bootstrap과 접근 role 지정은 실제 AWS 실행 전 운영 절차로 남긴다.
 
 ## 2. 결정 요약
 
