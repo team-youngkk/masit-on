@@ -32,10 +32,7 @@ data "aws_route_tables" "public_association" {
 }
 
 data "aws_route_table" "public" {
-  route_table_id = try(
-    data.aws_route_tables.public_association.ids[0],
-    data.aws_vpc.existing.main_route_table_id
-  )
+  route_table_id = length(data.aws_route_tables.public_association.ids) > 0 ? tolist(data.aws_route_tables.public_association.ids)[0] : data.aws_vpc.existing.main_route_table_id
 
   lifecycle {
     postcondition {
@@ -80,10 +77,7 @@ data "aws_route_tables" "private_association" {
 data "aws_route_table" "private" {
   for_each = toset(var.private_subnet_ids)
 
-  route_table_id = try(
-    data.aws_route_tables.private_association[each.key].ids[0],
-    data.aws_vpc.existing.main_route_table_id
-  )
+  route_table_id = length(data.aws_route_tables.private_association[each.key].ids) > 0 ? tolist(data.aws_route_tables.private_association[each.key].ids)[0] : data.aws_vpc.existing.main_route_table_id
 
   lifecycle {
     postcondition {
