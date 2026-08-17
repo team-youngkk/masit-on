@@ -1,8 +1,8 @@
 E3-T13 evidence manifest
 comparison_commit: 47b90c6
 captured_at: 2026-08-13T14:42:00+09:00
-recaptured_at: 2026-08-13T19:10:00+09:00
-recapture_reason: final-gate 1.1 revision changed docs/04-product/traceability.md and docs/05-specs/api-traceability.md; hashes and aggregate re-taken so the manifest matches HEAD
+recaptured_at: 2026-08-17T12:54:28+09:00
+recapture_reason: review feedback synchronized normal-load verification and maximum-load hold across second/third expansion documents; hashes and aggregate re-taken so the manifest matches HEAD
 file_hash_algorithm: SHA-256
 aggregate_algorithm: UTF-8 bytes of LF-joined lines in the exact order below; no final LF; each line is relative-path<TAB>lowercase-file-SHA256
 
@@ -12,8 +12,8 @@ docs/05-specs/api-traceability.md	7cb73231774a5ed6f22e1f9a5010ae4a37ba3f844c9756
 docs/05-specs/data/data-traceability.md	3534c1077db48ef31343e3271a0d49df707099519a122423dad69073db925bbd
 docs/07-adr/adr-traceability.md	3bdc461a29ca0d832bd9ffc101118b93d9058acb99c519e4a9dfda6d2080f587
 docs/08-planning/second-expansion-performance-verification.md	4e176d86e922da3c0beb96bba26535ec100a6da0b157fd28a438701433d3cb2e
-docs/08-planning/third-expansion-task-breakdown.md	af17687b49ae34ec62ac12c3db9dee4a70a74a693da89d22121797da0bd5217b
-docs/08-planning/third-expansion-test-matrix.md	c13f02a5b7e907a54f161ec3552c1f34d4e2240e1074cea99623a3ab2b77d448
+docs/08-planning/third-expansion-task-breakdown.md	a5530e4a0877fac7174a40a012771d175e92ce76d416a89e4a34a0ac595bad0e
+docs/08-planning/third-expansion-test-matrix.md	6ac46c89914c86c4ef60e659a00cc8cf2b79a4d0e3fa3465f75b5ae4af488c75
 docs/troubleshooting/pr-185-e3-t13-final-gate-review.md	608cd11f455630e9173464737233e41683753e00a73c4689802ee3166240dc15
 perf/k6/load-profile.js	f720d1d3b594e1ed048ca7466f0c31d85bb84ce2071f2a906a73fbec147ecd88
 perf/k6/normal-load-public-read.js	eed70e9b92dfa896410379b0f93eeeb0b13ed870ad2c00dd01c57dcdc9d71329
@@ -22,5 +22,5 @@ scripts/verify-third-expansion-evidence.ps1	777dfcd69c24dace1687902b5bf20d6736ff
 src/main/java/com/masiton/ai/application/AiExtractionWorkerService.java	ebd1714fb1e16e46dbadb7f2753adc534a75e2ecac48a7a01c64f9cc1f37c99d
 src/test/java/com/masiton/ai/application/AiExtractionWorkerServiceTest.java	572f5d6a4bc3bfd0262e4dff46f9263318ef91dd57f0e7627f55e15c6aad051b
 
-aggregate_sha256: 863f2ccb22fc2a51866643d3921a67021dad885832619c458c59efa1ebc0a142
+aggregate_sha256: 54b9db328531a0bdcde56e3a80b25aace64748737d943770d124a472bb3c97cb
 reproduce_powershell: "$paths = Get-Content docs/08-planning/third-expansion-evidence-manifest.txt | Where-Object { $_ -match '^[^#].*\t[0-9a-f]{64}$' } | ForEach-Object { ($_ -split \"\t\")[0] }; $manifest = ($paths | ForEach-Object { \"$_`t$((Get-FileHash -Algorithm SHA256 -LiteralPath $_).Hash.ToLowerInvariant())\" }) -join \"`n\"; $digest = [Security.Cryptography.SHA256]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($manifest)); ([BitConverter]::ToString($digest) -replace '-', '').ToLowerInvariant()"
