@@ -52,8 +52,8 @@ related_documents:
 | [3793783777](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3793783777) | public subnet 검증이 private subnet을 허용 | 인프라·네트워크 정합성 | 수정 필요 | subnet별 route table을 조회해 public은 IGW 기본 경로를, private은 IGW 기본 경로 부재를 검증 | `data.tf`·README 대조; Terraform 실행 파일 부재로 validate 미실행 |
 | [3793818107](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3793818107) | subnet과 VPC 소속 관계 검증 누락 | 인프라·네트워크 경계 | 수정 필요 | public/private `aws_subnet` data source에 입력 VPC 소속 postcondition 추가 | `data.tf`·VPC 변수 대조; Terraform 실행 파일 부재로 validate 미실행 |
 | [3793953578](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3793953578) | 증적 manifest의 15개 파일 SHA-256·aggregate 불일치 | 검증·문서 계약 | 수정 필요 | PR HEAD에서 PowerShell/.NET SHA-256으로 15개 항목과 aggregate를 재계산하고 최종 게이트 fingerprint를 동기화 | aggregate `2b15e9c4cb7a2fca3773c3a61279bad9d98405eeda3454d688b7d6c63c0afa24`; `verify-third-expansion-evidence.ps1` 통과 |
-| [3793953582](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3793953582) | route의 nullable `gateway_id`에 `coalesce(..., "")` 사용 | 인프라·Terraform 표현식 | 수정 필요 | null-safe conditional로 교체해 NAT·peering·TGW 등 gateway_id가 비어 있는 route도 검증 단계에서 오류 없이 처리 | `data.tf` 양쪽 route table 조건 대조; Terraform `validate` 재실행 필요 |
-| [3794171070](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3794171070) | `subnet_id` 조회가 명시적 route table 연결이 없는 main route table 사용 subnet에서 실패 | 인프라·네트워크 정합성 | 수정 필요 | `association.subnet-id`로 명시적 연결을 먼저 조회하고 없으면 지정 VPC의 `main_route_table_id`를 사용하도록 fallback | AWS provider `aws_route_tables`·`aws_vpc` data source 계약 대조; Terraform `fmt/validate` 실행 필요 |
+| [3793953582](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3793953582) | route의 nullable `gateway_id`에 `coalesce(..., "")` 사용 | 인프라·Terraform 표현식 | 수정 필요 | null-safe conditional로 교체해 NAT·peering·TGW 등 gateway_id가 비어 있는 route도 검증 단계에서 오류 없이 처리 | Terraform 1.6.6 + AWS provider 5.100.0 `fmt/init/validate` 통과 |
+| [3794171070](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3794171070) | `subnet_id` 조회가 명시적 route table 연결이 없는 main route table 사용 subnet에서 실패 | 인프라·네트워크 정합성 | 수정 필요 | `association.subnet-id`로 명시적 연결을 먼저 조회하고 없으면 지정 VPC의 `main_route_table_id`를 사용하도록 fallback | AWS provider `aws_route_tables`·`aws_vpc` data source 계약 대조; Terraform 1.6.6 + AWS provider 5.100.0 `fmt/init/validate` 통과 |
 
 ## 3. 문제 현상과 발생 조건
 
@@ -70,7 +70,7 @@ Terraform 구성과 성능 결과 문서가 서로 다른 실행 기준을 가�
 
 성능 문서는 격리 실행 결과를 기록하면서 정본 문서와 상태를 갱신하지 않아 `통과`와 `Not Measured`가 동시에 남았다. 공개 저장소 증적 보호 규칙과 실행 식별자 마스킹도 결과 문서에 적용되지 않았다.
 
-Terraform 도입과 egress 축소는 코드 오류가 아니라 팀 운영·보안 선택이었다. public subnet의 route table 검증을 보강하는 과정에서 public/private subnet data source의 VPC 소속 postcondition을 함께 유지하지 못한 것이 추가 원인이었다. `subnet_id` 필터가 명시적 association만 찾는다는 provider 동작을 고려하지 않아 VPC main route table fallback이 빠져 있었다. 정상 부하 완료 뒤 stale 상태 문장을 남긴 문서 동기화 누락도 함께 확인했다. Accepted ADR의 `reviewers`가 비어 있어 승인자와 결정 근거가 문서에서 끊긴 것도 별도 문서 계약 결함으로 확인했다. 2026-08-16 팀 리뷰에서 Terraform 도입과 축소 egress 정책을 승인해 ADR-PERF-003을 `Accepted`로 전환하고 구현에 반영한다. 실제 backend bucket·table bootstrap과 접근 role은 실행 전 운영 작업으로 남긴다.
+Terraform 도입과 egress 축소는 코드 오류가 아니라 팀 운영·보안 선택이었다. public subnet의 route table 검증을 보강하는 과정에서 public/private subnet data source의 VPC 소속 postcondition을 함께 유지하지 못한 것이 추가 원인이었다. `subnet_id` 필터가 명시적 association만 찾는다는 provider 동작을 고려하지 않아 VPC main route table fallback이 빠져 있었다. 검증 과정에서는 AWS provider 5.100.0의 route table export 이름이 `routes`인데 기존 코드가 `route`를 사용한 오류와 Terraform 1.6.6 lock constraint의 비정규 표기도 함께 확인해 수정했다. 정상 부하 완료 뒤 stale 상태 문장을 남긴 문서 동기화 누락도 함께 확인했다. Accepted ADR의 `reviewers`가 비어 있어 승인자와 결정 근거가 문서에서 끊긴 것도 별도 문서 계약 결함으로 확인했다. 2026-08-16 팀 리뷰에서 Terraform 도입과 축소 egress 정책을 승인해 ADR-PERF-003을 `Accepted`로 전환하고 구현에 반영한다. 실제 backend bucket·table bootstrap과 접근 role은 실행 전 운영 작업으로 남긴다.
 
 ## 5. 확인 및 시도
 
@@ -81,12 +81,12 @@ Terraform 도입과 egress 축소는 코드 오류가 아니라 팀 운영·보�
 | `rg`로 AWS command/instance ID 검색 | 결과 문서와 README에 원문 식별자 확인 | 공개 문서의 식별자를 placeholder로 교체 |
 | `git diff --check` | 통과 | whitespace 오류 없음 |
 | `node --check perf/k6/third-expansion-load.js` | 통과 | k6 스크립트 구문 확인 |
-| `terraform fmt -check`, `terraform validate` | 미실행 | 로컬 환경에 `terraform` 실행 파일이 없어 실행 불가; Terraform 설치 후 수행 필요 |
+| `terraform fmt -check`, `terraform init -backend=false`, `terraform validate` | 통과 | Terraform 1.6.6과 AWS provider 5.100.0을 임시 검증 디렉터리에 구성해 실행; lock constraint를 `5.100.0` 정규 형식으로 보정한 뒤 성공 |
 | AWS `sts/list-buckets/list-tables` 조회 | 실패 | 로컬 AWS config에 `masiton` profile이 없어 backend 리소스 존재를 확인하지 못함; 임의의 existing state로 보고하지 않음 |
 
 ## 6. 최종 해결
 
-- 변경 내용: Terraform 입력·버전·이미지·사양·public/private subnet의 VPC 소속·명시적 route table association 및 VPC main route table fallback·route 검증·nullable route gateway 처리·dead code 수정, KMS key ARN 권한 수정, 커밋 고정·체크섬 검증 WireMock fixture 배포와 loopback 바인딩, 제한된 egress 규칙, rate-limit helper 공통화, 정상 부하 `Verified`와 최대 부하 보류 상태로 성능 추적 문서 동기화, AWS 실행 식별자 마스킹, S3+DynamoDB backend 설계와 Accepted ADR 반영, ADR 승인자와 팀 결정 근거 링크 기록.
+- 변경 내용: Terraform 입력·버전·이미지·사양·provider lock constraint 정규화·public/private subnet의 VPC 소속·명시적 route table association 및 VPC main route table fallback·`routes` export 기반 route 검증·nullable route gateway 처리·dead code 수정, KMS key ARN 권한 수정, 커밋 고정·체크섬 검증 WireMock fixture 배포와 loopback 바인딩, 제한된 egress 규칙, rate-limit helper 공통화, 정상 부하 `Verified`와 최대 부하 보류 상태로 성능 추적 문서 동기화, AWS 실행 식별자 마스킹, S3+DynamoDB backend 설계와 Accepted ADR 반영, ADR 승인자와 팀 결정 근거 링크 기록.
 - 선택 이유: 확인 가능한 실행 결과와 현재 계약에 맞추고, 팀이 승인한 Terraform 도입·egress 정책을 코드·ADR·실행 문서에 일치시키기 위해서다.
 - 변경 파일: `infra/performance/terraform/`, `infra/performance/README.md`, `perf/k6/third-expansion-load.js`, `docs/08-planning/`, `docs/07-adr/`, `docs/troubleshooting/`, `.gitignore`
 - 고려한 대안: backend가 팀에 이미 존재한다고 가정하지 않고 bucket/table 제안 이름과 bootstrap 조건을 명시했다. egress는 전체 outbound 유지안과 비교한 뒤 팀 승인에 따라 축소안을 적용했다.
@@ -100,8 +100,8 @@ Terraform 도입과 egress 축소는 코드 오류가 아니라 팀 운영·보�
 | WireMock archive SHA-256·fixture 추출 확인 | 통과 | `414cf7e...` archive의 SHA-256과 `mappings`·`__files` 파일 존재 확인 |
 | WireMock fixture 전체 개수 대조 | 통과 | mappings JSON 23개·`__files` JSON 17개를 저장소와 user-data에 동일하게 반영 |
 | Terraform 실행 버전 기준 대조 | 통과 | `versions.tf`, `.terraform.lock.hcl`, `.terraform-version`, ADR, README가 각각 `1.6.6`·`5.100.0`을 가리킴 |
-| `terraform fmt -check` | 미실행 | Terraform 실행 파일 부재 |
-| `terraform validate` | 미실행 | Terraform 실행 파일 부재 및 AWS backend 리소스 미확인 |
+| `terraform fmt -check` | 통과 | Terraform 1.6.6으로 전체 Terraform 구성 확인 |
+| `terraform init -backend=false`·`terraform validate` | 통과 | AWS provider 5.100.0을 lock 파일에서 재사용해 backend 없이 초기화·구성 검증; 실제 AWS backend bootstrap·plan은 미실행 |
 | PR HEAD 증적 manifest 재계산·검증 스크립트 | 통과 | 15개 파일 SHA-256과 LF-joined aggregate를 PowerShell/.NET으로 재계산한 뒤 `scripts/verify-third-expansion-evidence.ps1` 실행; aggregate `2b15e9c4cb7a2fca3773c3a61279bad9d98405eeda3454d688b7d6c63c0afa24`와 최종 게이트 fingerprint가 일치 |
 | 전체 Gradle build | 미실행 | 이번 변경은 Java·Gradle 코드가 아니며 Terraform/k6 검증 환경이 별도로 필요 |
 
