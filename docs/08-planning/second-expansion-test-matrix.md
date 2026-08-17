@@ -100,13 +100,13 @@ iPhone Safari는 [범위](../00-overview/scope.md), [비기능 요구사항](../
 
 `ADR-PERF-001`이 Accepted가 되면서 **도구 미결정이라는 차단 사유는 없어졌다.** 확정된 내용은 k6 v2.1.0, `perf/k6/` 시나리오, `perf/seed/` 기준 데이터, `workflow_dispatch` 전용 실행, 측정 전용 임시 EC2다. 판정 기준(p95 500ms 이하, 오류율 1% 미만)은 `NFR-PERFORMANCE-006` 원문 그대로이며 낮추지 않았다.
 
-그러나 같은 날 팀이 **실측을 3차 확장 이후로 연기**하기로 결정했다. 구현에 우선순위를 두기 위한 판단이며, 측정 수단은 이미 준비돼 있어 언제든 실행할 수 있는 상태다. 즉 보류 사유가 "수단이 없다"에서 "수단은 있으나 지금 실행하지 않기로 했다"로 바뀐 것이지, 보류가 풀린 것이 아니다.
+정상 부하 50명·20 RPS는 2026-08-15 이슈 #207 격리 환경에서 정식 측정해 `Verified`로 기록했다. 최대 부하 200명·80 RPS는 같은 실행에서 관찰했지만 정식 판정은 3차 확장 이후로 연기했다. 따라서 현재 보류 대상은 최대 부하뿐이며, 정상 부하 기준은 해제됐다.
 
-**보류 사유가 바뀐 것과 측정이 끝난 것은 다르다.** 실제 수행 여부와 수치는 [2차 확장 성능 검증 결과](second-expansion-performance-verification.md)를 확인한다. 그 문서에 결과가 기록되기 전까지 `NFR-PERFORMANCE-006`의 정상 부하 조건은 **미측정 상태**이며, 측정했다고 보고하지 않는다.
+**현재 상태는 정상 부하 `Verified`, 최대 부하 정식 판정 보류다.** 정상 부하의 실제 수행 여부와 수치는 [2차 확장 성능 검증 결과](second-expansion-performance-verification.md)에서 확인한다. `NFR-PERFORMANCE-006`의 정상 부하 조건은 해제됐고, 최대 80 RPS는 관찰 결과만 있어 정식 판정 대상으로 남긴다.
 
-연기로 남는 위험은 하나 분명하다. [ADR-DATA-011](../07-adr/data/data-011-popular-restaurant-request-time-aggregation.md)이 인기 맛집에 캐시·Snapshot·Batch를 두지 않기로 한 근거가 "필요하다는 측정 근거가 없다"였으나, 2026-08-15 격리 실행으로 정상 부하 조건을 확인했다. 최대 부하 80 RPS는 관찰 결과이며 정상 부하 정식 판정을 대체하지 않는다.
+연기로 남는 위험은 최대 부하 정식 판정 하나다. [ADR-DATA-011](../07-adr/data/data-011-popular-restaurant-request-time-aggregation.md)이 인기 맛집에 캐시·Snapshot·Batch를 두지 않기로 한 근거와 관련해 정상 부하 조건은 2026-08-15 격리 실행으로 확인했다. 최대 부하 80 RPS는 관찰 결과이며 정식 판정을 대체하지 않는다.
 
-부하 측정이 실제로 수행되기 전까지 회귀 탐지는 다음 셋이 담당한다. 셋 다 쿼리 수와 실행계획의 구조적 악화는 잡지만 부하 하의 p95 악화는 잡지 못한다.
+최대 부하 정식 판정이 수행되기 전까지 회귀 탐지는 다음 셋이 담당한다. 셋 다 쿼리 수와 실행계획의 구조적 악화는 잡지만 부하 하의 p95 악화는 잡지 못한다.
 
 - `PublicCurationQueryCountApiTest`, `PopularRestaurantQueryCountApiTest` — 공개 조회 쿼리 수 상수 가드
 - `CurationPublicQueryPlanPostgreSqlIntegrationTest` — PostgreSQL 실행계획(`loops=1`) 검증
