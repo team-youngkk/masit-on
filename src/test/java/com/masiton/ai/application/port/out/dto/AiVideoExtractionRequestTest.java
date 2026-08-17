@@ -1,5 +1,6 @@
 package com.masiton.ai.application.port.out.dto;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.net.URI;
@@ -31,6 +32,20 @@ class AiVideoExtractionRequestTest {
                 URI.create("https://www.youtube.com/watch?v=video-id"), "  보완 메모  ");
 
         org.assertj.core.api.Assertions.assertThat(request.supplementText()).isEqualTo("보완 메모");
+        assertThat(request.supplementSourceHash())
+                .isEqualTo("bd02680f3838091255b879062abf2576424ffc401dcc8ab0cc9d9e2722f2cd64");
+    }
+
+    @Test
+    @DisplayName("보조 입력 해시는 trim한 UTF-8 원문에 대해 결정적으로 생성한다")
+    void 생성_동일보조입력_동일한SHA256해시를반환한다() {
+        AiVideoExtractionRequest padded = new AiVideoExtractionRequest(
+                URI.create("https://youtu.be/video-id"), "  맛집 😀  ");
+        AiVideoExtractionRequest normalized = new AiVideoExtractionRequest(
+                URI.create("https://youtu.be/video-id"), "맛집 😀");
+
+        assertThat(padded.supplementSourceHash()).isEqualTo(normalized.supplementSourceHash());
+        assertThat(padded.supplementSourceHash()).matches("[0-9a-f]{64}");
     }
 
     @Test

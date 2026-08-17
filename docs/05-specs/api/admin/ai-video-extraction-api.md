@@ -70,7 +70,7 @@ related_documents:
   "reviewStatus": null,
   "provider": "GOOGLE_GEMINI",
   "modelVersion": "gemini-3.5-flash-lite",
-  "promptVersion": "P2",
+  "promptVersion": "P7",
   "schemaVersion": "S1",
   "attemptCount": 0,
   "createdAt": "2026-08-10T12:00:00+09:00",
@@ -98,7 +98,7 @@ related_documents:
 ```
 
 - `videoUrl`: 필수, 공개 YouTube 동영상 URL만 허용한다.
-- `supplementText`: 선택, trim 후 최대 20,000자. 전체 자막을 자동으로 수집했다는 의미가 아니다. 비동기 Worker 복구를 위해 암호화된 임시 입력으로 저장할 수 있으며 작업 종료 후 24시간 이내 삭제한다.
+- `supplementText`: 선택, trim 후 최대 20,000자. 전체 자막을 자동으로 수집했다는 의미가 아니다. 비동기 Worker 복구를 위해 암호화된 임시 입력으로 저장할 수 있으며 작업 종료 후 24시간 이내 삭제한다. 식당명·메뉴·주소·Kakao 장소 URL은 보완 텍스트의 SHA-256과 문자 범위가 일치하는 `TEXT_RANGE` 후보로 사용할 수 있지만, 실제 방문 근거는 보완 텍스트만으로 확정하지 않고 영상 `TIMESTAMP`를 요구한다. 모든 값은 기존 Kakao·YouTube·Visit 검증을 그대로 통과해야 한다.
 - `idempotencyKey`: 선택. 동일 URL·입력·버전 조합은 서버 멱등성 키로 다시 수렴한다.
 
 #### 응답
