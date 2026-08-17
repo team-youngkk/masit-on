@@ -52,8 +52,10 @@ related_documents:
 | [3793783777](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3793783777) | public subnet 검증이 private subnet을 허용 | 인프라·네트워크 정합성 | 수정 필요 | subnet별 route table을 조회해 public은 IGW 기본 경로를, private은 IGW 기본 경로 부재를 검증 | `data.tf`·README 대조; Terraform 실행 파일 부재로 validate 미실행 |
 | [3793818107](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3793818107) | subnet과 VPC 소속 관계 검증 누락 | 인프라·네트워크 경계 | 수정 필요 | public/private `aws_subnet` data source에 입력 VPC 소속 postcondition 추가 | `data.tf`·VPC 변수 대조; Terraform 실행 파일 부재로 validate 미실행 |
 | [3793953578](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3793953578) | 증적 manifest의 15개 파일 SHA-256·aggregate 불일치 | 검증·문서 계약 | 수정 필요 | PR HEAD에서 PowerShell/.NET SHA-256으로 15개 항목과 aggregate를 재계산하고 최종 게이트 fingerprint를 동기화 | aggregate `2b15e9c4cb7a2fca3773c3a61279bad9d98405eeda3454d688b7d6c63c0afa24`; `verify-third-expansion-evidence.ps1` 통과 |
-| [3793953582](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3793953582) | route의 nullable `gateway_id`에 `coalesce(..., "")` 사용 | 인프라·Terraform 표현식 | 수정 필요 | null-safe conditional로 교체해 NAT·peering·TGW 등 gateway_id가 비어 있는 route도 검증 단계에서 오류 없이 처리 | Terraform 1.6.6 + AWS provider 5.100.0 `fmt/init/validate` 통과 |
+| [3793953582](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3793953582) | route의 nullable `gateway_id`에 `coalesce(..., "")` 사용 | 인프라·Terraform 표현식 | 수정 필요 | null-safe conditional로 교체해 NAT·peering·TGW 등 gateway_id가 비어 있는 route도 검증 단계에서 오류 없이 처리 | Terraform 1.6.6 + AWS provider 5.100.0 `fmt/init/validate` 통과; set은 `tolist()` 후 선택 |
 | [3794171070](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3794171070) | `subnet_id` 조회가 명시적 route table 연결이 없는 main route table 사용 subnet에서 실패 | 인프라·네트워크 정합성 | 수정 필요 | `association.subnet-id`로 명시적 연결을 먼저 조회하고 없으면 지정 VPC의 `main_route_table_id`를 사용하도록 fallback | AWS provider `aws_route_tables`·`aws_vpc` data source 계약 대조; Terraform 1.6.6 + AWS provider 5.100.0 `fmt/init/validate` 통과 |
+| [3794336221](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3794336221) | develop 병합 뒤 증적 manifest 재계산 | 검증·문서 계약 | 수정 필요 | 병합된 HEAD에서 15개 파일 해시·aggregate·final-gate fingerprint를 재계산 | `verify-third-expansion-evidence.ps1` 통과 여부를 최신 HEAD에서 확인 | 
+| [3794336229](https://github.com/team-youngkk/masit-on/pull/218#discussion_r3794336229) | `aws_route_tables.ids` set 인덱싱 | 인프라·Terraform 표현식 | 수정 필요 | fallback을 길이 조건으로 명시하고 `tolist(...)[0]`으로 explicit association ID를 선택 | Terraform 1.6.6 + AWS provider 5.100.0 `fmt/init/validate` 실행 | 
 
 ## 3. 문제 현상과 발생 조건
 
@@ -70,13 +72,13 @@ Terraform 구성과 성능 결과 문서가 서로 다른 실행 기준을 가�
 
 성능 문서는 격리 실행 결과를 기록하면서 정본 문서와 상태를 갱신하지 않아 `통과`와 `Not Measured`가 동시에 남았다. 공개 저장소 증적 보호 규칙과 실행 식별자 마스킹도 결과 문서에 적용되지 않았다.
 
-Terraform 도입과 egress 축소는 코드 오류가 아니라 팀 운영·보안 선택이었다. public subnet의 route table 검증을 보강하는 과정에서 public/private subnet data source의 VPC 소속 postcondition을 함께 유지하지 못한 것이 추가 원인이었다. `subnet_id` 필터가 명시적 association만 찾는다는 provider 동작을 고려하지 않아 VPC main route table fallback이 빠져 있었다. 검증 과정에서는 AWS provider 5.100.0의 route table export 이름이 `routes`인데 기존 코드가 `route`를 사용한 오류와 Terraform 1.6.6 lock constraint의 비정규 표기도 함께 확인해 수정했다. 정상 부하 완료 뒤 stale 상태 문장을 남긴 문서 동기화 누락도 함께 확인했다. Accepted ADR의 `reviewers`가 비어 있어 승인자와 결정 근거가 문서에서 끊긴 것도 별도 문서 계약 결함으로 확인했다. 2026-08-16 팀 리뷰에서 Terraform 도입과 축소 egress 정책을 승인해 ADR-PERF-003을 `Accepted`로 전환하고 구현에 반영한다. 실제 backend bucket·table bootstrap과 접근 role은 실행 전 운영 작업으로 남긴다.
+Terraform 도입과 egress 축소는 코드 오류가 아니라 팀 운영·보안 선택이었다. public subnet의 route table 검증을 보강하는 과정에서 public/private subnet data source의 VPC 소속 postcondition을 함께 유지하지 못한 것이 추가 원인이었다. `subnet_id` 필터가 명시적 association만 찾는다는 provider 동작을 고려하지 않아 VPC main route table fallback이 빠져 있었다. `aws_route_tables.ids`가 set인데 `[0]`으로 직접 인덱싱해 explicit association이 있어도 fallback으로 넘어가는 오류도 확인했다. 검증 과정에서는 AWS provider 5.100.0의 route table export 이름이 `routes`인데 기존 코드가 `route`를 사용한 오류와 Terraform 1.6.6 lock constraint의 비정규 표기도 함께 확인해 수정했다. 정상 부하 완료 뒤 stale 상태 문장을 남긴 문서 동기화 누락도 함께 확인했다. Accepted ADR의 `reviewers`가 비어 있어 승인자와 결정 근거가 문서에서 끊긴 것도 별도 문서 계약 결함으로 확인했다. 2026-08-16 팀 리뷰에서 Terraform 도입과 축소 egress 정책을 승인해 ADR-PERF-003을 `Accepted`로 전환하고 구현에 반영한다. 실제 backend bucket·table bootstrap과 접근 role은 실행 전 운영 작업으로 남긴다.
 
 ## 5. 확인 및 시도
 
 | 확인하거나 시도한 방법 | 결과 | 판단과 다음 단계 |
 |---|---|---|
-| PR review thread와 PR diff 대조 | 초기 13개와 후속 16개 확인 | 26개는 코드·문서로 처리하고, 후속 팀 결정 2건을 ADR·보안 그룹·문서에 반영 |
+| PR review thread와 PR diff 대조 | 초기 13개와 후속 18개 확인 | 28개는 코드·문서로 처리하고, 후속 팀 결정 2건을 ADR·보안 그룹·문서에 반영 |
 | 기존 `docs/troubleshooting` 검색 | PR #208·#214의 성능 추적성 기록 확인 | 기존 기록의 증거·지표 기록 방식을 재사용하고 새 사건으로 기록 |
 | `rg`로 AWS command/instance ID 검색 | 결과 문서와 README에 원문 식별자 확인 | 공개 문서의 식별자를 placeholder로 교체 |
 | `git diff --check` | 통과 | whitespace 오류 없음 |
@@ -107,7 +109,7 @@ Terraform 도입과 egress 축소는 코드 오류가 아니라 팀 운영·보�
 
 ## 8. 재발 방지 및 다음 확인
 
-- 재발 방지: Terraform backend 선언·예시 설정·state 보안 조건을 문서화하고, 결과 문서의 정본 상태·실행 증거·공개 식별자 보호 규칙을 함께 갱신했다. Accepted ADR 전환 시 `status`, `reviewers`, 승인 근거 링크를 함께 확인하고, 성능 측정 상태를 갱신할 때 2차·3차 추적표와 정본 결과의 정상/최대 부하 상태를 함께 대조하고, subnet 입력을 받을 때 VPC 소속과 route table의 IGW 기본 경로를 함께 검증하고, 명시적 association이 없으면 VPC main route table을 사용한다. 증적 manifest는 수동 해시를 편집하지 않고 HEAD의 실제 파일에서 재생성하며, Terraform route 검증에서는 nullable provider attribute에 `coalesce(..., "")`를 사용하지 않는다.
+- 재발 방지: Terraform backend 선언·예시 설정·state 보안 조건을 문서화하고, 결과 문서의 정본 상태·실행 증거·공개 식별자 보호 규칙을 함께 갱신했다. Accepted ADR 전환 시 `status`, `reviewers`, 승인 근거 링크를 함께 확인하고, 성능 측정 상태를 갱신할 때 2차·3차 추적표와 정본 결과의 정상/최대 부하 상태를 함께 대조하고, subnet 입력을 받을 때 VPC 소속과 route table의 IGW 기본 경로를 함께 검증하고, 명시적 association이 없으면 VPC main route table을 사용한다. 증적 manifest는 develop 병합 후 최신 HEAD에서 재생성하며, Terraform route 검증에서는 nullable provider attribute에 `coalesce(..., "")`를 사용하지 않고 set 속성은 `tolist()` 후 인덱싱한다.
 - 다음 확인: 이우람이 AWS role로 backend bucket/table을 bootstrap한 뒤 `terraform init -backend-config=backend.hcl`, `terraform fmt -check`, `terraform validate`, `terraform plan`을 실행한다. egress 변경 후 app·loadgen의 HTTPS/DNS/내부 통신과 RDS egress 없음이 plan에서 일치하는지 확인한다.
 
 ## 9. 도입 전후 비교 지표
