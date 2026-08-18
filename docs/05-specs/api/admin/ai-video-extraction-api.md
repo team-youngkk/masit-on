@@ -56,7 +56,7 @@ related_documents:
 
 `SUCCEEDED`와 `PARTIAL`은 실행 상태와 결과 완전성을 각각 표현한다. `AUTO_CONFIRMED`는 자동 검증과 기존 정식 등록 명령이 성공했다는 의미이며, 관리자의 사전 승인을 뜻하지 않는다.
 
-중복은 종결이 아니라 복구 가능한 보류다. 같은 맛집·방문 관계가 이미 존재하는 `DUPLICATE_CONFLICT`는 `AUTO_BLOCKED`로 귀결하며 `AUTO_REJECTED`로 매핑하지 않는다. `BR-AIEXTRACT-011`의 예외 전환 대상이므로 관리자 사후 보정 경로가 열려 있어야 한다.
+중복은 종결이 아니라 복구 가능한 보류다. 같은 맛집·방문 관계가 이미 존재하는 `DUPLICATE_CONFLICT`는 `AUTO_BLOCKED`로 귀결하며 `AUTO_REJECTED`로 매핑하지 않는다. `BR-AIEXTRACT-011`의 예외 전환 대상이지만, 관리자가 할 수 있는 것은 기존 등록 결과를 확인하는 것(`EXISTING_RESOURCE`)뿐이다. `CONFIRM`·`ADJUST_CATEGORY`로 사후 보정하지 않으며 재추출·재실행·수동 등록 경로도 없다.
 
 #### 작업 최상위 `reviewStatus` 요약 규칙
 

@@ -391,6 +391,33 @@ Kakao 장소와 카테고리는 관리자가 외부 기준정보 중 하나를 �
 
 검증: `recoveryPaths` 11행 전체와 `decision` 표를 대조해 `DISCARD`가 배열 밖 공통 동작이라는 서술이 두 절에서 같은 것을 확인했다. 3.5절 문장·3.6절 정규 표·사용자 흐름 세 곳에서 `DUPLICATE_CONFLICT`의 유일한 경로가 `EXISTING_RESOURCE`뿐이라는 서술이 일치하는 것을 확인했다. API 3.5절이 언급하는 감사 이력 대상 네 가지(사유·제출자·이전 카테고리·되돌린 식별자)가 새 테이블의 컬럼과 1:1 대응하는 것을 확인했다. 문서만 변경해 빌드·테스트 대상은 없다.
 
+### 10.13 12차 리뷰 처리
+
+10.12절 반영을 push한 지 8~12분 뒤(`f6ee199`) `jinyp01`과 `w00lam`이 각각 1건, 2건, 도합 4건을 남겼다. 전부 10.12절이 만든 새 계약(`DISCARD` 공통성, `DUPLICATE_CONFLICT` 유일 경로, `ai_registration_unit_review`)이 API 문서 안에서는 정리됐지만 같은 개념을 서술하는 다른 문서·다른 절까지는 퍼지지 않은 잔여 불일치였다.
+
+| 스레드 | 요청 요약 | 문제 유형 | 판단 | 처리 결과 |
+|---|---|---|---|---|
+| [와이어프레임 `DISCARD` 규칙 미갱신 (P1, jinyp01)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3801435083) | API는 `DISCARD`를 배열 밖 공통 예외로 바꿨는데 와이어프레임 218행은 "배열에 없는 동작을 화면에 두지 않는다"를 그대로 유지 | 기타 | 수정 필요 | 218행을 고쳐 `[폐기]`가 `recoveryPaths` 내용과 무관하게 `AUTO_BLOCKED`의 일곱 차단 사유 모두에서 공통으로 노출됨을 명시하고, 배열이 빈 네 거절 상황(`AUTO_BLOCKED`가 아님)은 `[폐기]`도 없다고 구분 |
+| [같은 항목 (P1, w00lam)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3801436706) | 같은 문장, 같은 지적 | 기타 | 수정 필요 | 위와 같은 수정으로 해소 |
+| [`DUPLICATE_CONFLICT` "사후 보정" 잔존 (P2)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3801436714) | 2.1절 상태 표 설명이 여전히 "관리자 사후 보정 경로가 열려 있어야 한다"고 서술해 `CONFIRM`·`ADJUST_CATEGORY`가 가능한 것처럼 읽힘 | 기타 | 수정 필요 | "사후 보정 경로가 열려 있어야 한다"를 삭제하고 "관리자가 할 수 있는 것은 `EXISTING_RESOURCE` 확인뿐이며 `CONFIRM`·`ADJUST_CATEGORY`로 사후 보정하지 않고 재추출·재실행·수동 등록 경로도 없다"로 교체 |
+| [Snapshot `review_reason`의 폐기 조건 미분리 (P2)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3801436719) | `ai_candidate_snapshot.review_reason`이 여전히 "폐기 시 필수"였는데, `DISCARD`는 이제 등록 단위 단위이고 사유는 `ai_registration_unit_review.reason`에 저장됨 | 데이터베이스 | 수정 필요 | `review_reason` 필수 조건을 "등록 단위 없이 `AUTO_BLOCKED`·`AUTO_REJECTED`로 판정되면 필수"로 좁히고, `reviewed_by`·`reviewed_at`도 Snapshot 자체 판정으로 범위를 한정. 단위별 폐기·보정 사유는 `ai_registration_unit_review`가 소유한다는 문장을 추가 |
+
+이번 라운드는 10.11절이 지적했던 것과 같은 패턴이 API 문서 밖으로 번진 사례다. 10.12절에서 API 계약(3.5·3.6절)은 고쳤지만, 다음 세 곳을 놓쳤다.
+
+- 같은 화면 규칙을 서술하는 **다른 문서**(와이어프레임)
+- 같은 개념을 서술하는 **같은 문서의 다른 절**(2.1절 상태 표 설명은 3.5·3.6절과 별개로 `DUPLICATE_CONFLICT`를 서술)
+- 새로 만든 테이블과 **기존 컬럼의 경계**(신설한 `ai_registration_unit_review`가 기존 `ai_candidate_snapshot.review_reason`의 "폐기 시 필수" 조건을 흡수해야 하는데 그 컬럼은 그대로 뒀다)
+
+세 곳 모두 "규칙을 한 곳에서 바꾸면 같은 개념이 등장하는 다른 위치까지 전부 확인한다"는, 이 문서가 반복해서 기록한 원인과 같다. 다음 라운드부터는 API 계약을 바꿀 때 와이어프레임·2.1절 상태 설명·데이터 계약의 세 지점을 같은 커밋에서 함께 검색하기로 한다.
+
+| 파일 | 변경 |
+|---|---|
+| [third-expansion-wireframes.md](../04-product/wireframes/third-expansion-wireframes.md) | `[폐기]`를 `recoveryPaths` 배열과 무관한 공통 동작으로 명시 |
+| [ai-video-extraction-api.md](../05-specs/api/admin/ai-video-extraction-api.md) | 2.1절 `DUPLICATE_CONFLICT` 설명에서 "사후 보정" 제거 |
+| [third-expansion-ai-video-data-contract.md](../05-specs/data/third-expansion-ai-video-data-contract.md) | `ai_candidate_snapshot.review_reason` 등 세 컬럼을 Snapshot 자체 판정으로 범위 한정, `ai_registration_unit_review`와의 경계 문장 추가 |
+
+검증: 와이어프레임·API 2.1절·데이터 계약 세 문서에서 `DISCARD`/`[폐기]`가 `recoveryPaths`와 무관한 공통 동작이라는 서술이 일치하는 것을, `DUPLICATE_CONFLICT`의 유일한 경로가 `EXISTING_RESOURCE`뿐이라는 서술이 API 2.1·3.5·3.6절과 사용자 흐름 네 곳에서 일치하는 것을, Snapshot 컬럼과 `ai_registration_unit_review` 컬럼의 책임 경계가 겹치지 않는 것을 확인했다. 문서만 변경해 빌드·테스트 대상은 없다.
+
 ## 11. 비교 지표
 
 해당 없음. 문서 계약 변경이며 측정할 런타임 지표가 없다. 자동 등록률·`CATEGORY_UNRESOLVED` 비율 등은 구현 후 [PRD 11절 지표](../04-product/prd/admin/ai-video-information-extraction.md)에서 측정한다. 이 PR 시점에는 기준선을 만들 수 없다.

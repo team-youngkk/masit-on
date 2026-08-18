@@ -121,10 +121,12 @@ related_documents:
 | `missing_fields` | `jsonb` | NN | 배열 | `UNKNOWN` 필드 |
 | `candidate_truncated` | `boolean` | NN | 기본 `false` | 후보 수 상한으로 일부 장소가 생략됨 |
 | `review_status` | `varchar(24)` | NN | 상태 CHECK | `AUTO_CONFIRMED/AUTO_BLOCKED/AUTO_REJECTED/MANUAL_OVERRIDE` |
-| `reviewed_by` | `uuid` | Yes | FK → `admin_account.id` | 검수 관리자 |
-| `review_reason` | `varchar(1000)` | Yes | 폐기 시 필수 | 검수 사유 |
-| `reviewed_at` | 시간 | Yes | 자동 등록 상태와 조합 | 자동 판정 또는 사후 보정 시각 |
+| `reviewed_by` | `uuid` | Yes | FK → `admin_account.id` | Snapshot 자체를 판정한 주체. 시스템 자동 판정이면 `NULL` |
+| `review_reason` | `varchar(1000)` | Yes | 등록 단위 없이 `AUTO_BLOCKED`·`AUTO_REJECTED`로 판정되면 필수 | Snapshot 자체의 차단·거부 사유 |
+| `reviewed_at` | 시간 | Yes | 자동 등록 상태와 조합 | Snapshot 자체 판정 시각 |
 | `created_at` | 시간 | NN | 기본 현재 시각 | Snapshot 생성 시각 |
+
+`reviewed_by`·`review_reason`·`reviewed_at`은 Snapshot 자체의 판정만 표현하며, 등록 단위가 하나도 없는 Snapshot(후보 부족·정책 위반으로 차단·거부된 경우)에서만 의미가 있다. Snapshot 하나가 등록 단위를 여럿 가질 수 있으므로 단위별 폐기·사후 보정·롤백의 행위자·사유는 이 컬럼이 아니라 `ai_registration_unit_review`(5.3절)가 소유한다. 단일 Snapshot 컬럼으로는 단위별 반복 이력을 표현할 수 없기 때문이다.
 
 `candidate_truncated`는 후보 수 상한 때문에 일부 장소가 후보에서 생략됐음을 뜻한다. 모델 응답의 표시 값과, 후보 수가 상한과 같은지를 함께 보고 서버가 확정한다. 이 컬럼이 `true`인 Snapshot의 등록 결과는 영상의 모든 맛집을 덮지 않으므로 관리자 화면에 누락 경고를 표시한다. 컬럼 추가에는 새 Flyway 마이그레이션이 필요하다.
 
