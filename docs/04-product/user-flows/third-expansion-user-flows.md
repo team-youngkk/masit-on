@@ -96,8 +96,8 @@ stateDiagram-v2
 ### 3.3 정상 추출과 자동 등록
 
 1. `AI-EXTRACT-LIST`에서 관리자가 작업 상태와 대기·실행 시간을 확인한다.
-2. Worker가 `SUCCEEDED` 결과에 대해 필드별 필수값·근거·태그 정규화·중복·Kakao·YouTube·Visit 검증을 자동 실행한다.
-3. 모든 검증이 성공하면 `AUTO_CONFIRMED`로 전환하고 Restaurant·Creator·Video·Visit·`AI_AUTO_CONFIRMED VisitTag`를 하나의 원자적 흐름으로 생성·공개한다.
+2. Worker는 `SUCCEEDED` 결과를 장소 단위 등록 단위로 나눈 뒤, 단위마다 필드별 필수값·근거·태그 정규화·중복·Kakao·YouTube·Visit 검증을 자동 실행한다. 장소 동일성은 상호명·주소로 Kakao를 검색해 판정하고, 대표 음식 카테고리는 확정한 장소의 분류와 메뉴 표현으로 결정한다. 관리자에게 후보 선택이나 카테고리 입력을 요구하지 않는다.
+3. 모든 검증이 성공한 등록 단위는 `AUTO_CONFIRMED`로 전환하고 Restaurant·Creator·Video·Visit·`AI_AUTO_CONFIRMED VisitTag`를 하나의 원자적 흐름으로 생성·공개한다. 원자성 경계는 등록 단위 하나이며, 한 단위의 실패가 이미 통과한 다른 단위를 되돌리지 않는다.
 4. 자동 등록 결과에는 모델·Prompt·Schema 버전과 검증 증거를 연결한다.
 5. 관리자는 목록에서 자동 등록 결과와 감사 이력을 조회하고, 오류가 발견된 경우에만 사후 보정 또는 롤백을 요청한다.
 

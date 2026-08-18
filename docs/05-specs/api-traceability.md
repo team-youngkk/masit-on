@@ -238,6 +238,8 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 | BR-NLSEARCH-001~003 | API-DISCOVERY-NL-001·API-DISCOVERY-001 | 직접 필터 우선·태그 AND·공개·활성 결과·전체 목록 대체 금지 | WS-14 |
 | BR-NLSEARCH-003 | API-DISCOVERY-NL-001·API-DISCOVERY-001 | 활성 TagDefinition·확정 VisitTag·공개 Visit·태그 AND·중복 제거 | WS-14 |
 | BR-AIEXTRACT-008 | API-ADMIN-AIEXTRACT-001 | 허용 태그 정의·근거·자동 결정·사후 보정·검증 전 공개 금지 | WS-15 |
+| BR-AIEXTRACT-009~010 | API-ADMIN-AIEXTRACT-001 | 등록 단위별 판정·상호명·주소 기반 장소 자동 확정·카테고리 자동 선정·`registrationUnits` 응답과 차단 사유 코드 | WS-15 |
+| BR-AIEXTRACT-011 | API-ADMIN-AIEXTRACT-001 | 등록 단위 일괄 등록 실행, 4종 원자 등록과 자원 재사용, 예외 사유별 보조 입력 전환 | WS-15 |
 | BR-COURSE-001~004 | API-DISCOVERY-COURSE-001 | 2~5개·첫 출발점 고정·좌표 필수·30km·만료·부분 결과 금지 | WS-16 |
 
 ## 5. NFR → API 검증 매핑

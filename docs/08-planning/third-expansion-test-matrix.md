@@ -61,6 +61,9 @@ related_documents:
 | `TST-E3-AI-001` | `BR-AIEXTRACT-001`, `BR-AIEXTRACT-005`, `BR-AIEXTRACT-006`, `BR-AIEXTRACT-007` | MockMvc, Webhook 계약, URL·Payload·멱등·보완 텍스트 암호화 | `E3-T04` |
 | `TST-E3-AI-002` | `FR-AIEXTRACT-002`, `NFR-OBSERVABILITY-005` | 관리자 API, 페이지·상태·민감정보 마스킹, traceId | `E3-T07` |
 | `TST-E3-AI-003` | `BR-AIEXTRACT-002`, `BR-AIEXTRACT-003`, `BR-AIEXTRACT-004`, `BR-AIEXTRACT-008`, `NFR-ACCURACY-002`, `NFR-INTEGRITY-006` | 실패 주입, 정식 Entity 0건, 자동 등록 원자성·멱등·태그 공개 경계 | `E3-T06`, `E3-T07` |
+| `TST-E3-AI-005` | `BR-AIEXTRACT-001`, `BR-AIEXTRACT-009` | 다장소 영상 등록 단위 분해, Kakao 검색 WireMock, 상호명·시구 일치 1건 자동 확정, `PLACE_NOT_FOUND`·`PLACE_AMBIGUOUS` 차단, 일부 단위 차단 시 나머지 단위 등록 유지 | `E3-T06`, `E3-T07` |
+| `TST-E3-AI-006` | `BR-AIEXTRACT-010` | Kakao 분류 1순위·메뉴 표현 2순위 매핑, 매핑 실패 시 `CATEGORY_UNRESOLVED` 차단, 기본값 대체 0건, 관리자 사후 카테고리 보정 | `E3-T06`, `E3-T07` |
+| `TST-E3-AI-007` | `BR-AIEXTRACT-011`, `NFR-INTEGRITY-006` | 등록 실행 1회로 맛집·유튜버·영상·방문 관계 4종 등록, 기존 유튜버·영상 재사용, 재요청 멱등·동시 요청 충돌, 중간 실패 시 해당 단위 저장 0건, 외부 호출 중 트랜잭션 미개방, 예외 사유별 보조 입력 전환과 그 밖의 경우 관리자 입력 미요구 | `E3-T06`, `E3-T07`, `E3-T12` |
 | `TST-E3-AI-004` | `NFR-EXTERNAL-005`, `NFR-RELIABILITY-005`, `NFR-AVAILABILITY-003` | Gemini timeout·429·5xx·Schema 오류, retry·lease·heartbeat·재기동·동시 claim | `E3-T05`, `E3-T13` |
 | `TST-E3-COURSE-001` | `BR-COURSE-001`, `BR-COURSE-002`, `NFR-PRIVACY-006` | 입력 경계값·좌표·공개 상태·비저장·현재 위치 미수집 | `E3-T09` |
 | `TST-E3-COURSE-002` | `BR-COURSE-003`, `NFR-PERFORMANCE-007` | Kakao Mobility WireMock 계약, 순서·TTL 5분·코스당 1회 호출 | `E3-T09` |

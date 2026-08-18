@@ -199,8 +199,13 @@ Prompt `P2` 변경 전 배포본과 동일한 역사적 계약(`gemini-3.5-flash
 
 ## 9. 남은 결정
 
-- 결정 C의 장소 동일성 판정 기준 변경 여부. restaurant 도메인 소유자 합의 대상이다. 관리자가 판정 주체로 남는 범위의 후속 설계는 [AI 후보 등록 보조 설계](third-expansion-ai-candidate-registration-assist.md)에 있다.
-- 메뉴 표현과 대표 카테고리 매핑 방식. 고정 키워드 완전일치를 유지할지 기준정보로 옮길지 판단이 필요하다.
+2026-08-18에 앞의 두 항목이 결정됐다. 결정 내용은 요구사항·PRD·ADR에 반영했고 이 절에는 결과만 남긴다.
+
+- **결정 C 해소** — 장소 동일성 판정 기준을 변경했다. AI 후보에 Kakao 장소 URL을 요구하지 않고, 시스템이 상호명·주소로 Kakao를 검색해 정규화 상호명 완전일치와 도로명주소 시·구 일치를 함께 만족하는 결과가 정확히 1건일 때만 자동 확정한다. 0건은 `PLACE_NOT_FOUND`, 2건 이상은 `PLACE_AMBIGUOUS`로 차단한다. 근거는 [BR-AIEXTRACT-009](../01-requirements/business-rules.md#br-aiextract-009-장소-동일성-자동-확정)와 [ADR-AI-001 5.3절](../07-adr/integration/ai-001-video-extraction-candidate-boundary.md)이다.
+- **복수 후보 처리 결정** — 후보가 여럿이라는 사실만으로 차단하지 않는다. 후보를 장소 단위 등록 단위로 나눠 각각 독립 판정하며, 한 단위의 차단이 다른 단위의 등록을 막지 않는다. `MAX_CANDIDATES` 상한은 다장소 영상을 통과시키기 위해 함께 올린다.
+- **카테고리 매핑 결정** — 고정 키워드 완전일치를 버리고 기준정보 매핑 표로 옮긴다. 1순위 근거는 확정한 Kakao 장소의 분류 표현, 2순위는 AI 메뉴 표현이며 둘 다 실패하면 `CATEGORY_UNRESOLVED`로 차단한다. 근거는 [BR-AIEXTRACT-010](../01-requirements/business-rules.md#br-aiextract-010-대표-음식-카테고리-자동-선정)이다.
+
+아직 남은 결정이다.
 - 관리자 수동 등록 결과와 AI 작업의 연결 보존 여부.
 - `MAX_CANDIDATES` 상한 인상 여부. 실측 최대가 131건이므로 다장소 영상을 통과시키려면 상한을 올려야 하지만 수신 계약 변경이다. 응답 크기와 처리 비용도 함께 판단한다.
 - `candidate_fields`의 복수 후보 배열을 `tr_ai_candidate_snapshot__json_contract` 트리거 검사 대상에 넣을지 여부. 현재 그 컬럼은 최상위 object CHECK만 받으므로 배열 원소의 `confidence` 범위와 `evidence` 형태가 DB 방어선을 통과하지 않는다. 애플리케이션 검증기가 정상 경로를 막고 있어 재현되는 결함은 없으나 심층 방어가 한 겹 줄었다. 트리거 변경은 새 마이그레이션이 필요하므로 Flyway 순서 소유자 합의 대상이다.

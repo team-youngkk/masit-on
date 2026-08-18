@@ -42,6 +42,7 @@ related_documents:
 | AI Extraction Job | 저장 | WS-15 | 영상 식별자·입력 해시·유입 경로·상태·lease·버전·시각을 보존 |
 | AI Extraction Temporary Input | 저장 | WS-15 | 관리자 보완 텍스트만 암호화해 작업 종료 후 24시간 이내까지 임시 보존 |
 | AI Candidate Snapshot | 저장 | WS-15 | 필드별 후보·신뢰도·`TIMESTAMP`·`TEXT_RANGE`·`UNKNOWN` 근거·완전성·자동 등록 상태를 버전별 보존 |
+| AI Registration Unit | 저장 | WS-15 | Snapshot을 장소 단위로 나눈 등록 단위와 단위별 판정 상태·장소·카테고리 근거·등록 결과를 보존 |
 | AI Candidate Tag Review | 저장 | WS-15 | 후보 태그별 자동 판단·사후 보정·사유·주체·시각을 append-only로 보존 |
 | Tag Definition | 저장 | WS-15·WS-14 협업 | 허용 태그 코드·유형·표시명·별칭·활성 상태를 보존 |
 | Visit Tag | 저장 | WS-15 생성·WS-14 조회 | 관리자 확정 태그와 확정 Visit의 연결·근거·버전을 보존 |
@@ -133,7 +134,35 @@ related_documents:
 
 후보가 여럿인 필드를 `field_confidences`·`evidence`에서 생략하는 것은 선택이 아니라 제약이다. `tr_ai_candidate_snapshot__json_contract` 트리거가 `field_confidences`의 모든 값을 0~1 숫자로, `evidence`의 모든 값을 단일 근거 object로 강제하므로 그 두 컬럼에는 배열을 담을 수 없다. 반면 `candidate_fields`에는 최상위 `jsonb_typeof = 'object'` CHECK만 걸려 있어 값 위치의 배열이 허용된다. 이 규칙 덕분에 복수 후보 보존에 스키마 변경이 필요하지 않다.
 
-따라서 `candidate_fields`의 키가 있다고 해서 `field_confidences`·`evidence`에 같은 키가 있다고 가정할 수 없다. 후보를 읽는 쪽은 값이 문자열인지 배열인지 먼저 확인해야 한다. 후보가 여럿인 필드는 자동 확정 대상이 아니므로 관리자 사후 보정에서도 시스템이 임의로 하나를 고르지 않는다.
+따라서 `candidate_fields`의 키가 있다고 해서 `field_confidences`·`evidence`에 같은 키가 있다고 가정할 수 없다. 후보를 읽는 쪽은 값이 문자열인지 배열인지 먼저 확인해야 한다.
+
+후보가 여럿이라는 사실 자체는 자동 확정을 막지 않는다. `BR-AIEXTRACT-001`에 따라 시스템은 후보를 장소 단위 등록 단위로 나누고 단위마다 독립적으로 판정한다. Snapshot은 원본 후보를 그대로 보존하고, 등록 단위와 그 판정 결과는 `ai_registration_unit`이 소유한다. 한 등록 단위 안에서 같은 필드에 값이 둘 이상 남아 어느 값으로 등록할지 확정할 수 없는 경우에만 그 단위를 차단하며, 이때도 시스템이 임의로 하나를 고르지 않는다.
+
+### 5.1 `ai_registration_unit`
+
+한 작업이 여러 맛집을 등록할 수 있으므로 판정·등록 결과는 Snapshot이 아니라 등록 단위가 소유한다. 새 테이블이므로 새 Flyway 마이그레이션이 필요하고 Flyway 순서 소유자 합의 대상이다.
+
+| 컬럼 | SQL 타입 후보 | Null | 키·제약 | 설명 |
+|---|---|---:|---|---|
+| `id` | `uuid` | NN | PK | 등록 단위 ID |
+| `snapshot_id` | `uuid` | NN | FK → `ai_candidate_snapshot.id` | 근거 Snapshot |
+| `unit_index` | `integer` | NN | `(snapshot_id, unit_index)` unique | Snapshot 안의 등록 단위 순번 |
+| `restaurant_name` | `varchar(255)` | NN | 공백 금지 | 이 단위의 맛집명 후보 |
+| `review_status` | `varchar(24)` | NN | 상태 CHECK | `AUTO_CONFIRMED/AUTO_BLOCKED/AUTO_REJECTED/MANUAL_OVERRIDE` |
+| `block_reason` | `varchar(64)` | Yes | 차단 상태일 때 필수 | `PLACE_NOT_FOUND`, `PLACE_AMBIGUOUS`, `CATEGORY_UNRESOLVED`, 기존 검증 실패 코드 |
+| `place_decision` | `jsonb` | Yes | 확정 시 필수 | 채택한 Kakao 장소 식별자·도로명주소와 `matchedBy` |
+| `category_decision` | `jsonb` | Yes | 확정 시 필수 | 선정한 카테고리와 `resolvedBy`(`KAKAO_PLACE_CATEGORY`·`MENU_EXPRESSION`·`MANUAL_OVERRIDE`) |
+| `registered_restaurant_id` | `uuid` | Yes | FK → `restaurant.id` | 자동 등록 결과 |
+| `registered_visit_id` | `uuid` | Yes | FK → `visit.id` | 같은 실행에서 만든 방문 관계 |
+| `executed_by` | `varchar(16)` | NN | `WORKER`·`ADMIN` CHECK | 등록 실행 주체 |
+| `decided_at` | 시간 | NN | 기본 현재 시각 | 판정 시각 |
+
+- `review_status`가 `AUTO_CONFIRMED`이면 `place_decision`·`category_decision`·`registered_restaurant_id`·`registered_visit_id`가 모두 존재해야 하고, 그 밖의 상태이면 두 등록 결과 컬럼은 `NULL`이어야 한다.
+- 맛집·유튜버·영상·방문 관계 4종 등록은 `BR-AIEXTRACT-011`에 따라 하나의 트랜잭션으로 저장한다. `executed_by`는 Worker 자동 실행과 관리자 실행을 구분하며 판정 기준은 두 경우가 같다.
+- 유튜버·영상은 기존 행이 있으면 재사용하므로 이 테이블은 맛집과 방문 관계만 직접 참조한다. 재사용 여부는 감사 이력에 남긴다.
+- 등록 단위의 실패는 같은 Snapshot의 다른 등록 단위 행과 그 정식 등록 결과를 변경하지 않는다. 원자성 경계는 등록 단위 하나다.
+- 관리자 사후 보정·롤백은 기존 행을 덮어쓰지 않고 감사 이력을 추가한 뒤 `review_status`를 `MANUAL_OVERRIDE`로 전환한다.
+- 작업 최상위 `ai_candidate_snapshot.review_status`는 등록 단위 판정의 요약이며, 단위별 권위 있는 값은 이 테이블이 가진다.
 
 `candidate_tags`의 각 항목은 `candidateTagId`, `tagType`, `rawLabel`, `normalizedCode`, `label`, `confidence`, `evidence`를 가진다. `normalizedCode`가 기존 정의와 통합되지 않는 경우 자동 등록 규칙을 통과하면 새 `TagDefinition`을 만든다.
 
@@ -248,6 +277,8 @@ Creator 등록만으로 `enabled=true`가 되지 않는다. 감시 중지·구�
 | `ix_ai_job__claim` | 상태·우선순위·생성 시각 | Worker claim과 실시간 우선 처리 |
 | `ix_ai_job__review` | 실행·자동 등록 상태·생성 시각 | 관리자 예외 보정 목록 |
 | `ux_ai_snapshot__job_version` | `(job_id, snapshot_version)` unique | Snapshot 버전 보존 |
+| `ux_ai_registration_unit__snapshot_index` | `(snapshot_id, unit_index)` unique | Snapshot 안 등록 단위 순번 고유성 |
+| `ix_ai_registration_unit__status` | `(review_status, decided_at)` | 차단 단위 예외 처리 목록 조회 |
 | `ix_ai_tag_review__candidate` | `(snapshot_id, candidate_tag_id, reviewed_at)` | 최신 태그 판단 조회와 이력 정렬 |
 | `ux_ai_attempt__job_no` | `(job_id, attempt_no)` unique | 재시도 이력 고유성 |
 | `ux_channel_watch__creator` | `creator_id` unique | 채널 감시 중복 방지 |
@@ -264,9 +295,9 @@ Creator 등록만으로 `enabled=true`가 되지 않는다. 감시 중지·구�
 1. Webhook 또는 관리자 요청이 `ai_extraction_job`을 생성한다.
 2. Worker가 lease를 claim하고 Gemini URL 입력 또는 관리자 텍스트 입력을 처리한다.
 3. 성공·부분 결과는 새로운 `ai_candidate_snapshot`으로 저장하고 작업을 종료한다.
-4. 시스템은 Snapshot을 자동 검증하고 `AUTO_CONFIRMED`, `AUTO_BLOCKED`, `AUTO_REJECTED`로 판정한다.
-5. 자동 검증을 모두 통과하면 관리자 승인 없이 정식 Entity와 `VisitTag`를 생성·공개한다.
-6. 실패·모호·중복 작업은 정규화 오류와 시도 이력을 보존하고 제한된 수동 재시도·사후 보정을 허용한다.
+4. 시스템은 Snapshot을 장소 단위 등록 단위로 나눠 `ai_registration_unit` 행을 만들고, 단위마다 Kakao 장소 동일성·대표 카테고리를 포함한 자동 검증을 수행해 `AUTO_CONFIRMED`, `AUTO_BLOCKED`, `AUTO_REJECTED`로 판정한다.
+5. 자동 검증을 모두 통과한 등록 단위는 관리자 승인 없이 정식 Entity와 `VisitTag`를 생성·공개한다.
+6. 실패·모호·중복 등록 단위는 정규화 오류와 시도 이력을 보존하고 제한된 수동 재시도·사후 보정을 허용한다. 같은 작업의 통과한 등록 단위는 되돌리지 않는다.
 7. Snapshot·시도·작업·태그 판단·자동 등록·롤백 이력은 1년 보존 후 정리한다.
 
 Webhook Raw Payload, 원본 영상, 자동 수집 전체 자막, Gemini 응답 전문은 저장하지 않는다. 관리자 보완 텍스트 암호문은 작업 종료 후 24시간 이내 삭제한다.
@@ -283,3 +314,5 @@ Webhook Raw Payload, 원본 영상, 자동 수집 전체 자막, Gemini 응답 �
 - [ ] 보완 텍스트 암호문이 작업 종료 후 24시간 이내 삭제되고, 관리자 재시도가 이전 입력을 재사용하지 않는다.
 - [x] `data-traceability.md`, 물리 테이블 정의, 제약·인덱스·Flyway 계획과 `V4` DDL의 구조적 대응이 문서화된다.
 - [ ] Flyway 빈 DB·`V3→V4` 적용, 제약 위반, lease 동시성·정식 Entity 0건 테스트 결과가 보존된다.
+- [ ] `ai_registration_unit`의 새 마이그레이션이 Flyway 순서 소유자 합의를 거쳐 추가되고, 단위별 상태·`registered_restaurant_id` 조합 제약이 검증된다.
+- [ ] 다장소 영상에서 일부 등록 단위가 차단돼도 통과한 단위의 정식 Entity가 유지되는 원자성 경계가 검증된다.

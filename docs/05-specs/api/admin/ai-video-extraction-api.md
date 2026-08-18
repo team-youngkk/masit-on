@@ -26,7 +26,7 @@ related_documents:
 
 ## 1. 범위와 공통 계약
 
-이 문서는 [PRD-ADMIN-002](../../../04-product/prd/admin/ai-video-information-extraction.md)의 관리자 신규 영상 추가, YouTube Webhook 접수, AI 추출 작업 조회와 자동 등록·예외 보정 API를 정의한다. AI 결과는 자동 검증을 통과하면 관리자 승인 없이 정식 Entity와 `VisitTag`를 생성·공개하고, 모호·실패·중복 결과만 보류한다.
+이 문서는 [PRD-ADMIN-002](../../../04-product/prd/admin/ai-video-information-extraction.md)의 관리자 신규 영상 추가, YouTube Webhook 접수, AI 추출 작업 조회와 자동 등록·예외 보정 API를 정의한다. AI 결과는 자동 검증을 통과하면 관리자 승인 없이 정식 Entity와 `VisitTag`를 생성·공개하고, 모호·실패·중복 결과만 보류한다. 판정과 등록의 단위는 작업 전체가 아니라 `BR-AIEXTRACT-001`의 장소 단위 등록 단위이며, 장소 동일성(`BR-AIEXTRACT-009`)과 대표 음식 카테고리(`BR-AIEXTRACT-010`)는 관리자 입력 없이 시스템이 결정한다. 이 API는 관리자에게 Kakao 장소 URL이나 음식 카테고리 선택을 요구하지 않는다.
 
 - 관리자 API는 `/api/admin` 아래에 두고 JWT Bearer와 `ADMIN` 권한을 요구한다.
 - YouTube Webhook은 `/api/webhooks/youtube` 아래의 외부 수신 경계이며 관리자 JWT를 요구하지 않는다. Webhook은 작업 접수만 하고 AI·정식 등록을 실행하지 않는다.
@@ -47,7 +47,7 @@ related_documents:
 | `executionStatus` | `FAILED` | 제한된 재시도 뒤 실행 실패 또는 입력 접근 실패 |
 | `resultCompleteness` | `COMPLETE` | 검수 대상 필드가 모두 추출됨 |
 | `resultCompleteness` | `PARTIAL` | 작업은 성공했지만 일부 필드가 `UNKNOWN` |
-| `reviewStatus` | `AUTO_CONFIRMED` | 자동 검증과 정식 등록·공개 완료 |
+| `reviewStatus` | `AUTO_CONFIRMED` | 자동 검증과 정식 등록·공개 완료. 작업 최상위 값은 모든 등록 단위가 확정된 경우에만 사용한다 |
 | `reviewStatus` | `AUTO_BLOCKED` | 모호·근거 부족·외부 충돌로 자동 보류 |
 | `reviewStatus` | `AUTO_REJECTED` | 입력·정책·중복 검증 실패로 자동 거부 |
 | `reviewStatus` | `MANUAL_OVERRIDE` | 관리자의 사후 보정·롤백 결과 |
@@ -159,13 +159,44 @@ related_documents:
     }
   ],
   "missingFields": ["visitEvidence"],
+  "registrationUnits": [
+    {
+      "unitId": "opaque-registration-unit-id",
+      "restaurantName": "후보 맛집명",
+      "reviewStatus": "AUTO_CONFIRMED",
+      "blockReason": null,
+      "registeredRestaurantId": "opaque-restaurant-id",
+      "placeDecision": {
+        "kakaoPlaceUrl": "https://place.map.kakao.com/example",
+        "roadAddress": "서울특별시 영등포구 도림로131길 17",
+        "matchedBy": "NAME_AND_DISTRICT"
+      },
+      "categoryDecision": {
+        "foodCategoryName": "일식",
+        "resolvedBy": "KAKAO_PLACE_CATEGORY"
+      }
+    },
+    {
+      "unitId": "opaque-registration-unit-id-2",
+      "restaurantName": "다른 후보 맛집명",
+      "reviewStatus": "AUTO_BLOCKED",
+      "blockReason": "PLACE_AMBIGUOUS",
+      "registeredRestaurantId": null,
+      "placeDecision": null,
+      "categoryDecision": null
+    }
+  ],
   "error": null
 }
 ```
 
 - `evidence.type`은 `TIMESTAMP`(`startMs`, `endMs`), `TEXT_RANGE`(`startOffset`, `endOffset`, `sourceHash`), `UNKNOWN` 후보를 사용한다.
 - `UNKNOWN` 또는 근거 없는 값은 정식 등록 확정 대상이 될 수 없다.
-- **같은 `field`가 `candidates`에 여러 번 나타날 수 있다.** 한 영상에서 장소를 하나로 판정할 수 없으면 `BR-AIEXTRACT-001`에 따라 후보를 확정하지 않고 모두 남기기 때문이다. 클라이언트는 `field`를 키로 후보를 색인하지 않는다.
+- **같은 `field`가 `candidates`에 여러 번 나타날 수 있다.** 한 영상에 장소가 여러 곳 등장하는 것은 정상이므로 `BR-AIEXTRACT-001`에 따라 후보를 모두 남긴다. 클라이언트는 `field`를 키로 후보를 색인하지 않는다.
+- `registrationUnits`는 `BR-AIEXTRACT-001`의 장소 단위 등록 단위별 판정 결과다. 후보가 없거나 등록 단위를 구성하지 못한 작업은 빈 배열이다. 작업 최상위 `reviewStatus`는 등록 단위 판정의 요약이며, 단위별 결과는 `registrationUnits[].reviewStatus`가 권위 있는 값이다.
+- `blockReason`은 `AUTO_BLOCKED`·`AUTO_REJECTED`일 때만 값이 있다. 장소 판정은 `PLACE_NOT_FOUND`·`PLACE_AMBIGUOUS`, 카테고리 판정은 `CATEGORY_UNRESOLVED`, 그 밖에는 기존 검증 실패 사유 코드를 사용한다.
+- `placeDecision.matchedBy`와 `categoryDecision.resolvedBy`는 자동 판정 근거다. `matchedBy`는 `NAME_AND_DISTRICT`, `resolvedBy`는 `KAKAO_PLACE_CATEGORY` 또는 `MENU_EXPRESSION`이다. 관리자 사후 보정 결과는 `MANUAL_OVERRIDE`로 표시한다.
+- `registeredRestaurantId`, `kakaoPlaceUrl` 등 모든 식별자는 불투명 문자열이며 클라이언트는 생성 규칙을 검증하지 않는다.
 - 실패 응답은 `error.category`, `retryable`, `attemptCount`만 제공하며 외부 응답 전문은 제공하지 않는다.
 
 ### 3.4 `POST /api/admin/ai/video-extractions/{jobId}/retry` 수동 재시도
@@ -191,6 +222,7 @@ related_documents:
 ```json
 {
   "decision": "CONFIRM",
+  "unitId": "opaque-registration-unit-id",
   "reason": "Kakao 장소와 영상 timestamp 근거를 확인함",
   "expectedReviewStatus": "AUTO_BLOCKED",
   "tagDecisions": [
@@ -204,7 +236,9 @@ related_documents:
 ```
 
 - `CONFIRM`은 정상 자동 등록을 시작하는 명령이 아니라, `AUTO_BLOCKED` 결과를 관리자가 사후 보정해 등록하는 경우에만 사용한다.
-- 필수 필드에 후보가 둘 이상 남아 있으면 `CONFIRM`을 `422 AIEXTRACT_VALIDATION_CONFLICT`로 거절한다. 서버가 후보 중 하나를 임의로 고르지 않기 때문이며, 외부 검증을 시작하기 전에 거절하고 정식 저장은 0건이다. 이 경우 관리자는 후보를 확인해 관리자 등록 API로 등록하거나 `DISCARD`한다.
+- `CONFIRM`·`DISCARD`·`ROLLBACK`은 등록 단위를 대상으로 한다. 작업에 등록 단위가 둘 이상이면 `unitId`가 필수이며, 없으면 `400 MISSING_REQUIRED_FIELD`로 거절한다.
+- 대상 등록 단위의 필수 필드에 후보가 둘 이상 남아 어느 값으로 등록할지 확정할 수 없으면 `CONFIRM`을 `422 AIEXTRACT_VALIDATION_CONFLICT`로 거절한다. 서버가 후보 중 하나를 임의로 고르지 않기 때문이며, 외부 검증을 시작하기 전에 거절하고 정식 저장은 0건이다. 이 경우 관리자는 후보를 확인해 관리자 등록 API로 등록하거나 `DISCARD`한다.
+- `ROLLBACK`은 지정한 등록 단위의 자동 등록 결과만 되돌리고 같은 작업의 다른 등록 단위는 변경하지 않는다.
 - `tagDecisions`는 자동 태그 판단 또는 관리자 사후 보정의 append-only 이력으로 저장한다.
 - `UNKNOWN` 근거의 AI 후보는 자동 등록하지 않고, `TIMESTAMP` 또는 `TEXT_RANGE` 근거가 있는 태그만 `AI_AUTO_CONFIRMED` `VisitTag` 연결 대상이 된다.
 - 자동 확정된 태그는 정식 `Visit` 등록 성공과 함께 `VisitTag`로 연결하며, 검색 API는 그 연결만 사용한다.
@@ -212,7 +246,68 @@ related_documents:
 - 자동 검증 실패 시 `AUTO_BLOCKED` 또는 `AUTO_REJECTED`로 유지하고 정식 Entity 저장은 0건이다.
 - 동시 검수 충돌은 `409 Conflict`로 처리하고 최신 상태 재조회를 요구한다.
 
-### 3.6 `PUT /api/admin/ai/youtube-channel-watches/{creatorId}` 채널 감시 설정
+### 3.6 `POST /api/admin/ai/video-extractions/{jobId}/registration-units/{unitId}/registration` 등록 단위 일괄 등록
+
+관리자가 아직 등록되지 않은 등록 단위의 등록을 실행한다. 한 번의 요청으로 맛집·유튜버·영상·방문 관계 4종을 등록하고 결과를 반환한다. 관리자는 장소 후보·주소 힌트·Kakao 장소 URL·음식 카테고리를 제출하지 않으며, 요청 본문은 비어 있다.
+
+Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-010`)을 사용한다. 실행 주체만 다르고 판정 기준은 같다.
+
+#### 응답 `200 OK`
+
+```json
+{
+  "unitId": "opaque-registration-unit-id",
+  "reviewStatus": "AUTO_CONFIRMED",
+  "restaurantId": "opaque-restaurant-id",
+  "creatorId": "opaque-creator-id",
+  "videoId": "opaque-video-id",
+  "visitId": "opaque-visit-id",
+  "reusedResources": ["creator", "video"],
+  "placeDecision": {
+    "kakaoPlaceUrl": "https://place.map.kakao.com/example",
+    "roadAddress": "서울특별시 영등포구 도림로131길 17",
+    "matchedBy": "NAME_AND_DISTRICT"
+  },
+  "categoryDecision": {
+    "foodCategoryName": "일식",
+    "resolvedBy": "KAKAO_PLACE_CATEGORY"
+  }
+}
+```
+
+- `reusedResources`는 새로 만들지 않고 기존 식별자를 재사용한 자원 목록이다. 유튜버·영상 재사용은 정상 경로이며 예외가 아니다.
+- 4종 등록의 원자 경계는 등록 단위 하나다. 중간 실패 시 이 등록 단위의 정식 저장은 0건이고, 같은 작업의 다른 등록 단위는 변경하지 않는다.
+- 외부 조회·검증은 DB 트랜잭션 밖에서 수행하고, 검증 통과 후 4종을 하나의 트랜잭션으로 저장한다.
+- 이미 `AUTO_CONFIRMED`인 등록 단위에 대한 재요청은 새 Entity를 만들지 않고 기존 결과를 그대로 반환한다.
+- 같은 등록 단위에 대한 동시 요청은 `409 AIEXTRACT_DUPLICATE_CONFLICT`로 처리한다.
+
+#### 예외 전환 응답 `422 AIEXTRACT_VALIDATION_CONFLICT`
+
+`BR-AIEXTRACT-011`이 정의한 예외 사유에 해당하면 정식 저장 0건으로 끝내고 필요한 보충 입력만 알린다. 그 밖의 사유로 관리자 입력을 요구하지 않는다.
+
+```json
+{
+  "code": "AIEXTRACT_VALIDATION_CONFLICT",
+  "blockReason": "PLACE_AMBIGUOUS",
+  "requiredSupplements": ["kakaoPlaceUrl"],
+  "traceId": "opaque-trace-id"
+}
+```
+
+| `blockReason` | 의미 | `requiredSupplements` |
+|---|---|---|
+| `PLACE_NOT_FOUND` | 조건을 만족하는 Kakao 장소가 없다 | `kakaoPlaceUrl` |
+| `PLACE_AMBIGUOUS` | 조건을 만족하는 장소가 둘 이상이다 | `kakaoPlaceUrl` |
+| `CATEGORY_UNRESOLVED` | 카테고리 근거를 찾지 못했다 | `foodCategoryId` |
+| `MISSING_REQUIRED_FIELD` | 등록 단위에 필수 후보가 없다 | 부족한 필드 이름 |
+| `VISIT_EVIDENCE_REQUIRED` | 방문 근거가 `UNKNOWN`이거나 영상 `TIMESTAMP`가 아니다 | 빈 배열. 보완은 재추출로만 가능하다 |
+| `DUPLICATE_CONFLICT` | 같은 맛집·방문 관계가 이미 존재한다 | 빈 배열 |
+| `EXTERNAL_SERVICE_ERROR` | Kakao·YouTube 조회 실패·시간 초과 | 빈 배열. 재실행으로 복구한다 |
+
+- 보충 입력은 기존 `POST /api/admin/ai/video-extractions/{jobId}/review`의 `CONFIRM`으로 제출한다. 이 API는 보충 입력을 받지 않는다.
+- 관리자가 제출한 보충 입력도 기존 Kakao·YouTube·Visit 검증을 우회하지 않는다.
+
+### 3.7 `PUT /api/admin/ai/youtube-channel-watches/{creatorId}` 채널 감시 설정
 
 ```json
 {
@@ -275,4 +370,8 @@ Webhook 수신 경로는 공개 인터넷 진입점이므로 Nginx·Spring Secur
 - [ ] `WEBHOOK`·`ADMIN` 요청이 하나의 멱등 작업으로 수렴하고, 동시 검수에서 정식 저장 중복이 0건이다.
 - [ ] Gemini 접근 실패·부분 추출·quota 차단과 관리자 텍스트 fallback의 응답이 계약 테스트로 고정된다.
 - [ ] 태그 후보의 허용 코드·근거·자동 판단과 사후 보정·`VisitTag` 연결이 계약 테스트로 고정된다.
+- [ ] 다장소 영상의 `registrationUnits` 응답과 단위별 `reviewStatus`·`blockReason`·`placeDecision`·`categoryDecision`이 계약 테스트로 고정된다.
+- [ ] 등록 단위가 둘 이상인 작업의 `review` 요청에서 `unitId` 누락 거절과 단위별 `ROLLBACK` 격리가 검증된다.
+- [ ] 등록 단위 일괄 등록의 4종 결과·자원 재사용·재요청 멱등·동시 요청 충돌과 예외 전환 `blockReason`·`requiredSupplements`가 계약 테스트로 고정된다.
+- [ ] 일괄 등록 중간 실패에서 해당 등록 단위 정식 저장 0건과 외부 호출 중 트랜잭션 미개방이 검증된다.
 - [ ] [데이터 계약](../../data/third-expansion-ai-video-data-contract.md), API 추적표, 후보·Worker 테스트와 연결된다.
