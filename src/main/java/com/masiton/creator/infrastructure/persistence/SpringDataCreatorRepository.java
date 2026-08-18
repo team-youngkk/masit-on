@@ -27,4 +27,9 @@ interface SpringDataCreatorRepository extends JpaRepository<CreatorJpaEntity, UU
                     + "ORDER BY channel_name COLLATE \"C\", id",
             nativeQuery = true)
     List<CreatorJpaEntity> findPublicSelectionList();
+
+    @Query(value = "SELECT * FROM creator "
+            + "WHERE external_channel_id IS NOT NULL "
+            + "ORDER BY channel_name COLLATE \"C\", id", nativeQuery = true)
+    List<CreatorJpaEntity> findAllForYoutubeChannelWatch();
 }

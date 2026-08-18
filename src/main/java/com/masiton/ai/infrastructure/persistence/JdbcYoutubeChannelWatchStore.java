@@ -4,8 +4,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -170,6 +172,30 @@ public class JdbcYoutubeChannelWatchStore implements YoutubeChannelWatchStore {
                  WHERE youtube_channel_id = ?
                 """, this::mapDetail, channelId);
         return rows.stream().findFirst();
+    }
+
+    @Override
+    public Map<String, WatchDetail> findDetailsByChannelIds(List<String> channelIds) {
+        if (channelIds == null || channelIds.isEmpty()) {
+            return Map.of();
+        }
+        String placeholders = String.join(",", java.util.Collections.nCopies(channelIds.size(), "?"));
+        String sql = """
+                SELECT youtube_channel_id, enabled, subscription_status, last_notification_at,
+                       last_renewed_at, last_error_category, last_error_at
+                  FROM youtube_channel_watch
+                 WHERE youtube_channel_id IN (%s)
+                """.formatted(placeholders);
+        return jdbcTemplate.query(sql, (rs, rowNum) -> Map.entry(
+                        rs.getString("youtube_channel_id"),
+                        new WatchDetail(rs.getBoolean("enabled"), rs.getString("subscription_status"),
+                                rs.getObject("last_notification_at", OffsetDateTime.class),
+                                rs.getObject("last_renewed_at", OffsetDateTime.class),
+                                rs.getString("last_error_category"),
+                                rs.getObject("last_error_at", OffsetDateTime.class))),
+                channelIds.toArray())
+                .stream()
+                .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     private Watch map(ResultSet rs, int rowNum) throws SQLException {

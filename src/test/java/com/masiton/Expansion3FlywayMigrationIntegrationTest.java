@@ -1,5 +1,6 @@
 package com.masiton;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -74,7 +75,7 @@ class Expansion3FlywayMigrationIntegrationTest {
                 "SELECT version FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank",
                 String.class);
         assertThat(versions).containsExactly("1", "2", "3", "4");
-        assertAiSchemaAndContracts(jdbcTemplate, database.schema());
+        assertAiSchemaAndContracts(jdbcTemplate, database.schema(), false);
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM pg_indexes WHERE schemaname = current_schema() "
                 + "AND indexname IN ('ix_ai_job__video_input_versions', 'ix_ai_job__video_mode_versions', "
                 + "'ix_ai_temporary_input__expires_at')", Integer.class)).isEqualTo(3);
@@ -103,7 +104,7 @@ class Expansion3FlywayMigrationIntegrationTest {
         assertThat(jdbcTemplate.queryForList(
                 "SELECT version FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank",
                 String.class)).containsExactly("1", "2", "3", "4");
-        assertAiSchemaAndContracts(jdbcTemplate, database.schema());
+        assertAiSchemaAndContracts(jdbcTemplate, database.schema(), false);
         assertThat(jdbcTemplate.queryForMap(
                 "SELECT id::text, region_id::text, food_category_id::text, name, kakao_place_id, "
                         + "kakao_place_url, road_address, phone_number FROM restaurant WHERE id = ?",
@@ -135,7 +136,7 @@ class Expansion3FlywayMigrationIntegrationTest {
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM pg_indexes WHERE schemaname = current_schema() "
                 + "AND indexname IN ('ix_ai_job__video_input_versions', 'ix_ai_job__video_mode_versions', "
                 + "'ix_ai_temporary_input__expires_at', 'ix_visit_tag__created_from_snapshot')", Integer.class)).isEqualTo(4);
-        assertAiSchemaAndContracts(jdbcTemplate, database.schema());
+        assertAiSchemaAndContracts(jdbcTemplate, database.schema(), true);
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM information_schema.columns "
                 + "WHERE table_schema = ? AND table_name = 'youtube_channel_watch' "
                 + "AND column_name = 'last_error_at'", Integer.class, database.schema())).isEqualTo(1);
@@ -267,7 +268,7 @@ class Expansion3FlywayMigrationIntegrationTest {
                 Integer.class)).isEqualTo(1);
     }
 
-    private void assertAiSchemaAndContracts(JdbcTemplate jdbcTemplate, String schema) {
+    private void assertAiSchemaAndContracts(JdbcTemplate jdbcTemplate, String schema, boolean includeLastErrorAt) {
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM information_schema.tables WHERE table_schema = ? "
                 + "AND table_name IN ('ai_extraction_job','ai_extraction_temporary_input','ai_candidate_snapshot',"
                 + "'ai_candidate_tag_review','tag_definition','visit_tag','ai_extraction_attempt','youtube_channel_watch')",
@@ -412,6 +413,15 @@ class Expansion3FlywayMigrationIntegrationTest {
                         + "AND contype='c' AND conrelid=?::regclass",
                 String.class, table)).as(table).containsExactlyInAnyOrderElementsOf(names));
 
+        List<String> watchColumns = new ArrayList<>(List.of(
+                "id", "creator_id", "youtube_channel_id", "enabled", "subscription_status",
+                "subscription_token_hash", "last_notification_at", "last_renewed_at", "last_error_category"));
+        if (includeLastErrorAt) {
+            watchColumns.add("last_error_at");
+        }
+        watchColumns.add("created_at");
+        watchColumns.add("updated_at");
+
         Map<String, List<String>> expectedColumns = new HashMap<>(Map.of(
                 "ai_extraction_job", List.of(
                         "id", "source", "priority", "youtube_channel_id", "youtube_video_id", "video_url",
@@ -438,10 +448,7 @@ class Expansion3FlywayMigrationIntegrationTest {
                 "ai_extraction_attempt", List.of(
                         "id", "job_id", "attempt_no", "provider_request_id", "started_at", "finished_at",
                         "outcome", "error_category", "input_tokens", "output_tokens", "estimated_cost_minor"),
-                "youtube_channel_watch", List.of(
-                        "id", "creator_id", "youtube_channel_id", "enabled", "subscription_status",
-                        "subscription_token_hash", "last_notification_at", "last_renewed_at", "last_error_category",
-                        "last_error_at", "created_at", "updated_at")));
+                "youtube_channel_watch", watchColumns));
         expectedColumns.forEach((table, columns) -> assertThat(jdbcTemplate.queryForList(
                 "SELECT column_name FROM information_schema.columns WHERE table_schema=? AND table_name=? "
                         + "ORDER BY ordinal_position",

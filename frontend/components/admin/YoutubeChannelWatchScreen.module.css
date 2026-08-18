@@ -1,5 +1,7 @@
 .screen, .creatorPanel, .statusPanel, .details, .detailGrid { display: grid; min-width: 0; gap: var(--space-4); }
+.watchList { display: grid; min-width: 0; gap: var(--space-4); }
 .creatorPanel, .statusPanel { padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
+.creatorPanel h1 { margin: 0 0 var(--space-2); font-size: var(--font-size-xl); }
 .creatorPanel label { display: grid; gap: var(--space-2); font-size: var(--font-size-sm); font-weight: 700; }
 .creatorPanel select { min-height: var(--control-min-height); padding: 0 var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); font: inherit; }
 .statusHeader, .statusTitle, .statusActions, .detail { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
@@ -7,6 +9,7 @@
 .statusTitle h2, .statusPanel h3, .statusPanel p { margin: 0; }
 .statusTitle { align-items: baseline; }
 .statusTitle h2 { font-size: var(--font-size-lg); }
+.availability { margin: var(--space-1) 0 0; color: var(--color-text-muted); font-size: var(--font-size-xs); }
 .statusDescription, .hint, .meta { color: var(--color-text-muted); font-size: var(--font-size-sm); }
 .statusDescription { margin: 0; }
 .detailGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; }

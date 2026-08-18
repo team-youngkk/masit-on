@@ -64,6 +64,10 @@ export function watchToggleEnabled(status: YoutubeChannelWatchStatus): boolean {
   return status.subscriptionStatus === 'RENEWAL_FAILED' ? true : !status.enabled
 }
 
+export function watchStartAllowed(summary: { publiclyVisible: boolean; externallyAvailable: boolean }): boolean {
+  return summary.publiclyVisible && summary.externallyAvailable
+}
+
 export function watchEnabledLabel(enabled: boolean): string {
   return enabled ? '활성화 요청됨' : '중지됨'
 }

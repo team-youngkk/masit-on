@@ -2,6 +2,8 @@ package com.masiton.ai.application;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.List;
+import java.util.Map;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +22,11 @@ public class YoutubeChannelWatchPersistenceService {
     @Transactional(readOnly = true)
     public Optional<YoutubeChannelWatchStore.WatchDetail> findDetail(String channelId) {
         return watchStore.findDetail(channelId);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, YoutubeChannelWatchStore.WatchDetail> findDetailsByChannelIds(List<String> channelIds) {
+        return watchStore.findDetailsByChannelIds(channelIds);
     }
 
     @Transactional

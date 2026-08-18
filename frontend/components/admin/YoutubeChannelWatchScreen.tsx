@@ -1,23 +1,23 @@
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import { Button } from '@/components/ui/Button'
 import { StatePanel } from '@/components/ui/StatePanel'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import {
-  getVerifiedCreators,
-  getYoutubeChannelWatch,
+  getYoutubeChannelWatches,
   setYoutubeChannelWatchEnabled,
   youtubeChannelWatchMessageFor,
-  youtubeChannelWatchQueryKey,
-  type YoutubeChannelWatchStatus,
+  youtubeChannelWatchesQueryKey,
+  type YoutubeChannelWatchSummary,
 } from '@/lib/admin/youtube-channel-watches'
 import {
   watchEnabledLabel,
   watchErrorCategoryLabel,
   watchErrorMessage,
+  watchStartAllowed,
   watchStatusPresentation,
   watchToggleEnabled,
   watchToggleLabel,
@@ -25,125 +25,151 @@ import {
 
 import styles from './YoutubeChannelWatchScreen.module.css'
 
+const WATCH_PAGE_SIZE = 50
+
 export function YoutubeChannelWatchScreen() {
-  const [selectedCreatorId, setSelectedCreatorId] = useState('')
   const [notice, setNotice] = useState<string | null>(null)
   const [noticeIsError, setNoticeIsError] = useState(false)
+  const [pendingIds, setPendingIds] = useState<Set<string>>(() => new Set())
+  const [rowErrors, setRowErrors] = useState<Record<string, string>>({})
   const queryClient = useQueryClient()
+  const queryKey = youtubeChannelWatchesQueryKey(1, WATCH_PAGE_SIZE)
 
-  const creatorsQuery = useQuery({
-    queryKey: ['admin', 'verified-creators'],
-    queryFn: getVerifiedCreators,
-  })
-  const creators = creatorsQuery.data ?? []
-
-  useEffect(() => {
-    if (creators.length > 0 && !creators.some((creator) => creator.id === selectedCreatorId)) {
-      setSelectedCreatorId(creators[0].id)
-    }
-  }, [creators, selectedCreatorId])
-
-  const watchQuery = useQuery({
-    queryKey: youtubeChannelWatchQueryKey(selectedCreatorId),
-    queryFn: () => getYoutubeChannelWatch(selectedCreatorId),
-    enabled: Boolean(selectedCreatorId),
+  const watchesQuery = useQuery({
+    queryKey,
+    queryFn: () => getYoutubeChannelWatches(1, WATCH_PAGE_SIZE),
   })
 
   const mutation = useMutation({
     mutationFn: ({ creatorId, enabled }: { creatorId: string; enabled: boolean }) =>
       setYoutubeChannelWatchEnabled(creatorId, enabled),
+    onMutate: ({ creatorId }) => {
+      setPendingIds((current) => new Set(current).add(creatorId))
+      setRowErrors((current) => {
+        const next = { ...current }
+        delete next[creatorId]
+        return next
+      })
+    },
     onSuccess: (status, variables) => {
-      queryClient.setQueryData(youtubeChannelWatchQueryKey(variables.creatorId), status)
+      queryClient.setQueryData(queryKey, (current: Awaited<ReturnType<typeof getYoutubeChannelWatches>> | undefined) => {
+        if (!current) return current
+        return {
+          ...current,
+          items: current.items.map((item) => item.creatorId === variables.creatorId ? { ...item, status } : item),
+        }
+      })
       setNotice('감시 상태를 저장했고 최신 상태를 반영했습니다.')
       setNoticeIsError(false)
     },
     onError: async (error, variables) => {
-      setNotice(youtubeChannelWatchMessageFor(error))
+      const message = youtubeChannelWatchMessageFor(error)
+      setRowErrors((current) => ({ ...current, [variables.creatorId]: message }))
+      setNotice('일부 채널의 감시 상태를 저장하지 못했습니다. 실패한 행을 확인해 주세요.')
       setNoticeIsError(true)
       try {
-        await queryClient.refetchQueries({ queryKey: youtubeChannelWatchQueryKey(variables.creatorId) })
+        await queryClient.refetchQueries({ queryKey })
       } catch {
-        // 원래 실패 안내는 유지하고, 재조회 실패는 다음 수동 조회에서 복구한다.
+        // 행별 실패 안내는 유지하고, 다음 수동 조회에서 복구한다.
       }
+    },
+    onSettled: (_status, _error, variables) => {
+      setPendingIds((current) => {
+        const next = new Set(current)
+        next.delete(variables.creatorId)
+        return next
+      })
     },
   })
 
-  function selectCreator(creatorId: string) {
+  function toggleWatch(summary: YoutubeChannelWatchSummary) {
+    if (pendingIds.has(summary.creatorId)) return
+    const enabled = watchToggleEnabled(summary.status)
+    if (enabled && !watchStartAllowed(summary)) return
     setNotice(null)
-    setSelectedCreatorId(creatorId)
+    mutation.mutate({ creatorId: summary.creatorId, enabled })
   }
 
-  function toggleWatch() {
-    if (!selectedCreatorId || !watchQuery.data || mutation.isPending) return
-    setNotice(null)
-    mutation.mutate({ creatorId: selectedCreatorId, enabled: watchToggleEnabled(watchQuery.data) })
+  if (watchesQuery.isPending) {
+    return <StatePanel title="유튜버 감시 목록을 불러오는 중입니다." />
   }
 
-  if (creatorsQuery.isPending) {
-    return <StatePanel title="검증된 유튜버 목록을 불러오는 중입니다." />
-  }
-
-  if (creatorsQuery.isError) {
+  if (watchesQuery.isError) {
     return <StatePanel
       tone="danger"
-      title="유튜버 목록을 불러오지 못했습니다."
-      description={youtubeChannelWatchMessageFor(creatorsQuery.error)}
-      actions={<Button className={styles.retryButton} variant="secondary" onClick={() => void creatorsQuery.refetch()}>다시 조회</Button>}
+      title="유튜버 감시 목록을 불러오지 못했습니다."
+      description={youtubeChannelWatchMessageFor(watchesQuery.error)}
+      actions={<Button className={styles.retryButton} variant="secondary" onClick={() => void watchesQuery.refetch()}>다시 조회</Button>}
     />
   }
 
-  if (creators.length === 0) {
-    return <StatePanel title="감시할 검증된 유튜버가 없습니다." description="먼저 공개·검증된 유튜버를 등록해 주세요." />
+  const summaries = watchesQuery.data.items
+  if (summaries.length === 0) {
+    return <StatePanel title="감시할 유튜버가 없습니다." description="먼저 YouTube 채널이 연결된 Creator를 등록해 주세요." />
   }
 
   return <div className={styles.screen}>
     <section className={styles.creatorPanel} aria-labelledby="youtube-watch-creator-heading">
-      <label htmlFor="youtube-watch-creator" id="youtube-watch-creator-heading">
-        감시할 유튜버
-        <select
-          id="youtube-watch-creator"
-          value={selectedCreatorId}
-          disabled={mutation.isPending}
-          onChange={(event) => selectCreator(event.target.value)}
-        >
-          {creators.map((creator) => <option key={creator.id} value={creator.id}>{creator.channelName}</option>)}
-        </select>
-      </label>
-      <p className={styles.hint}>검증된 Creator만 선택할 수 있습니다. 채널 감시는 신규 YouTube 영상 Webhook 접수 여부만 제어합니다.</p>
+      <div className={styles.statusHeader}>
+        <div>
+          <h1 id="youtube-watch-creator-heading">YouTube 채널 감시</h1>
+          <p className={styles.hint}>여러 유튜버를 동시에 감시할 수 있습니다. 각 행의 상태와 Webhook 수신 여부를 독립적으로 관리합니다.</p>
+        </div>
+        <Button className={styles.retryButton} variant="secondary" onClick={() => void watchesQuery.refetch()}>목록 새로고침</Button>
+      </div>
     </section>
 
-    {watchQuery.isPending ? <StatePanel title="채널 감시 상태를 불러오는 중입니다." /> : null}
-    {watchQuery.isError ? <StatePanel tone="danger" title="채널 감시 상태를 조회하지 못했습니다." description={youtubeChannelWatchMessageFor(watchQuery.error)} actions={<Button className={styles.retryButton} variant="secondary" onClick={() => void watchQuery.refetch()}>다시 조회</Button>} /> : null}
-    {watchQuery.data ? <WatchStatusPanel status={watchQuery.data} busy={mutation.isPending} onToggle={toggleWatch} /> : null}
+    <div className={styles.watchList}>
+      {summaries.map((summary) => <WatchStatusPanel
+        key={summary.creatorId}
+        summary={summary}
+        busy={pendingIds.has(summary.creatorId)}
+        rowError={rowErrors[summary.creatorId] ?? null}
+        onToggle={() => toggleWatch(summary)}
+      />)}
+    </div>
     {notice ? <p className={noticeIsError ? styles.errorNotice : styles.notice} role={noticeIsError ? 'alert' : 'status'}>{notice}</p> : null}
   </div>
 }
 
 function WatchStatusPanel({
-  status,
+  summary,
   busy,
+  rowError,
   onToggle,
 }: {
-  status: YoutubeChannelWatchStatus
+  summary: YoutubeChannelWatchSummary
   busy: boolean
+  rowError: string | null
   onToggle: () => void
 }) {
+  const { status } = summary
   const presentation = watchStatusPresentation(status.subscriptionStatus)
   const errorMessage = watchErrorMessage(status.lastErrorCategory)
+  const enabling = watchToggleEnabled(status)
+  const canToggle = !enabling || watchStartAllowed(summary)
+  const headingId = `youtube-watch-status-heading-${summary.creatorId}`
 
-  return <section className={styles.statusPanel} aria-labelledby="youtube-watch-status-heading">
+  return <section className={styles.statusPanel} aria-labelledby={headingId}>
     <div className={styles.statusHeader}>
       <div className={styles.statusTitle}>
-        <h2 id="youtube-watch-status-heading">채널 감시 상태</h2>
+        <div>
+          <h2 id={headingId}>{summary.channelName}</h2>
+          <p className={styles.availability}>{availabilityLabel(summary)}</p>
+        </div>
         <StatusBadge tone={presentation.tone}>{presentation.label}</StatusBadge>
       </div>
       <div className={styles.statusActions}>
         <span className={styles.meta}>{watchEnabledLabel(status.enabled)}</span>
-        <Button disabled={busy} onClick={onToggle}>{busy ? '저장 중…' : watchToggleLabel(status)}</Button>
+        <Button disabled={busy || !canToggle} onClick={onToggle}>
+          {busy ? '저장 중…' : watchToggleLabel(status)}
+        </Button>
       </div>
     </div>
     <p className={styles.statusDescription}>{presentation.description}</p>
+    {!canToggle ? <p className={styles.hint}>공개·외부 이용 가능한 채널만 감시를 시작할 수 있습니다. 기존 감시는 중지할 수 있습니다.</p> : null}
     {errorMessage ? <p className={styles.errorNotice}>{errorMessage}</p> : null}
+    {rowError ? <p className={styles.errorNotice} role="alert">{rowError}</p> : null}
     <dl className={styles.detailGrid}>
       <div className={styles.detail}><dt>마지막 오류 범주</dt><dd>{watchErrorCategoryLabel(status.lastErrorCategory)}</dd></div>
       <div className={styles.detail}><dt>마지막 오류 시각</dt><dd>{formatDate(status.lastErrorAt)}</dd></div>
@@ -151,6 +177,12 @@ function WatchStatusPanel({
       <div className={styles.detail}><dt>마지막 구독 갱신</dt><dd>{formatDate(status.lastRenewedAt)}</dd></div>
     </dl>
   </section>
+}
+
+function availabilityLabel(summary: YoutubeChannelWatchSummary): string {
+  if (summary.publiclyVisible && summary.externallyAvailable) return '감시 시작 가능'
+  if (summary.status.enabled) return '현재 감시 중 · 새로고침 후 중지 가능'
+  return '현재 감시 시작 불가'
 }
 
 function formatDate(value: string | null): string {

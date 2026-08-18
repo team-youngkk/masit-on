@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
@@ -29,6 +30,27 @@ class AdminYoutubeChannelWatchControllerApiTest {
     private final MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new AdminYoutubeChannelWatchController(useCase))
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
+
+    @Test
+    @DisplayName("감시 목록은 여러 유튜버와 각 상태를 한 번에 반환한다")
+    void 감시목록조회_여러유튜버_각상태를한번에반환한다() throws Exception {
+        UUID creatorId = UUID.randomUUID();
+        when(useCase.getStatuses(1, 20)).thenReturn(new YoutubeChannelWatchManagementUseCase.WatchPage(
+                List.of(new YoutubeChannelWatchManagementUseCase.WatchSummary(
+                        creatorId, "맛집 채널", true, true,
+                        new YoutubeChannelWatchManagementUseCase.WatchStatus(
+                                true, "ACTIVE", OffsetDateTime.parse("2026-08-12T01:02:03Z"), null, null))),
+                1, 20, 1, 1, false));
+
+        mockMvc.perform(get("/api/admin/ai/youtube-channel-watches"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].creatorId").value(creatorId.toString()))
+                .andExpect(jsonPath("$.items[0].channelName").value("맛집 채널"))
+                .andExpect(jsonPath("$.items[0].status.subscriptionStatus").value("ACTIVE"))
+                .andExpect(jsonPath("$.page.totalElements").value(1));
+
+        verify(useCase).getStatuses(1, 20);
+    }
 
     @Test
     @DisplayName("활성화 요청은 감시 상태와 nullable 메타데이터를 반환한다")

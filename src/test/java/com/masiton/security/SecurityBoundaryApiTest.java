@@ -62,10 +62,13 @@ class SecurityBoundaryApiTest extends FullContextIntegrationTest {
     }
 
     @Test
-    @DisplayName("채널 감시 GET·PUT 경로는 인증 없이 401을 반환한다")
+    @DisplayName("채널 감시 목록·GET·PUT 경로는 인증 없이 401을 반환한다")
     void 채널감시GETPUT_미인증_401공통오류를반환한다() throws Exception {
         String path = "/api/admin/ai/youtube-channel-watches/" + UNKNOWN_CREATOR_ID;
 
+        mockMvc.perform(get("/api/admin/ai/youtube-channel-watches"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
         mockMvc.perform(get(path))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
@@ -77,10 +80,14 @@ class SecurityBoundaryApiTest extends FullContextIntegrationTest {
     }
 
     @Test
-    @DisplayName("채널 감시 GET·PUT 경로는 ADMIN이 아니면 403을 반환한다")
+    @DisplayName("채널 감시 목록·GET·PUT 경로는 ADMIN이 아니면 403을 반환한다")
     void 채널감시GETPUT_비관리자_403공통오류를반환한다() throws Exception {
         String path = "/api/admin/ai/youtube-channel-watches/" + UNKNOWN_CREATOR_ID;
 
+        mockMvc.perform(get("/api/admin/ai/youtube-channel-watches")
+                        .with(user("viewer").authorities(new SimpleGrantedAuthority("VIEWER"))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
         mockMvc.perform(get(path).with(user("viewer").authorities(new SimpleGrantedAuthority("VIEWER"))))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"));
@@ -93,10 +100,13 @@ class SecurityBoundaryApiTest extends FullContextIntegrationTest {
     }
 
     @Test
-    @DisplayName("채널 감시 GET·PUT 경로는 ADMIN 권한으로 보안 필터를 통과한다")
+    @DisplayName("채널 감시 목록·GET·PUT 경로는 ADMIN 권한으로 보안 필터를 통과한다")
     void 채널감시GETPUT_ADMIN_보안필터를통과한다() throws Exception {
         String path = "/api/admin/ai/youtube-channel-watches/" + UNKNOWN_CREATOR_ID;
 
+        mockMvc.perform(get("/api/admin/ai/youtube-channel-watches")
+                        .with(user("admin").authorities(new SimpleGrantedAuthority("ADMIN"))))
+                .andExpect(status().isOk());
         mockMvc.perform(get(path).with(user("admin").authorities(new SimpleGrantedAuthority("ADMIN"))))
                 .andExpect(status().isNotFound());
         mockMvc.perform(put(path)

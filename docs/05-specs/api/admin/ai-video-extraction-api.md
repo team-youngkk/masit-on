@@ -212,7 +212,36 @@ related_documents:
 - 자동 검증 실패 시 `AUTO_BLOCKED` 또는 `AUTO_REJECTED`로 유지하고 정식 Entity 저장은 0건이다.
 - 동시 검수 충돌은 `409 Conflict`로 처리하고 최신 상태 재조회를 요구한다.
 
-### 3.6 `GET /api/admin/ai/youtube-channel-watches/{creatorId}` 채널 감시 상태 조회
+### 3.6 `GET /api/admin/ai/youtube-channel-watches` 채널 감시 목록 조회
+
+- `Authorization: Bearer <access-token>`과 `ADMIN` 권한을 요구한다.
+- `page`는 1-base이며 `size`는 `10`, `20`, `50`만 허용한다. 기본값은 각각 `1`, `20`이다.
+- 공개·외부 이용 가능 상태의 YouTube 채널이 연결된 Creator와 기존 감시 행을 함께 반환한다. 따라서 Creator가 비공개·삭제·외부 이용 불가로 바뀐 기존 감시 행도 목록에서 확인하고 중지할 수 있다.
+- 목록 조회는 외부 YouTube API를 호출하지 않고 Creator와 감시 저장소의 현재 상태만 조합한다.
+
+```json
+{
+  "items": [
+    {
+      "creatorId": "opaque-creator-id",
+      "channelName": "맛집 채널",
+      "publiclyVisible": true,
+      "externallyAvailable": true,
+      "status": {
+        "enabled": false,
+        "subscriptionStatus": "INACTIVE",
+        "lastNotificationAt": null,
+        "lastRenewedAt": null,
+        "lastErrorCategory": null,
+        "lastErrorAt": null
+      }
+    }
+  ],
+  "page": { "number": 1, "size": 20, "totalElements": 1, "totalPages": 1, "hasNext": false }
+}
+```
+
+### 3.7 `GET /api/admin/ai/youtube-channel-watches/{creatorId}` 채널 감시 상태 조회
 
 - `Authorization: Bearer <access-token>`과 `ADMIN` 권한을 요구한다.
 - 대상은 외부 YouTube 채널 식별자가 확인된 Creator로 한정한다. Creator가 존재하지 않거나 외부 채널 식별자가 없으면 `404 CREATOR_NOT_FOUND`를 반환한다. 등록 후 Creator가 비공개·삭제 상태 또는 외부 이용 불가로 바뀌어도 기존 감시 상태는 조회할 수 있다. 감시 활성화(`enabled=true`)만 공개·외부 이용 가능 검증을 요구한다.
@@ -235,7 +264,7 @@ related_documents:
 - `lastErrorAt`은 마지막 구독 처리 오류가 기록된 시각이며, 오류가 저장되지 않았으면 `null`이다. 오류 시각과 범주는 challenge 성공 시 함께 초기화한다.
 - `PUT`의 응답은 이 GET과 같은 자원 표현을 사용하며, 활성화·해지 결과는 이후 GET에서 조회할 수 있다.
 
-### 3.7 `PUT /api/admin/ai/youtube-channel-watches/{creatorId}` 채널 감시 설정
+### 3.8 `PUT /api/admin/ai/youtube-channel-watches/{creatorId}` 채널 감시 설정
 
 ```json
 {

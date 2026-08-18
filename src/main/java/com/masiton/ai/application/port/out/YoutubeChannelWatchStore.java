@@ -3,11 +3,15 @@ package com.masiton.ai.application.port.out;
 import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.List;
+import java.util.Map;
 
 public interface YoutubeChannelWatchStore {
     Optional<Watch> find(String channelId);
 
     Optional<WatchDetail> findDetail(String channelId);
+
+    Map<String, WatchDetail> findDetailsByChannelIds(List<String> channelIds);
 
     Optional<Watch> findForUpdate(String channelId);
 

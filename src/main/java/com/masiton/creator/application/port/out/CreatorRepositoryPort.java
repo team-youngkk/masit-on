@@ -20,4 +20,6 @@ public interface CreatorRepositoryPort {
      * 이미 정렬해 반환한다. 애플리케이션은 반환 순서를 다시 정렬하지 않는다.
      */
     List<Creator> findPublicSelectionList();
+
+    List<Creator> findAllForYoutubeChannelWatch();
 }

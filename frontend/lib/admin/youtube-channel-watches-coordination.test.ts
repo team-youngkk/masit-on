@@ -7,6 +7,7 @@ import {
   watchErrorCategoryLabel,
   watchErrorMessage,
   watchStatusPresentation,
+  watchStartAllowed,
   watchToggleEnabled,
   watchToggleLabel,
 } from './youtube-channel-watches-coordination.ts'
@@ -74,4 +75,10 @@ test('전환 중에도 현재 상태 기준 토글 문구를 일관되게 계산
   assert.equal(watchToggleLabel(null), '감시 시작')
   assert.equal(watchEnabledLabel(true), '활성화 요청됨')
   assert.equal(watchEnabledLabel(false), '중지됨')
+})
+
+test('공개되고 외부 채널이 이용 가능한 행만 감시 시작을 허용한다', () => {
+  assert.equal(watchStartAllowed({ publiclyVisible: true, externallyAvailable: true }), true)
+  assert.equal(watchStartAllowed({ publiclyVisible: false, externallyAvailable: true }), false)
+  assert.equal(watchStartAllowed({ publiclyVisible: true, externallyAvailable: false }), false)
 })
