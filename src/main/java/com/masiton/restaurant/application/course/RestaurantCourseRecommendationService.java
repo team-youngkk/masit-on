@@ -21,12 +21,14 @@ import com.masiton.restaurant.application.port.in.RestaurantCourseCommand;
 import com.masiton.restaurant.application.port.in.RestaurantCourseResult;
 import com.masiton.restaurant.application.port.in.RestaurantCourseSegment;
 import com.masiton.restaurant.application.port.in.RestaurantCourseStop;
+import com.masiton.restaurant.application.port.in.RestaurantCourseVertex;
 import com.masiton.restaurant.application.port.out.CourseRouteFailureCategory;
 import com.masiton.restaurant.application.port.out.CourseRouteLeg;
 import com.masiton.restaurant.application.port.out.CourseRouteProviderException;
 import com.masiton.restaurant.application.port.out.CourseRouteProviderPort;
 import com.masiton.restaurant.application.port.out.CourseRouteRequest;
 import com.masiton.restaurant.application.port.out.CourseRouteResult;
+import com.masiton.restaurant.application.port.out.CourseRouteVertex;
 import com.masiton.restaurant.application.port.out.CourseRouteWaypoint;
 import com.masiton.restaurant.application.port.out.RestaurantRepositoryPort;
 import com.masiton.restaurant.domain.course.CourseOrderCalculator;
@@ -197,7 +199,8 @@ public class RestaurantCourseRecommendationService implements RecommendRestauran
             } else {
                 role = CourseStopRole.WAYPOINT;
             }
-            result.add(new RestaurantCourseStop(i + 1, stop.restaurantId(), stop.name(), role));
+            result.add(new RestaurantCourseStop(
+                    i + 1, stop.restaurantId(), stop.name(), role, stop.latitude(), stop.longitude()));
         }
         return result;
     }
@@ -209,8 +212,19 @@ public class RestaurantCourseRecommendationService implements RecommendRestauran
             CourseStop to = orderedStops.get(i + 1);
             CourseRouteLeg leg = legs.get(i);
             segments.add(new RestaurantCourseSegment(
-                    from.restaurantId(), to.restaurantId(), leg.distanceMeters(), leg.durationSeconds()));
+                    from.restaurantId(),
+                    to.restaurantId(),
+                    leg.distanceMeters(),
+                    leg.durationSeconds(),
+                    leg.shapeStatus(),
+                    toPath(leg.path())));
         }
         return segments;
+    }
+
+    private List<RestaurantCourseVertex> toPath(List<CourseRouteVertex> path) {
+        return path.stream()
+                .map(vertex -> new RestaurantCourseVertex(vertex.latitude(), vertex.longitude()))
+                .toList();
     }
 }

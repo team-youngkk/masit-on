@@ -26,10 +26,13 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import com.masiton.restaurant.application.port.out.CourseRouteFailureCategory;
+import com.masiton.restaurant.application.port.out.CourseRouteLeg;
 import com.masiton.restaurant.application.port.out.CourseRouteProviderException;
 import com.masiton.restaurant.application.port.out.CourseRouteRequest;
 import com.masiton.restaurant.application.port.out.CourseRouteResult;
+import com.masiton.restaurant.application.port.out.CourseRouteVertex;
 import com.masiton.restaurant.application.port.out.CourseRouteWaypoint;
+import com.masiton.restaurant.domain.course.CourseRouteShapeStatus;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -109,7 +112,7 @@ class KakaoMobilityCourseRouteAdapterWireMockIntegrationTest {
         assertThat(params.get("destination")).isEqualTo("127.400400,37.300300");
         assertThat(params.get("waypoints")).isEqualTo("127.300300,37.200200");
         assertThat(params.get("priority")).isEqualTo("RECOMMEND");
-        assertThat(params.get("summary")).isEqualTo("true");
+        assertThat(params.get("summary")).isEqualTo("false");
         assertThat(request.path("headers").path("Authorization").asText()).isEqualTo("KakaoAK " + API_KEY);
     }
 
@@ -127,7 +130,7 @@ class KakaoMobilityCourseRouteAdapterWireMockIntegrationTest {
         Map<String, String> params = queryParams(requests.get(0));
         assertThat(params).containsOnlyKeys("origin", "destination", "priority", "summary");
         assertThat(params).doesNotContainKey("waypoints");
-        assertThat(params.get("summary")).isEqualTo("true");
+        assertThat(params.get("summary")).isEqualTo("false");
     }
 
     @Test
@@ -247,6 +250,136 @@ class KakaoMobilityCourseRouteAdapterWireMockIntegrationTest {
 
         assertThat(exception.category()).isEqualTo(CourseRouteFailureCategory.SCHEMA);
         assertThat(directionsRequests()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("roads.vertexes가 정상 제공되면 위도·경도 순으로 정규화하고 shapeStatus를 AVAILABLE로 매핑한다")
+    void 코스경로계산_형상좌표정상제공_path와shapeStatus를정규화한다() throws Exception {
+        stubDirections(200, Map.of("routes", List.of(Map.of(
+                "result_code", 0,
+                "sections", List.of(Map.of(
+                        "distance", 4200,
+                        "duration", 780,
+                        "roads", List.of(Map.of(
+                                "vertexes", List.of(127.2002, 37.1001, 127.3003, 37.2002, 127.4004, 37.3003)))))))));
+
+        CourseRouteResult result = defaultAdapter().calculate(twoStopRequest());
+
+        CourseRouteLeg leg = result.legs().get(0);
+        assertThat(leg.shapeStatus()).isEqualTo(CourseRouteShapeStatus.AVAILABLE);
+        assertThat(leg.path()).containsExactly(
+                new CourseRouteVertex(37.1001, 127.2002),
+                new CourseRouteVertex(37.2002, 127.3003),
+                new CourseRouteVertex(37.3003, 127.4004));
+    }
+
+    @Test
+    @DisplayName("여러 roads의 vertexes는 순서대로 이어붙인다")
+    void 코스경로계산_roads가여러건_vertexes를순서대로이어붙인다() throws Exception {
+        stubDirections(200, Map.of("routes", List.of(Map.of(
+                "result_code", 0,
+                "sections", List.of(Map.of(
+                        "distance", 4200,
+                        "duration", 780,
+                        "roads", List.of(
+                                Map.of("vertexes", List.of(127.2002, 37.1001)),
+                                Map.of("vertexes", List.of(127.3003, 37.2002)))))))));
+
+        CourseRouteResult result = defaultAdapter().calculate(twoStopRequest());
+
+        assertThat(result.legs().get(0).path()).containsExactly(
+                new CourseRouteVertex(37.1001, 127.2002),
+                new CourseRouteVertex(37.2002, 127.3003));
+    }
+
+    @Test
+    @DisplayName("형상 좌표가 500개를 초과하면 시작·끝점을 보존한 균등 샘플링으로 500개로 줄인다")
+    void 코스경로계산_형상좌표500개초과_시작끝점보존샘플링으로500개로줄인다() throws Exception {
+        int pointCount = 601;
+        List<Double> vertexes = new ArrayList<>(pointCount * 2);
+        for (int i = 0; i < pointCount; i++) {
+            vertexes.add(127.0 + (i * 0.0001));
+            vertexes.add(37.0 + (i * 0.0001));
+        }
+        stubDirections(200, Map.of("routes", List.of(Map.of(
+                "result_code", 0,
+                "sections", List.of(Map.of(
+                        "distance", 4200,
+                        "duration", 780,
+                        "roads", List.of(Map.of("vertexes", vertexes))))))));
+
+        CourseRouteResult result = defaultAdapter().calculate(twoStopRequest());
+
+        List<CourseRouteVertex> path = result.legs().get(0).path();
+        assertThat(path).hasSize(500);
+        assertThat(path.get(0)).isEqualTo(new CourseRouteVertex(37.0, 127.0));
+        assertThat(path.get(path.size() - 1)).isEqualTo(
+                new CourseRouteVertex(37.0 + ((pointCount - 1) * 0.0001), 127.0 + ((pointCount - 1) * 0.0001)));
+    }
+
+    @Test
+    @DisplayName("roads가 없으면 거리·시간은 정상 매핑하고 shapeStatus는 MISSING, path는 빈 목록이다")
+    void 코스경로계산_roads가없음_shapeStatus가MISSING이고path가비어있다() throws Exception {
+        stubDirections(200, Map.of("routes", List.of(Map.of(
+                "result_code", 0,
+                "sections", List.of(Map.of("distance", 4200, "duration", 780))))));
+
+        CourseRouteResult result = defaultAdapter().calculate(twoStopRequest());
+
+        CourseRouteLeg leg = result.legs().get(0);
+        assertThat(leg.distanceMeters()).isEqualTo(4200);
+        assertThat(leg.durationSeconds()).isEqualTo(780);
+        assertThat(leg.shapeStatus()).isEqualTo(CourseRouteShapeStatus.MISSING);
+        assertThat(leg.path()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("roads의 vertexes가 빈 배열이면 shapeStatus는 MISSING이고 요청은 실패하지 않는다")
+    void 코스경로계산_vertexes가빈배열_shapeStatus가MISSING이고실패하지않는다() throws Exception {
+        stubDirections(200, Map.of("routes", List.of(Map.of(
+                "result_code", 0,
+                "sections", List.of(Map.of(
+                        "distance", 4200,
+                        "duration", 780,
+                        "roads", List.of(Map.of("vertexes", List.of()))))))));
+
+        CourseRouteResult result = defaultAdapter().calculate(twoStopRequest());
+
+        CourseRouteLeg leg = result.legs().get(0);
+        assertThat(leg.shapeStatus()).isEqualTo(CourseRouteShapeStatus.MISSING);
+        assertThat(leg.path()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("vertexes 길이가 홀수이면 SCHEMA로 매핑한다")
+    void 코스경로계산_vertexes길이가홀수_SCHEMA로매핑한다() throws Exception {
+        stubDirections(200, Map.of("routes", List.of(Map.of(
+                "result_code", 0,
+                "sections", List.of(Map.of(
+                        "distance", 4200,
+                        "duration", 780,
+                        "roads", List.of(Map.of("vertexes", List.of(127.2002, 37.1001, 127.3003)))))))));
+
+        CourseRouteProviderException exception = catchThrowableOfType(
+                CourseRouteProviderException.class, () -> defaultAdapter().calculate(twoStopRequest()));
+
+        assertThat(exception.category()).isEqualTo(CourseRouteFailureCategory.SCHEMA);
+    }
+
+    @Test
+    @DisplayName("vertexes의 위도가 범위를 벗어나면 SCHEMA로 매핑한다")
+    void 코스경로계산_위도범위초과_SCHEMA로매핑한다() throws Exception {
+        stubDirections(200, Map.of("routes", List.of(Map.of(
+                "result_code", 0,
+                "sections", List.of(Map.of(
+                        "distance", 4200,
+                        "duration", 780,
+                        "roads", List.of(Map.of("vertexes", List.of(127.2002, 91.0)))))))));
+
+        CourseRouteProviderException exception = catchThrowableOfType(
+                CourseRouteProviderException.class, () -> defaultAdapter().calculate(twoStopRequest()));
+
+        assertThat(exception.category()).isEqualTo(CourseRouteFailureCategory.SCHEMA);
     }
 
     @Test
