@@ -8,6 +8,10 @@ related_documents:
 
 구현과 리뷰 과정에서 재현·검증한 문제의 현상, 원인, 처리 결과를 보존한다.
 
+## 최신 기록
+
+- [PR #227 YouTube 채널 감시 상태·관리 화면 후속 반영](pr-227-youtube-channel-watch-review.md)
+
 ## PR 리뷰
 
 - [PR #221 Redis 사설 경로 비용과 배포 게이트 서술 정합화](pr-221-deployment-hardening-cost-review.md)
