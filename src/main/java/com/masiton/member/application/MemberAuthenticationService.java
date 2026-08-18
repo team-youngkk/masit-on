@@ -275,7 +275,7 @@ public class MemberAuthenticationService {
     }
 
     private BusinessException invalidCredentials(String normalizedEmail, String source) {
-        rateLimits.recordLoginFailure(normalizedEmail, source);
+        rateLimits.tryRecordLoginFailure(normalizedEmail, source);
         return invalidCredentials();
     }
 

@@ -44,5 +44,5 @@ public interface MemberRateLimitStore {
      * Records one failed login against its email-and-source and email windows atomically.
      * The source-only window is acquired before JSON parsing by the login source filter.
      */
-    void recordLoginFailure(String normalizedEmail, String source);
+    boolean tryRecordLoginFailure(String normalizedEmail, String source);
 }

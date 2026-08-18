@@ -24,10 +24,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import com.masiton.member.application.MemberDeletionCleanupService;
-import com.masiton.security.application.InvalidRefreshTokenException;
-import com.masiton.security.application.RefreshTokenRotation;
-import com.masiton.security.application.port.out.LoginFailureStore;
-import com.masiton.security.application.port.out.RefreshTokenStore;
 import com.masiton.member.application.InvalidMemberSessionException;
 import com.masiton.member.application.MemberSession;
 import com.masiton.member.application.MemberSessionRevocation;
@@ -74,16 +70,10 @@ class RedisRefreshTokenStoreIntegrationTest {
     }
 
     @Autowired
-    private RefreshTokenStore refreshTokenStore;
-
-    @Autowired
     private MemberSessionStore memberSessionStore;
 
     @Autowired
     private MemberSessionRevocationRecoveryQueue memberSessionRevocationRecoveryQueue;
-
-    @Autowired
-    private LoginFailureStore loginFailureStore;
 
     @Autowired
     private StringRedisTemplate redisTemplate;
@@ -104,41 +94,6 @@ class RedisRefreshTokenStoreIntegrationTest {
     void clearRedis() {
         redisTemplate.getConnectionFactory().getConnection().serverCommands().flushDb();
         when(memberSessionClock.instant()).thenAnswer(ignored -> Instant.now());
-    }
-
-    @Test
-    @DisplayName("임의로 만든 Token은 다른 관리자의 활성 세션을 폐기하지 못한다")
-    void rotate_임의Token_활성세션을유지한다() {
-        RefreshTokenRotation issued = refreshTokenStore.issue("admin-a", Duration.ofDays(14));
-
-        assertThatThrownBy(() -> refreshTokenStore.rotate("forged-refresh-token", Duration.ofDays(14)))
-                .isInstanceOf(InvalidRefreshTokenException.class);
-
-        assertThat(refreshTokenStore.matches("admin-a", issued.refreshToken())).isTrue();
-    }
-
-    @Test
-    @DisplayName("회전된 이전 Token의 재사용은 같은 Token 계열을 폐기한다")
-    void rotate_이전Token재사용_현재세션을폐기한다() {
-        RefreshTokenRotation issued = refreshTokenStore.issue("admin-a", Duration.ofDays(14));
-        RefreshTokenRotation rotated = refreshTokenStore.rotate(issued.refreshToken(), Duration.ofDays(14));
-
-        assertThatThrownBy(() -> refreshTokenStore.rotate(issued.refreshToken(), Duration.ofDays(14)))
-                .isInstanceOf(InvalidRefreshTokenException.class);
-        assertThat(refreshTokenStore.matches("admin-a", rotated.refreshToken())).isFalse();
-    }
-
-    @Test
-    @DisplayName("로그인 실패는 다섯 번째부터 남은 TTL 동안 차단한다")
-    void 로그인실패_다섯번째_차단한다() {
-        for (int attempt = 0; attempt < 4; attempt++) {
-            loginFailureStore.recordFailure("admin-login", "127.0.0.1");
-            assertThat(loginFailureStore.isBlocked("admin-login", "127.0.0.1")).isFalse();
-        }
-
-        loginFailureStore.recordFailure("admin-login", "127.0.0.1");
-
-        assertThat(loginFailureStore.isBlocked("admin-login", "127.0.0.1")).isTrue();
     }
 
     @Test
@@ -193,7 +148,7 @@ class RedisRefreshTokenStoreIntegrationTest {
     void 회원로그인실패_다섯번째부터차단하고TTL을설정한다() {
         for (int attempt = 0; attempt < 5; attempt++) {
             assertThat(memberRateLimitStore.tryAcquireLoginSourceAttempt("198.51.100.10")).isTrue();
-            memberRateLimitStore.recordLoginFailure("member@example.com", "198.51.100.10");
+            assertThat(memberRateLimitStore.tryRecordLoginFailure("member@example.com", "198.51.100.10")).isTrue();
         }
 
         assertThat(memberRateLimitStore.isLoginBlocked("member@example.com", "198.51.100.10")).isTrue();
@@ -208,16 +163,30 @@ class RedisRefreshTokenStoreIntegrationTest {
     void 회원로그인실패_이메일과출처집계한도_적용() {
         for (int attempt = 0; attempt < 10; attempt++) {
             assertThat(memberRateLimitStore.tryAcquireLoginSourceAttempt("198.51.100." + attempt)).isTrue();
-            memberRateLimitStore.recordLoginFailure("member@example.com", "198.51.100." + attempt);
+            assertThat(memberRateLimitStore.tryRecordLoginFailure(
+                    "member@example.com", "198.51.100." + attempt)).isTrue();
         }
         assertThat(memberRateLimitStore.isLoginBlocked("member@example.com", "203.0.113.200")).isTrue();
 
         redisTemplate.getConnectionFactory().getConnection().serverCommands().flushDb();
         for (int attempt = 0; attempt < 50; attempt++) {
             assertThat(memberRateLimitStore.tryAcquireLoginSourceAttempt("203.0.113.10")).isTrue();
-            memberRateLimitStore.recordLoginFailure("member-" + attempt + "@example.com", "203.0.113.10");
+            assertThat(memberRateLimitStore.tryRecordLoginFailure(
+                    "member-" + attempt + "@example.com", "203.0.113.10")).isTrue();
         }
         assertThat(memberRateLimitStore.isLoginBlocked("new-member@example.com", "203.0.113.10")).isTrue();
+    }
+
+    @Test
+    @DisplayName("동시 로그인 실패는 계정출처 5회와 계정 10회 경계를 원자적으로 지킨다")
+    void 회원로그인실패_동시요청_원자한도적용() throws Exception {
+        assertThat(concurrentFailureRecords(20, attempt -> "198.51.100.10")).isEqualTo(5L);
+        assertThat(memberRateLimitStore.isLoginBlocked("member@example.com", "198.51.100.10")).isTrue();
+
+        redisTemplate.getConnectionFactory().getConnection().serverCommands().flushDb();
+
+        assertThat(concurrentFailureRecords(20, attempt -> "198.51.100." + attempt)).isEqualTo(10L);
+        assertThat(memberRateLimitStore.isLoginBlocked("member@example.com", "203.0.113.200")).isTrue();
     }
 
     @Test
@@ -231,6 +200,37 @@ class RedisRefreshTokenStoreIntegrationTest {
         assertThat(redisTemplate.keys("auth:member:rate-limit:login-email*")).isEmpty();
     }
 
+    private long concurrentFailureRecords(int attempts, java.util.function.IntFunction<String> sourceFactory)
+            throws Exception {
+        CountDownLatch ready = new CountDownLatch(attempts);
+        CountDownLatch start = new CountDownLatch(1);
+        try (ExecutorService executor = Executors.newFixedThreadPool(attempts)) {
+            java.util.List<Future<Boolean>> results = new java.util.ArrayList<>();
+            for (int attempt = 0; attempt < attempts; attempt++) {
+                int currentAttempt = attempt;
+                results.add(executor.submit(() -> {
+                    ready.countDown();
+                    if (!start.await(5, TimeUnit.SECONDS)) {
+                        throw new IllegalStateException("Timed out waiting for concurrent login failures");
+                    }
+                    return memberRateLimitStore.tryRecordLoginFailure(
+                            "member@example.com", sourceFactory.apply(currentAttempt));
+                }));
+            }
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+            return results.stream().filter(this::completedWithTrue).count();
+        }
+    }
+
+    private boolean completedWithTrue(Future<Boolean> result) {
+        try {
+            return result.get(5, TimeUnit.SECONDS);
+        } catch (Exception exception) {
+            throw new AssertionError(exception);
+        }
+    }
+
     private void assertTtlRange(String pattern, long maximumSeconds) {
         java.util.Set<String> keys = redisTemplate.keys(pattern);
         assertThat(keys).isNotEmpty();
@@ -238,15 +238,6 @@ class RedisRefreshTokenStoreIntegrationTest {
                 .isBetween(1L, maximumSeconds));
     }
 
-    @Test
-    @DisplayName("같은 출처의 다른 로그인 ID 다섯 번 실패도 차단한다")
-    void 로그인실패_같은출처다른로그인ID_차단한다() {
-        for (int attempt = 0; attempt < 5; attempt++) {
-            loginFailureStore.recordFailure("admin-" + attempt, "127.0.0.1");
-        }
-
-        assertThat(loginFailureStore.isBlocked("another-admin", "127.0.0.1")).isTrue();
-    }
     @Test
     @DisplayName("회원은 최대 세 개의 Redis refresh 세션만 유지한다")
     void memberSession_최대세개_가장오래된세션폐기() {

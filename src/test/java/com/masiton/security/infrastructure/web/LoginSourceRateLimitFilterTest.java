@@ -12,13 +12,13 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
 import com.masiton.common.web.ClientAddressResolver;
-import com.masiton.member.application.port.out.MemberRateLimitStore;
+import com.masiton.common.security.LoginSourceRateLimiter;
 
 import static org.mockito.Mockito.mock;
 
 class LoginSourceRateLimitFilterTest {
 
-    private final MemberRateLimitStore rateLimits = mock(MemberRateLimitStore.class);
+    private final LoginSourceRateLimiter rateLimits = mock(LoginSourceRateLimiter.class);
     private final ClientAddressResolver addresses = mock(ClientAddressResolver.class);
     private final SecurityErrorWriter errorWriter = mock(SecurityErrorWriter.class);
     private final FilterChain chain = mock(FilterChain.class);
@@ -51,5 +51,35 @@ class LoginSourceRateLimitFilterTest {
 
         verify(rateLimits, never()).tryAcquireLoginSourceAttempt(any());
         verify(chain).doFilter(request, response);
+    }
+
+    @Test
+    @DisplayName("출처 제한을 획득한 로그인 요청은 다음 필터로 진행한다")
+    void 로그인_출처제한획득_필터체인진행() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/auth/tokens");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        when(addresses.resolve(request)).thenReturn("203.0.113.10");
+        when(rateLimits.tryAcquireLoginSourceAttempt("203.0.113.10")).thenReturn(true);
+
+        filter.doFilter(request, response, chain);
+
+        verify(chain).doFilter(request, response);
+        verify(errorWriter, never()).invalidCredentials(any(), any());
+        verify(errorWriter, never()).authenticationServiceUnavailable(any(), any());
+    }
+
+    @Test
+    @DisplayName("출처 제한 저장소 장애는 503을 쓰고 다음 필터로 진행하지 않는다")
+    void 로그인_출처제한저장소장애_503() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/auth/tokens");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        when(addresses.resolve(request)).thenReturn("203.0.113.10");
+        when(rateLimits.tryAcquireLoginSourceAttempt("203.0.113.10"))
+                .thenThrow(new IllegalStateException("Redis unavailable"));
+
+        filter.doFilter(request, response, chain);
+
+        verify(errorWriter).authenticationServiceUnavailable(request, response);
+        verify(chain, never()).doFilter(any(), any());
     }
 }

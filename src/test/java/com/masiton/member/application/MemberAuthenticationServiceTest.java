@@ -101,7 +101,7 @@ class MemberAuthenticationServiceTest {
         // then
         assertThat(result.accessToken()).isEqualTo("access-token");
         verify(accounts).findByEmailForUpdate("member@example.com");
-        verify(rateLimits, never()).recordLoginFailure(any(), any());
+        verify(rateLimits, never()).tryRecordLoginFailure(any(), any());
     }
 
     @Test
@@ -116,7 +116,7 @@ class MemberAuthenticationServiceTest {
         // when & then
         assertInvalidCredentials(() -> service().login(
                 "member@example.com", "wrong-password", "127.0.0.1"));
-        verify(rateLimits).recordLoginFailure("member@example.com", "127.0.0.1");
+        verify(rateLimits).tryRecordLoginFailure("member@example.com", "127.0.0.1");
         verifyNoInteractions(sessions);
     }
 
@@ -133,7 +133,7 @@ class MemberAuthenticationServiceTest {
         verify(passwordEncoder).matches(
                 org.mockito.ArgumentMatchers.eq("any-password"),
                 org.mockito.ArgumentMatchers.startsWith("$2a$10$"));
-        verify(rateLimits).recordLoginFailure("missing@example.com", "127.0.0.1");
+        verify(rateLimits).tryRecordLoginFailure("missing@example.com", "127.0.0.1");
         verifyNoInteractions(sessions);
     }
 
