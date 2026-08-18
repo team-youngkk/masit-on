@@ -1,4 +1,6 @@
 aws_region = "ap-northeast-2"
+# AWS_PROFILE 환경 변수를 쓸 때는 지정하지 않는다.
+# aws_profile = "masiton"
 
 # Existing network and compute inputs. This module does not create VPC, subnet, AMI, RDS, or Redis.
 vpc_id = "vpc-REPLACE_ME"
@@ -13,7 +15,27 @@ app_subnet_ids = [
   "subnet-REPLACE_ME_PRIVATE_C",
 ]
 
-ami_id = "ami-REPLACE_ME"
+# docker와 CodeDeploy Agent는 user_data가 설치한다. AMI는 기존 것을 그대로 쓴다.
+ami_id        = "ami-REPLACE_ME"
+instance_type = "t4g.small"
+
+# ALB는 ACM 종단 후 Nginx 443으로 재암호화한다. HTTP/80 target을 쓰면 Nginx
+# 도메인 server의 301이 redirect loop를 만든다.
+app_port     = 443
+app_protocol = "HTTPS"
+
+# blue ASG는 CodeDeploy 교체 환경 체인의 seed다. 첫 배포 이후 트래픽은 CodeDeploy가
+# 만든 ASG가 담당하므로 상시 0대로 두고, ASG 자체 설정을 체인에 반영해야 할 때만
+# 1대로 키워 다시 seeding한다.
+blue_min_size         = 0
+blue_desired_capacity = 1
+blue_max_size         = 2
+
+# 새 ASG가 기존 RDS에 접근하려면 RDS SG에 app SG 출처 ingress가 필요하다.
+# 끄면 SG ingress에서 drop되어 backend가 Flyway 연결 timeout으로 기동에 실패한다.
+manage_rds_ingress_rule = true
+# Redis SG의 ingress는 전용 Redis를 소유하는 ../terraform-redis 레이어가 관리한다.
+manage_redis_ingress_rule = false
 
 rds_security_group_id   = "sg-REPLACE_ME_RDS"
 redis_security_group_id = "sg-REPLACE_ME_REDIS"
@@ -54,3 +76,11 @@ ssm_parameter_arns = ["arn:aws:ssm:ap-northeast-2:000000000000:parameter/masiton
 # NGINX_TRUSTED_PROXY_CIDRS=10.0.1.0/24,10.0.2.0/24
 # ENV
 # EOT
+
+# ---- 최초 seeding 구간에만 필요한 완화 ----
+# 앱이 없는 빈 baseline에서는 ELB health check와 alarm 게이트, 자동 rollback이
+# 첫 배포를 막는다. known-good revision 배포가 성공하면 세 값을 지워 안전한
+# 기본값(ELB / true / true)으로 되돌린다.
+# asg_health_check_type            = "EC2"
+# deployment_alarms_enabled        = false
+# deployment_auto_rollback_enabled = false
