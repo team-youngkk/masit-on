@@ -64,7 +64,8 @@ public class YoutubeChannelWatchManagementService implements YoutubeChannelWatch
                 .toList();
         long totalElements = candidates.size();
         long totalPages = totalElements == 0 ? 0 : (totalElements + size - 1L) / size;
-        int from = Math.min((page - 1) * size, candidates.size());
+        long offset = (long) (page - 1) * size;
+        int from = (int) Math.min(offset, candidates.size());
         int to = Math.min(from + size, candidates.size());
         List<WatchSummary> items = candidates.subList(from, to).stream()
                 .map(reference -> new WatchSummary(

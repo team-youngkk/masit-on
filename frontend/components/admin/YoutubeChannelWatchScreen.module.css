@@ -1,5 +1,8 @@
 .screen, .creatorPanel, .statusPanel, .details, .detailGrid { display: grid; min-width: 0; gap: var(--space-4); }
 .watchList { display: grid; min-width: 0; gap: var(--space-4); }
+.pageActions, .pagination { display: flex; align-items: center; gap: var(--space-3); }
+.pageLabel, .pagination { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.pagination { justify-content: center; }
 .creatorPanel, .statusPanel { padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
 .creatorPanel h1 { margin: 0 0 var(--space-2); font-size: var(--font-size-xl); }
 .creatorPanel label { display: grid; gap: var(--space-2); font-size: var(--font-size-sm); font-weight: 700; }

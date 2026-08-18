@@ -69,6 +69,8 @@ class YoutubeChannelWatchManagementServiceTest {
         assertThat(result.items().get(1).status().subscriptionStatus()).isEqualTo("INACTIVE");
         assertThat(result.items().get(2).channelName()).isEqualTo("비공개 채널");
         verify(watchPersistence).findDetailsByChannelIds(List.of("channel-active", "channel-inactive", "channel-unavailable"));
+
+        assertThat(service.getStatuses(Integer.MAX_VALUE, 50).items()).isEmpty();
     }
 
     @Test

@@ -28,16 +28,17 @@ import styles from './YoutubeChannelWatchScreen.module.css'
 const WATCH_PAGE_SIZE = 50
 
 export function YoutubeChannelWatchScreen() {
+  const [page, setPage] = useState(1)
   const [notice, setNotice] = useState<string | null>(null)
   const [noticeIsError, setNoticeIsError] = useState(false)
   const [pendingIds, setPendingIds] = useState<Set<string>>(() => new Set())
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({})
   const queryClient = useQueryClient()
-  const queryKey = youtubeChannelWatchesQueryKey(1, WATCH_PAGE_SIZE)
+  const queryKey = youtubeChannelWatchesQueryKey(page, WATCH_PAGE_SIZE)
 
   const watchesQuery = useQuery({
     queryKey,
-    queryFn: () => getYoutubeChannelWatches(1, WATCH_PAGE_SIZE),
+    queryFn: () => getYoutubeChannelWatches(page, WATCH_PAGE_SIZE),
   })
 
   const mutation = useMutation({
@@ -104,6 +105,7 @@ export function YoutubeChannelWatchScreen() {
   }
 
   const summaries = watchesQuery.data.items
+  const pageInfo = watchesQuery.data.page
   if (summaries.length === 0) {
     return <StatePanel title="감시할 유튜버가 없습니다." description="먼저 YouTube 채널이 연결된 Creator를 등록해 주세요." />
   }
@@ -115,7 +117,10 @@ export function YoutubeChannelWatchScreen() {
           <h1 id="youtube-watch-creator-heading">YouTube 채널 감시</h1>
           <p className={styles.hint}>여러 유튜버를 동시에 감시할 수 있습니다. 각 행의 상태와 Webhook 수신 여부를 독립적으로 관리합니다.</p>
         </div>
-        <Button className={styles.retryButton} variant="secondary" onClick={() => void watchesQuery.refetch()}>목록 새로고침</Button>
+        <div className={styles.pageActions}>
+          <Button className={styles.retryButton} variant="secondary" onClick={() => void watchesQuery.refetch()}>목록 새로고침</Button>
+          <span className={styles.pageLabel}>{pageInfo.number} / {Math.max(pageInfo.totalPages, 1)} 페이지</span>
+        </div>
       </div>
     </section>
 
@@ -128,6 +133,11 @@ export function YoutubeChannelWatchScreen() {
         onToggle={() => toggleWatch(summary)}
       />)}
     </div>
+    <nav className={styles.pagination} aria-label="YouTube 채널 감시 목록 페이지">
+      <Button variant="secondary" disabled={page <= 1 || watchesQuery.isFetching} onClick={() => setPage((current) => Math.max(1, current - 1))}>이전</Button>
+      <span>{pageInfo.number} / {Math.max(pageInfo.totalPages, 1)}</span>
+      <Button variant="secondary" disabled={!pageInfo.hasNext || watchesQuery.isFetching} onClick={() => setPage((current) => current + 1)}>다음</Button>
+    </nav>
     {notice ? <p className={noticeIsError ? styles.errorNotice : styles.notice} role={noticeIsError ? 'alert' : 'status'}>{notice}</p> : null}
   </div>
 }
