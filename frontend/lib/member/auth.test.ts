@@ -33,7 +33,12 @@ function tokenResponse(accessToken: string): Response {
     accessToken,
     tokenType: 'Bearer',
     expiresInSeconds: 1_800,
+    role: 'MEMBER',
   })
+}
+
+function currentMemberResponse(): Response {
+  return Response.json({ id: 'member-1', email: 'member@example.com', role: 'MEMBER' })
 }
 
 function deferredResponse(): {
@@ -71,6 +76,7 @@ memberAuthTest('로그아웃 응답 뒤에 로그인 요청을 실행해 새 세
         resolve()
         return pendingLogout.promise
       }
+      if (input === '/api/me' && method === 'GET') return currentMemberResponse()
       throw new Error(`Unexpected request: ${String(input)} ${method}`)
     }
   })
@@ -121,7 +127,7 @@ memberAuthTest('진행 중인 refresh 뒤에 로그인을 실행해 로그인 �
     }
     if (input === '/api/me' && method === 'GET') {
       protectedAuthorization = new Headers(init?.headers).get('Authorization')
-      return new Response(null, { status: 200 })
+      return currentMemberResponse()
     }
     throw new Error(`Unexpected request: ${String(input)} ${method}`)
   }
@@ -160,6 +166,7 @@ memberAuthTest('메모리 토큰이 없어도 refresh 후 서버 로그아웃을
     if (input === '/api/auth/tokens/refresh' && method === 'POST') {
       return tokenResponse('recovered-access')
     }
+    if (input === '/api/me' && method === 'GET') return currentMemberResponse()
     if (input === '/api/auth/tokens' && method === 'DELETE') {
       memberAuthAssert.equal(
         new Headers(init?.headers).get('Authorization'),
@@ -175,6 +182,7 @@ memberAuthTest('메모리 토큰이 없어도 refresh 후 서버 로그아웃을
 
   memberAuthAssert.deepEqual(requests, [
     'POST /api/auth/tokens/refresh',
+    'GET /api/me',
     'DELETE /api/auth/tokens',
   ])
   memberAuthAssert.equal(hasMemberAccessToken(), false)

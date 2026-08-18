@@ -27,8 +27,9 @@ test('신규 접수 API는 trim된 입력과 멱등 키를 JSON 본문으로 보
   const requestBodies: unknown[] = []
   const responses = [job(false), job(true)]
   let call = 0
-  globalThis.fetch = async (_input, init) => {
-    if (call++ === 0) return new Response(JSON.stringify({ accessToken: 'test-token', tokenType: 'Bearer', expiresInSeconds: 3600 }), { status: 200 })
+  globalThis.fetch = async (input, init) => {
+    if (call++ === 0) return new Response(JSON.stringify({ accessToken: 'test-token', tokenType: 'Bearer', expiresInSeconds: 3600, role: 'ADMIN' }), { status: 200 })
+    if (input === '/api/me') return Response.json({ id: 'admin-1', email: 'admin@example.com', role: 'ADMIN' })
     requestBodies.push(JSON.parse(String(init?.body)))
     return new Response(JSON.stringify(responses.shift()), { status: 200 })
   }
@@ -55,8 +56,9 @@ test('빈 보완 텍스트는 신규 접수 요청에서 생략한다', async ()
   const previousFetch = globalThis.fetch
   const requestBodies: unknown[] = []
   let call = 0
-  globalThis.fetch = async (_input, init) => {
-    if (call++ === 0) return new Response(JSON.stringify({ accessToken: 'test-token', tokenType: 'Bearer', expiresInSeconds: 3600 }), { status: 200 })
+  globalThis.fetch = async (input, init) => {
+    if (call++ === 0) return new Response(JSON.stringify({ accessToken: 'test-token', tokenType: 'Bearer', expiresInSeconds: 3600, role: 'ADMIN' }), { status: 200 })
+    if (input === '/api/me') return Response.json({ id: 'admin-1', email: 'admin@example.com', role: 'ADMIN' })
     requestBodies.push(JSON.parse(String(init?.body)))
     return new Response(JSON.stringify(job(false)), { status: 202 })
   }
@@ -75,8 +77,9 @@ test('빈 보완 텍스트는 신규 접수 요청에서 생략한다', async ()
 test('신규 접수 API 오류는 계약 코드별 안전한 안내로 변환한다', async () => {
   const previousFetch = globalThis.fetch
   let call = 0
-  globalThis.fetch = async () => {
-    if (call++ === 0) return new Response(JSON.stringify({ accessToken: 'test-token', tokenType: 'Bearer', expiresInSeconds: 3600 }), { status: 200 })
+  globalThis.fetch = async (input) => {
+    if (call++ === 0) return new Response(JSON.stringify({ accessToken: 'test-token', tokenType: 'Bearer', expiresInSeconds: 3600, role: 'ADMIN' }), { status: 200 })
+    if (input === '/api/me') return Response.json({ id: 'admin-1', email: 'admin@example.com', role: 'ADMIN' })
     return new Response(JSON.stringify({ code: 'AIEXTRACT_INVALID_VIDEO_URL', message: 'internal detail', traceId: 'trace-1' }), { status: 400 })
   }
 
