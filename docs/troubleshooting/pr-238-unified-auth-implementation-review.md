@@ -16,8 +16,8 @@ related_documents:
 |---|---|
 | PR | [#238](https://github.com/team-youngkk/masit-on/pull/238) |
 | 작성자 | jinyp01 |
-| 처리 일자 | 2026-08-18 |
-| 범위 | 로그인 실패 제한, JWT 보안 픽스처, 계층 의존, Redis 세션 테스트와 계정 전환 migration 검토 |
+| 처리 일자 | 2026-08-19 |
+| 범위 | 로그인 실패 제한, JWT 보안 픽스처, 계층 의존, Redis 세션 테스트와 계정 전환 migration 검토 및 최신 재리뷰·CI 확인 |
 | 주 문제 유형 | 애플리케이션 / 데이터베이스 |
 | 기존 기록 | [PR #129](pr-129-deploy-cutover-and-rate-limit-review.md)의 요청 선행 제한 원칙, [PR #192](pr-192-flyway-model-contract-review.md)의 Flyway 적용 이력 증거, [PR #235](pr-235-unified-auth-contract-review.md)의 통합 계정 전환 결정을 재사용했다. |
 
@@ -65,6 +65,7 @@ related_documents:
 | `ArchitectureTest` 로컬 재현 | security infrastructure가 member infrastructure에 의존 | common의 `ClientAddressResolver` port에 의존하도록 변경 |
 | 운영 Flyway 기록 확인 | 2026-08-14 기록은 V1~V3이지만 현재 시점의 공유·운영 이력은 미확인 | 신규 버전 배정 전 데이터 소유자 확인 필요 |
 | Docker daemon 확인 | 로컬 Docker Desktop 미실행 | PostgreSQL·Redis 통합 검증은 CI 재실행 필요 |
+| 2026-08-19 미해결 스레드·최신 CI 재확인 | role migration 관련 스레드 3건만 미해결이고, 최신 필수 CI는 1,288건 완료 중 27건 실패·2건 건너뜀 | 실패는 `member_account.role`이 없는 PostgreSQL 스키마에서 발생한다. 최신 적용 이력·승인 매핑·cutover 결정 전에는 임의 migration을 추가하지 않는다. |
 
 ## 6. 최종 해결
 
@@ -82,6 +83,7 @@ related_documents:
 | PR #238 CI run `32135495164` | 실패 | 프론트엔드·Terraform은 통과. 공통 resolver 주입 모호성으로 백엔드 Context가 연쇄 실패해 qualifier를 후속 보완했다. |
 | PR #238 CI run `32136091504` | 실패 | 프론트엔드·Terraform 통과. `SecurityConfigurationApiTest` 25건, `RedisRefreshTokenStoreIntegrationTest` 19건, `ArchitectureTest` 10건 통과. 백엔드 1,309건 중 남은 27건은 role 컬럼 부재로 인한 SQL 오류 또는 그 503 전파다. |
 | PR #238 CI run `32137718331` | 실패 | 원자 로그인 제한 Redis 통합 16건 통과. Origin 설정 제거 뒤 운영 configtree 테스트 한 곳이 삭제된 속성을 계속 기대해 현재 member 경로로 수정했다. 나머지 실패는 role migration 부재다. |
+| PR #238 CI run `32138590353` | 실패 | 프론트엔드 빌드·타입 검사와 Terraform 렌더링 계약은 통과했다. 백엔드는 1,288건 완료 중 27건 실패·2건 건너뜀이며 `member_account.role` 부재의 `BadSqlGrammarException`이 인증·컬렉션·outbox PostgreSQL 테스트로 전파됐다. |
 | PostgreSQL·Redis·MockMvc 통합 테스트 | 미실행 | 로컬 Docker daemon 미가동. push 뒤 CI에서 재검증한다. |
 
 ## 8. 재발 방지 및 다음 확인
@@ -93,10 +95,10 @@ related_documents:
 
 | 지표 | 도입 전 기준값 | 측정 방법·기간 | 배포 확장 후 값 | 비교 결과 | 담당자·확인 시점/이슈 |
 |---|---|---|---|---|---|
-| 백엔드 CI 실패 수 | 최초 38건, 첫 수정 run 249건 | PR #238 CI run별 비교 | 27건 | 코드·픽스처 회귀는 해소됐고 남은 실패는 role migration 결정에 수렴 | 데이터·인증 소유자, PR #238 |
+| 백엔드 CI 실패 수 | 최초 38건, 첫 수정 run 249건 | PR #238 CI run별 비교 | 최신 run에서 27건 | 코드·픽스처 회귀는 해소됐고 남은 실패는 role migration 결정에 수렴 | 데이터·인증 소유자, PR #238 |
 | 성공 로그인 뒤 계정 실패 카운터 | 로그인마다 1 증가 | Redis 통합 테스트 10회 | 0 증가 기대 | CI 재실행에서 확인 | 인증 소유자, PR #238 |
 
 ## 10. 남은 사항
 
-- `member_account.role`과 관리자 FK 전환 migration은 데이터 계약상 필요한 입력과 최신 적용 이력이 없어 결정 필요 상태다.
+- `member_account.role`과 관리자 FK 전환 migration은 데이터 계약상 필요한 입력과 최신 적용 이력이 없어 결정 필요 상태다. 2026-08-19 재확인에서도 해당 P1 스레드 3건만 미해결이며, 데이터·인증 소유자가 다음 미사용 버전, 승인 매핑 입력, `MIGRATE_ACTIVE`의 이메일 인증 상태 근거와 cutover 순서를 확정해야 한다.
 - 로컬 Docker가 없어 Testcontainers 기반 전체 회귀는 CI에서 확인해야 한다.
