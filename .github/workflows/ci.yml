@@ -857,10 +857,16 @@ jobs:
           esac
           deployment_id_file="$RUNNER_TEMP/codedeploy-deployment-id"
           deployment_id_key="masiton/codedeploy/${GITHUB_RUN_ID}/deployment-id"
+          # 내용이 빈 pointer object를 그대로 받아들이면 중지 step이 조용히 건너뛰어진다.
+          # 비어 있으면 pointer가 없는 것과 같이 취급해 아래 재조정으로 넘긴다.
           if aws s3 cp "s3://${CODEDEPLOY_S3_BUCKET}/${deployment_id_key}" \
             "$deployment_id_file"; then
-            printf 'resolved=%s\n' "$(tr -d '\r\n' < "$deployment_id_file")" >> "$GITHUB_OUTPUT"
-            exit 0
+            pointer_id=$(tr -d '\r\n' < "$deployment_id_file")
+            if [ -n "$pointer_id" ]; then
+              printf 'resolved=%s\n' "$pointer_id" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo 'S3 pointer object가 비어 있다. 재조정으로 넘어간다.' >&2
           fi
 
           # create-deployment 성공과 pointer 저장 사이에 runner가 죽으면 pointer
@@ -872,21 +878,40 @@ jobs:
             :*|*:) echo '::error::재조정에는 CodeDeploy application/deployment-group 입력이 필요하다' >&2; exit 1 ;;
           esac
           revision_prefix="masiton/codedeploy/${GITHUB_RUN_ID}/"
-          candidates=$(aws deploy list-deployments \
-            --application-name "$CODEDEPLOY_APPLICATION" \
-            --deployment-group-name "$CODEDEPLOY_DEPLOYMENT_GROUP" \
-            --include-only-statuses Created Queued InProgress Ready \
-            --query 'deployments' --output text)
-          if [ -z "$candidates" ] || [ "$candidates" = None ]; then
-            echo '진행 중인 deployment가 없다. 정리할 원격 배포가 남아 있지 않다.'
-            printf 'resolved=\n' >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          matched=$(aws deploy batch-get-deployments --deployment-ids $candidates \
-            --query "deploymentsInfo[?starts_with(revision.s3Location.key, \`${revision_prefix}\`)].deploymentId" \
-            --output text | tr -s '[:space:]' ' ' | sed 's/^ //; s/ $//')
-          if [ -z "$matched" ] || [ "$matched" = None ]; then
-            echo '이 실행이 만든 진행 중 deployment가 없다. 정리할 원격 배포가 남아 있지 않다.'
+          matched=""
+          # 이 경로의 전제가 create-deployment 직후 runner가 죽은 상황인데 CodeDeploy
+          # 목록 API는 최종 일관성을 가진다. 한 번의 빈 응답으로 "정리 대상 없음"을
+          # 확정하면 가장 필요한 순간에 놓친다. 아래 중지 polling이 240초를 쓰므로
+          # 5분 취소 강제 종료 한도 안에 들어가도록 재시도는 15초로 제한한다.
+          #
+          # Blue-Green은 트래픽 전환 뒤 원본 인스턴스 종료를 기다리는 동안 Baking에
+          # 머문다. 이 상태를 빼면 전환까지 끝난 배포를 정리 대상에서 놓친다.
+          for attempt in 1 2 3 4; do
+            candidates=$(aws deploy list-deployments \
+              --application-name "$CODEDEPLOY_APPLICATION" \
+              --deployment-group-name "$CODEDEPLOY_DEPLOYMENT_GROUP" \
+              --include-only-statuses Created Queued InProgress Baking Ready \
+              --query 'deployments' --output text)
+            if [ -n "$candidates" ] && [ "$candidates" != None ]; then
+              matched=$(aws deploy batch-get-deployments --deployment-ids $candidates \
+                --query "deploymentsInfo[?starts_with(revision.s3Location.key, \`${revision_prefix}\`)].deploymentId" \
+                --output text | tr -s '[:space:]' ' ' | sed 's/^ //; s/ $//')
+              if [ "$matched" = None ]; then
+                matched=""
+              fi
+            fi
+            if [ -n "$matched" ]; then
+              break
+            fi
+            if [ "$attempt" -lt 4 ]; then
+              sleep 5
+            fi
+          done
+          if [ -z "$matched" ]; then
+            # 배포 생성 전에 취소된 정상적인 경우와 목록 조회가 놓친 경우를 CI가
+            # 구분할 수 없다. 실패로 만들면 흔한 정상 취소마다 job이 붉게 남아
+            # 경고가 무시되므로, 성공으로 끝내되 확인이 필요하다는 사실을 남긴다.
+            echo '::warning::S3 pointer가 없고 이 실행이 만든 진행 중 deployment도 찾지 못했다. 배포가 생성되기 전에 취소됐을 수 있고 목록 조회가 놓쳤을 수도 있다. 원격 CodeDeploy 상태를 한 번 확인한다.'
             printf 'resolved=\n' >> "$GITHUB_OUTPUT"
             exit 0
           fi
