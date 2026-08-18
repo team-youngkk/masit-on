@@ -180,16 +180,37 @@ data "aws_iam_policy_document" "github_actions_deploy" {
     effect = "Allow"
     actions = [
       "codedeploy:CreateDeployment",
-      "codedeploy:GetDeployment",
+    ]
+    resources = [aws_codedeploy_deployment_group.app.arn]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
       "codedeploy:GetApplication",
       "codedeploy:GetDeploymentGroup",
-      "codedeploy:GetDeploymentConfig",
     ]
     resources = [
       aws_codedeploy_app.app.arn,
       aws_codedeploy_deployment_group.app.arn,
-      "*",
     ]
+  }
+
+  # Deployment ID와 deployment config 이름은 AWS가 실행 시 생성·선택하므로
+  # 조회 API에는 고정된 모듈 ARN을 줄 수 없다. wildcard가 필요한 조회만
+  # 별도 statement로 격리하고, 배포 생성은 위 deployment group으로 제한한다.
+  statement {
+    effect    = "Allow"
+    actions   = ["codedeploy:GetDeployment", "codedeploy:GetDeploymentConfig"]
+    resources = ["*"]
+  }
+
+  # CI timeout/cancel 시 진행 중인 deployment를 중지하고 자동 rollback을
+  # 요청해야 한다. AWS가 생성하는 deployment ID 때문에 resource는 wildcard다.
+  statement {
+    effect    = "Allow"
+    actions   = ["codedeploy:StopDeployment"]
+    resources = ["*"]
   }
 }
 

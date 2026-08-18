@@ -64,13 +64,48 @@ rollback() {
   set +e
   trap - ERR
   [ "$rollback_enabled" = yes ] || return 0
-  echo '배포 후 health 실패: 이전 이미지 참조로 rollback을 시도한다' >&2
+  echo '배포 후 health 실패: 이전 이미지·실행 산출물로 rollback을 시도한다' >&2
+
+  restore_asset() {
+    local source="$1"
+    local backup="$2"
+    if [ -f "$backup" ]; then
+      install -d "$(dirname "$source")"
+      rm -f "$source"
+      cp -a "$backup" "$source"
+    elif [ -f "${backup}.missing" ]; then
+      rm -f "$source"
+    fi
+  }
+
   for component in backend frontend; do
-    [ -f "$previous/${component}.image" ] && install -m 0644 "$previous/${component}.image" "$OPT_DIR/etc/${component}.image"
+    restore_asset "$OPT_DIR/etc/${component}.image" "$previous/${component}.image"
   done
+  restore_asset "$OPT_DIR/bin/app-run.sh" "$previous/opt/masiton/bin/app-run.sh"
+  restore_asset "$OPT_DIR/bin/app-secrets-render.sh" "$previous/opt/masiton/bin/app-secrets-render.sh"
+  restore_asset "$OPT_DIR/bin/runtime-health.sh" "$previous/opt/masiton/bin/runtime-health.sh"
+  restore_asset "/etc/systemd/system/masiton-backend.service" "$previous/etc/systemd/system/masiton-backend.service"
+  restore_asset "/etc/systemd/system/masiton-frontend.service" "$previous/etc/systemd/system/masiton-frontend.service"
   systemctl daemon-reload
-  systemctl restart masiton-backend.service
-  systemctl restart masiton-frontend.service
+  for service in masiton-backend.service masiton-frontend.service; do
+    if [ -f "/etc/systemd/system/$service" ]; then
+      systemctl restart "$service"
+    else
+      systemctl disable --now "$service" >/dev/null 2>&1 || true
+    fi
+  done
+}
+
+backup_asset() {
+  local source="$1"
+  local backup="$2"
+  if [ -e "$source" ]; then
+    install -d "$(dirname "$backup")"
+    cp -a "$source" "$backup"
+  else
+    install -d "$(dirname "$backup")"
+    : > "${backup}.missing"
+  fi
 }
 
 for component in backend frontend; do
@@ -90,8 +125,13 @@ done
 
 install -d -m 0750 "$previous"
 for component in backend frontend; do
-  [ -f "$OPT_DIR/etc/${component}.image" ] && install -m 0644 "$OPT_DIR/etc/${component}.image" "$previous/${component}.image"
+  backup_asset "$OPT_DIR/etc/${component}.image" "$previous/${component}.image"
 done
+backup_asset "$OPT_DIR/bin/app-run.sh" "$previous/opt/masiton/bin/app-run.sh"
+backup_asset "$OPT_DIR/bin/app-secrets-render.sh" "$previous/opt/masiton/bin/app-secrets-render.sh"
+backup_asset "$OPT_DIR/bin/runtime-health.sh" "$previous/opt/masiton/bin/runtime-health.sh"
+backup_asset "/etc/systemd/system/masiton-backend.service" "$previous/etc/systemd/system/masiton-backend.service"
+backup_asset "/etc/systemd/system/masiton-frontend.service" "$previous/etc/systemd/system/masiton-frontend.service"
 
 # 여기까지 왔으면 두 이미지가 모두 로컬에 있다. 이제 활성 경로를 교체한다.
 install -d -m 0755 "$OPT_DIR/bin" "$OPT_DIR/etc"

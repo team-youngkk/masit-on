@@ -28,8 +28,9 @@ resource "aws_codedeploy_deployment_group" "app" {
     }
 
     terminate_blue_instances_on_deployment_success {
-      # Blue remains available for immediate listener rollback and Terraform keeps
-      # its ownership. Green cleanup is an explicit post-deployment runbook step.
+      # Original 인스턴스는 같은 target group에서 해제되기 전까지 유지한다.
+      # listener를 바꾸지 않으므로 rollback·유휴 환경 정리는 instance ID와 ASG
+      # membership를 기준으로 별도 runbook에서 수행한다.
       action                           = "KEEP_ALIVE"
       termination_wait_time_in_minutes = var.codedeploy_deployment_wait_minutes
     }
@@ -52,8 +53,8 @@ resource "aws_codedeploy_deployment_group" "app" {
     ignore_poll_alarm_failure = false
   }
 
-  # CodeDeploy는 배포가 성공하면 이 목록을 교체 환경 ASG로 갱신한다. 그래야 다음
-  # 배포가 앱이 올라간 직전 색상을 복사해 KEEP_ALIVE rollback 대상이 실재한다.
+  # CodeDeploy는 배포가 성공하면 이 목록을 replacement 환경 ASG로 갱신한다. 그래야 다음
+  # 배포가 앱이 올라간 직전 환경을 복사해 KEEP_ALIVE rollback 대상이 실재한다.
   # Terraform이 이 값을 되돌리면 매 배포·매 apply마다 소유권이 충돌하고, 복사
   # 원본이 앱 없는 seed ASG가 되어 rollback 대상이 사라진다.
   # 따라서 첫 배포 이후 이 필드의 소유자는 CodeDeploy다. ASG 자체 설정을 바꿀

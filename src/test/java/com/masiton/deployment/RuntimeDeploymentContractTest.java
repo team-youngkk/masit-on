@@ -21,6 +21,11 @@ class RuntimeDeploymentContractTest {
     private static final Path NGINX_INSTALL = Path.of("deploy/scripts/nginx-install.sh");
     private static final Path ALB = Path.of("infra/production/terraform/alb.tf");
     private static final Path CODEDEPLOY = Path.of("infra/production/terraform/codedeploy.tf");
+    private static final Path TERRAFORM_DATA = Path.of("infra/production/terraform/data.tf");
+    private static final Path TERRAFORM_IAM = Path.of("infra/production/terraform/iam.tf");
+    private static final Path MONITORING = Path.of("infra/production/terraform/monitoring.tf");
+    private static final Path REDIS_INSTANCE = Path.of("infra/production/terraform-redis/instance.tf");
+    private static final Path REDIS_USER_DATA = Path.of("infra/production/terraform-redis/templates/redis-user-data.sh.tftpl");
     private static final Path APPSPEC = Path.of("deploy/codedeploy/appspec.yml");
     private static final Path AFTER_INSTALL = Path.of("deploy/codedeploy/hooks/after-install.sh");
     private static final Path VALIDATE_SERVICE = Path.of("deploy/codedeploy/hooks/validate-service.sh");
@@ -63,13 +68,66 @@ class RuntimeDeploymentContractTest {
         int release = script.lastIndexOf("trap - ERR");
 
         assertThat(script)
-                .contains("rollback_enabled=yes", "previous", "systemctl restart masiton-backend.service")
+                .contains("rollback_enabled=yes", "previous", "backup_asset", "restore_asset", ".missing")
+                .contains("systemctl restart masiton-backend.service")
                 .contains("REDIS_HOST")
                 .contains("redis_cli()")
                 .contains("--network host");
         assertThat(trap).isGreaterThan(0);
         assertThat(health).isGreaterThan(trap);
         assertThat(release).isGreaterThan(health);
+    }
+
+    @Test
+    @DisplayName("CodeDeploy timeout과 취소는 배포를 중지하고 terminal 상태까지 확인한다")
+    void codeDeploy_대기timeout과취소시중지하고_terminal상태까지확인한다() throws IOException {
+        String workflow = Files.readString(CI);
+        String iam = Files.readString(TERRAFORM_IAM);
+
+        assertThat(workflow)
+                .contains("stop-deployment")
+                .contains("--auto-rollback-enabled")
+                .contains("trap on_exit EXIT")
+                .contains("trap on_signal INT TERM")
+                .contains("for _ in $(seq 1 270)")
+                .contains("for _ in $(seq 1 60)")
+                .contains("Succeeded|Failed|Stopped");
+        assertThat(iam).contains("codedeploy:StopDeployment");
+    }
+
+    @Test
+    @DisplayName("Terraform은 ALB public·app private subnet route 조건과 단일 target group을 검증한다")
+    void terraform_서브넷route와_단일targetGroup을검증한다() throws IOException {
+        String data = Files.readString(TERRAFORM_DATA);
+        String alb = Files.readString(ALB);
+        String monitoring = Files.readString(MONITORING);
+
+        assertThat(data)
+                .contains("data \"aws_route_table\" \"alb\"")
+                .contains("0.0.0.0/0")
+                .contains("^igw-")
+                .contains("alb_subnet_ids의 route table에는")
+                .contains("app_subnet_ids의 route table에는");
+        assertThat(alb).doesNotContain("resource \"aws_lb_target_group\" \"green\"");
+        assertThat(monitoring).doesNotContain("green_unhealthy");
+    }
+
+    @Test
+    @DisplayName("Redis AOF 데이터 volume은 인스턴스 교체와 분리된 수명주기로 mount한다")
+    void redis_데이터volume을_인스턴스교체와분리한다() throws IOException {
+        String instance = Files.readString(REDIS_INSTANCE);
+        String userData = Files.readString(REDIS_USER_DATA);
+
+        assertThat(instance)
+                .contains("aws_ebs_volume\" \"redis_data")
+                .contains("prevent_destroy = true")
+                .contains("aws_volume_attachment\" \"redis_data")
+                .contains("data.aws_subnet.redis.availability_zone");
+        assertThat(userData)
+                .contains("/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_")
+                .contains("/opt/masiton/redis/data")
+                .contains("mkfs.ext4")
+                .contains("/etc/fstab");
     }
 
     @Test

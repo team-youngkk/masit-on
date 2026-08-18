@@ -25,3 +25,33 @@ data "aws_subnet" "app" {
     }
   }
 }
+
+data "aws_route_table" "alb" {
+  for_each  = toset(var.alb_subnet_ids)
+  subnet_id = each.value
+
+  lifecycle {
+    postcondition {
+      condition = anytrue([
+        for route in self.routes :
+        route.cidr_block == "0.0.0.0/0" && can(regex("^igw-", route.gateway_id))
+      ])
+      error_message = "alb_subnet_ids의 route table에는 0.0.0.0/0 -> IGW 경로가 있어야 한다."
+    }
+  }
+}
+
+data "aws_route_table" "app" {
+  for_each  = toset(var.app_subnet_ids)
+  subnet_id = each.value
+
+  lifecycle {
+    postcondition {
+      condition = alltrue([
+        for route in self.routes :
+        !(route.cidr_block == "0.0.0.0/0" && can(regex("^igw-", route.gateway_id)))
+      ])
+      error_message = "app_subnet_ids의 route table에는 IGW를 향한 0.0.0.0/0 경로가 없어야 한다."
+    }
+  }
+}

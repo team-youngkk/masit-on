@@ -55,7 +55,13 @@ variable "redis_instance_type" {
 }
 
 variable "redis_root_volume_size_gib" {
-  description = "AOF 파일과 컨테이너 이미지를 담는 root EBS 용량"
+  description = "Redis 컨테이너 이미지와 운영 파일을 담는 root EBS 용량"
+  type        = number
+  default     = 8
+}
+
+variable "redis_data_volume_size_gib" {
+  description = "AOF·RDB 데이터를 담는 교체 독립 EBS 용량"
   type        = number
   default     = 8
 }

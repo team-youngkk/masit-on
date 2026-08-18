@@ -688,6 +688,7 @@ jobs:
           tar -tzf codedeploy-revision.tar.gz | grep -Fx 'stage/revision.env'
 
       - name: CodeDeploy revision 업로드 및 배포
+        id: codedeploy_deploy
         if: env.DEPLOYMENT_TARGET == 'codedeploy'
         run: |
           set -euo pipefail
@@ -714,12 +715,56 @@ jobs:
             --description "masit-on ${IMAGE_TAG}" \
             --query 'deploymentId' --output text)
           echo "CodeDeploy deployment: $deployment_id"
+          deployment_terminal=false
+          stopping_deployment=false
+
+          stop_deployment_and_wait() {
+            [ "$deployment_terminal" = true ] && return 0
+            [ "$stopping_deployment" = true ] && return 0
+            stopping_deployment=true
+            echo "CodeDeploy 배포 중지를 요청한다: $deployment_id" >&2
+            aws deploy stop-deployment --deployment-id "$deployment_id" \
+              --auto-rollback-enabled || true
+            for _ in $(seq 1 60); do
+              status=$(aws deploy get-deployment --deployment-id "$deployment_id" \
+                --query 'deploymentInfo.status' --output text 2>/dev/null || echo Unknown)
+              case "$status" in
+                Succeeded|Failed|Stopped)
+                  deployment_terminal=true
+                  echo "CodeDeploy 중지 후 terminal 상태: $status" >&2
+                  return 0
+                  ;;
+              esac
+              sleep 10
+            done
+            echo "CodeDeploy 중지 요청 후에도 terminal 상태를 확인하지 못했다: $status" >&2
+          }
+
+          on_exit() {
+            exit_code=$?
+            if [ "$deployment_terminal" != true ] && [ "$stopping_deployment" != true ]; then
+              stop_deployment_and_wait
+            fi
+            trap - EXIT INT TERM
+            exit "$exit_code"
+          }
+          on_signal() {
+            exit 143
+          }
+          trap on_exit EXIT
+          trap on_signal INT TERM
+
           status=Created
-          for _ in $(seq 1 120); do
+          # AfterInstall hook(30분)와 ASG provisioning 시간을 포함하되, 제한 시간
+          # 초과·workflow 취소 시 EXIT trap에서 중지 요청을 보내 제어 공백을 막는다.
+          for _ in $(seq 1 270); do
             status=$(aws deploy get-deployment --deployment-id "$deployment_id" \
-              --query 'deploymentInfo.status' --output text)
+              --query 'deploymentInfo.status' --output text 2>/dev/null || echo Unknown)
             case "$status" in
-              Succeeded|Failed|Stopped) break ;;
+              Succeeded|Failed|Stopped)
+                deployment_terminal=true
+                break
+                ;;
             esac
             sleep 10
           done

@@ -54,7 +54,7 @@ variable "ami_id" {
 }
 
 variable "instance_type" {
-  description = "blue/green ASG 인스턴스 유형"
+  description = "original·replacement ASG 인스턴스 유형"
   type        = string
   default     = "t4g.medium"
 }

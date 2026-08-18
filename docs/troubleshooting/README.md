@@ -10,6 +10,8 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #228 ASG replacement 배포의 상태 보존·중단 제어·권한·네트워크 계약](pr-228-asg-replacement-deployment-review.md)
+
 - [PR #221 Redis 사설 경로 비용과 배포 게이트 서술 정합화](pr-221-deployment-hardening-cost-review.md)
 
 - [PR #218 격리 성능 환경·부하 결과 정합성](pr-218-isolated-performance-review.md)

@@ -3,7 +3,6 @@ locals {
     aws_cloudwatch_metric_alarm.target_5xx.alarm_name,
     aws_cloudwatch_metric_alarm.target_latency.alarm_name,
     aws_cloudwatch_metric_alarm.blue_unhealthy.alarm_name,
-    aws_cloudwatch_metric_alarm.green_unhealthy.alarm_name,
   ]
 }
 
@@ -60,24 +59,5 @@ resource "aws_cloudwatch_metric_alarm" "blue_unhealthy" {
   dimensions = {
     LoadBalancer = aws_lb.app.arn_suffix
     TargetGroup  = aws_lb_target_group.blue.arn_suffix
-  }
-}
-
-resource "aws_cloudwatch_metric_alarm" "green_unhealthy" {
-  alarm_name          = "${var.name_prefix}-green-unhealthy-host"
-  alarm_description   = "Green target group has an unhealthy host"
-  namespace           = "AWS/ApplicationELB"
-  metric_name         = "UnHealthyHostCount"
-  statistic           = "Maximum"
-  period              = 60
-  evaluation_periods  = 1
-  datapoints_to_alarm = 1
-  threshold           = 1
-  comparison_operator = "GreaterThanOrEqualToThreshold"
-  treat_missing_data  = "notBreaching"
-
-  dimensions = {
-    LoadBalancer = aws_lb.app.arn_suffix
-    TargetGroup  = aws_lb_target_group.green.arn_suffix
   }
 }

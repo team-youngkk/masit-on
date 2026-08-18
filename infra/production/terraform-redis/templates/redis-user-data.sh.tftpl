@@ -8,6 +8,24 @@ REGION=${aws_region}
 BUCKET=${assets_bucket}
 PREFIX=${assets_prefix}
 STAGE=/tmp/masiton-deploy
+DATA_VOLUME_ID=${data_volume_id}
+DATA_DEVICE="/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_${data_volume_id}"
+
+# EBS attachment은 인스턴스 bootstrap과 별도로 완료될 수 있다. 장치를 확인한
+# 뒤에만 mount해 Redis가 root volume에 AOF를 다시 쓰는 경로를 차단한다.
+for _ in $(seq 1 60); do
+  [ -e "$DATA_DEVICE" ] && break
+  sleep 2
+done
+[ -e "$DATA_DEVICE" ] || { echo "Redis data EBS 장치를 찾지 못했다: $DATA_DEVICE" >&2; exit 1; }
+
+if ! blkid "$DATA_DEVICE" >/dev/null 2>&1; then
+  mkfs.ext4 -F "$DATA_DEVICE"
+fi
+install -d -m 0755 /opt/masiton/redis/data
+grep -qF "$DATA_DEVICE /opt/masiton/redis/data ext4" /etc/fstab || \
+  echo "$DATA_DEVICE /opt/masiton/redis/data ext4 defaults,nofail,x-systemd.device-timeout=120 0 2" >> /etc/fstab
+mountpoint -q /opt/masiton/redis/data || mount /opt/masiton/redis/data
 
 install -d -m 0755 "$STAGE"
 %{ for f in asset_files ~}

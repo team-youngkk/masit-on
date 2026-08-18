@@ -8,12 +8,9 @@ output "alb_zone_id" {
   value       = aws_lb.app.zone_id
 }
 
-output "blue_green_target_group_arns" {
-  description = "CodeDeploy blue/green target group ARN"
-  value = {
-    blue  = aws_lb_target_group.blue.arn
-    green = aws_lb_target_group.green.arn
-  }
+output "target_group_arn" {
+  description = "CodeDeploy가 original·replacement 인스턴스를 교체 등록하는 target group ARN"
+  value       = aws_lb_target_group.blue.arn
 }
 
 output "autoscaling_group_names" {
