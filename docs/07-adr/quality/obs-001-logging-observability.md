@@ -15,14 +15,14 @@ related_documents:
   - ../../03-team/ownership.md
   - ../../05-specs/api/common/error-contract.md
   - ../../06-architecture/technology-policy.md
-  - ../security/auth-001-spring-security-jwt.md
+  - ../security/auth-007-unified-account-rbac-session.md
   - ../security/sec-001-secrets-workload-identity.md
   - ../../02-analysis/mvp-workstreams.md
   - ../integration/ext-001-reference-verification.md
   - ../../03-team/roles.md
   - ../adr-traceability.md
   - ../platform/frame-001-spring-boot.md
-  - ../platform/web-003-routing-boundary.md
+  - ../platform/web-006-unified-login-rbac-route.md
   - ../platform/deploy-002-validation-deployment-before-expansion.md
   - ../adr-backlog.md
 supersedes: []
@@ -59,7 +59,7 @@ Accepted
 
 단계별 로컬 검증에는 SLF4J·Logback과 Actuator를 사용한다. 초기 운영 배포부터 CloudWatch 수집, 로그 14일 보관, DB 일 1회 스냅샷·7일 보관과 Slack 알림을 활성화한다.
 
-이 결정은 다음 세 층위로 나뉜다. 첫째, 애플리케이션 로그(SLF4J·Logback)는 요청 상관관계와 오류 분류를 남긴다. 둘째, 상태·지표(Actuator)는 [ADR-WEB-003](../platform/web-003-routing-boundary.md)의 `/internal/health/live`, `/internal/health/ready`, `/internal/health/dependencies`에서 프로세스와 PostgreSQL·Redis 연결 가능 여부를 구분한다([NFR-AVAILABILITY-001](../../01-requirements/non-functional-requirements.md#nfr-availability-001-상태-확인과-장애-구분)). 셋째, 운영 수집·조회(CloudWatch)는 위 두 층위의 산출물을 모아 14일간 검색 가능하게 보관하고, 정의된 지표가 임계값을 넘으면 알람을 발생시킨다. 이 세 층위 중 하나만 갖추는 것으로는 단일 EC2 수동 복구 절차에서 필요한 진단이 완결되지 않는다.
+이 결정은 다음 세 층위로 나뉜다. 첫째, 애플리케이션 로그(SLF4J·Logback)는 요청 상관관계와 오류 분류를 남긴다. 둘째, 상태·지표(Actuator)는 [ADR-WEB-006](../platform/web-006-unified-login-rbac-route.md)의 `/internal/health/live`, `/internal/health/ready`, `/internal/health/dependencies`에서 프로세스와 PostgreSQL·Redis 연결 가능 여부를 구분한다([NFR-AVAILABILITY-001](../../01-requirements/non-functional-requirements.md#nfr-availability-001-상태-확인과-장애-구분)). 셋째, 운영 수집·조회(CloudWatch)는 위 두 층위의 산출물을 모아 14일간 검색 가능하게 보관하고, 정의된 지표가 임계값을 넘으면 알람을 발생시킨다. 이 세 층위 중 하나만 갖추는 것으로는 단일 EC2 수동 복구 절차에서 필요한 진단이 완결되지 않는다.
 
 ## 7. 선택 근거
 

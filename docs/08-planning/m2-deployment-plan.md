@@ -48,7 +48,7 @@ related_documents:
 ### 적용되는 ADR
 
 - [ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md) — 배포 순서와 활성화 범위
-- [ADR-WEB-003](../07-adr/platform/web-003-routing-boundary.md) — Nginx 경로 경계와 인증 matcher
+- [ADR-WEB-006](../07-adr/platform/web-006-unified-login-rbac-route.md) — Nginx 경로 경계와 통합 인증 matcher
 - [ADR-SEC-001](../07-adr/security/sec-001-secrets-workload-identity.md) — Parameter Store SecureString, KMS, EC2 IAM Role, GitHub Actions OIDC
 - [ADR-OBS-001](../07-adr/quality/obs-001-logging-observability.md) — CloudWatch 수집, 로그 14일, 스냅샷, Slack 알림
 - [ADR-CI-001](../07-adr/platform/ci-001-github-actions-quality-gate.md) — 품질 게이트 유지, ECR push와 EC2 배포 활성화
@@ -212,7 +212,7 @@ related_documents:
 - 작업: Nginx 설치·설정(`/api/**` → Spring Boot, 나머지 외부 경로 → Next.js, `/internal/**` 차단), ACM exportable 인증서(`masiton.click`, Route 53 DNS 검증) 발급과 EC2 내보내기·갱신 재배포 자동화 구성, HTTP → HTTPS 리다이렉트
 - 선행: M2-02(DNS 전파 완료), M2-03
 - 완료 조건: 인터넷에서 `/internal/health/live`가 차단되고, HTTPS로 프론트엔드와 `/api/**`가 모두 응답하며, 인증서 갱신과 재배포 절차가 문서화되고 최소 1회 시연된다
-- 근거: ADR-WEB-003, NFR-AVAILABILITY-001
+- 근거: ADR-WEB-006, NFR-AVAILABILITY-001
 
 ### M2-09 애플리케이션 배포
 

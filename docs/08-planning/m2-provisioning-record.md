@@ -494,7 +494,7 @@ ACM은 만료 45일 전에 자동 갱신하지만 **갱신본을 EC2로 다시 �
 | 서버 블록 | [`deploy/nginx/masiton.click.conf`](../../deploy/nginx/masiton.click.conf) |
 | TLS | `TLSv1.2`·`TLSv1.3`만. 세션 티켓 끔, HSTS 1년 |
 
-경로 소유권은 [ADR-WEB-003](../07-adr/platform/web-003-routing-boundary.md) 6.1절 그대로다.
+이 프로비저닝 시점의 경로 소유권은 [ADR-WEB-003](../07-adr/platform/web-003-routing-boundary.md) 6.1절을 따랐다. 현재 경로 계약은 이를 전체 대체한 [ADR-WEB-006](../07-adr/platform/web-006-unified-login-rbac-route.md)이 소유하며, 아래 표는 당시 적용 증거로 보존한다.
 
 | 경로 | 처리 |
 |---|---|

@@ -68,7 +68,7 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 | [PRD-DISCOVERY-001](../../04-product/prd/discovery/restaurant-discovery.md) | 맛집 목록·이름·지역·카테고리 탐색 | Restaurant, Region, FoodCategory | Visit, Creator |
 | [PRD-DISCOVERY-002](../../04-product/prd/discovery/creator-discovery.md) | 유튜버 선택 및 방문 맛집 탐색 | Creator | Visit, Restaurant, Video 공개 유효성 |
 | [PRD-DETAIL-001](../../04-product/prd/detail/restaurant-detail.md) | 맛집 기본 정보와 방문 콘텐츠 | Restaurant | Region, FoodCategory, Visit, Creator, Video |
-| [PRD-ADMIN-001](../../04-product/prd/admin/admin-data-management.md) | 인증된 관리자 검증·등록 | AdminAccount, AdminRefreshToken | Restaurant, Creator, Video, Visit |
+| [PRD-ADMIN-001](../../04-product/prd/admin/admin-data-management.md) | 인증된 관리자 검증·등록 | `MemberAccount(role=ADMIN)`, `AuthSession` | Restaurant, Creator, Video, Visit |
 | [PRD-ADMIN-002](../../04-product/prd/admin/ai-video-information-extraction.md) | AI 추출·상태 조회·자동 등록·예외 보정 | `ai_extraction_job`, `ai_candidate_snapshot`, `ai_extraction_attempt`, `youtube_channel_watch` | 자동 검증 통과 시 기존 Restaurant, Creator, Video, Visit와 VisitTag를 무승인 연결·공개 |
 | [PRD-DISCOVERY-005](../../04-product/prd/discovery/natural-language-restaurant-discovery.md) | 자연어 조건 해석·기존 목록 조회 | 신규 영속 데이터 없음 | Restaurant, Region, FoodCategory, Creator, Visit 기존 조회 조합 |
 | [PRD-DISCOVERY-006](../../04-product/prd/discovery/restaurant-course-recommendation.md) | 선택 맛집의 자동차 순서·경로 조회 | 신규 영속 데이터 없음 | Restaurant 좌표 조회·Route Provider 응답 조합 |
@@ -84,7 +84,7 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 | [FR-CREATOR-001](../../01-requirements/functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)·[FR-CREATOR-002](../../01-requirements/functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인) | Creator, Visit, Video | 공개·유효 관계와 채널 일치, 중복 제거 |
 | [FR-CREATOR-003](../../01-requirements/functional-requirements.md#fr-creator-003-유튜버-필터-선택-목록-조회) | Creator | 공개 Creator 최소 선택 정보 |
 | [FR-VIDEO-001](../../01-requirements/functional-requirements.md#fr-video-001-관련-영상-정보-확인) | Video, Creator, Visit | 공개 관련 영상, 외부 장애 격리 |
-| [FR-ADMIN-001](../../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근) | AdminAccount, AdminRefreshToken | 사전 발급 활성 계정, JWT·Refresh 회전·ADMIN 권한 |
+| [FR-ADMIN-001](../../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근)·[FR-AUTH-004](../../01-requirements/functional-requirements.md#fr-auth-004-통합-로그인과-rbac) | `MemberAccount(role=ADMIN)`, `AuthSession` | 운영 절차로 부여한 ADMIN 역할, 통합 JWT·Refresh 회전·현재 역할 재검증 |
 | [FR-ADMIN-002](../../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록) | Restaurant, Region, FoodCategory | 카카오 동일성, 서울 주소, 단일 카테고리, 원자적 공개 생성 |
 | [FR-ADMIN-003](../../01-requirements/functional-requirements.md#fr-admin-003-유튜버-정보-등록) | Creator | 외부 채널 ID 유일, 채널 단위 생성 |
 | [FR-ADMIN-004](../../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록) | Video, Creator | 외부 영상 ID 유일, 게시 채널 필수, 원본 미저장 |
@@ -114,6 +114,7 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 | [BR-VISIT-006](../../01-requirements/business-rules.md#br-visit-006-방문-날짜-관리-제외)·[BR-VISIT-007](../../01-requirements/business-rules.md#br-visit-007-등록-완료와-검증-상태) | 방문일·검증 상태 제외 | 속성 미생성, 생성 완료가 검증 완료 | 해당 없음 | 필요 |
 | [BR-ADMIN-003](../../01-requirements/business-rules.md#br-admin-003-등록-정합성-검증)·[BR-ADMIN-007](../../01-requirements/business-rules.md#br-admin-007-동시-등록의-고유성) | 정합성·동시성 | 유일·참조·원자성 | 필요 | 필요 |
 | [BR-ADMIN-008](../../01-requirements/business-rules.md#br-admin-008-보류-요청의-처리) | 보류 요청 | 핵심 엔티티·보류 레코드 미생성 | 해당 없음 | 필요 |
+| [BR-AUTH-009](../../01-requirements/business-rules.md#br-auth-009-통합-계정과-rbac)·[BR-AUTH-010](../../01-requirements/business-rules.md#br-auth-010-보안-속성-변경과-즉시-폐기) | 통합 계정·RBAC·즉시 폐기 | `member_account.role`, Redis `auth:session:` | `MEMBER|ADMIN` CHECK, role NOT NULL DEFAULT MEMBER | 공개 role 입력 거부, 변경 시 전 세션 폐기 |
 | [BR-AIEXTRACT-001](../../01-requirements/business-rules.md#br-aiextract-001-ai-후보-생성-범위)·[BR-AIEXTRACT-002](../../01-requirements/business-rules.md#br-aiextract-002-자동-검증-없는-정식-저장-금지) | AI 후보와 자동 등록 경계 | 자동 검증 전 Snapshot만 저장, 통과 시 핵심 Entity와 VisitTag 원자 생성 | 자동 등록 상태 CHECK, 통과 시 기존 등록 흐름 | 필요 |
 | [BR-AIEXTRACT-003](../../01-requirements/business-rules.md#br-aiextract-003-동일-영상-중복-추출)·[BR-AIEXTRACT-004](../../01-requirements/business-rules.md#br-aiextract-004-모델prompt결과-schema-버전) | 중복·버전 관리 | Job 멱등 unique, Attempt·Snapshot 버전 이력 | 복합 unique, 버전 NN | 필요 |
 | [BR-AIEXTRACT-005](../../01-requirements/business-rules.md#br-aiextract-005-영상-유입-경로와-작업-수렴)·[BR-AIEXTRACT-006](../../01-requirements/business-rules.md#br-aiextract-006-webhook-감시-채널-상태)·[BR-AIEXTRACT-007](../../01-requirements/business-rules.md#br-aiextract-007-gemini-영상-입력과-fallback) | 유입 경로·채널·Gemini fallback | Job source/priority, ChannelWatch, 원문 비저장 | lease·활성 상태·Provider 시도 이력 | 필요 |
@@ -125,9 +126,9 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 
 | API ID | 요청 목적 | 생성·변경 데이터 | 필수 참조 | 원자성 범위 | 담당 Workstream |
 |---|---|---|---|---|---|
-| [API-ADMIN-AUTH-001](../api/admin/authentication-api.md#api-admin-auth-001-관리자-로그인) | 관리자 로그인 | AdminRefreshToken 생성·기존 활성 Token 폐기 | AdminAccount | 계정당 활성 Token 전환 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
-| [API-ADMIN-AUTH-002](../api/admin/authentication-api.md#api-admin-auth-002-관리자-토큰-재발급) | 토큰 재발급 | 기존 Token 폐기·AdminRefreshToken 회전 | AdminAccount, AdminRefreshToken | 검증·회전 원자성 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
-| [API-ADMIN-AUTH-003](../api/admin/authentication-api.md#api-admin-auth-003-관리자-로그아웃) | 로그아웃 | AdminRefreshToken 폐기 | AdminRefreshToken | 현재 Token 하나 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
+| [API-MEMBER-AUTH-006](../api/account/member-authentication-api.md#api-member-auth-006-통합-로그인) | 회원·관리자 통합 로그인 | Redis `auth:session:` 생성·역할별 활성 세션 정리 | `member_account` | MEMBER 최대 3개·ADMIN 최대 1개 | [WS-05](../../02-analysis/first-expansion-workstreams.md#4-ws-05-사용자-계정인증)·[WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
+| [API-MEMBER-AUTH-007](../api/account/member-authentication-api.md#api-member-auth-007-access-token-재발급) | 토큰 재발급 | 기존 session 폐기·통합 session 회전 | `member_account`, `auth:session:` | 검증·회전 원자성 | [WS-05](../../02-analysis/first-expansion-workstreams.md#4-ws-05-사용자-계정인증) |
+| [API-MEMBER-AUTH-008](../api/account/member-authentication-api.md#api-member-auth-008-로그아웃) | 로그아웃 | 통합 session 폐기 | `auth:session:` | 현재 session 하나 | [WS-05](../../02-analysis/first-expansion-workstreams.md#4-ws-05-사용자-계정인증) |
 | [API-ADMIN-RESTAURANT-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-restaurant-preview-001-맛집-등록-검증-미리보기) | 외부 장소·입력 검증 | 핵심 Entity 변경 없음, `READY`이면 ConfirmationToken 기술 행 생성 | Region, FoodCategory 기준 | Token 발급 행 하나 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
 | [API-ADMIN-RESTAURANT-001](../api/admin/reference-data-api.md#api-admin-restaurant-001-맛집-등록-확정) | 맛집 생성 | Restaurant와 필수 참조 연결 | Region, FoodCategory | Restaurant 한 건 전체 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) / Restaurant |
 | [API-ADMIN-CREATOR-PREVIEW-001](../api/admin/reference-data-api.md#api-admin-creator-preview-001-유튜버-등록-검증-미리보기) | 외부 채널 검증 | 핵심 Entity 변경 없음, `READY`이면 ConfirmationToken 기술 행 생성 | 없음 | Token 발급 행 하나 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
@@ -153,7 +154,7 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 | [API-DETAIL-001](../api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회) | 관련 영상 | Visit | Video, Creator | Video 식별자 중복 제거, `contentStatus` | [WS-02](../../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) |
 | API-ADMIN-*-PREVIEW-001 | 후보·중복 판정 | 외부 확인 결과 | 기존 핵심 데이터 | `decision`, token, expiry, candidate DTO | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
 | API-ADMIN-*-001 | 생성 결과 | 생성 엔티티 | 표준 표시값 | 응답 DTO 조합 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록)와 소유 도메인 |
-| [API-ADMIN-AUTH-001](../api/admin/authentication-api.md#api-admin-auth-001-관리자-로그인)·[API-ADMIN-AUTH-002](../api/admin/authentication-api.md#api-admin-auth-002-관리자-토큰-재발급) | 인증·재발급 | AdminRefreshToken | AdminAccount 활성 여부 | JWT Access Token, 만료 시간 | [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
+| [API-MEMBER-AUTH-006](../api/account/member-authentication-api.md#api-member-auth-006-통합-로그인)·[API-MEMBER-AUTH-007](../api/account/member-authentication-api.md#api-member-auth-007-access-token-재발급)·[API-MEMBER-AUTH-009](../api/account/member-authentication-api.md#api-member-auth-009-현재-사용자-정보) | 인증·재발급·현재 계정 | `auth:session:` | `member_account` 활성 여부·현재 role | JWT Access Token, 만료 시간, role | [WS-05](../../02-analysis/first-expansion-workstreams.md#4-ws-05-사용자-계정인증)·[WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) |
 | [API-DISCOVERY-NL-001](../api/discovery/natural-language-restaurant-discovery-api.md) | 자연어 해석 결과·목록 | 기존 Restaurant 조회 조합 | Region, FoodCategory, Creator, Visit | `interpretation.status`, 적용·무시·충돌 조건, page | [WS-14](../../02-analysis/third-expansion-workstreams.md#5-ws-14-자연어-맛집-탐색) |
 | [API-DISCOVERY-COURSE-001](../api/discovery/restaurant-course-recommendation-api.md) | 코스 경로 결과 | 기존 Restaurant 조회 | 좌표·Route Provider 결과 | 순서·segments·total distance/time·generatedAt·expiresAt | [WS-16](../../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천) |
 | API-ADMIN-AIEXTRACT-001 | AI 작업 목록·상세·자동 등록·예외 보정 결과 | `ai_extraction_job`, `ai_candidate_snapshot`, `ai_extraction_attempt` | 후보 필드·근거·오류·자동 등록 상태 | `resultCompleteness`, `reviewStatus`, `attemptCount`, 상태별 목록 | [WS-15](../../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) |
@@ -168,7 +169,7 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 | [WS-01](../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색) 맛집 탐색 | Restaurant 조회 규칙 | Region, FoodCategory, Visit·Creator 판정 결과 | Visit 규칙을 재구현하지 않음 |
 | [WS-02](../../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) 상세 및 콘텐츠 | 상세 조합 | Restaurant, Visit, Creator, Video | 기본 데이터와 관계를 임의 변경하지 않음 |
 | [WS-03](../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 유튜버 기반 탐색 | Visit 관계 판정 계약 | Creator, Video, Restaurant 상태 | 최종 Restaurant 페이지 조합은 [WS-01](../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색) |
-| [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 관리자 등록 | 인증·등록 흐름 조율 | AdminAccount·AdminRefreshToken 및 네 소유 도메인 | 도메인 고유·정합성 규칙을 우회하지 않음 |
+| [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 관리자 등록 | ADMIN 인가·등록 흐름 조율 | `member_account.role`·`auth:session:` 및 네 소유 도메인 | 계정 인증은 WS-05와 공유하고 도메인 고유·정합성 규칙을 우회하지 않음 |
 | [WS-15](../../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) AI 영상 정보 추출 | `ai_extraction_job`, `ai_candidate_snapshot`, `ai_extraction_attempt`, `youtube_channel_watch` | 기존 등록 Entity와 외부 Provider 결과를 직접 소유하지 않음 | 후보·정식 저장·Worker lease 경계 소유 |
 
 ## 8. 물리 설계 라우팅
@@ -187,12 +188,12 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 
 | 범위 | 요구사항·API | 소유 데이터 | 생명주기·제약 | Workstream |
 |---|---|---|---|---|
-| 회원 기반 | `FR-MEMBER-001`~`005`, `FR-AUTH-001`~`003`, 회원 인증 API | `member_account`, `member_action_token`, `member_session_revocation`, `member_action_mail_outbox`, `member_deletion_job`, `member_session_revocation_recovery`, 회원 Redis | 이메일 고유성, Action Token 일회성, 비동기 메일 재시도, `sid` 만료까지 폐기 표식·보상 보존 | WS-05 |
+| 통합 계정 기반 | `FR-MEMBER-001`~`005`, `FR-AUTH-001`~`004`, 통합 계정·인증 API | `member_account.role`, `member_action_token`, `member_session_revocation`, `member_action_mail_outbox`, `member_deletion_job`, `member_session_revocation_recovery`, Redis `auth:session:` | 이메일 고유성, `MEMBER|ADMIN` CHECK, 공개 가입 MEMBER 고정, MEMBER 최대 3세션·ADMIN 최대 1세션, 역할·상태·비밀번호 변경 시 전 세션 폐기 | WS-05·WS-04 |
 | 찜 | `FR-FAVORITE-001`~`004`, `API-PERSONAL-001`~`004` | `favorite` | `(member_id, restaurant_id)` PK, 회원 삭제 cascade, 맛집 물리 삭제 전 정리 | WS-06 |
 | 최근 본 맛집 | `FR-RECENT-001`~`003`, `API-PERSONAL-005`~`006`, 공개 상세 부수효과 | `recent_restaurant_view` | 복합 PK upsert·최신 시각순·50건 상한, 주기 cleanup Command의 30일 물리 삭제, GET은 읽기 전용 | WS-06 |
 | 지도 탐색 | `FR-MAP-001`~`002`, `API-MAP-001` | `restaurant.latitude`, `restaurant.longitude` | nullable WGS84 쌍, 범위 CHECK, 좌표 없음은 지도에서만 제외 | WS-07 |
 | 유튜버 상세 | `FR-CREATOR-004`~`006`, `API-CREATOR-DETAIL-001`~`003` | `creator.profile_image_url`, `description`, `handle`과 기존 Creator·Visit·Video | 선택값은 null 또는 유효한 값, 사용자 조회 중 외부 API 호출 없음 | WS-08 |
-| 검증 참여자 제한 공개 | `API-VALIDATION-001`~`002`, `ADR-DEPLOY-004` | Redis `auth:verification:` 세션·실패 제한 | 128-bit 이상 세션 원문의 SHA-256 해시, 7일 고정 만료, 회원·관리자 인증과 분리, 정식 공개 시 전체 제거 | [OPS-VALIDATION](../../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙) |
+| 검증 참여자 제한 공개 | `API-VALIDATION-001`~`002`, `ADR-DEPLOY-004` | Redis `auth:verification:` 세션·실패 제한 | 128-bit 이상 세션 원문의 SHA-256 해시, 7일 고정 만료, 제품 통합 인증과 분리, 정식 공개 시 전체 제거 | [OPS-VALIDATION](../../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙) |
 
 각 물리 계약은 [테이블 정의](table-definitions.md#13-v3-회원-인증-하드닝-데이터-계약), [제약조건](constraints.md), [인덱스 전략](index-strategy.md#5-1차-확장-인덱스), [생명주기 규칙](lifecycle-rules.md#101-회원-개인화-관계-정리), [마이그레이션 계획](migration-plan.md#9-1차-확장-마이그레이션-구성-통합-이전-구간별-기록)을 함께 따른다.
 

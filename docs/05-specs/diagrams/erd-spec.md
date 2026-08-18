@@ -9,6 +9,7 @@ related_documents:
   - ../data/physical-data-model.md
   - ../data/constraint-mapping.md
   - ../../07-adr/security/auth-003-confirmation-token.md
+  - ../../07-adr/security/auth-007-unified-account-rbac-session.md
   - ../../07-adr/data/data-007-uuid-v4-identifiers.md
   - ../../07-adr/data/data-008-publication-lifecycle-soft-delete.md
 ---
@@ -29,12 +30,12 @@ related_documents:
 | 기본 | Creator | YouTube 채널 단위 유튜버 |
 | 기본 | Video | 외부 영상 메타데이터와 게시 채널 |
 | 관계 | Visit | 맛집·채널·근거 영상 삼항 관계 |
-| 인증 | AdminAccount | 사전 발급 관리자 계정 |
-| 인증 | AdminRefreshToken | Redis 기반 JWT Refresh Token 상태 |
+| 인증 | MemberAccount | 회원·관리자 통합 계정과 `MEMBER|ADMIN` 역할 |
+| 인증 | AuthSession | Redis 기반 통합 JWT Refresh session 상태 |
 
 ## 3. 제외 엔티티
 
-- 일반 사용자, 회원, 찜, 최근 본 맛집, 컬렉션, 알림, 사용자 제보
+- 찜, 최근 본 맛집, 컬렉션, 알림, 사용자 제보
 - 추천 결과, 자연어 검색 데이터, AI 추출 작업 데이터
 - 예약, 결제와 영상 원본 파일
 - 다중 카테고리 관계와 Region 계층
@@ -53,8 +54,8 @@ related_documents:
 | Creator | id, externalChannelId | 없음 | channelName, channelUrl, publicationStatus, lifecycleStatus, externalAvailabilityStatus |
 | Video | id, externalVideoId | publisherExternalChannelId; creatorId는 선택 | title, sourceUrl, thumbnailUrl, publicationStatus, lifecycleStatus, externalAvailabilityStatus |
 | Visit | id, (restaurantId+creatorId+videoId) | 세 참조 모두 | publicationStatus, lifecycleStatus |
-| AdminAccount | id, loginId | 없음 | passwordCredential, active |
-| AdminRefreshToken | tokenId, tokenCredential | adminAccountId | tokenFamilyId, expiresAt, invalidatedAt |
+| MemberAccount | id, email | 없음 | passwordCredential, status, role |
+| AuthSession | sessionId, tokenCredential | memberAccountId | tokenFamilyId, expiresAt, invalidatedAt |
 
 논리 ERD는 publication과 lifecycle을 서로 다른 상태 축으로 표시한다. 실제 값, `deleted_at` 조합과 FK 삭제 동작은 [물리 데이터 모델](../data/physical-data-model.md)과 [ADR-DATA-008](../../07-adr/data/data-008-publication-lifecycle-soft-delete.md)을 따른다.
 
@@ -66,7 +67,7 @@ related_documents:
 - Restaurant `1` — `0..N` Visit; Restaurant는 Visit 없이 존재 가능, Visit의 참조는 필수
 - Creator `1` — `0..N` Visit; Visit의 참조는 필수
 - Video `1` — `0..N` Visit; Visit의 참조는 필수
-- AdminAccount `1` — `0..N` AdminRefreshToken; 계정당 활성 Refresh Token은 최대 하나
+- MemberAccount `1` — `0..N` AuthSession; 활성 session은 `MEMBER` 최대 3개, `ADMIN` 최대 1개
 
 Restaurant–Video와 Restaurant–Creator 직접 관계는 그리지 않는다. 모두 Visit를 통해 파생된다.
 
@@ -77,7 +78,7 @@ Restaurant–Video와 Restaurant–Creator 직접 관계는 그리지 않는다.
 - Creator.externalChannelId 유일
 - Video.externalVideoId 유일
 - Visit의 restaurantId+creatorId+videoId 복합 유일
-- AdminAccount.loginId, AdminRefreshToken.tokenCredential 유일
+- MemberAccount.email, AuthSession.tokenCredential 유일
 - 모든 FK는 존재하는 대상을 참조한다.
 - Video의 선택 Creator 및 Visit.Creator와 외부 게시 채널 ID의 일치는 애플리케이션 검증과 [물리 복합 FK](../data/constraint-mapping.md#3-fk-목록과-삭제-정책)를 함께 사용한다.
 
@@ -87,7 +88,7 @@ Restaurant–Video와 Restaurant–Creator 직접 관계는 그리지 않는다.
 - Restaurant·Creator·Video·Visit의 `lifecycleStatus`는 활성·삭제 여부다.
 - Creator·Video의 `externalAvailabilityStatus`는 YouTube 리소스 가용 여부다.
 - Region·FoodCategory의 `active`는 신규 연결 가능 여부다.
-- AdminAccount.active와 AdminRefreshToken.invalidatedAt은 인증·재발급 유효성을 표현한다.
+- MemberAccount.status·role과 AuthSession.invalidatedAt은 인증·인가·재발급 유효성을 표현한다.
 - lifecycle, publication, 외부 availability와 검증 상태를 서로 합치지 않는다.
 
 ## 8. ERD 표기 규칙
@@ -107,7 +108,7 @@ Restaurant–Video와 Restaurant–Creator 직접 관계는 그리지 않는다.
 - 전국·다단계 지역 도입 시 Region 자기 관계
 - 한 방문의 복수 근거 도입 시 VisitEvidence
 - 개인 제작자와 채널 분리 시 Creator/Channel 재모델링
-- 관리자 인증을 외부 인증 제공자에 위임할 경우 AdminAccount–AdminRefreshToken 변경
+- 인증을 외부 인증 제공자에 위임할 경우 MemberAccount–AuthSession 변경
 
 ## 10. 검증 체크리스트
 

@@ -16,7 +16,7 @@ related_documents:
   - lang-001-java-21-runtime.md
   - build-001-gradle-groovy.md
   - ../architecture/arch-001-domain-monolith.md
-  - ../security/auth-001-spring-security-jwt.md
+  - ../security/auth-007-unified-account-rbac-session.md
   - ../../03-team/roles.md
   - ../../00-overview/scope.md
   - ../data/data-003-spring-data-jpa.md
@@ -48,7 +48,7 @@ Java 21 백엔드의 공통 애플리케이션·의존성 기준을 무엇으로
 ## 5. 고려한 선택지
 
 - **Spring Boot 4.1.0과 BOM**: 웹(Spring MVC), 보안(Spring Security 7.1.0), 데이터(Spring Data JPA), 테스트(Spring Boot Test) 스타터 버전을 BOM이 일괄 관리한다.
-- **개별 Spring 모듈 버전 직접 조합**: Spring Security, Spring Data 등을 BOM 없이 각각 명시 버전으로 선언하는 방식. 이 경우 네 사람이 각자 담당 영역에서 의존성을 추가할 때마다 서로 호환되는 조합인지 매번 별도로 확인해야 하는데, 공식 호환성 근거 없이 조합 검증을 직접 하는 것은 [technology-policy.md](../../06-architecture/technology-policy.md) 11장이 금지하는 "공식 호환성 근거 없는 버전 호환 단정"에 해당할 위험이 크다. 관리자 인증([ADR-AUTH-001](../security/auth-001-spring-security-jwt.md))에서 쓰는 Spring Security 버전과 웹 계층 Spring MVC 버전이 어긋나면 통합 시점에야 발견되는 문제이므로, 4인이 독립적으로 개발한다는 전제(범위 경계 규칙 6번)와 맞지 않는다.
+- **개별 Spring 모듈 버전 직접 조합**: Spring Security, Spring Data 등을 BOM 없이 각각 명시 버전으로 선언하는 방식. 이 경우 네 사람이 각자 담당 영역에서 의존성을 추가할 때마다 서로 호환되는 조합인지 매번 별도로 확인해야 하는데, 공식 호환성 근거 없이 조합 검증을 직접 하는 것은 [technology-policy.md](../../06-architecture/technology-policy.md) 11장이 금지하는 "공식 호환성 근거 없는 버전 호환 단정"에 해당할 위험이 크다. 통합 계정 인증([ADR-AUTH-007](../security/auth-007-unified-account-rbac-session.md))에서 쓰는 Spring Security 버전과 웹 계층 Spring MVC 버전이 어긋나면 통합 시점에야 발견되는 문제이므로, 4인이 독립적으로 개발한다는 전제(범위 경계 규칙 6번)와 맞지 않는다.
 - **다른 프레임워크 또는 Snapshot 버전**: 다른 프레임워크로 바꾸는 것은 이미 확정된 Java 21·Gradle 8.14.3·PostgreSQL 17.10 등 나머지 스택 전체의 재검증을 요구하는 별도 결정이라 이 ADR의 범위를 넘어선다. Snapshot은 [technology-policy.md](../../06-architecture/technology-policy.md) 3장이 명시적으로 금지하며, 정식 릴리스가 아닌 버전에 MVP 일정 전체를 거는 것은 4인 캡스톤 팀이 감당할 위험이 아니다.
 
 ## 6. 결정
@@ -65,7 +65,7 @@ BOM을 그대로 따르면 BOM에 없는 최신 버전이나 BOM이 아직 포�
 
 ## 9. 적용 범위
 
-모든 백엔드 애플리케이션 설정과 Spring 생태계 의존성에 적용한다. [WS-01](../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)~[WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 네 Workstream 모두, 그리고 관리자 인증([ADR-AUTH-001](../security/auth-001-spring-security-jwt.md))처럼 Spring Security를 직접 다루는 영역에도 동일하게 적용된다.
+모든 백엔드 애플리케이션 설정과 Spring 생태계 의존성에 적용한다. [WS-01](../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)~[WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 네 Workstream 모두, 그리고 통합 계정 인증([ADR-AUTH-007](../security/auth-007-unified-account-rbac-session.md))처럼 Spring Security를 직접 다루는 영역에도 동일하게 적용된다.
 
 ## 10. 강제 규칙
 
@@ -77,7 +77,7 @@ Starter와 BOM을 우선 사용하고 명시 버전이 필요한 예외는 ADR�
 
 ## 12. 구현 및 운영 영향
 
-공통 설정·보안·데이터·관측 기능은 Boot 4.1.0 수명주기와 호환성에 맞춘다. 관리자 인증([ADR-AUTH-001](../security/auth-001-spring-security-jwt.md)), 데이터 접근([ADR-DATA-003](../data/data-003-spring-data-jpa.md)), 관측([ADR-OBS-001](../quality/obs-001-logging-observability.md)) 등 다른 ADR이 정의하는 세부 구현도 이 프레임워크 기준선을 전제로 설계된다.
+공통 설정·보안·데이터·관측 기능은 Boot 4.1.0 수명주기와 호환성에 맞춘다. 통합 계정 인증([ADR-AUTH-007](../security/auth-007-unified-account-rbac-session.md)), 데이터 접근([ADR-DATA-003](../data/data-003-spring-data-jpa.md)), 관측([ADR-OBS-001](../quality/obs-001-logging-observability.md)) 등 다른 ADR이 정의하는 세부 구현도 이 프레임워크 기준선을 전제로 설계된다.
 
 ## 13. 검증 방법
 
@@ -90,4 +90,4 @@ Starter와 BOM을 우선 사용하고 명시 버전이 필요한 예외는 ADR�
 ## 15. 관련 문서
 
 - [기술 정책](../../06-architecture/technology-policy.md)
-- [관리자 인증 ADR](../security/auth-001-spring-security-jwt.md)
+- [통합 계정 인증 ADR](../security/auth-007-unified-account-rbac-session.md)

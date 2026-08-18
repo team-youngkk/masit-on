@@ -124,7 +124,7 @@ DB_URL=jdbc:postgresql://localhost:15432/masiton REDIS_PORT=16379 ./gradlew boot
 
 WireMock 포트를 바꿨다면 `KAKAO_BASE_URL`, `YOUTUBE_BASE_URL`도 같이 넘긴다. 설정은 공통·`local`·`test`·`prod` 네 계층이며 `bootRun`은 `local`, 테스트는 `test`, M2 운영 배포는 `prod` 프로파일을 쓴다. `prod`는 로컬 개발에서 쓰지 않는다. 프로파일을 지정하지 않은 실행은 접속값이 없어 기동에 실패한다. 계층 규칙은 [구현 컨벤션 4.5절](docs/06-architecture/implementation-conventions.md#45-설정-계층)에 있다.
 
-`/internal/**`은 로컬 컨테이너 네트워크 전용이며 운영 배포에서 인터넷 진입점에 노출하지 않는다([ADR-WEB-003](docs/07-adr/platform/web-003-routing-boundary.md)).
+`/internal/**`은 로컬 컨테이너 네트워크 전용이며 운영 배포에서 인터넷 진입점에 노출하지 않는다([ADR-WEB-006](docs/07-adr/platform/web-006-unified-login-rbac-route.md)).
 
 ## 6. 아키텍처 필수 규칙
 
@@ -139,12 +139,12 @@ WireMock 포트를 바꿨다면 `KAKAO_BASE_URL`, `YOUTUBE_BASE_URL`도 같이 �
 
 원문: [아키텍처 개요](docs/06-architecture/architecture-overview.md), [패키지 구조](docs/06-architecture/package-structure.md), [의존성 규칙](docs/06-architecture/dependency-rules.md), [모듈 경계](docs/06-architecture/module-boundaries.md), [트랜잭션 경계](docs/06-architecture/transaction-boundaries.md), [조회 조합](docs/06-architecture/query-composition.md), [애플리케이션 흐름](docs/06-architecture/application-flow.md)
 
-보안 경계(인증 필터·matcher 순서·Principal 전달)는 [보안 경계](docs/06-architecture/security-boundary.md)와 [ADR-WEB-003 라우팅 경계](docs/07-adr/platform/web-003-routing-boundary.md), 외부 연동(Kakao·YouTube Port/Adapter·timeout·실패 처리)은 [외부 연동](docs/06-architecture/external-integration.md)을 따른다.
+보안 경계(인증 필터·matcher 순서·Principal 전달)는 [보안 경계](docs/06-architecture/security-boundary.md)와 [ADR-WEB-006 라우팅 경계](docs/07-adr/platform/web-006-unified-login-rbac-route.md), 외부 연동(Kakao·YouTube Port/Adapter·timeout·실패 처리)은 [외부 연동](docs/06-architecture/external-integration.md)을 따른다.
 
 ## 7. API·데이터
 
 - 백엔드 경로는 버전 없는 `/api`, 관리자는 `/api/admin` 경계로 분리한다. `/v1` 같은 경로 버전을 도입하지 않는다.
-- 공개 GET 3종(`/api/restaurants`, `/api/creators`, `/api/restaurants/{id}`)은 무인증이다. 로그인(`POST /api/admin/auth/tokens`)과 재발급(`POST /api/admin/auth/tokens/refresh`)은 JWT를 요구하지 않고 각각 자격 증명과 Refresh 쿠키만 검증한다. 그 외 `/api/admin/**`은 JWT + `ADMIN`이고, 정의되지 않은 경로는 기본 거부한다.
+- 공개 GET 3종(`/api/restaurants`, `/api/creators`, `/api/restaurants/{id}`)은 무인증이다. 일반 회원과 관리자는 역할 선택 없이 `POST /api/auth/tokens`에서 로그인하고 서버가 `member_account.role`로 권한을 결정한다. 재발급 `POST /api/auth/tokens/refresh`는 통합 Refresh 쿠키를 검증한다. 그 외 `/api/admin/**`은 JWT + `ADMIN`이고, 정의되지 않은 경로는 기본 거부한다. 프론트 RBAC는 편의 기능이며 최종 인가는 Spring Security가 수행한다.
 - 목록 응답은 `{ "items": [...], "page": {...} }` 형태이고 페이지가 필요 없는 최소 선택 목록은 `{ "items": [...] }`다. 빈 결과도 `200`에 빈 `items`이며, 없는 단일 자원만 `404`다.
 - 페이지는 1-base, 크기 10·20·50, 기본 20.
 - 외부 API 식별자는 **불투명 문자열**이다. 클라이언트는 UUID 여부나 생성 규칙을 검증하지 않는다. 내부 식별자가 UUID v4인 것([ADR-DATA-007](docs/07-adr/data/data-007-uuid-v4-identifiers.md))은 외부 계약이 아니므로, 응답 필드 타입과 문서에 UUID를 전제하지 않는다.

@@ -16,6 +16,7 @@ related_documents:
   - adr-traceability.md
   - security/auth-001-spring-security-jwt.md
   - security/auth-003-confirmation-token.md
+  - security/auth-007-unified-account-rbac-session.md
   - data/data-005-redis-refresh-token.md
   - data/data-007-uuid-v4-identifiers.md
   - data/data-008-publication-lifecycle-soft-delete.md
@@ -206,8 +207,7 @@ MVP 구현 전 필수 결정과 3차 확장 정책 결정은 완료됐다. 아�
 
 | 검토 항목 | 분류 | 근거 | 필요한 결정 |
 |---|---|---|---|
-| 관리자 JWT·Refresh Token | 결정 완료 (2026-07-24) | Spring Security JWT와 Redis Refresh Token 사용으로 사용자 결정 | Access Token 30분, Refresh Token 14일(재발급마다 회전+재사용 탐지), Redis 장애 시 fail-closed(강제 재로그인) |
-| 일반 사용자 JWT·Refresh Token | Post-MVP | 일반 사용자 로그인 제외 | 회원 기능 승인 시 별도 인증 ADR |
+| 회원·관리자 통합 JWT·Refresh Token | 결정 완료 (2026-08-18) | [ADR-AUTH-007](security/auth-007-unified-account-rbac-session.md)로 단일 계정·세션 확정 | Access Token 30분, Refresh Token 14일, 역할별 세션 상한, 회전·재사용 탐지, Redis 장애 fail-closed |
 | Kakao Maps·PostGIS | Post-MVP | 지도·좌표·거리 검색 제외 | 지도 기능 범위 변경 |
 | Kakao Local REST API | 범위 일치 | 관리자 맛집 등록 시 카카오 장소 확인 필요 | Port/Adapter와 장애 처리 구현 |
 | Kakao Mobility | Accepted | `/v1/directions`, 자동차 경로, TTL 5분·캐시 없음·월 1,000건·유료 0원 | 운영 계정 quota·인증 연결 확인 |
@@ -216,8 +216,7 @@ MVP 구현 전 필수 결정과 3차 확장 정책 결정은 완료됐다. 아�
 | FCM | Post-MVP | 서비스 내 알림만 승인, 외부 푸시·동의·DeviceToken 제외 | 채널·동의·Token·전달 SLA 승인 |
 | S3 이미지 저장 | Post-MVP | 현재 이미지 업로드·사용자 이미지 요구사항 없음 | 이미지 기능 범위 변경 |
 | Redis 캐시 | 조건부 도입 | 캐시 필요성을 입증한 성능 측정 없음 | 병목과 무효화 전략 확인 |
-| Redis 관리자 Refresh Token | 범위 일치 | 관리자 JWT 재발급·폐기에 사용 | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md)·[ADR-DATA-005](data/data-005-redis-refresh-token.md) 적용 |
-| Redis 일반 사용자 Token | Post-MVP | 일반 사용자 로그인 없음 | 회원 인증 범위 변경 |
+| Redis 통합 Refresh session | 범위 일치 | 회원·관리자 JWT 재발급·폐기에 사용 | [ADR-AUTH-007](security/auth-007-unified-account-rbac-session.md) 적용 |
 | Redis 분산 락 | 조건부 도입 | 자동 배치와 다중 실행이 MVP에서 제외·미확정 | 실행 토폴로지와 중복 피해 확인 |
 | 확인 Token 저장·서명·단일 사용 | 결정 완료 (2026-07-27) | PostgreSQL 저장형 불투명 Token, 해시·후보 Snapshot, 원자적 소비와 결과 재현 | [ADR-AUTH-003](security/auth-003-confirmation-token.md) 적용 |
 | `UNIQUE` 이후 일반 동시성 제어 | 조건부 도입 | 기본 격리+고유 제약으로 시작하며 확인 Token의 제한된 conflict 처리는 별도 확정 | [ADR-DATA-006](#adr-data-006-동시-쓰기-충돌-제어)의 격리·락·일반 upsert 대안 검토 |
@@ -259,8 +258,8 @@ Conditional·Post-MVP Backlog 항목은 다음을 모두 충족해야 활성화�
 | 확인 Token 재시도·보관 | 최초 생성 `201`, 생성 완료 재시도 `200`, 동시 중복은 결정적 `409`, 완료·만료 기록 24시간 보관 후 발급 시 지연 정리 |
 | 배포 순서 | MVP 구현은 로컬 통합 검증, M2에서 다음 확장 단계보다 먼저 최초 AWS 운영 배포 |
 | 배포 토폴로지 | 초기 운영 배포는 단일 EC2 인스턴스(Nginx+App), 장애 시 수동 복구로 시작 |
-| 관리자 JWT | Access Token 만료 30분 |
-| 관리자 Refresh Token(Redis) | TTL 14일, 재발급마다 회전 + 재사용 탐지·즉시 폐기 |
+| 통합 JWT | Access Token 만료 30분, `aud=masit-on-api`, DB 현재 역할 기반 RBAC |
+| 통합 Refresh session(Redis) | TTL 14일, MEMBER 최대 3개·ADMIN 최대 1개, 재발급마다 회전 + 재사용 탐지·즉시 폐기 |
 | Redis 장애 처리 | Fail-closed(재발급 차단, Access Token 만료 후 강제 재로그인) |
 | 로그 보관 | 14일 (기존 기술 스펙 값 유지) |
 | 백업 | PostgreSQL 일 1회 자동 스냅샷, 7일 보관, RPO 최대 24시간 |

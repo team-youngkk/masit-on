@@ -19,7 +19,8 @@ related_documents:
 | Video 동일 원본 금지 | `uk_video__external_video_id` | YouTube 확인, 생성 전 조회 | `DUPLICATE_VIDEO` |
 | Visit 세 대상 조합 유일 | `uk_visit__restaurant_creator_video` | 생성 전 조회 | `DUPLICATE_VISIT_RELATIONSHIP` |
 | Region·Category 표준값 유일 | 각 `code`, `name`, `sort_order` UK | Flyway seed 검증 | 기준 데이터 배포 실패 |
-| 관리자 login ID 유일 | `uk_admin_account__login_id` | trim 후 정확 일치, 1~100자 | 계정 발급 거부 |
+| 통합 계정 이메일 유일 | `uk_member_account__email` | 정규화 이메일, 역할 입력과 무관 | 가입·운영 발급 거부 |
+| 계정 역할 허용값 | `ck_member_account__role` | 공개 가입은 `MEMBER`; `ADMIN`은 승인 운영 절차 | 잘못된 역할 거부 |
 | Video.Creator와 게시 채널 일치 | `fk_video__creator_channel` 복합 FK | Video 연결 전 외부 ID 비교 | `VIDEO_CHANNEL_MISMATCH` |
 | Visit.Creator와 Video.Creator 일치 | `fk_visit__video_creator` 복합 FK | null Video.Creator를 같은 트랜잭션에서 연결 | `VIDEO_CHANNEL_MISMATCH` |
 | 참조 존재 | 명명된 FK와 기본 `ON DELETE RESTRICT`; 개인화 관계의 회원 FK는 `ON DELETE CASCADE` | 대상별 조회로 404 구분 | `*_NOT_FOUND` |
@@ -39,8 +40,13 @@ related_documents:
 | `uk_food_category__code` | `food_category` | `code` |
 | `uk_food_category__name` | `food_category` | `name` |
 | `uk_food_category__sort_order` | `food_category` | `sort_order` |
-| `pk_admin_account` | `admin_account` | `id` |
-| `uk_admin_account__login_id` | `admin_account` | `login_id` |
+| `pk_admin_account` (legacy, 계약 단계 제거) | `admin_account` | `id` |
+| `uk_admin_account__login_id` (legacy, 계약 단계 제거) | `admin_account` | `login_id` |
+| `pk_admin_account_migration_map` (전환 staging, 계약 단계 제거) | `admin_account_migration_map` | `admin_account_id` |
+| `uk_admin_account_migration_map__normalized_email` (전환 staging, 계약 단계 제거) | `admin_account_migration_map` | `normalized_email` |
+| `uk_admin_account_migration_map__member_account_id` (전환 staging, 계약 단계 제거) | `admin_account_migration_map` | `member_account_id` (NULL 제외) |
+| `pk_member_account` | `member_account` | `id` |
+| `uk_member_account__email` | `member_account` | `email` |
 | `pk_restaurant` | `restaurant` | `id` |
 | `uk_restaurant__kakao_place_id` | `restaurant` | `kakao_place_id` |
 | `pk_creator` | `creator` | `id` |
@@ -68,7 +74,10 @@ PostgreSQL의 `UNIQUE`는 이미 동일 컬럼 B-tree 인덱스를 만든다. �
 | `fk_visit__restaurant` | `visit.restaurant_id` | `restaurant.id` | 동일 |
 | `fk_visit__creator` | `visit.creator_id` | `creator.id` | 동일 |
 | `fk_visit__video_creator` | `visit(video_id, creator_id)` | `video(id, creator_id)` | 동일 |
-| `fk_confirmation_token__admin_account` | `confirmation_token.admin_account_id` | `admin_account.id` | 동일 |
+| `fk_confirmation_token__admin_account` (legacy) | `confirmation_token.admin_account_id` | `admin_account.id` | 확장 단계 유지, 계약 단계 제거 |
+| `fk_confirmation_token__member_account` (target) | `confirmation_token.admin_account_id` 또는 후속 rename 컬럼 | `member_account.id` | `ON DELETE RESTRICT ON UPDATE RESTRICT` |
+| `fk_admin_account_migration_map__admin_account` (전환 staging) | `admin_account_migration_map.admin_account_id` | `admin_account.id` | `ON DELETE RESTRICT ON UPDATE RESTRICT`, 계약 단계 제거 |
+| `fk_admin_account_migration_map__member_account` (전환 staging) | `admin_account_migration_map.member_account_id` | `member_account.id` | `ON DELETE RESTRICT ON UPDATE RESTRICT`, 계약 단계 제거 |
 | `fk_favorite__member_account` | `favorite.member_id` | `member_account.id` | `ON DELETE CASCADE ON UPDATE RESTRICT` |
 | `fk_favorite__restaurant` | `favorite.restaurant_id` | `restaurant.id` | `ON DELETE RESTRICT ON UPDATE RESTRICT` |
 | `fk_recent_restaurant_view__member_account` | `recent_restaurant_view.member_id` | `member_account.id` | `ON DELETE CASCADE ON UPDATE RESTRICT` |
@@ -84,8 +93,12 @@ PostgreSQL의 `UNIQUE`는 이미 동일 컬럼 B-tree 인덱스를 만든다. �
 |---|---|
 | `ck_region__sort_order` | `sort_order BETWEEN 1 AND 25` |
 | `ck_food_category__sort_order` | `sort_order BETWEEN 1 AND 10` |
-| `ck_admin_account__login_id_not_blank` | `btrim(login_id) <> ''` |
-| `ck_admin_account__role` | `role = 'ADMIN'` |
+| `ck_admin_account__login_id_not_blank` (legacy) | `btrim(login_id) <> ''` |
+| `ck_admin_account__role` (legacy) | `role = 'ADMIN'` |
+| `ck_admin_account_migration_map__email` (전환 staging) | `normalized_email = lower(btrim(normalized_email))`이고 회원가입 이메일 형식 충족 |
+| `ck_admin_account_migration_map__approval_not_blank` (전환 staging) | `btrim(approval_record_id) <> ''` |
+| `ck_admin_account_migration_map__disposition` (전환 staging) | `migration_disposition IN ('MIGRATE_ACTIVE','PRESERVE_INACTIVE')` |
+| `ck_member_account__role` | `role IN ('MEMBER','ADMIN')` |
 | `ck_restaurant__phone_number` | `char_length(phone_number) BETWEEN 7 AND 20 AND phone_number ~ '^[0-9 +()\\-]+$'` |
 | `ck_restaurant__coordinate_pair` | `(latitude IS NULL AND longitude IS NULL) OR (latitude IS NOT NULL AND longitude IS NOT NULL)` |
 | `ck_restaurant__coordinate_range` | `(latitude BETWEEN -90 AND 90) AND (longitude BETWEEN -180 AND 180)` when both values are present |
@@ -116,6 +129,7 @@ PostgreSQL의 `UNIQUE`는 이미 동일 컬럼 B-tree 인덱스를 만든다. �
 | 외부 이용 불가 | `AVAILABLE → UNAVAILABLE` | `publication_status=PRIVATE`, `external_status_checked_at`, `updated_at` |
 | 외부 복구 | `UNAVAILABLE → AVAILABLE` | 재검증 후 publication 결정, 확인·변경 시각 |
 | Token 완료 | `ISSUED → CREATED/DUPLICATE` | `completed_at`, `result_resource_id` |
+| 계정 역할·상태·비밀번호 변경 | 허용된 운영/회원 흐름 | `updated_at` 갱신과 해당 계정 Redis 세션 전체 폐기 |
 
 완료 Token 상태는 되돌리지 않는다. 핵심 데이터 삭제는 복구할 수 있으므로 유일 제약에서 삭제 행을 제외하지 않는다.
 

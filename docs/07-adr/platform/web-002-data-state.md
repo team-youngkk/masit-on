@@ -7,6 +7,7 @@ owners:
   - 양성훈
   - 김인안
 related_requirements:
+  - FR-AUTH-004
   - NFR-MAINTAINABILITY-001
   - NFR-COMPATIBILITY-003
 related_documents:
@@ -14,7 +15,9 @@ related_documents:
   - ../../05-specs/api/discovery/restaurant-discovery-api.md
   - ../../05-specs/api/README.md
   - web-001-frontend-platform.md
-  - web-003-routing-boundary.md
+  - web-006-unified-login-rbac-route.md
+  - web-006-unified-login-rbac-route.md
+  - ../security/auth-007-unified-account-rbac-session.md
   - ../../02-analysis/mvp-workstreams.md
   - ../../00-overview/scope.md
   - ../../01-requirements/non-functional-requirements.md
@@ -32,7 +35,7 @@ Accepted
 
 ## 2. 결정 요약
 
-초기 서버 데이터는 Server Components `fetch`, 상호작용 이후 서버 상태는 TanStack Query, 검색 조건은 URL Query Parameter, 화면 지역 상태는 React `useState`로 관리한다.
+초기 서버 데이터는 Server Components `fetch`, 상호작용 이후 서버 상태와 현재 계정 세션은 TanStack Query, 검색 조건은 URL Query Parameter, 화면 지역 상태는 React `useState`로 관리한다.
 
 ## 3. 배경
 
@@ -79,9 +82,11 @@ TanStack Query의 정확한 버전은 `@tanstack/react-query` `5.101.4`로 확�
 
 검색 조건은 `05-specs`의 API 계약과 동일한 URL 의미(파라미터 이름·값)를 유지한다. 화면 URL `/restaurants`의 Query Parameter를 백엔드 `/api/restaurants` 호출에 전달하고, TanStack Query 캐시 키에는 페이지 번호·페이지 크기(10/20/50)·검색어·지역·유튜버·카테고리 조건을 모두 포함해 조건이 다르면 다른 캐시로 취급한다.
 
+현재 계정의 비밀이 아닌 식별 정보와 역할은 정확히 `['auth', 'session']` Query Key에 저장한다. 로그인·재발급 성공 응답의 `role`을 즉시 반영한 뒤 `GET /api/me`를 다시 조회해 `id`, `email`, `role`을 완성한다. Access Token 원문은 메모리 전용 인증 모듈에만 두고 TanStack Query 캐시·Local Storage·Session Storage에 저장하지 않는다. 로그아웃 처리, 재발급까지 실패한 확정 `401`, 서버가 알린 역할 변경 때는 Access Token과 세션 Query를 포함한 인증 범위 Query 캐시를 함께 제거한다. `403`은 재발급이나 재로그인 반복을 시작하지 않는다. 상세 흐름과 경로 권한은 [ADR-WEB-006](web-006-unified-login-rbac-route.md)을 따른다.
+
 ## 11. 금지 사항
 
-URL 검색 상태를 화면 지역 state로 중복 저장하는 것, 서버 데이터를 근거 없이 전역 저장소에 복제하는 것, 확정된 `@tanstack/react-query` `5.101.4` 이외의 버전을 임의로 설치하는 것을 금지한다.
+URL 검색 상태를 화면 지역 state로 중복 저장하는 것, 서버 데이터를 근거 없이 전역 저장소에 복제하는 것, 역할 문자열이나 경로 접두사만으로 권한을 추정하는 것, Access Token을 Query 캐시나 영구 브라우저 저장소에 넣는 것, 확정된 `@tanstack/react-query` `5.101.4` 이외의 버전을 임의로 설치하는 것을 금지한다.
 
 ## 12. 구현 및 운영 영향
 
@@ -89,7 +94,7 @@ Server Components와 Client Components 사이의 Hydration 경계, 캐시 무효
 
 ## 13. 검증 방법
 
-새로고침·공유 URL·브라우저 뒤로가기 후 동일한 목록·필터 결과가 재현되는지 확인한다. 초기 렌더링(Server Components `fetch`)이 이미 결정된 p95 목표 — 일반 조회 500ms, 검색·필터 조회 800ms, 오류율 1% 미만([RV-NFR-004](../../01-requirements/non-functional-requirements.md#rv-nfr-004-목표-응답-시간과-허용-오류율)) — 을 만족하는지, 페이지 크기 10/20/50 선택이 정상 동작하는지 확인한다. 상호작용 재조회(필터 변경, 관리자 등록 후 반영)가 TanStack Query 캐시 무효화를 거쳐 최신 데이터를 반영하는지 통합 테스트로 검증한다.
+새로고침·공유 URL·브라우저 뒤로가기 후 동일한 목록·필터 결과가 재현되는지 확인한다. 초기 렌더링(Server Components `fetch`)이 이미 결정된 p95 목표 — 일반 조회 500ms, 검색·필터 조회 800ms, 오류율 1% 미만([RV-NFR-004](../../01-requirements/non-functional-requirements.md#rv-nfr-004-목표-응답-시간과-허용-오류율)) — 을 만족하는지, 페이지 크기 10/20/50 선택이 정상 동작하는지 확인한다. 상호작용 재조회(필터 변경, 관리자 등록 후 반영)가 TanStack Query 캐시 무효화를 거쳐 최신 데이터를 반영하는지 통합 테스트로 검증한다. 로그인·재발급·로그아웃·역할 변경에서 `['auth', 'session']`, 메모리 Token과 인증 범위 캐시가 함께 전이하는지, 공개 조회 캐시는 불필요하게 제거되지 않는지 검증한다.
 
 ## 14. 재검토 조건
 

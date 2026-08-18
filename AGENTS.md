@@ -148,7 +148,7 @@ $env:REDIS_PORT = '16379'
 .\gradlew.bat bootRun
 ```
 
-`/internal/**`은 로컬 컨테이너 네트워크 전용이며 운영 배포의 인터넷 진입점에 노출하지 않는다([ADR-WEB-003](docs/07-adr/platform/web-003-routing-boundary.md)).
+`/internal/**`은 로컬 컨테이너 네트워크 전용이며 운영 배포의 인터넷 진입점에 노출하지 않는다([ADR-WEB-006](docs/07-adr/platform/web-006-unified-login-rbac-route.md)).
 
 ## 6. 아키텍처 필수 규칙
 
@@ -163,14 +163,14 @@ $env:REDIS_PORT = '16379'
 
 원문: [아키텍처 개요](docs/06-architecture/architecture-overview.md), [패키지 구조](docs/06-architecture/package-structure.md), [의존성 규칙](docs/06-architecture/dependency-rules.md), [모듈 경계](docs/06-architecture/module-boundaries.md), [트랜잭션 경계](docs/06-architecture/transaction-boundaries.md), [조회 조합](docs/06-architecture/query-composition.md), [애플리케이션 흐름](docs/06-architecture/application-flow.md)
 
-보안은 [보안 경계](docs/06-architecture/security-boundary.md)와 [ADR-WEB-003](docs/07-adr/platform/web-003-routing-boundary.md), Kakao·YouTube 연동은 [외부 연동](docs/06-architecture/external-integration.md)을 따른다.
+보안은 [보안 경계](docs/06-architecture/security-boundary.md)와 [ADR-WEB-006](docs/07-adr/platform/web-006-unified-login-rbac-route.md), Kakao·YouTube 연동은 [외부 연동](docs/06-architecture/external-integration.md)을 따른다.
 
 ## 7. API·데이터 규칙
 
 - 백엔드 경로는 버전 없는 `/api`, 관리자 경계는 `/api/admin`이다. `/v1` 같은 경로 버전을 도입하지 않는다.
 - 공개 GET 3종(`/api/restaurants`, `/api/creators`, `/api/restaurants/{id}`)은 무인증이다.
-- 로그인 `POST /api/admin/auth/tokens`와 재발급 `POST /api/admin/auth/tokens/refresh`은 JWT를 요구하지 않고 각각 자격 증명과 Refresh 쿠키를 검증한다.
-- 그 외 `/api/admin/**`은 JWT + `ADMIN`이며 정의되지 않은 경로는 기본 거부한다.
+- 일반 회원과 관리자는 역할 선택 없이 `POST /api/auth/tokens`에서 로그인하고, 서버가 `member_account.role`로 principal과 `MEMBER`·`ADMIN` 권한을 결정한다. 재발급 `POST /api/auth/tokens/refresh`는 통합 Refresh 쿠키를 검증한다.
+- 그 외 `/api/admin/**`은 JWT + `ADMIN`이며 정의되지 않은 경로는 기본 거부한다. 프론트의 역할 기반 메뉴와 Route guard는 편의 기능이고 최종 인가는 Spring Security가 수행한다.
 - 일반 목록 응답은 `{ "items": [...], "page": {...} }`, 페이지가 필요 없는 최소 선택 목록은 `{ "items": [...] }`다.
 - 빈 목록은 `200`과 빈 `items`, 없는 단일 자원만 `404`다.
 - 페이지는 1-base, 크기는 10·20·50, 기본값은 20이다.

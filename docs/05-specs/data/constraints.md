@@ -10,7 +10,7 @@ related_documents:
   - ../../07-adr/data/data-001-postgresql.md
   - ../../07-adr/security/auth-003-confirmation-token.md
   - ../api/discovery/restaurant-discovery-api.md
-  - ../api/admin/authentication-api.md
+  - ../api/account/member-authentication-api.md
   - ../../01-requirements/non-functional-requirements.md
   - physical-data-model.md
   - constraint-mapping.md
@@ -30,9 +30,8 @@ related_documents:
 - Creator: 내부 식별자, 외부 채널 ID, 채널명, 채널 URL, publication status와 외부 가용 상태가 필수다. 프로필 이미지 URL, 소개, handle은 선택 표시 정보다.
 - Video: 내부 식별자, 외부 영상 ID, 제목, 원본 URL, 썸네일 URL, 게시 채널 외부 ID, publication status와 외부 가용 상태가 필수다. 내부 Creator 참조와 게시일은 선택이다.
 - Visit: 내부 식별자, Restaurant·Creator·Video와 publication status가 필수다. 방문일·검증 상태·검증자·검증 시각은 저장하지 않는다.
-- AdminAccount: 내부 식별자, 로그인 ID, 안전한 비밀번호 자격 증명, 활성 여부가 필수다.
-- AdminRefreshToken: 계정 참조, 토큰·계열 검증 값과 생성·만료 시각이 필수다.
-- MemberAccount: 내부 식별자, 정규화 이메일, 안전한 비밀번호 해시와 상태가 필수다. 이메일 인증·탈퇴 요청 시각은 상태 전이를 보조하는 선택 속성이다.
+- MemberAccount: 내부 식별자, 정규화 이메일, 안전한 비밀번호 해시, 역할과 상태가 필수다. 역할은 `MEMBER/ADMIN`만 허용하고 기본값은 `MEMBER`다. 이메일 인증·탈퇴 요청 시각은 상태 전이를 보조하는 선택 속성이다.
+- AuthSession: MemberAccount 참조, 토큰·계열 검증 값과 생성·만료 시각이 필수다.
 - MemberActionToken: 회원 참조, 용도, SHA-256 해시, 상태와 만료 시각이 필수다.
 - MemberSessionRevocation: 폐기된 `sid`, 폐기 시각과 Access Token 만료 시각이 필수다. 회원 FK를 두지 않아 회원 개인정보 파기 뒤에도 기존 Token을 거부한다.
 - Favorite: 회원과 맛집 참조가 필수이고 `(member, restaurant)` 조합으로 식별한다.
@@ -84,13 +83,13 @@ related_documents:
 - 위반 시 처리: 기준 데이터 변경 거부
 - 관련 규칙/API: [BR-RESTAURANT-004](../../01-requirements/business-rules.md#br-restaurant-004-대표-음식-카테고리)·[BR-RESTAURANT-005](../../01-requirements/business-rules.md#br-restaurant-005-맛집의-지역-소속), [API-DISCOVERY-001](../api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색)
 
-### DATA-CONSTRAINT-006 관리자 로그인 ID 유일성
+### DATA-CONSTRAINT-006 legacy 관리자 이메일 매핑 유일성
 
-- 적용 데이터: AdminAccount
-- 제약: 정규화된 loginId는 하나의 계정만 식별한다.
-- 보장 수준: 저장소 필수, 애플리케이션 필수
-- 위반 시 처리: 계정 발급 거부
-- 관련 항목: [API-ADMIN-AUTH-001](../api/admin/authentication-api.md#api-admin-auth-001-관리자-로그인)
+- 적용 데이터: 전환 대상 AdminAccount, 전환 staging과 MemberAccount
+- 제약: 공동 승인된 일회성 입력만 `admin_account_migration_map`에 적재한다. `admin_account_id`는 PK·legacy FK, `normalized_email`은 회원가입과 같은 정규화 규칙을 적용한 UK이며 각 legacy 관리자는 서로 다른 staging 행을 거쳐 정확히 하나의 MemberAccount에 매핑되어야 한다. `active=true`는 `MIGRATE_ACTIVE`와 최종 `ACTIVE/ADMIN`, `active=false`는 승인된 `PRESERVE_INACTIVE`와 기존 회원 상태·역할 불변 또는 신규 `DISABLED/MEMBER`만 허용한다. 활성 legacy가 비활성 회원과 충돌하면 상태를 자동 복구하지 않고 역할 부여 전에 중단한다.
+- 보장 수준: 확장 마이그레이션 제약과 계약 마이그레이션 전 데이터 증명 필수. 입력 SHA-256·승인자·승인 시각·행 수를 접근 통제된 변경 기록과 대조한다.
+- 위반 시 처리: 역할·상태 변경 전 전체 전환 fail-closed, 복사·참조 전환 및 `admin_account` 제거 중단
+- 관련 항목: [마이그레이션 계획](migration-plan.md#13-통합-계정-전환-마이그레이션)
 
 ### DATA-CONSTRAINT-007 회원 이메일 유일성
 
@@ -132,7 +131,7 @@ related_documents:
 - Restaurant는 존재하는 Region과 FoodCategory를 참조한다.
 - Video.creatorId가 있으면 존재하는 Creator를 참조한다. Creator와 Video의 기본 등록 순서는 강제하지 않는다.
 - Visit는 존재하는 Restaurant, Creator, Video를 참조한다.
-- AdminRefreshToken은 존재하는 AdminAccount를 참조한다.
+- AuthSession은 존재하는 MemberAccount를 참조한다.
 - MemberActionToken, Favorite, RecentRestaurantView는 존재하는 MemberAccount를 참조한다.
 - Favorite와 RecentRestaurantView는 존재하는 Restaurant를 참조한다.
 - 보장 수준: 저장소 수준 필수
@@ -170,6 +169,7 @@ related_documents:
 - 외부 일시 오류만으로 external availability나 publication status를 자동 변경하지 않는다.
 - `ACTIVE/DELETED`와 `deleted_at`을 사용하며 [ADR-DATA-008](../../07-adr/data/data-008-publication-lifecycle-soft-delete.md)을 따른다.
 - MemberAccount는 `PENDING_VERIFICATION`, `ACTIVE`, `DELETION_PENDING`, `DISABLED`만 허용하며 `ACTIVE`만 로그인할 수 있다.
+- MemberAccount.role은 `MEMBER`, `ADMIN`만 허용한다. 공개 회원가입은 role 입력을 받지 않고 `MEMBER`만 생성하며 `ADMIN` 쓰기는 승인된 운영 경계로 제한한다.
 
 ## 6. 중복 방지
 
@@ -208,7 +208,7 @@ related_documents:
 | Token 목적별 단일 활성 | 부분 UK 필요 | 필요 | 재발급과 단일 사용 |
 | Favorite 회원·맛집 조합 멱등성 | 필요 | 필요 | 동시 찜과 중복 숨김 |
 | Recent upsert와 최신 시각 유지 | 복합 PK 필요 | 필요 | 재조회와 역행 방지 |
-| 계정당 활성 Refresh Token 최대 1개 | Redis·애플리케이션 | 필요 | 키·회전·무효화 전략에 의존 |
+| 역할별 활성 세션 상한(`MEMBER` 3, `ADMIN` 1) | Redis·애플리케이션 | 필요 | `auth:session:` 키·회전·무효화 전략에 의존 |
 | 확인 Token 단일 사용·결과 재현 | PostgreSQL 행 잠금·상태·고유 해시 | 필요 | 생성과 Token 결과를 같은 트랜잭션으로 커밋 |
 
 ## 9. 동시성 검토
@@ -222,7 +222,7 @@ related_documents:
 ## 10. 확정 및 조건부 재검토
 
 - 삭제·비공개 전환은 별도 운영 명령으로 수행하고 논리 삭제 데이터는 자동 purge 없이 보존한다.
-- Redis의 계정당 활성 Refresh Token 하나와 회전·재사용 탐지는 `auth:refresh:{adminId}` 원자 연산으로 보장한다.
+- Redis의 역할별 활성 세션 상한과 회전·재사용 탐지는 `auth:session:` namespace의 원자 연산으로 보장한다. 역할·상태·비밀번호 변경은 계정의 세션을 전부 폐기하며 cutover 시 legacy 관리자 세션도 전부 무효화한다.
 - 외부 URL·표시 메타데이터 변경 이력은 저장하지 않고 검색 인덱스는 성능 실측으로 튜닝한다.
 
 ## 11. 2차 확장 제약

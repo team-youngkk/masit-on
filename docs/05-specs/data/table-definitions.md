@@ -45,9 +45,9 @@ related_documents:
 | `created_at` | 시간 | NN | `CURRENT_TIMESTAMP` |  | 생성 시각 |
 | `updated_at` | 시간 | NN | `CURRENT_TIMESTAMP` |  | 변경 시각 |
 
-## 4. `admin_account`
+## 4. `admin_account` (전환 중 legacy)
 
-사전 발급 관리자 계정이다.
+V1에 존재하는 사전 발급 관리자 계정이다. 단일 계정 전환의 확장 단계에서 읽기 호환과 검증을 위해 유지하고, 계약 단계에서 참조 이전 증명을 통과한 뒤 제거한다. 신규 계정 원천으로 사용하지 않는다.
 
 | 컬럼 | SQL 타입 | Null | 기본값 | 키·제약 | 설명 |
 |---|---|---:|---|---|---|
@@ -60,6 +60,21 @@ related_documents:
 | `updated_at` | 시간 | NN | `CURRENT_TIMESTAMP` |  | 변경 시각 |
 
 로그인 ID의 대소문자 동일성은 API가 별도로 정의하지 않았으므로 저장값의 정확 일치를 사용한다. 비밀번호 원문과 Refresh Token은 이 테이블에 저장하지 않는다.
+
+### 4.1 `admin_account_migration_map` (전환 staging)
+
+통합 계정 전환에만 사용하는 일회성 매핑 테이블이다. 확장 단계에서 만들고 공동 승인된 입력을 적재한 뒤, 계약 증명을 통과하면 `admin_account`와 함께 제거한다. 신규 계정 원장이나 런타임 인증 조회에 사용하지 않는다.
+
+| 컬럼 | SQL 타입 | Null | 기본값 | 키·제약 | 설명 |
+|---|---|---:|---|---|---|
+| `admin_account_id` | `uuid` | NN | 없음 | PK, FK → `admin_account.id` | legacy 관리자 ID |
+| `normalized_email` | `varchar(254)` | NN | 없음 | UK, 빈 값·이메일 형식 금지 | 회원가입과 같은 규칙으로 정규화한 승인 이메일 |
+| `migration_disposition` | `varchar(24)` | NN | 없음 | `MIGRATE_ACTIVE/PRESERVE_INACTIVE` CHECK | legacy `active`와 일치하는 승인 전환 구분 |
+| `member_account_id` | `uuid` | Yes | `NULL` | UK, 값이 있으면 FK → `member_account.id` | 검증·복사 뒤 확정한 통합 계정 ID |
+| `approval_record_id` | `varchar(100)` | NN | 없음 | 빈 값 금지 | 접근 통제된 운영 변경 기록 식별자 |
+| `created_at` | 시간 | NN | `CURRENT_TIMESTAMP` |  | 적재 시각 |
+
+실제 이메일이나 입력 파일을 저장소에 커밋하지 않는다. 입력 파일 SHA-256·승인자·승인 시각·행 수는 `approval_record_id`가 가리키는 변경 기록에 남기고, 역할 부여 전 전체 legacy 관리자에 대해 누락·중복·정규화 충돌·동일 회원 수렴이 0건인지 검증한다. `MIGRATE_ACTIVE`는 `active=true`, `PRESERVE_INACTIVE`는 `active=false`와 일치해야 한다. 활성 전환은 최종 `ACTIVE/ADMIN`, 비활성 보존은 기존 회원 불변 또는 신규 `DISABLED/MEMBER`만 허용한다.
 
 ## 5. `restaurant`
 
@@ -149,7 +164,7 @@ related_documents:
 |---|---|---:|---|---|---|
 | `id` | `uuid` | NN | 없음 | PK | 내부 행 ID |
 | `token_hash` | `bytea` | NN | 없음 | UK, 정확히 32 byte | SHA-256 해시 |
-| `admin_account_id` | `uuid` | NN | 없음 | FK → AdminAccount | 발급 관리자 |
+| `admin_account_id` | `uuid` | NN | 없음 | 전환 전 FK → `admin_account`; 계약 후 회원 UUID FK → `member_account` | 발급 행위자 |
 | `resource_type` | `varchar(16)` | NN | 없음 | `RESTAURANT/CREATOR/VIDEO` | 생성 API 결속 |
 | `candidate_schema_version` | `smallint` | NN | `1` | `> 0` | Snapshot 역직렬화 버전 |
 | `identity_key` | `varchar(128)` | NN | 없음 | 빈 값 금지 | 장소·채널·영상 외부 동일성 값 |
@@ -164,7 +179,13 @@ related_documents:
 
 ## 10. `member_account`
 
-회원 계정은 관리자 계정과 identity·권한·인증 수명주기를 분리한다. 이메일은 고유하고, 비밀번호 원문이나 Refresh Token은 저장하지 않는다. 상태는 `PENDING_VERIFICATION`, `ACTIVE`, `DELETION_PENDING`, `DISABLED`이며, 이메일 인증 시각과 삭제 요청 시각의 조합을 CHECK 제약으로 강제한다.
+일반 회원과 관리자가 공유하는 단일 계정 테이블이다. 이메일은 고유하고, 비밀번호 원문이나 Refresh Token은 저장하지 않는다. 기존 열에 다음 역할 열을 전진 마이그레이션으로 추가한다.
+
+| 컬럼 | SQL 타입 | Null | 기본값 | 키·제약 | 설명 |
+|---|---|---:|---|---|---|
+| `role` | `varchar(16)` | NN | `'MEMBER'` | `MEMBER/ADMIN` | 통합 로그인 RBAC 역할 |
+
+공개 회원가입은 요청 역할을 받지 않고 기본값 `MEMBER`만 생성한다. `ADMIN` 발급·변경·회수는 승인된 운영 절차만 수행한다. 상태는 `PENDING_VERIFICATION`, `ACTIVE`, `DELETION_PENDING`, `DISABLED`이며 이메일 인증 시각·삭제 요청 시각 조합을 CHECK로 강제한다. 역할·상태·비밀번호 변경은 Redis 활성 세션 전체 폐기와 결합한다.
 
 ## 11. `member_action_token`
 
@@ -266,9 +287,7 @@ Redis 세션 변경 뒤 PostgreSQL `sid` 폐기 표식을 기록하지 못한 �
 
 ## 16. Redis 경계
 
-`AdminRefreshToken`은 Redis 8.8에만 저장한다. PostgreSQL `admin_account.id` 문자열을 Redis 값의 관리자 참조로 사용하되 DB FK 같은 원자성은 제공하지 않는다. Redis 키·검증값·14일 TTL·회전·재사용 탐지와 로그인 실패 제한은 [관리자 인증 API](../api/admin/authentication-api.md)와 [보안 경계](../../06-architecture/security-boundary.md)의 확정 계약을 따른다. Redis 구조는 이 문서의 PostgreSQL 스키마와 Flyway 대상이 아니다.
-
-회원 세션은 `auth:member:` namespace만 사용하며 관리자 `auth:refresh:` 키와 공유하지 않는다. 세션 ID별 Refresh Token 해시와 회원별 정렬 집합을 함께 저장해 최대 세 세션을 유지한다. 회전과 재사용 탐지는 Lua 스크립트로 원자 처리하며 Redis를 읽거나 쓰지 못하면 발급·재발급을 허용하지 않는다.
+Refresh Token 세션은 역할과 무관하게 Redis 8.8 `auth:session:` namespace에만 저장하고 `member_account.id`를 계정 참조로 사용한다. 세션 ID별 Token 해시와 계정별 정렬 집합을 함께 저장하며 상한은 `MEMBER` 3개, `ADMIN` 1개다. 회전·재사용 탐지·전체 폐기는 원자 처리하고 Redis를 읽거나 쓰지 못하면 발급·재발급을 허용하지 않는다. 쿠키·키 상세는 후속 ADR-AUTH-007이 소유한다. 전환 cutover에서 legacy 관리자 Refresh 세션은 전부 무효화한다.
 
 ## 17. 3차 확장 AI 영상 추출 테이블
 

@@ -45,7 +45,7 @@ related_documents:
   - ../../../05-specs/api/discovery/restaurant-discovery-api.md
   - ../../../05-specs/api/common/filtering-contract.md
   - ../../../05-specs/api/common/pagination-contract.md
-  - ../../../07-adr/platform/web-003-routing-boundary.md
+  - ../../../07-adr/platform/web-006-unified-login-rbac-route.md
   - ../../../01-requirements/non-functional-requirements.md
   - ../../traceability.md
 ---
