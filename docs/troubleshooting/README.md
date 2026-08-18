@@ -8,6 +8,10 @@ related_documents:
 
 구현과 리뷰 과정에서 재현·검증한 문제의 현상, 원인, 처리 결과를 보존한다.
 
+## 최신 기록
+
+- [PR #227 YouTube 채널 감시 상태·관리 화면 후속 반영](pr-227-youtube-channel-watch-review.md)
+
 ## PR 리뷰
 
 - [PR #228 ASG replacement 배포의 상태 보존·중단 제어·권한·네트워크 계약](pr-228-asg-replacement-deployment-review.md)

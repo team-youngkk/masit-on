@@ -64,4 +64,5 @@ class CreatorPersistenceAdapter implements CreatorRepositoryPort {
                 .map(CreatorMapper::toDomain)
                 .toList();
     }
+
 }

@@ -5,11 +5,14 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.masiton.ai.application.port.in.YoutubeChannelWatchManagementUseCase;
 import com.masiton.ai.application.port.out.YoutubeChannelWatchSubscriptionPort;
+import com.masiton.ai.application.port.out.YoutubeChannelWatchStore;
 import com.masiton.ai.application.port.out.YoutubeChannelWatchVerificationTokenPort;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
@@ -32,6 +35,33 @@ public class YoutubeChannelWatchManagementService implements YoutubeChannelWatch
         this.watchPersistence = watchPersistence;
         this.verificationTokens = verificationTokens;
         this.subscriptions = subscriptions;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public WatchStatus getStatus(UUID creatorId) {
+        FindCreatorReferenceUseCase.CreatorReference creator = creatorReferences.findCreatorReference(creatorId)
+                .orElseThrow(this::creatorNotFound);
+        return watchPersistence.findDetail(creator.externalChannelId())
+                .map(this::status)
+                .orElseGet(this::initialStatus);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public WatchPage getStatuses(int page, int size) {
+        long offset = (long) (page - 1) * size;
+        YoutubeChannelWatchStore.WatchCandidatePage candidatePage = watchPersistence.findCandidatePage(size, offset);
+        long totalElements = candidatePage.totalElements();
+        long totalPages = totalElements == 0 ? 0 : (totalElements + size - 1L) / size;
+        List<WatchSummary> items = candidatePage.items().stream()
+                .map(candidate -> new WatchSummary(
+                        candidate.creatorId(), candidate.channelName(), candidate.publiclyVisible(),
+                        candidate.externallyAvailable(), candidate.watch()
+                                .map(this::status)
+                                .orElseGet(this::initialStatus)))
+                .toList();
+        return new WatchPage(items, page, size, totalElements, totalPages, page < totalPages);
     }
 
     @Override
@@ -81,7 +111,11 @@ public class YoutubeChannelWatchManagementService implements YoutubeChannelWatch
 
     private WatchStatus status(com.masiton.ai.application.port.out.YoutubeChannelWatchStore.WatchDetail watch) {
         return new WatchStatus(watch.enabled(), watch.subscriptionStatus(), watch.lastNotificationAt(),
-                watch.lastRenewedAt(), watch.lastErrorCategory());
+                watch.lastRenewedAt(), watch.lastErrorCategory(), watch.lastErrorAt());
+    }
+
+    private WatchStatus initialStatus() {
+        return new WatchStatus(false, "INACTIVE", null, null, null);
     }
 
     private byte[] hashToken(String token) {

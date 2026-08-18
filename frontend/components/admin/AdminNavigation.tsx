@@ -14,6 +14,7 @@ const items = [
   { href: '/admin/participation', label: '제보·신고 검토' },
   { href: '/admin/curations', label: '큐레이션 관리' },
   { href: '/admin/ai', label: 'AI 영상 추출 관리' },
+  { href: '/admin/ai/youtube-channel-watches', label: 'YouTube 채널 감시' },
   { href: '/admin/restaurants/new', label: '맛집 등록' },
   { href: '/admin/creators/new', label: '유튜버 등록' },
   { href: '/admin/videos/new', label: '영상 등록' },
@@ -24,6 +25,11 @@ export function AdminNavigation() {
   const pathname = usePathname()
   const router = useRouter()
   const [logoutError, setLogoutError] = useState<string | null>(null)
+  const activeHref = items
+    .filter((item) => item.href === '/admin'
+      ? pathname === item.href
+      : pathname === item.href || pathname.startsWith(`${item.href}/`))
+    .sort((left, right) => right.href.length - left.href.length)[0]?.href
 
   async function handleLogout() {
     setLogoutError(null)
@@ -43,9 +49,7 @@ export function AdminNavigation() {
           <Link
             key={item.href}
             href={item.href}
-            className={item.href === '/admin'
-              ? pathname === item.href ? styles.activeLink : styles.link
-              : pathname === item.href || pathname.startsWith(`${item.href}/`) ? styles.activeLink : styles.link}
+            className={item.href === activeHref ? styles.activeLink : styles.link}
           >
             {item.label}
           </Link>
