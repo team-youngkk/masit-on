@@ -47,6 +47,8 @@ related_documents:
 
 ## 3. AI 영상 정보 추출과 자동 등록·예외 보정
 
+> 이 절의 등록 단위 판정 서술과 `MANUAL_OVERRIDE` 세 하위 상태 전이는 `합의 대기` 상태다. 절차와 불발 시 되돌릴 범위는 [ADR-AI-001 1절](../../07-adr/integration/ai-001-video-extraction-candidate-boundary.md)에 있다.
+
 ### 3.1 전체 상태 전이
 
 ```mermaid

@@ -28,7 +28,7 @@ related_documents:
 
 이 문서는 [PRD-ADMIN-002](../../../04-product/prd/admin/ai-video-information-extraction.md)의 관리자 신규 영상 추가, YouTube Webhook 접수, AI 추출 작업 조회와 자동 등록·예외 보정 API를 정의한다. AI 결과는 자동 검증을 통과하면 관리자 승인 없이 정식 Entity와 `VisitTag`를 생성·공개하고, 모호·실패·중복 결과만 보류한다. 판정과 등록의 단위는 작업 전체가 아니라 `BR-AIEXTRACT-001`의 장소 단위 등록 단위이며, 장소 동일성(`BR-AIEXTRACT-009`)과 대표 음식 카테고리(`BR-AIEXTRACT-010`)는 관리자 입력 없이 시스템이 결정한다. 이 API는 관리자에게 Kakao 장소 URL이나 음식 카테고리 선택을 요구하지 않는다.
 
-`registrationUnits`·`candidateTruncated` 응답 필드, 등록 단위 일괄 등록 API(3.6절), `review`의 `unitId`·`supplements`는 `합의 대기` 상태다. 합의는 [PR #226](https://github.com/team-youngkk/masit-on/pull/226)의 소유자 승인으로 갈음하며, 승인 전에는 구현 계약으로 사용하지 않는다. 승인 후 병합 직전 커밋에서 이 표시를 제거한다. 절차는 [ADR-AI-001 1절](../../../07-adr/integration/ai-001-video-extraction-candidate-boundary.md)에 있다. 그 밖의 절은 종전대로 Accepted다.
+`registrationUnits`·`candidateTruncated`·`manualOverrideType` 응답 필드, 등록 단위 일괄 등록 API(3.6절), `review`의 `unitId`·`supplements`·`ADJUST_CATEGORY`, 작업 최상위 `reviewStatus` 요약 규칙, `recoveryPaths`, `AIEXTRACT_UNIT_ID_REQUIRED`·`AIEXTRACT_UNIT_NOT_FOUND`·`AIEXTRACT_CONCURRENT_REQUEST_CONFLICT` 오류 코드는 `합의 대기` 상태다. 합의는 [PR #226](https://github.com/team-youngkk/masit-on/pull/226)의 소유자 승인으로 갈음하며, 승인 전에는 구현 계약으로 사용하지 않는다. 승인 후 병합 직전 커밋에서 이 표시를 제거한다. 절차는 [ADR-AI-001 1절](../../../07-adr/integration/ai-001-video-extraction-candidate-boundary.md)에 있다. 그 밖의 절은 종전대로 Accepted다.
 
 - 관리자 API는 `/api/admin` 아래에 두고 JWT Bearer와 `ADMIN` 권한을 요구한다.
 - YouTube Webhook은 `/api/webhooks/youtube` 아래의 외부 수신 경계이며 관리자 JWT를 요구하지 않는다. Webhook은 작업 접수만 하고 AI·정식 등록을 실행하지 않는다.
@@ -398,7 +398,7 @@ related_documents:
 - 자동 확정된 태그는 정식 `Visit` 등록 성공과 함께 `VisitTag`로 연결하며, 검색 API는 그 연결만 사용한다.
 - `DISCARD`는 등록되지 않은 `AUTO_BLOCKED` 등록 단위를 더 다루지 않겠다고 선언하는 종결 조치다. 자동 등록 결과를 되돌리는 것은 `ROLLBACK`이며 둘을 섞어 쓰지 않는다. 폐기한 등록 단위는 `MANUAL_OVERRIDE`가 되고 `discarded_at`이 채워지며, 등록 결과 컬럼은 계속 `NULL`이다. 이후 어떤 `decision`도 등록 API도 허용하지 않는다.
 - 자동 검증 실패 시 `AUTO_BLOCKED` 또는 `AUTO_REJECTED`로 유지하고 정식 Entity 저장은 0건이다.
-- 동시 검수 충돌은 `409 Conflict`로 처리하고 최신 상태 재조회를 요구한다.
+- 같은 등록 단위에 대한 동시 `review` 요청은 `409 AIEXTRACT_CONCURRENT_REQUEST_CONFLICT`로 처리하고 최신 상태 재조회를 요구한다.
 
 ### 3.6 `POST /api/admin/ai/video-extractions/{jobId}/registration-units/{unitId}/registration` 등록 단위 일괄 등록
 
@@ -503,9 +503,11 @@ Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-0
 | `PLACE_AMBIGUOUS` | 조건을 만족하는 장소가 둘 이상이다 | `CONFIRM` 보충 입력 | `kakaoPlaceUrl` |
 | `CATEGORY_UNRESOLVED` | 카테고리 근거를 찾지 못했다 | `CONFIRM` 보충 입력 | `foodCategoryId` |
 | `MISSING_REQUIRED_FIELD` | 등록 단위에 맛집명·주소 등 필수 후보가 없다 | 보완 텍스트 재추출 또는 기존 수동 등록 | 빈 배열 |
-| `VISIT_EVIDENCE_REQUIRED` | 방문 근거가 `UNKNOWN`이거나 영상 `TIMESTAMP`가 아니다 | 재추출. 방문 근거는 보완 텍스트 주장으로 확정하지 않는다 | 빈 배열 |
+| `VISIT_EVIDENCE_REQUIRED` | 방문 근거가 `UNKNOWN`이거나 영상 `TIMESTAMP`가 아니다 | 재추출 또는 기존 수동 등록. 방문 근거는 보완 텍스트 주장으로 확정하지 않는다 | 빈 배열 |
 | `DUPLICATE_CONFLICT` | 같은 맛집·방문 관계가 이미 존재한다 | 없음. 이미 등록된 자원을 확인한다 | 빈 배열 |
-| `EXTERNAL_SERVICE_ERROR` | Kakao·YouTube 조회 실패·시간 초과 | 등록 재실행 | 빈 배열 |
+| `EXTERNAL_SERVICE_ERROR` | Kakao·YouTube 조회 실패·시간 초과 | 등록 재실행 또는 기존 수동 등록 | 빈 배열 |
+
+이 표의 복구 경로 열은 3.6절 `recoveryPaths` 배열과 같은 의미이며, 세 사유 모두 재추출·재실행 뒤에도 관리자가 기존 수동 등록으로 우회할 수 있다는 점은 동일하다.
 
 - `requiredSupplements`가 빈 배열이면 `CONFIRM`으로 복구할 수 없다는 뜻이다. 이 상태에서 보낸 `CONFIRM`은 `422 AIEXTRACT_VALIDATION_CONFLICT`로 거절하고 정식 저장은 0건이며, 응답의 복구 경로를 안내한다.
 - 부족한 필드 이름은 작업 상세의 `missingFields`로 확인한다. 이 응답은 관리자가 채워 넣을 대상이 아니므로 `requiredSupplements`에 싣지 않는다.
@@ -557,7 +559,7 @@ Webhook 수신 경로는 공개 인터넷 진입점이므로 Nginx·Spring Secur
 | 오류 코드 | HTTP | 상황 |
 |---|---:|---|
 | `AIEXTRACT_INVALID_VIDEO_URL` | 400 | YouTube URL 형식·호스트·식별자 오류 |
-| `AIEXTRACT_DUPLICATE_CONFLICT` | 409 | 기존 정식 데이터 또는 동시 검수 충돌 |
+| `AIEXTRACT_DUPLICATE_CONFLICT` | 409 | 3.1절 신규 영상 접수 시 동일 URL이 기존 정식 등록 상태와 충돌해 자동 병합할 수 없음. 등록 단위의 업무 중복은 `blockReason`의 `DUPLICATE_CONFLICT`, 등록 단위 동시 요청은 `AIEXTRACT_CONCURRENT_REQUEST_CONFLICT`를 쓰며 이 코드와 다르다 |
 | `AIEXTRACT_JOB_NOT_FOUND` | 404 | 작업 ID 없음 또는 접근 불가 |
 | `AIEXTRACT_UNIT_NOT_FOUND` | 404 | 작업은 유효하지만 지정한 `unitId`가 그 작업의 등록 단위가 아님 |
 | `CREATOR_NOT_FOUND` | 404 | Creator 없음·비공개·삭제·외부 이용 불가 또는 감시 활성화 대상이 아님 |

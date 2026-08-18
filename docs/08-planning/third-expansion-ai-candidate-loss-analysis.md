@@ -199,6 +199,8 @@ Prompt `P2` 변경 전 배포본과 동일한 역사적 계약(`gemini-3.5-flash
 
 ## 9. 남은 결정
 
+> 이 절(9절)과 9.1절 전체는 `합의 대기` 상태다. 1~8절의 결함 분석과 실측 근거는 그 앞의 Accepted 상태를 유지한다. 절차와 불발 시 되돌릴 범위는 [ADR-AI-001 1절](../07-adr/integration/ai-001-video-extraction-candidate-boundary.md)에 있다.
+
 2026-08-18에 결정 C(장소 동일성), 복수 후보 처리, 카테고리 매핑, `MAX_CANDIDATES` 상한 네 항목이 결정됐다. 결정 내용은 요구사항·PRD·ADR에 반영했고 이 절에는 결과만 남긴다.
 
 - **결정 C 해소** — 장소 동일성 판정 기준을 변경했다. AI 후보에 Kakao 장소 URL을 요구하지 않고, 시스템이 상호명·주소로 Kakao를 검색해 정규화 상호명 완전일치와 도로명주소 시·구 일치를 함께 만족하는 결과가 정확히 1건일 때만 자동 확정한다. 0건은 `PLACE_NOT_FOUND`, 2건 이상은 `PLACE_AMBIGUOUS`로 차단한다. 근거는 [BR-AIEXTRACT-009](../01-requirements/business-rules.md#br-aiextract-009-장소-동일성-자동-확정)와 [ADR-AI-001 5.3절](../07-adr/integration/ai-001-video-extraction-candidate-boundary.md)이다.

@@ -154,7 +154,7 @@ related_documents:
 | `unit_index` | `integer` | NN | `(snapshot_id, unit_index)` unique | Snapshot 안의 등록 단위 순번 |
 | `restaurant_name` | `varchar(255)` | NN | 공백 금지 | 이 단위의 맛집명 후보 |
 | `review_status` | `varchar(24)` | NN | 상태 CHECK | `AUTO_CONFIRMED/AUTO_BLOCKED/AUTO_REJECTED/MANUAL_OVERRIDE` |
-| `block_reason` | `varchar(64)` | Yes | 차단 상태일 때 필수 | `PLACE_NOT_FOUND`, `PLACE_AMBIGUOUS`, `CATEGORY_UNRESOLVED`, 기존 검증 실패 코드 |
+| `block_reason` | `varchar(64)` | Yes | 차단 상태일 때 필수 | `PLACE_NOT_FOUND`, `PLACE_AMBIGUOUS`, `CATEGORY_UNRESOLVED`, `MISSING_REQUIRED_FIELD`, `VISIT_EVIDENCE_REQUIRED`, `DUPLICATE_CONFLICT`, `EXTERNAL_SERVICE_ERROR` |
 | `place_decision` | `jsonb` | Yes | 확정 시 필수 | 채택한 Kakao 장소 식별자·도로명주소와 `matchedBy` |
 | `category_decision` | `jsonb` | Yes | 확정 시 필수 | 선정한 카테고리와 `resolvedBy`(`KAKAO_PLACE_CATEGORY`·`MENU_EXPRESSION`·`MANUAL_OVERRIDE`) |
 | `registered_restaurant_id` | `uuid` | Yes | FK → `restaurant.id` | 등록한 맛집 |
