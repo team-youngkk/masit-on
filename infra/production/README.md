@@ -25,7 +25,7 @@ CodeDeploy가 원본 ASG를 기준으로 replacement 환경을 만들기 때문�
 - revision bucket은 이 모듈이 versioning·SSE·Public Access Block·TLS-only policy로 관리한다. GitHub Actions role은 OIDC trust와 `id-token: write`를 별도로 유지하고, 이 모듈에 role 이름을 넘기면 revision·deployment ID pointer prefix의 S3 Put/Get과 지정 CodeDeploy 앱/그룹의 생성·상태 조회·중단 권한을 추가한다.
 - Replacement ASG는 `COPY_AUTO_SCALING_GROUP`으로 CodeDeploy가 생성하므로 Terraform state가 소유하지 않는다. `KEEP_ALIVE` 정책으로 original 인스턴스를 관찰 기간 동안 남기고, 승인된 관찰 시간이 끝난 뒤 CodeDeploy가 만든 유휴 replacement ASG를 runbook으로 정리한다. Terraform plan에서 이 교체 환경을 관리 대상으로 추가하지 않는다.
 - 최초 apply에서는 Route53 alias가 기본으로 생성되지 않는다. blue에서 known-good revision을 기동하고 ALB health·외부 smoke를 확인한 뒤 `initial_blue_verified=true`를 별도 plan으로 승인해 DNS를 연결한다.
-- 자동 rollback은 CodeDeploy deployment failure/stop-on-alarm 이벤트에 대해 켜져 있다. ALB health가 backend readiness를 반영하고, target 5xx·latency·blue/green unhealthy host CloudWatch alarm도 이 모듈에서 deployment group에 연결한다.
+- 자동 rollback은 CodeDeploy deployment failure/stop-on-alarm 이벤트에 대해 켜져 있다. ALB health가 backend readiness를 반영하고, target 5xx·latency·`blue_unhealthy` CloudWatch alarm을 이 모듈에서 deployment group에 연결한다.
 
 ## 검증
 
