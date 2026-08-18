@@ -131,11 +131,14 @@ class Expansion3FlywayMigrationIntegrationTest {
         // then
         assertThat(jdbcTemplate.queryForList(
                 "SELECT version FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank", String.class))
-                .containsExactly("1", "2", "3", "4");
+                .containsExactly("1", "2", "3", "4", "5");
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM pg_indexes WHERE schemaname = current_schema() "
                 + "AND indexname IN ('ix_ai_job__video_input_versions', 'ix_ai_job__video_mode_versions', "
                 + "'ix_ai_temporary_input__expires_at', 'ix_visit_tag__created_from_snapshot')", Integer.class)).isEqualTo(4);
         assertAiSchemaAndContracts(jdbcTemplate, database.schema());
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM information_schema.columns "
+                + "WHERE table_schema = ? AND table_name = 'youtube_channel_watch' "
+                + "AND column_name = 'last_error_at'", Integer.class, database.schema())).isEqualTo(1);
         assertManualReviewSchema(jdbcTemplate, database.schema());
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT pg_get_constraintdef(oid) FROM pg_constraint "
