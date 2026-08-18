@@ -155,7 +155,6 @@ masiton:
     secure: true
     same-site: Strict
     path: /api/auth/tokens
-    public-base-url: ${AUTH_ALLOWED_ORIGINS:http://localhost:3000}
     member:
       refresh-token-ttl: P14D
       cookie-name: __Secure-masiton-refresh
@@ -165,5 +164,5 @@ masiton:
     login-failure:
       max-attempts: 5
       ttl: PT15M
-      trusted-proxy-addresses: ${ADMIN_LOGIN_TRUSTED_PROXY_ADDRESSES:}
-      reverse-proxy-enabled: ${ADMIN_LOGIN_REVERSE_PROXY_ENABLED:false}
+      trusted-proxy-addresses: ${AUTH_LOGIN_TRUSTED_PROXY_ADDRESSES:}
+      reverse-proxy-enabled: ${AUTH_LOGIN_REVERSE_PROXY_ENABLED:false}

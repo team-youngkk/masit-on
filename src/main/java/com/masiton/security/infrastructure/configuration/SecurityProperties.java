@@ -21,7 +21,6 @@ public class SecurityProperties {
     private boolean secure = true;
     private String sameSite = "Strict";
     private String path = "/api/auth/tokens";
-    private String publicBaseUrl = "http://localhost:3000";
     private final Member member = new Member();
     private final LoginFailure loginFailure = new LoginFailure();
 
@@ -69,14 +68,6 @@ public class SecurityProperties {
         this.path = path;
     }
 
-    public String getPublicBaseUrl() {
-        return publicBaseUrl;
-    }
-
-    public void setPublicBaseUrl(String publicBaseUrl) {
-        this.publicBaseUrl = publicBaseUrl;
-    }
-
     public LoginFailure getLoginFailure() {
         return loginFailure;
     }
@@ -88,16 +79,7 @@ public class SecurityProperties {
     @PostConstruct
     public void validateLoginFailureProxyBoundary() {
         loginFailure.validateProxyBoundary();
-        validateAdminPublicBaseUrl();
         validateMemberPublicBaseUrl();
-    }
-
-    public void validateAdminPublicBaseUrl() {
-        try {
-            publicBaseUrl = canonicalOrigins(publicBaseUrl);
-        } catch (IllegalArgumentException exception) {
-            throw new IllegalStateException("Admin public base URL must be an HTTP(S) origin", exception);
-        }
     }
 
     public void validateMemberPublicBaseUrl() {
@@ -108,10 +90,6 @@ public class SecurityProperties {
         }
     }
 
-    public boolean isAllowedPublicOrigin(String candidate) {
-        return Arrays.stream(publicBaseUrl.split(","))
-                .anyMatch(origin -> OriginCanonicalizer.matches(candidate, origin));
-    }
 
     private String canonicalOrigins(String configuredOrigins) {
         String canonical = Arrays.stream(configuredOrigins.split(","))
