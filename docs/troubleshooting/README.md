@@ -10,6 +10,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #226 AI 자동 등록 계약의 미완결 경로와 합의 상태 표기](pr-226-ai-auto-registration-contract-review.md)
 - [PR #221 Redis 사설 경로 비용과 배포 게이트 서술 정합화](pr-221-deployment-hardening-cost-review.md)
 
 - [PR #218 격리 성능 환경·부하 결과 정합성](pr-218-isolated-performance-review.md)

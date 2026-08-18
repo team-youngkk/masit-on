@@ -28,6 +28,8 @@ related_documents:
 
 이 문서는 [PRD-ADMIN-002](../../../04-product/prd/admin/ai-video-information-extraction.md)의 관리자 신규 영상 추가, YouTube Webhook 접수, AI 추출 작업 조회와 자동 등록·예외 보정 API를 정의한다. AI 결과는 자동 검증을 통과하면 관리자 승인 없이 정식 Entity와 `VisitTag`를 생성·공개하고, 모호·실패·중복 결과만 보류한다. 판정과 등록의 단위는 작업 전체가 아니라 `BR-AIEXTRACT-001`의 장소 단위 등록 단위이며, 장소 동일성(`BR-AIEXTRACT-009`)과 대표 음식 카테고리(`BR-AIEXTRACT-010`)는 관리자 입력 없이 시스템이 결정한다. 이 API는 관리자에게 Kakao 장소 URL이나 음식 카테고리 선택을 요구하지 않는다.
 
+`registrationUnits` 응답 필드, 등록 단위 일괄 등록 API(3.6절), `review`의 `unitId`·`supplements`는 `합의 대기` 상태다. API 소유자(김인안)와 restaurant 도메인 소유자의 합의 전에는 구현 계약으로 사용하지 않는다. 근거는 [ADR-AI-001 1절](../../../07-adr/integration/ai-001-video-extraction-candidate-boundary.md)이다. 그 밖의 절은 종전대로 Accepted다.
+
 - 관리자 API는 `/api/admin` 아래에 두고 JWT Bearer와 `ADMIN` 권한을 요구한다.
 - YouTube Webhook은 `/api/webhooks/youtube` 아래의 외부 수신 경계이며 관리자 JWT를 요구하지 않는다. Webhook은 작업 접수만 하고 AI·정식 등록을 실행하지 않는다.
 - 관리자 요청과 Webhook 요청은 같은 영상·입력·Provider·Model·Prompt·Schema 버전 멱등성 키로 수렴한다.
@@ -49,10 +51,28 @@ related_documents:
 | `resultCompleteness` | `PARTIAL` | 작업은 성공했지만 일부 필드가 `UNKNOWN` |
 | `reviewStatus` | `AUTO_CONFIRMED` | 자동 검증과 정식 등록·공개 완료. 작업 최상위 값은 모든 등록 단위가 확정된 경우에만 사용한다 |
 | `reviewStatus` | `AUTO_BLOCKED` | 모호·근거 부족·외부 충돌로 자동 보류 |
-| `reviewStatus` | `AUTO_REJECTED` | 입력·정책·중복 검증 실패로 자동 거부 |
+| `reviewStatus` | `AUTO_REJECTED` | 입력·정책 검증 실패로 자동 거부. 복구 경로가 없는 종결 상태다 |
 | `reviewStatus` | `MANUAL_OVERRIDE` | 관리자의 사후 보정·롤백 결과 |
 
 `SUCCEEDED`와 `PARTIAL`은 실행 상태와 결과 완전성을 각각 표현한다. `AUTO_CONFIRMED`는 자동 검증과 기존 정식 등록 명령이 성공했다는 의미이며, 관리자의 사전 승인을 뜻하지 않는다.
+
+중복은 종결이 아니라 복구 가능한 보류다. 같은 맛집·방문 관계가 이미 존재하는 `DUPLICATE_CONFLICT`는 `AUTO_BLOCKED`로 귀결하며 `AUTO_REJECTED`로 매핑하지 않는다. `BR-AIEXTRACT-011`의 예외 전환 대상이므로 관리자 사후 보정 경로가 열려 있어야 한다.
+
+#### 작업 최상위 `reviewStatus` 요약 규칙
+
+작업 최상위 값은 등록 단위 판정의 요약이다. 권위 있는 값은 `registrationUnits[].reviewStatus`이며, 최상위 값은 다음 우선순위로 결정한다.
+
+| 순위 | 조건 | 최상위 `reviewStatus` |
+|---:|---|---|
+| 1 | 등록 단위가 하나도 없다 | `null` |
+| 2 | 관리자 사후 보정·롤백이 하나라도 있다 | `MANUAL_OVERRIDE` |
+| 3 | `AUTO_BLOCKED` 단위가 하나라도 있다 | `AUTO_BLOCKED` |
+| 4 | 모든 단위가 `AUTO_REJECTED`다 | `AUTO_REJECTED` |
+| 5 | 모든 단위가 `AUTO_CONFIRMED`다 | `AUTO_CONFIRMED` |
+
+한 단위는 확정되고 다른 단위는 차단된 혼합 작업은 3순위에 따라 `AUTO_BLOCKED`다. 확정된 단위가 있어도 처리할 예외가 남아 있다는 뜻이므로, 클라이언트는 최상위 값만으로 등록 성공 여부를 판단하지 않고 `registrationUnits`를 함께 읽는다. 새 Enum 값은 추가하지 않는다.
+
+`resultCompleteness`와는 독립이다. `resultCompleteness`는 AI 추출 결과의 필드 완전성이고 `reviewStatus`는 등록 판정 결과다. `COMPLETE` 결과가 `AUTO_BLOCKED`일 수 있고, `PARTIAL` 결과의 일부 등록 단위가 `AUTO_CONFIRMED`일 수 있다.
 
 ### 2.2 작업 응답 공통 필드
 
@@ -225,6 +245,10 @@ related_documents:
   "unitId": "opaque-registration-unit-id",
   "reason": "Kakao 장소와 영상 timestamp 근거를 확인함",
   "expectedReviewStatus": "AUTO_BLOCKED",
+  "supplements": {
+    "kakaoPlaceUrl": "https://place.map.kakao.com/example",
+    "foodCategoryId": null
+  },
   "tagDecisions": [
     {
       "candidateTagId": "opaque-candidate-tag-id",
@@ -235,8 +259,23 @@ related_documents:
 }
 ```
 
+`supplements`는 `CONFIRM`에서만 사용하는 보충 입력이며, 3.6절 예외 전환 응답의 `requiredSupplements`에 대응한다.
+
+| 필드 | 타입 | 필수 조건 | 설명 |
+|---|---|---|---|
+| `supplements.kakaoPlaceUrl` | string 또는 null | `blockReason`이 `PLACE_NOT_FOUND`·`PLACE_AMBIGUOUS`이면 필수 | 관리자가 확인한 Kakao 장소 URL |
+| `supplements.foodCategoryId` | string 또는 null | `blockReason`이 `CATEGORY_UNRESOLVED`이면 필수 | 공통 기준정보 10개 값 중 하나의 식별자 |
+
+- `requiredSupplements`가 요구하지 않은 필드를 보내면 `400 INVALID_FIELD_VALUE`로 거절한다. 관리자가 자동 판정 결과를 임의로 덮어쓰지 못하게 하기 위해서다.
+- `requiredSupplements`가 요구한 필드가 없으면 `400 MISSING_REQUIRED_FIELD`로 거절하고 정식 저장은 0건이다.
+- `kakaoPlaceUrl`은 기존 수동 등록 경로와 같은 Kakao 장소 동일성 검증을 다시 통과해야 한다. 검증 실패는 `422 AIEXTRACT_VALIDATION_CONFLICT`이며 `blockReason`을 그대로 유지한다.
+- `foodCategoryId`는 활성 기준정보 값이어야 한다. 비활성·미존재 값은 `400 INVALID_FIELD_VALUE`다.
+- `VISIT_EVIDENCE_REQUIRED`·`DUPLICATE_CONFLICT`·`EXTERNAL_SERVICE_ERROR`는 보충 입력으로 복구할 수 없다. 이 사유의 `CONFIRM`은 `422 AIEXTRACT_VALIDATION_CONFLICT`로 거절하고 재추출·재실행 또는 수동 등록으로 안내한다.
+- 보충 입력으로 등록에 성공하면 등록 단위는 `MANUAL_OVERRIDE`가 되고, 사용한 보충값과 제출자를 감사 이력에 남긴다.
+- 계약 테스트는 `TST-E3-AI-007`에 매핑한다.
+
 - `CONFIRM`은 정상 자동 등록을 시작하는 명령이 아니라, `AUTO_BLOCKED` 결과를 관리자가 사후 보정해 등록하는 경우에만 사용한다.
-- `CONFIRM`·`DISCARD`·`ROLLBACK`은 등록 단위를 대상으로 한다. 작업에 등록 단위가 둘 이상이면 `unitId`가 필수이며, 없으면 `400 MISSING_REQUIRED_FIELD`로 거절한다.
+- `CONFIRM`·`DISCARD`·`ROLLBACK`은 등록 단위를 대상으로 한다. 작업에 등록 단위가 둘 이상이면 `unitId`가 필수이며, 없으면 `400 AIEXTRACT_UNIT_ID_REQUIRED`로 거절한다. 이 코드는 후보 데이터 부족을 뜻하는 `blockReason`의 `MISSING_REQUIRED_FIELD`와 구분한다. 전자는 요청 파라미터를 다시 보내야 하고, 후자는 후보 데이터를 보완해야 한다.
 - 대상 등록 단위의 필수 필드에 후보가 둘 이상 남아 어느 값으로 등록할지 확정할 수 없으면 `CONFIRM`을 `422 AIEXTRACT_VALIDATION_CONFLICT`로 거절한다. 서버가 후보 중 하나를 임의로 고르지 않기 때문이며, 외부 검증을 시작하기 전에 거절하고 정식 저장은 0건이다. 이 경우 관리자는 후보를 확인해 관리자 등록 API로 등록하거나 `DISCARD`한다.
 - `ROLLBACK`은 지정한 등록 단위의 자동 등록 결과만 되돌리고 같은 작업의 다른 등록 단위는 변경하지 않는다.
 - `tagDecisions`는 자동 태그 판단 또는 관리자 사후 보정의 append-only 이력으로 저장한다.
@@ -275,7 +314,8 @@ Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-0
 }
 ```
 
-- `reusedResources`는 새로 만들지 않고 기존 식별자를 재사용한 자원 목록이다. 유튜버·영상 재사용은 정상 경로이며 예외가 아니다.
+- `reusedResources`는 새로 만들지 않고 기존 식별자를 재사용한 자원 목록이다. 유튜버·영상 재사용은 정상 경로이며 예외가 아니다. 허용값은 `restaurant`, `creator`, `video`, `visit`이다.
+- 응답의 네 식별자와 `reusedResources`는 `ai_registration_unit`의 `registered_restaurant_id`, `registered_creator_id`, `registered_video_id`, `registered_visit_id`, `reused_resources` 컬럼에서 읽는다. 재요청 시 같은 값을 그대로 재구성할 수 있어야 하므로 별도 감사 이력이 아니라 이 테이블이 응답의 소스다.
 - 4종 등록의 원자 경계는 등록 단위 하나다. 중간 실패 시 이 등록 단위의 정식 저장은 0건이고, 같은 작업의 다른 등록 단위는 변경하지 않는다.
 - 외부 조회·검증은 DB 트랜잭션 밖에서 수행하고, 검증 통과 후 4종을 하나의 트랜잭션으로 저장한다.
 - 이미 `AUTO_CONFIRMED`인 등록 단위에 대한 재요청은 새 Entity를 만들지 않고 기존 결과를 그대로 반환한다.
@@ -359,7 +399,8 @@ Webhook 수신 경로는 공개 인터넷 진입점이므로 Nginx·Spring Secur
 | `AIEXTRACT_PROVIDER_BLOCKED` | 429 | Gemini Free Tier quota 소진·결제 연결 요구·무료 정책 미검증 |
 | `AIEXTRACT_WEBHOOK_REJECTED` | 403 | 구독 채널·검증 Token 불일치 |
 | `AIEXTRACT_WEBHOOK_SIGNATURE_INVALID` | 403 | Webhook HMAC 비밀값·헤더 누락 또는 서명 불일치 |
-| `AIEXTRACT_VALIDATION_CONFLICT` | 422 | 자동 검증 중 기존 Kakao·YouTube·Visit 검증 실패 |
+| `AIEXTRACT_VALIDATION_CONFLICT` | 422 | 자동 검증 중 기존 Kakao·YouTube·Visit 검증 실패, 보충 입력으로 복구할 수 없는 예외 사유 |
+| `AIEXTRACT_UNIT_ID_REQUIRED` | 400 | 등록 단위가 둘 이상인 작업의 `review` 요청에 `unitId`가 없음 |
 
 모든 오류는 서버 생성 `traceId`를 포함하며 입력 원문·Gemini 응답·비밀정보를 메시지에 포함하지 않는다.
 

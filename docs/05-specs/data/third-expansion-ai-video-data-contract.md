@@ -29,6 +29,8 @@ related_documents:
 
 이 문서는 AI 영상 추출 작업, 후보 Snapshot, 통제 태그, Gemini 영상 입력 이력과 YouTube 채널 감시 상태의 논리·물리 데이터 경계를 정의하는 Accepted 계약이다. Google Gemini API는 `gemini-3.5-flash-lite`, Gemini Developer API global endpoint, Free Tier 전용·유료 호출 금지, 현재 Prompt `P7`, 결과 Schema `S1`을 사용한다. 기존 Prompt `P1`·`P2`·`P3`·`P4`·`P5`·`P6` 작업과 Snapshot은 재현성을 위한 역사적 이력으로만 보존한다. 컬럼·제약·인덱스의 정본은 이 문서와 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql)의 대응을 검증하는 방식으로 관리한다.
 
+**`ai_registration_unit`(5.1절)과 `food_category_mapping`(5.2절)은 `합의 대기` 상태다.** 두 테이블은 새 Flyway 마이그레이션과 seed를 요구하므로 Flyway 순서 소유자(박진영)와 restaurant 도메인 소유자의 합의 전에는 확정 계약으로 사용하지 않는다. 합의 후 별도 커밋에서 이 표시를 제거한다. 그 밖의 절은 종전대로 Accepted다.
+
 - AI 후보 데이터는 기존 `Restaurant`, `Creator`, `Video`, `Visit`의 정식 데이터를 대체하지 않는다.
 - 자동 검증과 기존 외부 검증 전에는 정식 Entity를 생성·수정·공개하지 않는다. 관리자 사전 승인은 요구하지 않는다.
 - 원본 영상·전체 자막·전사·Gemini 응답 전문은 저장하지 않는다.
@@ -152,17 +154,55 @@ related_documents:
 | `block_reason` | `varchar(64)` | Yes | 차단 상태일 때 필수 | `PLACE_NOT_FOUND`, `PLACE_AMBIGUOUS`, `CATEGORY_UNRESOLVED`, 기존 검증 실패 코드 |
 | `place_decision` | `jsonb` | Yes | 확정 시 필수 | 채택한 Kakao 장소 식별자·도로명주소와 `matchedBy` |
 | `category_decision` | `jsonb` | Yes | 확정 시 필수 | 선정한 카테고리와 `resolvedBy`(`KAKAO_PLACE_CATEGORY`·`MENU_EXPRESSION`·`MANUAL_OVERRIDE`) |
-| `registered_restaurant_id` | `uuid` | Yes | FK → `restaurant.id` | 자동 등록 결과 |
+| `registered_restaurant_id` | `uuid` | Yes | FK → `restaurant.id` | 등록한 맛집 |
+| `registered_creator_id` | `uuid` | Yes | FK → `creator.id` | 등록하거나 재사용한 유튜버 |
+| `registered_video_id` | `uuid` | Yes | FK → `video.id` | 등록하거나 재사용한 영상 |
 | `registered_visit_id` | `uuid` | Yes | FK → `visit.id` | 같은 실행에서 만든 방문 관계 |
+| `reused_resources` | `jsonb` | NN | 배열, 허용값 CHECK | 새로 만들지 않고 재사용한 자원. `restaurant`·`creator`·`video`·`visit` |
 | `executed_by` | `varchar(16)` | NN | `WORKER`·`ADMIN` CHECK | 등록 실행 주체 |
 | `decided_at` | 시간 | NN | 기본 현재 시각 | 판정 시각 |
+| `rolled_back_at` | 시간 | Yes | `MANUAL_OVERRIDE`에서만 non-null | 관리자 롤백 시각 |
 
-- `review_status`가 `AUTO_CONFIRMED`이면 `place_decision`·`category_decision`·`registered_restaurant_id`·`registered_visit_id`가 모두 존재해야 하고, 그 밖의 상태이면 두 등록 결과 컬럼은 `NULL`이어야 한다.
+등록 결과 컬럼과 상태의 조합은 다음 규칙을 따른다. `MANUAL_OVERRIDE`는 사후 등록과 롤백 두 경우에 모두 쓰이므로 `rolled_back_at`으로 구분한다.
+
+| `review_status` | `rolled_back_at` | 의미 | 네 등록 결과 컬럼 |
+|---|---|---|---|
+| `AUTO_CONFIRMED` | `NULL` | 자동 등록 완료 | 모두 존재 |
+| `MANUAL_OVERRIDE` | `NULL` | 관리자 사후 보정 등록 완료 | 모두 존재 |
+| `MANUAL_OVERRIDE` | non-null | 관리자 롤백 완료 | 모두 `NULL` |
+| `AUTO_BLOCKED`·`AUTO_REJECTED` | `NULL` | 등록하지 않음 | 모두 `NULL` |
+
+- CHECK 조건은 "등록 결과 컬럼이 모두 존재하거나 모두 `NULL`"이고, 값이 존재하는 경우는 `AUTO_CONFIRMED`이거나 `rolled_back_at`이 `NULL`인 `MANUAL_OVERRIDE`뿐이다. `place_decision`·`category_decision`도 같은 조건을 따른다.
+- 롤백은 등록 결과 컬럼을 `NULL`로 되돌리고 `rolled_back_at`을 채운다. 되돌린 정식 Entity의 식별자는 감사 이력에 남는다.
 - 맛집·유튜버·영상·방문 관계 4종 등록은 `BR-AIEXTRACT-011`에 따라 하나의 트랜잭션으로 저장한다. `executed_by`는 Worker 자동 실행과 관리자 실행을 구분하며 판정 기준은 두 경우가 같다.
-- 유튜버·영상은 기존 행이 있으면 재사용하므로 이 테이블은 맛집과 방문 관계만 직접 참조한다. 재사용 여부는 감사 이력에 남긴다.
+- 유튜버·영상은 기존 행이 있으면 재사용한다. 재사용한 경우에도 참조 컬럼에 그 식별자를 기록하고 `reused_resources`에 자원 이름을 남긴다. 등록 단위 일괄 등록 API 응답은 감사 이력이 아니라 이 컬럼들에서 재구성한다.
 - 등록 단위의 실패는 같은 Snapshot의 다른 등록 단위 행과 그 정식 등록 결과를 변경하지 않는다. 원자성 경계는 등록 단위 하나다.
-- 관리자 사후 보정·롤백은 기존 행을 덮어쓰지 않고 감사 이력을 추가한 뒤 `review_status`를 `MANUAL_OVERRIDE`로 전환한다.
+- 관리자 사후 보정·롤백은 판정 이력을 덮어쓰지 않고 append-only 감사 이력을 추가한 뒤 `review_status`를 `MANUAL_OVERRIDE`로 전환한다.
 - 작업 최상위 `ai_candidate_snapshot.review_status`는 등록 단위 판정의 요약이며, 단위별 권위 있는 값은 이 테이블이 가진다.
+
+### 5.2 `food_category_mapping`
+
+`BR-AIEXTRACT-010`의 카테고리 매핑 표를 코드 상수가 아닌 기준정보로 관리하기 위한 테이블이다. 기존 `food_category`의 10개 값은 그대로 두고 매핑 규칙만 분리한다. `food_category`에 흡수하지 않는 이유는 한 카테고리에 여러 표현이 대응하는 다대일 관계이고 표현마다 출처·일치 방식·우선순위가 다르기 때문이다.
+
+새 테이블이므로 새 Flyway 마이그레이션과 seed가 필요하고 Flyway 순서 소유자 합의 대상이다. 기준정보 소유자는 restaurant 도메인이다.
+
+| 컬럼 | SQL 타입 후보 | Null | 키·제약 | 설명 |
+|---|---|---:|---|---|
+| `id` | `uuid` | NN | PK | 매핑 행 ID |
+| `source_type` | `varchar(24)` | NN | `KAKAO_PLACE_CATEGORY`·`MENU_EXPRESSION` CHECK | 대조 대상 근거 유형 |
+| `pattern` | `varchar(128)` | NN | 공백 금지, 정규화 저장 | 대조할 표현 |
+| `match_type` | `varchar(16)` | NN | `EXACT`·`PARTIAL` CHECK | 일치 방식 |
+| `food_category_id` | `uuid` | NN | FK → `food_category.id` | 대응 카테고리 |
+| `priority` | `smallint` | NN | 1 이상 | 복수 일치 시 우선순위. 작을수록 우선 |
+| `active` | `boolean` | NN | 기본 `true` | 활성 여부 |
+| `created_at`, `updated_at` | 시간 | NN | 기본 현재 시각 | 변경 이력 기준 시각 |
+
+- `(source_type, pattern, match_type)`은 unique다. `pattern`은 공백 제거·소문자 통일로 정규화해 저장하고 대조 시에도 같은 정규화를 적용한다.
+- 대조 순서는 `source_type`이 1순위(`KAKAO_PLACE_CATEGORY` 우선), 그 안에서 `match_type`이 2순위(`EXACT` 우선), 그 안에서 `priority` 오름차순이다. 같은 순위에서 서로 다른 카테고리로 일치하는 행이 둘 이상이면 임의로 고르지 않고 `CATEGORY_UNRESOLVED`로 차단한다.
+- `active = false` 행은 대조에서 제외한다. 행을 삭제하지 않고 비활성화해 과거 판정 근거를 보존한다.
+- 매핑 표 변경은 이미 등록된 결과를 소급 재계산하지 않는다. `updated_at`으로 변경 시점을 추적하고, 판정 시 사용한 매핑 행 식별자는 `ai_registration_unit.category_decision`에 남긴다.
+- `기타` 카테고리는 이 표가 명시적으로 `기타`를 지정한 행에 일치했을 때만 사용한다. 일치하는 행이 없으면 `기타`로 대체하지 않고 차단한다.
+- seed는 기존 `ResolveVerifiedRestaurantReferenceService`의 고정 키워드를 `MENU_EXPRESSION`·`EXACT` 행으로 이관하는 것에서 시작하고, Kakao 분류 표현은 `KAKAO_PLACE_CATEGORY` 행으로 추가한다. `TST-E3-AI-006`은 이 seed를 고정 데이터로 사용한다.
 
 `candidate_tags`의 각 항목은 `candidateTagId`, `tagType`, `rawLabel`, `normalizedCode`, `label`, `confidence`, `evidence`를 가진다. `normalizedCode`가 기존 정의와 통합되지 않는 경우 자동 등록 규칙을 통과하면 새 `TagDefinition`을 만든다.
 
