@@ -33,7 +33,7 @@ related_documents:
 - `preserve_client_ip`는 `false`를 유지한다. `true`면 대상 인스턴스가 보는 출처가 원래 클라이언트 IP가 되어 22를 endpoint security group 출처로 허용한 규칙에 매칭되지 않는다. 값을 바꾸면 endpoint가 교체된다.
 - 전용 Redis는 복제가 없는 단일 장애점이다. [ADR-DATA-005](../../../docs/07-adr/data/data-005-redis-refresh-token.md) 12절이 Redis 장애를 fail-closed로 정했으므로 **Redis가 죽으면 앱이 살아 있어도 인증이 전면 중단된다.**
 - Redis AOF·RDB는 별도 data EBS에 `/opt/masiton/redis/data`로 mount한다. Terraform이 Redis 인스턴스를 교체하면 attachment만 새 인스턴스로 바뀌며, data volume은 자동 삭제하지 않는다. volume을 의도적으로 폐기할 때는 `prevent_destroy`를 해제하는 별도 승인과 백업 확인이 필요하다.
-- [ADR-DATA-005](../../../docs/07-adr/data/data-005-redis-refresh-token.md) 6절은 2026-07-30에 공동 owner 합의로 "앱 인스턴스 동거"로 개정한 조항이다. **분리는 그 개정을 되돌리므로 같은 owner의 합의가 다시 필요하다.**
+- [ADR-DATA-005](../../../docs/07-adr/data/data-005-redis-refresh-token.md) 6절의 2026-07-30 "앱 인스턴스 동거"는 M2 초기 운영 기준으로 보존한다. **2026-08-18 김인안·이우람 owner 재합의로 배포 고도화 운영의 사설 subnet 전용 Redis가 확정되었으므로, 남은 선행 조건은 기존 데이터 이전·rollback·cutover 리허설과 실제 운영 승인이다.**
 
 ## 기존 Redis 상태가 있을 때 최초 전환
 
