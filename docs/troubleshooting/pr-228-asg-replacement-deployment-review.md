@@ -16,7 +16,7 @@ related_documents:
 | PR | [#228 ASG 기반 Blue-Green 운영 배포 인프라 반영](https://github.com/team-youngkk/masit-on/pull/228) |
 | 작성자 | w00lam |
 | 처리 일자 | 2026-08-18 |
-| 범위 | 최초 리뷰 7건, 후속 P1 리뷰 3건, 최신 후속 리뷰 4건, 최신 HEAD에서 이미 반영된 RDS ingress 예시 1건 |
+| 범위 | 최초 리뷰 7건, 후속 P1 리뷰 3건, 최신 후속 리뷰 6건, 최신 HEAD에서 이미 반영된 RDS ingress 예시 1건 |
 | 주 문제 유형 | 배포 / 인프라 / 애플리케이션 |
 | 기존 기록 | [트러블슈팅 인덱스](README.md), [PR #221 배포 hardening 기록](pr-221-deployment-hardening-cost-review.md), ADR-DEPLOY-005와 비용·일정 영향 검토를 확인했다. 동일한 Redis volume·CodeDeploy 중단·단일 target group 문제를 직접 다룬 기존 기록은 없어 새 기록으로 남긴다. |
 
@@ -38,6 +38,8 @@ related_documents:
 | [취소 cleanup](https://github.com/team-youngkk/masit-on/pull/228) (`PRRC_kwDOTf2xKc7imXGY`) | GitHub 취소가 EXIT trap보다 빨라 원격 CodeDeploy가 계속 진행할 수 있음 | 배포 / Git | 수정 필요 | production 자동 취소를 끄고 deployment ID artifact와 별도 cleanup job에서 stop·terminal 확인 | `RuntimeDeploymentContractTest` 통과. 실제 취소 리허설은 미실행 |
 | [Redis multipart AOF](https://github.com/team-youngkk/masit-on/pull/228) (`PRRC_kwDOTf2xKc7imXGd`) | Redis 8의 `appendonly.aof` 단일 파일 검사가 정상 복사본에서도 실패함 | 데이터베이스 / 인프라 | 수정 필요 | manifest·multipart AOF 파일·`redis-check-aof`·known fixture key 검증으로 교체 | README 계약 테스트 통과. 실제 운영 데이터 복구 리허설은 미실행 |
 | [public IPv4·private egress](https://github.com/team-youngkk/masit-on/pull/228) (`PRRC_kwDOTf2xKc7imXGk`) | public route만 있고 public IPv4 할당·private egress가 보장되지 않음 | 인프라 / 네트워크 | 수정 필요 | launch template에서 public IPv4를 명시하고 private 모드는 NAT default route를 plan에서 검증 | `RuntimeDeploymentContractTest`, Terraform fmt. 실제 AWS plan/apply는 미실행 |
+| [rollback trap 시점](https://github.com/team-youngkk/masit-on/pull/228) (`PRRC_kwDOTf2xKc7imuyR`) | 활성 파일 교체 전에 rollback trap이 없어 install·daemon-reload·enable 실패를 복구하지 못함 | 배포 / 애플리케이션 | 수정 필요 | 이전 산출물 backup 직후 trap을 등록해 첫 활성 install부터 rollback 보호 | Git Bash `bash -n`, `RuntimeDeploymentContractTest` |
+| [ACM 인증서 기본값](https://github.com/team-youngkk/masit-on/pull/228) (`PRRC_kwDOTf2xKc7imuyT`) | `null` 기본값은 HTTP listener만 만들지만 Nginx·배포는 항상 TLS 인증서를 요구함 | 인프라 / 배포 | 수정 필요 | ACM certificate ARN을 필수 변수로 만들고 ARN 형식 validation 추가 | Terraform validate·`RuntimeDeploymentContractTest`. 실제 AWS apply는 미실행 |
 
 ## 3. 문제 현상과 발생 조건
 
@@ -63,6 +65,8 @@ related_documents:
 11. GitHub Actions 취소 수명주기보다 긴 polling을 deploy job의 EXIT trap에만 의존했다.
 12. Redis 8 multipart AOF를 Redis 6 이전의 단일 `appendonly.aof` 파일로 가정했다.
 13. app subnet의 IGW route 검증만으로 public IPv4 할당과 private egress 경로까지 보장된다고 가정했다.
+14. 활성 경로를 처음 변경하는 install 단계보다 rollback trap 등록이 늦었다.
+15. Terraform은 ACM ARN이 없을 때 HTTP listener을 허용했지만, Nginx와 배포 스크립트는 TLS 인증서를 항상 요구했다.
 
 ## 5. 확인 및 시도
 
@@ -79,11 +83,11 @@ related_documents:
 | Terraform 1.6.6 `plan` | 초기 운영 레이어 실패 후 해결 | 초기 postcondition이 현재 public app subnet과 충돌했지만, `app_subnet_is_private` 변수로 의도를 선언하도록 정정한 뒤 현재 구성 plan은 통과했다. Redis는 데이터 volume 도입으로 인스턴스가 교체되며 교체 후 앱 재배포가 필요하다. 11절 참조 |
 | CodeDeploy cancel/rollback 리허설·IAM policy simulator | 미실행: 승인된 운영 리허설 범위 밖 | 운영 전환 전에 담당자가 확인 |
 | 후속 리뷰 3건 대조 | Redis migration 절차, rollback 오류 전파, stop 실패 전파를 코드·문서에 반영 | 관련 테스트와 셸 문법을 재실행하고 실제 운영 리허설은 별도 확인 |
-| 최신 후속 리뷰 4건 대조 | NVMe serial 정규화, 취소 cleanup job, multipart AOF 검증, public IPv4·private NAT 검증을 코드·문서에 반영 | 관련 테스트·셸 문법·Terraform fmt를 재실행하고 실제 AWS 리허설은 별도 확인 |
+| 최신 후속 리뷰 6건 대조 | NVMe serial 정규화, 취소 cleanup job, multipart AOF 검증, public IPv4·private NAT 검증, rollback trap 시점, ACM ARN 필수화를 코드·문서에 반영 | 관련 테스트·셸 문법·Terraform fmt를 재실행하고 실제 AWS 리허설은 별도 확인 |
 
 ## 6. 최종 해결
 
-- 변경 내용: Redis data EBS 분리·NVMe serial 정규화·multipart AOF 이전 검증, CodeDeploy 중단 보상·취소 cleanup job·실패 전파, 단일 target group 계약 정정과 green 자원 제거, public IPv4·private NAT route 검증, rollback 실행 산출물 backup/restore와 오류 전파, IAM statement 분리, 회귀 테스트와 문서 기록을 추가했다.
+- 변경 내용: Redis data EBS 분리·NVMe serial 정규화·multipart AOF 이전 검증, CodeDeploy 중단 보상·취소 cleanup job·실패 전파, 단일 target group 계약 정정과 green 자원 제거, public IPv4·private NAT route 검증, rollback 실행 산출물 backup/restore·trap 시점 보장과 오류 전파, ACM ARN 필수화, IAM statement 분리, 회귀 테스트와 문서 기록을 추가했다.
 - 선택 이유: 운영 상태·배포 제어·계약 문서를 각각 소유 경계에 맞춰 최소 변경하고, 기존 단일 EC2 경로는 유지하기 위해서다.
 - 변경 파일: `.github/workflows/ci.yml`, `deploy/scripts/app-deploy.sh`, `infra/production/terraform-redis/*`, `infra/production/terraform/*`, `infra/production/README.md`, `docs/07-adr/platform/deploy-005-asg-blue-green-rollout.md`, `docs/08-planning/blue-green-cleanup-runbook.md`, `src/test/java/com/masiton/deployment/RuntimeDeploymentContractTest.java`
 - 고려한 대안: Redis snapshot 복구 절차만 추가하는 방법보다 별도 EBS 수명주기 분리가 교체 시 즉시 보존을 보장한다. listener rollback 계약을 유지하는 방법은 실제 Server 플랫폼 동작과 충돌하므로 채택하지 않았다.
@@ -122,7 +126,7 @@ related_documents:
 - AWS 계정 리허설과 IAM policy simulator는 이 작업에서 실행하지 않았으므로 운영 전환 전 확인이 필요하다.
 - RDS ingress 예시 스레드는 최신 HEAD에 이미 `manage_rds_ingress_rule = true`가 있어 코드 변경 없이 “이미 해결”로 답변한다.
 - 후속 P1 스레드 3건은 코드·운영 문서에 반영했지만 실제 데이터 이전·cancel·rollback 리허설은 미실행이다.
-- 최신 후속 4건은 코드·운영 문서에 반영했지만 실제 AWS 취소 cleanup·Redis 복구·Terraform apply 리허설은 미실행이다.
+- 최신 후속 6건은 코드·운영 문서에 반영했지만 실제 AWS 취소 cleanup·Redis 복구·Terraform apply 리허설은 미실행이다.
 
 ## 11. 해결된 계약 충돌: app subnet의 IGW 경로
 
@@ -169,3 +173,5 @@ app_subnet_ids의 route table에는 IGW를 향한 0.0.0.0/0 경로가 없어야 
 2. **GitHub 취소 cleanup**: production `workflow_dispatch`와 push 배포는 자동 취소하지 않도록 concurrency를 PR에만 적용했다. CodeDeploy deployment ID를 artifact로 먼저 보관하고, deploy job이 취소되면 별도 cleanup job이 artifact를 읽어 stop 요청과 24회 terminal polling을 수행한다. 5분 취소 강제 종료 한도 안에 끝나도록 cleanup polling은 4분으로 제한했다.
 3. **Redis 8 multipart AOF**: 최초 이전 절차에서 단일 `appendonly.aof` 검사를 제거하고 `appendonly.aof.manifest`, multipart AOF 파일, 동일 Redis digest의 `redis-check-aof` 결과를 확인하도록 바꿨다. Redis 재기동 뒤에는 운영 비밀값을 노출하지 않고 known fixture key의 `EXISTS` 결과를 확인한다.
 4. **public/private egress**: public app 모드에서는 launch template의 `network_interfaces.associate_public_ip_address`를 `!var.app_subnet_is_private`로 명시한다. private 모드는 현재 모듈이 NAT egress를 지원 경로로 삼고 `0.0.0.0/0 -> nat-*` route를 postcondition으로 요구한다. endpoint-only private 토폴로지는 별도 서비스·subnet 연결 계약 없이는 허용하지 않는다.
+5. **rollback 보호 시점**: 이전 이미지·스크립트·unit backup이 끝난 직후 `rollback_enabled=yes`와 `trap rollback ERR`를 등록한다. 따라서 첫 활성 `install`·`daemon-reload`·`enable` 실패도 이전 산출물 복구 경로로 들어간다.
+6. **ACM 계약**: HTTP-only fallback을 제거하고 `acm_certificate_arn`을 nullable false의 필수 변수로 바꿨다. 유효한 ACM ARN 형식이 아니면 Terraform variable validation에서 멈추므로, ALB HTTPS listener·Nginx 인증서 export·배포 흐름이 같은 필수 전제를 공유한다.

@@ -83,10 +83,14 @@ variable "health_check_path" {
 }
 
 variable "acm_certificate_arn" {
-  description = "HTTPS listener에 사용할 기존 ACM 인증서 ARN. null이면 HTTP listener만 만든다"
+  description = "ALB HTTPS listener와 Nginx 재암호화에 사용할 기존 ACM 인증서 ARN. 운영 배포 경로에서 필수다"
   type        = string
-  default     = null
-  nullable    = true
+  nullable    = false
+
+  validation {
+    condition     = can(regex("^arn:aws:acm:[^:]+:[0-9]{12}:certificate/.+", var.acm_certificate_arn))
+    error_message = "acm_certificate_arn은 유효한 ACM certificate ARN이어야 한다."
+  }
 }
 
 variable "alb_ingress_cidr_blocks" {

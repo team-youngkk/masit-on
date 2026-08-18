@@ -67,6 +67,7 @@ class RuntimeDeploymentContractTest {
     void deploy_배포후health실패시rollback하고_성공시trap을해제한다() throws IOException {
         String script = Files.readString(APP_DEPLOY);
         int trap = script.indexOf("trap rollback ERR");
+        int firstActiveInstall = script.indexOf("install -d -m 0755 \"$OPT_DIR/bin\" \"$OPT_DIR/etc\"");
         int health = script.lastIndexOf("\"$OPT_DIR/bin/runtime-health.sh\"");
         int release = script.lastIndexOf("trap - ERR");
 
@@ -78,6 +79,7 @@ class RuntimeDeploymentContractTest {
                 .contains("redis_cli()")
                 .contains("--network host");
         assertThat(trap).isGreaterThan(0);
+        assertThat(firstActiveInstall).isGreaterThan(trap);
         assertThat(health).isGreaterThan(trap);
         assertThat(release).isGreaterThan(health);
     }
@@ -125,7 +127,11 @@ class RuntimeDeploymentContractTest {
                 .contains("var.app_subnet_is_private")
                 .contains("nat_gateway_id")
                 .contains("0.0.0.0/0 -> NAT gateway");
-        assertThat(variables).contains("variable \"app_subnet_is_private\"");
+        assertThat(variables)
+                .contains("variable \"app_subnet_is_private\"")
+                .contains("variable \"acm_certificate_arn\"")
+                .contains("nullable    = false")
+                .contains("acm_certificate_arn은 유효한 ACM certificate ARN이어야 한다.");
         assertThat(asg)
                 .contains("network_interfaces")
                 .contains("associate_public_ip_address = !var.app_subnet_is_private");

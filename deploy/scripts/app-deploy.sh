@@ -141,7 +141,12 @@ backup_asset "$OPT_DIR/bin/runtime-health.sh" "$previous/opt/masiton/bin/runtime
 backup_asset "/etc/systemd/system/masiton-backend.service" "$previous/etc/systemd/system/masiton-backend.service"
 backup_asset "/etc/systemd/system/masiton-frontend.service" "$previous/etc/systemd/system/masiton-frontend.service"
 
-# 여기까지 왔으면 두 이미지가 모두 로컬에 있다. 이제 활성 경로를 교체한다.
+# 여기까지 왔으면 두 이미지와 이전 실행 산출물의 백업이 모두 준비됐다. 이후 첫
+# install부터 rollback 보호를 켜서 활성 경로 변경 중 실패도 복구 대상으로 포함한다.
+rollback_enabled=yes
+trap rollback ERR
+
+# 이제 활성 경로를 교체한다.
 install -d -m 0755 "$OPT_DIR/bin" "$OPT_DIR/etc"
 install -m 0750 "$STAGE/app-run.sh" "$OPT_DIR/bin/app-run.sh"
 install -m 0750 "$STAGE/app-secrets-render.sh" "$OPT_DIR/bin/app-secrets-render.sh"
@@ -155,8 +160,6 @@ done
 
 systemctl daemon-reload
 systemctl enable masiton-backend.service masiton-frontend.service >/dev/null
-rollback_enabled=yes
-trap rollback ERR
 systemctl restart masiton-backend.service
 systemctl restart masiton-frontend.service
 
