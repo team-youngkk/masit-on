@@ -47,6 +47,8 @@ related_documents:
 
 ## 3. AI 영상 정보 추출과 자동 등록·예외 보정
 
+> 이 절의 등록 단위 판정 서술과 `MANUAL_OVERRIDE` 세 하위 상태 전이는 `합의 대기` 상태다. 절차와 불발 시 되돌릴 범위는 [ADR-AI-001 1절](../../07-adr/integration/ai-001-video-extraction-candidate-boundary.md)에 있다.
+
 ### 3.1 전체 상태 전이
 
 ```mermaid
@@ -57,17 +59,34 @@ stateDiagram-v2
     RUNNING --> FAILED: timeout / 429 / 제공자·Schema 오류
     FAILED --> QUEUED: 허용된 수동 재시도
     SUCCEEDED --> AUTO_CONFIRMED: 자동 검증·중복·근거·외부 검증 성공
-    SUCCEEDED --> AUTO_BLOCKED: 필수값 누락·모호·검증 충돌
-    SUCCEEDED --> AUTO_REJECTED: 정책 위반·중복·자동 거부
+    SUCCEEDED --> AUTO_BLOCKED: 필수값 누락·모호·검증 충돌·업무 중복
+    SUCCEEDED --> AUTO_REJECTED: 정책 위반·자동 거부
     AUTO_BLOCKED --> QUEUED: 허용된 재처리
-    AUTO_BLOCKED --> MANUAL_OVERRIDE: 관리자 사후 보정
-    AUTO_CONFIRMED --> MANUAL_OVERRIDE: 관리자 롤백·정정
+    AUTO_BLOCKED --> REGISTERED_OVERRIDE: 관리자 사후 보정 등록
+    AUTO_BLOCKED --> DISCARDED: 관리자 폐기
+    AUTO_CONFIRMED --> REGISTERED_OVERRIDE: 관리자 카테고리 보정
+    AUTO_CONFIRMED --> ROLLED_BACK: 관리자 롤백
+    REGISTERED_OVERRIDE --> REGISTERED_OVERRIDE: 카테고리 보정 반복
+    REGISTERED_OVERRIDE --> ROLLED_BACK: 관리자 롤백
     AUTO_CONFIRMED --> [*]
     AUTO_REJECTED --> [*]
-    MANUAL_OVERRIDE --> [*]
+    ROLLED_BACK --> [*]
+    DISCARDED --> [*]
 ```
 
+`REGISTERED_OVERRIDE`·`ROLLED_BACK`·`DISCARDED`는 별도 Enum 값이 아니라 `MANUAL_OVERRIDE` 하나의 세 하위 상태다. 저장 계층은 `rolled_back_at`·`discarded_at`으로 구분한다.
+
+| 하위 상태 | 구분 | 등록 결과 | 후속 전이 |
+|---|---|---|---|
+| 등록 유지 | 두 시각 모두 없음 | 존재 | 카테고리 보정, 롤백 |
+| 롤백 완료 | `rolled_back_at` 있음 | 없음 | 없음. 종결 |
+| 폐기 완료 | `discarded_at` 있음 | 없음 | 없음. 종결 |
+
 작업 실행 상태와 자동 등록 상태는 분리한다. `SUCCEEDED`는 AI 출력 Schema를 처리했다는 뜻이며, 자동 검증을 통과하면 `AUTO_CONFIRMED`로 전환하면서 정식 Entity와 `VisitTag`를 생성·공개한다. 관리자는 정상 경로의 사전 승인자가 아니며 차단 결과의 보정·롤백만 수행한다.
+
+같은 맛집·방문 관계가 이미 존재하는 업무 중복(`DUPLICATE_CONFLICT`)은 `AUTO_BLOCKED`로 귀결한다. 관리자가 기존 등록 결과를 확인할 수 있어야 하기 때문이다. 다만 이 예외는 보충 입력으로 복구하지 않는다. 유일한 복구 경로는 이미 등록된 자원으로 이동해 확인하는 것(`EXISTING_RESOURCE`)이며, 재추출·재실행이나 수동 등록으로 전환하는 경로는 없다. 공통 종결 동작인 `DISCARD`(폐기)는 다른 `AUTO_BLOCKED`와 같이 허용한다. `AUTO_REJECTED`는 입력·정책 검증 실패로 끝난 종결 상태이며 복구 경로가 없다. 이 매핑은 [`BR-AIEXTRACT-011`](../../01-requirements/business-rules.md#br-aiextract-011-등록-단위-일괄-등록과-예외-전환)과 [관리자 AI 영상 추출 API](../../05-specs/api/admin/ai-video-extraction-api.md) 2.1절과 같다.
+
+접수 단계의 중복은 성격이 다르다. 같은 영상·입력·버전 조합의 반복 요청은 상태 전이가 아니라 기존 작업으로 수렴하며 새 작업을 만들지 않는다.
 
 ### 3.2 신규 영상 감지와 관리자 추가
 
@@ -96,8 +115,8 @@ stateDiagram-v2
 ### 3.3 정상 추출과 자동 등록
 
 1. `AI-EXTRACT-LIST`에서 관리자가 작업 상태와 대기·실행 시간을 확인한다.
-2. Worker가 `SUCCEEDED` 결과에 대해 필드별 필수값·근거·태그 정규화·중복·Kakao·YouTube·Visit 검증을 자동 실행한다.
-3. 모든 검증이 성공하면 `AUTO_CONFIRMED`로 전환하고 Restaurant·Creator·Video·Visit·`AI_AUTO_CONFIRMED VisitTag`를 하나의 원자적 흐름으로 생성·공개한다.
+2. Worker는 `SUCCEEDED` 결과를 장소 단위 등록 단위로 나눈 뒤, 단위마다 필드별 필수값·근거·태그 정규화·중복·Kakao·YouTube·Visit 검증을 자동 실행한다. 장소 동일성은 상호명·주소로 Kakao를 검색해 판정하고, 대표 음식 카테고리는 확정한 장소의 분류와 메뉴 표현으로 결정한다. 관리자에게 후보 선택이나 카테고리 입력을 요구하지 않는다.
+3. 모든 검증이 성공한 등록 단위는 `AUTO_CONFIRMED`로 전환하고 Restaurant·Creator·Video·Visit·`AI_AUTO_CONFIRMED VisitTag`를 하나의 원자적 흐름으로 생성·공개한다. 원자성 경계는 등록 단위 하나이며, 한 단위의 실패가 이미 통과한 다른 단위를 되돌리지 않는다.
 4. 자동 등록 결과에는 모델·Prompt·Schema 버전과 검증 증거를 연결한다.
 5. 관리자는 목록에서 자동 등록 결과와 감사 이력을 조회하고, 오류가 발견된 경우에만 사후 보정 또는 롤백을 요청한다.
 
@@ -108,7 +127,7 @@ stateDiagram-v2
 1. 화면 상단에 “일부 항목을 추출하지 못했습니다” 경고와 누락 개수를 표시한다.
 2. 추출된 필드는 근거·신뢰도와 함께 표시하고 누락 필드는 `UNKNOWN`과 누락 이유를 표시한다.
 3. 정식 등록 필수값이 부족하면 `AUTO_BLOCKED`로 전환하고 공개하지 않는다.
-4. 관리자는 차단 사유를 확인한 뒤 허용된 값만 보완해 재처리하거나, 사후 보정·수동 등록·폐기를 선택한다. 정상 결과를 승인하기 위한 확정 버튼은 제공하지 않는다.
+4. 관리자는 차단 사유를 확인한 뒤 사유별로 정해진 경로만 따른다. 장소 동일성·카테고리 예외는 보조 입력 화면에서 `CONFIRM`으로 등록하고, 필수 필드·방문 근거 부족은 재추출 또는 기존 수동 등록으로, 외부 서비스 오류는 등록 재실행 또는 기존 수동 등록으로, 업무 중복은 기존 등록 결과 확인(`EXISTING_RESOURCE`)으로만 처리한다. 어느 사유든 `DISCARD`로 폐기할 수 있다. 정상 결과를 승인하기 위한 확정 버튼은 제공하지 않는다.
 5. 부분 결과를 완전 결과와 같은 성공 지표로 집계하지 않는다.
 
 ### 3.5 오류·재시도·복구
