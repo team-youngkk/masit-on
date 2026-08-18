@@ -52,7 +52,7 @@ related_documents:
 | `reviewStatus` | `AUTO_CONFIRMED` | 자동 검증과 정식 등록·공개 완료. 등록 단위 값은 그 단위의 등록 성공을 뜻하고, 작업 최상위 값은 아래 요약 규칙을 따르므로 모든 단위 성공을 보장하지 않는다 |
 | `reviewStatus` | `AUTO_BLOCKED` | 모호·근거 부족·외부 충돌로 자동 보류 |
 | `reviewStatus` | `AUTO_REJECTED` | 입력·정책 검증 실패로 자동 거부. 복구 경로가 없는 종결 상태다 |
-| `reviewStatus` | `MANUAL_OVERRIDE` | 관리자의 사후 보정·롤백 결과 |
+| `reviewStatus` | `MANUAL_OVERRIDE` | 관리자 개입 결과. 등록 유지(사후 보정 등록·카테고리 보정)·롤백 완료·폐기 완료 세 하위 상태를 가지며 `manualOverrideType`으로 구분한다 |
 
 `SUCCEEDED`와 `PARTIAL`은 실행 상태와 결과 완전성을 각각 표현한다. `AUTO_CONFIRMED`는 자동 검증과 기존 정식 등록 명령이 성공했다는 의미이며, 관리자의 사전 승인을 뜻하지 않는다.
 
@@ -79,7 +79,7 @@ related_documents:
 | 확정 + 거부 | `AUTO_CONFIRMED` | 거부는 종결이라 남은 작업이 없고 등록은 일어났다 |
 | 차단 + 거부 | `AUTO_BLOCKED` | 처리할 예외가 남았다 |
 | 확정 + 차단 + 거부 | `AUTO_BLOCKED` | 같은 이유 |
-| 사후 보정·롤백 포함 어떤 조합 | `MANUAL_OVERRIDE` | 관리자 개입 사실이 가장 우선한다 |
+| `MANUAL_OVERRIDE` 단위(등록 유지·롤백 완료·폐기 완료 어느 하위 상태든) 포함 어떤 조합 | `MANUAL_OVERRIDE` | 관리자 개입 사실이 가장 우선한다 |
 
 최상위 `AUTO_CONFIRMED`는 "모든 단위 성공"이 아니라 **"처리할 예외가 남지 않았고 등록된 단위가 있다"**는 뜻이다. 확정 + 거부 혼합도 여기에 해당한다. 모든 단위가 성공했는지 확인하려면 `registrationUnits`를 읽는다.
 

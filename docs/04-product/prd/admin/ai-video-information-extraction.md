@@ -154,7 +154,7 @@ related_documents:
 | `SUCCEEDED`·완전 | 모든 후보 필드·태그, 근거, 신뢰도, 버전 | 자동 검증·등록·공개 |
 | `SUCCEEDED`·부분 | 누락·`UNKNOWN` 필드·태그, 사용 가능한 근거, 불완전 경고 | 자동 보류·보완 재시도·예외 등록 |
 | `FAILED` | 오류 범주, 시도 횟수, 마지막 실패 시각 | 허용 시 수동 재시도·수동 등록 |
-| 검증 충돌 | 기존 데이터 후보, Kakao·YouTube 불일치, 정식 저장 0건 | 후보 수정·재검수·폐기 |
+| 검증 충돌(`AUTO_BLOCKED`) | 차단 사유, 근거, 정식 저장 0건 | 사유별 `recoveryPaths`만 노출. `review`는 `CONFIRM`(장소·카테고리 보충 입력)과 `DISCARD`만 허용하며 후보 값 직접 수정이나 일반 재검수는 없다 |
 | `AUTO_CONFIRMED` | 등록 단위별 자동 검증·등록·공개 결과, 채택한 Kakao 장소와 카테고리 근거, 버전·시각 | 결과 조회·사후 롤백·카테고리 보정(`ADJUST_CATEGORY`) |
 | `AUTO_BLOCKED` | 차단 사유·근거·시각. 사유는 `PLACE_NOT_FOUND`·`PLACE_AMBIGUOUS`·`CATEGORY_UNRESOLVED`·`MISSING_REQUIRED_FIELD`·`VISIT_EVIDENCE_REQUIRED`·`DUPLICATE_CONFLICT`·`EXTERNAL_SERVICE_ERROR` 7종으로 구분한다 | 사유별 복구 경로만 노출. 보조 입력·재추출·수동 등록·기존 자원 확인·재실행 |
 | `AUTO_REJECTED` | 거부 사유·근거·시각. 입력·정책 검증 실패로 끝난 종결 상태이며 복구 경로가 없다 | 새 작업 |

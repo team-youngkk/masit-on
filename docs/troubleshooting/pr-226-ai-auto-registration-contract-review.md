@@ -308,6 +308,18 @@ Kakao 장소와 카테고리는 관리자가 외부 기준정보 중 하나를 �
 
 7차에서 저장 컬럼(`rolled_back_at`·`discarded_at`)과 상태도는 고쳤지만 그 두 컬럼을 API 응답 필드로 노출하는 것을 놓쳤다. 계층을 하나 고치면 그 결과를 소비하는 다음 계층까지 반드시 확인해야 한다는 이번 PR 전체의 반복 패턴과 같다.
 
+### 10.9 9차 리뷰 처리
+
+박진영이 승인했다. 이우람이 3건을 남겼고, 그중 1건(P1)은 잘못된 동작이 실제로 호출되면 422가 나는 문제였다.
+
+| 스레드 | 요청 요약 | 문제 유형 | 판단 | 처리 결과 |
+|---|---|---|---|---|
+| [최상위 조합표에 폐기 완료 누락 (P2)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3801221528) | 3순위 조건은 넓혔는데 조합표·상태 설명은 그대로 | 기타 | 수정 필요 | 상태 설명과 조합표를 `MANUAL_OVERRIDE 단위(세 하위 상태 포함)`로 통일 |
+| [PRD 검증 충돌 행이 낡은 서술 (P2)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3801221535) | "후보 수정·재검수·폐기"가 현재 `recoveryPaths`·`review` 계약과 다름 | 기타 | 수정 필요 | 행을 사유별 `recoveryPaths`와 `CONFIRM`·`DISCARD`로 재작성 |
+| [예외 화면에 미허용 롤백 버튼 (P1)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3801221539) | `AUTO_BLOCKED` 화면에 `[비공개·롤백]` 노출. 호출 시 422 | 기타 | 수정 필요 | 롤백 버튼 제거, 두 예외 목업이 중복이라 하나로 병합하고 "등록 결과 없는 화면은 롤백 없음" 근거 추가 |
+
+세 번째 건을 처리하며 같은 `PLACE_AMBIGUOUS` 목업이 \`AI-EXTRACT-EXCEPTION\`과 \`AI-EXTRACT-VERIFY-CONFLICT\` 두 곳에 중복돼 있던 것을 확인했다. 병합 과정에서 만들어진 화면 이름 두 개가 실제로는 같은 화면이었다. 하나로 합치고 뒤쪽 절은 참조만 남겼다.
+
 ## 11. 비교 지표
 
 해당 없음. 문서 계약 변경이며 측정할 런타임 지표가 없다. 자동 등록률·`CATEGORY_UNRESOLVED` 비율 등은 구현 후 [PRD 11절 지표](../04-product/prd/admin/ai-video-information-extraction.md)에서 측정한다. 이 PR 시점에는 기준선을 만들 수 없다.
