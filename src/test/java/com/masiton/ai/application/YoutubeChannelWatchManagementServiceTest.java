@@ -41,7 +41,59 @@ class YoutubeChannelWatchManagementServiceTest {
             YoutubeChannelWatchVerificationTokenPort.class);
     private final YoutubeChannelWatchSubscriptionPort subscriptions = mock(YoutubeChannelWatchSubscriptionPort.class);
     private final YoutubeChannelWatchManagementService service = new YoutubeChannelWatchManagementService(
-            creatorReferences, watchPersistence, verificationTokens, subscriptions);
+            creatorReferences, watchPersistence, watchStore, verificationTokens, subscriptions);
+
+    @Test
+    @DisplayName("검증된 Creator에 Watch가 없으면 비활성 초기 상태를 반환한다")
+    void 감시조회_검증된Creator에Watch없음_비활성초기상태를반환한다() {
+        UUID creatorId = UUID.randomUUID();
+        when(creatorReferences.findCreatorReference(creatorId)).thenReturn(Optional.of(creator(creatorId, true, true)));
+        when(watchStore.findDetail("channel-id")).thenReturn(Optional.empty());
+
+        var result = service.getStatus(creatorId);
+
+        assertThat(result.enabled()).isFalse();
+        assertThat(result.subscriptionStatus()).isEqualTo("INACTIVE");
+        assertThat(result.lastNotificationAt()).isNull();
+        assertThat(result.lastRenewedAt()).isNull();
+        assertThat(result.lastErrorCategory()).isNull();
+        verify(watchStore).findDetail("channel-id");
+    }
+
+    @Test
+    @DisplayName("검증된 Creator의 Watch가 있으면 저장된 상태 필드를 그대로 반환한다")
+    void 감시조회_기존Watch_저장된상태필드를그대로반환한다() {
+        UUID creatorId = UUID.randomUUID();
+        OffsetDateTime notifiedAt = OffsetDateTime.parse("2026-08-12T01:02:03Z");
+        OffsetDateTime renewedAt = OffsetDateTime.parse("2026-08-13T04:05:06Z");
+        when(creatorReferences.findCreatorReference(creatorId)).thenReturn(Optional.of(creator(creatorId, true, true)));
+        when(watchStore.findDetail("channel-id")).thenReturn(Optional.of(
+                new YoutubeChannelWatchStore.WatchDetail(true, "RENEWAL_FAILED", notifiedAt, renewedAt,
+                        "SUBSCRIPTION_TIMEOUT")));
+
+        var result = service.getStatus(creatorId);
+
+        assertThat(result.enabled()).isTrue();
+        assertThat(result.subscriptionStatus()).isEqualTo("RENEWAL_FAILED");
+        assertThat(result.lastNotificationAt()).isEqualTo(notifiedAt);
+        assertThat(result.lastRenewedAt()).isEqualTo(renewedAt);
+        assertThat(result.lastErrorCategory()).isEqualTo("SUBSCRIPTION_TIMEOUT");
+    }
+
+    @Test
+    @DisplayName("없는 Creator 또는 검증되지 않은 Creator는 404 CREATOR_NOT_FOUND를 반환한다")
+    void 감시조회_없는Creator또는검증되지않은Creator_404CREATOR_NOT_FOUND를반환한다() {
+        UUID creatorId = UUID.randomUUID();
+        when(creatorReferences.findCreatorReference(creatorId)).thenReturn(Optional.of(creator(creatorId, true, false)));
+
+        assertThatThrownBy(() -> service.getStatus(creatorId))
+                .isInstanceOfSatisfying(BusinessException.class, exception -> {
+                    assertThat(exception.status()).isEqualTo(HttpStatus.NOT_FOUND);
+                    assertThat(exception.code()).isEqualTo("CREATOR_NOT_FOUND");
+                });
+
+        verifyNoInteractions(watchStore);
+    }
 
     @Test
     @DisplayName("검증된 Creator 감시를 활성화하면 외부 확인 전 UNKNOWN 상태를 저장한다")

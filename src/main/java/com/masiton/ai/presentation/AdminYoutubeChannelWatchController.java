@@ -4,6 +4,7 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -30,6 +31,11 @@ public class AdminYoutubeChannelWatchController {
             throw new BusinessException(ErrorCode.MISSING_REQUIRED_FIELD, "enabled", "enabled is required.");
         }
         return ResponseEntity.ok(WatchResponse.from(useCase.setEnabled(creatorId, request.enabled())));
+    }
+
+    @GetMapping("/{creatorId}")
+    public ResponseEntity<WatchResponse> getStatus(@PathVariable UUID creatorId) {
+        return ResponseEntity.ok(WatchResponse.from(useCase.getStatus(creatorId)));
     }
 
     public record WatchRequest(Boolean enabled) { }

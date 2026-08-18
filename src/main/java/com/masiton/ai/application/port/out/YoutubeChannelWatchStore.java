@@ -7,6 +7,8 @@ import java.util.UUID;
 public interface YoutubeChannelWatchStore {
     Optional<Watch> find(String channelId);
 
+    Optional<WatchDetail> findDetail(String channelId);
+
     Optional<Watch> findForUpdate(String channelId);
 
     WatchDetail upsert(UUID creatorId, String channelId, boolean enabled, String subscriptionStatus,

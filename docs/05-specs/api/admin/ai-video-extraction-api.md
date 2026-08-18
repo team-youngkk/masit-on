@@ -26,7 +26,7 @@ related_documents:
 
 ## 1. 범위와 공통 계약
 
-이 문서는 [PRD-ADMIN-002](../../../04-product/prd/admin/ai-video-information-extraction.md)의 관리자 신규 영상 추가, YouTube Webhook 접수, AI 추출 작업 조회와 자동 등록·예외 보정 API를 정의한다. AI 결과는 자동 검증을 통과하면 관리자 승인 없이 정식 Entity와 `VisitTag`를 생성·공개하고, 모호·실패·중복 결과만 보류한다.
+이 문서는 [PRD-ADMIN-002](../../../04-product/prd/admin/ai-video-information-extraction.md)의 관리자 신규 영상 추가, YouTube Webhook 접수, AI 추출 작업 조회, 채널 감시 설정·상태 조회와 자동 등록·예외 보정 API를 정의한다. AI 결과는 자동 검증을 통과하면 관리자 승인 없이 정식 Entity와 `VisitTag`를 생성·공개하고, 모호·실패·중복 결과만 보류한다.
 
 - 관리자 API는 `/api/admin` 아래에 두고 JWT Bearer와 `ADMIN` 권한을 요구한다.
 - YouTube Webhook은 `/api/webhooks/youtube` 아래의 외부 수신 경계이며 관리자 JWT를 요구하지 않는다. Webhook은 작업 접수만 하고 AI·정식 등록을 실행하지 않는다.
@@ -212,7 +212,28 @@ related_documents:
 - 자동 검증 실패 시 `AUTO_BLOCKED` 또는 `AUTO_REJECTED`로 유지하고 정식 Entity 저장은 0건이다.
 - 동시 검수 충돌은 `409 Conflict`로 처리하고 최신 상태 재조회를 요구한다.
 
-### 3.6 `PUT /api/admin/ai/youtube-channel-watches/{creatorId}` 채널 감시 설정
+### 3.6 `GET /api/admin/ai/youtube-channel-watches/{creatorId}` 채널 감시 상태 조회
+
+- `Authorization: Bearer <access-token>`과 `ADMIN` 권한을 요구한다.
+- 대상은 외부 YouTube 채널 식별자가 확인된 검증된 Creator로 한정한다. Creator가 존재하지 않거나 비공개·삭제 상태이거나 외부에서 이용할 수 없으면 `404 CREATOR_NOT_FOUND`를 반환한다.
+- 감시 설정 행이 없어도 오류로 처리하지 않고 다음 자원 표현을 `200 OK`로 반환한다.
+
+```json
+{
+  "enabled": false,
+  "subscriptionStatus": "INACTIVE",
+  "lastNotificationAt": null,
+  "lastRenewedAt": null,
+  "lastErrorCategory": null
+}
+```
+
+- `subscriptionStatus=UNKNOWN`은 `enabled=true` 활성화 의도를 저장했지만 외부 구독 challenge가 아직 성공하지 않은 상태이며, 이때 Webhook을 수락하지 않는다.
+- `subscriptionStatus=ACTIVE`는 challenge 성공 후 구독을 수락한 상태이며, 이때만 Webhook을 수락한다. `INACTIVE`와 `RENEWAL_FAILED`도 신규 Webhook을 수락하지 않는다.
+- `lastErrorCategory`는 저장된 오류 범주만 반환하며, Token 원문·Token 해시·Hub 원문과 외부 응답 전문은 반환하지 않는다. 오류가 저장되지 않았으면 `null`이다.
+- `PUT`의 응답은 이 GET과 같은 자원 표현을 사용하며, 활성화·해지 결과는 이후 GET에서 조회할 수 있다.
+
+### 3.7 `PUT /api/admin/ai/youtube-channel-watches/{creatorId}` 채널 감시 설정
 
 ```json
 {
@@ -226,7 +247,7 @@ related_documents:
 - `enabled=true` 요청은 `hub.mode=subscribe`와 발급한 검증 Token을 YouTube PubSubHubbub 구독 요청에 전달한다. 구독 확인 요청이 성공하기 전에는 계속 `UNKNOWN`으로 둔다.
 - 이미 `ACTIVE`이고 검증 Token 해시가 유효한 채널에 대한 중복 `enabled=true` 요청은 기존 상태·Token을 유지하고 외부 재구독을 요청하지 않는다.
 - Creator 등록만으로 자동 활성화하지 않는다.
-- 비활성화는 이미 접수된 작업·후보·정식 데이터를 삭제하지 않고 신규 Webhook 접수만 중지한다.
+- `enabled=false`는 신규 Webhook 접수를 중지하고 `subscriptionStatus=INACTIVE`로 저장한다. 이미 접수된 작업·후보·정식 데이터는 삭제하지 않는다.
 
 ## 4. YouTube Webhook API
 
@@ -259,7 +280,7 @@ Webhook 수신 경로는 공개 인터넷 진입점이므로 Nginx·Spring Secur
 | `AIEXTRACT_INVALID_VIDEO_URL` | 400 | YouTube URL 형식·호스트·식별자 오류 |
 | `AIEXTRACT_DUPLICATE_CONFLICT` | 409 | 기존 정식 데이터 또는 동시 검수 충돌 |
 | `AIEXTRACT_JOB_NOT_FOUND` | 404 | 작업 ID 없음 또는 접근 불가 |
-| `CREATOR_NOT_FOUND` | 404 | Creator 없음·비공개·삭제·외부 이용 불가 또는 감시 활성화 대상이 아님 |
+| `CREATOR_NOT_FOUND` | 404 | Creator 없음·비공개·삭제 또는 외부 이용 불가 |
 | `AIEXTRACT_RETRY_BLOCKED` | 409 | 상태상 재시도 불가 |
 | `AIEXTRACT_PROVIDER_BLOCKED` | 429 | Gemini Free Tier quota 소진·결제 연결 요구·무료 정책 미검증 |
 | `AIEXTRACT_WEBHOOK_REJECTED` | 403 | 구독 채널·검증 Token 불일치 |

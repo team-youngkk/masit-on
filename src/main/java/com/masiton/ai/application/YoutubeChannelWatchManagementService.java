@@ -7,9 +7,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.masiton.ai.application.port.in.YoutubeChannelWatchManagementUseCase;
 import com.masiton.ai.application.port.out.YoutubeChannelWatchSubscriptionPort;
+import com.masiton.ai.application.port.out.YoutubeChannelWatchStore;
 import com.masiton.ai.application.port.out.YoutubeChannelWatchVerificationTokenPort;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
@@ -21,17 +23,31 @@ public class YoutubeChannelWatchManagementService implements YoutubeChannelWatch
 
     private final FindCreatorReferenceUseCase creatorReferences;
     private final YoutubeChannelWatchPersistenceService watchPersistence;
+    private final YoutubeChannelWatchStore watchStore;
     private final YoutubeChannelWatchVerificationTokenPort verificationTokens;
     private final YoutubeChannelWatchSubscriptionPort subscriptions;
 
     public YoutubeChannelWatchManagementService(FindCreatorReferenceUseCase creatorReferences,
                                                 YoutubeChannelWatchPersistenceService watchPersistence,
+                                                YoutubeChannelWatchStore watchStore,
                                                 YoutubeChannelWatchVerificationTokenPort verificationTokens,
                                                 YoutubeChannelWatchSubscriptionPort subscriptions) {
         this.creatorReferences = creatorReferences;
         this.watchPersistence = watchPersistence;
+        this.watchStore = watchStore;
         this.verificationTokens = verificationTokens;
         this.subscriptions = subscriptions;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public WatchStatus getStatus(UUID creatorId) {
+        FindCreatorReferenceUseCase.CreatorReference creator = creatorReferences.findCreatorReference(creatorId)
+                .filter(reference -> reference.publiclyVisible() && reference.externallyAvailable())
+                .orElseThrow(this::creatorNotFound);
+        return watchStore.findDetail(creator.externalChannelId())
+                .map(this::status)
+                .orElseGet(this::initialStatus);
     }
 
     @Override
@@ -82,6 +98,10 @@ public class YoutubeChannelWatchManagementService implements YoutubeChannelWatch
     private WatchStatus status(com.masiton.ai.application.port.out.YoutubeChannelWatchStore.WatchDetail watch) {
         return new WatchStatus(watch.enabled(), watch.subscriptionStatus(), watch.lastNotificationAt(),
                 watch.lastRenewedAt(), watch.lastErrorCategory());
+    }
+
+    private WatchStatus initialStatus() {
+        return new WatchStatus(false, "INACTIVE", null, null, null);
     }
 
     private byte[] hashToken(String token) {

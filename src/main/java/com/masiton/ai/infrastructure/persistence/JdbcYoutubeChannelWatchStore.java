@@ -157,7 +157,8 @@ public class JdbcYoutubeChannelWatchStore implements YoutubeChannelWatchStore {
         return findDetail(channelId);
     }
 
-    private Optional<WatchDetail> findDetail(String channelId) {
+    @Override
+    public Optional<WatchDetail> findDetail(String channelId) {
         List<WatchDetail> rows = jdbcTemplate.query("""
                 SELECT enabled, subscription_status, last_notification_at, last_renewed_at, last_error_category
                   FROM youtube_channel_watch

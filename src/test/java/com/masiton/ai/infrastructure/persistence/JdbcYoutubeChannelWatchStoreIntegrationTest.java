@@ -111,6 +111,26 @@ class JdbcYoutubeChannelWatchStoreIntegrationTest {
     }
 
     @Test
+    @DisplayName("Watch 상태 조회는 PostgreSQL의 실패 상태·시각·오류 범주를 그대로 매핑하고 없는 행은 비운다")
+    void findDetail_실패상태와시각매핑_없는행은빈결과를반환한다() {
+        UUID creatorId = UUID.randomUUID();
+        String channelId = "channel-" + UUID.randomUUID();
+        OffsetDateTime lastNotificationAt = OffsetDateTime.parse("2026-08-12T01:02:03Z");
+        OffsetDateTime lastRenewedAt = OffsetDateTime.parse("2026-08-13T04:05:06Z");
+        insertCreator(creatorId, channelId);
+        insertWatch(creatorId, channelId, null, lastNotificationAt, lastRenewedAt, "SUBSCRIPTION_TIMEOUT");
+        jdbcTemplate.update("UPDATE youtube_channel_watch SET enabled = true, subscription_status = 'RENEWAL_FAILED' WHERE youtube_channel_id = ?", channelId);
+
+        try {
+            assertThat(store.findDetail(channelId)).contains(new YoutubeChannelWatchStore.WatchDetail(
+                    true, "RENEWAL_FAILED", lastNotificationAt, lastRenewedAt, "SUBSCRIPTION_TIMEOUT"));
+            assertThat(store.findDetail("missing-" + UUID.randomUUID())).isEmpty();
+        } finally {
+            deleteFixture(creatorId, channelId);
+        }
+    }
+
+    @Test
     @DisplayName("활성 Watch의 알림 수신 시각을 갱신한다")
     void markNotificationReceived_활성행_수신시각을갱신한다() {
         // given
