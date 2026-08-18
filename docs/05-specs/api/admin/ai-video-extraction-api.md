@@ -64,13 +64,14 @@ related_documents:
 
 | 순위 | 조건 | 최상위 `reviewStatus` |
 |---:|---|---|
-| 1 | 등록 단위가 하나도 없다 | `null` |
-| 2 | 관리자 사후 보정·롤백이 하나라도 있다 | `MANUAL_OVERRIDE` |
-| 3 | `AUTO_BLOCKED` 단위가 하나라도 있다 | `AUTO_BLOCKED` |
-| 4 | `AUTO_CONFIRMED` 단위가 하나라도 있다 | `AUTO_CONFIRMED` |
-| 5 | 그 밖의 경우, 즉 모든 단위가 `AUTO_REJECTED`다 | `AUTO_REJECTED` |
+| 1 | 후보 Snapshot이 아직 없다. 즉 자동 판정 전이다 | `null` |
+| 2 | Snapshot은 있으나 등록 단위가 하나도 없다 | Snapshot 자체 판정값. 후보 부족으로 차단이면 `AUTO_BLOCKED`, 정책 위반이면 `AUTO_REJECTED` |
+| 3 | 관리자 사후 보정·롤백이 하나라도 있다 | `MANUAL_OVERRIDE` |
+| 4 | `AUTO_BLOCKED` 단위가 하나라도 있다 | `AUTO_BLOCKED` |
+| 5 | `AUTO_CONFIRMED` 단위가 하나라도 있다 | `AUTO_CONFIRMED` |
+| 6 | 그 밖의 경우, 즉 모든 단위가 `AUTO_REJECTED`다 | `AUTO_REJECTED` |
 
-위에서부터 먼저 만족하는 조건 하나를 적용하며, 5순위가 나머지를 모두 받으므로 등록 단위 상태의 어떤 조합에서도 값이 하나로 결정된다. 조합별 결과는 다음과 같다.
+위에서부터 먼저 만족하는 조건 하나를 적용하며, 6순위가 나머지를 모두 받으므로 등록 단위 상태의 어떤 조합에서도 값이 하나로 결정된다. 조합별 결과는 다음과 같다.
 
 | 등록 단위 조합 | 최상위 값 | 이유 |
 |---|---|---|
@@ -260,7 +261,18 @@ related_documents:
 
 ### 3.5 `POST /api/admin/ai/video-extractions/{jobId}/review` 사후 보정·롤백
 
-이 API의 `review`는 정상 등록을 승인하는 API가 아니라 `AUTO_BLOCKED` 결과의 사후 보정과 이미 공개된 `AUTO_CONFIRMED` 결과의 롤백을 위한 관리자 API다. 요청 가능한 `decision`은 `CONFIRM`(차단 결과를 수동 보정해 등록), `DISCARD`(후보 폐기), `ROLLBACK`(자동 등록 결과 비공개·관계 해제)이며, 모든 변경은 `MANUAL_OVERRIDE` 이력으로 남긴다.
+이 API의 `review`는 정상 등록을 승인하는 API가 아니라 자동 판정 결과를 사후에 보정·롤백하는 관리자 API다. 모든 변경은 `MANUAL_OVERRIDE` 이력으로 남긴다.
+
+| `decision` | 허용 상태 | 효과 |
+|---|---|---|
+| `CONFIRM` | `AUTO_BLOCKED` | 보충 입력으로 판정을 보정해 등록한다 |
+| `DISCARD` | `AUTO_BLOCKED` | 등록 단위를 폐기한다 |
+| `ROLLBACK` | `AUTO_CONFIRMED`, 등록 완료 `MANUAL_OVERRIDE` | 등록 결과를 비공개·관계 해제한다 |
+| `ADJUST_CATEGORY` | `AUTO_CONFIRMED`, 등록 완료 `MANUAL_OVERRIDE` | 등록을 유지한 채 대표 음식 카테고리만 바꾼다 |
+
+허용 상태가 아닌 등록 단위에 대한 요청은 `422 AIEXTRACT_VALIDATION_CONFLICT`로 거절하고 정식 데이터는 변경하지 않는다. `AUTO_REJECTED`와 롤백 완료 `MANUAL_OVERRIDE`는 어떤 `decision`도 허용하지 않는 종결 상태이며 새 작업 재추출만 가능하다.
+
+장소 예외를 보정하는 `CONFIRM` 요청이다.
 
 ```json
 {
@@ -269,8 +281,7 @@ related_documents:
   "reason": "Kakao 장소와 영상 timestamp 근거를 확인함",
   "expectedReviewStatus": "AUTO_BLOCKED",
   "supplements": {
-    "kakaoPlaceUrl": "https://place.map.kakao.com/example",
-    "foodCategoryId": null
+    "kakaoPlaceUrl": "https://place.map.kakao.com/example"
   },
   "tagDecisions": [
     {
@@ -282,19 +293,49 @@ related_documents:
 }
 ```
 
-`supplements`는 `CONFIRM`에서만 사용하는 보충 입력이며, 3.6절 예외 전환 응답의 `requiredSupplements`에 대응한다.
+카테고리 예외를 보정하는 `CONFIRM` 요청은 다른 키를 보낸다.
+
+```json
+{
+  "decision": "CONFIRM",
+  "unitId": "opaque-registration-unit-id",
+  "reason": "Kakao 분류가 비어 있어 메뉴 표현으로 확인함",
+  "expectedReviewStatus": "AUTO_BLOCKED",
+  "supplements": {
+    "foodCategoryId": "opaque-food-category-id"
+  }
+}
+```
+
+등록 완료 결과의 카테고리만 바꾸는 요청이다. 공개 상태와 나머지 등록 결과는 그대로 둔다.
+
+```json
+{
+  "decision": "ADJUST_CATEGORY",
+  "unitId": "opaque-registration-unit-id",
+  "reason": "Kakao 분류가 실제 업종과 달라 보정함",
+  "expectedReviewStatus": "AUTO_CONFIRMED",
+  "supplements": {
+    "foodCategoryId": "opaque-food-category-id"
+  }
+}
+```
+
+`supplements`는 `CONFIRM`과 `ADJUST_CATEGORY`에서만 사용한다. `CONFIRM`에서는 3.6절 예외 전환 응답의 `requiredSupplements`에 대응하고, `ADJUST_CATEGORY`에서는 `foodCategoryId`만 필수다.
 
 | 필드 | 타입 | 필수 조건 | 설명 |
 |---|---|---|---|
-| `supplements.kakaoPlaceUrl` | string 또는 null | `blockReason`이 `PLACE_NOT_FOUND`·`PLACE_AMBIGUOUS`이면 필수 | 관리자가 확인한 Kakao 장소 URL |
-| `supplements.foodCategoryId` | string 또는 null | `blockReason`이 `CATEGORY_UNRESOLVED`이면 필수 | 공통 기준정보 10개 값 중 하나의 식별자 |
+| `supplements.kakaoPlaceUrl` | string | `blockReason`이 `PLACE_NOT_FOUND`·`PLACE_AMBIGUOUS`이면 필수 | 관리자가 확인한 Kakao 장소 URL |
+| `supplements.foodCategoryId` | string | `blockReason`이 `CATEGORY_UNRESOLVED`이거나 `decision`이 `ADJUST_CATEGORY`이면 필수 | 공통 기준정보 10개 값 중 하나의 식별자 |
 
+- **요구하지 않은 키는 값이 `null`이어도 보내지 않는다.** `null`을 미전송으로 취급하지 않고 키 존재만으로 판정한다. 직렬화 단계에서 `null` 필드를 자동으로 넣는 클라이언트는 그 필드를 제외하도록 설정해야 한다.
 - `requiredSupplements`가 요구하지 않은 필드를 보내면 `400 INVALID_FIELD_VALUE`로 거절한다. 관리자가 자동 판정 결과를 임의로 덮어쓰지 못하게 하기 위해서다.
 - `requiredSupplements`가 요구한 필드가 없으면 `400 MISSING_REQUIRED_FIELD`로 거절하고 정식 저장은 0건이다.
 - `kakaoPlaceUrl`은 기존 수동 등록 경로와 같은 Kakao 장소 동일성 검증을 다시 통과해야 한다. 검증 실패는 `422 AIEXTRACT_VALIDATION_CONFLICT`이며 `blockReason`을 그대로 유지한다.
 - `foodCategoryId`는 활성 기준정보 값이어야 한다. 비활성·미존재 값은 `400 INVALID_FIELD_VALUE`다.
 - `VISIT_EVIDENCE_REQUIRED`·`DUPLICATE_CONFLICT`·`EXTERNAL_SERVICE_ERROR`는 보충 입력으로 복구할 수 없다. 이 사유의 `CONFIRM`은 `422 AIEXTRACT_VALIDATION_CONFLICT`로 거절하고 재추출·재실행 또는 수동 등록으로 안내한다.
 - 보충 입력으로 등록에 성공하면 등록 단위는 `MANUAL_OVERRIDE`가 되고, 사용한 보충값과 제출자를 감사 이력에 남긴다.
+- `ADJUST_CATEGORY`는 `registered_restaurant_id`가 가리키는 맛집의 대표 카테고리와 `category_decision`을 바꾼다. `resolvedBy`는 `MANUAL_OVERRIDE`가 되고 등록 단위 상태는 `MANUAL_OVERRIDE`로 전환하되 등록 결과 컬럼과 공개 상태는 유지한다. 이전 카테고리 값과 제출자는 append-only 감사 이력에 남긴다.
 - 계약 테스트는 `TST-E3-AI-007`에 매핑한다.
 
 - `CONFIRM`은 정상 자동 등록을 시작하는 명령이 아니라, `AUTO_BLOCKED` 결과를 관리자가 사후 보정해 등록하는 경우에만 사용한다.
@@ -334,7 +375,7 @@ Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-0
 | `AUTO_REJECTED` | `422 AIEXTRACT_VALIDATION_CONFLICT`로 거절한다 | 없음 |
 
 - `AUTO_REJECTED`는 입력·정책 검증 실패로 끝난 종결 상태다. 이 엔드포인트로 되살리면 종결 판정을 우회하게 되므로 허용하지 않는다. 새 작업으로 다시 추출한다.
-- 롤백 완료 `MANUAL_OVERRIDE`는 관리자가 의도적으로 되돌린 결과다. 같은 경로로 다시 등록하면 롤백 의도를 무효로 만들 수 있어 거절한다. 다시 등록하려면 `review`의 `CONFIRM`으로 사유를 남긴다.
+- 롤백 완료 `MANUAL_OVERRIDE`는 관리자가 의도적으로 되돌린 결과다. 같은 경로로 다시 등록하면 롤백 의도를 무효로 만들 수 있어 거절한다. `review`의 어떤 `decision`도 이 상태를 대상으로 허용하지 않으므로, 다시 등록하려면 새 작업으로 재추출하거나 기존 수동 등록을 사용한다.
 - 멱등 응답은 새 Entity를 만들지 않고 `ai_registration_unit`에 저장된 기존 결과를 그대로 반환한다.
 
 #### 응답 `200 OK`
@@ -375,24 +416,40 @@ Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-0
 {
   "code": "AIEXTRACT_VALIDATION_CONFLICT",
   "blockReason": "PLACE_AMBIGUOUS",
-  "recoveryPath": "SUPPLEMENT",
+  "recoveryPaths": ["SUPPLEMENT", "MANUAL_REGISTRATION"],
   "requiredSupplements": ["kakaoPlaceUrl"],
   "traceId": "opaque-trace-id"
 }
 ```
 
-`AIEXTRACT_VALIDATION_CONFLICT`는 "검증 충돌" 하나를 뜻하며 복구 가능 여부를 구분하지 않는다. 클라이언트는 `recoveryPath`로 다음 화면을 결정한다.
+`AIEXTRACT_VALIDATION_CONFLICT`는 "검증 충돌" 하나를 뜻하며 복구 가능 여부를 구분하지 않는다. 클라이언트는 `recoveryPaths`로 화면에 노출할 동작을 결정한다. **배열이며 첫 원소가 주 경로다.** 한 차단 사유가 여러 복구 동작을 허용하기 때문에 단일 값으로 두지 않는다.
 
-| `recoveryPath` | 의미 | 클라이언트 동작 |
+| 값 | 의미 | 클라이언트 동작 |
 |---|---|---|
-| `SUPPLEMENT` | `CONFIRM` 보충 입력으로 복구 가능 | 보조 입력 화면. `requiredSupplements`가 필요한 필드를 지정한다 |
-| `REEXTRACT` | 보완 텍스트 재추출로만 복구 가능 | 재추출 안내. 입력란을 두지 않는다 |
+| `SUPPLEMENT` | `CONFIRM` 보충 입력으로 복구 | 보조 입력란. `requiredSupplements`가 필요한 필드를 지정한다 |
+| `REEXTRACT` | 보완 텍스트 재추출로 복구 | 재추출 버튼. 값 입력란을 두지 않는다 |
 | `MANUAL_REGISTRATION` | 기존 수동 등록으로 전환 | 수동 등록 화면 연결 |
 | `EXISTING_RESOURCE` | 이미 등록된 자원이 있어 새 등록이 불필요 | 기존 맛집·방문 관계로 이동 |
 | `RETRY` | 일시 오류. 같은 요청 재실행으로 복구 | 재실행 버튼 |
-| `NONE` | 이 경로로 복구할 수 없음 | 거절 사유만 표시 |
 
-`recoveryPath`가 `SUPPLEMENT`일 때만 `requiredSupplements`가 비어 있지 않다. 등록 단위 0개, 종결 상태 `AUTO_REJECTED`, 롤백 완료 `MANUAL_OVERRIDE` 거절은 `NONE`이다.
+차단 사유와 거절 상황별 매핑을 고정한다. 화면은 이 배열에 없는 동작을 노출하지 않는다.
+
+| 상황 | `recoveryPaths` | `requiredSupplements` |
+|---|---|---|
+| `PLACE_NOT_FOUND` | `["SUPPLEMENT", "MANUAL_REGISTRATION"]` | `["kakaoPlaceUrl"]` |
+| `PLACE_AMBIGUOUS` | `["SUPPLEMENT", "MANUAL_REGISTRATION"]` | `["kakaoPlaceUrl"]` |
+| `CATEGORY_UNRESOLVED` | `["SUPPLEMENT", "MANUAL_REGISTRATION"]` | `["foodCategoryId"]` |
+| `MISSING_REQUIRED_FIELD` | `["REEXTRACT", "MANUAL_REGISTRATION"]` | `[]` |
+| `VISIT_EVIDENCE_REQUIRED` | `["REEXTRACT", "MANUAL_REGISTRATION"]` | `[]` |
+| `DUPLICATE_CONFLICT` | `["EXISTING_RESOURCE"]` | `[]` |
+| `EXTERNAL_SERVICE_ERROR` | `["RETRY", "MANUAL_REGISTRATION"]` | `[]` |
+| 등록 단위 0개 거절 | `[]` | `[]` |
+| `AUTO_REJECTED` 거절 | `[]` | `[]` |
+| 롤백 완료 `MANUAL_OVERRIDE` 거절 | `[]` | `[]` |
+
+- 빈 배열은 이 경로로 복구할 수 없다는 뜻이다. 화면은 거절 사유만 표시하고 새 작업 재추출을 안내한다.
+- `requiredSupplements`는 `recoveryPaths`에 `SUPPLEMENT`가 있을 때만 비어 있지 않다.
+- `MANUAL_REGISTRATION`은 어느 예외에서든 관리자가 기존 수동 등록으로 우회할 수 있다는 뜻이며, 그 경로는 이 API가 아니라 기존 관리자 등록 API를 쓴다.
 
 보충 입력은 **판정 선택만 받고 후보 값 생성은 받지 않는다.** Kakao 장소와 카테고리는 관리자가 외부 기준정보 중 하나를 고르는 것이라 AI 근거를 대체하지 않지만, 맛집명·주소·방문 근거는 관리자가 값을 만들어 넣는 순간 영상 근거 없는 데이터가 등록된다. 그래서 후자는 보충 입력 대상이 아니고 재추출 또는 기존 수동 등록으로 처리한다.
 
@@ -464,7 +521,7 @@ Webhook 수신 경로는 공개 인터넷 진입점이므로 Nginx·Spring Secur
 | `AIEXTRACT_PROVIDER_BLOCKED` | 429 | Gemini Free Tier quota 소진·결제 연결 요구·무료 정책 미검증 |
 | `AIEXTRACT_WEBHOOK_REJECTED` | 403 | 구독 채널·검증 Token 불일치 |
 | `AIEXTRACT_WEBHOOK_SIGNATURE_INVALID` | 403 | Webhook HMAC 비밀값·헤더 누락 또는 서명 불일치 |
-| `AIEXTRACT_VALIDATION_CONFLICT` | 422 | 검증 충돌. 복구 가능 여부는 코드가 아니라 응답의 `recoveryPath`로 구분한다 |
+| `AIEXTRACT_VALIDATION_CONFLICT` | 422 | 검증 충돌. 복구 가능 여부는 코드가 아니라 응답의 `recoveryPaths`로 구분한다 |
 | `AIEXTRACT_UNIT_ID_REQUIRED` | 400 | 등록 단위가 둘 이상인 작업의 `review` 요청에 `unitId`가 없음 |
 | `AIEXTRACT_CONCURRENT_REQUEST_CONFLICT` | 409 | 같은 등록 단위에 대한 동시 요청. 업무 중복을 뜻하는 `blockReason`의 `DUPLICATE_CONFLICT`와 다름 |
 

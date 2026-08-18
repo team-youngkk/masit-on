@@ -171,7 +171,7 @@ related_documents:
 | `review_status` | `rolled_back_at` | 의미 | 네 등록 결과 컬럼 |
 |---|---|---|---|
 | `AUTO_CONFIRMED` | `NULL` | 자동 등록 완료 | 모두 존재 |
-| `MANUAL_OVERRIDE` | `NULL` | 관리자 사후 보정 등록 완료 | 모두 존재 |
+| `MANUAL_OVERRIDE` | `NULL` | 관리자 사후 보정 등록 완료 또는 등록 유지 상태의 카테고리 보정 | 모두 존재 |
 | `MANUAL_OVERRIDE` | non-null | 관리자 롤백 완료 | 모두 `NULL` |
 | `AUTO_BLOCKED`·`AUTO_REJECTED` | `NULL` | 등록하지 않음 | 모두 `NULL` |
 
@@ -182,7 +182,9 @@ related_documents:
 - 유튜버·영상은 기존 행이 있으면 재사용한다. 재사용한 경우에도 참조 컬럼에 그 식별자를 기록하고 `reused_resources`에 자원 이름을 남긴다. 등록 단위 일괄 등록 API 응답은 감사 이력이 아니라 이 컬럼들에서 재구성한다.
 - 등록 단위의 실패는 같은 Snapshot의 다른 등록 단위 행과 그 정식 등록 결과를 변경하지 않는다. 원자성 경계는 등록 단위 하나다.
 - 관리자 사후 보정·롤백은 판정 이력을 덮어쓰지 않고 append-only 감사 이력을 추가한 뒤 `review_status`를 `MANUAL_OVERRIDE`로 전환한다.
-- 작업 최상위 `ai_candidate_snapshot.review_status`는 등록 단위 판정의 요약이며, 단위별 권위 있는 값은 이 테이블이 가진다.
+- `ai_candidate_snapshot.review_status`는 NOT NULL이며 Snapshot 자체의 판정 상태를 저장한다. 등록 단위가 하나도 없는 Snapshot(후보 부족·정책 위반)도 이 컬럼으로 상태를 표현하므로 nullable이 필요하지 않다.
+- API 응답의 작업 최상위 `reviewStatus`는 이 컬럼과 등록 단위 상태를 함께 읽어 계산한다. 등록 단위가 있으면 단위 상태의 요약이고, 없으면 Snapshot 컬럼 값을 그대로 쓴다. API가 `null`을 반환하는 경우는 Snapshot이 아직 없는 판정 전 상태뿐이며, 이는 컬럼 부재로 표현된다.
+- 단위별 권위 있는 값은 이 테이블이 가진다. 최상위 요약값을 별도 컬럼으로 저장하지 않는다.
 
 ### 5.2 `food_category_mapping`
 

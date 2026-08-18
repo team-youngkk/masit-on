@@ -138,6 +138,14 @@ related_documents:
 - unitId 처리: 등록 단위 0개·1개·2개 이상 + 타 작업 단위 지정 4가지 모두 정의
 - 등록 결과 식별자: 상태 4종 × 식별자 존재 여부, 함께 존재하거나 함께 null
 - reused_resources: 자원 4종 중 실제 재사용 가능한 2종만 허용값에 남김
+
+6차 반영: 개념별 전 문서 기계 대조
+- 차단 사유 고유값 수 (BR / API / PRD): 7 / 7 / 7 일치
+- 단수 `recoveryPath` 잔존: 계약 문서 0건 (기록 문서의 인용만 남음)
+- supplements 예시의 null 키: 0건
+- 최상위 null 근거: API 요약 규칙 1순위와 데이터 계약 계산 규칙 양쪽에 존재
+- 롤백 완료 재등록 안내: 잘못된 CONFIRM 안내 제거 확인
+- review decision 4종 × 허용 상태: 표로 전부 정의됨
 ```
 
 ## 8. 재발 방지와 다음 확인
@@ -240,6 +248,35 @@ Kakao 장소와 카테고리는 관리자가 외부 기준정보 중 하나를 �
 | [PR 본문 서술 (P3)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3800559420) | 본문이 7가지 모두 보조 입력이라고 서술 | 기타 | 수정 필요 | PR 본문을 3 vs 4 분류로 수정 |
 
 와이어프레임 버전 라벨은 특히 아프다. 9.1절에서 "문서만 `P8`·`S2`로 올리면 배포되지 않은 상태를 배포된 것처럼 기록한다"고 써 놓고, 정작 같은 문서의 목록 목업에는 기존에 `S2`가 들어가 있었다. 새로 쓴 문장만 보고 기존 서술을 확인하지 않았다.
+
+### 10.5 6차 리뷰 처리와 연쇄 불일치 전수 점검
+
+16건이 올라왔고 중복을 빼면 8개 항목이다. 전부 3~5차 수정이 만든 연쇄 불일치다.
+
+| 스레드 | 요청 요약 | 문제 유형 | 판단 | 처리 결과 |
+|---|---|---|---|---|
+| [`BR-AIEXTRACT-002` 원자성 (P1)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3800668275) | 작업 전체 0건으로 읽혀 등록 단위 원자성과 충돌 | 기타 | 수정 필요 | 등록 단위 기준으로 개정하고, 작업 전체 0건이 되는 두 경우(추출 실패·등록 단위 0개)를 별도 명시 |
+| [등록 단위 0개의 최상위 상태 (P1)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3800668283) | API는 `null`, DB 컬럼은 NN이라 표현 불가 | 데이터베이스 | 수정 필요 | 요약 규칙을 6순위로 재정의. `null`은 Snapshot 부재(판정 전)로 한정하고, 단위 0개는 Snapshot 자체 판정값을 쓴다. 데이터 계약에 저장·계산 경계 명시 |
+| [롤백 완료 재등록 경로 (P1)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3800668286) | `CONFIRM` 안내가 실제 허용 상태와 불일치 | 기타 | 수정 필요 | `review`의 `decision`별 허용 상태표를 추가하고, 롤백 완료는 어떤 `decision`도 허용하지 않음을 명시. 잘못된 안내 제거 |
+| [복수 복구 경로 (P2, 2건)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3800644632) | 단일 Enum이 두 동작을 표현 못 함 | 기타 | 수정 필요 | `recoveryPath` → `recoveryPaths` 배열로 변경. 7개 예외와 3개 거절의 매핑을 전부 고정 |
+| [카테고리 보정 API 경로 (P2)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3800668293) | 화면·규칙은 허용하는데 호출 계약 없음 | 기타 | 수정 필요 | `ADJUST_CATEGORY` decision 신설. 등록 결과·공개 상태 유지, 이전 값 감사 이력 |
+| [보완 범위 구분 (P2)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3800668297) | 후보 값 직접 보완처럼 읽힘 | 기타 | 수정 필요 | 보완 경로를 `supplementText` 재추출과 `review` 보충 입력 둘로 나눠 서술 |
+| [절삭과 상한 위반 구분 (P2)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3800668304) | `PR-AIEXTRACT-007`이 상한 초과를 수동 등록으로 서술 | 기타 | 수정 필요 | `PR-AIEXTRACT-007`을 비용 상한으로 좁히고 `016`(정상 수용·절삭 표시)·`017`(Schema 위반 기각) 신설 |
+| [`supplements` null 키 (P2)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3800668306) | 예시가 바로 아래 불허 규칙을 위반 | 기타 | 수정 필요 | 장소·카테고리·`ADJUST_CATEGORY` 예시를 분리하고, `null`을 미전송으로 취급하지 않는 직렬화 규칙 명시 |
+
+#### 전수 점검 결과
+
+지적된 8개를 고친 뒤, 이번 PR이 만든 개념이 등장하는 모든 문서를 기계적으로 대조했다. 지적에 없던 연쇄 불일치 4건을 추가로 찾아 함께 고쳤다.
+
+| 추가 발견 | 조치 |
+|---|---|
+| PRD `AUTO_BLOCKED` 행이 차단 사유 3종만 열거 | 7종 전부로 맞추고 허용 동작을 사유별 복구 경로로 서술 |
+| `FR-AIEXTRACT-003`에 카테고리 보정 권한 없음 | 등록 완료 단위의 카테고리 보정을 요구사항에 추가 |
+| 데이터 계약 상태표가 `MANUAL_OVERRIDE`를 사후 등록으로만 설명 | 카테고리 보정도 같은 행에 해당함을 명시 |
+| 와이어프레임이 노출 동작의 근거를 서술하지 않음 | `recoveryPaths` 배열을 그대로 따르고 배열에 없는 동작을 두지 않는다고 명시 |
+| API 추적표의 `BR-AIEXTRACT-011` 행이 신규 요소 미반영 | `recoveryPaths`·`ADJUST_CATEGORY` 반영 |
+
+기계 점검 항목과 결과는 7절 검증 블록에 있다.
 
 ## 11. 비교 지표
 
