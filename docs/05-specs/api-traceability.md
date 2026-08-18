@@ -179,7 +179,7 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 | FR-AIEXTRACT-002 | API-ADMIN-AIEXTRACT-001 | 없음 | 목록·상세·부분 결과·실패·페이지 계약 테스트 | 김인안 |
 | FR-AIEXTRACT-003 | API-ADMIN-AIEXTRACT-001 | 기존 관리자 등록·방문 API | 자동 확정·자동 차단·사후 보정·롤백·정식 Entity 원자성 테스트 | 김인안 |
 | FR-AIEXTRACT-004 | API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | API-ADMIN-AIEXTRACT-001 | 구독 확인·신규 영상 Atom·중복 알림·AI 호출 격리 테스트 | 김인안 |
-| FR-AIEXTRACT-006 | API-ADMIN-AIEXTRACT-001 | API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | 검증 Creator 404, 감시 행 부재의 200 기본 상태, GET 상태 조회, PUT 활성화·해지·renewal 실패 상태 테스트 | 김인안 |
+| FR-AIEXTRACT-006 | API-ADMIN-AIEXTRACT-001 | API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | Creator 채널 식별자·감시 행 부재의 200 기본 상태, GET 상태·lastErrorAt 조회, PUT 활성화·해지·renewal 실패 상태 테스트 | 김인안 |
 | FR-NLSEARCH-001 | API-DISCOVERY-NL-001 | API-DISCOVERY-001 | 자연어 해석·적용 조건·기존 목록 응답 계약 테스트 | 양성훈 |
 | FR-NLSEARCH-002 | API-DISCOVERY-NL-001 | API-DISCOVERY-001 | 직접 필터 우선·AND 조합·충돌 요약 테스트 | 양성훈 |
 | FR-NLSEARCH-003 | API-DISCOVERY-NL-001 | 없음 | 빈 결과·`PARTIAL`·`FAILED`·전체 목록 대체 금지 테스트 | 양성훈 |
@@ -325,7 +325,7 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 | API | 핵심 테스트 | 평가·운영 증거 | E3 Task |
 |---|---|---|---|
 | [API-DISCOVERY-NL-001](api/discovery/natural-language-restaurant-discovery-api.md) | `TST-E3-NL-001~002`, `TST-E3-SEC-001`, `TST-E3-E2E-001` | `EVAL-NL-001~007`, p95·로그 마스킹 | `E3-T01~02`, `E3-T11~13` |
-| [API-ADMIN-AIEXTRACT-001](api/admin/ai-video-extraction-api.md), Webhook `001~002` | `TST-E3-AI-001~004`, `TST-E3-DATA-001`, `TST-E3-SEC-001` | [`EVAL-AI-001~010` 계약 자산·dry-run·HOLD 기록](../08-planning/third-expansion-ai-evaluation-result.md), 채널 감시 GET/PUT 상태·권한·민감정보 비노출, Worker·quota·정식 저장 0건 | `E3-T03~08`, `E3-T11~13` |
+| [API-ADMIN-AIEXTRACT-001](api/admin/ai-video-extraction-api.md), Webhook `001~002` | `TST-E3-AI-001~004`, `TST-E3-DATA-001`, `TST-E3-SEC-001`, `SecurityBoundaryApiTest` 채널 감시 GET/PUT 401·403·ADMIN 경계 | [`EVAL-AI-001~010` 계약 자산·dry-run·HOLD 기록](../08-planning/third-expansion-ai-evaluation-result.md), 채널 감시 GET/PUT 상태·lastErrorAt·권한·민감정보 비노출, Worker·quota·정식 저장 0건 | `E3-T03~08`, `E3-T11~13` |
 | [API-DISCOVERY-COURSE-001](api/discovery/restaurant-course-recommendation-api.md) | `TST-E3-COURSE-001~003`, `TST-E3-PERF-001`, `TST-E3-E2E-001` | `EVAL-COURSE-001~005`, Mobility quota·호출 수 | `E3-T09~13` |
 
 세 API의 계약 상태는 Accepted지만 테스트·외부 계정·운영 증거가 연결되기 전에는 API 구현 완료로 판정하지 않는다.

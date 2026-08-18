@@ -215,7 +215,7 @@ related_documents:
 ### 3.6 `GET /api/admin/ai/youtube-channel-watches/{creatorId}` 채널 감시 상태 조회
 
 - `Authorization: Bearer <access-token>`과 `ADMIN` 권한을 요구한다.
-- 대상은 외부 YouTube 채널 식별자가 확인된 검증된 Creator로 한정한다. Creator가 존재하지 않거나 비공개·삭제 상태이거나 외부에서 이용할 수 없으면 `404 CREATOR_NOT_FOUND`를 반환한다.
+- 대상은 외부 YouTube 채널 식별자가 확인된 Creator로 한정한다. Creator가 존재하지 않거나 외부 채널 식별자가 없으면 `404 CREATOR_NOT_FOUND`를 반환한다. 등록 후 Creator가 비공개·삭제 상태 또는 외부 이용 불가로 바뀌어도 기존 감시 상태는 조회할 수 있다. 감시 활성화(`enabled=true`)만 공개·외부 이용 가능 검증을 요구한다.
 - 감시 설정 행이 없어도 오류로 처리하지 않고 다음 자원 표현을 `200 OK`로 반환한다.
 
 ```json
@@ -224,13 +224,15 @@ related_documents:
   "subscriptionStatus": "INACTIVE",
   "lastNotificationAt": null,
   "lastRenewedAt": null,
-  "lastErrorCategory": null
+  "lastErrorCategory": null,
+  "lastErrorAt": null
 }
 ```
 
 - `subscriptionStatus=UNKNOWN`은 `enabled=true` 활성화 의도를 저장했지만 외부 구독 challenge가 아직 성공하지 않은 상태이며, 이때 Webhook을 수락하지 않는다.
 - `subscriptionStatus=ACTIVE`는 challenge 성공 후 구독을 수락한 상태이며, 이때만 Webhook을 수락한다. `INACTIVE`와 `RENEWAL_FAILED`도 신규 Webhook을 수락하지 않는다.
 - `lastErrorCategory`는 저장된 오류 범주만 반환하며, Token 원문·Token 해시·Hub 원문과 외부 응답 전문은 반환하지 않는다. 오류가 저장되지 않았으면 `null`이다.
+- `lastErrorAt`은 마지막 구독 처리 오류가 기록된 시각이며, 오류가 저장되지 않았으면 `null`이다. 오류 시각과 범주는 challenge 성공 시 함께 초기화한다.
 - `PUT`의 응답은 이 GET과 같은 자원 표현을 사용하며, 활성화·해지 결과는 이후 GET에서 조회할 수 있다.
 
 ### 3.7 `PUT /api/admin/ai/youtube-channel-watches/{creatorId}` 채널 감시 설정
@@ -242,7 +244,7 @@ related_documents:
 ```
 
 - 검증된 Creator의 YouTube 채널만 활성화할 수 있다.
-- 응답에는 `enabled`, `subscriptionStatus`, `lastNotificationAt`, `lastRenewedAt`, `lastErrorCategory`를 포함한다.
+- 응답에는 `enabled`, `subscriptionStatus`, `lastNotificationAt`, `lastRenewedAt`, `lastErrorCategory`, `lastErrorAt`을 포함한다.
 - `enabled=true`는 감시 활성화 의도만 저장하며, 외부 구독 challenge가 성공하기 전까지 `subscriptionStatus=UNKNOWN`으로 반환하고 Webhook을 수락하지 않는다. challenge 성공 시 `ACTIVE`와 `lastRenewedAt`을 기록한다.
 - `enabled=true` 요청은 `hub.mode=subscribe`와 발급한 검증 Token을 YouTube PubSubHubbub 구독 요청에 전달한다. 구독 확인 요청이 성공하기 전에는 계속 `UNKNOWN`으로 둔다.
 - 이미 `ACTIVE`이고 검증 Token 해시가 유효한 채널에 대한 중복 `enabled=true` 요청은 기존 상태·Token을 유지하고 외부 재구독을 요청하지 않는다.

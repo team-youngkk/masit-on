@@ -7,6 +7,7 @@ import {
   watchErrorCategoryLabel,
   watchErrorMessage,
   watchStatusPresentation,
+  watchToggleEnabled,
   watchToggleLabel,
 } from './youtube-channel-watches-coordination.ts'
 
@@ -46,12 +47,14 @@ test('응답 경계값은 허용된 상태와 안전한 nullable 필드로 정�
     lastNotificationAt: '',
     lastRenewedAt: '2026-08-12T01:00:00Z',
     lastErrorCategory: null,
+    lastErrorAt: null,
   }), {
     enabled: true,
     subscriptionStatus: 'ACTIVE',
     lastNotificationAt: null,
     lastRenewedAt: '2026-08-12T01:00:00Z',
     lastErrorCategory: null,
+    lastErrorAt: null,
   })
   assert.deepEqual(normalizeYoutubeChannelWatchStatus({ enabled: 'true', subscriptionStatus: 'SECRET' }), {
     enabled: false,
@@ -59,11 +62,15 @@ test('응답 경계값은 허용된 상태와 안전한 nullable 필드로 정�
     lastNotificationAt: null,
     lastRenewedAt: null,
     lastErrorCategory: null,
+    lastErrorAt: null,
   })
 })
 
 test('전환 중에도 현재 상태 기준 토글 문구를 일관되게 계산한다', () => {
-  assert.equal(watchToggleLabel({ enabled: true, subscriptionStatus: 'ACTIVE', lastNotificationAt: null, lastRenewedAt: null, lastErrorCategory: null }), '감시 중지')
+  assert.equal(watchToggleLabel({ enabled: true, subscriptionStatus: 'ACTIVE', lastNotificationAt: null, lastRenewedAt: null, lastErrorCategory: null, lastErrorAt: null }), '감시 중지')
+  assert.equal(watchToggleLabel({ enabled: true, subscriptionStatus: 'RENEWAL_FAILED', lastNotificationAt: null, lastRenewedAt: null, lastErrorCategory: null, lastErrorAt: null }), '감시 재시작')
+  assert.equal(watchToggleEnabled({ enabled: true, subscriptionStatus: 'RENEWAL_FAILED', lastNotificationAt: null, lastRenewedAt: null, lastErrorCategory: null, lastErrorAt: null }), true)
+  assert.equal(watchToggleEnabled({ enabled: true, subscriptionStatus: 'ACTIVE', lastNotificationAt: null, lastRenewedAt: null, lastErrorCategory: null, lastErrorAt: null }), false)
   assert.equal(watchToggleLabel(null), '감시 시작')
   assert.equal(watchEnabledLabel(true), '활성화 요청됨')
   assert.equal(watchEnabledLabel(false), '중지됨')

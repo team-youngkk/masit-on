@@ -2,6 +2,8 @@
 
 import { adminJson, AdminApiError, messageFor } from './api.ts'
 import { normalizeYoutubeChannelWatchStatus } from './youtube-channel-watches-coordination.ts'
+import { CreatorListError, fetchCreatorReferences } from '../creators-api.ts'
+import { youtubeChannelWatchMessageForCode } from './youtube-channel-watches-coordination.ts'
 
 export type YoutubeChannelWatchSubscriptionStatus = 'UNKNOWN' | 'ACTIVE' | 'INACTIVE' | 'RENEWAL_FAILED'
 
@@ -11,50 +13,13 @@ export type YoutubeChannelWatchStatus = {
   lastNotificationAt: string | null
   lastRenewedAt: string | null
   lastErrorCategory: string | null
+  lastErrorAt: string | null
 }
 
-export type Creator = {
-  id: string
-  channelName: string
-}
-
-export class CreatorListError extends Error {
-  readonly traceId?: string
-
-  constructor(message: string, traceId?: string) {
-    super(message)
-    this.name = 'CreatorListError'
-    this.traceId = traceId
-  }
-}
+export type Creator = Awaited<ReturnType<typeof fetchCreatorReferences>>[number]
 
 export async function getVerifiedCreators(): Promise<Creator[]> {
-  let response: Response
-  try {
-    response = await fetch('/api/creators', { cache: 'no-store' })
-  } catch {
-    throw new CreatorListError('검증된 유튜버 목록을 불러오지 못했습니다.')
-  }
-
-  if (!response.ok) {
-    let traceId: string | undefined
-    try {
-      traceId = ((await response.json()) as { traceId?: string }).traceId
-    } catch {
-      // 프록시가 JSON이 아닌 응답을 반환하면 traceId 없이 안내한다.
-    }
-    throw new CreatorListError('검증된 유튜버 목록을 불러오지 못했습니다.', traceId)
-  }
-
-  try {
-    const body = (await response.json()) as { items?: unknown }
-    if (!Array.isArray(body.items)) {
-      throw new Error('invalid creator response')
-    }
-    return body.items.filter(isCreator)
-  } catch {
-    throw new CreatorListError('검증된 유튜버 목록을 불러오지 못했습니다.')
-  }
+  return fetchCreatorReferences()
 }
 
 export async function getYoutubeChannelWatch(creatorId: string): Promise<YoutubeChannelWatchStatus> {
@@ -87,21 +52,11 @@ export function youtubeChannelWatchMessageFor(error: unknown): string {
       : '검증된 유튜버 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
   }
 
-  if (error instanceof AdminApiError && error.code === 'CREATOR_NOT_FOUND') {
-    return '선택한 유튜버를 감시 대상으로 확인하지 못했습니다. 목록을 새로고침해 주세요.'
-  }
-
-  if (error instanceof AdminApiError && error.code === 'EXTERNAL_SERVICE_ERROR') {
-    return 'YouTube 구독 요청을 완료하지 못했습니다. 상태를 확인한 뒤 잠시 후 다시 시도해 주세요.'
+  if (error instanceof AdminApiError) {
+    return youtubeChannelWatchMessageForCode(error.code) ?? messageFor(error)
   }
 
   return messageFor(error)
 }
 
-function isCreator(value: unknown): value is Creator {
-  return value !== null
-    && typeof value === 'object'
-    && !Array.isArray(value)
-    && typeof (value as { id?: unknown }).id === 'string'
-    && typeof (value as { channelName?: unknown }).channelName === 'string'
-}
+export { CreatorListError } from '../creators-api.ts'

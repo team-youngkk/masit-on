@@ -41,10 +41,10 @@ public class AdminYoutubeChannelWatchController {
     public record WatchRequest(Boolean enabled) { }
 
     public record WatchResponse(boolean enabled, String subscriptionStatus, OffsetDateTime lastNotificationAt,
-                                OffsetDateTime lastRenewedAt, String lastErrorCategory) {
+                                OffsetDateTime lastRenewedAt, String lastErrorCategory, OffsetDateTime lastErrorAt) {
         static WatchResponse from(YoutubeChannelWatchManagementUseCase.WatchStatus status) {
             return new WatchResponse(status.enabled(), status.subscriptionStatus(), status.lastNotificationAt(),
-                    status.lastRenewedAt(), status.lastErrorCategory());
+                    status.lastRenewedAt(), status.lastErrorCategory(), status.lastErrorAt());
         }
     }
 }

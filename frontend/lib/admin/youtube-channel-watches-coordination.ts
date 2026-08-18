@@ -29,24 +29,16 @@ const STATUS_PRESENTATIONS: Record<YoutubeChannelWatchSubscriptionStatus, WatchS
   },
 }
 
-const ERROR_MESSAGES: Record<string, string> = {
-  SUBSCRIPTION_4XX: 'YouTube가 구독 요청을 거부했습니다. YouTube 채널·구독 설정을 확인해 주세요.',
-  SUBSCRIPTION_5XX: 'YouTube 서버에서 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',
-  SUBSCRIPTION_UNEXPECTED_STATUS: 'YouTube 구독 응답을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.',
-  SUBSCRIPTION_TIMEOUT: 'YouTube 구독 요청 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.',
-  SUBSCRIPTION_UPSTREAM: 'YouTube 연결에 실패했습니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.',
-  TIMEOUT: '외부 서비스 응답 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.',
-  UPSTREAM: '외부 서비스 연결에 실패했습니다. 잠시 후 다시 시도해 주세요.',
-}
+type ErrorPresentation = { message: string; label: string }
 
-const ERROR_CATEGORY_LABELS: Record<string, string> = {
-  SUBSCRIPTION_4XX: '구독 요청 거부',
-  SUBSCRIPTION_5XX: 'YouTube 서버 오류',
-  SUBSCRIPTION_UNEXPECTED_STATUS: '예상하지 못한 구독 응답',
-  SUBSCRIPTION_TIMEOUT: '구독 요청 시간 초과',
-  SUBSCRIPTION_UPSTREAM: 'YouTube 연결 오류',
-  TIMEOUT: '외부 서비스 응답 시간 초과',
-  UPSTREAM: '외부 서비스 연결 오류',
+const ERROR_PRESENTATIONS: Record<string, ErrorPresentation> = {
+  SUBSCRIPTION_4XX: { message: 'YouTube가 구독 요청을 거부했습니다. YouTube 채널·구독 설정을 확인해 주세요.', label: '구독 요청 거부' },
+  SUBSCRIPTION_5XX: { message: 'YouTube 서버에서 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.', label: 'YouTube 서버 오류' },
+  SUBSCRIPTION_UNEXPECTED_STATUS: { message: 'YouTube 구독 응답을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.', label: '예상하지 못한 구독 응답' },
+  SUBSCRIPTION_TIMEOUT: { message: 'YouTube 구독 요청 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.', label: '구독 요청 시간 초과' },
+  SUBSCRIPTION_UPSTREAM: { message: 'YouTube 연결에 실패했습니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.', label: 'YouTube 연결 오류' },
+  TIMEOUT: { message: '외부 서비스 응답 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.', label: '외부 서비스 응답 시간 초과' },
+  UPSTREAM: { message: '외부 서비스 연결에 실패했습니다. 잠시 후 다시 시도해 주세요.', label: '외부 서비스 연결 오류' },
 }
 
 export function watchStatusPresentation(status: YoutubeChannelWatchSubscriptionStatus): WatchStatusPresentation {
@@ -55,16 +47,21 @@ export function watchStatusPresentation(status: YoutubeChannelWatchSubscriptionS
 
 export function watchErrorMessage(category: string | null): string | null {
   if (!category) return null
-  return ERROR_MESSAGES[category] ?? '구독 처리 중 운영 오류가 발생했습니다. 상태를 확인한 뒤 다시 시도해 주세요.'
+  return ERROR_PRESENTATIONS[category]?.message ?? '구독 처리 중 운영 오류가 발생했습니다. 상태를 확인한 뒤 다시 시도해 주세요.'
 }
 
 export function watchErrorCategoryLabel(category: string | null): string {
   if (!category) return '없음'
-  return ERROR_CATEGORY_LABELS[category] ?? '분류되지 않은 오류'
+  return ERROR_PRESENTATIONS[category]?.label ?? '분류되지 않은 오류'
 }
 
 export function watchToggleLabel(status: YoutubeChannelWatchStatus | null): string {
+  if (status?.subscriptionStatus === 'RENEWAL_FAILED') return '감시 재시작'
   return status?.enabled ? '감시 중지' : '감시 시작'
+}
+
+export function watchToggleEnabled(status: YoutubeChannelWatchStatus): boolean {
+  return status.subscriptionStatus === 'RENEWAL_FAILED' ? true : !status.enabled
 }
 
 export function watchEnabledLabel(enabled: boolean): string {
@@ -80,6 +77,18 @@ export function normalizeYoutubeChannelWatchStatus(value: unknown): YoutubeChann
     lastNotificationAt: nullableString(raw.lastNotificationAt),
     lastRenewedAt: nullableString(raw.lastRenewedAt),
     lastErrorCategory: nullableString(raw.lastErrorCategory),
+    lastErrorAt: nullableString(raw.lastErrorAt),
+  }
+}
+
+export function youtubeChannelWatchMessageForCode(code?: string): string | undefined {
+  switch (code) {
+    case 'CREATOR_NOT_FOUND':
+      return '선택한 유튜버를 감시 대상으로 확인하지 못했습니다. 목록을 새로고침해 주세요.'
+    case 'EXTERNAL_SERVICE_ERROR':
+      return 'YouTube 구독 요청을 완료하지 못했습니다. 상태를 확인한 뒤 잠시 후 다시 시도해 주세요.'
+    default:
+      return undefined
   }
 }
 

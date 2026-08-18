@@ -25,6 +25,11 @@ export function AdminNavigation() {
   const pathname = usePathname()
   const router = useRouter()
   const [logoutError, setLogoutError] = useState<string | null>(null)
+  const activeHref = items
+    .filter((item) => item.href === '/admin'
+      ? pathname === item.href
+      : pathname === item.href || pathname.startsWith(`${item.href}/`))
+    .sort((left, right) => right.href.length - left.href.length)[0]?.href
 
   async function handleLogout() {
     setLogoutError(null)
@@ -44,9 +49,7 @@ export function AdminNavigation() {
           <Link
             key={item.href}
             href={item.href}
-            className={item.href === '/admin'
-              ? pathname === item.href ? styles.activeLink : styles.link
-              : pathname === item.href || pathname.startsWith(`${item.href}/`) ? styles.activeLink : styles.link}
+            className={item.href === activeHref ? styles.activeLink : styles.link}
           >
             {item.label}
           </Link>

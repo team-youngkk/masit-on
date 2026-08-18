@@ -80,7 +80,8 @@ public class JdbcYoutubeChannelWatchStore implements YoutubeChannelWatchStore {
                            ELSE youtube_channel_watch.subscription_token_hash
                        END,
                        updated_at = CURRENT_TIMESTAMP
-                RETURNING enabled, subscription_status, last_notification_at, last_renewed_at, last_error_category
+                RETURNING enabled, subscription_status, last_notification_at, last_renewed_at,
+                          last_error_category, last_error_at
                 """, this::mapDetail, UUID.randomUUID(), creatorId, channelId, enabled, requestedStatus,
                 subscriptionTokenHash);
     }
@@ -101,6 +102,7 @@ public class JdbcYoutubeChannelWatchStore implements YoutubeChannelWatchStore {
                    SET subscription_status = 'ACTIVE',
                        last_renewed_at = ?,
                        last_error_category = NULL,
+                       last_error_at = NULL,
                        updated_at = CURRENT_TIMESTAMP
                  WHERE youtube_channel_id = ?
                    AND enabled = true
@@ -115,12 +117,14 @@ public class JdbcYoutubeChannelWatchStore implements YoutubeChannelWatchStore {
                    SET enabled = true,
                        subscription_status = 'RENEWAL_FAILED',
                        last_error_category = ?,
+                       last_error_at = CURRENT_TIMESTAMP,
                        updated_at = CURRENT_TIMESTAMP
                  WHERE youtube_channel_id = ?
                    AND subscription_token_hash = ?
                    AND enabled = true
                    AND subscription_status = 'UNKNOWN'
-                RETURNING enabled, subscription_status, last_notification_at, last_renewed_at, last_error_category
+                RETURNING enabled, subscription_status, last_notification_at, last_renewed_at,
+                          last_error_category, last_error_at
                 """, this::mapDetail, errorCategory, channelId, expectedTokenHash);
         return rows.stream().findFirst();
     }
@@ -160,7 +164,8 @@ public class JdbcYoutubeChannelWatchStore implements YoutubeChannelWatchStore {
     @Override
     public Optional<WatchDetail> findDetail(String channelId) {
         List<WatchDetail> rows = jdbcTemplate.query("""
-                SELECT enabled, subscription_status, last_notification_at, last_renewed_at, last_error_category
+                SELECT enabled, subscription_status, last_notification_at, last_renewed_at,
+                       last_error_category, last_error_at
                   FROM youtube_channel_watch
                  WHERE youtube_channel_id = ?
                 """, this::mapDetail, channelId);
@@ -175,6 +180,7 @@ public class JdbcYoutubeChannelWatchStore implements YoutubeChannelWatchStore {
     private WatchDetail mapDetail(ResultSet rs, int rowNum) throws SQLException {
         return new WatchDetail(rs.getBoolean("enabled"), rs.getString("subscription_status"),
                 rs.getObject("last_notification_at", OffsetDateTime.class),
-                rs.getObject("last_renewed_at", OffsetDateTime.class), rs.getString("last_error_category"));
+                rs.getObject("last_renewed_at", OffsetDateTime.class), rs.getString("last_error_category"),
+                rs.getObject("last_error_at", OffsetDateTime.class));
     }
 }

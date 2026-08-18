@@ -6,12 +6,12 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/Button'
 import { Field } from '@/components/ui/Field'
 import { adminJson, fieldErrorsFor, messageFor } from '@/lib/admin/api'
+import { fetchCreatorReferences } from '@/lib/creators-api'
 
 import styles from './admin.module.css'
 
 type Reference = { id: string; name: string }
 type RestaurantResponse = { items: Array<{ id: string; name: string }> }
-type CreatorResponse = { items: Array<{ id: string; channelName: string }> }
 type VisitResponse = { id: string; restaurantId: string; creatorId: string; videoId: string }
 
 async function fetchRestaurantReferences(query: string): Promise<Reference[]> {
@@ -27,17 +27,6 @@ async function fetchRestaurantReferences(query: string): Promise<Reference[]> {
 
   const restaurants = (await response.json()) as RestaurantResponse
   return restaurants.items.map(({ id, name }) => ({ id, name }))
-}
-
-async function fetchCreatorReferences(): Promise<Reference[]> {
-  const creatorResponse = await fetch('/api/creators')
-
-  if (!creatorResponse.ok) {
-    throw new Error('유튜버 참조 목록을 불러오지 못했습니다.')
-  }
-
-  const creators = (await creatorResponse.json()) as CreatorResponse
-  return creators.items.map(({ id, channelName }) => ({ id, name: channelName }))
 }
 
 export function VisitRegistrationForm() {
@@ -103,7 +92,7 @@ export function VisitRegistrationForm() {
         <span>유튜버</span>
         <select value={creatorId} onChange={(event) => setCreatorId(event.target.value)} required>
           <option value="">유튜버를 선택하세요</option>
-          {creators.data?.map((creator) => <option key={creator.id} value={creator.id}>{creator.name}</option>)}
+          {creators.data?.map((creator) => <option key={creator.id} value={creator.id}>{creator.channelName}</option>)}
         </select>
         {fieldErrors.creatorId ? <small className={styles.error}>{fieldErrors.creatorId}</small> : null}
       </label>

@@ -19,6 +19,7 @@ import {
   watchErrorCategoryLabel,
   watchErrorMessage,
   watchStatusPresentation,
+  watchToggleEnabled,
   watchToggleLabel,
 } from '@/lib/admin/youtube-channel-watches-coordination'
 
@@ -37,7 +38,7 @@ export function YoutubeChannelWatchScreen() {
   const creators = creatorsQuery.data ?? []
 
   useEffect(() => {
-    if (!selectedCreatorId && creators.length > 0) {
+    if (creators.length > 0 && !creators.some((creator) => creator.id === selectedCreatorId)) {
       setSelectedCreatorId(creators[0].id)
     }
   }, [creators, selectedCreatorId])
@@ -75,7 +76,7 @@ export function YoutubeChannelWatchScreen() {
   function toggleWatch() {
     if (!selectedCreatorId || !watchQuery.data || mutation.isPending) return
     setNotice(null)
-    mutation.mutate({ creatorId: selectedCreatorId, enabled: !watchQuery.data.enabled })
+    mutation.mutate({ creatorId: selectedCreatorId, enabled: watchToggleEnabled(watchQuery.data) })
   }
 
   if (creatorsQuery.isPending) {
@@ -144,11 +145,10 @@ function WatchStatusPanel({
     <p className={styles.statusDescription}>{presentation.description}</p>
     {errorMessage ? <p className={styles.errorNotice}>{errorMessage}</p> : null}
     <dl className={styles.detailGrid}>
-      <div className={styles.detail}><dt>활성화 요청</dt><dd>{watchEnabledLabel(status.enabled)}</dd></div>
       <div className={styles.detail}><dt>마지막 오류 범주</dt><dd>{watchErrorCategoryLabel(status.lastErrorCategory)}</dd></div>
+      <div className={styles.detail}><dt>마지막 오류 시각</dt><dd>{formatDate(status.lastErrorAt)}</dd></div>
       <div className={styles.detail}><dt>마지막 Webhook 수신</dt><dd>{formatDate(status.lastNotificationAt)}</dd></div>
       <div className={styles.detail}><dt>마지막 구독 갱신</dt><dd>{formatDate(status.lastRenewedAt)}</dd></div>
-      <div className={styles.detail}><dt>최근 구독 처리 안내</dt><dd>{errorMessage ?? '기록 없음'}</dd></div>
     </dl>
   </section>
 }

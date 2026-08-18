@@ -23,18 +23,15 @@ public class YoutubeChannelWatchManagementService implements YoutubeChannelWatch
 
     private final FindCreatorReferenceUseCase creatorReferences;
     private final YoutubeChannelWatchPersistenceService watchPersistence;
-    private final YoutubeChannelWatchStore watchStore;
     private final YoutubeChannelWatchVerificationTokenPort verificationTokens;
     private final YoutubeChannelWatchSubscriptionPort subscriptions;
 
     public YoutubeChannelWatchManagementService(FindCreatorReferenceUseCase creatorReferences,
                                                 YoutubeChannelWatchPersistenceService watchPersistence,
-                                                YoutubeChannelWatchStore watchStore,
                                                 YoutubeChannelWatchVerificationTokenPort verificationTokens,
                                                 YoutubeChannelWatchSubscriptionPort subscriptions) {
         this.creatorReferences = creatorReferences;
         this.watchPersistence = watchPersistence;
-        this.watchStore = watchStore;
         this.verificationTokens = verificationTokens;
         this.subscriptions = subscriptions;
     }
@@ -43,9 +40,8 @@ public class YoutubeChannelWatchManagementService implements YoutubeChannelWatch
     @Transactional(readOnly = true)
     public WatchStatus getStatus(UUID creatorId) {
         FindCreatorReferenceUseCase.CreatorReference creator = creatorReferences.findCreatorReference(creatorId)
-                .filter(reference -> reference.publiclyVisible() && reference.externallyAvailable())
                 .orElseThrow(this::creatorNotFound);
-        return watchStore.findDetail(creator.externalChannelId())
+        return watchPersistence.findDetail(creator.externalChannelId())
                 .map(this::status)
                 .orElseGet(this::initialStatus);
     }
@@ -97,7 +93,7 @@ public class YoutubeChannelWatchManagementService implements YoutubeChannelWatch
 
     private WatchStatus status(com.masiton.ai.application.port.out.YoutubeChannelWatchStore.WatchDetail watch) {
         return new WatchStatus(watch.enabled(), watch.subscriptionStatus(), watch.lastNotificationAt(),
-                watch.lastRenewedAt(), watch.lastErrorCategory());
+                watch.lastRenewedAt(), watch.lastErrorCategory(), watch.lastErrorAt());
     }
 
     private WatchStatus initialStatus() {

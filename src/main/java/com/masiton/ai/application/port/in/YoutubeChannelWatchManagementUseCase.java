@@ -10,5 +10,10 @@ public interface YoutubeChannelWatchManagementUseCase {
     WatchStatus getStatus(UUID creatorId);
 
     record WatchStatus(boolean enabled, String subscriptionStatus, OffsetDateTime lastNotificationAt,
-                       OffsetDateTime lastRenewedAt, String lastErrorCategory) { }
+                       OffsetDateTime lastRenewedAt, String lastErrorCategory, OffsetDateTime lastErrorAt) {
+        public WatchStatus(boolean enabled, String subscriptionStatus, OffsetDateTime lastNotificationAt,
+                           OffsetDateTime lastRenewedAt, String lastErrorCategory) {
+            this(enabled, subscriptionStatus, lastNotificationAt, lastRenewedAt, lastErrorCategory, null);
+        }
+    }
 }

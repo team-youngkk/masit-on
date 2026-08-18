@@ -123,7 +123,7 @@ class JdbcYoutubeChannelWatchStoreIntegrationTest {
 
         try {
             assertThat(store.findDetail(channelId)).contains(new YoutubeChannelWatchStore.WatchDetail(
-                    true, "RENEWAL_FAILED", lastNotificationAt, lastRenewedAt, "SUBSCRIPTION_TIMEOUT"));
+                    true, "RENEWAL_FAILED", lastNotificationAt, lastRenewedAt, "SUBSCRIPTION_TIMEOUT", null));
             assertThat(store.findDetail("missing-" + UUID.randomUUID())).isEmpty();
         } finally {
             deleteFixture(creatorId, channelId);
@@ -234,6 +234,7 @@ class JdbcYoutubeChannelWatchStoreIntegrationTest {
             assertThat(detail.enabled()).isTrue();
             assertThat(detail.subscriptionStatus()).isEqualTo("RENEWAL_FAILED");
             assertThat(detail.lastErrorCategory()).isEqualTo("SUBSCRIPTION_5XX");
+            assertThat(detail.lastErrorAt()).isNotNull();
         } finally {
             deleteFixture(creatorId, channelId);
         }

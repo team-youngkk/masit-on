@@ -127,7 +127,8 @@ class AdminYoutubeChannelWatchControllerApiTest {
         UUID creatorId = UUID.randomUUID();
         when(useCase.getStatus(creatorId)).thenReturn(new YoutubeChannelWatchManagementUseCase.WatchStatus(
                 true, "RENEWAL_FAILED", OffsetDateTime.parse("2026-08-12T01:00:00Z"),
-                OffsetDateTime.parse("2026-08-13T02:00:00Z"), "SUBSCRIPTION_TIMEOUT"));
+                OffsetDateTime.parse("2026-08-13T02:00:00Z"), "SUBSCRIPTION_TIMEOUT",
+                OffsetDateTime.parse("2026-08-13T03:00:00Z")));
 
         mockMvc.perform(get("/api/admin/ai/youtube-channel-watches/{creatorId}", creatorId))
                 .andExpect(status().isOk())
@@ -135,7 +136,8 @@ class AdminYoutubeChannelWatchControllerApiTest {
                 .andExpect(jsonPath("$.subscriptionStatus").value("RENEWAL_FAILED"))
                 .andExpect(jsonPath("$.lastNotificationAt").value("2026-08-12T01:00:00Z"))
                 .andExpect(jsonPath("$.lastRenewedAt").value("2026-08-13T02:00:00Z"))
-                .andExpect(jsonPath("$.lastErrorCategory").value("SUBSCRIPTION_TIMEOUT"));
+                .andExpect(jsonPath("$.lastErrorCategory").value("SUBSCRIPTION_TIMEOUT"))
+                .andExpect(jsonPath("$.lastErrorAt").value("2026-08-13T03:00:00Z"));
     }
 
     @Test

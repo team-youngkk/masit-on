@@ -33,5 +33,10 @@ public interface YoutubeChannelWatchStore {
     }
 
     record WatchDetail(boolean enabled, String subscriptionStatus, OffsetDateTime lastNotificationAt,
-                       OffsetDateTime lastRenewedAt, String lastErrorCategory) { }
+                       OffsetDateTime lastRenewedAt, String lastErrorCategory, OffsetDateTime lastErrorAt) {
+        public WatchDetail(boolean enabled, String subscriptionStatus, OffsetDateTime lastNotificationAt,
+                           OffsetDateTime lastRenewedAt, String lastErrorCategory) {
+            this(enabled, subscriptionStatus, lastNotificationAt, lastRenewedAt, lastErrorCategory, null);
+        }
+    }
 }
