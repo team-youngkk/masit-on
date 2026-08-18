@@ -80,8 +80,8 @@ Testcontainers 기반 자동화 테스트는 매 실행 시 빈 데이터베이�
 관리자 계정은 공용 seed에 넣지 않는다. 환경별 비밀번호 해시를 Git에 커밋하지 않고 다음 절차를 사용한다.
 
 1. 배포 환경의 비밀 관리 경로에서 초기 login ID와 일회용 비밀번호를 제공한다.
-2. 별도 부트스트랩 명령이 PasswordEncoder로 해시해 `admin_account`를 한 번 생성한다.
-3. 동일 `login_id`가 있으면 덮어쓰지 않고 실패한다.
+2. 별도 부트스트랩 명령이 PasswordEncoder로 해시해 `member_account`에 `role='ADMIN'`인 활성 계정을 한 번 생성한다.
+3. 동일한 정규화 이메일이 있으면 덮어쓰지 않고 실패한다. 기존 회원 승격은 별도의 승인된 역할 변경 절차를 사용한다.
 4. 평문·해시·Token을 로그에 출력하지 않는다.
 
 운영 계정을 Flyway placeholder나 SQL 파일에 넣지 않는다.
@@ -119,6 +119,8 @@ Flyway undo 파일과 하향 migration은 기본 경로로 사용하지 않는�
 2. 애플리케이션만 문제면 이전 애플리케이션이 확장된 스키마와 호환되는지 확인 후 되돌린다.
 3. 데이터 훼손 또는 호환 불가능 DDL이면 배포를 중지하고 RDS 스냅샷 복구를 판단한다.
 
+통합 계정 전환은 계약 단계의 `admin_account` 제거 전까지 retained legacy 테이블과 이전 애플리케이션으로 롤백할 수 있다. 테이블 제거 후에는 하향 DDL로 되돌리지 않고 데이터베이스 복원 또는 새 전진 수정 마이그레이션만 사용한다.
+
 운영에 적용된 migration 파일 수정과 `flyway repair`로 잘못된 checksum을 덮는 행위는 금지한다. `repair`는 실제 파일 무결성과 복구 계획을 확인한 예외 운영 절차에서만 승인한다.
 
 ## 7. CI 검증
@@ -132,6 +134,7 @@ Flyway undo 파일과 하향 migration은 기본 경로로 사용하지 않는�
 - 중복 Restaurant/Creator/Video/Visit, 채널 불일치, 삭제 상태 쌍, Token 상태 쌍 위반 테스트
 - 기준 데이터 수·code·name·순서·`OTHER` 단일성 검증
 - 공개 목록·Creator 필터·상세 조회 실행계획 smoke test
+- 통합 계정 전환의 legacy/회원 행 수, 관리자 이메일 1:1 매핑, 비밀번호 해시 호환성, 전환 대상 FK, MEMBER·ADMIN 로그인과 역할별 세션 상한 검증
 
 ## 8. V2 1차 확장 스키마
 
@@ -200,3 +203,32 @@ AI 영상 추출 스키마·재사용 조회 인덱스·수동 검수 감사·�
 초기 스키마 baseline 다음 변경은 `V2`로 적용됐고, 1차 확장 변경은 2.3절 통합 이후 다시 `V2` 하나로 적용됐다. 2차 확장은 `V3`, 3차 확장 AI 영상 추출·누적 AI 변경·Gemini 모델 전환 제약은 통합 `V4`, 채널 감시 오류 시각 보강은 `V5`를 사용한다.
 
 `V1`과 `V2`는 각각 적용된 시점부터 수정하지 않는다. 현행 `V3__add_expansion_2_schema.sql` 또는 `V4__create_third_expansion_ai_schema.sql`을 향후 통합하려면 2.1절과 ADR-DATA-009의 강제 규칙을 모두 증명해야 하며, 이미 운영에 적용된 파일은 통합·수정하지 않는다.
+
+## 13. 통합 계정 전환 마이그레이션
+
+이 문서 변경은 SQL을 구현하지 않는다. 실제 구현은 현재 `flyway_schema_history`와 저장소의 최신 버전을 다시 확인한 뒤 **다음 미사용 버전**을 배정한다. 현행 저장소에는 V5까지 있으나 공유·운영 적용 여부 확인 없이 V6를 확정하거나 기존 파일을 통합하지 않는다.
+
+### 13.1 확장·복사 단계
+
+첫 번째 신규 마이그레이션은 다음 범위만 전진 적용한다.
+
+1. `member_account.role varchar(16) NOT NULL DEFAULT 'MEMBER'`와 `MEMBER/ADMIN` CHECK를 추가한다.
+2. legacy `admin_account`별 검증된 고유 관리자 이메일 매핑을 준비하고, 같은 이메일의 MemberAccount가 없으면 관리자 UUID를 재사용해 `ACTIVE/ADMIN` 행을 복사한다. 기존 MemberAccount가 있으면 그 회원 UUID를 매핑 대상으로 사용한다.
+3. 비밀번호 해시는 현재 PasswordEncoder가 검증할 수 있는 형식만 그대로 이전한다. 호환되지 않는 해시는 임의 변환하지 않고 해당 행을 차단 목록에 남긴다.
+4. `confirmation_token`, Creator/AI 관리자 행위자, 감사·검수 등 `admin_account`를 참조하는 모든 FK를 목록화하고 회원 UUID 매핑으로 호환 읽기/쓰기를 제공한다. 매핑되지 않은 FK는 허용하지 않는다.
+5. 애플리케이션은 통합 로그인과 `member_account.role` 기반 RBAC로 전환하되 legacy 테이블은 유지한다. 역할·상태·비밀번호 변경 시 `auth:session:`의 해당 계정 세션을 모두 폐기한다.
+6. 최소 한 호환 관찰 기간 동안 legacy/신규 행 수, 매핑 누락·중복, FK 고아, MEMBER·ADMIN 로그인, ADMIN 권한 경로, 세션 상한(`MEMBER` 3, `ADMIN` 1)을 관측한다. cutover에서 legacy 관리자 Refresh 세션은 전부 무효화한다.
+
+공개 회원가입 API는 역할을 받지 않고 DB 기본값 `MEMBER`만 사용한다. `ADMIN` 발급·변경·회수는 승인된 운영 명령에 한정한다.
+
+### 13.2 계약 단계
+
+별도의 후속 마이그레이션은 다음 증거가 모두 승인된 뒤에만 실행한다.
+
+- 확장 전후 관리자 수와 `role='ADMIN'` 수가 승인된 예외를 제외하고 일치한다.
+- 모든 legacy 관리자 이메일이 정확히 하나의 MemberAccount에 매핑되고, 중복·누락·호환 불가 비밀번호 해시가 0건이다.
+- `admin_account`를 향한 FK가 0개이고 모든 관리자 행위자 참조가 유효한 `member_account.id`를 가리킨다.
+- 통합 MEMBER·ADMIN 로그인, ADMIN RBAC, 로그아웃·회전·전체 세션 폐기와 rollback rehearsal이 통과한다.
+- 적용 대상 버전이 운영·공유 환경에 이미 존재하지 않는다는 `flyway_schema_history` 읽기 증거와, 신규 마이그레이션 적용 테스트가 남아 있다.
+
+증명 후 legacy FK·제약과 `admin_account`를 제거한다. 제거 이후 롤백은 DB 복원 또는 전진 수정만 허용한다. 이 변경은 기존 적용 파일의 수정·삭제나 릴리스 전 통합 예외로 처리하지 않는다.

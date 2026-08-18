@@ -1,7 +1,7 @@
 ---
 id: ADR-AUTH-002
 title: 일반 회원 JWT와 Refresh Token 세션
-status: Accepted
+status: Superseded
 decision_date: 2026-07-29
 last_reviewed: 2026-07-29
 owners:
@@ -33,16 +33,16 @@ related_documents:
   - auth-006-cookie-origin-defense.md
   - ../data/data-005-redis-refresh-token.md
 supersedes: []
-superseded_by: null
+superseded_by: ADR-AUTH-007
 ---
 
 # ADR-AUTH-002 일반 회원 JWT와 Refresh Token 세션
 
 ## 1. 상태
 
-Accepted
+Superseded by [ADR-AUTH-007](auth-007-unified-account-rbac-session.md).
 
-2026-07-29 요구사항·API·데이터 계약 확정 결과를 동기화했다. 기존의 관리자·회원 인증 분리, RS256 JWT, Redis Refresh 세션과 최대 3세션이라는 결론은 변경하지 않았다.
+일반 회원 세션의 역사적 결정은 보존하지만 현재 구현 계약으로 사용하지 않는다.
 
 현재 `develop`에는 V2 회원 보안 데이터, 회원 JWT 발급과 Redis 세션 기반만 구현돼 있다. 이 문서의 계정 상태·`sid` 폐기 표식 조회, 회원 인증 API, 요청 제한 HMAC, 신뢰 프록시와 Origin 검증은 후속 구현이 완료되기 전까지 현재 적용된 보안 통제로 간주하지 않는다.
 

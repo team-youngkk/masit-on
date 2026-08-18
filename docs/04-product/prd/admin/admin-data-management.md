@@ -11,6 +11,7 @@ related_requirements:
   - FR-ADMIN-002
   - FR-ADMIN-003
   - FR-ADMIN-004
+  - FR-AUTH-004
   - FR-VISIT-001
 related_business_rules:
   - BR-RESTAURANT-003
@@ -44,6 +45,8 @@ related_business_rules:
   - BR-ADMIN-006
   - BR-ADMIN-007
   - BR-ADMIN-008
+  - BR-AUTH-009
+  - BR-AUTH-010
 related_nfr:
   - NFR-PERFORMANCE-003
   - NFR-SECURITY-001
@@ -70,8 +73,8 @@ related_documents:
   - ../../../03-team/ownership.md
   - ../../../05-specs/api/admin/README.md
   - ../../../05-specs/data/README.md
-  - ../../../07-adr/security/auth-001-spring-security-jwt.md
-  - ../../../07-adr/platform/web-003-routing-boundary.md
+  - ../../../07-adr/security/auth-007-unified-account-rbac-session.md
+  - ../../../07-adr/platform/web-006-unified-login-rbac-route.md
   - ../../../07-adr/integration/ext-001-reference-verification.md
   - ../../../01-requirements/non-functional-requirements.md
   - ../../traceability.md
@@ -81,11 +84,11 @@ related_documents:
 
 ## 1. 문서 정보
 
-관리자 접근부터 맛집·유튜버·영상 기본 데이터, 방문 관계 등록과 사용자 조회 반영까지 하나의 완결된 [WS-04](../../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 업무 흐름으로 정의한다. 화면은 `/admin/login`, `/admin/restaurants/new`, `/admin/creators/new`, `/admin/videos/new`, `/admin/visits/new`로 분리하고 백엔드 호출은 `/api/admin/**`를 사용한다.
+관리자 접근부터 맛집·유튜버·영상 기본 데이터, 방문 관계 등록과 사용자 조회 반영까지 하나의 완결된 [WS-04](../../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 업무 흐름으로 정의한다. 로그인 화면은 일반 회원과 공유하고, 메인 페이지의 관리자 진입 링크에서 `/admin/restaurants/new`, `/admin/creators/new`, `/admin/videos/new`, `/admin/visits/new`로 이동한다. 백엔드 호출은 `/api/admin/**`를 사용한다.
 
 ## 2. 기능 개요
 
-사전 발급 계정으로 인증한 관리자는 사실을 확인한 기본 데이터를 먼저 등록하고, 실제 방문 영상을 근거로 세 대상의 관계를 등록해 사용자 탐색과 상세에 반영한다.
+승인된 운영 절차로 `member_account.role=ADMIN`이 부여된 관리자는 통합 로그인 후 사실을 확인한 기본 데이터를 먼저 등록하고, 실제 방문 영상을 근거로 세 대상의 관계를 등록해 사용자 탐색과 상세에 반영한다.
 
 ## 3. 문제 및 사용자 요구
 
@@ -103,13 +106,13 @@ related_documents:
 
 ## 6. 대상 사용자
 
-- 사전 발급된 동일 등록 권한의 관리자
+- 승인된 운영 절차로 `ADMIN` 역할이 부여된 동일 등록 권한의 관리자
 
 ## 7. 전제 조건
 
 - 팀이 최소 관리자 인증과 접근 거부 계약을 확정한다.
 - 방문 관계 전에 참조할 맛집·유튜버·영상이 등록돼 있어야 한다.
-- 관리자 화면 진입 시 메모리 Access Token이 없으면 Refresh Token 재발급을 한 번 시도하고 실패하면 `/admin/login`으로 이동한다.
+- 메인 페이지는 TanStack Query 현재 사용자 결과가 `ADMIN`일 때 관리자 링크를 표시한다. 보호 Route 진입 시 메모리 Access Token이 없으면 통합 Refresh 재발급을 한 번 시도하고 실패하면 공통 `/login`으로 이동한다.
 - 관리자는 출처와 사실, 영상 게시 채널과 실제 방문 근거를 확인한다.
 
 ## 8. 핵심 사용자 흐름

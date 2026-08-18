@@ -65,7 +65,7 @@ Restaurant·Creator·Video·Visit에 `publication_status(PUBLIC/PRIVATE)`와 `li
 
 ## 9. 적용 범위
 
-Restaurant·Creator·Video·Visit와 그 공개 조회·운영 정정에 적용한다. Region·FoodCategory는 `active`, AdminAccount는 `active`, 확인 Token은 자체 상태·보관 정책을 사용한다.
+Restaurant·Creator·Video·Visit와 그 공개 조회·운영 정정에 적용한다. Region·FoodCategory는 `active`, 통합 `MemberAccount`는 `status`와 `role`, 확인 Token은 자체 상태·보관 정책을 사용한다.
 
 ## 10. 강제 규칙
 

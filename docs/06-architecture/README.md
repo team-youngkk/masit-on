@@ -13,7 +13,7 @@ related_documents:
   - external-integration.md
   - ../07-adr/architecture/arch-001-domain-monolith.md
   - ../07-adr/architecture/arch-002-external-ports-adapters.md
-  - ../07-adr/platform/web-003-routing-boundary.md
+  - ../07-adr/platform/web-006-unified-login-rbac-route.md
   - ../07-adr/security/auth-003-confirmation-token.md
 ---
 
@@ -60,9 +60,9 @@ related_documents:
 - [ADR-ARCH-002 외부 연동 Port/Adapter 경계](../07-adr/architecture/arch-002-external-ports-adapters.md)
 - [ADR-DATA-003 Spring Data JPA](../07-adr/data/data-003-spring-data-jpa.md)
 - [ADR-DATA-004 Flyway](../07-adr/data/data-004-flyway.md)
-- [ADR-AUTH-001 관리자 Spring Security JWT](../07-adr/security/auth-001-spring-security-jwt.md)
+- [ADR-AUTH-007 통합 계정 RBAC와 세션](../07-adr/security/auth-007-unified-account-rbac-session.md)
 - [ADR-AUTH-003 관리자 등록 확인 Token](../07-adr/security/auth-003-confirmation-token.md)
-- [ADR-WEB-003 웹 화면·API·운영 경로 경계](../07-adr/platform/web-003-routing-boundary.md)
+- [ADR-WEB-006 통합 로그인과 역할 기반 관리자 화면 진입](../07-adr/platform/web-006-unified-login-rbac-route.md)
 - [ADR-EXT-001 관리자 외부 기준정보 확인](../07-adr/integration/ext-001-reference-verification.md)
 - [ADR-TEST-001 계층별 자동화 테스트](../07-adr/quality/test-001-automation-strategy.md)
 

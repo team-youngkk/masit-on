@@ -45,7 +45,7 @@ related_documents:
   - ../../../01-requirements/business-rules.md
   - ../../../02-analysis/mvp-workstreams.md
   - ../../../05-specs/api/detail/restaurant-detail-api.md
-  - ../../../07-adr/platform/web-003-routing-boundary.md
+  - ../../../07-adr/platform/web-006-unified-login-rbac-route.md
   - ../../../05-specs/data/relationship-rules.md
   - ../../../05-specs/data/lifecycle-rules.md
   - ../../../01-requirements/non-functional-requirements.md

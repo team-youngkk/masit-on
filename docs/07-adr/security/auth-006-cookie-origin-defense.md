@@ -15,9 +15,8 @@ related_documents:
   - ../../05-specs/api/admin/authentication-api.md
   - ../../05-specs/api/account/member-authentication-api.md
   - ../../06-architecture/security-boundary.md
-  - auth-001-spring-security-jwt.md
-  - auth-002-member-jwt-refresh-token.md
-  - ../platform/web-003-routing-boundary.md
+  - auth-007-unified-account-rbac-session.md
+  - ../platform/web-006-unified-login-rbac-route.md
 ---
 
 # ADR-AUTH-006 쿠키 기반 Refresh·Logout Origin 방어
@@ -28,7 +27,7 @@ Accepted
 
 ## 2. 결정 요약
 
-회원과 관리자 Refresh·Logout처럼 보안 쿠키를 사용하는 요청은 단일 `Origin` 헤더를 요구한다. 값은 각 경계의 배포 Origin allowlist와 canonical form으로 비교하며, 헤더가 없거나 여러 개이거나 허용되지 않으면 Token을 읽거나 회전·폐기하기 전에 `403 FORBIDDEN`으로 거부한다.
+통합 Refresh·Logout처럼 보안 쿠키를 사용하는 요청은 단일 `Origin` 헤더를 요구한다. 값은 배포 Origin allowlist와 canonical form으로 비교하며, 헤더가 없거나 여러 개이거나 허용되지 않으면 Token을 읽거나 회전·폐기하기 전에 `403 FORBIDDEN`으로 거부한다.
 
 ## 3. 배경
 
@@ -36,7 +35,7 @@ Accepted
 
 ## 4. 결정
 
-- 회원 `/api/auth/tokens/refresh`, `/api/auth/tokens`와 관리자 `/api/admin/auth/tokens/refresh`, `/api/admin/auth/tokens`에만 적용한다.
+- 통합 `/api/auth/tokens/refresh`, `/api/auth/tokens`의 쿠키 기반 `POST`·`DELETE` 요청에 적용한다. 로그인 `POST /api/auth/tokens`처럼 쿠키를 읽지 않는 요청에는 적용하지 않는다.
 - `HttpServletRequest#getHeaders("Origin")`로 모든 값을 읽어 정확히 하나일 때만 후보로 인정한다.
 - 회원은 `MemberCookieSettings.publicBaseUrl`, 관리자는 canonicalized `ADMIN_PUBLIC_BASE_URL` allowlist로 후보를 비교한다.
 - 검증은 회원 서비스와 관리자 Bearer·Refresh Token 처리보다 먼저 수행하며, 실패 시 `403 FORBIDDEN`과 공통 오류 계약을 반환한다.
@@ -52,7 +51,7 @@ Accepted
 
 ## 7. 검증 방법
 
-회원·관리자 Refresh·Logout에 대해 허용된 단일 Origin, 누락, 허용되지 않은 값, 서로 다른 다중 Origin을 검증한다. 실패한 경우 서비스 호출, Token 회전·폐기와 쿠키 변경이 시작되지 않는지 확인한다.
+통합 Refresh·Logout에 대해 허용된 단일 Origin, 누락, 허용되지 않은 값, 서로 다른 다중 Origin을 검증한다. 실패한 경우 서비스 호출, Token 회전·폐기와 쿠키 변경이 시작되지 않는지 확인한다.
 
 ## 8. 관련 문서
 
@@ -60,5 +59,4 @@ Accepted
 - [관리자 인증 API](../../05-specs/api/admin/authentication-api.md)
 - [회원 계정·인증 API](../../05-specs/api/account/member-authentication-api.md)
 - [보안 경계](../../06-architecture/security-boundary.md)
-- [관리자 JWT 인증 ADR](auth-001-spring-security-jwt.md)
-- [회원 JWT·Refresh Token ADR](auth-002-member-jwt-refresh-token.md)
+- [통합 계정 RBAC와 세션 ADR](auth-007-unified-account-rbac-session.md)

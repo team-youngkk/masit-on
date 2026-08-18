@@ -56,8 +56,8 @@ related_documents:
 | 맛집 탐색 | [맛집 탐색 API](discovery/restaurant-discovery-api.md) |
 | 유튜버 기반 탐색 | [유튜버 기반 탐색 API](discovery/creator-discovery-api.md) |
 | 맛집·유튜버 상세 | [맛집 상세 API](detail/restaurant-detail-api.md), [유튜버 상세 API](detail/creator-detail-api.md) |
-| 관리자 인증·기본 데이터·방문 관계 | [관리자 인증](admin/authentication-api.md), [기본 데이터](admin/reference-data-api.md), [방문 관계](admin/visit-registration-api.md) |
-| 회원 인증 | [회원 인증 API](account/member-authentication-api.md) |
+| 통합 계정·인증 | [통합 계정·인증 API](account/member-authentication-api.md), [관리자 인증 폐기 경로 호환표](admin/authentication-api.md) |
+| 관리자 기본 데이터·방문 관계 | [기본 데이터](admin/reference-data-api.md), [방문 관계](admin/visit-registration-api.md) |
 | 찜·최근 본 맛집 | [개인 맛집 관리 API](personal/personal-restaurant-api.md) |
 | 지도 탐색 | [지도 탐색 API](discovery/map-discovery-api.md) |
 

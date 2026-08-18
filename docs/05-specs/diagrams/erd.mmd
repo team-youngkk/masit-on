@@ -5,7 +5,7 @@ erDiagram
     RESTAURANT ||--o{ VISIT : has
     CREATOR ||--o{ VISIT : visits
     VIDEO ||--o{ VISIT : proves
-    ADMIN_ACCOUNT ||--o{ ADMIN_REFRESH_TOKEN : owns
+    MEMBER_ACCOUNT ||--o{ AUTH_SESSION : owns
 
     REGION {
         identifier id PK
@@ -84,21 +84,22 @@ erDiagram
         timestamp deletedAt "required only when deleted"
     }
 
-    ADMIN_ACCOUNT {
+    MEMBER_ACCOUNT {
         identifier id PK
-        text loginId UK
+        text email UK
         text passwordCredential
-        boolean active
+        status status
+        status role "MEMBER or ADMIN"
         timestamp createdAt
         timestamp updatedAt
     }
 
-    ADMIN_REFRESH_TOKEN {
-        identifier tokenId PK
-        identifier adminAccountId FK
+    AUTH_SESSION {
+        identifier sessionId PK
+        identifier memberAccountId FK
         text tokenCredential UK
         text tokenFamilyId
         timestamp createdAt
         timestamp expiresAt
-        timestamp invalidatedAt "optional; at most one active token per account"
+        timestamp invalidatedAt "optional; MEMBER max 3, ADMIN max 1"
     }

@@ -10,6 +10,7 @@ related_documents:
   - platform/web-001-frontend-platform.md
   - platform/web-002-data-state.md
   - platform/web-003-routing-boundary.md
+  - platform/web-006-unified-login-rbac-route.md
   - platform/web-004-supported-browser-matrix.md
   - platform/web-005-application-port-binding.md
   - ../02-analysis/mvp-workstreams.md
@@ -23,6 +24,7 @@ related_documents:
   - security/auth-002-member-jwt-refresh-token.md
   - security/auth-003-confirmation-token.md
   - security/auth-006-cookie-origin-defense.md
+  - security/auth-007-unified-account-rbac-session.md
   - data/data-005-redis-refresh-token.md
   - data/data-007-uuid-v4-identifiers.md
   - data/data-008-publication-lifecycle-soft-delete.md
@@ -59,21 +61,23 @@ related_documents:
 | [ADR-FRAME-001](platform/frame-001-spring-boot.md) | Spring Boot 애플리케이션 기준 | Accepted | Critical | Spring Boot 4.1.0, Spring Security 7.1.0 BOM | 전체 백엔드 | [문서](platform/frame-001-spring-boot.md) |
 | [ADR-WEB-001](platform/web-001-frontend-platform.md) | 프론트엔드 런타임과 프레임워크 기준 | Accepted | High | Node.js 24.18.0, Next.js 16.2.11, TypeScript 7.0.2 | 전체 웹 UI | [문서](platform/web-001-frontend-platform.md) |
 | [ADR-WEB-002](platform/web-002-data-state.md) | 프론트엔드 데이터와 상태 책임 분리 | Accepted | Medium | Server Components `fetch`, TanStack Query, URL Query Parameter, `useState` | [WS-01](../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)~[WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 웹 UI | [문서](platform/web-002-data-state.md) |
-| [ADR-WEB-003](platform/web-003-routing-boundary.md) | 웹 화면·API·운영 경로 경계 | Accepted | Critical | Next.js App Router, Nginx, Spring Security, `/api`, `/internal` | 전체 웹·API·운영 진입점 | [문서](platform/web-003-routing-boundary.md) |
+| [ADR-WEB-003](platform/web-003-routing-boundary.md) | 웹 화면·API·운영 경로 경계 | Superseded | Critical | Next.js App Router, Nginx, Spring Security, `/api`, `/internal` | ADR-WEB-006이 전체 경계를 대체 | [문서](platform/web-003-routing-boundary.md) |
 | [ADR-WEB-004](platform/web-004-supported-browser-matrix.md) | 지원 브라우저 매트릭스와 iPhone Safari 지원 수준 | Accepted | High | PC Chrome·Edge, Android Chrome, 화면 폭 5종 | 전체 웹 UI 인수 판정 | [문서](platform/web-004-supported-browser-matrix.md) |
 | [ADR-WEB-005](platform/web-005-application-port-binding.md) | 운영 애플리케이션 포트 loopback 바인딩 | Accepted | Critical | Spring Boot, Next.js, Docker host network, Nginx | 운영 진입점·애플리케이션 포트 | [문서](platform/web-005-application-port-binding.md) |
+| [ADR-WEB-006](platform/web-006-unified-login-rbac-route.md) | 통합 로그인과 역할 기반 관리자 화면 진입 | Accepted | Critical | Next.js App Router, TanStack Query, Spring Security RBAC | 통합 로그인·메인 관리자 링크·`/admin` 경계 | [문서](platform/web-006-unified-login-rbac-route.md) |
 | [ADR-ARCH-001](architecture/arch-001-domain-monolith.md) | 단일 모듈 도메인 중심 모놀리스 | Accepted | Critical | 단일 모듈, 계층형 모놀리스 | 전체 Workstream | [문서](architecture/arch-001-domain-monolith.md) |
 | [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md) | 외부 연동 Port/Adapter 경계 | Accepted | High | Port/Adapter | [WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)~[WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록), 외부 연동 | [문서](architecture/arch-002-external-ports-adapters.md) |
 | [ADR-DATA-001](data/data-001-postgresql.md) | PostgreSQL 17.10 주 데이터베이스 | Accepted | Critical | PostgreSQL 17.10 | 전체 영속 데이터 | [문서](data/data-001-postgresql.md) |
 | [ADR-DATA-002](data/data-002-database-placement.md) | 개발 Docker와 운영 RDS 데이터베이스 분리 | Accepted | High | Docker PostgreSQL, Amazon RDS | 개발·테스트·운영 | [문서](data/data-002-database-placement.md) |
 | [ADR-DATA-003](data/data-003-spring-data-jpa.md) | Spring Data JPA 기본 데이터 접근 | Accepted | High | Spring Data JPA | 전체 Repository | [문서](data/data-003-spring-data-jpa.md) |
 | [ADR-DATA-004](data/data-004-flyway.md) | Flyway 스키마 마이그레이션 | Accepted | Critical | Flyway 12.4.0 | 전체 스키마 변경 | [문서](data/data-004-flyway.md) |
-| [ADR-AUTH-001](security/auth-001-spring-security-jwt.md) | 관리자 Spring Security JWT 인증·인가 | Accepted | Critical | Spring Security 7.1.0, JWT, Redis 8.8 Refresh Token | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 관리자 | [문서](security/auth-001-spring-security-jwt.md) |
-| [ADR-AUTH-002](security/auth-002-member-jwt-refresh-token.md) | 회원 JWT와 Refresh Token | Accepted | Critical | Spring Security 7.1.0, JWT, Redis 8.8 Refresh Token | 회원 계정·인증 | [문서](security/auth-002-member-jwt-refresh-token.md) |
+| [ADR-AUTH-001](security/auth-001-spring-security-jwt.md) | 관리자 Spring Security JWT 인증·인가 | Superseded | Critical | Spring Security 7.1.0, JWT, Redis 8.8 Refresh Token | ADR-AUTH-007이 통합 계정·세션으로 대체 | [문서](security/auth-001-spring-security-jwt.md) |
+| [ADR-AUTH-002](security/auth-002-member-jwt-refresh-token.md) | 회원 JWT와 Refresh Token | Superseded | Critical | Spring Security 7.1.0, JWT, Redis 8.8 Refresh Token | ADR-AUTH-007이 통합 계정·세션으로 대체 | [문서](security/auth-002-member-jwt-refresh-token.md) |
 | [ADR-AUTH-003](security/auth-003-confirmation-token.md) | 관리자 등록 확인 Token의 저장·소비·재시도 | Accepted | Critical | PostgreSQL, SHA-256, 불투명 Token, JSONB Snapshot | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 기준정보 등록 | [문서](security/auth-003-confirmation-token.md) |
 | [ADR-AUTH-005](security/auth-005-member-action-mail-outbox.md) | 회원 Action 메일의 신뢰성 있는 전달 (Outbox) | Accepted | High | PostgreSQL, AES-GCM, `@Scheduled` Worker | 회원 가입 인증·비밀번호 재설정 | [문서](security/auth-005-member-action-mail-outbox.md) |
 | [ADR-AUTH-006](security/auth-006-cookie-origin-defense.md) | 쿠키 기반 Refresh·Logout Origin 방어 | Accepted | High | 단일 Origin 헤더, Origin allowlist | 회원·관리자 Refresh·Logout | [문서](security/auth-006-cookie-origin-defense.md) |
-| [ADR-DATA-005](data/data-005-redis-refresh-token.md) | Redis 8.8 관리자 Refresh Token 저장소 | Accepted | Critical | Redis Open Source 8.8 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 인증·운영 | [문서](data/data-005-redis-refresh-token.md) |
+| [ADR-AUTH-007](security/auth-007-unified-account-rbac-session.md) | 통합 계정 RBAC와 세션 | Accepted | Critical | Spring Security 7.1.0, JWT, Redis 8.8, `member_account.role` | 회원·관리자 통합 인증과 `/api/admin/**` 인가 | [문서](security/auth-007-unified-account-rbac-session.md) |
+| [ADR-DATA-005](data/data-005-redis-refresh-token.md) | Redis 8.8 관리자 Refresh Token 저장소 | Superseded | Critical | Redis Open Source 8.8 | ADR-AUTH-007이 통합 세션 저장으로 대체 | [문서](data/data-005-redis-refresh-token.md) |
 | [ADR-DATA-007](data/data-007-uuid-v4-identifiers.md) | 애플리케이션 생성 UUID v4 내부 식별자 | Accepted | High | Java UUID, PostgreSQL uuid | 전체 영속 데이터 | [문서](data/data-007-uuid-v4-identifiers.md) |
 | [ADR-DATA-008](data/data-008-publication-lifecycle-soft-delete.md) | 공개 상태와 논리 삭제 생명주기 분리 | Accepted | Critical | PostgreSQL CHECK, partial index | 핵심 공개 데이터 | [문서](data/data-008-publication-lifecycle-soft-delete.md) |
 | [ADR-EXT-001](integration/ext-001-reference-verification.md) | 관리자 외부 기준정보 확인 서비스 | Accepted | High | Kakao Local REST API V2, YouTube Data API v3 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 등록 | [문서](integration/ext-001-reference-verification.md) |

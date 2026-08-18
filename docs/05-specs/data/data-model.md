@@ -42,9 +42,8 @@ MVP와 1차 확장 계약의 조회·인증·개인화 API를 지원하는 핵�
 | Creator | YouTube 채널 단위 유튜버의 외부 식별·표시·링크·상태 | 채널 단위 확정 |
 | Video | YouTube 원본 영상의 외부 식별·표시 메타데이터·게시 채널·상태 | 확정 |
 | Visit | Restaurant·Creator·Video를 연결하는 검증 완료 방문 관계 | 삼항 관계 확정 |
-| AdminAccount | 사전 발급 관리자 자격 증명과 활성 여부 | 내부 계정 사용 확정 |
-| AdminRefreshToken | JWT 재발급 Token의 회전·만료·무효화 상태 | Redis 8.8 저장 확정 |
-| MemberAccount | 이메일 회원의 식별·상태·인증 기반 | 1차 확장 확정 |
+| MemberAccount | 일반 회원과 관리자가 공유하는 이메일 계정·역할·상태·인증 기반 | 단일 계정 원천 확정 |
+| AuthSession | JWT 재발급 Token의 회전·만료·무효화 상태 | Redis 8.8 통합 namespace 저장 확정 |
 | MemberActionToken | 이메일 인증·비밀번호 재설정용 1회성 Token | 1차 확장 확정 |
 | MemberSessionRevocation | 폐기된 회원 Access Token `sid` 거부 상태 | 1차 확장 확정 |
 | Favorite | 회원–맛집 찜 관계 | 1차 확장 확정 |
@@ -68,9 +67,8 @@ FoodCategory도 Restaurant 도메인의 참조 데이터로 둔다. Restaurant�
 | Creator | Creator | 관리자 유튜버 등록 유스케이스([WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 조율) | Creator | 일반 사용자, Visit, 관리자 |
 | Video | Video | 관리자 영상 등록 유스케이스([WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 조율) | Video | 일반 사용자, Visit, 관리자 |
 | Visit | Visit | 관리자 방문 관계 등록 유스케이스([WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 조율) | Visit | [WS-01](../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)·[WS-02](../../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회)·[WS-03](../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색), 관리자 |
-| AdminAccount | 관리자 인증 애플리케이션 책임 | 수동 운영 발급 | 수동 운영 | 관리자 인증 |
-| AdminRefreshToken | 관리자 인증 애플리케이션 책임 | JWT 로그인·재발급 성공 | 회전·로그아웃·만료·재사용 탐지 | 관리자 인증 API |
-| MemberAccount | Member/Auth | 회원가입·인증·로그인 유스케이스([WS-05](../../02-analysis/first-expansion-workstreams.md#4-ws-05-사용자-계정인증)) | Member/Auth | 회원 인증·개인화 |
+| MemberAccount | Member/Auth | 공개 회원가입 또는 승인된 관리자 운영 발급 | Member/Auth와 승인된 운영 절차 | 통합 로그인·RBAC·개인화 |
+| AuthSession | Member/Auth | JWT 로그인·재발급 성공 | 회전·로그아웃·계정 변경·재사용 탐지 | 통합 인증 API |
 | MemberActionToken | Member/Auth | 메일 인증·재설정 발급 | Member/Auth | 회원 인증 API |
 | MemberSessionRevocation | Member/Auth | 로그아웃·세션 축출·탈퇴·재사용 탐지 | Member/Auth | 회원 인증 API |
 | MemberActionMailOutbox | Member/Auth | 키 식별자·AES-GCM 암호문을 사용한 인증·재설정 메일 비동기 전달 | Member/Auth | 회원 인증 API |
@@ -91,7 +89,7 @@ Admin은 독립 비즈니스 도메인이 아니다. 인증과 등록 흐름을 
 | Restaurant–Visit | Restaurant 1 : N Visit | Visit는 Restaurant 1개 필수, Restaurant는 Visit 없이 존재 가능 |
 | Creator–Visit | Creator 1 : N Visit | Visit는 Creator 1개 필수 |
 | Video–Visit | Video 1 : N Visit | Visit는 근거 Video 1개 필수, 한 Video는 여러 Restaurant의 근거 가능 |
-| AdminAccount–AdminRefreshToken | AdminAccount 1 : N AdminRefreshToken | 유효 Token은 계정 1개 필수, 계정당 활성 Token은 최대 1개 |
+| MemberAccount–AuthSession | MemberAccount 1 : N AuthSession | 일반 회원은 최대 3개, 관리자는 최대 1개의 활성 세션 |
 | MemberAccount–Favorite | MemberAccount 1 : N Favorite | Favorite는 회원 1명 필수 |
 | MemberAccount–RecentRestaurantView | MemberAccount 1 : N RecentRestaurantView | Recent는 회원 1명 필수 |
 | Restaurant–Favorite | Restaurant 1 : N Favorite | Favorite는 맛집 1개 필수 |
@@ -104,7 +102,7 @@ Admin은 독립 비즈니스 도메인이 아니다. 인증과 등록 흐름을 
 3. 채널 미리보기에서 YouTube 채널을 확인한 뒤 Creator를 만들고 즉시 공개한다.
 4. 영상 미리보기에서 외부 영상, 메타데이터와 게시 채널 외부 식별을 확인해 Video를 만든다. Creator보다 먼저 등록할 수 있으며, 일치 Creator가 존재하면 내부 연결을 해소한다.
 5. 관리자가 영상의 실제 방문과 게시 채널 일치를 확인한 뒤 기존 Restaurant·Creator·Video를 참조하는 Visit를 한 번에 생성한다.
-6. 회원가입·인증·재설정은 MemberAccount와 MemberActionToken을 사용하며 Refresh Token은 Redis namespace로 분리한다.
+6. 공개 회원가입·통합 로그인·인증·재설정은 MemberAccount와 MemberActionToken을 사용한다. 공개 회원가입은 요청에서 역할을 받지 않고 항상 `MEMBER`로 저장한다. `ADMIN` 발급·역할 변경·회수는 승인된 운영 절차에서만 수행한다.
 7. 공개 맛집 상세가 인증 회원으로 성공하면 RecentRestaurantView를 upsert하고 회원별 30일·50건 정리를 같은 Command 범위에서 수행한다.
 8. 어느 단계든 실패하면 해당 요청의 일부 데이터나 관계를 남기지 않는다. 서로 다른 기본 데이터 등록 요청은 독립적이며 자동으로 묶어 생성하지 않는다.
 
@@ -138,13 +136,14 @@ Restaurant, Creator, Video와 Visit는 일반 사용자 노출을 위한 publica
 
 ## 11. API 지원 범위
 
-모든 공개 조회 API, 관리자 인증 API, 맛집·유튜버·영상 검증 미리보기와 등록 API, 방문 관계 등록 API, 회원 인증 API와 개인 맛집 관리 API를 지원한다. 확인 Token은 PostgreSQL에 해시·관리자·자원 종류·후보 스키마 버전·JSONB Snapshot과 결과 상태를 저장하는 10분 수명의 단기 기술 데이터다. 핵심 도메인 모델에는 포함하지 않으며 저장·소비·24시간 결과 재현은 [ADR-AUTH-003](../../07-adr/security/auth-003-confirmation-token.md)을 따른다. `REVIEW_REQUIRED` 미리보기는 등록 요청 데이터로 저장하지 않는다.
+모든 공개 조회 API, 통합 인증 API, 맛집·유튜버·영상 검증 미리보기와 등록 API, 방문 관계 등록 API와 개인 맛집 관리 API를 지원한다. 확인 Token은 PostgreSQL에 해시·관리자 역할 행위자·자원 종류·후보 스키마 버전·JSONB Snapshot과 결과 상태를 저장하는 10분 수명의 단기 기술 데이터다. 핵심 도메인 모델에는 포함하지 않으며 저장·소비·24시간 결과 재현은 [ADR-AUTH-003](../../07-adr/security/auth-003-confirmation-token.md)을 따른다. `REVIEW_REQUIRED` 미리보기는 등록 요청 데이터로 저장하지 않는다.
 
 ## 12. 확정 및 조건부 재검토
 
 - 삭제·비공개 전환은 별도 운영 명령으로 수행하고 논리 삭제 데이터는 자동 purge 없이 보존한다.
 - 외부 표시 메타데이터는 최신값만 유지하고 변경 이력을 저장하지 않는다.
-- 회원 요청·로그인 제한과 이메일 인증 코드의 요청 출처당 10분 10회 제출 제한은 Redis 회원 namespace에 저장하고, key에는 정규화 이메일·클라이언트 주소 대신 용도 분리 `rateLimitSecret`의 HMAC-SHA-256 hex만 사용한다. Refresh Token의 Redis 키·검증값·정리 전략은 인증 ADR을 따른다.
+- 회원 요청·로그인 제한과 이메일 인증 코드의 요청 출처당 10분 10회 제출 제한은 Redis 인증 namespace에 저장하고, key에는 정규화 이메일·클라이언트 주소 대신 용도 분리 `rateLimitSecret`의 HMAC-SHA-256 hex만 사용한다. Refresh Token은 역할과 무관하게 `auth:session:` 통합 namespace를 사용하며 키·쿠키·검증값·회전 전략의 정본은 [ADR-AUTH-007](../../07-adr/security/auth-007-unified-account-rbac-session.md)에 둔다.
+- `member_account.role`은 `MEMBER`와 `ADMIN`만 허용한다. 역할·상태·비밀번호가 바뀌면 해당 계정의 활성 세션을 모두 폐기한다. 기존 관리자 세션은 전환 시 전부 무효화한다.
 - 제한 공개 검증 세션은 Redis `auth:verification:` namespace에 세션 ID의 SHA-256 해시와 7일 고정 만료만 저장한다. 회원·관리자 ID·권한·Refresh Token과 결합하지 않으며 정식 공개 시 namespace 전체를 제거한다.
 - 검색 인덱스와 추가 동시성 제어는 확정 부하·데이터 규모의 성능 측정에서 병목이 확인될 때만 활성화한다.
 

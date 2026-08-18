@@ -11,7 +11,8 @@ related_documents:
   - ../05-specs/api/detail/restaurant-detail-api.md
   - ../05-specs/api/admin/visit-registration-api.md
   - ../07-adr/security/auth-003-confirmation-token.md
-  - ../07-adr/platform/web-003-routing-boundary.md
+  - ../07-adr/security/auth-007-unified-account-rbac-session.md
+  - ../07-adr/platform/web-006-unified-login-rbac-route.md
 ---
 
 # 애플리케이션 흐름
@@ -30,8 +31,9 @@ HTTP Request
 ```
 
 - 공개 `GET /api/restaurants`, `GET /api/restaurants/{restaurantId}`, `GET /api/creators`, `GET /api/creators/{creatorId}`, `GET /api/creators/{creatorId}/restaurants`, `GET /api/creators/{creatorId}/videos`는 인증 없이 Controller로 전달한다.
-- `POST /api/admin/auth/tokens`는 로그인 자격 증명, `POST /api/admin/auth/tokens/refresh`는 Refresh Token 쿠키만 검증한다.
-- `DELETE /api/admin/auth/tokens`는 JWT와 Refresh Token 쿠키를 모두 검증하고, 나머지 `/api/admin/**`은 JWT와 `ADMIN` 권한을 먼저 확인한다.
+- `POST /api/auth/tokens`는 역할 구분 없는 통합 로그인 자격 증명을 검증하고 DB 역할을 응답에 포함한다. 형식 오류를 포함한 모든 시도는 자격 증명 검증 전에 요청 출처 제한을 통과한다.
+- `POST /api/auth/tokens/refresh`와 `DELETE /api/auth/tokens`는 Origin을 Token 처리보다 먼저 검증한다. 재발급은 DB의 현재 역할을 응답에 반영한다.
+- `/api/me/**`는 통합 JWT, `/api/admin/**`은 통합 JWT와 현재 `ADMIN` 역할을 먼저 확인한다.
 - 정의되지 않은 `/api/**`는 기본 거부하고 `/internal/**`은 인터넷 Nginx 경로로 전달하지 않는다.
 - Controller는 형식·필수값 검증과 HTTP 변환만 한다.
 - Application은 유스케이스 순서, 권한 컨텍스트 사용, 트랜잭션과 오류 의미를 소유한다.
@@ -45,6 +47,9 @@ HTTP Request
 | 맛집 목록·복합 필터 | 이름, Region, FoodCategory, Creator ID, 페이지 | 조건 정규화, 공개 조건, 페이지·정렬, Creator 관계 필터 조합 | 목록 DTO와 페이지 메타데이터 |
 | Creator 선택 목록 | 없음 | 공개 Creator 조회, 채널명 오름차순 | ID·채널명 목록 |
 | 맛집 상세 | Restaurant ID | 기본 정보 필수 조회, 콘텐츠 조합, 부분 실패 변환 | `RestaurantDetailResult` |
+| 현재 계정 | 통합 Principal | 현재 `ACTIVE` 상태·역할 조회 | ID·email·`MEMBER|ADMIN` role |
+
+메인 페이지는 TanStack Query로 현재 계정 Query를 소비한다. `role=ADMIN`일 때만 관리자 링크를 표시하며 Route Guard의 캐시는 로그인·재발급·로그아웃 뒤 갱신·제거한다. 직접 URL 접근과 캐시 변조는 서버 `/api/admin/**` 인가에 영향을 주지 않는다.
 
 ### 맛집 목록
 

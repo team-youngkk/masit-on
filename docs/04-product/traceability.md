@@ -112,6 +112,7 @@ related_documents:
 | [FR-AUTH-001](../01-requirements/functional-requirements.md#fr-auth-001-로그인과-활성-세션-발급) | 로그인과 활성 세션 발급 | [PRD-ACCOUNT-001](prd/account/member-authentication.md) | 없음 | [WS-05](../02-analysis/first-expansion-workstreams.md#4-ws-05-사용자-계정인증) | 김인안 |
 | [FR-AUTH-002](../01-requirements/functional-requirements.md#fr-auth-002-access-token-재발급) | Access Token 재발급 | [PRD-ACCOUNT-001](prd/account/member-authentication.md) | 없음 | [WS-05](../02-analysis/first-expansion-workstreams.md#4-ws-05-사용자-계정인증) | 김인안 |
 | [FR-AUTH-003](../01-requirements/functional-requirements.md#fr-auth-003-로그아웃과-다중-로그인-세션-관리) | 로그아웃과 다중 로그인 세션 관리 | [PRD-ACCOUNT-001](prd/account/member-authentication.md) | 없음 | [WS-05](../02-analysis/first-expansion-workstreams.md#4-ws-05-사용자-계정인증) | 김인안 |
+| [FR-AUTH-004](../01-requirements/functional-requirements.md#fr-auth-004-통합-로그인과-rbac) | 통합 로그인과 RBAC 관리자 진입 | [PRD-ACCOUNT-001](prd/account/member-authentication.md) | [PRD-ADMIN-001](prd/admin/admin-data-management.md) | [WS-05](../02-analysis/first-expansion-workstreams.md#4-ws-05-사용자-계정인증)·[WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 김인안 |
 | [FR-FAVORITE-001](../01-requirements/functional-requirements.md#fr-favorite-001-맛집-찜-추가) | 맛집 찜 추가 | [PRD-PERSONAL-001](prd/personal/personal-restaurant-management.md) | [PRD-ACCOUNT-001](prd/account/member-authentication.md) | [WS-06](../02-analysis/first-expansion-workstreams.md#5-ws-06-개인-맛집-관리) | 박진영 |
 | [FR-FAVORITE-002](../01-requirements/functional-requirements.md#fr-favorite-002-맛집-찜-해제) | 맛집 찜 해제 | [PRD-PERSONAL-001](prd/personal/personal-restaurant-management.md) | [PRD-ACCOUNT-001](prd/account/member-authentication.md) | [WS-06](../02-analysis/first-expansion-workstreams.md#5-ws-06-개인-맛집-관리) | 박진영 |
 | [FR-FAVORITE-003](../01-requirements/functional-requirements.md#fr-favorite-003-맛집별-현재-회원-찜-상태-확인) | 맛집별 현재 회원 찜 상태 확인 | [PRD-PERSONAL-001](prd/personal/personal-restaurant-management.md) | [PRD-DETAIL-001](prd/detail/restaurant-detail.md) | [WS-06](../02-analysis/first-expansion-workstreams.md#5-ws-06-개인-맛집-관리) | 박진영 |
@@ -125,7 +126,7 @@ related_documents:
 | [FR-CREATOR-005](../01-requirements/functional-requirements.md#fr-creator-005-유튜버의-방문-맛집-목록-조회) | 유튜버의 방문 맛집 목록 조회 | [PRD-DETAIL-002](prd/detail/creator-detail.md) | [PRD-DETAIL-001](prd/detail/restaurant-detail.md) | [WS-08](../02-analysis/first-expansion-workstreams.md#7-ws-08-유튜버-상세) | 이우람 |
 | [FR-CREATOR-006](../01-requirements/functional-requirements.md#fr-creator-006-유튜버의-근거-영상-목록-조회) | 유튜버의 근거 영상 목록 조회 | [PRD-DETAIL-002](prd/detail/creator-detail.md) | [PRD-DETAIL-001](prd/detail/restaurant-detail.md) | [WS-08](../02-analysis/first-expansion-workstreams.md#7-ws-08-유튜버-상세) | 이우람 |
 
-1차 확장 기능 요구사항 20개도 MVP와 동일하게 각각 정확히 하나의 주 PRD에 배정됐다. Workstream·담당자 배정은 [1차 확장 Workstream](../02-analysis/first-expansion-workstreams.md) 2절과 일치한다.
+1차 확장 기능 요구사항 21개도 MVP와 동일하게 각각 정확히 하나의 주 PRD에 배정됐다. Workstream·담당자 배정은 [1차 확장 Workstream](../02-analysis/first-expansion-workstreams.md) 2절과 일치한다.
 
 ### 3.3 2차 확장 PRD 목록
 
