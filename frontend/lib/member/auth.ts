@@ -33,7 +33,27 @@ async function currentSession(): Promise<MemberSession> {
   if (!body.id || !body.email || (body.role !== 'MEMBER' && body.role !== 'ADMIN')) throw new Error('Invalid current member response')
   return body
 }
-export async function memberLogout(): Promise<void> { try { const restored = accessToken ? null : await restoreMemberSessionOnce(); if (restored?.unavailable) throw new Response(null, { status: 503 }); await withMemberAuthCookieLock(async () => { const token = accessToken; if (!token) throw new Response(null, { status: 401 }); const response = await sendAuthenticatedMemberRequest('/api/auth/tokens', { method: 'DELETE' }, token); if (response.status !== 204 && response.status !== 401) throw response }) } finally { clearMemberAccessToken() } }
+async function deleteCurrentMemberSession(): Promise<Response> {
+  return withMemberAuthCookieLock(async () => {
+    const token = accessToken
+    if (!token) return new Response(null, { status: 401 })
+    return sendAuthenticatedMemberRequest('/api/auth/tokens', { method: 'DELETE' }, token)
+  })
+}
+export async function memberLogout(): Promise<void> {
+  try {
+    const restored = accessToken ? null : await restoreMemberSessionOnce()
+    if (restored?.unavailable) throw new Response(null, { status: 503 })
+    let response = await deleteCurrentMemberSession()
+    if (response.status === 401) {
+      clearMemberAccessToken()
+      const refreshed = await restoreMemberSessionOnce()
+      if (refreshed.unavailable || !refreshed.session) throw new Response(null, { status: 401 })
+      response = await deleteCurrentMemberSession()
+    }
+    requireStatus(response, 204)
+  } finally { clearMemberAccessToken() }
+}
 export async function memberLogin(email: string, password: string): Promise<MemberSession> { await withMemberAuthCookieLock(async () => { await tokenResponse(await fetch('/api/auth/tokens', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) })) }); try { return await currentSession() } catch (error) { if (error instanceof Response && error.status === 401) clearMemberAccessToken(); throw error } }
 export async function memberRegister(email: string, password: string): Promise<void> { const r = await fetch('/api/auth/registrations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) }); requireStatus(r, 202) }
 export async function resendMemberEmailVerification(email: string): Promise<void> { const r = await fetch('/api/auth/email-verifications/resend', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) }); requireStatus(r, 202) }
@@ -48,4 +68,4 @@ export async function restoreMemberSessionOnce(): Promise<RestoreResult> {
   return refreshPromise
 }
 export async function ensureMemberSession(): Promise<MemberSession | null> { return (await restoreMemberSessionOnce()).session }
-export async function authenticatedMemberFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> { let retried = false; let token = accessToken; if (!token) { const restored = await restoreMemberSessionOnce(); token = accessToken; if (!token || restored.unavailable) return new Response(null, { status: restored.unavailable ? 503 : 401 }); retried = true }; let response = await sendAuthenticatedMemberRequest(input, init, token); if (response.status !== 401 || retried) return response; if (accessToken === token) discardAccessToken(); const restored = await restoreMemberSessionOnce(); if (!accessToken || restored.unavailable) return response; response = await sendAuthenticatedMemberRequest(input, init, accessToken); if (response.status === 401) clearMemberAccessToken(); return response }
+export async function authenticatedMemberFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> { let retried = false; let token = accessToken; if (!token) { const restored = await restoreMemberSessionOnce(); token = accessToken; if (!token || restored.unavailable) return new Response(null, { status: restored.unavailable ? 503 : 401 }); retried = true }; let response = await sendAuthenticatedMemberRequest(input, init, token); if (response.status !== 401) return response; if (retried) { if (accessToken === token) clearMemberAccessToken(); return response }; if (accessToken === token) discardAccessToken(); const restored = await restoreMemberSessionOnce(); if (!accessToken || restored.unavailable) return response; response = await sendAuthenticatedMemberRequest(input, init, accessToken); if (response.status === 401) clearMemberAccessToken(); return response }
