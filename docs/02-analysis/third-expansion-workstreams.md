@@ -128,7 +128,7 @@ related_documents:
 ### 소유 계약
 
 - `FR-AIEXTRACT-001~007`
-- `BR-AIEXTRACT-001~008`
+- `BR-AIEXTRACT-001~011`
 - `NFR-ACCURACY-002`, `NFR-INTEGRITY-006`, `NFR-RELIABILITY-005` 구현
 - `NFR-SECURITY-007`, `NFR-PRIVACY-006`, `NFR-COST-001`, `NFR-EXTERNAL-005` AI 적용
 - [AI 영상 정보 추출 PRD](../04-product/prd/admin/ai-video-information-extraction.md)

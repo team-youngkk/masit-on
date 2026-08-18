@@ -54,6 +54,8 @@ related_documents:
 
 ## 3. BR·NFR 교차 검증
 
+`TST-E3-AI-005`~`008`은 `합의 대기` 상태인 계약을 검증 대상으로 삼는다. 합의가 불발되면 네 묶음을 함께 제거한다. 절차와 되돌릴 범위는 [ADR-AI-001 1절](../07-adr/integration/ai-001-video-extraction-candidate-boundary.md)에 있다.
+
 | 테스트 묶음 | 적용 계약 | 필수 계층·증거 | 완료 Task |
 |---|---|---|---|
 | `TST-E3-NL-001` | `BR-NLSEARCH-001`, `BR-NLSEARCH-002`, `BR-NLSEARCH-003`, `NFR-ACCURACY-001` | parser 단위, API 계약, 기존 목록 통합, 240건 Dataset exact match·재현율 | `E3-T01`, `E3-T02` |
@@ -61,6 +63,10 @@ related_documents:
 | `TST-E3-AI-001` | `BR-AIEXTRACT-001`, `BR-AIEXTRACT-005`, `BR-AIEXTRACT-006`, `BR-AIEXTRACT-007` | MockMvc, Webhook 계약, URL·Payload·멱등·보완 텍스트 암호화 | `E3-T04` |
 | `TST-E3-AI-002` | `FR-AIEXTRACT-002`, `NFR-OBSERVABILITY-005` | 관리자 API, 페이지·상태·민감정보 마스킹, traceId | `E3-T07` |
 | `TST-E3-AI-003` | `BR-AIEXTRACT-002`, `BR-AIEXTRACT-003`, `BR-AIEXTRACT-004`, `BR-AIEXTRACT-008`, `NFR-ACCURACY-002`, `NFR-INTEGRITY-006` | 실패 주입, 정식 Entity 0건, 자동 등록 원자성·멱등·태그 공개 경계 | `E3-T06`, `E3-T07` |
+| `TST-E3-AI-008` | `BR-AIEXTRACT-001`, `BR-AIEXTRACT-004` | 후보 300건 응답 수용, 301건 이상 `SCHEMA` 기각, 절삭 표시 응답의 `candidateTruncated` 전파, 후보 수가 상한과 같으면 표시 없어도 `true` 판정, `P8`·`S2` 멱등성 키 분리와 P7 작업 보존 | `E3-T05`, `E3-T07` |
+| `TST-E3-AI-005` | `BR-AIEXTRACT-001`, `BR-AIEXTRACT-009` | 다장소 영상 등록 단위 분해, Kakao 검색 WireMock, 상호명·시구 일치 1건 자동 확정, `PLACE_NOT_FOUND`·`PLACE_AMBIGUOUS` 차단, 일부 단위 차단 시 나머지 단위 등록 유지 | `E3-T06`, `E3-T07` |
+| `TST-E3-AI-006` | `BR-AIEXTRACT-010` | `food_category_mapping` seed 고정 데이터 기준으로 Kakao 분류 1순위·메뉴 표현 2순위 매핑, 완전일치·부분일치 우선순위, 같은 순위 복수 일치 시 차단, 매핑 실패 시 `CATEGORY_UNRESOLVED` 차단, 기본값 대체 0건, 비활성 행 제외, 관리자 사후 카테고리 보정, 활성 행 부분 unique와 비활성 후 같은 키 재등록, 매핑 변경 뒤에도 `category_decision`으로 과거 판정 재현 | `E3-T06`, `E3-T07` |
+| `TST-E3-AI-007` | `BR-AIEXTRACT-011`, `NFR-INTEGRITY-006` | 등록 실행 1회로 맛집·유튜버·영상·방문 관계 4종 등록, 기존 유튜버·영상 재사용, 재요청 멱등·동시 요청 충돌, 중간 실패 시 해당 단위 저장 0건, 외부 호출 중 트랜잭션 미개방, 예외 사유별 보조 입력 전환과 그 밖의 경우 관리자 입력 미요구, `CONFIRM` `supplements`의 사유별 필수·불허 필드와 재검증, 최상위 `reviewStatus` 요약 규칙 3개 분기(Snapshot 없음은 `null`, Snapshot 있고 등록 단위 0개는 Snapshot 판정값 `AUTO_BLOCKED`·`AUTO_REJECTED`, 등록 단위 있음은 혼합 5개 조합), `unitId` 경계값(0개·1개·2개 이상과 타 작업 단위 지정), 작업 상세 `registrationUnits`의 4종 식별자·`reusedResources`·`manualOverrideType` 노출과 상태별 null 규칙, 등록 유지·롤백 완료·폐기 완료 세 하위 상태의 API 판별, 동시 요청 `AIEXTRACT_CONCURRENT_REQUEST_CONFLICT`, 등록 단위 상태 6종별 허용·거절·멱등 결과(폐기 완료 포함), 네 `decision`에 같은 `unitId` 규칙 적용, `DISCARD` 후 `discarded_at` 저장과 이후 모든 요청 거절, `AIEXTRACT_UNIT_NOT_FOUND`와 `AIEXTRACT_JOB_NOT_FOUND` 구분, 보충 입력 불가 예외의 `CONFIRM` 거절과 복구 경로 안내, 업무 중복이 `AUTO_BLOCKED`로 귀결하고 `AUTO_REJECTED`로 전이하지 않는 상태 전이, `recoveryPaths` 11개 상황별 매핑과 `requiredSupplements`의 대응, `ADJUST_CATEGORY`가 공개 상태·등록 결과를 유지하는지, `AUTO_BLOCKED` 예외 화면에 롤백 동작 미노출, `AUTO_REJECTED`에 사후 보정·롤백 동작 미노출, `DISCARD`가 `recoveryPaths` 배열과 무관하게 일곱 `blockReason` 모두에서 허용됨, `DUPLICATE_CONFLICT`의 `CONFIRM` 거절 시 `EXISTING_RESOURCE`만 안내하고 재추출·재실행·수동 등록은 안내하지 않음, `ai_registration_unit_review`에 네 `decision`의 행위자·사유·시각·보충값/이전 카테고리/되돌린 등록 식별자가 append-only로 남는지 | `E3-T06`, `E3-T07`, `E3-T12` |
 | `TST-E3-AI-004` | `NFR-EXTERNAL-005`, `NFR-RELIABILITY-005`, `NFR-AVAILABILITY-003` | Gemini timeout·429·5xx·Schema 오류, retry·lease·heartbeat·재기동·동시 claim | `E3-T05`, `E3-T13` |
 | `TST-E3-COURSE-001` | `BR-COURSE-001`, `BR-COURSE-002`, `NFR-PRIVACY-006` | 입력 경계값·좌표·공개 상태·비저장·현재 위치 미수집 | `E3-T09` |
 | `TST-E3-COURSE-002` | `BR-COURSE-003`, `NFR-PERFORMANCE-007` | Kakao Mobility WireMock 계약, 순서·TTL 5분·코스당 1회 호출 | `E3-T09` |

@@ -1,6 +1,8 @@
 ---
-status: PROPOSED
+status: SUPERSEDED
 design_date: 2026-08-14
+superseded_date: 2026-08-18
+superseded_by: AI 자동 등록 결정(BR-AIEXTRACT-009, BR-AIEXTRACT-010, ADR-AI-001 5.3)
 workstream: WS-15
 scope: AI 후보 선택과 카카오 장소 자동 입력
 owner_agreement_required: true
@@ -20,6 +22,10 @@ related_documents:
 ---
 
 # 3차 확장 AI 후보 선택과 카카오 장소 자동 입력 설계
+
+> **이 문서는 2026-08-18에 SUPERSEDED됐다.** 관리자가 후보를 고르고 카테고리를 선택하는 전제가 폐기되고, 장소 동일성과 대표 카테고리를 시스템이 판정하는 자동 등록으로 대체됐다. 현재 계약은 [BR-AIEXTRACT-009](../01-requirements/business-rules.md#br-aiextract-009-장소-동일성-자동-확정), [BR-AIEXTRACT-010](../01-requirements/business-rules.md#br-aiextract-010-대표-음식-카테고리-자동-선정), [ADR-AI-001 5.3절](../07-adr/integration/ai-001-video-extraction-candidate-boundary.md)이다. 아래 내용은 결정 이전 설계안의 역사적 기록으로만 남긴다.
+>
+> 3절의 관리자 장소 검색 API(`POST /api/admin/restaurant-place-searches`)는 신설하지 않는다. 장소 검색은 관리자 화면이 아니라 orchestration의 자동 판정 경로에서 사용하므로 관리자 API로 노출할 필요가 없다. `PlaceSearchPort` 신설과 Kakao keyword 검색 Adapter 확장은 그 자동 판정 경로의 구현으로 유효하다.
 
 ## 1. 문서 목적
 
