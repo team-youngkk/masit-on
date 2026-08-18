@@ -157,16 +157,16 @@ public class MemberAuthenticationService {
     public MemberAuthenticationResult login(String email, String password, String source) {
         String normalizedEmail = normalizeEmail(email);
         try {
-            if (!rateLimits.tryAcquireLoginAttempt(normalizedEmail, source)) {
+            if (rateLimits.isLoginBlocked(normalizedEmail, source)) {
                 throw invalidCredentials();
             }
             MemberAccount account = accounts.findByEmailForUpdate(normalizedEmail).orElse(null);
             String passwordHash = account == null ? DUMMY_PASSWORD_HASH : account.passwordHash();
             if (!passwordEncoder.matches(password, passwordHash) || account == null) {
-                throw invalidCredentials();
+                throw invalidCredentials(normalizedEmail, source);
             }
             if (!account.canAuthenticate()) {
-                throw invalidCredentials();
+                throw invalidCredentials(normalizedEmail, source);
             }
             return issueSession(account);
         } catch (BusinessException exception) {

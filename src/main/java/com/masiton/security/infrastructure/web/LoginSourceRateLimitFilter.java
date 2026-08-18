@@ -10,8 +10,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.masiton.common.web.ClientAddressResolver;
 import com.masiton.member.application.port.out.MemberRateLimitStore;
-import com.masiton.member.infrastructure.web.MemberClientAddressResolver;
 
 /** Runs before MVC consumes JSON so malformed login requests cannot bypass the source quota. */
 @Component
@@ -19,10 +19,10 @@ public class LoginSourceRateLimitFilter extends OncePerRequestFilter {
     private static final String LOGIN_PATH = "/api/auth/tokens";
 
     private final MemberRateLimitStore rateLimits;
-    private final MemberClientAddressResolver clientAddressResolver;
+    private final ClientAddressResolver clientAddressResolver;
     private final SecurityErrorWriter errorWriter;
 
-    public LoginSourceRateLimitFilter(MemberRateLimitStore rateLimits, MemberClientAddressResolver clientAddressResolver,
+    public LoginSourceRateLimitFilter(MemberRateLimitStore rateLimits, ClientAddressResolver clientAddressResolver,
             SecurityErrorWriter errorWriter) {
         this.rateLimits = rateLimits;
         this.clientAddressResolver = clientAddressResolver;

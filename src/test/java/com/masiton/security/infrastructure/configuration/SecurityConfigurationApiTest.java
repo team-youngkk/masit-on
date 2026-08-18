@@ -108,8 +108,14 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
     @Test
     @DisplayName("ADMIN 권한 없는 인증 요청은 403 계약을 반환한다")
     void 관리자API_ADMIN권한없음_403계약() throws Exception {
+        given(memberSessionAccessChecker.check("member-id", "member-session-id", "MEMBER"))
+                .willReturn(MemberSessionAccessChecker.AccessDecision.ALLOWED);
+
         mockMvc.perform(get("/api/admin/restaurants")
                         .with(SecurityMockMvcRequestPostProcessors.jwt()
+                                .jwt(jwt -> jwt.subject("member-id")
+                                        .claim("sid", "member-session-id")
+                                        .claim("roles", List.of("MEMBER")))
                                 .authorities(new SimpleGrantedAuthority("CREATOR"))))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"))
@@ -119,8 +125,14 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
     @Test
     @DisplayName("일반 관리자 Bearer API는 Origin 없이도 Origin 필터를 적용하지 않는다")
     void 일반관리자BearerAPI_Origin없음_Origin필터를적용하지않는다() throws Exception {
+        given(memberSessionAccessChecker.check("admin-id", "admin-session-id", "ADMIN"))
+                .willReturn(MemberSessionAccessChecker.AccessDecision.ALLOWED);
+
         mockMvc.perform(get("/api/admin/origin-filter-is-not-applied")
                         .with(SecurityMockMvcRequestPostProcessors.jwt()
+                                .jwt(jwt -> jwt.subject("admin-id")
+                                        .claim("sid", "admin-session-id")
+                                        .claim("roles", List.of("ADMIN")))
                                 .authorities(new SimpleGrantedAuthority("ADMIN"))))
                 .andExpect(status().isNotFound());
     }
@@ -139,8 +151,14 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
     @Test
     @DisplayName("관리자 장소 검색 API의 ADMIN 권한 없는 요청은 403 계약을 반환한다")
     void 관리자장소검색API_ADMIN권한없음_403계약() throws Exception {
+        given(memberSessionAccessChecker.check("member-id", "member-session-id", "MEMBER"))
+                .willReturn(MemberSessionAccessChecker.AccessDecision.ALLOWED);
+
         mockMvc.perform(post("/api/admin/restaurant-place-searches")
                         .with(SecurityMockMvcRequestPostProcessors.jwt()
+                                .jwt(jwt -> jwt.subject("member-id")
+                                        .claim("sid", "member-session-id")
+                                        .claim("roles", List.of("MEMBER")))
                                 .authorities(new SimpleGrantedAuthority("CREATOR")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"아코\",\"roadAddressHint\":null}"))
@@ -166,8 +184,14 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
     @Test
     @DisplayName("과거 관리자 인증 경로는 alias나 redirect 없이 거부된다")
     void legacyAdminAuthenticationPath_거부된다() throws Exception {
+        given(memberSessionAccessChecker.check("admin-id", "admin-session-id", "ADMIN"))
+                .willReturn(MemberSessionAccessChecker.AccessDecision.ALLOWED);
+
         mockMvc.perform(post("/api/admin/auth/tokens")
                         .with(SecurityMockMvcRequestPostProcessors.jwt()
+                                .jwt(jwt -> jwt.subject("admin-id")
+                                        .claim("sid", "admin-session-id")
+                                        .claim("roles", List.of("ADMIN")))
                                 .authorities(new SimpleGrantedAuthority("ADMIN"))))
                 .andExpect(status().isNotFound())
                 .andExpect(header().doesNotExist(HttpHeaders.LOCATION));
@@ -234,7 +258,7 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
     @Test
     @DisplayName("회원과 관리자는 하나의 JWT audience를 사용한다")
     void jwt_통합Audience_두Decoder에서검증된다() throws Exception {
-        String token = signedTokenWithoutSid("test-key-20260727");
+        String token = signedToken("test-key-20260727");
 
         assertThat(jwtDecoder.decode(token).getAudience()).containsExactly("masit-on-api");
         assertThat(memberJwtDecoder.decode(token).getAudience()).containsExactly("masit-on-api");
@@ -421,7 +445,7 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
     }
 
     @Test
-    @DisplayName("선택 인증은 공개 상세의 단일 경로 세그먼트에만 적용한다")
+    @DisplayName("선택 인증은 공개 상세의 단일 경로 세그먼트에만 적용하고 하위 경로는 거부한다")
     void restaurantDetail_하위경로_선택인증을적용하지않는다() throws Exception {
         String memberId = UUID.randomUUID().toString();
         String sessionId = UUID.randomUUID().toString();
@@ -429,7 +453,7 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
 
         mockMvc.perform(get("/api/restaurants/{restaurantId}/extra", UUID.randomUUID())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
 
         verify(recordRecentRestaurantViewUseCase, never()).record(any(), any());
     }
@@ -464,10 +488,6 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
 
     private static String signedToken(String keyId, String issuer, String audience) throws Exception {
         return signedTokenWithClaims(keyId, issuer, audience, List.of("MEMBER"), Duration.ofMinutes(1), true, true);
-    }
-
-    private static String signedTokenWithoutSid(String keyId) throws Exception {
-        return signedTokenWithClaims(keyId, "masit-on", "masit-on-api", List.of("MEMBER"), Duration.ofMinutes(1), false, true);
     }
 
     private static String signedTokenWithClaims(List<String> roles, Duration lifetime, boolean includeSid, boolean includeJti)

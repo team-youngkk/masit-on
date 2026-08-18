@@ -11,15 +11,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
+import com.masiton.common.web.ClientAddressResolver;
 import com.masiton.member.application.port.out.MemberRateLimitStore;
-import com.masiton.member.infrastructure.web.MemberClientAddressResolver;
 
 import static org.mockito.Mockito.mock;
 
 class LoginSourceRateLimitFilterTest {
 
     private final MemberRateLimitStore rateLimits = mock(MemberRateLimitStore.class);
-    private final MemberClientAddressResolver addresses = mock(MemberClientAddressResolver.class);
+    private final ClientAddressResolver addresses = mock(ClientAddressResolver.class);
     private final SecurityErrorWriter errorWriter = mock(SecurityErrorWriter.class);
     private final FilterChain chain = mock(FilterChain.class);
     private final LoginSourceRateLimitFilter filter = new LoginSourceRateLimitFilter(rateLimits, addresses, errorWriter);

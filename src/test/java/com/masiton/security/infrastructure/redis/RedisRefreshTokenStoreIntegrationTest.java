@@ -192,6 +192,7 @@ class RedisRefreshTokenStoreIntegrationTest {
     @DisplayName("회원 로그인 실패는 5회 계정출처 제한과 15분 TTL을 적용한다")
     void 회원로그인실패_다섯번째부터차단하고TTL을설정한다() {
         for (int attempt = 0; attempt < 5; attempt++) {
+            assertThat(memberRateLimitStore.tryAcquireLoginSourceAttempt("198.51.100.10")).isTrue();
             memberRateLimitStore.recordLoginFailure("member@example.com", "198.51.100.10");
         }
 
@@ -206,15 +207,28 @@ class RedisRefreshTokenStoreIntegrationTest {
     @DisplayName("회원 로그인 실패는 이메일 10회와 출처 50회 제한을 각각 적용한다")
     void 회원로그인실패_이메일과출처집계한도_적용() {
         for (int attempt = 0; attempt < 10; attempt++) {
+            assertThat(memberRateLimitStore.tryAcquireLoginSourceAttempt("198.51.100." + attempt)).isTrue();
             memberRateLimitStore.recordLoginFailure("member@example.com", "198.51.100." + attempt);
         }
         assertThat(memberRateLimitStore.isLoginBlocked("member@example.com", "203.0.113.200")).isTrue();
 
         redisTemplate.getConnectionFactory().getConnection().serverCommands().flushDb();
         for (int attempt = 0; attempt < 50; attempt++) {
+            assertThat(memberRateLimitStore.tryAcquireLoginSourceAttempt("203.0.113.10")).isTrue();
             memberRateLimitStore.recordLoginFailure("member-" + attempt + "@example.com", "203.0.113.10");
         }
         assertThat(memberRateLimitStore.isLoginBlocked("new-member@example.com", "203.0.113.10")).isTrue();
+    }
+
+    @Test
+    @DisplayName("성공 로그인은 계정 기반 실패 제한을 소모하지 않는다")
+    void 회원로그인성공_계정실패한도_소모하지않는다() {
+        for (int attempt = 0; attempt < 10; attempt++) {
+            assertThat(memberRateLimitStore.tryAcquireLoginSourceAttempt("198.51.100.10")).isTrue();
+        }
+
+        assertThat(memberRateLimitStore.isLoginBlocked("member@example.com", "198.51.100.10")).isFalse();
+        assertThat(redisTemplate.keys("auth:member:rate-limit:login-email*")).isEmpty();
     }
 
     private void assertTtlRange(String pattern, long maximumSeconds) {
@@ -282,7 +296,7 @@ class RedisRefreshTokenStoreIntegrationTest {
             assertThat(memberSessionStore.matches("member-a", second.refreshToken())).isTrue();
             assertThat(memberSessionStore.matches("member-a", concurrentlyIssuedA.refreshToken())).isTrue();
             assertThat(memberSessionStore.matches("member-a", concurrentlyIssuedB.refreshToken())).isTrue();
-            assertThat(redisTemplate.opsForZSet().size("auth:member:sessions:member-a")).isEqualTo(3L);
+            assertThat(redisTemplate.opsForZSet().size("auth:session:account:member-a")).isEqualTo(3L);
             assertThat(java.util.stream.Stream.of(concurrentlyIssuedA, concurrentlyIssuedB)
                     .flatMap(session -> session.revokedSessionIds().stream()))
                     .containsExactly(first.sessionId());
@@ -354,7 +368,7 @@ class RedisRefreshTokenStoreIntegrationTest {
 
             assertThatThrownBy(issued::get)
                     .hasCauseInstanceOf(InvalidMemberSessionException.class);
-            assertThat(redisTemplate.opsForZSet().size("auth:member:sessions:member-a")).isZero();
+            assertThat(redisTemplate.opsForZSet().size("auth:session:account:member-a")).isZero();
 
             when(memberSessionClock.instant()).thenReturn(Instant.parse("2020-01-01T00:00:00Z"));
             MemberSession issuedAfterRevocation = memberSessionStore.issue("member-a", Duration.ofDays(14));
@@ -431,7 +445,7 @@ class RedisRefreshTokenStoreIntegrationTest {
     }
 
     private void replaceWithLegacySessionRecord(MemberSession session) {
-        String key = "auth:member:session:" + session.sessionId();
+        String key = "auth:session:data:" + session.sessionId();
         String serialized = redisTemplate.opsForValue().get(key);
         String legacySerialized = serialized.replaceFirst(",\\s*\\\"expiresAtEpochMillis\\\"\\s*:\\s*\\d+(?=\\s*})", "");
 

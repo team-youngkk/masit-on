@@ -32,9 +32,6 @@ public interface MemberRateLimitStore {
      */
     boolean isLoginBlocked(String normalizedEmail, String source);
 
-    /** Acquires valid-login email/source and email windows before credential lookup. */
-    boolean tryAcquireLoginAttempt(String normalizedEmail, String source);
-
     /** Acquires the source-only window before JSON parsing for every login request. */
     boolean tryAcquireLoginSourceAttempt(String source);
 
@@ -44,7 +41,8 @@ public interface MemberRateLimitStore {
     VerificationAttemptResult acquireEmailVerificationAttempt(String source);
 
     /**
-     * Records one failed login against its email-and-source, email, and source windows atomically.
+     * Records one failed login against its email-and-source and email windows atomically.
+     * The source-only window is acquired before JSON parsing by the login source filter.
      */
     void recordLoginFailure(String normalizedEmail, String source);
 }

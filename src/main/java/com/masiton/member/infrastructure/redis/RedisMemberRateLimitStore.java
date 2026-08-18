@@ -127,21 +127,6 @@ public class RedisMemberRateLimitStore implements MemberRateLimitStore {
             return 1
             """, Long.class);
 
-    private static final DefaultRedisScript<Long> ACQUIRE_LOGIN_ATTEMPT = new DefaultRedisScript<>("""
-            for index, key in ipairs(KEYS) do
-              if tonumber(redis.call('GET', key) or '0') >= tonumber(ARGV[index]) then
-                return 0
-              end
-            end
-            for _, key in ipairs(KEYS) do
-              local attempts = redis.call('INCR', key)
-              if attempts == 1 then
-                redis.call('EXPIRE', key, ARGV[3])
-              end
-            end
-            return 1
-            """, Long.class);
-
     private final StringRedisTemplate redisTemplate;
     private final byte[] secret;
 
@@ -189,18 +174,6 @@ public class RedisMemberRateLimitStore implements MemberRateLimitStore {
     }
 
     @Override
-    public boolean tryAcquireLoginAttempt(String normalizedEmail, String source) {
-        Long acquired = redisTemplate.execute(
-                ACQUIRE_LOGIN_ATTEMPT,
-                List.of(loginEmailSourceKey(normalizedEmail, source), loginEmailKey(normalizedEmail)),
-                String.valueOf(LOGIN_EMAIL_SOURCE_LIMIT),
-                String.valueOf(LOGIN_EMAIL_LIMIT),
-                seconds(LOGIN_FAILURE_TTL)
-        );
-        return Long.valueOf(1).equals(acquired);
-    }
-
-    @Override
     public boolean tryAcquireLoginSourceAttempt(String source) {
         Long acquired = redisTemplate.execute(
                 ACQUIRE_LOGIN_SOURCE_ATTEMPT,
@@ -232,7 +205,7 @@ public class RedisMemberRateLimitStore implements MemberRateLimitStore {
     public void recordLoginFailure(String normalizedEmail, String source) {
         redisTemplate.execute(
                 RECORD_LOGIN_FAILURE,
-                List.of(loginEmailSourceKey(normalizedEmail, source), loginEmailKey(normalizedEmail), loginSourceKey(source)),
+                List.of(loginEmailSourceKey(normalizedEmail, source), loginEmailKey(normalizedEmail)),
                 seconds(LOGIN_FAILURE_TTL)
         );
     }
