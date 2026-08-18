@@ -304,7 +304,7 @@ related_documents:
 | 1개 | 그 단위를 대상으로 한다 | 그 단위와 일치해야 한다 |
 | 2개 이상 | `400 AIEXTRACT_UNIT_ID_REQUIRED` | 지정한 단위를 대상으로 한다 |
 
-- 지정한 `unitId`가 이 작업의 등록 단위가 아니면 `404 AIEXTRACT_JOB_NOT_FOUND`로 응답한다. 다른 작업의 단위 식별자 존재 여부를 노출하지 않기 위해서다.
+- 지정한 `unitId`가 이 작업의 등록 단위가 아니면 `404 AIEXTRACT_UNIT_NOT_FOUND`로 응답한다. 작업 자체가 없거나 접근할 수 없는 `AIEXTRACT_JOB_NOT_FOUND`와 구분한다. 전자는 `unitId`를 다시 확인해야 하고, 후자는 작업 목록으로 돌아가야 한다. 이 응답은 그 식별자가 다른 작업에 존재하는지 여부를 알려주지 않는다.
 - `AIEXTRACT_UNIT_ID_REQUIRED`는 후보 데이터 부족을 뜻하는 `blockReason`의 `MISSING_REQUIRED_FIELD`와 구분한다. 전자는 요청 파라미터를 다시 보내야 하고, 후자는 후보 데이터를 보완해야 한다.
 - 대상 등록 단위의 필수 필드에 후보가 둘 이상 남아 어느 값으로 등록할지 확정할 수 없으면 `CONFIRM`을 `422 AIEXTRACT_VALIDATION_CONFLICT`로 거절한다. 서버가 후보 중 하나를 임의로 고르지 않기 때문이며, 외부 검증을 시작하기 전에 거절하고 정식 저장은 0건이다. 이 경우 관리자는 후보를 확인해 관리자 등록 API로 등록하거나 `DISCARD`한다.
 - `ROLLBACK`은 지정한 등록 단위의 자동 등록 결과만 되돌리고 같은 작업의 다른 등록 단위는 변경하지 않는다.
@@ -320,6 +320,20 @@ related_documents:
 관리자가 아직 등록되지 않은 등록 단위의 등록을 실행한다. 한 번의 요청으로 맛집·유튜버·영상·방문 관계 4종을 등록하고 결과를 반환한다. 관리자는 장소 후보·주소 힌트·Kakao 장소 URL·음식 카테고리를 제출하지 않으며, 요청 본문은 비어 있다.
 
 Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-010`)을 사용한다. 실행 주체만 다르고 판정 기준은 같다.
+
+#### 등록 단위 상태별 허용 범위
+
+| 등록 단위 상태 | 요청 처리 | 저장 효과 |
+|---|---|---|
+| `AUTO_BLOCKED` | 허용. 판정을 다시 실행한다 | 차단 사유가 해소됐으면 등록, 아니면 예외 전환 응답과 저장 0건 |
+| `AUTO_CONFIRMED` | 멱등. `200 OK`와 기존 결과를 반환한다 | 없음 |
+| `MANUAL_OVERRIDE` · 등록 완료 | 멱등. `200 OK`와 기존 결과를 반환한다 | 없음 |
+| `MANUAL_OVERRIDE` · 롤백 완료 | `422 AIEXTRACT_VALIDATION_CONFLICT`로 거절한다 | 없음 |
+| `AUTO_REJECTED` | `422 AIEXTRACT_VALIDATION_CONFLICT`로 거절한다 | 없음 |
+
+- `AUTO_REJECTED`는 입력·정책 검증 실패로 끝난 종결 상태다. 이 엔드포인트로 되살리면 종결 판정을 우회하게 되므로 허용하지 않는다. 새 작업으로 다시 추출한다.
+- 롤백 완료 `MANUAL_OVERRIDE`는 관리자가 의도적으로 되돌린 결과다. 같은 경로로 다시 등록하면 롤백 의도를 무효로 만들 수 있어 거절한다. 다시 등록하려면 `review`의 `CONFIRM`으로 사유를 남긴다.
+- 멱등 응답은 새 Entity를 만들지 않고 `ai_registration_unit`에 저장된 기존 결과를 그대로 반환한다.
 
 #### 응답 `200 OK`
 
@@ -348,7 +362,7 @@ Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-0
 - 응답의 네 식별자와 `reusedResources`는 `ai_registration_unit`의 `registered_restaurant_id`, `registered_creator_id`, `registered_video_id`, `registered_visit_id`, `reused_resources` 컬럼에서 읽는다. 재요청 시 같은 값을 그대로 재구성할 수 있어야 하므로 별도 감사 이력이 아니라 이 테이블이 응답의 소스다.
 - 4종 등록의 원자 경계는 등록 단위 하나다. 중간 실패 시 이 등록 단위의 정식 저장은 0건이고, 같은 작업의 다른 등록 단위는 변경하지 않는다.
 - 외부 조회·검증은 DB 트랜잭션 밖에서 수행하고, 검증 통과 후 4종을 하나의 트랜잭션으로 저장한다.
-- 이미 `AUTO_CONFIRMED`인 등록 단위에 대한 재요청은 새 Entity를 만들지 않고 기존 결과를 그대로 반환한다.
+- 재요청과 상태별 허용 범위는 위 표를 따른다.
 - 같은 등록 단위에 대한 동시 요청은 `409 AIEXTRACT_CONCURRENT_REQUEST_CONFLICT`로 처리한다. 이 코드는 동시성 충돌이며, 같은 맛집·방문 관계가 이미 존재한다는 업무 중복을 뜻하는 `blockReason`의 `DUPLICATE_CONFLICT`와 다르다. 전자는 잠시 후 재시도하면 되고, 후자는 이미 등록된 자원을 확인해야 한다.
 
 #### 예외 전환 응답 `422 AIEXTRACT_VALIDATION_CONFLICT`
@@ -364,16 +378,20 @@ Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-0
 }
 ```
 
-| `blockReason` | 의미 | `requiredSupplements` |
-|---|---|---|
-| `PLACE_NOT_FOUND` | 조건을 만족하는 Kakao 장소가 없다 | `kakaoPlaceUrl` |
-| `PLACE_AMBIGUOUS` | 조건을 만족하는 장소가 둘 이상이다 | `kakaoPlaceUrl` |
-| `CATEGORY_UNRESOLVED` | 카테고리 근거를 찾지 못했다 | `foodCategoryId` |
-| `MISSING_REQUIRED_FIELD` | 등록 단위에 필수 후보가 없다 | 부족한 필드 이름 |
-| `VISIT_EVIDENCE_REQUIRED` | 방문 근거가 `UNKNOWN`이거나 영상 `TIMESTAMP`가 아니다 | 빈 배열. 보완은 재추출로만 가능하다 |
-| `DUPLICATE_CONFLICT` | 같은 맛집·방문 관계가 이미 존재한다 | 빈 배열 |
-| `EXTERNAL_SERVICE_ERROR` | Kakao·YouTube 조회 실패·시간 초과 | 빈 배열. 재실행으로 복구한다 |
+보충 입력은 **판정 선택만 받고 후보 값 생성은 받지 않는다.** Kakao 장소와 카테고리는 관리자가 외부 기준정보 중 하나를 고르는 것이라 AI 근거를 대체하지 않지만, 맛집명·주소·방문 근거는 관리자가 값을 만들어 넣는 순간 영상 근거 없는 데이터가 등록된다. 그래서 후자는 보충 입력 대상이 아니고 재추출 또는 기존 수동 등록으로 처리한다.
 
+| `blockReason` | 의미 | 복구 경로 | `requiredSupplements` |
+|---|---|---|---|
+| `PLACE_NOT_FOUND` | 조건을 만족하는 Kakao 장소가 없다 | `CONFIRM` 보충 입력 | `kakaoPlaceUrl` |
+| `PLACE_AMBIGUOUS` | 조건을 만족하는 장소가 둘 이상이다 | `CONFIRM` 보충 입력 | `kakaoPlaceUrl` |
+| `CATEGORY_UNRESOLVED` | 카테고리 근거를 찾지 못했다 | `CONFIRM` 보충 입력 | `foodCategoryId` |
+| `MISSING_REQUIRED_FIELD` | 등록 단위에 맛집명·주소 등 필수 후보가 없다 | 보완 텍스트 재추출 또는 기존 수동 등록 | 빈 배열 |
+| `VISIT_EVIDENCE_REQUIRED` | 방문 근거가 `UNKNOWN`이거나 영상 `TIMESTAMP`가 아니다 | 재추출. 방문 근거는 보완 텍스트 주장으로 확정하지 않는다 | 빈 배열 |
+| `DUPLICATE_CONFLICT` | 같은 맛집·방문 관계가 이미 존재한다 | 없음. 이미 등록된 자원을 확인한다 | 빈 배열 |
+| `EXTERNAL_SERVICE_ERROR` | Kakao·YouTube 조회 실패·시간 초과 | 등록 재실행 | 빈 배열 |
+
+- `requiredSupplements`가 빈 배열이면 `CONFIRM`으로 복구할 수 없다는 뜻이다. 이 상태에서 보낸 `CONFIRM`은 `422 AIEXTRACT_VALIDATION_CONFLICT`로 거절하고 정식 저장은 0건이며, 응답의 복구 경로를 안내한다.
+- 부족한 필드 이름은 작업 상세의 `missingFields`로 확인한다. 이 응답은 관리자가 채워 넣을 대상이 아니므로 `requiredSupplements`에 싣지 않는다.
 - 보충 입력은 기존 `POST /api/admin/ai/video-extractions/{jobId}/review`의 `CONFIRM`으로 제출한다. 이 API는 보충 입력을 받지 않는다.
 - 관리자가 제출한 보충 입력도 기존 Kakao·YouTube·Visit 검증을 우회하지 않는다.
 
@@ -424,6 +442,7 @@ Webhook 수신 경로는 공개 인터넷 진입점이므로 Nginx·Spring Secur
 | `AIEXTRACT_INVALID_VIDEO_URL` | 400 | YouTube URL 형식·호스트·식별자 오류 |
 | `AIEXTRACT_DUPLICATE_CONFLICT` | 409 | 기존 정식 데이터 또는 동시 검수 충돌 |
 | `AIEXTRACT_JOB_NOT_FOUND` | 404 | 작업 ID 없음 또는 접근 불가 |
+| `AIEXTRACT_UNIT_NOT_FOUND` | 404 | 작업은 유효하지만 지정한 `unitId`가 그 작업의 등록 단위가 아님 |
 | `CREATOR_NOT_FOUND` | 404 | Creator 없음·비공개·삭제·외부 이용 불가 또는 감시 활성화 대상이 아님 |
 | `AIEXTRACT_RETRY_BLOCKED` | 409 | 상태상 재시도 불가 |
 | `AIEXTRACT_PROVIDER_BLOCKED` | 429 | Gemini Free Tier quota 소진·결제 연결 요구·무료 정책 미검증 |
