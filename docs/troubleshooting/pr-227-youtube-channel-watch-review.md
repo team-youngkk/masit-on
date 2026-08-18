@@ -100,14 +100,15 @@ related_documents:
 | `./gradlew.bat compileJava compileTestJava --no-daemon --console=plain` | 통과 | 백엔드와 테스트 컴파일 |
 | `./gradlew.bat test --tests "com.masiton.ai.application.YoutubeChannelWatchManagementServiceTest" --tests "com.masiton.ai.presentation.AdminYoutubeChannelWatchControllerApiTest" --no-daemon --console=plain` | 통과 | Creator 조건, 상태 응답·`lastErrorAt`, Controller 계약 |
 | `./gradlew.bat test --tests "com.masiton.security.SecurityBoundaryApiTest" --no-daemon --console=plain` | 실행 차단 | Docker 데몬 부재로 Testcontainers 초기화 실패 |
-| `npm test` | 통과 | 243개 테스트 |
 | `npm run typecheck` | 통과 | TypeScript 검사 |
 | `npm run build` | 통과 | Next.js 프로덕션 빌드와 `/admin/ai/youtube-channel-watches` 라우트 생성 |
 | `npm test` | 통과 | 프런트 전체 244개 테스트, 접근 불가 `RENEWAL_FAILED` 중지 회귀 포함 |
 | `npm run typecheck` | 통과 | 토글 상태 계산과 감시 화면 TypeScript 검사 |
+| `node --test lib/admin/youtube-channel-watches-coordination.test.ts` | 통과 | 버튼 라벨과 요청값이 모두 `감시 중지`가 되는 회귀 포함 8개 테스트 |
 | `git diff --check` | 통과 | 공백 오류 없음 |
 | GitHub Actions CI #32094957568 | 통과 | Backend 1,290개 테스트와 프런트 타입 검사·프로덕션 빌드가 통과했다. V4 대상 테스트의 V5 `last_error_at` 혼입, V5 컬럼 순서 기대 오류, Prompt 문서 P2 불일치를 순차 수정했다. |
 | GitHub Actions CI #32096939340 | 통과 | 이번 후속 변경을 포함한 백엔드 전체 테스트와 프런트 타입 검사·프로덕션 빌드가 통과했다. Creator·Watch DB 페이징 통합 테스트와 접근 불가 `RENEWAL_FAILED` 토글 회귀를 포함한다. |
+| GitHub Actions CI #32101943978 | 통과 | 버튼 라벨 수정 커밋을 포함한 백엔드 전체 테스트와 프런트 타입 검사·프로덕션 빌드가 통과했다. |
 
 ## 8. 재발 방지 및 다음 확인
 
@@ -127,6 +128,6 @@ related_documents:
 
 ## 10. 남은 사항
 
-- 로컬 Docker 데몬 부재로 full-context 보안 테스트와 PostgreSQL 통합 테스트를 실행하지 못했다. 코드 컴파일과 비컨테이너 테스트는 통과했다.
+- 로컬 Docker 데몬 부재로 full-context 보안 테스트와 PostgreSQL 통합 테스트는 로컬에서 실행하지 못했지만, CI #32101943978에서 통과했다.
 - 기존 12개와 이번 후속 5개 수정 필요 스레드의 반영 내용·검증 범위를 답글로 남기고 해결 처리한다. 이미 반영된 2개 스레드도 기존 CI 근거로 확인 처리한다.
 - 남은 코드·계약 변경 사항은 없다. GitHub Actions에 표시된 Node.js 20 및 setup-java v4 deprecation은 저장소 액션 유지보수 경고로, 이번 변경의 테스트 실패가 아니다.
