@@ -10,10 +10,12 @@ related_documents:
 
 ## 최신 기록
 
+- [PR #232 코스 경로 형상·실패 계약 정합화](pr-232-course-route-map-contract-review.md)
 - [PR #227 YouTube 채널 감시 상태·관리 화면 후속 반영](pr-227-youtube-channel-watch-review.md)
 
 ## PR 리뷰
 
+- [PR #232 코스 경로 형상·실패 계약 정합화](pr-232-course-route-map-contract-review.md)
 - [PR #226 AI 자동 등록 계약의 미완결 경로와 합의 상태 표기](pr-226-ai-auto-registration-contract-review.md)
 - [PR #221 Redis 사설 경로 비용과 배포 게이트 서술 정합화](pr-221-deployment-hardening-cost-review.md)
 
