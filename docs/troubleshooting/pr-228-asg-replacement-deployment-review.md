@@ -67,8 +67,8 @@ related_documents:
 | `RuntimeDeploymentContractTest` 실행 | 통과 | 변경된 배포 계약의 정적 회귀 확인 |
 | Git Bash `bash -n`으로 배포 script·Redis template 검사 | 통과 | 셸 구문 오류 없음 확인 |
 | Docker Terraform 1.6.6 `fmt -check -recursive` 두 레이어 | 통과 | HCL 포맷 정합성 확인 |
-| Terraform 1.6.6 `validate` 두 레이어 | 통과 | 실제 AWS 자격 증명으로 실행. terraform-redis의 중복 data source 선언을 이 단계에서 발견해 `data.tf`로 통합 |
-| Terraform 1.6.6 `plan` | Redis 레이어 통과, **운영 레이어 실패** | Redis는 데이터 volume 도입으로 인스턴스가 교체되며 교체 후 앱 재배포가 필요하다. 운영 레이어는 app subnet postcondition이 현재 구성과 충돌한다. 11절 참조 |
+| Terraform 1.6.6 `validate` 두 레이어 | 통과 | 선행 검증 기록(커밋 `5ac0298`)에서 실제 AWS 자격 증명으로 실행했다. terraform-redis의 중복 data source 선언을 이 단계에서 발견해 `data.tf`로 통합 |
+| Terraform 1.6.6 `plan` | 초기 운영 레이어 실패 후 해결 | 초기 postcondition이 현재 public app subnet과 충돌했지만, `app_subnet_is_private` 변수로 의도를 선언하도록 정정한 뒤 현재 구성 plan은 통과했다. Redis는 데이터 volume 도입으로 인스턴스가 교체되며 교체 후 앱 재배포가 필요하다. 11절 참조 |
 | CodeDeploy cancel/rollback 리허설·IAM policy simulator | 미실행: 승인된 운영 리허설 범위 밖 | 운영 전환 전에 담당자가 확인 |
 | 후속 리뷰 3건 대조 | Redis migration 절차, rollback 오류 전파, stop 실패 전파를 코드·문서에 반영 | 관련 테스트와 셸 문법을 재실행하고 실제 운영 리허설은 별도 확인 |
 
@@ -88,8 +88,8 @@ related_documents:
 | `C:\Program Files\Git\bin\bash.exe -n infra/production/terraform-redis/templates/redis-user-data.sh.tftpl` | 통과 | EBS mount bootstrap 셸 문법 |
 | `git diff --check` | 통과 | whitespace 오류 없음 |
 | `docker run hashicorp/terraform:1.6.6 ... fmt -check -recursive` | 통과 | 운영·Redis 두 Terraform 레이어의 포맷 |
-| `terraform validate` | 통과 | 두 레이어. terraform-redis의 중복 data source 선언을 여기서 잡았다 |
-| `terraform plan` | **운영 레이어 실패** | Redis 레이어는 통과(3 add·1 change·1 destroy, 인스턴스 교체). 운영 레이어는 app subnet postcondition이 실패한다. 아래 11절 참조 |
+| `terraform validate` | 통과 | 두 레이어. 선행 검증 기록(커밋 `5ac0298`)에서 terraform-redis의 중복 data source 선언을 잡았다 |
+| `terraform plan` | 통과(현재 구성) | Redis 레이어는 통과(3 add·1 change·1 destroy, 인스턴스 교체). 운영 레이어는 `app_subnet_is_private = false`와 public app subnet이 일치하며, 미사용 green target group·alarm 2건만 destroy 대상으로 확인됐다 |
 
 ## 8. 재발 방지 및 다음 확인
 
@@ -113,7 +113,7 @@ related_documents:
 
 ## 11. 해결된 계약 충돌: app subnet의 IGW 경로
 
-`data "aws_route_table" "app"`의 postcondition이 app subnet에 IGW 기본 경로가 없을 것을 요구하는데, 현재 `app_subnet_ids`는 public subnet 2개다. `terraform plan`이 이 조건에서 실패한다.
+초기 구현의 `data "aws_route_table" "app"` postcondition은 app subnet에 IGW 기본 경로가 없을 것을 고정적으로 요구했다. 당시 `app_subnet_ids`가 public subnet 2개라서 운영 레이어 `terraform plan`이 다음 조건에서 실패했다.
 
 ```text
 Error: Resource postcondition failed
@@ -128,7 +128,7 @@ app_subnet_ids의 route table에는 IGW를 향한 0.0.0.0/0 경로가 없어야 
 | 리뷰 지적 | app subnet에 IGW 기본 경로가 없어야 한다. 있으면 app이 의도와 다르게 public에 놓인다 |
 | [영향 검토 6.6절](../08-planning/deployment-hardening-impact-review.md) | 앱 인스턴스는 public subnet에 남기고 보안 그룹 인바운드만 ALB 출처로 좁힌다. 사설 배치는 NAT 또는 인터페이스 엔드포인트를 요구해 [8.1절](../08-planning/deployment-hardening-impact-review.md) 판정에서 예산을 초과한다 |
 
-즉 postcondition은 "app은 사설"을 불변식으로 굳혔고, 실제 채택된 토폴로지는 "app은 공용 + 보안 그룹 경계"다. 한쪽을 임의로 고칠 수 없다.
+즉 초기 postcondition은 "app은 사설"을 불변식으로 굳혔고, 실제 채택된 토폴로지는 "app은 공용 + 보안 그룹 경계"였다. 한쪽을 임의로 고칠 수 없었다.
 
 선택지는 셋이다.
 
@@ -136,7 +136,7 @@ app_subnet_ids의 route table에는 IGW를 향한 0.0.0.0/0 경로가 없어야 
 2. postcondition을 6.6절 전제에 맞게 바꾼다. 예산 산정은 유지되지만 리뷰가 막으려던 오배치 검증이 약해진다
 3. 배치 의도를 변수로 명시하고 그 값에 따라 postcondition을 반대로 적용한다. 오배치 검증을 유지하면서 6.6절 구성을 허용하지만 변수 하나가 늘어난다
 
-**3번으로 결정했다.** `app_subnet_is_private` 변수를 도입해 배치 의도를 tfvars에 선언하고, postcondition이 선언과 실제 route를 대조한다. 현재 운영은 6.6절 근거로 `false`이며 앱은 public subnet에 있고 인터넷 경계는 security group이 ALB 출처 `443`만 허용하는 것으로 지킨다.
+**3번으로 결정해 반영했다.** `app_subnet_is_private` 변수를 도입해 배치 의도를 tfvars에 선언하고, postcondition이 선언과 실제 route를 대조한다. 현재 운영은 6.6절 근거로 `false`이며 앱은 public subnet에 있고 인터넷 경계는 security group이 ALB 출처 `443`만 허용하는 것으로 지킨다.
 
 방향을 코드에 굳히지 않았으므로 오배치 검증은 양쪽으로 살아 있다.
 
@@ -148,4 +148,4 @@ app_subnet_ids의 route table에는 IGW를 향한 0.0.0.0/0 경로가 없어야 
 
 마지막 항목은 실패하기는 하지만 `query returned no results`로 나와 의도가 드러나지 않는다. 메시지 개선은 후속 과제로 남긴다.
 
-운영 레이어 `plan`은 통과하며 destroy 대상은 미사용 green target group과 alarm 2건뿐이다.
+정정 후 운영 레이어 `plan`은 통과하며 destroy 대상은 미사용 green target group과 alarm 2건뿐이다. 현재 작업 환경에서는 실제 AWS 자격 증명이 없어 이 plan을 재실행하지 못했으며, 해당 결과는 최신 저장소 검증 기록과 PR 답글에 남겼다.
