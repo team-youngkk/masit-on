@@ -32,4 +32,4 @@ related_documents:
 | [ADR-CI-001](ci-001-github-actions-quality-gate.md) | GitHub Actions 빌드·테스트 품질 게이트 |
 | [ADR-DEPLOY-003](deploy-003-validation-cookie-session.md) | 검증 참여자 제한 공개 쿠키 세션(Superseded) |
 | [ADR-DEPLOY-004](deploy-004-public-api-validation-gate-boundary.md) | 비관리자 공개 API 검증 세션 gate 경계 |
-| [ADR-DEPLOY-005](deploy-005-asg-blue-green-rollout.md) | ASG 기반 Blue-Green 운영 배포 (Proposed) |
+| [ADR-DEPLOY-005](deploy-005-asg-blue-green-rollout.md) | ASG 기반 Blue-Green 운영 배포 (Accepted) |

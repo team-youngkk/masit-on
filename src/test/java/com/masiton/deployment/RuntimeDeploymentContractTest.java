@@ -40,8 +40,8 @@ class RuntimeDeploymentContractTest {
     private static final Path VALIDATE_SERVICE = Path.of("deploy/codedeploy/hooks/validate-service.sh");
 
     @Test
-    @DisplayName("Redis는 환경 변수와 SSM을 선택적으로 사용하고 단일 EC2 기본값을 유지한다")
-    void redisEndpoint_환경변수와SSM을선택적으로사용하고_loopback기본값을유지한다() throws IOException {
+    @DisplayName("Redis는 환경 변수와 SSM을 사용해 배포 고도화 endpoint를 주입한다")
+    void redisEndpoint_환경변수와SSM으로공유endpoint를주입한다() throws IOException {
         String script = Files.readString(APP_RUN);
 
         assertThat(script)
@@ -54,7 +54,7 @@ class RuntimeDeploymentContractTest {
     }
 
     @Test
-    @DisplayName("새 인스턴스 bootstrap은 공유 Redis를 기본으로 앱·Nginx를 같은 stage에서 멱등 실행한다")
+    @DisplayName("새 인스턴스 bootstrap은 공유 Redis endpoint를 사용해 앱·Nginx를 같은 stage에서 멱등 실행한다")
     void bootstrap_동일stage에서설치스크립트를재실행한다() throws IOException {
         String script = Files.readString(BOOTSTRAP);
 
@@ -190,18 +190,22 @@ class RuntimeDeploymentContractTest {
                 .contains("deployment ID pointer")
                 .contains("StopDeployment")
                 .contains("ADR-DEPLOY-005")
-                .contains("운영 적용하지 않는다");
+                .contains("Accepted")
+                .contains("전용 Redis")
+                .contains("운영 apply");
         assertThat(Files.readString(CI_ADR))
                 .contains("terraform-contract")
                 .contains("S3 pointer")
                 .contains("CodeDeploy 취소 cleanup");
         assertThat(Files.readString(DEPLOYMENT_ADR))
                 .contains("replacement 환경")
-                .contains("Accepted [ADR-DATA-005]")
-                .contains("owner의 재합의");
+                .contains("사설 subnet 전용 Redis")
+                .contains("owner 재합의")
+                .contains("Accepted 운영 계약");
         assertThat(Files.readString(ADR_BACKLOG))
-                .contains("Accepted [ADR-DATA-005]")
-                .contains("Redis 배치 owner 재합의");
+                .contains("Accepted (2026-08-18")
+                .contains("Redis 배치 owner 재합의")
+                .contains("운영 전환 전에 남김");
         assertThat(Files.readString(CLEANUP_RUNBOOK))
                 .contains("codedeploy-cancel-cleanup")
                 .contains("S3 deployment ID pointer");

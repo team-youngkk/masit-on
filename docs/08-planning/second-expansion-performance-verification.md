@@ -29,7 +29,7 @@ related_documents:
 
 이번 결과는 측정 전용 임시 환경의 증거이며 운영 인스턴스의 누적 데이터·동시 트래픽·캐시 워밍 상태를 대변하지 않는다. 3차 확장에서 데이터 규모나 배포 토폴로지가 바뀌면 동일 기준으로 재측정하고, 미달 시 [ADR-DATA-011](../07-adr/data/data-011-popular-restaurant-request-time-aggregation.md)의 후속 조치 조건을 검토한다.
 
-또한 [ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md) 3.1절의 배포 고도화(ALB·Blue-Green·다중 인스턴스)는 "3차 확장 이후" 검토 대상이다. 이번 결과는 측정 시점의 단일 EC2 구성에 대한 증거이므로, 배포 고도화가 착수되면 `RV-NFR-011`의 "운영 동급 단일 EC2" 전제와 함께 재검토한다.
+또한 [ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md)와 Accepted [ADR-DEPLOY-005](../07-adr/platform/deploy-005-asg-blue-green-rollout.md)에 따라 배포 고도화(ALB·ASG·CodeDeploy replacement)는 M2 단일 EC2 측정 이후의 운영 토폴로지로 구분한다. 이번 결과는 측정 시점의 단일 EC2 구성에 대한 증거이므로, 실제 전환 전 `RV-NFR-011` 비교 기준과 배포 고도화 환경의 성능·비용을 다시 확인한다.
 
 ## 1. 판정 기준
 

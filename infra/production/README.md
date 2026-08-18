@@ -11,7 +11,7 @@ related_documents:
 
 CodeDeploy가 원본 ASG를 기준으로 replacement 환경을 만들기 때문에 Terraform에는 원본 ASG와 하나의 target group을 둔다. EC2/On-Premises 배포에서는 replacement 인스턴스를 같은 target group에 등록하고 original 인스턴스를 해제한다. listener나 별도 green target group은 사용하지 않으며, 배포 검증·관찰 뒤 유휴 replacement ASG를 삭제하는 절차를 별도로 수행해야 한다.
 
-이 문서와 Terraform 레이어는 [ADR-DEPLOY-005](../../docs/07-adr/platform/deploy-005-asg-blue-green-rollout.md) Proposed 구현안이다. 특히 전용 Redis 배치는 Accepted [ADR-DATA-005](../../docs/07-adr/data/data-005-redis-refresh-token.md) 6절과 충돌하므로 owner 재합의와 ADR Accepted 전환 전에는 운영 적용하지 않는다.
+이 문서와 Terraform 레이어는 Accepted [ADR-DEPLOY-005](../../docs/07-adr/platform/deploy-005-asg-blue-green-rollout.md)의 배포 고도화 구현이다. 전용 Redis 배치는 2026-08-18 owner 재합의로 개정된 Accepted [ADR-DATA-005](../../docs/07-adr/data/data-005-redis-refresh-token.md) 6절을 따른다. 실제 운영 apply·데이터 이전·CodeDeploy 전환은 별도 runbook과 승인·리허설을 통과한 뒤 수행한다.
 
 ## 적용 전 필수 확인
 

@@ -227,7 +227,7 @@ MVP 구현 전 필수 결정과 3차 확장 정책 결정은 완료됐다. 아�
 | 멀티모듈·독립 배포 | Post-MVP | 단일 모듈·단일 애플리케이션 배포로 MVP 복잡도 제한 | [ADR-ARCH-004](#adr-arch-004-멀티모듈독립-배포-전환)의 경계·이전 전략 결정 |
 | 세분화된 관리자 권한 | Post-MVP | 사전 발급 단일 `ADMIN` 역할만 범위에 포함 | [ADR-AUTH-004](#adr-auth-004-관리자-권한-세분화)의 권한 모델·이전 결정 |
 | Nginx·EC2·ECR | 기술 선택 완료, M2 적용 (2026-07-28) | [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md)에서 단계 순서 변경 | M2부터 단일 EC2 인스턴스에 적용 |
-| ALB·ASG·Blue-Green | [ADR-DEPLOY-005](platform/deploy-005-asg-blue-green-rollout.md) Proposed; 비용 초과는 작업 요청자가 부담하기로 승인했으며 운영 전환 전 팀 리뷰 필요. 전용 Redis 제안은 Accepted [ADR-DATA-005](data/data-005-redis-refresh-token.md) 6절의 앱 인스턴스 동거 결정과 충돌 | 초기 운영 배포는 단일 인스턴스 수동 복구 | Redis 배치 owner 재합의, ASG·ALB·CodeDeploy 경계와 롤백 리허설을 통과한 뒤 Accepted 전환 |
+| ALB·ASG·Blue-Green | [ADR-DEPLOY-005](platform/deploy-005-asg-blue-green-rollout.md) Accepted (2026-08-18); 비용 초과는 작업 요청자가 부담하기로 승인. 전용 Redis 배치는 [ADR-DATA-005](data/data-005-redis-refresh-token.md) 6절 owner 재합의로 해소 | 초기 운영 배포는 단일 인스턴스 수동 복구 | 실제 AWS apply, Redis 데이터 이전, CodeDeploy 취소·rollback 리허설과 비용·알람 증거를 운영 전환 전에 남김 |
 | 전체 CI/CD 배포 흐름 | M2 적용 (2026-07-28) | 전 단계 CI는 빌드·테스트 수행 | M2부터 ECR push·EC2 승인 배포·Smoke Test 활성화 |
 | 로그 14일 보관 | M2 적용 (2026-07-28) | 로컬 단계에는 CloudWatch 미사용 | M2부터 로그·백업·알림 정책 활성화 |
 
@@ -245,7 +245,7 @@ Conditional·Post-MVP Backlog 항목은 다음을 모두 충족해야 활성화�
 ## 7. 작성 우선순위
 
 1. [결정 완료 2026-07-27] 관리자 검증 미리보기의 확인 Token 저장·단일 사용·재시도 정책 결정
-2. [결정 완료 2026-07-24] 배포 토폴로지와 ALB·ASG·Blue-Green 충돌 해결
+2. [결정 완료 2026-08-18] 배포 토폴로지와 ALB·ASG·Blue-Green 충돌 해결 및 전용 Redis 배치 owner 재합의
 3. [결정 완료 2026-07-24] 관리자 JWT 만료·서명 키와 Redis Refresh Token 키·회전·장애 정책 결정
 4. [결정 완료 2026-07-24] 로그 보관·운영 지표·알림 기준 결정
 5. 동시성·조회 확장·자동 복원력은 테스트·운영 근거 발생 시 검토
@@ -271,4 +271,4 @@ Conditional·Post-MVP Backlog 항목은 다음을 모두 충족해야 활성화�
 
 | 3차 확장 ADR 상태 | 자연어·AI·비동기·Mobility 경계는 Accepted. 구현은 계약 테스트·계정 연결·평가·부하 증거 게이트를 따른다 |
 
-현재 MVP 구현 전 필수 미결정 항목은 없다. 다만 이슈 #207 격리 성능 검증 환경의 Terraform·remote state 운영은 [ADR-PERF-003](quality/perf-003-isolated-performance-terraform.md)의 팀 리뷰가 남아 있다. AWS 운영 세부는 M2 초기 운영 배포 문서에서 확정한다. ALB·Blue-Green 전환은 3차 확장 이후 배포 고도화 단계에서 검토한다. 착수 시점은 2026-07-28 팀 4인 전원이 합의했으나 비용·일정 영향 검토가 남아 있다([ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) 3.1절). 영향 검토가 미결정 항목으로 남으며, 토폴로지·전환 절차·비용은 착수 시점의 별도 ADR에서 확정한다.
+현재 MVP 구현 전 필수 미결정 항목은 없다. 다만 이슈 #207 격리 성능 검증 환경의 Terraform·remote state 운영은 [ADR-PERF-003](quality/perf-003-isolated-performance-terraform.md)의 팀 리뷰가 남아 있다. AWS 운영 세부는 M2 초기 운영 배포 문서와 [ADR-DEPLOY-005](platform/deploy-005-asg-blue-green-rollout.md) 실행 게이트에서 확인한다. ALB·Blue-Green 토폴로지와 전용 Redis 배치는 2026-08-18 Accepted ADR과 owner 재합의로 확정했으며, 실제 apply·전환·rollback 리허설과 비용 증거는 운영 적용 전에 남긴다.

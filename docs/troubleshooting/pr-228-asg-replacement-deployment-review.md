@@ -182,3 +182,9 @@ app_subnet_ids의 route table에는 IGW를 향한 0.0.0.0/0 경로가 없어야 
 6. **ACM 계약**: HTTP-only fallback을 제거하고 `acm_certificate_arn`을 nullable false의 필수 변수로 바꿨다. 유효한 ACM ARN 형식이 아니면 Terraform variable validation에서 멈추므로, ALB HTTPS listener·Nginx 인증서 export·배포 흐름이 같은 필수 전제를 공유한다.
 7. **templatefile 회귀 방지**: 소스 형태는 `RuntimeDeploymentContractTest`가 확인하고, `tests/template-render/redis-user-data.tftest.hcl`이 Terraform 1.6.6 `templatefile()` 렌더링 결과에 셸 parameter expansion이 남는지 검증한다. CI의 `terraform-contract` job이 이 테스트를 이미지 생성보다 먼저 실행해 렌더링 회귀가 배포 후보를 막는다.
 8. **취소 ID 회귀 방지**: artifact 후속 step에 의존하지 않고 S3 pointer를 같은 실행 step에서 먼저 기록하도록 해, workflow 취소로 후속 step이 생략되어도 cleanup job이 deployment ID를 조회할 수 있게 했다.
+
+## 13. 결정 반영: 배포 고도화와 Redis 배치
+
+2026-08-18 사용자·owner 결정에 따라 [ADR-DEPLOY-005](../07-adr/platform/deploy-005-asg-blue-green-rollout.md)를 `Accepted`로 전환하고, [ADR-DATA-005](../07-adr/data/data-005-redis-refresh-token.md) 6절에 김인안·이우람의 운영 배치 재합의를 기록했다. M2의 앱 EC2 동거 Redis는 당시 초기 운영 기준선으로 보존하며, 배포 고도화 운영은 앱 ASG와 분리된 사설 subnet 전용 Redis를 사용한다.
+
+이 결정으로 기존 리뷰에서 발견된 “Proposed 배포 ADR·전용 Redis 구현·Accepted 동거 Redis 계약”의 충돌은 해소됐다. ADR 색인·추적표·Backlog·요구사항·기술 정책·운영 README와 계약 테스트도 같은 기준으로 동기화했다. 남은 확인 항목은 문서 계약이 아니라 실제 AWS Terraform apply, Redis 데이터 이전, CodeDeploy 취소·rollback, IAM simulator, 비용·알람과 replacement health 리허설이다.

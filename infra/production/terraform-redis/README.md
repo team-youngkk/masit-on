@@ -8,7 +8,7 @@ related_documents:
 
 # 전용 private Redis Terraform
 
-이 Proposed 배포 고도화 모듈은 앱 인스턴스에 동거하던 Redis를 사설 subnet의 전용 인스턴스로 분리하는 안을 담는다. [배포 고도화 영향 검토 8.2절](../../../docs/08-planning/deployment-hardening-impact-review.md)이 이것을 1단계로 제안했고, Blue-Green 무중단의 전제다. 다만 [ADR-DATA-005](../../../docs/07-adr/data/data-005-redis-refresh-token.md) 6절의 Accepted 배치 결정과 충돌하므로, owner 재합의와 [ADR-DEPLOY-005](../../../docs/07-adr/platform/deploy-005-asg-blue-green-rollout.md)의 Accepted 전환 전에는 이 레이어를 운영에 적용하지 않는다.
+이 Accepted 배포 고도화 모듈은 M2에서 앱 인스턴스에 동거하던 Redis를 사설 subnet의 전용 인스턴스로 분리한다. [배포 고도화 영향 검토 8.2절](../../../docs/08-planning/deployment-hardening-impact-review.md)이 정의한 1단계이며, Blue-Green 무중단의 전제다. 2026-08-18 owner 재합의로 [ADR-DATA-005](../../../docs/07-adr/data/data-005-redis-refresh-token.md) 6절의 배포 고도화 운영 배치와 [ADR-DEPLOY-005](../../../docs/07-adr/platform/deploy-005-asg-blue-green-rollout.md)가 Accepted 확정되었다. 실제 Redis 데이터 이전·cutover·복구는 운영 runbook과 리허설을 통과한 뒤 수행한다.
 
 `../terraform`(운영 ASG·Blue-Green)과 state를 분리한다. 그 모듈은 `redis_security_group_id`를 **입력으로만** 받고 Redis를 만들지 않는다. 이 모듈의 `redis_security_group_id` 출력을 그 입력에 넣는다.
 

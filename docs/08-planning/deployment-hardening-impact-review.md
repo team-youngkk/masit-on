@@ -1,11 +1,9 @@
 ---
-status: PROPOSED
+status: ACCEPTED
 review_date: 2026-08-17
 owners:
   - 이우람
 decision_pending:
-  - 배포 고도화 착수 여부와 단계 순서
-  - Redis 전용 인스턴스의 사설 서브넷 외부 접근 경로
   - Blue-Green 도입에 따른 마이그레이션 하위 호환 규칙
   - 앱 인스턴스 t4g.medium → t4g.small 하향
 related_documents:
@@ -32,7 +30,7 @@ related_documents:
 
 [ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md) 3.1절은 2026-07-28 팀 4인 전원이 배포 고도화 착수 시점을 "3차 확장 이후"로 합의했다고 기록하면서, [범위 문서 7절](../00-overview/scope.md#7-범위-변경-절차) 3항(개발 비용·데이터·외부 연동·운영 영향)과 4항(일정 영향)을 수행하지 않았고 **"실제 착수는 위 두 검토를 통과한 뒤에 시작한다"**고 못박았다. 이 문서가 그 두 검토다.
 
-검토 대상 구성은 **Blue-Green 무중단 배포 + Redis 전용 인스턴스 분리 + 앱 인스턴스 t4g.small 하향**이다. ALB·ASG·Blue-Green을 medium 인스턴스에 그대로 얹는 초안은 예산을 넘겨 폐기했고(5.5절에 기록), 인스턴스 하향을 전제로 다시 산정했다.
+검토 대상 구성은 **Blue-Green 무중단 배포 + Redis 전용 인스턴스 분리 + 앱 인스턴스 t4g.small 하향**이다. 2026-08-18 owner 검토로 배포 고도화 착수 방향과 전용 Redis 배치를 승인했고, 이 문서의 비용·운영 영향 결과를 [ADR-DEPLOY-005](../07-adr/platform/deploy-005-asg-blue-green-rollout.md)와 [ADR-DATA-005](../07-adr/data/data-005-redis-refresh-token.md)의 현재 계약에 반영했다. ALB·ASG·Blue-Green을 medium 인스턴스에 그대로 얹는 초안은 예산을 넘겨 폐기했고(5.5절에 기록), 인스턴스 하향을 전제로 다시 산정했다.
 
 | 검토 항목 | 결과 |
 |---|---|
@@ -280,7 +278,7 @@ Redis를 분리하면 앱은 무중단이 되지만, 전용 인스턴스는 복�
 
 분리에 따라오는 문서·설정 변경도 함께 처리한다.
 
-- [ADR-DATA-005](../07-adr/data/data-005-redis-refresh-token.md) 6절은 2026-07-30에 공동 owner(김인안·이우람) 합의로 "앱 인스턴스 동거"로 개정한 조항이다. **분리는 이 개정을 되돌리는 것이므로 같은 owner의 합의가 다시 필요하다.** 10·11절의 강제 규칙(8.8 계열, 사설 네트워크, 퍼블릭 IP 금지)은 사설 서브넷 배치로 그대로 지켜진다.
+- [ADR-DATA-005](../07-adr/data/data-005-redis-refresh-token.md) 6절은 2026-07-30에 공동 owner(김인안·이우람) 합의로 M2 초기 운영의 "앱 인스턴스 동거" 기준을 기록한 조항이다. **2026-08-18 같은 owner의 재합의로 배포 고도화 운영에서는 사설 subnet 전용 Redis를 사용하도록 개정했다.** 10·11절의 강제 규칙(8.8 계열, 사설 네트워크, 퍼블릭 IP 금지)은 그대로 지켜진다.
 - [masiton-redis.service](../../deploy/redis/masiton-redis.service)의 `--publish 127.0.0.1:6379:6379`를 사설 IP 바인딩으로 바꾸고, 보안 그룹으로 앱 보안 그룹 출처의 6379만 허용한다. **loopback이 사라지므로 보안 그룹이 유일한 경계가 된다.**
 - 배포 스크립트도 함께 바뀐다. 6.8절 표의 `docker exec masiton-redis` 항목을 참조한다.
 - AOF `everysec`·`noeviction`·`maxmemory` 설정은 전용 인스턴스의 EBS 볼륨으로 그대로 옮긴다. 재기동 후 인증 상태 유지 검증(`M2-13`에 해당)을 새 구성에서 다시 한다.
@@ -347,7 +345,7 @@ ALB를 앞에 두면 앱 인스턴스를 사설 서브넷에 넣는 구성이 �
 
 대신 지금 확인할 수 있는 일정 사실 둘을 기록한다.
 
-**첫째, 착수 시점 조건인 "3차 확장 이후"에 아직 도달하지 않았다.** [3차 확장 최종 게이트](third-expansion-final-gate-result.md)는 `CONDITIONAL`이고 4절의 여섯 항목이 모두 미해소다. 같은 문서 1.1절이 승격·배포는 막지 않는다고 개정했지만 **단계 완료 선언은 4절이 해소된 시점**이라고 명시했다.
+**첫째, 3차 확장 최종 게이트와 배포 고도화 실제 적용은 별도다.** [3차 확장 최종 게이트](third-expansion-final-gate-result.md)는 `CONDITIONAL`이고 4절의 여섯 항목이 모두 미해소다. 배포 고도화 ADR의 Accepted 전환은 이 기능 게이트를 완료로 선언하지 않으며, 실제 AWS 전환은 이 문서와 ADR의 운영 리허설 조건을 따른다.
 
 **둘째, 토폴로지를 먼저 바꾸면 남은 성능 증거의 비교 기준이 끊긴다.** 게이트 4절 3번은 측정 전용 환경에서 최대 `200/80`을 실행·판정하고, 정상 `50/20`은 2차 확장 성능 검증 결과의 `Verified` 증거를 재사용하도록 요구한다. [#190 운영 직접 관찰](issue-190-operational-performance-result.md)은 단일 medium 인스턴스에서 수집됐다. **인스턴스를 small로 내리는 것만으로도 이 운영 비교 기준은 무효가 된다.** 성능 게이트를 먼저 닫고 하향·고도화를 시작하는 순서가 재측정 비용을 줄인다.
 
@@ -370,11 +368,11 @@ ALB를 앞에 두면 앱 인스턴스를 사설 서브넷에 넣는 구성이 �
 
 한 번에 전환하지 않는다. 단계를 나누면 각각을 독립적으로 되돌릴 수 있고, 앞 단계의 실측이 뒤 단계의 판정 근거가 된다.
 
-**1단계 — Redis 분리.** 현재 단일 인스턴스 구조에서 먼저 수행한다. ALB도 Blue-Green도 없는 상태에서 전용 인스턴스만 떼어낸다. **여기서 E1·E2·E3 중 어느 경로가 실제로 성립하는지 확정되고, 그 값이 2·3단계의 예산 판정을 결정한다.** ADR-DATA-005 6절 개정에 공동 owner 합의가 필요하고, 배포 검증의 `docker exec masiton-redis` 4곳을 원격 호출로 바꾸는 작업이 같은 범위에 포함된다(6.8절).
+**1단계 — Redis 분리.** 현재 단일 인스턴스 구조에서 먼저 수행한다. ALB도 Blue-Green도 없는 상태에서 전용 인스턴스만 떼어낸다. **여기서 E1·E2·E3 중 어느 경로가 실제로 성립하는지 확정되고, 그 값이 2·3단계의 예산 판정을 결정한다.** ADR-DATA-005 6절의 전용 배치 owner 재합의는 2026-08-18 완료했고, 배포 검증의 `docker exec masiton-redis` 4곳을 원격 호출로 바꾸는 작업이 같은 범위에 포함된다(6.8절).
 
 **2단계 — ALB 도입, Nginx 유지.** TLS를 ACM으로 옮기고 XFF·XFP 신뢰 경계를 재설계한다(6.1절). 퍼블릭 서브넷을 두 번째 AZ에 추가한다(6.5절). 이 시점까지 상시 1대이므로 NFR-AVAILABILITY-002는 손대지 않는다.
 
-**3단계 — Blue-Green과 ASG 활성화.** 마이그레이션 하위 호환 규칙을 확정해 문서화한다(6.2절). Redis 접근 경로와 예산 초과액을 운영 기록에 남기고, ASG 상시 2대를 Blue-Green의 운영 토폴로지로 도입한다. ASG는 배포 중 green을 별도 target group으로 검증한 뒤 listener를 전환하며, 실패 시 기존 blue를 유지·복귀한다.
+**3단계 — Blue-Green과 ASG 활성화.** 마이그레이션 하위 호환 규칙을 확정해 문서화한다(6.2절). Redis 접근 경로와 예산 초과액을 운영 기록에 남기고, ASG replacement를 Blue-Green의 운영 토폴로지로 도입한다. 현재 구현은 단일 target group에 replacement 인스턴스를 등록·검증한 뒤 original을 해제하며, 실패 시 기존 original을 유지·복귀한다.
 
 인스턴스 하향은 2단계와 3단계 사이에서 수행한다. 4.3절의 실측과 heap 고정이 선행 조건이다.
 
@@ -382,7 +380,7 @@ ALB를 앞에 두면 앱 인스턴스를 사설 서브넷에 넣는 구성이 �
 
 1. 3차 확장 최종 게이트의 일반 공개 전용 미해소 항목과 배포 고도화 검증 항목을 구분해 기록한다. 해당 문서는 승격·운영 배포 자체를 막지 않는다고 규정한다.
 2. 4차 확장 계획을 기다리지 않고 배포 작업의 구현·검증 기간과 기능 일정과의 병렬 가능 여부를 이 절에 기록한다.
-3. [ADR-DEPLOY-005](../07-adr/platform/deploy-005-asg-blue-green-rollout.md)의 Proposed 결정을 팀 리뷰하고, ALB 재암호화·Redis 접근·CodeDeploy hook·ASG 용량·Flyway 호환 규칙을 확정한다.
+3. [ADR-DEPLOY-005](../07-adr/platform/deploy-005-asg-blue-green-rollout.md)의 Accepted 결정을 기준으로 ALB 재암호화·Redis 접근·CodeDeploy hook·ASG 용량·Flyway 호환 규칙을 운영 리허설에서 검증한다.
 4. `M2-09`가 미룬 RSS 실측과 JVM heap 고정 여부를 결정한다(4.3절).
 
 ## 9. 이 검토가 확인하지 않은 것

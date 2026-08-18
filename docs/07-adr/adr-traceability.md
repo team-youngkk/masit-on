@@ -87,7 +87,7 @@ related_documents:
 | QueryDSL | 조건부 | Conditional ADR | [ADR-SEARCH-001](adr-backlog.md#adr-search-001-querydsl-도입) | 복합 조회 필요성 확인 후 도입 |
 | PostGIS | 기술 스펙 확정, 현재 범위 제외 | Accepted ADR | [ADR-MAP-001](integration/map-001-map-bounds-search.md) | WGS84 좌표 응답만 사용하고 뷰포트·거리·공간 검색은 제외 |
 | pgvector | Post-MVP | Post-MVP ADR | [ADR-SEARCH-002](adr-backlog.md#adr-search-002-pgvector-자연어-검색rag) | 자연어 검색·RAG 제외 |
-| Redis 8.8 | 고정·관리자 Token 역할 확정, 운영 배치는 ADR-DATA-005 6절 | Accepted ADR | [ADR-DATA-005](data/data-005-redis-refresh-token.md) | 관리자 Refresh Token 저장, 배포 고도화의 전용 Redis 제안은 별도 Proposed ADR·owner 재확인 대상이며 캐시·락은 별도 조건부 |
+| Redis 8.8 | 고정·관리자 Token 역할과 배포 고도화 운영 배치 확정 | Accepted ADR | [ADR-DATA-005](data/data-005-redis-refresh-token.md), [ADR-DEPLOY-005](platform/deploy-005-asg-blue-green-rollout.md) | 관리자 Refresh Token은 사설 subnet 전용 Redis에 저장하며 캐시·락은 별도 조건부 |
 | Redis AOF `everysec` + RDB | 확정 설정 | Operational Configuration | Redis 역할 결정 후 운영 문서 | 아키텍처보다 영속화 설정값 |
 | Redis 캐시 | 확정 기술 용도 | Conditional ADR | [ADR-CACHE-001](adr-backlog.md#adr-cache-001-redis-캐시-도입) | 성능 병목·무효화 근거 없음 |
 | Redis 관리자 Refresh Token | 사용자 확정 | Accepted ADR | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md), [ADR-DATA-005](data/data-005-redis-refresh-token.md) | 관리자 JWT 재발급·폐기 |
@@ -134,7 +134,7 @@ related_documents:
 | 운영 애플리케이션 포트 loopback 바인딩 | 확정 (2026-08-14) | Accepted ADR | [ADR-WEB-005](platform/web-005-application-port-binding.md), [ADR-RUNTIME-001](platform/runtime-001-docker.md) | Nginx 우회 직결과 `/internal/**` 노출을 네트워크 계층에서 차단 |
 | 검증 참여자 제한 공개 | 공개 API gate 경계 후속 결정 (2026-08-14) | Accepted ADR | [ADR-DEPLOY-004](platform/deploy-004-public-api-validation-gate-boundary.md) | 7일 HttpOnly 쿠키·Redis 세션을 유지하고 비관리자 공개 API만 경로·Method 단위로 gate 제외; 정식 공개 시 전체 제거 |
 | Amazon ECR·EC2 | 기술 선택 확정, 초기 운영 배포부터 적용 | Accepted ADR | [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | M2부터 단일 EC2에 배포하고 확장 단계별 변경 반영 |
-| ALB·ASG·Blue-Green | [ADR-DEPLOY-005](platform/deploy-005-asg-blue-green-rollout.md) Proposed; 비용 초과는 작업 요청자 승인, 운영 전환은 미실행 | Proposed ADR | [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md), [ADR-DEPLOY-005](platform/deploy-005-asg-blue-green-rollout.md) | ALB·ASG·CodeDeploy·공유 Redis를 준비하되 기존 단일 EC2는 새 환경 검증 전 유지 |
+| ALB·ASG·Blue-Green | [ADR-DEPLOY-005](platform/deploy-005-asg-blue-green-rollout.md) Accepted; 비용 초과는 작업 요청자 승인, 실제 운영 전환은 미실행 | Accepted ADR | [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md), [ADR-DEPLOY-005](platform/deploy-005-asg-blue-green-rollout.md) | ALB·ASG·CodeDeploy·사설 subnet 전용 Redis를 기준으로 하되 기존 단일 EC2는 실제 환경 검증 전 유지 |
 | GitHub Actions → ECR → EC2 | 초기 운영 배포부터 적용 | Accepted ADR | [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | 빌드·테스트 품질 게이트를 유지하고 M2부터 AWS 배포 경로 활성화 |
 | Amazon S3 이미지 저장 | 확정이나 기능 없음 | Post-MVP ADR | [ADR-MEDIA-001](adr-backlog.md#adr-media-001-s3-사용자-이미지-저장) | 이미지 업로드·사용자 이미지 요구사항 없음 |
 | FCM HTTP v1 | 외부 채널 범위 제외 | Post-MVP ADR | [ADR-NOTIFY-001](adr-backlog.md#adr-notify-001-fcm-푸시-알림), 현재 서비스 내 저장은 [ADR-NOTIFY-002](integration/notify-002-in-app-notification-reliability.md) | 채널·동의·DeviceToken·전달 SLA 미승인 |
@@ -241,7 +241,7 @@ related_documents:
 - 관리자 JWT 만료(30분)·Redis Refresh Token TTL(14일, 회전+재사용 탐지)·Redis 장애 시 fail-closed 정책
 - Nginx·ECR·EC2를 포함한 초기 운영 배포 토폴로지(단일 EC2 인스턴스)
 - `/api` 화면·백엔드 분리, 관리자 인증 matcher와 `/internal` 상태 확인 경계
-- ALB·ASG·Blue-Green: 초기 운영 배포에는 미도입, 3차 확장 이후 배포 고도화 단계에서 검토 (2026-07-28 착수 시점 합의, 비용·일정 영향 검토 미완)
+- ALB·ASG·Blue-Green: M2 초기 운영에는 미도입하고, 2026-08-18 영향·비용 검토 후 배포 고도화 기준을 [ADR-DEPLOY-005](platform/deploy-005-asg-blue-green-rollout.md)로 Accepted 확정. 실제 적용·리허설은 별도 운영 게이트로 남김
 - 로그 14일 보관, 백업(일 1회 자동 스냅샷·7일 보관), 운영 알림(CloudWatch→Slack, 담당자 1명. 팀 상시 채널이 Slack뿐이라는 근거는 [RV-NFR-013](../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준))
 
 다음은 여전히 팀 결정이 필요한 미결정 항목이다.
@@ -251,7 +251,7 @@ related_documents:
 - 외부 전달의 자동 재시도·Circuit Breaker·비동기 이벤트 도입 기준 (Transactional Outbox는 회원 Action 메일에 한해 [ADR-AUTH-005](security/auth-005-member-action-mail-outbox.md)로 확정, 서비스 내 알림은 [ADR-NOTIFY-002](integration/notify-002-in-app-notification-reliability.md)로 비동기 전달 불필요 결정)
 - 멀티모듈·독립 배포와 세분화된 관리자 권한의 전환 기준
 - Jsoup, n8n 등 정확한 버전이 없는 의존성 (k6는 [ADR-PERF-001](quality/perf-001-k6-load-testing.md)이 v2.1.0으로 고정해 2026-08-06 해소)
-- 현재 구현 전 필수 팀 결정은 없다. ALB·Blue-Green 전환 자동화는 토폴로지 확장 시 새 ADR로 결정한다. ADR-PERF-003의 실제 backend bootstrap 세부는 실행 전 운영 작업으로 확인한다.
+- 현재 구현 전 필수 팀 결정은 없다. ALB·Blue-Green 전환 자동화의 기준은 ADR-DEPLOY-005로 확정했고, ADR-PERF-003의 실제 backend bootstrap 세부와 AWS 운영 리허설은 실행 전 운영 작업으로 확인한다.
 
 ## 9. 2차 확장 ADR 검토 결과
 
