@@ -212,6 +212,23 @@ data "aws_iam_policy_document" "github_actions_deploy" {
     actions   = ["codedeploy:StopDeployment"]
     resources = ["*"]
   }
+
+  # deployment ID를 S3 pointer에 저장하기 전에 runner가 죽으면 cleanup job이
+  # 중지 대상을 잃는다. 진행 중인 deployment를 revision key로 역조회해 되찾는
+  # 재조정 경로에 필요하다. 조회 범위는 이 deployment group으로 제한한다.
+  statement {
+    effect    = "Allow"
+    actions   = ["codedeploy:ListDeployments"]
+    resources = [aws_codedeploy_deployment_group.app.arn]
+  }
+
+  # batch-get-deployments는 조회 대상이 deployment ID라 고정 ARN을 줄 수 없다.
+  # 위 GetDeployment wildcard와 같은 이유로 읽기 전용 조회만 격리해 허용한다.
+  statement {
+    effect    = "Allow"
+    actions   = ["codedeploy:BatchGetDeployments"]
+    resources = ["*"]
+  }
 }
 
 resource "aws_iam_role_policy" "github_actions_deploy" {
