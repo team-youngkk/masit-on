@@ -10,8 +10,8 @@ PREFIX=${assets_prefix}
 STAGE=/tmp/masiton-deploy
 DATA_VOLUME_ID=${data_volume_id}
 # Nitro NVMe serial은 EBS volume ID의 하이픈을 제거한 값이다.
-DATA_VOLUME_SERIAL="${DATA_VOLUME_ID//-/}"
-DATA_DEVICE="/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_${DATA_VOLUME_SERIAL}"
+DATA_VOLUME_SERIAL="$${DATA_VOLUME_ID//-/}"
+DATA_DEVICE="/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_$${DATA_VOLUME_SERIAL}"
 
 # EBS attachment은 인스턴스 bootstrap과 별도로 완료될 수 있다. 장치를 확인한
 # 뒤에만 mount해 Redis가 root volume에 AOF를 다시 쓰는 경로를 차단한다.

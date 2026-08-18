@@ -101,8 +101,14 @@ class RuntimeDeploymentContractTest {
                 .contains("stop_failed=false", "return 1", "::error::CodeDeploy")
                 .contains("cancel-in-progress: ${{ github.event_name == 'pull_request' }}")
                 .contains("codedeploy-cancel-cleanup")
-                .contains("actions/download-artifact@v4")
+                .contains("deployment_id_key")
+                .contains("aws s3api put-object")
+                .contains("aws s3 cp \"s3://${CODEDEPLOY_S3_BUCKET}/${deployment_id_key}\"")
                 .contains("for _ in $(seq 1 24)");
+        assertThat(workflow).doesNotContain("actions/download-artifact@v4");
+        assertThat(workflow.indexOf("aws s3api put-object"))
+                .isGreaterThan(workflow.indexOf("aws deploy create-deployment"))
+                .isLessThan(workflow.indexOf("for _ in $(seq 1 270)"));
         assertThat(iam).contains("codedeploy:StopDeployment");
     }
 
@@ -152,7 +158,9 @@ class RuntimeDeploymentContractTest {
                 .contains("data.aws_subnet.redis.availability_zone");
         assertThat(userData)
                 .contains("/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_")
-                .contains("DATA_VOLUME_SERIAL=\"${DATA_VOLUME_ID//-/}\"")
+                .contains("DATA_VOLUME_SERIAL=\"$${DATA_VOLUME_ID//-/}\"")
+                .contains("nvme-Amazon_Elastic_Block_Store_$${DATA_VOLUME_SERIAL}")
+                .doesNotContain("DATA_VOLUME_SERIAL=\"${DATA_VOLUME_ID//-/}\"")
                 .contains("/opt/masiton/redis/data")
                 .contains("mkfs.ext4")
                 .contains("/etc/fstab");
@@ -163,6 +171,10 @@ class RuntimeDeploymentContractTest {
                 .contains("redis-check-aof")
                 .contains("known-fixture-key")
                 .contains("terraform import aws_ebs_volume.redis_data");
+        assertThat(Files.readString(CI))
+                .contains("Terraform 렌더링 계약")
+                .contains("infra/production/terraform-redis/tests/template-render")
+                .contains("hashicorp/terraform:1.6.6 test");
     }
 
     @Test

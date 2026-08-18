@@ -57,6 +57,24 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  terraform-contract:
+    name: Terraform 렌더링 계약
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      # Redis user-data는 Terraform templatefile()과 Bash가 함께 해석한다.
+      # 고정된 Terraform 버전으로 실제 렌더링 결과를 검사해 plan 단계의 보간
+      # 회귀를 PR 품질 게이트에서 차단한다.
+      - name: Redis template 렌더링 테스트
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            -w /workspace/infra/production/terraform-redis/tests/template-render \
+            hashicorp/terraform:1.6.6 test
+
   # workflow_dispatch는 이미 게시된 이미지를 배포하는 경로다. 그 이미지는 push 때
   # 이 두 job을 통과해야 만들어졌으므로 품질 게이트는 이미 걸린 상태이고, 다시 도는
   # 것은 배포 대상이 아닌 브랜치 현재 커밋을 검사하는 일이다. 롤백은 현재 커밋이
@@ -132,7 +150,7 @@ jobs:
     name: 이미지 빌드·검증·push
     # 빌드·테스트가 하나라도 실패하면 이 job에 도달하지 않는다.
     # ADR-RUNTIME-001 13절과 M2-06 완료 조건이 요구하는 차단이다.
-    needs: [backend, frontend]
+    needs: [backend, frontend, terraform-contract]
     #
     # 배포 대상 브랜치의 push에서만 실행한다. 세 가지를 동시에 만족시키기 위한 조건이다.
     #
@@ -716,6 +734,19 @@ jobs:
           echo "CodeDeploy deployment: $deployment_id"
           deployment_id_file="$RUNNER_TEMP/codedeploy-deployment-id"
           printf '%s\n' "$deployment_id" > "$deployment_id_file"
+          # workflow 취소 시 후속 Actions step은 실행되지 않을 수 있으므로,
+          # cleanup job이 접근할 수 있는 S3에 deployment ID를 이 step에서 즉시 보관한다.
+          deployment_id_key="masiton/codedeploy/${GITHUB_RUN_ID}/deployment-id"
+          if ! aws s3api put-object \
+            --bucket "$CODEDEPLOY_S3_BUCKET" \
+            --key "$deployment_id_key" \
+            --body "$deployment_id_file" \
+            --server-side-encryption AES256 >/dev/null; then
+            echo "::error::CodeDeploy deployment ID 보관에 실패했다: $deployment_id" >&2
+            aws deploy stop-deployment --deployment-id "$deployment_id" \
+              --auto-rollback-enabled || true
+            exit 1
+          fi
           deployment_terminal=false
           stopping_deployment=false
 
@@ -784,21 +815,10 @@ jobs:
           fi
           echo 'CodeDeploy 배포 완료'
 
-      # workflow 취소로 위 step의 bash가 강제 종료돼 EXIT trap이 실행되지 않을 수
-      # 있다. deployment ID를 먼저 artifact로 남겨 별도 cleanup job이 회수한다.
-      - name: CodeDeploy deployment ID 보관
-        if: ${{ always() && env.DEPLOYMENT_TARGET == 'codedeploy' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: codedeploy-deployment-id-${{ github.run_id }}
-          path: ${{ runner.temp }}/codedeploy-deployment-id
-          if-no-files-found: error
-          retention-days: 1
-
   # GitHub 취소는 현재 step에 SIGINT·SIGTERM을 보내고 곧 프로세스 트리를 종료할
   # 수 있어 deploy job 내부 trap만으로는 원격 CodeDeploy 정리를 보장할 수 없다.
-  # 별도 job은 취소된 deploy job의 artifact를 읽어 4분 이내에 stop과 terminal 확인을
-  # 수행한다. 5분 취소 강제 종료 한도 안에 끝나도록 polling을 제한한다.
+  # 별도 job은 취소된 deploy job이 S3에 남긴 deployment ID를 읽어 4분 이내에 stop과
+  # terminal 확인을 수행한다. 5분 취소 강제 종료 한도 안에 끝나도록 polling을 제한한다.
   codedeploy-cancel-cleanup:
     name: 취소된 CodeDeploy 정리
     needs: [deploy]
@@ -813,29 +833,32 @@ jobs:
       id-token: write
     env:
       AWS_REGION: ap-northeast-2
+      CODEDEPLOY_S3_BUCKET: ${{ github.event.inputs.codedeploy_s3_bucket || '' }}
     steps:
-      - name: CodeDeploy deployment ID artifact 다운로드
-        id: deployment_id_artifact
-        if: always()
-        continue-on-error: true
-        uses: actions/download-artifact@v4
-        with:
-          name: codedeploy-deployment-id-${{ github.run_id }}
-          path: ${{ runner.temp }}/codedeploy-deployment
-
       - name: AWS 자격 증명 (OIDC, 장기 키 없음)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::711457211155:role/masiton-github-actions-role
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: CodeDeploy deployment ID 조회
+        run: |
+          set -euo pipefail
+          case "$CODEDEPLOY_S3_BUCKET" in
+            ''|*[!a-z0-9.-]*) echo 'CODEDEPLOY_S3_BUCKET은 cleanup에도 필요하다' >&2; exit 1 ;;
+          esac
+          deployment_id_file="$RUNNER_TEMP/codedeploy-deployment-id"
+          deployment_id_key="masiton/codedeploy/${GITHUB_RUN_ID}/deployment-id"
+          aws s3 cp "s3://${CODEDEPLOY_S3_BUCKET}/${deployment_id_key}" \
+            "$deployment_id_file"
+
       - name: 원격 CodeDeploy 중지 및 terminal 확인
         if: always()
         run: |
           set -euo pipefail
-          deployment_id_file="$RUNNER_TEMP/codedeploy-deployment/codedeploy-deployment-id"
+          deployment_id_file="$RUNNER_TEMP/codedeploy-deployment-id"
           if [ ! -s "$deployment_id_file" ]; then
-            echo '::error::취소된 배포의 CodeDeploy deployment ID artifact를 확인하지 못했다.'
+            echo '::error::취소된 배포의 CodeDeploy deployment ID S3 object를 확인하지 못했다.'
             exit 1
           fi
           deployment_id=$(tr -d '\r\n' < "$deployment_id_file")
