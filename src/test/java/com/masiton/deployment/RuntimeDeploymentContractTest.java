@@ -21,6 +21,7 @@ class RuntimeDeploymentContractTest {
     private static final Path NGINX_INSTALL = Path.of("deploy/scripts/nginx-install.sh");
     private static final Path ALB = Path.of("infra/production/terraform/alb.tf");
     private static final Path CODEDEPLOY = Path.of("infra/production/terraform/codedeploy.tf");
+    private static final Path TERRAFORM_VARIABLES = Path.of("infra/production/terraform/variables.tf");
     private static final Path TERRAFORM_DATA = Path.of("infra/production/terraform/data.tf");
     private static final Path TERRAFORM_IAM = Path.of("infra/production/terraform/iam.tf");
     private static final Path MONITORING = Path.of("infra/production/terraform/monitoring.tf");
@@ -96,18 +97,24 @@ class RuntimeDeploymentContractTest {
     }
 
     @Test
-    @DisplayName("Terraform은 ALB public·app private subnet route 조건과 단일 target group을 검증한다")
+    @DisplayName("Terraform은 ALB IGW 경로와 선언된 app 배치 의도, 단일 target group을 검증한다")
     void terraform_서브넷route와_단일targetGroup을검증한다() throws IOException {
         String data = Files.readString(TERRAFORM_DATA);
+        String variables = Files.readString(TERRAFORM_VARIABLES);
         String alb = Files.readString(ALB);
         String monitoring = Files.readString(MONITORING);
 
+        // ALB는 IGW 기본 경로를 요구하고, app은 선언한 배치 의도와 실제 route가
+        // 어긋날 때 plan에서 실패한다. 배포 고도화 영향 검토 6.6절이 앱을 public
+        // subnet에 두는 구성을 전제로 비용을 산정했으므로 방향을 코드에 굳히지 않는다.
         assertThat(data)
                 .contains("data \"aws_route_table\" \"alb\"")
+                .contains("data \"aws_route_table\" \"app\"")
                 .contains("0.0.0.0/0")
                 .contains("^igw-")
                 .contains("alb_subnet_ids의 route table에는")
-                .contains("app_subnet_ids의 route table에는");
+                .contains("var.app_subnet_is_private");
+        assertThat(variables).contains("variable \"app_subnet_is_private\"");
         assertThat(alb).doesNotContain("resource \"aws_lb_target_group\" \"green\"");
         assertThat(monitoring).doesNotContain("green_unhealthy");
     }

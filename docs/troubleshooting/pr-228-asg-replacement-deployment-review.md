@@ -104,7 +104,7 @@ related_documents:
 - RDS ingress 예시 스레드는 최신 HEAD에 이미 `manage_rds_ingress_rule = true`가 있어 코드 변경 없이 “이미 해결”로 답변한다.
 - subnet route 스레드는 app subnet 비용·보안 계약의 결정이 필요해 미해결 상태다.
 
-## 11. 미해결 계약 충돌: app subnet의 IGW 경로
+## 11. 해결된 계약 충돌: app subnet의 IGW 경로
 
 `data "aws_route_table" "app"`의 postcondition이 app subnet에 IGW 기본 경로가 없을 것을 요구하는데, 현재 `app_subnet_ids`는 public subnet 2개다. `terraform plan`이 이 조건에서 실패한다.
 
@@ -129,4 +129,16 @@ app_subnet_ids의 route table에는 IGW를 향한 0.0.0.0/0 경로가 없어야 
 2. postcondition을 6.6절 전제에 맞게 바꾼다. 예산 산정은 유지되지만 리뷰가 막으려던 오배치 검증이 약해진다
 3. 배치 의도를 변수로 명시하고 그 값에 따라 postcondition을 반대로 적용한다. 오배치 검증을 유지하면서 6.6절 구성을 허용하지만 변수 하나가 늘어난다
 
-**이 판정은 비용과 보안 경계를 동시에 건드리므로 팀 결정 사항이다.** 결정 전까지 운영 레이어 `apply`를 수행할 수 없다.
+**3번으로 결정했다.** `app_subnet_is_private` 변수를 도입해 배치 의도를 tfvars에 선언하고, postcondition이 선언과 실제 route를 대조한다. 현재 운영은 6.6절 근거로 `false`이며 앱은 public subnet에 있고 인터넷 경계는 security group이 ALB 출처 `443`만 허용하는 것으로 지킨다.
+
+방향을 코드에 굳히지 않았으므로 오배치 검증은 양쪽으로 살아 있다.
+
+| 시나리오 | plan 결과 |
+|---|---|
+| `false` + public subnet (현재 구성) | 통과 |
+| `true` + public subnet | 실패 — postcondition |
+| ALB에 private subnet 지정 | 실패 — 해당 subnet에 명시적 route table 연결이 없어 data source 조회가 비어 있다 |
+
+마지막 항목은 실패하기는 하지만 `query returned no results`로 나와 의도가 드러나지 않는다. 메시지 개선은 후속 과제로 남긴다.
+
+운영 레이어 `plan`은 통과하며 destroy 대상은 미사용 green target group과 alarm 2건뿐이다.
