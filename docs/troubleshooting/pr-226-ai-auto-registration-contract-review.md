@@ -132,6 +132,12 @@ related_documents:
 
 합의 대기 표기 전파
 - ADR 1절 / business-rules BR-009 앞 / API 1절 / 데이터 계약 1절: 4곳 확인
+
+2차 반영: 새 표의 입력 공간 전수 확인
+- 최상위 reviewStatus: 등록 단위 상태 4종의 조합 5가지를 나열해 전부 하나로 수렴
+- unitId 처리: 등록 단위 0개·1개·2개 이상 + 타 작업 단위 지정 4가지 모두 정의
+- 등록 결과 식별자: 상태 4종 × 식별자 존재 여부, 함께 존재하거나 함께 null
+- reused_resources: 자원 4종 중 실제 재사용 가능한 2종만 허용값에 남김
 ```
 
 ## 8. 재발 방지와 다음 확인
@@ -170,6 +176,30 @@ related_documents:
 
 `합의 대기` 표시를 언제 어떻게 제거할지가 정의돼 있지 않아 표시가 무기한 남을 수 있었다. 합의를 이 PR의 소유자 승인으로 갈음하기로 정했다. 계약 소유자 세 명이 모두 이 PR의 리뷰어이고 ruleset이 2명 승인을 강제하므로 승인 기록이 그대로 합의 근거가 된다. 승인이 달리면 병합 직전 커밋에서 네 문서의 표시를 함께 제거하고, 승인 없이는 병합하지 않는다.
 
-## 10. 비교 지표
+## 10. 2차 리뷰 처리
+
+1차 반영 뒤 새로 올라온 미해결 스레드 7건이다. 모두 1차 반영이 **새로 만든** 계약의 빈틈이며, 지적 유형이 1차와 같다. 규칙·표를 추가하면서 그 표가 덮지 못하는 조합과 경계값을 함께 확인하지 않았다.
+
+| 스레드 | 요청 요약 | 문제 유형 | 판단 | 처리 결과 |
+|---|---|---|---|---|
+| [혼합 최상위 상태 미정의 (P1)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3800416042) | 확정 + 거부 조합이 어느 순위에도 걸리지 않음 | 기타 | 수정 필요 | 4순위를 "`AUTO_CONFIRMED`가 하나라도 있다", 5순위를 "그 밖의 경우"로 바꿔 전 조합을 덮고, 조합별 결과표와 우선순위 근거를 추가 |
+| [혼합 조합 완결 (P2)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3800423755) | 같은 항목 | 기타 | 수정 필요 | 위와 같은 수정. 다섯 조합을 계약 테스트로 고정 |
+| [작업 상세의 4종 식별자 (P2)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3800423760) | 상세 응답의 등록 단위에 맛집 식별자만 있음 | 기타 | 수정 필요 | `registrationUnits[]`에 `registeredCreatorId`·`registeredVideoId`·`registeredVisitId`·`reusedResources` 추가, 상태별 null 규칙 명시 |
+| [`unitId` 경계값 (P2)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3800416046) | 등록 단위 0개·1개일 때 동작 미정의 | 기타 | 수정 필요 | 단위 수별 처리표 추가. 0개는 `422`, 1개는 생략 허용, 타 작업 단위 지정은 `404` |
+| [동시성·업무 중복 코드 혼동 (P2)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3800416057) | `AIEXTRACT_DUPLICATE_CONFLICT`와 `DUPLICATE_CONFLICT` 이름 충돌 | 기타 | 수정 필요 | 동시성 충돌에 `AIEXTRACT_CONCURRENT_REQUEST_CONFLICT`를 신설하고 두 코드의 차이를 명시. 기존 Accepted 코드는 건드리지 않음 |
+| [매핑 이력 보존 (P2)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3800423763) | UPDATE하면 과거 매핑을 재현할 수 없음 | 데이터베이스 | 수정 필요 | 활성 행 부분 unique로 바꾸고 업무 컬럼을 append-only로 운영. `category_decision`에 매핑 행 식별자와 그 시점 카테고리 값을 함께 저장 |
+| [`reused_resources` 허용값 (P3)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3800416052) | CHECK가 실제 로직보다 넓음 | 데이터베이스 | 수정 필요 | 허용값을 `creator`·`video`로 좁힘. 맛집·방문 관계는 `DUPLICATE_CONFLICT`로 차단되어 재사용이 발생할 수 없다는 근거를 본문에 명시 |
+
+### 10.1 반복된 원인
+
+1차와 2차의 지적이 형태만 다르고 원인은 같다. **새 표·새 규칙을 추가할 때 그 표가 덮는 입력 공간을 전부 나열해 확인하지 않았다.**
+
+- 최상위 요약 규칙은 5개 순위를 썼지만 등록 단위 상태 4종의 조합을 전부 대입해 보지 않았다. 확정 + 거부 조합이 빠졌다.
+- `unitId` 필수 조건은 "둘 이상"만 썼고 0개·1개를 확인하지 않았다.
+- `reused_resources` CHECK는 자원 4종을 기계적으로 나열했고, 그중 둘이 실제로 발생 가능한지 확인하지 않았다.
+
+1차 반영에서 "상태 조합표를 만들어 검증한다"는 방법을 `MANUAL_OVERRIDE` 건에는 적용했지만 다른 표에는 적용하지 않았다. 2차에서는 새로 만든 모든 표에 같은 방법을 적용했고, 7절 검증 블록에 조합 나열 결과를 남겼다.
+
+## 11. 비교 지표
 
 해당 없음. 문서 계약 변경이며 측정할 런타임 지표가 없다. 자동 등록률·`CATEGORY_UNRESOLVED` 비율 등은 구현 후 [PRD 11절 지표](../04-product/prd/admin/ai-video-information-extraction.md)에서 측정한다. 이 PR 시점에는 기준선을 만들 수 없다.

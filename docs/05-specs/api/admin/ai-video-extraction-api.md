@@ -67,10 +67,20 @@ related_documents:
 | 1 | 등록 단위가 하나도 없다 | `null` |
 | 2 | 관리자 사후 보정·롤백이 하나라도 있다 | `MANUAL_OVERRIDE` |
 | 3 | `AUTO_BLOCKED` 단위가 하나라도 있다 | `AUTO_BLOCKED` |
-| 4 | 모든 단위가 `AUTO_REJECTED`다 | `AUTO_REJECTED` |
-| 5 | 모든 단위가 `AUTO_CONFIRMED`다 | `AUTO_CONFIRMED` |
+| 4 | `AUTO_CONFIRMED` 단위가 하나라도 있다 | `AUTO_CONFIRMED` |
+| 5 | 그 밖의 경우, 즉 모든 단위가 `AUTO_REJECTED`다 | `AUTO_REJECTED` |
 
-한 단위는 확정되고 다른 단위는 차단된 혼합 작업은 3순위에 따라 `AUTO_BLOCKED`다. 확정된 단위가 있어도 처리할 예외가 남아 있다는 뜻이므로, 클라이언트는 최상위 값만으로 등록 성공 여부를 판단하지 않고 `registrationUnits`를 함께 읽는다. 새 Enum 값은 추가하지 않는다.
+위에서부터 먼저 만족하는 조건 하나를 적용하며, 5순위가 나머지를 모두 받으므로 등록 단위 상태의 어떤 조합에서도 값이 하나로 결정된다. 조합별 결과는 다음과 같다.
+
+| 등록 단위 조합 | 최상위 값 | 이유 |
+|---|---|---|
+| 확정 + 차단 | `AUTO_BLOCKED` | 처리할 예외가 남았다 |
+| 확정 + 거부 | `AUTO_CONFIRMED` | 거부는 종결이라 남은 작업이 없고 등록은 일어났다 |
+| 차단 + 거부 | `AUTO_BLOCKED` | 처리할 예외가 남았다 |
+| 확정 + 차단 + 거부 | `AUTO_BLOCKED` | 같은 이유 |
+| 사후 보정·롤백 포함 어떤 조합 | `MANUAL_OVERRIDE` | 관리자 개입 사실이 가장 우선한다 |
+
+`AUTO_BLOCKED`가 `AUTO_CONFIRMED`보다 우선하는 이유는 처리할 예외가 남아 있음을 알리기 위해서다. 반대로 `AUTO_REJECTED`는 복구 경로가 없는 종결이므로 확정된 등록이 있으면 그쪽이 우선한다. 클라이언트는 어느 경우에도 최상위 값만으로 등록 성공 여부를 판단하지 않고 `registrationUnits`를 함께 읽는다. 새 Enum 값은 추가하지 않는다. 계약 테스트는 위 다섯 조합을 모두 고정한다.
 
 `resultCompleteness`와는 독립이다. `resultCompleteness`는 AI 추출 결과의 필드 완전성이고 `reviewStatus`는 등록 판정 결과다. `COMPLETE` 결과가 `AUTO_BLOCKED`일 수 있고, `PARTIAL` 결과의 일부 등록 단위가 `AUTO_CONFIRMED`일 수 있다.
 
@@ -187,6 +197,10 @@ related_documents:
       "reviewStatus": "AUTO_CONFIRMED",
       "blockReason": null,
       "registeredRestaurantId": "opaque-restaurant-id",
+      "registeredCreatorId": "opaque-creator-id",
+      "registeredVideoId": "opaque-video-id",
+      "registeredVisitId": "opaque-visit-id",
+      "reusedResources": ["creator", "video"],
       "placeDecision": {
         "kakaoPlaceUrl": "https://place.map.kakao.com/example",
         "roadAddress": "서울특별시 영등포구 도림로131길 17",
@@ -203,6 +217,10 @@ related_documents:
       "reviewStatus": "AUTO_BLOCKED",
       "blockReason": "PLACE_AMBIGUOUS",
       "registeredRestaurantId": null,
+      "registeredCreatorId": null,
+      "registeredVideoId": null,
+      "registeredVisitId": null,
+      "reusedResources": [],
       "placeDecision": null,
       "categoryDecision": null
     }
@@ -216,6 +234,7 @@ related_documents:
 - **같은 `field`가 `candidates`에 여러 번 나타날 수 있다.** 한 영상에 장소가 여러 곳 등장하는 것은 정상이므로 `BR-AIEXTRACT-001`에 따라 후보를 모두 남긴다. 클라이언트는 `field`를 키로 후보를 색인하지 않는다.
 - `candidateTruncated`가 `true`이면 후보 수 상한 때문에 일부 장소가 후보에서 생략됐다는 뜻이다. 클라이언트는 이 작업의 등록 결과가 영상의 모든 맛집을 덮지 않는다고 표시해야 한다. 후보 수가 상한과 같으면 모델이 표시하지 않았어도 서버가 `true`로 판단한다.
 - `registrationUnits`는 `BR-AIEXTRACT-001`의 장소 단위 등록 단위별 판정 결과다. 후보가 없거나 등록 단위를 구성하지 못한 작업은 빈 배열이다. 작업 최상위 `reviewStatus`는 등록 단위 판정의 요약이며, 단위별 결과는 `registrationUnits[].reviewStatus`가 권위 있는 값이다.
+- 등록 결과 식별자 4종은 함께 존재하거나 함께 `null`이다. `AUTO_CONFIRMED`와 등록 완료 `MANUAL_OVERRIDE`에서만 값이 있고, `AUTO_BLOCKED`·`AUTO_REJECTED`·롤백 완료 `MANUAL_OVERRIDE`에서는 모두 `null`이며 `reusedResources`는 빈 배열이다. 이 규칙은 데이터 계약 5.1절의 상태·컬럼 조합표와 같다.
 - `blockReason`은 `AUTO_BLOCKED`·`AUTO_REJECTED`일 때만 값이 있다. 장소 판정은 `PLACE_NOT_FOUND`·`PLACE_AMBIGUOUS`, 카테고리 판정은 `CATEGORY_UNRESOLVED`, 그 밖에는 기존 검증 실패 사유 코드를 사용한다.
 - `placeDecision.matchedBy`와 `categoryDecision.resolvedBy`는 자동 판정 근거다. `matchedBy`는 `NAME_AND_DISTRICT`, `resolvedBy`는 `KAKAO_PLACE_CATEGORY` 또는 `MENU_EXPRESSION`이다. 관리자 사후 보정 결과는 `MANUAL_OVERRIDE`로 표시한다.
 - `registeredRestaurantId`, `kakaoPlaceUrl` 등 모든 식별자는 불투명 문자열이며 클라이언트는 생성 규칙을 검증하지 않는다.
@@ -277,7 +296,16 @@ related_documents:
 - 계약 테스트는 `TST-E3-AI-007`에 매핑한다.
 
 - `CONFIRM`은 정상 자동 등록을 시작하는 명령이 아니라, `AUTO_BLOCKED` 결과를 관리자가 사후 보정해 등록하는 경우에만 사용한다.
-- `CONFIRM`·`DISCARD`·`ROLLBACK`은 등록 단위를 대상으로 한다. 작업에 등록 단위가 둘 이상이면 `unitId`가 필수이며, 없으면 `400 AIEXTRACT_UNIT_ID_REQUIRED`로 거절한다. 이 코드는 후보 데이터 부족을 뜻하는 `blockReason`의 `MISSING_REQUIRED_FIELD`와 구분한다. 전자는 요청 파라미터를 다시 보내야 하고, 후자는 후보 데이터를 보완해야 한다.
+- `CONFIRM`·`DISCARD`·`ROLLBACK`은 등록 단위를 대상으로 한다. `unitId` 처리 규칙은 작업이 가진 등록 단위 수에 따라 다음과 같다.
+
+| 등록 단위 수 | `unitId` 생략 | `unitId` 지정 |
+|---:|---|---|
+| 0개 | `422 AIEXTRACT_VALIDATION_CONFLICT`. 대상이 없어 처리할 수 없고 정식 저장은 0건이다 | 같음 |
+| 1개 | 그 단위를 대상으로 한다 | 그 단위와 일치해야 한다 |
+| 2개 이상 | `400 AIEXTRACT_UNIT_ID_REQUIRED` | 지정한 단위를 대상으로 한다 |
+
+- 지정한 `unitId`가 이 작업의 등록 단위가 아니면 `404 AIEXTRACT_JOB_NOT_FOUND`로 응답한다. 다른 작업의 단위 식별자 존재 여부를 노출하지 않기 위해서다.
+- `AIEXTRACT_UNIT_ID_REQUIRED`는 후보 데이터 부족을 뜻하는 `blockReason`의 `MISSING_REQUIRED_FIELD`와 구분한다. 전자는 요청 파라미터를 다시 보내야 하고, 후자는 후보 데이터를 보완해야 한다.
 - 대상 등록 단위의 필수 필드에 후보가 둘 이상 남아 어느 값으로 등록할지 확정할 수 없으면 `CONFIRM`을 `422 AIEXTRACT_VALIDATION_CONFLICT`로 거절한다. 서버가 후보 중 하나를 임의로 고르지 않기 때문이며, 외부 검증을 시작하기 전에 거절하고 정식 저장은 0건이다. 이 경우 관리자는 후보를 확인해 관리자 등록 API로 등록하거나 `DISCARD`한다.
 - `ROLLBACK`은 지정한 등록 단위의 자동 등록 결과만 되돌리고 같은 작업의 다른 등록 단위는 변경하지 않는다.
 - `tagDecisions`는 자동 태그 판단 또는 관리자 사후 보정의 append-only 이력으로 저장한다.
@@ -316,12 +344,12 @@ Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-0
 }
 ```
 
-- `reusedResources`는 새로 만들지 않고 기존 식별자를 재사용한 자원 목록이다. 유튜버·영상 재사용은 정상 경로이며 예외가 아니다. 허용값은 `restaurant`, `creator`, `video`, `visit`이다.
+- `reusedResources`는 새로 만들지 않고 기존 식별자를 재사용한 자원 목록이다. 허용값은 `creator`와 `video`뿐이다. 유튜버·영상 재사용은 정상 경로이며 예외가 아니다. 맛집과 방문 관계는 이미 존재하면 `DUPLICATE_CONFLICT`로 차단되어 등록 자체가 일어나지 않으므로 재사용 대상이 될 수 없다.
 - 응답의 네 식별자와 `reusedResources`는 `ai_registration_unit`의 `registered_restaurant_id`, `registered_creator_id`, `registered_video_id`, `registered_visit_id`, `reused_resources` 컬럼에서 읽는다. 재요청 시 같은 값을 그대로 재구성할 수 있어야 하므로 별도 감사 이력이 아니라 이 테이블이 응답의 소스다.
 - 4종 등록의 원자 경계는 등록 단위 하나다. 중간 실패 시 이 등록 단위의 정식 저장은 0건이고, 같은 작업의 다른 등록 단위는 변경하지 않는다.
 - 외부 조회·검증은 DB 트랜잭션 밖에서 수행하고, 검증 통과 후 4종을 하나의 트랜잭션으로 저장한다.
 - 이미 `AUTO_CONFIRMED`인 등록 단위에 대한 재요청은 새 Entity를 만들지 않고 기존 결과를 그대로 반환한다.
-- 같은 등록 단위에 대한 동시 요청은 `409 AIEXTRACT_DUPLICATE_CONFLICT`로 처리한다.
+- 같은 등록 단위에 대한 동시 요청은 `409 AIEXTRACT_CONCURRENT_REQUEST_CONFLICT`로 처리한다. 이 코드는 동시성 충돌이며, 같은 맛집·방문 관계가 이미 존재한다는 업무 중복을 뜻하는 `blockReason`의 `DUPLICATE_CONFLICT`와 다르다. 전자는 잠시 후 재시도하면 되고, 후자는 이미 등록된 자원을 확인해야 한다.
 
 #### 예외 전환 응답 `422 AIEXTRACT_VALIDATION_CONFLICT`
 
@@ -403,6 +431,7 @@ Webhook 수신 경로는 공개 인터넷 진입점이므로 Nginx·Spring Secur
 | `AIEXTRACT_WEBHOOK_SIGNATURE_INVALID` | 403 | Webhook HMAC 비밀값·헤더 누락 또는 서명 불일치 |
 | `AIEXTRACT_VALIDATION_CONFLICT` | 422 | 자동 검증 중 기존 Kakao·YouTube·Visit 검증 실패, 보충 입력으로 복구할 수 없는 예외 사유 |
 | `AIEXTRACT_UNIT_ID_REQUIRED` | 400 | 등록 단위가 둘 이상인 작업의 `review` 요청에 `unitId`가 없음 |
+| `AIEXTRACT_CONCURRENT_REQUEST_CONFLICT` | 409 | 같은 등록 단위에 대한 동시 요청. 업무 중복을 뜻하는 `blockReason`의 `DUPLICATE_CONFLICT`와 다름 |
 
 모든 오류는 서버 생성 `traceId`를 포함하며 입력 원문·Gemini 응답·비밀정보를 메시지에 포함하지 않는다.
 

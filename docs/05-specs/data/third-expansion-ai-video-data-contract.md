@@ -161,7 +161,7 @@ related_documents:
 | `registered_creator_id` | `uuid` | Yes | FK → `creator.id` | 등록하거나 재사용한 유튜버 |
 | `registered_video_id` | `uuid` | Yes | FK → `video.id` | 등록하거나 재사용한 영상 |
 | `registered_visit_id` | `uuid` | Yes | FK → `visit.id` | 같은 실행에서 만든 방문 관계 |
-| `reused_resources` | `jsonb` | NN | 배열, 허용값 CHECK | 새로 만들지 않고 재사용한 자원. `restaurant`·`creator`·`video`·`visit` |
+| `reused_resources` | `jsonb` | NN | 배열, 허용값 `creator`·`video` CHECK | 새로 만들지 않고 재사용한 자원 |
 | `executed_by` | `varchar(16)` | NN | `WORKER`·`ADMIN` CHECK | 등록 실행 주체 |
 | `decided_at` | 시간 | NN | 기본 현재 시각 | 판정 시각 |
 | `rolled_back_at` | 시간 | Yes | `MANUAL_OVERRIDE`에서만 non-null | 관리자 롤백 시각 |
@@ -178,6 +178,7 @@ related_documents:
 - CHECK 조건은 "등록 결과 컬럼이 모두 존재하거나 모두 `NULL`"이고, 값이 존재하는 경우는 `AUTO_CONFIRMED`이거나 `rolled_back_at`이 `NULL`인 `MANUAL_OVERRIDE`뿐이다. `place_decision`·`category_decision`도 같은 조건을 따른다.
 - 롤백은 등록 결과 컬럼을 `NULL`로 되돌리고 `rolled_back_at`을 채운다. 되돌린 정식 Entity의 식별자는 감사 이력에 남는다.
 - 맛집·유튜버·영상·방문 관계 4종 등록은 `BR-AIEXTRACT-011`에 따라 하나의 트랜잭션으로 저장한다. `executed_by`는 Worker 자동 실행과 관리자 실행을 구분하며 판정 기준은 두 경우가 같다.
+- 재사용이 일어나는 자원은 유튜버와 영상뿐이다. 맛집과 방문 관계는 같은 것이 이미 있으면 `DUPLICATE_CONFLICT`로 차단되어 등록 자체가 일어나지 않으므로 재사용 대상이 될 수 없다. `reused_resources`의 허용값을 `creator`·`video`로 좁혀 이 경계를 DB에서 강제한다.
 - 유튜버·영상은 기존 행이 있으면 재사용한다. 재사용한 경우에도 참조 컬럼에 그 식별자를 기록하고 `reused_resources`에 자원 이름을 남긴다. 등록 단위 일괄 등록 API 응답은 감사 이력이 아니라 이 컬럼들에서 재구성한다.
 - 등록 단위의 실패는 같은 Snapshot의 다른 등록 단위 행과 그 정식 등록 결과를 변경하지 않는다. 원자성 경계는 등록 단위 하나다.
 - 관리자 사후 보정·롤백은 판정 이력을 덮어쓰지 않고 append-only 감사 이력을 추가한 뒤 `review_status`를 `MANUAL_OVERRIDE`로 전환한다.
@@ -200,10 +201,14 @@ related_documents:
 | `active` | `boolean` | NN | 기본 `true` | 활성 여부 |
 | `created_at`, `updated_at` | 시간 | NN | 기본 현재 시각 | 변경 이력 기준 시각 |
 
-- `(source_type, pattern, match_type)`은 unique다. `pattern`은 공백 제거·소문자 통일로 정규화해 저장하고 대조 시에도 같은 정규화를 적용한다.
+- unique 제약은 **활성 행에만 적용한다.** `(source_type, pattern, match_type)`에 `WHERE active` 부분 unique 인덱스를 둔다. 비활성 행은 같은 키로 여러 벌 남을 수 있어야 과거 매핑을 보존할 수 있다.
+- 업무 컬럼(`food_category_id`, `match_type`, `priority`)은 append-only로 운영한다. **기존 행을 UPDATE해 바꾸지 않고, 기존 행을 `active = false`로 내린 뒤 새 행을 추가한다.** UPDATE로 바꾸면 `category_decision`에 남은 매핑 행 식별자로 과거 판정 근거를 재현할 수 없다.
+- `active`와 `updated_at`만 기존 행에서 갱신한다. 비활성화 시각이 그 매핑이 유효했던 구간의 끝이다.
+- `ai_registration_unit.category_decision`에는 사용한 매핑 행 식별자와 그 시점의 카테고리 값을 함께 남긴다. 매핑 행이 나중에 비활성화돼도 판정 당시 값을 그대로 읽을 수 있다.
+- `pattern`은 공백 제거·소문자 통일로 정규화해 저장하고 대조 시에도 같은 정규화를 적용한다.
 - 대조 순서는 `source_type`이 1순위(`KAKAO_PLACE_CATEGORY` 우선), 그 안에서 `match_type`이 2순위(`EXACT` 우선), 그 안에서 `priority` 오름차순이다. 같은 순위에서 서로 다른 카테고리로 일치하는 행이 둘 이상이면 임의로 고르지 않고 `CATEGORY_UNRESOLVED`로 차단한다.
 - `active = false` 행은 대조에서 제외한다. 행을 삭제하지 않고 비활성화해 과거 판정 근거를 보존한다.
-- 매핑 표 변경은 이미 등록된 결과를 소급 재계산하지 않는다. `updated_at`으로 변경 시점을 추적하고, 판정 시 사용한 매핑 행 식별자는 `ai_registration_unit.category_decision`에 남긴다.
+- 매핑 표 변경은 이미 등록된 결과를 소급 재계산하지 않는다.
 - `기타` 카테고리는 이 표가 명시적으로 `기타`를 지정한 행에 일치했을 때만 사용한다. 일치하는 행이 없으면 `기타`로 대체하지 않고 차단한다.
 - seed는 기존 `ResolveVerifiedRestaurantReferenceService`의 고정 키워드를 `MENU_EXPRESSION`·`EXACT` 행으로 이관하는 것에서 시작하고, Kakao 분류 표현은 `KAKAO_PLACE_CATEGORY` 행으로 추가한다. `TST-E3-AI-006`은 이 seed를 고정 데이터로 사용한다.
 
