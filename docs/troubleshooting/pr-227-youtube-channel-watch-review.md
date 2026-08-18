@@ -83,13 +83,13 @@ related_documents:
 | `npm run typecheck` | 통과 | TypeScript 검사 |
 | `npm run build` | 통과 | Next.js 프로덕션 빌드와 `/admin/ai/youtube-channel-watches` 라우트 생성 |
 | `git diff --check` | 통과 | 공백 오류 없음 |
-| GitHub Actions CI #621 | 실패 원인 수정 중 | 전체 1,288개 테스트 중 `Expansion3FlywayMigrationIntegrationTest`의 V5 `last_error_at` 컬럼 기대 목록 누락 1건 확인 |
+| GitHub Actions CI #621 | 실패 원인 확인·수정 | 전체 1,288개 테스트 중 `Expansion3FlywayMigrationIntegrationTest`의 V5 `last_error_at` 컬럼 기대 목록 누락 1건을 확인했고 `11ce999`에서 수정했다. 해당 후속 커밋에는 새 CI 실행이 보고되지 않았다. |
 
 ## 8. 재발 방지 및 다음 확인
 
 - 상태별 토글 동작과 `lastErrorAt` 응답 정규화를 프런트·백엔드 회귀 테스트로 고정했다.
 - API 추적표에 정확한 GET·PUT 보안 경계 테스트를 연결했다.
-- Docker가 제공되는 CI에서 `SecurityBoundaryApiTest`와 PostgreSQL `JdbcYoutubeChannelWatchStoreIntegrationTest`를 확인한다.
+- Docker가 제공되는 CI에서 `SecurityBoundaryApiTest`와 PostgreSQL `JdbcYoutubeChannelWatchStoreIntegrationTest`를 다시 확인한다. 현재 로컬 Docker 데몬이 없어 full-context 통합 실행은 차단되어 있다.
 
 ## 9. 도입 전후 비교 지표
 
@@ -101,4 +101,4 @@ related_documents:
 ## 10. 남은 사항
 
 - 로컬 Docker 데몬 부재로 full-context 보안 테스트와 PostgreSQL 통합 테스트를 실행하지 못했다. 코드 컴파일과 비컨테이너 테스트는 통과했다.
-- CI #621에서 확인된 V5 컬럼 기대 목록 누락을 테스트에 반영한 뒤 재실행하고, 통과 후 스레드 답글과 해결 처리를 진행한다.
+- 12개 리뷰 스레드에 반영 내용과 검증 범위를 답글로 남기고 모두 해결 처리했다. 후속 CI가 자동 생성되지 않아 전체 Testcontainers 재실행 결과는 아직 원격에서 확인하지 못했다.
