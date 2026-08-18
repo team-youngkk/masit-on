@@ -58,7 +58,7 @@ Accepted. **단, 2026-08-18 결정(5.3절의 장소 동일성 판정 기준, 대
 | 요구사항 | `BR-AIEXTRACT-009`·`010`·`011` 전체, `BR-AIEXTRACT-001`의 등록 단위 분해와 후보 수 상한·절삭 표시 항목, `BR-AIEXTRACT-002`의 등록 단위 원자성 개정, `FR-AIEXTRACT-003`의 등록 단위·자동 판정·카테고리 보정 항목 |
 | 제품 | `PR-AIEXTRACT-011`~`017`, PRD의 관리자 실행 흐름·등록 단위 화면 상태·후보 절삭 경고·보완 경로 구분, 사용자 흐름의 등록 단위 판정 서술, 와이어프레임의 자동 판정 결과·예외 화면 분리·절삭 배너 |
 | API 계약 | `registrationUnits`·`candidateTruncated`·`manualOverrideType`, 등록 단위 일괄 등록(3.6절), `review`의 `unitId`·`supplements`·`ADJUST_CATEGORY`, 최상위 요약 규칙, `recoveryPaths`, `AIEXTRACT_UNIT_ID_REQUIRED`·`AIEXTRACT_UNIT_NOT_FOUND`·`AIEXTRACT_CONCURRENT_REQUEST_CONFLICT` |
-| 데이터 계약 | `ai_registration_unit`, `food_category_mapping`, `ai_candidate_snapshot.candidate_truncated`와 관련 추적표 행 |
+| 데이터 계약 | `ai_registration_unit`, `ai_registration_unit_review`, `food_category_mapping`, `ai_candidate_snapshot.candidate_truncated`와 관련 추적표 행 |
 | 계획 | `TST-E3-AI-005`~`008`, 손실 분석 9절의 네 결정과 9.1절 |
 
 자동 검증·정식 등록·롤백 경계와 원문 전체 미저장, `gemini-3.5-flash-lite` 사용, global endpoint, Free Tier 전용·유료 호출 금지 정책을 2026-08-14 확정했다. 2026-08-16에는 관리자 보완 텍스트의 검증 가능한 `TEXT_RANGE`를 식당 기준정보 후보에 사용할 수 있도록 Prompt를 `P3`로 올렸고, 실측 범위 산출 편차를 제거하기 위해 서버가 정확한 줄 단위 `referenceSpans`를 제공하는 `P4`, 필드 오연결을 줄이는 `fieldHint`를 추가한 `P5`, 방문 후보 값을 명시적인 완료형 물리 방문 문장으로 제한한 `P6`, 방문 문장의 종결 마침표를 수신 정규화와 일치시킨 `P7`로 올렸다. 운영·개발·공유 데이터베이스에 V4가 아직 적용되지 않았으므로 최종 V4 제약은 `gemini-3.5-flash-lite`만 저장하도록 한다. 기존 Prompt `P1`부터 `P6`까지의 작업과 `gemini-3-flash-preview` 평가 자산은 역사적 이력으로 보존한다. 관리자 사전 승인은 요구하지 않는다. 2026-08-18에는 자동 등록을 실제로 성립시키기 위해 판정 주체를 확정했다. 장소 동일성은 AI가 제출한 Kakao 장소 URL이 아니라 상호명·주소 기반 시스템 검색으로 판정하고, 대표 음식 카테고리는 확정한 Kakao 장소 분류와 메뉴 표현으로 자동 선정하며, 판정과 등록의 단위는 작업이 아니라 장소 단위 등록 단위다.

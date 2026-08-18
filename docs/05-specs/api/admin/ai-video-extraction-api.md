@@ -375,7 +375,7 @@ related_documents:
 - `requiredSupplements`가 요구한 필드가 없으면 `400 MISSING_REQUIRED_FIELD`로 거절하고 정식 저장은 0건이다.
 - `kakaoPlaceUrl`은 기존 수동 등록 경로와 같은 Kakao 장소 동일성 검증을 다시 통과해야 한다. 검증 실패는 `422 AIEXTRACT_VALIDATION_CONFLICT`이며 `blockReason`을 그대로 유지한다.
 - `foodCategoryId`는 활성 기준정보 값이어야 한다. 비활성·미존재 값은 `400 INVALID_FIELD_VALUE`다.
-- `VISIT_EVIDENCE_REQUIRED`·`DUPLICATE_CONFLICT`·`EXTERNAL_SERVICE_ERROR`는 보충 입력으로 복구할 수 없다. 이 사유의 `CONFIRM`은 `422 AIEXTRACT_VALIDATION_CONFLICT`로 거절하고 재추출·재실행 또는 수동 등록으로 안내한다.
+- `VISIT_EVIDENCE_REQUIRED`·`DUPLICATE_CONFLICT`·`EXTERNAL_SERVICE_ERROR`는 보충 입력으로 복구할 수 없다. 이 사유의 `CONFIRM`은 `422 AIEXTRACT_VALIDATION_CONFLICT`로 거절한다. `VISIT_EVIDENCE_REQUIRED`·`EXTERNAL_SERVICE_ERROR`는 재추출·재실행 또는 수동 등록으로 안내하고, `DUPLICATE_CONFLICT`는 이미 등록된 자원 확인(`EXISTING_RESOURCE`)만 안내하며 재추출·재실행·수동 등록 경로는 없다.
 - 보충 입력으로 등록에 성공하면 등록 단위는 `MANUAL_OVERRIDE`가 되고, 사용한 보충값과 제출자를 감사 이력에 남긴다.
 - `ADJUST_CATEGORY`는 `registered_restaurant_id`가 가리키는 맛집의 대표 카테고리와 `category_decision`을 바꾼다. `resolvedBy`는 `MANUAL_OVERRIDE`가 되고 등록 단위 상태는 `MANUAL_OVERRIDE`로 전환하되 등록 결과 컬럼과 공개 상태는 유지한다. 이전 카테고리 값과 제출자는 append-only 감사 이력에 남긴다.
 - 계약 테스트는 `TST-E3-AI-007`에 매핑한다.
@@ -475,7 +475,7 @@ Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-0
 | `EXISTING_RESOURCE` | 이미 등록된 자원이 있어 새 등록이 불필요 | 기존 맛집·방문 관계로 이동 |
 | `RETRY` | 일시 오류. 같은 요청 재실행으로 복구 | 재실행 버튼 |
 
-차단 사유와 거절 상황별 매핑을 고정한다. 화면은 이 배열에 없는 동작을 노출하지 않는다.
+차단 사유와 거절 상황별 매핑을 고정한다. 화면은 이 배열에 없는 동작을 노출하지 않는다. **`DISCARD`는 이 배열과 무관한 예외다.** `decision` 표(3.5절)가 정의한 대로 `DISCARD`는 `recoveryPaths` 내용과 관계없이 `AUTO_BLOCKED`의 일곱 `blockReason` 모두에서 공통으로 허용하는 종결 동작이며, 화면은 배열이 안내하는 동작에 `DISCARD`를 항상 추가로 노출한다. 등록 단위 0개 거절·`AUTO_REJECTED` 거절·롤백 완료·폐기 완료 네 거절 상황은 `AUTO_BLOCKED`가 아니므로 `DISCARD` 대상이 아니다.
 
 | 상황 | `recoveryPaths` | `requiredSupplements` |
 |---|---|---|
@@ -494,6 +494,7 @@ Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-0
 - 빈 배열은 이 경로로 복구할 수 없다는 뜻이다. 화면은 거절 사유만 표시하고 새 작업 재추출을 안내한다.
 - `requiredSupplements`는 `recoveryPaths`에 `SUPPLEMENT`가 있을 때만 비어 있지 않다.
 - `MANUAL_REGISTRATION`은 어느 예외에서든 관리자가 기존 수동 등록으로 우회할 수 있다는 뜻이며, 그 경로는 이 API가 아니라 기존 관리자 등록 API를 쓴다.
+- `DISCARD`는 `recoveryPaths` 배열에 나타나지 않지만, 3.5절 `decision` 표가 정의한 대로 `AUTO_BLOCKED` 등록 단위 전체에서 공통으로 허용하는 종결 동작이다. 화면은 배열이 안내하는 동작과 별개로 `DISCARD`를 항상 함께 노출한다.
 
 보충 입력은 **판정 선택만 받고 후보 값 생성은 받지 않는다.** Kakao 장소와 카테고리는 관리자가 외부 기준정보 중 하나를 고르는 것이라 AI 근거를 대체하지 않지만, 맛집명·주소·방문 근거는 관리자가 값을 만들어 넣는 순간 영상 근거 없는 데이터가 등록된다. 그래서 후자는 보충 입력 대상이 아니고 재추출 또는 기존 수동 등록으로 처리한다.
 

@@ -364,6 +364,33 @@ Kakao 장소와 카테고리는 관리자가 외부 기준정보 중 하나를 �
 
 검증: 3.6절 `recoveryPaths` 표(`DUPLICATE_CONFLICT` → `["EXISTING_RESOURCE"]`)와 3.5절 산문 표·요약 문장을 대조해 세 사유(`MISSING_REQUIRED_FIELD`·`VISIT_EVIDENCE_REQUIRED`·`EXTERNAL_SERVICE_ERROR`)와 `DUPLICATE_CONFLICT`가 서로 다른 경로를 갖는다는 서술이 두 절에서 일치하는 것을 확인했다. 문서만 변경해 빌드·테스트 대상은 없다.
 
+### 10.12 11차 리뷰 처리
+
+10.11절 반영을 push한 지 5분 뒤(`cdece6c` → 05:44:58Z, 리뷰 05:50:19Z) `w00lam`이 3건을 남겼다. 이번에는 세 건 모두 그 시점 코드에 실제로 남아 있던 결함이었다.
+
+| 스레드 | 요청 요약 | 문제 유형 | 판단 | 처리 결과 |
+|---|---|---|---|---|
+| [`DISCARD`와 `recoveryPaths` 불일치 (P1)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3801371224) | `decision` 표는 모든 `AUTO_BLOCKED`에 `DISCARD`를 허용하고 와이어프레임도 `[폐기]`를 보여주는데, `recoveryPaths` 11행에는 `DISCARD`가 한 번도 없고 "화면은 배열에 없는 동작을 노출하지 않는다"는 규칙과 충돌 | 기타 | 수정 필요 | `DISCARD`를 `recoveryPaths`와 무관한 공통 종결 동작으로 명시. 일곱 `blockReason` 모두에서 배열 내용과 관계없이 허용하고, 화면은 배열이 안내하는 동작에 `DISCARD`를 항상 추가로 노출한다고 3.6절 두 곳에 적음 |
+| [`DUPLICATE_CONFLICT`의 `CONFIRM` 실패 안내 재불일치 (P2)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3801371227) | 3.5절 문장이 `VISIT_EVIDENCE_REQUIRED`·`DUPLICATE_CONFLICT`·`EXTERNAL_SERVICE_ERROR` 세 사유를 묶어 "재추출·재실행 또는 수동 등록"으로 안내하지만, 중복의 정규 경로는 `EXISTING_RESOURCE` 하나뿐 | 기타 | 수정 필요 | 3.5절 문장을 분리해 `VISIT_EVIDENCE_REQUIRED`·`EXTERNAL_SERVICE_ERROR`만 재추출·재실행·수동 등록으로 안내하고 `DUPLICATE_CONFLICT`는 `EXISTING_RESOURCE` 확인만 안내하도록 고침. 사용자 흐름 문서의 "기존 등록 결과를 확인하고 사후 보정할 수 있어야" 서술도 같은 범위로 좁힘 |
+| [등록 단위 사후 조작 감사 저장소 부재 (P1)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3801371229) | API 3.5절은 `CONFIRM`·`DISCARD`·`ROLLBACK`·`ADJUST_CATEGORY`의 변경을 사유·제출자·이전 카테고리·되돌린 식별자와 함께 감사 이력으로 남긴다고 계약하지만, `ai_registration_unit`에는 현재 상태 컬럼만 있고 이력 테이블이 없음 | 데이터베이스 | 수정 필요 | 데이터 계약 5.3절에 `ai_registration_unit_review`를 신설. `ai_candidate_tag_review`(6절)와 같은 append-only 이력 패턴을 따르고 `decision`별로 배타적인 `submitted_supplements`·`previous_category_decision`·`reverted_registration`을 둠. ADR 되돌림 범위·데이터 추적표·`TST-E3-AI-007`에 반영 |
+
+이번 라운드는 세 건 모두 실제 결함이었다는 점에서 10.11절과 다르다. 두 가지 원인이 겹쳤다.
+
+- **`DISCARD` 건**: `recoveryPaths` 배열을 만들 때 "이 배열이 화면 동작의 전부"라고 규칙을 세웠는데, `decision` 표가 이미 정의한 `DISCARD`라는 배열 밖 공통 동작이 있다는 사실을 그 규칙에 반영하지 않았다. 규칙을 새로 쓰면서 기존에 있던 다른 계약과 대조하지 않은, 이 PR 전체의 반복 패턴이다.
+- **`DUPLICATE_CONFLICT` 건**: 10.11절에서 3.5절 산문 표(505~508행)의 `DUPLICATE_CONFLICT` 행은 이미 고쳤지만, 같은 뜻을 서술하는 3.5절 본문 다른 문장(378행 부근)과 제품 문서(사용자 흐름 87행)는 놓쳤다. 같은 개념이 여러 곳에 흩어져 있을 때 표 하나만 고치고 산문 서술은 대조하지 않는 패턴이 다시 나타났다.
+- **감사 이력 테이블 부재**: 규칙(API 3.5절)을 쓸 때 "감사 이력에 남긴다"고만 적고 그 저장소를 데이터 계약에 실제로 만들지 않았다. 4절 근본 원인에서 이미 지적한 "규칙을 먼저 쓰고 소비 지점을 역방향으로 검증하지 않는다"는 패턴과 같다.
+
+| 파일 | 변경 |
+|---|---|
+| [ai-video-extraction-api.md](../05-specs/api/admin/ai-video-extraction-api.md) | `DISCARD`를 `recoveryPaths`와 무관한 공통 종결 동작으로 명시(2곳), `DUPLICATE_CONFLICT` 안내 문장 분리 |
+| [third-expansion-user-flows.md](../04-product/user-flows/third-expansion-user-flows.md) | `DUPLICATE_CONFLICT` 서술에서 "사후 보정" 제거, `EXISTING_RESOURCE` 확인만 가능하다고 명시 |
+| [third-expansion-ai-video-data-contract.md](../05-specs/data/third-expansion-ai-video-data-contract.md) | 5.3절 `ai_registration_unit_review` 신설, 1절 `합의 대기` 목록에 추가 |
+| [ai-001-video-extraction-candidate-boundary.md](../07-adr/integration/ai-001-video-extraction-candidate-boundary.md) | 되돌림 범위 표에 `ai_registration_unit_review` 추가 |
+| [data-traceability.md](../05-specs/data/data-traceability.md) | `ai_registration_unit_review` 행 추가 |
+| [third-expansion-test-matrix.md](../08-planning/third-expansion-test-matrix.md) | `TST-E3-AI-007`에 `DISCARD` 공통성, `DUPLICATE_CONFLICT` 안내 구분, 감사 이력 검증 항목 추가 |
+
+검증: `recoveryPaths` 11행 전체와 `decision` 표를 대조해 `DISCARD`가 배열 밖 공통 동작이라는 서술이 두 절에서 같은 것을 확인했다. 3.5절 문장·3.6절 정규 표·사용자 흐름 세 곳에서 `DUPLICATE_CONFLICT`의 유일한 경로가 `EXISTING_RESOURCE`뿐이라는 서술이 일치하는 것을 확인했다. API 3.5절이 언급하는 감사 이력 대상 네 가지(사유·제출자·이전 카테고리·되돌린 식별자)가 새 테이블의 컬럼과 1:1 대응하는 것을 확인했다. 문서만 변경해 빌드·테스트 대상은 없다.
+
 ## 11. 비교 지표
 
 해당 없음. 문서 계약 변경이며 측정할 런타임 지표가 없다. 자동 등록률·`CATEGORY_UNRESOLVED` 비율 등은 구현 후 [PRD 11절 지표](../04-product/prd/admin/ai-video-information-extraction.md)에서 측정한다. 이 PR 시점에는 기준선을 만들 수 없다.

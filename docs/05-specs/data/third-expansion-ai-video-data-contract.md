@@ -29,7 +29,7 @@ related_documents:
 
 이 문서는 AI 영상 추출 작업, 후보 Snapshot, 통제 태그, Gemini 영상 입력 이력과 YouTube 채널 감시 상태의 논리·물리 데이터 경계를 정의하는 Accepted 계약이다. Google Gemini API는 `gemini-3.5-flash-lite`, Gemini Developer API global endpoint, Free Tier 전용·유료 호출 금지, 현재 Prompt `P7`, 결과 Schema `S1`을 사용한다. 기존 Prompt `P1`·`P2`·`P3`·`P4`·`P5`·`P6` 작업과 Snapshot은 재현성을 위한 역사적 이력으로만 보존한다. V4 AI 스키마의 정본은 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql)이고, 채널 감시 오류 시각 보강은 [`V5__add_youtube_channel_watch_last_error_at.sql`](../../../src/main/resources/db/migration/V5__add_youtube_channel_watch_last_error_at.sql)로 관리한다.
 
-**`ai_registration_unit`(5.1절), `food_category_mapping`(5.2절), `ai_candidate_snapshot.candidate_truncated`는 `합의 대기` 상태다.** 세 항목 모두 새 Flyway 마이그레이션을 요구한다. 합의는 [PR #226](https://github.com/team-youngkk/masit-on/pull/226)의 소유자 승인으로 갈음하며, Flyway 순서 소유자(박진영)와 restaurant 도메인 소유자의 승인 전에는 확정 계약으로 사용하지 않는다. 승인 후 병합 직전 커밋에서 이 표시를 제거한다. 절차는 [ADR-AI-001 1절](../../07-adr/integration/ai-001-video-extraction-candidate-boundary.md)에 있다. 그 밖의 절은 종전대로 Accepted다.
+**`ai_registration_unit`(5.1절), `ai_registration_unit_review`(5.3절), `food_category_mapping`(5.2절), `ai_candidate_snapshot.candidate_truncated`는 `합의 대기` 상태다.** 네 항목 모두 새 Flyway 마이그레이션을 요구한다. 합의는 [PR #226](https://github.com/team-youngkk/masit-on/pull/226)의 소유자 승인으로 갈음하며, Flyway 순서 소유자(박진영)와 restaurant 도메인 소유자의 승인 전에는 확정 계약으로 사용하지 않는다. 승인 후 병합 직전 커밋에서 이 표시를 제거한다. 절차는 [ADR-AI-001 1절](../../07-adr/integration/ai-001-video-extraction-candidate-boundary.md)에 있다. 그 밖의 절은 종전대로 Accepted다.
 
 - AI 후보 데이터는 기존 `Restaurant`, `Creator`, `Video`, `Visit`의 정식 데이터를 대체하지 않는다.
 - 자동 검증과 기존 외부 검증 전에는 정식 Entity를 생성·수정·공개하지 않는다. 관리자 사전 승인은 요구하지 않는다.
@@ -218,6 +218,27 @@ related_documents:
 - 매핑 표 변경은 이미 등록된 결과를 소급 재계산하지 않는다.
 - `기타` 카테고리는 이 표가 명시적으로 `기타`를 지정한 행에 일치했을 때만 사용한다. 일치하는 행이 없으면 `기타`로 대체하지 않고 차단한다.
 - seed는 기존 `ResolveVerifiedRestaurantReferenceService`의 고정 키워드를 `MENU_EXPRESSION`·`EXACT` 행으로 이관하는 것에서 시작하고, Kakao 분류 표현은 `KAKAO_PLACE_CATEGORY` 행으로 추가한다. `TST-E3-AI-006`은 이 seed를 고정 데이터로 사용한다.
+
+### 5.3 `ai_registration_unit_review`
+
+API 3.5절 `review`의 `CONFIRM`·`DISCARD`·`ROLLBACK`·`ADJUST_CATEGORY` 네 `decision`이 만드는 등록 단위 사후 조작을 append-only 이력으로 보존한다. `ai_registration_unit`은 현재 상태만 갖고 있어 반복 보정·행위자·사유를 표현할 수 없으므로 별도 테이블로 분리한다. 새 테이블이므로 새 Flyway 마이그레이션이 필요하고 `합의 대기` 대상이다.
+
+| 컬럼 | SQL 타입 후보 | Null | 키·제약 | 설명 |
+|---|---|---:|---|---|
+| `id` | `uuid` | NN | PK | 이력 ID |
+| `registration_unit_id` | `uuid` | NN | FK → `ai_registration_unit.id` | 대상 등록 단위 |
+| `decision` | `varchar(24)` | NN | `CONFIRM/DISCARD/ROLLBACK/ADJUST_CATEGORY` CHECK | API 3.5절 `decision`과 동일 |
+| `reason` | `varchar(1000)` | Yes | `CONFIRM`·`DISCARD`·`ADJUST_CATEGORY`는 필수, `ROLLBACK`은 권장 | 조작 사유 |
+| `submitted_supplements` | `jsonb` | Yes | `CONFIRM`일 때만 non-null | 제출한 `kakaoPlaceUrl`·`foodCategoryId` |
+| `previous_category_decision` | `jsonb` | Yes | `ADJUST_CATEGORY`일 때만 non-null | 변경 전 `category_decision` 값 |
+| `reverted_registration` | `jsonb` | Yes | `ROLLBACK`일 때만 non-null | 되돌리기 전 `registered_restaurant_id`·`registered_creator_id`·`registered_video_id`·`registered_visit_id` |
+| `reviewed_by` | `uuid` | NN | FK → `admin_account.id` | 조작 관리자 |
+| `reviewed_at` | 시간 | NN | 기본 현재 시각 | 조작 시각 |
+
+- 이력 행은 수정·삭제하지 않는다. 같은 등록 단위에 여러 행이 쌓일 수 있다(예: `CONFIRM` 이후 `ROLLBACK`).
+- `submitted_supplements`·`previous_category_decision`·`reverted_registration`은 서로 배타적이다. 한 행에는 그 `decision`에 해당하는 값만 채운다.
+- 이 표는 감사·추적 전용이며 현재 상태 계산에 관여하지 않는다. API 응답의 `manualOverrideType`·등록 결과는 `ai_registration_unit`의 컬럼에서 재구성하고 이 표를 참조하지 않는다.
+- API 3.5절의 "이전 카테고리 값과 제출자는 append-only 감사 이력에 남긴다", "되돌린 정식 Entity의 식별자는 감사 이력에 남는다" 서술이 가리키는 저장소가 이 테이블이다.
 
 `candidate_tags`의 각 항목은 `candidateTagId`, `tagType`, `rawLabel`, `normalizedCode`, `label`, `confidence`, `evidence`를 가진다. `normalizedCode`가 기존 정의와 통합되지 않는 경우 자동 등록 규칙을 통과하면 새 `TagDefinition`을 만든다.
 
