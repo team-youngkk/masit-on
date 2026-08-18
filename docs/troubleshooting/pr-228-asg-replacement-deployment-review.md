@@ -24,11 +24,11 @@ related_documents:
 
 | 스레드 | 요청 요약 | 문제 유형 | 판단 | 처리 결과 | 근거/검증 |
 |---|---|---|---|---|---|
-| [Redis volume](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801367860) | root volume 교체 시 AOF·Refresh Token·rate-limit 상태가 삭제되지 않도록 분리 | 데이터베이스 / 인프라 | 수정 필요 | 별도 암호화 gp3 EBS와 attachment를 추가하고 mount·`prevent_destroy`를 적용 | `RuntimeDeploymentContractTest`, Git Bash `bash -n` 통과. Terraform 검증은 로컬 도구 부재로 미실행 |
+| [Redis volume](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801367860) | root volume 교체 시 AOF·Refresh Token·rate-limit 상태가 삭제되지 않도록 분리 | 데이터베이스 / 인프라 | 수정 필요 | 별도 암호화 gp3 EBS와 attachment를 추가하고 mount·`prevent_destroy`를 적용 | `RuntimeDeploymentContractTest`, Git Bash `bash -n`, `terraform validate`·`plan` 통과 |
 | [CodeDeploy timeout/cancel](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801367865) | timeout·workflow 취소 시 `stop-deployment --auto-rollback-enabled`와 terminal 상태 확인 | 배포 | 수정 필요 | 45분 polling, EXIT·signal trap, 중지 후 terminal polling, `StopDeployment` 권한 추가 | `RuntimeDeploymentContractTest` 통과. 실제 CodeDeploy 취소 리허설은 미실행 |
 | [ADR·runbook target group](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801367867) | listener 전환 대신 단일 target group의 instance 등록·해제와 ASG membership 판정으로 정정하고 green 자원 제거 | 배포 / 인프라 | 수정 필요 | ADR·runbook·운영 README 정정, green target group·alarm·output 제거 | `RuntimeDeploymentContractTest`, 관련 문자열 검색 통과. AWS 리허설은 미실행 |
 | [RDS ingress 예시](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801373600) | 예시에 `manage_rds_ingress_rule = true` 명시 | 인프라 | 이미 해결 | 최신 HEAD의 `infra/production/terraform/terraform.tfvars.example`에 이미 설정되어 있어 추가 변경 없음 | 현재 파일 36행의 `true` 확인 |
-| [subnet route 조건](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801373603) | ALB에는 IGW default route, app에는 IGW default route가 없음을 plan에서 검증 | 인프라 | 수정 필요 | subnet별 `aws_route_table` data source와 ALB/app postcondition 추가 | Terraform provider의 `routes`·`gateway_id` 계약 확인, `RuntimeDeploymentContractTest` 통과. `terraform validate`는 도구 부재로 미실행 |
+| [subnet route 조건](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801373603) | ALB에는 IGW default route, app에는 IGW default route가 없음을 plan에서 검증 | 인프라 | 수정 필요 | subnet별 `aws_route_table` data source와 ALB/app postcondition 추가 | Terraform provider의 `routes`·`gateway_id` 계약 확인, `RuntimeDeploymentContractTest`·`terraform validate`·`plan` 통과 |
 | [rollback 실행 산출물](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801373606) | 이미지뿐 아니라 script·systemd unit도 실패 시 이전 버전 복원 | 배포 / 애플리케이션 | 수정 필요 | 배포 전 script·unit backup과 missing marker를 만들고 rollback에서 복원·제거 | Git Bash `bash -n`, `RuntimeDeploymentContractTest` 통과 |
 | [CodeDeploy IAM wildcard](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801373612) | CreateDeployment를 deployment group으로 제한하고 wildcard 조회를 별도 분리 | 인프라 | 수정 필요 | 생성·고정 리소스 조회·wildcard 조회·중지 권한을 별도 statement로 분리 | `RuntimeDeploymentContractTest` 통과. IAM policy simulator는 미실행 |
 
@@ -60,8 +60,10 @@ related_documents:
 | 공식 AWS provider `aws_route_table` data source 확인 | route 목록 속성은 `routes`, 대상 속성은 `gateway_id` | postcondition을 `self.routes` 기준으로 작성 |
 | `RuntimeDeploymentContractTest` 실행 | 통과 | 변경된 배포 계약의 정적 회귀 확인 |
 | Git Bash `bash -n`으로 배포 script·Redis template 검사 | 통과 | 셸 구문 오류 없음 확인 |
-| `terraform fmt -check -recursive`, `terraform validate` | 미실행: 로컬에 Terraform 실행 파일 없음 | 원격 CI 또는 Terraform 설치 환경에서 실행 필요 |
-| 실제 AWS plan·CodeDeploy cancel/rollback·IAM simulator | 미실행: 계정·실행 환경과 승인된 운영 리허설 없음 | PR 원격 branch 반영 후 담당자가 운영 전환 전에 확인 |
+| Docker Terraform 1.6.6 `fmt -check -recursive` 두 레이어 | 통과 | HCL 포맷 정합성 확인 |
+| Terraform 1.6.6 `validate` 두 레이어 | 통과 | 실제 AWS 자격 증명으로 실행. terraform-redis의 중복 data source 선언을 이 단계에서 발견해 `data.tf`로 통합 |
+| Terraform 1.6.6 `plan` 두 레이어 | 통과 | 운영 레이어는 미사용 green target group·alarm 2건만 destroy. Redis 레이어는 데이터 volume 도입으로 인스턴스가 교체되며 교체 후 앱 재배포가 필요하다 |
+| CodeDeploy cancel/rollback 리허설·IAM policy simulator | 미실행: 승인된 운영 리허설 범위 밖 | 운영 전환 전에 담당자가 확인 |
 
 ## 6. 최종 해결
 
@@ -78,8 +80,9 @@ related_documents:
 | `C:\Program Files\Git\bin\bash.exe -n deploy/scripts/app-deploy.sh` | 통과 | rollback backup/restore 셸 문법 |
 | `C:\Program Files\Git\bin\bash.exe -n infra/production/terraform-redis/templates/redis-user-data.sh.tftpl` | 통과 | EBS mount bootstrap 셸 문법 |
 | `git diff --check` | 통과 | whitespace 오류 없음 |
-| `terraform fmt -check -recursive` | 미실행 | 로컬 Terraform 미설치 |
-| `terraform validate` | 미실행 | 로컬 Terraform 미설치 |
+| `docker run hashicorp/terraform:1.6.6 ... fmt -check -recursive` | 통과 | 운영·Redis 두 Terraform 레이어의 포맷 |
+| `terraform validate` | 통과 | 두 레이어. terraform-redis의 중복 data source 선언을 여기서 잡았다 |
+| `terraform plan` | 통과 | 운영 레이어는 미사용 green target group·alarm 2건만 destroy. Redis 레이어는 인스턴스 교체 |
 
 ## 8. 재발 방지 및 다음 확인
 
@@ -96,6 +99,6 @@ related_documents:
 
 ## 10. 남은 사항
 
-- 로컬 Terraform 미설치로 `fmt`·`validate`·plan을 실행하지 못했다.
+- Docker Terraform 1.6.6으로 `fmt`는 통과했지만, 실제 AWS 자격 증명 없이 `validate`용 provider 초기화를 완료하지 못했다.
 - AWS 계정 리허설과 IAM policy simulator는 이 작업에서 실행하지 않았으므로 운영 전환 전 확인이 필요하다.
 - RDS ingress 예시 스레드는 최신 HEAD에 이미 `manage_rds_ingress_rule = true`가 있어 코드 변경 없이 “이미 해결”로 답변한다.
