@@ -79,7 +79,7 @@ class ProdSecretsConfigTreeTest {
                     .isEqualTo("test-youtube-webhook-secret");
             assertThat(environment.getProperty("masiton.security.verification.public-base-url"))
                     .isEqualTo("https://masiton.click");
-            assertThat(environment.getProperty("masiton.security.public-base-url"))
+            assertThat(environment.getProperty("masiton.security.member.public-base-url"))
                     .isEqualTo("https://masiton.click");
             assertThat(environment.getProperty("masiton.security.verification.trusted-proxy-addresses"))
                     .isEqualTo("127.0.0.1");

@@ -81,6 +81,7 @@ related_documents:
 | `git diff --check` | 통과 | 공백 오류 없음 |
 | PR #238 CI run `32135495164` | 실패 | 프론트엔드·Terraform은 통과. 공통 resolver 주입 모호성으로 백엔드 Context가 연쇄 실패해 qualifier를 후속 보완했다. |
 | PR #238 CI run `32136091504` | 실패 | 프론트엔드·Terraform 통과. `SecurityConfigurationApiTest` 25건, `RedisRefreshTokenStoreIntegrationTest` 19건, `ArchitectureTest` 10건 통과. 백엔드 1,309건 중 남은 27건은 role 컬럼 부재로 인한 SQL 오류 또는 그 503 전파다. |
+| PR #238 CI run `32137718331` | 실패 | 원자 로그인 제한 Redis 통합 16건 통과. Origin 설정 제거 뒤 운영 configtree 테스트 한 곳이 삭제된 속성을 계속 기대해 현재 member 경로로 수정했다. 나머지 실패는 role migration 부재다. |
 | PostgreSQL·Redis·MockMvc 통합 테스트 | 미실행 | 로컬 Docker daemon 미가동. push 뒤 CI에서 재검증한다. |
 
 ## 8. 재발 방지 및 다음 확인
