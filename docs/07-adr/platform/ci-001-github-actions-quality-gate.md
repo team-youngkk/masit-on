@@ -84,11 +84,11 @@ GitHub Actions를 CI 기준으로 삼으면 자체 서버를 운영하지 않아
 
 ## 12. 구현 및 운영 영향
 
-빌드 캐시, Testcontainers 실행 환경, 테스트 결과·산출물 보관 기간, OIDC trust policy(어떤 저장소·브랜치가 어떤 IAM Role을 assume할 수 있는지)가 필요하다. 단일 EC2 배포이므로 배포 단계 자체는 상대적으로 단순하지만(ECR에 이미지를 올리고 EC2에서 받아 실행), 장애 시 수동 복구 절차([technology-policy.md](../../06-architecture/technology-policy.md) 13장)와 CI 산출물(배포 가능한 이미지 태그)이 어떻게 연결되는지는 별도 운영 문서에서 다룬다.
+빌드 캐시, Testcontainers 실행 환경, 테스트 결과·산출물 보관 기간, OIDC trust policy(어떤 저장소·브랜치가 어떤 IAM Role을 assume할 수 있는지)가 필요하다. Terraform user-data `templatefile()` 렌더링처럼 이미지 생성 전에 확인해야 하는 인프라 계약은 고정 Terraform 1.6.6 `terraform-contract` job으로 별도 게이트를 둔다. CodeDeploy 배포는 생성 직후 실행별 deployment ID를 S3 pointer에 기록하고, 취소 cleanup job이 이를 읽어 중단·terminal 상태 확인을 수행하므로 OIDC role에 해당 S3 Put/Get과 `StopDeployment` 권한도 필요하다.
 
 ## 13. 검증 방법
 
-의도적으로 실패하는 커밋을 올려 단계 완료 후보에서 차단되는지 확인한다. 캐시를 지운 깨끗한 상태에서 재빌드가 동일한 결과를 내는지와 테스트 결과가 기록되는지 확인한다. OIDC, 이미지 생성·ECR push, 운영 배포 수동 승인, 배포 후 Smoke Test와 직전 이미지 복구는 M2에서 검증한다.
+의도적으로 실패하는 커밋을 올려 단계 완료 후보에서 차단되는지 확인한다. 캐시를 지운 깨끗한 상태에서 재빌드가 동일한 결과를 내는지와 테스트 결과가 기록되는지 확인하고, Terraform contract fixture 실패가 이미지 생성·배포 후보를 차단하는지 검증한다. OIDC, 이미지 생성·ECR push, 운영 배포 수동 승인, 배포 후 Smoke Test, CodeDeploy 취소 cleanup, 직전 이미지 복구는 M2에서 검증한다.
 
 ## 14. 재검토 조건
 

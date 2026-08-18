@@ -8,7 +8,7 @@ related_documents:
 
 # 전용 private Redis Terraform
 
-앱 인스턴스에 동거하던 Redis를 사설 subnet의 전용 인스턴스로 분리한다. [배포 고도화 영향 검토 8.2절](../../../docs/08-planning/deployment-hardening-impact-review.md)이 이것을 1단계로 지정했고, Blue-Green 무중단의 전제다. 색상이 바뀌어도 세션·Refresh Token·rate-limit 상태가 유지되어야 하기 때문이다.
+이 Proposed 배포 고도화 모듈은 앱 인스턴스에 동거하던 Redis를 사설 subnet의 전용 인스턴스로 분리하는 안을 담는다. [배포 고도화 영향 검토 8.2절](../../../docs/08-planning/deployment-hardening-impact-review.md)이 이것을 1단계로 제안했고, Blue-Green 무중단의 전제다. 다만 [ADR-DATA-005](../../../docs/07-adr/data/data-005-redis-refresh-token.md) 6절의 Accepted 배치 결정과 충돌하므로, owner 재합의와 [ADR-DEPLOY-005](../../../docs/07-adr/platform/deploy-005-asg-blue-green-rollout.md)의 Accepted 전환 전에는 이 레이어를 운영에 적용하지 않는다.
 
 `../terraform`(운영 ASG·Blue-Green)과 state를 분리한다. 그 모듈은 `redis_security_group_id`를 **입력으로만** 받고 Redis를 만들지 않는다. 이 모듈의 `redis_security_group_id` 출력을 그 입력에 넣는다.
 

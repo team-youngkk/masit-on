@@ -87,7 +87,7 @@ related_documents:
 | QueryDSL | 조건부 | Conditional ADR | [ADR-SEARCH-001](adr-backlog.md#adr-search-001-querydsl-도입) | 복합 조회 필요성 확인 후 도입 |
 | PostGIS | 기술 스펙 확정, 현재 범위 제외 | Accepted ADR | [ADR-MAP-001](integration/map-001-map-bounds-search.md) | WGS84 좌표 응답만 사용하고 뷰포트·거리·공간 검색은 제외 |
 | pgvector | Post-MVP | Post-MVP ADR | [ADR-SEARCH-002](adr-backlog.md#adr-search-002-pgvector-자연어-검색rag) | 자연어 검색·RAG 제외 |
-| Redis 8.8 전용 인스턴스 | 고정·관리자 Token 역할 확정 | Accepted ADR | [ADR-DATA-005](data/data-005-redis-refresh-token.md) | 관리자 Refresh Token 저장, 캐시·락은 별도 조건부 |
+| Redis 8.8 | 고정·관리자 Token 역할 확정, 운영 배치는 ADR-DATA-005 6절 | Accepted ADR | [ADR-DATA-005](data/data-005-redis-refresh-token.md) | 관리자 Refresh Token 저장, 배포 고도화의 전용 Redis 제안은 별도 Proposed ADR·owner 재확인 대상이며 캐시·락은 별도 조건부 |
 | Redis AOF `everysec` + RDB | 확정 설정 | Operational Configuration | Redis 역할 결정 후 운영 문서 | 아키텍처보다 영속화 설정값 |
 | Redis 캐시 | 확정 기술 용도 | Conditional ADR | [ADR-CACHE-001](adr-backlog.md#adr-cache-001-redis-캐시-도입) | 성능 병목·무효화 근거 없음 |
 | Redis 관리자 Refresh Token | 사용자 확정 | Accepted ADR | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md), [ADR-DATA-005](data/data-005-redis-refresh-token.md) | 관리자 JWT 재발급·폐기 |

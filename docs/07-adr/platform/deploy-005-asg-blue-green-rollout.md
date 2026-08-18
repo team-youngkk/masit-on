@@ -43,14 +43,14 @@ Internet
   -> original 또는 replacement ASG
   -> 각 EC2의 Nginx
   -> loopback Spring Boot / Next.js
-  -> 공유 RDS PostgreSQL 및 사설 Redis
+  -> 공유 RDS PostgreSQL 및 Redis (배치 방식은 ADR-DATA-005와 이 제안의 owner 재확인 대상)
 ```
 
 - ALB는 TLS 종단과 상태 확인을 담당하며, 하나의 target group을 계속 가리킨다. Nginx는 애플리케이션 경로 라우팅, 검증 세션 gate와 오류 응답 경계를 계속 담당한다.
 - Blue는 Terraform이 관리하는 원본 ASG와 target group이다. EC2/On-Premises CodeDeploy는 원본 ASG를 복사해 replacement ASG를 만들고, 같은 target group에 replacement 인스턴스를 등록한 뒤 original 인스턴스를 해제한다. listener 전환이나 별도 green target group은 사용하지 않는다. 성공 후에도 original과 replacement를 관찰 기간 동안 유지하고, 유휴 replacement ASG 정리는 별도 runbook으로 수행한다.
-- ASG는 상시 `min=1`, `desired=1`, `max=2`를 기본 운영값으로 둔다. 배포 전환 중에는 blue와 green이 동시에 존재할 수 있으며, 기존 색상은 관찰 기간 뒤 축소한다.
-- Redis는 앱 인스턴스에 동거시키지 않고 사설 전용 인스턴스로 분리한다. 세션·Refresh Token·rate-limit 상태는 색상 전환 사이에 공유되어야 한다.
-- 운영 배포는 GitHub Actions의 기존 build/test/ECR digest 검증과 `production` 승인 게이트를 유지하고, 승인 후 CodeDeploy가 green 생성·검증·전환을 수행하도록 확장한다.
+- ASG는 상시 `min=1`, `desired=1`, `max=2`를 기본 운영값으로 둔다. 배포 전환 중에는 original과 replacement가 동시에 존재할 수 있으며, 기존 환경은 관찰 기간 뒤 축소한다.
+- 이 Proposed ADR은 Blue-Green 전환 사이의 상태 공유를 위해 Redis 분리를 제안하지만, Accepted [ADR-DATA-005](../data/data-005-redis-refresh-token.md) 6절의 앱 인스턴스 동거 결정과 충돌한다. 전용 Redis 적용은 데이터 owner의 재합의와 이 ADR의 Accepted 전환 전에는 운영 계약으로 취급하지 않는다.
+- 운영 배포는 GitHub Actions의 기존 build/test/ECR digest 검증, Terraform `terraform-contract` 렌더링 게이트와 `production` 승인 게이트를 유지하고, 승인 후 CodeDeploy가 replacement 환경을 생성·검증·전환하도록 확장한다. 배포 ID는 실행별 S3 pointer에 먼저 보존해 취소 cleanup이 원격 deployment를 중단할 수 있어야 한다.
 - `/internal/**`은 ALB·Nginx의 인터넷 경계에서 계속 차단한다. ALB health check는 비밀정보를 반환하지 않는 별도 readiness 경로 또는 인스턴스 내부 검증 경로로 구성한다.
 - Flyway 변경은 blue와 green이 동시에 실행할 수 있도록 expand → 애플리케이션 전환 → 별도 contract migration 순서를 따른다. 전환 실패 시 데이터 스키마를 자동 rollback하지 않는다.
 

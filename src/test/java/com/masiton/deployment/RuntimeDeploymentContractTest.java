@@ -29,6 +29,12 @@ class RuntimeDeploymentContractTest {
     private static final Path REDIS_INSTANCE = Path.of("infra/production/terraform-redis/instance.tf");
     private static final Path REDIS_USER_DATA = Path.of("infra/production/terraform-redis/templates/redis-user-data.sh.tftpl");
     private static final Path REDIS_README = Path.of("infra/production/terraform-redis/README.md");
+    private static final Path PRODUCTION_README = Path.of("infra/production/README.md");
+    private static final Path CI_ADR = Path.of("docs/07-adr/platform/ci-001-github-actions-quality-gate.md");
+    private static final Path DEPLOYMENT_ADR = Path.of("docs/07-adr/platform/deploy-005-asg-blue-green-rollout.md");
+    private static final Path ADR_BACKLOG = Path.of("docs/07-adr/adr-backlog.md");
+    private static final Path CLEANUP_RUNBOOK = Path.of("docs/08-planning/blue-green-cleanup-runbook.md");
+    private static final Path TROUBLESHOOTING = Path.of("docs/troubleshooting/pr-228-asg-replacement-deployment-review.md");
     private static final Path APPSPEC = Path.of("deploy/codedeploy/appspec.yml");
     private static final Path AFTER_INSTALL = Path.of("deploy/codedeploy/hooks/after-install.sh");
     private static final Path VALIDATE_SERVICE = Path.of("deploy/codedeploy/hooks/validate-service.sh");
@@ -175,6 +181,33 @@ class RuntimeDeploymentContractTest {
                 .contains("Terraform 렌더링 계약")
                 .contains("infra/production/terraform-redis/tests/template-render")
                 .contains("hashicorp/terraform:1.6.6 test");
+    }
+
+    @Test
+    @DisplayName("배포 구현·ADR·runbook·troubleshooting 문서는 같은 취소와 Redis 승인 경계를 설명한다")
+    void 문서계약은_취소정리와Redis승인경계를_같이설명한다() throws IOException {
+        assertThat(Files.readString(PRODUCTION_README))
+                .contains("deployment ID pointer")
+                .contains("StopDeployment")
+                .contains("ADR-DEPLOY-005")
+                .contains("운영 적용하지 않는다");
+        assertThat(Files.readString(CI_ADR))
+                .contains("terraform-contract")
+                .contains("S3 pointer")
+                .contains("CodeDeploy 취소 cleanup");
+        assertThat(Files.readString(DEPLOYMENT_ADR))
+                .contains("replacement 환경")
+                .contains("Accepted [ADR-DATA-005]")
+                .contains("owner의 재합의");
+        assertThat(Files.readString(ADR_BACKLOG))
+                .contains("Accepted [ADR-DATA-005]")
+                .contains("Redis 배치 owner 재합의");
+        assertThat(Files.readString(CLEANUP_RUNBOOK))
+                .contains("codedeploy-cancel-cleanup")
+                .contains("S3 deployment ID pointer");
+        assertThat(Files.readString(TROUBLESHOOTING))
+                .contains("redis-user-data.tftest.hcl")
+                .contains("terraform-contract");
     }
 
     @Test

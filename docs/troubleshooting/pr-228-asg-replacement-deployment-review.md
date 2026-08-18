@@ -35,7 +35,7 @@ related_documents:
 | [rollback 오류 전파](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801505488) | rollback 성공처럼 반환되어 실패한 배포가 성공으로 끝날 수 있음 | 배포 / 애플리케이션 | 수정 필요 | 원래 exit code 보존, 복구 실패 non-zero 반환, 수동 복구 error를 추가 | Git Bash `bash -n`, `RuntimeDeploymentContractTest` 통과 |
 | [CodeDeploy stop 실패](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801505494) | stop API 실패·terminal 미확인이 성공 경로로 처리됨 | 배포 / 인프라 | 수정 필요 | stop 실패와 terminal 미확인을 non-zero·GitHub error annotation으로 전파 | `RuntimeDeploymentContractTest` 통과. 실제 cancel 리허설은 미실행 |
 | [Redis NVMe serial](https://github.com/team-youngkk/masit-on/pull/228) (`PRRC_kwDOTf2xKc7imXGN`) | Nitro NVMe `/dev/disk/by-id` serial에서 EBS volume ID 하이픈이 제거됨 | 인프라 / 배포 | 수정 필요 | user-data에서 volume ID를 하이픈 제거 후 stable by-id 경로로 변환 | Redis user-data `bash -n`, `RuntimeDeploymentContractTest` |
-| [취소 cleanup](https://github.com/team-youngkk/masit-on/pull/228) (`PRRC_kwDOTf2xKc7imXGY`) | GitHub 취소가 EXIT trap보다 빨라 원격 CodeDeploy가 계속 진행할 수 있음 | 배포 / Git | 수정 필요 | production 자동 취소를 끄고 deployment ID artifact와 별도 cleanup job에서 stop·terminal 확인 | `RuntimeDeploymentContractTest` 통과. 실제 취소 리허설은 미실행 |
+| [취소 cleanup](https://github.com/team-youngkk/masit-on/pull/228) (`PRRC_kwDOTf2xKc7imXGY`) | GitHub 취소가 EXIT trap보다 빨라 원격 CodeDeploy가 계속 진행할 수 있음 | 배포 / Git | 수정 필요 | production 자동 취소를 끄고 실행별 S3 deployment ID pointer와 별도 cleanup job에서 stop·terminal 확인 | `RuntimeDeploymentContractTest` 통과. 실제 취소 리허설은 미실행 |
 | [Redis multipart AOF](https://github.com/team-youngkk/masit-on/pull/228) (`PRRC_kwDOTf2xKc7imXGd`) | Redis 8의 `appendonly.aof` 단일 파일 검사가 정상 복사본에서도 실패함 | 데이터베이스 / 인프라 | 수정 필요 | manifest·multipart AOF 파일·`redis-check-aof`·known fixture key 검증으로 교체 | README 계약 테스트 통과. 실제 운영 데이터 복구 리허설은 미실행 |
 | [public IPv4·private egress](https://github.com/team-youngkk/masit-on/pull/228) (`PRRC_kwDOTf2xKc7imXGk`) | public route만 있고 public IPv4 할당·private egress가 보장되지 않음 | 인프라 / 네트워크 | 수정 필요 | launch template에서 public IPv4를 명시하고 private 모드는 NAT default route를 plan에서 검증 | `RuntimeDeploymentContractTest`, Terraform fmt. 실제 AWS plan/apply는 미실행 |
 | [rollback trap 시점](https://github.com/team-youngkk/masit-on/pull/228) (`PRRC_kwDOTf2xKc7imuyR`) | 활성 파일 교체 전에 rollback trap이 없어 install·daemon-reload·enable 실패를 복구하지 못함 | 배포 / 애플리케이션 | 수정 필요 | 이전 산출물 backup 직후 trap을 등록해 첫 활성 install부터 rollback 보호 | Git Bash `bash -n`, `RuntimeDeploymentContractTest` |
@@ -106,14 +106,15 @@ related_documents:
 | `git diff --check` | 통과 | whitespace 오류 없음 |
 | Ruby YAML parser로 `.github/workflows/ci.yml` 구문 확인 | 통과 | workflow YAML 구문 오류 없음 |
 | `docker run hashicorp/terraform:1.6.6 ... fmt -check -recursive` | 통과 | 운영·Redis 두 Terraform 레이어의 포맷 |
-| `terraform validate` | 통과 | 두 레이어. 선행 검증 기록(커밋 `5ac0298`)에서 terraform-redis의 중복 data source 선언을 잡았다 |
-| 이번 변경 후 production `terraform validate` | 통과 | Docker Terraform 1.6.6에서 provider schema와 `network_interfaces`·NAT postcondition 구문을 확인했다. 실제 AWS API 조회는 수행하지 않았다 |
+| `docker run hashicorp/terraform:1.6.6 ... terraform test` | 통과 | `redis-user-data.sh.tftpl`의 `templatefile()` 렌더링과 셸 parameter expansion 보존 |
+| `terraform validate` | 선행 검증 기록에서 통과 | 두 레이어. 선행 검증 기록(커밋 `5ac0298`)에서 terraform-redis의 중복 data source 선언을 잡았다 |
+| 이번 변경 후 production `terraform validate` | 미실행(자격 증명 검증에서 중단) | 현재 환경의 dummy AWS 자격 증명으로 provider 초기화가 `InvalidClientTokenId`에서 중단됐다. 변경한 production HCL은 없으므로 실제 AWS API 검증 결과로 해석하지 않는다 |
 | 이번 변경 후 Redis `terraform validate` | 미실행 | 현재 환경에서 Redis provider 초기화가 실제 AWS 자격 증명 검증에서 중단됐다. 이번 Redis Terraform HCL 변경은 없고 user-data·README만 변경했다 |
-| `terraform plan` | 통과(현재 구성) | Redis 레이어는 통과(3 add·1 change·1 destroy, 인스턴스 교체). 운영 레이어는 `app_subnet_is_private = false`와 public app subnet이 일치하며, 미사용 green target group·alarm 2건만 destroy 대상으로 확인됐다 |
+| `terraform plan` | 선행 실행에서 통과(이번 환경 재실행 미실행) | 선행 실행에서 Redis 레이어는 3 add·1 change·1 destroy, 운영 레이어는 `app_subnet_is_private = false`와 public app subnet이 일치하며 미사용 green target group·alarm 2건만 destroy 대상으로 확인됐다. 이번 환경에서는 AWS 자격 증명 없이 재실행하지 않았다 |
 
 ## 8. 재발 방지 및 다음 확인
 
-- 재발 방지: `RuntimeDeploymentContractTest`에 CodeDeploy 중단, IAM 권한, route 조건, 단일 target group, Redis data volume, rollback 산출물 계약을 추가했다.
+- 재발 방지: `RuntimeDeploymentContractTest`에 CodeDeploy 중단, IAM 권한, route 조건, 단일 target group, Redis data volume, rollback 산출물 계약을 추가하고, Terraform `template-render/redis-user-data.tftest.hcl`과 CI `terraform-contract` job으로 `templatefile()` 렌더링 결과도 검증한다.
 - 다음 확인: 실제 AWS에서 CodeDeploy timeout/cancel·replacement failure·Redis 기존 데이터 이전·Redis instance replacement·IAM policy simulator를 운영 전환 전에 담당자 승인으로 확인한다.
 
 ## 9. 도입 전후 비교 지표
@@ -179,5 +180,5 @@ app_subnet_ids의 route table에는 IGW를 향한 0.0.0.0/0 경로가 없어야 
 4. **public/private egress**: public app 모드에서는 launch template의 `network_interfaces.associate_public_ip_address`를 `!var.app_subnet_is_private`로 명시한다. private 모드는 현재 모듈이 NAT egress를 지원 경로로 삼고 `0.0.0.0/0 -> nat-*` route를 postcondition으로 요구한다. endpoint-only private 토폴로지는 별도 서비스·subnet 연결 계약 없이는 허용하지 않는다.
 5. **rollback 보호 시점**: 이전 이미지·스크립트·unit backup이 끝난 직후 `rollback_enabled=yes`와 `trap rollback ERR`를 등록한다. 따라서 첫 활성 `install`·`daemon-reload`·`enable` 실패도 이전 산출물 복구 경로로 들어간다.
 6. **ACM 계약**: HTTP-only fallback을 제거하고 `acm_certificate_arn`을 nullable false의 필수 변수로 바꿨다. 유효한 ACM ARN 형식이 아니면 Terraform variable validation에서 멈추므로, ALB HTTPS listener·Nginx 인증서 export·배포 흐름이 같은 필수 전제를 공유한다.
-7. **templatefile 회귀 방지**: `RuntimeDeploymentContractTest`가 Terraform template에 `$${...}` escape가 있고 과거의 unescaped 셸 보간식이 없는지 확인해, Terraform plan 단계에서 template parsing이 깨지는 회귀를 차단한다.
+7. **templatefile 회귀 방지**: 소스 형태는 `RuntimeDeploymentContractTest`가 확인하고, `tests/template-render/redis-user-data.tftest.hcl`이 Terraform 1.6.6 `templatefile()` 렌더링 결과에 셸 parameter expansion이 남는지 검증한다. CI의 `terraform-contract` job이 이 테스트를 이미지 생성보다 먼저 실행해 렌더링 회귀가 배포 후보를 막는다.
 8. **취소 ID 회귀 방지**: artifact 후속 step에 의존하지 않고 S3 pointer를 같은 실행 step에서 먼저 기록하도록 해, workflow 취소로 후속 step이 생략되어도 cleanup job이 deployment ID를 조회할 수 있게 했다.

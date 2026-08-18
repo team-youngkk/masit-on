@@ -8,6 +8,8 @@ related_documents:
 
 CodeDeploy `COPY_AUTO_SCALING_GROUP`은 Terraform state 밖에서 replacement ASG를 만든다. EC2/On-Premises Blue-Green은 하나의 target group에 replacement 인스턴스를 등록하고 original 인스턴스를 해제하므로 listener를 전환하지 않는다. 배포 성공 직후에는 replacement와 original을 함께 유지하고, 관찰 기간과 외부 health·오류율 확인이 끝난 뒤에만 유휴 ASG를 정리한다.
 
+이 문서는 성공한 배포 뒤 유휴 replacement ASG를 운영자가 정리하는 절차다. GitHub Actions workflow가 취소된 경우의 CodeDeploy 중단·terminal 상태 확인은 `.github/workflows/ci.yml`의 `codedeploy-cancel-cleanup` job이 실행별 S3 deployment ID pointer를 사용해 자동으로 처리하므로 이 runbook의 수동 정리 대상과 혼동하지 않는다.
+
 ## 확인
 
 ```powershell

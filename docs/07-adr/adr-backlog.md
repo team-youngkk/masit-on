@@ -227,7 +227,7 @@ MVP 구현 전 필수 결정과 3차 확장 정책 결정은 완료됐다. 아�
 | 멀티모듈·독립 배포 | Post-MVP | 단일 모듈·단일 애플리케이션 배포로 MVP 복잡도 제한 | [ADR-ARCH-004](#adr-arch-004-멀티모듈독립-배포-전환)의 경계·이전 전략 결정 |
 | 세분화된 관리자 권한 | Post-MVP | 사전 발급 단일 `ADMIN` 역할만 범위에 포함 | [ADR-AUTH-004](#adr-auth-004-관리자-권한-세분화)의 권한 모델·이전 결정 |
 | Nginx·EC2·ECR | 기술 선택 완료, M2 적용 (2026-07-28) | [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md)에서 단계 순서 변경 | M2부터 단일 EC2 인스턴스에 적용 |
-| ALB·ASG·Blue-Green | [ADR-DEPLOY-005](platform/deploy-005-asg-blue-green-rollout.md) Proposed; 비용 초과는 작업 요청자가 부담하기로 승인했으며 운영 전환 전 팀 리뷰 필요 | 초기 운영 배포는 단일 인스턴스 수동 복구 | ASG·ALB·CodeDeploy·Redis 경계와 롤백 리허설을 통과한 뒤 Accepted 전환 |
+| ALB·ASG·Blue-Green | [ADR-DEPLOY-005](platform/deploy-005-asg-blue-green-rollout.md) Proposed; 비용 초과는 작업 요청자가 부담하기로 승인했으며 운영 전환 전 팀 리뷰 필요. 전용 Redis 제안은 Accepted [ADR-DATA-005](data/data-005-redis-refresh-token.md) 6절의 앱 인스턴스 동거 결정과 충돌 | 초기 운영 배포는 단일 인스턴스 수동 복구 | Redis 배치 owner 재합의, ASG·ALB·CodeDeploy 경계와 롤백 리허설을 통과한 뒤 Accepted 전환 |
 | 전체 CI/CD 배포 흐름 | M2 적용 (2026-07-28) | 전 단계 CI는 빌드·테스트 수행 | M2부터 ECR push·EC2 승인 배포·Smoke Test 활성화 |
 | 로그 14일 보관 | M2 적용 (2026-07-28) | 로컬 단계에는 CloudWatch 미사용 | M2부터 로그·백업·알림 정책 활성화 |
 
