@@ -34,6 +34,27 @@ class KakaoMobilityPropertiesTest {
                 .hasMessageContaining("allowed provider endpoint");
     }
 
+    @Test
+    @DisplayName("로컬 허용 플래그가 있으면 Compose WireMock endpoint를 허용한다")
+    void 설정검증_로컬플래그활성화_WireMockComposeEndpoint를허용한다() {
+        KakaoMobilityProperties properties = validProperties();
+        properties.setBaseUrl("http://wiremock:8080");
+
+        assertThatCode(properties::validateFixedContract).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("로컬 허용 플래그가 없으면 Compose WireMock endpoint를 거부한다")
+    void 설정검증_로컬플래그비활성화_WireMockComposeEndpoint를거부한다() {
+        KakaoMobilityProperties properties = validProperties();
+        properties.setLocalBaseUrlAllowed(false);
+        properties.setBaseUrl("http://wiremock:8080");
+
+        assertThatThrownBy(properties::validateFixedContract)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("allowed provider endpoint");
+    }
+
     private KakaoMobilityProperties validProperties() {
         KakaoMobilityProperties properties = new KakaoMobilityProperties();
         properties.setEnabled(true);

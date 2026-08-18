@@ -92,7 +92,7 @@ public class KakaoMobilityProperties {
             boolean localHost = localBaseUrlAllowed
                     && "http".equalsIgnoreCase(uri.getScheme())
                     && uri.getPort() > 0
-                    && Set.of("localhost", "127.0.0.1", "::1").contains(uri.getHost());
+                    && Set.of("localhost", "127.0.0.1", "::1", "wiremock").contains(uri.getHost());
             if (enabled && !productionHost && !localHost) {
                 throw new IllegalStateException("Kakao Mobility base URL is not an allowed provider endpoint");
             }

@@ -61,10 +61,10 @@ class VerifyAiContentCandidateService implements VerifyAiContentCandidateUseCase
         if (video.isEmpty() || !matchesVideo(command, video.get())) {
             return VerificationResult.blocked("EXTERNAL_REFERENCE_MISMATCH");
         }
-        if (!confirmsActualVisit(command.visitEvidence(), verifiedRestaurant.name())) {
+        VerifiedVideo verifiedVideo = video.get();
+        if (!confirmsActualVisit(command.visitEvidence(), verifiedRestaurant.name(), verifiedVideo.channelName())) {
             return VerificationResult.blocked("VISIT_EVIDENCE_REQUIRED");
         }
-        VerifiedVideo verifiedVideo = video.get();
         return VerificationResult.verified(new VerifiedContent(
                 verifiedRestaurant.regionId(), verifiedRestaurant.foodCategoryId(), verifiedRestaurant.name(),
                 verifiedRestaurant.kakaoPlaceId(), verifiedRestaurant.kakaoPlaceUrl(),
@@ -76,7 +76,8 @@ class VerifyAiContentCandidateService implements VerifyAiContentCandidateUseCase
                 verifiedVideo.thumbnailUrl(), verifiedVideo.publishedAt(), verifiedVideo.checkedAt()));
     }
 
-    private boolean confirmsActualVisit(VisitEvidenceCandidate candidate, String verifiedRestaurantName) {
+    private boolean confirmsActualVisit(VisitEvidenceCandidate candidate, String verifiedRestaurantName,
+                                        String verifiedChannelName) {
         if (candidate == null || !nonBlank(candidate.value()) || !Double.isFinite(candidate.confidence())
                 || candidate.confidence() < 0 || candidate.confidence() > 1) {
             return false;
@@ -89,7 +90,8 @@ class VerifyAiContentCandidateService implements VerifyAiContentCandidateUseCase
         String normalized = normalizeClaim(candidate.value());
         return !hasBlockingVisitContext(normalized)
                 && EXPLICIT_ACTUAL_VISIT_CLAIM.matcher(normalized).matches()
-                && hasFirsthandVisitContext(normalizePhrase(candidate.value()), verifiedRestaurantName);
+                && hasFirsthandVisitContext(normalizePhrase(candidate.value()), verifiedRestaurantName,
+                verifiedChannelName);
     }
 
     private String normalizeClaim(String value) {
@@ -107,7 +109,7 @@ class VerifyAiContentCandidateService implements VerifyAiContentCandidateUseCase
                 || BLOCKING_VISIT_CONTEXT.matcher(normalized).find();
     }
 
-    private boolean hasFirsthandVisitContext(String phrase, String verifiedRestaurantName) {
+    private boolean hasFirsthandVisitContext(String phrase, String verifiedRestaurantName, String verifiedChannelName) {
         var visitVerb = VISIT_VERB.matcher(phrase);
         if (!visitVerb.find()) {
             return false;
@@ -119,12 +121,13 @@ class VerifyAiContentCandidateService implements VerifyAiContentCandidateUseCase
         if (target.isBlank() || targetIndex < 0 || !hasTargetBoundary(compactPrefix, targetIndex, target)) {
             return false;
         }
-        if (hasThirdPartySubjectBeforeTarget(compactPrefix, target)) {
+        if (hasThirdPartySubjectBeforeTarget(compactPrefix, target, verifiedChannelName)) {
             return false;
         }
         var firsthandSubject = FIRSTHAND_SUBJECT.matcher(prefix);
         if (!firsthandSubject.lookingAt()) {
-            return hasImplicitPlaceTarget(compactPrefix, target);
+            return hasImplicitPlaceTarget(compactPrefix, target)
+                    || isVerifiedChannelSubject(compactPrefix.substring(0, targetIndex), verifiedChannelName);
         }
         String subjectRemainder = prefix.substring(firsthandSubject.end()).trim();
         return !SUBJECT_BEFORE_DIRECT.matcher(subjectRemainder).find();
@@ -152,7 +155,7 @@ class VerifyAiContentCandidateService implements VerifyAiContentCandidateUseCase
                         + "(?:직접|정말|진짜|바로|다시|오늘|어제|또|한번|한번더)?");
     }
 
-    private boolean hasThirdPartySubjectBeforeTarget(String compactPrefix, String target) {
+    private boolean hasThirdPartySubjectBeforeTarget(String compactPrefix, String target, String verifiedChannelName) {
         int targetIndex = compactPrefix.lastIndexOf(target);
         if (targetIndex <= 0) {
             return false;
@@ -162,7 +165,13 @@ class VerifyAiContentCandidateService implements VerifyAiContentCandidateUseCase
         while (subject.find()) {
             lastSubject = subject.group();
         }
-        return lastSubject != null && !isFirsthandSubject(lastSubject);
+        return lastSubject != null && !isFirsthandSubject(lastSubject)
+                && !isVerifiedChannelSubject(lastSubject, verifiedChannelName);
+    }
+
+    private boolean isVerifiedChannelSubject(String subject, String verifiedChannelName) {
+        String baseSubject = subject.replaceFirst("(?:가|이|은|는)$", "");
+        return !baseSubject.isBlank() && normalizeClaim(verifiedChannelName).equals(normalizeClaim(baseSubject));
     }
 
     private boolean isFirsthandSubject(String subject) {
@@ -173,13 +182,9 @@ class VerifyAiContentCandidateService implements VerifyAiContentCandidateUseCase
     }
 
     private boolean validEvidence(Evidence evidence) {
-        if (evidence == null || evidence.type() == EvidenceType.UNKNOWN) {
-            return false;
-        }
-        if (evidence.type() == EvidenceType.TIMESTAMP) {
-            return validRange(evidence.startMs(), evidence.endMs());
-        }
-        return validRange(evidence.startOffset(), evidence.endOffset()) && nonBlank(evidence.sourceHash());
+        return evidence != null
+                && evidence.type() == EvidenceType.TIMESTAMP
+                && validRange(evidence.startMs(), evidence.endMs());
     }
 
     private boolean validRange(Long start, Long end) {

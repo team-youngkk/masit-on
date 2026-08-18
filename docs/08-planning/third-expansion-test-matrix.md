@@ -88,7 +88,7 @@ related_documents:
 | AI Worker 운영 | 단일 EC2 CPU·메모리·DB·backlog·처리시간·재기동·quota | 미실행 | [E3-T13 최종 게이트 판정](third-expansion-final-gate-result.md)과 장애 복구 결과 |
 | Mobility 운영 | quota·호출 수·timeout·비용 hard stop | 미실행 | [E3-T13 최종 게이트 판정](third-expansion-final-gate-result.md), WireMock 및 운영 계정 검증 |
 | 코스 좌표 적합성 | 운영 ACTIVE·공개 맛집 좌표 보강률 | 미측정 | [E3-T13 최종 게이트 판정](third-expansion-final-gate-result.md)의 읽기 전용 측정·조치·재측정 기록 |
-| 2차 승계 부하 | 정상 50명/20 RPS, 최대 200명/80 RPS | 시나리오 준비·실측 미실행 | [E3-T13 최종 게이트 판정](third-expansion-final-gate-result.md) 결과와 3차 완료 판정 |
+| 2차 승계 부하 | 정상 50명/20 RPS, 최대 200명/80 RPS | 정상 부하는 `Verified` 결과 연결, 최대 부하는 관찰만 완료·정식 판정 보류 | [E3-T13 최종 게이트 판정](third-expansion-final-gate-result.md)와 [정본 결과](second-expansion-performance-verification.md) 대조 |
 
 실행 증거가 없으면 해당 요구사항을 통과했다고 보고하지 않는다. 팀이 측정을 연기한 항목은 보류 사유와 해제 조건을 기록하되 판정 기준을 낮추지 않는다.
 

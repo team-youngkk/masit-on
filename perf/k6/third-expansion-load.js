@@ -3,6 +3,10 @@
 // 요청률·VU 상한은 공용 LOAD.rate·LOAD.vus 프로필에서 선택한다.
 //
 // public-read는 POST /api/restaurants/natural-language-search만 호출한다.
+// 자연어 검색은 client address별 요청 제한을 받으므로 PUBLIC_READ_MODE로 검증
+// 목적을 나눈다. contract는 제한 아래 저속으로 계약·지연을 검증하고, throughput은
+// 상한을 넘겨 포화 거동만 관찰한다. throughput은 단일 client에서 rate-limit 응답이
+// 다수를 차지하므로 성능 인증 근거가 아니다.
 // course는 POST /api/restaurants/course-routes만 호출하며, 측정 전용 예산으로
 // Mobility production quota·rate-limit 설정을 완화하지 않고 실행량만 제한한다.
 // Kakao Mobility는 측정 대상 환경의 WireMock Stub이어야 한다. 실제 Kakao·YouTube
@@ -27,6 +31,7 @@ const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
 const RESULT_DIR = __ENV.RESULT_DIR || 'perf/k6/results';
 const SCENARIO = __ENV.SCENARIO || 'course';
 const COURSE_METRIC_MODE = __ENV.COURSE_METRIC_MODE || 'internal';
+const PUBLIC_READ_MODE = __ENV.PUBLIC_READ_MODE || 'contract';
 
 if (!['public-read', 'course'].includes(SCENARIO)) {
     throw new Error(`지원하지 않는 SCENARIO=${SCENARIO}. public-read 또는 course를 사용한다.`);
@@ -34,6 +39,29 @@ if (!['public-read', 'course'].includes(SCENARIO)) {
 if (!['internal', 'external'].includes(COURSE_METRIC_MODE)) {
     throw new Error(`지원하지 않는 COURSE_METRIC_MODE=${COURSE_METRIC_MODE}. internal 또는 external을 사용한다.`);
 }
+if (!['contract', 'throughput'].includes(PUBLIC_READ_MODE)) {
+    throw new Error(`지원하지 않는 PUBLIC_READ_MODE=${PUBLIC_READ_MODE}. contract 또는 throughput을 사용한다.`);
+}
+
+// 이 값은 RedisNaturalLanguageRateLimitStore의 client address별 창 60초·상한 60건을
+// 복제한다. production 설정을 완화하지 않고 측정 전용 실행량만 이 경계 아래로 둔다.
+// API 계약은 429 NATURAL_LANGUAGE_RATE_LIMITED만 정의하므로 이 수치를 응답 계약으로
+// 다루지 않는다.
+const NATURAL_LANGUAGE_LIMIT_PER_MINUTE = 60;
+// 상한과 같은 값이면 창 경계에서 429가 나올 수 있어 계약 검증 상한을 하나 낮춘다.
+// 다만 제한기가 세는 시각은 k6의 도착 예정 시각이 아니라 서버 처리 시각이다. 상한에
+// 가까운 값으로 실행하면 GC pause 같은 지연으로 밀린 요청이 한 창에 겹쳐 애플리케이션
+// 결함 없이 429가 날 수 있다. warmup과 measured도 같은 client 키를 공유한다.
+// 기본값 30건/분은 그 여유를 두 배로 둔 값이므로 특별한 이유 없이 올리지 않는다.
+const NATURAL_LANGUAGE_REQUESTS_PER_MINUTE = integerEnv(
+    'NATURAL_LANGUAGE_REQUESTS_PER_MINUTE',
+    30,
+    1,
+    NATURAL_LANGUAGE_LIMIT_PER_MINUTE - 1,
+);
+const NATURAL_LANGUAGE_CONTRACT_VUS = integerEnv('NATURAL_LANGUAGE_CONTRACT_VUS', 5, 1, 50);
+const NATURAL_LANGUAGE_CONTRACT_MEASURED_DURATION =
+    __ENV.NATURAL_LANGUAGE_CONTRACT_MEASURED_DURATION || '10m';
 
 const COURSE_DURATION_METRIC = COURSE_METRIC_MODE === 'internal'
     ? 'duration_course_route_internal_observed'
@@ -100,15 +128,29 @@ const courseTotalDuration = new Trend('duration_course_route_external_included',
 const courseTimeoutViolations = new Counter('course_timeout_violations');
 const courseProviderBlockedResponses = new Counter('course_provider_blocked_responses');
 const courseServiceRateLimitResponses = new Counter('course_service_rate_limit_responses');
+// 자연어 arm의 429를 별도로 세지 않으면 실패 응답을 사후에 rate-limit으로 확정할 수
+// 없다. 이슈 #190의 6,783건이 그 사례였다.
+const naturalLanguageRateLimitResponses = new Counter('natural_language_rate_limit_responses');
 const serverErrorRate = new Rate('server_error_rate');
 const unexpectedStatus = new Counter('unexpected_status_count');
 const measuredSamples = new Counter('measured_samples');
 const performanceSamples = new Counter('performance_samples');
 
-const publicReadOptions = loadScenarios({
-    warmupExec: 'publicReadWarmUp',
-    measuredExec: 'publicReadMeasured',
-});
+// 기본값을 contract로 둔다. 제한을 넘기는 실행은 결과 해석에 별도 근거가 필요하므로
+// 명시 선택으로만 들어가게 한다.
+const publicReadOptions = PUBLIC_READ_MODE === 'contract'
+    ? loadScenarios({
+          rate: NATURAL_LANGUAGE_REQUESTS_PER_MINUTE,
+          timeUnit: '1m',
+          vus: NATURAL_LANGUAGE_CONTRACT_VUS,
+          measuredDuration: NATURAL_LANGUAGE_CONTRACT_MEASURED_DURATION,
+          warmupExec: 'publicReadWarmUp',
+          measuredExec: 'publicReadMeasured',
+      })
+    : loadScenarios({
+          warmupExec: 'publicReadWarmUp',
+          measuredExec: 'publicReadMeasured',
+      });
 const courseOptions = loadScenarios({
     rate: COURSE_REQUESTS_PER_SECOND,
     vus: COURSE_VUS,
@@ -131,10 +173,22 @@ export const options = {
               'http_req_failed{phase:measured}': ['rate<0.01'],
               dropped_iterations: ['count==0'],
           }
-        : {
-              ...(LOAD_PROFILE === 'normal' ? { duration_natural_language_search: ['p(95)<800'] } : {}),
+        : PUBLIC_READ_MODE === 'contract'
+        ? {
+              // 요청 제한 아래에서는 429가 하나도 없어야 계약 검증이 성립한다.
+              duration_natural_language_search: ['p(95)<800'],
+              // 판정은 측정 구간으로 한다. warmup 429는 직전 실행의 잔여 창처럼
+              // 애플리케이션과 무관한 원인일 수 있어 요약에만 남긴다.
+              'natural_language_rate_limit_responses{phase:measured}': ['count==0'],
               server_error_rate: ['rate<0.01'],
               'http_req_failed{phase:measured}': ['rate<0.01'],
+              dropped_iterations: ['count==0'],
+          }
+        : {
+              // throughput은 단일 client에서 429가 다수를 차지하는 것이 정상이므로
+              // 지연·실패율을 통과 기준으로 걸지 않는다. 서버 오류와 부하 생성기
+              // 포화만 판정한다.
+              server_error_rate: ['rate<0.01'],
               dropped_iterations: ['count==0'],
           },
 };
@@ -244,13 +298,26 @@ function responseCode(response) {
 }
 
 function recordCourseFailure(response, phase) {
+    if (recordRateLimitFailure(response, phase, courseServiceRateLimitResponses, 'COURSE_ROUTE_RATE_LIMITED')) {
+        return;
+    }
     const code = responseCode(response);
-    if (response.status === 429 || code === 'COURSE_ROUTE_RATE_LIMITED') {
-        courseServiceRateLimitResponses.add(1, { phase });
-    } else if (response.status === 502 || code === 'COURSE_ROUTE_PROVIDER_UNAVAILABLE') {
+    if (response.status === 502 || code === 'COURSE_ROUTE_PROVIDER_UNAVAILABLE') {
         // 공개 API는 Mobility의 PROVIDER_BLOCKED를 provider unavailable로 통합한다.
         courseProviderBlockedResponses.add(1, { phase });
     }
+}
+
+function recordNaturalLanguageFailure(response, phase) {
+    recordRateLimitFailure(response, phase, naturalLanguageRateLimitResponses, 'NATURAL_LANGUAGE_RATE_LIMITED');
+}
+
+function recordRateLimitFailure(response, phase, counter, code) {
+    if (response.status !== 429 && responseCode(response) !== code) {
+        return false;
+    }
+    counter.add(1, { phase });
+    return true;
 }
 
 function evaluate(response, endpoint, trend, record) {
@@ -262,6 +329,8 @@ function evaluate(response, endpoint, trend, record) {
     }
     if (endpoint === 'course_route') {
         recordCourseFailure(response, record ? 'measured' : 'warmup');
+    } else if (endpoint === 'natural_language_search') {
+        recordNaturalLanguageFailure(response, record ? 'measured' : 'warmup');
     }
     if (!record) {
         return;
@@ -289,14 +358,46 @@ export function handleSummary(data) {
 
 function renderText(data) {
     const lines = [];
-    lines.push(`NFR-PERFORMANCE-007 ${SCENARIO} / ${LOAD.label}(요청률 ${SCENARIO === 'course' ? COURSE_REQUESTS_PER_SECOND : LOAD.rate} RPS / 동시성 상한 ${SCENARIO === 'course' ? COURSE_VUS : LOAD.vus}) 결과`);
+    if (SCENARIO === 'public-read' && PUBLIC_READ_MODE === 'contract') {
+        lines.push(
+            `NFR-PERFORMANCE-007 참고 관찰 — public-read / 계약 검증(요청률 ${NATURAL_LANGUAGE_REQUESTS_PER_MINUTE}건/분 `
+            + `/ 동시성 상한 ${NATURAL_LANGUAGE_CONTRACT_VUS}) 결과`
+        );
+        lines.push(
+            `*** 이 실행은 NFR-PERFORMANCE-007의 성능 인증이 아니다. 단일 client address의 요청 제한`
+            + `(${NATURAL_LANGUAGE_LIMIT_PER_MINUTE}건/분) 아래에서 계약과 지연만 관찰하며, 해당 요구사항의 검증 방법인 `
+            + '50 VU / 20 RPS와 200 VU / 80 RPS에 미치지 못한다.'
+        );
+        lines.push(`계약 검증은 공용 LOAD 프로필을 쓰지 않는다. LOAD_PROFILE=${LOAD_PROFILE} 값은 이 결과에 반영되지 않았다.`);
+    } else {
+        lines.push(`NFR-PERFORMANCE-007 ${SCENARIO} / ${LOAD.label}(요청률 ${SCENARIO === 'course' ? COURSE_REQUESTS_PER_SECOND : LOAD.rate} RPS / 동시성 상한 ${SCENARIO === 'course' ? COURSE_VUS : LOAD.vus}) 결과`);
+    }
+    if (SCENARIO === 'public-read' && PUBLIC_READ_MODE === 'throughput') {
+        lines.push(
+            '*** throughput 모드는 요청 제한을 넘겨 포화 거동만 관찰한다. 단일 client address에서는 '
+            + `${NATURAL_LANGUAGE_LIMIT_PER_MINUTE}건/분을 넘는 요청이 429가 되므로, 아래 지연 지표와 [통과] 표기를 `
+            + '성능 인증 근거로 쓰지 않는다. 성능 판정은 다중 client source가 확보된 환경에서만 한다.'
+        );
+    }
     if (SCENARIO === 'course') {
         lines.push(`코스 측정 프로필: ${COURSE_METRIC_MODE} (${COURSE_DURATION_METRIC})`);
         lines.push(`코스 측정 전용 예산: preflight ${COURSE_PREFLIGHT_REQUEST_BUDGET}건 + warmup 최대 ${COURSE_ACTUAL_WARMUP_REQUEST_BUDGET}건 + measured 최대 ${COURSE_ACTUAL_MEASURED_REQUEST_BUDGET}건 = ${COURSE_TOTAL_REQUEST_BUDGET}건 (< Mobility monthly quota ${MOBILITY_MONTHLY_QUOTA})`);
         lines.push('production quota/rate-limit 설정은 변경하지 않으며, quota·rate-limit 응답은 성능 표본에 포함하지 않는다.');
     }
-    if (metricValue(data, 'measured_samples', 'count') === 0) {
+    const measured = metricValue(data, 'measured_samples', 'count');
+    const performance = metricValue(data, 'performance_samples', 'count');
+    if (measured === 0) {
         lines.push('*** 측정 구간 표본이 0건이다. 측정이 성립하지 않았으므로 아래 [통과] 표기를 판정 근거로 쓰지 않는다.');
+    } else if (performance === 0) {
+        lines.push('*** 200 응답이 0건이라 성능 표본이 없다. 아래 지연 지표와 [통과] 표기를 판정 근거로 쓰지 않는다.');
+    } else if (performance < measured) {
+        // 200 응답만 Trend에 들어가므로, 실패 비중이 크면 p95는 살아남은 소수 표본의
+        // 값이다. #190에서 419건짜리 p95가 통과로 읽힌 경로를 막는다.
+        lines.push(
+            `*** 측정 표본 ${measured}건 중 성능 표본은 ${performance}건`
+            + `(${(performance / measured * 100).toFixed(1)}%)뿐이다. 아래 지연 지표는 200 응답만의 값이므로 `
+            + '전체 요청의 성능으로 해석하지 않는다.'
+        );
     }
 
     lines.push('');
@@ -322,9 +423,27 @@ function renderText(data) {
     lines.push('');
     lines.push('[오류·부하 조건]');
     lines.push(`  서버 오류율(5xx): ${formatPercent(metricValue(data, 'server_error_rate', 'rate'))} ${thresholdVerdict(data.metrics.server_error_rate)}`);
-    lines.push(`  http_req_failed (측정 구간): ${formatPercent(metricValue(data, 'http_req_failed{phase:measured}', 'rate'))} ${thresholdVerdict(data.metrics['http_req_failed{phase:measured}'])}`);
+    // k6는 threshold를 건 하위 지표만 집계한다. 없는 지표를 0으로 출력하면 실패를
+    // 0%로 오독하게 되므로 미집계 사실을 그대로 적는다.
+    const measuredFailed = data.metrics['http_req_failed{phase:measured}'];
+    lines.push(measuredFailed
+        ? `  http_req_failed (측정 구간): ${formatPercent(metricValue(data, 'http_req_failed{phase:measured}', 'rate'))} ${thresholdVerdict(measuredFailed)}`
+        : '  http_req_failed (측정 구간): 집계하지 않음 — 이 모드는 실패율을 판정 기준으로 쓰지 않는다. 아래 전체 값을 본다.');
     lines.push(`  http_req_failed (전체): ${formatPercent(metricValue(data, 'http_req_failed', 'rate'))}`);
     lines.push(`  200 아닌 응답: ${metricValue(data, 'unexpected_status_count', 'count')}건`);
+    if (SCENARIO === 'public-read') {
+        const rateLimited = metricValue(data, 'natural_language_rate_limit_responses', 'count');
+        const unexpected = metricValue(data, 'unexpected_status_count', 'count');
+        const measuredRateLimited = data.metrics['natural_language_rate_limit_responses{phase:measured}'];
+        lines.push(`  자연어 rate-limit 응답(429, warmup 포함 전체): ${rateLimited}건`);
+        if (measuredRateLimited) {
+            lines.push(
+                `  자연어 rate-limit 응답(429, 측정 구간): ${metricValue(data, 'natural_language_rate_limit_responses{phase:measured}', 'count')}건 `
+                + `${thresholdVerdict(measuredRateLimited)}`
+            );
+        }
+        lines.push(`  rate-limit으로 설명되지 않는 200 아닌 응답: ${unexpected - rateLimited}건`);
+    }
     if (SCENARIO === 'course') {
         lines.push(`  Mobility quota/provider 차단 응답(502): ${metricValue(data, 'course_provider_blocked_responses', 'count')}건 ${thresholdVerdict(data.metrics.course_provider_blocked_responses)}`);
         lines.push(`  서비스 rate-limit 응답(429): ${metricValue(data, 'course_service_rate_limit_responses', 'count')}건 ${thresholdVerdict(data.metrics.course_service_rate_limit_responses)}`);
