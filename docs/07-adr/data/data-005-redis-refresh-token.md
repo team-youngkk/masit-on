@@ -1,7 +1,7 @@
 ---
 id: ADR-DATA-005
 title: Redis 8.8 관리자 Refresh Token 저장소
-status: Accepted
+status: Superseded
 decision_date: 2026-07-24
 owners:
   - 김인안
@@ -12,20 +12,22 @@ related_requirements:
   - NFR-RELIABILITY-002
   - NFR-PRIVACY-002
 related_documents:
-  - ../../05-specs/api/admin/authentication-api.md
+  - ../../05-specs/api/account/member-authentication-api.md
   - ../../05-specs/data/entity-definitions.md
   - ../security/auth-001-spring-security-jwt.md
   - ../../06-architecture/technology-policy.md
   - ../quality/obs-001-logging-observability.md
 supersedes: []
-superseded_by: null
+superseded_by: ADR-AUTH-007
 ---
 
 # ADR-DATA-005 Redis 8.8 관리자 Refresh Token 저장소
 
+> 이 ADR은 통합 로그인·`member_account` RBAC·`auth:session:` 계약을 정의할 후속 ADR-AUTH-007로 대체됐다. 아래 내용은 기존 관리자 전용 설계의 역사 기록으로 보존하며 신규 구현의 정본으로 사용하지 않는다.
+
 ## 1. 상태
 
-Accepted
+Superseded by ADR-AUTH-007
 
 ## 2. 결정 요약
 
@@ -86,5 +88,5 @@ Redis 운영 비용·가용성 문제가 발생하거나 인증 제공자 전환
 ## 15. 관련 문서
 
 - [관리자 인증 ADR](../security/auth-001-spring-security-jwt.md)
-- [관리자 인증 API](../../05-specs/api/admin/authentication-api.md)
+- [통합 인증 API](../../05-specs/api/account/member-authentication-api.md)
 - [Redis 정책](../../06-architecture/technology-policy.md#7-redis-연결-및-역할-분리-정책)

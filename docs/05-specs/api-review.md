@@ -18,6 +18,7 @@ related_documents:
   - ../04-product/prd/detail/restaurant-detail.md
   - ../01-requirements/non-functional-requirements.md
   - ../07-adr/security/auth-003-confirmation-token.md
+  - ../07-adr/platform/web-006-unified-login-rbac-route.md
 ---
 
 # 맛잇온 API 계약 검토
@@ -194,9 +195,9 @@ API를 임의 정책 결정 없이 구현·프론트엔드 연동 가능한 상�
 - 현재 상태: 결정 완료
 - 관련 요구사항: [FR-RESTAURANT-001](../01-requirements/functional-requirements.md#fr-restaurant-001-맛집-목록-조회), [FR-RESTAURANT-008](../01-requirements/functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회), [FR-ADMIN-001](../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근), [NFR-AVAILABILITY-001](../01-requirements/non-functional-requirements.md#nfr-availability-001-상태-확인과-장애-구분)
 - 영향 API: 모든 외부 API와 관리자 인증 API
-- 결정: 모든 백엔드 API는 버전 없는 `/api` 접두사를 사용한다. Nginx는 `/api/**`만 Spring Boot, 나머지 외부 경로는 Next.js로 전달하고 `/internal/**`은 인터넷에서 차단한다. 로그인·재발급 matcher를 포괄 관리자 matcher보다 먼저 평가한다.
-- 영향: 화면과 API 경로 충돌을 제거하고, 관리자 로그인·재발급 예외와 내부 상태 확인 경계를 명시했다.
-- 결정 시점: 2026-07-27 [ADR-WEB-003](../07-adr/platform/web-003-routing-boundary.md)으로 확정
+- 결정: 모든 백엔드 API는 버전 없는 `/api` 접두사를 사용한다. Nginx는 `/api/**`만 Spring Boot, 나머지 외부 경로는 Next.js로 전달하고 `/internal/**`은 인터넷에서 차단한다. 통합 로그인·재발급 matcher를 포괄 관리자 matcher보다 먼저 평가한다.
+- 영향: 화면과 API 경로 충돌을 제거하고, 통합 로그인·재발급 예외와 내부 상태 확인 경계를 명시했다.
+- 결정 시점: 2026-08-18 [ADR-WEB-006](../07-adr/platform/web-006-unified-login-rbac-route.md)으로 현재 경계를 재확정했다. 2026-07-27 [ADR-WEB-003](../07-adr/platform/web-003-routing-boundary.md)의 최초 결정은 WEB-006이 전체 대체한 역사적 근거다.
 
 ### RV-API-015 맛집 상세 콘텐츠 정렬
 

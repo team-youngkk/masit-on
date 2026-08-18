@@ -38,7 +38,7 @@ related_documents:
 - API DTO의 축약·집계·판정 값은 저장 모델에서 제외했다.
 - 카카오 장소 동일성은 [ADR-EXT-001](../../07-adr/integration/ext-001-reference-verification.md)의 제공자 place ID로 확정되어 물리 유일 키에 반영됐다.
 - UUID 내부 ID와 상태·논리 삭제는 [ADR-DATA-007](../../07-adr/data/data-007-uuid-v4-identifiers.md)·[ADR-DATA-008](../../07-adr/data/data-008-publication-lifecycle-soft-delete.md)로 확정됐다.
-- 관리자 내부 계정과 Redis Refresh Token 상태는 MVP 저장 범위다. Redis 8.8, `auth:refresh:{adminId}` 키의 SHA-256 Token 해시·계열·만료 정보, 14일 TTL, 원자적 회전·재사용 탐지와 `auth:login-failure:{loginIdHash}` 로그인 제한 카운터까지 확정됐다.
+- 일반 회원과 관리자는 `member_account`를 단일 계정 원천으로 사용하고 `role=MEMBER/ADMIN`으로 권한을 구분한다. Refresh 상태는 Redis 8.8 `auth:session:` 통합 namespace를 사용하며 세션 상한은 MEMBER 3개, ADMIN 1개다. 키·쿠키 상세는 후속 ADR-AUTH-007이 소유한다.
 - 확인 Token은 PostgreSQL 저장형 불투명 Token과 원자적 소비·결과 재현으로 확정됐다.
 
 ## 3. 모델링 차단 항목
@@ -137,9 +137,10 @@ related_documents:
 
 - 중요도: High
 - 현재 상태: 결정 완료 (2026-07-27)
-- 영향 데이터: AdminAccount, AdminRefreshToken 및 단기 로그인 실패 상태
-- 결정: Refresh Token은 `auth:refresh:{adminId}` 키에 SHA-256 Token 해시와 Token 계열·만료 정보를 JSON으로 저장한다. 로그인 실패는 `auth:login-failure:{loginIdHash}` 카운터를 사용하고 첫 실패부터 15분 TTL을 적용하며 5회 실패 시 남은 TTL 동안 차단하고 성공 시 삭제한다.
-- 원자성: 새 로그인·회전·재사용 탐지는 Redis Lua Script 또는 동등한 단일 원자 연산으로 계정당 활성 Token 하나를 보장한다.
+- 영향 데이터: MemberAccount, AuthSession 및 단기 로그인 실패 상태
+- 결정: Refresh Token은 `auth:session:` 통합 namespace에 SHA-256 Token 해시와 Token 계열·만료 정보를 저장한다. 역할별 활성 세션 상한은 MEMBER 3개, ADMIN 1개다. 로그인 실패 식별·TTL 상세는 후속 ADR-AUTH-007 계약을 따른다.
+- 원자성: 새 로그인·회전·재사용 탐지와 역할·상태·비밀번호 변경에 따른 전체 폐기는 Redis Lua Script 또는 동등한 단일 원자 연산으로 처리한다.
+- 전환: cutover 때 legacy 관리자 Refresh 세션을 모두 무효화하고 재로그인을 요구한다.
 - 결정 시점: 인증 구현 전
 
 ### RV-DATA-007 검증 확인 토큰 구현
@@ -171,7 +172,7 @@ related_documents:
 | 외부 자원 식별 전략 | 결정 완료 | [ADR-EXT-001](../../07-adr/integration/ext-001-reference-verification.md)의 제공자 원본 ID |
 | 동시 중복 방지 전략 | 기본안 완료·강화 조건부 | UK+오류 변환; 강화는 [ADR-DATA-006](../../07-adr/adr-backlog.md#adr-data-006-동시-쓰기-충돌-제어) |
 | 확인 Token 저장 전략 | 결정 완료 | [ADR-AUTH-003](../../07-adr/security/auth-003-confirmation-token.md) |
-| Refresh Token 저장 전략 | 결정 완료 | [ADR-DATA-005](../../07-adr/data/data-005-redis-refresh-token.md), [관리자 인증 API](../api/admin/authentication-api.md), [보안 경계](../../06-architecture/security-boundary.md) |
+| Refresh Token 저장 전략 | 후속 ADR로 대체 | [ADR-DATA-005](../../07-adr/data/data-005-redis-refresh-token.md)는 역사 기록, 정본은 후속 ADR-AUTH-007 |
 
 ## 9. 구현 중 결정 가능한 항목
 
@@ -218,4 +219,4 @@ related_documents:
 - 인기 순위는 기존 Favorite의 현재 행에서 계산하고 Metric·Snapshot을 저장하지 않는다.
 - 알림은 필수 서비스 내 기록만 저장하며 Preference·DeviceToken·Outbox를 만들지 않는다.
 - 제보·신고는 별도 테이블, 상태 감사는 두 요청 중 하나를 참조하는 공통 ModerationHistory로 저장한다.
-- V1·V2는 수정하지 않고 V3 신규 마이그레이션을 계획한다. 운영 전 통합 예외는 ADR-DATA-009 증명이 있을 때만 허용한다.
+- 적용된 마이그레이션은 수정하지 않고 실제 최신 순서 다음의 신규 마이그레이션을 계획한다. 통합 계정은 확장·호환 관찰과 별도 계약 제거의 두 단계로 나누며, 운영 전 통합 예외와 새 계약 마이그레이션을 혼동하지 않는다. 제거 전 행 수·FK·로그인·rollback rehearsal 증거가 필수다.

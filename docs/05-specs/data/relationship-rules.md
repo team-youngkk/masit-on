@@ -30,7 +30,7 @@ related_documents:
 | Restaurant–Visit | 1 : N | Visit | Visit의 Restaurant 필수 |
 | Creator–Visit | 1 : N | Visit | Visit의 Creator 필수 |
 | Video–Visit | 1 : N | Visit | Visit의 근거 Video 필수 |
-| AdminAccount–AdminRefreshToken | 1 : N | 관리자 JWT 재발급 | 활성 Refresh Token 최대 1개 |
+| MemberAccount–AuthSession | 1 : N | 통합 JWT 재발급 | 활성 세션 `MEMBER` 최대 3개, `ADMIN` 최대 1개 |
 
 ## 3. Restaurant–Region
 
@@ -219,6 +219,10 @@ Creator는 YouTube 채널 단위이고 Video는 외부 게시 채널 ID를 필�
 - ADR 필요 여부: 현재는 확정 비즈니스·API 계약을 그대로 명세하므로 필수 ADR이 아니다. 변경 시 장기 구조 영향이 크므로 ADR을 작성한다.
 
 ## 12. 확정 및 범위 변경 조건
+
+- `member_account`가 일반 회원과 관리자의 유일한 계정 원천이다. 공개 회원가입은 `MEMBER`만 생성하고 관리자 권한은 승인된 운영 절차로만 부여·회수한다.
+- 관리자 발급 확인 Token, 감사 행위자, Creator 관련 관리자 FK 등 legacy `admin_account` 참조는 검증된 이메일 매핑으로 동일한 회원 UUID에 이전한다. 매핑 누락·중복 또는 호환되지 않는 비밀번호 해시가 있으면 전환하지 않는다.
+- 역할·상태·비밀번호 변경은 MemberAccount–AuthSession 관계의 모든 활성 세션을 끊는다. cutover에서는 legacy 관리자 Refresh 관계를 보존하지 않는다.
 
 - 삭제·복구 전환은 MVP에서 인증된 별도 운영 명령으로만 수행하고 관리자 API는 만들지 않는다.
 - 논리 삭제 데이터는 MVP에서 기한 없이 보존하고 자동 물리 purge를 수행하지 않는다. 보존 요구나 용량 문제가 생기면 별도 ADR로 정한다.

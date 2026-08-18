@@ -109,12 +109,13 @@ related_documents:
 ### NFR-SECURITY-001 공개 조회와 관리자 접근 통제
 
 - 요구사항:
-  - 일반 조회는 로그인 없이 사용할 수 있어야 하며 모든 관리자 등록 요청은 인증과 관리자 권한 검증을 모두 통과해야 한다.
+  - 일반 조회는 로그인 없이 사용할 수 있어야 하며 모든 관리자 등록 요청은 통합 계정 인증과 현재 `ADMIN` 역할 검증을 모두 통과해야 한다.
 - 적용 대상:
   - 일반 사용자 조회 API와 관리자 등록 기능
 - 목표 기준:
   - 인증되지 않은 일반 조회 요청은 허용
   - 인증 정보가 없거나 유효하지 않은 요청과 인증됐으나 권한이 없는 요청을 구분해 관리자 기능 접근을 100% 거부
+  - 메인 페이지 링크·프론트 Route Guard 우회 요청도 서버 RBAC에서 100% 거부
 - 검증 방법:
   - 인증 없음·실패·권한 실패·정상 관리자 시나리오의 자동화 보안 테스트
 - 중요도:
@@ -290,7 +291,7 @@ related_documents:
 - 중요도:
   - High
 - 결정 상태:
-  - 확정 ([ADR-WEB-003](../07-adr/platform/web-003-routing-boundary.md))
+  - 확정 ([ADR-WEB-006](../07-adr/platform/web-006-unified-login-rbac-route.md))
 
 ### NFR-AVAILABILITY-002 초기 운영 배포 가용성과 수동 복구
 
@@ -701,7 +702,7 @@ related_documents:
 ### NFR-SECURITY-004 회원 자격 증명과 Token 보호
 
 - 요구사항:
-  - 회원 비밀번호·Action Token·Refresh Token 원문을 저장·로그·응답에 남기지 않고, 로그인 실패 제한·세션 회전·`sid` 폐기를 강제한다.
+  - 통합 계정 비밀번호·Action Token·Refresh Token 원문을 저장·로그·응답에 남기지 않고, 모든 형식의 자격 증명 시도에 선행 요청 제한·세션 회전·`sid` 폐기를 강제한다.
   - 8자 이메일 인증 코드는 32자 문자 집합의 CSPRNG 출력으로 최소 40-bit 탐색 공간을 확보하고, 원문 대신 SHA-256 해시만 검증 저장소에 보관한다.
 - 적용 대상:
   - 일반 회원 가입·로그인·재발급·로그아웃·비밀번호 재설정·탈퇴
@@ -717,7 +718,7 @@ related_documents:
 ### NFR-SECURITY-005 회원 인증 남용과 계정 열거 방지
 
 - 요구사항:
-  - 계정 상태·존재와 메일 발송 결과가 외부 응답·처리 시간으로 식별되지 않게 하며 가입·이메일 인증 코드 제출·재설정·로그인 요청 제한을 적용한다.
+  - 계정 상태·존재·역할과 메일 발송 결과가 외부 응답·처리 시간으로 식별되지 않게 하며 가입·이메일 인증 코드 제출·재설정·로그인 요청 제한을 적용한다. 형식이 잘못된 로그인도 요청 출처 제한을 계정 검증 전에 적용한다.
   - 공개 맛집 상세는 선택적 회원 인증 또는 개인화 저장소 장애에도 기본 `200` 응답을 유지하고 최근 기록만 생략한다.
 - 적용 대상:
   - 회원 가입·인증·비밀번호 재설정·로그인과 공개 맛집 상세
@@ -1269,12 +1270,12 @@ related_documents:
 
 - 현재 상태: 결정 완료
 - 결정 내용:
-  - 사전 발급 계정과 동일 등록 권한을 사용하며 계정 관리 화면은 MVP에서 제외한다.
-  - Spring Security 7.1.0과 JWT Access Token으로 관리자 인증·인가를 수행한다.
-  - Refresh Token은 Redis 8.8에 저장하고 `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/api/admin/auth` 쿠키로만 전달하며 재발급 때 회전한다.
+  - `member_account` 단일 계정에 `MEMBER|ADMIN` 역할을 두고 로그인 화면과 Token API를 통합한다. 역할 관리 공개 화면·API는 제외한다.
+  - Spring Security 7.1.0과 통합 JWT Access Token으로 인증하고 현재 `ADMIN` 역할로 관리자 API를 인가한다.
+  - Refresh Token은 Redis 8.8 `auth:session:` namespace에 저장하고 `__Secure-masiton-refresh`, `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/api/auth/tokens` 쿠키로 전달하며 재발급 때 회전한다.
   - Access Token은 `Authorization: Bearer` 헤더로 전달하고 브라우저 영구 저장소에 보관하지 않는다.
-  - 계정당 활성 Refresh Token 하나만 허용한다. Access Token 만료는 30분, Refresh Token TTL은 14일이며 재발급마다 회전하고 재사용을 탐지해 폐기한다. Redis 장애 시에는 재발급을 차단하는 fail-closed로 처리해 Access Token 만료 후 재로그인을 요구한다.
-  - 계정 발급·회수·복구는 수동 운영한다.
+  - `MEMBER`는 최대 3개, `ADMIN`은 최대 1개의 활성 세션을 허용한다. Access Token 만료는 30분, Refresh Token TTL은 14일이며 재발급마다 회전하고 재사용을 탐지해 폐기한다. Redis 장애 시 재발급은 fail-closed다.
+  - `ADMIN` 역할 부여·회수·복구는 승인·감사 가능한 운영 절차로만 수행한다.
 - 영향:
   - 접근 통제, 운영 절차와 보안 테스트
 - 결정 시점:

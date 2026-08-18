@@ -4,47 +4,57 @@ related_documents:
   - error-contract.md
   - ../account/member-authentication-api.md
   - ../admin/authentication-api.md
-  - ../../../07-adr/security/auth-001-spring-security-jwt.md
-  - ../../../07-adr/security/auth-002-member-jwt-refresh-token.md
+  - ../../../07-adr/security/auth-007-unified-account-rbac-session.md
   - ../../../07-adr/security/auth-006-cookie-origin-defense.md
-  - ../../../07-adr/platform/web-003-routing-boundary.md
+  - ../../../07-adr/platform/web-006-unified-login-rbac-route.md
 ---
 
 # 인증 공통 계약
 
-## 1. 경계
+## 1. 통합 계정과 경계
 
-| 경계 | 경로 | Access Token | Refresh Token |
-|---|---|---|---|
-| 일반 회원 공개 인증 동작 | 기능별 `/api/auth/**` | 로그인 응답 본문, 이후 Bearer | 회원 전용 보안 쿠키 |
-| 일반 회원 본인 자원 | `/api/me`, `/api/me/**` | `aud=masit-on-member-api` Bearer 필수 | 직접 사용하지 않음 |
-| 관리자 | `/api/admin/**` | `aud=masit-on-admin-api` Bearer 필수. 로그인·재발급은 예외 | 관리자 전용 보안 쿠키 |
+`member_account`가 일반 회원과 관리자의 유일한 인증 계정 원장이다. 계정은 `MEMBER` 또는 `ADMIN` 역할 하나를 가지며 이메일·비밀번호 로그인 화면과 Token API를 공유한다.
 
-회원과 관리자 principal, JWT audience, Refresh 쿠키와 Redis namespace는 교차 사용하지 않는다. **보호 경계**에서 반대 audience, 만료·변조 Token과 인증 누락은 `401 AUTHENTICATION_REQUIRED`다. 올바른 경계의 신원으로 인증됐지만 별도 권한이 부족할 때만 `403 FORBIDDEN`을 사용한다.
+| 경계 | 경로 | 인증·인가 |
+|---|---|---|
+| 공개 조회·가입·복구 | 계약에 명시된 공개 API | 인증 없음 |
+| 통합 Token | `POST /api/auth/tokens`, `POST /api/auth/tokens/refresh`, `DELETE /api/auth/tokens` | 각각 자격 증명, Refresh 쿠키, Bearer + Refresh 쿠키 |
+| 현재 계정·본인 자원 | `/api/me`, `/api/me/**` | 유효한 통합 Bearer |
+| 관리자 | `/api/admin/**` | 유효한 통합 Bearer + 현재 `ADMIN` 역할 |
 
-## 2. 일반 회원 Token 전달
+공개 회원가입은 `role`을 입력받지 않고 항상 `MEMBER`를 만든다. 알 수 없는 필드로 전달된 `role`도 허용하지 않고 `400 INVALID_REQUEST`로 거부한다. `ADMIN` 프로비저닝과 역할 변경은 승인·감사 가능한 운영 절차만 허용하며 공개 UI·API를 제공하지 않는다.
 
-- Access Token: RS256 JWT, 30분, 응답 본문 전달, 브라우저 메모리 보관, Bearer 전송
-- `sid`: 로그인으로 생성된 회원 세션의 불투명 식별자. 같은 세션의 Access Token, 회전 전후 Refresh 상태와 PostgreSQL 폐기 표식이 공유
-- `jti`: Access Token 한 개의 고유 식별자이며 `sid` 대신 세션 폐기에 사용하지 않음
-- Refresh Token: 불투명 값, 14일, 회전·재사용 탐지
-- 쿠키: `__Secure-masiton-member-refresh`; `Path=/api/auth/tokens`; `HttpOnly`; `Secure`; `SameSite=Strict`; `Domain` 생략
-- 활성 세션: 회원당 최대 3개. 네 번째 로그인 성공 시 가장 오래된 세션 폐기
-- 회원 Bearer 검증: 서명·만료·issuer·audience·계정 `ACTIVE`와 함께 PostgreSQL `sid` 폐기 표식을 확인한다. 표식이 있으면 `401 AUTHENTICATION_REQUIRED`, 표식 또는 계정 상태 저장소를 조회할 수 없으면 `503 AUTHENTICATION_SERVICE_UNAVAILABLE`로 fail-closed 처리한다.
+## 2. Token과 세션
 
-### 2.1 공개 맛집 상세의 선택적 회원 인증
+- Access Token은 RS256 JWT이고 `iss=masit-on`, `aud=masit-on-api`, 유효 시간 30분이다.
+- 최소 claim은 `sub`, `iss`, `aud`, `sid`, `jti`, `roles`, `iat`, `exp`다. `roles`는 발급 시 DB의 현재 단일 역할로 만들며 이메일·상태·비밀번호·개인화 데이터를 넣지 않는다.
+- Access Token은 응답 본문으로만 전달하고 브라우저 메모리에만 둔다. localStorage, sessionStorage, IndexedDB와 일반 쿠키에 저장하지 않는다.
+- Refresh Token은 14일의 고엔트로피 불투명 값이며 Redis `auth:session:` namespace에 원문이 아닌 SHA-256 해시와 회전 상태만 저장한다.
+- 쿠키는 `__Secure-masiton-refresh`; `Path=/api/auth/tokens`; `HttpOnly`; `Secure`; `SameSite=Strict`; `Domain` 생략이다.
+- `MEMBER`는 최대 3세션, `ADMIN`은 최대 1세션이다. 새 로그인으로 상한을 넘으면 가장 오래된 세션을 원자적으로 폐기한다.
+- Refresh는 매번 원자적으로 회전한다. 동시 사용은 하나만 성공하며 재사용을 탐지하면 해당 Token family 전체를 폐기한다.
 
-`GET /api/restaurants/{restaurantId}`는 `permitAll` 공개 조회가 기본이다. 이 경로에서만 유효한 회원 Bearer Token이 있을 때 최근 본 맛집 기록을 위한 회원 문맥을 선택적으로 사용한다.
+역할·상태·비밀번호 변경은 모든 활성 세션을 폐기한다. 모든 보호 경계는 현재 `member_account.status=ACTIVE`와 역할을 조회하거나 변경과 전 세션 폐기가 원자적으로 보장되는 동등한 통제로 변경 직후 이전 Access Token을 거부한다. 인증 상태 저장소를 확인할 수 없으면 `503 AUTHENTICATION_SERVICE_UNAVAILABLE`로 fail-closed 처리한다.
 
-- Authorization 헤더가 없거나, 회원 Token이 만료·변조·폐기·잘못된 audience인 경우에는 회원 principal을 만들지 않고 익명 공개 조회로 계속한다.
-- 회원 계정 상태·폐기 표식 조회 또는 최근 기록 저장소에 장애가 나도 공개 상세의 정상 `200` 응답을 인증·개인화 오류로 바꾸지 않으며 최근 기록만 생략한다.
-- 이 예외는 위 한 공개 상세 경로에만 적용한다. `/api/me/**`, 회원 로그아웃과 그 밖의 회원 보호 경로는 기존 `401`/`503` fail-closed 규칙을 그대로 적용한다.
-- 회원·관리자 Refresh 쿠키를 사용하는 재발급·로그아웃: `Origin` 헤더가 정확히 하나이고 HTTPS 동일 Origin의 배포 Origin allowlist와 canonical form으로 일치해야 한다. Origin 누락·다중·불일치는 `403 FORBIDDEN`이며 Token 회전·폐기를 시작하지 않는다.
+## 3. 응답 역할과 클라이언트 RBAC
 
-Redis 장애 중 로그인·재발급은 fail-closed다. 로그아웃은 서버 폐기를 확인한 경우에만 성공한다. 세부 요청·응답과 오류는 [회원 계정·인증 API](../account/member-authentication-api.md)를 따른다.
+로그인·재발급 응답과 `GET /api/me`는 `role: MEMBER|ADMIN`을 반환한다. 클라이언트는 TanStack Query의 현재 사용자 Query를 단일 서버 상태 원천으로 사용해 메인 페이지 관리자 링크와 `/admin/**` Route Guard를 갱신한다.
 
-요청 출처 기반 제한은 신뢰된 Nginx가 외부 입력을 덮어써 전달한 단일 클라이언트 주소를 사용한다. 애플리케이션은 지정된 Nginx 네트워크 peer에서 온 전달 헤더만 해석하고 외부 클라이언트가 보낸 전달 헤더는 신뢰하지 않는다.
+클라이언트 가드는 사용자 경험을 위한 보조 장치다. 링크 숨김, 캐시된 역할 또는 직접 URL 접근 여부와 관계없이 `/api/admin/**`의 최종 인가는 서버가 현재 역할로 수행한다. 안전한 `returnTo`는 동일 Origin의 허용된 내부 경로만 수락하며 외부 URL, 프로토콜 상대 URL과 관리자 권한이 없는 대상은 사용하지 않는다.
 
-## 3. 클라이언트 저장 금지
+## 4. 오류와 장애
 
-Access·Refresh Token을 localStorage·sessionStorage에 저장하지 않는다. Token 원문과 Authorization·Cookie 헤더를 로그·오류·분석 이벤트에 남기지 않는다.
+- 인증 누락·만료·변조·폐기 Token: `401 AUTHENTICATION_REQUIRED`
+- 유효하게 인증됐지만 현재 역할 부족: `403 FORBIDDEN`
+- Redis·계정 상태 저장소·폐기 저장소 장애로 안전한 판정 불가: `503 AUTHENTICATION_SERVICE_UNAVAILABLE`
+- 네트워크 실패: HTTP 응답으로 가장하지 않고 클라이언트가 재시도 가능한 전송 실패로 구분한다.
+
+공개 맛집 API는 인증 저장소 장애에도 계속 공개 동작한다. 선택적 인증을 사용하는 공개 상세는 인증 실패나 상태 조회 장애를 익명 조회로 격리하고 개인화 부수효과만 생략한다.
+
+## 5. Origin·제한·비밀정보
+
+Refresh 쿠키가 사용되는 `POST /api/auth/tokens/refresh`와 `DELETE /api/auth/tokens`는 역할 판정과 Token 조회·회전·폐기 전에 정확히 하나의 `Origin`이 역할과 무관한 통합 `AUTH_ALLOWED_ORIGINS`와 canonical form으로 일치하는지 검사한다. 누락·다중·불일치는 `403 FORBIDDEN`이고 Token 상태를 변경하지 않는다. 쿠키를 읽지 않는 로그인 `POST /api/auth/tokens`에는 이 검사를 적용하지 않는다.
+
+모든 로그인 요청은 JSON 구조·이메일·비밀번호 형식의 정상 여부와 관계없이 자격 증명 검증 전에 신뢰된 요청 출처 제한을 적용한다. 전달 주소는 구성된 trusted proxy peer에서 온 단일 값만 신뢰하고, reverse proxy 활성화 시 trusted proxy 설정이 비어 있으면 시작을 실패시킨다.
+
+로그인 실패는 계정 존재·상태·역할·비밀번호 오류를 구분하지 않는다. Token 원문, 비밀번호, Authorization·Cookie 헤더, 원문 이메일·클라이언트 주소와 제한용 HMAC 비밀을 저장소·로그·오류·분석 이벤트에 남기지 않는다.

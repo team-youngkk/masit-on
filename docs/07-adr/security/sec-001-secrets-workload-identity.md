@@ -14,7 +14,7 @@ related_documents:
   - ../../01-requirements/non-functional-requirements.md
   - ../../03-team/ownership.md
   - ../../06-architecture/technology-policy.md
-  - auth-001-spring-security-jwt.md
+  - auth-007-unified-account-rbac-session.md
   - ../integration/ext-001-reference-verification.md
   - ../platform/runtime-001-docker.md
   - ../platform/ci-001-github-actions-quality-gate.md
@@ -62,7 +62,7 @@ JWT 서명 키, DB·Redis 자격 증명, Kakao·YouTube API 키와 같은 운영
 
 ## 8. 트레이드오프
 
-평문 저장이나 장기 키보다 최초 설정 비용(KMS key policy, Parameter 경로 설계, IAM trust policy, OIDC 조건 설정)이 든다. 별도 인프라 전담자가 없는 4인 팀 구조에서 이 설정을 담당하는 이우람(인프라 기술 의사결정 담당, [roles.md](../../03-team/roles.md))에게 초기 부담이 집중된다. Redis 장애 시 관리자 재로그인이 필요해지는 fail-closed 정책([ADR-AUTH-001](auth-001-spring-security-jwt.md))처럼, 비밀 접근 계층 장애 시에도 애플리케이션 시작이 지연되거나 배포가 막힐 수 있다. 이 위험은 부트스트랩 절차 문서화와 배포 전후 헬스체크([roles.md](../../03-team/roles.md)의 "배포 전후 검사와 헬스체크 기준 확인" 책임)로 완화하고, 초기 설정 비용은 EC2·CI 각각 한 번만 구성하면 되는 일회성 비용이라는 점으로 상쇄한다.
+평문 저장이나 장기 키보다 최초 설정 비용(KMS key policy, Parameter 경로 설계, IAM trust policy, OIDC 조건 설정)이 든다. 별도 인프라 전담자가 없는 4인 팀 구조에서 이 설정을 담당하는 이우람(인프라 기술 의사결정 담당, [roles.md](../../03-team/roles.md))에게 초기 부담이 집중된다. Redis 장애 시 통합 인증 재로그인이 필요해지는 fail-closed 정책([ADR-AUTH-007](auth-007-unified-account-rbac-session.md))처럼, 비밀 접근 계층 장애 시에도 애플리케이션 시작이 지연되거나 배포가 막힐 수 있다. 이 위험은 부트스트랩 절차 문서화와 배포 전후 헬스체크([roles.md](../../03-team/roles.md)의 "배포 전후 검사와 헬스체크 기준 확인" 책임)로 완화하고, 초기 설정 비용은 EC2·CI 각각 한 번만 구성하면 되는 일회성 비용이라는 점으로 상쇄한다.
 
 ## 9. 적용 범위
 
@@ -78,7 +78,7 @@ JWT 서명 키, DB·Redis 자격 증명, Kakao·YouTube API 키, 배포 권한�
 
 ## 12. 구현 및 운영 영향
 
-KMS key policy, Parameter 경로 설계(서비스·환경별 네임스페이스), IAM trust policy, GitHub Actions OIDC 조건(리포지토리·브랜치 제한)과 키 교체 절차 문서화가 필요하다. Redis 장애 시 Refresh Token 재발급이 막히는 fail-closed 정책([ADR-AUTH-001](auth-001-spring-security-jwt.md))과 마찬가지로, Parameter Store·KMS 접근 실패 시 애플리케이션이 비밀 없이 기동되지 않고 안전하게 시작 실패하도록 부트스트랩 절차를 정의한다.
+KMS key policy, Parameter 경로 설계(서비스·환경별 네임스페이스), IAM trust policy, GitHub Actions OIDC 조건(리포지토리·브랜치 제한)과 키 교체 절차 문서화가 필요하다. Redis 장애 시 Refresh Token 재발급이 막히는 fail-closed 정책([ADR-AUTH-007](auth-007-unified-account-rbac-session.md))과 마찬가지로, Parameter Store·KMS 접근 실패 시 애플리케이션이 비밀 없이 기동되지 않고 안전하게 시작 실패하도록 부트스트랩 절차를 정의한다.
 
 ## 13. 검증 방법
 
@@ -92,5 +92,5 @@ AWS 계정·플랫폼 자체가 바뀌거나, 비밀 종류·접근 정책이 �
 
 - [기술 정책](../../06-architecture/technology-policy.md)
 - [NFR](../../01-requirements/non-functional-requirements.md)
-- [관리자 JWT 인증 ADR](../security/auth-001-spring-security-jwt.md)
+- [통합 계정 인증 ADR](auth-007-unified-account-rbac-session.md)
 - [외부 기준정보 확인 서비스 ADR](../integration/ext-001-reference-verification.md)

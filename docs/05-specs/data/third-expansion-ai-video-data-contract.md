@@ -12,6 +12,7 @@ related_documents:
   - constraints.md
   - lifecycle-rules.md
   - data-traceability.md
+  - migration-plan.md
   - ../api/admin/ai-video-extraction-api.md
   - ../../01-requirements/functional-requirements.md
   - ../../01-requirements/business-rules.md
@@ -20,6 +21,7 @@ related_documents:
   - ../../04-product/prd/admin/ai-video-information-extraction.md
   - ../../07-adr/integration/ai-001-video-extraction-candidate-boundary.md
   - ../../07-adr/integration/ext-003-ai-extraction-async-reliability.md
+  - ../../07-adr/security/auth-007-unified-account-rbac-session.md
   - ../../08-planning/third-expansion-evaluation-strategy.md
 ---
 
@@ -36,6 +38,7 @@ related_documents:
 - 원본 영상·전체 자막·전사·Gemini 응답 전문은 저장하지 않는다.
 - Webhook과 관리자 추가는 동일 작업 경계에서 `source`만 구분한다.
 - 초기 데이터 적립은 `BACKFILL` 우선순위로 관리하고 Webhook 실시간 작업보다 낮게 처리한다.
+- 관리자 행위자 FK의 최종 원장은 `member_account.id`다. 명령 시점의 현재 `role=ADMIN`을 애플리케이션에서 확인하고, 적용된 V4의 `admin_account` FK는 [통합 계정 전환 마이그레이션](migration-plan.md#13-통합-계정-전환-마이그레이션)에서 동일 행위자의 MemberAccount ID로 전환한다. 적용된 V4 파일은 수정하지 않는다.
 
 ## 2. 논리 개념과 저장 여부
 
@@ -121,7 +124,7 @@ related_documents:
 | `missing_fields` | `jsonb` | NN | 배열 | `UNKNOWN` 필드 |
 | `candidate_truncated` | `boolean` | NN | 기본 `false` | 후보 수 상한으로 일부 장소가 생략됨 |
 | `review_status` | `varchar(24)` | NN | 상태 CHECK | `AUTO_CONFIRMED/AUTO_BLOCKED/AUTO_REJECTED/MANUAL_OVERRIDE` |
-| `reviewed_by` | `uuid` | Yes | FK → `admin_account.id` | Snapshot 자체를 판정한 주체. 시스템 자동 판정이면 `NULL` |
+| `reviewed_by` | `uuid` | Yes | 최종 FK → `member_account.id`; V4 legacy FK는 전환 마이그레이션에서 교체 | Snapshot 자체를 판정한 당시 `ADMIN` 계정. 시스템 자동 판정이면 `NULL` |
 | `review_reason` | `varchar(1000)` | Yes | 등록 단위 없이 `AUTO_BLOCKED`·`AUTO_REJECTED`로 판정되면 필수 | Snapshot 자체의 차단·거부 사유 |
 | `reviewed_at` | 시간 | Yes | 자동 등록 상태와 조합 | Snapshot 자체 판정 시각 |
 | `created_at` | 시간 | NN | 기본 현재 시각 | Snapshot 생성 시각 |
@@ -234,7 +237,7 @@ API 3.5절 `review`의 `CONFIRM`·`DISCARD`·`ROLLBACK`·`ADJUST_CATEGORY` 네 `
 | `submitted_supplements` | `jsonb` | Yes | `CONFIRM`일 때만 non-null | 제출한 `kakaoPlaceUrl`·`foodCategoryId` |
 | `previous_category_decision` | `jsonb` | Yes | `ADJUST_CATEGORY`일 때만 non-null | 변경 전 `category_decision` 값 |
 | `reverted_registration` | `jsonb` | Yes | `ROLLBACK`일 때만 non-null | 되돌리기 전 `registered_restaurant_id`·`registered_creator_id`·`registered_video_id`·`registered_visit_id` |
-| `reviewed_by` | `uuid` | NN | FK → `admin_account.id` | 조작 관리자 |
+| `reviewed_by` | `uuid` | NN | 최종 FK → `member_account.id`; V4 legacy FK는 전환 마이그레이션에서 교체 | 조작 당시 `ADMIN` 계정 |
 | `reviewed_at` | 시간 | NN | 기본 현재 시각 | 조작 시각 |
 
 - 이력 행은 수정·삭제하지 않는다. 같은 등록 단위에 여러 행이 쌓일 수 있다(예: `CONFIRM` 이후 `ROLLBACK`).
@@ -263,7 +266,7 @@ API 3.5절 `review`의 `CONFIRM`·`DISCARD`·`ROLLBACK`·`ADJUST_CATEGORY` 네 `
 | `replacement_tag_definition_id` | `uuid` | Yes | `AUTO_MERGE`일 때 필수, `ACTIVE`만 허용 | 통합 대상 태그 |
 | `reason` | `varchar(1000)` | Yes | 자동 차단·사후 보정 시 권장 | 판단 사유 |
 | `decision_source` | `varchar(16)` | NN | `SYSTEM/ADMIN` | 판단 주체 유형 |
-| `reviewed_by` | `uuid` | Yes | FK → `admin_account.id` | 사후 보정 관리자 |
+| `reviewed_by` | `uuid` | Yes | 최종 FK → `member_account.id`; V4 legacy FK는 전환 마이그레이션에서 교체 | 사후 보정 당시 `ADMIN` 계정 |
 | `reviewed_at` | 시간 | NN | 시각 규칙 | 판단 시각 |
 
 - 이력 행은 수정·삭제하지 않으며, 재검수는 새 행을 추가한다.

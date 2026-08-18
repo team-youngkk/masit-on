@@ -22,7 +22,7 @@ related_documents:
 
 | Workstream | 사용자 가치 | 관련 요구사항 | 최종 책임자 | 기본 리뷰어 | 상태 |
 |---|---|---|---|---|---|
-| [WS-05](first-expansion-workstreams.md#4-ws-05-사용자-계정인증) 사용자 계정·인증 | 개인화 데이터를 여러 기기에서 안전하게 사용 | `FR-MEMBER-001`~`005`, `FR-AUTH-001`~`003` | 김인안 | 이우람 | 확정 |
+| [WS-05](first-expansion-workstreams.md#4-ws-05-사용자-계정인증) 사용자 계정·인증 | 개인화 데이터를 여러 기기에서 안전하게 사용하고 ADMIN이 관리 화면에 진입 | `FR-MEMBER-001`~`005`, `FR-AUTH-001`~`004` | 김인안 | 이우람 | 확정 |
 | [WS-06](first-expansion-workstreams.md#5-ws-06-개인-맛집-관리) 개인 맛집 관리 | 다시 찾을 맛집과 이전에 본 맛집으로 복귀 | `FR-FAVORITE-001`~`004`, `FR-RECENT-001`~`003` | 박진영 | 김인안 | 확정 |
 | [WS-07](first-expansion-workstreams.md#6-ws-07-지도-탐색) 지도 탐색 | 필터 결과를 유지하는 맛집 위치와 분포 탐색 | `FR-MAP-001`~`002` | 양성훈 | 박진영 | 확정 |
 | [WS-08](first-expansion-workstreams.md#7-ws-08-유튜버-상세) 유튜버 상세 | 채널·방문 맛집·근거 영상을 한곳에서 탐색 | `FR-CREATOR-004`~`006` | 이우람 | 박진영 | 확정 |
@@ -47,7 +47,7 @@ related_documents:
 
 | 선행 계약 | 주 조율 | 영향 Workstream | 완료 판단 |
 |---|---|---|---|
-| 회원 identity·권한·JWT audience·쿠키·Redis namespace 분리 | 김인안 | WS-05, WS-06 | 인증 ADR과 API·보안 계약 승인 |
+| 통합 계정 identity·RBAC·JWT audience·쿠키·Redis namespace | 김인안 | WS-04, WS-05, WS-06 | 인증 ADR과 API·보안 계약 승인 |
 | 회원 개인정보·탈퇴 정리·메일 실패 정책 | 김인안 | WS-05, WS-06 | 개인정보·운영·장애 인수 시나리오 승인 |
 | 맛집 좌표와 기존 데이터 backfill | 박진영 | WS-07, WS-04 | 데이터·마이그레이션 계약 및 backfill 검증 계획 승인 |
 | Kakao Maps SDK 키·오류·호출량 경계 | 양성훈 | WS-07 | 외부 연동 계약과 브라우저 검증 계획 승인 |
@@ -59,15 +59,16 @@ related_documents:
 
 ### 책임
 
-- 이메일 회원가입, 가입 인증, 로그인, Access Token 재발급과 로그아웃
+- 이메일 회원가입, 가입 인증, 역할 선택 없는 통합 로그인, Access Token 재발급과 로그아웃
 - 비밀번호 재설정, 회원 탈퇴와 계정 상태 전이
-- 회원용 Token·세션, 최대 3개 활성 세션, 실패·호출 제한과 계정 열거 방지
+- `member_account.role` 기반 `MEMBER|ADMIN` 구분, 역할별 세션 상한, 실패·호출 제한과 계정 열거 방지
+- TanStack Query 현재 계정 상태와 ADMIN 전용 메인 진입 링크, 서버 `/api/admin/**` RBAC 경계
 - Redis·메일 장애의 fail-closed 처리와 공개 조회 장애 격리
 
 ### 의존성
 
 - WS-06은 인증된 회원 식별자와 탈퇴 정리 계약을 사용한다.
-- 기존 관리자 인증 구현 중 JWT RS256·Redis Refresh Token의 검증된 기술 요소는 재사용할 수 있지만 identity, audience, 역할, 쿠키와 namespace는 분리한다.
+- 기존 관리자 인증 구현 중 JWT RS256·Redis Refresh Token의 검증된 기술 요소는 통합 계정·audience·쿠키·namespace 계약 안에서 재사용한다.
 - 공개 조회 Workstream은 인증 장애에 의존하지 않는다.
 
 ### 완료 경계

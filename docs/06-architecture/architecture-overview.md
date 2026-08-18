@@ -12,7 +12,7 @@ related_documents:
   - ../07-adr/integration/ext-003-ai-extraction-async-reliability.md
   - ../07-adr/integration/route-001-kakao-mobility-course-routing.md
   - ../08-planning/third-expansion-task-breakdown.md
-  - ../07-adr/platform/web-003-routing-boundary.md
+  - ../07-adr/platform/web-006-unified-login-rbac-route.md
 ---
 
 # 아키텍처 개요

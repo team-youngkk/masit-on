@@ -1,0 +1,14 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/v1/directions",
+    "queryParameters": {
+      "origin": { "equalTo": "127.600600,37.600600" }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json; charset=utf-8" },
+    "bodyFileName": "kakao-mobility-directions-shape-missing.json"
+  }
+}

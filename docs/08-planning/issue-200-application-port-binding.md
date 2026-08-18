@@ -29,7 +29,7 @@ related_documents:
 프론트엔드는 `HOSTNAME=127.0.0.1`로 loopback에만 바인딩하고 있었지만, 백엔드는 바인딩 주소를 지정하지 않아 Spring Boot 기본값대로 호스트의 모든 인터페이스(`0.0.0.0:8080`)에 붙었다. 현재 보안 그룹이 `8080`을 열지 않아 실제 노출은 없었지만, 경계가 보안 그룹 규칙 하나에만 의존하는 상태였다. 규칙이 추가되거나 호스트 방화벽이 바뀌면 다음이 동시에 성립한다.
 
 - Nginx를 건너뛴 `/api/**` 직결. 제한 공개 세션 `auth_request` gate와 유량 제한, `Authorization`·`Cookie` 정리가 모두 적용되지 않는다.
-- 인터넷에 공개하지 않기로 한 `/internal/**` 노출. [ADR-WEB-003](../07-adr/platform/web-003-routing-boundary.md) 6.5절의 상태 확인 세 경로는 애플리케이션 인증이 없고, 네트워크 경계만이 유일한 보호다.
+- 인터넷에 공개하지 않기로 한 `/internal/**` 노출. 이 계획 작성 당시에는 [ADR-WEB-003](../07-adr/platform/web-003-routing-boundary.md) 6.5절을 근거로 삼았고, 현재 같은 상태 확인 경로와 인터넷 차단 계약은 이를 대체한 [ADR-WEB-006](../07-adr/platform/web-006-unified-login-rbac-route.md)이 소유한다. 상태 확인 세 경로는 애플리케이션 인증이 없고 네트워크 경계만이 유일한 보호다.
 
 ## 3. 경계 구성
 

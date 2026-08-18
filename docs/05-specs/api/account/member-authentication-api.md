@@ -18,6 +18,7 @@ related_requirements:
   - FR-AUTH-001
   - FR-AUTH-002
   - FR-AUTH-003
+  - FR-AUTH-004
 related_business_rules:
   - BR-MEMBER-001
   - BR-MEMBER-002
@@ -31,6 +32,8 @@ related_business_rules:
   - BR-AUTH-006
   - BR-AUTH-007
   - BR-AUTH-008
+  - BR-AUTH-009
+  - BR-AUTH-010
 related_nfr:
   - NFR-SECURITY-003
   - NFR-SECURITY-004
@@ -50,60 +53,60 @@ related_documents:
   - ../common/error-contract.md
   - ../common/authentication-contract.md
   - ../../../06-architecture/security-boundary.md
-  - ../../../07-adr/platform/web-003-routing-boundary.md
+  - ../../../07-adr/platform/web-006-unified-login-rbac-route.md
   - ../../../07-adr/security/auth-006-cookie-origin-defense.md
+  - ../../../07-adr/security/auth-007-unified-account-rbac-session.md
 ---
 
-# 일반 회원 계정·인증 API
+# 통합 계정·인증 API
 
 ## 1. 결정
 
-일반 회원 계정은 이메일과 비밀번호로 가입하고 이메일 인증을 완료한 활성 회원만 로그인할 수 있다. 회원가입, 이메일 인증·재발송과 비밀번호 재설정은 `/api/auth/**`, 현재 회원 정보 조회와 탈퇴는 `/api/me`에 둔다. 관리자 인증 경계인 `/api/admin/**`와 경로, principal, JWT audience, Refresh Token 쿠키 및 Redis namespace를 분리한다.
+`member_account`는 일반 회원과 관리자의 단일 계정 원장이다. 공개 가입은 역할을 입력받지 않고 항상 `MEMBER`를 만들며, 활성 계정은 역할 구분 없는 같은 이메일·비밀번호 로그인과 `/api/auth/tokens`를 사용한다. 현재 계정은 `/api/me`에서 역할을 함께 조회하고 `/api/admin/**`는 현재 역할이 `ADMIN`인 경우에만 허용한다.
 
-Access Token은 응답 본문으로 발급하고 브라우저 메모리에만 유지한다. 인증이 필요한 회원 API에는 `Authorization: Bearer <access-token>`으로 전달한다. Refresh Token은 회원 전용 `HttpOnly` 보안 쿠키로만 전달하며 JavaScript, 응답 본문, URL과 로그에 노출하지 않는다.
+Access Token은 응답 본문으로 발급하고 브라우저 메모리에만 유지한다. 인증이 필요한 API에는 `Authorization: Bearer <access-token>`으로 전달한다. Refresh Token은 통합 `HttpOnly` 보안 쿠키로만 전달하며 JavaScript, 응답 본문, URL과 로그에 노출하지 않는다.
 
 ## 2. 인증과 Token 전달 계약
 
 ### 2.1 Access Token
 
-- JWT 서명 알고리즘은 RS256, issuer는 `masit-on`, 회원 audience는 `masit-on-member-api`다.
-- 관리자 audience인 `masit-on-admin-api` Token은 회원 API에서 인증하지 않고, 회원 Token은 관리자 API에서 인증하지 않는다.
+- JWT 서명 알고리즘은 RS256, issuer는 `masit-on`, audience는 모든 역할에 공통인 `masit-on-api`다.
 - 유효 시간은 발급 시점부터 30분이다.
-- 최소 claim은 회원 식별자 `sub`, `iss`, `aud`, 세션 식별자 `sid`, `iat`, `exp`, Access Token 식별자 `jti`다. 로그인으로 만든 같은 세션의 Access Token과 회전 전후 Refresh 상태는 동일한 불투명 `sid`를 공유한다. `jti`는 Access Token마다 새로 발급하며 세션 폐기 식별자로 사용하지 않는다. 이메일, 비밀번호, Refresh Token, 계정 상태와 개인화 데이터는 claim에 넣지 않는다.
+- 최소 claim은 계정 식별자 `sub`, `iss`, `aud`, 세션 식별자 `sid`, `roles`, `iat`, `exp`, Access Token 식별자 `jti`다. `roles`는 발급 시 DB의 현재 단일 역할(`MEMBER` 또는 `ADMIN`)에서 만든다. 로그인으로 만든 같은 세션의 Access Token과 회전 전후 Refresh 상태는 동일한 불투명 `sid`를 공유한다. `jti`는 Access Token마다 새로 발급하며 세션 폐기 식별자로 사용하지 않는다. 이메일, 비밀번호, Refresh Token, 계정 상태와 개인화 데이터는 claim에 넣지 않는다.
 - 프론트엔드는 Access Token을 브라우저 메모리에만 보관한다. Local Storage, Session Storage, IndexedDB와 일반 쿠키에 저장하지 않는다.
 - Token 발급·재발급과 현재 회원 응답에는 `Cache-Control: no-store`를 적용한다.
 
 ### 2.2 Refresh Token 쿠키
 
-회원 Refresh Token 쿠키 계약은 다음과 같이 확정한다.
+통합 Refresh Token 쿠키 계약은 다음과 같이 확정한다.
 
 ```http
-Set-Cookie: __Secure-masiton-member-refresh=<opaque-token>; Path=/api/auth/tokens; Max-Age=1209600; HttpOnly; Secure; SameSite=Strict
+Set-Cookie: __Secure-masiton-refresh=<opaque-token>; Path=/api/auth/tokens; Max-Age=1209600; HttpOnly; Secure; SameSite=Strict
 ```
 
 | 속성 | 값 | 규칙 |
 |---|---|---|
-| 이름 | `__Secure-masiton-member-refresh` | 회원 전용 이름이다. 관리자 Refresh 쿠키에 사용하지 않는다. |
-| `Path` | `/api/auth/tokens` | 로그인·재발급·로그아웃 경계에서만 전송한다. 관리자 `Path=/api/admin/auth`와 분리한다. |
+| 이름 | `__Secure-masiton-refresh` | 모든 역할이 공유하는 통합 Refresh 쿠키다. |
+| `Path` | `/api/auth/tokens` | 통합 로그인·재발급·로그아웃 경계에서만 전송한다. |
 | `Max-Age` | `1209600` | 14일이다. 회전할 때 다시 14일을 부여한다. |
 | `HttpOnly` | 활성 | JavaScript 접근을 금지한다. |
 | `Secure` | 활성 | HTTPS에서만 전송한다. |
 | `SameSite` | `Strict` | 교차 사이트 요청에 전송하지 않는다. |
 | `Domain` | 생략 | 현재 Host에만 한정한다. |
 
-Refresh 쿠키를 사용하는 재발급·로그아웃은 HTTPS 동일 Origin 요청만 허용하고 `Origin` 헤더를 배포 Origin allowlist와 일치시킨다. 불일치하거나 브라우저 요청에서 누락되면 `403 FORBIDDEN`이며 Token을 회전·폐기하지 않는다. CORS로 임의 Origin과 자격 증명 요청을 함께 허용하지 않는다.
+Refresh 쿠키를 사용하는 재발급·로그아웃은 HTTPS 동일 Origin 요청만 허용하고 `Origin` 헤더를 역할과 무관한 통합 `AUTH_ALLOWED_ORIGINS`와 일치시킨다. 불일치하거나 브라우저 요청에서 누락되면 `403 FORBIDDEN`이며 역할을 조회하거나 Token을 회전·폐기하지 않는다. 쿠키를 읽지 않는 로그인에는 이 검사를 적용하지 않고, CORS로 임의 Origin과 자격 증명 요청을 함께 허용하지 않는다.
 
 로그아웃 성공, 서버가 Refresh Token을 사용할 수 없다고 확정한 인증 실패와 Redis 장애에는 같은 이름·Path·보안 속성과 `Max-Age=0`으로 쿠키를 만료한다. Redis 장애에서는 프론트엔드의 메모리 Access Token도 제거하고 서버가 요청에서 확인한 세션 식별자의 폐기를 복구 후 재시도한다. 서버 폐기가 확인되기 전에는 로그아웃 성공으로 표시하지 않는다.
 
 ### 2.3 세션과 Redis
 
-- 회원당 활성 Refresh 세션은 최대 3개다. 네 번째 로그인 성공 시 생성 시각이 가장 오래된 활성 세션을 원자적으로 폐기한다. Redis 세션과 회전된 모든 Refresh 상태는 Access Token과 같은 `sid`를 보존한다.
+- `MEMBER`는 최대 3개, `ADMIN`은 최대 1개의 활성 Refresh 세션을 가진다. 새 로그인으로 상한을 넘으면 생성 시각이 가장 오래된 활성 세션을 원자적으로 폐기한다. Redis 세션과 회전된 모든 Refresh 상태는 Access Token과 같은 `sid`를 보존한다.
 - Refresh Token은 재발급할 때마다 회전한다. 같은 Token의 동시 재발급은 하나만 성공하며 재사용이 탐지되면 해당 Token 계열을 폐기한다.
-- 회원 Refresh 세션, 로그인 제한, 이메일 인증과 비밀번호 재설정 상태는 관리자 key와 구분되는 회원 전용 namespace를 사용한다. 물리 key 형식은 데이터 계약에서 정의한다.
+- 통합 Refresh 세션은 Redis `auth:session:` namespace를 사용한다. 로그인 제한, 이메일 인증과 비밀번호 재설정의 물리 key 형식은 데이터 계약에서 정의한다.
 - Redis에서 세션 생성·검증·회전·폐기를 안전하게 확인할 수 없으면 로그인·재발급·로그아웃은 fail-closed로 실패한다. 이 장애는 공개 맛집 조회를 차단하지 않는다.
 - 요청 출처 제한은 신뢰된 Nginx가 외부 입력을 덮어써 전달한 단일 클라이언트 주소를 사용한다. Spring Boot는 지정된 Nginx 네트워크 peer의 전달 헤더만 해석하고 직접 전달된 `X-Forwarded-For`를 신뢰하지 않는다.
 - 비밀번호 재설정 완료와 회원 탈퇴는 해당 회원의 모든 활성 세션을 폐기한다. 현재 활성 `sid`를 모두 식별하고 PostgreSQL 폐기 표식을 저장한 뒤에만 비밀번호 변경을 완료하며, 폐기를 보장할 수 없으면 `503 AUTHENTICATION_SERVICE_UNAVAILABLE`로 실패하고 비밀번호를 변경하지 않는다.
-- 모든 회원 Bearer 인증은 계정 상태와 PostgreSQL `sid` 폐기 표식을 확인한다. 표식이 있으면 서명·만료가 유효한 기존 Access Token도 `401 AUTHENTICATION_REQUIRED`로 거부하고, 표식 또는 계정 상태 저장소를 확인할 수 없으면 `503 AUTHENTICATION_SERVICE_UNAVAILABLE`로 fail-closed 처리한다.
+- 모든 보호 Bearer 인증은 현재 계정 상태와 역할 및 PostgreSQL `sid` 폐기 표식을 확인하거나 동등한 전 세션 폐기 보장을 적용한다. 역할·상태·비밀번호 변경은 모든 세션을 폐기한다. 표식이 있거나 현재 역할이 경계에 부족하면 각각 `401 AUTHENTICATION_REQUIRED`, `403 FORBIDDEN`으로 처리하고, 안전하게 확인할 수 없으면 `503 AUTHENTICATION_SERVICE_UNAVAILABLE`로 fail-closed 처리한다.
 
 ## 3. API 요약과 접근
 
@@ -114,13 +117,13 @@ Refresh 쿠키를 사용하는 재발급·로그아웃은 HTTPS 동일 Origin �
 | [API-MEMBER-AUTH-003](#api-member-auth-003-인증-메일-재발송) | POST | `/api/auth/email-verifications/resend` | 없음 | 가입 인증 메일 재발송 접수 |
 | [API-MEMBER-AUTH-004](#api-member-auth-004-비밀번호-재설정-요청) | POST | `/api/auth/password-resets/requests` | 없음 | 재설정 메일 발송 접수 |
 | [API-MEMBER-AUTH-005](#api-member-auth-005-비밀번호-재설정-완료) | POST | `/api/auth/password-resets/confirmations` | 일회용 Token | 비밀번호 변경과 모든 세션 폐기 |
-| [API-MEMBER-AUTH-006](#api-member-auth-006-로그인) | POST | `/api/auth/tokens` | 자격 증명 | Access·Refresh Token 발급 |
+| [API-MEMBER-AUTH-006](#api-member-auth-006-통합-로그인) | POST | `/api/auth/tokens` | 자격 증명 | 역할이 포함된 Access·Refresh Token 발급 |
 | [API-MEMBER-AUTH-007](#api-member-auth-007-access-token-재발급) | POST | `/api/auth/tokens/refresh` | Refresh 쿠키 | Token 회전과 새 Access Token 발급 |
 | [API-MEMBER-AUTH-008](#api-member-auth-008-로그아웃) | DELETE | `/api/auth/tokens` | Bearer + Refresh 쿠키 | 현재 세션 폐기 |
-| [API-MEMBER-AUTH-009](#api-member-auth-009-현재-사용자-정보) | GET | `/api/me` | Bearer | 현재 회원의 최소 정보 조회 |
+| [API-MEMBER-AUTH-009](#api-member-auth-009-현재-사용자-정보) | GET | `/api/me` | Bearer | 현재 계정의 최소 정보와 역할 조회 |
 | [API-MEMBER-AUTH-010](#api-member-auth-010-회원-탈퇴) | DELETE | `/api/me` | Bearer | 본인 계정 탈퇴 접수 |
 
-`/api/auth/**`의 표에 정의된 요청만 인증 예외 matcher로 허용한다. `/api/me`와 찜·최근 본 맛집 등 개인화 API는 회원 audience가 유효한 Bearer JWT를 요구한다. 경로에 `memberId`를 받지 않고 검증된 `MemberPrincipal`만 사용하므로 다른 회원의 자원을 지정할 수 없다. 정의되지 않은 `/api/auth/**`와 `/api/me/**` 경로는 기본 거부한다.
+`/api/auth/**`의 표에 정의된 요청만 인증 예외 matcher로 허용한다. `/api/me`와 개인화 API는 통합 Bearer JWT를 요구하고 `/api/admin/**`는 추가로 현재 `ADMIN` 역할을 요구한다. 경로에 `memberId`를 받지 않고 검증된 현재 계정 principal만 사용한다. 정의되지 않은 `/api/auth/**`와 `/api/me/**` 경로는 기본 거부한다.
 
 ## 4. 계정 상태 비노출 공통 응답
 
@@ -157,6 +160,8 @@ Refresh 쿠키를 사용하는 재발급·로그아웃은 HTTPS 동일 Origin �
 |---|---|---:|---|
 | `email` | string | 예 | 앞뒤 공백 제거와 영문 소문자 변환 뒤 유효한 비국제화 이메일이어야 한다. 제공자별 `+` 태그·점 별칭은 제거하지 않는다. |
 | `password` | string | 예 | 12~64자이며 정규화한 이메일과 같을 수 없다. 앞뒤 공백을 자동 제거하지 않는다. |
+
+요청 Schema에는 `role`이 없다. `role`을 포함한 알 수 없는 필드는 `400 INVALID_REQUEST`로 거부하고, 정상 가입은 서버가 무조건 `MEMBER`를 부여한다. 공개 요청으로 `ADMIN`을 선택·추론·승격할 수 없다.
 
 입력이 유효하면 [공통 접수 응답](#4-계정-상태-비노출-공통-응답)을 반환한다. 신규 가입 가능한 경우 미인증 회원과 24시간 유효한 최신 일회용 인증 코드를 만들고 메일을 발송한다. 코드는 `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`에서 CSPRNG로 8자를 독립 추출한 40-bit 난수다. 정규화 이메일당 직전 요청 60초 뒤부터 하루 최대 5회, 회원가입·재설정 합산 요청 출처당 시간당 최대 20회를 원자적으로 적용한다. 중복·활성·탈퇴 정리 중 계정이나 제한 초과 요청은 외부에 구분하지 않으며 새 계정·Token·메일을 만들지 않는다.
 
@@ -247,7 +252,7 @@ Refresh 쿠키를 사용하는 재발급·로그아웃은 HTTPS 동일 Origin �
 
 ## 7. 로그인·재발급·로그아웃
 
-### API-MEMBER-AUTH-006 로그인
+### API-MEMBER-AUTH-006 통합 로그인
 
 - Method: `POST`
 - Path: `/api/auth/tokens`
@@ -265,46 +270,48 @@ Refresh 쿠키를 사용하는 재발급·로그아웃은 HTTPS 동일 Origin �
 | `email` | string | 예 | 회원가입과 같은 정규화·형식 규칙 |
 | `password` | string | 예 | 12~64자. 공백을 자동 제거하지 않고 응답과 로그 기록을 금지한다. |
 
-성공 시 `200 OK`, 회원 Refresh Token 보안 쿠키와 다음 본문을 반환한다.
+성공 시 `200 OK`, 통합 Refresh Token 보안 쿠키와 다음 본문을 반환한다.
 
 ```json
 {
   "accessToken": "member-jwt-access-token",
   "tokenType": "Bearer",
-  "expiresInSeconds": 1800
+  "expiresInSeconds": 1800,
+  "role": "ADMIN"
 }
 ```
 
 | 필드 | 타입 | 필수 | 의미 |
 |---|---|---:|---|
-| `accessToken` | string | 예 | 회원 audience가 설정된 JWT Access Token |
+| `accessToken` | string | 예 | 통합 `aud=masit-on-api` JWT Access Token |
 | `tokenType` | string | 예 | 항상 `Bearer` |
 | `expiresInSeconds` | integer | 예 | 응답 시점의 Access Token 잔여 만료 초 |
+| `role` | string | 예 | DB에서 확인한 현재 역할. `MEMBER` 또는 `ADMIN` |
 
-미존재·미인증·탈퇴·비활성 계정, 잘못된 비밀번호와 세 로그인 실패 제한 중 하나에 해당하는 요청은 모두 `401 INVALID_CREDENTIALS`와 같은 본문으로 처리한다. 계정·요청 출처 조합 5회, 계정 전체 10회, 요청 출처 전체 50회를 첫 실패부터 15분 동안 적용하며 `Retry-After`로 제한 범위를 노출하지 않는다.
+미존재·미인증·탈퇴·비활성 계정, 역할과 잘못된 비밀번호 및 세 로그인 실패 제한 중 하나에 해당하는 요청은 모두 `401 INVALID_CREDENTIALS`와 같은 본문으로 처리한다. JSON·이메일·비밀번호 형식이 잘못된 시도도 자격 증명 검증 전에 요청 출처 제한을 적용한다. 유효한 형식에는 계정·요청 출처 조합 5회, 계정 전체 10회, 요청 출처 전체 50회를 첫 실패부터 15분 동안 적용하며 `Retry-After`로 제한 범위를 노출하지 않는다.
 
-Redis 장애로 새 세션과 세션 상한을 안전하게 반영할 수 없으면 Token과 쿠키를 발급하지 않고 `503 AUTHENTICATION_SERVICE_UNAVAILABLE`를 반환한다. 성공한 네 번째 로그인은 가장 오래된 기존 세션 하나를 폐기한 후 새 세션을 발급해 활성 세션을 3개로 유지한다.
+Redis 장애로 새 세션과 역할별 세션 상한을 안전하게 반영할 수 없으면 Token과 쿠키를 발급하지 않고 `503 AUTHENTICATION_SERVICE_UNAVAILABLE`를 반환한다. 새 로그인은 `MEMBER` 3개, `ADMIN` 1개 상한을 유지한다.
 
 ### API-MEMBER-AUTH-007 Access Token 재발급
 
 - Method: `POST`
 - Path: `/api/auth/tokens/refresh`
-- 인증: `__Secure-masiton-member-refresh` 쿠키
+- 인증: `__Secure-masiton-refresh` 쿠키
 - Bearer Token: 요구하지 않음
 
-유효한 활성 세션과 활성 회원의 아직 사용하지 않은 Refresh Token이면 기존 Token을 원자적으로 폐기·회전하고 로그인과 같은 `200 OK` 본문과 새 보안 쿠키를 반환한다. 재발급은 활성 세션 수를 늘리지 않는다.
+유효한 활성 세션과 `ACTIVE` 계정의 아직 사용하지 않은 Refresh Token이면 현재 DB 역할을 다시 확인해 기존 Token을 원자적으로 폐기·회전하고 로그인과 같은 `role` 포함 `200 OK` 본문과 새 보안 쿠키를 반환한다. 재발급은 활성 세션 수를 늘리지 않는다.
 
 - 쿠키 누락·변조·만료·폐기·회원 비활성: `401 INVALID_REFRESH_TOKEN`
 - 회전 전 Token 재사용: `401 INVALID_REFRESH_TOKEN`, 해당 Token 계열 폐기
 - Redis 장애: `503 AUTHENTICATION_SERVICE_UNAVAILABLE`, 새 Token과 쿠키 발급 금지
 
-무효 Refresh Token이 서버에서 사용 불가능하다고 확정되면 응답에서 회원 Refresh 쿠키를 만료한다. 같은 Refresh Token의 동시 요청은 하나만 성공하고 나머지는 재사용 탐지 규칙을 적용한다.
+무효 Refresh Token이 서버에서 사용 불가능하다고 확정되면 응답에서 통합 Refresh 쿠키를 만료한다. 같은 Refresh Token의 동시 요청은 하나만 성공하고 나머지는 재사용 탐지 규칙을 적용한다.
 
 ### API-MEMBER-AUTH-008 로그아웃
 
 - Method: `DELETE`
 - Path: `/api/auth/tokens`
-- 인증: 회원 Bearer JWT와 `__Secure-masiton-member-refresh` 쿠키
+- 인증: 통합 Bearer JWT와 `__Secure-masiton-refresh` 쿠키
 
 현재 Bearer JWT의 회원과 Refresh 세션 소유자가 일치하면 현재 세션만 폐기하고 쿠키를 만료한 뒤 `204 No Content`를 반환한다. 같은 회원의 다른 활성 세션은 유지한다. 이미 만료·폐기된 현재 Refresh Token은 다른 세션에 영향을 주지 않고 쿠키를 만료해 `204`를 반환한다. PostgreSQL 폐기 표식이 저장된 직후부터 현재 세션의 기존 Access Token도 `401 AUTHENTICATION_REQUIRED`로 거부한다.
 
@@ -323,7 +330,8 @@ Bearer JWT가 없거나 유효하지 않음, Refresh 쿠키 누락 또는 두 �
 ```json
 {
   "id": "member-id",
-  "email": "member@example.com"
+  "email": "member@example.com",
+  "role": "MEMBER"
 }
 ```
 
@@ -331,6 +339,7 @@ Bearer JWT가 없거나 유효하지 않음, Refresh 쿠키 누락 또는 두 �
 |---|---|---:|---|
 | `id` | string | 예 | 회원 자원 안에서 안정적인 불투명 식별자. 클라이언트가 생성 규칙을 해석하지 않는다. |
 | `email` | string | 예 | 회원의 정규화된 가입 이메일 |
+| `role` | string | 예 | 서버에서 확인한 현재 역할. `MEMBER` 또는 `ADMIN` |
 
 경로·쿼리로 회원 식별자를 받지 않는다. 인증이 없거나 Token이 무효하거나 Token 발급 뒤 계정이 비활성·탈퇴 처리 상태가 됐으면 `401 AUTHENTICATION_REQUIRED`다. 다른 회원의 존재 여부를 `403`이나 `404`로 구분하는 경로는 제공하지 않는다.
 
@@ -360,10 +369,10 @@ Bearer JWT가 없거나 유효하지 않음, Refresh 쿠키 누락 또는 두 �
 | 400 | `INVALID_PASSWORD_RESET_TOKEN` | 재설정 Token이 변조·만료·사용·교체됐거나 대상 상태가 유효하지 않음 |
 | 401 | `INVALID_CREDENTIALS` | 로그인 자격 증명·계정 상태·로그인 제한 실패를 구분하지 않음 |
 | 401 | `INVALID_REFRESH_TOKEN` | Refresh 쿠키 누락·무효·만료·폐기·재사용 또는 회원 비활성 |
-| 401 | `AUTHENTICATION_REQUIRED` | 보호 API의 회원 Bearer JWT가 없거나 무효, principal 불일치 |
-| 403 | `FORBIDDEN` | 유효한 회원 인증이 있지만 허용되지 않은 별도 권한이 필요한 경우. 본인 계정 API에서는 사용하지 않음 |
+| 401 | `AUTHENTICATION_REQUIRED` | 보호 API의 통합 Bearer JWT가 없거나 무효, principal 불일치 |
+| 403 | `FORBIDDEN` | 유효한 통합 인증이 있지만 현재 역할이 관리자 경계에 부족한 경우 |
 | 429 | `RATE_LIMIT_EXCEEDED` | 이메일 인증 코드 제출이 요청 출처당 10분 10회를 초과함 |
-| 503 | `AUTHENTICATION_SERVICE_UNAVAILABLE` | Redis 또는 PostgreSQL 인증 상태 저장소 장애로 회원 인증 상태의 생성·검증·폐기를 보장할 수 없음. 회원 Bearer의 `sid` 폐기 표식·계정 상태 조회 실패도 포함 |
+| 503 | `AUTHENTICATION_SERVICE_UNAVAILABLE` | Redis 또는 PostgreSQL 인증 상태 저장소 장애로 계정 인증 상태의 생성·검증·폐기를 보장할 수 없음. Bearer의 `sid` 폐기 표식·계정 상태 조회 실패도 포함 |
 | 500 | `INTERNAL_SERVER_ERROR` | 예상하지 못한 내부 실패 |
 
 탈퇴·비활성·미인증 상태를 알려주는 별도 공개 오류 코드는 두지 않는다. 로그인에서는 `401 INVALID_CREDENTIALS`, Refresh·보호 API에서는 각각 `401 INVALID_REFRESH_TOKEN` 또는 `401 AUTHENTICATION_REQUIRED`, 계정 상태 비노출 접수 API에서는 `202`로 일반화한다.
@@ -377,9 +386,9 @@ Bearer JWT가 없거나 유효하지 않음, Refresh 쿠키 누락 또는 두 �
 - 인증·재설정 Token 원문은 저장소·로그·URL에 남지 않고 최신 Token 한 번만 성공한다.
 - 가입·인증 재발송·재설정 요청의 미존재·미인증·탈퇴·활성·제한·메일 실패 응답은 상태·본문·헤더가 같다.
 - 로그인 상태별 동일 오류와 p95 100ms 기준, 세 종류 실패 제한을 검증한다.
-- 네 번째 로그인 뒤 활성 세션은 3개이며 가장 오래된 세션만 재발급할 수 없다.
+- `MEMBER` 네 번째 로그인 뒤 활성 세션은 3개, `ADMIN` 재로그인 뒤 활성 세션은 1개이며 가장 오래된 초과 세션은 재발급할 수 없다.
 - Refresh Token 회전·동시 요청·재사용 탐지와 Token 계열 폐기를 검증한다.
-- 관리자 Token·쿠키·Redis 상태가 회원 인증에 사용되지 않고 반대 방향도 거부되는지 검증한다.
+- 동일 Token·쿠키·Redis 세션이 역할에 따라 본인 경계에서는 동작하고 관리자 경계에서는 현재 `ADMIN`만 허용되는지 검증한다.
 - Redis 장애에서 로그인·재발급·로그아웃이 fail-closed이고 공개 조회는 정상인지 검증한다.
 - 현재 회원 조회·탈퇴가 Principal 본인만 사용하며 경로 식별자로 다른 회원을 지정할 수 없는지 검증한다.
 - 비밀번호 재설정과 탈퇴 뒤 기존 모든 Access·Refresh Token 및 남은 일회용 Token을 사용할 수 없는지 검증한다.
@@ -404,6 +413,6 @@ Bearer JWT가 없거나 유효하지 않음, Refresh 쿠키 누락 또는 두 �
 
 - 회원가입 → 이메일 인증 → 로그인 → 현재 사용자 조회 → 재발급 → 로그아웃 흐름이 브라우저·통합 테스트를 통과한다.
 - 비밀번호 재설정과 탈퇴 뒤 인증·개인화 데이터 폐기 및 동일 이메일 재가입 조건이 검증된다.
-- 계정 상태 비노출, 요청·로그인 제한, 최대 3세션, Refresh 회전·재사용과 Redis 장애가 정상·예외·동시성 테스트를 통과한다.
-- 관리자·회원 인증 matcher, principal, audience, 쿠키와 Redis namespace 분리가 Security 통합 테스트로 검증된다.
-- API 추적표, 데이터 계약, 보안 경계와 ADR-WEB-003이 이 경로·Token 전달 계약에 맞게 갱신된다.
+- 계정 상태 비노출, 요청·로그인 제한, 역할별 세션 상한, Refresh 회전·재사용과 Redis 장애가 정상·예외·동시성 테스트를 통과한다.
+- 통합 matcher, principal, audience, 쿠키와 Redis namespace 및 서버 RBAC가 Security 통합 테스트로 검증된다.
+- API 추적표, 데이터 계약, 보안 경계와 ADR-WEB-006이 이 경로·Token 전달 계약에 맞게 갱신된다.

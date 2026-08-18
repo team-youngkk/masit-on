@@ -15,7 +15,7 @@ related_documents:
   - ../api/admin/visit-registration-api.md
   - ../../02-analysis/mvp-workstreams.md
   - ../../01-requirements/non-functional-requirements.md
-  - ../api/admin/authentication-api.md
+  - ../api/account/member-authentication-api.md
   - physical-data-model.md
   - table-definitions.md
 ---
@@ -286,37 +286,38 @@ Visit의 실제 방문 근거 후보로 등록된 YouTube 원본 콘텐츠의 �
 - 같은 세 대상 조합은 중복이며, 같은 Restaurant·Creator라도 Video가 다르면 별도 Visit를 허용한다.
 - 관련 항목: [FR-VISIT-001](../../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록), [BR-CREATOR-005](../../01-requirements/business-rules.md#br-creator-005-방문-관계의-유튜버-일치), [BR-VIDEO-004](../../01-requirements/business-rules.md#br-video-004-영상과-방문-관계의-다대상-연결)~[BR-VIDEO-006](../../01-requirements/business-rules.md#br-video-006-게시일과-방문일의-구분), [BR-VISIT-001](../../01-requirements/business-rules.md#br-visit-001-방문-관계의-구성)~[BR-VISIT-007](../../01-requirements/business-rules.md#br-visit-007-등록-완료와-검증-상태), [API-ADMIN-VISIT-001](../api/admin/visit-registration-api.md#api-admin-visit-001-방문-관계-등록)
 
-## AdminAccount
+## MemberAccount
 
 ### 정의
 
-MVP 관리자 인증에 사용하는 사전 발급 내부 계정이다. 일반 사용자 회원 모델과 분리된다.
+일반 회원과 관리자가 통합 로그인에서 공유하는 유일한 계정 원천이다. 권한은 `role`로 구분하며 별도 관리자 계정을 신규 생성하지 않는다.
 
 ### 소유 책임
 
-- [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록)의 관리자 인증 애플리케이션 책임. 발급·회수·복구는 수동 운영이다.
+- Member/Auth가 일반 회원 수명주기를 소유한다. `ADMIN` 발급·역할 변경·회수는 승인된 운영 절차만 수행한다.
 
 ### 속성
 
 | 속성 | 의미 | 필수 여부 | 유일성 | 공개 여부 | 비고 |
 |---|---|---:|---:|---:|---|
 | id | 내부 식별자 | 필수 | 유일 | 비공개 | API 미노출 |
-| loginId | 로그인 식별자 | 필수 | 유일 | 비공개 | 존재 여부를 오류로 구분하지 않음 |
+| email | 정규화된 로그인 이메일 | 필수 | 유일 | 비공개 | 일반 회원·관리자 공통 식별자 |
 | passwordCredential | 안전하게 변환된 비밀번호 자격 증명 | 필수 | 아님 | 비공개 | 평문 저장 금지, 방식은 후속 보안 설계 |
-| active | 로그인·등록 권한 활성 여부 | 필수 | 아님 | 비공개 | 동일 등록 권한만 사용 |
+| role | RBAC 역할 | 필수 | 아님 | 제한 공개 | `MEMBER` 또는 `ADMIN`, 기본값 `MEMBER` |
+| status | 계정 상태 | 필수 | 아님 | 비공개 | `ACTIVE`만 로그인 가능 |
 | createdAt / updatedAt | 발급·변경 시각 | 공통 요구 | 아님 | 비공개 |  |
 
-회원가입, 역할 목록, 계정 관리 화면과 비밀번호 복구 데이터는 MVP에 추가하지 않는다.
+공개 회원가입은 역할 입력을 받지 않고 항상 `MEMBER`를 생성한다. `ADMIN`은 승인된 운영 발급 또는 역할 변경으로만 부여하며, 역할·상태·비밀번호 변경과 관리자 권한 회수는 활성 세션을 모두 폐기한다.
 
 ### 관련 항목
 
-- [FR-ADMIN-001](../../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근), [BR-ADMIN-001](../../01-requirements/business-rules.md#br-admin-001-관리자-권한-검증), [NFR-SECURITY-001](../../01-requirements/non-functional-requirements.md#nfr-security-001-공개-조회와-관리자-접근-통제)·[NFR-SECURITY-003](../../01-requirements/non-functional-requirements.md#nfr-security-003-비밀정보와-오류-정보-보호), [NFR-PRIVACY-002](../../01-requirements/non-functional-requirements.md#nfr-privacy-002-인증정보와-외부-키-보호), [API-ADMIN-AUTH-001](../api/admin/authentication-api.md#api-admin-auth-001-관리자-로그인)~[API-ADMIN-AUTH-003](../api/admin/authentication-api.md#api-admin-auth-003-관리자-로그아웃)
+- [FR-ADMIN-001](../../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근), [BR-ADMIN-001](../../01-requirements/business-rules.md#br-admin-001-관리자-권한-검증), [NFR-SECURITY-001](../../01-requirements/non-functional-requirements.md#nfr-security-001-공개-조회와-관리자-접근-통제)·[NFR-SECURITY-003](../../01-requirements/non-functional-requirements.md#nfr-security-003-비밀정보와-오류-정보-보호), [NFR-PRIVACY-002](../../01-requirements/non-functional-requirements.md#nfr-privacy-002-인증정보와-외부-키-보호), [회원 인증 API](../api/account/member-authentication-api.md)
 
-## AdminRefreshToken
+## AuthSession
 
 ### 정의
 
-관리자 JWT Access Token 재발급과 폐기를 통제하기 위해 Redis 8.8에 저장하는 Refresh Token 상태다. Access Token JWT 자체는 영속 엔티티로 저장하지 않는다.
+통합 로그인 JWT Access Token 재발급과 폐기를 통제하기 위해 Redis 8.8 `auth:session:` namespace에 저장하는 Refresh Token 상태다. Access Token JWT 자체는 영속 엔티티로 저장하지 않는다.
 
 ### 속성
 
@@ -331,6 +332,7 @@ MVP 관리자 인증에 사용하는 사전 발급 내부 계정이다. 일반 �
 
 ### 관계와 규칙
 
-- 정확히 하나의 AdminAccount를 참조한다.
-- 계정당 활성 Refresh Token은 최대 하나이며 새 로그인은 기존 Token을 폐기한다.
-- 저장 매체는 Redis 8.8, TTL은 14일로 확정한다. 키 형식, 검증값 해시·암호화, 서명 키 교체와 로그인 제한 카운터는 후속 기술 설계 대상이다.
+- 정확히 하나의 MemberAccount를 참조한다.
+- 계정당 활성 세션 상한은 `MEMBER` 3개, `ADMIN` 1개다. 상한 초과 시 인증 계약에 정의된 순서로 기존 세션을 폐기한다.
+- 역할·상태·비밀번호 변경은 해당 계정의 세션을 모두 폐기한다. 전환 배포에서는 기존 관리자 Refresh Token을 모두 무효화한다.
+- 저장 매체는 Redis 8.8, TTL은 14일로 유지한다. 키·쿠키·검증값·회전·재사용 탐지의 정본은 후속 ADR-AUTH-007이다.
