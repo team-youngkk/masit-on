@@ -13,11 +13,13 @@ related_requirements:
   - FR-COURSE-001
   - FR-COURSE-002
   - FR-COURSE-003
+  - FR-COURSE-004
 related_business_rules:
   - BR-COURSE-001
   - BR-COURSE-002
   - BR-COURSE-003
   - BR-COURSE-004
+  - BR-COURSE-005
 related_nfr:
   - NFR-PRIVACY-006
   - NFR-COST-001
@@ -40,6 +42,8 @@ related_documents:
   - ../common/response-contract.md
   - ../common/error-contract.md
   - ../common/identifier-contract.md
+  - ../common/coordinate-contract.md
+  - ../../../08-planning/issue-231-course-route-map.md
 ---
 
 # 맛집 코스 추천 API
@@ -137,19 +141,22 @@ related_documents:
       "sequence": 1,
       "restaurantId": "restaurant-id-1",
       "name": "출발 맛집",
-      "role": "START"
+      "role": "START",
+      "coordinate": { "latitude": 37.5665, "longitude": 126.9780 }
     },
     {
       "sequence": 2,
       "restaurantId": "restaurant-id-3",
       "name": "두 번째 맛집",
-      "role": "WAYPOINT"
+      "role": "WAYPOINT",
+      "coordinate": { "latitude": 37.5651, "longitude": 126.9812 }
     },
     {
       "sequence": 3,
       "restaurantId": "restaurant-id-2",
       "name": "마지막 맛집",
-      "role": "DESTINATION"
+      "role": "DESTINATION",
+      "coordinate": { "latitude": 37.5601, "longitude": 126.9850 }
     }
   ],
   "segments": [
@@ -157,13 +164,21 @@ related_documents:
       "fromRestaurantId": "restaurant-id-1",
       "toRestaurantId": "restaurant-id-3",
       "distanceMeters": 4200,
-      "durationSeconds": 780
+      "durationSeconds": 780,
+      "shapeStatus": "AVAILABLE",
+      "path": [
+        { "latitude": 37.5665, "longitude": 126.9780 },
+        { "latitude": 37.5660, "longitude": 126.9795 },
+        { "latitude": 37.5651, "longitude": 126.9812 }
+      ]
     },
     {
       "fromRestaurantId": "restaurant-id-3",
       "toRestaurantId": "restaurant-id-2",
       "distanceMeters": 3100,
-      "durationSeconds": 600
+      "durationSeconds": 600,
+      "shapeStatus": "MISSING",
+      "path": []
     }
   ],
   "totalDistanceMeters": 7300,
@@ -185,17 +200,26 @@ related_documents:
 | `restaurants[].restaurantId` | string | 예 | 맛집 식별자 |
 | `restaurants[].name` | string | 예 | 공개 맛집 이름 |
 | `restaurants[].role` | enum | 예 | `START`, `WAYPOINT`, `DESTINATION` |
+| `restaurants[].coordinate` | object | 예 | 지도 마커 표시용 WGS84 좌표(`latitude`, `longitude`). [좌표 공통 계약](../common/coordinate-contract.md)을 따른다 |
 | `segments` | array | 예 | 인접 방문지 사이 실제 경로 구간 |
 | `segments[].fromRestaurantId` | string | 예 | 출발 맛집 식별자 |
 | `segments[].toRestaurantId` | string | 예 | 도착 맛집 식별자 |
 | `segments[].distanceMeters` | integer | 예 | 외부 제공 실제 경로 거리 |
 | `segments[].durationSeconds` | integer | 예 | 외부 제공 예상 소요 시간 |
+| `segments[].shapeStatus` | enum | 예 | `AVAILABLE`(형상 제공됨) 또는 `MISSING`(형상만 누락, 거리·시간은 정상) |
+| `segments[].path` | array | 예 | 제공자 중립 WGS84 좌표 배열. `shapeStatus`가 `MISSING`이면 빈 배열 |
 | `totalDistanceMeters` | integer | 예 | 구간 실제 거리 합계 |
 | `totalDurationSeconds` | integer | 예 | 구간 예상 시간 합계 |
 | `generatedAt` | date-time | 예 | 응답 생성 시각 |
 | `expiresAt` | date-time | 예 | 생성 시각 5분 뒤의 재조회 만료 시각 |
 
-응답에는 좌표, Kakao 원문 응답, API Key, 현재 위치와 개인 식별자를 포함하지 않는다. 모든 식별자는 구조를 해석하지 않는 문자열이다.
+응답에는 Kakao 원문 응답, API Key, 현재 위치, 지도 뷰포트와 개인 식별자를 포함하지 않는다. `restaurants[].coordinate`와 `segments[].path`는 지도에 순서 마커와 실제 경로 선을 표시하기 위한 의도적 예외이며, 그 밖의 내부 계산 좌표는 노출하지 않는다. 모든 식별자는 구조를 해석하지 않는 문자열이다.
+
+### 경로 형상 상한과 저하
+
+- `segments[].path`는 세그먼트당 최대 500개 좌표점을 담는다. 제공자 응답이 상한을 초과하면 시작점과 끝점을 보존한 균등 간격 샘플링으로 상한 이내로 줄인다. 이 축소는 오류가 아니며 `shapeStatus`는 `AVAILABLE`로 유지한다.
+- 제공자 응답에 특정 구간의 형상 좌표가 전혀 없지만 그 구간의 거리·시간은 정상이면 해당 구간만 `shapeStatus: MISSING`, `path: []`로 표시하고 `status`는 `SUCCEEDED`를 유지한다. 이 경우는 `COURSE_ROUTE_PARTIAL_FAILURE`가 아니다.
+- 하나 이상의 구간에서 거리·시간 계산 자체가 실패하면 기존과 동일하게 `COURSE_ROUTE_PARTIAL_FAILURE`를 반환하며 이때는 `restaurants`·`segments`를 포함한 성공 응답을 만들지 않는다.
 
 ## 5. Distance and Expiry Rules
 
@@ -261,7 +285,7 @@ related_documents:
 - Free Tier quota 초과 전 hard stop하며 유료 호출은 항상 금지한다. 무료 quota·계약 확인이 없으면 호출하지 않는다.
 - 연결 1초·응답 4초·전체 5초 timeout과 재시도 0회를 적용한다. 429·5xx·quota 오류는 실패 상태로 반환한다.
 - 외부 장애는 코스 API에 격리하고 기존 목록·상세·자연어 탐색에 전파하지 않는다.
-- 로그에는 좌표 원문, 외부 응답, API Key, 현재 위치와 회원 식별자를 남기지 않는다.
+- 로그에는 좌표·경로 형상, 외부 응답, API Key, 현재 위치, 지도 뷰포트와 회원 식별자를 남기지 않는다. 좌표·경로는 응답 필드로만 노출하며 로그 예외는 없다.
 - 내부 입력 검증·응답 조합 p95 500ms, 외부 호출 포함 정상 또는 명시적 실패 5초 이내를 목표로 한다.
 
 ## 8. API 완료 조건
@@ -271,5 +295,8 @@ related_documents:
 - [ ] 위치·선택 이력·경로 결과 저장 0건과 외부 전송 필드 최소화를 검증한다.
 - [ ] Kakao Mobility 운영 계정 인증·quota 연결과 `/v1/directions` WireMock 계약을 검증한다.
 - [ ] 50명·20 RPS와 200명·80 RPS에서 기존 탐색 격리와 응답 시간을 검증한다.
+- [ ] FR-COURSE-004와 BR-COURSE-005의 `restaurants[].coordinate`·`segments[].path`·`shapeStatus` 응답과 형상만 누락된 경우의 `SUCCEEDED` 유지를 계약 테스트로 고정한다.
+- [ ] `segments[].path`가 세그먼트당 500개를 초과할 때 시작·끝점을 보존한 샘플링으로 상한 이내로 줄어드는 것을 WireMock으로 검증한다.
+- [ ] 응답·로그에 Kakao 원문 응답·API Key·현재 위치·지도 뷰포트가 없는 것을 검증한다.
 
 ---

@@ -9,10 +9,12 @@ related_requirements:
   - FR-COURSE-001
   - FR-COURSE-002
   - FR-COURSE-003
+  - FR-COURSE-004
   - BR-COURSE-001
   - BR-COURSE-002
   - BR-COURSE-003
   - BR-COURSE-004
+  - BR-COURSE-005
   - NFR-EXTERNAL-005
   - NFR-PERFORMANCE-007
   - NFR-PRIVACY-006
@@ -23,6 +25,7 @@ related_documents:
   - ../../04-product/prd/discovery/restaurant-course-recommendation.md
   - ../../04-product/user-flows/third-expansion-user-flows.md
   - ../../08-planning/third-expansion-baseline-review.md
+  - ../../08-planning/issue-231-course-route-map.md
   - ../architecture/arch-002-external-ports-adapters.md
   - ../integration/map-001-map-bounds-search.md
   - ../security/sec-001-secrets-workload-identity.md
@@ -37,13 +40,15 @@ superseded_by: null
 
 ## 1. 상태
 
-Accepted. 요청 시 경로 계산, 초기 비저장·비캐시, Port/Adapter 경계와 Kakao Mobility 자동차 길찾기 `/v1/directions` 사용을 2026-08-10 확정했다. 실제 운영 계정 quota·인증 연결은 활성화 전 검증한다.
+Accepted. 요청 시 경로 계산, 초기 비저장·비캐시, Port/Adapter 경계와 Kakao Mobility 자동차 길찾기 `/v1/directions` 사용을 2026-08-10 확정했다. 실제 운영 계정 quota·인증 연결은 활성화 전 검증한다. 2026-08-18에는 [이슈 #231](https://github.com/team-youngkk/masit-on/issues/231) 문서화 초안([`D-231-01`~`06`](../../08-planning/issue-231-course-route-map.md#10-결정-확정-이슈-233))을 확정해 지도 표시를 위한 실제 경로 형상 취득 방식과 응답 경계를 추가했다.
 
 ## 2. 결정 요약
 
 코스 추천은 새 `Route` 또는 `Course` 영속 도메인을 만들지 않고, [WS-16](../../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천)의 요청·조회 애플리케이션에서 사용자가 선택한 2~5개 공개 맛집의 Restaurant 좌표를 Kakao Mobility 자동차 경로 API에 전달한다.
 
 외부 경로 호출은 Port/Adapter로 격리한다. 결과는 초기에는 일회성 응답으로 제공하고 TTL은 5분으로 고정하며 서버 캐시는 사용하지 않는다.
+
+지도에 실제 자동차 경로 선과 순서 마커를 표시하기 위해, 같은 1회 호출을 `summary=false`로 전환해 제공자의 `sections[].roads[].vertexes` 형상을 함께 받고 Adapter가 제공자 중립 좌표 배열로 정규화한다. 방문지 좌표와 구간 형상 좌표는 이 목적에 한정해 API 응답에 노출하는 의도적 예외이며, 그 밖의 좌표(지도 뷰포트 등)는 여전히 노출하지 않는다.
 
 ## 3. 배경
 
@@ -71,6 +76,7 @@ Restaurant에는 지도 표시를 위한 nullable WGS84 좌표가 이미 존재�
 - Adapter는 좌표·자동차 이동 조건을 외부 요청으로 변환하고 거리·시간·구간·제공자 오류를 내부 계약으로 변환한다.
 - 외부 키·원문 응답·민감한 요청 정보를 로그·응답에 노출하지 않는다.
 - 연결 timeout 1초·응답 timeout 4초·전체 5초를 적용하고 재시도하지 않는다. 429·5xx·quota 오류와 호출 상한은 실패 상태로 기록한다.
+- 요청은 `summary=false`로 호출한다. `summary=true`는 `sections[].roads`를 제외해 실제 경로 형상을 받을 수 없으므로, 기존 코스당 최대 1회 호출 계약을 유지한 채 같은 호출의 모드만 전환한다. Adapter는 `sections[].roads[].vertexes`(경도·위도 교차 배열)를 위도·경도 쌍의 목록으로 정규화하고, 제공자 원문 필드명·좌표 순서·부가 메타데이터는 내부 계약과 응답에 노출하지 않는다.
 
 ### 5.3. 결과와 실패
 
@@ -79,6 +85,12 @@ Restaurant에는 지도 표시를 위한 nullable WGS84 좌표가 이미 존재�
 - 외부 호출이 실패하면 실패 상태와 재시도 안내를 반환한다.
 - 일부 구간만 성공한 경우 성공하지 않은 구간을 추정해 정상 코스로 표시하지 않는다.
 - 초기에는 코스 결과를 사용자별로 저장·공유하지 않는다.
+
+### 5.5. 경로 형상과 지도 표시
+
+- 방문지에는 지도 마커 표시를 위한 WGS84 좌표를, 구간에는 정규화된 경로 형상 좌표 배열(`path`)과 형상 상태(`shapeStatus`)를 결과에 포함한다. 이 두 좌표 노출은 지도 표시 목적에 한정한 의도적 예외이며, 그 밖의 좌표(지도 뷰포트 등)는 여전히 노출하지 않는다.
+- 구간별 거리·시간 계산은 정상이지만 그 구간의 형상 좌표만 제공되지 않으면 해당 구간만 `shapeStatus: MISSING`으로 표시하고 결과 전체는 `SUCCEEDED`로 유지한다. 직선이나 추정 경로를 대체 형상으로 표시하지 않는다. 이는 5.3절의 "일부 구간만 성공" 실패 처리와 별개이며, 구간의 거리·시간 계산 자체가 실패한 경우에만 5.3절의 실패 상태를 적용한다.
+- 구간 형상 좌표는 세그먼트당 최대 500개로 제한한다. 제공자 응답이 상한을 초과하면 시작점과 끝점을 보존한 균등 간격 샘플링으로 줄이며, 이 축소를 형상 누락이나 실패로 취급하지 않는다. 이 상한은 실제 트래픽 분포를 관찰할 수 없는 상태(로컬·자동화 테스트의 실제 Kakao API 호출 금지)에서 정한 초기 공학적 값이며, 운영 데이터가 쌓이면 재조정할 수 있다.
 
 ### 5.4. 캐시
 
@@ -90,6 +102,9 @@ Restaurant에는 지도 표시를 위한 nullable WGS84 좌표가 이미 존재�
 - **Port/Adapter를 통한 Kakao Mobility 호출**: 제공자 계약을 격리하고 WireMock으로 실패·quota·부분 결과를 재현할 수 있다.
 - **자체 거리 계산·직선거리 fallback**: 실제 자동차 경로가 아닌 결과를 정상 경로처럼 제공할 위험이 있어 초기에는 사용하지 않는다.
 - **모든 결과를 DB에 저장**: 초기 범위의 저장·공유를 넘어 보존·개인정보·무효화 책임을 만들므로 사용하지 않는다.
+- **직선 좌표로 경로 형상 대체**: 실제 자동차 이동 경로가 아닌 결과를 정상 경로처럼 표시할 위험이 있어 사용하지 않는다.
+- **형상 좌표 상한 초과 시 요청 전체 거부**: 거리·시간이 정상인데도 지도 표시 문제만으로 전체 코스를 실패시키는 것은 과도하므로, 시작·끝점을 보존한 샘플링으로 대체한다.
+- **형상 누락 시 코스 전체 실패**: 순서·거리·시간 결과가 이미 정상인데 지도 표시 문제로 전체 코스를 무효화하면 사용자에게 유용한 정보를 잃으므로, 형상 상태 필드로 지도만 저하시키는 방식을 선택한다.
 
 ## 7. 트레이드오프
 
@@ -102,6 +117,8 @@ Restaurant에는 지도 표시를 위한 nullable WGS84 좌표가 이미 존재�
 - 외부 호출 실패가 기존 맛집 목록·상세 기능을 중단시키지 않는지 확인한다.
 - 요청별 호출 수·응답 시간·무료 quota 사용량을 기록하고 quota hard stop을 검증한다.
 - 좌표 보강률과 단일 EC2 용량을 확인한다.
+- `summary=false` WireMock Fixture로 `roads[].vertexes` 정규화, 세그먼트당 500개 상한 초과 시 샘플링, 거리·시간은 정상이지만 형상만 없는 응답의 `shapeStatus: MISSING` 처리를 검증한다.
+- 응답·로그에 Kakao 원문 응답·API Key·현재 위치·지도 뷰포트가 없는 것을 검증한다.
 - [NFR-EXTERNAL-005](../../01-requirements/non-functional-requirements.md#nfr-external-005-ai와-mobility-timeoutrate-limit재시도), [NFR-PERFORMANCE-007](../../01-requirements/non-functional-requirements.md#nfr-performance-007-자연어-검색과-경로-응답-시간), [NFR-COST-001](../../01-requirements/non-functional-requirements.md#nfr-cost-001-ai임베딩mobility-호출-비용-상한)의 목표와 수치를 계약 기준으로 사용한다. 실제 quota 연결과 부하 결과는 활성화·최종 완료 증거로 추가한다.
 
 ## 9. 확정 운영 규칙
@@ -110,3 +127,5 @@ Restaurant에는 지도 표시를 위한 nullable WGS84 좌표가 이미 존재�
 - 코스당 외부 호출은 최대 1회, 결과 TTL은 5분, 서버 캐시는 없고 유료 비용은 0원·앱 월 1,000건 상한이다.
 - Mobility timeout은 1초·4초·5초, 재시도 0회다. 실패·429·부분 결과는 추정값 없는 실패 상태로 반환한다.
 - API 자격 증명과 quota가 확인되지 않으면 코스 외부 호출을 hard stop하고 기존 탐색 기능은 계속 제공한다.
+- 코스당 1회 호출은 `summary=false`로 실행해 실제 경로 형상을 함께 받는다. 방문지 좌표와 구간 형상 좌표(세그먼트당 최대 500개, 초과 시 시작·끝점 보존 샘플링)는 지도 표시 목적에 한정해 응답에 노출한다.
+- 구간 거리·시간이 정상인데 형상만 없으면 `shapeStatus: MISSING`으로 표시하고 결과 전체는 성공으로 유지한다. 직선이나 추정 경로로 대체하지 않는다.
