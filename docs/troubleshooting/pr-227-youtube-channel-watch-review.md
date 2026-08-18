@@ -51,6 +51,7 @@ related_documents:
 | [DB 경계 페이징](https://github.com/team-youngkk/masit-on/pull/227#discussion_r3800842686) | 전체 Creator/Watch를 읽은 뒤 애플리케이션에서 page를 자르지 않도록 수정 | 데이터베이스 | 수정 필요 | Creator·Watch 조인 경계에서 후보 `COUNT(*)`와 `ORDER BY ... LIMIT/OFFSET`을 수행하고 페이지 행의 Watch 상태를 같은 조회에서 매핑 | 백엔드 컴파일·서비스 회귀 테스트 통과, PostgreSQL 통합은 CI 확인 |
 | [V4/V5 컬럼 기대 분리](https://github.com/team-youngkk/masit-on/pull/227#discussion_r3800573744) | V4 전용 시나리오에서 V5 `last_error_at`을 요구하지 않도록 분리 | 데이터베이스 | 이미 해결 | 기존 커밋에서 migration assertion helper에 적용 버전별 기대 컬럼을 분리 | CI #32094957568 백엔드 통과 |
 | [현재 Prompt P7](https://github.com/team-youngkk/masit-on/pull/227#discussion_r3800573748) | V5 문서 보강 과정에서 현재 Prompt P7을 과거 값으로 되돌리지 않음 | 기타(계약·문서) | 이미 해결 | 현재 Prompt를 P7로 복원하고 P1~P6 역사 이력도 함께 명시 | CI #32094957568 백엔드 통과 |
+| [접근 불가 실패 행 버튼 문구](https://github.com/team-youngkk/masit-on/pull/227#discussion_r3801149979) | 접근 불가 `RENEWAL_FAILED` 행의 `감시 재시작` 문구를 실제 `enabled=false` 중지 동작과 일치 | 애플리케이션 | 수정 필요 | 버튼 라벨이 계산된 action의 요청값을 반영하도록 수정하고 회귀 테스트 추가 | 프런트 테스트·typecheck 및 최신 CI 통과 |
 
 ## 3. 문제 현상과 발생 조건
 
@@ -88,6 +89,7 @@ related_documents:
 - 감시 상태는 채널 ID 목록을 한 번에 조회하고, 관리자 화면은 각 행의 pending/error 상태를 분리해 한 행의 실패가 다른 행을 막지 않도록 했다.
 - 감시 목록은 `creator`와 `youtube_channel_watch`를 조인해 공개·활성·외부 가용 후보 또는 기존 Watch 소유자만 DB에서 선별한다. 후보 `COUNT(*)`와 정렬·`LIMIT/OFFSET`을 조회 경계에서 수행해 페이지 행의 상태만 읽는다. 전체 수는 마지막 페이지를 넘어간 요청에서도 유지되도록 별도 count 조회로 가져온다. 따라서 공개 목록에서 빠진 기존 Watch도 목록에 남아 중지할 수 있다.
 - 프런트 토글은 시작/재시작 가능 여부와 기존 감시 중지 가능 여부를 분리했다. 접근 불가한 `RENEWAL_FAILED`도 중지 요청은 보낼 수 있고, 공개·외부 가용 상태일 때만 재시작한다.
+- 접근 불가한 `RENEWAL_FAILED` 행의 버튼 라벨도 실제 요청값에 맞춰 `감시 중지`로 표시해, 재시작처럼 보이는 운영 오조작을 막는다.
 - 현재 Prompt `P7`을 유지하면서 과거 Prompt `P1`~`P6` 작업·Snapshot의 역사적 보존 계약을 복원했다.
 - V4 대상 Flyway 검증은 V4 컬럼만, 최신 V5 검증은 `last_error_at`까지 기대하도록 분리했으며 Prompt 문서 계약을 P7로 맞췄다.
 
@@ -126,5 +128,5 @@ related_documents:
 ## 10. 남은 사항
 
 - 로컬 Docker 데몬 부재로 full-context 보안 테스트와 PostgreSQL 통합 테스트를 실행하지 못했다. 코드 컴파일과 비컨테이너 테스트는 통과했다.
-- 기존 12개와 이번 후속 4개 수정 필요 스레드의 반영 내용·검증 범위를 답글로 남기고 해결 처리했다. 이미 반영된 2개 스레드도 기존 CI 근거로 확인 처리한다.
+- 기존 12개와 이번 후속 5개 수정 필요 스레드의 반영 내용·검증 범위를 답글로 남기고 해결 처리한다. 이미 반영된 2개 스레드도 기존 CI 근거로 확인 처리한다.
 - 남은 코드·계약 변경 사항은 없다. GitHub Actions에 표시된 Node.js 20 및 setup-java v4 deprecation은 저장소 액션 유지보수 경고로, 이번 변경의 테스트 실패가 아니다.

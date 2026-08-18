@@ -71,6 +71,7 @@ test('응답 경계값은 허용된 상태와 안전한 nullable 필드로 정�
 test('전환 중에도 현재 상태 기준 토글 문구를 일관되게 계산한다', () => {
   assert.equal(watchToggleLabel({ enabled: true, subscriptionStatus: 'ACTIVE', lastNotificationAt: null, lastRenewedAt: null, lastErrorCategory: null, lastErrorAt: null }), '감시 중지')
   assert.equal(watchToggleLabel({ enabled: true, subscriptionStatus: 'RENEWAL_FAILED', lastNotificationAt: null, lastRenewedAt: null, lastErrorCategory: null, lastErrorAt: null }), '감시 재시작')
+  assert.equal(watchToggleLabel({ enabled: true, subscriptionStatus: 'RENEWAL_FAILED', lastNotificationAt: null, lastRenewedAt: null, lastErrorCategory: null, lastErrorAt: null }, false), '감시 중지')
   assert.equal(watchToggleEnabled({ enabled: true, subscriptionStatus: 'RENEWAL_FAILED', lastNotificationAt: null, lastRenewedAt: null, lastErrorCategory: null, lastErrorAt: null }), true)
   assert.equal(watchToggleEnabled({ enabled: true, subscriptionStatus: 'ACTIVE', lastNotificationAt: null, lastRenewedAt: null, lastErrorCategory: null, lastErrorAt: null }), false)
   assert.equal(watchToggleLabel(null), '감시 시작')

@@ -55,7 +55,8 @@ export function watchErrorCategoryLabel(category: string | null): string {
   return ERROR_PRESENTATIONS[category]?.label ?? '분류되지 않은 오류'
 }
 
-export function watchToggleLabel(status: YoutubeChannelWatchStatus | null): string {
+export function watchToggleLabel(status: YoutubeChannelWatchStatus | null, requestedEnabled?: boolean): string {
+  if (status?.enabled && requestedEnabled === false) return '감시 중지'
   if (status?.subscriptionStatus === 'RENEWAL_FAILED') return '감시 재시작'
   return status?.enabled ? '감시 중지' : '감시 시작'
 }

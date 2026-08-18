@@ -170,7 +170,7 @@ function WatchStatusPanel({
       <div className={styles.statusActions}>
         <span className={styles.meta}>{watchEnabledLabel(status.enabled)}</span>
         <Button disabled={busy || !action.allowed} onClick={onToggle}>
-          {busy ? '저장 중…' : watchToggleLabel(status)}
+          {busy ? '저장 중…' : watchToggleLabel(status, action.enabled)}
         </Button>
       </div>
     </div>
