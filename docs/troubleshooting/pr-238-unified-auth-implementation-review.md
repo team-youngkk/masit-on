@@ -67,6 +67,7 @@ related_documents:
 | `./gradlew.bat compileTestJava test --tests com.masiton.member.application.MemberAuthenticationServiceTest --tests com.masiton.security.infrastructure.web.LoginSourceRateLimitFilterTest --tests com.masiton.architecture.ArchitectureTest --no-daemon --console=plain` | 통과 | 서비스 19건, 필터 2건, 아키텍처 10건 |
 | `git diff --check` | 통과 | 공백 오류 없음 |
 | PR #238 CI run `32135495164` | 실패 | 프론트엔드·Terraform은 통과. 공통 resolver 주입 모호성으로 백엔드 Context가 연쇄 실패해 qualifier를 후속 보완했다. |
+| PR #238 CI run `32136091504` | 실패 | 프론트엔드·Terraform 통과. `SecurityConfigurationApiTest` 25건, `RedisRefreshTokenStoreIntegrationTest` 19건, `ArchitectureTest` 10건 통과. 백엔드 1,309건 중 남은 27건은 role 컬럼 부재로 인한 SQL 오류 또는 그 503 전파다. |
 | PostgreSQL·Redis·MockMvc 통합 테스트 | 미실행 | 로컬 Docker daemon 미가동. push 뒤 CI에서 재검증한다. |
 
 ## 8. 재발 방지 및 다음 확인
@@ -78,7 +79,7 @@ related_documents:
 
 | 지표 | 도입 전 기준값 | 측정 방법·기간 | 배포 확장 후 값 | 비교 결과 | 담당자·확인 시점/이슈 |
 |---|---|---|---|---|---|
-| 백엔드 CI 실패 수 | 최초 38건, 첫 수정 run 249건 | PR #238 CI run별 비교 | 재실행 예정 | 첫 수정 run의 주입 모호성은 보완했으나 migration 결정 전에는 전체 0건을 보장할 수 없음 | PR 작성자, 다음 CI run |
+| 백엔드 CI 실패 수 | 최초 38건, 첫 수정 run 249건 | PR #238 CI run별 비교 | 27건 | 코드·픽스처 회귀는 해소됐고 남은 실패는 role migration 결정에 수렴 | 데이터·인증 소유자, PR #238 |
 | 성공 로그인 뒤 계정 실패 카운터 | 로그인마다 1 증가 | Redis 통합 테스트 10회 | 0 증가 기대 | CI 재실행에서 확인 | 인증 소유자, PR #238 |
 
 ## 10. 남은 사항
