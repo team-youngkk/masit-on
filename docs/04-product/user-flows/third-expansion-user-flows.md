@@ -57,8 +57,8 @@ stateDiagram-v2
     RUNNING --> FAILED: timeout / 429 / 제공자·Schema 오류
     FAILED --> QUEUED: 허용된 수동 재시도
     SUCCEEDED --> AUTO_CONFIRMED: 자동 검증·중복·근거·외부 검증 성공
-    SUCCEEDED --> AUTO_BLOCKED: 필수값 누락·모호·검증 충돌
-    SUCCEEDED --> AUTO_REJECTED: 정책 위반·중복·자동 거부
+    SUCCEEDED --> AUTO_BLOCKED: 필수값 누락·모호·검증 충돌·업무 중복
+    SUCCEEDED --> AUTO_REJECTED: 정책 위반·자동 거부
     AUTO_BLOCKED --> QUEUED: 허용된 재처리
     AUTO_BLOCKED --> MANUAL_OVERRIDE: 관리자 사후 보정
     AUTO_CONFIRMED --> MANUAL_OVERRIDE: 관리자 롤백·정정
@@ -68,6 +68,10 @@ stateDiagram-v2
 ```
 
 작업 실행 상태와 자동 등록 상태는 분리한다. `SUCCEEDED`는 AI 출력 Schema를 처리했다는 뜻이며, 자동 검증을 통과하면 `AUTO_CONFIRMED`로 전환하면서 정식 Entity와 `VisitTag`를 생성·공개한다. 관리자는 정상 경로의 사전 승인자가 아니며 차단 결과의 보정·롤백만 수행한다.
+
+같은 맛집·방문 관계가 이미 존재하는 업무 중복(`DUPLICATE_CONFLICT`)은 `AUTO_BLOCKED`로 귀결한다. 관리자가 기존 등록 결과를 확인하고 사후 보정할 수 있어야 하기 때문이다. `AUTO_REJECTED`는 입력·정책 검증 실패로 끝난 종결 상태이며 복구 경로가 없다. 이 매핑은 [`BR-AIEXTRACT-011`](../../01-requirements/business-rules.md#br-aiextract-011-등록-단위-일괄-등록과-예외-전환)과 [관리자 AI 영상 추출 API](../../05-specs/api/admin/ai-video-extraction-api.md) 2.1절과 같다.
+
+접수 단계의 중복은 성격이 다르다. 같은 영상·입력·버전 조합의 반복 요청은 상태 전이가 아니라 기존 작업으로 수렴하며 새 작업을 만들지 않는다.
 
 ### 3.2 신규 영상 감지와 관리자 추가
 
