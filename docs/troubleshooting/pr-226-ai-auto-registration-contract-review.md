@@ -418,6 +418,26 @@ Kakao 장소와 카테고리는 관리자가 외부 기준정보 중 하나를 �
 
 검증: 와이어프레임·API 2.1절·데이터 계약 세 문서에서 `DISCARD`/`[폐기]`가 `recoveryPaths`와 무관한 공통 동작이라는 서술이 일치하는 것을, `DUPLICATE_CONFLICT`의 유일한 경로가 `EXISTING_RESOURCE`뿐이라는 서술이 API 2.1·3.5·3.6절과 사용자 흐름 네 곳에서 일치하는 것을, Snapshot 컬럼과 `ai_registration_unit_review` 컬럼의 책임 경계가 겹치지 않는 것을 확인했다. 문서만 변경해 빌드·테스트 대상은 없다.
 
+### 10.14 13차 리뷰 처리
+
+10.13절 반영을 push한 지 10분 뒤(`50ab2bf`) `w00lam`이 3건을 남겼다. `DUPLICATE_CONFLICT`가 `EXISTING_RESOURCE` 하나만 갖는다는 계약이 API 문서 밖 세 곳(ADR, PRD, 사용자 흐름 3.4절)에 아직 퍼지지 않은 잔여 불일치였다.
+
+| 스레드 | 요청 요약 | 문제 유형 | 판단 | 처리 결과 |
+|---|---|---|---|---|
+| [ADR의 "사후 보정·수동 등록 흐름" 잔존 (P1)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3801490702) | ADR 5.3절이 중복을 "관리자 사후 보정·수동 등록 흐름으로 보낸다"고 서술해 최신 API 2.1·3.5·3.6절·사용자 흐름과 충돌 | 기타 | 수정 필요 | "사후 보정·수동 등록 흐름으로 보낸다"를 삭제하고 "관리자가 할 수 있는 것은 `EXISTING_RESOURCE` 확인뿐이며 사후 보정·재추출·재실행·수동 등록 경로는 없다"로 교체 |
+| [PRD 예외 공통 문장 일반화 (P2)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3801490705) | "나머지 예외는 재추출 또는 기존 수동 등록"이라는 문장이 `DUPLICATE_CONFLICT`에도 그 경로가 있는 것처럼 읽힘 | 기타 | 수정 필요 | 사유별로 나눠 서술. 필수 필드·방문 근거·외부 서비스 오류는 재추출 또는 수동 등록, 업무 중복은 `EXISTING_RESOURCE` 확인만 |
+| [사용자 흐름 3.4절 부분 추출 일반화 (P2)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3801490713) | "허용된 값만 보완해 재처리하거나, 사후 보정·수동 등록·폐기"라는 문장이 모든 차단 사유에 균일하게 적용되는 것처럼 읽힘 | 기타 | 수정 필요 | 사유별 경로로 분리: 장소·카테고리는 보조 입력 `CONFIRM`, 필수 필드·방문 근거·외부 서비스 오류는 재추출·수동 등록, 업무 중복은 `EXISTING_RESOURCE` 확인, 모든 사유에 `DISCARD` 폐기 가능 |
+
+10.11절부터 이어진 같은 문제(`DUPLICATE_CONFLICT`가 `EXISTING_RESOURCE` 하나만 갖는다는 계약)가 API 계약(3.5·3.6·2.1절)에는 완전히 반영됐지만, **제품·아키텍처 문서로 퍼지는 데 세 라운드(10.11~10.14)가 걸렸다.** 이유는 같은 개념이 "복구 경로"라는 구체적 이름이 아니라 "사후 보정"·"수동 등록으로 우회"처럼 문서마다 다른 일반화된 표현으로 흩어져 있어, API 문서 안에서 문자열을 맞춰도 다른 문서의 유사 표현은 검색으로 걸리지 않았기 때문이다. 이번에 고친 세 문장은 모두 "`DUPLICATE_CONFLICT`"·"업무 중복"이라는 코드/용어는 명시했지만 그 뒤에 붙는 서술은 각자 다른 말로 일반화돼 있었다.
+
+| 파일 | 변경 |
+|---|---|
+| [ai-001-video-extraction-candidate-boundary.md](../07-adr/integration/ai-001-video-extraction-candidate-boundary.md) | 5.3절 중복 처리 서술에서 "사후 보정·수동 등록 흐름" 제거 |
+| [ai-video-information-extraction.md](../04-product/prd/admin/ai-video-information-extraction.md) | 정상 등록 흐름 4번의 예외 안내를 사유별로 분리 |
+| [third-expansion-user-flows.md](../04-product/user-flows/third-expansion-user-flows.md) | 3.4절 부분 추출 4번을 사유별 경로로 분리 |
+
+검증: `DUPLICATE_CONFLICT`/업무 중복을 언급하는 API 2.1·3.5·3.6절, ADR 5.3절, PRD 정상 등록 흐름, 사용자 흐름 3.1·3.4절 여섯 곳에서 "`EXISTING_RESOURCE` 확인만 가능, 사후 보정·재추출·재실행·수동 등록 없음"이라는 서술이 모두 일치하는 것을 확인했다. 문서만 변경해 빌드·테스트 대상은 없다.
+
 ## 11. 비교 지표
 
 해당 없음. 문서 계약 변경이며 측정할 런타임 지표가 없다. 자동 등록률·`CATEGORY_UNRESOLVED` 비율 등은 구현 후 [PRD 11절 지표](../04-product/prd/admin/ai-video-information-extraction.md)에서 측정한다. 이 PR 시점에는 기준선을 만들 수 없다.
