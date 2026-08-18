@@ -455,6 +455,25 @@ Kakao 장소와 카테고리는 관리자가 외부 기준정보 중 하나를 �
 
 검증: API 3.6절 `recoveryPaths` 표(`MISSING_REQUIRED_FIELD`·`VISIT_EVIDENCE_REQUIRED` → `REEXTRACT`, `EXTERNAL_SERVICE_ERROR` → `RETRY`)와 PRD·사용자 흐름 두 문장을 대조해 세 사유가 서로 다른 동작으로 정확히 갈리는 것을 확인했다. 문서만 변경해 빌드·테스트 대상은 없다.
 
+### 10.16 15차 리뷰 처리
+
+10.15절 반영을 push한 지 3분 뒤(`10dc19f`) `jinyp01`이 1건을 남겼다.
+
+| 스레드 | 요청 요약 | 문제 유형 | 판단 | 처리 결과 |
+|---|---|---|---|---|
+| [`DUPLICATE_CONFLICT`에서 `DISCARD` 배제 (P1)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3801530676) | API 2.1·3.5절, PRD, 사용자 흐름 3.1절, ADR 5.3절이 "관리자가 할 수 있는 것은 `EXISTING_RESOURCE`뿐"이라고 단정해, 10.12~10.13절에서 이미 확정한 "`DISCARD`는 모든 `AUTO_BLOCKED`에 공통 허용"과 어긋남 | 기타 | 수정 필요 | 다섯 곳(API 2.1·3.5·3.6절, PRD, 사용자 흐름, ADR) 모두 "유일한 **`recoveryPaths`** 경로는 `EXISTING_RESOURCE`"로 한정하고 "공통 종결 동작인 `DISCARD`는 다른 `AUTO_BLOCKED`와 같이 허용한다"는 문장을 추가 |
+
+10.11절부터 10.15절까지 `DUPLICATE_CONFLICT`를 "재추출·재실행·수동 등록 경로가 없다"고 반복해서 좁혀 왔는데, 그 되풀이 과정에서 정작 10.12~10.13절이 별도로 확정한 "`DISCARD`는 배열과 무관한 공통 동작"이라는 규칙과는 대조하지 않았다. 한 사유를 여러 라운드에 걸쳐 계속 좁히다 보면, 그 사유에 여전히 남아 있는 공통 규칙(이 경우 `DISCARD`)을 함께 확인하지 않고 "전부 없다"로 과잉 단정하게 되는 새로운 실패 유형이다.
+
+| 파일 | 변경 |
+|---|---|
+| [ai-video-extraction-api.md](../05-specs/api/admin/ai-video-extraction-api.md) | 2.1·3.5·3.6절 세 곳에 `DISCARD` 공통 허용 문장 추가 |
+| [ai-video-information-extraction.md](../04-product/prd/admin/ai-video-information-extraction.md) | 정상 등록 흐름 4번에 `DISCARD` 허용 문장 추가 |
+| [third-expansion-user-flows.md](../04-product/user-flows/third-expansion-user-flows.md) | 3.1절에 `DISCARD` 허용 문장 추가 |
+| [ai-001-video-extraction-candidate-boundary.md](../07-adr/integration/ai-001-video-extraction-candidate-boundary.md) | 5.3절에 `DISCARD` 허용 문장 추가 |
+
+검증: `DUPLICATE_CONFLICT`를 언급하는 API 2.1·3.5·3.6절, PRD, 사용자 흐름, ADR 여섯 곳 모두에서 "`recoveryPaths`상 유일한 경로는 `EXISTING_RESOURCE`, `DISCARD`는 별도로 허용"이라는 서술이 일치하는 것을 확인했다. 문서만 변경해 빌드·테스트 대상은 없다.
+
 ## 11. 비교 지표
 
 해당 없음. 문서 계약 변경이며 측정할 런타임 지표가 없다. 자동 등록률·`CATEGORY_UNRESOLVED` 비율 등은 구현 후 [PRD 11절 지표](../04-product/prd/admin/ai-video-information-extraction.md)에서 측정한다. 이 PR 시점에는 기준선을 만들 수 없다.

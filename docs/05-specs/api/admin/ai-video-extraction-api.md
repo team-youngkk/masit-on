@@ -56,7 +56,7 @@ related_documents:
 
 `SUCCEEDED`와 `PARTIAL`은 실행 상태와 결과 완전성을 각각 표현한다. `AUTO_CONFIRMED`는 자동 검증과 기존 정식 등록 명령이 성공했다는 의미이며, 관리자의 사전 승인을 뜻하지 않는다.
 
-중복은 종결이 아니라 복구 가능한 보류다. 같은 맛집·방문 관계가 이미 존재하는 `DUPLICATE_CONFLICT`는 `AUTO_BLOCKED`로 귀결하며 `AUTO_REJECTED`로 매핑하지 않는다. `BR-AIEXTRACT-011`의 예외 전환 대상이지만, 관리자가 할 수 있는 것은 기존 등록 결과를 확인하는 것(`EXISTING_RESOURCE`)뿐이다. `CONFIRM`·`ADJUST_CATEGORY`로 사후 보정하지 않으며 재추출·재실행·수동 등록 경로도 없다.
+중복은 종결이 아니라 복구 가능한 보류다. 같은 맛집·방문 관계가 이미 존재하는 `DUPLICATE_CONFLICT`는 `AUTO_BLOCKED`로 귀결하며 `AUTO_REJECTED`로 매핑하지 않는다. `BR-AIEXTRACT-011`의 예외 전환 대상이지만, `recoveryPaths`로서 관리자가 할 수 있는 것은 기존 등록 결과를 확인하는 것(`EXISTING_RESOURCE`)뿐이다. `CONFIRM`·`ADJUST_CATEGORY`로 사후 보정하지 않으며 재추출·재실행·수동 등록 경로도 없다. 다만 `DISCARD`는 `recoveryPaths`와 무관한 공통 종결 동작이므로 다른 `AUTO_BLOCKED`와 같이 허용한다.
 
 #### 작업 최상위 `reviewStatus` 요약 규칙
 
@@ -375,7 +375,7 @@ related_documents:
 - `requiredSupplements`가 요구한 필드가 없으면 `400 MISSING_REQUIRED_FIELD`로 거절하고 정식 저장은 0건이다.
 - `kakaoPlaceUrl`은 기존 수동 등록 경로와 같은 Kakao 장소 동일성 검증을 다시 통과해야 한다. 검증 실패는 `422 AIEXTRACT_VALIDATION_CONFLICT`이며 `blockReason`을 그대로 유지한다.
 - `foodCategoryId`는 활성 기준정보 값이어야 한다. 비활성·미존재 값은 `400 INVALID_FIELD_VALUE`다.
-- `VISIT_EVIDENCE_REQUIRED`·`DUPLICATE_CONFLICT`·`EXTERNAL_SERVICE_ERROR`는 보충 입력으로 복구할 수 없다. 이 사유의 `CONFIRM`은 `422 AIEXTRACT_VALIDATION_CONFLICT`로 거절한다. `VISIT_EVIDENCE_REQUIRED`·`EXTERNAL_SERVICE_ERROR`는 재추출·재실행 또는 수동 등록으로 안내하고, `DUPLICATE_CONFLICT`는 이미 등록된 자원 확인(`EXISTING_RESOURCE`)만 안내하며 재추출·재실행·수동 등록 경로는 없다.
+- `VISIT_EVIDENCE_REQUIRED`·`DUPLICATE_CONFLICT`·`EXTERNAL_SERVICE_ERROR`는 보충 입력으로 복구할 수 없다. 이 사유의 `CONFIRM`은 `422 AIEXTRACT_VALIDATION_CONFLICT`로 거절한다. `VISIT_EVIDENCE_REQUIRED`·`EXTERNAL_SERVICE_ERROR`는 재추출·재실행 또는 수동 등록으로 안내하고, `DUPLICATE_CONFLICT`는 `recoveryPaths`상 이미 등록된 자원 확인(`EXISTING_RESOURCE`)만 안내하며 재추출·재실행·수동 등록 경로는 없다. 세 사유 모두 `DISCARD`는 `recoveryPaths`와 무관하게 공통으로 허용한다.
 - 보충 입력으로 등록에 성공하면 등록 단위는 `MANUAL_OVERRIDE`가 되고, 사용한 보충값과 제출자를 감사 이력에 남긴다.
 - `ADJUST_CATEGORY`는 `registered_restaurant_id`가 가리키는 맛집의 대표 카테고리와 `category_decision`을 바꾼다. `resolvedBy`는 `MANUAL_OVERRIDE`가 되고 등록 단위 상태는 `MANUAL_OVERRIDE`로 전환하되 등록 결과 컬럼과 공개 상태는 유지한다. 이전 카테고리 값과 제출자는 append-only 감사 이력에 남긴다.
 - 계약 테스트는 `TST-E3-AI-007`에 매핑한다.
@@ -508,7 +508,7 @@ Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-0
 | `DUPLICATE_CONFLICT` | 같은 맛집·방문 관계가 이미 존재한다 | `EXISTING_RESOURCE`. 이미 등록된 자원으로 이동해 확인한다 | 빈 배열 |
 | `EXTERNAL_SERVICE_ERROR` | Kakao·YouTube 조회 실패·시간 초과 | 등록 재실행 또는 기존 수동 등록 | 빈 배열 |
 
-이 표의 복구 경로 열은 3.6절 `recoveryPaths` 배열과 같은 의미다. `MISSING_REQUIRED_FIELD`·`VISIT_EVIDENCE_REQUIRED`·`EXTERNAL_SERVICE_ERROR`는 재추출·재실행 뒤에도 관리자가 기존 수동 등록으로 우회할 수 있다. `DUPLICATE_CONFLICT`는 `EXISTING_RESOURCE`만 가지며 재추출·재실행·수동 등록 우회 경로가 없다.
+이 표의 복구 경로 열은 3.6절 `recoveryPaths` 배열과 같은 의미다. `MISSING_REQUIRED_FIELD`·`VISIT_EVIDENCE_REQUIRED`·`EXTERNAL_SERVICE_ERROR`는 재추출·재실행 뒤에도 관리자가 기존 수동 등록으로 우회할 수 있다. `DUPLICATE_CONFLICT`는 `recoveryPaths`상 `EXISTING_RESOURCE`만 가지며 재추출·재실행·수동 등록 우회 경로가 없다. 일곱 사유 모두 `DISCARD`는 이 표와 무관하게 공통으로 허용한다.
 
 - `requiredSupplements`가 빈 배열이면 `CONFIRM`으로 복구할 수 없다는 뜻이다. 이 상태에서 보낸 `CONFIRM`은 `422 AIEXTRACT_VALIDATION_CONFLICT`로 거절하고 정식 저장은 0건이며, 응답의 복구 경로를 안내한다.
 - 부족한 필드 이름은 작업 상세의 `missingFields`로 확인한다. 이 응답은 관리자가 채워 넣을 대상이 아니므로 `requiredSupplements`에 싣지 않는다.
