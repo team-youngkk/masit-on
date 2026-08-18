@@ -69,11 +69,12 @@ V1에 존재하는 사전 발급 관리자 계정이다. 단일 계정 전환의
 |---|---|---:|---|---|---|
 | `admin_account_id` | `uuid` | NN | 없음 | PK, FK → `admin_account.id` | legacy 관리자 ID |
 | `normalized_email` | `varchar(254)` | NN | 없음 | UK, 빈 값·이메일 형식 금지 | 회원가입과 같은 규칙으로 정규화한 승인 이메일 |
+| `migration_disposition` | `varchar(24)` | NN | 없음 | `MIGRATE_ACTIVE/PRESERVE_INACTIVE` CHECK | legacy `active`와 일치하는 승인 전환 구분 |
 | `member_account_id` | `uuid` | Yes | `NULL` | UK, 값이 있으면 FK → `member_account.id` | 검증·복사 뒤 확정한 통합 계정 ID |
 | `approval_record_id` | `varchar(100)` | NN | 없음 | 빈 값 금지 | 접근 통제된 운영 변경 기록 식별자 |
 | `created_at` | 시간 | NN | `CURRENT_TIMESTAMP` |  | 적재 시각 |
 
-실제 이메일이나 입력 파일을 저장소에 커밋하지 않는다. 입력 파일 SHA-256·승인자·승인 시각·행 수는 `approval_record_id`가 가리키는 변경 기록에 남기고, 역할 부여 전 전체 legacy 관리자에 대해 누락·중복·정규화 충돌·동일 회원 수렴이 0건인지 검증한다.
+실제 이메일이나 입력 파일을 저장소에 커밋하지 않는다. 입력 파일 SHA-256·승인자·승인 시각·행 수는 `approval_record_id`가 가리키는 변경 기록에 남기고, 역할 부여 전 전체 legacy 관리자에 대해 누락·중복·정규화 충돌·동일 회원 수렴이 0건인지 검증한다. `MIGRATE_ACTIVE`는 `active=true`, `PRESERVE_INACTIVE`는 `active=false`와 일치해야 한다. 활성 전환은 최종 `ACTIVE/ADMIN`, 비활성 보존은 기존 회원 불변 또는 신규 `DISABLED/MEMBER`만 허용한다.
 
 ## 5. `restaurant`
 

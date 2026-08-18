@@ -86,9 +86,9 @@ related_documents:
 ### DATA-CONSTRAINT-006 legacy 관리자 이메일 매핑 유일성
 
 - 적용 데이터: 전환 대상 AdminAccount, 전환 staging과 MemberAccount
-- 제약: 공동 승인된 일회성 입력만 `admin_account_migration_map`에 적재한다. `admin_account_id`는 PK·legacy FK, `normalized_email`은 회원가입과 같은 정규화 규칙을 적용한 UK이며 각 legacy 관리자는 서로 다른 staging 행을 거쳐 정확히 하나의 MemberAccount에 매핑되어야 한다. 알 수 없는 ID·중복·누락·정규화 충돌·여러 관리자의 동일 회원 수렴은 허용하지 않는다.
+- 제약: 공동 승인된 일회성 입력만 `admin_account_migration_map`에 적재한다. `admin_account_id`는 PK·legacy FK, `normalized_email`은 회원가입과 같은 정규화 규칙을 적용한 UK이며 각 legacy 관리자는 서로 다른 staging 행을 거쳐 정확히 하나의 MemberAccount에 매핑되어야 한다. `active=true`는 `MIGRATE_ACTIVE`와 최종 `ACTIVE/ADMIN`, `active=false`는 승인된 `PRESERVE_INACTIVE`와 기존 회원 상태·역할 불변 또는 신규 `DISABLED/MEMBER`만 허용한다. 활성 legacy가 비활성 회원과 충돌하면 상태를 자동 복구하지 않고 역할 부여 전에 중단한다.
 - 보장 수준: 확장 마이그레이션 제약과 계약 마이그레이션 전 데이터 증명 필수. 입력 SHA-256·승인자·승인 시각·행 수를 접근 통제된 변경 기록과 대조한다.
-- 위반 시 처리: 역할 부여 전 전체 전환 fail-closed, 복사·참조 전환 및 `admin_account` 제거 중단
+- 위반 시 처리: 역할·상태 변경 전 전체 전환 fail-closed, 복사·참조 전환 및 `admin_account` 제거 중단
 - 관련 항목: [마이그레이션 계획](migration-plan.md#13-통합-계정-전환-마이그레이션)
 
 ### DATA-CONSTRAINT-007 회원 이메일 유일성

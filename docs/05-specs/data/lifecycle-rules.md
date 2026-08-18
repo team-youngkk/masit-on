@@ -108,7 +108,7 @@ related_documents:
 - 공개 회원가입은 `member_account.role='MEMBER'`로만 시작하며 요청 본문으로 역할을 선택하지 않는다.
 - `ADMIN` 발급, `MEMBER ↔ ADMIN` 변경과 관리자 권한 회수는 승인된 운영 절차만 수행한다. 역할·상태·비밀번호가 바뀌면 해당 계정의 Redis 활성 세션을 모두 폐기한다.
 - 활성 세션 상한은 `MEMBER` 3개, `ADMIN` 1개다. 계정이 `DISABLED` 또는 `DELETION_PENDING`으로 바뀌면 새 로그인·재발급을 막는다.
-- legacy 관리자 계정은 검증된 유일 이메일과 호환 가능한 비밀번호 해시가 확인된 행만 MemberAccount로 이전한다. cutover 시 legacy 관리자 Refresh 세션은 모두 무효화해 재로그인을 요구한다.
+- `active=true` legacy 관리자는 검증된 유일 이메일·호환 가능한 비밀번호 해시와 기존 `ACTIVE` 회원 상태가 확인된 경우에만 `ACTIVE/ADMIN`으로 이전한다. 기존 회원이 `PENDING_VERIFICATION`, `DELETION_PENDING`, `DISABLED`이면 migration이 상태를 복구하거나 역할을 부여하지 않고 중단한다. `active=false` legacy 관리자는 승인된 비활성 보존 대상으로만 이전하며 기존 회원은 불변, 새 identity-only 행은 `DISABLED/MEMBER`로 만든다. cutover 시 legacy 관리자 Refresh 세션은 모두 무효화해 재로그인을 요구한다.
 
 - 논리 삭제 데이터는 기한 없이 보존하고 자동 purge하지 않으며 승인된 운영자만 별도 명령으로 복구할 수 있다.
 - 상태 변경 화면·관리 API는 MVP에 만들지 않고 인증된 운영 명령만 제공한다.

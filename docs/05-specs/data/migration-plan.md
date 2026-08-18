@@ -213,14 +213,15 @@ AI 영상 추출 스키마·재사용 조회 인덱스·수동 검수 감사·�
 첫 번째 신규 마이그레이션은 다음 범위만 전진 적용한다.
 
 1. `member_account.role varchar(16) NOT NULL DEFAULT 'MEMBER'`와 `MEMBER/ADMIN` CHECK를 추가한다.
-2. 확장 마이그레이션이 전환 전용 `admin_account_migration_map` staging 테이블을 만든다. 인증 소유자와 데이터 소유자가 공동 승인한 일회성 매핑 입력만 이 테이블에 적재하며, 저장소·마이그레이션 SQL에는 실제 이메일을 커밋하지 않는다. 입력은 legacy `admin_account.id`, 관리자에게 별도 확인한 이메일, 승인 변경 기록 ID로 구성하고 원본 파일은 접근 통제된 운영 변경 기록에 보관한다.
+2. 확장 마이그레이션이 전환 전용 `admin_account_migration_map` staging 테이블을 만든다. 인증 소유자와 데이터 소유자가 공동 승인한 일회성 매핑 입력만 이 테이블에 적재하며, 저장소·마이그레이션 SQL에는 실제 이메일을 커밋하지 않는다. 입력은 legacy `admin_account.id`, 관리자에게 별도 확인한 이메일, 전환 구분(`MIGRATE_ACTIVE` 또는 `PRESERVE_INACTIVE`), 승인 변경 기록 ID로 구성하고 원본 파일은 접근 통제된 운영 변경 기록에 보관한다.
 3. 적재기는 회원가입과 같은 규칙으로 이메일을 trim·소문자 정규화한다. `admin_account_id` PK·FK와 `normalized_email` UK, 빈 값·형식 CHECK를 적용하고, 입력 파일 SHA-256·승인자·승인 시각·행 수를 변경 기록에 남긴다. 원본 이메일·비밀번호·Token은 로그나 검증 출력에 남기지 않는다.
-4. 복사 전에 legacy 관리자 전체가 정확히 한 행에 매핑됐는지, 알 수 없는 관리자 ID·중복 이메일·누락·정규화 충돌이 0건인지 한 트랜잭션에서 검증한다. 하나라도 실패하면 역할 부여와 FK 전환을 시작하지 않고 전체 마이그레이션을 중단한다.
-5. 같은 정규화 이메일의 MemberAccount가 없으면 legacy 관리자 UUID를 재사용해 `ACTIVE/ADMIN` 행을 복사한다. 기존 MemberAccount가 정확히 하나 있으면 그 회원 UUID를 매핑 대상으로 사용하고 역할을 `ADMIN`으로 변경한다. 매핑 staging 행에는 최종 `member_account_id`를 기록하며 두 legacy 관리자가 같은 회원으로 수렴하거나 한 legacy 관리자가 여러 회원 후보를 가지면 fail-closed 처리한다.
-6. 비밀번호 해시는 현재 PasswordEncoder가 검증할 수 있는 형식만 그대로 이전한다. 호환되지 않는 해시는 임의 변환하지 않고 해당 행을 차단 목록에 남긴다.
-7. `confirmation_token`, Creator/AI 관리자 행위자, 감사·검수 등 `admin_account`를 참조하는 모든 FK를 목록화하고 staging의 최종 회원 UUID 매핑으로 호환 읽기/쓰기를 제공한다. 매핑되지 않은 FK는 허용하지 않는다.
-8. 애플리케이션은 통합 로그인과 `member_account.role` 기반 RBAC로 전환하되 legacy 테이블과 staging 테이블은 유지한다. 역할·상태·비밀번호 변경 시 `auth:session:`의 해당 계정 세션을 모두 폐기한다.
-9. 최소 한 호환 관찰 기간 동안 legacy/신규 행 수, 매핑 누락·중복, FK 고아, MEMBER·ADMIN 로그인, ADMIN 권한 경로, 세션 상한(`MEMBER` 3, `ADMIN` 1)을 관측한다. cutover에서 legacy 관리자 Refresh 세션은 전부 무효화한다.
+4. 복사 전에 legacy 관리자 전체가 정확히 한 행에 매핑됐는지, 알 수 없는 관리자 ID·중복 이메일·누락·정규화 충돌이 0건인지 한 트랜잭션에서 검증한다. `active=true`는 `MIGRATE_ACTIVE`, `active=false`는 공동 승인된 `PRESERVE_INACTIVE`만 허용한다. 상태와 전환 구분이 다르거나 비활성 보존 승인이 없으면 역할 부여와 FK 전환을 시작하지 않고 전체 마이그레이션을 중단한다.
+5. `MIGRATE_ACTIVE`에서 같은 정규화 이메일의 MemberAccount가 없으면 legacy 관리자 UUID를 재사용해 `ACTIVE/ADMIN` 행을 복사한다. 기존 MemberAccount가 정확히 하나 있으면 현재 상태가 `ACTIVE`일 때만 그 UUID의 역할을 `ADMIN`으로 변경한다. 기존 상태가 `PENDING_VERIFICATION`, `DELETION_PENDING`, `DISABLED`이면 migration이 상태를 바꾸거나 역할을 부여하지 않고 fail-closed한다. 필요한 이메일 인증·탈퇴 완료·승인된 재활성화는 기존 계정 생명주기 절차에서 먼저 끝내고, 새 입력 checksum과 승인을 받은 뒤 migration을 다시 실행한다.
+6. `PRESERVE_INACTIVE`는 관리자 권한을 부여하지 않는다. 기존 MemberAccount가 있으면 상태와 역할을 모두 유지하고 역사적 관리자 행위자 FK만 그 UUID로 이전한다. 기존 MemberAccount가 없으면 legacy UUID와 해시를 사용한 `DISABLED/MEMBER` identity-only 행을 만들고 로그인·재발급을 허용하지 않는다. 이 행을 나중에 `ACTIVE` 또는 `ADMIN`으로 바꾸려면 migration과 분리된 역할·상태 변경 승인과 감사 기록이 필요하다.
+7. 비밀번호 해시는 현재 PasswordEncoder가 검증할 수 있는 형식만 그대로 이전한다. 호환되지 않는 해시는 임의 변환하지 않고 해당 행을 차단 목록에 남긴다.
+8. `confirmation_token`, Creator/AI 관리자 행위자, 감사·검수 등 `admin_account`를 참조하는 모든 FK를 목록화하고 staging의 최종 회원 UUID 매핑으로 호환 읽기/쓰기를 제공한다. 매핑되지 않은 FK는 허용하지 않는다.
+9. 애플리케이션은 통합 로그인과 `member_account.role` 기반 RBAC로 전환하되 legacy 테이블과 staging 테이블은 유지한다. 역할·상태·비밀번호 변경 시 `auth:session:`의 해당 계정 세션을 모두 폐기한다.
+10. 최소 한 호환 관찰 기간 동안 legacy/신규 행 수, 전환 구분별 결과, 매핑 누락·중복, FK 고아, 활성 ADMIN 로그인, `PRESERVE_INACTIVE`의 ADMIN 경로 거부, 신규 identity-only 행의 로그인·재발급 거부, 세션 상한(`MEMBER` 3, `ADMIN` 1)을 관측한다. cutover에서 legacy 관리자 Refresh 세션은 전부 무효화한다.
 
 공개 회원가입 API는 역할을 받지 않고 DB 기본값 `MEMBER`만 사용한다. `ADMIN` 발급·변경·회수는 승인된 운영 명령에 한정한다.
 
@@ -228,9 +229,10 @@ AI 영상 추출 스키마·재사용 조회 인덱스·수동 검수 감사·�
 
 별도의 후속 마이그레이션은 다음 증거가 모두 승인된 뒤에만 실행한다.
 
-- 확장 전후 관리자 수와 `role='ADMIN'` 수가 승인된 예외를 제외하고 일치한다.
+- `active=true` legacy 관리자 수, `MIGRATE_ACTIVE` 완료 수와 새 `status='ACTIVE' AND role='ADMIN'` 매핑 수가 일치한다. 모든 활성 전환 계정의 ADMIN 로그인과 권한 경로가 성공한다.
+- `active=false` legacy 관리자 수와 승인된 `PRESERVE_INACTIVE` 수가 일치한다. 기존 MemberAccount의 상태·역할 변경은 0건이고 새 identity-only 행은 모두 `DISABLED/MEMBER`이며 로그인·재발급이 거부된다.
 - 승인된 매핑 입력의 SHA-256·승인자·승인 시각·행 수가 변경 기록과 일치하고, `admin_account_migration_map`에 알 수 없는 관리자 ID·정규화 실패·중복·누락이 0건이다.
-- 모든 legacy 관리자가 staging의 서로 다른 한 행을 거쳐 정확히 하나의 MemberAccount에 매핑되고, 둘 이상의 관리자가 같은 회원으로 수렴한 건·호환 불가 비밀번호 해시가 0건이다. 검증 증거는 원본 이메일 대신 관리자 ID·회원 ID와 집계 결과만 남긴다.
+- 모든 legacy 관리자가 staging의 서로 다른 한 행을 거쳐 정확히 하나의 MemberAccount에 매핑되고, 둘 이상의 관리자가 같은 회원으로 수렴한 건·호환 불가 비밀번호 해시가 0건이다. `MIGRATE_ACTIVE`가 비활성 MemberAccount로 끝난 건과 `PRESERVE_INACTIVE`가 migration으로 `ADMIN` 또는 `ACTIVE`를 얻은 건도 0건이다. 검증 증거는 원본 이메일 대신 관리자 ID·회원 ID·전환 구분과 집계 결과만 남긴다.
 - `admin_account`를 향한 FK가 0개이고 모든 관리자 행위자 참조가 유효한 `member_account.id`를 가리킨다.
 - 통합 MEMBER·ADMIN 로그인, ADMIN RBAC, 로그아웃·회전·전체 세션 폐기와 rollback rehearsal이 통과한다.
 - 적용 대상 버전이 운영·공유 환경에 이미 존재하지 않는다는 `flyway_schema_history` 읽기 증거와, 신규 마이그레이션 적용 테스트가 남아 있다.

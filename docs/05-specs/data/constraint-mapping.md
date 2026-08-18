@@ -97,6 +97,7 @@ PostgreSQL의 `UNIQUE`는 이미 동일 컬럼 B-tree 인덱스를 만든다. �
 | `ck_admin_account__role` (legacy) | `role = 'ADMIN'` |
 | `ck_admin_account_migration_map__email` (전환 staging) | `normalized_email = lower(btrim(normalized_email))`이고 회원가입 이메일 형식 충족 |
 | `ck_admin_account_migration_map__approval_not_blank` (전환 staging) | `btrim(approval_record_id) <> ''` |
+| `ck_admin_account_migration_map__disposition` (전환 staging) | `migration_disposition IN ('MIGRATE_ACTIVE','PRESERVE_INACTIVE')` |
 | `ck_member_account__role` | `role IN ('MEMBER','ADMIN')` |
 | `ck_restaurant__phone_number` | `char_length(phone_number) BETWEEN 7 AND 20 AND phone_number ~ '^[0-9 +()\\-]+$'` |
 | `ck_restaurant__coordinate_pair` | `(latitude IS NULL AND longitude IS NULL) OR (latitude IS NOT NULL AND longitude IS NOT NULL)` |
