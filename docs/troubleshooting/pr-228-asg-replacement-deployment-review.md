@@ -28,7 +28,7 @@ related_documents:
 | [CodeDeploy timeout/cancel](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801367865) | timeout·workflow 취소 시 `stop-deployment --auto-rollback-enabled`와 terminal 상태 확인 | 배포 | 수정 필요 | 45분 polling, EXIT·signal trap, 중지 후 terminal polling, `StopDeployment` 권한 추가 | `RuntimeDeploymentContractTest` 통과. 실제 CodeDeploy 취소 리허설은 미실행 |
 | [ADR·runbook target group](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801367867) | listener 전환 대신 단일 target group의 instance 등록·해제와 ASG membership 판정으로 정정하고 green 자원 제거 | 배포 / 인프라 | 수정 필요 | ADR·runbook·운영 README 정정, green target group·alarm·output 제거 | `RuntimeDeploymentContractTest`, 관련 문자열 검색 통과. AWS 리허설은 미실행 |
 | [RDS ingress 예시](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801373600) | 예시에 `manage_rds_ingress_rule = true` 명시 | 인프라 | 이미 해결 | 최신 HEAD의 `infra/production/terraform/terraform.tfvars.example`에 이미 설정되어 있어 추가 변경 없음 | 현재 파일 36행의 `true` 확인 |
-| [subnet route 조건](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801373603) | ALB에는 IGW default route, app에는 IGW default route가 없음을 plan에서 검증 | 인프라 | 수정 필요 | subnet별 `aws_route_table` data source와 ALB/app postcondition 추가 | Terraform provider의 `routes`·`gateway_id` 계약 확인, `RuntimeDeploymentContractTest`·`terraform validate` 통과. **`plan`은 실패하며 11절의 계약 충돌이 원인이다** |
+| [subnet route 조건](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801373603) | ALB에는 IGW default route, app에는 IGW default route가 없음을 plan에서 검증 | 인프라 | 결정 필요 | subnet별 `aws_route_table` data source와 ALB/app postcondition은 추가했지만 현재 public app subnet 전제와 충돌해 thread를 미해결로 유지 | Terraform provider의 `routes`·`gateway_id` 계약 확인. 저장소 검증 기록상 `validate`는 통과했지만 운영 `plan`은 11절 조건에서 실패 |
 | [rollback 실행 산출물](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801373606) | 이미지뿐 아니라 script·systemd unit도 실패 시 이전 버전 복원 | 배포 / 애플리케이션 | 수정 필요 | 배포 전 script·unit backup과 missing marker를 만들고 rollback에서 복원·제거 | Git Bash `bash -n`, `RuntimeDeploymentContractTest` 통과 |
 | [CodeDeploy IAM wildcard](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801373612) | CreateDeployment를 deployment group으로 제한하고 wildcard 조회를 별도 분리 | 인프라 | 수정 필요 | 생성·고정 리소스 조회·wildcard 조회·중지 권한을 별도 statement로 분리 | `RuntimeDeploymentContractTest` 통과. IAM policy simulator는 미실행 |
 
@@ -87,7 +87,7 @@ related_documents:
 ## 8. 재발 방지 및 다음 확인
 
 - 재발 방지: `RuntimeDeploymentContractTest`에 CodeDeploy 중단, IAM 권한, route 조건, 단일 target group, Redis data volume, rollback 산출물 계약을 추가했다.
-- 다음 확인: PR 원격 branch에서 Terraform 두 레이어의 `fmt`·`validate`·saved plan을 실행하고, 실제 AWS에서 CodeDeploy timeout/cancel·replacement failure·Redis instance replacement·IAM policy simulator를 운영 전환 전에 담당자 승인으로 확인한다.
+- 다음 확인: 인프라 owner와 팀이 app subnet을 private+NAT로 전환할지, 배치 의도를 변수로 명시할지 결정한 뒤 운영 `plan`을 다시 실행한다. 그 후 실제 AWS에서 CodeDeploy timeout/cancel·replacement failure·Redis instance replacement·IAM policy simulator를 운영 전환 전에 담당자 승인으로 확인한다.
 
 ## 9. 도입 전후 비교 지표
 
@@ -99,9 +99,10 @@ related_documents:
 
 ## 10. 남은 사항
 
-- Docker Terraform 1.6.6으로 `fmt`는 통과했지만, 실제 AWS 자격 증명 없이 `validate`용 provider 초기화를 완료하지 못했다.
+- 저장소의 선행 검증 기록(커밋 `5ac0298`)에 실제 AWS 자격 증명으로 두 레이어 `validate` 통과가 남아 있다. 현재 작업 환경에서는 실제 자격 증명 없이 provider 초기화를 재현할 수 없었다.
 - AWS 계정 리허설과 IAM policy simulator는 이 작업에서 실행하지 않았으므로 운영 전환 전 확인이 필요하다.
 - RDS ingress 예시 스레드는 최신 HEAD에 이미 `manage_rds_ingress_rule = true`가 있어 코드 변경 없이 “이미 해결”로 답변한다.
+- subnet route 스레드는 app subnet 비용·보안 계약의 결정이 필요해 미해결 상태다.
 
 ## 11. 미해결 계약 충돌: app subnet의 IGW 경로
 
