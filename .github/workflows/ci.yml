@@ -722,9 +722,13 @@ jobs:
             [ "$deployment_terminal" = true ] && return 0
             [ "$stopping_deployment" = true ] && return 0
             stopping_deployment=true
+            stop_failed=false
             echo "CodeDeploy 배포 중지를 요청한다: $deployment_id" >&2
-            aws deploy stop-deployment --deployment-id "$deployment_id" \
-              --auto-rollback-enabled || true
+            if ! aws deploy stop-deployment --deployment-id "$deployment_id" \
+              --auto-rollback-enabled; then
+              stop_failed=true
+              echo "::error::CodeDeploy stop-deployment 호출에 실패했다: $deployment_id" >&2
+            fi
             for _ in $(seq 1 60); do
               status=$(aws deploy get-deployment --deployment-id "$deployment_id" \
                 --query 'deploymentInfo.status' --output text 2>/dev/null || echo Unknown)
@@ -732,18 +736,23 @@ jobs:
                 Succeeded|Failed|Stopped)
                   deployment_terminal=true
                   echo "CodeDeploy 중지 후 terminal 상태: $status" >&2
-                  return 0
+                  [ "$stop_failed" = false ]
+                  return $?
                   ;;
               esac
               sleep 10
             done
-            echo "CodeDeploy 중지 요청 후에도 terminal 상태를 확인하지 못했다: $status" >&2
+            echo "::error::CodeDeploy 중지 요청 후에도 terminal 상태를 확인하지 못했다: $status" >&2
+            return 1
           }
 
           on_exit() {
             exit_code=$?
             if [ "$deployment_terminal" != true ] && [ "$stopping_deployment" != true ]; then
-              stop_deployment_and_wait
+              if ! stop_deployment_and_wait; then
+                echo "::error::CodeDeploy 중지 또는 terminal 상태 확인에 실패했다. 원격 deployment를 수동 확인해야 한다." >&2
+                [ "$exit_code" -eq 0 ] && exit_code=1
+              fi
             fi
             trap - EXIT INT TERM
             exit "$exit_code"

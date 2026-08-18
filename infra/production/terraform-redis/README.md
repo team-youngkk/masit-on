@@ -35,6 +35,34 @@ related_documents:
 - Redis AOF·RDB는 별도 data EBS에 `/opt/masiton/redis/data`로 mount한다. Terraform이 Redis 인스턴스를 교체하면 attachment만 새 인스턴스로 바뀌며, data volume은 자동 삭제하지 않는다. volume을 의도적으로 폐기할 때는 `prevent_destroy`를 해제하는 별도 승인과 백업 확인이 필요하다.
 - [ADR-DATA-005](../../../docs/07-adr/data/data-005-redis-refresh-token.md) 6절은 2026-07-30에 공동 owner 합의로 "앱 인스턴스 동거"로 개정한 조항이다. **분리는 그 개정을 되돌리므로 같은 owner의 합의가 다시 필요하다.**
 
+## 기존 Redis 상태가 있을 때 최초 전환
+
+새 data EBS가 비어 있으면 bootstrap은 파일시스템을 생성하고 mount한다. 따라서 기존 root volume의 AOF·RDB를 가진 환경에서 바로 `apply`하면 기존 세션·Refresh Token·rate-limit 상태가 새 volume에 나타나지 않는다. 운영 데이터가 있을 수 있으면 아래 offline copy를 먼저 수행하고, 확인 전에는 Redis 레이어를 apply하지 않는다.
+
+```bash
+# 1) 현재 Redis를 중지하고 원본 data를 변경하지 않는다.
+sudo systemctl stop masiton-redis.service
+
+# 2) Redis 인스턴스와 같은 AZ에 암호화 EBS를 만든 뒤 현재 인스턴스에 attach한다.
+aws ec2 create-volume --availability-zone <redis-az> --size <gib> --volume-type gp3 --encrypted
+aws ec2 attach-volume --volume-id <new-volume-id> --instance-id <current-redis-instance-id> --device /dev/sdf
+
+# 3) 새 volume을 임시 경로에 mount하고 원본 data를 복사한다.
+sudo mkfs.ext4 /dev/nvme1n1
+sudo mkdir -p /mnt/masiton-redis-data
+sudo mount /dev/nvme1n1 /mnt/masiton-redis-data
+sudo rsync -aHAX --numeric-ids /opt/masiton/redis/data/ /mnt/masiton-redis-data/
+sudo test -f /mnt/masiton-redis-data/appendonly.aof
+
+# 4) 복사본을 unmount하고 attachment를 분리한다. 이후 volume을 Terraform state에 import한다.
+sudo umount /mnt/masiton-redis-data
+aws ec2 detach-volume --volume-id <new-volume-id>
+terraform import aws_ebs_volume.redis_data <new-volume-id>
+terraform plan -out=redis.tfplan
+```
+
+`/dev/nvme1n1`은 예시다. `lsblk`와 volume ID를 대조해 실제 장치를 확인하고, Redis 재기동·AOF 로딩·인증 상태·rate-limit key를 검증한 뒤에만 replacement 인스턴스와 attachment 교체를 승인한다. 운영 데이터가 없는 신규 도입이면 그 사실을 plan 승인 기록에 남기고 빈 volume 경로를 사용한다.
+
 ## AMI 만드는 절차
 
 퍼블릭 subnet에 임시 인스턴스를 띄워 이미지를 받아 굽고 종료한다. 이미지 digest를 갱신할 때 같은 절차를 반복한다.

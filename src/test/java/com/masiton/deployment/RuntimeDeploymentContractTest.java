@@ -27,6 +27,7 @@ class RuntimeDeploymentContractTest {
     private static final Path MONITORING = Path.of("infra/production/terraform/monitoring.tf");
     private static final Path REDIS_INSTANCE = Path.of("infra/production/terraform-redis/instance.tf");
     private static final Path REDIS_USER_DATA = Path.of("infra/production/terraform-redis/templates/redis-user-data.sh.tftpl");
+    private static final Path REDIS_README = Path.of("infra/production/terraform-redis/README.md");
     private static final Path APPSPEC = Path.of("deploy/codedeploy/appspec.yml");
     private static final Path AFTER_INSTALL = Path.of("deploy/codedeploy/hooks/after-install.sh");
     private static final Path VALIDATE_SERVICE = Path.of("deploy/codedeploy/hooks/validate-service.sh");
@@ -70,6 +71,7 @@ class RuntimeDeploymentContractTest {
 
         assertThat(script)
                 .contains("rollback_enabled=yes", "previous", "backup_asset", "restore_asset", ".missing")
+                .contains("local original_exit_code=$?", "rollback_failed=yes", "return \"$original_exit_code\"")
                 .contains("systemctl restart masiton-backend.service")
                 .contains("REDIS_HOST")
                 .contains("redis_cli()")
@@ -92,7 +94,8 @@ class RuntimeDeploymentContractTest {
                 .contains("trap on_signal INT TERM")
                 .contains("for _ in $(seq 1 270)")
                 .contains("for _ in $(seq 1 60)")
-                .contains("Succeeded|Failed|Stopped");
+                .contains("Succeeded|Failed|Stopped")
+                .contains("stop_failed=false", "return 1", "::error::CodeDeploy");
         assertThat(iam).contains("codedeploy:StopDeployment");
     }
 
@@ -135,6 +138,10 @@ class RuntimeDeploymentContractTest {
                 .contains("/opt/masiton/redis/data")
                 .contains("mkfs.ext4")
                 .contains("/etc/fstab");
+        assertThat(Files.readString(REDIS_README))
+                .contains("## 기존 Redis 상태가 있을 때 최초 전환")
+                .contains("rsync -aHAX --numeric-ids")
+                .contains("terraform import aws_ebs_volume.redis_data");
     }
 
     @Test

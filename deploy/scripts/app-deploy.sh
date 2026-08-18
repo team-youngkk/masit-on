@@ -61,20 +61,22 @@ cleanup() {
 trap cleanup EXIT
 
 rollback() {
+  local original_exit_code=$?
   set +e
   trap - ERR
-  [ "$rollback_enabled" = yes ] || return 0
+  [ "$rollback_enabled" = yes ] || return "$original_exit_code"
   echo '배포 후 health 실패: 이전 이미지·실행 산출물로 rollback을 시도한다' >&2
+  local rollback_failed=no
 
   restore_asset() {
     local source="$1"
     local backup="$2"
     if [ -f "$backup" ]; then
-      install -d "$(dirname "$source")"
-      rm -f "$source"
-      cp -a "$backup" "$source"
+      install -d "$(dirname "$source")" || rollback_failed=yes
+      rm -f "$source" || rollback_failed=yes
+      cp -a "$backup" "$source" || rollback_failed=yes
     elif [ -f "${backup}.missing" ]; then
-      rm -f "$source"
+      rm -f "$source" || rollback_failed=yes
     fi
   }
 
@@ -86,14 +88,20 @@ rollback() {
   restore_asset "$OPT_DIR/bin/runtime-health.sh" "$previous/opt/masiton/bin/runtime-health.sh"
   restore_asset "/etc/systemd/system/masiton-backend.service" "$previous/etc/systemd/system/masiton-backend.service"
   restore_asset "/etc/systemd/system/masiton-frontend.service" "$previous/etc/systemd/system/masiton-frontend.service"
-  systemctl daemon-reload
+  systemctl daemon-reload || rollback_failed=yes
   for service in masiton-backend.service masiton-frontend.service; do
     if [ -f "/etc/systemd/system/$service" ]; then
-      systemctl restart "$service"
+      systemctl restart "$service" || rollback_failed=yes
     else
       systemctl disable --now "$service" >/dev/null 2>&1 || true
     fi
   done
+
+  if [ "$rollback_failed" = yes ]; then
+    echo 'rollback 자체가 실패했다. 수동 복구가 필요하다.' >&2
+    return 1
+  fi
+  return "$original_exit_code"
 }
 
 backup_asset() {

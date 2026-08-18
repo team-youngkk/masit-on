@@ -16,7 +16,7 @@ related_documents:
 | PR | [#228 ASG 기반 Blue-Green 운영 배포 인프라 반영](https://github.com/team-youngkk/masit-on/pull/228) |
 | 작성자 | w00lam |
 | 처리 일자 | 2026-08-18 |
-| 범위 | 미해결 inline review thread 7건과 최신 HEAD에서 이미 반영된 RDS ingress 예시 1건 |
+| 범위 | 최초 리뷰 7건과 후속 P1 리뷰 3건, 최신 HEAD에서 이미 반영된 RDS ingress 예시 1건 |
 | 주 문제 유형 | 배포 / 인프라 / 애플리케이션 |
 | 기존 기록 | [트러블슈팅 인덱스](README.md), [PR #221 배포 hardening 기록](pr-221-deployment-hardening-cost-review.md), ADR-DEPLOY-005와 비용·일정 영향 검토를 확인했다. 동일한 Redis volume·CodeDeploy 중단·단일 target group 문제를 직접 다룬 기존 기록은 없어 새 기록으로 남긴다. |
 
@@ -28,9 +28,12 @@ related_documents:
 | [CodeDeploy timeout/cancel](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801367865) | timeout·workflow 취소 시 `stop-deployment --auto-rollback-enabled`와 terminal 상태 확인 | 배포 | 수정 필요 | 45분 polling, EXIT·signal trap, 중지 후 terminal polling, `StopDeployment` 권한 추가 | `RuntimeDeploymentContractTest` 통과. 실제 CodeDeploy 취소 리허설은 미실행 |
 | [ADR·runbook target group](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801367867) | listener 전환 대신 단일 target group의 instance 등록·해제와 ASG membership 판정으로 정정하고 green 자원 제거 | 배포 / 인프라 | 수정 필요 | ADR·runbook·운영 README 정정, green target group·alarm·output 제거 | `RuntimeDeploymentContractTest`, 관련 문자열 검색 통과. AWS 리허설은 미실행 |
 | [RDS ingress 예시](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801373600) | 예시에 `manage_rds_ingress_rule = true` 명시 | 인프라 | 이미 해결 | 최신 HEAD의 `infra/production/terraform/terraform.tfvars.example`에 이미 설정되어 있어 추가 변경 없음 | 현재 파일 36행의 `true` 확인 |
-| [subnet route 조건](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801373603) | ALB에는 IGW default route, app에는 IGW default route가 없음을 plan에서 검증 | 인프라 | 결정 필요 | subnet별 `aws_route_table` data source와 ALB/app postcondition은 추가했지만 현재 public app subnet 전제와 충돌해 thread를 미해결로 유지 | Terraform provider의 `routes`·`gateway_id` 계약 확인. 저장소 검증 기록상 `validate`는 통과했지만 운영 `plan`은 11절 조건에서 실패 |
+| [subnet route 조건](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801373603) | ALB에는 IGW default route, app에는 IGW default route가 없음을 plan에서 검증 | 인프라 | 수정 필요 | `app_subnet_is_private` 변수로 배치 의도를 명시하고 선언값과 실제 route를 대조하도록 정정 | `RuntimeDeploymentContractTest` 통과. 운영 public subnet 전제는 `false`로 선언해 plan 충돌을 해소 |
 | [rollback 실행 산출물](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801373606) | 이미지뿐 아니라 script·systemd unit도 실패 시 이전 버전 복원 | 배포 / 애플리케이션 | 수정 필요 | 배포 전 script·unit backup과 missing marker를 만들고 rollback에서 복원·제거 | Git Bash `bash -n`, `RuntimeDeploymentContractTest` 통과 |
 | [CodeDeploy IAM wildcard](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801373612) | CreateDeployment를 deployment group으로 제한하고 wildcard 조회를 별도 분리 | 인프라 | 수정 필요 | 생성·고정 리소스 조회·wildcard 조회·중지 권한을 별도 statement로 분리 | `RuntimeDeploymentContractTest` 통과. IAM policy simulator는 미실행 |
+| [Redis 최초 데이터 이전](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801505483) | 기존 root volume의 AOF·RDB를 새 data EBS로 이전하는 절차가 없음 | 인프라 / 데이터베이스 | 수정 필요 | 기존 상태를 offline copy하고 Terraform import 후 replacement를 승인하는 운영 절차를 Redis README에 추가 | `RuntimeDeploymentContractTest` 통과. 실제 운영 데이터 이전은 미실행 |
+| [rollback 오류 전파](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801505488) | rollback 성공처럼 반환되어 실패한 배포가 성공으로 끝날 수 있음 | 배포 / 애플리케이션 | 수정 필요 | 원래 exit code 보존, 복구 실패 non-zero 반환, 수동 복구 error를 추가 | Git Bash `bash -n`, `RuntimeDeploymentContractTest` 통과 |
+| [CodeDeploy stop 실패](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801505494) | stop API 실패·terminal 미확인이 성공 경로로 처리됨 | 배포 / 인프라 | 수정 필요 | stop 실패와 terminal 미확인을 non-zero·GitHub error annotation으로 전파 | `RuntimeDeploymentContractTest` 통과. 실제 cancel 리허설은 미실행 |
 
 ## 3. 문제 현상과 발생 조건
 
@@ -49,6 +52,9 @@ related_documents:
 4. 입력 subnet의 VPC 소속만 확인하고 route table의 public/private 의미를 plan에서 검증하지 않았다.
 5. rollback 백업 대상이 이미지 참조에 한정되어 실행 script·unit의 버전 불일치가 남을 수 있었다.
 6. CI role의 CreateDeployment와 조회 권한을 한 statement에 묶고 wildcard를 포함했다.
+7. 최초 Redis 교체에서 기존 root volume 데이터를 새 EBS로 옮기는 운영 전제와 절차를 기록하지 않았다.
+8. rollback 함수가 원래 오류 코드와 복구 실패를 보존하지 않았다.
+9. CodeDeploy 중지 보상 함수가 stop API 실패와 terminal 미확인을 성공으로 반환했다.
 
 ## 5. 확인 및 시도
 
@@ -64,10 +70,11 @@ related_documents:
 | Terraform 1.6.6 `validate` 두 레이어 | 통과 | 실제 AWS 자격 증명으로 실행. terraform-redis의 중복 data source 선언을 이 단계에서 발견해 `data.tf`로 통합 |
 | Terraform 1.6.6 `plan` | Redis 레이어 통과, **운영 레이어 실패** | Redis는 데이터 volume 도입으로 인스턴스가 교체되며 교체 후 앱 재배포가 필요하다. 운영 레이어는 app subnet postcondition이 현재 구성과 충돌한다. 11절 참조 |
 | CodeDeploy cancel/rollback 리허설·IAM policy simulator | 미실행: 승인된 운영 리허설 범위 밖 | 운영 전환 전에 담당자가 확인 |
+| 후속 리뷰 3건 대조 | Redis migration 절차, rollback 오류 전파, stop 실패 전파를 코드·문서에 반영 | 관련 테스트와 셸 문법을 재실행하고 실제 운영 리허설은 별도 확인 |
 
 ## 6. 최종 해결
 
-- 변경 내용: Redis data EBS 분리, CodeDeploy 중단 보상, 단일 target group 계약 정정과 green 자원 제거, route postcondition, rollback 실행 산출물 backup/restore, IAM statement 분리, 회귀 테스트와 문서 기록을 추가했다.
+- 변경 내용: Redis data EBS 분리와 최초 데이터 이전 절차, CodeDeploy 중단 보상과 실패 전파, 단일 target group 계약 정정과 green 자원 제거, route postcondition, rollback 실행 산출물 backup/restore와 오류 전파, IAM statement 분리, 회귀 테스트와 문서 기록을 추가했다.
 - 선택 이유: 운영 상태·배포 제어·계약 문서를 각각 소유 경계에 맞춰 최소 변경하고, 기존 단일 EC2 경로는 유지하기 위해서다.
 - 변경 파일: `.github/workflows/ci.yml`, `deploy/scripts/app-deploy.sh`, `infra/production/terraform-redis/*`, `infra/production/terraform/*`, `infra/production/README.md`, `docs/07-adr/platform/deploy-005-asg-blue-green-rollout.md`, `docs/08-planning/blue-green-cleanup-runbook.md`, `src/test/java/com/masiton/deployment/RuntimeDeploymentContractTest.java`
 - 고려한 대안: Redis snapshot 복구 절차만 추가하는 방법보다 별도 EBS 수명주기 분리가 교체 시 즉시 보존을 보장한다. listener rollback 계약을 유지하는 방법은 실제 Server 플랫폼 동작과 충돌하므로 채택하지 않았다.
@@ -87,7 +94,7 @@ related_documents:
 ## 8. 재발 방지 및 다음 확인
 
 - 재발 방지: `RuntimeDeploymentContractTest`에 CodeDeploy 중단, IAM 권한, route 조건, 단일 target group, Redis data volume, rollback 산출물 계약을 추가했다.
-- 다음 확인: 인프라 owner와 팀이 app subnet을 private+NAT로 전환할지, 배치 의도를 변수로 명시할지 결정한 뒤 운영 `plan`을 다시 실행한다. 그 후 실제 AWS에서 CodeDeploy timeout/cancel·replacement failure·Redis instance replacement·IAM policy simulator를 운영 전환 전에 담당자 승인으로 확인한다.
+- 다음 확인: 실제 AWS에서 CodeDeploy timeout/cancel·replacement failure·Redis 기존 데이터 이전·Redis instance replacement·IAM policy simulator를 운영 전환 전에 담당자 승인으로 확인한다.
 
 ## 9. 도입 전후 비교 지표
 
@@ -102,7 +109,7 @@ related_documents:
 - 저장소의 선행 검증 기록(커밋 `5ac0298`)에 실제 AWS 자격 증명으로 두 레이어 `validate` 통과가 남아 있다. 현재 작업 환경에서는 실제 자격 증명 없이 provider 초기화를 재현할 수 없었다.
 - AWS 계정 리허설과 IAM policy simulator는 이 작업에서 실행하지 않았으므로 운영 전환 전 확인이 필요하다.
 - RDS ingress 예시 스레드는 최신 HEAD에 이미 `manage_rds_ingress_rule = true`가 있어 코드 변경 없이 “이미 해결”로 답변한다.
-- subnet route 스레드는 app subnet 비용·보안 계약의 결정이 필요해 미해결 상태다.
+- 후속 P1 스레드 3건은 코드·운영 문서에 반영했지만 실제 데이터 이전·cancel·rollback 리허설은 미실행이다.
 
 ## 11. 해결된 계약 충돌: app subnet의 IGW 경로
 
