@@ -49,7 +49,7 @@ related_documents:
 | `executionStatus` | `FAILED` | 제한된 재시도 뒤 실행 실패 또는 입력 접근 실패 |
 | `resultCompleteness` | `COMPLETE` | 검수 대상 필드가 모두 추출됨 |
 | `resultCompleteness` | `PARTIAL` | 작업은 성공했지만 일부 필드가 `UNKNOWN` |
-| `reviewStatus` | `AUTO_CONFIRMED` | 자동 검증과 정식 등록·공개 완료. 작업 최상위 값은 모든 등록 단위가 확정된 경우에만 사용한다 |
+| `reviewStatus` | `AUTO_CONFIRMED` | 자동 검증과 정식 등록·공개 완료. 등록 단위 값은 그 단위의 등록 성공을 뜻하고, 작업 최상위 값은 아래 요약 규칙을 따르므로 모든 단위 성공을 보장하지 않는다 |
 | `reviewStatus` | `AUTO_BLOCKED` | 모호·근거 부족·외부 충돌로 자동 보류 |
 | `reviewStatus` | `AUTO_REJECTED` | 입력·정책 검증 실패로 자동 거부. 복구 경로가 없는 종결 상태다 |
 | `reviewStatus` | `MANUAL_OVERRIDE` | 관리자의 사후 보정·롤백 결과 |
@@ -79,6 +79,8 @@ related_documents:
 | 차단 + 거부 | `AUTO_BLOCKED` | 처리할 예외가 남았다 |
 | 확정 + 차단 + 거부 | `AUTO_BLOCKED` | 같은 이유 |
 | 사후 보정·롤백 포함 어떤 조합 | `MANUAL_OVERRIDE` | 관리자 개입 사실이 가장 우선한다 |
+
+최상위 `AUTO_CONFIRMED`는 "모든 단위 성공"이 아니라 **"처리할 예외가 남지 않았고 등록된 단위가 있다"**는 뜻이다. 확정 + 거부 혼합도 여기에 해당한다. 모든 단위가 성공했는지 확인하려면 `registrationUnits`를 읽는다.
 
 `AUTO_BLOCKED`가 `AUTO_CONFIRMED`보다 우선하는 이유는 처리할 예외가 남아 있음을 알리기 위해서다. 반대로 `AUTO_REJECTED`는 복구 경로가 없는 종결이므로 확정된 등록이 있으면 그쪽이 우선한다. 클라이언트는 어느 경우에도 최상위 값만으로 등록 성공 여부를 판단하지 않고 `registrationUnits`를 함께 읽는다. 새 Enum 값은 추가하지 않는다. 계약 테스트는 위 다섯 조합을 모두 고정한다.
 
@@ -373,10 +375,24 @@ Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-0
 {
   "code": "AIEXTRACT_VALIDATION_CONFLICT",
   "blockReason": "PLACE_AMBIGUOUS",
+  "recoveryPath": "SUPPLEMENT",
   "requiredSupplements": ["kakaoPlaceUrl"],
   "traceId": "opaque-trace-id"
 }
 ```
+
+`AIEXTRACT_VALIDATION_CONFLICT`는 "검증 충돌" 하나를 뜻하며 복구 가능 여부를 구분하지 않는다. 클라이언트는 `recoveryPath`로 다음 화면을 결정한다.
+
+| `recoveryPath` | 의미 | 클라이언트 동작 |
+|---|---|---|
+| `SUPPLEMENT` | `CONFIRM` 보충 입력으로 복구 가능 | 보조 입력 화면. `requiredSupplements`가 필요한 필드를 지정한다 |
+| `REEXTRACT` | 보완 텍스트 재추출로만 복구 가능 | 재추출 안내. 입력란을 두지 않는다 |
+| `MANUAL_REGISTRATION` | 기존 수동 등록으로 전환 | 수동 등록 화면 연결 |
+| `EXISTING_RESOURCE` | 이미 등록된 자원이 있어 새 등록이 불필요 | 기존 맛집·방문 관계로 이동 |
+| `RETRY` | 일시 오류. 같은 요청 재실행으로 복구 | 재실행 버튼 |
+| `NONE` | 이 경로로 복구할 수 없음 | 거절 사유만 표시 |
+
+`recoveryPath`가 `SUPPLEMENT`일 때만 `requiredSupplements`가 비어 있지 않다. 등록 단위 0개, 종결 상태 `AUTO_REJECTED`, 롤백 완료 `MANUAL_OVERRIDE` 거절은 `NONE`이다.
 
 보충 입력은 **판정 선택만 받고 후보 값 생성은 받지 않는다.** Kakao 장소와 카테고리는 관리자가 외부 기준정보 중 하나를 고르는 것이라 AI 근거를 대체하지 않지만, 맛집명·주소·방문 근거는 관리자가 값을 만들어 넣는 순간 영상 근거 없는 데이터가 등록된다. 그래서 후자는 보충 입력 대상이 아니고 재추출 또는 기존 수동 등록으로 처리한다.
 
@@ -448,7 +464,7 @@ Webhook 수신 경로는 공개 인터넷 진입점이므로 Nginx·Spring Secur
 | `AIEXTRACT_PROVIDER_BLOCKED` | 429 | Gemini Free Tier quota 소진·결제 연결 요구·무료 정책 미검증 |
 | `AIEXTRACT_WEBHOOK_REJECTED` | 403 | 구독 채널·검증 Token 불일치 |
 | `AIEXTRACT_WEBHOOK_SIGNATURE_INVALID` | 403 | Webhook HMAC 비밀값·헤더 누락 또는 서명 불일치 |
-| `AIEXTRACT_VALIDATION_CONFLICT` | 422 | 자동 검증 중 기존 Kakao·YouTube·Visit 검증 실패, 보충 입력으로 복구할 수 없는 예외 사유 |
+| `AIEXTRACT_VALIDATION_CONFLICT` | 422 | 검증 충돌. 복구 가능 여부는 코드가 아니라 응답의 `recoveryPath`로 구분한다 |
 | `AIEXTRACT_UNIT_ID_REQUIRED` | 400 | 등록 단위가 둘 이상인 작업의 `review` 요청에 `unitId`가 없음 |
 | `AIEXTRACT_CONCURRENT_REQUEST_CONFLICT` | 409 | 같은 등록 단위에 대한 동시 요청. 업무 중복을 뜻하는 `blockReason`의 `DUPLICATE_CONFLICT`와 다름 |
 

@@ -226,6 +226,21 @@ Kakao 장소와 카테고리는 관리자가 외부 기준정보 중 하나를 �
 
 2차 반영에서 API 2.1절의 `AUTO_REJECTED` 설명에서 중복을 제거했지만, 같은 개념을 서술하는 사용자 흐름 상태도를 함께 보지 않았다. 계약 문서(API·BR)와 제품 문서(사용자 흐름·와이어프레임)를 서로 다른 패스에서 고친 것이 원인이다. 이번에는 상태 매핑을 바꾸면서 그 매핑이 등장하는 네 문서를 한 번에 확인했다.
 
+### 10.4 5차 리뷰 처리
+
+김인안과 박진영이 승인했고 이우람이 7건을 남겼다. 중복 2건을 제외하면 6개 항목이며, 전부 3~4차 재분류가 만든 잔여 불일치다.
+
+| 스레드 | 요청 요약 | 문제 유형 | 판단 | 처리 결과 |
+|---|---|---|---|---|
+| [`AUTO_REJECTED` 복구 가능 여부 (P1)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3800587050) | FR은 사후 보정·롤백 허용, API·흐름은 종결로 정의 | 기타 | 수정 필요 | `FR-AIEXTRACT-003`을 `AUTO_BLOCKED` 사후 보정과 `AUTO_CONFIRMED` 롤백으로 분리하고 `AUTO_REJECTED`는 재추출만 가능하다고 명시 |
+| [보완 버튼 노출 (P2, 2건)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3800563363) | 후보 값 부족 예외 목업에 `[허용된 값 보완]` 잔존 | 기타 | 수정 필요 | 목업에서 보완 버튼을 제거하고 재추출·수동 등록만 남김. 장소·카테고리 차단은 보조 입력을 받는 별도 목업으로 분리 |
+| [최상위 `AUTO_CONFIRMED` 의미 (P2)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3800587048) | 상태 표는 "모든 단위 확정", 요약 규칙은 혼합도 포함 | 기타 | 수정 필요 | 상태 표 설명을 요약 규칙에 맞추고, 최상위 값의 의미를 "처리할 예외가 남지 않았고 등록된 단위가 있다"로 명시 |
+| [`AIEXTRACT_VALIDATION_CONFLICT` 복구 구분 (P2)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3800587052) | 같은 422가 복구 가능·불가를 모두 가리킴 | 기타 | 수정 필요 | 오류 계약을 "검증 충돌"로 일반화하고 응답에 `recoveryPath`(6종)를 추가해 클라이언트가 다음 화면을 결정하게 함 |
+| [와이어프레임 버전 라벨 (P2)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3800587057) | 목록 목업이 `M3/P7/S2` 표시 | 기타 | 수정 필요 | `M3/P7/S1`로 정정. `P8`·`S2`는 구현 PR에서 갱신할 미래 라벨 |
+| [PR 본문 서술 (P3)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3800559420) | 본문이 7가지 모두 보조 입력이라고 서술 | 기타 | 수정 필요 | PR 본문을 3 vs 4 분류로 수정 |
+
+와이어프레임 버전 라벨은 특히 아프다. 9.1절에서 "문서만 `P8`·`S2`로 올리면 배포되지 않은 상태를 배포된 것처럼 기록한다"고 써 놓고, 정작 같은 문서의 목록 목업에는 기존에 `S2`가 들어가 있었다. 새로 쓴 문장만 보고 기존 서술을 확인하지 않았다.
+
 ## 11. 비교 지표
 
 해당 없음. 문서 계약 변경이며 측정할 런타임 지표가 없다. 자동 등록률·`CATEGORY_UNRESOLVED` 비율 등은 구현 후 [PRD 11절 지표](../04-product/prd/admin/ai-video-information-extraction.md)에서 측정한다. 이 PR 시점에는 기준선을 만들 수 없다.
