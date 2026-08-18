@@ -51,6 +51,7 @@ related_documents:
 | `FR-COURSE-001` | 공개·활성·좌표 보유 맛집 2~5개, 중복·출발점·30km 검증 | `TST-E3-COURSE-001` | `E3-T09` |
 | `FR-COURSE-002` | 첫 장소 출발, 최근접 이웃 순서, 구간·전체 거리/시간, 만료 | `TST-E3-COURSE-002` | `E3-T09` |
 | `FR-COURSE-003` | timeout·429·5xx·부분 실패·추정값 금지와 기능 격리 | `TST-E3-COURSE-003` | `E3-T10` |
+| `FR-COURSE-004` | 순서 마커·실제 경로 선 표시, 형상 일부 누락 시 지도만 저하, SDK·키 실패에도 텍스트 결과 유지 | `TST-E3-COURSE-004` | `E3-T09`, `E3-T10` |
 
 ## 3. BR·NFR 교차 검증
 
@@ -71,6 +72,7 @@ related_documents:
 | `TST-E3-COURSE-001` | `BR-COURSE-001`, `BR-COURSE-002`, `NFR-PRIVACY-006` | 입력 경계값·좌표·공개 상태·비저장·현재 위치 미수집 | `E3-T09` |
 | `TST-E3-COURSE-002` | `BR-COURSE-003`, `NFR-PERFORMANCE-007` | Kakao Mobility WireMock 계약, 순서·TTL 5분·코스당 1회 호출 | `E3-T09` |
 | `TST-E3-COURSE-003` | `BR-COURSE-004`, `NFR-EXTERNAL-005`, `NFR-COST-001`, `NFR-AVAILABILITY-003` | timeout·429·5xx·부분 실패·quota hard stop·기존 탐색 격리 | `E3-T10`, `E3-T13` |
+| `TST-E3-COURSE-004` | `BR-COURSE-005`, `NFR-PRIVACY-006`, `NFR-PERFORMANCE-007` | `summary=false` WireMock 정상 형상, `restaurants[].coordinate`·`segments[].path`·`shapeStatus` 응답 계약, 거리·시간 정상·형상만 없는 구간의 `MISSING` 처리와 `SUCCEEDED` 유지, 세그먼트당 500개 상한 초과 시 시작·끝점 보존 샘플링, 프론트 마커·Polyline 렌더링과 목록 양방향 동기화, SDK 실패·키 누락 시 텍스트 결과 유지, 응답·로그에 원문·뷰포트·API Key 없음 | `E3-T09`, `E3-T10`, `E3-T13` |
 | `TST-E3-DATA-001` | `NFR-INTEGRITY-006`, `NFR-PRIVACY-006`, `NFR-TEST-006` | V1→V4·빈 DB migration, PK/UK/FK/CHECK, 보존·삭제·정식 저장 0건 | `E3-T03`, `E3-T11` |
 | `TST-E3-SEC-001` | `NFR-SECURITY-007`, `NFR-OBSERVABILITY-005` | 관리자/공개 audience, 악성 입력, Secret·URL·자막·Provider 응답 로그 비노출 | `E3-T01`, `E3-T04`, `E3-T13` |
 | `TST-E3-E2E-001` | 3차 확장 전체 FR·BR·NFR | 360px·390px·768px·1280px·1440px, 키보드, 정상·빈·오류·복구 브라우저 흐름 | `E3-T12` |

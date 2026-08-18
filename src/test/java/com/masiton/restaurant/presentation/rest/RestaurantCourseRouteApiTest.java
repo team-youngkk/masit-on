@@ -32,11 +32,14 @@ import org.testcontainers.utility.DockerImageName;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import com.masiton.restaurant.application.port.out.CourseRouteFailureCategory;
 import com.masiton.restaurant.application.port.out.CourseRouteLeg;
 import com.masiton.restaurant.application.port.out.CourseRouteProviderException;
 import com.masiton.restaurant.application.port.out.CourseRouteProviderPort;
 import com.masiton.restaurant.application.port.out.CourseRouteResult;
+import com.masiton.restaurant.application.port.out.CourseRouteVertex;
+import com.masiton.restaurant.domain.course.CourseRouteShapeStatus;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.emptyString;
@@ -112,7 +115,11 @@ class RestaurantCourseRouteApiTest {
         // given
         UUID startId = insertPublicRestaurant("출발 맛집", "37.5665", "126.9780");
         UUID destinationId = insertPublicRestaurant("도착 맛집", "37.5700", "126.9820");
-        given(courseRouteProviderPort.calculate(any())).willReturn(singleLegResult(1200, 300));
+        given(courseRouteProviderPort.calculate(any())).willReturn(singleLegResultWithShape(
+                1200,
+                300,
+                CourseRouteShapeStatus.AVAILABLE,
+                List.of(new CourseRouteVertex(37.5665, 126.9780), new CourseRouteVertex(37.5700, 126.9820))));
         int restaurantCountBefore = restaurantCount();
 
         // when
@@ -125,14 +132,24 @@ class RestaurantCourseRouteApiTest {
                 .andExpect(jsonPath("$.restaurants[0].sequence").value(1))
                 .andExpect(jsonPath("$.restaurants[0].role").value("START"))
                 .andExpect(jsonPath("$.restaurants[0].restaurantId").value(startId.toString()))
+                .andExpect(jsonPath("$.restaurants[0].coordinate.latitude").value(37.5665))
+                .andExpect(jsonPath("$.restaurants[0].coordinate.longitude").value(126.9780))
                 .andExpect(jsonPath("$.restaurants[1].sequence").value(2))
                 .andExpect(jsonPath("$.restaurants[1].role").value("DESTINATION"))
                 .andExpect(jsonPath("$.restaurants[1].restaurantId").value(destinationId.toString()))
+                .andExpect(jsonPath("$.restaurants[1].coordinate.latitude").value(37.5700))
+                .andExpect(jsonPath("$.restaurants[1].coordinate.longitude").value(126.9820))
                 .andExpect(jsonPath("$.segments.length()").value(1))
                 .andExpect(jsonPath("$.segments[0].fromRestaurantId").value(startId.toString()))
                 .andExpect(jsonPath("$.segments[0].toRestaurantId").value(destinationId.toString()))
                 .andExpect(jsonPath("$.segments[0].distanceMeters").value(1200))
                 .andExpect(jsonPath("$.segments[0].durationSeconds").value(300))
+                .andExpect(jsonPath("$.segments[0].shapeStatus").value("AVAILABLE"))
+                .andExpect(jsonPath("$.segments[0].path.length()").value(2))
+                .andExpect(jsonPath("$.segments[0].path[0].latitude").value(37.5665))
+                .andExpect(jsonPath("$.segments[0].path[0].longitude").value(126.9780))
+                .andExpect(jsonPath("$.segments[0].path[1].latitude").value(37.5700))
+                .andExpect(jsonPath("$.segments[0].path[1].longitude").value(126.9820))
                 .andExpect(jsonPath("$.totalDistanceMeters").value(1200))
                 .andExpect(jsonPath("$.totalDurationSeconds").value(300))
                 .andExpect(jsonPath("$.generatedAt").exists())
@@ -141,7 +158,11 @@ class RestaurantCourseRouteApiTest {
 
         // then
         String body = result.getResponse().getContentAsString();
-        assertThat(body).doesNotContain("latitude", "longitude", "KakaoAK");
+        // NFR-PRIVACY-006 + API-DISCOVERY-COURSE-001 4절: restaurants[].coordinate와 segments[].path는
+        // 지도 표시를 위한 의도적 예외로만 좌표를 노출한다. 이 두 위치를 제거한 나머지 응답에는 여전히
+        // 좌표(latitude/longitude)와 Kakao API Key가 전혀 없어야 한다.
+        assertThat(bodyWithoutDocumentedCoordinates(body)).doesNotContain("latitude", "longitude");
+        assertThat(body).doesNotContain("KakaoAK");
 
         JsonNode root = objectMapper.readTree(body);
         assertThat(root.get("restaurants").get(0).get("restaurantId").isTextual()).isTrue();
@@ -153,6 +174,28 @@ class RestaurantCourseRouteApiTest {
 
         verify(courseRouteProviderPort, times(1)).calculate(any());
         assertThat(restaurantCount()).isEqualTo(restaurantCountBefore);
+    }
+
+    @Test
+    @DisplayName("구간 형상 좌표가 없으면 shapeStatus는 MISSING, path는 빈 배열이고 status는 SUCCEEDED로 유지된다")
+    void courseRoute_구간형상좌표없음_shapeStatusMISSING이고SUCCEEDED를유지한다() throws Exception {
+        // given
+        UUID startId = insertPublicRestaurant("출발 맛집", "37.5665", "126.9780");
+        UUID destinationId = insertPublicRestaurant("도착 맛집", "37.5700", "126.9820");
+        given(courseRouteProviderPort.calculate(any())).willReturn(singleLegResult(1200, 300));
+
+        // when & then
+        mockMvc.perform(post(COURSE_ROUTES_PATH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(courseRequestJson(startId, destinationId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SUCCEEDED"))
+                .andExpect(jsonPath("$.segments[0].shapeStatus").value("MISSING"))
+                .andExpect(jsonPath("$.segments[0].path.length()").value(0))
+                .andExpect(jsonPath("$.segments[0].distanceMeters").value(1200))
+                .andExpect(jsonPath("$.segments[0].durationSeconds").value(300));
+
+        verify(courseRouteProviderPort, times(1)).calculate(any());
     }
 
     @Test
@@ -477,6 +520,29 @@ class RestaurantCourseRouteApiTest {
 
     private CourseRouteResult singleLegResult(int distanceMeters, int durationSeconds) {
         return new CourseRouteResult(List.of(new CourseRouteLeg(distanceMeters, durationSeconds)));
+    }
+
+    private CourseRouteResult singleLegResultWithShape(
+            int distanceMeters, int durationSeconds, CourseRouteShapeStatus shapeStatus, List<CourseRouteVertex> path) {
+        return new CourseRouteResult(
+                List.of(new CourseRouteLeg(distanceMeters, durationSeconds, shapeStatus, path)));
+    }
+
+    /**
+     * NFR-PRIVACY-006 검증 보조: 응답에서 좌표 노출이 허용된 유일한 두 위치({@code restaurants[].coordinate},
+     * {@code segments[].path})를 제거한 나머지 JSON 문자열을 돌려준다. 이 결과에 {@code latitude}·
+     * {@code longitude}가 남아 있으면 의도하지 않은 좌표 노출이다.
+     */
+    private String bodyWithoutDocumentedCoordinates(String body) {
+        JsonNode root = objectMapper.readTree(body);
+        ObjectNode redacted = (ObjectNode) root.deepCopy();
+        for (JsonNode stop : redacted.path("restaurants")) {
+            ((ObjectNode) stop).remove("coordinate");
+        }
+        for (JsonNode segment : redacted.path("segments")) {
+            ((ObjectNode) segment).remove("path");
+        }
+        return objectMapper.writeValueAsString(redacted);
     }
 
     private String courseRequestJsonRaw(String... restaurantIds) {
