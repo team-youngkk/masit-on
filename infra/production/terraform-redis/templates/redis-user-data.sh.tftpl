@@ -1,0 +1,28 @@
+#!/bin/bash
+# 전용 private Redis 부트스트랩. 컨테이너 이미지는 AMI에 미리 pull되어 있고
+# 설정 파일은 S3 gateway endpoint로 받는다. 비밀값을 여기에 쓰지 않는다.
+# requirepass는 redis-render-conf.sh가 Parameter Store에서 읽어 tmpfs에 렌더링한다.
+set -euxo pipefail
+
+REGION=${aws_region}
+BUCKET=${assets_bucket}
+PREFIX=${assets_prefix}
+STAGE=/tmp/masiton-deploy
+
+install -d -m 0755 "$STAGE"
+%{ for f in asset_files ~}
+aws s3 cp "s3://$BUCKET/$PREFIX/${f}" "$STAGE/${f}" --region "$REGION"
+%{ endfor ~}
+chmod 0755 "$STAGE/redis-install.sh" "$STAGE/redis-render-conf.sh"
+
+# 자신의 사설 IP에만 6379를 노출한다. 인스턴스 밖 경계는 보안 그룹이 담당한다.
+TOKEN=$(curl -sS -X PUT http://169.254.169.254/latest/api/token -H 'X-aws-ec2-metadata-token-ttl-seconds: 300')
+PRIVATE_IP=$(curl -sS -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/local-ipv4)
+
+install -d -m 0755 /etc/systemd/system/masiton-redis.service.d
+cat > /etc/systemd/system/masiton-redis.service.d/10-publish-addr.conf <<DROPIN
+[Service]
+Environment=REDIS_PUBLISH_ADDR=$PRIVATE_IP
+DROPIN
+
+bash "$STAGE/redis-install.sh" "$STAGE"

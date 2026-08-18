@@ -23,10 +23,16 @@ RestartSec=5s
 Environment=AWS_REGION=ap-northeast-2
 Environment=IMAGE=redis@sha256:8096655e437712b07503796fb64d81359256cfcff0ab29d95a7da72863786efb
 
+# 컨테이너 포트를 노출할 주소다. 앱과 동거하는 인스턴스는 loopback만 열어 커널이
+# 경계를 지킨다. 앱과 분리한 전용 Redis 인스턴스는 다른 인스턴스에서 접속해야 하므로
+# drop-in으로 자신의 사설 IP를 넣는다. 그 경우 인스턴스 밖 경계는 보안 그룹이
+# 유일하므로 6379는 앱 보안 그룹 출처만 허용한다(배포 고도화 영향 검토 6.3절).
+Environment=REDIS_PUBLISH_ADDR=127.0.0.1
+
 ExecStartPre=-/usr/bin/docker rm -f masiton-redis
 ExecStartPre=/opt/masiton/bin/redis-render-conf.sh
 ExecStart=/usr/bin/docker run --name masiton-redis \
-  --publish 127.0.0.1:6379:6379 \
+  --publish ${REDIS_PUBLISH_ADDR}:6379:6379 \
   --volume /run/masiton/redis.conf:/usr/local/etc/redis/redis.conf:ro \
   --volume /opt/masiton/redis/data:/data \
   --memory 384m \

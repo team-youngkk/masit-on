@@ -1,0 +1,4 @@
+# 실제 backend bucket과 locking table은 계정 운영자가 별도로 만든다.
+# 이 파일에 비밀값을 넣지 말고 init 시 -backend-config로 주입한다.
+bucket         = "masiton-terraform-state-REPLACE_ACCOUNT"
+dynamodb_table = "masiton-terraform-lock"

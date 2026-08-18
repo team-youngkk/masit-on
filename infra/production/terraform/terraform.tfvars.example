@@ -1,0 +1,56 @@
+aws_region = "ap-northeast-2"
+
+# Existing network and compute inputs. This module does not create VPC, subnet, AMI, RDS, or Redis.
+vpc_id = "vpc-REPLACE_ME"
+
+alb_subnet_ids = [
+  "subnet-REPLACE_ME_PUBLIC_A",
+  "subnet-REPLACE_ME_PUBLIC_C",
+]
+
+app_subnet_ids = [
+  "subnet-REPLACE_ME_PRIVATE_A",
+  "subnet-REPLACE_ME_PRIVATE_C",
+]
+
+ami_id = "ami-REPLACE_ME"
+
+rds_security_group_id   = "sg-REPLACE_ME_RDS"
+redis_security_group_id = "sg-REPLACE_ME_REDIS"
+
+# ACM is required for the ALB HTTPS listener. ALB re-encrypts traffic to Nginx on 443.
+acm_certificate_arn = "arn:aws:acm:ap-northeast-2:000000000000:certificate/REPLACE_ME"
+
+ecr_repository_arns = [
+  "arn:aws:ecr:ap-northeast-2:000000000000:repository/masiton-backend",
+  "arn:aws:ecr:ap-northeast-2:000000000000:repository/masiton-frontend",
+]
+
+kms_key_arns = ["arn:aws:kms:ap-northeast-2:000000000000:key/REPLACE_ME"]
+
+codedeploy_revision_bucket_name = "masiton-prod-codedeploy-REPLACE_ACCOUNT"
+
+nginx_trusted_proxy_cidrs = [
+  "10.0.0.0/16",
+]
+
+# Route53 alias is managed only when both values are set.
+# route53_zone_id     = "ZREPLACE_ME"
+# route53_record_name  = "api.example.com"
+# initial_blue_verified = true # known-good blue 검증 후에만 활성화
+
+ssm_parameter_arns = ["arn:aws:ssm:ap-northeast-2:000000000000:parameter/masiton/*"]
+# github_actions_role_name = "masiton-github-actions-role"
+# Keep secrets out of this file. user_data must install/start CodeDeploy Agent and
+# write REQUIRE_SHARED_REDIS=true plus the shared Redis endpoint configuration.
+# user_data = <<-EOT
+# #!/bin/bash
+# # Application bootstrap must resolve secret values from SSM using the instance role.
+# install -d -m 0750 /etc/masiton
+# cat > /etc/masiton/deployment.env <<'ENV'
+# REQUIRE_SHARED_REDIS=true
+# REDIS_HOST=redis.internal.example
+# REDIS_PORT=6379
+# NGINX_TRUSTED_PROXY_CIDRS=10.0.1.0/24,10.0.2.0/24
+# ENV
+# EOT

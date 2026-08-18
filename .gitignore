@@ -65,5 +65,6 @@ next-env.d.ts
 *.tfvars
 *.tfplan
 !terraform.tfvars.example
-infra/performance/terraform/backend.hcl
+# backend 설정은 모듈마다 로컬 전용이다. backend.hcl.example만 커밋한다.
+backend.hcl
 crash.log
