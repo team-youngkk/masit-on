@@ -28,7 +28,7 @@ related_documents:
 
 이 문서는 [PRD-ADMIN-002](../../../04-product/prd/admin/ai-video-information-extraction.md)의 관리자 신규 영상 추가, YouTube Webhook 접수, AI 추출 작업 조회와 자동 등록·예외 보정 API를 정의한다. AI 결과는 자동 검증을 통과하면 관리자 승인 없이 정식 Entity와 `VisitTag`를 생성·공개하고, 모호·실패·중복 결과만 보류한다. 판정과 등록의 단위는 작업 전체가 아니라 `BR-AIEXTRACT-001`의 장소 단위 등록 단위이며, 장소 동일성(`BR-AIEXTRACT-009`)과 대표 음식 카테고리(`BR-AIEXTRACT-010`)는 관리자 입력 없이 시스템이 결정한다. 이 API는 관리자에게 Kakao 장소 URL이나 음식 카테고리 선택을 요구하지 않는다.
 
-`registrationUnits` 응답 필드, 등록 단위 일괄 등록 API(3.6절), `review`의 `unitId`·`supplements`는 `합의 대기` 상태다. API 소유자(김인안)와 restaurant 도메인 소유자의 합의 전에는 구현 계약으로 사용하지 않는다. 근거는 [ADR-AI-001 1절](../../../07-adr/integration/ai-001-video-extraction-candidate-boundary.md)이다. 그 밖의 절은 종전대로 Accepted다.
+`registrationUnits`·`candidateTruncated` 응답 필드, 등록 단위 일괄 등록 API(3.6절), `review`의 `unitId`·`supplements`는 `합의 대기` 상태다. 합의는 [PR #226](https://github.com/team-youngkk/masit-on/pull/226)의 소유자 승인으로 갈음하며, 승인 전에는 구현 계약으로 사용하지 않는다. 승인 후 병합 직전 커밋에서 이 표시를 제거한다. 절차는 [ADR-AI-001 1절](../../../07-adr/integration/ai-001-video-extraction-candidate-boundary.md)에 있다. 그 밖의 절은 종전대로 Accepted다.
 
 - 관리자 API는 `/api/admin` 아래에 두고 JWT Bearer와 `ADMIN` 권한을 요구한다.
 - YouTube Webhook은 `/api/webhooks/youtube` 아래의 외부 수신 경계이며 관리자 JWT를 요구하지 않는다. Webhook은 작업 접수만 하고 AI·정식 등록을 실행하지 않는다.
@@ -179,6 +179,7 @@ related_documents:
     }
   ],
   "missingFields": ["visitEvidence"],
+  "candidateTruncated": false,
   "registrationUnits": [
     {
       "unitId": "opaque-registration-unit-id",
@@ -213,6 +214,7 @@ related_documents:
 - `evidence.type`은 `TIMESTAMP`(`startMs`, `endMs`), `TEXT_RANGE`(`startOffset`, `endOffset`, `sourceHash`), `UNKNOWN` 후보를 사용한다.
 - `UNKNOWN` 또는 근거 없는 값은 정식 등록 확정 대상이 될 수 없다.
 - **같은 `field`가 `candidates`에 여러 번 나타날 수 있다.** 한 영상에 장소가 여러 곳 등장하는 것은 정상이므로 `BR-AIEXTRACT-001`에 따라 후보를 모두 남긴다. 클라이언트는 `field`를 키로 후보를 색인하지 않는다.
+- `candidateTruncated`가 `true`이면 후보 수 상한 때문에 일부 장소가 후보에서 생략됐다는 뜻이다. 클라이언트는 이 작업의 등록 결과가 영상의 모든 맛집을 덮지 않는다고 표시해야 한다. 후보 수가 상한과 같으면 모델이 표시하지 않았어도 서버가 `true`로 판단한다.
 - `registrationUnits`는 `BR-AIEXTRACT-001`의 장소 단위 등록 단위별 판정 결과다. 후보가 없거나 등록 단위를 구성하지 못한 작업은 빈 배열이다. 작업 최상위 `reviewStatus`는 등록 단위 판정의 요약이며, 단위별 결과는 `registrationUnits[].reviewStatus`가 권위 있는 값이다.
 - `blockReason`은 `AUTO_BLOCKED`·`AUTO_REJECTED`일 때만 값이 있다. 장소 판정은 `PLACE_NOT_FOUND`·`PLACE_AMBIGUOUS`, 카테고리 판정은 `CATEGORY_UNRESOLVED`, 그 밖에는 기존 검증 실패 사유 코드를 사용한다.
 - `placeDecision.matchedBy`와 `categoryDecision.resolvedBy`는 자동 판정 근거다. `matchedBy`는 `NAME_AND_DISTRICT`, `resolvedBy`는 `KAKAO_PLACE_CATEGORY` 또는 `MENU_EXPRESSION`이다. 관리자 사후 보정 결과는 `MANUAL_OVERRIDE`로 표시한다.

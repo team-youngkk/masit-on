@@ -29,7 +29,7 @@ related_documents:
 
 이 문서는 AI 영상 추출 작업, 후보 Snapshot, 통제 태그, Gemini 영상 입력 이력과 YouTube 채널 감시 상태의 논리·물리 데이터 경계를 정의하는 Accepted 계약이다. Google Gemini API는 `gemini-3.5-flash-lite`, Gemini Developer API global endpoint, Free Tier 전용·유료 호출 금지, 현재 Prompt `P7`, 결과 Schema `S1`을 사용한다. 기존 Prompt `P1`·`P2`·`P3`·`P4`·`P5`·`P6` 작업과 Snapshot은 재현성을 위한 역사적 이력으로만 보존한다. 컬럼·제약·인덱스의 정본은 이 문서와 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql)의 대응을 검증하는 방식으로 관리한다.
 
-**`ai_registration_unit`(5.1절)과 `food_category_mapping`(5.2절)은 `합의 대기` 상태다.** 두 테이블은 새 Flyway 마이그레이션과 seed를 요구하므로 Flyway 순서 소유자(박진영)와 restaurant 도메인 소유자의 합의 전에는 확정 계약으로 사용하지 않는다. 합의 후 별도 커밋에서 이 표시를 제거한다. 그 밖의 절은 종전대로 Accepted다.
+**`ai_registration_unit`(5.1절), `food_category_mapping`(5.2절), `ai_candidate_snapshot.candidate_truncated`는 `합의 대기` 상태다.** 세 항목 모두 새 Flyway 마이그레이션을 요구한다. 합의는 [PR #226](https://github.com/team-youngkk/masit-on/pull/226)의 소유자 승인으로 갈음하며, Flyway 순서 소유자(박진영)와 restaurant 도메인 소유자의 승인 전에는 확정 계약으로 사용하지 않는다. 승인 후 병합 직전 커밋에서 이 표시를 제거한다. 절차는 [ADR-AI-001 1절](../../07-adr/integration/ai-001-video-extraction-candidate-boundary.md)에 있다. 그 밖의 절은 종전대로 Accepted다.
 
 - AI 후보 데이터는 기존 `Restaurant`, `Creator`, `Video`, `Visit`의 정식 데이터를 대체하지 않는다.
 - 자동 검증과 기존 외부 검증 전에는 정식 Entity를 생성·수정·공개하지 않는다. 관리자 사전 승인은 요구하지 않는다.
@@ -119,11 +119,14 @@ related_documents:
 | `field_confidences` | `jsonb` | NN | 필드별 범위 검증 | 신뢰도 |
 | `evidence` | `jsonb` | NN | `TIMESTAMP`·`TEXT_RANGE`·`UNKNOWN` Schema | 필드별 근거 메타데이터 |
 | `missing_fields` | `jsonb` | NN | 배열 | `UNKNOWN` 필드 |
+| `candidate_truncated` | `boolean` | NN | 기본 `false` | 후보 수 상한으로 일부 장소가 생략됨 |
 | `review_status` | `varchar(24)` | NN | 상태 CHECK | `AUTO_CONFIRMED/AUTO_BLOCKED/AUTO_REJECTED/MANUAL_OVERRIDE` |
 | `reviewed_by` | `uuid` | Yes | FK → `admin_account.id` | 검수 관리자 |
 | `review_reason` | `varchar(1000)` | Yes | 폐기 시 필수 | 검수 사유 |
 | `reviewed_at` | 시간 | Yes | 자동 등록 상태와 조합 | 자동 판정 또는 사후 보정 시각 |
 | `created_at` | 시간 | NN | 기본 현재 시각 | Snapshot 생성 시각 |
+
+`candidate_truncated`는 후보 수 상한 때문에 일부 장소가 후보에서 생략됐음을 뜻한다. 모델 응답의 표시 값과, 후보 수가 상한과 같은지를 함께 보고 서버가 확정한다. 이 컬럼이 `true`인 Snapshot의 등록 결과는 영상의 모든 맛집을 덮지 않으므로 관리자 화면에 누락 경고를 표시한다. 컬럼 추가에는 새 Flyway 마이그레이션이 필요하다.
 
 `candidate_fields`는 자동 검증 전 후보 Schema다. 외부 검증 실패·모호한 장소·근거 부족 시 Snapshot을 유지하고 정식 Entity 행은 0건이어야 한다. `AUTO_CONFIRMED` 전환은 자동 등록 명령의 성공을 의미하므로 정식 등록 결과와 롤백 메타데이터를 별도 감사 또는 작업 결과로 연결한다.
 
