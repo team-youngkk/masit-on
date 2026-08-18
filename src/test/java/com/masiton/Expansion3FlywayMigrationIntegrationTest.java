@@ -441,7 +441,7 @@ class Expansion3FlywayMigrationIntegrationTest {
                 "youtube_channel_watch", List.of(
                         "id", "creator_id", "youtube_channel_id", "enabled", "subscription_status",
                         "subscription_token_hash", "last_notification_at", "last_renewed_at", "last_error_category",
-                        "created_at", "updated_at")));
+                        "last_error_at", "created_at", "updated_at")));
         expectedColumns.forEach((table, columns) -> assertThat(jdbcTemplate.queryForList(
                 "SELECT column_name FROM information_schema.columns WHERE table_schema=? AND table_name=? "
                         + "ORDER BY ordinal_position",
