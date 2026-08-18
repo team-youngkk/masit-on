@@ -60,12 +60,25 @@ stateDiagram-v2
     SUCCEEDED --> AUTO_BLOCKED: 필수값 누락·모호·검증 충돌·업무 중복
     SUCCEEDED --> AUTO_REJECTED: 정책 위반·자동 거부
     AUTO_BLOCKED --> QUEUED: 허용된 재처리
-    AUTO_BLOCKED --> MANUAL_OVERRIDE: 관리자 사후 보정
-    AUTO_CONFIRMED --> MANUAL_OVERRIDE: 관리자 롤백·정정
+    AUTO_BLOCKED --> REGISTERED_OVERRIDE: 관리자 사후 보정 등록
+    AUTO_BLOCKED --> DISCARDED: 관리자 폐기
+    AUTO_CONFIRMED --> REGISTERED_OVERRIDE: 관리자 카테고리 보정
+    AUTO_CONFIRMED --> ROLLED_BACK: 관리자 롤백
+    REGISTERED_OVERRIDE --> REGISTERED_OVERRIDE: 카테고리 보정 반복
+    REGISTERED_OVERRIDE --> ROLLED_BACK: 관리자 롤백
     AUTO_CONFIRMED --> [*]
     AUTO_REJECTED --> [*]
-    MANUAL_OVERRIDE --> [*]
+    ROLLED_BACK --> [*]
+    DISCARDED --> [*]
 ```
+
+`REGISTERED_OVERRIDE`·`ROLLED_BACK`·`DISCARDED`는 별도 Enum 값이 아니라 `MANUAL_OVERRIDE` 하나의 세 하위 상태다. 저장 계층은 `rolled_back_at`·`discarded_at`으로 구분한다.
+
+| 하위 상태 | 구분 | 등록 결과 | 후속 전이 |
+|---|---|---|---|
+| 등록 유지 | 두 시각 모두 없음 | 존재 | 카테고리 보정, 롤백 |
+| 롤백 완료 | `rolled_back_at` 있음 | 없음 | 없음. 종결 |
+| 폐기 완료 | `discarded_at` 있음 | 없음 | 없음. 종결 |
 
 작업 실행 상태와 자동 등록 상태는 분리한다. `SUCCEEDED`는 AI 출력 Schema를 처리했다는 뜻이며, 자동 검증을 통과하면 `AUTO_CONFIRMED`로 전환하면서 정식 Entity와 `VisitTag`를 생성·공개한다. 관리자는 정상 경로의 사전 승인자가 아니며 차단 결과의 보정·롤백만 수행한다.
 

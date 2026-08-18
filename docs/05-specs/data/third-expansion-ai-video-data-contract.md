@@ -165,18 +165,22 @@ related_documents:
 | `executed_by` | `varchar(16)` | NN | `WORKER`·`ADMIN` CHECK | 등록 실행 주체 |
 | `decided_at` | 시간 | NN | 기본 현재 시각 | 판정 시각 |
 | `rolled_back_at` | 시간 | Yes | `MANUAL_OVERRIDE`에서만 non-null | 관리자 롤백 시각 |
+| `discarded_at` | 시간 | Yes | `MANUAL_OVERRIDE`에서만 non-null | 관리자 폐기 시각 |
 
-등록 결과 컬럼과 상태의 조합은 다음 규칙을 따른다. `MANUAL_OVERRIDE`는 사후 등록과 롤백 두 경우에 모두 쓰이므로 `rolled_back_at`으로 구분한다.
+등록 결과 컬럼과 상태의 조합은 다음 규칙을 따른다. `MANUAL_OVERRIDE`는 사후 등록·롤백·폐기 세 경우에 쓰이므로 `rolled_back_at`과 `discarded_at`으로 구분한다.
 
-| `review_status` | `rolled_back_at` | 의미 | 네 등록 결과 컬럼 |
+| `review_status` | 구분 컬럼 | 의미 | 네 등록 결과 컬럼 |
 |---|---|---|---|
-| `AUTO_CONFIRMED` | `NULL` | 자동 등록 완료 | 모두 존재 |
-| `MANUAL_OVERRIDE` | `NULL` | 관리자 사후 보정 등록 완료 또는 등록 유지 상태의 카테고리 보정 | 모두 존재 |
-| `MANUAL_OVERRIDE` | non-null | 관리자 롤백 완료 | 모두 `NULL` |
-| `AUTO_BLOCKED`·`AUTO_REJECTED` | `NULL` | 등록하지 않음 | 모두 `NULL` |
+| `AUTO_CONFIRMED` | 둘 다 `NULL` | 자동 등록 완료 | 모두 존재 |
+| `MANUAL_OVERRIDE` | 둘 다 `NULL` | 관리자 사후 보정 등록 완료 또는 등록 유지 상태의 카테고리 보정 | 모두 존재 |
+| `MANUAL_OVERRIDE` | `rolled_back_at` non-null | 관리자 롤백 완료 | 모두 `NULL` |
+| `MANUAL_OVERRIDE` | `discarded_at` non-null | 관리자 폐기 완료. 애초에 등록되지 않은 단위를 더 다루지 않겠다는 선언이다 | 모두 `NULL` |
+| `AUTO_BLOCKED`·`AUTO_REJECTED` | 둘 다 `NULL` | 등록하지 않음 | 모두 `NULL` |
 
-- CHECK 조건은 "등록 결과 컬럼이 모두 존재하거나 모두 `NULL`"이고, 값이 존재하는 경우는 `AUTO_CONFIRMED`이거나 `rolled_back_at`이 `NULL`인 `MANUAL_OVERRIDE`뿐이다. `place_decision`·`category_decision`도 같은 조건을 따른다.
+- `rolled_back_at`과 `discarded_at`은 동시에 값을 가질 수 없다. 롤백은 등록된 단위를, 폐기는 등록되지 않은 단위를 대상으로 하기 때문이다.
+- CHECK 조건은 "등록 결과 컬럼이 모두 존재하거나 모두 `NULL`"이고, 값이 존재하는 경우는 `AUTO_CONFIRMED`이거나 두 구분 컬럼이 모두 `NULL`인 `MANUAL_OVERRIDE`뿐이다. `place_decision`·`category_decision`도 같은 조건을 따른다.
 - 롤백은 등록 결과 컬럼을 `NULL`로 되돌리고 `rolled_back_at`을 채운다. 되돌린 정식 Entity의 식별자는 감사 이력에 남는다.
+- 폐기는 등록 결과 컬럼을 건드리지 않고 `discarded_at`만 채운다. 롤백·폐기 완료 단위는 등록 API와 `review`의 모든 `decision`을 거절하는 종결 상태다.
 - 맛집·유튜버·영상·방문 관계 4종 등록은 `BR-AIEXTRACT-011`에 따라 하나의 트랜잭션으로 저장한다. `executed_by`는 Worker 자동 실행과 관리자 실행을 구분하며 판정 기준은 두 경우가 같다.
 - 재사용이 일어나는 자원은 유튜버와 영상뿐이다. 맛집과 방문 관계는 같은 것이 이미 있으면 `DUPLICATE_CONFLICT`로 차단되어 등록 자체가 일어나지 않으므로 재사용 대상이 될 수 없다. `reused_resources`의 허용값을 `creator`·`video`로 좁혀 이 경계를 DB에서 강제한다.
 - 유튜버·영상은 기존 행이 있으면 재사용한다. 재사용한 경우에도 참조 컬럼에 그 식별자를 기록하고 `reused_resources`에 자원 이름을 남긴다. 등록 단위 일괄 등록 API 응답은 감사 이력이 아니라 이 컬럼들에서 재구성한다.

@@ -270,7 +270,9 @@ related_documents:
 | `ROLLBACK` | `AUTO_CONFIRMED`, 등록 완료 `MANUAL_OVERRIDE` | 등록 결과를 비공개·관계 해제한다 |
 | `ADJUST_CATEGORY` | `AUTO_CONFIRMED`, 등록 완료 `MANUAL_OVERRIDE` | 등록을 유지한 채 대표 음식 카테고리만 바꾼다 |
 
-허용 상태가 아닌 등록 단위에 대한 요청은 `422 AIEXTRACT_VALIDATION_CONFLICT`로 거절하고 정식 데이터는 변경하지 않는다. `AUTO_REJECTED`와 롤백 완료 `MANUAL_OVERRIDE`는 어떤 `decision`도 허용하지 않는 종결 상태이며 새 작업 재추출만 가능하다.
+허용 상태가 아닌 등록 단위에 대한 요청은 `422 AIEXTRACT_VALIDATION_CONFLICT`로 거절하고 정식 데이터는 변경하지 않는다. `AUTO_REJECTED`, 롤백 완료 `MANUAL_OVERRIDE`, 폐기 완료 `MANUAL_OVERRIDE`는 어떤 `decision`도 허용하지 않는 종결 상태이며 새 작업 재추출만 가능하다.
+
+`unitId` 처리 규칙은 네 `decision`에 모두 같게 적용한다. 3.5절 아래의 등록 단위 수별 처리표가 그 규칙이며 `ADJUST_CATEGORY`도 예외가 아니다.
 
 장소 예외를 보정하는 `CONFIRM` 요청이다.
 
@@ -339,7 +341,7 @@ related_documents:
 - 계약 테스트는 `TST-E3-AI-007`에 매핑한다.
 
 - `CONFIRM`은 정상 자동 등록을 시작하는 명령이 아니라, `AUTO_BLOCKED` 결과를 관리자가 사후 보정해 등록하는 경우에만 사용한다.
-- `CONFIRM`·`DISCARD`·`ROLLBACK`은 등록 단위를 대상으로 한다. `unitId` 처리 규칙은 작업이 가진 등록 단위 수에 따라 다음과 같다.
+- 네 `decision`(`CONFIRM`·`DISCARD`·`ROLLBACK`·`ADJUST_CATEGORY`)은 모두 등록 단위를 대상으로 하며 같은 `unitId` 처리 규칙을 따른다. 규칙은 작업이 가진 등록 단위 수에 따라 다음과 같다.
 
 | 등록 단위 수 | `unitId` 생략 | `unitId` 지정 |
 |---:|---|---|
@@ -354,7 +356,7 @@ related_documents:
 - `tagDecisions`는 자동 태그 판단 또는 관리자 사후 보정의 append-only 이력으로 저장한다.
 - `UNKNOWN` 근거의 AI 후보는 자동 등록하지 않고, `TIMESTAMP` 또는 `TEXT_RANGE` 근거가 있는 태그만 `AI_AUTO_CONFIRMED` `VisitTag` 연결 대상이 된다.
 - 자동 확정된 태그는 정식 `Visit` 등록 성공과 함께 `VisitTag`로 연결하며, 검색 API는 그 연결만 사용한다.
-- `DISCARD`는 자동 등록 결과를 비공개·롤백하는 사후 조치로 사용한다.
+- `DISCARD`는 등록되지 않은 `AUTO_BLOCKED` 등록 단위를 더 다루지 않겠다고 선언하는 종결 조치다. 자동 등록 결과를 되돌리는 것은 `ROLLBACK`이며 둘을 섞어 쓰지 않는다. 폐기한 등록 단위는 `MANUAL_OVERRIDE`가 되고 `discarded_at`이 채워지며, 등록 결과 컬럼은 계속 `NULL`이다. 이후 어떤 `decision`도 등록 API도 허용하지 않는다.
 - 자동 검증 실패 시 `AUTO_BLOCKED` 또는 `AUTO_REJECTED`로 유지하고 정식 Entity 저장은 0건이다.
 - 동시 검수 충돌은 `409 Conflict`로 처리하고 최신 상태 재조회를 요구한다.
 
@@ -372,6 +374,7 @@ Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-0
 | `AUTO_CONFIRMED` | 멱등. `200 OK`와 기존 결과를 반환한다 | 없음 |
 | `MANUAL_OVERRIDE` · 등록 완료 | 멱등. `200 OK`와 기존 결과를 반환한다 | 없음 |
 | `MANUAL_OVERRIDE` · 롤백 완료 | `422 AIEXTRACT_VALIDATION_CONFLICT`로 거절한다 | 없음 |
+| `MANUAL_OVERRIDE` · 폐기 완료 | `422 AIEXTRACT_VALIDATION_CONFLICT`로 거절한다 | 없음 |
 | `AUTO_REJECTED` | `422 AIEXTRACT_VALIDATION_CONFLICT`로 거절한다 | 없음 |
 
 - `AUTO_REJECTED`는 입력·정책 검증 실패로 끝난 종결 상태다. 이 엔드포인트로 되살리면 종결 판정을 우회하게 되므로 허용하지 않는다. 새 작업으로 다시 추출한다.
@@ -446,6 +449,7 @@ Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-0
 | 등록 단위 0개 거절 | `[]` | `[]` |
 | `AUTO_REJECTED` 거절 | `[]` | `[]` |
 | 롤백 완료 `MANUAL_OVERRIDE` 거절 | `[]` | `[]` |
+| 폐기 완료 `MANUAL_OVERRIDE` 거절 | `[]` | `[]` |
 
 - 빈 배열은 이 경로로 복구할 수 없다는 뜻이다. 화면은 거절 사유만 표시하고 새 작업 재추출을 안내한다.
 - `requiredSupplements`는 `recoveryPaths`에 `SUPPLEMENT`가 있을 때만 비어 있지 않다.
