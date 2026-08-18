@@ -56,7 +56,7 @@ class MemberAuthenticationControllerTest {
 
     private final MemberAuthenticationService service = mock(MemberAuthenticationService.class);
     private final MemberCookieSettings cookieSettings = new MemberCookieSettings(
-            "__Secure-masiton-member-refresh",
+            "__Secure-masiton-refresh",
             Duration.ofDays(14),
             "/api/auth/tokens",
             true,
@@ -152,7 +152,7 @@ class MemberAuthenticationControllerTest {
                 .getFirst(HttpHeaders.SET_COOKIE);
 
         assertThat(cookie)
-                .contains("__Secure-masiton-member-refresh=refresh", "Path=/api/auth/tokens", "Max-Age=1209600")
+                .contains("__Secure-masiton-refresh=refresh", "Path=/api/auth/tokens", "Max-Age=1209600")
                 .contains("HttpOnly", "Secure", "SameSite=Strict");
     }
 
@@ -221,6 +221,28 @@ class MemberAuthenticationControllerTest {
                 .andExpect(status().isOk());
 
         verify(canonicalService).refresh("refresh-token");
+    }
+
+    @Test
+    @DisplayName("회원 Refresh는 통합 Origin allowlist의 두 번째 Origin도 허용한다")
+    void refresh_복수AllowedOrigins_두번째Origin허용() throws Exception {
+        MemberCookieSettings allowlistSettings = memberCookieSettings(
+                "https://first.example.test, HTTPS://SECOND.EXAMPLE.TEST:443");
+        MemberAuthenticationService allowlistService = mock(MemberAuthenticationService.class);
+        when(allowlistService.refresh("refresh-token"))
+                .thenReturn(new MemberAuthenticationResult("access", "refresh", 1800));
+        MockMvc allowlistMockMvc = MockMvcBuilders.standaloneSetup(new MemberAuthenticationController(
+                allowlistService,
+                allowlistSettings,
+                addressResolver()
+        )).build();
+
+        allowlistMockMvc.perform(post("/api/auth/tokens/refresh")
+                        .header(HttpHeaders.ORIGIN, "https://second.example.test")
+                        .cookie(new Cookie(allowlistSettings.cookieName(), "refresh-token")))
+                .andExpect(status().isOk());
+
+        verify(allowlistService).refresh("refresh-token");
     }
 
     @Test
@@ -363,7 +385,7 @@ class MemberAuthenticationControllerTest {
 
     private static MemberCookieSettings memberCookieSettings(String publicBaseUrl) {
         return new MemberCookieSettings(
-                "__Secure-masiton-member-refresh",
+                "__Secure-masiton-refresh",
                 Duration.ofDays(14),
                 "/api/auth/tokens",
                 true,

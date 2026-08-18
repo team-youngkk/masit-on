@@ -221,13 +221,13 @@ else
   echo "Nginx 설정 smoke 스킵: 설치된 masit-on site 설정이 없다(nginx-install 단계에서 검증한다)."
 fi
 if [ -f "$nginx_site_conf" ] && systemctl is-active --quiet nginx; then
-  public_admin_status=$(curl -k -sS -m 5 -o /dev/null -w '%{http_code}' \
+  public_login_status=$(curl -k -sS -m 5 -o /dev/null -w '%{http_code}' \
     --resolve masiton.click:443:127.0.0.1 \
     -H 'X-Forwarded-For: 198.51.100.99' \
     -H 'Content-Type: application/json' -X POST --data '{}' \
-    https://masiton.click/api/admin/auth/tokens)
-  [ "$public_admin_status" = "401" ] || {
-    echo "public Nginx 관리자 로그인 경계 확인 실패: HTTP $public_admin_status" >&2
+    https://masiton.click/api/auth/tokens)
+  [ "$public_login_status" = "401" ] || {
+    echo "public Nginx 통합 로그인 경계 확인 실패: HTTP $public_login_status" >&2
     exit 1
   }
 else

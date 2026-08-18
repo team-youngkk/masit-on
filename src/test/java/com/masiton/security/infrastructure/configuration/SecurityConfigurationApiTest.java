@@ -5,6 +5,7 @@ import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.time.Instant;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Base64;
@@ -40,8 +41,6 @@ import com.masiton.orchestration.application.port.in.GetRestaurantDetailQuery;
 import com.masiton.orchestration.application.query.ContentStatus;
 import com.masiton.orchestration.application.query.RestaurantDetailResult;
 import com.masiton.personal.application.port.in.RecordRecentRestaurantViewUseCase;
-import com.masiton.security.application.AdminAuthenticationService;
-import com.masiton.security.application.AuthenticationResult;
 
 import static org.hamcrest.Matchers.emptyString;
 import static org.hamcrest.Matchers.not;
@@ -89,9 +88,6 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
 
     @MockitoBean
     private PublicCurationUseCase publicCurationUseCase;
-
-    @MockitoBean
-    private AdminAuthenticationService adminAuthenticationService;
 
     @DynamicPropertySource
     static void securityProperties(DynamicPropertyRegistry registry) {
@@ -156,80 +152,25 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
     @Test
     @DisplayName("로그인과 재발급 matcher는 포괄 관리자 matcher보다 먼저 허용한다")
     void 로그인재발급_matcher_401없이입력검증() throws Exception {
-        mockMvc.perform(post("/api/admin/auth/tokens")
+        mockMvc.perform(post("/api/auth/tokens")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest());
 
-        mockMvc.perform(post("/api/admin/auth/tokens/refresh"))
+        mockMvc.perform(post("/api/auth/tokens/refresh"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"))
                 .andExpect(jsonPath("$.traceId").value(not(emptyString())));
-        verify(adminAuthenticationService, never()).refresh(any());
     }
 
     @Test
-    @DisplayName("관리자 Refresh는 허용 Origin만 쿠키와 use case까지 전달한다")
-    void adminRefresh_허용Origin_정상흐름유지() throws Exception {
-        given(adminAuthenticationService.refresh("refresh-token"))
-                .willReturn(new AuthenticationResult("access", "rotated-refresh", 1800));
-
-        mockMvc.perform(post("/api/admin/auth/tokens/refresh")
-                        .header(HttpHeaders.ORIGIN, "http://localhost:3000")
-                        .cookie(new jakarta.servlet.http.Cookie("masit_on_refresh", "refresh-token")))
-                .andExpect(status().isOk())
-                .andExpect(header().string(HttpHeaders.SET_COOKIE, org.hamcrest.Matchers.containsString("masit_on_refresh=rotated-refresh")));
-
-        verify(adminAuthenticationService).refresh("refresh-token");
-    }
-
-    @Test
-    @DisplayName("관리자 Logout은 허용 Origin에서 기존 JWT·Refresh Cookie 흐름을 유지한다")
-    void adminLogout_허용Origin_정상흐름유지() throws Exception {
-        mockMvc.perform(delete("/api/admin/auth/tokens")
-                        .header(HttpHeaders.ORIGIN, "http://localhost:3000")
-                        .cookie(new jakarta.servlet.http.Cookie("masit_on_refresh", "refresh-token"))
+    @DisplayName("과거 관리자 인증 경로는 alias나 redirect 없이 거부된다")
+    void legacyAdminAuthenticationPath_거부된다() throws Exception {
+        mockMvc.perform(post("/api/admin/auth/tokens")
                         .with(SecurityMockMvcRequestPostProcessors.jwt()
-                                .jwt(jwt -> jwt.subject("admin-id"))
                                 .authorities(new SimpleGrantedAuthority("ADMIN"))))
-                .andExpect(status().isNoContent())
-                .andExpect(header().string(HttpHeaders.SET_COOKIE,
-                        org.hamcrest.Matchers.containsString("Max-Age=0")));
-
-        verify(adminAuthenticationService).logout("admin-id", "refresh-token");
-    }
-
-    @Test
-    @DisplayName("관리자 Cookie 경계는 불허 또는 다중 Origin을 JWT와 use case보다 먼저 403으로 거부한다")
-    void adminCookieOrigin_불허또는다중Origin_JWT와UseCase전403거부() throws Exception {
-        String unverifiableToken = signedToken("retired-key");
-
-        mockMvc.perform(delete("/api/admin/auth/tokens")
-                        .header(HttpHeaders.ORIGIN, "https://untrusted.example")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + unverifiableToken)
-                        .cookie(new jakarta.servlet.http.Cookie("masit_on_refresh", "refresh-token")))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
-                .andExpect(jsonPath("$.traceId").value(not(emptyString())));
-        mockMvc.perform(post("/api/admin/auth/tokens/refresh")
-                        .header(HttpHeaders.ORIGIN, "http://localhost:3000")
-                        .header(HttpHeaders.ORIGIN, "https://untrusted.example")
-                        .cookie(new jakarta.servlet.http.Cookie("masit_on_refresh", "refresh-token")))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
-
-        verify(adminAuthenticationService, never()).refresh(any());
-        verify(adminAuthenticationService, never()).logout(any(), any());
-    }
-
-    @Test
-    @DisplayName("로그아웃은 Origin 검증을 JWT보다 먼저 적용한다")
-    void 로그아웃_Origin누락_403() throws Exception {
-        mockMvc.perform(delete("/api/admin/auth/tokens"))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
-                .andExpect(jsonPath("$.traceId").value(not(emptyString())));
-        verify(adminAuthenticationService, never()).logout(any(), any());
+                .andExpect(status().isNotFound())
+                .andExpect(header().doesNotExist(HttpHeaders.LOCATION));
     }
 
     @Test
@@ -284,22 +225,19 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
     @Test
     @DisplayName("issuer 또는 audience가 다른 JWT는 거부한다")
     void jwt_IssuerAudience불일치_거부한다() throws Exception {
-        assertThatThrownBy(() -> jwtDecoder.decode(signedToken("test-key-20260727", "other-issuer", "masit-on-admin-api")))
+        assertThatThrownBy(() -> jwtDecoder.decode(signedToken("test-key-20260727", "other-issuer", "masit-on-api")))
                 .isInstanceOf(JwtException.class);
         assertThatThrownBy(() -> jwtDecoder.decode(signedToken("test-key-20260727", "masit-on", "other-audience")))
                 .isInstanceOf(JwtException.class);
     }
 
     @Test
-    @DisplayName("관리자와 회원 JWT audience는 서로의 보안 경계에서 거부된다")
-    void jwt_관리자회원Audience교차거부() throws Exception {
-        String adminToken = signedToken("test-key-20260727", "masit-on", "masit-on-admin-api");
-        String memberToken = signedToken("test-key-20260727", "masit-on", "masit-on-member-api");
+    @DisplayName("회원과 관리자는 하나의 JWT audience를 사용한다")
+    void jwt_통합Audience_두Decoder에서검증된다() throws Exception {
+        String token = signedTokenWithoutSid("test-key-20260727");
 
-        assertThatThrownBy(() -> jwtDecoder.decode(memberToken))
-                .isInstanceOf(JwtException.class);
-        assertThatThrownBy(() -> memberJwtDecoder.decode(adminToken))
-                .isInstanceOf(JwtException.class);
+        assertThat(jwtDecoder.decode(token).getAudience()).containsExactly("masit-on-api");
+        assertThat(memberJwtDecoder.decode(token).getAudience()).containsExactly("masit-on-api");
     }
 
     @Test
@@ -316,41 +254,44 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
     }
 
     @Test
-    @DisplayName("회원 경계는 교차 audience와 sid 없는 회원 JWT를 거부한다")
-    void memberAdminApi_교차Audience와sid누락_401거부() throws Exception {
-        String adminToken = signedToken("test-key-20260727", "masit-on", "masit-on-admin-api");
-        String memberToken = signedToken("test-key-20260727", "masit-on", "masit-on-member-api");
+    @DisplayName("JWT는 필수 jti와 단일 역할 및 최대 30분 수명을 강제한다")
+    void jwt_필수Claim역할수명_검증한다() throws Exception {
+        assertThatThrownBy(() -> jwtDecoder.decode(signedTokenWithClaims(List.of("MEMBER"), Duration.ofMinutes(31), true, true)))
+                .isInstanceOf(JwtException.class);
+        assertThatThrownBy(() -> jwtDecoder.decode(signedTokenWithClaims(List.of("MEMBER", "ADMIN"), Duration.ofMinutes(1), true, true)))
+                .isInstanceOf(JwtException.class);
+        assertThatThrownBy(() -> jwtDecoder.decode(signedTokenWithClaims(List.of("MEMBER"), Duration.ofMinutes(1), true, false)))
+                .isInstanceOf(JwtException.class);
+    }
 
-        mockMvc.perform(get("/api/me/boundary").header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken))
+    @Test
+    @DisplayName("통합 경계는 sid 없는 JWT를 회원과 관리자 API에서 거부한다")
+    void unifiedApi_sid누락_401거부() throws Exception {
+        String token = signedToken("test-key-20260727", "masit-on", "masit-on-api");
+
+        mockMvc.perform(get("/api/me/boundary").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isUnauthorized())
                 .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "private, no-store"));
-        mockMvc.perform(get("/api/me/boundary").header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
-                .andExpect(status().isUnauthorized());
-        mockMvc.perform(get("/api/admin/restaurants").header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken))
+        mockMvc.perform(get("/api/admin/restaurants").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isUnauthorized());
         mockMvc.perform(post("/api/auth/tokens"))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
-    @DisplayName("유효한 회원 principal만 /api/me 경계를 통과하고 관리자 principal은 같은 경계에서 거부된다")
-    void memberBoundary_본인Principal만통과_관리자Audience거부() throws Exception {
+    @DisplayName("유효한 통합 principal은 역할과 무관하게 /api/me 경계를 통과한다")
+    void memberBoundary_통합Principal통과() throws Exception {
         String memberId = UUID.randomUUID().toString();
         String sessionId = UUID.randomUUID().toString();
         String memberToken = memberTokenIssuer.issueAccessToken(new MemberPrincipal(memberId, sessionId));
-        String adminToken = signedToken("test-key-20260727", "masit-on", "masit-on-admin-api");
-        given(memberSessionAccessChecker.check(memberId, sessionId))
+        given(memberSessionAccessChecker.check(memberId, sessionId, "MEMBER"))
                 .willReturn(MemberSessionAccessChecker.AccessDecision.ALLOWED);
 
         mockMvc.perform(get("/api/me/boundary")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken))
                 .andExpect(status().isNotFound())
                 .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "private, no-store"));
-        mockMvc.perform(get("/api/me/boundary")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
-                .andExpect(status().isUnauthorized());
-
-        verify(memberSessionAccessChecker).check(memberId, sessionId);
+        verify(memberSessionAccessChecker).check(memberId, sessionId, "MEMBER");
     }
 
     @Test
@@ -401,7 +342,7 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
         String memberId = UUID.randomUUID().toString();
         String sessionId = UUID.randomUUID().toString();
         String memberToken = memberTokenIssuer.issueAccessToken(new MemberPrincipal(memberId, sessionId));
-        given(memberSessionAccessChecker.check(memberId, sessionId))
+        given(memberSessionAccessChecker.check(memberId, sessionId, "MEMBER"))
                 .willReturn(MemberSessionAccessChecker.AccessDecision.ALLOWED);
 
         mockMvc.perform(delete("/api/auth/tokens")
@@ -418,7 +359,7 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
         String sessionId = UUID.randomUUID().toString();
         UUID restaurantId = UUID.randomUUID();
         String memberToken = memberTokenIssuer.issueAccessToken(new MemberPrincipal(memberId, sessionId));
-        given(memberSessionAccessChecker.check(memberId, sessionId))
+        given(memberSessionAccessChecker.check(memberId, sessionId, "MEMBER"))
                 .willReturn(MemberSessionAccessChecker.AccessDecision.ALLOWED);
         given(getRestaurantDetailQuery.getRestaurantDetail(restaurantId)).willReturn(detail(restaurantId));
 
@@ -426,20 +367,20 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken))
                 .andExpect(status().isOk());
 
-        verify(memberSessionAccessChecker).check(memberId, sessionId);
+        verify(memberSessionAccessChecker).check(memberId, sessionId, "MEMBER");
         verify(recordRecentRestaurantViewUseCase).record(UUID.fromString(memberId), restaurantId);
     }
 
     @Test
     @DisplayName("공개 상세는 무효 또는 폐기된 회원 JWT를 익명 조회로 폴백한다")
     void restaurantDetail_무효또는폐기JWT_익명조회로폴백한다() throws Exception {
-        String invalidMemberToken = signedToken("retired-key", "masit-on", "masit-on-member-api");
+        String invalidMemberToken = signedToken("retired-key", "masit-on", "masit-on-api");
         String memberId = UUID.randomUUID().toString();
         String sessionId = UUID.randomUUID().toString();
         UUID invalidTokenRestaurantId = UUID.randomUUID();
         UUID revokedTokenRestaurantId = UUID.randomUUID();
         String revokedMemberToken = memberTokenIssuer.issueAccessToken(new MemberPrincipal(memberId, sessionId));
-        given(memberSessionAccessChecker.check(memberId, sessionId))
+        given(memberSessionAccessChecker.check(memberId, sessionId, "MEMBER"))
                 .willReturn(MemberSessionAccessChecker.AccessDecision.DENIED);
         given(getRestaurantDetailQuery.getRestaurantDetail(invalidTokenRestaurantId))
                 .willReturn(detail(invalidTokenRestaurantId));
@@ -463,7 +404,7 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
         String sessionId = UUID.randomUUID().toString();
         UUID restaurantId = UUID.randomUUID();
         String memberToken = memberTokenIssuer.issueAccessToken(new MemberPrincipal(memberId, sessionId));
-        given(memberSessionAccessChecker.check(memberId, sessionId))
+        given(memberSessionAccessChecker.check(memberId, sessionId, "MEMBER"))
                 .willReturn(MemberSessionAccessChecker.AccessDecision.UNAVAILABLE);
         given(getRestaurantDetailQuery.getRestaurantDetail(restaurantId)).willReturn(detail(restaurantId));
 
@@ -518,24 +459,43 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
     }
 
     private static String signedToken(String keyId) throws Exception {
-        return signedToken(keyId, "masit-on", "masit-on-admin-api");
+        return signedToken(keyId, "masit-on", "masit-on-api");
     }
 
     private static String signedToken(String keyId, String issuer, String audience) throws Exception {
+        return signedTokenWithClaims(keyId, issuer, audience, List.of("MEMBER"), Duration.ofMinutes(1), true, true);
+    }
+
+    private static String signedTokenWithoutSid(String keyId) throws Exception {
+        return signedTokenWithClaims(keyId, "masit-on", "masit-on-api", List.of("MEMBER"), Duration.ofMinutes(1), false, true);
+    }
+
+    private static String signedTokenWithClaims(List<String> roles, Duration lifetime, boolean includeSid, boolean includeJti)
+            throws Exception {
+        return signedTokenWithClaims("test-key-20260727", "masit-on", "masit-on-api", roles, lifetime, includeSid, includeJti);
+    }
+
+    private static String signedTokenWithClaims(String keyId, String issuer, String audience, List<String> roles,
+            Duration lifetime, boolean includeSid, boolean includeJti) throws Exception {
         Instant now = Instant.now();
-        JWTClaimsSet claims = new JWTClaimsSet.Builder()
+        JWTClaimsSet.Builder claims = new JWTClaimsSet.Builder()
                 .issuer(issuer)
                 .audience(List.of(audience))
                 .subject("admin-id")
-                .claim("roles", List.of("MEMBER"))
+                .claim("roles", roles)
                 .issueTime(java.util.Date.from(now))
-                .expirationTime(java.util.Date.from(now.plusSeconds(60)))
-                .build();
+                .expirationTime(java.util.Date.from(now.plus(lifetime)));
+        if (includeSid) {
+            claims.claim("sid", "session-id");
+        }
+        if (includeJti) {
+            claims.jwtID(UUID.randomUUID().toString());
+        }
         com.nimbusds.jose.JWSHeader.Builder header = new com.nimbusds.jose.JWSHeader.Builder(JWSAlgorithm.RS256);
         if (keyId != null) {
             header.keyID(keyId);
         }
-        SignedJWT jwt = new SignedJWT(header.build(), claims);
+        SignedJWT jwt = new SignedJWT(header.build(), claims.build());
         jwt.sign(new RSASSASigner((RSAPrivateKey) KEY_PAIR.getPrivate()));
         return jwt.serialize();
     }

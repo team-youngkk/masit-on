@@ -201,7 +201,7 @@ class MemberOwnedResourceHidingFullStackTest extends FullContextIntegrationTest 
         java.time.Instant now = java.time.Instant.now();
         com.nimbusds.jwt.JWTClaimsSet claims = new com.nimbusds.jwt.JWTClaimsSet.Builder()
                 .issuer("masit-on")
-                .audience(java.util.List.of("masit-on-admin-api"))
+                .audience(java.util.List.of("masit-on-api"))
                 .subject(adminId.toString())
                 .claim("roles", java.util.List.of("ADMIN"))
                 .issueTime(java.util.Date.from(now))

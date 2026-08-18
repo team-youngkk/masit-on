@@ -157,18 +157,18 @@ public class MemberAuthenticationService {
     public MemberAuthenticationResult login(String email, String password, String source) {
         String normalizedEmail = normalizeEmail(email);
         try {
-            if (rateLimits.isLoginBlocked(normalizedEmail, source)) {
+            if (!rateLimits.tryAcquireLoginAttempt(normalizedEmail, source)) {
                 throw invalidCredentials();
             }
             MemberAccount account = accounts.findByEmailForUpdate(normalizedEmail).orElse(null);
             String passwordHash = account == null ? DUMMY_PASSWORD_HASH : account.passwordHash();
             if (!passwordEncoder.matches(password, passwordHash) || account == null) {
-                throw invalidCredentials(normalizedEmail, source);
+                throw invalidCredentials();
             }
             if (!account.canAuthenticate()) {
-                throw invalidCredentials(normalizedEmail, source);
+                throw invalidCredentials();
             }
-            return issueSession(account.id());
+            return issueSession(account);
         } catch (BusinessException exception) {
             throw exception;
         } catch (RuntimeException exception) {
@@ -185,7 +185,7 @@ public class MemberAuthenticationService {
             }
             MemberAccount account = accounts.findById(UUID.fromString(session.memberId())).filter(MemberAccount::canAuthenticate)
                     .orElseThrow(this::invalidRefreshToken);
-            return result(account.id(), session);
+            return result(account, session);
         } catch (InvalidMemberSessionException exception) {
             recordRevocations(exception.revokedSessionIds(), Instant.now(clock));
             throw invalidRefreshToken();
@@ -234,15 +234,17 @@ public class MemberAuthenticationService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED));
     }
 
-    private MemberAuthenticationResult issueSession(UUID memberId) {
-        MemberSession session = sessions.issue(memberId.toString(), REFRESH_TOKEN_TTL);
+    private MemberAuthenticationResult issueSession(MemberAccount account) {
+        MemberSession session = account.role() == com.masiton.member.domain.model.MemberRole.ADMIN
+                ? sessions.issue(account.id().toString(), REFRESH_TOKEN_TTL, 1)
+                : sessions.issue(account.id().toString(), REFRESH_TOKEN_TTL);
         recordRevocations(session.revokedSessionIds(), Instant.now(clock));
-        return result(memberId, session);
+        return result(account, session);
     }
 
-    private MemberAuthenticationResult result(UUID memberId, MemberSession session) {
-        String accessToken = tokenIssuer.issueAccessToken(new MemberPrincipal(memberId.toString(), session.sessionId()));
-        return new MemberAuthenticationResult(accessToken, session.refreshToken(), jwtSettings.accessTokenTtl().toSeconds());
+    private MemberAuthenticationResult result(MemberAccount account, MemberSession session) {
+        String accessToken = tokenIssuer.issueAccessToken(new MemberPrincipal(account.id().toString(), session.sessionId(), account.role()));
+        return new MemberAuthenticationResult(accessToken, session.refreshToken(), jwtSettings.accessTokenTtl().toSeconds(), account.role().name());
     }
 
     private void issueActionToken(MemberAccount account, MemberActionPurpose purpose) {

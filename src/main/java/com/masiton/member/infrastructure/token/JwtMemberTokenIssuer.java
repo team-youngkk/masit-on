@@ -36,7 +36,7 @@ public class JwtMemberTokenIssuer implements MemberTokenIssuer {
                 .issuedAt(issuedAt)
                 .expiresAt(issuedAt.plus(settings.accessTokenTtl()))
                 .claim("sid", principal.sessionId())
-                .claim("roles", List.of("MEMBER"))
+                .claim("roles", List.of(principal.role().name()))
                 .build();
         JwsHeader header = JwsHeader.with(SignatureAlgorithm.RS256)
                 .keyId(settings.keyId())

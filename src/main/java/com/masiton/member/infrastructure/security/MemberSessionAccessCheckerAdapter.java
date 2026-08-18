@@ -25,10 +25,18 @@ public class MemberSessionAccessCheckerAdapter implements MemberSessionAccessChe
 
     @Override
     public AccessDecision check(String memberId, String sessionId) {
+        return check(memberId, sessionId, null);
+    }
+
+    @Override
+    public AccessDecision check(String memberId, String sessionId, String role) {
         try {
             UUID accountId = UUID.fromString(memberId);
             UUID parsedSessionId = UUID.fromString(sessionId);
-            boolean allowed = accounts.findById(accountId).filter(MemberAccount::canAuthenticate).isPresent()
+            boolean allowed = accounts.findById(accountId)
+                    .filter(account -> account.canAuthenticate()
+                            && (role == null || account.role().name().equals(role)))
+                    .isPresent()
                     && !revocations.isRevoked(parsedSessionId, Instant.now());
             return allowed ? AccessDecision.ALLOWED : AccessDecision.DENIED;
         } catch (IllegalArgumentException exception) {

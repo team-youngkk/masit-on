@@ -180,9 +180,10 @@ class AdminRegistrationJourneyAcceptanceTest {
     }
 
     private String login() throws Exception {
-        String response = mockMvc.perform(post("/api/admin/auth/tokens").contentType(APPLICATION_JSON)
-                        .content("{\"loginId\":\"acceptance-admin\",\"password\":\"" + PASSWORD + "\"}"))
+        String response = mockMvc.perform(post("/api/auth/tokens").contentType(APPLICATION_JSON)
+                        .content("{\"email\":\"acceptance-admin@example.com\",\"password\":\"" + PASSWORD + "\"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.tokenType").value("Bearer"))
+                .andExpect(jsonPath("$.role").value("ADMIN"))
                 .andReturn().getResponse().getContentAsString();
         return objectMapper.readTree(response).get("accessToken").asText();
     }

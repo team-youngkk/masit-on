@@ -323,7 +323,7 @@ class MaliciousInputRegressionApiTest extends FullContextIntegrationTest {
         Instant now = Instant.now();
         JWTClaimsSet claims = new JWTClaimsSet.Builder()
                 .issuer("masit-on")
-                .audience(List.of("masit-on-admin-api"))
+                .audience(List.of("masit-on-api"))
                 .subject(adminId.toString())
                 .claim("roles", List.of("ADMIN"))
                 .issueTime(java.util.Date.from(now))

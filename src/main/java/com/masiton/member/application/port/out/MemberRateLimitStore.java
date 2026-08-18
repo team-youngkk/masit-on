@@ -32,6 +32,12 @@ public interface MemberRateLimitStore {
      */
     boolean isLoginBlocked(String normalizedEmail, String source);
 
+    /** Acquires valid-login email/source and email windows before credential lookup. */
+    boolean tryAcquireLoginAttempt(String normalizedEmail, String source);
+
+    /** Acquires the source-only window before JSON parsing for every login request. */
+    boolean tryAcquireLoginSourceAttempt(String source);
+
     /**
      * Records one email-verification code submission attempt for a trusted request source.
      */

@@ -115,6 +115,33 @@ public class RedisMemberRateLimitStore implements MemberRateLimitStore {
             return 1
             """, Long.class);
 
+    private static final DefaultRedisScript<Long> ACQUIRE_LOGIN_SOURCE_ATTEMPT = new DefaultRedisScript<>("""
+            local attempts = tonumber(redis.call('GET', KEYS[1]) or '0')
+            if attempts >= tonumber(ARGV[1]) then
+              return 0
+            end
+            attempts = redis.call('INCR', KEYS[1])
+            if attempts == 1 then
+              redis.call('EXPIRE', KEYS[1], ARGV[2])
+            end
+            return 1
+            """, Long.class);
+
+    private static final DefaultRedisScript<Long> ACQUIRE_LOGIN_ATTEMPT = new DefaultRedisScript<>("""
+            for index, key in ipairs(KEYS) do
+              if tonumber(redis.call('GET', key) or '0') >= tonumber(ARGV[index]) then
+                return 0
+              end
+            end
+            for _, key in ipairs(KEYS) do
+              local attempts = redis.call('INCR', key)
+              if attempts == 1 then
+                redis.call('EXPIRE', key, ARGV[3])
+              end
+            end
+            return 1
+            """, Long.class);
+
     private final StringRedisTemplate redisTemplate;
     private final byte[] secret;
 
@@ -159,6 +186,29 @@ public class RedisMemberRateLimitStore implements MemberRateLimitStore {
                 String.valueOf(LOGIN_SOURCE_LIMIT)
         );
         return Long.valueOf(1).equals(blocked);
+    }
+
+    @Override
+    public boolean tryAcquireLoginAttempt(String normalizedEmail, String source) {
+        Long acquired = redisTemplate.execute(
+                ACQUIRE_LOGIN_ATTEMPT,
+                List.of(loginEmailSourceKey(normalizedEmail, source), loginEmailKey(normalizedEmail)),
+                String.valueOf(LOGIN_EMAIL_SOURCE_LIMIT),
+                String.valueOf(LOGIN_EMAIL_LIMIT),
+                seconds(LOGIN_FAILURE_TTL)
+        );
+        return Long.valueOf(1).equals(acquired);
+    }
+
+    @Override
+    public boolean tryAcquireLoginSourceAttempt(String source) {
+        Long acquired = redisTemplate.execute(
+                ACQUIRE_LOGIN_SOURCE_ATTEMPT,
+                List.of(loginSourceKey(source)),
+                String.valueOf(LOGIN_SOURCE_LIMIT),
+                seconds(LOGIN_FAILURE_TTL)
+        );
+        return Long.valueOf(1).equals(acquired);
     }
 
     @Override
