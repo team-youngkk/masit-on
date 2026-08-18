@@ -57,7 +57,7 @@ Accepted. **단, 2026-08-18 결정(5.3절의 장소 동일성 판정 기준, 대
 |---|---|
 | 요구사항 | `BR-AIEXTRACT-009`·`010`·`011` 전체, `BR-AIEXTRACT-001`의 등록 단위 분해와 후보 수 상한·절삭 표시 항목, `BR-AIEXTRACT-002`의 등록 단위 원자성 개정, `FR-AIEXTRACT-003`의 등록 단위·자동 판정·카테고리 보정 항목 |
 | 제품 | `PR-AIEXTRACT-011`~`017`, PRD의 관리자 실행 흐름·등록 단위 화면 상태·후보 절삭 경고·보완 경로 구분, 사용자 흐름의 등록 단위 판정 서술, 와이어프레임의 자동 판정 결과·예외 화면 분리·절삭 배너 |
-| API 계약 | `registrationUnits`·`candidateTruncated`, 등록 단위 일괄 등록(3.6절), `review`의 `unitId`·`supplements`·`ADJUST_CATEGORY`, 최상위 요약 규칙, `recoveryPaths`, `AIEXTRACT_UNIT_ID_REQUIRED`·`AIEXTRACT_UNIT_NOT_FOUND`·`AIEXTRACT_CONCURRENT_REQUEST_CONFLICT` |
+| API 계약 | `registrationUnits`·`candidateTruncated`·`manualOverrideType`, 등록 단위 일괄 등록(3.6절), `review`의 `unitId`·`supplements`·`ADJUST_CATEGORY`, 최상위 요약 규칙, `recoveryPaths`, `AIEXTRACT_UNIT_ID_REQUIRED`·`AIEXTRACT_UNIT_NOT_FOUND`·`AIEXTRACT_CONCURRENT_REQUEST_CONFLICT` |
 | 데이터 계약 | `ai_registration_unit`, `food_category_mapping`, `ai_candidate_snapshot.candidate_truncated`와 관련 추적표 행 |
 | 계획 | `TST-E3-AI-005`~`008`, 손실 분석 9절의 네 결정과 9.1절 |
 

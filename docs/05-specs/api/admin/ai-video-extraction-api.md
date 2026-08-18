@@ -66,7 +66,7 @@ related_documents:
 |---:|---|---|
 | 1 | 후보 Snapshot이 아직 없다. 즉 자동 판정 전이다 | `null` |
 | 2 | Snapshot은 있으나 등록 단위가 하나도 없다 | Snapshot 자체 판정값. 후보 부족으로 차단이면 `AUTO_BLOCKED`, 정책 위반이면 `AUTO_REJECTED` |
-| 3 | 관리자 사후 보정·롤백이 하나라도 있다 | `MANUAL_OVERRIDE` |
+| 3 | `MANUAL_OVERRIDE` 단위가 하나라도 있다(등록 유지·롤백 완료·폐기 완료 세 하위 상태 모두 포함) | `MANUAL_OVERRIDE` |
 | 4 | `AUTO_BLOCKED` 단위가 하나라도 있다 | `AUTO_BLOCKED` |
 | 5 | `AUTO_CONFIRMED` 단위가 하나라도 있다 | `AUTO_CONFIRMED` |
 | 6 | 그 밖의 경우, 즉 모든 단위가 `AUTO_REJECTED`다 | `AUTO_REJECTED` |
@@ -198,6 +198,7 @@ related_documents:
       "unitId": "opaque-registration-unit-id",
       "restaurantName": "후보 맛집명",
       "reviewStatus": "AUTO_CONFIRMED",
+      "manualOverrideType": null,
       "blockReason": null,
       "registeredRestaurantId": "opaque-restaurant-id",
       "registeredCreatorId": "opaque-creator-id",
@@ -218,7 +219,36 @@ related_documents:
       "unitId": "opaque-registration-unit-id-2",
       "restaurantName": "다른 후보 맛집명",
       "reviewStatus": "AUTO_BLOCKED",
+      "manualOverrideType": null,
       "blockReason": "PLACE_AMBIGUOUS",
+      "registeredRestaurantId": null,
+      "registeredCreatorId": null,
+      "registeredVideoId": null,
+      "registeredVisitId": null,
+      "reusedResources": [],
+      "placeDecision": null,
+      "categoryDecision": null
+    },
+    {
+      "unitId": "opaque-registration-unit-id-3",
+      "restaurantName": "롤백된 맛집명",
+      "reviewStatus": "MANUAL_OVERRIDE",
+      "manualOverrideType": "ROLLED_BACK",
+      "blockReason": null,
+      "registeredRestaurantId": null,
+      "registeredCreatorId": null,
+      "registeredVideoId": null,
+      "registeredVisitId": null,
+      "reusedResources": [],
+      "placeDecision": null,
+      "categoryDecision": null
+    },
+    {
+      "unitId": "opaque-registration-unit-id-4",
+      "restaurantName": "폐기된 맛집명",
+      "reviewStatus": "MANUAL_OVERRIDE",
+      "manualOverrideType": "DISCARDED",
+      "blockReason": null,
       "registeredRestaurantId": null,
       "registeredCreatorId": null,
       "registeredVideoId": null,
@@ -232,12 +262,22 @@ related_documents:
 }
 ```
 
+`manualOverrideType`은 `reviewStatus`가 `MANUAL_OVERRIDE`일 때만 값이 있고, 그 밖의 상태에서는 `null`이다.
+
+| `manualOverrideType` | 의미 | 등록 결과 식별자 4종 |
+|---|---|---|
+| `null` | `MANUAL_OVERRIDE`가 아니거나, 등록 유지 상태(사후 보정 등록 완료·카테고리 보정) | 등록 유지 상태면 모두 존재, 그 밖은 `MANUAL_OVERRIDE`가 아니므로 해당 없음 |
+| `ROLLED_BACK` | 관리자 롤백 완료. 종결 상태 | 모두 `null` |
+| `DISCARDED` | 관리자 폐기 완료. 종결 상태 | 모두 `null` |
+
+등록 유지 상태(사후 보정 등록 또는 카테고리 보정 완료)는 `manualOverrideType`이 `null`이면서 `reviewStatus`가 `MANUAL_OVERRIDE`이고 등록 결과 식별자가 모두 존재하는 조합으로 판별한다. 롤백 완료·폐기 완료와 달리 별도 값을 두지 않은 이유는 등록 결과 존재 여부만으로 이미 구분되기 때문이다.
+
 - `evidence.type`은 `TIMESTAMP`(`startMs`, `endMs`), `TEXT_RANGE`(`startOffset`, `endOffset`, `sourceHash`), `UNKNOWN` 후보를 사용한다.
 - `UNKNOWN` 또는 근거 없는 값은 정식 등록 확정 대상이 될 수 없다.
 - **같은 `field`가 `candidates`에 여러 번 나타날 수 있다.** 한 영상에 장소가 여러 곳 등장하는 것은 정상이므로 `BR-AIEXTRACT-001`에 따라 후보를 모두 남긴다. 클라이언트는 `field`를 키로 후보를 색인하지 않는다.
 - `candidateTruncated`가 `true`이면 후보 수 상한 때문에 일부 장소가 후보에서 생략됐다는 뜻이다. 클라이언트는 이 작업의 등록 결과가 영상의 모든 맛집을 덮지 않는다고 표시해야 한다. 후보 수가 상한과 같으면 모델이 표시하지 않았어도 서버가 `true`로 판단한다.
 - `registrationUnits`는 `BR-AIEXTRACT-001`의 장소 단위 등록 단위별 판정 결과다. 후보가 없거나 등록 단위를 구성하지 못한 작업은 빈 배열이다. 작업 최상위 `reviewStatus`는 등록 단위 판정의 요약이며, 단위별 결과는 `registrationUnits[].reviewStatus`가 권위 있는 값이다.
-- 등록 결과 식별자 4종은 함께 존재하거나 함께 `null`이다. `AUTO_CONFIRMED`와 등록 완료 `MANUAL_OVERRIDE`에서만 값이 있고, `AUTO_BLOCKED`·`AUTO_REJECTED`·롤백 완료 `MANUAL_OVERRIDE`에서는 모두 `null`이며 `reusedResources`는 빈 배열이다. 이 규칙은 데이터 계약 5.1절의 상태·컬럼 조합표와 같다.
+- 등록 결과 식별자 4종은 함께 존재하거나 함께 `null`이다. `AUTO_CONFIRMED`와 등록 유지 `MANUAL_OVERRIDE`(`manualOverrideType=null`)에서만 값이 있고, `AUTO_BLOCKED`·`AUTO_REJECTED`·롤백 완료·폐기 완료 `MANUAL_OVERRIDE`에서는 모두 `null`이며 `reusedResources`는 빈 배열이다. 이 규칙은 데이터 계약 5.1절의 상태·컬럼 조합표와 같다.
 - `blockReason`은 `AUTO_BLOCKED`·`AUTO_REJECTED`일 때만 값이 있다. 장소 판정은 `PLACE_NOT_FOUND`·`PLACE_AMBIGUOUS`, 카테고리 판정은 `CATEGORY_UNRESOLVED`, 그 밖에는 기존 검증 실패 사유 코드를 사용한다.
 - `placeDecision.matchedBy`와 `categoryDecision.resolvedBy`는 자동 판정 근거다. `matchedBy`는 `NAME_AND_DISTRICT`, `resolvedBy`는 `KAKAO_PLACE_CATEGORY` 또는 `MENU_EXPRESSION`이다. 관리자 사후 보정 결과는 `MANUAL_OVERRIDE`로 표시한다.
 - `registeredRestaurantId`, `kakaoPlaceUrl` 등 모든 식별자는 불투명 문자열이며 클라이언트는 생성 규칙을 검증하지 않는다.

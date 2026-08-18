@@ -181,6 +181,7 @@ related_documents:
 - CHECK 조건은 "등록 결과 컬럼이 모두 존재하거나 모두 `NULL`"이고, 값이 존재하는 경우는 `AUTO_CONFIRMED`이거나 두 구분 컬럼이 모두 `NULL`인 `MANUAL_OVERRIDE`뿐이다. `place_decision`·`category_decision`도 같은 조건을 따른다.
 - 롤백은 등록 결과 컬럼을 `NULL`로 되돌리고 `rolled_back_at`을 채운다. 되돌린 정식 Entity의 식별자는 감사 이력에 남는다.
 - 폐기는 등록 결과 컬럼을 건드리지 않고 `discarded_at`만 채운다. 롤백·폐기 완료 단위는 등록 API와 `review`의 모든 `decision`을 거절하는 종결 상태다.
+- API 응답의 `manualOverrideType`은 이 두 컬럼에서 계산한다. `rolled_back_at`이 있으면 `ROLLED_BACK`, `discarded_at`이 있으면 `DISCARDED`, 둘 다 없으면 `null`이다. 별도 컬럼으로 저장하지 않는다.
 - 맛집·유튜버·영상·방문 관계 4종 등록은 `BR-AIEXTRACT-011`에 따라 하나의 트랜잭션으로 저장한다. `executed_by`는 Worker 자동 실행과 관리자 실행을 구분하며 판정 기준은 두 경우가 같다.
 - 재사용이 일어나는 자원은 유튜버와 영상뿐이다. 맛집과 방문 관계는 같은 것이 이미 있으면 `DUPLICATE_CONFLICT`로 차단되어 등록 자체가 일어나지 않으므로 재사용 대상이 될 수 없다. `reused_resources`의 허용값을 `creator`·`video`로 좁혀 이 경계를 DB에서 강제한다.
 - 유튜버·영상은 기존 행이 있으면 재사용한다. 재사용한 경우에도 참조 컬럼에 그 식별자를 기록하고 `reused_resources`에 자원 이름을 남긴다. 등록 단위 일괄 등록 API 응답은 감사 이력이 아니라 이 컬럼들에서 재구성한다.
