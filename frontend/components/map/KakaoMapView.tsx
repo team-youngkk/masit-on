@@ -30,7 +30,12 @@ type KakaoMapViewProps = {
   onSelect: (id: string) => void
 }
 
-function loadKakaoMapsSdk(key: string, timeoutMs: number): Promise<KakaoGlobal> {
+/*
+ * `/course` 결과 지도(CourseRouteMap)와 공유하는 유일한 경계다(D-231-05,
+ * docs/08-planning/issue-231-course-route-map.md). 이 함수 밖의 상태·마커 로직은
+ * 공유하지 않는다.
+ */
+export function loadKakaoMapsSdk(key: string, timeoutMs: number): Promise<KakaoGlobal> {
   return new Promise((resolve, reject) => {
     const existing = window.kakao
     if (existing?.maps?.Map) {

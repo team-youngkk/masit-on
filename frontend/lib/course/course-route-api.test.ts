@@ -6,11 +6,33 @@ import { requestCourseRoute } from './course-route-api.ts'
 const SUCCESS_BODY = {
   status: 'SUCCEEDED',
   restaurants: [
-    { sequence: 1, restaurantId: 'r1', name: '출발 맛집', role: 'START' },
-    { sequence: 2, restaurantId: 'r2', name: '도착 맛집', role: 'DESTINATION' },
+    {
+      sequence: 1,
+      restaurantId: 'r1',
+      name: '출발 맛집',
+      role: 'START',
+      coordinate: { latitude: 37.5665, longitude: 126.978 },
+    },
+    {
+      sequence: 2,
+      restaurantId: 'r2',
+      name: '도착 맛집',
+      role: 'DESTINATION',
+      coordinate: { latitude: 37.5651, longitude: 126.9812 },
+    },
   ],
   segments: [
-    { fromRestaurantId: 'r1', toRestaurantId: 'r2', distanceMeters: 4200, durationSeconds: 780 },
+    {
+      fromRestaurantId: 'r1',
+      toRestaurantId: 'r2',
+      distanceMeters: 4200,
+      durationSeconds: 780,
+      shapeStatus: 'AVAILABLE',
+      path: [
+        { latitude: 37.5665, longitude: 126.978 },
+        { latitude: 37.5651, longitude: 126.9812 },
+      ],
+    },
   ],
   totalDistanceMeters: 4200,
   totalDurationSeconds: 780,
@@ -91,6 +113,102 @@ test('본문이 JSON이 아닌 오류 응답도 기본 메시지로 안전하게
 
 test('계약 필드가 빠진 200 응답은 성공으로 처리하지 않는다', async (t) => {
   t.mock.method(globalThis, 'fetch', async () => Response.json({ status: 'SUCCEEDED' }))
+
+  const result = await requestCourseRoute(['r1', 'r2'])
+  assert.equal(result.kind, 'error')
+})
+
+test('shapeStatus가 MISSING이고 path가 빈 배열이어도 거리·시간이 정상이면 성공으로 처리한다(BR-COURSE-005)', async (t) => {
+  const bodyWithMissingShape = {
+    ...SUCCESS_BODY,
+    segments: [
+      {
+        fromRestaurantId: 'r1',
+        toRestaurantId: 'r2',
+        distanceMeters: 4200,
+        durationSeconds: 780,
+        shapeStatus: 'MISSING',
+        path: [],
+      },
+    ],
+  }
+  t.mock.method(globalThis, 'fetch', async () => Response.json(bodyWithMissingShape))
+
+  const result = await requestCourseRoute(['r1', 'r2'])
+  assert.deepEqual(result, { kind: 'success', route: bodyWithMissingShape })
+})
+
+test('방문지 좌표가 빠진 200 응답은 성공으로 처리하지 않는다', async (t) => {
+  const bodyWithoutCoordinate = {
+    ...SUCCESS_BODY,
+    restaurants: [
+      { sequence: 1, restaurantId: 'r1', name: '출발 맛집', role: 'START' },
+      SUCCESS_BODY.restaurants[1],
+    ],
+  }
+  t.mock.method(globalThis, 'fetch', async () => Response.json(bodyWithoutCoordinate))
+
+  const result = await requestCourseRoute(['r1', 'r2'])
+  assert.equal(result.kind, 'error')
+})
+
+test('구간 shapeStatus가 계약값을 벗어난 200 응답은 성공으로 처리하지 않는다', async (t) => {
+  const bodyWithInvalidShapeStatus = {
+    ...SUCCESS_BODY,
+    segments: [{ ...SUCCESS_BODY.segments[0], shapeStatus: 'UNKNOWN' }],
+  }
+  t.mock.method(globalThis, 'fetch', async () => Response.json(bodyWithInvalidShapeStatus))
+
+  const result = await requestCourseRoute(['r1', 'r2'])
+  assert.equal(result.kind, 'error')
+})
+
+test('path 원소에 null이 섞인 200 응답은 성공으로 처리하지 않는다', async (t) => {
+  const bodyWithInvalidPathElement = {
+    ...SUCCESS_BODY,
+    segments: [
+      { ...SUCCESS_BODY.segments[0], path: [SUCCESS_BODY.segments[0].path[0], null] },
+    ],
+  }
+  t.mock.method(globalThis, 'fetch', async () => Response.json(bodyWithInvalidPathElement))
+
+  const result = await requestCourseRoute(['r1', 'r2'])
+  assert.equal(result.kind, 'error')
+})
+
+test('path 원소 좌표가 WGS84 범위를 벗어난 200 응답은 성공으로 처리하지 않는다', async (t) => {
+  const bodyWithOutOfRangeCoordinate = {
+    ...SUCCESS_BODY,
+    segments: [
+      { ...SUCCESS_BODY.segments[0], path: [{ latitude: 91, longitude: 126.978 }] },
+    ],
+  }
+  t.mock.method(globalThis, 'fetch', async () => Response.json(bodyWithOutOfRangeCoordinate))
+
+  const result = await requestCourseRoute(['r1', 'r2'])
+  assert.equal(result.kind, 'error')
+})
+
+test('방문지 좌표가 문자열인 200 응답은 성공으로 처리하지 않는다', async (t) => {
+  const bodyWithStringCoordinate = {
+    ...SUCCESS_BODY,
+    restaurants: [
+      { ...SUCCESS_BODY.restaurants[0], coordinate: { latitude: '37.5665', longitude: 126.978 } },
+      SUCCESS_BODY.restaurants[1],
+    ],
+  }
+  t.mock.method(globalThis, 'fetch', async () => Response.json(bodyWithStringCoordinate))
+
+  const result = await requestCourseRoute(['r1', 'r2'])
+  assert.equal(result.kind, 'error')
+})
+
+test('shapeStatus가 MISSING인데 path가 비어 있지 않은 200 응답은 성공으로 처리하지 않는다(BR-COURSE-005 불변식)', async (t) => {
+  const bodyWithInconsistentShape = {
+    ...SUCCESS_BODY,
+    segments: [{ ...SUCCESS_BODY.segments[0], shapeStatus: 'MISSING' }],
+  }
+  t.mock.method(globalThis, 'fetch', async () => Response.json(bodyWithInconsistentShape))
 
   const result = await requestCourseRoute(['r1', 'r2'])
   assert.equal(result.kind, 'error')
