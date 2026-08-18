@@ -1,17 +1,16 @@
 package com.masiton.ai.application.port.out;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.List;
-import java.util.Map;
 
 public interface YoutubeChannelWatchStore {
     Optional<Watch> find(String channelId);
 
     Optional<WatchDetail> findDetail(String channelId);
 
-    Map<String, WatchDetail> findDetailsByChannelIds(List<String> channelIds);
+    WatchCandidatePage findCandidatePage(int limit, long offset);
 
     Optional<Watch> findForUpdate(String channelId);
 
@@ -43,4 +42,10 @@ public interface YoutubeChannelWatchStore {
             this(enabled, subscriptionStatus, lastNotificationAt, lastRenewedAt, lastErrorCategory, null);
         }
     }
+
+    record WatchCandidatePage(List<WatchCandidate> items, long totalElements) { }
+
+    record WatchCandidate(UUID creatorId, String channelName, boolean publiclyVisible,
+                          boolean externallyAvailable, String externalChannelId,
+                          Optional<WatchDetail> watch) { }
 }

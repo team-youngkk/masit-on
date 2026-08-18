@@ -9,6 +9,7 @@ import {
   watchStatusPresentation,
   watchStartAllowed,
   watchToggleEnabled,
+  watchToggleAction,
   watchToggleLabel,
 } from './youtube-channel-watches-coordination.ts'
 
@@ -81,4 +82,21 @@ test('공개되고 외부 채널이 이용 가능한 행만 감시 시작을 허
   assert.equal(watchStartAllowed({ publiclyVisible: true, externallyAvailable: true }), true)
   assert.equal(watchStartAllowed({ publiclyVisible: false, externallyAvailable: true }), false)
   assert.equal(watchStartAllowed({ publiclyVisible: true, externallyAvailable: false }), false)
+})
+
+test('공개 자격을 잃은 기존 감시는 중지할 수 있고 재시작은 막는다', () => {
+  const failedStatus = { enabled: true, subscriptionStatus: 'RENEWAL_FAILED' as const, lastNotificationAt: null, lastRenewedAt: null, lastErrorCategory: null, lastErrorAt: null }
+
+  assert.deepEqual(watchToggleAction({ publiclyVisible: false, externallyAvailable: false, status: failedStatus }), {
+    enabled: false,
+    allowed: true,
+  })
+  assert.deepEqual(watchToggleAction({ publiclyVisible: false, externallyAvailable: false, status: { ...failedStatus, enabled: false } }), {
+    enabled: false,
+    allowed: false,
+  })
+  assert.deepEqual(watchToggleAction({ publiclyVisible: true, externallyAvailable: true, status: failedStatus }), {
+    enabled: true,
+    allowed: true,
+  })
 })

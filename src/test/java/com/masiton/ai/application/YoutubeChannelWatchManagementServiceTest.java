@@ -13,7 +13,6 @@ import static org.mockito.Mockito.when;
 
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -30,7 +29,6 @@ import com.masiton.ai.application.port.out.YoutubeChannelWatchStore;
 import com.masiton.ai.application.port.out.YoutubeChannelWatchSubscriptionPort;
 import com.masiton.ai.application.port.out.YoutubeChannelWatchVerificationTokenPort;
 import com.masiton.common.web.BusinessException;
-import com.masiton.creator.application.port.in.FindYoutubeChannelWatchCreatorsUseCase;
 import com.masiton.creator.application.port.in.FindCreatorReferenceUseCase;
 import com.masiton.video.application.port.in.ResolveVerifiedVideoUseCase;
 
@@ -38,14 +36,13 @@ import com.masiton.video.application.port.in.ResolveVerifiedVideoUseCase;
 class YoutubeChannelWatchManagementServiceTest {
 
     private final FindCreatorReferenceUseCase creatorReferences = mock(FindCreatorReferenceUseCase.class);
-    private final FindYoutubeChannelWatchCreatorsUseCase watchCreators = mock(FindYoutubeChannelWatchCreatorsUseCase.class);
     private final YoutubeChannelWatchStore watchStore = mock(YoutubeChannelWatchStore.class);
     private final YoutubeChannelWatchPersistenceService watchPersistence = mock(YoutubeChannelWatchPersistenceService.class);
     private final YoutubeChannelWatchVerificationTokenPort verificationTokens = mock(
             YoutubeChannelWatchVerificationTokenPort.class);
     private final YoutubeChannelWatchSubscriptionPort subscriptions = mock(YoutubeChannelWatchSubscriptionPort.class);
     private final YoutubeChannelWatchManagementService service = new YoutubeChannelWatchManagementService(
-            creatorReferences, watchCreators, watchPersistence, verificationTokens, subscriptions);
+            creatorReferences, watchPersistence, verificationTokens, subscriptions);
 
     @Test
     @DisplayName("여러 유튜버의 감시 상태를 한 번에 조회하고 기존 감시 행도 유지한다")
@@ -53,14 +50,13 @@ class YoutubeChannelWatchManagementServiceTest {
         UUID activeId = UUID.randomUUID();
         UUID inactiveId = UUID.randomUUID();
         UUID unavailableId = UUID.randomUUID();
-        when(watchCreators.findAll()).thenReturn(List.of(
-                new FindYoutubeChannelWatchCreatorsUseCase.CreatorReference(activeId, "활성 채널", "channel-active", true, true),
-                new FindYoutubeChannelWatchCreatorsUseCase.CreatorReference(inactiveId, "비활성 채널", "channel-inactive", true, true),
-                new FindYoutubeChannelWatchCreatorsUseCase.CreatorReference(unavailableId, "비공개 채널", "channel-unavailable", false, false)));
-        when(watchPersistence.findDetailsByChannelIds(List.of("channel-active", "channel-inactive", "channel-unavailable")))
-                .thenReturn(Map.of(
-                        "channel-active", new YoutubeChannelWatchStore.WatchDetail(true, "ACTIVE", null, null, null),
-                        "channel-unavailable", new YoutubeChannelWatchStore.WatchDetail(false, "INACTIVE", null, null, "CREATOR_HIDDEN")));
+        when(watchPersistence.findCandidatePage(20, 0)).thenReturn(new YoutubeChannelWatchStore.WatchCandidatePage(List.of(
+                new YoutubeChannelWatchStore.WatchCandidate(activeId, "활성 채널", true, true, "channel-active",
+                        Optional.of(new YoutubeChannelWatchStore.WatchDetail(true, "ACTIVE", null, null, null))),
+                new YoutubeChannelWatchStore.WatchCandidate(inactiveId, "비활성 채널", true, true, "channel-inactive",
+                        Optional.empty()),
+                new YoutubeChannelWatchStore.WatchCandidate(unavailableId, "비공개 채널", false, false, "channel-unavailable",
+                        Optional.of(new YoutubeChannelWatchStore.WatchDetail(false, "INACTIVE", null, null, "CREATOR_HIDDEN")))), 3));
 
         var result = service.getStatuses(1, 20);
 
@@ -68,8 +64,10 @@ class YoutubeChannelWatchManagementServiceTest {
         assertThat(result.items().get(0).status().subscriptionStatus()).isEqualTo("ACTIVE");
         assertThat(result.items().get(1).status().subscriptionStatus()).isEqualTo("INACTIVE");
         assertThat(result.items().get(2).channelName()).isEqualTo("비공개 채널");
-        verify(watchPersistence).findDetailsByChannelIds(List.of("channel-active", "channel-inactive", "channel-unavailable"));
+        verify(watchPersistence).findCandidatePage(20, 0);
 
+        when(watchPersistence.findCandidatePage(50, (long) (Integer.MAX_VALUE - 1) * 50))
+                .thenReturn(new YoutubeChannelWatchStore.WatchCandidatePage(List.of(), 3));
         assertThat(service.getStatuses(Integer.MAX_VALUE, 50).items()).isEmpty();
     }
 

@@ -65,10 +65,4 @@ class CreatorPersistenceAdapter implements CreatorRepositoryPort {
                 .toList();
     }
 
-    @Override
-    public List<Creator> findAllForYoutubeChannelWatch() {
-        return springDataCreatorRepository.findAllForYoutubeChannelWatch().stream()
-                .map(CreatorMapper::toDomain)
-                .toList();
-    }
 }

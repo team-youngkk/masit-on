@@ -131,6 +131,52 @@ class JdbcYoutubeChannelWatchStoreIntegrationTest {
     }
 
     @Test
+    @DisplayName("감시 목록은 공개 후보와 기존 Watch를 DB에서 페이징하고 Watch 없는 비공개 Creator는 제외한다")
+    void findCandidatePage_후보조건과Watch보존을DB에서페이징한다() {
+        UUID availableCreatorId = UUID.randomUUID();
+        UUID watchedUnavailableCreatorId = UUID.randomUUID();
+        UUID excludedCreatorId = UUID.randomUUID();
+        String availableChannelId = "channel-" + UUID.randomUUID();
+        String watchedUnavailableChannelId = "channel-" + UUID.randomUUID();
+        String excludedChannelId = "channel-" + UUID.randomUUID();
+        insertCreator(availableCreatorId, availableChannelId);
+        insertCreator(watchedUnavailableCreatorId, watchedUnavailableChannelId);
+        insertCreator(excludedCreatorId, excludedChannelId);
+        jdbcTemplate.update("""
+                UPDATE creator
+                   SET publication_status = 'PRIVATE', external_availability_status = 'UNAVAILABLE'
+                 WHERE id IN (?, ?)
+                """, watchedUnavailableCreatorId, excludedCreatorId);
+        insertWatch(watchedUnavailableCreatorId, watchedUnavailableChannelId, null, null, null, null);
+
+        try {
+            YoutubeChannelWatchStore.WatchCandidatePage first = store.findCandidatePage(1, 0);
+            YoutubeChannelWatchStore.WatchCandidatePage second = store.findCandidatePage(1, 1);
+            YoutubeChannelWatchStore.WatchCandidatePage beyondLast = store.findCandidatePage(1, 2);
+
+            assertThat(first.totalElements()).isEqualTo(2);
+            assertThat(second.totalElements()).isEqualTo(2);
+            assertThat(beyondLast.totalElements()).isEqualTo(2);
+            assertThat(beyondLast.items()).isEmpty();
+            assertThat(first.items()).hasSize(1);
+            assertThat(second.items()).hasSize(1);
+            assertThat(first.items()).allMatch(candidate -> candidate.creatorId().equals(availableCreatorId)
+                    || candidate.creatorId().equals(watchedUnavailableCreatorId));
+            assertThat(second.items()).allMatch(candidate -> candidate.creatorId().equals(availableCreatorId)
+                    || candidate.creatorId().equals(watchedUnavailableCreatorId));
+            assertThat(first.items().get(0).creatorId()).isNotEqualTo(second.items().get(0).creatorId());
+            assertThat(first.items().stream().map(YoutubeChannelWatchStore.WatchCandidate::creatorId)
+                    .toList()).doesNotContain(excludedCreatorId);
+            assertThat(second.items().stream().map(YoutubeChannelWatchStore.WatchCandidate::creatorId)
+                    .toList()).doesNotContain(excludedCreatorId);
+        } finally {
+            deleteFixture(availableCreatorId, availableChannelId);
+            deleteFixture(watchedUnavailableCreatorId, watchedUnavailableChannelId);
+            deleteFixture(excludedCreatorId, excludedChannelId);
+        }
+    }
+
+    @Test
     @DisplayName("활성 Watch의 알림 수신 시각을 갱신한다")
     void markNotificationReceived_활성행_수신시각을갱신한다() {
         // given

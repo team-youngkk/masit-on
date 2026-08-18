@@ -17,9 +17,8 @@ import {
   watchEnabledLabel,
   watchErrorCategoryLabel,
   watchErrorMessage,
-  watchStartAllowed,
   watchStatusPresentation,
-  watchToggleEnabled,
+  watchToggleAction,
   watchToggleLabel,
 } from '@/lib/admin/youtube-channel-watches-coordination'
 
@@ -85,10 +84,10 @@ export function YoutubeChannelWatchScreen() {
 
   function toggleWatch(summary: YoutubeChannelWatchSummary) {
     if (pendingIds.has(summary.creatorId)) return
-    const enabled = watchToggleEnabled(summary.status)
-    if (enabled && !watchStartAllowed(summary)) return
+    const action = watchToggleAction(summary)
+    if (!action.allowed) return
     setNotice(null)
-    mutation.mutate({ creatorId: summary.creatorId, enabled })
+    mutation.mutate({ creatorId: summary.creatorId, enabled: action.enabled })
   }
 
   if (watchesQuery.isPending) {
@@ -156,8 +155,7 @@ function WatchStatusPanel({
   const { status } = summary
   const presentation = watchStatusPresentation(status.subscriptionStatus)
   const errorMessage = watchErrorMessage(status.lastErrorCategory)
-  const enabling = watchToggleEnabled(status)
-  const canToggle = !enabling || watchStartAllowed(summary)
+  const action = watchToggleAction(summary)
   const headingId = `youtube-watch-status-heading-${summary.creatorId}`
 
   return <section className={styles.statusPanel} aria-labelledby={headingId}>
@@ -171,13 +169,13 @@ function WatchStatusPanel({
       </div>
       <div className={styles.statusActions}>
         <span className={styles.meta}>{watchEnabledLabel(status.enabled)}</span>
-        <Button disabled={busy || !canToggle} onClick={onToggle}>
+        <Button disabled={busy || !action.allowed} onClick={onToggle}>
           {busy ? '저장 중…' : watchToggleLabel(status)}
         </Button>
       </div>
     </div>
     <p className={styles.statusDescription}>{presentation.description}</p>
-    {!canToggle ? <p className={styles.hint}>공개·외부 이용 가능한 채널만 감시를 시작할 수 있습니다. 기존 감시는 중지할 수 있습니다.</p> : null}
+    {!action.allowed ? <p className={styles.hint}>공개·외부 이용 가능한 채널만 감시를 시작할 수 있습니다. 기존 감시는 중지할 수 있습니다.</p> : null}
     {errorMessage ? <p className={styles.errorNotice}>{errorMessage}</p> : null}
     {rowError ? <p className={styles.errorNotice} role="alert">{rowError}</p> : null}
     <dl className={styles.detailGrid}>
@@ -191,7 +189,7 @@ function WatchStatusPanel({
 
 function availabilityLabel(summary: YoutubeChannelWatchSummary): string {
   if (summary.publiclyVisible && summary.externallyAvailable) return '감시 시작 가능'
-  if (summary.status.enabled) return '현재 감시 중 · 새로고침 후 중지 가능'
+  if (summary.status.enabled) return '현재 감시 중 · 중지 가능'
   return '현재 감시 시작 불가'
 }
 

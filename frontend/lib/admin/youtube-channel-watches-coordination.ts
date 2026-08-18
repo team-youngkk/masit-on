@@ -68,6 +68,21 @@ export function watchStartAllowed(summary: { publiclyVisible: boolean; externall
   return summary.publiclyVisible && summary.externallyAvailable
 }
 
+export function watchToggleAction(summary: {
+  publiclyVisible: boolean
+  externallyAvailable: boolean
+  status: YoutubeChannelWatchStatus
+}): { enabled: boolean; allowed: boolean } {
+  const canStart = watchStartAllowed(summary)
+  return {
+    // A failed or unknown subscription is restartable only while the Creator
+    // is still a valid public, externally available target. Existing watches
+    // remain stoppable even after that eligibility is lost.
+    enabled: canStart ? watchToggleEnabled(summary.status) : false,
+    allowed: summary.status.enabled || canStart,
+  }
+}
+
 export function watchEnabledLabel(enabled: boolean): string {
   return enabled ? '활성화 요청됨' : '중지됨'
 }

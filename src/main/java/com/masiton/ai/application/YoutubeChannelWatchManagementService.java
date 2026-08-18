@@ -6,7 +6,6 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.List;
-import java.util.Map;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,24 +18,20 @@ import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
 import com.masiton.creator.application.port.in.CreatorReferenceExceptionFactory;
 import com.masiton.creator.application.port.in.FindCreatorReferenceUseCase;
-import com.masiton.creator.application.port.in.FindYoutubeChannelWatchCreatorsUseCase;
 
 @Service
 public class YoutubeChannelWatchManagementService implements YoutubeChannelWatchManagementUseCase {
 
     private final FindCreatorReferenceUseCase creatorReferences;
-    private final FindYoutubeChannelWatchCreatorsUseCase watchCreators;
     private final YoutubeChannelWatchPersistenceService watchPersistence;
     private final YoutubeChannelWatchVerificationTokenPort verificationTokens;
     private final YoutubeChannelWatchSubscriptionPort subscriptions;
 
     public YoutubeChannelWatchManagementService(FindCreatorReferenceUseCase creatorReferences,
-                                                FindYoutubeChannelWatchCreatorsUseCase watchCreators,
                                                 YoutubeChannelWatchPersistenceService watchPersistence,
                                                 YoutubeChannelWatchVerificationTokenPort verificationTokens,
                                                 YoutubeChannelWatchSubscriptionPort subscriptions) {
         this.creatorReferences = creatorReferences;
-        this.watchCreators = watchCreators;
         this.watchPersistence = watchPersistence;
         this.verificationTokens = verificationTokens;
         this.subscriptions = subscriptions;
@@ -55,25 +50,16 @@ public class YoutubeChannelWatchManagementService implements YoutubeChannelWatch
     @Override
     @Transactional(readOnly = true)
     public WatchPage getStatuses(int page, int size) {
-        List<FindYoutubeChannelWatchCreatorsUseCase.CreatorReference> references = watchCreators.findAll();
-        Map<String, YoutubeChannelWatchStore.WatchDetail> watches = watchPersistence
-                .findDetailsByChannelIds(references.stream().map(FindYoutubeChannelWatchCreatorsUseCase.CreatorReference::externalChannelId).toList());
-        List<FindYoutubeChannelWatchCreatorsUseCase.CreatorReference> candidates = references.stream()
-                .filter(reference -> (reference.publiclyVisible() && reference.externallyAvailable())
-                        || watches.containsKey(reference.externalChannelId()))
-                .toList();
-        long totalElements = candidates.size();
-        long totalPages = totalElements == 0 ? 0 : (totalElements + size - 1L) / size;
         long offset = (long) (page - 1) * size;
-        int from = (int) Math.min(offset, candidates.size());
-        int to = Math.min(from + size, candidates.size());
-        List<WatchSummary> items = candidates.subList(from, to).stream()
-                .map(reference -> new WatchSummary(
-                        reference.id(), reference.channelName(), reference.publiclyVisible(),
-                        reference.externallyAvailable(),
-                        watches.containsKey(reference.externalChannelId())
-                                ? status(watches.get(reference.externalChannelId()))
-                                : initialStatus()))
+        YoutubeChannelWatchStore.WatchCandidatePage candidatePage = watchPersistence.findCandidatePage(size, offset);
+        long totalElements = candidatePage.totalElements();
+        long totalPages = totalElements == 0 ? 0 : (totalElements + size - 1L) / size;
+        List<WatchSummary> items = candidatePage.items().stream()
+                .map(candidate -> new WatchSummary(
+                        candidate.creatorId(), candidate.channelName(), candidate.publiclyVisible(),
+                        candidate.externallyAvailable(), candidate.watch()
+                                .map(this::status)
+                                .orElseGet(this::initialStatus)))
                 .toList();
         return new WatchPage(items, page, size, totalElements, totalPages, page < totalPages);
     }

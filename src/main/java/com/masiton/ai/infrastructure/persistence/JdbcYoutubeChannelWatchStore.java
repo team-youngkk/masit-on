@@ -4,10 +4,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -175,27 +173,55 @@ public class JdbcYoutubeChannelWatchStore implements YoutubeChannelWatchStore {
     }
 
     @Override
-    public Map<String, WatchDetail> findDetailsByChannelIds(List<String> channelIds) {
-        if (channelIds == null || channelIds.isEmpty()) {
-            return Map.of();
-        }
-        String placeholders = String.join(",", java.util.Collections.nCopies(channelIds.size(), "?"));
-        String sql = """
-                SELECT youtube_channel_id, enabled, subscription_status, last_notification_at,
-                       last_renewed_at, last_error_category, last_error_at
-                  FROM youtube_channel_watch
-                 WHERE youtube_channel_id IN (%s)
-                """.formatted(placeholders);
-        return jdbcTemplate.query(sql, (rs, rowNum) -> Map.entry(
-                        rs.getString("youtube_channel_id"),
-                        new WatchDetail(rs.getBoolean("enabled"), rs.getString("subscription_status"),
-                                rs.getObject("last_notification_at", OffsetDateTime.class),
-                                rs.getObject("last_renewed_at", OffsetDateTime.class),
-                                rs.getString("last_error_category"),
-                                rs.getObject("last_error_at", OffsetDateTime.class))),
-                channelIds.toArray())
-                .stream()
-                .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
+    public WatchCandidatePage findCandidatePage(int limit, long offset) {
+        long totalElements = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                  FROM creator c
+                  LEFT JOIN youtube_channel_watch w ON w.creator_id = c.id
+                 WHERE c.external_channel_id IS NOT NULL
+                   AND ((c.publication_status = 'PUBLIC'
+                         AND c.lifecycle_status = 'ACTIVE'
+                         AND c.external_availability_status = 'AVAILABLE')
+                        OR w.id IS NOT NULL)
+                """, Long.class);
+        List<WatchCandidate> rows = jdbcTemplate.query("""
+                SELECT c.id AS creator_id,
+                       c.channel_name,
+                       c.external_channel_id,
+                       (c.publication_status = 'PUBLIC' AND c.lifecycle_status = 'ACTIVE') AS publicly_visible,
+                       (c.external_availability_status = 'AVAILABLE') AS externally_available,
+                       w.id AS watch_id,
+                       w.enabled AS watch_enabled,
+                       w.subscription_status AS watch_subscription_status,
+                       w.last_notification_at AS watch_last_notification_at,
+                       w.last_renewed_at AS watch_last_renewed_at,
+                       w.last_error_category AS watch_last_error_category,
+                       w.last_error_at AS watch_last_error_at
+                  FROM creator c
+                  LEFT JOIN youtube_channel_watch w ON w.creator_id = c.id
+                 WHERE c.external_channel_id IS NOT NULL
+                   AND ((c.publication_status = 'PUBLIC'
+                         AND c.lifecycle_status = 'ACTIVE'
+                         AND c.external_availability_status = 'AVAILABLE')
+                        OR w.id IS NOT NULL)
+                 ORDER BY c.channel_name COLLATE "C", c.id
+                 LIMIT ? OFFSET ?
+                """, (rs, rowNum) -> new WatchCandidate(
+                        rs.getObject("creator_id", UUID.class),
+                        rs.getString("channel_name"),
+                        rs.getBoolean("publicly_visible"),
+                        rs.getBoolean("externally_available"),
+                        rs.getString("external_channel_id"),
+                        rs.getObject("watch_id") == null
+                                ? Optional.empty()
+                                : Optional.of(new WatchDetail(
+                                        rs.getBoolean("watch_enabled"),
+                                        rs.getString("watch_subscription_status"),
+                                        rs.getObject("watch_last_notification_at", OffsetDateTime.class),
+                                        rs.getObject("watch_last_renewed_at", OffsetDateTime.class),
+                                        rs.getString("watch_last_error_category"),
+                                        rs.getObject("watch_last_error_at", OffsetDateTime.class)))), limit, offset);
+        return new WatchCandidatePage(rows, totalElements);
     }
 
     private Watch map(ResultSet rs, int rowNum) throws SQLException {

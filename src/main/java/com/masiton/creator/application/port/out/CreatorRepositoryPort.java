@@ -21,5 +21,4 @@ public interface CreatorRepositoryPort {
      */
     List<Creator> findPublicSelectionList();
 
-    List<Creator> findAllForYoutubeChannelWatch();
 }
