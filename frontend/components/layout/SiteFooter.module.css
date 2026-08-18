@@ -22,3 +22,9 @@
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
+
+@media (max-width: 767px) {
+  .footer {
+    margin-bottom: calc(4rem + var(--space-1) + env(safe-area-inset-bottom));
+  }
+}

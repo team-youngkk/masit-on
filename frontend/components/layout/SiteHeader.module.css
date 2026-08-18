@@ -1,5 +1,6 @@
 .header {
-  position: relative;
+  position: sticky;
+  top: 0;
   z-index: 10;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-background);
@@ -15,11 +16,16 @@
 }
 
 .brandLink {
+  display: inline-flex;
+  align-items: center;
   flex: 0 0 auto;
-  font-size: var(--font-size-lg);
+  min-height: var(--control-min-height);
+  color: var(--color-primary-deep);
+  font-size: var(--font-size-xl);
 }
 
-.nav {
+.desktopNav,
+.accountArea {
   display: flex;
   align-items: center;
   gap: var(--space-4);
@@ -29,23 +35,59 @@
   color: var(--color-text-muted);
 }
 
-.nav a,
+.desktopNav {
+  margin-left: auto;
+}
+
+.accountArea {
+  position: relative;
+  margin-left: var(--space-4);
+}
+
+.desktopNav a,
+.accountArea a,
 .memberMenu summary,
 .memberMenu button {
   min-height: var(--control-min-height);
 }
 
-.nav > a,
+.desktopNav > a,
+.accountArea > a,
 .memberMenu summary {
   display: inline-flex;
   align-items: center;
   white-space: nowrap;
 }
 
-.nav a:hover,
+.desktopNav a:hover,
+.accountArea a:hover,
 .memberMenu summary:hover,
 .memberMenu button:hover {
   color: var(--color-text);
+}
+
+.navLink {
+  position: relative;
+  font-weight: 600;
+}
+
+.desktopNav .navLink::after {
+  position: absolute;
+  right: 0;
+  bottom: -0.8rem;
+  left: 0;
+  height: 2px;
+  border-radius: var(--radius-full);
+  background: transparent;
+  content: '';
+}
+
+.desktopNav .active {
+  color: var(--color-primary-deep);
+}
+
+.desktopNav .active::after {
+  background: var(--color-primary-strong);
 }
 
 .sessionLoading {
@@ -161,17 +203,29 @@
   cursor: pointer;
 }
 
-@media (max-width: 480px) {
+.mobileNav {
+  display: none;
+}
+
+@media (max-width: 767px) {
   .inner {
-    flex-wrap: wrap;
-    gap: var(--space-2);
+    min-height: 64px;
   }
 
-  .nav {
-    flex: 1 1 100%;
-    flex-wrap: wrap;
-    gap: var(--space-3);
-    margin-left: 0;
+  .desktopNav {
+    display: none;
+  }
+
+  .accountArea {
+    gap: var(--space-2);
+    margin-left: auto;
+  }
+
+  .accountArea > a,
+  .memberMenu summary {
+    padding: 0 var(--space-2);
+    color: var(--color-primary-deep);
+    font-weight: 700;
   }
 
   .sessionLoading {
@@ -181,9 +235,49 @@
   }
 
   .logoutError {
-    right: var(--space-2);
-    left: var(--space-2);
+    position: fixed;
+    top: calc(64px + var(--space-2));
+    right: var(--layout-gutter);
+    left: var(--layout-gutter);
     flex-wrap: wrap;
     white-space: normal;
+  }
+
+  .mobileNav {
+    position: fixed;
+    z-index: 20;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    min-height: 64px;
+    padding-bottom: env(safe-area-inset-bottom);
+    border-top: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-surface) 96%, transparent);
+    box-shadow: 0 -8px 24px rgb(31 29 26 / 7%);
+    backdrop-filter: blur(14px);
+  }
+
+  .mobileNav a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.1rem;
+    min-width: 0;
+    min-height: 64px;
+    color: var(--color-text-muted);
+    font-size: 0.72rem;
+  }
+
+  .mobileNav a > span:first-child {
+    font-size: 1.35rem;
+    line-height: 1;
+  }
+
+  .mobileNav .active {
+    background: var(--color-primary-faint);
+    color: var(--color-primary-deep);
   }
 }

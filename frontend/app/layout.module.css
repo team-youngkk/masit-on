@@ -11,3 +11,14 @@
   margin: 0 auto;
   padding: var(--space-8) var(--layout-gutter) var(--space-12);
 }
+
+.main.adminMain {
+  max-width: none;
+  padding: 0;
+}
+
+@media (min-width: 768px) {
+  .main {
+    padding-bottom: var(--space-12);
+  }
+}

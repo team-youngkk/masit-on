@@ -5,6 +5,9 @@ import { useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/Button'
 import { Field } from '@/components/ui/Field'
+import { SectionHeader } from '@/components/ui/PageShell'
+import { StatePanel } from '@/components/ui/StatePanel'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 import { CATEGORY_OPTIONS, DISTRICT_OPTIONS } from '@/lib/restaurants-api'
 import {
   MAX_COURSE_SIZE,
@@ -310,7 +313,10 @@ export function CourseScreen() {
   return (
     <div className={styles.layout}>
       <section className={styles.searchPanel} aria-labelledby="course-search-heading">
-        <h2 id="course-search-heading">맛집 더 찾기</h2>
+        <SectionHeader
+          title={<span id="course-search-heading">맛집 더 찾기</span>}
+          description="검색한 맛집을 코스 후보에 추가하세요."
+        />
         <form
           className={styles.searchForm}
           onSubmit={(event) => {
@@ -427,14 +433,21 @@ export function CourseScreen() {
 
       <section className={styles.builderPanel} aria-labelledby="course-builder-heading">
         <div className={styles.builderHeader}>
-          <h2 id="course-builder-heading">맛집 코스</h2>
-          <p className={styles.selectionCount}>
-            선택 {selected.length}/{MAX_COURSE_SIZE}
-          </p>
+          <SectionHeader
+            title={<span id="course-builder-heading">방문 순서</span>}
+            description="드래그 없이 버튼으로 순서를 조정할 수 있습니다."
+            actions={<StatusBadge tone={selected.length >= 2 ? 'success' : 'neutral'}>선택 {selected.length}/{MAX_COURSE_SIZE}</StatusBadge>}
+          />
         </div>
 
         {selected.length === 0 ? (
-          <p className={styles.state}>왼쪽에서 맛집을 검색해 코스에 추가해 주세요.</p>
+          <StatePanel
+            compact
+            headingLevel={3}
+            title="코스를 구성해 주세요"
+            description="맛집을 2곳 이상 선택하면 자동차 이동 순서를 계산할 수 있습니다."
+            icon="1"
+          />
         ) : (
           <ol className={styles.selectionList}>
             {selected.map((item, index) => (
@@ -503,7 +516,7 @@ export function CourseScreen() {
       </section>
 
       {outcome ? (
-        <section className={styles.resultPanel} aria-labelledby="course-outcome-heading">
+        <section className={styles.resultPanel} aria-label="코스 경로 결과">
           {outcome.kind === 'success' ? (
             <CourseResult
               route={outcome.route}
@@ -621,26 +634,30 @@ function CourseProblem({
   const selectedRestaurants = 'selectedRestaurants' in outcome ? outcome.selectedRestaurants : undefined
 
   return (
-    <div role="alert">
-      <h2 id="course-outcome-heading">경로를 만들 수 없습니다</h2>
-      <p className={styles.problemBadge}>[{categoryLabel}]</p>
-      <p>{outcome.message}</p>
-      {outcome.traceId ? (
-        <p className={styles.traceId}>traceId: {outcome.traceId}</p>
-      ) : null}
-      {selectedRestaurants?.length ? (
-        <>
-          <p className={styles.selectHint}>확인이 필요한 맛집</p>
-          <ol className={styles.selectionList} aria-label="확인이 필요한 맛집 목록">
-            {selectedRestaurants.map((restaurant) => (
-              <li key={restaurant.restaurantId} className={styles.selectionItem}>
-                <span className={styles.selectionOrder}>{restaurant.inputOrder}</span>
-                <p className={styles.selectionName}>{restaurant.name}</p>
-              </li>
-            ))}
-          </ol>
-        </>
-      ) : null}
+    <div>
+      <div role="alert">
+        <StatePanel
+          title="경로를 만들 수 없습니다"
+          description={<><StatusBadge tone="warning">{categoryLabel}</StatusBadge><p>{outcome.message}</p></>}
+          tone="warning"
+          role="presentation"
+          compact
+          traceId={outcome.traceId}
+        />
+        {selectedRestaurants?.length ? (
+          <>
+            <p className={styles.selectHint}>확인이 필요한 맛집</p>
+            <ol className={styles.selectionList} aria-label="확인이 필요한 맛집 목록">
+              {selectedRestaurants.map((restaurant) => (
+                <li key={restaurant.restaurantId} className={styles.selectionItem}>
+                  <span className={styles.selectionOrder}>{restaurant.inputOrder}</span>
+                  <p className={styles.selectionName}>{restaurant.name}</p>
+                </li>
+              ))}
+            </ol>
+          </>
+        ) : null}
+      </div>
       {outcome.kind === 'failure' && !outcome.retryAllowed ? (
         <p className={styles.selectHint} id="course-retry-guidance">
           지금은 다시 시도할 수 없습니다. 잠시 후 다시 방문해 주세요.

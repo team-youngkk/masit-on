@@ -18,3 +18,4 @@ related_documents:
 | [ADR-OBS-001](obs-001-logging-observability.md) | 애플리케이션 로그와 운영 관측 기준 |
 | [ADR-PERF-001](perf-001-k6-load-testing.md) | k6 부하 테스트 도구와 실행 체계 |
 | [ADR-PERF-002](perf-002-operational-participant-load-testing.md) | 검증 참여자 전용 운영 직접 부하 검증 예외 |
+| [ADR-PERF-003](perf-003-isolated-performance-terraform.md) | 격리 성능 검증 환경 Terraform과 상태 저장소 |

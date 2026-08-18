@@ -1,0 +1,21 @@
+#!/bin/bash
+set -euo pipefail
+
+exec > >(tee /var/log/masiton-perf-loadgen-bootstrap.log | logger -t masiton-perf-loadgen-bootstrap -s 2>/dev/console) 2>&1
+
+dnf install -y curl tar gzip jq
+
+asset="k6-v${k6_version}-linux-arm64"
+curl -fsSL -o /tmp/k6.tar.gz "https://github.com/grafana/k6/releases/download/v${k6_version}/$${asset}.tar.gz"
+echo "${k6_arm64_sha256}  /tmp/k6.tar.gz" | sha256sum -c -
+tar -xzf /tmp/k6.tar.gz -C /tmp
+install -m 0755 "/tmp/$${asset}/k6" /usr/local/bin/k6
+rm -rf /tmp/k6.tar.gz "/tmp/$${asset}"
+
+k6 version
+mkdir -p /opt/masiton-perf/results
+chmod 0755 /opt/masiton-perf /opt/masiton-perf/results
+cat >/opt/masiton-perf/README.txt <<'NOTE'
+Copy the reviewed perf/k6 scenario and its WireMock-aware configuration to this instance through SSM.
+Run k6 from this host only after the app health checks and WireMock stubs have passed.
+NOTE

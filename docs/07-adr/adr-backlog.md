@@ -47,7 +47,7 @@ MVP 구현 전 필수 결정과 3차 확장 정책 결정은 완료됐다. 아�
 - 현재 상태: Accepted
 - 문서: [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md)
 - 결정 시점: AI 제공자·후보 데이터·관리자 검수 API 작성 전
-- 핵심: AI 결과를 후보 Snapshot으로 격리하고, 자동 필수값·근거·중복·Kakao·YouTube·Visit 검증을 통과한 뒤 관리자 승인 없이 정식 등록·공개한다. Gemini Free Tier 전용 global endpoint의 `gemini-3.5-flash-lite`, 현재 P2/S1을 사용하며 기존 P1 이력은 보존하고 유료 호출은 금지한다.
+- 핵심: AI 결과를 후보 Snapshot으로 격리하고, 자동 필수값·근거·중복·Kakao·YouTube·Visit 검증을 통과한 뒤 관리자 승인 없이 정식 등록·공개한다. Gemini Free Tier 전용 global endpoint의 `gemini-3.5-flash-lite`, 현재 P7/S1을 사용하며 기존 P1·P2·P3·P4·P5·P6 이력은 보존하고 유료 호출은 금지한다.
 - 선확정: n8n 등 외부 워크플로 도구를 초기 실행 경계에 도입하지 않고, Provider Port/Adapter와 애플리케이션 Worker를 사용한다. 원문·자막 전체는 저장하지 않는다.
 
 ### ADR-EXT-003 AI 추출 비동기 작업과 단일 EC2 복구 경계
@@ -133,9 +133,16 @@ MVP 구현 전 필수 결정과 3차 확장 정책 결정은 완료됐다. 아�
 - 현재 상태: Accepted로 이동 (2026-08-06)
 - 현재 결정: [ADR-PERF-001](quality/perf-001-k6-load-testing.md)에 따라 k6 v2.1.0을 고정하고, 시나리오는 `perf/k6/`, 기준 데이터 시드는 `perf/seed/`에 둔다. 실행은 `workflow_dispatch` 전용 워크플로로만 하며 정기 CI 비용은 늘지 않는다. 측정은 운영 동급 사양의 측정 전용 임시 EC2에서 수행한다.
 - 활성화 조건 충족: 정확한 버전(v2.1.0)과 CI 비용(정기 실행 없음, 측정 시간분 임시 인스턴스 비용)이 2026-08-06 승인됐다.
-- 남은 공백: 정상 부하 실측은 팀이 2026-08-06에 3차 확장 이후로 연기했고, 최대 부하 200명·80 RPS 시나리오는 아직 만들지 않았다. 둘 다 `RV-NFR-011`이 이미 요구하는 항목이며 범위 밖이 아니다([ADR-PERF-001](quality/perf-001-k6-load-testing.md) 8.1절).
+- 남은 공백: 정상 부하는 2026-08-15 이슈 #207 격리 환경에서 측정했고, 최대 부하도 관찰했으나 정상 부하 정식 판정을 대체하지 않는다. 둘 다 `RV-NFR-011`이 이미 요구하는 항목이다([ADR-PERF-001](quality/perf-001-k6-load-testing.md) 8.1절).
 - 재검토 조건: 기준 데이터 규모·목표 부하가 바뀌거나, 배포 토폴로지가 단일 인스턴스에서 바뀌거나, 정기 자동 실행이 필요해진다.
 - 영향: CI 시간(정기 증가 없음), 성능 품질 게이트, 측정 시점 인프라 비용
+
+### ADR-PERF-003 격리 성능 검증 환경 Terraform과 상태 저장소
+
+- 현재 상태: Accepted (2026-08-16 팀 승인)
+- 현재 결정: [ADR-PERF-003](quality/perf-003-isolated-performance-terraform.md)에 따라 Terraform으로 이슈 #207 격리 성능 환경을 만들고, S3 backend·DynamoDB locking과 제한된 egress 정책을 사용한다.
+- 남은 운영 작업: 실제 AWS bootstrap 전에 S3 bucket·DynamoDB table 이름, 접근 role과 bootstrap 소유자를 확인한다.
+- 영향: AWS 프로비저닝·state 접근 통제·성능 검증 실행 절차
 
 ## 4. Post-MVP ADR
 
@@ -204,7 +211,7 @@ MVP 구현 전 필수 결정과 3차 확장 정책 결정은 완료됐다. 아�
 | Kakao Maps·PostGIS | Post-MVP | 지도·좌표·거리 검색 제외 | 지도 기능 범위 변경 |
 | Kakao Local REST API | 범위 일치 | 관리자 맛집 등록 시 카카오 장소 확인 필요 | Port/Adapter와 장애 처리 구현 |
 | Kakao Mobility | Accepted | `/v1/directions`, 자동차 경로, TTL 5분·캐시 없음·월 1,000건·유료 0원 | 운영 계정 quota·인증 연결 확인 |
-| Google Gemini API | Accepted | Free Tier 전용 global endpoint, `gemini-3.5-flash-lite`, 현재 P2/S1·기존 P1 이력 보존, 원문 비저장·유료 호출 금지 | 운영 계정 billing 미연결·모델별 무료 quota 확인 |
+| Google Gemini API | Accepted | Free Tier 전용 global endpoint, `gemini-3.5-flash-lite`, 현재 P7/S1·기존 P1·P2·P3·P4·P5·P6 이력 보존, 원문 비저장·유료 호출 금지 | 운영 계정 billing 미연결·모델별 무료 quota 확인 |
 | pgvector | Post-MVP | 자연어 검색·RAG 제외 | 검색 범위 변경 |
 | FCM | Post-MVP | 서비스 내 알림만 승인, 외부 푸시·동의·DeviceToken 제외 | 채널·동의·Token·전달 SLA 승인 |
 | S3 이미지 저장 | Post-MVP | 현재 이미지 업로드·사용자 이미지 요구사항 없음 | 이미지 기능 범위 변경 |
@@ -260,8 +267,8 @@ Conditional·Post-MVP Backlog 항목은 다음을 모두 충족해야 활성화�
 | 운영 알림 | CloudWatch 알람 → Slack, 담당자 1명 |
 | 부하 테스트 도구 | k6 v2.1.0 고정, `perf/k6/` 시나리오와 `perf/seed/` 기준 데이터, `workflow_dispatch` 전용 실행으로 정기 CI 비용 없음 |
 | 성능 측정 기준 데이터 | `RV-NFR-002` 4종에 더해 회원 1,000명·찜 20,000건(상위권 편차 분포)을 `ADR-PERF-001`이 확정 |
-| 정상 부하 실측 시점 | 2026-08-06 팀 결정으로 3차 확장 이후로 연기. 측정 수단은 준비 완료, 결과는 미측정 |
+| 정상 부하 실측 시점 | 2026-08-15 이슈 #207 격리 환경에서 측정 완료. 정본 문서와 ADR-PERF-001에 Verified 기록 |
 
 | 3차 확장 ADR 상태 | 자연어·AI·비동기·Mobility 경계는 Accepted. 구현은 계약 테스트·계정 연결·평가·부하 증거 게이트를 따른다 |
 
-현재 MVP 구현 전 필수 미결정 항목은 없다. AWS 운영 세부는 M2 초기 운영 배포 문서에서 확정한다. ALB·Blue-Green 전환은 3차 확장 이후 배포 고도화 단계에서 검토한다. 착수 시점은 2026-07-28 팀 4인 전원이 합의했으나 비용·일정 영향 검토가 남아 있다([ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) 3.1절). 영향 검토가 미결정 항목으로 남으며, 토폴로지·전환 절차·비용은 착수 시점의 별도 ADR에서 확정한다.
+현재 MVP 구현 전 필수 미결정 항목은 없다. 다만 이슈 #207 격리 성능 검증 환경의 Terraform·remote state 운영은 [ADR-PERF-003](quality/perf-003-isolated-performance-terraform.md)의 팀 리뷰가 남아 있다. AWS 운영 세부는 M2 초기 운영 배포 문서에서 확정한다. ALB·Blue-Green 전환은 3차 확장 이후 배포 고도화 단계에서 검토한다. 착수 시점은 2026-07-28 팀 4인 전원이 합의했으나 비용·일정 영향 검토가 남아 있다([ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) 3.1절). 영향 검토가 미결정 항목으로 남으며, 토폴로지·전환 절차·비용은 착수 시점의 별도 ADR에서 확정한다.

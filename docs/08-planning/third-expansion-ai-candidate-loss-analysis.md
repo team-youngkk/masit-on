@@ -205,3 +205,35 @@ Prompt `P2` 변경 전 배포본과 동일한 역사적 계약(`gemini-3.5-flash
 - `MAX_CANDIDATES` 상한 인상 여부. 실측 최대가 131건이므로 다장소 영상을 통과시키려면 상한을 올려야 하지만 수신 계약 변경이다. 응답 크기와 처리 비용도 함께 판단한다.
 - `candidate_fields`의 복수 후보 배열을 `tr_ai_candidate_snapshot__json_contract` 트리거 검사 대상에 넣을지 여부. 현재 그 컬럼은 최상위 object CHECK만 받으므로 배열 원소의 `confidence` 범위와 `evidence` 형태가 DB 방어선을 통과하지 않는다. 애플리케이션 검증기가 정상 경로를 막고 있어 재현되는 결함은 없으나 심층 방어가 한 겹 줄었다. 트리거 변경은 새 마이그레이션이 필요하므로 Flyway 순서 소유자 합의 대상이다.
 - 후보 표현 해석을 `presentation`에서 `application`으로 이관할지 여부. 현재 `AdminAiVideoExtractionController.DetailResponse.candidates()`가 스칼라·배열 두 표현을 해석한다. 이관은 응답 매핑 전체를 건드리므로 이번 결함 범위를 넘는다고 판단했다.
+
+## 10. Prompt P3 보완 텍스트 근거 경계
+
+2026-08-16 로컬 P2 실측에서 공개 YouTube 영상 `LQOYruD7sek`과 서이축산 기준정보를 보완 텍스트로 제출했다. Gemini 호출은 성공했지만 `restaurantName`·`menu`·`visitEvidence`만 반환하고 `address`·`location`을 누락해 작업 `bf17c172-34e6-4655-a0c6-4b4ecfb158c7`이 `SUCCEEDED/PARTIAL/AUTO_BLOCKED`로 끝났다. Kakao 검증 호출과 Restaurant·Creator·Video·Visit 저장은 모두 0건이었다.
+
+P3는 관리자 보완 텍스트를 시스템 지시와 분리된 비신뢰 데이터로 유지하면서 `restaurantName`·`menu`·`address`·`location`에만 SHA-256과 문자 범위가 일치하는 `TEXT_RANGE` 근거를 허용한다. `visitEvidence`는 보완 텍스트 주장으로 만들 수 없고 실제 영상의 `TIMESTAMP`를 요구한다. 잘못된 hash·범위·후보 문자열은 Provider 응답 검증에서 실패하며, 통과한 기준정보도 기존 Kakao 장소 동일성·YouTube 메타데이터·방문 근거·중복·원자성 검증을 우회하지 않는다.
+
+시스템 지시의 후보 생성 의미가 바뀌므로 `BR-AIEXTRACT-004`에 따라 Prompt 버전을 `P3`로 올리고 기존 P1·P2 작업은 역사적 이력으로 보존한다. 근거 Schema의 모양은 바뀌지 않아 결과 Schema는 `S1`을 유지한다.
+
+## 11. Prompt P4 정확 범위 안내
+
+P3 실제 호출 두 건은 보완 텍스트를 전달했지만 모두 공급자 응답의 엄격한 근거 검증에서 `SCHEMA`로 차단됐다. 보안 검증을 부분 문자열 포함으로 완화하지 않고, P4 요청은 비어 있지 않은 각 보완 텍스트 줄의 정확한 UTF-16 `startOffset`·`endOffset`·`text`를 비신뢰 JSON 데이터의 `referenceSpans`로 함께 전달한다. 모델은 일치하는 span을 그대로 복사해야 하며 서버는 기존처럼 SHA-256, 경계, 값의 정확 일치를 재검사한다. 방문 근거는 계속 영상 `TIMESTAMP`만 허용한다.
+
+P4 실측에서는 완전한 다섯 필드 추출까지 도달했지만 방문 문장 형식 변동으로 `AUTO_BLOCKED`됐고, 다른 실행에서는 `location` 누락 또는 주소 값 오연결이 재현됐다. P5는 명시적 라벨의 `fieldHint`와 라벨을 제외한 정확 범위를 함께 제공하고 서버도 후보 필드와 hint를 결속한다. P5 실측은 네 기준정보를 정확히 추출했지만 방문 문장이 명시적 물리 방문 동사 없이 구매 행동만 표현되어 `VISIT_EVIDENCE_REQUIRED`로 차단됐다. 구매·주문·일반 취식은 배달·포장 오탐 위험 때문에 방문 근거로 완화하지 않는다.
+
+P6는 방문 후보의 요청 Schema를 공통 후보와 분리해 값은 완료형 물리 방문 문장, 근거는 영상 `TIMESTAMP`만 반환하도록 제한했다. quota window만 일시적으로 초기화한 로컬 실측에서 작업 `0c0d80f2-6334-47f0-a72d-b77d0e0cff1a`이 `SUCCEEDED/COMPLETE/AUTO_CONFIRMED`로 끝났고 Restaurant·Creator·Video·Visit가 각각 1건 생성되어 모두 `PUBLIC` 상태가 됐다. 공개 맛집 목록과 상세 API에서도 `서이축산` 저장 결과를 확인했다. 실측 후 임시 WireMock mapping과 quota window override는 제거했으며 감사 이력과 정식 등록 데이터는 검증 증거로 보존한다.
+
+## 12. 태그 후보의 출처 없는 TEXT_RANGE 근거
+
+P3 이후 수신 검증은 태그 후보에도 보완 텍스트 범위 검증을 적용했다. 그런데 태그는 보완 텍스트를 출처로 삼을 수 없는 필드라 검증이 항상 실패했고, 태그 하나가 `TEXT_RANGE` 근거를 내면 같은 응답의 정상 기준정보 후보까지 함께 `SCHEMA`로 기각됐다. `SCHEMA`는 재시도하지 않으므로 작업은 곧바로 `FAILED`로 끝나고 `ai_candidate_snapshot`이 남지 않아 관리자가 검토할 근거도 사라졌다. 송신 Schema는 태그 근거에 세 유형을 모두 허용하므로 모델이 이 응답을 만드는 것 자체는 계약 위반이 아니었다.
+
+수신 검증은 태그 근거의 구조 검사(`hasOnlyFields`, 범위, `sourceHash`)를 그대로 유지하고, 구조가 유효한 `TEXT_RANGE` 태그 근거만 `UNKNOWN`으로 낮춘다. `AiCandidateValidator`가 `UNKNOWN` 태그 근거를 이미 `AUTO_REJECTED`·`UNKNOWN_EVIDENCE`로 기록하므로 태그는 연결되지 않고, 나머지 후보는 검증과 자동 확정 경로를 그대로 밟는다. 보완 텍스트가 태그의 출처가 될 수 없다는 경계는 유지되고 관측 가능성만 회복한다.
+
+이 수정만으로는 시스템 지시와 요청 Schema가 바뀌지 않으므로 Prompt 버전을 올리지 않는다. 결과 Schema도 `S1`을 유지한다. 같은 PR에서 Prompt를 `P7`로 올린 것은 13절의 별개 사유 때문이다. 구조가 깨진 태그 근거는 종전대로 응답 전체를 `SCHEMA`로 기각한다.
+
+## 13. 방문 문장 종결 마침표의 송신·수신 불일치
+
+P6 송신 Schema의 방문 후보 값 정규식은 `^.*(?:방문했습니다|…)$`로 완료형 동사가 문자열 끝이기를 요구했다. 그런데 수신 판정의 `normalizeClaim`은 값에서 공백을 모두 제거하고 종결 `.`·`。`를 떼어낸 뒤 같은 동사 집합을 검사한다. 그래서 `"제가 서이축산을 방문했습니다."`처럼 가장 자연스러운 형태가 수신에서는 유효한데 송신 제약 디코딩 단계에서는 배제됐다. 실패가 겉으로 드러나지 않고 모델이 표현을 바꾸도록 밀어내기만 하므로, P4·P5에서 반복 관찰된 방문 문장 형식 변동의 원인 중 하나로 남아 있었다.
+
+P7은 정규식의 후행 허용 문자를 수신이 제거하는 범위와 정확히 맞춰 `[\s.。]*$`로 바꾼다. `!`와 `?`는 `hasBlockingVisitContext`가 의문·감탄을 차단 문맥으로 다루므로 송신에서도 계속 거부한다. 판정 기준 자체는 완화하지 않았고, 수신 계약과 시스템 지시가 바뀌지 않으므로 결과 Schema는 `S1`을 유지한다.
+
+`BR-AIEXTRACT-004`의 버전별 재현성을 지키기 위해 송신 Schema가 바뀐 이번 변경도 Prompt 버전을 `P7`로 올린다. `ux_ai_job__idempotency`가 `prompt_version`을 포함하므로 P6까지 처리한 영상은 재추출 대상이 된다. 무료 quota가 한 번 더 소모되므로 운영에서 켤 때는 `AI_WORKER_PROVIDER_QUOTA_LIMIT`·`AI_WORKER_APPLICATION_QUOTA_LIMIT`를 먼저 확인한다. P6 작업과 Snapshot은 생성 당시 의미로 보존한다.

@@ -1,0 +1,20 @@
+aws_region = "ap-northeast-2"
+
+# SSO profile can be selected with $env:AWS_PROFILE instead.
+# aws_profile = "masiton"
+
+run_id = "YYYYMMDD-NN"
+
+# Existing network only. Terraform does not create or modify this VPC.
+vpc_id           = "vpc-REPLACE_ME"
+public_subnet_id = "subnet-REPLACE_ME"
+private_subnet_ids = [
+  "subnet-REPLACE_ME_A",
+  "subnet-REPLACE_ME_C",
+]
+
+# Amazon Linux 2023 arm64; do not use a moving latest selector.
+ami_id = "ami-REPLACE_ME"
+
+# Digest-pinned ECR image. Do not use :latest.
+app_image_uri = "711457211155.dkr.ecr.ap-northeast-2.amazonaws.com/masiton-backend@sha256:REPLACE_WITH_64_HEX_DIGEST"

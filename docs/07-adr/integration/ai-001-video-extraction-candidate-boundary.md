@@ -42,13 +42,13 @@ superseded_by: null
 
 ## 1. 상태
 
-Accepted. 자동 검증·정식 등록·롤백 경계와 원문 전체 미저장, `gemini-3.5-flash-lite` 사용, global endpoint, Free Tier 전용·유료 호출 금지 정책을 2026-08-14 확정했다. 운영·개발·공유 데이터베이스에 V4가 아직 적용되지 않았으므로 최종 V4 제약은 `gemini-3.5-flash-lite`만 저장하도록 한다. 기존 `gemini-3-flash-preview` 평가 자산은 역사적 fixture로 보존하되 운영 작업 계약에는 포함하지 않는다. 관리자 사전 승인은 요구하지 않는다.
+Accepted. 자동 검증·정식 등록·롤백 경계와 원문 전체 미저장, `gemini-3.5-flash-lite` 사용, global endpoint, Free Tier 전용·유료 호출 금지 정책을 2026-08-14 확정했다. 2026-08-16에는 관리자 보완 텍스트의 검증 가능한 `TEXT_RANGE`를 식당 기준정보 후보에 사용할 수 있도록 Prompt를 `P3`로 올렸고, 실측 범위 산출 편차를 제거하기 위해 서버가 정확한 줄 단위 `referenceSpans`를 제공하는 `P4`, 필드 오연결을 줄이는 `fieldHint`를 추가한 `P5`, 방문 후보 값을 명시적인 완료형 물리 방문 문장으로 제한한 `P6`, 방문 문장의 종결 마침표를 수신 정규화와 일치시킨 `P7`로 올렸다. 운영·개발·공유 데이터베이스에 V4가 아직 적용되지 않았으므로 최종 V4 제약은 `gemini-3.5-flash-lite`만 저장하도록 한다. 기존 Prompt `P1`부터 `P6`까지의 작업과 `gemini-3-flash-preview` 평가 자산은 역사적 이력으로 보존한다. 관리자 사전 승인은 요구하지 않는다.
 
 ## 2. 결정 요약
 
 AI 영상 정보 추출은 자동 검증을 통과한 경우 기존 Restaurant·Creator·Video·Visit와 태그를 자동 생성·공개하고, 불확실한 결과만 보류하는 운영 경계로 둔다. AI 호출은 Provider Port/Adapter를 통해 격리하고, 결과와 자동 판단은 버전이 있는 구조화 Snapshot·감사 이력으로 관리한다.
 
-Google Gemini API Free Tier의 `gemini-3.5-flash-lite`를 사용하고 공개 YouTube URL을 영상 입력으로 전달한다. Gemini 모델 문서상 영상 입력과 구조화 출력을 지원한다. 관리자 보완 텍스트는 Gemini 접근 제한·분석 실패·부분 추출의 fallback으로 사용한다. Prompt `P2`, 결과 Schema `S1`, global endpoint, File API·context caching 미사용을 고정한다. Free Tier quota 소진·결제 연결 요구·모델의 Free Tier 미지원 시에는 호출하지 않고 실패·수동 등록 fallback으로 전환한다.
+Google Gemini API Free Tier의 `gemini-3.5-flash-lite`를 사용하고 공개 YouTube URL을 영상 입력으로 전달한다. Gemini 모델 문서상 영상 입력과 구조화 출력을 지원한다. 관리자 보완 텍스트는 Gemini 접근 제한·분석 실패·부분 추출의 fallback으로 사용한다. Prompt `P7`, 결과 Schema `S1`, global endpoint, File API·context caching 미사용을 고정한다. Free Tier quota 소진·결제 연결 요구·모델의 Free Tier 미지원 시에는 호출하지 않고 실패·수동 등록 fallback으로 전환한다.
 
 ## 3. 배경
 
@@ -79,6 +79,7 @@ AI 호출 결과를 어디에 저장하고 어떤 조건에서 기존 정식 등
 - 제공자 자동 failover는 초기 범위에서 사용하지 않는다. 승인되지 않은 모델로 조용히 전환하지 않는다.
 - n8n 같은 외부 워크플로 도구는 초기 실행 경계에 도입하지 않는다. 작업 실행은 [ADR-EXT-003](ext-003-ai-extraction-async-reliability.md)의 애플리케이션 내부 Worker를 따른다.
 - 키·토큰·원문 입력은 로그와 오류 응답에 남기지 않는다.
+- Prompt `P7`은 관리자 보완 텍스트를 계속 비신뢰 사용자 데이터로 격리하고, 서버가 라벨을 제외한 정확한 UTF-16 `referenceSpans`와 허용 필드 `fieldHint`를 함께 제공한다. 식당명·메뉴·주소·Kakao 장소 URL만 보완 텍스트의 SHA-256과 정확히 일치하는 범위의 `TEXT_RANGE` 후보로 허용하며, 보완 텍스트의 방문 주장은 자동 확정하지 않는다. 방문 후보 값은 명시적인 완료형 물리 방문 문장으로 제한하고 실제 방문은 영상의 채널 제작자 주장과 `TIMESTAMP`로만 확정한다. 태그는 보완 텍스트를 출처로 삼을 수 없으므로 구조가 유효한 태그의 `TEXT_RANGE` 근거는 응답 전체를 기각하지 않고 그 태그만 `UNKNOWN`으로 낮춰 `AUTO_REJECTED`로 기록한다.
 
 ### 5.3. 정식 등록 경계
 
@@ -126,8 +127,13 @@ Worker가 후보를 자동 확정하기 전에 orchestration이 다음 검증을
 
 ## 10. 확정 운영 규칙
 
-- 모델 `gemini-3.5-flash-lite`, global endpoint, Prompt `P2`, Schema `S1`을 사용한다.
+- 모델 `gemini-3.5-flash-lite`, global endpoint, Prompt `P7`, Schema `S1`을 사용한다.
 - Prompt는 2026-08-14에 `P1`에서 `P2`로 올렸다. 송신 요청 Schema가 수신 검증 계약을 표현하지 못해 태그 후보와 완결성 결합에서 응답이 기각되던 결함을 고치면서 시스템 지시와 요청 Schema 표현이 함께 바뀌었기 때문이다. 수신 계약 자체는 바뀌지 않았으므로 결과 Schema는 `S1`을 유지한다. `BR-AIEXTRACT-004`가 요구하는 버전별 재현성을 지키기 위해 라벨을 유지하지 않았고, `P1` 후보 Snapshot은 덮어쓰거나 폐기하지 않는다. `aiextract-golden-v1.0.0` 평가 자산은 `gemini-3-flash-preview`·`P1` 기준의 역사적 fixture로 보존하며 운영 작업 계약에 포함하지 않는다. 근거는 [AI 후보 손실 분석](../../08-planning/third-expansion-ai-candidate-loss-analysis.md)에 있다.
+- Prompt는 2026-08-16에 `P2`에서 `P3`로 올렸다. P2 실측에서 영상에 직접 노출되지 않는 도로명주소와 Kakao 장소 URL이 관리자 보완 텍스트에 있어도 누락되어 자동 등록 경로에 진입하지 못했다. P3는 네 식당 기준정보 필드에만 보완 텍스트의 검증 가능한 `TEXT_RANGE`를 허용하고, 방문 근거는 영상 `TIMESTAMP`로 제한한다. 수신 Schema는 기존 `TEXT_RANGE`를 그대로 사용하므로 `S1`을 유지하며, P2 작업과 Snapshot은 생성 당시 의미로 보존한다.
+- 같은 날 P3 실측 두 건은 Gemini가 엄격한 범위 계약과 일치하는 후보를 반환하지 않아 `SCHEMA`로 차단됐다. P4는 서버가 보완 텍스트의 비어 있지 않은 줄마다 정확한 UTF-16 `referenceSpans`를 제공해 모델의 범위 계산 편차를 줄인다. 수신 검증은 정확 일치와 방문 `TIMESTAMP` 제한을 그대로 유지하며 P3 작업은 역사적 이력으로 보존한다.
+- P4 실측에서는 범위는 정확해졌지만 URL 줄을 주소 필드로 연결하는 변동성이 확인됐다. P5는 명시적 라벨이 있는 줄에 허용된 `fieldHint`를 붙이고 라벨을 제외한 값 범위를 제공한다. P4 작업과 Snapshot은 생성 당시 의미로 보존한다.
+- P5 실측에서는 네 기준정보를 정확히 추출했지만 방문 후보가 완료된 물리 방문을 명시하지 않아 차단됐다. P6는 방문 후보 값과 근거 Schema를 분리하고 완료형 물리 방문 문장과 영상 `TIMESTAMP`만 허용한다. P6 실측에서 자동 검증·정식 등록·공개 조회까지 성공했으며 P5 작업과 Snapshot은 생성 당시 의미로 보존한다.
+- P6 송신 Schema의 방문 문장 정규식이 종결 마침표와 후행 공백을 거부해, 수신 정규화가 어차피 제거하는 문자 때문에 자연스러운 방문 문장이 제약 디코딩 단계에서 배제될 수 있었다. P7은 그 정규식의 후행 허용 문자를 수신 `normalizeClaim`이 제거하는 범위(공백과 `.`·`。`)와 일치시킨다. `!`와 `?`는 수신에서 차단 문맥으로 다루므로 계속 거부한다. 시스템 지시와 수신 계약은 바뀌지 않으므로 결과 Schema는 `S1`을 유지하며, P6 작업과 Snapshot은 생성 당시 의미로 보존한다.
 - quota·장애 시 자동 failover하지 않고 실패·수동 등록 fallback을 사용한다.
 - 근거는 timestamp 또는 text range 위치·입력 hash만 저장하며 원문은 저장하지 않는다.
 - 호출 timeout·retry·hard stop은 [비동기 신뢰성 ADR](ext-003-ai-extraction-async-reliability.md)과 NFR 수치를 따른다.

@@ -47,6 +47,14 @@ on:
         options:
           - normal
           - max
+      public_read_mode:
+        description: '자연어 검색 검증 모드. contract(요청 제한 아래 저속 계약 검증)와 throughput(제한 초과 포화 관찰)을 별도 실행한다. 둘 다 NFR-PERFORMANCE-007 성능 인증이 아니다'
+        required: true
+        default: contract
+        type: choice
+        options:
+          - contract
+          - throughput
       course_metric_mode:
         description: '코스 측정 프로필. internal(무지연 Stub)과 external(외부 지연 포함 Stub)을 별도 실행한다'
         required: true
@@ -177,24 +185,35 @@ jobs:
       # LOAD_PROFILE은 workflow_dispatch의 choice 입력으로만 정한다.
       - name: 공개 조회 시나리오 실행 (${{ inputs.load_profile }})
         if: ${{ inputs.scenario == 'public-read' || inputs.scenario == 'all' }}
-        run: k6 run --env BASE_URL="$BASE_URL" --env LOAD_PROFILE="$LOAD_PROFILE" --env RESULT_DIR="perf/k6/results/${{ inputs.load_profile }}/public-read" perf/k6/normal-load-public-read.js
+        run: |
+          mkdir -p "$RESULT_DIR"
+          k6 run --env BASE_URL="$BASE_URL" --env LOAD_PROFILE="$LOAD_PROFILE" --env RESULT_DIR="$RESULT_DIR" perf/k6/normal-load-public-read.js
         env:
           BASE_URL: ${{ inputs.base_url }}
           LOAD_PROFILE: ${{ inputs.load_profile }}
           RESULT_DIR: perf/k6/results/${{ inputs.load_profile }}/public-read
 
-      - name: 3차 확장 자연어 시나리오 실행 (${{ inputs.load_profile }})
+      # 자연어 검색은 client address별 요청 제한을 받는다. 러너 한 곳에서 보내는
+      # 요청은 같은 주소로 집계되므로 load_profile만으로 실행 조건이 결정되지 않는다.
+      # PUBLIC_READ_MODE를 명시 전달하고 결과 경로에도 넣어, contract 실행 결과가
+      # load_profile 이름만 보고 최대 부하 측정으로 인용되지 않게 한다.
+      - name: 3차 확장 자연어 시나리오 실행 (${{ inputs.load_profile }} / ${{ inputs.public_read_mode }})
         if: ${{ inputs.scenario == 'third-expansion' || inputs.scenario == 'all' }}
-        run: k6 run --env BASE_URL="$BASE_URL" --env LOAD_PROFILE="$LOAD_PROFILE" --env SCENARIO=public-read --env RESULT_DIR="perf/k6/results/${{ inputs.load_profile }}/third-expansion/natural-language" perf/k6/third-expansion-load.js
+        run: |
+          mkdir -p "$RESULT_DIR"
+          k6 run --env BASE_URL="$BASE_URL" --env LOAD_PROFILE="$LOAD_PROFILE" --env SCENARIO=public-read --env PUBLIC_READ_MODE="$PUBLIC_READ_MODE" --env RESULT_DIR="$RESULT_DIR" perf/k6/third-expansion-load.js
         env:
           BASE_URL: ${{ inputs.base_url }}
           LOAD_PROFILE: ${{ inputs.load_profile }}
           SCENARIO: public-read
-          RESULT_DIR: perf/k6/results/${{ inputs.load_profile }}/third-expansion/natural-language
+          PUBLIC_READ_MODE: ${{ inputs.public_read_mode }}
+          RESULT_DIR: perf/k6/results/${{ inputs.load_profile }}/third-expansion/natural-language/${{ inputs.public_read_mode }}
 
       - name: 3차 확장 코스 시나리오 실행 (${{ inputs.load_profile }} / ${{ inputs.course_metric_mode }})
         if: ${{ inputs.scenario == 'third-expansion' || inputs.scenario == 'all' }}
-        run: k6 run --env BASE_URL="$BASE_URL" --env LOAD_PROFILE="$LOAD_PROFILE" --env SCENARIO=course --env COURSE_METRIC_MODE="$COURSE_METRIC_MODE" --env COURSE_RESTAURANT_IDS="$COURSE_RESTAURANT_IDS" --env RESULT_DIR="perf/k6/results/${{ inputs.load_profile }}/third-expansion/course/${{ inputs.course_metric_mode }}" perf/k6/third-expansion-load.js
+        run: |
+          mkdir -p "$RESULT_DIR"
+          k6 run --env BASE_URL="$BASE_URL" --env LOAD_PROFILE="$LOAD_PROFILE" --env SCENARIO=course --env COURSE_METRIC_MODE="$COURSE_METRIC_MODE" --env COURSE_RESTAURANT_IDS="$COURSE_RESTAURANT_IDS" --env RESULT_DIR="$RESULT_DIR" perf/k6/third-expansion-load.js
         env:
           BASE_URL: ${{ inputs.base_url }}
           LOAD_PROFILE: ${{ inputs.load_profile }}
@@ -222,15 +241,15 @@ jobs:
                 ;;
               third-expansion)
                 summaries=(
-                  "perf/k6/results/${LOAD_PROFILE}/third-expansion/natural-language/summary.txt"
-                  "perf/k6/results/${LOAD_PROFILE}/third-expansion/course/${{ inputs.course_metric_mode }}/summary.txt"
+                  "perf/k6/results/${LOAD_PROFILE}/third-expansion/natural-language/${PUBLIC_READ_MODE}/summary.txt"
+                  "perf/k6/results/${LOAD_PROFILE}/third-expansion/course/${COURSE_METRIC_MODE}/summary.txt"
                 )
                 ;;
               all)
                 summaries=(
                   "perf/k6/results/${LOAD_PROFILE}/public-read/summary.txt"
-                  "perf/k6/results/${LOAD_PROFILE}/third-expansion/natural-language/summary.txt"
-                  "perf/k6/results/${LOAD_PROFILE}/third-expansion/course/${{ inputs.course_metric_mode }}/summary.txt"
+                  "perf/k6/results/${LOAD_PROFILE}/third-expansion/natural-language/${PUBLIC_READ_MODE}/summary.txt"
+                  "perf/k6/results/${LOAD_PROFILE}/third-expansion/course/${COURSE_METRIC_MODE}/summary.txt"
                 )
                 ;;
               *)
@@ -250,6 +269,8 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
         env:
           NOTES: ${{ inputs.notes }}
+          PUBLIC_READ_MODE: ${{ inputs.public_read_mode }}
+          COURSE_METRIC_MODE: ${{ inputs.course_metric_mode }}
 
       # 선택한 실행의 결과만 보관한다. 선택하지 않은 실행의 파일이 없는 것은
       # 정상적인 workflow_dispatch 경로이므로 해당 upload step 자체를 건너뛴다.
@@ -269,10 +290,10 @@ jobs:
         if: ${{ always() && (inputs.scenario == 'third-expansion' || inputs.scenario == 'all') }}
         uses: actions/upload-artifact@v4
         with:
-          name: k6-${{ inputs.load_profile }}-third-expansion-natural-language-results
+          name: k6-${{ inputs.load_profile }}-third-expansion-natural-language-${{ inputs.public_read_mode }}-results
           path: |
-            perf/k6/results/${{ inputs.load_profile }}/third-expansion/natural-language/summary.json
-            perf/k6/results/${{ inputs.load_profile }}/third-expansion/natural-language/summary.txt
+            perf/k6/results/${{ inputs.load_profile }}/third-expansion/natural-language/${{ inputs.public_read_mode }}/summary.json
+            perf/k6/results/${{ inputs.load_profile }}/third-expansion/natural-language/${{ inputs.public_read_mode }}/summary.txt
           retention-days: 14
           if-no-files-found: error
 

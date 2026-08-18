@@ -7,6 +7,11 @@
   border-radius: var(--radius-lg);
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.card:focus-within {
+  border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-border));
 }
 
 .title {

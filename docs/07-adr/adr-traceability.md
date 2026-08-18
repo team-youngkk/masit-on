@@ -38,6 +38,7 @@ related_documents:
   - quality/test-001-automation-strategy.md
   - quality/perf-001-k6-load-testing.md
   - quality/perf-002-operational-participant-load-testing.md
+  - quality/perf-003-isolated-performance-terraform.md
   - quality/obs-001-logging-observability.md
   - security/sec-001-secrets-workload-identity.md
   - platform/runtime-001-docker.md
@@ -112,7 +113,7 @@ related_documents:
 | Spring Batch 6.0.4 | 고정이나 자동화 제외 | Post-MVP ADR | [ADR-AUTO-001](adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) | 이력·재시작 배치 범위 없음 |
 | 하루 1회 이상 최근 기록 cleanup | 1차 확장 적용 | Operational Configuration | [ADR-DATA-010](data/data-010-recent-view-retention-cleanup.md) | 신규 조회와 독립된 30일 경과 `recent_restaurant_view` 물리 삭제; 실패 관측·재시도 |
 | AI 제공자·모델 | Gemini Free Tier global endpoint, `gemini-3.5-flash-lite` | Accepted ADR | [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md) | 공개 YouTube URL 입력, 후보·검수·무료 quota·보존 기준 |
-| JSON Schema + Prompt Template | 현재 Prompt `P2`, 결과 Schema `S1`; 기존 `P1` 이력 보존 | Accepted ADR | [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md) | AI 후보 계약과 평가 기준에 연결 |
+| JSON Schema + Prompt Template | 현재 Prompt `P7`, 결과 Schema `S1`; 기존 `P1`·`P2`·`P3`·`P4`·`P5`·`P6` 이력 보존 | Accepted ADR | [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md) | AI 후보 계약과 평가 기준에 연결 |
 | 자연어 조건 해석 | P1 규칙 기반·태그 18종·태그 AND·`UNRESOLVED` | Accepted ADR | [ADR-ARCH-005](architecture/arch-005-natural-language-filter-interpretation.md) | 임베딩·RAG 없이 WS-14 조회 애플리케이션에서 처리 |
 | AI 추출 비동기 Worker | Worker 1개/인스턴스·lease 120초·polling 5초·재시도 고정, 용량 실측은 최종 게이트 | Accepted ADR | [ADR-EXT-003](integration/ext-003-ai-extraction-async-reliability.md) | 작업 상태·복구·비용 격리 |
 | JUnit 5 + Mockito | 확정 | Accepted ADR | [ADR-TEST-001](quality/test-001-automation-strategy.md) | 단위 테스트 기준 |
@@ -120,6 +121,7 @@ related_documents:
 | WireMock | 확정 | Accepted ADR | [ADR-TEST-001](quality/test-001-automation-strategy.md) | 외부 API 장애·계약 격리 |
 | Spring Batch Test 6.0.4 | 파생·기능 제외 | Duplicate or Derived Rule | [ADR-AUTO-001](adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) | Spring Batch 활성화에 종속 |
 | k6 v2.1.0 | 도구·버전·실행 비용 확정 (2026-08-06) | Accepted ADR | [ADR-PERF-001](quality/perf-001-k6-load-testing.md) | `perf/k6/` 시나리오, `workflow_dispatch` 전용 실행, 정기 CI 비용 증가 없음 |
+| Terraform + AWS provider | 이슈 #207 격리 성능 환경 프로비저닝과 S3/DynamoDB state locking, 제한된 egress | Accepted ADR | [ADR-PERF-003](quality/perf-003-isolated-performance-terraform.md) | Terraform·egress 정책은 팀 승인; 실제 backend bootstrap은 실행 전 확인 |
 | SLF4J + Logback | 확정 | Accepted ADR | [ADR-OBS-001](quality/obs-001-logging-observability.md) | 애플리케이션 로그 기준 |
 | Actuator + CloudWatch | 기술 선택 확정, 적용 시점 이관 | Accepted ADR | [ADR-OBS-001](quality/obs-001-logging-observability.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | Actuator는 전 단계, CloudWatch는 초기 운영 배포부터 적용 |
 | 로그 보관 14일 | M2부터 적용 | Operational Configuration | [ADR-OBS-001](quality/obs-001-logging-observability.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | AWS 운영 시작 후 14일 유지 |
@@ -159,7 +161,7 @@ related_documents:
 | [NFR-DEPLOYMENT-003](../01-requirements/non-functional-requirements.md#nfr-deployment-003-버전-추적과-복구-절차)~[NFR-DEPLOYMENT-004](../01-requirements/non-functional-requirements.md#nfr-deployment-004-단계별-실행-및-초기-운영-배포-복잡도-제한) | [ADR-DATA-004](data/data-004-flyway.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md), [ADR-DEPLOY-004](platform/deploy-004-public-api-validation-gate-boundary.md) | 단계별 실행, 초기 운영 배포 복구·복잡도와 제한 공개 쿠키 세션 제거 가능성 |
 | [NFR-MAINTAINABILITY-001](../01-requirements/non-functional-requirements.md#nfr-maintainability-001-책임과-의존성-경계)~[NFR-MAINTAINABILITY-003](../01-requirements/non-functional-requirements.md#nfr-maintainability-003-추적성과-운영-복잡도) | [ADR-ARCH-001](architecture/arch-001-domain-monolith.md), [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md), [ADR-ARCH-003](adr-backlog.md#adr-arch-003-조회-확장-패턴), [ADR-ARCH-004](adr-backlog.md#adr-arch-004-멀티모듈독립-배포-전환) | 책임 경계, 조회 확장, 배포 경계와 운영 복잡도 제한 |
 | [NFR-PRIVACY-001](../01-requirements/non-functional-requirements.md#nfr-privacy-001-mvp-개인정보-최소화)~[NFR-PRIVACY-004](../01-requirements/non-functional-requirements.md#nfr-privacy-004-위치와-행동-데이터-최소화) | [ADR-AUTH-001](security/auth-001-spring-security-jwt.md), [ADR-AUTH-002](security/auth-002-member-jwt-refresh-token.md), [ADR-SEC-001](security/sec-001-secrets-workload-identity.md), [ADR-DATA-010](data/data-010-recent-view-retention-cleanup.md) | 회원 데이터 최소화·탈퇴 파기·최근 기록 30일 cleanup과 비밀 보호 |
-| [NFR-PERFORMANCE-006](../01-requirements/non-functional-requirements.md#nfr-performance-006-2차-확장-공개-조회와-인기-집계-성능) | [ADR-DATA-011](data/data-011-popular-restaurant-request-time-aggregation.md), [ADR-PERF-001](quality/perf-001-k6-load-testing.md), [ADR-PERF-002](quality/perf-002-operational-participant-load-testing.md) | 실시간 PostgreSQL 집계·실행계획·부하 기준, 선제 캐시 금지, k6 v2.1.0 정상 부하 판정과 이슈 #190 운영 직접 검증 예외 |
+| [NFR-PERFORMANCE-006](../01-requirements/non-functional-requirements.md#nfr-performance-006-2차-확장-공개-조회와-인기-집계-성능) | [ADR-DATA-011](data/data-011-popular-restaurant-request-time-aggregation.md), [ADR-PERF-001](quality/perf-001-k6-load-testing.md), [ADR-PERF-002](quality/perf-002-operational-participant-load-testing.md) | 실시간 PostgreSQL 집계·실행계획·부하 기준, 선제 캐시 금지, k6 v2.1.0 정상 부하 판정(2026-08-15 Verified)과 이슈 #190 운영 직접 검증 예외 |
 | [NFR-INTEGRITY-005](../01-requirements/non-functional-requirements.md#nfr-integrity-005-처리-상태와-알림-원자성)·[NFR-RELIABILITY-004](../01-requirements/non-functional-requirements.md#nfr-reliability-004-실시간-집계와-서비스-내-알림-복구-경계) | [ADR-DATA-011](data/data-011-popular-restaurant-request-time-aggregation.md), [ADR-NOTIFY-002](integration/notify-002-in-app-notification-reliability.md) | 과거 순위 fallback 없음, 상태·이력·알림 같은 트랜잭션, Outbox 없음 |
 | [NFR-PRIVACY-005](../01-requirements/non-functional-requirements.md#nfr-privacy-005-2차-확장-개인정보-보존과-회원-탈퇴) | [ADR-DATA-012](data/data-012-second-expansion-retention-cleanup.md), [ADR-NOTIFY-002](integration/notify-002-in-app-notification-reliability.md) | 식별 제거·알림 보존·탈퇴, Preference·DeviceToken 미저장 |
 | [NFR-COMPATIBILITY-001](../01-requirements/non-functional-requirements.md#nfr-compatibility-001-웹모바일-브라우저-호환성) | [ADR-WEB-001](platform/web-001-frontend-platform.md), [ADR-WEB-004](platform/web-004-supported-browser-matrix.md) | 지원 표방 브라우저 3종과 화면 폭 5종, iPhone Safari 지원 표방 보류 |
@@ -249,7 +251,7 @@ related_documents:
 - 외부 전달의 자동 재시도·Circuit Breaker·비동기 이벤트 도입 기준 (Transactional Outbox는 회원 Action 메일에 한해 [ADR-AUTH-005](security/auth-005-member-action-mail-outbox.md)로 확정, 서비스 내 알림은 [ADR-NOTIFY-002](integration/notify-002-in-app-notification-reliability.md)로 비동기 전달 불필요 결정)
 - 멀티모듈·독립 배포와 세분화된 관리자 권한의 전환 기준
 - Jsoup, n8n 등 정확한 버전이 없는 의존성 (k6는 [ADR-PERF-001](quality/perf-001-k6-load-testing.md)이 v2.1.0으로 고정해 2026-08-06 해소)
-- 현재 구현 전 필수 팀 결정은 없다. ALB·Blue-Green 전환 자동화는 토폴로지 확장 시 새 ADR로 결정한다.
+- 현재 구현 전 필수 팀 결정은 없다. ALB·Blue-Green 전환 자동화는 토폴로지 확장 시 새 ADR로 결정한다. ADR-PERF-003의 실제 backend bootstrap 세부는 실행 전 운영 작업으로 확인한다.
 
 ## 9. 2차 확장 ADR 검토 결과
 
@@ -286,7 +288,7 @@ Accepted 세 건은 현재 요구사항을 구현하는 최소 구조만 승인�
 | ADR | 결정 경계 | 테스트·평가 | E3 Task |
 |---|---|---|---|
 | [ADR-ARCH-005](architecture/arch-005-natural-language-filter-interpretation.md) | P1 규칙·사전·기존 목록 Query·태그 AND·해석 실패 | `TST-E3-NL-001~002`, `EVAL-NL-001~007` | `E3-T01~02` |
-| [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md) | Gemini 현재 P2/S1·기존 P1 이력·후보 Snapshot·근거·자동 검증·무료 quota | `TST-E3-AI-001~003`, `TST-E3-SEC-001`, [`EVAL-AI-001~010` 역사적 P1 계약 자산·dry-run·HOLD 기록](../08-planning/third-expansion-ai-evaluation-result.md) | `E3-T03~08` |
+| [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md) | Gemini 현재 P7/S1·기존 P1·P2·P3·P4·P5·P6 이력·후보 Snapshot·근거·자동 검증·무료 quota | `TST-E3-AI-001~003`, `TST-E3-SEC-001`, [`EVAL-AI-001~010` 역사적 P1 계약 자산·dry-run·HOLD 기록](../08-planning/third-expansion-ai-evaluation-result.md) | `E3-T03~08` |
 | [ADR-EXT-003](integration/ext-003-ai-extraction-async-reliability.md) | PostgreSQL claim·lease·heartbeat·retry·재기동·단일 EC2 | `TST-E3-AI-004`, `TST-E3-DATA-001`, `E3-T13` 증거 | `E3-T04~05`, `E3-T13` |
 | [ADR-ROUTE-001](integration/route-001-kakao-mobility-course-routing.md) | Mobility `/v1/directions`·순서·TTL·캐시 없음·호출/비용 | `TST-E3-COURSE-001~003`, `EVAL-COURSE-001~005`, `E3-T13` 증거 | `E3-T09~10`, `E3-T13` |
 | [ADR-TEST-001](quality/test-001-automation-strategy.md), [ADR-PERF-001](quality/perf-001-k6-load-testing.md) | 테스트 계층·WireMock·Testcontainers·부하 실행 | `TST-E3-DATA-001`, `TST-E3-E2E-001`, `TST-E3-PERF-001` | `E3-T11~13` |

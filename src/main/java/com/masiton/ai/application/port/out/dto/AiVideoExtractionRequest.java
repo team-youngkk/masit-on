@@ -1,6 +1,10 @@
 package com.masiton.ai.application.port.out.dto;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.regex.Pattern;
@@ -19,6 +23,16 @@ public record AiVideoExtractionRequest(URI videoUrl, String supplementText) {
         supplementText = supplementText == null ? "" : supplementText.trim();
         if (supplementText.length() > MAX_SUPPLEMENT_LENGTH) {
             throw new IllegalArgumentException("supplementText is too long");
+        }
+    }
+
+    public String supplementSourceHash() {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256")
+                    .digest(supplementText.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(digest);
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 must be available", exception);
         }
     }
 

@@ -11,7 +11,7 @@ export function Brand({ className }: { className?: string }) {
   return (
     <span className={cn(styles.brand, className)}>
       <span className={styles.mark} aria-hidden="true">
-        ●
+        M
       </span>
       맛잇온
     </span>

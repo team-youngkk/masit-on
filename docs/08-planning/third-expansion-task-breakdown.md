@@ -37,7 +37,7 @@ related_documents:
 | `E3-T01` | 자연어 P1 parser·기존 목록 Query·오류·보안 API를 구현한다 | 양성훈 / 이우람 | 문서화 게이트 | 가능 | `TST-E3-NL-001~002`, `TST-E3-SEC-001`; 직접 필터 우선·공개 상태·원문 비저장·전체 목록 대체 금지 |
 | `E3-T02` | 자연어 공개 화면·240건 평가·회귀 자동화를 완성한다 | 양성훈 / 박진영 | `E3-T01`, `E3-T06` | 불가 | `EVAL-NL-001~007`, 화면 폭 5종·키보드, exact match 90%+, 재현율 95%+, 미지원 오적용 0건 |
 | `E3-T03` | AI Job·Snapshot·태그·시도·감시 물리 스키마와 V4 검증을 구현한다 | 박진영 / 김인안 | 문서화 게이트 | 가능 | `TST-E3-DATA-001`; V3→V4·빈 DB, PK/UK/FK/CHECK, 18개 태그 seed, 원문·평문 비저장 |
-| `E3-T04` | AI 작업 접수·Webhook·Gemini Provider·버전 경계를 구현한다 | 김인안 / 이우람 | `E3-T03` | 가능 | `TST-E3-AI-001`; `202`, 멱등 Job, Webhook AI 호출 격리, 현재 Prompt P2·Schema S1·기존 P1 이력 보존·Free Tier 차단 |
+| `E3-T04` | AI 작업 접수·Webhook·Gemini Provider·버전 경계를 구현한다 | 김인안 / 이우람 | `E3-T03` | 가능 | `TST-E3-AI-001`; `202`, 멱등 Job, Webhook AI 호출 격리, 현재 Prompt P7·Schema S1·기존 P1·P2·P3·P4·P5·P6 이력 보존·Free Tier 차단 |
 | `E3-T05` | AI Worker claim·retry·lease 복구·quota hard stop을 구현한다 | 이우람 / 박진영 | `E3-T04` | 가능 | `TST-E3-AI-004`; timeout·429·5xx·Schema 오류, heartbeat·재기동·동시 claim·기존 탐색 격리 |
 | `E3-T06` | AI 후보 자동 검증·태그 통제·정식 등록 원자성을 구현한다 | 김인안 / 박진영 | `E3-T03`, `E3-T04`, `E3-T05` | 불가 | `TST-E3-AI-003`, `TST-E3-DATA-001`; 근거·장소·Visit·태그 검증, 실패 시 정식 Entity 0건 |
 | `E3-T07` | AI 관리자 조회·사후 보정·롤백 API와 화면을 구현한다 | 김인안 / 양성훈 | `E3-T06` | 가능 | `TST-E3-AI-002`, `TST-E3-E2E-001`; 입력 원문·비밀정보 미노출, 정상 결과 사전 승인 금지 |
@@ -46,7 +46,7 @@ related_documents:
 | `E3-T10` | 코스 실패 경계·공개 화면·60건 Fixture 평가를 완성한다 | 이우람 / 박진영 | `E3-T09` | 불가 | `TST-E3-COURSE-003`, `EVAL-COURSE-001~005`; timeout·429·5xx·부분 실패·비저장·화면 폭 5종, 운영 quota 판정은 `E3-T13`에 위임 |
 | `E3-T11` | 세 Workstream의 API·Repository·Worker·외부 Adapter 통합 회귀를 완료한다 | 박진영 / 영향 WS | `E3-T02`, `E3-T07`, `E3-T10` | 불가 | 정상·예외·경계·동시성·부분 저장 0건, V4 migration과 기존 공개 탐색 회귀 |
 | `E3-T12` | 전체 사용자 여정의 브라우저·접근성·오류 복구 증거를 보존한다 | 전원 / 상호 교차 리뷰 | `E3-T11` | 불가 | `TST-E3-E2E-001`; 360·390·768·1280·1440px, 키보드, 정상·빈·오류·복구, 미검증 브라우저 기록 |
-| `E3-T13` | 보안·성능·운영 적합성·추적표와 기능 활성화 최종 게이트를 판정한다 | 전원 / 상호 교차 리뷰 | `E3-T08`, `E3-T11`, `E3-T12` | 불가 | `TST-E3-SEC-001`, `TST-E3-PERF-001`; 자연어 p95, 운영 ACTIVE·공개 맛집 좌표 보강률 읽기 전용 측정·조치·재측정, Worker 자원·backlog·Gemini quota, Mobility 계정·호출·비용, 50/20·200/80 부하, 네 추적표 정합화와 활성화 go/no-go |
+| `E3-T13` | 보안·성능·운영 적합성·추적표와 기능 활성화 최종 게이트를 판정한다 | 전원 / 상호 교차 리뷰 | `E3-T08`, `E3-T11`, `E3-T12` | 불가 | `TST-E3-SEC-001`, `TST-E3-PERF-001`; 자연어 p95, 정상 50/20 증거 대조·최대 200/80 부하 판정, 운영 ACTIVE·공개 맛집 좌표 보강률 읽기 전용 측정·조치·재측정, Worker 자원·backlog·Gemini quota, Mobility 계정·호출·비용, 네 추적표 정합화와 활성화 go/no-go |
 
 ## 3. Task별 계약 경계
 

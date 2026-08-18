@@ -55,10 +55,17 @@
   }
 
   .filters > * {
-    flex: 1 1 200px;
+    flex: 1 1 10rem;
+    min-width: 0;
   }
 
   .actions {
     flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 767px) {
+  .actions {
+    flex-wrap: wrap;
   }
 }
