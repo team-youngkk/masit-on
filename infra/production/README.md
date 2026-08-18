@@ -19,7 +19,7 @@ CodeDeploy가 원본 ASG를 기준으로 replacement 환경을 만들기 때문�
 - 인스턴스 IAM role이 ECR, Parameter Store, KMS, SSM Agent에 필요한 최소 권한을 가진다.
 - GitHub Actions OIDC role이 CodeDeploy revision을 올리고 실행별 deployment ID pointer를 기록·조회할 S3 prefix 권한과 지정 CodeDeploy application/deployment group의 `CreateDeployment`·상태 조회·`StopDeployment` 권한을 가진다. 배포 취소 cleanup은 이 pointer를 직접 읽어 수행한다.
 - RDS 보안 그룹의 ingress를 이 모듈이 관리할지 `manage_rds_ingress_rule`로 명시한다. **새 ASG가 기존 RDS에 접근하려면 이 값이 `true`여야 한다.** 끄면 SG ingress에서 drop되어 backend가 Flyway 연결 timeout으로 기동에 실패한다. Redis ingress는 전용 Redis를 소유하는 `../terraform-redis` 레이어가 관리하므로 `manage_redis_ingress_rule`은 `false`로 둔다.
-- ACM을 연결한 ALB는 Nginx 포트 `443`으로 재암호화해 전달하고 Spring Boot `8080`에 직접 연결하지 않는다. 현재 승인된 운영 예시는 public app subnet(`app_subnet_is_private=false`)이며, private 모드를 선택할 때만 NAT 또는 CodeDeploy·SSM·ECR·S3 VPC endpoint 경로를 함께 가져야 한다.
+- ACM을 연결한 ALB는 Nginx 포트 `443`으로 재암호화해 전달하고 Spring Boot `8080`에 직접 연결하지 않는다. 현재 승인된 운영 예시는 public app subnet(`app_subnet_is_private=false`)이며, private 모드를 선택하면 `0.0.0.0/0 -> NAT gateway` 경로가 필수다. CodeDeploy·SSM·ECR·S3 VPC endpoint는 별도 보조 경로로 관리하고, endpoint-only private 토폴로지는 현재 postcondition에서 지원하지 않는다.
 - `/_masiton/alb-health`는 backend readiness status만 반영하는 비민감 ALB health 응답이며 `/internal/**` 경계를 외부에 노출하지 않는다.
 - `user_data`·AMI·Parameter Store에 실제 비밀값을 기록하지 않는다. `REQUIRE_SHARED_REDIS=true`, 공유 Redis endpoint, ALB subnet CIDR를 `/etc/masiton/deployment.env`에 설정해야 한다.
 - revision bucket은 이 모듈이 versioning·SSE·Public Access Block·TLS-only policy로 관리한다. GitHub Actions role은 OIDC trust와 `id-token: write`를 별도로 유지하고, 이 모듈에 role 이름을 넘기면 revision·deployment ID pointer prefix의 S3 Put/Get과 지정 CodeDeploy 앱/그룹의 생성·상태 조회·중단 권한을 추가한다.

@@ -199,7 +199,9 @@ class RuntimeDeploymentContractTest {
                 .contains("ADR-DEPLOY-005")
                 .contains("Accepted")
                 .contains("전용 Redis")
-                .contains("운영 apply");
+                .contains("운영 apply")
+                .contains("0.0.0.0/0 -> NAT gateway")
+                .contains("endpoint-only private 토폴로지는 현재 postcondition에서 지원하지 않는다");
         assertThat(Files.readString(CI_ADR))
                 .contains("terraform-contract")
                 .contains("S3 pointer")
