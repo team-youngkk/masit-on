@@ -55,5 +55,16 @@ data "aws_route_table" "app" {
       ]) != var.app_subnet_is_private
       error_message = "app_subnet_is_private=true면 app_subnet_ids의 route table에 IGW를 향한 0.0.0.0/0 경로가 없어야 하고, false면 있어야 한다."
     }
+
+    # 이 모듈의 private 모드는 NAT egress 경로를 전제로 한다. endpoint-only
+    # 토폴로지는 필요한 서비스 목록과 subnet 연결을 별도 계약으로 관리해야 하므로
+    # 현재 모듈의 기본 경로로 허용하지 않는다.
+    postcondition {
+      condition = !var.app_subnet_is_private || anytrue([
+        for route in self.routes :
+        route.cidr_block == "0.0.0.0/0" && can(regex("^nat-", route.nat_gateway_id))
+      ])
+      error_message = "app_subnet_is_private=true면 app_subnet_ids의 route table에 0.0.0.0/0 -> NAT gateway 경로가 있어야 한다."
+    }
   }
 }

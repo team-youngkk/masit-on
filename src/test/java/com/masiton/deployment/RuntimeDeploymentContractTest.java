@@ -23,6 +23,7 @@ class RuntimeDeploymentContractTest {
     private static final Path CODEDEPLOY = Path.of("infra/production/terraform/codedeploy.tf");
     private static final Path TERRAFORM_VARIABLES = Path.of("infra/production/terraform/variables.tf");
     private static final Path TERRAFORM_DATA = Path.of("infra/production/terraform/data.tf");
+    private static final Path TERRAFORM_ASG = Path.of("infra/production/terraform/asg.tf");
     private static final Path TERRAFORM_IAM = Path.of("infra/production/terraform/iam.tf");
     private static final Path MONITORING = Path.of("infra/production/terraform/monitoring.tf");
     private static final Path REDIS_INSTANCE = Path.of("infra/production/terraform-redis/instance.tf");
@@ -95,7 +96,11 @@ class RuntimeDeploymentContractTest {
                 .contains("for _ in $(seq 1 270)")
                 .contains("for _ in $(seq 1 60)")
                 .contains("Succeeded|Failed|Stopped")
-                .contains("stop_failed=false", "return 1", "::error::CodeDeploy");
+                .contains("stop_failed=false", "return 1", "::error::CodeDeploy")
+                .contains("cancel-in-progress: ${{ github.event_name == 'pull_request' }}")
+                .contains("codedeploy-cancel-cleanup")
+                .contains("actions/download-artifact@v4")
+                .contains("for _ in $(seq 1 24)");
         assertThat(iam).contains("codedeploy:StopDeployment");
     }
 
@@ -104,6 +109,7 @@ class RuntimeDeploymentContractTest {
     void terraform_서브넷route와_단일targetGroup을검증한다() throws IOException {
         String data = Files.readString(TERRAFORM_DATA);
         String variables = Files.readString(TERRAFORM_VARIABLES);
+        String asg = Files.readString(TERRAFORM_ASG);
         String alb = Files.readString(ALB);
         String monitoring = Files.readString(MONITORING);
 
@@ -116,8 +122,13 @@ class RuntimeDeploymentContractTest {
                 .contains("0.0.0.0/0")
                 .contains("^igw-")
                 .contains("alb_subnet_ids의 route table에는")
-                .contains("var.app_subnet_is_private");
+                .contains("var.app_subnet_is_private")
+                .contains("nat_gateway_id")
+                .contains("0.0.0.0/0 -> NAT gateway");
         assertThat(variables).contains("variable \"app_subnet_is_private\"");
+        assertThat(asg)
+                .contains("network_interfaces")
+                .contains("associate_public_ip_address = !var.app_subnet_is_private");
         assertThat(alb).doesNotContain("resource \"aws_lb_target_group\" \"green\"");
         assertThat(monitoring).doesNotContain("green_unhealthy");
     }
@@ -135,12 +146,16 @@ class RuntimeDeploymentContractTest {
                 .contains("data.aws_subnet.redis.availability_zone");
         assertThat(userData)
                 .contains("/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_")
+                .contains("DATA_VOLUME_SERIAL=\"${DATA_VOLUME_ID//-/}\"")
                 .contains("/opt/masiton/redis/data")
                 .contains("mkfs.ext4")
                 .contains("/etc/fstab");
         assertThat(Files.readString(REDIS_README))
                 .contains("## 기존 Redis 상태가 있을 때 최초 전환")
                 .contains("rsync -aHAX --numeric-ids")
+                .contains("appendonly.aof.manifest")
+                .contains("redis-check-aof")
+                .contains("known-fixture-key")
                 .contains("terraform import aws_ebs_volume.redis_data");
     }
 

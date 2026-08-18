@@ -52,7 +52,18 @@ sudo mkfs.ext4 /dev/nvme1n1
 sudo mkdir -p /mnt/masiton-redis-data
 sudo mount /dev/nvme1n1 /mnt/masiton-redis-data
 sudo rsync -aHAX --numeric-ids /opt/masiton/redis/data/ /mnt/masiton-redis-data/
-sudo test -f /mnt/masiton-redis-data/appendonly.aof
+
+# Redis 7+ multipart AOF의 manifest와 파일을 확인한다. redis-check-aof는
+# Redis service가 사용하는 동일한 digest 이미지로 실행해 호스트 도구 차이를 없앤다.
+sudo test -f /mnt/masiton-redis-data/appendonlydir/appendonly.aof.manifest
+REDIS_IMAGE="$(sudo sed -n 's/^Environment=IMAGE=//p' /etc/systemd/system/masiton-redis.service)"
+AOF_FILES="$(sudo find /mnt/masiton-redis-data/appendonlydir -type f \
+  \( -name '*.base.aof' -o -name '*.incr.aof' \) -print)"
+[ -n "$AOF_FILES" ]
+while IFS= read -r aof_file; do
+  sudo docker run --rm -v /mnt/masiton-redis-data/appendonlydir:/data:ro \
+    "$REDIS_IMAGE" redis-check-aof "/data/$(basename "$aof_file")"
+done <<< "$AOF_FILES"
 
 # 4) 복사본을 unmount하고 attachment를 분리한다. 이후 volume을 Terraform state에 import한다.
 sudo umount /mnt/masiton-redis-data
@@ -61,7 +72,15 @@ terraform import aws_ebs_volume.redis_data <new-volume-id>
 terraform plan -out=redis.tfplan
 ```
 
-`/dev/nvme1n1`은 예시다. `lsblk`와 volume ID를 대조해 실제 장치를 확인하고, Redis 재기동·AOF 로딩·인증 상태·rate-limit key를 검증한 뒤에만 replacement 인스턴스와 attachment 교체를 승인한다. 운영 데이터가 없는 신규 도입이면 그 사실을 plan 승인 기록에 남기고 빈 volume 경로를 사용한다.
+`/dev/nvme1n1`은 예시다. `lsblk`와 volume ID를 대조해 실제 장치를 확인한다. 새 Redis를 기동한 뒤에는 운영용 비밀값을 셸의 `REDISCLI_AUTH`에 안전하게 주입하고 아래처럼 기존 fixture key가 복구됐는지 확인한다.
+
+```bash
+sudo systemctl start masiton-redis.service
+sudo docker exec -e REDISCLI_AUTH="$REDISCLI_AUTH" masiton-redis \
+  redis-cli --raw EXISTS '<known-fixture-key>' | grep -qx 1
+```
+
+manifest·`redis-check-aof`·known fixture key 검증을 모두 통과한 뒤에만 replacement 인스턴스와 attachment 교체를 승인한다. 운영 데이터가 없는 신규 도입이면 그 사실을 plan 승인 기록에 남기고 빈 volume 경로를 사용한다.
 
 ## AMI 만드는 절차
 

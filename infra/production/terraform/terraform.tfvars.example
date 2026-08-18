@@ -15,6 +15,10 @@ app_subnet_ids = [
   "subnet-REPLACE_ME_PRIVATE_C",
 ]
 
+# private 모드는 NAT gateway egress 경로를 요구한다. public 모드로 배치할 때는
+# false로 바꾸며 launch template이 public IPv4를 명시적으로 할당한다.
+app_subnet_is_private = true
+
 # docker와 CodeDeploy Agent는 user_data가 설치한다. AMI는 기존 것을 그대로 쓴다.
 ami_id        = "ami-REPLACE_ME"
 instance_type = "t4g.small"

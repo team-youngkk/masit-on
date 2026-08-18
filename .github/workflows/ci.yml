@@ -48,14 +48,13 @@ on:
 permissions:
   contents: read
 
-# 같은 ref에 새 커밋이 오면 진행 중인 실행을 취소해 러너 시간을 낭비하지 않는다.
+# PR 검증은 같은 ref의 새 커밋이 오면 이전 실행을 취소한다. 운영 배포는 외부
+# 취소나 새 실행이 원격 CodeDeploy를 방치하지 않도록 자동 취소하지 않는다.
 #
-# 그룹에 이벤트 종류를 넣는다. ref만으로 묶으면 롤백 배포가 진행되는 중에 같은
-# 브랜치로 push가 들어오면 그 배포가 취소된다. 장애 대응 중에 복구가 조용히 멈추는
-# 방향의 실패라 두 경로를 분리한다.
+# 이벤트 종류를 그룹에 넣어 PR과 push·dispatch 실행을 서로 취소하지 않는다.
 concurrency:
   group: ci-${{ github.event_name }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # workflow_dispatch는 이미 게시된 이미지를 배포하는 경로다. 그 이미지는 push 때
@@ -715,6 +714,8 @@ jobs:
             --description "masit-on ${IMAGE_TAG}" \
             --query 'deploymentId' --output text)
           echo "CodeDeploy deployment: $deployment_id"
+          deployment_id_file="$RUNNER_TEMP/codedeploy-deployment-id"
+          printf '%s\n' "$deployment_id" > "$deployment_id_file"
           deployment_terminal=false
           stopping_deployment=false
 
@@ -782,3 +783,88 @@ jobs:
             exit 1
           fi
           echo 'CodeDeploy 배포 완료'
+
+      # workflow 취소로 위 step의 bash가 강제 종료돼 EXIT trap이 실행되지 않을 수
+      # 있다. deployment ID를 먼저 artifact로 남겨 별도 cleanup job이 회수한다.
+      - name: CodeDeploy deployment ID 보관
+        if: ${{ always() && env.DEPLOYMENT_TARGET == 'codedeploy' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: codedeploy-deployment-id-${{ github.run_id }}
+          path: ${{ runner.temp }}/codedeploy-deployment-id
+          if-no-files-found: error
+          retention-days: 1
+
+  # GitHub 취소는 현재 step에 SIGINT·SIGTERM을 보내고 곧 프로세스 트리를 종료할
+  # 수 있어 deploy job 내부 trap만으로는 원격 CodeDeploy 정리를 보장할 수 없다.
+  # 별도 job은 취소된 deploy job의 artifact를 읽어 4분 이내에 stop과 terminal 확인을
+  # 수행한다. 5분 취소 강제 종료 한도 안에 끝나도록 polling을 제한한다.
+  codedeploy-cancel-cleanup:
+    name: 취소된 CodeDeploy 정리
+    needs: [deploy]
+    if: >-
+      always() &&
+      needs.deploy.result == 'cancelled' &&
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.deployment_target == 'codedeploy'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: ap-northeast-2
+    steps:
+      - name: CodeDeploy deployment ID artifact 다운로드
+        id: deployment_id_artifact
+        if: always()
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: codedeploy-deployment-id-${{ github.run_id }}
+          path: ${{ runner.temp }}/codedeploy-deployment
+
+      - name: AWS 자격 증명 (OIDC, 장기 키 없음)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::711457211155:role/masiton-github-actions-role
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: 원격 CodeDeploy 중지 및 terminal 확인
+        if: always()
+        run: |
+          set -euo pipefail
+          deployment_id_file="$RUNNER_TEMP/codedeploy-deployment/codedeploy-deployment-id"
+          if [ ! -s "$deployment_id_file" ]; then
+            echo '::error::취소된 배포의 CodeDeploy deployment ID artifact를 확인하지 못했다.'
+            exit 1
+          fi
+          deployment_id=$(tr -d '\r\n' < "$deployment_id_file")
+          case "$deployment_id" in
+            d-*[!0-9A-Za-z-]*|'' )
+              echo "::error::deployment ID 형식이 올바르지 않다: $deployment_id"
+              exit 1
+              ;;
+          esac
+
+          stop_failed=false
+          if ! aws deploy stop-deployment --deployment-id "$deployment_id" \
+            --auto-rollback-enabled; then
+            stop_failed=true
+            echo "::error::CodeDeploy stop-deployment 호출에 실패했다: $deployment_id"
+          fi
+
+          status=Unknown
+          for _ in $(seq 1 24); do
+            status=$(aws deploy get-deployment --deployment-id "$deployment_id" \
+              --query 'deploymentInfo.status' --output text 2>/dev/null || echo Unknown)
+            case "$status" in
+              Succeeded|Failed|Stopped)
+                echo "CodeDeploy cleanup terminal 상태: $status"
+                [ "$stop_failed" = false ]
+                exit $?
+                ;;
+            esac
+            sleep 10
+          done
+          echo "::error::CodeDeploy cleanup이 terminal 상태를 확인하지 못했다: $status"
+          exit 1

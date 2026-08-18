@@ -8,7 +8,14 @@ resource "aws_launch_template" "blue" {
     name = aws_iam_instance_profile.app.name
   }
 
-  vpc_security_group_ids = [aws_security_group.app.id]
+  # public app subnet 모드에서는 subnet의 map_public_ip_on_launch 설정과 무관하게
+  # replacement 인스턴스가 인터넷으로 나갈 수 있도록 public IPv4를 명시한다.
+  # private 모드에서는 NAT 경로를 data.tf postcondition으로 검증한다.
+  network_interfaces {
+    device_index                = 0
+    associate_public_ip_address = !var.app_subnet_is_private
+    security_groups             = [aws_security_group.app.id]
+  }
 
   block_device_mappings {
     device_name = "/dev/xvda"
