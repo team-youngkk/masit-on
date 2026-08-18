@@ -80,7 +80,8 @@ public class JdbcYoutubeChannelWatchStore implements YoutubeChannelWatchStore {
                            ELSE youtube_channel_watch.subscription_token_hash
                        END,
                        updated_at = CURRENT_TIMESTAMP
-                RETURNING enabled, subscription_status, last_notification_at, last_renewed_at, last_error_category
+                RETURNING enabled, subscription_status, last_notification_at, last_renewed_at,
+                          last_error_category, last_error_at
                 """, this::mapDetail, UUID.randomUUID(), creatorId, channelId, enabled, requestedStatus,
                 subscriptionTokenHash);
     }
@@ -101,6 +102,7 @@ public class JdbcYoutubeChannelWatchStore implements YoutubeChannelWatchStore {
                    SET subscription_status = 'ACTIVE',
                        last_renewed_at = ?,
                        last_error_category = NULL,
+                       last_error_at = NULL,
                        updated_at = CURRENT_TIMESTAMP
                  WHERE youtube_channel_id = ?
                    AND enabled = true
@@ -115,12 +117,14 @@ public class JdbcYoutubeChannelWatchStore implements YoutubeChannelWatchStore {
                    SET enabled = true,
                        subscription_status = 'RENEWAL_FAILED',
                        last_error_category = ?,
+                       last_error_at = CURRENT_TIMESTAMP,
                        updated_at = CURRENT_TIMESTAMP
                  WHERE youtube_channel_id = ?
                    AND subscription_token_hash = ?
                    AND enabled = true
                    AND subscription_status = 'UNKNOWN'
-                RETURNING enabled, subscription_status, last_notification_at, last_renewed_at, last_error_category
+                RETURNING enabled, subscription_status, last_notification_at, last_renewed_at,
+                          last_error_category, last_error_at
                 """, this::mapDetail, errorCategory, channelId, expectedTokenHash);
         return rows.stream().findFirst();
     }
@@ -157,13 +161,67 @@ public class JdbcYoutubeChannelWatchStore implements YoutubeChannelWatchStore {
         return findDetail(channelId);
     }
 
-    private Optional<WatchDetail> findDetail(String channelId) {
+    @Override
+    public Optional<WatchDetail> findDetail(String channelId) {
         List<WatchDetail> rows = jdbcTemplate.query("""
-                SELECT enabled, subscription_status, last_notification_at, last_renewed_at, last_error_category
+                SELECT enabled, subscription_status, last_notification_at, last_renewed_at,
+                       last_error_category, last_error_at
                   FROM youtube_channel_watch
                  WHERE youtube_channel_id = ?
                 """, this::mapDetail, channelId);
         return rows.stream().findFirst();
+    }
+
+    @Override
+    public WatchCandidatePage findCandidatePage(int limit, long offset) {
+        long totalElements = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                  FROM creator c
+                  LEFT JOIN youtube_channel_watch w ON w.creator_id = c.id
+                 WHERE c.external_channel_id IS NOT NULL
+                   AND ((c.publication_status = 'PUBLIC'
+                         AND c.lifecycle_status = 'ACTIVE'
+                         AND c.external_availability_status = 'AVAILABLE')
+                        OR w.id IS NOT NULL)
+                """, Long.class);
+        List<WatchCandidate> rows = jdbcTemplate.query("""
+                SELECT c.id AS creator_id,
+                       c.channel_name,
+                       c.external_channel_id,
+                       (c.publication_status = 'PUBLIC' AND c.lifecycle_status = 'ACTIVE') AS publicly_visible,
+                       (c.external_availability_status = 'AVAILABLE') AS externally_available,
+                       w.id AS watch_id,
+                       w.enabled AS watch_enabled,
+                       w.subscription_status AS watch_subscription_status,
+                       w.last_notification_at AS watch_last_notification_at,
+                       w.last_renewed_at AS watch_last_renewed_at,
+                       w.last_error_category AS watch_last_error_category,
+                       w.last_error_at AS watch_last_error_at
+                  FROM creator c
+                  LEFT JOIN youtube_channel_watch w ON w.creator_id = c.id
+                 WHERE c.external_channel_id IS NOT NULL
+                   AND ((c.publication_status = 'PUBLIC'
+                         AND c.lifecycle_status = 'ACTIVE'
+                         AND c.external_availability_status = 'AVAILABLE')
+                        OR w.id IS NOT NULL)
+                 ORDER BY c.channel_name COLLATE "C", c.id
+                 LIMIT ? OFFSET ?
+                """, (rs, rowNum) -> new WatchCandidate(
+                        rs.getObject("creator_id", UUID.class),
+                        rs.getString("channel_name"),
+                        rs.getBoolean("publicly_visible"),
+                        rs.getBoolean("externally_available"),
+                        rs.getString("external_channel_id"),
+                        rs.getObject("watch_id") == null
+                                ? Optional.empty()
+                                : Optional.of(new WatchDetail(
+                                        rs.getBoolean("watch_enabled"),
+                                        rs.getString("watch_subscription_status"),
+                                        rs.getObject("watch_last_notification_at", OffsetDateTime.class),
+                                        rs.getObject("watch_last_renewed_at", OffsetDateTime.class),
+                                        rs.getString("watch_last_error_category"),
+                                        rs.getObject("watch_last_error_at", OffsetDateTime.class)))), limit, offset);
+        return new WatchCandidatePage(rows, totalElements);
     }
 
     private Watch map(ResultSet rs, int rowNum) throws SQLException {
@@ -174,6 +232,7 @@ public class JdbcYoutubeChannelWatchStore implements YoutubeChannelWatchStore {
     private WatchDetail mapDetail(ResultSet rs, int rowNum) throws SQLException {
         return new WatchDetail(rs.getBoolean("enabled"), rs.getString("subscription_status"),
                 rs.getObject("last_notification_at", OffsetDateTime.class),
-                rs.getObject("last_renewed_at", OffsetDateTime.class), rs.getString("last_error_category"));
+                rs.getObject("last_renewed_at", OffsetDateTime.class), rs.getString("last_error_category"),
+                rs.getObject("last_error_at", OffsetDateTime.class));
     }
 }

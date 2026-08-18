@@ -174,7 +174,7 @@ restaurant/infrastructure/persistence/
 | `src/main/java/com/masiton/common/{web,observability}` | 동일 | 공통 오류·traceId 기반만 포함 |
 | 기존 도메인·기술 패키지 | `src/main/java/com/masiton/{restaurant,creator,video,visit,orchestration,security,ai}/...` | 기존 소유권을 유지하고 3차 경계는 별도 리뷰 후 확장 |
 | `src/test/java/com/masiton/...` | 동일 | 운영 패키지 구조를 반영 |
-| `src/main/resources/db/migration/` | 동일 | `V1`~`V4` 전진 마이그레이션과 빈 DB 검증 |
+| `src/main/resources/db/migration/` | 동일 | `V1`~`V5` 전진 마이그레이션과 빈 DB 검증 |
 | `src/test/java/com/masiton/architecture` | 동일 | 기존 ArchUnit·SQL 경계 테스트에 3차 규칙을 추가 검증 |
 
 ## 9. 단계적 이전 방법

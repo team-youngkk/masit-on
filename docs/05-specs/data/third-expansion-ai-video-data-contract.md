@@ -27,7 +27,7 @@ related_documents:
 
 ## 1. 결정 상태와 범위
 
-이 문서는 AI 영상 추출 작업, 후보 Snapshot, 통제 태그, Gemini 영상 입력 이력과 YouTube 채널 감시 상태의 논리·물리 데이터 경계를 정의하는 Accepted 계약이다. Google Gemini API는 `gemini-3.5-flash-lite`, Gemini Developer API global endpoint, Free Tier 전용·유료 호출 금지, 현재 Prompt `P7`, 결과 Schema `S1`을 사용한다. 기존 Prompt `P1`·`P2`·`P3`·`P4`·`P5`·`P6` 작업과 Snapshot은 재현성을 위한 역사적 이력으로만 보존한다. 컬럼·제약·인덱스의 정본은 이 문서와 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql)의 대응을 검증하는 방식으로 관리한다.
+이 문서는 AI 영상 추출 작업, 후보 Snapshot, 통제 태그, Gemini 영상 입력 이력과 YouTube 채널 감시 상태의 논리·물리 데이터 경계를 정의하는 Accepted 계약이다. Google Gemini API는 `gemini-3.5-flash-lite`, Gemini Developer API global endpoint, Free Tier 전용·유료 호출 금지, 현재 Prompt `P7`, 결과 Schema `S1`을 사용한다. 기존 Prompt `P1`·`P2`·`P3`·`P4`·`P5`·`P6` 작업과 Snapshot은 재현성을 위한 역사적 이력으로만 보존한다. V4 AI 스키마의 정본은 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql)이고, 채널 감시 오류 시각 보강은 [`V5__add_youtube_channel_watch_last_error_at.sql`](../../../src/main/resources/db/migration/V5__add_youtube_channel_watch_last_error_at.sql)로 관리한다.
 
 **`ai_registration_unit`(5.1절), `food_category_mapping`(5.2절), `ai_candidate_snapshot.candidate_truncated`는 `합의 대기` 상태다.** 세 항목 모두 새 Flyway 마이그레이션을 요구한다. 합의는 [PR #226](https://github.com/team-youngkk/masit-on/pull/226)의 소유자 승인으로 갈음하며, Flyway 순서 소유자(박진영)와 restaurant 도메인 소유자의 승인 전에는 확정 계약으로 사용하지 않는다. 승인 후 병합 직전 커밋에서 이 표시를 제거한다. 절차는 [ADR-AI-001 1절](../../07-adr/integration/ai-001-video-extraction-candidate-boundary.md)에 있다. 그 밖의 절은 종전대로 Accepted다.
 
@@ -320,6 +320,7 @@ AI·자연어 파서는 `ACTIVE` 정의만 사용한다. `DEPRECATED` 태그는 
 | `last_notification_at` | 시간 | Yes |  | 마지막 유효 알림 |
 | `last_renewed_at` | 시간 | Yes |  | 마지막 구독 갱신 |
 | `last_error_category` | `varchar(64)` | Yes |  | 마지막 오류 범주 |
+| `last_error_at` | 시간 | Yes |  | 마지막 구독 처리 오류 시각 |
 | `created_at`, `updated_at` | 시간 | NN | 시각 규칙 | 생성·변경 |
 
 Creator 등록만으로 `enabled=true`가 되지 않는다. 감시 중지·구독 만료·갱신 실패는 과거 Job·Snapshot·정식 Entity를 삭제하지 않고 신규 Webhook 접수만 차단한다.
@@ -343,7 +344,7 @@ Creator 등록만으로 `enabled=true`가 되지 않는다. 감시 중지·구�
 | `ix_visit_tag__tag_lookup` | `tag_definition_id`, 공개 Visit 상태 조합 | 태그 기반 맛집 조회 |
 | `ix_ai_temporary_input__expires_at` | `expires_at`, `job_id` | 만료 임시 입력 cleanup 선택 |
 
-정확한 PostgreSQL partial index·FK 삭제 동작·lease claim SQL과 Gemini 모델 CHECK 제약은 [ADR-EXT-003](../../07-adr/integration/ext-003-ai-extraction-async-reliability.md), [테이블 정의](table-definitions.md), [제약조건](constraints.md), [인덱스 전략](index-strategy.md), [Flyway 계획](migration-plan.md)과 통합 `V4` DDL의 대응으로 확인한다.
+정확한 PostgreSQL partial index·FK 삭제 동작·lease claim SQL과 Gemini 모델 CHECK 제약은 [ADR-EXT-003](../../07-adr/integration/ext-003-ai-extraction-async-reliability.md), [테이블 정의](table-definitions.md), [제약조건](constraints.md), [인덱스 전략](index-strategy.md), [Flyway 계획](migration-plan.md)과 통합 `V4`·보강 `V5` DDL의 대응으로 확인한다.
 
 ## 12. 생명주기와 보존
 
@@ -367,7 +368,7 @@ Webhook Raw Payload, 원본 영상, 자동 수집 전체 자막, Gemini 응답 �
 - [ ] 자동 태그 정규화·중복·근거 판단과 사후 보정 이력이 append-only로 보존되고, `UNKNOWN` AI 근거가 `AI_AUTO_CONFIRMED` `VisitTag`로 연결되지 않는다.
 - [ ] 원본 영상·자동 수집 전체 자막·AI 응답 전문·보완 텍스트 평문이 저장·로그·API 응답에 노출되지 않는다.
 - [ ] 보완 텍스트 암호문이 작업 종료 후 24시간 이내 삭제되고, 관리자 재시도가 이전 입력을 재사용하지 않는다.
-- [x] `data-traceability.md`, 물리 테이블 정의, 제약·인덱스·Flyway 계획과 `V4` DDL의 구조적 대응이 문서화된다.
+- [x] `data-traceability.md`, 물리 테이블 정의, 제약·인덱스·Flyway 계획과 `V4`·`V5` DDL의 구조적 대응이 문서화된다.
 - [ ] Flyway 빈 DB·`V3→V4` 적용, 제약 위반, lease 동시성·정식 Entity 0건 테스트 결과가 보존된다.
 - [ ] `ai_registration_unit`의 새 마이그레이션이 Flyway 순서 소유자 합의를 거쳐 추가되고, 단위별 상태·`registered_restaurant_id` 조합 제약이 검증된다.
 - [ ] 다장소 영상에서 일부 등록 단위가 차단돼도 통과한 단위의 정식 Entity가 유지되는 원자성 경계가 검증된다.
