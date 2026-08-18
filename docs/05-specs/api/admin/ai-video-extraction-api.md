@@ -504,10 +504,10 @@ Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-0
 | `CATEGORY_UNRESOLVED` | 카테고리 근거를 찾지 못했다 | `CONFIRM` 보충 입력 | `foodCategoryId` |
 | `MISSING_REQUIRED_FIELD` | 등록 단위에 맛집명·주소 등 필수 후보가 없다 | 보완 텍스트 재추출 또는 기존 수동 등록 | 빈 배열 |
 | `VISIT_EVIDENCE_REQUIRED` | 방문 근거가 `UNKNOWN`이거나 영상 `TIMESTAMP`가 아니다 | 재추출 또는 기존 수동 등록. 방문 근거는 보완 텍스트 주장으로 확정하지 않는다 | 빈 배열 |
-| `DUPLICATE_CONFLICT` | 같은 맛집·방문 관계가 이미 존재한다 | 없음. 이미 등록된 자원을 확인한다 | 빈 배열 |
+| `DUPLICATE_CONFLICT` | 같은 맛집·방문 관계가 이미 존재한다 | `EXISTING_RESOURCE`. 이미 등록된 자원으로 이동해 확인한다 | 빈 배열 |
 | `EXTERNAL_SERVICE_ERROR` | Kakao·YouTube 조회 실패·시간 초과 | 등록 재실행 또는 기존 수동 등록 | 빈 배열 |
 
-이 표의 복구 경로 열은 3.6절 `recoveryPaths` 배열과 같은 의미이며, 세 사유 모두 재추출·재실행 뒤에도 관리자가 기존 수동 등록으로 우회할 수 있다는 점은 동일하다.
+이 표의 복구 경로 열은 3.6절 `recoveryPaths` 배열과 같은 의미다. `MISSING_REQUIRED_FIELD`·`VISIT_EVIDENCE_REQUIRED`·`EXTERNAL_SERVICE_ERROR`는 재추출·재실행 뒤에도 관리자가 기존 수동 등록으로 우회할 수 있다. `DUPLICATE_CONFLICT`는 `EXISTING_RESOURCE`만 가지며 재추출·재실행·수동 등록 우회 경로가 없다.
 
 - `requiredSupplements`가 빈 배열이면 `CONFIRM`으로 복구할 수 없다는 뜻이다. 이 상태에서 보낸 `CONFIRM`은 `422 AIEXTRACT_VALIDATION_CONFLICT`로 거절하고 정식 저장은 0건이며, 응답의 복구 경로를 안내한다.
 - 부족한 필드 이름은 작업 상세의 `missingFields`로 확인한다. 이 응답은 관리자가 채워 넣을 대상이 아니므로 `requiredSupplements`에 싣지 않는다.

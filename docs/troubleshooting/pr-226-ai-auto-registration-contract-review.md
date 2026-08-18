@@ -344,6 +344,26 @@ Kakao 장소와 카테고리는 관리자가 외부 기준정보 중 하나를 �
 
 스테일 앵커 2건(`BR-AIEXTRACT-004`, `BR-AIEXTRACT-008`의 수동 `<a id>` 태그가 과거 제목과 불일치)도 발견했으나, `git log -S`로 확인한 결과 이 PR 이전 PR #167(초기 3차 확장 구축)부터 있던 문제이고 실제 링크는 GitHub 자동 생성 앵커로 정상 작동해 이번 PR 범위에서 다루지 않았다.
 
+### 10.11 10차 리뷰 처리
+
+10.10절 선제 전수 재검증 커밋(`d5f0931`) 직후 `w00lam`이 3건을 남겼다. 이 커밋이 push된 지 2~3분 뒤에 작성된 코멘트인데, 그중 2건은 실제로는 그 커밋 이전 커밋(`47067fb`, 9차 반영)에서 이미 고쳐진 내용을 가리키고 있었다. 코드를 먼저 확인한 뒤 처리 판단을 내렸다.
+
+| 스레드 | 요청 요약 | 문제 유형 | 판단 | 처리 결과 |
+|---|---|---|---|---|
+| [최상위 조합표 폐기 완료 재확인 (P2)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3801306147) | 조합표가 "사후 보정·롤백 포함"만 적어 폐기 완료가 빠진 것처럼 읽힘 | 기타 | 이미 해결 | 조합표(2.1절)는 9차 반영(`47067fb`, 커밋 시각 05:18:54Z)에서 이미 `MANUAL_OVERRIDE 단위(등록 유지·롤백 완료·폐기 완료 어느 하위 상태든) 포함 어떤 조합`으로 세 하위 상태를 전부 명시했다. 리뷰 코멘트 시각(05:36:44Z)이 그보다 늦어 코멘트가 반영 전 버전을 가리킨 것으로 확인했다 |
+| [3.5·3.6절 복구 경로 표 재불일치 (P2)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3801306155) | `DUPLICATE_CONFLICT`를 3.6절은 `EXISTING_RESOURCE`, 3.5절은 "없음"으로 서로 다르게 적고, 요약 문장은 "세 사유 모두 재추출·재실행"이라고 해 중복 사유에도 재추출 경로가 있는 것처럼 서술 | 기타 | 수정 필요 | 3.5절 표의 `DUPLICATE_CONFLICT` 행을 "`EXISTING_RESOURCE`. 이미 등록된 자원으로 이동해 확인한다"로 바꿔 3.6절과 맞추고, 요약 문장을 `MISSING_REQUIRED_FIELD`·`VISIT_EVIDENCE_REQUIRED`·`EXTERNAL_SERVICE_ERROR` 세 사유만 명시하도록 좁히고 `DUPLICATE_CONFLICT`는 재추출·재실행·수동 등록 우회 경로가 없다고 별도로 적었다 |
+| [`AUTO_BLOCKED` 검증 충돌 목업 롤백 버튼 재확인 (P1)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3801306161) | `[비공개·롤백]` 버튼이 `AUTO_BLOCKED`에서 호출 시 422가 되므로 제거 필요 | 기타 | 이미 해결 | 이 버튼은 9차 반영(`47067fb`)에서 이미 제거됐다. `AI-EXTRACT-VERIFY-CONFLICT` 절은 현재 목업 자체를 두지 않고 `PLACE_AMBIGUOUS` 목업(롤백 버튼 없음)을 참조만 하며, "등록 결과가 없고 롤백 동작을 두지 않는다"는 서술만 남아 있다. `git blame`으로 제거 커밋과 시각을 확인했다 |
+
+**원인 확정에 실제로 재현한 문제(2번째 스레드)**: 10.10절 선제 재검증 커밋이 3.5절에 "이 표의 복구 경로 열은 3.6절 `recoveryPaths` 배열과 같은 의미이며, 세 사유 모두 재추출·재실행 뒤에도 관리자가 기존 수동 등록으로 우회할 수 있다는 점은 동일하다"는 요약 문장을 새로 추가하면서, 바로 위 `DUPLICATE_CONFLICT` 행의 "없음"이라는 기존 서술과 대조하지 않았다. `DUPLICATE_CONFLICT`는 `EXISTING_RESOURCE`만 갖고 재추출·재실행 경로 자체가 없으므로, 새로 쓴 요약 문장이 표 전체(7행)를 가리키는 것으로 읽히면 사실과 어긋난다. **선제 전수 재검증 커밋 자체가 표를 요약하면서 새로운 불일치를 만든 경우**로, 10절 전체가 반복해서 보여준 "표를 고치면서 그 표 전 행을 대조하지 않는다" 패턴이 자기 자신을 재검증하는 커밋에서도 재발했다.
+
+**남은 2건이 이미 해결로 처리된 이유**: `git blame`과 커밋 시각(9차 반영 `47067fb` 05:18:54Z, 이번 리뷰 코멘트 05:36:44Z)을 대조해 리뷰가 남겨질 때 이미 코드에 반영돼 있었음을 확인했다. 코멘트 자체를 근거 없이 기각하지 않고 파일 히스토리로 재현을 시도한 뒤 판단했다.
+
+| 파일 | 변경 |
+|---|---|
+| [ai-video-extraction-api.md](../05-specs/api/admin/ai-video-extraction-api.md) | 3.5절 `DUPLICATE_CONFLICT` 복구 경로 행과 요약 문장을 3.6절 정규 표와 1:1로 맞춤 |
+
+검증: 3.6절 `recoveryPaths` 표(`DUPLICATE_CONFLICT` → `["EXISTING_RESOURCE"]`)와 3.5절 산문 표·요약 문장을 대조해 세 사유(`MISSING_REQUIRED_FIELD`·`VISIT_EVIDENCE_REQUIRED`·`EXTERNAL_SERVICE_ERROR`)와 `DUPLICATE_CONFLICT`가 서로 다른 경로를 갖는다는 서술이 두 절에서 일치하는 것을 확인했다. 문서만 변경해 빌드·테스트 대상은 없다.
+
 ## 11. 비교 지표
 
 해당 없음. 문서 계약 변경이며 측정할 런타임 지표가 없다. 자동 등록률·`CATEGORY_UNRESOLVED` 비율 등은 구현 후 [PRD 11절 지표](../04-product/prd/admin/ai-video-information-extraction.md)에서 측정한다. 이 PR 시점에는 기준선을 만들 수 없다.
