@@ -39,12 +39,12 @@ variable "alb_subnet_ids" {
 }
 
 variable "app_subnet_ids" {
-  description = "기존 private app subnet ID 목록"
+  description = "기존 app subnet ID 목록. app_subnet_is_private 값에 따라 public 또는 private route를 검증한다"
   type        = list(string)
 
   validation {
     condition     = length(var.app_subnet_ids) >= 2
-    error_message = "ASG에는 private subnet을 2개 이상 지정해야 한다."
+    error_message = "ASG에는 서로 다른 AZ의 app subnet을 2개 이상 지정해야 한다."
   }
 }
 
@@ -294,5 +294,5 @@ variable "deployment_auto_rollback_enabled" {
 variable "app_subnet_is_private" {
   description = "true면 app subnet에 IGW 기본 경로가 없어야 하고, false면 ALB와 같은 public subnet임을 요구한다"
   type        = bool
-  default     = true
+  default     = false
 }

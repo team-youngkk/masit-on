@@ -35,6 +35,7 @@ class RuntimeDeploymentContractTest {
     private static final Path ADR_BACKLOG = Path.of("docs/07-adr/adr-backlog.md");
     private static final Path CLEANUP_RUNBOOK = Path.of("docs/08-planning/blue-green-cleanup-runbook.md");
     private static final Path TROUBLESHOOTING = Path.of("docs/troubleshooting/pr-228-asg-replacement-deployment-review.md");
+    private static final Path TERRAFORM_TFVARS_EXAMPLE = Path.of("infra/production/terraform/terraform.tfvars.example");
     private static final Path APPSPEC = Path.of("deploy/codedeploy/appspec.yml");
     private static final Path AFTER_INSTALL = Path.of("deploy/codedeploy/hooks/after-install.sh");
     private static final Path VALIDATE_SERVICE = Path.of("deploy/codedeploy/hooks/validate-service.sh");
@@ -126,6 +127,7 @@ class RuntimeDeploymentContractTest {
         String asg = Files.readString(TERRAFORM_ASG);
         String alb = Files.readString(ALB);
         String monitoring = Files.readString(MONITORING);
+        String tfvarsExample = Files.readString(TERRAFORM_TFVARS_EXAMPLE);
 
         // ALB는 IGW 기본 경로를 요구하고, app은 선언한 배치 의도와 실제 route가
         // 어긋날 때 plan에서 실패한다. 배포 고도화 영향 검토 6.6절이 앱을 public
@@ -144,6 +146,11 @@ class RuntimeDeploymentContractTest {
                 .contains("variable \"acm_certificate_arn\"")
                 .contains("nullable    = false")
                 .contains("acm_certificate_arn은 유효한 ACM certificate ARN이어야 한다.");
+        assertThat(tfvarsExample)
+                .contains("subnet-REPLACE_ME_PUBLIC_A")
+                .contains("subnet-REPLACE_ME_PUBLIC_C")
+                .contains("app_subnet_is_private = false")
+                .contains("현재 승인된 운영 예시는 public app subnet이다");
         assertThat(asg)
                 .contains("network_interfaces")
                 .contains("associate_public_ip_address = !var.app_subnet_is_private");
