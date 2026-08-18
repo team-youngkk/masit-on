@@ -47,6 +47,7 @@ related_documents:
 | 확인하거나 시도한 방법 | 결과 | 판단과 다음 단계 |
 |---|---|---|
 | CI 실패 로그 38건을 테스트별로 분류 | role 컬럼 부재, JWT 픽스처, 이전 Redis 키, 계층 의존으로 수렴 | 독립적인 코드·테스트 회귀를 먼저 수정 |
+| 첫 수정 push 뒤 CI 재실행 | 공통 `ClientAddressResolver` 구현이 여럿이라 로그인 필터 생성자가 모호해졌고 Context 연쇄 실패 249건 발생 | `memberClientAddressResolver` qualifier를 명시하고 재실행 |
 | 로그인 서비스와 Redis Lua 호출 순서 확인 | 성공 전에 계정 카운터를 증가시킴 | 실패 확정 뒤 기록하도록 변경 |
 | `ArchitectureTest` 로컬 재현 | security infrastructure가 member infrastructure에 의존 | common의 `ClientAddressResolver` port에 의존하도록 변경 |
 | 운영 Flyway 기록 확인 | 2026-08-14 기록은 V1~V3이지만 현재 시점의 공유·운영 이력은 미확인 | 신규 버전 배정 전 데이터 소유자 확인 필요 |
@@ -54,7 +55,7 @@ related_documents:
 
 ## 6. 최종 해결
 
-- 변경 내용: 로그인 실패 시점 집계, 공통 클라이언트 주소 port 사용, 완전한 mock JWT claim, 현재 Redis 세션 키와 보안 상태 코드로 테스트를 동기화했다.
+- 변경 내용: 로그인 실패 시점 집계, qualifier를 지정한 공통 클라이언트 주소 port 사용, 완전한 mock JWT claim, 현재 Redis 세션 키와 보안 상태 코드로 테스트를 동기화했다.
 - 선택 이유: 공개 계약의 실패 기반 계정 제한과 계층 규칙을 최소 변경으로 복원하면서 source-only 선행 제한은 그대로 유지하기 위해서다.
 - 변경 파일: `MemberAuthenticationService`, `MemberRateLimitStore`, `RedisMemberRateLimitStore`, `LoginSourceRateLimitFilter`와 관련 테스트
 - 고려한 대안: 현재 증거 없이 V6와 관리자 데이터를 임의 생성하는 방안은 적용 이력 충돌과 잘못된 인증 시각·관리자 매핑 위험 때문에 채택하지 않았다.
@@ -65,6 +66,7 @@ related_documents:
 |---|---|---|
 | `./gradlew.bat compileTestJava test --tests com.masiton.member.application.MemberAuthenticationServiceTest --tests com.masiton.security.infrastructure.web.LoginSourceRateLimitFilterTest --tests com.masiton.architecture.ArchitectureTest --no-daemon --console=plain` | 통과 | 서비스 19건, 필터 2건, 아키텍처 10건 |
 | `git diff --check` | 통과 | 공백 오류 없음 |
+| PR #238 CI run `32135495164` | 실패 | 프론트엔드·Terraform은 통과. 공통 resolver 주입 모호성으로 백엔드 Context가 연쇄 실패해 qualifier를 후속 보완했다. |
 | PostgreSQL·Redis·MockMvc 통합 테스트 | 미실행 | 로컬 Docker daemon 미가동. push 뒤 CI에서 재검증한다. |
 
 ## 8. 재발 방지 및 다음 확인
@@ -76,7 +78,7 @@ related_documents:
 
 | 지표 | 도입 전 기준값 | 측정 방법·기간 | 배포 확장 후 값 | 비교 결과 | 담당자·확인 시점/이슈 |
 |---|---|---|---|---|---|
-| 백엔드 CI 실패 수 | 38건 | PR #238 최초 실패 run | 재실행 예정 | migration 결정 전에는 전체 0건을 보장할 수 없음 | PR 작성자, 다음 CI run |
+| 백엔드 CI 실패 수 | 최초 38건, 첫 수정 run 249건 | PR #238 CI run별 비교 | 재실행 예정 | 첫 수정 run의 주입 모호성은 보완했으나 migration 결정 전에는 전체 0건을 보장할 수 없음 | PR 작성자, 다음 CI run |
 | 성공 로그인 뒤 계정 실패 카운터 | 로그인마다 1 증가 | Redis 통합 테스트 10회 | 0 증가 기대 | CI 재실행에서 확인 | 인증 소유자, PR #238 |
 
 ## 10. 남은 사항

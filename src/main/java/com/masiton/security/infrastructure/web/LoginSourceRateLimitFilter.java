@@ -6,6 +6,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -22,7 +23,8 @@ public class LoginSourceRateLimitFilter extends OncePerRequestFilter {
     private final ClientAddressResolver clientAddressResolver;
     private final SecurityErrorWriter errorWriter;
 
-    public LoginSourceRateLimitFilter(MemberRateLimitStore rateLimits, ClientAddressResolver clientAddressResolver,
+    public LoginSourceRateLimitFilter(MemberRateLimitStore rateLimits,
+            @Qualifier("memberClientAddressResolver") ClientAddressResolver clientAddressResolver,
             SecurityErrorWriter errorWriter) {
         this.rateLimits = rateLimits;
         this.clientAddressResolver = clientAddressResolver;
