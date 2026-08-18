@@ -28,6 +28,19 @@ related_documents:
 | [member_account.role migration](https://github.com/team-youngkk/masit-on/pull/238#discussion_r3803788129) | role을 조회하는 애플리케이션과 같은 배포에 스키마 전환을 제공한다. | 데이터베이스 | 결정 필요 | 임의 V6 추가를 보류했다. 현재 공유·운영 적용 이력, 활성 관리자 `email_verified_at` 출처, 승인된 매핑 입력이 필요하다. | [migration-plan 13.1](../05-specs/data/migration-plan.md#131-확장복사-단계)은 현재 이력 확인과 공동 승인 입력을 선행 조건으로 둔다. |
 | [로그인 실패 제한](https://github.com/team-youngkk/masit-on/pull/238#discussion_r3803788131) | 성공 로그인은 실패 한도를 소모하지 않게 한다. | 애플리케이션 | 수정 필요 | 자격 증명 확인 전에는 차단 여부만 조회하고 실패가 확정된 경우에만 계정·계정/출처 카운터를 증가시킨다. 출처 카운터는 요청 선행 필터가 한 번만 증가시킨다. | 서비스·필터·아키텍처 테스트 31건 통과. Redis 경계 테스트를 보강했다. |
 | [JWT audience 픽스처](https://github.com/team-youngkk/masit-on/pull/238#discussion_r3803799416) | audience 성공 토큰에 필수 sid를 포함한다. | 애플리케이션 | 수정 필요 | 성공 검증은 모든 필수 claim을 가진 토큰을 사용하고 sid 누락 거부 테스트는 별도로 유지했다. | `compileTestJava` 통과. Docker 부재로 MockMvc 통합 실행은 CI에서 재확인한다. |
+| [role migration 후속 1](https://github.com/team-youngkk/masit-on/pull/238#discussion_r3803806624) | role과 관리자 전환 migration을 추가한다. | 데이터베이스 | 결정 필요 | 최초 migration 스레드와 같은 선행 결정으로 묶어 보류했다. | 최신 CI의 남은 27건이 role 컬럼 부재에 수렴했다. |
+| [로그인 실패 제한 후속 1](https://github.com/team-youngkk/masit-on/pull/238#discussion_r3803806633) | 성공을 제외하고 실패만 기록한다. | 애플리케이션 | 이미 해결 | `f84728f`에서 실패 확정 뒤 기록하도록 변경했다. | 서비스 회귀 19건 통과. |
+| [로그아웃 401 후속 1](https://github.com/team-youngkk/masit-on/pull/238#discussion_r3803806638) | 401 뒤 refresh와 DELETE를 한 번 재시도한다. | 애플리케이션 | 수정 필요 | stale token 제거, single-flight refresh, DELETE 1회 재시도, 최종 204 검증을 추가했다. | 프론트 테스트 266건·typecheck 통과. |
+| [role migration 후속 2](https://github.com/team-youngkk/masit-on/pull/238#discussion_r3803859549) | V6과 관리자 전환을 구현한다. | 데이터베이스 | 결정 필요 | 현재 이력과 승인된 전환 입력이 없어 임의 V6를 추가하지 않았다. | migration plan 13.1 선행 조건. |
+| [로그인 실패 제한 후속 2](https://github.com/team-youngkk/masit-on/pull/238#discussion_r3803859554) | 성공 로그인 카운터 소비를 제거한다. | 애플리케이션 | 이미 해결 | 실패 기반 집계로 전환하고 사용하지 않는 선행 획득 API를 제거했다. | 성공 로그인 비집계 테스트 추가. |
+| [로그아웃 401 후속 2](https://github.com/team-youngkk/masit-on/pull/238#discussion_r3803859559) | 만료 access token 로그아웃을 재시도한다. | 애플리케이션 | 수정 필요 | 같은 수정으로 refresh 후 새 Bearer DELETE를 한 번 수행한다. | 전용 프론트 회귀 테스트 통과. |
+| [legacy 관리자 인증 stack](https://github.com/team-youngkk/masit-on/pull/238#discussion_r3803859562) | 제거된 Controller 전용 미사용 stack을 정리한다. | 애플리케이션 | 수정 필요 | 통합 로그인에 사용되지 않는 service, port, adapter, entity와 전용 테스트를 삭제했다. 관리자 write principal은 유지했다. | `compileTestJava` 통과. |
+| [복원 직후 401](https://github.com/team-youngkk/masit-on/pull/238#discussion_r3803859567) | 복원 token이 401이면 token과 세션 상태를 정리한다. | 애플리케이션 | 수정 필요 | stale token 제거와 session-changed event를 복원 직후 401 분기에도 적용했다. | 전용 프론트 회귀 테스트 통과. |
+| [로그인 필터 계층 의존](https://github.com/team-youngkk/masit-on/pull/238#discussion_r3803859570) | security가 member port·구현에 직접 의존하지 않게 한다. | 애플리케이션 | 수정 필요 | `common.security.LoginSourceRateLimiter` port로 의존을 역전하고 주소 해석도 common port만 참조한다. | ArchitectureTest 10건 통과. |
+| [Origin 설정 단일화](https://github.com/team-youngkk/masit-on/pull/238#discussion_r3803859573) | 미사용 admin Origin 설정을 제거한다. | 애플리케이션 | 수정 필요 | `SecurityProperties.publicBaseUrl`과 검증·판정 API, 중복 application 바인딩을 제거했다. | `compileJava` 통과. |
+| [로그인 필터 경계 테스트](https://github.com/team-youngkk/masit-on/pull/238#discussion_r3803859580) | 정상 통과와 Redis 장애 503을 검증한다. | 애플리케이션 | 수정 필요 | filter-chain 진행과 fail-closed 분기를 추가했다. | 필터 테스트 4건 통과. |
+| [trusted proxy 변수명](https://github.com/team-youngkk/masit-on/pull/238#discussion_r3803859584) | 운영 변수를 `AUTH_LOGIN_*` 계약에 맞춘다. | 배포 | 수정 필요 | application·app-run·app-deploy를 공통 변수명으로 통일했다. | 배포 계약 테스트 통과. |
+| [실패 기록 원자성](https://github.com/team-youngkk/masit-on/pull/238#discussion_r3803986253) | 확인과 증가를 하나의 Lua 연산으로 묶는다. | 애플리케이션 | 수정 필요 | 실패 기록 Lua가 5/10 한도를 확인하고 허용된 경우만 원자 증가해 결과를 반환하도록 변경했다. | 동시 5/10 경계 Redis 테스트 추가. |
 
 ## 3. 문제 현상과 발생 조건
 
@@ -40,7 +53,7 @@ related_documents:
 
 ## 4. 근본 원인
 
-로그인 서비스가 형식이 유효한 모든 요청에 대해 카운터를 원자 획득하도록 구현되어 성공도 실패 한도에 포함됐다. 통합 JWT와 Redis 세션 keyspace를 변경하면서 일부 통합 테스트 픽스처가 이전 claim·키를 유지했고, 로그인 출처 필터가 회원 도메인의 infrastructure 구현에 직접 의존해 계층 규칙을 위반했다. 별도로 애플리케이션은 `member_account.role`을 사용하지만, 계정 전환 migration은 운영 이력과 승인 입력이 없는 상태에서 구현되지 않아 PostgreSQL 테스트와 실제 배포 모두 선행 조건이 충족되지 않았다.
+로그인 서비스가 형식이 유효한 모든 요청에 대해 카운터를 원자 획득하도록 구현되어 성공도 실패 한도에 포함됐고, 이를 실패 뒤 두 Redis 호출로 나눈 첫 수정은 동시 한도 초과 여지를 만들었다. 통합 JWT와 Redis 세션 keyspace를 변경하면서 일부 통합 테스트 픽스처가 이전 claim·키를 유지했고, 로그인 출처 필터가 회원 도메인의 port·구현을 직접 참조해 계층 규칙을 위반했다. 프론트는 로그아웃과 복원 직후 401에서 stale token·Refresh 쿠키 정리를 끝내지 않았다. 별도로 애플리케이션은 `member_account.role`을 사용하지만, 계정 전환 migration은 운영 이력과 승인 입력이 없는 상태에서 구현되지 않아 PostgreSQL 테스트와 실제 배포 모두 선행 조건이 충족되지 않았다.
 
 ## 5. 확인 및 시도
 
@@ -55,7 +68,7 @@ related_documents:
 
 ## 6. 최종 해결
 
-- 변경 내용: 로그인 실패 시점 집계, qualifier를 지정한 공통 클라이언트 주소 port 사용, 완전한 mock JWT claim, 현재 Redis 세션 키와 보안 상태 코드로 테스트를 동기화했다.
+- 변경 내용: 로그인 실패 시점의 원자 5/10 집계, 공통 로그인 제한·클라이언트 주소 port, 완전한 mock JWT claim, 현재 Redis 세션 키, 프론트 401 정리, Origin·trusted-proxy 설정 단일화, 미사용 관리자 인증 stack 삭제를 반영했다.
 - 선택 이유: 공개 계약의 실패 기반 계정 제한과 계층 규칙을 최소 변경으로 복원하면서 source-only 선행 제한은 그대로 유지하기 위해서다.
 - 변경 파일: `MemberAuthenticationService`, `MemberRateLimitStore`, `RedisMemberRateLimitStore`, `LoginSourceRateLimitFilter`와 관련 테스트
 - 고려한 대안: 현재 증거 없이 V6와 관리자 데이터를 임의 생성하는 방안은 적용 이력 충돌과 잘못된 인증 시각·관리자 매핑 위험 때문에 채택하지 않았다.
