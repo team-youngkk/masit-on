@@ -85,10 +85,10 @@ related_documents:
 
 ### DATA-CONSTRAINT-006 legacy 관리자 이메일 매핑 유일성
 
-- 적용 데이터: 전환 대상 AdminAccount와 MemberAccount
-- 제약: 각 legacy 관리자 행은 검증된 정규화 이메일 하나로 정확히 하나의 MemberAccount에 매핑되어야 한다. 중복·누락·모호한 매핑은 허용하지 않는다.
-- 보장 수준: 계약 마이그레이션 전 데이터 증명 필수
-- 위반 시 처리: 복사·참조 전환 및 `admin_account` 제거 중단
+- 적용 데이터: 전환 대상 AdminAccount, 전환 staging과 MemberAccount
+- 제약: 공동 승인된 일회성 입력만 `admin_account_migration_map`에 적재한다. `admin_account_id`는 PK·legacy FK, `normalized_email`은 회원가입과 같은 정규화 규칙을 적용한 UK이며 각 legacy 관리자는 서로 다른 staging 행을 거쳐 정확히 하나의 MemberAccount에 매핑되어야 한다. 알 수 없는 ID·중복·누락·정규화 충돌·여러 관리자의 동일 회원 수렴은 허용하지 않는다.
+- 보장 수준: 확장 마이그레이션 제약과 계약 마이그레이션 전 데이터 증명 필수. 입력 SHA-256·승인자·승인 시각·행 수를 접근 통제된 변경 기록과 대조한다.
+- 위반 시 처리: 역할 부여 전 전체 전환 fail-closed, 복사·참조 전환 및 `admin_account` 제거 중단
 - 관련 항목: [마이그레이션 계획](migration-plan.md#13-통합-계정-전환-마이그레이션)
 
 ### DATA-CONSTRAINT-007 회원 이메일 유일성

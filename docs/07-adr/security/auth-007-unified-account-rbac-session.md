@@ -96,7 +96,7 @@ Accepted
 
 ### 3.6 Origin과 요청 제한
 
-Refresh 쿠키가 사용되는 재발급·로그아웃은 Bearer·Refresh Token 조회, 회전과 폐기보다 먼저 `Origin`을 검사한다. 정확히 하나의 HTTPS Origin이 배포 allowlist와 canonical form으로 일치해야 하며 누락·다중·불일치는 Token 상태를 바꾸지 않고 `403`이다.
+Refresh 쿠키가 사용되는 `POST /api/auth/tokens/refresh`와 `DELETE /api/auth/tokens`는 역할 판정과 Bearer·Refresh Token 조회, 회전과 폐기보다 먼저 `Origin`을 검사한다. 정확히 하나의 HTTPS Origin이 역할과 무관한 통합 `AUTH_ALLOWED_ORIGINS`와 canonical form으로 일치해야 하며 누락·다중·불일치는 Token 상태를 바꾸지 않고 `403`이다. 쿠키를 읽지 않는 로그인 `POST /api/auth/tokens`에는 이 검사를 적용하지 않는다.
 
 모든 로그인 시도는 JSON·이메일·비밀번호 형식이 잘못됐더라도 자격 증명·계정 검증 전에 요청 출처 제한을 원자 적용한다. 형식이 유효하면 정규화 이메일 기반 제한도 함께 적용한다. 계정 존재·상태·역할·비밀번호 오류와 제한 종류는 동일한 `401 INVALID_CREDENTIALS`로 일반화한다.
 

@@ -61,6 +61,20 @@ V1에 존재하는 사전 발급 관리자 계정이다. 단일 계정 전환의
 
 로그인 ID의 대소문자 동일성은 API가 별도로 정의하지 않았으므로 저장값의 정확 일치를 사용한다. 비밀번호 원문과 Refresh Token은 이 테이블에 저장하지 않는다.
 
+### 4.1 `admin_account_migration_map` (전환 staging)
+
+통합 계정 전환에만 사용하는 일회성 매핑 테이블이다. 확장 단계에서 만들고 공동 승인된 입력을 적재한 뒤, 계약 증명을 통과하면 `admin_account`와 함께 제거한다. 신규 계정 원장이나 런타임 인증 조회에 사용하지 않는다.
+
+| 컬럼 | SQL 타입 | Null | 기본값 | 키·제약 | 설명 |
+|---|---|---:|---|---|---|
+| `admin_account_id` | `uuid` | NN | 없음 | PK, FK → `admin_account.id` | legacy 관리자 ID |
+| `normalized_email` | `varchar(254)` | NN | 없음 | UK, 빈 값·이메일 형식 금지 | 회원가입과 같은 규칙으로 정규화한 승인 이메일 |
+| `member_account_id` | `uuid` | Yes | `NULL` | UK, 값이 있으면 FK → `member_account.id` | 검증·복사 뒤 확정한 통합 계정 ID |
+| `approval_record_id` | `varchar(100)` | NN | 없음 | 빈 값 금지 | 접근 통제된 운영 변경 기록 식별자 |
+| `created_at` | 시간 | NN | `CURRENT_TIMESTAMP` |  | 적재 시각 |
+
+실제 이메일이나 입력 파일을 저장소에 커밋하지 않는다. 입력 파일 SHA-256·승인자·승인 시각·행 수는 `approval_record_id`가 가리키는 변경 기록에 남기고, 역할 부여 전 전체 legacy 관리자에 대해 누락·중복·정규화 충돌·동일 회원 수렴이 0건인지 검증한다.
+
 ## 5. `restaurant`
 
 | 컬럼 | SQL 타입 | Null | 기본값 | 키·제약 | 설명 |

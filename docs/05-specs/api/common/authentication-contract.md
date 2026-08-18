@@ -53,7 +53,7 @@ related_documents:
 
 ## 5. Origin·제한·비밀정보
 
-Refresh 쿠키가 사용되는 재발급·로그아웃은 Token 조회·회전·폐기 전에 정확히 하나의 `Origin`이 배포 allowlist와 canonical form으로 일치하는지 검사한다. 누락·다중·불일치는 `403 FORBIDDEN`이고 Token 상태를 변경하지 않는다.
+Refresh 쿠키가 사용되는 `POST /api/auth/tokens/refresh`와 `DELETE /api/auth/tokens`는 역할 판정과 Token 조회·회전·폐기 전에 정확히 하나의 `Origin`이 역할과 무관한 통합 `AUTH_ALLOWED_ORIGINS`와 canonical form으로 일치하는지 검사한다. 누락·다중·불일치는 `403 FORBIDDEN`이고 Token 상태를 변경하지 않는다. 쿠키를 읽지 않는 로그인 `POST /api/auth/tokens`에는 이 검사를 적용하지 않는다.
 
 모든 로그인 요청은 JSON 구조·이메일·비밀번호 형식의 정상 여부와 관계없이 자격 증명 검증 전에 신뢰된 요청 출처 제한을 적용한다. 전달 주소는 구성된 trusted proxy peer에서 온 단일 값만 신뢰하고, reverse proxy 활성화 시 trusted proxy 설정이 비어 있으면 시작을 실패시킨다.
 

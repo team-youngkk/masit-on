@@ -147,7 +147,7 @@ URL은 HTTPS와 허용 호스트를 검증하고 리디렉션 최종 호스트�
 [ADR-AUTH-007](../07-adr/security/auth-007-unified-account-rbac-session.md) 및 [ADR-AUTH-006](../07-adr/security/auth-006-cookie-origin-defense.md)에 따라:
 
 - Access Token은 30분 만료, 프론트엔드 메모리에만 둔다.
-- Refresh Token은 14일 TTL, `__Secure-masiton-refresh`, HttpOnly·Secure·SameSite=Strict·`Path=/api/auth/tokens` 쿠키로 전달한다. Refresh·Logout 요청은 단일 `Origin`이 배포 Origin과 정확히 일치해야 하며, 누락·다중·불일치는 Token 처리보다 먼저 `403`으로 차단한다.
+- Refresh Token은 14일 TTL, `__Secure-masiton-refresh`, HttpOnly·Secure·SameSite=Strict·`Path=/api/auth/tokens` 쿠키로 전달한다. `POST /api/auth/tokens/refresh`와 `DELETE /api/auth/tokens`는 단일 `Origin`이 역할과 무관한 `AUTH_ALLOWED_ORIGINS`와 정확히 일치해야 하며, 누락·다중·불일치는 역할 조회와 Token 처리보다 먼저 `403`으로 차단한다. 로그인 `POST /api/auth/tokens`에는 이 검사를 적용하지 않는다.
 - `MEMBER`는 최대 3개, `ADMIN`은 최대 1개의 활성 세션을 허용한다.
 - 재발급마다 회전하고 재사용을 탐지해 Token 계열을 폐기한다.
 - Redis 장애 시 재발급은 fail-closed이고 재로그인을 요구한다.

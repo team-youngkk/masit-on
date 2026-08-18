@@ -118,7 +118,7 @@ erDiagram
 - `visit(video_id, creator_id)`는 `video(id, creator_id)`를 참조한다. 따라서 Visit.Creator와 Video.Creator가 DB에서도 같아야 한다.
 - Visit는 `(restaurant_id, creator_id, video_id)` 복합 유일이다.
 - Restaurant·Creator·Video·Visit 등 핵심 공개 데이터 FK는 `RESTRICT`다. 회원 소유 관계와 2차 확장 FK의 `CASCADE/SET NULL` 예외는 각 생명주기 계약에 명시하며 [2차 확장 데이터 계약](second-expansion-data-contract.md)을 따른다.
-- `confirmation_token`과 관리자 행위자·감사 FK는 전환 매핑으로 `member_account.id`를 참조한다. 기존 관리자 UUID를 그대로 재사용할 수 없으면 검증된 이메일 매핑표로 새 회원 UUID를 연결하며, 미매핑 행이 하나라도 있으면 계약 단계 제거를 중단한다.
+- `confirmation_token`과 관리자 행위자·감사 FK는 전환 staging `admin_account_migration_map`의 확정 `member_account_id`를 통해 `member_account.id`를 참조한다. staging 입력은 인증·데이터 소유자가 공동 승인하고 legacy 관리자 ID PK, 정규화 이메일 UK, 최종 회원 ID UK를 강제한다. 미매핑·중복·정규화 충돌·동일 회원 수렴이 하나라도 있으면 역할 부여와 계약 단계 제거를 중단한다.
 
 ## 6. 트랜잭션 규칙
 

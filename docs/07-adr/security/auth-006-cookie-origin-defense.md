@@ -27,7 +27,7 @@ Accepted
 
 ## 2. 결정 요약
 
-통합 Refresh·Logout처럼 보안 쿠키를 사용하는 요청은 단일 `Origin` 헤더를 요구한다. 값은 배포 Origin allowlist와 canonical form으로 비교하며, 헤더가 없거나 여러 개이거나 허용되지 않으면 Token을 읽거나 회전·폐기하기 전에 `403 FORBIDDEN`으로 거부한다.
+통합 Refresh·Logout처럼 보안 쿠키를 사용하는 요청은 단일 `Origin` 헤더를 요구한다. 값은 역할과 무관한 통합 `AUTH_ALLOWED_ORIGINS` allowlist와 canonical form으로 비교하며, 헤더가 없거나 여러 개이거나 허용되지 않으면 Token을 읽거나 회전·폐기하기 전에 `403 FORBIDDEN`으로 거부한다.
 
 ## 3. 배경
 
@@ -35,23 +35,24 @@ Accepted
 
 ## 4. 결정
 
-- 통합 `/api/auth/tokens/refresh`, `/api/auth/tokens`의 쿠키 기반 `POST`·`DELETE` 요청에 적용한다. 로그인 `POST /api/auth/tokens`처럼 쿠키를 읽지 않는 요청에는 적용하지 않는다.
+- 정확한 적용 대상은 `POST /api/auth/tokens/refresh`와 `DELETE /api/auth/tokens`다. 로그인 `POST /api/auth/tokens`는 쿠키를 읽지 않으므로 이 Origin 검사 대상이 아니다.
 - `HttpServletRequest#getHeaders("Origin")`로 모든 값을 읽어 정확히 하나일 때만 후보로 인정한다.
-- 회원은 `MemberCookieSettings.publicBaseUrl`, 관리자는 canonicalized `ADMIN_PUBLIC_BASE_URL` allowlist로 후보를 비교한다.
-- 검증은 회원 서비스와 관리자 Bearer·Refresh Token 처리보다 먼저 수행하며, 실패 시 `403 FORBIDDEN`과 공통 오류 계약을 반환한다.
+- 회원과 관리자는 같은 `AUTH_ALLOWED_ORIGINS`를 사용한다. 쉼표로 구분된 각 값은 scheme·host·명시적 port만 허용하고 path·query·fragment·userinfo는 거부하며, 기동 시 canonicalize·중복 제거한다. 운영 프로파일은 HTTPS Origin만 허용하고 로컬 프로파일의 명시적 loopback HTTP 값만 예외로 둔다.
+- `MEMBER_PUBLIC_BASE_URL`과 `ADMIN_PUBLIC_BASE_URL`은 통합 인증 cutover 뒤 Origin 판정 입력으로 사용하지 않는다. 두 역할에 서로 다른 allowlist를 적용하거나 요청 역할에 따라 allowlist를 선택하지 않는다.
+- 검증은 역할 판정, Bearer·Refresh Token 조회와 서비스 호출보다 먼저 공통 인증 필터에서 수행하며, 실패 시 `403 FORBIDDEN`과 공통 오류 계약을 반환한다.
 - 로그인, Bearer 전용 관리자 API와 공개 조회에는 이 검사를 확장하지 않는다.
 
 ## 5. 선택 근거와 트레이드오프
 
-공통 resolver를 사용하면 회원·관리자 경계의 다중 헤더 해석을 동일하게 유지하면서 allowlist 정책은 각 설정 객체가 소유할 수 있다. 브라우저가 아닌 운영 점검 요청도 Origin을 명시해야 하며, 기존 쿠키 속성과 함께 방어 계층을 하나 더 운영하는 비용을 부담한다.
+공통 resolver와 단일 allowlist를 사용하면 역할 판정 전에도 같은 규칙으로 요청을 차단하고 회원·관리자 경계의 설정 드리프트를 제거할 수 있다. 브라우저가 아닌 운영 점검 요청도 Origin을 명시해야 하며, 기존 쿠키 속성과 함께 방어 계층을 하나 더 운영하는 비용을 부담한다.
 
 ## 6. 구현 및 운영 영향
 
-회원 Controller와 관리자 Origin Filter가 공통 resolver를 사용한다. 운영 환경은 회원·관리자 공개 Origin 설정을 실제 웹 Origin으로 주입해야 하며, URL path·query·fragment가 포함된 값은 허용하지 않는다.
+통합 인증 필터가 공통 resolver와 `AUTH_ALLOWED_ORIGINS`를 사용한다. 운영 환경은 실제 웹 Origin 집합을 이 설정 하나에 주입하고, 빈 값·파싱 실패·금지 구성요소·운영 HTTP 값이 있으면 애플리케이션 시작을 실패시킨다. 기존 역할별 Origin 설정 제거와 공통 필터 전환은 통합 인증 구현과 같은 cutover에서 수행한다.
 
 ## 7. 검증 방법
 
-통합 Refresh·Logout에 대해 허용된 단일 Origin, 누락, 허용되지 않은 값, 서로 다른 다중 Origin을 검증한다. 실패한 경우 서비스 호출, Token 회전·폐기와 쿠키 변경이 시작되지 않는지 확인한다.
+통합 Refresh·Logout에 대해 두 역할 각각 허용된 단일 Origin, 누락, 허용되지 않은 값, 서로 다른 다중 Origin을 검증한다. 로그인 `POST /api/auth/tokens`에는 Origin 검사를 적용하지 않는지 확인한다. 역할별 legacy 설정값이 달라도 `AUTH_ALLOWED_ORIGINS`만 판정에 사용하며, 실패한 경우 역할 조회·서비스 호출·Token 회전·폐기와 쿠키 변경이 시작되지 않는지 확인한다.
 
 ## 8. 관련 문서
 

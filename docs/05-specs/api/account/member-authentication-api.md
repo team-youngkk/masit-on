@@ -94,7 +94,7 @@ Set-Cookie: __Secure-masiton-refresh=<opaque-token>; Path=/api/auth/tokens; Max-
 | `SameSite` | `Strict` | 교차 사이트 요청에 전송하지 않는다. |
 | `Domain` | 생략 | 현재 Host에만 한정한다. |
 
-Refresh 쿠키를 사용하는 재발급·로그아웃은 HTTPS 동일 Origin 요청만 허용하고 `Origin` 헤더를 배포 Origin allowlist와 일치시킨다. 불일치하거나 브라우저 요청에서 누락되면 `403 FORBIDDEN`이며 Token을 회전·폐기하지 않는다. CORS로 임의 Origin과 자격 증명 요청을 함께 허용하지 않는다.
+Refresh 쿠키를 사용하는 재발급·로그아웃은 HTTPS 동일 Origin 요청만 허용하고 `Origin` 헤더를 역할과 무관한 통합 `AUTH_ALLOWED_ORIGINS`와 일치시킨다. 불일치하거나 브라우저 요청에서 누락되면 `403 FORBIDDEN`이며 역할을 조회하거나 Token을 회전·폐기하지 않는다. 쿠키를 읽지 않는 로그인에는 이 검사를 적용하지 않고, CORS로 임의 Origin과 자격 증명 요청을 함께 허용하지 않는다.
 
 로그아웃 성공, 서버가 Refresh Token을 사용할 수 없다고 확정한 인증 실패와 Redis 장애에는 같은 이름·Path·보안 속성과 `Max-Age=0`으로 쿠키를 만료한다. Redis 장애에서는 프론트엔드의 메모리 Access Token도 제거하고 서버가 요청에서 확인한 세션 식별자의 폐기를 복구 후 재시도한다. 서버 폐기가 확인되기 전에는 로그아웃 성공으로 표시하지 않는다.
 

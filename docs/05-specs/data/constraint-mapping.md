@@ -42,6 +42,9 @@ related_documents:
 | `uk_food_category__sort_order` | `food_category` | `sort_order` |
 | `pk_admin_account` (legacy, 계약 단계 제거) | `admin_account` | `id` |
 | `uk_admin_account__login_id` (legacy, 계약 단계 제거) | `admin_account` | `login_id` |
+| `pk_admin_account_migration_map` (전환 staging, 계약 단계 제거) | `admin_account_migration_map` | `admin_account_id` |
+| `uk_admin_account_migration_map__normalized_email` (전환 staging, 계약 단계 제거) | `admin_account_migration_map` | `normalized_email` |
+| `uk_admin_account_migration_map__member_account_id` (전환 staging, 계약 단계 제거) | `admin_account_migration_map` | `member_account_id` (NULL 제외) |
 | `pk_member_account` | `member_account` | `id` |
 | `uk_member_account__email` | `member_account` | `email` |
 | `pk_restaurant` | `restaurant` | `id` |
@@ -73,6 +76,8 @@ PostgreSQL의 `UNIQUE`는 이미 동일 컬럼 B-tree 인덱스를 만든다. �
 | `fk_visit__video_creator` | `visit(video_id, creator_id)` | `video(id, creator_id)` | 동일 |
 | `fk_confirmation_token__admin_account` (legacy) | `confirmation_token.admin_account_id` | `admin_account.id` | 확장 단계 유지, 계약 단계 제거 |
 | `fk_confirmation_token__member_account` (target) | `confirmation_token.admin_account_id` 또는 후속 rename 컬럼 | `member_account.id` | `ON DELETE RESTRICT ON UPDATE RESTRICT` |
+| `fk_admin_account_migration_map__admin_account` (전환 staging) | `admin_account_migration_map.admin_account_id` | `admin_account.id` | `ON DELETE RESTRICT ON UPDATE RESTRICT`, 계약 단계 제거 |
+| `fk_admin_account_migration_map__member_account` (전환 staging) | `admin_account_migration_map.member_account_id` | `member_account.id` | `ON DELETE RESTRICT ON UPDATE RESTRICT`, 계약 단계 제거 |
 | `fk_favorite__member_account` | `favorite.member_id` | `member_account.id` | `ON DELETE CASCADE ON UPDATE RESTRICT` |
 | `fk_favorite__restaurant` | `favorite.restaurant_id` | `restaurant.id` | `ON DELETE RESTRICT ON UPDATE RESTRICT` |
 | `fk_recent_restaurant_view__member_account` | `recent_restaurant_view.member_id` | `member_account.id` | `ON DELETE CASCADE ON UPDATE RESTRICT` |
@@ -90,6 +95,8 @@ PostgreSQL의 `UNIQUE`는 이미 동일 컬럼 B-tree 인덱스를 만든다. �
 | `ck_food_category__sort_order` | `sort_order BETWEEN 1 AND 10` |
 | `ck_admin_account__login_id_not_blank` (legacy) | `btrim(login_id) <> ''` |
 | `ck_admin_account__role` (legacy) | `role = 'ADMIN'` |
+| `ck_admin_account_migration_map__email` (전환 staging) | `normalized_email = lower(btrim(normalized_email))`이고 회원가입 이메일 형식 충족 |
+| `ck_admin_account_migration_map__approval_not_blank` (전환 staging) | `btrim(approval_record_id) <> ''` |
 | `ck_member_account__role` | `role IN ('MEMBER','ADMIN')` |
 | `ck_restaurant__phone_number` | `char_length(phone_number) BETWEEN 7 AND 20 AND phone_number ~ '^[0-9 +()\\-]+$'` |
 | `ck_restaurant__coordinate_pair` | `(latitude IS NULL AND longitude IS NULL) OR (latitude IS NOT NULL AND longitude IS NOT NULL)` |
