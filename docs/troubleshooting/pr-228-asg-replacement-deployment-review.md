@@ -24,11 +24,11 @@ related_documents:
 
 | 스레드 | 요청 요약 | 문제 유형 | 판단 | 처리 결과 | 근거/검증 |
 |---|---|---|---|---|---|
-| [Redis volume](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801367860) | root volume 교체 시 AOF·Refresh Token·rate-limit 상태가 삭제되지 않도록 분리 | 데이터베이스 / 인프라 | 수정 필요 | 별도 암호화 gp3 EBS와 attachment를 추가하고 mount·`prevent_destroy`를 적용 | `RuntimeDeploymentContractTest`, Git Bash `bash -n`, `terraform validate`·`plan` 통과 |
+| [Redis volume](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801367860) | root volume 교체 시 AOF·Refresh Token·rate-limit 상태가 삭제되지 않도록 분리 | 데이터베이스 / 인프라 | 수정 필요 | 별도 암호화 gp3 EBS와 attachment를 추가하고 mount·`prevent_destroy`를 적용 | `RuntimeDeploymentContractTest`, Git Bash `bash -n`, `terraform validate`·Redis `plan` 통과 |
 | [CodeDeploy timeout/cancel](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801367865) | timeout·workflow 취소 시 `stop-deployment --auto-rollback-enabled`와 terminal 상태 확인 | 배포 | 수정 필요 | 45분 polling, EXIT·signal trap, 중지 후 terminal polling, `StopDeployment` 권한 추가 | `RuntimeDeploymentContractTest` 통과. 실제 CodeDeploy 취소 리허설은 미실행 |
 | [ADR·runbook target group](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801367867) | listener 전환 대신 단일 target group의 instance 등록·해제와 ASG membership 판정으로 정정하고 green 자원 제거 | 배포 / 인프라 | 수정 필요 | ADR·runbook·운영 README 정정, green target group·alarm·output 제거 | `RuntimeDeploymentContractTest`, 관련 문자열 검색 통과. AWS 리허설은 미실행 |
 | [RDS ingress 예시](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801373600) | 예시에 `manage_rds_ingress_rule = true` 명시 | 인프라 | 이미 해결 | 최신 HEAD의 `infra/production/terraform/terraform.tfvars.example`에 이미 설정되어 있어 추가 변경 없음 | 현재 파일 36행의 `true` 확인 |
-| [subnet route 조건](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801373603) | ALB에는 IGW default route, app에는 IGW default route가 없음을 plan에서 검증 | 인프라 | 수정 필요 | subnet별 `aws_route_table` data source와 ALB/app postcondition 추가 | Terraform provider의 `routes`·`gateway_id` 계약 확인, `RuntimeDeploymentContractTest`·`terraform validate`·`plan` 통과 |
+| [subnet route 조건](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801373603) | ALB에는 IGW default route, app에는 IGW default route가 없음을 plan에서 검증 | 인프라 | 수정 필요 | subnet별 `aws_route_table` data source와 ALB/app postcondition 추가 | Terraform provider의 `routes`·`gateway_id` 계약 확인, `RuntimeDeploymentContractTest`·`terraform validate` 통과. **`plan`은 실패하며 11절의 계약 충돌이 원인이다** |
 | [rollback 실행 산출물](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801373606) | 이미지뿐 아니라 script·systemd unit도 실패 시 이전 버전 복원 | 배포 / 애플리케이션 | 수정 필요 | 배포 전 script·unit backup과 missing marker를 만들고 rollback에서 복원·제거 | Git Bash `bash -n`, `RuntimeDeploymentContractTest` 통과 |
 | [CodeDeploy IAM wildcard](https://github.com/team-youngkk/masit-on/pull/228#discussion_r3801373612) | CreateDeployment를 deployment group으로 제한하고 wildcard 조회를 별도 분리 | 인프라 | 수정 필요 | 생성·고정 리소스 조회·wildcard 조회·중지 권한을 별도 statement로 분리 | `RuntimeDeploymentContractTest` 통과. IAM policy simulator는 미실행 |
 
@@ -62,7 +62,7 @@ related_documents:
 | Git Bash `bash -n`으로 배포 script·Redis template 검사 | 통과 | 셸 구문 오류 없음 확인 |
 | Docker Terraform 1.6.6 `fmt -check -recursive` 두 레이어 | 통과 | HCL 포맷 정합성 확인 |
 | Terraform 1.6.6 `validate` 두 레이어 | 통과 | 실제 AWS 자격 증명으로 실행. terraform-redis의 중복 data source 선언을 이 단계에서 발견해 `data.tf`로 통합 |
-| Terraform 1.6.6 `plan` 두 레이어 | 통과 | 운영 레이어는 미사용 green target group·alarm 2건만 destroy. Redis 레이어는 데이터 volume 도입으로 인스턴스가 교체되며 교체 후 앱 재배포가 필요하다 |
+| Terraform 1.6.6 `plan` | Redis 레이어 통과, **운영 레이어 실패** | Redis는 데이터 volume 도입으로 인스턴스가 교체되며 교체 후 앱 재배포가 필요하다. 운영 레이어는 app subnet postcondition이 현재 구성과 충돌한다. 11절 참조 |
 | CodeDeploy cancel/rollback 리허설·IAM policy simulator | 미실행: 승인된 운영 리허설 범위 밖 | 운영 전환 전에 담당자가 확인 |
 
 ## 6. 최종 해결
@@ -82,7 +82,7 @@ related_documents:
 | `git diff --check` | 통과 | whitespace 오류 없음 |
 | `docker run hashicorp/terraform:1.6.6 ... fmt -check -recursive` | 통과 | 운영·Redis 두 Terraform 레이어의 포맷 |
 | `terraform validate` | 통과 | 두 레이어. terraform-redis의 중복 data source 선언을 여기서 잡았다 |
-| `terraform plan` | 통과 | 운영 레이어는 미사용 green target group·alarm 2건만 destroy. Redis 레이어는 인스턴스 교체 |
+| `terraform plan` | **운영 레이어 실패** | Redis 레이어는 통과(3 add·1 change·1 destroy, 인스턴스 교체). 운영 레이어는 app subnet postcondition이 실패한다. 아래 11절 참조 |
 
 ## 8. 재발 방지 및 다음 확인
 
@@ -102,3 +102,30 @@ related_documents:
 - Docker Terraform 1.6.6으로 `fmt`는 통과했지만, 실제 AWS 자격 증명 없이 `validate`용 provider 초기화를 완료하지 못했다.
 - AWS 계정 리허설과 IAM policy simulator는 이 작업에서 실행하지 않았으므로 운영 전환 전 확인이 필요하다.
 - RDS ingress 예시 스레드는 최신 HEAD에 이미 `manage_rds_ingress_rule = true`가 있어 코드 변경 없이 “이미 해결”로 답변한다.
+
+## 11. 미해결 계약 충돌: app subnet의 IGW 경로
+
+`data "aws_route_table" "app"`의 postcondition이 app subnet에 IGW 기본 경로가 없을 것을 요구하는데, 현재 `app_subnet_ids`는 public subnet 2개다. `terraform plan`이 이 조건에서 실패한다.
+
+```text
+Error: Resource postcondition failed
+  on data.tf line 50, in data "aws_route_table" "app"
+app_subnet_ids의 route table에는 IGW를 향한 0.0.0.0/0 경로가 없어야 한다.
+```
+
+두 근거가 서로 반대 방향을 요구한다.
+
+| 근거 | 요구 |
+|---|---|
+| 리뷰 지적 | app subnet에 IGW 기본 경로가 없어야 한다. 있으면 app이 의도와 다르게 public에 놓인다 |
+| [영향 검토 6.6절](../08-planning/deployment-hardening-impact-review.md) | 앱 인스턴스는 public subnet에 남기고 보안 그룹 인바운드만 ALB 출처로 좁힌다. 사설 배치는 NAT 또는 인터페이스 엔드포인트를 요구해 [8.1절](../08-planning/deployment-hardening-impact-review.md) 판정에서 예산을 초과한다 |
+
+즉 postcondition은 "app은 사설"을 불변식으로 굳혔고, 실제 채택된 토폴로지는 "app은 공용 + 보안 그룹 경계"다. 한쪽을 임의로 고칠 수 없다.
+
+선택지는 셋이다.
+
+1. app을 사설 subnet으로 옮기고 NAT를 추가한다. 리뷰 의도에 정확히 맞지만 8.1절이 예산 초과로 판정한 구성이다
+2. postcondition을 6.6절 전제에 맞게 바꾼다. 예산 산정은 유지되지만 리뷰가 막으려던 오배치 검증이 약해진다
+3. 배치 의도를 변수로 명시하고 그 값에 따라 postcondition을 반대로 적용한다. 오배치 검증을 유지하면서 6.6절 구성을 허용하지만 변수 하나가 늘어난다
+
+**이 판정은 비용과 보안 경계를 동시에 건드리므로 팀 결정 사항이다.** 결정 전까지 운영 레이어 `apply`를 수행할 수 없다.
