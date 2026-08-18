@@ -19,6 +19,51 @@ import {
 const FALLBACK_ERROR_MESSAGE =
   '코스 경로를 계산하지 못했습니다. 잠시 후 다시 시도해 주세요.'
 
+function isValidCourseCoordinate(value: unknown): boolean {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+  const coordinate = value as Record<string, unknown>
+  return typeof coordinate.latitude === 'number' && typeof coordinate.longitude === 'number'
+}
+
+/*
+ * 지도 마커 표시(FR-COURSE-004)에 좌표가 필수이므로 방문지 항목은 좌표까지 확인한다.
+ * `role` 열거값은 서버가 새 역할을 추가해도 화면이 깨지지 않도록 문자열 여부만 확인한다.
+ */
+function isValidCourseRestaurantItem(value: unknown): boolean {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+  const restaurant = value as Record<string, unknown>
+  return (
+    typeof restaurant.sequence === 'number' &&
+    typeof restaurant.restaurantId === 'string' &&
+    typeof restaurant.name === 'string' &&
+    typeof restaurant.role === 'string' &&
+    isValidCourseCoordinate(restaurant.coordinate)
+  )
+}
+
+/*
+ * `shapeStatus`가 MISSING이면 `path`는 빈 배열이다(BR-COURSE-005). 배열 원소 좌표까지는
+ * 여기서 검증하지 않고 그리기 단계에서 형상 상태로만 분기한다.
+ */
+function isValidCourseSegmentItem(value: unknown): boolean {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+  const segment = value as Record<string, unknown>
+  return (
+    typeof segment.fromRestaurantId === 'string' &&
+    typeof segment.toRestaurantId === 'string' &&
+    typeof segment.distanceMeters === 'number' &&
+    typeof segment.durationSeconds === 'number' &&
+    (segment.shapeStatus === 'AVAILABLE' || segment.shapeStatus === 'MISSING') &&
+    Array.isArray(segment.path)
+  )
+}
+
 function isValidCourseRouteResult(value: unknown): value is CourseRouteResult {
   if (typeof value !== 'object' || value === null) {
     return false
@@ -27,7 +72,9 @@ function isValidCourseRouteResult(value: unknown): value is CourseRouteResult {
   return (
     body.status === 'SUCCEEDED' &&
     Array.isArray(body.restaurants) &&
+    body.restaurants.every(isValidCourseRestaurantItem) &&
     Array.isArray(body.segments) &&
+    body.segments.every(isValidCourseSegmentItem) &&
     typeof body.totalDistanceMeters === 'number' &&
     typeof body.totalDurationSeconds === 'number' &&
     typeof body.generatedAt === 'string' &&
