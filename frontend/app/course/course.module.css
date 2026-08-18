@@ -277,6 +277,11 @@
   background: var(--color-surface-muted);
 }
 
+.resultItemButton:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
 .resultItemButton[aria-pressed='true'] {
   border-color: var(--color-primary-strong);
   background: var(--color-primary-soft);

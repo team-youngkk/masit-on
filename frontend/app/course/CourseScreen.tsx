@@ -624,7 +624,12 @@ function CourseResult({
                 type="button"
                 className={styles.resultItemButton}
                 aria-pressed={selected}
-                onClick={() => onSelectRestaurant(restaurant.restaurantId)}
+                disabled={expired}
+                onClick={() => {
+                  if (!expired) {
+                    onSelectRestaurant(restaurant.restaurantId)
+                  }
+                }}
               >
                 <span className={styles.selectionOrder}>{restaurant.sequence}</span>
                 <div>

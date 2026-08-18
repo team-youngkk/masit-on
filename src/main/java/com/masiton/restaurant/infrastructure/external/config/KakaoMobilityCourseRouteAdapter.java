@@ -188,11 +188,19 @@ final class KakaoMobilityCourseRouteAdapter implements CourseRouteProviderPort {
     }
 
     /**
-     * BR-COURSE-005·ADR-ROUTE-001 5.5절: {@code roads}가 없거나 모든 {@code vertexes}가 비어 있으면
-     * 오류가 아니라 해당 구간의 형상 좌표 없음으로 취급하고 빈 목록을 반환한다.
+     * BR-COURSE-005·ADR-ROUTE-001 5.5절: {@code roads} 필드 자체가 없거나 모든 {@code vertexes}가
+     * 비어 있으면 오류가 아니라 해당 구간의 형상 좌표 없음으로 취급하고 빈 목록을 반환한다. 다만
+     * {@code roads}가 존재하면서 배열이 아닌 타입(object·문자열 등)이면 제공자 응답 Schema 위반이므로
+     * 형상 없음으로 조용히 넘기지 않고 {@code SCHEMA} 실패로 분류한다.
      */
     private List<CourseRouteVertex> toPath(JsonNode roads) {
-        if (!roads.isArray() || roads.isEmpty()) {
+        if (roads.isMissingNode() || roads.isNull()) {
+            return List.of();
+        }
+        if (!roads.isArray()) {
+            throw new CourseRouteProviderException(CourseRouteFailureCategory.SCHEMA);
+        }
+        if (roads.isEmpty()) {
             return List.of();
         }
         List<CourseRouteVertex> vertexes = new ArrayList<>();

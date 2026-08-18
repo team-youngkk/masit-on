@@ -383,6 +383,22 @@ class KakaoMobilityCourseRouteAdapterWireMockIntegrationTest {
     }
 
     @Test
+    @DisplayName("roads가 배열이 아닌 타입이면 형상 없음으로 조용히 넘기지 않고 SCHEMA로 매핑한다")
+    void 코스경로계산_roads가배열이아닌타입_SCHEMA로매핑한다() throws Exception {
+        stubDirections(200, Map.of("routes", List.of(Map.of(
+                "result_code", 0,
+                "sections", List.of(Map.of(
+                        "distance", 4200,
+                        "duration", 780,
+                        "roads", Map.of("unexpected", "object")))))));
+
+        CourseRouteProviderException exception = catchThrowableOfType(
+                CourseRouteProviderException.class, () -> defaultAdapter().calculate(twoStopRequest()));
+
+        assertThat(exception.category()).isEqualTo(CourseRouteFailureCategory.SCHEMA);
+    }
+
+    @Test
     @DisplayName("enabled가 false이면 외부 호출 없이 PROVIDER_BLOCKED로 실패한다")
     void 코스경로계산_enabled가false_PROVIDER_BLOCKED로실패하고요청이없다() throws Exception {
         KakaoMobilityCourseRouteAdapter adapter = adapter(properties(false, true, API_KEY, Duration.ofSeconds(4)));

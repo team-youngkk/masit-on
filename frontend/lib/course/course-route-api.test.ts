@@ -163,6 +163,57 @@ test('구간 shapeStatus가 계약값을 벗어난 200 응답은 성공으로 �
   assert.equal(result.kind, 'error')
 })
 
+test('path 원소에 null이 섞인 200 응답은 성공으로 처리하지 않는다', async (t) => {
+  const bodyWithInvalidPathElement = {
+    ...SUCCESS_BODY,
+    segments: [
+      { ...SUCCESS_BODY.segments[0], path: [SUCCESS_BODY.segments[0].path[0], null] },
+    ],
+  }
+  t.mock.method(globalThis, 'fetch', async () => Response.json(bodyWithInvalidPathElement))
+
+  const result = await requestCourseRoute(['r1', 'r2'])
+  assert.equal(result.kind, 'error')
+})
+
+test('path 원소 좌표가 WGS84 범위를 벗어난 200 응답은 성공으로 처리하지 않는다', async (t) => {
+  const bodyWithOutOfRangeCoordinate = {
+    ...SUCCESS_BODY,
+    segments: [
+      { ...SUCCESS_BODY.segments[0], path: [{ latitude: 91, longitude: 126.978 }] },
+    ],
+  }
+  t.mock.method(globalThis, 'fetch', async () => Response.json(bodyWithOutOfRangeCoordinate))
+
+  const result = await requestCourseRoute(['r1', 'r2'])
+  assert.equal(result.kind, 'error')
+})
+
+test('방문지 좌표가 문자열인 200 응답은 성공으로 처리하지 않는다', async (t) => {
+  const bodyWithStringCoordinate = {
+    ...SUCCESS_BODY,
+    restaurants: [
+      { ...SUCCESS_BODY.restaurants[0], coordinate: { latitude: '37.5665', longitude: 126.978 } },
+      SUCCESS_BODY.restaurants[1],
+    ],
+  }
+  t.mock.method(globalThis, 'fetch', async () => Response.json(bodyWithStringCoordinate))
+
+  const result = await requestCourseRoute(['r1', 'r2'])
+  assert.equal(result.kind, 'error')
+})
+
+test('shapeStatus가 MISSING인데 path가 비어 있지 않은 200 응답은 성공으로 처리하지 않는다(BR-COURSE-005 불변식)', async (t) => {
+  const bodyWithInconsistentShape = {
+    ...SUCCESS_BODY,
+    segments: [{ ...SUCCESS_BODY.segments[0], shapeStatus: 'MISSING' }],
+  }
+  t.mock.method(globalThis, 'fetch', async () => Response.json(bodyWithInconsistentShape))
+
+  const result = await requestCourseRoute(['r1', 'r2'])
+  assert.equal(result.kind, 'error')
+})
+
 test('네트워크 오류는 재시도를 안내하는 기본 메시지로 변환한다', async (t) => {
   t.mock.method(globalThis, 'fetch', async () => {
     throw new TypeError('network down')
