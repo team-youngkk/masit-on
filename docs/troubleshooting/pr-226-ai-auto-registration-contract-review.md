@@ -438,6 +438,23 @@ Kakao 장소와 카테고리는 관리자가 외부 기준정보 중 하나를 �
 
 검증: `DUPLICATE_CONFLICT`/업무 중복을 언급하는 API 2.1·3.5·3.6절, ADR 5.3절, PRD 정상 등록 흐름, 사용자 흐름 3.1·3.4절 여섯 곳에서 "`EXISTING_RESOURCE` 확인만 가능, 사후 보정·재추출·재실행·수동 등록 없음"이라는 서술이 모두 일치하는 것을 확인했다. 문서만 변경해 빌드·테스트 대상은 없다.
 
+### 10.15 14차 리뷰 처리
+
+10.14절 반영을 push한 지 5분 뒤(`4dc89b0`) `jinyp01`이 1건을 남겼다.
+
+| 스레드 | 요청 요약 | 문제 유형 | 판단 | 처리 결과 |
+|---|---|---|---|---|
+| [`EXTERNAL_SERVICE_ERROR`를 `REEXTRACT`와 혼동 (P2)](https://github.com/team-youngkk/masit-on/pull/226#discussion_r3801514510) | 10.14절에서 고친 PRD·사용자 흐름 문장이 `MISSING_REQUIRED_FIELD`·`VISIT_EVIDENCE_REQUIRED`·`EXTERNAL_SERVICE_ERROR` 세 사유를 여전히 "재추출"로 묶었는데, API 3.6절은 앞의 둘을 `REEXTRACT`(보완 텍스트로 새 작업), 외부 서비스 오류를 `RETRY`(같은 등록 요청 재실행)로 구분함 | 기타 | 수정 필요 | PRD 정상 등록 흐름 4번과 사용자 흐름 3.4절 4번 모두 `EXTERNAL_SERVICE_ERROR`를 분리해 "등록 재실행 또는 기존 수동 등록"으로, 나머지 둘은 "재추출 또는 기존 수동 등록"으로 서술 |
+
+10.11절부터 이어온 `DUPLICATE_CONFLICT` 전파 작업 중 만든 **새로운 결함**이다. 여러 사유를 한 문장으로 묶어 "재추출 또는 수동 등록"이라고 단순화하면서, 그 안에 `REEXTRACT`(보완 텍스트 재추출)와 `RETRY`(같은 요청 재실행)라는 서로 다른 클라이언트 동작이 섞여 있다는 것을 확인하지 않았다. 값 하나를 여러 사유에 걸쳐 일반화할 때 그 값이 실제로 같은 뜻인지 canonical 표(3.6절 `recoveryPaths`)와 다시 대조해야 한다는 교훈이다.
+
+| 파일 | 변경 |
+|---|---|
+| [ai-video-information-extraction.md](../04-product/prd/admin/ai-video-information-extraction.md) | 정상 등록 흐름 4번에서 `EXTERNAL_SERVICE_ERROR`를 분리 |
+| [third-expansion-user-flows.md](../04-product/user-flows/third-expansion-user-flows.md) | 3.4절 4번에서 `EXTERNAL_SERVICE_ERROR`를 분리 |
+
+검증: API 3.6절 `recoveryPaths` 표(`MISSING_REQUIRED_FIELD`·`VISIT_EVIDENCE_REQUIRED` → `REEXTRACT`, `EXTERNAL_SERVICE_ERROR` → `RETRY`)와 PRD·사용자 흐름 두 문장을 대조해 세 사유가 서로 다른 동작으로 정확히 갈리는 것을 확인했다. 문서만 변경해 빌드·테스트 대상은 없다.
+
 ## 11. 비교 지표
 
 해당 없음. 문서 계약 변경이며 측정할 런타임 지표가 없다. 자동 등록률·`CATEGORY_UNRESOLVED` 비율 등은 구현 후 [PRD 11절 지표](../04-product/prd/admin/ai-video-information-extraction.md)에서 측정한다. 이 PR 시점에는 기준선을 만들 수 없다.
