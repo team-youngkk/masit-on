@@ -105,14 +105,15 @@ related_documents:
 | `npm run typecheck` | 통과 | 토글 상태 계산과 감시 화면 TypeScript 검사 |
 | `git diff --check` | 통과 | 공백 오류 없음 |
 | GitHub Actions CI #32094957568 | 통과 | Backend 1,290개 테스트와 프런트 타입 검사·프로덕션 빌드가 통과했다. V4 대상 테스트의 V5 `last_error_at` 혼입, V5 컬럼 순서 기대 오류, Prompt 문서 P2 불일치를 순차 수정했다. |
+| GitHub Actions CI #32096939340 | 통과 | 이번 후속 변경을 포함한 백엔드 전체 테스트와 프런트 타입 검사·프로덕션 빌드가 통과했다. Creator·Watch DB 페이징 통합 테스트와 접근 불가 `RENEWAL_FAILED` 토글 회귀를 포함한다. |
 
 ## 8. 재발 방지 및 다음 확인
 
 - 상태별 토글 동작과 `lastErrorAt` 응답 정규화를 프런트·백엔드 회귀 테스트로 고정했다.
 - API 추적표에 정확한 GET·PUT 보안 경계 테스트를 연결했다.
 - 다중 목록 응답·배치 조회·기존 비공개 감시 행 유지·행별 실패 격리를 API/서비스/프런트 테스트와 계약 문서에 연결했다.
-- Docker가 제공되는 CI에서 `SecurityBoundaryApiTest`와 PostgreSQL `JdbcYoutubeChannelWatchStoreIntegrationTest`를 다시 확인한다. 현재 로컬 Docker 데몬이 없어 full-context 통합 실행은 차단되어 있다.
-- Docker가 제공되는 CI에서 Creator·Watch 조인 페이징의 기존 Watch 보존, 제외 대상, `COUNT(*) OVER()` 전체 수와 페이지 경계를 확인한다.
+- 로컬 Docker 데몬 때문에 실행하지 못했던 `SecurityBoundaryApiTest`와 PostgreSQL `JdbcYoutubeChannelWatchStoreIntegrationTest`를 CI #32096939340에서 확인했다.
+- Creator·Watch 조인 페이징의 기존 Watch 보존, 제외 대상, count 전체 수와 마지막 페이지 경계를 CI 통합 테스트로 확인했다.
 
 ## 9. 도입 전후 비교 지표
 
@@ -125,5 +126,5 @@ related_documents:
 ## 10. 남은 사항
 
 - 로컬 Docker 데몬 부재로 full-context 보안 테스트와 PostgreSQL 통합 테스트를 실행하지 못했다. 코드 컴파일과 비컨테이너 테스트는 통과했다.
-- 기존 12개와 이번 후속 4개 수정 필요 스레드의 반영 내용·검증 범위를 답글로 남기고 해결 처리한다. 이미 반영된 2개 스레드는 기존 CI 근거로 확인 처리한다.
-- 로컬 Docker 데몬 부재로 PostgreSQL 조인 페이징 통합 실행은 원격 CI에서 최종 확인한다.
+- 기존 12개와 이번 후속 4개 수정 필요 스레드의 반영 내용·검증 범위를 답글로 남기고 해결 처리했다. 이미 반영된 2개 스레드도 기존 CI 근거로 확인 처리한다.
+- 남은 코드·계약 변경 사항은 없다. GitHub Actions에 표시된 Node.js 20 및 setup-java v4 deprecation은 저장소 액션 유지보수 경고로, 이번 변경의 테스트 실패가 아니다.
