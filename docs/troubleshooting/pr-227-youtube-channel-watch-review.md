@@ -90,7 +90,7 @@ related_documents:
 | `npm run typecheck` | 통과 | TypeScript 검사 |
 | `npm run build` | 통과 | Next.js 프로덕션 빌드와 `/admin/ai/youtube-channel-watches` 라우트 생성 |
 | `git diff --check` | 통과 | 공백 오류 없음 |
-| GitHub Actions CI #32092419599 | 실패 원인 확인·수정 | Backend 1,288개 테스트 중 V4 대상 테스트가 V5 `last_error_at`를 요구한 3건과 Prompt 문서 P2 불일치 1건을 확인했다. 로컬에서 기대 목록·문서를 수정했으며 push 후 CI 재실행이 필요하다. |
+| GitHub Actions CI #32094957568 | 통과 | Backend 1,290개 테스트와 프런트 타입 검사·프로덕션 빌드가 통과했다. V4 대상 테스트의 V5 `last_error_at` 혼입, V5 컬럼 순서 기대 오류, Prompt 문서 P2 불일치를 순차 수정했다. |
 
 ## 8. 재발 방지 및 다음 확인
 
