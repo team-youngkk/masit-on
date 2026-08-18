@@ -415,12 +415,11 @@ class Expansion3FlywayMigrationIntegrationTest {
 
         List<String> watchColumns = new ArrayList<>(List.of(
                 "id", "creator_id", "youtube_channel_id", "enabled", "subscription_status",
-                "subscription_token_hash", "last_notification_at", "last_renewed_at", "last_error_category"));
+                "subscription_token_hash", "last_notification_at", "last_renewed_at", "last_error_category",
+                "created_at", "updated_at"));
         if (includeLastErrorAt) {
             watchColumns.add("last_error_at");
         }
-        watchColumns.add("created_at");
-        watchColumns.add("updated_at");
 
         Map<String, List<String>> expectedColumns = new HashMap<>(Map.of(
                 "ai_extraction_job", List.of(
