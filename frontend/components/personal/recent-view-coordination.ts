@@ -2,6 +2,7 @@ export type RecentViewSessionStatus =
   | 'loading'
   | 'authenticated'
   | 'anonymous'
+  | 'unavailable'
 
 export type RecentViewCoordinationState = {
   requestedRestaurantId: string | null
