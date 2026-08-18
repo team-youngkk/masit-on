@@ -17,6 +17,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #228 ASG replacement 배포의 상태 보존·중단 제어·권한·네트워크 계약](pr-228-asg-replacement-deployment-review.md)
 - [PR #235 통합 인증·라우팅·관리자 계정 전환 계약 리뷰 반영](pr-235-unified-auth-contract-review.md)
 - [PR #236 코스 지도 구현의 형상 Schema·만료 선택·좌표 검증 결함](pr-236-course-route-map-implementation-review.md)
 - [PR #232 코스 경로 형상·실패 계약 정합화](pr-232-course-route-map-contract-review.md)

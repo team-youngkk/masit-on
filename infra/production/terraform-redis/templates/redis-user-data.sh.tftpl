@@ -1,0 +1,48 @@
+#!/bin/bash
+# 전용 private Redis 부트스트랩. 컨테이너 이미지는 AMI에 미리 pull되어 있고
+# 설정 파일은 S3 gateway endpoint로 받는다. 비밀값을 여기에 쓰지 않는다.
+# requirepass는 redis-render-conf.sh가 Parameter Store에서 읽어 tmpfs에 렌더링한다.
+set -euxo pipefail
+
+REGION=${aws_region}
+BUCKET=${assets_bucket}
+PREFIX=${assets_prefix}
+STAGE=/tmp/masiton-deploy
+DATA_VOLUME_ID=${data_volume_id}
+# Nitro NVMe serial은 EBS volume ID의 하이픈을 제거한 값이다.
+DATA_VOLUME_SERIAL="$${DATA_VOLUME_ID//-/}"
+DATA_DEVICE="/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_$${DATA_VOLUME_SERIAL}"
+
+# EBS attachment은 인스턴스 bootstrap과 별도로 완료될 수 있다. 장치를 확인한
+# 뒤에만 mount해 Redis가 root volume에 AOF를 다시 쓰는 경로를 차단한다.
+for _ in $(seq 1 60); do
+  [ -e "$DATA_DEVICE" ] && break
+  sleep 2
+done
+[ -e "$DATA_DEVICE" ] || { echo "Redis data EBS 장치를 찾지 못했다: $DATA_DEVICE" >&2; exit 1; }
+
+if ! blkid "$DATA_DEVICE" >/dev/null 2>&1; then
+  mkfs.ext4 -F "$DATA_DEVICE"
+fi
+install -d -m 0755 /opt/masiton/redis/data
+grep -qF "$DATA_DEVICE /opt/masiton/redis/data ext4" /etc/fstab || \
+  echo "$DATA_DEVICE /opt/masiton/redis/data ext4 defaults,nofail,x-systemd.device-timeout=120 0 2" >> /etc/fstab
+mountpoint -q /opt/masiton/redis/data || mount /opt/masiton/redis/data
+
+install -d -m 0755 "$STAGE"
+%{ for f in asset_files ~}
+aws s3 cp "s3://$BUCKET/$PREFIX/${f}" "$STAGE/${f}" --region "$REGION"
+%{ endfor ~}
+chmod 0755 "$STAGE/redis-install.sh" "$STAGE/redis-render-conf.sh"
+
+# 자신의 사설 IP에만 6379를 노출한다. 인스턴스 밖 경계는 보안 그룹이 담당한다.
+TOKEN=$(curl -sS -X PUT http://169.254.169.254/latest/api/token -H 'X-aws-ec2-metadata-token-ttl-seconds: 300')
+PRIVATE_IP=$(curl -sS -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/local-ipv4)
+
+install -d -m 0755 /etc/systemd/system/masiton-redis.service.d
+cat > /etc/systemd/system/masiton-redis.service.d/10-publish-addr.conf <<DROPIN
+[Service]
+Environment=REDIS_PUBLISH_ADDR=$PRIVATE_IP
+DROPIN
+
+bash "$STAGE/redis-install.sh" "$STAGE"

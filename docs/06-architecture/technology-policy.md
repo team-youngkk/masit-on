@@ -77,7 +77,7 @@ related_documents:
 ## 5. 개발·테스트·운영 환경 분리
 
 - 개발은 로컬 Docker의 PostgreSQL을 사용하며 운영 RDS에 연결하지 않는다.
-- Redis 역할이 활성화되면 개발은 로컬 Docker Redis만 사용하며 운영 Redis에 연결하지 않는다.
+- Redis 역할이 활성화되면 개발은 로컬 Docker Redis만 사용하며 운영 Redis에 연결하지 않는다. 배포 고도화 운영은 [ADR-DATA-005](../07-adr/data/data-005-redis-refresh-token.md)에 따라 앱 ASG와 분리된 사설 subnet 전용 Redis를 사용한다.
 - 테스트는 Testcontainers 또는 격리된 대체 구현을 사용하고 운영 리소스를 사용하지 않는다.
 - 운영 접속 정보는 환경별 프로파일과 비밀값으로 주입한다.
 - 운영 설정에 `localhost` 또는 Docker 서비스명을 넣지 않는다.
@@ -150,10 +150,10 @@ related_documents:
 - 초기 운영 배포는 단일 EC2 인스턴스(Nginx 리버스 프록시 + Next.js 프론트엔드 + Spring Boot 백엔드)를 사용하며 다중 리전·다중 인스턴스 고가용성 구성을 필수로 하지 않는다.
 - Nginx는 `/api/**`를 Spring Boot, 나머지 외부 경로를 Next.js로 전달하며 `/internal/**`은 인터넷에서 차단한다. 세부 경로와 인증 matcher는 [ADR-WEB-006](../07-adr/platform/web-006-unified-login-rbac-route.md)을 따른다.
 - 운영 애플리케이션 포트는 loopback에만 바인딩해 인스턴스 밖에서 직접 연결할 수 없게 한다. 백엔드 `server.address`와 프론트엔드 `HOSTNAME`을 `127.0.0.1`로 고정하고 이 값을 넓히는 환경 변수를 컨테이너에 전달하지 않는다([ADR-WEB-005](../07-adr/platform/web-005-application-port-binding.md)).
-- 장애 발생 시 운영자가 인스턴스를 수동으로 재기동·교체하는 절차를 사용하며, ASG 기반 자동 복구는 도입하지 않는다.
-- ALB·Blue-Green·ASG 다중 인스턴스 자동화는 3차 확장 이후 배포 고도화 단계에서 도입을 검토한다. 착수 시점은 2026-07-28 팀 4인 전원이 합의했으나 비용·일정 영향 검토가 남아 있어 도입이 확정된 상태는 아니다([ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md) 3.1절). 그때까지 초기 운영 배포의 단일 인스턴스·수동 복구 구성을 유지하며, 토폴로지·전환 절차·비용과 Nginx의 경로 라우팅 책임을 ALB가 대체할지는 착수 시점의 별도 ADR에서 확정한다.
+- 장애 발생 시 M2 초기 운영은 운영자가 인스턴스를 수동으로 재기동·교체하며, 배포 고도화 운영은 [ADR-DEPLOY-005](../07-adr/platform/deploy-005-asg-blue-green-rollout.md)의 ASG·CodeDeploy replacement 경계를 사용한다.
+- ALB·Blue-Green·ASG 다중 인스턴스 자동화는 2026-08-18 영향·비용 검토와 owner 결정을 거쳐 배포 고도화 기준으로 Accepted 확정했다. M2 초기 운영의 단일 인스턴스·수동 복구 기준은 유지하고, 고도화 실제 전환은 별도 runbook·승인·리허설을 따른다. Nginx의 애플리케이션 경로 라우팅 책임은 ALB가 대체하지 않는다.
 - GitHub Actions 빌드·테스트 품질 게이트는 전 단계에 적용하고, ECR push·EC2 승인 배포·Smoke Test는 초기 운영 배포부터 활성화한다.
-- 초기 운영 배포부터 GitHub Actions → ECR → EC2 경로를 사용한다. ALB·Blue-Green 전환 자동화 범위는 배포 고도화 단계에서 별도로 설계한다.
+- 초기 운영 배포부터 GitHub Actions → ECR → EC2 경로를 사용한다. 배포 고도화의 ALB·ASG·CodeDeploy replacement 범위는 ADR-DEPLOY-005를 따른다.
 - 초기 운영 배포부터 로그는 14일 보관하고, DB 백업은 일 1회 자동 스냅샷 후 7일 보관(RPO 최대 24시간)하며, 운영 알림은 CloudWatch 알람을 Slack으로 담당자 1명에게 통지한다. 팀 상시 채널이 Slack뿐이고 운영 이메일 수신 체계가 없어 Slack Webhook만 사용한다([RV-NFR-013](../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준)).
 - 관련: [ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md), [ADR-WEB-006](../07-adr/platform/web-006-unified-login-rbac-route.md), [ADR-WEB-005](../07-adr/platform/web-005-application-port-binding.md), [docs/07-adr/adr-backlog.md](../07-adr/adr-backlog.md) 범위 충돌 검토, [RV-NFR-005](../01-requirements/non-functional-requirements.md#rv-nfr-005-목표-가용성과-복구-시간)·[RV-NFR-009](../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간)·[RV-NFR-010](../01-requirements/non-functional-requirements.md#rv-nfr-010-백업-주기와-복구-범위)·[RV-NFR-013](../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준).
 

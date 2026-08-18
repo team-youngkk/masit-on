@@ -10,6 +10,14 @@
 # 롤백은 이전 커밋 SHA로 이 스크립트를 다시 실행하는 것이다.
 set -euo pipefail
 
+DEPLOYMENT_ENV_FILE="${DEPLOYMENT_ENV_FILE:-/etc/masiton/deployment.env}"
+if [ -f "$DEPLOYMENT_ENV_FILE" ]; then
+  set -a
+  # shellcheck disable=SC1090
+  . "$DEPLOYMENT_ENV_FILE"
+  set +a
+fi
+
 TAG="${1:?배포할 커밋 SHA를 지정한다}"
 STAGE="${2:-/tmp/masiton-deploy}"
 REGION="${AWS_REGION:-ap-northeast-2}"
@@ -22,6 +30,7 @@ OPT_DIR=/opt/masiton
 for f in app-run.sh app-secrets-render.sh masiton-backend.service masiton-frontend.service; do
   [ -f "$STAGE/$f" ] || { echo "스테이징에 $f 가 없다: $STAGE" >&2; exit 1; }
 done
+[ -f "$STAGE/runtime-health.sh" ] || { echo "스테이징에 runtime-health.sh가 없다" >&2; exit 1; }
 
 aws ecr get-login-password --region "$REGION" \
   | docker login --username AWS --password-stdin "$REGISTRY" >/dev/null
@@ -36,14 +45,76 @@ aws ecr get-login-password --region "$REGION" \
 # 함께 바뀐 배포에서는 실패한 배포가 재부팅 후 장애를 만든다.
 staged=$(mktemp -d)
 smoke_redis_keys=()
+previous="$staged/previous"
+rollback_enabled=no
 cleanup() {
   if [ "${#smoke_redis_keys[@]}" -gt 0 ] && [ -n "${redis_password:-}" ]; then
-    docker exec -e REDISCLI_AUTH="$redis_password" masiton-redis redis-cli \
-      DEL "${smoke_redis_keys[@]}" >/dev/null 2>&1 || true
+    if declare -F redis_cli >/dev/null 2>&1; then
+      redis_cli DEL "${smoke_redis_keys[@]}" >/dev/null 2>&1 || true
+    else
+      docker exec -e REDISCLI_AUTH="$redis_password" masiton-redis redis-cli \
+        DEL "${smoke_redis_keys[@]}" >/dev/null 2>&1 || true
+    fi
   fi
   rm -rf "$staged"
 }
 trap cleanup EXIT
+
+rollback() {
+  local original_exit_code=$?
+  set +e
+  trap - ERR
+  [ "$rollback_enabled" = yes ] || return "$original_exit_code"
+  echo '배포 후 health 실패: 이전 이미지·실행 산출물로 rollback을 시도한다' >&2
+  local rollback_failed=no
+
+  restore_asset() {
+    local source="$1"
+    local backup="$2"
+    if [ -f "$backup" ]; then
+      install -d "$(dirname "$source")" || rollback_failed=yes
+      rm -f "$source" || rollback_failed=yes
+      cp -a "$backup" "$source" || rollback_failed=yes
+    elif [ -f "${backup}.missing" ]; then
+      rm -f "$source" || rollback_failed=yes
+    fi
+  }
+
+  for component in backend frontend; do
+    restore_asset "$OPT_DIR/etc/${component}.image" "$previous/${component}.image"
+  done
+  restore_asset "$OPT_DIR/bin/app-run.sh" "$previous/opt/masiton/bin/app-run.sh"
+  restore_asset "$OPT_DIR/bin/app-secrets-render.sh" "$previous/opt/masiton/bin/app-secrets-render.sh"
+  restore_asset "$OPT_DIR/bin/runtime-health.sh" "$previous/opt/masiton/bin/runtime-health.sh"
+  restore_asset "/etc/systemd/system/masiton-backend.service" "$previous/etc/systemd/system/masiton-backend.service"
+  restore_asset "/etc/systemd/system/masiton-frontend.service" "$previous/etc/systemd/system/masiton-frontend.service"
+  systemctl daemon-reload || rollback_failed=yes
+  for service in masiton-backend.service masiton-frontend.service; do
+    if [ -f "/etc/systemd/system/$service" ]; then
+      systemctl restart "$service" || rollback_failed=yes
+    else
+      systemctl disable --now "$service" >/dev/null 2>&1 || true
+    fi
+  done
+
+  if [ "$rollback_failed" = yes ]; then
+    echo 'rollback 자체가 실패했다. 수동 복구가 필요하다.' >&2
+    return 1
+  fi
+  return "$original_exit_code"
+}
+
+backup_asset() {
+  local source="$1"
+  local backup="$2"
+  if [ -e "$source" ]; then
+    install -d "$(dirname "$backup")"
+    cp -a "$source" "$backup"
+  else
+    install -d "$(dirname "$backup")"
+    : > "${backup}.missing"
+  fi
+}
 
 for component in backend frontend; do
   repository="masiton-${component}"
@@ -60,12 +131,28 @@ for component in backend frontend; do
   echo "${component}: ${digest}"
 done
 
-# 여기까지 왔으면 두 이미지가 모두 로컬에 있다. 이제 활성 경로를 교체한다.
+install -d -m 0750 "$previous"
+for component in backend frontend; do
+  backup_asset "$OPT_DIR/etc/${component}.image" "$previous/${component}.image"
+done
+backup_asset "$OPT_DIR/bin/app-run.sh" "$previous/opt/masiton/bin/app-run.sh"
+backup_asset "$OPT_DIR/bin/app-secrets-render.sh" "$previous/opt/masiton/bin/app-secrets-render.sh"
+backup_asset "$OPT_DIR/bin/runtime-health.sh" "$previous/opt/masiton/bin/runtime-health.sh"
+backup_asset "/etc/systemd/system/masiton-backend.service" "$previous/etc/systemd/system/masiton-backend.service"
+backup_asset "/etc/systemd/system/masiton-frontend.service" "$previous/etc/systemd/system/masiton-frontend.service"
+
+# 여기까지 왔으면 두 이미지와 이전 실행 산출물의 백업이 모두 준비됐다. 이후 첫
+# install부터 rollback 보호를 켜서 활성 경로 변경 중 실패도 복구 대상으로 포함한다.
+rollback_enabled=yes
+trap rollback ERR
+
+# 이제 활성 경로를 교체한다.
 install -d -m 0755 "$OPT_DIR/bin" "$OPT_DIR/etc"
 install -m 0750 "$STAGE/app-run.sh" "$OPT_DIR/bin/app-run.sh"
 install -m 0750 "$STAGE/app-secrets-render.sh" "$OPT_DIR/bin/app-secrets-render.sh"
 install -m 0644 "$STAGE/masiton-backend.service" /etc/systemd/system/masiton-backend.service
 install -m 0644 "$STAGE/masiton-frontend.service" /etc/systemd/system/masiton-frontend.service
+install -m 0750 "$STAGE/runtime-health.sh" "$OPT_DIR/bin/runtime-health.sh"
 
 for component in backend frontend; do
   install -m 0644 "$staged/${component}.image" "$OPT_DIR/etc/${component}.image"
@@ -114,6 +201,7 @@ for _ in $(seq 1 36); do
   sleep 5
 done
 [ -n "$front" ] || { echo "프론트엔드 응답 확인 실패" >&2; systemctl status masiton-frontend.service --no-pager -l | tail -20; exit 1; }
+"$OPT_DIR/bin/runtime-health.sh"
 
 # 관리자 로그인 rate-limit은 신뢰된 Nginx peer에서만 전달 헤더를 해석해야 한다.
 # 환경변수의 값은 출력하지 않고, 배포된 컨테이너의 실제 주입 결과만 비교한다.
@@ -155,6 +243,21 @@ refresh_status=$(curl -sS -m 5 -o /dev/null -w '%{http_code}' \
 # Nginx peer(127.0.0.1)를 신뢰해 서로 다른 X-Forwarded-For가 실제로 별도
 # login-source 버킷을 만드는지 Redis 키로 확인한다.
 redis_password=$(< /run/masiton/secrets/spring.data.redis.password)
+REDIS_HOST="${REDIS_HOST:-$(aws ssm get-parameter --region "$REGION" --name /masiton/redis/host \
+  --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || printf '')}"
+if [ "${REQUIRE_SHARED_REDIS:-false}" = true ] && [ -z "$REDIS_HOST" ]; then
+  echo "ASG 배포 smoke에서도 공유 Redis endpoint가 필요하다: REDIS_HOST 또는 /masiton/redis/host" >&2
+  exit 1
+fi
+REDIS_HOST="${REDIS_HOST:-127.0.0.1}"
+REDIS_PORT="${REDIS_PORT:-$(aws ssm get-parameter --region "$REGION" --name /masiton/redis/port \
+  --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || printf '')}"
+REDIS_PORT="${REDIS_PORT:-6379}"
+REDIS_CLI_IMAGE="${REDIS_CLI_IMAGE:-redis:8.8-alpine}"
+redis_cli() {
+  docker run --rm --network host -e REDISCLI_AUTH="$redis_password" "$REDIS_CLI_IMAGE" \
+    redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" --raw "$@"
+}
 rate_limit_keys() {
   python3 - "$1" "$2" <<'PY'
 import hashlib
@@ -176,8 +279,7 @@ PY
 mapfile -t first_client_keys < <(rate_limit_keys '198.51.100.10' 'deploy-smoke-1@invalid.example')
 mapfile -t second_client_keys < <(rate_limit_keys '198.51.100.11' 'deploy-smoke-2@invalid.example')
 smoke_redis_keys=("${first_client_keys[@]}" "${second_client_keys[@]}")
-docker exec -e REDISCLI_AUTH="$redis_password" masiton-redis redis-cli \
-  DEL "${smoke_redis_keys[@]}" >/dev/null
+redis_cli DEL "${smoke_redis_keys[@]}" >/dev/null
 
 for client in \
   '198.51.100.10|deploy-smoke-1@invalid.example' \
@@ -191,11 +293,13 @@ for client in \
 done
 
 for source_key in "${first_client_keys[0]}" "${second_client_keys[0]}"; do
-  source_count=$(docker exec -e REDISCLI_AUTH="$redis_password" masiton-redis redis-cli GET "$source_key")
+  source_count=$(redis_cli GET "$source_key")
   [ "$source_count" = "1" ] || { echo "회원 rate-limit source 키 검증 실패: $source_key" >&2; exit 1; }
 done
-docker exec -e REDISCLI_AUTH="$redis_password" masiton-redis redis-cli \
-  DEL "${smoke_redis_keys[@]}" >/dev/null
+redis_cli DEL "${smoke_redis_keys[@]}" >/dev/null
 smoke_redis_keys=()
+
+trap - ERR
+rollback_enabled=no
 
 echo "배포 완료: tag=${TAG}"

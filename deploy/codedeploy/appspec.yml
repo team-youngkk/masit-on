@@ -1,0 +1,19 @@
+version: 0.0
+os: linux
+files:
+  - source: stage
+    destination: /opt/masiton/revision
+    overwrite: true
+hooks:
+  AfterInstall:
+    - location: stage/codedeploy/hooks/after-install.sh
+      timeout: 1800
+      runas: root
+  ApplicationStart:
+    - location: stage/codedeploy/hooks/application-start.sh
+      timeout: 120
+      runas: root
+  ValidateService:
+    - location: stage/codedeploy/hooks/validate-service.sh
+      timeout: 120
+      runas: root
