@@ -81,11 +81,12 @@ class AiExtractionCommitProjectionIntegrationTest extends FullContextIntegration
                 false, false, false, false));
         AiExtractionResultCommitService.ProcessCommand command = new AiExtractionResultCommitService.ProcessCommand(
                 jobId, "worker-1", 1, startedAt, finishedAt, "provider-request-1", "COMPLETE",
-                "{}", "[]", "{}", "{}", "[]", null, "AUTO_CONFIRMED",
+                "{}", "[]", "{}", "{}", "[]", false, null, "AUTO_CONFIRMED",
                 List.of(new AiExtractionResultCommitService.AiTagCandidate(
                         "candidate-spicy", "TASTE", "TASTE_SPICY", "매운맛", BigDecimal.valueOf(0.95),
                         "{\"type\":\"TIMESTAMP\",\"startMs\":1000,\"endMs\":2000}",
-                        "[]", "P1/S1", "AUTO_ACCEPT", null, true, null)));
+                        "[]", "P1/S1", "AUTO_ACCEPT", null, true, null)),
+                List.of());
         AutoRegisterVerifiedContentUseCase.VerifiedContentCommand registration =
                 new AutoRegisterVerifiedContentUseCase.VerifiedContentCommand(
                         new AutoRegisterVerifiedContentUseCase.RestaurantCandidate(

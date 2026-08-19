@@ -96,7 +96,7 @@ class AiExtractionResultCommitServicePostgreSqlIntegrationTest extends FullConte
                                 "https://img.youtube.com/vi/atomic/0.jpg", finishedAt, finishedAt), true);
         AiExtractionResultCommitService.ProcessCommand command = new AiExtractionResultCommitService.ProcessCommand(
                 jobId, "worker-1", 1, startedAt, finishedAt, "provider-request-atomic", "COMPLETE",
-                "{}", "[]", "{}", "{}", "[]", null, "AUTO_CONFIRMED", List.of());
+                "{}", "[]", "{}", "{}", "[]", false, null, "AUTO_CONFIRMED", List.of(), List.of());
 
         // When / Then
         assertThatThrownBy(() -> commitService.persistConfirmed(command, registration))
@@ -131,8 +131,8 @@ class AiExtractionResultCommitServicePostgreSqlIntegrationTest extends FullConte
         String evidence = "{\"address\":{\"type\":\"TIMESTAMP\",\"startMs\":1,\"endMs\":2}}";
         AiExtractionResultCommitService.ProcessCommand command = new AiExtractionResultCommitService.ProcessCommand(
                 jobId, "worker-1", 1, startedAt, finishedAt, "provider-request-array", "COMPLETE",
-                candidateFields, "[]", fieldConfidences, evidence, "[]", "MULTIPLE_CANDIDATES", "AUTO_BLOCKED",
-                List.of());
+                candidateFields, "[]", fieldConfidences, evidence, "[]", false, "MULTIPLE_CANDIDATES", "AUTO_BLOCKED",
+                List.of(), List.of());
 
         // When
         boolean persisted = commitService.persistBlocked(command);

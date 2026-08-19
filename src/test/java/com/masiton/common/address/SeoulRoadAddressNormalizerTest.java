@@ -1,4 +1,4 @@
-package com.masiton.restaurant.application;
+package com.masiton.common.address;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

@@ -3,6 +3,7 @@ package com.masiton.ai.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -22,6 +23,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.masiton.ai.application.port.out.AiExtractionResultStore;
+import com.masiton.ai.application.port.out.AiRegistrationUnitStore;
 import com.masiton.orchestration.application.port.in.AutoRegisterVerifiedContentUseCase;
 import tools.jackson.databind.ObjectMapper;
 
@@ -29,9 +31,10 @@ import tools.jackson.databind.ObjectMapper;
 class AiExtractionResultCommitServiceTest {
 
     private final AiExtractionResultStore resultStore = mock(AiExtractionResultStore.class);
+    private final AiRegistrationUnitStore registrationUnitStore = mock(AiRegistrationUnitStore.class);
     private final AutoRegisterVerifiedContentUseCase autoRegister = mock(AutoRegisterVerifiedContentUseCase.class);
     private final AiExtractionResultCommitService service = new AiExtractionResultCommitService(
-            resultStore, autoRegister, new ObjectMapper());
+            resultStore, registrationUnitStore, autoRegister, new ObjectMapper());
     private final UUID jobId = UUID.randomUUID();
     private final OffsetDateTime finishedAt = OffsetDateTime.parse("2026-08-11T00:00:10Z");
 
@@ -44,7 +47,7 @@ class AiExtractionResultCommitServiceTest {
                 .willReturn(Optional.of(job()));
         given(resultStore.nextSnapshotVersion(jobId)).willReturn(1);
         given(resultStore.insertSnapshot(any(), anyInt(), anyString(), anyString(), anyString(), anyString(),
-                anyString(), eq("AUTO_BLOCKED"), anyString(), any(), any())).willReturn(UUID.randomUUID());
+                anyString(), anyBoolean(), eq("AUTO_BLOCKED"), anyString(), any(), any())).willReturn(UUID.randomUUID());
 
         // When
         boolean committed = service.persistBlocked(command);
@@ -70,7 +73,7 @@ class AiExtractionResultCommitServiceTest {
         given(resultStore.nextSnapshotVersion(jobId)).willReturn(1);
         UUID snapshotId = UUID.randomUUID();
         given(resultStore.insertSnapshot(any(), anyInt(), anyString(), anyString(), anyString(), anyString(),
-                anyString(), eq("AUTO_BLOCKED"), anyString(), any(), any())).willReturn(snapshotId);
+                anyString(), anyBoolean(), eq("AUTO_BLOCKED"), anyString(), any(), any())).willReturn(snapshotId);
 
         // When
         assertThat(service.persistBlocked(command)).isTrue();
@@ -96,7 +99,7 @@ class AiExtractionResultCommitServiceTest {
                 .willReturn(Optional.of(job()));
         given(resultStore.nextSnapshotVersion(jobId)).willReturn(1);
         given(resultStore.insertSnapshot(any(), anyInt(), anyString(), anyString(), anyString(), anyString(),
-                anyString(), eq("AUTO_CONFIRMED"), eq(null), any(), any())).willReturn(UUID.randomUUID());
+                anyString(), anyBoolean(), eq("AUTO_CONFIRMED"), eq(null), any(), any())).willReturn(UUID.randomUUID());
         given(resultStore.findTagForUpdate("MENU_NAENGMYEON"))
                 .willReturn(Optional.of(new AiExtractionResultStore.TagDefinition(
                         tagId, "MENU_NAENGMYEON", "MENU", "냉면", "[]", "ACTIVE")));
@@ -123,7 +126,7 @@ class AiExtractionResultCommitServiceTest {
         given(resultStore.lockProcessingJob(jobId, "worker-1", 1)).willReturn(Optional.of(job()));
         given(resultStore.nextSnapshotVersion(jobId)).willReturn(1);
         given(resultStore.insertSnapshot(any(), anyInt(), anyString(), anyString(), anyString(), anyString(),
-                anyString(), eq("AUTO_CONFIRMED"), eq(null), any(), any())).willReturn(UUID.randomUUID());
+                anyString(), anyBoolean(), eq("AUTO_CONFIRMED"), eq(null), any(), any())).willReturn(UUID.randomUUID());
         given(autoRegister.register(any())).willThrow(new IllegalStateException("registration failure"));
 
         // When / Then
@@ -139,10 +142,47 @@ class AiExtractionResultCommitServiceTest {
                 URI.create("https://www.youtube.com/watch?v=video-1"));
     }
 
+    @Test
+    @DisplayName("BR-AIEXTRACT-001 등록 단위 판정도 같은 트랜잭션에서 저장한다")
+    void persistBlocked_등록단위판정포함_같은트랜잭션에서저장한다() {
+        // Given
+        RegistrationUnitOutcome outcome = RegistrationUnitOutcome.blocked(1, "행복식당", "PLACE_NOT_FOUND");
+        AiExtractionResultCommitService.ProcessCommand command = command(List.of(), List.of(outcome));
+        given(resultStore.lockProcessingJob(jobId, "worker-1", 1)).willReturn(Optional.of(job()));
+        given(resultStore.nextSnapshotVersion(jobId)).willReturn(1);
+        UUID snapshotId = UUID.randomUUID();
+        given(resultStore.insertSnapshot(any(), anyInt(), anyString(), anyString(), anyString(), anyString(),
+                anyString(), anyBoolean(), eq("AUTO_BLOCKED"), anyString(), any(), any())).willReturn(snapshotId);
+
+        // When
+        assertThat(service.persistBlocked(command)).isTrue();
+
+        // Then
+        var captor = org.mockito.ArgumentCaptor.forClass(AiRegistrationUnitStore.RegistrationUnitInsert.class);
+        verify(registrationUnitStore).insert(captor.capture());
+        AiRegistrationUnitStore.RegistrationUnitInsert inserted = captor.getValue();
+        assertThat(inserted.snapshotId()).isEqualTo(snapshotId);
+        assertThat(inserted.unitIndex()).isEqualTo(1);
+        assertThat(inserted.restaurantName()).isEqualTo("행복식당");
+        assertThat(inserted.reviewStatus()).isEqualTo("AUTO_BLOCKED");
+        assertThat(inserted.blockReason()).isEqualTo("PLACE_NOT_FOUND");
+        assertThat(inserted.placeDecisionJson()).isNull();
+        assertThat(inserted.categoryDecisionJson()).isNull();
+        assertThat(inserted.registeredRestaurantId()).isNull();
+        assertThat(inserted.executedBy()).isEqualTo("WORKER");
+    }
+
     private AiExtractionResultCommitService.ProcessCommand command(
             List<AiExtractionResultCommitService.AiTagCandidate> tags) {
+        return command(tags, List.of());
+    }
+
+    private AiExtractionResultCommitService.ProcessCommand command(
+            List<AiExtractionResultCommitService.AiTagCandidate> tags,
+            List<RegistrationUnitOutcome> registrationUnitOutcomes) {
         return new AiExtractionResultCommitService.ProcessCommand(
                 jobId, "worker-1", 1, finishedAt.minusSeconds(5), finishedAt, "request-1", "COMPLETE",
-                "{}", "[]", "{}", "{}", "[]", "VALIDATION_FAILED", "AUTO_BLOCKED", tags);
+                "{}", "[]", "{}", "{}", "[]", false, "VALIDATION_FAILED", "AUTO_BLOCKED", tags,
+                registrationUnitOutcomes);
     }
 }

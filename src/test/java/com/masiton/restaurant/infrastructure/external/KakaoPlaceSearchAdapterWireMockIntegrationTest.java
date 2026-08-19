@@ -73,6 +73,37 @@ class KakaoPlaceSearchAdapterWireMockIntegrationTest {
     }
 
     @Test
+    @DisplayName("category_name이 있는 문서는 placeCategory로 그대로 반환한다")
+    void 검색_카테고리있음_placeCategory로반환한다() throws Exception {
+        stubKeywordSearch(200, Map.of("documents", List.of(Map.of(
+                "place_name", "아코",
+                "place_url", "https://place.map.kakao.com/example",
+                "road_address_name", "서울특별시 강동구 성내동 12-38",
+                "phone", "02-000-0000",
+                "category_name", "음식점 > 한식 > 냉면"))));
+
+        List<PlaceSearchCandidate> results = adapter().search("아코");
+
+        assertThat(results).hasSize(1);
+        assertThat(results.get(0).placeCategory()).isEqualTo("음식점 > 한식 > 냉면");
+    }
+
+    @Test
+    @DisplayName("category_name이 없는 문서는 placeCategory를 null로 채워 반환한다")
+    void 검색_카테고리없음_placeCategory를null로반환한다() throws Exception {
+        stubKeywordSearch(200, Map.of("documents", List.of(Map.of(
+                "place_name", "아코",
+                "place_url", "https://place.map.kakao.com/example",
+                "road_address_name", "서울특별시 강동구 성내동 12-38",
+                "phone", "02-000-0000"))));
+
+        List<PlaceSearchCandidate> results = adapter().search("아코");
+
+        assertThat(results).hasSize(1);
+        assertThat(results.get(0).placeCategory()).isNull();
+    }
+
+    @Test
     @DisplayName("전화번호가 없는 문서는 phoneNumber를 null로 채워 반환한다")
     void 검색_전화번호없음_phoneNumber를null로반환한다() throws Exception {
         stubKeywordSearch(200, Map.of("documents", List.of(Map.of(

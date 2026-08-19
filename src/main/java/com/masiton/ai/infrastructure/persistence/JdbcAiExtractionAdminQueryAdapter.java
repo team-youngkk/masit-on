@@ -55,6 +55,7 @@ public class JdbcAiExtractionAdminQueryAdapter implements AiExtractionAdminQuery
         List<Detail> rows = jdbc.query(select() + from, (rs, n) -> new Detail(
                 job(rs, n), json(rs, "candidate_fields"), json(rs, "candidate_tags"),
                 json(rs, "field_confidences"), json(rs, "evidence"), json(rs, "missing_fields"),
+                rs.getBoolean("candidate_truncated"),
                 rs.getString("error_category"), retryable(rs.getString("error_category")), attempts(jobId)), jobId);
         return rows.stream().findFirst();
     }
@@ -281,6 +282,22 @@ public class JdbcAiExtractionAdminQueryAdapter implements AiExtractionAdminQuery
                 UUID.randomUUID(), snapshotId, decision, expected, adminId, reason.trim());
     }
     @Override
+    public Optional<JobVideoReference> jobVideoReference(UUID jobId) {
+        return jdbc.query("SELECT youtube_channel_id, youtube_video_id, video_url FROM ai_extraction_job WHERE id=?",
+                (rs, n) -> new JobVideoReference(rs.getString(1), rs.getString(2), rs.getString(3)), jobId)
+                .stream().findFirst();
+    }
+
+    @Override
+    public Optional<SnapshotCandidateJson> snapshotCandidates(UUID snapshotId) {
+        return jdbc.query("SELECT candidate_fields, field_confidences, evidence, candidate_tags "
+                        + "FROM ai_candidate_snapshot WHERE id=?",
+                (rs, n) -> new SnapshotCandidateJson(json(rs, "candidate_fields"), json(rs, "field_confidences"),
+                        json(rs, "evidence"), json(rs, "candidate_tags")), snapshotId)
+                .stream().findFirst();
+    }
+
+    @Override
     public void appendTagOverrides(UUID snapshotId, UUID adminId, String reason, List<TagDecision> decisions) {
         for (TagDecision decision : decisions) {
             jdbc.update("INSERT INTO ai_candidate_tag_review(id,snapshot_id,candidate_tag_id,decision,"
@@ -303,7 +320,7 @@ public class JdbcAiExtractionAdminQueryAdapter implements AiExtractionAdminQuery
                 + "job.model_version,job.prompt_version,job.schema_version,job.attempt_count,"
                 + "job.created_at,job.started_at,job.finished_at,job.error_category,"
                 + "snapshot.candidate_fields,snapshot.candidate_tags,snapshot.field_confidences,"
-                + "snapshot.evidence,snapshot.missing_fields";
+                + "snapshot.evidence,snapshot.missing_fields,snapshot.candidate_truncated";
     }
 
     private AiExtractionJobView job(ResultSet resultSet, int rowNumber) throws SQLException {

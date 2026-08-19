@@ -10,8 +10,8 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import com.masiton.common.address.SeoulRoadAddressNormalizer;
 import com.masiton.restaurant.application.PlaceVerificationFailedException;
-import com.masiton.restaurant.application.SeoulRoadAddressNormalizer;
 import com.masiton.restaurant.application.port.out.PlaceVerificationPort;
 import com.masiton.restaurant.application.port.out.VerifiedPlace;
 import tools.jackson.databind.ObjectMapper;
