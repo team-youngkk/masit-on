@@ -29,12 +29,19 @@ instance_type = "t4g.small"
 app_port     = 443
 app_protocol = "HTTPS"
 
-# blue ASG는 CodeDeploy 교체 환경 체인의 seed다. 첫 배포 이후 트래픽은 CodeDeploy가
-# 만든 ASG가 담당하므로 상시 0대로 두고, ASG 자체 설정을 체인에 반영해야 할 때만
-# 1대로 키워 다시 seeding한다.
+# blue ASG는 CodeDeploy 교체 환경 체인의 seed다. blue_desired_capacity=1은 최초
+# seeding에 필요한 값이다. 첫 배포 후 replacement가 healthy해지면 이미 실행 중인
+# seed를 0대로 내리는 명령을 [정리 runbook](../../../docs/08-planning/blue-green-cleanup-runbook.md)에서
+# 실행한다. desired_capacity는 ignore_changes 대상이므로 tfvars만 바꾸지 않는다.
+# ASG 자체 설정을 체인에 반영해 다시 seeding할 때만 1대로 복원한다.
 blue_min_size         = 0
 blue_desired_capacity = 1
 blue_max_size         = 2
+
+# 최초 seeding에서는 false로 유지한다. known-good 배포 성공 후
+# deployment group의 autoscaling_groups가 replacement ASG를 가리키는 것을
+# 확인한 뒤 별도 plan/apply에서 true로 바꿔 성공 배포 후 자동 종료를 활성화한다.
+codedeploy_termination_enabled = false
 
 # 새 ASG가 기존 RDS에 접근하려면 RDS SG에 app SG 출처 ingress가 필요하다.
 # 끄면 SG ingress에서 drop되어 backend가 Flyway 연결 timeout으로 기동에 실패한다.
@@ -89,3 +96,4 @@ ssm_parameter_arns = ["arn:aws:ssm:ap-northeast-2:000000000000:parameter/masiton
 # asg_health_check_type            = "EC2"
 # deployment_alarms_enabled        = false
 # deployment_auto_rollback_enabled = false
+
