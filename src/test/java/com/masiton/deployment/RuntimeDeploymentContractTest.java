@@ -100,6 +100,7 @@ class RuntimeDeploymentContractTest {
         String iam = Files.readString(TERRAFORM_IAM);
 
         assertThat(workflow)
+                .contains("ref: ${{ env.IMAGE_TAG }}")
                 .contains("stop-deployment")
                 .contains("--auto-rollback-enabled")
                 .contains("trap on_exit EXIT")
@@ -113,6 +114,10 @@ class RuntimeDeploymentContractTest {
                 .contains("deployment_id_key")
                 .contains("aws s3api put-object")
                 .contains("aws s3 cp \"s3://${CODEDEPLOY_S3_BUCKET}/${deployment_id_key}\"")
+                .contains("aws deploy list-deployments")
+                .contains("aws deploy batch-get-deployments")
+                .contains("lookup_completed")
+                .contains("steps.lookup.outputs.resolved")
                 .contains("for _ in $(seq 1 24)");
         assertThat(workflow).doesNotContain("actions/download-artifact@v4");
         assertThat(workflow.indexOf("aws s3api put-object"))
