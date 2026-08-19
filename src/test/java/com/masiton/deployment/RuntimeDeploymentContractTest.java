@@ -127,7 +127,10 @@ class RuntimeDeploymentContractTest {
         assertThat(workflow.indexOf("aws s3api put-object"))
                 .isGreaterThan(workflow.indexOf("aws deploy create-deployment"))
                 .isLessThan(workflow.indexOf("for _ in $(seq 1 270)"));
-        assertThat(iam).contains("codedeploy:StopDeployment");
+        assertThat(iam)
+                .contains("codedeploy:StopDeployment")
+                .contains("actions   = [\"codedeploy:ListDeployments\"]\n    resources = [aws_codedeploy_deployment_group.app.arn]")
+                .contains("actions   = [\"codedeploy:BatchGetDeployments\"]\n    resources = [aws_codedeploy_deployment_group.app.arn]");
     }
 
     @Test
