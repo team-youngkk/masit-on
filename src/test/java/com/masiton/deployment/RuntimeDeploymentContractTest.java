@@ -260,7 +260,18 @@ class RuntimeDeploymentContractTest {
                 .contains("운영 전환 전에 남김");
         assertThat(Files.readString(CLEANUP_RUNBOOK))
                 .contains("codedeploy-cancel-cleanup")
-                .contains("S3 deployment ID pointer");
+                .contains("S3 deployment ID pointer")
+                .contains("update-auto-scaling-group")
+                .contains("--desired-capacity 0")
+                .contains("ignore_changes = [desired_capacity]")
+                .contains("healthy target instance가 seed ASG에 남아 있지 않고 replacement ASG에만 속하는지");
+        assertThat(Files.readString(PRODUCTION_README))
+                .contains("desired capacity 0으로 축소한다")
+                .contains("ignore_changes = [desired_capacity]")
+                .contains("seed ASG의 healthy target이 남아 있지 않은 것을 확인한 뒤");
+        assertThat(Files.readString(TERRAFORM_TFVARS_EXAMPLE))
+                .contains("blue_desired_capacity=1은 최초")
+                .contains("desired_capacity는 ignore_changes 대상이므로 tfvars만 바꾸지 않는다");
         assertThat(Files.readString(TROUBLESHOOTING))
                 .contains("redis-user-data.tftest.hcl")
                 .contains("terraform-contract");

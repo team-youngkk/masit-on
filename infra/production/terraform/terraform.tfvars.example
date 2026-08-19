@@ -29,9 +29,11 @@ instance_type = "t4g.small"
 app_port     = 443
 app_protocol = "HTTPS"
 
-# blue ASG는 CodeDeploy 교체 환경 체인의 seed다. 첫 배포 이후 트래픽은 CodeDeploy가
-# 만든 ASG가 담당하므로 상시 0대로 두고, ASG 자체 설정을 체인에 반영해야 할 때만
-# 1대로 키워 다시 seeding한다.
+# blue ASG는 CodeDeploy 교체 환경 체인의 seed다. blue_desired_capacity=1은 최초
+# seeding에 필요한 값이다. 첫 배포 후 replacement가 healthy해지면 이미 실행 중인
+# seed를 0대로 내리는 명령을 [정리 runbook](../../../docs/08-planning/blue-green-cleanup-runbook.md)에서
+# 실행한다. desired_capacity는 ignore_changes 대상이므로 tfvars만 바꾸지 않는다.
+# ASG 자체 설정을 체인에 반영해 다시 seeding할 때만 1대로 복원한다.
 blue_min_size         = 0
 blue_desired_capacity = 1
 blue_max_size         = 2

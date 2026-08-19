@@ -26,6 +26,25 @@ aws deploy get-deployment-group `
 
 GitHub Actions workflow가 취소된 경우의 CodeDeploy 중단·terminal 상태 확인은 `.github/workflows/ci.yml`의 `codedeploy-cancel-cleanup` job이 실행별 S3 deployment ID pointer를 사용해 자동으로 처리하므로 이 runbook의 수동 정리 대상과 혼동하지 않는다.
 
+## 최초 seeding 후 Terraform seed 축소
+
+첫 배포가 성공하고 deployment group이 replacement ASG를 가리키며 replacement의 target health가 정상인 것을 확인한 뒤, Terraform이 소유한 seed ASG는 삭제하지 않고 0대로 축소한다. `aws_autoscaling_group.blue`에는 `ignore_changes = [desired_capacity]`가 있으므로 `blue_desired_capacity` 값을 tfvars에서 바꾸는 것만으로 이미 실행 중인 seed ASG의 desired capacity가 내려가지 않는다.
+
+```powershell
+$seedAsgName = "<name-prefix>-blue-asg"
+
+aws autoscaling update-auto-scaling-group `
+  --auto-scaling-group-name $seedAsgName `
+  --min-size 0 `
+  --desired-capacity 0
+
+aws autoscaling describe-auto-scaling-groups `
+  --auto-scaling-group-names $seedAsgName `
+  --query 'AutoScalingGroups[0].{MinSize:MinSize,DesiredCapacity:DesiredCapacity,Instances:Instances[*].InstanceId}'
+```
+
+위 결과의 `DesiredCapacity`와 `Instances`가 0인지 확인한 뒤 [확인](#확인)의 target health 명령을 다시 실행한다. healthy target instance가 seed ASG에 남아 있지 않고 replacement ASG에만 속하는지 `describe-auto-scaling-instances`로 대조한 다음에만 `codedeploy_termination_enabled=true`를 별도 plan/apply한다. seed ASG 자체는 Terraform state와 target group 연결을 유지하므로 삭제하지 않는다.
+
 ## 확인
 
 ```powershell
