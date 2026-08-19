@@ -216,6 +216,18 @@ data "aws_iam_policy_document" "github_actions_deploy" {
     resources = [aws_codedeploy_deployment_group.app.arn]
   }
 
+  # CreateDeployment에 revision을 실어 보내면 CodeDeploy가 그 revision을
+  # application에 먼저 등록한다. 등록·조회 권한의 리소스 타입은 deployment group이
+  # 아니라 application이므로 위 statement로는 덮이지 않는다.
+  statement {
+    effect = "Allow"
+    actions = [
+      "codedeploy:RegisterApplicationRevision",
+      "codedeploy:GetApplicationRevision",
+    ]
+    resources = [aws_codedeploy_app.app.arn]
+  }
+
   statement {
     effect = "Allow"
     actions = [
