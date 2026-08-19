@@ -123,6 +123,10 @@ class RuntimeDeploymentContractTest {
                 .contains("for _ in $(seq 1 24)");
         int incompleteLookup = workflow.indexOf("if [ \"$lookup_completed\" = false ]; then");
         int incompleteLookupExit = workflow.indexOf("exit 1", incompleteLookup);
+        int attemptLoop = workflow.indexOf("for attempt in 1 2 3 4; do");
+        int attemptReset = workflow.indexOf("lookup_completed=false", attemptLoop);
+        assertThat(attemptReset).isGreaterThan(attemptLoop);
+        assertThat(attemptReset).isLessThan(workflow.indexOf("candidates=\"\"", attemptLoop));
         assertThat(incompleteLookup).isGreaterThan(0);
         assertThat(incompleteLookupExit).isGreaterThan(incompleteLookup);
         assertThat(workflow).doesNotContain("actions/download-artifact@v4");

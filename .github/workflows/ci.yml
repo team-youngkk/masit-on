@@ -888,6 +888,9 @@ jobs:
           # 머문다. 이 상태를 빼면 전환까지 끝난 배포를 정리 대상에서 놓친다.
           lookup_completed=false
           for attempt in 1 2 3 4; do
+            # 이전 시도의 성공 여부를 다음 시도에 물려주지 않는다. 현재 시도가
+            # 전체 조회를 끝까지 완료한 경우에만 아래에서 true로 설정한다.
+            lookup_completed=false
             candidates=""
             if ! candidates=$(aws deploy list-deployments \
               --application-name "$CODEDEPLOY_APPLICATION" \
