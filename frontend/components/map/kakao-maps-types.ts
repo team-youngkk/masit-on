@@ -65,6 +65,11 @@ export type KakaoMapsNamespace = {
       type: string,
       handler: () => void,
     ): void
+    removeListener(
+      target: KakaoEventTarget,
+      type: string,
+      handler: () => void,
+    ): void
   }
   load(callback: () => void): void
 }

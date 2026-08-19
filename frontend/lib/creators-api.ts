@@ -130,12 +130,17 @@ export class CreatorIdentifierInvalidError extends Error {
 }
 
 export class CreatorDetailUnavailableError extends Error {
+  readonly status: number
+  readonly traceId?: string
+
   constructor(
-    readonly status: number,
-    readonly traceId?: string,
+    status: number,
+    traceId?: string,
   ) {
     super(`유튜버 상세 조회에 실패했습니다: ${status}`)
     this.name = 'CreatorDetailUnavailableError'
+    this.status = status
+    this.traceId = traceId
   }
 }
 
