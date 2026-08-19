@@ -333,24 +333,41 @@ class RuntimeDeploymentContractTest {
         assertThat(bootstrap).contains("\"$STAGE/cloudwatch-install.sh\" \"$STAGE\"");
         assertThat(afterInstall).contains("cloudwatch-install.sh");
 
-        // 권한이 없으면 지표가 끊기고 감지 경로 자체가 사라진다.
+        // 전송 실패를 삼키면 지표가 없는 채로 alarm이 영원히 OK로 남아 감지 계약이
+        // 조용히 거짓이 된다. 실패를 그대로 종료 코드로 드러내야 한다.
+        assertThat(metrics)
+                .contains("put_status=$?")
+                .contains("exit \"$put_status\"");
+
+        // 권한이 없으면 지표가 끊기고 감지 경로 자체가 사라진다. agent가 보내는
+        // 로그 권한이 없으면 agent만 기동한 채 전송이 계속 실패한다.
         assertThat(iam)
                 .contains("cloudwatch:PutMetricData")
                 .contains("cloudwatch:namespace")
-                .contains("masiton/health");
+                .contains("masiton/health")
+                .contains("logs:PutLogEvents")
+                .contains("log-group:/masiton/*");
 
         // 결측을 breaching으로 두면 교체 환경이 지표를 올리기 전에 모든 배포가
-        // 자기 자신의 알람에 걸린다.
+        // 자기 자신의 알람에 걸린다. 차원이 없으면 다른 환경의 값이 섞인다.
         assertThat(monitoring)
                 .contains("FleetDependencyRedis")
                 .contains("statistic   = \"Minimum\"")
                 .contains("comparison_operator = \"LessThanThreshold\"")
                 .contains("treat_missing_data = \"notBreaching\"")
+                .contains("Environment = \"asg\"")
                 .contains("aws_cloudwatch_metric_alarm.fleet_dependency_redis.alarm_name");
+        assertThat(metrics).contains("Dimensions=[{Name=Environment,Value=$ENVIRONMENT}]");
 
         // Redis를 readiness에 넣으면 공유 Redis 장애가 fleet 전체를 동시에
-        // unhealthy로 만들어 공개 탐색까지 끊긴다. ALB 경로는 그대로 둔다.
+        // unhealthy로 만들어 공개 탐색까지 끊긴다. ALB health location이 dependencies로
+        // 바뀌지 않았는지만 본다. 파일 전체를 금지하면 무관한 변경까지 막는다.
         assertThat(nginx).contains("proxy_pass http://masiton_backend/internal/health/ready");
-        assertThat(nginx).doesNotContain("/internal/health/dependencies");
+        for (String block : nginx.split("location = /_masiton/alb-health")) {
+            if (block.startsWith(" {")) {
+                assertThat(block.substring(0, block.indexOf('}')))
+                        .doesNotContain("/internal/health/dependencies");
+            }
+        }
     }
 }

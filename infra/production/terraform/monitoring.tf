@@ -76,6 +76,12 @@ resource "aws_cloudwatch_metric_alarm" "fleet_dependency_redis" {
   # 두면 모든 Blue-Green 배포가 시작 직후 자기 자신의 알람에 걸려 중단된다.
   # 지표 유실 감지는 이 배포 게이트가 아니라 별도 운영 알람의 몫이다.
   treat_missing_data = "notBreaching"
+
+  # 차원 없이 올리면 이 계정·리전의 다른 인스턴스가 올린 값까지 같은 지표에 섞여
+  # ASG와 무관한 Redis 장애가 배포를 막는다. 기존 단일 EC2 정리 단계가 그 경우다.
+  dimensions = {
+    Environment = "asg"
+  }
 }
 
 resource "aws_cloudwatch_metric_alarm" "blue_unhealthy" {

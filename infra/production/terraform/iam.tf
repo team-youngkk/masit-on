@@ -98,6 +98,25 @@ data "aws_iam_policy_document" "app_parameter_read" {
       values   = ["masiton/health"]
     }
   }
+
+  # cloudwatch-install.sh가 설치하는 agent는 amazon-cloudwatch-agent.json대로
+  # Nginx access·error와 컨테이너 로그를 CloudWatch Logs로 보낸다. 이 권한이
+  # 없으면 agent는 기동한 채 전송만 계속 실패해, 장애 조사 때 있을 줄 알았던
+  # 로그가 비어 있다. 설정이 선언한 로그 그룹으로 범위를 제한한다.
+  statement {
+    effect = "Allow"
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents",
+      "logs:PutRetentionPolicy",
+      "logs:DescribeLogStreams",
+    ]
+    resources = [
+      "arn:aws:logs:${var.aws_region}:*:log-group:/masiton/*",
+      "arn:aws:logs:${var.aws_region}:*:log-group:/masiton/*:log-stream:*",
+    ]
+  }
 }
 
 resource "aws_iam_role_policy" "app_parameter_read" {
