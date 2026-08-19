@@ -58,3 +58,4 @@ systemctl enable --now masiton-health-metrics.timer >/dev/null
 AWS_REGION="$REGION" "$OPT_DIR/bin/health-metrics.sh"
 
 echo "timer: enabled=$(systemctl is-enabled masiton-health-metrics.timer) active=$(systemctl is-active masiton-health-metrics.timer)"
+

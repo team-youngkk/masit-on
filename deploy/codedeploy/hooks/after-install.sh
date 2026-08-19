@@ -14,3 +14,4 @@ chmod +x "$ROOT"/instance-bootstrap.sh "$ROOT"/redis-install.sh \
   "$ROOT"/app-deploy.sh "$ROOT"/nginx-install.sh "$ROOT"/runtime-health.sh \
   "$ROOT"/cloudwatch-install.sh "$ROOT"/health-metrics.sh
 "$ROOT/instance-bootstrap.sh" "$image_tag" "$ROOT"
+
