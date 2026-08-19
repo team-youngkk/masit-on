@@ -14,8 +14,13 @@ private_route_table_ids = ["rtb-REPLACE_ME"]
 # masiton-redis.service의 digest 고정이 그대로 동작한다.
 redis_ami_id = "ami-REPLACE_ME"
 
-# 운영 ASG의 app security group.
-app_security_group_ids = ["sg-REPLACE_ME_APP"]
+# Redis 6379에 접근하는 app security group. /masiton/redis/host는 두 환경이
+# 공유하므로, 기존 단일 EC2가 아직 rollback 경로로 남아 있는 동안에는 그 SG도
+# 함께 허용해야 재기동 시 Redis 연결이 끊기지 않는다.
+app_security_group_ids = [
+  "sg-REPLACE_ME_LEGACY_APP", # masiton-app-sg (기존 운영 EC2)
+  "sg-REPLACE_ME_APP",        # masiton-prod-app-sg (신규 ASG)
+]
 
 # ssm endpoint는 private DNS가 VPC 전역에 적용된다. SSM Agent를 쓰는
 # 기존 운영 인스턴스의 SG를 반드시 포함해야 그 인스턴스가 SSM에서 이탈하지 않는다.

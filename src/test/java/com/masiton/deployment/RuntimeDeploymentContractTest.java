@@ -273,20 +273,35 @@ class RuntimeDeploymentContractTest {
     }
 
     @Test
-    @DisplayName("기존 단일 EC2 SSM 경로와 차세대 배포 입력 계약을 함께 보존한다")
-    void ci_기존INSTANCE경로와_CodeDeploy_ASG입력을함께보존한다() throws IOException {
+    @DisplayName("CodeDeploy 단일 경로와 운영 기본값을 사용한다")
+    void ci_CodeDeploy단일경로와운영기본값을사용한다() throws IOException {
         String workflow = Files.readString(CI);
+        String deploy = section(workflow, "  deploy:", "  # GitHub 취소");
+        String cleanup = workflow.substring(workflow.indexOf("  codedeploy-cancel-cleanup:"));
 
         assertThat(workflow)
-                .contains("INSTANCE_ID:")
-                .contains("--instance-ids \"$INSTANCE_ID\"")
-                .contains("deployment_target")
+                .doesNotContain("INSTANCE_ID:")
+                .doesNotContain("--instance-ids \"$INSTANCE_ID\"")
+                .doesNotContain("deployment_target")
+                .doesNotContain("DEPLOYMENT_TARGET")
+                .doesNotContain("SSM 명령 준비")
+                .doesNotContain("SSM으로 배포 실행")
                 .contains("CODEDEPLOY_APPLICATION")
                 .contains("CODEDEPLOY_DEPLOYMENT_GROUP")
-                .contains("if: env.DEPLOYMENT_TARGET == 'instance'")
-                .contains("if: env.DEPLOYMENT_TARGET == 'codedeploy'")
+                .contains("codedeploy_application || 'masiton-prod-codedeploy'")
+                .contains("codedeploy_deployment_group || 'masiton-prod-deployment-group'")
+                .contains("codedeploy_s3_bucket || 'masiton-prod-codedeploy-711457211155'")
                 .contains("environment: production")
                 .contains("id-token: write");
+        assertThat(deploy)
+                .contains("name: CodeDeploy revision 패키징")
+                .contains("name: CodeDeploy revision 업로드 및 배포")
+                .doesNotContain("if: env.DEPLOYMENT_TARGET");
+        assertThat(cleanup)
+                .contains("needs.deploy.result == 'cancelled'")
+                .contains("codedeploy_s3_bucket || 'masiton-prod-codedeploy-711457211155'")
+                .doesNotContain("github.event_name == 'workflow_dispatch'")
+                .doesNotContain("github.event.inputs.deployment_target");
     }
 
     @Test
@@ -316,9 +331,9 @@ class RuntimeDeploymentContractTest {
                 .contains("aws deploy create-deployment")
                 .contains("aws deploy get-deployment")
                 .contains("CODEDEPLOY_S3_BUCKET")
-                .contains("codedeploy_s3_bucket || ''")
+                .contains("codedeploy_s3_bucket || 'masiton-prod-codedeploy-711457211155'")
                 .contains("--s3-location")
-                .contains("for _ in $(seq 1 120)");
+                .contains("for _ in $(seq 1 270)");
     }
 
     @Test

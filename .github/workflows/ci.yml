@@ -16,7 +16,7 @@ on:
       - 'deploy/**'
   # 배포 대상 커밋을 직접 지정하는 입력 경로다. push 트리거만으로는 배포 job이 항상
   # 현재 실행의 커밋을 배포하게 되어, 장애 시 직전 digest로 되돌리려면 승인 게이트
-  # 밖에서 SSM을 수동 실행해야 한다. 롤백도 같은 경로를 쓰도록 하는 #78 완료 조건이다.
+  # 밖에서 배포를 수동 실행해야 한다. 롤백도 같은 경로를 쓰도록 하는 #78 완료 조건이다.
   #
   # 이 경로도 배포 job의 `environment: production` 승인을 그대로 거친다. 승인 없이는
   # job이 시작되지 않으므로 게이트를 우회하는 경로가 아니다.
@@ -26,22 +26,16 @@ on:
         description: '배포할 커밋 SHA 40자. 비우면 선택한 브랜치의 현재 커밋을 배포한다'
         required: false
         type: string
-      deployment_target:
-        description: '배포 대상 입력 계약'
-        required: false
-        default: instance
-        type: choice
-        options: [instance, codedeploy]
       codedeploy_application:
-        description: 'CodeDeploy application name'
+        description: 'CodeDeploy application name. 비우면 운영 기본값을 쓴다'
         required: false
         type: string
       codedeploy_deployment_group:
-        description: 'CodeDeploy deployment group'
+        description: 'CodeDeploy deployment group. 비우면 운영 기본값을 쓴다'
         required: false
         type: string
       codedeploy_s3_bucket:
-        description: 'CodeDeploy revision S3 bucket (codedeploy 선택 시 필수)'
+        description: 'CodeDeploy revision S3 bucket. 비우면 운영 기본값을 쓴다'
         required: false
         type: string
 
@@ -479,11 +473,11 @@ jobs:
       id-token: write
     env:
       AWS_REGION: ap-northeast-2
-      INSTANCE_ID: i-0b451f18bca827cc9
-      DEPLOYMENT_TARGET: ${{ github.event.inputs.deployment_target || 'instance' }}
-      CODEDEPLOY_APPLICATION: ${{ github.event.inputs.codedeploy_application || '' }}
-      CODEDEPLOY_DEPLOYMENT_GROUP: ${{ github.event.inputs.codedeploy_deployment_group || '' }}
-      CODEDEPLOY_S3_BUCKET: ${{ github.event.inputs.codedeploy_s3_bucket || '' }}
+      # 배포 경로는 CodeDeploy Blue-Green 하나다. push 이벤트에는 inputs가 없으므로
+      # 운영 자원 이름을 기본값으로 둔다. dispatch 입력은 이 기본값을 덮는다.
+      CODEDEPLOY_APPLICATION: ${{ github.event.inputs.codedeploy_application || 'masiton-prod-codedeploy' }}
+      CODEDEPLOY_DEPLOYMENT_GROUP: ${{ github.event.inputs.codedeploy_deployment_group || 'masiton-prod-deployment-group' }}
+      CODEDEPLOY_S3_BUCKET: ${{ github.event.inputs.codedeploy_s3_bucket || 'masiton-prod-codedeploy-711457211155' }}
       # 입력이 있으면 그 커밋을, 없으면 이 실행의 커밋을 배포한다. push 이벤트에는
       # inputs가 없어 항상 github.sha가 된다.
       IMAGE_TAG: ${{ github.event.inputs.image_tag || github.sha }}
@@ -495,8 +489,8 @@ jobs:
         with:
           ref: ${{ env.IMAGE_TAG }}
 
-      # 이 값은 아래에서 SSM 명령 문자열에 들어가 인스턴스에서 root로 실행된다.
-      # 자유 문자열을 그대로 실으면 명령 주입이 되므로 커밋 SHA 형식만 받아들인다.
+      # 이 값은 revision.env에 실려 인스턴스의 AfterInstall hook에서 이미지 태그로
+      # 쓰인다. 자유 문자열을 그대로 실으면 안 되므로 커밋 SHA 형식만 받아들인다.
       # 승인 게이트가 사람 판단을 요구하지만 그것은 입력 내용을 검사하지 않는다.
       - name: 배포 대상 커밋 SHA 검증
         run: |
@@ -519,133 +513,7 @@ jobs:
           role-to-assume: arn:aws:iam::711457211155:role/masiton-github-actions-role
           aws-region: ${{ env.AWS_REGION }}
 
-      # 배포 스크립트를 인스턴스로 실어 보낸다. 인스턴스에 미리 설치해 두는 방식은
-      # 스크립트를 바꿀 때 수동 단계가 생겨 ADR-RUNTIME-001 12절이 경계한 "재현 절차가
-      # 문서 밖 암묵 지식이 되는 것"에 가까워진다. 저장소의 현재 내용을 그대로 보낸다.
-      #
-      # base64로 싣는 이유는 인용과 개행 처리를 없애기 위한 것이다.
-      - name: SSM 명령 준비
-        run: |
-          set -euo pipefail
-          python3 - <<'PY' > command.json
-          import base64
-          import io
-          import json
-          import os
-          import tarfile
-
-          files = [
-              "deploy/scripts/app-deploy.sh",
-              "deploy/scripts/app-run.sh",
-              "deploy/scripts/app-secrets-render.sh",
-              "deploy/scripts/runtime-health.sh",
-              "deploy/scripts/instance-bootstrap.sh",
-              "deploy/scripts/redis-install.sh",
-              "deploy/scripts/redis-render-conf.sh",
-              "deploy/redis/redis.conf",
-              "deploy/redis/masiton-redis.service",
-              "deploy/scripts/nginx-install.sh",
-              "deploy/scripts/nginx-smoke.sh",
-              "deploy/scripts/tls-deploy-cert.sh",
-              "deploy/app/masiton-backend.service",
-              "deploy/app/masiton-frontend.service",
-              "deploy/nginx/nginx.conf",
-              "deploy/nginx/masiton.click.conf",
-              "deploy/nginx/00-masiton-upgrade-map.conf",
-              "deploy/nginx/masiton-tls-renew.service",
-              "deploy/nginx/masiton-tls-renew.timer",
-          ]
-
-          archive = io.BytesIO()
-          with tarfile.open(fileobj=archive, mode="w:gz", compresslevel=9) as bundle:
-              for path in files:
-                  with open(path, "rb") as handle:
-                      content = handle.read().replace(b"\r\n", b"\n")
-                  info = tarfile.TarInfo(os.path.basename(path))
-                  info.size = len(content)
-                  info.mode = 0o644
-                  info.mtime = 0
-                  bundle.addfile(info, io.BytesIO(content))
-
-          encoded = base64.b64encode(archive.getvalue()).decode("ascii")
-          lines = [
-              "set -euo pipefail",
-              "STAGE=/tmp/masiton-deploy",
-              'rm -rf "$STAGE"',
-              'mkdir -p "$STAGE"',
-          ]
-          for index in range(0, len(encoded), 400):
-              redirect = ">" if index == 0 else ">>"
-              lines.append(f'printf %s "{encoded[index:index + 400]}" {redirect} "$STAGE/deploy-bundle.tar.gz.b64"')
-          lines.append('base64 -d "$STAGE/deploy-bundle.tar.gz.b64" > "$STAGE/deploy-bundle.tar.gz"')
-          lines.append('tar -xzf "$STAGE/deploy-bundle.tar.gz" -C "$STAGE"')
-          lines.append('rm -f "$STAGE/deploy-bundle.tar.gz.b64" "$STAGE/deploy-bundle.tar.gz"')
-          lines.append('chmod +x "$STAGE/app-deploy.sh" "$STAGE/app-run.sh" "$STAGE/app-secrets-render.sh" "$STAGE/nginx-install.sh" "$STAGE/nginx-smoke.sh" "$STAGE/tls-deploy-cert.sh"')
-          lines.append('chmod +x "$STAGE/runtime-health.sh" "$STAGE/instance-bootstrap.sh" "$STAGE/redis-install.sh" "$STAGE/redis-render-conf.sh"')
-          lines.append(f'"$STAGE/app-deploy.sh" "{os.environ["IMAGE_TAG"]}" "$STAGE"')
-          lines.append('"$STAGE/nginx-install.sh" "$STAGE"')
-
-          payload = {"commands": ["\n".join(lines)], "executionTimeout": ["1800"]}
-          serialized = json.dumps(payload, ensure_ascii=True)
-          max_ssm_command_bytes = 64 * 1024
-          payload_bytes = len(serialized.encode("utf-8"))
-          if payload_bytes > max_ssm_command_bytes:
-              raise SystemExit(
-                  f"SSM 명령 JSON이 64KB 제한을 넘었다: {payload_bytes} > {max_ssm_command_bytes}")
-          print(serialized)
-          PY
-          echo "명령 크기: $(wc -c < command.json)바이트"
-
-      # 배포 스크립트가 상태 확인 폴링까지 하고 실패하면 non-zero로 끝난다. 그래서
-      # 명령 상태가 Success가 아니면 이 job도 실패한다. 실패를 성공으로 바꾸지 않는다.
-      - name: SSM으로 배포 실행
-        if: env.DEPLOYMENT_TARGET == 'instance'
-        run: |
-          set -euo pipefail
-          command_id=$(aws ssm send-command \
-            --instance-ids "$INSTANCE_ID" \
-            --document-name AWS-RunShellScript \
-            --parameters "file://command.json" \
-            --query 'Command.CommandId' --output text)
-          echo "CommandId: $command_id"
-
-          status=Pending
-          for _ in $(seq 1 120); do
-            status=$(aws ssm get-command-invocation \
-              --command-id "$command_id" --instance-id "$INSTANCE_ID" \
-              --query 'Status' --output text 2>/dev/null || echo Pending)
-            case "$status" in
-              Success|Failed|Cancelled|TimedOut) break ;;
-            esac
-            sleep 10
-          done
-
-          {
-            echo '## 운영 배포'
-            echo
-            echo "커밋 \`${IMAGE_TAG}\`"
-            echo
-            echo '```text'
-            aws ssm get-command-invocation --command-id "$command_id" --instance-id "$INSTANCE_ID" \
-              --query 'StandardOutputContent' --output text
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-
-          echo "===== 실행 출력 ====="
-          aws ssm get-command-invocation --command-id "$command_id" --instance-id "$INSTANCE_ID" \
-            --query 'StandardOutputContent' --output text
-
-          if [ "$status" != "Success" ]; then
-            echo "===== 오류 출력 ====="
-            aws ssm get-command-invocation --command-id "$command_id" --instance-id "$INSTANCE_ID" \
-              --query 'StandardErrorContent' --output text
-            echo "배포가 실패했다 (상태 $status). 직전 이미지로 롤백하려면 Actions에서 이 워크플로를 workflow_dispatch로 실행하고 image_tag에 직전 커밋 SHA를 넣는다. 같은 승인 게이트를 거친다." >&2
-            exit 1
-          fi
-          echo "배포 완료: $IMAGE_TAG"
-
       - name: CodeDeploy revision 패키징
-        if: env.DEPLOYMENT_TARGET == 'codedeploy'
         run: |
           set -euo pipefail
           python3 - <<'PY'
@@ -719,7 +587,6 @@ jobs:
 
       - name: CodeDeploy revision 업로드 및 배포
         id: codedeploy_deploy
-        if: env.DEPLOYMENT_TARGET == 'codedeploy'
         run: |
           set -euo pipefail
           case "$CODEDEPLOY_S3_BUCKET" in
@@ -837,18 +704,16 @@ jobs:
     needs: [deploy]
     if: >-
       always() &&
-      needs.deploy.result == 'cancelled' &&
-      github.event_name == 'workflow_dispatch' &&
-      github.event.inputs.deployment_target == 'codedeploy'
+      needs.deploy.result == 'cancelled'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
       id-token: write
     env:
       AWS_REGION: ap-northeast-2
-      CODEDEPLOY_S3_BUCKET: ${{ github.event.inputs.codedeploy_s3_bucket || '' }}
-      CODEDEPLOY_APPLICATION: ${{ github.event.inputs.codedeploy_application || '' }}
-      CODEDEPLOY_DEPLOYMENT_GROUP: ${{ github.event.inputs.codedeploy_deployment_group || '' }}
+      CODEDEPLOY_S3_BUCKET: ${{ github.event.inputs.codedeploy_s3_bucket || 'masiton-prod-codedeploy-711457211155' }}
+      CODEDEPLOY_APPLICATION: ${{ github.event.inputs.codedeploy_application || 'masiton-prod-codedeploy' }}
+      CODEDEPLOY_DEPLOYMENT_GROUP: ${{ github.event.inputs.codedeploy_deployment_group || 'masiton-prod-deployment-group' }}
     steps:
       - name: AWS 자격 증명 (OIDC, 장기 키 없음)
         uses: aws-actions/configure-aws-credentials@v4
