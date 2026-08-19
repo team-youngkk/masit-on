@@ -111,6 +111,17 @@ Testcontainers 기반 자동화 테스트는 매 실행 시 빈 데이터베이�
 
 초기 스키마 baseline은 빈 DB 대상이므로 일반 transaction 안에서 수행한다. `CONCURRENTLY`가 필요한 후속 Flyway 파일은 해당 파일만 transaction 비활성화하고 한 파일에 다른 변경을 섞지 않는다.
 
+### 5.1. Blue-Green 하위 호환 계약
+
+Blue와 green이 같은 RDS를 함께 사용하는 동안에는 아래 expand-contract 규칙을 모든 운영 migration에 적용한다. 이 규칙은 [ADR-DEPLOY-005](../../07-adr/platform/deploy-005-asg-blue-green-rollout.md)의 Accepted 운영 계약을 데이터 변경 작성 규칙으로 구체화한다.
+
+1. **Expand 단계**에서는 기존 애플리케이션이 읽거나 쓰는 스키마를 깨지 않는 additive 변경만 적용한다. nullable 컬럼·테이블·인덱스 추가와 기존 값의 허용 범위 확장은 허용하지만, 컬럼·테이블 삭제, 구 컬럼 제거를 수반하는 rename, 호환되지 않는 제약 강화는 적용하지 않는다.
+2. Expand migration 적용 뒤에는 구·신 애플리케이션이 모두 동작할 수 있는 코드를 배포한다. 새 컬럼이나 상태값은 구버전이 무시해도 안전해야 하며, 필요한 backfill·이중 읽기·이중 쓰기의 완료 조건과 검증 방법을 migration PR에 기록한다.
+3. **Contract 단계**의 삭제·이름 변경·제약 강화는 구버전이 트래픽과 롤백 대상에서 제외된 것을 확인한 뒤 별도 배포와 별도 migration으로 수행한다. Contract migration을 Expand migration과 같은 배포에 섞지 않는다.
+4. Blue-Green 전환 실패 시 데이터 스키마를 자동으로 되돌리지 않는다. 애플리케이션만 되돌릴 때는 확장된 스키마와의 호환성을 확인하고, 호환되지 않는 경우에는 전진 수정 migration 또는 승인된 복구 절차를 사용한다.
+
+위 규칙을 만족하지 않는 migration은 배포 후보에서 제외하고 데이터 소유자 검토를 다시 받는다.
+
 ## 6. 롤백과 복구
 
 Flyway undo 파일과 하향 migration은 기본 경로로 사용하지 않는다. 배포 전에는 전진 수정 가능성을 검토하고, 적용 후 오류는 다음 순서로 대응한다.

@@ -4,7 +4,6 @@ review_date: 2026-08-17
 owners:
   - 이우람
 decision_pending:
-  - Blue-Green 도입에 따른 마이그레이션 하위 호환 규칙
   - 앱 인스턴스 t4g.medium → t4g.small 하향
 related_documents:
   - ../07-adr/platform/deploy-002-validation-deployment-before-expansion.md
@@ -266,9 +265,9 @@ M2 산정과 같이 2026년 최고치 1,559원을 적용한다.
 
 Blue-Green 전환 중에는 구버전(blue)과 신버전(green)이 같은 RDS를 동시에 바라본다. green이 새 마이그레이션을 적용하면 blue는 **자기가 모르는 스키마 위에서 돌게 된다.** 컬럼 삭제나 이름 변경이면 blue의 쿼리가 즉시 깨지고, `ddl-auto=validate`라 재기동 시 기동 자체가 실패할 수도 있다.
 
-따라서 도입 이후 모든 스키마 변경은 **확장 후 축소(expand-contract)** 로 나뉜다. 컬럼 추가와 양쪽 배포를 먼저 끝내고, 구 컬럼 제거는 별도 배포로 미룬다. 이는 배포 방식 결정이 아니라 **마이그레이션 작성 규칙 변경**이며 [Flyway 마이그레이션 계획](../05-specs/data/migration-plan.md)과 [ADR-DATA-009](../07-adr/data/data-009-pre-release-migration-consolidation.md)에 영향이 간다.
+따라서 도입 이후 모든 스키마 변경은 **확장 후 축소(expand-contract)** 로 나뉜다. 구체적인 작성·검증 규칙은 [Flyway 마이그레이션 계획 5.1절](../05-specs/data/migration-plan.md#51-blue-green-하위-호환-계약)에 확정한다. 컬럼 추가와 양쪽 배포를 먼저 끝내고, backfill·이중 읽기/쓰기를 검증한 뒤 구 컬럼 제거·제약 강화는 별도 contract migration으로 미룬다.
 
-착수 ADR에 이 규칙을 명시하지 않으면, 규칙을 모르는 상태로 작성된 마이그레이션 한 건이 전환 중 장애를 만든다.
+이 규칙은 이 문서의 `decision_pending` 항목이 아니라 Accepted 데이터 계약이다. 규칙을 만족하지 않는 migration은 배포 후보에서 제외하고 데이터 소유자 검토를 다시 받는다.
 
 ### 6.3. 무중단의 약한 고리가 Redis로 옮겨간다
 
@@ -372,7 +371,7 @@ ALB를 앞에 두면 앱 인스턴스를 사설 서브넷에 넣는 구성이 �
 
 **2단계 — ALB 도입, Nginx 유지.** TLS를 ACM으로 옮기고 XFF·XFP 신뢰 경계를 재설계한다(6.1절). 퍼블릭 서브넷을 두 번째 AZ에 추가한다(6.5절). 이 시점까지 상시 1대이므로 NFR-AVAILABILITY-002는 손대지 않는다.
 
-**3단계 — Blue-Green과 ASG 활성화.** 마이그레이션 하위 호환 규칙을 확정해 문서화한다(6.2절). Redis 접근 경로와 예산 초과액을 운영 기록에 남기고, ASG replacement를 Blue-Green의 운영 토폴로지로 도입한다. 현재 구현은 단일 target group에 replacement 인스턴스를 등록·검증한 뒤 original을 해제하며, 실패 시 기존 original을 유지·복귀한다.
+**3단계 — Blue-Green과 ASG 활성화.** 6.2절과 [Flyway 마이그레이션 계획 5.1절](../05-specs/data/migration-plan.md#51-blue-green-하위-호환-계약)의 expand-contract 계약을 각 migration에 적용하고, Redis 접근 경로와 예산 초과액을 운영 기록에 남긴다. 그 뒤 ASG replacement를 Blue-Green의 운영 토폴로지로 도입한다. 현재 구현은 단일 target group에 replacement 인스턴스를 등록·검증한 뒤 original을 해제하며, 실패 시 기존 original을 유지·복귀한다.
 
 인스턴스 하향은 2단계와 3단계 사이에서 수행한다. 4.3절의 실측과 heap 고정이 선행 조건이다.
 

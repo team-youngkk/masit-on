@@ -41,6 +41,9 @@ class RuntimeDeploymentContractTest {
     private static final Path APPSPEC = Path.of("deploy/codedeploy/appspec.yml");
     private static final Path AFTER_INSTALL = Path.of("deploy/codedeploy/hooks/after-install.sh");
     private static final Path VALIDATE_SERVICE = Path.of("deploy/codedeploy/hooks/validate-service.sh");
+    private static final Path MIGRATION_PLAN = Path.of("docs/05-specs/data/migration-plan.md");
+    private static final Path DEPLOYMENT_IMPACT_REVIEW = Path.of("docs/08-planning/deployment-hardening-impact-review.md");
+    private static final Path PLANNING_README = Path.of("docs/08-planning/README.md");
 
     @Test
     @DisplayName("Redis는 환경 변수와 SSM을 사용해 배포 고도화 endpoint를 주입한다")
@@ -122,6 +125,15 @@ class RuntimeDeploymentContractTest {
                 .contains("lookup_completed")
                 .contains("steps.lookup.outputs.resolved")
                 .contains("for _ in $(seq 1 24)");
+        int unresolvedStart = cleanup.indexOf("if [ -z \"$matched\" ]; then");
+        int unresolvedEnd = cleanup.indexOf("case \"$matched\"", unresolvedStart);
+        assertThat(unresolvedStart).isGreaterThan(0);
+        assertThat(unresolvedEnd).isGreaterThan(unresolvedStart);
+        assertThat(cleanup.substring(unresolvedStart, unresolvedEnd))
+                .contains("원격 CodeDeploy 상태가 미확정")
+                .contains("exit 1")
+                .doesNotContain("exit 0")
+                .doesNotContain("배포가 생성되기 전에 취소됐을 수 있다");
         assertThat(workflow).contains("cancel-in-progress: ${{ github.event_name == 'pull_request' }}");
         assertThat(workflow).doesNotContain("actions/download-artifact@v4");
         assertThat(workflow.indexOf("aws s3api put-object"))
@@ -235,6 +247,29 @@ class RuntimeDeploymentContractTest {
         assertThat(Files.readString(TROUBLESHOOTING))
                 .contains("redis-user-data.tftest.hcl")
                 .contains("terraform-contract");
+    }
+
+    @Test
+    @DisplayName("Blue-Green 마이그레이션 하위 호환 규칙을 Accepted 데이터 계약으로 고정한다")
+    void 문서계약은_BlueGreenMigration하위호환규칙을_Accepted계약으로고정한다() throws IOException {
+        String migrationPlan = Files.readString(MIGRATION_PLAN);
+        String impactReview = Files.readString(DEPLOYMENT_IMPACT_REVIEW);
+        String planningReadme = Files.readString(PLANNING_README);
+
+        assertThat(migrationPlan)
+                .contains("### 5.1. Blue-Green 하위 호환 계약")
+                .contains("Blue와 green이 같은 RDS를 함께 사용하는 동안")
+                .contains("별도 migration으로 수행한다")
+                .contains("배포 후보에서 제외하고 데이터 소유자 검토를 다시 받는다");
+        assertThat(impactReview)
+                .contains("status: ACCEPTED")
+                .contains("decision_pending:\n  - 앱 인스턴스 t4g.medium → t4g.small 하향")
+                .doesNotContain("decision_pending:\n  - Blue-Green 도입에 따른 마이그레이션 하위 호환 규칙")
+                .contains("Flyway 마이그레이션 계획 5.1절")
+                .contains("Accepted 데이터 계약");
+        assertThat(planningReadme)
+                .contains("deployment-hardening-impact-review.md")
+                .contains("`ACCEPTED`");
     }
 
     @Test
