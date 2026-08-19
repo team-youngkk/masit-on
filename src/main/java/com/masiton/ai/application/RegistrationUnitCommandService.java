@@ -127,12 +127,12 @@ public class RegistrationUnitCommandService {
         boolean updated;
         try {
             updated = registrationUnitStore.markRegistered(unit.id(), "AUTO_BLOCKED", registered);
-        } catch (DataIntegrityViolationException exception) {
-            compensateFailedRegistration(unit, registration);
-            throw concurrentConflict();
+        } catch (RuntimeException exception) {
+            compensateFailedRegistration(registration);
+            throw exception instanceof DataIntegrityViolationException ? concurrentConflict() : exception;
         }
         if (!updated) {
-            compensateFailedRegistration(unit, registration);
+            compensateFailedRegistration(registration);
             throw concurrentConflict();
         }
         return RegistrationExecutionView.fromRegistration(unit.id(), "AUTO_CONFIRMED", registration, registered);
@@ -232,12 +232,12 @@ public class RegistrationUnitCommandService {
         try {
             committed = confirmCommitService.commit(unit.id(), "AUTO_BLOCKED", registered, unit.snapshotId(),
                     registration.visitId(), tagDecisions, adminId, reason, submittedSupplementsJson);
-        } catch (DataIntegrityViolationException exception) {
-            compensateFailedRegistration(unit, registration);
-            throw concurrentConflict();
+        } catch (RuntimeException exception) {
+            compensateFailedRegistration(registration);
+            throw exception instanceof DataIntegrityViolationException ? concurrentConflict() : exception;
         }
         if (!committed) {
-            compensateFailedRegistration(unit, registration);
+            compensateFailedRegistration(registration);
             throw concurrentConflict();
         }
     }
@@ -245,17 +245,21 @@ public class RegistrationUnitCommandService {
     /**
      * {@code AutoRegisterVerifiedContentUseCase#register}는 자신의 트랜잭션에서 즉시 커밋되므로,
      * 그 뒤 등록 단위 상태 반영({@code markRegistered}·{@link RegistrationUnitConfirmCommitService#commit})이
-     * 동시 요청에 선점당하면 방금 만든 4종 자원이 어떤 등록 단위에도 연결되지 못한 채 남는다. 맛집은
-     * 재사용 대상이 아니므로(이 방문의 등록 단위는 항상 새 맛집·방문을 만든다) 이 상태를 그대로 두면
-     * 재시도가 {@code DUPLICATE_CONFLICT}로 영구히 막힌다. 방금 만든 자원을 되돌려 재시도 가능한
-     * 상태로 복구한다.
+     * 실패(동시 요청 선점, unique 제약 위반, 태그·감사 저장 중 예외 등 어떤 이유든)하면 방금 만든 4종
+     * 자원이 어떤 등록 단위에도 연결되지 못한 채 남는다. 맛집은 재사용 대상이 아니므로(이 등록 단위는
+     * 항상 새 맛집·방문을 만든다) 이 상태를 그대로 두면 같은 {@code kakaoPlaceId}의 재시도가
+     * {@code DUPLICATE_CONFLICT}로 영구히 막힌다.
+     *
+     * <p>{@code review}의 {@code ROLLBACK}이 쓰는 {@link RollbackAiRegisteredContentUseCase#rollback}은
+     * 감사 보존을 위해 {@code publication_status}만 {@code PRIVATE}로 바꿀 뿐 행을 지우지 않으므로,
+     * {@code kakao_place_id} unique 제약이 남아 재시도를 막는다. 여기서는 유효하게 등록된 적 없는
+     * 데이터이므로 {@link RollbackAiRegisteredContentUseCase#discardFailedRegistration}로 하드
+     * 삭제해야 재시도가 실제로 열린다.</p>
      */
-    private void compensateFailedRegistration(AiRegistrationUnitStore.RegistrationUnitRow unit,
-            AutoRegisterVerifiedContentUseCase.RegistrationResult registration) {
-        rollbackUseCase.rollback(new RollbackAiRegisteredContentUseCase.RegistrationReference(
-                unit.snapshotId(), registration.restaurantId(), registration.restaurantCreated(),
+    private void compensateFailedRegistration(AutoRegisterVerifiedContentUseCase.RegistrationResult registration) {
+        rollbackUseCase.discardFailedRegistration(registration.restaurantId(), registration.restaurantCreated(),
                 registration.creatorId(), registration.creatorCreated(), registration.videoId(),
-                registration.videoCreated(), registration.visitId(), registration.visitCreated()));
+                registration.videoCreated(), registration.visitId(), registration.visitCreated());
     }
 
     private void discard(AiRegistrationUnitStore.RegistrationUnitRow unit, String reason, UUID adminId) {

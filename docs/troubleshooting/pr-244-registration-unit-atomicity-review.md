@@ -17,8 +17,8 @@ related_documents:
 | PR | [#244 [E3] AI 영상 추출 자동 등록 계약을 구현한다](https://github.com/team-youngkk/masit-on/pull/244) |
 | 작성자 | `tjdgns0618` |
 | 처리 일자 | 2026-08-19 |
-| 범위 | 1차: 미해결 인라인 리뷰 3건(`inan0226` 2건, `jinyp01` 1건). 2차: 1차 반영 뒤 새로 열린 인라인 리뷰 9건(`w00lam` 6건 — 그중 2건은 1차와 같은 문제를 겨냥한 별도 스레드, `jinyp01` 1건, `inan0226` 2건) |
-| 주 문제 유형 | 애플리케이션 — 동시성 제어와 트랜잭션 경계, 죽은 코드, 식별자 변환 |
+| 범위 | 1차: 미해결 인라인 리뷰 3건(`inan0226` 2건, `jinyp01` 1건). 2차: 1차 반영 뒤 새로 열린 인라인 리뷰 9건(`w00lam` 6건 — 그중 2건은 1차와 같은 문제를 겨냥한 별도 스레드, `jinyp01` 1건, `inan0226` 2건). 3차: 2차의 보상 롤백 자체를 검증한 인라인 리뷰 2건(`inan0226` 1건, `jinyp01` 1건) |
+| 주 문제 유형 | 애플리케이션 — 동시성 제어와 트랜잭션 경계, 죽은 코드, 식별자 변환, 보상 처리 정확성 |
 | 기존 기록 | [PR #175 관리자 AI 검수 동시성·태그 감사 후속](pr-175-ai-admin-review-follow-up.md)에서 이미 "검수 상태 전이·태그·감사를 한 트랜잭션으로 묶는다"는 같은 패턴을 다뤘다. 이번 PR의 등록 단위(`ai_registration_unit`) 경로는 그 패턴을 새로 만든 별도 클래스라 같은 결함이 재발했다. [PR #226](pr-226-ai-auto-registration-contract-review.md)은 이 기능의 계약을 확정한 문서 PR로, DB 저장 소스·상태 조합 결정의 배경이다. |
 
 ## 2. 리뷰 스레드 처리 결과
@@ -43,6 +43,13 @@ related_documents:
 | [정식 등록·CONFIRM 커밋 원자 경계 (P1, inan0226)](https://github.com/team-youngkk/masit-on/pull/244#discussion_r3810394514) | `AutoRegisterVerifiedContentService.register()`가 별도 트랜잭션에서 먼저 커밋되고, 등록 단위 상태·태그·감사는 나중에 별도 트랜잭션으로 반영되어 후자가 실패하면 4종 정식 데이터가 고아로 남음 | 애플리케이션 | 수정 필요(제안한 대안 채택) | 두 트랜잭션을 하나로 합치는 대신, 리뷰가 제시한 대안인 "commit 실패 시 보상 롤백"을 채택: `markRegistered`/`confirmCommitService.commit()`이 CAS 실패 또는 unique 제약 위반으로 실패하면 `RollbackAiRegisteredContentUseCase.rollback()`으로 방금 만든 4종을 즉시 되돌려 재시도 가능한 상태로 복구 | `RegistrationUnitCommandServiceTest`의 보상 롤백 검증(마이크로 단위), 근본적인 단일 트랜잭션 병합은 Worker 경로도 공유하는 `ExecuteRegistrationUnitUseCase` 계약 변경이 필요해 이번 PR 범위에서는 보상 롤백으로 대체 |
 | [adminId FK 불일치 (P1, w00lam)](https://github.com/team-youngkk/masit-on/pull/244#discussion_r3810399031) | `RegistrationUnitConfirmCommitService.commit()`이 이미 `admin_account.id`로 변환된 값을 `member_account.id`로 취급 | 애플리케이션 | 수정 필요 | 위 adminId 이중 변환 스레드와 같은 원인·같은 수정(Controller에서 변환 제거)으로 해소 | 동일 |
 
+### 3차 리뷰 라운드 (2차의 보상 롤백 자체를 검증)
+
+| 스레드 | 요청 요약 | 문제 유형 | 판단 | 처리 결과 | 근거/검증 |
+|---|---|---|---|---|---|
+| [보상 롤백이 일부 실패 경로만 커버 (P1, inan0226)](https://github.com/team-youngkk/masit-on/pull/244#discussion_r3810603399) | `confirmCommitService.commit()` 호출을 `DataIntegrityViolationException`만 잡아, 감사 insert의 `IllegalStateException` 등 다른 런타임 예외는 보상 없이 그대로 전파됨 | 애플리케이션 | 수정 필요 | `catch (DataIntegrityViolationException)`을 `catch (RuntimeException)`으로 넓히고, `DataIntegrityViolationException`이면 `concurrentConflict()`로, 그 외에는 원래 예외를 그대로 던지도록 변경. `registerUnit`(`executeAndPersist`) 경로도 같은 패턴으로 보완 | `RegistrationUnitCommandServiceTest`의 일반 `RuntimeException` 주입 회귀 테스트(등록 단위 일괄 등록·CONFIRM 각 1건) |
+| [보상 롤백이 실제로 재시도를 열지 못함 (P1, jinyp01)](https://github.com/team-youngkk/masit-on/pull/244#discussion_r3810604423) | `compensateFailedRegistration`이 부르는 `RollbackAiRegisteredContentUseCase.rollback()`은 `publication_status`만 `PRIVATE`로 바꿀 뿐 행을 지우지 않아, `restaurant.kakao_place_id` unique 제약이 남아 재시도가 여전히 `DUPLICATE_CONFLICT`로 막힘 | 애플리케이션 | 수정 필요 | `RollbackAiRegisteredContentUseCase`에 하드 삭제 전용 `discardFailedRegistration()`을 신설하고 `AiRegisteredContentStore.deleteIfCreated()`로 구현. `compensateFailedRegistration()`이 기존 `rollback()`(감사 보존용 PRIVATE 전환) 대신 이 메서드를 호출하도록 변경 | `JdbcAiRegisteredContentStorePostgreSqlIntegrationTest` — 하드 삭제 후 같은 `kakaoPlaceId`로 새 맛집 insert가 실제로 성공하는지까지 PostgreSQL로 검증 |
+
 ## 3. 문제 현상과 발생 조건
 
 - 오류 메시지: 없음(리뷰 시점 재현 코드, 런타임 예외 아님)
@@ -61,6 +68,13 @@ related_documents:
 - 재현 조건(register+CONFIRM 경계): CONFIRM에서 `executeRegistrationUnit.execute()`가 내부적으로 `autoRegister.register()`를 호출해 그 자리에서 즉시 커밋한 뒤, `RegistrationUnitConfirmCommitService.commit()`이 별도 트랜잭션으로 등록 단위 상태·태그·감사를 반영하다가 CAS 충돌 또는 unique 제약 위반으로 실패.
 - 실제 결과(register+CONFIRM 경계): 방금 만든 restaurant·visit(및 필요 시 creator·video)가 어떤 등록 단위에도 연결되지 못한 채 DB에 남고, 등록 단위는 여전히 `AUTO_BLOCKED`라 재시도할 수 있지만 재시도 시 `isDuplicate()`가 방금 만든 restaurant를 발견해 `DUPLICATE_CONFLICT`로 영구히 막힌다.
 
+### 3차 리뷰 라운드 추가 현상
+
+- 재현 조건(보상 범위 누락): 2차에서 추가한 `compensateFailedRegistration()` 호출부가 `catch (DataIntegrityViolationException)`만 잡음. `confirmCommitService.commit()`/`registrationUnitStore.markRegistered()` 내부에서 `IllegalStateException`(예: 태그·감사 Adapter의 방어적 예외) 등 다른 `RuntimeException`이 발생.
+- 실제 결과(보상 범위 누락): 보상이 실행되지 않은 채 원래 예외가 그대로 전파되어, 방금 만든 4종 콘텐츠가 등록 단위에도 연결되지 못하고 보상도 받지 못한 상태로 남는다.
+- 재현 조건(보상이 재시도를 못 엶): 2차의 `compensateFailedRegistration()`이 CAS 실패 시 `rollbackUseCase.rollback()`을 호출.
+- 실제 결과(보상이 재시도를 못 엶): `rollback()` → `AiRegisteredContentStore.makePrivateIfCreated()`는 `restaurant.publication_status`만 `PRIVATE`로 바꿀 뿐 행을 지우지 않는다. `DuplicateRegistrationCheckQueryAdapter.restaurantExists()`는 `publication_status`를 전혀 보지 않고 `kakao_place_id` 존재만 확인하므로, 보상 뒤에도 같은 장소로는 재시도할 수 없다 — Javadoc이 약속한 "재시도 가능한 상태로 복구"가 실제로는 이뤄지지 않는다.
+
 ## 4. 근본 원인
 
 - 동시성: `AiRegistrationUnitStore.markRegistered`/`confirmWithSupplement`가 `WHERE id = ?`만으로 무조건 갱신해, `lockByJobAndUnitId`의 짧은 잠금이 풀린 뒤에는 상태 전이 자체를 막을 장치가 없었다. 외부 호출 중 DB 트랜잭션을 열지 않는다는 아키텍처 제약(트랜잭션 경계 문서) 때문에 잠금을 계속 들고 있을 수 없으므로, 최종 갱신에 조건을 거는 낙관적 동시성 제어가 필요했다.
@@ -68,6 +82,8 @@ related_documents:
 - 죽은 코드: `isDuplicate()` 작성 당시 "같은 맛집이면서 같은 방문 조합"을 노려 두 조건을 순차 확인하려 했으나, `visitExists`의 SQL이 이미 `restaurantExists`가 보장하는 조건(그 kakaoPlaceId의 restaurant 행 존재)을 전제로 JOIN하기 때문에, `restaurantExists`가 false로 걸러진 뒤에는 `visitExists`가 항상 false를 반환한다. `DuplicateRegistrationCheckPort.visitExists`의 자체 Javadoc에도 "세 외부 식별자 중 어느 하나라도 아직 정식 등록되지 않았으면 그 조합의 방문 관계도 존재할 수 없으므로 false"라고 이미 명시돼 있어, 작성자도 이 조건을 인지한 채로 죽은 분기를 남긴 것으로 보인다(추정).
 - adminId 이중 변환: Controller의 `adminId()`가 애초에 legacy `admin_account` FK를 위해 변환된 값을 반환하도록 작성돼 있었는데, `RegistrationUnitCommandService`(이번 PR이 새로 만든 등록 단위 경로)는 반대로 "raw member_account id가 넘어온다"고 가정하고 짠 코드였다. 두 가정이 서로 어긋난 채로 함께 존재했고, Controller의 유일한 호출부(`review()`)가 이 어긋남을 가려 로컬 개발에서는 드러나지 않았다(추정 — 실제 실행 시 어느 경로가 먼저 예외를 던지는지는 미검증).
 - register+CONFIRM 원자 경계: `ExecuteRegistrationUnitUseCase.execute()`는 Kakao·YouTube 외부 호출이 끝난 뒤 `autoRegister.register()`를 내부에서 직접 호출해 그 자체 트랜잭션으로 즉시 커밋한다(Worker 경로의 `RegistrationUnitAutoExecutionService`도 동일하게 이 계약을 통해 호출하므로 같은 특성을 공유한다). `RegistrationUnitCommandService`는 이 결과를 받은 뒤 별도 트랜잭션(`RegistrationUnitConfirmCommitService`)에서 등록 단위 상태를 반영하므로, 두 트랜잭션 사이에 원자성이 없다. 완전한 해결은 `execute()`가 "검증"과 "등록"을 분리해 등록을 호출자의 트랜잭션 안에서 수행하도록 계약을 바꿔야 하는데, 이는 Worker·관리자 두 경로가 공유하는 계약이라 이번 PR의 범위를 벗어난다.
+- 보상 범위 누락: 보상 롤백을 추가할 때 "동시성 충돌"만 염두에 두고 그 신호인 `DataIntegrityViolationException` 하나만 잡았다. 하지만 `confirmCommitService.commit()`은 태그·감사 Adapter를 포함한 여러 하위 호출을 거치므로, 동시성과 무관한 다른 런타임 예외도 같은 시점(register 이후) 에 발생할 수 있다는 점을 놓쳤다.
+- 보상이 재시도를 못 엶: `RollbackAiRegisteredContentUseCase.rollback()`은 애초에 관리자가 수행하는 `review`의 `ROLLBACK`(정상적으로 등록된 콘텐츠를 감사 이력과 함께 되돌리는 것) 전용으로 설계된 메서드였다. 이 메서드를 "동시성 경쟁에서 진 시도가 만든, 유효하게 등록된 적 없는 콘텐츠"를 지우는 용도로 그대로 재사용한 것이 원인이다. 두 시나리오는 겉보기엔 비슷하지만(둘 다 "되돌리기") 목적이 다르다 — 전자는 감사 보존이 요구사항이고 후자는 재시도 가능성 회복이 요구사항이라, 같은 메서드로 만족시킬 수 없었다.
 
 ## 5. 확인 및 시도
 
@@ -80,6 +96,8 @@ related_documents:
 | `AdminAiVideoExtractionController`에서 `adminId(authentication)`의 유일한 호출부 검색 | `review()` 한 곳뿐이고, `RegistrationUnitConfirmCommitService`·`port.appendTagOverrides` 외에 이 값을 다른 형태로 기대하는 호출부가 없음 | Controller에서 변환을 제거해도 다른 흐름에 영향 없음을 확인하고 안전하게 수정 |
 | `file -i`와 Read 도구로 `RegistrationUnitCommandService.java`의 실제 인코딩 확인 | `charset=utf-8`이고 Read 도구로도 정상 한글 렌더링됨. `git log -p`로 이 Javadoc 블록의 전체 이력을 확인해도 손상된 커밋이 없음 | 실제 파일은 손상되지 않았다고 결론 — 리뷰 코멘트의 `?` 문자는 리뷰 도구 쪽 인코딩 표시 문제로 추정, 수정 불필요로 판단 |
 | Worker 경로(`RegistrationUnitAutoExecutionService`)도 `ExecuteRegistrationUnitUseCase.execute()`를 거치는지, `autoRegister.register()` 호출 위치가 어디인지 확인 | Worker 경로도 관리자 경로와 동일하게 `execute()` 내부에서 `register()`가 즉시 커밋되는 구조를 공유함(`RegistrationUnitAutoExecutionService`도 트랜잭션 밖에서 실행하도록 Javadoc에 명시) | register+최종 커밋의 완전한 단일 트랜잭션 병합은 두 경로가 공유하는 계약 변경이 필요해 이번 PR 범위를 벗어난다고 판단, 대신 보상 롤백을 채택 |
+| `AiRegisteredContentStore.makePrivateIfCreated`/`JdbcAiRegisteredContentStore` 실제 SQL 확인 | `UPDATE restaurant SET publication_status = 'PRIVATE' WHERE id = ?`뿐이고 `DELETE`가 전혀 없음. `DuplicateRegistrationCheckQueryAdapter.restaurantExists`도 `publication_status` 조건이 없어 PRIVATE로 바뀐 행도 여전히 "존재"로 판정됨 | jinyp01의 지적이 정확함을 코드로 확인 — `rollback()` 재사용이 아니라 실제 하드 삭제가 필요 |
+| `restaurant`/`creator`/`video`/`visit`의 FK 제약이 `ON DELETE RESTRICT`인지, 이 보상 시점에 다른 테이블이 이미 이 행들을 참조하는지 확인 | 모두 `ON DELETE RESTRICT`. 다만 보상이 실행되는 시점은 정확히 `ai_registration_unit`의 CAS 갱신이 실패한 시점이라, `ai_registration_unit.registered_*_id`는 애초에 이 행들을 가리키도록 갱신된 적이 없다(그 갱신 자체가 실패했으므로). 감사 이력(`ai_registration_unit_review`)·태그 연결도 같은 트랜잭션에서 실패해 커밋되지 않음 | 이 시점에는 어떤 테이블도 방금 만든 4종을 참조하지 않으므로 하드 삭제가 FK 제약과 충돌하지 않는다고 판단, `deleteIfCreated()`로 실제 검증 |
 
 ## 6. 최종 해결
 
@@ -115,6 +133,21 @@ related_documents:
   - `src/test/java/com/masiton/restaurant/infrastructure/persistence/FoodCategoryMappingRepositoryPortIntegrationTest.java`
 - 고려한 대안: register+CONFIRM 원자 경계에 대해 `execute()`가 검증과 등록을 분리해 등록 자체를 호출자 트랜잭션 안에서 수행하도록 계약을 재설계하는 방안을 검토했으나, Worker 경로(`RegistrationUnitAutoExecutionService`/`AiExtractionResultCommitService`)도 같은 계약을 쓰고 있어 두 소비자에 영향을 준다. API·계약 변경은 소유자와 사전 합의가 필요하다는 프로젝트 규칙에 따라 이번 PR 단독으로 진행하지 않고, 리뷰가 제시한 보상 롤백으로 대체했다.
 
+### 3차 리뷰 라운드 최종 해결
+
+- 변경 내용:
+  - `RegistrationUnitCommandService.executeAndPersist()`/`confirm()`의 `catch (DataIntegrityViolationException)`을 `catch (RuntimeException)`으로 넓혔다. `compensateFailedRegistration()`을 호출한 뒤, 잡은 예외가 `DataIntegrityViolationException`이면 `concurrentConflict()`(409)로 변환하고 그 외 런타임 예외는 원래 예외를 그대로 다시 던진다(진짜 버그를 동시성 충돌로 잘못 보고하지 않도록).
+  - `RollbackAiRegisteredContentUseCase`에 `discardFailedRegistration(...)`을 신설하고 `AiRegisteredContentStore.deleteIfCreated(...)`(`JdbcAiRegisteredContentStore`)로 구현했다. 기존 `rollback()`/`makePrivateIfCreated()`(감사 보존용 PRIVATE 전환)는 그대로 두고, 동시성 경쟁에서 진 시도를 위한 별도의 하드 삭제 경로를 추가했다.
+  - `RegistrationUnitCommandService.compensateFailedRegistration()`이 `rollbackUseCase.rollback()` 대신 `rollbackUseCase.discardFailedRegistration()`을 호출하도록 변경.
+- 선택 이유: 두 지적 모두 "보상이 실제로 보상 역할을 하지 못한다"는 같은 종류의 문제였다. 예외 범위는 기계적으로 넓히면 되는 문제였고, 재시도 불가 문제는 기존 `rollback()`이 서로 다른 두 목적(감사 보존 vs. 유효하지 않았던 데이터 정리)을 겸용하려 한 설계 오류라 판단해 목적별로 메서드를 분리했다. `rollback()`의 기존 동작(PRIVATE 전환)은 `review`의 `ROLLBACK` 결정이 여전히 의존하므로 바꾸지 않았다.
+- 변경 파일(3차):
+  - `src/main/java/com/masiton/orchestration/application/port/in/RollbackAiRegisteredContentUseCase.java`
+  - `src/main/java/com/masiton/orchestration/application/command/RollbackAiRegisteredContentService.java`
+  - `src/main/java/com/masiton/orchestration/application/port/out/AiRegisteredContentStore.java`
+  - `src/main/java/com/masiton/orchestration/infrastructure/rollback/JdbcAiRegisteredContentStore.java`
+  - `src/main/java/com/masiton/ai/application/RegistrationUnitCommandService.java`
+- 고려한 대안: `restaurantExists()`가 `publication_status = 'PUBLIC'`인 행만 보도록 바꾸는 방안(jinyp01이 제시한 두 대안 중 하나)도 검토했으나, 이 조회는 정식으로 등록된 행 전체를 대상으로 하는 일반 중복 판정 쿼리라 그 의미를 "동시성 경쟁에서 진 시도의 잔여물 제외"까지 넓히면 다른 호출 맥락(정상 등록 흐름)의 판정 기준까지 조용히 바뀔 위험이 있었다. 하드 삭제 쪽이 영향 범위가 이 보상 시나리오로 국한돼 더 안전하다고 판단했다.
+
 ## 7. 검증
 
 | 검증 | 결과 | 확인한 내용 |
@@ -131,10 +164,13 @@ related_documents:
 | `./gradlew test --tests "...JdbcAiRegistrationUnitStorePostgreSqlIntegrationTest"` | 통과 | rollback·discard·adjustCategory CAS 신규 3건 포함 16건 |
 | `./gradlew test --tests "...FoodCategoryMappingRepositoryPortIntegrationTest"` | 통과 | V8 주석 정정 후 4건 |
 | `./gradlew clean build`(전체 백엔드 빌드, 2차) | 통과 | 1380건, 실패·오류 0건(회귀 없음) |
+| `./gradlew test --tests "...RegistrationUnitCommandServiceTest"`(3차) | 통과 | 일반 `RuntimeException` 주입 시 보상 후 원래 예외 전달 회귀 2건 포함 9건 |
+| `./gradlew test --tests "...JdbcAiRegisteredContentStorePostgreSqlIntegrationTest"`(신규) | 통과 | 하드 삭제 후 같은 `kakaoPlaceId`로 재등록 성공 검증 포함 2건 |
+| `./gradlew clean build`(전체 백엔드 빌드, 3차) | 통과 | 1384건, 실패·오류 0건(회귀 없음) |
 
 ## 8. 재발 방지 및 다음 확인
 
-- 재발 방지: 외부 호출 뒤 최종 DB 반영이 있는 새 Application 서비스를 작성할 때는 (1) 상태 전이가 있으면 `expectedStatus` 조건부 갱신(등록 결과 존재 여부처럼 상태 문자열만으로 구분 안 되는 불변식이 있으면 추가 WHERE 조건도 함께), (2) 여러 쓰기가 있으면 `AiExtractionResultCommitService`/`RegistrationUnitConfirmCommitService`처럼 순수 DB 쓰기만 모은 `@Transactional` 커밋 서비스로 분리, (3) Controller와 Service 경계를 넘는 식별자(특히 `member_account.id`/`admin_account.id`처럼 의미가 다른 두 UUID)는 어느 계층이 변환을 책임지는지 타입이나 이름만으로는 구분되지 않으므로 값을 넘기기 전에 호출부를 전수 확인하는 세 관례를 [PR #175 기록](pr-175-ai-admin-review-follow-up.md)에 이어 이 기록에도 남긴다.
+- 재발 방지: 외부 호출 뒤 최종 DB 반영이 있는 새 Application 서비스를 작성할 때는 (1) 상태 전이가 있으면 `expectedStatus` 조건부 갱신(등록 결과 존재 여부처럼 상태 문자열만으로 구분 안 되는 불변식이 있으면 추가 WHERE 조건도 함께), (2) 여러 쓰기가 있으면 `AiExtractionResultCommitService`/`RegistrationUnitConfirmCommitService`처럼 순수 DB 쓰기만 모은 `@Transactional` 커밋 서비스로 분리, (3) Controller와 Service 경계를 넘는 식별자(특히 `member_account.id`/`admin_account.id`처럼 의미가 다른 두 UUID)는 어느 계층이 변환을 책임지는지 타입이나 이름만으로는 구분되지 않으므로 값을 넘기기 전에 호출부를 전수 확인, (4) 실패 시 보상 처리를 추가할 때는 특정 예외 하나만이 아니라 그 호출 경로가 던질 수 있는 런타임 예외 전체를 기준으로 catch 범위를 정하고, 기존 메서드를 재사용하기 전에 그 메서드가 실제로 하는 일(감사 보존용 소프트 삭제 vs. 하드 삭제)이 지금 필요한 목적과 같은지 구현을 열어서 확인하는 네 관례를 [PR #175 기록](pr-175-ai-admin-review-follow-up.md)에 이어 이 기록에도 남긴다.
 - 다음 확인: register+CONFIRM(및 등록 단위 일괄 등록)의 완전한 단일 트랜잭션 병합은 Worker·관리자 두 경로가 공유하는 `ExecuteRegistrationUnitUseCase` 계약 변경이 필요하다. 이번 PR은 보상 롤백으로 재시도 가능성만 보장했고, 계약 자체를 바꾸는 근본 해결은 별도 이슈로 등록해 담당자·소유자 합의 후 진행해야 한다(추적 이슈 없음, 필요 시 신규 등록). PR #244 본문의 "검증하지 못한 항목"에 남아 있던 `DISCARD`/`ROLLBACK`/`ADJUST_CATEGORY`가 외부 콘텐츠 반영(`rollbackUseCase.rollback()`/`adjustCategoryUseCase.adjust()`)까지 포함해 완전히 원자적이지는 않다는 잔여 위험도 PR 본문이 이미 후속 작업으로 분리하겠다고 명시한 대로 유지한다(이번 라운드에서는 등록 단위 행 자체의 CAS만 추가했다).
 
 ## 9. 도입 전후 비교 지표
@@ -145,4 +181,4 @@ related_documents:
 
 ## 10. 남은 사항
 
-1차·2차 모두 12개 스레드를 수정 완료 후 답글·해결 처리한다. 이 중 register+CONFIRM 원자 경계는 보상 롤백으로 즉시 위험(영구 `DUPLICATE_CONFLICT` 잠금)만 해소했고, `ExecuteRegistrationUnitUseCase` 계약을 바꾸는 근본 해결은 8절의 "다음 확인"에 남긴 별도 후속 작업이다.
+1~3차 모두 14개 스레드를 수정 완료 후 답글·해결 처리한다. 이 중 register+CONFIRM 원자 경계는 보상 처리(하드 삭제)로 즉시 위험(영구 `DUPLICATE_CONFLICT` 잠금)만 해소했고, `ExecuteRegistrationUnitUseCase` 계약을 바꾸는 근본 해결은 8절의 "다음 확인"에 남긴 별도 후속 작업이다. 3차에서 보상 처리 자체의 정확성(예외 범위, 실제 재시도 가능 여부)이 리뷰로 두 번 더 지적된 점을 감안하면, 이 보상 로직이 앞으로도 계속 리뷰 대상이 될 가능성이 있어 후속 작업(계약 재설계)이 이뤄지기 전까지는 유사한 보상 코드를 추가할 때 이 기록의 8절 재발 방지 항목을 먼저 확인하는 편이 안전하다.

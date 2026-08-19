@@ -3,6 +3,7 @@ package com.masiton.ai.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -87,8 +88,8 @@ class RegistrationUnitCommandServiceTest {
     }
 
     @Test
-    @DisplayName("등록 단위 일괄 등록 중 동시 요청이 먼저 반영하면 409를 던지고 방금 만든 등록 콘텐츠를 보상 롤백한다")
-    void registerUnit_동시요청이먼저반영하면_409충돌을던지고보상롤백한다() {
+    @DisplayName("등록 단위 일괄 등록 중 동시 요청이 먼저 반영하면 409를 던지고 방금 만든 등록 콘텐츠를 하드 삭제로 보상한다")
+    void registerUnit_동시요청이먼저반영하면_409충돌을던지고보상삭제한다() {
         // Given
         AiRegistrationUnitStore.RegistrationUnitRow unit = blockedUnitRow();
         when(registrationUnitStore.lockByJobAndUnitId(JOB_ID, UNIT_ID)).thenReturn(Optional.of(unit));
@@ -105,15 +106,15 @@ class RegistrationUnitCommandServiceTest {
                     assertThat(businessException.code()).isEqualTo("AIEXTRACT_CONCURRENT_REQUEST_CONFLICT");
                 });
         AutoRegisterVerifiedContentUseCase.RegistrationResult registration = result.registration();
-        verify(rollbackUseCase).rollback(new RollbackAiRegisteredContentUseCase.RegistrationReference(
-                SNAPSHOT_ID, registration.restaurantId(), registration.restaurantCreated(),
-                registration.creatorId(), registration.creatorCreated(), registration.videoId(),
-                registration.videoCreated(), registration.visitId(), registration.visitCreated()));
+        verify(rollbackUseCase).discardFailedRegistration(registration.restaurantId(),
+                registration.restaurantCreated(), registration.creatorId(), registration.creatorCreated(),
+                registration.videoId(), registration.videoCreated(), registration.visitId(),
+                registration.visitCreated());
     }
 
     @Test
-    @DisplayName("등록 단위 일괄 등록 중 저장이 unique 제약을 위반하면 409 AIEXTRACT_CONCURRENT_REQUEST_CONFLICT를 던진다")
-    void registerUnit_저장이unique제약을위반하면_409충돌을던진다() {
+    @DisplayName("등록 단위 일괄 등록 중 저장이 unique 제약을 위반하면 409를 던지고 방금 만든 등록 콘텐츠를 보상 삭제한다")
+    void registerUnit_저장이unique제약을위반하면_409충돌을던지고보상삭제한다() {
         // Given
         AiRegistrationUnitStore.RegistrationUnitRow unit = blockedUnitRow();
         when(registrationUnitStore.lockByJobAndUnitId(JOB_ID, UNIT_ID)).thenReturn(Optional.of(unit));
@@ -126,6 +127,24 @@ class RegistrationUnitCommandServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .satisfies(exception -> assertThat(((BusinessException) exception).code())
                         .isEqualTo("AIEXTRACT_CONCURRENT_REQUEST_CONFLICT"));
+        verify(rollbackUseCase).discardFailedRegistration(any(), anyBoolean(), any(), anyBoolean(), any(),
+                anyBoolean(), any(), anyBoolean());
+    }
+
+    @Test
+    @DisplayName("등록 단위 일괄 등록 중 감사 저장이 일반 런타임 예외로 실패해도 보상 삭제 후 원래 예외를 그대로 전달한다")
+    void registerUnit_일반런타임예외로실패하면_보상삭제후원래예외를전달한다() {
+        // Given
+        AiRegistrationUnitStore.RegistrationUnitRow unit = blockedUnitRow();
+        when(registrationUnitStore.lockByJobAndUnitId(JOB_ID, UNIT_ID)).thenReturn(Optional.of(unit));
+        when(executeRegistrationUnit.execute(any())).thenReturn(confirmedResult());
+        IllegalStateException injected = new IllegalStateException("audit adapter failure");
+        when(registrationUnitStore.markRegistered(eq(UNIT_ID), eq("AUTO_BLOCKED"), any())).thenThrow(injected);
+
+        // When / Then
+        assertThatThrownBy(() -> service.registerUnit(JOB_ID, UNIT_ID)).isSameAs(injected);
+        verify(rollbackUseCase).discardFailedRegistration(any(), anyBoolean(), any(), anyBoolean(), any(),
+                anyBoolean(), any(), anyBoolean());
     }
 
     @Test
@@ -164,7 +183,28 @@ class RegistrationUnitCommandServiceTest {
                 .satisfies(exception -> assertThat(((BusinessException) exception).code())
                         .isEqualTo("AIEXTRACT_CONCURRENT_REQUEST_CONFLICT"));
         verify(registrationUnitReviewStore, never()).insert(any());
-        verify(rollbackUseCase).rollback(any());
+        verify(rollbackUseCase).discardFailedRegistration(any(), anyBoolean(), any(), anyBoolean(), any(),
+                anyBoolean(), any(), anyBoolean());
+    }
+
+    @Test
+    @DisplayName("review CONFIRM 중 감사 저장이 일반 런타임 예외로 실패해도 보상 삭제 후 원래 예외를 그대로 전달한다")
+    void review_CONFIRM중_일반런타임예외로실패하면_보상삭제후원래예외를전달한다() {
+        // Given
+        AiRegistrationUnitStore.RegistrationUnitRow unit = blockedUnitRow();
+        when(registrationUnitStore.findByJobId(JOB_ID)).thenReturn(List.of(unit));
+        when(registrationUnitStore.lockByJobAndUnitId(JOB_ID, UNIT_ID)).thenReturn(Optional.of(unit));
+        when(executeRegistrationUnit.execute(any())).thenReturn(confirmedResult());
+        IllegalStateException injected = new IllegalStateException("audit adapter failure");
+        when(confirmCommitService.commit(eq(UNIT_ID), eq("AUTO_BLOCKED"), any(), eq(SNAPSHOT_ID), any(), any(),
+                any(), anyString(), any())).thenThrow(injected);
+
+        // When / Then
+        UUID adminId = UUID.randomUUID();
+        assertThatThrownBy(() -> service.review(JOB_ID, "CONFIRM", UNIT_ID.toString(), "사유",
+                "https://place.map.kakao.com/1", null, List.of(), adminId)).isSameAs(injected);
+        verify(rollbackUseCase).discardFailedRegistration(any(), anyBoolean(), any(), anyBoolean(), any(),
+                anyBoolean(), any(), anyBoolean());
     }
 
     @Test
