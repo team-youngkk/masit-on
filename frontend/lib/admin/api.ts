@@ -11,7 +11,9 @@ type ApiErrorBody = {
   code?: string
   message?: string
   errors?: ApiFieldError[]
+  resource?: unknown
   traceId?: string
+  details?: unknown
   [key: string]: unknown
 }
 
@@ -20,7 +22,9 @@ export class AdminApiError extends Error {
   readonly code?: string
   readonly fieldErrors: ApiFieldError[]
   readonly traceId?: string
-  /** code·message·errors·traceId 외에 API별로 실어 보내는 계약 필드(예: blockReason, recoveryPaths)를 원본 그대로 보존한다. */
+  /** 이미 존재하는 자원의 참조. 관리자 중복 등록 오류 등에서만 값이 있다. */
+  readonly resource: unknown
+  /** 기능별 오류 계약이 정의하는 안전한 추가 컨텍스트(예: blockReason, recoveryPaths). 응답의 `details` 필드를 그대로 보존한다. */
   readonly details: Record<string, unknown>
 
   constructor(
@@ -30,6 +34,7 @@ export class AdminApiError extends Error {
     traceId?: string,
     message = '요청을 처리하지 못했습니다.',
     details: Record<string, unknown> = {},
+    resource: unknown = null,
   ) {
     super(message)
     this.name = 'AdminApiError'
@@ -38,6 +43,7 @@ export class AdminApiError extends Error {
     this.fieldErrors = fieldErrors
     this.traceId = traceId
     this.details = details
+    this.resource = resource
   }
 }
 
@@ -49,14 +55,15 @@ async function errorFrom(response: Response): Promise<AdminApiError> {
     // 응답 본문이 없는 네트워크·프록시 오류도 상태 코드로 안내한다.
   }
 
-  const { code, message, errors, traceId, ...details } = body ?? {}
+  const { code, message, errors, traceId, details, resource } = body ?? {}
   return new AdminApiError(
     response.status,
     code,
     errors ?? [],
     traceId,
     message ?? '요청을 처리하지 못했습니다.',
-    details,
+    details && typeof details === 'object' ? (details as Record<string, unknown>) : {},
+    resource ?? null,
   )
 }
 

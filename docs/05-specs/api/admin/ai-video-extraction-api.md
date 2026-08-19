@@ -458,14 +458,21 @@ Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-0
 ```json
 {
   "code": "AIEXTRACT_VALIDATION_CONFLICT",
-  "blockReason": "PLACE_AMBIGUOUS",
-  "recoveryPaths": ["SUPPLEMENT", "MANUAL_REGISTRATION"],
-  "requiredSupplements": ["kakaoPlaceUrl"],
+  "message": "Registration unit validation conflict.",
+  "errors": [],
+  "resource": null,
+  "details": {
+    "blockReason": "PLACE_AMBIGUOUS",
+    "recoveryPaths": ["SUPPLEMENT", "MANUAL_REGISTRATION"],
+    "requiredSupplements": ["kakaoPlaceUrl"]
+  },
   "traceId": "opaque-trace-id"
 }
 ```
 
-`AIEXTRACT_VALIDATION_CONFLICT`는 "검증 충돌" 하나를 뜻하며 복구 가능 여부를 구분하지 않는다. 클라이언트는 `recoveryPaths`로 화면에 노출할 동작을 결정한다. **배열이며 첫 원소가 주 경로다.** 한 차단 사유가 여러 복구 동작을 허용하기 때문에 단일 값으로 두지 않는다.
+`blockReason`·`recoveryPaths`·`requiredSupplements`는 [공통 오류 계약](../common/error-contract.md)의 `details` 필드 안에 중첩된다. `code`·`traceId`와 같은 최상위 필드가 아니다.
+
+`AIEXTRACT_VALIDATION_CONFLICT`는 "검증 충돌" 하나를 뜻하며 복구 가능 여부를 구분하지 않는다. 클라이언트는 `details.recoveryPaths`로 화면에 노출할 동작을 결정한다. **배열이며 첫 원소가 주 경로다.** 한 차단 사유가 여러 복구 동작을 허용하기 때문에 단일 값으로 두지 않는다.
 
 | 값 | 의미 | 클라이언트 동작 |
 |---|---|---|
