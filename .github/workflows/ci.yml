@@ -38,10 +38,6 @@ on:
         description: 'CodeDeploy revision S3 bucket. 비우면 운영 기본값을 쓴다'
         required: false
         type: string
-      codedeploy_seed_asg:
-        description: '최초 seeding 때 Terraform이 소유한 blue ASG 이름. 비우면 운영 기본값을 쓴다'
-        required: false
-        type: string
 
 permissions:
   contents: read
@@ -482,7 +478,9 @@ jobs:
       CODEDEPLOY_APPLICATION: ${{ github.event.inputs.codedeploy_application || 'masiton-prod-codedeploy' }}
       CODEDEPLOY_DEPLOYMENT_GROUP: ${{ github.event.inputs.codedeploy_deployment_group || 'masiton-prod-deployment-group' }}
       CODEDEPLOY_S3_BUCKET: ${{ github.event.inputs.codedeploy_s3_bucket || 'masiton-prod-codedeploy-711457211155' }}
-      CODEDEPLOY_SEED_ASG: ${{ github.event.inputs.codedeploy_seed_asg || 'masiton-prod-blue-asg' }}
+      # Terraform variables.tf의 기본 name_prefix로 생성되는 seed ASG다. 이 값은
+      # workflow_dispatch 입력으로 덮어쓸 수 없게 해 최초 seed 보호 검사를 우회하지 못하게 한다.
+      CODEDEPLOY_SEED_ASG: masiton-prod-blue-asg
       # 입력이 있으면 그 커밋을, 없으면 이 실행의 커밋을 배포한다. push 이벤트에는
       # inputs가 없어 항상 github.sha가 된다.
       IMAGE_TAG: ${{ github.event.inputs.image_tag || github.sha }}
@@ -620,6 +618,10 @@ jobs:
             KEEP_ALIVE)
               ;;
             TERMINATE)
+              if [ "$CODEDEPLOY_APPLICATION" != "masiton-prod-codedeploy" ] || [ "$CODEDEPLOY_DEPLOYMENT_GROUP" != "masiton-prod-deployment-group" ]; then
+                echo "::error::TERMINATE 배포는 Terraform seed 이름이 고정된 production deployment group에서만 허용한다." >&2
+                exit 1
+              fi
               if [ "$current_asg_count" != "1" ] || [ "$current_asg" = "None" ] || [ "$current_asg" = "$CODEDEPLOY_SEED_ASG" ]; then
                 echo "::error::TERMINATE 배포를 차단했다. 현재 원본 ASG가 Terraform seed인지 확인해야 한다 (count=${current_asg_count}, asg=${current_asg}, seed=${CODEDEPLOY_SEED_ASG})." >&2
                 exit 1
