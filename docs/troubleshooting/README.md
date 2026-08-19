@@ -10,6 +10,7 @@ related_documents:
 
 ## 최신 기록
 
+- [PR #253 CodeDeploy 단일 경로 전환과 배포 계약 테스트 CI 회귀](pr-253-codedeploy-only-contract-test-review.md)
 - [PR #244 등록 단위 실행의 동시성·CONFIRM 원자성과 중복 판정 죽은 코드](pr-244-registration-unit-atomicity-review.md)
 - [PR #238 통합 인증 구현과 CI 회귀](pr-238-unified-auth-implementation-review.md)
 - [PR #235 통합 인증·라우팅·관리자 계정 전환 계약 리뷰 반영](pr-235-unified-auth-contract-review.md)
