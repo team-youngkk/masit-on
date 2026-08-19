@@ -55,6 +55,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 @SpringBootTest
@@ -439,8 +440,13 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + memberToken))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "private, no-store"))
-                .andExpect(jsonPath("$.code").value("AUTHENTICATION_SERVICE_UNAVAILABLE"));
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_SERVICE_UNAVAILABLE"))
+                .andExpect(jsonPath("$.message").isNotEmpty())
+                .andExpect(jsonPath("$.errors").isArray())
+                .andExpect(jsonPath("$.errors").isEmpty())
+                .andExpect(jsonPath("$.traceId").value(not(emptyString())));
 
+        verify(memberSessionAccessChecker, times(2)).check(memberId, sessionId, "MEMBER");
         verify(recordRecentRestaurantViewUseCase, never()).record(any(), any());
     }
 

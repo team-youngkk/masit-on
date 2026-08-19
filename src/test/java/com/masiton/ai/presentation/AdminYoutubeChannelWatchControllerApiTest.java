@@ -1,6 +1,8 @@
 package com.masiton.ai.presentation;
 
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -20,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.masiton.ai.application.port.in.YoutubeChannelWatchManagementUseCase;
+import com.masiton.common.observability.TraceIdFilter;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.GlobalExceptionHandler;
 
@@ -29,6 +32,7 @@ class AdminYoutubeChannelWatchControllerApiTest {
     private final YoutubeChannelWatchManagementUseCase useCase = mock(YoutubeChannelWatchManagementUseCase.class);
     private final MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new AdminYoutubeChannelWatchController(useCase))
             .setControllerAdvice(new GlobalExceptionHandler())
+            .addFilters(new TraceIdFilter())
             .build();
 
     @Test
@@ -50,6 +54,36 @@ class AdminYoutubeChannelWatchControllerApiTest {
                 .andExpect(jsonPath("$.page.totalElements").value(1));
 
         verify(useCase).getStatuses(1, 20);
+    }
+
+    @Test
+    @DisplayName("page가 0이면 400 INVALID_FIELD_VALUE와 page 오류를 반환하고 조회하지 않는다")
+    void 감시목록조회_page가0이면_400INVALID_FIELD_VALUE와page오류를반환하고조회하지않는다() throws Exception {
+        mockMvc.perform(get("/api/admin/ai/youtube-channel-watches")
+                        .param("page", "0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_FIELD_VALUE"))
+                .andExpect(jsonPath("$.message").isNotEmpty())
+                .andExpect(jsonPath("$.errors[0].field").value("page"))
+                .andExpect(jsonPath("$.errors[0].reason").isNotEmpty())
+                .andExpect(jsonPath("$.traceId").isNotEmpty());
+
+        verify(useCase, never()).getStatuses(anyInt(), anyInt());
+    }
+
+    @Test
+    @DisplayName("허용되지 않은 size가 15이면 400 INVALID_FIELD_VALUE와 size 오류를 반환하고 조회하지 않는다")
+    void 감시목록조회_허용되지않은size가15이면_400INVALID_FIELD_VALUE와size오류를반환하고조회하지않는다() throws Exception {
+        mockMvc.perform(get("/api/admin/ai/youtube-channel-watches")
+                        .param("size", "15"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_FIELD_VALUE"))
+                .andExpect(jsonPath("$.message").isNotEmpty())
+                .andExpect(jsonPath("$.errors[0].field").value("size"))
+                .andExpect(jsonPath("$.errors[0].reason").isNotEmpty())
+                .andExpect(jsonPath("$.traceId").isNotEmpty());
+
+        verify(useCase, never()).getStatuses(anyInt(), anyInt());
     }
 
     @Test
