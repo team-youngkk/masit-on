@@ -28,10 +28,11 @@ resource "aws_codedeploy_deployment_group" "app" {
     }
 
     terminate_blue_instances_on_deployment_success {
-      # Original 인스턴스는 같은 target group에서 해제되기 전까지 유지한다.
-      # listener를 바꾸지 않으므로 rollback·유휴 환경 정리는 instance ID와 ASG
-      # membership를 기준으로 별도 runbook에서 수행한다.
-      action                           = "KEEP_ALIVE"
+      # 대기 시간이 지나면 CodeDeploy가 original 인스턴스와 그 ASG를 정리한다.
+      # KEEP_ALIVE는 정리를 사람에게 맡겨 유휴 인스턴스가 누적됐다. 대신 이 값이
+      # rollback 가능 시간의 상한이 되고, 원본 종료 대기가 배포 수명주기 안에
+      # 들어가므로 CI 배포 job이 붙잡혀 있는 시간도 그만큼 늘어난다.
+      action                           = "TERMINATE"
       termination_wait_time_in_minutes = var.codedeploy_deployment_wait_minutes
     }
   }

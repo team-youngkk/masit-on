@@ -249,9 +249,9 @@ variable "initial_blue_verified" {
 }
 
 variable "codedeploy_deployment_wait_minutes" {
-  description = "배포 후 blue 인스턴스 종료 전 대기 시간"
+  description = "배포 성공 후 original 인스턴스를 종료하기까지의 대기 시간. 이 값이 rollback 가능 시간의 상한이자 CI 배포 job이 대기하는 시간이다. ci.yml의 배포 폴링 한도(45분)에서 provisioning·hook 시간을 뺀 범위 안에 두어야 한다"
   type        = number
-  default     = 5
+  default     = 15
 }
 
 variable "asg_health_check_type" {
