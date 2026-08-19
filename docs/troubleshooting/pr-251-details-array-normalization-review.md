@@ -13,7 +13,7 @@ related_documents:
 | PR | https://github.com/team-youngkk/masit-on/pull/251 |
 | 작성자 | 양성훈 (tjdgns0618) |
 | 처리 일자 | 2026-08-19 |
-| 범위 | 리뷰 스레드 1건 (`frontend/lib/admin/api.ts:65`) |
+| 범위 | 리뷰 스레드 2건 (`frontend/lib/admin/api.ts:65`, `docs/troubleshooting/pr-251-details-array-normalization-review.md:24`) |
 | 주 문제 유형 | 애플리케이션 |
 | 기존 기록 | 조사 전 `docs/troubleshooting/`에서 `Array.isArray`·`typeof ... === 'object'` 관련 기존 기록을 검색했으나 없음 |
 
@@ -21,7 +21,8 @@ related_documents:
 
 | 스레드 | 요청 요약 | 문제 유형 | 판단 | 처리 결과 | 근거/검증 |
 |---|---|---|---|---|---|
-| [PRRT_kwDOTf2xKc6abD9C](https://github.com/team-youngkk/masit-on/pull/251#discussion_r0) | `typeof details === 'object'`는 배열도 통과시켜 `Record<string, unknown>` 불변식과 PR 본문의 "비객체 안전 처리" 서술이 어긋난다. `!Array.isArray(details)` 조건과 배열 응답 회귀 테스트 요청 | 애플리케이션 | 수정 필요 | `frontend/lib/admin/api.ts`에 `!Array.isArray(details)` 조건 추가, `ai-video-extractions.test.ts`에 배열 `details` 회귀 테스트 추가 | `npm run test`(274/274), `npm run typecheck`, `npx next build` 모두 통과 |
+| [#discussion_r3811970050](https://github.com/team-youngkk/masit-on/pull/251#discussion_r3811970050) | `typeof details === 'object'`는 배열도 통과시켜 `Record<string, unknown>` 불변식과 PR 본문의 "비객체 안전 처리" 서술이 어긋난다. `!Array.isArray(details)` 조건과 배열 응답 회귀 테스트 요청 | 애플리케이션 | 수정 필요 | `frontend/lib/admin/api.ts`에 `!Array.isArray(details)` 조건 추가, `ai-video-extractions.test.ts`에 배열 `details` 회귀 테스트 추가 | `npm run test`(274/274), `npm run typecheck`, `npx next build` 모두 통과 |
+| [#discussion_r3812063021](https://github.com/team-youngkk/masit-on/pull/251#discussion_r3812063021) | 트러블슈팅 기록의 스레드 링크가 유효하지 않은 자리표시자(`#discussion_r0`)라 추적성이 없음 | 기타 (문서 링크 정확성) | 수정 필요 | 실제 리뷰 코멘트 링크(`#discussion_r3811970050`)로 교체 | 문서 diff 확인 |
 
 ## 3. 문제 현상과 발생 조건
 
