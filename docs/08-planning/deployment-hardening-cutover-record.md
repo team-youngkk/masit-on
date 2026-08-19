@@ -134,15 +134,23 @@ Terraform이 소유한 `masiton-prod-blue-asg`(desired 0)는 후보에서 제외
 | 인스턴스 | 종료. 루트 볼륨 30GB는 `DeleteOnTermination`으로 함께 삭제 |
 | Elastic IP | release. **미사용 EIP는 과금되므로 종료와 함께 회수해야 한다** |
 | 최종 스냅샷 | 종료 전 생성 후 대조를 마치고 삭제 |
+| 기존 EC2 보안 그룹 | 참조 규칙을 모두 제거한 뒤 삭제 |
+
+보안 그룹은 참조가 남아 있으면 지워지지 않는다. 제거 대상은 세 곳이었다.
+
+- Redis SG의 6379 ingress와 SSM endpoint client 규칙 — `terraform-redis` 레이어가 소유하므로 tfvars에서 SG를 빼고 apply했다
+- **RDS SG의 5432 ingress** — M2 자원 생성 때 수동으로 만든 규칙이라 Terraform 관리 밖이었고 CLI로 제거했다. 같은 SG의 운영 ASG 규칙(`manage_rds_ingress_rule`이 소유)은 유지해야 한다. 지우면 다음 배포가 Flyway 연결 timeout으로 실패한다
+
+**계정 전체 보안 그룹을 훑어 참조를 찾은 뒤에 삭제했다.** 관련 있어 보이는 SG만 확인했을 때는 RDS 규칙이 드러나지 않았다.
 
 배포 성공 후 유휴 환경 2개도 [runbook](blue-green-cleanup-runbook.md)에 따라 정리했다.
+
+정리를 마친 뒤 `codedeploy_termination_enabled`를 `true`로 적용해 유휴 환경 자동 종료를 활성화했다. 선행 조건인 "deployment group의 원본 ASG가 seed ASG가 아니라 replacement ASG일 것"은 배포 `d-EGYARQWBK`로 충족됐다. 이후 배포는 성공 15분 뒤 original 인스턴스와 ASG가 자동 종료되며, 그 15분이 rollback 가능 시간의 상한이다. **첫 자동 종료가 실제로 일어나는지는 다음 배포에서 확인해야 한다.**
 
 ### 6.2. 남은 작업
 
 | 항목 | 내용 |
 |---|---|
-| 기존 EC2 SG 정리 | Redis 6379 ingress와 SSM endpoint client 목록에서 제거한다. 4.2절에서 rollback 경로 보호를 위해 추가한 것이고 인스턴스가 사라져 불필요하다 |
-| 유휴 환경 자동 종료 활성화 | `codedeploy_termination_enabled`가 `false`이고 대기 시간만 15분으로 반영돼 있다. 선행 조건인 "deployment group의 원본 ASG가 replacement ASG일 것"은 충족됐다 |
 | 아웃바운드 IP 고정 | 4.4절 참조. IP 허용 목록을 요구하는 공급자가 추가되면 다시 필요해진다 |
 | `REQUIRE_SHARED_REDIS` 가드 보완 | 4.2절 참조. 값이 로컬 루프백일 때도 실패시킬지 결정한다 |
 | 진단 메시지 개선 | `app-deploy.sh`의 dependency 실패 메시지가 실제 DOWN 항목 대신 mail을 지목한다. YouTube 어댑터는 upstream 상태 코드를 남기지 않는다 |

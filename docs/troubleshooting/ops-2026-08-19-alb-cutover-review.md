@@ -92,7 +92,7 @@ related_documents:
 - **`app-deploy.sh`의 dependency 실패 메시지에 실제 DOWN 항목을 넣는다.** 지금은 mail을 지목해 30분을 잘못된 방향으로 쓰게 만들었다.
 - **`YouTubeVideoVerificationAdapter`가 upstream 상태 코드를 남기게 한다.** 본문에 키가 포함되지 않으므로 상태 코드와 `reason`은 로그로 남길 수 있다.
 - **아웃바운드 IP 고정 여부를 결정한다.** 이번에는 IP 제한 해제로 우회했지만, IP 허용 목록을 요구하는 공급자가 추가되면 다시 부딪힌다. NAT Gateway는 [비용 검토](../08-planning/deployment-hardening-impact-review.md) 5절에서 예산 초과(E3)로 판정된 항목이다.
-- **유휴 환경 자동 종료를 켤지 결정한다.** `codedeploy_termination_enabled`는 현재 `false`이고 대기 시간만 15분으로 반영돼 있다. 켜기 전 선행 조건(deployment group의 원본 ASG가 replacement ASG일 것)은 충족돼 있다.
+- **Terraform state 밖의 자원을 정리 목록에 포함한다.** M2 시기에 수동 생성한 규칙은 코드에 없어 plan에 나타나지 않는다. 인스턴스를 없앨 때는 그 인스턴스의 SG를 참조하는 규칙을 계정 전체에서 조회해야 한다.
 
 ## 9. 도입 전후 비교 지표
 
@@ -108,5 +108,6 @@ related_documents:
 ## 10. 남은 사항
 
 - 기존 인스턴스 정리는 완료했다(인스턴스 종료, EIP release, 최종 스냅샷 생성 후 삭제). 루트 볼륨은 `DeleteOnTermination`으로 함께 삭제됐다.
-- 기존 EC2 SG를 Redis ingress와 SSM endpoint client 목록에서 제거하는 후속 정리가 남았다. 인스턴스가 사라졌으므로 그 허용은 더 이상 필요 없다.
+- 기존 EC2 SG 정리는 완료했다. **보안 그룹 삭제는 참조를 계정 전체에서 찾아야 한다.** Redis SG와 SSM endpoint 규칙을 `terraform-redis` apply로 지운 뒤에도 삭제가 막혔고, 계정의 모든 보안 그룹을 훑어 **RDS SG의 5432 ingress**가 남아 있는 것을 찾았다. 그 규칙은 M2 자원 생성 때 수동으로 만든 것이라 Terraform state에 없었다. 관련 있어 보이는 SG만 확인했을 때는 드러나지 않았다.
+- 유휴 환경 자동 종료(`codedeploy_termination_enabled`)를 활성화했다. 첫 자동 종료 관측은 다음 배포에서 확인한다.
 - 전환 후 장시간 관찰과 비용 실측은 이 기록의 범위 밖이다.
