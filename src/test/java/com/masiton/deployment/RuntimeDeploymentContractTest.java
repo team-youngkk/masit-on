@@ -262,9 +262,11 @@ class RuntimeDeploymentContractTest {
                 .contains("codedeploy-cancel-cleanup")
                 .contains("S3 deployment ID pointer")
                 .contains("update-auto-scaling-group")
+                .contains("--min-size 0")
                 .contains("--desired-capacity 0")
                 .contains("ignore_changes = [desired_capacity]")
-                .contains("healthy target instance가 seed ASG에 남아 있지 않고 replacement ASG에만 속하는지");
+                .contains("healthy target instance가 seed ASG에 남아 있지 않고 replacement ASG에만 속하는지")
+                .contains("seed ASG 자체는 Terraform state와 target group 연결을 유지하므로 삭제하지 않는다");
         assertThat(Files.readString(PRODUCTION_README))
                 .contains("desired capacity 0으로 축소한다")
                 .contains("ignore_changes = [desired_capacity]")
