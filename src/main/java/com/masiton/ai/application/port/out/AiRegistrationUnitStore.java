@@ -62,22 +62,35 @@ public interface AiRegistrationUnitStore {
      * {@code review}의 {@code ROLLBACK}을 반영한다. {@code review_status}를 {@code MANUAL_OVERRIDE}로,
      * {@code rolled_back_at}을 채우고 등록 결과 4종·{@code place_decision}·{@code category_decision}·
      * {@code reused_resources}를 초기화한다.
+     *
+     * <p>{@link #markRegistered}와 같은 이유로 {@code WHERE review_status = expectedReviewStatus AND
+     * registered_restaurant_id IS NOT NULL} 조건부 갱신이다. {@code review_status}만으로는
+     * {@code MANUAL_OVERRIDE}가 "여전히 등록됨"과 "이미 롤백·폐기됨"을 구분하지 못하므로 등록 결과
+     * 존재 여부를 추가 조건으로 확인한다. 다른 요청이 먼저 반영해 조건이 어긋나면 {@code false}를
+     * 반환한다.</p>
      */
-    void rollback(UUID unitId, OffsetDateTime rolledBackAt);
+    boolean rollback(UUID unitId, String expectedReviewStatus, OffsetDateTime rolledBackAt);
 
     /**
      * {@code review}의 {@code DISCARD}를 반영한다. {@code review_status}를 {@code MANUAL_OVERRIDE}로,
      * {@code discarded_at}을 채우고 {@code block_reason}을 지운다. 등록 결과 컬럼은 이미 모두
      * {@code NULL}이므로 건드리지 않는다.
+     *
+     * <p>{@link #markRegistered}와 같은 이유로 {@code WHERE review_status = expectedReviewStatus}
+     * 조건부 갱신이다. 다른 요청이 먼저 반영해 더 이상 일치하지 않으면 {@code false}를 반환한다.</p>
      */
-    void discard(UUID unitId, OffsetDateTime discardedAt);
+    boolean discard(UUID unitId, String expectedReviewStatus, OffsetDateTime discardedAt);
 
     /**
      * {@code review}의 {@code ADJUST_CATEGORY}를 반영한다. {@code review_status}를
      * {@code MANUAL_OVERRIDE}로 바꾸고 {@code category_decision}만 교체한다. 등록 결과·
      * {@code place_decision}·{@code executed_by}는 그대로 둔다.
+     *
+     * <p>{@link #rollback}과 같은 이유로 {@code WHERE review_status = expectedReviewStatus AND
+     * registered_restaurant_id IS NOT NULL} 조건부 갱신이다. 다른 요청이 먼저 반영해 조건이 어긋나면
+     * {@code false}를 반환한다.</p>
      */
-    void adjustCategory(UUID unitId, String categoryDecisionJson);
+    boolean adjustCategory(UUID unitId, String expectedReviewStatus, String categoryDecisionJson);
 
     /**
      * {@code placeDecisionJson}·{@code categoryDecisionJson}과 등록 결과 식별자 4종은 모두

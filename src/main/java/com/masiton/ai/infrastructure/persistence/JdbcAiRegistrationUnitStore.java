@@ -143,7 +143,7 @@ class JdbcAiRegistrationUnitStore implements AiRegistrationUnitStore {
     }
 
     @Override
-    public void rollback(UUID unitId, OffsetDateTime rolledBackAt) {
+    public boolean rollback(UUID unitId, String expectedReviewStatus, OffsetDateTime rolledBackAt) {
         int updated = jdbcTemplate.update("""
                 UPDATE ai_registration_unit
                    SET review_status = 'MANUAL_OVERRIDE',
@@ -155,38 +155,32 @@ class JdbcAiRegistrationUnitStore implements AiRegistrationUnitStore {
                        reused_resources = '[]'::jsonb,
                        place_decision = NULL,
                        category_decision = NULL
-                 WHERE id = ?
-                """, rolledBackAt, unitId);
-        if (updated != 1) {
-            throw new IllegalStateException("AI registration unit was not found for rollback: " + unitId);
-        }
+                 WHERE id = ? AND review_status = ? AND registered_restaurant_id IS NOT NULL
+                """, rolledBackAt, unitId, expectedReviewStatus);
+        return updated == 1;
     }
 
     @Override
-    public void discard(UUID unitId, OffsetDateTime discardedAt) {
+    public boolean discard(UUID unitId, String expectedReviewStatus, OffsetDateTime discardedAt) {
         int updated = jdbcTemplate.update("""
                 UPDATE ai_registration_unit
                    SET review_status = 'MANUAL_OVERRIDE',
                        discarded_at = ?,
                        block_reason = NULL
-                 WHERE id = ?
-                """, discardedAt, unitId);
-        if (updated != 1) {
-            throw new IllegalStateException("AI registration unit was not found for discard: " + unitId);
-        }
+                 WHERE id = ? AND review_status = ?
+                """, discardedAt, unitId, expectedReviewStatus);
+        return updated == 1;
     }
 
     @Override
-    public void adjustCategory(UUID unitId, String categoryDecisionJson) {
+    public boolean adjustCategory(UUID unitId, String expectedReviewStatus, String categoryDecisionJson) {
         int updated = jdbcTemplate.update("""
                 UPDATE ai_registration_unit
                    SET review_status = 'MANUAL_OVERRIDE',
                        category_decision = ?::jsonb
-                 WHERE id = ?
-                """, categoryDecisionJson, unitId);
-        if (updated != 1) {
-            throw new IllegalStateException("AI registration unit was not found for category adjustment: " + unitId);
-        }
+                 WHERE id = ? AND review_status = ? AND registered_restaurant_id IS NOT NULL
+                """, categoryDecisionJson, unitId, expectedReviewStatus);
+        return updated == 1;
     }
 
     private String selectColumns() {

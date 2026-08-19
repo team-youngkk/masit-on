@@ -128,9 +128,11 @@ public class RegistrationUnitCommandService {
         try {
             updated = registrationUnitStore.markRegistered(unit.id(), "AUTO_BLOCKED", registered);
         } catch (DataIntegrityViolationException exception) {
+            compensateFailedRegistration(unit, registration);
             throw concurrentConflict();
         }
         if (!updated) {
+            compensateFailedRegistration(unit, registration);
             throw concurrentConflict();
         }
         return RegistrationExecutionView.fromRegistration(unit.id(), "AUTO_CONFIRMED", registration, registered);
@@ -142,10 +144,14 @@ public class RegistrationUnitCommandService {
 
     /**
      * {@code CONFIRM}은 외부 조회(Kakao)를 포함할 수 있으므로 이 메서드 전체를 {@code @Transactional}로
-     * 감싸지 않는다. {@code DISCARD}·{@code ROLLBACK}·{@code ADJUST_CATEGORY}는 외부 호출이 없으며
-     * 각 저장 호출이 단일 문장 단위로 원자적이다. {@code ROLLBACK}·{@code ADJUST_CATEGORY}의 등록
-     * 콘텐츠 반영은 {@link RollbackAiRegisteredContentUseCase}·{@link AdjustRegisteredCategoryUseCase}가
-     * 각자 소유한 트랜잭션에서 수행한다.
+     * 감싸지 않는다. 네 결정 모두 {@code lockUnit}으로 읽은 시점의 상태를 {@code expectedReviewStatus}로
+     * 넘겨, 최종 저장이 {@code WHERE review_status = expectedReviewStatus}(등록 결과가 있어야 하는
+     * {@code ROLLBACK}·{@code ADJUST_CATEGORY}는 {@code registered_restaurant_id IS NOT NULL}도 함께)
+     * 조건을 만족할 때만 반영되게 한다. 조건이 어긋나면(동시 요청이 먼저 반영) 아무것도 바꾸지 않고
+     * {@code false}를 반환하며 이 클래스가 {@code concurrentConflict()}로 응답한다. {@code ROLLBACK}·
+     * {@code ADJUST_CATEGORY}의 등록 콘텐츠 반영은 {@link RollbackAiRegisteredContentUseCase}·
+     * {@link AdjustRegisteredCategoryUseCase}가 각자 소유한 트랜잭션에서 먼저 수행한 뒤 등록 단위
+     * 상태를 반영한다.
      */
     public void review(UUID jobId, String decision, String unitIdRaw, String reason, String suppliedKakaoPlaceUrl,
                        String suppliedFoodCategoryIdRaw, List<AiExtractionAdminQueryPort.TagDecision> tagDecisions,
@@ -227,18 +233,38 @@ public class RegistrationUnitCommandService {
             committed = confirmCommitService.commit(unit.id(), "AUTO_BLOCKED", registered, unit.snapshotId(),
                     registration.visitId(), tagDecisions, adminId, reason, submittedSupplementsJson);
         } catch (DataIntegrityViolationException exception) {
+            compensateFailedRegistration(unit, registration);
             throw concurrentConflict();
         }
         if (!committed) {
+            compensateFailedRegistration(unit, registration);
             throw concurrentConflict();
         }
+    }
+
+    /**
+     * {@code AutoRegisterVerifiedContentUseCase#register}는 자신의 트랜잭션에서 즉시 커밋되므로,
+     * 그 뒤 등록 단위 상태 반영({@code markRegistered}·{@link RegistrationUnitConfirmCommitService#commit})이
+     * 동시 요청에 선점당하면 방금 만든 4종 자원이 어떤 등록 단위에도 연결되지 못한 채 남는다. 맛집은
+     * 재사용 대상이 아니므로(이 방문의 등록 단위는 항상 새 맛집·방문을 만든다) 이 상태를 그대로 두면
+     * 재시도가 {@code DUPLICATE_CONFLICT}로 영구히 막힌다. 방금 만든 자원을 되돌려 재시도 가능한
+     * 상태로 복구한다.
+     */
+    private void compensateFailedRegistration(AiRegistrationUnitStore.RegistrationUnitRow unit,
+            AutoRegisterVerifiedContentUseCase.RegistrationResult registration) {
+        rollbackUseCase.rollback(new RollbackAiRegisteredContentUseCase.RegistrationReference(
+                unit.snapshotId(), registration.restaurantId(), registration.restaurantCreated(),
+                registration.creatorId(), registration.creatorCreated(), registration.videoId(),
+                registration.videoCreated(), registration.visitId(), registration.visitCreated()));
     }
 
     private void discard(AiRegistrationUnitStore.RegistrationUnitRow unit, String reason, UUID adminId) {
         if (!"AUTO_BLOCKED".equals(unit.reviewStatus())) {
             throw validationConflict(unit.blockReason());
         }
-        registrationUnitStore.discard(unit.id(), OffsetDateTime.now());
+        if (!registrationUnitStore.discard(unit.id(), "AUTO_BLOCKED", OffsetDateTime.now())) {
+            throw concurrentConflict();
+        }
         registrationUnitReviewStore.insert(new AiRegistrationUnitReviewStore.RegistrationUnitReviewInsert(
                 unit.id(), "DISCARD", reason, null, null, null, adminId));
     }
@@ -257,7 +283,9 @@ public class RegistrationUnitCommandService {
                 unit.snapshotId(), unit.registeredRestaurantId(), true, unit.registeredCreatorId(),
                 !unit.reusedResources().contains("creator"), unit.registeredVideoId(),
                 !unit.reusedResources().contains("video"), unit.registeredVisitId(), true));
-        registrationUnitStore.rollback(unit.id(), OffsetDateTime.now());
+        if (!registrationUnitStore.rollback(unit.id(), unit.reviewStatus(), OffsetDateTime.now())) {
+            throw concurrentConflict();
+        }
         registrationUnitReviewStore.insert(new AiRegistrationUnitReviewStore.RegistrationUnitReviewInsert(
                 unit.id(), "ROLLBACK", reason, null, null, writeJson(reverted), adminId));
     }
@@ -281,7 +309,9 @@ public class RegistrationUnitCommandService {
         newDecision.put("resolvedBy", "MANUAL_OVERRIDE");
 
         adjustCategoryUseCase.adjust(unit.registeredRestaurantId(), categoryId);
-        registrationUnitStore.adjustCategory(unit.id(), writeJson(newDecision));
+        if (!registrationUnitStore.adjustCategory(unit.id(), unit.reviewStatus(), writeJson(newDecision))) {
+            throw concurrentConflict();
+        }
         registrationUnitReviewStore.insert(new AiRegistrationUnitReviewStore.RegistrationUnitReviewInsert(
                 unit.id(), "ADJUST_CATEGORY", reason, null, unit.categoryDecisionJson(), null, adminId));
     }

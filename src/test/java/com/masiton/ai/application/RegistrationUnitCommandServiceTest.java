@@ -87,12 +87,13 @@ class RegistrationUnitCommandServiceTest {
     }
 
     @Test
-    @DisplayName("등록 단위 일괄 등록 중 동시 요청이 먼저 반영하면 409 AIEXTRACT_CONCURRENT_REQUEST_CONFLICT를 던진다")
-    void registerUnit_동시요청이먼저반영하면_409충돌을던진다() {
+    @DisplayName("등록 단위 일괄 등록 중 동시 요청이 먼저 반영하면 409를 던지고 방금 만든 등록 콘텐츠를 보상 롤백한다")
+    void registerUnit_동시요청이먼저반영하면_409충돌을던지고보상롤백한다() {
         // Given
         AiRegistrationUnitStore.RegistrationUnitRow unit = blockedUnitRow();
         when(registrationUnitStore.lockByJobAndUnitId(JOB_ID, UNIT_ID)).thenReturn(Optional.of(unit));
-        when(executeRegistrationUnit.execute(any())).thenReturn(confirmedResult());
+        RegistrationUnitExecutionResult result = confirmedResult();
+        when(executeRegistrationUnit.execute(any())).thenReturn(result);
         when(registrationUnitStore.markRegistered(eq(UNIT_ID), eq("AUTO_BLOCKED"), any())).thenReturn(false);
 
         // When / Then
@@ -103,6 +104,11 @@ class RegistrationUnitCommandServiceTest {
                     assertThat(businessException.status()).isEqualTo(HttpStatus.CONFLICT);
                     assertThat(businessException.code()).isEqualTo("AIEXTRACT_CONCURRENT_REQUEST_CONFLICT");
                 });
+        AutoRegisterVerifiedContentUseCase.RegistrationResult registration = result.registration();
+        verify(rollbackUseCase).rollback(new RollbackAiRegisteredContentUseCase.RegistrationReference(
+                SNAPSHOT_ID, registration.restaurantId(), registration.restaurantCreated(),
+                registration.creatorId(), registration.creatorCreated(), registration.videoId(),
+                registration.videoCreated(), registration.visitId(), registration.visitCreated()));
     }
 
     @Test
@@ -158,12 +164,78 @@ class RegistrationUnitCommandServiceTest {
                 .satisfies(exception -> assertThat(((BusinessException) exception).code())
                         .isEqualTo("AIEXTRACT_CONCURRENT_REQUEST_CONFLICT"));
         verify(registrationUnitReviewStore, never()).insert(any());
+        verify(rollbackUseCase).rollback(any());
+    }
+
+    @Test
+    @DisplayName("DISCARD 중 동시 요청이 먼저 반영하면 409 AIEXTRACT_CONCURRENT_REQUEST_CONFLICT를 던진다")
+    void review_DISCARD중_동시요청이먼저반영하면_409충돌을던진다() {
+        // Given
+        AiRegistrationUnitStore.RegistrationUnitRow unit = blockedUnitRow();
+        when(registrationUnitStore.findByJobId(JOB_ID)).thenReturn(List.of(unit));
+        when(registrationUnitStore.lockByJobAndUnitId(JOB_ID, UNIT_ID)).thenReturn(Optional.of(unit));
+        when(registrationUnitStore.discard(eq(UNIT_ID), eq("AUTO_BLOCKED"), any())).thenReturn(false);
+
+        // When / Then
+        assertThatThrownBy(() -> service.review(JOB_ID, "DISCARD", UNIT_ID.toString(), "사유",
+                null, null, List.of(), UUID.randomUUID()))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(exception -> assertThat(((BusinessException) exception).code())
+                        .isEqualTo("AIEXTRACT_CONCURRENT_REQUEST_CONFLICT"));
+        verify(registrationUnitReviewStore, never()).insert(any());
+    }
+
+    @Test
+    @DisplayName("ROLLBACK 중 동시 요청이 먼저 반영하면 409 AIEXTRACT_CONCURRENT_REQUEST_CONFLICT를 던진다")
+    void review_ROLLBACK중_동시요청이먼저반영하면_409충돌을던진다() {
+        // Given
+        AiRegistrationUnitStore.RegistrationUnitRow unit = registeredUnitRow("AUTO_CONFIRMED");
+        when(registrationUnitStore.findByJobId(JOB_ID)).thenReturn(List.of(unit));
+        when(registrationUnitStore.lockByJobAndUnitId(JOB_ID, UNIT_ID)).thenReturn(Optional.of(unit));
+        when(registrationUnitStore.rollback(eq(UNIT_ID), eq("AUTO_CONFIRMED"), any())).thenReturn(false);
+
+        // When / Then
+        assertThatThrownBy(() -> service.review(JOB_ID, "ROLLBACK", UNIT_ID.toString(), "오등록",
+                null, null, List.of(), UUID.randomUUID()))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(exception -> assertThat(((BusinessException) exception).code())
+                        .isEqualTo("AIEXTRACT_CONCURRENT_REQUEST_CONFLICT"));
+        verify(registrationUnitReviewStore, never()).insert(any());
+    }
+
+    @Test
+    @DisplayName("ADJUST_CATEGORY 중 동시 요청이 먼저 반영하면 409 AIEXTRACT_CONCURRENT_REQUEST_CONFLICT를 던진다")
+    void review_ADJUST_CATEGORY중_동시요청이먼저반영하면_409충돌을던진다() {
+        // Given
+        AiRegistrationUnitStore.RegistrationUnitRow unit = registeredUnitRow("AUTO_CONFIRMED");
+        UUID foodCategoryId = UUID.randomUUID();
+        when(registrationUnitStore.findByJobId(JOB_ID)).thenReturn(List.of(unit));
+        when(registrationUnitStore.lockByJobAndUnitId(JOB_ID, UNIT_ID)).thenReturn(Optional.of(unit));
+        when(resolveFoodCategory.findActiveCategoryName(foodCategoryId)).thenReturn(Optional.of("일식"));
+        when(registrationUnitStore.adjustCategory(eq(UNIT_ID), eq("AUTO_CONFIRMED"), any())).thenReturn(false);
+
+        // When / Then
+        assertThatThrownBy(() -> service.review(JOB_ID, "ADJUST_CATEGORY", UNIT_ID.toString(), "카테고리 오분류",
+                null, foodCategoryId.toString(), List.of(), UUID.randomUUID()))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(exception -> assertThat(((BusinessException) exception).code())
+                        .isEqualTo("AIEXTRACT_CONCURRENT_REQUEST_CONFLICT"));
+        verify(registrationUnitReviewStore, never()).insert(any());
     }
 
     private AiRegistrationUnitStore.RegistrationUnitRow blockedUnitRow() {
         return new AiRegistrationUnitStore.RegistrationUnitRow(UNIT_ID, SNAPSHOT_ID, 1, "행복식당", "AUTO_BLOCKED",
                 "PLACE_NOT_FOUND", null, null, null, null, null, null, List.of(), null, OffsetDateTime.now(), null,
                 null);
+    }
+
+    private AiRegistrationUnitStore.RegistrationUnitRow registeredUnitRow(String reviewStatus) {
+        return new AiRegistrationUnitStore.RegistrationUnitRow(UNIT_ID, SNAPSHOT_ID, 1, "행복식당", reviewStatus, null,
+                "{\"kakaoPlaceUrl\":\"https://place.map.kakao.com/1\",\"roadAddress\":\"서울특별시 마포구 월드컵로 1\","
+                        + "\"matchedBy\":\"NAME_AND_DISTRICT\"}",
+                "{\"foodCategoryName\":\"한식\",\"resolvedBy\":\"KAKAO_PLACE_CATEGORY\"}",
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), List.of(), "WORKER",
+                OffsetDateTime.now(), null, null);
     }
 
     private RegistrationUnitExecutionResult confirmedResult() {

@@ -20,7 +20,6 @@ import com.masiton.ai.application.RegistrationUnitCommandService;
 import com.masiton.ai.application.port.out.AiExtractionAdminQueryPort;
 import com.masiton.ai.application.port.out.AiRegistrationUnitStore;
 import com.masiton.ai.application.port.out.dto.AiExtractionJobView;
-import com.masiton.common.security.LegacyAdminActorResolver;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
 import tools.jackson.databind.JsonNode;
@@ -37,18 +36,15 @@ public class AdminAiVideoExtractionController {
     private final AiExtractionJobUseCase useCase;
     private final AdminAiExtractionQueryService queryService;
     private final ObjectMapper objectMapper;
-    private final LegacyAdminActorResolver legacyAdminActorResolver;
 
     public AdminAiVideoExtractionController(
             AiExtractionJobUseCase useCase,
             AdminAiExtractionQueryService queryService,
-            ObjectMapper objectMapper,
-            LegacyAdminActorResolver legacyAdminActorResolver
+            ObjectMapper objectMapper
     ) {
         this.useCase = useCase;
         this.queryService = queryService;
         this.objectMapper = objectMapper;
-        this.legacyAdminActorResolver = legacyAdminActorResolver;
     }
 
     @GetMapping
@@ -99,12 +95,18 @@ public class AdminAiVideoExtractionController {
         return ResponseEntity.ok(RegistrationExecutionResponse.from(result));
     }
 
+    /**
+     * {@code member_account.id}(JWT subject)를 그대로 반환한다. {@code RegistrationUnitCommandService}가
+     * 이 값을 {@code ai_registration_unit_review.reviewed_by}(member_account FK)에 그대로 저장하고,
+     * legacy {@code admin_account} FK가 필요한 곳에서만 {@code LegacyAdminActorResolver}로 변환하므로
+     * 여기서 미리 변환하면 안 된다.
+     */
     private UUID adminId(Authentication authentication) {
         if (authentication == null || authentication.getName() == null) {
             throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
         }
         try {
-            return legacyAdminActorResolver.resolve(UUID.fromString(authentication.getName()));
+            return UUID.fromString(authentication.getName());
         } catch (IllegalArgumentException exception) {
             throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
         }

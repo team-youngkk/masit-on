@@ -307,8 +307,9 @@ class JdbcAiRegistrationUnitStorePostgreSqlIntegrationTest extends FullContextIn
                 "{\"foodCategoryName\":\"한식\",\"resolvedBy\":\"KAKAO_PLACE_CATEGORY\"}",
                 restaurantId, creatorId, videoId, visitId, "[]", "WORKER", OffsetDateTime.now()));
 
-        store.rollback(unitId, OffsetDateTime.now());
+        boolean updated = store.rollback(unitId, "AUTO_CONFIRMED", OffsetDateTime.now());
 
+        assertThat(updated).isTrue();
         AiRegistrationUnitStore.RegistrationUnitRow row = store.findBySnapshotId(snapshotId).get(0);
         assertThat(row.reviewStatus()).isEqualTo("MANUAL_OVERRIDE");
         assertThat(row.manualOverrideType()).isEqualTo("ROLLED_BACK");
@@ -319,19 +320,56 @@ class JdbcAiRegistrationUnitStorePostgreSqlIntegrationTest extends FullContextIn
     }
 
     @Test
+    @DisplayName("expectedReviewStatus가 어긋나면 롤백은 아무것도 바꾸지 않고 false를 반환한다")
+    void rollback_expectedReviewStatus불일치_false를반환하고갱신하지않는다() {
+        UUID restaurantId = UUID.randomUUID();
+        UUID creatorId = UUID.randomUUID();
+        UUID videoId = UUID.randomUUID();
+        UUID visitId = UUID.randomUUID();
+        registerContentFixtures(restaurantId, creatorId, videoId, visitId);
+        UUID unitId = store.insert(new AiRegistrationUnitStore.RegistrationUnitInsert(
+                snapshotId, 1, "행복식당", "AUTO_CONFIRMED", null,
+                "{\"kakaoPlaceUrl\":\"https://place.map.kakao.com/1\"}", "{\"foodCategoryName\":\"한식\"}",
+                restaurantId, creatorId, videoId, visitId, "[]", "WORKER", OffsetDateTime.now()));
+
+        boolean updated = store.rollback(unitId, "MANUAL_OVERRIDE", OffsetDateTime.now());
+
+        assertThat(updated).isFalse();
+        AiRegistrationUnitStore.RegistrationUnitRow row = store.findBySnapshotId(snapshotId).get(0);
+        assertThat(row.reviewStatus()).isEqualTo("AUTO_CONFIRMED");
+        assertThat(row.registeredRestaurantId()).isEqualTo(restaurantId);
+    }
+
+    @Test
     @DisplayName("폐기는 discarded_at을 채우고 block_reason을 지운다")
     void discard_discardedAt을채우고blockReason을지운다() {
         UUID unitId = store.insert(new AiRegistrationUnitStore.RegistrationUnitInsert(
                 snapshotId, 1, "행복식당", "AUTO_BLOCKED", "PLACE_NOT_FOUND", null, null,
                 null, null, null, null, null, "WORKER", OffsetDateTime.now()));
 
-        store.discard(unitId, OffsetDateTime.now());
+        boolean updated = store.discard(unitId, "AUTO_BLOCKED", OffsetDateTime.now());
 
+        assertThat(updated).isTrue();
         AiRegistrationUnitStore.RegistrationUnitRow row = store.findBySnapshotId(snapshotId).get(0);
         assertThat(row.reviewStatus()).isEqualTo("MANUAL_OVERRIDE");
         assertThat(row.manualOverrideType()).isEqualTo("DISCARDED");
         assertThat(row.blockReason()).isNull();
         assertThat(row.registeredRestaurantId()).isNull();
+    }
+
+    @Test
+    @DisplayName("expectedReviewStatus가 어긋나면 폐기는 아무것도 바꾸지 않고 false를 반환한다")
+    void discard_expectedReviewStatus불일치_false를반환하고갱신하지않는다() {
+        UUID unitId = store.insert(new AiRegistrationUnitStore.RegistrationUnitInsert(
+                snapshotId, 1, "행복식당", "AUTO_BLOCKED", "PLACE_NOT_FOUND", null, null,
+                null, null, null, null, null, "WORKER", OffsetDateTime.now()));
+
+        boolean updated = store.discard(unitId, "AUTO_CONFIRMED", OffsetDateTime.now());
+
+        assertThat(updated).isFalse();
+        AiRegistrationUnitStore.RegistrationUnitRow row = store.findBySnapshotId(snapshotId).get(0);
+        assertThat(row.reviewStatus()).isEqualTo("AUTO_BLOCKED");
+        assertThat(row.blockReason()).isEqualTo("PLACE_NOT_FOUND");
     }
 
     @Test
@@ -349,13 +387,37 @@ class JdbcAiRegistrationUnitStorePostgreSqlIntegrationTest extends FullContextIn
                 "{\"foodCategoryName\":\"한식\",\"resolvedBy\":\"KAKAO_PLACE_CATEGORY\"}",
                 restaurantId, creatorId, videoId, visitId, "[]", "WORKER", OffsetDateTime.now()));
 
-        store.adjustCategory(unitId, "{\"foodCategoryName\":\"일식\",\"resolvedBy\":\"MANUAL_OVERRIDE\"}");
+        boolean updated = store.adjustCategory(unitId, "AUTO_CONFIRMED",
+                "{\"foodCategoryName\":\"일식\",\"resolvedBy\":\"MANUAL_OVERRIDE\"}");
 
+        assertThat(updated).isTrue();
         AiRegistrationUnitStore.RegistrationUnitRow row = store.findBySnapshotId(snapshotId).get(0);
         assertThat(row.reviewStatus()).isEqualTo("MANUAL_OVERRIDE");
         assertThat(row.categoryDecisionJson()).contains("일식", "MANUAL_OVERRIDE");
         assertThat(row.registeredRestaurantId()).isEqualTo(restaurantId);
         assertThat(row.isRegistered()).isTrue();
+    }
+
+    @Test
+    @DisplayName("expectedReviewStatus가 어긋나면 카테고리 보정은 아무것도 바꾸지 않고 false를 반환한다")
+    void adjustCategory_expectedReviewStatus불일치_false를반환하고갱신하지않는다() {
+        UUID restaurantId = UUID.randomUUID();
+        UUID creatorId = UUID.randomUUID();
+        UUID videoId = UUID.randomUUID();
+        UUID visitId = UUID.randomUUID();
+        registerContentFixtures(restaurantId, creatorId, videoId, visitId);
+        UUID unitId = store.insert(new AiRegistrationUnitStore.RegistrationUnitInsert(
+                snapshotId, 1, "행복식당", "AUTO_CONFIRMED", null,
+                "{\"kakaoPlaceUrl\":\"https://place.map.kakao.com/1\"}",
+                "{\"foodCategoryName\":\"한식\",\"resolvedBy\":\"KAKAO_PLACE_CATEGORY\"}",
+                restaurantId, creatorId, videoId, visitId, "[]", "WORKER", OffsetDateTime.now()));
+
+        boolean updated = store.adjustCategory(unitId, "MANUAL_OVERRIDE",
+                "{\"foodCategoryName\":\"일식\",\"resolvedBy\":\"MANUAL_OVERRIDE\"}");
+
+        assertThat(updated).isFalse();
+        AiRegistrationUnitStore.RegistrationUnitRow row = store.findBySnapshotId(snapshotId).get(0);
+        assertThat(row.categoryDecisionJson()).contains("한식", "KAKAO_PLACE_CATEGORY");
     }
 
     private void registerContentFixtures(UUID restaurantId, UUID creatorId, UUID videoId, UUID visitId) {
