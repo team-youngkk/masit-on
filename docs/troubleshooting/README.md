@@ -1,6 +1,7 @@
 ---
 related_documents:
   - ../00-overview/README.md
+  - ../08-planning/deployment-hardening-cutover-record.md
   - ../../.codex/skills/troubleshoot-pr-review/SKILL.md
 ---
 
@@ -10,6 +11,7 @@ related_documents:
 
 ## 최신 기록
 
+- [운영 전환: ALB·Blue-Green 트래픽 전환에서 드러난 결함 3건](ops-2026-08-19-alb-cutover-review.md)
 - [PR #253 CodeDeploy 단일 경로 전환과 배포 계약 테스트 CI 회귀](pr-253-codedeploy-only-contract-test-review.md)
 - [PR #251 오류 응답 details의 배열 정규화 누락](pr-251-details-array-normalization-review.md)
 - [PR #244 등록 단위 실행의 동시성·CONFIRM 원자성과 중복 판정 죽은 코드](pr-244-registration-unit-atomicity-review.md)
@@ -18,6 +20,12 @@ related_documents:
 - [PR #236 코스 지도 구현의 형상 Schema·만료 선택·좌표 검증 결함](pr-236-course-route-map-implementation-review.md)
 - [PR #232 코스 경로 형상·실패 계약 정합화](pr-232-course-route-map-contract-review.md)
 - [PR #227 YouTube 채널 감시 상태·관리 화면 후속 반영](pr-227-youtube-channel-watch-review.md)
+
+## 운영 전환
+
+리뷰가 아니라 실제 운영 작업 중에 드러난 문제의 기록이다. 파일명은 `ops-<날짜>-` 규약을 쓴다.
+
+- [ALB·Blue-Green 트래픽 전환에서 드러난 결함 3건](ops-2026-08-19-alb-cutover-review.md)
 
 ## PR 리뷰
 
