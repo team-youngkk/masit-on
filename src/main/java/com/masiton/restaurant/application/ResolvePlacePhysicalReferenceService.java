@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
+import com.masiton.common.address.SeoulRoadAddressNormalizer;
 import com.masiton.restaurant.application.port.in.ResolvePlacePhysicalReferenceUseCase;
 import com.masiton.restaurant.application.port.out.PlaceVerificationPort;
 import com.masiton.restaurant.application.port.out.RegionRepositoryPort;

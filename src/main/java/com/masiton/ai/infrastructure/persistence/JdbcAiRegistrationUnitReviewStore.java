@@ -7,7 +7,7 @@ import org.springframework.stereotype.Repository;
 
 import com.masiton.ai.application.port.out.AiRegistrationUnitReviewStore;
 
-/** PostgreSQL adapter for {@code ai_registration_unit_review} (V6). */
+/** PostgreSQL adapter for {@code ai_registration_unit_review} (V8). */
 @Repository
 class JdbcAiRegistrationUnitReviewStore implements AiRegistrationUnitReviewStore {
 

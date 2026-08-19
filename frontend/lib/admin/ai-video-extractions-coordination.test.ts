@@ -59,12 +59,15 @@ test('재시도는 실패한 작업과 부분 완료 작업에서만 가능하�
   assert.equal(retryActionAvailable({ executionStatus: 'RUNNING', resultCompleteness: null }), false)
 })
 
-test('차단·거부 등록 단위는 등록 실행만 노출한다', () => {
+test('차단 등록 단위는 등록 실행만 노출한다', () => {
   assert.deepEqual(registrationUnitActionsFor({ reviewStatus: 'AUTO_BLOCKED', manualOverrideType: null }), {
     registerable: true, adjustCategory: false, rollback: false,
   })
+})
+
+test('거부(AUTO_REJECTED)는 등록 단위 일괄 등록 API가 항상 거절하는 종결 상태라 어떤 조치도 노출하지 않는다', () => {
   assert.deepEqual(registrationUnitActionsFor({ reviewStatus: 'AUTO_REJECTED', manualOverrideType: null }), {
-    registerable: true, adjustCategory: false, rollback: false,
+    registerable: false, adjustCategory: false, rollback: false,
   })
 })
 

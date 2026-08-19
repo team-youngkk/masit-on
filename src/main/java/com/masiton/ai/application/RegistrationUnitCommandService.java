@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -14,6 +15,7 @@ import com.masiton.ai.application.port.out.AiExtractionAdminQueryPort;
 import com.masiton.ai.application.port.out.AiRegistrationUnitConcurrentAccessException;
 import com.masiton.ai.application.port.out.AiRegistrationUnitReviewStore;
 import com.masiton.ai.application.port.out.AiRegistrationUnitStore;
+import com.masiton.common.security.LegacyAdminActorResolver;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
 import com.masiton.orchestration.application.port.in.AdjustRegisteredCategoryUseCase;
@@ -54,6 +56,7 @@ public class RegistrationUnitCommandService {
     private final ResolveFoodCategoryUseCase resolveFoodCategory;
     private final RollbackAiRegisteredContentUseCase rollbackUseCase;
     private final AdjustRegisteredCategoryUseCase adjustCategoryUseCase;
+    private final LegacyAdminActorResolver legacyAdminActorResolver;
     private final ObjectMapper objectMapper;
 
     public RegistrationUnitCommandService(
@@ -65,6 +68,7 @@ public class RegistrationUnitCommandService {
             ResolveFoodCategoryUseCase resolveFoodCategory,
             RollbackAiRegisteredContentUseCase rollbackUseCase,
             AdjustRegisteredCategoryUseCase adjustCategoryUseCase,
+            LegacyAdminActorResolver legacyAdminActorResolver,
             ObjectMapper objectMapper) {
         this.port = port;
         this.registrationUnitStore = registrationUnitStore;
@@ -74,6 +78,7 @@ public class RegistrationUnitCommandService {
         this.resolveFoodCategory = resolveFoodCategory;
         this.rollbackUseCase = rollbackUseCase;
         this.adjustCategoryUseCase = adjustCategoryUseCase;
+        this.legacyAdminActorResolver = legacyAdminActorResolver;
         this.objectMapper = objectMapper;
     }
 
@@ -112,7 +117,12 @@ public class RegistrationUnitCommandService {
                 RegistrationUnitJsonSupport.placeDecisionJson(objectMapper, result.placeDecision()),
                 RegistrationUnitJsonSupport.categoryDecisionJson(objectMapper, result.categoryDecision()),
                 ADMIN_EXECUTOR);
-        registrationUnitStore.markRegistered(unit.id(), registered);
+        try {
+            registrationUnitStore.markRegistered(unit.id(), registered);
+        } catch (DataIntegrityViolationException exception) {
+            throw new BusinessException(HttpStatus.CONFLICT, "AIEXTRACT_CONCURRENT_REQUEST_CONFLICT",
+                    "Concurrent request on the same registration unit.");
+        }
         return RegistrationExecutionView.fromRegistration(unit.id(), "AUTO_CONFIRMED", registration, registered);
     }
 
@@ -156,6 +166,12 @@ public class RegistrationUnitCommandService {
         if (!"AUTO_BLOCKED".equals(unit.reviewStatus())) {
             throw validationConflict(unit.blockReason());
         }
+        // Validate tagDecisions up front: nothing below this point may commit if the request is invalid,
+        // otherwise a validation failure after confirmWithSupplement would leave the unit registered with
+        // no audit row and no recoverable retry path (its blockReason is gone once it is no longer AUTO_BLOCKED).
+        if (!tagDecisions.isEmpty()) {
+            validateTagDecisions(unit, tagDecisions);
+        }
         String blockReason = unit.blockReason();
         UUID suppliedFoodCategoryId = null;
         String suppliedFoodCategoryName = null;
@@ -196,14 +212,21 @@ public class RegistrationUnitCommandService {
                 RegistrationUnitJsonSupport.reusedResourcesJson(objectMapper, registration),
                 RegistrationUnitJsonSupport.placeDecisionJson(objectMapper, result.placeDecision()),
                 RegistrationUnitJsonSupport.categoryDecisionJson(objectMapper, result.categoryDecision()), null);
-        registrationUnitStore.confirmWithSupplement(unit.id(), registered);
+        try {
+            registrationUnitStore.confirmWithSupplement(unit.id(), registered);
+        } catch (DataIntegrityViolationException exception) {
+            throw new BusinessException(HttpStatus.CONFLICT, "AIEXTRACT_CONCURRENT_REQUEST_CONFLICT",
+                    "Concurrent request on the same registration unit.");
+        }
 
         if (!tagDecisions.isEmpty()) {
-            validateTagDecisions(unit, tagDecisions);
             List<AiExtractionAdminQueryPort.TagDecision> attached =
                     port.connectConfirmedTags(unit.snapshotId(), registration.visitId(), tagDecisions);
             if (!attached.isEmpty()) {
-                port.appendTagOverrides(unit.snapshotId(), adminId, reason, attached);
+                // ai_candidate_tag_review.reviewed_by is still legacy-FK'd to admin_account(id) (V4),
+                // unlike ai_registration_unit_review.reviewed_by below which targets member_account(id)
+                // directly (V8). adminId here is the raw member_account id from the JWT subject.
+                port.appendTagOverrides(unit.snapshotId(), legacyAdminActorResolver.resolve(adminId), reason, attached);
             }
         }
 
@@ -380,6 +403,12 @@ public class RegistrationUnitCommandService {
         if ("ROLLBACK".equals(decision)) {
             if (reason != null && reason.isBlank()) {
                 throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, "reason", "reason must not be blank.");
+            }
+            // reason is only recommended for ROLLBACK, but the column is varchar(1000) regardless;
+            // an over-length value must be rejected here, not surface as a DB error after side effects commit.
+            if (reasonProvided && reason.trim().length() > 1_000) {
+                throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, "reason",
+                        "reason must be at most 1,000 characters.");
             }
             return;
         }

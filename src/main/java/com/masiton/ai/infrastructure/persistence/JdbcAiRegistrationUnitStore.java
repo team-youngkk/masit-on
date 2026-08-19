@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -18,7 +19,7 @@ import com.masiton.ai.application.port.out.AiRegistrationUnitStore;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-/** PostgreSQL adapter for {@code ai_registration_unit} (V6). */
+/** PostgreSQL adapter for {@code ai_registration_unit} (V8). */
 @Repository
 class JdbcAiRegistrationUnitStore implements AiRegistrationUnitStore {
 
@@ -98,7 +99,28 @@ class JdbcAiRegistrationUnitStore implements AiRegistrationUnitStore {
         } catch (PessimisticLockingFailureException exception) {
             throw new AiRegistrationUnitConcurrentAccessException(
                     "Concurrent request on the same registration unit: " + unitId, exception);
+        } catch (DataAccessException exception) {
+            // Spring's default SQLErrorCodeSQLExceptionTranslator does not map PostgreSQL's
+            // lock_not_available (55P03, raised by FOR UPDATE NOWAIT) to PessimisticLockingFailureException,
+            // so a NOWAIT conflict surfaces as a generic UncategorizedSQLException here instead.
+            if (isLockNotAvailable(exception)) {
+                throw new AiRegistrationUnitConcurrentAccessException(
+                        "Concurrent request on the same registration unit: " + unitId, exception);
+            }
+            throw exception;
         }
+    }
+
+    private static final String POSTGRES_LOCK_NOT_AVAILABLE_SQL_STATE = "55P03";
+
+    private boolean isLockNotAvailable(Throwable exception) {
+        for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
+            if (cause instanceof SQLException sqlException
+                    && POSTGRES_LOCK_NOT_AVAILABLE_SQL_STATE.equals(sqlException.getSQLState())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

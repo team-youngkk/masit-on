@@ -7,8 +7,8 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
+import com.masiton.common.address.SeoulRoadAddressNormalizer;
 import com.masiton.orchestration.application.port.in.ResolvePlaceIdentityUseCase;
-import com.masiton.restaurant.application.SeoulRoadAddressNormalizer;
 import com.masiton.restaurant.application.port.in.SearchPlacesByNameUseCase;
 import com.masiton.restaurant.application.port.out.PlaceSearchCandidate;
 

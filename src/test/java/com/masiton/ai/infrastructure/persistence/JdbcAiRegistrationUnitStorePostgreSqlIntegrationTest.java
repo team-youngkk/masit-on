@@ -163,12 +163,15 @@ class JdbcAiRegistrationUnitStorePostgreSqlIntegrationTest extends FullContextIn
     @Test
     @DisplayName("존재하지 않는 등록 단위를 등록 완료로 갱신하면 실패한다")
     void markRegistered_존재하지않는단위_실패한다() {
+        // given: @Repository 빈의 예외는 PersistenceExceptionTranslationPostProcessor가
+        // IllegalStateException을 InvalidDataAccessApiUsageException으로 변환한다.
         assertThatThrownBy(() -> store.markRegistered(UUID.randomUUID(),
                 new AiRegistrationUnitStore.RegisteredResult(
                         UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
                         "[\"creator\",\"video\"]", "{\"kakaoPlaceUrl\":\"https://place.map.kakao.com/1\"}",
                         "{\"foodCategoryName\":\"한식\"}", "WORKER")))
-                .isInstanceOf(IllegalStateException.class);
+                .isInstanceOf(org.springframework.dao.InvalidDataAccessApiUsageException.class)
+                .hasCauseInstanceOf(IllegalStateException.class);
     }
 
     @Test

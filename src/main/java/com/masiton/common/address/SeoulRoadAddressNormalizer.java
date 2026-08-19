@@ -1,4 +1,4 @@
-package com.masiton.restaurant.application;
+package com.masiton.common.address;
 
 import java.util.Optional;
 import java.util.regex.Matcher;

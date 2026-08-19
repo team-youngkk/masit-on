@@ -76,13 +76,18 @@ function isRegisteredManualOverride(unit: Pick<AiRegistrationUnit, 'reviewStatus
   return unit.reviewStatus === 'MANUAL_OVERRIDE' && unit.manualOverrideType === null
 }
 
-/** 등록 단위별로 노출할 조치를 결정한다. 등록 실행은 AUTO_BLOCKED·AUTO_REJECTED에서, 카테고리 보정·롤백은 등록이 유지된 단위에서만 허용한다. */
+/**
+ * 등록 단위별로 노출할 조치를 결정한다. 등록 실행은 AUTO_BLOCKED에서만 허용한다. AUTO_REJECTED는
+ * 등록 단위 일괄 등록 API에서 항상 422 AIEXTRACT_VALIDATION_CONFLICT로 거절되는 종결 상태이므로
+ * (API 3.6절 상태별 허용 범위 표), 등록 실행 버튼을 노출하지 않는다. 카테고리 보정·롤백은 등록이
+ * 유지된 단위에서만 허용한다.
+ */
 export function registrationUnitActionsFor(
   unit: Pick<AiRegistrationUnit, 'reviewStatus' | 'manualOverrideType'>,
 ): AiRegistrationUnitActions {
   const registered = unit.reviewStatus === 'AUTO_CONFIRMED' || isRegisteredManualOverride(unit)
   return {
-    registerable: unit.reviewStatus === 'AUTO_BLOCKED' || unit.reviewStatus === 'AUTO_REJECTED',
+    registerable: unit.reviewStatus === 'AUTO_BLOCKED',
     adjustCategory: registered,
     rollback: registered,
   }

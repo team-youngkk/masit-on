@@ -11,8 +11,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import com.masiton.common.address.SeoulRoadAddressNormalizer;
 import com.masiton.restaurant.application.PlaceSearchFailedException;
-import com.masiton.restaurant.application.SeoulRoadAddressNormalizer;
 import com.masiton.restaurant.application.port.out.PlaceSearchCandidate;
 import com.masiton.restaurant.application.port.out.PlaceSearchPort;
 import tools.jackson.databind.ObjectMapper;

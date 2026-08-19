@@ -105,8 +105,9 @@ test('검수 요청은 unitId와 요구한 supplements 키만 본문에 담고 t
   const previousFetch = globalThis.fetch
   const requestBodies: unknown[] = []
   let call = 0
-  globalThis.fetch = async (_input, init) => {
-    if (call++ === 0) return new Response(JSON.stringify({ accessToken: 'test-token', tokenType: 'Bearer', expiresInSeconds: 3600 }), { status: 200 })
+  globalThis.fetch = async (input, init) => {
+    if (call++ === 0) return new Response(JSON.stringify({ accessToken: 'test-token', tokenType: 'Bearer', expiresInSeconds: 3600, role: 'ADMIN' }), { status: 200 })
+    if (input === '/api/me') return Response.json({ id: 'admin-1', email: 'admin@example.com', role: 'ADMIN' })
     requestBodies.push(JSON.parse(String(init?.body)))
     return new Response(null, { status: 204 })
   }
@@ -135,8 +136,9 @@ test('supplements를 지정하지 않은 검수 요청(ROLLBACK 등)은 그 키 
   const previousFetch = globalThis.fetch
   const requestBodies: unknown[] = []
   let call = 0
-  globalThis.fetch = async (_input, init) => {
-    if (call++ === 0) return new Response(JSON.stringify({ accessToken: 'test-token', tokenType: 'Bearer', expiresInSeconds: 3600 }), { status: 200 })
+  globalThis.fetch = async (input, init) => {
+    if (call++ === 0) return new Response(JSON.stringify({ accessToken: 'test-token', tokenType: 'Bearer', expiresInSeconds: 3600, role: 'ADMIN' }), { status: 200 })
+    if (input === '/api/me') return Response.json({ id: 'admin-1', email: 'admin@example.com', role: 'ADMIN' })
     requestBodies.push(JSON.parse(String(init?.body)))
     return new Response(null, { status: 204 })
   }
@@ -165,8 +167,9 @@ test('등록 단위 등록 API는 빈 본문으로 요청하고 성공 결과를
     placeDecision: { kakaoPlaceUrl: 'https://place.map.kakao.com/example', roadAddress: '서울특별시 영등포구 도림로131길 17', matchedBy: 'NAME_AND_DISTRICT' },
     categoryDecision: { foodCategoryName: '일식', resolvedBy: 'KAKAO_PLACE_CATEGORY' },
   }
-  globalThis.fetch = async (_input, init) => {
-    if (call++ === 0) return new Response(JSON.stringify({ accessToken: 'test-token', tokenType: 'Bearer', expiresInSeconds: 3600 }), { status: 200 })
+  globalThis.fetch = async (input, init) => {
+    if (call++ === 0) return new Response(JSON.stringify({ accessToken: 'test-token', tokenType: 'Bearer', expiresInSeconds: 3600, role: 'ADMIN' }), { status: 200 })
+    if (input === '/api/me') return Response.json({ id: 'admin-1', email: 'admin@example.com', role: 'ADMIN' })
     requestBodies.push(init?.body as string | undefined)
     return new Response(JSON.stringify(result), { status: 200 })
   }
@@ -186,8 +189,9 @@ test('등록 단위 등록 API는 빈 본문으로 요청하고 성공 결과를
 test('등록 단위 등록 API의 422 예외 전환 응답은 blockReason·recoveryPaths·requiredSupplements로 파싱한다', async () => {
   const previousFetch = globalThis.fetch
   let call = 0
-  globalThis.fetch = async () => {
-    if (call++ === 0) return new Response(JSON.stringify({ accessToken: 'test-token', tokenType: 'Bearer', expiresInSeconds: 3600 }), { status: 200 })
+  globalThis.fetch = async (input) => {
+    if (call++ === 0) return new Response(JSON.stringify({ accessToken: 'test-token', tokenType: 'Bearer', expiresInSeconds: 3600, role: 'ADMIN' }), { status: 200 })
+    if (input === '/api/me') return Response.json({ id: 'admin-1', email: 'admin@example.com', role: 'ADMIN' })
     return new Response(JSON.stringify({
       code: 'AIEXTRACT_VALIDATION_CONFLICT',
       blockReason: 'PLACE_AMBIGUOUS',
