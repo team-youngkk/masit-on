@@ -212,8 +212,9 @@ auth_trusted_proxies=$(printf '%s\n' "$backend_env" | awk -F= '$1 == "AUTH_LOGIN
 [ "$auth_trusted_proxies" = "127.0.0.1" ] || { echo "통합 로그인 trusted-proxy 환경변수 주입 실패" >&2; exit 1; }
 
 # app-deploy는 nginx-install보다 먼저 실행될 수 있다. Nginx가 이미 설치·활성화된
-# 호스트에서는 실제 설정을 검사하고 public API 경계를 확인한다. 무세션 요청은
-# verification gate에 걸리는 것이 정상(401)이므로 로그인 성공을 요구하지 않는다.
+# 호스트에서는 실제 설정을 검사하고 public API 경계를 확인한다. 로그인 endpoint는
+# 공개 경로이므로 형식이 유효한 가짜 자격 증명을 보내 애플리케이션의 401을 확인한다.
+# 빈 JSON({})은 인증 경계가 아니라 입력 검증 오류(400)를 확인하게 된다.
 nginx_site_conf=/etc/nginx/conf.d/masiton.click.conf
 if command -v nginx >/dev/null 2>&1 && [ -f "$nginx_site_conf" ]; then
   nginx -t
@@ -221,10 +222,11 @@ else
   echo "Nginx 설정 smoke 스킵: 설치된 masit-on site 설정이 없다(nginx-install 단계에서 검증한다)."
 fi
 if [ -f "$nginx_site_conf" ] && systemctl is-active --quiet nginx; then
+  public_login_body='{"email":"deploy-smoke-invalid@example.com","password":"invalid-password-123"}'
   public_login_status=$(curl -k -sS -m 5 -o /dev/null -w '%{http_code}' \
     --resolve masiton.click:443:127.0.0.1 \
     -H 'X-Forwarded-For: 198.51.100.99' \
-    -H 'Content-Type: application/json' -X POST --data '{}' \
+    -H 'Content-Type: application/json' -X POST --data "$public_login_body" \
     https://masiton.click/api/auth/tokens)
   [ "$public_login_status" = "401" ] || {
     echo "public Nginx 통합 로그인 경계 확인 실패: HTTP $public_login_status" >&2
