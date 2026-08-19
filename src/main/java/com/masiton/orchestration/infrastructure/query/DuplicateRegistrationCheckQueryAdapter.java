@@ -24,21 +24,4 @@ class DuplicateRegistrationCheckQueryAdapter implements DuplicateRegistrationChe
                 "SELECT EXISTS (SELECT 1 FROM restaurant WHERE kakao_place_id = ?)", Boolean.class, kakaoPlaceId);
         return Boolean.TRUE.equals(exists);
     }
-
-    @Override
-    public boolean visitExists(String kakaoPlaceId, String creatorExternalChannelId, String videoExternalVideoId) {
-        Boolean exists = jdbcTemplate.queryForObject("""
-                SELECT EXISTS (
-                    SELECT 1
-                      FROM visit v
-                      JOIN restaurant r ON r.id = v.restaurant_id
-                      JOIN creator c ON c.id = v.creator_id
-                      JOIN video vd ON vd.id = v.video_id
-                     WHERE r.kakao_place_id = ?
-                       AND c.external_channel_id = ?
-                       AND vd.external_video_id = ?
-                )
-                """, Boolean.class, kakaoPlaceId, creatorExternalChannelId, videoExternalVideoId);
-        return Boolean.TRUE.equals(exists);
-    }
 }

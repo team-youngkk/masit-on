@@ -103,7 +103,7 @@ class RegistrationUnitExecutionService implements ExecuteRegistrationUnitUseCase
             return blocked("VISIT_EVIDENCE_REQUIRED");
         }
 
-        if (isDuplicate(placeStep, verifiedVideo)) {
+        if (isDuplicate(placeStep)) {
             return blocked("DUPLICATE_CONFLICT");
         }
 
@@ -171,12 +171,13 @@ class RegistrationUnitExecutionService implements ExecuteRegistrationUnitUseCase
         return new CategoryStep(resolved.foodCategoryId(), resolved.foodCategoryName(), resolved.resolvedBy());
     }
 
-    private boolean isDuplicate(PlaceStep placeStep, VerifiedVideo verifiedVideo) {
-        if (duplicateRegistrationCheck.restaurantExists(placeStep.kakaoPlaceId())) {
-            return true;
-        }
-        return duplicateRegistrationCheck.visitExists(placeStep.kakaoPlaceId(),
-                verifiedVideo.publisherExternalChannelId(), verifiedVideo.externalVideoId());
+    /**
+     * 데이터 계약(third-expansion-ai-video-data-contract.md 11절)상 맛집은 재사용 대상이 아니다.
+     * 같은 {@code kakaoPlaceId}의 맛집이 이미 있으면 이 방문의 유튜버·영상 조합과 무관하게 항상
+     * {@code DUPLICATE_CONFLICT}로 차단한다.
+     */
+    private boolean isDuplicate(PlaceStep placeStep) {
+        return duplicateRegistrationCheck.restaurantExists(placeStep.kakaoPlaceId());
     }
 
     private boolean matchesVideo(RegistrationUnitExecutionCommand command, VerifiedVideo video) {

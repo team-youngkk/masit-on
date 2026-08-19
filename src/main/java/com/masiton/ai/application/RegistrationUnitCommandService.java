@@ -39,8 +39,12 @@ import tools.jackson.databind.node.ObjectNode;
  * 이 서비스가 담당한다.
  *
  * <p>외부 조회(Kakao·YouTube)가 필요한 경로({@link #registerUnit}, {@code CONFIRM})는 이 클래스의
- * 메서드 전체를 트랜잭션으로 감싸지 않는다. 행 잠금과 최종 DB 반영만 각 저장 호출 내부에서
- * 원자적으로 수행한다.</p>
+ * 메서드 전체를 트랜잭션으로 감싸지 않는다. 대신 외부 호출이 끝난 뒤의 최종 상태 전이를
+ * {@code expectedReviewStatus} 조건부 갱신({@link AiRegistrationUnitStore#markRegistered}·
+ * {@link AiRegistrationUnitStore#confirmWithSupplement})으로 원자화해, 같은 등록 단위에 대한
+ * 동시 요청 중 하나만 반영되고 나머지는 {@code AIEXTRACT_CONCURRENT_REQUEST_CONFLICT}로 거절되게
+ * 한다. {@code CONFIRM}의 등록 단위 상태·태그 연결·감사 이력 세 쓰기는
+ * {@link RegistrationUnitConfirmCommitService}가 하나의 트랜잭션으로 묶어 커밋한다.</p>
  */
 @Service
 public class RegistrationUnitCommandService {
@@ -56,6 +60,7 @@ public class RegistrationUnitCommandService {
     private final ResolveFoodCategoryUseCase resolveFoodCategory;
     private final RollbackAiRegisteredContentUseCase rollbackUseCase;
     private final AdjustRegisteredCategoryUseCase adjustCategoryUseCase;
+    private final RegistrationUnitConfirmCommitService confirmCommitService;
     private final LegacyAdminActorResolver legacyAdminActorResolver;
     private final ObjectMapper objectMapper;
 
@@ -68,6 +73,7 @@ public class RegistrationUnitCommandService {
             ResolveFoodCategoryUseCase resolveFoodCategory,
             RollbackAiRegisteredContentUseCase rollbackUseCase,
             AdjustRegisteredCategoryUseCase adjustCategoryUseCase,
+            RegistrationUnitConfirmCommitService confirmCommitService,
             LegacyAdminActorResolver legacyAdminActorResolver,
             ObjectMapper objectMapper) {
         this.port = port;
@@ -78,6 +84,7 @@ public class RegistrationUnitCommandService {
         this.resolveFoodCategory = resolveFoodCategory;
         this.rollbackUseCase = rollbackUseCase;
         this.adjustCategoryUseCase = adjustCategoryUseCase;
+        this.confirmCommitService = confirmCommitService;
         this.legacyAdminActorResolver = legacyAdminActorResolver;
         this.objectMapper = objectMapper;
     }
@@ -117,11 +124,14 @@ public class RegistrationUnitCommandService {
                 RegistrationUnitJsonSupport.placeDecisionJson(objectMapper, result.placeDecision()),
                 RegistrationUnitJsonSupport.categoryDecisionJson(objectMapper, result.categoryDecision()),
                 ADMIN_EXECUTOR);
+        boolean updated;
         try {
-            registrationUnitStore.markRegistered(unit.id(), registered);
+            updated = registrationUnitStore.markRegistered(unit.id(), "AUTO_BLOCKED", registered);
         } catch (DataIntegrityViolationException exception) {
-            throw new BusinessException(HttpStatus.CONFLICT, "AIEXTRACT_CONCURRENT_REQUEST_CONFLICT",
-                    "Concurrent request on the same registration unit.");
+            throw concurrentConflict();
+        }
+        if (!updated) {
+            throw concurrentConflict();
         }
         return RegistrationExecutionView.fromRegistration(unit.id(), "AUTO_CONFIRMED", registration, registered);
     }
@@ -212,26 +222,16 @@ public class RegistrationUnitCommandService {
                 RegistrationUnitJsonSupport.reusedResourcesJson(objectMapper, registration),
                 RegistrationUnitJsonSupport.placeDecisionJson(objectMapper, result.placeDecision()),
                 RegistrationUnitJsonSupport.categoryDecisionJson(objectMapper, result.categoryDecision()), null);
+        boolean committed;
         try {
-            registrationUnitStore.confirmWithSupplement(unit.id(), registered);
+            committed = confirmCommitService.commit(unit.id(), "AUTO_BLOCKED", registered, unit.snapshotId(),
+                    registration.visitId(), tagDecisions, adminId, reason, submittedSupplementsJson);
         } catch (DataIntegrityViolationException exception) {
-            throw new BusinessException(HttpStatus.CONFLICT, "AIEXTRACT_CONCURRENT_REQUEST_CONFLICT",
-                    "Concurrent request on the same registration unit.");
+            throw concurrentConflict();
         }
-
-        if (!tagDecisions.isEmpty()) {
-            List<AiExtractionAdminQueryPort.TagDecision> attached =
-                    port.connectConfirmedTags(unit.snapshotId(), registration.visitId(), tagDecisions);
-            if (!attached.isEmpty()) {
-                // ai_candidate_tag_review.reviewed_by is still legacy-FK'd to admin_account(id) (V4),
-                // unlike ai_registration_unit_review.reviewed_by below which targets member_account(id)
-                // directly (V8). adminId here is the raw member_account id from the JWT subject.
-                port.appendTagOverrides(unit.snapshotId(), legacyAdminActorResolver.resolve(adminId), reason, attached);
-            }
+        if (!committed) {
+            throw concurrentConflict();
         }
-
-        registrationUnitReviewStore.insert(new AiRegistrationUnitReviewStore.RegistrationUnitReviewInsert(
-                unit.id(), "CONFIRM", reason, submittedSupplementsJson, null, null, adminId));
     }
 
     private void discard(AiRegistrationUnitStore.RegistrationUnitRow unit, String reason, UUID adminId) {
@@ -332,9 +332,19 @@ public class RegistrationUnitCommandService {
         try {
             return registrationUnitStore.lockByJobAndUnitId(jobId, unitId).orElseThrow(this::unitNotFound);
         } catch (AiRegistrationUnitConcurrentAccessException exception) {
-            throw new BusinessException(HttpStatus.CONFLICT, "AIEXTRACT_CONCURRENT_REQUEST_CONFLICT",
-                    "Concurrent request on the same registration unit.");
+            throw concurrentConflict();
         }
+    }
+
+    /**
+     * {@code lockByJobAndUnitId}의 {@code FOR UPDATE NOWAIT}는 그 조회 문장이 끝나면 풀리므로,
+     * Kakao·YouTube 외부 호출을 마친 뒤의 최종 상태 전이({@code markRegistered}·
+     * {@code confirmWithSupplement}의 {@code expectedReviewStatus} 조건부 갱신, DB unique 제약)가
+     * 실제 동시성 가드다. 둘 중 어느 쪽이 막았든 응답은 같다.
+     */
+    private BusinessException concurrentConflict() {
+        return new BusinessException(HttpStatus.CONFLICT, "AIEXTRACT_CONCURRENT_REQUEST_CONFLICT",
+                "Concurrent request on the same registration unit.");
     }
 
     private BusinessException unitNotFound() {

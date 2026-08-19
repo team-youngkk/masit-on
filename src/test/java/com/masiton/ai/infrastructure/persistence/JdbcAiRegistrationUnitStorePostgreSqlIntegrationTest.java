@@ -95,12 +95,13 @@ class JdbcAiRegistrationUnitStorePostgreSqlIntegrationTest extends FullContextIn
                 snapshotId, 1, "행복식당", "AUTO_BLOCKED", "PLACE_NOT_FOUND", null, null,
                 null, null, null, null, null, "WORKER", OffsetDateTime.now()));
 
-        store.markRegistered(unitId, new AiRegistrationUnitStore.RegisteredResult(
+        boolean updated = store.markRegistered(unitId, "AUTO_BLOCKED", new AiRegistrationUnitStore.RegisteredResult(
                 restaurantId, creatorId, videoId, visitId, "[\"creator\",\"video\"]",
                 "{\"kakaoPlaceUrl\":\"https://place.map.kakao.com/1\",\"roadAddress\":\"서울특별시 마포구 월드컵로 1\","
                         + "\"matchedBy\":\"NAME_AND_DISTRICT\"}",
                 "{\"foodCategoryName\":\"한식\",\"resolvedBy\":\"KAKAO_PLACE_CATEGORY\"}", "WORKER"));
 
+        assertThat(updated).isTrue();
         AiRegistrationUnitStore.RegistrationUnitRow row = store.findBySnapshotId(snapshotId).get(0);
         assertThat(row.reviewStatus()).isEqualTo("AUTO_CONFIRMED");
         assertThat(row.blockReason()).isNull();
@@ -161,17 +162,44 @@ class JdbcAiRegistrationUnitStorePostgreSqlIntegrationTest extends FullContextIn
     }
 
     @Test
-    @DisplayName("존재하지 않는 등록 단위를 등록 완료로 갱신하면 실패한다")
-    void markRegistered_존재하지않는단위_실패한다() {
-        // given: @Repository 빈의 예외는 PersistenceExceptionTranslationPostProcessor가
-        // IllegalStateException을 InvalidDataAccessApiUsageException으로 변환한다.
-        assertThatThrownBy(() -> store.markRegistered(UUID.randomUUID(),
+    @DisplayName("존재하지 않는 등록 단위를 등록 완료로 갱신하면 아무것도 바꾸지 않고 false를 반환한다")
+    void markRegistered_존재하지않는단위_false를반환한다() {
+        boolean updated = store.markRegistered(UUID.randomUUID(), "AUTO_BLOCKED",
                 new AiRegistrationUnitStore.RegisteredResult(
                         UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
                         "[\"creator\",\"video\"]", "{\"kakaoPlaceUrl\":\"https://place.map.kakao.com/1\"}",
-                        "{\"foodCategoryName\":\"한식\"}", "WORKER")))
-                .isInstanceOf(org.springframework.dao.InvalidDataAccessApiUsageException.class)
-                .hasCauseInstanceOf(IllegalStateException.class);
+                        "{\"foodCategoryName\":\"한식\"}", "WORKER"));
+
+        assertThat(updated).isFalse();
+    }
+
+    @Test
+    @DisplayName("이미 다른 요청이 상태를 바꾼 등록 단위는 expectedReviewStatus가 어긋나 false를 반환하고 아무것도 갱신하지 않는다")
+    void markRegistered_동시요청으로상태가바뀐뒤_false를반환하고갱신하지않는다() {
+        UUID firstRestaurantId = UUID.randomUUID();
+        UUID firstCreatorId = UUID.randomUUID();
+        UUID firstVideoId = UUID.randomUUID();
+        UUID firstVisitId = UUID.randomUUID();
+        registerContentFixtures(firstRestaurantId, firstCreatorId, firstVideoId, firstVisitId);
+        UUID unitId = store.insert(new AiRegistrationUnitStore.RegistrationUnitInsert(
+                snapshotId, 1, "행복식당", "AUTO_BLOCKED", "PLACE_NOT_FOUND", null, null,
+                null, null, null, null, null, "WORKER", OffsetDateTime.now()));
+        boolean firstRequestWon = store.markRegistered(unitId, "AUTO_BLOCKED", new AiRegistrationUnitStore.RegisteredResult(
+                firstRestaurantId, firstCreatorId, firstVideoId, firstVisitId, "[]",
+                "{\"kakaoPlaceUrl\":\"https://place.map.kakao.com/1\"}", "{\"foodCategoryName\":\"한식\"}", "ADMIN"));
+
+        // second request still observes the pre-write "AUTO_BLOCKED" snapshot (its own lockByJobAndUnitId
+        // read happened before the first request committed), so its expectedReviewStatus is stale by the
+        // time it writes; the WHERE review_status = ? guard rejects it instead of overwriting the winner.
+        boolean secondRequestWon = store.markRegistered(unitId, "AUTO_BLOCKED",
+                new AiRegistrationUnitStore.RegisteredResult(
+                        UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "[]",
+                        "{\"kakaoPlaceUrl\":\"https://place.map.kakao.com/1\"}", "{\"foodCategoryName\":\"한식\"}", "ADMIN"));
+
+        assertThat(firstRequestWon).isTrue();
+        assertThat(secondRequestWon).isFalse();
+        AiRegistrationUnitStore.RegistrationUnitRow row = store.findBySnapshotId(snapshotId).get(0);
+        assertThat(row.registeredRestaurantId()).isEqualTo(firstRestaurantId);
     }
 
     @Test
@@ -231,18 +259,37 @@ class JdbcAiRegistrationUnitStorePostgreSqlIntegrationTest extends FullContextIn
                 snapshotId, 1, "행복식당", "AUTO_BLOCKED", "PLACE_NOT_FOUND", null, null,
                 null, null, null, null, null, "WORKER", OffsetDateTime.now()));
 
-        store.confirmWithSupplement(unitId, new AiRegistrationUnitStore.RegisteredResult(
+        boolean updated = store.confirmWithSupplement(unitId, "AUTO_BLOCKED", new AiRegistrationUnitStore.RegisteredResult(
                 restaurantId, creatorId, videoId, visitId, "[]",
                 "{\"kakaoPlaceUrl\":\"https://place.map.kakao.com/1\",\"roadAddress\":\"서울특별시 마포구 월드컵로 1\","
                         + "\"matchedBy\":\"MANUAL_OVERRIDE\"}",
                 "{\"foodCategoryName\":\"한식\",\"resolvedBy\":\"KAKAO_PLACE_CATEGORY\"}", null));
 
+        assertThat(updated).isTrue();
         AiRegistrationUnitStore.RegistrationUnitRow row = store.findBySnapshotId(snapshotId).get(0);
         assertThat(row.reviewStatus()).isEqualTo("MANUAL_OVERRIDE");
         assertThat(row.manualOverrideType()).isNull();
         assertThat(row.executedBy()).isEqualTo("WORKER");
         assertThat(row.registeredRestaurantId()).isEqualTo(restaurantId);
         assertThat(row.isRegistered()).isTrue();
+    }
+
+    @Test
+    @DisplayName("expectedReviewStatus가 더 이상 일치하지 않으면 보충 입력 확정은 아무것도 바꾸지 않고 false를 반환한다")
+    void confirmWithSupplement_expectedReviewStatus불일치_false를반환하고갱신하지않는다() {
+        UUID unitId = store.insert(new AiRegistrationUnitStore.RegistrationUnitInsert(
+                snapshotId, 1, "행복식당", "AUTO_BLOCKED", "PLACE_NOT_FOUND", null, null,
+                null, null, null, null, null, "WORKER", OffsetDateTime.now()));
+
+        boolean updated = store.confirmWithSupplement(unitId, "AUTO_CONFIRMED",
+                new AiRegistrationUnitStore.RegisteredResult(
+                        UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "[]",
+                        "{\"kakaoPlaceUrl\":\"https://place.map.kakao.com/1\"}", "{\"foodCategoryName\":\"한식\"}", null));
+
+        assertThat(updated).isFalse();
+        AiRegistrationUnitStore.RegistrationUnitRow row = store.findBySnapshotId(snapshotId).get(0);
+        assertThat(row.reviewStatus()).isEqualTo("AUTO_BLOCKED");
+        assertThat(row.registeredRestaurantId()).isNull();
     }
 
     @Test

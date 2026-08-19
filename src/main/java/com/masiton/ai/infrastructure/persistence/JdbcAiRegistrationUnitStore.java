@@ -55,7 +55,7 @@ class JdbcAiRegistrationUnitStore implements AiRegistrationUnitStore {
     }
 
     @Override
-    public void markRegistered(UUID unitId, RegisteredResult registered) {
+    public boolean markRegistered(UUID unitId, String expectedReviewStatus, RegisteredResult registered) {
         int updated = jdbcTemplate.update("""
                 UPDATE ai_registration_unit
                    SET review_status = 'AUTO_CONFIRMED',
@@ -68,13 +68,12 @@ class JdbcAiRegistrationUnitStore implements AiRegistrationUnitStore {
                        place_decision = ?::jsonb,
                        category_decision = ?::jsonb,
                        executed_by = ?
-                 WHERE id = ?
+                 WHERE id = ? AND review_status = ?
                 """, registered.registeredRestaurantId(), registered.registeredCreatorId(),
                 registered.registeredVideoId(), registered.registeredVisitId(), registered.reusedResourcesJson(),
-                registered.placeDecisionJson(), registered.categoryDecisionJson(), registered.executedBy(), unitId);
-        if (updated != 1) {
-            throw new IllegalStateException("AI registration unit was not found for registration: " + unitId);
-        }
+                registered.placeDecisionJson(), registered.categoryDecisionJson(), registered.executedBy(), unitId,
+                expectedReviewStatus);
+        return updated == 1;
     }
 
     @Override
@@ -124,7 +123,7 @@ class JdbcAiRegistrationUnitStore implements AiRegistrationUnitStore {
     }
 
     @Override
-    public void confirmWithSupplement(UUID unitId, RegisteredResult registered) {
+    public boolean confirmWithSupplement(UUID unitId, String expectedReviewStatus, RegisteredResult registered) {
         int updated = jdbcTemplate.update("""
                 UPDATE ai_registration_unit
                    SET review_status = 'MANUAL_OVERRIDE',
@@ -136,13 +135,11 @@ class JdbcAiRegistrationUnitStore implements AiRegistrationUnitStore {
                        reused_resources = COALESCE(?::jsonb, '[]'::jsonb),
                        place_decision = ?::jsonb,
                        category_decision = ?::jsonb
-                 WHERE id = ?
+                 WHERE id = ? AND review_status = ?
                 """, registered.registeredRestaurantId(), registered.registeredCreatorId(),
                 registered.registeredVideoId(), registered.registeredVisitId(), registered.reusedResourcesJson(),
-                registered.placeDecisionJson(), registered.categoryDecisionJson(), unitId);
-        if (updated != 1) {
-            throw new IllegalStateException("AI registration unit was not found for supplement: " + unitId);
-        }
+                registered.placeDecisionJson(), registered.categoryDecisionJson(), unitId, expectedReviewStatus);
+        return updated == 1;
     }
 
     @Override

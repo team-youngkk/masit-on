@@ -22,8 +22,15 @@ public interface AiRegistrationUnitStore {
      * 이미 존재하는 등록 단위 행을 정식 등록 완료 상태로 갱신한다. {@code review_status}를
      * {@code AUTO_CONFIRMED}로 바꾸고 {@code executedBy}는 이 등록을 실행한 주체(관리자 등록 단위
      * 일괄 등록 API 3.6절에서는 {@code ADMIN})로 갱신한다.
+     *
+     * <p>Kakao·YouTube 외부 호출이 끝난 뒤 이 메서드가 실제로 반영될 때까지 행 잠금을 유지할 수
+     * 없으므로({@code lockByJobAndUnitId}의 {@code FOR UPDATE NOWAIT}는 그 조회 문장 하나에서만
+     * 유효하다), {@code WHERE review_status = expectedReviewStatus} 조건으로 상태 전이 자체를
+     * 원자화한다. 그 사이 다른 요청이 먼저 반영해 더 이상 {@code expectedReviewStatus}가 아니면
+     * 아무것도 바꾸지 않고 {@code false}를 반환한다. 호출자는 이 경우
+     * {@code AIEXTRACT_CONCURRENT_REQUEST_CONFLICT}로 응답해야 한다.</p>
      */
-    void markRegistered(UUID unitId, RegisteredResult registered);
+    boolean markRegistered(UUID unitId, String expectedReviewStatus, RegisteredResult registered);
 
     /** Snapshot 하나가 가진 등록 단위 전체를 {@code unit_index} 오름차순으로 조회한다. */
     List<RegistrationUnitRow> findBySnapshotId(UUID snapshotId);
@@ -45,8 +52,11 @@ public interface AiRegistrationUnitStore {
     /**
      * {@code review}의 {@code CONFIRM} 보충 입력 성공 결과를 반영한다. {@code review_status}를
      * {@code MANUAL_OVERRIDE}로 바꾸되 {@code executed_by}는 바꾸지 않는다.
+     *
+     * <p>{@link #markRegistered}와 같은 이유로 {@code WHERE review_status = expectedReviewStatus}
+     * 조건부 갱신이다. 다른 요청이 먼저 반영해 더 이상 일치하지 않으면 {@code false}를 반환한다.</p>
      */
-    void confirmWithSupplement(UUID unitId, RegisteredResult registered);
+    boolean confirmWithSupplement(UUID unitId, String expectedReviewStatus, RegisteredResult registered);
 
     /**
      * {@code review}의 {@code ROLLBACK}을 반영한다. {@code review_status}를 {@code MANUAL_OVERRIDE}로,
