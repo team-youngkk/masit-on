@@ -40,6 +40,8 @@ const KAKAO_MAPS_JS_KEY = process.env.NEXT_PUBLIC_KAKAO_MAPS_JS_KEY
 const SDK_LOAD_TIMEOUT_MS = 10_000
 const DEFAULT_CENTER = { latitude: 37.5665, longitude: 126.978 }
 
+type MarkerClickHandler = () => void
+
 type CourseRouteMapProps = {
   restaurants: CourseRestaurant[]
   segments: CourseSegment[]
@@ -142,17 +144,24 @@ export function CourseRouteMap({
       return
     }
 
-    try {
-      for (const marker of markersByIdRef.current.values()) {
+    const currentSelectedId = selectedRestaurantIdRef.current
+    const markersById = new Map<string, KakaoMarker>()
+    const markerClickHandlers = new Map<KakaoMarker, MarkerClickHandler>()
+    const polylines: KakaoPolyline[] = []
+
+    const disposeOverlays = () => {
+      for (const [marker, handler] of markerClickHandlers) {
+        kakaoGlobal.maps.event.removeListener(marker, 'click', handler)
+      }
+      for (const marker of markersById.values()) {
         marker.setMap(null)
       }
-      for (const polyline of polylinesRef.current) {
+      for (const polyline of polylines) {
         polyline.setMap(null)
       }
+    }
 
-      const currentSelectedId = selectedRestaurantIdRef.current
-      const markersById = new Map<string, KakaoMarker>()
-
+    try {
       for (const restaurant of restaurants) {
         const selected = restaurant.restaurantId === currentSelectedId
         const image = buildMarkerImage(kakaoGlobal, restaurant.role, restaurant.sequence, selected)
@@ -161,16 +170,18 @@ export function CourseRouteMap({
           restaurant.coordinate.longitude,
         )
         const marker = new kakaoGlobal.maps.Marker({ position, map, image })
-        kakaoGlobal.maps.event.addListener(marker, 'click', () => {
+        const handler = () => {
           onSelectRestaurantRef.current(restaurant.restaurantId)
-        })
+        }
         markersById.set(restaurant.restaurantId, marker)
+        kakaoGlobal.maps.event.addListener(marker, 'click', handler)
+        markerClickHandlers.set(marker, handler)
       }
 
       markersByIdRef.current = markersById
       previousSelectedIdRef.current = currentSelectedId
 
-      polylinesRef.current = availableSegmentPaths(segments).map((path) => {
+      for (const path of availableSegmentPaths(segments)) {
         const polylinePath = path.map(
           (point) => new kakaoGlobal.maps.LatLng(point.latitude, point.longitude),
         )
@@ -182,8 +193,9 @@ export function CourseRouteMap({
           strokeStyle: 'solid',
         })
         polyline.setMap(map)
-        return polyline
-      })
+        polylines.push(polyline)
+      }
+      polylinesRef.current = polylines
 
       const bounds = computeCourseMapBounds(collectCourseMapPoints(restaurants, segments))
       if (bounds) {
@@ -194,6 +206,16 @@ export function CourseRouteMap({
       }
     } catch {
       setStatus('error')
+    }
+
+    return () => {
+      disposeOverlays()
+      if (markersByIdRef.current === markersById) {
+        markersByIdRef.current = new Map()
+      }
+      if (polylinesRef.current === polylines) {
+        polylinesRef.current = []
+      }
     }
   }, [restaurants, segments, status])
 
