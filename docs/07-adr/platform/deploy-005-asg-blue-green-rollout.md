@@ -47,7 +47,7 @@ Internet
 ```
 
 - ALB는 TLS 종단과 상태 확인을 담당하며, 하나의 target group을 계속 가리킨다. Nginx는 애플리케이션 경로 라우팅, 검증 세션 gate와 오류 응답 경계를 계속 담당한다.
-- Blue는 Terraform이 관리하는 원본 ASG와 target group이다. EC2/On-Premises CodeDeploy는 원본 ASG를 복사해 replacement ASG를 만들고, 같은 target group에 replacement 인스턴스를 등록한 뒤 original 인스턴스를 해제한다. listener 전환이나 별도 green target group은 사용하지 않는다. 성공 후에도 original과 replacement를 관찰 기간 동안 유지하고, 유휴 replacement ASG 정리는 별도 runbook으로 수행한다.
+- Blue는 Terraform이 관리하는 원본 ASG와 target group이다. EC2/On-Premises CodeDeploy는 원본 ASG를 복사해 replacement ASG를 만들고, 같은 target group에 replacement 인스턴스를 등록한 뒤 original 인스턴스를 해제한다. listener 전환이나 별도 green target group은 사용하지 않는다. 최초 seeding에서는 `codedeploy_termination_enabled=false`로 original을 유지하고, deployment group의 원본 ASG가 replacement로 갱신된 것을 확인한 뒤에만 `true`로 전환한다. 전환 후 성공한 배포는 관찰 대기 시간(기본 15분)이 지나면 CodeDeploy가 original 인스턴스와 ASG를 종료하며, 실패·중단된 배포가 남긴 환경은 별도 runbook으로 수행한다.
 - ASG는 상시 `min=1`, `desired=1`, `max=2`를 기본 운영값으로 둔다. 배포 전환 중에는 original과 replacement가 동시에 존재할 수 있으며, 기존 환경은 관찰 기간 뒤 축소한다.
 - Redis는 Blue-Green 전환 사이의 상태 공유를 위해 앱 인스턴스와 분리한 사설 subnet 전용 인스턴스로 운영한다. 2026-08-18 김인안·이우람 owner 재합의로 [ADR-DATA-005](../data/data-005-redis-refresh-token.md) 6절의 운영 배치를 개정했으며, 이 ADR과 함께 Accepted 운영 계약으로 취급한다.
 - 운영 배포는 GitHub Actions의 기존 build/test/ECR digest 검증, Terraform `terraform-contract` 렌더링 게이트와 `production` 승인 게이트를 유지하고, 승인 후 CodeDeploy가 replacement 환경을 생성·검증·전환하도록 확장한다. 배포 ID는 실행별 S3 pointer에 먼저 보존해 취소 cleanup이 원격 deployment를 중단할 수 있어야 한다.
@@ -91,4 +91,5 @@ Internet
 - 인증 owner는 ALB→Nginx proxy header와 쿠키 세션 경계를 검토한다.
 - 데이터 owner는 모든 운영 migration의 expand/contract 호환성을 검토한다.
 - 실제 운영 전환은 기존 단일 EC2 rollback 경로, 관찰 기간, 비용 알림과 담당자 승인을 포함한 별도 runbook을 통과해야 한다.
+
 
