@@ -22,7 +22,7 @@ import tools.jackson.databind.ObjectMapper;
 class SecurityErrorWriterTest {
 
     private final MemberCookieSettings cookieSettings = new MemberCookieSettings(
-            "__Secure-masiton-member-refresh",
+            "__Secure-masiton-refresh",
             Duration.ofDays(14),
             "/api/auth/tokens",
             true,

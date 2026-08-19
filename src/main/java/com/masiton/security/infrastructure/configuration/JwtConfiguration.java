@@ -5,6 +5,7 @@ import java.security.interfaces.RSAPublicKey;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.time.Duration;
 
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.JWKSet;
@@ -17,6 +18,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
@@ -50,8 +53,8 @@ public class JwtConfiguration {
     MemberJwtSettings memberJwtSettings(SecurityProperties properties) {
         return new MemberJwtSettings(
                 properties.getJwt().getIssuer(),
-                properties.getJwt().getMemberAudience(),
-                properties.getJwt().getMemberAccessTokenTtl(),
+                properties.getJwt().getAudience(),
+                properties.getJwt().getAccessTokenTtl(),
                 properties.getJwt().getKeyId()
         );
     }
@@ -62,9 +65,9 @@ public class JwtConfiguration {
     }
 
     @Bean
-    MemberCookieSettings memberCookieSettings(SecurityProperties properties) {
+    MemberCookieSettings memberCookieSettings(SecurityProperties properties, Environment environment) {
         SecurityProperties.Member member = properties.getMember();
-        return new MemberCookieSettings(
+        MemberCookieSettings settings = new MemberCookieSettings(
                 member.getCookieName(),
                 member.getRefreshTokenTtl(),
                 member.getPath(),
@@ -72,6 +75,11 @@ public class JwtConfiguration {
                 properties.getSameSite(),
                 member.getPublicBaseUrl()
         );
+        if (environment.acceptsProfiles(Profiles.of("prod"))
+                && settings.allowedOrigins().stream().anyMatch(origin -> !origin.startsWith("https://"))) {
+            throw new IllegalStateException("Production authentication origins must use HTTPS");
+        }
+        return settings;
     }
 
     @Bean
@@ -93,7 +101,7 @@ public class JwtConfiguration {
 
     @Bean("memberJwtDecoder")
     JwtDecoder memberJwtDecoder(SecurityProperties properties) {
-        return jwtDecoder(properties, properties.getJwt().getMemberAudience());
+        return jwtDecoder(properties, properties.getJwt().getAudience());
     }
 
     private JwtDecoder jwtDecoder(SecurityProperties properties, String expectedAudience) {
@@ -114,9 +122,23 @@ public class JwtConfiguration {
         OAuth2TokenValidator<Jwt> audienceValidator = jwt -> jwt.getAudience().contains(expectedAudience)
                 ? OAuth2TokenValidatorResult.success()
                 : OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", "Invalid audience", null));
+        OAuth2TokenValidator<Jwt> claimValidator = jwt -> {
+            List<String> roles = jwt.getClaimAsStringList("roles");
+            boolean valid = nonBlank(jwt.getSubject())
+                    && nonBlank(jwt.getClaimAsString("sid"))
+                    && nonBlank(jwt.getId())
+                    && jwt.getIssuedAt() != null && jwt.getExpiresAt() != null
+                    && !jwt.getExpiresAt().isBefore(jwt.getIssuedAt())
+                    && !Duration.between(jwt.getIssuedAt(), jwt.getExpiresAt()).minusMinutes(30).isPositive()
+                    && roles != null && roles.size() == 1
+                    && ("MEMBER".equals(roles.getFirst()) || "ADMIN".equals(roles.getFirst()));
+            return valid ? OAuth2TokenValidatorResult.success()
+                    : OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", "Invalid required claims", null));
+        };
         decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
                 JwtValidators.createDefaultWithIssuer(properties.getJwt().getIssuer()),
-                audienceValidator
+                audienceValidator,
+                claimValidator
         ));
         return token -> {
             Jwt jwt = decoder.decode(token);
@@ -128,6 +150,10 @@ public class JwtConfiguration {
             }
             return jwt;
         };
+    }
+
+    private boolean nonBlank(String value) {
+        return value != null && !value.isBlank();
     }
 
     private String requiredKeyId(SecurityProperties properties) {

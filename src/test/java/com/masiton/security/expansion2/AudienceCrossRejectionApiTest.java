@@ -92,7 +92,7 @@ class AudienceCrossRejectionApiTest extends FullContextIntegrationTest {
     @Test
     @DisplayName("관리자 JWT는 회원 컬렉션 API를 401로 거부당한다")
     void 관리자토큰_회원컬렉션API_401거부() throws Exception {
-        String adminToken = signedToken("test-key-20260806", "masit-on", "masit-on-admin-api");
+        String adminToken = signedToken("test-key-20260806", "masit-on", "masit-on-api");
 
         mockMvc.perform(get("/api/me/collections").header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
                 .andExpect(status().isUnauthorized())
@@ -102,7 +102,7 @@ class AudienceCrossRejectionApiTest extends FullContextIntegrationTest {
     @Test
     @DisplayName("관리자 JWT는 회원 컬렉션 옵션 API를 401로 거부당한다")
     void 관리자토큰_회원컬렉션옵션API_401거부() throws Exception {
-        String adminToken = signedToken("test-key-20260806", "masit-on", "masit-on-admin-api");
+        String adminToken = signedToken("test-key-20260806", "masit-on", "masit-on-api");
 
         mockMvc.perform(get("/api/me/collection-options")
                         .queryParam("restaurantId", UUID.randomUUID().toString())
@@ -114,7 +114,7 @@ class AudienceCrossRejectionApiTest extends FullContextIntegrationTest {
     @Test
     @DisplayName("관리자 JWT는 회원 알림 API를 401로 거부당한다")
     void 관리자토큰_회원알림API_401거부() throws Exception {
-        String adminToken = signedToken("test-key-20260806", "masit-on", "masit-on-admin-api");
+        String adminToken = signedToken("test-key-20260806", "masit-on", "masit-on-api");
 
         mockMvc.perform(get("/api/me/notifications").header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
                 .andExpect(status().isUnauthorized())
@@ -124,7 +124,7 @@ class AudienceCrossRejectionApiTest extends FullContextIntegrationTest {
     @Test
     @DisplayName("관리자 JWT는 회원 제보 목록 API를 401로 거부당한다")
     void 관리자토큰_회원제보목록API_401거부() throws Exception {
-        String adminToken = signedToken("test-key-20260806", "masit-on", "masit-on-admin-api");
+        String adminToken = signedToken("test-key-20260806", "masit-on", "masit-on-api");
 
         mockMvc.perform(get("/api/me/submissions").header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
                 .andExpect(status().isUnauthorized())
@@ -134,7 +134,7 @@ class AudienceCrossRejectionApiTest extends FullContextIntegrationTest {
     @Test
     @DisplayName("관리자 JWT는 회원 신고 목록 API를 401로 거부당한다")
     void 관리자토큰_회원신고목록API_401거부() throws Exception {
-        String adminToken = signedToken("test-key-20260806", "masit-on", "masit-on-admin-api");
+        String adminToken = signedToken("test-key-20260806", "masit-on", "masit-on-api");
 
         mockMvc.perform(get("/api/me/reports").header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
                 .andExpect(status().isUnauthorized())

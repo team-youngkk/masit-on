@@ -87,6 +87,7 @@ class MemberAuthenticationServiceTest {
         // given
         UUID memberId = UUID.randomUUID();
         MemberAccount account = activeAccount(memberId);
+        given(rateLimits.isLoginBlocked("member@example.com", "127.0.0.1")).willReturn(false);
         given(accounts.findByEmailForUpdate("member@example.com")).willReturn(Optional.of(account));
         given(passwordEncoder.matches("correct-password", account.passwordHash())).willReturn(true);
         given(sessions.issue(memberId.toString(), Duration.ofDays(14)))
@@ -100,6 +101,7 @@ class MemberAuthenticationServiceTest {
         // then
         assertThat(result.accessToken()).isEqualTo("access-token");
         verify(accounts).findByEmailForUpdate("member@example.com");
+        verify(rateLimits, never()).tryRecordLoginFailure(any(), any());
     }
 
     @Test
@@ -107,13 +109,14 @@ class MemberAuthenticationServiceTest {
     void 로그인_잘못된비밀번호_실패기록() {
         // given
         MemberAccount account = activeAccount(UUID.randomUUID());
+        given(rateLimits.isLoginBlocked("member@example.com", "127.0.0.1")).willReturn(false);
         given(accounts.findByEmailForUpdate("member@example.com")).willReturn(Optional.of(account));
         given(passwordEncoder.matches("wrong-password", account.passwordHash())).willReturn(false);
 
         // when & then
         assertInvalidCredentials(() -> service().login(
                 "member@example.com", "wrong-password", "127.0.0.1"));
-        verify(rateLimits).recordLoginFailure("member@example.com", "127.0.0.1");
+        verify(rateLimits).tryRecordLoginFailure("member@example.com", "127.0.0.1");
         verifyNoInteractions(sessions);
     }
 
@@ -122,6 +125,7 @@ class MemberAuthenticationServiceTest {
     void 로그인_없는계정_더미해시비교와실패기록() {
         // given
         given(accounts.findByEmailForUpdate("missing@example.com")).willReturn(Optional.empty());
+        given(rateLimits.isLoginBlocked("missing@example.com", "127.0.0.1")).willReturn(false);
 
         // when & then
         assertInvalidCredentials(() -> service().login(
@@ -129,7 +133,7 @@ class MemberAuthenticationServiceTest {
         verify(passwordEncoder).matches(
                 org.mockito.ArgumentMatchers.eq("any-password"),
                 org.mockito.ArgumentMatchers.startsWith("$2a$10$"));
-        verify(rateLimits).recordLoginFailure("missing@example.com", "127.0.0.1");
+        verify(rateLimits).tryRecordLoginFailure("missing@example.com", "127.0.0.1");
         verifyNoInteractions(sessions);
     }
 
@@ -255,6 +259,7 @@ class MemberAuthenticationServiceTest {
     @DisplayName("로그인_계정저장소장애면인증서비스이용불가로변환한다")
     void 로그인_계정저장소장애면인증서비스이용불가로변환한다() {
         // given
+        given(rateLimits.isLoginBlocked("member@example.com", "127.0.0.1")).willReturn(false);
         given(accounts.findByEmailForUpdate("member@example.com"))
                 .willThrow(new IllegalStateException("database unavailable"));
         MemberAuthenticationService service = service();

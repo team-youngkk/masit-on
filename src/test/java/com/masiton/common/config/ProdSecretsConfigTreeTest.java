@@ -79,7 +79,7 @@ class ProdSecretsConfigTreeTest {
                     .isEqualTo("test-youtube-webhook-secret");
             assertThat(environment.getProperty("masiton.security.verification.public-base-url"))
                     .isEqualTo("https://masiton.click");
-            assertThat(environment.getProperty("masiton.security.public-base-url"))
+            assertThat(environment.getProperty("masiton.security.member.public-base-url"))
                     .isEqualTo("https://masiton.click");
             assertThat(environment.getProperty("masiton.security.verification.trusted-proxy-addresses"))
                     .isEqualTo("127.0.0.1");
@@ -228,8 +228,7 @@ class ProdSecretsConfigTreeTest {
                         "REDIS_PORT=6379",
                         "MAIL_HOST=smtp.example.invalid",
                         "MAIL_PORT=587",
-                        "ADMIN_PUBLIC_BASE_URL=https://masiton.click",
-                        "MEMBER_PUBLIC_BASE_URL=https://masiton.click",
+                        "AUTH_ALLOWED_ORIGINS=https://masiton.click",
                         "VERIFICATION_PUBLIC_BASE_URL=https://masiton.click",
                         "VERIFICATION_TRUSTED_PROXY_ADDRESSES=127.0.0.1",
                         "VERIFICATION_REVERSE_PROXY_ENABLED=true",
