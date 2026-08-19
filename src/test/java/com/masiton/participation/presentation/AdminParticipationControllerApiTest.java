@@ -14,6 +14,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.masiton.common.observability.TraceIdFilter;
+import com.masiton.common.security.LegacyAdminActorResolver;
 import com.masiton.common.web.GlobalExceptionHandler;
 import com.masiton.participation.application.AdminParticipationView;
 import com.masiton.participation.application.ParticipationException;
@@ -35,9 +36,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AdminParticipationControllerApiTest {
 
     private final AdminParticipationUseCase useCase = mock(AdminParticipationUseCase.class);
-    private final MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new AdminParticipationController(useCase))
+    private final LegacyAdminActorResolver legacyAdminActorResolver = mock(LegacyAdminActorResolver.class);
+    private final MockMvc mockMvc = MockMvcBuilders.standaloneSetup(
+            new AdminParticipationController(useCase, legacyAdminActorResolver))
             .setControllerAdvice(new GlobalExceptionHandler()).build();
     private final UUID adminId = UUID.randomUUID();
+    private final UUID legacyAdminId = UUID.randomUUID();
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUpLegacyAdminActor() {
+        given(legacyAdminActorResolver.resolve(adminId)).willReturn(legacyAdminId);
+    }
 
     @Test
     @DisplayName("목록은 필터와 1-base 페이지 메타데이터를 반환한다")
@@ -83,7 +92,7 @@ class AdminParticipationControllerApiTest {
         ArgumentCaptor<UUID> actor = ArgumentCaptor.forClass(UUID.class);
         ArgumentCaptor<String> trace = ArgumentCaptor.forClass(String.class);
         verify(useCase).updateSubmission(org.mockito.ArgumentMatchers.eq(requestId), actor.capture(), any(), trace.capture());
-        assertThat(actor.getValue()).isEqualTo(adminId);
+        assertThat(actor.getValue()).isEqualTo(legacyAdminId);
         assertThat(trace.getValue()).isEqualTo("server-trace");
     }
 

@@ -5,6 +5,7 @@ import {
   memberLoginHref,
   memberSignupHref,
   memberVerifyEmailHref,
+  safeAdminReturnTo,
   safeMemberReturnTo,
 } from './auth-navigation.ts'
 
@@ -55,4 +56,13 @@ test('외부 또는 프로토콜 상대 경로는 회원가입 링크에 전달�
   assert.equal(memberVerifyEmailHref('/.//example.com'), '/verify-email')
   assert.equal(memberSignupHref('/.//example.com'), '/signup')
   assert.equal(safeMemberReturnTo('javascript:alert(1)'), null)
+})
+
+test('관리자 복귀 경로는 계약된 정확한 관리자 화면만 허용한다', () => {
+  assert.equal(safeAdminReturnTo('/admin'), '/admin')
+  assert.equal(safeAdminReturnTo('/admin/visits/new'), '/admin/visits/new')
+  assert.equal(safeAdminReturnTo('/admin-tools'), null)
+  assert.equal(safeAdminReturnTo('//example.com/admin'), null)
+  assert.equal(safeAdminReturnTo('/admin%252fvisits%252fnew'), null)
+  assert.equal(safeAdminReturnTo('/admin\\visits\\new'), null)
 })

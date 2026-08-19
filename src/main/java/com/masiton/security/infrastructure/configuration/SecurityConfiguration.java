@@ -5,7 +5,6 @@ import java.util.stream.Collectors;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
@@ -32,6 +31,7 @@ import com.masiton.security.infrastructure.RestaurantPathClassifier;
 import com.masiton.security.infrastructure.web.AdminCookieOriginFilter;
 import com.masiton.security.infrastructure.web.SecurityErrorWriter;
 import com.masiton.security.infrastructure.web.MemberSessionRevocationFilter;
+import com.masiton.security.infrastructure.web.LoginSourceRateLimitFilter;
 
 @Configuration
 public class SecurityConfiguration {
@@ -42,9 +42,9 @@ public class SecurityConfiguration {
             Converter<Jwt, ? extends AbstractAuthenticationToken> jwtAuthenticationConverter,
             SecurityErrorWriter securityErrorWriter,
             AdminCookieOriginFilter adminCookieOriginFilter,
+            LoginSourceRateLimitFilter loginSourceRateLimitFilter,
             MemberSessionRevocationFilter memberSessionRevocationFilter,
-            JwtDecoder jwtDecoder,
-            @Qualifier("memberJwtDecoder") JwtDecoder memberJwtDecoder
+            JwtDecoder jwtDecoder
     ) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -53,8 +53,6 @@ public class SecurityConfiguration {
                         .authenticationEntryPoint(securityErrorWriter)
                         .accessDeniedHandler(securityErrorWriter))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers(HttpMethod.POST, "/api/admin/auth/tokens").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/admin/auth/tokens/refresh").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/webhooks/youtube/channel-updates").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/webhooks/youtube/channel-updates").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/verification/sessions").permitAll()
@@ -85,42 +83,34 @@ public class SecurityConfiguration {
                                 "/internal/verification/access-required",
                                 "/internal/verification/unavailable").permitAll()
                         .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/auth/tokens").hasAuthority("MEMBER")
-                        .requestMatchers("/api/me", "/api/me/**").hasAuthority("MEMBER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/auth/tokens").authenticated()
+                        .requestMatchers("/api/me", "/api/me/**").authenticated()
                         .requestMatchers("/api/**", "/internal/**").denyAll()
                         // Non-API paths are owned by the web application, not by this API security boundary.
                         .anyRequest().permitAll())
                 .oauth2ResourceServer(resourceServer -> resourceServer
                         .authenticationEntryPoint(securityErrorWriter)
                         .bearerTokenResolver(optionalMemberBearerTokenResolver())
-                        .authenticationManagerResolver(authenticationManagerResolver(
-                                jwtDecoder,
-                                memberJwtDecoder,
-                                jwtAuthenticationConverter)))
+                        .authenticationManagerResolver(authenticationManagerResolver(jwtDecoder, jwtAuthenticationConverter)))
                 .addFilterBefore(adminCookieOriginFilter, BearerTokenAuthenticationFilter.class)
+                .addFilterBefore(loginSourceRateLimitFilter, BearerTokenAuthenticationFilter.class)
                 .addFilterAfter(memberSessionRevocationFilter, BearerTokenAuthenticationFilter.class)
                 .build();
     }
 
     private AuthenticationManagerResolver<HttpServletRequest> authenticationManagerResolver(
-            JwtDecoder adminJwtDecoder,
-            JwtDecoder memberJwtDecoder,
+            JwtDecoder jwtDecoder,
             Converter<Jwt, ? extends AbstractAuthenticationToken> jwtAuthenticationConverter
     ) {
-        AuthenticationManager adminAuthenticationManager = authenticationManager(adminJwtDecoder, jwtAuthenticationConverter);
-        AuthenticationManager memberAuthenticationManager = authenticationManager(memberJwtDecoder, jwtAuthenticationConverter);
+        AuthenticationManager authenticationManager = authenticationManager(jwtDecoder, jwtAuthenticationConverter);
         AuthenticationManager publicAuthenticationManager = authentication -> authenticatePublicRequest(
                 authentication,
-                memberAuthenticationManager
+                authenticationManager
         );
         return request -> {
-            String requestUri = request.getRequestURI();
-            if (isMemberBoundary(requestUri)) {
-                return memberAuthenticationManager;
-            }
             return isOptionalMemberAuthenticationRequest(request)
                     ? publicAuthenticationManager
-                    : adminAuthenticationManager;
+                    : authenticationManager;
         };
     }
 
@@ -131,12 +121,6 @@ public class SecurityConfiguration {
                 || isAnonymousPublicWriteRequest(request)
                 ? null
                 : delegate.resolve(request);
-    }
-
-    private boolean isMemberBoundary(String requestUri) {
-        return requestUri.startsWith("/api/auth/")
-                || requestUri.equals("/api/me")
-                || requestUri.startsWith("/api/me/");
     }
 
     private boolean isOptionalMemberAuthenticationRequest(HttpServletRequest request) {
@@ -205,9 +189,7 @@ public class SecurityConfiguration {
             return false;
         }
         String requestUri = request.getRequestURI();
-        return requestUri.equals("/api/admin/auth/tokens")
-                || requestUri.equals("/api/admin/auth/tokens/refresh")
-                || requestUri.equals("/api/auth/registrations")
+        return requestUri.equals("/api/auth/registrations")
                 || requestUri.equals("/api/auth/email-verifications")
                 || requestUri.equals("/api/auth/email-verifications/resend")
                 || requestUri.equals("/api/auth/password-resets/requests")

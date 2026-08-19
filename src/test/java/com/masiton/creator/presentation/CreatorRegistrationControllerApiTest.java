@@ -11,6 +11,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.masiton.creator.application.port.in.CreatorRegistrationUseCase;
+import com.masiton.common.security.LegacyAdminActorResolver;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -23,8 +24,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class CreatorRegistrationControllerApiTest {
 
     private final CreatorRegistrationUseCase creatorRegistrationUseCase = mock(CreatorRegistrationUseCase.class);
+    private final LegacyAdminActorResolver legacyAdminActorResolver = mock(LegacyAdminActorResolver.class);
     private final MockMvc mockMvc = MockMvcBuilders.standaloneSetup(
-            new CreatorRegistrationController(creatorRegistrationUseCase)).build();
+            new CreatorRegistrationController(creatorRegistrationUseCase, legacyAdminActorResolver)).build();
     private final UUID adminId = UUID.randomUUID();
 
     @Test
@@ -66,6 +68,7 @@ class CreatorRegistrationControllerApiTest {
     }
 
     private UsernamePasswordAuthenticationToken authentication() {
+        when(legacyAdminActorResolver.resolve(adminId)).thenReturn(adminId);
         return UsernamePasswordAuthenticationToken.authenticated(adminId.toString(), "N/A", java.util.List.of());
     }
 }

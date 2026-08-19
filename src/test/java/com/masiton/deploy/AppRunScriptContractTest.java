@@ -24,5 +24,6 @@ class AppRunScriptContractTest {
                 "KAKAO_MOBILITY_FREE_TIER_VERIFIED=$(optional_bool_param /masiton/integration/kakao-mobility/free-tier-verified)");
         assertThat(script).contains("*) printf 'false' ;;");
         assertThat(script).contains("exec /usr/bin/docker run --name masiton-backend");
+        assertThat(script).contains("-e SPRING_FLYWAY_TARGET");
     }
 }

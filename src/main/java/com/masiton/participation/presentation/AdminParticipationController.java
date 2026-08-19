@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.masiton.common.observability.TraceIdFilter;
+import com.masiton.common.security.LegacyAdminActorResolver;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
 import com.masiton.participation.application.AdminParticipationView;
@@ -35,9 +36,14 @@ public class AdminParticipationController {
     private static final String PRIVATE_NO_STORE = "private, no-store";
 
     private final AdminParticipationUseCase useCase;
+    private final LegacyAdminActorResolver legacyAdminActorResolver;
 
-    public AdminParticipationController(AdminParticipationUseCase useCase) {
+    public AdminParticipationController(
+            AdminParticipationUseCase useCase,
+            LegacyAdminActorResolver legacyAdminActorResolver
+    ) {
         this.useCase = useCase;
+        this.legacyAdminActorResolver = legacyAdminActorResolver;
     }
 
     @GetMapping("/submissions")
@@ -127,8 +133,8 @@ public class AdminParticipationController {
     private UUID adminId(Authentication authentication) {
         if (authentication == null) throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
         try {
-            return UUID.fromString(authentication.getName());
-        } catch (RuntimeException exception) {
+            return legacyAdminActorResolver.resolve(UUID.fromString(authentication.getName()));
+        } catch (IllegalArgumentException exception) {
             throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
         }
     }

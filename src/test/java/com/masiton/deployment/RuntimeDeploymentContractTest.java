@@ -16,6 +16,8 @@ class RuntimeDeploymentContractTest {
     private static final Path APP_DEPLOY = Path.of("deploy/scripts/app-deploy.sh");
     private static final Path BOOTSTRAP = Path.of("deploy/scripts/instance-bootstrap.sh");
     private static final Path HEALTH = Path.of("deploy/scripts/runtime-health.sh");
+    private static final Path HEALTH_METRICS = Path.of("deploy/scripts/health-metrics.sh");
+    private static final Path CLOUDWATCH_AGENT = Path.of("deploy/cloudwatch/amazon-cloudwatch-agent.json");
     private static final Path CI = Path.of(".github/workflows/ci.yml");
     private static final Path NGINX = Path.of("deploy/nginx/masiton.click.conf");
     private static final Path NGINX_INSTALL = Path.of("deploy/scripts/nginx-install.sh");
@@ -96,27 +98,39 @@ class RuntimeDeploymentContractTest {
     void codeDeploy_대기timeout과취소시중지하고_terminal상태까지확인한다() throws IOException {
         String workflow = Files.readString(CI);
         String iam = Files.readString(TERRAFORM_IAM);
+        String deploy = section(workflow, "  deploy:", "  # GitHub 취소");
+        String cleanup = workflow.substring(workflow.indexOf("  codedeploy-cancel-cleanup:"));
 
-        assertThat(workflow)
-                .contains("stop-deployment")
-                .contains("--auto-rollback-enabled")
+        assertThat(deploy)
+                .contains("ref: ${{ env.IMAGE_TAG }}")
+                .contains("actions/checkout@v4")
                 .contains("trap on_exit EXIT")
                 .contains("trap on_signal INT TERM")
                 .contains("for _ in $(seq 1 270)")
                 .contains("for _ in $(seq 1 60)")
-                .contains("Succeeded|Failed|Stopped")
                 .contains("stop_failed=false", "return 1", "::error::CodeDeploy")
-                .contains("cancel-in-progress: ${{ github.event_name == 'pull_request' }}")
+                .contains("aws s3api put-object");
+        assertThat(cleanup)
+                .contains("stop-deployment")
+                .contains("--auto-rollback-enabled")
+                .contains("Succeeded|Failed|Stopped")
                 .contains("codedeploy-cancel-cleanup")
                 .contains("deployment_id_key")
-                .contains("aws s3api put-object")
                 .contains("aws s3 cp \"s3://${CODEDEPLOY_S3_BUCKET}/${deployment_id_key}\"")
+                .contains("aws deploy list-deployments")
+                .contains("aws deploy batch-get-deployments")
+                .contains("lookup_completed")
+                .contains("steps.lookup.outputs.resolved")
                 .contains("for _ in $(seq 1 24)");
+        assertThat(workflow).contains("cancel-in-progress: ${{ github.event_name == 'pull_request' }}");
         assertThat(workflow).doesNotContain("actions/download-artifact@v4");
         assertThat(workflow.indexOf("aws s3api put-object"))
                 .isGreaterThan(workflow.indexOf("aws deploy create-deployment"))
                 .isLessThan(workflow.indexOf("for _ in $(seq 1 270)"));
-        assertThat(iam).contains("codedeploy:StopDeployment");
+        assertThat(iam)
+                .contains("codedeploy:StopDeployment")
+                .contains("actions   = [\"codedeploy:ListDeployments\"]\n    resources = [aws_codedeploy_deployment_group.app.arn]")
+                .contains("actions   = [\"codedeploy:BatchGetDeployments\"]\n    resources = [aws_codedeploy_deployment_group.app.arn]");
     }
 
     @Test
@@ -304,4 +318,81 @@ class RuntimeDeploymentContractTest {
                 .contains("DEPLOYMENT_STOP_ON_ALARM")
                 .contains("local.deployment_alarm_names");
     }
+
+    @Test
+    @DisplayName("Redis 장애는 트래픽이 아닌 배포 게이트로 감지한다")
+    void redis장애를_배포게이트alarm으로감지한다() throws IOException {
+        String metrics = Files.readString(HEALTH_METRICS);
+        String bootstrap = Files.readString(BOOTSTRAP);
+        String afterInstall = Files.readString(AFTER_INSTALL);
+        String workflow = Files.readString(CI);
+        String iam = Files.readString(TERRAFORM_IAM);
+        String monitoring = Files.readString(MONITORING);
+        String variables = Files.readString(TERRAFORM_VARIABLES);
+        String agent = Files.readString(CLOUDWATCH_AGENT);
+        String nginx = Files.readString(NGINX);
+        String deploymentAlarms = section(monitoring, "locals {", "resource \"aws_cloudwatch_metric_alarm\" \"target_5xx\"");
+        String deploymentRedis = section(
+                monitoring,
+                "resource \"aws_cloudwatch_metric_alarm\" \"fleet_dependency_redis\"",
+                "resource \"aws_cloudwatch_metric_alarm\" \"blue_unhealthy\"");
+
+        assertThat(metrics)
+                .contains("MetricName=FleetDependencyRedis,Value=$redis,Unit=None")
+                .contains("MetricName=DependencyRedis,Value=$redis,Unit=None,Dimensions=");
+        assertThat(workflow)
+                .contains("deploy/scripts/cloudwatch-install.sh")
+                .contains("deploy/scripts/health-metrics.sh")
+                .contains("deploy/cloudwatch/amazon-cloudwatch-agent.json")
+                .contains("deploy/cloudwatch/masiton-health-metrics.service")
+                .contains("deploy/cloudwatch/masiton-health-metrics.timer");
+        assertThat(bootstrap)
+                .contains("\"$STAGE/cloudwatch-install.sh\" \"$STAGE\"")
+                .contains("after-install.sh의 chmod");
+        assertThat(afterInstall).contains("cloudwatch-install.sh");
+        assertThat(metrics)
+                .contains("put_status=$?")
+                .contains("exit \"$put_status\"");
+        assertThat(iam)
+                .contains("cloudwatch:PutMetricData")
+                .contains("cloudwatch:namespace")
+                .contains("masiton/health")
+                .contains("masiton/host")
+                .contains("logs:PutLogEvents")
+                .contains("log-group:/masiton/*");
+        assertThat(agent).contains("\"namespace\": \"masiton/host\"");
+        assertThat(deploymentRedis)
+                .contains("evaluation_periods  = 3")
+                .contains("datapoints_to_alarm = 3")
+                .contains("treat_missing_data = \"breaching\"")
+                .contains("comparison_operator = \"LessThanThreshold\"")
+                .contains("Environment = \"asg\"");
+        assertThat(deploymentAlarms)
+                .contains("aws_cloudwatch_metric_alarm.fleet_dependency_redis.alarm_name")
+                .doesNotContain("fleet_dependency_redis_freshness");
+        assertThat(variables)
+                .contains("variable \"deployment_alarms_enabled\"")
+                .contains("default     = true");
+        assertThat(metrics).contains("Dimensions=[{Name=Environment,Value=$ENVIRONMENT}]");
+
+        assertThat(nginx)
+                .contains("location = /_masiton/alb-health {")
+                .contains("proxy_pass http://masiton_backend/internal/health/ready");
+        for (String block : nginx.split("location = /_masiton/alb-health")) {
+            if (block.startsWith(" {")) {
+                assertThat(block.substring(0, block.indexOf('}')))
+                        .doesNotContain("/internal/health/dependencies");
+            }
+        }
+    }
+
+    private static String section(String source, String startMarker, String endMarker) {
+        int start = source.indexOf(startMarker);
+        int end = source.indexOf(endMarker, start);
+        if (start < 0 || end < 0) {
+            throw new AssertionError("계약 섹션을 찾지 못했다: " + startMarker);
+        }
+        return source.substring(start, end);
+    }
 }
+

@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.masiton.common.observability.TraceIdFilter;
+import com.masiton.common.security.LegacyAdminActorResolver;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
 import com.masiton.common.web.ErrorResponse;
@@ -22,8 +23,14 @@ import com.masiton.creator.application.port.in.CreatorRegistrationUseCase;
 @RequestMapping("/api/admin")
 public class CreatorRegistrationController {
     private final CreatorRegistrationUseCase creatorRegistrationUseCase;
-    public CreatorRegistrationController(CreatorRegistrationUseCase creatorRegistrationUseCase) {
+    private final LegacyAdminActorResolver legacyAdminActorResolver;
+
+    public CreatorRegistrationController(
+            CreatorRegistrationUseCase creatorRegistrationUseCase,
+            LegacyAdminActorResolver legacyAdminActorResolver
+    ) {
         this.creatorRegistrationUseCase = creatorRegistrationUseCase;
+        this.legacyAdminActorResolver = legacyAdminActorResolver;
     }
 
     @PostMapping("/creator-registration-previews")
@@ -53,7 +60,7 @@ public class CreatorRegistrationController {
             throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
         }
         try {
-            return UUID.fromString(authentication.getName());
+            return legacyAdminActorResolver.resolve(UUID.fromString(authentication.getName()));
         } catch (IllegalArgumentException exception) {
             throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
         }

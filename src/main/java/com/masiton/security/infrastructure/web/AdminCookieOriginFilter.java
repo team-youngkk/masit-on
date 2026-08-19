@@ -7,7 +7,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.masiton.security.infrastructure.configuration.SecurityProperties;
+import com.masiton.common.security.MemberCookieSettings;
 import com.masiton.common.web.TrustedOriginResolver;
 
 import jakarta.servlet.FilterChain;
@@ -18,14 +18,14 @@ import jakarta.servlet.http.HttpServletResponse;
 @Component
 public class AdminCookieOriginFilter extends OncePerRequestFilter {
 
-    private static final String TOKEN_PATH = "/api/admin/auth/tokens";
+    private static final String TOKEN_PATH = "/api/auth/tokens";
     private static final String REFRESH_PATH = TOKEN_PATH + "/refresh";
 
-    private final SecurityProperties properties;
+    private final MemberCookieSettings cookieSettings;
     private final SecurityErrorWriter errorWriter;
 
-    public AdminCookieOriginFilter(SecurityProperties properties, SecurityErrorWriter errorWriter) {
-        this.properties = properties;
+    public AdminCookieOriginFilter(MemberCookieSettings cookieSettings, SecurityErrorWriter errorWriter) {
+        this.cookieSettings = cookieSettings;
         this.errorWriter = errorWriter;
     }
 
@@ -40,7 +40,8 @@ public class AdminCookieOriginFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         if (TrustedOriginResolver.resolveSingleOrigin(request)
-                .filter(properties::isAllowedPublicOrigin)
+                .filter(origin -> cookieSettings.allowedOrigins().stream()
+                        .anyMatch(allowed -> com.masiton.common.web.OriginCanonicalizer.matches(origin, allowed)))
                 .isEmpty()) {
             reject(request, response);
             return;

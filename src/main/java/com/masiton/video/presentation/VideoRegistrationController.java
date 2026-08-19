@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.masiton.common.observability.TraceIdFilter;
+import com.masiton.common.security.LegacyAdminActorResolver;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
 import com.masiton.common.web.ErrorResponse;
@@ -22,8 +23,14 @@ import com.masiton.video.application.port.in.VideoRegistrationUseCase;
 @RequestMapping("/api/admin")
 public class VideoRegistrationController {
     private final VideoRegistrationUseCase videoRegistrationUseCase;
-    public VideoRegistrationController(VideoRegistrationUseCase videoRegistrationUseCase) {
+    private final LegacyAdminActorResolver legacyAdminActorResolver;
+
+    public VideoRegistrationController(
+            VideoRegistrationUseCase videoRegistrationUseCase,
+            LegacyAdminActorResolver legacyAdminActorResolver
+    ) {
         this.videoRegistrationUseCase = videoRegistrationUseCase;
+        this.legacyAdminActorResolver = legacyAdminActorResolver;
     }
 
     @PostMapping("/video-registration-previews")
@@ -53,7 +60,7 @@ public class VideoRegistrationController {
             throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
         }
         try {
-            return UUID.fromString(authentication.getName());
+            return legacyAdminActorResolver.resolve(UUID.fromString(authentication.getName()));
         } catch (IllegalArgumentException exception) {
             throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
         }

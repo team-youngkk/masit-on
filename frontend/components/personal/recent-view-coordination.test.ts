@@ -46,10 +46,10 @@ recentViewTest('A 조회 직후 B로 이동하면 B 요청을 허용한다', () 
   recentViewAssert.deepEqual(moved.state, { requestedRestaurantId: 'B' })
 })
 
-recentViewTest('익명 또는 세션 확인 중 상태에서는 요청 기록을 초기화한다', () => {
+recentViewTest('인증되지 않은 세션 상태에서는 요청 기록을 초기화한다', () => {
   const requestedA = { requestedRestaurantId: 'A' }
 
-  for (const status of ['anonymous', 'loading'] as const) {
+  for (const status of ['anonymous', 'loading', 'unavailable'] as const) {
     const reset = coordinateRecentView(requestedA, status, 'A')
 
     recentViewAssert.equal(reset.shouldRequest, false)
