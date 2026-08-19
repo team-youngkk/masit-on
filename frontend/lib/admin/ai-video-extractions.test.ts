@@ -2,7 +2,8 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { clearAccessToken, login } from './auth.ts'
-import { createAiVideoExtraction, aiExtractionMessageFor } from './ai-video-extractions.ts'
+import { AdminApiError } from './api.ts'
+import { aiValidationConflictFrom, createAiVideoExtraction, registerAiRegistrationUnit, reviewAiVideoExtraction, aiExtractionMessageFor } from './ai-video-extractions.ts'
 
 const job = (reused: boolean) => ({
   jobId: reused ? 'job-reused' : 'job-new',
@@ -95,4 +96,128 @@ test('신규 접수 API 오류는 계약 코드별 안전한 안내로 변환한
     clearAccessToken()
     globalThis.fetch = previousFetch
   }
+})
+
+test('검수 요청은 unitId와 요구한 supplements 키만 본문에 담고 tagDecisions 기본값을 보낸다', async () => {
+  const previousFetch = globalThis.fetch
+  const requestBodies: unknown[] = []
+  let call = 0
+  globalThis.fetch = async (_input, init) => {
+    if (call++ === 0) return new Response(JSON.stringify({ accessToken: 'test-token', tokenType: 'Bearer', expiresInSeconds: 3600 }), { status: 200 })
+    requestBodies.push(JSON.parse(String(init?.body)))
+    return new Response(null, { status: 204 })
+  }
+
+  try {
+    clearAccessToken()
+    await login('admin', 'password')
+    await reviewAiVideoExtraction('job-1', 'CONFIRM', 'unit-1', 'AUTO_BLOCKED', '  Kakao 장소를 확인함  ', {
+      supplements: { kakaoPlaceUrl: 'https://place.map.kakao.com/example' },
+    })
+    assert.deepEqual(requestBodies, [{
+      decision: 'CONFIRM',
+      unitId: 'unit-1',
+      expectedReviewStatus: 'AUTO_BLOCKED',
+      reason: 'Kakao 장소를 확인함',
+      supplements: { kakaoPlaceUrl: 'https://place.map.kakao.com/example' },
+      tagDecisions: [],
+    }])
+  } finally {
+    clearAccessToken()
+    globalThis.fetch = previousFetch
+  }
+})
+
+test('supplements를 지정하지 않은 검수 요청(ROLLBACK 등)은 그 키 자체를 보내지 않는다', async () => {
+  const previousFetch = globalThis.fetch
+  const requestBodies: unknown[] = []
+  let call = 0
+  globalThis.fetch = async (_input, init) => {
+    if (call++ === 0) return new Response(JSON.stringify({ accessToken: 'test-token', tokenType: 'Bearer', expiresInSeconds: 3600 }), { status: 200 })
+    requestBodies.push(JSON.parse(String(init?.body)))
+    return new Response(null, { status: 204 })
+  }
+
+  try {
+    clearAccessToken()
+    await login('admin', 'password')
+    await reviewAiVideoExtraction('job-1', 'ROLLBACK', 'unit-1', 'AUTO_CONFIRMED', '롤백 사유')
+    assert.deepEqual(requestBodies, [{
+      decision: 'ROLLBACK', unitId: 'unit-1', expectedReviewStatus: 'AUTO_CONFIRMED', reason: '롤백 사유', tagDecisions: [],
+    }])
+    assert.ok(!('supplements' in (requestBodies[0] as Record<string, unknown>)))
+  } finally {
+    clearAccessToken()
+    globalThis.fetch = previousFetch
+  }
+})
+
+test('등록 단위 등록 API는 빈 본문으로 요청하고 성공 결과를 그대로 반환한다', async () => {
+  const previousFetch = globalThis.fetch
+  const requestBodies: Array<string | undefined> = []
+  let call = 0
+  const result = {
+    unitId: 'unit-1', reviewStatus: 'AUTO_CONFIRMED', restaurantId: 'restaurant-1', creatorId: 'creator-1',
+    videoId: 'video-1', visitId: 'visit-1', reusedResources: ['creator', 'video'],
+    placeDecision: { kakaoPlaceUrl: 'https://place.map.kakao.com/example', roadAddress: '서울특별시 영등포구 도림로131길 17', matchedBy: 'NAME_AND_DISTRICT' },
+    categoryDecision: { foodCategoryName: '일식', resolvedBy: 'KAKAO_PLACE_CATEGORY' },
+  }
+  globalThis.fetch = async (_input, init) => {
+    if (call++ === 0) return new Response(JSON.stringify({ accessToken: 'test-token', tokenType: 'Bearer', expiresInSeconds: 3600 }), { status: 200 })
+    requestBodies.push(init?.body as string | undefined)
+    return new Response(JSON.stringify(result), { status: 200 })
+  }
+
+  try {
+    clearAccessToken()
+    await login('admin', 'password')
+    const response = await registerAiRegistrationUnit('job-1', 'unit-1')
+    assert.deepEqual(response, result)
+    assert.deepEqual(requestBodies, [undefined])
+  } finally {
+    clearAccessToken()
+    globalThis.fetch = previousFetch
+  }
+})
+
+test('등록 단위 등록 API의 422 예외 전환 응답은 blockReason·recoveryPaths·requiredSupplements로 파싱한다', async () => {
+  const previousFetch = globalThis.fetch
+  let call = 0
+  globalThis.fetch = async () => {
+    if (call++ === 0) return new Response(JSON.stringify({ accessToken: 'test-token', tokenType: 'Bearer', expiresInSeconds: 3600 }), { status: 200 })
+    return new Response(JSON.stringify({
+      code: 'AIEXTRACT_VALIDATION_CONFLICT',
+      blockReason: 'PLACE_AMBIGUOUS',
+      recoveryPaths: ['SUPPLEMENT', 'MANUAL_REGISTRATION'],
+      requiredSupplements: ['kakaoPlaceUrl'],
+      traceId: 'trace-2',
+    }), { status: 422 })
+  }
+
+  try {
+    clearAccessToken()
+    await login('admin', 'password')
+    let reason: unknown
+    try {
+      await registerAiRegistrationUnit('job-1', 'unit-1')
+      assert.fail('예외 전환 응답은 실패해야 합니다.')
+    } catch (caught) {
+      reason = caught
+    }
+    assert.ok(reason instanceof AdminApiError)
+    assert.deepEqual(aiValidationConflictFrom(reason), {
+      blockReason: 'PLACE_AMBIGUOUS',
+      recoveryPaths: ['SUPPLEMENT', 'MANUAL_REGISTRATION'],
+      requiredSupplements: ['kakaoPlaceUrl'],
+      traceId: 'trace-2',
+    })
+  } finally {
+    clearAccessToken()
+    globalThis.fetch = previousFetch
+  }
+})
+
+test('AIEXTRACT_VALIDATION_CONFLICT가 아닌 오류는 예외 전환 정보로 파싱하지 않는다', () => {
+  assert.equal(aiValidationConflictFrom(new AdminApiError(409, 'AIEXTRACT_CONCURRENT_REQUEST_CONFLICT')), null)
+  assert.equal(aiValidationConflictFrom(new Error('network')), null)
 })

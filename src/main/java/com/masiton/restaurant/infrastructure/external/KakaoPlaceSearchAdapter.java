@@ -87,6 +87,7 @@ class KakaoPlaceSearchAdapter implements PlaceSearchPort {
         String placeUrl = stringValue(document.get("place_url"));
         String roadAddress = stringValue(document.get("road_address_name"));
         String phoneNumber = stringValue(document.get("phone"));
+        String category = stringValue(document.get("category_name"));
         if (name == null || placeUrl == null || roadAddress == null) {
             return CandidateConversion.excluded(ExclusionReason.MISSING_REQUIRED);
         }
@@ -96,7 +97,8 @@ class KakaoPlaceSearchAdapter implements PlaceSearchPort {
             return CandidateConversion.excluded(ExclusionReason.INVALID_PLACE_URL);
         }
         return CandidateConversion.included(new PlaceSearchCandidate(
-                name, canonicalUrl.get().toString(), SeoulRoadAddressNormalizer.normalize(roadAddress), phoneNumber));
+                name, canonicalUrl.get().toString(), SeoulRoadAddressNormalizer.normalize(roadAddress), phoneNumber,
+                category));
     }
 
     private String stringValue(Object value) {

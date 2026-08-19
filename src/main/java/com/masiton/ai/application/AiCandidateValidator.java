@@ -18,7 +18,7 @@ import com.masiton.ai.application.AiCandidateValidationResult.ValidationIssue;
 import tools.jackson.databind.JsonNode;
 
 /**
- * Pure S1 candidate validator. External place, video, duplicate, and registration checks belong to
+ * Pure S1/S2 candidate validator. External place, video, duplicate, and registration checks belong to
  * the orchestration layer and are intentionally outside this class.
  */
 public final class AiCandidateValidator {
@@ -37,18 +37,18 @@ public final class AiCandidateValidator {
     private static final Set<String> TAG_TYPES = Set.of(
             "MENU", "TASTE", "OCCASION", "ATMOSPHERE");
     private static final Set<String> ROOT_FIELDS = Set.of(
-            "resultCompleteness", "candidates", "missingFields");
+            "resultCompleteness", "candidates", "missingFields", "candidateTruncated");
     private static final Set<String> EVIDENCE_TYPES = Set.of("TIMESTAMP", "TEXT_RANGE", "UNKNOWN");
 
     public AiCandidateValidationResult validate(JsonNode payload) {
         if (payload == null || !payload.isObject() || !hasOnlyFields(payload, ROOT_FIELDS)) {
-            return rejected(Map.of(), null, List.of(), List.of(), List.of(),
+            return rejected(Map.of(), null, List.of(), List.of(), List.of(), false,
                     issue("INVALID_PAYLOAD", null));
         }
 
         String resultCompleteness = textValue(payload.get("resultCompleteness"));
         if (!"COMPLETE".equals(resultCompleteness) && !"PARTIAL".equals(resultCompleteness)) {
-            return rejected(Map.of(), null, List.of(), List.of(), List.of(),
+            return rejected(Map.of(), null, List.of(), List.of(), List.of(), false,
                     issue("INVALID_RESULT_COMPLETENESS", null));
         }
 
@@ -56,9 +56,14 @@ public final class AiCandidateValidator {
         JsonNode missingFieldsNode = payload.get("missingFields");
         if (candidatesNode == null || !candidatesNode.isArray()
                 || missingFieldsNode == null || !missingFieldsNode.isArray()) {
-            return rejected(Map.of(), null, List.of(), List.of(), List.of(),
+            return rejected(Map.of(), null, List.of(), List.of(), List.of(), false,
                     issue("INVALID_PAYLOAD", null));
         }
+
+        // The provider adapter already enforces S2's strict candidateTruncated presence/type and the
+        // server-side cap override; this pure validator only needs to read it through for persistence,
+        // defaulting to false so pre-S2 fixtures without the field keep their historical behavior.
+        boolean candidateTruncated = payload.path("candidateTruncated").asBoolean(false);
 
         List<ValidationIssue> issues = new ArrayList<>();
         LinkedHashSet<String> declaredMissing = new LinkedHashSet<>();
@@ -178,7 +183,7 @@ public final class AiCandidateValidator {
         }
 
         return new AiCandidateValidationResult(decision, selectedCandidates, foodCategoryName,
-                connectableTags, rejectedTags, new ArrayList<>(missingFields), issues);
+                connectableTags, rejectedTags, new ArrayList<>(missingFields), issues, candidateTruncated);
     }
 
     private CandidateParseResult parseCandidate(JsonNode node, String field, List<ValidationIssue> issues) {
@@ -340,10 +345,11 @@ public final class AiCandidateValidator {
             List<TagCandidate> tags,
             List<TagCandidate> rejectedTags,
             List<String> missingFields,
+            boolean candidateTruncated,
             ValidationIssue issue
     ) {
         return new AiCandidateValidationResult(Decision.AUTO_REJECTED, candidates, foodCategoryName,
-                tags, rejectedTags, missingFields, List.of(issue));
+                tags, rejectedTags, missingFields, List.of(issue), candidateTruncated);
     }
 
     private ValidationIssue issue(String code, String field) {

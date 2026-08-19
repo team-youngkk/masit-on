@@ -229,7 +229,7 @@ V3 전진 적용과 전체 FK·UNIQUE·CHECK·인덱스는 `TST-E2-E2E-001`, `E2
 
 | 데이터 범위 | 소유 요구사항·API | 계약·보류 | Workstream | 다음 검증 |
 |---|---|---|---|---|
-| `ai_extraction_job` | FR-AIEXTRACT-001~007, API-ADMIN-AIEXTRACT-001 | [AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md), 현재 Gemini P7/S1·기존 P1·P2·P3·P4·P5·P6 이력·모델·보존 정책 Accepted | WS-15 | 중복 접수·lease 복구·재시도·원자성 |
+| `ai_extraction_job` | FR-AIEXTRACT-001~007, API-ADMIN-AIEXTRACT-001 | [AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md), 현재 Gemini P8/S2·기존 P1·P2·P3·P4·P5·P6·P7 이력·모델·보존 정책 Accepted | WS-15 | 중복 접수·lease 복구·재시도·원자성 |
 | `ai_extraction_temporary_input` | BR-AIEXTRACT-007, NFR-PRIVACY-006 | 관리자 보완 텍스트 암호화 임시 저장, 작업 종료 후 24시간 이내 삭제, Webhook 작업 미생성 | WS-15 | 재시작 복구·암호화·자동 삭제·재시도 입력 재사용 금지 |
 | `ai_candidate_snapshot` | FR-AIEXTRACT-002~003·007, BR-AIEXTRACT-001~004·008 | 필드·태그 후보 Schema·근거·자동 등록 상태 버전 보존, 정식 Entity와 분리 | WS-15 | 부분 추출·환각·태그 오분류·자동 차단·폐기 |
 | `ai_registration_unit` | FR-AIEXTRACT-003, BR-AIEXTRACT-001·009·010·011, API-ADMIN-AIEXTRACT-001 | Snapshot의 장소 단위 등록 단위와 단위별 판정 상태·차단 사유·장소·카테고리 근거·맛집·유튜버·영상·방문 등록 결과·재사용 자원 | WS-15 | 다장소 영상 독립 판정, 부분 차단 시 원자성 경계, 등록 완료·롤백 완료·폐기 완료 `MANUAL_OVERRIDE` 구분, 단위별 롤백 |

@@ -1,4 +1,14 @@
-import type { AiExecutionStatus, AiExtractionJob, AiExtractionReviewStatus, AiExtractionSource, AiExtractionSubmissionResult } from './ai-video-extractions'
+import type {
+  AiExecutionStatus,
+  AiExtractionJob,
+  AiExtractionReviewStatus,
+  AiExtractionSource,
+  AiExtractionSubmissionResult,
+  AiRecoveryPath,
+  AiRegistrationUnit,
+  AiReviewDecision,
+  AiReviewSupplements,
+} from './ai-video-extractions'
 import { idempotencyAttempt, type IdempotencyAttempt } from '../idempotency.ts'
 
 export type AiExtractionFilters = {
@@ -46,17 +56,69 @@ export function nextAiExtractionFilters(
   }
 }
 
-export function reviewActionsFor(job: Pick<AiExtractionJob, 'executionStatus' | 'resultCompleteness' | 'reviewStatus'>) {
+/** 재시도는 작업 전체 실행 상태를 대상으로 하며 등록 단위와 무관하다. */
+export function retryActionAvailable(job: Pick<AiExtractionJob, 'executionStatus' | 'resultCompleteness'>): boolean {
+  return job.executionStatus === 'FAILED' || (job.executionStatus === 'SUCCEEDED' && job.resultCompleteness === 'PARTIAL')
+}
+
+export type AiRegistrationUnitActions = {
+  registerable: boolean
+  adjustCategory: boolean
+  rollback: boolean
+}
+
+/**
+ * 등록 유지 상태(사후 보정 등록 완료·카테고리 보정)는 manualOverrideType이 null이면서
+ * reviewStatus가 MANUAL_OVERRIDE이고 등록 결과 식별자가 모두 존재하는 조합으로 판별한다.
+ * 롤백 완료·폐기 완료와 달리 별도 값을 두지 않으므로 이 조합만으로 구분한다.
+ */
+function isRegisteredManualOverride(unit: Pick<AiRegistrationUnit, 'reviewStatus' | 'manualOverrideType'>): boolean {
+  return unit.reviewStatus === 'MANUAL_OVERRIDE' && unit.manualOverrideType === null
+}
+
+/** 등록 단위별로 노출할 조치를 결정한다. 등록 실행은 AUTO_BLOCKED·AUTO_REJECTED에서, 카테고리 보정·롤백은 등록이 유지된 단위에서만 허용한다. */
+export function registrationUnitActionsFor(
+  unit: Pick<AiRegistrationUnit, 'reviewStatus' | 'manualOverrideType'>,
+): AiRegistrationUnitActions {
+  const registered = unit.reviewStatus === 'AUTO_CONFIRMED' || isRegisteredManualOverride(unit)
   return {
-    retry: job.executionStatus === 'FAILED' || (job.executionStatus === 'SUCCEEDED' && job.resultCompleteness === 'PARTIAL'),
-    confirm: job.reviewStatus === 'AUTO_BLOCKED',
-    discard: job.reviewStatus === 'AUTO_BLOCKED' || job.reviewStatus === 'AUTO_REJECTED',
-    rollback: job.reviewStatus === 'AUTO_CONFIRMED',
+    registerable: unit.reviewStatus === 'AUTO_BLOCKED' || unit.reviewStatus === 'AUTO_REJECTED',
+    adjustCategory: registered,
+    rollback: registered,
   }
 }
 
-export function reviewRequest(decision: 'CONFIRM' | 'DISCARD' | 'ROLLBACK', expectedReviewStatus: AiExtractionReviewStatus) {
-  return { decision, expectedReviewStatus }
+export type ExceptionAction = AiRecoveryPath | 'DISCARD'
+
+/**
+ * `DISCARD`는 `recoveryPaths` 배열과 무관한 공통 종결 동작이며 `AUTO_BLOCKED` 등록 단위에서만 허용한다.
+ * `AUTO_REJECTED` 거절·롤백 완료·폐기 완료 거절은 대상이 아니므로 배열을 그대로 반환한다.
+ */
+export function exceptionActionsFor(unitReviewStatus: AiExtractionReviewStatus, recoveryPaths: AiRecoveryPath[]): ExceptionAction[] {
+  return unitReviewStatus === 'AUTO_BLOCKED' ? [...recoveryPaths, 'DISCARD'] : [...recoveryPaths]
+}
+
+const CANDIDATE_TRUNCATED_MESSAGE = '후보 수 상한(300)을 넘어 일부 장소가 누락됐습니다.'
+
+/** `candidateTruncated`가 true일 때만 배너 문구를 반환하고, 그 밖에는 배너를 표시하지 않는다. */
+export function candidateTruncatedBannerMessage(candidateTruncated: boolean): string | null {
+  return candidateTruncated ? CANDIDATE_TRUNCATED_MESSAGE : null
+}
+
+export type AiReviewRequest = {
+  decision: AiReviewDecision
+  unitId: string
+  expectedReviewStatus: AiExtractionReviewStatus
+  supplements?: AiReviewSupplements
+}
+
+export function reviewRequest(
+  decision: AiReviewDecision,
+  unitId: string,
+  expectedReviewStatus: AiExtractionReviewStatus,
+  supplements?: AiReviewSupplements,
+): AiReviewRequest {
+  return { decision, unitId, expectedReviewStatus, ...(supplements ? { supplements } : {}) }
 }
 
 export function aiExtractionMessageForCode(code?: string, context: 'manage' | 'submission' = 'manage'): string | undefined {
@@ -73,6 +135,12 @@ export function aiExtractionMessageForCode(code?: string, context: 'manage' | 's
       return '후보 검증에 실패해 등록 또는 검수를 완료하지 못했습니다. 최신 작업 상태를 확인해 주세요.'
     case 'AIEXTRACT_JOB_NOT_FOUND':
       return 'AI 추출 작업을 찾을 수 없습니다. 목록을 새로고침해 주세요.'
+    case 'AIEXTRACT_UNIT_NOT_FOUND':
+      return '등록 단위를 찾을 수 없습니다. 최신 작업 상태를 다시 조회해 주세요.'
+    case 'AIEXTRACT_UNIT_ID_REQUIRED':
+      return '등록 단위가 여러 개인 작업입니다. 처리할 등록 단위를 다시 선택해 주세요.'
+    case 'AIEXTRACT_CONCURRENT_REQUEST_CONFLICT':
+      return '같은 등록 단위에 대한 다른 요청과 충돌했습니다. 최신 상태를 다시 조회한 뒤 진행해 주세요.'
     default:
       return undefined
   }

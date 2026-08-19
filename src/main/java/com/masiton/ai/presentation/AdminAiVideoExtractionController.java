@@ -16,11 +16,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.masiton.ai.application.port.in.AiExtractionJobUseCase;
 import com.masiton.ai.application.AdminAiExtractionQueryService;
+import com.masiton.ai.application.RegistrationUnitCommandService;
 import com.masiton.ai.application.port.out.AiExtractionAdminQueryPort;
+import com.masiton.ai.application.port.out.AiRegistrationUnitStore;
 import com.masiton.ai.application.port.out.dto.AiExtractionJobView;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 @RestController
 @RequestMapping("/api/admin/ai/video-extractions")
@@ -32,9 +35,13 @@ public class AdminAiVideoExtractionController {
 
     private final AiExtractionJobUseCase useCase;
     private final AdminAiExtractionQueryService queryService;
+    private final ObjectMapper objectMapper;
 
-    public AdminAiVideoExtractionController(AiExtractionJobUseCase useCase, AdminAiExtractionQueryService queryService) {
-        this.useCase = useCase; this.queryService = queryService;
+    public AdminAiVideoExtractionController(AiExtractionJobUseCase useCase, AdminAiExtractionQueryService queryService,
+                                            ObjectMapper objectMapper) {
+        this.useCase = useCase;
+        this.queryService = queryService;
+        this.objectMapper = objectMapper;
     }
 
     @GetMapping
@@ -56,7 +63,9 @@ public class AdminAiVideoExtractionController {
         }
     }
     @GetMapping("/{jobId}")
-    public DetailResponse detail(@PathVariable UUID jobId) { return DetailResponse.from(queryService.detail(jobId)); }
+    public DetailResponse detail(@PathVariable UUID jobId) {
+        return DetailResponse.from(queryService.detail(jobId), objectMapper);
+    }
     @PostMapping("/{jobId}/retry")
     public ResponseEntity<AiExtractionJobResponse> retry(@PathVariable UUID jobId, @RequestBody RetryRequest request) {
         String url = queryService.retryUrl(jobId);
@@ -67,10 +76,22 @@ public class AdminAiVideoExtractionController {
     }
     @PostMapping("/{jobId}/review")
     public ResponseEntity<Void> review(Authentication authentication, @PathVariable UUID jobId, @RequestBody ReviewRequest request) {
-        queryService.review(jobId, request.decision(), request.expectedReviewStatus(), adminId(authentication), request.reason(),
-                request.tagDecisions() == null ? List.of() : request.tagDecisions().stream().map(t -> new AiExtractionAdminQueryPort.TagDecision(t.candidateTagId(), t.decision(), t.tagCode())).toList());
+        String kakaoPlaceUrl = request.supplements() == null ? null : request.supplements().kakaoPlaceUrl();
+        String foodCategoryId = request.supplements() == null ? null : request.supplements().foodCategoryId();
+        queryService.review(jobId, request.decision(), request.unitId(), request.reason(), kakaoPlaceUrl, foodCategoryId,
+                request.tagDecisions() == null ? List.of() : request.tagDecisions().stream()
+                        .map(t -> new AiExtractionAdminQueryPort.TagDecision(t.candidateTagId(), t.decision(), t.tagCode()))
+                        .toList(),
+                adminId(authentication));
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{jobId}/registration-units/{unitId}/registration")
+    public ResponseEntity<RegistrationExecutionResponse> registerUnit(@PathVariable UUID jobId, @PathVariable UUID unitId) {
+        RegistrationUnitCommandService.RegistrationExecutionView result = queryService.registerUnit(jobId, unitId);
+        return ResponseEntity.ok(RegistrationExecutionResponse.from(result));
+    }
+
     private UUID adminId(Authentication authentication) { try { return UUID.fromString(authentication.getName()); } catch (Exception e) { throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED); } }
 
     @PostMapping
@@ -118,22 +139,60 @@ public class AdminAiVideoExtractionController {
     public record YoutubeReference(String channelId, String videoId, String videoUrl) {
     }
     public record RetryRequest(String supplementText, String reason) { }
-    public record ReviewRequest(String decision, String reason, String expectedReviewStatus, List<TagDecisionRequest> tagDecisions) { }
+    public record ReviewRequest(String decision, String reason, String expectedReviewStatus, String unitId,
+                                SupplementsRequest supplements, List<TagDecisionRequest> tagDecisions) { }
+    public record SupplementsRequest(String kakaoPlaceUrl, String foodCategoryId) { }
     public record TagDecisionRequest(String candidateTagId, String decision, String tagCode) { }
     public record PageResponse(List<AiExtractionJobResponse> items, Page page) { }
     public record Page(int number, int size, long totalElements, long totalPages, boolean hasNext) { }
+
+    public record RegistrationExecutionResponse(
+            UUID unitId, String reviewStatus, UUID restaurantId, UUID creatorId, UUID videoId, UUID visitId,
+            List<String> reusedResources, JsonNode placeDecision, JsonNode categoryDecision) {
+        static RegistrationExecutionResponse from(RegistrationUnitCommandService.RegistrationExecutionView view) {
+            return new RegistrationExecutionResponse(view.unitId(), view.reviewStatus(), view.restaurantId(),
+                    view.creatorId(), view.videoId(), view.visitId(), view.reusedResources(), view.placeDecision(),
+                    view.categoryDecision());
+        }
+    }
+
+    public record RegistrationUnitResponse(
+            UUID unitId, String restaurantName, String reviewStatus, String manualOverrideType, String blockReason,
+            UUID registeredRestaurantId, UUID registeredCreatorId, UUID registeredVideoId, UUID registeredVisitId,
+            List<String> reusedResources, JsonNode placeDecision, JsonNode categoryDecision) {
+
+        static RegistrationUnitResponse from(AiRegistrationUnitStore.RegistrationUnitRow row, ObjectMapper mapper) {
+            return new RegistrationUnitResponse(row.id(), row.restaurantName(), row.reviewStatus(),
+                    row.manualOverrideType(), row.blockReason(), row.registeredRestaurantId(),
+                    row.registeredCreatorId(), row.registeredVideoId(), row.registeredVisitId(),
+                    row.reusedResources(), readTree(mapper, row.placeDecisionJson()),
+                    readTree(mapper, row.categoryDecisionJson()));
+        }
+
+        private static JsonNode readTree(ObjectMapper mapper, String json) {
+            return json == null || json.isBlank() ? null : mapper.readTree(json);
+        }
+    }
+
     public record DetailResponse(
             UUID jobId, String source, YoutubeReference youtube, String executionStatus, String resultCompleteness,
             String reviewStatus, String provider, String modelVersion, String promptVersion, String schemaVersion,
             int attemptCount, java.time.OffsetDateTime createdAt, java.time.OffsetDateTime startedAt,
-            java.time.OffsetDateTime finishedAt, boolean reused, List<Object> candidates, Object missingFields, Error error,
+            java.time.OffsetDateTime finishedAt, boolean reused, List<Object> candidates, Object missingFields,
+            boolean candidateTruncated, List<RegistrationUnitResponse> registrationUnits, Error error,
             List<AiExtractionAdminQueryPort.Attempt> attempts) {
-        static DetailResponse from(AiExtractionAdminQueryPort.Detail d) {
+        static DetailResponse from(AdminAiExtractionQueryService.AdminJobDetail jobDetail, ObjectMapper objectMapper) {
+            AiExtractionAdminQueryPort.Detail d = jobDetail.detail();
             AiExtractionJobResponse job = AiExtractionJobResponse.from(d.job());
-            return new DetailResponse(job.jobId(), job.source(), job.youtube(), job.executionStatus(), job.resultCompleteness(),
-                    job.reviewStatus(), job.provider(), job.modelVersion(), job.promptVersion(), job.schemaVersion(),
-                    job.attemptCount(), job.createdAt(), job.startedAt(), job.finishedAt(), job.reused(),
-                    candidates(d), d.missingFields(), d.errorCategory() == null ? null : new Error(d.errorCategory(), d.retryable(), job.attemptCount()),
+            List<RegistrationUnitResponse> registrationUnits = jobDetail.registrationUnits().stream()
+                    .map(row -> RegistrationUnitResponse.from(row, objectMapper))
+                    .toList();
+            return new DetailResponse(job.jobId(), job.source(), job.youtube(), job.executionStatus(),
+                    job.resultCompleteness(), jobDetail.topReviewStatus(), job.provider(), job.modelVersion(),
+                    job.promptVersion(), job.schemaVersion(), job.attemptCount(), job.createdAt(), job.startedAt(),
+                    job.finishedAt(), job.reused(), candidates(d), d.missingFields(), d.candidateTruncated(),
+                    registrationUnits,
+                    d.errorCategory() == null ? null : new Error(d.errorCategory(), d.retryable(), job.attemptCount()),
                     d.attempts());
         }
 

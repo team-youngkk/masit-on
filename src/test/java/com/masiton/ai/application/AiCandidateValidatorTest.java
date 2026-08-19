@@ -36,7 +36,7 @@ class AiCandidateValidatorTest {
 
         // When
         AiCandidateValidationResult result = new AiCandidateValidationResult(
-                Decision.AUTO_CONFIRMED, source, null, List.of(), List.of(), List.of(), List.of());
+                Decision.AUTO_CONFIRMED, source, null, List.of(), List.of(), List.of(), List.of(), false);
         sourceCandidates.clear();
 
         // Then

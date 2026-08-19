@@ -35,4 +35,11 @@ public class JdbcAiRegisteredContentStore implements AiRegisteredContentStore {
             jdbcTemplate.update("UPDATE restaurant SET publication_status = 'PRIVATE' WHERE id = ?", restaurantId);
         }
     }
+
+    @Override
+    public void updateFoodCategory(UUID restaurantId, UUID foodCategoryId) {
+        jdbcTemplate.update(
+                "UPDATE restaurant SET food_category_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                foodCategoryId, restaurantId);
+    }
 }

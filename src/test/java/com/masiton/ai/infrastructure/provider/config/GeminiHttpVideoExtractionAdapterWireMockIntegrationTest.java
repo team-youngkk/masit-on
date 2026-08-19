@@ -45,7 +45,8 @@ class GeminiHttpVideoExtractionAdapterWireMockIntegrationTest {
         Map<String, Object> payload = Map.of(
                 "responseId", "wiremock-request-id",
                 "candidates", List.of(Map.of("content", Map.of("parts", List.of(Map.of(
-                        "text", "{\"resultCompleteness\":\"COMPLETE\",\"candidates\":[],\"missingFields\":[]}"))))));
+                        "text", "{\"resultCompleteness\":\"COMPLETE\",\"candidates\":[],\"missingFields\":[],"
+                                + "\"candidateTruncated\":false}"))))));
         String mapping = objectMapper.writeValueAsString(Map.of(
                 "request", Map.of(
                         "method", "POST",

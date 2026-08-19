@@ -2,8 +2,6 @@ package com.masiton.restaurant.application;
 
 import java.util.Comparator;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Service;
 
@@ -20,7 +18,6 @@ import com.masiton.restaurant.application.port.out.PlaceSearchPort;
 class SearchAdminPlaceCandidatesService implements SearchAdminPlaceCandidatesUseCase {
 
     private static final int MAX_ROAD_ADDRESS_LENGTH = 255;
-    private static final Pattern SEOUL_ROAD_ADDRESS = Pattern.compile("^서울특별시\\s+([^\\s]+구)\\s+.+$");
 
     private final PlaceSearchPort placeSearchPort;
 
@@ -77,11 +74,7 @@ class SearchAdminPlaceCandidatesService implements SearchAdminPlaceCandidatesUse
 
     /** 서울 자치구를 뽑을 수 없으면 null로 두고 항목 자체는 남긴다. */
     private String districtOf(String roadAddress) {
-        if (roadAddress == null) {
-            return null;
-        }
-        Matcher matcher = SEOUL_ROAD_ADDRESS.matcher(roadAddress.trim());
-        return matcher.matches() ? matcher.group(1) : null;
+        return SeoulRoadAddressNormalizer.extractDistrict(roadAddress).orElse(null);
     }
 
     private String normalizeHint(String roadAddressHint) {

@@ -36,11 +36,11 @@ class AdminAiVideoExtractionControllerApiTest {
 
     private final AiExtractionJobUseCase useCase = mock(AiExtractionJobUseCase.class);
     private final AdminAiExtractionQueryService queryService = mock(AdminAiExtractionQueryService.class);
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final MockMvc mockMvc = MockMvcBuilders.standaloneSetup(
-            new AdminAiVideoExtractionController(useCase, queryService))
+            new AdminAiVideoExtractionController(useCase, queryService, objectMapper))
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
     @DisplayName("신규 접수는 202와 공통 필드 null 키를 포함한다")
@@ -215,8 +215,9 @@ class AdminAiVideoExtractionControllerApiTest {
                 objectMapper.readTree("""
                         {"address": {"type":"TIMESTAMP","startMs":10,"endMs":20}}
                         """),
-                objectMapper.createArrayNode(), null, null, java.util.List.of());
-        when(queryService.detail(jobId)).thenReturn(detail);
+                objectMapper.createArrayNode(), false, null, null, java.util.List.of());
+        when(queryService.detail(jobId)).thenReturn(new AdminAiExtractionQueryService.AdminJobDetail(
+                detail, java.util.List.of(), "AUTO_BLOCKED"));
 
         mockMvc.perform(get("/api/admin/ai/video-extractions/{jobId}", jobId))
                 .andExpect(status().isOk())
@@ -234,10 +235,13 @@ class AdminAiVideoExtractionControllerApiTest {
     void review_효과경계없음_409을반환한다() throws Exception {
         UUID jobId = UUID.fromString("55555555-5555-4555-8555-555555555555");
         doThrow(new BusinessException(HttpStatus.CONFLICT, "AIEXTRACT_DUPLICATE_CONFLICT", "effect unavailable"))
-                .when(queryService).review(org.mockito.ArgumentMatchers.eq(jobId), org.mockito.ArgumentMatchers.eq("ROLLBACK"), org.mockito.ArgumentMatchers.eq("AUTO_CONFIRMED"), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq("오등록"), org.mockito.ArgumentMatchers.anyList());
+                .when(queryService).review(org.mockito.ArgumentMatchers.eq(jobId), org.mockito.ArgumentMatchers.eq("ROLLBACK"),
+                        org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq("오등록"),
+                        org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.anyList(), org.mockito.ArgumentMatchers.any());
         mockMvc.perform(post("/api/admin/ai/video-extractions/{jobId}/review", jobId)
                         .principal(new UsernamePasswordAuthenticationToken("55555555-5555-4555-8555-555555555556", "n/a"))
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"decision\":\"ROLLBACK\",\"expectedReviewStatus\":\"AUTO_CONFIRMED\",\"reason\":\"오등록\"}"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"decision\":\"ROLLBACK\",\"unitId\":\"77777777-7777-4777-8777-777777777777\",\"expectedReviewStatus\":\"AUTO_CONFIRMED\",\"reason\":\"오등록\"}"))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("AIEXTRACT_DUPLICATE_CONFLICT"));
     }
 }

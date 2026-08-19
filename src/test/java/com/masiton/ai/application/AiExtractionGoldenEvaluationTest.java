@@ -124,9 +124,9 @@ class AiExtractionGoldenEvaluationTest {
 
         assertThat(runtime.get("provider").asText()).isEqualTo(AiExtractionContract.PROVIDER);
         assertThat(runtime.get("modelVersion").asText()).isEqualTo("gemini-3-flash-preview");
-        // 골든 자산은 gemini-3-flash-preview·P1 기준의 역사적 fixture다. 운영 계약이 P2로 올라가도 재판정 없이 보존한다.
+        // 골든 자산은 gemini-3-flash-preview·P1·S1 기준의 역사적 fixture다. 운영 계약이 올라가도 재판정 없이 보존한다.
         assertThat(runtime.get("promptVersion").asText()).isEqualTo("P1");
-        assertThat(runtime.get("schemaVersion").asText()).isEqualTo(AiExtractionContract.SCHEMA_VERSION);
+        assertThat(runtime.get("schemaVersion").asText()).isEqualTo("S1");
         assertThat(cases).allSatisfy(testCase -> {
             assertThat(testCase.humanStatus()).isEqualTo("PENDING");
             assertThat(testCase.judgeRole()).isNotBlank();
