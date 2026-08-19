@@ -126,7 +126,7 @@ class GeminiHttpVideoExtractionAdapterTest {
                             + "{\"field\":\"restaurantName\",\"value\":\"서이축산\",\"confidence\":0.9,"
                             + "\"evidence\":{\"type\":\"TEXT_RANGE\",\"startOffset\":" + start
                             + ",\"endOffset\":" + end + ",\"sourceHash\":\""
-                            + request.supplementSourceHash() + "\"}}],\"missingFields\":[]}"));
+                            + request.supplementSourceHash() + "\"}}],\"missingFields\":[],\"candidateTruncated\":false}"));
         });
 
         AiVideoExtractionResult result = adapter(serverUrl()).extract(request);
@@ -247,7 +247,7 @@ class GeminiHttpVideoExtractionAdapterTest {
                 "{\"resultCompleteness\":\"COMPLETE\",\"candidates\":["
                         + "{\"field\":\"visitEvidence\",\"value\":\"직접 방문\",\"confidence\":0.9,"
                         + "\"evidence\":{\"type\":\"TIMESTAMP\",\"startMs\":1000,\"endMs\":2000}}],"
-                        + "\"missingFields\":[]}")));
+                        + "\"missingFields\":[],\"candidateTruncated\":false}")));
 
         assertThat(adapter(serverUrl()).extract(request).candidates()
                 .at("/candidates/0/evidence/type").asText()).isEqualTo("TIMESTAMP");
@@ -348,7 +348,7 @@ class GeminiHttpVideoExtractionAdapterTest {
                         + "{\"field\":\"menu\",\"value\":\"메뉴\",\"confidence\":0.8,"
                         + "\"evidence\":{\"type\":\"TEXT_RANGE\",\"startOffset\":0,"
                         + "\"endOffset\":2,\"sourceHash\":\"" + request.supplementSourceHash()
-                        + "\"}}],\"missingFields\":[]}")));
+                        + "\"}}],\"missingFields\":[],\"candidateTruncated\":false}")));
 
         AiVideoExtractionResult result = adapter(serverUrl()).extract(request);
 
@@ -361,7 +361,7 @@ class GeminiHttpVideoExtractionAdapterTest {
     void 추출_PARTIAL허용누락필드_S1후보페이로드를반환한다() throws Exception {
         startServer(exchange -> respond(exchange, 200, geminiEnvelopeWithPayload(
                 "{\"resultCompleteness\":\"PARTIAL\",\"candidates\":[],"
-                        + "\"missingFields\":[\"address\"]}")));
+                        + "\"missingFields\":[\"address\"],\"candidateTruncated\":false}")));
 
         AiVideoExtractionResult result = adapter(serverUrl()).extract(request());
 
@@ -426,7 +426,7 @@ class GeminiHttpVideoExtractionAdapterTest {
                         + "\"rawLabel\":\"능이버섯 삼계탕에 포인트를 더한 곳\",\"normalizedCode\":\"TASTE_NAENGYI\","
                         + "\"label\":\"능이버섯 삼계탕\",\"confidence\":0.9,"
                         + "\"evidence\":{\"type\":\"TIMESTAMP\",\"startMs\":302000,\"endMs\":305000}}"
-                        + "],\"missingFields\":[]}")));
+                        + "],\"missingFields\":[],\"candidateTruncated\":false}")));
 
         AiVideoExtractionResult result = adapter(serverUrl()).extract(request());
 
@@ -447,7 +447,7 @@ class GeminiHttpVideoExtractionAdapterTest {
                         + "\"endOffset\":8,\"sourceHash\":\"" + request.supplementSourceHash() + "\"}},"
                         + "{\"field\":\"menu\",\"value\":\"삼계탕\",\"confidence\":0.9,"
                         + "\"evidence\":{\"type\":\"TIMESTAMP\",\"startMs\":1,\"endMs\":2}}"
-                        + "],\"missingFields\":[]}")));
+                        + "],\"missingFields\":[],\"candidateTruncated\":false}")));
 
         // When
         AiVideoExtractionResult result = adapter(serverUrl()).extract(request);
@@ -824,7 +824,7 @@ class GeminiHttpVideoExtractionAdapterTest {
                 + "{\"field\":\"" + field + "\",\"value\":\"" + value + "\",\"confidence\":0.9,"
                 + "\"evidence\":{\"type\":\"TEXT_RANGE\",\"startOffset\":" + startOffset
                 + ",\"endOffset\":" + endOffset + ",\"sourceHash\":\"" + sourceHash
-                + "\"}}],\"missingFields\":[]}";
+                + "\"}}],\"missingFields\":[],\"candidateTruncated\":false}";
     }
 
     private void startServer(ExchangeHandler handler) throws IOException {
@@ -839,7 +839,7 @@ class GeminiHttpVideoExtractionAdapterTest {
 
     private String geminiEnvelope(String completeness) throws IOException {
         String payload = "{\"resultCompleteness\":\"" + completeness
-                + "\",\"candidates\":[],\"missingFields\":[]}";
+                + "\",\"candidates\":[],\"missingFields\":[],\"candidateTruncated\":false}";
         return geminiEnvelopeWithPayload(payload);
     }
 

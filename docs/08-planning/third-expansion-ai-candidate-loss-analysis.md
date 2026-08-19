@@ -197,11 +197,9 @@ P2 변경 전 배포본과 동일한 역사적 계약(`gemini-3.5-flash-lite`, P
 - 상세 조회 응답의 `candidates`에 같은 `field`가 여러 번 나타나는 것을 검증한다.
 - 로컬·자동화 테스트에서 실제 Gemini·Kakao·YouTube API를 호출하지 않는다.
 
-## 9. 남은 결정
+## 9. 확정한 결정
 
-> 이 절(9절)과 9.1절 전체는 `합의 대기` 상태다. 1~8절의 결함 분석과 실측 근거는 그 앞의 Accepted 상태를 유지한다. 절차와 불발 시 되돌릴 범위는 [ADR-AI-001 1절](../07-adr/integration/ai-001-video-extraction-candidate-boundary.md)에 있다.
-
-2026-08-18에 결정 C(장소 동일성), 복수 후보 처리, 카테고리 매핑, `MAX_CANDIDATES` 상한 네 항목이 결정됐다. 결정 내용은 요구사항·PRD·ADR에 반영했고 이 절에는 결과만 남긴다.
+2026-08-18에 결정 C(장소 동일성), 복수 후보 처리, 카테고리 매핑, `MAX_CANDIDATES` 상한 네 항목이 결정됐다. [PR #226](https://github.com/team-youngkk/masit-on/pull/226)에서 소유자 승인으로 합의를 확정했다. 결정 내용은 요구사항·PRD·ADR에 반영했고 이 절에는 결과만 남긴다.
 
 - **결정 C 해소** — 장소 동일성 판정 기준을 변경했다. AI 후보에 Kakao 장소 URL을 요구하지 않고, 시스템이 상호명·주소로 Kakao를 검색해 정규화 상호명 완전일치와 도로명주소 시·구 일치를 함께 만족하는 결과가 정확히 1건일 때만 자동 확정한다. 0건은 `PLACE_NOT_FOUND`, 2건 이상은 `PLACE_AMBIGUOUS`로 차단한다. 근거는 [BR-AIEXTRACT-009](../01-requirements/business-rules.md#br-aiextract-009-장소-동일성-자동-확정)와 [ADR-AI-001 5.3절](../07-adr/integration/ai-001-video-extraction-candidate-boundary.md)이다.
 - **복수 후보 처리 결정** — 후보가 여럿이라는 사실만으로 차단하지 않는다. 후보를 장소 단위 등록 단위로 나눠 각각 독립 판정하며, 한 단위의 차단이 다른 단위의 등록을 막지 않는다.
@@ -250,7 +248,7 @@ P2 변경 전 배포본과 동일한 역사적 계약(`gemini-3.5-flash-lite`, P
 
 `ux_ai_job__idempotency`가 `prompt_version`과 `schema_version`을 포함하므로 P7·S1으로 처리한 영상은 재추출 대상이 된다. 무료 quota를 한 번 더 소모하므로 운영에서 켜기 전에 `AI_WORKER_PROVIDER_QUOTA_LIMIT`·`AI_WORKER_APPLICATION_QUOTA_LIMIT`를 먼저 확인한다. P7까지의 작업과 Snapshot은 생성 당시 의미로 보존한다.
 
-**버전 라벨은 이 PR에서 올리지 않는다.** 문서가 `P8`·`S2`를 현재 운영 계약으로 서술하면 배포되지 않은 상태를 배포된 것처럼 기록하게 된다. [PR #220](../troubleshooting/pr-220-ai-prompt-version-propagation-review.md)이 같은 유형의 전파 누락을 남긴 기록이다. 현재 운영 계약은 `P7`·`S1`이며, 구현 PR이 코드와 함께 라벨을 올리고 위 표의 다섯 대상을 같은 PR에서 갱신한다.
+**버전 라벨은 이 구현 PR에서 코드와 함께 올렸다.** [PR #220](../troubleshooting/pr-220-ai-prompt-version-propagation-review.md)이 문서만 앞서 올려 배포되지 않은 상태를 배포된 것처럼 기록했던 같은 유형의 전파 누락을 남긴 적이 있어, 이번에는 위 표의 다섯 대상(시스템 지시, 결과 Schema, 수신 검증기, `ai_candidate_snapshot`, 관리자 상세 응답·화면)을 코드와 같은 PR에서 함께 갱신했다. 현재 운영 계약은 `P8`·`S2`이며, `P7`·`S1`은 기존 이력으로 보존한다.
 
 ## 10. Prompt P3 보완 텍스트 근거 경계
 

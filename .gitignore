@@ -24,6 +24,7 @@
 
 # Gradle
 .gradle/
+.gradle-docker/
 build/
 !gradle/wrapper/
 

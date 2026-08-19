@@ -18,7 +18,7 @@ public interface AiExtractionResultStore {
     int nextSnapshotVersion(UUID jobId);
 
     UUID insertSnapshot(UUID jobId, int snapshotVersion, String candidateFields, String candidateTags,
-                        String fieldConfidences, String evidence, String missingFields,
+                        String fieldConfidences, String evidence, String missingFields, boolean candidateTruncated,
                         String reviewStatus, String reviewReason, OffsetDateTime reviewedAt,
                         OffsetDateTime createdAt);
 

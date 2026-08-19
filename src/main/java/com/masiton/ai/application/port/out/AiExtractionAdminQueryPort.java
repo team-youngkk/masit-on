@@ -19,10 +19,19 @@ public interface AiExtractionAdminQueryPort {
     List<TagDecision> connectConfirmedTags(UUID snapshotId, UUID visitId, List<TagDecision> decisions);
     void appendTagOverrides(UUID snapshotId, UUID adminId, String reason, List<TagDecision> decisions);
 
+    /** 작업의 YouTube 참조를 조회한다. 등록 단위 실행·검토에 필요한 최소 정보이며 job 존재 확인에도 쓴다. */
+    Optional<JobVideoReference> jobVideoReference(UUID jobId);
+
+    /** 등록 단위의 근거 Snapshot 원본 후보 JSON을 조회한다. {@code unit_index} 재분해에 쓴다. */
+    Optional<SnapshotCandidateJson> snapshotCandidates(UUID snapshotId);
+
     record Page(List<AiExtractionJobView> items, long totalElements) { }
     record Detail(AiExtractionJobView job, JsonNode candidateFields, JsonNode candidateTags, JsonNode fieldConfidences,
-                  JsonNode evidence, JsonNode missingFields, String errorCategory, Boolean retryable,
-                  List<Attempt> attempts) { }
+                  JsonNode evidence, JsonNode missingFields, boolean candidateTruncated, String errorCategory,
+                  Boolean retryable, List<Attempt> attempts) { }
+    record JobVideoReference(String channelId, String videoId, String videoUrl) { }
+    record SnapshotCandidateJson(
+            JsonNode candidateFields, JsonNode fieldConfidences, JsonNode evidence, JsonNode candidateTags) { }
     record Attempt(int attemptNo, String outcome, String errorCategory, OffsetDateTime startedAt, OffsetDateTime finishedAt) { }
     record RetryTarget(String videoUrl, String executionStatus, String resultCompleteness) { }
     record ReviewTarget(UUID snapshotId, String reviewStatus, UUID jobId, String channelId, String videoId,

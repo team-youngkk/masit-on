@@ -18,7 +18,8 @@ public record AiCandidateValidationResult(
         List<TagCandidate> tags,
         List<TagCandidate> rejectedTags,
         List<String> missingFields,
-        List<ValidationIssue> issues
+        List<ValidationIssue> issues,
+        boolean candidateTruncated
 ) {
 
     public AiCandidateValidationResult {

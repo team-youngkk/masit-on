@@ -132,7 +132,7 @@ class Expansion3FlywayMigrationIntegrationTest {
         // then
         assertThat(jdbcTemplate.queryForList(
                 "SELECT version FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank", String.class))
-                .containsExactly("1", "2", "3", "4", "5", "6", "7");
+                .containsExactly("1", "2", "3", "4", "5", "6", "7", "8");
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM pg_indexes WHERE schemaname = current_schema() "
                 + "AND indexname IN ('ix_ai_job__video_input_versions', 'ix_ai_job__video_mode_versions', "
                 + "'ix_ai_temporary_input__expires_at', 'ix_visit_tag__created_from_snapshot')", Integer.class)).isEqualTo(4);
@@ -429,12 +429,7 @@ class Expansion3FlywayMigrationIntegrationTest {
                         "lease_expires_at", "error_category", "created_at", "started_at", "finished_at", "retry_reason"),
                 "ai_extraction_temporary_input", List.of(
                         "job_id", "ciphertext", "encryption_key_id", "expires_at", "created_at"),
-                "ai_candidate_snapshot", List.of(
-                        "id", "job_id", "snapshot_version", "candidate_fields", "candidate_tags",
-                        "field_confidences", "evidence", "missing_fields", "review_status", "reviewed_by",
-                        "review_reason", "reviewed_at", "created_at", "registered_restaurant_id",
-                        "registered_creator_id", "registered_video_id", "registered_visit_id",
-                        "restaurant_created", "creator_created", "video_created", "visit_created"),
+                "ai_candidate_snapshot", snapshotColumns(includeLastErrorAt),
                 "ai_candidate_tag_review", List.of(
                         "id", "snapshot_id", "candidate_tag_id", "decision", "replacement_tag_definition_id",
                         "reason", "decision_source", "reviewed_by", "reviewed_at", "manual_tag_code"),
@@ -455,6 +450,23 @@ class Expansion3FlywayMigrationIntegrationTest {
         assertThat(jdbcTemplate.queryForObject("SELECT data_type FROM information_schema.columns WHERE table_schema=? "
                 + "AND table_name='ai_extraction_temporary_input' AND column_name='ciphertext'", String.class, schema))
                 .isEqualTo("bytea");
+    }
+
+    /**
+     * {@code candidate_truncated}은 V8이 추가한 컬럼이라 V5(last_error_at)와 마찬가지로 V4까지만
+     * 마이그레이션한 시나리오에는 없다. 두 컬럼이 항상 함께 적용되므로 같은 플래그로 gate한다.
+     */
+    private List<String> snapshotColumns(boolean includeLatestExtensions) {
+        List<String> columns = new ArrayList<>(List.of(
+                "id", "job_id", "snapshot_version", "candidate_fields", "candidate_tags",
+                "field_confidences", "evidence", "missing_fields", "review_status", "reviewed_by",
+                "review_reason", "reviewed_at", "created_at", "registered_restaurant_id",
+                "registered_creator_id", "registered_video_id", "registered_visit_id",
+                "restaurant_created", "creator_created", "video_created", "visit_created"));
+        if (includeLatestExtensions) {
+            columns.add("candidate_truncated");
+        }
+        return columns;
     }
 
     @Test

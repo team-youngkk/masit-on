@@ -1410,8 +1410,6 @@ related_documents:
 
 ### FR-AIEXTRACT-003 자동 확정·예외 보정·폐기
 
-> 등록 단위·자동 판정·카테고리 보정과 관련된 아래 내용은 `합의 대기` 상태다. 절차와 불발 시 되돌릴 범위는 [ADR-AI-001 1절](../07-adr/integration/ai-001-video-extraction-candidate-boundary.md)에 있다.
-
 - 시스템은 성공한 후보를 등록 단위별로 자동 검증해 `AUTO_CONFIRMED`, `AUTO_BLOCKED` 또는 `AUTO_REJECTED`로 전환한다. 한 작업이 여러 등록 단위를 가질 수 있으며 판정은 단위별로 독립적이다.
 - 장소 동일성은 시스템이 상호명·주소 후보로 Kakao 장소를 검색해 판정하고, 대표 음식 카테고리는 확정한 Kakao 장소 분류와 메뉴 후보로 결정한다. 두 판정 모두 관리자 선택을 요구하지 않는다.
 - `AUTO_CONFIRMED`일 때 맛집 동일성·주소·영상 메타데이터·방문 근거를 확인하고 기존 Kakao 장소·YouTube·Visit 검증을 모두 통과한 결과를 관리자 승인 없이 정식 등록·공개한다.

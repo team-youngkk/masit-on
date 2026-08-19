@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.net.URI;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -31,8 +32,14 @@ class AiExtractionResultProcessorServiceTest {
     private final AiExtractionResultStore resultStore = mock(AiExtractionResultStore.class);
     private final AiExtractionResultCommitService commitService = mock(AiExtractionResultCommitService.class);
     private final VerifyAiContentCandidateUseCase contentVerification = mock(VerifyAiContentCandidateUseCase.class);
+    private final RegistrationUnitAutoExecutionService registrationUnitAutoExecution =
+            mock(RegistrationUnitAutoExecutionService.class);
     private final AiExtractionResultProcessorService processor = new AiExtractionResultProcessorService(
-            resultStore, commitService, contentVerification, objectMapper);
+            resultStore, commitService, contentVerification, registrationUnitAutoExecution, objectMapper);
+
+    {
+        given(registrationUnitAutoExecution.execute(any(), any(), any(), any(), any(), any())).willReturn(List.of());
+    }
 
     @Test
     @DisplayName("PARTIAL에서 태그만 누락돼도 필수 후보와 외부 검증을 통과하면 등록 커밋으로 전달한다")

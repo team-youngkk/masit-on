@@ -44,6 +44,7 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
     private final AiExtractionResultStore resultStore;
     private final AiExtractionResultCommitService commitService;
     private final VerifyAiContentCandidateUseCase contentVerification;
+    private final RegistrationUnitAutoExecutionService registrationUnitAutoExecution;
     private final ObjectMapper objectMapper;
     private final AiCandidateValidator candidateValidator = new AiCandidateValidator();
 
@@ -51,10 +52,12 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
             AiExtractionResultStore resultStore,
             AiExtractionResultCommitService commitService,
             VerifyAiContentCandidateUseCase contentVerification,
+            RegistrationUnitAutoExecutionService registrationUnitAutoExecution,
             ObjectMapper objectMapper) {
         this.resultStore = resultStore;
         this.commitService = commitService;
         this.contentVerification = contentVerification;
+        this.registrationUnitAutoExecution = registrationUnitAutoExecution;
         this.objectMapper = objectMapper;
     }
 
@@ -68,8 +71,14 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
         }
 
         ParsedCandidate candidate = parse(result.candidates());
+        // BR-AIEXTRACT-001: registration units are judged independently of the job-level candidate
+        // outcome below, so a video with multiple places can still auto-register the places that
+        // clear steps 1-2 even when the legacy single-candidate pipeline blocks the job itself.
+        List<RegistrationUnitOutcome> registrationUnitOutcomes = registrationUnitAutoExecution.execute(
+                candidate.fields(), candidate.confidences(), candidate.evidence(),
+                job.get().channelId(), job.get().videoId(), job.get().videoUrl());
         AiExtractionResultCommitService.ProcessCommand base = command(
-                jobId, workerId, attemptNo, attemptStartedAt, finishedAt, result, candidate);
+                jobId, workerId, attemptNo, attemptStartedAt, finishedAt, result, candidate, registrationUnitOutcomes);
         if (candidate.blockReason() != null) {
             return persistBlocked(base, candidate);
         }
@@ -145,6 +154,7 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
                     BigDecimal.valueOf(candidate.confidence()), candidateEvidence));
         });
         validation.missingFields().forEach(missing::add);
+        boolean candidateTruncated = validation.candidateTruncated();
 
         List<ParsedTag> tags = new ArrayList<>();
         validation.allTags().forEach(tag -> {
@@ -168,8 +178,9 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
         String completeness = "COMPLETE".equals(rawCompleteness) || "PARTIAL".equals(rawCompleteness)
                 ? rawCompleteness : "PARTIAL";
         return new ParsedCandidate(completeness, fields, tagsJson,
-                confidences, evidence, missing, tags, parsedFields.get("restaurantName"), parsedFields.get("menu"),
-                parsedFields.get("address"), parsedFields.get("location"), parsedFields.get("visitEvidence"), reason,
+                confidences, evidence, missing, candidateTruncated, tags, parsedFields.get("restaurantName"),
+                parsedFields.get("menu"), parsedFields.get("address"), parsedFields.get("location"),
+                parsedFields.get("visitEvidence"), reason,
                 validation.isAutoRejected() ? "AUTO_REJECTED" : "AUTO_BLOCKED");
     }
 
@@ -225,11 +236,13 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
 
     private AiExtractionResultCommitService.ProcessCommand command(
             UUID jobId, String workerId, int attemptNo, OffsetDateTime attemptStartedAt,
-            OffsetDateTime finishedAt, AiVideoExtractionResult result, ParsedCandidate candidate) {
+            OffsetDateTime finishedAt, AiVideoExtractionResult result, ParsedCandidate candidate,
+            List<RegistrationUnitOutcome> registrationUnitOutcomes) {
         return new AiExtractionResultCommitService.ProcessCommand(jobId, workerId, attemptNo, attemptStartedAt,
                 finishedAt, result.providerRequestId(), candidate.completeness(), json(candidate.fields()),
                 json(candidate.tagsJson()), json(candidate.confidences()), json(candidate.evidence()),
-                json(candidate.missing()), candidate.blockReason(), candidate.reviewStatus(), List.of());
+                json(candidate.missing()), candidate.candidateTruncated(), candidate.blockReason(),
+                candidate.reviewStatus(), List.of(), registrationUnitOutcomes);
     }
 
     private AiExtractionResultCommitService.ProcessCommand withTags(
@@ -245,7 +258,8 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
         return new AiExtractionResultCommitService.ProcessCommand(command.jobId(), command.workerId(), command.attemptNo(),
                 command.attemptStartedAt(), command.finishedAt(), command.providerRequestId(), command.resultCompleteness(),
                 command.candidateFields(), command.candidateTags(), command.fieldConfidences(), command.evidence(),
-                command.missingFields(), command.blockReason(), reviewStatus, tags);
+                command.missingFields(), command.candidateTruncated(), command.blockReason(), reviewStatus, tags,
+                command.registrationUnitOutcomes());
     }
 
     private AiExtractionResultCommitService.ProcessCommand withReason(
@@ -253,7 +267,8 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
         return new AiExtractionResultCommitService.ProcessCommand(command.jobId(), command.workerId(), command.attemptNo(),
                 command.attemptStartedAt(), command.finishedAt(), command.providerRequestId(), command.resultCompleteness(),
                 command.candidateFields(), command.candidateTags(), command.fieldConfidences(), command.evidence(),
-                command.missingFields(), reason == null ? "VALIDATION_FAILED" : reason, "AUTO_BLOCKED", command.tags());
+                command.missingFields(), command.candidateTruncated(), reason == null ? "VALIDATION_FAILED" : reason,
+                "AUTO_BLOCKED", command.tags(), command.registrationUnitOutcomes());
     }
 
     private ObjectNode evidenceNode(AiCandidateValidationResult.Evidence source) {
@@ -329,6 +344,7 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
             ObjectNode confidences,
             ObjectNode evidence,
             ArrayNode missing,
+            boolean candidateTruncated,
             List<ParsedTag> tags,
             ParsedField restaurantName,
             ParsedField menu,

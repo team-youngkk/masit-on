@@ -37,7 +37,7 @@ related_documents:
 | `E3-T01` | 자연어 P1 parser·기존 목록 Query·오류·보안 API를 구현한다 | 양성훈 / 이우람 | 문서화 게이트 | 가능 | `TST-E3-NL-001~002`, `TST-E3-SEC-001`; 직접 필터 우선·공개 상태·원문 비저장·전체 목록 대체 금지 |
 | `E3-T02` | 자연어 공개 화면·240건 평가·회귀 자동화를 완성한다 | 양성훈 / 박진영 | `E3-T01`, `E3-T06` | 불가 | `EVAL-NL-001~007`, 화면 폭 5종·키보드, exact match 90%+, 재현율 95%+, 미지원 오적용 0건 |
 | `E3-T03` | AI Job·Snapshot·태그·시도·감시 물리 스키마와 V4 검증을 구현한다 | 박진영 / 김인안 | 문서화 게이트 | 가능 | `TST-E3-DATA-001`; V3→V4·빈 DB, PK/UK/FK/CHECK, 18개 태그 seed, 원문·평문 비저장 |
-| `E3-T04` | AI 작업 접수·Webhook·Gemini Provider·버전 경계를 구현한다 | 김인안 / 이우람 | `E3-T03` | 가능 | `TST-E3-AI-001`; `202`, 멱등 Job, Webhook AI 호출 격리, 현재 Prompt P7·Schema S1·기존 P1·P2·P3·P4·P5·P6 이력 보존·Free Tier 차단 |
+| `E3-T04` | AI 작업 접수·Webhook·Gemini Provider·버전 경계를 구현한다 | 김인안 / 이우람 | `E3-T03` | 가능 | `TST-E3-AI-001`; `202`, 멱등 Job, Webhook AI 호출 격리, 현재 Prompt P8·Schema S2·기존 P1·P2·P3·P4·P5·P6·P7 이력 보존·Free Tier 차단 |
 | `E3-T05` | AI Worker claim·retry·lease 복구·quota hard stop을 구현한다 | 이우람 / 박진영 | `E3-T04` | 가능 | `TST-E3-AI-004`; timeout·429·5xx·Schema 오류, heartbeat·재기동·동시 claim·기존 탐색 격리 |
 | `E3-T06` | AI 후보 자동 검증·태그 통제·정식 등록 원자성을 구현한다 | 김인안 / 박진영 | `E3-T03`, `E3-T04`, `E3-T05` | 불가 | `TST-E3-AI-003`, `TST-E3-DATA-001`; 근거·장소·Visit·태그 검증, 실패 시 정식 Entity 0건 |
 | `E3-T07` | AI 관리자 조회·사후 보정·롤백 API와 화면을 구현한다 | 김인안 / 양성훈 | `E3-T06` | 가능 | `TST-E3-AI-002`, `TST-E3-E2E-001`; 입력 원문·비밀정보 미노출, 정상 결과 사전 승인 금지 |
