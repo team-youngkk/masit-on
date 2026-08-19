@@ -78,8 +78,6 @@ AI 영상 추출은 일반 사용자 화면을 만들지 않고 관리자 작업
 
 ## 4. AI 영상 추출 자동 등록·예외 보정
 
-> 이 절의 자동 판정 결과 표시, 등록 단위별 결과 블록, 예외 화면 분리와 후보 절삭 경고 배너는 `합의 대기` 상태다. 절차와 불발 시 되돌릴 범위는 [ADR-AI-001 1절](../../07-adr/integration/ai-001-video-extraction-candidate-boundary.md)에 있다.
-
 ### AI-EXTRACT-LIST — 작업 목록
 
 ```text

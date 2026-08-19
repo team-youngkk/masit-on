@@ -28,7 +28,7 @@ related_documents:
 
 이 문서는 [PRD-ADMIN-002](../../../04-product/prd/admin/ai-video-information-extraction.md)의 관리자 신규 영상 추가, YouTube Webhook 접수, AI 추출 작업 조회, 채널 감시 설정·상태 조회와 자동 등록·예외 보정 API를 정의한다. AI 결과는 자동 검증을 통과하면 관리자 승인 없이 정식 Entity와 `VisitTag`를 생성·공개하고, 모호·실패·중복 결과만 보류한다. 판정과 등록의 단위는 작업 전체가 아니라 `BR-AIEXTRACT-001`의 장소 단위 등록 단위이며, 장소 동일성(`BR-AIEXTRACT-009`)과 대표 음식 카테고리(`BR-AIEXTRACT-010`)는 관리자 입력 없이 시스템이 결정한다. 이 API는 관리자에게 Kakao 장소 URL이나 음식 카테고리 선택을 요구하지 않는다.
 
-`registrationUnits`·`candidateTruncated`·`manualOverrideType` 응답 필드, 등록 단위 일괄 등록 API(3.6절), `review`의 `unitId`·`supplements`·`ADJUST_CATEGORY`, 작업 최상위 `reviewStatus` 요약 규칙, `recoveryPaths`, `AIEXTRACT_UNIT_ID_REQUIRED`·`AIEXTRACT_UNIT_NOT_FOUND`·`AIEXTRACT_CONCURRENT_REQUEST_CONFLICT` 오류 코드는 `합의 대기` 상태다. 합의는 [PR #226](https://github.com/team-youngkk/masit-on/pull/226)의 소유자 승인으로 갈음하며, 승인 전에는 구현 계약으로 사용하지 않는다. 승인 후 병합 직전 커밋에서 이 표시를 제거한다. 절차는 [ADR-AI-001 1절](../../../07-adr/integration/ai-001-video-extraction-candidate-boundary.md)에 있다. 그 밖의 절은 종전대로 Accepted다.
+`registrationUnits`·`candidateTruncated`·`manualOverrideType` 응답 필드, 등록 단위 일괄 등록 API(3.6절), `review`의 `unitId`·`supplements`·`ADJUST_CATEGORY`, 작업 최상위 `reviewStatus` 요약 규칙, `recoveryPaths`, `AIEXTRACT_UNIT_ID_REQUIRED`·`AIEXTRACT_UNIT_NOT_FOUND`·`AIEXTRACT_CONCURRENT_REQUEST_CONFLICT` 오류 코드는 [PR #226](https://github.com/team-youngkk/masit-on/pull/226)의 소유자 승인으로 합의를 확정했다. 절차는 [ADR-AI-001 1절](../../../07-adr/integration/ai-001-video-extraction-candidate-boundary.md)에 있다.
 
 - 관리자 API는 `/api/admin` 아래에 두고 JWT Bearer와 `ADMIN` 권한을 요구한다.
 - YouTube Webhook은 `/api/webhooks/youtube` 아래의 외부 수신 경계이며 관리자 JWT를 요구하지 않는다. Webhook은 작업 접수만 하고 AI·정식 등록을 실행하지 않는다.
@@ -103,8 +103,8 @@ related_documents:
   "reviewStatus": null,
   "provider": "GOOGLE_GEMINI",
   "modelVersion": "gemini-3.5-flash-lite",
-  "promptVersion": "P7",
-  "schemaVersion": "S1",
+  "promptVersion": "P8",
+  "schemaVersion": "S2",
   "attemptCount": 0,
   "createdAt": "2026-08-10T12:00:00+09:00",
   "startedAt": null,

@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.masiton.ai.application.port.out.AiExtractionResultStore;
+import com.masiton.ai.application.port.out.AiRegistrationUnitStore;
 import com.masiton.orchestration.application.port.in.AutoRegisterVerifiedContentUseCase;
 
 import tools.jackson.databind.ObjectMapper;
@@ -17,18 +18,28 @@ import tools.jackson.databind.ObjectMapper;
 /**
  * AI 결과의 짧은 저장 트랜잭션을 소유한다. 외부 검증은 호출자에서 끝낸 뒤 이
  * 서비스에 들어오며, 이 안에서만 후보·정식 Entity·태그·작업 종료를 함께 커밋한다.
+ *
+ * <p>{@code registrationUnitOutcomes}로 전달된 {@code BR-AIEXTRACT-001} 등록 단위 판정도 이
+ * 트랜잭션 안에서 {@code ai_registration_unit}에 함께 저장한다. 그 판정 자체(Kakao 검색 등
+ * 외부 호출)는 호출자가 이 서비스를 부르기 전에 끝내며, 이 서비스는 이미 계산된 결과를
+ * 순수 DB 저장으로만 반영한다.</p>
  */
 @Service
 class AiExtractionResultCommitService {
 
+    private static final String WORKER_EXECUTOR = "WORKER";
+
     private final AiExtractionResultStore resultStore;
+    private final AiRegistrationUnitStore registrationUnitStore;
     private final AutoRegisterVerifiedContentUseCase autoRegister;
     private final ObjectMapper objectMapper;
 
     AiExtractionResultCommitService(AiExtractionResultStore resultStore,
+                                    AiRegistrationUnitStore registrationUnitStore,
                                     AutoRegisterVerifiedContentUseCase autoRegister,
                                     ObjectMapper objectMapper) {
         this.resultStore = resultStore;
+        this.registrationUnitStore = registrationUnitStore;
         this.autoRegister = autoRegister;
         this.objectMapper = objectMapper;
     }
@@ -42,6 +53,7 @@ class AiExtractionResultCommitService {
         }
         UUID snapshotId = insertSnapshot(command, command.reviewStatus(), command.blockReason());
         insertTagReviews(snapshotId, command.tags(), command.finishedAt());
+        insertRegistrationUnits(snapshotId, command.registrationUnitOutcomes(), command.finishedAt());
         resultStore.completeSuccess(command.jobId(), command.workerId(), command.attemptNo(),
                 command.resultCompleteness(), command.attemptStartedAt(), command.finishedAt(),
                 command.providerRequestId());
@@ -62,6 +74,7 @@ class AiExtractionResultCommitService {
                 registration.creatorId(), registration.creatorCreated(), registration.videoId(), registration.videoCreated(),
                 registration.visitId(), registration.visitCreated());
         insertTagReviewsAndVisitTags(snapshotId, command.tags(), registration.visitId(), command.finishedAt());
+        insertRegistrationUnits(snapshotId, command.registrationUnitOutcomes(), command.finishedAt());
         resultStore.completeSuccess(command.jobId(), command.workerId(), command.attemptNo(),
                 command.resultCompleteness(), command.attemptStartedAt(), command.finishedAt(),
                 command.providerRequestId());
@@ -71,7 +84,7 @@ class AiExtractionResultCommitService {
     private UUID insertSnapshot(ProcessCommand command, String reviewStatus, String reviewReason) {
         return resultStore.insertSnapshot(command.jobId(), resultStore.nextSnapshotVersion(command.jobId()),
                 command.candidateFields(), command.candidateTags(), command.fieldConfidences(),
-                command.evidence(), command.missingFields(), reviewStatus, reviewReason,
+                command.evidence(), command.missingFields(), command.candidateTruncated(), reviewStatus, reviewReason,
                 command.finishedAt(), command.finishedAt());
     }
 
@@ -123,6 +136,21 @@ class AiExtractionResultCommitService {
         }
     }
 
+    /**
+     * {@code BR-AIEXTRACT-001} 등록 단위 판정 중 이번 슬라이스에서 영속화 가능한 것만 저장한다.
+     * {@link RegistrationUnitOutcome} Javadoc 참고.
+     */
+    private void insertRegistrationUnits(UUID snapshotId, List<RegistrationUnitOutcome> outcomes,
+                                         OffsetDateTime decidedAt) {
+        for (RegistrationUnitOutcome outcome : outcomes) {
+            registrationUnitStore.insert(new AiRegistrationUnitStore.RegistrationUnitInsert(
+                    snapshotId, outcome.unitIndex(), outcome.restaurantName(), outcome.reviewStatus(),
+                    outcome.blockReason(), outcome.placeDecisionJson(), outcome.categoryDecisionJson(),
+                    outcome.registeredRestaurantId(), outcome.registeredCreatorId(), outcome.registeredVideoId(),
+                    outcome.registeredVisitId(), outcome.reusedResourcesJson(), WORKER_EXECUTOR, decidedAt));
+        }
+    }
+
     record ProcessCommand(
             UUID jobId,
             String workerId,
@@ -136,9 +164,11 @@ class AiExtractionResultCommitService {
             String fieldConfidences,
             String evidence,
             String missingFields,
+            boolean candidateTruncated,
             String blockReason,
             String reviewStatus,
-            List<AiTagCandidate> tags) {
+            List<AiTagCandidate> tags,
+            List<RegistrationUnitOutcome> registrationUnitOutcomes) {
     }
 
     record AiTagCandidate(

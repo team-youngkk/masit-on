@@ -29,9 +29,9 @@ related_documents:
 
 ## 1. 결정 상태와 범위
 
-이 문서는 AI 영상 추출 작업, 후보 Snapshot, 통제 태그, Gemini 영상 입력 이력과 YouTube 채널 감시 상태의 논리·물리 데이터 경계를 정의하는 Accepted 계약이다. Google Gemini API는 `gemini-3.5-flash-lite`, Gemini Developer API global endpoint, Free Tier 전용·유료 호출 금지, 현재 Prompt `P7`, 결과 Schema `S1`을 사용한다. 기존 Prompt `P1`·`P2`·`P3`·`P4`·`P5`·`P6` 작업과 Snapshot은 재현성을 위한 역사적 이력으로만 보존한다. V4 AI 스키마의 정본은 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql)이고, 채널 감시 오류 시각 보강은 [`V5__add_youtube_channel_watch_last_error_at.sql`](../../../src/main/resources/db/migration/V5__add_youtube_channel_watch_last_error_at.sql)로 관리한다.
+이 문서는 AI 영상 추출 작업, 후보 Snapshot, 통제 태그, Gemini 영상 입력 이력과 YouTube 채널 감시 상태의 논리·물리 데이터 경계를 정의하는 Accepted 계약이다. Google Gemini API는 `gemini-3.5-flash-lite`, Gemini Developer API global endpoint, Free Tier 전용·유료 호출 금지, 현재 Prompt `P8`, 결과 Schema `S2`를 사용한다. 기존 Prompt `P1`·`P2`·`P3`·`P4`·`P5`·`P6`·`P7` 작업과 Snapshot은 재현성을 위한 역사적 이력으로만 보존한다. V4 AI 스키마의 정본은 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql)이고, 채널 감시 오류 시각 보강은 [`V5__add_youtube_channel_watch_last_error_at.sql`](../../../src/main/resources/db/migration/V5__add_youtube_channel_watch_last_error_at.sql)로 관리한다.
 
-**`ai_registration_unit`(5.1절), `ai_registration_unit_review`(5.3절), `food_category_mapping`(5.2절), `ai_candidate_snapshot.candidate_truncated`는 `합의 대기` 상태다.** 네 항목 모두 새 Flyway 마이그레이션을 요구한다. 합의는 [PR #226](https://github.com/team-youngkk/masit-on/pull/226)의 소유자 승인으로 갈음하며, Flyway 순서 소유자(박진영)와 restaurant 도메인 소유자의 승인 전에는 확정 계약으로 사용하지 않는다. 승인 후 병합 직전 커밋에서 이 표시를 제거한다. 절차는 [ADR-AI-001 1절](../../07-adr/integration/ai-001-video-extraction-candidate-boundary.md)에 있다. 그 밖의 절은 종전대로 Accepted다.
+`ai_registration_unit`(5.1절), `ai_registration_unit_review`(5.3절), `food_category_mapping`(5.2절), `ai_candidate_snapshot.candidate_truncated`는 [PR #226](https://github.com/team-youngkk/masit-on/pull/226)에서 Flyway 순서 소유자(박진영)와 restaurant 도메인 소유자의 승인으로 합의를 확정했다. 네 항목은 `V8__add_ai_registration_unit_and_food_category_mapping.sql`로 구현했다. 절차는 [ADR-AI-001 1절](../../07-adr/integration/ai-001-video-extraction-candidate-boundary.md)에 있다.
 
 - AI 후보 데이터는 기존 `Restaurant`, `Creator`, `Video`, `Visit`의 정식 데이터를 대체하지 않는다.
 - 자동 검증과 기존 외부 검증 전에는 정식 Entity를 생성·수정·공개하지 않는다. 관리자 사전 승인은 요구하지 않는다.
@@ -150,7 +150,7 @@ related_documents:
 
 ### 5.1 `ai_registration_unit`
 
-한 작업이 여러 맛집을 등록할 수 있으므로 판정·등록 결과는 Snapshot이 아니라 등록 단위가 소유한다. 새 테이블이므로 새 Flyway 마이그레이션이 필요하고 Flyway 순서 소유자 합의 대상이다.
+한 작업이 여러 맛집을 등록할 수 있으므로 판정·등록 결과는 Snapshot이 아니라 등록 단위가 소유한다. `V8__add_ai_registration_unit_and_food_category_mapping.sql`로 구현했다.
 
 | 컬럼 | SQL 타입 후보 | Null | 키·제약 | 설명 |
 |---|---|---:|---|---|
@@ -200,7 +200,7 @@ related_documents:
 
 `BR-AIEXTRACT-010`의 카테고리 매핑 표를 코드 상수가 아닌 기준정보로 관리하기 위한 테이블이다. 기존 `food_category`의 10개 값은 그대로 두고 매핑 규칙만 분리한다. `food_category`에 흡수하지 않는 이유는 한 카테고리에 여러 표현이 대응하는 다대일 관계이고 표현마다 출처·일치 방식·우선순위가 다르기 때문이다.
 
-새 테이블이므로 새 Flyway 마이그레이션과 seed가 필요하고 Flyway 순서 소유자 합의 대상이다. 기준정보 소유자는 restaurant 도메인이다.
+`V8__add_ai_registration_unit_and_food_category_mapping.sql`로 구현했고 seed를 함께 적재했다. 기준정보 소유자는 restaurant 도메인이다.
 
 | 컬럼 | SQL 타입 후보 | Null | 키·제약 | 설명 |
 |---|---|---:|---|---|
@@ -226,7 +226,7 @@ related_documents:
 
 ### 5.3 `ai_registration_unit_review`
 
-API 3.5절 `review`의 `CONFIRM`·`DISCARD`·`ROLLBACK`·`ADJUST_CATEGORY` 네 `decision`이 만드는 등록 단위 사후 조작을 append-only 이력으로 보존한다. `ai_registration_unit`은 현재 상태만 갖고 있어 반복 보정·행위자·사유를 표현할 수 없으므로 별도 테이블로 분리한다. 새 테이블이므로 새 Flyway 마이그레이션이 필요하고 `합의 대기` 대상이다.
+API 3.5절 `review`의 `CONFIRM`·`DISCARD`·`ROLLBACK`·`ADJUST_CATEGORY` 네 `decision`이 만드는 등록 단위 사후 조작을 append-only 이력으로 보존한다. `ai_registration_unit`은 현재 상태만 갖고 있어 반복 보정·행위자·사유를 표현할 수 없으므로 별도 테이블로 분리한다. `V8__add_ai_registration_unit_and_food_category_mapping.sql`로 구현했다.
 
 | 컬럼 | SQL 타입 후보 | Null | 키·제약 | 설명 |
 |---|---|---:|---|---|

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { registrationCompletionTransition, registrationStepDecision } from './registration-progression.ts'
+import { registrationStepDecision } from './registration-progression.ts'
 
 test('READY 판정은 새로 생성한다', () => {
   assert.deepEqual(registrationStepDecision({ decision: 'READY', existingResource: null }), { action: 'create' })
@@ -28,22 +28,4 @@ test('DUPLICATE 자원 id의 앞뒤 공백을 제거한다', () => {
   assert.deepEqual(registrationStepDecision({ decision: 'DUPLICATE', existingResource: { id: ' existing-1 ' } }), {
     action: 'skip', existingId: 'existing-1',
   })
-})
-
-test('정상 등록은 맛집-유튜버-영상-방문 순서로 한 단계씩 진행한다', () => {
-  const restaurant = registrationCompletionTransition('restaurant', { status: 'success', resourceId: 'r-1', kind: 'created' }, false)
-  const creator = registrationCompletionTransition('creator', { status: 'success', resourceId: 'c-1', kind: 'created' }, false)
-  const video = registrationCompletionTransition('video', { status: 'success', resourceId: 'v-1', kind: 'created' }, false)
-  assert.deepEqual(restaurant, { resourceId: 'r-1', nextStep: 'creator' })
-  assert.deepEqual(creator, { resourceId: 'c-1', nextStep: 'video' })
-  assert.deepEqual(video, { resourceId: 'v-1', nextStep: 'visit' })
-})
-
-test('DUPLICATE 완료는 다음 단계로 정확히 한 번만 진행하고 실패는 진행시키지 않는다', () => {
-  const first = registrationCompletionTransition('restaurant', { status: 'success', resourceId: ' existing-1 ', kind: 'duplicate' }, false)
-  const repeated = registrationCompletionTransition('restaurant', { status: 'success', resourceId: 'existing-1', kind: 'duplicate' }, true)
-  const failed = registrationCompletionTransition('restaurant', { status: 'failure' }, false)
-  assert.deepEqual(first, { resourceId: 'existing-1', nextStep: 'creator' })
-  assert.equal(repeated, null)
-  assert.equal(failed, null)
 })

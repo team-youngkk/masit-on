@@ -55,7 +55,7 @@ related_documents:
 
 ## 3. BR·NFR 교차 검증
 
-`TST-E3-AI-005`~`008`은 `합의 대기` 상태인 계약을 검증 대상으로 삼는다. 합의가 불발되면 네 묶음을 함께 제거한다. 절차와 되돌릴 범위는 [ADR-AI-001 1절](../07-adr/integration/ai-001-video-extraction-candidate-boundary.md)에 있다.
+`TST-E3-AI-005`~`008`은 [PR #226](https://github.com/team-youngkk/masit-on/pull/226)에서 소유자 승인으로 합의를 확정한 계약을 검증 대상으로 삼는다. 절차는 [ADR-AI-001 1절](../07-adr/integration/ai-001-video-extraction-candidate-boundary.md)에 있다.
 
 | 테스트 묶음 | 적용 계약 | 필수 계층·증거 | 완료 Task |
 |---|---|---|---|

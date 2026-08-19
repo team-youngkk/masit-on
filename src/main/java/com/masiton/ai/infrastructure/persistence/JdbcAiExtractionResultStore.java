@@ -51,17 +51,18 @@ class JdbcAiExtractionResultStore implements AiExtractionResultStore {
     @Override
     public UUID insertSnapshot(UUID jobId, int snapshotVersion, String candidateFields, String candidateTags,
                                String fieldConfidences, String evidence, String missingFields,
-                               String reviewStatus, String reviewReason, OffsetDateTime reviewedAt,
-                               OffsetDateTime createdAt) {
+                               boolean candidateTruncated, String reviewStatus, String reviewReason,
+                               OffsetDateTime reviewedAt, OffsetDateTime createdAt) {
         UUID snapshotId = UUID.randomUUID();
         jdbcTemplate.update("""
                 INSERT INTO ai_candidate_snapshot (
                     id, job_id, snapshot_version, candidate_fields, candidate_tags,
-                    field_confidences, evidence, missing_fields, review_status,
+                    field_confidences, evidence, missing_fields, candidate_truncated, review_status,
                     review_reason, reviewed_at, created_at
-                ) VALUES (?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?, ?, ?, ?, ?)
                 """, snapshotId, jobId, snapshotVersion, candidateFields, candidateTags,
-                fieldConfidences, evidence, missingFields, reviewStatus, reviewReason, reviewedAt, createdAt);
+                fieldConfidences, evidence, missingFields, candidateTruncated, reviewStatus, reviewReason,
+                reviewedAt, createdAt);
         return snapshotId;
     }
 

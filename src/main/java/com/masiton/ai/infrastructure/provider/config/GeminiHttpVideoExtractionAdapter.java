@@ -31,10 +31,11 @@ final class GeminiHttpVideoExtractionAdapter implements AiVideoExtractionProvide
 
     private static final String GENERATE_CONTENT_PATH = "/v1beta/models/%s:generateContent";
     private static final int MAX_RESPONSE_BYTES = 1_048_576;
-    private static final int MAX_CANDIDATES = 100;
+    private static final int MAX_CANDIDATES = 300;
     private static final int MAX_MISSING_FIELDS = 20;
     private static final int MAX_STRING_LENGTH = 4_096;
-    private static final Set<String> S1_ROOT_FIELDS = Set.of("resultCompleteness", "candidates", "missingFields");
+    private static final Set<String> S1_ROOT_FIELDS = Set.of(
+            "resultCompleteness", "candidates", "missingFields", "candidateTruncated");
     private static final Set<String> S1_COMMON_CANDIDATE_FIELDS = Set.of("field", "value", "confidence", "evidence");
     private static final Set<String> S1_TAG_CANDIDATE_FIELDS = Set.of(
             "field", "candidateTagId", "tagType", "rawLabel", "normalizedCode", "label", "confidence", "evidence");
@@ -162,7 +163,9 @@ final class GeminiHttpVideoExtractionAdapter implements AiVideoExtractionProvide
                 + "방문가능, 예약, price, rating, hours, or availability). "
                 + "candidates must never contain more than " + MAX_CANDIDATES + " items and missingFields must never "
                 + "contain more than " + MAX_MISSING_FIELDS + " items. If the video covers more places than that, "
-                + "keep only the candidates and missing fields with the strongest evidence and omit the rest.";
+                + "keep only the candidates and missing fields with the strongest evidence and omit the rest. "
+                + "Always include a top-level candidateTruncated boolean. Set it to true whenever any candidate or "
+                + "missing field was omitted because of either limit above, and to false when nothing was omitted.";
     }
 
     private String untrustedSupplement(AiVideoExtractionRequest request) {
@@ -252,8 +255,10 @@ final class GeminiHttpVideoExtractionAdapter implements AiVideoExtractionProvide
         required.add("resultCompleteness");
         required.add("candidates");
         required.add("missingFields");
+        required.add("candidateTruncated");
         ObjectNode propertiesNode = schema.putObject("properties");
         propertiesNode.putObject("resultCompleteness").put("type", "string").putArray("enum").add(completenessValue);
+        propertiesNode.putObject("candidateTruncated").put("type", "boolean");
         ObjectNode candidates = propertiesNode.putObject("candidates");
         candidates.put("type", "array");
         ObjectNode candidateItems = candidates.putObject("items");
@@ -426,7 +431,19 @@ final class GeminiHttpVideoExtractionAdapter implements AiVideoExtractionProvide
             throw new AiProviderException(AiProviderFailureCategory.SCHEMA);
         }
         downgradeUnsourcedTagEvidence(payload);
+        applyTruncationOverride(payload);
         return new AiVideoExtractionResult(payload, requestId(envelope).orElse(null));
+    }
+
+    /**
+     * BR-AIEXTRACT-001: the model's self-reported candidateTruncated flag is never solely trusted.
+     * When the candidate count equals the cap, truncation is possible even if the model did not
+     * report it, so the server forces the flag to true regardless of the reported value.
+     */
+    private void applyTruncationOverride(JsonNode payload) {
+        if (payload.path("candidates").size() == MAX_CANDIDATES) {
+            ((ObjectNode) payload).put("candidateTruncated", true);
+        }
     }
 
     /**
@@ -453,7 +470,8 @@ final class GeminiHttpVideoExtractionAdapter implements AiVideoExtractionProvide
                 || !payload.path("candidates").isArray()
                 || payload.path("candidates").size() > MAX_CANDIDATES
                 || !payload.path("missingFields").isArray()
-                || payload.path("missingFields").size() > MAX_MISSING_FIELDS) {
+                || payload.path("missingFields").size() > MAX_MISSING_FIELDS
+                || !payload.path("candidateTruncated").isBoolean()) {
             return false;
         }
         String completeness = payload.path("resultCompleteness").asText();

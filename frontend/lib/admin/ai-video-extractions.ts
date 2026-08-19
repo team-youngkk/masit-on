@@ -47,9 +47,44 @@ export type AiCandidate = {
 
 export type AiTagDecision = { candidateTagId: string; decision: 'MANUAL_OVERRIDE'; tagCode: string | null }
 
+export type AiManualOverrideType = 'ROLLED_BACK' | 'DISCARDED' | null
+
+export type AiBlockReason =
+  | 'PLACE_NOT_FOUND'
+  | 'PLACE_AMBIGUOUS'
+  | 'CATEGORY_UNRESOLVED'
+  | 'MISSING_REQUIRED_FIELD'
+  | 'VISIT_EVIDENCE_REQUIRED'
+  | 'DUPLICATE_CONFLICT'
+  | 'EXTERNAL_SERVICE_ERROR'
+
+export type AiRecoveryPath = 'SUPPLEMENT' | 'REEXTRACT' | 'MANUAL_REGISTRATION' | 'EXISTING_RESOURCE' | 'RETRY'
+
+export type AiRequiredSupplementField = 'kakaoPlaceUrl' | 'foodCategoryId'
+
+export type AiPlaceDecision = { kakaoPlaceUrl: string; roadAddress: string; matchedBy: string }
+export type AiCategoryDecision = { foodCategoryName: string; resolvedBy: string }
+
+export type AiRegistrationUnit = {
+  unitId: string
+  restaurantName: string
+  reviewStatus: AiExtractionReviewStatus
+  manualOverrideType: AiManualOverrideType
+  blockReason: AiBlockReason | null
+  registeredRestaurantId: string | null
+  registeredCreatorId: string | null
+  registeredVideoId: string | null
+  registeredVisitId: string | null
+  reusedResources: Array<'creator' | 'video'>
+  placeDecision: AiPlaceDecision | null
+  categoryDecision: AiCategoryDecision | null
+}
+
 export type AiExtractionDetail = AiExtractionJob & {
   candidates: AiCandidate[]
   missingFields: string[]
+  candidateTruncated: boolean
+  registrationUnits: AiRegistrationUnit[]
   error: { category: string; retryable: boolean } | null
   attempts: AiExtractionAttempt[]
 }
@@ -107,16 +142,79 @@ export async function retryAiVideoExtraction(jobId: string, supplementText: stri
   })
 }
 
+export type AiReviewDecision = 'CONFIRM' | 'DISCARD' | 'ROLLBACK' | 'ADJUST_CATEGORY'
+export type AiReviewSupplements = { kakaoPlaceUrl: string } | { foodCategoryId: string }
+
 export async function reviewAiVideoExtraction(
   jobId: string,
-  decision: 'CONFIRM' | 'DISCARD' | 'ROLLBACK',
+  decision: AiReviewDecision,
+  unitId: string,
   expectedReviewStatus: AiExtractionReviewStatus,
   reason: string,
-  tagDecisions: AiTagDecision[] = [],
+  options: { supplements?: AiReviewSupplements; tagDecisions?: AiTagDecision[] } = {},
 ): Promise<void> {
+  const { supplements, tagDecisions = [] } = options
   await adminJson<void>(`/api/admin/ai/video-extractions/${encodeURIComponent(jobId)}/review`, {
-    method: 'POST', body: JSON.stringify({ decision, expectedReviewStatus, reason: reason.trim(), tagDecisions }),
+    method: 'POST',
+    body: JSON.stringify({
+      decision,
+      unitId,
+      expectedReviewStatus,
+      reason: reason.trim(),
+      ...(supplements ? { supplements } : {}),
+      tagDecisions,
+    }),
   })
+}
+
+export type AiRegistrationUnitResult = {
+  unitId: string
+  reviewStatus: AiExtractionReviewStatus
+  restaurantId: string
+  creatorId: string
+  videoId: string
+  visitId: string
+  reusedResources: Array<'creator' | 'video'>
+  placeDecision: AiPlaceDecision
+  categoryDecision: AiCategoryDecision
+}
+
+export type AiValidationConflict = {
+  blockReason: AiBlockReason | null
+  recoveryPaths: AiRecoveryPath[]
+  requiredSupplements: AiRequiredSupplementField[]
+  traceId?: string
+}
+
+const BLOCK_REASONS: readonly AiBlockReason[] = [
+  'PLACE_NOT_FOUND', 'PLACE_AMBIGUOUS', 'CATEGORY_UNRESOLVED', 'MISSING_REQUIRED_FIELD',
+  'VISIT_EVIDENCE_REQUIRED', 'DUPLICATE_CONFLICT', 'EXTERNAL_SERVICE_ERROR',
+]
+const RECOVERY_PATHS: readonly AiRecoveryPath[] = ['SUPPLEMENT', 'REEXTRACT', 'MANUAL_REGISTRATION', 'EXISTING_RESOURCE', 'RETRY']
+const REQUIRED_SUPPLEMENT_FIELDS: readonly AiRequiredSupplementField[] = ['kakaoPlaceUrl', 'foodCategoryId']
+
+/** `AIEXTRACT_VALIDATION_CONFLICT` 422 응답만 등록 단위 예외 화면에 필요한 필드로 변환한다. 그 밖의 오류는 `null`이다. */
+export function aiValidationConflictFrom(error: unknown): AiValidationConflict | null {
+  if (!(error instanceof AdminApiError) || error.code !== 'AIEXTRACT_VALIDATION_CONFLICT') return null
+  const details = error.details
+  const blockReason = typeof details.blockReason === 'string' && (BLOCK_REASONS as string[]).includes(details.blockReason)
+    ? details.blockReason as AiBlockReason
+    : null
+  const recoveryPaths = Array.isArray(details.recoveryPaths)
+    ? details.recoveryPaths.filter((value): value is AiRecoveryPath => (RECOVERY_PATHS as string[]).includes(value))
+    : []
+  const requiredSupplements = Array.isArray(details.requiredSupplements)
+    ? details.requiredSupplements.filter((value): value is AiRequiredSupplementField => (REQUIRED_SUPPLEMENT_FIELDS as string[]).includes(value))
+    : []
+  return { blockReason, recoveryPaths, requiredSupplements, traceId: error.traceId }
+}
+
+/** 요청 본문은 비어 있다. 이미 등록된 단위는 멱등 `200 OK`로 기존 결과를 그대로 반환한다. */
+export async function registerAiRegistrationUnit(jobId: string, unitId: string): Promise<AiRegistrationUnitResult> {
+  return adminJson<AiRegistrationUnitResult>(
+    `/api/admin/ai/video-extractions/${encodeURIComponent(jobId)}/registration-units/${encodeURIComponent(unitId)}/registration`,
+    { method: 'POST' },
+  )
 }
 
 export function aiExtractionMessageFor(error: unknown, context: 'manage' | 'submission' = 'manage'): string {
@@ -144,6 +242,8 @@ type RawAiExtractionDetail = {
   reused?: boolean
   candidates: unknown[]
   missingFields: unknown
+  candidateTruncated?: unknown
+  registrationUnits?: unknown
   error: { category: string; retryable: boolean; attemptCount: number } | null
   attempts: AiExtractionAttempt[]
 }
@@ -159,8 +259,49 @@ function normalizeDetail(raw: RawAiExtractionDetail): AiExtractionDetail {
     ...raw,
     candidates,
     missingFields: Array.isArray(raw.missingFields) ? raw.missingFields.filter((value): value is string => typeof value === 'string') : [],
+    candidateTruncated: raw.candidateTruncated === true,
+    registrationUnits: Array.isArray(raw.registrationUnits) ? raw.registrationUnits.map(normalizeRegistrationUnit).filter((value): value is AiRegistrationUnit => value !== null) : [],
     error: raw.error ? { category: raw.error.category, retryable: raw.error.retryable } : null,
     attempts: Array.isArray(raw.attempts) ? raw.attempts : [],
+  }
+}
+
+function nullableString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null
+}
+
+function reusedResourcesValue(value: unknown): Array<'creator' | 'video'> {
+  return Array.isArray(value) ? value.filter((item): item is 'creator' | 'video' => item === 'creator' || item === 'video') : []
+}
+
+function placeDecisionValue(value: unknown): AiPlaceDecision | null {
+  const raw = record(value)
+  if (typeof raw.kakaoPlaceUrl !== 'string' || typeof raw.roadAddress !== 'string' || typeof raw.matchedBy !== 'string') return null
+  return { kakaoPlaceUrl: raw.kakaoPlaceUrl, roadAddress: raw.roadAddress, matchedBy: raw.matchedBy }
+}
+
+function categoryDecisionValue(value: unknown): AiCategoryDecision | null {
+  const raw = record(value)
+  if (typeof raw.foodCategoryName !== 'string' || typeof raw.resolvedBy !== 'string') return null
+  return { foodCategoryName: raw.foodCategoryName, resolvedBy: raw.resolvedBy }
+}
+
+function normalizeRegistrationUnit(value: unknown): AiRegistrationUnit | null {
+  const raw = record(value)
+  if (typeof raw.unitId !== 'string' || typeof raw.restaurantName !== 'string' || typeof raw.reviewStatus !== 'string') return null
+  return {
+    unitId: raw.unitId,
+    restaurantName: raw.restaurantName,
+    reviewStatus: raw.reviewStatus as AiExtractionReviewStatus,
+    manualOverrideType: raw.manualOverrideType === 'ROLLED_BACK' || raw.manualOverrideType === 'DISCARDED' ? raw.manualOverrideType : null,
+    blockReason: typeof raw.blockReason === 'string' && (BLOCK_REASONS as string[]).includes(raw.blockReason) ? raw.blockReason as AiBlockReason : null,
+    registeredRestaurantId: nullableString(raw.registeredRestaurantId),
+    registeredCreatorId: nullableString(raw.registeredCreatorId),
+    registeredVideoId: nullableString(raw.registeredVideoId),
+    registeredVisitId: nullableString(raw.registeredVisitId),
+    reusedResources: reusedResourcesValue(raw.reusedResources),
+    placeDecision: placeDecisionValue(raw.placeDecision),
+    categoryDecision: categoryDecisionValue(raw.categoryDecision),
   }
 }
 

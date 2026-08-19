@@ -4,11 +4,10 @@ import java.net.URI;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Service;
 
+import com.masiton.common.address.SeoulRoadAddressNormalizer;
 import com.masiton.restaurant.application.port.in.ResolveVerifiedRestaurantReferenceUseCase;
 import com.masiton.restaurant.application.port.out.FoodCategoryRepositoryPort;
 import com.masiton.restaurant.application.port.out.PlaceVerificationPort;
@@ -19,7 +18,6 @@ import com.masiton.restaurant.application.port.out.VerifiedPlace;
 @Service
 class ResolveVerifiedRestaurantReferenceService implements ResolveVerifiedRestaurantReferenceUseCase {
 
-    private static final Pattern SEOUL_ROAD_ADDRESS = Pattern.compile("^서울특별시\\s+([^\\s]+구)\\s+.+$");
     private static final Map<String, String> MENU_CATEGORY = Map.ofEntries(
             Map.entry("한식", "한식"), Map.entry("한식집", "한식"), Map.entry("한식당", "한식"),
             Map.entry("냉면", "한식"), Map.entry("물냉면", "한식"), Map.entry("비빔냉면", "한식"),
@@ -68,11 +66,11 @@ class ResolveVerifiedRestaurantReferenceService implements ResolveVerifiedRestau
         if (categoryName == null) {
             return Optional.empty();
         }
-        Matcher districtMatcher = SEOUL_ROAD_ADDRESS.matcher(verifiedPlace.get().roadAddress().trim());
-        if (!districtMatcher.matches()) {
+        Optional<String> district = SeoulRoadAddressNormalizer.extractDistrict(verifiedPlace.get().roadAddress());
+        if (district.isEmpty()) {
             return Optional.empty();
         }
-        var region = regionRepository.findByName(districtMatcher.group(1))
+        var region = regionRepository.findByName(district.get())
                 .filter(value -> value.isActive())
                 .orElse(null);
         var foodCategory = foodCategoryRepository.findByName(categoryName)

@@ -45,21 +45,9 @@ superseded_by: null
 
 ## 1. 상태
 
-Accepted. **단, 2026-08-18 결정(5.3절의 장소 동일성 판정 기준, 대표 카테고리 자동 선정, 등록 단위 경계, 후보 수 상한 300)은 `합의 대기` 상태다.**
+Accepted.
 
-합의는 이 결정을 담은 [PR #226](https://github.com/team-youngkk/masit-on/pull/226)의 소유자 승인으로 갈음한다. 별도 합의 절차를 두지 않는 이유는 계약 소유자 세 명(김인안·박진영·이우람)이 모두 이 PR의 리뷰어이고, 저장소 ruleset이 작성자를 제외한 2명 승인을 강제해 승인 기록이 곧 합의 근거로 남기 때문이다. restaurant 도메인 소유자 판단이 필요한 장소 동일성 기준 변경도 같은 리뷰에서 다룬다.
-
-세 소유자의 승인이 달리면 병합 직전 커밋에서 이 표시와 다른 문서의 같은 표시를 제거해 Accepted로 확정한다. 승인 없이 병합하지 않는다. 그 앞의 결정은 종전대로 Accepted다.
-
-합의가 불발되면 다음을 함께 되돌린다. 목록에 없는 문서를 남겨 두면 폐기된 결정을 계속 참조하게 되므로 전 범위를 열거한다.
-
-| 문서 | 되돌릴 범위 |
-|---|---|
-| 요구사항 | `BR-AIEXTRACT-009`·`010`·`011` 전체, `BR-AIEXTRACT-001`의 등록 단위 분해와 후보 수 상한·절삭 표시 항목, `BR-AIEXTRACT-002`의 등록 단위 원자성 개정, `FR-AIEXTRACT-003`의 등록 단위·자동 판정·카테고리 보정 항목 |
-| 제품 | `PR-AIEXTRACT-011`~`017`, PRD의 관리자 실행 흐름·등록 단위 화면 상태·후보 절삭 경고·보완 경로 구분, 사용자 흐름의 등록 단위 판정 서술, 와이어프레임의 자동 판정 결과·예외 화면 분리·절삭 배너 |
-| API 계약 | `registrationUnits`·`candidateTruncated`·`manualOverrideType`, 등록 단위 일괄 등록(3.6절), `review`의 `unitId`·`supplements`·`ADJUST_CATEGORY`, 최상위 요약 규칙, `recoveryPaths`, `AIEXTRACT_UNIT_ID_REQUIRED`·`AIEXTRACT_UNIT_NOT_FOUND`·`AIEXTRACT_CONCURRENT_REQUEST_CONFLICT` |
-| 데이터 계약 | `ai_registration_unit`, `ai_registration_unit_review`, `food_category_mapping`, `ai_candidate_snapshot.candidate_truncated`와 관련 추적표 행 |
-| 계획 | `TST-E3-AI-005`~`008`, 손실 분석 9절의 네 결정과 9.1절 |
+2026-08-18 결정(5.3절의 장소 동일성 판정 기준, 대표 카테고리 자동 선정, 등록 단위 경계, 후보 수 상한 300)은 이 결정을 담은 [PR #226](https://github.com/team-youngkk/masit-on/pull/226)에서 계약 소유자 세 명(김인안·박진영·이우람) 중 작성자를 제외한 2명 이상의 승인을 받아 합의를 확정했다. restaurant 도메인 소유자 판단이 필요한 장소 동일성 기준 변경도 같은 리뷰에서 다뤘다. 합의 확정에 따라 이 결정이 만드는 `BR-AIEXTRACT-009`·`010`·`011`, 등록 단위 분해·원자성, 후보 수 상한·절삭 표시, 관련 API·데이터 계약(`registrationUnits`·`candidateTruncated`·`manualOverrideType`·등록 단위 일괄 등록·`review`의 `unitId`·`supplements`·`ADJUST_CATEGORY`·`recoveryPaths`·신설 오류 코드, `ai_registration_unit`·`ai_registration_unit_review`·`food_category_mapping`·`ai_candidate_snapshot.candidate_truncated`), 제품 문서(`PR-AIEXTRACT-011`~`017`)와 계획 문서(`TST-E3-AI-005`~`008`)는 모두 이 구현 PR에서 Accepted로 확정한다.
 
 자동 검증·정식 등록·롤백 경계와 원문 전체 미저장, `gemini-3.5-flash-lite` 사용, global endpoint, Free Tier 전용·유료 호출 금지 정책을 2026-08-14 확정했다. 2026-08-16에는 관리자 보완 텍스트의 검증 가능한 `TEXT_RANGE`를 식당 기준정보 후보에 사용할 수 있도록 Prompt를 `P3`로 올렸고, 실측 범위 산출 편차를 제거하기 위해 서버가 정확한 줄 단위 `referenceSpans`를 제공하는 `P4`, 필드 오연결을 줄이는 `fieldHint`를 추가한 `P5`, 방문 후보 값을 명시적인 완료형 물리 방문 문장으로 제한한 `P6`, 방문 문장의 종결 마침표를 수신 정규화와 일치시킨 `P7`로 올렸다. 운영·개발·공유 데이터베이스에 V4가 아직 적용되지 않았으므로 최종 V4 제약은 `gemini-3.5-flash-lite`만 저장하도록 한다. 기존 Prompt `P1`부터 `P6`까지의 작업과 `gemini-3-flash-preview` 평가 자산은 역사적 이력으로 보존한다. 관리자 사전 승인은 요구하지 않는다. 2026-08-18에는 자동 등록을 실제로 성립시키기 위해 판정 주체를 확정했다. 장소 동일성은 AI가 제출한 Kakao 장소 URL이 아니라 상호명·주소 기반 시스템 검색으로 판정하고, 대표 음식 카테고리는 확정한 Kakao 장소 분류와 메뉴 표현으로 자동 선정하며, 판정과 등록의 단위는 작업이 아니라 장소 단위 등록 단위다.
 
@@ -116,7 +104,7 @@ Worker는 후보를 장소 단위 등록 단위로 나눈 뒤, 등록 단위마�
 
 2번은 1번에서 확정한 Kakao 장소의 분류 표현을 1순위, AI 메뉴 후보 표현을 2순위 근거로 기준정보 매핑 표에 대조해 공통 10개 값 중 하나를 정한다. 두 근거 모두 대응 값을 찾지 못하면 임의 기본값을 쓰지 않고 `CATEGORY_UNRESOLVED`로 차단한다.
 
-후보 수 상한은 100에서 300으로 올린다. 상한 초과의 정상 동작은 응답 기각이 아니라 모델의 자체 절삭이므로, 절삭이 일어난 결과는 그 사실을 표시해 관리자가 누락을 인지할 수 있게 한다. 후보 수가 상한과 같으면 표시가 없어도 절삭 가능으로 취급한다. 이 변경은 시스템 지시와 결과 Schema를 함께 바꾸므로 구현 시 Prompt를 `P8`, 결과 Schema를 `S2`로 올리고 수신 검증기·`ai_candidate_snapshot`·관리자 응답·와이어프레임을 같은 PR에서 갱신한다. 현재 운영 계약은 `P7`·`S1`이며 이 문서의 다른 절이 서술하는 버전은 배포된 상태를 가리킨다. 근거와 파급 범위는 [후보 손실 분석 9.1절](../../08-planning/third-expansion-ai-candidate-loss-analysis.md)에 있다.
+후보 수 상한은 100에서 300으로 올린다. 상한 초과의 정상 동작은 응답 기각이 아니라 모델의 자체 절삭이므로, 절삭이 일어난 결과는 그 사실을 표시해 관리자가 누락을 인지할 수 있게 한다. 후보 수가 상한과 같으면 표시가 없어도 절삭 가능으로 취급한다. 이 변경은 시스템 지시와 결과 Schema를 함께 바꾸므로 Prompt를 `P8`, 결과 Schema를 `S2`로 올리고 수신 검증기·`ai_candidate_snapshot`·관리자 응답·와이어프레임을 같은 PR에서 갱신했다. 현재 운영 계약은 `P8`·`S2`이며 `P7`·`S1`은 기존 이력으로 보존한다. 근거와 파급 범위는 [후보 손실 분석 9.1절](../../08-planning/third-expansion-ai-candidate-loss-analysis.md)에 있다.
 
 검증 중 하나라도 실패하면 그 등록 단위는 후보·자동 판단 이력만 남기고 Restaurant·Creator·Video·Visit 정식 저장 0건으로 끝난다. 판정과 원자성 경계는 등록 단위이며, 한 단위의 실패가 같은 작업에서 이미 통과한 다른 단위를 되돌리지 않는다. 후보가 기존 등록과 중복이면 새 Entity를 만들지 않고 `AUTO_BLOCKED`로 보관한다. 유일한 복구 경로는 기존 등록 결과를 확인하는 것(`EXISTING_RESOURCE`)이며, 사후 보정·재추출·재실행·수동 등록으로 전환하는 경로는 없다. 다만 공통 종결 동작인 `DISCARD`는 다른 `AUTO_BLOCKED`와 같이 허용한다.
 
@@ -163,13 +151,14 @@ Worker는 후보를 장소 단위 등록 단위로 나눈 뒤, 등록 단위마�
 
 ## 10. 확정 운영 규칙
 
-- 모델 `gemini-3.5-flash-lite`, global endpoint, Prompt `P7`, Schema `S1`을 사용한다.
+- 모델 `gemini-3.5-flash-lite`, global endpoint, Prompt `P8`, Schema `S2`를 사용한다.
 - Prompt는 2026-08-14에 `P1`에서 `P2`로 올렸다. 송신 요청 Schema가 수신 검증 계약을 표현하지 못해 태그 후보와 완결성 결합에서 응답이 기각되던 결함을 고치면서 시스템 지시와 요청 Schema 표현이 함께 바뀌었기 때문이다. 수신 계약 자체는 바뀌지 않았으므로 결과 Schema는 `S1`을 유지한다. `BR-AIEXTRACT-004`가 요구하는 버전별 재현성을 지키기 위해 라벨을 유지하지 않았고, `P1` 후보 Snapshot은 덮어쓰거나 폐기하지 않는다. `aiextract-golden-v1.0.0` 평가 자산은 `gemini-3-flash-preview`·`P1` 기준의 역사적 fixture로 보존하며 운영 작업 계약에 포함하지 않는다. 근거는 [AI 후보 손실 분석](../../08-planning/third-expansion-ai-candidate-loss-analysis.md)에 있다.
 - Prompt는 2026-08-16에 `P2`에서 `P3`로 올렸다. P2 실측에서 영상에 직접 노출되지 않는 도로명주소와 Kakao 장소 URL이 관리자 보완 텍스트에 있어도 누락되어 자동 등록 경로에 진입하지 못했다. P3는 네 식당 기준정보 필드에만 보완 텍스트의 검증 가능한 `TEXT_RANGE`를 허용하고, 방문 근거는 영상 `TIMESTAMP`로 제한한다. 수신 Schema는 기존 `TEXT_RANGE`를 그대로 사용하므로 `S1`을 유지하며, P2 작업과 Snapshot은 생성 당시 의미로 보존한다.
 - 같은 날 P3 실측 두 건은 Gemini가 엄격한 범위 계약과 일치하는 후보를 반환하지 않아 `SCHEMA`로 차단됐다. P4는 서버가 보완 텍스트의 비어 있지 않은 줄마다 정확한 UTF-16 `referenceSpans`를 제공해 모델의 범위 계산 편차를 줄인다. 수신 검증은 정확 일치와 방문 `TIMESTAMP` 제한을 그대로 유지하며 P3 작업은 역사적 이력으로 보존한다.
 - P4 실측에서는 범위는 정확해졌지만 URL 줄을 주소 필드로 연결하는 변동성이 확인됐다. P5는 명시적 라벨이 있는 줄에 허용된 `fieldHint`를 붙이고 라벨을 제외한 값 범위를 제공한다. P4 작업과 Snapshot은 생성 당시 의미로 보존한다.
 - P5 실측에서는 네 기준정보를 정확히 추출했지만 방문 후보가 완료된 물리 방문을 명시하지 않아 차단됐다. P6는 방문 후보 값과 근거 Schema를 분리하고 완료형 물리 방문 문장과 영상 `TIMESTAMP`만 허용한다. P6 실측에서 자동 검증·정식 등록·공개 조회까지 성공했으며 P5 작업과 Snapshot은 생성 당시 의미로 보존한다.
 - P6 송신 Schema의 방문 문장 정규식이 종결 마침표와 후행 공백을 거부해, 수신 정규화가 어차피 제거하는 문자 때문에 자연스러운 방문 문장이 제약 디코딩 단계에서 배제될 수 있었다. P7은 그 정규식의 후행 허용 문자를 수신 `normalizeClaim`이 제거하는 범위(공백과 `.`·`。`)와 일치시킨다. `!`와 `?`는 수신에서 차단 문맥으로 다루므로 계속 거부한다. 시스템 지시와 수신 계약은 바뀌지 않으므로 결과 Schema는 `S1`을 유지하며, P6 작업과 Snapshot은 생성 당시 의미로 보존한다.
+- Prompt는 후보 수 상한을 100에서 300으로 올리면서 `P7`에서 `P8`로, 결과 Schema를 `S1`에서 `S2`로 함께 올렸다. 상한 초과의 정상 동작은 모델의 자체 절삭이므로, 시스템 지시에 상한 값 300과 절삭 시 `candidateTruncated`를 `true`로 표시하라는 지시를 추가하고, 송신·수신 Schema에 `candidateTruncated` 필수 boolean 필드를 추가했다. 서버는 모델 표시값을 그대로 신뢰하지 않고 후보 수가 상한과 같으면 표시가 없어도 `candidateTruncated`를 `true`로 강제한다. `ux_ai_job__idempotency`가 Prompt·Schema 버전을 포함하므로 기존 `P7` 작업은 재추출 대상이 되며 P7 작업과 Snapshot은 생성 당시 의미로 보존한다. 근거는 [후보 손실 분석 9.1절](../../08-planning/third-expansion-ai-candidate-loss-analysis.md)에 있다.
 - quota·장애 시 자동 failover하지 않고 실패·수동 등록 fallback을 사용한다.
 - 근거는 timestamp 또는 text range 위치·입력 hash만 저장하며 원문은 저장하지 않는다.
 - 호출 timeout·retry·hard stop은 [비동기 신뢰성 ADR](ext-003-ai-extraction-async-reliability.md)과 NFR 수치를 따른다.

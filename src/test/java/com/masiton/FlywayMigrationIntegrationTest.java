@@ -27,7 +27,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /**
  * 빈 PostgreSQL에 V1 baseline, V2(1차 확장 통합 스키마), V3(2차 확장 스키마),
  * V4(통합 3차 확장 AI 후보 스키마와 Lite 단일 모델 제약), V5(채널 감시 오류 시각)가
- * V6(통합 계정 전환의 역할 열과 staging), V7(승인된 관리자 계정 복사)이
+ * V6(통합 계정 전환의 역할 열과 staging), V7(승인된 관리자 계정 복사),
+ * V8(AI 등록 단위·카테고리 매핑 기준정보와 Snapshot 절단 표시)이
  * 순서대로 성공적으로 적용되고,
  * ddl-auto=validate로 컨텍스트가 기동하며, Region·FoodCategory 기준 데이터가
  * seed-data-plan.md 2~4·6절 기준과 일치하는지 확인한다.
@@ -63,9 +64,9 @@ class FlywayMigrationIntegrationTest {
     private MemberSessionRevocationStore memberSessionRevocationStore;
 
     @Test
-    @DisplayName("빈 데이터베이스에 V1부터 V7까지 계약된 순서와 파일명으로 성공 기록된다")
-    void 마이그레이션적용_빈데이터베이스_V1부터V7까지계약된순서와파일명으로성공기록된다() {
-        // given: 컨텍스트 기동 시점에 Flyway가 V1부터 V7 변경을 적용했다.
+    @DisplayName("빈 데이터베이스에 V1부터 V8까지 계약된 순서와 파일명으로 성공 기록된다")
+    void 마이그레이션적용_빈데이터베이스_V1부터V8까지계약된순서와파일명으로성공기록된다() {
+        // given: 컨텍스트 기동 시점에 Flyway가 V1부터 V8 변경을 적용했다.
 
         // when
         List<AppliedMigration> appliedMigrations = jdbcTemplate.query(
@@ -93,7 +94,9 @@ class FlywayMigrationIntegrationTest {
                 new AppliedMigration("6", "add unified account staging", "SQL",
                         "V6__add_unified_account_staging.sql", true),
                 new AppliedMigration("7", "migrate approved admin accounts", "SQL",
-                        "V7__migrate_approved_admin_accounts.sql", true)
+                        "V7__migrate_approved_admin_accounts.sql", true),
+                new AppliedMigration("8", "add ai registration unit and food category mapping", "SQL",
+                        "V8__add_ai_registration_unit_and_food_category_mapping.sql", true)
         );
     }
 

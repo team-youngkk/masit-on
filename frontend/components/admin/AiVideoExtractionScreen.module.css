@@ -14,6 +14,10 @@
 .card p, .candidate p { margin: 0; overflow-wrap: anywhere; }
 .badge { width: fit-content; padding: .2rem .55rem; border-radius: 999px; background: var(--color-primary-soft); font-size: var(--font-size-sm); font-weight: 700; }
 .meta, .hint { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.unitDetails { display: grid; gap: var(--space-1); margin: 0; color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.unitDetails dt { font-weight: 600; }
+.unitDetails dd { margin: 0; overflow-wrap: anywhere; }
+.banner { margin: 0; }
 .fieldError { margin: calc(var(--space-2) * -1) 0 0; color: var(--color-danger); font-size: var(--font-size-sm); }
 .meta code { overflow-wrap: anywhere; }
 .notice, .error, .warning { margin: 0; padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-surface-muted); overflow-wrap: anywhere; }
