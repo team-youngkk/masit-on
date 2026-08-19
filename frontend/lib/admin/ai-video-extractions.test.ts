@@ -252,3 +252,40 @@ test('AdminApiError.details에 이미 언랩된 blockReason·recoveryPaths·requ
     traceId: 'trace-3',
   })
 })
+
+test('details가 배열이면 AdminApiError.details는 빈 객체로 정규화된다', async () => {
+  const previousFetch = globalThis.fetch
+  let call = 0
+  globalThis.fetch = async (input) => {
+    if (call++ === 0) return new Response(JSON.stringify({ accessToken: 'test-token', tokenType: 'Bearer', expiresInSeconds: 3600, role: 'ADMIN' }), { status: 200 })
+    if (input === '/api/me') return Response.json({ id: 'admin-1', email: 'admin@example.com', role: 'ADMIN' })
+    return new Response(JSON.stringify({
+      code: 'AIEXTRACT_VALIDATION_CONFLICT',
+      details: ['PLACE_AMBIGUOUS'],
+      traceId: 'trace-4',
+    }), { status: 422 })
+  }
+
+  try {
+    clearAccessToken()
+    await login('admin', 'password')
+    let reason: unknown
+    try {
+      await registerAiRegistrationUnit('job-1', 'unit-1')
+      assert.fail('예외 전환 응답은 실패해야 합니다.')
+    } catch (caught) {
+      reason = caught
+    }
+    assert.ok(reason instanceof AdminApiError)
+    assert.deepEqual((reason as AdminApiError).details, {})
+    assert.deepEqual(aiValidationConflictFrom(reason), {
+      blockReason: null,
+      recoveryPaths: [],
+      requiredSupplements: [],
+      traceId: 'trace-4',
+    })
+  } finally {
+    clearAccessToken()
+    globalThis.fetch = previousFetch
+  }
+})

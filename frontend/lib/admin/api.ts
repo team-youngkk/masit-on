@@ -62,7 +62,7 @@ async function errorFrom(response: Response): Promise<AdminApiError> {
     errors ?? [],
     traceId,
     message ?? '요청을 처리하지 못했습니다.',
-    details && typeof details === 'object' ? (details as Record<string, unknown>) : {},
+    details && typeof details === 'object' && !Array.isArray(details) ? (details as Record<string, unknown>) : {},
     resource ?? null,
   )
 }
