@@ -107,4 +107,3 @@ if [ "$put_status" -ne 0 ]; then
   echo "CloudWatch 지표 전송에 실패했다 (exit $put_status). 감지 경로가 동작하지 않는다." >&2
   exit "$put_status"
 fi
-
