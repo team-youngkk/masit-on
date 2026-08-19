@@ -886,19 +886,62 @@ jobs:
           #
           # Blue-Green은 트래픽 전환 뒤 원본 인스턴스 종료를 기다리는 동안 Baking에
           # 머문다. 이 상태를 빼면 전환까지 끝난 배포를 정리 대상에서 놓친다.
+          lookup_completed=false
           for attempt in 1 2 3 4; do
-            candidates=$(aws deploy list-deployments \
+            candidates=""
+            if ! candidates=$(aws deploy list-deployments \
               --application-name "$CODEDEPLOY_APPLICATION" \
               --deployment-group-name "$CODEDEPLOY_DEPLOYMENT_GROUP" \
               --include-only-statuses Created Queued InProgress Baking Ready \
-              --query 'deployments' --output text)
+              --query 'deployments' --output text); then
+              echo "::warning::CodeDeploy deployment 목록 조회에 실패했다 (시도 $attempt/4). 재시도한다." >&2
+              if [ "$attempt" -lt 4 ]; then
+                sleep 5
+              fi
+              continue
+            fi
+
             if [ -n "$candidates" ] && [ "$candidates" != None ]; then
-              matched=$(aws deploy batch-get-deployments --deployment-ids $candidates \
-                --query "deploymentsInfo[?starts_with(revision.s3Location.key, \`${revision_prefix}\`)].deploymentId" \
-                --output text | tr -s '[:space:]' ' ' | sed 's/^ //; s/ $//')
-              if [ "$matched" = None ]; then
+              candidate_ids=()
+              while IFS= read -r candidate_id; do
+                if [ -n "$candidate_id" ]; then
+                  candidate_ids+=("$candidate_id")
+                fi
+              done < <(printf '%s\n' "$candidates" | tr -s '[:space:]' '\n')
+
+              matched_ids=()
+              batch_failed=false
+              for ((offset = 0; offset < ${#candidate_ids[@]}; offset += 25)); do
+                batch=("${candidate_ids[@]:offset:25}")
+                batch_matches=""
+                if ! batch_matches=$(aws deploy batch-get-deployments \
+                  --deployment-ids "${batch[@]}" \
+                  --query "deploymentsInfo[?starts_with(revision.s3Location.key, \`${revision_prefix}\`)].deploymentId" \
+                  --output text | tr -s '[:space:]' ' ' | sed 's/^ //; s/ $//'); then
+                  batch_failed=true
+                  echo "::warning::CodeDeploy deployment 상세 조회에 실패했다 (시도 $attempt/4, batch $((offset / 25 + 1))). 재시도한다." >&2
+                  break
+                fi
+                if [ "$batch_matches" != None ] && [ -n "$batch_matches" ]; then
+                  while IFS= read -r matched_id; do
+                    if [ -n "$matched_id" ]; then
+                      matched_ids+=("$matched_id")
+                    fi
+                  done < <(printf '%s\n' "$batch_matches" | tr -s '[:space:]' '\n')
+                fi
+              done
+
+              if [ "$batch_failed" = false ] && [ "${#matched_ids[@]}" -gt 0 ]; then
+                matched=$(printf '%s\n' "${matched_ids[@]}" | sort -u | paste -sd ' ' -)
+              else
                 matched=""
               fi
+              if [ "$batch_failed" = false ]; then
+                lookup_completed=true
+              fi
+            else
+              matched=""
+              lookup_completed=true
             fi
             if [ -n "$matched" ]; then
               break
@@ -908,6 +951,11 @@ jobs:
             fi
           done
           if [ -z "$matched" ]; then
+            if [ "$lookup_completed" = false ]; then
+              echo '::error::S3 pointer가 없고 CodeDeploy 재조정 조회를 완료하지 못했다. cleanup을 완료하지 못했으므로 원격 CodeDeploy 상태를 확인해야 한다.' >&2
+              printf 'resolved=\n' >> "$GITHUB_OUTPUT"
+              exit 1
+            fi
             # 배포 생성 전에 취소된 정상적인 경우와 목록 조회가 놓친 경우를 CI가
             # 구분할 수 없다. 실패로 만들면 흔한 정상 취소마다 job이 붉게 남아
             # 경고가 무시되므로, 성공으로 끝내되 확인이 필요하다는 사실을 남긴다.
