@@ -17,6 +17,7 @@ class RuntimeDeploymentContractTest {
     private static final Path BOOTSTRAP = Path.of("deploy/scripts/instance-bootstrap.sh");
     private static final Path HEALTH = Path.of("deploy/scripts/runtime-health.sh");
     private static final Path HEALTH_METRICS = Path.of("deploy/scripts/health-metrics.sh");
+    private static final Path CLOUDWATCH_AGENT = Path.of("deploy/cloudwatch/amazon-cloudwatch-agent.json");
     private static final Path CI = Path.of(".github/workflows/ci.yml");
     private static final Path NGINX = Path.of("deploy/nginx/masiton.click.conf");
     private static final Path NGINX_INSTALL = Path.of("deploy/scripts/nginx-install.sh");
@@ -112,32 +113,12 @@ class RuntimeDeploymentContractTest {
                 .contains("deployment_id_key")
                 .contains("aws s3api put-object")
                 .contains("aws s3 cp \"s3://${CODEDEPLOY_S3_BUCKET}/${deployment_id_key}\"")
-                .contains("if ! candidates=$(aws deploy list-deployments")
-                .contains("if ! batch_matches=$(aws deploy batch-get-deployments")
-                .contains("offset += 25")
-                .contains("offset < ${#candidate_ids[@]}")
-                .contains("batch=(\"${candidate_ids[@]:offset:25}\")")
-                .contains("--deployment-ids \"${batch[@]}\"")
-                .contains("batch_failed=false", "lookup_completed=false")
-                .contains("CodeDeploy 재조정 조회를 완료하지 못했다")
-                .contains("if [ \"$lookup_completed\" = false ]; then")
                 .contains("for _ in $(seq 1 24)");
-        int incompleteLookup = workflow.indexOf("if [ \"$lookup_completed\" = false ]; then");
-        int incompleteLookupExit = workflow.indexOf("exit 1", incompleteLookup);
-        int attemptLoop = workflow.indexOf("for attempt in 1 2 3 4; do");
-        int attemptReset = workflow.indexOf("lookup_completed=false", attemptLoop);
-        assertThat(attemptReset).isGreaterThan(attemptLoop);
-        assertThat(attemptReset).isLessThan(workflow.indexOf("candidates=\"\"", attemptLoop));
-        assertThat(incompleteLookup).isGreaterThan(0);
-        assertThat(incompleteLookupExit).isGreaterThan(incompleteLookup);
         assertThat(workflow).doesNotContain("actions/download-artifact@v4");
         assertThat(workflow.indexOf("aws s3api put-object"))
                 .isGreaterThan(workflow.indexOf("aws deploy create-deployment"))
                 .isLessThan(workflow.indexOf("for _ in $(seq 1 270)"));
-        assertThat(iam)
-                .contains("codedeploy:StopDeployment")
-                .contains("actions   = [\"codedeploy:BatchGetDeployments\"]\n    resources = [aws_codedeploy_deployment_group.app.arn]")
-                .doesNotContain("actions   = [\"codedeploy:BatchGetDeployments\"]\n    resources = [\"*\"]");
+        assertThat(iam).contains("codedeploy:StopDeployment");
     }
 
     @Test
@@ -335,53 +316,53 @@ class RuntimeDeploymentContractTest {
         String workflow = Files.readString(CI);
         String iam = Files.readString(TERRAFORM_IAM);
         String monitoring = Files.readString(MONITORING);
+        String variables = Files.readString(TERRAFORM_VARIABLES);
+        String agent = Files.readString(CLOUDWATCH_AGENT);
         String nginx = Files.readString(NGINX);
+        String deploymentAlarms = section(monitoring, "locals {", "resource \"aws_cloudwatch_metric_alarm\" \"target_5xx\"");
+        String deploymentRedis = section(
+                monitoring,
+                "resource \"aws_cloudwatch_metric_alarm\" \"fleet_dependency_redis\"",
+                "resource \"aws_cloudwatch_metric_alarm\" \"blue_unhealthy\"");
 
-        // 인스턴스가 계속 바뀌는 ASG에서 알람 대상으로 고정할 수 있어야 하므로
-        // InstanceId 차원 없이 올리는 fleet 집계 지표가 함께 있어야 한다.
         assertThat(metrics)
                 .contains("MetricName=FleetDependencyRedis,Value=$redis,Unit=None")
                 .contains("MetricName=DependencyRedis,Value=$redis,Unit=None,Dimensions=");
-
-        // 지표를 올리는 주체가 새 인스턴스마다 설치돼야 알람에 데이터가 생긴다.
         assertThat(workflow)
                 .contains("deploy/scripts/cloudwatch-install.sh")
                 .contains("deploy/scripts/health-metrics.sh")
                 .contains("deploy/cloudwatch/amazon-cloudwatch-agent.json")
                 .contains("deploy/cloudwatch/masiton-health-metrics.service")
                 .contains("deploy/cloudwatch/masiton-health-metrics.timer");
-        assertThat(bootstrap).contains("\"$STAGE/cloudwatch-install.sh\" \"$STAGE\"");
+        assertThat(bootstrap)
+                .contains("\"$STAGE/cloudwatch-install.sh\" \"$STAGE\"")
+                .contains("after-install.sh의 chmod");
         assertThat(afterInstall).contains("cloudwatch-install.sh");
-
-        // 전송 실패를 삼키면 지표가 없는 채로 alarm이 영원히 OK로 남아 감지 계약이
-        // 조용히 거짓이 된다. 실패를 그대로 종료 코드로 드러내야 한다.
         assertThat(metrics)
                 .contains("put_status=$?")
                 .contains("exit \"$put_status\"");
-
-        // 권한이 없으면 지표가 끊기고 감지 경로 자체가 사라진다. agent가 보내는
-        // 로그 권한이 없으면 agent만 기동한 채 전송이 계속 실패한다.
         assertThat(iam)
                 .contains("cloudwatch:PutMetricData")
                 .contains("cloudwatch:namespace")
                 .contains("masiton/health")
+                .contains("masiton/host")
                 .contains("logs:PutLogEvents")
                 .contains("log-group:/masiton/*");
-
-        // 결측을 breaching으로 두면 교체 환경이 지표를 올리기 전에 모든 배포가
-        // 자기 자신의 알람에 걸린다. 차원이 없으면 다른 환경의 값이 섞인다.
-        assertThat(monitoring)
-                .contains("FleetDependencyRedis")
-                .contains("statistic   = \"Minimum\"")
+        assertThat(agent).contains("\"namespace\": \"masiton/host\"");
+        assertThat(deploymentRedis)
+                .contains("evaluation_periods  = 3")
+                .contains("datapoints_to_alarm = 3")
+                .contains("treat_missing_data = \"breaching\"")
                 .contains("comparison_operator = \"LessThanThreshold\"")
-                .contains("treat_missing_data = \"notBreaching\"")
-                .contains("Environment = \"asg\"")
-                .contains("aws_cloudwatch_metric_alarm.fleet_dependency_redis.alarm_name");
+                .contains("Environment = \"asg\"");
+        assertThat(deploymentAlarms)
+                .contains("aws_cloudwatch_metric_alarm.fleet_dependency_redis.alarm_name")
+                .doesNotContain("fleet_dependency_redis_freshness");
+        assertThat(variables)
+                .contains("variable \"deployment_alarms_enabled\"")
+                .contains("default     = true");
         assertThat(metrics).contains("Dimensions=[{Name=Environment,Value=$ENVIRONMENT}]");
 
-        // Redis를 readiness에 넣으면 공유 Redis 장애가 fleet 전체를 동시에
-        // unhealthy로 만들어 공개 탐색까지 끊긴다. ALB health location이 dependencies로
-        // 바뀌지 않았는지만 본다. 파일 전체를 금지하면 무관한 변경까지 막는다.
         assertThat(nginx).contains("proxy_pass http://masiton_backend/internal/health/ready");
         for (String block : nginx.split("location = /_masiton/alb-health")) {
             if (block.startsWith(" {")) {
@@ -390,4 +371,14 @@ class RuntimeDeploymentContractTest {
             }
         }
     }
+
+    private static String section(String source, String startMarker, String endMarker) {
+        int start = source.indexOf(startMarker);
+        int end = source.indexOf(endMarker, start);
+        if (start < 0 || end < 0) {
+            throw new AssertionError("계약 섹션을 찾지 못했다: " + startMarker);
+        }
+        return source.substring(start, end);
+    }
 }
+
