@@ -70,6 +70,15 @@ metric_data=(
   "MetricName=HealthReady,Value=$ready,Unit=None,Dimensions=[{Name=InstanceId,Value=$instance_id}]"
   "MetricName=DependencyPostgres,Value=$db,Unit=None,Dimensions=[{Name=InstanceId,Value=$instance_id}]"
   "MetricName=DependencyRedis,Value=$redis,Unit=None,Dimensions=[{Name=InstanceId,Value=$instance_id}]"
+  # 위 지표는 InstanceId 차원을 가져 ASG처럼 인스턴스가 계속 바뀌는 환경에서는
+  # 알람 대상으로 고정할 수 없다. 차원 없는 같은 값을 함께 올려 fleet 전체를
+  # 하나의 지표로 본다. 차원 집합이 다르면 CloudWatch가 별개 지표로 다루므로
+  # 위 InstanceId 지표와 섞이지 않는다. Minimum으로 집계하면 한 대라도 0이면
+  # 0이 되어 "어느 인스턴스든 Redis가 끊겼다"를 표현한다.
+  #
+  # Redis만 올린다. Postgres는 ready 그룹에 있어 이미 ALB가 target을 드레인하지만
+  # Redis는 ready에 없어 어느 경로로도 감지되지 않는다(ADR-DEPLOY-005 5절).
+  "MetricName=FleetDependencyRedis,Value=$redis,Unit=None"
 )
 # 인증서를 읽지 못했으면 지표를 올리지 않는다. 0을 올리면 만료 임박으로 오탐하고,
 # 임의값을 올리면 실제 만료를 가린다. 지표가 끊기면 알람이 breaching으로 잡는다.

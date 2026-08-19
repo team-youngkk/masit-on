@@ -82,6 +82,22 @@ data "aws_iam_policy_document" "app_parameter_read" {
     actions   = ["s3:GetObject", "s3:GetObjectVersion"]
     resources = ["${aws_s3_bucket.codedeploy_revision.arn}/masiton/codedeploy/*"]
   }
+
+  # health-metrics.sh가 1분 주기로 상태 지표를 올린다. 이 권한이 없으면 지표가
+  # 끊기고, Redis 장애를 감지하는 유일한 경로인 CodeDeploy alarm이 동작하지 않는다.
+  # PutMetricData는 resource 수준 제한을 지원하지 않으므로 wildcard이고, 대신
+  # namespace 조건으로 이 서비스의 지표에만 쓸 수 있게 좁힌다.
+  statement {
+    effect    = "Allow"
+    actions   = ["cloudwatch:PutMetricData"]
+    resources = ["*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "cloudwatch:namespace"
+      values   = ["masiton/health"]
+    }
+  }
 }
 
 resource "aws_iam_role_policy" "app_parameter_read" {

@@ -16,6 +16,7 @@ class RuntimeDeploymentContractTest {
     private static final Path APP_DEPLOY = Path.of("deploy/scripts/app-deploy.sh");
     private static final Path BOOTSTRAP = Path.of("deploy/scripts/instance-bootstrap.sh");
     private static final Path HEALTH = Path.of("deploy/scripts/runtime-health.sh");
+    private static final Path HEALTH_METRICS = Path.of("deploy/scripts/health-metrics.sh");
     private static final Path CI = Path.of(".github/workflows/ci.yml");
     private static final Path NGINX = Path.of("deploy/nginx/masiton.click.conf");
     private static final Path NGINX_INSTALL = Path.of("deploy/scripts/nginx-install.sh");
@@ -303,5 +304,53 @@ class RuntimeDeploymentContractTest {
                 .contains("action = \"COPY_AUTO_SCALING_GROUP\"")
                 .contains("DEPLOYMENT_STOP_ON_ALARM")
                 .contains("local.deployment_alarm_names");
+    }
+
+    @Test
+    @DisplayName("Redis 장애는 트래픽이 아닌 배포 게이트로 감지한다")
+    void redis장애를_배포게이트alarm으로감지한다() throws IOException {
+        String metrics = Files.readString(HEALTH_METRICS);
+        String bootstrap = Files.readString(BOOTSTRAP);
+        String afterInstall = Files.readString(AFTER_INSTALL);
+        String workflow = Files.readString(CI);
+        String iam = Files.readString(TERRAFORM_IAM);
+        String monitoring = Files.readString(MONITORING);
+        String nginx = Files.readString(NGINX);
+
+        // 인스턴스가 계속 바뀌는 ASG에서 알람 대상으로 고정할 수 있어야 하므로
+        // InstanceId 차원 없이 올리는 fleet 집계 지표가 함께 있어야 한다.
+        assertThat(metrics)
+                .contains("MetricName=FleetDependencyRedis,Value=$redis,Unit=None")
+                .contains("MetricName=DependencyRedis,Value=$redis,Unit=None,Dimensions=");
+
+        // 지표를 올리는 주체가 새 인스턴스마다 설치돼야 알람에 데이터가 생긴다.
+        assertThat(workflow)
+                .contains("deploy/scripts/cloudwatch-install.sh")
+                .contains("deploy/scripts/health-metrics.sh")
+                .contains("deploy/cloudwatch/amazon-cloudwatch-agent.json")
+                .contains("deploy/cloudwatch/masiton-health-metrics.service")
+                .contains("deploy/cloudwatch/masiton-health-metrics.timer");
+        assertThat(bootstrap).contains("\"$STAGE/cloudwatch-install.sh\" \"$STAGE\"");
+        assertThat(afterInstall).contains("cloudwatch-install.sh");
+
+        // 권한이 없으면 지표가 끊기고 감지 경로 자체가 사라진다.
+        assertThat(iam)
+                .contains("cloudwatch:PutMetricData")
+                .contains("cloudwatch:namespace")
+                .contains("masiton/health");
+
+        // 결측을 breaching으로 두면 교체 환경이 지표를 올리기 전에 모든 배포가
+        // 자기 자신의 알람에 걸린다.
+        assertThat(monitoring)
+                .contains("FleetDependencyRedis")
+                .contains("statistic   = \"Minimum\"")
+                .contains("comparison_operator = \"LessThanThreshold\"")
+                .contains("treat_missing_data = \"notBreaching\"")
+                .contains("aws_cloudwatch_metric_alarm.fleet_dependency_redis.alarm_name");
+
+        // Redis를 readiness에 넣으면 공유 Redis 장애가 fleet 전체를 동시에
+        // unhealthy로 만들어 공개 탐색까지 끊긴다. ALB 경로는 그대로 둔다.
+        assertThat(nginx).contains("proxy_pass http://masiton_backend/internal/health/ready");
+        assertThat(nginx).doesNotContain("/internal/health/dependencies");
     }
 }
