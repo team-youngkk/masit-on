@@ -446,7 +446,7 @@ class SecurityConfigurationApiTest extends FullContextIntegrationTest {
                 .andExpect(jsonPath("$.errors").isEmpty())
                 .andExpect(jsonPath("$.traceId").value(not(emptyString())));
 
-        verify(memberSessionAccessChecker, times(2)).check(memberId, sessionId);
+        verify(memberSessionAccessChecker, times(2)).check(memberId, sessionId, "MEMBER");
         verify(recordRecentRestaurantViewUseCase, never()).record(any(), any());
     }
 
