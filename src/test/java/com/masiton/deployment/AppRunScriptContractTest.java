@@ -436,7 +436,7 @@ class AppRunScriptContractTest {
     }
 
     @Test
-    @DisplayName("Nginx 관리 설정이 배치된 경우에만 app-deploy가 설정 검사를 실행한다")
+    @DisplayName("Nginx 관리 설정이 배치된 경우 app-deploy가 공개 로그인 경계를 확인한다")
     void appDeploy_관리설정이있을때만Nginx설정검사() throws IOException {
         String script = Files.readString(APP_DEPLOY_SCRIPT);
 
@@ -444,7 +444,11 @@ class AppRunScriptContractTest {
                 .contains("nginx_site_conf=/etc/nginx/conf.d/masiton.click.conf")
                 .contains("command -v nginx >/dev/null 2>&1 && [ -f \"$nginx_site_conf\" ]")
                 .contains("[ -f \"$nginx_site_conf\" ] && systemctl is-active --quiet nginx")
-                .contains("Nginx 설정 smoke 스킵: 설치된 masit-on site 설정이 없다");
+                .contains("Nginx 설정 smoke 스킵: 설치된 masit-on site 설정이 없다")
+                .contains("public_login_body='{\"email\":\"deploy-smoke-invalid@example.com\",\"password\":\"invalid-password-123\"}'")
+                .contains("--data \"$public_login_body\"")
+                .contains("[ \"$public_login_status\" = \"401\" ]")
+                .doesNotContain("-X POST --data '{}'");
     }
 
     /**
