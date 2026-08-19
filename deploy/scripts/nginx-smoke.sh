@@ -161,7 +161,9 @@ assert_not_validation_access_error POST /api/webhooks/youtube/channel-updates
 assert_validation_gate_status HEAD /api/webhooks/youtube/channel-updates
 assert_validation_gate PATCH /api/webhooks/youtube/channel-updates
 
-assert_validation_gate POST /api/auth/tokens '{}'
+# 통합 로그인 POST는 공개 경로다. 빈 자격 증명은 Spring 입력 검증 400이어도
+# backend에 도달한 결과이므로 verification gate 401로 판정하지 않는다.
+assert_not_validation_access_error POST /api/auth/tokens '{}'
 assert_validation_gate GET /api/nginx-smoke-unknown
 # 공개 location 또는 검증 세션 location에 먼저 매칭돼도 비허용 메서드는 공통 JSON gate로 돌아가야 한다.
 assert_validation_gate PATCH /api/restaurants
