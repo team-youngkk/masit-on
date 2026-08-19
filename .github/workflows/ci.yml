@@ -673,6 +673,14 @@ jobs:
               "deploy/nginx/00-masiton-upgrade-map.conf",
               "deploy/nginx/masiton-tls-renew.service",
               "deploy/nginx/masiton-tls-renew.timer",
+              # Redis 장애는 ready 그룹에 없어 ALB target health로 드러나지 않는다.
+              # 이 지표 수집이 CodeDeploy alarm의 유일한 감지 경로이므로 revision에
+              # 실어 새 인스턴스마다 설치한다(ADR-DEPLOY-005 5절).
+              "deploy/scripts/cloudwatch-install.sh",
+              "deploy/scripts/health-metrics.sh",
+              "deploy/cloudwatch/amazon-cloudwatch-agent.json",
+              "deploy/cloudwatch/masiton-health-metrics.service",
+              "deploy/cloudwatch/masiton-health-metrics.timer",
           ]
           hooks = [
               "deploy/codedeploy/hooks/after-install.sh",
@@ -1010,3 +1018,4 @@ jobs:
           done
           echo "::error::CodeDeploy cleanup이 terminal 상태를 확인하지 못했다: $status"
           exit 1
+
