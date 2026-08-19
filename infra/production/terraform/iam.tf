@@ -222,12 +222,12 @@ data "aws_iam_policy_document" "github_actions_deploy" {
     resources = [aws_codedeploy_deployment_group.app.arn]
   }
 
-  # batch-get-deployments는 조회 대상이 deployment ID라 고정 ARN을 줄 수 없다.
-  # 위 GetDeployment wildcard와 같은 이유로 읽기 전용 조회만 격리해 허용한다.
+  # batch-get-deployments도 deployment group 리소스 범위를 지원하므로
+  # 이 배포 group 외의 deployment 정보는 조회하지 못하도록 제한한다.
   statement {
     effect    = "Allow"
     actions   = ["codedeploy:BatchGetDeployments"]
-    resources = ["*"]
+    resources = [aws_codedeploy_deployment_group.app.arn]
   }
 }
 
