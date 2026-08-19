@@ -10,6 +10,7 @@ related_documents:
 
 ## 최신 기록
 
+- [PR #244 등록 단위 실행의 동시성·CONFIRM 원자성과 중복 판정 죽은 코드](pr-244-registration-unit-atomicity-review.md)
 - [PR #238 통합 인증 구현과 CI 회귀](pr-238-unified-auth-implementation-review.md)
 - [PR #235 통합 인증·라우팅·관리자 계정 전환 계약 리뷰 반영](pr-235-unified-auth-contract-review.md)
 - [PR #236 코스 지도 구현의 형상 Schema·만료 선택·좌표 검증 결함](pr-236-course-route-map-implementation-review.md)
@@ -18,6 +19,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #244 등록 단위 실행의 동시성·CONFIRM 원자성과 중복 판정 죽은 코드](pr-244-registration-unit-atomicity-review.md)
 - [PR #238 통합 인증 구현과 CI 회귀](pr-238-unified-auth-implementation-review.md)
 - [PR #228 ASG replacement 배포의 상태 보존·중단 제어·권한·네트워크 계약](pr-228-asg-replacement-deployment-review.md)
 - [PR #235 통합 인증·라우팅·관리자 계정 전환 계약 리뷰 반영](pr-235-unified-auth-contract-review.md)
