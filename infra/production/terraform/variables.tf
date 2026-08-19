@@ -249,9 +249,20 @@ variable "initial_blue_verified" {
 }
 
 variable "codedeploy_deployment_wait_minutes" {
-  description = "배포 성공 후 original 인스턴스를 종료하기까지의 대기 시간. 이 값이 rollback 가능 시간의 상한이자 CI 배포 job이 대기하는 시간이다. ci.yml의 배포 폴링 한도(45분)에서 provisioning·hook 시간을 뺀 범위 안에 두어야 한다"
+  description = "배포 성공 후 original 인스턴스를 종료하기까지의 대기 시간(1~15분). 이 값이 rollback 가능 시간의 상한이며 CI 배포 폴링 한도 45분에서 provisioning·hook 시간을 위한 여유를 남기는 보수적 운영 상한이다"
   type        = number
   default     = 15
+
+  validation {
+    condition     = var.codedeploy_deployment_wait_minutes >= 1 && var.codedeploy_deployment_wait_minutes <= 15 && var.codedeploy_deployment_wait_minutes == floor(var.codedeploy_deployment_wait_minutes)
+    error_message = "codedeploy_deployment_wait_minutes는 1 이상 15 이하의 정수여야 한다. CI 배포 폴링 45분과 provisioning·hook 시간을 함께 고려한 보수적 상한이다."
+  }
+}
+
+variable "codedeploy_termination_enabled" {
+  description = "CodeDeploy 성공 후 original 인스턴스와 ASG를 자동 종료할지 여부. 최초 seeding에서는 false로 두고 replacement ASG가 deployment group의 원본으로 전환된 것을 확인한 뒤 true로 바꾼다"
+  type        = bool
+  default     = false
 }
 
 variable "asg_health_check_type" {
@@ -296,3 +307,4 @@ variable "app_subnet_is_private" {
   type        = bool
   default     = false
 }
+

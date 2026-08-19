@@ -101,6 +101,7 @@ class RuntimeDeploymentContractTest {
     void codeDeploy_대기timeout과취소시중지하고_terminal상태까지확인한다() throws IOException {
         String workflow = Files.readString(CI);
         String iam = Files.readString(TERRAFORM_IAM);
+        String variables = Files.readString(TERRAFORM_VARIABLES);
         String deploy = section(workflow, "  deploy:", "  # GitHub 취소");
         String cleanup = workflow.substring(workflow.indexOf("  codedeploy-cancel-cleanup:"));
 
@@ -112,7 +113,18 @@ class RuntimeDeploymentContractTest {
                 .contains("for _ in $(seq 1 270)")
                 .contains("for _ in $(seq 1 60)")
                 .contains("stop_failed=false", "return 1", "::error::CodeDeploy")
+                .contains("CODEDEPLOY_SEED_ASG")
+                .contains("get-deployment-group")
+                .contains("terminateBlueInstancesOnDeploymentSuccess.action")
+                .contains("TERMINATE 배포를 차단했다")
+                .contains("current_asg_count")
                 .contains("aws s3api put-object");
+        assertThat(variables)
+                .contains("variable \"codedeploy_deployment_wait_minutes\"")
+                .contains("default     = 15")
+                .contains("<= 15")
+                .contains("variable \"codedeploy_termination_enabled\"")
+                .contains("default     = false");
         assertThat(cleanup)
                 .contains("stop-deployment")
                 .contains("--auto-rollback-enabled")
@@ -445,4 +457,5 @@ class RuntimeDeploymentContractTest {
         return source.substring(start, end);
     }
 }
+
 

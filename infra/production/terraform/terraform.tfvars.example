@@ -36,6 +36,11 @@ blue_min_size         = 0
 blue_desired_capacity = 1
 blue_max_size         = 2
 
+# 최초 seeding에서는 false로 유지한다. known-good 배포 성공 후
+# deployment group의 autoscaling_groups가 replacement ASG를 가리키는 것을
+# 확인한 뒤 별도 plan/apply에서 true로 바꿔 성공 배포 후 자동 종료를 활성화한다.
+codedeploy_termination_enabled = false
+
 # 새 ASG가 기존 RDS에 접근하려면 RDS SG에 app SG 출처 ingress가 필요하다.
 # 끄면 SG ingress에서 drop되어 backend가 Flyway 연결 timeout으로 기동에 실패한다.
 manage_rds_ingress_rule = true
@@ -89,3 +94,4 @@ ssm_parameter_arns = ["arn:aws:ssm:ap-northeast-2:000000000000:parameter/masiton
 # asg_health_check_type            = "EC2"
 # deployment_alarms_enabled        = false
 # deployment_auto_rollback_enabled = false
+
