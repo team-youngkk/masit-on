@@ -325,6 +325,8 @@ class MaliciousInputRegressionApiTest extends FullContextIntegrationTest {
                 .issuer("masit-on")
                 .audience(List.of("masit-on-api"))
                 .subject(adminId.toString())
+                .claim("sid", UUID.randomUUID().toString())
+                .jwtID(UUID.randomUUID().toString())
                 .claim("roles", List.of("ADMIN"))
                 .issueTime(java.util.Date.from(now))
                 .expirationTime(java.util.Date.from(now.plusSeconds(60)))
@@ -347,8 +349,18 @@ class MaliciousInputRegressionApiTest extends FullContextIntegrationTest {
 
     private UUID insertAdmin() {
         UUID id = UUID.randomUUID();
+        String email = id + "@example.com";
         jdbcTemplate.update("INSERT INTO admin_account (id, login_id, password_hash) VALUES (?, ?, 'hash')",
                 id, "admin-" + id);
+        jdbcTemplate.update("""
+                INSERT INTO member_account (id, email, password_hash, email_verified_at, status, role)
+                VALUES (?, ?, 'hash', CURRENT_TIMESTAMP, 'ACTIVE', 'ADMIN')
+                """, id, email);
+        jdbcTemplate.update("""
+                INSERT INTO admin_account_migration_map
+                    (admin_account_id, normalized_email, migration_disposition, member_account_id, approval_record_id)
+                VALUES (?, ?, 'MIGRATE_ACTIVE', ?, 'test-approved-admin')
+                """, id, email, id);
         return id;
     }
 

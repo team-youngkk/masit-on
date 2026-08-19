@@ -108,6 +108,7 @@ case "$component" in
       --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 \
       --volume "$SECRETS_DIR":"$SECRETS_DIR":ro \
       -e SPRING_PROFILES_ACTIVE \
+      -e SPRING_FLYWAY_TARGET \
       -e DB_URL -e DB_USERNAME \
       -e KAKAO_MOBILITY_ENABLED -e KAKAO_MOBILITY_FREE_TIER_VERIFIED \
       -e REDIS_HOST -e REDIS_PORT \

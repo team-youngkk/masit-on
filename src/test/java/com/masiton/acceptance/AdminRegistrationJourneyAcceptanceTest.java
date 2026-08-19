@@ -78,11 +78,20 @@ class AdminRegistrationJourneyAcceptanceTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        jdbcTemplate.execute("truncate table visit, video, creator, restaurant, confirmation_token, admin_account, food_category, region cascade");
+        jdbcTemplate.execute("truncate table visit, video, creator, restaurant, confirmation_token, "
+                + "admin_account_migration_map, member_account, admin_account, food_category, region cascade");
         jdbcTemplate.update("insert into region (id, code, name, sort_order, active) values (?, 'MAPO', '마포구', 1, true)", REGION_ID);
         jdbcTemplate.update("insert into food_category (id, code, name, sort_order, active) values (?, 'KOREAN', '한식', 1, true)", CATEGORY_ID);
+        String passwordHash = new BCryptPasswordEncoder().encode(PASSWORD);
+        jdbcTemplate.update("insert into member_account (id, email, password_hash, status, role, email_verified_at) "
+                        + "values (?, 'acceptance-admin@example.com', ?, 'ACTIVE', 'ADMIN', current_timestamp)",
+                ADMIN_ID, passwordHash);
         jdbcTemplate.update("insert into admin_account (id, login_id, password_hash, role, active) values (?, 'acceptance-admin', ?, 'ADMIN', true)",
-                ADMIN_ID, new BCryptPasswordEncoder().encode(PASSWORD));
+                ADMIN_ID, passwordHash);
+        jdbcTemplate.update("insert into admin_account_migration_map (admin_account_id, normalized_email, "
+                        + "migration_disposition, member_account_id, approval_record_id) "
+                        + "values (?, 'acceptance-admin@example.com', 'MIGRATE_ACTIVE', ?, 'TEST-UNIFIED-AUTH-001')",
+                ADMIN_ID, ADMIN_ID);
         REDIS.execInContainer("redis-cli", "FLUSHALL");
     }
 

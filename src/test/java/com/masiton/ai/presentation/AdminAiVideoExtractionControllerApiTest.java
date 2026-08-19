@@ -26,6 +26,7 @@ import com.masiton.ai.application.port.in.AiExtractionJobUseCase;
 import com.masiton.ai.application.AdminAiExtractionQueryService;
 import com.masiton.ai.application.port.out.AiExtractionAdminQueryPort;
 import com.masiton.ai.application.port.out.dto.AiExtractionJobView;
+import com.masiton.common.security.LegacyAdminActorResolver;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.GlobalExceptionHandler;
 
@@ -36,11 +37,17 @@ class AdminAiVideoExtractionControllerApiTest {
 
     private final AiExtractionJobUseCase useCase = mock(AiExtractionJobUseCase.class);
     private final AdminAiExtractionQueryService queryService = mock(AdminAiExtractionQueryService.class);
+    private final LegacyAdminActorResolver legacyAdminActorResolver = mock(LegacyAdminActorResolver.class);
     private final MockMvc mockMvc = MockMvcBuilders.standaloneSetup(
-            new AdminAiVideoExtractionController(useCase, queryService))
+            new AdminAiVideoExtractionController(useCase, queryService, legacyAdminActorResolver))
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUpLegacyAdminActor() {
+        when(legacyAdminActorResolver.resolve(any())).thenAnswer(invocation -> invocation.getArgument(0));
+    }
 
     @Test
     @DisplayName("신규 접수는 202와 공통 필드 null 키를 포함한다")
