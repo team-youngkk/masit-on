@@ -194,9 +194,11 @@ test('등록 단위 등록 API의 422 예외 전환 응답은 blockReason·recov
     if (input === '/api/me') return Response.json({ id: 'admin-1', email: 'admin@example.com', role: 'ADMIN' })
     return new Response(JSON.stringify({
       code: 'AIEXTRACT_VALIDATION_CONFLICT',
-      blockReason: 'PLACE_AMBIGUOUS',
-      recoveryPaths: ['SUPPLEMENT', 'MANUAL_REGISTRATION'],
-      requiredSupplements: ['kakaoPlaceUrl'],
+      details: {
+        blockReason: 'PLACE_AMBIGUOUS',
+        recoveryPaths: ['SUPPLEMENT', 'MANUAL_REGISTRATION'],
+        requiredSupplements: ['kakaoPlaceUrl'],
+      },
       traceId: 'trace-2',
     }), { status: 422 })
   }
@@ -227,4 +229,63 @@ test('등록 단위 등록 API의 422 예외 전환 응답은 blockReason·recov
 test('AIEXTRACT_VALIDATION_CONFLICT가 아닌 오류는 예외 전환 정보로 파싱하지 않는다', () => {
   assert.equal(aiValidationConflictFrom(new AdminApiError(409, 'AIEXTRACT_CONCURRENT_REQUEST_CONFLICT')), null)
   assert.equal(aiValidationConflictFrom(new Error('network')), null)
+})
+
+test('AdminApiError.details에 이미 언랩된 blockReason·recoveryPaths·requiredSupplements를 정확히 파싱한다', () => {
+  const error = new AdminApiError(
+    422,
+    'AIEXTRACT_VALIDATION_CONFLICT',
+    [],
+    'trace-3',
+    '요청을 처리하지 못했습니다.',
+    {
+      blockReason: 'MISSING_REQUIRED_FIELD',
+      recoveryPaths: ['REEXTRACT', 'MANUAL_REGISTRATION'],
+      requiredSupplements: [],
+    },
+  )
+
+  assert.deepEqual(aiValidationConflictFrom(error), {
+    blockReason: 'MISSING_REQUIRED_FIELD',
+    recoveryPaths: ['REEXTRACT', 'MANUAL_REGISTRATION'],
+    requiredSupplements: [],
+    traceId: 'trace-3',
+  })
+})
+
+test('details가 배열이면 AdminApiError.details는 빈 객체로 정규화된다', async () => {
+  const previousFetch = globalThis.fetch
+  let call = 0
+  globalThis.fetch = async (input) => {
+    if (call++ === 0) return new Response(JSON.stringify({ accessToken: 'test-token', tokenType: 'Bearer', expiresInSeconds: 3600, role: 'ADMIN' }), { status: 200 })
+    if (input === '/api/me') return Response.json({ id: 'admin-1', email: 'admin@example.com', role: 'ADMIN' })
+    return new Response(JSON.stringify({
+      code: 'AIEXTRACT_VALIDATION_CONFLICT',
+      details: ['PLACE_AMBIGUOUS'],
+      traceId: 'trace-4',
+    }), { status: 422 })
+  }
+
+  try {
+    clearAccessToken()
+    await login('admin', 'password')
+    let reason: unknown
+    try {
+      await registerAiRegistrationUnit('job-1', 'unit-1')
+      assert.fail('예외 전환 응답은 실패해야 합니다.')
+    } catch (caught) {
+      reason = caught
+    }
+    assert.ok(reason instanceof AdminApiError)
+    assert.deepEqual((reason as AdminApiError).details, {})
+    assert.deepEqual(aiValidationConflictFrom(reason), {
+      blockReason: null,
+      recoveryPaths: [],
+      requiredSupplements: [],
+      traceId: 'trace-4',
+    })
+  } finally {
+    clearAccessToken()
+    globalThis.fetch = previousFetch
+  }
 })
