@@ -967,12 +967,12 @@ jobs:
               printf 'resolved=\n' >> "$GITHUB_OUTPUT"
               exit 1
             fi
-            # 배포 생성 전에 취소된 정상적인 경우와 목록 조회가 놓친 경우를 CI가
-            # 구분할 수 없다. 실패로 만들면 흔한 정상 취소마다 job이 붉게 남아
-            # 경고가 무시되므로, 성공으로 끝내되 확인이 필요하다는 사실을 남긴다.
-            echo '::warning::S3 pointer가 없고 이 실행이 만든 진행 중 deployment도 찾지 못했다. 배포가 생성되기 전에 취소됐을 수 있고 목록 조회가 놓쳤을 수도 있다. 원격 CodeDeploy 상태를 한 번 확인한다.'
+            # CodeDeploy 목록 조회가 성공해도 eventual consistency 때문에 빈 결과가
+            # 원격 deployment 부재를 증명하지 않는다. 배포 생성 전 취소와 아직
+            # 목록에 나타나지 않은 실제 deployment를 구분할 수 없으므로 fail-closed한다.
+            echo '::error::S3 pointer가 없고 이 실행이 만든 deployment를 확인하지 못했다. 원격 CodeDeploy 상태가 미확정이므로 cleanup을 성공 처리하지 않는다.' >&2
             printf 'resolved=\n' >> "$GITHUB_OUTPUT"
-            exit 0
+            exit 1
           fi
           case "$matched" in
             *' '*) echo "::error::같은 실행의 deployment가 둘 이상 조회됐다: $matched" >&2; exit 1 ;;
@@ -980,8 +980,8 @@ jobs:
           echo "재조정으로 deployment를 되찾았다: $matched"
           printf 'resolved=%s\n' "$matched" >> "$GITHUB_OUTPUT"
 
-      # 정리할 원격 배포가 없다고 확인된 경우까지 실패로 만들지 않는다. 조회 step이
-      # 실패하면 이 step은 건너뛰고 job이 그 자리에서 실패한다.
+      # 정리할 원격 배포 ID가 확인된 경우에만 중지한다. ID 조회가 미확정이면
+      # lookup step이 non-zero로 끝나므로 이 step을 건너뛰고 job이 실패한다.
       - name: 원격 CodeDeploy 중지 및 terminal 확인
         if: steps.lookup.outputs.resolved != ''
         env:
