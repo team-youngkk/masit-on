@@ -60,8 +60,8 @@ resource "aws_cloudwatch_metric_alarm" "fleet_dependency_redis" {
   alarm_name        = "${var.name_prefix}-fleet-dependency-redis"
   alarm_description = "An app instance reports the Redis dependency as DOWN"
   namespace         = "masiton/health"
-  # health-metrics.sh가 Environment=asg 차원으로 올리는 fleet 집계 지표다. Minimum이므로
-  # 한 대라도 0을 올리면 0이 된다. InstanceId 차원 지표는 인스턴스가 계속 바뀌는 ASG에서
+  # health-metrics.sh가 차원 없이 올리는 fleet 집계 지표다. Minimum이므로 한 대라도
+  # 0을 올리면 0이 된다. InstanceId 차원 지표는 인스턴스가 계속 바뀌는 ASG에서
   # 알람 대상으로 고정할 수 없어 쓰지 않는다.
   metric_name = "FleetDependencyRedis"
   statistic   = "Minimum"
@@ -72,11 +72,13 @@ resource "aws_cloudwatch_metric_alarm" "fleet_dependency_redis" {
   datapoints_to_alarm = 3
   threshold           = 1
   comparison_operator = "LessThanThreshold"
-  # 최초 seeding은 deployment_alarms_enabled=false로 진행해 지표가 아직 없는
-  # 구간을 명시적으로 제외한다. 정상 운영에서는 결측도 감지 경로 장애이므로
-  # fail-closed로 배포를 막는다.
-  treat_missing_data = "breaching"
+  # 교체 환경 인스턴스는 지표를 올리기 시작하기 전까지 데이터가 없다. breaching으로
+  # 두면 모든 Blue-Green 배포가 시작 직후 자기 자신의 알람에 걸려 중단된다.
+  # 지표 유실 감지는 이 배포 게이트가 아니라 별도 운영 알람의 몫이다.
+  treat_missing_data = "notBreaching"
 
+  # 차원 없이 올리면 이 계정·리전의 다른 인스턴스가 올린 값까지 같은 지표에 섞여
+  # ASG와 무관한 Redis 장애가 배포를 막는다. 기존 단일 EC2 정리 단계가 그 경우다.
   dimensions = {
     Environment = "asg"
   }
@@ -100,4 +102,3 @@ resource "aws_cloudwatch_metric_alarm" "blue_unhealthy" {
     TargetGroup  = aws_lb_target_group.blue.arn_suffix
   }
 }
-

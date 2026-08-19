@@ -363,7 +363,9 @@ class RuntimeDeploymentContractTest {
                 .contains("default     = true");
         assertThat(metrics).contains("Dimensions=[{Name=Environment,Value=$ENVIRONMENT}]");
 
-        assertThat(nginx).contains("proxy_pass http://masiton_backend/internal/health/ready");
+        assertThat(nginx)
+                .contains("location = /_masiton/alb-health {")
+                .contains("proxy_pass http://masiton_backend/internal/health/ready");
         for (String block : nginx.split("location = /_masiton/alb-health")) {
             if (block.startsWith(" {")) {
                 assertThat(block.substring(0, block.indexOf('}')))

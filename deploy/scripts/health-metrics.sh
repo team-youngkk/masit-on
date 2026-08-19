@@ -95,9 +95,8 @@ if [ -n "$cert_days" ]; then
 fi
 
 # 전송 실패를 삼키지 않는다. FleetDependencyRedis가 올라가지 않으면 CodeDeploy
-# alarm은 결측을 notBreaching으로 다뤄 영원히 OK로 남고, "Redis 장애 시 배포가
-# 차단된다"는 계약이 아무도 모르는 사이에 거짓이 된다. 권한 누락이나 네트워크
-# 문제는 systemd 단위 실패와 배포 실패로 즉시 드러나야 한다.
+# alarm은 결측을 breaching으로 다뤄 배포를 차단한다. 권한 누락이나 네트워크
+# 문제는 systemd 단위 실패와 배포 게이트 차단으로 즉시 드러나야 한다.
 put_status=0
 aws cloudwatch put-metric-data --region "$REGION" --namespace "$NAMESPACE" \
   --metric-data "${metric_data[@]}" || put_status=$?
@@ -108,3 +107,4 @@ if [ "$put_status" -ne 0 ]; then
   echo "CloudWatch 지표 전송에 실패했다 (exit $put_status). 감지 경로가 동작하지 않는다." >&2
   exit "$put_status"
 fi
+
