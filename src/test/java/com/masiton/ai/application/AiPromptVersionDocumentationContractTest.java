@@ -40,6 +40,7 @@ class AiPromptVersionDocumentationContractTest {
             Path.of("docs/07-adr/adr-traceability.md"),
             Path.of("docs/07-adr/integration/ai-001-video-extraction-candidate-boundary.md"),
             Path.of("docs/08-planning/third-expansion-baseline-review.md"),
+            Path.of("docs/08-planning/third-expansion-ai-candidate-loss-analysis.md"),
             Path.of("docs/08-planning/third-expansion-evaluation-strategy.md"),
             Path.of("docs/08-planning/third-expansion-implementation-plan.md"),
             Path.of("docs/08-planning/third-expansion-scope-and-terminology.md"),

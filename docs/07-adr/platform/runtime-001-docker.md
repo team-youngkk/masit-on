@@ -21,7 +21,7 @@ related_documents:
   - ../security/sec-001-secrets-workload-identity.md
   - ../adr-backlog.md
   - ../adr-traceability.md
-  - web-003-routing-boundary.md
+  - web-006-unified-login-rbac-route.md
   - ../../02-analysis/mvp-workstreams.md
 supersedes: []
 superseded_by: null

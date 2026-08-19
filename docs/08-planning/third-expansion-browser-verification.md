@@ -204,15 +204,15 @@ java.lang.IllegalStateException: Kakao Mobility base URL is not an allowed provi
 | 항목 | 계약 | 검증 시점 백엔드 | 검증 시점 프런트엔드 |
 |---|---|---|---|
 | 신규 영상 추가·추출 요청 | [API 3.1](../05-specs/api/admin/ai-video-extraction-api.md) `POST /api/admin/ai/video-extractions`, `PR-AIEXTRACT-001` | 있음 | **없음** |
-| 채널 감시 활성화·중지 | [API 3.6](../05-specs/api/admin/ai-video-extraction-api.md) `PUT /api/admin/ai/youtube-channel-watches/{creatorId}`, `PR-AIEXTRACT-008` | **없음** | **없음** |
+| 채널 감시 활성화·중지·상태 조회 | [API 3.6~3.7](../05-specs/api/admin/ai-video-extraction-api.md) `GET/PUT /api/admin/ai/youtube-channel-watches/{creatorId}`, `PR-AIEXTRACT-008` | 당시 없음 → 현재 있음 (`#184`) | 당시 없음 → 현재 있음 (`#224`, `/admin/ai/youtube-channel-watches`) |
 
 [AI 영상 정보 추출 PRD](../04-product/prd/admin/ai-video-information-extraction.md) 5절은 관리자가 신규 영상 추가 화면에서 URL을 제출해 초기 데이터 적립과 Webhook 누락 보완을 직접 접수한다고 정한다. 관리자 화면에는 목록·상세·재시도·검수만 있고 접수 진입점이 없어, 지금은 API를 직접 호출해야 작업을 만들 수 있다.
 
-`YoutubeChannelWatchStore`에는 `find`만 있고 쓰기 메서드가 없다. `youtube_channel_watch` 테이블은 `V4`에 있지만 행을 넣는 코드가 애플리케이션에 없어 감시 채널을 등록할 수단이 API에도 화면에도 없다. Webhook 접수 자체는 구현돼 있으나 구독을 열 수 없어 실제 알림 경로가 끝까지 이어지지 않는다.
+검증 당시 `YoutubeChannelWatchStore`에는 `find`만 있고 쓰기 메서드가 없었다. `youtube_channel_watch` 테이블은 `V4`에 있지만 행을 넣는 코드가 애플리케이션에 없어 감시 채널을 등록할 수단이 API에도 화면에도 없었다. Webhook 접수 자체는 구현돼 있으나 구독을 열 수 없어 실제 알림 경로가 끝까지 이어지지 않았다.
 
 두 항목은 `E3-T12` 범위 밖이며 [#180](https://github.com/team-youngkk/masit-on/issues/180) 채널 감시 설정 API와 [#181](https://github.com/team-youngkk/masit-on/issues/181) 신규 영상 추가 화면으로 분리했다.
 
-두 이슈는 각각 [#184](https://github.com/team-youngkk/masit-on/pull/184)와 [#182](https://github.com/team-youngkk/masit-on/pull/182)로 구현돼 `develop`에 병합됐고, 이 브랜치도 병합본을 포함한다. `AdminYoutubeChannelWatchController`와 관리자 접수 폼이 생겨 위 공백은 해소됐다. **다만 이 문서의 3절 측정과 4절 여정은 병합 전 기준 커밋에서 수행했으므로 두 신규 화면·API는 검증 대상에 없다.** 6절에 미검증으로 남긴다.
+두 이슈는 각각 [#184](https://github.com/team-youngkk/masit-on/pull/184)와 [#182](https://github.com/team-youngkk/masit-on/pull/182)로 구현돼 `develop`에 병합됐고, 이 브랜치도 병합본을 포함한다. 이후 [#224](https://github.com/team-youngkk/masit-on/issues/224)에서 `AdminYoutubeChannelWatchController`의 상태 조회와 `/admin/ai/youtube-channel-watches` 화면을 추가해 채널 감시 공백도 해소했다. **다만 이 문서의 3절 측정과 4절 여정은 병합 전 기준 커밋에서 수행했으므로 신규 화면·API는 브라우저 검증 대상에 포함하지 않았다.** 6절에 미검증으로 남긴다.
 
 ### 5.5 관측만 한 항목
 

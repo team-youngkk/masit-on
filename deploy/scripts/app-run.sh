@@ -18,6 +18,14 @@
 # 전달한다(M2-08). 브리지 네트워크로는 두 방향 모두 성립하지 않는다.
 set -euo pipefail
 
+DEPLOYMENT_ENV_FILE="${DEPLOYMENT_ENV_FILE:-/etc/masiton/deployment.env}"
+if [ -f "$DEPLOYMENT_ENV_FILE" ]; then
+  set -a
+  # shellcheck disable=SC1090
+  . "$DEPLOYMENT_ENV_FILE"
+  set +a
+fi
+
 component="${1:?backend 또는 frontend를 지정한다}"
 REGION="${AWS_REGION:-ap-northeast-2}"
 IMAGE_REF_FILE="/opt/masiton/etc/${component}.image"
@@ -54,21 +62,30 @@ case "$component" in
     DB_USERNAME=$(param /masiton/db/username); export DB_USERNAME
     KAKAO_MOBILITY_ENABLED=$(optional_bool_param /masiton/integration/kakao-mobility/enabled); export KAKAO_MOBILITY_ENABLED
     KAKAO_MOBILITY_FREE_TIER_VERIFIED=$(optional_bool_param /masiton/integration/kakao-mobility/free-tier-verified); export KAKAO_MOBILITY_FREE_TIER_VERIFIED
-    export REDIS_HOST=127.0.0.1
-    export REDIS_PORT=6379
+    # 단일 EC2 기본값은 유지하고, ASG에서는 환경 변수 또는 선택적 SSM 값으로
+    # Redis endpoint를 바꿀 수 있게 한다. 명시적 환경 변수가 SSM보다 우선한다.
+    REDIS_HOST="${REDIS_HOST:-$(optional_param /masiton/redis/host)}"
+    if [ "${REQUIRE_SHARED_REDIS:-false}" = true ] && [ -z "$REDIS_HOST" ]; then
+      echo "ASG 배포에서는 공유 Redis endpoint가 필요하다: REDIS_HOST 또는 /masiton/redis/host" >&2
+      exit 1
+    fi
+    REDIS_HOST="${REDIS_HOST:-127.0.0.1}"
+    REDIS_PORT="${REDIS_PORT:-$(optional_param /masiton/redis/port)}"
+    REDIS_PORT="${REDIS_PORT:-6379}"
+    export REDIS_HOST
+    export REDIS_PORT
     MAIL_HOST=$(param /masiton/mail/host); export MAIL_HOST
     MAIL_PORT=$(param /masiton/mail/port); export MAIL_PORT
     export MAIL_HEALTH_ENABLED=true
     export DEPENDENCY_HEALTH_COMPONENTS=db,redis,mail
-    export ADMIN_PUBLIC_BASE_URL=https://masiton.click
-    export MEMBER_PUBLIC_BASE_URL=https://masiton.click
+    export AUTH_ALLOWED_ORIGINS=https://masiton.click
     export VERIFICATION_PUBLIC_BASE_URL=https://masiton.click
     export VERIFICATION_TRUSTED_PROXY_ADDRESSES=127.0.0.1
     export VERIFICATION_REVERSE_PROXY_ENABLED=true
     export MEMBER_TRUSTED_PROXY_ADDRESSES=127.0.0.1
     export MEMBER_REVERSE_PROXY_ENABLED=true
-    export ADMIN_LOGIN_TRUSTED_PROXY_ADDRESSES=127.0.0.1
-    export ADMIN_LOGIN_REVERSE_PROXY_ENABLED=true
+    export AUTH_LOGIN_TRUSTED_PROXY_ADDRESSES=127.0.0.1
+    export AUTH_LOGIN_REVERSE_PROXY_ENABLED=true
     export RESTAURANT_MAP_TRUSTED_PROXY_ADDRESSES=127.0.0.1
     export RESTAURANT_MAP_REVERSE_PROXY_ENABLED=true
     # 운영 프로파일은 이 값에 기본값을 두지 않는다. PubSubHubbub 허브가 구독을 검증할 때
@@ -91,14 +108,15 @@ case "$component" in
       --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 \
       --volume "$SECRETS_DIR":"$SECRETS_DIR":ro \
       -e SPRING_PROFILES_ACTIVE \
+      -e SPRING_FLYWAY_TARGET \
       -e DB_URL -e DB_USERNAME \
       -e KAKAO_MOBILITY_ENABLED -e KAKAO_MOBILITY_FREE_TIER_VERIFIED \
       -e REDIS_HOST -e REDIS_PORT \
       -e MAIL_HOST -e MAIL_PORT -e MAIL_HEALTH_ENABLED -e DEPENDENCY_HEALTH_COMPONENTS \
-      -e ADMIN_PUBLIC_BASE_URL -e MEMBER_PUBLIC_BASE_URL -e VERIFICATION_PUBLIC_BASE_URL \
+      -e AUTH_ALLOWED_ORIGINS -e VERIFICATION_PUBLIC_BASE_URL \
       -e VERIFICATION_TRUSTED_PROXY_ADDRESSES -e VERIFICATION_REVERSE_PROXY_ENABLED \
       -e MEMBER_TRUSTED_PROXY_ADDRESSES -e MEMBER_REVERSE_PROXY_ENABLED \
-      -e ADMIN_LOGIN_TRUSTED_PROXY_ADDRESSES -e ADMIN_LOGIN_REVERSE_PROXY_ENABLED \
+      -e AUTH_LOGIN_TRUSTED_PROXY_ADDRESSES -e AUTH_LOGIN_REVERSE_PROXY_ENABLED \
       -e RESTAURANT_MAP_TRUSTED_PROXY_ADDRESSES -e RESTAURANT_MAP_REVERSE_PROXY_ENABLED \
       -e AI_WORKER_ENABLED -e AI_WORKER_PROVIDER_QUOTA_LIMIT \
       -e AI_WORKER_APPLICATION_QUOTA_LIMIT -e AI_WORKER_QUOTA_WINDOW \

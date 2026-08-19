@@ -70,8 +70,8 @@ related_documents:
 | `/api/auth/email-verifications/resend` | `POST` | 이메일 검증 재전송 |
 | `/api/auth/password-resets/requests` | `POST` | 비밀번호 재설정 요청 |
 | `/api/auth/password-resets/confirmations` | `POST` | 비밀번호 재설정 확정 |
-| `/api/auth/tokens` | `POST` | 회원 로그인 |
-| `/api/auth/tokens/refresh` | `POST` | 회원 Token 재발급 |
+| `/api/auth/tokens` | `POST` | 회원·관리자 통합 로그인 |
+| `/api/auth/tokens/refresh` | `POST` | 회원·관리자 통합 Token 재발급 |
 | `/api/restaurants` | `GET` | 맛집 목록 조회 |
 | `/api/curations` | `GET` | 큐레이션 목록 조회 |
 | `/api/creators` | `GET` | 유튜버 목록 조회 |
@@ -90,9 +90,9 @@ related_documents:
 
 `{id}`는 비어 있지 않은 **불투명 단일 경로 세그먼트**다. UUID 형식이나 생성 규칙을 가정하지 않는다. 정규식은 시작과 끝을 고정하며, 하위 경로나 비슷한 prefix까지 제외 범위를 넓히지 않는다. `/_next/static/`을 뺀 정적 경로는 exact-match로 두고, 동적 경로는 위 anchored 정규식만 사용한다.
 
-Spring Security에서 JWT 없이 요청할 수 있는 `/api/admin/auth/tokens`와 `/api/admin/auth/tokens/refresh`는 이 목록의 예외다. 두 관리자 경로는 Nginx 검증 session gate를 계속 요구한다. gate를 통과한 뒤에는 각각 관리자 자격 증명과 관리자 Refresh Token 계약을 적용하며, Spring JWT 자체를 요구하지 않는다. 그 밖의 정의되지 않은 `/api/**`도 gate를 유지한다.
+통합 로그인과 재발급 경로는 회원뿐 아니라 관리자 자격 증명과 Refresh Token도 처리한다. 두 경로를 제한 공개 gate에서 제외하는 것은 의도된 계약이며, Backend의 자격 증명 검증·Origin 방어·요청 제한을 우회하지 않는다. 그 밖의 정의되지 않은 `/api/**`는 gate를 유지한다.
 
-비관리자 공개 API를 gate에서 제외하는 것은 Spring 인증·인가를 우회한다는 뜻이 아니다. Nginx는 이 경로의 `Authorization`과 `Cookie`를 보존해 Backend가 각 API 계약을 적용하게 한다. 특히 맛집 상세는 선택적 회원 Bearer 문맥을 사용할 수 있고 `/api/auth/tokens/refresh`는 회원 Refresh 쿠키를 처리해야 한다.
+비관리자 공개 API를 gate에서 제외하는 것은 Spring 인증·인가를 우회한다는 뜻이 아니다. Nginx는 이 경로의 `Authorization`과 `Cookie`를 보존해 Backend가 각 API 계약을 적용하게 한다. 특히 맛집 상세는 선택적 회원 Bearer 문맥을 사용할 수 있고 `/api/auth/tokens/refresh`는 통합 Refresh 쿠키를 처리해야 한다.
 
 기존 운영 예외의 자격 증명 제거는 유지한다. `/api/verification/sessions`에서는 회원·관리자 Bearer가 검증 세션 경계로 넘어가지 않도록 `Authorization`을 비우되, `DELETE`가 검증 세션 쿠키를 Backend에서 직접 폐기할 수 있게 `Cookie`를 전달한다. 외부 시스템이 호출하는 `/api/webhooks/youtube/channel-updates`는 `Authorization`과 `Cookie`를 모두 비운다.
 

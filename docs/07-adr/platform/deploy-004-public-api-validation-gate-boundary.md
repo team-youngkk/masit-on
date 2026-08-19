@@ -17,7 +17,7 @@ related_documents:
   - ../../06-architecture/security-boundary.md
   - ../../08-planning/expansion-1-task-breakdown.md
   - deploy-003-validation-cookie-session.md
-  - web-003-routing-boundary.md
+  - web-006-unified-login-rbac-route.md
 supersedes:
   - ADR-DEPLOY-003
 supersedes_decision: 검증 로그인·세션 진입점과 자체 인증 Callback을 제외한 전체 화면·API의 검증 세션 gate 적용
@@ -136,5 +136,5 @@ Nginx는 공개 API별 exact 또는 anchored regex location에서 허용 Method�
 
 - [검증 참여자 제한 공개 API 계약](../../05-specs/api/common/validation-access-contract.md)
 - [보안 경계](../../06-architecture/security-boundary.md)
-- [웹 화면·API·운영 경로 경계](web-003-routing-boundary.md)
+- [통합 로그인과 역할 기반 관리자 화면 진입](web-006-unified-login-rbac-route.md)
 - [대체한 ADR-DEPLOY-003](deploy-003-validation-cookie-session.md)

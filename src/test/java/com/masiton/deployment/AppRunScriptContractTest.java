@@ -232,10 +232,6 @@ class AppRunScriptContractTest {
         expectedPermits.add("POST " + CALLBACK_PATH);
         expectedPermits.add("POST /api/verification/sessions");
         expectedPermits.add("DELETE /api/verification/sessions");
-        // 관리자 로그인은 Spring Security에서는 무인증이지만 제한 공개 Nginx gate는 유지한다.
-        expectedPermits.add("POST /api/admin/auth/tokens");
-        expectedPermits.add("POST /api/admin/auth/tokens/refresh");
-
         assertThat(actualPermits)
                 .as("SecurityConfiguration의 메서드별 permitAll 목록이 공개 경계 계약과 같아야 한다")
                 .containsExactlyElementsOf(expectedPermits);
@@ -331,7 +327,6 @@ class AppRunScriptContractTest {
                 .contains("proxy_set_header Authorization \"\";")
                 .doesNotContain(GATE_DIRECTIVE);
 
-        assertThat(resolveLocation(locations, "/api/admin/auth/tokens").body()).contains(GATE_DIRECTIVE);
         assertThat(resolveLocation(locations, "/api/admin/anything").body()).contains(GATE_DIRECTIVE);
         assertThat(resolveLocation(locations, "/api/not-defined").body()).contains(GATE_DIRECTIVE);
 
@@ -413,7 +408,7 @@ class AppRunScriptContractTest {
                 .contains("[[ \"$status\" =~ ^(000|3[0-9][0-9]|502|503|504)$ ]]")
                 .contains("[ \"$status\" = \"401\" ] || is_api_routing_failure \"$status\"")
                 .contains("|| is_api_routing_failure \"$status\"; then")
-                .contains("assert_validation_gate POST /api/admin/auth/tokens '{}'")
+                .contains("assert_validation_gate POST /api/auth/tokens '{}'")
                 .contains("assert_validation_gate GET /api/nginx-smoke-unknown")
                 .contains("assert_validation_gate PATCH /api/restaurants")
                 .contains("assert_validation_gate GET /api/verification/sessions")

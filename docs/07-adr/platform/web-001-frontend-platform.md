@@ -14,11 +14,12 @@ related_documents:
   - ../../03-team/ownership.md
   - ../../04-product/prd/00-product-overview.md
   - ../../05-specs/api/README.md
-  - web-003-routing-boundary.md
+  - web-006-unified-login-rbac-route.md
+  - web-006-unified-login-rbac-route.md
   - web-004-supported-browser-matrix.md
   - ../../06-architecture/technology-policy.md
   - web-002-data-state.md
-  - ../security/auth-001-spring-security-jwt.md
+  - ../security/auth-007-unified-account-rbac-session.md
   - ci-001-github-actions-quality-gate.md
   - ../../03-team/roles.md
   - ../../02-analysis/mvp-workstreams.md
@@ -43,7 +44,7 @@ Accepted
 
 MVP는 웹·모바일 브라우저의 탐색과 관리자 등록 화면을 재현 가능한 빌드로 제공해야 한다.
 
-공개 화면(목록·검색·필터·상세)은 로그인 없이 서울 지역 맛집을 탐색하는 흐름이며([scope.md](../../00-overview/scope.md)), URL로 검색 조건을 공유할 수 있어야 한다([ADR-WEB-002](web-002-data-state.md)). 관리자 화면(맛집·유튜버·영상·방문 관계 등록)은 JWT 인증 뒤에 있는 폼 중심 상호작용이다([ADR-AUTH-001](../security/auth-001-spring-security-jwt.md)). 하나의 프론트엔드 코드베이스가 이 두 성격의 화면을 모두 감당해야 하므로, 런타임·프레임워크·언어를 먼저 고정해야 [ADR-WEB-002](web-002-data-state.md)와 [ADR-CI-001](ci-001-github-actions-quality-gate.md)이 그 위에서 결정을 내릴 수 있다.
+공개 화면(목록·검색·필터·상세)은 로그인 없이 서울 지역 맛집을 탐색하는 흐름이며([scope.md](../../00-overview/scope.md)), URL로 검색 조건을 공유할 수 있어야 한다([ADR-WEB-002](web-002-data-state.md)). 관리자 화면(맛집·유튜버·영상·방문 관계 등록)은 통합 JWT와 `ADMIN` 역할 확인 뒤에 있는 폼 중심 상호작용이다([ADR-AUTH-007](../security/auth-007-unified-account-rbac-session.md)). 하나의 프론트엔드 코드베이스가 이 두 성격의 화면을 모두 감당해야 하므로, 런타임·프레임워크·언어를 먼저 고정해야 [ADR-WEB-002](web-002-data-state.md)와 [ADR-CI-001](ci-001-github-actions-quality-gate.md)이 그 위에서 결정을 내릴 수 있다.
 
 프론트엔드 기술 의사결정은 [roles.md](../../03-team/roles.md) 6장에 따라 양성훈·김인안이 공동 담당하지만, 두 사람 모두 각자 High 복잡도 백엔드 Workstream([WS-01](../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색), [WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록))의 최종 책임자이기도 하다. [roles.md](../../03-team/roles.md)는 "개인별 기술 역량과 선호도는 확인되지 않았다"고 명시하므로, 이 문서의 근거는 특정 팀원이 특정 기술에 이미 익숙하다는 가정에 의존하지 않는다. 대신 [scope.md](../../00-overview/scope.md) 6장의 범위 경계 규칙 6번 — "4명의 백엔드 개발자가 MVP 기간 내 서로 독립적으로 개발 가능한 크기와 의존성을 가지는가" — 을 프론트엔드 스택 선택의 실질적 제약으로 사용한다. 초기 월 인프라 예산은 15만 원([adr-traceability.md](../adr-traceability.md))으로, 별도 유료 플랫폼·서비스를 도입할 여지는 크지 않다.
 
@@ -82,7 +83,7 @@ Node.js 24.18.0, Next.js 16.2.11, TypeScript 7.0.2를 정확히 고정한다.
 
 ## 10. 강제 규칙
 
-런타임·패키지 버전과 `package-lock.json` 등 잠금 파일을 저장소에 고정하고, Server Components와 Client Components(`"use client"`) 경계를 파일 단위로 명시한다. 관리자 화면은 공개 화면과 같은 코드베이스를 쓰되, [ADR-WEB-003](web-003-routing-boundary.md)의 `/admin/login`, 기능별 `/admin/**` 경로와 인증 복구 흐름으로 구분한다.
+런타임·패키지 버전과 `package-lock.json` 등 잠금 파일을 저장소에 고정하고, Server Components와 Client Components(`"use client"`) 경계를 파일 단위로 명시한다. 관리자 화면은 공개 화면과 같은 코드베이스를 쓰되, [ADR-WEB-006](web-006-unified-login-rbac-route.md)의 통합 `/login`, 역할 기반 `/admin/**` 진입과 인증 복구 흐름으로 구분한다.
 
 ### 10.1 승인된 예외 — Next 내장 TypeScript 검사 비활성화
 

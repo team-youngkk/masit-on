@@ -61,7 +61,7 @@ class ConfigurationLayeringTest {
         // then
         assertThat(common.getProperty("masiton.security.secure")).isEqualTo(true);
         assertThat(common.getProperty("masiton.security.same-site")).isEqualTo("Strict");
-        assertThat(common.getProperty("masiton.security.path")).isEqualTo("/api/admin/auth");
+        assertThat(common.getProperty("masiton.security.path")).isEqualTo("/api/auth/tokens");
     }
 
     @Test
@@ -80,7 +80,7 @@ class ConfigurationLayeringTest {
             // RV-NFR-007: Refresh 쿠키는 어떤 환경에서도 Secure·SameSite=Strict·관리자 경로 한정이다.
             assertInvariantNotViolated(profileFile, profile, "masiton.security.secure", true);
             assertInvariantNotViolated(profileFile, profile, "masiton.security.same-site", "Strict");
-            assertInvariantNotViolated(profileFile, profile, "masiton.security.path", "/api/admin/auth");
+            assertInvariantNotViolated(profileFile, profile, "masiton.security.path", "/api/auth/tokens");
         }
     }
 

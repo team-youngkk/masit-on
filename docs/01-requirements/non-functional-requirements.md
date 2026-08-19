@@ -109,12 +109,13 @@ related_documents:
 ### NFR-SECURITY-001 공개 조회와 관리자 접근 통제
 
 - 요구사항:
-  - 일반 조회는 로그인 없이 사용할 수 있어야 하며 모든 관리자 등록 요청은 인증과 관리자 권한 검증을 모두 통과해야 한다.
+  - 일반 조회는 로그인 없이 사용할 수 있어야 하며 모든 관리자 등록 요청은 통합 계정 인증과 현재 `ADMIN` 역할 검증을 모두 통과해야 한다.
 - 적용 대상:
   - 일반 사용자 조회 API와 관리자 등록 기능
 - 목표 기준:
   - 인증되지 않은 일반 조회 요청은 허용
   - 인증 정보가 없거나 유효하지 않은 요청과 인증됐으나 권한이 없는 요청을 구분해 관리자 기능 접근을 100% 거부
+  - 메인 페이지 링크·프론트 Route Guard 우회 요청도 서버 RBAC에서 100% 거부
 - 검증 방법:
   - 인증 없음·실패·권한 실패·정상 관리자 시나리오의 자동화 보안 테스트
 - 중요도:
@@ -290,7 +291,7 @@ related_documents:
 - 중요도:
   - High
 - 결정 상태:
-  - 확정 ([ADR-WEB-003](../07-adr/platform/web-003-routing-boundary.md))
+  - 확정 ([ADR-WEB-006](../07-adr/platform/web-006-unified-login-rbac-route.md))
 
 ### NFR-AVAILABILITY-002 초기 운영 배포 가용성과 수동 복구
 
@@ -300,7 +301,7 @@ related_documents:
   - M2 초기 운영 배포부터 배포 고도화 전까지 사용하는 운영 인프라와 장애 복구 절차
 - 목표 기준:
   - 문서화된 복구 절차를 이용한 복구 훈련 성공
-  - 단일 EC2 인스턴스와 수동 복구를 유지하며, ALB·ASG·Blue-Green은 3차 확장 이후 배포 고도화 단계에서 도입을 검토 ([RV-NFR-005](non-functional-requirements.md#rv-nfr-005-목표-가용성과-복구-시간), [ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md) 3.1절 참조)
+  - M2에서는 단일 EC2 인스턴스와 수동 복구를 유지한다. 배포 고도화 단계는 영향·비용 검토 후 Accepted 된 [ADR-DEPLOY-005](../07-adr/platform/deploy-005-asg-blue-green-rollout.md)의 ALB·ASG·CodeDeploy replacement와 사설 subnet 전용 Redis 기준을 따르며, 실제 전환 전 리허설을 수행한다.
 - 검증 방법:
   - M2 제한 공개 전 수동 복구 리허설과 핵심 조회 점검
 - 중요도:
@@ -562,7 +563,7 @@ related_documents:
 ### NFR-DEPLOYMENT-004 단계별 실행 및 초기 운영 배포 복잡도 제한
 
 - 요구사항:
-  - MVP와 각 확장 단계는 로컬 Docker 실행 절차와 책임을 문서화한다. 초기 운영 배포는 수동 승인 배포를 허용하되 복잡한 무중단 배포를 필수 요구사항으로 두지 않는다. 무중단 배포는 배포 고도화 단계에서 검토할 과제다.
+  - MVP와 각 확장 단계는 로컬 Docker 실행 절차와 책임을 문서화한다. M2 초기 운영 배포는 수동 승인 배포를 허용하고 복잡한 무중단 배포를 필수로 요구하지 않는다. 배포 고도화 단계의 무중단 배포 기준은 Accepted [ADR-DEPLOY-005](../07-adr/platform/deploy-005-asg-blue-green-rollout.md)를 따르며 실제 적용은 운영 승인·리허설을 거친다.
   - 제한 공개는 검증 참여자 전용 7일 쿠키 세션으로 한 번만 확인하고 회원·관리자 Bearer 인증과 충돌하지 않아야 하며, 정식 공개 시 전용 로그인·세션·쿠키·비밀정보를 제거할 수 있어야 한다.
 - 적용 대상:
   - 로컬 통합 실행과 M2 초기 운영 배포부터의 운영 배포 절차
@@ -701,7 +702,7 @@ related_documents:
 ### NFR-SECURITY-004 회원 자격 증명과 Token 보호
 
 - 요구사항:
-  - 회원 비밀번호·Action Token·Refresh Token 원문을 저장·로그·응답에 남기지 않고, 로그인 실패 제한·세션 회전·`sid` 폐기를 강제한다.
+  - 통합 계정 비밀번호·Action Token·Refresh Token 원문을 저장·로그·응답에 남기지 않고, 모든 형식의 자격 증명 시도에 선행 요청 제한·세션 회전·`sid` 폐기를 강제한다.
   - 8자 이메일 인증 코드는 32자 문자 집합의 CSPRNG 출력으로 최소 40-bit 탐색 공간을 확보하고, 원문 대신 SHA-256 해시만 검증 저장소에 보관한다.
 - 적용 대상:
   - 일반 회원 가입·로그인·재발급·로그아웃·비밀번호 재설정·탈퇴
@@ -717,7 +718,7 @@ related_documents:
 ### NFR-SECURITY-005 회원 인증 남용과 계정 열거 방지
 
 - 요구사항:
-  - 계정 상태·존재와 메일 발송 결과가 외부 응답·처리 시간으로 식별되지 않게 하며 가입·이메일 인증 코드 제출·재설정·로그인 요청 제한을 적용한다.
+  - 계정 상태·존재·역할과 메일 발송 결과가 외부 응답·처리 시간으로 식별되지 않게 하며 가입·이메일 인증 코드 제출·재설정·로그인 요청 제한을 적용한다. 형식이 잘못된 로그인도 요청 출처 제한을 계정 검증 전에 적용한다.
   - 공개 맛집 상세는 선택적 회원 인증 또는 개인화 저장소 장애에도 기본 `200` 응답을 유지하고 최근 기록만 생략한다.
 - 적용 대상:
   - 회원 가입·인증·비밀번호 재설정·로그인과 공개 맛집 상세
@@ -1247,7 +1248,7 @@ related_documents:
   - 초기 운영 배포는 단일 EC2 인스턴스(Nginx 리버스 프록시 + Next.js 프론트엔드 + Spring Boot 백엔드)를 사용하며 다중 리전·고가용성 구성을 도입하지 않는다.
   - Nginx는 `/api/**`만 Spring Boot로 전달하고 나머지 외부 경로는 Next.js로 전달하며 `/internal/**`은 인터넷에서 차단한다.
   - 장애 발생 시 운영자가 인스턴스를 수동으로 재기동·교체하고 핵심 조회를 확인하는 절차를 사용한다. ASG 기반 자동 복구는 도입하지 않는다.
-  - ALB·Blue-Green 무중단 배포는 3차 확장 이후 배포 고도화 단계에서 도입을 검토한다. 그때까지 단일 인스턴스와 수동 복구를 유지한다. 2026-07-28 팀 4인 전원이 3차 확장 이후를 착수 시점으로 합의했으나 비용·일정 영향 검토는 수행하지 않았으므로, 실제 착수는 그 검토를 통과한 뒤에 시작한다([ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md) 3.1절). 토폴로지·전환 절차·비용은 착수 시점의 별도 ADR에서 확정한다.
+  - M2 초기 운영은 단일 인스턴스와 수동 복구를 유지한다. 2026-08-18 비용·일정 영향 검토와 owner 결정을 완료해 ALB·ASG·CodeDeploy replacement와 전용 Redis를 [ADR-DEPLOY-005](../07-adr/platform/deploy-005-asg-blue-green-rollout.md)로 Accepted 확정했으며, 실제 운영 전환은 비용·migration 호환성·rollback·취소 cleanup 리허설을 통과한 뒤 시작한다.
 - 영향:
   - 인프라 비용, 복구 절차와 운영 대응
 - 결정 시점:
@@ -1269,12 +1270,12 @@ related_documents:
 
 - 현재 상태: 결정 완료
 - 결정 내용:
-  - 사전 발급 계정과 동일 등록 권한을 사용하며 계정 관리 화면은 MVP에서 제외한다.
-  - Spring Security 7.1.0과 JWT Access Token으로 관리자 인증·인가를 수행한다.
-  - Refresh Token은 Redis 8.8에 저장하고 `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/api/admin/auth` 쿠키로만 전달하며 재발급 때 회전한다.
+  - `member_account` 단일 계정에 `MEMBER|ADMIN` 역할을 두고 로그인 화면과 Token API를 통합한다. 역할 관리 공개 화면·API는 제외한다.
+  - Spring Security 7.1.0과 통합 JWT Access Token으로 인증하고 현재 `ADMIN` 역할로 관리자 API를 인가한다.
+  - Refresh Token은 Redis 8.8 `auth:session:` namespace에 저장하고 `__Secure-masiton-refresh`, `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/api/auth/tokens` 쿠키로 전달하며 재발급 때 회전한다.
   - Access Token은 `Authorization: Bearer` 헤더로 전달하고 브라우저 영구 저장소에 보관하지 않는다.
-  - 계정당 활성 Refresh Token 하나만 허용한다. Access Token 만료는 30분, Refresh Token TTL은 14일이며 재발급마다 회전하고 재사용을 탐지해 폐기한다. Redis 장애 시에는 재발급을 차단하는 fail-closed로 처리해 Access Token 만료 후 재로그인을 요구한다.
-  - 계정 발급·회수·복구는 수동 운영한다.
+  - `MEMBER`는 최대 3개, `ADMIN`은 최대 1개의 활성 세션을 허용한다. Access Token 만료는 30분, Refresh Token TTL은 14일이며 재발급마다 회전하고 재사용을 탐지해 폐기한다. Redis 장애 시 재발급은 fail-closed다.
+  - `ADMIN` 역할 부여·회수·복구는 승인·감사 가능한 운영 절차로만 수행한다.
 - 영향:
   - 접근 통제, 운영 절차와 보안 테스트
 - 결정 시점:

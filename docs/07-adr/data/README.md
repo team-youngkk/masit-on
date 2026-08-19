@@ -25,7 +25,7 @@ related_documents:
 | [ADR-DATA-002](data-002-database-placement.md) | 개발 Docker와 운영 RDS 데이터베이스 분리 |
 | [ADR-DATA-003](data-003-spring-data-jpa.md) | Spring Data JPA 기본 데이터 접근 |
 | [ADR-DATA-004](data-004-flyway.md) | Flyway 스키마 마이그레이션 |
-| [ADR-DATA-005](data-005-redis-refresh-token.md) | Redis 8.8 관리자 Refresh Token 저장소 |
+| [ADR-DATA-005](data-005-redis-refresh-token.md) | Redis 8.8 관리자 Refresh Token 저장소(Superseded) |
 | [ADR-DATA-007](data-007-uuid-v4-identifiers.md) | 애플리케이션 생성 UUID v4 내부 식별자 |
 | [ADR-DATA-008](data-008-publication-lifecycle-soft-delete.md) | 공개 상태와 논리 삭제 생명주기 분리 |
 | [ADR-DATA-009](data-009-pre-release-migration-consolidation.md) | 운영 배포 전 마이그레이션 통합 범위 |

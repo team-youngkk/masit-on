@@ -18,7 +18,7 @@ related_documents:
   - ../../03-team/roles.md
   - ../../00-overview/scope.md
   - ../adr-traceability.md
-  - ../security/auth-001-spring-security-jwt.md
+  - ../security/auth-007-unified-account-rbac-session.md
   - ../../01-requirements/non-functional-requirements.md
 supersedes: []
 superseded_by: null
@@ -64,7 +64,7 @@ MVP는 하나의 배포 가능한 백엔드 모듈 안에서 도메인 중심 �
 
 ## 9. 적용 범위
 
-전체 백엔드 코드, 패키지 구조, [WS-01](../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)~[WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) Workstream 통합과 단일 EC2 배포 단위에 적용한다. 프론트엔드(Next.js)와 관리자 인증([ADR-AUTH-001](../security/auth-001-spring-security-jwt.md))처럼 별도 ADR로 이미 결정된 영역은 이 ADR의 세부 구조 결정 범위에서 제외한다.
+전체 백엔드 코드, 패키지 구조, [WS-01](../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)~[WS-04](../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) Workstream 통합과 단일 EC2 배포 단위에 적용한다. 프론트엔드(Next.js)와 통합 계정 인증([ADR-AUTH-007](../security/auth-007-unified-account-rbac-session.md))처럼 별도 ADR로 이미 결정된 영역은 이 ADR의 세부 구조 결정 범위에서 제외한다.
 
 ## 10. 강제 규칙
 

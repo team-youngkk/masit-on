@@ -13,7 +13,7 @@ related_requirements:
   - NFR-INTEGRITY-003
 related_documents:
   - ../../05-specs/api/account/member-authentication-api.md
-  - auth-002-member-jwt-refresh-token.md
+  - auth-007-unified-account-rbac-session.md
   - auth-003-confirmation-token.md
   - ../data/data-004-flyway.md
   - ../adr-backlog.md
@@ -113,7 +113,7 @@ Accepted
 ## 15. 관련 문서
 
 - [회원 계정·인증 API](../../05-specs/api/account/member-authentication-api.md)
-- [ADR-AUTH-002 회원 JWT와 Refresh Token](auth-002-member-jwt-refresh-token.md)
+- [ADR-AUTH-007 통합 계정 RBAC와 세션](auth-007-unified-account-rbac-session.md)
 - [ADR-AUTH-003 확인 Token](auth-003-confirmation-token.md)
 - [ADR-EXT-001 관리자 외부 기준정보 확인 서비스](../integration/ext-001-reference-verification.md)
 - [ADR Backlog](../adr-backlog.md)

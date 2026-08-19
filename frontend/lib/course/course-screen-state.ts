@@ -7,18 +7,29 @@
 
 export type CourseRestaurantRole = 'START' | 'WAYPOINT' | 'DESTINATION'
 
+export type CourseCoordinate = {
+  latitude: number
+  longitude: number
+}
+
 export type CourseRestaurant = {
   sequence: number
   restaurantId: string
   name: string
   role: CourseRestaurantRole
+  coordinate: CourseCoordinate
 }
+
+/* AVAILABLE(형상 제공됨) 또는 MISSING(형상만 누락, 거리·시간은 정상). 직선 대체는 하지 않는다(BR-COURSE-005). */
+export type CourseSegmentShapeStatus = 'AVAILABLE' | 'MISSING'
 
 export type CourseSegment = {
   fromRestaurantId: string
   toRestaurantId: string
   distanceMeters: number
   durationSeconds: number
+  shapeStatus: CourseSegmentShapeStatus
+  path: CourseCoordinate[]
 }
 
 export type CourseRouteResult = {

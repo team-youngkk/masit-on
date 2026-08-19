@@ -24,7 +24,7 @@ related_documents:
   - ../../06-architecture/security-boundary.md
   - ../data/data-001-postgresql.md
   - ../data/data-004-flyway.md
-  - auth-001-spring-security-jwt.md
+  - auth-007-unified-account-rbac-session.md
 supersedes: []
 superseded_by: null
 ---
@@ -151,5 +151,5 @@ Flyway로 단기 Token 테이블·고유 해시·후보 스키마 버전·상태
 - [관리자 기준정보 등록 API](../../05-specs/api/admin/reference-data-api.md)
 - [공통 오류 계약](../../05-specs/api/common/error-contract.md)
 - [트랜잭션 경계](../../06-architecture/transaction-boundaries.md)
-- [관리자 인증 ADR](auth-001-spring-security-jwt.md)
+- [통합 계정 인증 ADR](auth-007-unified-account-rbac-session.md)
 - [PostgreSQL ADR](../data/data-001-postgresql.md)

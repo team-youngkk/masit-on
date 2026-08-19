@@ -80,8 +80,8 @@ Testcontainers 기반 자동화 테스트는 매 실행 시 빈 데이터베이�
 관리자 계정은 공용 seed에 넣지 않는다. 환경별 비밀번호 해시를 Git에 커밋하지 않고 다음 절차를 사용한다.
 
 1. 배포 환경의 비밀 관리 경로에서 초기 login ID와 일회용 비밀번호를 제공한다.
-2. 별도 부트스트랩 명령이 PasswordEncoder로 해시해 `admin_account`를 한 번 생성한다.
-3. 동일 `login_id`가 있으면 덮어쓰지 않고 실패한다.
+2. 별도 부트스트랩 명령이 PasswordEncoder로 해시해 `member_account`에 `role='ADMIN'`인 활성 계정을 한 번 생성한다.
+3. 동일한 정규화 이메일이 있으면 덮어쓰지 않고 실패한다. 기존 회원 승격은 별도의 승인된 역할 변경 절차를 사용한다.
 4. 평문·해시·Token을 로그에 출력하지 않는다.
 
 운영 계정을 Flyway placeholder나 SQL 파일에 넣지 않는다.
@@ -111,6 +111,17 @@ Testcontainers 기반 자동화 테스트는 매 실행 시 빈 데이터베이�
 
 초기 스키마 baseline은 빈 DB 대상이므로 일반 transaction 안에서 수행한다. `CONCURRENTLY`가 필요한 후속 Flyway 파일은 해당 파일만 transaction 비활성화하고 한 파일에 다른 변경을 섞지 않는다.
 
+### 5.1. Blue-Green 하위 호환 계약
+
+Blue와 green이 같은 RDS를 함께 사용하는 동안에는 아래 expand-contract 규칙을 모든 운영 migration에 적용한다. 이 규칙은 [ADR-DEPLOY-005](../../07-adr/platform/deploy-005-asg-blue-green-rollout.md)의 Accepted 운영 계약을 데이터 변경 작성 규칙으로 구체화한다.
+
+1. **Expand 단계**에서는 기존 애플리케이션이 읽거나 쓰는 스키마를 깨지 않는 additive 변경만 적용한다. nullable 컬럼·테이블·인덱스 추가와 기존 값의 허용 범위 확장은 허용하지만, 컬럼·테이블 삭제, 구 컬럼 제거를 수반하는 rename, 호환되지 않는 제약 강화는 적용하지 않는다.
+2. Expand migration 적용 뒤에는 구·신 애플리케이션이 모두 동작할 수 있는 코드를 배포한다. 새 컬럼이나 상태값은 구버전이 무시해도 안전해야 하며, 필요한 backfill·이중 읽기·이중 쓰기의 완료 조건과 검증 방법을 migration PR에 기록한다.
+3. **Contract 단계**의 삭제·이름 변경·제약 강화는 구버전이 트래픽과 롤백 대상에서 제외된 것을 확인한 뒤 별도 배포와 별도 migration으로 수행한다. Contract migration을 Expand migration과 같은 배포에 섞지 않는다.
+4. Blue-Green 전환 실패 시 데이터 스키마를 자동으로 되돌리지 않는다. 애플리케이션만 되돌릴 때는 확장된 스키마와의 호환성을 확인하고, 호환되지 않는 경우에는 전진 수정 migration 또는 승인된 복구 절차를 사용한다.
+
+위 규칙을 만족하지 않는 migration은 배포 후보에서 제외하고 데이터 소유자 검토를 다시 받는다.
+
 ## 6. 롤백과 복구
 
 Flyway undo 파일과 하향 migration은 기본 경로로 사용하지 않는다. 배포 전에는 전진 수정 가능성을 검토하고, 적용 후 오류는 다음 순서로 대응한다.
@@ -118,6 +129,8 @@ Flyway undo 파일과 하향 migration은 기본 경로로 사용하지 않는�
 1. 데이터 손실이 없고 호환 가능하면 새 버전의 전진 수정 SQL을 작성한다.
 2. 애플리케이션만 문제면 이전 애플리케이션이 확장된 스키마와 호환되는지 확인 후 되돌린다.
 3. 데이터 훼손 또는 호환 불가능 DDL이면 배포를 중지하고 RDS 스냅샷 복구를 판단한다.
+
+통합 계정 전환은 계약 단계의 `admin_account` 제거 전까지 retained legacy 테이블과 이전 애플리케이션으로 롤백할 수 있다. 테이블 제거 후에는 하향 DDL로 되돌리지 않고 데이터베이스 복원 또는 새 전진 수정 마이그레이션만 사용한다.
 
 운영에 적용된 migration 파일 수정과 `flyway repair`로 잘못된 checksum을 덮는 행위는 금지한다. `repair`는 실제 파일 무결성과 복구 계획을 확인한 예외 운영 절차에서만 승인한다.
 
@@ -132,6 +145,7 @@ Flyway undo 파일과 하향 migration은 기본 경로로 사용하지 않는�
 - 중복 Restaurant/Creator/Video/Visit, 채널 불일치, 삭제 상태 쌍, Token 상태 쌍 위반 테스트
 - 기준 데이터 수·code·name·순서·`OTHER` 단일성 검증
 - 공개 목록·Creator 필터·상세 조회 실행계획 smoke test
+- 통합 계정 전환의 legacy/회원 행 수, 관리자 이메일 1:1 매핑, 비밀번호 해시 호환성, 전환 대상 FK, MEMBER·ADMIN 로그인과 역할별 세션 상한 검증
 
 ## 8. V2 1차 확장 스키마
 
@@ -181,6 +195,10 @@ V3 구간 아웃박스는 Action Token만 FK로 참조한다. 수신자는 `memb
 
 이 마이그레이션은 원본 영상·전체 자막·Provider 응답 전문을 저장하지 않으며 외부 API를 호출하지 않는다. 실제 3차 완료 판정은 [3차 확장 테스트 추적표](../../08-planning/third-expansion-test-matrix.md), 평가 결과, Worker·quota·브라우저 증거까지 연결해 수행한다.
 
+### 11.3 V5 채널 감시 오류 시각 보강
+
+[`V5__add_youtube_channel_watch_last_error_at.sql`](../../../src/main/resources/db/migration/V5__add_youtube_channel_watch_last_error_at.sql)은 기존 `youtube_channel_watch`를 수정하지 않고 `last_error_at` nullable 시간 열을 추가한다. 구독 처리 실패 시각을 저장하고 challenge 성공 시 오류 범주와 함께 초기화하며, 기존 행과 감시 상태는 백필하거나 외부 API를 호출하지 않는다. 빈 DB의 V1→V5 적용과 V3→V4 전진 적용 뒤 V5 적용은 Flyway 통합 테스트로 검증한다.
+
 ### 11.1 AI 누적 변경 통합 구성
 
 AI 영상 추출 스키마·재사용 조회 인덱스·수동 검수 감사·재시도 사유·태그 롤백 provenance는 `V4__create_third_expansion_ai_schema.sql`에 적용 순서대로 포함한다. 외부 YouTube 검증 전 멱등 조회 인덱스는 `youtube_video_id`와 입력 hash 또는 입력 모드·Provider/Model/Prompt/Schema 버전을 선두 조건으로 사용하며, 최신 작업 조회와 `expires_at` 만료 행 선택을 지원한다. 기존 작업·태그 행의 provenance는 nullable로 유지하고 새 자동 확정·수동 보정 연결부터 Snapshot ID를 기록한다.
@@ -193,6 +211,43 @@ AI 영상 추출 스키마·재사용 조회 인덱스·수동 검수 감사·�
 
 ## 12. 향후 변경 번호
 
-초기 스키마 baseline 다음 변경은 `V2`로 적용됐고, 1차 확장 변경은 2.3절 통합 이후 다시 `V2` 하나로 적용됐다. 2차 확장은 `V3`, 3차 확장 AI 영상 추출·누적 AI 변경·Gemini 모델 전환 제약은 통합 `V4`를 사용한다.
+초기 스키마 baseline 다음 변경은 `V2`로 적용됐고, 1차 확장 변경은 2.3절 통합 이후 다시 `V2` 하나로 적용됐다. 2차 확장은 `V3`, 3차 확장 AI 영상 추출·누적 AI 변경·Gemini 모델 전환 제약은 통합 `V4`, 채널 감시 오류 시각 보강은 `V5`를 사용한다.
 
 `V1`과 `V2`는 각각 적용된 시점부터 수정하지 않는다. 현행 `V3__add_expansion_2_schema.sql` 또는 `V4__create_third_expansion_ai_schema.sql`을 향후 통합하려면 2.1절과 ADR-DATA-009의 강제 규칙을 모두 증명해야 하며, 이미 운영에 적용된 파일은 통합·수정하지 않는다.
+
+## 13. 통합 계정 전환 마이그레이션
+
+통합 계정 전환의 확장·복사 단계는 데이터·인증 소유자 공동 승인 뒤 `V6`과 `V7`로 전진 적용한다. `V6`은 역할 열과 staging만 만들고, 공동 승인 입력을 운영 변경 기록에서 적재한 뒤 `V7`이 계정을 복사한다. 실제 이메일·비밀번호·입력 원본은 저장소나 Flyway SQL에 넣지 않는다.
+
+기존 관리자 데이터가 있는 환경은 `SPRING_FLYWAY_TARGET=6`으로 V6까지만 적용하고, 승인 입력을 staging에 적재·검증한 다음 target 없이 V7을 적용한다. V7은 mapping 누락이나 상태 충돌에서 전체 트랜잭션을 중단한다. 빈 DB는 V7까지 연속 적용할 수 있다.
+
+### 13.1 확장·복사 단계
+
+V6은 1~3번을 전진 적용하고, V7은 승인 입력 적재 뒤 4~10번을 전진 적용한다.
+
+1. `member_account.role varchar(16) NOT NULL DEFAULT 'MEMBER'`와 `MEMBER/ADMIN` CHECK를 추가한다.
+2. 확장 마이그레이션이 전환 전용 `admin_account_migration_map` staging 테이블을 만든다. 인증 소유자와 데이터 소유자가 공동 승인한 일회성 매핑 입력만 이 테이블에 적재하며, 저장소·마이그레이션 SQL에는 실제 이메일을 커밋하지 않는다. 입력은 legacy `admin_account.id`, 관리자에게 별도 확인한 이메일, 전환 구분(`MIGRATE_ACTIVE` 또는 `PRESERVE_INACTIVE`), 승인 변경 기록 ID로 구성하고 원본 파일은 접근 통제된 운영 변경 기록에 보관한다.
+3. 적재기는 회원가입과 같은 규칙으로 이메일을 trim·소문자 정규화한다. `admin_account_id` PK·FK와 `normalized_email` UK, 빈 값·형식 CHECK를 적용하고, 입력 파일 SHA-256·승인자·승인 시각·행 수를 변경 기록에 남긴다. 원본 이메일·비밀번호·Token은 로그나 검증 출력에 남기지 않는다.
+4. 복사 전에 legacy 관리자 전체가 정확히 한 행에 매핑됐는지, 알 수 없는 관리자 ID·중복 이메일·누락·정규화 충돌이 0건인지 한 트랜잭션에서 검증한다. `active=true`는 `MIGRATE_ACTIVE`, `active=false`는 공동 승인된 `PRESERVE_INACTIVE`만 허용한다. 상태와 전환 구분이 다르거나 비활성 보존 승인이 없으면 역할 부여와 FK 전환을 시작하지 않고 전체 마이그레이션을 중단한다.
+5. `MIGRATE_ACTIVE`에서 같은 정규화 이메일의 MemberAccount가 없으면 legacy 관리자 UUID를 재사용해 `ACTIVE/ADMIN` 행을 복사한다. 새 행의 `email_verified_at`은 공동 승인된 mapping의 적재 시각으로 기록한다. 기존 MemberAccount가 정확히 하나 있으면 현재 상태가 `ACTIVE`일 때만 그 UUID의 역할을 `ADMIN`으로 변경한다. 기존 상태가 `PENDING_VERIFICATION`, `DELETION_PENDING`, `DISABLED`이면 migration이 상태를 바꾸거나 역할을 부여하지 않고 fail-closed한다. 필요한 이메일 인증·탈퇴 완료·승인된 재활성화는 기존 계정 생명주기 절차에서 먼저 끝내고, 새 입력 checksum과 승인을 받은 뒤 migration을 다시 실행한다.
+6. `PRESERVE_INACTIVE`는 관리자 권한을 부여하지 않는다. 기존 MemberAccount가 있으면 상태와 역할을 모두 유지하고 역사적 관리자 행위자 FK만 그 UUID로 이전한다. 기존 MemberAccount가 없으면 legacy UUID와 해시를 사용한 `DISABLED/MEMBER` identity-only 행을 만들고 로그인·재발급을 허용하지 않는다. 이 행을 나중에 `ACTIVE` 또는 `ADMIN`으로 바꾸려면 migration과 분리된 역할·상태 변경 승인과 감사 기록이 필요하다.
+7. 비밀번호 해시는 현재 PasswordEncoder가 검증할 수 있는 형식만 그대로 이전한다. 호환되지 않는 해시는 임의 변환하지 않고 해당 행을 차단 목록에 남긴다.
+8. `confirmation_token`, Creator/AI 관리자 행위자, 감사·검수 등 `admin_account`를 참조하는 모든 FK를 목록화하고 staging의 최종 회원 UUID 매핑으로 호환 읽기/쓰기를 제공한다. 관찰 기간의 관리자 쓰기는 `member_account_id → admin_account_id` 활성 매핑을 fail-closed로 해석한다. 매핑되지 않은 FK는 허용하지 않는다.
+9. 애플리케이션은 통합 로그인과 `member_account.role` 기반 RBAC로 전환하되 legacy 테이블과 staging 테이블은 유지한다. 역할·상태·비밀번호 변경 시 `auth:session:`의 해당 계정 세션을 모두 폐기한다.
+10. 최소 한 호환 관찰 기간 동안 legacy/신규 행 수, 전환 구분별 결과, 매핑 누락·중복, FK 고아, 활성 ADMIN 로그인, `PRESERVE_INACTIVE`의 ADMIN 경로 거부, 신규 identity-only 행의 로그인·재발급 거부, 세션 상한(`MEMBER` 3, `ADMIN` 1)을 관측한다. cutover에서 legacy 관리자 Refresh 세션은 전부 무효화한다.
+
+공개 회원가입 API는 역할을 받지 않고 DB 기본값 `MEMBER`만 사용한다. `ADMIN` 발급·변경·회수는 승인된 운영 명령에 한정한다.
+
+### 13.2 계약 단계
+
+별도의 후속 마이그레이션은 다음 증거가 모두 승인된 뒤에만 실행한다.
+
+- `active=true` legacy 관리자 수, `MIGRATE_ACTIVE` 완료 수와 새 `status='ACTIVE' AND role='ADMIN'` 매핑 수가 일치한다. 모든 활성 전환 계정의 ADMIN 로그인과 권한 경로가 성공한다.
+- `active=false` legacy 관리자 수와 승인된 `PRESERVE_INACTIVE` 수가 일치한다. 기존 MemberAccount의 상태·역할 변경은 0건이고 새 identity-only 행은 모두 `DISABLED/MEMBER`이며 로그인·재발급이 거부된다.
+- 승인된 매핑 입력의 SHA-256·승인자·승인 시각·행 수가 변경 기록과 일치하고, `admin_account_migration_map`에 알 수 없는 관리자 ID·정규화 실패·중복·누락이 0건이다.
+- 모든 legacy 관리자가 staging의 서로 다른 한 행을 거쳐 정확히 하나의 MemberAccount에 매핑되고, 둘 이상의 관리자가 같은 회원으로 수렴한 건·호환 불가 비밀번호 해시가 0건이다. `MIGRATE_ACTIVE`가 비활성 MemberAccount로 끝난 건과 `PRESERVE_INACTIVE`가 migration으로 `ADMIN` 또는 `ACTIVE`를 얻은 건도 0건이다. 검증 증거는 원본 이메일 대신 관리자 ID·회원 ID·전환 구분과 집계 결과만 남긴다.
+- `admin_account`를 향한 FK가 0개이고 모든 관리자 행위자 참조가 유효한 `member_account.id`를 가리킨다.
+- 통합 MEMBER·ADMIN 로그인, ADMIN RBAC, 로그아웃·회전·전체 세션 폐기와 rollback rehearsal이 통과한다.
+- 적용 대상 버전이 운영·공유 환경에 이미 존재하지 않는다는 `flyway_schema_history` 읽기 증거와, 신규 마이그레이션 적용 테스트가 남아 있다.
+
+증명 후 legacy FK·제약, `admin_account`와 `admin_account_migration_map`을 같은 계약 단계에서 제거한다. 제거 이후 롤백은 DB 복원 또는 전진 수정만 허용한다. 이 변경은 기존 적용 파일의 수정·삭제나 릴리스 전 통합 예외로 처리하지 않는다.

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Field } from '@/components/ui/Field'
 import { cn } from '@/lib/cn'
 import { memberLogin, memberRegister, requestPasswordReset, confirmPasswordReset, resendMemberEmailVerification } from '@/lib/member/auth'
-import { memberVerifyEmailHref, safeMemberReturnTo } from '@/lib/member/auth-navigation'
+import { memberVerifyEmailHref, safeAdminReturnTo, safeMemberReturnTo } from '@/lib/member/auth-navigation'
 import {
   acceptMemberRegistration,
   type AcceptedMemberRegistration,
@@ -24,8 +24,9 @@ function getCurrentReturnTo(): string | null {
   return safeMemberReturnTo(returnTo)
 }
 
-function getSafeReturnTo(): string {
-  return getCurrentReturnTo() ?? '/me'
+function getSafeReturnTo(returnTo?: string | null): string {
+  const candidate = returnTo ?? getCurrentReturnTo()
+  return safeAdminReturnTo(candidate) ?? safeMemberReturnTo(candidate) ?? '/restaurants'
 }
 
 const CTA_LABELS: Record<MemberAuthMode, { idle: string; submitting: string }> = {
@@ -72,7 +73,7 @@ export function MemberAuthForm({ mode, returnTo }: { mode: MemberAuthMode; retur
 
     setSubmitting(true)
     try {
-      if (mode === 'login') { await memberLogin(normalizedEmail, password); router.replace(getSafeReturnTo()) }
+      if (mode === 'login') { await memberLogin(normalizedEmail, password); router.replace(getSafeReturnTo(returnTo)) }
       if (mode === 'signup') {
         const submittedEmail = normalizedEmail
         await memberRegister(submittedEmail, password)

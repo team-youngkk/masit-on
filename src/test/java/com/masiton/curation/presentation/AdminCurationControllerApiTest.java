@@ -28,6 +28,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.masiton.common.observability.TraceIdFilter;
+import com.masiton.common.security.LegacyAdminActorResolver;
+import com.masiton.common.web.BusinessException;
+import com.masiton.common.web.ErrorCode;
 import com.masiton.common.web.GlobalExceptionHandler;
 import com.masiton.curation.application.CurationException;
 import com.masiton.curation.application.port.in.AdminCurationUseCase;
@@ -39,13 +42,17 @@ import com.masiton.curation.domain.model.CurationStatus;
 class AdminCurationControllerApiTest {
 
     private final AdminCurationUseCase useCase = mock(AdminCurationUseCase.class);
-    private final MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new AdminCurationController(useCase))
+    private final LegacyAdminActorResolver legacyAdminActorResolver = mock(LegacyAdminActorResolver.class);
+    private final MockMvc mockMvc = MockMvcBuilders.standaloneSetup(
+            new AdminCurationController(useCase, legacyAdminActorResolver))
             .setControllerAdvice(new GlobalExceptionHandler()).build();
     private final UUID adminId = UUID.randomUUID();
+    private final UUID legacyAdminId = UUID.randomUUID();
 
     @BeforeEach
     void setUpTraceId() {
         MDC.put(TraceIdFilter.TRACE_ID_MDC_KEY, "server-trace");
+        given(legacyAdminActorResolver.resolve(adminId)).willReturn(legacyAdminId);
     }
 
     @AfterEach
@@ -126,8 +133,23 @@ class AdminCurationControllerApiTest {
         ArgumentCaptor<String> trace = ArgumentCaptor.forClass(String.class);
         verify(useCase).updateContent(org.mockito.ArgumentMatchers.eq(curationId), actor.capture(),
                 org.mockito.ArgumentMatchers.eq(" 새 제목 "), org.mockito.ArgumentMatchers.isNull(), trace.capture());
-        assertThat(actor.getValue()).isEqualTo(adminId);
+        assertThat(actor.getValue()).isEqualTo(legacyAdminId);
         assertThat(trace.getValue()).isEqualTo("server-trace");
+    }
+
+    @Test
+    @DisplayName("레거시 관리자 매핑이 없으면 쓰기 요청을 403으로 차단한다")
+    void 편집_레거시관리자매핑없음_403반환() throws Exception {
+        UUID curationId = UUID.randomUUID();
+        given(legacyAdminActorResolver.resolve(adminId)).willThrow(new BusinessException(ErrorCode.FORBIDDEN));
+
+        mockMvc.perform(patch("/api/admin/curations/{id}", curationId)
+                        .principal(new UsernamePasswordAuthenticationToken(adminId.toString(), "", List.of()))
+                        .requestAttr(TraceIdFilter.TRACE_ID_REQUEST_ATTRIBUTE, "server-trace")
+                        .contentType("application/json").content("{\"title\":\"새 제목\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.traceId").value("server-trace"));
     }
 
     @Test
@@ -184,9 +206,9 @@ class AdminCurationControllerApiTest {
                         .contentType("application/json").content("{\"curationIds\":[]}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.items").isArray());
 
-        verify(useCase).replaceRestaurants(curationId, adminId, List.of(restaurantId), "server-trace");
-        verify(useCase).setPublication(curationId, adminId, CurationStatus.PUBLISHED, "server-trace");
-        verify(useCase).replaceMainOrder(adminId, List.of(), "server-trace");
+        verify(useCase).replaceRestaurants(curationId, legacyAdminId, List.of(restaurantId), "server-trace");
+        verify(useCase).setPublication(curationId, legacyAdminId, CurationStatus.PUBLISHED, "server-trace");
+        verify(useCase).replaceMainOrder(legacyAdminId, List.of(), "server-trace");
     }
 
     private CurationDetail detail(UUID id) {

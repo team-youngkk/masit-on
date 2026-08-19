@@ -29,7 +29,7 @@ public class MemberSessionRevocationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String requestUri = request.getRequestURI();
-        return !(isMemberProtectedRequest(requestUri, request.getMethod()) || isOptionalRestaurantDetailRequest(request));
+        return !(isProtectedRequest(requestUri, request.getMethod()) || isOptionalRestaurantDetailRequest(request));
     }
 
     @Override
@@ -39,7 +39,7 @@ public class MemberSessionRevocationFilter extends OncePerRequestFilter {
             String sessionId = authentication.getToken().getClaimAsString("sid");
             MemberSessionAccessChecker.AccessDecision decision = sessionId == null
                     ? MemberSessionAccessChecker.AccessDecision.DENIED
-                    : sessionAccessChecker.check(authentication.getName(), sessionId);
+                    : sessionAccessChecker.check(authentication.getName(), sessionId, currentRole(authentication));
             if (decision != MemberSessionAccessChecker.AccessDecision.ALLOWED) {
                 SecurityContextHolder.clearContext();
                 if (isOptionalRestaurantDetailRequest(request)) {
@@ -57,9 +57,15 @@ public class MemberSessionRevocationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    private boolean isMemberProtectedRequest(String requestUri, String method) {
+    private boolean isProtectedRequest(String requestUri, String method) {
         return requestUri.equals("/api/me") || requestUri.startsWith("/api/me/")
+                || requestUri.startsWith("/api/admin/")
                 || (requestUri.equals("/api/auth/tokens") && HttpMethod.DELETE.matches(method));
+    }
+
+    private String currentRole(JwtAuthenticationToken authentication) {
+        java.util.List<String> roles = authentication.getToken().getClaimAsStringList("roles");
+        return roles != null && roles.size() == 1 ? roles.getFirst() : "__INVALID_ROLE__";
     }
 
     /**

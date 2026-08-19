@@ -47,9 +47,9 @@ spring:
     username: ${DB_USERNAME}
   data:
     redis:
-      # 앱 EC2에 동거하는 Redis에 loopback으로 붙는다(ADR-DATA-005 6절).
-      # ADR-RUNTIME-001 11절이 운영 설정의 Docker 서비스명을 금지하므로
-      # `redis` 같은 컨테이너 이름을 쓰지 않는다.
+      # 배포 고도화 운영에서는 앱 ASG와 분리된 사설 subnet 전용 Redis endpoint에 붙는다
+      # (ADR-DATA-005 6절, ADR-DEPLOY-005). ADR-RUNTIME-001 11절이 운영 설정의
+      # Docker 서비스명을 금지하므로 `redis` 같은 컨테이너 이름을 쓰지 않는다.
       host: ${REDIS_HOST}
       port: ${REDIS_PORT}
   mail:

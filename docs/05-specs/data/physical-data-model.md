@@ -27,7 +27,7 @@ related_documents:
 
 논리 ERD를 PostgreSQL 17.10과 Spring Data JPA로 구현할 수 있는 관계형 스키마로 구체화한다. PostgreSQL 영속 데이터, 제약, 인덱스와 Flyway 순서를 다루며 Redis 8.8의 Refresh Token 값 구조는 범위에서 제외한다.
 
-MVP PostgreSQL 테이블은 `region`, `food_category`, `admin_account`, `restaurant`, `creator`, `video`, `visit`, `confirmation_token` 8개다. `AdminRefreshToken`은 Redis 전용이고 PostgreSQL 테이블을 만들지 않는다.
+전환 완료 후 PostgreSQL의 계정 원천은 `member_account` 하나다. 기존 `admin_account`는 호환 관찰 기간에만 유지하고 계약 단계 마이그레이션에서 제거한다. Refresh Token 세션 상태는 Redis 전용이고 PostgreSQL 테이블을 만들지 않는다.
 
 ## 2. 확정 물리 컨벤션
 
@@ -80,6 +80,7 @@ UUID v4는 DB 확장 없이 생성할 수 있고 API의 불투명 문자열 계�
 | 생명주기 | `lifecycle_status` | `ACTIVE`, `DELETED` | `restaurant`, `creator`, `video`, `visit` |
 | 외부 가용성 | `external_availability_status` | `AVAILABLE`, `UNAVAILABLE` | `creator`, `video` |
 | 확인 Token | `status` | `ISSUED`, `CREATED`, `DUPLICATE` | `confirmation_token` |
+| 계정 역할 | `role` | `MEMBER`, `ADMIN` | `member_account` |
 
 핵심 데이터 생성값은 `PUBLIC`·`ACTIVE`, Creator와 Video의 외부 생성값은 `AVAILABLE`이다. 삭제는 `lifecycle_status='DELETED'`, `publication_status='PRIVATE'`, `deleted_at IS NOT NULL`을 같은 트랜잭션에서 설정한다. 복구는 반대로 `ACTIVE`, 검증된 공개 상태와 `deleted_at=NULL`을 함께 적용한다. MVP에는 이 전환 API가 없으나 운영 정정과 후속 API가 같은 규칙을 사용한다.
 
@@ -106,7 +107,9 @@ erDiagram
     RESTAURANT ||--o{ VISIT : has
     CREATOR ||--o{ VISIT : makes
     VIDEO ||--o{ VISIT : proves
-    ADMIN_ACCOUNT ||--o{ CONFIRMATION_TOKEN : issues
+    MEMBER_ACCOUNT ||--o{ CONFIRMATION_TOKEN : issues
+    MEMBER_ACCOUNT ||--o{ FAVORITE : owns
+    MEMBER_ACCOUNT ||--o{ RECENT_RESTAURANT_VIEW : owns
 ```
 
 - `restaurant.region_id`, `restaurant.food_category_id`는 필수 FK다.
@@ -115,6 +118,7 @@ erDiagram
 - `visit(video_id, creator_id)`는 `video(id, creator_id)`를 참조한다. 따라서 Visit.Creator와 Video.Creator가 DB에서도 같아야 한다.
 - Visit는 `(restaurant_id, creator_id, video_id)` 복합 유일이다.
 - Restaurant·Creator·Video·Visit 등 핵심 공개 데이터 FK는 `RESTRICT`다. 회원 소유 관계와 2차 확장 FK의 `CASCADE/SET NULL` 예외는 각 생명주기 계약에 명시하며 [2차 확장 데이터 계약](second-expansion-data-contract.md)을 따른다.
+- `confirmation_token`과 관리자 행위자·감사 FK는 전환 staging `admin_account_migration_map`의 확정 `member_account_id`를 통해 `member_account.id`를 참조한다. staging 입력은 인증·데이터 소유자가 공동 승인하고 legacy 관리자 ID PK, 정규화 이메일 UK, 최종 회원 ID UK와 `MIGRATE_ACTIVE/PRESERVE_INACTIVE` 구분을 강제한다. 활성 legacy는 `ACTIVE/ADMIN`으로만 전환하고, 비활성 legacy는 기존 회원 상태·역할을 유지하거나 신규 `DISABLED/MEMBER` identity-only 행으로만 FK를 보존한다. 상태 조합 위반·미매핑·중복·정규화 충돌·동일 회원 수렴이 하나라도 있으면 역할·상태 변경과 계약 단계 제거를 중단한다.
 
 ## 6. 트랜잭션 규칙
 
@@ -123,6 +127,7 @@ erDiagram
 - Visit 등록은 세 참조 조회, 공개·활성·외부 가용성 확인, 채널 일치 확인, 필요 시 Video.Creator 연결, Visit INSERT를 한 트랜잭션에서 수행한다.
 - `updated_at`만 바뀌는 무의미한 쓰기는 하지 않는다.
 - 애플리케이션 선조회는 오류 메시지를 위한 것이며 최종 중복 방지는 DB 유일 제약이 담당한다.
+- 공개 회원가입 INSERT는 `role`을 입력받지 않고 DB 기본값 `MEMBER`를 사용한다. `ADMIN` 역할 쓰기는 승인된 운영 경계에서만 허용한다.
 
 ## 7. JPA 매핑 경계
 

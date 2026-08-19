@@ -8,8 +8,24 @@
         "duration": 1380
       },
       "sections": [
-        { "distance": 4200, "duration": 780 },
-        { "distance": 3100, "duration": 600 }
+        {
+          "distance": 4200,
+          "duration": 780,
+          "roads": [
+            {
+              "vertexes": [126.9780, 37.5665, 126.9795, 37.5660, 126.9812, 37.5651]
+            }
+          ]
+        },
+        {
+          "distance": 3100,
+          "duration": 600,
+          "roads": [
+            {
+              "vertexes": [126.9812, 37.5651, 126.9830, 37.5625, 126.9850, 37.5601]
+            }
+          ]
+        }
       ]
     }
   ]

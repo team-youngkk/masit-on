@@ -22,6 +22,7 @@ import {
   type CourseCandidate,
 } from '@/lib/course/course-selection'
 import { requestCourseRoute } from '@/lib/course/course-route-api'
+import { toggleCourseMapSelection } from '@/lib/course/course-route-map-state'
 import {
   searchCourseCandidates,
   type CourseSearchItem,
@@ -37,6 +38,7 @@ import {
   type CourseRouteOutcome,
 } from '@/lib/course/course-screen-state'
 
+import { CourseRouteMap } from './CourseRouteMap'
 import styles from './course.module.css'
 
 /* 만료 여부를 반영하기 위해 이 주기로 현재 시각을 다시 읽는다. 실시간 카운트다운은 아니다. */
@@ -75,6 +77,8 @@ export function CourseScreen() {
   const [outcome, setOutcome] = useState<CourseRouteOutcome | null>(null)
   const [calculating, setCalculating] = useState(false)
   const [now, setNow] = useState(() => Date.now())
+  /* 지도 마커·텍스트 목록의 선택 강조를 함께 옮기는 화면 상태다. 서버에 저장하지 않는다. */
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<string | null>(null)
 
   const searchRequestId = useRef(0)
   const routeRequestId = useRef(0)
@@ -106,6 +110,19 @@ export function CourseScreen() {
     const timeout = window.setTimeout(() => setNow(Date.now()), delay)
     return () => window.clearTimeout(timeout)
   }, [outcome])
+
+  /*
+   * 결과가 만료되면 지도·목록의 선택 강조를 지워 만료된 경로가 여전히 조작 가능한 최신
+   * 결과처럼 보이지 않게 한다(FR-COURSE-004 상태표의 "조작 상태 해제").
+   */
+  useEffect(() => {
+    if (outcome?.kind !== 'success') {
+      return
+    }
+    if (isCourseRouteExpired(outcome.route.expiresAt, now)) {
+      setSelectedRestaurantId(null)
+    }
+  }, [outcome, now])
 
   useEffect(
     () => () => {
@@ -247,6 +264,7 @@ export function CourseScreen() {
     routeRequestId.current += 1
     setCalculating(false)
     setOutcome(null)
+    setSelectedRestaurantId(null)
     setSelected(next)
   }
 
@@ -271,6 +289,9 @@ export function CourseScreen() {
     routeAbortController.current = controller
     const requestId = ++routeRequestId.current
     setCalculating(true)
+    /* 새 요청을 시작하는 즉시 이전 결과의 지도 선택을 지워, 아직 응답이 없는 동안에도
+     * 이전 경로가 최신 결과처럼 조작 가능해 보이지 않게 한다. */
+    setSelectedRestaurantId(null)
     try {
       const result = await requestCourseRoute(toCourseRestaurantIds(selected), controller.signal)
       if (routeRequestId.current !== requestId) {
@@ -302,6 +323,11 @@ export function CourseScreen() {
     routeRequestId.current += 1
     setCalculating(false)
     setOutcome(null)
+    setSelectedRestaurantId(null)
+  }
+
+  function selectRestaurant(id: string) {
+    setSelectedRestaurantId((current) => toggleCourseMapSelection(current, id))
   }
 
   const sizeGuidance = courseSizeGuidance(selected)
@@ -521,6 +547,8 @@ export function CourseScreen() {
             <CourseResult
               route={outcome.route}
               expired={expired}
+              selectedRestaurantId={selectedRestaurantId}
+              onSelectRestaurant={selectRestaurant}
               onReselect={backToBuilder}
               onRefresh={() => void calculateCourse()}
               refreshing={calculating}
@@ -542,12 +570,16 @@ export function CourseScreen() {
 function CourseResult({
   route,
   expired,
+  selectedRestaurantId,
+  onSelectRestaurant,
   onReselect,
   onRefresh,
   refreshing,
 }: {
   route: Extract<CourseRouteOutcome, { kind: 'success' }>['route']
   expired: boolean
+  selectedRestaurantId: string | null
+  onSelectRestaurant: (id: string) => void
   onReselect: () => void
   onRefresh: () => void
   refreshing: boolean
@@ -568,22 +600,49 @@ function CourseResult({
         </p>
       ) : null}
 
+      {/*
+       * 지도는 항상 순서·거리·시간 목록의 보조 표시일 뿐이다. SDK 로딩 실패·키 누락에도
+       * 아래 목록은 그대로 완전한 대체 수단으로 남는다(FR-COURSE-004).
+       */}
+      <div className={styles.mapContainer}>
+        <CourseRouteMap
+          restaurants={route.restaurants}
+          segments={route.segments}
+          selectedRestaurantId={selectedRestaurantId}
+          onSelectRestaurant={onSelectRestaurant}
+          expired={expired}
+        />
+      </div>
+
       <ol className={styles.resultList}>
         {route.restaurants.map((restaurant, index) => {
           const segment = route.segments[index]
+          const selected = restaurant.restaurantId === selectedRestaurantId
           return (
             <li key={restaurant.restaurantId} className={styles.resultItem}>
-              <span className={styles.selectionOrder}>{restaurant.sequence}</span>
-              <div>
-                <p className={styles.selectionName}>{restaurant.name}</p>
-                {!expired && segment ? (
-                  <p className={styles.segmentInfo}>
-                    자동차 {formatCourseDistance(segment.distanceMeters)} ·{' '}
-                    {formatCourseDuration(segment.durationSeconds)} (외부 경로 계산 결과이며 도착을
-                    보장하지 않습니다)
-                  </p>
-                ) : null}
-              </div>
+              <button
+                type="button"
+                className={styles.resultItemButton}
+                aria-pressed={selected}
+                disabled={expired}
+                onClick={() => {
+                  if (!expired) {
+                    onSelectRestaurant(restaurant.restaurantId)
+                  }
+                }}
+              >
+                <span className={styles.selectionOrder}>{restaurant.sequence}</span>
+                <div>
+                  <p className={styles.selectionName}>{restaurant.name}</p>
+                  {!expired && segment ? (
+                    <p className={styles.segmentInfo}>
+                      자동차 {formatCourseDistance(segment.distanceMeters)} ·{' '}
+                      {formatCourseDuration(segment.durationSeconds)} (외부 경로 계산 결과이며
+                      도착을 보장하지 않습니다)
+                    </p>
+                  ) : null}
+                </div>
+              </button>
             </li>
           )
         })}

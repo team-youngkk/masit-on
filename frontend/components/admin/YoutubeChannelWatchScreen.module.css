@@ -1,0 +1,32 @@
+.screen, .creatorPanel, .statusPanel, .details, .detailGrid { display: grid; min-width: 0; gap: var(--space-4); }
+.watchList { display: grid; min-width: 0; gap: var(--space-4); }
+.pageActions, .pagination { display: flex; align-items: center; gap: var(--space-3); }
+.pageLabel, .pagination { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.pagination { justify-content: center; }
+.creatorPanel, .statusPanel { padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
+.creatorPanel h1 { margin: 0 0 var(--space-2); font-size: var(--font-size-xl); }
+.creatorPanel label { display: grid; gap: var(--space-2); font-size: var(--font-size-sm); font-weight: 700; }
+.creatorPanel select { min-height: var(--control-min-height); padding: 0 var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); font: inherit; }
+.statusHeader, .statusTitle, .statusActions, .detail { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.statusHeader { justify-content: space-between; align-items: flex-start; }
+.statusTitle h2, .statusPanel h3, .statusPanel p { margin: 0; }
+.statusTitle { align-items: baseline; }
+.statusTitle h2 { font-size: var(--font-size-lg); }
+.availability { margin: var(--space-1) 0 0; color: var(--color-text-muted); font-size: var(--font-size-xs); }
+.statusDescription, .hint, .meta { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.statusDescription { margin: 0; }
+.detailGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; }
+.detail { justify-content: space-between; padding-bottom: var(--space-3); border-bottom: 1px solid var(--color-border); }
+.detail:last-child { border-bottom: 0; padding-bottom: 0; }
+.detail dt { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.detail dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.errorNotice { margin: 0; padding: var(--space-3); border-left: 4px solid var(--color-danger); border-radius: var(--radius-md); background: var(--color-surface-muted); color: var(--color-danger); overflow-wrap: anywhere; }
+.notice { margin: 0; padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-surface-muted); overflow-wrap: anywhere; }
+.error { color: var(--color-danger); }
+.retryButton { width: fit-content; }
+@media (max-width: 640px) {
+  .creatorPanel, .statusPanel { padding: var(--space-4); }
+  .statusHeader { display: grid; }
+  .statusActions, .statusActions > * { width: 100%; }
+  .detailGrid { grid-template-columns: 1fr; }
+}

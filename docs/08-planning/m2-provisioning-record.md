@@ -365,7 +365,7 @@ Secret이 아니라 변수를 쓴다. [ADR-MAP-001 외부 서비스 경계](../0
 
 ## 7. M2-05 Redis (#44)
 
-생성 일시 2026-07-30. 배치는 [ADR-DATA-005](../07-adr/data/data-005-redis-refresh-token.md) 6절 개정(2026-07-30 김인안·이우람 합의)에 따라 앱 EC2 동거다.
+생성 일시 2026-07-30. M2 초기 운영 배치는 [ADR-DATA-005](../07-adr/data/data-005-redis-refresh-token.md) 6절 개정(2026-07-30 김인안·이우람 합의)에 따라 앱 EC2 동거다. 2026-08-18 owner 재합의로 배포 고도화 운영에서는 사설 subnet 전용 Redis로 분리하는 개정이 추가되었으며, 이 기록은 M2 기준선으로 보존한다.
 
 ### 7.1. 구성
 
@@ -494,7 +494,7 @@ ACM은 만료 45일 전에 자동 갱신하지만 **갱신본을 EC2로 다시 �
 | 서버 블록 | [`deploy/nginx/masiton.click.conf`](../../deploy/nginx/masiton.click.conf) |
 | TLS | `TLSv1.2`·`TLSv1.3`만. 세션 티켓 끔, HSTS 1년 |
 
-경로 소유권은 [ADR-WEB-003](../07-adr/platform/web-003-routing-boundary.md) 6.1절 그대로다.
+이 프로비저닝 시점의 경로 소유권은 [ADR-WEB-003](../07-adr/platform/web-003-routing-boundary.md) 6.1절을 따랐다. 현재 경로 계약은 이를 전체 대체한 [ADR-WEB-006](../07-adr/platform/web-006-unified-login-rbac-route.md)이 소유하며, 아래 표는 당시 적용 증거로 보존한다.
 
 | 경로 | 처리 |
 |---|---|

@@ -27,4 +27,5 @@ interface SpringDataCreatorRepository extends JpaRepository<CreatorJpaEntity, UU
                     + "ORDER BY channel_name COLLATE \"C\", id",
             nativeQuery = true)
     List<CreatorJpaEntity> findPublicSelectionList();
+
 }

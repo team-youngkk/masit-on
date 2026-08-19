@@ -17,6 +17,16 @@ public class YoutubeChannelWatchPersistenceService {
         this.watchStore = watchStore;
     }
 
+    @Transactional(readOnly = true)
+    public Optional<YoutubeChannelWatchStore.WatchDetail> findDetail(String channelId) {
+        return watchStore.findDetail(channelId);
+    }
+
+    @Transactional(readOnly = true)
+    public YoutubeChannelWatchStore.WatchCandidatePage findCandidatePage(int limit, long offset) {
+        return watchStore.findCandidatePage(limit, offset);
+    }
+
     @Transactional
     public ActivationPreparation prepareActivation(UUID creatorId, String channelId, byte[] tokenHash) {
         Optional<YoutubeChannelWatchStore.Watch> existing = watchStore.findForUpdate(channelId);

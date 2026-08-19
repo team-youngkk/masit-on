@@ -15,6 +15,7 @@ related_documents:
   - ../../02-analysis/second-expansion-domain-boundaries.md
   - ../../02-analysis/second-expansion-workstreams.md
   - migration-plan.md
+  - ../../07-adr/security/auth-007-unified-account-rbac-session.md
   - ../../07-adr/data/data-009-pre-release-migration-consolidation.md
   - ../../07-adr/data/data-011-popular-restaurant-request-time-aggregation.md
   - ../../07-adr/data/data-012-second-expansion-retention-cleanup.md
@@ -47,7 +48,7 @@ Popularity 테이블, 알림 Outbox·전달 작업, 추천 점수와 수신 설�
 - 내부 ID는 [ADR-DATA-007](../../07-adr/data/data-007-uuid-v4-identifiers.md)에 따른 애플리케이션 생성 `uuid`다.
 - 모든 시각은 `timestamp(6) with time zone`, 이름은 단수 `lower_snake_case`를 사용한다.
 - 일반 상태·소유 자원에는 논리 삭제 열을 일괄 추가하지 않는다. 요구사항에 정의된 보존과 물리 삭제·식별 제거를 각각 적용한다.
-- FK 대상 회원은 `member_account`, 관리자는 `admin_account`, 맛집은 `restaurant`, 찜은 기존 `favorite`다.
+- FK 대상 회원과 관리자는 모두 `member_account`, 맛집은 `restaurant`, 찜은 기존 `favorite`다. 관리자 행위자 FK는 명령 시점의 현재 `role=ADMIN`을 애플리케이션에서 확인한다. 적용된 V3의 `admin_account` FK는 [통합 계정 전환 마이그레이션](migration-plan.md#13-통합-계정-전환-마이그레이션)에서 동일 행위자의 MemberAccount ID로 전환하며 기존 V3 파일은 수정하지 않는다.
 - API의 다형 대상은 허용 유형과 실제 행 존재를 애플리케이션에서 검증한다. 하나의 `target_id`에 여러 테이블 FK를 걸지 않는다.
 
 ## 3. 컬렉션
@@ -107,8 +108,8 @@ Popularity 테이블, 알림 Outbox·전달 작업, 추천 점수와 수신 설�
 | `description` | `varchar(1000)` | NN | 기본 `''`, 최대 1000 | 설명 |
 | `publication_status` | `varchar(16)` | NN | `DRAFT/PUBLISHED` | 게시 상태 |
 | `main_position` | `smallint` | Yes | `PUBLISHED`일 때 1~5, `DRAFT`일 때 NULL | 메인 표시 순서 |
-| `created_by` | `uuid` | NN | FK → `admin_account.id` `ON DELETE RESTRICT` | 생성 관리자 |
-| `updated_by` | `uuid` | NN | FK → `admin_account.id` `ON DELETE RESTRICT` | 마지막 변경 관리자 |
+| `created_by` | `uuid` | NN | 최종 FK → `member_account.id` `ON DELETE RESTRICT`; V3 legacy FK는 전환 마이그레이션에서 교체 | 생성 당시 `ADMIN` 계정 |
+| `updated_by` | `uuid` | NN | 최종 FK → `member_account.id` `ON DELETE RESTRICT`; V3 legacy FK는 전환 마이그레이션에서 교체 | 마지막 변경 당시 `ADMIN` 계정 |
 | `created_at` | 시간 | NN | 기본 현재 시각 | 생성 시각 |
 | `updated_at` | 시간 | NN | 기본 현재 시각 | 변경 시각 |
 | `published_at` | 시간 | Yes | `PUBLISHED`이면 필수 | 마지막 게시 시각, 게시 중단 뒤에도 보존 |
@@ -184,7 +185,7 @@ Popularity 테이블, 알림 Outbox·전달 작업, 추천 점수와 수신 설�
 | `id` | `uuid` | NN | PK | 이력 ID |
 | `submission_id` | `uuid` | Yes | FK → `submission.id` `ON DELETE CASCADE` | 제보 이력 |
 | `report_id` | `uuid` | Yes | FK → `report.id` `ON DELETE CASCADE` | 신고 이력 |
-| `admin_account_id` | `uuid` | NN | FK → `admin_account.id` `ON DELETE RESTRICT` | 처리 관리자 |
+| `admin_account_id` | `uuid` | NN | 최종 FK → `member_account.id` `ON DELETE RESTRICT`; legacy 컬럼명은 호환 기간 유지 | 처리 당시 `ADMIN` 계정. V3 FK는 전환 마이그레이션에서 교체 |
 | `from_status` | `varchar(16)` | NN | 상태 CHECK | 이전 상태 |
 | `to_status` | `varchar(16)` | NN | 상태 CHECK | 새 상태 |
 | `member_reason` | `varchar(1000)` | Yes |  | 당시 공개 사유 Snapshot |

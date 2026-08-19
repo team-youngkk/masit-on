@@ -1,7 +1,7 @@
 ---
 id: ADR-AUTH-001
 title: 관리자 Spring Security JWT 인증·인가
-status: Accepted
+status: Superseded
 decision_date: 2026-07-24
 owners:
   - 김인안
@@ -22,13 +22,16 @@ related_documents:
   - ../../06-architecture/technology-policy.md
   - auth-006-cookie-origin-defense.md
 supersedes: []
+superseded_by: ADR-AUTH-007
 ---
 
 # ADR-AUTH-001 관리자 Spring Security JWT 인증·인가
 
 ## 1. 상태
 
-Accepted
+Superseded by [ADR-AUTH-007](auth-007-unified-account-rbac-session.md).
+
+관리자 JWT의 역사적 결정은 보존하지만 현재 구현 계약으로 사용하지 않는다.
 
 ## 2. 결정 요약
 

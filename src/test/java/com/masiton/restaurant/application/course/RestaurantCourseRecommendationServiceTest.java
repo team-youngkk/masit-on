@@ -16,14 +16,18 @@ import org.springframework.http.HttpStatus;
 
 import com.masiton.restaurant.application.port.in.RestaurantCourseCommand;
 import com.masiton.restaurant.application.port.in.RestaurantCourseResult;
+import com.masiton.restaurant.application.port.in.RestaurantCourseSegment;
 import com.masiton.restaurant.application.port.in.RestaurantCourseStop;
+import com.masiton.restaurant.application.port.in.RestaurantCourseVertex;
 import com.masiton.restaurant.application.port.out.CourseRouteFailureCategory;
 import com.masiton.restaurant.application.port.out.CourseRouteLeg;
 import com.masiton.restaurant.application.port.out.CourseRouteProviderException;
 import com.masiton.restaurant.application.port.out.CourseRouteProviderPort;
 import com.masiton.restaurant.application.port.out.CourseRouteRequest;
 import com.masiton.restaurant.application.port.out.CourseRouteResult;
+import com.masiton.restaurant.application.port.out.CourseRouteVertex;
 import com.masiton.restaurant.application.port.out.RestaurantRepositoryPort;
+import com.masiton.restaurant.domain.course.CourseRouteShapeStatus;
 import com.masiton.restaurant.domain.course.CourseStopRole;
 import com.masiton.restaurant.domain.model.LifecycleStatus;
 import com.masiton.restaurant.domain.model.PublicationStatus;
@@ -326,6 +330,62 @@ class RestaurantCourseRecommendationServiceTest {
 
         // then
         assertThat(result.generatedAt()).isEqualTo(expectedGeneratedAt);
+    }
+
+    // ---------------------------------------------------------------------
+    // 경로 형상과 방문지 좌표 (BR-COURSE-005, ADR-ROUTE-001 5.5절)
+    // ---------------------------------------------------------------------
+
+    @Test
+    @DisplayName("정상 요청의 stop에는 Restaurant의 좌표가 그대로 담긴다")
+    void recommend_정상요청_stop에Restaurant좌표가담긴다() {
+        // given
+        RestaurantCourseCommand command = givenTwoStopCourseWithLeg(new CourseRouteLeg(1000, 120));
+
+        // when
+        RestaurantCourseResult result = service.recommend(command);
+
+        // then
+        assertThat(result.restaurants()).extracting(RestaurantCourseStop::latitude)
+                .containsExactly(BigDecimal.valueOf(37.5000), BigDecimal.valueOf(37.5010));
+        assertThat(result.restaurants()).extracting(RestaurantCourseStop::longitude)
+                .containsExactly(BigDecimal.valueOf(127.0000), BigDecimal.valueOf(127.0000));
+    }
+
+    @Test
+    @DisplayName("CourseRouteLeg의 shapeStatus와 path가 AVAILABLE이면 segment에 그대로 옮겨진다")
+    void recommend_leg의shapeStatus가AVAILABLE이면_segment에path가그대로담긴다() {
+        // given
+        CourseRouteLeg availableLeg = new CourseRouteLeg(
+                1000,
+                120,
+                CourseRouteShapeStatus.AVAILABLE,
+                List.of(new CourseRouteVertex(37.5000, 127.0000), new CourseRouteVertex(37.5010, 127.0000)));
+        RestaurantCourseCommand command = givenTwoStopCourseWithLeg(availableLeg);
+
+        // when
+        RestaurantCourseResult result = service.recommend(command);
+
+        // then
+        RestaurantCourseSegment segment = result.segments().get(0);
+        assertThat(segment.shapeStatus()).isEqualTo(CourseRouteShapeStatus.AVAILABLE);
+        assertThat(segment.path()).containsExactly(
+                new RestaurantCourseVertex(37.5000, 127.0000), new RestaurantCourseVertex(37.5010, 127.0000));
+    }
+
+    @Test
+    @DisplayName("CourseRouteLeg의 path가 비어 있으면 segment의 shapeStatus는 MISSING이고 path도 비어 있다")
+    void recommend_leg의path가비어있으면_segment의shapeStatus가MISSING이다() {
+        // given
+        RestaurantCourseCommand command = givenTwoStopCourseWithLeg(new CourseRouteLeg(1000, 120));
+
+        // when
+        RestaurantCourseResult result = service.recommend(command);
+
+        // then
+        RestaurantCourseSegment segment = result.segments().get(0);
+        assertThat(segment.shapeStatus()).isEqualTo(CourseRouteShapeStatus.MISSING);
+        assertThat(segment.path()).isEmpty();
     }
 
     // ---------------------------------------------------------------------

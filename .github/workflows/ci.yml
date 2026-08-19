@@ -26,20 +26,55 @@ on:
         description: '배포할 커밋 SHA 40자. 비우면 선택한 브랜치의 현재 커밋을 배포한다'
         required: false
         type: string
+      deployment_target:
+        description: '배포 대상 입력 계약'
+        required: false
+        default: instance
+        type: choice
+        options: [instance, codedeploy]
+      codedeploy_application:
+        description: 'CodeDeploy application name'
+        required: false
+        type: string
+      codedeploy_deployment_group:
+        description: 'CodeDeploy deployment group'
+        required: false
+        type: string
+      codedeploy_s3_bucket:
+        description: 'CodeDeploy revision S3 bucket (codedeploy 선택 시 필수)'
+        required: false
+        type: string
 
 permissions:
   contents: read
 
-# 같은 ref에 새 커밋이 오면 진행 중인 실행을 취소해 러너 시간을 낭비하지 않는다.
+# PR 검증은 같은 ref의 새 커밋이 오면 이전 실행을 취소한다. 운영 배포는 외부
+# 취소나 새 실행이 원격 CodeDeploy를 방치하지 않도록 자동 취소하지 않는다.
 #
-# 그룹에 이벤트 종류를 넣는다. ref만으로 묶으면 롤백 배포가 진행되는 중에 같은
-# 브랜치로 push가 들어오면 그 배포가 취소된다. 장애 대응 중에 복구가 조용히 멈추는
-# 방향의 실패라 두 경로를 분리한다.
+# 이벤트 종류를 그룹에 넣어 PR과 push·dispatch 실행을 서로 취소하지 않는다.
 concurrency:
   group: ci-${{ github.event_name }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  terraform-contract:
+    name: Terraform 렌더링 계약
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      # Redis user-data는 Terraform templatefile()과 Bash가 함께 해석한다.
+      # 고정된 Terraform 버전으로 실제 렌더링 결과를 검사해 plan 단계의 보간
+      # 회귀를 PR 품질 게이트에서 차단한다.
+      - name: Redis template 렌더링 테스트
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            -w /workspace/infra/production/terraform-redis/tests/template-render \
+            hashicorp/terraform:1.6.6 test
+
   # workflow_dispatch는 이미 게시된 이미지를 배포하는 경로다. 그 이미지는 push 때
   # 이 두 job을 통과해야 만들어졌으므로 품질 게이트는 이미 걸린 상태이고, 다시 도는
   # 것은 배포 대상이 아닌 브랜치 현재 커밋을 검사하는 일이다. 롤백은 현재 커밋이
@@ -115,7 +150,7 @@ jobs:
     name: 이미지 빌드·검증·push
     # 빌드·테스트가 하나라도 실패하면 이 job에 도달하지 않는다.
     # ADR-RUNTIME-001 13절과 M2-06 완료 조건이 요구하는 차단이다.
-    needs: [backend, frontend]
+    needs: [backend, frontend, terraform-contract]
     #
     # 배포 대상 브랜치의 push에서만 실행한다. 세 가지를 동시에 만족시키기 위한 조건이다.
     #
@@ -445,11 +480,20 @@ jobs:
     env:
       AWS_REGION: ap-northeast-2
       INSTANCE_ID: i-0b451f18bca827cc9
+      DEPLOYMENT_TARGET: ${{ github.event.inputs.deployment_target || 'instance' }}
+      CODEDEPLOY_APPLICATION: ${{ github.event.inputs.codedeploy_application || '' }}
+      CODEDEPLOY_DEPLOYMENT_GROUP: ${{ github.event.inputs.codedeploy_deployment_group || '' }}
+      CODEDEPLOY_S3_BUCKET: ${{ github.event.inputs.codedeploy_s3_bucket || '' }}
       # 입력이 있으면 그 커밋을, 없으면 이 실행의 커밋을 배포한다. push 이벤트에는
       # inputs가 없어 항상 github.sha가 된다.
       IMAGE_TAG: ${{ github.event.inputs.image_tag || github.sha }}
     steps:
+      # 배포할 이미지와 같은 커밋을 체크아웃한다. ref를 비우면 롤백 실행에서 과거
+      # 이미지에 현재 브랜치 tip의 app-run.sh·systemd unit·Nginx 설정이 조합돼
+      # 이미지와 배포 산출물의 호환성이 깨진다.
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.IMAGE_TAG }}
 
       # 이 값은 아래에서 SSM 명령 문자열에 들어가 인스턴스에서 root로 실행된다.
       # 자유 문자열을 그대로 실으면 명령 주입이 되므로 커밋 SHA 형식만 받아들인다.
@@ -494,6 +538,12 @@ jobs:
               "deploy/scripts/app-deploy.sh",
               "deploy/scripts/app-run.sh",
               "deploy/scripts/app-secrets-render.sh",
+              "deploy/scripts/runtime-health.sh",
+              "deploy/scripts/instance-bootstrap.sh",
+              "deploy/scripts/redis-install.sh",
+              "deploy/scripts/redis-render-conf.sh",
+              "deploy/redis/redis.conf",
+              "deploy/redis/masiton-redis.service",
               "deploy/scripts/nginx-install.sh",
               "deploy/scripts/nginx-smoke.sh",
               "deploy/scripts/tls-deploy-cert.sh",
@@ -531,6 +581,7 @@ jobs:
           lines.append('tar -xzf "$STAGE/deploy-bundle.tar.gz" -C "$STAGE"')
           lines.append('rm -f "$STAGE/deploy-bundle.tar.gz.b64" "$STAGE/deploy-bundle.tar.gz"')
           lines.append('chmod +x "$STAGE/app-deploy.sh" "$STAGE/app-run.sh" "$STAGE/app-secrets-render.sh" "$STAGE/nginx-install.sh" "$STAGE/nginx-smoke.sh" "$STAGE/tls-deploy-cert.sh"')
+          lines.append('chmod +x "$STAGE/runtime-health.sh" "$STAGE/instance-bootstrap.sh" "$STAGE/redis-install.sh" "$STAGE/redis-render-conf.sh"')
           lines.append(f'"$STAGE/app-deploy.sh" "{os.environ["IMAGE_TAG"]}" "$STAGE"')
           lines.append('"$STAGE/nginx-install.sh" "$STAGE"')
 
@@ -548,6 +599,7 @@ jobs:
       # 배포 스크립트가 상태 확인 폴링까지 하고 실패하면 non-zero로 끝난다. 그래서
       # 명령 상태가 Success가 아니면 이 job도 실패한다. 실패를 성공으로 바꾸지 않는다.
       - name: SSM으로 배포 실행
+        if: env.DEPLOYMENT_TARGET == 'instance'
         run: |
           set -euo pipefail
           command_id=$(aws ssm send-command \
@@ -591,3 +643,379 @@ jobs:
             exit 1
           fi
           echo "배포 완료: $IMAGE_TAG"
+
+      - name: CodeDeploy revision 패키징
+        if: env.DEPLOYMENT_TARGET == 'codedeploy'
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import io
+          import os
+          import tarfile
+
+          files = [
+              "deploy/scripts/app-deploy.sh",
+              "deploy/scripts/app-run.sh",
+              "deploy/scripts/app-secrets-render.sh",
+              "deploy/scripts/runtime-health.sh",
+              "deploy/scripts/instance-bootstrap.sh",
+              "deploy/scripts/redis-install.sh",
+              "deploy/scripts/redis-render-conf.sh",
+              "deploy/redis/redis.conf",
+              "deploy/redis/masiton-redis.service",
+              "deploy/scripts/nginx-install.sh",
+              "deploy/scripts/nginx-smoke.sh",
+              "deploy/scripts/tls-deploy-cert.sh",
+              "deploy/app/masiton-backend.service",
+              "deploy/app/masiton-frontend.service",
+              "deploy/nginx/nginx.conf",
+              "deploy/nginx/masiton.click.conf",
+              "deploy/nginx/00-masiton-upgrade-map.conf",
+              "deploy/nginx/masiton-tls-renew.service",
+              "deploy/nginx/masiton-tls-renew.timer",
+              # Redis 장애는 ready 그룹에 없어 ALB target health로 드러나지 않는다.
+              # 이 지표 수집이 CodeDeploy alarm의 유일한 감지 경로이므로 revision에
+              # 실어 새 인스턴스마다 설치한다(ADR-DEPLOY-005 5절).
+              "deploy/scripts/cloudwatch-install.sh",
+              "deploy/scripts/health-metrics.sh",
+              "deploy/cloudwatch/amazon-cloudwatch-agent.json",
+              "deploy/cloudwatch/masiton-health-metrics.service",
+              "deploy/cloudwatch/masiton-health-metrics.timer",
+          ]
+          hooks = [
+              "deploy/codedeploy/hooks/after-install.sh",
+              "deploy/codedeploy/hooks/application-start.sh",
+              "deploy/codedeploy/hooks/validate-service.sh",
+          ]
+          image_tag = os.environ["IMAGE_TAG"]
+          if len(image_tag) != 40 or any(char not in "0123456789abcdef" for char in image_tag):
+              raise SystemExit("IMAGE_TAG must be a 40-character lowercase commit SHA")
+
+          with tarfile.open("codedeploy-revision.tar.gz", "w:gz", compresslevel=9) as bundle:
+              bundle.add("deploy/codedeploy/appspec.yml", arcname="appspec.yml")
+              for path in files:
+                  content = open(path, "rb").read().replace(b"\r\n", b"\n")
+                  info = tarfile.TarInfo("stage/" + os.path.basename(path))
+                  info.size = len(content)
+                  info.mode = 0o755 if path.endswith(".sh") else 0o644
+                  info.mtime = 0
+                  bundle.addfile(info, io.BytesIO(content))
+              for path in hooks:
+                  content = open(path, "rb").read().replace(b"\r\n", b"\n")
+                  info = tarfile.TarInfo("stage/codedeploy/hooks/" + os.path.basename(path))
+                  info.size = len(content)
+                  info.mode = 0o755
+                  info.mtime = 0
+                  bundle.addfile(info, io.BytesIO(content))
+              tag = (image_tag + "\n").encode("ascii")
+              info = tarfile.TarInfo("stage/revision.env")
+              info.size = len(tag)
+              info.mode = 0o600
+              info.mtime = 0
+              bundle.addfile(info, io.BytesIO(tag))
+          PY
+          tar -tzf codedeploy-revision.tar.gz | grep -Fx 'appspec.yml'
+          tar -tzf codedeploy-revision.tar.gz | grep -Fx 'stage/revision.env'
+
+      - name: CodeDeploy revision 업로드 및 배포
+        id: codedeploy_deploy
+        if: env.DEPLOYMENT_TARGET == 'codedeploy'
+        run: |
+          set -euo pipefail
+          case "$CODEDEPLOY_S3_BUCKET" in
+            ''|*[!a-z0-9.-]*) echo 'CODEDEPLOY_S3_BUCKET은 workflow input 또는 환경 변수로 명시해야 한다' >&2; exit 1 ;;
+          esac
+          case "$CODEDEPLOY_APPLICATION:$CODEDEPLOY_DEPLOYMENT_GROUP" in
+            :*|*:) echo 'CodeDeploy application/deployment-group 입력이 필요하다' >&2; exit 1 ;;
+          esac
+          revision_key="masiton/codedeploy/${GITHUB_RUN_ID}/${IMAGE_TAG}.tar.gz"
+          aws s3 cp codedeploy-revision.tar.gz \
+            "s3://${CODEDEPLOY_S3_BUCKET}/${revision_key}" --sse AES256
+          revision_version=$(aws s3api head-object \
+            --bucket "$CODEDEPLOY_S3_BUCKET" --key "$revision_key" \
+            --query 'VersionId' --output text)
+          [ -n "$revision_version" ] && [ "$revision_version" != None ] || {
+            echo 'revision bucket versioning이 활성화되지 않았다' >&2
+            exit 1
+          }
+          deployment_id=$(aws deploy create-deployment \
+            --application-name "$CODEDEPLOY_APPLICATION" \
+            --deployment-group-name "$CODEDEPLOY_DEPLOYMENT_GROUP" \
+            --s3-location "bucket=${CODEDEPLOY_S3_BUCKET},key=${revision_key},bundleType=tgz,version=${revision_version}" \
+            --description "masit-on ${IMAGE_TAG}" \
+            --query 'deploymentId' --output text)
+          echo "CodeDeploy deployment: $deployment_id"
+          deployment_id_file="$RUNNER_TEMP/codedeploy-deployment-id"
+          printf '%s\n' "$deployment_id" > "$deployment_id_file"
+          # workflow 취소 시 후속 Actions step은 실행되지 않을 수 있으므로,
+          # cleanup job이 접근할 수 있는 S3에 deployment ID를 이 step에서 즉시 보관한다.
+          deployment_id_key="masiton/codedeploy/${GITHUB_RUN_ID}/deployment-id"
+          if ! aws s3api put-object \
+            --bucket "$CODEDEPLOY_S3_BUCKET" \
+            --key "$deployment_id_key" \
+            --body "$deployment_id_file" \
+            --server-side-encryption AES256 >/dev/null; then
+            echo "::error::CodeDeploy deployment ID 보관에 실패했다: $deployment_id" >&2
+            aws deploy stop-deployment --deployment-id "$deployment_id" \
+              --auto-rollback-enabled || true
+            exit 1
+          fi
+          deployment_terminal=false
+          stopping_deployment=false
+
+          stop_deployment_and_wait() {
+            [ "$deployment_terminal" = true ] && return 0
+            [ "$stopping_deployment" = true ] && return 0
+            stopping_deployment=true
+            stop_failed=false
+            echo "CodeDeploy 배포 중지를 요청한다: $deployment_id" >&2
+            if ! aws deploy stop-deployment --deployment-id "$deployment_id" \
+              --auto-rollback-enabled; then
+              stop_failed=true
+              echo "::error::CodeDeploy stop-deployment 호출에 실패했다: $deployment_id" >&2
+            fi
+            for _ in $(seq 1 60); do
+              status=$(aws deploy get-deployment --deployment-id "$deployment_id" \
+                --query 'deploymentInfo.status' --output text 2>/dev/null || echo Unknown)
+              case "$status" in
+                Succeeded|Failed|Stopped)
+                  deployment_terminal=true
+                  echo "CodeDeploy 중지 후 terminal 상태: $status" >&2
+                  [ "$stop_failed" = false ]
+                  return $?
+                  ;;
+              esac
+              sleep 10
+            done
+            echo "::error::CodeDeploy 중지 요청 후에도 terminal 상태를 확인하지 못했다: $status" >&2
+            return 1
+          }
+
+          on_exit() {
+            exit_code=$?
+            if [ "$deployment_terminal" != true ] && [ "$stopping_deployment" != true ]; then
+              if ! stop_deployment_and_wait; then
+                echo "::error::CodeDeploy 중지 또는 terminal 상태 확인에 실패했다. 원격 deployment를 수동 확인해야 한다." >&2
+                [ "$exit_code" -eq 0 ] && exit_code=1
+              fi
+            fi
+            trap - EXIT INT TERM
+            exit "$exit_code"
+          }
+          on_signal() {
+            exit 143
+          }
+          trap on_exit EXIT
+          trap on_signal INT TERM
+
+          status=Created
+          # AfterInstall hook(30분)와 ASG provisioning 시간을 포함하되, 제한 시간
+          # 초과·workflow 취소 시 EXIT trap에서 중지 요청을 보내 제어 공백을 막는다.
+          for _ in $(seq 1 270); do
+            status=$(aws deploy get-deployment --deployment-id "$deployment_id" \
+              --query 'deploymentInfo.status' --output text 2>/dev/null || echo Unknown)
+            case "$status" in
+              Succeeded|Failed|Stopped)
+                deployment_terminal=true
+                break
+                ;;
+            esac
+            sleep 10
+          done
+          if [ "$status" != Succeeded ]; then
+            echo "CodeDeploy 배포 실패: $status" >&2
+            exit 1
+          fi
+          echo 'CodeDeploy 배포 완료'
+
+  # GitHub 취소는 현재 step에 SIGINT·SIGTERM을 보내고 곧 프로세스 트리를 종료할
+  # 수 있어 deploy job 내부 trap만으로는 원격 CodeDeploy 정리를 보장할 수 없다.
+  # 별도 job은 취소된 deploy job이 S3에 남긴 deployment ID를 읽어 4분 이내에 stop과
+  # terminal 확인을 수행한다. 5분 취소 강제 종료 한도 안에 끝나도록 polling을 제한한다.
+  codedeploy-cancel-cleanup:
+    name: 취소된 CodeDeploy 정리
+    needs: [deploy]
+    if: >-
+      always() &&
+      needs.deploy.result == 'cancelled' &&
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.deployment_target == 'codedeploy'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: ap-northeast-2
+      CODEDEPLOY_S3_BUCKET: ${{ github.event.inputs.codedeploy_s3_bucket || '' }}
+      CODEDEPLOY_APPLICATION: ${{ github.event.inputs.codedeploy_application || '' }}
+      CODEDEPLOY_DEPLOYMENT_GROUP: ${{ github.event.inputs.codedeploy_deployment_group || '' }}
+    steps:
+      - name: AWS 자격 증명 (OIDC, 장기 키 없음)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::711457211155:role/masiton-github-actions-role
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: CodeDeploy deployment ID 조회
+        id: lookup
+        run: |
+          set -euo pipefail
+          case "$CODEDEPLOY_S3_BUCKET" in
+            ''|*[!a-z0-9.-]*) echo 'CODEDEPLOY_S3_BUCKET은 cleanup에도 필요하다' >&2; exit 1 ;;
+          esac
+          deployment_id_file="$RUNNER_TEMP/codedeploy-deployment-id"
+          deployment_id_key="masiton/codedeploy/${GITHUB_RUN_ID}/deployment-id"
+          # 내용이 빈 pointer object를 그대로 받아들이면 중지 step이 조용히 건너뛰어진다.
+          # 비어 있으면 pointer가 없는 것과 같이 취급해 아래 재조정으로 넘긴다.
+          if aws s3 cp "s3://${CODEDEPLOY_S3_BUCKET}/${deployment_id_key}" \
+            "$deployment_id_file"; then
+            pointer_id=$(tr -d '\r\n' < "$deployment_id_file")
+            if [ -n "$pointer_id" ]; then
+              printf 'resolved=%s\n' "$pointer_id" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo 'S3 pointer object가 비어 있다. 재조정으로 넘어간다.' >&2
+          fi
+
+          # create-deployment 성공과 pointer 저장 사이에 runner가 죽으면 pointer
+          # 없이 원격 배포만 남는다. pointer 저장 자체는 원자적으로 만들 수 없으므로
+          # pointer에 의존하지 않는 재조정 경로를 둔다. revision key가 이 실행의
+          # run ID를 품고 있어 진행 중인 deployment에서 같은 실행의 것을 되찾는다.
+          echo 'S3 pointer가 없다. 이 실행의 revision key로 원격 deployment를 재조정한다.' >&2
+          case "$CODEDEPLOY_APPLICATION:$CODEDEPLOY_DEPLOYMENT_GROUP" in
+            :*|*:) echo '::error::재조정에는 CodeDeploy application/deployment-group 입력이 필요하다' >&2; exit 1 ;;
+          esac
+          revision_prefix="masiton/codedeploy/${GITHUB_RUN_ID}/"
+          matched=""
+          # 이 경로의 전제가 create-deployment 직후 runner가 죽은 상황인데 CodeDeploy
+          # 목록 API는 최종 일관성을 가진다. 한 번의 빈 응답으로 "정리 대상 없음"을
+          # 확정하면 가장 필요한 순간에 놓친다. 아래 중지 polling이 240초를 쓰므로
+          # 5분 취소 강제 종료 한도 안에 들어가도록 재시도는 15초로 제한한다.
+          #
+          # Blue-Green은 트래픽 전환 뒤 원본 인스턴스 종료를 기다리는 동안 Baking에
+          # 머문다. 이 상태를 빼면 전환까지 끝난 배포를 정리 대상에서 놓친다.
+          lookup_completed=false
+          for attempt in 1 2 3 4; do
+            # 이전 시도의 성공 여부를 다음 시도에 물려주지 않는다. 현재 시도가
+            # 전체 조회를 끝까지 완료한 경우에만 아래에서 true로 설정한다.
+            lookup_completed=false
+            candidates=""
+            if ! candidates=$(aws deploy list-deployments \
+              --application-name "$CODEDEPLOY_APPLICATION" \
+              --deployment-group-name "$CODEDEPLOY_DEPLOYMENT_GROUP" \
+              --include-only-statuses Created Queued InProgress Baking Ready \
+              --query 'deployments' --output text); then
+              echo "::warning::CodeDeploy deployment 목록 조회에 실패했다 (시도 $attempt/4). 재시도한다." >&2
+              if [ "$attempt" -lt 4 ]; then
+                sleep 5
+              fi
+              continue
+            fi
+
+            if [ -n "$candidates" ] && [ "$candidates" != None ]; then
+              candidate_ids=()
+              while IFS= read -r candidate_id; do
+                if [ -n "$candidate_id" ]; then
+                  candidate_ids+=("$candidate_id")
+                fi
+              done < <(printf '%s\n' "$candidates" | tr -s '[:space:]' '\n')
+
+              matched_ids=()
+              batch_failed=false
+              for ((offset = 0; offset < ${#candidate_ids[@]}; offset += 25)); do
+                batch=("${candidate_ids[@]:offset:25}")
+                batch_matches=""
+                if ! batch_matches=$(aws deploy batch-get-deployments \
+                  --deployment-ids "${batch[@]}" \
+                  --query "deploymentsInfo[?starts_with(revision.s3Location.key, \`${revision_prefix}\`)].deploymentId" \
+                  --output text | tr -s '[:space:]' ' ' | sed 's/^ //; s/ $//'); then
+                  batch_failed=true
+                  echo "::warning::CodeDeploy deployment 상세 조회에 실패했다 (시도 $attempt/4, batch $((offset / 25 + 1))). 재시도한다." >&2
+                  break
+                fi
+                if [ "$batch_matches" != None ] && [ -n "$batch_matches" ]; then
+                  while IFS= read -r matched_id; do
+                    if [ -n "$matched_id" ]; then
+                      matched_ids+=("$matched_id")
+                    fi
+                  done < <(printf '%s\n' "$batch_matches" | tr -s '[:space:]' '\n')
+                fi
+              done
+
+              if [ "$batch_failed" = false ] && [ "${#matched_ids[@]}" -gt 0 ]; then
+                matched=$(printf '%s\n' "${matched_ids[@]}" | sort -u | paste -sd ' ' -)
+              else
+                matched=""
+              fi
+              if [ "$batch_failed" = false ]; then
+                lookup_completed=true
+              fi
+            else
+              matched=""
+              lookup_completed=true
+            fi
+            if [ -n "$matched" ]; then
+              break
+            fi
+            if [ "$attempt" -lt 4 ]; then
+              sleep 5
+            fi
+          done
+          if [ -z "$matched" ]; then
+            if [ "$lookup_completed" = false ]; then
+              echo '::error::S3 pointer가 없고 CodeDeploy 재조정 조회를 완료하지 못했다. cleanup을 완료하지 못했으므로 원격 CodeDeploy 상태를 확인해야 한다.' >&2
+              printf 'resolved=\n' >> "$GITHUB_OUTPUT"
+              exit 1
+            fi
+            # CodeDeploy 목록 조회가 성공해도 eventual consistency 때문에 빈 결과가
+            # 원격 deployment 부재를 증명하지 않는다. 배포 생성 전 취소와 아직
+            # 목록에 나타나지 않은 실제 deployment를 구분할 수 없으므로 fail-closed한다.
+            echo '::error::S3 pointer가 없고 이 실행이 만든 deployment를 확인하지 못했다. 원격 CodeDeploy 상태가 미확정이므로 cleanup을 성공 처리하지 않는다.' >&2
+            printf 'resolved=\n' >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          case "$matched" in
+            *' '*) echo "::error::같은 실행의 deployment가 둘 이상 조회됐다: $matched" >&2; exit 1 ;;
+          esac
+          echo "재조정으로 deployment를 되찾았다: $matched"
+          printf 'resolved=%s\n' "$matched" >> "$GITHUB_OUTPUT"
+
+      # 정리할 원격 배포 ID가 확인된 경우에만 중지한다. ID 조회가 미확정이면
+      # lookup step이 non-zero로 끝나므로 이 step을 건너뛰고 job이 실패한다.
+      - name: 원격 CodeDeploy 중지 및 terminal 확인
+        if: steps.lookup.outputs.resolved != ''
+        env:
+          RESOLVED_DEPLOYMENT_ID: ${{ steps.lookup.outputs.resolved }}
+        run: |
+          set -euo pipefail
+          deployment_id="$RESOLVED_DEPLOYMENT_ID"
+          case "$deployment_id" in
+            d-*[!0-9A-Za-z-]*|'' )
+              echo "::error::deployment ID 형식이 올바르지 않다: $deployment_id"
+              exit 1
+              ;;
+          esac
+
+          stop_failed=false
+          if ! aws deploy stop-deployment --deployment-id "$deployment_id" \
+            --auto-rollback-enabled; then
+            stop_failed=true
+            echo "::error::CodeDeploy stop-deployment 호출에 실패했다: $deployment_id"
+          fi
+
+          status=Unknown
+          for _ in $(seq 1 24); do
+            status=$(aws deploy get-deployment --deployment-id "$deployment_id" \
+              --query 'deploymentInfo.status' --output text 2>/dev/null || echo Unknown)
+            case "$status" in
+              Succeeded|Failed|Stopped)
+                echo "CodeDeploy cleanup terminal 상태: $status"
+                [ "$stop_failed" = false ]
+                exit $?
+                ;;
+            esac
+            sleep 10
+          done
+          echo "::error::CodeDeploy cleanup이 terminal 상태를 확인하지 못했다: $status"
+          exit 1
+

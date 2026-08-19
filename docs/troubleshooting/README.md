@@ -8,8 +8,22 @@ related_documents:
 
 구현과 리뷰 과정에서 재현·검증한 문제의 현상, 원인, 처리 결과를 보존한다.
 
+## 최신 기록
+
+- [PR #238 통합 인증 구현과 CI 회귀](pr-238-unified-auth-implementation-review.md)
+- [PR #235 통합 인증·라우팅·관리자 계정 전환 계약 리뷰 반영](pr-235-unified-auth-contract-review.md)
+- [PR #236 코스 지도 구현의 형상 Schema·만료 선택·좌표 검증 결함](pr-236-course-route-map-implementation-review.md)
+- [PR #232 코스 경로 형상·실패 계약 정합화](pr-232-course-route-map-contract-review.md)
+- [PR #227 YouTube 채널 감시 상태·관리 화면 후속 반영](pr-227-youtube-channel-watch-review.md)
+
 ## PR 리뷰
 
+- [PR #238 통합 인증 구현과 CI 회귀](pr-238-unified-auth-implementation-review.md)
+- [PR #228 ASG replacement 배포의 상태 보존·중단 제어·권한·네트워크 계약](pr-228-asg-replacement-deployment-review.md)
+- [PR #235 통합 인증·라우팅·관리자 계정 전환 계약 리뷰 반영](pr-235-unified-auth-contract-review.md)
+- [PR #236 코스 지도 구현의 형상 Schema·만료 선택·좌표 검증 결함](pr-236-course-route-map-implementation-review.md)
+- [PR #232 코스 경로 형상·실패 계약 정합화](pr-232-course-route-map-contract-review.md)
+- [PR #226 AI 자동 등록 계약의 미완결 경로와 합의 상태 표기](pr-226-ai-auto-registration-contract-review.md)
 - [PR #221 Redis 사설 경로 비용과 배포 게이트 서술 정합화](pr-221-deployment-hardening-cost-review.md)
 
 - [PR #218 격리 성능 환경·부하 결과 정합성](pr-218-isolated-performance-review.md)

@@ -68,7 +68,7 @@ UUID 내부 식별자와 논리 삭제 정책은 각각 [ADR-DATA-007](../../07-
 
 3차 확장 AI 영상 추출은 [AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)을 진입점으로 사용한다. 원본 영상·전체 자막·Gemini 원문 응답은 저장하지 않으며, 후보와 검수 이력은 관리자 전용으로 1년 보존한다. 통제 태그 정의와 확정 `VisitTag`만 기존 등록 흐름 성공 뒤 공개 검색에 연결한다.
 
-검증 미리보기의 확인 Token은 PostgreSQL 단기 기술 테이블로 확정됐지만 핵심 도메인 엔티티나 논리 ERD에는 포함하지 않는다. Token 해시·관리자·자원 종류·후보 스키마 버전·JSONB Snapshot과 결과 상태만 저장하며 세부 정책은 [ADR-AUTH-003](../../07-adr/security/auth-003-confirmation-token.md)을 따른다. 저장 위치가 미정인 로그인 제한 카운터 같은 기술 아티팩트도 핵심 엔티티로 만들지 않는다.
+검증 미리보기의 확인 Token은 PostgreSQL 단기 기술 테이블로 확정됐지만 핵심 도메인 엔티티나 논리 ERD에는 포함하지 않는다. Token 해시·관리자·자원 종류·후보 스키마 버전·JSONB Snapshot과 결과 상태만 저장하며 세부 정책은 [ADR-AUTH-003](../../07-adr/security/auth-003-confirmation-token.md)을 따른다. 로그인 실패 제한과 Refresh session은 Redis 기술 데이터이며 핵심 엔티티로 만들지 않는다.
 
 ## 4. 문서 참조 순서
 

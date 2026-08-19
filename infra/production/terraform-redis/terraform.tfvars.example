@@ -1,0 +1,32 @@
+# 실제 값은 계정 운영자가 조회해 채운다.
+# 비밀값은 넣지 않는다. 아래 ID·ARN은 비밀이 아닌 자원 식별자다.
+
+aws_region  = "ap-northeast-2"
+aws_profile = "masiton"
+
+vpc_id          = "vpc-REPLACE_ME"
+redis_subnet_id = "subnet-REPLACE_ME_PRIVATE" # masiton-private-2a, 10.0.10.0/24
+
+# private subnet은 명시적 연결이 없어 main route table을 쓴다.
+private_route_table_ids = ["rtb-REPLACE_ME"]
+
+# docker와 redis@sha256:8096655e를 미리 담은 AMI. RepoDigest가 보존되어
+# masiton-redis.service의 digest 고정이 그대로 동작한다.
+redis_ami_id = "ami-REPLACE_ME"
+
+# 운영 ASG의 app security group.
+app_security_group_ids = ["sg-REPLACE_ME_APP"]
+
+# ssm endpoint는 private DNS가 VPC 전역에 적용된다. SSM Agent를 쓰는
+# 기존 운영 인스턴스의 SG를 반드시 포함해야 그 인스턴스가 SSM에서 이탈하지 않는다.
+ssm_endpoint_client_security_group_ids = [
+  "sg-REPLACE_ME_LEGACY_APP", # masiton-app-sg (기존 운영 EC2)
+  "sg-REPLACE_ME_APP", # masiton-prod-app-sg (신규 ASG)
+]
+
+redis_assets_bucket = "masiton-prod-codedeploy-REPLACE_ACCOUNT"
+
+redis_password_parameter_arn = "arn:aws:ssm:ap-northeast-2:REPLACE_ACCOUNT:parameter/masiton/redis/password"
+
+# 고객관리 키가 없어 SecureString은 AWS 관리 alias/aws/ssm으로 암호화돼 있다.
+kms_key_arns = ["arn:aws:kms:ap-northeast-2:REPLACE_ACCOUNT:key/REPLACE_ME"]
