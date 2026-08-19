@@ -111,7 +111,6 @@ Terraform이 소유한 `masiton-prod-blue-asg`(desired 0)는 후보에서 제외
 | 기존 medium 정리 | 동거 Redis 종료, `masiton-tls-renew.timer` 해제, 인스턴스 종료. 절감은 여기서 실현된다. **수행 즉시 rollback 경로가 사라지므로 관찰 기간 뒤에 판단한다** |
 | 유휴 환경 자동 정리 | `terminate_blue_instances_on_deployment_success.action`을 `TERMINATE`로 바꾸면 배포 성공 후 자동 종료된다. 다만 대기 시간이 rollback 가능 시간의 상한이 되고, [ADR-DEPLOY-005](../07-adr/platform/deploy-005-asg-blue-green-rollout.md)가 "관찰 기간 유지 + runbook 정리"를 명시하므로 ADR·runbook 개정과 같은 PR에서 판단한다 |
 | `REQUIRE_SHARED_REDIS` 가드 보완 | 4.2절 참조. 값이 로컬 루프백일 때도 실패시킬지 결정한다 |
-| 문서 계약 | 마이그레이션 규칙 문서화, ADR-DATA-005 6절 합의, ADR-DEPLOY-005 Accepted 전환 |
 
 ## 7. 이 기록이 확인하지 않은 것
 
