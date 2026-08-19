@@ -31,12 +31,12 @@ import com.masiton.common.security.MemberSessionSettings;
 @Component
 public class RedisMemberSessionStore implements MemberSessionStore {
 
-    private static final String SESSION_PREFIX = "auth:member:session:";
-    private static final String REFRESH_INDEX_PREFIX = "auth:member:refresh:";
-    private static final String USED_REFRESH_INDEX_PREFIX = "auth:member:refresh:used:";
-    private static final String MEMBER_SESSIONS_PREFIX = "auth:member:sessions:";
-    private static final String MEMBER_SESSION_SEQUENCE_PREFIX = "auth:member:sessions:sequence:";
-    private static final String MEMBER_SESSION_GENERATION_PREFIX = "auth:member:sessions:generation:";
+    private static final String SESSION_PREFIX = "auth:session:data:";
+    private static final String REFRESH_INDEX_PREFIX = "auth:session:refresh:";
+    private static final String USED_REFRESH_INDEX_PREFIX = "auth:session:refresh:used:";
+    private static final String MEMBER_SESSIONS_PREFIX = "auth:session:account:";
+    private static final String MEMBER_SESSION_SEQUENCE_PREFIX = "auth:session:sequence:";
+    private static final String MEMBER_SESSION_GENERATION_PREFIX = "auth:session:generation:";
     private static final String ISSUE_REVOKED_SENTINEL = "__REVOKED_DURING_ISSUE__";
 
     private static final DefaultRedisScript<Long> MIGRATE_LEGACY_SESSION_RECORD_SCRIPT = new DefaultRedisScript<>("""
@@ -231,6 +231,11 @@ public class RedisMemberSessionStore implements MemberSessionStore {
 
     @Override
     public MemberSession issue(String memberId, Duration ttl) {
+        return issue(memberId, ttl, maxSessions);
+    }
+
+    @Override
+    public MemberSession issue(String memberId, Duration ttl, int requestedMaxSessions) {
         String expectedGeneration = memberSessionGeneration(memberId);
         migrateLegacySessionRecords(memberId);
         String sessionId = UUID.randomUUID().toString();
@@ -250,7 +255,7 @@ public class RedisMemberSessionStore implements MemberSessionStore {
                 ),
                 String.valueOf(createdAt.toEpochMilli()),
                 sessionId,
-                String.valueOf(maxSessions),
+                String.valueOf(requestedMaxSessions),
                 SESSION_PREFIX,
                 REFRESH_INDEX_PREFIX,
                 serialize(record),

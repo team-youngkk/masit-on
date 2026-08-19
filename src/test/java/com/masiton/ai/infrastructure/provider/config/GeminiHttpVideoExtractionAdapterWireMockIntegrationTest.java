@@ -14,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -30,7 +31,10 @@ class GeminiHttpVideoExtractionAdapterWireMockIntegrationTest {
 
     @Container
     static final GenericContainer<?> WIREMOCK = new GenericContainer<>("wiremock/wiremock:3.13.2-alpine")
-            .withExposedPorts(WIREMOCK_PORT);
+            .withExposedPorts(WIREMOCK_PORT)
+            .waitingFor(Wait.forHttp("/__admin/health")
+                    .forPort(WIREMOCK_PORT)
+                    .forStatusCode(200));
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 

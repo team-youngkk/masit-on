@@ -112,12 +112,32 @@ class RuntimeDeploymentContractTest {
                 .contains("deployment_id_key")
                 .contains("aws s3api put-object")
                 .contains("aws s3 cp \"s3://${CODEDEPLOY_S3_BUCKET}/${deployment_id_key}\"")
+                .contains("if ! candidates=$(aws deploy list-deployments")
+                .contains("if ! batch_matches=$(aws deploy batch-get-deployments")
+                .contains("offset += 25")
+                .contains("offset < ${#candidate_ids[@]}")
+                .contains("batch=(\"${candidate_ids[@]:offset:25}\")")
+                .contains("--deployment-ids \"${batch[@]}\"")
+                .contains("batch_failed=false", "lookup_completed=false")
+                .contains("CodeDeploy 재조정 조회를 완료하지 못했다")
+                .contains("if [ \"$lookup_completed\" = false ]; then")
                 .contains("for _ in $(seq 1 24)");
+        int incompleteLookup = workflow.indexOf("if [ \"$lookup_completed\" = false ]; then");
+        int incompleteLookupExit = workflow.indexOf("exit 1", incompleteLookup);
+        int attemptLoop = workflow.indexOf("for attempt in 1 2 3 4; do");
+        int attemptReset = workflow.indexOf("lookup_completed=false", attemptLoop);
+        assertThat(attemptReset).isGreaterThan(attemptLoop);
+        assertThat(attemptReset).isLessThan(workflow.indexOf("candidates=\"\"", attemptLoop));
+        assertThat(incompleteLookup).isGreaterThan(0);
+        assertThat(incompleteLookupExit).isGreaterThan(incompleteLookup);
         assertThat(workflow).doesNotContain("actions/download-artifact@v4");
         assertThat(workflow.indexOf("aws s3api put-object"))
                 .isGreaterThan(workflow.indexOf("aws deploy create-deployment"))
                 .isLessThan(workflow.indexOf("for _ in $(seq 1 270)"));
-        assertThat(iam).contains("codedeploy:StopDeployment");
+        assertThat(iam)
+                .contains("codedeploy:StopDeployment")
+                .contains("actions   = [\"codedeploy:BatchGetDeployments\"]\n    resources = [aws_codedeploy_deployment_group.app.arn]")
+                .doesNotContain("actions   = [\"codedeploy:BatchGetDeployments\"]\n    resources = [\"*\"]");
     }
 
     @Test

@@ -15,6 +15,26 @@ export function safeMemberReturnTo(returnTo: string | null | undefined): string 
   }
 }
 
+const ADMIN_RETURN_TO_PATHS = new Set([
+  '/admin',
+  '/admin/restaurants/new',
+  '/admin/creators/new',
+  '/admin/videos/new',
+  '/admin/visits/new',
+])
+
+export function safeAdminReturnTo(returnTo: string | null | undefined): string | null {
+  if (!returnTo || returnTo.includes('\\') || /%25/i.test(returnTo)) return null
+  const safeReturnTo = safeMemberReturnTo(returnTo)
+  if (!safeReturnTo) return null
+  try {
+    const parsed = new URL(safeReturnTo, 'https://masiton.local')
+    return !parsed.search && !parsed.hash && ADMIN_RETURN_TO_PATHS.has(parsed.pathname)
+      ? parsed.pathname
+      : null
+  } catch { return null }
+}
+
 function memberAuthHref(pathname: '/login' | '/signup' | '/verify-email', returnTo: string | null | undefined): string {
   const safeReturnTo = safeMemberReturnTo(returnTo)
   if (!safeReturnTo) {

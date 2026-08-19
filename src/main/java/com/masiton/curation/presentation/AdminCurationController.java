@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.masiton.common.observability.TraceIdFilter;
+import com.masiton.common.security.LegacyAdminActorResolver;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
 import com.masiton.curation.application.port.in.AdminCurationUseCase;
@@ -38,9 +39,11 @@ public class AdminCurationController {
     private static final Set<String> PAGE_FIELDS = Set.of("page", "size", "status");
     private static final Set<Integer> ALLOWED_SIZES = Set.of(10, 20, 50);
     private final AdminCurationUseCase useCase;
+    private final LegacyAdminActorResolver legacyAdminActorResolver;
 
-    public AdminCurationController(AdminCurationUseCase useCase) {
+    public AdminCurationController(AdminCurationUseCase useCase, LegacyAdminActorResolver legacyAdminActorResolver) {
         this.useCase = useCase;
+        this.legacyAdminActorResolver = legacyAdminActorResolver;
     }
 
     @PostMapping
@@ -140,8 +143,11 @@ public class AdminCurationController {
 
     private UUID adminId(Authentication authentication) {
         if (authentication == null) throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
-        try { return UUID.fromString(authentication.getName()); }
-        catch (RuntimeException exception) { throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED); }
+        try {
+            return legacyAdminActorResolver.resolve(UUID.fromString(authentication.getName()));
+        } catch (IllegalArgumentException exception) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
     }
 
     private String traceId(HttpServletRequest request) {

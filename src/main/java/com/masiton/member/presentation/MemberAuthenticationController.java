@@ -105,7 +105,7 @@ public class MemberAuthenticationController {
     private ResponseEntity<AccessTokenResponse> tokenResponse(MemberAuthenticationResult result) {
         return ResponseEntity.ok().header(HttpHeaders.CACHE_CONTROL, "no-store")
                 .header(HttpHeaders.SET_COOKIE, refreshCookie(result.refreshToken()).toString())
-                .body(new AccessTokenResponse(result.accessToken(), "Bearer", result.expiresInSeconds()));
+                .body(new AccessTokenResponse(result.accessToken(), "Bearer", result.expiresInSeconds(), result.role()));
     }
 
     private ResponseEntity<AcceptedResponse> accepted() {
@@ -145,7 +145,8 @@ public class MemberAuthenticationController {
 
     private void requireTrustedOrigin(HttpServletRequest request) {
         if (TrustedOriginResolver.resolveSingleOrigin(request)
-                .filter(origin -> OriginCanonicalizer.matches(origin, cookieSettings.publicBaseUrl()))
+                .filter(origin -> cookieSettings.allowedOrigins().stream()
+                        .anyMatch(allowed -> OriginCanonicalizer.matches(origin, allowed)))
                 .isEmpty()) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
@@ -182,6 +183,6 @@ public class MemberAuthenticationController {
     public record TokenRequest(String token) { }
     public record ResetPasswordRequest(@NotBlank @Size(max = 200) String token,
             @NotBlank @Size(min = 12, max = 64) String newPassword) { }
-    public record AccessTokenResponse(String accessToken, String tokenType, long expiresInSeconds) { }
+    public record AccessTokenResponse(String accessToken, String tokenType, long expiresInSeconds, String role) { }
     public record AcceptedResponse(boolean accepted) { }
 }

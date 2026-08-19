@@ -66,6 +66,17 @@ public class SecurityErrorWriter implements AuthenticationEntryPoint, AccessDeni
         ));
     }
 
+    public void invalidCredentials(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        response.setStatus(401);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store");
+        String traceId = (String) request.getAttribute(TraceIdFilter.TRACE_ID_REQUEST_ATTRIBUTE);
+        objectMapper.writeValue(response.getOutputStream(), ErrorResponse.of(
+                "INVALID_CREDENTIALS", "Invalid email or password",
+                traceId == null ? UUID.randomUUID().toString().replace("-", "") : traceId
+        ));
+    }
+
     private void write(HttpServletRequest request, HttpServletResponse response, ErrorCode errorCode) throws IOException {
         response.setStatus(errorCode.status().value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);

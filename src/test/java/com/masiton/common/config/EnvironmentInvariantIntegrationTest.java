@@ -65,6 +65,6 @@ class EnvironmentInvariantIntegrationTest {
         // then
         assertThat(secure).isTrue();
         assertThat(sameSite).isEqualTo("Strict");
-        assertThat(cookiePath).isEqualTo("/api/admin/auth");
+        assertThat(cookiePath).isEqualTo("/api/auth/tokens");
     }
 }

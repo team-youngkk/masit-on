@@ -55,7 +55,7 @@ public class MemberProfileController {
     }
 
     private MemberResponse response(MemberAccount account) {
-        return new MemberResponse(account.id().toString(), account.email());
+        return new MemberResponse(account.id().toString(), account.email(), account.role().name());
     }
 
     private ResponseEntity.BodyBuilder privateNoStore(ResponseEntity.BodyBuilder response) {
@@ -74,5 +74,9 @@ public class MemberProfileController {
         return UUID.randomUUID().toString().replace("-", "");
     }
 
-    public record MemberResponse(String id, String email) { }
+    public record MemberResponse(String id, String email, String role) {
+        public MemberResponse(String id, String email) {
+            this(id, email, "MEMBER");
+        }
+    }
 }

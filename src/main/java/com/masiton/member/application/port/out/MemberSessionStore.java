@@ -11,6 +11,10 @@ public interface MemberSessionStore {
 
     MemberSession issue(String memberId, Duration ttl);
 
+    default MemberSession issue(String memberId, Duration ttl, int maxSessions) {
+        return issue(memberId, ttl);
+    }
+
     MemberSession rotate(String refreshToken, Duration ttl);
 
     Optional<MemberSessionOwner> findSession(String refreshToken);
