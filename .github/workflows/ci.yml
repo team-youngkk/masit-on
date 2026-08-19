@@ -62,12 +62,7 @@ jobs:
     if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-24.04
     steps:
-      # 배포할 이미지와 같은 커밋을 체크아웃한다. ref를 비우면 롤백 실행에서 과거
-      # 이미지에 현재 브랜치 tip의 app-run.sh·systemd unit·Nginx 설정이 조합돼
-      # 이미지와 배포 산출물의 호환성이 깨진다.
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ env.IMAGE_TAG }}
 
       # Redis user-data는 Terraform templatefile()과 Bash가 함께 해석한다.
       # 고정된 Terraform 버전으로 실제 렌더링 결과를 검사해 plan 단계의 보간
@@ -493,7 +488,12 @@ jobs:
       # inputs가 없어 항상 github.sha가 된다.
       IMAGE_TAG: ${{ github.event.inputs.image_tag || github.sha }}
     steps:
+      # 배포할 이미지와 같은 커밋을 체크아웃한다. ref를 비우면 롤백 실행에서 과거
+      # 이미지에 현재 브랜치 tip의 app-run.sh·systemd unit·Nginx 설정이 조합돼
+      # 이미지와 배포 산출물의 호환성이 깨진다.
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.IMAGE_TAG }}
 
       # 이 값은 아래에서 SSM 명령 문자열에 들어가 인스턴스에서 root로 실행된다.
       # 자유 문자열을 그대로 실으면 명령 주입이 되므로 커밋 SHA 형식만 받아들인다.

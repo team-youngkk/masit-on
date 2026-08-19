@@ -98,27 +98,31 @@ class RuntimeDeploymentContractTest {
     void codeDeploy_대기timeout과취소시중지하고_terminal상태까지확인한다() throws IOException {
         String workflow = Files.readString(CI);
         String iam = Files.readString(TERRAFORM_IAM);
+        String deploy = section(workflow, "  deploy:", "  # GitHub 취소");
+        String cleanup = workflow.substring(workflow.indexOf("  codedeploy-cancel-cleanup:"));
 
-        assertThat(workflow)
+        assertThat(deploy)
                 .contains("ref: ${{ env.IMAGE_TAG }}")
-                .contains("stop-deployment")
-                .contains("--auto-rollback-enabled")
+                .contains("actions/checkout@v4")
                 .contains("trap on_exit EXIT")
                 .contains("trap on_signal INT TERM")
                 .contains("for _ in $(seq 1 270)")
                 .contains("for _ in $(seq 1 60)")
-                .contains("Succeeded|Failed|Stopped")
                 .contains("stop_failed=false", "return 1", "::error::CodeDeploy")
-                .contains("cancel-in-progress: ${{ github.event_name == 'pull_request' }}")
+                .contains("aws s3api put-object");
+        assertThat(cleanup)
+                .contains("stop-deployment")
+                .contains("--auto-rollback-enabled")
+                .contains("Succeeded|Failed|Stopped")
                 .contains("codedeploy-cancel-cleanup")
                 .contains("deployment_id_key")
-                .contains("aws s3api put-object")
                 .contains("aws s3 cp \"s3://${CODEDEPLOY_S3_BUCKET}/${deployment_id_key}\"")
                 .contains("aws deploy list-deployments")
                 .contains("aws deploy batch-get-deployments")
                 .contains("lookup_completed")
                 .contains("steps.lookup.outputs.resolved")
                 .contains("for _ in $(seq 1 24)");
+        assertThat(workflow).contains("cancel-in-progress: ${{ github.event_name == 'pull_request' }}");
         assertThat(workflow).doesNotContain("actions/download-artifact@v4");
         assertThat(workflow.indexOf("aws s3api put-object"))
                 .isGreaterThan(workflow.indexOf("aws deploy create-deployment"))
