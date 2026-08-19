@@ -87,6 +87,37 @@ class JdbcAiRegisteredContentStorePostgreSqlIntegrationTest extends FullContextI
     }
 
     @Test
+    @DisplayName("기존 미완성 Video에 이번에 만든 Creator를 연결한 경우 Creator를 지우지 않고 보존하며 예외 없이 완료한다")
+    void deleteIfCreated_기존Video가참조하는Creator는삭제하지않고예외없이완료한다() {
+        // Given: VerifiedVideoRegistrationService.existingWithCreator()가 creator_id가 비어 있던
+        // 기존 Video에 이번 시도의 새 Creator를 연결한 상태(videoCreated=false, creatorCreated=true)
+        UUID restaurantId = UUID.randomUUID();
+        UUID creatorId = UUID.randomUUID();
+        UUID videoId = UUID.randomUUID();
+        UUID visitId = UUID.randomUUID();
+        insertFixtures(restaurantId, creatorId, videoId, visitId);
+
+        // When
+        store.deleteIfCreated(restaurantId, true, creatorId, true, videoId, false, visitId, true);
+
+        // Then: restaurant·visit는 지워지지만, video가 참조하는 creator는 FK 위반 없이 보존된다
+        assertThat(count("restaurant", "id = ?", restaurantId)).isZero();
+        assertThat(count("visit", "id = ?", visitId)).isZero();
+        assertThat(count("video", "id = ?", videoId)).isEqualTo(1);
+        assertThat(count("creator", "id = ?", creatorId)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT creator_id FROM video WHERE id = ?", UUID.class, videoId))
+                .isEqualTo(creatorId);
+
+        UUID retryRestaurantId = UUID.randomUUID();
+        jdbcTemplate.update("""
+                INSERT INTO restaurant (id, region_id, food_category_id, name, kakao_place_id, kakao_place_url,
+                    road_address, phone_number)
+                VALUES (?, ?, ?, '행복식당(재시도)', ?, 'https://place.map.kakao.com/1', '서울특별시 마포구 월드컵로 1', '02-1234-5678')
+                """, retryRestaurantId, REGION_ID, FOOD_CATEGORY_ID, kakaoPlaceId);
+        assertThat(count("restaurant", "id = ?", retryRestaurantId)).isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("재사용 자원(created=false)은 하드 삭제 대상에서 제외한다")
     void deleteIfCreated_재사용자원은삭제하지않는다() {
         // Given: 크리에이터·영상은 재사용(created=false), 맛집·방문만 이번에 새로 만든 자원

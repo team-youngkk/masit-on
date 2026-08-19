@@ -17,8 +17,8 @@ related_documents:
 | PR | [#244 [E3] AI 영상 추출 자동 등록 계약을 구현한다](https://github.com/team-youngkk/masit-on/pull/244) |
 | 작성자 | `tjdgns0618` |
 | 처리 일자 | 2026-08-19 |
-| 범위 | 1차: 미해결 인라인 리뷰 3건(`inan0226` 2건, `jinyp01` 1건). 2차: 1차 반영 뒤 새로 열린 인라인 리뷰 9건(`w00lam` 6건 — 그중 2건은 1차와 같은 문제를 겨냥한 별도 스레드, `jinyp01` 1건, `inan0226` 2건). 3차: 2차의 보상 롤백 자체를 검증한 인라인 리뷰 2건(`inan0226` 1건, `jinyp01` 1건) |
-| 주 문제 유형 | 애플리케이션 — 동시성 제어와 트랜잭션 경계, 죽은 코드, 식별자 변환, 보상 처리 정확성 |
+| 범위 | 1차: 미해결 인라인 리뷰 3건(`inan0226` 2건, `jinyp01` 1건). 2차: 1차 반영 뒤 새로 열린 인라인 리뷰 9건(`w00lam` 6건 — 그중 2건은 1차와 같은 문제를 겨냥한 별도 스레드, `jinyp01` 1건, `inan0226` 2건). 3차: 2차의 보상 롤백 자체를 검증한 인라인 리뷰 2건(`inan0226` 1건, `jinyp01` 1건). 4차: 3차의 하드 삭제 구현 자체를 검증한 인라인 리뷰 1건(`inan0226`) |
+| 주 문제 유형 | 애플리케이션·데이터베이스 — 동시성 제어와 트랜잭션 경계, 죽은 코드, 식별자 변환, 보상 처리 정확성 |
 | 기존 기록 | [PR #175 관리자 AI 검수 동시성·태그 감사 후속](pr-175-ai-admin-review-follow-up.md)에서 이미 "검수 상태 전이·태그·감사를 한 트랜잭션으로 묶는다"는 같은 패턴을 다뤘다. 이번 PR의 등록 단위(`ai_registration_unit`) 경로는 그 패턴을 새로 만든 별도 클래스라 같은 결함이 재발했다. [PR #226](pr-226-ai-auto-registration-contract-review.md)은 이 기능의 계약을 확정한 문서 PR로, DB 저장 소스·상태 조합 결정의 배경이다. |
 
 ## 2. 리뷰 스레드 처리 결과
@@ -50,6 +50,13 @@ related_documents:
 | [보상 롤백이 일부 실패 경로만 커버 (P1, inan0226)](https://github.com/team-youngkk/masit-on/pull/244#discussion_r3810603399) | `confirmCommitService.commit()` 호출을 `DataIntegrityViolationException`만 잡아, 감사 insert의 `IllegalStateException` 등 다른 런타임 예외는 보상 없이 그대로 전파됨 | 애플리케이션 | 수정 필요 | `catch (DataIntegrityViolationException)`을 `catch (RuntimeException)`으로 넓히고, `DataIntegrityViolationException`이면 `concurrentConflict()`로, 그 외에는 원래 예외를 그대로 던지도록 변경. `registerUnit`(`executeAndPersist`) 경로도 같은 패턴으로 보완 | `RegistrationUnitCommandServiceTest`의 일반 `RuntimeException` 주입 회귀 테스트(등록 단위 일괄 등록·CONFIRM 각 1건) |
 | [보상 롤백이 실제로 재시도를 열지 못함 (P1, jinyp01)](https://github.com/team-youngkk/masit-on/pull/244#discussion_r3810604423) | `compensateFailedRegistration`이 부르는 `RollbackAiRegisteredContentUseCase.rollback()`은 `publication_status`만 `PRIVATE`로 바꿀 뿐 행을 지우지 않아, `restaurant.kakao_place_id` unique 제약이 남아 재시도가 여전히 `DUPLICATE_CONFLICT`로 막힘 | 애플리케이션 | 수정 필요 | `RollbackAiRegisteredContentUseCase`에 하드 삭제 전용 `discardFailedRegistration()`을 신설하고 `AiRegisteredContentStore.deleteIfCreated()`로 구현. `compensateFailedRegistration()`이 기존 `rollback()`(감사 보존용 PRIVATE 전환) 대신 이 메서드를 호출하도록 변경 | `JdbcAiRegisteredContentStorePostgreSqlIntegrationTest` — 하드 삭제 후 같은 `kakaoPlaceId`로 새 맛집 insert가 실제로 성공하는지까지 PostgreSQL로 검증 |
 
+### 4차 리뷰 라운드 (3차의 하드 삭제 자체를 검증)
+
+| 스레드 | 요청 요약 | 문제 유형 | 판단 | 처리 결과 | 근거/검증 |
+|---|---|---|---|---|---|
+| [기존 미완성 Video가 참조하는 Creator를 삭제해 FK 위반으로 전체 보상이 롤백됨 (P1, inan0226)](https://github.com/team-youngkk/masit-on/pull/244#discussion_r3810735187) | `VerifiedVideoRegistrationService.existingWithCreator()`가 `creator_id`가 비어 있던 기존 Video에 이번 시도의 새 Creator를 연결하면서 `videoCreated=false`를 반환하는 경로가 있음. `deleteIfCreated()`는 `videoCreated=false`라 Video를 보존하면서도 `creatorCreated=true`인 Creator는 무조건 삭제를 시도해 `video.creator_id` FK(RESTRICT) 위반으로 삭제 트랜잭션 전체가 롤백됨. 그 결과 Restaurant·Creator가 모두 남아 재시도가 다시 `DUPLICATE_CONFLICT`로 막힘 | 데이터베이스 | 수정 필요 | Creator를 지우기 전에 `SELECT EXISTS (SELECT 1 FROM video WHERE creator_id = ?)`로 참조 여부를 확인하고, 참조가 남아 있으면 삭제를 건너뛰고 보존하도록 `JdbcAiRegisteredContentStore.deleteIfCreated()`를 수정. Creator에는 `kakao_place_id`처럼 재시도를 막는 unique 제약이 없어 보존해도 무해함을 확인 | `JdbcAiRegisteredContentStorePostgreSqlIntegrationTest` — 이 시나리오를 그대로 재현해 예외 없이 완료되고 Restaurant는 지워지되 Video·Creator는 보존되며, `kakaoPlaceId` 재시도가 여전히 성공하는지까지 PostgreSQL로 검증하는 회귀 테스트 추가 |
+
+
 ## 3. 문제 현상과 발생 조건
 
 - 오류 메시지: 없음(리뷰 시점 재현 코드, 런타임 예외 아님)
@@ -75,6 +82,11 @@ related_documents:
 - 재현 조건(보상이 재시도를 못 엶): 2차의 `compensateFailedRegistration()`이 CAS 실패 시 `rollbackUseCase.rollback()`을 호출.
 - 실제 결과(보상이 재시도를 못 엶): `rollback()` → `AiRegisteredContentStore.makePrivateIfCreated()`는 `restaurant.publication_status`만 `PRIVATE`로 바꿀 뿐 행을 지우지 않는다. `DuplicateRegistrationCheckQueryAdapter.restaurantExists()`는 `publication_status`를 전혀 보지 않고 `kakao_place_id` 존재만 확인하므로, 보상 뒤에도 같은 장소로는 재시도할 수 없다 — Javadoc이 약속한 "재시도 가능한 상태로 복구"가 실제로는 이뤄지지 않는다.
 
+### 4차 리뷰 라운드 추가 현상
+
+- 재현 조건: `VerifiedVideoRegistrationService.existingWithCreator()`가 `creator_id`가 비어 있던 기존 Video에 이번 시도에서 새로 만든 Creator를 연결(`assignCreatorIfUnassigned`)하면서도 `videoCreated=false`(Video 자체는 새로 만든 게 아니므로)를 반환하는 조합. 3차의 `deleteIfCreated()`는 `videoCreated=false`인 Video는 보존(지우지 않음)하면서 `creatorCreated=true`인 Creator는 무조건 삭제를 시도.
+- 실제 결과: 보존된 Video가 여전히 그 Creator를 참조하므로(`video.creator_id`), Creator 삭제가 FK(RESTRICT) 위반으로 실패하고 `deleteIfCreated()`의 트랜잭션 전체가 롤백된다. Restaurant·Creator가 모두 orphan으로 남아 재시도가 다시 `DUPLICATE_CONFLICT`로 막힌다 — 3차가 고친 "보상이 재시도를 못 엶" 문제가 이 특정 조합에서 그대로 재발한 것과 같은 결과다.
+
 ## 4. 근본 원인
 
 - 동시성: `AiRegistrationUnitStore.markRegistered`/`confirmWithSupplement`가 `WHERE id = ?`만으로 무조건 갱신해, `lockByJobAndUnitId`의 짧은 잠금이 풀린 뒤에는 상태 전이 자체를 막을 장치가 없었다. 외부 호출 중 DB 트랜잭션을 열지 않는다는 아키텍처 제약(트랜잭션 경계 문서) 때문에 잠금을 계속 들고 있을 수 없으므로, 최종 갱신에 조건을 거는 낙관적 동시성 제어가 필요했다.
@@ -84,6 +96,7 @@ related_documents:
 - register+CONFIRM 원자 경계: `ExecuteRegistrationUnitUseCase.execute()`는 Kakao·YouTube 외부 호출이 끝난 뒤 `autoRegister.register()`를 내부에서 직접 호출해 그 자체 트랜잭션으로 즉시 커밋한다(Worker 경로의 `RegistrationUnitAutoExecutionService`도 동일하게 이 계약을 통해 호출하므로 같은 특성을 공유한다). `RegistrationUnitCommandService`는 이 결과를 받은 뒤 별도 트랜잭션(`RegistrationUnitConfirmCommitService`)에서 등록 단위 상태를 반영하므로, 두 트랜잭션 사이에 원자성이 없다. 완전한 해결은 `execute()`가 "검증"과 "등록"을 분리해 등록을 호출자의 트랜잭션 안에서 수행하도록 계약을 바꿔야 하는데, 이는 Worker·관리자 두 경로가 공유하는 계약이라 이번 PR의 범위를 벗어난다.
 - 보상 범위 누락: 보상 롤백을 추가할 때 "동시성 충돌"만 염두에 두고 그 신호인 `DataIntegrityViolationException` 하나만 잡았다. 하지만 `confirmCommitService.commit()`은 태그·감사 Adapter를 포함한 여러 하위 호출을 거치므로, 동시성과 무관한 다른 런타임 예외도 같은 시점(register 이후) 에 발생할 수 있다는 점을 놓쳤다.
 - 보상이 재시도를 못 엶: `RollbackAiRegisteredContentUseCase.rollback()`은 애초에 관리자가 수행하는 `review`의 `ROLLBACK`(정상적으로 등록된 콘텐츠를 감사 이력과 함께 되돌리는 것) 전용으로 설계된 메서드였다. 이 메서드를 "동시성 경쟁에서 진 시도가 만든, 유효하게 등록된 적 없는 콘텐츠"를 지우는 용도로 그대로 재사용한 것이 원인이다. 두 시나리오는 겉보기엔 비슷하지만(둘 다 "되돌리기") 목적이 다르다 — 전자는 감사 보존이 요구사항이고 후자는 재시도 가능성 회복이 요구사항이라, 같은 메서드로 만족시킬 수 없었다.
+- Creator FK 위반: `deleteIfCreated()`를 설계할 때 "각 자원의 `created` 플래그가 true면 지운다"는 단순한 규칙만 적용했는데, `videoCreated`/`creatorCreated`는 서로 독립적으로 결정되는 값이라 "Video는 보존되지만 그 Video가 참조하는 Creator는 이번에 새로 만든 것"이라는 조합이 가능하다는 점을 놓쳤다. `VerifiedVideoRegistrationService.existingWithCreator()`의 실제 동작(비어 있던 Video의 `creator_id`를 나중에 채워 넣는 경로)을 열어서 확인하지 않고 `created` 플래그만으로 삭제 대상을 판단한 것이 원인이다.
 
 ## 5. 확인 및 시도
 
@@ -98,6 +111,7 @@ related_documents:
 | Worker 경로(`RegistrationUnitAutoExecutionService`)도 `ExecuteRegistrationUnitUseCase.execute()`를 거치는지, `autoRegister.register()` 호출 위치가 어디인지 확인 | Worker 경로도 관리자 경로와 동일하게 `execute()` 내부에서 `register()`가 즉시 커밋되는 구조를 공유함(`RegistrationUnitAutoExecutionService`도 트랜잭션 밖에서 실행하도록 Javadoc에 명시) | register+최종 커밋의 완전한 단일 트랜잭션 병합은 두 경로가 공유하는 계약 변경이 필요해 이번 PR 범위를 벗어난다고 판단, 대신 보상 롤백을 채택 |
 | `AiRegisteredContentStore.makePrivateIfCreated`/`JdbcAiRegisteredContentStore` 실제 SQL 확인 | `UPDATE restaurant SET publication_status = 'PRIVATE' WHERE id = ?`뿐이고 `DELETE`가 전혀 없음. `DuplicateRegistrationCheckQueryAdapter.restaurantExists`도 `publication_status` 조건이 없어 PRIVATE로 바뀐 행도 여전히 "존재"로 판정됨 | jinyp01의 지적이 정확함을 코드로 확인 — `rollback()` 재사용이 아니라 실제 하드 삭제가 필요 |
 | `restaurant`/`creator`/`video`/`visit`의 FK 제약이 `ON DELETE RESTRICT`인지, 이 보상 시점에 다른 테이블이 이미 이 행들을 참조하는지 확인 | 모두 `ON DELETE RESTRICT`. 다만 보상이 실행되는 시점은 정확히 `ai_registration_unit`의 CAS 갱신이 실패한 시점이라, `ai_registration_unit.registered_*_id`는 애초에 이 행들을 가리키도록 갱신된 적이 없다(그 갱신 자체가 실패했으므로). 감사 이력(`ai_registration_unit_review`)·태그 연결도 같은 트랜잭션에서 실패해 커밋되지 않음 | 이 시점에는 어떤 테이블도 방금 만든 4종을 참조하지 않으므로 하드 삭제가 FK 제약과 충돌하지 않는다고 판단, `deleteIfCreated()`로 실제 검증 |
+| `VerifiedVideoRegistrationService`의 `register()` 실제 분기(`existingWithCreator`) 코드 확인 | `existing.getCreatorId() == null`인 기존 Video에 `assignCreatorIfUnassigned`로 새 Creator를 연결하면서 `videoCreated=false`를 반환하는 분기가 실제로 존재함. 즉 "Video는 보존되지만 그 Video가 참조하는 Creator는 새로 만든 것"인 조합이 실제로 발생할 수 있음을 확인 | inan0226의 지적이 정확함을 코드로 확인 — `created` 플래그만으로 삭제 여부를 정하지 않고, 실제 FK 참조 여부를 확인하는 방어 로직 추가 |
 
 ## 6. 최종 해결
 
@@ -148,6 +162,16 @@ related_documents:
   - `src/main/java/com/masiton/ai/application/RegistrationUnitCommandService.java`
 - 고려한 대안: `restaurantExists()`가 `publication_status = 'PUBLIC'`인 행만 보도록 바꾸는 방안(jinyp01이 제시한 두 대안 중 하나)도 검토했으나, 이 조회는 정식으로 등록된 행 전체를 대상으로 하는 일반 중복 판정 쿼리라 그 의미를 "동시성 경쟁에서 진 시도의 잔여물 제외"까지 넓히면 다른 호출 맥락(정상 등록 흐름)의 판정 기준까지 조용히 바뀔 위험이 있었다. 하드 삭제 쪽이 영향 범위가 이 보상 시나리오로 국한돼 더 안전하다고 판단했다.
 
+### 4차 리뷰 라운드 최종 해결
+
+- 변경 내용:
+  - `JdbcAiRegisteredContentStore.deleteIfCreated()`에서 Creator를 지우기 전에 `SELECT EXISTS (SELECT 1 FROM video WHERE creator_id = ?)`로 그 Creator를 참조하는 Video가 남아 있는지 확인하고, 참조가 있으면 삭제를 건너뛰도록 변경(Creator에는 `kakao_place_id`처럼 재시도를 막는 unique 제약이 없어 보존해도 무해함을 확인).
+  - `AiRegisteredContentStore.deleteIfCreated()` Javadoc에 이 예외 조건을 명시.
+- 선택 이유: `existingWithCreator()`가 만드는 "Video 보존 + 새 Creator 연결"이라는 특수 조합은 `created` 플래그만으로는 구분할 수 없어, 실제 FK 참조 여부를 쿼리로 확인하는 것이 유일하게 정확한 방법이었다. Video 쪽의 `creator_id`를 되돌리는 방안(연결을 끊고 완전히 삭제)도 검토했으나, 그 Video는 이번 시도가 소유한 자원이 아니라 보존 대상이라 그 행을 다시 수정하는 것 자체가 보상의 책임 범위를 벗어난다고 판단해 채택하지 않았다.
+- 변경 파일(4차):
+  - `src/main/java/com/masiton/orchestration/infrastructure/rollback/JdbcAiRegisteredContentStore.java`
+  - `src/main/java/com/masiton/orchestration/application/port/out/AiRegisteredContentStore.java`
+
 ## 7. 검증
 
 | 검증 | 결과 | 확인한 내용 |
@@ -167,10 +191,12 @@ related_documents:
 | `./gradlew test --tests "...RegistrationUnitCommandServiceTest"`(3차) | 통과 | 일반 `RuntimeException` 주입 시 보상 후 원래 예외 전달 회귀 2건 포함 9건 |
 | `./gradlew test --tests "...JdbcAiRegisteredContentStorePostgreSqlIntegrationTest"`(신규) | 통과 | 하드 삭제 후 같은 `kakaoPlaceId`로 재등록 성공 검증 포함 2건 |
 | `./gradlew clean build`(전체 백엔드 빌드, 3차) | 통과 | 1384건, 실패·오류 0건(회귀 없음) |
+| `./gradlew test --tests "...JdbcAiRegisteredContentStorePostgreSqlIntegrationTest"`(4차) | 통과 | 기존 미완성 Video가 참조하는 Creator 보존 + 예외 없이 완료 + 재시도 성공까지 검증하는 회귀 테스트 포함 3건 |
+| `./gradlew clean build`(전체 백엔드 빌드, 4차) | 통과 | 1385건, 실패·오류 0건(회귀 없음) |
 
 ## 8. 재발 방지 및 다음 확인
 
-- 재발 방지: 외부 호출 뒤 최종 DB 반영이 있는 새 Application 서비스를 작성할 때는 (1) 상태 전이가 있으면 `expectedStatus` 조건부 갱신(등록 결과 존재 여부처럼 상태 문자열만으로 구분 안 되는 불변식이 있으면 추가 WHERE 조건도 함께), (2) 여러 쓰기가 있으면 `AiExtractionResultCommitService`/`RegistrationUnitConfirmCommitService`처럼 순수 DB 쓰기만 모은 `@Transactional` 커밋 서비스로 분리, (3) Controller와 Service 경계를 넘는 식별자(특히 `member_account.id`/`admin_account.id`처럼 의미가 다른 두 UUID)는 어느 계층이 변환을 책임지는지 타입이나 이름만으로는 구분되지 않으므로 값을 넘기기 전에 호출부를 전수 확인, (4) 실패 시 보상 처리를 추가할 때는 특정 예외 하나만이 아니라 그 호출 경로가 던질 수 있는 런타임 예외 전체를 기준으로 catch 범위를 정하고, 기존 메서드를 재사용하기 전에 그 메서드가 실제로 하는 일(감사 보존용 소프트 삭제 vs. 하드 삭제)이 지금 필요한 목적과 같은지 구현을 열어서 확인하는 네 관례를 [PR #175 기록](pr-175-ai-admin-review-follow-up.md)에 이어 이 기록에도 남긴다.
+- 재발 방지: 외부 호출 뒤 최종 DB 반영이 있는 새 Application 서비스를 작성할 때는 (1) 상태 전이가 있으면 `expectedStatus` 조건부 갱신(등록 결과 존재 여부처럼 상태 문자열만으로 구분 안 되는 불변식이 있으면 추가 WHERE 조건도 함께), (2) 여러 쓰기가 있으면 `AiExtractionResultCommitService`/`RegistrationUnitConfirmCommitService`처럼 순수 DB 쓰기만 모은 `@Transactional` 커밋 서비스로 분리, (3) Controller와 Service 경계를 넘는 식별자(특히 `member_account.id`/`admin_account.id`처럼 의미가 다른 두 UUID)는 어느 계층이 변환을 책임지는지 타입이나 이름만으로는 구분되지 않으므로 값을 넘기기 전에 호출부를 전수 확인, (4) 실패 시 보상 처리를 추가할 때는 특정 예외 하나만이 아니라 그 호출 경로가 던질 수 있는 런타임 예외 전체를 기준으로 catch 범위를 정하고, 기존 메서드를 재사용하기 전에 그 메서드가 실제로 하는 일(감사 보존용 소프트 삭제 vs. 하드 삭제)이 지금 필요한 목적과 같은지 구현을 열어서 확인, (5) 여러 자원의 "이번에 새로 만들었는지"를 각자 독립된 boolean으로 넘기는 보상 로직에서는 그 플래그들의 조합이 실제 스키마 FK와 충돌하지 않는지(한 자원이 보존되면서 다른 자원을 참조하는 조합이 가능한지) 호출되는 서비스의 실제 분기까지 열어서 확인하는 다섯 관례를 [PR #175 기록](pr-175-ai-admin-review-follow-up.md)에 이어 이 기록에도 남긴다.
 - 다음 확인: register+CONFIRM(및 등록 단위 일괄 등록)의 완전한 단일 트랜잭션 병합은 Worker·관리자 두 경로가 공유하는 `ExecuteRegistrationUnitUseCase` 계약 변경이 필요하다. 이번 PR은 보상 롤백으로 재시도 가능성만 보장했고, 계약 자체를 바꾸는 근본 해결은 별도 이슈로 등록해 담당자·소유자 합의 후 진행해야 한다(추적 이슈 없음, 필요 시 신규 등록). PR #244 본문의 "검증하지 못한 항목"에 남아 있던 `DISCARD`/`ROLLBACK`/`ADJUST_CATEGORY`가 외부 콘텐츠 반영(`rollbackUseCase.rollback()`/`adjustCategoryUseCase.adjust()`)까지 포함해 완전히 원자적이지는 않다는 잔여 위험도 PR 본문이 이미 후속 작업으로 분리하겠다고 명시한 대로 유지한다(이번 라운드에서는 등록 단위 행 자체의 CAS만 추가했다).
 
 ## 9. 도입 전후 비교 지표
@@ -181,4 +207,4 @@ related_documents:
 
 ## 10. 남은 사항
 
-1~3차 모두 14개 스레드를 수정 완료 후 답글·해결 처리한다. 이 중 register+CONFIRM 원자 경계는 보상 처리(하드 삭제)로 즉시 위험(영구 `DUPLICATE_CONFLICT` 잠금)만 해소했고, `ExecuteRegistrationUnitUseCase` 계약을 바꾸는 근본 해결은 8절의 "다음 확인"에 남긴 별도 후속 작업이다. 3차에서 보상 처리 자체의 정확성(예외 범위, 실제 재시도 가능 여부)이 리뷰로 두 번 더 지적된 점을 감안하면, 이 보상 로직이 앞으로도 계속 리뷰 대상이 될 가능성이 있어 후속 작업(계약 재설계)이 이뤄지기 전까지는 유사한 보상 코드를 추가할 때 이 기록의 8절 재발 방지 항목을 먼저 확인하는 편이 안전하다.
+1~4차 모두 15개 스레드를 수정 완료 후 답글·해결 처리한다. 이 중 register+CONFIRM 원자 경계는 보상 처리(하드 삭제)로 즉시 위험(영구 `DUPLICATE_CONFLICT` 잠금)만 해소했고, `ExecuteRegistrationUnitUseCase` 계약을 바꾸는 근본 해결은 8절의 "다음 확인"에 남긴 별도 후속 작업이다. 2차에서 도입한 보상 처리 자체의 정확성이 3차(예외 범위, 실제 재시도 가능 여부)와 4차(Creator FK 위반)로 세 라운드 연속 지적된 점을 감안하면, 이 보상 로직은 자원 조합이 복잡해 앞으로도 유사한 결함이 나올 가능성이 있다. 후속 작업(계약 재설계)이 이뤄지기 전까지는 유사한 보상 코드를 추가하거나 수정할 때 이 기록의 8절 재발 방지 항목, 특히 "created 플래그 조합이 실제 FK와 충돌하지 않는지 호출되는 서비스의 실제 분기까지 확인"하는 항목을 먼저 확인하는 편이 안전하다.
