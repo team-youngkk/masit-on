@@ -103,7 +103,7 @@ related_documents:
 | 배포 경로 | SSM `send-command`로 고정 인스턴스 | CodeDeploy Blue-Green, push 경로 기본값 |
 | 배포 중 중단 | 컨테이너 교체 구간 존재 | replacement 등록 후 original 해제 |
 | 아웃바운드 공인 IP | EIP 고정 | 인스턴스마다 변동 |
-| 유휴 환경 정리 | 해당 없음 | 수동(runbook). 자동 종료는 미활성 |
+| 유휴 환경 정리 | 해당 없음 | 성공 15분 뒤 CodeDeploy 자동 종료. 실패·중단된 배포만 runbook 수동 정리 |
 
 ## 10. 남은 사항
 
