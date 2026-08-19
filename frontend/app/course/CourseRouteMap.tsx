@@ -205,7 +205,6 @@ export function CourseRouteMap({
         map.setBounds(latLngBounds)
       }
     } catch {
-      disposeOverlays()
       setStatus('error')
     }
 
