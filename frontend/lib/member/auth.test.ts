@@ -33,7 +33,12 @@ function tokenResponse(accessToken: string): Response {
     accessToken,
     tokenType: 'Bearer',
     expiresInSeconds: 1_800,
+    role: 'MEMBER',
   })
+}
+
+function currentMemberResponse(): Response {
+  return Response.json({ id: 'member-1', email: 'member@example.com', role: 'MEMBER' })
 }
 
 function deferredResponse(): {
@@ -71,6 +76,7 @@ memberAuthTest('로그아웃 응답 뒤에 로그인 요청을 실행해 새 세
         resolve()
         return pendingLogout.promise
       }
+      if (input === '/api/me' && method === 'GET') return currentMemberResponse()
       throw new Error(`Unexpected request: ${String(input)} ${method}`)
     }
   })
@@ -121,7 +127,7 @@ memberAuthTest('진행 중인 refresh 뒤에 로그인을 실행해 로그인 �
     }
     if (input === '/api/me' && method === 'GET') {
       protectedAuthorization = new Headers(init?.headers).get('Authorization')
-      return new Response(null, { status: 200 })
+      return currentMemberResponse()
     }
     throw new Error(`Unexpected request: ${String(input)} ${method}`)
   }
@@ -160,6 +166,7 @@ memberAuthTest('메모리 토큰이 없어도 refresh 후 서버 로그아웃을
     if (input === '/api/auth/tokens/refresh' && method === 'POST') {
       return tokenResponse('recovered-access')
     }
+    if (input === '/api/me' && method === 'GET') return currentMemberResponse()
     if (input === '/api/auth/tokens' && method === 'DELETE') {
       memberAuthAssert.equal(
         new Headers(init?.headers).get('Authorization'),
@@ -175,9 +182,55 @@ memberAuthTest('메모리 토큰이 없어도 refresh 후 서버 로그아웃을
 
   memberAuthAssert.deepEqual(requests, [
     'POST /api/auth/tokens/refresh',
+    'GET /api/me',
     'DELETE /api/auth/tokens',
   ])
   memberAuthAssert.equal(hasMemberAccessToken(), false)
+})
+
+memberAuthTest('로그아웃 DELETE 401은 refresh 뒤 새 토큰으로 한 번만 재시도한다', async () => {
+  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { locks: new SerialLockManager() } })
+  Object.defineProperty(globalThis, 'window', { configurable: true, value: { dispatchEvent: () => true } })
+  const authorizations: string[] = []
+  let refreshes = 0
+  globalThis.fetch = async (input, init) => {
+    const method = init?.method ?? 'GET'
+    if (input === '/api/auth/tokens' && method === 'POST') return tokenResponse('stale-access')
+    if (input === '/api/auth/tokens/refresh') { refreshes += 1; return tokenResponse('renewed-access') }
+    if (input === '/api/me') return currentMemberResponse()
+    if (input === '/api/auth/tokens' && method === 'DELETE') {
+      authorizations.push(new Headers(init?.headers).get('Authorization') ?? '')
+      return new Response(null, { status: authorizations.length === 1 ? 401 : 204 })
+    }
+    throw new Error(`Unexpected request: ${String(input)} ${method}`)
+  }
+  clearMemberAccessToken()
+  await memberLogin('member@example.com', 'password-value')
+  await memberLogout()
+  memberAuthAssert.deepEqual(authorizations, ['Bearer stale-access', 'Bearer renewed-access'])
+  memberAuthAssert.equal(refreshes, 1)
+  memberAuthAssert.equal(hasMemberAccessToken(), false)
+})
+
+memberAuthTest('복원 직후 보호 요청 401은 토큰과 세션 변경을 함께 정리한다', async () => {
+  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { locks: new SerialLockManager() } })
+  let events = 0
+  Object.defineProperty(globalThis, 'window', { configurable: true, value: { dispatchEvent: () => { events += 1; return true } } })
+  globalThis.fetch = async (input, init) => {
+    if (input === '/api/auth/tokens/refresh') return tokenResponse('restored-access')
+    if (input === '/api/me') return currentMemberResponse()
+    if (input === '/api/me/favorites') {
+      memberAuthAssert.equal(new Headers(init?.headers).get('Authorization'), 'Bearer restored-access')
+      return new Response(null, { status: 401 })
+    }
+    throw new Error(`Unexpected request: ${String(input)}`)
+  }
+  clearMemberAccessToken()
+  events = 0
+  const response = await authenticatedMemberFetch('/api/me/favorites')
+  memberAuthAssert.equal(response.status, 401)
+  memberAuthAssert.equal(hasMemberAccessToken(), false)
+  memberAuthAssert.equal(events, 2)
 })
 
 memberAuthTest('이메일 인증 토큰은 URL이 아닌 JSON 본문으로만 전송한다', async () => {

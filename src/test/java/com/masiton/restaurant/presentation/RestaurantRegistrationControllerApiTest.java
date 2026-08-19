@@ -11,6 +11,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.masiton.restaurant.application.port.in.RestaurantRegistrationUseCase;
 import com.masiton.restaurant.application.port.in.SearchAdminPlaceCandidatesUseCase;
+import com.masiton.common.security.LegacyAdminActorResolver;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -26,8 +27,10 @@ class RestaurantRegistrationControllerApiTest {
     private final RestaurantRegistrationUseCase restaurantRegistrationUseCase = mock(RestaurantRegistrationUseCase.class);
     private final SearchAdminPlaceCandidatesUseCase searchAdminPlaceCandidatesUseCase =
             mock(SearchAdminPlaceCandidatesUseCase.class);
+    private final LegacyAdminActorResolver legacyAdminActorResolver = mock(LegacyAdminActorResolver.class);
     private final MockMvc mockMvc = MockMvcBuilders.standaloneSetup(
-            new RestaurantRegistrationController(restaurantRegistrationUseCase, searchAdminPlaceCandidatesUseCase))
+            new RestaurantRegistrationController(restaurantRegistrationUseCase, searchAdminPlaceCandidatesUseCase,
+                    legacyAdminActorResolver))
             .build();
     private final UUID adminId = UUID.randomUUID();
 
@@ -53,6 +56,7 @@ class RestaurantRegistrationControllerApiTest {
     }
 
     private UsernamePasswordAuthenticationToken authentication() {
+        when(legacyAdminActorResolver.resolve(adminId)).thenReturn(adminId);
         return UsernamePasswordAuthenticationToken.authenticated(adminId.toString(), "N/A", java.util.List.of());
     }
 }

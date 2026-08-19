@@ -17,11 +17,10 @@ public class SecurityProperties {
 
     private final Jwt jwt = new Jwt();
     private Duration refreshTokenTtl = Duration.ofDays(14);
-    private String cookieName = "masit_on_refresh";
+    private String cookieName = "__Secure-masiton-refresh";
     private boolean secure = true;
     private String sameSite = "Strict";
-    private String path = "/api/admin/auth";
-    private String publicBaseUrl = "http://localhost:3000";
+    private String path = "/api/auth/tokens";
     private final Member member = new Member();
     private final LoginFailure loginFailure = new LoginFailure();
 
@@ -69,14 +68,6 @@ public class SecurityProperties {
         this.path = path;
     }
 
-    public String getPublicBaseUrl() {
-        return publicBaseUrl;
-    }
-
-    public void setPublicBaseUrl(String publicBaseUrl) {
-        this.publicBaseUrl = publicBaseUrl;
-    }
-
     public LoginFailure getLoginFailure() {
         return loginFailure;
     }
@@ -88,35 +79,36 @@ public class SecurityProperties {
     @PostConstruct
     public void validateLoginFailureProxyBoundary() {
         loginFailure.validateProxyBoundary();
-        validateAdminPublicBaseUrl();
         validateMemberPublicBaseUrl();
-    }
-
-    public void validateAdminPublicBaseUrl() {
-        try {
-            publicBaseUrl = OriginCanonicalizer.canonicalize(publicBaseUrl);
-        } catch (IllegalArgumentException exception) {
-            throw new IllegalStateException("Admin public base URL must be an HTTP(S) origin", exception);
-        }
     }
 
     public void validateMemberPublicBaseUrl() {
         try {
-            member.publicBaseUrl = OriginCanonicalizer.canonicalize(member.publicBaseUrl);
+            member.publicBaseUrl = canonicalOrigins(member.publicBaseUrl);
         } catch (IllegalArgumentException exception) {
             throw new IllegalStateException("Member public base URL must be an HTTP(S) origin", exception);
         }
     }
 
-    public boolean isAllowedPublicOrigin(String candidate) {
-        return OriginCanonicalizer.matches(candidate, publicBaseUrl);
+
+    private String canonicalOrigins(String configuredOrigins) {
+        String canonical = Arrays.stream(configuredOrigins.split(","))
+                .map(String::trim)
+                .filter(value -> !value.isEmpty())
+                .map(OriginCanonicalizer::canonicalize)
+                .distinct()
+                .collect(Collectors.joining(","));
+        if (canonical.isEmpty()) {
+            throw new IllegalArgumentException("Allowed origins must not be empty");
+        }
+        return canonical;
     }
 
     public static class Jwt {
 
         private String issuer = "masit-on";
-        private String audience = "masit-on-admin-api";
-        private String memberAudience = "masit-on-member-api";
+        private String audience = "masit-on-api";
+        private String memberAudience = "masit-on-api";
         private Duration accessTokenTtl = Duration.ofMinutes(30);
         private Duration memberAccessTokenTtl = Duration.ofMinutes(30);
         private String keyId;
@@ -200,7 +192,7 @@ public class SecurityProperties {
     public static class Member {
 
         private Duration refreshTokenTtl = Duration.ofDays(14);
-        private String cookieName = "__Secure-masiton-member-refresh";
+        private String cookieName = "__Secure-masiton-refresh";
         private String path = "/api/auth/tokens";
         private String publicBaseUrl = "http://localhost:3000";
         private int maxSessions = 3;

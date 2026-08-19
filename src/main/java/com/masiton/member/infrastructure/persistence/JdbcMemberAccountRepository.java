@@ -27,25 +27,25 @@ public class JdbcMemberAccountRepository implements MemberAccountRepository {
 
     @Override
     public Optional<MemberAccount> findByEmail(String email) {
-        return jdbcTemplate.query("SELECT id, email, password_hash, status, email_verified_at, deletion_requested_at, created_at "
+        return jdbcTemplate.query("SELECT id, email, password_hash, status, role, email_verified_at, deletion_requested_at, created_at "
                         + "FROM member_account WHERE email = ?", MAPPER, email).stream().findFirst();
     }
 
     @Override
     public Optional<MemberAccount> findByEmailForUpdate(String email) {
-        return jdbcTemplate.query("SELECT id, email, password_hash, status, email_verified_at, deletion_requested_at, created_at "
+        return jdbcTemplate.query("SELECT id, email, password_hash, status, role, email_verified_at, deletion_requested_at, created_at "
                         + "FROM member_account WHERE email = ? FOR UPDATE", MAPPER, email).stream().findFirst();
     }
 
     @Override
     public Optional<MemberAccount> findById(UUID id) {
-        return jdbcTemplate.query("SELECT id, email, password_hash, status, email_verified_at, deletion_requested_at, created_at "
+        return jdbcTemplate.query("SELECT id, email, password_hash, status, role, email_verified_at, deletion_requested_at, created_at "
                         + "FROM member_account WHERE id = ?", MAPPER, id).stream().findFirst();
     }
 
     @Override
     public Optional<MemberAccount> findByIdForUpdate(UUID id) {
-        return jdbcTemplate.query("SELECT id, email, password_hash, status, email_verified_at, deletion_requested_at, created_at "
+        return jdbcTemplate.query("SELECT id, email, password_hash, status, role, email_verified_at, deletion_requested_at, created_at "
                         + "FROM member_account WHERE id = ? FOR UPDATE", MAPPER, id).stream().findFirst();
     }
 
@@ -53,7 +53,7 @@ public class JdbcMemberAccountRepository implements MemberAccountRepository {
     public MemberAccount create(String email, String passwordHash, Instant now) {
         UUID id = UUID.randomUUID();
         OffsetDateTime recordedAt = asOffsetDateTime(now);
-        jdbcTemplate.update("INSERT INTO member_account (id, email, password_hash, status, created_at, updated_at) VALUES (?, ?, ?, 'PENDING_VERIFICATION', ?, ?)",
+        jdbcTemplate.update("INSERT INTO member_account (id, email, password_hash, status, role, created_at, updated_at) VALUES (?, ?, ?, 'PENDING_VERIFICATION', 'MEMBER', ?, ?)",
                 id, email, passwordHash, recordedAt, recordedAt);
         return findById(id).orElseThrow();
     }
@@ -62,9 +62,9 @@ public class JdbcMemberAccountRepository implements MemberAccountRepository {
     public Optional<MemberAccount> createIfAbsent(String email, String passwordHash, Instant now) {
         UUID id = UUID.randomUUID();
         OffsetDateTime recordedAt = asOffsetDateTime(now);
-        return jdbcTemplate.query("INSERT INTO member_account (id, email, password_hash, status, created_at, updated_at) "
-                        + "VALUES (?, ?, ?, 'PENDING_VERIFICATION', ?, ?) ON CONFLICT (email) DO NOTHING "
-                        + "RETURNING id, email, password_hash, status, email_verified_at, deletion_requested_at, created_at",
+        return jdbcTemplate.query("INSERT INTO member_account (id, email, password_hash, status, role, created_at, updated_at) "
+                        + "VALUES (?, ?, ?, 'PENDING_VERIFICATION', 'MEMBER', ?, ?) ON CONFLICT (email) DO NOTHING "
+                        + "RETURNING id, email, password_hash, status, role, email_verified_at, deletion_requested_at, created_at",
                 MAPPER, id, email, passwordHash, recordedAt, recordedAt).stream().findFirst();
     }
 
@@ -100,6 +100,7 @@ public class JdbcMemberAccountRepository implements MemberAccountRepository {
                 resultSet.getString("email"),
                 resultSet.getString("password_hash"),
                 MemberStatus.valueOf(resultSet.getString("status")),
+                com.masiton.member.domain.model.MemberRole.valueOf(resultSet.getString("role")),
                 resultSet.getTimestamp("email_verified_at") == null ? null : resultSet.getTimestamp("email_verified_at").toInstant(),
                 resultSet.getTimestamp("deletion_requested_at") == null ? null : resultSet.getTimestamp("deletion_requested_at").toInstant(),
                 resultSet.getTimestamp("created_at").toInstant()

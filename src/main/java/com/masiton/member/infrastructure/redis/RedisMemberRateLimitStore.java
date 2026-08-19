@@ -15,9 +15,10 @@ import org.springframework.stereotype.Component;
 
 import com.masiton.member.application.port.out.MemberRateLimitStore;
 import com.masiton.member.infrastructure.configuration.MemberRateLimitProperties;
+import com.masiton.common.security.LoginSourceRateLimiter;
 
 @Component
-public class RedisMemberRateLimitStore implements MemberRateLimitStore {
+public class RedisMemberRateLimitStore implements MemberRateLimitStore, LoginSourceRateLimiter {
 
     private static final String PREFIX = "auth:member:rate-limit:";
     private static final String EMAIL_COOLDOWN_PREFIX = PREFIX + "email-cooldown:";
@@ -106,11 +107,28 @@ public class RedisMemberRateLimitStore implements MemberRateLimitStore {
             """, Long.class);
 
     private static final DefaultRedisScript<Long> RECORD_LOGIN_FAILURE = new DefaultRedisScript<>("""
+            for index, key in ipairs(KEYS) do
+              if tonumber(redis.call('GET', key) or '0') >= tonumber(ARGV[index]) then
+                return 0
+              end
+            end
             for _, key in ipairs(KEYS) do
               local attempts = redis.call('INCR', key)
               if attempts == 1 then
-                redis.call('EXPIRE', key, ARGV[1])
+                redis.call('EXPIRE', key, ARGV[3])
               end
+            end
+            return 1
+            """, Long.class);
+
+    private static final DefaultRedisScript<Long> ACQUIRE_LOGIN_SOURCE_ATTEMPT = new DefaultRedisScript<>("""
+            local attempts = tonumber(redis.call('GET', KEYS[1]) or '0')
+            if attempts >= tonumber(ARGV[1]) then
+              return 0
+            end
+            attempts = redis.call('INCR', KEYS[1])
+            if attempts == 1 then
+              redis.call('EXPIRE', KEYS[1], ARGV[2])
             end
             return 1
             """, Long.class);
@@ -162,6 +180,17 @@ public class RedisMemberRateLimitStore implements MemberRateLimitStore {
     }
 
     @Override
+    public boolean tryAcquireLoginSourceAttempt(String source) {
+        Long acquired = redisTemplate.execute(
+                ACQUIRE_LOGIN_SOURCE_ATTEMPT,
+                List.of(loginSourceKey(source)),
+                String.valueOf(LOGIN_SOURCE_LIMIT),
+                seconds(LOGIN_FAILURE_TTL)
+        );
+        return Long.valueOf(1).equals(acquired);
+    }
+
+    @Override
     public VerificationAttemptResult acquireEmailVerificationAttempt(String source) {
         Long result = redisTemplate.execute(
                 ACQUIRE_EMAIL_VERIFICATION_ATTEMPT,
@@ -179,12 +208,15 @@ public class RedisMemberRateLimitStore implements MemberRateLimitStore {
     }
 
     @Override
-    public void recordLoginFailure(String normalizedEmail, String source) {
-        redisTemplate.execute(
+    public boolean tryRecordLoginFailure(String normalizedEmail, String source) {
+        Long recorded = redisTemplate.execute(
                 RECORD_LOGIN_FAILURE,
-                List.of(loginEmailSourceKey(normalizedEmail, source), loginEmailKey(normalizedEmail), loginSourceKey(source)),
+                List.of(loginEmailSourceKey(normalizedEmail, source), loginEmailKey(normalizedEmail)),
+                String.valueOf(LOGIN_EMAIL_SOURCE_LIMIT),
+                String.valueOf(LOGIN_EMAIL_LIMIT),
                 seconds(LOGIN_FAILURE_TTL)
         );
+        return Long.valueOf(1).equals(recorded);
     }
 
     private String emailCooldownKey(String normalizedEmail) {

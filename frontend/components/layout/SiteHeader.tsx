@@ -36,7 +36,7 @@ function MapNavigationLink({
 
 export function SiteHeader() {
   const pathname = usePathname()
-  const { status, logout } = useMemberSession()
+  const { status, session, logout } = useMemberSession()
   const menuRef = useRef<HTMLDetailsElement>(null)
   const [logoutFailed, setLogoutFailed] = useState(false)
 
@@ -98,6 +98,7 @@ export function SiteHeader() {
           {status === 'anonymous' ? <Link href="/login">로그인</Link> : null}
           {status === 'authenticated' ? (
             <>
+              {session?.role === 'ADMIN' ? <Link href="/admin">관리자</Link> : null}
               <NotificationBell />
               <details
                 className={styles.memberMenu}

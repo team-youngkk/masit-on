@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.masiton.common.observability.TraceIdFilter;
+import com.masiton.common.security.LegacyAdminActorResolver;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
 import com.masiton.common.web.ErrorResponse;
@@ -28,13 +29,16 @@ public class RestaurantRegistrationController {
 
     private final RestaurantRegistrationUseCase restaurantRegistrationUseCase;
     private final SearchAdminPlaceCandidatesUseCase searchAdminPlaceCandidatesUseCase;
+    private final LegacyAdminActorResolver legacyAdminActorResolver;
 
     public RestaurantRegistrationController(
             RestaurantRegistrationUseCase restaurantRegistrationUseCase,
-            SearchAdminPlaceCandidatesUseCase searchAdminPlaceCandidatesUseCase
+            SearchAdminPlaceCandidatesUseCase searchAdminPlaceCandidatesUseCase,
+            LegacyAdminActorResolver legacyAdminActorResolver
     ) {
         this.restaurantRegistrationUseCase = restaurantRegistrationUseCase;
         this.searchAdminPlaceCandidatesUseCase = searchAdminPlaceCandidatesUseCase;
+        this.legacyAdminActorResolver = legacyAdminActorResolver;
     }
 
     @PostMapping("/restaurant-registration-previews")
@@ -99,7 +103,7 @@ public class RestaurantRegistrationController {
             throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
         }
         try {
-            return UUID.fromString(authentication.getName());
+            return legacyAdminActorResolver.resolve(UUID.fromString(authentication.getName()));
         } catch (IllegalArgumentException exception) {
             throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
         }

@@ -11,6 +11,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.masiton.video.application.port.in.VideoRegistrationUseCase;
+import com.masiton.common.security.LegacyAdminActorResolver;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -23,8 +24,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class VideoRegistrationControllerApiTest {
 
     private final VideoRegistrationUseCase videoRegistrationUseCase = mock(VideoRegistrationUseCase.class);
+    private final LegacyAdminActorResolver legacyAdminActorResolver = mock(LegacyAdminActorResolver.class);
     private final MockMvc mockMvc = MockMvcBuilders.standaloneSetup(
-            new VideoRegistrationController(videoRegistrationUseCase)).build();
+            new VideoRegistrationController(videoRegistrationUseCase, legacyAdminActorResolver)).build();
     private final UUID adminId = UUID.randomUUID();
 
     @Test
@@ -67,6 +69,7 @@ class VideoRegistrationControllerApiTest {
     }
 
     private UsernamePasswordAuthenticationToken authentication() {
+        when(legacyAdminActorResolver.resolve(adminId)).thenReturn(adminId);
         return UsernamePasswordAuthenticationToken.authenticated(adminId.toString(), "N/A", java.util.List.of());
     }
 }
