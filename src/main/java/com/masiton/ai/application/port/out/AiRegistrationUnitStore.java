@@ -7,7 +7,7 @@ import java.util.UUID;
 
 /**
  * {@code ai_registration_unit} 저장 Port다. 데이터 계약 5.1절과
- * {@code V6__add_ai_registration_unit_and_food_category_mapping.sql}의 컬럼·CHECK 제약을 그대로
+ * {@code V8__add_ai_registration_unit_and_food_category_mapping.sql}의 컬럼·CHECK 제약을 그대로
  * 따른다. 특히 {@code place_decision}·{@code category_decision}은 네 등록 결과 식별자와 함께
  * 모두 존재하거나 모두 {@code NULL}이어야 하므로({@code ck_ai_registration_unit__registration_result_pair}),
  * 등록이 완료되지 않은 상태({@code AUTO_BLOCKED}·{@code AUTO_REJECTED})로 {@link #insert}를 호출할 때는

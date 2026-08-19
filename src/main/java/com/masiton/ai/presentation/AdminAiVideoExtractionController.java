@@ -20,6 +20,7 @@ import com.masiton.ai.application.RegistrationUnitCommandService;
 import com.masiton.ai.application.port.out.AiExtractionAdminQueryPort;
 import com.masiton.ai.application.port.out.AiRegistrationUnitStore;
 import com.masiton.ai.application.port.out.dto.AiExtractionJobView;
+import com.masiton.common.security.LegacyAdminActorResolver;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
 import tools.jackson.databind.JsonNode;
@@ -36,12 +37,18 @@ public class AdminAiVideoExtractionController {
     private final AiExtractionJobUseCase useCase;
     private final AdminAiExtractionQueryService queryService;
     private final ObjectMapper objectMapper;
+    private final LegacyAdminActorResolver legacyAdminActorResolver;
 
-    public AdminAiVideoExtractionController(AiExtractionJobUseCase useCase, AdminAiExtractionQueryService queryService,
-                                            ObjectMapper objectMapper) {
+    public AdminAiVideoExtractionController(
+            AiExtractionJobUseCase useCase,
+            AdminAiExtractionQueryService queryService,
+            ObjectMapper objectMapper,
+            LegacyAdminActorResolver legacyAdminActorResolver
+    ) {
         this.useCase = useCase;
         this.queryService = queryService;
         this.objectMapper = objectMapper;
+        this.legacyAdminActorResolver = legacyAdminActorResolver;
     }
 
     @GetMapping
@@ -92,7 +99,16 @@ public class AdminAiVideoExtractionController {
         return ResponseEntity.ok(RegistrationExecutionResponse.from(result));
     }
 
-    private UUID adminId(Authentication authentication) { try { return UUID.fromString(authentication.getName()); } catch (Exception e) { throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED); } }
+    private UUID adminId(Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
+        try {
+            return legacyAdminActorResolver.resolve(UUID.fromString(authentication.getName()));
+        } catch (IllegalArgumentException exception) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
+    }
 
     @PostMapping
     public ResponseEntity<AiExtractionJobResponse> submit(@RequestBody SubmitRequest request) {

@@ -488,7 +488,12 @@ jobs:
       # inputs가 없어 항상 github.sha가 된다.
       IMAGE_TAG: ${{ github.event.inputs.image_tag || github.sha }}
     steps:
+      # 배포할 이미지와 같은 커밋을 체크아웃한다. ref를 비우면 롤백 실행에서 과거
+      # 이미지에 현재 브랜치 tip의 app-run.sh·systemd unit·Nginx 설정이 조합돼
+      # 이미지와 배포 산출물의 호환성이 깨진다.
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.IMAGE_TAG }}
 
       # 이 값은 아래에서 SSM 명령 문자열에 들어가 인스턴스에서 root로 실행된다.
       # 자유 문자열을 그대로 실으면 명령 주입이 되므로 커밋 SHA 형식만 받아들인다.
@@ -668,6 +673,14 @@ jobs:
               "deploy/nginx/00-masiton-upgrade-map.conf",
               "deploy/nginx/masiton-tls-renew.service",
               "deploy/nginx/masiton-tls-renew.timer",
+              # Redis 장애는 ready 그룹에 없어 ALB target health로 드러나지 않는다.
+              # 이 지표 수집이 CodeDeploy alarm의 유일한 감지 경로이므로 revision에
+              # 실어 새 인스턴스마다 설치한다(ADR-DEPLOY-005 5절).
+              "deploy/scripts/cloudwatch-install.sh",
+              "deploy/scripts/health-metrics.sh",
+              "deploy/cloudwatch/amazon-cloudwatch-agent.json",
+              "deploy/cloudwatch/masiton-health-metrics.service",
+              "deploy/cloudwatch/masiton-health-metrics.timer",
           ]
           hooks = [
               "deploy/codedeploy/hooks/after-install.sh",
@@ -834,6 +847,8 @@ jobs:
     env:
       AWS_REGION: ap-northeast-2
       CODEDEPLOY_S3_BUCKET: ${{ github.event.inputs.codedeploy_s3_bucket || '' }}
+      CODEDEPLOY_APPLICATION: ${{ github.event.inputs.codedeploy_application || '' }}
+      CODEDEPLOY_DEPLOYMENT_GROUP: ${{ github.event.inputs.codedeploy_deployment_group || '' }}
     steps:
       - name: AWS 자격 증명 (OIDC, 장기 키 없음)
         uses: aws-actions/configure-aws-credentials@v4
@@ -842,6 +857,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: CodeDeploy deployment ID 조회
+        id: lookup
         run: |
           set -euo pipefail
           case "$CODEDEPLOY_S3_BUCKET" in
@@ -849,19 +865,130 @@ jobs:
           esac
           deployment_id_file="$RUNNER_TEMP/codedeploy-deployment-id"
           deployment_id_key="masiton/codedeploy/${GITHUB_RUN_ID}/deployment-id"
-          aws s3 cp "s3://${CODEDEPLOY_S3_BUCKET}/${deployment_id_key}" \
-            "$deployment_id_file"
+          # 내용이 빈 pointer object를 그대로 받아들이면 중지 step이 조용히 건너뛰어진다.
+          # 비어 있으면 pointer가 없는 것과 같이 취급해 아래 재조정으로 넘긴다.
+          if aws s3 cp "s3://${CODEDEPLOY_S3_BUCKET}/${deployment_id_key}" \
+            "$deployment_id_file"; then
+            pointer_id=$(tr -d '\r\n' < "$deployment_id_file")
+            if [ -n "$pointer_id" ]; then
+              printf 'resolved=%s\n' "$pointer_id" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo 'S3 pointer object가 비어 있다. 재조정으로 넘어간다.' >&2
+          fi
 
+          # create-deployment 성공과 pointer 저장 사이에 runner가 죽으면 pointer
+          # 없이 원격 배포만 남는다. pointer 저장 자체는 원자적으로 만들 수 없으므로
+          # pointer에 의존하지 않는 재조정 경로를 둔다. revision key가 이 실행의
+          # run ID를 품고 있어 진행 중인 deployment에서 같은 실행의 것을 되찾는다.
+          echo 'S3 pointer가 없다. 이 실행의 revision key로 원격 deployment를 재조정한다.' >&2
+          case "$CODEDEPLOY_APPLICATION:$CODEDEPLOY_DEPLOYMENT_GROUP" in
+            :*|*:) echo '::error::재조정에는 CodeDeploy application/deployment-group 입력이 필요하다' >&2; exit 1 ;;
+          esac
+          revision_prefix="masiton/codedeploy/${GITHUB_RUN_ID}/"
+          matched=""
+          # 이 경로의 전제가 create-deployment 직후 runner가 죽은 상황인데 CodeDeploy
+          # 목록 API는 최종 일관성을 가진다. 한 번의 빈 응답으로 "정리 대상 없음"을
+          # 확정하면 가장 필요한 순간에 놓친다. 아래 중지 polling이 240초를 쓰므로
+          # 5분 취소 강제 종료 한도 안에 들어가도록 재시도는 15초로 제한한다.
+          #
+          # Blue-Green은 트래픽 전환 뒤 원본 인스턴스 종료를 기다리는 동안 Baking에
+          # 머문다. 이 상태를 빼면 전환까지 끝난 배포를 정리 대상에서 놓친다.
+          lookup_completed=false
+          for attempt in 1 2 3 4; do
+            # 이전 시도의 성공 여부를 다음 시도에 물려주지 않는다. 현재 시도가
+            # 전체 조회를 끝까지 완료한 경우에만 아래에서 true로 설정한다.
+            lookup_completed=false
+            candidates=""
+            if ! candidates=$(aws deploy list-deployments \
+              --application-name "$CODEDEPLOY_APPLICATION" \
+              --deployment-group-name "$CODEDEPLOY_DEPLOYMENT_GROUP" \
+              --include-only-statuses Created Queued InProgress Baking Ready \
+              --query 'deployments' --output text); then
+              echo "::warning::CodeDeploy deployment 목록 조회에 실패했다 (시도 $attempt/4). 재시도한다." >&2
+              if [ "$attempt" -lt 4 ]; then
+                sleep 5
+              fi
+              continue
+            fi
+
+            if [ -n "$candidates" ] && [ "$candidates" != None ]; then
+              candidate_ids=()
+              while IFS= read -r candidate_id; do
+                if [ -n "$candidate_id" ]; then
+                  candidate_ids+=("$candidate_id")
+                fi
+              done < <(printf '%s\n' "$candidates" | tr -s '[:space:]' '\n')
+
+              matched_ids=()
+              batch_failed=false
+              for ((offset = 0; offset < ${#candidate_ids[@]}; offset += 25)); do
+                batch=("${candidate_ids[@]:offset:25}")
+                batch_matches=""
+                if ! batch_matches=$(aws deploy batch-get-deployments \
+                  --deployment-ids "${batch[@]}" \
+                  --query "deploymentsInfo[?starts_with(revision.s3Location.key, \`${revision_prefix}\`)].deploymentId" \
+                  --output text | tr -s '[:space:]' ' ' | sed 's/^ //; s/ $//'); then
+                  batch_failed=true
+                  echo "::warning::CodeDeploy deployment 상세 조회에 실패했다 (시도 $attempt/4, batch $((offset / 25 + 1))). 재시도한다." >&2
+                  break
+                fi
+                if [ "$batch_matches" != None ] && [ -n "$batch_matches" ]; then
+                  while IFS= read -r matched_id; do
+                    if [ -n "$matched_id" ]; then
+                      matched_ids+=("$matched_id")
+                    fi
+                  done < <(printf '%s\n' "$batch_matches" | tr -s '[:space:]' '\n')
+                fi
+              done
+
+              if [ "$batch_failed" = false ] && [ "${#matched_ids[@]}" -gt 0 ]; then
+                matched=$(printf '%s\n' "${matched_ids[@]}" | sort -u | paste -sd ' ' -)
+              else
+                matched=""
+              fi
+              if [ "$batch_failed" = false ]; then
+                lookup_completed=true
+              fi
+            else
+              matched=""
+              lookup_completed=true
+            fi
+            if [ -n "$matched" ]; then
+              break
+            fi
+            if [ "$attempt" -lt 4 ]; then
+              sleep 5
+            fi
+          done
+          if [ -z "$matched" ]; then
+            if [ "$lookup_completed" = false ]; then
+              echo '::error::S3 pointer가 없고 CodeDeploy 재조정 조회를 완료하지 못했다. cleanup을 완료하지 못했으므로 원격 CodeDeploy 상태를 확인해야 한다.' >&2
+              printf 'resolved=\n' >> "$GITHUB_OUTPUT"
+              exit 1
+            fi
+            # 배포 생성 전에 취소된 정상적인 경우와 목록 조회가 놓친 경우를 CI가
+            # 구분할 수 없다. 실패로 만들면 흔한 정상 취소마다 job이 붉게 남아
+            # 경고가 무시되므로, 성공으로 끝내되 확인이 필요하다는 사실을 남긴다.
+            echo '::warning::S3 pointer가 없고 이 실행이 만든 진행 중 deployment도 찾지 못했다. 배포가 생성되기 전에 취소됐을 수 있고 목록 조회가 놓쳤을 수도 있다. 원격 CodeDeploy 상태를 한 번 확인한다.'
+            printf 'resolved=\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          case "$matched" in
+            *' '*) echo "::error::같은 실행의 deployment가 둘 이상 조회됐다: $matched" >&2; exit 1 ;;
+          esac
+          echo "재조정으로 deployment를 되찾았다: $matched"
+          printf 'resolved=%s\n' "$matched" >> "$GITHUB_OUTPUT"
+
+      # 정리할 원격 배포가 없다고 확인된 경우까지 실패로 만들지 않는다. 조회 step이
+      # 실패하면 이 step은 건너뛰고 job이 그 자리에서 실패한다.
       - name: 원격 CodeDeploy 중지 및 terminal 확인
-        if: always()
+        if: steps.lookup.outputs.resolved != ''
+        env:
+          RESOLVED_DEPLOYMENT_ID: ${{ steps.lookup.outputs.resolved }}
         run: |
           set -euo pipefail
-          deployment_id_file="$RUNNER_TEMP/codedeploy-deployment-id"
-          if [ ! -s "$deployment_id_file" ]; then
-            echo '::error::취소된 배포의 CodeDeploy deployment ID S3 object를 확인하지 못했다.'
-            exit 1
-          fi
-          deployment_id=$(tr -d '\r\n' < "$deployment_id_file")
+          deployment_id="$RESOLVED_DEPLOYMENT_ID"
           case "$deployment_id" in
             d-*[!0-9A-Za-z-]*|'' )
               echo "::error::deployment ID 형식이 올바르지 않다: $deployment_id"
@@ -891,3 +1018,4 @@ jobs:
           done
           echo "::error::CodeDeploy cleanup이 terminal 상태를 확인하지 못했다: $status"
           exit 1
+

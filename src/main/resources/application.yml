@@ -145,27 +145,24 @@ masiton:
       reverse-proxy-enabled: ${VERIFICATION_REVERSE_PROXY_ENABLED:false}
     jwt:
       issuer: masit-on
-      audience: masit-on-admin-api
-      member-audience: masit-on-member-api
+      audience: masit-on-api
       access-token-ttl: PT30M
-      member-access-token-ttl: PT30M
       key-id: ${JWT_KEY_ID:}
       private-key-pem: ${JWT_PRIVATE_KEY_PEM:}
       public-key-pem: ${JWT_PUBLIC_KEY_PEM:}
     refresh-token-ttl: P14D
-    cookie-name: masit_on_refresh
+    cookie-name: __Secure-masiton-refresh
     secure: true
     same-site: Strict
-    path: /api/admin/auth
-    public-base-url: ${ADMIN_PUBLIC_BASE_URL:http://localhost:3000}
+    path: /api/auth/tokens
     member:
       refresh-token-ttl: P14D
-      cookie-name: __Secure-masiton-member-refresh
+      cookie-name: __Secure-masiton-refresh
       path: /api/auth/tokens
-      public-base-url: ${MEMBER_PUBLIC_BASE_URL:http://localhost:3000}
+      public-base-url: ${AUTH_ALLOWED_ORIGINS:http://localhost:3000}
       max-sessions: 3
     login-failure:
       max-attempts: 5
       ttl: PT15M
-      trusted-proxy-addresses: ${ADMIN_LOGIN_TRUSTED_PROXY_ADDRESSES:}
-      reverse-proxy-enabled: ${ADMIN_LOGIN_REVERSE_PROXY_ENABLED:false}
+      trusted-proxy-addresses: ${AUTH_LOGIN_TRUSTED_PROXY_ADDRESSES:}
+      reverse-proxy-enabled: ${AUTH_LOGIN_REVERSE_PROXY_ENABLED:false}

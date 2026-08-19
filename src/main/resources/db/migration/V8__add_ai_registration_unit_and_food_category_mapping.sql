@@ -1,4 +1,4 @@
--- V6: AI 등록 단위·카테고리 매핑 기준정보 추가와 Snapshot 절단 표시 보강
+-- V8: AI 등록 단위·카테고리 매핑 기준정보 추가와 Snapshot 절단 표시 보강
 -- 근거: docs/05-specs/data/third-expansion-ai-video-data-contract.md 5, 5.1, 5.2, 5.3, 11절
 --
 -- 적용 순서: ai_candidate_snapshot 보강 -> ai_registration_unit -> food_category_mapping(+seed)

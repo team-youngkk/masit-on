@@ -9,6 +9,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
 import com.masiton.common.web.GlobalExceptionHandler;
+import com.masiton.common.security.LegacyAdminActorResolver;
 import com.masiton.restaurant.application.port.in.RestaurantRegistrationUseCase;
 import com.masiton.restaurant.application.port.in.SearchAdminPlaceCandidatesUseCase;
 
@@ -25,8 +26,10 @@ class RestaurantPlaceSearchControllerApiTest {
     private final RestaurantRegistrationUseCase restaurantRegistrationUseCase = mock(RestaurantRegistrationUseCase.class);
     private final SearchAdminPlaceCandidatesUseCase searchAdminPlaceCandidatesUseCase =
             mock(SearchAdminPlaceCandidatesUseCase.class);
+    private final LegacyAdminActorResolver legacyAdminActorResolver = mock(LegacyAdminActorResolver.class);
     private final MockMvc mockMvc = MockMvcBuilders.standaloneSetup(
-                    new RestaurantRegistrationController(restaurantRegistrationUseCase, searchAdminPlaceCandidatesUseCase))
+                    new RestaurantRegistrationController(restaurantRegistrationUseCase, searchAdminPlaceCandidatesUseCase,
+                            legacyAdminActorResolver))
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
 

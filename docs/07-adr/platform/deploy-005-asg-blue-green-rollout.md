@@ -69,6 +69,9 @@ Internet
 - 앱 ASG는 RDS와 Redis에 필요한 포트만 접근하고, Redis는 앱 ASG 보안 그룹에서만 접근한다.
 - launch template와 CodeDeploy hook은 ECR digest와 Parameter Store 경로를 사용하며 비밀값을 이미지·user data·로그에 기록하지 않는다.
 - replacement health 실패 시 CodeDeploy가 original 인스턴스를 유지하고 replacement를 폐기한다. 배포 후 오류율·지연·readiness alarm이 임계값을 넘으면 deployment를 중지하고 original ASG membership를 복구 대상으로 삼는다. listener rollback은 사용하지 않는다.
+- **ALB health check는 readiness만 반영하고 readiness에는 Redis가 없다.** 따라서 Redis 장애는 target health로 드러나지 않고, 공개 GET은 `200`이지만 인증은 [ADR-AUTH-007](../security/auth-007-unified-account-rbac-session.md) 12절대로 fail-closed가 되는 구간이 생긴다. 이 상태는 **배포 게이트로 감지하고 트래픽 경로로는 감지하지 않는다.** Redis는 fleet 전체가 인스턴스 하나를 공유하므로 readiness에 넣으면 모든 target이 동시에 unhealthy가 되어 Redis와 무관한 공개 탐색까지 전면 중단된다. 감지를 얻고 가용성을 잃는 교환이므로 채택하지 않는다.
+- 감지 경로는 `masiton/health` 네임스페이스의 `FleetDependencyRedis` 지표다. `health-metrics.sh`가 1분 주기로 `Environment=asg` 차원으로 올리고, `Minimum`이 연속 3회 `1` 미만이면 deployment alarm이 된다. 이 alarm은 CodeDeploy deployment group의 alarm 목록에 포함되므로 **Redis가 끊긴 상태에서는 새 배포가 시작되지 않고 진행 중인 배포는 자동 rollback된다.** 이미 서비스 중인 트래픽은 끊지 않는다.
+- 최초 seeding에서는 `deployment_alarms_enabled=false`로 deployment alarm을 명시적으로 제외한다. 정상 운영에서는 지표 수집 중단도 감지 경로 장애이므로 deployment alarm의 결측을 `breaching`으로 처리해 새 배포를 막는다.
 - 기존 단일 EC2는 새 환경에서 배포·복구·비용을 확인하기 전까지 제거하지 않는다.
 
 ## 6. 검증
@@ -78,6 +81,7 @@ Internet
 - replacement readiness와 Nginx smoke가 통과하기 전 original target instance가 target group에서 해제되지 않는지 확인한다.
 - 의도적 health 실패와 배포 후 오류율 상승을 주입해 original 유지·replacement 폐기와 ASG membership 복구를 확인한다.
 - Redis 재기동과 앱 인스턴스 교체 뒤 세션·Refresh Token·rate-limit 상태가 유지되는지 확인한다.
+- 교체 환경 인스턴스에서 `masiton-health-metrics.timer`가 활성이고 `FleetDependencyRedis`가 실제로 올라오는지 확인한다. 최초 seeding에서만 `deployment_alarms_enabled=false`를 사용하고, 정상 운영에서 Redis를 의도적으로 끊거나 지표 수집을 중단해 deployment alarm이 `ALARM`으로 전이하는지 확인한다.
 - expand 단계가 아닌 destructive migration이 배포 gate에서 차단되는지 확인한다.
 - 비용은 실제 청구와 대조하고 ASG·ALB·Redis 전용 인스턴스의 상시 비용을 별도 기록한다.
 
@@ -87,3 +91,4 @@ Internet
 - 인증 owner는 ALB→Nginx proxy header와 쿠키 세션 경계를 검토한다.
 - 데이터 owner는 모든 운영 migration의 expand/contract 호환성을 검토한다.
 - 실제 운영 전환은 기존 단일 EC2 rollback 경로, 관찰 기간, 비용 알림과 담당자 승인을 포함한 별도 runbook을 통과해야 한다.
+

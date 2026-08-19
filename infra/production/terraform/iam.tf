@@ -82,6 +82,38 @@ data "aws_iam_policy_document" "app_parameter_read" {
     actions   = ["s3:GetObject", "s3:GetObjectVersion"]
     resources = ["${aws_s3_bucket.codedeploy_revision.arn}/masiton/codedeploy/*"]
   }
+
+  # health-metrics.sh가 1분 주기로 상태 지표를 올린다. PutMetricData는 resource
+  # 수준 제한을 지원하지 않으므로 namespace 조건으로 이 서비스의 지표만 허용한다.
+  # CloudWatch Agent도 이 role을 사용하며 masiton/host namespace로 host 지표를 보낸다.
+  statement {
+    effect    = "Allow"
+    actions   = ["cloudwatch:PutMetricData"]
+    resources = ["*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "cloudwatch:namespace"
+      values   = ["masiton/health", "masiton/host"]
+    }
+  }
+
+  # cloudwatch-install.sh가 설치하는 agent는 Nginx·컨테이너 로그를 CloudWatch Logs로
+  # 보낸다. 설정이 선언한 로그 그룹으로 범위를 제한한다.
+  statement {
+    effect = "Allow"
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents",
+      "logs:PutRetentionPolicy",
+      "logs:DescribeLogStreams",
+    ]
+    resources = [
+      "arn:aws:logs:${var.aws_region}:*:log-group:/masiton/*",
+      "arn:aws:logs:${var.aws_region}:*:log-group:/masiton/*:log-stream:*",
+    ]
+  }
 }
 
 resource "aws_iam_role_policy" "app_parameter_read" {
@@ -212,6 +244,23 @@ data "aws_iam_policy_document" "github_actions_deploy" {
     actions   = ["codedeploy:StopDeployment"]
     resources = ["*"]
   }
+
+  # deployment ID를 S3 pointer에 저장하기 전에 runner가 죽으면 cleanup job이
+  # 중지 대상을 잃는다. 진행 중인 deployment를 revision key로 역조회해 되찾는
+  # 재조정 경로에 필요하다. 조회 범위는 이 deployment group으로 제한한다.
+  statement {
+    effect    = "Allow"
+    actions   = ["codedeploy:ListDeployments"]
+    resources = [aws_codedeploy_deployment_group.app.arn]
+  }
+
+  # batch-get-deployments도 deployment group 리소스 범위를 지원하므로
+  # 이 배포 group 외의 deployment 정보는 조회하지 못하도록 제한한다.
+  statement {
+    effect    = "Allow"
+    actions   = ["codedeploy:BatchGetDeployments"]
+    resources = [aws_codedeploy_deployment_group.app.arn]
+  }
 }
 
 resource "aws_iam_role_policy" "github_actions_deploy" {
@@ -220,3 +269,4 @@ resource "aws_iam_role_policy" "github_actions_deploy" {
   role   = var.github_actions_role_name
   policy = data.aws_iam_policy_document.github_actions_deploy.json
 }
+
