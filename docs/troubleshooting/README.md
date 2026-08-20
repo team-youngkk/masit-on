@@ -15,6 +15,7 @@ related_documents:
 
 ## 최신 기록
 
+- [PR #259 등록 단위 일괄 폐기의 상태·감사 이력 불일치](pr-259-registration-unit-discard-all-review.md)
 - [PR #257 전환 후 런타임 기준선 리뷰 반영](pr-257-runtime-baseline-review.md)
 - [운영 전환: ALB·Blue-Green 트래픽 전환에서 드러난 결함 3건](ops-2026-08-19-alb-cutover-review.md)
 - [PR #253 CodeDeploy 단일 경로 전환과 배포 계약 테스트 CI 회귀](pr-253-codedeploy-only-contract-test-review.md)
@@ -34,6 +35,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #259 등록 단위 일괄 폐기의 상태·감사 이력 불일치](pr-259-registration-unit-discard-all-review.md)
 - [PR #257 전환 후 런타임 기준선 리뷰 반영](pr-257-runtime-baseline-review.md)
 - [PR #251 오류 응답 details의 배열 정규화 누락](pr-251-details-array-normalization-review.md)
 - [PR #244 등록 단위 실행의 동시성·CONFIRM 원자성과 중복 판정 죽은 코드](pr-244-registration-unit-atomicity-review.md)

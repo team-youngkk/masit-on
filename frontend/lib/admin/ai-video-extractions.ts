@@ -217,6 +217,16 @@ export async function registerAiRegistrationUnit(jobId: string, unitId: string):
   )
 }
 
+export type AiDiscardAllResult = { discardedUnitIds: string[]; discardedCount: number }
+
+/** AUTO_BLOCKED 등록 단위가 하나도 없어도 오류 없이 discardedCount: 0을 반환한다. */
+export async function discardAllBlockedRegistrationUnits(jobId: string, reason: string): Promise<AiDiscardAllResult> {
+  return adminJson<AiDiscardAllResult>(
+    `/api/admin/ai/video-extractions/${encodeURIComponent(jobId)}/registration-units/discard-all`,
+    { method: 'POST', body: JSON.stringify({ reason: reason.trim() }) },
+  )
+}
+
 export function aiExtractionMessageFor(error: unknown, context: 'manage' | 'submission' = 'manage'): string {
   if (error instanceof AdminApiError) {
     return aiExtractionMessageForCode(error.code, context) ?? messageFor(error)

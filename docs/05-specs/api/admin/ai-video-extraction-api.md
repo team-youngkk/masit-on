@@ -285,7 +285,7 @@ related_documents:
 
 ### 3.4 `POST /api/admin/ai/video-extractions/{jobId}/retry` 수동 재시도
 
-`FAILED` 또는 `SUCCEEDED/PARTIAL` 작업에 관리자가 새로운 보완 텍스트를 제출해 새 버전 작업을 요청한다. 이전 작업의 임시 입력은 재사용하지 않는다.
+`FAILED` 작업, `SUCCEEDED/PARTIAL` 작업, 또는 `SUCCEEDED`이면서 등록 단위 중 하나 이상이 `AUTO_BLOCKED`인 작업에 관리자가 새로운 보완 텍스트를 제출해 새 버전 작업을 요청한다. 이전 작업의 임시 입력은 재사용하지 않는다.
 
 ```json
 {
@@ -589,6 +589,36 @@ Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-0
 - 이미 `ACTIVE`이고 검증 Token 해시가 유효한 채널에 대한 중복 `enabled=true` 요청은 기존 상태·Token을 유지하고 외부 재구독을 요청하지 않는다.
 - Creator 등록만으로 자동 활성화하지 않는다.
 - `enabled=false`는 신규 Webhook 접수를 중지하고 `subscriptionStatus=INACTIVE`로 저장한다. 이미 접수된 작업·후보·정식 데이터는 삭제하지 않는다.
+
+### 3.10 `POST /api/admin/ai/video-extractions/{jobId}/registration-units/discard-all` 등록 단위 일괄 폐기
+
+작업에 속한 `AUTO_BLOCKED` 등록 단위를 한 번의 요청으로 모두 폐기한다. 등록 단위 하나씩 3.5절 `review`의 `DISCARD`를 반복 호출해야 하는 비효율을 줄이기 위한 전용 엔드포인트이며, 효과는 대상 등록 단위마다 `DISCARD`를 개별 실행한 것과 같다.
+
+```json
+{
+  "reason": "여러 건 동시 처리 사유"
+}
+```
+
+- `reason`은 필수이며 검증 규칙은 3.5절 `DISCARD`의 `reason` 검증과 같다. trim 후 공백이거나 1,000자를 초과하면 모두 `400 MISSING_REQUIRED_FIELD`로 거절한다.
+- 대상은 요청 시점에 그 작업이 가진 `AUTO_BLOCKED` 등록 단위 전체다. 개별 `unitId`를 지정하지 않는다.
+- 등록 단위 사이에는 교차 원자성이 없다. 각 등록 단위는 3.5절 `DISCARD`와 같은 조건부 갱신으로 독립적으로 폐기되며, 하나의 실패가 다른 등록 단위의 폐기를 막지 않는다.
+- 동시 요청으로 처리 시작 시점에는 `AUTO_BLOCKED`였으나 재확인 시 이미 상태가 바뀐 등록 단위는 조용히 건너뛰고 응답에 포함하지 않는다. 오류로 취급하지 않는다.
+- 대상 작업에 `AUTO_BLOCKED` 등록 단위가 하나도 없어도 오류가 아니다. `discardedUnitIds`가 빈 배열인 `200 OK`를 반환하며, 반복 호출해도 안전하다(멱등).
+
+#### 응답 `200 OK`
+
+```json
+{
+  "discardedUnitIds": ["opaque-registration-unit-id", "opaque-registration-unit-id"],
+  "discardedCount": 2
+}
+```
+
+- `discardedUnitIds`는 이 요청으로 실제 폐기에 성공한 등록 단위 식별자만 담는다. 동시 요청으로 건너뛴 등록 단위는 포함하지 않는다.
+- `discardedCount`는 `discardedUnitIds`의 길이와 같다.
+- 폐기된 각 등록 단위는 3.5절 `DISCARD`와 동일하게 `MANUAL_OVERRIDE`가 되고 `discarded_at`이 채워지며 감사 이력(`ai_registration_unit_review`)에 `DISCARD` 행이 남는다.
+- 작업 자체가 없으면 `404 AIEXTRACT_JOB_NOT_FOUND`로 응답한다.
 
 ## 4. YouTube Webhook API
 
