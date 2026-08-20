@@ -78,7 +78,7 @@ tasks.named('test') {
     // 이 줄만으로는 실행 동작이 달라지지 않고, 값을 준 실행과 주지 않은 실행을 같은 코드로
     // 비교할 수 있다. 측정이 끝나 상한을 확정하면 이 통로 대신 고정값으로 바꾼다.
     systemProperty 'spring.test.context.cache.maxSize',
-            System.getProperty('spring.test.context.cache.maxSize', '32')
+            System.getProperty('spring.test.context.cache.maxSize', '80')
 
     // 테스트 JVM 힙 측정용 통로다(#262). 지정이 없으면 Gradle 기본값 512MB로 도는데,
     // 그 안에 Spring TestContext 캐시 기본 상한인 컨텍스트 32개가 빠듯하게 들어간다.
