@@ -34,7 +34,10 @@ docker pull '${redis_image}'
 docker rm -f masiton-perf-wiremock masiton-perf-redis 2>/dev/null || true
 
 # 앱 인스턴스에서만 도달한다. 보안 그룹이 8081·6379를 app SG로 제한하므로
-# 인스턴스 밖으로 열리지 않는다. loopback 고정은 원격 호출을 막아 쓸 수 없다.
+# 인스턴스 밖으로 열리지 않는다. WireMock 관리 API(/__admin)는 인증이 없어 app SG가
+# 유일한 경계다. 측정 후 destroy하는 임시 자원이고 app SG에 속한 호스트가 앱
+# 인스턴스 하나뿐이라는 전제에서 수용한 범위이며, 근거와 주의 사항은
+# infra/performance/README.md에 있다. Redis는 requirepass로 이중 방어한다.
 docker run -d \
   --name masiton-perf-wiremock \
   --restart unless-stopped \
@@ -48,27 +51,81 @@ docker run -d \
 # 운영 Redis와 같은 제약을 재현한다. maxmemory·정책·AOF·컨테이너 메모리 제한이
 # 다르면 측정한 지연과 실패 양상이 운영을 대변하지 못한다.
 # 원문 계약은 deploy/redis/redis.conf와 deploy/redis/masiton-redis.service다.
+#
+# requirepass는 운영과 같은 이유로 필요하고, 이 환경에서는 연결 조건이기도 하다.
+# Redis 8.8은 bind를 명시했더라도 비밀번호가 없으면 protected mode에서 loopback
+# 외 연결에 DENIED를 반환한다. 앱이 다른 인스턴스에 있으므로 인증 없이는 아예
+# 붙지 못한다.
+#
+# 비밀값을 명령행에 두지 않는다. 같은 인스턴스의 ps에서 읽히기 때문이다.
+# 운영과 같이 tmpfs(/run)에 설정을 렌더링해 읽기 전용으로 마운트한다.
+# 원문 절차는 deploy/scripts/redis-render-conf.sh다.
+cat >/opt/masiton-perf/render-redis-conf.sh <<'RENDER_REDIS_CONF'
+#!/bin/bash
+set -euo pipefail
+
+# /run은 tmpfs라 재기동하면 사라진다. 비밀값이 디스크나 볼륨 스냅샷에 남지
+# 않지만, 그래서 인스턴스를 재기동했다면 Redis를 올리기 전에 이 스크립트를
+# 다시 실행해야 한다.
+install -d -m 0711 /run/masiton-perf
+
+password=$(aws ssm get-parameter \
+  --region '${aws_region}' \
+  --name '${redis_param_name}' \
+  --with-decryption \
+  --query 'Parameter.Value' --output text)
+
+if [ -z "$password" ] || [ "$password" = 'None' ]; then
+  echo 'Parameter Store에서 Redis requirepass를 읽지 못했다' >&2
+  exit 1
+fi
+
+# Windows 셸에서 등록한 값이 CR을 물고 있으면 설정 파서는 떼어내지만 클라이언트는
+# 그대로 보내 WRONGPASS가 된다. 운영에서 M2-05에 실제로 겪은 형태다.
+password=$(printf %s "$password" | tr -d '\r\n')
+
+umask 077
+{
+  cat <<'REDIS_CONF'
+bind 0.0.0.0
+protected-mode yes
+port 6379
+maxmemory 256mb
+maxmemory-policy noeviction
+appendonly yes
+appendfsync everysec
+save 900 1
+save 300 10
+save 60 10000
+REDIS_CONF
+  printf 'requirepass %s\n' "$password"
+} >/run/masiton-perf/redis.conf
+
+unset password
+
+# redis:8.8-alpine은 비루트(uid·gid 999)로 돌고 읽기 전용 마운트라 이미지
+# entrypoint의 chown이 듣지 않는다. 호스트에서 미리 맞춘다.
+chown 999:999 /run/masiton-perf/redis.conf
+chmod 0400 /run/masiton-perf/redis.conf
+RENDER_REDIS_CONF
+chmod 0700 /opt/masiton-perf/render-redis-conf.sh
+/opt/masiton-perf/render-redis-conf.sh
+
 docker run -d \
   --name masiton-perf-redis \
   --restart unless-stopped \
   --network host \
   --memory 384m \
+  -v /run/masiton-perf/redis.conf:/etc/redis/redis.conf:ro \
   '${redis_image}' \
-  redis-server \
-  --bind 0.0.0.0 \
-  --protected-mode yes \
-  --port 6379 \
-  --maxmemory 256mb \
-  --maxmemory-policy noeviction \
-  --appendonly yes \
-  --appendfsync everysec \
-  --save 900 1 \
-  --save 300 10 \
-  --save 60 10000
+  redis-server /etc/redis/redis.conf
 
 cat >/opt/masiton-perf/deps-note.txt <<'NOTE'
 This host runs the performance dependencies only: WireMock (8081) and Redis (6379).
 The application under test runs on a separate instance so that its host memory,
 JVM heap and GC selection match production. Both ports are reachable from the
-application security group only.
+application security group only. Redis additionally requires AUTH; the password
+is rendered to /run/masiton-perf/redis.conf by render-redis-conf.sh and never
+written to disk or a command line. Re-run that script before starting Redis if
+this instance is rebooted, because /run is tmpfs.
 NOTE

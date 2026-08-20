@@ -38,6 +38,11 @@ output "db_password_parameter_name" {
   value       = aws_ssm_parameter.db_password.name
 }
 
+output "redis_password_parameter_name" {
+  description = "성능 전용 Redis requirepass의 SecureString Parameter 이름"
+  value       = aws_ssm_parameter.redis_password.name
+}
+
 output "resource_scope" {
   description = "이 state가 관리하는 리소스 경계"
   value = {

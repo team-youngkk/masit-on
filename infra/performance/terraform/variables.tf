@@ -73,6 +73,24 @@ variable "db_password" {
   }
 }
 
+variable "redis_password" {
+  description = "성능 전용 Redis requirepass. TF_VAR_redis_password로 주입하며 저장소에 기록하지 않는다"
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition     = length(var.redis_password) >= 16 && length(var.redis_password) <= 128
+    error_message = "redis_password는 16~128자여야 한다."
+  }
+
+  # requirepass는 설정 파일 한 줄과 RESP inline AUTH 명령으로 전달되므로
+  # 공백이 섞이면 조용히 잘린다. 등록 시점에 막는다.
+  validation {
+    condition     = length(regexall("[[:space:]]", var.redis_password)) == 0
+    error_message = "redis_password에는 공백을 넣을 수 없다."
+  }
+}
+
 variable "db_name" {
   description = "성능 전용 데이터베이스 이름"
   type        = string
