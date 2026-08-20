@@ -72,6 +72,18 @@ tasks.named('test') {
     // 기본 실행은 이 프로퍼티를 전달하지 않으므로 forked 테스트 JVM에서 false로 평가돼 제외되고,
     // -Dmasiton.eval.releaseHoldout=true로 실행하면 값이 그대로 전달돼 포함된다.
     systemProperty 'masiton.eval.releaseHoldout', System.getProperty('masiton.eval.releaseHoldout', 'false')
+
+    // Spring TestContext 캐시 상한 측정용 통로다(#262). Gradle은 테스트를 별도 JVM으로
+    // fork하므로 `-D`로 준 값이 그대로 전달되지 않는다. 기본값은 Spring 기본값과 같은 32라
+    // 이 줄만으로는 실행 동작이 달라지지 않고, 값을 준 실행과 주지 않은 실행을 같은 코드로
+    // 비교할 수 있다. 측정이 끝나 상한을 확정하면 이 통로 대신 고정값으로 바꾼다.
+    systemProperty 'spring.test.context.cache.maxSize',
+            System.getProperty('spring.test.context.cache.maxSize', '32')
+
+    // 테스트 JVM 힙 측정용 통로다(#262). 지정이 없으면 Gradle 기본값 512MB로 도는데,
+    // 그 안에 Spring TestContext 캐시 기본 상한인 컨텍스트 32개가 빠듯하게 들어간다.
+    // 상한만 올리면 힙이 먼저 터지므로(1차 실험 OOM) 두 값을 함께 움직여야 한다.
+    maxHeapSize = System.getProperty('masiton.test.maxHeapSize', '3g')
 }
 
 tasks.named('bootRun') {
