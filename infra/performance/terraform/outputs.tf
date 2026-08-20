@@ -8,6 +8,16 @@ output "loadgen_instance_id" {
   value       = aws_instance.loadgen.id
 }
 
+output "deps_instance_id" {
+  description = "SSM 대상인 WireMock·Redis 의존 EC2 ID"
+  value       = aws_instance.deps.id
+}
+
+output "deps_private_ip" {
+  description = "의존 EC2 private IP. 앱 EC2에서만 8081·6379로 접근한다"
+  value       = aws_instance.deps.private_ip
+}
+
 output "app_private_ip" {
   description = "앱 EC2 private IP. loadgen에서만 접근한다"
   value       = aws_instance.app.private_ip

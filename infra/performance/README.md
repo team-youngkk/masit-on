@@ -6,11 +6,19 @@ Terraform은 기존 VPC와 서브넷을 **읽기만** 한다. 운영 EC2, 운영
 
 구성 범위는 다음과 같다.
 
-- 기존 VPC 안의 성능 검증 전용 앱 EC2와 k6 EC2
+- 기존 VPC 안의 성능 검증 전용 EC2 3대 — 측정 대상 앱, WireMock·Redis 의존, k6 부하 생성기
 - 성능 검증 전용 RDS PostgreSQL
-- 앱·부하 생성기·RDS 사이의 최소 보안 그룹 규칙
+- 앱·의존·부하 생성기·RDS 사이의 최소 보안 그룹 규칙
 - EC2 Instance Profile, SSM Parameter Store SecureString, ECR 읽기 권한
-- 앱 인스턴스의 WireMock·Redis 컨테이너와 부하 생성기의 고정 버전 k6 부트스트랩
+- 의존 인스턴스의 WireMock·Redis 컨테이너와 부하 생성기의 고정 버전 k6 부트스트랩
+
+### 왜 3대인가
+
+운영 앱 인스턴스는 backend·frontend·Nginx만 실행하고 Redis는 사설 서브넷의 전용 인스턴스에 있다. 성능 환경이 WireMock·Redis를 앱 호스트에 동거시키면 **호스트 메모리 여유와 Redis 왕복이 운영과 달라져 측정값이 운영을 대변하지 못한다.** [전환 후 런타임 실측 기준선](../../docs/08-planning/post-cutover-runtime-baseline.md) 5절이 이 조건을 정리했다.
+
+`app_instance_type` 기본값은 운영 ASG와 같은 `t4g.small`이다. **컨테이너 메모리 제한이 JVM heap 상한과 GC 선택을 결정하므로**(같은 문서 2.1·2.2절) 백엔드를 기동할 때 운영과 같은 `--memory 1024m`, 프론트엔드는 `--memory 512m`를 사용해야 한다. 이 값이 다르면 heap과 GC가 달라져 비교가 성립하지 않는다.
+
+의존 인스턴스의 Redis는 운영과 같은 `maxmemory 256mb`·`noeviction`·AOF·컨테이너 `--memory 384m`로 기동한다. 비밀번호는 설정하지 않으며 보안 그룹이 앱 SG만 허용하는 것으로 경계를 만든다. 운영은 `requirepass`를 사용하므로 이 점만 다르다.
 
 백엔드 이미지 실행, `perf/seed` 적재, 시나리오 실행과 결과 기록은 Terraform의 책임이 아니다. 인프라가 준비된 뒤 SSM으로 실행하며, 실제 실행 결과는 [issue-207-isolated-performance-result.md](../../docs/08-planning/issue-207-isolated-performance-result.md)에 기록한다.
 
@@ -62,7 +70,8 @@ backend는 S3 bucket `masiton-terraform-state-711457211155`와 DynamoDB table `m
 - 변경 대상이 `masiton-perf-207-` 리소스뿐인지
 - 운영 인스턴스 ID `<production-app-instance-id>`, 운영 RDS `masiton-db`, 운영 보안 그룹이 변경 대상에 없는지
 - 앱 8080 포트는 load generator 보안 그룹에서만 허용되는지
-- app egress가 HTTPS·VPC DNS·RDS 5432만, loadgen egress가 HTTPS·VPC DNS·app 8080만 허용되는지
+- 의존 인스턴스의 8081·6379가 app 보안 그룹에서만 허용되는지
+- app egress가 HTTPS·VPC DNS·RDS 5432·의존 8081·6379만, loadgen egress가 HTTPS·VPC DNS·app 8080만, deps egress가 HTTPS·VPC DNS만 허용되는지
 - 명시적 route table 연결이 없는 subnet은 VPC main route table로 fallback한 뒤, public subnet route table에 `0.0.0.0/0 -> internet gateway` 경로가 있고 private subnet route table에는 해당 IGW 기본 경로가 없는지
 - RDS 보안 그룹에 egress 규칙이 없는지
 - RDS가 `publicly_accessible=false`인지
@@ -71,11 +80,11 @@ backend는 S3 bucket `masiton-terraform-state-711457211155`와 DynamoDB table `m
 
 Terraform 출력의 `app_instance_id`로 SSM 명령을 실행해 다음 순서로 진행한다.
 
-1. 앱 인스턴스의 `/opt/masiton-perf/`에 백엔드 이미지와 성능 전용 설정을 기동한다.
-2. user-data가 커밋 고정 WireMock fixture archive의 SHA-256을 검증하고 매핑 파일을 배포했는지 확인한 뒤, SSM으로 `curl -fsS http://127.0.0.1:8081/__admin/mappings | grep -q '"mappings"'`를 실행해 WireMock 매핑 로드를 확인한다. 확인에 실패하면 백엔드·부하 테스트를 시작하지 않는다.
+1. 앱 인스턴스의 `/opt/masiton-perf/`에 백엔드 이미지와 성능 전용 설정을 기동한다. `runtime.env`의 `WIREMOCK_BASE_URL`·`REDIS_HOST`는 의존 인스턴스를 가리킨다. 컨테이너 메모리 제한은 운영과 같은 값을 사용한다.
+2. user-data가 커밋 고정 WireMock fixture archive의 SHA-256을 검증하고 매핑 파일을 배포했는지 확인한 뒤, 앱 인스턴스에서 SSM으로 `curl -fsS http://<deps_private_ip>:8081/__admin/mappings | grep -q '"mappings"'`를 실행해 WireMock 매핑 로드와 앱→의존 경로를 함께 확인한다. 확인에 실패하면 백엔드·부하 테스트를 시작하지 않는다.
 3. `perf/seed/`를 RDS에 적재하고 `ANALYZE`를 실행한다.
 4. 같은 VPC의 `loadgen_instance_id`에서 k6 시나리오를 실행한다.
-5. RDS·EC2·Redis·WireMock 증적과 k6 결과를 기록한다.
+5. RDS·EC2·Redis·WireMock 증적과 k6 결과를 기록한다. 앱 인스턴스의 GC 로그와 `CPUCreditBalance`, Redis의 `used_memory`·`evicted_keys`·`rejected_connections`를 함께 남긴다. 갓 기동한 t4g 인스턴스는 CPU 크레딧이 0에서 시작하므로 warmup과 회복 대기를 거친 뒤 측정한다.
 6. 증적을 보존한 뒤 `terraform destroy`한다.
 
 Terraform은 백엔드 기동과 시드 적재를 자동 실행하지 않는다. 이 단계를 분리해 두어 계획·적용 중 실수로 부하가 시작되지 않도록 했다. 실제 외부 Kakao·YouTube API를 호출하지 말고 WireMock만 사용한다.

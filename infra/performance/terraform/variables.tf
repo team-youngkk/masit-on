@@ -141,6 +141,18 @@ variable "k6_arm64_sha256" {
   }
 }
 
+variable "app_instance_type" {
+  description = "측정 대상 앱 EC2 타입. 운영 ASG launch template과 같은 값이어야 측정값이 운영을 대변한다"
+  type        = string
+  default     = "t4g.small"
+}
+
+variable "deps_instance_type" {
+  description = "WireMock·Redis 의존 EC2 타입. 측정 대상이 아니므로 병목이 되지 않을 정도면 된다"
+  type        = string
+  default     = "t4g.small"
+}
+
 variable "root_volume_size_gib" {
   description = "EC2 root EBS 용량"
   type        = number
