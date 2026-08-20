@@ -9,6 +9,9 @@ spring:
       port: ${REDIS_PORT:6379}
 
 masiton:
+  member:
+    action-mail:
+      from-address: ${MEMBER_ACTION_MAIL_FROM_ADDRESS:no-reply@localhost}
   ai:
     youtube-webhook:
       secret: local-youtube-hub-secret

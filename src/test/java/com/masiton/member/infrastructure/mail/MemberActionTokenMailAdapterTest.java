@@ -8,6 +8,7 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 
 import com.masiton.member.domain.model.MemberActionPurpose;
+import com.masiton.member.infrastructure.configuration.MemberActionMailProperties;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -26,6 +27,7 @@ class MemberActionTokenMailAdapterTest {
 
         ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
         verify(mailSender).send(messageCaptor.capture());
+        assertThat(messageCaptor.getValue().getFrom()).isEqualTo("no-reply@masiton.click");
         assertThat(messageCaptor.getValue().getSubject()).isEqualTo("Verify your Masit-on email");
         assertThat(messageCaptor.getValue().getText()).contains("verification code").contains("AB7K9M2Q");
     }
@@ -40,6 +42,7 @@ class MemberActionTokenMailAdapterTest {
 
         ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
         verify(mailSender).send(messageCaptor.capture());
+        assertThat(messageCaptor.getValue().getFrom()).isEqualTo("no-reply@masiton.click");
         assertThat(messageCaptor.getValue().getSubject()).isEqualTo("Reset your Masit-on password");
         assertThat(messageCaptor.getValue().getText()).contains("password reset token").contains("opaque-reset-token");
     }
@@ -47,6 +50,8 @@ class MemberActionTokenMailAdapterTest {
     private MemberActionTokenMailAdapter adapter(JavaMailSender mailSender) {
         StaticListableBeanFactory beanFactory = new StaticListableBeanFactory();
         beanFactory.addBean("mailSender", mailSender);
-        return new MemberActionTokenMailAdapter(beanFactory.getBeanProvider(JavaMailSender.class));
+        MemberActionMailProperties properties = new MemberActionMailProperties();
+        properties.setFromAddress("no-reply@masiton.click");
+        return new MemberActionTokenMailAdapter(beanFactory.getBeanProvider(JavaMailSender.class), properties);
     }
 }

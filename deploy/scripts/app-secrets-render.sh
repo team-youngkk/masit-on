@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 애플리케이션 비밀값을 tmpfs에 파일로 렌더링한다 — M2-09.
+# 애플리케이션 운영 메일 설정과 비밀값을 tmpfs에 파일로 렌더링한다 — M2-09.
 #
 # 컨테이너 환경 변수로 비밀값을 넘기지 않는 이유는 Docker가 그것을
 # `/var/lib/docker/containers/<id>/config.v2.json`에 평문으로 적기 때문이다.
@@ -29,14 +29,35 @@ install -d -m 0500 -o "$APP_UID" -g "$APP_GID" "$SECRETS_DIR"
 # 지웠다고 믿은 비밀값이 계속 주입된다.
 find "$SECRETS_DIR" -mindepth 1 -maxdepth 1 -type f -delete
 
-# 필수 값. 하나라도 없으면 기동을 시도하지 않는다.
-render_required() {
-  local property="$1" parameter="$2"
+# 필수 Parameter 조회. 하나라도 없으면 기동을 시도하지 않는다.
+read_required_parameter() {
+  local parameter="$1" error_message="$2"
   local value
   value=$(aws ssm get-parameter --region "$REGION" --name "$parameter" --with-decryption \
     --query 'Parameter.Value' --output text)
   if [ -z "$value" ] || [ "$value" = "None" ]; then
-    echo "필수 비밀값을 읽지 못했다: $parameter" >&2
+    echo "$error_message: $parameter" >&2
+    exit 1
+  fi
+  printf '%s' "$value"
+}
+
+# 필수 값. 하나라도 없으면 기동을 시도하지 않는다.
+render_required() {
+  local property="$1" parameter="$2"
+  local value
+  value=$(read_required_parameter "$parameter" "필수 비밀값을 읽지 못했다")
+  write_secret "$property" "$value"
+}
+
+# 주소처럼 공백만으로는 유효하지 않은 필수 설정에 사용한다. 일반 비밀값의
+# 공백 허용 규칙은 바꾸지 않고, 발신 주소 누락을 컨테이너 기동 전 진단한다.
+render_required_non_blank() {
+  local property="$1" parameter="$2"
+  local value
+  value=$(read_required_parameter "$parameter" "필수 설정값(non-blank)을 읽지 못했다")
+  if [[ "$value" =~ ^[[:space:]]*$ ]]; then
+    echo "필수 설정값(non-blank)을 읽지 못했다: $parameter" >&2
     exit 1
   fi
   write_secret "$property" "$value"
@@ -94,6 +115,7 @@ render_required "masiton.security.jwt.private-key-pem"  /masiton/jwt/private-key
 render_required "masiton.security.jwt.public-key-pem"   /masiton/jwt/public-key-pem
 render_required "masiton.member.action-mail.active-key-id" /masiton/member/action-mail/active-key-id
 render_required "masiton.member.action-mail.active-key"    /masiton/member/action-mail/active-key
+render_required_non_blank "masiton.member.action-mail.from-address" /masiton/member/action-mail/from-address
 render_required "masiton.member.rate-limit.secret"         /masiton/member/rate-limit/secret
 render_required "spring.mail.username"                     /masiton/mail/username
 render_required "spring.mail.password"                     /masiton/mail/password

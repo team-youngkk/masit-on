@@ -48,6 +48,7 @@ class AesGcmMemberActionTokenCipherTest {
 
     private AesGcmMemberActionTokenCipher cipher() {
         MemberActionMailProperties properties = new MemberActionMailProperties();
+        properties.setFromAddress("no-reply@test.masiton.invalid");
         properties.setActiveKeyId("test-1");
         properties.setActiveKey(TEST_KEY);
         properties.validate();
