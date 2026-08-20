@@ -32,11 +32,10 @@ import com.masiton.curation.application.PublicCurationService;
 import com.masiton.curation.application.port.out.CurationStore;
 import com.masiton.curation.domain.model.CurationStatus;
 
-import com.masiton.test.FullContextIntegrationTest;
-
 @SpringBootTest
+@com.masiton.test.TestProfile
 @DisplayName("큐레이션 PostgreSQL 통합")
-class CurationPostgreSqlIntegrationTest extends FullContextIntegrationTest {
+class CurationPostgreSqlIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final UUID REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000001");
     private static final UUID CATEGORY_ID = UUID.fromString("20000000-0000-4000-8000-000000000001");

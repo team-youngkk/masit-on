@@ -26,11 +26,10 @@ import com.masiton.ai.application.port.out.YoutubeChannelWatchStore;
 import com.masiton.ai.application.YoutubeChannelWatchPersistenceService;
 import com.masiton.test.IntegrationTestFixtures;
 
-import com.masiton.test.FullContextIntegrationTest;
-
 @SpringBootTest
+@com.masiton.test.TestProfile
 @DisplayName("YouTube 채널 Watch PostgreSQL 통합")
-class JdbcYoutubeChannelWatchStoreIntegrationTest extends FullContextIntegrationTest {
+class JdbcYoutubeChannelWatchStoreIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     @Autowired
     private YoutubeChannelWatchStore store;
@@ -43,11 +42,6 @@ class JdbcYoutubeChannelWatchStoreIntegrationTest extends FullContextIntegration
 
     @Autowired
     private org.springframework.transaction.PlatformTransactionManager transactionManager;
-
-    @org.junit.jupiter.api.BeforeEach
-    void setUp() {
-        cleanupTransactionalState(jdbcTemplate);
-    }
 
     @Test
     @DisplayName("PUBLIC·ACTIVE·AVAILABLE Creator의 Watch를 활성화하면 외부 확인 전 UNKNOWN으로 둔다")

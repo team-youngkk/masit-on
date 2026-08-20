@@ -48,17 +48,18 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.masiton.test.FullContextIntegrationTest;
-
 /**
- * 코스 추천 외부 실패 격리와 만료 경계 인수 테스트다.
+ * TST-E3-COURSE-003. 코스 경로 조회의 외부 실패가 기존 공개 탐색 API 3종에 전파되지 않는지,
+ * 그리고 5분 만료 경계가 서버 캐시 없이 지켜지는지 검증한다.
+ * 외부 Kakao Mobility 호출은 {@link CourseRouteProviderPort}를 {@code @MockitoBean}으로 대체해 격리한다.
  * 근거: docs/05-specs/api/discovery/restaurant-course-recommendation-api.md,
  * docs/08-planning/third-expansion-test-matrix.md, docs/troubleshooting/pr-171-course-route-review.md
  */
 @SpringBootTest
+@com.masiton.test.TestProfile
 @AutoConfigureMockMvc
 @DisplayName("맛집 코스 추천 외부 실패 격리와 만료 경계")
-class CourseRouteFailureIsolationApiTest extends FullContextIntegrationTest {
+class CourseRouteFailureIsolationApiTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final String COURSE_ROUTES_PATH = "/api/restaurants/course-routes";
     private static final UUID MAPO_REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000014");

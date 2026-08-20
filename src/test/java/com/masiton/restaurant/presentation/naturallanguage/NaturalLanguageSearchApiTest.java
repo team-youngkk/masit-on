@@ -32,12 +32,15 @@ import static org.mockito.Mockito.verify;
  * API-DISCOVERY-NL-001의 공개 MockMvc·PostgreSQL 계약 테스트다.
  * 자연어 원문은 테스트 출력이나 로그에 기록하지 않고 요청 본문으로만 전달한다.
  */
-import com.masiton.test.FullContextIntegrationTest;
-
 @SpringBootTest
+@com.masiton.test.TestProfile
 @AutoConfigureMockMvc
+@org.springframework.test.context.TestPropertySource(properties = {
+        "masiton.restaurant.map.rate-limit.reverse-proxy-enabled=true",
+        "masiton.restaurant.map.rate-limit.trusted-proxy-addresses=127.0.0.1"
+})
 @DisplayName("자연어 맛집 검색 API")
-class NaturalLanguageSearchApiTest extends FullContextIntegrationTest {
+class NaturalLanguageSearchApiTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final UUID SEONGDONG_REGION_ID =
             UUID.fromString("10000000-0000-4000-8000-000000000004");
@@ -45,12 +48,6 @@ class NaturalLanguageSearchApiTest extends FullContextIntegrationTest {
             UUID.fromString("10000000-0000-4000-8000-000000000023");
     private static final UUID KOREAN_CATEGORY_ID =
             UUID.fromString("20000000-0000-4000-8000-000000000001");
-
-    @DynamicPropertySource
-    static void registerRateLimitProperties(DynamicPropertyRegistry registry) {
-        registry.add("masiton.restaurant.map.rate-limit.reverse-proxy-enabled", () -> true);
-        registry.add("masiton.restaurant.map.rate-limit.trusted-proxy-addresses", () -> "127.0.0.1");
-    }
 
     @Autowired
     private MockMvc mockMvc;

@@ -17,8 +17,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.masiton.test.FullContextIntegrationTest;
-
 @SpringBootTest(properties = {
         "management.health.mail.enabled=true",
         "management.endpoint.health.group.dependencies.include=db,redis,mail",
@@ -26,9 +24,11 @@ import com.masiton.test.FullContextIntegrationTest;
         "spring.mail.port=1",
         "spring.mail.properties.mail.smtp.connectiontimeout=500"
 })
+@com.masiton.test.TestProfile
 @AutoConfigureMockMvc
+@Testcontainers
 @DisplayName("운영 SMTP 상태 확인")
-class ProdMailHealthIntegrationTest extends FullContextIntegrationTest {
+class ProdMailHealthIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;

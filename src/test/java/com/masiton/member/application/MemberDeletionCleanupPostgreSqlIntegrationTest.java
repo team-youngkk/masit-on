@@ -29,12 +29,11 @@ import com.masiton.test.TestProfile;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.masiton.test.FullContextIntegrationTest;
-
 @SpringBootTest
+@TestProfile
 @Import(MemberDeletionCleanupPostgreSqlIntegrationTest.LateFailureConfiguration.class)
 @DisplayName("회원 탈퇴 정리 PostgreSQL 통합")
-class MemberDeletionCleanupPostgreSqlIntegrationTest extends FullContextIntegrationTest {
+class MemberDeletionCleanupPostgreSqlIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final UUID REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000001");
     private static final UUID FOOD_CATEGORY_ID = UUID.fromString("20000000-0000-4000-8000-000000000001");

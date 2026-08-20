@@ -24,11 +24,11 @@ import com.masiton.test.TestProfile;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.masiton.test.FullContextIntegrationTest;
-
 @SpringBootTest
+@TestProfile
+@Testcontainers
 @DisplayName("회원 Action 메일 outbox 영속화")
-class MemberActionMailOutboxPersistenceIntegrationTest extends FullContextIntegrationTest {
+class MemberActionMailOutboxPersistenceIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final Instant NOW = Instant.parse("2026-07-30T03:10:00Z");
 

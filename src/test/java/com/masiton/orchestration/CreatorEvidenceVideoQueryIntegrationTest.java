@@ -25,11 +25,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 실제 PostgreSQL로 검증한다. BR-VISIT-005(관계 유효성), BR-CREATOR-011(중복 제거·정렬),
  * creator-detail-api.md 7절(페이지)의 근거 판정을 다룬다.
  */
-import com.masiton.test.FullContextIntegrationTest;
-
 @SpringBootTest
-@DisplayName("유튜버 근거 영상 조회 Adapter")
-class CreatorEvidenceVideoQueryIntegrationTest extends FullContextIntegrationTest {
+@com.masiton.test.TestProfile
+@DisplayName("유튜버 근거 영상 조회")
+class CreatorEvidenceVideoQueryIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final UUID SEED_REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000001");
     private static final UUID SEED_FOOD_CATEGORY_ID = UUID.fromString("20000000-0000-4000-8000-000000000001");

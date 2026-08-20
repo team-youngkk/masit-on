@@ -27,11 +27,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * BR-VIDEO-005·009 근거 판정을 다룬다. Restaurant ID 후보 조회(WS-01용)는
  * visit.VisitQueryIntegrationTest가 검증한다.
  */
-import com.masiton.test.FullContextIntegrationTest;
-
 @SpringBootTest
+@com.masiton.test.TestProfile
 @DisplayName("맛집 상세 콘텐츠(방문 유튜버·관련 영상) 조회")
-class VisitContentQueryIntegrationTest extends FullContextIntegrationTest {
+class VisitContentQueryIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final UUID SEED_REGION_ID =
             UUID.fromString("10000000-0000-4000-8000-000000000001");

@@ -39,13 +39,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 회원·찜이 늘어도 반복 조회가 생기지 않아야 한다. {@link QueryCountingDataSourceConfiguration}를
  * 공유 fixture로 재사용한다.
  */
-import com.masiton.test.FullContextIntegrationTest;
-
 @SpringBootTest
+@com.masiton.test.TestProfile
 @AutoConfigureMockMvc
 @Import(QueryCountingDataSourceConfiguration.class)
 @DisplayName("인기 맛집 조회 쿼리 수")
-class PopularRestaurantQueryCountApiTest extends FullContextIntegrationTest {
+class PopularRestaurantQueryCountApiTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final UUID SEED_REGION_ID =
             UUID.fromString("10000000-0000-4000-8000-000000000001");

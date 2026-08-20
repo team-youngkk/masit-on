@@ -27,7 +27,6 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import com.masiton.ai.application.port.in.AiExtractionJobUseCase;
 import com.masiton.ai.application.port.in.YoutubeChannelWatchManagementUseCase;
@@ -39,15 +38,14 @@ import tools.jackson.databind.ObjectMapper;
 
 @DisplayName("YouTube 채널 감시 활성화·challenge 경쟁 통합")
 @SpringBootTest
-@Testcontainers
 class YoutubeChannelWatchActivationRaceIntegrationTest extends FullContextIntegrationTest {
 
     private static final int WIREMOCK_PORT = 8080;
-    static final GenericContainer<?> WIREMOCK;
+
+    static final GenericContainer<?> WIREMOCK = new GenericContainer<>("wiremock/wiremock:3.13.2-alpine")
+            .withExposedPorts(WIREMOCK_PORT);
 
     static {
-        WIREMOCK = new GenericContainer<>("wiremock/wiremock:3.13.2-alpine")
-                .withExposedPorts(WIREMOCK_PORT);
         WIREMOCK.start();
     }
 

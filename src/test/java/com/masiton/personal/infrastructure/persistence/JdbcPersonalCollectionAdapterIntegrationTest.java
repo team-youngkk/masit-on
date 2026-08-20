@@ -35,11 +35,10 @@ import tools.jackson.databind.ObjectMapper;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.masiton.test.FullContextIntegrationTest;
-
 @SpringBootTest
+@com.masiton.test.TestProfile
 @DisplayName("개인 컬렉션 JDBC 저장소")
-class JdbcPersonalCollectionAdapterIntegrationTest extends FullContextIntegrationTest {
+class JdbcPersonalCollectionAdapterIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final UUID REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000001");
     private static final UUID CATEGORY_ID = UUID.fromString("20000000-0000-4000-8000-000000000001");

@@ -2,7 +2,6 @@ package com.masiton.acceptance;
 
 import java.util.UUID;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -32,27 +31,30 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.masiton.test.FullContextIntegrationTest;
-
 @SpringBootTest
+@com.masiton.test.TestProfile
 @AutoConfigureMockMvc
-@Testcontainers
 @DisplayName("관리자 데이터 등록 사용자 여정 인수")
-class AdminRegistrationJourneyAcceptanceTest extends FullContextIntegrationTest {
+class AdminRegistrationJourneyAcceptanceTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final UUID ADMIN_ID = UUID.fromString("10000000-0000-0000-0000-000000000001");
+    private static final UUID REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000014");
+    private static final UUID CATEGORY_ID = UUID.fromString("20000000-0000-4000-8000-000000000001");
     private static final String PASSWORD = "acceptance-password";
     private static final int WIREMOCK_PORT = 8080;
 
-    @Container
     static final GenericContainer<?> WIREMOCK = new GenericContainer<>(DockerImageName.parse("wiremock/wiremock:3.13.2-alpine"))
             .withCopyFileToContainer(MountableFile.forHostPath("docker/wiremock/mappings"), "/home/wiremock/mappings")
             .withCopyFileToContainer(MountableFile.forHostPath("docker/wiremock/__files"), "/home/wiremock/__files")
             .withExposedPorts(WIREMOCK_PORT)
             .waitingFor(Wait.forHttp("/__admin/health").forPort(WIREMOCK_PORT).forStatusCode(200));
 
+    static {
+        WIREMOCK.start();
+    }
+
     @DynamicPropertySource
-    static void externalProperties(DynamicPropertyRegistry registry) {
+    static void integrationProperties(DynamicPropertyRegistry registry) {
         registry.add("masiton.integration.kakao.base-url", AdminRegistrationJourneyAcceptanceTest::wireMockUrl);
         registry.add("masiton.integration.kakao.rest-api-key", () -> "wiremock-only-key");
         registry.add("masiton.integration.youtube.base-url", AdminRegistrationJourneyAcceptanceTest::wireMockUrl);
@@ -66,6 +68,7 @@ class AdminRegistrationJourneyAcceptanceTest extends FullContextIntegrationTest 
     @BeforeEach
     void setUp() throws Exception {
         cleanupTransactionalState(jdbcTemplate);
+        jdbcTemplate.execute("truncate table confirmation_token, admin_account_migration_map, member_account, admin_account cascade");
         String passwordHash = new BCryptPasswordEncoder().encode(PASSWORD);
         jdbcTemplate.update("insert into member_account (id, email, password_hash, status, role, email_verified_at) "
                         + "values (?, 'acceptance-admin@example.com', ?, 'ACTIVE', 'ADMIN', current_timestamp)",
@@ -76,12 +79,6 @@ class AdminRegistrationJourneyAcceptanceTest extends FullContextIntegrationTest 
                         + "migration_disposition, member_account_id, approval_record_id) "
                         + "values (?, 'acceptance-admin@example.com', 'MIGRATE_ACTIVE', ?, 'TEST-UNIFIED-AUTH-001')",
                 ADMIN_ID, ADMIN_ID);
-        REDIS.execInContainer("redis-cli", "FLUSHALL");
-    }
-
-    @AfterEach
-    void tearDown() throws Exception {
-        cleanupTransactionalState(jdbcTemplate);
         REDIS.execInContainer("redis-cli", "FLUSHALL");
     }
 

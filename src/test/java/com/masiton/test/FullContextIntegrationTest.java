@@ -37,8 +37,20 @@ public abstract class FullContextIntegrationTest {
         registry.add("spring.data.redis.port", () -> REDIS.getMappedPort(REDIS_PORT));
     }
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    protected org.springframework.jdbc.core.JdbcTemplate baseJdbcTemplate;
+
+    @org.junit.jupiter.api.BeforeEach
+    void autoCleanupTransactionalState() {
+        if (baseJdbcTemplate != null) {
+            cleanupTransactionalState(baseJdbcTemplate);
+        }
+    }
+
     public static void cleanupTransactionalState(org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
         jdbcTemplate.execute("TRUNCATE TABLE ai_candidate_tag_review, ai_extraction_manual_review");
+        jdbcTemplate.execute("DELETE FROM ai_registration_unit_review");
+        jdbcTemplate.execute("DELETE FROM ai_registration_unit");
         jdbcTemplate.execute("DELETE FROM visit_tag");
         jdbcTemplate.execute("DELETE FROM tag_definition WHERE source <> 'SEED'");
         jdbcTemplate.update("UPDATE tag_definition SET status = 'ACTIVE' WHERE source = 'SEED'");
@@ -46,12 +58,13 @@ public abstract class FullContextIntegrationTest {
         jdbcTemplate.execute("DELETE FROM ai_extraction_attempt");
         jdbcTemplate.execute("DELETE FROM ai_extraction_temporary_input");
         jdbcTemplate.execute("DELETE FROM ai_extraction_job");
+        jdbcTemplate.execute("DELETE FROM youtube_channel_watch");
         jdbcTemplate.execute("DELETE FROM confirmation_token");
         jdbcTemplate.execute("DELETE FROM curation_restaurant");
         jdbcTemplate.execute("DELETE FROM curation");
-        jdbcTemplate.execute("DELETE FROM favorite");
         jdbcTemplate.execute("DELETE FROM collection_restaurant");
         jdbcTemplate.execute("DELETE FROM personal_collection");
+        jdbcTemplate.execute("DELETE FROM favorite");
         jdbcTemplate.execute("DELETE FROM recent_restaurant_view");
         jdbcTemplate.execute("DELETE FROM notification");
         jdbcTemplate.execute("DELETE FROM moderation_history");
@@ -61,6 +74,11 @@ public abstract class FullContextIntegrationTest {
         jdbcTemplate.execute("DELETE FROM video");
         jdbcTemplate.execute("DELETE FROM creator");
         jdbcTemplate.execute("DELETE FROM restaurant");
+        jdbcTemplate.execute("DELETE FROM member_action_token");
+        jdbcTemplate.execute("DELETE FROM member_action_mail_outbox");
+        jdbcTemplate.execute("DELETE FROM member_deletion_job");
+        jdbcTemplate.execute("DELETE FROM member_session_revocation_recovery");
+        jdbcTemplate.execute("DELETE FROM member_session_revocation");
         jdbcTemplate.execute("DELETE FROM admin_account_migration_map");
         jdbcTemplate.execute("DELETE FROM admin_account");
         jdbcTemplate.execute("DELETE FROM member_account");

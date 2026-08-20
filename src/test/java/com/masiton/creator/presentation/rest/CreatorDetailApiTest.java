@@ -23,15 +23,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.masiton.test.FullContextIntegrationTest;
-
 /**
  * API-CREATOR-DETAIL-001 유튜버 기본 상세 조회를 실제 PostgreSQL과 MockMvc로 검증한다.
  */
 @SpringBootTest
+@com.masiton.test.TestProfile
 @AutoConfigureMockMvc
 @DisplayName("유튜버 기본 상세 조회 API")
-class CreatorDetailApiTest extends FullContextIntegrationTest {
+class CreatorDetailApiTest extends com.masiton.test.FullContextIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;

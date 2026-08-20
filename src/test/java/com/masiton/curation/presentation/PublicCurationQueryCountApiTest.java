@@ -37,13 +37,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 최대치로 늘어도 실행되는 쿼리 수가 상수임을 확인하며, 이는 findPublished + findRestaurants(Collection) +
  * findRestaurantReferences(Collection) 세 번의 배치 조회로 고정돼야 한다는 계약을 회귀 테스트로 지킨다.
  */
-import com.masiton.test.FullContextIntegrationTest;
-
 @SpringBootTest
+@com.masiton.test.TestProfile
 @AutoConfigureMockMvc
 @Import(QueryCountingDataSourceConfiguration.class)
 @DisplayName("공개 큐레이션 조회 쿼리 수")
-class PublicCurationQueryCountApiTest extends FullContextIntegrationTest {
+class PublicCurationQueryCountApiTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final UUID SEED_REGION_ID =
             UUID.fromString("10000000-0000-4000-8000-000000000001");

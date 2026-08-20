@@ -53,16 +53,17 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.masiton.test.FullContextIntegrationTest;
-
 /**
- * API-COURSE-001 맛집 코스 추천의 Controller-PostgreSQL-Redis 통합 인수 테스트다.
+ * API-DISCOVERY-COURSE-001 맛집 코스 추천의 API 계약·보안 경계 인수 테스트다.
+ * 외부 Kakao Mobility 호출은 {@link CourseRouteProviderPort}를 {@code @MockitoBean}으로 대체해 격리한다.
+ * Adapter의 실제 HTTP 계약은 별도 WireMock 테스트가 검증한다.
  * 근거: docs/05-specs/api/discovery/restaurant-course-recommendation-api.md
  */
 @SpringBootTest
+@com.masiton.test.TestProfile
 @AutoConfigureMockMvc
 @DisplayName("맛집 코스 추천 API")
-class RestaurantCourseRouteApiTest extends FullContextIntegrationTest {
+class RestaurantCourseRouteApiTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final String COURSE_ROUTES_PATH = "/api/restaurants/course-routes";
     private static final UUID MAPO_REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000014");

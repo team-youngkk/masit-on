@@ -36,12 +36,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 교체하므로, 실제 DB 콘텐츠를 검증하는 {@link RestaurantDetailApiTest}의 다른 테스트에 영향을
  * 주지 않기 위함이다.
  */
-import com.masiton.test.FullContextIntegrationTest;
-
 @SpringBootTest
+@com.masiton.test.TestProfile
 @AutoConfigureMockMvc
 @DisplayName("맛집 상세 조회 API 콘텐츠 실패 격리")
-class RestaurantDetailContentFailureIntegrationTest extends FullContextIntegrationTest {
+class RestaurantDetailContentFailureIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final UUID SEED_FOOD_CATEGORY_ID =
             UUID.fromString("20000000-0000-4000-8000-000000000001");

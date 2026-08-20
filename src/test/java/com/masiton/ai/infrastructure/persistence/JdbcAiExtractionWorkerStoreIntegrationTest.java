@@ -26,11 +26,10 @@ import com.masiton.ai.application.port.out.AiExtractionWorkerStore;
 import com.masiton.ai.application.port.out.AiExtractionWorkerStore.ClaimedJob;
 import com.masiton.test.TestProfile;
 
-import com.masiton.test.FullContextIntegrationTest;
-
 @SpringBootTest
+@TestProfile
 @DisplayName("AI 추출 워커 PostgreSQL lease")
-class JdbcAiExtractionWorkerStoreIntegrationTest extends FullContextIntegrationTest {
+class JdbcAiExtractionWorkerStoreIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     @Autowired
     private AiExtractionWorkerStore store;
@@ -40,7 +39,8 @@ class JdbcAiExtractionWorkerStoreIntegrationTest extends FullContextIntegrationT
 
     @BeforeEach
     void setUp() {
-        cleanupTransactionalState(jdbcTemplate);
+        jdbcTemplate.update("DELETE FROM ai_extraction_attempt");
+        jdbcTemplate.update("DELETE FROM ai_extraction_job");
     }
 
     @Test

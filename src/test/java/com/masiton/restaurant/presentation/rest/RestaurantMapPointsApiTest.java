@@ -20,21 +20,20 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
-import com.masiton.test.FullContextIntegrationTest;
-
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * API-MAP-001 지도 뷰포트 내 맛집 마커 목록 조회의 Controller-PostgreSQL 인수 테스트다.
+ * API-MAP-001 지도 맛집 마커 조회의 Controller-PostgreSQL-Redis 인수 테스트다.
  * 근거: docs/05-specs/api/discovery/map-discovery-api.md
  */
 @SpringBootTest
+@com.masiton.test.TestProfile
 @AutoConfigureMockMvc
 @DisplayName("지도 맛집 마커 조회 API")
-class RestaurantMapPointsApiTest extends FullContextIntegrationTest {
+class RestaurantMapPointsApiTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final UUID MAPO_REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000014");
     private static final UUID KOREAN_CATEGORY_ID = UUID.fromString("20000000-0000-4000-8000-000000000001");
@@ -46,7 +45,7 @@ class RestaurantMapPointsApiTest extends FullContextIntegrationTest {
     private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
-    void cleanUpTransactionalTables() throws Exception {
+    void cleanUpState() throws Exception {
         cleanupTransactionalState(jdbcTemplate);
         REDIS.execInContainer("redis-cli", "FLUSHALL");
     }

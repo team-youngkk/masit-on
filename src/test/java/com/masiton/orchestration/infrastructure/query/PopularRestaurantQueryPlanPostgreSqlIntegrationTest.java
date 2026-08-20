@@ -27,11 +27,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 스캔 방식(Seq Scan / Index Scan)은 플래너의 통계 판단이라 단정하지 않고,
  * `favorite`를 맛집마다 반복 조회하는 계획(상관 서브쿼리 등)으로 바뀌는 회귀만 고정한다.
  */
-import com.masiton.test.FullContextIntegrationTest;
-
 @SpringBootTest
+@com.masiton.test.TestProfile
 @DisplayName("인기 맛집 집계 실행계획")
-class PopularRestaurantQueryPlanPostgreSqlIntegrationTest extends FullContextIntegrationTest {
+class PopularRestaurantQueryPlanPostgreSqlIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final UUID SEED_REGION_ID =
             UUID.fromString("10000000-0000-4000-8000-000000000001");

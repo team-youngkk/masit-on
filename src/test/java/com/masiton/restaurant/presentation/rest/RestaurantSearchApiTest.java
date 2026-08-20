@@ -22,16 +22,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.masiton.test.FullContextIntegrationTest;
-
 /**
  * API-DISCOVERY-001 맛집 목록 및 조건 검색의 Controller-PostgreSQL 인수 테스트다.
  * 근거: docs/05-specs/api/discovery/restaurant-discovery-api.md
  */
 @SpringBootTest
+@com.masiton.test.TestProfile
 @AutoConfigureMockMvc
 @DisplayName("맛집 검색 API")
-class RestaurantSearchApiTest extends FullContextIntegrationTest {
+class RestaurantSearchApiTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final UUID MAPO_REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000014");
     private static final UUID GANGNAM_REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000023");

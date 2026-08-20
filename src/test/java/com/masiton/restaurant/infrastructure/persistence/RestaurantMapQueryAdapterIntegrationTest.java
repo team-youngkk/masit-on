@@ -27,11 +27,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * RestaurantMapQueryAdapter의 지도 마커 필터 조회를 실제 PostgreSQL로 검증한다.
  * 근거: docs/07-adr/integration/map-001-map-bounds-search.md
  */
-import com.masiton.test.FullContextIntegrationTest;
-
 @SpringBootTest
+@com.masiton.test.TestProfile
 @DisplayName("지도 맛집 마커 조회 Query Adapter")
-class RestaurantMapQueryAdapterIntegrationTest extends FullContextIntegrationTest {
+class RestaurantMapQueryAdapterIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final UUID MAPO_REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000014");
     private static final UUID GANGNAM_REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000023");

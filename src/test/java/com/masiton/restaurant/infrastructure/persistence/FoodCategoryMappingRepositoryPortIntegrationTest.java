@@ -22,15 +22,14 @@ import com.masiton.restaurant.domain.model.FoodCategoryMappingSourceType;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.masiton.test.FullContextIntegrationTest;
-
 /**
  * V8 마이그레이션이 적재한 food_category_mapping seed와 대조 순서(EXACT 우선, priority 오름차순)를
  * 실제 PostgreSQL로 검증한다.
  */
 @SpringBootTest
+@com.masiton.test.TestProfile
 @DisplayName("FoodCategoryMapping 대조 순서 조회")
-class FoodCategoryMappingRepositoryPortIntegrationTest extends FullContextIntegrationTest {
+class FoodCategoryMappingRepositoryPortIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     @Autowired
     private FoodCategoryMappingRepositoryPort mappingRepositoryPort;

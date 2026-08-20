@@ -34,11 +34,10 @@ import com.masiton.orchestration.application.retention.port.out.RetentionCleanup
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.masiton.test.FullContextIntegrationTest;
-
 @SpringBootTest
+@com.masiton.test.TestProfile
 @DisplayName("회원 알림 JDBC 저장·조회")
-class JdbcNotificationAdapterIntegrationTest extends FullContextIntegrationTest {
+class JdbcNotificationAdapterIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     // 보존 범위를 다루지 않는 시나리오에서는 모든 행이 항상 보존되도록 아주 오래된 cutoff를 쓴다.
     private static final OffsetDateTime NO_RETENTION_CUTOFF = OffsetDateTime.parse("1970-01-01T00:00:00Z");
@@ -59,7 +58,10 @@ class JdbcNotificationAdapterIntegrationTest extends FullContextIntegrationTest 
 
     @BeforeEach
     void clearNotificationRelations() {
-        cleanupTransactionalState(jdbcTemplate);
+        jdbcTemplate.update("DELETE FROM notification");
+        jdbcTemplate.update("DELETE FROM report");
+        jdbcTemplate.update("DELETE FROM submission");
+        jdbcTemplate.update("DELETE FROM member_account");
     }
 
     @Test

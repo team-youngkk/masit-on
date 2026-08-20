@@ -25,11 +25,10 @@ import com.masiton.personal.infrastructure.persistence.JdbcPersonalCollectionAda
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.masiton.test.FullContextIntegrationTest;
-
 @SpringBootTest
+@com.masiton.test.TestProfile
 @DisplayName("개인 컬렉션 조합 조회 어댑터")
-class PersonalCollectionQueryAdapterIntegrationTest extends FullContextIntegrationTest {
+class PersonalCollectionQueryAdapterIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final UUID REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000001");
     private static final UUID CATEGORY_ID = UUID.fromString("20000000-0000-4000-8000-000000000001");

@@ -31,11 +31,10 @@ import com.masiton.visit.application.port.in.FindDistinctValidRestaurantIdsByCre
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.masiton.test.FullContextIntegrationTest;
-
 @SpringBootTest
+@com.masiton.test.TestProfile
 @DisplayName("방문 관계 등록 통합")
-class VisitRelationshipRegistrationIntegrationTest extends FullContextIntegrationTest {
+class VisitRelationshipRegistrationIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final UUID SEED_REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000001");
     private static final UUID SEED_FOOD_CATEGORY_ID = UUID.fromString("20000000-0000-4000-8000-000000000001");

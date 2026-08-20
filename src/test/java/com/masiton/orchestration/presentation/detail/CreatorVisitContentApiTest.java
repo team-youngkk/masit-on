@@ -28,12 +28,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 검증한다. Fixture는 각 테스트가 JdbcTemplate으로 직접 적재하고 다른 테스트가 만든 데이터에 의존하지
  * 않는다.
  */
-import com.masiton.test.FullContextIntegrationTest;
-
 @SpringBootTest
+@com.masiton.test.TestProfile
 @AutoConfigureMockMvc
 @DisplayName("유튜버 방문 맛집·근거 영상 조회 API")
-class CreatorVisitContentApiTest extends FullContextIntegrationTest {
+class CreatorVisitContentApiTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final UUID SEED_REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000001");
     private static final UUID SEED_FOOD_CATEGORY_ID = UUID.fromString("20000000-0000-4000-8000-000000000001");

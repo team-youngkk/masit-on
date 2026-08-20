@@ -35,11 +35,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 바뀌는 회귀"만 고정한다. 이는 troubleshooting/pr-141-admin-curation-review.md가 기록한 관리자 쪽
  * 최대 20건 단건 반복 조회 사고와 동일한 유형이 공개 조회에도 재발하지 않는지 지키는 회귀 테스트다.
  */
-import com.masiton.test.FullContextIntegrationTest;
-
 @SpringBootTest
+@com.masiton.test.TestProfile
 @DisplayName("공개 큐레이션 조회 실행계획")
-class CurationPublicQueryPlanPostgreSqlIntegrationTest extends FullContextIntegrationTest {
+class CurationPublicQueryPlanPostgreSqlIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final UUID SEED_REGION_ID =
             UUID.fromString("10000000-0000-4000-8000-000000000001");
@@ -64,12 +63,6 @@ class CurationPublicQueryPlanPostgreSqlIntegrationTest extends FullContextIntegr
 
     @Autowired
     private CurationStore store;
-
-    @org.junit.jupiter.api.BeforeEach
-    void clear() {
-        jdbcTemplate.update("DELETE FROM curation_restaurant");
-        jdbcTemplate.update("DELETE FROM curation");
-    }
 
     @Test
     @DisplayName("대표 데이터에서 게시된 큐레이션 구성 맛집을 큐레이션 건수만큼 반복 조회하지 않는다")

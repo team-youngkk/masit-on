@@ -19,8 +19,6 @@ import com.masiton.visit.application.port.in.FindDistinctValidRestaurantIdsByCre
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.masiton.test.FullContextIntegrationTest;
-
 /**
  * business-rules.md BR-VISIT-001~007, BR-CREATOR-007, BR-VIDEO-005·009 근거 공개·유효 판정을
  * 실제 PostgreSQL에서 검증한다. ConstraintViolationIntegrationTest와 같은 패턴(순수 JDBC INSERT
@@ -32,8 +30,9 @@ import com.masiton.test.FullContextIntegrationTest;
  * 검증한다(query-composition.md 5절에 따라 이관됨).
  */
 @SpringBootTest
+@com.masiton.test.TestProfile
 @DisplayName("Visit 공개·유효 조합 판정")
-class VisitQueryIntegrationTest extends FullContextIntegrationTest {
+class VisitQueryIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     // seed-data-plan.md 2·3절 고정 기준 데이터. 초기 스키마 baseline이 적재하므로 참조만 하고 수정하지 않는다.
     private static final UUID SEED_REGION_ID =

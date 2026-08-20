@@ -31,12 +31,11 @@ import com.masiton.restaurant.infrastructure.external.config.KakaoMobilityProper
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
-import com.masiton.test.FullContextIntegrationTest;
-
 @SpringBootTest
+@com.masiton.test.TestProfile
 @ExtendWith(OutputCaptureExtension.class)
 @DisplayName("Redis 코스 경로 quota")
-class RedisCourseRouteQuotaIntegrationTest extends FullContextIntegrationTest {
+class RedisCourseRouteQuotaIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final String IN_FLIGHT_KEY = "restaurant:course-route:in-flight";
 

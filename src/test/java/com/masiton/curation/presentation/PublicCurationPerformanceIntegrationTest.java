@@ -43,13 +43,12 @@ import org.junit.jupiter.api.DisplayName;
  * {@code perf/k6/normal-load-public-read.js}가 담당한다. 그 측정이 실제로 수행되기 전까지
  * 이 테스트는 ADR-PERF-001 8절이 명시한 세 회귀 방어선 중 하나로 남는다. 삭제하지 않는다.
  */
-import com.masiton.test.FullContextIntegrationTest;
-
 @Disabled("정상 부하 판정은 ADR-PERF-001의 k6 시나리오가 담당한다. 이 테스트는 수동 실행용 보조 지표")
 @SpringBootTest
+@com.masiton.test.TestProfile
 @AutoConfigureMockMvc
 @DisplayName("공개 큐레이션 조회 내부 처리 p95")
-class PublicCurationPerformanceIntegrationTest extends FullContextIntegrationTest {
+class PublicCurationPerformanceIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final UUID SEED_REGION_ID =
             UUID.fromString("10000000-0000-4000-8000-000000000001");

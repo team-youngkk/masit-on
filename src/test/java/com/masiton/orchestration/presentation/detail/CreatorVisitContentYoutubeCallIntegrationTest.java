@@ -38,23 +38,24 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * <p>두 호출의 200을 함께 단정한다. 상태를 확인하지 않으면 매핑이나 공개 경로 허용이 깨져 조회가
  * 실패하는 상태에서도 "YouTube 요청 0건"은 참이 되어 테스트가 통과한다.
  */
-import com.masiton.test.FullContextIntegrationTest;
-
 @SpringBootTest
+@com.masiton.test.TestProfile
 @AutoConfigureMockMvc
-@Testcontainers
 @DisplayName("유튜버 방문 맛집·근거 영상 조회 중 YouTube 미호출")
-class CreatorVisitContentYoutubeCallIntegrationTest extends FullContextIntegrationTest {
+class CreatorVisitContentYoutubeCallIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final UUID SEED_REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000001");
     private static final UUID SEED_FOOD_CATEGORY_ID = UUID.fromString("20000000-0000-4000-8000-000000000001");
     private static final int WIREMOCK_PORT = 8080;
 
-    @Container
     static final GenericContainer<?> WIREMOCK =
             new GenericContainer<>("wiremock/wiremock:3.13.2-alpine")
                     .withExposedPorts(WIREMOCK_PORT)
                     .waitingFor(Wait.forHttp("/__admin/health").forPort(WIREMOCK_PORT).forStatusCode(200));
+
+    static {
+        WIREMOCK.start();
+    }
 
     @DynamicPropertySource
     static void registerYoutubeProperties(DynamicPropertyRegistry registry) {

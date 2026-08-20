@@ -24,11 +24,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * findByName의 실제 PostgreSQL 동작을 검증한다. 초기 스키마 baseline이 적재한 서울 자치구·대표 음식 카테고리
  * 기준 데이터를 그대로 사용한다.
  */
-import com.masiton.test.FullContextIntegrationTest;
-
 @SpringBootTest
+@com.masiton.test.TestProfile
 @DisplayName("Region·FoodCategory 이름 조회")
-class ReferenceDataLookupIntegrationTest extends FullContextIntegrationTest {
+class ReferenceDataLookupIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     @Autowired
     private RegionRepositoryPort regionRepositoryPort;

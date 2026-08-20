@@ -21,11 +21,10 @@ import com.masiton.test.TestProfile;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.masiton.test.FullContextIntegrationTest;
-
 @SpringBootTest
+@TestProfile
 @DisplayName("회원 세션 폐기 복구 작업 PostgreSQL")
-class JdbcMemberSessionRevocationRecoveryJobStoreIntegrationTest extends FullContextIntegrationTest {
+class JdbcMemberSessionRevocationRecoveryJobStoreIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     @Autowired
     private MemberSessionRevocationRecoveryJobStore recoveryJobs;

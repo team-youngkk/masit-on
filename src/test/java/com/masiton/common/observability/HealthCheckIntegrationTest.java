@@ -17,12 +17,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.masiton.test.FullContextIntegrationTest;
-
 @SpringBootTest
+@com.masiton.test.TestProfile
 @AutoConfigureMockMvc
-@DisplayName("상태 확인 경로")
-class HealthCheckIntegrationTest extends FullContextIntegrationTest {
+@DisplayName("헬스체크 계약")
+class HealthCheckIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;

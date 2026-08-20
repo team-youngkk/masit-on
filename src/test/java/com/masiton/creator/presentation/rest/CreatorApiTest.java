@@ -12,8 +12,6 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
-import com.masiton.test.FullContextIntegrationTest;
-
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -23,20 +21,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 빈 목록 계약 검증과 쿼리 파라미터 검증이 서로의 데이터에 영향을 주지 않는다.
  */
 @SpringBootTest
+@com.masiton.test.TestProfile
 @AutoConfigureMockMvc
 @DisplayName("유튜버 필터 선택 목록 API")
-class CreatorApiTest extends FullContextIntegrationTest {
+class CreatorApiTest extends com.masiton.test.FullContextIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
-
-    @Autowired
-    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
-
-    @org.junit.jupiter.api.BeforeEach
-    void setUp() {
-        cleanupTransactionalState(jdbcTemplate);
-    }
 
     @Test
     @DisplayName("등록된 공개 유튜버가 없으면 200과 빈 items를 반환한다")

@@ -25,11 +25,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * 발생하는지 단언한다. 각 테스트는 고유한 UUID·외부 식별자를 스스로 준비하므로
  * 다른 테스트가 만든 데이터에 의존하지 않는다.
  */
-import com.masiton.test.FullContextIntegrationTest;
-
 @SpringBootTest
+@com.masiton.test.TestProfile
 @DisplayName("제약 조건 위반")
-class ConstraintViolationIntegrationTest extends FullContextIntegrationTest {
+class ConstraintViolationIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     // seed-data-plan.md 2·3절 고정 기준 데이터. 초기 스키마 baseline이 적재하므로 참조만 하고 수정하지 않는다.
     private static final UUID SEED_REGION_ID =

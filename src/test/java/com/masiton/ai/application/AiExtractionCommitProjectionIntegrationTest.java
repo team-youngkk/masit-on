@@ -55,6 +55,11 @@ class AiExtractionCommitProjectionIntegrationTest extends FullContextIntegration
     @BeforeEach
     void cleanUpState() {
         cleanupTransactionalState(jdbcTemplate);
+        jdbcTemplate.update("""
+                INSERT INTO tag_definition (id, tag_code, tag_type, display_name, aliases, status, source)
+                VALUES ('30000000-0000-4000-8000-000000000007', 'TASTE_SPICY', 'TASTE', '매운맛', '[]'::jsonb, 'ACTIVE', 'SEED')
+                ON CONFLICT (tag_code) DO UPDATE SET status = 'ACTIVE', display_name = '매운맛'
+                """);
         given(naturalLanguageRateLimitPort.tryAcquire(any())).willReturn(true);
     }
 

@@ -27,11 +27,10 @@ import com.masiton.restaurant.application.port.in.PopularRestaurantUseCase;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.masiton.test.FullContextIntegrationTest;
-
 @SpringBootTest
+@com.masiton.test.TestProfile
 @DisplayName("인기 맛집 실시간 집계 조회")
-class PopularRestaurantQueryPostgreSqlIntegrationTest extends FullContextIntegrationTest {
+class PopularRestaurantQueryPostgreSqlIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final UUID SEED_REGION_ID =
             UUID.fromString("10000000-0000-4000-8000-000000000001");
@@ -52,7 +51,9 @@ class PopularRestaurantQueryPostgreSqlIntegrationTest extends FullContextIntegra
      */
     @BeforeEach
     void clearAggregationSources() {
-        cleanupTransactionalState(jdbcTemplate);
+        jdbcTemplate.update("DELETE FROM favorite");
+        jdbcTemplate.update("DELETE FROM restaurant");
+        jdbcTemplate.update("DELETE FROM member_account");
     }
 
     @Test

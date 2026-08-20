@@ -36,11 +36,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
-import com.masiton.test.FullContextIntegrationTest;
-
 @SpringBootTest
+@com.masiton.test.TestProfile
 @DisplayName("Redis Refresh Token 저장소")
-class RedisRefreshTokenStoreIntegrationTest extends FullContextIntegrationTest {
+class RedisRefreshTokenStoreIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     @Autowired
     private MemberSessionStore memberSessionStore;
