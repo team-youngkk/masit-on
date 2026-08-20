@@ -139,6 +139,48 @@ public class RegistrationUnitCommandService {
     }
 
     // =========================================================================================
+    // API 3.7 등록 단위 일괄 폐기
+    // =========================================================================================
+
+    /**
+     * 작업의 {@code AUTO_BLOCKED} 등록 단위를 모두 폐기한다. 등록 단위 사이에는 교차 원자성이
+     * 필요 없으므로({@code AUTO_BLOCKED} 각각은 독립적으로 검토된다) 하나씩 다시 잠그고 여전히
+     * {@code AUTO_BLOCKED}인 것만 {@link #discard}로 폐기한다. 동시 요청으로 이미 상태가 바뀐
+     * 단위는(잠금 실패, 재확인 시 상태 불일치 포함) 조용히 건너뛰고 나머지를 계속 처리해 반복
+     * 호출에도 안전한 부분 성공을 허용한다. 개별 단위 처리 중 예상치 못한 DB 오류가 나도 이미
+     * 폐기에 성공한 단위를 잃지 않도록, 그 단위만 건너뛰고 나머지를 계속 처리한다.
+     */
+    public List<UUID> discardAllBlocked(UUID jobId, String reason, UUID adminId) {
+        requireReason("DISCARD", reason);
+        String trimmedReason = reason.trim();
+        requireJob(jobId);
+
+        List<AiRegistrationUnitStore.RegistrationUnitRow> units = registrationUnitStore.findByJobId(jobId);
+        List<UUID> discardedUnitIds = new java.util.ArrayList<>();
+        for (AiRegistrationUnitStore.RegistrationUnitRow candidate : units) {
+            if (!"AUTO_BLOCKED".equals(candidate.reviewStatus())) {
+                continue;
+            }
+            AiRegistrationUnitStore.RegistrationUnitRow locked;
+            try {
+                locked = registrationUnitStore.lockByJobAndUnitId(jobId, candidate.id()).orElse(null);
+            } catch (AiRegistrationUnitConcurrentAccessException exception) {
+                continue;
+            }
+            if (locked == null || !"AUTO_BLOCKED".equals(locked.reviewStatus())) {
+                continue;
+            }
+            try {
+                discard(locked, trimmedReason, adminId);
+            } catch (RuntimeException exception) {
+                continue;
+            }
+            discardedUnitIds.add(locked.id());
+        }
+        return List.copyOf(discardedUnitIds);
+    }
+
+    // =========================================================================================
     // API 3.5 review
     // =========================================================================================
 

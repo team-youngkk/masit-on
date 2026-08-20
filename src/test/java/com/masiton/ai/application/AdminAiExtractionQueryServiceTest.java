@@ -1,6 +1,7 @@
 package com.masiton.ai.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -10,12 +11,14 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.masiton.ai.application.port.out.AiExtractionAdminQueryPort;
 import com.masiton.ai.application.port.out.AiRegistrationUnitStore;
 import com.masiton.ai.application.port.out.dto.AiExtractionJobView;
+import com.masiton.common.web.BusinessException;
 
 @DisplayName("관리자 AI 추출 검토 서비스")
 class AdminAiExtractionQueryServiceTest {
@@ -81,6 +84,72 @@ class AdminAiExtractionQueryServiceTest {
 
         verify(registrationUnitCommandService).review(jobId, "ROLLBACK", "unit-1", "오등록", null, null, List.of(),
                 adminId);
+    }
+
+    @Test
+    @DisplayName("실행 상태가 FAILED이면 재시도 가능하다")
+    void retryUrl_실행상태FAILED_재시도가능하다() {
+        UUID jobId = UUID.randomUUID();
+        AiExtractionAdminQueryPort.RetryTarget target = new AiExtractionAdminQueryPort.RetryTarget(
+                "https://www.youtube.com/watch?v=video", "FAILED", null);
+        given(port.retryTarget(jobId)).willReturn(Optional.of(target));
+
+        String videoUrl = service.retryUrl(jobId);
+
+        assertThat(videoUrl).isEqualTo("https://www.youtube.com/watch?v=video");
+    }
+
+    @Test
+    @DisplayName("실행 상태가 SUCCEEDED이고 완결성이 PARTIAL이면 재시도 가능하다")
+    void retryUrl_실행상태SUCCEEDED_완결성PARTIAL_재시도가능하다() {
+        UUID jobId = UUID.randomUUID();
+        AiExtractionAdminQueryPort.RetryTarget target = new AiExtractionAdminQueryPort.RetryTarget(
+                "https://www.youtube.com/watch?v=video", "SUCCEEDED", "PARTIAL");
+        given(port.retryTarget(jobId)).willReturn(Optional.of(target));
+
+        String videoUrl = service.retryUrl(jobId);
+
+        assertThat(videoUrl).isEqualTo("https://www.youtube.com/watch?v=video");
+    }
+
+    @Test
+    @DisplayName("실행 상태가 SUCCEEDED/COMPLETE이어도 등록 단위 중 하나가 AUTO_BLOCKED이면 재시도 가능하다")
+    void retryUrl_완결이어도등록단위AUTO_BLOCKED존재하면_재시도가능하다() {
+        UUID jobId = UUID.randomUUID();
+        AiExtractionAdminQueryPort.RetryTarget target = new AiExtractionAdminQueryPort.RetryTarget(
+                "https://www.youtube.com/watch?v=video", "SUCCEEDED", "COMPLETE");
+        given(port.retryTarget(jobId)).willReturn(Optional.of(target));
+        AiRegistrationUnitStore.RegistrationUnitRow confirmedUnit = new AiRegistrationUnitStore.RegistrationUnitRow(
+                UUID.randomUUID(), UUID.randomUUID(), 1, "확정 맛집", "AUTO_CONFIRMED", null, null, null,
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), List.of(), "WORKER",
+                OffsetDateTime.now(), null, null);
+        AiRegistrationUnitStore.RegistrationUnitRow blockedUnit = new AiRegistrationUnitStore.RegistrationUnitRow(
+                UUID.randomUUID(), UUID.randomUUID(), 2, "차단 맛집", "AUTO_BLOCKED", "MISSING_REQUIRED_FIELD", null,
+                null, null, null, null, null, List.of(), "WORKER", OffsetDateTime.now(), null, null);
+        given(registrationUnitStore.findByJobId(jobId)).willReturn(List.of(confirmedUnit, blockedUnit));
+
+        String videoUrl = service.retryUrl(jobId);
+
+        assertThat(videoUrl).isEqualTo("https://www.youtube.com/watch?v=video");
+    }
+
+    @Test
+    @DisplayName("실행 상태가 SUCCEEDED/COMPLETE이고 등록 단위가 모두 AUTO_BLOCKED가 아니면 재시도를 거절한다")
+    void retryUrl_완결이고등록단위전부AUTO_BLOCKED아니면_재시도거절한다() {
+        UUID jobId = UUID.randomUUID();
+        AiExtractionAdminQueryPort.RetryTarget target = new AiExtractionAdminQueryPort.RetryTarget(
+                "https://www.youtube.com/watch?v=video", "SUCCEEDED", "COMPLETE");
+        given(port.retryTarget(jobId)).willReturn(Optional.of(target));
+        AiRegistrationUnitStore.RegistrationUnitRow confirmedUnit = new AiRegistrationUnitStore.RegistrationUnitRow(
+                UUID.randomUUID(), UUID.randomUUID(), 1, "확정 맛집", "AUTO_CONFIRMED", null, null, null,
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), List.of(), "WORKER",
+                OffsetDateTime.now(), null, null);
+        given(registrationUnitStore.findByJobId(jobId)).willReturn(List.of(confirmedUnit));
+
+        assertThatThrownBy(() -> service.retryUrl(jobId))
+                .asInstanceOf(InstanceOfAssertFactories.type(BusinessException.class))
+                .extracting(BusinessException::code)
+                .isEqualTo("AIEXTRACT_RETRY_BLOCKED");
     }
 
     @Test

@@ -160,5 +160,6 @@ Worker는 후보를 장소 단위 등록 단위로 나눈 뒤, 등록 단위마�
 - P6 송신 Schema의 방문 문장 정규식이 종결 마침표와 후행 공백을 거부해, 수신 정규화가 어차피 제거하는 문자 때문에 자연스러운 방문 문장이 제약 디코딩 단계에서 배제될 수 있었다. P7은 그 정규식의 후행 허용 문자를 수신 `normalizeClaim`이 제거하는 범위(공백과 `.`·`。`)와 일치시킨다. `!`와 `?`는 수신에서 차단 문맥으로 다루므로 계속 거부한다. 시스템 지시와 수신 계약은 바뀌지 않으므로 결과 Schema는 `S1`을 유지하며, P6 작업과 Snapshot은 생성 당시 의미로 보존한다.
 - Prompt는 후보 수 상한을 100에서 300으로 올리면서 `P7`에서 `P8`로, 결과 Schema를 `S1`에서 `S2`로 함께 올렸다. 상한 초과의 정상 동작은 모델의 자체 절삭이므로, 시스템 지시에 상한 값 300과 절삭 시 `candidateTruncated`를 `true`로 표시하라는 지시를 추가하고, 송신·수신 Schema에 `candidateTruncated` 필수 boolean 필드를 추가했다. 서버는 모델 표시값을 그대로 신뢰하지 않고 후보 수가 상한과 같으면 표시가 없어도 `candidateTruncated`를 `true`로 강제한다. `ux_ai_job__idempotency`가 Prompt·Schema 버전을 포함하므로 기존 `P7` 작업은 재추출 대상이 되며 P7 작업과 Snapshot은 생성 당시 의미로 보존한다. 근거는 [후보 손실 분석 9.1절](../../08-planning/third-expansion-ai-candidate-loss-analysis.md)에 있다.
 - quota·장애 시 자동 failover하지 않고 실패·수동 등록 fallback을 사용한다.
+- 재시도는 작업 실행 상태뿐 아니라 등록 단위의 AUTO_BLOCKED 여부도 함께 판정한다.
 - 근거는 timestamp 또는 text range 위치·입력 hash만 저장하며 원문은 저장하지 않는다.
 - 호출 timeout·retry·hard stop은 [비동기 신뢰성 ADR](ext-003-ai-extraction-async-reliability.md)과 NFR 수치를 따른다.
