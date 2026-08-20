@@ -3,7 +3,10 @@ set -euo pipefail
 
 exec > >(tee /var/log/masiton-perf-loadgen-bootstrap.log | logger -t masiton-perf-loadgen-bootstrap -s 2>/dev/console) 2>&1
 
-dnf install -y curl tar gzip jq
+# curl은 설치 목록에 넣지 않는다. AL2023에 기본 설치된 curl-minimal이 이미
+# /usr/bin/curl을 제공하고, 전체 curl 패키지와 파일이 충돌해 dnf 트랜잭션이
+# 실패한다. set -e 때문에 이 한 줄이 부트스트랩 전체를 중단시켰다.
+dnf install -y tar gzip jq
 
 asset="k6-v${k6_version}-linux-arm64"
 curl -fsSL -o /tmp/k6.tar.gz "https://github.com/grafana/k6/releases/download/v${k6_version}/$${asset}.tar.gz"
