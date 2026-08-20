@@ -4,6 +4,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceLock;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -18,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.masiton.test.FullContextIntegrationTest;
 
+@ResourceLock("shared-test-infrastructure")
 @DisplayName("RedisMemberRateLimitStore")
 class RedisMemberRateLimitStoreIntegrationTest {
 
@@ -35,7 +37,7 @@ class RedisMemberRateLimitStoreIntegrationTest {
         connectionFactory.start();
         StringRedisTemplate redisTemplate = new StringRedisTemplate(connectionFactory);
         redisTemplate.afterPropertiesSet();
-        redisTemplate.getConnectionFactory().getConnection().serverCommands().flushDb();
+        FullContextIntegrationTest.deleteRedisKeys(redisTemplate, "auth:member:rate-limit:*");
 
         MemberRateLimitProperties properties = new MemberRateLimitProperties();
         properties.setSecret("test-secret");

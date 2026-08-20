@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -64,6 +65,7 @@ class AdminRegistrationJourneyAcceptanceTest extends com.masiton.test.FullContex
     @Autowired MockMvc mockMvc;
     @Autowired ObjectMapper objectMapper;
     @Autowired JdbcTemplate jdbcTemplate;
+    @Autowired StringRedisTemplate redisTemplate;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -79,7 +81,11 @@ class AdminRegistrationJourneyAcceptanceTest extends com.masiton.test.FullContex
                         + "migration_disposition, member_account_id, approval_record_id) "
                         + "values (?, 'acceptance-admin@example.com', 'MIGRATE_ACTIVE', ?, 'TEST-UNIFIED-AUTH-001')",
                 ADMIN_ID, ADMIN_ID);
-        REDIS.execInContainer("redis-cli", "FLUSHALL");
+        deleteRedisKeys(
+                redisTemplate,
+                "auth:session:*",
+                "auth:member:session:revocation:recovery:*",
+                "auth:member:rate-limit:*");
     }
 
     @Test

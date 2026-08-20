@@ -18,6 +18,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -76,6 +77,9 @@ class RestaurantCourseRouteApiTest extends com.masiton.test.FullContextIntegrati
     private JdbcTemplate jdbcTemplate;
 
     @Autowired
+    private StringRedisTemplate redisTemplate;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     @MockitoBean
@@ -84,7 +88,7 @@ class RestaurantCourseRouteApiTest extends com.masiton.test.FullContextIntegrati
     @BeforeEach
     void cleanUpState() throws Exception {
         cleanupTransactionalState(jdbcTemplate);
-        REDIS.execInContainer("redis-cli", "FLUSHALL");
+        deleteRedisKeys(redisTemplate, "restaurant:course-route:*");
     }
 
     @Test

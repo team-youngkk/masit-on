@@ -1,6 +1,11 @@
 package com.masiton.test;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.junit.jupiter.api.parallel.ResourceLock;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
@@ -8,6 +13,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 @TestProfile
 @SpringBootTest
+@ResourceLock("shared-test-infrastructure")
 public abstract class FullContextIntegrationTest {
 
     private static final int REDIS_PORT = 6379;
@@ -82,5 +88,18 @@ public abstract class FullContextIntegrationTest {
         jdbcTemplate.execute("DELETE FROM admin_account_migration_map");
         jdbcTemplate.execute("DELETE FROM admin_account");
         jdbcTemplate.execute("DELETE FROM member_account");
+    }
+
+    public static void deleteRedisKeys(StringRedisTemplate redisTemplate, String... patterns) {
+        Set<String> keys = new HashSet<>();
+        for (String pattern : patterns) {
+            Set<String> matchingKeys = redisTemplate.keys(pattern);
+            if (matchingKeys != null) {
+                keys.addAll(matchingKeys);
+            }
+        }
+        if (!keys.isEmpty()) {
+            redisTemplate.delete(keys);
+        }
     }
 }

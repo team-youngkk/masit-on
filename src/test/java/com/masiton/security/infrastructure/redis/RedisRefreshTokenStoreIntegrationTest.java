@@ -31,6 +31,7 @@ import com.masiton.member.application.MemberSessionRevocationRecoveryService;
 import com.masiton.member.application.port.out.MemberSessionRevocationRecoveryQueue;
 import com.masiton.member.application.port.out.MemberSessionStore;
 import com.masiton.member.application.port.out.MemberRateLimitStore;
+import com.masiton.test.FullContextIntegrationTest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -64,7 +65,11 @@ class RedisRefreshTokenStoreIntegrationTest extends com.masiton.test.FullContext
 
     @BeforeEach
     void clearRedis() {
-        redisTemplate.getConnectionFactory().getConnection().serverCommands().flushDb();
+        FullContextIntegrationTest.deleteRedisKeys(
+                redisTemplate,
+                "auth:session:*",
+                "auth:member:session:revocation:recovery:*",
+                "auth:member:rate-limit:*");
         when(memberSessionClock.instant()).thenAnswer(ignored -> Instant.now());
     }
 
@@ -140,7 +145,7 @@ class RedisRefreshTokenStoreIntegrationTest extends com.masiton.test.FullContext
         }
         assertThat(memberRateLimitStore.isLoginBlocked("member@example.com", "203.0.113.200")).isTrue();
 
-        redisTemplate.getConnectionFactory().getConnection().serverCommands().flushDb();
+        FullContextIntegrationTest.deleteRedisKeys(redisTemplate, "auth:member:rate-limit:*");
         for (int attempt = 0; attempt < 50; attempt++) {
             assertThat(memberRateLimitStore.tryAcquireLoginSourceAttempt("203.0.113.10")).isTrue();
             assertThat(memberRateLimitStore.tryRecordLoginFailure(
@@ -155,7 +160,7 @@ class RedisRefreshTokenStoreIntegrationTest extends com.masiton.test.FullContext
         assertThat(concurrentFailureRecords(20, attempt -> "198.51.100.10")).isEqualTo(5L);
         assertThat(memberRateLimitStore.isLoginBlocked("member@example.com", "198.51.100.10")).isTrue();
 
-        redisTemplate.getConnectionFactory().getConnection().serverCommands().flushDb();
+        FullContextIntegrationTest.deleteRedisKeys(redisTemplate, "auth:member:rate-limit:*");
 
         assertThat(concurrentFailureRecords(20, attempt -> "198.51.100." + attempt)).isEqualTo(10L);
         assertThat(memberRateLimitStore.isLoginBlocked("member@example.com", "203.0.113.200")).isTrue();

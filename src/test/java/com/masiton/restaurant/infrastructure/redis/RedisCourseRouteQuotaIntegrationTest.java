@@ -44,7 +44,7 @@ class RedisCourseRouteQuotaIntegrationTest extends com.masiton.test.FullContextI
 
     @BeforeEach
     void clearRedis() {
-        redisTemplate.getConnectionFactory().getConnection().serverCommands().flushDb();
+        deleteRedisKeys(redisTemplate, "restaurant:course-route:*");
     }
 
     @Test

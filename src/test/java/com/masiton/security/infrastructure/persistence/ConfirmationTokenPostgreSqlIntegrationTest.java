@@ -13,6 +13,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceLock;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -24,14 +25,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.masiton.test.FullContextIntegrationTest;
 
+@ResourceLock("shared-test-infrastructure")
 @DisplayName("확인 토큰 PostgreSQL 동시성")
 class ConfirmationTokenPostgreSqlIntegrationTest {
 
     private JdbcTemplate jdbcTemplate;
     private ExecutorService executorService;
+    private UUID adminId;
+    private UUID tokenId;
 
     @BeforeEach
     void setUp() {
+        adminId = null;
+        tokenId = null;
         jdbcTemplate = new JdbcTemplate(new DriverManagerDataSource(
                 FullContextIntegrationTest.POSTGRES.getJdbcUrl(),
                 FullContextIntegrationTest.POSTGRES.getUsername(),
@@ -43,18 +49,24 @@ class ConfirmationTokenPostgreSqlIntegrationTest {
     @AfterEach
     void tearDown() {
         executorService.shutdownNow();
+        if (tokenId != null) {
+            jdbcTemplate.update("delete from confirmation_token where id = ?", tokenId);
+        }
+        if (adminId != null) {
+            jdbcTemplate.update("delete from admin_account where id = ?", adminId);
+        }
     }
 
     @Test
     @DisplayName("동일 토큰의 동시 확정은 하나만 생성하고 나머지는 저장된 결과를 재생한다")
     void confirmation_동일토큰동시확정_하나생성나머지재생() throws Exception {
-        UUID adminId = UUID.randomUUID();
+        adminId = UUID.randomUUID();
         jdbcTemplate.update("""
                 insert into admin_account (id, login_id, password_hash, role, active)
                 values (?, ?, 'hash', 'ADMIN', true)
                 """, adminId, "admin-" + adminId);
 
-        UUID tokenId = UUID.randomUUID();
+        tokenId = UUID.randomUUID();
         UUID createdResourceId = UUID.randomUUID();
         jdbcTemplate.update("""
                         insert into confirmation_token (
