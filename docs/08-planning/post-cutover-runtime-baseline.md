@@ -9,7 +9,7 @@ related_documents:
   - third-expansion-final-gate-result.md
   - issue-190-operational-performance-result.md
   - ../07-adr/data/data-005-redis-refresh-token.md
-  - ../troubleshooting/ops-2026-08-19-alb-cutover-review.md
+  - ../troubleshooting/pr-257-runtime-baseline-review.md
 ---
 
 # 전환 후 런타임 실측 기준선
@@ -64,7 +64,7 @@ SerialGC의 full GC는 단일 스레드 stop-the-world다. 평상시 CPU 2% 구�
 
 ### 2.3. CPU 크레딧
 
-t4g는 버스터블이고 small의 적립률은 vCPU당 시간당 12 크레딧으로 **medium(24)의 절반**이다. 검토 4.3절이 미확인으로 남긴 항목이다.
+t4g는 버스터블이고 [AWS CPU 크레딧 표](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/burstable-credits-baseline-concepts.html)에 따르면 t4g.small과 t4g.medium은 모두 2 vCPU, 인스턴스당 시간당 24 크레딧(= vCPU당 시간당 12 크레딧)을 얻는다. **두 인스턴스 크기의 적립률은 같다.** 검토 4.3절이 미확인으로 남긴 항목이다.
 
 | 시각(KST) | CPU 평균 | `CPUCreditBalance` | `CPUSurplusCreditBalance` |
 |---|---:|---:|---:|
@@ -73,7 +73,7 @@ t4g는 버스터블이고 small의 적립률은 vCPU당 시간당 12 크레딧�
 | 21:50 | 2.30% | 10.62 | 0 |
 | 22:05 | 2.19% | 15.96 | 0 |
 
-**기동 직후 잉여 크레딧을 사용한 구간이 있다.** 새 인스턴스는 크레딧 0에서 시작하는데 부팅·이미지 pull·JVM 기동·Flyway가 겹치기 때문이다. 이후 저부하에서 15분마다 약 5씩 회복한다.
+**기동 직후 잉여 크레딧을 사용한 구간이 있다.** 새 인스턴스는 크레딧 0에서 시작하는데 부팅·이미지 pull·JVM 기동·Flyway가 겹치기 때문이다. 이후 저부하에서 15분마다 약 5씩 회복했으며, 이는 24크레딧/시간의 이론상 15분당 최대 6크레딧과 같은 방향의 관측이다.
 
 부하 측정에 직접 영향이 있다. **크레딧이 없는 갓 기동한 인스턴스에 최대 부하를 걸면 측정 대상이 애플리케이션 성능이 아니라 크레딧 고갈이 된다.** warmup과 크레딧 회복 대기를 측정 절차에 포함해야 한다.
 
