@@ -4,9 +4,14 @@ resource "aws_security_group" "redis" {
   vpc_id      = data.aws_vpc.existing.id
 }
 
+# description은 AWS에서 변경 불가라 값을 바꾸면 security group이 교체된다. 이 SG는
+# ssm endpoint와 EC2 Instance Connect Endpoint가 참조하므로 교체가 운영 SSM 경로와
+# 관리 접속을 끊는다. 실제 범위는 아래 vpce_from_vpc 규칙까지 포함해 VPC 내부지만,
+# 문구를 그 때문에 고치지 않는다. 2026-08-20에 이 문구만 바꾼 plan이 SG 교체와
+# 연쇄 재생성 5건을 만들어 되돌렸다.
 resource "aws_security_group" "vpce" {
   name        = "${var.name_prefix}-vpce-sg"
-  description = "masit-on interface VPC endpoints: 443 from inside the VPC only"
+  description = "masit-on interface VPC endpoints: 443 from private workloads only"
   vpc_id      = data.aws_vpc.existing.id
 }
 
