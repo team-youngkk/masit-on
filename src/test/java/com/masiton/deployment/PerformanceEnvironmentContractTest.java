@@ -24,6 +24,7 @@ class PerformanceEnvironmentContractTest {
         assertThat(template)
                 .contains("export VERIFICATION_ENABLED=false")
                 .contains("-e VERIFICATION_ENABLED")
+                .contains("write_secret 'masiton.member.action-mail.from-address' 'perf@example.invalid'")
                 .doesNotContain("write_secret 'masiton.security.verification.login-id'")
                 .doesNotContain("write_secret 'masiton.security.verification.password-hash'");
     }

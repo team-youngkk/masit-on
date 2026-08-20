@@ -121,9 +121,9 @@ wait_for 'WireMock mappings' wiremock_mappings
 CHECK_DEPENDENCIES
 chmod 0700 /opt/masiton-perf/check-dependencies.sh
 
-# prod 프로파일은 configtree로 비밀값 파일 10건을 읽는다. 성능 환경은 운영 비밀값에
+# prod 프로파일은 configtree로 비밀값 파일 11건을 읽는다. 성능 환경은 운영 비밀값에
 # 접근하지 않으므로(app 역할은 이 실행의 db·redis parameter 둘만 읽는다) 나머지
-# 8건을 이 인스턴스에서 일회용으로 만든다. 검증 세션은 이 환경에서 명시적으로
+# 9건을 이 인스턴스에서 일회용으로 만든다. 검증 세션은 이 환경에서 명시적으로
 # 비활성화하며, 부하 시나리오는 무인증 공개 GET만
 # 호출하므로 그 값들은 기동 요건을 채우는 역할만 한다.
 # 파일 이름이 곧 속성 이름이고 경로도 운영과 같다. 원문은
@@ -179,6 +179,7 @@ rm -rf "$key_dir"
 # 아래는 형식 검증이 없고 측정 경로에서 쓰이지 않는다. 운영 값을 복제하지 않는다.
 write_secret 'masiton.member.action-mail.active-key-id' 'perf'
 write_secret 'masiton.member.action-mail.active-key' "$(throwaway)"
+write_secret 'masiton.member.action-mail.from-address' 'perf@example.invalid'
 write_secret 'masiton.member.rate-limit.secret' "$(throwaway)"
 write_secret 'spring.mail.username' 'perf@example.invalid'
 write_secret 'spring.mail.password' "$(throwaway)"
