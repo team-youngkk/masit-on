@@ -63,6 +63,8 @@ class RegistrationUnitCommandServiceTest {
     private final AdjustRegisteredCategoryUseCase adjustCategoryUseCase = mock(AdjustRegisteredCategoryUseCase.class);
     private final RegistrationUnitConfirmCommitService confirmCommitService =
             mock(RegistrationUnitConfirmCommitService.class);
+    private final RegistrationUnitDiscardCommitService discardCommitService =
+            mock(RegistrationUnitDiscardCommitService.class);
     private final LegacyAdminActorResolver legacyAdminActorResolver = mock(LegacyAdminActorResolver.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -72,7 +74,8 @@ class RegistrationUnitCommandServiceTest {
     void setUp() {
         service = new RegistrationUnitCommandService(port, registrationUnitStore, registrationUnitReviewStore,
                 decomposeRegistrationUnits, executeRegistrationUnit, resolveFoodCategory, rollbackUseCase,
-                adjustCategoryUseCase, confirmCommitService, legacyAdminActorResolver, objectMapper);
+                adjustCategoryUseCase, confirmCommitService, discardCommitService, legacyAdminActorResolver,
+                objectMapper);
 
         when(port.jobVideoReference(JOB_ID)).thenReturn(Optional.of(
                 new AiExtractionAdminQueryPort.JobVideoReference("channel-1", "video-1",
@@ -214,7 +217,7 @@ class RegistrationUnitCommandServiceTest {
         AiRegistrationUnitStore.RegistrationUnitRow unit = blockedUnitRow();
         when(registrationUnitStore.findByJobId(JOB_ID)).thenReturn(List.of(unit));
         when(registrationUnitStore.lockByJobAndUnitId(JOB_ID, UNIT_ID)).thenReturn(Optional.of(unit));
-        when(registrationUnitStore.discard(eq(UNIT_ID), eq("AUTO_BLOCKED"), any())).thenReturn(false);
+        when(discardCommitService.commit(eq(UNIT_ID), eq("AUTO_BLOCKED"), any(), any())).thenReturn(false);
 
         // When / Then
         assertThatThrownBy(() -> service.review(JOB_ID, "DISCARD", UNIT_ID.toString(), "사유",
@@ -222,7 +225,6 @@ class RegistrationUnitCommandServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .satisfies(exception -> assertThat(((BusinessException) exception).code())
                         .isEqualTo("AIEXTRACT_CONCURRENT_REQUEST_CONFLICT"));
-        verify(registrationUnitReviewStore, never()).insert(any());
     }
 
     @Test
@@ -276,8 +278,8 @@ class RegistrationUnitCommandServiceTest {
         when(registrationUnitStore.findByJobId(JOB_ID)).thenReturn(List.of(first, second, confirmed));
         when(registrationUnitStore.lockByJobAndUnitId(JOB_ID, firstBlockedId)).thenReturn(Optional.of(first));
         when(registrationUnitStore.lockByJobAndUnitId(JOB_ID, secondBlockedId)).thenReturn(Optional.of(second));
-        when(registrationUnitStore.discard(eq(firstBlockedId), eq("AUTO_BLOCKED"), any())).thenReturn(true);
-        when(registrationUnitStore.discard(eq(secondBlockedId), eq("AUTO_BLOCKED"), any())).thenReturn(true);
+        when(discardCommitService.commit(eq(firstBlockedId), eq("AUTO_BLOCKED"), any(), any())).thenReturn(true);
+        when(discardCommitService.commit(eq(secondBlockedId), eq("AUTO_BLOCKED"), any(), any())).thenReturn(true);
 
         // When
         UUID adminId = UUID.randomUUID();
@@ -286,7 +288,7 @@ class RegistrationUnitCommandServiceTest {
         // Then
         assertThat(discardedUnitIds).containsExactlyInAnyOrder(firstBlockedId, secondBlockedId);
         verify(registrationUnitStore, never()).lockByJobAndUnitId(JOB_ID, confirmedId);
-        verify(registrationUnitStore, never()).discard(eq(confirmedId), any(), any());
+        verify(discardCommitService, never()).commit(eq(confirmedId), any(), any(), any());
     }
 
     @Test
@@ -315,14 +317,36 @@ class RegistrationUnitCommandServiceTest {
         when(registrationUnitStore.findByJobId(JOB_ID)).thenReturn(List.of(stale, normal));
         when(registrationUnitStore.lockByJobAndUnitId(JOB_ID, staleId)).thenReturn(Optional.empty());
         when(registrationUnitStore.lockByJobAndUnitId(JOB_ID, normalId)).thenReturn(Optional.of(normal));
-        when(registrationUnitStore.discard(eq(normalId), eq("AUTO_BLOCKED"), any())).thenReturn(true);
+        when(discardCommitService.commit(eq(normalId), eq("AUTO_BLOCKED"), any(), any())).thenReturn(true);
 
         // When
         List<UUID> discardedUnitIds = service.discardAllBlocked(JOB_ID, "사유", UUID.randomUUID());
 
         // Then
         assertThat(discardedUnitIds).containsExactly(normalId);
-        verify(registrationUnitStore, never()).discard(eq(staleId), any(), any());
+        verify(discardCommitService, never()).commit(eq(staleId), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("한 단위의 감사 이력 저장이 예상치 못한 오류로 실패해도 나머지 단위는 계속 폐기한다")
+    void discardAllBlocked_한단위가예상치못한오류로실패해도_나머지는계속폐기한다() {
+        // Given
+        UUID failingId = UUID.randomUUID();
+        UUID succeedingId = UUID.randomUUID();
+        AiRegistrationUnitStore.RegistrationUnitRow failing = blockedUnitRow(failingId);
+        AiRegistrationUnitStore.RegistrationUnitRow succeeding = blockedUnitRow(succeedingId);
+        when(registrationUnitStore.findByJobId(JOB_ID)).thenReturn(List.of(failing, succeeding));
+        when(registrationUnitStore.lockByJobAndUnitId(JOB_ID, failingId)).thenReturn(Optional.of(failing));
+        when(registrationUnitStore.lockByJobAndUnitId(JOB_ID, succeedingId)).thenReturn(Optional.of(succeeding));
+        when(discardCommitService.commit(eq(failingId), eq("AUTO_BLOCKED"), any(), any()))
+                .thenThrow(new DataIntegrityViolationException("감사 이력 저장 실패"));
+        when(discardCommitService.commit(eq(succeedingId), eq("AUTO_BLOCKED"), any(), any())).thenReturn(true);
+
+        // When
+        List<UUID> discardedUnitIds = service.discardAllBlocked(JOB_ID, "사유", UUID.randomUUID());
+
+        // Then
+        assertThat(discardedUnitIds).containsExactly(succeedingId);
     }
 
     private AiRegistrationUnitStore.RegistrationUnitRow blockedUnitRow(UUID unitId) {

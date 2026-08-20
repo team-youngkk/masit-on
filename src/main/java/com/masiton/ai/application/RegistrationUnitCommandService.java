@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -49,6 +51,7 @@ import tools.jackson.databind.node.ObjectNode;
 @Service
 public class RegistrationUnitCommandService {
 
+    private static final Logger log = LoggerFactory.getLogger(RegistrationUnitCommandService.class);
     private static final Set<String> KNOWN_DECISIONS = Set.of("CONFIRM", "DISCARD", "ROLLBACK", "ADJUST_CATEGORY");
     private static final String ADMIN_EXECUTOR = "ADMIN";
 
@@ -61,6 +64,7 @@ public class RegistrationUnitCommandService {
     private final RollbackAiRegisteredContentUseCase rollbackUseCase;
     private final AdjustRegisteredCategoryUseCase adjustCategoryUseCase;
     private final RegistrationUnitConfirmCommitService confirmCommitService;
+    private final RegistrationUnitDiscardCommitService discardCommitService;
     private final LegacyAdminActorResolver legacyAdminActorResolver;
     private final ObjectMapper objectMapper;
 
@@ -74,6 +78,7 @@ public class RegistrationUnitCommandService {
             RollbackAiRegisteredContentUseCase rollbackUseCase,
             AdjustRegisteredCategoryUseCase adjustCategoryUseCase,
             RegistrationUnitConfirmCommitService confirmCommitService,
+            RegistrationUnitDiscardCommitService discardCommitService,
             LegacyAdminActorResolver legacyAdminActorResolver,
             ObjectMapper objectMapper) {
         this.port = port;
@@ -85,6 +90,7 @@ public class RegistrationUnitCommandService {
         this.rollbackUseCase = rollbackUseCase;
         this.adjustCategoryUseCase = adjustCategoryUseCase;
         this.confirmCommitService = confirmCommitService;
+        this.discardCommitService = discardCommitService;
         this.legacyAdminActorResolver = legacyAdminActorResolver;
         this.objectMapper = objectMapper;
     }
@@ -139,16 +145,18 @@ public class RegistrationUnitCommandService {
     }
 
     // =========================================================================================
-    // API 3.7 등록 단위 일괄 폐기
+    // API 3.10 등록 단위 일괄 폐기
     // =========================================================================================
 
     /**
      * 작업의 {@code AUTO_BLOCKED} 등록 단위를 모두 폐기한다. 등록 단위 사이에는 교차 원자성이
      * 필요 없으므로({@code AUTO_BLOCKED} 각각은 독립적으로 검토된다) 하나씩 다시 잠그고 여전히
-     * {@code AUTO_BLOCKED}인 것만 {@link #discard}로 폐기한다. 동시 요청으로 이미 상태가 바뀐
-     * 단위는(잠금 실패, 재확인 시 상태 불일치 포함) 조용히 건너뛰고 나머지를 계속 처리해 반복
-     * 호출에도 안전한 부분 성공을 허용한다. 개별 단위 처리 중 예상치 못한 DB 오류가 나도 이미
-     * 폐기에 성공한 단위를 잃지 않도록, 그 단위만 건너뛰고 나머지를 계속 처리한다.
+     * {@code AUTO_BLOCKED}인 것만 {@link #discard}로 폐기한다. {@link #discard}가 위임하는
+     * {@link RegistrationUnitDiscardCommitService#commit}이 상태 전이와 감사 이력 삽입을 하나의
+     * 트랜잭션으로 묶으므로, 감사 이력 삽입이 실패해도 상태 전이만 반영되는 불일치는 남지 않는다.
+     * 동시 요청으로 이미 상태가 바뀐 단위는(잠금 실패, 재확인 시 상태 불일치 포함) 조용히 건너뛰고
+     * 나머지를 계속 처리해 반복 호출에도 안전한 부분 성공을 허용한다. 개별 단위 처리 중 예상치 못한
+     * 오류가 나도 그 단위만 건너뛰고 나머지를 계속 처리하되, 원인 추적을 위해 경고 로그를 남긴다.
      */
     public List<UUID> discardAllBlocked(UUID jobId, String reason, UUID adminId) {
         requireReason("DISCARD", reason);
@@ -173,6 +181,7 @@ public class RegistrationUnitCommandService {
             try {
                 discard(locked, trimmedReason, adminId);
             } catch (RuntimeException exception) {
+                log.warn("등록 단위 일괄 폐기 중 단위 {}만 건너뜁니다.", locked.id(), exception);
                 continue;
             }
             discardedUnitIds.add(locked.id());
@@ -308,11 +317,9 @@ public class RegistrationUnitCommandService {
         if (!"AUTO_BLOCKED".equals(unit.reviewStatus())) {
             throw validationConflict(unit.blockReason());
         }
-        if (!registrationUnitStore.discard(unit.id(), "AUTO_BLOCKED", OffsetDateTime.now())) {
+        if (!discardCommitService.commit(unit.id(), "AUTO_BLOCKED", reason, adminId)) {
             throw concurrentConflict();
         }
-        registrationUnitReviewStore.insert(new AiRegistrationUnitReviewStore.RegistrationUnitReviewInsert(
-                unit.id(), "DISCARD", reason, null, null, null, adminId));
     }
 
     private void rollback(AiRegistrationUnitStore.RegistrationUnitRow unit, String reason, UUID adminId) {

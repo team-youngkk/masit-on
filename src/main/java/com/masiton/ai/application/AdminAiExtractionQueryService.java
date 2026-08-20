@@ -74,7 +74,7 @@ public class AdminAiExtractionQueryService {
         return registrationUnitCommandService.registerUnit(jobId, unitId);
     }
 
-    /** API 3.7절: AUTO_BLOCKED 등록 단위 일괄 폐기. {@link RegistrationUnitCommandService}로 위임한다. */
+    /** API 3.10절: AUTO_BLOCKED 등록 단위 일괄 폐기. {@link RegistrationUnitCommandService}로 위임한다. */
     public List<UUID> discardAllBlocked(UUID jobId, String reason, UUID adminId) {
         return registrationUnitCommandService.discardAllBlocked(jobId, reason, adminId);
     }
