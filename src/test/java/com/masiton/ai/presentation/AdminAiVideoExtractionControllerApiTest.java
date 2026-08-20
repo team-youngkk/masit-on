@@ -27,6 +27,7 @@ import com.masiton.ai.application.AdminAiExtractionQueryService;
 import com.masiton.ai.application.port.out.AiExtractionAdminQueryPort;
 import com.masiton.ai.application.port.out.dto.AiExtractionJobView;
 import com.masiton.common.web.BusinessException;
+import com.masiton.common.web.ErrorCode;
 import com.masiton.common.web.GlobalExceptionHandler;
 
 import tools.jackson.databind.ObjectMapper;
@@ -243,6 +244,46 @@ class AdminAiVideoExtractionControllerApiTest {
                         .principal(new UsernamePasswordAuthenticationToken("55555555-5555-4555-8555-555555555556", "n/a"))
                         .contentType(MediaType.APPLICATION_JSON).content("{\"decision\":\"ROLLBACK\",\"unitId\":\"77777777-7777-4777-8777-777777777777\",\"expectedReviewStatus\":\"AUTO_CONFIRMED\",\"reason\":\"오등록\"}"))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("AIEXTRACT_DUPLICATE_CONFLICT"));
+    }
+
+    @Test
+    @DisplayName("AUTO_BLOCKED 등록 단위 일괄 폐기는 200과 폐기된 unitId 목록을 반환한다")
+    void discardAllBlocked_정상요청은_200과폐기된unitId목록을반환한다() throws Exception {
+        UUID jobId = UUID.fromString("55555555-5555-4555-8555-555555555555");
+        UUID memberAccountId = UUID.fromString("88888888-8888-4888-8888-888888888888");
+        UUID firstUnitId = UUID.fromString("77777777-7777-4777-8777-777777777777");
+        UUID secondUnitId = UUID.fromString("99999999-9999-4999-8999-999999999999");
+        when(queryService.discardAllBlocked(org.mockito.ArgumentMatchers.eq(jobId),
+                org.mockito.ArgumentMatchers.eq("여러 건 동시 처리 사유"), org.mockito.ArgumentMatchers.eq(memberAccountId)))
+                .thenReturn(java.util.List.of(firstUnitId, secondUnitId));
+
+        mockMvc.perform(post("/api/admin/ai/video-extractions/{jobId}/registration-units/discard-all", jobId)
+                        .principal(new UsernamePasswordAuthenticationToken(memberAccountId.toString(), "n/a"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"여러 건 동시 처리 사유\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.discardedCount").value(2))
+                .andExpect(jsonPath("$.discardedUnitIds.length()").value(2))
+                .andExpect(jsonPath("$.discardedUnitIds[0]").value(firstUnitId.toString()))
+                .andExpect(jsonPath("$.discardedUnitIds[1]").value(secondUnitId.toString()));
+    }
+
+    @Test
+    @DisplayName("AUTO_BLOCKED 등록 단위 일괄 폐기는 reason 누락 시 400 MISSING_REQUIRED_FIELD를 반환한다")
+    void discardAllBlocked_reason누락_400필수값오류를반환한다() throws Exception {
+        UUID jobId = UUID.fromString("55555555-5555-4555-8555-555555555555");
+        UUID memberAccountId = UUID.fromString("88888888-8888-4888-8888-888888888888");
+        doThrow(new BusinessException(ErrorCode.MISSING_REQUIRED_FIELD, "reason",
+                "reason is required and must be at most 1,000 characters."))
+                .when(queryService).discardAllBlocked(org.mockito.ArgumentMatchers.eq(jobId),
+                        org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.eq(memberAccountId));
+
+        mockMvc.perform(post("/api/admin/ai/video-extractions/{jobId}/registration-units/discard-all", jobId)
+                        .principal(new UsernamePasswordAuthenticationToken(memberAccountId.toString(), "n/a"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("MISSING_REQUIRED_FIELD"));
     }
 
     @Test

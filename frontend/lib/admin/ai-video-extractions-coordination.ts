@@ -56,9 +56,17 @@ export function nextAiExtractionFilters(
   }
 }
 
-/** 재시도는 작업 전체 실행 상태를 대상으로 하며 등록 단위와 무관하다. */
-export function retryActionAvailable(job: Pick<AiExtractionJob, 'executionStatus' | 'resultCompleteness'>): boolean {
-  return job.executionStatus === 'FAILED' || (job.executionStatus === 'SUCCEEDED' && job.resultCompleteness === 'PARTIAL')
+/**
+ * 재시도는 FAILED 작업, SUCCEEDED/PARTIAL 작업, 또는 SUCCEEDED이면서 등록 단위 중 하나 이상이
+ * AUTO_BLOCKED인 작업에서 가능하다(API 3.4절).
+ */
+export function retryActionAvailable(
+  job: Pick<AiExtractionJob, 'executionStatus' | 'resultCompleteness'>,
+  registrationUnits: Pick<AiRegistrationUnit, 'reviewStatus'>[],
+): boolean {
+  const hasBlockedUnit = registrationUnits.some((unit) => unit.reviewStatus === 'AUTO_BLOCKED')
+  return job.executionStatus === 'FAILED'
+    || (job.executionStatus === 'SUCCEEDED' && (job.resultCompleteness === 'PARTIAL' || hasBlockedUnit))
 }
 
 export type AiRegistrationUnitActions = {
