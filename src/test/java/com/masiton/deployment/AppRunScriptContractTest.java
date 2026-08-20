@@ -128,7 +128,8 @@ class AppRunScriptContractTest {
 
         assertThat(renderer)
                 .contains("render_required_non_blank \"masiton.member.action-mail.from-address\""
-                        + " /masiton/member/action-mail/from-address");
+                        + " /masiton/member/action-mail/from-address")
+                .contains("[[ \"$value\" =~ ^[[:space:]]*$ ]]");
         assertThat(productionProfile).contains("masiton.member.action-mail.from-address");
         assertThat(provisioning)
                 .contains("| `masiton.member.action-mail.from-address` |"
