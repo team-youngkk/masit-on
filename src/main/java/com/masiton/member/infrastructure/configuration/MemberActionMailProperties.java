@@ -12,7 +12,16 @@ public class MemberActionMailProperties {
 
     private String activeKeyId;
     private String activeKey;
+    private String fromAddress;
     private Map<String, String> keys = new LinkedHashMap<>();
+
+    public String getFromAddress() {
+        return fromAddress;
+    }
+
+    public void setFromAddress(String fromAddress) {
+        this.fromAddress = fromAddress;
+    }
 
     public String getActiveKeyId() {
         return activeKeyId;
@@ -44,6 +53,9 @@ public class MemberActionMailProperties {
 
     @PostConstruct
     public void validate() {
+        if (fromAddress == null || fromAddress.isBlank()) {
+            throw new IllegalStateException("A member action-mail from address is required");
+        }
         if (activeKeyId == null || activeKeyId.isBlank()) {
             throw new IllegalStateException("An active member action-mail encryption key id is required");
         }
