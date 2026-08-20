@@ -53,10 +53,30 @@ test('AI 작업 필터를 바꾸면 첫 페이지로 이동한다', () => {
 })
 
 test('재시도는 실패한 작업과 부분 완료 작업에서만 가능하다', () => {
-  assert.equal(retryActionAvailable({ executionStatus: 'FAILED', resultCompleteness: null }), true)
-  assert.equal(retryActionAvailable({ executionStatus: 'SUCCEEDED', resultCompleteness: 'PARTIAL' }), true)
-  assert.equal(retryActionAvailable({ executionStatus: 'SUCCEEDED', resultCompleteness: 'COMPLETE' }), false)
-  assert.equal(retryActionAvailable({ executionStatus: 'RUNNING', resultCompleteness: null }), false)
+  assert.equal(retryActionAvailable({ executionStatus: 'FAILED', resultCompleteness: null }, []), true)
+  assert.equal(retryActionAvailable({ executionStatus: 'SUCCEEDED', resultCompleteness: 'PARTIAL' }, []), true)
+  assert.equal(retryActionAvailable({ executionStatus: 'SUCCEEDED', resultCompleteness: 'COMPLETE' }, []), false)
+  assert.equal(retryActionAvailable({ executionStatus: 'RUNNING', resultCompleteness: null }, []), false)
+})
+
+test('SUCCEEDED/COMPLETE 작업도 등록 단위 중 하나가 AUTO_BLOCKED이면 재시도할 수 있다', () => {
+  assert.equal(
+    retryActionAvailable(
+      { executionStatus: 'SUCCEEDED', resultCompleteness: 'COMPLETE' },
+      [{ reviewStatus: 'AUTO_CONFIRMED' }, { reviewStatus: 'AUTO_BLOCKED' }],
+    ),
+    true,
+  )
+})
+
+test('SUCCEEDED/COMPLETE 작업의 등록 단위가 전부 AUTO_CONFIRMED이면 재시도할 수 없다', () => {
+  assert.equal(
+    retryActionAvailable(
+      { executionStatus: 'SUCCEEDED', resultCompleteness: 'COMPLETE' },
+      [{ reviewStatus: 'AUTO_CONFIRMED' }, { reviewStatus: 'AUTO_CONFIRMED' }],
+    ),
+    false,
+  )
 })
 
 test('차단 등록 단위는 등록 실행만 노출한다', () => {

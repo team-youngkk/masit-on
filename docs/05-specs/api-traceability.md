@@ -178,7 +178,7 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 |---|---|---|---|---|
 | FR-AIEXTRACT-001·FR-AIEXTRACT-005 | API-ADMIN-AIEXTRACT-001 | API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | URL 검증·관리자 신규 추가·멱등 접수·202 응답 계약 테스트 | 김인안 |
 | FR-AIEXTRACT-002 | API-ADMIN-AIEXTRACT-001 | 없음 | 목록·상세·부분 결과·실패·페이지 계약 테스트 | 김인안 |
-| FR-AIEXTRACT-003 | API-ADMIN-AIEXTRACT-001 | 기존 관리자 등록·방문 API | 자동 확정·자동 차단·사후 보정·롤백·정식 Entity 원자성 테스트 | 김인안 |
+| FR-AIEXTRACT-003 | API-ADMIN-AIEXTRACT-001 | 기존 관리자 등록·방문 API | 자동 확정·자동 차단·사후 보정·롤백·정식 Entity 원자성·`AUTO_BLOCKED` 등록 단위 일괄 폐기(BR-AIEXTRACT-011 `DISCARD` 종결 동작의 다건 확장) 테스트 | 김인안 |
 | FR-AIEXTRACT-004 | API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | API-ADMIN-AIEXTRACT-001 | 구독 확인·신규 영상 Atom·중복 알림·AI 호출 격리 테스트 | 김인안 |
 | FR-AIEXTRACT-006 | API-ADMIN-AIEXTRACT-001 | API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | Creator 채널 식별자·감시 행 부재의 200 기본 상태, 다중 채널 목록·일괄 상태 조회, GET 상태·lastErrorAt 조회, PUT 활성화·해지·renewal 실패 상태 테스트 | 김인안 |
 | FR-NLSEARCH-001 | API-DISCOVERY-NL-001 | API-DISCOVERY-001 | 자연어 해석·적용 조건·기존 목록 응답 계약 테스트 | 양성훈 |
@@ -241,7 +241,7 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 | BR-NLSEARCH-003 | API-DISCOVERY-NL-001·API-DISCOVERY-001 | 활성 TagDefinition·확정 VisitTag·공개 Visit·태그 AND·중복 제거 | WS-14 |
 | BR-AIEXTRACT-008 | API-ADMIN-AIEXTRACT-001 | 허용 태그 정의·근거·자동 결정·사후 보정·검증 전 공개 금지 | WS-15 |
 | BR-AIEXTRACT-009~010 | API-ADMIN-AIEXTRACT-001 | 등록 단위별 판정·상호명·주소 기반 장소 자동 확정·카테고리 자동 선정·`registrationUnits` 응답과 차단 사유 코드 | WS-15 |
-| BR-AIEXTRACT-011 | API-ADMIN-AIEXTRACT-001 | 등록 단위 일괄 등록 실행, 4종 원자 등록과 자원 재사용, 예외 7종의 `recoveryPaths` 매핑, `CONFIRM`·`ADJUST_CATEGORY` 허용 상태 | WS-15 |
+| BR-AIEXTRACT-011 | API-ADMIN-AIEXTRACT-001 | 등록 단위 일괄 등록 실행, 4종 원자 등록과 자원 재사용, 예외 7종의 `recoveryPaths` 매핑, `CONFIRM`·`ADJUST_CATEGORY` 허용 상태, `AUTO_BLOCKED` 등록 단위 일괄 폐기(`DISCARD` 다건 확장) | WS-15 |
 | BR-COURSE-001~004 | API-DISCOVERY-COURSE-001 | 2~5개·첫 출발점 고정·좌표 필수·30km·만료·부분 결과 금지 | WS-16 |
 | BR-COURSE-005 | API-DISCOVERY-COURSE-001 | 방문지·구간 좌표 노출, 구간 형상 상태(`shapeStatus`), 상한 초과 샘플링 | WS-16 |
 

@@ -1,6 +1,7 @@
 ---
 related_documents:
   - ../00-overview/README.md
+  - ../08-planning/deployment-hardening-cutover-record.md
   - ../../.codex/skills/troubleshoot-pr-review/SKILL.md
 ---
 
@@ -8,8 +9,15 @@ related_documents:
 
 구현과 리뷰 과정에서 재현·검증한 문제의 현상, 원인, 처리 결과를 보존한다.
 
+## 기록 분류와 파일명 규약
+
+문제를 발견한 경계에 따라 기록을 구분한다. PR 리뷰에서 발견·해결한 문제는 `pr-<번호>-<짧은-이름>.md`를 사용하고, PR 리뷰가 아닌 실제 운영 작업 중 발견·해결한 문제는 `ops-<YYYY-MM-DD>-<짧은-이름>.md`를 사용한다. 운영 전환 기록도 리뷰 기반 기록과 같은 트러블슈팅 구조로 작성하되, `운영 전환` 목록에서 별도로 찾을 수 있게 한다. 이 분류와 `ops-<날짜>-` 확장은 PR #256 리뷰에서 운영 사건과 리뷰 사건의 추적 단위를 분리하기 위한 팀 문서 규칙으로 정리했다.
+
 ## 최신 기록
 
+- [PR #259 등록 단위 일괄 폐기의 상태·감사 이력 불일치](pr-259-registration-unit-discard-all-review.md)
+- [PR #257 전환 후 런타임 기준선 리뷰 반영](pr-257-runtime-baseline-review.md)
+- [운영 전환: ALB·Blue-Green 트래픽 전환에서 드러난 결함 3건](ops-2026-08-19-alb-cutover-review.md)
 - [PR #253 CodeDeploy 단일 경로 전환과 배포 계약 테스트 CI 회귀](pr-253-codedeploy-only-contract-test-review.md)
 - [PR #251 오류 응답 details의 배열 정규화 누락](pr-251-details-array-normalization-review.md)
 - [PR #244 등록 단위 실행의 동시성·CONFIRM 원자성과 중복 판정 죽은 코드](pr-244-registration-unit-atomicity-review.md)
@@ -19,8 +27,16 @@ related_documents:
 - [PR #232 코스 경로 형상·실패 계약 정합화](pr-232-course-route-map-contract-review.md)
 - [PR #227 YouTube 채널 감시 상태·관리 화면 후속 반영](pr-227-youtube-channel-watch-review.md)
 
+## 운영 전환
+
+리뷰가 아니라 실제 운영 작업 중에 드러난 문제의 기록이다. 파일명은 `ops-<날짜>-` 규약을 쓴다.
+
+- [ALB·Blue-Green 트래픽 전환에서 드러난 결함 3건](ops-2026-08-19-alb-cutover-review.md)
+
 ## PR 리뷰
 
+- [PR #259 등록 단위 일괄 폐기의 상태·감사 이력 불일치](pr-259-registration-unit-discard-all-review.md)
+- [PR #257 전환 후 런타임 기준선 리뷰 반영](pr-257-runtime-baseline-review.md)
 - [PR #251 오류 응답 details의 배열 정규화 누락](pr-251-details-array-normalization-review.md)
 - [PR #244 등록 단위 실행의 동시성·CONFIRM 원자성과 중복 판정 죽은 코드](pr-244-registration-unit-atomicity-review.md)
 - [PR #238 통합 인증 구현과 CI 회귀](pr-238-unified-auth-implementation-review.md)

@@ -95,6 +95,13 @@ public class AdminAiVideoExtractionController {
         return ResponseEntity.ok(RegistrationExecutionResponse.from(result));
     }
 
+    @PostMapping("/{jobId}/registration-units/discard-all")
+    public ResponseEntity<DiscardAllResponse> discardAllBlocked(Authentication authentication, @PathVariable UUID jobId,
+                                                                 @RequestBody DiscardAllRequest request) {
+        List<UUID> discardedUnitIds = queryService.discardAllBlocked(jobId, request.reason(), adminId(authentication));
+        return ResponseEntity.ok(new DiscardAllResponse(discardedUnitIds, discardedUnitIds.size()));
+    }
+
     /**
      * {@code member_account.id}(JWT subject)를 그대로 반환한다. {@code RegistrationUnitCommandService}가
      * 이 값을 {@code ai_registration_unit_review.reviewed_by}(member_account FK)에 그대로 저장하고,
@@ -157,6 +164,8 @@ public class AdminAiVideoExtractionController {
     public record YoutubeReference(String channelId, String videoId, String videoUrl) {
     }
     public record RetryRequest(String supplementText, String reason) { }
+    public record DiscardAllRequest(String reason) { }
+    public record DiscardAllResponse(List<UUID> discardedUnitIds, int discardedCount) { }
     public record ReviewRequest(String decision, String reason, String expectedReviewStatus, String unitId,
                                 SupplementsRequest supplements, List<TagDecisionRequest> tagDecisions) { }
     public record SupplementsRequest(String kakaoPlaceUrl, String foodCategoryId) { }
