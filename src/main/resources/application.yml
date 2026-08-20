@@ -135,6 +135,7 @@ masiton:
       reverse-proxy-enabled: ${MEMBER_REVERSE_PROXY_ENABLED:false}
   security:
     verification:
+      enabled: ${VERIFICATION_ENABLED:true}
       login-id: ${VERIFICATION_LOGIN_ID:}
       password-hash: ${VERIFICATION_PASSWORD_HASH:}
       public-base-url: ${VERIFICATION_PUBLIC_BASE_URL:http://localhost:3000}
