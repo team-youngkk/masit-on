@@ -27,11 +27,11 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 스캔 방식(Seq Scan / Index Scan)은 플래너의 통계 판단이라 단정하지 않고,
  * `favorite`를 맛집마다 반복 조회하는 계획(상관 서브쿼리 등)으로 바뀌는 회귀만 고정한다.
  */
+import com.masiton.test.FullContextIntegrationTest;
+
 @SpringBootTest
-@com.masiton.test.TestProfile
-@Testcontainers
 @DisplayName("인기 맛집 집계 실행계획")
-class PopularRestaurantQueryPlanPostgreSqlIntegrationTest {
+class PopularRestaurantQueryPlanPostgreSqlIntegrationTest extends FullContextIntegrationTest {
 
     private static final UUID SEED_REGION_ID =
             UUID.fromString("10000000-0000-4000-8000-000000000001");
@@ -39,20 +39,6 @@ class PopularRestaurantQueryPlanPostgreSqlIntegrationTest {
             UUID.fromString("20000000-0000-4000-8000-000000000001");
     private static final int RESTAURANT_COUNT = 200;
     private static final int MEMBER_COUNT = 50;
-
-    @Container
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.10-alpine")
-                    .withDatabaseName("masiton")
-                    .withUsername("masiton")
-                    .withPassword("masiton_local");
-
-    @DynamicPropertySource
-    static void registerDatasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
 
     @Autowired
     private JdbcTemplate jdbcTemplate;

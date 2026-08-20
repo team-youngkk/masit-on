@@ -42,30 +42,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * {@code Connection.prepareStatement}/{@code prepareCall} 호출 횟수를 센다. 새 라이브러리 의존 없이
  * query-composition.md 6·11절이 요구하는 "상세 정상 경로 쿼리 수 2회"를 자동으로 검증하기 위함이다.
  */
+import com.masiton.test.FullContextIntegrationTest;
+
 @SpringBootTest
-@com.masiton.test.TestProfile
 @AutoConfigureMockMvc
-@Testcontainers
 @DisplayName("맛집 상세 조회 API")
-class RestaurantDetailApiTest {
+class RestaurantDetailApiTest extends FullContextIntegrationTest {
 
     // seed-data-plan.md 2·3절 고정 기준 데이터. 초기 스키마 baseline이 적재하므로 참조만 하고 수정하지 않는다.
     private static final UUID SEED_FOOD_CATEGORY_ID =
             UUID.fromString("20000000-0000-4000-8000-000000000001");
-
-    @Container
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.10-alpine")
-                    .withDatabaseName("masiton")
-                    .withUsername("masiton")
-                    .withPassword("masiton_local");
-
-    @DynamicPropertySource
-    static void registerDatasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
 
     /** {@link QueryCountingDataSourceConfiguration}이 prepareStatement/prepareCall 호출마다 증가시킨다. */
     private static final AtomicInteger PREPARED_STATEMENT_COUNT = new AtomicInteger();

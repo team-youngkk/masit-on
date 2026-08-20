@@ -43,6 +43,18 @@ class BcryptVerificationCredentialVerifierTest {
         verify(passwordEncoder).matches(org.mockito.ArgumentMatchers.eq("password"), anyString());
     }
 
+    @Test
+    @DisplayName("검증 세션이 비활성화되어도 더미가 아닌 설정 해시로 비교하고 거부한다")
+    void matches_검증세션비활성화_비밀번호비교후거부한다() {
+        VerificationAccessProperties properties = properties();
+        properties.setEnabled(false);
+        when(passwordEncoder.matches(anyString(), anyString())).thenReturn(true);
+
+        assertThat(new BcryptVerificationCredentialVerifier(properties, passwordEncoder)
+                .matches("participant", "password")).isFalse();
+        verify(passwordEncoder).matches("password", properties.getPasswordHash());
+    }
+
     private VerificationAccessProperties properties() {
         VerificationAccessProperties properties = new VerificationAccessProperties();
         properties.setLoginId("participant");

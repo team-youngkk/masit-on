@@ -23,29 +23,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.masiton.test.FullContextIntegrationTest;
+
 /**
  * API-CREATOR-DETAIL-001 유튜버 기본 상세 조회를 실제 PostgreSQL과 MockMvc로 검증한다.
  */
 @SpringBootTest
-@com.masiton.test.TestProfile
 @AutoConfigureMockMvc
-@Testcontainers
 @DisplayName("유튜버 기본 상세 조회 API")
-class CreatorDetailApiTest {
-
-    @Container
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.10-alpine")
-                    .withDatabaseName("masiton")
-                    .withUsername("masiton")
-                    .withPassword("masiton_local");
-
-    @DynamicPropertySource
-    static void registerDatasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
+class CreatorDetailApiTest extends FullContextIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;

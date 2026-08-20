@@ -27,30 +27,16 @@ import static org.assertj.core.api.Assertions.assertThat;
  * RestaurantMapQueryAdapter의 지도 마커 필터 조회를 실제 PostgreSQL로 검증한다.
  * 근거: docs/07-adr/integration/map-001-map-bounds-search.md
  */
+import com.masiton.test.FullContextIntegrationTest;
+
 @SpringBootTest
-@com.masiton.test.TestProfile
-@Testcontainers
 @DisplayName("지도 맛집 마커 조회 Query Adapter")
-class RestaurantMapQueryAdapterIntegrationTest {
+class RestaurantMapQueryAdapterIntegrationTest extends FullContextIntegrationTest {
 
     private static final UUID MAPO_REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000014");
     private static final UUID GANGNAM_REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000023");
     private static final UUID KOREAN_CATEGORY_ID = UUID.fromString("20000000-0000-4000-8000-000000000001");
     private static final UUID JAPANESE_CATEGORY_ID = UUID.fromString("20000000-0000-4000-8000-000000000003");
-
-    @Container
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.10-alpine")
-                    .withDatabaseName("masiton")
-                    .withUsername("masiton")
-                    .withPassword("masiton_local");
-
-    @DynamicPropertySource
-    static void registerDatasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
 
     @Autowired
     private RestaurantMapPointsQueryPort restaurantMapPointsQueryPort;
@@ -60,7 +46,7 @@ class RestaurantMapQueryAdapterIntegrationTest {
 
     @BeforeEach
     void cleanUpTransactionalTables() {
-        jdbcTemplate.execute("TRUNCATE TABLE visit, video, creator, restaurant CASCADE");
+        cleanupTransactionalState(jdbcTemplate);
     }
 
     @Test

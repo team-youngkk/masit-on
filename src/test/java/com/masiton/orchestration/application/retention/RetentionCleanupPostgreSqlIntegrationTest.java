@@ -30,31 +30,18 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doAnswer;
 
+import com.masiton.test.FullContextIntegrationTest;
+
 /**
  * TST-E2-LIFE-001: 90일 알림 정리와 1년 제보·신고 식별 제거 배치의 중간 실패를
  * 실제 PostgreSQL 트랜잭션 경계에서 검증한다. cutoff는 고정 값으로 직접 전달하고
  * Clock에 의존하지 않는다.
  */
 @SpringBootTest
-@TestProfile
-@Testcontainers
 @DisplayName("2차 확장 보존 정리 PostgreSQL 통합")
-class RetentionCleanupPostgreSqlIntegrationTest {
+class RetentionCleanupPostgreSqlIntegrationTest extends FullContextIntegrationTest {
 
     private static final int BATCH_SIZE = RetentionCleanupService.BATCH_SIZE;
-
-    @Container
-    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17.10-alpine")
-            .withDatabaseName("masiton")
-            .withUsername("masiton")
-            .withPassword("masiton_test");
-
-    @DynamicPropertySource
-    static void registerDatasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
 
     @Autowired
     private RetentionCleanupBatchCommand batches;

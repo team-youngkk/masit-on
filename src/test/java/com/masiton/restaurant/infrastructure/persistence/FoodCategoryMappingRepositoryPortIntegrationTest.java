@@ -22,29 +22,15 @@ import com.masiton.restaurant.domain.model.FoodCategoryMappingSourceType;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.masiton.test.FullContextIntegrationTest;
+
 /**
  * V8 마이그레이션이 적재한 food_category_mapping seed와 대조 순서(EXACT 우선, priority 오름차순)를
  * 실제 PostgreSQL로 검증한다.
  */
 @SpringBootTest
-@com.masiton.test.TestProfile
-@Testcontainers
 @DisplayName("FoodCategoryMapping 대조 순서 조회")
-class FoodCategoryMappingRepositoryPortIntegrationTest {
-
-    @Container
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.10-alpine")
-                    .withDatabaseName("masiton")
-                    .withUsername("masiton")
-                    .withPassword("masiton_local");
-
-    @DynamicPropertySource
-    static void registerDatasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
+class FoodCategoryMappingRepositoryPortIntegrationTest extends FullContextIntegrationTest {
 
     @Autowired
     private FoodCategoryMappingRepositoryPort mappingRepositoryPort;

@@ -28,6 +28,6 @@ public class BcryptVerificationCredentialVerifier implements VerificationCredent
         boolean idMatches = MessageDigest.isEqual(properties.getLoginId().getBytes(StandardCharsets.UTF_8),
                 loginId.getBytes(StandardCharsets.UTF_8));
         boolean passwordMatches = passwordEncoder.matches(password, configuredHash ? hash : DUMMY_PASSWORD_HASH);
-        return configuredHash && idMatches && passwordMatches;
+        return properties.isEnabled() && configuredHash && idMatches && passwordMatches;
     }
 }

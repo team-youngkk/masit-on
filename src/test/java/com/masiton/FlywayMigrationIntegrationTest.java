@@ -37,31 +37,22 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * 이 테스트는 flyway_schema_history를 직접 조회해 적용 파일과 순서가 migration-plan.md
  * 8~9절과 13.1절의 계약과 일치하는지 추가로 단언한다.
  */
+import com.masiton.test.FullContextIntegrationTest;
+
 @SpringBootTest
-@com.masiton.test.TestProfile
-@Testcontainers
-    @DisplayName("Flyway 마이그레이션과 기준 데이터")
-class FlywayMigrationIntegrationTest {
-
-    @Container
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.10-alpine")
-                    .withDatabaseName("masiton")
-                    .withUsername("masiton")
-                    .withPassword("masiton_local");
-
-    @DynamicPropertySource
-    static void registerDatasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
+@DisplayName("Flyway 마이그레이션과 기준 데이터")
+class FlywayMigrationIntegrationTest extends FullContextIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
     @Autowired
     private MemberSessionRevocationStore memberSessionRevocationStore;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        cleanupTransactionalState(jdbcTemplate);
+    }
 
     @Test
     @DisplayName("빈 데이터베이스에 V1부터 V8까지 계약된 순서와 파일명으로 성공 기록된다")

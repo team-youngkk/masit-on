@@ -48,44 +48,21 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.masiton.test.FullContextIntegrationTest;
+
 /**
- * TST-E3-COURSE-003. 코스 경로 조회의 외부 실패가 기존 공개 탐색 API 3종에 전파되지 않는지,
- * 그리고 5분 만료 경계가 서버 캐시 없이 지켜지는지 검증한다.
- * 외부 Kakao Mobility 호출은 {@link CourseRouteProviderPort}를 {@code @MockitoBean}으로 대체해 격리한다.
+ * 코스 추천 외부 실패 격리와 만료 경계 인수 테스트다.
  * 근거: docs/05-specs/api/discovery/restaurant-course-recommendation-api.md,
  * docs/08-planning/third-expansion-test-matrix.md, docs/troubleshooting/pr-171-course-route-review.md
  */
 @SpringBootTest
-@com.masiton.test.TestProfile
 @AutoConfigureMockMvc
-@Testcontainers
 @DisplayName("맛집 코스 추천 외부 실패 격리와 만료 경계")
-class CourseRouteFailureIsolationApiTest {
+class CourseRouteFailureIsolationApiTest extends FullContextIntegrationTest {
 
     private static final String COURSE_ROUTES_PATH = "/api/restaurants/course-routes";
     private static final UUID MAPO_REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000014");
     private static final UUID KOREAN_CATEGORY_ID = UUID.fromString("20000000-0000-4000-8000-000000000001");
-
-    @Container
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.10-alpine")
-                    .withDatabaseName("masiton")
-                    .withUsername("masiton")
-                    .withPassword("masiton_local");
-
-    @Container
-    static final GenericContainer<?> REDIS = new GenericContainer<>(DockerImageName.parse("redis:8.8-alpine"))
-            .withExposedPorts(6379)
-            .waitingFor(Wait.forListeningPort());
-
-    @DynamicPropertySource
-    static void registerDatasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-        registry.add("spring.data.redis.host", REDIS::getHost);
-        registry.add("spring.data.redis.port", () -> REDIS.getMappedPort(6379));
-    }
 
     @Autowired
     private MockMvc mockMvc;
@@ -101,7 +78,7 @@ class CourseRouteFailureIsolationApiTest {
 
     @BeforeEach
     void cleanUpState() throws Exception {
-        jdbcTemplate.execute("TRUNCATE TABLE visit, video, creator, restaurant CASCADE");
+        cleanupTransactionalState(jdbcTemplate);
         REDIS.execInContainer("redis-cli", "FLUSHALL");
     }
 

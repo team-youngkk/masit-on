@@ -36,29 +36,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 교체하므로, 실제 DB 콘텐츠를 검증하는 {@link RestaurantDetailApiTest}의 다른 테스트에 영향을
  * 주지 않기 위함이다.
  */
+import com.masiton.test.FullContextIntegrationTest;
+
 @SpringBootTest
-@com.masiton.test.TestProfile
 @AutoConfigureMockMvc
-@Testcontainers
 @DisplayName("맛집 상세 조회 API 콘텐츠 실패 격리")
-class RestaurantDetailContentFailureIntegrationTest {
+class RestaurantDetailContentFailureIntegrationTest extends FullContextIntegrationTest {
 
     private static final UUID SEED_FOOD_CATEGORY_ID =
             UUID.fromString("20000000-0000-4000-8000-000000000001");
-
-    @Container
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.10-alpine")
-                    .withDatabaseName("masiton")
-                    .withUsername("masiton")
-                    .withPassword("masiton_local");
-
-    @DynamicPropertySource
-    static void registerDatasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
 
     @Autowired
     private MockMvc mockMvc;

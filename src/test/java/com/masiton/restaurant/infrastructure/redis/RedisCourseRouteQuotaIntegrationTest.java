@@ -31,35 +31,14 @@ import com.masiton.restaurant.infrastructure.external.config.KakaoMobilityProper
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
+import com.masiton.test.FullContextIntegrationTest;
+
 @SpringBootTest
-@com.masiton.test.TestProfile
-@Testcontainers
 @ExtendWith(OutputCaptureExtension.class)
 @DisplayName("Redis 코스 경로 quota")
-class RedisCourseRouteQuotaIntegrationTest {
+class RedisCourseRouteQuotaIntegrationTest extends FullContextIntegrationTest {
 
-    private static final int REDIS_PORT = 6379;
     private static final String IN_FLIGHT_KEY = "restaurant:course-route:in-flight";
-
-    @Container
-    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17.10-alpine")
-            .withDatabaseName("masiton")
-            .withUsername("masiton")
-            .withPassword("masiton_local");
-
-    @Container
-    static final GenericContainer<?> REDIS = new GenericContainer<>("redis:8.8-alpine")
-            .withExposedPorts(REDIS_PORT)
-            .waitingFor(Wait.forListeningPort());
-
-    @DynamicPropertySource
-    static void registerDependencies(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-        registry.add("spring.data.redis.host", REDIS::getHost);
-        registry.add("spring.data.redis.port", () -> REDIS.getMappedPort(REDIS_PORT));
-    }
 
     @Autowired
     private StringRedisTemplate redisTemplate;

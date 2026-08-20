@@ -23,29 +23,15 @@ import com.masiton.creator.domain.model.PublicationStatus;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.masiton.test.FullContextIntegrationTest;
+
 /**
  * ConstraintViolationIntegrationTest 패턴을 따른다. 각 테스트는 고유 UUID로 자신의 데이터만
  * 준비하고, 같은 컨테이너를 공유하는 다른 테스트의 데이터가 섞여도 자신이 만든 행만 걸러서 검증한다.
  */
 @SpringBootTest
-@com.masiton.test.TestProfile
-@Testcontainers
 @DisplayName("Creator 공개 선택 목록 저장소 조회")
-class CreatorPersistenceAdapterIntegrationTest {
-
-    @Container
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.10-alpine")
-                    .withDatabaseName("masiton")
-                    .withUsername("masiton")
-                    .withPassword("masiton_local");
-
-    @DynamicPropertySource
-    static void registerDatasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
+class CreatorPersistenceAdapterIntegrationTest extends FullContextIntegrationTest {
 
     @Autowired
     private CreatorRepositoryPort creatorRepositoryPort;

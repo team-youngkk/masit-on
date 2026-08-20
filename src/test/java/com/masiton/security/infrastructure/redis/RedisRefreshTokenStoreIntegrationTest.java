@@ -36,38 +36,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
+import com.masiton.test.FullContextIntegrationTest;
+
 @SpringBootTest
-@com.masiton.test.TestProfile
-@Testcontainers
 @DisplayName("Redis Refresh Token 저장소")
-class RedisRefreshTokenStoreIntegrationTest {
-
-    private static final int REDIS_PORT = 6379;
-
-    /*
-     * 이 테스트는 Redis만 검증하지만 @SpringBootTest가 전체 컨텍스트를 띄우므로
-     * Flyway와 JPA가 기동 시점에 PostgreSQL을 요구한다. application-test.yml의
-     * datasource는 localhost:5432를 가리키므로 컨테이너를 함께 띄우지 않으면
-     * 컨텍스트 로딩이 실패한다.
-     */
-    @Container
-    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17.10-alpine")
-            .withDatabaseName("masiton")
-            .withUsername("masiton")
-            .withPassword("masiton_local");
-
-    @Container
-    static final GenericContainer<?> REDIS = new GenericContainer<>("redis:8.8-alpine")
-            .withExposedPorts(REDIS_PORT);
-
-    @DynamicPropertySource
-    static void registerDependencies(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-        registry.add("spring.data.redis.host", REDIS::getHost);
-        registry.add("spring.data.redis.port", () -> REDIS.getMappedPort(REDIS_PORT));
-    }
+class RedisRefreshTokenStoreIntegrationTest extends FullContextIntegrationTest {
 
     @Autowired
     private MemberSessionStore memberSessionStore;

@@ -32,12 +32,12 @@ import static org.mockito.Mockito.verify;
  * API-DISCOVERY-NL-001의 공개 MockMvc·PostgreSQL 계약 테스트다.
  * 자연어 원문은 테스트 출력이나 로그에 기록하지 않고 요청 본문으로만 전달한다.
  */
+import com.masiton.test.FullContextIntegrationTest;
+
 @SpringBootTest
-@com.masiton.test.TestProfile
 @AutoConfigureMockMvc
-@Testcontainers
 @DisplayName("자연어 맛집 검색 API")
-class NaturalLanguageSearchApiTest {
+class NaturalLanguageSearchApiTest extends FullContextIntegrationTest {
 
     private static final UUID SEONGDONG_REGION_ID =
             UUID.fromString("10000000-0000-4000-8000-000000000004");
@@ -46,18 +46,8 @@ class NaturalLanguageSearchApiTest {
     private static final UUID KOREAN_CATEGORY_ID =
             UUID.fromString("20000000-0000-4000-8000-000000000001");
 
-    @Container
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.10-alpine")
-                    .withDatabaseName("masiton")
-                    .withUsername("masiton")
-                    .withPassword("masiton_local");
-
     @DynamicPropertySource
-    static void registerDatasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
+    static void registerRateLimitProperties(DynamicPropertyRegistry registry) {
         registry.add("masiton.restaurant.map.rate-limit.reverse-proxy-enabled", () -> true);
         registry.add("masiton.restaurant.map.rate-limit.trusted-proxy-addresses", () -> "127.0.0.1");
     }
@@ -73,13 +63,7 @@ class NaturalLanguageSearchApiTest {
 
     @BeforeEach
     void cleanUpTransactionalTables() {
-        jdbcTemplate.execute("TRUNCATE TABLE visit, video, creator, restaurant CASCADE");
-        jdbcTemplate.update("""
-                INSERT INTO tag_definition (id, tag_code, tag_type, display_name, aliases, status, source)
-                VALUES ('30000000-0000-4000-8000-000000000001', 'MENU_NAENGMYEON', 'MENU', '냉면', '[]'::jsonb, 'ACTIVE', 'SEED')
-                ON CONFLICT (tag_code) DO UPDATE SET status = 'ACTIVE'
-                """);
-        jdbcTemplate.update("UPDATE tag_definition SET status = 'ACTIVE' WHERE tag_code = 'MENU_NAENGMYEON'");
+        cleanupTransactionalState(jdbcTemplate);
         when(rateLimitPort.tryAcquire("127.0.0.1")).thenReturn(true);
     }
 

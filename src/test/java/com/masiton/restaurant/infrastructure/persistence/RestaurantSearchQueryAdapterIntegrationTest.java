@@ -27,16 +27,16 @@ import com.masiton.restaurant.application.port.out.VisitedByRow;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.masiton.test.FullContextIntegrationTest;
+
 /**
  * RestaurantSearchQueryAdapter의 네이티브 SQL 조회를 실제 PostgreSQL로 검증한다.
  * 초기 스키마 baseline이 적재한 서울 자치구·대표 음식 카테고리 기준 데이터를 그대로 사용하고,
  * restaurant·creator·video·visit은 각 테스트가 직접 적재한 뒤 다음 테스트 실행 전 초기화한다.
  */
 @SpringBootTest
-@com.masiton.test.TestProfile
-@Testcontainers
 @DisplayName("맛집 검색 Query Adapter")
-class RestaurantSearchQueryAdapterIntegrationTest {
+class RestaurantSearchQueryAdapterIntegrationTest extends FullContextIntegrationTest {
 
     private static final UUID MAPO_REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000014");
     private static final UUID GANGNAM_REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000023");
@@ -44,20 +44,6 @@ class RestaurantSearchQueryAdapterIntegrationTest {
     private static final UUID JAPANESE_CATEGORY_ID = UUID.fromString("20000000-0000-4000-8000-000000000003");
     private static final String NOODLE_TAG_CODE = "MENU_NAENGMYEON";
     private static final String SOLO_TAG_CODE = "OCCASION_SOLO";
-
-    @Container
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.10-alpine")
-                    .withDatabaseName("masiton")
-                    .withUsername("masiton")
-                    .withPassword("masiton_local");
-
-    @DynamicPropertySource
-    static void registerDatasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
 
     @Autowired
     private RestaurantSearchQueryPort restaurantSearchQueryPort;
@@ -67,8 +53,7 @@ class RestaurantSearchQueryAdapterIntegrationTest {
 
     @BeforeEach
     void cleanUpTransactionalTables() {
-        jdbcTemplate.execute("TRUNCATE TABLE visit, video, creator, restaurant CASCADE");
-        restoreSeedTags();
+        cleanupTransactionalState(jdbcTemplate);
     }
 
     @Test

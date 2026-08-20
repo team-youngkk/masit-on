@@ -17,34 +17,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.masiton.test.FullContextIntegrationTest;
+
 @SpringBootTest
-@com.masiton.test.TestProfile
 @AutoConfigureMockMvc
-@Testcontainers
 @DisplayName("상태 확인 경로")
-class HealthCheckIntegrationTest {
-
-    private static final int REDIS_PORT = 6379;
-
-    @Container
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.10-alpine")
-                    .withDatabaseName("masiton")
-                    .withUsername("masiton")
-                    .withPassword("masiton_local");
-
-    @Container
-    static final GenericContainer<?> REDIS =
-            new GenericContainer<>("redis:8.8-alpine").withExposedPorts(REDIS_PORT);
-
-    @DynamicPropertySource
-    static void registerDependencies(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-        registry.add("spring.data.redis.host", REDIS::getHost);
-        registry.add("spring.data.redis.port", () -> REDIS.getMappedPort(REDIS_PORT));
-    }
+class HealthCheckIntegrationTest extends FullContextIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;

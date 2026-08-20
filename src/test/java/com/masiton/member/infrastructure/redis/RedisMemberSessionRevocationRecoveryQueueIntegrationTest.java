@@ -19,15 +19,12 @@ import com.masiton.member.application.MemberSessionRevocation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@Testcontainers
+import com.masiton.test.FullContextIntegrationTest;
+
 @DisplayName("RedisMemberSessionRevocationRecoveryQueue")
 class RedisMemberSessionRevocationRecoveryQueueIntegrationTest {
 
     private static final int REDIS_PORT = 6379;
-
-    @Container
-    static final GenericContainer<?> REDIS = new GenericContainer<>("redis:8.8-alpine")
-            .withExposedPorts(REDIS_PORT);
 
     private LettuceConnectionFactory connectionFactory;
     private RedisMemberSessionRevocationRecoveryQueue recoveryQueue;
@@ -35,7 +32,8 @@ class RedisMemberSessionRevocationRecoveryQueueIntegrationTest {
     @BeforeEach
     void setUp() {
         connectionFactory = new LettuceConnectionFactory(new RedisStandaloneConfiguration(
-                REDIS.getHost(), REDIS.getMappedPort(REDIS_PORT)));
+                FullContextIntegrationTest.REDIS.getHost(),
+                FullContextIntegrationTest.REDIS.getMappedPort(REDIS_PORT)));
         connectionFactory.afterPropertiesSet();
         connectionFactory.start();
         StringRedisTemplate redisTemplate = new StringRedisTemplate(connectionFactory);

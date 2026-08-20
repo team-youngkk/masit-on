@@ -26,24 +26,11 @@ import com.masiton.ai.application.port.out.AiExtractionWorkerStore;
 import com.masiton.ai.application.port.out.AiExtractionWorkerStore.ClaimedJob;
 import com.masiton.test.TestProfile;
 
+import com.masiton.test.FullContextIntegrationTest;
+
 @SpringBootTest
-@TestProfile
-@Testcontainers
 @DisplayName("AI 추출 워커 PostgreSQL lease")
-class JdbcAiExtractionWorkerStoreIntegrationTest {
-
-    @Container
-    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17.10-alpine")
-            .withDatabaseName("masiton")
-            .withUsername("masiton")
-            .withPassword("masiton_test");
-
-    @DynamicPropertySource
-    static void registerDatasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
+class JdbcAiExtractionWorkerStoreIntegrationTest extends FullContextIntegrationTest {
 
     @Autowired
     private AiExtractionWorkerStore store;
@@ -53,8 +40,7 @@ class JdbcAiExtractionWorkerStoreIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        jdbcTemplate.update("DELETE FROM ai_extraction_attempt");
-        jdbcTemplate.update("DELETE FROM ai_extraction_job");
+        cleanupTransactionalState(jdbcTemplate);
     }
 
     @Test

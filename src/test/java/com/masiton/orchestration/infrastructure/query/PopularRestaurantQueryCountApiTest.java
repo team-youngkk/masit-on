@@ -39,32 +39,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 회원·찜이 늘어도 반복 조회가 생기지 않아야 한다. {@link QueryCountingDataSourceConfiguration}를
  * 공유 fixture로 재사용한다.
  */
+import com.masiton.test.FullContextIntegrationTest;
+
 @SpringBootTest
-@com.masiton.test.TestProfile
 @AutoConfigureMockMvc
-@Testcontainers
 @Import(QueryCountingDataSourceConfiguration.class)
 @DisplayName("인기 맛집 조회 쿼리 수")
-class PopularRestaurantQueryCountApiTest {
+class PopularRestaurantQueryCountApiTest extends FullContextIntegrationTest {
 
     private static final UUID SEED_REGION_ID =
             UUID.fromString("10000000-0000-4000-8000-000000000001");
     private static final UUID SEED_FOOD_CATEGORY_ID =
             UUID.fromString("20000000-0000-4000-8000-000000000001");
-
-    @Container
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.10-alpine")
-                    .withDatabaseName("masiton")
-                    .withUsername("masiton")
-                    .withPassword("masiton_local");
-
-    @DynamicPropertySource
-    static void registerDatasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
 
     @Autowired
     private MockMvc mockMvc;

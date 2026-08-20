@@ -25,28 +25,14 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 실제 PostgreSQL로 검증한다. BR-VISIT-005(관계 유효성), BR-CREATOR-011(중복 제거·정렬),
  * creator-detail-api.md 7절(페이지)의 근거 판정을 다룬다.
  */
+import com.masiton.test.FullContextIntegrationTest;
+
 @SpringBootTest
-@com.masiton.test.TestProfile
-@Testcontainers
 @DisplayName("유튜버 근거 영상 조회 Adapter")
-class CreatorEvidenceVideoQueryIntegrationTest {
+class CreatorEvidenceVideoQueryIntegrationTest extends FullContextIntegrationTest {
 
     private static final UUID SEED_REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000001");
     private static final UUID SEED_FOOD_CATEGORY_ID = UUID.fromString("20000000-0000-4000-8000-000000000001");
-
-    @Container
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.10-alpine")
-                    .withDatabaseName("masiton")
-                    .withUsername("masiton")
-                    .withPassword("masiton_local");
-
-    @DynamicPropertySource
-    static void registerDatasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
 
     @Autowired
     private JdbcTemplate jdbcTemplate;

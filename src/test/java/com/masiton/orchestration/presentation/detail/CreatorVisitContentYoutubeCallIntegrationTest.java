@@ -38,23 +38,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * <p>두 호출의 200을 함께 단정한다. 상태를 확인하지 않으면 매핑이나 공개 경로 허용이 깨져 조회가
  * 실패하는 상태에서도 "YouTube 요청 0건"은 참이 되어 테스트가 통과한다.
  */
+import com.masiton.test.FullContextIntegrationTest;
+
 @SpringBootTest
-@com.masiton.test.TestProfile
 @AutoConfigureMockMvc
 @Testcontainers
 @DisplayName("유튜버 방문 맛집·근거 영상 조회 중 YouTube 미호출")
-class CreatorVisitContentYoutubeCallIntegrationTest {
+class CreatorVisitContentYoutubeCallIntegrationTest extends FullContextIntegrationTest {
 
     private static final UUID SEED_REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000001");
     private static final UUID SEED_FOOD_CATEGORY_ID = UUID.fromString("20000000-0000-4000-8000-000000000001");
     private static final int WIREMOCK_PORT = 8080;
-
-    @Container
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.10-alpine")
-                    .withDatabaseName("masiton")
-                    .withUsername("masiton")
-                    .withPassword("masiton_local");
 
     @Container
     static final GenericContainer<?> WIREMOCK =
@@ -63,10 +57,7 @@ class CreatorVisitContentYoutubeCallIntegrationTest {
                     .waitingFor(Wait.forHttp("/__admin/health").forPort(WIREMOCK_PORT).forStatusCode(200));
 
     @DynamicPropertySource
-    static void registerProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
+    static void registerYoutubeProperties(DynamicPropertyRegistry registry) {
         registry.add("masiton.integration.youtube.base-url",
                 CreatorVisitContentYoutubeCallIntegrationTest::wireMockUrl);
         registry.add("masiton.integration.youtube.api-key", () -> "wiremock-only-key");

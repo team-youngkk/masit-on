@@ -17,15 +17,12 @@ import com.masiton.security.infrastructure.configuration.VerificationAccessPrope
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@Testcontainers
+import com.masiton.test.FullContextIntegrationTest;
+
 @DisplayName("RedisVerificationAccessStore")
 class RedisVerificationAccessStoreIntegrationTest {
 
     private static final int REDIS_PORT = 6379;
-
-    @Container
-    static final GenericContainer<?> REDIS = new GenericContainer<>("redis:8.8-alpine")
-            .withExposedPorts(REDIS_PORT);
 
     private LettuceConnectionFactory connectionFactory;
     private StringRedisTemplate redisTemplate;
@@ -34,7 +31,8 @@ class RedisVerificationAccessStoreIntegrationTest {
     @BeforeEach
     void setUp() {
         connectionFactory = new LettuceConnectionFactory(new RedisStandaloneConfiguration(
-                REDIS.getHost(), REDIS.getMappedPort(REDIS_PORT)));
+                FullContextIntegrationTest.REDIS.getHost(),
+                FullContextIntegrationTest.REDIS.getMappedPort(REDIS_PORT)));
         connectionFactory.afterPropertiesSet();
         connectionFactory.start();
         redisTemplate = new StringRedisTemplate(connectionFactory);

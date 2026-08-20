@@ -13,30 +13,16 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.masiton.test.FullContextIntegrationTest;
+
 /**
  * 공통 설정 계층(application.yml)의 운영 불변값이 프로파일 계층을 얹은 실제 기동 환경에서도
  * 유지되는지 검증한다. 파일 내용만 보는 {@link ConfigurationLayeringTest}와 달리 프로파일 병합
  * 결과를 Environment에서 확인한다.
  */
 @SpringBootTest
-@com.masiton.test.TestProfile
-@Testcontainers
 @DisplayName("환경별 운영 불변값")
-class EnvironmentInvariantIntegrationTest {
-
-    @Container
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.10-alpine")
-                    .withDatabaseName("masiton")
-                    .withUsername("masiton")
-                    .withPassword("masiton_local");
-
-    @DynamicPropertySource
-    static void registerDatasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
+class EnvironmentInvariantIntegrationTest extends FullContextIntegrationTest {
 
     @Autowired
     private Environment environment;
