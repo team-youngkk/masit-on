@@ -29,16 +29,24 @@ install -d -m 0500 -o "$APP_UID" -g "$APP_GID" "$SECRETS_DIR"
 # 지웠다고 믿은 비밀값이 계속 주입된다.
 find "$SECRETS_DIR" -mindepth 1 -maxdepth 1 -type f -delete
 
-# 필수 값. 하나라도 없으면 기동을 시도하지 않는다.
-render_required() {
-  local property="$1" parameter="$2"
+# 필수 Parameter 조회. 하나라도 없으면 기동을 시도하지 않는다.
+read_required_parameter() {
+  local parameter="$1" error_message="$2"
   local value
   value=$(aws ssm get-parameter --region "$REGION" --name "$parameter" --with-decryption \
     --query 'Parameter.Value' --output text)
   if [ -z "$value" ] || [ "$value" = "None" ]; then
-    echo "필수 비밀값을 읽지 못했다: $parameter" >&2
+    echo "$error_message: $parameter" >&2
     exit 1
   fi
+  printf '%s' "$value"
+}
+
+# 필수 값. 하나라도 없으면 기동을 시도하지 않는다.
+render_required() {
+  local property="$1" parameter="$2"
+  local value
+  value=$(read_required_parameter "$parameter" "필수 비밀값을 읽지 못했다")
   write_secret "$property" "$value"
 }
 
@@ -47,10 +55,9 @@ render_required() {
 render_required_non_blank() {
   local property="$1" parameter="$2"
   local value
-  value=$(aws ssm get-parameter --region "$REGION" --name "$parameter" --with-decryption \
-    --query 'Parameter.Value' --output text)
-  if [ -z "$value" ] || [ "$value" = "None" ] || [[ "$value" =~ ^[[:space:]]*$ ]]; then
-    echo "필수 메일 발신 주소를 읽지 못했다: $parameter" >&2
+  value=$(read_required_parameter "$parameter" "필수 설정값(non-blank)을 읽지 못했다")
+  if [[ "$value" =~ ^[[:space:]]*$ ]]; then
+    echo "필수 설정값(non-blank)을 읽지 못했다: $parameter" >&2
     exit 1
   fi
   write_secret "$property" "$value"
