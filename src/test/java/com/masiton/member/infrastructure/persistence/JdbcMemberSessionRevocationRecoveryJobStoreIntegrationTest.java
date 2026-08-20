@@ -23,22 +23,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @TestProfile
-@Testcontainers
 @DisplayName("회원 세션 폐기 복구 작업 PostgreSQL")
-class JdbcMemberSessionRevocationRecoveryJobStoreIntegrationTest {
-
-    @Container
-    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17.10-alpine")
-            .withDatabaseName("masiton")
-            .withUsername("masiton")
-            .withPassword("masiton_test");
-
-    @DynamicPropertySource
-    static void registerDatasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
+class JdbcMemberSessionRevocationRecoveryJobStoreIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     @Autowired
     private MemberSessionRevocationRecoveryJobStore recoveryJobs;

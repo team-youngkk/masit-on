@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -32,33 +33,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @com.masiton.test.TestProfile
 @AutoConfigureMockMvc
-@Testcontainers
 @DisplayName("지도 맛집 마커 조회 API")
-class RestaurantMapPointsApiTest {
+class RestaurantMapPointsApiTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final UUID MAPO_REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000014");
     private static final UUID KOREAN_CATEGORY_ID = UUID.fromString("20000000-0000-4000-8000-000000000001");
-
-    @Container
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.10-alpine")
-                    .withDatabaseName("masiton")
-                    .withUsername("masiton")
-                    .withPassword("masiton_local");
-
-    @Container
-    static final GenericContainer<?> REDIS = new GenericContainer<>(DockerImageName.parse("redis:8.8-alpine"))
-            .withExposedPorts(6379)
-            .waitingFor(Wait.forListeningPort());
-
-    @DynamicPropertySource
-    static void registerDatasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-        registry.add("spring.data.redis.host", REDIS::getHost);
-        registry.add("spring.data.redis.port", () -> REDIS.getMappedPort(6379));
-    }
 
     @Autowired
     private MockMvc mockMvc;
@@ -66,10 +45,13 @@ class RestaurantMapPointsApiTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private StringRedisTemplate redisTemplate;
+
     @BeforeEach
     void cleanUpState() throws Exception {
-        jdbcTemplate.execute("TRUNCATE TABLE visit, video, creator, restaurant CASCADE");
-        REDIS.execInContainer("redis-cli", "FLUSHALL");
+        cleanupTransactionalState(jdbcTemplate);
+        deleteRedisKeys(redisTemplate, "restaurant:map:rate-limit:*");
     }
 
     @Test

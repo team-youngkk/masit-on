@@ -34,9 +34,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @SpringBootTest
 @com.masiton.test.TestProfile
-@Testcontainers
 @DisplayName("맛집 검색 Query Adapter")
-class RestaurantSearchQueryAdapterIntegrationTest {
+class RestaurantSearchQueryAdapterIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final UUID MAPO_REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000014");
     private static final UUID GANGNAM_REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000023");
@@ -44,20 +43,6 @@ class RestaurantSearchQueryAdapterIntegrationTest {
     private static final UUID JAPANESE_CATEGORY_ID = UUID.fromString("20000000-0000-4000-8000-000000000003");
     private static final String NOODLE_TAG_CODE = "MENU_NAENGMYEON";
     private static final String SOLO_TAG_CODE = "OCCASION_SOLO";
-
-    @Container
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.10-alpine")
-                    .withDatabaseName("masiton")
-                    .withUsername("masiton")
-                    .withPassword("masiton_local");
-
-    @DynamicPropertySource
-    static void registerDatasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
 
     @Autowired
     private RestaurantSearchQueryPort restaurantSearchQueryPort;
@@ -67,7 +52,7 @@ class RestaurantSearchQueryAdapterIntegrationTest {
 
     @BeforeEach
     void cleanUpTransactionalTables() {
-        jdbcTemplate.execute("TRUNCATE TABLE visit, video, creator, restaurant CASCADE");
+        cleanupTransactionalState(jdbcTemplate);
         restoreSeedTags();
     }
 

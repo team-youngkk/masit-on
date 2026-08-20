@@ -47,9 +47,8 @@ import org.junit.jupiter.api.DisplayName;
 @SpringBootTest
 @com.masiton.test.TestProfile
 @AutoConfigureMockMvc
-@Testcontainers
 @DisplayName("공개 큐레이션 조회 내부 처리 p95")
-class PublicCurationPerformanceIntegrationTest {
+class PublicCurationPerformanceIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final UUID SEED_REGION_ID =
             UUID.fromString("10000000-0000-4000-8000-000000000001");
@@ -62,20 +61,6 @@ class PublicCurationPerformanceIntegrationTest {
 
     private static final int PUBLISHED_CURATION_COUNT = 5;
     private static final int RESTAURANT_PER_CURATION = 20;
-
-    @Container
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.10-alpine")
-                    .withDatabaseName("masiton")
-                    .withUsername("masiton")
-                    .withPassword("masiton_local");
-
-    @DynamicPropertySource
-    static void registerDatasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
 
     @Autowired
     private MockMvc mockMvc;

@@ -42,9 +42,12 @@ class YoutubeChannelWatchActivationRaceIntegrationTest extends FullContextIntegr
 
     private static final int WIREMOCK_PORT = 8080;
 
-    @Container
     static final GenericContainer<?> WIREMOCK = new GenericContainer<>("wiremock/wiremock:3.13.2-alpine")
             .withExposedPorts(WIREMOCK_PORT);
+
+    static {
+        WIREMOCK.start();
+    }
 
     @DynamicPropertySource
     static void wiremockProperties(DynamicPropertyRegistry registry) {

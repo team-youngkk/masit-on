@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -34,38 +35,27 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @com.masiton.test.TestProfile
 @AutoConfigureMockMvc
-@Testcontainers
 @DisplayName("관리자 데이터 등록 사용자 여정 인수")
-class AdminRegistrationJourneyAcceptanceTest {
+class AdminRegistrationJourneyAcceptanceTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final UUID ADMIN_ID = UUID.fromString("10000000-0000-0000-0000-000000000001");
-    private static final UUID REGION_ID = UUID.fromString("20000000-0000-0000-0000-000000000001");
-    private static final UUID CATEGORY_ID = UUID.fromString("30000000-0000-0000-0000-000000000001");
+    private static final UUID REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000014");
+    private static final UUID CATEGORY_ID = UUID.fromString("20000000-0000-4000-8000-000000000001");
     private static final String PASSWORD = "acceptance-password";
     private static final int WIREMOCK_PORT = 8080;
 
-    @Container
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(DockerImageName.parse("postgres:17.10-alpine"))
-            .withDatabaseName("masiton").withUsername("masiton").withPassword("masiton_local");
-
-    @Container
-    static final GenericContainer<?> REDIS = new GenericContainer<>(DockerImageName.parse("redis:8.8-alpine"))
-            .withExposedPorts(6379).waitingFor(Wait.forListeningPort());
-
-    @Container
     static final GenericContainer<?> WIREMOCK = new GenericContainer<>(DockerImageName.parse("wiremock/wiremock:3.13.2-alpine"))
             .withCopyFileToContainer(MountableFile.forHostPath("docker/wiremock/mappings"), "/home/wiremock/mappings")
             .withCopyFileToContainer(MountableFile.forHostPath("docker/wiremock/__files"), "/home/wiremock/__files")
             .withExposedPorts(WIREMOCK_PORT)
             .waitingFor(Wait.forHttp("/__admin/health").forPort(WIREMOCK_PORT).forStatusCode(200));
 
+    static {
+        WIREMOCK.start();
+    }
+
     @DynamicPropertySource
-    static void properties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-        registry.add("spring.data.redis.host", REDIS::getHost);
-        registry.add("spring.data.redis.port", () -> REDIS.getMappedPort(6379));
+    static void integrationProperties(DynamicPropertyRegistry registry) {
         registry.add("masiton.integration.kakao.base-url", AdminRegistrationJourneyAcceptanceTest::wireMockUrl);
         registry.add("masiton.integration.kakao.rest-api-key", () -> "wiremock-only-key");
         registry.add("masiton.integration.youtube.base-url", AdminRegistrationJourneyAcceptanceTest::wireMockUrl);
@@ -75,13 +65,12 @@ class AdminRegistrationJourneyAcceptanceTest {
     @Autowired MockMvc mockMvc;
     @Autowired ObjectMapper objectMapper;
     @Autowired JdbcTemplate jdbcTemplate;
+    @Autowired StringRedisTemplate redisTemplate;
 
     @BeforeEach
     void setUp() throws Exception {
-        jdbcTemplate.execute("truncate table visit, video, creator, restaurant, confirmation_token, "
-                + "admin_account_migration_map, member_account, admin_account, food_category, region cascade");
-        jdbcTemplate.update("insert into region (id, code, name, sort_order, active) values (?, 'MAPO', '마포구', 1, true)", REGION_ID);
-        jdbcTemplate.update("insert into food_category (id, code, name, sort_order, active) values (?, 'KOREAN', '한식', 1, true)", CATEGORY_ID);
+        cleanupTransactionalState(jdbcTemplate);
+        jdbcTemplate.execute("truncate table confirmation_token, admin_account_migration_map, member_account, admin_account cascade");
         String passwordHash = new BCryptPasswordEncoder().encode(PASSWORD);
         jdbcTemplate.update("insert into member_account (id, email, password_hash, status, role, email_verified_at) "
                         + "values (?, 'acceptance-admin@example.com', ?, 'ACTIVE', 'ADMIN', current_timestamp)",
@@ -92,7 +81,11 @@ class AdminRegistrationJourneyAcceptanceTest {
                         + "migration_disposition, member_account_id, approval_record_id) "
                         + "values (?, 'acceptance-admin@example.com', 'MIGRATE_ACTIVE', ?, 'TEST-UNIFIED-AUTH-001')",
                 ADMIN_ID, ADMIN_ID);
-        REDIS.execInContainer("redis-cli", "FLUSHALL");
+        deleteRedisKeys(
+                redisTemplate,
+                "auth:session:*",
+                "auth:member:session:revocation:recovery:*",
+                "auth:member:rate-limit:*");
     }
 
     @Test

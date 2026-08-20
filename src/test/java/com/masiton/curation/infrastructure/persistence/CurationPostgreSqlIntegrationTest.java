@@ -34,24 +34,12 @@ import com.masiton.curation.domain.model.CurationStatus;
 
 @SpringBootTest
 @com.masiton.test.TestProfile
-@Testcontainers
 @DisplayName("큐레이션 PostgreSQL 통합")
-class CurationPostgreSqlIntegrationTest {
+class CurationPostgreSqlIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final UUID REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000001");
     private static final UUID CATEGORY_ID = UUID.fromString("20000000-0000-4000-8000-000000000001");
     private static final OffsetDateTime NOW = OffsetDateTime.parse("2026-08-05T00:00:00Z");
-
-    @Container
-    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17.10-alpine")
-            .withDatabaseName("masiton").withUsername("masiton").withPassword("masiton_local");
-
-    @DynamicPropertySource
-    static void datasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
 
     @Autowired JdbcTemplate jdbcTemplate;
     @Autowired JdbcCurationStore store;

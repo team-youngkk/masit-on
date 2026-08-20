@@ -21,7 +21,8 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@Testcontainers
+import com.masiton.test.FullContextIntegrationTest;
+
 @DisplayName("통합 계정 전환 Flyway 마이그레이션")
 class UnifiedAccountMigrationIntegrationTest {
 
@@ -29,13 +30,6 @@ class UnifiedAccountMigrationIntegrationTest {
             "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
 
     private static final AtomicInteger SCHEMA_SEQUENCE = new AtomicInteger();
-
-    @Container
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.10-alpine")
-                    .withDatabaseName("masiton")
-                    .withUsername("masiton")
-                    .withPassword("masiton_local");
 
     @Test
     @DisplayName("V5 회원 행을 보존하면서 V6 역할 기본값과 전환 staging을 전진 적용한다")
@@ -262,14 +256,16 @@ class UnifiedAccountMigrationIntegrationTest {
     private SchemaDatabase createSchemaDatabase() {
         String schema = "unified_account_" + SCHEMA_SEQUENCE.incrementAndGet();
         JdbcTemplate adminJdbcTemplate = new JdbcTemplate(new DriverManagerDataSource(
-                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword()));
+                FullContextIntegrationTest.POSTGRES.getJdbcUrl(),
+                FullContextIntegrationTest.POSTGRES.getUsername(),
+                FullContextIntegrationTest.POSTGRES.getPassword()));
         adminJdbcTemplate.execute("CREATE SCHEMA " + schema);
 
-        String separator = POSTGRES.getJdbcUrl().contains("?") ? "&" : "?";
+        String separator = FullContextIntegrationTest.POSTGRES.getJdbcUrl().contains("?") ? "&" : "?";
         DataSource schemaDataSource = new DriverManagerDataSource(
-                POSTGRES.getJdbcUrl() + separator + "currentSchema=" + schema,
-                POSTGRES.getUsername(),
-                POSTGRES.getPassword());
+                FullContextIntegrationTest.POSTGRES.getJdbcUrl() + separator + "currentSchema=" + schema,
+                FullContextIntegrationTest.POSTGRES.getUsername(),
+                FullContextIntegrationTest.POSTGRES.getPassword());
         return new SchemaDatabase(schema, schemaDataSource);
     }
 

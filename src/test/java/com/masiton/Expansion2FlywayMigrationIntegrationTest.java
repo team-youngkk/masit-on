@@ -20,20 +20,14 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@Testcontainers
+import com.masiton.test.FullContextIntegrationTest;
+
 @DisplayName("2차 확장 Flyway 마이그레이션")
 class Expansion2FlywayMigrationIntegrationTest {
 
     private static final UUID REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000014");
     private static final UUID CATEGORY_ID = UUID.fromString("20000000-0000-4000-8000-000000000001");
     private static final AtomicInteger SCHEMA_SEQUENCE = new AtomicInteger();
-
-    @Container
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.10-alpine")
-                    .withDatabaseName("masiton")
-                    .withUsername("masiton")
-                    .withPassword("masiton_local");
 
     @Test
     @DisplayName("V2 스키마와 기존 행을 보존하면서 V3를 전진 적용한다")
@@ -235,14 +229,16 @@ class Expansion2FlywayMigrationIntegrationTest {
     private SchemaDatabase createSchemaDatabase() {
         String schema = "expansion2_" + SCHEMA_SEQUENCE.incrementAndGet();
         JdbcTemplate adminJdbcTemplate = new JdbcTemplate(new DriverManagerDataSource(
-                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword()));
+                FullContextIntegrationTest.POSTGRES.getJdbcUrl(),
+                FullContextIntegrationTest.POSTGRES.getUsername(),
+                FullContextIntegrationTest.POSTGRES.getPassword()));
         adminJdbcTemplate.execute("CREATE SCHEMA " + schema);
 
-        String separator = POSTGRES.getJdbcUrl().contains("?") ? "&" : "?";
+        String separator = FullContextIntegrationTest.POSTGRES.getJdbcUrl().contains("?") ? "&" : "?";
         DataSource schemaDataSource = new DriverManagerDataSource(
-                POSTGRES.getJdbcUrl() + separator + "currentSchema=" + schema,
-                POSTGRES.getUsername(),
-                POSTGRES.getPassword());
+                FullContextIntegrationTest.POSTGRES.getJdbcUrl() + separator + "currentSchema=" + schema,
+                FullContextIntegrationTest.POSTGRES.getUsername(),
+                FullContextIntegrationTest.POSTGRES.getPassword());
         return new SchemaDatabase(schema, schemaDataSource);
     }
 
