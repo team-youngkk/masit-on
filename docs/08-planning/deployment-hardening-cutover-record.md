@@ -63,7 +63,7 @@ DNS는 [route53.tf](../../infra/production/terraform/route53.tf)의 `initial_blu
 
 `v0.7.1` 승격이 만든 `main` push가 그 경로로 배포됐다. 배포 `d-EGYARQWBK`가 성공했고 revision key의 run ID와 커밋이 승격 merge commit과 일치했다. **입력 없이 도는 push 배포가 CodeDeploy로 나간 첫 사례다.**
 
-## 4. 리허설에서 드러나지 않은 결함
+## 4. 실제 전환에서 드러난 결함
 
 4.1과 4.2는 **로컬 admin 자격증명과 동거 Redis 구성에서는 재현되지 않는다.** 리허설의 검증 범위가 실제 경로보다 좁았다는 것이 공통 원인이다. 4.4는 성격이 다르다. 리허설의 문제가 아니라 **토폴로지 변경이 깬 전제를 외부 설정에 반영하지 않은 것**이다.
 
