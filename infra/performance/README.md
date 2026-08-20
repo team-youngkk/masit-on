@@ -51,6 +51,15 @@ WireMock 8081은 인증이 없고 `0.0.0.0`에 바인딩되므로 **`/__admin`�
 - 성능 전용 Redis `requirepass`를 `TF_VAR_redis_password` 환경 변수로 주입. 16~128자이고 공백을 넣지 않는다
 - 기존 VPC의 ID, public subnet 1개, private subnet 2개
 - 실행할 ECR 이미지의 **digest 고정 URI**
+- 운영 SSM 인터페이스 endpoint가 VPC 안에서 443을 허용하는 상태([infra/production/terraform-redis](../production/terraform-redis)의 `vpce_from_vpc` 규칙)
+
+### SSM 경로는 운영 endpoint에 의존한다
+
+운영 VPC에는 `private_dns_enabled = true`인 SSM 인터페이스 endpoint가 있어 `ssm.<region>.amazonaws.com`이 **VPC 전역에서** endpoint 사설 IP로 해석된다. 성능 인스턴스가 public subnet에 공인 IP를 갖고 있고 egress로 HTTPS를 전부 열어도, DNS가 인터넷 게이트웨이 경로를 쓰지 못하게 만든다. 따라서 **endpoint security group이 성능 인스턴스를 허용하지 않으면 SSM Agent 등록 자체가 실패하고, `send-command`가 `InvalidInstanceId`로 거부된다.**
+
+운영 모듈의 `vpce_from_vpc` 규칙이 VPC CIDR에 443을 허용해 이 조건을 만족시킨다. 성능 SG를 실행마다 열거하지 않는 이유는 측정 1회마다 운영 모듈을 두 번 apply해야 하고, 그 규칙 변경이 2026-08-18 SSM 이탈 사고의 원인이었기 때문이다. 경위는 [ops-2026-08-20-perf-env-bootstrap-failure.md](../../docs/troubleshooting/ops-2026-08-20-perf-env-bootstrap-failure.md)에 있다.
+
+`ssmmessages`·`ec2messages` endpoint는 두지 않는다. 성능 인스턴스는 운영 앱 인스턴스와 같이 public subnet에 공인 IP가 있어 그 도메인은 인터넷 게이트웨이로 나간다.
 
 Terraform을 실행하기 전에 현재 계정과 리전을 확인한다.
 
@@ -97,6 +106,18 @@ backend는 S3 bucket `masiton-terraform-state-711457211155`와 DynamoDB table `m
 - RDS가 `publicly_accessible=false`인지
 
 ## 인프라 준비 후
+
+**apply가 끝난 것은 부트스트랩이 끝난 것이 아니다.** user-data는 `plan`으로 검증되지 않고 실패해도 apply는 성공으로 끝난다. SSM 에이전트 등록에 1~2분, user-data 완주에 몇 분이 더 걸리므로 다음을 먼저 확인한다.
+
+```bash
+aws ssm describe-instance-information --query 'InstanceInformationList[].{Id:InstanceId,Ping:PingStatus}' --output table
+```
+
+3대가 `Online`으로 보이지 않거나 `send-command`가 `InvalidInstanceId`로 거부되면 콘솔 출력을 읽어 user-data 실패를 확인한다. 2026-08-20에 이 경로로 `dnf` 패키지 충돌과 SSM endpoint 도달 실패를 진단했다([기록](../../docs/troubleshooting/ops-2026-08-20-perf-env-bootstrap-failure.md)).
+
+```bash
+aws ec2 get-console-output --instance-id <deps_instance_id> --output text --query Output
+```
 
 Terraform 출력의 `app_instance_id`로 SSM 명령을 실행해 다음 순서로 진행한다.
 

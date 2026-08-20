@@ -3,7 +3,10 @@ set -euo pipefail
 
 exec > >(tee /var/log/masiton-perf-bootstrap.log | logger -t masiton-perf-bootstrap -s 2>/dev/console) 2>&1
 
-dnf install -y docker curl tar
+# curl은 설치 목록에 넣지 않는다. AL2023에 기본 설치된 curl-minimal이 이미
+# /usr/bin/curl을 제공하고, 전체 curl 패키지와 파일이 충돌해 dnf 트랜잭션이
+# 실패한다. set -e 때문에 이 한 줄이 부트스트랩 전체를 중단시켰다.
+dnf install -y docker tar
 systemctl enable --now docker
 
 mkdir -p /opt/masiton-perf /opt/masiton-perf/gc
