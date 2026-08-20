@@ -6,7 +6,7 @@ exec > >(tee /var/log/masiton-perf-bootstrap.log | logger -t masiton-perf-bootst
 dnf install -y docker curl tar
 systemctl enable --now docker
 
-mkdir -p /opt/masiton-perf
+mkdir -p /opt/masiton-perf /opt/masiton-perf/gc
 chown -R root:root /opt/masiton-perf
 
 # WireMock과 Redis는 이 인스턴스에서 돌지 않는다. 운영 앱 인스턴스가 두 자원을
@@ -24,6 +24,9 @@ APP_IMAGE_URI=${app_image_uri}
 WIREMOCK_BASE_URL=http://${deps_private_ip}:8081
 REDIS_HOST=${deps_private_ip}
 REDIS_PORT=6379
+GC_LOG_HOST_DIR=/opt/masiton-perf/gc
+GC_LOG_CONTAINER_DIR=/var/log/masiton-gc
+JAVA_TOOL_OPTIONS=-Xlog:gc*:file=/var/log/masiton-gc/gc.log:time,uptime,level,tags:filecount=5,filesize=10M
 RUNTIME_ENV
 chmod 0600 /opt/masiton-perf/runtime.env
 

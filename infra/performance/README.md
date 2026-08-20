@@ -80,11 +80,13 @@ backend는 S3 bucket `masiton-terraform-state-711457211155`와 DynamoDB table `m
 
 Terraform 출력의 `app_instance_id`로 SSM 명령을 실행해 다음 순서로 진행한다.
 
-1. 앱 인스턴스의 `/opt/masiton-perf/`에 백엔드 이미지와 성능 전용 설정을 기동한다. `runtime.env`의 `WIREMOCK_BASE_URL`·`REDIS_HOST`는 의존 인스턴스를 가리킨다. 컨테이너 메모리 제한은 운영과 같은 값을 사용한다.
+1. 앱 인스턴스의 `/opt/masiton-perf/`에 백엔드 이미지와 성능 전용 설정을 기동한다. `runtime.env`의 `WIREMOCK_BASE_URL`·`REDIS_HOST`는 의존 인스턴스를 가리킨다. 컨테이너 메모리 제한은 운영과 같은 값(`--memory 1024m`, 프론트엔드 `--memory 512m`)을 사용한다.
+
+   **GC 로그는 측정 전용 추가 설정이다.** `runtime.env`의 `JAVA_TOOL_OPTIONS`가 컨테이너 안 `/var/log/masiton-gc/gc.log`에 기록하도록 지정하므로, 기동할 때 `-v /opt/masiton-perf/gc:/var/log/masiton-gc`를 함께 마운트해야 호스트에서 회수할 수 있다. 운영에는 이 옵션이 없다 — SerialGC full GC 정지를 지연 스파이크와 구분하기 위한 측정 목적이며, 로깅 오버헤드만큼 운영과 조건이 다르다는 점을 결과 문서에 적는다.
 2. user-data가 커밋 고정 WireMock fixture archive의 SHA-256을 검증하고 매핑 파일을 배포했는지 확인한 뒤, 앱 인스턴스에서 SSM으로 `curl -fsS http://<deps_private_ip>:8081/__admin/mappings | grep -q '"mappings"'`를 실행해 WireMock 매핑 로드와 앱→의존 경로를 함께 확인한다. 확인에 실패하면 백엔드·부하 테스트를 시작하지 않는다.
 3. `perf/seed/`를 RDS에 적재하고 `ANALYZE`를 실행한다.
 4. 같은 VPC의 `loadgen_instance_id`에서 k6 시나리오를 실행한다.
-5. RDS·EC2·Redis·WireMock 증적과 k6 결과를 기록한다. 앱 인스턴스의 GC 로그와 `CPUCreditBalance`, Redis의 `used_memory`·`evicted_keys`·`rejected_connections`를 함께 남긴다. 갓 기동한 t4g 인스턴스는 CPU 크레딧이 0에서 시작하므로 warmup과 회복 대기를 거친 뒤 측정한다.
+5. RDS·EC2·Redis·WireMock 증적과 k6 결과를 기록한다. 앱 인스턴스의 GC 로그(`/opt/masiton-perf/gc/`)와 `CPUCreditBalance`, Redis의 `used_memory`·`evicted_keys`·`rejected_connections`를 함께 남긴다. 갓 기동한 t4g 인스턴스는 CPU 크레딧이 0에서 시작하므로 warmup과 회복 대기를 거친 뒤 측정한다.
 6. 증적을 보존한 뒤 `terraform destroy`한다.
 
 Terraform은 백엔드 기동과 시드 적재를 자동 실행하지 않는다. 이 단계를 분리해 두어 계획·적용 중 실수로 부하가 시작되지 않도록 했다. 실제 외부 Kakao·YouTube API를 호출하지 말고 WireMock만 사용한다.
