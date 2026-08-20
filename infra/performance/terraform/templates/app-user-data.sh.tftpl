@@ -6,49 +6,12 @@ exec > >(tee /var/log/masiton-perf-bootstrap.log | logger -t masiton-perf-bootst
 dnf install -y docker curl tar
 systemctl enable --now docker
 
-wiremock_root=/opt/masiton-perf/wiremock
-fixture_archive=/tmp/masiton-wiremock-fixture.tar.gz
-fixture_extract_root=/tmp/masit-on-${wiremock_fixture_commit}
-mkdir -p "$wiremock_root"
+mkdir -p /opt/masiton-perf /opt/masiton-perf/gc
 chown -R root:root /opt/masiton-perf
 
-curl --fail --location --retry 3 --silent --show-error \
-  -o "$fixture_archive" \
-  "https://codeload.github.com/team-youngkk/masit-on/tar.gz/${wiremock_fixture_commit}"
-echo "${wiremock_fixture_sha256}  $fixture_archive" | sha256sum -c -
-tar -xzf "$fixture_archive" -C /tmp
-cp -a "$fixture_extract_root/docker/wiremock/." "$wiremock_root/"
-test -s "$wiremock_root/mappings/kakao-place-normal.json"
-test -s "$wiremock_root/__files/kakao-place-normal.json"
-expected_mapping_count=23
-expected_body_count=17
-actual_mapping_count=$(find "$wiremock_root/mappings" -maxdepth 1 -type f -name '*.json' | wc -l)
-actual_body_count=$(find "$wiremock_root/__files" -maxdepth 1 -type f -name '*.json' | wc -l)
-test "$actual_mapping_count" -eq "$expected_mapping_count"
-test "$actual_body_count" -eq "$expected_body_count"
-rm -rf "$fixture_archive" "$fixture_extract_root"
-
-docker pull '${wiremock_image}'
-docker pull '${redis_image}'
-
-docker rm -f masiton-perf-wiremock masiton-perf-redis 2>/dev/null || true
-
-docker run -d \
-  --name masiton-perf-wiremock \
-  --restart unless-stopped \
-  --network host \
-  -v /opt/masiton-perf/wiremock:/home/wiremock \
-  '${wiremock_image}' \
-  --bind-address 127.0.0.1 \
-  --port 8081 \
-  --verbose
-
-docker run -d \
-  --name masiton-perf-redis \
-  --restart unless-stopped \
-  --network host \
-  '${redis_image}' \
-  redis-server --bind 127.0.0.1 --protected-mode yes --port 6379
+# WireMock과 Redis는 이 인스턴스에서 돌지 않는다. 운영 앱 인스턴스가 두 자원을
+# 동거시키지 않으므로 성능 환경도 별도 dependency 인스턴스로 분리한다. 같은
+# 호스트에 두면 호스트 메모리 여유가 운영과 달라져 측정값을 대변하지 못한다.
 
 cat >/opt/masiton-perf/runtime.env <<'RUNTIME_ENV'
 AWS_REGION=${aws_region}
@@ -58,14 +21,102 @@ DB_NAME=${db_name}
 DB_USERNAME=${db_username}
 DB_PASSWORD_PARAMETER=${db_param_name}
 APP_IMAGE_URI=${app_image_uri}
-WIREMOCK_BASE_URL=http://127.0.0.1:8081
-REDIS_HOST=127.0.0.1
+WIREMOCK_BASE_URL=http://${deps_private_ip}:8081
+REDIS_HOST=${deps_private_ip}
 REDIS_PORT=6379
+REDIS_PASSWORD_PARAMETER=${redis_param_name}
+GC_LOG_HOST_DIR=/opt/masiton-perf/gc
+GC_LOG_CONTAINER_DIR=/var/log/masiton-gc
+JAVA_TOOL_OPTIONS=-Xlog:gc*:file=/var/log/masiton-gc/gc.log:time,uptime,level,tags:filecount=5,filesize=10M
 RUNTIME_ENV
 chmod 0600 /opt/masiton-perf/runtime.env
 
+cat >/opt/masiton-perf/check-dependencies.sh <<'CHECK_DEPENDENCIES'
+#!/bin/bash
+set -euo pipefail
+
+attempts=30
+interval=2
+
+# Redis requirepass를 명령행에 두지 않는다. 같은 인스턴스의 ps에서 읽힌다.
+# 값은 변수에만 담고 검증이 끝나면 지운다.
+redis_password=$(aws ssm get-parameter \
+  --region '${aws_region}' \
+  --name '${redis_param_name}' \
+  --with-decryption \
+  --query 'Parameter.Value' --output text | tr -d '\r\n')
+
+if [ -z "$redis_password" ] || [ "$redis_password" = 'None' ]; then
+  echo 'Parameter Store에서 Redis requirepass를 읽지 못했다' >&2
+  exit 1
+fi
+
+# RESP inline 명령으로 AUTH 뒤에 PING을 보낸다. 응답은 CRLF로 끝나므로 read가
+# 남기는 CR까지 감안해 접두사로 본다. 셸 파라미터 확장을 쓰지 않는 이유는 이
+# 파일이 Terraform 템플릿이어서 $${...} 표기가 templatefile() 보간과 충돌하기
+# 때문이다.
+redis_ping() {
+  auth_response=''
+  ping_response=''
+  exec 3<>"/dev/tcp/${deps_private_ip}/6379" || return 1
+  printf 'AUTH %s\r\nPING\r\n' "$redis_password" >&3
+  IFS= read -r -t 5 auth_response <&3
+  IFS= read -r -t 5 ping_response <&3
+  exec 3>&-
+  case "$auth_response" in
+  '+OK'*) ;;
+  # 도달 불가와 인증 실패를 구분해야 원인을 바로 안다. 서버 오류 문구만 남기고
+  # 비밀값은 출력하지 않는다.
+  '-'*)
+    echo "Redis AUTH rejected: $auth_response" >&2
+    return 1
+    ;;
+  *) return 1 ;;
+  esac
+  case "$ping_response" in
+  '+PONG'*) return 0 ;;
+  *) return 1 ;;
+  esac
+}
+
+# grep -q가 파이프를 먼저 닫으면 pipefail이 curl의 쓰기 실패를 잡으므로
+# 본문을 변수로 받은 뒤 검사한다.
+wiremock_mappings() {
+  body=''
+  body=$(curl --fail --silent --show-error --max-time 5 \
+    "http://${deps_private_ip}:8081/__admin/mappings") || return 1
+  case "$body" in
+  *'"mappings"'*) return 0 ;;
+  *) return 1 ;;
+  esac
+}
+
+wait_for() {
+  name=$1
+  check=$2
+  for attempt in $(seq 1 "$attempts"); do
+    if "$check"; then
+      echo "$name: OK"
+      return 0
+    fi
+    if [ "$attempt" -eq "$attempts" ]; then
+      echo "$name failed after $attempts attempts: ${deps_private_ip}" >&2
+      return 1
+    fi
+    sleep "$interval"
+  done
+}
+
+wait_for 'Redis AUTH+PING' redis_ping
+unset redis_password
+wait_for 'WireMock mappings' wiremock_mappings
+CHECK_DEPENDENCIES
+chmod 0700 /opt/masiton-perf/check-dependencies.sh
+
 cat >/opt/masiton-perf/start-backend-note.txt <<'NOTE'
 The infrastructure is ready. Start the digest-pinned backend through an audited SSM command.
-Read /opt/masiton-perf/runtime.env from the instance; retrieve DB_PASSWORD_PARAMETER with SSM SecureString.
+Read /opt/masiton-perf/runtime.env from the instance; retrieve DB_PASSWORD_PARAMETER and
+REDIS_PASSWORD_PARAMETER with SSM SecureString. Redis requires AUTH, so the backend needs the
+Redis password as well; /opt/masiton-perf/check-dependencies.sh verifies both dependencies first.
 Do not put the password in user-data, shell history, GitHub workflow inputs, or repository files.
 NOTE

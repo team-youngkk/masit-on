@@ -15,6 +15,7 @@ related_documents:
 
 ## 최신 기록
 
+- [PR #261 의존 인스턴스 분리가 만든 Redis 연결 거부와 무인증 노출](pr-261-performance-deps-separation-review.md)
 - [PR #259 등록 단위 일괄 폐기의 상태·감사 이력 불일치](pr-259-registration-unit-discard-all-review.md)
 - [PR #257 전환 후 런타임 기준선 리뷰 반영](pr-257-runtime-baseline-review.md)
 - [운영 전환: ALB·Blue-Green 트래픽 전환에서 드러난 결함 3건](ops-2026-08-19-alb-cutover-review.md)
@@ -35,6 +36,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #261 의존 인스턴스 분리가 만든 Redis 연결 거부와 무인증 노출](pr-261-performance-deps-separation-review.md)
 - [PR #259 등록 단위 일괄 폐기의 상태·감사 이력 불일치](pr-259-registration-unit-discard-all-review.md)
 - [PR #257 전환 후 런타임 기준선 리뷰 반영](pr-257-runtime-baseline-review.md)
 - [PR #251 오류 응답 details의 배열 정규화 누락](pr-251-details-array-normalization-review.md)
