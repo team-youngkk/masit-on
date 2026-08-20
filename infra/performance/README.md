@@ -122,12 +122,32 @@ aws ec2 get-console-output --instance-id <deps_instance_id> --output text --quer
 Terraform 출력의 `app_instance_id`로 SSM 명령을 실행해 다음 순서로 진행한다.
 
 1. **백엔드를 기동하기 전에** 앱 인스턴스에서 `/opt/masiton-perf/check-dependencies.sh`를 SSM으로 실행한다. 이 스크립트는 Redis `requirepass`를 Parameter Store에서 읽어 앱 호스트에서 deps Redis로 RESP inline `AUTH`·`PING`을 보내 `Redis AUTH+PING: OK`를 확인하고, user-data가 커밋 고정 fixture archive의 SHA-256을 검증해 배포한 매핑이 WireMock `/__admin/mappings`에 로드됐는지 확인해 `WireMock mappings: OK`를 출력한다. 인증 실패는 `Redis AUTH rejected: -WRONGPASS ...`로 도달 불가와 구분된다. 확인에 실패하면 백엔드와 부하 테스트를 시작하지 않는다.
-2. 앱 인스턴스의 `/opt/masiton-perf/`에 백엔드 이미지와 성능 전용 설정을 기동한다. `runtime.env`의 `WIREMOCK_BASE_URL`·`REDIS_HOST`는 의존 인스턴스를 가리킨다. 컨테이너 메모리 제한은 운영과 같은 값(`--memory 1024m`, 프론트엔드 `--memory 512m`)을 사용한다.
+2. 앱 인스턴스에서 `/opt/masiton-perf/start-backend.sh`를 SSM으로 실행한다. 1단계 검증을 다시 실행한 뒤 비밀값을 렌더링하고, digest 고정 이미지를 ECR에서 받아 운영과 같은 `--memory 1024m`로 기동한다. 준비성은 `/internal/health/ready`가 `200`이고 `/internal/health/dependencies`의 `db`·`redis`가 모두 `UP`인 것으로 확인한다.
 
-   **GC 로그는 측정 전용 추가 설정이다.** `runtime.env`의 `JAVA_TOOL_OPTIONS`가 컨테이너 안 `/var/log/masiton-gc/gc.log`에 기록하도록 지정하므로, 기동할 때 `-v /opt/masiton-perf/gc:/var/log/masiton-gc`를 함께 마운트해야 호스트에서 회수할 수 있다. 운영에는 이 옵션이 없다 — SerialGC full GC 정지를 지연 스파이크와 구분하기 위한 측정 목적이며, 로깅 오버헤드만큼 운영과 조건이 다르다는 점을 결과 문서에 적는다.
+   ```bash
+   aws ssm send-command --instance-ids <app_instance_id> --document-name AWS-RunShellScript      --parameters 'commands=["/opt/masiton-perf/start-backend.sh"]'
+   ```
+
+   **GC 로그는 측정 전용 추가 설정이다.** `runtime.env`의 `JAVA_TOOL_OPTIONS`가 컨테이너 안 `/var/log/masiton-gc/gc.log`에 기록하므로 `-v /opt/masiton-perf/gc:/var/log/masiton-gc`를 마운트해야 호스트에서 회수할 수 있다. **호스트 디렉터리 소유자를 컨테이너 사용자(uid 1001)로 맞춰야 한다** — root 소유면 JVM이 `-Xlog` 파일을 열지 못해 `Could not create the Java Virtual Machine`으로 기동 자체가 실패한다. 운영에는 이 옵션이 없다: SerialGC full GC 정지를 지연 스파이크와 구분하기 위한 측정 목적이며, 로깅 오버헤드만큼 운영과 조건이 다르다는 점을 결과 문서에 적는다.
+
+### 백엔드 설정이 운영과 다른 지점
+
+성능 환경은 운영과 같은 `prod` 프로파일로 기동한다. 다음만 다르고, 결과 문서에 함께 적는다.
+
+| 항목 | 운영 | 성능 환경 | 이유 |
+|---|---|---|---|
+| DB·Redis 비밀번호 | `/masiton/**` | 이 실행의 `/masiton/perf-207/<run_id>/**` | 운영 비밀값을 복제하지 않는다 |
+| 그 외 필수 비밀값 10건 | Parameter Store | 인스턴스에서 만든 일회용 값(tmpfs) | 부하 시나리오가 무인증 공개 GET만 호출한다 |
+| Kakao·YouTube base URL | 실제 제공자 | 의존 인스턴스의 WireMock | 실제 외부 API를 호출하지 않는다 |
+| 메일 준비성 검사 | `MAIL_HEALTH_ENABLED=true`, 의존 검사 `db,redis,mail` | `false`, `db,redis` | SMTP가 없고 메일 경로를 측정하지 않는다 |
+| `server.address` | `127.0.0.1` (Nginx 프록시) | `0.0.0.0` (`SERVER_ADDRESS=0.0.0.0`) | Nginx 없이 loadgen 인스턴스가 네트워크를 통해 직접 호출한다 |
+| GC 로그 | 없음 | `JAVA_TOOL_OPTIONS`로 활성 | full GC 정지를 지연 스파이크와 구분한다 |
+| 프론트엔드·Nginx | 같은 호스트에서 실행 | 실행하지 않는다 | 측정 대상이 백엔드 공개 API다. **호스트 메모리 여유가 운영보다 크다는 점을 결과에 적는다** |
+
+인증 origin은 운영과 같은 값을 쓴다. `prod` 프로파일이 HTTPS를 강제해(`Production authentication origins must use HTTPS`) 사설 주소를 넣으면 기동하지 않는다.
 3. `perf/seed/`를 RDS에 적재하고 `ANALYZE`를 실행한다.
 4. 같은 VPC의 `loadgen_instance_id`에서 k6 시나리오를 실행한다.
-5. RDS·EC2·Redis·WireMock 증적과 k6 결과를 기록한다. 앱 인스턴스의 GC 로그(`/opt/masiton-perf/gc/`)와 `CPUCreditBalance`, Redis의 `used_memory`·`evicted_keys`·`rejected_connections`를 함께 남긴다. 갓 기동한 t4g 인스턴스는 CPU 크레딧이 0에서 시작하므로 warmup과 회복 대기를 거친 뒤 측정한다.
+5. RDS·EC2·Redis·WireMock 증적과 k6 결과를 기록한다. 앱 인스턴스의 GC 로그(`/opt/masiton-perf/gc/`)와 `CPUCreditBalance`, Redis의 `used_memory`·`evicted_keys`·`rejected_connections`를 함께 남긴다. `CPUCreditBalance`는 증적으로 남기되 측정 시작 조건으로 쓰지 않는다. 이 구성의 EC2 3대는 운영 앱 인스턴스와 같은 `unlimited` 크레딧 모드라 잔액이 0이어도 스로틀링되지 않고 초과분이 과금된다. 기다려야 하는 것은 크레딧이 아니라 JVM warmup(JIT·클래스 로딩), 커넥션 풀, RDS 버퍼 캐시와 `ANALYZE`다.
 
    **의존 컨테이너의 OOM·재시작 여부도 증적에 포함한다.** Redis는 `--memory 384m` 안에서 `maxmemory 256mb`와 AOF rewrite·RDB 스냅샷을 함께 돌리므로, 쓰기 부하 구간의 fork copy-on-write가 한도를 넘기면 컨테이너가 조용히 OOM-kill되고 `--restart unless-stopped`가 다시 살린다. 이 경우 그 구간의 지연·에러율은 측정 대상 조건을 대변하지 않으므로 결과를 무효로 판정한다.
 
