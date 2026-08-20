@@ -137,14 +137,15 @@ Terraform 출력의 `app_instance_id`로 SSM 명령을 실행해 다음 순서�
 | 항목 | 운영 | 성능 환경 | 이유 |
 |---|---|---|---|
 | DB·Redis 비밀번호 | `/masiton/**` | 이 실행의 `/masiton/perf-207/<run_id>/**` | 운영 비밀값을 복제하지 않는다 |
-| 그 외 필수 비밀값 10건 | Parameter Store | 인스턴스에서 만든 일회용 값(tmpfs) | 부하 시나리오가 무인증 공개 GET만 호출한다 |
+| 그 외 필수 비밀값 8건 | Parameter Store | 인스턴스에서 만든 일회용 값(tmpfs) | 부하 시나리오가 무인증 공개 GET만 호출하고 검증 세션을 비활성화한다 |
 | Kakao·YouTube base URL | 실제 제공자 | 의존 인스턴스의 WireMock | 실제 외부 API를 호출하지 않는다 |
 | 메일 준비성 검사 | `MAIL_HEALTH_ENABLED=true`, 의존 검사 `db,redis,mail` | `false`, `db,redis` | SMTP가 없고 메일 경로를 측정하지 않는다 |
+| 검증 세션·gate | 활성화 | `VERIFICATION_ENABLED=false`, HTTP 매핑 미등록 | 성능 측정은 무인증 공개 GET만 대상으로 하며 검증 로그인·쿠키·gate 흐름은 측정하지 않는다 |
 | `server.address` | `127.0.0.1` (Nginx 프록시) | `0.0.0.0` (`SERVER_ADDRESS=0.0.0.0`) | Nginx 없이 loadgen 인스턴스가 네트워크를 통해 직접 호출한다 |
 | GC 로그 | 없음 | `JAVA_TOOL_OPTIONS`로 활성 | full GC 정지를 지연 스파이크와 구분한다 |
 | 프론트엔드·Nginx | 같은 호스트에서 실행 | 실행하지 않는다 | 측정 대상이 백엔드 공개 API다. **호스트 메모리 여유가 운영보다 크다는 점을 결과에 적는다** |
 
-인증 origin은 운영과 같은 값을 쓴다. `prod` 프로파일이 HTTPS를 강제해(`Production authentication origins must use HTTPS`) 사설 주소를 넣으면 기동하지 않는다.
+회원 인증 origin은 운영과 같은 값을 쓴다. `prod` 프로파일이 HTTPS를 강제해(`Production authentication origins must use HTTPS`) 사설 주소를 넣으면 기동하지 않는다. 검증 세션은 성능 환경에서 `VERIFICATION_ENABLED=false`로 명시적으로 비활성화하며, `/api/verification/sessions`와 내부 검증 세션 HTTP 매핑을 등록하지 않는다. 운영 기본값은 활성화 상태를 유지한다.
 3. `perf/seed/`를 RDS에 적재하고 `ANALYZE`를 실행한다.
 4. 같은 VPC의 `loadgen_instance_id`에서 k6 시나리오를 실행한다.
 5. RDS·EC2·Redis·WireMock 증적과 k6 결과를 기록한다. 앱 인스턴스의 GC 로그(`/opt/masiton-perf/gc/`)와 `CPUCreditBalance`, Redis의 `used_memory`·`evicted_keys`·`rejected_connections`를 함께 남긴다. `CPUCreditBalance`는 증적으로 남기되 측정 시작 조건으로 쓰지 않는다. 이 구성의 EC2 3대는 운영 앱 인스턴스와 같은 `unlimited` 크레딧 모드라 잔액이 0이어도 스로틀링되지 않고 초과분이 과금된다. 기다려야 하는 것은 크레딧이 아니라 JVM warmup(JIT·클래스 로딩), 커넥션 풀, RDS 버퍼 캐시와 `ANALYZE`다.

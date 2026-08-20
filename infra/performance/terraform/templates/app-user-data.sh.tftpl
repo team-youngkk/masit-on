@@ -121,9 +121,10 @@ wait_for 'WireMock mappings' wiremock_mappings
 CHECK_DEPENDENCIES
 chmod 0700 /opt/masiton-perf/check-dependencies.sh
 
-# prod 프로파일은 configtree로 비밀값 파일 12건을 읽는다. 성능 환경은 운영 비밀값에
+# prod 프로파일은 configtree로 비밀값 파일 10건을 읽는다. 성능 환경은 운영 비밀값에
 # 접근하지 않으므로(app 역할은 이 실행의 db·redis parameter 둘만 읽는다) 나머지
-# 10건을 이 인스턴스에서 일회용으로 만든다. 부하 시나리오는 무인증 공개 GET만
+# 8건을 이 인스턴스에서 일회용으로 만든다. 검증 세션은 이 환경에서 명시적으로
+# 비활성화하며, 부하 시나리오는 무인증 공개 GET만
 # 호출하므로 그 값들은 기동 요건을 채우는 역할만 한다.
 # 파일 이름이 곧 속성 이름이고 경로도 운영과 같다. 원문은
 # deploy/scripts/app-secrets-render.sh와 application-prod.yml이다.
@@ -181,8 +182,6 @@ write_secret 'masiton.member.action-mail.active-key' "$(throwaway)"
 write_secret 'masiton.member.rate-limit.secret' "$(throwaway)"
 write_secret 'spring.mail.username' 'perf@example.invalid'
 write_secret 'spring.mail.password' "$(throwaway)"
-write_secret 'masiton.security.verification.login-id' 'perf'
-write_secret 'masiton.security.verification.password-hash' "$(throwaway)"
 
 echo "비밀값 렌더링 완료: $SECRETS_DIR ($(find "$SECRETS_DIR" -type f | wc -l)건)"
 RENDER_SECRETS
@@ -202,6 +201,7 @@ SECRETS_DIR=/run/masiton/secrets
 export SECRETS_DIR
 
 export SPRING_PROFILES_ACTIVE=prod
+export VERIFICATION_ENABLED=false
 # prod 프로파일은 server.address가 127.0.0.1로 고정되어 있다(application-prod.yml).
 # 성능 환경에서는 loadgen 인스턴스가 네트워크를 통해 호출하므로 0.0.0.0으로 열어야 한다.
 export SERVER_ADDRESS=0.0.0.0
@@ -239,9 +239,6 @@ export GEMINI_PAID_BILLING_ENABLED=false
 # 설정이 운영과 같은 상태로 측정된다.
 app_origin="https://masiton.click"
 export AUTH_ALLOWED_ORIGINS="$app_origin"
-export VERIFICATION_PUBLIC_BASE_URL="$app_origin"
-export VERIFICATION_TRUSTED_PROXY_ADDRESSES=127.0.0.1
-export VERIFICATION_REVERSE_PROXY_ENABLED=true
 export MEMBER_TRUSTED_PROXY_ADDRESSES=127.0.0.1
 export MEMBER_REVERSE_PROXY_ENABLED=true
 export AUTH_LOGIN_TRUSTED_PROXY_ADDRESSES=127.0.0.1
@@ -274,14 +271,14 @@ docker run -d --name masiton-perf-backend \
   --volume "$SECRETS_DIR":"$SECRETS_DIR":ro \
   --volume /opt/masiton-perf/gc:/var/log/masiton-gc \
   -e SPRING_PROFILES_ACTIVE \
+  -e VERIFICATION_ENABLED \
   -e SERVER_ADDRESS \
   -e DB_URL -e DB_USERNAME \
   -e REDIS_HOST -e REDIS_PORT \
   -e KAKAO_BASE_URL -e YOUTUBE_BASE_URL \
   -e KAKAO_MOBILITY_ENABLED -e KAKAO_MOBILITY_FREE_TIER_VERIFIED \
   -e MAIL_HOST -e MAIL_PORT -e MAIL_HEALTH_ENABLED -e DEPENDENCY_HEALTH_COMPONENTS \
-  -e AUTH_ALLOWED_ORIGINS -e VERIFICATION_PUBLIC_BASE_URL \
-  -e VERIFICATION_TRUSTED_PROXY_ADDRESSES -e VERIFICATION_REVERSE_PROXY_ENABLED \
+  -e AUTH_ALLOWED_ORIGINS \
   -e MEMBER_TRUSTED_PROXY_ADDRESSES -e MEMBER_REVERSE_PROXY_ENABLED \
   -e AUTH_LOGIN_TRUSTED_PROXY_ADDRESSES -e AUTH_LOGIN_REVERSE_PROXY_ENABLED \
   -e RESTAURANT_MAP_TRUSTED_PROXY_ADDRESSES -e RESTAURANT_MAP_REVERSE_PROXY_ENABLED \
