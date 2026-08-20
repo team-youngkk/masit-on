@@ -48,11 +48,17 @@ public class AdminAiExtractionQueryService {
         AiExtractionAdminQueryPort.RetryTarget target = port.retryTarget(jobId)
                 .orElseThrow(this::jobNotFound);
         boolean retryable = "FAILED".equals(target.executionStatus())
-                || ("SUCCEEDED".equals(target.executionStatus()) && "PARTIAL".equals(target.resultCompleteness()));
+                || ("SUCCEEDED".equals(target.executionStatus())
+                    && ("PARTIAL".equals(target.resultCompleteness()) || hasAutoBlockedRegistrationUnit(jobId)));
         if (!retryable) {
             throw new BusinessException(HttpStatus.CONFLICT, "AIEXTRACT_RETRY_BLOCKED", "The job is not retryable.");
         }
         return target.videoUrl();
+    }
+
+    private boolean hasAutoBlockedRegistrationUnit(UUID jobId) {
+        return registrationUnitStore.findByJobId(jobId).stream()
+                .anyMatch(unit -> "AUTO_BLOCKED".equals(unit.reviewStatus()));
     }
 
     /** API 3.5절: 등록 단위 granularity 사후 보정·롤백. {@link RegistrationUnitCommandService}로 위임한다. */
@@ -66,6 +72,11 @@ public class AdminAiExtractionQueryService {
     /** API 3.6절: 등록 단위 일괄 등록. {@link RegistrationUnitCommandService}로 위임한다. */
     public RegistrationUnitCommandService.RegistrationExecutionView registerUnit(UUID jobId, UUID unitId) {
         return registrationUnitCommandService.registerUnit(jobId, unitId);
+    }
+
+    /** API 3.10절: AUTO_BLOCKED 등록 단위 일괄 폐기. {@link RegistrationUnitCommandService}로 위임한다. */
+    public List<UUID> discardAllBlocked(UUID jobId, String reason, UUID adminId) {
+        return registrationUnitCommandService.discardAllBlocked(jobId, reason, adminId);
     }
 
     private BusinessException jobNotFound() {

@@ -7,7 +7,14 @@ import { Button } from '@/components/ui/Button'
 import { StatePanel } from '@/components/ui/StatePanel'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { aiConfidenceTone } from '@/lib/admin/ai-confidence'
-import { aiExtractionMessageFor, getAiVideoExtraction, retryAiVideoExtraction, type AiCandidate, type AiExtractionDetail } from '@/lib/admin/ai-video-extractions'
+import {
+  aiExtractionMessageFor,
+  discardAllBlockedRegistrationUnits,
+  getAiVideoExtraction,
+  retryAiVideoExtraction,
+  type AiCandidate,
+  type AiExtractionDetail,
+} from '@/lib/admin/ai-video-extractions'
 import { candidateTruncatedBannerMessage, retryActionAvailable } from '@/lib/admin/ai-video-extractions-coordination'
 
 import { AiRegistrationUnits } from './AiRegistrationUnits'
@@ -21,6 +28,8 @@ export function AiVideoExtractionDetail({ jobId }: { jobId: string }) {
   const [retryOpen, setRetryOpen] = useState(false)
   const [supplementText, setSupplementText] = useState('')
   const [reason, setReason] = useState('')
+  const [discardAllOpen, setDiscardAllOpen] = useState(false)
+  const [discardAllReason, setDiscardAllReason] = useState('')
 
   const load = useCallback(async () => {
     const next = await getAiVideoExtraction(jobId)
@@ -47,11 +56,22 @@ export function AiVideoExtractionDetail({ jobId }: { jobId: string }) {
     finally { setBusy(false) }
   }
 
+  async function discardAll() {
+    setBusy(true); setError(false)
+    try {
+      const result = await discardAllBlockedRegistrationUnits(jobId, discardAllReason)
+      setDiscardAllOpen(false); setDiscardAllReason('')
+      await refresh(`${result.discardedCount}건 폐기했습니다.`)
+    } catch (caught) { setError(true); setNotice(aiExtractionMessageFor(caught)) }
+    finally { setBusy(false) }
+  }
+
   if (busy && !data) return <StatePanel title="AI 작업 상세를 불러오는 중입니다" />
   if (!data) return <StatePanel tone="danger" title="AI 작업 상세를 불러오지 못했습니다" description={notice || '잠시 후 다시 시도해 주세요.'} actions={<Button variant="secondary" disabled={busy} onClick={() => void refresh()}>다시 시도</Button>} />
 
-  const retryAvailable = retryActionAvailable(data)
+  const retryAvailable = retryActionAvailable(data, data.registrationUnits)
   const truncatedMessage = candidateTruncatedBannerMessage(data.candidateTruncated)
+  const hasBlockedUnit = data.registrationUnits.some((unit) => unit.reviewStatus === 'AUTO_BLOCKED')
 
   return <div className={styles.detail}>
     <div className={styles.toolbar}><Link href="/admin/ai">← 작업 목록</Link><Button variant="secondary" disabled={busy} onClick={() => void refresh('최신 상태를 조회했습니다.')}>새로고침</Button></div>
@@ -63,12 +83,20 @@ export function AiVideoExtractionDetail({ jobId }: { jobId: string }) {
       <p className={styles.meta}><code>{data.jobId}</code></p>
       <div className={styles.meta}><StatusBadge tone={executionTone(data.executionStatus)}>{data.executionStatus}</StatusBadge><StatusBadge>{data.resultCompleteness ?? '미완료'}</StatusBadge><StatusBadge tone={reviewTone(data.reviewStatus)}>{data.reviewStatus ?? '미정'}</StatusBadge><span>시도 {data.attemptCount}회</span></div>
       <p className={styles.meta}>버전 {data.provider} / {data.modelVersion} / {data.promptVersion} / {data.schemaVersion}</p>
+      <p className={styles.meta}><a href={data.youtube.videoUrl} target="_blank" rel="noreferrer">원본 유튜브 영상 보기</a></p>
       {data.error ? <p className={styles.warning} role="alert">실패 범주: {data.error.category} · {data.error.retryable ? '재시도 가능' : '재시도 불가'} · 시도 {data.attemptCount}회</p> : null}
     </section>
 
     <section className={styles.panel} aria-labelledby="registration-unit-heading">
-      <h2 id="registration-unit-heading">등록 단위</h2>
+      <div className={styles.toolbar}>
+        <h2 id="registration-unit-heading">등록 단위</h2>
+        {hasBlockedUnit ? <Button variant="secondary" disabled={busy} onClick={() => setDiscardAllOpen((open) => !open)}>AUTO_BLOCKED 전체 폐기</Button> : null}
+      </div>
       <p className={styles.hint}>장소 동일성과 대표 음식 카테고리는 관리자 입력 없이 시스템이 판정합니다. 예외만 아래에서 보충하거나 폐기할 수 있습니다.</p>
+      {discardAllOpen ? <form className={styles.retryForm} onSubmit={(event) => { event.preventDefault(); void discardAll() }}>
+        <label>폐기 사유<input required value={discardAllReason} onChange={(event) => setDiscardAllReason(event.target.value)} /></label>
+        <div className={styles.actions}><Button type="submit" disabled={busy}>전체 폐기 제출</Button><Button variant="secondary" disabled={busy} onClick={() => setDiscardAllOpen(false)}>취소</Button></div>
+      </form> : null}
       <AiRegistrationUnits jobId={jobId} units={data.registrationUnits} refresh={refresh} onRequestRetry={() => setRetryOpen(true)} />
     </section>
 
