@@ -60,6 +60,8 @@ class ProdSecretsConfigTreeTest {
                     .startsWith("-----BEGIN PUBLIC KEY-----");
             assertThat(environment.getProperty("masiton.member.action-mail.active-key-id")).isEqualTo("prod-mail-1");
             assertThat(environment.getProperty("masiton.member.action-mail.active-key")).isEqualTo("mail-cipher-key");
+            assertThat(environment.getProperty("masiton.member.action-mail.from-address"))
+                    .isEqualTo("no-reply@masiton.click");
             assertThat(environment.getProperty("masiton.member.rate-limit.secret")).isEqualTo("member-rate-secret");
             assertThat(environment.getProperty("spring.mail.username")).isEqualTo("smtp-user");
             assertThat(environment.getProperty("spring.mail.password")).isEqualTo("smtp-password");
@@ -97,6 +99,24 @@ class ProdSecretsConfigTreeTest {
             assertThat(context).hasNotFailed();
             assertThat(context).hasSingleBean(JavaMailSender.class);
         });
+    }
+
+    @Test
+    @DisplayName("운영 발신 주소가 없으면 기동을 차단한다")
+    void 운영프로파일_발신주소가없으면_기동실패(@TempDir Path secrets) throws Exception {
+        writeSecrets(secrets);
+        Files.delete(secrets.resolve("masiton.member.action-mail.from-address"));
+
+        runner(secrets).run(context -> assertThat(context).hasFailed());
+    }
+
+    @Test
+    @DisplayName("운영 발신 주소가 공백이면 기동을 차단한다")
+    void 운영프로파일_발신주소가공백이면_기동실패(@TempDir Path secrets) throws Exception {
+        writeSecrets(secrets);
+        Files.writeString(secrets.resolve("masiton.member.action-mail.from-address"), "   ");
+
+        runner(secrets).run(context -> assertThat(context).hasFailed());
     }
 
     @Test
@@ -247,6 +267,7 @@ class ProdSecretsConfigTreeTest {
         write(secrets, "masiton.security.jwt.public-key-pem", "-----BEGIN PUBLIC KEY-----\npub\n-----END PUBLIC KEY-----");
         write(secrets, "masiton.member.action-mail.active-key-id", "prod-mail-1");
         write(secrets, "masiton.member.action-mail.active-key", "mail-cipher-key");
+        write(secrets, "masiton.member.action-mail.from-address", "no-reply@masiton.click");
         write(secrets, "masiton.member.rate-limit.secret", "member-rate-secret");
         write(secrets, "spring.mail.username", "smtp-user");
         write(secrets, "spring.mail.password", "smtp-password");

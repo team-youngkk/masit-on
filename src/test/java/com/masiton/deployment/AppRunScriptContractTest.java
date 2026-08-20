@@ -119,6 +119,30 @@ class AppRunScriptContractTest {
                 .contains("masiton.ai.temporary-input.keys.$key_id");
     }
 
+    @Test
+    @DisplayName("회원 메일 발신 주소의 SSM·configtree·운영 문서 매핑을 고정한다")
+    void 회원메일_발신주소의운영주입경로를_동기화한다() throws IOException {
+        String renderer = Files.readString(Path.of("deploy/scripts/app-secrets-render.sh"));
+        String commonProfile = Files.readString(COMMON_PROFILE);
+        String productionProfile = Files.readString(PROD_PROFILE);
+        String provisioning = Files.readString(Path.of("docs/08-planning/m2-provisioning-record.md"));
+
+        assertThat(renderer)
+                .contains("read_required_parameter() {")
+                .contains("value=$(read_required_parameter \"$parameter\" \"필수 비밀값을 읽지 못했다\")")
+                .contains("value=$(read_required_parameter \"$parameter\" \"필수 설정값(non-blank)을 읽지 못했다\")")
+                .contains("echo \"필수 설정값(non-blank)을 읽지 못했다: $parameter\" >&2")
+                .contains("render_required_non_blank \"masiton.member.action-mail.from-address\""
+                        + " /masiton/member/action-mail/from-address")
+                .contains("[[ \"$value\" =~ ^[[:space:]]*$ ]]");
+        assertThat(commonProfile)
+                .contains("from-address: ${MEMBER_ACTION_MAIL_FROM_ADDRESS:}");
+        assertThat(productionProfile).contains("masiton.member.action-mail.from-address");
+        assertThat(provisioning)
+                .contains("| `masiton.member.action-mail.from-address` |"
+                        + " `/masiton/member/action-mail/from-address` | `String` |");
+    }
+
     /**
      * 운영 프로파일이 기본값 없이 요구하는 환경 변수를 스크립트가 실제로 넘기는지 고정한다.
      *

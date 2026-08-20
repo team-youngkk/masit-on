@@ -23,6 +23,7 @@
 #   masiton.security.jwt.public-key-pem
 #   masiton.member.action-mail.active-key-id
 #   masiton.member.action-mail.active-key
+#   masiton.member.action-mail.from-address
 #   masiton.member.rate-limit.secret
 #   spring.mail.username
 #   spring.mail.password

@@ -597,13 +597,19 @@ reload가 master 프로세스를 바꾸지 않으므로 **인증서 교체에 �
 |---|---|---|
 | `masiton.member.action-mail.active-key-id` | `/masiton/member/action-mail/active-key-id` | `String` |
 | `masiton.member.action-mail.active-key` | `/masiton/member/action-mail/active-key` | `SecureString` |
+| `masiton.member.action-mail.from-address` | `/masiton/member/action-mail/from-address` | `String` |
 | `masiton.member.rate-limit.secret` | `/masiton/member/rate-limit/secret` | `SecureString` |
 | `spring.mail.username` | `/masiton/mail/username` | `SecureString` |
 | `spring.mail.password` | `/masiton/mail/password` | `SecureString` |
 
+`masiton.member.action-mail.from-address`는 SMTP 계정 사용자명과 분리된 발신 주소다. 운영 값은
+`no-reply@masiton.click`처럼 `masiton.click` 도메인에 정렬된 주소를 Parameter Store에 등록한다.
+SMTP 제공자가 안내한 SPF·DKIM 레코드를 `masiton.click` DNS에 등록하고, 실제 수신함의
+Authentication-Results에서 SPF·DKIM 통과와 From 표기를 확인한 뒤 운영 완료로 판정한다.
+
 SMTP 전송은 `/masiton/mail/host`·`/masiton/mail/port`의 인증 SMTP 서버와 필수
 STARTTLS를 사용한다. 호스트와 포트는 비밀이 아니므로 `app-run.sh`가 환경 변수로
-전달하고 사용자명·비밀번호만 configtree로 주입한다. `mail` health가 내부
+전달하고 발신 주소·사용자명·비밀번호는 configtree로 주입한다. `mail` health가 내부
 `dependencies` 그룹에 포함되며 배포 스크립트가 `dependencies.mail`의 `UP` 상태를
 명시적으로 검사한다. 연결·인증이 성립하지 않으면 배포 워크플로가 실패 상태로 끝나며
 기록된 직전 이미지 SHA로 같은 승인 게이트의 롤백 절차를 실행한다.
