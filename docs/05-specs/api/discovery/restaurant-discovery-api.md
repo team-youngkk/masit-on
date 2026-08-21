@@ -100,7 +100,7 @@ related_documents:
 | `creatorId` | Identifier | 아니요 | 없음 | 유튜버 1명의 식별자 | 공개 유튜버만 허용, 반복 불가 |
 | `tag` | string | 아니요 | 없음 | 활성 관리자 확정 태그 코드 1개 | 공개·유효 Visit에 연결된 활성 태그만 허용, 반복 불가 |
 | `page` | integer | 아니요 | `1` | 요청 페이지 | 1 이상. 첫 페이지는 1 |
-| `size` | integer | 아니요 | `20` | 페이지 크기 | `10`, `20`, `50`만 허용 |
+| `size` | integer | 아니요 | `21` | 페이지 크기 | `10`, `20`, `21`, `50`만 허용 |
 
 #### Request Rules
 
@@ -135,7 +135,7 @@ related_documents:
   ],
   "page": {
     "number": 1,
-    "size": 20,
+    "size": 21,
     "totalElements": 1,
     "totalPages": 1,
     "hasNext": false
@@ -175,7 +175,7 @@ related_documents:
 
 ## 7. 정렬 및 페이지네이션
 
-클라이언트 정렬 입력은 없다. 이름 오름차순, 같은 이름은 전체 도로명주소 오름차순으로 안정 정렬한다. 페이지는 1부터 시작하고 크기 20이 기본이며 10·20·50만 허용한다. 범위 밖의 유효 페이지는 빈 목록이다.
+클라이언트 정렬 입력은 없다. 이름 오름차순, 같은 이름은 전체 도로명주소 오름차순으로 안정 정렬한다. 페이지는 1부터 시작하고 크기 21이 기본이며 10·20·21·50만 허용한다. 범위 밖의 유효 페이지는 빈 목록이다.
 
 ## 8. 응답 모델
 
@@ -187,7 +187,7 @@ related_documents:
 
 ## 10. 예제
 
-`GET /api/restaurants?query=식당&district=마포구&category=한식&creatorId=creator-id&tag=MENU_NAENGMYEON&page=1&size=20`
+`GET /api/restaurants?query=식당&district=마포구&category=한식&creatorId=creator-id&tag=MENU_NAENGMYEON&page=1&size=21`
 
 이 요청은 네 탐색 조건을 모두 만족하는 공개 맛집의 첫 페이지를 요청한다.
 

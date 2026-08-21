@@ -27,7 +27,7 @@ public class RestaurantSearchController {
     private static final Set<String> KNOWN_FIELDS =
             Set.of("query", "district", "category", "creatorId", "page", "size");
     private static final Set<String> ARRAY_STYLE_FILTER_FIELDS = Set.of("district", "category", "creatorId");
-    private static final Set<Integer> ALLOWED_SIZES = Set.of(10, 20, 50);
+    private static final Set<Integer> ALLOWED_SIZES = Set.of(10, 20, 21, 50);
 
     private final SearchRestaurantsUseCase searchRestaurantsUseCase;
 
@@ -99,11 +99,11 @@ public class RestaurantSearchController {
 
     private int parseSize(String raw) {
         if (raw == null) {
-            return 20;
+            return 21;
         }
         int size = parseInt(raw, "size");
         if (!ALLOWED_SIZES.contains(size)) {
-            throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, "size", "10, 20, 50 중 하나만 허용합니다.");
+            throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, "size", "10, 20, 21, 50 중 하나만 허용합니다.");
         }
         return size;
     }

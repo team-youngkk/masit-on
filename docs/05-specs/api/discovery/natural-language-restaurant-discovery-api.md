@@ -89,7 +89,7 @@ related_documents:
     "tags": []
   },
   "page": 1,
-  "size": 20
+  "size": 21
 }
 ```
 
@@ -103,7 +103,7 @@ related_documents:
 | `filters.creatorId` | string | 아니요 | 유튜버 식별자 | 불투명 식별자 1개 |
 | `filters.tags` | array[string] | 아니요 | 관리자 확정 태그 코드 목록 | 0~5개, 중복 불가, 활성 태그만 허용 |
 | `page` | integer | 아니요 | 결과 페이지 | 기본 `1`, 1 이상 |
-| `size` | integer | 아니요 | 결과 크기 | 기본 `20`, `10·20·50`만 허용 |
+| `size` | integer | 아니요 | 결과 크기 | 기본 `21`, `10·20·21·50`만 허용 |
 
 `filters` 안의 직접 필터는 사용자가 명시한 값으로 간주한다. `filters`가 생략되면 자연어에서 해석된 조건만 적용한다.
 
@@ -136,7 +136,7 @@ related_documents:
     "items": [],
     "page": {
       "number": 1,
-      "size": 20,
+      "size": 21,
       "totalElements": 0,
       "totalPages": 0,
       "hasNext": false

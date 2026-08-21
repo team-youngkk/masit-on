@@ -10,8 +10,8 @@ const STRUCTURED_FILTER_KEYS: readonly RestaurantStructuredFilterKey[] = [
   'category',
   'creatorId',
 ]
-const DEFAULT_SIZE = '20'
-const ALLOWED_SIZES = new Set(['10', '20', '50'])
+const DEFAULT_SIZE = '21'
+const ALLOWED_SIZES = new Set(['10', '20', '21', '50'])
 
 function buildRestaurantFilterHref(
   current: Pick<URLSearchParams, 'get'>,

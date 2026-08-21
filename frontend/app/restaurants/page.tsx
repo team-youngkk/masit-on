@@ -143,7 +143,7 @@ export default async function RestaurantsPage({
   const currentDistrict = toSingleValue(rawParams.district) ?? ''
   const currentCategory = toSingleValue(rawParams.category) ?? ''
   const currentCreatorId = toSingleValue(rawParams.creatorId)
-  const currentSize = apiParams.get('size') ?? '20'
+  const currentSize = apiParams.get('size') ?? '21'
   const currentRoute = `/restaurants?${apiParams.toString()}`
   const currentCreatorKnown =
     creatorsResult.ok &&

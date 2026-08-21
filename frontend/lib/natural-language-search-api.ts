@@ -106,7 +106,7 @@ export function naturalLanguageRetryDelay(retryAvailableAt: number, responseTime
 
 export async function searchRestaurantsByNaturalLanguage(sentence: string, filters: NaturalLanguageSearchFilters, page = 1, signal?: AbortSignal): Promise<NaturalLanguageSearchOutcome> {
   let response: Response
-  try { response = await fetch('/api/restaurants/natural-language-search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sentence, filters, page, size: 20 }), cache: 'no-store', signal }) } catch (error) { if (error instanceof DOMException && error.name === 'AbortError') throw error; return { kind: 'error', message: FALLBACK_ERROR, retryAllowed: true } }
+  try { response = await fetch('/api/restaurants/natural-language-search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sentence, filters, page, size: 21 }), cache: 'no-store', signal }) } catch (error) { if (error instanceof DOMException && error.name === 'AbortError') throw error; return { kind: 'error', message: FALLBACK_ERROR, retryAllowed: true } }
   let body: unknown = null; try { body = await response.json() } catch { body = null }
   if (response.ok) { const result = decodeNaturalLanguageResult(body); return result ? { kind: 'success', result } : { kind: 'error', message: FALLBACK_ERROR, retryAllowed: false } }
   const error = isRecord(body) ? body : {}; const message = typeof error.message === 'string' ? error.message : undefined; const traceId = typeof error.traceId === 'string' ? error.traceId : undefined
