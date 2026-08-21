@@ -187,7 +187,9 @@ function completenessTone(status: AiExtractionJob['resultCompleteness']): 'succe
 }
 
 function reviewTone(status: AiExtractionReviewStatus | null): 'success' | 'warning' | 'danger' | 'neutral' {
+  if (status === 'AUTO_CONFIRMED' || status === 'MANUAL_OVERRIDE') return 'success'
   if (status === 'AUTO_BLOCKED') return 'warning'
   if (status === 'AUTO_REJECTED') return 'danger'
   return 'neutral'
 }
+

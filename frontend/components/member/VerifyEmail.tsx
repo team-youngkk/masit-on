@@ -42,7 +42,7 @@ export function VerifyEmail({ loginHref }: { loginHref: string }) {
   const [verifying, setVerifying] = useState(false)
   const [resending, setResending] = useState(false)
   const [verified, setVerified] = useState(false)
-  const [showResend, setShowResend] = useState(false)
+  const [showResend, setShowResend] = useState(true)
   const [emailLocked, setEmailLocked] = useState(false)
   const [verificationRequestedAt, setVerificationRequestedAt] = useState<number | null>(null)
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null)
@@ -291,3 +291,4 @@ export function VerifyEmail({ loginHref }: { loginHref: string }) {
     </div>
   )
 }
+
