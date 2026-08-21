@@ -16,7 +16,7 @@ related_documents:
 | PR | [#278 AI 장소명 부분 일치 검증](https://github.com/team-youngkk/masit-on/pull/278) |
 | 작성자 | `tjdgns0618` |
 | 처리 일자 | 2026-08-21 |
-| 범위 | 장소명 fallback의 운영 활성화 경계와 등록 단위 판정 JSON·Accepted 데이터 계약 정합성 |
+| 범위 | 장소명 fallback의 운영 활성화 경계와 등록 단위 판정 JSON·API 응답 예시·Accepted 데이터 계약 정합성 |
 | 주 문제 유형 | 애플리케이션 / 데이터베이스 |
 | 기존 기록 | [PR #226 AI 자동 등록 계약 리뷰](pr-226-ai-auto-registration-contract-review.md), [PR #209 AI 후보 등록 경계 리뷰](pr-209-ai-candidate-registration-review.md)를 확인했으며, 이번 변경의 판정 JSON 감사 범위를 별도로 기록했다. |
 
@@ -28,13 +28,14 @@ related_documents:
 | [P2 장소 감사 필드](https://github.com/team-youngkk/masit-on/pull/278#discussion_r3829685090) | 검색어와 채택한 Kakao 장소 ID가 실제 JSON에 없음 | 애플리케이션 | 수정 필요 | `PlaceDecision`·`place_decision`에 `searchQuery`, `kakaoPlaceId`를 추가 | Worker JSON 회귀 테스트, 전체 `clean build` 통과 |
 | [P1 fallback 활성화](https://github.com/team-youngkk/masit-on/pull/278#discussion_r3829698401) | Release holdout 전 완화 매칭이 기본 활성화됨 | 애플리케이션 | 수정 필요 | `AI_PLACE_IDENTITY_RELAXED_MATCHING_ENABLED` feature flag를 추가하고 기본값을 `false`로 설정 | 비활성 플래그 회귀 테스트, 전체 `clean build` 통과 |
 | [P1 장소 감사 계약](https://github.com/team-youngkk/masit-on/pull/278#discussion_r3829698404) | 문서의 장소 감사 보장과 저장 구현이 불일치 | 애플리케이션 | 수정 필요 | 요구사항·API·ADR·데이터 계약을 실제 decision JSON 필드와 일치시킴 | 전체 `clean build` 통과 |
+| [P2 API 응답 예시](https://github.com/team-youngkk/masit-on/pull/278#discussion_r3829837719) | API의 두 응답 예시가 새 감사 필드를 누락 | 애플리케이션 | 수정 필요 | `placeDecision`·`categoryDecision` 예시에 새 필드를 추가 | 문서 대조 및 전체 `clean build` 통과 |
 
 ## 3. 문제 현상과 발생 조건
 
 - 오류 메시지: 직접적인 런타임 오류는 없었으며, 리뷰에서 계약-구현 불일치가 발견됐다.
 - 발생 환경: Windows, Java 21, 브랜치 `feature/ws-15-kakao-place-name-matching`, AI 장소명 부분 일치 검증 변경.
 - 재현 조건: exact-name 후보가 없고 이름 containment 후보가 존재하는 경우, 완화 매칭 feature flag가 꺼져 있으면 운영 경로는 `PLACE_NOT_FOUND`로 차단한다. 활성화된 테스트 정책에서는 후보를 평가하고 결과 JSON을 생성한다.
-- 실제 결과: 기존 구현은 `ResolvedFoodCategory.matchedMappingId`와 `PlaceStep.kakaoPlaceId`·검색어를 최종 결정 JSON에 보존하지 않았고, fallback은 별도 운영 게이트 없이 평가됐다.
+- 실제 결과: 기존 구현은 `ResolvedFoodCategory.matchedMappingId`와 `PlaceStep.kakaoPlaceId`·검색어를 최종 결정 JSON에 보존하지 않았고, fallback은 별도 운영 게이트 없이 평가됐다. 후속 확인에서는 구현 변경 뒤 API 응답 예시가 이전 필드만 보여 문서 내부 모순이 남아 있었다.
 - 기대 결과: Accepted 데이터 계약의 판정 근거를 재현할 수 있어야 하며, Release holdout·인간 판정 승인 전에는 fallback이 운영에서 실행되지 않아야 한다.
 - 영향 범위: 자동 등록의 오연결 위험, 과거 카테고리 판정 재현성, 관리자 감사 조회와 운영 활성화 판단.
 
@@ -52,6 +53,7 @@ related_documents:
 | BR-AIEXTRACT-009와 `PlaceDecision`·Worker 직렬화 대조 | 문서는 검색어·장소 식별자를 약속하지만 구현은 URL·주소·`matchedBy`만 저장 | 검색어·Kakao 장소 ID를 결정 JSON에 추가 |
 | `ResolvePlaceIdentityService`의 exact 부재 경로와 운영 설정 대조 | fallback 실행 조건에 운영 게이트가 없음 | Application Port 정책과 기본 비활성 설정 추가 |
 | `git diff --check` 및 관련 테스트 | 통과 | 전체 빌드로 확대 검증 |
+| API 응답 예시와 `RegistrationUnitJsonSupport` 대조 | 새 필드 누락 확인 | 두 예시에 `searchQuery`, `kakaoPlaceId`, `matchedMappingId` 추가 |
 
 ## 6. 최종 해결
 
@@ -59,7 +61,7 @@ related_documents:
   - `PlaceIdentityMatchingPolicy`와 `PlaceIdentityMatchingProperties`를 추가하고 `AI_PLACE_IDENTITY_RELAXED_MATCHING_ENABLED=false`를 기본값으로 설정했다.
   - `PlaceDecision`에 `searchQuery`, `kakaoPlaceId`를 추가하고 `place_decision` JSON에 저장한다.
   - `CategoryDecision`에 `matchedMappingId`를 추가하고 `category_decision` JSON에 저장한다. 수동 카테고리 보정은 `null`이다.
-  - 요구사항·PRD·API·데이터 계약·ADR을 실제 저장 필드와 활성화 경계에 맞춰 갱신했다.
+  - 요구사항·PRD·API·데이터 계약·ADR과 API 응답 예시를 실제 저장 필드와 활성화 경계에 맞춰 갱신했다.
 - 선택 이유: Accepted 데이터 계약의 과거 판정 재현성 요구를 유지하면서, 품질 게이트 전 자동 완화 판정이 운영에 노출되지 않도록 fail-closed 기본값을 적용했다.
 - 변경 파일: `src/main/java/com/masiton/orchestration/application/`, `src/main/java/com/masiton/ai/application/RegistrationUnitJsonSupport.java`, `src/main/resources/application.yml`, 관련 테스트와 `docs/01-requirements/`, `docs/04-product/`, `docs/05-specs/`, `docs/07-adr/`.
 - 수정 커밋: [8652d35a](https://github.com/team-youngkk/masit-on/commit/8652d35a)
@@ -86,5 +88,5 @@ related_documents:
 
 ## 10. 남은 사항
 
-- 리뷰 스레드 4건은 수정·검증·답변 후 모두 해결 처리했다.
+- 리뷰 스레드 5건은 수정·검증·답변 후 모두 해결 처리했다.
 - Release holdout·인간 판정 승인과 PR 승인 절차는 아직 남아 있다.

@@ -206,11 +206,14 @@ related_documents:
       "registeredVisitId": "opaque-visit-id",
       "reusedResources": ["creator", "video"],
       "placeDecision": {
+        "searchQuery": "후보 맛집명",
+        "kakaoPlaceId": "opaque-kakao-place-id",
         "kakaoPlaceUrl": "https://place.map.kakao.com/example",
         "roadAddress": "서울특별시 영등포구 도림로131길 17",
         "matchedBy": "NAME_AND_DISTRICT"
       },
       "categoryDecision": {
+        "matchedMappingId": "opaque-food-category-mapping-id",
         "foodCategoryName": "일식",
         "resolvedBy": "KAKAO_PLACE_CATEGORY"
       }
@@ -435,11 +438,14 @@ Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-0
   "visitId": "opaque-visit-id",
   "reusedResources": ["creator", "video"],
   "placeDecision": {
+    "searchQuery": "후보 맛집명",
+    "kakaoPlaceId": "opaque-kakao-place-id",
     "kakaoPlaceUrl": "https://place.map.kakao.com/example",
     "roadAddress": "서울특별시 영등포구 도림로131길 17",
     "matchedBy": "NAME_AND_DISTRICT"
   },
   "categoryDecision": {
+    "matchedMappingId": "opaque-food-category-mapping-id",
     "foodCategoryName": "일식",
     "resolvedBy": "KAKAO_PLACE_CATEGORY"
   }
