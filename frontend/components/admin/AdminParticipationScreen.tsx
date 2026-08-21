@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/Button'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 import { AdminApiError, messageFor } from '@/lib/admin/api'
 import {
   AdminActionType,
@@ -30,6 +31,14 @@ const TARGET_TYPES: AdminTargetType[] = ['RESTAURANT', 'CREATOR', 'VIDEO', 'VISI
 const ACTION_TYPES: AdminActionType[] = ['CREATED', 'UPDATED', 'HIDDEN']
 const STATUS_LABELS: Record<AdminParticipationStatus, string> = {
   RECEIVED: '접수', IN_REVIEW: '검토 중', ACCEPTED: '승인', REJECTED: '반려', COMPLETED: '처리 완료',
+}
+
+function participationStatusTone(status: AdminParticipationStatus): 'success' | 'neutral' | 'warning' | 'danger' | 'info' {
+  if (status === 'ACCEPTED') return 'success'
+  if (status === 'REJECTED') return 'danger'
+  if (status === 'IN_REVIEW') return 'warning'
+  if (status === 'RECEIVED') return 'info'
+  return 'neutral'
 }
 
 function targetDetails(item: AdminParticipationItem): Array<[string, string]> {
@@ -243,7 +252,7 @@ export function AdminParticipationScreen() {
       <ul className={styles.list}>
         {items.map((item) => <li key={item.requestId}>
           <button type="button" disabled={busy} className={styles.item} aria-current={selected?.requestId === item.requestId} onClick={() => void openDetail(item)}>
-            <span><strong>{item.targetType}</strong> · {STATUS_LABELS[item.status]}</span>
+            <span className={styles.itemHeader}><strong>{item.targetType}</strong><StatusBadge className={styles.itemStatus} tone={participationStatusTone(item.status)}>{STATUS_LABELS[item.status]}</StatusBadge></span>
             <span>{item.description}</span>
             <small>{new Date(item.createdAt).toLocaleString('ko-KR')} · 회원 {item.memberId ?? '연결 제거됨'}</small>
           </button>

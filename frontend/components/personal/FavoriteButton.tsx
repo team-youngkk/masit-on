@@ -16,6 +16,7 @@ type FavoriteButtonProps = {
   restaurantId: string
   restaurantName: string
   returnTo: string
+  compact?: boolean
 }
 
 type LoadState = 'loading' | 'ready' | 'anonymous' | 'error'
@@ -28,6 +29,7 @@ export function FavoriteButton({
   restaurantId,
   restaurantName,
   returnTo,
+  compact = false,
 }: FavoriteButtonProps) {
   const { status } = useMemberSession()
   const requestSequence = useRef(0)
@@ -99,11 +101,18 @@ export function FavoriteButton({
     return (
       <Button
         variant="secondary"
-        className={styles.control}
+        className={compact ? `${styles.control} ${styles.compactControl}` : styles.control}
         disabled
         aria-label={`${restaurantName} 찜 상태 확인 중`}
       >
-        찜 확인 중…
+        {compact ? (
+          <>
+            <span aria-hidden="true">♡</span>
+            <span className={styles.srOnly}>찜 상태 확인 중…</span>
+          </>
+        ) : (
+          '찜 확인 중…'
+        )}
       </Button>
     )
   }
@@ -115,10 +124,21 @@ export function FavoriteButton({
       <div className={styles.guidance}>
         <Link
           href={loginHref}
-          className={styles.loginLink}
+          className={
+            compact
+              ? `${styles.loginLink} ${styles.compactLoginLink}`
+              : styles.loginLink
+          }
           aria-label={`${restaurantName} 찜을 위해 로그인`}
         >
-          로그인 후 찜하기
+          {compact ? (
+            <>
+              <span aria-hidden="true">♡</span>
+              <span className={styles.srOnly}>찜을 위해 로그인</span>
+            </>
+          ) : (
+            '로그인 후 찜하기'
+          )}
         </Link>
       </div>
     )
@@ -129,11 +149,20 @@ export function FavoriteButton({
       <div className={styles.feedback}>
         <Button
           variant="secondary"
-          className={styles.control}
+          className={
+            compact ? `${styles.control} ${styles.compactControl}` : styles.control
+          }
           onClick={() => void loadFavorite()}
           aria-label={`${restaurantName} 찜 상태 다시 확인`}
         >
-          찜 상태 다시 확인
+          {compact ? (
+            <>
+              <span aria-hidden="true">↻</span>
+              <span className={styles.srOnly}>찜 상태 다시 확인</span>
+            </>
+          ) : (
+            '찜 상태 다시 확인'
+          )}
         </Button>
         <span className={styles.error} role="alert">
           찜 상태를 불러오지 못했습니다.
@@ -146,14 +175,22 @@ export function FavoriteButton({
     <div className={styles.feedback}>
       <Button
         variant="secondary"
-        className={styles.control}
+        className={
+          compact ? `${styles.control} ${styles.compactControl}` : styles.control
+        }
         aria-pressed={favorited}
         aria-label={`${restaurantName} ${favorited ? '찜 해제' : '찜하기'}`}
         disabled={submitting}
         onClick={() => void toggleFavorite()}
       >
         <span aria-hidden="true">{favorited ? '♥' : '♡'}</span>
-        {submitting ? '저장 중…' : favorited ? '찜 해제' : '찜하기'}
+        {compact ? (
+          <span className={styles.srOnly}>
+            {submitting ? '저장 중…' : favorited ? '찜 해제' : '찜하기'}
+          </span>
+        ) : (
+          (submitting ? '저장 중…' : favorited ? '찜 해제' : '찜하기')
+        )}
       </Button>
       {mutationError ? (
         <span className={styles.error} role="alert">

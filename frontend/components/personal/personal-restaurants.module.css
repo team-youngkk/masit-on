@@ -27,7 +27,11 @@
 }
 
 .cta:hover {
-  background: var(--color-primary-strong);
+  background: var(--color-primary);
+}
+
+.cta:focus-visible {
+  background: var(--color-primary);
 }
 
 .list {
@@ -93,6 +97,11 @@
   background: var(--color-surface);
   color: var(--color-text);
   cursor: pointer;
+}
+
+.pageButton:hover,
+.pageButton:focus-visible {
+  background: var(--color-surface-muted);
 }
 
 .currentPage {

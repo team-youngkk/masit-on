@@ -86,6 +86,12 @@ export default async function RestaurantDetailPage({
             restaurantId={restaurant.id}
             returnTo={`/restaurants/${encodeURIComponent(restaurant.id)}`}
           />
+          <Link
+            className={styles.reportLink}
+            href={`/me/requests?kind=report&targetType=RESTAURANT&targetId=${encodeURIComponent(restaurant.id)}`}
+          >
+            정보 오류 제보
+          </Link>
         </div>
       </header>
 

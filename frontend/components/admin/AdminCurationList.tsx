@@ -84,14 +84,16 @@ export function AdminCurationList() {
           </span>
         </li>)}
       </ol> : <p className={styles.hint}>현재 게시 중인 큐레이션이 없습니다.</p>}
-      <Button disabled={busy} onClick={() => void saveMainOrder()}>메인 순서 저장</Button>
+      <div className={styles.formActions}>
+        <Button disabled={busy} onClick={() => void saveMainOrder()}>메인 순서 저장</Button>
+      </div>
     </section>
 
     {busy && !items.length ? <p role="status">큐레이션 목록을 불러오는 중입니다.</p> : null}
     {!busy && !items.length && !error ? <p className={styles.notice}>조건에 맞는 큐레이션이 없습니다.</p> : null}
     <ul className={styles.list}>
       {items.map((item) => <li className={styles.card} key={item.curationId}>
-        <span className={styles.badge}>{LABELS[item.status]}</span>
+        <span className={`${styles.badge} ${item.status === 'PUBLISHED' ? styles.activeBadge : styles.draftBadge}`}>{LABELS[item.status]}</span>
         <h2><Link href={`/admin/curations/${encodeURIComponent(item.curationId)}`}>{item.title}</Link></h2>
         <p>{item.description || '설명 없음'}</p>
         <p className={styles.meta}>맛집 {item.restaurantCount ?? 0}곳 · 최근 수정 {new Date(item.updatedAt).toLocaleString('ko-KR')}</p>

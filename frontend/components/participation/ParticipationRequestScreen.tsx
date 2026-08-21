@@ -41,11 +41,23 @@ const TAB_ORDER: RequestKind[] = ['submission', 'report']
 
 type SubmitNotice = { text: string; isError: boolean; traceId?: string }
 
-export function ParticipationRequestScreen() {
+type ParticipationRequestScreenProps = {
+  initialKind?: RequestKind
+  initialTargetType?: TargetType
+  initialTargetId?: string
+  loginReturnTo?: string
+}
+
+export function ParticipationRequestScreen({
+  initialKind = 'submission',
+  initialTargetType = 'RESTAURANT',
+  initialTargetId = '',
+  loginReturnTo = RETURN_TO,
+}: ParticipationRequestScreenProps) {
   const { status: session } = useMemberSession()
-  const [kind, setKind] = useState<RequestKind>('submission')
-  const [targetType, setTargetType] = useState<TargetType>('RESTAURANT')
-  const [targetId, setTargetId] = useState('')
+  const [kind, setKind] = useState<RequestKind>(initialKind)
+  const [targetType, setTargetType] = useState<TargetType>(initialTargetType)
+  const [targetId, setTargetId] = useState(initialTargetId)
   const [reportType, setReportType] = useState<ReportType>('ERROR')
   const [candidate, setCandidate] = useState<Record<string, string>>({ name: '', roadAddress: '' })
   const [description, setDescription] = useState('')
@@ -231,7 +243,7 @@ export function ParticipationRequestScreen() {
 
   if (session === 'loading') return <PageShell title="제보·신고"><StatePanel title="로그인 상태를 확인하고 있습니다." /></PageShell>
   if (session === 'anonymous') return (
-    <PageShell title="제보·신고"><StatePanel tone="warning" title="제보와 신고는 로그인 후 이용할 수 있습니다." actions={<Link href={memberLoginHref(RETURN_TO)}>로그인하기</Link>} /></PageShell>
+    <PageShell title="제보·신고"><StatePanel tone="warning" title="제보와 신고는 로그인 후 이용할 수 있습니다." actions={<Link href={memberLoginHref(loginReturnTo)}>로그인하기</Link>} /></PageShell>
   )
 
   return <PageShell className={styles.screen} title="내 제보·신고" description="새 정보는 제보하고, 기존 정보의 문제는 신고해 주세요. 하루 합산 5건까지 접수할 수 있습니다.">
@@ -291,7 +303,7 @@ export function ParticipationRequestScreen() {
       </div>
       {unauthorized ? (
         <p role="alert">
-          로그인이 필요합니다. <Link href={memberLoginHref(RETURN_TO)}>로그인하기</Link>
+          로그인이 필요합니다. <Link href={memberLoginHref(loginReturnTo)}>로그인하기</Link>
           {errorTraceId ? <span className={styles.traceId}>traceId: {errorTraceId}</span> : null}
         </p>
       ) : loaded && items.length === 0 && !listError ? (

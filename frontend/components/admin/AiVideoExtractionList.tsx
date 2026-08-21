@@ -120,7 +120,14 @@ export function AiVideoExtractionList() {
         </>
       })() : null}
     </section>
-    <div className={styles.toolbar}>
+    <section className={styles.panel} aria-labelledby="ai-extraction-filter-heading">
+      <div className={styles.toolbar}>
+        <div>
+          <h2 id="ai-extraction-filter-heading">작업 목록</h2>
+          <p className={styles.hint}>실행 상태와 자동 등록 상태를 분리해 확인할 수 있습니다.</p>
+        </div>
+        <Button variant="secondary" disabled={busy} onClick={() => setRefreshVersion((current) => current + 1)}>새로고침</Button>
+      </div>
       <div className={styles.filterRow} aria-label="작업 목록 필터">
         <label>실행 상태<select value={filters.executionStatus} disabled={busy} onChange={(event) => change({ executionStatus: event.target.value as AiExecutionStatus | '' })}>
           <option value="">전체</option><option value="QUEUED">대기</option><option value="RUNNING">실행 중</option><option value="SUCCEEDED">성공</option><option value="FAILED">실패</option>
@@ -128,12 +135,11 @@ export function AiVideoExtractionList() {
         <label>유입 경로<select value={filters.source} disabled={busy} onChange={(event) => change({ source: event.target.value as AiExtractionSource | '' })}>
           <option value="">전체</option><option value="WEBHOOK">Webhook</option><option value="ADMIN">관리자</option>
         </select></label>
-        <label>검수 상태<select value={filters.reviewStatus} disabled={busy} onChange={(event) => change({ reviewStatus: event.target.value as AiExtractionReviewStatus | '' })}>
+        <label>자동 등록 상태<select value={filters.reviewStatus} disabled={busy} onChange={(event) => change({ reviewStatus: event.target.value as AiExtractionReviewStatus | '' })}>
           <option value="">전체</option><option value="AUTO_CONFIRMED">자동 확정</option><option value="AUTO_BLOCKED">자동 보류</option><option value="AUTO_REJECTED">자동 거부</option><option value="MANUAL_OVERRIDE">수동 보정</option>
         </select></label>
       </div>
-      <Button variant="secondary" disabled={busy} onClick={() => setRefreshVersion((current) => current + 1)}>새로고침</Button>
-    </div>
+    </section>
 
     {busy && !data ? <StatePanel compact title="AI 작업 목록을 불러오는 중입니다" /> : null}
     {!busy && !error && data?.items.length === 0 ? <StatePanel compact title="조건에 맞는 AI 작업이 없습니다" description="필터를 바꾸거나 새로고침해 주세요." /> : null}
@@ -149,10 +155,19 @@ export function AiVideoExtractionList() {
 
 function JobCard({ job, formatDate }: { job: AiExtractionJob; formatDate: (value: string | null) => string }) {
   return <li className={styles.card}>
-    <StatusBadge tone={executionTone(job.executionStatus)}>{job.executionStatus}</StatusBadge>
-    <h2><Link href={`/admin/ai/${encodeURIComponent(job.jobId)}`}>작업 상세</Link></h2>
-    <p className={styles.meta}><code>{job.jobId}</code></p>
-    <p className={styles.meta}>유입 {job.source} · 검수 {job.reviewStatus ?? '미정'} · 결과 {job.resultCompleteness ?? '미완료'}</p>
+    <div className={styles.toolbar}>
+      <div>
+        <p className={styles.meta}>작업 ID <code>{job.jobId}</code></p>
+        <h2><Link href={`/admin/ai/${encodeURIComponent(job.jobId)}`}>작업 상세</Link></h2>
+      </div>
+      <StatusBadge tone={executionTone(job.executionStatus)}>{job.executionStatus}</StatusBadge>
+    </div>
+    <p className={styles.meta}><a className={styles.videoLink} href={job.youtube.videoUrl} target="_blank" rel="noreferrer">영상 {job.youtube.videoId} 확인</a> · 유입 {job.source}</p>
+    <div className={`${styles.meta} ${styles.statusSummary}`} aria-label="AI 작업 상태 요약">
+      <span className={styles.statusItem}>실행 상태 <StatusBadge tone={executionTone(job.executionStatus)}>{job.executionStatus}</StatusBadge></span>
+      <span className={styles.statusItem}>결과 완전성 <StatusBadge tone={completenessTone(job.resultCompleteness)}>{job.resultCompleteness ?? '미완료'}</StatusBadge></span>
+      <span className={styles.statusItem}>자동 등록 상태 <StatusBadge tone={reviewTone(job.reviewStatus)}>{job.reviewStatus ?? '미정'}</StatusBadge></span>
+    </div>
     <p className={styles.meta}>버전 {job.modelVersion} / {job.promptVersion} / {job.schemaVersion} · 시도 {job.attemptCount}회</p>
     <p className={styles.meta}>생성 {formatDate(job.createdAt)} · 완료 {formatDate(job.finishedAt)}</p>
   </li>
@@ -162,5 +177,17 @@ function executionTone(status: AiExecutionStatus): 'success' | 'warning' | 'dang
   if (status === 'SUCCEEDED') return 'success'
   if (status === 'FAILED') return 'danger'
   if (status === 'RUNNING') return 'warning'
+  return 'neutral'
+}
+
+function completenessTone(status: AiExtractionJob['resultCompleteness']): 'success' | 'warning' | 'neutral' {
+  if (status === 'COMPLETE') return 'success'
+  if (status === 'PARTIAL') return 'warning'
+  return 'neutral'
+}
+
+function reviewTone(status: AiExtractionReviewStatus | null): 'success' | 'warning' | 'danger' | 'neutral' {
+  if (status === 'AUTO_BLOCKED') return 'warning'
+  if (status === 'AUTO_REJECTED') return 'danger'
   return 'neutral'
 }

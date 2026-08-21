@@ -81,7 +81,7 @@ export function AiVideoExtractionDetail({ jobId }: { jobId: string }) {
     <section className={styles.panel} aria-labelledby="job-summary-heading">
       <h2 id="job-summary-heading">작업 상태</h2>
       <p className={styles.meta}><code>{data.jobId}</code></p>
-      <div className={styles.meta}><StatusBadge tone={executionTone(data.executionStatus)}>{data.executionStatus}</StatusBadge><StatusBadge>{data.resultCompleteness ?? '미완료'}</StatusBadge><StatusBadge tone={reviewTone(data.reviewStatus)}>{data.reviewStatus ?? '미정'}</StatusBadge><span>시도 {data.attemptCount}회</span></div>
+      <div className={`${styles.meta} ${styles.statusSummary}`}><StatusBadge tone={executionTone(data.executionStatus)}>{data.executionStatus}</StatusBadge><StatusBadge>{data.resultCompleteness ?? '미완료'}</StatusBadge><StatusBadge tone={reviewTone(data.reviewStatus)}>{data.reviewStatus ?? '미정'}</StatusBadge><span className={styles.statusItem}>시도 {data.attemptCount}회</span></div>
       <p className={styles.meta}>버전 {data.provider} / {data.modelVersion} / {data.promptVersion} / {data.schemaVersion}</p>
       <p className={styles.meta}><a href={data.youtube.videoUrl} target="_blank" rel="noreferrer">원본 유튜브 영상 보기</a></p>
       {data.error ? <p className={styles.warning} role="alert">실패 범주: {data.error.category} · {data.error.retryable ? '재시도 가능' : '재시도 불가'} · 시도 {data.attemptCount}회</p> : null}

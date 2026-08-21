@@ -7,6 +7,7 @@ import { Suspense, useEffect, useRef, useState } from 'react'
 import { useMemberSession } from '@/components/member/MemberSessionProvider'
 import { buildMapNavigationHref } from '@/lib/map/map-navigation'
 import { COURSE_NAVIGATION } from '@/lib/course/course-navigation'
+import { THEME_STORAGE_KEY, isTheme, resolveTheme, type Theme } from '@/lib/theme'
 import { cn } from '@/lib/cn'
 
 import { Brand } from './Brand'
@@ -15,9 +16,11 @@ import styles from './SiteHeader.module.css'
 
 function MapNavigationLink({
   className,
+  onClick,
   children = '지도',
 }: {
   className?: string
+  onClick?: () => void
   children?: React.ReactNode
 }) {
   const pathname = usePathname()
@@ -27,6 +30,7 @@ function MapNavigationLink({
     <Link
       href={buildMapNavigationHref(pathname, searchParams)}
       className={className}
+      onClick={onClick}
       aria-current={pathname.startsWith('/map') ? 'page' : undefined}
     >
       {children}
@@ -38,7 +42,69 @@ export function SiteHeader() {
   const pathname = usePathname()
   const { status, session, logout } = useMemberSession()
   const menuRef = useRef<HTMLDetailsElement>(null)
+  const quickMenuRef = useRef<HTMLDetailsElement>(null)
   const [logoutFailed, setLogoutFailed] = useState(false)
+  const [theme, setTheme] = useState<Theme>('light')
+  const [themeReady, setThemeReady] = useState(false)
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+
+    function applyTheme(nextTheme: Theme): void {
+      document.documentElement.dataset.theme = nextTheme
+      setTheme(nextTheme)
+    }
+
+    function syncTheme(): void {
+      let storedTheme: string | null = null
+      try {
+        storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY)
+      } catch {
+        // 저장소 접근이 차단된 환경에서는 시스템 설정만 사용한다.
+      }
+      applyTheme(resolveTheme(storedTheme, mediaQuery.matches))
+      setThemeReady(true)
+    }
+
+    function handleStorage(event: StorageEvent): void {
+      if (event.key === THEME_STORAGE_KEY) {
+        syncTheme()
+      }
+    }
+
+    function handleSystemThemeChange(): void {
+      let hasStoredTheme = false
+      try {
+        hasStoredTheme = isTheme(window.localStorage.getItem(THEME_STORAGE_KEY))
+      } catch {
+        // 시스템 설정 변경을 그대로 반영한다.
+      }
+      if (!hasStoredTheme) {
+        syncTheme()
+      }
+    }
+
+    syncTheme()
+    window.addEventListener('storage', handleStorage)
+    mediaQuery.addEventListener?.('change', handleSystemThemeChange)
+
+    return () => {
+      window.removeEventListener('storage', handleStorage)
+      mediaQuery.removeEventListener?.('change', handleSystemThemeChange)
+    }
+  }, [])
+
+  function toggleTheme(): void {
+    const nextTheme: Theme = theme === 'dark' ? 'light' : 'dark'
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme)
+    } catch {
+      // 현재 탭의 테마 전환은 저장소가 없어도 동작해야 한다.
+    }
+    document.documentElement.dataset.theme = nextTheme
+    setTheme(nextTheme)
+    setThemeReady(true)
+  }
 
   useEffect(() => {
     if (status === 'authenticated') {
@@ -46,8 +112,16 @@ export function SiteHeader() {
     }
   }, [status])
 
+  useEffect(() => {
+    quickMenuRef.current?.removeAttribute('open')
+  }, [pathname])
+
   function closeMemberMenu(): void {
     menuRef.current?.removeAttribute('open')
+  }
+
+  function closeQuickMenu(): void {
+    quickMenuRef.current?.removeAttribute('open')
   }
 
   function handleMemberMenuKeyDown(event: React.KeyboardEvent<HTMLDetailsElement>): void {
@@ -89,13 +163,59 @@ export function SiteHeader() {
             <MapNavigationLink className={navClass('/map')} />
           </Suspense>
         </nav>
+        <div className={styles.headerTools} aria-label="헤더 도구">
+          <button
+            type="button"
+            className={styles.themeToggle}
+            onClick={toggleTheme}
+            aria-hidden={!themeReady}
+            aria-label={themeReady ? (theme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환') : '테마 변경 준비 중'}
+            aria-pressed={themeReady && theme === 'dark'}
+            disabled={!themeReady}
+            tabIndex={themeReady ? 0 : -1}
+            title={themeReady ? (theme === 'dark' ? '라이트 모드' : '다크 모드') : '테마 변경'}
+          >
+            <span aria-hidden="true">{themeReady ? (theme === 'dark' ? '☀' : '☾') : '◐'}</span>
+          </button>
+          <details className={styles.quickMenu} ref={quickMenuRef}>
+            <summary aria-label="메뉴">
+              <span className={styles.menuIcon} aria-hidden="true"><i /><i /><i /></span>
+            </summary>
+            <nav className={styles.quickMenuItems} aria-label="빠른 메뉴 목록">
+              <Link href="/restaurants" onClick={closeQuickMenu}>맛집 탐색</Link>
+              <Link href={COURSE_NAVIGATION.href} onClick={closeQuickMenu}>{COURSE_NAVIGATION.label}</Link>
+              <Link href="/popular" onClick={closeQuickMenu}>인기</Link>
+              <Link href="/curations" onClick={closeQuickMenu}>큐레이션</Link>
+              <Suspense fallback={<Link href="/map" onClick={closeQuickMenu}>지도</Link>}>
+                <MapNavigationLink onClick={closeQuickMenu}>지도</MapNavigationLink>
+              </Suspense>
+              <span className={styles.quickMenuDivider} aria-hidden="true" />
+              {status === 'loading' ? (
+                <span className={styles.quickMenuStatus}>로그인 확인 중</span>
+              ) : null}
+              {status === 'anonymous' || status === 'unavailable' ? <Link href="/login" onClick={closeQuickMenu}>로그인</Link> : null}
+              {status === 'authenticated' ? (
+                <>
+                  {session?.role === 'ADMIN' ? <Link href="/admin" onClick={closeQuickMenu}>관리자</Link> : null}
+                  <NotificationBell />
+                  <Link href="/me" onClick={closeQuickMenu}>내 정보</Link>
+                  <Link href="/me/favorites" onClick={closeQuickMenu}>내 찜</Link>
+                  <Link href="/me/recent-restaurants" onClick={closeQuickMenu}>최근 본 맛집</Link>
+                  <Link href="/me/collections" onClick={closeQuickMenu}>내 컬렉션</Link>
+                  <Link href="/me/requests" onClick={closeQuickMenu}>내 제보·신고</Link>
+                  <button type="button" onClick={() => void handleLogout()}>로그아웃</button>
+                </>
+              ) : null}
+            </nav>
+          </details>
+        </div>
         <div className={styles.accountArea}>
           {status === 'loading' ? (
             <span className={styles.sessionLoading} aria-live="polite">
               로그인 확인 중
             </span>
           ) : null}
-          {status === 'anonymous' ? <Link href="/login">로그인</Link> : null}
+          {status === 'anonymous' || status === 'unavailable' ? <Link href="/login">로그인</Link> : null}
           {status === 'authenticated' ? (
             <>
               {session?.role === 'ADMIN' ? <Link href="/admin">관리자</Link> : null}
@@ -129,22 +249,22 @@ export function SiteHeader() {
               </details>
             </>
           ) : null}
-          {logoutFailed ? (
-            <div className={styles.logoutError} role="alert">
-              <span>서버 로그아웃을 완료하지 못했습니다.</span>
-              <button type="button" onClick={() => void handleLogout()}>
-                다시 시도
-              </button>
-              <Link href="/restaurants" onClick={() => setLogoutFailed(false)}>
-                공개 화면
-              </Link>
-            </div>
-          ) : null}
         </div>
+        {logoutFailed ? (
+          <div className={styles.logoutError} role="alert">
+            <span>서버 로그아웃을 완료하지 못했습니다.</span>
+            <button type="button" onClick={() => void handleLogout()}>
+              다시 시도
+            </button>
+            <Link href="/restaurants" onClick={() => setLogoutFailed(false)}>
+              공개 화면
+            </Link>
+          </div>
+        ) : null}
       </div>
       <nav className={styles.mobileNav} aria-label="모바일 주요 메뉴">
         <Link href="/restaurants" className={navClass('/restaurants')} aria-current={pathname.startsWith('/restaurants') ? 'page' : undefined}>
-          <span aria-hidden="true">⌕</span><span>탐색</span>
+          <span className={styles.mobileSearchIcon} aria-hidden="true" /><span>탐색</span>
         </Link>
         <Link href={COURSE_NAVIGATION.href} className={navClass(COURSE_NAVIGATION.href)} aria-current={pathname.startsWith(COURSE_NAVIGATION.href) ? 'page' : undefined}>
           <span aria-hidden="true">↝</span><span>코스</span>

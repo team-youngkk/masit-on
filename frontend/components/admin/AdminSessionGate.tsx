@@ -23,9 +23,9 @@ export function AdminSessionGate({ children }: { children: ReactNode }) {
     const returnTo = safeAdminReturnTo(pathname) ?? '/admin'
     router.replace(`/login?${new URLSearchParams({ returnTo }).toString()}`)
   }, [pathname, router, status])
-  if (status === 'loading') return <p className={styles.loading} aria-live="polite">관리자 인증을 확인하고 있습니다.</p>
-  if (status === 'unavailable') return <StatePanel tone="warning" title="인증 상태를 확인하지 못했습니다" description="잠시 후 다시 시도해 주세요." actions={<button type="button" onClick={() => void refreshSession()}>다시 시도</button>} />
+  if (status === 'loading') return <div className={styles.sessionState} aria-busy="true"><p className={styles.loading} aria-live="polite">관리자 인증을 확인하고 있습니다.</p></div>
+  if (status === 'unavailable') return <div className={styles.sessionState}><StatePanel tone="warning" title="인증 상태를 확인하지 못했습니다" description="잠시 후 다시 시도해 주세요." actions={<button type="button" onClick={() => void refreshSession()}>다시 시도</button>} /></div>
   if (status === 'anonymous') return null
-  if (session?.role !== 'ADMIN') return <StatePanel tone="danger" title="관리자 권한이 필요합니다" description="현재 계정으로는 관리자 화면에 접근할 수 없습니다." />
+  if (session?.role !== 'ADMIN') return <div className={styles.sessionState}><StatePanel tone="danger" title="관리자 권한이 필요합니다" description="현재 계정으로는 관리자 화면에 접근할 수 없습니다." /></div>
   return <>{children}</>
 }

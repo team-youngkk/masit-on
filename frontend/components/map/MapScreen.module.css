@@ -1,4 +1,5 @@
 .screen {
+  min-width: 0;
   padding-bottom: var(--space-12);
 }
 
@@ -6,13 +7,19 @@
   display: inline-flex;
   align-items: center;
   min-height: var(--control-min-height);
-  margin: var(--space-4) 0;
+  margin: var(--space-2) 0;
   padding: 0 var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 45%, var(--color-border));
+  border-radius: var(--radius-full);
   background: var(--color-surface);
-  color: var(--color-text);
+  color: var(--color-primary-strong);
+  font-weight: 700;
   cursor: pointer;
+}
+
+.filterToggle:hover,
+.filterToggle:focus-visible {
+  background: var(--color-primary-faint);
 }
 
 .filterContent {
@@ -21,19 +28,21 @@
 
 .filterContentOpen {
   display: block;
-  margin-bottom: var(--space-4);
 }
 
 .notice {
-  margin: var(--space-4) 0;
+  margin: 0;
   padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-muted);
+  border: 1px solid color-mix(in srgb, var(--color-warning) 28%, var(--color-border));
+  border-radius: var(--radius-lg);
+  background: var(--color-warning-soft);
   color: var(--color-text);
 }
 
 .error {
   composes: notice;
+  border-color: color-mix(in srgb, var(--color-danger) 30%, var(--color-border));
+  background: var(--color-danger-soft);
   color: var(--color-danger);
 }
 
@@ -51,7 +60,7 @@
     'map'
     'summary'
     'list';
-  gap: var(--space-5);
+  gap: var(--space-4);
 }
 
 .mapArea {
@@ -76,12 +85,11 @@
 
   .filterContent {
     display: block;
-    margin-bottom: var(--space-4);
   }
 
   .layout {
     /* 768px에서는 요약·목록 레일이 지도보다 넓어지지 않게 제한한다. */
-    grid-template-columns: minmax(0, 1fr) minmax(17rem, 19rem);
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 20rem);
     grid-template-areas:
       'map summary'
       'map list';
@@ -94,18 +102,20 @@
 
   .summaryArea {
     position: sticky;
-    top: var(--space-4);
+    top: var(--space-6);
   }
 }
 
 @media (min-width: 1024px) {
   .layout {
-    grid-template-columns: minmax(0, 1fr) minmax(17rem, 22rem);
+    grid-template-columns: minmax(0, 1fr) minmax(19rem, 23rem);
+    gap: var(--space-5);
   }
 }
 
 @media (min-width: 1280px) {
   .layout {
     grid-template-columns: minmax(0, 1fr) minmax(20rem, 25rem);
+    gap: var(--space-6);
   }
 }

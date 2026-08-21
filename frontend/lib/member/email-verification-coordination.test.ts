@@ -66,20 +66,20 @@ emailVerificationTest('verification code input trims ASCII edge whitespace and u
 
 emailVerificationTest('successful verification clears the code and returns success feedback', async () => {
   const tokens: string[] = []
-  let clearCount = 0
+  let token = 'AB12CD34'
 
   const result = await submitEmailVerification({
-    token: 'AB12CD34',
+    token,
     verify: async (token: string) => {
       tokens.push(token)
     },
     clearToken: () => {
-      clearCount += 1
+      token = ''
     },
   })
 
   emailVerificationAssert.deepEqual(tokens, ['AB12CD34'])
-  emailVerificationAssert.equal(clearCount, 1)
+  emailVerificationAssert.equal(token, '')
   emailVerificationAssert.deepEqual(result, {
     verified: true,
     shouldOfferResend: false,
@@ -91,19 +91,19 @@ emailVerificationTest('successful verification clears the code and returns succe
 })
 
 emailVerificationTest('400 verification failure clears the code and offers resend', async () => {
-  let clearCount = 0
+  let token = 'AB12CD34'
 
   const result = await submitEmailVerification({
-    token: 'AB12CD34',
+    token,
     verify: async () => {
       throw new Response(null, { status: 400 })
     },
     clearToken: () => {
-      clearCount += 1
+      token = ''
     },
   })
 
-  emailVerificationAssert.equal(clearCount, 1)
+  emailVerificationAssert.equal(token, '')
   emailVerificationAssert.deepEqual(result, {
     verified: false,
     shouldOfferResend: true,
@@ -115,19 +115,19 @@ emailVerificationTest('400 verification failure clears the code and offers resen
 })
 
 emailVerificationTest('429 verification throttling preserves the code and keeps resend hidden', async () => {
-  let clearCount = 0
+  let token = ' AB12CD34 '
 
   const result = await submitEmailVerification({
-    token: 'AB12CD34',
+    token,
     verify: async () => {
       throw new Response(null, { status: 429 })
     },
     clearToken: () => {
-      clearCount += 1
+      token = ''
     },
   })
 
-  emailVerificationAssert.equal(clearCount, 0)
+  emailVerificationAssert.equal(token, ' AB12CD34 ')
   emailVerificationAssert.deepEqual(result, {
     verified: false,
     shouldOfferResend: false,
@@ -139,19 +139,19 @@ emailVerificationTest('429 verification throttling preserves the code and keeps 
 })
 
 emailVerificationTest('503 verification outage preserves the code and keeps resend hidden', async () => {
-  let clearCount = 0
+  let token = 'AB12CD34'
 
   const result = await submitEmailVerification({
-    token: 'AB12CD34',
+    token,
     verify: async () => {
       throw new Response(null, { status: 503 })
     },
     clearToken: () => {
-      clearCount += 1
+      token = ''
     },
   })
 
-  emailVerificationAssert.equal(clearCount, 0)
+  emailVerificationAssert.equal(token, 'AB12CD34')
   emailVerificationAssert.deepEqual(result, {
     verified: false,
     shouldOfferResend: false,
@@ -163,19 +163,19 @@ emailVerificationTest('503 verification outage preserves the code and keeps rese
 })
 
 emailVerificationTest('network failures preserve the code and keep resend hidden', async () => {
-  let clearCount = 0
+  let token = 'AB12CD34'
 
   const result = await submitEmailVerification({
-    token: 'AB12CD34',
+    token,
     verify: async () => {
       throw new TypeError('network unavailable')
     },
     clearToken: () => {
-      clearCount += 1
+      token = ''
     },
   })
 
-  emailVerificationAssert.equal(clearCount, 0)
+  emailVerificationAssert.equal(token, 'AB12CD34')
   emailVerificationAssert.equal(result.verified, false)
   emailVerificationAssert.equal(result.shouldOfferResend, false)
   emailVerificationAssert.equal(result.feedback.kind, 'alert')
@@ -199,7 +199,7 @@ emailVerificationTest('successful resend returns the shared privacy-preserving f
   emailVerificationAssert.deepEqual(result, {
     feedback: {
       kind: 'status',
-      text: '인증 메일 재발송 요청을 접수했습니다. 계정 상태나 실제 발송 여부와 관계없이 같은 안내를 제공합니다.',
+      text: '인증 메일 재발송 요청을 접수했습니다.',
     },
   })
 })

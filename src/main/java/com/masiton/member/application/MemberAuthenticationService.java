@@ -39,7 +39,7 @@ import com.masiton.member.domain.model.MemberStatus;
 public class MemberAuthenticationService {
     private static final Logger log = LoggerFactory.getLogger(MemberAuthenticationService.class);
     private static final Duration REFRESH_TOKEN_TTL = Duration.ofDays(14);
-    private static final Duration EMAIL_VERIFICATION_TOKEN_TTL = Duration.ofHours(24);
+    private static final Duration EMAIL_VERIFICATION_TOKEN_TTL = Duration.ofMinutes(5);
     private static final Duration PASSWORD_RESET_TOKEN_TTL = Duration.ofMinutes(30);
     private static final String EMAIL_VERIFICATION_TOKEN_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private static final int EMAIL_VERIFICATION_TOKEN_LENGTH = 8;

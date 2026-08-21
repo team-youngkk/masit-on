@@ -286,8 +286,10 @@ class MemberAuthenticationServiceTest {
         service().register("member@example.com", "correct horse battery staple", "127.0.0.1");
 
         org.mockito.InOrder persistence = inOrder(actionTokens, actionMailOutbox);
-        persistence.verify(actionTokens).replace(any(MemberActionToken.class), org.mockito.ArgumentMatchers.eq(NOW));
+        ArgumentCaptor<MemberActionToken> tokenCaptor = ArgumentCaptor.forClass(MemberActionToken.class);
+        persistence.verify(actionTokens).replace(tokenCaptor.capture(), org.mockito.ArgumentMatchers.eq(NOW));
         persistence.verify(actionMailOutbox).enqueue(any(MemberActionMailOutbox.class), org.mockito.ArgumentMatchers.eq(NOW));
+        assertThat(tokenCaptor.getValue().expiresAt()).isEqualTo(NOW.plus(Duration.ofMinutes(5)));
         verifyNoInteractions(actionTokenDelivery);
     }
 

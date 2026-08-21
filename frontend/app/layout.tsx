@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 
 import { AppFrame } from '@/components/layout/AppFrame'
 import { MemberSessionProvider } from '@/components/member/MemberSessionProvider'
+import { themeInitScript } from '@/lib/theme'
 
 import './globals.css'
 import styles from './layout.module.css'
@@ -22,7 +23,10 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="ko">
+    <html lang="ko" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className={styles.shell}>
         <MemberSessionProvider>
           <AppFrame>{children}</AppFrame>

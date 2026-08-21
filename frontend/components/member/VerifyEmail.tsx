@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 
 import {
   resendMemberEmailVerification,
@@ -15,7 +15,11 @@ import {
 } from '@/lib/member/email-verification-coordination'
 import { Button } from '@/components/ui/Button'
 import { Field } from '@/components/ui/Field'
-import { StatusBadge } from '@/components/ui/StatusBadge'
+import {
+  MEMBER_EMAIL_VERIFICATION_TTL_SECONDS,
+  PENDING_MEMBER_REGISTRATION_EMAIL_KEY,
+  PENDING_MEMBER_REGISTRATION_REQUESTED_AT_KEY,
+} from './member-auth-form-coordination'
 
 import styles from './VerifyEmail.module.css'
 
@@ -23,6 +27,12 @@ type Feedback = {
   kind: 'status' | 'alert'
   text: string
 } | null
+
+function formatRemainingTime(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return [minutes, seconds].map(value => String(value).padStart(2, '0')).join(':')
+}
 
 export function VerifyEmail({ loginHref }: { loginHref: string }) {
   const [token, setToken] = useState('')
@@ -33,10 +43,46 @@ export function VerifyEmail({ loginHref }: { loginHref: string }) {
   const [resending, setResending] = useState(false)
   const [verified, setVerified] = useState(false)
   const [showResend, setShowResend] = useState(false)
+  const [emailLocked, setEmailLocked] = useState(false)
+  const [verificationRequestedAt, setVerificationRequestedAt] = useState<number | null>(null)
+  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null)
   const tokenHintId = useId()
   const resendHintId = useId()
   const singleFlight = useRef(createEmailVerificationSingleFlight()).current
   const busy = verifying || resending
+  const canCompleteSignup = token.length === 8
+
+  useEffect(() => {
+    try {
+      const pendingEmail = window.sessionStorage.getItem(PENDING_MEMBER_REGISTRATION_EMAIL_KEY)
+      if (pendingEmail) {
+        setEmail(pendingEmail)
+        setEmailLocked(true)
+      }
+      const requestedAt = Number(window.sessionStorage.getItem(PENDING_MEMBER_REGISTRATION_REQUESTED_AT_KEY))
+      if (Number.isFinite(requestedAt) && requestedAt > 0) {
+        setVerificationRequestedAt(requestedAt)
+      }
+    } catch {
+      // 저장된 이메일이 없으면 인증 페이지에서 직접 입력할 수 있다.
+    }
+  }, [])
+
+  useEffect(() => {
+    if (verificationRequestedAt === null) {
+      setRemainingSeconds(null)
+      return
+    }
+
+    const expiresAt = verificationRequestedAt + MEMBER_EMAIL_VERIFICATION_TTL_SECONDS * 1000
+    const updateRemainingTime = () => {
+      setRemainingSeconds(Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000)))
+    }
+
+    updateRemainingTime()
+    const intervalId = window.setInterval(updateRemainingTime, 1000)
+    return () => window.clearInterval(intervalId)
+  }, [verificationRequestedAt])
 
   async function submitVerification(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -59,6 +105,14 @@ export function VerifyEmail({ loginHref }: { loginHref: string }) {
         setVerified(result.verified)
         setShowResend(result.shouldOfferResend)
         setVerificationFeedback(result.feedback)
+        if (result.verified) {
+          try {
+            window.sessionStorage.removeItem(PENDING_MEMBER_REGISTRATION_EMAIL_KEY)
+            window.sessionStorage.removeItem(PENDING_MEMBER_REGISTRATION_REQUESTED_AT_KEY)
+          } catch {
+            // 저장소 정리 실패는 인증 완료를 막지 않는다.
+          }
+        }
       } finally {
         setVerifying(false)
       }
@@ -79,6 +133,15 @@ export function VerifyEmail({ loginHref }: { loginHref: string }) {
           resend: resendMemberEmailVerification,
         })
 
+        if (result.feedback.kind === 'status') {
+          const requestedAt = Date.now()
+          setVerificationRequestedAt(requestedAt)
+          try {
+            window.sessionStorage.setItem(PENDING_MEMBER_REGISTRATION_REQUESTED_AT_KEY, String(requestedAt))
+          } catch {
+            // 저장소가 차단되어도 현재 페이지에서는 타이머를 계속 표시한다.
+          }
+        }
         setResendFeedback(result.feedback)
       } finally {
         setResending(false)
@@ -94,10 +157,10 @@ export function VerifyEmail({ loginHref }: { loginHref: string }) {
           <h1 id="verify-email-title" className={styles.title}>
             이메일 인증
           </h1>
-          <div className={styles.steps} aria-label="가입 단계"><StatusBadge tone="success">1 이메일 입력</StatusBadge><StatusBadge tone="success">2 이메일 인증</StatusBadge><StatusBadge>3 가입 완료</StatusBadge></div>
           <p className={styles.description}>
-            이메일로 받은 8자 인증 코드를 입력해 가입을 완료하세요. 앞뒤 공백은
-            자동으로 제거되고 영문은 대문자로 입력됩니다.
+            이메일로 받은 8자 인증 코드를 입력해 가입을 완료하세요.
+            <br />
+            앞뒤 공백은 자동으로 제거되고 영문은 대문자로 입력됩니다.
           </p>
         </header>
 
@@ -126,6 +189,16 @@ export function VerifyEmail({ loginHref }: { loginHref: string }) {
             <p id={tokenHintId} className={styles.help}>
               메일 본문에 포함된 8자 코드를 입력해 주세요.
             </p>
+            <p
+              className={remainingSeconds === 0 ? styles.alert : styles.timer}
+              role={remainingSeconds === null ? undefined : 'timer'}
+            >
+              {remainingSeconds === null
+                ? `인증 코드는 발급 후 ${Math.floor(MEMBER_EMAIL_VERIFICATION_TTL_SECONDS / 60)}분 동안 유효합니다.`
+                : remainingSeconds > 0
+                  ? `인증 코드 남은 시간 ${formatRemainingTime(remainingSeconds)}`
+                  : '인증 코드가 만료되었습니다. 인증 메일을 다시 요청해 주세요.'}
+            </p>
 
             {verificationFeedback ? (
               <p
@@ -145,9 +218,9 @@ export function VerifyEmail({ loginHref }: { loginHref: string }) {
               </p>
             )}
 
-            <Button type="submit" disabled={busy}>
-              {verifying ? '인증 중...' : '이메일 인증'}
-            </Button>
+            {canCompleteSignup ? <Button type="submit" disabled={busy}>
+              {verifying ? '인증 중...' : '가입 완료'}
+            </Button> : null}
           </form>
         ) : (
           <div className={styles.successPanel}>
@@ -169,10 +242,6 @@ export function VerifyEmail({ loginHref }: { loginHref: string }) {
             <h2 id="resend-title" className={styles.sectionTitle}>
               인증 메일 다시 요청
             </h2>
-            <p className={styles.description}>
-              계정 상태나 실제 발송 여부는 안내하지 않습니다. 재발송 제한은
-              화면에서 계산하지 않고 아래 기준만 안내합니다.
-            </p>
           </div>
 
           <form className={styles.form} onSubmit={submitResend}>
@@ -181,6 +250,7 @@ export function VerifyEmail({ loginHref }: { loginHref: string }) {
               name="email"
               type="email"
               value={email}
+              readOnly={emailLocked}
               onChange={event => {
                 setEmail(event.target.value)
                 if (resendFeedback) {
