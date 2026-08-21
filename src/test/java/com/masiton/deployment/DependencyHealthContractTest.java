@@ -65,19 +65,25 @@ class DependencyHealthContractTest {
     }
 
     @Test
-    @DisplayName("mock curl 실패 경로는 원래 상태로 롤백하고 응답 본문을 노출하지 않는다")
-    void dependencyHealth_실패경로는_롤백안전하고본문을누출하지않는다() throws Exception {
+    @DisplayName("실제 app-deploy 호출 문맥의 실패는 원래 상태로 롤백하고 응답 본문을 노출하지 않는다")
+    void dependencyHealth_실제appDeploy호출문맥에서_실패하면롤백하고본문을누출하지않는다() throws Exception {
         String script = Files.readString(APP_DEPLOY);
-        String function = embeddedDependencyHealthFunction(script);
+        String fragment = embeddedDependencyHealthFragment(script);
+        String trapContext = embeddedTopLevelRollbackTrap(script);
         List<DependencyHealthCase> cases = List.of(
                 new DependencyHealthCase("transport", 7, "HTTP 요청 실패: HTTP 000", null),
                 new DependencyHealthCase("http", 1, "HTTP 실패: HTTP 503", null),
                 new DependencyHealthCase("malformed", 1, "JSON 파싱 실패: HTTP 200", null),
-                new DependencyHealthCase("components", 1, "구성요소 실패: db redis", "db redis"),
-                new DependencyHealthCase("missing", 1, "구성요소 실패: mail", "mail"));
+                new DependencyHealthCase("db", 1, "구성요소 실패: db", "db"),
+                new DependencyHealthCase("mail", 1, "구성요소 실패: mail", "mail"),
+                new DependencyHealthCase("redis", 1, "구성요소 실패: redis", "redis"),
+                new DependencyHealthCase("db-mail", 1, "구성요소 실패: db mail", "db mail"),
+                new DependencyHealthCase("db-redis", 1, "구성요소 실패: db redis", "db redis"),
+                new DependencyHealthCase("mail-redis", 1, "구성요소 실패: mail redis", "mail redis"),
+                new DependencyHealthCase("all", 1, "구성요소 실패: db mail redis", "db mail redis"));
 
         for (DependencyHealthCase healthCase : cases) {
-            ShellResult result = runDependencyHealthHarness(function, healthCase.mode());
+            ShellResult result = runDependencyHealthHarness(fragment, trapContext, healthCase.mode());
 
             assertThat(result.exitCode())
                     .as("실패 모드: %s", healthCase.mode())
@@ -88,6 +94,9 @@ class DependencyHealthContractTest {
             assertThat(result.output())
                     .as("응답 본문 누출: %s", healthCase.mode())
                     .doesNotContain("SENSITIVE_HEALTH_BODY");
+            assertThat(result.rollbackInvoked())
+                    .as("ERR trap rollback 호출: %s", healthCase.mode())
+                    .isTrue();
             assertThat(result.rollbackStatus())
                     .as("rollback 원래 종료 상태: %s", healthCase.mode())
                     .isEqualTo(healthCase.exitCode());
@@ -108,22 +117,36 @@ class DependencyHealthContractTest {
         return script.substring(pythonStart, pythonEnd);
     }
 
-    private static String embeddedDependencyHealthFunction(String script) {
-        String marker = "check_dependency_health() {\n";
-        int functionStart = script.indexOf(marker);
-        assertThat(functionStart).as("dependency health function").isGreaterThanOrEqualTo(0);
-        int functionEnd = script.indexOf("\n}\n\n# 함수 호출 자체를 조건문으로 감싸지 않아", functionStart);
-        assertThat(functionEnd).as("dependency health function end").isGreaterThan(functionStart);
-        return script.substring(functionStart, functionEnd + 2);
+    private static String embeddedDependencyHealthFragment(String script) {
+        String marker = "dependencies_body=\"$staged/dependencies.json\"\n";
+        int fragmentStart = script.indexOf(marker);
+        assertThat(fragmentStart).as("dependency health top-level fragment").isGreaterThanOrEqualTo(0);
+        int fragmentEnd = script.indexOf("\n\nfront=\"\"", fragmentStart);
+        assertThat(fragmentEnd).as("dependency health top-level fragment end").isGreaterThan(fragmentStart);
+        String fragment = script.substring(fragmentStart, fragmentEnd);
+        assertThat(fragment)
+                .contains("check_dependency_health \"$dependencies_body\" \"$dependencies_failures\"");
+        return fragment;
     }
 
-    private static ShellResult runDependencyHealthHarness(String function, String mode) throws Exception {
+    private static String embeddedTopLevelRollbackTrap(String script) {
+        String marker = "rollback_enabled=yes\ntrap rollback ERR\n";
+        int trapStart = script.indexOf(marker);
+        assertThat(trapStart).as("production top-level rollback trap").isGreaterThanOrEqualTo(0);
+        return script.substring(trapStart, trapStart + marker.length());
+    }
+
+    private static ShellResult runDependencyHealthHarness(String fragment, String trapContext, String mode)
+            throws Exception {
         Path directory = Files.createTempDirectory("masiton-dependency-health-shell-");
         Path harness = directory.resolve("harness.sh");
-        Path bodyFile = directory.resolve("dependencies.json");
-        Path failuresFile = directory.resolve("dependency-failures.txt");
+        Path stagedDirectory = directory.resolve("staged");
         Path rollbackFile = directory.resolve("rollback-status.txt");
-        Files.writeString(harness, shellHarness(function, bodyFile, failuresFile, rollbackFile), StandardCharsets.UTF_8);
+        Path rollbackInvokedFile = directory.resolve("rollback-invoked.txt");
+        Files.createDirectories(stagedDirectory);
+        Files.writeString(harness,
+                shellHarness(fragment, trapContext, stagedDirectory, rollbackFile, rollbackInvokedFile),
+                StandardCharsets.UTF_8);
         makeExecutable(harness);
 
         try {
@@ -136,26 +159,39 @@ class DependencyHealthContractTest {
                     .isTrue();
             String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
             int rollbackStatus = Integer.parseInt(Files.readString(rollbackFile, StandardCharsets.UTF_8).trim());
-            return new ShellResult(process.exitValue(), output, rollbackStatus);
+            boolean rollbackInvoked = Files.readString(rollbackInvokedFile, StandardCharsets.UTF_8)
+                    .trim()
+                    .equals("yes");
+            return new ShellResult(process.exitValue(), output, rollbackStatus, rollbackInvoked);
         } finally {
             Files.deleteIfExists(rollbackFile);
-            Files.deleteIfExists(failuresFile);
-            Files.deleteIfExists(bodyFile);
+            Files.deleteIfExists(rollbackInvokedFile);
+            Files.deleteIfExists(stagedDirectory.resolve("dependencies.json"));
+            Files.deleteIfExists(stagedDirectory.resolve("dependency-failures.txt"));
+            Files.deleteIfExists(stagedDirectory);
             Files.deleteIfExists(harness);
             Files.deleteIfExists(directory);
         }
     }
 
-    private static String shellHarness(String function, Path bodyFile, Path failuresFile, Path rollbackFile) {
+    private static String shellHarness(
+            String fragment,
+            String trapContext,
+            Path stagedDirectory,
+            Path rollbackFile,
+            Path rollbackInvokedFile) {
         return "#!/usr/bin/env bash\n"
                 + "set -Eeuo pipefail\n"
                 + "rollback_marker='" + shellPath(rollbackFile) + "'\n"
+                + "rollback_invoked_marker='" + shellPath(rollbackInvokedFile) + "'\n"
                 + "rollback() {\n"
                 + "  local original_exit_code=$?\n"
+                + "  printf 'yes\\n' > \"$rollback_invoked_marker\"\n"
                 + "  printf '%s\\n' \"$original_exit_code\" > \"$rollback_marker\"\n"
                 + "  return \"$original_exit_code\"\n"
                 + "}\n"
-                + "trap rollback ERR\n"
+                + "staged='" + shellPath(stagedDirectory) + "'\n"
+                + trapContext
                 + "python3() { python \"$@\"; }\n"
                 + "curl() {\n"
                 + "  local output='' body code\n"
@@ -170,15 +206,19 @@ class DependencyHealthContractTest {
                 + "    transport) return 7 ;;\n"
                 + "    http) body='{\"secret\":\"SENSITIVE_HEALTH_BODY\",\"components\":{\"db\":{\"status\":\"DOWN\"}}}'; code=503 ;;\n"
                 + "    malformed) body='{malformed-SENSITIVE_HEALTH_BODY'; code=200 ;;\n"
-                + "    components) body='{\"secret\":\"SENSITIVE_HEALTH_BODY\",\"components\":{\"db\":{\"status\":\"DOWN\"},\"mail\":{\"status\":\"UP\"},\"redis\":{\"status\":\"DOWN\"}}}'; code=200 ;;\n"
-                + "    missing) body='{\"secret\":\"SENSITIVE_HEALTH_BODY\",\"components\":{\"db\":{\"status\":\"UP\"},\"redis\":{\"status\":\"UP\"}}}'; code=200 ;;\n"
+                + "    db) body='{\"secret\":\"SENSITIVE_HEALTH_BODY\",\"components\":{\"db\":{\"status\":\"DOWN\"},\"mail\":{\"status\":\"UP\"},\"redis\":{\"status\":\"UP\"}}}'; code=200 ;;\n"
+                + "    mail) body='{\"secret\":\"SENSITIVE_HEALTH_BODY\",\"components\":{\"db\":{\"status\":\"UP\"},\"mail\":{\"status\":\"DOWN\"},\"redis\":{\"status\":\"UP\"}}}'; code=200 ;;\n"
+                + "    redis) body='{\"secret\":\"SENSITIVE_HEALTH_BODY\",\"components\":{\"db\":{\"status\":\"UP\"},\"mail\":{\"status\":\"UP\"},\"redis\":{\"status\":\"DOWN\"}}}'; code=200 ;;\n"
+                + "    db-mail) body='{\"secret\":\"SENSITIVE_HEALTH_BODY\",\"components\":{\"db\":{\"status\":\"DOWN\"},\"mail\":{\"status\":\"DOWN\"},\"redis\":{\"status\":\"UP\"}}}'; code=200 ;;\n"
+                + "    db-redis) body='{\"secret\":\"SENSITIVE_HEALTH_BODY\",\"components\":{\"db\":{\"status\":\"DOWN\"},\"mail\":{\"status\":\"UP\"},\"redis\":{\"status\":\"DOWN\"}}}'; code=200 ;;\n"
+                + "    mail-redis) body='{\"secret\":\"SENSITIVE_HEALTH_BODY\",\"components\":{\"db\":{\"status\":\"UP\"},\"mail\":{\"status\":\"DOWN\"},\"redis\":{\"status\":\"DOWN\"}}}'; code=200 ;;\n"
+                + "    all) body='{\"secret\":\"SENSITIVE_HEALTH_BODY\",\"components\":{\"db\":{\"status\":\"DOWN\"},\"mail\":{\"status\":\"DOWN\"},\"redis\":{\"status\":\"DOWN\"}}}'; code=200 ;;\n"
                 + "    *) return 64 ;;\n"
                 + "  esac\n"
                 + "  printf '%s' \"$body\" > \"$output\"\n"
                 + "  printf '%s' \"$code\"\n"
                 + "}\n"
-                + function + "\n"
-                + "check_dependency_health '" + shellPath(bodyFile) + "' '" + shellPath(failuresFile) + "'\n";
+                + fragment + "\n";
     }
 
     private static String shellPath(Path path) {
@@ -277,6 +317,6 @@ class DependencyHealthContractTest {
     private record DependencyHealthCase(String mode, int exitCode, String diagnostic, String expectedFailures) {
     }
 
-    private record ShellResult(int exitCode, String output, int rollbackStatus) {
+    private record ShellResult(int exitCode, String output, int rollbackStatus, boolean rollbackInvoked) {
     }
 }
