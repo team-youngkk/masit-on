@@ -62,6 +62,11 @@ resource "aws_codedeploy_deployment_group" "app" {
   # 절차가 필요하다. TERMINATE는 replacement ASG가 이 목록에 들어온 것을
   # 확인한 뒤에만 활성화해야 Terraform state의 seed ASG 삭제를 막을 수 있다.
   lifecycle {
+    precondition {
+      condition     = !var.redis_recovery_mode || var.deployment_alarms_enabled
+      error_message = "redis_recovery_mode=true requires deployment_alarms_enabled=true; ALB 5xx, latency, and unhealthy-host protections must remain enabled."
+    }
+
     ignore_changes = [autoscaling_groups]
   }
 
@@ -75,4 +80,3 @@ resource "aws_codedeploy_deployment_group" "app" {
     }
   }
 }
-

@@ -545,6 +545,20 @@ class RuntimeDeploymentContractTest {
                 .contains("IgnorePollFailure=false");
     }
 
+    @Test
+    @DisplayName("Redis 복구 모드에서 배포 알람 게이트 비활성화 조합을 Terraform이 거부한다")
+    void redisRecoveryMode_배포알람게이트비활성화조합을계획에서거부한다() throws IOException {
+        String codeDeploy = Files.readString(CODEDEPLOY);
+
+        assertThat(codeDeploy)
+                .contains("resource \"aws_codedeploy_deployment_group\" \"app\" {")
+                .contains("lifecycle {")
+                .contains("precondition {")
+                .contains("condition     = !var.redis_recovery_mode || var.deployment_alarms_enabled")
+                .contains("redis_recovery_mode=true requires deployment_alarms_enabled=true")
+                .contains("ALB 5xx, latency, and unhealthy-host protections must remain enabled.");
+    }
+
     private static String section(String source, String startMarker, String endMarker) {
         int start = source.indexOf(startMarker);
         int end = source.indexOf(endMarker, start);
