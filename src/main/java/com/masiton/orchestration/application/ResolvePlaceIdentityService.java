@@ -31,9 +31,9 @@ class ResolvePlaceIdentityService implements ResolvePlaceIdentityUseCase {
     private static final String MATCHED_BY_NAME_CONTAINMENT_AND_DISTRICT_AND_CATEGORY =
             "NAME_CONTAINMENT_AND_DISTRICT_AND_CATEGORY";
     private static final Pattern BRANCH_SUFFIX = Pattern.compile(
-            "(?i)(?:\\s+|\\()(?:(?:본점|본관|별관)|\\d+호점|[가-힣A-Za-z0-9]{1,12}점)\\)?$");
+            "(?i)(?:\\s+|\\()(?:(?:본점|본관|별관|지점)|\\d+호점)\\)?$");
     private static final Pattern COMPACT_BRANCH_SUFFIX = Pattern.compile(
-            "(?i)(?:본점|본관|별관|\\d+호점)$");
+            "(?i)(?:본점|본관|별관|지점|\\d+호점)$");
 
     private final SearchPlacesByNameUseCase searchPlacesByName;
     private final LookupFoodCategoryMappingUseCase lookupFoodCategoryMapping;

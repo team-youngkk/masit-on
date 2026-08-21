@@ -8,6 +8,9 @@ import java.nio.file.Path;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.context.properties.bind.Bindable;
+import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.mock.env.MockEnvironment;
 
 @DisplayName("AI 장소명 완화 매칭 설정")
 class PlaceIdentityMatchingPropertiesTest {
@@ -26,6 +29,19 @@ class PlaceIdentityMatchingPropertiesTest {
         PlaceIdentityMatchingProperties properties = new PlaceIdentityMatchingProperties();
 
         properties.setRelaxedMatchingEnabled(false);
+
+        assertThat(properties.relaxedMatchingEnabled()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Spring 환경 변수 바인딩으로 false를 주입하면 정책도 비활성화된다")
+    void 환경변수_바인딩값_false_정책을비활성화한다() {
+        MockEnvironment environment = new MockEnvironment()
+                .withProperty("masiton.ai.place-identity.relaxed-matching-enabled", "false");
+
+        PlaceIdentityMatchingProperties properties = Binder.get(environment)
+                .bind("masiton.ai.place-identity", Bindable.of(PlaceIdentityMatchingProperties.class))
+                .get();
 
         assertThat(properties.relaxedMatchingEnabled()).isFalse();
     }

@@ -90,3 +90,7 @@ related_documents:
 
 - 리뷰 스레드 5건은 수정·검증·답변 후 모두 해결 처리했다.
 - Release holdout·인간 판정 승인과 PR 승인 절차는 아직 남아 있다.
+
+## 11. 후속 정책 변경
+
+이 문서 2·6·8절의 `false` 기본값과 holdout 전 운영 비활성 문장은 PR #278 당시의 리뷰 처리 결과를 기록한 역사적 서술이다. 후속 변경에서는 장소명 완화 매칭의 운영 기본값을 `true`로 전환하고, `AI_PLACE_IDENTITY_RELAXED_MATCHING_ENABLED=false`를 긴급 차단값으로 유지한다. Release holdout·인간 판정은 완화 매칭의 런타임 차단 조건이 아니라 현재 AI 자동 등록 품질과 전체 운영 확장 여부를 판정하는 근거로 남긴다.

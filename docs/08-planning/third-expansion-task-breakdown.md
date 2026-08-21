@@ -41,7 +41,7 @@ related_documents:
 | `E3-T05` | AI Worker claim·retry·lease 복구·quota hard stop을 구현한다 | 이우람 / 박진영 | `E3-T04` | 가능 | `TST-E3-AI-004`; timeout·429·5xx·Schema 오류, heartbeat·재기동·동시 claim·기존 탐색 격리 |
 | `E3-T06` | AI 후보 자동 검증·태그 통제·정식 등록 원자성을 구현한다 | 김인안 / 박진영 | `E3-T03`, `E3-T04`, `E3-T05` | 불가 | `TST-E3-AI-003`, `TST-E3-DATA-001`; 근거·장소·Visit·태그 검증, 실패 시 정식 Entity 0건 |
 | `E3-T07` | AI 관리자 조회·사후 보정·롤백 API와 화면을 구현한다 | 김인안 / 양성훈 | `E3-T06` | 가능 | `TST-E3-AI-002`, `TST-E3-E2E-001`; 입력 원문·비밀정보 미노출, 정상 결과 사전 승인 금지 |
-| `E3-T08` | AI 120건 평가·인간 사후 판정·출시 후보와 롤백 준비를 검증한다 | 박진영 / 이우람 | `E3-T06`, `E3-T07` | 불가 | `EVAL-AI-001~010`; Development 72·Calibration 24·Release holdout 24, Critical 오연결 0건, 운영 활성화는 `E3-T13` 전까지 보류 |
+| `E3-T08` | AI 120건 평가·인간 사후 판정·출시 후보와 롤백 준비를 검증한다 | 박진영 / 이우람 | `E3-T06`, `E3-T07` | 불가 | `EVAL-AI-001~010`; Development 72·Calibration 24·Release holdout 24, Critical 오연결 0건, 완화 매칭 기본값은 운영 활성화하되 품질 관찰·승인 근거는 `E3-T13`에서 판정 |
 | `E3-T09` | 코스 후보·결정론적 순서·Mobility Route 조합을 구현한다 | 이우람 / 양성훈 | 문서화 게이트 | 가능 | `TST-E3-COURSE-001~002`; 2~5개·첫 장소·30km·동률 ID·코스당 외부 호출 1회·TTL 5분 |
 | `E3-T10` | 코스 실패 경계·공개 화면·60건 Fixture 평가를 완성한다 | 이우람 / 박진영 | `E3-T09` | 불가 | `TST-E3-COURSE-003`, `EVAL-COURSE-001~005`; timeout·429·5xx·부분 실패·비저장·화면 폭 5종, 운영 quota 판정은 `E3-T13`에 위임 |
 | `E3-T11` | 세 Workstream의 API·Repository·Worker·외부 Adapter 통합 회귀를 완료한다 | 박진영 / 영향 WS | `E3-T02`, `E3-T07`, `E3-T10` | 불가 | 정상·예외·경계·동시성·부분 저장 0건, V4 migration과 기존 공개 탐색 회귀 |
