@@ -40,12 +40,12 @@ test('제보와 신고 대상은 목록 요약과 상세 필드를 구분해 제
   assert.equal(participationTargetSummary({
     targetType: 'RESTAURANT',
     candidate: { name: '새 맛집', roadAddress: '서울시 테스트로 1' },
-  }), 'RESTAURANT · 새 맛집 · 서울시 테스트로 1')
+  }), '맛집 · 새 맛집 · 서울시 테스트로 1')
   assert.deepEqual(participationTargetDetails({
     targetType: 'VIDEO',
     targetId: 'video-id',
     reportType: 'UNAVAILABLE',
-  }), [['대상 식별자', 'video-id'], ['신고 유형', 'UNAVAILABLE']])
+  }), [['대상 식별자', 'video-id'], ['신고 유형', '이용 불가']])
 })
 
 test('Response 오류는 traceId를 포함한 계약 본문을 함께 반환한다', async () => {
