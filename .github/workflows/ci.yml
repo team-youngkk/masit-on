@@ -170,7 +170,7 @@ jobs:
           fi
           printf 'image_tag=%s\n' "$IMAGE_TAG" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: ${{ steps.target.outputs.image_tag }}
 
@@ -967,4 +967,3 @@ jobs:
           done
           echo "::error::CodeDeploy cleanup이 terminal 상태를 확인하지 못했다: $status"
           exit 1
-
