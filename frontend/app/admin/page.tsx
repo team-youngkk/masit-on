@@ -9,9 +9,9 @@ import styles from '@/components/admin/admin.module.css'
 export default function AdminHomePage() {
   return (
     <AdminPage title="관리자 대시보드" wide>
-      <section className={styles.dashboard} aria-label="관리 작업">
+      <section className={styles.dashboard} aria-labelledby="admin-dashboard-heading">
         <SectionHeader
-          title="관리 작업"
+          title={<span id="admin-dashboard-heading">관리 작업</span>}
           description="실제 등록·검수 작업으로 이동합니다. 집계 수치는 별도 API가 제공될 때만 표시합니다."
         />
         <div className={styles.dashboardGrid}>

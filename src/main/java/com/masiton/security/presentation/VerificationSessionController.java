@@ -13,6 +13,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,6 +29,7 @@ import com.masiton.security.infrastructure.configuration.VerificationAccessPrope
 import com.masiton.security.infrastructure.web.VerificationClientAddressResolver;
 
 @RestController
+@ConditionalOnProperty(prefix = "masiton.security.verification", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VerificationSessionController {
 
     private final VerificationSessionService service;

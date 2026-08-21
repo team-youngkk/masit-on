@@ -128,12 +128,14 @@ masiton:
     action-mail:
       active-key-id: ${MEMBER_ACTION_MAIL_ACTIVE_KEY_ID:}
       active-key: ${MEMBER_ACTION_MAIL_ACTIVE_KEY:}
+      from-address: ${MEMBER_ACTION_MAIL_FROM_ADDRESS:}
     rate-limit:
       secret: ${MEMBER_RATE_LIMIT_SECRET:}
       trusted-proxy-addresses: ${MEMBER_TRUSTED_PROXY_ADDRESSES:}
       reverse-proxy-enabled: ${MEMBER_REVERSE_PROXY_ENABLED:false}
   security:
     verification:
+      enabled: ${VERIFICATION_ENABLED:true}
       login-id: ${VERIFICATION_LOGIN_ID:}
       password-hash: ${VERIFICATION_PASSWORD_HASH:}
       public-base-url: ${VERIFICATION_PUBLIC_BASE_URL:http://localhost:3000}

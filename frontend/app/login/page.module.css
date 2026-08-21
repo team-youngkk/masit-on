@@ -11,6 +11,7 @@
 
 .signupPrompt {
   margin: 0;
+  padding-inline: var(--space-1);
   color: var(--color-text-muted);
 }
 

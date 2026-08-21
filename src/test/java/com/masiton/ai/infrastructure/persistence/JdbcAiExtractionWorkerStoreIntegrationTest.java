@@ -28,22 +28,8 @@ import com.masiton.test.TestProfile;
 
 @SpringBootTest
 @TestProfile
-@Testcontainers
 @DisplayName("AI 추출 워커 PostgreSQL lease")
-class JdbcAiExtractionWorkerStoreIntegrationTest {
-
-    @Container
-    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17.10-alpine")
-            .withDatabaseName("masiton")
-            .withUsername("masiton")
-            .withPassword("masiton_test");
-
-    @DynamicPropertySource
-    static void registerDatasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
+class JdbcAiExtractionWorkerStoreIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     @Autowired
     private AiExtractionWorkerStore store;

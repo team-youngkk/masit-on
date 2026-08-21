@@ -35,7 +35,7 @@ const VERIFICATION_FAILURE_MESSAGE =
 const VERIFICATION_RETRY_MESSAGE =
   '인증 요청을 처리하지 못했습니다. 입력한 8자 코드를 유지했으니 잠시 후 다시 시도해 주세요.'
 const RESEND_SUCCESS_MESSAGE =
-  '인증 메일 재발송 요청을 접수했습니다. 계정 상태나 실제 발송 여부와 관계없이 같은 안내를 제공합니다.'
+  '인증 메일 재발송 요청을 접수했습니다.'
 const RESEND_FAILURE_MESSAGE =
   '인증 메일 재발송 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.'
 

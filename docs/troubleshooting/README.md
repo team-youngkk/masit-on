@@ -15,6 +15,11 @@ related_documents:
 
 ## 최신 기록
 
+- [PR #273 화면 동기화 후 이메일 재발송·상태 배지·원본 자산 정리](pr-273-frontend-ui-sync-review.md)
+- [PR #272 공유 테스트 컨테이너의 Redis·관리자 계정 격리](pr-272-test-context-consolidation-review.md)
+- [PR #269 회원 메일 발신 주소 주입 경로와 렌더러 중복](pr-269-member-mail-from-address-review.md)
+- [운영 작업: 격리 성능 환경 첫 apply에서 부트스트랩이 전혀 실행되지 않았다](ops-2026-08-20-perf-env-bootstrap-failure.md)
+- [PR #261 의존 인스턴스 분리가 만든 Redis 연결 거부와 무인증 노출](pr-261-performance-deps-separation-review.md)
 - [PR #259 등록 단위 일괄 폐기의 상태·감사 이력 불일치](pr-259-registration-unit-discard-all-review.md)
 - [PR #257 전환 후 런타임 기준선 리뷰 반영](pr-257-runtime-baseline-review.md)
 - [운영 전환: ALB·Blue-Green 트래픽 전환에서 드러난 결함 3건](ops-2026-08-19-alb-cutover-review.md)
@@ -31,10 +36,15 @@ related_documents:
 
 리뷰가 아니라 실제 운영 작업 중에 드러난 문제의 기록이다. 파일명은 `ops-<날짜>-` 규약을 쓴다.
 
+- [운영 작업: 격리 성능 환경 첫 apply에서 부트스트랩이 전혀 실행되지 않았다](ops-2026-08-20-perf-env-bootstrap-failure.md)
 - [ALB·Blue-Green 트래픽 전환에서 드러난 결함 3건](ops-2026-08-19-alb-cutover-review.md)
 
 ## PR 리뷰
 
+- [PR #273 화면 동기화 후 이메일 재발송·상태 배지·원본 자산 정리](pr-273-frontend-ui-sync-review.md)
+- [PR #272 공유 테스트 컨테이너의 Redis·관리자 계정 격리](pr-272-test-context-consolidation-review.md)
+- [PR #269 회원 메일 발신 주소 주입 경로와 렌더러 중복](pr-269-member-mail-from-address-review.md)
+- [PR #261 의존 인스턴스 분리가 만든 Redis 연결 거부와 무인증 노출](pr-261-performance-deps-separation-review.md)
 - [PR #259 등록 단위 일괄 폐기의 상태·감사 이력 불일치](pr-259-registration-unit-discard-all-review.md)
 - [PR #257 전환 후 런타임 기준선 리뷰 반영](pr-257-runtime-baseline-review.md)
 - [PR #251 오류 응답 details의 배열 정규화 누락](pr-251-details-array-normalization-review.md)

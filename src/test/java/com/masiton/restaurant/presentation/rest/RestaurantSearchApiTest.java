@@ -29,28 +29,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @com.masiton.test.TestProfile
 @AutoConfigureMockMvc
-@Testcontainers
 @DisplayName("맛집 검색 API")
-class RestaurantSearchApiTest {
+class RestaurantSearchApiTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final UUID MAPO_REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000014");
     private static final UUID GANGNAM_REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000023");
     private static final UUID KOREAN_CATEGORY_ID = UUID.fromString("20000000-0000-4000-8000-000000000001");
     private static final UUID JAPANESE_CATEGORY_ID = UUID.fromString("20000000-0000-4000-8000-000000000003");
-
-    @Container
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.10-alpine")
-                    .withDatabaseName("masiton")
-                    .withUsername("masiton")
-                    .withPassword("masiton_local");
-
-    @DynamicPropertySource
-    static void registerDatasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
 
     @Autowired
     private MockMvc mockMvc;
@@ -60,7 +45,7 @@ class RestaurantSearchApiTest {
 
     @BeforeEach
     void cleanUpTransactionalTables() {
-        jdbcTemplate.execute("TRUNCATE TABLE visit, video, creator, restaurant CASCADE");
+        cleanupTransactionalState(jdbcTemplate);
     }
 
     @Test

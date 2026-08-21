@@ -59,14 +59,16 @@ export function AdminCurationDetail({ curationId }: { curationId: string }) {
   const warnings = data.items.filter((item) => item.warning || (item.availability && item.availability !== 'PUBLIC'))
 
   return <div className={styles.screen}>
-    <div className={styles.toolbar}><Link href="/admin/curations">← 목록으로</Link><span className={styles.badge}>{data.status === 'PUBLISHED' ? '게시 중' : '초안'}</span></div>
+    <div className={styles.toolbar}><Link href="/admin/curations">← 목록으로</Link><span className={`${styles.badge} ${data.status === 'PUBLISHED' ? styles.activeBadge : styles.draftBadge}`}>{data.status === 'PUBLISHED' ? '게시 중' : '초안'}</span></div>
     {warnings.length ? <div className={styles.warning} role="alert"><strong>공개 노출 경고</strong>{warnings.map((item) => <p key={item.restaurantId}>{item.restaurantId}: {item.warning ?? `${item.availability} 상태로 공개 화면에서 숨겨집니다.`}</p>)}</div> : null}
 
     <form className={`${styles.form} ${styles.panel}`} onSubmit={(event) => { event.preventDefault(); const errors = validateCurationText(title, description); if (errors.length) { setError(true); setNotice(errors.join(' ')); return } void run(() => updateAdminCuration(curationId, title, description), '제목과 설명을 저장했습니다.') }}>
       <h2>기본 정보</h2>
       <label>제목 <span>1~100자</span><input maxLength={100} value={title} onChange={(event) => setTitle(event.target.value)} /></label>
       <label>설명 <span>0~1000자</span><textarea rows={5} maxLength={1000} value={description} onChange={(event) => setDescription(event.target.value)} /></label>
-      <Button type="submit" disabled={busy}>기본 정보 저장</Button>
+      <div className={styles.formActions}>
+        <Button type="submit" disabled={busy}>기본 정보 저장</Button>
+      </div>
     </form>
 
     <section className={styles.panel} aria-labelledby="restaurants-heading">
@@ -83,15 +85,19 @@ export function AdminCurationDetail({ curationId }: { curationId: string }) {
           <Button variant="secondary" disabled={busy} onClick={() => setRestaurantIds(restaurantIds.filter((_, target) => target !== index))}>제거</Button>
         </span>
       </li>)}</ol> : <p className={styles.hint}>구성된 맛집이 없습니다. 빈 목록도 저장할 수 있습니다.</p>}
-      <Button disabled={busy} onClick={() => { const parsed = parseRestaurantIds(restaurantIds.join('\n')); if (parsed.errors.length) { setError(true); setNotice(parsed.errors.join(' ')); return } void run(() => replaceCurationRestaurants(curationId, parsed.ids), '맛집 구성과 순서를 전체 교체했습니다.') }}>구성 순서 저장</Button>
+      <div className={styles.formActions}>
+        <Button disabled={busy} onClick={() => { const parsed = parseRestaurantIds(restaurantIds.join('\n')); if (parsed.errors.length) { setError(true); setNotice(parsed.errors.join(' ')); return } void run(() => replaceCurationRestaurants(curationId, parsed.ids), '맛집 구성과 순서를 전체 교체했습니다.') }}>구성 순서 저장</Button>
+      </div>
     </section>
 
     <section className={`${styles.panel} ${styles.dangerZone}`} aria-labelledby="publication-heading">
       <h2 id="publication-heading">게시 상태</h2>
       <p>{data.status === 'PUBLISHED' ? '현재 공개 메인 목록에 노출됩니다.' : '현재 공개 화면에 노출되지 않습니다.'}</p>
-      <Button variant={data.status === 'PUBLISHED' ? 'secondary' : 'primary'} disabled={busy} onClick={() => void run(() => setCurationPublication(curationId, data.status === 'PUBLISHED' ? 'DRAFT' : 'PUBLISHED'), data.status === 'PUBLISHED' ? '게시를 중단했습니다.' : '큐레이션을 게시했습니다. 메인 순서는 목록 화면에서 조정할 수 있습니다.')}>
-        {data.status === 'PUBLISHED' ? '게시 중단' : '게시'}
-      </Button>
+      <div className={styles.formActions}>
+        <Button variant={data.status === 'PUBLISHED' ? 'secondary' : 'primary'} disabled={busy} onClick={() => void run(() => setCurationPublication(curationId, data.status === 'PUBLISHED' ? 'DRAFT' : 'PUBLISHED'), data.status === 'PUBLISHED' ? '게시를 중단했습니다.' : '큐레이션을 게시했습니다. 메인 순서는 목록 화면에서 조정할 수 있습니다.')}>
+          {data.status === 'PUBLISHED' ? '게시 중단' : '게시'}
+        </Button>
+      </div>
     </section>
     {notice ? <p className={error ? styles.error : styles.notice} role={error ? 'alert' : 'status'}>{notice}</p> : null}
   </div>

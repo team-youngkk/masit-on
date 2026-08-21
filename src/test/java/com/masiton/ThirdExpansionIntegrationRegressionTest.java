@@ -59,17 +59,7 @@ class ThirdExpansionIntegrationRegressionTest extends FullContextIntegrationTest
 
     @BeforeEach
     void cleanUpState() {
-        jdbcTemplate.execute("TRUNCATE TABLE ai_candidate_tag_review, ai_extraction_manual_review");
-        jdbcTemplate.execute("DELETE FROM visit_tag");
-        jdbcTemplate.execute("DELETE FROM tag_definition WHERE source <> 'SEED'");
-        jdbcTemplate.execute("DELETE FROM ai_candidate_snapshot");
-        jdbcTemplate.execute("DELETE FROM ai_extraction_attempt");
-        jdbcTemplate.execute("DELETE FROM ai_extraction_temporary_input");
-        jdbcTemplate.execute("DELETE FROM ai_extraction_job");
-        jdbcTemplate.execute("DELETE FROM visit");
-        jdbcTemplate.execute("DELETE FROM video");
-        jdbcTemplate.execute("DELETE FROM creator");
-        jdbcTemplate.execute("DELETE FROM restaurant");
+        cleanupTransactionalState(jdbcTemplate);
         given(naturalLanguageRateLimitPort.tryAcquire(any())).willReturn(true);
     }
 

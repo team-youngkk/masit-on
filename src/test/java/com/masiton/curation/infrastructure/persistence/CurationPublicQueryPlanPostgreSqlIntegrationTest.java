@@ -37,9 +37,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @SpringBootTest
 @com.masiton.test.TestProfile
-@Testcontainers
 @DisplayName("공개 큐레이션 조회 실행계획")
-class CurationPublicQueryPlanPostgreSqlIntegrationTest {
+class CurationPublicQueryPlanPostgreSqlIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final UUID SEED_REGION_ID =
             UUID.fromString("10000000-0000-4000-8000-000000000001");
@@ -55,20 +54,6 @@ class CurationPublicQueryPlanPostgreSqlIntegrationTest {
     private static final int RESTAURANT_PER_CURATION = 20;
     /** 여러 큐레이션이 맛집을 공유하도록 만드는 풀 크기이며 비공개·삭제 맛집을 섞는다. */
     private static final int RESTAURANT_POOL_SIZE = 60;
-
-    @Container
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.10-alpine")
-                    .withDatabaseName("masiton")
-                    .withUsername("masiton")
-                    .withPassword("masiton_local");
-
-    @DynamicPropertySource
-    static void registerDatasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
 
     @Autowired
     private JdbcTemplate jdbcTemplate;

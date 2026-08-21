@@ -31,29 +31,14 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @SpringBootTest
 @com.masiton.test.TestProfile
-@Testcontainers
 @DisplayName("Visit 공개·유효 조합 판정")
-class VisitQueryIntegrationTest {
+class VisitQueryIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     // seed-data-plan.md 2·3절 고정 기준 데이터. 초기 스키마 baseline이 적재하므로 참조만 하고 수정하지 않는다.
     private static final UUID SEED_REGION_ID =
             UUID.fromString("10000000-0000-4000-8000-000000000001");
     private static final UUID SEED_FOOD_CATEGORY_ID =
             UUID.fromString("20000000-0000-4000-8000-000000000001");
-
-    @Container
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.10-alpine")
-                    .withDatabaseName("masiton")
-                    .withUsername("masiton")
-                    .withPassword("masiton_local");
-
-    @DynamicPropertySource
-    static void registerDatasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
 
     @Autowired
     private JdbcTemplate jdbcTemplate;

@@ -34,7 +34,8 @@ import tools.jackson.databind.ObjectMapper;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@Testcontainers
+import com.masiton.test.FullContextIntegrationTest;
+
 @DisplayName("3차 확장 AI Flyway 마이그레이션")
 class Expansion3FlywayMigrationIntegrationTest {
 
@@ -47,13 +48,6 @@ class Expansion3FlywayMigrationIntegrationTest {
             "TASTE_SPICY", "TASTE_SWEET", "TASTE_SAVORY", "TASTE_LIGHT", "OCCASION_SOLO", "OCCASION_DATE",
             "OCCASION_GROUP", "OCCASION_LATE_NIGHT", "ATMOSPHERE_CASUAL", "ATMOSPHERE_QUIET",
             "ATMOSPHERE_LIVELY", "ATMOSPHERE_BAR");
-
-    @Container
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.10-alpine")
-                    .withDatabaseName("masiton")
-                    .withUsername("masiton")
-                    .withPassword("masiton_local");
 
     @Test
     @DisplayName("V3 데이터와 스키마를 보존하면서 V4 AI 후보 스키마와 18개 통제 태그를 전진 적용한다")
@@ -642,14 +636,16 @@ class Expansion3FlywayMigrationIntegrationTest {
     private SchemaDatabase createSchemaDatabase() {
         String schema = "expansion3_" + SCHEMA_SEQUENCE.incrementAndGet();
         JdbcTemplate adminJdbcTemplate = new JdbcTemplate(new DriverManagerDataSource(
-                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword()));
+                FullContextIntegrationTest.POSTGRES.getJdbcUrl(),
+                FullContextIntegrationTest.POSTGRES.getUsername(),
+                FullContextIntegrationTest.POSTGRES.getPassword()));
         adminJdbcTemplate.execute("CREATE SCHEMA " + schema);
 
-        String separator = POSTGRES.getJdbcUrl().contains("?") ? "&" : "?";
+        String separator = FullContextIntegrationTest.POSTGRES.getJdbcUrl().contains("?") ? "&" : "?";
         DataSource schemaDataSource = new DriverManagerDataSource(
-                POSTGRES.getJdbcUrl() + separator + "currentSchema=" + schema,
-                POSTGRES.getUsername(),
-                POSTGRES.getPassword());
+                FullContextIntegrationTest.POSTGRES.getJdbcUrl() + separator + "currentSchema=" + schema,
+                FullContextIntegrationTest.POSTGRES.getUsername(),
+                FullContextIntegrationTest.POSTGRES.getPassword());
         return new SchemaDatabase(schema, schemaDataSource);
     }
 

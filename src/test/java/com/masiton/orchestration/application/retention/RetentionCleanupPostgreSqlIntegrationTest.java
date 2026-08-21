@@ -37,24 +37,10 @@ import static org.mockito.Mockito.doAnswer;
  */
 @SpringBootTest
 @TestProfile
-@Testcontainers
 @DisplayName("2차 확장 보존 정리 PostgreSQL 통합")
-class RetentionCleanupPostgreSqlIntegrationTest {
+class RetentionCleanupPostgreSqlIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final int BATCH_SIZE = RetentionCleanupService.BATCH_SIZE;
-
-    @Container
-    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17.10-alpine")
-            .withDatabaseName("masiton")
-            .withUsername("masiton")
-            .withPassword("masiton_test");
-
-    @DynamicPropertySource
-    static void registerDatasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
 
     @Autowired
     private RetentionCleanupBatchCommand batches;

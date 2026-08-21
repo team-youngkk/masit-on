@@ -7,6 +7,7 @@ const {
   authenticatedMemberFetch,
   memberLogin,
   memberLogout,
+  memberRegister,
   resendMemberEmailVerification,
   verifyMemberEmail,
 } = require('./auth.ts')
@@ -250,6 +251,26 @@ memberAuthTest('이메일 인증 토큰은 URL이 아닌 JSON 본문으로만 �
   memberAuthAssert.equal(requestedUrl.includes(token), false)
   memberAuthAssert.equal(requestInit?.method, 'POST')
   memberAuthAssert.deepEqual(JSON.parse(String(requestInit?.body)), { token })
+})
+
+memberAuthTest('회원가입 접수는 중복 여부와 계정 상태를 노출하지 않고 202를 void로 처리한다', async () => {
+  const requests: Array<{ email: string; password: string }> = []
+  globalThis.fetch = async (input, init) => {
+    memberAuthAssert.equal(input, '/api/auth/registrations')
+    memberAuthAssert.equal(init?.method, 'POST')
+    requests.push(JSON.parse(String(init?.body)))
+    return Response.json({ accepted: true }, { status: 202 })
+  }
+
+  const first = await memberRegister('member@example.com', 'password-value')
+  const duplicate = await memberRegister('member@example.com', 'password-value')
+
+  memberAuthAssert.equal(first, undefined)
+  memberAuthAssert.equal(duplicate, undefined)
+  memberAuthAssert.deepEqual(requests, [
+    { email: 'member@example.com', password: 'password-value' },
+    { email: 'member@example.com', password: 'password-value' },
+  ])
 })
 
 memberAuthTest('인증 메일 재발송은 이메일만 JSON 본문으로 전송한다', async () => {

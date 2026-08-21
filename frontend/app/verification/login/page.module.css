@@ -2,16 +2,16 @@
   display: grid;
   min-height: calc(100vh - 12rem);
   place-items: center;
-  padding: var(--space-6) 0;
+  padding: var(--space-8) var(--space-4);
 }
 
 .card {
   display: grid;
   width: min(100%, 30rem);
-  gap: var(--space-6);
-  padding: clamp(1.5rem, 5vw, 2.5rem);
+  gap: var(--space-5);
+  padding: clamp(1.5rem, 5vw, 2.25rem);
   border: 1px solid var(--color-border);
-  border-radius: 1rem;
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
 }
@@ -41,6 +41,10 @@
 .form {
   display: grid;
   gap: var(--space-4);
+}
+
+.form > button {
+  width: 100%;
 }
 
 .error {

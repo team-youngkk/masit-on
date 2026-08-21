@@ -54,17 +54,12 @@ class AiExtractionCommitProjectionIntegrationTest extends FullContextIntegration
 
     @BeforeEach
     void cleanUpState() {
-        jdbcTemplate.execute("TRUNCATE TABLE ai_candidate_tag_review, ai_extraction_manual_review");
-        jdbcTemplate.execute("DELETE FROM visit_tag");
-        jdbcTemplate.execute("DELETE FROM tag_definition WHERE source <> 'SEED'");
-        jdbcTemplate.execute("DELETE FROM ai_candidate_snapshot");
-        jdbcTemplate.execute("DELETE FROM ai_extraction_attempt");
-        jdbcTemplate.execute("DELETE FROM ai_extraction_temporary_input");
-        jdbcTemplate.execute("DELETE FROM ai_extraction_job");
-        jdbcTemplate.execute("DELETE FROM visit");
-        jdbcTemplate.execute("DELETE FROM video");
-        jdbcTemplate.execute("DELETE FROM creator");
-        jdbcTemplate.execute("DELETE FROM restaurant");
+        cleanupTransactionalState(jdbcTemplate);
+        jdbcTemplate.update("""
+                INSERT INTO tag_definition (id, tag_code, tag_type, display_name, aliases, status, source)
+                VALUES ('30000000-0000-4000-8000-000000000007', 'TASTE_SPICY', 'TASTE', '매운맛', '[]'::jsonb, 'ACTIVE', 'SEED')
+                ON CONFLICT (tag_code) DO UPDATE SET status = 'ACTIVE', display_name = '매운맛'
+                """);
         given(naturalLanguageRateLimitPort.tryAcquire(any())).willReturn(true);
     }
 

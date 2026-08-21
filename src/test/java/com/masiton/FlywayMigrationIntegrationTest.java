@@ -39,23 +39,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 @SpringBootTest
 @com.masiton.test.TestProfile
-@Testcontainers
-    @DisplayName("Flyway 마이그레이션과 기준 데이터")
-class FlywayMigrationIntegrationTest {
-
-    @Container
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.10-alpine")
-                    .withDatabaseName("masiton")
-                    .withUsername("masiton")
-                    .withPassword("masiton_local");
-
-    @DynamicPropertySource
-    static void registerDatasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
+@DisplayName("Flyway 마이그레이션과 기준 데이터")
+class FlywayMigrationIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;

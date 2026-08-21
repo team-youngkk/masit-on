@@ -13,6 +13,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceLock;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -22,52 +23,50 @@ import org.testcontainers.utility.DockerImageName;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@Testcontainers
+import com.masiton.test.FullContextIntegrationTest;
+
+@ResourceLock("shared-test-infrastructure")
 @DisplayName("확인 토큰 PostgreSQL 동시성")
 class ConfirmationTokenPostgreSqlIntegrationTest {
 
-    @Container
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(DockerImageName.parse("postgres:17.10-alpine"))
-            .withDatabaseName("masiton")
-            .withUsername("masiton")
-            .withPassword("masiton_local");
-
     private JdbcTemplate jdbcTemplate;
     private ExecutorService executorService;
+    private UUID adminId;
+    private UUID tokenId;
 
     @BeforeEach
     void setUp() {
+        adminId = null;
+        tokenId = null;
         jdbcTemplate = new JdbcTemplate(new DriverManagerDataSource(
-                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword()));
-        jdbcTemplate.execute("drop table if exists confirmation_token");
-        jdbcTemplate.execute("""
-                create table confirmation_token (
-                    id uuid primary key,
-                    token_hash bytea not null unique,
-                    admin_account_id uuid not null,
-                    resource_type varchar(16) not null,
-                    candidate_schema_version smallint not null,
-                    identity_key varchar(128) not null,
-                    candidate_snapshot jsonb not null,
-                    status varchar(16) not null,
-                    issued_at timestamp with time zone not null,
-                    expires_at timestamp with time zone not null,
-                    completed_at timestamp with time zone,
-                    result_resource_id uuid
-                )
-                """);
+                FullContextIntegrationTest.POSTGRES.getJdbcUrl(),
+                FullContextIntegrationTest.POSTGRES.getUsername(),
+                FullContextIntegrationTest.POSTGRES.getPassword()));
+        jdbcTemplate.execute("DELETE FROM confirmation_token");
         executorService = Executors.newFixedThreadPool(2);
     }
 
     @AfterEach
     void tearDown() {
         executorService.shutdownNow();
+        if (tokenId != null) {
+            jdbcTemplate.update("delete from confirmation_token where id = ?", tokenId);
+        }
+        if (adminId != null) {
+            jdbcTemplate.update("delete from admin_account where id = ?", adminId);
+        }
     }
 
     @Test
     @DisplayName("동일 토큰의 동시 확정은 하나만 생성하고 나머지는 저장된 결과를 재생한다")
     void confirmation_동일토큰동시확정_하나생성나머지재생() throws Exception {
-        UUID tokenId = UUID.randomUUID();
+        adminId = UUID.randomUUID();
+        jdbcTemplate.update("""
+                insert into admin_account (id, login_id, password_hash, role, active)
+                values (?, ?, 'hash', 'ADMIN', true)
+                """, adminId, "admin-" + adminId);
+
+        tokenId = UUID.randomUUID();
         UUID createdResourceId = UUID.randomUUID();
         jdbcTemplate.update("""
                         insert into confirmation_token (
@@ -77,7 +76,7 @@ class ConfirmationTokenPostgreSqlIntegrationTest {
                         """,
                 tokenId,
                 MessageDigest.getInstance("SHA-256").digest("raw-token".getBytes()),
-                UUID.randomUUID(),
+                adminId,
                 "{\"name\":\"candidate\"}");
 
         CountDownLatch start = new CountDownLatch(1);
@@ -89,16 +88,18 @@ class ConfirmationTokenPostgreSqlIntegrationTest {
         assertThat(outcomes).containsExactlyInAnyOrder("CREATED", "REPLAYED");
         assertThat(jdbcTemplate.queryForObject(
                 "select result_resource_id from confirmation_token where id = ?", UUID.class, tokenId))
-                .isEqualTo(createdResourceId);
+            .isEqualTo(createdResourceId);
         assertThat(jdbcTemplate.queryForObject(
                 "select status from confirmation_token where id = ?", String.class, tokenId))
-                .isEqualTo("CREATED");
+            .isEqualTo("CREATED");
     }
 
     private String completeOrReplay(UUID tokenId, UUID resourceId, CountDownLatch start) throws Exception {
         start.await();
         try (java.sql.Connection connection = java.sql.DriverManager.getConnection(
-                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())) {
+                FullContextIntegrationTest.POSTGRES.getJdbcUrl(),
+                FullContextIntegrationTest.POSTGRES.getUsername(),
+                FullContextIntegrationTest.POSTGRES.getPassword())) {
             connection.setAutoCommit(false);
             try (java.sql.PreparedStatement select = connection.prepareStatement(
                     "select status, result_resource_id from confirmation_token where id = ? for update")) {

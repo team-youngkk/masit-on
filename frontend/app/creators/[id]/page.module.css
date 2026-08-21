@@ -213,3 +213,160 @@
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
+
+/* 공개 탐색 화면의 카드 리듬을 상세 프로필과 두 독립 목록에도 유지한다. */
+.header {
+  position: relative;
+  overflow: hidden;
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(circle at 92% 12%, var(--color-primary-soft) 0 10%, transparent 30%),
+    linear-gradient(135deg, var(--color-hero-start), var(--color-hero-mid));
+}
+
+.header::after {
+  position: absolute;
+  top: -5rem;
+  right: -4rem;
+  width: 12rem;
+  height: 12rem;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 26%, transparent);
+  border-radius: 50%;
+  content: '';
+  pointer-events: none;
+}
+
+.profileImage,
+.heading,
+.channelLink {
+  position: relative;
+  z-index: 1;
+}
+
+.profileImage {
+  border: 3px solid var(--color-surface);
+  box-shadow: 0 0 0 1px var(--color-border), var(--shadow-card);
+}
+
+.name {
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  letter-spacing: -0.035em;
+}
+
+.channelLink {
+  border-color: var(--color-primary-deep);
+  border-radius: var(--radius-full);
+  background: var(--color-primary-deep);
+  color: var(--color-text-on-primary);
+}
+
+.channelLink:hover {
+  background: var(--color-primary);
+}
+
+.sectionNav {
+  display: flex;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+  overflow-x: auto;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sectionNav a {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  min-height: var(--control-min-height);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.sectionNav a:hover,
+.sectionNav a:focus-visible {
+  border-color: var(--color-primary);
+  background: var(--color-primary-faint);
+  color: var(--color-primary-strong);
+}
+
+.listSection {
+  scroll-margin-top: var(--space-6);
+}
+
+.restaurantList li,
+.videoGrid > article {
+  min-width: 0;
+  height: 100%;
+}
+
+.restaurantList li > article,
+.videoGrid > article {
+  border-radius: var(--radius-lg);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.restaurantList li > article:hover,
+.restaurantList li > article:focus-within,
+.videoGrid > article:hover,
+.videoGrid > article:focus-within {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-raised);
+}
+
+.videoGrid > article {
+  overflow: hidden;
+}
+
+a.videoLink {
+  margin: calc(-1 * var(--space-2));
+  padding: var(--space-2);
+}
+
+.restaurantList {
+  gap: var(--space-3);
+}
+
+.videoGrid {
+  gap: var(--space-3);
+}
+
+.retryLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-min-height);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-primary-strong);
+  font: inherit;
+  font-weight: 700;
+}
+
+.thumbnail {
+  border-radius: calc(var(--radius-md) - 2px);
+}
+
+.retryLink:focus-visible,
+.pageLink:focus-visible,
+.channelLink:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+@media (max-width: 480px) {
+  .header {
+    padding: var(--space-5) var(--space-4);
+  }
+
+  .sectionNav {
+    margin-inline: calc(-1 * var(--space-1));
+    padding-inline: var(--space-1);
+  }
+}

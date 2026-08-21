@@ -1,11 +1,9 @@
 const memberAuthFormAssert = require('node:assert/strict')
 const memberAuthFormTest = require('node:test')
 const {
-  acceptMemberRegistration,
   isInvalidMemberCredentialsResponse,
   normalizeMemberEmail,
   prepareMemberAuthSubmission,
-  resendAcceptedMemberRegistration,
   validateMemberAuthForm,
 } = require('./member-auth-form-coordination.ts')
 
@@ -114,32 +112,4 @@ memberAuthFormTest('로그인 자격 증명 오류는 401 응답만 입력 오�
   memberAuthFormAssert.equal(isInvalidMemberCredentialsResponse(new Response(null, { status: 401 })), true)
   memberAuthFormAssert.equal(isInvalidMemberCredentialsResponse(new Response(null, { status: 503 })), false)
   memberAuthFormAssert.equal(isInvalidMemberCredentialsResponse(new Error('network')), false)
-})
-
-memberAuthFormTest('가입 접수 후 입력값이 바뀌어도 재발송은 접수한 이메일을 사용한다', async () => {
-  let currentEmail = ' Registered@Example.COM '
-  const prepared = prepareMemberAuthSubmission({
-    mode: 'signup',
-    email: currentEmail,
-    password: '123456789012',
-    passwordConfirmation: '123456789012',
-    token: '',
-  })
-  const registration = acceptMemberRegistration(prepared.normalizedEmail)
-  const resentEmails: string[] = []
-
-  currentEmail = 'changed@example.com'
-  memberAuthFormAssert.deepEqual(registration, {
-    email: 'registered@example.com',
-    emailReadOnly: true,
-  })
-  await resendAcceptedMemberRegistration(
-    registration,
-    async (email: string) => {
-      resentEmails.push(email)
-    },
-  )
-
-  memberAuthFormAssert.equal(currentEmail, 'changed@example.com')
-  memberAuthFormAssert.deepEqual(resentEmails, ['registered@example.com'])
 })

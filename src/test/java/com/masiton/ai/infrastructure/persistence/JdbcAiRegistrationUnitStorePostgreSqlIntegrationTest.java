@@ -37,6 +37,7 @@ class JdbcAiRegistrationUnitStorePostgreSqlIntegrationTest extends FullContextIn
 
     @BeforeEach
     void setUp() {
+        cleanupTransactionalState(jdbcTemplate);
         jobId = UUID.randomUUID();
         snapshotId = UUID.randomUUID();
         OffsetDateTime now = OffsetDateTime.now();

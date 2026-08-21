@@ -28,22 +28,8 @@ import com.masiton.test.IntegrationTestFixtures;
 
 @SpringBootTest
 @com.masiton.test.TestProfile
-@Testcontainers
 @DisplayName("YouTube 채널 Watch PostgreSQL 통합")
-class JdbcYoutubeChannelWatchStoreIntegrationTest {
-
-    @Container
-    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17.10-alpine")
-            .withDatabaseName("masiton")
-            .withUsername("masiton")
-            .withPassword("masiton_test");
-
-    @DynamicPropertySource
-    static void registerDatasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
+class JdbcYoutubeChannelWatchStoreIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     @Autowired
     private YoutubeChannelWatchStore store;

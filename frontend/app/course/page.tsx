@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 
 import { PageShell } from '@/components/ui/PageShell'
+import { isDesignPreviewEnvironment } from '@/lib/design-preview'
 
 import { CourseScreen } from './CourseScreen'
 import styles from './course.module.css'
@@ -16,14 +17,20 @@ export const metadata: Metadata = {
  * 맞물려 클라이언트 컴포넌트 하나가 상태를 소유한다. 이 파일은 라우트 진입점만 맡는다.
  */
 export default function CoursePage() {
+  const isDesignPreview = isDesignPreviewEnvironment({
+    nodeEnv: process.env.NODE_ENV,
+    previewFlag: process.env.MASITON_UI_PREVIEW,
+  })
+
   return (
     <PageShell
       className={styles.page}
-      eyebrow="자동차 이동 코스"
       title="맛집 코스"
-      description="2~5곳을 선택하면 첫 맛집을 출발점으로 자동차 이동 순서를 제안합니다."
+      description="2~5곳을 선택하세요."
     >
-      <CourseScreen />
+      <section className={styles.courseFrame} aria-label="맛집 코스 구성">
+        <CourseScreen designPreview={isDesignPreview} />
+      </section>
     </PageShell>
   )
 }

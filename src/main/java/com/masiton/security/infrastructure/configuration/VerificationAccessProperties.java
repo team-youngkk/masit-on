@@ -15,6 +15,7 @@ import com.masiton.security.application.port.out.VerificationSessionSettings;
 @ConfigurationProperties("masiton.security.verification")
 public class VerificationAccessProperties implements VerificationSessionSettings {
 
+    private boolean enabled = true;
     private String loginId = "";
     private String passwordHash = "";
     private String publicBaseUrl = "http://localhost:3000";
@@ -25,6 +26,8 @@ public class VerificationAccessProperties implements VerificationSessionSettings
     private String trustedProxyAddresses = "";
     private boolean reverseProxyEnabled;
 
+    public boolean isEnabled() { return enabled; }
+    public void setEnabled(boolean enabled) { this.enabled = enabled; }
     public String getLoginId() { return loginId; }
     public void setLoginId(String loginId) { this.loginId = loginId; }
     public String getPasswordHash() { return passwordHash; }

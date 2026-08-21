@@ -50,6 +50,7 @@ class RegistrationUnitConfirmCommitServicePostgreSqlIntegrationTest extends Full
 
     @BeforeEach
     void setUp() {
+        cleanupTransactionalState(jdbcTemplate);
         jobId = UUID.randomUUID();
         snapshotId = UUID.randomUUID();
         adminId = UUID.randomUUID();

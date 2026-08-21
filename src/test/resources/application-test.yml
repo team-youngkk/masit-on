@@ -3,6 +3,9 @@ spring:
     url: jdbc:postgresql://localhost:5432/masiton
     username: masiton
     password: masiton_local
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
   data:
     redis:
       host: localhost
@@ -12,6 +15,7 @@ masiton:
   member:
     action-mail:
       # Test-only AES-256 material; it is not used outside the test profile.
+      from-address: no-reply@test.masiton.invalid
       active-key-id: test-1
       active-key: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
     rate-limit:

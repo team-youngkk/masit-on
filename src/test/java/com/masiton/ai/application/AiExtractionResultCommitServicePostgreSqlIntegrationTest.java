@@ -47,6 +47,7 @@ class AiExtractionResultCommitServicePostgreSqlIntegrationTest extends FullConte
 
     @BeforeEach
     void setUp() {
+        cleanupTransactionalState(jdbcTemplate);
         jobId = UUID.randomUUID();
         startedAt = OffsetDateTime.now().minusSeconds(5);
         finishedAt = OffsetDateTime.now();

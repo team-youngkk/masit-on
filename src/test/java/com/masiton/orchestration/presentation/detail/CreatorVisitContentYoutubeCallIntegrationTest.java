@@ -41,32 +41,24 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @com.masiton.test.TestProfile
 @AutoConfigureMockMvc
-@Testcontainers
 @DisplayName("유튜버 방문 맛집·근거 영상 조회 중 YouTube 미호출")
-class CreatorVisitContentYoutubeCallIntegrationTest {
+class CreatorVisitContentYoutubeCallIntegrationTest extends com.masiton.test.FullContextIntegrationTest {
 
     private static final UUID SEED_REGION_ID = UUID.fromString("10000000-0000-4000-8000-000000000001");
     private static final UUID SEED_FOOD_CATEGORY_ID = UUID.fromString("20000000-0000-4000-8000-000000000001");
     private static final int WIREMOCK_PORT = 8080;
 
-    @Container
-    static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:17.10-alpine")
-                    .withDatabaseName("masiton")
-                    .withUsername("masiton")
-                    .withPassword("masiton_local");
-
-    @Container
     static final GenericContainer<?> WIREMOCK =
             new GenericContainer<>("wiremock/wiremock:3.13.2-alpine")
                     .withExposedPorts(WIREMOCK_PORT)
                     .waitingFor(Wait.forHttp("/__admin/health").forPort(WIREMOCK_PORT).forStatusCode(200));
 
+    static {
+        WIREMOCK.start();
+    }
+
     @DynamicPropertySource
-    static void registerProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
+    static void registerYoutubeProperties(DynamicPropertyRegistry registry) {
         registry.add("masiton.integration.youtube.base-url",
                 CreatorVisitContentYoutubeCallIntegrationTest::wireMockUrl);
         registry.add("masiton.integration.youtube.api-key", () -> "wiremock-only-key");
