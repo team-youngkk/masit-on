@@ -291,4 +291,3 @@ export function VerifyEmail({ loginHref }: { loginHref: string }) {
     </div>
   )
 }
-

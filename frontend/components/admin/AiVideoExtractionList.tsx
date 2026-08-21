@@ -192,4 +192,3 @@ function reviewTone(status: AiExtractionReviewStatus | null): 'success' | 'warni
   if (status === 'AUTO_REJECTED') return 'danger'
   return 'neutral'
 }
-
