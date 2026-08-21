@@ -55,8 +55,8 @@ public interface ResolveFoodCategoryUseCase {
     /**
      * {@code resolvedBy}는 {@code KAKAO_PLACE_CATEGORY} 또는 {@code MENU_EXPRESSION}이다.
      * {@code matchedMappingId}는 orchestration 내부에서 판정에 사용한
-     * {@code food_category_mapping} 행 식별자다. 등록 단위의 현재 {@code category_decision}
-     * 저장 계약에는 포함하지 않는다.
+     * {@code food_category_mapping} 행 식별자다. 자동 판정 시 등록 단위의
+     * {@code category_decision}에 함께 저장한다.
      */
     record ResolvedFoodCategory(UUID foodCategoryId, String foodCategoryName, String resolvedBy, UUID matchedMappingId) {
     }

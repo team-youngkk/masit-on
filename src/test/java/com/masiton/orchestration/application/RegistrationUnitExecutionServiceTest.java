@@ -147,8 +147,11 @@ class RegistrationUnitExecutionServiceTest {
 
         assertThat(result.confirmed()).isTrue();
         assertThat(result.registration()).isEqualTo(registration);
+        assertThat(result.placeDecision().searchQuery()).isEqualTo("행복식당");
+        assertThat(result.placeDecision().kakaoPlaceId()).isEqualTo(KAKAO_PLACE_ID);
         assertThat(result.placeDecision().kakaoPlaceUrl()).isEqualTo(KAKAO_PLACE_URL);
         assertThat(result.categoryDecision().foodCategoryId()).isEqualTo(FOOD_CATEGORY_ID);
+        assertThat(result.categoryDecision().matchedMappingId()).isNotNull();
         verify(resolvePlaceIdentity).resolve(new ResolvePlaceIdentityUseCase.PlaceIdentityCommand(
                 "행복식당", "서울특별시 마포구 월드컵로 1", "냉면"));
     }

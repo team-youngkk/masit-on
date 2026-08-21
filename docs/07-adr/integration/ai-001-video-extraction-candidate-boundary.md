@@ -110,7 +110,7 @@ Worker는 후보를 장소 단위 등록 단위로 나눈 뒤, 등록 단위마�
 
 등록 단위의 등록은 Worker가 자동 실행하거나 관리자가 상세 화면에서 실행한다. 두 경로는 실행 주체만 다르고 같은 판정 규칙·같은 orchestration 명령을 사용하며, 관리자 실행이라는 이유로 기준을 완화하지 않는다. 관리자 실행 경로도 맛집·유튜버·영상·방문 관계 4종을 한 번에 등록하고, 단계별 관리자 입력을 요구하지 않는다. `BR-AIEXTRACT-011`이 정의한 예외에서만 보조 입력 경로로 전환한다.
 
-장소 판정 결과와 카테고리 판정 결과, 실행 주체는 등록 단위 결정 JSON에 남긴다. 장소 자동 확정의 `matchedBy`(`NAME_AND_DISTRICT`, `NAME_CONTAINS_AND_DISTRICT_AND_CATEGORY`, `MANUAL_OVERRIDE`)는 `place_decision`에, 대표 카테고리와 `resolvedBy`는 `category_decision`에 기록한다. 세부 매핑 행 식별자와 원문 검색 응답 전체는 현재 저장 계약에 포함하지 않는다. exact-name 우선 원칙이나 fallback 조건의 완화는 Critical 오연결 지표에 직접 영향을 주므로 Release holdout 재평가와 품질 게이트 통과, restaurant 도메인 소유자 합의를 거친다.
+- 장소 판정 결과와 카테고리 판정 결과, 실행 주체는 등록 단위 결정 JSON에 남긴다. 장소 자동 확정의 검색어·채택한 Kakao 장소 식별자·URL·도로명주소와 `matchedBy`(`NAME_AND_DISTRICT`, `NAME_CONTAINS_AND_DISTRICT_AND_CATEGORY`, `MANUAL_OVERRIDE`)는 `place_decision`에, 대표 카테고리·판정 당시 사용한 매핑 행 식별자와 `resolvedBy`는 `category_decision`에 기록한다. 원문 검색 응답 전체는 저장하지 않는다. exact-name 우선 원칙이나 fallback 조건의 완화는 Critical 오연결 지표에 직접 영향을 주므로 Release holdout 재평가와 품질 게이트 통과, restaurant 도메인 소유자 합의를 거치며, 완화 경로 feature flag의 기본값은 `false`다.
 
 ## 6. 고려하지 않은 선택지
 

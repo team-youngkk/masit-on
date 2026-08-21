@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import com.masiton.orchestration.application.port.in.ResolvePlaceIdentityUseCase.PlaceIdentityCommand;
 import com.masiton.orchestration.application.port.in.ResolvePlaceIdentityUseCase.PlaceIdentityStatus;
+import com.masiton.orchestration.application.port.out.PlaceIdentityMatchingPolicy;
 import com.masiton.restaurant.application.port.in.LookupFoodCategoryMappingUseCase;
 import com.masiton.restaurant.application.port.in.LookupFoodCategoryMappingUseCase.MappingResolution;
 import com.masiton.restaurant.application.port.in.SearchPlacesByNameUseCase;
@@ -21,7 +22,9 @@ class ResolvePlaceIdentityServiceTest {
 
     private final SearchPlacesByNameUseCase placeSearchPort = mock(SearchPlacesByNameUseCase.class);
     private final LookupFoodCategoryMappingUseCase categoryMapping = mock(LookupFoodCategoryMappingUseCase.class);
-    private final ResolvePlaceIdentityService service = new ResolvePlaceIdentityService(placeSearchPort, categoryMapping);
+    private final PlaceIdentityMatchingPolicy relaxedMatchingEnabled = () -> true;
+    private final ResolvePlaceIdentityService service = new ResolvePlaceIdentityService(
+            placeSearchPort, categoryMapping, relaxedMatchingEnabled);
 
     @Test
     @DisplayName("이름 완전일치와 시구 일치를 만족하는 결과가 정확히 1건이면 확정한다")
@@ -256,5 +259,21 @@ class ResolvePlaceIdentityServiceTest {
 
         // Then
         assertThat(result.status()).isEqualTo(PlaceIdentityStatus.PLACE_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("완화 판정 플래그가 꺼져 있으면 이름 포함 후보를 확정하지 않는다")
+    void resolve_완화판정플래그가꺼져있으면_이름포함후보를확정하지않는다() {
+        given(placeSearchPort.search("우래옥")).willReturn(List.of(
+                new PlaceSearchCandidate("우래옥 본점", "https://place.map.kakao.com/1",
+                        "서울특별시 중구 창경궁로 62-29", "02-000-0000", "음식점 > 한식 > 냉면")));
+
+        ResolvePlaceIdentityService disabledService = new ResolvePlaceIdentityService(
+                placeSearchPort, categoryMapping, () -> false);
+
+        var result = disabledService.resolve(new PlaceIdentityCommand("우래옥", "서울특별시 중구 세종대로 1", "냉면"));
+
+        assertThat(result.status()).isEqualTo(PlaceIdentityStatus.PLACE_NOT_FOUND);
+        org.mockito.Mockito.verifyNoInteractions(categoryMapping);
     }
 }

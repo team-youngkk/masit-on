@@ -123,9 +123,10 @@ class RegistrationUnitExecutionService implements ExecuteRegistrationUnitUseCase
                         true));
 
         return RegistrationUnitExecutionResult.confirmed(
-                new PlaceDecision(placeStep.kakaoPlaceUrl(), placeStep.roadAddress(), placeStep.matchedBy()),
+                new PlaceDecision(command.restaurantName(), placeStep.kakaoPlaceId(), placeStep.kakaoPlaceUrl(),
+                        placeStep.roadAddress(), placeStep.matchedBy()),
                 new CategoryDecision(categoryStep.foodCategoryId(), categoryStep.foodCategoryName(),
-                        categoryStep.resolvedBy()),
+                        categoryStep.resolvedBy(), categoryStep.matchedMappingId()),
                 registration);
     }
 
@@ -160,7 +161,7 @@ class RegistrationUnitExecutionService implements ExecuteRegistrationUnitUseCase
     private CategoryStep resolveCategory(RegistrationUnitExecutionCommand command, PlaceStep placeStep) {
         if (command.hasSuppliedFoodCategory()) {
             return new CategoryStep(command.suppliedFoodCategoryId(), command.suppliedFoodCategoryName(),
-                    MATCHED_BY_MANUAL_OVERRIDE);
+                    MATCHED_BY_MANUAL_OVERRIDE, null);
         }
         ResolveFoodCategoryUseCase.FoodCategoryResolutionResult resolution = resolveFoodCategory.resolve(
                 new ResolveFoodCategoryUseCase.FoodCategoryResolutionCommand(
@@ -169,7 +170,8 @@ class RegistrationUnitExecutionService implements ExecuteRegistrationUnitUseCase
             return null;
         }
         ResolveFoodCategoryUseCase.ResolvedFoodCategory resolved = resolution.resolvedFoodCategory();
-        return new CategoryStep(resolved.foodCategoryId(), resolved.foodCategoryName(), resolved.resolvedBy());
+        return new CategoryStep(resolved.foodCategoryId(), resolved.foodCategoryName(), resolved.resolvedBy(),
+                resolved.matchedMappingId());
     }
 
     /**
@@ -218,6 +220,7 @@ class RegistrationUnitExecutionService implements ExecuteRegistrationUnitUseCase
         }
     }
 
-    private record CategoryStep(java.util.UUID foodCategoryId, String foodCategoryName, String resolvedBy) {
+    private record CategoryStep(java.util.UUID foodCategoryId, String foodCategoryName, String resolvedBy,
+                                java.util.UUID matchedMappingId) {
     }
 }

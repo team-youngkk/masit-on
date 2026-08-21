@@ -281,7 +281,7 @@ related_documents:
 - `blockReason`은 `AUTO_BLOCKED`·`AUTO_REJECTED`일 때만 값이 있다. 장소 판정은 `PLACE_NOT_FOUND`·`PLACE_AMBIGUOUS`, 카테고리 판정은 `CATEGORY_UNRESOLVED`, 그 밖에는 기존 검증 실패 사유 코드를 사용한다.
 - `placeDecision.matchedBy`와 `categoryDecision.resolvedBy`는 자동 판정 근거다. `matchedBy`는 exact-name 우선 경로의 `NAME_AND_DISTRICT` 또는 exact 후보가 없을 때 제한적으로 허용되는 이름 containment/LIKE fallback 경로의 `NAME_CONTAINS_AND_DISTRICT_AND_CATEGORY`다. fallback은 Kakao 분류와 AI 메뉴가 같은 단일 음식 카테고리로 매핑되고, 시·구가 일치하며, 장소 동일성 판정 필수 필드가 있고, qualifying candidate가 정확히 1건일 때만 응답에 나타난다. 좌표는 지도 표시용 선택값이다. `resolvedBy`는 `KAKAO_PLACE_CATEGORY` 또는 `MENU_EXPRESSION`이며, 관리자 사후 보정 결과는 `MANUAL_OVERRIDE`로 표시한다.
 - exact-name 후보가 2건 이상이면 `PLACE_AMBIGUOUS`로 차단하고 fallback으로 전환하지 않는다. exact-name 후보가 없을 때 fallback 조건을 만족하는 후보가 없으면 `PLACE_NOT_FOUND`, 2건 이상이면 `PLACE_AMBIGUOUS`로 차단한다.
-- 자동 확정 응답의 장소 검색 결과와 `matchedBy`는 `place_decision`에, 대표 카테고리와 `resolvedBy`는 `category_decision`에 기록한다. 보충 입력으로 확정한 장소는 `MANUAL_OVERRIDE`로 기록한다. 세부 매핑 행 식별자나 원문 검색 응답 전체는 현재 저장 계약에 포함하지 않는다.
+- 자동 확정 응답의 장소 검색어·채택한 Kakao 장소 식별자·URL·도로명주소·`matchedBy`는 `place_decision`에 기록하고, 대표 카테고리·판정 당시 사용한 매핑 행 식별자(`matchedMappingId`)·`resolvedBy`는 `category_decision`에 기록한다. 보충 입력으로 확정한 장소는 `MANUAL_OVERRIDE`로 기록하며, 매핑 행을 사용하지 않은 수동 카테고리 보정의 `matchedMappingId`는 `null`이다. 원문 검색 응답 전체는 저장하지 않는다.
 - `registeredRestaurantId`, `kakaoPlaceUrl` 등 모든 식별자는 불투명 문자열이며 클라이언트는 생성 규칙을 검증하지 않는다.
 - 실패 응답은 `error.category`, `retryable`, `attemptCount`만 제공하며 외부 응답 전문은 제공하지 않는다.
 

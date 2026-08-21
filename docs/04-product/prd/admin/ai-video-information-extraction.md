@@ -229,5 +229,5 @@ related_documents:
 - 현재 운영 계약인 `gemini-3.5-flash-lite`·Prompt `P8`·Schema `S2` 중 하나라도 변경하면 새 후보 버전과 평가 보고서를 만든다.
 - 예외 보정 처리량이 추출 요청량을 따라가지 못하는 경우 BACKFILL 작업을 먼저 중지하고 Webhook 실시간 작업을 우선한다.
 - 태그 정의·별칭·근거 정책 변경은 데이터 계약과 평가 Dataset 버전을 함께 올린다.
-- 장소 동일성 자동 확정 기준(`BR-AIEXTRACT-009`) 또는 containment/LIKE fallback 조건을 완화하면 Critical 오연결 위험이 직접 올라간다. 기준 변경은 Release holdout 재평가와 품질 게이트 통과, restaurant 도메인 소유자 합의 없이 하지 않는다.
+- 장소 동일성 자동 확정 기준(`BR-AIEXTRACT-009`) 또는 containment/LIKE fallback 조건을 완화하면 Critical 오연결 위험이 직접 올라간다. 완화 경로는 `AI_PLACE_IDENTITY_RELAXED_MATCHING_ENABLED=false`를 기본값으로 두며, Release holdout 재평가·품질 게이트 통과·인간 판정 승인·restaurant 도메인 소유자 합의 후에만 운영에서 활성화한다.
 - 카테고리 매핑 표 변경은 기준정보 변경으로 취급하고 변경 이력을 남긴다. 매핑 표를 넓혀 `CATEGORY_UNRESOLVED`를 줄이는 변경은 오분류율을 함께 측정한다.

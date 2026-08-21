@@ -28,7 +28,7 @@ public interface LookupFoodCategoryMappingUseCase {
      */
     Optional<String> findActiveCategoryName(UUID foodCategoryId);
 
-    /** {@code food_category_mapping} 대조 결과 하나를 표현한다. 새 값은 추가하지 않는다. */
+    /** {@code food_category_mapping} 대조 결과 하나를 표현하며 감사 JSON 재현에 사용한다. */
     enum MappingOutcome {
         /** 정확히 하나의 카테고리로 일치했다. */
         MATCHED,
@@ -38,7 +38,7 @@ public interface LookupFoodCategoryMappingUseCase {
         CONFLICT
     }
 
-    /** 대조에 사용한 매핑 행 식별자와 대응 카테고리다. orchestration 내부 판정 결과로만 전달한다. */
+    /** 대조에 사용한 매핑 행 식별자와 대응 카테고리다. */
     record ResolvedMapping(UUID mappingId, UUID foodCategoryId) {
     }
 

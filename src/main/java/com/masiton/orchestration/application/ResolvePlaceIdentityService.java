@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import com.masiton.common.address.SeoulRoadAddressNormalizer;
 import com.masiton.orchestration.application.port.in.ResolvePlaceIdentityUseCase;
+import com.masiton.orchestration.application.port.out.PlaceIdentityMatchingPolicy;
 import com.masiton.restaurant.application.port.in.LookupFoodCategoryMappingUseCase;
 import com.masiton.restaurant.application.port.in.LookupFoodCategoryMappingUseCase.MappingOutcome;
 import com.masiton.restaurant.application.port.in.LookupFoodCategoryMappingUseCase.MappingResolution;
@@ -29,11 +30,14 @@ class ResolvePlaceIdentityService implements ResolvePlaceIdentityUseCase {
 
     private final SearchPlacesByNameUseCase searchPlacesByName;
     private final LookupFoodCategoryMappingUseCase lookupFoodCategoryMapping;
+    private final PlaceIdentityMatchingPolicy placeIdentityMatchingPolicy;
 
     ResolvePlaceIdentityService(SearchPlacesByNameUseCase searchPlacesByName,
-                                LookupFoodCategoryMappingUseCase lookupFoodCategoryMapping) {
+                                LookupFoodCategoryMappingUseCase lookupFoodCategoryMapping,
+                                PlaceIdentityMatchingPolicy placeIdentityMatchingPolicy) {
         this.searchPlacesByName = searchPlacesByName;
         this.lookupFoodCategoryMapping = lookupFoodCategoryMapping;
+        this.placeIdentityMatchingPolicy = placeIdentityMatchingPolicy;
     }
 
     @Override
@@ -58,6 +62,10 @@ class ResolvePlaceIdentityService implements ResolvePlaceIdentityUseCase {
 
         if (!exactMatches.isEmpty()) {
             return toResult(exactMatches, MATCHED_BY_NAME_AND_DISTRICT);
+        }
+
+        if (!placeIdentityMatchingPolicy.relaxedMatchingEnabled()) {
+            return PlaceIdentityResult.notFound();
         }
 
         List<PlaceSearchCandidate> relaxedMatches = candidates.stream()
