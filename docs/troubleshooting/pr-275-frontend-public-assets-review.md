@@ -25,6 +25,7 @@ related_documents:
 | 스레드 | 요청 요약 | 문제 유형 | 판단 | 처리 결과 | 근거/검증 |
 |---|---|---|---|---|---|
 | [PR #275](https://github.com/team-youngkk/masit-on/pull/275) · `frontend/Dockerfile:68` | 파일 끝의 불필요한 빈 줄을 제거하고 `git diff --check`를 다시 실행 | 배포 | 수정 필요 | 마지막 빈 줄을 제거하고 단일 개행만 남겼다. | 원격 PR 파일의 마지막 바이트를 확인한 뒤 정규화했고, 로컬 `git diff --check`가 통과했다. |
+| [PR #275](https://github.com/team-youngkk/masit-on/pull/275) · `docs/troubleshooting/pr-275-frontend-public-assets-review.md:67` | Docker 이미지 검증 시점을 실제 CI workflow 조건에 맞게 정정 | 배포 | 수정 필요 | PR에서는 이미지 job이 실행되지 않는다는 제한과 `main`·`deploy/m2` 대상 push 및 배포 후 smoke test 시점을 명시했다. | `.github/workflows/ci.yml`의 `images` job 조건과 수정 문서를 대조했고, `git diff --check`가 통과했다. |
 
 ## 3. 문제 현상과 발생 조건
 
