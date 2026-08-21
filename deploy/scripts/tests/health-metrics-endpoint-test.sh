@@ -17,6 +17,7 @@ export REDIS_CLI_CAPTURE="$TEST_ROOT/redis-cli-arguments"
 export DOCKER_CAPTURE="$TEST_ROOT/docker-arguments"
 export TLS_CERT="$TEST_ROOT/no-certificate.pem"
 export PATH="$BIN:$PATH"
+unset REDISCLI_AUTH
 
 printf 'test-secret\n' > "$REDIS_PASSWORD_FILE"
 printf 'used_memory:1048576\nmaxmemory:4194304\n' > "$REDIS_INFO_FIXTURE"
@@ -74,7 +75,8 @@ SHIM
 cat > "$BIN/redis-cli" <<'SHIM'
 #!/usr/bin/env bash
 set -euo pipefail
-[ "${REDISCLI_AUTH:-}" = test-secret ] || { echo 'password was not read through the validated path' >&2; exit 1; }
+[ -z "${REDISCLI_AUTH:-}" ] || { echo 'REDISCLI_AUTH must not carry direct-path credentials' >&2; exit 1; }
+[ "$(cat)" = test-secret ] || { echo 'password was not read from the protected file through stdin' >&2; exit 1; }
 printf '%s\n' "$@" > "$REDIS_CLI_CAPTURE"
 cat "$REDIS_INFO_FIXTURE"
 SHIM

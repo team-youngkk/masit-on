@@ -18,7 +18,9 @@ export REDIS_INFO_FIXTURE="$TEST_ROOT/redis-info"
 export AWS_CAPTURE="$TEST_ROOT/aws-arguments"
 export DOCKER_CAPTURE="$TEST_ROOT/docker-arguments"
 export TLS_CERT="$TEST_ROOT/no-certificate.pem"
-export REDIS_CLI_IMAGE=redis:8.8-alpine
+# Deliberately provide an arbitrary digest override. The production script must ignore it.
+export REDIS_CLI_IMAGE='redis@sha256:0000000000000000000000000000000000000000000000000000000000000000'
+export EXPECTED_REDIS_CLI_IMAGE='redis@sha256:8096655e437712b07503796fb64d81359256cfcff0ab29d95a7da72863786efb'
 ORIGINAL_PATH="$PATH"
 CONTROLLED_PATH="$BIN"
 old_ifs="$IFS"
@@ -121,7 +123,11 @@ while [ "$#" -gt 0 ]; do
     *) image="$1"; shift; break ;;
   esac
 done
-[ "$image" = "$REDIS_CLI_IMAGE" ] || exit 1
+[ "$image" = "$EXPECTED_REDIS_CLI_IMAGE" ] || exit 1
+case "$image" in
+  *@sha256:*) ;;
+  *) echo 'Docker fallback image must be immutable' >&2; exit 1 ;;
+esac
 [ "$user" = "$SECRET_OWNER" ] || exit 1
 [ "$mount" = "type=bind,src=$REDIS_PASSWORD_FILE,dst=/run/masiton-redis-password,readonly" ] || exit 1
 [ "${1:-}" = sh ] && [ "${2:-}" = -c ] || exit 1

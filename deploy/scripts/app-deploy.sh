@@ -255,7 +255,9 @@ REDIS_HOST="${REDIS_HOST:-127.0.0.1}"
 REDIS_PORT="${REDIS_PORT:-$(aws ssm get-parameter --region "$REGION" --name /masiton/redis/port \
   --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || printf '')}"
 REDIS_PORT="${REDIS_PORT:-6379}"
-REDIS_CLI_IMAGE="${REDIS_CLI_IMAGE:-redis:8.8-alpine}"
+# The fallback client is an executable dependency, so keep it aligned with the
+# systemd-owned Redis image and ignore arbitrary environment overrides.
+REDIS_CLI_IMAGE='redis@sha256:8096655e437712b07503796fb64d81359256cfcff0ab29d95a7da72863786efb'
 redis_cli() {
   docker run --rm --network host -e REDISCLI_AUTH="$redis_password" "$REDIS_CLI_IMAGE" \
     redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" --raw "$@"

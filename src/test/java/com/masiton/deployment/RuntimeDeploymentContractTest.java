@@ -405,6 +405,7 @@ class RuntimeDeploymentContractTest {
     @DisplayName("Redis 장애는 트래픽이 아닌 배포 게이트로 감지한다")
     void redis장애를_배포게이트alarm으로감지한다() throws IOException {
         String metrics = Files.readString(HEALTH_METRICS);
+        String appDeploy = Files.readString(APP_DEPLOY);
         String bootstrap = Files.readString(BOOTSTRAP);
         String afterInstall = Files.readString(AFTER_INSTALL);
         String workflow = Files.readString(CI);
@@ -426,7 +427,10 @@ class RuntimeDeploymentContractTest {
                 .contains("resolve_shared_redis_host")
                 .contains("REDIS_ENDPOINT_HOST")
                 .contains("[ \"$REDIS_ENDPOINT_VALID\" = true ] || return 1")
-                .contains("REDISCLI_AUTH=\"$redis_password\" redis-cli")
+                .contains("REDIS_CLI_IMAGE='redis@sha256:8096655e437712b07503796fb64d81359256cfcff0ab29d95a7da72863786efb'")
+                .contains("redis-cli --askpass -h \"$REDIS_ENDPOINT_HOST\" -p \"$REDIS_ENDPOINT_PORT\" --raw \"$@\" < \"$REDIS_PASSWORD_FILE\"")
+                .doesNotContain("REDISCLI_AUTH=\"$redis_password\" redis-cli")
+                .doesNotContain("REDIS_CLI_IMAGE=\"${REDIS_CLI_IMAGE:-")
                 .contains("redis_password_owner=$(stat -c '%u:%g' \"$REDIS_PASSWORD_FILE\"")
                 .contains("--user \"$redis_password_owner\"")
                 .contains("--mount \"type=bind,src=$REDIS_PASSWORD_FILE,dst=/run/masiton-redis-password,readonly\"")
@@ -437,12 +441,22 @@ class RuntimeDeploymentContractTest {
                 .contains("MetricName=RedisMemoryUtilizationPercent")
                 .contains("maxmemory")
                 .contains("used_memory");
+        assertThat(appDeploy)
+                .contains("REDIS_CLI_IMAGE='redis@sha256:8096655e437712b07503796fb64d81359256cfcff0ab29d95a7da72863786efb'")
+                .contains("docker run --rm --network host -e REDISCLI_AUTH=\"$redis_password\" \"$REDIS_CLI_IMAGE\"")
+                .doesNotContain("REDIS_CLI_IMAGE=\"${REDIS_CLI_IMAGE:-")
+                .doesNotContain("redis:8.8-alpine");
         assertThat(workflow)
                 .contains("deploy/scripts/cloudwatch-install.sh")
                 .contains("deploy/scripts/health-metrics.sh")
                 .contains("deploy/cloudwatch/amazon-cloudwatch-agent.json")
                 .contains("deploy/cloudwatch/masiton-health-metrics.service")
-                .contains("deploy/cloudwatch/masiton-health-metrics.timer");
+                .contains("deploy/cloudwatch/masiton-health-metrics.timer")
+                .contains("infra/production/terraform")
+                .contains("terraform init -backend=false")
+                .contains("terraform validate")
+                .contains("infra/production/terraform-redis/tests/template-render")
+                .contains("hashicorp/terraform:1.6.6 test");
         assertThat(bootstrap)
                 .contains("\"$STAGE/cloudwatch-install.sh\" \"$STAGE\"")
                 .contains("after-install.sh의 chmod");

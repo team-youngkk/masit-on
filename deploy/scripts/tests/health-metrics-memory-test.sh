@@ -17,6 +17,7 @@ export REDIS_INFO_FIXTURE="$TEST_ROOT/redis-info"
 export AWS_CAPTURE="$TEST_ROOT/aws-arguments"
 export TLS_CERT="$TEST_ROOT/no-certificate.pem"
 export PATH="$BIN:$PATH"
+unset REDISCLI_AUTH
 
 printf 'test-secret\n' > "$REDIS_PASSWORD_FILE"
 
@@ -48,7 +49,8 @@ SHIM
 cat > "$BIN/redis-cli" <<'SHIM'
 #!/usr/bin/env bash
 set -euo pipefail
-[ "${REDISCLI_AUTH:-}" = test-secret ] || { echo 'redis-cli auth was not supplied through the direct path' >&2; exit 1; }
+[ -z "${REDISCLI_AUTH:-}" ] || { echo 'REDISCLI_AUTH must not carry direct-path credentials' >&2; exit 1; }
+[ "$(cat)" = test-secret ] || { echo 'redis-cli did not read auth from stdin' >&2; exit 1; }
 if [ "${REDIS_UNAVAILABLE:-0}" = 1 ]; then
   exit 1
 fi

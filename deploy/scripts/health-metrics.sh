@@ -170,18 +170,17 @@ if [ "$REDIS_ENDPOINT_VALID" != true ]; then
 fi
 
 REDIS_PASSWORD_FILE="${REDIS_PASSWORD_FILE:-/run/masiton/secrets/spring.data.redis.password}"
-REDIS_CLI_IMAGE="${REDIS_CLI_IMAGE:-redis:8.8-alpine}"
+# Keep the fallback client aligned with deploy/redis/masiton-redis.service. Do not
+# allow deployment environment input to select an arbitrary executable image.
+REDIS_CLI_IMAGE='redis@sha256:8096655e437712b07503796fb64d81359256cfcff0ab29d95a7da72863786efb'
 
 redis_cli() {
   # Endpoint validation must complete before this function can read the
   # password file or discover/invoke either Redis client path.
   [ "$REDIS_ENDPOINT_VALID" = true ] || return 1
   if command -v redis-cli >/dev/null 2>&1; then
-    local redis_password=""
     [ -r "$REDIS_PASSWORD_FILE" ] || return 1
-    redis_password=$(tr -d '\r\n' < "$REDIS_PASSWORD_FILE")
-    [ -n "$redis_password" ] || return 1
-    REDISCLI_AUTH="$redis_password" redis-cli -h "$REDIS_ENDPOINT_HOST" -p "$REDIS_ENDPOINT_PORT" --raw "$@"
+    redis-cli --askpass -h "$REDIS_ENDPOINT_HOST" -p "$REDIS_ENDPOINT_PORT" --raw "$@" < "$REDIS_PASSWORD_FILE"
   elif command -v docker >/dev/null 2>&1; then
     local redis_password_owner=""
     [ -r "$REDIS_PASSWORD_FILE" ] || return 1

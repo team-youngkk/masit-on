@@ -69,6 +69,14 @@ jobs:
             -w /workspace/infra/production/terraform-redis/tests/template-render \
             hashicorp/terraform:1.6.6 test
 
+      - name: Production Terraform backend 없이 초기화·검증
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            -w /workspace/infra/production/terraform \
+            hashicorp/terraform:1.6.6 sh -c 'terraform init -backend=false && terraform validate'
+
   # workflow_dispatch는 이미 게시된 이미지를 배포하는 경로다. 그 이미지는 push 때
   # 이 두 job을 통과해야 만들어졌으므로 품질 게이트는 이미 걸린 상태이고, 다시 도는
   # 것은 배포 대상이 아닌 브랜치 현재 커밋을 검사하는 일이다. 롤백은 현재 커밋이
@@ -921,5 +929,4 @@ jobs:
           done
           echo "::error::CodeDeploy cleanup이 terminal 상태를 확인하지 못했다: $status"
           exit 1
-
 
