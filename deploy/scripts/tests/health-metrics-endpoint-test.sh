@@ -105,7 +105,7 @@ assert_not_called() {
 run_valid() {
   local host="$1" expected_address="$2"
   rm -f "$REDIS_CLI_CAPTURE" "$DOCKER_CAPTURE"
-  REDIS_HOST="$host" REDIS_PORT=6379 "$SCRIPT" > "$TEST_ROOT/valid.output" 2>&1
+  REQUIRE_SHARED_REDIS=true REDIS_HOST="$host" REDIS_PORT=6379 "$SCRIPT" > "$TEST_ROOT/valid.output" 2>&1
   assert_contains "$expected_address" "$REDIS_CLI_CAPTURE"
   assert_not_called "$DOCKER_CAPTURE"
 }
@@ -113,13 +113,24 @@ run_valid() {
 run_rejected() {
   local host="$1" port="$2"
   rm -f "$REDIS_CLI_CAPTURE" "$DOCKER_CAPTURE"
-  REDIS_HOST="$host" REDIS_PORT="$port" "$SCRIPT" > "$TEST_ROOT/rejected.output" 2>&1
+  REQUIRE_SHARED_REDIS=true REDIS_HOST="$host" REDIS_PORT="$port" "$SCRIPT" > "$TEST_ROOT/rejected.output" 2>&1
   assert_not_called "$REDIS_CLI_CAPTURE"
+  assert_not_called "$DOCKER_CAPTURE"
+}
+
+run_local_fallback() {
+  rm -f "$REDIS_CLI_CAPTURE" "$DOCKER_CAPTURE"
+  REQUIRE_SHARED_REDIS=false REDIS_HOST= REDIS_PORT=6379 "$SCRIPT" > "$TEST_ROOT/local.output" 2>&1
+  assert_contains '127.0.0.1' "$REDIS_CLI_CAPTURE"
+  assert_contains 'MetricName=RedisUsedMemoryBytes,Value=1048576' "$AWS_CAPTURE"
+  assert_contains 'MetricName=RedisMaxMemoryBytes,Value=4194304' "$AWS_CAPTURE"
+  assert_contains 'MetricName=RedisMemoryUtilizationPercent,Value=25' "$AWS_CAPTURE"
   assert_not_called "$DOCKER_CAPTURE"
 }
 
 run_valid 10.42.0.15 10.42.0.15
 run_valid redis.safe.test 10.42.0.15
+run_local_fallback
 
 for host in \
   127.0.0.1 169.254.1.1 0.0.0.0 224.0.0.1 255.255.255.255 \

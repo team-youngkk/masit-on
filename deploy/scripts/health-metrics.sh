@@ -66,13 +66,13 @@ redis=$(probe dependencies redis)
 
 # Redis는 앱 컨테이너와 같은 host network를 사용하므로, health-metrics도 같은
 # endpoint를 직접 조회한다. 비밀값은 명령행이 아니라 app-secrets-render.sh가
-# tmpfs에 만든 파일에서 읽는다. ASG endpoint가 SSM에만 있을 때도 수집할 수 있게
-# 하고, 공유 Redis가 아닌 단일 EC2의 기존 동거 Redis만 127.0.0.1 fallback을
-# 유지한다. REQUIRE_SHARED_REDIS=true인 ASG에서 SSM 조회가 실패하면 빈 값으로
-# 남겨 capacity 지표를 결측 처리한다.
-REDIS_HOST="${REDIS_HOST:-$(aws ssm get-parameter --region "$REGION" --name /masiton/redis/host \
-  --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || printf '')}"
-if [ -z "$REDIS_HOST" ] && [ "${REQUIRE_SHARED_REDIS:-false}" != true ]; then
+# tmpfs에 만든 파일에서 읽는다. 공유 모드가 아니면 SSM의 공유 endpoint를 사용하지
+# 않고 기존 단일 EC2 동거 Redis인 127.0.0.1로 고정한다. 공유 모드에서 SSM 조회가
+# 실패하면 빈 값으로 남겨 capacity 지표를 결측 처리한다.
+if [ "${REQUIRE_SHARED_REDIS:-false}" = true ]; then
+  REDIS_HOST="${REDIS_HOST:-$(aws ssm get-parameter --region "$REGION" --name /masiton/redis/host \
+    --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || printf '')}"
+else
   REDIS_HOST=127.0.0.1
 fi
 REDIS_PORT="${REDIS_PORT:-$(aws ssm get-parameter --region "$REGION" --name /masiton/redis/port \
@@ -176,18 +176,38 @@ validate_shared_redis_endpoint() {
   }
   REDIS_VALIDATED_PORT="$port"
 }
+
+validate_local_redis_endpoint() {
+  local port="${1-}"
+  REDIS_VALIDATED_HOST=127.0.0.1
+  REDIS_VALIDATED_PORT=""
+  validate_shared_redis_port "$port" || {
+    echo "로컬 Redis port가 유효한 숫자 범위가 아니다" >&2
+    return 1
+  }
+  REDIS_VALIDATED_PORT="$port"
+}
 # END SHARED REDIS ENDPOINT CONTRACT
 
 REDIS_ENDPOINT_HOST=""
 REDIS_ENDPOINT_PORT=""
 REDIS_ENDPOINT_VALID=false
-if validate_shared_redis_endpoint "$REDIS_HOST" "$REDIS_PORT"; then
+if [ "${REQUIRE_SHARED_REDIS:-false}" = true ]; then
+  validate_shared_redis_endpoint "$REDIS_HOST" "$REDIS_PORT"
+else
+  validate_local_redis_endpoint "$REDIS_PORT"
+fi
+if [ "$?" -eq 0 ]; then
   REDIS_ENDPOINT_HOST="$REDIS_VALIDATED_HOST"
   REDIS_ENDPOINT_PORT="$REDIS_VALIDATED_PORT"
   REDIS_ENDPOINT_VALID=true
 fi
 if [ "$REDIS_ENDPOINT_VALID" != true ]; then
-  echo "Redis shared endpoint가 안전한 private IPv4/port 계약을 만족하지 않는다" >&2
+  if [ "${REQUIRE_SHARED_REDIS:-false}" = true ]; then
+    echo "Redis shared endpoint가 안전한 private IPv4/port 계약을 만족하지 않는다" >&2
+  else
+    echo "Redis local endpoint가 127.0.0.1/유효한 port 계약을 만족하지 않는다" >&2
+  fi
 fi
 
 REDIS_PASSWORD_FILE="${REDIS_PASSWORD_FILE:-/run/masiton/secrets/spring.data.redis.password}"
