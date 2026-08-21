@@ -423,6 +423,9 @@ class RuntimeDeploymentContractTest {
                 .contains("MetricName=FleetDependencyRedis,Value=$redis,Unit=None")
                 .contains("MetricName=DependencyRedis,Value=$redis,Unit=None,Dimensions=")
                 .contains("redis_cli INFO memory")
+                .contains("resolve_shared_redis_host")
+                .contains("REDIS_ENDPOINT_HOST")
+                .contains("[ \"$REDIS_ENDPOINT_VALID\" = true ] || return 1")
                 .contains("REDISCLI_AUTH=\"$redis_password\" redis-cli")
                 .contains("redis_password_owner=$(stat -c '%u:%g' \"$REDIS_PASSWORD_FILE\"")
                 .contains("--user \"$redis_password_owner\"")
@@ -557,6 +560,43 @@ class RuntimeDeploymentContractTest {
                 .contains("condition     = !var.redis_recovery_mode || var.deployment_alarms_enabled")
                 .contains("redis_recovery_mode=true requires deployment_alarms_enabled=true")
                 .contains("ALB 5xx, latency, and unhealthy-host protections must remain enabled.");
+    }
+
+    @Test
+    @DisplayName("배포 알람 비활성화는 명시적인 최초 seeding 명령에서만 허용한다")
+    void deploymentAlarms_최초Seeding명령에서만비활성화한다() throws IOException {
+        String variables = Files.readString(TERRAFORM_VARIABLES);
+        String codeDeploy = Files.readString(CODEDEPLOY);
+        String tfvarsExample = Files.readString(TERRAFORM_TFVARS_EXAMPLE);
+        String adr = Files.readString(DEPLOYMENT_ADR);
+        String productionReadme = Files.readString(PRODUCTION_README);
+        String cutoverRecord = Files.readString(Path.of("docs/08-planning/deployment-hardening-cutover-record.md"));
+
+        assertThat(variables)
+                .contains("variable \"initial_alarm_seeding\"")
+                .contains("default     = false");
+        assertThat(codeDeploy)
+                .contains("condition     = var.deployment_alarms_enabled || var.initial_alarm_seeding")
+                .contains("deployment_alarms_enabled=false requires initial_alarm_seeding=true")
+                .contains("condition     = !var.initial_alarm_seeding || !var.redis_recovery_mode")
+                .contains("initial_alarm_seeding=true cannot be combined with redis_recovery_mode=true")
+                .contains("condition     = !var.redis_recovery_mode || var.deployment_alarms_enabled");
+        assertThat(tfvarsExample)
+                .contains("terraform plan -var=\"initial_alarm_seeding=true\" -var=\"deployment_alarms_enabled=false\"")
+                .contains("initial_alarm_seeding             = true")
+                .contains("deployment_alarms_enabled         = false");
+        assertThat(adr)
+                .contains("initial_alarm_seeding=true")
+                .contains("deployment_alarms_enabled=false")
+                .contains("redis_recovery_mode=true");
+        assertThat(productionReadme)
+                .contains("initial_alarm_seeding=true")
+                .contains("deployment_alarms_enabled=false")
+                .contains("initial_alarm_seeding=false");
+        assertThat(cutoverRecord)
+                .contains("initial_alarm_seeding=true")
+                .contains("deployment_alarms_enabled=false")
+                .contains("Redis 복구 모드에서는 이 완화를 사용하지 않는다");
     }
 
     private static String section(String source, String startMarker, String endMarker) {

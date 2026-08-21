@@ -9,7 +9,7 @@ mkdir -p "$BIN"
 trap 'rm -rf "$TEST_ROOT"' EXIT
 
 export HEALTH_BASE=http://health-metrics.test
-export REDIS_HOST=redis.test
+export REDIS_HOST=10.42.0.15
 export REDIS_PORT=6379
 export REDIS_PASSWORD_FILE="$TEST_ROOT/redis-password"
 export REDIS_INFO_FIXTURE="$TEST_ROOT/redis-info"

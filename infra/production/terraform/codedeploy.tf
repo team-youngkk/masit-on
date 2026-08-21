@@ -63,6 +63,16 @@ resource "aws_codedeploy_deployment_group" "app" {
   # 확인한 뒤에만 활성화해야 Terraform state의 seed ASG 삭제를 막을 수 있다.
   lifecycle {
     precondition {
+      condition     = var.deployment_alarms_enabled || var.initial_alarm_seeding
+      error_message = "deployment_alarms_enabled=false requires initial_alarm_seeding=true; alarm bypass is permitted only for explicit initial seeding."
+    }
+
+    precondition {
+      condition     = !var.initial_alarm_seeding || !var.redis_recovery_mode
+      error_message = "initial_alarm_seeding=true cannot be combined with redis_recovery_mode=true."
+    }
+
+    precondition {
       condition     = !var.redis_recovery_mode || var.deployment_alarms_enabled
       error_message = "redis_recovery_mode=true requires deployment_alarms_enabled=true; ALB 5xx, latency, and unhealthy-host protections must remain enabled."
     }

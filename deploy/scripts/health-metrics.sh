@@ -78,16 +78,110 @@ fi
 REDIS_PORT="${REDIS_PORT:-$(aws ssm get-parameter --region "$REGION" --name /masiton/redis/port \
   --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || printf '')}"
 REDIS_PORT="${REDIS_PORT:-6379}"
+
+# health-metrics는 host network에서 Redis에 직접 연결하므로, 입력 endpoint를
+# Redis client가 읽기 전에 엄격히 고정한다. 숫자 IPv4는 표준 dotted-decimal만
+# 허용해 octal·shorthand·IPv4-mapped IPv6 해석 차이를 제거하고, DNS는 모든 A
+# 결과를 검사한 뒤 선택한 숫자 주소를 사용해 validation 이후 rebinding을 막는다.
+is_canonical_ipv4() {
+  local candidate="$1"
+  local -a octets=()
+  [[ "$candidate" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || return 1
+  IFS=. read -r -a octets <<< "$candidate"
+  [ "${#octets[@]}" -eq 4 ] || return 1
+  for octet in "${octets[@]}"; do
+    [[ "$octet" == 0 || "$octet" =~ ^[1-9][0-9]{0,2}$ ]] || return 1
+    ((10#$octet <= 255)) || return 1
+  done
+}
+
+is_safe_shared_ipv4() {
+  local candidate="$1"
+  local -a octets=()
+  is_canonical_ipv4 "$candidate" || return 1
+  IFS=. read -r -a octets <<< "$candidate"
+  local first="${octets[0]}"
+  local second="${octets[1]}"
+
+  # Shared Redis is reachable only through a private IPv4 address. This also
+  # rejects unspecified, loopback, link-local, multicast and broadcast ranges.
+  if (( first == 10 )); then
+    return 0
+  fi
+  if (( first == 172 && second >= 16 && second <= 31 )); then
+    return 0
+  fi
+  if (( first == 192 && second == 168 )); then
+    return 0
+  fi
+  return 1
+}
+
+resolve_shared_redis_host() {
+  local host="$1"
+  local lookup=""
+  local address=""
+  local resolved=""
+  local -a labels=()
+
+  if is_canonical_ipv4 "$host"; then
+    is_safe_shared_ipv4 "$host" || return 1
+    printf '%s' "$host"
+    return 0
+  fi
+
+  # Numeric-looking non-canonical forms must not fall through to DNS, where a
+  # resolver or client could interpret them as legacy octal/decimal addresses.
+  [[ "$host" =~ ^[0-9.]+$ || "$host" =~ ^[0xX][0-9A-Fa-f]+$ ]] && return 1
+
+  # A colon is never valid in the hostname form. In particular, this rejects
+  # IPv6 and IPv4-mapped IPv6 before any resolver or client can reinterpret it.
+  [[ "$host" != *:* ]] || return 1
+  [[ "$host" =~ ^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$ ]] || return 1
+  [ "${#host}" -le 253 ] || return 1
+  [[ "$host" != *..* ]] || return 1
+  IFS=. read -r -a labels <<< "$host"
+  for label in "${labels[@]}"; do
+    [ "${#label}" -le 63 ] || return 1
+  done
+
+  lookup=$(getent ahostsv4 "$host" 2>/dev/null) || return 1
+  [ -n "$lookup" ] || return 1
+  while IFS= read -r address; do
+    [ -n "$address" ] || continue
+    is_safe_shared_ipv4 "$address" || return 1
+    [ -n "$resolved" ] || resolved="$address"
+  done < <(printf '%s\n' "$lookup" | awk '{print $1}')
+  [ -n "$resolved" ] || return 1
+  printf '%s' "$resolved"
+}
+
+REDIS_ENDPOINT_HOST=""
+REDIS_ENDPOINT_PORT=""
+REDIS_ENDPOINT_VALID=false
+if [[ "$REDIS_PORT" =~ ^[1-9][0-9]{0,4}$ ]] && ((10#$REDIS_PORT <= 65535)); then
+  if REDIS_ENDPOINT_HOST=$(resolve_shared_redis_host "$REDIS_HOST"); then
+    REDIS_ENDPOINT_PORT="$REDIS_PORT"
+    REDIS_ENDPOINT_VALID=true
+  fi
+fi
+if [ "$REDIS_ENDPOINT_VALID" != true ]; then
+  echo "Redis shared endpoint가 안전한 private IPv4/port 계약을 만족하지 않는다" >&2
+fi
+
 REDIS_PASSWORD_FILE="${REDIS_PASSWORD_FILE:-/run/masiton/secrets/spring.data.redis.password}"
 REDIS_CLI_IMAGE="${REDIS_CLI_IMAGE:-redis:8.8-alpine}"
 
 redis_cli() {
+  # Endpoint validation must complete before this function can read the
+  # password file or discover/invoke either Redis client path.
+  [ "$REDIS_ENDPOINT_VALID" = true ] || return 1
   if command -v redis-cli >/dev/null 2>&1; then
     local redis_password=""
     [ -r "$REDIS_PASSWORD_FILE" ] || return 1
     redis_password=$(tr -d '\r\n' < "$REDIS_PASSWORD_FILE")
     [ -n "$redis_password" ] || return 1
-    REDISCLI_AUTH="$redis_password" redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" --raw "$@"
+    REDISCLI_AUTH="$redis_password" redis-cli -h "$REDIS_ENDPOINT_HOST" -p "$REDIS_ENDPOINT_PORT" --raw "$@"
   elif command -v docker >/dev/null 2>&1; then
     local redis_password_owner=""
     [ -r "$REDIS_PASSWORD_FILE" ] || return 1
@@ -98,7 +192,7 @@ redis_cli() {
       --mount "type=bind,src=$REDIS_PASSWORD_FILE,dst=/run/masiton-redis-password,readonly" \
       "$REDIS_CLI_IMAGE" sh -c \
       'REDISCLI_AUTH="$(tr -d "\\r\\n" < /run/masiton-redis-password)" exec redis-cli "$@"' \
-      sh -h "$REDIS_HOST" -p "$REDIS_PORT" --raw "$@"
+      sh -h "$REDIS_ENDPOINT_HOST" -p "$REDIS_ENDPOINT_PORT" --raw "$@"
   else
     return 1
   fi

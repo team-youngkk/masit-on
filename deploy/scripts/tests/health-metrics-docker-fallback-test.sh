@@ -10,7 +10,7 @@ mkdir -p "$BIN"
 trap 'rm -rf "$TEST_ROOT"' EXIT
 
 export HEALTH_BASE=http://health-metrics.test
-export REDIS_HOST=redis.test
+export REDIS_HOST=10.42.0.15
 export REDIS_PORT=6379
 export REDIS_PASSWORD_FILE="$TEST_ROOT/redis-password"
 export REDIS_INFO_FIXTURE="$TEST_ROOT/redis-info"
@@ -18,7 +18,25 @@ export AWS_CAPTURE="$TEST_ROOT/aws-arguments"
 export DOCKER_CAPTURE="$TEST_ROOT/docker-arguments"
 export TLS_CERT="$TEST_ROOT/no-certificate.pem"
 export REDIS_CLI_IMAGE=redis:8.8-alpine
-export PATH="$BIN:$PATH"
+ORIGINAL_PATH="$PATH"
+CONTROLLED_PATH="$BIN"
+old_ifs="$IFS"
+IFS=:
+for path_entry in $ORIGINAL_PATH; do
+  # Keep every original utility directory except directories that expose a
+  # system redis-cli. The shims in $BIN remain available to the fixture.
+  if [ -e "$path_entry/redis-cli" ] || [ -e "$path_entry/redis-cli.exe" ]; then
+    continue
+  fi
+  CONTROLLED_PATH="$CONTROLLED_PATH:$path_entry"
+done
+IFS="$old_ifs"
+# Do not inherit a system redis-cli: this test must exercise the Docker branch.
+export PATH="$CONTROLLED_PATH"
+if command -v redis-cli >/dev/null 2>&1; then
+  echo 'controlled PATH unexpectedly exposes redis-cli' >&2
+  exit 1
+fi
 unset REDISCLI_AUTH
 
 # Mirror app-secrets-render.sh: the client receives a 0400 uid/gid-owned file.
