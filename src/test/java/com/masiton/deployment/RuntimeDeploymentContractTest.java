@@ -335,6 +335,31 @@ class RuntimeDeploymentContractTest {
     }
 
     @Test
+    @DisplayName("수동 이미지 배포는 선택한 커밋의 프론트엔드 감사 성공을 요구한다")
+    void ci_수동이미지배포는선택한커밋의프론트엔드감사성공을요구한다() throws IOException {
+        String workflow = Files.readString(CI);
+        String dispatchAudit = section(workflow, "  frontend-dispatch-audit:", "  images:");
+        String deploy = section(workflow, "  deploy:", "  # GitHub 취소");
+
+        assertThat(workflow)
+                .contains("frontend:\n    name: 프론트엔드 빌드·타입 검사\n    if: github.event_name != 'workflow_dispatch'")
+                .contains("frontend-dispatch-audit:");
+        assertThat(dispatchAudit)
+                .contains("if: github.event_name == 'workflow_dispatch'")
+                .contains("IMAGE_TAG: ${{ github.event.inputs.image_tag || github.sha }}")
+                .contains("ref: ${{ steps.target.outputs.image_tag }}")
+                .contains("node:24.18.0-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd")
+                .contains("npm ci && npm audit --omit=dev --audit-level=high");
+        assertThat(deploy)
+                .contains("needs: [images, frontend-dispatch-audit]")
+                .contains("always()")
+                .contains("needs.images.result == 'success'")
+                .contains("needs['frontend-dispatch-audit'].result == 'skipped'")
+                .contains("needs.images.result == 'skipped'")
+                .contains("needs['frontend-dispatch-audit'].result == 'success'");
+    }
+
+    @Test
     @DisplayName("CodeDeploy revision은 appspec hook과 안전한 image tag 파일을 사용한다")
     void codeDeploy_revision은appspec과안전한imageTag전달을사용한다() throws IOException {
         String appspec = Files.readString(APPSPEC);
