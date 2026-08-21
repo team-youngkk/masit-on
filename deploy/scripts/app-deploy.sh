@@ -61,7 +61,7 @@ cleanup() {
 trap cleanup EXIT
 
 rollback() {
-  local original_exit_code=$?
+  local original_exit_code="${1:-$?}"
   set +e
   trap - ERR
   [ "$rollback_enabled" = yes ] || return "$original_exit_code"
@@ -177,18 +177,27 @@ done
 
 dependencies_body="$staged/dependencies.json"
 dependencies_failures="$staged/dependency-failures.txt"
-dependencies_status=""
-if ! dependencies_status=$(curl -sS -m 5 -o "$dependencies_body" -w '%{http_code}' \
-  http://127.0.0.1:8080/internal/health/dependencies); then
-  echo "백엔드 dependency health HTTP 요청 실패: HTTP ${dependencies_status:-000}" >&2
-  exit 1
-fi
-if [ "$dependencies_status" != "200" ]; then
-  echo "백엔드 dependency health HTTP 실패: HTTP $dependencies_status" >&2
-  exit 1
-fi
+check_dependency_health() {
+  local dependencies_body="$1"
+  local dependencies_failures="$2"
+  local dependencies_status=""
+  local dependency_request_status
+  local dependency_parse_status
 
-if python3 - "$dependencies_body" "$dependencies_failures" <<'PY'
+  if dependencies_status=$(curl -sS -m 5 -o "$dependencies_body" -w '%{http_code}' \
+    http://127.0.0.1:8080/internal/health/dependencies); then
+    :
+  else
+    dependency_request_status=$?
+    echo "백엔드 dependency health HTTP 요청 실패: HTTP ${dependencies_status:-000}" >&2
+    return "$dependency_request_status"
+  fi
+  if [ "$dependencies_status" != "200" ]; then
+    echo "백엔드 dependency health HTTP 실패: HTTP $dependencies_status" >&2
+    return 1
+  fi
+
+  if python3 - "$dependencies_body" "$dependencies_failures" <<'PY'
 import json
 import sys
 
@@ -221,18 +230,22 @@ if failed_components:
         failures.write(" ".join(failed_components))
     raise SystemExit(1)
 PY
-then
-  :
-else
-  dependency_parse_status=$?
-  if [ "$dependency_parse_status" = "1" ]; then
-    dependency_components=$(<"$dependencies_failures")
-    echo "백엔드 dependency health 구성요소 실패: $dependency_components (HTTP $dependencies_status)" >&2
+  then
+    :
   else
-    echo "백엔드 dependency health JSON 파싱 실패: HTTP $dependencies_status" >&2
+    dependency_parse_status=$?
+    if [ "$dependency_parse_status" = "1" ]; then
+      dependency_components=$(<"$dependencies_failures")
+      echo "백엔드 dependency health 구성요소 실패: $dependency_components (HTTP $dependencies_status)" >&2
+    else
+      echo "백엔드 dependency health JSON 파싱 실패: HTTP $dependencies_status" >&2
+    fi
+    return 1
   fi
-  exit 1
-fi
+}
+
+# 함수 호출 자체를 조건문으로 감싸지 않아, 실패 시 기존 ERR trap이 롤백을 실행한다.
+check_dependency_health "$dependencies_body" "$dependencies_failures"
 
 front=""
 for _ in $(seq 1 36); do
