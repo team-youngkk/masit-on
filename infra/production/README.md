@@ -13,6 +13,10 @@ CodeDeploy가 원본 ASG를 기준으로 replacement 환경을 만들기 때문�
 
 이 문서와 Terraform 레이어는 Accepted [ADR-DEPLOY-005](../../docs/07-adr/platform/deploy-005-asg-blue-green-rollout.md)의 배포 고도화 구현이다. 전용 Redis 배치는 2026-08-18 owner 재합의로 개정된 Accepted [ADR-DATA-005](../../docs/07-adr/data/data-005-redis-refresh-token.md) 6절을 따른다. 실제 운영 apply·데이터 이전·CodeDeploy 전환은 별도 runbook과 승인·리허설을 통과한 뒤 수행한다.
 
+## Redis 장애 복구 진입점
+
+전용 Redis 장애로 CodeDeploy 게이트가 복구 배포까지 막히면 [Redis 장애 복구 runbook](../../docs/08-planning/redis-recovery-runbook.md)을 유일한 break-glass 진입점으로 사용한다. 정상 감시는 fail-closed로 유지하며, 운영 담당자 2인의 승인·30분 유효기간·복구 목적의 단 한 번 배포·즉시 게이트 복원 계약을 지킨다. `treat_missing_data = "breaching"`, `ignore_poll_alarm_failure = false`와 회원 인증의 fail-closed 경계는 완화하지 않는다.
+
 ## 적용 전 필수 확인
 
 - CodeDeploy Agent가 AMI 또는 launch template `user_data`에서 설치·기동된다.

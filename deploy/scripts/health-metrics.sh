@@ -80,18 +80,21 @@ REDIS_PORT="${REDIS_PORT:-$(aws ssm get-parameter --region "$REGION" --name /mas
 REDIS_PORT="${REDIS_PORT:-6379}"
 REDIS_PASSWORD_FILE="${REDIS_PASSWORD_FILE:-/run/masiton/secrets/spring.data.redis.password}"
 REDIS_CLI_IMAGE="${REDIS_CLI_IMAGE:-redis:8.8-alpine}"
-redis_password=""
-if [ -r "$REDIS_PASSWORD_FILE" ]; then
-  redis_password=$(tr -d '\r\n' < "$REDIS_PASSWORD_FILE")
-fi
 
 redis_cli() {
-  [ -n "$redis_password" ] || return 1
   if command -v redis-cli >/dev/null 2>&1; then
+    local redis_password=""
+    [ -r "$REDIS_PASSWORD_FILE" ] || return 1
+    redis_password=$(tr -d '\r\n' < "$REDIS_PASSWORD_FILE")
+    [ -n "$redis_password" ] || return 1
     REDISCLI_AUTH="$redis_password" redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" --raw "$@"
   elif command -v docker >/dev/null 2>&1; then
-    docker run --rm --network host -e REDISCLI_AUTH="$redis_password" "$REDIS_CLI_IMAGE" \
-      redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" --raw "$@"
+    [ -r "$REDIS_PASSWORD_FILE" ] || return 1
+    docker run --rm --network host \
+      --mount "type=bind,src=$REDIS_PASSWORD_FILE,dst=/run/masiton-redis-password,readonly" \
+      "$REDIS_CLI_IMAGE" sh -c \
+      'REDISCLI_AUTH="$(tr -d "\\r\\n" < /run/masiton-redis-password)" exec redis-cli "$@"' \
+      sh -h "$REDIS_HOST" -p "$REDIS_PORT" --raw "$@"
   else
     return 1
   fi
