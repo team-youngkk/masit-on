@@ -25,7 +25,7 @@
 }
 
 .primary:hover:not(:disabled) {
-  background: var(--color-primary-contrast);
+  background: var(--color-primary);
   transform: translateY(-1px);
 }
 
@@ -55,5 +55,5 @@
 }
 
 .danger:hover:not(:disabled) {
-  background: #b9380d;
+  background: var(--color-danger-deep);
 }

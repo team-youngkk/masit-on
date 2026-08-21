@@ -103,7 +103,7 @@ export default function MePage() {
     ['제보·신고', '/me/requests', '새 정보 제안과 기존 정보 신고를 관리합니다.'],
   ] as const
 
-  return <PageShell size="narrow" eyebrow="회원" title="내 정보" description="내 계정과 개인화 메뉴를 관리합니다.">
+  return <PageShell className={styles.page} size="narrow" eyebrow="회원" title="내 정보" description="내 계정과 개인화 메뉴를 관리합니다.">
     {member ? <>
       <section className={styles.summary} aria-label="현재 로그인한 계정">
         <strong>{member.email}</strong>

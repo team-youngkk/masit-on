@@ -10,9 +10,7 @@ import styles from './Brand.module.css'
 export function Brand({ className }: { className?: string }) {
   return (
     <span className={cn(styles.brand, className)}>
-      <span className={styles.mark} aria-hidden="true">
-        M
-      </span>
+      <img className={styles.mark} src="/icon.png" alt="" aria-hidden="true" />
       맛잇온
     </span>
   )

@@ -8,14 +8,10 @@
 }
 
 .mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
   width: 1.65em;
   height: 1.65em;
   border-radius: var(--radius-full);
-  background: var(--color-primary-strong);
-  color: var(--color-text-on-primary);
-  font-size: 0.62em;
-  letter-spacing: 0;
+  flex: 0 0 auto;
+  object-fit: cover;
 }

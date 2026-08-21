@@ -129,7 +129,16 @@ export default async function CreatorDetailPage({
         ) : null}
       </header>
 
-      <section className={styles.listSection} aria-label="방문 맛집">
+      <nav className={styles.sectionNav} aria-label="유튜버 상세 콘텐츠">
+        <a href="#creator-restaurants">방문 맛집</a>
+        <a href="#creator-videos">근거 영상</a>
+      </nav>
+
+      <section
+        id="creator-restaurants"
+        className={styles.listSection}
+        aria-label="방문 맛집"
+      >
         <SectionHeader title="방문 맛집" />
         <CreatorRestaurantsSection
           creatorId={id}
@@ -138,7 +147,11 @@ export default async function CreatorDetailPage({
         />
       </section>
 
-      <section className={styles.listSection} aria-label="근거 영상">
+      <section
+        id="creator-videos"
+        className={styles.listSection}
+        aria-label="근거 영상"
+      >
         <SectionHeader title="근거 영상" />
         <CreatorVideosSection
           creatorId={id}

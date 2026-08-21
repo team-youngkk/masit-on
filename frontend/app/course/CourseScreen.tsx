@@ -39,6 +39,7 @@ import {
 } from '@/lib/course/course-screen-state'
 
 import { CourseRouteMap } from './CourseRouteMap'
+import { CourseFilterSelect } from './CourseFilterSelect'
 import styles from './course.module.css'
 
 /* 만료 여부를 반영하기 위해 이 주기로 현재 시각을 다시 읽는다. 실시간 카운트다운은 아니다. */
@@ -61,7 +62,15 @@ type SearchState = {
   traceId?: string
 }
 
-export function CourseScreen() {
+export function CourseScreen({ designPreview = false }: { designPreview?: boolean }) {
+  if (designPreview) {
+    return <DesignCoursePreview />
+  }
+
+  return <LiveCourseScreen />
+}
+
+function LiveCourseScreen() {
   const [selected, setSelected] = useState<CourseCandidate[]>([])
   const [query, setQuery] = useState('')
   const [district, setDistrict] = useState('')
@@ -362,37 +371,25 @@ export function CourseScreen() {
             <label className={styles.selectLabel} htmlFor="course-district">
               자치구
             </label>
-            <select
+            <CourseFilterSelect
               id="course-district"
-              className={styles.select}
+              ariaLabel="자치구"
+              options={[{ value: '', label: '전체' }, ...DISTRICT_OPTIONS.map((option) => ({ value: option, label: option }))]}
               value={district}
-              onChange={(event) => setDistrict(event.target.value)}
-            >
-              <option value="">전체</option>
-              {DISTRICT_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
+              onChange={setDistrict}
+            />
           </div>
           <div className={styles.selectGroup}>
             <label className={styles.selectLabel} htmlFor="course-category">
               대표 음식
             </label>
-            <select
+            <CourseFilterSelect
               id="course-category"
-              className={styles.select}
+              ariaLabel="대표 음식"
+              options={[{ value: '', label: '전체' }, ...CATEGORY_OPTIONS.map((option) => ({ value: option, label: option }))]}
               value={category}
-              onChange={(event) => setCategory(event.target.value)}
-            >
-              <option value="">전체</option>
-              {CATEGORY_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
+              onChange={setCategory}
+            />
           </div>
           <Button type="submit" className={styles.searchSubmit} disabled={search.status === 'loading'}>
             {search.status === 'loading' ? '검색 중…' : '검색'}
@@ -563,6 +560,164 @@ export function CourseScreen() {
           )}
         </section>
       ) : null}
+    </div>
+  )
+}
+
+function DesignCoursePreview() {
+  const fallbackCandidates: CourseSearchItem[] = [
+    { id: 'preview-euljiro', name: '을지로 고기곰탕', district: '중구 을지로', category: '한식' },
+    { id: 'preview-seongsu', name: '성수 수제비', district: '성동구 성수동', category: '한식' },
+    { id: 'preview-hannam', name: '한남동 카페', district: '용산구 한남동', category: '카페' },
+    { id: 'preview-yeonhui', name: '연희동 베이커리', district: '서대문구 연희동', category: '베이커리' },
+    { id: 'preview-mangwon', name: '망원동 칼국수', district: '마포구 망원동', category: '면요리' },
+  ]
+  const [candidates, setCandidates] = useState(fallbackCandidates)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(
+    () => new Set(fallbackCandidates.slice(0, 3).map((candidate) => candidate.id)),
+  )
+  const [loading, setLoading] = useState(true)
+  const [generated, setGenerated] = useState(false)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    let active = true
+
+    async function loadAllCandidates() {
+      try {
+        const firstPage = await searchCourseCandidates({}, controller.signal, 1)
+        if (!active || !firstPage.ok) {
+          return
+        }
+
+        const allItems = [...firstPage.items]
+        let page = firstPage.page.number
+        let hasNext = firstPage.page.hasNext
+        while (hasNext) {
+          const nextPage = await searchCourseCandidates({}, controller.signal, page + 1)
+          if (!active || !nextPage.ok) {
+            return
+          }
+          allItems.push(...nextPage.items)
+          page = nextPage.page.number
+          hasNext = nextPage.page.hasNext
+        }
+
+        if (allItems.length > 0) {
+          setCandidates(allItems)
+          setSelectedIds(new Set(allItems.slice(0, 3).map((candidate) => candidate.id)))
+        }
+      } catch (error) {
+        if (!isAbortError(error)) {
+          // API가 아직 비어 있으면 화면 확인용 후보를 유지한다.
+        }
+      } finally {
+        if (active) {
+          setLoading(false)
+        }
+      }
+    }
+
+    void loadAllCandidates()
+    return () => {
+      active = false
+      controller.abort()
+    }
+  }, [])
+
+  function toggleCandidate(id: string) {
+    setSelectedIds((current) => {
+      const next = new Set(current)
+      if (next.has(id)) {
+        next.delete(id)
+      } else if (next.size < MAX_COURSE_SIZE) {
+        next.add(id)
+      }
+      return next
+    })
+    setGenerated(false)
+  }
+
+  const route = candidates.filter((candidate) => selectedIds.has(candidate.id))
+  const canGenerate = route.length >= 2
+
+  return (
+    <div className={styles.designPreviewLayout} aria-label="코스 화면 디자인 미리보기">
+      <section className={styles.previewPicker} aria-labelledby="preview-course-picker-heading">
+        <div className={styles.previewHeading}>
+          <div>
+            <p className={styles.previewEyebrow}>맛집 코스</p>
+            <h2 id="preview-course-picker-heading">맛집을 선택하세요</h2>
+            <p>2~5곳을 선택해서 나만의 맛집 코스를 만들어보세요.</p>
+          </div>
+          <span className={styles.previewCount}>{route.length}/{MAX_COURSE_SIZE}</span>
+        </div>
+        <ul className={styles.previewCandidateList}>
+          {candidates.map((candidate) => (
+            <li key={candidate.id} className={selectedIds.has(candidate.id) ? styles.previewCandidateSelected : undefined}>
+              <label className={styles.previewCheckControl}>
+                <input
+                  type="checkbox"
+                  className={styles.previewCheckInput}
+                  checked={selectedIds.has(candidate.id)}
+                  disabled={!selectedIds.has(candidate.id) && selectedIds.size >= MAX_COURSE_SIZE}
+                  onChange={() => toggleCandidate(candidate.id)}
+                  aria-label={`${candidate.name} 코스 선택`}
+                />
+                <span className={styles.previewCheck} aria-hidden="true">
+                  {selectedIds.has(candidate.id) ? '✓' : ''}
+                </span>
+              </label>
+              <span className={styles.previewCandidateInfo}>
+                <strong>{candidate.name}</strong>
+                <small>{candidate.district} · {candidate.category}</small>
+              </span>
+              <span className={styles.previewDragHandle} aria-hidden="true">⠿</span>
+            </li>
+          ))}
+        </ul>
+        <p className={styles.previewHint}>
+          {loading ? '맛집 목록을 불러오는 중…' : `전체 ${candidates.length}곳 · 최소 2곳, 최대 ${MAX_COURSE_SIZE}곳까지 선택할 수 있어요.`}
+        </p>
+        <button
+          type="button"
+          className={styles.previewPrimaryAction}
+          disabled={!canGenerate}
+          onClick={() => setGenerated(true)}
+        >
+          코스 생성
+        </button>
+      </section>
+
+      <section className={styles.previewRoute} aria-labelledby="preview-course-route-heading">
+        <div className={styles.previewHeading}>
+          <div>
+            <p className={styles.previewEyebrow}>방문 순서</p>
+            <h2 id="preview-course-route-heading">추천 이동 순서</h2>
+            <p>선택한 맛집을 자동차로 이동하기 좋은 순서예요.</p>
+          </div>
+          <span className={styles.previewRouteBadge}>자동차</span>
+        </div>
+        <ol className={styles.previewRouteList}>
+          {route.map((candidate, index) => (
+            <li key={candidate.name}>
+              <span className={styles.previewRouteNumber}>{index + 1}</span>
+              <span>
+                <strong>{candidate.name}</strong>
+                <small>{index === 0 ? '출발지' : index === route.length - 1 ? '도착지' : '방문지'}</small>
+              </span>
+            </li>
+          ))}
+        </ol>
+        <div className={styles.previewErrorCard} role="status">
+          <span className={styles.previewErrorIcon} aria-hidden="true">{generated ? '✓' : '⌁'}</span>
+          <h3>{generated ? '코스를 준비했어요' : '경로를 불러오지 못했습니다'}</h3>
+          <p>{generated ? `${route.length}곳을 방문하는 코스 후보입니다.` : '잠시 후 다시 시도해 주세요.'}</p>
+          <button type="button" className={styles.previewRetryAction} onClick={() => setGenerated(!generated)}>
+            {generated ? '선택 수정' : '다시 시도'}
+          </button>
+        </div>
+      </section>
     </div>
   )
 }

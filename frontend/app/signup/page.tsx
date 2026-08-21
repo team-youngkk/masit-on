@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 import { MemberAuthForm } from '@/components/member/MemberAuthForm'
 import { PageShell } from '@/components/ui/PageShell'
-import { memberLoginHref, memberVerifyEmailHref } from '@/lib/member/auth-navigation'
+import { memberLoginHref } from '@/lib/member/auth-navigation'
 
 import styles from './page.module.css'
 
@@ -19,9 +19,6 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
       <MemberAuthForm mode="signup" returnTo={returnTo} />
       <p className={styles.prompt}>
         이미 계정이 있으신가요? <Link href={memberLoginHref(returnTo)}>로그인</Link>
-      </p>
-      <p className={styles.prompt}>
-        인증 토큰을 받으셨나요? <Link href={memberVerifyEmailHref(returnTo)}>이메일 인증</Link>
       </p>
     </PageShell>
   )

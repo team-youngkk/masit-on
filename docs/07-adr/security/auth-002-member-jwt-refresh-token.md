@@ -85,7 +85,7 @@ Redis `auth:member:` namespace에는 Refresh Token 원문이 아니라 SHA-256 �
 
 회원 인증 요청 제한 key에는 원문 이메일이나 클라이언트 주소를 넣지 않는다. 정규화 이메일과 신뢰된 클라이언트 주소는 각각 `HMAC-SHA-256(rateLimitSecret, value)`의 고정 길이 소문자 hex로 변환한다. `rateLimitSecret`은 JWT 서명키와 Token 해시 용도에서 분리하고 로그에 남기지 않는다. 요청 출처는 신뢰된 Nginx가 외부 전달 헤더를 덮어써 제공한 단일 주소만 사용하며 Spring Boot는 지정된 Nginx peer의 전달 헤더만 신뢰한다.
 
-가입 이메일 인증 Action Token은 사람이 직접 입력할 수 있도록 `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`에서 CSPRNG로 생성한 8자 코드로 발급한다. 32자 문자 집합의 탐색 공간은 40-bit이며, 24시간 단일 소비·최신 코드만 유효·요청 출처당 10분 10회 제출 제한을 함께 적용한다. 검증 저장소에는 SHA-256 해시만 남기고 메일 Outbox의 암호화 전달 경계 외에는 원문을 저장·로그하지 않는다. 비밀번호 재설정 Token과 Access·Refresh Token은 이 단축 형식을 사용하지 않는다.
+가입 이메일 인증 Action Token은 사람이 직접 입력할 수 있도록 `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`에서 CSPRNG로 생성한 8자 코드로 발급한다. 32자 문자 집합의 탐색 공간은 40-bit이며, 5분 단일 소비·최신 코드만 유효·요청 출처당 10분 10회 제출 제한을 함께 적용한다. 검증 저장소에는 SHA-256 해시만 남기고 메일 Outbox의 암호화 전달 경계 외에는 원문을 저장·로그하지 않는다. 비밀번호 재설정 Token과 Access·Refresh Token은 이 단축 형식을 사용하지 않는다.
 
 ### 4.4. 폐기와 계정 상태
 

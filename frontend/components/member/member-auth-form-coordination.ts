@@ -1,9 +1,9 @@
-export type AcceptedMemberRegistration = Readonly<{
-  email: string
-  emailReadOnly: true
-}>
-
 export type MemberAuthMode = 'login' | 'signup' | 'request-reset' | 'confirm-reset'
+
+export const PENDING_MEMBER_REGISTRATION_EMAIL_KEY = 'masiton.pending-member-registration-email'
+export const PENDING_MEMBER_REGISTRATION_REQUESTED_AT_KEY = 'masiton.pending-member-registration-requested-at'
+export const MEMBER_EMAIL_VERIFICATION_TTL_SECONDS = 5 * 60
+export const PASSWORD_POLICY_ERROR_MESSAGE = '비밀번호는 12자 이상 64자 이하로 입력해 주세요.'
 
 export type MemberAuthFieldErrors = Readonly<{
   email?: string
@@ -53,7 +53,7 @@ export function validateMemberAuthForm(values: MemberAuthFormValues): MemberAuth
   if (needsPassword && !values.password) {
     errors.password = '비밀번호를 입력해 주세요.'
   } else if (needsPasswordPolicy && (values.password.length < 12 || values.password.length > 64)) {
-    errors.password = '비밀번호는 12자 이상 64자 이하로 입력해 주세요.'
+    errors.password = PASSWORD_POLICY_ERROR_MESSAGE
   } else if (values.mode === 'signup' && values.password === normalizedEmail) {
     errors.password = '비밀번호는 이메일과 다르게 입력해 주세요.'
   }
@@ -81,15 +81,4 @@ export function prepareMemberAuthSubmission(values: MemberAuthFormValues): Reado
 
 export function isInvalidMemberCredentialsResponse(reason: unknown): boolean {
   return reason instanceof Response && reason.status === 401
-}
-
-export function acceptMemberRegistration(email: string): AcceptedMemberRegistration {
-  return { email, emailReadOnly: true }
-}
-
-export async function resendAcceptedMemberRegistration(
-  registration: AcceptedMemberRegistration,
-  resend: (email: string) => Promise<void>,
-): Promise<void> {
-  await resend(registration.email)
 }

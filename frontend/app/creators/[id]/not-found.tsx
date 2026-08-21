@@ -1,6 +1,7 @@
 import Link from 'next/link'
 
 import { Card } from '@/components/ui/Card'
+import { PageShell } from '@/components/ui/PageShell'
 
 import styles from './not-found.module.css'
 
@@ -10,13 +11,15 @@ import styles from './not-found.module.css'
  */
 export default function CreatorNotFound() {
   return (
-    <section className={styles.notFound}>
-      <Card title="유튜버를 찾을 수 없습니다" level={2}>
-        <p>요청하신 유튜버 정보가 존재하지 않거나 더 이상 제공되지 않습니다.</p>
-        <Link href="/restaurants" className={styles.link}>
-          맛집 탐색으로 돌아가기
-        </Link>
-      </Card>
-    </section>
+    <PageShell title="유튜버 상세" size="narrow">
+      <section className={styles.notFound}>
+        <Card title="유튜버를 찾을 수 없습니다" level={2}>
+          <p>요청하신 유튜버 정보가 존재하지 않거나 더 이상 제공되지 않습니다.</p>
+          <Link href="/restaurants" className={styles.link}>
+            맛집 탐색으로 돌아가기
+          </Link>
+        </Card>
+      </section>
+    </PageShell>
   )
 }

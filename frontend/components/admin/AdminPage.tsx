@@ -18,7 +18,7 @@ export function AdminPage({
 }) {
   return (
     <AdminSessionGate>
-      <section className={styles.shell}>
+      <section className={styles.shell} aria-label="관리자 작업 공간">
         <AdminNavigation />
         <main className={styles.main}>
           <PageShell title={title} className={wide ? styles.wideContent : styles.content}>

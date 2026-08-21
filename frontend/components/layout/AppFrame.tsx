@@ -18,10 +18,10 @@ export function AppFrame({ children }: { children: ReactNode }) {
   }
 
   return (
-    <>
+    <div className={styles.publicFrame} data-public-frame="true">
       <SiteHeader />
       <main className={styles.main}>{children}</main>
       <SiteFooter />
-    </>
+    </div>
   )
 }

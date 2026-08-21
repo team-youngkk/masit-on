@@ -12,6 +12,7 @@
   --color-primary-contrast: #044e28;
   --color-primary-soft: #e8f6ec;
   --color-primary-faint: #f3fbf5;
+  --color-border-strong: #d9ded5;
 
   /* 표면 */
   --color-background: #fdfbf8;
@@ -33,9 +34,15 @@
   --color-info: #2563eb;
   --color-info-soft: #eff6ff;
 
+  /* 장식용 공개 화면 표면 */
+  --color-hero-start: #fffdf8;
+  --color-hero-mid: #f6f0e4;
+  --color-hero-end: #ece1cd;
+  --color-text-on-image: #ffffff;
+
   /* 타이포 */
-  --font-sans: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI',
-    'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  --font-sans: 'Pretendard', 'Noto Sans KR', 'Apple SD Gothic Neo',
+    'Malgun Gothic', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-size-sm: 0.875rem;
   --font-size-base: 1rem;
   --font-size-lg: 1.125rem;
@@ -71,6 +78,44 @@
   --layout-gutter: var(--space-4);
 }
 
+/* 관리자 화면은 공개 프레임 밖에 있으므로 이 범위의 토큰을 상속하지 않는다. */
+html[data-theme='dark'] [data-public-frame] {
+  color-scheme: dark;
+
+  --color-primary: #4ade80;
+  --color-primary-strong: #86efac;
+  --color-primary-deep: #22c55e;
+  --color-primary-contrast: #052e16;
+  --color-primary-soft: #143b25;
+  --color-primary-faint: #10281a;
+  --color-border-strong: #3f4d42;
+
+  --color-background: #111410;
+  --color-surface: #1b201c;
+  --color-surface-muted: #252b26;
+  --color-border: #354239;
+
+  --color-text: #f2f7f2;
+  --color-text-muted: #b1bcb2;
+  --color-text-on-primary: #06140a;
+
+  --color-danger: #fb7185;
+  --color-danger-deep: #fda4af;
+  --color-danger-soft: #3d1f22;
+  --color-warning: #fbbf24;
+  --color-warning-soft: #3d3012;
+  --color-info: #60a5fa;
+  --color-info-soft: #142b46;
+
+  --color-hero-start: #1a211a;
+  --color-hero-mid: #273126;
+  --color-hero-end: #374435;
+  --color-text-on-image: #ffffff;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 22%), 0 4px 12px rgb(0 0 0 / 18%);
+  --shadow-raised: 0 12px 36px rgb(0 0 0 / 32%);
+}
+
 @media (min-width: 768px) {
   :root {
     --layout-gutter: var(--space-8);
@@ -96,6 +141,12 @@ body {
   font-size: var(--font-size-base);
   line-height: var(--line-height-base);
   -webkit-font-smoothing: antialiased;
+}
+
+[data-public-frame] {
+  min-height: 100dvh;
+  background: var(--color-background);
+  color: var(--color-text);
 }
 
 ::selection {

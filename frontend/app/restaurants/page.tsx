@@ -1,13 +1,15 @@
 import Link from 'next/link'
 
 import { FavoriteButton } from '@/components/personal/FavoriteButton'
+import { FilterSelect } from '@/components/restaurants/FilterSelect'
 import { NaturalLanguageRestaurantSearch } from '@/components/restaurants/NaturalLanguageRestaurantSearch'
 import { Button } from '@/components/ui/Button'
 import { PageShell } from '@/components/ui/PageShell'
 import { StatePanel } from '@/components/ui/StatePanel'
 import { cn } from '@/lib/cn'
-import { buildMapNavigationHref } from '@/lib/map/map-navigation'
+import { shouldUseRestaurantDesignPreview } from '@/lib/design-preview'
 import { naturalLanguageFiltersKey } from '@/lib/natural-language-filters-key'
+import { getRestaurantPlaceholderImage } from '@/lib/restaurant-placeholder-image'
 import {
   buildRestaurantFilterClearHref,
   buildRestaurantFiltersResetHref,
@@ -23,6 +25,7 @@ import {
   fetchRestaurants,
   toSingleValue,
   type RawSearchParams,
+  type RestaurantListItem,
 } from '@/lib/restaurants-api'
 
 import styles from './restaurants.module.css'
@@ -33,6 +36,96 @@ type ActiveFilter = {
   label: string
   value: string
 }
+
+const DESIGN_PREVIEW_ITEMS: RestaurantListItem[] = [
+  {
+    id: 'design-preview-1',
+    name: '연남동 진짜곱창',
+    district: '마포구',
+    category: '곱창',
+    visitedBy: [
+      { id: 'preview-sungsik', channelName: '성시경' },
+      { id: 'preview-baek', channelName: '백종원' },
+      { id: 'preview-jjayang', channelName: '쯔양' },
+    ],
+    remainingVisitedByCount: 0,
+  },
+  {
+    id: 'design-preview-2',
+    name: '홍대 멘야하루',
+    district: '마포구',
+    category: '라멘',
+    visitedBy: [{ id: 'preview-baek', channelName: '백종원' }],
+    remainingVisitedByCount: 0,
+  },
+  {
+    id: 'design-preview-3',
+    name: '성수동 우마카세',
+    district: '성동구',
+    category: '이자카야',
+    visitedBy: [
+      { id: 'preview-jjayang', channelName: '쯔양' },
+      { id: 'preview-kwak', channelName: '곽튜브' },
+    ],
+    remainingVisitedByCount: 0,
+  },
+  {
+    id: 'design-preview-4',
+    name: '이태원 소담순두부',
+    district: '용산구',
+    category: '순두부찌개',
+    visitedBy: [{ id: 'preview-lee', channelName: '이밥' }],
+    remainingVisitedByCount: 0,
+  },
+  {
+    id: 'design-preview-5',
+    name: '방이동 평양집',
+    district: '송파구',
+    category: '냉면',
+    visitedBy: [{ id: 'preview-kwak', channelName: '곽튜브' }],
+    remainingVisitedByCount: 0,
+  },
+  {
+    id: 'design-preview-6',
+    name: '서래마을 오스테리아',
+    district: '서초구',
+    category: '파스타',
+    visitedBy: [{ id: 'preview-choi', channelName: '최자로드' }],
+    remainingVisitedByCount: 0,
+  },
+  {
+    id: 'design-preview-7',
+    name: '명동 만리장성',
+    district: '중구',
+    category: '중식',
+    visitedBy: [{ id: 'preview-baek', channelName: '백종원' }],
+    remainingVisitedByCount: 0,
+  },
+  {
+    id: 'design-preview-8',
+    name: '노량진 바다식당',
+    district: '동작구',
+    category: '해산물',
+    visitedBy: [{ id: 'preview-jjayang', channelName: '쯔양' }],
+    remainingVisitedByCount: 0,
+  },
+  {
+    id: 'design-preview-9',
+    name: '연희동 작은 디저트',
+    district: '서대문구',
+    category: '디저트',
+    visitedBy: [{ id: 'preview-sungsik', channelName: '성시경' }],
+    remainingVisitedByCount: 0,
+  },
+  {
+    id: 'design-preview-10',
+    name: '망원 커피하우스',
+    district: '마포구',
+    category: '카페',
+    visitedBy: [{ id: 'preview-kwak', channelName: '곽튜브' }],
+    remainingVisitedByCount: 0,
+  },
+]
 
 /* 검색·필터·페이지 상태는 URL 쿼리로만 관리한다(PRD 8절, pagination-contract.md). */
 export default async function RestaurantsPage({
@@ -52,7 +145,6 @@ export default async function RestaurantsPage({
   const currentCreatorId = toSingleValue(rawParams.creatorId)
   const currentSize = apiParams.get('size') ?? '20'
   const currentRoute = `/restaurants?${apiParams.toString()}`
-  const mapHref = buildMapNavigationHref('/restaurants', apiParams)
   const currentCreatorKnown =
     creatorsResult.ok &&
     (!currentCreatorId ||
@@ -99,16 +191,42 @@ export default async function RestaurantsPage({
       : []),
   ]
   const items = result.ok ? result.data.items : []
+  const isDesignPreview = shouldUseRestaurantDesignPreview({
+    nodeEnv: process.env.NODE_ENV,
+    previewFlag: process.env.MASITON_UI_PREVIEW,
+    hasItems: items.length > 0,
+    query: currentQuery,
+    district: currentDistrict,
+    category: currentCategory,
+    creatorId: currentCreatorId,
+  })
+  const displayItems: RestaurantListItem[] = isDesignPreview
+    ? DESIGN_PREVIEW_ITEMS
+    : items
+  const previewApiWarning = isDesignPreview && !result.ok
   const page = result.ok ? result.data.page : null
   const pageNumbers = page ? buildPageNumbers(page.number, page.totalPages) : []
 
   return (
     <PageShell className={styles.page}>
-      <section className={styles.hero} aria-labelledby="restaurants-title">
-        <p className={styles.eyebrow}>맛집 탐색</p>
-        <h1 id="restaurants-title">유튜버가 다녀온 진짜 맛집</h1>
-        <p>이름, 지역, 음식 종류, 유튜버로 원하는 맛집을 찾아보세요.</p>
-      </section>
+      <section className={styles.heroShell}>
+        <section className={styles.hero} aria-labelledby="restaurants-title">
+          <div className={styles.heroCopy}>
+            <p className={styles.eyebrow}>맛집 탐색</p>
+            <h1 id="restaurants-title">
+              유튜버가 다녀온 맛집,<br />
+              <strong>오늘은 어디로 갈까요?</strong>
+            </h1>
+            <p>검증된 맛집을 영상으로 확인하고, 실패 없는 선택을 즐겨보세요.</p>
+          </div>
+          <div className={styles.heroVisual} aria-hidden="true">
+            <img
+              src="/images/restaurant-hero-mascot.png"
+              alt=""
+              className={styles.heroImage}
+            />
+          </div>
+        </section>
 
       <form
         id="structured-restaurant-search"
@@ -137,84 +255,90 @@ export default async function RestaurantsPage({
             <div className={styles.filterControls}>
               <label className={styles.selectLabel} htmlFor="district">
                 <span className={styles.srOnly}>지역</span>
-                <select
+                <FilterSelect
                   id="district"
+                  formId="structured-restaurant-search"
                   name="district"
-                  defaultValue={currentDistrict}
+                  options={DISTRICT_OPTIONS.map((district) => ({
+                    value: district,
+                    label: district,
+                  }))}
+                  value={currentDistrict}
+                  placeholder="지역"
                   className={styles.select}
-                >
-                  <option value="">지역</option>
-                  {DISTRICT_OPTIONS.map((district) => (
-                    <option key={district} value={district}>
-                      {district}
-                    </option>
-                  ))}
-                </select>
+                  controlClassName={styles.selectControl}
+                  menuClassName={styles.selectMenu}
+                  optionClassName={styles.selectOption}
+                  selectedOptionClassName={styles.selectOptionSelected}
+                />
               </label>
               <label className={styles.selectLabel} htmlFor="category">
                 <span className={styles.srOnly}>음식 종류</span>
-                <select
+                <FilterSelect
                   id="category"
+                  formId="structured-restaurant-search"
                   name="category"
-                  defaultValue={currentCategory}
+                  options={CATEGORY_OPTIONS.map((category) => ({
+                    value: category,
+                    label: category,
+                  }))}
+                  value={currentCategory}
+                  placeholder="음식 종류"
                   className={styles.select}
-                >
-                  <option value="">음식 종류</option>
-                  {CATEGORY_OPTIONS.map((category) => (
-                    <option key={category} value={category}>
-                      {category}
-                    </option>
-                  ))}
-                </select>
+                  controlClassName={styles.selectControl}
+                  menuClassName={styles.selectMenu}
+                  optionClassName={styles.selectOption}
+                  selectedOptionClassName={styles.selectOptionSelected}
+                />
               </label>
               <label className={styles.selectLabel} htmlFor="creatorId">
                 <span className={styles.srOnly}>유튜버</span>
                 {creatorsResult.ok ? (
-                  <select
+                  <FilterSelect
                     id="creatorId"
+                    formId="structured-restaurant-search"
                     name="creatorId"
-                    defaultValue={currentCreatorId ?? ''}
+                    options={creatorsResult.data.items.map((creator) => ({
+                      value: creator.id,
+                      label: creator.channelName,
+                    }))}
+                    value={currentCreatorId ?? ''}
+                    placeholder="유튜버"
                     className={styles.select}
-                  >
-                    <option value="">유튜버</option>
-                    {creatorsResult.data.items.map((creator) => (
-                      <option key={creator.id} value={creator.id}>
-                        {creator.channelName}
-                      </option>
-                    ))}
-                    {!currentCreatorKnown && currentCreatorId ? (
-                      <option value={currentCreatorId}>
-                        선택할 수 없는 유튜버
-                      </option>
-                    ) : null}
-                  </select>
+                    controlClassName={styles.selectControl}
+                    menuClassName={styles.selectMenu}
+                    optionClassName={styles.selectOption}
+                    selectedOptionClassName={styles.selectOptionSelected}
+                  />
                 ) : (
                   <>
-                    <select
+                    <FilterSelect
                       id="creatorId"
-                      defaultValue=""
-                      className={styles.select}
+                      formId="structured-restaurant-search"
+                      name="creatorId"
+                      options={[]}
+                      value=""
+                      submittedValue={currentCreatorId ?? ''}
+                      placeholder="유튜버"
                       disabled
-                    >
-                      <option value="">유튜버</option>
-                    </select>
-                    {currentCreatorId ? (
-                      <input
-                        type="hidden"
-                        name="creatorId"
-                        value={currentCreatorId}
-                      />
-                    ) : null}
+                      className={styles.select}
+                      controlClassName={styles.selectControl}
+                      menuClassName={styles.selectMenu}
+                      optionClassName={styles.selectOption}
+                      selectedOptionClassName={styles.selectOptionSelected}
+                    />
                   </>
                 )}
               </label>
             </div>
-            <Link
-              href={buildRestaurantFiltersResetHref(apiParams)}
-              className={styles.resetLink}
-            >
-              필터 초기화
-            </Link>
+            {activeFilters.length > 0 ? (
+              <Link
+                href={buildRestaurantFiltersResetHref(apiParams)}
+                className={styles.resetLink}
+              >
+                필터 초기화
+              </Link>
+            ) : null}
           </div>
           {activeFilters.length > 0 ? (
             <div className={styles.chipStrip} aria-label="적용된 검색 조건">
@@ -246,38 +370,22 @@ export default async function RestaurantsPage({
                 </Link>
               ) : null}
             </p>
-          ) : creatorsResult.data.items.length === 0 ? (
+          ) : creatorsResult.data.items.length === 0 && currentCreatorId ? (
             <p className={styles.creatorHint}>등록된 유튜버가 없습니다.</p>
           ) : null}
         </div>
         <input type="hidden" name="size" value={currentSize} />
-      </form>
+        </form>
+      </section>
 
-      <NaturalLanguageRestaurantSearch
-        key={naturalLanguageFiltersKey(naturalLanguageFilters)}
-        structuredFormId="structured-restaurant-search"
-        creatorLabels={
-          creatorsResult.ok
-            ? Object.fromEntries(
-                creatorsResult.data.items.map((creator) => [
-                  creator.id,
-                  creator.channelName,
-                ]),
-              )
-            : {}
-        }
-        filters={naturalLanguageFilters}
-        returnTo={currentRoute}
-      />
-
-      {!result.ok ? (
+      {!result.ok && !isDesignPreview ? (
         <StatePanel
           title="맛집을 불러올 수 없습니다"
           description={result.message}
           tone="danger"
           traceId={result.traceId}
         />
-      ) : items.length === 0 ? (
+      ) : displayItems.length === 0 ? (
         <StatePanel
           title="조건에 맞는 맛집이 없습니다"
           description="검색어 또는 필터를 바꿔 다시 찾아보세요."
@@ -285,12 +393,23 @@ export default async function RestaurantsPage({
         />
       ) : (
         <>
+          {previewApiWarning ? (
+            <StatePanel
+              compact
+              tone="warning"
+              title="개발용 디자인 프리뷰"
+              description="맛집 API가 연결되지 않아 더미 데이터로 표시하고 있습니다."
+            />
+          ) : null}
           <section
             className={styles.resultHeader}
             aria-labelledby="results-title"
           >
             <h2 id="results-title">
-              검색 결과 {page?.totalElements ?? items.length}곳
+              {isDesignPreview ? '서울 맛집' : '검색 결과'}{' '}
+              {isDesignPreview
+                ? `${displayItems.length}곳`
+                : `${page?.totalElements ?? displayItems.length}곳`}
             </h2>
             <span
               className={styles.staticSort}
@@ -300,58 +419,92 @@ export default async function RestaurantsPage({
             </span>
           </section>
           <ul className={styles.list}>
-            {items.map((restaurant) => (
+            {displayItems.map((restaurant) => (
               <li key={restaurant.id} className={styles.listItem}>
                 <article className={styles.restaurantCard}>
-                  <div className={styles.cardHeading}>
-                    <div>
-                      <p className={styles.cardMeta}>
-                        {restaurant.district} · {restaurant.category}
-                      </p>
-                      <h3>{restaurant.name}</h3>
-                    </div>
-                    <FavoriteButton
-                      restaurantId={restaurant.id}
-                      restaurantName={restaurant.name}
-                      returnTo={currentRoute}
+                  <div className={styles.cardMedia}>
+                    <img
+                      src={
+                        getRestaurantPlaceholderImage(
+                          restaurant.id,
+                          restaurant.category,
+                        ).src
+                      }
+                      alt=""
+                      className={styles.cardMediaImage}
+                      loading="lazy"
+                      decoding="async"
                     />
                   </div>
-                  {restaurant.visitedBy.length > 0 ? (
-                    <p className={styles.visitedBy}>
-                      방문 유튜버:{' '}
-                      {restaurant.visitedBy
-                        .map((creator) => creator.channelName)
-                        .join(', ')}
-                      {restaurant.remainingVisitedByCount > 0
-                        ? ` 외 ${restaurant.remainingVisitedByCount}명`
-                        : ''}
-                    </p>
+                  <div className={styles.cardHeading}>
+                    <div className={styles.cardTitleBlock}>
+                      <div className={styles.cardTitleRow}>
+                        <h3>
+                          <Link
+                            href={
+                              isDesignPreview
+                                ? `/restaurants?query=${encodeURIComponent(restaurant.name)}`
+                                : `/restaurants/${encodeURIComponent(restaurant.id)}`
+                            }
+                          >
+                            {restaurant.name}
+                          </Link>
+                        </h3>
+                        {isDesignPreview ? (
+                          <Link
+                            href={`/login?returnTo=${encodeURIComponent(currentRoute)}`}
+                            className={styles.previewFavorite}
+                            aria-label={`${restaurant.name} 찜하려면 로그인`}
+                          >
+                            ♡
+                          </Link>
+                        ) : (
+                          <FavoriteButton
+                            compact
+                            restaurantId={restaurant.id}
+                            restaurantName={restaurant.name}
+                            returnTo={currentRoute}
+                          />
+                        )}
+                      </div>
+                      <p className={styles.cardAddress}>
+                        {restaurant.district} · {restaurant.category}
+                      </p>
+                      {restaurant.visitedBy.length > 0 ? (
+                        <div className={styles.cardBadges}>
+                          <span className={styles.creatorBadge}>
+                            {restaurant.visitedBy.length +
+                              restaurant.remainingVisitedByCount ===
+                            1
+                              ? restaurant.visitedBy[0]?.channelName
+                              : `유튜버 ${restaurant.visitedBy.length + restaurant.remainingVisitedByCount}명 방문`}
+                          </span>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                  {isDesignPreview ? (
+                    <Link
+                      href={`/restaurants?query=${encodeURIComponent(restaurant.name)}`}
+                      className={styles.detailLink}
+                      aria-label={`${restaurant.name} 검색 결과 보기`}
+                    >
+                      상세 보기 <span>→</span>
+                    </Link>
                   ) : (
-                    <p className={styles.visitedBy}>
-                      방문 유튜버 정보가 없습니다.
-                    </p>
+                    <Link
+                      href={`/restaurants/${encodeURIComponent(restaurant.id)}`}
+                      className={styles.detailLink}
+                      aria-label={`${restaurant.name} 상세 보기`}
+                    >
+                      상세 보기 <span aria-hidden="true">→</span>
+                    </Link>
                   )}
-                  <Link
-                    href={`/restaurants/${encodeURIComponent(restaurant.id)}`}
-                    className={styles.detailLink}
-                    aria-label={`${restaurant.name} 상세 보기`}
-                  >
-                    상세 보기 <span aria-hidden="true">→</span>
-                  </Link>
                 </article>
               </li>
             ))}
           </ul>
-          <aside className={styles.helperPanel} aria-label="맛집 탐색 도움말">
-            <div>
-              <strong>원하는 맛집이 보이지 않나요?</strong>
-              <p>검색어나 필터를 바꾸거나 지도에서 주변 맛집을 찾아보세요.</p>
-            </div>
-            <Link href={mapHref} className={styles.mapLink}>
-              지도 보기 <span aria-hidden="true">↗</span>
-            </Link>
-          </aside>
-          {page ? (
+          {page && !isDesignPreview ? (
             <nav className={styles.pagination} aria-label="페이지 이동">
               <p className={styles.pageStatus}>
                 {page.number} / {Math.max(page.totalPages, 1)} 페이지 (총{' '}
@@ -412,6 +565,23 @@ export default async function RestaurantsPage({
           ) : null}
         </>
       )}
+
+      <NaturalLanguageRestaurantSearch
+        key={naturalLanguageFiltersKey(naturalLanguageFilters)}
+        structuredFormId="structured-restaurant-search"
+        creatorLabels={
+          creatorsResult.ok
+            ? Object.fromEntries(
+                creatorsResult.data.items.map((creator) => [
+                  creator.id,
+                  creator.channelName,
+                ]),
+              )
+            : {}
+        }
+        filters={naturalLanguageFilters}
+        returnTo={currentRoute}
+      />
     </PageShell>
   )
 }

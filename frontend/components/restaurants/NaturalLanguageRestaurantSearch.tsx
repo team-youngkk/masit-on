@@ -27,6 +27,13 @@ import styles from './NaturalLanguageRestaurantSearch.module.css'
 
 type Props = { filters: NaturalLanguageSearchFilters; returnTo: string; structuredFormId: string; creatorLabels: Record<string, string> }
 
+const TAG_GROUPS = [
+  { label: '음식 종류', prefix: 'MENU_' },
+  { label: '맛', prefix: 'TASTE_' },
+  { label: '상황', prefix: 'OCCASION_' },
+  { label: '분위기', prefix: 'ATMOSPHERE_' },
+] as const
+
 export function NaturalLanguageRestaurantSearch({ filters, returnTo, structuredFormId, creatorLabels }: Props) {
   const [sentence, setSentence] = useState('')
   /* 여러 태그 AND는 목록 API(단일 `tag`)가 아니라 자연어 API의 filters.tags가 담당하므로
@@ -35,9 +42,16 @@ export function NaturalLanguageRestaurantSearch({ filters, returnTo, structuredF
   const [tags, setTags] = useState<string[]>(filters.tags)
   const [outcome, setOutcome] = useState<NaturalLanguageSearchOutcome | null>(null)
   const [pending, setPending] = useState(false)
+  const [expanded, setExpanded] = useState(false)
   const [now, setNow] = useState(Date.now())
   const controller = useRef<AbortController | null>(null)
+  const searchInputRef = useRef<HTMLInputElement | null>(null)
   const last = useRef({ sentence: '', page: 1, filters })
+
+  function expandSearch() {
+    setExpanded(true)
+    window.requestAnimationFrame(() => searchInputRef.current?.focus())
+  }
 
   function liveFilters() {
     const form = document.getElementById(structuredFormId)
@@ -84,31 +98,96 @@ export function NaturalLanguageRestaurantSearch({ filters, returnTo, structuredF
     if (controller.current === active) controller.current = null
   }, [])
   const applied = result ? formatNaturalLanguageAppliedConditions(result.interpretation.appliedConditions, creatorLabels) : []
+  const selectedConditions = [
+    filters.query ? `“${filters.query}”` : null,
+    filters.district,
+    filters.category,
+    filters.creatorId ? creatorLabels[filters.creatorId] ?? '선택한 유튜버' : null,
+    ...tags.map((tag) => NATURAL_LANGUAGE_TAG_OPTIONS.find((option) => option.code === tag)?.label ?? tag),
+  ].filter((condition): condition is string => Boolean(condition))
 
-  return <section className={styles.search} aria-label="문장으로 맛집 찾기">
-    <h2 className={styles.title}>문장으로 맛집 찾기</h2>
-    <p className={styles.description}>예: 성동구에서 냉면 먹기 좋은 곳. 선택된 기존 필터는 함께 적용됩니다.</p>
-    <form className={styles.form} onSubmit={(event) => { event.preventDefault(); void submit(sentence) }}>
-      <label htmlFor="natural-language-sentence" className={styles.label}>자연어 검색 문장</label>
-      <div className={styles.controls}>
-        <input id="natural-language-sentence" className={styles.input} value={sentence} onChange={(event) => setSentence(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); void submit(sentence) } }} maxLength={500} required disabled={pending} placeholder="원하는 맛집 조건을 문장으로 입력하세요" />
-        <Button type="submit" disabled={pending}>{pending ? '해석 중…' : '문장 검색'}</Button>
+  if (!expanded) {
+    return <section id="natural-language-search-panel" className={styles.collapsedSearch} aria-label="원하는 맛집 찾기">
+      <button
+        type="button"
+        className={styles.collapsedButton}
+        aria-expanded={false}
+        aria-controls="natural-language-search-panel"
+        onClick={expandSearch}
+      >
+        <svg
+          className={styles.collapsedIcon}
+          viewBox="0 0 32 32"
+          fill="none"
+          aria-hidden="true"
+        >
+          <circle cx="13.5" cy="13.5" r="8.5" stroke="currentColor" strokeWidth="2.25" />
+          <path d="M20 20L27.5 27.5" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" />
+        </svg>
+        <span className={styles.collapsedCopy}>
+          <strong>원하는 맛집이 보이지 않나요?</strong>
+          <span>검색어나 필터를 변경해보거나, 다른 지역을 선택해보세요.</span>
+        </span>
+        <span className={styles.collapsedArrow} aria-hidden="true">→</span>
+      </button>
+    </section>
+  }
+
+  return <section id="natural-language-search-panel" className={styles.search} aria-label="원하는 맛집 찾기">
+    <div className={styles.headingRow}>
+      <div>
+        <h2 className={styles.title}>찾고 싶은 맛집을 알려주세요</h2>
+        <p className={styles.description}>지역, 메뉴, 분위기를 편하게 적어보세요.</p>
       </div>
-      <fieldset className={styles.tags} disabled={pending}>
-        <legend className={styles.label}>직접 지정 태그 ({tags.length}/{NATURAL_LANGUAGE_TAG_LIMIT} 선택)</legend>
-        <p className={styles.tagHint}>선택한 태그는 다음 문장 검색에 적용되고, 문장에서 해석한 태그를 대체합니다.</p>
-        {NATURAL_LANGUAGE_TAG_OPTIONS.map((option) => <label key={option.code} className={styles.tagOption}>
-          <input type="checkbox" checked={tags.includes(option.code)} disabled={!tags.includes(option.code) && tags.length >= NATURAL_LANGUAGE_TAG_LIMIT} onChange={() => toggleTag(option.code)} />
-          {option.label}
-        </label>)}
-      </fieldset>
-    </form>
+      <button
+        type="button"
+        className={styles.collapseButton}
+        aria-expanded={true}
+        aria-controls="natural-language-search-panel"
+        onClick={() => setExpanded(false)}
+      >
+        접기
+      </button>
+    </div>
+    <div className={styles.searchGrid}>
+      <form className={styles.form} onSubmit={(event) => { event.preventDefault(); void submit(sentence) }}>
+        <label htmlFor="natural-language-sentence" className={styles.label}>원하는 조건</label>
+        <div className={styles.controls}>
+          <input ref={searchInputRef} id="natural-language-sentence" className={styles.input} value={sentence} onChange={(event) => setSentence(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); void submit(sentence) } }} maxLength={500} required disabled={pending} placeholder="예: 성동구에서 냉면 먹기 좋은 곳" />
+          <Button type="submit" disabled={pending}>{pending ? '찾는 중…' : '찾아보기'}</Button>
+        </div>
+        <fieldset className={styles.tags} disabled={pending}>
+          <legend className={styles.label}>추천 조건 ({tags.length}/{NATURAL_LANGUAGE_TAG_LIMIT})</legend>
+          <p className={styles.tagHint}>조건을 골라두면 입력한 내용과 함께 검색해요.</p>
+          {TAG_GROUPS.map((group) => <div key={group.prefix} className={styles.tagGroup}>
+            <h3 className={styles.tagGroupTitle}>{group.label}</h3>
+            <div className={styles.tagOptions}>
+              {NATURAL_LANGUAGE_TAG_OPTIONS.filter((option) => option.code.startsWith(group.prefix)).map((option) => <label key={option.code} className={`${styles.tagOption} ${tags.includes(option.code) ? styles.tagSelected : ''}`}>
+                <input type="checkbox" checked={tags.includes(option.code)} disabled={!tags.includes(option.code) && tags.length >= NATURAL_LANGUAGE_TAG_LIMIT} onChange={() => toggleTag(option.code)} />
+                {option.label}
+              </label>)}
+            </div>
+          </div>)}
+        </fieldset>
+      </form>
+      <aside className={styles.criteriaPanel} aria-label="현재 검색 조건">
+        <div className={styles.criteriaHeading}>
+          <div>
+            <strong>이렇게 이해했어요</strong>
+            <p>선택한 조건을 함께 적용합니다.</p>
+          </div>
+        </div>
+        <div className={styles.criteriaChips}>
+          {selectedConditions.length ? selectedConditions.map((condition) => <span key={condition}>{condition}</span>) : <span className={styles.emptyCriteria}>조건을 입력하면 여기에 표시됩니다.</span>}
+        </div>
+      </aside>
+    </div>
     <div className={styles.status} aria-live="polite" aria-atomic="true">
       {pending ? <p>입력한 조건을 확인하고 있습니다.</p> : null}
       {result ? <>
         <div className={styles.summary}>
           <p><strong>{result.interpretation.status === 'FAILED' ? '해석 실패' : result.interpretation.status === 'PARTIAL' ? '일부 조건 적용' : '조건 적용 완료'}</strong></p>
-          {applied.length ? <div className={styles.applied}>{applied.map((condition) => <StatusBadge key={condition} tone="success">{condition}</StatusBadge>)}</div> : null}
+          {applied.length ? <div className={styles.applied}>{applied.map((condition) => <StatusBadge key={condition} tone="success" className={styles.appliedBadge}>{condition}</StatusBadge>)}</div> : null}
           <p>총 {result.results.page.totalElements}건</p>
           {result.interpretation.ignoredConditions.length ? <p>적용하지 않은 조건: {result.interpretation.ignoredConditions.map((item) => item.text).join(', ')}</p> : null}
           {result.interpretation.conflicts.length ? <p>직접 필터 우선: {result.interpretation.conflicts.map((item) => naturalLanguageConditionLabel(item.field.toLowerCase())).join(', ')}</p> : null}
