@@ -235,7 +235,7 @@ class RuntimeDeploymentContractTest {
                 .contains("Terraform 렌더링 계약")
                 .contains("infra/production/terraform-redis/tests/template-render")
                 .contains(TERRAFORM_IMAGE + " test")
-                .contains(TERRAFORM_IMAGE + " sh -c 'terraform init -backend=false && terraform validate'")
+                .contains(TERRAFORM_IMAGE + " --entrypoint sh sh -c 'terraform init -backend=false && terraform validate'")
                 .doesNotContain("hashicorp/terraform:1.6.6");
     }
 
@@ -448,11 +448,15 @@ class RuntimeDeploymentContractTest {
                 .contains("maxmemory")
                 .contains("used_memory");
         assertThat(appDeploy)
-                .contains("redis_ip_is_approved")
-                .contains("redis_resolve_host")
-                .contains("getent ahosts --no-addrconfig")
+                .contains("is_canonical_ipv4")
+                .contains("is_safe_shared_ipv4")
+                .contains("resolve_shared_redis_host")
+                .contains("getent ahostsv4")
                 .contains("validate_shared_redis_endpoint")
                 .contains("REDIS_HOST=\"$REDIS_VALIDATED_HOST\"")
+                .contains("REDIS_PORT=\"$REDIS_VALIDATED_PORT\"")
+                .doesNotContain("fc00")
+                .doesNotContain("fd00")
                 .contains("readonly REDIS_CLI_IMAGE='redis@sha256:8096655e437712b07503796fb64d81359256cfcff0ab29d95a7da72863786efb'")
                 .contains("--mount \"type=bind,source=$REDIS_PASSWORD_FILE,target=/run/secrets/redis-password,readonly\"")
                 .contains("--user \"$REDIS_PASSWORD_UID:$REDIS_PASSWORD_GID\"")
@@ -461,6 +465,11 @@ class RuntimeDeploymentContractTest {
                 .doesNotContain("redis_password")
                 .doesNotContain("${REDIS_CLI_IMAGE")
                 .doesNotContain("redis:8.8-alpine");
+        assertThat(Files.readString(REDIS_README))
+                .doesNotContain("REDISCLI_AUTH")
+                .doesNotContain("docker exec -e")
+                .contains("redis-cli --askpass")
+                .contains("< /run/redis-password");
         assertThat(appDeploy.indexOf("validate_shared_redis_endpoint \"$REDIS_HOST\" \"$REDIS_PORT\""))
                 .as("공유 Redis endpoint를 검증한 뒤에만 비밀번호 파일을 열어야 한다")
                 .isLessThan(appDeploy.indexOf("REDIS_PASSWORD_FILE="));
@@ -475,7 +484,7 @@ class RuntimeDeploymentContractTest {
                 .contains("terraform validate")
                 .contains("infra/production/terraform-redis/tests/template-render")
                 .contains(TERRAFORM_IMAGE + " test")
-                .contains(TERRAFORM_IMAGE + " sh -c 'terraform init -backend=false && terraform validate'")
+                .contains(TERRAFORM_IMAGE + " --entrypoint sh sh -c 'terraform init -backend=false && terraform validate'")
                 .doesNotContain("hashicorp/terraform:1.6.6");
         assertThat(bootstrap)
                 .contains("\"$STAGE/cloudwatch-install.sh\" \"$STAGE\"")

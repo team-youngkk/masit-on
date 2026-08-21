@@ -18,6 +18,79 @@
 # 전달한다(M2-08). 브리지 네트워크로는 두 방향 모두 성립하지 않는다.
 set -euo pipefail
 
+# BEGIN SHARED REDIS ENDPOINT CONTRACT
+is_canonical_ipv4() {
+  local candidate="$1"
+  local -a octets=()
+  [[ "$candidate" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || return 1
+  IFS=. read -r -a octets <<< "$candidate"
+  [ "${#octets[@]}" -eq 4 ] || return 1
+  for octet in "${octets[@]}"; do
+    [[ "$octet" == 0 || "$octet" =~ ^[1-9][0-9]{0,2}$ ]] || return 1
+    ((10#$octet <= 255)) || return 1
+  done
+}
+
+is_safe_shared_ipv4() {
+  local candidate="$1"
+  local -a octets=()
+  is_canonical_ipv4 "$candidate" || return 1
+  IFS=. read -r -a octets <<< "$candidate"
+  local first="${octets[0]}"
+  local second="${octets[1]}"
+  if (( first == 10 )); then return 0; fi
+  if (( first == 172 && second >= 16 && second <= 31 )); then return 0; fi
+  if (( first == 192 && second == 168 )); then return 0; fi
+  return 1
+}
+
+resolve_shared_redis_host() {
+  local host="$1" lookup="" address="" resolved=""
+  local -a labels=()
+  if is_canonical_ipv4 "$host"; then
+    is_safe_shared_ipv4 "$host" || return 1
+    printf '%s' "$host"
+    return 0
+  fi
+  [[ "$host" =~ ^[0-9.]+$ || "$host" =~ ^[0xX][0-9A-Fa-f]+$ ]] && return 1
+  [[ "$host" != *:* ]] || return 1
+  [[ "$host" =~ ^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$ ]] || return 1
+  [ "${#host}" -le 253 ] || return 1
+  [[ "$host" != *..* ]] || return 1
+  IFS=. read -r -a labels <<< "$host"
+  for label in "${labels[@]}"; do [ "${#label}" -le 63 ] || return 1; done
+  lookup=$(getent ahostsv4 "$host" 2>/dev/null) || return 1
+  [ -n "$lookup" ] || return 1
+  while IFS= read -r address; do
+    [ -n "$address" ] || continue
+    is_safe_shared_ipv4 "$address" || return 1
+    [ -n "$resolved" ] || resolved="$address"
+  done < <(printf '%s\n' "$lookup" | awk '{print $1}')
+  [ -n "$resolved" ] || return 1
+  printf '%s' "$resolved"
+}
+
+validate_shared_redis_port() {
+  local port="${1-}"
+  [[ "$port" =~ ^[1-9][0-9]{0,4}$ ]] || return 1
+  ((10#$port <= 65535))
+}
+
+validate_shared_redis_endpoint() {
+  local host="${1-}" port="${2-}"
+  REDIS_VALIDATED_HOST=""; REDIS_VALIDATED_PORT=""
+  REDIS_VALIDATED_HOST=$(resolve_shared_redis_host "$host") || {
+    echo "공유 Redis host가 안전한 private IPv4 주소로 고정되지 않는다" >&2
+    return 1
+  }
+  validate_shared_redis_port "$port" || {
+    echo "공유 Redis port가 유효한 숫자 범위가 아니다" >&2
+    return 1
+  }
+  REDIS_VALIDATED_PORT="$port"
+}
+# END SHARED REDIS ENDPOINT CONTRACT
+
 DEPLOYMENT_ENV_FILE="${DEPLOYMENT_ENV_FILE:-/etc/masiton/deployment.env}"
 if [ -f "$DEPLOYMENT_ENV_FILE" ]; then
   set -a
@@ -65,13 +138,23 @@ case "$component" in
     # 단일 EC2 기본값은 유지하고, ASG에서는 환경 변수 또는 선택적 SSM 값으로
     # Redis endpoint를 바꿀 수 있게 한다. 명시적 환경 변수가 SSM보다 우선한다.
     REDIS_HOST="${REDIS_HOST:-$(optional_param /masiton/redis/host)}"
-    if [ "${REQUIRE_SHARED_REDIS:-false}" = true ] && [ -z "$REDIS_HOST" ]; then
-      echo "ASG 배포에서는 공유 Redis endpoint가 필요하다: REDIS_HOST 또는 /masiton/redis/host" >&2
-      exit 1
-    fi
-    REDIS_HOST="${REDIS_HOST:-127.0.0.1}"
     REDIS_PORT="${REDIS_PORT:-$(optional_param /masiton/redis/port)}"
-    REDIS_PORT="${REDIS_PORT:-6379}"
+    if [ "${REQUIRE_SHARED_REDIS:-false}" = true ]; then
+      [ -n "$REDIS_HOST" ] || {
+        echo "ASG 배포에서는 공유 Redis endpoint가 필요하다: REDIS_HOST 또는 /masiton/redis/host" >&2
+        exit 1
+      }
+      validate_shared_redis_endpoint "$REDIS_HOST" "$REDIS_PORT" || exit 1
+      REDIS_HOST="$REDIS_VALIDATED_HOST"
+      REDIS_PORT="$REDIS_VALIDATED_PORT"
+    else
+      REDIS_HOST="${REDIS_HOST:-127.0.0.1}"
+      REDIS_PORT="${REDIS_PORT:-6379}"
+      validate_shared_redis_port "$REDIS_PORT" || {
+        echo "Redis port가 유효하지 않다" >&2
+        exit 1
+      }
+    fi
     export REDIS_HOST
     export REDIS_PORT
     MAIL_HOST=$(param /masiton/mail/host); export MAIL_HOST

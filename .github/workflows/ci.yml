@@ -75,7 +75,7 @@ jobs:
           docker run --rm \
             -v "${{ github.workspace }}:/workspace" \
             -w /workspace/infra/production/terraform \
-            hashicorp/terraform@sha256:9a42ea97ea25b363f4c65be25b9ca52b1e511ea5bf7d56050a506ad2daa7af9d sh -c 'terraform init -backend=false && terraform validate'
+            hashicorp/terraform@sha256:9a42ea97ea25b363f4c65be25b9ca52b1e511ea5bf7d56050a506ad2daa7af9d --entrypoint sh sh -c 'terraform init -backend=false && terraform validate'
 
   # workflow_dispatch는 이미 게시된 이미지를 배포하는 경로다. 그 이미지는 push 때
   # 이 두 job을 통과해야 만들어졌으므로 품질 게이트는 이미 걸린 상태이고, 다시 도는

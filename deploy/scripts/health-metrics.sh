@@ -79,6 +79,7 @@ REDIS_PORT="${REDIS_PORT:-$(aws ssm get-parameter --region "$REGION" --name /mas
   --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || printf '')}"
 REDIS_PORT="${REDIS_PORT:-6379}"
 
+# BEGIN SHARED REDIS ENDPOINT CONTRACT
 # health-metrics는 host network에서 Redis에 직접 연결하므로, 입력 endpoint를
 # Redis client가 읽기 전에 엄격히 고정한다. 숫자 IPv4는 표준 dotted-decimal만
 # 허용해 octal·shorthand·IPv4-mapped IPv6 해석 차이를 제거하고, DNS는 모든 A
@@ -156,14 +157,34 @@ resolve_shared_redis_host() {
   printf '%s' "$resolved"
 }
 
+validate_shared_redis_port() {
+  local port="${1-}"
+  [[ "$port" =~ ^[1-9][0-9]{0,4}$ ]] || return 1
+  ((10#$port <= 65535))
+}
+
+validate_shared_redis_endpoint() {
+  local host="${1-}" port="${2-}"
+  REDIS_VALIDATED_HOST=""; REDIS_VALIDATED_PORT=""
+  REDIS_VALIDATED_HOST=$(resolve_shared_redis_host "$host") || {
+    echo "공유 Redis host가 안전한 private IPv4 주소로 고정되지 않는다" >&2
+    return 1
+  }
+  validate_shared_redis_port "$port" || {
+    echo "공유 Redis port가 유효한 숫자 범위가 아니다" >&2
+    return 1
+  }
+  REDIS_VALIDATED_PORT="$port"
+}
+# END SHARED REDIS ENDPOINT CONTRACT
+
 REDIS_ENDPOINT_HOST=""
 REDIS_ENDPOINT_PORT=""
 REDIS_ENDPOINT_VALID=false
-if [[ "$REDIS_PORT" =~ ^[1-9][0-9]{0,4}$ ]] && ((10#$REDIS_PORT <= 65535)); then
-  if REDIS_ENDPOINT_HOST=$(resolve_shared_redis_host "$REDIS_HOST"); then
-    REDIS_ENDPOINT_PORT="$REDIS_PORT"
-    REDIS_ENDPOINT_VALID=true
-  fi
+if validate_shared_redis_endpoint "$REDIS_HOST" "$REDIS_PORT"; then
+  REDIS_ENDPOINT_HOST="$REDIS_VALIDATED_HOST"
+  REDIS_ENDPOINT_PORT="$REDIS_VALIDATED_PORT"
+  REDIS_ENDPOINT_VALID=true
 fi
 if [ "$REDIS_ENDPOINT_VALID" != true ]; then
   echo "Redis shared endpoint가 안전한 private IPv4/port 계약을 만족하지 않는다" >&2
