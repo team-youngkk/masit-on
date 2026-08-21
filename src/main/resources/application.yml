@@ -63,6 +63,9 @@ logging:
 
 masiton:
   ai:
+    place-identity:
+      # 이름 완화 판정은 Release holdout·인간 판정 승인 후에만 운영에서 활성화한다.
+      relaxed-matching-enabled: ${AI_PLACE_IDENTITY_RELAXED_MATCHING_ENABLED:false}
     worker:
       enabled: ${AI_WORKER_ENABLED:false}
       poll-interval: PT5S
