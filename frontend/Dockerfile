@@ -54,6 +54,7 @@ RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 # 정적 파일은 별도로 복사해야 한다.
 COPY --from=build --chown=masiton:masiton /app/.next/standalone ./
 COPY --from=build --chown=masiton:masiton /app/.next/static ./.next/static
+COPY --from=build --chown=masiton:masiton /app/public ./public
 
 USER masiton
 
