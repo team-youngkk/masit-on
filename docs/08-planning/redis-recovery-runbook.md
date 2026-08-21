@@ -13,7 +13,8 @@ related_documents:
 유일한 break-glass 진입점이다. 평상시에는 이 절차를 사용하지 않는다. 정상 감시는
 `FleetDependencyRedis`·`RedisMemoryUtilizationPercent`의 결측을 포함해 fail-closed로
 동작해야 하며, Terraform의 missing-data 정책과 CodeDeploy의 alarm polling 정책을
-완화하지 않는다.
+완화하지 않는다. 복구 배포에서 일시적으로 제외하는 것은 Redis alarm 두 개뿐이며,
+ALB 5xx·지연·비정상 호스트 alarm은 계속 CodeDeploy 게이트로 동작한다.
 
 ## 1. 정상 계약과 중단 기준
 
@@ -53,19 +54,23 @@ related_documents:
 ## 3. 게이트의 일시적 해제와 한 번의 복구 배포
 
 Terraform 작업 디렉터리는 `infra/production/terraform`이다. 먼저 현재 state를
-갱신하고 plan을 저장한다. `deployment_alarms_enabled=false`는 명령행에서만 넘긴다.
-`terraform.tfvars`, Terraform 리소스의 `treat_missing_data`, alarm 목록과
-`ignore_poll_alarm_failure`를 수정하지 않는다.
+갱신하고 plan을 저장한다. `redis_recovery_mode=true`와
+`deployment_alarms_enabled=true`는 명령행에서만 넘긴다. `terraform.tfvars`,
+Terraform 리소스의 `treat_missing_data`, alarm 목록과 `ignore_poll_alarm_failure`를
+수정하지 않는다. 복구 모드는 CodeDeploy alarm 목록에서 전용 Redis alarm 두 개만
+제외하고 ALB target 5xx·target latency·blue unhealthy-host alarm 3개를 그대로 남긴다.
 
 ```powershell
-terraform plan -var="deployment_alarms_enabled=false" -out=redis-break-glass.tfplan
+terraform plan -var="redis_recovery_mode=true" -var="deployment_alarms_enabled=true" -out=redis-break-glass.tfplan
 terraform show -no-color redis-break-glass.tfplan
 terraform apply redis-break-glass.tfplan
 ```
 
-plan에는 CodeDeploy deployment group의 alarm enabled 값에 대한 일시적 변경만 있어야
-한다. 승인 기록에 plan 요약, 승인자 2명, 유효기간 만료 시각, 복구 revision과
-deployment ID를 함께 적는다.
+plan에는 CodeDeploy deployment group의 Redis alarm 목록 제외와 그에 필요한 입력 변경만
+있어야 한다. `enabled=true`, `ignore_poll_alarm_failure=false`와 ALB target 5xx·target
+latency·blue unhealthy-host alarm 3개가 유지되는지 `terraform show`에서 확인한다. 승인
+기록에 plan 요약, 승인자 2명, 유효기간 만료 시각, 복구 revision과 deployment ID를 함께
+적는다.
 
 게이트가 꺼진 동안 known-good 또는 복구용 revision으로 CodeDeploy 배포를 **한 번만**
 실행한다. 배포가 실패하거나 중단되면 자동 rollback 결과를 확인하고, rollback이
@@ -87,7 +92,7 @@ deployment ID를 함께 적는다.
 넘어가지 않는다.
 
 ```powershell
-terraform plan -var="deployment_alarms_enabled=true" -out=redis-break-glass-restore.tfplan
+terraform plan -var="redis_recovery_mode=false" -var="deployment_alarms_enabled=true" -out=redis-break-glass-restore.tfplan
 terraform show -no-color redis-break-glass-restore.tfplan
 terraform apply redis-break-glass-restore.tfplan
 aws deploy get-deployment-group `
@@ -96,6 +101,7 @@ aws deploy get-deployment-group `
   --query 'deploymentGroupInfo.alarmConfiguration.{Enabled:enabled,IgnorePollFailure:ignorePollAlarmFailure,Alarms:alarms}'
 ```
 
-최종 출력에서 `Enabled=true`, `IgnorePollFailure=false`, 두 Redis alarm이 목록에
-있는 것을 확인하고 승인 기록을 닫는다. 복원 apply가 실패하면 게이트가 복원됐다고
-간주하지 말고 추가 배포 없이 수동 장애 대응으로 전환한다.
+최종 출력에서 `Enabled=true`, `IgnorePollFailure=false`, ALB target 5xx·target
+latency·blue unhealthy-host와 Redis alarm 두 개가 모두 목록에 있는 것을 확인하고 승인
+기록을 닫는다. 복원 apply가 실패하면 게이트가 복원됐다고 간주하지 말고 추가 배포
+없이 수동 장애 대응으로 전환한다.

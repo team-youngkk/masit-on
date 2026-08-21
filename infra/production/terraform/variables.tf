@@ -282,6 +282,12 @@ variable "deployment_alarms_enabled" {
   default     = true
 }
 
+variable "redis_recovery_mode" {
+  description = "승인된 단일 Redis 복구 배포에서만 true로 두며, CodeDeploy alarm 목록에서 Redis alarm만 제외한다. ALB·latency·unhealthy-host alarm과 polling 실패 차단은 유지한다"
+  type        = bool
+  default     = false
+}
+
 variable "mail_smtp_port" {
   description = "애플리케이션이 외부 SMTP relay로 나가는 포트. dependency health의 mail 항목이 이 경로를 사용한다"
   type        = number
@@ -307,4 +313,3 @@ variable "app_subnet_is_private" {
   type        = bool
   default     = false
 }
-

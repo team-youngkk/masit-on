@@ -109,7 +109,7 @@ t4g.nano, 컨테이너 제한 384 MB, `maxmemory 256mb`.
 메모리 여유는 충분하지만 다음 셋은 남는다.
 
 1. **단일 장애점.** replica가 없다. 이 인스턴스가 멈추면 로그인·토큰 재발급·코스 quota가 동시에 멈춘다. AOF로 데이터는 보존되지만 그동안은 정지다.
-2. **장애가 배포까지 막는다.** `masiton-prod-fleet-dependency-redis` 알람이 `treat_missing_data = breaching`이고 deployment group의 `ignore_poll_alarm_failure = false`다. **Redis가 멈추면 그것을 고치려는 배포도 `DEPLOYMENT_STOP_ON_ALARM`으로 막힌다.** [전환 기록](deployment-hardening-cutover-record.md) 4.3절의 순환과 같은 계열이며, 그때 사용한 `deployment_alarms_enabled` 완화가 장애 시에도 필요해진다.
+2. **장애가 배포까지 막는다.** `masiton-prod-fleet-dependency-redis` 알람이 `treat_missing_data = breaching`이고 deployment group의 `ignore_poll_alarm_failure = false`다. **Redis가 멈추면 그것을 고치려는 배포도 `DEPLOYMENT_STOP_ON_ALARM`으로 막힌다.** [전환 기록](deployment-hardening-cutover-record.md) 4.3절의 순환과 같은 계열이며, 장애 시에는 승인된 `redis_recovery_mode`로 Redis alarm 두 개만 일시 제외한다.
 3. **정책이 키 계열을 구분하지 않는다.** 세션·quota는 evict되면 안 되므로 `noeviction`이 맞는 선택이다. 그러나 rate limit 키도 같은 정책을 공유하므로, 예상 못 한 키 폭증에서 **버려도 되는 데이터 때문에 버리면 안 되는 쓰기가 막힌다.**
 
 ### 3.3. 감시가 없다
@@ -149,17 +149,19 @@ Redis 장애 때 복구 배포 자체가 위 게이트에 막히면 다음 승�
    데이터 계층 복구가 가능한 경우 먼저 전용 Redis의 AUTH PING, `INFO memory`,
    AOF 상태와 앱의 dependency health를 복구한다.
 2. 지표 수집·Redis endpoint·복구용 앱 revision을 배포해야 하는데 alarm이 이를
-   막는 경우에만 `infra/production/terraform`에서 **명령행 변수로 한 번** 게이트를
-   끈다. `terraform.tfvars`나 Terraform 리소스의 missing-data 정책은 바꾸지 않는다.
+   막는 경우에만 `infra/production/terraform`에서 **명령행 변수로 한 번** Redis alarm
+   두 개를 목록에서 제외한다. `terraform.tfvars`나 Terraform 리소스의 missing-data
+   정책은 바꾸지 않는다.
 
    ```powershell
-   terraform plan -var="deployment_alarms_enabled=false" -out=redis-break-glass.tfplan
+   terraform plan -var="redis_recovery_mode=true" -var="deployment_alarms_enabled=true" -out=redis-break-glass.tfplan
    terraform show -no-color redis-break-glass.tfplan
    terraform apply redis-break-glass.tfplan
    ```
 
-   plan에는 CodeDeploy deployment group alarm enabled 값의 일시적 변경만 있어야
-   하며, 다른 변경·삭제·교체가 보이면 중단한다. 이 상태에서 복구 목적의 **단 한 번의**
+   plan에는 CodeDeploy deployment group의 Redis alarm 목록 제외만 있어야 하며,
+   ALB 5xx·지연·비정상 호스트 alarm과 `Enabled=true`, `IgnorePollFailure=false`가
+   유지되어야 한다. 다른 변경·삭제·교체가 보이면 중단한다. 이 상태에서 복구 목적의 **단 한 번의**
    배포만 실행한다. 공개 탐색이 예상 상태를 벗어나거나, 회원 인증이 성공으로
    우회되거나, replacement health가 실패하면 즉시 배포를 중단하고 기존
    known-good revision으로 rollback한다.
@@ -168,7 +170,7 @@ Redis 장애 때 복구 배포 자체가 위 게이트에 막히면 다음 승�
    회복한 뒤 즉시 정상 게이트를 복원한다.
 
    ```powershell
-   terraform plan -var="deployment_alarms_enabled=true" -out=redis-break-glass-restore.tfplan
+   terraform plan -var="redis_recovery_mode=false" -var="deployment_alarms_enabled=true" -out=redis-break-glass-restore.tfplan
    terraform apply redis-break-glass-restore.tfplan
    aws deploy get-deployment-group `
      --application-name <application-name> `

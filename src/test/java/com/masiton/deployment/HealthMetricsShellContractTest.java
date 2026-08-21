@@ -15,6 +15,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 class HealthMetricsShellContractTest {
 
     private static final Path CONTRACT = Path.of("deploy/scripts/tests/health-metrics-memory-test.sh");
+    private static final Path DOCKER_FALLBACK_CONTRACT =
+            Path.of("deploy/scripts/tests/health-metrics-docker-fallback-test.sh");
 
     @Test
     @DisplayName("Redis 메모리 지표는 유효한 INFO에서만 올리고 결측에서도 의존성 지표를 유지한다")
@@ -32,6 +34,24 @@ class HealthMetricsShellContractTest {
         assertThat(finished).as("hermetic shell contract must be bounded").isTrue();
         assertThat(process.exitValue()).as(output).isZero();
         assertThat(output).contains("health-metrics memory contract: PASS");
+    }
+
+    @Test
+    @DisplayName("Docker fallback은 시크릿 파일 소유자로 컨테이너를 실행하고 평문을 넘기지 않는다")
+    void redisDockerFallback_시크릿파일소유자로실행하고_평문을전달하지않는다()
+            throws IOException, InterruptedException {
+        Process process = new ProcessBuilder(bashCommand(), DOCKER_FALLBACK_CONTRACT.toString())
+                .redirectErrorStream(true)
+                .start();
+        boolean finished = process.waitFor(30, TimeUnit.SECONDS);
+        if (!finished) {
+            process.destroyForcibly();
+        }
+        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+
+        assertThat(finished).as("hermetic Docker fallback contract must be bounded").isTrue();
+        assertThat(process.exitValue()).as(output).isZero();
+        assertThat(output).contains("health-metrics Docker fallback contract: PASS");
     }
 
     private static String bashCommand() {

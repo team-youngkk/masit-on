@@ -89,8 +89,12 @@ redis_cli() {
     [ -n "$redis_password" ] || return 1
     REDISCLI_AUTH="$redis_password" redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" --raw "$@"
   elif command -v docker >/dev/null 2>&1; then
+    local redis_password_owner=""
     [ -r "$REDIS_PASSWORD_FILE" ] || return 1
+    redis_password_owner=$(stat -c '%u:%g' "$REDIS_PASSWORD_FILE" 2>/dev/null) || return 1
+    [[ "$redis_password_owner" =~ ^[0-9]+:[0-9]+$ ]] || return 1
     docker run --rm --network host \
+      --user "$redis_password_owner" \
       --mount "type=bind,src=$REDIS_PASSWORD_FILE,dst=/run/masiton-redis-password,readonly" \
       "$REDIS_CLI_IMAGE" sh -c \
       'REDISCLI_AUTH="$(tr -d "\\r\\n" < /run/masiton-redis-password)" exec redis-cli "$@"' \

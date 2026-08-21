@@ -424,6 +424,8 @@ class RuntimeDeploymentContractTest {
                 .contains("MetricName=DependencyRedis,Value=$redis,Unit=None,Dimensions=")
                 .contains("redis_cli INFO memory")
                 .contains("REDISCLI_AUTH=\"$redis_password\" redis-cli")
+                .contains("redis_password_owner=$(stat -c '%u:%g' \"$REDIS_PASSWORD_FILE\"")
+                .contains("--user \"$redis_password_owner\"")
                 .contains("--mount \"type=bind,src=$REDIS_PASSWORD_FILE,dst=/run/masiton-redis-password,readonly\"")
                 .contains("/run/masiton-redis-password")
                 .doesNotContain("docker run --rm --network host -e REDISCLI_AUTH")
@@ -471,11 +473,16 @@ class RuntimeDeploymentContractTest {
                 .contains("treat_missing_data = \"breaching\"")
                 .contains("Environment = \"asg\"");
         assertThat(deploymentAlarms)
+                .contains("var.redis_recovery_mode ? [] : [")
+                .contains("aws_cloudwatch_metric_alarm.target_5xx.alarm_name")
+                .contains("aws_cloudwatch_metric_alarm.target_latency.alarm_name")
+                .contains("aws_cloudwatch_metric_alarm.blue_unhealthy.alarm_name")
                 .contains("aws_cloudwatch_metric_alarm.fleet_dependency_redis.alarm_name")
                 .contains("aws_cloudwatch_metric_alarm.redis_memory_utilization.alarm_name")
                 .doesNotContain("fleet_dependency_redis_freshness");
         assertThat(variables)
                 .contains("variable \"deployment_alarms_enabled\"")
+                .contains("variable \"redis_recovery_mode\"")
                 .contains("default     = true");
         assertThat(metrics).contains("Dimensions=[{Name=Environment,Value=$ENVIRONMENT}]");
 
@@ -504,12 +511,15 @@ class RuntimeDeploymentContractTest {
         assertThat(monitoring)
                 .contains("treat_missing_data = \"breaching\"");
         assertThat(codeDeploy)
+                .contains("alarms = local.deployment_alarm_names")
+                .contains("enabled                   = var.deployment_alarms_enabled")
                 .contains("ignore_poll_alarm_failure = false");
         assertThat(baseline)
-                .contains("deployment_alarms_enabled=false")
+                .contains("redis_recovery_mode=true")
                 .contains("deployment_alarms_enabled=true")
+                .doesNotContain("deployment_alarms_enabled=false")
                 .contains("terraform.tfvars")
-                .contains("missing-data 정책은 바꾸지 않는다")
+                .contains("정책은 바꾸지 않는다")
                 .contains("공개 맛집 탐색 GET")
                 .contains("회원 로그인·토큰 재발급·세션·rate-limit")
                 .contains("known-good revision으로 rollback")
@@ -525,8 +535,12 @@ class RuntimeDeploymentContractTest {
                 .contains("최대 한 번")
                 .contains("treat_missing_data = \"breaching\"")
                 .contains("ignore_poll_alarm_failure = false")
-                .contains("deployment_alarms_enabled=false")
+                .contains("redis_recovery_mode=true")
                 .contains("deployment_alarms_enabled=true")
+                .doesNotContain("deployment_alarms_enabled=false")
+                .contains("ALB target 5xx")
+                .contains("target latency")
+                .contains("blue unhealthy-host")
                 .contains("Enabled=true")
                 .contains("IgnorePollFailure=false");
     }
