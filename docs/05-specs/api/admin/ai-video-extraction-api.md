@@ -206,11 +206,14 @@ related_documents:
       "registeredVisitId": "opaque-visit-id",
       "reusedResources": ["creator", "video"],
       "placeDecision": {
+        "searchQuery": "후보 맛집명",
+        "kakaoPlaceId": "opaque-kakao-place-id",
         "kakaoPlaceUrl": "https://place.map.kakao.com/example",
         "roadAddress": "서울특별시 영등포구 도림로131길 17",
         "matchedBy": "NAME_AND_DISTRICT"
       },
       "categoryDecision": {
+        "matchedMappingId": "opaque-food-category-mapping-id",
         "foodCategoryName": "일식",
         "resolvedBy": "KAKAO_PLACE_CATEGORY"
       }
@@ -279,7 +282,9 @@ related_documents:
 - `registrationUnits`는 `BR-AIEXTRACT-001`의 장소 단위 등록 단위별 판정 결과다. 후보가 없거나 등록 단위를 구성하지 못한 작업은 빈 배열이다. 작업 최상위 `reviewStatus`는 등록 단위 판정의 요약이며, 단위별 결과는 `registrationUnits[].reviewStatus`가 권위 있는 값이다.
 - 등록 결과 식별자 4종은 함께 존재하거나 함께 `null`이다. `AUTO_CONFIRMED`와 등록 유지 `MANUAL_OVERRIDE`(`manualOverrideType=null`)에서만 값이 있고, `AUTO_BLOCKED`·`AUTO_REJECTED`·롤백 완료·폐기 완료 `MANUAL_OVERRIDE`에서는 모두 `null`이며 `reusedResources`는 빈 배열이다. 이 규칙은 데이터 계약 5.1절의 상태·컬럼 조합표와 같다.
 - `blockReason`은 `AUTO_BLOCKED`·`AUTO_REJECTED`일 때만 값이 있다. 장소 판정은 `PLACE_NOT_FOUND`·`PLACE_AMBIGUOUS`, 카테고리 판정은 `CATEGORY_UNRESOLVED`, 그 밖에는 기존 검증 실패 사유 코드를 사용한다.
-- `placeDecision.matchedBy`와 `categoryDecision.resolvedBy`는 자동 판정 근거다. `matchedBy`는 `NAME_AND_DISTRICT`, `resolvedBy`는 `KAKAO_PLACE_CATEGORY` 또는 `MENU_EXPRESSION`이다. 관리자 사후 보정 결과는 `MANUAL_OVERRIDE`로 표시한다.
+- `placeDecision.matchedBy`와 `categoryDecision.resolvedBy`는 자동 판정 근거다. `matchedBy`는 exact-name 우선 경로의 `NAME_AND_DISTRICT` 또는 exact 후보가 없을 때 제한적으로 허용되는 이름 containment/LIKE fallback 경로의 `NAME_CONTAINS_AND_DISTRICT_AND_CATEGORY`다. fallback은 Kakao 분류와 AI 메뉴가 같은 단일 음식 카테고리로 매핑되고, 시·구가 일치하며, 장소 동일성 판정 필수 필드가 있고, qualifying candidate가 정확히 1건일 때만 응답에 나타난다. 좌표는 지도 표시용 선택값이다. `resolvedBy`는 `KAKAO_PLACE_CATEGORY` 또는 `MENU_EXPRESSION`이며, 관리자 사후 보정 결과는 `MANUAL_OVERRIDE`로 표시한다.
+- exact-name 후보가 2건 이상이면 `PLACE_AMBIGUOUS`로 차단하고 fallback으로 전환하지 않는다. exact-name 후보가 없을 때 fallback 조건을 만족하는 후보가 없으면 `PLACE_NOT_FOUND`, 2건 이상이면 `PLACE_AMBIGUOUS`로 차단한다.
+- 자동 확정 응답의 장소 검색어·채택한 Kakao 장소 식별자·URL·도로명주소·`matchedBy`는 `place_decision`에 기록하고, 대표 카테고리·판정 당시 사용한 매핑 행 식별자(`matchedMappingId`)·`resolvedBy`는 `category_decision`에 기록한다. 보충 입력으로 확정한 장소는 `MANUAL_OVERRIDE`로 기록하며, 매핑 행을 사용하지 않은 수동 카테고리 보정의 `matchedMappingId`는 `null`이다. 원문 검색 응답 전체는 저장하지 않는다.
 - `registeredRestaurantId`, `kakaoPlaceUrl` 등 모든 식별자는 불투명 문자열이며 클라이언트는 생성 규칙을 검증하지 않는다.
 - 실패 응답은 `error.category`, `retryable`, `attemptCount`만 제공하며 외부 응답 전문은 제공하지 않는다.
 
@@ -433,11 +438,14 @@ Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-0
   "visitId": "opaque-visit-id",
   "reusedResources": ["creator", "video"],
   "placeDecision": {
+    "searchQuery": "후보 맛집명",
+    "kakaoPlaceId": "opaque-kakao-place-id",
     "kakaoPlaceUrl": "https://place.map.kakao.com/example",
     "roadAddress": "서울특별시 영등포구 도림로131길 17",
     "matchedBy": "NAME_AND_DISTRICT"
   },
   "categoryDecision": {
+    "matchedMappingId": "opaque-food-category-mapping-id",
     "foodCategoryName": "일식",
     "resolvedBy": "KAKAO_PLACE_CATEGORY"
   }
@@ -671,6 +679,7 @@ Webhook 수신 경로는 공개 인터넷 진입점이므로 Nginx·Spring Secur
 - [ ] Gemini 접근 실패·부분 추출·quota 차단과 관리자 텍스트 fallback의 응답이 계약 테스트로 고정된다.
 - [ ] 태그 후보의 허용 코드·근거·자동 판단과 사후 보정·`VisitTag` 연결이 계약 테스트로 고정된다.
 - [ ] 다장소 영상의 `registrationUnits` 응답과 단위별 `reviewStatus`·`blockReason`·`placeDecision`·`categoryDecision`이 계약 테스트로 고정된다.
+- [ ] exact-name 우선, 제한적 containment/LIKE fallback의 조건·`matchedBy` 값·`PLACE_NOT_FOUND`·`PLACE_AMBIGUOUS` 결과와 감사 기록이 계약 테스트로 고정되고, Release holdout 품질 게이트의 판정 근거와 연결된다.
 - [ ] 등록 단위가 둘 이상인 작업의 `review` 요청에서 `unitId` 누락 거절과 단위별 `ROLLBACK` 격리가 검증된다.
 - [ ] 등록 단위 일괄 등록의 4종 결과·자원 재사용·재요청 멱등·동시 요청 충돌과 예외 전환 `blockReason`·`requiredSupplements`가 계약 테스트로 고정된다.
 - [ ] 일괄 등록 중간 실패에서 해당 등록 단위 정식 저장 0건과 외부 호출 중 트랜잭션 미개방이 검증된다.

@@ -56,6 +56,8 @@ final class RegistrationUnitJsonSupport {
 
     static String placeDecisionJson(ObjectMapper objectMapper, PlaceDecision decision) {
         ObjectNode node = objectMapper.createObjectNode();
+        node.put("searchQuery", decision.searchQuery());
+        node.put("kakaoPlaceId", decision.kakaoPlaceId());
         node.put("kakaoPlaceUrl", decision.kakaoPlaceUrl());
         node.put("roadAddress", decision.roadAddress());
         node.put("matchedBy", decision.matchedBy());
@@ -67,6 +69,11 @@ final class RegistrationUnitJsonSupport {
         node.put("foodCategoryId", decision.foodCategoryId().toString());
         node.put("foodCategoryName", decision.foodCategoryName());
         node.put("resolvedBy", decision.resolvedBy());
+        if (decision.matchedMappingId() == null) {
+            node.putNull("matchedMappingId");
+        } else {
+            node.put("matchedMappingId", decision.matchedMappingId().toString());
+        }
         return json(objectMapper, node);
     }
 

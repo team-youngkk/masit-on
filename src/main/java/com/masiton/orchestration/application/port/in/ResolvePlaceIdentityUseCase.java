@@ -10,9 +10,14 @@ public interface ResolvePlaceIdentityUseCase {
 
     /**
      * {@code restaurantName}은 AI가 추출한 등록 단위의 상호명 후보, {@code candidateAddress}는
-     * 같은 등록 단위의 주소 후보다. 두 값 모두 Kakao 장소 식별자를 전제하지 않는다.
+     * 같은 등록 단위의 주소 후보, {@code menuExpression}은 완화된 장소명 대조에서만 쓰는
+     * AI 메뉴 표현이다. 세 값 모두 Kakao 장소 식별자를 전제하지 않는다.
      */
-    record PlaceIdentityCommand(String restaurantName, String candidateAddress) {
+    record PlaceIdentityCommand(String restaurantName, String candidateAddress, String menuExpression) {
+
+        public PlaceIdentityCommand(String restaurantName, String candidateAddress) {
+            this(restaurantName, candidateAddress, null);
+        }
     }
 
     record PlaceIdentityResult(PlaceIdentityStatus status, ConfirmedPlace confirmedPlace) {
@@ -50,7 +55,10 @@ public interface ResolvePlaceIdentityUseCase {
 
     /**
      * 자동 확정한 Kakao 장소다. {@code placeCategory}는 Kakao 원문 분류 표현이며
-     * {@code BR-AIEXTRACT-010} 카테고리 판정의 1순위 입력으로 쓴다.
+     * {@code BR-AIEXTRACT-010} 카테고리 판정의 1순위 입력으로 쓴다. {@code matchedBy}는 정확
+     * 일치의 {@code NAME_AND_DISTRICT}, 카테고리 근거를 함께 사용한
+     * 완화 일치의 {@code NAME_CONTAINS_AND_DISTRICT_AND_CATEGORY}, 또는 보충 입력 경로의
+     * {@code MANUAL_OVERRIDE}다.
      */
     record ConfirmedPlace(String kakaoPlaceUrl, String roadAddress, String matchedBy, String placeCategory) {
     }
