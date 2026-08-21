@@ -1,9 +1,12 @@
 package com.masiton.orchestration.application;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Service;
 
@@ -25,8 +28,12 @@ import com.masiton.restaurant.application.port.out.PlaceSearchCandidate;
 class ResolvePlaceIdentityService implements ResolvePlaceIdentityUseCase {
 
     private static final String MATCHED_BY_NAME_AND_DISTRICT = "NAME_AND_DISTRICT";
-    private static final String MATCHED_BY_NAME_CONTAINS_AND_DISTRICT_AND_CATEGORY =
-            "NAME_CONTAINS_AND_DISTRICT_AND_CATEGORY";
+    private static final String MATCHED_BY_NAME_CONTAINMENT_AND_DISTRICT_AND_CATEGORY =
+            "NAME_CONTAINMENT_AND_DISTRICT_AND_CATEGORY";
+    private static final Pattern BRANCH_SUFFIX = Pattern.compile(
+            "(?i)(?:\\s+|\\()(?:(?:본점|본관|별관)|\\d+호점|[가-힣A-Za-z0-9]{1,12}점)\\)?$");
+    private static final Pattern COMPACT_BRANCH_SUFFIX = Pattern.compile(
+            "(?i)(?:본점|본관|별관|\\d+호점)$");
 
     private final SearchPlacesByNameUseCase searchPlacesByName;
     private final LookupFoodCategoryMappingUseCase lookupFoodCategoryMapping;
@@ -53,7 +60,7 @@ class ResolvePlaceIdentityService implements ResolvePlaceIdentityUseCase {
         }
 
         String normalizedName = normalize(command.restaurantName());
-        List<PlaceSearchCandidate> candidates = searchPlacesByName.search(command.restaurantName());
+        List<PlaceSearchCandidate> candidates = searchCandidates(command.restaurantName());
         List<PlaceSearchCandidate> exactMatches = candidates.stream()
                 .filter(this::hasRequiredFields)
                 .filter(candidate -> normalize(candidate.placeName()).equals(normalizedName))
@@ -68,13 +75,50 @@ class ResolvePlaceIdentityService implements ResolvePlaceIdentityUseCase {
             return PlaceIdentityResult.notFound();
         }
 
+        String baseName = stripBranchSuffix(command.restaurantName());
+        if (!blank(baseName) && !baseName.equals(command.restaurantName().strip())) {
+            candidates = mergeCandidates(candidates, searchCandidates(baseName));
+        }
         List<PlaceSearchCandidate> relaxedMatches = candidates.stream()
                 .filter(this::hasRelaxedRequiredFields)
                 .filter(candidate -> matchesDistrict(candidate.roadAddress(), candidateDistrict.get()))
                 .filter(candidate -> isNameContainmentMatch(candidate.placeName(), normalizedName))
                 .filter(candidate -> hasSameCategoryEvidence(candidate, command.menuExpression()))
                 .toList();
-        return toResult(relaxedMatches, MATCHED_BY_NAME_CONTAINS_AND_DISTRICT_AND_CATEGORY);
+        return toResult(relaxedMatches, MATCHED_BY_NAME_CONTAINMENT_AND_DISTRICT_AND_CATEGORY);
+    }
+
+    private List<PlaceSearchCandidate> searchCandidates(String restaurantName) {
+        return mergeCandidates(List.of(), searchPlacesByName.search(restaurantName));
+    }
+
+    private List<PlaceSearchCandidate> mergeCandidates(List<PlaceSearchCandidate> initial,
+                                                       List<PlaceSearchCandidate> additional) {
+        Map<String, PlaceSearchCandidate> candidates = new LinkedHashMap<>();
+        for (PlaceSearchCandidate candidate : initial) {
+            addCandidate(candidates, candidate);
+        }
+        for (PlaceSearchCandidate candidate : additional) {
+            addCandidate(candidates, candidate);
+        }
+        return List.copyOf(candidates.values());
+    }
+
+    private void addCandidate(Map<String, PlaceSearchCandidate> candidates, PlaceSearchCandidate candidate) {
+        if (candidate != null) {
+            String key = blank(candidate.kakaoPlaceUrl())
+                    ? normalize(candidate.placeName()) + "|" + normalize(candidate.roadAddress())
+                    : candidate.kakaoPlaceUrl();
+            candidates.putIfAbsent(key, candidate);
+        }
+    }
+
+    private String stripBranchSuffix(String restaurantName) {
+        String stripped = BRANCH_SUFFIX.matcher(restaurantName).replaceFirst("").strip();
+        if (stripped.equals(restaurantName)) {
+            stripped = COMPACT_BRANCH_SUFFIX.matcher(restaurantName).replaceFirst("").strip();
+        }
+        return stripped;
     }
 
     private PlaceIdentityResult toResult(List<PlaceSearchCandidate> qualifying, String matchedBy) {
@@ -105,7 +149,8 @@ class ResolvePlaceIdentityService implements ResolvePlaceIdentityUseCase {
         String normalizedCandidateName = normalize(candidateName);
         return !normalizedName.isEmpty()
                 && !normalizedCandidateName.equals(normalizedName)
-                && normalizedCandidateName.contains(normalizedName);
+                && (normalizedCandidateName.contains(normalizedName)
+                || normalizedName.contains(normalizedCandidateName));
     }
 
     private boolean hasSameCategoryEvidence(PlaceSearchCandidate candidate, String menuExpression) {

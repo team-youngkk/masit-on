@@ -7,7 +7,7 @@ import com.masiton.orchestration.application.port.out.PlaceIdentityMatchingPolic
 @ConfigurationProperties("masiton.ai.place-identity")
 public class PlaceIdentityMatchingProperties implements PlaceIdentityMatchingPolicy {
 
-    private boolean relaxedMatchingEnabled;
+    private boolean relaxedMatchingEnabled = true;
 
     @Override
     public boolean relaxedMatchingEnabled() {

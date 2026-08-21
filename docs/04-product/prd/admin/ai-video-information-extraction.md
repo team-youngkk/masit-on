@@ -205,7 +205,7 @@ related_documents:
 - 태그 후보 정밀도·재현율, 자동 통합·차단·롤백율과 태그별 오탐률
 - 중복 요청 수렴률, 검증 충돌률과 정식 등록 실패율
 - 영상당 등록 단위 수, 등록 단위별 자동 확정률과 `PLACE_NOT_FOUND`·`PLACE_AMBIGUOUS`·`CATEGORY_UNRESOLVED` 차단 비율
-- 장소 판정 방식별(`NAME_AND_DISTRICT`, `NAME_CONTAINS_AND_DISTRICT_AND_CATEGORY`, `MANUAL_OVERRIDE`) 사용 비율과 `matchedBy` 감사 기록 누락률
+- 장소 판정 방식별(`NAME_AND_DISTRICT`, `NAME_CONTAINMENT_AND_DISTRICT_AND_CATEGORY`, `MANUAL_OVERRIDE`) 사용 비율과 `matchedBy` 감사 기록 누락률
 - 카테고리 근거 순위별 사용 비율(Kakao 분류·메뉴 표현)과 관리자 사후 카테고리 보정률
 - 모델·Prompt·Schema 버전별 Token·호출 수와 비용
 - 자동 차단·롤백·사후 보정 처리 시간과 수동 등록 전환율
@@ -229,5 +229,5 @@ related_documents:
 - 현재 운영 계약인 `gemini-3.5-flash-lite`·Prompt `P8`·Schema `S2` 중 하나라도 변경하면 새 후보 버전과 평가 보고서를 만든다.
 - 예외 보정 처리량이 추출 요청량을 따라가지 못하는 경우 BACKFILL 작업을 먼저 중지하고 Webhook 실시간 작업을 우선한다.
 - 태그 정의·별칭·근거 정책 변경은 데이터 계약과 평가 Dataset 버전을 함께 올린다.
-- 장소 동일성 자동 확정 기준(`BR-AIEXTRACT-009`) 또는 containment/LIKE fallback 조건을 완화하면 Critical 오연결 위험이 직접 올라간다. 완화 경로는 `AI_PLACE_IDENTITY_RELAXED_MATCHING_ENABLED=false`를 기본값으로 두며, Release holdout 재평가·품질 게이트 통과·인간 판정 승인·restaurant 도메인 소유자 합의 후에만 운영에서 활성화한다.
+- 장소 동일성 자동 확정 기준(`BR-AIEXTRACT-009`) 또는 containment/LIKE fallback 조건을 완화하면 Critical 오연결 위험이 직접 올라간다. 완화 경로는 `AI_PLACE_IDENTITY_RELAXED_MATCHING_ENABLED=true`를 기본값으로 운영에서 활성화하되, 동일 구·카테고리·유일 후보 조건을 유지하고 오연결 감시 또는 긴급 차단이 필요하면 환경 변수로 `false`를 주입한다. 양방향 이름 containment와 지점명 접미사 제거는 기존 안전 조건을 완화하지 않으며 Release holdout·인간 판정 지표를 계속 수집한다.
 - 카테고리 매핑 표 변경은 기준정보 변경으로 취급하고 변경 이력을 남긴다. 매핑 표를 넓혀 `CATEGORY_UNRESOLVED`를 줄이는 변경은 오분류율을 함께 측정한다.

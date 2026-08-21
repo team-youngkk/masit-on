@@ -100,7 +100,7 @@ Worker는 후보를 장소 단위 등록 단위로 나눈 뒤, 등록 단위마�
 4. 실제 방문 근거와 Visit 연결 검증
 5. 중복·공개 상태·원자성 검증
 
-1번의 판정 입력은 AI가 만든 상호명·메뉴와 주소·위치 표현이다. **AI 후보에 Kakao 장소 URL을 요구하지 않는다.** orchestration은 exact-name 일치를 우선해 상호명으로 Kakao 장소를 검색하고, 정규화 상호명 완전일치·도로명주소 시·구 일치·장소 동일성 판정 필수 필드 보유를 함께 만족하는 결과가 정확히 1건이면 `NAME_AND_DISTRICT`로 동일성을 확정한다. exact-name 후보가 2건 이상이면 fallback으로 전환하지 않고 `PLACE_AMBIGUOUS`로 차단한다. exact-name 후보가 없을 때만 이름 containment/LIKE fallback을 평가하며, Kakao 분류와 AI 메뉴가 매핑 표에서 같은 단 하나의 음식 카테고리로 결정되고 시·구가 일치하며 장소 동일성 판정 필수 필드가 있고 qualifying candidate가 정확히 1건일 때만 `NAME_CONTAINS_AND_DISTRICT_AND_CATEGORY`로 확정한다. 좌표는 지도 표시용 선택값이다. fallback 조건을 충족하는 후보가 없으면 `PLACE_NOT_FOUND`, 2건 이상이면 `PLACE_AMBIGUOUS`로 차단한다. 관리자가 URL을 직접 제출하는 수동 등록 경로의 검증 기준은 그대로 둔다.
+1번의 판정 입력은 AI가 만든 상호명·메뉴와 주소·위치 표현이다. **AI 후보에 Kakao 장소 URL을 요구하지 않는다.** orchestration은 exact-name 일치를 우선해 원본 상호명으로 Kakao 장소를 검색하고, 정규화 상호명 완전일치·도로명주소 시·구 일치·장소 동일성 판정 필수 필드 보유를 함께 만족하는 결과가 정확히 1건이면 `NAME_AND_DISTRICT`로 동일성을 확정한다. exact-name 후보가 2건 이상이면 fallback으로 전환하지 않고 `PLACE_AMBIGUOUS`로 차단한다. exact-name 후보가 없을 때만 원본 상호명과 `본점`·`본관`·`별관`·호점·지점명 접미사를 제거한 기본 상호명을 순서대로 검색하고, 정규화한 두 이름 중 한쪽이 다른 쪽을 포함하는 양방향 containment/LIKE fallback을 평가한다. Kakao 분류와 AI 메뉴가 매핑 표에서 같은 단 하나의 음식 카테고리로 결정되고 시·구가 일치하며 장소 동일성 판정 필수 필드가 있고 qualifying candidate가 정확히 1건일 때만 `NAME_CONTAINMENT_AND_DISTRICT_AND_CATEGORY`로 확정한다. 좌표는 지도 표시용 선택값이다. fallback 조건을 충족하는 후보가 없으면 `PLACE_NOT_FOUND`, 2건 이상이면 `PLACE_AMBIGUOUS`로 차단한다. 관리자가 URL을 직접 제출하는 수동 등록 경로의 검증 기준은 그대로 둔다.
 
 2번은 1번에서 확정한 Kakao 장소의 분류 표현을 1순위, AI 메뉴 후보 표현을 2순위 근거로 기준정보 매핑 표에 대조해 공통 10개 값 중 하나를 정한다. 두 근거 모두 대응 값을 찾지 못하면 임의 기본값을 쓰지 않고 `CATEGORY_UNRESOLVED`로 차단한다.
 
@@ -110,7 +110,7 @@ Worker는 후보를 장소 단위 등록 단위로 나눈 뒤, 등록 단위마�
 
 등록 단위의 등록은 Worker가 자동 실행하거나 관리자가 상세 화면에서 실행한다. 두 경로는 실행 주체만 다르고 같은 판정 규칙·같은 orchestration 명령을 사용하며, 관리자 실행이라는 이유로 기준을 완화하지 않는다. 관리자 실행 경로도 맛집·유튜버·영상·방문 관계 4종을 한 번에 등록하고, 단계별 관리자 입력을 요구하지 않는다. `BR-AIEXTRACT-011`이 정의한 예외에서만 보조 입력 경로로 전환한다.
 
-- 장소 판정 결과와 카테고리 판정 결과, 실행 주체는 등록 단위 결정 JSON에 남긴다. 장소 자동 확정의 검색어·채택한 Kakao 장소 식별자·URL·도로명주소와 `matchedBy`(`NAME_AND_DISTRICT`, `NAME_CONTAINS_AND_DISTRICT_AND_CATEGORY`, `MANUAL_OVERRIDE`)는 `place_decision`에, 대표 카테고리·판정 당시 사용한 매핑 행 식별자와 `resolvedBy`는 `category_decision`에 기록한다. 원문 검색 응답 전체는 저장하지 않는다. exact-name 우선 원칙이나 fallback 조건의 완화는 Critical 오연결 지표에 직접 영향을 주므로 Release holdout 재평가와 품질 게이트 통과, restaurant 도메인 소유자 합의를 거치며, 완화 경로 feature flag의 기본값은 `false`다.
+- 장소 판정 결과와 카테고리 판정 결과, 실행 주체는 등록 단위 결정 JSON에 남긴다. 장소 자동 확정의 검색어·채택한 Kakao 장소 식별자·URL·도로명주소와 `matchedBy`(`NAME_AND_DISTRICT`, `NAME_CONTAINMENT_AND_DISTRICT_AND_CATEGORY`, `MANUAL_OVERRIDE`)는 `place_decision`에, 대표 카테고리·판정 당시 사용한 매핑 행 식별자와 `resolvedBy`는 `category_decision`에 기록한다. 원문 검색 응답 전체는 저장하지 않는다. 양방향 이름 containment와 지점명 접미사 제거는 기존 시·구·카테고리·유일 후보 안전 조건을 유지하며, 완화 경로 feature flag의 기본값은 `true`다. 환경 변수로 `false`를 주입하면 긴급 차단할 수 있고, Release holdout·인간 판정 지표는 계속 수집한다.
 
 ## 6. 고려하지 않은 선택지
 

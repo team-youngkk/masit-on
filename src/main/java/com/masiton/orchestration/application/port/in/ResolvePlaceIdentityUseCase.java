@@ -57,7 +57,7 @@ public interface ResolvePlaceIdentityUseCase {
      * 자동 확정한 Kakao 장소다. {@code placeCategory}는 Kakao 원문 분류 표현이며
      * {@code BR-AIEXTRACT-010} 카테고리 판정의 1순위 입력으로 쓴다. {@code matchedBy}는 정확
      * 일치의 {@code NAME_AND_DISTRICT}, 카테고리 근거를 함께 사용한
-     * 완화 일치의 {@code NAME_CONTAINS_AND_DISTRICT_AND_CATEGORY}, 또는 보충 입력 경로의
+     * 완화 일치의 {@code NAME_CONTAINMENT_AND_DISTRICT_AND_CATEGORY}, 또는 보충 입력 경로의
      * {@code MANUAL_OVERRIDE}다.
      */
     record ConfirmedPlace(String kakaoPlaceUrl, String roadAddress, String matchedBy, String placeCategory) {
