@@ -424,7 +424,7 @@ read -r REDIS_PASSWORD_UID REDIS_PASSWORD_GID < <(stat -c '%u %g' "$REDIS_PASSWO
   echo "Redis smoke 비밀값 파일 소유자 UID:GID를 확인할 수 없다: $REDIS_PASSWORD_FILE" >&2
   exit 1
 }
-REDIS_CLI_IMAGE="${REDIS_CLI_IMAGE:-redis:8.8-alpine}"
+readonly REDIS_CLI_IMAGE='redis@sha256:8096655e437712b07503796fb64d81359256cfcff0ab29d95a7da72863786efb'
 redis_cli() {
   docker run --rm --network host \
     --mount "type=bind,source=$REDIS_PASSWORD_FILE,target=/run/secrets/redis-password,readonly" \

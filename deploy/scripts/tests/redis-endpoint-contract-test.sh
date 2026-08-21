@@ -176,6 +176,7 @@ run_contract_cases() {
 
 assert_redis_smoke_secret_contract() {
   local script="$1"
+  local expected_redis_cli_image='redis@sha256:8096655e437712b07503796fb64d81359256cfcff0ab29d95a7da72863786efb'
   if grep -Fq 'REDISCLI_AUTH' "$script" || grep -Fq 'redis_password' "$script" || \
       grep -Eq -- 'redis-cli .* (--pass|-a)( |$)' "$script"; then
     echo "Redis smoke가 비밀값을 환경 변수/셸 변수로 노출한다: $(basename "$script")" >&2
@@ -193,6 +194,14 @@ assert_redis_smoke_secret_contract() {
     echo "Redis smoke가 stdin 기반 redis-cli 인증을 사용하지 않는다: $(basename "$script")" >&2
     exit 1
   }
+  grep -Fq -- "REDIS_CLI_IMAGE='$expected_redis_cli_image'" "$script" || {
+    echo "Redis smoke가 저장소 고정 digest를 사용하지 않는다: $(basename "$script")" >&2
+    exit 1
+  }
+  if grep -Fq -- '${REDIS_CLI_IMAGE' "$script"; then
+    echo "Redis smoke가 임의의 REDIS_CLI_IMAGE override를 허용한다: $(basename "$script")" >&2
+    exit 1
+  fi
   local validate_line password_file_line redis_cli_line
   validate_line="$(grep -nF 'validate_shared_redis_endpoint "$REDIS_HOST" "$REDIS_PORT"' "$script" | cut -d: -f1)"
   password_file_line="$(grep -nF 'REDIS_PASSWORD_FILE=' "$script" | head -n1 | cut -d: -f1)"
