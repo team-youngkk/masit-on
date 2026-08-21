@@ -35,7 +35,14 @@ class RedisEndpointContractTest {
                 .contains("REDIS_HOST=\"${REDIS_HOST:-127.0.0.1}\"")
                 .contains("REDIS_PORT=\"${REDIS_PORT:-6379}\"");
         assertThat(appDeploy)
-                .contains("redis-cli -h \"$REDIS_HOST\" -p \"$REDIS_PORT\" --raw");
+                .contains("--mount \"type=bind,source=$REDIS_PASSWORD_FILE,target=/run/secrets/redis-password,readonly\"")
+                .contains("--user \"$REDIS_PASSWORD_UID:$REDIS_PASSWORD_GID\"")
+                .contains("redis-cli --askpass")
+                .doesNotContain("REDISCLI_AUTH")
+                .doesNotContain("redis_password");
+        assertThat(appDeploy.lastIndexOf("validate_shared_redis_endpoint \"$REDIS_HOST\" \"$REDIS_PORT\""))
+                .isLessThan(appDeploy.indexOf("REDIS_PASSWORD_FILE="))
+                .isLessThan(appDeploy.indexOf("redis_cli() {"));
     }
 
     private static String contract(String script) {

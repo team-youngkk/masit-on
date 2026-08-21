@@ -83,35 +83,19 @@ redis_ipv6_to_words() {
   (( "${#redis_ipv6_words[@]}" == 8 ))
 }
 
-redis_ip_is_restricted() {
-  local address="$1" first_octet second_octet all_zero=yes i
+redis_ip_is_approved() {
+  local address="$1" first_octet second_octet
   local -a words=()
   if redis_ipv4_to_words "$address"; then
     first_octet=$((REDIS_IPV4_HIGH / 256)); second_octet=$((REDIS_IPV4_HIGH % 256))
-    (( first_octet == 0 || first_octet == 127 )) && return 0
-    (( first_octet == 169 && second_octet == 254 )) && return 0
-    (( first_octet >= 224 && first_octet <= 239 )) && return 0
-    (( REDIS_IPV4_HIGH == 0 && REDIS_IPV4_LOW == 0 )) && return 0
+    (( first_octet == 10 )) && return 0
+    (( first_octet == 172 && second_octet >= 16 && second_octet <= 31 )) && return 0
+    (( first_octet == 192 && second_octet == 168 )) && return 0
     return 1
   fi
   redis_ipv6_to_words "$address" || return 1
   words=("${redis_ipv6_words[@]}")
-  for ((i = 0; i < 8; i++)); do
-    if (( words[i] != 0 )); then all_zero=no; break; fi
-  done
-  [ "$all_zero" = yes ] && return 0
-  (( words[0] == 0 && words[1] == 0 && words[2] == 0 && words[3] == 0 &&
-      words[4] == 0 && words[5] == 0 && words[6] == 0 && words[7] == 1 )) && return 0
-  (( words[0] >= 0xfe80 && words[0] <= 0xfebf )) && return 0
-  (( words[0] >= 0xff00 && words[0] <= 0xffff )) && return 0
-  if (( words[0] == 0 && words[1] == 0 && words[2] == 0 && words[3] == 0 &&
-        words[4] == 0 && (words[5] == 0 || words[5] == 65535) )); then
-    first_octet=$((words[6] / 256)); second_octet=$((words[6] % 256))
-    (( first_octet == 0 || first_octet == 127 )) && return 0
-    (( first_octet == 169 && second_octet == 254 )) && return 0
-    (( first_octet >= 224 && first_octet <= 239 )) && return 0
-  fi
-  return 1
+  (( words[0] >= 0xfc00 && words[0] <= 0xfdff ))
 }
 
 redis_host_is_noncanonical_numeric_ipv4() {
@@ -147,7 +131,7 @@ validate_redis_host() {
   esac
   redis_host_is_noncanonical_numeric_ipv4 "$normalized_host" && return 1
   if redis_ipv4_to_words "$normalized_host" || redis_ipv6_to_words "$normalized_host"; then
-    redis_ip_is_restricted "$normalized_host" && return 1
+    redis_ip_is_approved "$normalized_host" || return 1
     REDIS_VALIDATED_HOST="$normalized_host"
     return 0
   fi
@@ -157,7 +141,7 @@ validate_redis_host() {
       return 1
     fi
     resolved_any=yes
-    redis_ip_is_restricted "$address" && return 1
+    redis_ip_is_approved "$address" || return 1
     [ -n "$selected_address" ] || selected_address="$address"
   done < <(redis_resolve_host "$normalized_host")
   [ "$resolved_any" = yes ] || return 1
@@ -176,7 +160,7 @@ validate_shared_redis_endpoint() {
   local host="${1-}"
   local port="${2-}"
   if ! validate_redis_host "$host"; then
-    echo "공유 Redis host가 비어 있거나 loopback/유효하지 않다" >&2
+    echo "공유 Redis host가 비어 있거나 승인된 사설 주소가 아니다" >&2
     return 1
   fi
   if ! validate_redis_port "$port"; then
@@ -224,13 +208,8 @@ smoke_redis_keys=()
 previous="$staged/previous"
 rollback_enabled=no
 cleanup() {
-  if [ "${#smoke_redis_keys[@]}" -gt 0 ] && [ -n "${redis_password:-}" ]; then
-    if declare -F redis_cli >/dev/null 2>&1; then
-      redis_cli DEL "${smoke_redis_keys[@]}" >/dev/null 2>&1 || true
-    else
-      docker exec -e REDISCLI_AUTH="$redis_password" masiton-redis redis-cli \
-        DEL "${smoke_redis_keys[@]}" >/dev/null 2>&1 || true
-    fi
+  if [ "${#smoke_redis_keys[@]}" -gt 0 ] && declare -F redis_cli >/dev/null 2>&1; then
+    redis_cli DEL "${smoke_redis_keys[@]}" >/dev/null 2>&1 || true
   fi
   rm -rf "$staged"
 }
@@ -435,11 +414,24 @@ else
     exit 1
   }
 fi
-redis_password=$(< /run/masiton/secrets/spring.data.redis.password)
+REDIS_PASSWORD_FILE="${REDIS_PASSWORD_FILE:-/run/masiton/secrets/spring.data.redis.password}"
+[ -r "$REDIS_PASSWORD_FILE" ] || {
+  echo "Redis smoke 비밀값 파일을 읽을 수 없다: $REDIS_PASSWORD_FILE" >&2
+  exit 1
+}
+read -r REDIS_PASSWORD_UID REDIS_PASSWORD_GID < <(stat -c '%u %g' "$REDIS_PASSWORD_FILE")
+[[ "$REDIS_PASSWORD_UID" =~ ^[0-9]+$ && "$REDIS_PASSWORD_GID" =~ ^[0-9]+$ ]] || {
+  echo "Redis smoke 비밀값 파일 소유자 UID:GID를 확인할 수 없다: $REDIS_PASSWORD_FILE" >&2
+  exit 1
+}
 REDIS_CLI_IMAGE="${REDIS_CLI_IMAGE:-redis:8.8-alpine}"
 redis_cli() {
-  docker run --rm --network host -e REDISCLI_AUTH="$redis_password" "$REDIS_CLI_IMAGE" \
-    redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" --raw "$@"
+  docker run --rm --network host \
+    --mount "type=bind,source=$REDIS_PASSWORD_FILE,target=/run/secrets/redis-password,readonly" \
+    --user "$REDIS_PASSWORD_UID:$REDIS_PASSWORD_GID" \
+    "$REDIS_CLI_IMAGE" \
+    sh -c 'host=$1; port=$2; shift 2; exec redis-cli --askpass -h "$host" -p "$port" --raw "$@" < /run/secrets/redis-password' \
+    redis-smoke "$REDIS_HOST" "$REDIS_PORT" "$@"
 }
 rate_limit_keys() {
   python3 - "$1" "$2" <<'PY'
