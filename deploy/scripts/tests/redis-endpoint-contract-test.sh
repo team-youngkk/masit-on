@@ -62,6 +62,32 @@ validate_shared_redis_endpoint \"\$1\" \"\$2\"" \
     -- "$host" "$port"
 }
 
+validated_host() {
+  local script="$1"
+  local host="$2"
+  local port="$3"
+  local contract
+  contract="$(extract_contract "$script")"
+  PATH="$TEST_BIN_DIR:$PATH" bash -c "$contract
+validate_shared_redis_endpoint \"\$1\" \"\$2\"
+printf '%s\\n' \"\$REDIS_VALIDATED_HOST\"" \
+    -- "$host" "$port"
+}
+
+assert_validated_host() {
+  local script="$1"
+  local host="$2"
+  local port="$3"
+  local expected="$4"
+  local actual
+  actual="$(validated_host "$script" "$host" "$port")"
+  [ "$actual" = "$expected" ] || {
+    printf 'unexpected validated host: expected=<redacted>, actual=<redacted>, script=%s\\n' \
+      "$(basename "$script")" >&2
+    exit 1
+  }
+}
+
 assert_rejected() {
   local script="$1"
   local host="$2"
@@ -120,6 +146,8 @@ run_contract_cases() {
   assert_accepted "$script" 'private-dual-stack.internal.example' '6379'
   assert_accepted "$script" 'redis.internal.example' '1'
   assert_accepted "$script" 'redis.internal.example' '65535'
+  assert_validated_host "$script" 'redis.internal.example' '6379' '10.20.30.40'
+  assert_validated_host "$script" 'private-dual-stack.internal.example' '6379' '10.20.30.40'
 }
 
 app_run_contract="$(extract_contract "$APP_RUN_SCRIPT")"

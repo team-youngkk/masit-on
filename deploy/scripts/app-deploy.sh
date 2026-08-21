@@ -128,38 +128,40 @@ redis_resolve_host() {
   getent ahosts "$host" 2>/dev/null
 }
 
-redis_host_is_loopback() {
-  local host="${1-}" scope resolved address resolved_any=no
-  host="${host,,}"
-  host="${host%.}"
-  if [[ "$host" == *%* ]]; then
-    [[ "$host" == *:* ]] || return 0
-    scope="${host#*%}"; host="${host%%\%*}"
-    [ -n "$scope" ] || return 0
-    [[ "$scope" != *%* ]] || return 0
-  fi
-  case "$host" in
-    localhost|localhost.localdomain|127) return 0 ;;
-  esac
-  redis_host_is_noncanonical_numeric_ipv4 "$host" && return 0
-  redis_ip_is_restricted "$host" && return 0
-  if redis_ipv4_to_words "$host" || redis_ipv6_to_words "$host"; then return 1; fi
-  while read -r address _; do
-    [ -n "$address" ] || continue
-    resolved_any=yes
-    redis_ip_is_restricted "$address" && return 0
-    if ! redis_ipv4_to_words "$address" && ! redis_ipv6_to_words "$address"; then return 0; fi
-  done < <(redis_resolve_host "$host")
-  [ "$resolved_any" = yes ] || return 0
-  return 1
-}
-
 validate_redis_host() {
-  local host="${1-}"
+  local host="${1-}" normalized_host address selected_address="" resolved_any=no scope
   [ -n "$host" ] || return 1
   [[ "$host" != *[[:space:]]* ]] || return 1
   [[ "$host" != */* ]] || return 1
-  redis_host_is_loopback "$host" && return 1
+  normalized_host="${host,,}"
+  normalized_host="${normalized_host%.}"
+  if [[ "$normalized_host" == *%* ]]; then
+    [[ "$normalized_host" == *:* ]] || return 1
+    scope="${normalized_host#*%}"
+    normalized_host="${normalized_host%%\%*}"
+    [ -n "$scope" ] || return 1
+    [[ "$scope" != *%* ]] || return 1
+  fi
+  case "$normalized_host" in
+    localhost|localhost.localdomain|127) return 1 ;;
+  esac
+  redis_host_is_noncanonical_numeric_ipv4 "$normalized_host" && return 1
+  if redis_ipv4_to_words "$normalized_host" || redis_ipv6_to_words "$normalized_host"; then
+    redis_ip_is_restricted "$normalized_host" && return 1
+    REDIS_VALIDATED_HOST="$normalized_host"
+    return 0
+  fi
+  while read -r address _; do
+    [ -n "$address" ] || continue
+    if ! redis_ipv4_to_words "$address" && ! redis_ipv6_to_words "$address"; then
+      return 1
+    fi
+    resolved_any=yes
+    redis_ip_is_restricted "$address" && return 1
+    [ -n "$selected_address" ] || selected_address="$address"
+  done < <(redis_resolve_host "$normalized_host")
+  [ "$resolved_any" = yes ] || return 1
+  REDIS_VALIDATED_HOST="$selected_address"
   return 0
 }
 
@@ -424,6 +426,7 @@ REDIS_PORT="${REDIS_PORT:-$(aws ssm get-parameter --region "$REGION" --name /mas
   --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || printf '')}"
 if [ "${REQUIRE_SHARED_REDIS:-false}" = true ]; then
   validate_shared_redis_endpoint "$REDIS_HOST" "$REDIS_PORT" || exit 1
+  REDIS_HOST="$REDIS_VALIDATED_HOST"
 else
   REDIS_HOST="${REDIS_HOST:-127.0.0.1}"
   REDIS_PORT="${REDIS_PORT:-6379}"

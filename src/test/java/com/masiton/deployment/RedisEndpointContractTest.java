@@ -26,12 +26,16 @@ class RedisEndpointContractTest {
         assertThat(contract(appRun)).isEqualTo(contract(appDeploy));
         assertThat(appRun)
                 .contains("validate_shared_redis_endpoint \"$REDIS_HOST\" \"$REDIS_PORT\"")
+                .contains("REDIS_HOST=\"$REDIS_VALIDATED_HOST\"")
                 .contains("REDIS_HOST=\"${REDIS_HOST:-127.0.0.1}\"")
                 .contains("REDIS_PORT=\"${REDIS_PORT:-6379}\"");
         assertThat(appDeploy)
                 .contains("validate_shared_redis_endpoint \"$REDIS_HOST\" \"$REDIS_PORT\"")
+                .contains("REDIS_HOST=\"$REDIS_VALIDATED_HOST\"")
                 .contains("REDIS_HOST=\"${REDIS_HOST:-127.0.0.1}\"")
                 .contains("REDIS_PORT=\"${REDIS_PORT:-6379}\"");
+        assertThat(appDeploy)
+                .contains("redis-cli -h \"$REDIS_HOST\" -p \"$REDIS_PORT\" --raw");
     }
 
     private static String contract(String script) {
