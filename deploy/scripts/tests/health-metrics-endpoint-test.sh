@@ -19,6 +19,8 @@ export TLS_CERT="$TEST_ROOT/no-certificate.pem"
 export PATH="$BIN:$PATH"
 unset REDISCLI_AUTH
 
+grep -Fq 'A colon is never valid in the hostname form' "$SCRIPT" || exit 1
+
 printf 'test-secret\n' > "$REDIS_PASSWORD_FILE"
 printf 'used_memory:1048576\nmaxmemory:4194304\n' > "$REDIS_INFO_FIXTURE"
 

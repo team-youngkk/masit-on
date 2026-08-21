@@ -43,6 +43,8 @@ class RuntimeDeploymentContractTest {
     private static final Path VALIDATE_SERVICE = Path.of("deploy/codedeploy/hooks/validate-service.sh");
     private static final Path MIGRATION_PLAN = Path.of("docs/05-specs/data/migration-plan.md");
     private static final Path DEPLOYMENT_IMPACT_REVIEW = Path.of("docs/08-planning/deployment-hardening-impact-review.md");
+    private static final String TERRAFORM_IMAGE =
+            "hashicorp/terraform@sha256:9a42ea97ea25b363f4c65be25b9ca52b1e511ea5bf7d56050a506ad2daa7af9d";
     private static final Path PLANNING_README = Path.of("docs/08-planning/README.md");
     private static final Path POST_CUTOVER_BASELINE = Path.of("docs/08-planning/post-cutover-runtime-baseline.md");
     private static final Path REDIS_RECOVERY_RUNBOOK = Path.of("docs/08-planning/redis-recovery-runbook.md");
@@ -232,7 +234,9 @@ class RuntimeDeploymentContractTest {
         assertThat(Files.readString(CI))
                 .contains("Terraform 렌더링 계약")
                 .contains("infra/production/terraform-redis/tests/template-render")
-                .contains("hashicorp/terraform:1.6.6 test");
+                .contains(TERRAFORM_IMAGE + " test")
+                .contains(TERRAFORM_IMAGE + " sh -c 'terraform init -backend=false && terraform validate'")
+                .doesNotContain("hashicorp/terraform:1.6.6");
     }
 
     @Test
@@ -425,6 +429,8 @@ class RuntimeDeploymentContractTest {
                 .contains("MetricName=DependencyRedis,Value=$redis,Unit=None,Dimensions=")
                 .contains("redis_cli INFO memory")
                 .contains("resolve_shared_redis_host")
+                .contains("private IPv4/port")
+                .contains("A colon is never valid in the hostname form")
                 .contains("REDIS_ENDPOINT_HOST")
                 .contains("[ \"$REDIS_ENDPOINT_VALID\" = true ] || return 1")
                 .contains("REDIS_CLI_IMAGE='redis@sha256:8096655e437712b07503796fb64d81359256cfcff0ab29d95a7da72863786efb'")
@@ -442,9 +448,13 @@ class RuntimeDeploymentContractTest {
                 .contains("maxmemory")
                 .contains("used_memory");
         assertThat(appDeploy)
-                .contains("REDIS_CLI_IMAGE='redis@sha256:8096655e437712b07503796fb64d81359256cfcff0ab29d95a7da72863786efb'")
-                .contains("docker run --rm --network host -e REDISCLI_AUTH=\"$redis_password\" \"$REDIS_CLI_IMAGE\"")
-                .doesNotContain("REDIS_CLI_IMAGE=\"${REDIS_CLI_IMAGE:-")
+                .contains("readonly REDIS_CLI_IMAGE='redis@sha256:8096655e437712b07503796fb64d81359256cfcff0ab29d95a7da72863786efb'")
+                .contains("--mount \"type=bind,source=$REDIS_PASSWORD_FILE,target=/run/secrets/redis-password,readonly\"")
+                .contains("--user \"$REDIS_PASSWORD_UID:$REDIS_PASSWORD_GID\"")
+                .contains("redis-cli --askpass")
+                .doesNotContain("REDISCLI_AUTH")
+                .doesNotContain("redis_password")
+                .doesNotContain("${REDIS_CLI_IMAGE")
                 .doesNotContain("redis:8.8-alpine");
         assertThat(workflow)
                 .contains("deploy/scripts/cloudwatch-install.sh")
@@ -456,7 +466,9 @@ class RuntimeDeploymentContractTest {
                 .contains("terraform init -backend=false")
                 .contains("terraform validate")
                 .contains("infra/production/terraform-redis/tests/template-render")
-                .contains("hashicorp/terraform:1.6.6 test");
+                .contains(TERRAFORM_IMAGE + " test")
+                .contains(TERRAFORM_IMAGE + " sh -c 'terraform init -backend=false && terraform validate'")
+                .doesNotContain("hashicorp/terraform:1.6.6");
         assertThat(bootstrap)
                 .contains("\"$STAGE/cloudwatch-install.sh\" \"$STAGE\"")
                 .contains("after-install.sh의 chmod");
@@ -583,7 +595,11 @@ class RuntimeDeploymentContractTest {
 
         assertThat(codeDeploy)
                 .contains("condition     = !var.initial_alarm_seeding || !var.deployment_auto_rollback_enabled")
-                .contains("initial_alarm_seeding=true requires deployment_auto_rollback_enabled=false");
+                .contains("initial_alarm_seeding=true requires deployment_auto_rollback_enabled=false")
+                .contains("condition     = var.initial_alarm_seeding || var.deployment_auto_rollback_enabled")
+                .contains("initial_alarm_seeding=false requires deployment_auto_rollback_enabled=true")
+                .contains("condition     = var.initial_alarm_seeding ? (!var.deployment_alarms_enabled && !var.deployment_auto_rollback_enabled && !var.redis_recovery_mode) : (var.deployment_alarms_enabled && var.deployment_auto_rollback_enabled)")
+                .contains("Only the explicit initial seed combination may disable deployment alarms and automatic rollback");
     }
 
     @Test
@@ -605,6 +621,8 @@ class RuntimeDeploymentContractTest {
                 .contains("condition     = !var.initial_alarm_seeding || !var.redis_recovery_mode")
                 .contains("initial_alarm_seeding=true cannot be combined with redis_recovery_mode=true")
                 .contains("condition     = !var.initial_alarm_seeding || !var.deployment_auto_rollback_enabled")
+                .contains("condition     = var.initial_alarm_seeding || var.deployment_auto_rollback_enabled")
+                .contains("condition     = var.initial_alarm_seeding ? (!var.deployment_alarms_enabled && !var.deployment_auto_rollback_enabled && !var.redis_recovery_mode) : (var.deployment_alarms_enabled && var.deployment_auto_rollback_enabled)")
                 .contains("condition     = !var.redis_recovery_mode || var.deployment_alarms_enabled");
         assertThat(tfvarsExample)
                 .contains("terraform plan -var=\"initial_alarm_seeding=true\" -var=\"deployment_alarms_enabled=false\" -var=\"deployment_auto_rollback_enabled=false\"")
@@ -614,7 +632,8 @@ class RuntimeDeploymentContractTest {
                 .contains("initial_alarm_seeding=true")
                 .contains("deployment_alarms_enabled=false")
                 .contains("deployment_auto_rollback_enabled=false")
-                .contains("redis_recovery_mode=true");
+                .contains("redis_recovery_mode=false")
+                .contains("Redis 복구");
         assertThat(productionReadme)
                 .contains("initial_alarm_seeding=true")
                 .contains("deployment_alarms_enabled=false")

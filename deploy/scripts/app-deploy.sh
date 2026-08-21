@@ -48,13 +48,8 @@ smoke_redis_keys=()
 previous="$staged/previous"
 rollback_enabled=no
 cleanup() {
-  if [ "${#smoke_redis_keys[@]}" -gt 0 ] && [ -n "${redis_password:-}" ]; then
-    if declare -F redis_cli >/dev/null 2>&1; then
-      redis_cli DEL "${smoke_redis_keys[@]}" >/dev/null 2>&1 || true
-    else
-      docker exec -e REDISCLI_AUTH="$redis_password" masiton-redis redis-cli \
-        DEL "${smoke_redis_keys[@]}" >/dev/null 2>&1 || true
-    fi
+  if [ "${#smoke_redis_keys[@]}" -gt 0 ] && declare -F redis_cli >/dev/null 2>&1; then
+    redis_cli DEL "${smoke_redis_keys[@]}" >/dev/null 2>&1 || true
   fi
   rm -rf "$staged"
 }
@@ -244,7 +239,6 @@ refresh_status=$(curl -sS -m 5 -o /dev/null -w '%{http_code}' \
 
 # Nginx peer(127.0.0.1)를 신뢰해 서로 다른 X-Forwarded-For가 실제로 별도
 # login-source 버킷을 만드는지 Redis 키로 확인한다.
-redis_password=$(< /run/masiton/secrets/spring.data.redis.password)
 REDIS_HOST="${REDIS_HOST:-$(aws ssm get-parameter --region "$REGION" --name /masiton/redis/host \
   --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || printf '')}"
 if [ "${REQUIRE_SHARED_REDIS:-false}" = true ] && [ -z "$REDIS_HOST" ]; then
@@ -255,12 +249,24 @@ REDIS_HOST="${REDIS_HOST:-127.0.0.1}"
 REDIS_PORT="${REDIS_PORT:-$(aws ssm get-parameter --region "$REGION" --name /masiton/redis/port \
   --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || printf '')}"
 REDIS_PORT="${REDIS_PORT:-6379}"
-# The fallback client is an executable dependency, so keep it aligned with the
-# systemd-owned Redis image and ignore arbitrary environment overrides.
-REDIS_CLI_IMAGE='redis@sha256:8096655e437712b07503796fb64d81359256cfcff0ab29d95a7da72863786efb'
+REDIS_PASSWORD_FILE="${REDIS_PASSWORD_FILE:-/run/masiton/secrets/spring.data.redis.password}"
+[ -r "$REDIS_PASSWORD_FILE" ] || {
+  echo "Redis smoke 비밀값 파일을 읽을 수 없다: $REDIS_PASSWORD_FILE" >&2
+  exit 1
+}
+read -r REDIS_PASSWORD_UID REDIS_PASSWORD_GID < <(stat -c '%u %g' "$REDIS_PASSWORD_FILE")
+[[ "$REDIS_PASSWORD_UID" =~ ^[0-9]+$ && "$REDIS_PASSWORD_GID" =~ ^[0-9]+$ ]] || {
+  echo "Redis smoke 비밀값 파일 소유자 UID:GID를 확인할 수 없다: $REDIS_PASSWORD_FILE" >&2
+  exit 1
+}
+readonly REDIS_CLI_IMAGE='redis@sha256:8096655e437712b07503796fb64d81359256cfcff0ab29d95a7da72863786efb'
 redis_cli() {
-  docker run --rm --network host -e REDISCLI_AUTH="$redis_password" "$REDIS_CLI_IMAGE" \
-    redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" --raw "$@"
+  docker run --rm --network host \
+    --mount "type=bind,source=$REDIS_PASSWORD_FILE,target=/run/secrets/redis-password,readonly" \
+    --user "$REDIS_PASSWORD_UID:$REDIS_PASSWORD_GID" \
+    "$REDIS_CLI_IMAGE" \
+    sh -c 'host=$1; port=$2; shift 2; exec redis-cli --askpass -h "$host" -p "$port" --raw "$@" < /run/secrets/redis-password' \
+    redis-smoke "$REDIS_HOST" "$REDIS_PORT" "$@"
 }
 rate_limit_keys() {
   python3 - "$1" "$2" <<'PY'

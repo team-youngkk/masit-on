@@ -15,7 +15,7 @@ CodeDeploy가 원본 ASG를 기준으로 replacement 환경을 만들기 때문�
 
 ## Redis 장애 복구 진입점
 
-전용 Redis 장애로 CodeDeploy 게이트가 복구 배포까지 막히면 [Redis 장애 복구 runbook](../../docs/08-planning/redis-recovery-runbook.md)을 유일한 break-glass 진입점으로 사용한다. 정상 감시는 fail-closed로 유지하며, 운영 담당자 2인의 승인·30분 유효기간·복구 목적의 단 한 번 배포·즉시 게이트 복원 계약을 지킨다. `treat_missing_data = "breaching"`, `ignore_poll_alarm_failure = false`와 회원 인증의 fail-closed 경계는 완화하지 않는다. `deployment_alarms_enabled=false`는 Redis 복구에 사용할 수 없고, 최초 seeding 명령에서만 `initial_alarm_seeding=true`·`deployment_alarms_enabled=false`·`deployment_auto_rollback_enabled=false`를 함께 허용한다.
+전용 Redis 장애로 CodeDeploy 게이트가 복구 배포까지 막히면 [Redis 장애 복구 runbook](../../docs/08-planning/redis-recovery-runbook.md)을 유일한 break-glass 진입점으로 사용한다. 정상 감시는 fail-closed로 유지하며, 운영 담당자 2인의 승인·30분 유효기간·복구 목적의 단 한 번 배포·즉시 게이트 복원 계약을 지킨다. `treat_missing_data = "breaching"`, `ignore_poll_alarm_failure = false`와 회원 인증의 fail-closed 경계는 완화하지 않는다. `deployment_alarms_enabled=false`는 Redis 복구에 사용할 수 없고, 최초 seeding 명령에서만 `initial_alarm_seeding=true`·`deployment_alarms_enabled=false`·`deployment_auto_rollback_enabled=false`·`redis_recovery_mode=false`의 조합을 허용한다. 그 외 모드에서는 자동 rollback을 켠다.
 
 ## 적용 전 필수 확인
 
