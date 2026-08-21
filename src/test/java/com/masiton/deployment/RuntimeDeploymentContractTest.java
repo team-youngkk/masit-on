@@ -448,6 +448,11 @@ class RuntimeDeploymentContractTest {
                 .contains("maxmemory")
                 .contains("used_memory");
         assertThat(appDeploy)
+                .contains("redis_ip_is_approved")
+                .contains("redis_resolve_host")
+                .contains("getent ahosts --no-addrconfig")
+                .contains("validate_shared_redis_endpoint")
+                .contains("REDIS_HOST=\"$REDIS_VALIDATED_HOST\"")
                 .contains("readonly REDIS_CLI_IMAGE='redis@sha256:8096655e437712b07503796fb64d81359256cfcff0ab29d95a7da72863786efb'")
                 .contains("--mount \"type=bind,source=$REDIS_PASSWORD_FILE,target=/run/secrets/redis-password,readonly\"")
                 .contains("--user \"$REDIS_PASSWORD_UID:$REDIS_PASSWORD_GID\"")
@@ -456,6 +461,9 @@ class RuntimeDeploymentContractTest {
                 .doesNotContain("redis_password")
                 .doesNotContain("${REDIS_CLI_IMAGE")
                 .doesNotContain("redis:8.8-alpine");
+        assertThat(appDeploy.indexOf("validate_shared_redis_endpoint \"$REDIS_HOST\" \"$REDIS_PORT\""))
+                .as("공유 Redis endpoint를 검증한 뒤에만 비밀번호 파일을 열어야 한다")
+                .isLessThan(appDeploy.indexOf("REDIS_PASSWORD_FILE="));
         assertThat(workflow)
                 .contains("deploy/scripts/cloudwatch-install.sh")
                 .contains("deploy/scripts/health-metrics.sh")

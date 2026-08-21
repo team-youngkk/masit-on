@@ -190,8 +190,8 @@ redis_cli() {
       --user "$redis_password_owner" \
       --mount "type=bind,src=$REDIS_PASSWORD_FILE,dst=/run/masiton-redis-password,readonly" \
       "$REDIS_CLI_IMAGE" sh -c \
-      'REDISCLI_AUTH="$(tr -d "\\r\\n" < /run/masiton-redis-password)" exec redis-cli "$@"' \
-      sh -h "$REDIS_ENDPOINT_HOST" -p "$REDIS_ENDPOINT_PORT" --raw "$@"
+      'host=$1; port=$2; shift 2; exec redis-cli --askpass -h "$host" -p "$port" --raw "$@" < /run/masiton-redis-password' \
+      sh "$REDIS_ENDPOINT_HOST" "$REDIS_ENDPOINT_PORT" "$@"
   else
     return 1
   fi

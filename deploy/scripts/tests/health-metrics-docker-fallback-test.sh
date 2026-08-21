@@ -137,13 +137,20 @@ case "$container_command" in
   *) exit 1 ;;
 esac
 case "$container_command" in
-  *'tr -d'*) ;;
+  *'redis-cli --askpass'*) ;;
   *) exit 1 ;;
+esac
+case "$container_command" in
+  *'< /run/masiton-redis-password'*) ;;
+  *) echo 'Docker fallback must feed redis-cli --askpass from the mounted password file' >&2; exit 1 ;;
+esac
+case "$container_command" in
+  *'REDISCLI_AUTH'*) echo 'Docker fallback must not use REDISCLI_AUTH' >&2; exit 1 ;;
 esac
 shift 3
 # Simulate the stock image's redis-cli after validating the exact command shape.
 # Read through the mounted source here because Git Bash cannot reproduce Alpine
-# ash's backslash handling for tr, while the production command is still checked above.
+# ash's redis-cli --askpass interaction, while the production command is checked above.
 password="$(sed 's/\r//g' < "$REDIS_PASSWORD_FILE")"
 [ "$password" = test-secret ] || exit 1
 cat "$REDIS_INFO_FIXTURE"

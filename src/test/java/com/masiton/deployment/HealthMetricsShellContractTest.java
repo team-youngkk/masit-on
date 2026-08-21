@@ -19,6 +19,9 @@ class HealthMetricsShellContractTest {
             Path.of("deploy/scripts/tests/health-metrics-docker-fallback-test.sh");
     private static final Path ENDPOINT_CONTRACT =
             Path.of("deploy/scripts/tests/health-metrics-endpoint-test.sh");
+    // Windows Git Bash starts many short-lived helper processes in the endpoint
+    // matrix. Keep the test bounded, but allow the slower process startup cost.
+    private static final long WINDOWS_GIT_BASH_ENDPOINT_TIMEOUT_SECONDS = 120;
 
     @Test
     @DisplayName("Redis 메모리 지표는 유효한 INFO에서만 올리고 결측에서도 의존성 지표를 유지한다")
@@ -63,7 +66,7 @@ class HealthMetricsShellContractTest {
         Process process = new ProcessBuilder(bashCommand(), ENDPOINT_CONTRACT.toString())
                 .redirectErrorStream(true)
                 .start();
-        boolean finished = process.waitFor(30, TimeUnit.SECONDS);
+        boolean finished = process.waitFor(WINDOWS_GIT_BASH_ENDPOINT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
         if (!finished) {
             process.destroyForcibly();
         }
