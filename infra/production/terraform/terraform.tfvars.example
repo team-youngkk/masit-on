@@ -91,10 +91,10 @@ ssm_parameter_arns = ["arn:aws:ssm:ap-northeast-2:000000000000:parameter/masiton
 
 # ---- 최초 seeding 구간에만 필요한 완화 ----
 # 앱이 없는 빈 baseline에서는 ELB health check와 alarm 게이트, 자동 rollback이
-# 첫 배포를 막는다. 아래 두 입력은 tfvars에 저장하지 말고, 최초 known-good
+# 첫 배포를 막는다. 아래 세 입력은 tfvars에 저장하지 말고, 최초 known-good
 # revision을 올리는 단 한 번의 명령에만 함께 넘긴다. 배포가 성공하면 즉시
-# 기본값(ELB / true / true / initial_alarm_seeding=false)으로 복원한다.
-# terraform plan -var="initial_alarm_seeding=true" -var="deployment_alarms_enabled=false" -out=initial-seed.tfplan
+# 기본값(ELB / true / true / initial_alarm_seeding=false / auto rollback=true)으로 복원한다.
+# terraform plan -var="initial_alarm_seeding=true" -var="deployment_alarms_enabled=false" -var="deployment_auto_rollback_enabled=false" -out=initial-seed.tfplan
 # terraform apply initial-seed.tfplan
 # asg_health_check_type            = "EC2"
 # initial_alarm_seeding             = true

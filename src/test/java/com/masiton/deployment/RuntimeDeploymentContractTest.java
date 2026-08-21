@@ -563,6 +563,16 @@ class RuntimeDeploymentContractTest {
     }
 
     @Test
+    @DisplayName("최초 seeding에서 자동 rollback 활성화 조합을 Terraform이 거부한다")
+    void initialAlarmSeeding_자동Rollback활성화조합을계획에서거부한다() throws IOException {
+        String codeDeploy = Files.readString(CODEDEPLOY);
+
+        assertThat(codeDeploy)
+                .contains("condition     = !var.initial_alarm_seeding || !var.deployment_auto_rollback_enabled")
+                .contains("initial_alarm_seeding=true requires deployment_auto_rollback_enabled=false");
+    }
+
+    @Test
     @DisplayName("배포 알람 비활성화는 명시적인 최초 seeding 명령에서만 허용한다")
     void deploymentAlarms_최초Seeding명령에서만비활성화한다() throws IOException {
         String variables = Files.readString(TERRAFORM_VARIABLES);
@@ -580,22 +590,26 @@ class RuntimeDeploymentContractTest {
                 .contains("deployment_alarms_enabled=false requires initial_alarm_seeding=true")
                 .contains("condition     = !var.initial_alarm_seeding || !var.redis_recovery_mode")
                 .contains("initial_alarm_seeding=true cannot be combined with redis_recovery_mode=true")
+                .contains("condition     = !var.initial_alarm_seeding || !var.deployment_auto_rollback_enabled")
                 .contains("condition     = !var.redis_recovery_mode || var.deployment_alarms_enabled");
         assertThat(tfvarsExample)
-                .contains("terraform plan -var=\"initial_alarm_seeding=true\" -var=\"deployment_alarms_enabled=false\"")
+                .contains("terraform plan -var=\"initial_alarm_seeding=true\" -var=\"deployment_alarms_enabled=false\" -var=\"deployment_auto_rollback_enabled=false\"")
                 .contains("initial_alarm_seeding             = true")
                 .contains("deployment_alarms_enabled         = false");
         assertThat(adr)
                 .contains("initial_alarm_seeding=true")
                 .contains("deployment_alarms_enabled=false")
+                .contains("deployment_auto_rollback_enabled=false")
                 .contains("redis_recovery_mode=true");
         assertThat(productionReadme)
                 .contains("initial_alarm_seeding=true")
                 .contains("deployment_alarms_enabled=false")
+                .contains("deployment_auto_rollback_enabled=false")
                 .contains("initial_alarm_seeding=false");
         assertThat(cutoverRecord)
                 .contains("initial_alarm_seeding=true")
                 .contains("deployment_alarms_enabled=false")
+                .contains("deployment_auto_rollback_enabled=false")
                 .contains("Redis 복구 모드에서는 이 완화를 사용하지 않는다");
     }
 

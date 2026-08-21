@@ -8,6 +8,7 @@ BIN="$TEST_ROOT/bin"
 mkdir -p "$BIN"
 trap 'rm -rf "$TEST_ROOT"' EXIT
 
+export DEPLOYMENT_ENV_FILE="$TEST_ROOT/nonexistent-deployment.env"
 export HEALTH_BASE=http://health-metrics.test
 export REDIS_HOST=10.42.0.15
 export REDIS_PORT=6379

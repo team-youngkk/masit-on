@@ -54,7 +54,7 @@ Terraform이 `redis_recovery_mode`와 `deployment_alarms_enabled`를 독립적�
 - 기존 Redis 복구 런북의 `redis_recovery_mode=true`·`deployment_alarms_enabled=true` 절차와 정상 fail-closed 감시 의미는 변경하지 않았다.
 - 변경 파일: `infra/production/terraform/codedeploy.tf`, `src/test/java/com/masiton/deployment/RuntimeDeploymentContractTest.java`, 이 기록과 인덱스.
 
-선택 이유는 AWS 자원 생성 전에 Terraform 자체가 잘못된 운영 입력을 차단하고, `deployment_alarms_enabled=false`를 사용하는 최초 seeding 경로는 기존처럼 `redis_recovery_mode=false`에서 계속 허용하기 위해서다.
+선택 이유는 AWS 자원 생성 전에 Terraform 자체가 잘못된 운영 입력을 차단하고, `deployment_alarms_enabled=false`·`deployment_auto_rollback_enabled=false`를 사용하는 최초 seeding 경로는 기존처럼 `redis_recovery_mode=false`에서 계속 허용하기 위해서다.
 
 ## 7. 검증
 

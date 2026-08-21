@@ -32,7 +32,7 @@ related_documents:
 | 1 | CI 배포 역할에 `codedeploy:RegisterApplicationRevision`이 없어 `CreateDeployment`가 AccessDenied | 인프라 / 배포 | 수정 필요 | application ARN 범위 statement 추가 ([#252](https://github.com/team-youngkk/masit-on/pull/252)) | 수정 후 배포 `d-B98S5GTBK`가 `CreateDeployment`를 통과 |
 | 2 | `/masiton/redis/host`가 `127.0.0.1`로 남아 신규 ASG 인스턴스의 Redis dependency가 DOWN | 인프라 / 데이터베이스 | 수정 필요 | `terraform-redis` apply로 파라미터를 전용 Redis 사설 IP로 교정하고, 기존 EC2 SG를 Redis 6379 ingress에 추가 | 배포 `d-HBU3LWSBK` 성공, dependency health 세 항목 UP |
 | 3 | 아웃바운드 공인 IP가 바뀌어 IP 제한이 걸린 YouTube API 키가 거부됨 | 외부 연동 / 인프라 | 수정 필요 | Google API 키의 애플리케이션(IP) 제한을 해제하고 API 제한은 유지 | 인스턴스에서 YouTube Data API 호출 `http=200` 확인 |
-| 4 | 알람 지표를 올리는 리비전을 배포해야 하는데 그 지표 결측이 배포를 막는 순환 | 배포 | 설계된 완화 사용 | 한 사이클만 `-var deployment_alarms_enabled=false`로 배포하고 지표 발생 후 기본값 복원 | 알람 `masiton-prod-fleet-dependency-redis` OK 전환 확인 |
+| 4 | 알람 지표를 올리는 리비전을 배포해야 하는데 그 지표 결측이 배포를 막는 순환 | 배포 | 설계된 완화 사용 | 최초 seeding 한 사이클만 `-var initial_alarm_seeding=true -var deployment_alarms_enabled=false -var deployment_auto_rollback_enabled=false`로 배포하고 지표 발생 후 기본값 복원 | 알람 `masiton-prod-fleet-dependency-redis` OK 전환 확인 |
 
 ## 3. 문제 현상과 발생 조건
 

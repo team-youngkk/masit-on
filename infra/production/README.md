@@ -15,7 +15,7 @@ CodeDeploy가 원본 ASG를 기준으로 replacement 환경을 만들기 때문�
 
 ## Redis 장애 복구 진입점
 
-전용 Redis 장애로 CodeDeploy 게이트가 복구 배포까지 막히면 [Redis 장애 복구 runbook](../../docs/08-planning/redis-recovery-runbook.md)을 유일한 break-glass 진입점으로 사용한다. 정상 감시는 fail-closed로 유지하며, 운영 담당자 2인의 승인·30분 유효기간·복구 목적의 단 한 번 배포·즉시 게이트 복원 계약을 지킨다. `treat_missing_data = "breaching"`, `ignore_poll_alarm_failure = false`와 회원 인증의 fail-closed 경계는 완화하지 않는다. `deployment_alarms_enabled=false`는 Redis 복구에 사용할 수 없고, 최초 seeding 명령에서만 `initial_alarm_seeding=true`와 함께 허용된다.
+전용 Redis 장애로 CodeDeploy 게이트가 복구 배포까지 막히면 [Redis 장애 복구 runbook](../../docs/08-planning/redis-recovery-runbook.md)을 유일한 break-glass 진입점으로 사용한다. 정상 감시는 fail-closed로 유지하며, 운영 담당자 2인의 승인·30분 유효기간·복구 목적의 단 한 번 배포·즉시 게이트 복원 계약을 지킨다. `treat_missing_data = "breaching"`, `ignore_poll_alarm_failure = false`와 회원 인증의 fail-closed 경계는 완화하지 않는다. `deployment_alarms_enabled=false`는 Redis 복구에 사용할 수 없고, 최초 seeding 명령에서만 `initial_alarm_seeding=true`·`deployment_alarms_enabled=false`·`deployment_auto_rollback_enabled=false`를 함께 허용한다.
 
 ## 적용 전 필수 확인
 
@@ -31,7 +31,7 @@ CodeDeploy가 원본 ASG를 기준으로 replacement 환경을 만들기 때문�
 - 최초 apply에서는 Route53 alias가 기본으로 생성되지 않는다. blue에서 known-good revision을 기동하고 ALB health·외부 smoke를 확인한 뒤 `initial_blue_verified=true`를 별도 plan으로 승인해 DNS를 연결한다.
 - 자동 rollback은 CodeDeploy deployment failure/stop-on-alarm 이벤트에 대해 켜져 있다. ALB health가 backend readiness를 반영하고, target 5xx·latency·`blue_unhealthy` CloudWatch alarm을 이 모듈에서 deployment group에 연결한다.
 
-최초 전환은 다음 순서로 진행한다. `codedeploy_termination_enabled=false`로 apply하고, 앱 없는 seed ASG라서 alarm 게이트를 꺼야 한다면 다음 명령으로만 최초 known-good revision을 한 번 배포한다: `terraform plan -var="initial_alarm_seeding=true" -var="deployment_alarms_enabled=false"`. 배포 직후 `initial_alarm_seeding=false`·`deployment_alarms_enabled=true`로 정상 게이트를 복원한다. 그 뒤 `aws deploy get-deployment-group`으로 deployment group의 원본 ASG가 replacement로 갱신됐는지 확인한다. Terraform seed ASG(`${name_prefix}-blue-asg`)가 계속 원본으로 남아 있으면 `true`로 바꾸지 않는다. replacement ASG와 target health를 확인하고 [정리 runbook](../../docs/08-planning/blue-green-cleanup-runbook.md)의 AWS CLI로 seed ASG를 desired capacity 0으로 축소한 뒤, seed에 healthy target이 남아 있지 않은 것을 재확인한다. 그 후에만 `codedeploy_termination_enabled=true`로 별도 plan/apply한다. 이 순서를 건너뛰면 `TERMINATE`가 Terraform state 소유 seed ASG를 삭제할 수 있다.
+최초 전환은 다음 순서로 진행한다. `codedeploy_termination_enabled=false`로 apply하고, 앱 없는 seed ASG라서 alarm 게이트를 꺼야 한다면 다음 명령으로만 최초 known-good revision을 한 번 배포한다: `terraform plan -var="initial_alarm_seeding=true" -var="deployment_alarms_enabled=false" -var="deployment_auto_rollback_enabled=false"`. 배포 직후 `initial_alarm_seeding=false`·`deployment_alarms_enabled=true`·`deployment_auto_rollback_enabled=true`로 정상 게이트와 자동 rollback을 복원한다. 그 뒤 `aws deploy get-deployment-group`으로 deployment group의 원본 ASG가 replacement로 갱신됐는지 확인한다. Terraform seed ASG(`${name_prefix}-blue-asg`)가 계속 원본으로 남아 있으면 `true`로 바꾸지 않는다. replacement ASG와 target health를 확인하고 [정리 runbook](../../docs/08-planning/blue-green-cleanup-runbook.md)의 AWS CLI로 seed ASG를 desired capacity 0으로 축소한 뒤, seed에 healthy target이 남아 있지 않은 것을 재확인한다. 그 후에만 `codedeploy_termination_enabled=true`로 별도 plan/apply한다. 이 순서를 건너뛰면 `TERMINATE`가 Terraform state 소유 seed ASG를 삭제할 수 있다.
 
 ## 검증
 

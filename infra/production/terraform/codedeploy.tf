@@ -73,6 +73,11 @@ resource "aws_codedeploy_deployment_group" "app" {
     }
 
     precondition {
+      condition     = !var.initial_alarm_seeding || !var.deployment_auto_rollback_enabled
+      error_message = "initial_alarm_seeding=true requires deployment_auto_rollback_enabled=false; automatic rollback is disabled only for the initial seed deployment."
+    }
+
+    precondition {
       condition     = !var.redis_recovery_mode || var.deployment_alarms_enabled
       error_message = "redis_recovery_mode=true requires deployment_alarms_enabled=true; ALB 5xx, latency, and unhealthy-host protections must remain enabled."
     }
