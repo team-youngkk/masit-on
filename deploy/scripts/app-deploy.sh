@@ -10,6 +10,50 @@
 # 롤백은 이전 커밋 SHA로 이 스크립트를 다시 실행하는 것이다.
 set -euo pipefail
 
+# BEGIN SHARED REDIS ENDPOINT CONTRACT
+redis_host_is_loopback() {
+  local host="${1-}"
+  host="${host,,}"
+  host="${host%.}"
+  case "$host" in
+    localhost|localhost.localdomain|127|127.*|0.0.0.0|::|::1|::1%*|0:0:0:0:0:0:0:0|0:0:0:0:0:0:0:1|0:0:0:0:0:0:0:1%*|::ffff:127.*|0:0:0:0:0:ffff:127.*)
+      return 0
+      ;;
+  esac
+  [[ "$host" =~ ^(0{1,4}:){7}0{0,3}1$ ]] && return 0
+  return 1
+}
+
+validate_redis_host() {
+  local host="${1-}"
+  [ -n "$host" ] || return 1
+  [[ "$host" != *[[:space:]]* ]] || return 1
+  [[ "$host" != */* ]] || return 1
+  redis_host_is_loopback "$host" && return 1
+  return 0
+}
+
+validate_redis_port() {
+  local port="${1-}"
+  [[ "$port" =~ ^[0-9]{1,5}$ ]] || return 1
+  local numeric=$((10#$port))
+  (( numeric >= 1 && numeric <= 65535 ))
+}
+
+validate_shared_redis_endpoint() {
+  local host="${1-}"
+  local port="${2-}"
+  if ! validate_redis_host "$host"; then
+    echo "공유 Redis host가 비어 있거나 loopback/유효하지 않다" >&2
+    return 1
+  fi
+  if ! validate_redis_port "$port"; then
+    echo "공유 Redis port가 유효하지 않다" >&2
+    return 1
+  fi
+}
+# END SHARED REDIS ENDPOINT CONTRACT
+
 DEPLOYMENT_ENV_FILE="${DEPLOYMENT_ENV_FILE:-/etc/masiton/deployment.env}"
 if [ -f "$DEPLOYMENT_ENV_FILE" ]; then
   set -a
@@ -244,17 +288,21 @@ refresh_status=$(curl -sS -m 5 -o /dev/null -w '%{http_code}' \
 
 # Nginx peer(127.0.0.1)를 신뢰해 서로 다른 X-Forwarded-For가 실제로 별도
 # login-source 버킷을 만드는지 Redis 키로 확인한다.
-redis_password=$(< /run/masiton/secrets/spring.data.redis.password)
 REDIS_HOST="${REDIS_HOST:-$(aws ssm get-parameter --region "$REGION" --name /masiton/redis/host \
   --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || printf '')}"
-if [ "${REQUIRE_SHARED_REDIS:-false}" = true ] && [ -z "$REDIS_HOST" ]; then
-  echo "ASG 배포 smoke에서도 공유 Redis endpoint가 필요하다: REDIS_HOST 또는 /masiton/redis/host" >&2
-  exit 1
-fi
-REDIS_HOST="${REDIS_HOST:-127.0.0.1}"
 REDIS_PORT="${REDIS_PORT:-$(aws ssm get-parameter --region "$REGION" --name /masiton/redis/port \
   --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || printf '')}"
-REDIS_PORT="${REDIS_PORT:-6379}"
+if [ "${REQUIRE_SHARED_REDIS:-false}" = true ]; then
+  validate_shared_redis_endpoint "$REDIS_HOST" "$REDIS_PORT" || exit 1
+else
+  REDIS_HOST="${REDIS_HOST:-127.0.0.1}"
+  REDIS_PORT="${REDIS_PORT:-6379}"
+  validate_redis_port "$REDIS_PORT" || {
+    echo "Redis port가 유효하지 않다" >&2
+    exit 1
+  }
+fi
+redis_password=$(< /run/masiton/secrets/spring.data.redis.password)
 REDIS_CLI_IMAGE="${REDIS_CLI_IMAGE:-redis:8.8-alpine}"
 redis_cli() {
   docker run --rm --network host -e REDISCLI_AUTH="$redis_password" "$REDIS_CLI_IMAGE" \

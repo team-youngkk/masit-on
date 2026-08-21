@@ -18,6 +18,50 @@
 # 전달한다(M2-08). 브리지 네트워크로는 두 방향 모두 성립하지 않는다.
 set -euo pipefail
 
+# BEGIN SHARED REDIS ENDPOINT CONTRACT
+redis_host_is_loopback() {
+  local host="${1-}"
+  host="${host,,}"
+  host="${host%.}"
+  case "$host" in
+    localhost|localhost.localdomain|127|127.*|0.0.0.0|::|::1|::1%*|0:0:0:0:0:0:0:0|0:0:0:0:0:0:0:1|0:0:0:0:0:0:0:1%*|::ffff:127.*|0:0:0:0:0:ffff:127.*)
+      return 0
+      ;;
+  esac
+  [[ "$host" =~ ^(0{1,4}:){7}0{0,3}1$ ]] && return 0
+  return 1
+}
+
+validate_redis_host() {
+  local host="${1-}"
+  [ -n "$host" ] || return 1
+  [[ "$host" != *[[:space:]]* ]] || return 1
+  [[ "$host" != */* ]] || return 1
+  redis_host_is_loopback "$host" && return 1
+  return 0
+}
+
+validate_redis_port() {
+  local port="${1-}"
+  [[ "$port" =~ ^[0-9]{1,5}$ ]] || return 1
+  local numeric=$((10#$port))
+  (( numeric >= 1 && numeric <= 65535 ))
+}
+
+validate_shared_redis_endpoint() {
+  local host="${1-}"
+  local port="${2-}"
+  if ! validate_redis_host "$host"; then
+    echo "공유 Redis host가 비어 있거나 loopback/유효하지 않다" >&2
+    return 1
+  fi
+  if ! validate_redis_port "$port"; then
+    echo "공유 Redis port가 유효하지 않다" >&2
+    return 1
+  fi
+}
+# END SHARED REDIS ENDPOINT CONTRACT
+
 DEPLOYMENT_ENV_FILE="${DEPLOYMENT_ENV_FILE:-/etc/masiton/deployment.env}"
 if [ -f "$DEPLOYMENT_ENV_FILE" ]; then
   set -a
@@ -65,13 +109,17 @@ case "$component" in
     # 단일 EC2 기본값은 유지하고, ASG에서는 환경 변수 또는 선택적 SSM 값으로
     # Redis endpoint를 바꿀 수 있게 한다. 명시적 환경 변수가 SSM보다 우선한다.
     REDIS_HOST="${REDIS_HOST:-$(optional_param /masiton/redis/host)}"
-    if [ "${REQUIRE_SHARED_REDIS:-false}" = true ] && [ -z "$REDIS_HOST" ]; then
-      echo "ASG 배포에서는 공유 Redis endpoint가 필요하다: REDIS_HOST 또는 /masiton/redis/host" >&2
-      exit 1
-    fi
-    REDIS_HOST="${REDIS_HOST:-127.0.0.1}"
     REDIS_PORT="${REDIS_PORT:-$(optional_param /masiton/redis/port)}"
-    REDIS_PORT="${REDIS_PORT:-6379}"
+    if [ "${REQUIRE_SHARED_REDIS:-false}" = true ]; then
+      validate_shared_redis_endpoint "$REDIS_HOST" "$REDIS_PORT" || exit 1
+    else
+      REDIS_HOST="${REDIS_HOST:-127.0.0.1}"
+      REDIS_PORT="${REDIS_PORT:-6379}"
+      validate_redis_port "$REDIS_PORT" || {
+        echo "Redis port가 유효하지 않다" >&2
+        exit 1
+      }
+    fi
     export REDIS_HOST
     export REDIS_PORT
     MAIL_HOST=$(param /masiton/mail/host); export MAIL_HOST
