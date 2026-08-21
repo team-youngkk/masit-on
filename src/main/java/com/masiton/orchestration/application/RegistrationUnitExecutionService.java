@@ -140,7 +140,8 @@ class RegistrationUnitExecutionService implements ExecuteRegistrationUnitUseCase
         }
 
         ResolvePlaceIdentityUseCase.PlaceIdentityResult identity = resolvePlaceIdentity.resolve(
-                new ResolvePlaceIdentityUseCase.PlaceIdentityCommand(command.restaurantName(), command.address()));
+                new ResolvePlaceIdentityUseCase.PlaceIdentityCommand(
+                        command.restaurantName(), command.address(), command.menu()));
         if (identity.status() == ResolvePlaceIdentityUseCase.PlaceIdentityStatus.PLACE_AMBIGUOUS) {
             return PlaceStep.ambiguousResult();
         }

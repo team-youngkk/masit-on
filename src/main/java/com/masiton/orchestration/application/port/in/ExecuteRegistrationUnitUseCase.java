@@ -80,7 +80,11 @@ public interface ExecuteRegistrationUnitUseCase {
         }
     }
 
-    /** {@code matchedBy}는 {@code NAME_AND_DISTRICT} 또는 보충 입력 경로의 {@code MANUAL_OVERRIDE}다. */
+    /**
+     * {@code matchedBy}는 {@code NAME_AND_DISTRICT}, 제한적 이름·카테고리 완화 경로의
+     * {@code NAME_CONTAINS_AND_DISTRICT_AND_CATEGORY}, 또는 보충 입력 경로의
+     * {@code MANUAL_OVERRIDE}다.
+     */
     record PlaceDecision(String kakaoPlaceUrl, String roadAddress, String matchedBy) {
     }
 

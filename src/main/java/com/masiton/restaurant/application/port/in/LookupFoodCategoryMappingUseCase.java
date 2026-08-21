@@ -38,7 +38,7 @@ public interface LookupFoodCategoryMappingUseCase {
         CONFLICT
     }
 
-    /** 대조에 사용한 매핑 행 식별자와 대응 카테고리다. {@code category_decision} 감사 근거로 쓴다. */
+    /** 대조에 사용한 매핑 행 식별자와 대응 카테고리다. orchestration 내부 판정 결과로만 전달한다. */
     record ResolvedMapping(UUID mappingId, UUID foodCategoryId) {
     }
 

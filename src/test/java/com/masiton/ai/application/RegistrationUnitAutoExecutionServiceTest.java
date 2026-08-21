@@ -52,7 +52,8 @@ class RegistrationUnitAutoExecutionServiceTest {
         UUID visitId = UUID.randomUUID();
         UUID foodCategoryId = UUID.randomUUID();
         given(executeRegistrationUnit.execute(any())).willReturn(RegistrationUnitExecutionResult.confirmed(
-                new PlaceDecision("https://place.map.kakao.com/1", "서울특별시 마포구 월드컵로 1", "NAME_AND_DISTRICT"),
+                new PlaceDecision("https://place.map.kakao.com/1", "서울특별시 마포구 월드컵로 1",
+                        "NAME_CONTAINS_AND_DISTRICT_AND_CATEGORY"),
                 new CategoryDecision(foodCategoryId, "한식", "KAKAO_PLACE_CATEGORY"),
                 new AutoRegisterVerifiedContentUseCase.RegistrationResult(
                         restaurantId, creatorId, videoId, visitId, true, false, false, true)));
@@ -71,7 +72,7 @@ class RegistrationUnitAutoExecutionServiceTest {
         assertThat(outcome.registeredVideoId()).isEqualTo(videoId);
         assertThat(outcome.registeredVisitId()).isEqualTo(visitId);
         assertThat(outcome.reusedResourcesJson()).contains("creator", "video");
-        assertThat(outcome.placeDecisionJson()).contains("NAME_AND_DISTRICT");
+        assertThat(outcome.placeDecisionJson()).contains("NAME_CONTAINS_AND_DISTRICT_AND_CATEGORY");
         assertThat(outcome.categoryDecisionJson()).contains("한식", "KAKAO_PLACE_CATEGORY");
     }
 

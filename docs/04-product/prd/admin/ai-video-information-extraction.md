@@ -72,7 +72,7 @@ related_documents:
 - 정상 경로에서 관리자는 후보를 고르지 않고 Kakao 장소 URL과 음식 카테고리도 입력하지 않는다. 한 영상에 여러 맛집이 등장해도 등록 단위별로 자동 등록된다.
 - 정상 결과뿐 아니라 일부 필드만 추출된 결과, 근거 없음, 제공자 오류와 재시도 가능 여부를 구분한다.
 - 자동 검증 실패·모호·중복 결과의 정식 Entity 생성·공개는 0건이다.
-- 품질 목표는 평가 입력 120건(Development 72·Calibration 24·Release holdout 24), 맛집·주소 후보 정밀도 90% 이상, 방문 근거 재현율 80% 이상, 자동 등록 정밀도 90% 이상, 자동 태그 정밀도 90% 이상·재현율 80% 이상, Critical 오연결 0건이며 Release holdout에서 검증한다.
+- 품질 목표는 평가 입력 120건(Development 72·Calibration 24·Release holdout 24), 맛집·주소 후보 정밀도 90% 이상, 방문 근거 재현율 80% 이상, 자동 등록 정밀도 90% 이상, 자동 태그 정밀도 90% 이상·재현율 80% 이상, Critical 오연결 0건이며 Release holdout에서 검증한다. 장소명 fallback을 포함한 자동 등록 품질은 이 Release holdout과 인간 판정 승인 전에는 통과로 보지 않는다.
 
 ## 4. 범위
 
@@ -89,7 +89,7 @@ related_documents:
 - 모델·Prompt·결과 Schema 버전과 처리 시각
 - 자동 판정 상태 `AUTO_CONFIRMED`, `AUTO_BLOCKED`, `AUTO_REJECTED`와 사후 보정·롤백 이력
 - 장소 단위 등록 단위 분해와 등록 단위별 독립 판정
-- 상호명·주소 기반 Kakao 장소 동일성 자동 판정과 대표 음식 카테고리 자동 선정
+- exact-name 우선·주소 시·구 일치 기반 Kakao 장소 동일성 자동 판정과, exact 후보가 없을 때만 허용하는 제한적 이름 containment/LIKE fallback, 대표 음식 카테고리 자동 선정
 - 자동 확정 후보의 기존 Kakao·YouTube·Visit 검증·등록·공개 흐름 연결
 - 제한 재시도, 실패 보관과 예외 수동 등록 대체
 
@@ -107,7 +107,7 @@ related_documents:
 2. 시스템은 영상·입력·버전 조합의 중복을 확인하고 새 작업 또는 기존 작업을 안내한다.
 3. 작업은 비동기로 실행되며 관리자는 목록·상세에서 상태를 확인한다.
 4. 성공하면 필드별 후보·신뢰도·근거와 완전·부분 추출 상태를 표시한다.
-5. 시스템은 후보를 장소 단위 등록 단위로 묶고, 단위마다 상호명·주소로 Kakao 장소를 검색해 동일성을 판정하고 확정한 장소의 분류로 대표 음식 카테고리를 결정한다.
+5. 시스템은 후보를 장소 단위 등록 단위로 묶고, 단위마다 exact-name 일치를 우선해 상호명·주소로 Kakao 장소를 검색한다. exact 후보가 없을 때만 Kakao 분류와 AI 메뉴가 같은 단일 음식 카테고리로 매핑되고 시·구·필수 필드·단일 후보 조건을 모두 만족하는 containment/LIKE fallback을 허용하며, 확정한 장소의 분류로 대표 음식 카테고리를 결정한다.
 6. 검증을 통과한 등록 단위는 관리자 승인 없이 정식 저장·공개한다. 통과하지 못한 단위만 차단 사유와 함께 관리자 화면에 남는다.
 7. AI·검증·정식 저장 실패는 해당 등록 단위의 정식 데이터 0건으로 끝나고 재시도·예외 보정 또는 기존 수동 등록으로 복구한다. 같은 작업에서 이미 통과한 등록 단위는 되돌리지 않는다.
 
@@ -137,7 +137,7 @@ related_documents:
 | PR-AIEXTRACT-017 | 후보 수가 상한을 넘는 응답은 Schema 위반이므로 기각하고 등록 단위를 만들지 않는다. | FR-AIEXTRACT-002, BR-AIEXTRACT-001 |
 | PR-AIEXTRACT-010 | 자막 기반 태그 후보는 정규화·중복·근거 검증 후 관리자 승인 없이 `Visit`과 검색에 연결한다. | FR-AIEXTRACT-007, BR-AIEXTRACT-008 |
 | PR-AIEXTRACT-011 | 한 영상의 맛집 후보는 장소 단위 등록 단위로 나뉘어 각각 독립적으로 판정·등록된다. 한 단위의 차단이 다른 단위의 등록을 막지 않는다. | FR-AIEXTRACT-003, BR-AIEXTRACT-001 |
-| PR-AIEXTRACT-012 | 장소 동일성은 시스템이 상호명·주소로 Kakao 장소를 검색해 판정한다. 관리자에게 Kakao 장소 URL 입력이나 후보 선택을 요구하지 않는다. | FR-AIEXTRACT-003, BR-AIEXTRACT-009 |
+| PR-AIEXTRACT-012 | 장소 동일성은 exact-name 일치를 우선해 시스템이 상호명·주소로 Kakao 장소를 검색해 판정한다. exact 후보가 없을 때만 Kakao 분류와 AI 메뉴가 같은 단일 음식 카테고리로 매핑되고 시·구·필수 필드·정확히 1건 조건을 만족하는 이름 containment/LIKE fallback을 허용한다. 관리자에게 Kakao 장소 URL 입력이나 후보 선택을 요구하지 않는다. | FR-AIEXTRACT-003, BR-AIEXTRACT-009 |
 | PR-AIEXTRACT-013 | 대표 음식 카테고리는 확정한 Kakao 장소 분류를 1순위, AI 메뉴 표현을 2순위 근거로 자동 선정하고, 둘 다 실패하면 자동 확정을 차단한다. | FR-AIEXTRACT-003, BR-AIEXTRACT-010 |
 | PR-AIEXTRACT-014 | 관리자가 등록 단위의 등록을 실행하면 맛집·유튜버·영상·방문 관계 4종을 한 번에 등록하고 결과만 표시한다. 단계별 진행 화면과 장소·카테고리 입력을 요구하지 않는다. | FR-AIEXTRACT-003, BR-AIEXTRACT-011 |
 | PR-AIEXTRACT-015 | 보조 입력은 장소 동일성과 카테고리 예외에서만 요구한다. 후보 값이 부족한 예외는 관리자 입력 대신 재추출·수동 등록으로 안내한다. | FR-AIEXTRACT-003, BR-AIEXTRACT-011 |
@@ -205,6 +205,7 @@ related_documents:
 - 태그 후보 정밀도·재현율, 자동 통합·차단·롤백율과 태그별 오탐률
 - 중복 요청 수렴률, 검증 충돌률과 정식 등록 실패율
 - 영상당 등록 단위 수, 등록 단위별 자동 확정률과 `PLACE_NOT_FOUND`·`PLACE_AMBIGUOUS`·`CATEGORY_UNRESOLVED` 차단 비율
+- 장소 판정 방식별(`NAME_AND_DISTRICT`, `NAME_CONTAINS_AND_DISTRICT_AND_CATEGORY`, `MANUAL_OVERRIDE`) 사용 비율과 `matchedBy` 감사 기록 누락률
 - 카테고리 근거 순위별 사용 비율(Kakao 분류·메뉴 표현)과 관리자 사후 카테고리 보정률
 - 모델·Prompt·Schema 버전별 Token·호출 수와 비용
 - 자동 차단·롤백·사후 보정 처리 시간과 수동 등록 전환율
@@ -215,7 +216,7 @@ related_documents:
 - [ ] 정상·부분·오류·중복·재시도·복구·자동 확정·자동 보류·롤백 화면 상태가 인수 테스트를 통과한다.
 - [ ] 자동 검증 전 정식 저장·공개 0건과 검증 실패 시 부분 저장 0건을 검증한다.
 - [ ] 다장소 영상에서 등록 단위별 독립 판정과 일부 단위 차단 시 나머지 단위의 정상 등록을 검증한다.
-- [ ] 장소 자동 확정 조건(정확 1건 일치)과 `PLACE_NOT_FOUND`·`PLACE_AMBIGUOUS` 차단, 카테고리 1·2순위 근거와 `CATEGORY_UNRESOLVED` 차단을 검증한다.
+- [ ] exact-name 우선 판정, exact 후보 부재 시에만 허용되는 containment/LIKE fallback의 동일 단일 음식 카테고리·시·구·필수 Kakao 필드·정확히 1건 조건, `matchedBy` 감사 기록과 `PLACE_NOT_FOUND`·`PLACE_AMBIGUOUS` 차단을 검증한다. 카테고리 1·2순위 근거와 `CATEGORY_UNRESOLVED` 차단도 검증한다.
 - [ ] 관리자 등록 실행 한 번으로 맛집·유튜버·영상·방문 관계 4종이 등록되고, 기존 유튜버·영상이 재사용되며, 중간 실패 시 해당 등록 단위의 저장이 0건인 것을 검증한다.
 - [ ] 정의된 예외 사유에서만 보조 입력 화면으로 전환하고 그 밖의 경우 관리자 입력을 요구하지 않는 것을 검증한다.
 - [ ] Prompt Injection, 원문·비밀정보 로그 차단과 원본 영상·전체 자막 미보존을 검증한다.
@@ -228,5 +229,5 @@ related_documents:
 - 현재 운영 계약인 `gemini-3.5-flash-lite`·Prompt `P8`·Schema `S2` 중 하나라도 변경하면 새 후보 버전과 평가 보고서를 만든다.
 - 예외 보정 처리량이 추출 요청량을 따라가지 못하는 경우 BACKFILL 작업을 먼저 중지하고 Webhook 실시간 작업을 우선한다.
 - 태그 정의·별칭·근거 정책 변경은 데이터 계약과 평가 Dataset 버전을 함께 올린다.
-- 장소 동일성 자동 확정 기준(`BR-AIEXTRACT-009`)을 완화하면 Critical 오연결 위험이 직접 올라간다. 기준 완화는 Release holdout 재평가와 restaurant 도메인 소유자 합의 없이 하지 않는다.
+- 장소 동일성 자동 확정 기준(`BR-AIEXTRACT-009`) 또는 containment/LIKE fallback 조건을 완화하면 Critical 오연결 위험이 직접 올라간다. 기준 변경은 Release holdout 재평가와 품질 게이트 통과, restaurant 도메인 소유자 합의 없이 하지 않는다.
 - 카테고리 매핑 표 변경은 기준정보 변경으로 취급하고 변경 이력을 남긴다. 매핑 표를 넓혀 `CATEGORY_UNRESOLVED`를 줄이는 변경은 오분류율을 함께 측정한다.
