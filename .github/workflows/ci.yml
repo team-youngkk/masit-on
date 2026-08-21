@@ -129,16 +129,19 @@ jobs:
       # digest를 바꿀 때는 태그도 함께 바꾼다. 한쪽만 바꾸면 빌드가 실패하거나
       # 의도와 다른 이미지를 쓴다.
       #
+      # `npm audit`는 package-lock.json에 고정된 프로덕션 의존성만 검사하고 high 이상을
+      # 발견하면 0이 아닌 코드로 끝난다. 감사와 빌드를 같은 고정 런타임의 단일 명령
+      # 체인으로 실행해 취약한 산출물이 다음 단계로 넘어가지 않게 한다.
       # `npm run build`는 `tsc --noEmit && next build`라 타입 검사와 프로덕션 빌드를
       # 한 번에 수행한다. next.config.ts가 Next 내장 TypeScript 단계를 끄고 있어
       # 타입 검사는 이 tsc가 담당한다.
-      - name: 타입 검사와 프로덕션 빌드 (고정 런타임)
+      - name: 프로덕션 의존성 감사·타입 검사와 프로덕션 빌드 (고정 런타임)
         run: |
           docker run --rm \
             -v "${{ github.workspace }}/frontend":/app \
             -w /app \
             node:24.18.0-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd \
-            sh -c 'npm ci && npm run build'
+            sh -c 'npm ci && npm audit --omit=dev --audit-level=high && npm run build'
 
   images:
     name: 이미지 빌드·검증·push
