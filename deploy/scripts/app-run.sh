@@ -19,16 +19,151 @@
 set -euo pipefail
 
 # BEGIN SHARED REDIS ENDPOINT CONTRACT
-redis_host_is_loopback() {
-  local host="${1-}"
-  host="${host,,}"
-  host="${host%.}"
-  case "$host" in
-    localhost|localhost.localdomain|127|127.*|0.0.0.0|::|::1|::1%*|0:0:0:0:0:0:0:0|0:0:0:0:0:0:0:1|0:0:0:0:0:0:0:1%*|::ffff:127.*|0:0:0:0:0:ffff:127.*)
-      return 0
+redis_ipv4_to_words() {
+  local host="$1"
+  local -a parts=()
+  local part value high low count high_part middle_part low_part
+  IFS=. read -r -a parts <<< "$host"
+  count="${#parts[@]}"
+  (( count >= 1 && count <= 4 )) || return 1
+  for part in "${parts[@]}"; do
+    [[ "$part" =~ ^[0-9]+$ ]] || return 1
+  done
+  case "$count" in
+    1)
+      value=$((10#${parts[0]}))
+      (( value <= 4294967295 )) || return 1
+      high=$((value / 65536)); low=$((value % 65536))
+      ;;
+    2)
+      high_part=$((10#${parts[0]})); value=$((10#${parts[1]}))
+      (( high_part <= 255 && value <= 16777215 )) || return 1
+      high=$((high_part * 256 + value / 65536)); low=$((value % 65536))
+      ;;
+    3)
+      high_part=$((10#${parts[0]})); middle_part=$((10#${parts[1]})); value=$((10#${parts[2]}))
+      (( high_part <= 255 && middle_part <= 255 && value <= 65535 )) || return 1
+      high=$((high_part * 256 + middle_part)); low="$value"
+      ;;
+    4)
+      high_part=$((10#${parts[0]})); middle_part=$((10#${parts[1]})); low_part=$((10#${parts[2]})); value=$((10#${parts[3]}))
+      (( high_part <= 255 && middle_part <= 255 && low_part <= 255 && value <= 255 )) || return 1
+      high=$((high_part * 256 + middle_part)); low=$((low_part * 256 + value))
       ;;
   esac
-  [[ "$host" =~ ^(0{1,4}:){7}0{0,3}1$ ]] && return 0
+  REDIS_IPV4_HIGH="$high"
+  REDIS_IPV4_LOW="$low"
+}
+
+redis_ipv6_append_groups() {
+  local group_list="$1" group value
+  local -a groups=()
+  [ -n "$group_list" ] || return 0
+  IFS=: read -r -a groups <<< "$group_list"
+  for group in "${groups[@]}"; do
+    [[ "$group" =~ ^[0-9a-f]{1,4}$ ]] || return 1
+    value=$((16#$group))
+    redis_ipv6_words+=("$value")
+  done
+}
+
+redis_ipv6_to_words() {
+  local host="$1" left right dotted high_hex low_hex
+  local left_count right_count zero_count i group
+  local -a right_groups=()
+  redis_ipv6_words=()
+  [[ "$host" == *:* ]] || return 1
+  if [[ "$host" == *.* ]]; then
+    dotted="${host##*:}"
+    [[ "$dotted" != "$host" ]] || return 1
+    redis_ipv4_to_words "$dotted" || return 1
+    printf -v high_hex '%x' "$REDIS_IPV4_HIGH"
+    printf -v low_hex '%x' "$REDIS_IPV4_LOW"
+    host="${host%:*}:$high_hex:$low_hex"
+  fi
+  case "$host" in
+    *::*)
+      left="${host%%::*}"; right="${host#*::}"
+      [[ "$left" != *::* && "$right" != *::* ]] || return 1
+      [[ -z "$left" || ( "$left" != :* && "$left" != *: ) ]] || return 1
+      [[ -z "$right" || ( "$right" != :* && "$right" != *: ) ]] || return 1
+      redis_ipv6_append_groups "$left" || return 1
+      left_count="${#redis_ipv6_words[@]}"
+      if [ -n "$right" ]; then
+        IFS=: read -r -a right_groups <<< "$right"
+        for group in "${right_groups[@]}"; do
+          [[ "$group" =~ ^[0-9a-f]{1,4}$ ]] || return 1
+        done
+        right_count="${#right_groups[@]}"
+      else
+        right_count=0
+      fi
+      (( left_count + right_count < 8 )) || return 1
+      zero_count=$((8 - left_count - right_count))
+      for ((i = 0; i < zero_count; i++)); do redis_ipv6_words+=(0); done
+      redis_ipv6_append_groups "$right" || return 1
+      ;;
+    *)
+      [[ "$host" != :* && "$host" != *: ]] || return 1
+      redis_ipv6_append_groups "$host" || return 1
+      ;;
+  esac
+  (( "${#redis_ipv6_words[@]}" == 8 ))
+}
+
+redis_ip_is_restricted() {
+  local address="$1" first_octet second_octet all_zero=yes i
+  local -a words=()
+  if redis_ipv4_to_words "$address"; then
+    first_octet=$((REDIS_IPV4_HIGH / 256)); second_octet=$((REDIS_IPV4_HIGH % 256))
+    (( first_octet == 0 || first_octet == 127 )) && return 0
+    (( first_octet == 169 && second_octet == 254 )) && return 0
+    (( first_octet >= 224 && first_octet <= 239 )) && return 0
+    (( REDIS_IPV4_HIGH == 0 && REDIS_IPV4_LOW == 0 )) && return 0
+    return 1
+  fi
+  redis_ipv6_to_words "$address" || return 1
+  words=("${redis_ipv6_words[@]}")
+  for ((i = 0; i < 8; i++)); do
+    if (( words[i] != 0 )); then all_zero=no; break; fi
+  done
+  [ "$all_zero" = yes ] && return 0
+  (( words[0] == 0 && words[1] == 0 && words[2] == 0 && words[3] == 0 &&
+      words[4] == 0 && words[5] == 0 && words[6] == 0 && words[7] == 1 )) && return 0
+  (( words[0] >= 0xfe80 && words[0] <= 0xfebf )) && return 0
+  (( words[0] >= 0xff00 && words[0] <= 0xffff )) && return 0
+  if (( words[0] == 0 && words[1] == 0 && words[2] == 0 && words[3] == 0 &&
+        words[4] == 0 && (words[5] == 0 || words[5] == 65535) )); then
+    first_octet=$((words[6] / 256)); second_octet=$((words[6] % 256))
+    (( first_octet == 0 || first_octet == 127 )) && return 0
+    (( first_octet == 169 && second_octet == 254 )) && return 0
+    (( first_octet >= 224 && first_octet <= 239 )) && return 0
+  fi
+  return 1
+}
+
+redis_host_is_loopback() {
+  local host="${1-}" scope resolved address resolved_any=no
+  host="${host,,}"
+  host="${host%.}"
+  if [[ "$host" == *%* ]]; then
+    [[ "$host" == *:* ]] || return 0
+    scope="${host#*%}"; host="${host%%\%*}"
+    [ -n "$scope" ] || return 0
+    [[ "$scope" != *%* ]] || return 0
+  fi
+  case "$host" in
+    localhost|localhost.localdomain|127) return 0 ;;
+  esac
+  redis_ip_is_restricted "$host" && return 0
+  if redis_ipv4_to_words "$host" || redis_ipv6_to_words "$host"; then return 1; fi
+  while read -r address _; do
+    [ -n "$address" ] || continue
+    resolved_any=yes
+    redis_ip_is_restricted "$address" && return 0
+    if ! redis_ipv4_to_words "$address" && ! redis_ipv6_to_words "$address"; then return 0; fi
+  done < <(getent ahosts "$host" 2>/dev/null)
+  [ "$resolved_any" = yes ] || return 0
   return 1
 }
 

@@ -80,6 +80,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: 공유 Redis endpoint 셸 계약
+        run: ./deploy/scripts/tests/redis-endpoint-contract-test.sh
+
       # ADR-CI-001 9·10절과 기술 정책 3절이 CI 런타임을 JDK 21.0.12로 고정한다.
       # `21`처럼 major만 주면 setup-java가 최신 21.x를 고를 수 있어 저장소 변경 없이
       # CI 런타임이 달라진다. 패치까지 명시한다.
@@ -921,5 +924,4 @@ jobs:
           done
           echo "::error::CodeDeploy cleanup이 terminal 상태를 확인하지 못했다: $status"
           exit 1
-
 
