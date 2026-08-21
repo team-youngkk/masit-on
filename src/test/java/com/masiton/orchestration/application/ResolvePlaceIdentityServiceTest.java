@@ -178,8 +178,135 @@ class ResolvePlaceIdentityServiceTest {
 
         // Then
         assertThat(result.isConfirmed()).isTrue();
-        assertThat(result.confirmedPlace().matchedBy()).isEqualTo("NAME_CONTAINS_AND_DISTRICT_AND_CATEGORY");
+        assertThat(result.confirmedPlace().matchedBy()).isEqualTo("NAME_CONTAINMENT_AND_DISTRICT_AND_CATEGORY");
         assertThat(result.confirmedPlace().kakaoPlaceUrl()).isEqualTo("https://place.map.kakao.com/1");
+    }
+
+    @Test
+    @DisplayName("AI 상호명에 붙은 본점이 Kakao 상호명에 없으면 기본 상호명 검색과 역방향 완화로 확정한다")
+    void resolve_AI상호명에지점명이붙고Kakao상호명은기본명이면_역방향완화확정한다() {
+        // Given
+        var foodCategoryId = java.util.UUID.randomUUID();
+        given(placeSearchPort.search("우래옥 본점")).willReturn(List.of());
+        given(placeSearchPort.search("우래옥")).willReturn(List.of(
+                new PlaceSearchCandidate("우래옥", "https://place.map.kakao.com/1",
+                        "서울특별시 중구 창경궁로 62-29", "02-000-0000", "음식점 > 한식 > 냉면")));
+        given(categoryMapping.resolveByKakaoPlaceCategory("음식점 > 한식 > 냉면"))
+                .willReturn(MappingResolution.matched(java.util.UUID.randomUUID(), foodCategoryId));
+        given(categoryMapping.resolveByMenuExpression("냉면"))
+                .willReturn(MappingResolution.matched(java.util.UUID.randomUUID(), foodCategoryId));
+
+        // When
+        var result = service.resolve(new PlaceIdentityCommand(
+                "우래옥 본점", "서울특별시 중구 세종대로 1", "냉면"));
+
+        // Then
+        assertThat(result.isConfirmed()).isTrue();
+        assertThat(result.confirmedPlace().matchedBy())
+                .isEqualTo("NAME_CONTAINMENT_AND_DISTRICT_AND_CATEGORY");
+        assertThat(result.confirmedPlace().kakaoPlaceUrl()).isEqualTo("https://place.map.kakao.com/1");
+        org.mockito.Mockito.verify(placeSearchPort).search("우래옥 본점");
+        org.mockito.Mockito.verify(placeSearchPort).search("우래옥");
+    }
+
+    @Test
+    @DisplayName("원래 검색과 기본 상호명 검색이 같은 후보를 반환해도 한 건으로 중복 제거한다")
+    void resolve_원래검색과기본상호명검색이같은후보면_중복제거후확정한다() {
+        var foodCategoryId = java.util.UUID.randomUUID();
+        var candidate = new PlaceSearchCandidate(
+                "우래옥", "https://place.map.kakao.com/1",
+                "서울특별시 중구 창경궁로 62-29", "02-000-0000", "음식점 > 한식 > 냉면");
+        given(placeSearchPort.search("우래옥 본점")).willReturn(List.of(candidate));
+        given(placeSearchPort.search("우래옥")).willReturn(List.of(candidate));
+        given(categoryMapping.resolveByKakaoPlaceCategory("음식점 > 한식 > 냉면"))
+                .willReturn(MappingResolution.matched(java.util.UUID.randomUUID(), foodCategoryId));
+        given(categoryMapping.resolveByMenuExpression("냉면"))
+                .willReturn(MappingResolution.matched(java.util.UUID.randomUUID(), foodCategoryId));
+
+        var result = service.resolve(new PlaceIdentityCommand(
+                "우래옥 본점", "서울특별시 중구 세종대로 1", "냉면"));
+
+        assertThat(result.isConfirmed()).isTrue();
+        assertThat(result.confirmedPlace().kakaoPlaceUrl()).isEqualTo("https://place.map.kakao.com/1");
+    }
+
+    @Test
+    @DisplayName("AI 상호명에 붙은 지점 표기도 기본 상호명 검색으로 역방향 완화한다")
+    void resolve_AI상호명에지점표기가붙으면_기본상호명검색으로완화한다() {
+        var foodCategoryId = java.util.UUID.randomUUID();
+        given(placeSearchPort.search("우래옥 지점")).willReturn(List.of());
+        given(placeSearchPort.search("우래옥")).willReturn(List.of(
+                new PlaceSearchCandidate("우래옥", "https://place.map.kakao.com/1",
+                        "서울특별시 중구 창경궁로 62-29", "02-000-0000", "음식점 > 한식 > 냉면")));
+        given(categoryMapping.resolveByKakaoPlaceCategory("음식점 > 한식 > 냉면"))
+                .willReturn(MappingResolution.matched(java.util.UUID.randomUUID(), foodCategoryId));
+        given(categoryMapping.resolveByMenuExpression("냉면"))
+                .willReturn(MappingResolution.matched(java.util.UUID.randomUUID(), foodCategoryId));
+
+        var result = service.resolve(new PlaceIdentityCommand(
+                "우래옥 지점", "서울특별시 중구 세종대로 1", "냉면"));
+
+        assertThat(result.isConfirmed()).isTrue();
+        assertThat(result.confirmedPlace().kakaoPlaceUrl()).isEqualTo("https://place.map.kakao.com/1");
+        org.mockito.Mockito.verify(placeSearchPort).search("우래옥 지점");
+        org.mockito.Mockito.verify(placeSearchPort).search("우래옥");
+    }
+
+    @Test
+    @DisplayName("끝 공백이 있는 AI 상호명도 지점 접미사를 제거해 기본 상호명을 검색한다")
+    void resolve_끝공백이있는상호명은_정규화후기본상호명을검색한다() {
+        var foodCategoryId = java.util.UUID.randomUUID();
+        given(placeSearchPort.search("우래옥 본점 ")).willReturn(List.of());
+        given(placeSearchPort.search("우래옥")).willReturn(List.of(
+                new PlaceSearchCandidate("우래옥", "https://place.map.kakao.com/1",
+                        "서울특별시 중구 창경궁로 62-29", "02-000-0000", "음식점 > 한식 > 냉면")));
+        given(categoryMapping.resolveByKakaoPlaceCategory("음식점 > 한식 > 냉면"))
+                .willReturn(MappingResolution.matched(java.util.UUID.randomUUID(), foodCategoryId));
+        given(categoryMapping.resolveByMenuExpression("냉면"))
+                .willReturn(MappingResolution.matched(java.util.UUID.randomUUID(), foodCategoryId));
+
+        var result = service.resolve(new PlaceIdentityCommand(
+                "우래옥 본점 ", "서울특별시 중구 세종대로 1", "냉면"));
+
+        assertThat(result.isConfirmed()).isTrue();
+        assertThat(result.confirmedPlace().kakaoPlaceUrl()).isEqualTo("https://place.map.kakao.com/1");
+        org.mockito.Mockito.verify(placeSearchPort).search("우래옥 본점 ");
+        org.mockito.Mockito.verify(placeSearchPort).search("우래옥");
+    }
+
+    @Test
+    @DisplayName("괄호로 감싼 본점 표기도 기본 상호명 검색으로 역방향 완화한다")
+    void resolve_괄호로감싼본점표기는_기본상호명검색으로완화한다() {
+        var foodCategoryId = java.util.UUID.randomUUID();
+        given(placeSearchPort.search("우래옥 (본점)")).willReturn(List.of());
+        given(placeSearchPort.search("우래옥")).willReturn(List.of(
+                new PlaceSearchCandidate("우래옥", "https://place.map.kakao.com/1",
+                        "서울특별시 중구 창경궁로 62-29", "02-000-0000", "음식점 > 한식 > 냉면")));
+        given(categoryMapping.resolveByKakaoPlaceCategory("음식점 > 한식 > 냉면"))
+                .willReturn(MappingResolution.matched(java.util.UUID.randomUUID(), foodCategoryId));
+        given(categoryMapping.resolveByMenuExpression("냉면"))
+                .willReturn(MappingResolution.matched(java.util.UUID.randomUUID(), foodCategoryId));
+
+        var result = service.resolve(new PlaceIdentityCommand(
+                "우래옥 (본점)", "서울특별시 중구 세종대로 1", "냉면"));
+
+        assertThat(result.isConfirmed()).isTrue();
+        assertThat(result.confirmedPlace().kakaoPlaceUrl()).isEqualTo("https://place.map.kakao.com/1");
+        org.mockito.Mockito.verify(placeSearchPort).search("우래옥 (본점)");
+        org.mockito.Mockito.verify(placeSearchPort).search("우래옥");
+    }
+
+    @Test
+    @DisplayName("일반 단어의 점으로 끝나는 표현은 지점 접미사로 오인하지 않는다")
+    void resolve_일반단어의점표현은_지점접미사로오인하지않는다() {
+        given(placeSearchPort.search("독점")).willReturn(List.of());
+
+        var result = service.resolve(new PlaceIdentityCommand(
+                "독점", "서울특별시 중구 세종대로 1", "냉면"));
+
+        assertThat(result.status()).isEqualTo(PlaceIdentityStatus.PLACE_NOT_FOUND);
+        org.mockito.Mockito.verify(placeSearchPort).search("독점");
+        org.mockito.Mockito.verifyNoMoreInteractions(placeSearchPort);
     }
 
     @Test
@@ -264,16 +391,17 @@ class ResolvePlaceIdentityServiceTest {
     @Test
     @DisplayName("완화 판정 플래그가 꺼져 있으면 이름 포함 후보를 확정하지 않는다")
     void resolve_완화판정플래그가꺼져있으면_이름포함후보를확정하지않는다() {
-        given(placeSearchPort.search("우래옥")).willReturn(List.of(
-                new PlaceSearchCandidate("우래옥 본점", "https://place.map.kakao.com/1",
-                        "서울특별시 중구 창경궁로 62-29", "02-000-0000", "음식점 > 한식 > 냉면")));
+        given(placeSearchPort.search("우래옥 본점")).willReturn(List.of());
 
         ResolvePlaceIdentityService disabledService = new ResolvePlaceIdentityService(
                 placeSearchPort, categoryMapping, () -> false);
 
-        var result = disabledService.resolve(new PlaceIdentityCommand("우래옥", "서울특별시 중구 세종대로 1", "냉면"));
+        var result = disabledService.resolve(new PlaceIdentityCommand(
+                "우래옥 본점", "서울특별시 중구 세종대로 1", "냉면"));
 
         assertThat(result.status()).isEqualTo(PlaceIdentityStatus.PLACE_NOT_FOUND);
         org.mockito.Mockito.verifyNoInteractions(categoryMapping);
+        org.mockito.Mockito.verify(placeSearchPort).search("우래옥 본점");
+        org.mockito.Mockito.verifyNoMoreInteractions(placeSearchPort);
     }
 }
