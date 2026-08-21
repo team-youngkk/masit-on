@@ -32,6 +32,33 @@ const ACTION_TYPES: AdminActionType[] = ['CREATED', 'UPDATED', 'HIDDEN']
 const STATUS_LABELS: Record<AdminParticipationStatus, string> = {
   RECEIVED: '접수', IN_REVIEW: '검토 중', ACCEPTED: '승인', REJECTED: '반려', COMPLETED: '처리 완료',
 }
+const TARGET_TYPE_LABELS: Record<AdminTargetType, string> = {
+  RESTAURANT: '맛집',
+  CREATOR: '유튜버',
+  VIDEO: '영상',
+  VISIT_RELATIONSHIP: '방문 관계',
+}
+const ACTION_TYPE_LABELS: Record<AdminActionType, string> = {
+  CREATED: '등록',
+  UPDATED: '수정',
+  HIDDEN: '숨김',
+}
+const REPORT_TYPE_LABELS: Record<string, string> = {
+  ERROR: '정보 오류',
+  CLOSED: '폐업',
+  UNAVAILABLE: '이용 불가',
+  WRONG_RELATIONSHIP: '잘못된 연결',
+  INAPPROPRIATE_CONTENT: '부적절한 콘텐츠',
+}
+const CANDIDATE_FIELD_LABELS: Record<string, string> = {
+  name: '이름',
+  roadAddress: '도로명 주소',
+  channelUrl: '채널 URL',
+  videoUrl: '영상 URL',
+  restaurantId: '맛집 ID',
+  creatorId: '유튜버 ID',
+  videoId: '영상 ID',
+}
 
 function participationStatusTone(status: AdminParticipationStatus): 'success' | 'neutral' | 'warning' | 'danger' | 'info' {
   if (status === 'ACCEPTED') return 'success'
@@ -46,16 +73,18 @@ function targetDetails(item: AdminParticipationItem): Array<[string, string]> {
     return Object.entries(item.candidate)
       .filter((entry): entry is [string, string | number | boolean] =>
         ['string', 'number', 'boolean'].includes(typeof entry[1]))
-      .map(([key, value]) => [key, String(value)])
+      .map(([key, value]) => [CANDIDATE_FIELD_LABELS[key] ?? key, String(value)])
   }
   return [
     ...(item.targetId ? [['대상 식별자', item.targetId] as [string, string]] : []),
-    ...(item.reportType ? [['신고 유형', item.reportType] as [string, string]] : []),
+    ...(item.reportType ? [['신고 유형', REPORT_TYPE_LABELS[item.reportType] ?? item.reportType] as [string, string]] : []),
   ]
 }
 
 function resultSummary(result: AdminParticipationItem['result']): string {
-  return result ? `${result.actionType} · ${result.targetType} · ${result.targetId}` : '없음'
+  return result
+    ? `${ACTION_TYPE_LABELS[result.actionType]} · ${TARGET_TYPE_LABELS[result.targetType]} · ${result.targetId}`
+    : '없음'
 }
 
 export function AdminParticipationScreen() {
@@ -243,7 +272,7 @@ export function AdminParticipationScreen() {
         <label>대상 유형
           <select disabled={busy} value={targetType} onChange={(event) => changeQuery({ targetType: event.target.value as AdminTargetType | '' })}>
             <option value="">전체</option>
-            {TARGET_TYPES.map((value) => <option key={value}>{value}</option>)}
+            {TARGET_TYPES.map((value) => <option key={value} value={value}>{TARGET_TYPE_LABELS[value]}</option>)}
           </select>
         </label>
         <Button variant="secondary" disabled={busy} onClick={() => void refreshList()}>새로고침</Button>
@@ -252,7 +281,7 @@ export function AdminParticipationScreen() {
       <ul className={styles.list}>
         {items.map((item) => <li key={item.requestId}>
           <button type="button" disabled={busy} className={styles.item} aria-current={selected?.requestId === item.requestId} onClick={() => void openDetail(item)}>
-            <span className={styles.itemHeader}><strong>{item.targetType}</strong><StatusBadge className={styles.itemStatus} tone={participationStatusTone(item.status)}>{STATUS_LABELS[item.status]}</StatusBadge></span>
+            <span className={styles.itemHeader}><strong>{TARGET_TYPE_LABELS[item.targetType]}</strong><StatusBadge className={styles.itemStatus} tone={participationStatusTone(item.status)}>{STATUS_LABELS[item.status]}</StatusBadge></span>
             <span>{item.description}</span>
             <small>{new Date(item.createdAt).toLocaleString('ko-KR')} · 회원 {item.memberId ?? '연결 제거됨'}</small>
           </button>
@@ -271,8 +300,8 @@ export function AdminParticipationScreen() {
       <dl className={styles.metadata}>
         <div><dt>요청 ID</dt><dd>{selected.requestId}</dd></div>
         <div><dt>회원 ID</dt><dd>{selected.memberId ?? '보존 정책에 따라 식별 연결이 제거됨'}</dd></div>
-        <div><dt>상태</dt><dd>{STATUS_LABELS[selected.status]} ({selected.status})</dd></div>
-        <div><dt>대상</dt><dd>{selected.targetType}</dd></div>
+        <div><dt>상태</dt><dd>{STATUS_LABELS[selected.status]}</dd></div>
+        <div><dt>대상</dt><dd>{TARGET_TYPE_LABELS[selected.targetType]}</dd></div>
         {targetDetails(selected).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
         <div><dt>회원 요청 원문</dt><dd className={styles.originalText}>{selected.description}</dd></div>
         <div><dt>현재 공개 사유</dt><dd>{selected.memberReason || '없음'}</dd></div>
@@ -296,10 +325,10 @@ export function AdminParticipationScreen() {
           <legend>실제 조치 결과</legend>
           <label className={styles.checkbox}><input type="checkbox" checked={actionConfirmed} onChange={(event) => setActionConfirmed(event.target.checked)} /> 실제 데이터 등록·정정·숨김 조치를 완료했습니다.</label>
           <label>조치 유형<select value={actionType} onChange={(event) => setActionType(event.target.value as AdminActionType | '')}>
-            <option value="">선택</option>{ACTION_TYPES.map((value) => <option key={value}>{value}</option>)}
+            <option value="">선택</option>{ACTION_TYPES.map((value) => <option key={value} value={value}>{ACTION_TYPE_LABELS[value]}</option>)}
           </select></label>
           <label>조치 대상 유형<select value={resultTargetType} onChange={(event) => setResultTargetType(event.target.value as AdminTargetType | '')}>
-            <option value="">선택</option>{TARGET_TYPES.map((value) => <option key={value}>{value}</option>)}
+            <option value="">선택</option>{TARGET_TYPES.map((value) => <option key={value} value={value}>{TARGET_TYPE_LABELS[value]}</option>)}
           </select></label>
           <label>조치 대상 ID<input value={resultTargetId} onChange={(event) => setResultTargetId(event.target.value)} /></label>
         </fieldset> : null}
@@ -314,7 +343,7 @@ export function AdminParticipationScreen() {
         <h3>감사 이력</h3>
         {selected.moderationHistory?.length ? <ol>
           {selected.moderationHistory.map((entry) => <li key={entry.historyId}>
-            <strong>{entry.fromStatus} → {entry.toStatus}</strong>
+            <strong>{STATUS_LABELS[entry.fromStatus]} → {STATUS_LABELS[entry.toStatus]}</strong>
             <span>{new Date(entry.createdAt).toLocaleString('ko-KR')} · 관리자 {entry.adminId}</span>
             <span>공개 사유: {entry.memberReason || '없음'}</span>
             <span>내부 메모: {entry.internalNote || '없음'}</span>
