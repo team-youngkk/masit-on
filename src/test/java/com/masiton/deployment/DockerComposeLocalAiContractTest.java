@@ -27,6 +27,7 @@ class DockerComposeLocalAiContractTest {
             "AI_WORKER_QUOTA_WINDOW",
             "AI_WORKER_PROVIDER_QUOTA_LIMIT",
             "AI_WORKER_APPLICATION_QUOTA_LIMIT",
+            "AI_PLACE_IDENTITY_RELAXED_MATCHING_ENABLED",
             "GEMINI_ENABLED",
             "GEMINI_FREE_TIER_VERIFIED",
             "GEMINI_PAID_BILLING_ENABLED",
@@ -40,7 +41,8 @@ class DockerComposeLocalAiContractTest {
         assertThat(appEnvironment(compose))
                 .contains("AI_WORKER_ENABLED: ${AI_WORKER_ENABLED:-false}")
                 .contains("AI_WORKER_PROVIDER_QUOTA_LIMIT: ${AI_WORKER_PROVIDER_QUOTA_LIMIT:-0}")
-                .contains("AI_WORKER_APPLICATION_QUOTA_LIMIT: ${AI_WORKER_APPLICATION_QUOTA_LIMIT:-0}");
+                .contains("AI_WORKER_APPLICATION_QUOTA_LIMIT: ${AI_WORKER_APPLICATION_QUOTA_LIMIT:-0}")
+                .contains("AI_PLACE_IDENTITY_RELAXED_MATCHING_ENABLED: ${AI_PLACE_IDENTITY_RELAXED_MATCHING_ENABLED:-true}");
     }
 
     @Test
@@ -79,6 +81,7 @@ class DockerComposeLocalAiContractTest {
         assertThat(environment.path("AI_WORKER_QUOTA_WINDOW").asText()).isEqualTo("P1D");
         assertThat(environment.path("AI_WORKER_PROVIDER_QUOTA_LIMIT").asText()).isEqualTo("0");
         assertThat(environment.path("AI_WORKER_APPLICATION_QUOTA_LIMIT").asText()).isEqualTo("0");
+        assertThat(environment.path("AI_PLACE_IDENTITY_RELAXED_MATCHING_ENABLED").asText()).isEqualTo("true");
         assertThat(environment.path("GEMINI_ENABLED").asText()).isEqualTo("false");
         assertThat(environment.path("GEMINI_FREE_TIER_VERIFIED").asText()).isEqualTo("false");
         assertThat(environment.path("GEMINI_PAID_BILLING_ENABLED").asText()).isEqualTo("false");
@@ -93,6 +96,7 @@ class DockerComposeLocalAiContractTest {
                 "AI_WORKER_QUOTA_WINDOW", "P1D",
                 "AI_WORKER_PROVIDER_QUOTA_LIMIT", "20",
                 "AI_WORKER_APPLICATION_QUOTA_LIMIT", "10",
+                "AI_PLACE_IDENTITY_RELAXED_MATCHING_ENABLED", "false",
                 "GEMINI_ENABLED", "true",
                 "GEMINI_FREE_TIER_VERIFIED", "true",
                 "GEMINI_PAID_BILLING_ENABLED", "false",
@@ -102,6 +106,7 @@ class DockerComposeLocalAiContractTest {
         assertThat(environment.path("AI_WORKER_QUOTA_WINDOW").asText()).isEqualTo("P1D");
         assertThat(environment.path("AI_WORKER_PROVIDER_QUOTA_LIMIT").asText()).isEqualTo("20");
         assertThat(environment.path("AI_WORKER_APPLICATION_QUOTA_LIMIT").asText()).isEqualTo("10");
+        assertThat(environment.path("AI_PLACE_IDENTITY_RELAXED_MATCHING_ENABLED").asText()).isEqualTo("false");
         assertThat(environment.path("GEMINI_ENABLED").asText()).isEqualTo("true");
         assertThat(environment.path("GEMINI_FREE_TIER_VERIFIED").asText()).isEqualTo("true");
         assertThat(environment.path("GEMINI_PAID_BILLING_ENABLED").asText()).isEqualTo("false");

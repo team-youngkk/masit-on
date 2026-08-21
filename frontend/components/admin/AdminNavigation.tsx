@@ -59,6 +59,10 @@ export function AdminNavigation() {
         ))}
       </nav>
       <div className={styles.sidebarFooter}>
+        <Link className={styles.link} href="/restaurants">
+          <span className={styles.navIcon} aria-hidden="true">↗</span>
+          <span>메인 페이지</span>
+        </Link>
         <Button variant="secondary" onClick={() => void handleLogout()}>
           로그아웃
         </Button>

@@ -25,6 +25,8 @@ related_documents:
 
 `E3-T08`의 평가 자산과 판정 형식은 준비됐지만, 이 문서 작성 시점에는 Release holdout 24건의 실제 제공자 실행과 지정 인간 판정자·검증자의 사후 판정이 수행·승인되지 않았다. 따라서 당시 출시 후보 `GOOGLE_GEMINI` / `gemini-3-flash-preview` / Prompt `P1` / Schema `S1`의 판정은 **`HOLD`**다. 이후 운영 모델이 `gemini-3.5-flash-lite`로 변경되었으므로, 이 문서는 이전 후보의 평가 기록으로 보존하며 새 모델은 별도 평가 실행이 필요하다. 아래 목표값은 승인된 기준이지 측정 결과가 아니다.
 
+이 문서의 `HOLD`와 “운영 활성화 금지”는 위에 적은 이전 모델·Prompt·Schema 후보의 출시 판정 기록이다. 후속 정책에서는 장소명 완화 매칭의 런타임 기본값을 `true`로 운영하고, `AI_PLACE_IDENTITY_RELAXED_MATCHING_ENABLED=false`를 긴급 차단값으로 사용한다. 이는 새 모델의 품질이 검증됐다는 뜻이 아니며, 현재 모델의 Release holdout·인간 판정·Critical 오연결 0건 증거는 여전히 별도로 수집해 `E3-T13`에서 품질과 전체 AI 자동 등록의 go/no-go를 판정해야 한다.
+
 현재 자산 점검 기준 120건의 `humanReview.status`는 모두 `PENDING`이다. Release holdout의 합성 validator 기대값은 `AUTO_CONFIRMED` 6건·`AUTO_BLOCKED` 14건·`AUTO_REJECTED` 4건이다. 이 수치는 평가기 배선 검사용 기대 분포일 뿐 실제 제공자 품질 결과나 인간 판정 결과가 아니다. 24건 모두 아직 실제 제공자 실행과 인간 판정 전이다.
 
 | 판정 항목 | Release 목표 | 현재 결과 | 상태 |
@@ -36,7 +38,7 @@ related_documents:
 | 태그 후보 recall | 80% 이상 | 미측정 | `HOLD` |
 | Critical 오연결 | 0건 | 인간 판정 미수행 | `HOLD` |
 
-평가 자산이나 자동 평가기의 존재를 Release 통과로 해석하지 않는다. 운영 활성화는 `E3-T13`의 최종 go/no-go 전까지 금지한다.
+평가 자산이나 자동 평가기의 존재를 Release 통과로 해석하지 않는다. 장소명 완화 매칭은 현재 운영 기본값으로 활성화되지만, 전체 AI 자동 등록의 Release 승인과 확장은 `E3-T13`의 최종 go/no-go 및 별도 품질 증거를 따른다.
 
 ## 2. 평가 후보와 자산
 

@@ -147,8 +147,13 @@ class RegistrationUnitExecutionServiceTest {
 
         assertThat(result.confirmed()).isTrue();
         assertThat(result.registration()).isEqualTo(registration);
+        assertThat(result.placeDecision().searchQuery()).isEqualTo("행복식당");
+        assertThat(result.placeDecision().kakaoPlaceId()).isEqualTo(KAKAO_PLACE_ID);
         assertThat(result.placeDecision().kakaoPlaceUrl()).isEqualTo(KAKAO_PLACE_URL);
         assertThat(result.categoryDecision().foodCategoryId()).isEqualTo(FOOD_CATEGORY_ID);
+        assertThat(result.categoryDecision().matchedMappingId()).isNotNull();
+        verify(resolvePlaceIdentity).resolve(new ResolvePlaceIdentityUseCase.PlaceIdentityCommand(
+                "행복식당", "서울특별시 마포구 월드컵로 1", "냉면"));
     }
 
     private void stubConfirmedPlace() {
@@ -174,14 +179,14 @@ class RegistrationUnitExecutionServiceTest {
     }
 
     private RegistrationUnitExecutionCommand command(String restaurantName, String address) {
-        return new RegistrationUnitExecutionCommand(restaurantName, address, null, null, "channel-1", "video-1",
+        return new RegistrationUnitExecutionCommand(restaurantName, address, "냉면", null, "channel-1", "video-1",
                 URI.create("https://www.youtube.com/watch?v=video-1"));
     }
 
     private RegistrationUnitExecutionCommand commandWithVisitEvidence() {
         VisitEvidenceCandidate visitEvidence = new VisitEvidenceCandidate("행복식당 방문했습니다", 0.9,
                 new Evidence(EvidenceType.TIMESTAMP, 1_000L, 2_000L, null, null, null));
-        return new RegistrationUnitExecutionCommand("행복식당", "서울특별시 마포구 월드컵로 1", null, visitEvidence,
+        return new RegistrationUnitExecutionCommand("행복식당", "서울특별시 마포구 월드컵로 1", "냉면", visitEvidence,
                 "channel-1", "video-1", URI.create("https://www.youtube.com/watch?v=video-1"));
     }
 }

@@ -69,7 +69,7 @@ class RestaurantSearchApiTest extends com.masiton.test.FullContextIntegrationTes
                 .andExpect(jsonPath("$.items[0].visitedBy[0].channelName").value("테스트 채널"))
                 .andExpect(jsonPath("$.items[0].remainingVisitedByCount").value(0))
                 .andExpect(jsonPath("$.page.number").value(1))
-                .andExpect(jsonPath("$.page.size").value(20))
+                .andExpect(jsonPath("$.page.size").value(21))
                 .andExpect(jsonPath("$.page.totalElements").value(1))
                 .andExpect(jsonPath("$.page.totalPages").value(1))
                 .andExpect(jsonPath("$.page.hasNext").value(false));
@@ -150,17 +150,17 @@ class RestaurantSearchApiTest extends com.masiton.test.FullContextIntegrationTes
     }
 
     @Test
-    @DisplayName("size를 지정하지 않으면 기본값 20이 적용된다")
-    void search_size미지정_기본값20이적용된다() throws Exception {
+    @DisplayName("size를 지정하지 않으면 기본값 21이 적용된다")
+    void search_size미지정_기본값21이적용된다() throws Exception {
         mockMvc.perform(get("/api/restaurants"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.page.size").value(20));
+                .andExpect(jsonPath("$.page.size").value(21));
     }
 
     @Test
-    @DisplayName("허용된 페이지 크기 10, 20, 50은 그대로 응답 page.size에 반영된다")
+    @DisplayName("허용된 페이지 크기 10, 20, 21, 50은 그대로 응답 page.size에 반영된다")
     void search_허용된페이지크기_응답에반영된다() throws Exception {
-        for (int size : new int[] {10, 20, 50}) {
+        for (int size : new int[] {10, 20, 21, 50}) {
             mockMvc.perform(get("/api/restaurants").param("size", String.valueOf(size)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.page.size").value(size));

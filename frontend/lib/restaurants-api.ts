@@ -18,7 +18,7 @@ const FALLBACK_CREATORS_ERROR_MESSAGE =
   '유튜버 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
 
 const DEFAULT_PAGE = '1'
-const DEFAULT_SIZE = '20'
+const DEFAULT_SIZE = '21'
 
 /* filtering-contract.md 1절 고정 10개 카테고리 */
 export const CATEGORY_OPTIONS = [

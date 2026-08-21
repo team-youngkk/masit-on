@@ -21,7 +21,7 @@ import com.masiton.restaurant.application.port.in.NaturalLanguageSearchCommand;
 @RequestMapping("/api/restaurants")
 public class NaturalLanguageSearchController {
 
-    private static final Set<Integer> ALLOWED_SIZES = Set.of(10, 20, 50);
+    private static final Set<Integer> ALLOWED_SIZES = Set.of(10, 20, 21, 50);
 
     private final NaturalLanguageSearchService service;
     private final ClientAddressResolver clientAddressResolver;
@@ -117,9 +117,9 @@ public class NaturalLanguageSearchController {
     }
 
     private int size(Integer raw) {
-        int value = raw == null ? 20 : raw;
+        int value = raw == null ? 21 : raw;
         if (!ALLOWED_SIZES.contains(value)) {
-            throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, "size", "10, 20, 50 중 하나만 허용합니다.");
+            throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, "size", "10, 20, 21, 50 중 하나만 허용합니다.");
         }
         return value;
     }

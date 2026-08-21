@@ -146,7 +146,7 @@ WireMock 포트를 바꿨다면 `KAKAO_BASE_URL`, `YOUTUBE_BASE_URL`도 같이 �
 - 백엔드 경로는 버전 없는 `/api`, 관리자는 `/api/admin` 경계로 분리한다. `/v1` 같은 경로 버전을 도입하지 않는다.
 - 공개 GET 3종(`/api/restaurants`, `/api/creators`, `/api/restaurants/{id}`)은 무인증이다. 일반 회원과 관리자는 역할 선택 없이 `POST /api/auth/tokens`에서 로그인하고 서버가 `member_account.role`로 권한을 결정한다. 재발급 `POST /api/auth/tokens/refresh`는 통합 Refresh 쿠키를 검증한다. 그 외 `/api/admin/**`은 JWT + `ADMIN`이고, 정의되지 않은 경로는 기본 거부한다. 프론트 RBAC는 편의 기능이며 최종 인가는 Spring Security가 수행한다.
 - 목록 응답은 `{ "items": [...], "page": {...} }` 형태이고 페이지가 필요 없는 최소 선택 목록은 `{ "items": [...] }`다. 빈 결과도 `200`에 빈 `items`이며, 없는 단일 자원만 `404`다.
-- 페이지는 1-base, 크기 10·20·50, 기본 20.
+- 페이지는 1-base다. 일반 목록은 크기 10·20·50, 기본 20을 사용하고, 3열 맛집 탐색(`/api/restaurants` 및 자연어 검색)은 기존 20 호출을 호환하면서 크기 10·20·21·50, 기본 21을 사용한다.
 - 외부 API 식별자는 **불투명 문자열**이다. 클라이언트는 UUID 여부나 생성 규칙을 검증하지 않는다. 내부 식별자가 UUID v4인 것([ADR-DATA-007](docs/07-adr/data/data-007-uuid-v4-identifiers.md))은 외부 계약이 아니므로, 응답 필드 타입과 문서에 UUID를 전제하지 않는다.
 - 모든 오류 응답에 서버 생성 `traceId`를 포함한다.
 - Entity를 API 요청·응답에 노출하지 않는다.
