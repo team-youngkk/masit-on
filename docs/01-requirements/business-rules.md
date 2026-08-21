@@ -1761,11 +1761,11 @@ related_documents:
 - 시스템은 등록 단위의 상호명과 주소 후보로 Kakao 장소를 검색해 동일성을 판정한다. 판정 주체는 관리자가 아니라 시스템이며 관리자 사전 승인을 요구하지 않는다.
 - 장소명 판정은 exact-name 일치를 우선한다. 공백 제거·대소문자 통일 정규화 후 장소명이 상호명 후보와 완전히 일치하고, 도로명주소의 시·구가 AI 주소 후보와 일치하며, 장소 식별자·장소명·도로명주소 등 장소 동일성 판정 필수값이 있는 후보가 정확히 1건이면 자동 확정한다. 이 판정의 `matchedBy`는 `NAME_AND_DISTRICT`다. 좌표는 기존 지도 표시 규칙에 따라 선택값으로 취급하며, 지번·도로명 표기 차이 때문에 주소 전체 문자열 완전일치는 요구하지 않는다.
 - exact-name 판정 후보가 0건일 때만 이름 containment/LIKE fallback을 평가할 수 있다. fallback은 다음 조건을 모두 만족해야 한다. 하나라도 어긋나면 자동 확정하지 않는다.
-  - 정규화한 Kakao 장소명이 AI 상호명 후보를 포함하는 containment/LIKE 일치다.
+  - 정규화한 Kakao 장소명과 AI 상호명 후보 중 한쪽이 다른 쪽을 포함하는 양방향 containment/LIKE 일치다. 검색은 원본 상호명과 `본점`·`본관`·`별관`·`지점`·`1호점` 같은 명시적 지점 표기를 제거한 기본 상호명을 순서대로 시도한다.
   - Kakao 장소 분류 표현과 AI 메뉴 표현을 `BR-AIEXTRACT-010`의 매핑 표로 각각 대조했을 때, 양쪽이 동일한 단 하나의 대표 음식 카테고리로 매핑된다.
   - Kakao 장소 도로명주소와 AI 주소 후보의 시·구가 일치한다.
   - 장소 식별자·장소명·도로명주소 등 장소 동일성 판정 필수값이 모두 존재한다. 좌표 누락은 지도 표시에서만 제외한다.
-  - 위 조건을 함께 만족하는 후보가 정확히 1건이다. 이 판정의 `matchedBy`는 `NAME_CONTAINS_AND_DISTRICT_AND_CATEGORY`다.
+  - 위 조건을 함께 만족하는 후보가 정확히 1건이다. 새로 확정하는 판정의 `matchedBy`는 `NAME_CONTAINMENT_AND_DISTRICT_AND_CATEGORY`다. PR #278에서 이미 저장된 감사 JSON의 `NAME_CONTAINS_AND_DISTRICT_AND_CATEGORY`는 과거 판정 재현을 위한 legacy 값으로 계속 허용한다.
 - exact-name 후보가 2건 이상이거나 fallback 후보가 2건 이상이면 `PLACE_AMBIGUOUS`, 두 판정 경로에서 조건을 만족하는 후보가 없거나 fallback 조건을 충족하지 못하면 `PLACE_NOT_FOUND`로 차단한다. 차단된 등록 단위는 `AUTO_BLOCKED`로 남기고 정식 저장은 0건이다.
 - 관리자가 Kakao 장소 URL을 직접 제출하는 수동 등록 경로의 검증 기준은 바꾸지 않는다. 두 경로는 같은 장소에 대해 같은 동일성 결과를 만들어야 한다.
 - 자동 확정한 장소 판정 결과의 검색어·채택 장소 식별자·`matchedBy`와 대표 카테고리 결정 결과의 판정 당시 매핑 행 식별자·카테고리 값은 등록 단위의 `place_decision`·`category_decision`에 남기고 관리자는 사후 보정·롤백할 수 있다. 사후 보정 결과의 `matchedBy`는 `MANUAL_OVERRIDE`로 기록한다.
