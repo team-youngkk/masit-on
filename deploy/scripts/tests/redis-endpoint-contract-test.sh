@@ -12,13 +12,32 @@ cat > "$TEST_BIN_DIR/getent" <<'EOF'
 if [ "${1-}" != ahosts ]; then
   exit 2
 fi
-case "${2-}" in
+query="${2-}"
+no_addrconfig=no
+if [ "$query" = --no-addrconfig ]; then
+  no_addrconfig=yes
+  query="${3-}"
+fi
+case "$query" in
   redis.internal.example) printf '%s STREAM 10.20.30.40\n' '10.20.30.40' ;;
   127.0.0.1.nip.io) printf '%s STREAM 127.0.0.1\n' '127.0.0.1' ;;
   mapped-loopback.internal.example) printf '%s STREAM ::ffff:7f00:1\n' '::ffff:7f00:1' ;;
   link-local.internal.example) printf '%s STREAM 169.254.1.2\n' '169.254.1.2' ;;
   multicast.internal.example) printf '%s STREAM 224.0.0.1\n' '224.0.0.1' ;;
   unspecified.internal.example) printf '%s STREAM 0.0.0.0\n' '0.0.0.0' ;;
+  dual-stack.internal.example)
+    printf '%s STREAM 10.20.30.40\n' '10.20.30.40'
+    if [ "$no_addrconfig" = yes ]; then
+      printf '%s STREAM ::1\n' '::1'
+      printf '%s STREAM fe80::2\n' 'fe80::2'
+    fi
+    ;;
+  private-dual-stack.internal.example)
+    printf '%s STREAM 10.20.30.40\n' '10.20.30.40'
+    if [ "$no_addrconfig" = yes ]; then
+      printf '%s STREAM fd00::10\n' 'fd00::10'
+    fi
+    ;;
   *) exit 2 ;;
 esac
 EOF
@@ -67,6 +86,9 @@ run_contract_cases() {
   assert_rejected "$script" '127.42.7.9' '6379'
   assert_rejected "$script" 'localhost' '6379'
   assert_rejected "$script" '0.0.0.0' '6379'
+  assert_rejected "$script" '0177.0.0.1' '6379'
+  assert_rejected "$script" '0177.1' '6379'
+  assert_rejected "$script" '127.1' '6379'
   assert_rejected "$script" '::1' '6379'
   assert_rejected "$script" '::1%lo' '6379'
   assert_rejected "$script" '0000:0000:0000:0000:0000:0000:0000:0001' '6379'
@@ -84,6 +106,7 @@ run_contract_cases() {
   assert_rejected "$script" 'link-local.internal.example' '6379'
   assert_rejected "$script" 'multicast.internal.example' '6379'
   assert_rejected "$script" 'unspecified.internal.example' '6379'
+  assert_rejected "$script" 'dual-stack.internal.example' '6379'
   assert_rejected "$script" 'redis.internal.example' ''
   assert_rejected "$script" 'redis.internal.example' '0'
   assert_rejected "$script" 'redis.internal.example' '65536'
@@ -94,6 +117,7 @@ run_contract_cases() {
   assert_accepted "$script" 'fd00::10%eth0' '6379'
   assert_accepted "$script" '::ffff:c000:201' '6379'
   assert_accepted "$script" '::c000:201%eth0' '6379'
+  assert_accepted "$script" 'private-dual-stack.internal.example' '6379'
   assert_accepted "$script" 'redis.internal.example' '1'
   assert_accepted "$script" 'redis.internal.example' '65535'
 }

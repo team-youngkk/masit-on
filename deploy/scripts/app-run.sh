@@ -22,35 +22,15 @@ set -euo pipefail
 redis_ipv4_to_words() {
   local host="$1"
   local -a parts=()
-  local part value high low count high_part middle_part low_part
+  local part value high low high_part middle_part low_part
+  [[ "$host" =~ ^(0|[1-9][0-9]{0,2})\.(0|[1-9][0-9]{0,2})\.(0|[1-9][0-9]{0,2})\.(0|[1-9][0-9]{0,2})$ ]] || return 1
   IFS=. read -r -a parts <<< "$host"
-  count="${#parts[@]}"
-  (( count >= 1 && count <= 4 )) || return 1
   for part in "${parts[@]}"; do
-    [[ "$part" =~ ^[0-9]+$ ]] || return 1
+    value=$((10#$part))
+    (( value <= 255 )) || return 1
   done
-  case "$count" in
-    1)
-      value=$((10#${parts[0]}))
-      (( value <= 4294967295 )) || return 1
-      high=$((value / 65536)); low=$((value % 65536))
-      ;;
-    2)
-      high_part=$((10#${parts[0]})); value=$((10#${parts[1]}))
-      (( high_part <= 255 && value <= 16777215 )) || return 1
-      high=$((high_part * 256 + value / 65536)); low=$((value % 65536))
-      ;;
-    3)
-      high_part=$((10#${parts[0]})); middle_part=$((10#${parts[1]})); value=$((10#${parts[2]}))
-      (( high_part <= 255 && middle_part <= 255 && value <= 65535 )) || return 1
-      high=$((high_part * 256 + middle_part)); low="$value"
-      ;;
-    4)
-      high_part=$((10#${parts[0]})); middle_part=$((10#${parts[1]})); low_part=$((10#${parts[2]})); value=$((10#${parts[3]}))
-      (( high_part <= 255 && middle_part <= 255 && low_part <= 255 && value <= 255 )) || return 1
-      high=$((high_part * 256 + middle_part)); low=$((low_part * 256 + value))
-      ;;
-  esac
+  high_part=$((10#${parts[0]})); middle_part=$((10#${parts[1]})); low_part=$((10#${parts[2]})); value=$((10#${parts[3]}))
+  high=$((high_part * 256 + middle_part)); low=$((low_part * 256 + value))
   REDIS_IPV4_HIGH="$high"
   REDIS_IPV4_LOW="$low"
 }
@@ -142,6 +122,20 @@ redis_ip_is_restricted() {
   return 1
 }
 
+redis_host_is_noncanonical_numeric_ipv4() {
+  local host="${1%.}"
+  [[ "$host" =~ ^[0-9]+(\.[0-9]+){0,3}$ ]] || return 1
+  ! redis_ipv4_to_words "$host"
+}
+
+redis_resolve_host() {
+  local host="$1"
+  if getent ahosts --no-addrconfig "$host" 2>/dev/null; then
+    return 0
+  fi
+  getent ahosts "$host" 2>/dev/null
+}
+
 redis_host_is_loopback() {
   local host="${1-}" scope resolved address resolved_any=no
   host="${host,,}"
@@ -155,6 +149,7 @@ redis_host_is_loopback() {
   case "$host" in
     localhost|localhost.localdomain|127) return 0 ;;
   esac
+  redis_host_is_noncanonical_numeric_ipv4 "$host" && return 0
   redis_ip_is_restricted "$host" && return 0
   if redis_ipv4_to_words "$host" || redis_ipv6_to_words "$host"; then return 1; fi
   while read -r address _; do
@@ -162,7 +157,7 @@ redis_host_is_loopback() {
     resolved_any=yes
     redis_ip_is_restricted "$address" && return 0
     if ! redis_ipv4_to_words "$address" && ! redis_ipv6_to_words "$address"; then return 0; fi
-  done < <(getent ahosts "$host" 2>/dev/null)
+  done < <(redis_resolve_host "$host")
   [ "$resolved_any" = yes ] || return 0
   return 1
 }
