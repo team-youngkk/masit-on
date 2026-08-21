@@ -64,16 +64,16 @@ related_documents:
 ## 8. 재발 방지 및 다음 확인
 
 - 재발 방지: 원격 파일 갱신 시 입력 내용을 개행 정규화한 뒤 커밋한다.
-- 다음 확인: GitHub Actions의 Docker 이미지 클린 빌드와 이미지 내부 `public` 자산 확인은 PR 검증 단계에서 수행한다.
+- 다음 확인: PR에서는 `images` job이 실행되지 않는다. Docker 이미지 클린 빌드와 이미지 내부 `public` 자산 확인은 `main` 또는 `deploy/m2` 대상 push의 이미지 빌드·검증 단계에서 수행하고, 배포 후 smoke test에서 `/images/...` 응답을 확인한다.
 
 ## 9. 도입 전후 비교 지표
 
 | 지표 | 도입 전 기준값 | 측정 방법·기간 | 배포 확장 후 값 | 비교 결과 | 담당자·확인 시점/이슈 |
 |---|---|---|---|---|---|
 | EOF 정적 검사 | 실패: `new blank line at EOF` | `git diff --check` 및 PR CI | 확인 예정 | 파일 형상 오류가 사라졌는지 확인 | @w00lam · PR #275 CI 완료 시 |
-| 이미지 자산 404율 | 미측정 | 배포 후 `/images/...` 요청의 HTTP 상태를 smoke test로 확인 | 확인 예정 | 배포 전후 비교 | @w00lam · 이미지 배포 후 |
+| 이미지 자산 404율 | 미측정 | `main` 또는 `deploy/m2` 대상 push의 이미지 검증과 배포 후 `/images/...` 요청 HTTP 상태를 확인 | 확인 예정 | 배포 전후 비교 | @w00lam · 이미지 배포 후 |
 
 ## 10. 남은 사항
 
 - 인라인 리뷰 스레드: 수정 답글 후 해결 처리한다.
-- 로컬 Docker 데몬이 없어 이미지 빌드와 배포 후 smoke test는 GitHub Actions·운영 배포 단계에서 확인한다.
+- PR에서는 이미지 job이 실행되지 않는다. 로컬 Docker 데몬이 없어 이미지 빌드와 배포 후 smoke test는 `main` 또는 `deploy/m2` 대상 push의 GitHub Actions 이미지 job과 운영 배포 단계에서 확인한다.
