@@ -54,14 +54,21 @@ class RuntimeDeploymentContractTest {
     @DisplayName("Redis는 환경 변수와 SSM을 사용해 배포 고도화 endpoint를 주입한다")
     void redisEndpoint_환경변수와SSM으로공유endpoint를주입한다() throws IOException {
         String script = Files.readString(APP_RUN);
+        String appDeploy = Files.readString(APP_DEPLOY);
 
         assertThat(script)
                 .contains("REQUIRE_SHARED_REDIS")
                 .contains("REDIS_HOST=\"${REDIS_HOST:-$(optional_param /masiton/redis/host)}\"")
                 .contains("REDIS_PORT=\"${REDIS_PORT:-$(optional_param /masiton/redis/port)}\"")
-                .contains("REDIS_HOST=\"${REDIS_HOST:-127.0.0.1}\"")
                 .contains("REDIS_PORT=\"${REDIS_PORT:-6379}\"")
                 .contains("-e REDIS_HOST -e REDIS_PORT");
+        assertThat(appDeploy)
+                .contains("REQUIRE_SHARED_REDIS")
+                .contains("else\n  REDIS_HOST=127.0.0.1\n  REDIS_PORT=\"${REDIS_PORT:-6379}\"")
+                .doesNotContain("REDIS_HOST=\"${REDIS_HOST:-127.0.0.1}\"");
+        assertThat(script)
+                .contains("else\n      REDIS_HOST=127.0.0.1\n      REDIS_PORT=\"${REDIS_PORT:-6379}\"")
+                .doesNotContain("REDIS_HOST=\"${REDIS_HOST:-127.0.0.1}\"");
     }
 
     @Test

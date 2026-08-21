@@ -148,7 +148,7 @@ case "$component" in
       REDIS_HOST="$REDIS_VALIDATED_HOST"
       REDIS_PORT="$REDIS_VALIDATED_PORT"
     else
-      REDIS_HOST="${REDIS_HOST:-127.0.0.1}"
+      REDIS_HOST=127.0.0.1
       REDIS_PORT="${REDIS_PORT:-6379}"
       validate_shared_redis_port "$REDIS_PORT" || {
         echo "Redis port가 유효하지 않다" >&2
