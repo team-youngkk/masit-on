@@ -44,6 +44,7 @@ class RuntimeDeploymentContractTest {
     private static final Path MIGRATION_PLAN = Path.of("docs/05-specs/data/migration-plan.md");
     private static final Path DEPLOYMENT_IMPACT_REVIEW = Path.of("docs/08-planning/deployment-hardening-impact-review.md");
     private static final Path PLANNING_README = Path.of("docs/08-planning/README.md");
+    private static final Path POST_CUTOVER_BASELINE = Path.of("docs/08-planning/post-cutover-runtime-baseline.md");
 
     @Test
     @DisplayName("Redis는 환경 변수와 SSM을 사용해 배포 고도화 endpoint를 주입한다")
@@ -419,7 +420,13 @@ class RuntimeDeploymentContractTest {
 
         assertThat(metrics)
                 .contains("MetricName=FleetDependencyRedis,Value=$redis,Unit=None")
-                .contains("MetricName=DependencyRedis,Value=$redis,Unit=None,Dimensions=");
+                .contains("MetricName=DependencyRedis,Value=$redis,Unit=None,Dimensions=")
+                .contains("redis_cli INFO memory")
+                .contains("MetricName=RedisUsedMemoryBytes")
+                .contains("MetricName=RedisMaxMemoryBytes")
+                .contains("MetricName=RedisMemoryUtilizationPercent")
+                .contains("maxmemory")
+                .contains("used_memory");
         assertThat(workflow)
                 .contains("deploy/scripts/cloudwatch-install.sh")
                 .contains("deploy/scripts/health-metrics.sh")
@@ -447,8 +454,20 @@ class RuntimeDeploymentContractTest {
                 .contains("treat_missing_data = \"breaching\"")
                 .contains("comparison_operator = \"LessThanThreshold\"")
                 .contains("Environment = \"asg\"");
+        String deploymentRedisMemory = section(
+                monitoring,
+                "resource \"aws_cloudwatch_metric_alarm\" \"redis_memory_utilization\"",
+                "resource \"aws_cloudwatch_metric_alarm\" \"blue_unhealthy\"");
+        assertThat(deploymentRedisMemory)
+                .contains("metric_name         = \"RedisMemoryUtilizationPercent\"")
+                .contains("threshold           = 80")
+                .contains("evaluation_periods  = 3")
+                .contains("datapoints_to_alarm = 3")
+                .contains("treat_missing_data = \"breaching\"")
+                .contains("Environment = \"asg\"");
         assertThat(deploymentAlarms)
                 .contains("aws_cloudwatch_metric_alarm.fleet_dependency_redis.alarm_name")
+                .contains("aws_cloudwatch_metric_alarm.redis_memory_utilization.alarm_name")
                 .doesNotContain("fleet_dependency_redis_freshness");
         assertThat(variables)
                 .contains("variable \"deployment_alarms_enabled\"")
@@ -464,6 +483,33 @@ class RuntimeDeploymentContractTest {
                         .doesNotContain("/internal/health/dependencies");
             }
         }
+    }
+
+    @Test
+    @DisplayName("Redis 장애 break-glass는 정상 fail-closed 게이트를 복원해야 한다")
+    void redisRecovery_장애복구breakGlass와정상게이트복원을문서화한다() throws IOException {
+        String baseline = Files.readString(POST_CUTOVER_BASELINE);
+        String variables = Files.readString(TERRAFORM_VARIABLES);
+        String monitoring = Files.readString(MONITORING);
+        String codeDeploy = Files.readString(CODEDEPLOY);
+
+        assertThat(variables)
+                .contains("variable \"deployment_alarms_enabled\"")
+                .contains("default     = true");
+        assertThat(monitoring)
+                .contains("treat_missing_data = \"breaching\"");
+        assertThat(codeDeploy)
+                .contains("ignore_poll_alarm_failure = false");
+        assertThat(baseline)
+                .contains("deployment_alarms_enabled=false")
+                .contains("deployment_alarms_enabled=true")
+                .contains("terraform.tfvars")
+                .contains("missing-data 정책은 바꾸지 않는다")
+                .contains("공개 맛집 탐색 GET")
+                .contains("회원 로그인·토큰 재발급·세션·rate-limit")
+                .contains("known-good revision으로 rollback")
+                .contains("15개월")
+                .contains("새 metric series 3개와 alarm 1개");
     }
 
     private static String section(String source, String startMarker, String endMarker) {

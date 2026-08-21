@@ -9,6 +9,14 @@
 # 3회 실패"와 "저장소 연결 실패 연속 3회"를 각각 표현한다.
 set -uo pipefail
 
+DEPLOYMENT_ENV_FILE="${DEPLOYMENT_ENV_FILE:-/etc/masiton/deployment.env}"
+if [ -f "$DEPLOYMENT_ENV_FILE" ]; then
+  set -a
+  # shellcheck disable=SC1090
+  . "$DEPLOYMENT_ENV_FILE"
+  set +a
+fi
+
 REGION="${AWS_REGION:-ap-northeast-2}"
 NAMESPACE="${METRIC_NAMESPACE:-masiton/health}"
 # fleet 집계 지표의 범위를 가르는 이름이다. CodeDeploy alarm은 asg만 본다.
@@ -56,6 +64,60 @@ ready=$(probe ready "")
 db=$(probe dependencies db)
 redis=$(probe dependencies redis)
 
+# Redis는 앱 컨테이너와 같은 host network를 사용하므로, health-metrics도 같은
+# endpoint를 직접 조회한다. 비밀값은 명령행이 아니라 app-secrets-render.sh가
+# tmpfs에 만든 파일에서 읽는다. ASG endpoint가 SSM에만 있을 때도 수집할 수 있게
+# 하고, 공유 Redis가 아닌 단일 EC2의 기존 동거 Redis만 127.0.0.1 fallback을
+# 유지한다. REQUIRE_SHARED_REDIS=true인 ASG에서 SSM 조회가 실패하면 빈 값으로
+# 남겨 capacity 지표를 결측 처리한다.
+REDIS_HOST="${REDIS_HOST:-$(aws ssm get-parameter --region "$REGION" --name /masiton/redis/host \
+  --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || printf '')}"
+if [ -z "$REDIS_HOST" ] && [ "${REQUIRE_SHARED_REDIS:-false}" != true ]; then
+  REDIS_HOST=127.0.0.1
+fi
+REDIS_PORT="${REDIS_PORT:-$(aws ssm get-parameter --region "$REGION" --name /masiton/redis/port \
+  --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || printf '')}"
+REDIS_PORT="${REDIS_PORT:-6379}"
+REDIS_PASSWORD_FILE="${REDIS_PASSWORD_FILE:-/run/masiton/secrets/spring.data.redis.password}"
+REDIS_CLI_IMAGE="${REDIS_CLI_IMAGE:-redis:8.8-alpine}"
+redis_password=""
+if [ -r "$REDIS_PASSWORD_FILE" ]; then
+  redis_password=$(tr -d '\r\n' < "$REDIS_PASSWORD_FILE")
+fi
+
+redis_cli() {
+  [ -n "$redis_password" ] || return 1
+  if command -v redis-cli >/dev/null 2>&1; then
+    REDISCLI_AUTH="$redis_password" redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" --raw "$@"
+  elif command -v docker >/dev/null 2>&1; then
+    docker run --rm --network host -e REDISCLI_AUTH="$redis_password" "$REDIS_CLI_IMAGE" \
+      redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" --raw "$@"
+  else
+    return 1
+  fi
+}
+
+redis_used_memory=""
+redis_max_memory=""
+redis_memory_percent=""
+redis_info=""
+if redis_info=$(redis_cli INFO memory 2>/dev/null); then
+  redis_used_memory=$(printf '%s\n' "$redis_info" | awk -F: '$1 == "used_memory" {gsub("\\r", "", $2); print $2; exit}')
+  redis_max_memory=$(printf '%s\n' "$redis_info" | awk -F: '$1 == "maxmemory" {gsub("\\r", "", $2); print $2; exit}')
+fi
+
+redis_memory_data=()
+if [[ "$redis_used_memory" =~ ^[0-9]+$ ]] \
+  && [[ "$redis_max_memory" =~ ^[0-9]+$ ]] \
+  && [ "$redis_max_memory" -gt 0 ]; then
+  redis_memory_percent=$((redis_used_memory * 100 / redis_max_memory))
+  redis_memory_data=(
+    "MetricName=RedisUsedMemoryBytes,Value=$redis_used_memory,Unit=Bytes,Dimensions=[{Name=Environment,Value=$ENVIRONMENT}]"
+    "MetricName=RedisMaxMemoryBytes,Value=$redis_max_memory,Unit=Bytes,Dimensions=[{Name=Environment,Value=$ENVIRONMENT}]"
+    "MetricName=RedisMemoryUtilizationPercent,Value=$redis_memory_percent,Unit=Percent,Dimensions=[{Name=Environment,Value=$ENVIRONMENT}]"
+  )
+fi
+
 # Nginx에 **설치된** 인증서의 남은 일수를 올린다. ACM의 DaysToExpiry는 ACM이 가진
 # 인증서만 보므로, ACM이 갱신했는데 EC2 재배포가 실패한 경우를 잡지 못한다.
 # 계획 4.1절이 감시하려는 위험이 정확히 그 경우다.
@@ -88,6 +150,11 @@ metric_data=(
   # 변하지 않는 환경 이름으로 범위를 좁힌다.
   "MetricName=FleetDependencyRedis,Value=$redis,Unit=None,Dimensions=[{Name=Environment,Value=$ENVIRONMENT}]"
 )
+# Capacity data is intentionally environment-scoped: every ASG instance observes
+# the same dedicated Redis. If INFO memory cannot be read or maxmemory is unset,
+# omit all three metrics so the capacity alarm treats missing data as a detection
+# path failure.
+metric_data+=("${redis_memory_data[@]}")
 # 인증서를 읽지 못했으면 지표를 올리지 않는다. 0을 올리면 만료 임박으로 오탐하고,
 # 임의값을 올리면 실제 만료를 가린다. 지표가 끊기면 알람이 breaching으로 잡는다.
 if [ -n "$cert_days" ]; then
@@ -101,7 +168,7 @@ put_status=0
 aws cloudwatch put-metric-data --region "$REGION" --namespace "$NAMESPACE" \
   --metric-data "${metric_data[@]}" || put_status=$?
 
-echo "live=$live ready=$ready postgres=$db redis=$redis cert_days=${cert_days:-미확인}"
+echo "live=$live ready=$ready postgres=$db redis=$redis redis_memory_percent=${redis_memory_percent:-미확인} cert_days=${cert_days:-미확인}"
 
 if [ "$put_status" -ne 0 ]; then
   echo "CloudWatch 지표 전송에 실패했다 (exit $put_status). 감지 경로가 동작하지 않는다." >&2

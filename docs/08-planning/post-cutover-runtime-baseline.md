@@ -114,9 +114,80 @@ t4g.nano, 컨테이너 제한 384 MB, `maxmemory 256mb`.
 
 ### 3.3. 감시가 없다
 
-현재 배포 게이트 알람 4종 중 Redis 관련은 `FleetDependencyRedis` 하나이며 이는 **연결 가능 여부**만 본다. `used_memory`가 한도에 접근하는 것을 알리는 지표·알람이 없어, 3.1절의 경로로 한도에 닿으면 **쓰기가 막힌 뒤에야 알게 된다.**
+기준선 측정 당시 배포 게이트 알람 4종 중 Redis 관련은 `FleetDependencyRedis` 하나였고,
+이는 **연결 가능 여부**만 봤다. `used_memory`가 한도에 접근하는 지표·알람이 없어,
+3.1절의 경로로 한도에 닿으면 **쓰기가 막힌 뒤에야 알게 되는** 상태였다. 이 공백은
+3.4절의 용량 지표·알람으로 보강한다.
 
 현재 사용률이 0.7%로 확인됐으므로 임계값을 잡기 쉬운 시점이다.
+
+## 3.4. Redis 용량 감시와 복구·break-glass 계약
+
+`health-metrics.sh`는 1분마다 Redis `INFO memory`의 `used_memory`와
+`maxmemory`를 읽어 `RedisUsedMemoryBytes`, `RedisMaxMemoryBytes`,
+`RedisMemoryUtilizationPercent`를 `Environment=asg` 차원으로 올린다. 인스턴스별
+지표가 아니라 전용 Redis를 공유하는 fleet 단위 지표다. 사용률이 80% 이상인 상태가
+60초 간격으로 3회 이어지면
+`masiton-prod-redis-memory-utilization`이 ALARM이 되고, 이 알람은
+`FleetDependencyRedis`와 함께 CodeDeploy 배포 게이트에 포함된다.
+
+정상 운영 계약은 다음과 같다.
+
+- 공개 맛집 탐색 GET은 Redis 장애만으로 차단하지 않는다. DB와 ALB가 정상인 동안
+  공개 탐색은 계속 응답할 수 있다.
+- 회원 로그인·토큰 재발급·세션·rate-limit은 Redis를 우회하지 않고 fail-closed한다.
+  Redis 장애를 이유로 인증을 성공시키거나 rate-limit을 무력화하는 fallback을
+  추가하지 않는다.
+- Redis 연결 알람, 용량 알람, 지표 결측은 새 배포를 막고 진행 중인 배포는
+  CodeDeploy rollback 대상으로 삼는다. `treat_missing_data = "breaching"`을
+  `notBreaching`으로 바꾸거나 `ignore_poll_alarm_failure`를 완화하지 않는다.
+
+Redis 장애 때 복구 배포 자체가 위 게이트에 막히면 다음 승인된 break-glass만 사용한다.
+
+1. 장애 시각, 현재 deployment ID, 두 Redis 알람의 상태, 공개 탐색 응답, 로그인·토큰
+   재발급의 fail-closed 결과를 기록하고 운영 담당자 2인의 승인을 받는다. Redis
+   데이터 계층 복구가 가능한 경우 먼저 전용 Redis의 AUTH PING, `INFO memory`,
+   AOF 상태와 앱의 dependency health를 복구한다.
+2. 지표 수집·Redis endpoint·복구용 앱 revision을 배포해야 하는데 alarm이 이를
+   막는 경우에만 `infra/production/terraform`에서 **명령행 변수로 한 번** 게이트를
+   끈다. `terraform.tfvars`나 Terraform 리소스의 missing-data 정책은 바꾸지 않는다.
+
+   ```powershell
+   terraform plan -var="deployment_alarms_enabled=false" -out=redis-break-glass.tfplan
+   terraform show -no-color redis-break-glass.tfplan
+   terraform apply redis-break-glass.tfplan
+   ```
+
+   plan에는 CodeDeploy deployment group alarm enabled 값의 일시적 변경만 있어야
+   하며, 다른 변경·삭제·교체가 보이면 중단한다. 이 상태에서 복구 목적의 **단 한 번의**
+   배포만 실행한다. 공개 탐색이 예상 상태를 벗어나거나, 회원 인증이 성공으로
+   우회되거나, replacement health가 실패하면 즉시 배포를 중단하고 기존
+   known-good revision으로 rollback한다.
+3. 복구 revision이 첫 `FleetDependencyRedis=1`과 유효한 Redis 용량 지표를 올리고,
+   두 alarm이 `OK`로 전환되며, dependency health·공개 탐색·인증 smoke가 기준을
+   회복한 뒤 즉시 정상 게이트를 복원한다.
+
+   ```powershell
+   terraform plan -var="deployment_alarms_enabled=true" -out=redis-break-glass-restore.tfplan
+   terraform apply redis-break-glass-restore.tfplan
+   aws deploy get-deployment-group `
+     --application-name <application-name> `
+     --deployment-group-name <deployment-group-name> `
+     --query 'deploymentGroupInfo.alarmConfiguration.{Enabled:enabled,IgnorePollFailure:ignorePollAlarmFailure,Alarms:alarms}'
+   ```
+
+   `Enabled=true`, `IgnorePollFailure=false`, 두 Redis alarm이 목록에 있는 것을
+   확인해야 한다. 복구가 실패했거나 지표가 다시 결측이면 break-glass를 연장하지
+   말고 Redis 데이터 복구·기존 revision rollback·수동 장애 대응으로 전환한다.
+
+용량 지표 3종은 60초 주기의 CloudWatch 표준 custom metric이며 환경 차원만 사용한다.
+CloudWatch의 표준 custom metric 보존 정책을 적용한다. 1분 해상도 원본은 15일 보존되고
+그 뒤 자동 집계되어 최대 15개월까지 남는다. 기존 Nginx·컨테이너 로그 보존 기간 14일은
+바꾸지 않는다. 이번 변경은 새 metric series 3개와 alarm 1개를
+추가하며 로그 수집량은 늘리지 않는다. 비용은 metric series와 alarm 수에 따라 증가하므로
+운영 전환 후 첫 7일 동안 `AWS/Usage` 및 CloudWatch 청구를 확인하고, 사용하지 않는
+차원을 추가하지 않는다. 보존·가격 정책은 [CloudWatch metrics 보존 문서](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_concepts.html#MetricsRetention)와
+[CloudWatch 가격](https://aws.amazon.com/cloudwatch/pricing/)을 기준으로 갱신한다.
 
 ## 4. 실측 과정에서 드러난 사실
 
