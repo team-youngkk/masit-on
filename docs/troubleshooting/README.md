@@ -15,6 +15,7 @@ related_documents:
 
 ## 최신 기록
 
+- [PR #280 페이지네이션 예외 정책 문서 정합성](pr-280-pagination-policy-documentation-review.md)
 - [PR #279 장소명 정규화·감사 값 호환·운영 기본값 리뷰](pr-279-ai-place-identity-review.md)
 - [PR #278 Kakao 장소명 완화 판정의 감사와 활성화 게이트](pr-278-kakao-place-name-matching-review.md)
 - [PR #275 프론트 Dockerfile EOF 빈 줄](pr-275-frontend-public-assets-review.md)
@@ -44,6 +45,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #280 페이지네이션 예외 정책 문서 정합성](pr-280-pagination-policy-documentation-review.md)
 - [PR #279 장소명 정규화·감사 값 호환·운영 기본값 리뷰](pr-279-ai-place-identity-review.md)
 - [PR #278 Kakao 장소명 완화 판정의 감사와 활성화 게이트](pr-278-kakao-place-name-matching-review.md)
 - [PR #275 프론트 Dockerfile EOF 빈 줄](pr-275-frontend-public-assets-review.md)

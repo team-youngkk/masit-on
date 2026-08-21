@@ -8,6 +8,8 @@ related_documents:
 
 # 페이지네이션 계약
 
+이 문서의 기본값과 허용값은 일반 페이지네이션의 공통 기준이다. 단, 3열 맛집 카드의 마지막 행을 채우기 위한 맛집 탐색 API(`GET /api/restaurants`, `POST /api/restaurants/natural-language-search`)는 endpoint 계약에서 기본값을 `21`로 정하고, 기존 호출 호환을 위해 `10`, `20`, `21`, `50`을 허용한다. 다른 페이지네이션 API는 아래 공통 기준을 따른다.
+
 ## 1. 요청
 
 | 이름 | 타입 | 필수 | 기본값 | 규칙 |
