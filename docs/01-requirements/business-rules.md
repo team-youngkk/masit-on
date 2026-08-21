@@ -1765,7 +1765,7 @@ related_documents:
   - Kakao 장소 분류 표현과 AI 메뉴 표현을 `BR-AIEXTRACT-010`의 매핑 표로 각각 대조했을 때, 양쪽이 동일한 단 하나의 대표 음식 카테고리로 매핑된다.
   - Kakao 장소 도로명주소와 AI 주소 후보의 시·구가 일치한다.
   - 장소 식별자·장소명·도로명주소 등 장소 동일성 판정 필수값이 모두 존재한다. 좌표 누락은 지도 표시에서만 제외한다.
-  - 위 조건을 함께 만족하는 후보가 정확히 1건이다. 이 판정의 `matchedBy`는 `NAME_CONTAINMENT_AND_DISTRICT_AND_CATEGORY`다.
+  - 위 조건을 함께 만족하는 후보가 정확히 1건이다. 새로 확정하는 판정의 `matchedBy`는 `NAME_CONTAINMENT_AND_DISTRICT_AND_CATEGORY`다. PR #278에서 이미 저장된 감사 JSON의 `NAME_CONTAINS_AND_DISTRICT_AND_CATEGORY`는 과거 판정 재현을 위한 legacy 값으로 계속 허용한다.
 - exact-name 후보가 2건 이상이거나 fallback 후보가 2건 이상이면 `PLACE_AMBIGUOUS`, 두 판정 경로에서 조건을 만족하는 후보가 없거나 fallback 조건을 충족하지 못하면 `PLACE_NOT_FOUND`로 차단한다. 차단된 등록 단위는 `AUTO_BLOCKED`로 남기고 정식 저장은 0건이다.
 - 관리자가 Kakao 장소 URL을 직접 제출하는 수동 등록 경로의 검증 기준은 바꾸지 않는다. 두 경로는 같은 장소에 대해 같은 동일성 결과를 만들어야 한다.
 - 자동 확정한 장소 판정 결과의 검색어·채택 장소 식별자·`matchedBy`와 대표 카테고리 결정 결과의 판정 당시 매핑 행 식별자·카테고리 값은 등록 단위의 `place_decision`·`category_decision`에 남기고 관리자는 사후 보정·롤백할 수 있다. 사후 보정 결과의 `matchedBy`는 `MANUAL_OVERRIDE`로 기록한다.

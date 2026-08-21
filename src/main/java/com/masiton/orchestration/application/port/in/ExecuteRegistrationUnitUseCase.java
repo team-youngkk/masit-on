@@ -82,7 +82,8 @@ public interface ExecuteRegistrationUnitUseCase {
 
     /**
      * {@code matchedBy}는 {@code NAME_AND_DISTRICT}, 제한적 이름·카테고리 완화 경로의
-     * {@code NAME_CONTAINMENT_AND_DISTRICT_AND_CATEGORY}, 또는 보충 입력 경로의
+     * {@code NAME_CONTAINMENT_AND_DISTRICT_AND_CATEGORY}, 기존 저장 JSON의
+     * legacy {@code NAME_CONTAINS_AND_DISTRICT_AND_CATEGORY}, 또는 보충 입력 경로의
      * {@code MANUAL_OVERRIDE}다.
      */
     /** 검색어와 최종 채택한 Kakao 장소 식별자를 함께 보존하는 장소 판정 감사 값이다. */

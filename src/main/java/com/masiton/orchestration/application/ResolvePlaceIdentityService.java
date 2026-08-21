@@ -31,7 +31,7 @@ class ResolvePlaceIdentityService implements ResolvePlaceIdentityUseCase {
     private static final String MATCHED_BY_NAME_CONTAINMENT_AND_DISTRICT_AND_CATEGORY =
             "NAME_CONTAINMENT_AND_DISTRICT_AND_CATEGORY";
     private static final Pattern BRANCH_SUFFIX = Pattern.compile(
-            "(?i)(?:\\s+|\\()(?:(?:본점|본관|별관|지점)|\\d+호점)\\)?$");
+            "(?i)(?:\\s+|\\s*\\(\\s*)(?:(?:본점|본관|별관|지점)|\\d+호점)\\s*\\)?$");
     private static final Pattern COMPACT_BRANCH_SUFFIX = Pattern.compile(
             "(?i)(?:본점|본관|별관|지점|\\d+호점)$");
 
@@ -59,7 +59,8 @@ class ResolvePlaceIdentityService implements ResolvePlaceIdentityUseCase {
             return PlaceIdentityResult.notFound();
         }
 
-        String normalizedName = normalize(command.restaurantName());
+        String normalizedRestaurantName = command.restaurantName().strip();
+        String normalizedName = normalize(normalizedRestaurantName);
         List<PlaceSearchCandidate> candidates = searchCandidates(command.restaurantName());
         List<PlaceSearchCandidate> exactMatches = candidates.stream()
                 .filter(this::hasRequiredFields)
@@ -75,8 +76,8 @@ class ResolvePlaceIdentityService implements ResolvePlaceIdentityUseCase {
             return PlaceIdentityResult.notFound();
         }
 
-        String baseName = stripBranchSuffix(command.restaurantName());
-        if (!blank(baseName) && !baseName.equals(command.restaurantName().strip())) {
+        String baseName = stripBranchSuffix(normalizedRestaurantName);
+        if (!blank(baseName) && !baseName.equals(normalizedRestaurantName)) {
             candidates = mergeCandidates(candidates, searchCandidates(baseName));
         }
         List<PlaceSearchCandidate> relaxedMatches = candidates.stream()
@@ -114,9 +115,10 @@ class ResolvePlaceIdentityService implements ResolvePlaceIdentityUseCase {
     }
 
     private String stripBranchSuffix(String restaurantName) {
-        String stripped = BRANCH_SUFFIX.matcher(restaurantName).replaceFirst("").strip();
-        if (stripped.equals(restaurantName)) {
-            stripped = COMPACT_BRANCH_SUFFIX.matcher(restaurantName).replaceFirst("").strip();
+        String normalizedRestaurantName = restaurantName.strip();
+        String stripped = BRANCH_SUFFIX.matcher(normalizedRestaurantName).replaceFirst("").strip();
+        if (stripped.equals(normalizedRestaurantName)) {
+            stripped = COMPACT_BRANCH_SUFFIX.matcher(normalizedRestaurantName).replaceFirst("").strip();
         }
         return stripped;
     }

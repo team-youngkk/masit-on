@@ -205,7 +205,7 @@ related_documents:
 - 태그 후보 정밀도·재현율, 자동 통합·차단·롤백율과 태그별 오탐률
 - 중복 요청 수렴률, 검증 충돌률과 정식 등록 실패율
 - 영상당 등록 단위 수, 등록 단위별 자동 확정률과 `PLACE_NOT_FOUND`·`PLACE_AMBIGUOUS`·`CATEGORY_UNRESOLVED` 차단 비율
-- 장소 판정 방식별(`NAME_AND_DISTRICT`, `NAME_CONTAINMENT_AND_DISTRICT_AND_CATEGORY`, `MANUAL_OVERRIDE`) 사용 비율과 `matchedBy` 감사 기록 누락률
+- 장소 판정 방식별(`NAME_AND_DISTRICT`, `NAME_CONTAINMENT_AND_DISTRICT_AND_CATEGORY`, legacy `NAME_CONTAINS_AND_DISTRICT_AND_CATEGORY`, `MANUAL_OVERRIDE`) 사용 비율과 `matchedBy` 감사 기록 누락률
 - 카테고리 근거 순위별 사용 비율(Kakao 분류·메뉴 표현)과 관리자 사후 카테고리 보정률
 - 모델·Prompt·Schema 버전별 Token·호출 수와 비용
 - 자동 차단·롤백·사후 보정 처리 시간과 수동 등록 전환율

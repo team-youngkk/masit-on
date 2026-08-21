@@ -253,6 +253,50 @@ class ResolvePlaceIdentityServiceTest {
     }
 
     @Test
+    @DisplayName("끝 공백이 있는 AI 상호명도 지점 접미사를 제거해 기본 상호명을 검색한다")
+    void resolve_끝공백이있는상호명은_정규화후기본상호명을검색한다() {
+        var foodCategoryId = java.util.UUID.randomUUID();
+        given(placeSearchPort.search("우래옥 본점 ")).willReturn(List.of());
+        given(placeSearchPort.search("우래옥")).willReturn(List.of(
+                new PlaceSearchCandidate("우래옥", "https://place.map.kakao.com/1",
+                        "서울특별시 중구 창경궁로 62-29", "02-000-0000", "음식점 > 한식 > 냉면")));
+        given(categoryMapping.resolveByKakaoPlaceCategory("음식점 > 한식 > 냉면"))
+                .willReturn(MappingResolution.matched(java.util.UUID.randomUUID(), foodCategoryId));
+        given(categoryMapping.resolveByMenuExpression("냉면"))
+                .willReturn(MappingResolution.matched(java.util.UUID.randomUUID(), foodCategoryId));
+
+        var result = service.resolve(new PlaceIdentityCommand(
+                "우래옥 본점 ", "서울특별시 중구 세종대로 1", "냉면"));
+
+        assertThat(result.isConfirmed()).isTrue();
+        assertThat(result.confirmedPlace().kakaoPlaceUrl()).isEqualTo("https://place.map.kakao.com/1");
+        org.mockito.Mockito.verify(placeSearchPort).search("우래옥 본점 ");
+        org.mockito.Mockito.verify(placeSearchPort).search("우래옥");
+    }
+
+    @Test
+    @DisplayName("괄호로 감싼 본점 표기도 기본 상호명 검색으로 역방향 완화한다")
+    void resolve_괄호로감싼본점표기는_기본상호명검색으로완화한다() {
+        var foodCategoryId = java.util.UUID.randomUUID();
+        given(placeSearchPort.search("우래옥 (본점)")).willReturn(List.of());
+        given(placeSearchPort.search("우래옥")).willReturn(List.of(
+                new PlaceSearchCandidate("우래옥", "https://place.map.kakao.com/1",
+                        "서울특별시 중구 창경궁로 62-29", "02-000-0000", "음식점 > 한식 > 냉면")));
+        given(categoryMapping.resolveByKakaoPlaceCategory("음식점 > 한식 > 냉면"))
+                .willReturn(MappingResolution.matched(java.util.UUID.randomUUID(), foodCategoryId));
+        given(categoryMapping.resolveByMenuExpression("냉면"))
+                .willReturn(MappingResolution.matched(java.util.UUID.randomUUID(), foodCategoryId));
+
+        var result = service.resolve(new PlaceIdentityCommand(
+                "우래옥 (본점)", "서울특별시 중구 세종대로 1", "냉면"));
+
+        assertThat(result.isConfirmed()).isTrue();
+        assertThat(result.confirmedPlace().kakaoPlaceUrl()).isEqualTo("https://place.map.kakao.com/1");
+        org.mockito.Mockito.verify(placeSearchPort).search("우래옥 (본점)");
+        org.mockito.Mockito.verify(placeSearchPort).search("우래옥");
+    }
+
+    @Test
     @DisplayName("일반 단어의 점으로 끝나는 표현은 지점 접미사로 오인하지 않는다")
     void resolve_일반단어의점표현은_지점접미사로오인하지않는다() {
         given(placeSearchPort.search("독점")).willReturn(List.of());
