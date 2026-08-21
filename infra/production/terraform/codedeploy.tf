@@ -92,6 +92,11 @@ resource "aws_codedeploy_deployment_group" "app" {
       error_message = "redis_recovery_mode=true requires deployment_alarms_enabled=true; ALB 5xx, latency, and unhealthy-host protections must remain enabled."
     }
 
+    precondition {
+      condition     = !var.initial_alarm_seeding || !var.codedeploy_termination_enabled
+      error_message = "initial_alarm_seeding=true cannot be combined with codedeploy_termination_enabled=true; keep seed ASG termination disabled until the replacement ASG is verified."
+    }
+
     ignore_changes = [autoscaling_groups]
   }
 

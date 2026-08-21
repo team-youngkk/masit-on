@@ -48,6 +48,7 @@ class RuntimeDeploymentContractTest {
     private static final Path PLANNING_README = Path.of("docs/08-planning/README.md");
     private static final Path POST_CUTOVER_BASELINE = Path.of("docs/08-planning/post-cutover-runtime-baseline.md");
     private static final Path REDIS_RECOVERY_RUNBOOK = Path.of("docs/08-planning/redis-recovery-runbook.md");
+    private static final Path M2_PROVISIONING_RECORD = Path.of("docs/08-planning/m2-provisioning-record.md");
 
     @Test
     @DisplayName("Redis는 환경 변수와 SSM을 사용해 배포 고도화 endpoint를 주입한다")
@@ -235,7 +236,7 @@ class RuntimeDeploymentContractTest {
                 .contains("Terraform 렌더링 계약")
                 .contains("infra/production/terraform-redis/tests/template-render")
                 .contains(TERRAFORM_IMAGE + " test")
-                .contains(TERRAFORM_IMAGE + " --entrypoint sh sh -c 'terraform init -backend=false && terraform validate'")
+                .contains("--entrypoint sh \\\n            " + TERRAFORM_IMAGE + " \\\n            -c 'terraform init -backend=false && terraform validate'")
                 .doesNotContain("hashicorp/terraform:1.6.6");
     }
 
@@ -470,6 +471,12 @@ class RuntimeDeploymentContractTest {
                 .doesNotContain("docker exec -e")
                 .contains("redis-cli --askpass")
                 .contains("< /run/redis-password");
+        assertThat(Files.readString(M2_PROVISIONING_RECORD))
+                .doesNotContain("REDISCLI_AUTH")
+                .contains("redis-cli --askpass")
+                .contains("install -m 0600 /dev/null /run/masiton/redis-cli-password")
+                .contains("docker exec -i masiton-redis")
+                .contains("< /run/masiton/redis-cli-password");
         assertThat(appDeploy.indexOf("validate_shared_redis_endpoint \"$REDIS_HOST\" \"$REDIS_PORT\""))
                 .as("공유 Redis endpoint를 검증한 뒤에만 비밀번호 파일을 열어야 한다")
                 .isLessThan(appDeploy.indexOf("REDIS_PASSWORD_FILE="));
@@ -484,7 +491,7 @@ class RuntimeDeploymentContractTest {
                 .contains("terraform validate")
                 .contains("infra/production/terraform-redis/tests/template-render")
                 .contains(TERRAFORM_IMAGE + " test")
-                .contains(TERRAFORM_IMAGE + " --entrypoint sh sh -c 'terraform init -backend=false && terraform validate'")
+                .contains("--entrypoint sh \\\n            " + TERRAFORM_IMAGE + " \\\n            -c 'terraform init -backend=false && terraform validate'")
                 .doesNotContain("hashicorp/terraform:1.6.6");
         assertThat(bootstrap)
                 .contains("\"$STAGE/cloudwatch-install.sh\" \"$STAGE\"")
@@ -606,6 +613,17 @@ class RuntimeDeploymentContractTest {
     }
 
     @Test
+    @DisplayName("최초 seeding에서 CodeDeploy 원본 종료 활성화 조합을 Terraform이 거부한다")
+    void initialAlarmSeeding_CodeDeploy원본종료활성화조합을계획에서거부한다() throws IOException {
+        String codeDeploy = Files.readString(CODEDEPLOY);
+
+        assertThat(codeDeploy)
+                .contains("condition     = !var.initial_alarm_seeding || !var.codedeploy_termination_enabled")
+                .contains("initial_alarm_seeding=true cannot be combined with codedeploy_termination_enabled=true")
+                .contains("keep seed ASG termination disabled until the replacement ASG is verified.");
+    }
+
+    @Test
     @DisplayName("최초 seeding에서 자동 rollback 활성화 조합을 Terraform이 거부한다")
     void initialAlarmSeeding_자동Rollback활성화조합을계획에서거부한다() throws IOException {
         String codeDeploy = Files.readString(CODEDEPLOY);
@@ -640,7 +658,9 @@ class RuntimeDeploymentContractTest {
                 .contains("condition     = !var.initial_alarm_seeding || !var.deployment_auto_rollback_enabled")
                 .contains("condition     = var.initial_alarm_seeding || var.deployment_auto_rollback_enabled")
                 .contains("condition     = var.initial_alarm_seeding ? (!var.deployment_alarms_enabled && !var.deployment_auto_rollback_enabled && !var.redis_recovery_mode) : (var.deployment_alarms_enabled && var.deployment_auto_rollback_enabled)")
-                .contains("condition     = !var.redis_recovery_mode || var.deployment_alarms_enabled");
+                .contains("condition     = !var.redis_recovery_mode || var.deployment_alarms_enabled")
+                .contains("condition     = !var.initial_alarm_seeding || !var.codedeploy_termination_enabled")
+                .contains("initial_alarm_seeding=true cannot be combined with codedeploy_termination_enabled=true");
         assertThat(tfvarsExample)
                 .contains("terraform plan -var=\"initial_alarm_seeding=true\" -var=\"deployment_alarms_enabled=false\" -var=\"deployment_auto_rollback_enabled=false\"")
                 .contains("initial_alarm_seeding             = true")
