@@ -20,11 +20,13 @@
   display: inline-flex;
   align-items: center;
   flex: 0 0 auto;
+  margin-right: var(--space-2);
   min-height: var(--control-min-height);
   color: var(--color-primary-deep);
   font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: -0.04em;
+  transform: translateX(calc(-1 * var(--space-2)));
 }
 
 .desktopNav,
@@ -107,6 +109,31 @@
   color: var(--color-text);
   cursor: pointer;
   font-size: var(--font-size-lg);
+}
+
+.themeIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.sunIcon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.moonIcon {
+  display: block;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: #fff;
+  transform: scaleX(-1);
+}
+
+.moonIcon path {
+  fill: currentColor;
 }
 
 .themeToggle:hover {
@@ -339,6 +366,13 @@
 
 .mobileNav {
   display: none;
+}
+
+@media (min-width: 768px) {
+  .brandLink {
+    margin-right: var(--space-6);
+    transform: translateX(calc(-1 * var(--space-6)));
+  }
 }
 
 @media (max-width: 767px) {

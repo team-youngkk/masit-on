@@ -175,7 +175,13 @@ export function SiteHeader() {
             tabIndex={themeReady ? 0 : -1}
             title={themeReady ? (theme === 'dark' ? '라이트 모드' : '다크 모드') : '테마 변경'}
           >
-            <span aria-hidden="true">{themeReady ? (theme === 'dark' ? '☀' : '☾') : '◐'}</span>
+            <span aria-hidden="true" className={styles.themeIcon}>
+              {themeReady ? (theme === 'dark' ? (
+                <svg className={styles.moonIcon} viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M19.9 14.5A8.5 8.5 0 1 1 9.5 4.1a7 7 0 0 0 10.4 10.4Z" />
+                </svg>
+              ) : <span className={styles.sunIcon}>☀</span>) : '◐'}
+            </span>
           </button>
           <details className={styles.quickMenu} ref={quickMenuRef}>
             <summary aria-label="메뉴">
