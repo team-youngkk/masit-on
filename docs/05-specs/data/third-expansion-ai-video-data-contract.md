@@ -160,8 +160,8 @@ related_documents:
 | `restaurant_name` | `varchar(255)` | NN | 공백 금지 | 이 단위의 맛집명 후보 |
 | `review_status` | `varchar(24)` | NN | 상태 CHECK | `AUTO_CONFIRMED/AUTO_BLOCKED/AUTO_REJECTED/MANUAL_OVERRIDE` |
 | `block_reason` | `varchar(64)` | Yes | 차단 상태일 때 필수 | `PLACE_NOT_FOUND`, `PLACE_AMBIGUOUS`, `CATEGORY_UNRESOLVED`, `MISSING_REQUIRED_FIELD`, `VISIT_EVIDENCE_REQUIRED`, `DUPLICATE_CONFLICT`, `EXTERNAL_SERVICE_ERROR` |
-| `place_decision` | `jsonb` | Yes | 확정 시 필수 | 채택한 Kakao 장소 식별자·도로명주소와 `matchedBy` |
-| `category_decision` | `jsonb` | Yes | 확정 시 필수 | 선정한 카테고리와 `resolvedBy`(`KAKAO_PLACE_CATEGORY`·`MENU_EXPRESSION`·`MANUAL_OVERRIDE`) |
+| `place_decision` | `jsonb` | Yes | 확정 시 필수 | `searchQuery`, 채택한 `kakaoPlaceId`·`kakaoPlaceUrl`·도로명주소와 `matchedBy`; 새 값은 `NAME_AND_DISTRICT`, `NAME_CONTAINMENT_AND_DISTRICT_AND_CATEGORY`, `MANUAL_OVERRIDE`, 기존 PR #278 저장 행의 `NAME_CONTAINS_AND_DISTRICT_AND_CATEGORY`는 legacy 조회 값 |
+| `category_decision` | `jsonb` | Yes | 확정 시 필수 | 선정한 카테고리·판정 당시 `matchedMappingId`·`resolvedBy`(`KAKAO_PLACE_CATEGORY`·`MENU_EXPRESSION`·`MANUAL_OVERRIDE`) |
 | `registered_restaurant_id` | `uuid` | Yes | FK → `restaurant.id` | 등록한 맛집 |
 | `registered_creator_id` | `uuid` | Yes | FK → `creator.id` | 등록하거나 재사용한 유튜버 |
 | `registered_video_id` | `uuid` | Yes | FK → `video.id` | 등록하거나 재사용한 영상 |

@@ -81,7 +81,7 @@ test('다른 필터를 해제할 때 creatorId 앞뒤 공백을 원문 그대로
   assert.equal(next.searchParams.get('size'), '50')
 })
 
-test('빈 구조화 필터는 전달하지 않고 빈 size는 기본값 20으로 대체한다', () => {
+test('빈 구조화 필터는 전달하지 않고 빈 size는 기본값 21로 대체한다', () => {
   const current = new URLSearchParams({
     query: '   ',
     district: '',
@@ -92,24 +92,24 @@ test('빈 구조화 필터는 전달하지 않고 빈 size는 기본값 20으로
 
   assert.equal(
     buildRestaurantFilterClearHref(current, 'query'),
-    '/restaurants?page=1&size=20',
+    '/restaurants?page=1&size=21',
   )
 })
 
-test('size가 없으면 현재 API 기본값 20을 명시한다', () => {
+test('size가 없으면 현재 API 기본값 21을 명시한다', () => {
   const current = new URLSearchParams({ district: '마포구' })
 
   assert.equal(
     buildRestaurantFilterClearHref(current, 'category'),
-    '/restaurants?district=%EB%A7%88%ED%8F%AC%EA%B5%AC&page=1&size=20',
+    '/restaurants?district=%EB%A7%88%ED%8F%AC%EA%B5%AC&page=1&size=21',
   )
   assert.equal(
     buildRestaurantFiltersResetHref(current),
-    '/restaurants?page=1&size=20',
+    '/restaurants?page=1&size=21',
   )
 })
 
-test('허용되지 않은 size는 필터 해제와 초기화에서 기본값 20으로 복구한다', () => {
+test('허용되지 않은 size는 필터 해제와 초기화에서 기본값 21으로 복구한다', () => {
   const current = new URLSearchParams({
     district: '성동구',
     page: '3',
@@ -118,10 +118,10 @@ test('허용되지 않은 size는 필터 해제와 초기화에서 기본값 20�
 
   assert.equal(
     buildRestaurantFilterClearHref(current, 'district'),
-    '/restaurants?page=1&size=20',
+    '/restaurants?page=1&size=21',
   )
   assert.equal(
     buildRestaurantFiltersResetHref(current),
-    '/restaurants?page=1&size=20',
+    '/restaurants?page=1&size=21',
   )
 })

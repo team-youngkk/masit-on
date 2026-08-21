@@ -73,11 +73,11 @@ Spring Data JPA의 선언적 Repository 패턴은 4명이 서로 다른 엔티�
 
 ## 12. 구현 및 운영 영향
 
-목록·검색 조회는 기본 페이지 크기 20, 허용 크기 10/20/50([RV-NFR-003](../../01-requirements/non-functional-requirements.md#rv-nfr-003-페이지-크기))을 `Pageable`로 강제하고 그 밖의 값은 잘못된 요청으로 거부한다. 연결 풀 크기는 정상 부하 50명·20 RPS와 최대 부하 200명·80 RPS 성능 테스트 결과로 조정하며, 개발 단계에서는 SQL 로그를 활성화해 생성되는 쿼리와 N+1 여부를 팀원이 직접 확인할 수 있게 한다. 조인이 잦은 조회는 인덱스와 실행 계획을 리뷰 대상에 포함한다.
+일반 목록·검색 조회는 기본 페이지 크기 20, 허용 크기 10/20/50([RV-NFR-003](../../01-requirements/non-functional-requirements.md#rv-nfr-003-페이지-크기))을 `Pageable`로 강제한다. 단, 3열 카드 화면인 맛집 탐색 GET·자연어 POST는 기본 21, 허용 크기 10/20/21/50으로 endpoint 계약을 적용하고 기존 20 호출을 호환한다. 그 밖의 값은 잘못된 요청으로 거부한다. 연결 풀 크기는 정상 부하 50명·20 RPS와 최대 부하 200명·80 RPS 성능 테스트 결과로 조정하며, 개발 단계에서는 SQL 로그를 활성화해 생성되는 쿼리와 N+1 여부를 팀원이 직접 확인할 수 있게 한다. 조인이 잦은 조회는 인덱스와 실행 계획을 리뷰 대상에 포함한다.
 
 ## 13. 검증 방법
 
-PostgreSQL Testcontainers로 CRUD, 제약 위반, 동시 등록 트랜잭션 충돌과 롤백을 검증한다. 조인 조회는 실행되는 쿼리 수를 테스트에서 직접 단언(assert)해 N+1이 없는지 확인하고, 목록·검색 API는 페이지 크기 10/20/50과 기본값 20이 [RV-NFR-003](../../01-requirements/non-functional-requirements.md#rv-nfr-003-페이지-크기)대로 동작하는지, 그 밖의 값이 잘못된 요청으로 거부되는지 경계값 테스트로 확인한다. 성능은 [RV-NFR-004](../../01-requirements/non-functional-requirements.md#rv-nfr-004-목표-응답-시간과-허용-오류율)(일반 조회 p95 500ms, 검색·필터 p95 800ms, 오류율 1% 미만)를 통과 기준으로 삼는다.
+PostgreSQL Testcontainers로 CRUD, 제약 위반, 동시 등록 트랜잭션 충돌과 롤백을 검증한다. 조인 조회는 실행되는 쿼리 수를 테스트에서 직접 단언(assert)해 N+1이 없는지 확인하고, 일반 목록·검색 API는 페이지 크기 10/20/50과 기본값 20을, 맛집 탐색 API는 페이지 크기 10/20/21/50과 기본값 21을 [RV-NFR-003](../../01-requirements/non-functional-requirements.md#rv-nfr-003-페이지-크기)대로 검증하며, 그 밖의 값이 잘못된 요청으로 거부되는지 경계값 테스트로 확인한다. 성능은 [RV-NFR-004](../../01-requirements/non-functional-requirements.md#rv-nfr-004-목표-응답-시간과-허용-오류율)(일반 조회 p95 500ms, 검색·필터 p95 800ms, 오류율 1% 미만)를 통과 기준으로 삼는다.
 
 ## 14. 재검토 조건
 

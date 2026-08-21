@@ -63,6 +63,9 @@ logging:
 
 masiton:
   ai:
+    place-identity:
+      # 이름 완화 판정은 운영에서 기본 활성화하며, 긴급 차단 시 환경 변수로 false를 주입한다.
+      relaxed-matching-enabled: ${AI_PLACE_IDENTITY_RELAXED_MATCHING_ENABLED:true}
     worker:
       enabled: ${AI_WORKER_ENABLED:false}
       poll-interval: PT5S

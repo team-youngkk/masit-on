@@ -89,7 +89,7 @@ class NaturalLanguageSearchApiTest extends com.masiton.test.FullContextIntegrati
                 .andExpect(jsonPath("$.results.items[0].id").value(restaurantId.toString()))
                 .andExpect(jsonPath("$.results.items[0].name").value("성수 한식 맛집"))
                 .andExpect(jsonPath("$.results.page.number").value(1))
-                .andExpect(jsonPath("$.results.page.size").value(20))
+                .andExpect(jsonPath("$.results.page.size").value(21))
                 .andExpect(jsonPath("$.results.page.totalElements").value(1))
                 .andExpect(jsonPath("$.results.page.totalPages").value(1))
                 .andExpect(jsonPath("$.results.page.hasNext").value(false));
