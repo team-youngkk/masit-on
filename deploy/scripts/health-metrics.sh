@@ -72,12 +72,12 @@ redis=$(probe dependencies redis)
 if [ "${REQUIRE_SHARED_REDIS:-false}" = true ]; then
   REDIS_HOST="${REDIS_HOST:-$(aws ssm get-parameter --region "$REGION" --name /masiton/redis/host \
     --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || printf '')}"
+  REDIS_PORT="${REDIS_PORT:-$(aws ssm get-parameter --region "$REGION" --name /masiton/redis/port \
+    --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || printf '')}"
 else
   REDIS_HOST=127.0.0.1
+  REDIS_PORT="${REDIS_PORT:-6379}"
 fi
-REDIS_PORT="${REDIS_PORT:-$(aws ssm get-parameter --region "$REGION" --name /masiton/redis/port \
-  --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || printf '')}"
-REDIS_PORT="${REDIS_PORT:-6379}"
 
 # BEGIN SHARED REDIS ENDPOINT CONTRACT
 # health-metrics는 host network에서 Redis에 직접 연결하므로, 입력 endpoint를

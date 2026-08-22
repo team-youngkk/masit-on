@@ -80,3 +80,7 @@ Terraform이 `redis_recovery_mode`와 `deployment_alarms_enabled`를 독립적�
 
 - GitHub PR이 없어 리뷰 스레드 답글·resolve 처리는 수행하지 않았다.
 - Terraform CLI 부재로 `fmt`, `validate`, 실제 invalid plan 결과는 CI에서 확인해야 한다.
+
+## 후속 PR
+
+- [PR #289 Redis local fallback의 SSM port 오염](pr-289-redis-recovery-observability-review.md)에서 같은 운영 배포 경계의 후속 리뷰를 처리했다. 공유 Redis 모드가 아닐 때 SSM port가 단일 EC2 fallback으로 유입되던 문제를 세 producer와 회귀 테스트에서 보완했다.

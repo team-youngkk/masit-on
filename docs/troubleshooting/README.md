@@ -15,6 +15,7 @@ related_documents:
 
 ## 최신 기록
 
+- [PR #289 Redis local fallback의 SSM port 오염](pr-289-redis-recovery-observability-review.md)
 - [Issue #284 Redis 복구 모드의 ALB 보호 선행 조건](pr-284-redis-recovery-observability-review.md)
 - [이슈 #282 dependency health 진단과 롤백 안전성](pr-282-dependency-health-diagnostics-review.md)
 - [PR #280 페이지네이션 예외 정책 문서 정합성](pr-280-pagination-policy-documentation-review.md)
@@ -47,6 +48,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #289 Redis local fallback의 SSM port 오염](pr-289-redis-recovery-observability-review.md)
 - [PR #280 페이지네이션 예외 정책 문서 정합성](pr-280-pagination-policy-documentation-review.md)
 - [PR #279 장소명 정규화·감사 값 호환·운영 기본값 리뷰](pr-279-ai-place-identity-review.md)
 - [PR #278 Kakao 장소명 완화 판정의 감사와 활성화 게이트](pr-278-kakao-place-name-matching-review.md)

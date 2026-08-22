@@ -58,5 +58,29 @@ class RedisEndpointParityContractTest {
                 "REDIS_ENDPOINT_PORT=\"$REDIS_VALIDATED_PORT\"",
                 "redis-cli --askpass",
                 "< /run/masiton-redis-password");
+
+        assertThat(appRun)
+                .as("app-run.sh는 공유 모드에서만 SSM Redis endpoint를 읽어야 한다")
+                .satisfies(RedisEndpointParityContractTest::assertSharedLookupPrecedesLocalFallback);
+        assertThat(appDeploy)
+                .as("app-deploy.sh는 공유 모드에서만 SSM Redis endpoint를 읽어야 한다")
+                .satisfies(RedisEndpointParityContractTest::assertSharedLookupPrecedesLocalFallback);
+        assertThat(healthMetrics)
+                .as("health-metrics.sh는 공유 모드에서만 SSM Redis endpoint를 읽어야 한다")
+                .satisfies(RedisEndpointParityContractTest::assertSharedLookupPrecedesLocalFallback);
+    }
+
+    private static void assertSharedLookupPrecedesLocalFallback(String script) {
+        int sharedMode = script.indexOf("if [ \"${REQUIRE_SHARED_REDIS:-false}\" = true ]; then");
+        int hostLookup = script.indexOf("/masiton/redis/host");
+        int portLookup = script.indexOf("/masiton/redis/port");
+        int localFallback = script.indexOf("REDIS_HOST=127.0.0.1");
+        int localPortDefault = script.indexOf("REDIS_PORT=\"${REDIS_PORT:-6379}\"");
+
+        assertThat(sharedMode).as("shared Redis 분기를 찾지 못했다").isGreaterThanOrEqualTo(0);
+        assertThat(hostLookup).as("Redis host SSM 조회를 찾지 못했다").isGreaterThan(sharedMode);
+        assertThat(portLookup).as("Redis port SSM 조회를 찾지 못했다").isGreaterThan(sharedMode);
+        assertThat(localFallback).as("로컬 Redis fallback을 찾지 못했다").isGreaterThan(portLookup);
+        assertThat(localPortDefault).as("로컬 Redis port 기본값을 찾지 못했다").isGreaterThan(localFallback);
     }
 }

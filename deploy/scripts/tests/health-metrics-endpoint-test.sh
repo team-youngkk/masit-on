@@ -13,6 +13,7 @@ export HEALTH_BASE=http://health-metrics.test
 export REDIS_PASSWORD_FILE="$TEST_ROOT/redis-password"
 export REDIS_INFO_FIXTURE="$TEST_ROOT/redis-info"
 export AWS_CAPTURE="$TEST_ROOT/aws-arguments"
+export AWS_SSM_CAPTURE="$TEST_ROOT/aws-ssm-arguments"
 export REDIS_CLI_CAPTURE="$TEST_ROOT/redis-cli-arguments"
 export DOCKER_CAPTURE="$TEST_ROOT/docker-arguments"
 export TLS_CERT="$TEST_ROOT/no-certificate.pem"
@@ -44,6 +45,13 @@ set -euo pipefail
 if [ "${1:-}" = cloudwatch ] && [ "${2:-}" = put-metric-data ]; then
   printf '%s\n' "$@" > "$AWS_CAPTURE"
   exit 0
+fi
+if [ "${1:-}" = ssm ] && [ "${2:-}" = get-parameter ]; then
+  printf '%s\n' "$@" >> "$AWS_SSM_CAPTURE"
+  case "$*" in
+    */masiton/redis/port*) printf '6380'; exit 0 ;;
+    *) echo 'unexpected SSM parameter' >&2; exit 1 ;;
+  esac
 fi
 echo 'unexpected aws call' >&2
 exit 1
@@ -120,8 +128,12 @@ run_rejected() {
 
 run_local_fallback() {
   rm -f "$REDIS_CLI_CAPTURE" "$DOCKER_CAPTURE"
-  REQUIRE_SHARED_REDIS=false REDIS_HOST= REDIS_PORT=6379 "$SCRIPT" > "$TEST_ROOT/local.output" 2>&1
+  rm -f "$AWS_SSM_CAPTURE"
+  REQUIRE_SHARED_REDIS=false REDIS_HOST= REDIS_PORT= "$SCRIPT" > "$TEST_ROOT/local.output" 2>&1
   assert_contains '127.0.0.1' "$REDIS_CLI_CAPTURE"
+  assert_contains '-p' "$REDIS_CLI_CAPTURE"
+  assert_contains '6379' "$REDIS_CLI_CAPTURE"
+  assert_not_called "$AWS_SSM_CAPTURE"
   assert_contains 'MetricName=RedisUsedMemoryBytes,Value=1048576' "$AWS_CAPTURE"
   assert_contains 'MetricName=RedisMaxMemoryBytes,Value=4194304' "$AWS_CAPTURE"
   assert_contains 'MetricName=RedisMemoryUtilizationPercent,Value=25' "$AWS_CAPTURE"
