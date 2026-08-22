@@ -216,7 +216,7 @@ cleanup() {
 trap cleanup EXIT
 
 rollback() {
-  local original_exit_code=$?
+  local original_exit_code="${1:-$?}"
   set +e
   trap - ERR
   [ "$rollback_enabled" = yes ] || return "$original_exit_code"
@@ -331,21 +331,76 @@ done
 [ -n "$ready" ] || { echo "백엔드 ready 확인 실패" >&2; systemctl status masiton-backend.service --no-pager -l | tail -20; exit 1; }
 
 dependencies_body="$staged/dependencies.json"
-dependencies_status=$(curl -sS -m 5 -o "$dependencies_body" -w '%{http_code}' \
-  http://127.0.0.1:8080/internal/health/dependencies)
-if [ "$dependencies_status" != "200" ] || ! python3 - "$dependencies_body" <<'PY'
+dependencies_failures="$staged/dependency-failures.txt"
+check_dependency_health() {
+  local dependencies_body="$1"
+  local dependencies_failures="$2"
+  local dependencies_status=""
+  local dependency_request_status
+  local dependency_parse_status
+
+  if dependencies_status=$(curl -sS -m 5 -o "$dependencies_body" -w '%{http_code}' \
+    http://127.0.0.1:8080/internal/health/dependencies); then
+    :
+  else
+    dependency_request_status=$?
+    echo "백엔드 dependency health HTTP 요청 실패: HTTP ${dependencies_status:-000}" >&2
+    return "$dependency_request_status"
+  fi
+  if [ "$dependencies_status" != "200" ]; then
+    echo "백엔드 dependency health HTTP 실패: HTTP $dependencies_status" >&2
+    return 1
+  fi
+
+  if python3 - "$dependencies_body" "$dependencies_failures" <<'PY'
 import json
 import sys
 
-with open(sys.argv[1], encoding="utf-8") as response:
-    body = json.load(response)
-if body.get("components", {}).get("mail", {}).get("status") != "UP":
+try:
+    with open(sys.argv[1], encoding="utf-8") as response:
+        body = json.load(response)
+except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+    raise SystemExit(2)
+
+components = body.get("components") if isinstance(body, dict) else None
+if not isinstance(components, dict):
+    raise SystemExit(2)
+
+expected_components = ("db", "mail", "redis")
+failed_components = []
+for name in expected_components:
+    component = components.get(name)
+    if not isinstance(component, dict) or component.get("status") != "UP":
+        failed_components.append(name)
+
+for name in sorted(components):
+    if name in expected_components:
+        continue
+    component = components[name]
+    if not isinstance(component, dict) or component.get("status") != "UP":
+        failed_components.append(name)
+
+if failed_components:
+    with open(sys.argv[2], "w", encoding="utf-8") as failures:
+        failures.write(" ".join(failed_components))
     raise SystemExit(1)
 PY
-then
-  echo "백엔드 mail dependency 확인 실패: HTTP $dependencies_status" >&2
-  exit 1
-fi
+  then
+    :
+  else
+    dependency_parse_status=$?
+    if [ "$dependency_parse_status" = "1" ]; then
+      dependency_components=$(<"$dependencies_failures")
+      echo "백엔드 dependency health 구성요소 실패: $dependency_components (HTTP $dependencies_status)" >&2
+    else
+      echo "백엔드 dependency health JSON 파싱 실패: HTTP $dependencies_status" >&2
+    fi
+    return 1
+  fi
+}
+
+# 함수 호출 자체를 조건문으로 감싸지 않아, 실패 시 기존 ERR trap이 롤백을 실행한다.
+check_dependency_health "$dependencies_body" "$dependencies_failures"
 
 front=""
 for _ in $(seq 1 36); do
