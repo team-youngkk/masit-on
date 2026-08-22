@@ -80,131 +80,198 @@ else
 fi
 
 # BEGIN SHARED REDIS ENDPOINT CONTRACT
-# health-metrics는 host network에서 Redis에 직접 연결하므로, 입력 endpoint를
-# Redis client가 읽기 전에 엄격히 고정한다. 숫자 IPv4는 표준 dotted-decimal만
-# 허용해 octal·shorthand·IPv4-mapped IPv6 해석 차이를 제거하고, DNS는 모든 A
-# 결과를 검사한 뒤 선택한 숫자 주소를 사용해 validation 이후 rebinding을 막는다.
-is_canonical_ipv4() {
-  local candidate="$1"
-  local -a octets=()
-  [[ "$candidate" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || return 1
-  IFS=. read -r -a octets <<< "$candidate"
-  [ "${#octets[@]}" -eq 4 ] || return 1
-  for octet in "${octets[@]}"; do
-    [[ "$octet" == 0 || "$octet" =~ ^[1-9][0-9]{0,2}$ ]] || return 1
-    ((10#$octet <= 255)) || return 1
-  done
-}
-
-is_safe_shared_ipv4() {
-  local candidate="$1"
-  local -a octets=()
-  is_canonical_ipv4 "$candidate" || return 1
-  IFS=. read -r -a octets <<< "$candidate"
-  local first="${octets[0]}"
-  local second="${octets[1]}"
-
-  # Shared Redis is reachable only through a private IPv4 address. This also
-  # rejects unspecified, loopback, link-local, multicast and broadcast ranges.
-  if (( first == 10 )); then
-    return 0
-  fi
-  if (( first == 172 && second >= 16 && second <= 31 )); then
-    return 0
-  fi
-  if (( first == 192 && second == 168 )); then
-    return 0
-  fi
-  return 1
-}
-
-resolve_shared_redis_host() {
+redis_ipv4_to_words() {
   local host="$1"
-  local lookup=""
-  local address=""
-  local resolved=""
-  local -a labels=()
-
-  if is_canonical_ipv4 "$host"; then
-    is_safe_shared_ipv4 "$host" || return 1
-    printf '%s' "$host"
-    return 0
-  fi
-
-  # Numeric-looking non-canonical forms must not fall through to DNS, where a
-  # resolver or client could interpret them as legacy octal/decimal addresses.
-  [[ "$host" =~ ^[0-9.]+$ || "$host" =~ ^[0xX][0-9A-Fa-f]+$ ]] && return 1
-
-  # A colon is never valid in the hostname form. In particular, this rejects
-  # IPv6 and IPv4-mapped IPv6 before any resolver or client can reinterpret it.
-  [[ "$host" != *:* ]] || return 1
-  [[ "$host" =~ ^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$ ]] || return 1
-  [ "${#host}" -le 253 ] || return 1
-  [[ "$host" != *..* ]] || return 1
-  IFS=. read -r -a labels <<< "$host"
-  for label in "${labels[@]}"; do
-    [ "${#label}" -le 63 ] || return 1
+  local -a parts=()
+  local part value high low high_part middle_part low_part
+  [[ "$host" =~ ^(0|[1-9][0-9]{0,2})\.(0|[1-9][0-9]{0,2})\.(0|[1-9][0-9]{0,2})\.(0|[1-9][0-9]{0,2})$ ]] || return 1
+  IFS=. read -r -a parts <<< "$host"
+  for part in "${parts[@]}"; do
+    value=$((10#$part))
+    (( value <= 255 )) || return 1
   done
-
-  lookup=$(getent ahostsv4 "$host" 2>/dev/null) || return 1
-  [ -n "$lookup" ] || return 1
-  while IFS= read -r address; do
-    [ -n "$address" ] || continue
-    is_safe_shared_ipv4 "$address" || return 1
-    [ -n "$resolved" ] || resolved="$address"
-  done < <(printf '%s\n' "$lookup" | awk '{print $1}')
-  [ -n "$resolved" ] || return 1
-  printf '%s' "$resolved"
+  high_part=$((10#${parts[0]})); middle_part=$((10#${parts[1]})); low_part=$((10#${parts[2]})); value=$((10#${parts[3]}))
+  high=$((high_part * 256 + middle_part)); low=$((low_part * 256 + value))
+  REDIS_IPV4_HIGH="$high"
+  REDIS_IPV4_LOW="$low"
 }
 
-validate_shared_redis_port() {
+redis_ipv6_append_groups() {
+  local group_list="$1" group value
+  local -a groups=()
+  [ -n "$group_list" ] || return 0
+  IFS=: read -r -a groups <<< "$group_list"
+  for group in "${groups[@]}"; do
+    [[ "$group" =~ ^[0-9a-f]{1,4}$ ]] || return 1
+    value=$((16#$group))
+    redis_ipv6_words+=("$value")
+  done
+}
+
+redis_ipv6_to_words() {
+  local host="$1" left right dotted high_hex low_hex
+  local left_count right_count zero_count i group
+  local -a right_groups=()
+  redis_ipv6_words=()
+  [[ "$host" == *:* ]] || return 1
+  if [[ "$host" == *.* ]]; then
+    dotted="${host##*:}"
+    [[ "$dotted" != "$host" ]] || return 1
+    redis_ipv4_to_words "$dotted" || return 1
+    printf -v high_hex '%x' "$REDIS_IPV4_HIGH"
+    printf -v low_hex '%x' "$REDIS_IPV4_LOW"
+    host="${host%:*}:$high_hex:$low_hex"
+  fi
+  case "$host" in
+    *::*)
+      left="${host%%::*}"; right="${host#*::}"
+      [[ "$left" != *::* && "$right" != *::* ]] || return 1
+      [[ -z "$left" || ( "$left" != :* && "$left" != *: ) ]] || return 1
+      [[ -z "$right" || ( "$right" != :* && "$right" != *: ) ]] || return 1
+      redis_ipv6_append_groups "$left" || return 1
+      left_count="${#redis_ipv6_words[@]}"
+      if [ -n "$right" ]; then
+        IFS=: read -r -a right_groups <<< "$right"
+        for group in "${right_groups[@]}"; do
+          [[ "$group" =~ ^[0-9a-f]{1,4}$ ]] || return 1
+        done
+        right_count="${#right_groups[@]}"
+      else
+        right_count=0
+      fi
+      (( left_count + right_count < 8 )) || return 1
+      zero_count=$((8 - left_count - right_count))
+      for ((i = 0; i < zero_count; i++)); do redis_ipv6_words+=(0); done
+      redis_ipv6_append_groups "$right" || return 1
+      ;;
+    *)
+      [[ "$host" != :* && "$host" != *: ]] || return 1
+      redis_ipv6_append_groups "$host" || return 1
+      ;;
+  esac
+  (( "${#redis_ipv6_words[@]}" == 8 ))
+}
+
+redis_ip_is_approved() {
+  local address="$1" first_octet second_octet
+  local -a words=()
+  if redis_ipv4_to_words "$address"; then
+    first_octet=$((REDIS_IPV4_HIGH / 256)); second_octet=$((REDIS_IPV4_HIGH % 256))
+    (( first_octet == 10 )) && return 0
+    (( first_octet == 172 && second_octet >= 16 && second_octet <= 31 )) && return 0
+    (( first_octet == 192 && second_octet == 168 )) && return 0
+    return 1
+  fi
+  redis_ipv6_to_words "$address" || return 1
+  words=("${redis_ipv6_words[@]}")
+  (( words[0] >= 0xfc00 && words[0] <= 0xfdff ))
+}
+
+redis_host_is_noncanonical_numeric_ipv4() {
+  local host="${1%.}"
+  [[ "$host" =~ ^[0-9]+(\.[0-9]+){0,3}$ ]] || return 1
+  ! redis_ipv4_to_words "$host"
+}
+
+redis_resolve_host() {
+  local host="$1"
+  if getent ahosts --no-addrconfig "$host" 2>/dev/null; then
+    return 0
+  fi
+  getent ahosts "$host" 2>/dev/null
+}
+
+validate_redis_host() {
+  local host="${1-}" normalized_host address selected_address="" resolved_any=no scope
+  [ -n "$host" ] || return 1
+  [[ "$host" != *[[:space:]]* ]] || return 1
+  [[ "$host" != */* ]] || return 1
+  normalized_host="${host,,}"
+  normalized_host="${normalized_host%.}"
+  if [[ "$normalized_host" == *%* ]]; then
+    [[ "$normalized_host" == *:* ]] || return 1
+    scope="${normalized_host#*%}"
+    normalized_host="${normalized_host%%\%*}"
+    [ -n "$scope" ] || return 1
+    [[ "$scope" != *%* ]] || return 1
+  fi
+  case "$normalized_host" in
+    localhost|localhost.localdomain|127) return 1 ;;
+  esac
+  redis_host_is_noncanonical_numeric_ipv4 "$normalized_host" && return 1
+  if redis_ipv4_to_words "$normalized_host" || redis_ipv6_to_words "$normalized_host"; then
+    redis_ip_is_approved "$normalized_host" || return 1
+    REDIS_VALIDATED_HOST="$normalized_host"
+    return 0
+  fi
+  while read -r address _; do
+    [ -n "$address" ] || continue
+    if ! redis_ipv4_to_words "$address" && ! redis_ipv6_to_words "$address"; then
+      return 1
+    fi
+    resolved_any=yes
+    redis_ip_is_approved "$address" || return 1
+    [ -n "$selected_address" ] || selected_address="$address"
+  done < <(redis_resolve_host "$normalized_host")
+  [ "$resolved_any" = yes ] || return 1
+  REDIS_VALIDATED_HOST="$selected_address"
+  return 0
+}
+
+validate_redis_port() {
   local port="${1-}"
-  [[ "$port" =~ ^[1-9][0-9]{0,4}$ ]] || return 1
-  ((10#$port <= 65535))
+  [[ "$port" =~ ^[0-9]{1,5}$ ]] || return 1
+  local numeric=$((10#$port))
+  (( numeric >= 1 && numeric <= 65535 ))
 }
 
 validate_shared_redis_endpoint() {
-  local host="${1-}" port="${2-}"
-  REDIS_VALIDATED_HOST=""; REDIS_VALIDATED_PORT=""
-  REDIS_VALIDATED_HOST=$(resolve_shared_redis_host "$host") || {
-    echo "공유 Redis host가 안전한 private IPv4 주소로 고정되지 않는다" >&2
+  local host="${1-}"
+  local port="${2-}"
+  if ! validate_redis_host "$host"; then
+    echo "공유 Redis host가 비어 있거나 승인된 사설 주소가 아니다" >&2
     return 1
-  }
-  validate_shared_redis_port "$port" || {
-    echo "공유 Redis port가 유효한 숫자 범위가 아니다" >&2
+  fi
+  if ! validate_redis_port "$port"; then
+    echo "공유 Redis port가 유효하지 않다" >&2
     return 1
-  }
-  REDIS_VALIDATED_PORT="$port"
+  fi
 }
+# END SHARED REDIS ENDPOINT CONTRACT
 
 validate_local_redis_endpoint() {
   local port="${1-}"
   REDIS_VALIDATED_HOST=127.0.0.1
   REDIS_VALIDATED_PORT=""
-  validate_shared_redis_port "$port" || {
+  validate_redis_port "$port" || {
     echo "로컬 Redis port가 유효한 숫자 범위가 아니다" >&2
     return 1
   }
   REDIS_VALIDATED_PORT="$port"
 }
-# END SHARED REDIS ENDPOINT CONTRACT
 
 REDIS_ENDPOINT_HOST=""
 REDIS_ENDPOINT_PORT=""
 REDIS_ENDPOINT_VALID=false
+endpoint_validation_status=1
 if [ "${REQUIRE_SHARED_REDIS:-false}" = true ]; then
-  validate_shared_redis_endpoint "$REDIS_HOST" "$REDIS_PORT"
+  if validate_shared_redis_endpoint "$REDIS_HOST" "$REDIS_PORT"; then
+    REDIS_VALIDATED_PORT="$REDIS_PORT"
+    endpoint_validation_status=0
+  fi
 else
-  validate_local_redis_endpoint "$REDIS_PORT"
+  if validate_local_redis_endpoint "$REDIS_PORT"; then
+    endpoint_validation_status=0
+  fi
 fi
-if [ "$?" -eq 0 ]; then
+if [ "$endpoint_validation_status" -eq 0 ]; then
   REDIS_ENDPOINT_HOST="$REDIS_VALIDATED_HOST"
   REDIS_ENDPOINT_PORT="$REDIS_VALIDATED_PORT"
   REDIS_ENDPOINT_VALID=true
 fi
 if [ "$REDIS_ENDPOINT_VALID" != true ]; then
   if [ "${REQUIRE_SHARED_REDIS:-false}" = true ]; then
-    echo "Redis shared endpoint가 안전한 private IPv4/port 계약을 만족하지 않는다" >&2
+    echo "Redis shared endpoint가 승인된 private IPv4/ULA IPv6 및 port 계약을 만족하지 않는다" >&2
   else
     echo "Redis local endpoint가 127.0.0.1/유효한 port 계약을 만족하지 않는다" >&2
   fi

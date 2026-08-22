@@ -20,7 +20,7 @@ export TLS_CERT="$TEST_ROOT/no-certificate.pem"
 export PATH="$BIN:$PATH"
 unset REDISCLI_AUTH
 
-grep -Fq 'A colon is never valid in the hostname form' "$SCRIPT" || exit 1
+grep -Fq 'redis_ipv6_to_words' "$SCRIPT" || exit 1
 
 printf 'test-secret\n' > "$REDIS_PASSWORD_FILE"
 printf 'used_memory:1048576\nmaxmemory:4194304\n' > "$REDIS_INFO_FIXTURE"
@@ -73,9 +73,21 @@ SHIM
 cat > "$BIN/getent" <<'SHIM'
 #!/usr/bin/env bash
 set -euo pipefail
-[ "${1:-}" = ahostsv4 ] || exit 2
-case "${2:-}" in
+[ "${1:-}" = ahosts ] || exit 2
+no_addrconfig=no
+query="${2:-}"
+if [ "$query" = --no-addrconfig ]; then
+  no_addrconfig=yes
+  query="${3:-}"
+fi
+case "$query" in
   redis.safe.test) printf '10.42.0.15 STREAM redis.safe.test\n' ;;
+  redis.private-dual.test)
+    printf '10.42.0.15 STREAM redis.private-dual.test\n'
+    if [ "$no_addrconfig" = yes ]; then
+      printf 'fd00::10 STREAM redis.private-dual.test\n'
+    fi
+    ;;
   redis.unsafe.test) printf '127.0.0.1 STREAM redis.unsafe.test\n' ;;
   redis.mixed.test) printf '10.42.0.15 STREAM redis.mixed.test\n169.254.1.1 STREAM redis.mixed.test\n' ;;
   *) exit 2 ;;
@@ -113,7 +125,10 @@ assert_not_called() {
 run_valid() {
   local host="$1" expected_address="$2"
   rm -f "$REDIS_CLI_CAPTURE" "$DOCKER_CAPTURE"
-  REQUIRE_SHARED_REDIS=true REDIS_HOST="$host" REDIS_PORT=6379 "$SCRIPT" > "$TEST_ROOT/valid.output" 2>&1
+  REQUIRE_SHARED_REDIS=true REDIS_HOST="$host" REDIS_PORT=6379 "$SCRIPT" > "$TEST_ROOT/valid.output" 2>&1 || {
+    cat "$TEST_ROOT/valid.output" >&2
+    exit 1
+  }
   assert_contains "$expected_address" "$REDIS_CLI_CAPTURE"
   assert_not_called "$DOCKER_CAPTURE"
 }
@@ -121,7 +136,10 @@ run_valid() {
 run_rejected() {
   local host="$1" port="$2"
   rm -f "$REDIS_CLI_CAPTURE" "$DOCKER_CAPTURE"
-  REQUIRE_SHARED_REDIS=true REDIS_HOST="$host" REDIS_PORT="$port" "$SCRIPT" > "$TEST_ROOT/rejected.output" 2>&1
+  REQUIRE_SHARED_REDIS=true REDIS_HOST="$host" REDIS_PORT="$port" "$SCRIPT" > "$TEST_ROOT/rejected.output" 2>&1 || {
+    cat "$TEST_ROOT/rejected.output" >&2
+    exit 1
+  }
   assert_not_called "$REDIS_CLI_CAPTURE"
   assert_not_called "$DOCKER_CAPTURE"
 }
@@ -142,11 +160,13 @@ run_local_fallback() {
 
 run_valid 10.42.0.15 10.42.0.15
 run_valid redis.safe.test 10.42.0.15
+run_valid fd00::10 fd00::10
+run_valid redis.private-dual.test 10.42.0.15
 run_local_fallback
 
 for host in \
   127.0.0.1 169.254.1.1 0.0.0.0 224.0.0.1 255.255.255.255 \
-  0177.0.0.1 127.1 0x7f000001 ::ffff:10.42.0.15 \
+  0177.0.0.1 127.1 0x7f000001 ::1 fe80::1 ::ffff:10.42.0.15 \
   8.8.8.8 redis.unsafe.test redis.mixed.test; do
   run_rejected "$host" 6379
 done
