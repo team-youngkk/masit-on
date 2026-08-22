@@ -293,7 +293,7 @@ test('details가 배열이면 AdminApiError.details는 빈 객체로 정규화�
   }
 })
 
-test('보충 검증 실패 사유는 허용된 차단 코드만 원래 복구 정보와 함께 파싱한다', () => {
+test('보충 검증 실패 사유는 원래 차단 사유와 실제 복구 경로를 분리해 파싱한다', () => {
   const error = new AdminApiError(
     422,
     'AIEXTRACT_VALIDATION_CONFLICT',
@@ -302,18 +302,42 @@ test('보충 검증 실패 사유는 허용된 차단 코드만 원래 복구 �
     '요청을 처리하지 못했습니다.',
     {
       blockReason: 'PLACE_AMBIGUOUS',
-      recoveryPaths: ['SUPPLEMENT', 'MANUAL_REGISTRATION'],
-      requiredSupplements: ['kakaoPlaceUrl'],
+      recoveryPaths: ['REEXTRACT', 'MANUAL_REGISTRATION'],
+      requiredSupplements: [],
       validationFailureReason: 'VISIT_EVIDENCE_REQUIRED',
     },
   )
 
   assert.deepEqual(aiValidationConflictFrom(error), {
     blockReason: 'PLACE_AMBIGUOUS',
-    recoveryPaths: ['SUPPLEMENT', 'MANUAL_REGISTRATION'],
-    requiredSupplements: ['kakaoPlaceUrl'],
+    recoveryPaths: ['REEXTRACT', 'MANUAL_REGISTRATION'],
+    requiredSupplements: [],
     validationFailureReason: 'VISIT_EVIDENCE_REQUIRED',
     traceId: 'trace-5',
+  })
+})
+
+test('보충 후속 중복 실패는 기존 자원 확인 경로만 파싱한다', () => {
+  const error = new AdminApiError(
+    422,
+    'AIEXTRACT_VALIDATION_CONFLICT',
+    [],
+    undefined,
+    undefined,
+    {
+      blockReason: 'PLACE_AMBIGUOUS',
+      recoveryPaths: ['EXISTING_RESOURCE'],
+      requiredSupplements: [],
+      validationFailureReason: 'DUPLICATE_CONFLICT',
+    },
+  )
+
+  assert.deepEqual(aiValidationConflictFrom(error), {
+    blockReason: 'PLACE_AMBIGUOUS',
+    recoveryPaths: ['EXISTING_RESOURCE'],
+    requiredSupplements: [],
+    validationFailureReason: 'DUPLICATE_CONFLICT',
+    traceId: undefined,
   })
 })
 

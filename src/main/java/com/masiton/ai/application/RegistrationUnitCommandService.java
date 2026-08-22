@@ -566,7 +566,8 @@ public class RegistrationUnitCommandService {
     }
 
     private BusinessException validationConflict(String blockReason, String validationFailureReason) {
-        RecoveryMapping mapping = recoveryMappingFor(blockReason);
+        RecoveryMapping mapping = recoveryMappingFor(
+                validationFailureReason == null ? blockReason : validationFailureReason);
         return new BusinessException(HttpStatus.UNPROCESSABLE_ENTITY, "AIEXTRACT_VALIDATION_CONFLICT",
                 "Registration unit validation conflict.",
                 new ValidationConflictDetails(blockReason, validationFailureReason, mapping.recoveryPaths(),

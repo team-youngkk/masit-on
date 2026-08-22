@@ -240,8 +240,8 @@ class AdminAiVideoExtractionControllerApiTest {
                 "Registration unit validation conflict.",
                 new RegistrationUnitCommandService.ValidationConflictDetails(
                         "PLACE_AMBIGUOUS", "VISIT_EVIDENCE_REQUIRED",
-                        java.util.List.of("SUPPLEMENT", "MANUAL_REGISTRATION"),
-                        java.util.List.of("kakaoPlaceUrl"))))
+                        java.util.List.of("REEXTRACT", "MANUAL_REGISTRATION"),
+                        java.util.List.of())))
                 .when(queryService).review(org.mockito.ArgumentMatchers.eq(jobId), org.mockito.ArgumentMatchers.eq("CONFIRM"),
                         org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq("보충 사유"),
                         org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
@@ -256,7 +256,9 @@ class AdminAiVideoExtractionControllerApiTest {
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.details.blockReason").value("PLACE_AMBIGUOUS"))
                 .andExpect(jsonPath("$.details.validationFailureReason").value("VISIT_EVIDENCE_REQUIRED"))
-                .andExpect(jsonPath("$.details.requiredSupplements[0]").value("kakaoPlaceUrl"));
+                .andExpect(jsonPath("$.details.recoveryPaths[0]").value("REEXTRACT"))
+                .andExpect(jsonPath("$.details.recoveryPaths[1]").value("MANUAL_REGISTRATION"))
+                .andExpect(jsonPath("$.details.requiredSupplements").isEmpty());
     }
 
     @Test

@@ -114,6 +114,7 @@ test('롤백 완료·폐기 완료 MANUAL_OVERRIDE는 어떤 조치도 노출하
 
 test('예외 화면 조치는 recoveryPaths 배열 내용을 그대로 반영하고 순서를 보존한다', () => {
   assert.deepEqual(exceptionActionsFor('AUTO_BLOCKED', ['SUPPLEMENT', 'MANUAL_REGISTRATION']), ['SUPPLEMENT', 'MANUAL_REGISTRATION', 'DISCARD'])
+  assert.deepEqual(exceptionActionsFor('AUTO_BLOCKED', ['REEXTRACT', 'MANUAL_REGISTRATION']), ['REEXTRACT', 'MANUAL_REGISTRATION', 'DISCARD'])
   assert.deepEqual(exceptionActionsFor('AUTO_BLOCKED', ['EXISTING_RESOURCE']), ['EXISTING_RESOURCE', 'DISCARD'])
 })
 

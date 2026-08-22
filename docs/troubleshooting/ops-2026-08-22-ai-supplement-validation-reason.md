@@ -23,8 +23,8 @@ related_documents:
 | 구분 | 기대 동작 | 실제 동작 |
 |---|---|---|
 | 보충 입력 `CONFIRM` | 같은 작업의 같은 등록 단위만 재검증하고 성공 시 해당 단위를 등록한다 | 새 작업을 만들지 않는 것은 계약대로 동작했다 |
-| 기존 차단 사유 | `blockReason`과 복구 경로를 유지한다 | 백엔드는 유지했다 |
-| 이번 검증 실패 사유 | 안전한 사유 코드와 traceId를 관리자에게 표시한다 | 백엔드는 후속 실패 사유를 버리고, 프론트는 422 상세를 파싱하지 않아 일반 문구만 표시했다 |
+| 기존 차단 사유 | `blockReason`은 유지하고 복구 경로는 이번 실패 사유에 맞춰 계산한다 | `blockReason`은 유지했지만 복구 경로도 기존 사유 기준으로 남아 있었다 |
+| 이번 검증 실패 사유 | 안전한 사유 코드와 traceId를 관리자에게 표시하고 그 사유의 복구 경로를 안내한다 | 백엔드는 후속 실패 사유를 버리고, 프론트는 422 상세를 파싱하지 않아 일반 문구만 표시했다 |
 | 다른 등록 단위 | 상태와 등록 결과를 건드리지 않는다 | 단위별 경계는 유지됐다 |
 
 ## 3. 근본 원인
@@ -35,9 +35,9 @@ related_documents:
 
 ## 4. 처리
 
-- `details.blockReason`·`recoveryPaths`·`requiredSupplements`는 기존 계약대로 유지한다.
+- `details.blockReason`은 기존 등록 단위의 차단 사유로 유지하고, `recoveryPaths`·`requiredSupplements`는 보충 후속 실패 시 `validationFailureReason`의 매핑을 사용한다.
 - 보충 `CONFIRM`의 후속 검증 실패 시 선택 필드 `details.validationFailureReason`에 실제 안전한 사유 코드를 추가한다.
-- 프론트는 기존 복구 경로를 유지하면서 `이번 보충 검증 실패` 사유를 별도로 표시한다.
+- 프론트는 `이번 보충 검증 실패` 사유와 그 사유에 맞는 복구 경로를 별도로 표시한다.
 - 보충 실패 시 등록 단위 상태, 정식 Restaurant·Creator·Video·Visit, 감사 이력, 새 AI 작업과 실행 시도를 만들지 않는다.
 - API 계약, 사용자 흐름, 이 운영 기록과 백엔드·프론트 회귀 테스트를 같은 변경에서 동기화한다.
 
@@ -53,3 +53,11 @@ related_documents:
 - GitHub 이슈: [#291](https://github.com/team-youngkk/masit-on/issues/291)
 - Workstream: WS-15 AI 영상 정보 추출
 - 관련 계약: `FR-AIEXTRACT-003`, `BR-AIEXTRACT-011`, 관리자 AI 영상 추출 API 3.5·3.6절
+
+## 7. PR 리뷰 후속
+
+| 스레드 | 분류 | 판단 | 근거와 반영 |
+|---|---|---|---|
+| [PR #293 P1 복구 경로](https://github.com/team-youngkk/masit-on/pull/293#discussion_r3834796446) | 애플리케이션 | 수정 필요 | `validationFailureReason`만 실제 값으로 바뀌고 `recoveryPaths`·`requiredSupplements`가 기존 `blockReason` 매핑에 머물러 방문 근거 실패에도 보충 폼이 반복될 수 있었다. 후속 실패 사유 매핑을 우선 적용하고 방문 근거·중복 실패 회귀 테스트와 API·화면 문서를 갱신했다. |
+
+검증 명령과 결과는 PR #293 본문 및 해당 스레드 답글에 기록한다. 이 문제는 운영 전후 사용자 행동 지표를 현재 측정할 수 없으므로, 배포 후 보충 후속 실패의 사유별 복구 경로 클릭·반복 제출 비율을 동일 작업 ID 기준으로 비교한다.

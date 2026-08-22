@@ -232,8 +232,8 @@ class RegistrationUnitCommandServiceTest {
                             (RegistrationUnitCommandService.ValidationConflictDetails) businessException.details();
                     assertThat(details.blockReason()).isEqualTo("PLACE_AMBIGUOUS");
                     assertThat(details.validationFailureReason()).isEqualTo("VISIT_EVIDENCE_REQUIRED");
-                    assertThat(details.recoveryPaths()).containsExactly("SUPPLEMENT", "MANUAL_REGISTRATION");
-                    assertThat(details.requiredSupplements()).containsExactly("kakaoPlaceUrl");
+                    assertThat(details.recoveryPaths()).containsExactly("REEXTRACT", "MANUAL_REGISTRATION");
+                    assertThat(details.requiredSupplements()).isEmpty();
                     assertThat(objectMapper.writeValueAsString(details))
                             .contains("\"validationFailureReason\":\"VISIT_EVIDENCE_REQUIRED\"");
                 });
