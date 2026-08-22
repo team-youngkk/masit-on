@@ -10,6 +10,166 @@
 # 롤백은 이전 커밋 SHA로 이 스크립트를 다시 실행하는 것이다.
 set -euo pipefail
 
+# BEGIN SHARED REDIS ENDPOINT CONTRACT
+redis_ipv4_to_words() {
+  local host="$1"
+  local -a parts=()
+  local part value high low high_part middle_part low_part
+  [[ "$host" =~ ^(0|[1-9][0-9]{0,2})\.(0|[1-9][0-9]{0,2})\.(0|[1-9][0-9]{0,2})\.(0|[1-9][0-9]{0,2})$ ]] || return 1
+  IFS=. read -r -a parts <<< "$host"
+  for part in "${parts[@]}"; do
+    value=$((10#$part))
+    (( value <= 255 )) || return 1
+  done
+  high_part=$((10#${parts[0]})); middle_part=$((10#${parts[1]})); low_part=$((10#${parts[2]})); value=$((10#${parts[3]}))
+  high=$((high_part * 256 + middle_part)); low=$((low_part * 256 + value))
+  REDIS_IPV4_HIGH="$high"
+  REDIS_IPV4_LOW="$low"
+}
+
+redis_ipv6_append_groups() {
+  local group_list="$1" group value
+  local -a groups=()
+  [ -n "$group_list" ] || return 0
+  IFS=: read -r -a groups <<< "$group_list"
+  for group in "${groups[@]}"; do
+    [[ "$group" =~ ^[0-9a-f]{1,4}$ ]] || return 1
+    value=$((16#$group))
+    redis_ipv6_words+=("$value")
+  done
+}
+
+redis_ipv6_to_words() {
+  local host="$1" left right dotted high_hex low_hex
+  local left_count right_count zero_count i group
+  local -a right_groups=()
+  redis_ipv6_words=()
+  [[ "$host" == *:* ]] || return 1
+  if [[ "$host" == *.* ]]; then
+    dotted="${host##*:}"
+    [[ "$dotted" != "$host" ]] || return 1
+    redis_ipv4_to_words "$dotted" || return 1
+    printf -v high_hex '%x' "$REDIS_IPV4_HIGH"
+    printf -v low_hex '%x' "$REDIS_IPV4_LOW"
+    host="${host%:*}:$high_hex:$low_hex"
+  fi
+  case "$host" in
+    *::*)
+      left="${host%%::*}"; right="${host#*::}"
+      [[ "$left" != *::* && "$right" != *::* ]] || return 1
+      [[ -z "$left" || ( "$left" != :* && "$left" != *: ) ]] || return 1
+      [[ -z "$right" || ( "$right" != :* && "$right" != *: ) ]] || return 1
+      redis_ipv6_append_groups "$left" || return 1
+      left_count="${#redis_ipv6_words[@]}"
+      if [ -n "$right" ]; then
+        IFS=: read -r -a right_groups <<< "$right"
+        for group in "${right_groups[@]}"; do
+          [[ "$group" =~ ^[0-9a-f]{1,4}$ ]] || return 1
+        done
+        right_count="${#right_groups[@]}"
+      else
+        right_count=0
+      fi
+      (( left_count + right_count < 8 )) || return 1
+      zero_count=$((8 - left_count - right_count))
+      for ((i = 0; i < zero_count; i++)); do redis_ipv6_words+=(0); done
+      redis_ipv6_append_groups "$right" || return 1
+      ;;
+    *)
+      [[ "$host" != :* && "$host" != *: ]] || return 1
+      redis_ipv6_append_groups "$host" || return 1
+      ;;
+  esac
+  (( "${#redis_ipv6_words[@]}" == 8 ))
+}
+
+redis_ip_is_approved() {
+  local address="$1" first_octet second_octet
+  local -a words=()
+  if redis_ipv4_to_words "$address"; then
+    first_octet=$((REDIS_IPV4_HIGH / 256)); second_octet=$((REDIS_IPV4_HIGH % 256))
+    (( first_octet == 10 )) && return 0
+    (( first_octet == 172 && second_octet >= 16 && second_octet <= 31 )) && return 0
+    (( first_octet == 192 && second_octet == 168 )) && return 0
+    return 1
+  fi
+  redis_ipv6_to_words "$address" || return 1
+  words=("${redis_ipv6_words[@]}")
+  (( words[0] >= 0xfc00 && words[0] <= 0xfdff ))
+}
+
+redis_host_is_noncanonical_numeric_ipv4() {
+  local host="${1%.}"
+  [[ "$host" =~ ^[0-9]+(\.[0-9]+){0,3}$ ]] || return 1
+  ! redis_ipv4_to_words "$host"
+}
+
+redis_resolve_host() {
+  local host="$1"
+  if getent ahosts --no-addrconfig "$host" 2>/dev/null; then
+    return 0
+  fi
+  getent ahosts "$host" 2>/dev/null
+}
+
+validate_redis_host() {
+  local host="${1-}" normalized_host address selected_address="" resolved_any=no scope
+  [ -n "$host" ] || return 1
+  [[ "$host" != *[[:space:]]* ]] || return 1
+  [[ "$host" != */* ]] || return 1
+  normalized_host="${host,,}"
+  normalized_host="${normalized_host%.}"
+  if [[ "$normalized_host" == *%* ]]; then
+    [[ "$normalized_host" == *:* ]] || return 1
+    scope="${normalized_host#*%}"
+    normalized_host="${normalized_host%%\%*}"
+    [ -n "$scope" ] || return 1
+    [[ "$scope" != *%* ]] || return 1
+  fi
+  case "$normalized_host" in
+    localhost|localhost.localdomain|127) return 1 ;;
+  esac
+  redis_host_is_noncanonical_numeric_ipv4 "$normalized_host" && return 1
+  if redis_ipv4_to_words "$normalized_host" || redis_ipv6_to_words "$normalized_host"; then
+    redis_ip_is_approved "$normalized_host" || return 1
+    REDIS_VALIDATED_HOST="$normalized_host"
+    return 0
+  fi
+  while read -r address _; do
+    [ -n "$address" ] || continue
+    if ! redis_ipv4_to_words "$address" && ! redis_ipv6_to_words "$address"; then
+      return 1
+    fi
+    resolved_any=yes
+    redis_ip_is_approved "$address" || return 1
+    [ -n "$selected_address" ] || selected_address="$address"
+  done < <(redis_resolve_host "$normalized_host")
+  [ "$resolved_any" = yes ] || return 1
+  REDIS_VALIDATED_HOST="$selected_address"
+  return 0
+}
+
+validate_redis_port() {
+  local port="${1-}"
+  [[ "$port" =~ ^[0-9]{1,5}$ ]] || return 1
+  local numeric=$((10#$port))
+  (( numeric >= 1 && numeric <= 65535 ))
+}
+
+validate_shared_redis_endpoint() {
+  local host="${1-}"
+  local port="${2-}"
+  if ! validate_redis_host "$host"; then
+    echo "공유 Redis host가 비어 있거나 승인된 사설 주소가 아니다" >&2
+    return 1
+  fi
+  if ! validate_redis_port "$port"; then
+    echo "공유 Redis port가 유효하지 않다" >&2
+    return 1
+  fi
+}
+# END SHARED REDIS ENDPOINT CONTRACT
+
 DEPLOYMENT_ENV_FILE="${DEPLOYMENT_ENV_FILE:-/etc/masiton/deployment.env}"
 if [ -f "$DEPLOYMENT_ENV_FILE" ]; then
   set -a
@@ -48,13 +208,8 @@ smoke_redis_keys=()
 previous="$staged/previous"
 rollback_enabled=no
 cleanup() {
-  if [ "${#smoke_redis_keys[@]}" -gt 0 ] && [ -n "${redis_password:-}" ]; then
-    if declare -F redis_cli >/dev/null 2>&1; then
-      redis_cli DEL "${smoke_redis_keys[@]}" >/dev/null 2>&1 || true
-    else
-      docker exec -e REDISCLI_AUTH="$redis_password" masiton-redis redis-cli \
-        DEL "${smoke_redis_keys[@]}" >/dev/null 2>&1 || true
-    fi
+  if [ "${#smoke_redis_keys[@]}" -gt 0 ] && declare -F redis_cli >/dev/null 2>&1; then
+    redis_cli DEL "${smoke_redis_keys[@]}" >/dev/null 2>&1 || true
   fi
   rm -rf "$staged"
 }
@@ -299,21 +454,39 @@ refresh_status=$(curl -sS -m 5 -o /dev/null -w '%{http_code}' \
 
 # Nginx peer(127.0.0.1)를 신뢰해 서로 다른 X-Forwarded-For가 실제로 별도
 # login-source 버킷을 만드는지 Redis 키로 확인한다.
-redis_password=$(< /run/masiton/secrets/spring.data.redis.password)
 REDIS_HOST="${REDIS_HOST:-$(aws ssm get-parameter --region "$REGION" --name /masiton/redis/host \
   --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || printf '')}"
-if [ "${REQUIRE_SHARED_REDIS:-false}" = true ] && [ -z "$REDIS_HOST" ]; then
-  echo "ASG 배포 smoke에서도 공유 Redis endpoint가 필요하다: REDIS_HOST 또는 /masiton/redis/host" >&2
-  exit 1
-fi
-REDIS_HOST="${REDIS_HOST:-127.0.0.1}"
 REDIS_PORT="${REDIS_PORT:-$(aws ssm get-parameter --region "$REGION" --name /masiton/redis/port \
   --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || printf '')}"
-REDIS_PORT="${REDIS_PORT:-6379}"
-REDIS_CLI_IMAGE="${REDIS_CLI_IMAGE:-redis:8.8-alpine}"
+if [ "${REQUIRE_SHARED_REDIS:-false}" = true ]; then
+  validate_shared_redis_endpoint "$REDIS_HOST" "$REDIS_PORT" || exit 1
+  REDIS_HOST="$REDIS_VALIDATED_HOST"
+else
+  REDIS_HOST="${REDIS_HOST:-127.0.0.1}"
+  REDIS_PORT="${REDIS_PORT:-6379}"
+  validate_redis_port "$REDIS_PORT" || {
+    echo "Redis port가 유효하지 않다" >&2
+    exit 1
+  }
+fi
+REDIS_PASSWORD_FILE="${REDIS_PASSWORD_FILE:-/run/masiton/secrets/spring.data.redis.password}"
+[ -r "$REDIS_PASSWORD_FILE" ] || {
+  echo "Redis smoke 비밀값 파일을 읽을 수 없다: $REDIS_PASSWORD_FILE" >&2
+  exit 1
+}
+read -r REDIS_PASSWORD_UID REDIS_PASSWORD_GID < <(stat -c '%u %g' "$REDIS_PASSWORD_FILE")
+[[ "$REDIS_PASSWORD_UID" =~ ^[0-9]+$ && "$REDIS_PASSWORD_GID" =~ ^[0-9]+$ ]] || {
+  echo "Redis smoke 비밀값 파일 소유자 UID:GID를 확인할 수 없다: $REDIS_PASSWORD_FILE" >&2
+  exit 1
+}
+readonly REDIS_CLI_IMAGE='redis@sha256:8096655e437712b07503796fb64d81359256cfcff0ab29d95a7da72863786efb'
 redis_cli() {
-  docker run --rm --network host -e REDISCLI_AUTH="$redis_password" "$REDIS_CLI_IMAGE" \
-    redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" --raw "$@"
+  docker run --rm --network host \
+    --mount "type=bind,source=$REDIS_PASSWORD_FILE,target=/run/secrets/redis-password,readonly" \
+    --user "$REDIS_PASSWORD_UID:$REDIS_PASSWORD_GID" \
+    "$REDIS_CLI_IMAGE" \
+    sh -c 'host=$1; port=$2; shift 2; exec redis-cli --askpass -h "$host" -p "$port" --raw "$@" < /run/secrets/redis-password' \
+    redis-smoke "$REDIS_HOST" "$REDIS_PORT" "$@"
 }
 rate_limit_keys() {
   python3 - "$1" "$2" <<'PY'
