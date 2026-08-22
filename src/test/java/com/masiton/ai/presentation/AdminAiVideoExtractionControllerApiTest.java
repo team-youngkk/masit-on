@@ -24,6 +24,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 
 import com.masiton.ai.application.port.in.AiExtractionJobUseCase;
 import com.masiton.ai.application.AdminAiExtractionQueryService;
+import com.masiton.ai.application.RegistrationUnitCommandService;
 import com.masiton.ai.application.port.out.AiExtractionAdminQueryPort;
 import com.masiton.ai.application.port.out.dto.AiExtractionJobView;
 import com.masiton.common.web.BusinessException;
@@ -229,6 +230,33 @@ class AdminAiVideoExtractionControllerApiTest {
                 .andExpect(jsonPath("$.candidates[1].value").value("둘째 맛집"))
                 .andExpect(jsonPath("$.candidates[2].field").value("address"))
                 .andExpect(jsonPath("$.candidates[2].value").value("서울시"));
+    }
+
+    @Test
+    @DisplayName("보충 검증 실패는 기존 차단 사유와 이번 실패 사유를 함께 반환한다")
+    void review_보충검증실패_기존사유와이번실패사유를함께반환한다() throws Exception {
+        UUID jobId = UUID.fromString("55555555-5555-4555-8555-555555555555");
+        doThrow(new BusinessException(HttpStatus.UNPROCESSABLE_ENTITY, "AIEXTRACT_VALIDATION_CONFLICT",
+                "Registration unit validation conflict.",
+                new RegistrationUnitCommandService.ValidationConflictDetails(
+                        "PLACE_AMBIGUOUS", "VISIT_EVIDENCE_REQUIRED",
+                        java.util.List.of("SUPPLEMENT", "MANUAL_REGISTRATION"),
+                        java.util.List.of("kakaoPlaceUrl"))))
+                .when(queryService).review(org.mockito.ArgumentMatchers.eq(jobId), org.mockito.ArgumentMatchers.eq("CONFIRM"),
+                        org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq("보충 사유"),
+                        org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.anyList(), org.mockito.ArgumentMatchers.any());
+
+        mockMvc.perform(post("/api/admin/ai/video-extractions/{jobId}/review", jobId)
+                        .principal(new UsernamePasswordAuthenticationToken("55555555-5555-4555-8555-555555555556", "n/a"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"decision\":\"CONFIRM\",\"unitId\":\"77777777-7777-4777-8777-777777777777\","
+                                + "\"expectedReviewStatus\":\"AUTO_BLOCKED\",\"reason\":\"보충 사유\","
+                                + "\"supplements\":{\"kakaoPlaceUrl\":\"https://place.map.kakao.com/1\"}}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.details.blockReason").value("PLACE_AMBIGUOUS"))
+                .andExpect(jsonPath("$.details.validationFailureReason").value("VISIT_EVIDENCE_REQUIRED"))
+                .andExpect(jsonPath("$.details.requiredSupplements[0]").value("kakaoPlaceUrl"));
     }
 
     @Test

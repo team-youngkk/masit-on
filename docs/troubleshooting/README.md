@@ -16,6 +16,7 @@ related_documents:
 ## 최신 기록
 
 - [PR #280 페이지네이션 예외 정책 문서 정합성](pr-280-pagination-policy-documentation-review.md)
+- [운영 작업: AI 보충 입력 검증 실패 사유가 화면에서 사라졌다](ops-2026-08-22-ai-supplement-validation-reason.md)
 - [PR #279 장소명 정규화·감사 값 호환·운영 기본값 리뷰](pr-279-ai-place-identity-review.md)
 - [PR #278 Kakao 장소명 완화 판정의 감사와 활성화 게이트](pr-278-kakao-place-name-matching-review.md)
 - [PR #275 프론트 Dockerfile EOF 빈 줄](pr-275-frontend-public-assets-review.md)
@@ -37,6 +38,8 @@ related_documents:
 - [PR #227 YouTube 채널 감시 상태·관리 화면 후속 반영](pr-227-youtube-channel-watch-review.md)
 
 ## 운영 전환
+
+- [AI 보충 입력 검증 실패 사유가 화면에서 사라졌다](ops-2026-08-22-ai-supplement-validation-reason.md)
 
 리뷰가 아니라 실제 운영 작업 중에 드러난 문제의 기록이다. 파일명은 `ops-<날짜>-` 규약을 쓴다.
 
