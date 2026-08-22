@@ -222,11 +222,11 @@ case "$component" in
     DB_USERNAME=$(param /masiton/db/username); export DB_USERNAME
     KAKAO_MOBILITY_ENABLED=$(optional_bool_param /masiton/integration/kakao-mobility/enabled); export KAKAO_MOBILITY_ENABLED
     KAKAO_MOBILITY_FREE_TIER_VERIFIED=$(optional_bool_param /masiton/integration/kakao-mobility/free-tier-verified); export KAKAO_MOBILITY_FREE_TIER_VERIFIED
-    # 단일 EC2 기본값은 유지하고, ASG에서는 환경 변수 또는 선택적 SSM 값으로
-    # Redis endpoint를 바꿀 수 있게 한다. 명시적 환경 변수가 SSM보다 우선한다.
-    REDIS_HOST="${REDIS_HOST:-$(optional_param /masiton/redis/host)}"
-    REDIS_PORT="${REDIS_PORT:-$(optional_param /masiton/redis/port)}"
     if [ "${REQUIRE_SHARED_REDIS:-false}" = true ]; then
+      # 단일 EC2 기본값은 유지하고, ASG에서는 환경 변수 또는 선택적 SSM 값으로
+      # Redis endpoint를 바꿀 수 있게 한다. 명시적 환경 변수가 SSM보다 우선한다.
+      REDIS_HOST="${REDIS_HOST:-$(optional_param /masiton/redis/host)}"
+      REDIS_PORT="${REDIS_PORT:-$(optional_param /masiton/redis/port)}"
       validate_shared_redis_endpoint "$REDIS_HOST" "$REDIS_PORT" || exit 1
       REDIS_HOST="$REDIS_VALIDATED_HOST"
     else

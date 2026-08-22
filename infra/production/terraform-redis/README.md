@@ -72,12 +72,14 @@ terraform import aws_ebs_volume.redis_data <new-volume-id>
 terraform plan -out=redis.tfplan
 ```
 
-`/dev/nvme1n1`은 예시다. `lsblk`와 volume ID를 대조해 실제 장치를 확인한다. 새 Redis를 기동한 뒤에는 운영용 비밀값을 셸의 `REDISCLI_AUTH`에 안전하게 주입하고 아래처럼 기존 fixture key가 복구됐는지 확인한다.
+`/dev/nvme1n1`은 예시다. `lsblk`와 volume ID를 대조해 실제 장치를 확인한다. 새 Redis를 기동한 뒤에는 운영용 비밀값 파일을 읽기 전용으로 연결하고 `redis-cli --askpass`가 stdin에서 읽게 해 기존 fixture key가 복구됐는지 확인한다.
 
 ```bash
 sudo systemctl start masiton-redis.service
-sudo docker exec -e REDISCLI_AUTH="$REDISCLI_AUTH" masiton-redis \
-  redis-cli --raw EXISTS '<known-fixture-key>' | grep -qx 1
+sudo docker run --rm --network host \
+  --mount type=bind,src=/run/masiton/secrets/spring.data.redis.password,dst=/run/redis-password,readonly \
+  "$(sudo sed -n 's/^Environment=IMAGE=//p' /etc/systemd/system/masiton-redis.service)" sh -c \
+  'exec redis-cli --askpass --raw EXISTS "$1" < /run/redis-password' redis-recovery '<known-fixture-key>' | grep -qx 1
 ```
 
 manifest·`redis-check-aof`·known fixture key 검증을 모두 통과한 뒤에만 replacement 인스턴스와 attachment 교체를 승인한다. 운영 데이터가 없는 신규 도입이면 그 사실을 plan 승인 기록에 남기고 빈 volume 경로를 사용한다.
