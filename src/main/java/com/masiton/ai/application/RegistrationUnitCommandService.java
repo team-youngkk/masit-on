@@ -13,6 +13,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import com.masiton.ai.application.port.out.AiExtractionAdminQueryPort;
 import com.masiton.ai.application.port.out.AiRegistrationUnitConcurrentAccessException;
 import com.masiton.ai.application.port.out.AiRegistrationUnitReviewStore;
@@ -270,7 +272,7 @@ public class RegistrationUnitCommandService {
         if (!result.confirmed()) {
             // BR-AIEXTRACT-011/API 3.5: supplement validation failure keeps the original blockReason
             // and persists nothing.
-            throw validationConflict(unit.blockReason());
+            throw validationConflict(unit.blockReason(), result.blockReason());
         }
 
         AutoRegisterVerifiedContentUseCase.RegistrationResult registration = result.registration();
@@ -560,10 +562,15 @@ public class RegistrationUnitCommandService {
     }
 
     private BusinessException validationConflict(String blockReason) {
+        return validationConflict(blockReason, null);
+    }
+
+    private BusinessException validationConflict(String blockReason, String validationFailureReason) {
         RecoveryMapping mapping = recoveryMappingFor(blockReason);
         return new BusinessException(HttpStatus.UNPROCESSABLE_ENTITY, "AIEXTRACT_VALIDATION_CONFLICT",
                 "Registration unit validation conflict.",
-                new ValidationConflictDetails(blockReason, mapping.recoveryPaths(), mapping.requiredSupplements()));
+                new ValidationConflictDetails(blockReason, validationFailureReason, mapping.recoveryPaths(),
+                        mapping.requiredSupplements()));
     }
 
     private RecoveryMapping recoveryMappingFor(String blockReason) {
@@ -588,7 +595,9 @@ public class RegistrationUnitCommandService {
     }
 
     /** {@code 422 AIEXTRACT_VALIDATION_CONFLICT} 응답의 {@code details} 페이로드다. */
-    public record ValidationConflictDetails(String blockReason, List<String> recoveryPaths,
+    public record ValidationConflictDetails(String blockReason,
+                                            @JsonInclude(JsonInclude.Include.NON_NULL) String validationFailureReason,
+                                            List<String> recoveryPaths,
                                             List<String> requiredSupplements) {
     }
 

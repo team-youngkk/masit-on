@@ -58,6 +58,20 @@ export type AiBlockReason =
   | 'DUPLICATE_CONFLICT'
   | 'EXTERNAL_SERVICE_ERROR'
 
+export const AI_BLOCK_REASON_LABELS: Record<AiBlockReason, string> = {
+  PLACE_NOT_FOUND: '조건을 만족하는 Kakao 장소를 찾지 못했습니다.',
+  PLACE_AMBIGUOUS: '조건을 만족하는 Kakao 장소가 둘 이상입니다.',
+  CATEGORY_UNRESOLVED: '대표 음식 카테고리 근거를 찾지 못했습니다.',
+  MISSING_REQUIRED_FIELD: '등록에 필요한 필수 후보가 없습니다.',
+  VISIT_EVIDENCE_REQUIRED: '방문 근거가 부족합니다.',
+  DUPLICATE_CONFLICT: '같은 맛집·방문 관계가 이미 등록돼 있습니다.',
+  EXTERNAL_SERVICE_ERROR: '외부 조회가 실패하거나 시간이 초과됐습니다.',
+}
+
+export function aiValidationFailureMessageFor(reason: AiBlockReason | null): string | null {
+  return reason ? `이번 보충 검증 실패: ${AI_BLOCK_REASON_LABELS[reason]}` : null
+}
+
 export type AiRecoveryPath = 'SUPPLEMENT' | 'REEXTRACT' | 'MANUAL_REGISTRATION' | 'EXISTING_RESOURCE' | 'RETRY'
 
 export type AiRequiredSupplementField = 'kakaoPlaceUrl' | 'foodCategoryId'
@@ -183,6 +197,7 @@ export type AiValidationConflict = {
   blockReason: AiBlockReason | null
   recoveryPaths: AiRecoveryPath[]
   requiredSupplements: AiRequiredSupplementField[]
+  validationFailureReason: AiBlockReason | null
   traceId?: string
 }
 
@@ -206,7 +221,11 @@ export function aiValidationConflictFrom(error: unknown): AiValidationConflict |
   const requiredSupplements = Array.isArray(details.requiredSupplements)
     ? details.requiredSupplements.filter((value): value is AiRequiredSupplementField => (REQUIRED_SUPPLEMENT_FIELDS as string[]).includes(value))
     : []
-  return { blockReason, recoveryPaths, requiredSupplements, traceId: error.traceId }
+  const validationFailureReason = typeof details.validationFailureReason === 'string'
+    && (BLOCK_REASONS as string[]).includes(details.validationFailureReason)
+    ? details.validationFailureReason as AiBlockReason
+    : null
+  return { blockReason, recoveryPaths, requiredSupplements, validationFailureReason, traceId: error.traceId }
 }
 
 /** 요청 본문은 비어 있다. 이미 등록된 단위는 멱등 `200 OK`로 기존 결과를 그대로 반환한다. */

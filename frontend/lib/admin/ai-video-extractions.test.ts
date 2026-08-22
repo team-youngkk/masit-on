@@ -3,7 +3,7 @@ import test from 'node:test'
 
 import { clearAccessToken, login } from './auth.ts'
 import { AdminApiError } from './api.ts'
-import { aiValidationConflictFrom, createAiVideoExtraction, registerAiRegistrationUnit, reviewAiVideoExtraction, aiExtractionMessageFor } from './ai-video-extractions.ts'
+import { aiValidationConflictFrom, aiValidationFailureMessageFor, createAiVideoExtraction, registerAiRegistrationUnit, reviewAiVideoExtraction, aiExtractionMessageFor } from './ai-video-extractions.ts'
 
 const job = (reused: boolean) => ({
   jobId: reused ? 'job-reused' : 'job-new',
@@ -218,6 +218,7 @@ test('등록 단위 등록 API의 422 예외 전환 응답은 blockReason·recov
       blockReason: 'PLACE_AMBIGUOUS',
       recoveryPaths: ['SUPPLEMENT', 'MANUAL_REGISTRATION'],
       requiredSupplements: ['kakaoPlaceUrl'],
+      validationFailureReason: null,
       traceId: 'trace-2',
     })
   } finally {
@@ -249,6 +250,7 @@ test('AdminApiError.details에 이미 언랩된 blockReason·recoveryPaths·requ
     blockReason: 'MISSING_REQUIRED_FIELD',
     recoveryPaths: ['REEXTRACT', 'MANUAL_REGISTRATION'],
     requiredSupplements: [],
+    validationFailureReason: null,
     traceId: 'trace-3',
   })
 })
@@ -282,10 +284,55 @@ test('details가 배열이면 AdminApiError.details는 빈 객체로 정규화�
       blockReason: null,
       recoveryPaths: [],
       requiredSupplements: [],
+      validationFailureReason: null,
       traceId: 'trace-4',
     })
   } finally {
     clearAccessToken()
     globalThis.fetch = previousFetch
   }
+})
+
+test('보충 검증 실패 사유는 허용된 차단 코드만 원래 복구 정보와 함께 파싱한다', () => {
+  const error = new AdminApiError(
+    422,
+    'AIEXTRACT_VALIDATION_CONFLICT',
+    [],
+    'trace-5',
+    '요청을 처리하지 못했습니다.',
+    {
+      blockReason: 'PLACE_AMBIGUOUS',
+      recoveryPaths: ['SUPPLEMENT', 'MANUAL_REGISTRATION'],
+      requiredSupplements: ['kakaoPlaceUrl'],
+      validationFailureReason: 'VISIT_EVIDENCE_REQUIRED',
+    },
+  )
+
+  assert.deepEqual(aiValidationConflictFrom(error), {
+    blockReason: 'PLACE_AMBIGUOUS',
+    recoveryPaths: ['SUPPLEMENT', 'MANUAL_REGISTRATION'],
+    requiredSupplements: ['kakaoPlaceUrl'],
+    validationFailureReason: 'VISIT_EVIDENCE_REQUIRED',
+    traceId: 'trace-5',
+  })
+})
+
+test('보충 검증 실패 사유가 허용되지 않은 값이면 안전하게 무시한다', () => {
+  const error = new AdminApiError(
+    422,
+    'AIEXTRACT_VALIDATION_CONFLICT',
+    [],
+    undefined,
+    undefined,
+    {
+      validationFailureReason: 'INTERNAL_ERROR',
+    },
+  )
+
+  assert.equal(aiValidationConflictFrom(error)?.validationFailureReason, null)
+})
+
+test('보충 검증 실패 사유는 화면용 한국어 안내로 변환하고 없는 사유는 숨긴다', () => {
+  assert.equal(aiValidationFailureMessageFor('VISIT_EVIDENCE_REQUIRED'), '이번 보충 검증 실패: 방문 근거가 부족합니다.')
+  assert.equal(aiValidationFailureMessageFor(null), null)
 })

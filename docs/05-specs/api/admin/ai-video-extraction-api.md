@@ -378,7 +378,7 @@ related_documents:
 - **요구하지 않은 키는 값이 `null`이어도 보내지 않는다.** `null`을 미전송으로 취급하지 않고 키 존재만으로 판정한다. 직렬화 단계에서 `null` 필드를 자동으로 넣는 클라이언트는 그 필드를 제외하도록 설정해야 한다.
 - `requiredSupplements`가 요구하지 않은 필드를 보내면 `400 INVALID_FIELD_VALUE`로 거절한다. 관리자가 자동 판정 결과를 임의로 덮어쓰지 못하게 하기 위해서다.
 - `requiredSupplements`가 요구한 필드가 없으면 `400 MISSING_REQUIRED_FIELD`로 거절하고 정식 저장은 0건이다.
-- `kakaoPlaceUrl`은 기존 수동 등록 경로와 같은 Kakao 장소 동일성 검증을 다시 통과해야 한다. 검증 실패는 `422 AIEXTRACT_VALIDATION_CONFLICT`이며 `blockReason`을 그대로 유지한다.
+- `kakaoPlaceUrl`은 기존 수동 등록 경로와 같은 Kakao 장소 동일성 검증을 다시 통과해야 한다. 검증 실패는 `422 AIEXTRACT_VALIDATION_CONFLICT`이며 등록 단위의 기존 `blockReason`·복구 경로는 그대로 유지한다. 보충값을 적용한 뒤 다음 검증 단계에서 실패하면 응답의 선택 필드 `validationFailureReason`에 실제 실패 사유를 함께 담는다. 이 값은 일시적인 이번 요청의 결과이며 등록 단위 상태·기존 `blockReason`·감사 이력을 바꾸지 않는다.
 - `foodCategoryId`는 활성 기준정보 값이어야 한다. 비활성·미존재 값은 `400 INVALID_FIELD_VALUE`다.
 - `VISIT_EVIDENCE_REQUIRED`·`DUPLICATE_CONFLICT`·`EXTERNAL_SERVICE_ERROR`는 보충 입력으로 복구할 수 없다. 이 사유의 `CONFIRM`은 `422 AIEXTRACT_VALIDATION_CONFLICT`로 거절한다. `VISIT_EVIDENCE_REQUIRED`·`EXTERNAL_SERVICE_ERROR`는 재추출·재실행 또는 수동 등록으로 안내하고, `DUPLICATE_CONFLICT`는 `recoveryPaths`상 이미 등록된 자원 확인(`EXISTING_RESOURCE`)만 안내하며 재추출·재실행·수동 등록 경로는 없다. 세 사유 모두 `DISCARD`는 `recoveryPaths`와 무관하게 공통으로 허용한다.
 - 보충 입력으로 등록에 성공하면 등록 단위는 `MANUAL_OVERRIDE`가 되고, 사용한 보충값과 제출자를 감사 이력에 남긴다.
@@ -471,6 +471,7 @@ Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-0
   "resource": null,
   "details": {
     "blockReason": "PLACE_AMBIGUOUS",
+    "validationFailureReason": "VISIT_EVIDENCE_REQUIRED",
     "recoveryPaths": ["SUPPLEMENT", "MANUAL_REGISTRATION"],
     "requiredSupplements": ["kakaoPlaceUrl"]
   },
@@ -478,9 +479,11 @@ Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-0
 }
 ```
 
-`blockReason`·`recoveryPaths`·`requiredSupplements`는 [공통 오류 계약](../common/error-contract.md)의 `details` 필드 안에 중첩된다. `code`·`traceId`와 같은 최상위 필드가 아니다.
+`blockReason`·`validationFailureReason`·`recoveryPaths`·`requiredSupplements`는 [공통 오류 계약](../common/error-contract.md)의 `details` 필드 안에 중첩된다. `code`·`traceId`와 같은 최상위 필드가 아니다.
 
 `AIEXTRACT_VALIDATION_CONFLICT`는 "검증 충돌" 하나를 뜻하며 복구 가능 여부를 구분하지 않는다. 클라이언트는 `details.recoveryPaths`로 화면에 노출할 동작을 결정한다. **배열이며 첫 원소가 주 경로다.** 한 차단 사유가 여러 복구 동작을 허용하기 때문에 단일 값으로 두지 않는다.
+
+`details.validationFailureReason`는 보충 입력 `CONFIRM`을 다시 실행한 결과가 실패했을 때만 존재한다. `details.blockReason`은 기존 등록 단위의 차단 사유이므로 보충 입력 화면과 복구 경로를 결정하는 데 계속 사용하고, `validationFailureReason`은 이번 요청에서 어느 후속 검증이 실패했는지 관리자에게 설명하는 데 사용한다. 비밀정보·외부 응답 원문은 포함하지 않는다.
 
 | 값 | 의미 | 클라이언트 동작 |
 |---|---|---|
