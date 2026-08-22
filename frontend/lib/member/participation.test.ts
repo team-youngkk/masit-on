@@ -3,8 +3,8 @@ import test from 'node:test'
 
 import {
   allowedReportTypes,
+  createParticipationDetailCoordinator,
   isCurrentParticipationDetailRequest,
-  loadParticipationDetailIfCurrent,
   parseParticipationError,
   participationDuplicateRequestId,
   participationErrorMessage,
@@ -58,20 +58,17 @@ test('탭 전환으로 이전 중복 상세 요청을 무시한다', () => {
 test('지연된 중복 상세 조회가 탭 전환 뒤 selected를 갱신하지 않는다', async () => {
   let resolveDetail!: (detail: { requestId: string }) => void
   const getParticipationDetail = new Promise<{ requestId: string }>(resolve => { resolveDetail = resolve })
-  let currentRequest = 1
-  let currentKind = 'submission'
+  const detailCoordinator = createParticipationDetailCoordinator<string>('submission')
   const selected: { requestId: string }[] = []
 
-  const pending = loadParticipationDetailIfCurrent(
-    1,
+  const pending = detailCoordinator.load(
     'submission',
+    'submission-1',
     () => getParticipationDetail,
-    () => isCurrentParticipationDetailRequest(1, currentRequest, 'submission', currentKind),
     detail => selected.push(detail),
   )
 
-  currentRequest += 1
-  currentKind = 'report'
+  detailCoordinator.switchKind('report')
   resolveDetail({ requestId: 'submission-1' })
 
   assert.equal(await pending, false)

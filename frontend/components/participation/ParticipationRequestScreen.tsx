@@ -26,7 +26,7 @@ import {
 } from '@/lib/member/participation'
 import {
   allowedReportTypes,
-  loadParticipationDetailIfCurrent,
+  createParticipationDetailCoordinator,
   participationCandidateFieldLabel,
   participationDuplicateRequestId,
   participationReportTypeLabel,
@@ -87,8 +87,7 @@ export function ParticipationRequestScreen({
   const [loaded, setLoaded] = useState(false)
   const retry = useRef<{ fingerprint: string; key: string } | null>(null)
   const listRequest = useRef(0)
-  const detailRequest = useRef(0)
-  const kindRef = useRef<RequestKind>(initialKind)
+  const detailRequest = useRef(createParticipationDetailCoordinator(initialKind))
   const submissionTabRef = useRef<HTMLButtonElement>(null)
   const reportTabRef = useRef<HTMLButtonElement>(null)
 
@@ -156,8 +155,7 @@ export function ParticipationRequestScreen({
 
   function switchTab(nextKind: RequestKind) {
     if (nextKind === kind) return
-    detailRequest.current += 1
-    kindRef.current = nextKind
+    detailRequest.current.switchKind(nextKind)
     resetPageForFilters(nextKind, filter)
     setKind(nextKind)
     setSelected(null)
@@ -217,14 +215,11 @@ export function ParticipationRequestScreen({
         if (duplicateRequestId) {
           setFilter('')
           setPageNumber(1)
-          const request = ++detailRequest.current
-          const requestKind = kind
           try {
-            await loadParticipationDetailIfCurrent(
-              request,
-              requestKind,
-              () => getParticipationDetail(requestKind, duplicateRequestId),
-              () => isCurrentParticipationDetailRequest(request, detailRequest.current, requestKind, kindRef.current),
+            await detailRequest.current.load(
+              kind,
+              duplicateRequestId,
+              getParticipationDetail,
               setSelected,
             )
           } catch { /* 목록에서 재확인 */ }
@@ -238,11 +233,11 @@ export function ParticipationRequestScreen({
   }
 
   async function openDetail(item: ParticipationItem) {
-    const request = ++detailRequest.current
+    const request = detailRequest.current.begin(kind)
     setBusy(true)
     try {
       const detail = await getParticipationDetail(kind, item.requestId)
-      if (request !== detailRequest.current) return
+      if (!request.isCurrent()) return
       setSelected(detail)
       setError(false)
       setErrorTraceId(undefined)
@@ -250,7 +245,7 @@ export function ParticipationRequestScreen({
       setMessage('')
     } catch (reason) {
       const parsed = await parseParticipationError(reason)
-      if (request !== detailRequest.current) return
+      if (!request.isCurrent()) return
       setErrorTraceId(parsed?.contract.traceId)
       if (parsed?.status === 401) {
         setUnauthorized(true)
@@ -262,7 +257,7 @@ export function ParticipationRequestScreen({
         setMessage(parsed?.contract.message || '요청 상세를 불러오지 못했습니다.')
       }
     } finally {
-      if (request === detailRequest.current) setBusy(false)
+      if (request.isCurrent()) setBusy(false)
     }
   }
 

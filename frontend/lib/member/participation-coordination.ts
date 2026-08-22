@@ -81,17 +81,36 @@ export function isCurrentParticipationDetailRequest(
   return request === currentRequest && requestKind === currentKind
 }
 
-export async function loadParticipationDetailIfCurrent<T>(
-  request: number,
-  requestKind: string,
-  load: () => Promise<T>,
-  isCurrent: () => boolean,
-  select: (detail: T) => void,
-): Promise<boolean> {
-  const detail = await load()
-  if (!isCurrent()) return false
-  select(detail)
-  return true
+export function createParticipationDetailCoordinator<K extends string>(initialKind: K) {
+  let currentRequest = 0
+  let currentKind = initialKind
+
+  const switchKind = (nextKind: K) => {
+    currentRequest += 1
+    currentKind = nextKind
+  }
+
+  const begin = (requestKind: K) => {
+    const request = ++currentRequest
+    return {
+      isCurrent: () => isCurrentParticipationDetailRequest(request, currentRequest, requestKind, currentKind),
+    }
+  }
+
+  async function load<T>(
+    requestKind: K,
+    requestId: string,
+    loadDetail: (kind: K, requestId: string) => Promise<T>,
+    select: (detail: T) => void,
+  ): Promise<boolean> {
+    const request = begin(requestKind)
+    const detail = await loadDetail(requestKind, requestId)
+    if (!request.isCurrent()) return false
+    select(detail)
+    return true
+  }
+
+  return { begin, load, switchKind }
 }
 
 export function participationErrorMessage(status: number, error: ParticipationContractError): string {
