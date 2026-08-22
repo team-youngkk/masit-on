@@ -81,6 +81,19 @@ export function isCurrentParticipationDetailRequest(
   return request === currentRequest && requestKind === currentKind
 }
 
+export async function loadParticipationDetailIfCurrent<T>(
+  request: number,
+  requestKind: string,
+  load: () => Promise<T>,
+  isCurrent: () => boolean,
+  select: (detail: T) => void,
+): Promise<boolean> {
+  const detail = await load()
+  if (!isCurrent()) return false
+  select(detail)
+  return true
+}
+
 export function participationErrorMessage(status: number, error: ParticipationContractError): string {
   if (status === 401) return '로그인이 만료되었습니다. 다시 로그인한 뒤 입력 내용을 확인해 주세요.'
   if (error.code === 'DAILY_REQUEST_LIMIT_EXCEEDED') return '오늘 접수 가능한 5건을 모두 사용했습니다. 내일 다시 시도해 주세요.'
@@ -155,4 +168,3 @@ function stableStringify(value: unknown): string {
   }
   return JSON.stringify(value)
 }
-

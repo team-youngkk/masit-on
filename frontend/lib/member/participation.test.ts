@@ -4,6 +4,7 @@ import test from 'node:test'
 import {
   allowedReportTypes,
   isCurrentParticipationDetailRequest,
+  loadParticipationDetailIfCurrent,
   parseParticipationError,
   participationDuplicateRequestId,
   participationErrorMessage,
@@ -54,6 +55,29 @@ test('탭 전환으로 이전 중복 상세 요청을 무시한다', () => {
   assert.equal(isCurrentParticipationDetailRequest(1, 1, 'submission', 'report'), false)
 })
 
+test('지연된 중복 상세 조회가 탭 전환 뒤 selected를 갱신하지 않는다', async () => {
+  let resolveDetail!: (detail: { requestId: string }) => void
+  const getParticipationDetail = new Promise<{ requestId: string }>(resolve => { resolveDetail = resolve })
+  let currentRequest = 1
+  let currentKind = 'submission'
+  const selected: { requestId: string }[] = []
+
+  const pending = loadParticipationDetailIfCurrent(
+    1,
+    'submission',
+    () => getParticipationDetail,
+    () => isCurrentParticipationDetailRequest(1, currentRequest, 'submission', currentKind),
+    detail => selected.push(detail),
+  )
+
+  currentRequest += 1
+  currentKind = 'report'
+  resolveDetail({ requestId: 'submission-1' })
+
+  assert.equal(await pending, false)
+  assert.deepEqual(selected, [])
+})
+
 test('대상 유형별로 계약된 신고 유형만 노출한다', () => {
   assert.deepEqual(allowedReportTypes('RESTAURANT'), ['ERROR', 'INAPPROPRIATE_CONTENT', 'CLOSED'])
   assert.deepEqual(allowedReportTypes('VIDEO'), ['ERROR', 'INAPPROPRIATE_CONTENT', 'UNAVAILABLE'])
@@ -93,4 +117,3 @@ test('JSON이 아닌 오류 본문은 상태 코드만 담고 빈 계약으로 �
 test('Response가 아닌 원인은 네트워크 오류로 간주해 null을 반환한다', async () => {
   assert.equal(await parseParticipationError(new TypeError('network down')), null)
 })
-

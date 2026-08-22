@@ -26,6 +26,7 @@ import {
 } from '@/lib/member/participation'
 import {
   allowedReportTypes,
+  loadParticipationDetailIfCurrent,
   participationCandidateFieldLabel,
   participationDuplicateRequestId,
   participationReportTypeLabel,
@@ -219,9 +220,13 @@ export function ParticipationRequestScreen({
           const request = ++detailRequest.current
           const requestKind = kind
           try {
-            const detail = await getParticipationDetail(requestKind, duplicateRequestId)
-            if (!isCurrentParticipationDetailRequest(request, detailRequest.current, requestKind, kindRef.current)) return
-            setSelected(detail)
+            await loadParticipationDetailIfCurrent(
+              request,
+              requestKind,
+              () => getParticipationDetail(requestKind, duplicateRequestId),
+              () => isCurrentParticipationDetailRequest(request, detailRequest.current, requestKind, kindRef.current),
+              setSelected,
+            )
           } catch { /* 목록에서 재확인 */ }
         }
       } else {
@@ -376,4 +381,3 @@ export function ParticipationRequestScreen({
     </p> : null}
     </PageShell>
 }
-
