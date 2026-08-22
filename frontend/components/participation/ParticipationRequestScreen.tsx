@@ -33,6 +33,7 @@ import {
   participationTargetDetails,
   participationTargetSummary,
   participationTargetTypeLabel,
+  isCurrentParticipationDetailRequest,
   updateParticipationListQuery,
 } from '@/lib/member/participation-coordination'
 
@@ -86,6 +87,7 @@ export function ParticipationRequestScreen({
   const retry = useRef<{ fingerprint: string; key: string } | null>(null)
   const listRequest = useRef(0)
   const detailRequest = useRef(0)
+  const kindRef = useRef<RequestKind>(initialKind)
   const submissionTabRef = useRef<HTMLButtonElement>(null)
   const reportTabRef = useRef<HTMLButtonElement>(null)
 
@@ -154,6 +156,7 @@ export function ParticipationRequestScreen({
   function switchTab(nextKind: RequestKind) {
     if (nextKind === kind) return
     detailRequest.current += 1
+    kindRef.current = nextKind
     resetPageForFilters(nextKind, filter)
     setKind(nextKind)
     setSelected(null)
@@ -213,7 +216,13 @@ export function ParticipationRequestScreen({
         if (duplicateRequestId) {
           setFilter('')
           setPageNumber(1)
-          try { setSelected(await getParticipationDetail(kind, duplicateRequestId)) } catch { /* 목록에서 재확인 */ }
+          const request = ++detailRequest.current
+          const requestKind = kind
+          try {
+            const detail = await getParticipationDetail(requestKind, duplicateRequestId)
+            if (!isCurrentParticipationDetailRequest(request, detailRequest.current, requestKind, kindRef.current)) return
+            setSelected(detail)
+          } catch { /* 목록에서 재확인 */ }
         }
       } else {
         setSubmitNotice({ text: '네트워크 오류가 발생했습니다. 같은 요청으로 다시 시도해 주세요.', isError: true })
@@ -367,3 +376,4 @@ export function ParticipationRequestScreen({
     </p> : null}
     </PageShell>
 }
+

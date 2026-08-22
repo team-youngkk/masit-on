@@ -6,7 +6,6 @@ export type ParticipationContractError = {
   traceId?: string
   resource?: { requestId?: string; status?: string } | null
 }
-
 export type ParticipationErrorDetails = ParsedContractError<ParticipationContractError>
 
 const TARGET_TYPE_LABELS: Record<string, string> = {
@@ -71,6 +70,15 @@ export function participationDuplicateRequestId(error: ParticipationContractErro
   if (error.code !== 'DUPLICATE_OPEN_SUBMISSION' && error.code !== 'DUPLICATE_OPEN_REPORT') return undefined
   const requestId = error.resource?.requestId?.trim()
   return requestId || undefined
+}
+
+export function isCurrentParticipationDetailRequest(
+  request: number,
+  currentRequest: number,
+  requestKind: string,
+  currentKind: string,
+): boolean {
+  return request === currentRequest && requestKind === currentKind
 }
 
 export function participationErrorMessage(status: number, error: ParticipationContractError): string {
@@ -147,3 +155,4 @@ function stableStringify(value: unknown): string {
   }
   return JSON.stringify(value)
 }
+
