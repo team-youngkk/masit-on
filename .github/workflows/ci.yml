@@ -68,7 +68,17 @@ jobs:
           docker run --rm \
             -v "${{ github.workspace }}:/workspace" \
             -w /workspace/infra/production/terraform-redis/tests/template-render \
-            hashicorp/terraform:1.6.6 test
+            hashicorp/terraform@sha256:9a42ea97ea25b363f4c65be25b9ca52b1e511ea5bf7d56050a506ad2daa7af9d test
+
+      - name: Production Terraform backend 없이 초기화·검증
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            -w /workspace/infra/production/terraform \
+            --entrypoint sh \
+            hashicorp/terraform@sha256:9a42ea97ea25b363f4c65be25b9ca52b1e511ea5bf7d56050a506ad2daa7af9d \
+            -c 'terraform init -backend=false && terraform validate'
 
   # workflow_dispatch는 이미 게시된 이미지를 배포하는 경로다. backend·frontend job은
   # 실행 커밋의 현재 소스를 검사하므로 이 경로에서 건너뛰고, 아래 dispatch audit job이

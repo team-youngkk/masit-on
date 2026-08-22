@@ -454,11 +454,11 @@ refresh_status=$(curl -sS -m 5 -o /dev/null -w '%{http_code}' \
 
 # Nginx peer(127.0.0.1)를 신뢰해 서로 다른 X-Forwarded-For가 실제로 별도
 # login-source 버킷을 만드는지 Redis 키로 확인한다.
-REDIS_HOST="${REDIS_HOST:-$(aws ssm get-parameter --region "$REGION" --name /masiton/redis/host \
-  --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || printf '')}"
-REDIS_PORT="${REDIS_PORT:-$(aws ssm get-parameter --region "$REGION" --name /masiton/redis/port \
-  --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || printf '')}"
 if [ "${REQUIRE_SHARED_REDIS:-false}" = true ]; then
+  REDIS_HOST="${REDIS_HOST:-$(aws ssm get-parameter --region "$REGION" --name /masiton/redis/host \
+    --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || printf '')}"
+  REDIS_PORT="${REDIS_PORT:-$(aws ssm get-parameter --region "$REGION" --name /masiton/redis/port \
+    --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || printf '')}"
   validate_shared_redis_endpoint "$REDIS_HOST" "$REDIS_PORT" || exit 1
   REDIS_HOST="$REDIS_VALIDATED_HOST"
 else
