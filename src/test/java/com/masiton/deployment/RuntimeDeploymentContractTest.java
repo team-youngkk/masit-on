@@ -64,11 +64,9 @@ class RuntimeDeploymentContractTest {
                 .contains("-e REDIS_HOST -e REDIS_PORT");
         assertThat(appDeploy)
                 .contains("REQUIRE_SHARED_REDIS")
-                .contains("else\n  REDIS_HOST=127.0.0.1\n  REDIS_PORT=\"${REDIS_PORT:-6379}\"")
-                .doesNotContain("REDIS_HOST=\"${REDIS_HOST:-127.0.0.1}\"");
+                .contains("else\n  REDIS_HOST=\"${REDIS_HOST:-127.0.0.1}\"\n  REDIS_PORT=\"${REDIS_PORT:-6379}\"");
         assertThat(script)
-                .contains("else\n      REDIS_HOST=127.0.0.1\n      REDIS_PORT=\"${REDIS_PORT:-6379}\"")
-                .doesNotContain("REDIS_HOST=\"${REDIS_HOST:-127.0.0.1}\"");
+                .contains("else\n      REDIS_HOST=\"${REDIS_HOST:-127.0.0.1}\"\n      REDIS_PORT=\"${REDIS_PORT:-6379}\"");
     }
 
     @Test
@@ -482,15 +480,14 @@ class RuntimeDeploymentContractTest {
                 .contains("maxmemory")
                 .contains("used_memory");
         assertThat(appDeploy)
-                .contains("is_canonical_ipv4")
-                .contains("is_safe_shared_ipv4")
-                .contains("resolve_shared_redis_host")
-                .contains("getent ahostsv4")
+                .contains("redis_ipv4_to_words")
+                .contains("redis_ipv6_to_words")
+                .contains("redis_ip_is_approved")
+                .contains("getent ahosts --no-addrconfig")
                 .contains("validate_shared_redis_endpoint")
                 .contains("REDIS_HOST=\"$REDIS_VALIDATED_HOST\"")
-                .contains("REDIS_PORT=\"$REDIS_VALIDATED_PORT\"")
-                .doesNotContain("fc00")
-                .doesNotContain("fd00")
+                .contains("fc00")
+                .contains("0xfdff")
                 .contains("readonly REDIS_CLI_IMAGE='redis@sha256:8096655e437712b07503796fb64d81359256cfcff0ab29d95a7da72863786efb'")
                 .contains("--mount \"type=bind,source=$REDIS_PASSWORD_FILE,target=/run/secrets/redis-password,readonly\"")
                 .contains("--user \"$REDIS_PASSWORD_UID:$REDIS_PASSWORD_GID\"")

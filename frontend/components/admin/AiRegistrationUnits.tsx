@@ -9,7 +9,10 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { AdminApiError } from '@/lib/admin/api'
 import {
   aiExtractionMessageFor,
+  AI_BLOCK_REASON_LABELS,
+  aiValidationFailureMessageFor,
   aiValidationConflictFrom,
+  aiValidationRetryActionFor,
   registerAiRegistrationUnit,
   reviewAiVideoExtraction,
   type AiRegistrationUnit,
@@ -22,16 +25,6 @@ import { CATEGORY_OPTIONS } from '@/lib/restaurants-api'
 
 import styles from './AiVideoExtractionScreen.module.css'
 import buttonStyles from '../ui/Button.module.css'
-
-const BLOCK_REASON_LABELS: Record<string, string> = {
-  PLACE_NOT_FOUND: '조건을 만족하는 Kakao 장소를 찾지 못했습니다.',
-  PLACE_AMBIGUOUS: '조건을 만족하는 Kakao 장소가 둘 이상입니다.',
-  CATEGORY_UNRESOLVED: '대표 음식 카테고리 근거를 찾지 못했습니다.',
-  MISSING_REQUIRED_FIELD: '등록에 필요한 필수 후보가 없습니다.',
-  VISIT_EVIDENCE_REQUIRED: '방문 근거가 부족합니다.',
-  DUPLICATE_CONFLICT: '같은 맛집·방문 관계가 이미 등록돼 있습니다.',
-  EXTERNAL_SERVICE_ERROR: '외부 조회가 실패하거나 시간이 초과됐습니다.',
-}
 
 const SUPPLEMENT_FIELD_LABELS: Record<AiRequiredSupplementField, string> = {
   kakaoPlaceUrl: 'Kakao 장소 URL',
@@ -78,6 +71,7 @@ function RegistrationUnitCard({ jobId, unit, refresh, onRequestRetry }: CardProp
   const [conflict, setConflict] = useState<AiValidationConflict | null>(null)
   const [reason, setReason] = useState('')
   const [supplementValue, setSupplementValue] = useState('')
+  const [supplementField, setSupplementField] = useState<AiRequiredSupplementField | null>(null)
   const [categoryFormOpen, setCategoryFormOpen] = useState(false)
   const [categoryReason, setCategoryReason] = useState('')
   const [foodCategoryId, setFoodCategoryId] = useState('')
@@ -117,6 +111,7 @@ function RegistrationUnitCard({ jobId, unit, refresh, onRequestRetry }: CardProp
 
   async function submitSupplement(field: AiRequiredSupplementField) {
     if (!reason.trim() || !supplementValue.trim()) return
+    setSupplementField(field)
     setBusy(true); setError(false)
     try {
       const supplements: AiReviewSupplements = field === 'kakaoPlaceUrl'
@@ -125,13 +120,29 @@ function RegistrationUnitCard({ jobId, unit, refresh, onRequestRetry }: CardProp
       const request = reviewRequest('CONFIRM', unit.unitId, unit.reviewStatus, supplements)
       await reviewAiVideoExtraction(jobId, request.decision, request.unitId, request.expectedReviewStatus, reason, { supplements: request.supplements })
       setConflict(null); setReason(''); setSupplementValue('')
+      setSupplementField(null)
       await refresh(`${unit.restaurantName} 보충 입력으로 등록을 완료했습니다.`)
     } catch (caught) {
       if (await handleConflict(caught)) return
-      setError(true); setNotice(aiExtractionMessageFor(caught))
+      const validationConflict = aiValidationConflictFrom(caught)
+      if (validationConflict) {
+        setConflict(validationConflict)
+        setError(true)
+        setNotice(validationConflict.validationFailureReason ? '' : aiExtractionMessageFor(caught))
+      } else {
+        setError(true); setNotice(aiExtractionMessageFor(caught))
+      }
     } finally {
       setBusy(false)
     }
+  }
+
+  function retryRegistration() {
+    if (conflict && aiValidationRetryActionFor(conflict.validationFailureReason, supplementField) === 'SUPPLEMENT' && supplementField) {
+      void submitSupplement(supplementField)
+      return
+    }
+    void register()
   }
 
   async function discard() {
@@ -190,7 +201,7 @@ function RegistrationUnitCard({ jobId, unit, refresh, onRequestRetry }: CardProp
       </div>
 
       {unit.manualOverrideType ? <p className={styles.hint}>{MANUAL_OVERRIDE_LABELS[unit.manualOverrideType]}</p> : null}
-      {!unit.manualOverrideType && unit.blockReason ? <p className={styles.hint}>{BLOCK_REASON_LABELS[unit.blockReason] ?? unit.blockReason}</p> : null}
+      {!unit.manualOverrideType && unit.blockReason ? <p className={styles.hint}>{AI_BLOCK_REASON_LABELS[unit.blockReason] ?? unit.blockReason}</p> : null}
 
       {unit.placeDecision && unit.categoryDecision ? (
         <dl className={styles.unitDetails}>
@@ -229,7 +240,7 @@ function RegistrationUnitCard({ jobId, unit, refresh, onRequestRetry }: CardProp
           supplementValue={supplementValue}
           onSupplementValueChange={setSupplementValue}
           onSubmitSupplement={submitSupplement}
-          onRetry={register}
+          onRetry={retryRegistration}
           onRequestRetryExtraction={onRequestRetry}
           onDiscard={discard}
         />
@@ -301,14 +312,20 @@ function ExceptionPanel({
 }) {
   const actions = exceptionActionsFor(unit.reviewStatus, conflict.recoveryPaths)
   const supplementField = conflict.requiredSupplements[0]
+  const validationFailureMessage = aiValidationFailureMessageFor(conflict.validationFailureReason)
 
   if (!actions.length) {
     return (
       <StatePanel
         tone="danger"
         headingLevel={4}
-        title={conflict.blockReason ? BLOCK_REASON_LABELS[conflict.blockReason] ?? conflict.blockReason : '등록 조건을 충족하지 못했습니다.'}
-        description="이 예외는 자동 복구할 수 없습니다. 새 작업으로 다시 추출해 주세요."
+        title={conflict.blockReason ? AI_BLOCK_REASON_LABELS[conflict.blockReason] ?? conflict.blockReason : '등록 조건을 충족하지 못했습니다.'}
+        description={
+          <>
+            {validationFailureMessage ? <p className={styles.error}>{validationFailureMessage}</p> : null}
+            <p>이 예외는 자동 복구할 수 없습니다. 새 작업으로 다시 추출해 주세요.</p>
+          </>
+        }
         traceId={conflict.traceId ?? null}
       />
     )
@@ -318,34 +335,37 @@ function ExceptionPanel({
     <StatePanel
       tone="warning"
       headingLevel={4}
-      title={conflict.blockReason ? BLOCK_REASON_LABELS[conflict.blockReason] ?? conflict.blockReason : '등록 조건을 충족하지 못했습니다.'}
+      title={conflict.blockReason ? AI_BLOCK_REASON_LABELS[conflict.blockReason] ?? conflict.blockReason : '등록 조건을 충족하지 못했습니다.'}
       traceId={conflict.traceId ?? null}
       description={
-        <div className={styles.actions}>
-          {actions.includes('SUPPLEMENT') && supplementField ? (
-            <form
-              className={styles.retryForm}
-              onSubmit={(event) => { event.preventDefault(); onSubmitSupplement(supplementField) }}
-            >
-              <label>
-                {SUPPLEMENT_FIELD_LABELS[supplementField]}
-                <input required value={supplementValue} onChange={(event) => onSupplementValueChange(event.target.value)} />
-              </label>
-              <label>보충 사유<input required value={reason} onChange={(event) => onReasonChange(event.target.value)} /></label>
-              <Button type="submit" disabled={busy}>보충 입력 제출</Button>
-            </form>
-          ) : null}
-          {actions.includes('REEXTRACT') ? <Button variant="secondary" disabled={busy} onClick={onRequestRetryExtraction}>보완 텍스트 재추출</Button> : null}
-          {actions.includes('MANUAL_REGISTRATION') ? <Link href="/admin/restaurants/new" className={`${buttonStyles.button} ${buttonStyles.secondary}`}>기존 수동 등록으로 전환</Link> : null}
-          {actions.includes('EXISTING_RESOURCE') ? <p className={styles.hint}>이미 등록된 맛집·방문 관계를 관리자 화면에서 직접 확인해 주세요.</p> : null}
-          {actions.includes('RETRY') ? <Button variant="secondary" disabled={busy} onClick={onRetry}>등록 재실행</Button> : null}
-          {actions.includes('DISCARD') ? (
-            <form className={styles.retryForm} onSubmit={(event) => { event.preventDefault(); onDiscard() }}>
-              <label>폐기 사유<input required value={reason} onChange={(event) => onReasonChange(event.target.value)} /></label>
-              <Button type="submit" variant="secondary" disabled={busy}>폐기</Button>
-            </form>
-          ) : null}
-        </div>
+        <>
+          {validationFailureMessage ? <p className={styles.error}>{validationFailureMessage}</p> : null}
+          <div className={styles.actions}>
+            {actions.includes('SUPPLEMENT') && supplementField ? (
+              <form
+                className={styles.retryForm}
+                onSubmit={(event) => { event.preventDefault(); onSubmitSupplement(supplementField) }}
+              >
+                <label>
+                  {SUPPLEMENT_FIELD_LABELS[supplementField]}
+                  <input required value={supplementValue} onChange={(event) => onSupplementValueChange(event.target.value)} />
+                </label>
+                <label>보충 사유<input required value={reason} onChange={(event) => onReasonChange(event.target.value)} /></label>
+                <Button type="submit" disabled={busy}>보충 입력 제출</Button>
+              </form>
+            ) : null}
+            {actions.includes('REEXTRACT') ? <Button variant="secondary" disabled={busy} onClick={onRequestRetryExtraction}>보완 텍스트 재추출</Button> : null}
+            {actions.includes('MANUAL_REGISTRATION') ? <Link href="/admin/restaurants/new" className={`${buttonStyles.button} ${buttonStyles.secondary}`}>기존 수동 등록으로 전환</Link> : null}
+            {actions.includes('EXISTING_RESOURCE') ? <p className={styles.hint}>이미 등록된 맛집·방문 관계를 관리자 화면에서 직접 확인해 주세요.</p> : null}
+            {actions.includes('RETRY') ? <Button variant="secondary" disabled={busy} onClick={onRetry}>등록 재실행</Button> : null}
+            {actions.includes('DISCARD') ? (
+              <form className={styles.retryForm} onSubmit={(event) => { event.preventDefault(); onDiscard() }}>
+                <label>폐기 사유<input required value={reason} onChange={(event) => onReasonChange(event.target.value)} /></label>
+                <Button type="submit" variant="secondary" disabled={busy}>폐기</Button>
+              </form>
+            ) : null}
+          </div>
+        </>
       }
     />
   )

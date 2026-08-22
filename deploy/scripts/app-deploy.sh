@@ -10,7 +10,7 @@
 # 롤백은 이전 커밋 SHA로 이 스크립트를 다시 실행하는 것이다.
 set -euo pipefail
 
-# BEGIN LEGACY REDIS ADDRESS HELPERS
+# BEGIN SHARED REDIS ENDPOINT CONTRACT
 redis_ipv4_to_words() {
   local host="$1"
   local -a parts=()
@@ -93,9 +93,9 @@ redis_ip_is_approved() {
     (( first_octet == 192 && second_octet == 168 )) && return 0
     return 1
   fi
-  # The Redis producer currently exposes an IPv4 endpoint. Do not admit ULA
-  # IPv6 here until every producer and consumer has the same contract.
-  return 1
+  redis_ipv6_to_words "$address" || return 1
+  words=("${redis_ipv6_words[@]}")
+  (( words[0] >= 0xfc00 && words[0] <= 0xfdff ))
 }
 
 redis_host_is_noncanonical_numeric_ipv4() {
@@ -106,7 +106,10 @@ redis_host_is_noncanonical_numeric_ipv4() {
 
 redis_resolve_host() {
   local host="$1"
-  getent ahostsv4 "$host" 2>/dev/null
+  if getent ahosts --no-addrconfig "$host" 2>/dev/null; then
+    return 0
+  fi
+  getent ahosts "$host" 2>/dev/null
 }
 
 validate_redis_host() {
@@ -148,7 +151,7 @@ validate_redis_host() {
 
 validate_redis_port() {
   local port="${1-}"
-  [[ "$port" =~ ^[1-9][0-9]{0,4}$ ]] || return 1
+  [[ "$port" =~ ^[0-9]{1,5}$ ]] || return 1
   local numeric=$((10#$port))
   (( numeric >= 1 && numeric <= 65535 ))
 }
@@ -164,80 +167,6 @@ validate_shared_redis_endpoint() {
     echo "공유 Redis port가 유효하지 않다" >&2
     return 1
   fi
-  REDIS_VALIDATED_PORT="$port"
-}
-# END LEGACY REDIS ADDRESS HELPERS
-
-# BEGIN SHARED REDIS ENDPOINT CONTRACT
-is_canonical_ipv4() {
-  local candidate="$1"
-  local -a octets=()
-  [[ "$candidate" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || return 1
-  IFS=. read -r -a octets <<< "$candidate"
-  [ "${#octets[@]}" -eq 4 ] || return 1
-  for octet in "${octets[@]}"; do
-    [[ "$octet" == 0 || "$octet" =~ ^[1-9][0-9]{0,2}$ ]] || return 1
-    ((10#$octet <= 255)) || return 1
-  done
-}
-
-is_safe_shared_ipv4() {
-  local candidate="$1"
-  local -a octets=()
-  is_canonical_ipv4 "$candidate" || return 1
-  IFS=. read -r -a octets <<< "$candidate"
-  local first="${octets[0]}"
-  local second="${octets[1]}"
-  if (( first == 10 )); then return 0; fi
-  if (( first == 172 && second >= 16 && second <= 31 )); then return 0; fi
-  if (( first == 192 && second == 168 )); then return 0; fi
-  return 1
-}
-
-resolve_shared_redis_host() {
-  local host="$1" lookup="" address="" resolved=""
-  local -a labels=()
-  if is_canonical_ipv4 "$host"; then
-    is_safe_shared_ipv4 "$host" || return 1
-    printf '%s' "$host"
-    return 0
-  fi
-  [[ "$host" =~ ^[0-9.]+$ || "$host" =~ ^[0xX][0-9A-Fa-f]+$ ]] && return 1
-  [[ "$host" != *:* ]] || return 1
-  [[ "$host" =~ ^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$ ]] || return 1
-  [ "${#host}" -le 253 ] || return 1
-  [[ "$host" != *..* ]] || return 1
-  IFS=. read -r -a labels <<< "$host"
-  for label in "${labels[@]}"; do [ "${#label}" -le 63 ] || return 1; done
-  lookup=$(getent ahostsv4 "$host" 2>/dev/null) || return 1
-  [ -n "$lookup" ] || return 1
-  while IFS= read -r address; do
-    [ -n "$address" ] || continue
-    is_safe_shared_ipv4 "$address" || return 1
-    [ -n "$resolved" ] || resolved="$address"
-  done < <(printf '%s\n' "$lookup" | awk '{print $1}')
-  [ -n "$resolved" ] || return 1
-  printf '%s' "$resolved"
-}
-
-validate_shared_redis_port() {
-  local port="${1-}"
-  [[ "$port" =~ ^[1-9][0-9]{0,4}$ ]] || return 1
-  ((10#$port <= 65535))
-}
-
-validate_shared_redis_endpoint() {
-  local host="${1-}" port="${2-}"
-  REDIS_VALIDATED_HOST=""; REDIS_VALIDATED_PORT=""
-  REDIS_VALIDATED_HOST=$(resolve_shared_redis_host "$host") || {
-    echo "공유 Redis host가 안전한 private IPv4 주소로 고정되지 않는다" >&2
-    return 1
-  }
-  validate_shared_redis_port "$port" || {
-    echo "공유 Redis port가 유효한 숫자 범위가 아니다" >&2
-    return 1
-  }
-  REDIS_VALIDATED_PORT="$port"
 }
 # END SHARED REDIS ENDPOINT CONTRACT
 
@@ -530,16 +459,10 @@ if [ "${REQUIRE_SHARED_REDIS:-false}" = true ]; then
     --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || printf '')}"
   REDIS_PORT="${REDIS_PORT:-$(aws ssm get-parameter --region "$REGION" --name /masiton/redis/port \
     --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || printf '')}"
-  if [ -z "$REDIS_HOST" ]; then
-    echo "ASG 배포 smoke에서도 공유 Redis endpoint가 필요하다: REDIS_HOST 또는 /masiton/redis/host" >&2
-    exit 1
-  fi
   validate_shared_redis_endpoint "$REDIS_HOST" "$REDIS_PORT" || exit 1
-  # DNS를 다시 조회하지 않도록 검증 과정에서 선택한 숫자 주소를 고정한다.
   REDIS_HOST="$REDIS_VALIDATED_HOST"
-  REDIS_PORT="$REDIS_VALIDATED_PORT"
 else
-  REDIS_HOST=127.0.0.1
+  REDIS_HOST="${REDIS_HOST:-127.0.0.1}"
   REDIS_PORT="${REDIS_PORT:-6379}"
   validate_redis_port "$REDIS_PORT" || {
     echo "Redis port가 유효하지 않다" >&2
