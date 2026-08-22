@@ -3,7 +3,7 @@ import test from 'node:test'
 
 import { clearAccessToken, login } from './auth.ts'
 import { AdminApiError } from './api.ts'
-import { aiValidationConflictFrom, aiValidationFailureMessageFor, createAiVideoExtraction, registerAiRegistrationUnit, reviewAiVideoExtraction, aiExtractionMessageFor } from './ai-video-extractions.ts'
+import { aiValidationConflictFrom, aiValidationFailureMessageFor, aiValidationRetryActionFor, createAiVideoExtraction, registerAiRegistrationUnit, reviewAiVideoExtraction, aiExtractionMessageFor } from './ai-video-extractions.ts'
 
 const job = (reused: boolean) => ({
   jobId: reused ? 'job-reused' : 'job-new',
@@ -359,4 +359,36 @@ test('보충 검증 실패 사유가 허용되지 않은 값이면 안전하게 
 test('보충 검증 실패 사유는 화면용 한국어 안내로 변환하고 없는 사유는 숨긴다', () => {
   assert.equal(aiValidationFailureMessageFor('VISIT_EVIDENCE_REQUIRED'), '이번 보충 검증 실패: 방문 근거가 부족합니다.')
   assert.equal(aiValidationFailureMessageFor(null), null)
+})
+
+test('보충 후 외부 오류 재시도는 같은 CONFIRM을 사용하고 일반 등록 재시도는 기존 등록 API를 사용한다', () => {
+  assert.equal(aiValidationRetryActionFor('EXTERNAL_SERVICE_ERROR', 'kakaoPlaceUrl'), 'SUPPLEMENT')
+  assert.equal(aiValidationRetryActionFor('EXTERNAL_SERVICE_ERROR', 'foodCategoryId'), 'SUPPLEMENT')
+  assert.equal(aiValidationRetryActionFor('EXTERNAL_SERVICE_ERROR', null), 'REGISTRATION')
+  assert.equal(aiValidationRetryActionFor('VISIT_EVIDENCE_REQUIRED', 'kakaoPlaceUrl'), 'REGISTRATION')
+})
+
+test('장소·카테고리 보충 후 외부 오류는 원래 차단 사유를 유지하고 보충 재시도를 선택한다', () => {
+  for (const [blockReason, supplementField] of [
+    ['PLACE_AMBIGUOUS', 'kakaoPlaceUrl'],
+    ['CATEGORY_UNRESOLVED', 'foodCategoryId'],
+  ] as const) {
+    const conflict = aiValidationConflictFrom(new AdminApiError(
+      422,
+      'AIEXTRACT_VALIDATION_CONFLICT',
+      [],
+      undefined,
+      undefined,
+      {
+        blockReason,
+        recoveryPaths: ['RETRY', 'MANUAL_REGISTRATION'],
+        requiredSupplements: [],
+        validationFailureReason: 'EXTERNAL_SERVICE_ERROR',
+      },
+    ))
+
+    assert.equal(conflict?.blockReason, blockReason)
+    assert.equal(conflict?.validationFailureReason, 'EXTERNAL_SERVICE_ERROR')
+    assert.equal(aiValidationRetryActionFor(conflict?.validationFailureReason ?? null, supplementField), 'SUPPLEMENT')
+  }
 })

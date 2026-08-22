@@ -72,6 +72,13 @@ export function aiValidationFailureMessageFor(reason: AiBlockReason | null): str
   return reason ? `이번 보충 검증 실패: ${AI_BLOCK_REASON_LABELS[reason]}` : null
 }
 
+export function aiValidationRetryActionFor(
+  validationFailureReason: AiBlockReason | null,
+  supplementField: AiRequiredSupplementField | null,
+): 'SUPPLEMENT' | 'REGISTRATION' {
+  return validationFailureReason === 'EXTERNAL_SERVICE_ERROR' && supplementField ? 'SUPPLEMENT' : 'REGISTRATION'
+}
+
 export type AiRecoveryPath = 'SUPPLEMENT' | 'REEXTRACT' | 'MANUAL_REGISTRATION' | 'EXISTING_RESOURCE' | 'RETRY'
 
 export type AiRequiredSupplementField = 'kakaoPlaceUrl' | 'foodCategoryId'

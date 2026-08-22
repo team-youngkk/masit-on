@@ -380,7 +380,7 @@ related_documents:
 - `requiredSupplements`가 요구한 필드가 없으면 `400 MISSING_REQUIRED_FIELD`로 거절하고 정식 저장은 0건이다.
 - `kakaoPlaceUrl`은 기존 수동 등록 경로와 같은 Kakao 장소 동일성 검증을 다시 통과해야 한다. 검증 실패는 `422 AIEXTRACT_VALIDATION_CONFLICT`이며 등록 단위의 기존 `blockReason`은 그대로 유지한다. 보충값을 적용한 뒤 다음 검증 단계에서 실패하면 응답의 선택 필드 `validationFailureReason`에 실제 실패 사유를 담고, `recoveryPaths`·`requiredSupplements`는 그 실제 실패 사유의 매핑을 사용한다. 이 값들은 일시적인 이번 요청의 결과이며 등록 단위 상태·기존 `blockReason`·감사 이력을 바꾸지 않는다.
 - `foodCategoryId`는 활성 기준정보 값이어야 한다. 비활성·미존재 값은 `400 INVALID_FIELD_VALUE`다.
-- `VISIT_EVIDENCE_REQUIRED`·`DUPLICATE_CONFLICT`·`EXTERNAL_SERVICE_ERROR`는 보충 입력으로 복구할 수 없다. 이 사유의 `CONFIRM`은 `422 AIEXTRACT_VALIDATION_CONFLICT`로 거절한다. `VISIT_EVIDENCE_REQUIRED`·`EXTERNAL_SERVICE_ERROR`는 재추출·재실행 또는 수동 등록으로 안내하고, `DUPLICATE_CONFLICT`는 `recoveryPaths`상 이미 등록된 자원 확인(`EXISTING_RESOURCE`)만 안내하며 재추출·재실행·수동 등록 경로는 없다. 세 사유 모두 `DISCARD`는 `recoveryPaths`와 무관하게 공통으로 허용한다.
+- `VISIT_EVIDENCE_REQUIRED`·`DUPLICATE_CONFLICT`·`EXTERNAL_SERVICE_ERROR`는 보충 입력으로 복구할 수 없다. 이 사유의 `CONFIRM`은 `422 AIEXTRACT_VALIDATION_CONFLICT`로 거절한다. `VISIT_EVIDENCE_REQUIRED`는 재추출·수동 등록, `EXTERNAL_SERVICE_ERROR`는 재실행·수동 등록으로 안내하며, 보충 `CONFIRM` 후 `EXTERNAL_SERVICE_ERROR`가 발생한 경우 재실행은 화면에 유지된 같은 보충값·사유를 포함한 `CONFIRM`을 다시 보낸다. `DUPLICATE_CONFLICT`는 `recoveryPaths`상 이미 등록된 자원 확인(`EXISTING_RESOURCE`)만 안내하며 재추출·재실행·수동 등록 경로는 없다. 세 사유 모두 `DISCARD`는 `recoveryPaths`와 무관하게 공통으로 허용한다.
 - 보충 입력으로 등록에 성공하면 등록 단위는 `MANUAL_OVERRIDE`가 되고, 사용한 보충값과 제출자를 감사 이력에 남긴다.
 - `ADJUST_CATEGORY`는 `registered_restaurant_id`가 가리키는 맛집의 대표 카테고리와 `category_decision`을 바꾼다. `resolvedBy`는 `MANUAL_OVERRIDE`가 되고 등록 단위 상태는 `MANUAL_OVERRIDE`로 전환하되 등록 결과 컬럼과 공개 상태는 유지한다. 이전 카테고리 값과 제출자는 append-only 감사 이력에 남긴다.
 - 계약 테스트는 `TST-E3-AI-007`에 매핑한다.
@@ -491,7 +491,7 @@ Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-0
 | `REEXTRACT` | 보완 텍스트 재추출로 복구 | 재추출 버튼. 값 입력란을 두지 않는다 |
 | `MANUAL_REGISTRATION` | 기존 수동 등록으로 전환 | 수동 등록 화면 연결 |
 | `EXISTING_RESOURCE` | 이미 등록된 자원이 있어 새 등록이 불필요 | 기존 맛집·방문 관계로 이동 |
-| `RETRY` | 일시 오류. 같은 요청 재실행으로 복구 | 재실행 버튼 |
+| `RETRY` | 일시 오류. 최초 등록은 등록 명령을, 보충 `CONFIRM` 후 실패는 같은 보충 요청을 재실행 | 재실행 버튼 |
 
 차단 사유와 거절 상황별 매핑을 고정한다. 보충 후속 검증 실패는 `validationFailureReason`의 매핑을 우선 적용하며, 그 밖의 응답은 `blockReason`의 매핑을 사용한다. 화면은 이 배열에 없는 동작을 노출하지 않는다. **`DISCARD`는 이 배열과 무관한 예외다.** `decision` 표(3.5절)가 정의한 대로 `DISCARD`는 `recoveryPaths` 내용과 관계없이 `AUTO_BLOCKED`의 일곱 `blockReason` 모두에서 공통으로 허용하는 종결 동작이며, 화면은 배열이 안내하는 동작에 `DISCARD`를 항상 추가로 노출한다. 등록 단위 0개 거절·`AUTO_REJECTED` 거절·롤백 완료·폐기 완료 네 거절 상황은 `AUTO_BLOCKED`가 아니므로 `DISCARD` 대상이 아니다.
 
@@ -529,6 +529,7 @@ Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-0
 이 표의 복구 경로 열은 3.6절 `recoveryPaths` 배열과 같은 의미다. `MISSING_REQUIRED_FIELD`·`VISIT_EVIDENCE_REQUIRED`·`EXTERNAL_SERVICE_ERROR`는 재추출·재실행 뒤에도 관리자가 기존 수동 등록으로 우회할 수 있다. `DUPLICATE_CONFLICT`는 `recoveryPaths`상 `EXISTING_RESOURCE`만 가지며 재추출·재실행·수동 등록 우회 경로가 없다. 일곱 사유 모두 `DISCARD`는 이 표와 무관하게 공통으로 허용한다.
 
 - `requiredSupplements`가 빈 배열이면 `CONFIRM`으로 복구할 수 없다는 뜻이다. 이 상태에서 보낸 `CONFIRM`은 `422 AIEXTRACT_VALIDATION_CONFLICT`로 거절하고 정식 저장은 0건이며, 응답의 복구 경로를 안내한다.
+- 보충 `CONFIRM` 후 `EXTERNAL_SERVICE_ERROR`의 `RETRY`는 화면이 유지한 동일한 `supplements`와 `reason`으로 같은 `CONFIRM`을 재전송한다. 최초 `AUTO_BLOCKED` 등록 실행의 `RETRY`는 보충값이 없는 등록 API 재실행이다.
 - 부족한 필드 이름은 작업 상세의 `missingFields`로 확인한다. 이 응답은 관리자가 채워 넣을 대상이 아니므로 `requiredSupplements`에 싣지 않는다.
 - 보충 입력은 기존 `POST /api/admin/ai/video-extractions/{jobId}/review`의 `CONFIRM`으로 제출한다. 이 API는 보충 입력을 받지 않는다.
 - 관리자가 제출한 보충 입력도 기존 Kakao·YouTube·Visit 검증을 우회하지 않는다.

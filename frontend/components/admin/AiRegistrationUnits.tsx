@@ -12,6 +12,7 @@ import {
   AI_BLOCK_REASON_LABELS,
   aiValidationFailureMessageFor,
   aiValidationConflictFrom,
+  aiValidationRetryActionFor,
   registerAiRegistrationUnit,
   reviewAiVideoExtraction,
   type AiRegistrationUnit,
@@ -70,6 +71,7 @@ function RegistrationUnitCard({ jobId, unit, refresh, onRequestRetry }: CardProp
   const [conflict, setConflict] = useState<AiValidationConflict | null>(null)
   const [reason, setReason] = useState('')
   const [supplementValue, setSupplementValue] = useState('')
+  const [supplementField, setSupplementField] = useState<AiRequiredSupplementField | null>(null)
   const [categoryFormOpen, setCategoryFormOpen] = useState(false)
   const [categoryReason, setCategoryReason] = useState('')
   const [foodCategoryId, setFoodCategoryId] = useState('')
@@ -109,6 +111,7 @@ function RegistrationUnitCard({ jobId, unit, refresh, onRequestRetry }: CardProp
 
   async function submitSupplement(field: AiRequiredSupplementField) {
     if (!reason.trim() || !supplementValue.trim()) return
+    setSupplementField(field)
     setBusy(true); setError(false)
     try {
       const supplements: AiReviewSupplements = field === 'kakaoPlaceUrl'
@@ -117,6 +120,7 @@ function RegistrationUnitCard({ jobId, unit, refresh, onRequestRetry }: CardProp
       const request = reviewRequest('CONFIRM', unit.unitId, unit.reviewStatus, supplements)
       await reviewAiVideoExtraction(jobId, request.decision, request.unitId, request.expectedReviewStatus, reason, { supplements: request.supplements })
       setConflict(null); setReason(''); setSupplementValue('')
+      setSupplementField(null)
       await refresh(`${unit.restaurantName} 보충 입력으로 등록을 완료했습니다.`)
     } catch (caught) {
       if (await handleConflict(caught)) return
@@ -131,6 +135,14 @@ function RegistrationUnitCard({ jobId, unit, refresh, onRequestRetry }: CardProp
     } finally {
       setBusy(false)
     }
+  }
+
+  function retryRegistration() {
+    if (conflict && aiValidationRetryActionFor(conflict.validationFailureReason, supplementField) === 'SUPPLEMENT' && supplementField) {
+      void submitSupplement(supplementField)
+      return
+    }
+    void register()
   }
 
   async function discard() {
@@ -228,7 +240,7 @@ function RegistrationUnitCard({ jobId, unit, refresh, onRequestRetry }: CardProp
           supplementValue={supplementValue}
           onSupplementValueChange={setSupplementValue}
           onSubmitSupplement={submitSupplement}
-          onRetry={register}
+          onRetry={retryRegistration}
           onRequestRetryExtraction={onRequestRetry}
           onDiscard={discard}
         />
