@@ -15,6 +15,7 @@ related_documents:
 
 ## 최신 기록
 
+- [이슈 #282 dependency health 진단과 롤백 안전성](pr-282-dependency-health-diagnostics-review.md)
 - [PR #280 페이지네이션 예외 정책 문서 정합성](pr-280-pagination-policy-documentation-review.md)
 - [운영 작업: AI 보충 입력 검증 실패 사유가 화면에서 사라졌다](ops-2026-08-22-ai-supplement-validation-reason.md)
 - [PR #279 장소명 정규화·감사 값 호환·운영 기본값 리뷰](pr-279-ai-place-identity-review.md)
