@@ -85,7 +85,8 @@ class RuntimeDeploymentContractTest {
 
         assertThat(script)
                 .contains("rollback_enabled=yes", "previous", "backup_asset", "restore_asset", ".missing")
-                .contains("local original_exit_code=$?", "rollback_failed=yes", "return \"$original_exit_code\"")
+                .contains("local original_exit_code=\"${1:-$?}\"", "rollback_failed=yes",
+                        "return \"$original_exit_code\"")
                 .contains("systemctl restart masiton-backend.service")
                 .contains("REDIS_HOST")
                 .contains("redis_cli()")
