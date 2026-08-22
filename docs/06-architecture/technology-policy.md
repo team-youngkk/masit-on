@@ -57,6 +57,7 @@ related_documents:
 | 컨테이너 취약점 스캐너 | `aquasec/trivy:0.72.0` (digest 고정) | `M2-06`에서 고정. CI 전용이며 운영 이미지에 포함되지 않는다. 차단 기준은 수정 버전이 있는 `CRITICAL`·`HIGH` |
 | 부하 테스트 도구 | k6 v2.1.0 | [ADR-PERF-001](../07-adr/quality/perf-001-k6-load-testing.md)에서 고정. 측정 시점에만 설치하는 외부 바이너리이며 `build.gradle`·`package.json` 어디에도 의존성으로 넣지 않는다 |
 | sharp | 0.35.0 | `M2-06`에서 npm `overrides`로 고정. Next.js 16.2.11이 끌어오는 0.34.5에 libvips CVE 4건(GHSA-f88m-g3jw-g9cj, HIGH)이 있어 올렸다. Next이 이 버전 이상을 끌어오면 override를 제거한다 |
+| 프론트엔드 전이 의존성 보안 고정 | `postcss` 8.5.23, `nanoid` 3.3.18 | npm `overrides`로 고정. Next.js 16.2.11이 선언한 `postcss` 8.4.31과 그 전이 `nanoid` 3.3.16의 high 취약점을 해소하며, Next.js 자체 버전은 변경하지 않는다 |
 | Spring Batch | 6.0.4, Spring Boot BOM 관리 | Post-MVP |
 
 - `latest`, `+`, `x`, `^`, `~` 또는 동등한 범위 버전을 사용하지 않는다.
@@ -73,6 +74,10 @@ related_documents:
 - 정확한 버전이 확정되지 않은 라이브러리는 이름이 기술 스펙에 있어도 의존성에 추가하지 않는다.
 - 패키지 매니저, IDE, 클라우드 콘솔의 자동 업그레이드 제안은 변경 승인이 아니다.
 - 잠금 파일과 Wrapper 등 재현 가능한 빌드에 필요한 파일을 저장소에서 관리한다.
+- Next.js 16.2.11이 안전한 PostCSS 버전을 선언하기 전까지 `package.json`의 `overrides`에서
+  `postcss` 8.5.23과 `nanoid` 3.3.18을 정확히 고정한다. 이 두 버전은 프로덕션 의존성 감사에서
+  high 이상이 0건인지 CI의 `npm audit --omit=dev --audit-level=high`로 확인한다. Next.js를
+  변경할 때는 해당 override의 필요성과 이 정책을 함께 재검토한다.
 
 ## 5. 개발·테스트·운영 환경 분리
 

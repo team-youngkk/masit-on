@@ -18,6 +18,166 @@
 # 전달한다(M2-08). 브리지 네트워크로는 두 방향 모두 성립하지 않는다.
 set -euo pipefail
 
+# BEGIN SHARED REDIS ENDPOINT CONTRACT
+redis_ipv4_to_words() {
+  local host="$1"
+  local -a parts=()
+  local part value high low high_part middle_part low_part
+  [[ "$host" =~ ^(0|[1-9][0-9]{0,2})\.(0|[1-9][0-9]{0,2})\.(0|[1-9][0-9]{0,2})\.(0|[1-9][0-9]{0,2})$ ]] || return 1
+  IFS=. read -r -a parts <<< "$host"
+  for part in "${parts[@]}"; do
+    value=$((10#$part))
+    (( value <= 255 )) || return 1
+  done
+  high_part=$((10#${parts[0]})); middle_part=$((10#${parts[1]})); low_part=$((10#${parts[2]})); value=$((10#${parts[3]}))
+  high=$((high_part * 256 + middle_part)); low=$((low_part * 256 + value))
+  REDIS_IPV4_HIGH="$high"
+  REDIS_IPV4_LOW="$low"
+}
+
+redis_ipv6_append_groups() {
+  local group_list="$1" group value
+  local -a groups=()
+  [ -n "$group_list" ] || return 0
+  IFS=: read -r -a groups <<< "$group_list"
+  for group in "${groups[@]}"; do
+    [[ "$group" =~ ^[0-9a-f]{1,4}$ ]] || return 1
+    value=$((16#$group))
+    redis_ipv6_words+=("$value")
+  done
+}
+
+redis_ipv6_to_words() {
+  local host="$1" left right dotted high_hex low_hex
+  local left_count right_count zero_count i group
+  local -a right_groups=()
+  redis_ipv6_words=()
+  [[ "$host" == *:* ]] || return 1
+  if [[ "$host" == *.* ]]; then
+    dotted="${host##*:}"
+    [[ "$dotted" != "$host" ]] || return 1
+    redis_ipv4_to_words "$dotted" || return 1
+    printf -v high_hex '%x' "$REDIS_IPV4_HIGH"
+    printf -v low_hex '%x' "$REDIS_IPV4_LOW"
+    host="${host%:*}:$high_hex:$low_hex"
+  fi
+  case "$host" in
+    *::*)
+      left="${host%%::*}"; right="${host#*::}"
+      [[ "$left" != *::* && "$right" != *::* ]] || return 1
+      [[ -z "$left" || ( "$left" != :* && "$left" != *: ) ]] || return 1
+      [[ -z "$right" || ( "$right" != :* && "$right" != *: ) ]] || return 1
+      redis_ipv6_append_groups "$left" || return 1
+      left_count="${#redis_ipv6_words[@]}"
+      if [ -n "$right" ]; then
+        IFS=: read -r -a right_groups <<< "$right"
+        for group in "${right_groups[@]}"; do
+          [[ "$group" =~ ^[0-9a-f]{1,4}$ ]] || return 1
+        done
+        right_count="${#right_groups[@]}"
+      else
+        right_count=0
+      fi
+      (( left_count + right_count < 8 )) || return 1
+      zero_count=$((8 - left_count - right_count))
+      for ((i = 0; i < zero_count; i++)); do redis_ipv6_words+=(0); done
+      redis_ipv6_append_groups "$right" || return 1
+      ;;
+    *)
+      [[ "$host" != :* && "$host" != *: ]] || return 1
+      redis_ipv6_append_groups "$host" || return 1
+      ;;
+  esac
+  (( "${#redis_ipv6_words[@]}" == 8 ))
+}
+
+redis_ip_is_approved() {
+  local address="$1" first_octet second_octet
+  local -a words=()
+  if redis_ipv4_to_words "$address"; then
+    first_octet=$((REDIS_IPV4_HIGH / 256)); second_octet=$((REDIS_IPV4_HIGH % 256))
+    (( first_octet == 10 )) && return 0
+    (( first_octet == 172 && second_octet >= 16 && second_octet <= 31 )) && return 0
+    (( first_octet == 192 && second_octet == 168 )) && return 0
+    return 1
+  fi
+  redis_ipv6_to_words "$address" || return 1
+  words=("${redis_ipv6_words[@]}")
+  (( words[0] >= 0xfc00 && words[0] <= 0xfdff ))
+}
+
+redis_host_is_noncanonical_numeric_ipv4() {
+  local host="${1%.}"
+  [[ "$host" =~ ^[0-9]+(\.[0-9]+){0,3}$ ]] || return 1
+  ! redis_ipv4_to_words "$host"
+}
+
+redis_resolve_host() {
+  local host="$1"
+  if getent ahosts --no-addrconfig "$host" 2>/dev/null; then
+    return 0
+  fi
+  getent ahosts "$host" 2>/dev/null
+}
+
+validate_redis_host() {
+  local host="${1-}" normalized_host address selected_address="" resolved_any=no scope
+  [ -n "$host" ] || return 1
+  [[ "$host" != *[[:space:]]* ]] || return 1
+  [[ "$host" != */* ]] || return 1
+  normalized_host="${host,,}"
+  normalized_host="${normalized_host%.}"
+  if [[ "$normalized_host" == *%* ]]; then
+    [[ "$normalized_host" == *:* ]] || return 1
+    scope="${normalized_host#*%}"
+    normalized_host="${normalized_host%%\%*}"
+    [ -n "$scope" ] || return 1
+    [[ "$scope" != *%* ]] || return 1
+  fi
+  case "$normalized_host" in
+    localhost|localhost.localdomain|127) return 1 ;;
+  esac
+  redis_host_is_noncanonical_numeric_ipv4 "$normalized_host" && return 1
+  if redis_ipv4_to_words "$normalized_host" || redis_ipv6_to_words "$normalized_host"; then
+    redis_ip_is_approved "$normalized_host" || return 1
+    REDIS_VALIDATED_HOST="$normalized_host"
+    return 0
+  fi
+  while read -r address _; do
+    [ -n "$address" ] || continue
+    if ! redis_ipv4_to_words "$address" && ! redis_ipv6_to_words "$address"; then
+      return 1
+    fi
+    resolved_any=yes
+    redis_ip_is_approved "$address" || return 1
+    [ -n "$selected_address" ] || selected_address="$address"
+  done < <(redis_resolve_host "$normalized_host")
+  [ "$resolved_any" = yes ] || return 1
+  REDIS_VALIDATED_HOST="$selected_address"
+  return 0
+}
+
+validate_redis_port() {
+  local port="${1-}"
+  [[ "$port" =~ ^[0-9]{1,5}$ ]] || return 1
+  local numeric=$((10#$port))
+  (( numeric >= 1 && numeric <= 65535 ))
+}
+
+validate_shared_redis_endpoint() {
+  local host="${1-}"
+  local port="${2-}"
+  if ! validate_redis_host "$host"; then
+    echo "공유 Redis host가 비어 있거나 승인된 사설 주소가 아니다" >&2
+    return 1
+  fi
+  if ! validate_redis_port "$port"; then
+    echo "공유 Redis port가 유효하지 않다" >&2
+    return 1
+  fi
+}
+# END SHARED REDIS ENDPOINT CONTRACT
+
 DEPLOYMENT_ENV_FILE="${DEPLOYMENT_ENV_FILE:-/etc/masiton/deployment.env}"
 if [ -f "$DEPLOYMENT_ENV_FILE" ]; then
   set -a
@@ -65,13 +225,18 @@ case "$component" in
     # 단일 EC2 기본값은 유지하고, ASG에서는 환경 변수 또는 선택적 SSM 값으로
     # Redis endpoint를 바꿀 수 있게 한다. 명시적 환경 변수가 SSM보다 우선한다.
     REDIS_HOST="${REDIS_HOST:-$(optional_param /masiton/redis/host)}"
-    if [ "${REQUIRE_SHARED_REDIS:-false}" = true ] && [ -z "$REDIS_HOST" ]; then
-      echo "ASG 배포에서는 공유 Redis endpoint가 필요하다: REDIS_HOST 또는 /masiton/redis/host" >&2
-      exit 1
-    fi
-    REDIS_HOST="${REDIS_HOST:-127.0.0.1}"
     REDIS_PORT="${REDIS_PORT:-$(optional_param /masiton/redis/port)}"
-    REDIS_PORT="${REDIS_PORT:-6379}"
+    if [ "${REQUIRE_SHARED_REDIS:-false}" = true ]; then
+      validate_shared_redis_endpoint "$REDIS_HOST" "$REDIS_PORT" || exit 1
+      REDIS_HOST="$REDIS_VALIDATED_HOST"
+    else
+      REDIS_HOST="${REDIS_HOST:-127.0.0.1}"
+      REDIS_PORT="${REDIS_PORT:-6379}"
+      validate_redis_port "$REDIS_PORT" || {
+        echo "Redis port가 유효하지 않다" >&2
+        exit 1
+      }
+    fi
     export REDIS_HOST
     export REDIS_PORT
     MAIL_HOST=$(param /masiton/mail/host); export MAIL_HOST
