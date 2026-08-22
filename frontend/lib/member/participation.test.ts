@@ -4,6 +4,7 @@ import test from 'node:test'
 import {
   allowedReportTypes,
   parseParticipationError,
+  participationDuplicateRequestId,
   participationErrorMessage,
   participationPayloadKey,
   participationTargetDetails,
@@ -28,6 +29,22 @@ test('다음 페이지로 이동하고 종류나 상태 필터가 바뀌면 1페
 test('중복과 일일 제한 오류는 다음 행동을 안내한다', () => {
   assert.match(participationErrorMessage(409, { code: 'DUPLICATE_OPEN_REPORT' }), /내 요청 목록/)
   assert.match(participationErrorMessage(429, { code: 'DAILY_REQUEST_LIMIT_EXCEEDED' }), /내일/)
+})
+
+test('중복 제보·신고 응답에서 기존 요청 식별자를 추출한다', () => {
+  assert.equal(participationDuplicateRequestId({
+    code: 'DUPLICATE_OPEN_SUBMISSION',
+    resource: { requestId: 'submission-1' },
+  }), 'submission-1')
+  assert.equal(participationDuplicateRequestId({
+    code: 'DUPLICATE_OPEN_REPORT',
+    resource: { requestId: 'report-1' },
+  }), 'report-1')
+  assert.equal(participationDuplicateRequestId({
+    code: 'DUPLICATE_OPEN_REPORT',
+    resource: { requestId: '  ' },
+  }), undefined)
+  assert.equal(participationDuplicateRequestId({ code: 'DAILY_REQUEST_LIMIT_EXCEEDED' }), undefined)
 })
 
 test('대상 유형별로 계약된 신고 유형만 노출한다', () => {

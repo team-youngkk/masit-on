@@ -27,6 +27,7 @@ import {
 import {
   allowedReportTypes,
   participationCandidateFieldLabel,
+  participationDuplicateRequestId,
   participationReportTypeLabel,
   participationStatusLabel,
   participationTargetDetails,
@@ -208,11 +209,11 @@ export function ParticipationRequestScreen({
       } else if (parsed) {
         const contract: ContractError = parsed.contract
         setSubmitNotice({ text: participationErrorMessage(parsed.status, contract), isError: true, traceId: contract.traceId })
-        if ((contract.code === 'DUPLICATE_OPEN_SUBMISSION' || contract.code === 'DUPLICATE_OPEN_REPORT')
-          && contract.resource?.requestId) {
+        const duplicateRequestId = participationDuplicateRequestId(contract)
+        if (duplicateRequestId) {
           setFilter('')
           setPageNumber(1)
-          try { setSelected(await getParticipationDetail(kind, contract.resource.requestId)) } catch { /* 목록에서 재확인 */ }
+          try { setSelected(await getParticipationDetail(kind, duplicateRequestId)) } catch { /* 목록에서 재확인 */ }
         }
       } else {
         setSubmitNotice({ text: '네트워크 오류가 발생했습니다. 같은 요청으로 다시 시도해 주세요.', isError: true })
@@ -341,7 +342,7 @@ export function ParticipationRequestScreen({
       </nav>
     </section>}
 
-    {view === 'history' && selected ? <section className={styles.detail} aria-live="polite">
+    {selected ? <section className={styles.detail} aria-live="polite">
       <h2>요청 상세</h2>
       <p><strong>상태:</strong> {participationStatusLabel(selected.status)}</p>
       <p><strong>대상:</strong> {participationTargetTypeLabel(selected.targetType)}</p>
