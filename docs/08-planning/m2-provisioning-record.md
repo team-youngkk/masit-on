@@ -1185,7 +1185,7 @@ push(main·deploy/m2)  → 빌드·테스트 → 이미지 빌드·검증·ECR p
                       → [environment: production 승인 대기]
                       → SSM으로 app-deploy.sh 실행 → 상태 확인
 
-workflow_dispatch     → (빌드·테스트·이미지 job 건너뜀)
+workflow_dispatch     → 선택한 커밋 checkout → 프론트엔드 프로덕션 의존성 감사
   image_tag=<커밋 SHA> → [environment: production 승인 대기]
                       → SSM으로 app-deploy.sh 실행 → 상태 확인
 ```
@@ -1195,7 +1195,7 @@ workflow_dispatch     → (빌드·테스트·이미지 job 건너뜀)
 | 위치 | [`ci.yml`](../../.github/workflows/ci.yml)의 `운영 배포` job |
 | 트리거 | `push`(`main`·`deploy/m2`), `workflow_dispatch` |
 | 배포 대상 | `push`는 그 실행의 커밋, `workflow_dispatch`는 `image_tag` 입력(비우면 브랜치 현재 커밋) |
-| 순서 보장 | `needs: [images]`. `workflow_dispatch`에서는 이미지 job이 `skipped`이고 job 조건이 그 경우만 통과시킨다 |
+| 순서 보장 | `needs: [images, frontend-dispatch-audit]`. `workflow_dispatch`에서는 이미지 job이 `skipped`이고, 선택한 커밋을 감사한 dispatch job이 `success`인 경우만 통과시킨다 |
 | 승인 게이트 | GitHub `environment: production` (두 경로 공통) |
 | 필수 리뷰어 | 팀 4인(`w00lam`·`tjdgns0618`·`inan0226`·`jinyp01`) |
 | 배포 허용 브랜치 | `main`, `deploy/m2` |

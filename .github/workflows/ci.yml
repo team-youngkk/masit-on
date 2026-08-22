@@ -4,7 +4,8 @@
 #
 # 이미지 빌드·검증·ECR push와 운영 배포는 M2부터 활성화하는 범위다(ADR-DEPLOY-002,
 # ADR-CI-001). 같은 워크플로에 두는 이유는 아래 images·deploy job 주석에 있다.
-# 두 job은 배포 대상 브랜치에서만 돌고 PR과 develop push에서는 실행되지 않는다.
+# images·deploy는 배포 대상 브랜치에서만 돌고 PR과 develop push에서는 실행되지 않으며,
+# workflow_dispatch의 배포 대상은 별도의 프론트엔드 프로덕션 의존성 감사 job을 거친다.
 name: CI
 
 on:
@@ -79,10 +80,10 @@ jobs:
             hashicorp/terraform@sha256:9a42ea97ea25b363f4c65be25b9ca52b1e511ea5bf7d56050a506ad2daa7af9d \
             -c 'terraform init -backend=false && terraform validate'
 
-  # workflow_dispatch는 이미 게시된 이미지를 배포하는 경로다. 그 이미지는 push 때
-  # 이 두 job을 통과해야 만들어졌으므로 품질 게이트는 이미 걸린 상태이고, 다시 도는
-  # 것은 배포 대상이 아닌 브랜치 현재 커밋을 검사하는 일이다. 롤백은 현재 커밋이
-  # 문제라서 하는 것이므로 그 검사를 기다리게 하면 복구만 몇 분 늦어진다.
+  # workflow_dispatch는 이미 게시된 이미지를 배포하는 경로다. backend·frontend job은
+  # 실행 커밋의 현재 소스를 검사하므로 이 경로에서 건너뛰고, 아래 dispatch audit job이
+  # 실제 배포 대상 image_tag의 프론트엔드 package-lock.json을 검사한다. 롤백·재배포가
+  # 오래된 이미지의 취약한 의존성을 다시 배포하는 우회 경로가 되지 않게 하는 별도 게이트다.
   backend:
     name: 백엔드 빌드·테스트
     if: github.event_name != 'workflow_dispatch'
@@ -139,16 +140,57 @@ jobs:
       # digest를 바꿀 때는 태그도 함께 바꾼다. 한쪽만 바꾸면 빌드가 실패하거나
       # 의도와 다른 이미지를 쓴다.
       #
+      # `npm audit`는 package-lock.json에 고정된 프로덕션 의존성만 검사하고 high 이상을
+      # 발견하면 0이 아닌 코드로 끝난다. 감사와 빌드를 같은 고정 런타임의 단일 명령
+      # 체인으로 실행해 취약한 산출물이 다음 단계로 넘어가지 않게 한다.
       # `npm run build`는 `tsc --noEmit && next build`라 타입 검사와 프로덕션 빌드를
       # 한 번에 수행한다. next.config.ts가 Next 내장 TypeScript 단계를 끄고 있어
       # 타입 검사는 이 tsc가 담당한다.
-      - name: 타입 검사와 프로덕션 빌드 (고정 런타임)
+      - name: 프로덕션 의존성 감사·타입 검사와 프로덕션 빌드 (고정 런타임)
         run: |
           docker run --rm \
             -v "${{ github.workspace }}/frontend":/app \
             -w /app \
             node:24.18.0-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd \
-            sh -c 'npm ci && npm run build'
+            sh -c 'npm ci && npm audit --omit=dev --audit-level=high && npm run build'
+
+  # workflow_dispatch에서만 실행한다. dispatch의 image_tag는 현재 워크플로 소스와
+  # 다를 수 있으므로, 반드시 배포 job과 같은 대상(image_tag 또는 github.sha)을
+  # 검증·checkout한 뒤 고정 Node 런타임으로 package-lock.json을 감사한다.
+  frontend-dispatch-audit:
+    name: dispatch 프론트엔드 프로덕션 의존성 감사
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: 배포 대상 커밋 SHA 검증
+        id: target
+        env:
+          IMAGE_TAG: ${{ github.event.inputs.image_tag || github.sha }}
+        run: |
+          set -euo pipefail
+          case "$IMAGE_TAG" in
+            "" | *[!0-9a-f]*)
+              echo "커밋 SHA는 소문자 16진수 40자여야 한다: '${IMAGE_TAG}'" >&2
+              exit 1
+              ;;
+          esac
+          if [ "${#IMAGE_TAG}" -ne 40 ]; then
+            echo "커밋 SHA는 40자여야 한다 (${#IMAGE_TAG}자): '${IMAGE_TAG}'" >&2
+            exit 1
+          fi
+          printf 'image_tag=%s\n' "$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ steps.target.outputs.image_tag }}
+
+      - name: 프로덕션 의존성 감사 (고정 런타임)
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/frontend":/app \
+            -w /app \
+            node:24.18.0-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd \
+            sh -c 'npm ci && npm audit --omit=dev --audit-level=high'
 
   images:
     name: 이미지 빌드·검증·push
@@ -459,22 +501,26 @@ jobs:
   # 이미지가 게시돼도 배포는 사람의 판단을 기다린다.
   deploy:
     name: 운영 배포
-    needs: [images]
+    needs: [images, frontend-dispatch-audit]
     # 두 경로로 들어온다. 어느 쪽이든 배포 대상 브랜치여야 한다. OIDC 신뢰 정책이
     # refs/heads/main과 refs/heads/deploy/m2만 허용하므로 그 밖의 ref는 AssumeRole
     # 단계에서 거절되지만, 승인 요청 자체가 뜨지 않도록 여기서 먼저 막는다.
     #
     #   push               — 이미지 job이 성공해야 한다. 방금 게시한 이미지를 배포한다.
     #   workflow_dispatch  — 이미 게시된 이미지를 배포한다(롤백·재배포). 이미지 job은
-    #                        push에서만 도므로 skipped이고, 그래서 `!cancelled()`로
-    #                        skipped 의존성을 통과시킨다. 대신 skipped를 명시적으로
-    #                        요구해 push 경로에서 이미지 실패가 통과되지 않게 한다.
+    #                        push에서만 도므로 skipped이다. dispatch audit job이 성공한
+    #                        경우에만 이 skipped 의존성을 통과시킨다.
     if: >-
+      always() &&
       !cancelled() &&
       (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/deploy/m2') &&
       (
-        (github.event_name == 'push' && needs.images.result == 'success') ||
-        (github.event_name == 'workflow_dispatch' && needs.images.result == 'skipped')
+        (github.event_name == 'push' &&
+          needs.images.result == 'success' &&
+          needs['frontend-dispatch-audit'].result == 'skipped') ||
+        (github.event_name == 'workflow_dispatch' &&
+          needs.images.result == 'skipped' &&
+          needs['frontend-dispatch-audit'].result == 'success')
       )
     runs-on: ubuntu-24.04
     environment: production
