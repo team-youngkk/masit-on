@@ -1,7 +1,7 @@
 import { ParticipationRequestScreen } from '@/components/participation/ParticipationRequestScreen'
 import type { RequestKind, TargetType } from '@/lib/member/participation'
 
-type ParticipationRequestsPageProps = {
+type NewParticipationRequestPageProps = {
   searchParams: Promise<{
     kind?: string | string[]
     targetType?: string | string[]
@@ -13,7 +13,7 @@ function firstValue(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value
 }
 
-export default async function ParticipationRequestsPage({ searchParams }: ParticipationRequestsPageProps) {
+export default async function NewParticipationRequestPage({ searchParams }: NewParticipationRequestPageProps) {
   const params = await searchParams
   const kind = firstValue(params.kind) === 'report' ? 'report' as RequestKind : 'submission' as RequestKind
   const targetType = firstValue(params.targetType)
@@ -25,10 +25,10 @@ export default async function ParticipationRequestsPage({ searchParams }: Partic
   if (targetId) loginQuery.set('targetId', targetId)
 
   return <ParticipationRequestScreen
-    view="history"
+    view="new"
     initialKind={kind}
     initialTargetType={initialTargetType}
     initialTargetId={targetId}
-    loginReturnTo={`/me/requests?${loginQuery.toString()}`}
+    loginReturnTo={`/me/requests/new?${loginQuery.toString()}`}
   />
 }
