@@ -279,6 +279,18 @@ export function ParticipationRequestScreen({
     <PageShell title={pageTitle}><StatePanel tone="warning" title="제보와 신고는 로그인 후 이용할 수 있습니다." actions={<Link href={memberLoginHref(loginReturnTo)}>로그인하기</Link>} /></PageShell>
   )
 
+  if (view === 'new' && initialLoadError) return (
+    <PageShell title={pageTitle}>
+      <StatePanel
+        tone="danger"
+        title="맛집 정보를 불러오지 못했습니다."
+        description={initialLoadError.message}
+        traceId={initialLoadError.traceId}
+        actions={<Link href={loginReturnTo}>다시 시도</Link>}
+      />
+    </PageShell>
+  )
+
   return <PageShell
     className={styles.screen}
     title={pageTitle}

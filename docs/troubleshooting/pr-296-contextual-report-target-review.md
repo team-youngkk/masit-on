@@ -33,6 +33,7 @@ related_documents:
 | [비맛집 신고 흐름 1](https://github.com/team-youngkk/masit-on/pull/296#discussion_r3838256014) | `/api/me/reports`로 이어지는 기존 신고 입력 복구 | 애플리케이션 | 수정 필요 | `kind=report`를 보존해 신고 payload와 API 경로가 유지되도록 수정 |
 | [비맛집 신고 흐름 2](https://github.com/team-youngkk/masit-on/pull/296#discussion_r3838284720) | 계약된 나머지 대상 유형의 신고 입력을 복구 | 애플리케이션 | 수정 필요 | `CREATOR`·`VIDEO`·`VISIT_RELATIONSHIP`에 대한 대상 식별자 입력과 신고 유형 선택을 유지 |
 | [조회 실패 fallback 분리](https://github.com/team-youngkk/masit-on/pull/296#discussion_r3838285334) | 5xx·네트워크 오류를 제보 fallback으로 바꾸지 않음 | 애플리케이션 | 수정 필요 | 404/400만 일반 신고 입력으로 fallback하고, 그 밖의 오류는 traceId를 포함한 오류·재시도 상태로 표시 |
+| [오류 상태 렌더링 재리뷰](https://github.com/team-youngkk/masit-on/pull/296#discussion_r3838611838) | 전달된 `initialLoadError`를 실제 오류·재시도 UI에 사용하고 신고 입력을 차단 | 애플리케이션 | 수정 필요 | `ParticipationRequestScreen`에서 `StatePanel` 오류 상태와 재시도 링크를 렌더링 |
 
 위 표의 스레드 링크는 GitHub에 게시될 최종 PR에서 확인할 수 있도록 원문 위치를 남긴다. 비맛집 신고 흐름과 조회 실패 fallback 요청은 서로 다른 인라인 코멘트였지만, 같은 진입 분기 변경 묶음으로 처리했다.
 
@@ -42,10 +43,11 @@ related_documents:
 - 그 결과 사용자는 기존 신고 URL로 들어와도 제보 폼을 보고, 신고 API 대신 제보 API로 전송할 수 있었다.
 - 맛집 상세 신고 컨텍스트 조회의 모든 예외가 `null`로 처리되어, 상세 API의 5xx나 네트워크 장애도 정상적인 제보 화면으로 오인될 수 있었다.
 - URL의 `targetLabel`은 신뢰할 수 없으므로 서버 조회 전에는 표시용 이름으로 사용할 수 없다.
+- 조회 실패 정보를 prop으로 전달했지만 화면에서 소비하지 않으면, 오류 상태를 구분해도 실제 신고 입력이 계속 노출될 수 있다.
 
 ## 4. 근본 원인
 
-`new/page.tsx`가 맛집 상세에서 진입한 신고와 일반 신고 URL을 하나의 `contextualReport` truthy 여부로만 분기했다. 서버 조회 결과가 없으면 원래 요청의 `kind`와 `targetType`을 복원하지 않고 제보 기본값으로 재구성했으며, 조회 예외의 종류도 구분하지 않았다. 또한 화면은 `initialTargetId`가 있으면 서버 검증 여부와 관계없이 읽기 전용 요약을 표시할 수 있는 구조였다.
+`new/page.tsx`가 맛집 상세에서 진입한 신고와 일반 신고 URL을 하나의 `contextualReport` truthy 여부로만 분기했다. 서버 조회 결과가 없으면 원래 요청의 `kind`와 `targetType`을 복원하지 않고 제보 기본값으로 재구성했으며, 조회 예외의 종류도 구분하지 않았다. 또한 화면은 `initialTargetId`가 있으면 서버 검증 여부와 관계없이 읽기 전용 요약을 표시할 수 있는 구조였고, 첫 수정에서는 `initialLoadError`를 prop으로만 전달해 렌더링하지 않는 누락이 남았다.
 
 ## 5. 확인 및 시도
 
@@ -63,13 +65,14 @@ related_documents:
 - 404 또는 식별자 형식 오류는 대상 식별자를 직접 입력하는 일반 신고 흐름으로 fallback한다.
 - 5xx·네트워크·분류되지 않은 오류는 제보로 전환하지 않고 `StatePanel`의 오류·재시도 상태로 표시하며, 서버가 제공한 `traceId`를 함께 보여준다.
 - `ParticipationRequestScreen`은 검증 성공한 컨텍스트에서만 대상 요약을 읽기 전용으로 표시하고, 그 외 신고는 기존 식별자 입력을 유지한다. 신규 화면의 종류 탭 제거는 유지하되 URL로 직접 진입한 신고의 `report` 동작은 보존한다.
+- 재리뷰에서 확인된 누락을 보완해 `initialLoadError`가 있으면 신고 입력을 렌더링하지 않고, traceId와 재시도 링크를 포함한 `StatePanel` 오류 상태를 표시한다.
 - `frontend/package.json`의 테스트 목록에 새 정규화 회귀 테스트를 포함했다.
 
 ## 7. 검증
 
 | 검증 | 결과 | 확인한 내용 |
 |---|---|---|
-| `npm test` | 통과 | 프런트 전체 304개 테스트와 새 `participation-entry` 테스트 |
+| `npm test` | 통과 | 프런트 전체 305개 테스트와 새 `participation-entry` 테스트 |
 | `npm run typecheck` | 통과 | Next.js·TypeScript 타입 검사 |
 | `npm run build` | 통과 | 테스트, 타입 검사, Next.js 프로덕션 빌드 및 `/me/requests/new` 라우트 생성 |
 | `git diff --check` | 통과 | 공백 오류 없음 |
@@ -89,4 +92,4 @@ related_documents:
 
 ## 10. 남은 사항
 
-- 최종 변경은 PR 브랜치에 반영한 뒤 이 기록의 검증 결과와 함께 각 원래 인라인 스레드에 답글로 연결한다.
+- PR 브랜치의 최신 커밋에서 `initialLoadError` 오류 상태 렌더링까지 반영하고, 전체 테스트·타입 검사·프로덕션 빌드를 다시 통과했다. 재리뷰 스레드에도 반영 내용과 검증 결과를 답글로 연결한다.
