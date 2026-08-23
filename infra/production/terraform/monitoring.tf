@@ -1,10 +1,15 @@
 locals {
-  deployment_alarm_names = [
-    aws_cloudwatch_metric_alarm.target_5xx.alarm_name,
-    aws_cloudwatch_metric_alarm.target_latency.alarm_name,
-    aws_cloudwatch_metric_alarm.blue_unhealthy.alarm_name,
-    aws_cloudwatch_metric_alarm.fleet_dependency_redis.alarm_name,
-  ]
+  deployment_alarm_names = concat(
+    [
+      aws_cloudwatch_metric_alarm.target_5xx.alarm_name,
+      aws_cloudwatch_metric_alarm.target_latency.alarm_name,
+      aws_cloudwatch_metric_alarm.blue_unhealthy.alarm_name,
+    ],
+    var.redis_recovery_mode ? [] : [
+      aws_cloudwatch_metric_alarm.fleet_dependency_redis.alarm_name,
+      aws_cloudwatch_metric_alarm.redis_memory_utilization.alarm_name,
+    ],
+  )
 }
 
 resource "aws_cloudwatch_metric_alarm" "target_5xx" {
@@ -72,9 +77,31 @@ resource "aws_cloudwatch_metric_alarm" "fleet_dependency_redis" {
   datapoints_to_alarm = 3
   threshold           = 1
   comparison_operator = "LessThanThreshold"
-  # 최초 seeding은 deployment_alarms_enabled=false로 진행해 지표가 아직 없는
-  # 구간을 명시적으로 제외한다. 정상 운영에서는 결측도 감지 경로 장애이므로
-  # fail-closed로 배포를 막는다.
+  # 정상 운영과 복구 모드 모두 결측은 감지 경로 장애이므로 breaching으로 처리한다.
+  # 복구 모드는 이 alarm을 CodeDeploy 목록에서만 일시적으로 제외하며, 이 리소스의
+  # missing-data 계약 자체를 바꾸지 않는다.
+  treat_missing_data = "breaching"
+
+  dimensions = {
+    Environment = "asg"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "redis_memory_utilization" {
+  alarm_name          = "${var.name_prefix}-redis-memory-utilization"
+  alarm_description   = "Dedicated Redis used_memory/maxmemory utilization is at or above 80%"
+  namespace           = "masiton/health"
+  metric_name         = "RedisMemoryUtilizationPercent"
+  statistic           = "Maximum"
+  period              = 60
+  evaluation_periods  = 3
+  datapoints_to_alarm = 3
+  threshold           = 80
+  unit                = "Percent"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  # Capacity data is produced by the same timer as FleetDependencyRedis. A
+  # missing series means the recovery signal is unavailable, so normal
+  # deployment monitoring remains fail-closed.
   treat_missing_data = "breaching"
 
   dimensions = {

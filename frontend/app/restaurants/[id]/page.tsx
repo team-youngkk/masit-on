@@ -88,7 +88,7 @@ export default async function RestaurantDetailPage({
           />
           <Link
             className={styles.reportLink}
-            href={`/me/requests?kind=report&targetType=RESTAURANT&targetId=${encodeURIComponent(restaurant.id)}`}
+            href={`/me/requests/new?kind=report&targetType=RESTAURANT&targetId=${encodeURIComponent(restaurant.id)}`}
           >
             정보 오류 제보
           </Link>

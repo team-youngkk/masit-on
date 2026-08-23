@@ -100,7 +100,7 @@ export default function MePage() {
     ['최근 본 맛집', '/me/recent-restaurants', '최근 확인한 맛집을 다시 봅니다.'],
     ['내 컬렉션', '/me/collections', '목적별로 맛집을 모아 봅니다.'],
     ['알림', '/me/notifications', '제보·신고 처리 알림을 확인합니다.'],
-    ['제보·신고', '/me/requests', '새 정보 제안과 기존 정보 신고를 관리합니다.'],
+    ['제보·신고', '/me/requests', '제보·신고 내역을 확인합니다.'],
   ] as const
 
   return <PageShell className={styles.page} size="narrow" eyebrow="회원" title="내 정보" description="내 계정과 개인화 메뉴를 관리합니다.">

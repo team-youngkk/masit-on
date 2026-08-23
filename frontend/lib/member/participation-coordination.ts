@@ -6,8 +6,56 @@ export type ParticipationContractError = {
   traceId?: string
   resource?: { requestId?: string; status?: string } | null
 }
-
 export type ParticipationErrorDetails = ParsedContractError<ParticipationContractError>
+
+const TARGET_TYPE_LABELS: Record<string, string> = {
+  RESTAURANT: '맛집',
+  CREATOR: '유튜버',
+  VIDEO: '영상',
+  VISIT_RELATIONSHIP: '방문 관계',
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  RECEIVED: '접수',
+  IN_REVIEW: '검토 중',
+  ACCEPTED: '승인',
+  REJECTED: '반려',
+  COMPLETED: '처리 완료',
+}
+
+const REPORT_TYPE_LABELS: Record<string, string> = {
+  ERROR: '정보 오류',
+  CLOSED: '폐업',
+  UNAVAILABLE: '이용 불가',
+  WRONG_RELATIONSHIP: '잘못된 연결',
+  INAPPROPRIATE_CONTENT: '부적절한 콘텐츠',
+}
+
+const CANDIDATE_FIELD_LABELS: Record<string, string> = {
+  name: '이름',
+  roadAddress: '도로명 주소',
+  channelUrl: '채널 URL',
+  videoUrl: '영상 URL',
+  restaurantId: '맛집 ID',
+  creatorId: '유튜버 ID',
+  videoId: '영상 ID',
+}
+
+export function participationTargetTypeLabel(value: string): string {
+  return TARGET_TYPE_LABELS[value] ?? value
+}
+
+export function participationStatusLabel(value: string): string {
+  return STATUS_LABELS[value] ?? value
+}
+
+export function participationReportTypeLabel(value: string): string {
+  return REPORT_TYPE_LABELS[value] ?? value
+}
+
+export function participationCandidateFieldLabel(value: string): string {
+  return CANDIDATE_FIELD_LABELS[value] ?? value
+}
 
 /**
  * createParticipation/getParticipations/getParticipationDetail은 실패 시
@@ -16,6 +64,53 @@ export type ParticipationErrorDetails = ParsedContractError<ParticipationContrac
  */
 export async function parseParticipationError(reason: unknown): Promise<ParticipationErrorDetails | null> {
   return parseContractError<ParticipationContractError>(reason)
+}
+
+export function participationDuplicateRequestId(error: ParticipationContractError): string | undefined {
+  if (error.code !== 'DUPLICATE_OPEN_SUBMISSION' && error.code !== 'DUPLICATE_OPEN_REPORT') return undefined
+  const requestId = error.resource?.requestId?.trim()
+  return requestId || undefined
+}
+
+export function isCurrentParticipationDetailRequest(
+  request: number,
+  currentRequest: number,
+  requestKind: string,
+  currentKind: string,
+): boolean {
+  return request === currentRequest && requestKind === currentKind
+}
+
+export function createParticipationDetailCoordinator<K extends string>(initialKind: K) {
+  let currentRequest = 0
+  let currentKind = initialKind
+
+  const switchKind = (nextKind: K) => {
+    currentRequest += 1
+    currentKind = nextKind
+  }
+
+  const begin = (requestKind: K) => {
+    const request = ++currentRequest
+    return {
+      isCurrent: () => isCurrentParticipationDetailRequest(request, currentRequest, requestKind, currentKind),
+    }
+  }
+
+  async function load<T>(
+    requestKind: K,
+    requestId: string,
+    loadDetail: (kind: K, requestId: string) => Promise<T>,
+    select: (detail: T) => void,
+  ): Promise<boolean> {
+    const request = begin(requestKind)
+    const detail = await loadDetail(requestKind, requestId)
+    if (!request.isCurrent()) return false
+    select(detail)
+    return true
+  }
+
+  return { begin, load, switchKind }
 }
 
 export function participationErrorMessage(status: number, error: ParticipationContractError): string {
@@ -53,17 +148,18 @@ export function participationTargetDetails(item: ParticipationTarget): Array<[st
     return Object.entries(item.candidate)
       .filter((entry): entry is [string, string | number | boolean] =>
         ['string', 'number', 'boolean'].includes(typeof entry[1]))
-      .map(([key, value]) => [key, String(value)])
+      .map(([key, value]) => [participationCandidateFieldLabel(key), String(value)])
   }
   return [
     ...(item.targetId ? [['대상 식별자', item.targetId] as [string, string]] : []),
-    ...(item.reportType ? [['신고 유형', item.reportType] as [string, string]] : []),
+    ...(item.reportType ? [['신고 유형', participationReportTypeLabel(item.reportType)] as [string, string]] : []),
   ]
 }
 
 export function participationTargetSummary(item: ParticipationTarget): string {
   const values = participationTargetDetails(item).map(([, value]) => value)
-  return values.length ? `${item.targetType} · ${values.join(' · ')}` : item.targetType
+  const targetType = participationTargetTypeLabel(item.targetType)
+  return values.length ? `${targetType} · ${values.join(' · ')}` : targetType
 }
 
 export type ParticipationListQuery = {
