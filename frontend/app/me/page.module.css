@@ -29,6 +29,10 @@
 }
 
 .passwordResetLink {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 24px;
+  align-items: center;
   color: var(--color-primary-strong);
   font-size: var(--font-size-sm);
   font-weight: 700;
