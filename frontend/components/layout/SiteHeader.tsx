@@ -217,6 +217,7 @@ export function SiteHeader() {
               ) : <span className={styles.sunIcon}>☀</span>) : '◐'}
             </span>
           </button>
+          {status === 'authenticated' ? <NotificationBell /> : null}
           <details className={styles.quickMenu} ref={quickMenuRef}>
             <summary aria-label="메뉴">
               <span className={styles.menuIcon} aria-hidden="true"><i /><i /><i /></span>
@@ -259,7 +260,6 @@ export function SiteHeader() {
           {status === 'authenticated' ? (
             <>
               {session?.role === 'ADMIN' ? <Link href="/admin">관리자</Link> : null}
-              <NotificationBell />
               <details
                 className={styles.memberMenu}
                 ref={menuRef}
