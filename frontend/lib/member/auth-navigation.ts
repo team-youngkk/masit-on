@@ -23,6 +23,8 @@ const ADMIN_RETURN_TO_PATHS = new Set([
   '/admin/visits/new',
 ])
 
+const AUTHENTICATION_PATHS = new Set(['/login', '/signup', '/verify-email', '/password-reset', '/admin/login'])
+
 export function safeAdminReturnTo(returnTo: string | null | undefined): string | null {
   if (!returnTo || returnTo.includes('\\') || /%25/i.test(returnTo)) return null
   const safeReturnTo = safeMemberReturnTo(returnTo)
@@ -33,6 +35,19 @@ export function safeAdminReturnTo(returnTo: string | null | undefined): string |
       ? parsed.pathname
       : null
   } catch { return null }
+}
+
+export function memberLoginDestination(returnTo: string | null | undefined): string {
+  if (returnTo && (returnTo.includes('\\') || /%25/i.test(returnTo))) return '/restaurants'
+
+  const safeAdminPath = safeAdminReturnTo(returnTo)
+  if (safeAdminPath) return safeAdminPath
+
+  const safeMemberPath = safeMemberReturnTo(returnTo)
+  if (!safeMemberPath) return '/restaurants'
+
+  const pathname = new URL(safeMemberPath, 'https://masiton.local').pathname
+  return AUTHENTICATION_PATHS.has(pathname) ? '/restaurants' : safeMemberPath
 }
 
 function memberAuthHref(pathname: '/login' | '/signup' | '/verify-email', returnTo: string | null | undefined): string {
