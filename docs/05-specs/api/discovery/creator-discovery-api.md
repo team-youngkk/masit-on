@@ -99,7 +99,8 @@ related_documents:
   "items": [
     {
       "id": "creator-id",
-      "channelName": "채널명"
+      "channelName": "채널명",
+      "profileImageUrl": "https://i.ytimg.com/vi/example/hqdefault.jpg"
     }
   ]
 }
@@ -112,6 +113,7 @@ related_documents:
 | `items` | array | 예 | 채널명 오름차순의 공개 유튜버 | 없으면 `[]` |
 | `items[].id` | Identifier | 예 | 유튜버 식별자 | `null` 불가 |
 | `items[].channelName` | string | 예 | 현재 YouTube 채널명 | 빈 문자열 불가 |
+| `items[].profileImageUrl` | string 또는 null | 예 | 지도 마커 등에 표시할 유튜버 프로필 이미지 URL | 미등록이면 `null` |
 
 #### Error Cases
 
