@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { PageShell, SectionHeader } from '@/components/ui/PageShell'
 import { StatePanel } from '@/components/ui/StatePanel'
 import { memberLoginHref } from '@/lib/member/auth-navigation'
+import { reportTargetType } from '@/lib/member/participation-entry'
 import {
   ContractError,
   createParticipation,
@@ -54,6 +55,8 @@ type ParticipationRequestScreenProps = {
   initialTargetType?: TargetType
   initialTargetId?: string
   initialTargetLabel?: string
+  initialTargetVerified?: boolean
+  initialLoadError?: { message: string; traceId?: string }
   loginReturnTo?: string
 }
 
@@ -63,6 +66,8 @@ export function ParticipationRequestScreen({
   initialTargetType = 'RESTAURANT',
   initialTargetId = '',
   initialTargetLabel = '',
+  initialTargetVerified = false,
+  initialLoadError,
   loginReturnTo = RETURN_TO,
 }: ParticipationRequestScreenProps) {
   const { status: session } = useMemberSession()
@@ -93,7 +98,8 @@ export function ParticipationRequestScreen({
   const detailRequest = useRef(createParticipationDetailCoordinator(initialKind))
   const submissionTabRef = useRef<HTMLButtonElement>(null)
   const reportTabRef = useRef<HTMLButtonElement>(null)
-  const isContextualReport = view === 'new' && kind === 'report' && Boolean(initialTargetId)
+  const isContextualReport = view === 'new' && kind === 'report' && initialTargetVerified
+  const requestTargetType = reportTargetType(targetType, isContextualReport)
   const pageTitle = view === 'history' ? '내 제보·신고 내역' : kind === 'report' ? '정보 오류 신고' : '새 제보 접수'
 
   const load = useCallback(async () => {
@@ -186,7 +192,7 @@ export function ParticipationRequestScreen({
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
-    const base = { targetType, description, ...(evidenceUrl ? { evidenceUrl } : {}) }
+    const base = { targetType: requestTargetType, description, ...(evidenceUrl ? { evidenceUrl } : {}) }
     const payload: SubmissionInput | ReportInput = kind === 'submission'
       ? { ...base, candidate }
       : { ...base, targetId, reportType }
@@ -302,9 +308,9 @@ export function ParticipationRequestScreen({
           <input required value={candidate[field]} onChange={event => { setCandidate({ ...candidate, [field]: event.target.value }); retry.current = null }} />
         </label>)
         : <>
-          {targetId ? (
+          {isContextualReport ? (
             <div className={styles.targetSummary}>
-              <div><strong>신고 대상</strong><span>{participationTargetTypeLabel(targetType)} · {targetLabel || '선택된 정보'}</span></div>
+              <div><strong>신고 대상</strong><span>{participationTargetTypeLabel(requestTargetType)} · {initialTargetLabel || '선택된 정보'}</span></div>
             </div>
           ) : (
             <label>대상 식별자<input required value={targetId} onChange={event => { setTargetId(event.target.value); retry.current = null }} /></label>

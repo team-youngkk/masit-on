@@ -1,6 +1,12 @@
 import { ParticipationRequestScreen } from '@/components/participation/ParticipationRequestScreen'
-import { getRestaurantDetail } from '@/lib/api'
+import {
+  RestaurantDetailUnavailableError,
+  RestaurantIdentifierInvalidError,
+  RestaurantNotFoundError,
+  getRestaurantDetail,
+} from '@/lib/api'
 import type { RequestKind, TargetType } from '@/lib/member/participation'
+import { parseNewParticipationEntry } from '@/lib/member/participation-entry'
 
 type NewParticipationRequestPageProps = {
   searchParams: Promise<{
@@ -16,32 +22,52 @@ function firstValue(value: string | string[] | undefined): string | undefined {
 
 export default async function NewParticipationRequestPage({ searchParams }: NewParticipationRequestPageProps) {
   const params = await searchParams
-  const requestedKind = firstValue(params.kind)
-  const requestedTargetType = firstValue(params.targetType)
-  const requestedTargetId = firstValue(params.targetId)?.trim()
-  const contextualReport = requestedKind === 'report' && requestedTargetType === 'RESTAURANT' && requestedTargetId
-    ? await loadRestaurantContext(requestedTargetId)
+  const entry = parseNewParticipationEntry({
+    kind: firstValue(params.kind),
+    targetType: firstValue(params.targetType),
+    targetId: firstValue(params.targetId),
+  })
+  const restaurantContext = entry.isRestaurantReport && entry.targetId
+    ? await loadRestaurantContext(entry.targetId)
     : null
-  const kind = contextualReport ? 'report' as RequestKind : 'submission' as RequestKind
-  const initialTargetType: TargetType = 'RESTAURANT'
+  const contextualReport = restaurantContext?.status === 'found' ? restaurantContext : null
+  const initialLoadError = restaurantContext?.status === 'unavailable'
+    ? { message: '맛집 정보를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.', traceId: restaurantContext.traceId }
+    : undefined
+  const kind: RequestKind = entry.kind
+  const initialTargetType: TargetType = entry.targetType
+  const targetId = contextualReport?.id ?? entry.targetId
   const loginQuery = new URLSearchParams({ kind, targetType: initialTargetType })
-  if (contextualReport) loginQuery.set('targetId', contextualReport.id)
+  if (targetId) loginQuery.set('targetId', targetId)
 
   return <ParticipationRequestScreen
     view="new"
     initialKind={kind}
     initialTargetType={initialTargetType}
-    initialTargetId={contextualReport?.id}
+    initialTargetId={targetId}
     initialTargetLabel={contextualReport?.name}
+    initialTargetVerified={Boolean(contextualReport)}
+    initialLoadError={initialLoadError}
     loginReturnTo={`/me/requests/new?${loginQuery.toString()}`}
   />
 }
 
-async function loadRestaurantContext(restaurantId: string): Promise<{ id: string; name: string } | null> {
+type RestaurantContext =
+  | { status: 'found'; id: string; name: string }
+  | { status: 'fallback' }
+  | { status: 'unavailable'; traceId?: string }
+
+async function loadRestaurantContext(restaurantId: string): Promise<RestaurantContext> {
   try {
     const restaurant = await getRestaurantDetail(restaurantId)
-    return { id: restaurant.id, name: restaurant.name }
-  } catch {
-    return null
+    return { status: 'found', id: restaurant.id, name: restaurant.name }
+  } catch (reason) {
+    if (reason instanceof RestaurantNotFoundError || reason instanceof RestaurantIdentifierInvalidError) {
+      return { status: 'fallback' }
+    }
+    if (reason instanceof RestaurantDetailUnavailableError) {
+      return { status: 'unavailable', traceId: reason.traceId }
+    }
+    return { status: 'unavailable' }
   }
 }

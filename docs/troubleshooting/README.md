@@ -15,7 +15,9 @@ related_documents:
 
 ## 최신 기록
 
+- [PR #296 신고 대상 컨텍스트와 fallback 경계](pr-296-contextual-report-target-review.md)
 - [PR #286 신규 접수 중복 응답의 상세 상태 확인 회귀](pr-286-participation-duplicate-detail-review.md)
+- [PR #296 신고 대상 컨텍스트와 fallback 경계](pr-296-contextual-report-target-review.md)
 - [PR #289 Redis local fallback의 SSM port 오염](pr-289-redis-recovery-observability-review.md)
 - [Issue #284 Redis 복구 모드의 ALB 보호 선행 조건](pr-284-redis-recovery-observability-review.md)
 - [이슈 #282 dependency health 진단과 롤백 안전성](pr-282-dependency-health-diagnostics-review.md)
