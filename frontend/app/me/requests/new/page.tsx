@@ -6,6 +6,7 @@ type NewParticipationRequestPageProps = {
     kind?: string | string[]
     targetType?: string | string[]
     targetId?: string | string[]
+    targetLabel?: string | string[]
   }>
 }
 
@@ -21,14 +22,17 @@ export default async function NewParticipationRequestPage({ searchParams }: NewP
     ? targetType
     : 'RESTAURANT'
   const targetId = firstValue(params.targetId)?.trim()
+  const targetLabel = firstValue(params.targetLabel)?.trim()
   const loginQuery = new URLSearchParams({ kind, targetType: initialTargetType })
   if (targetId) loginQuery.set('targetId', targetId)
+  if (targetLabel) loginQuery.set('targetLabel', targetLabel)
 
   return <ParticipationRequestScreen
     view="new"
     initialKind={kind}
     initialTargetType={initialTargetType}
     initialTargetId={targetId}
+    initialTargetLabel={targetLabel}
     loginReturnTo={`/me/requests/new?${loginQuery.toString()}`}
   />
 }

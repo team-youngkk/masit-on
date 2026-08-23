@@ -53,6 +53,7 @@ type ParticipationRequestScreenProps = {
   initialKind?: RequestKind
   initialTargetType?: TargetType
   initialTargetId?: string
+  initialTargetLabel?: string
   loginReturnTo?: string
 }
 
@@ -61,12 +62,14 @@ export function ParticipationRequestScreen({
   initialKind = 'submission',
   initialTargetType = 'RESTAURANT',
   initialTargetId = '',
+  initialTargetLabel = '',
   loginReturnTo = RETURN_TO,
 }: ParticipationRequestScreenProps) {
   const { status: session } = useMemberSession()
   const [kind, setKind] = useState<RequestKind>(initialKind)
   const [targetType, setTargetType] = useState<TargetType>(initialTargetType)
   const [targetId, setTargetId] = useState(initialTargetId)
+  const [targetLabel, setTargetLabel] = useState(initialTargetLabel)
   const [reportType, setReportType] = useState<ReportType>('ERROR')
   const [candidate, setCandidate] = useState<Record<string, string>>({ name: '', roadAddress: '' })
   const [description, setDescription] = useState('')
@@ -136,6 +139,8 @@ export function ParticipationRequestScreen({
 
   function changeTarget(next: TargetType) {
     setTargetType(next)
+    setTargetId('')
+    setTargetLabel('')
     if (next === 'RESTAURANT') setCandidate({ name: '', roadAddress: '' })
     if (next === 'CREATOR') setCandidate({ channelUrl: '' })
     if (next === 'VIDEO') setCandidate({ videoUrl: '' })
@@ -291,7 +296,14 @@ export function ParticipationRequestScreen({
           <input required value={candidate[field]} onChange={event => { setCandidate({ ...candidate, [field]: event.target.value }); retry.current = null }} />
         </label>)
         : <>
-          <label>대상 식별자<input required value={targetId} onChange={event => { setTargetId(event.target.value); retry.current = null }} /></label>
+          {targetLabel && targetId ? (
+            <div className={styles.targetSummary}>
+              <div><strong>신고 대상</strong><span>{participationTargetTypeLabel(targetType)} · {targetLabel}</span></div>
+              <Link href="/me/requests/new?kind=report">다른 대상 신고하기</Link>
+            </div>
+          ) : (
+            <label>대상 식별자<input required value={targetId} onChange={event => { setTargetId(event.target.value); retry.current = null }} /></label>
+          )}
           <label>신고 유형<select value={reportType} onChange={event => { setReportType(event.target.value as ReportType); retry.current = null }}>
             {(allowedReportTypes(targetType) as ReportType[]).map(value => <option key={value} value={value}>{participationReportTypeLabel(value)}</option>)}
           </select></label>
