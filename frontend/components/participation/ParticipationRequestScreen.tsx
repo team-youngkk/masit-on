@@ -93,6 +93,8 @@ export function ParticipationRequestScreen({
   const detailRequest = useRef(createParticipationDetailCoordinator(initialKind))
   const submissionTabRef = useRef<HTMLButtonElement>(null)
   const reportTabRef = useRef<HTMLButtonElement>(null)
+  const isContextualReport = view === 'new' && kind === 'report' && Boolean(initialTargetId)
+  const pageTitle = view === 'history' ? '내 제보·신고 내역' : kind === 'report' ? '정보 오류 신고' : '새 제보 접수'
 
   const load = useCallback(async () => {
     if (session !== 'authenticated') return
@@ -266,40 +268,43 @@ export function ParticipationRequestScreen({
     }
   }
 
-  if (session === 'loading') return <PageShell title={view === 'new' ? '제보·신고 접수' : '내 제보·신고 내역'}><StatePanel title="로그인 상태를 확인하고 있습니다." /></PageShell>
+  if (session === 'loading') return <PageShell title={pageTitle}><StatePanel title="로그인 상태를 확인하고 있습니다." /></PageShell>
   if (session === 'anonymous') return (
-    <PageShell title={view === 'new' ? '제보·신고 접수' : '내 제보·신고 내역'}><StatePanel tone="warning" title="제보와 신고는 로그인 후 이용할 수 있습니다." actions={<Link href={memberLoginHref(loginReturnTo)}>로그인하기</Link>} /></PageShell>
+    <PageShell title={pageTitle}><StatePanel tone="warning" title="제보와 신고는 로그인 후 이용할 수 있습니다." actions={<Link href={memberLoginHref(loginReturnTo)}>로그인하기</Link>} /></PageShell>
   )
 
   return <PageShell
     className={styles.screen}
-    title={view === 'new' ? '제보·신고 접수' : '내 제보·신고 내역'}
-    description={view === 'new' ? '새 정보는 제보하고, 기존 정보의 문제는 신고해 주세요. 하루 합산 5건까지 접수할 수 있습니다.' : '제보와 신고의 처리 상태와 답변을 확인할 수 있습니다.'}
+    title={pageTitle}
+    description={view === 'new'
+      ? (kind === 'report' ? '현재 보고 있는 정보의 문제를 알려 주세요.' : '새 맛집·유튜버·영상 정보를 제보해 주세요. 하루 합산 5건까지 접수할 수 있습니다.')
+      : '제보와 신고의 처리 상태와 답변을 확인할 수 있습니다.'}
   >
 
-    <div className={styles.tabs} role="tablist" aria-label={view === 'new' ? '요청 종류' : '내역 종류'} onKeyDown={handleTabListKeyDown}>
-      <button id="tab-submission" ref={submissionTabRef} type="button" role="tab" aria-selected={kind === 'submission'} aria-controls={view === 'new' ? 'participation-tabpanel' : 'participation-history-panel'} onClick={() => switchTab('submission')}>{view === 'new' ? '제보: 새 정보 제안' : '제보 내역'}</button>
-      <button id="tab-report" ref={reportTabRef} type="button" role="tab" aria-selected={kind === 'report'} aria-controls={view === 'new' ? 'participation-tabpanel' : 'participation-history-panel'} onClick={() => switchTab('report')}>{view === 'new' ? '신고: 기존 정보 문제' : '신고 내역'}</button>
-    </div>
+    {view === 'history' ? <div className={styles.tabs} role="tablist" aria-label="내역 종류" onKeyDown={handleTabListKeyDown}>
+      <button id="tab-submission" ref={submissionTabRef} type="button" role="tab" aria-selected={kind === 'submission'} aria-controls="participation-history-panel" onClick={() => switchTab('submission')}>제보 내역</button>
+      <button id="tab-report" ref={reportTabRef} type="button" role="tab" aria-selected={kind === 'report'} aria-controls="participation-history-panel" onClick={() => switchTab('report')}>신고 내역</button>
+    </div> : null}
 
-    {view === 'new' ? <div id="participation-tabpanel" role="tabpanel" aria-labelledby={kind === 'submission' ? 'tab-submission' : 'tab-report'} className={styles.tabpanel}>
+    {view === 'new' ? <div id="participation-form-panel" className={styles.tabpanel}>
     <p><Link href="/me/requests">내 제보·신고 내역 확인</Link></p>
     <form className={styles.form} onSubmit={event => void submit(event)}>
       <SectionHeader title={kind === 'submission' ? '새 제보 접수' : '새 신고 접수'} level={2} />
       <label>대상 유형
-        <select value={targetType} onChange={event => changeTarget(event.target.value as TargetType)}>
-          {TARGETS.map(value => <option key={value} value={value}>{participationTargetTypeLabel(value)}</option>)}
-        </select>
+        {isContextualReport
+          ? <span className={styles.readOnlyField}>{participationTargetTypeLabel(targetType)}</span>
+          : <select value={targetType} onChange={event => changeTarget(event.target.value as TargetType)}>
+            {TARGETS.map(value => <option key={value} value={value}>{participationTargetTypeLabel(value)}</option>)}
+          </select>}
       </label>
       {kind === 'submission'
         ? Object.keys(candidate).map(field => <label key={field}>{participationCandidateFieldLabel(field)}
           <input required value={candidate[field]} onChange={event => { setCandidate({ ...candidate, [field]: event.target.value }); retry.current = null }} />
         </label>)
         : <>
-          {targetLabel && targetId ? (
+          {targetId ? (
             <div className={styles.targetSummary}>
-              <div><strong>신고 대상</strong><span>{participationTargetTypeLabel(targetType)} · {targetLabel}</span></div>
-              <Link href="/me/requests/new?kind=report">다른 대상 신고하기</Link>
+              <div><strong>신고 대상</strong><span>{participationTargetTypeLabel(targetType)} · {targetLabel || '선택된 정보'}</span></div>
             </div>
           ) : (
             <label>대상 식별자<input required value={targetId} onChange={event => { setTargetId(event.target.value); retry.current = null }} /></label>
@@ -328,7 +333,7 @@ export function ParticipationRequestScreen({
     </div> : <section id="participation-history-panel" role="tabpanel" aria-labelledby={kind === 'submission' ? 'tab-submission' : 'tab-report'}>
       <div className={styles.filters}>
         <h2>{kind === 'submission' ? '내 제보 목록' : '내 신고 목록'}</h2>
-        <Link href="/me/requests/new">새 제보·신고하기</Link>
+        <Link href="/me/requests/new">새 제보하기</Link>
         <label>상태 <select value={filter} onChange={event => {
           const nextFilter = event.target.value as RequestStatus | ''
           resetPageForFilters(kind, nextFilter)
