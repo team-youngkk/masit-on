@@ -15,7 +15,12 @@ related_documents:
 
 ## 최신 기록
 
+- [PR #286 신규 접수 중복 응답의 상세 상태 확인 회귀](pr-286-participation-duplicate-detail-review.md)
+- [PR #289 Redis local fallback의 SSM port 오염](pr-289-redis-recovery-observability-review.md)
+- [Issue #284 Redis 복구 모드의 ALB 보호 선행 조건](pr-284-redis-recovery-observability-review.md)
+- [이슈 #282 dependency health 진단과 롤백 안전성](pr-282-dependency-health-diagnostics-review.md)
 - [PR #280 페이지네이션 예외 정책 문서 정합성](pr-280-pagination-policy-documentation-review.md)
+- [운영 작업: AI 보충 입력 검증 실패 사유가 화면에서 사라졌다](ops-2026-08-22-ai-supplement-validation-reason.md)
 - [PR #279 장소명 정규화·감사 값 호환·운영 기본값 리뷰](pr-279-ai-place-identity-review.md)
 - [PR #278 Kakao 장소명 완화 판정의 감사와 활성화 게이트](pr-278-kakao-place-name-matching-review.md)
 - [PR #275 프론트 Dockerfile EOF 빈 줄](pr-275-frontend-public-assets-review.md)
@@ -38,6 +43,8 @@ related_documents:
 
 ## 운영 전환
 
+- [AI 보충 입력 검증 실패 사유가 화면에서 사라졌다](ops-2026-08-22-ai-supplement-validation-reason.md)
+
 리뷰가 아니라 실제 운영 작업 중에 드러난 문제의 기록이다. 파일명은 `ops-<날짜>-` 규약을 쓴다.
 
 - [운영 작업: 격리 성능 환경 첫 apply에서 부트스트랩이 전혀 실행되지 않았다](ops-2026-08-20-perf-env-bootstrap-failure.md)
@@ -45,6 +52,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #289 Redis local fallback의 SSM port 오염](pr-289-redis-recovery-observability-review.md)
 - [PR #280 페이지네이션 예외 정책 문서 정합성](pr-280-pagination-policy-documentation-review.md)
 - [PR #279 장소명 정규화·감사 값 호환·운영 기본값 리뷰](pr-279-ai-place-identity-review.md)
 - [PR #278 Kakao 장소명 완화 판정의 감사와 활성화 게이트](pr-278-kakao-place-name-matching-review.md)

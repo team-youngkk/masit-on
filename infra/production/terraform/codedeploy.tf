@@ -62,6 +62,41 @@ resource "aws_codedeploy_deployment_group" "app" {
   # 절차가 필요하다. TERMINATE는 replacement ASG가 이 목록에 들어온 것을
   # 확인한 뒤에만 활성화해야 Terraform state의 seed ASG 삭제를 막을 수 있다.
   lifecycle {
+    precondition {
+      condition     = var.deployment_alarms_enabled || var.initial_alarm_seeding
+      error_message = "deployment_alarms_enabled=false requires initial_alarm_seeding=true; alarm bypass is permitted only for explicit initial seeding."
+    }
+
+    precondition {
+      condition     = !var.initial_alarm_seeding || !var.redis_recovery_mode
+      error_message = "initial_alarm_seeding=true cannot be combined with redis_recovery_mode=true."
+    }
+
+    precondition {
+      condition     = !var.initial_alarm_seeding || !var.deployment_auto_rollback_enabled
+      error_message = "initial_alarm_seeding=true requires deployment_auto_rollback_enabled=false; automatic rollback is disabled only for the initial seed deployment."
+    }
+
+    precondition {
+      condition     = var.initial_alarm_seeding || var.deployment_auto_rollback_enabled
+      error_message = "initial_alarm_seeding=false requires deployment_auto_rollback_enabled=true; automatic rollback may be disabled only for the explicit initial seed deployment."
+    }
+
+    precondition {
+      condition     = var.initial_alarm_seeding ? (!var.deployment_alarms_enabled && !var.deployment_auto_rollback_enabled && !var.redis_recovery_mode) : (var.deployment_alarms_enabled && var.deployment_auto_rollback_enabled)
+      error_message = "Only the explicit initial seed combination may disable deployment alarms and automatic rollback: initial_alarm_seeding=true, deployment_alarms_enabled=false, deployment_auto_rollback_enabled=false, redis_recovery_mode=false."
+    }
+
+    precondition {
+      condition     = !var.redis_recovery_mode || var.deployment_alarms_enabled
+      error_message = "redis_recovery_mode=true requires deployment_alarms_enabled=true; ALB 5xx, latency, and unhealthy-host protections must remain enabled."
+    }
+
+    precondition {
+      condition     = !var.initial_alarm_seeding || !var.codedeploy_termination_enabled
+      error_message = "initial_alarm_seeding=true cannot be combined with codedeploy_termination_enabled=true; keep seed ASG termination disabled until the replacement ASG is verified."
+    }
+
     ignore_changes = [autoscaling_groups]
   }
 
@@ -75,4 +110,3 @@ resource "aws_codedeploy_deployment_group" "app" {
     }
   }
 }
-

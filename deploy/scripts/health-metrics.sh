@@ -9,6 +9,14 @@
 # 3회 실패"와 "저장소 연결 실패 연속 3회"를 각각 표현한다.
 set -uo pipefail
 
+DEPLOYMENT_ENV_FILE="${DEPLOYMENT_ENV_FILE:-/etc/masiton/deployment.env}"
+if [ -f "$DEPLOYMENT_ENV_FILE" ]; then
+  set -a
+  # shellcheck disable=SC1090
+  . "$DEPLOYMENT_ENV_FILE"
+  set +a
+fi
+
 REGION="${AWS_REGION:-ap-northeast-2}"
 NAMESPACE="${METRIC_NAMESPACE:-masiton/health}"
 # fleet 집계 지표의 범위를 가르는 이름이다. CodeDeploy alarm은 asg만 본다.
@@ -56,6 +64,268 @@ ready=$(probe ready "")
 db=$(probe dependencies db)
 redis=$(probe dependencies redis)
 
+# Redis는 앱 컨테이너와 같은 host network를 사용하므로, health-metrics도 같은
+# endpoint를 직접 조회한다. 비밀값은 명령행이 아니라 app-secrets-render.sh가
+# tmpfs에 만든 파일에서 읽는다. 공유 모드가 아니면 SSM의 공유 endpoint를 사용하지
+# 않고 기존 단일 EC2 동거 Redis인 127.0.0.1로 고정한다. 공유 모드에서 SSM 조회가
+# 실패하면 빈 값으로 남겨 capacity 지표를 결측 처리한다.
+if [ "${REQUIRE_SHARED_REDIS:-false}" = true ]; then
+  REDIS_HOST="${REDIS_HOST:-$(aws ssm get-parameter --region "$REGION" --name /masiton/redis/host \
+    --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || printf '')}"
+  REDIS_PORT="${REDIS_PORT:-$(aws ssm get-parameter --region "$REGION" --name /masiton/redis/port \
+    --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || printf '')}"
+else
+  REDIS_HOST=127.0.0.1
+  REDIS_PORT="${REDIS_PORT:-6379}"
+fi
+
+# BEGIN SHARED REDIS ENDPOINT CONTRACT
+redis_ipv4_to_words() {
+  local host="$1"
+  local -a parts=()
+  local part value high low high_part middle_part low_part
+  [[ "$host" =~ ^(0|[1-9][0-9]{0,2})\.(0|[1-9][0-9]{0,2})\.(0|[1-9][0-9]{0,2})\.(0|[1-9][0-9]{0,2})$ ]] || return 1
+  IFS=. read -r -a parts <<< "$host"
+  for part in "${parts[@]}"; do
+    value=$((10#$part))
+    (( value <= 255 )) || return 1
+  done
+  high_part=$((10#${parts[0]})); middle_part=$((10#${parts[1]})); low_part=$((10#${parts[2]})); value=$((10#${parts[3]}))
+  high=$((high_part * 256 + middle_part)); low=$((low_part * 256 + value))
+  REDIS_IPV4_HIGH="$high"
+  REDIS_IPV4_LOW="$low"
+}
+
+redis_ipv6_append_groups() {
+  local group_list="$1" group value
+  local -a groups=()
+  [ -n "$group_list" ] || return 0
+  IFS=: read -r -a groups <<< "$group_list"
+  for group in "${groups[@]}"; do
+    [[ "$group" =~ ^[0-9a-f]{1,4}$ ]] || return 1
+    value=$((16#$group))
+    redis_ipv6_words+=("$value")
+  done
+}
+
+redis_ipv6_to_words() {
+  local host="$1" left right dotted high_hex low_hex
+  local left_count right_count zero_count i group
+  local -a right_groups=()
+  redis_ipv6_words=()
+  [[ "$host" == *:* ]] || return 1
+  if [[ "$host" == *.* ]]; then
+    dotted="${host##*:}"
+    [[ "$dotted" != "$host" ]] || return 1
+    redis_ipv4_to_words "$dotted" || return 1
+    printf -v high_hex '%x' "$REDIS_IPV4_HIGH"
+    printf -v low_hex '%x' "$REDIS_IPV4_LOW"
+    host="${host%:*}:$high_hex:$low_hex"
+  fi
+  case "$host" in
+    *::*)
+      left="${host%%::*}"; right="${host#*::}"
+      [[ "$left" != *::* && "$right" != *::* ]] || return 1
+      [[ -z "$left" || ( "$left" != :* && "$left" != *: ) ]] || return 1
+      [[ -z "$right" || ( "$right" != :* && "$right" != *: ) ]] || return 1
+      redis_ipv6_append_groups "$left" || return 1
+      left_count="${#redis_ipv6_words[@]}"
+      if [ -n "$right" ]; then
+        IFS=: read -r -a right_groups <<< "$right"
+        for group in "${right_groups[@]}"; do
+          [[ "$group" =~ ^[0-9a-f]{1,4}$ ]] || return 1
+        done
+        right_count="${#right_groups[@]}"
+      else
+        right_count=0
+      fi
+      (( left_count + right_count < 8 )) || return 1
+      zero_count=$((8 - left_count - right_count))
+      for ((i = 0; i < zero_count; i++)); do redis_ipv6_words+=(0); done
+      redis_ipv6_append_groups "$right" || return 1
+      ;;
+    *)
+      [[ "$host" != :* && "$host" != *: ]] || return 1
+      redis_ipv6_append_groups "$host" || return 1
+      ;;
+  esac
+  (( "${#redis_ipv6_words[@]}" == 8 ))
+}
+
+redis_ip_is_approved() {
+  local address="$1" first_octet second_octet
+  local -a words=()
+  if redis_ipv4_to_words "$address"; then
+    first_octet=$((REDIS_IPV4_HIGH / 256)); second_octet=$((REDIS_IPV4_HIGH % 256))
+    (( first_octet == 10 )) && return 0
+    (( first_octet == 172 && second_octet >= 16 && second_octet <= 31 )) && return 0
+    (( first_octet == 192 && second_octet == 168 )) && return 0
+    return 1
+  fi
+  redis_ipv6_to_words "$address" || return 1
+  words=("${redis_ipv6_words[@]}")
+  (( words[0] >= 0xfc00 && words[0] <= 0xfdff ))
+}
+
+redis_host_is_noncanonical_numeric_ipv4() {
+  local host="${1%.}"
+  [[ "$host" =~ ^[0-9]+(\.[0-9]+){0,3}$ ]] || return 1
+  ! redis_ipv4_to_words "$host"
+}
+
+redis_resolve_host() {
+  local host="$1"
+  if getent ahosts --no-addrconfig "$host" 2>/dev/null; then
+    return 0
+  fi
+  getent ahosts "$host" 2>/dev/null
+}
+
+validate_redis_host() {
+  local host="${1-}" normalized_host address selected_address="" resolved_any=no scope
+  [ -n "$host" ] || return 1
+  [[ "$host" != *[[:space:]]* ]] || return 1
+  [[ "$host" != */* ]] || return 1
+  normalized_host="${host,,}"
+  normalized_host="${normalized_host%.}"
+  if [[ "$normalized_host" == *%* ]]; then
+    [[ "$normalized_host" == *:* ]] || return 1
+    scope="${normalized_host#*%}"
+    normalized_host="${normalized_host%%\%*}"
+    [ -n "$scope" ] || return 1
+    [[ "$scope" != *%* ]] || return 1
+  fi
+  case "$normalized_host" in
+    localhost|localhost.localdomain|127) return 1 ;;
+  esac
+  redis_host_is_noncanonical_numeric_ipv4 "$normalized_host" && return 1
+  if redis_ipv4_to_words "$normalized_host" || redis_ipv6_to_words "$normalized_host"; then
+    redis_ip_is_approved "$normalized_host" || return 1
+    REDIS_VALIDATED_HOST="$normalized_host"
+    return 0
+  fi
+  while read -r address _; do
+    [ -n "$address" ] || continue
+    if ! redis_ipv4_to_words "$address" && ! redis_ipv6_to_words "$address"; then
+      return 1
+    fi
+    resolved_any=yes
+    redis_ip_is_approved "$address" || return 1
+    [ -n "$selected_address" ] || selected_address="$address"
+  done < <(redis_resolve_host "$normalized_host")
+  [ "$resolved_any" = yes ] || return 1
+  REDIS_VALIDATED_HOST="$selected_address"
+  return 0
+}
+
+validate_redis_port() {
+  local port="${1-}"
+  [[ "$port" =~ ^[0-9]{1,5}$ ]] || return 1
+  local numeric=$((10#$port))
+  (( numeric >= 1 && numeric <= 65535 ))
+}
+
+validate_shared_redis_endpoint() {
+  local host="${1-}"
+  local port="${2-}"
+  if ! validate_redis_host "$host"; then
+    echo "공유 Redis host가 비어 있거나 승인된 사설 주소가 아니다" >&2
+    return 1
+  fi
+  if ! validate_redis_port "$port"; then
+    echo "공유 Redis port가 유효하지 않다" >&2
+    return 1
+  fi
+}
+# END SHARED REDIS ENDPOINT CONTRACT
+
+validate_local_redis_endpoint() {
+  local port="${1-}"
+  REDIS_VALIDATED_HOST=127.0.0.1
+  REDIS_VALIDATED_PORT=""
+  validate_redis_port "$port" || {
+    echo "로컬 Redis port가 유효한 숫자 범위가 아니다" >&2
+    return 1
+  }
+  REDIS_VALIDATED_PORT="$port"
+}
+
+REDIS_ENDPOINT_HOST=""
+REDIS_ENDPOINT_PORT=""
+REDIS_ENDPOINT_VALID=false
+endpoint_validation_status=1
+if [ "${REQUIRE_SHARED_REDIS:-false}" = true ]; then
+  if validate_shared_redis_endpoint "$REDIS_HOST" "$REDIS_PORT"; then
+    REDIS_VALIDATED_PORT="$REDIS_PORT"
+    endpoint_validation_status=0
+  fi
+else
+  if validate_local_redis_endpoint "$REDIS_PORT"; then
+    endpoint_validation_status=0
+  fi
+fi
+if [ "$endpoint_validation_status" -eq 0 ]; then
+  REDIS_ENDPOINT_HOST="$REDIS_VALIDATED_HOST"
+  REDIS_ENDPOINT_PORT="$REDIS_VALIDATED_PORT"
+  REDIS_ENDPOINT_VALID=true
+fi
+if [ "$REDIS_ENDPOINT_VALID" != true ]; then
+  if [ "${REQUIRE_SHARED_REDIS:-false}" = true ]; then
+    echo "Redis shared endpoint가 승인된 private IPv4/ULA IPv6 및 port 계약을 만족하지 않는다" >&2
+  else
+    echo "Redis local endpoint가 127.0.0.1/유효한 port 계약을 만족하지 않는다" >&2
+  fi
+fi
+
+REDIS_PASSWORD_FILE="${REDIS_PASSWORD_FILE:-/run/masiton/secrets/spring.data.redis.password}"
+# Keep the fallback client aligned with deploy/redis/masiton-redis.service. Do not
+# allow deployment environment input to select an arbitrary executable image.
+REDIS_CLI_IMAGE='redis@sha256:8096655e437712b07503796fb64d81359256cfcff0ab29d95a7da72863786efb'
+
+redis_cli() {
+  # Endpoint validation must complete before this function can read the
+  # password file or discover/invoke either Redis client path.
+  [ "$REDIS_ENDPOINT_VALID" = true ] || return 1
+  if command -v redis-cli >/dev/null 2>&1; then
+    [ -r "$REDIS_PASSWORD_FILE" ] || return 1
+    redis-cli --askpass -h "$REDIS_ENDPOINT_HOST" -p "$REDIS_ENDPOINT_PORT" --raw "$@" < "$REDIS_PASSWORD_FILE"
+  elif command -v docker >/dev/null 2>&1; then
+    local redis_password_owner=""
+    [ -r "$REDIS_PASSWORD_FILE" ] || return 1
+    redis_password_owner=$(stat -c '%u:%g' "$REDIS_PASSWORD_FILE" 2>/dev/null) || return 1
+    [[ "$redis_password_owner" =~ ^[0-9]+:[0-9]+$ ]] || return 1
+    docker run --rm --network host \
+      --user "$redis_password_owner" \
+      --mount "type=bind,src=$REDIS_PASSWORD_FILE,dst=/run/masiton-redis-password,readonly" \
+      "$REDIS_CLI_IMAGE" sh -c \
+      'host=$1; port=$2; shift 2; exec redis-cli --askpass -h "$host" -p "$port" --raw "$@" < /run/masiton-redis-password' \
+      sh "$REDIS_ENDPOINT_HOST" "$REDIS_ENDPOINT_PORT" "$@"
+  else
+    return 1
+  fi
+}
+
+redis_used_memory=""
+redis_max_memory=""
+redis_memory_percent=""
+redis_info=""
+if redis_info=$(redis_cli INFO memory 2>/dev/null); then
+  redis_used_memory=$(printf '%s\n' "$redis_info" | awk -F: '$1 == "used_memory" {gsub("\\r", "", $2); print $2; exit}')
+  redis_max_memory=$(printf '%s\n' "$redis_info" | awk -F: '$1 == "maxmemory" {gsub("\\r", "", $2); print $2; exit}')
+fi
+
+redis_memory_data=()
+if [[ "$redis_used_memory" =~ ^[0-9]+$ ]] \
+  && [[ "$redis_max_memory" =~ ^[0-9]+$ ]] \
+  && [ "$redis_max_memory" -gt 0 ]; then
+  redis_memory_percent=$((redis_used_memory * 100 / redis_max_memory))
+  redis_memory_data=(
+    "MetricName=RedisUsedMemoryBytes,Value=$redis_used_memory,Unit=Bytes,Dimensions=[{Name=Environment,Value=$ENVIRONMENT}]"
+    "MetricName=RedisMaxMemoryBytes,Value=$redis_max_memory,Unit=Bytes,Dimensions=[{Name=Environment,Value=$ENVIRONMENT}]"
+    "MetricName=RedisMemoryUtilizationPercent,Value=$redis_memory_percent,Unit=Percent,Dimensions=[{Name=Environment,Value=$ENVIRONMENT}]"
+  )
+fi
+
 # Nginx에 **설치된** 인증서의 남은 일수를 올린다. ACM의 DaysToExpiry는 ACM이 가진
 # 인증서만 보므로, ACM이 갱신했는데 EC2 재배포가 실패한 경우를 잡지 못한다.
 # 계획 4.1절이 감시하려는 위험이 정확히 그 경우다.
@@ -88,6 +358,11 @@ metric_data=(
   # 변하지 않는 환경 이름으로 범위를 좁힌다.
   "MetricName=FleetDependencyRedis,Value=$redis,Unit=None,Dimensions=[{Name=Environment,Value=$ENVIRONMENT}]"
 )
+# Capacity data is intentionally environment-scoped: every ASG instance observes
+# the same dedicated Redis. If INFO memory cannot be read or maxmemory is unset,
+# omit all three metrics so the capacity alarm treats missing data as a detection
+# path failure.
+metric_data+=("${redis_memory_data[@]}")
 # 인증서를 읽지 못했으면 지표를 올리지 않는다. 0을 올리면 만료 임박으로 오탐하고,
 # 임의값을 올리면 실제 만료를 가린다. 지표가 끊기면 알람이 breaching으로 잡는다.
 if [ -n "$cert_days" ]; then
@@ -101,7 +376,7 @@ put_status=0
 aws cloudwatch put-metric-data --region "$REGION" --namespace "$NAMESPACE" \
   --metric-data "${metric_data[@]}" || put_status=$?
 
-echo "live=$live ready=$ready postgres=$db redis=$redis cert_days=${cert_days:-미확인}"
+echo "live=$live ready=$ready postgres=$db redis=$redis redis_memory_percent=${redis_memory_percent:-미확인} cert_days=${cert_days:-미확인}"
 
 if [ "$put_status" -ne 0 ]; then
   echo "CloudWatch 지표 전송에 실패했다 (exit $put_status). 감지 경로가 동작하지 않는다." >&2

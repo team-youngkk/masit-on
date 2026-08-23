@@ -95,6 +95,7 @@ function LiveCourseScreen() {
   const routeAbortController = useRef<AbortController | null>(null)
   /* 같은 tick에 연속으로 발생한 선택 변경이 서로를 덮어쓰지 않도록 최신 목록을 따로 들고 있는다. */
   const selectedRef = useRef<CourseCandidate[]>(selected)
+  const resultPanelRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     if (outcome?.kind !== 'success') {
@@ -132,6 +133,18 @@ function LiveCourseScreen() {
       setSelectedRestaurantId(null)
     }
   }, [outcome, now])
+
+  useEffect(() => {
+    if (!outcome) {
+      return
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+      resultPanelRef.current?.scrollIntoView({ behavior, block: 'start' })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [outcome])
 
   useEffect(
     () => () => {
@@ -539,7 +552,7 @@ function LiveCourseScreen() {
       </section>
 
       {outcome ? (
-        <section className={styles.resultPanel} aria-label="코스 경로 결과">
+        <section ref={resultPanelRef} className={styles.resultPanel} aria-label="코스 경로 결과">
           {outcome.kind === 'success' ? (
             <CourseResult
               route={outcome.route}

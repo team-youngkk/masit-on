@@ -277,9 +277,21 @@ variable "asg_health_check_type" {
 }
 
 variable "deployment_alarms_enabled" {
-  description = "CodeDeploy deployment group의 alarm 게이트. 정상 운영은 true다. blue가 아직 unhealthy한 최초 배포에서만 false로 두어야 배포가 시작 즉시 중단되지 않는다"
+  description = "CodeDeploy deployment group의 alarm 게이트. 정상 운영과 Redis 복구 모드는 true이며, 명시적 최초 seeding에서만 initial_alarm_seeding=true 및 deployment_auto_rollback_enabled=false와 함께 false로 둘 수 있다"
   type        = bool
   default     = true
+}
+
+variable "initial_alarm_seeding" {
+  description = "앱 없는 seed ASG에 최초 known-good revision을 올리는 단 한 번의 seeding 모드. deployment_alarms_enabled=false 및 deployment_auto_rollback_enabled=false와 함께 명령행에서만 명시한다"
+  type        = bool
+  default     = false
+}
+
+variable "redis_recovery_mode" {
+  description = "승인된 단일 Redis 복구 배포에서만 true로 두며, CodeDeploy alarm 목록에서 Redis alarm만 제외한다. ALB·latency·unhealthy-host alarm과 polling 실패 차단은 유지한다"
+  type        = bool
+  default     = false
 }
 
 variable "mail_smtp_port" {
@@ -307,4 +319,3 @@ variable "app_subnet_is_private" {
   type        = bool
   default     = false
 }
-
