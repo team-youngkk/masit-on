@@ -1,6 +1,7 @@
 .layout {
   min-height: 100dvh;
   background: var(--color-surface-muted);
+  color: var(--color-text);
 }
 
 .shell {
@@ -374,3 +375,4 @@
     text-align: left;
   }
 }
+
