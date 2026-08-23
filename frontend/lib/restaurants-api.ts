@@ -107,6 +107,8 @@ export type FetchRestaurantsResult =
 export type Creator = {
   id: string
   channelName: string
+  /* 구버전 최소 선택 목록과 호환하기 위해 profileImageUrl 누락도 허용한다. */
+  profileImageUrl?: string | null
 }
 
 export type CreatorListResponse = {
