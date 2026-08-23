@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import type { MapBounds } from '@/lib/map/map-points-query'
 import type { MapPointItem } from '@/lib/map/map-points-response'
+import { isSafeHttpsUrl } from '@/lib/map/selected-creator-profile-image'
 
 import type { KakaoGlobal, KakaoMap, KakaoMarker, KakaoMarkerImage } from './kakao-maps-types'
 
@@ -26,6 +27,7 @@ declare global {
 type KakaoMapViewProps = {
   items: MapPointItem[]
   selectedId: string | null
+  selectedCreatorProfileImageUrl: string | null
   fallbackBounds: MapBounds
   onSelect: (id: string) => void
 }
@@ -80,8 +82,21 @@ export function loadKakaoMapsSdk(key: string, timeoutMs: number): Promise<KakaoG
   })
 }
 
-/* 기본 마커와 선택 마커를 구분하는 최소 SVG 핀. 외부 이미지 자산을 추가하지 않는다. */
-function createMarkerImage(kakaoGlobal: KakaoGlobal, selected: boolean): KakaoMarkerImage {
+/* 선택 유튜버의 검증된 프로필 이미지가 없을 때 쓰는 기본·선택 SVG 핀이다. */
+function createMarkerImage(
+  kakaoGlobal: KakaoGlobal,
+  selected: boolean,
+  selectedCreatorProfileImageUrl: string | null,
+): KakaoMarkerImage {
+  if (isSafeHttpsUrl(selectedCreatorProfileImageUrl)) {
+    const size = selected ? 36 : 32
+    return new kakaoGlobal.maps.MarkerImage(
+      selectedCreatorProfileImageUrl,
+      new kakaoGlobal.maps.Size(size, size),
+      { offset: new kakaoGlobal.maps.Point(size / 2, size) },
+    )
+  }
+
   const fill = selected ? '%2316a34a' : '%236f6a63'
   const svg =
     `data:image/svg+xml,` +
@@ -95,6 +110,7 @@ function createMarkerImage(kakaoGlobal: KakaoGlobal, selected: boolean): KakaoMa
 export function KakaoMapView({
   items,
   selectedId,
+  selectedCreatorProfileImageUrl,
   fallbackBounds,
   onSelect,
 }: KakaoMapViewProps) {
@@ -108,6 +124,38 @@ export function KakaoMapView({
   const selectedIdRef = useRef(selectedId)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [retryCount, setRetryCount] = useState(0)
+  const [loadedProfileImageUrl, setLoadedProfileImageUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!isSafeHttpsUrl(selectedCreatorProfileImageUrl)) {
+      setLoadedProfileImageUrl(null)
+      return
+    }
+
+    let cancelled = false
+    const image = new window.Image()
+    image.onload = () => {
+      if (!cancelled) {
+        setLoadedProfileImageUrl(selectedCreatorProfileImageUrl)
+      }
+    }
+    image.onerror = () => {
+      if (!cancelled) {
+        setLoadedProfileImageUrl(null)
+      }
+    }
+    image.src = selectedCreatorProfileImageUrl
+
+    return () => {
+      cancelled = true
+      image.onload = null
+      image.onerror = null
+    }
+  }, [selectedCreatorProfileImageUrl])
+
+  const usableProfileImageUrl = loadedProfileImageUrl === selectedCreatorProfileImageUrl
+    ? loadedProfileImageUrl
+    : null
 
   onSelectRef.current = onSelect
   selectedIdRef.current = selectedId
@@ -170,7 +218,11 @@ export function KakaoMapView({
       marker.setMap(null)
     }
 
-    const defaultImage = createMarkerImage(kakaoGlobal, false)
+    const defaultImage = createMarkerImage(
+      kakaoGlobal,
+      false,
+      usableProfileImageUrl,
+    )
     const markersById = new Map<string, KakaoMarker>()
 
     markersRef.current = items.map((item) => {
@@ -197,12 +249,14 @@ export function KakaoMapView({
       ? markersById.get(currentSelectedId)
       : undefined
     if (currentSelectedMarker) {
-      currentSelectedMarker.setImage(createMarkerImage(kakaoGlobal, true))
+      currentSelectedMarker.setImage(
+        createMarkerImage(kakaoGlobal, true, usableProfileImageUrl),
+      )
       previousSelectedIdRef.current = currentSelectedId ?? null
     } else {
       previousSelectedIdRef.current = null
     }
-  }, [items, status])
+  }, [items, usableProfileImageUrl, status])
 
   /*
    * selectedId가 바뀔 때만 실행되어, 이전 선택 마커는 기본 이미지로 되돌리고 새 선택
@@ -222,19 +276,23 @@ export function KakaoMapView({
     if (previousId && previousId !== selectedId) {
       const previousMarker = markersById.get(previousId)
       if (previousMarker) {
-        previousMarker.setImage(createMarkerImage(kakaoGlobal, false))
+        previousMarker.setImage(
+          createMarkerImage(kakaoGlobal, false, usableProfileImageUrl),
+        )
       }
     }
 
     if (selectedId) {
       const selectedMarker = markersById.get(selectedId)
       if (selectedMarker) {
-        selectedMarker.setImage(createMarkerImage(kakaoGlobal, true))
+        selectedMarker.setImage(
+          createMarkerImage(kakaoGlobal, true, usableProfileImageUrl),
+        )
       }
     }
 
     previousSelectedIdRef.current = selectedId
-  }, [selectedId, status])
+  }, [selectedId, status, usableProfileImageUrl])
 
   useEffect(() => {
     const kakaoGlobal = kakaoRef.current

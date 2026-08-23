@@ -50,7 +50,9 @@ export type KakaoMapsNamespace = {
   MarkerImage: new (
     src: string,
     size: { width: number; height: number },
+    options?: { offset?: { x: number; y: number } },
   ) => KakaoMarkerImage
+  Point: new (x: number, y: number) => { x: number; y: number }
   Polyline: new (options: {
     path: KakaoLatLng[]
     strokeWeight?: number
