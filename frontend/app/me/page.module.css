@@ -16,9 +16,29 @@
   box-shadow: var(--shadow-card);
 }
 
-.summary strong {
+.summaryAccount {
+  display: grid;
+  min-width: 0;
+  flex: 1 1 auto;
+  gap: var(--space-1);
+}
+
+.summaryAccount strong {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.passwordResetLink {
+  color: var(--color-primary-strong);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+}
+
+.passwordResetLink:hover,
+.passwordResetLink:focus-visible {
+  color: var(--color-primary-deep);
 }
 
 .menu {
@@ -88,6 +108,8 @@
 }
 
 @media (max-width: 480px) {
+  .summaryAccount { width: 100%; }
   .summary > button,
   .withdrawalActions > button { flex: 1 1 100%; }
 }
+

@@ -106,7 +106,10 @@ export default function MePage() {
   return <PageShell className={styles.page} size="narrow" eyebrow="회원" title="내 정보" description="내 계정과 개인화 메뉴를 관리합니다.">
     {member ? <>
       <section className={styles.summary} aria-label="현재 로그인한 계정">
-        <strong>{member.email}</strong>
+        <div className={styles.summaryAccount}>
+          <strong>{member.email}</strong>
+          <Link className={styles.passwordResetLink} href="/password-reset">비밀번호 재설정</Link>
+        </div>
         <Button variant="secondary" disabled={action !== null} onClick={logout}>{action === 'logout' ? '로그아웃 중…' : '로그아웃'}</Button>
       </section>
       <nav className={styles.menu} aria-label="내 정보 메뉴">
@@ -128,3 +131,4 @@ export default function MePage() {
     {message ? <StatePanel compact tone={messageIsError ? 'danger' : 'neutral'} title={message} /> : null}
   </PageShell>
 }
+
