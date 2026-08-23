@@ -38,6 +38,40 @@ function MapNavigationLink({
   )
 }
 
+type MobileNavIconName = 'search' | 'course' | 'popular' | 'curation' | 'map'
+
+function MobileNavIcon({ name }: { name: MobileNavIconName }) {
+  const props = {
+    viewBox: '0 0 24 24',
+    width: 24,
+    height: 24,
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.8,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    'aria-hidden': true,
+  }
+
+  if (name === 'search') {
+    return <svg {...props} strokeWidth={2.1}><circle cx="10" cy="10" r="6.5" /><path d="m15 15 5 5" /></svg>
+  }
+
+  if (name === 'course') {
+    return <svg {...props}><path d="M5 20c4 0 5-3 5-6s1-6 5-6h4" /><path d="m16 5 3-3 3 3" /></svg>
+  }
+
+  if (name === 'popular') {
+    return <svg {...props}><path d="M7 4h10v3a5 5 0 0 1-10 0V4Z" /><path d="M7 6H4v1a4 4 0 0 0 4 4M17 6h3v1a4 4 0 0 1-4 4M12 12v4M9 20h6M10 16h4" /></svg>
+  }
+
+  if (name === 'curation') {
+    return <svg {...props}><path d="m4 7 8-3 8 3-8 3-8-3Z" /><path d="m4 12 8 3 8-3M4 17l8 3 8-3" /></svg>
+  }
+
+  return <svg {...props}><path d="m3.5 5.5 5.5-2.5 6 3 5.5-2.5v15L15 21l-6-3-5.5 2.5v-15Z" /><path d="M9 3v15M15 6v15" /></svg>
+}
+
 export function SiteHeader() {
   const pathname = usePathname()
   const { status, session, logout } = useMemberSession()
@@ -203,7 +237,7 @@ export function SiteHeader() {
               {status === 'authenticated' ? (
                 <>
                   {session?.role === 'ADMIN' ? <Link href="/admin" onClick={closeQuickMenu}>관리자</Link> : null}
-                  <NotificationBell />
+                  <NotificationBell showLabel />
                   <Link href="/me" onClick={closeQuickMenu}>내 정보</Link>
                   <Link href="/me/favorites" onClick={closeQuickMenu}>내 찜</Link>
                   <Link href="/me/recent-restaurants" onClick={closeQuickMenu}>최근 본 맛집</Link>
@@ -270,21 +304,22 @@ export function SiteHeader() {
       </div>
       <nav className={styles.mobileNav} aria-label="모바일 주요 메뉴">
         <Link href="/restaurants" className={navClass('/restaurants')} aria-current={pathname.startsWith('/restaurants') ? 'page' : undefined}>
-          <span className={styles.mobileSearchIcon} aria-hidden="true" /><span>탐색</span>
+          <MobileNavIcon name="search" /><span>탐색</span>
         </Link>
         <Link href={COURSE_NAVIGATION.href} className={navClass(COURSE_NAVIGATION.href)} aria-current={pathname.startsWith(COURSE_NAVIGATION.href) ? 'page' : undefined}>
-          <span aria-hidden="true">↝</span><span>코스</span>
+          <MobileNavIcon name="course" /><span>코스</span>
         </Link>
         <Link href="/popular" className={navClass('/popular')} aria-current={pathname.startsWith('/popular') ? 'page' : undefined}>
-          <span aria-hidden="true">♨</span><span>인기</span>
+          <MobileNavIcon name="popular" /><span>인기</span>
         </Link>
         <Link href="/curations" className={navClass('/curations')} aria-current={pathname.startsWith('/curations') ? 'page' : undefined}>
-          <span aria-hidden="true">▣</span><span>큐레이션</span>
+          <MobileNavIcon name="curation" /><span>큐레이션</span>
         </Link>
-        <Suspense fallback={<Link href="/map" className={navClass('/map')}><span aria-hidden="true">⌖</span><span>지도</span></Link>}>
-          <MapNavigationLink className={navClass('/map')}><span aria-hidden="true">⌖</span><span>지도</span></MapNavigationLink>
+        <Suspense fallback={<Link href="/map" className={navClass('/map')}><MobileNavIcon name="map" /><span>지도</span></Link>}>
+          <MapNavigationLink className={navClass('/map')}><MobileNavIcon name="map" /><span>지도</span></MapNavigationLink>
         </Suspense>
       </nav>
     </header>
   )
 }
+

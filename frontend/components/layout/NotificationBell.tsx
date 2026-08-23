@@ -9,7 +9,7 @@ import { NOTIFICATIONS_CHANGED_EVENT, formatUnreadBadge, getUnreadCount } from '
 
 import styles from './SiteHeader.module.css'
 
-export function NotificationBell() {
+export function NotificationBell({ showLabel = false }: { showLabel?: boolean }) {
   const { status } = useMemberSession()
   const pathname = usePathname()
   const request = useRef(0)
@@ -50,8 +50,8 @@ export function NotificationBell() {
       className={styles.notificationBell}
       aria-label={badge ? `읽지 않은 알림 ${unreadCount}개` : '알림'}
     >
-      <span aria-hidden="true" className={styles.notificationIcon}>
-        🔔
+      <span aria-hidden="true" className={showLabel ? styles.notificationLabel : styles.notificationIcon}>
+        {showLabel ? '알림' : '🔔'}
       </span>
       {badge ? (
         <span className={styles.notificationBadge} aria-hidden="true">
@@ -61,3 +61,4 @@ export function NotificationBell() {
     </Link>
   )
 }
+
