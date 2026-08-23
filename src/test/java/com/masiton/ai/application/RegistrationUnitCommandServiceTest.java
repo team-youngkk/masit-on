@@ -211,6 +211,59 @@ class RegistrationUnitCommandServiceTest {
     }
 
     @Test
+    @DisplayName("PLACE_AMBIGUOUS 보충 CONFIRM이 후속 검증에 실패하면 원래 사유와 실제 실패 사유를 함께 반환한다")
+    void review_CONFIRM_PLACE_AMBIGUOUS보충이후속검증에실패하면_원래사유와실제실패사유를함께반환한다() {
+        // Given
+        AiRegistrationUnitStore.RegistrationUnitRow unit = blockedUnitRow("PLACE_AMBIGUOUS");
+        when(registrationUnitStore.findByJobId(JOB_ID)).thenReturn(List.of(unit));
+        when(registrationUnitStore.lockByJobAndUnitId(JOB_ID, UNIT_ID)).thenReturn(Optional.of(unit));
+        when(executeRegistrationUnit.execute(any()))
+                .thenReturn(RegistrationUnitExecutionResult.blocked("VISIT_EVIDENCE_REQUIRED"));
+
+        // When / Then
+        assertThatThrownBy(() -> service.review(JOB_ID, "CONFIRM", UNIT_ID.toString(), "사유",
+                "https://place.map.kakao.com/1", null, List.of(), UUID.randomUUID()))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(exception -> {
+                    BusinessException businessException = (BusinessException) exception;
+                    assertThat(businessException.status()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+                    assertThat(businessException.code()).isEqualTo("AIEXTRACT_VALIDATION_CONFLICT");
+                    RegistrationUnitCommandService.ValidationConflictDetails details =
+                            (RegistrationUnitCommandService.ValidationConflictDetails) businessException.details();
+                    assertThat(details.blockReason()).isEqualTo("PLACE_AMBIGUOUS");
+                    assertThat(details.validationFailureReason()).isEqualTo("VISIT_EVIDENCE_REQUIRED");
+                    assertThat(details.recoveryPaths()).containsExactly("REEXTRACT", "MANUAL_REGISTRATION");
+                    assertThat(details.requiredSupplements()).isEmpty();
+                    assertThat(objectMapper.writeValueAsString(details))
+                            .contains("\"validationFailureReason\":\"VISIT_EVIDENCE_REQUIRED\"");
+                });
+        verify(confirmCommitService, never()).commit(any(), anyString(), any(), any(), any(), any(), any(), any(), any());
+        verify(rollbackUseCase, never()).discardFailedRegistration(any(), anyBoolean(), any(), anyBoolean(), any(),
+                anyBoolean(), any(), anyBoolean());
+    }
+
+    @Test
+    @DisplayName("일반 validationConflict 응답에는 validationFailureReason을 추가하지 않는다")
+    void 일반_validationConflict응답은_validationFailureReason을추가하지않는다() {
+        // Given
+        AiRegistrationUnitStore.RegistrationUnitRow unit = unitRow("AUTO_CONFIRMED", "PLACE_AMBIGUOUS");
+        when(registrationUnitStore.findByJobId(JOB_ID)).thenReturn(List.of(unit));
+        when(registrationUnitStore.lockByJobAndUnitId(JOB_ID, UNIT_ID)).thenReturn(Optional.of(unit));
+
+        // When / Then
+        assertThatThrownBy(() -> service.review(JOB_ID, "CONFIRM", UNIT_ID.toString(), "사유",
+                "https://place.map.kakao.com/1", null, List.of(), UUID.randomUUID()))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(exception -> {
+                    BusinessException businessException = (BusinessException) exception;
+                    assertThat(businessException.code()).isEqualTo("AIEXTRACT_VALIDATION_CONFLICT");
+                    assertThat(objectMapper.writeValueAsString(businessException.details()))
+                            .isEqualTo("{\"blockReason\":\"PLACE_AMBIGUOUS\",\"recoveryPaths\":[\"SUPPLEMENT\",\"MANUAL_REGISTRATION\"],"
+                                    + "\"requiredSupplements\":[\"kakaoPlaceUrl\"]}");
+                });
+    }
+
+    @Test
     @DisplayName("DISCARD 중 동시 요청이 먼저 반영하면 409 AIEXTRACT_CONCURRENT_REQUEST_CONFLICT를 던진다")
     void review_DISCARD중_동시요청이먼저반영하면_409충돌을던진다() {
         // Given
@@ -350,9 +403,7 @@ class RegistrationUnitCommandServiceTest {
     }
 
     private AiRegistrationUnitStore.RegistrationUnitRow blockedUnitRow(UUID unitId) {
-        return new AiRegistrationUnitStore.RegistrationUnitRow(unitId, SNAPSHOT_ID, 1, "행복식당", "AUTO_BLOCKED",
-                "PLACE_NOT_FOUND", null, null, null, null, null, null, List.of(), null, OffsetDateTime.now(), null,
-                null);
+        return unitRow(unitId, "AUTO_BLOCKED", "PLACE_NOT_FOUND");
     }
 
     private AiRegistrationUnitStore.RegistrationUnitRow registeredUnitRow(UUID unitId, String reviewStatus) {
@@ -365,9 +416,20 @@ class RegistrationUnitCommandServiceTest {
     }
 
     private AiRegistrationUnitStore.RegistrationUnitRow blockedUnitRow() {
-        return new AiRegistrationUnitStore.RegistrationUnitRow(UNIT_ID, SNAPSHOT_ID, 1, "행복식당", "AUTO_BLOCKED",
-                "PLACE_NOT_FOUND", null, null, null, null, null, null, List.of(), null, OffsetDateTime.now(), null,
-                null);
+        return blockedUnitRow("PLACE_NOT_FOUND");
+    }
+
+    private AiRegistrationUnitStore.RegistrationUnitRow blockedUnitRow(String blockReason) {
+        return unitRow(UNIT_ID, "AUTO_BLOCKED", blockReason);
+    }
+
+    private AiRegistrationUnitStore.RegistrationUnitRow unitRow(String reviewStatus, String blockReason) {
+        return unitRow(UNIT_ID, reviewStatus, blockReason);
+    }
+
+    private AiRegistrationUnitStore.RegistrationUnitRow unitRow(UUID unitId, String reviewStatus, String blockReason) {
+        return new AiRegistrationUnitStore.RegistrationUnitRow(unitId, SNAPSHOT_ID, 1, "행복식당", reviewStatus,
+                blockReason, null, null, null, null, null, null, List.of(), null, OffsetDateTime.now(), null, null);
     }
 
     private AiRegistrationUnitStore.RegistrationUnitRow registeredUnitRow(String reviewStatus) {

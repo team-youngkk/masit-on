@@ -26,8 +26,15 @@ import {
 } from '@/lib/member/participation'
 import {
   allowedReportTypes,
+  createParticipationDetailCoordinator,
+  participationCandidateFieldLabel,
+  participationDuplicateRequestId,
+  participationReportTypeLabel,
+  participationStatusLabel,
   participationTargetDetails,
   participationTargetSummary,
+  participationTargetTypeLabel,
+  isCurrentParticipationDetailRequest,
   updateParticipationListQuery,
 } from '@/lib/member/participation-coordination'
 
@@ -42,6 +49,7 @@ const TAB_ORDER: RequestKind[] = ['submission', 'report']
 type SubmitNotice = { text: string; isError: boolean; traceId?: string }
 
 type ParticipationRequestScreenProps = {
+  view?: 'new' | 'history'
   initialKind?: RequestKind
   initialTargetType?: TargetType
   initialTargetId?: string
@@ -49,6 +57,7 @@ type ParticipationRequestScreenProps = {
 }
 
 export function ParticipationRequestScreen({
+  view = 'new',
   initialKind = 'submission',
   initialTargetType = 'RESTAURANT',
   initialTargetId = '',
@@ -78,7 +87,7 @@ export function ParticipationRequestScreen({
   const [loaded, setLoaded] = useState(false)
   const retry = useRef<{ fingerprint: string; key: string } | null>(null)
   const listRequest = useRef(0)
-  const detailRequest = useRef(0)
+  const detailRequest = useRef(createParticipationDetailCoordinator(initialKind))
   const submissionTabRef = useRef<HTMLButtonElement>(null)
   const reportTabRef = useRef<HTMLButtonElement>(null)
 
@@ -121,7 +130,9 @@ export function ParticipationRequestScreen({
     }
   }, [filter, kind, pageNumber, session])
 
-  useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    if (view === 'history') void load()
+  }, [load, view])
 
   function changeTarget(next: TargetType) {
     setTargetType(next)
@@ -144,7 +155,7 @@ export function ParticipationRequestScreen({
 
   function switchTab(nextKind: RequestKind) {
     if (nextKind === kind) return
-    detailRequest.current += 1
+    detailRequest.current.switchKind(nextKind)
     resetPageForFilters(nextKind, filter)
     setKind(nextKind)
     setSelected(null)
@@ -181,12 +192,14 @@ export function ParticipationRequestScreen({
     try {
       const created = await createParticipation(kind, payload, retry.current.key)
       retry.current = null
-      setSelected(created)
+      setSelected(view === 'history' ? created : null)
       setDescription('')
       setEvidenceUrl('')
       setSubmitNotice({ text: '요청을 접수했습니다. 접수만으로 공개 데이터가 변경되거나 숨겨지지 않습니다.', isError: false })
-      if (pageNumber === 1) await load()
-      else setPageNumber(1)
+      if (view === 'history') {
+        if (pageNumber === 1) await load()
+        else setPageNumber(1)
+      }
     } catch (reason) {
       const parsed = await parseParticipationError(reason)
       if (parsed?.status === 401) {
@@ -198,11 +211,18 @@ export function ParticipationRequestScreen({
       } else if (parsed) {
         const contract: ContractError = parsed.contract
         setSubmitNotice({ text: participationErrorMessage(parsed.status, contract), isError: true, traceId: contract.traceId })
-        if ((contract.code === 'DUPLICATE_OPEN_SUBMISSION' || contract.code === 'DUPLICATE_OPEN_REPORT')
-          && contract.resource?.requestId) {
+        const duplicateRequestId = participationDuplicateRequestId(contract)
+        if (duplicateRequestId) {
           setFilter('')
           setPageNumber(1)
-          try { setSelected(await getParticipationDetail(kind, contract.resource.requestId)) } catch { /* 목록에서 재확인 */ }
+          try {
+            await detailRequest.current.load(
+              kind,
+              duplicateRequestId,
+              getParticipationDetail,
+              setSelected,
+            )
+          } catch { /* 목록에서 재확인 */ }
         }
       } else {
         setSubmitNotice({ text: '네트워크 오류가 발생했습니다. 같은 요청으로 다시 시도해 주세요.', isError: true })
@@ -213,11 +233,11 @@ export function ParticipationRequestScreen({
   }
 
   async function openDetail(item: ParticipationItem) {
-    const request = ++detailRequest.current
+    const request = detailRequest.current.begin(kind)
     setBusy(true)
     try {
       const detail = await getParticipationDetail(kind, item.requestId)
-      if (request !== detailRequest.current) return
+      if (!request.isCurrent()) return
       setSelected(detail)
       setError(false)
       setErrorTraceId(undefined)
@@ -225,7 +245,7 @@ export function ParticipationRequestScreen({
       setMessage('')
     } catch (reason) {
       const parsed = await parseParticipationError(reason)
-      if (request !== detailRequest.current) return
+      if (!request.isCurrent()) return
       setErrorTraceId(parsed?.contract.traceId)
       if (parsed?.status === 401) {
         setUnauthorized(true)
@@ -237,38 +257,43 @@ export function ParticipationRequestScreen({
         setMessage(parsed?.contract.message || '요청 상세를 불러오지 못했습니다.')
       }
     } finally {
-      if (request === detailRequest.current) setBusy(false)
+      if (request.isCurrent()) setBusy(false)
     }
   }
 
-  if (session === 'loading') return <PageShell title="제보·신고"><StatePanel title="로그인 상태를 확인하고 있습니다." /></PageShell>
+  if (session === 'loading') return <PageShell title={view === 'new' ? '제보·신고 접수' : '내 제보·신고 내역'}><StatePanel title="로그인 상태를 확인하고 있습니다." /></PageShell>
   if (session === 'anonymous') return (
-    <PageShell title="제보·신고"><StatePanel tone="warning" title="제보와 신고는 로그인 후 이용할 수 있습니다." actions={<Link href={memberLoginHref(loginReturnTo)}>로그인하기</Link>} /></PageShell>
+    <PageShell title={view === 'new' ? '제보·신고 접수' : '내 제보·신고 내역'}><StatePanel tone="warning" title="제보와 신고는 로그인 후 이용할 수 있습니다." actions={<Link href={memberLoginHref(loginReturnTo)}>로그인하기</Link>} /></PageShell>
   )
 
-  return <PageShell className={styles.screen} title="내 제보·신고" description="새 정보는 제보하고, 기존 정보의 문제는 신고해 주세요. 하루 합산 5건까지 접수할 수 있습니다.">
+  return <PageShell
+    className={styles.screen}
+    title={view === 'new' ? '제보·신고 접수' : '내 제보·신고 내역'}
+    description={view === 'new' ? '새 정보는 제보하고, 기존 정보의 문제는 신고해 주세요. 하루 합산 5건까지 접수할 수 있습니다.' : '제보와 신고의 처리 상태와 답변을 확인할 수 있습니다.'}
+  >
 
-    <div className={styles.tabs} role="tablist" aria-label="요청 종류" onKeyDown={handleTabListKeyDown}>
-      <button id="tab-submission" ref={submissionTabRef} type="button" role="tab" aria-selected={kind === 'submission'} aria-controls="participation-tabpanel" onClick={() => switchTab('submission')}>제보: 새 정보 제안</button>
-      <button id="tab-report" ref={reportTabRef} type="button" role="tab" aria-selected={kind === 'report'} aria-controls="participation-tabpanel" onClick={() => switchTab('report')}>신고: 기존 정보 문제</button>
+    <div className={styles.tabs} role="tablist" aria-label={view === 'new' ? '요청 종류' : '내역 종류'} onKeyDown={handleTabListKeyDown}>
+      <button id="tab-submission" ref={submissionTabRef} type="button" role="tab" aria-selected={kind === 'submission'} aria-controls={view === 'new' ? 'participation-tabpanel' : 'participation-history-panel'} onClick={() => switchTab('submission')}>{view === 'new' ? '제보: 새 정보 제안' : '제보 내역'}</button>
+      <button id="tab-report" ref={reportTabRef} type="button" role="tab" aria-selected={kind === 'report'} aria-controls={view === 'new' ? 'participation-tabpanel' : 'participation-history-panel'} onClick={() => switchTab('report')}>{view === 'new' ? '신고: 기존 정보 문제' : '신고 내역'}</button>
     </div>
 
-    <div id="participation-tabpanel" role="tabpanel" aria-labelledby={kind === 'submission' ? 'tab-submission' : 'tab-report'} className={styles.tabpanel}>
+    {view === 'new' ? <div id="participation-tabpanel" role="tabpanel" aria-labelledby={kind === 'submission' ? 'tab-submission' : 'tab-report'} className={styles.tabpanel}>
+    <p><Link href="/me/requests">내 제보·신고 내역 확인</Link></p>
     <form className={styles.form} onSubmit={event => void submit(event)}>
       <SectionHeader title={kind === 'submission' ? '새 제보 접수' : '새 신고 접수'} level={2} />
       <label>대상 유형
         <select value={targetType} onChange={event => changeTarget(event.target.value as TargetType)}>
-          {TARGETS.map(value => <option key={value}>{value}</option>)}
+          {TARGETS.map(value => <option key={value} value={value}>{participationTargetTypeLabel(value)}</option>)}
         </select>
       </label>
       {kind === 'submission'
-        ? Object.keys(candidate).map(field => <label key={field}>{field}
+        ? Object.keys(candidate).map(field => <label key={field}>{participationCandidateFieldLabel(field)}
           <input required value={candidate[field]} onChange={event => { setCandidate({ ...candidate, [field]: event.target.value }); retry.current = null }} />
         </label>)
         : <>
           <label>대상 식별자<input required value={targetId} onChange={event => { setTargetId(event.target.value); retry.current = null }} /></label>
           <label>신고 유형<select value={reportType} onChange={event => { setReportType(event.target.value as ReportType); retry.current = null }}>
-            {(allowedReportTypes(targetType) as ReportType[]).map(value => <option key={value}>{value}</option>)}
+            {(allowedReportTypes(targetType) as ReportType[]).map(value => <option key={value} value={value}>{participationReportTypeLabel(value)}</option>)}
           </select></label>
         </>}
       <label>설명 <span className={styles.muted}>10~2000자</span>
@@ -288,16 +313,17 @@ export function ParticipationRequestScreen({
       </p>
     ) : null}
 
-    <section>
+    </div> : <section id="participation-history-panel" role="tabpanel" aria-labelledby={kind === 'submission' ? 'tab-submission' : 'tab-report'}>
       <div className={styles.filters}>
-        <h2>내 요청 목록</h2>
+        <h2>{kind === 'submission' ? '내 제보 목록' : '내 신고 목록'}</h2>
+        <Link href="/me/requests/new">새 제보·신고하기</Link>
         <label>상태 <select value={filter} onChange={event => {
           const nextFilter = event.target.value as RequestStatus | ''
           resetPageForFilters(kind, nextFilter)
           setFilter(nextFilter)
         }}>
           <option value="">전체</option>
-          {STATUSES.map(value => <option key={value}>{value}</option>)}
+          {STATUSES.map(value => <option key={value} value={value}>{participationStatusLabel(value)}</option>)}
         </select></label>
         <Button variant="secondary" disabled={busy} onClick={() => void load()}>새로고침</Button>
       </div>
@@ -312,7 +338,7 @@ export function ParticipationRequestScreen({
         <ul className={styles.list}>
           {items.map(item => <li key={item.requestId}>
             <button className={styles.item} type="button" onClick={() => void openDetail(item)}>
-              <strong>{participationTargetSummary(item)}</strong> · {item.status}<br />
+              <strong>{participationTargetSummary(item)}</strong> · {participationStatusLabel(item.status)}<br />
               <span>{item.description}</span>
             </button>
           </li>)}
@@ -323,12 +349,12 @@ export function ParticipationRequestScreen({
         <span>{pageNumber} / {Math.max(totalPages, 1)} 페이지</span>
         <Button variant="secondary" disabled={busy || !hasNext} onClick={() => setPageNumber(pageNumber + 1)}>다음</Button>
       </nav>
-    </section>
+    </section>}
 
     {selected ? <section className={styles.detail} aria-live="polite">
       <h2>요청 상세</h2>
-      <p><strong>상태:</strong> {selected.status}</p>
-      <p><strong>대상:</strong> {selected.targetType}</p>
+      <p><strong>상태:</strong> {participationStatusLabel(selected.status)}</p>
+      <p><strong>대상:</strong> {participationTargetTypeLabel(selected.targetType)}</p>
       {participationTargetDetails(selected).map(([label, value]) => <p key={label}><strong>{label}:</strong> {value}</p>)}
       <p>{selected.description}</p>
       {selected.memberReason ? <p><strong>처리 사유:</strong> {selected.memberReason}</p> : null}
@@ -344,7 +370,6 @@ export function ParticipationRequestScreen({
         </p>
         : null}
     </section> : null}
-    </div>
     {message ? <p className={error ? styles.error : undefined} role={error ? 'alert' : 'status'}>
       {message}
       {errorTraceId ? <span className={styles.traceId}>traceId: {errorTraceId}</span> : null}

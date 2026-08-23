@@ -22,7 +22,8 @@ public class CreatorSelectionListQueryService implements GetPublicCreatorSelecti
     @Override
     public List<CreatorSelectionItem> getPublicSelectionList() {
         return creatorRepositoryPort.findPublicSelectionList().stream()
-                .map(creator -> new CreatorSelectionItem(creator.getId(), creator.getChannelName()))
+                .map(creator -> new CreatorSelectionItem(
+                        creator.getId(), creator.getChannelName(), creator.getProfileImageUrl()))
                 .toList();
     }
 }

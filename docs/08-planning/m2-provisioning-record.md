@@ -397,7 +397,7 @@ Docker는 이 Task에서 처음 설치했다(`docker 25.0.14`, `overlay2`, cgrou
 
 - tmpfs이므로 재기동하면 사라진다. 자격 증명이 루트 볼륨과 볼륨 스냅샷에 남지 않는다(NFR-SECURITY-003).
 - 그래서 컨테이너의 `--restart` 정책을 쓰지 않고 systemd가 수명 주기를 소유한다. `--restart`로 되살아나는 컨테이너는 렌더링을 기다리지 않아 마운트 대상이 없는 상태로 기동한다.
-- 값을 명령행 인자로 넘기지 않는다. `redis-server --requirepass`나 `redis-cli -a`는 같은 인스턴스의 `ps`에서 읽힌다. 검증에도 `REDISCLI_AUTH` 환경 변수를 썼다.
+- 값을 명령행 인자로 넘기지 않는다. `redis-server --requirepass`나 `redis-cli -a`는 같은 인스턴스의 `ps`에서 읽힌다. 운영 검증에서는 권한 `0600` 보호 파일을 stdin으로 연결하고 `redis-cli --askpass`를 사용한다.
 - 렌더링한 파일은 `uid 999`(컨테이너의 `redis` 사용자) 소유 `0400`이다. 읽기 전용 마운트라 이미지 entrypoint의 `chown`이 실패하므로 호스트에서 미리 맞춘다.
 
 ### 7.3. 완료 조건 검증
@@ -1098,8 +1098,11 @@ AOF로 인증 상태가 복원되므로 재기동이 세션 전량 소실로 이
 **차단 해제는 두 경로가 있다.** TTL 만료를 기다리거나, 운영자가 카운터를 삭제한다. 리허설에서는 검증 참여자 접속을 빨리 되돌리기 위해 후자를 썼고 삭제 직후 로그인이 `200`으로 복구됐다. 이 절차는 운영 대응 수단으로 기록해 둔다.
 
 ```text
-docker exec -e REDISCLI_AUTH=... masiton-redis redis-cli --scan --pattern 'auth:login-failure:*'
-docker exec -e REDISCLI_AUTH=... masiton-redis redis-cli del <키>
+install -m 0600 /dev/null /run/masiton/redis-cli-password
+# 보호된 비밀 저장소에서 Redis 비밀번호를 위 파일에 한 줄로 주입한다.
+docker exec -i masiton-redis redis-cli --askpass --scan --pattern 'auth:login-failure:*' < /run/masiton/redis-cli-password
+docker exec -i masiton-redis redis-cli --askpass del <키> < /run/masiton/redis-cli-password
+rm -f /run/masiton/redis-cli-password
 ```
 
 시험이 만든 차단이 실제로 검증 참여자 로그인을 막았다. 카운터에 시험과 무관한 `loginId` 항목이 함께 잡혀 있었고, 그 사람은 자신의 비밀번호가 맞는데도 `401`을 받았다. **`source` 차단의 영향 범위를 실측으로 확인한 셈이다.**
@@ -1182,7 +1185,7 @@ push(main·deploy/m2)  → 빌드·테스트 → 이미지 빌드·검증·ECR p
                       → [environment: production 승인 대기]
                       → SSM으로 app-deploy.sh 실행 → 상태 확인
 
-workflow_dispatch     → (빌드·테스트·이미지 job 건너뜀)
+workflow_dispatch     → 선택한 커밋 checkout → 프론트엔드 프로덕션 의존성 감사
   image_tag=<커밋 SHA> → [environment: production 승인 대기]
                       → SSM으로 app-deploy.sh 실행 → 상태 확인
 ```
@@ -1192,7 +1195,7 @@ workflow_dispatch     → (빌드·테스트·이미지 job 건너뜀)
 | 위치 | [`ci.yml`](../../.github/workflows/ci.yml)의 `운영 배포` job |
 | 트리거 | `push`(`main`·`deploy/m2`), `workflow_dispatch` |
 | 배포 대상 | `push`는 그 실행의 커밋, `workflow_dispatch`는 `image_tag` 입력(비우면 브랜치 현재 커밋) |
-| 순서 보장 | `needs: [images]`. `workflow_dispatch`에서는 이미지 job이 `skipped`이고 job 조건이 그 경우만 통과시킨다 |
+| 순서 보장 | `needs: [images, frontend-dispatch-audit]`. `workflow_dispatch`에서는 이미지 job이 `skipped`이고, 선택한 커밋을 감사한 dispatch job이 `success`인 경우만 통과시킨다 |
 | 승인 게이트 | GitHub `environment: production` (두 경로 공통) |
 | 필수 리뷰어 | 팀 4인(`w00lam`·`tjdgns0618`·`inan0226`·`jinyp01`) |
 | 배포 허용 브랜치 | `main`, `deploy/m2` |

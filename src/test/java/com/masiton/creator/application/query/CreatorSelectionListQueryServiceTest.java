@@ -46,8 +46,8 @@ class CreatorSelectionListQueryServiceTest {
     void 조회_저장소가역순으로반환_서비스가재정렬하지않고그대로위임한다() {
         // given: 저장소가 이미 오름차순으로 정렬해 반환한다는 계약(CreatorRepositoryPort 참고)이므로
         // 서비스가 스스로 재정렬하지 않는지 확인하려면 일부러 오름차순이 아닌 순서를 대역으로 준다.
-        Creator first = creatorOf("마바사 채널");
-        Creator second = creatorOf("가나다 채널");
+        Creator first = creatorOf("마바사 채널", "https://i.ytimg.com/vi/fixtureVid1/hqdefault.jpg");
+        Creator second = creatorOf("가나다 채널", null);
         given(creatorRepositoryPort.findPublicSelectionList()).willReturn(List.of(first, second));
         CreatorSelectionListQueryService service = new CreatorSelectionListQueryService(creatorRepositoryPort);
 
@@ -60,15 +60,17 @@ class CreatorSelectionListQueryServiceTest {
                 .containsExactly("마바사 채널", "가나다 채널");
         assertThat(result.get(0).id()).isEqualTo(first.getId());
         assertThat(result.get(1).id()).isEqualTo(second.getId());
+        assertThat(result.get(0).profileImageUrl()).isEqualTo("https://i.ytimg.com/vi/fixtureVid1/hqdefault.jpg");
+        assertThat(result.get(1).profileImageUrl()).isNull();
     }
 
-    private Creator creatorOf(String channelName) {
+    private Creator creatorOf(String channelName, String profileImageUrl) {
         return new Creator(
                 UUID.randomUUID(),
                 "UC-" + UUID.randomUUID(),
                 channelName,
                 "https://example.com/channel",
-                null,
+                profileImageUrl,
                 null,
                 null,
                 PublicationStatus.PUBLIC,

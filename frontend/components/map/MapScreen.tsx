@@ -17,6 +17,7 @@ import {
   mergeHydratedMapRateLimitState,
   setMapRateLimitedUntil,
 } from '@/lib/map/rate-limit-state'
+import { findSelectedCreatorProfileImageUrl } from '@/lib/map/selected-creator-profile-image'
 import { findSelectedMapPoint, toggleMapSelection } from '@/lib/map/selection-sync'
 import type { FetchCreatorsResult } from '@/lib/restaurants-api'
 
@@ -82,6 +83,10 @@ export function MapScreen({ initialFilters, creatorsResult }: MapScreenProps) {
     () => buildMapPointsQueryKey(filters),
     [filters.category, filters.creatorId, filters.district, filters.query],
   )
+  const currentCreatorProfileImageUrl = findSelectedCreatorProfileImageUrl(
+    filters.creatorId,
+    creatorsResult,
+  )
 
   /*
    * HydrationBoundary가 복원한 서버 prefetch 결과를 useQuery 실행 전에 직접 읽고, 429 대기를
@@ -127,6 +132,9 @@ export function MapScreen({ initialFilters, creatorsResult }: MapScreenProps) {
   const [lastGoodView, setLastGoodView] = useState<MapPointsViewState | null>(
     () => (data?.kind === 'ok' ? data.view : null),
   )
+  const [lastGoodCreatorProfileImageUrl, setLastGoodCreatorProfileImageUrl] = useState<string | null>(
+    () => (data?.kind === 'ok' ? currentCreatorProfileImageUrl : null),
+  )
   const [banner, setBanner] = useState<Banner | null>(() => deriveBanner(data))
 
   const [previousData, setPreviousData] = useState(data)
@@ -134,6 +142,7 @@ export function MapScreen({ initialFilters, creatorsResult }: MapScreenProps) {
     setPreviousData(data)
     if (data?.kind === 'ok') {
       setLastGoodView(data.view)
+      setLastGoodCreatorProfileImageUrl(currentCreatorProfileImageUrl)
       setBanner(null)
       setRateLimitState((current) => setMapRateLimitedUntil(current, queryKey, null))
     } else if (data?.kind === 'rateLimited') {
@@ -227,6 +236,7 @@ export function MapScreen({ initialFilters, creatorsResult }: MapScreenProps) {
           <KakaoMapView
             items={items}
             selectedId={selectedId}
+            selectedCreatorProfileImageUrl={lastGoodCreatorProfileImageUrl}
             fallbackBounds={SEOUL_FALLBACK_BOUNDS}
             onSelect={handleSelect}
           />

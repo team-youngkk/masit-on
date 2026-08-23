@@ -25,6 +25,7 @@ export default async function ParticipationRequestsPage({ searchParams }: Partic
   if (targetId) loginQuery.set('targetId', targetId)
 
   return <ParticipationRequestScreen
+    view="history"
     initialKind={kind}
     initialTargetType={initialTargetType}
     initialTargetId={targetId}

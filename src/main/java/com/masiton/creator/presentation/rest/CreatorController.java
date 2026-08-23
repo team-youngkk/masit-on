@@ -31,7 +31,8 @@ public class CreatorController {
         }
         List<CreatorSelectionItemResponse> items = getPublicCreatorSelectionListUseCase.getPublicSelectionList()
                 .stream()
-                .map(item -> new CreatorSelectionItemResponse(item.id().toString(), item.channelName()))
+                .map(item -> new CreatorSelectionItemResponse(
+                        item.id().toString(), item.channelName(), item.profileImageUrl()))
                 .toList();
         return new CreatorSelectionListResponse(items);
     }
