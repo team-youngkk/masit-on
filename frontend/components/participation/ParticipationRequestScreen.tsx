@@ -333,7 +333,7 @@ export function ParticipationRequestScreen({
     </div> : <section id="participation-history-panel" role="tabpanel" aria-labelledby={kind === 'submission' ? 'tab-submission' : 'tab-report'}>
       <div className={styles.filters}>
         <h2>{kind === 'submission' ? '내 제보 목록' : '내 신고 목록'}</h2>
-        <Link href="/me/requests/new">새 제보하기</Link>
+        {kind === 'submission' ? <Link href="/me/requests/new">새 제보하기</Link> : null}
         <label>상태 <select value={filter} onChange={event => {
           const nextFilter = event.target.value as RequestStatus | ''
           resetPageForFilters(kind, nextFilter)
