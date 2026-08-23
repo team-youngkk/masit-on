@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Field } from '@/components/ui/Field'
 import { cn } from '@/lib/cn'
 import { memberLogin, memberRegister, requestPasswordReset, confirmPasswordReset } from '@/lib/member/auth'
-import { memberLoginHref, memberVerifyEmailHref, safeAdminReturnTo, safeMemberReturnTo } from '@/lib/member/auth-navigation'
+import { memberLoginDestination, memberLoginHref, memberVerifyEmailHref, safeMemberReturnTo } from '@/lib/member/auth-navigation'
 import {
   type MemberAuthFieldErrors,
   type MemberAuthMode,
@@ -25,7 +25,7 @@ function getCurrentReturnTo(): string | null {
 
 function getSafeReturnTo(returnTo?: string | null): string {
   const candidate = returnTo ?? getCurrentReturnTo()
-  return safeAdminReturnTo(candidate) ?? safeMemberReturnTo(candidate) ?? '/restaurants'
+  return memberLoginDestination(candidate)
 }
 
 const CTA_LABELS: Record<MemberAuthMode, { idle: string; submitting: string }> = {
