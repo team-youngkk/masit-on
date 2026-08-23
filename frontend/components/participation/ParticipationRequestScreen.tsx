@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { PageShell, SectionHeader } from '@/components/ui/PageShell'
 import { StatePanel } from '@/components/ui/StatePanel'
 import { memberLoginHref } from '@/lib/member/auth-navigation'
+import { reportTargetType } from '@/lib/member/participation-entry'
 import {
   ContractError,
   createParticipation,
@@ -53,6 +54,9 @@ type ParticipationRequestScreenProps = {
   initialKind?: RequestKind
   initialTargetType?: TargetType
   initialTargetId?: string
+  initialTargetLabel?: string
+  initialTargetVerified?: boolean
+  initialLoadError?: { message: string; traceId?: string }
   loginReturnTo?: string
 }
 
@@ -61,12 +65,16 @@ export function ParticipationRequestScreen({
   initialKind = 'submission',
   initialTargetType = 'RESTAURANT',
   initialTargetId = '',
+  initialTargetLabel = '',
+  initialTargetVerified = false,
+  initialLoadError,
   loginReturnTo = RETURN_TO,
 }: ParticipationRequestScreenProps) {
   const { status: session } = useMemberSession()
   const [kind, setKind] = useState<RequestKind>(initialKind)
   const [targetType, setTargetType] = useState<TargetType>(initialTargetType)
   const [targetId, setTargetId] = useState(initialTargetId)
+  const [targetLabel, setTargetLabel] = useState(initialTargetLabel)
   const [reportType, setReportType] = useState<ReportType>('ERROR')
   const [candidate, setCandidate] = useState<Record<string, string>>({ name: '', roadAddress: '' })
   const [description, setDescription] = useState('')
@@ -90,6 +98,9 @@ export function ParticipationRequestScreen({
   const detailRequest = useRef(createParticipationDetailCoordinator(initialKind))
   const submissionTabRef = useRef<HTMLButtonElement>(null)
   const reportTabRef = useRef<HTMLButtonElement>(null)
+  const isContextualReport = view === 'new' && kind === 'report' && initialTargetVerified
+  const requestTargetType = reportTargetType(targetType, isContextualReport)
+  const pageTitle = view === 'history' ? '내 제보·신고 내역' : kind === 'report' ? '정보 오류 신고' : '새 제보 접수'
 
   const load = useCallback(async () => {
     if (session !== 'authenticated') return
@@ -136,6 +147,8 @@ export function ParticipationRequestScreen({
 
   function changeTarget(next: TargetType) {
     setTargetType(next)
+    setTargetId('')
+    setTargetLabel('')
     if (next === 'RESTAURANT') setCandidate({ name: '', roadAddress: '' })
     if (next === 'CREATOR') setCandidate({ channelUrl: '' })
     if (next === 'VIDEO') setCandidate({ videoUrl: '' })
@@ -179,7 +192,7 @@ export function ParticipationRequestScreen({
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
-    const base = { targetType, description, ...(evidenceUrl ? { evidenceUrl } : {}) }
+    const base = { targetType: requestTargetType, description, ...(evidenceUrl ? { evidenceUrl } : {}) }
     const payload: SubmissionInput | ReportInput = kind === 'submission'
       ? { ...base, candidate }
       : { ...base, targetId, reportType }
@@ -261,37 +274,59 @@ export function ParticipationRequestScreen({
     }
   }
 
-  if (session === 'loading') return <PageShell title={view === 'new' ? '제보·신고 접수' : '내 제보·신고 내역'}><StatePanel title="로그인 상태를 확인하고 있습니다." /></PageShell>
+  if (session === 'loading') return <PageShell title={pageTitle}><StatePanel title="로그인 상태를 확인하고 있습니다." /></PageShell>
   if (session === 'anonymous') return (
-    <PageShell title={view === 'new' ? '제보·신고 접수' : '내 제보·신고 내역'}><StatePanel tone="warning" title="제보와 신고는 로그인 후 이용할 수 있습니다." actions={<Link href={memberLoginHref(loginReturnTo)}>로그인하기</Link>} /></PageShell>
+    <PageShell title={pageTitle}><StatePanel tone="warning" title="제보와 신고는 로그인 후 이용할 수 있습니다." actions={<Link href={memberLoginHref(loginReturnTo)}>로그인하기</Link>} /></PageShell>
+  )
+
+  if (view === 'new' && initialLoadError) return (
+    <PageShell title={pageTitle}>
+      <StatePanel
+        tone="danger"
+        title="맛집 정보를 불러오지 못했습니다."
+        description={initialLoadError.message}
+        traceId={initialLoadError.traceId}
+        actions={<Link href={loginReturnTo}>다시 시도</Link>}
+      />
+    </PageShell>
   )
 
   return <PageShell
     className={styles.screen}
-    title={view === 'new' ? '제보·신고 접수' : '내 제보·신고 내역'}
-    description={view === 'new' ? '새 정보는 제보하고, 기존 정보의 문제는 신고해 주세요. 하루 합산 5건까지 접수할 수 있습니다.' : '제보와 신고의 처리 상태와 답변을 확인할 수 있습니다.'}
+    title={pageTitle}
+    description={view === 'new'
+      ? (kind === 'report' ? '현재 보고 있는 정보의 문제를 알려 주세요.' : '새 맛집·유튜버·영상 정보를 제보해 주세요. 하루 합산 5건까지 접수할 수 있습니다.')
+      : '제보와 신고의 처리 상태와 답변을 확인할 수 있습니다.'}
   >
 
-    <div className={styles.tabs} role="tablist" aria-label={view === 'new' ? '요청 종류' : '내역 종류'} onKeyDown={handleTabListKeyDown}>
-      <button id="tab-submission" ref={submissionTabRef} type="button" role="tab" aria-selected={kind === 'submission'} aria-controls={view === 'new' ? 'participation-tabpanel' : 'participation-history-panel'} onClick={() => switchTab('submission')}>{view === 'new' ? '제보: 새 정보 제안' : '제보 내역'}</button>
-      <button id="tab-report" ref={reportTabRef} type="button" role="tab" aria-selected={kind === 'report'} aria-controls={view === 'new' ? 'participation-tabpanel' : 'participation-history-panel'} onClick={() => switchTab('report')}>{view === 'new' ? '신고: 기존 정보 문제' : '신고 내역'}</button>
-    </div>
+    {view === 'history' ? <div className={styles.tabs} role="tablist" aria-label="내역 종류" onKeyDown={handleTabListKeyDown}>
+      <button id="tab-submission" ref={submissionTabRef} type="button" role="tab" aria-selected={kind === 'submission'} aria-controls="participation-history-panel" onClick={() => switchTab('submission')}>제보 내역</button>
+      <button id="tab-report" ref={reportTabRef} type="button" role="tab" aria-selected={kind === 'report'} aria-controls="participation-history-panel" onClick={() => switchTab('report')}>신고 내역</button>
+    </div> : null}
 
-    {view === 'new' ? <div id="participation-tabpanel" role="tabpanel" aria-labelledby={kind === 'submission' ? 'tab-submission' : 'tab-report'} className={styles.tabpanel}>
+    {view === 'new' ? <div id="participation-form-panel" className={styles.tabpanel}>
     <p><Link href="/me/requests">내 제보·신고 내역 확인</Link></p>
     <form className={styles.form} onSubmit={event => void submit(event)}>
       <SectionHeader title={kind === 'submission' ? '새 제보 접수' : '새 신고 접수'} level={2} />
       <label>대상 유형
-        <select value={targetType} onChange={event => changeTarget(event.target.value as TargetType)}>
-          {TARGETS.map(value => <option key={value} value={value}>{participationTargetTypeLabel(value)}</option>)}
-        </select>
+        {isContextualReport
+          ? <span className={styles.readOnlyField}>{participationTargetTypeLabel(targetType)}</span>
+          : <select value={targetType} onChange={event => changeTarget(event.target.value as TargetType)}>
+            {TARGETS.map(value => <option key={value} value={value}>{participationTargetTypeLabel(value)}</option>)}
+          </select>}
       </label>
       {kind === 'submission'
         ? Object.keys(candidate).map(field => <label key={field}>{participationCandidateFieldLabel(field)}
           <input required value={candidate[field]} onChange={event => { setCandidate({ ...candidate, [field]: event.target.value }); retry.current = null }} />
         </label>)
         : <>
-          <label>대상 식별자<input required value={targetId} onChange={event => { setTargetId(event.target.value); retry.current = null }} /></label>
+          {isContextualReport ? (
+            <div className={styles.targetSummary}>
+              <div><strong>신고 대상</strong><span>{participationTargetTypeLabel(requestTargetType)} · {initialTargetLabel || '선택된 정보'}</span></div>
+            </div>
+          ) : (
+            <label>대상 식별자<input required value={targetId} onChange={event => { setTargetId(event.target.value); retry.current = null }} /></label>
+          )}
           <label>신고 유형<select value={reportType} onChange={event => { setReportType(event.target.value as ReportType); retry.current = null }}>
             {(allowedReportTypes(targetType) as ReportType[]).map(value => <option key={value} value={value}>{participationReportTypeLabel(value)}</option>)}
           </select></label>
@@ -316,7 +351,7 @@ export function ParticipationRequestScreen({
     </div> : <section id="participation-history-panel" role="tabpanel" aria-labelledby={kind === 'submission' ? 'tab-submission' : 'tab-report'}>
       <div className={styles.filters}>
         <h2>{kind === 'submission' ? '내 제보 목록' : '내 신고 목록'}</h2>
-        <Link href="/me/requests/new">새 제보·신고하기</Link>
+        {kind === 'submission' ? <Link href="/me/requests/new">새 제보하기</Link> : null}
         <label>상태 <select value={filter} onChange={event => {
           const nextFilter = event.target.value as RequestStatus | ''
           resetPageForFilters(kind, nextFilter)

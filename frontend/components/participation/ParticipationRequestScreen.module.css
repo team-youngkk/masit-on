@@ -2,6 +2,12 @@
 .tabs, .filters, .actions { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
 .tabs button { min-height: var(--control-min-height); padding: 0 var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); cursor: pointer; }
 .tabs button[aria-selected='true'] { border-color: var(--color-primary); background: var(--color-primary-soft); color: var(--color-primary-strong); font-weight: 700; }
+.targetSummary { display: grid; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-muted); }
+.targetSummary > div { display: grid; gap: var(--space-1); }
+.targetSummary strong { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.targetSummary span { overflow-wrap: anywhere; font-weight: 700; }
+.targetSummary a { justify-self: start; color: var(--color-primary-strong); font-weight: 700; }
+.readOnlyField { display: flex; align-items: center; min-height: var(--control-min-height); padding: 0 var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-muted); color: var(--color-text); }
 .form { display: grid; gap: var(--space-4); max-width: 48rem; padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-card); }
 .form label { display: grid; gap: var(--space-2); font-weight: 600; }
 .form input, .form select, .form textarea { width: 100%; min-height: var(--control-min-height); padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); font: inherit; }
