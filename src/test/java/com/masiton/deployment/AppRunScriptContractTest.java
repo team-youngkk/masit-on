@@ -373,6 +373,11 @@ class AppRunScriptContractTest {
         assertThat(locationBySelector(locations, "^~ /_next/static/").body())
                 .as("정적 파일은 GET 외 메서드를 프론트엔드로 전달하지 않아야 한다")
                 .contains("limit_except GET", "deny all;");
+        assertThat(locationBySelector(locations, "= /icon.png").body())
+                .as("검증 로그인 화면의 브랜드 마크는 세션 게이트 없이 GET으로 제공해야 한다")
+                .contains("limit_except GET", "deny all;")
+                .doesNotContain(GATE_DIRECTIVE)
+                .contains("proxy_pass http://masiton_frontend;");
     }
 
     @Test

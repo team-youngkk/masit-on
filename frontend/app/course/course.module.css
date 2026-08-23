@@ -696,6 +696,7 @@
 
 .resultPanel {
   position: relative;
+  scroll-margin-top: calc(72px + var(--space-4));
 }
 
 .resultPanel > div {
