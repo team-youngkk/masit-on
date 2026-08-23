@@ -32,11 +32,11 @@ public class MemberActionTokenMailAdapter implements MemberActionTokenDeliveryPo
         message.setTo(email);
         message.setFrom(mailProperties.getFromAddress());
         if (purpose == MemberActionPurpose.EMAIL_VERIFICATION) {
-            message.setSubject("Verify your Masit-on email");
-            message.setText("Enter this 8-character verification code in the Masit-on verification screen:\n" + rawToken);
+            message.setSubject("맛잇온 이메일 인증 코드");
+            message.setText("맛잇온 이메일 인증을 위해 아래 8자리 인증 코드를 입력해 주세요.\n\n인증 코드: " + rawToken);
         } else {
-            message.setSubject("Reset your Masit-on password");
-            message.setText("Enter this password reset token in the Masit-on password reset screen:\n" + rawToken);
+            message.setSubject("맛잇온 비밀번호 재설정");
+            message.setText("맛잇온 비밀번호를 재설정하려면 아래 재설정 토큰을 입력해 주세요.\n\n재설정 토큰: " + rawToken);
         }
         try {
             mailSender.send(message);

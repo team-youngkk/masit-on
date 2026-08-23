@@ -18,7 +18,7 @@ import static org.mockito.Mockito.verify;
 class MemberActionTokenMailAdapterTest {
 
     @Test
-    @DisplayName("이메일 인증 메일은 verification code 문구를 사용한다")
+    @DisplayName("이메일 인증 메일은 한국어 인증 코드 문구를 사용한다")
     void send_이메일인증_검증코드문구사용() {
         JavaMailSender mailSender = mock(JavaMailSender.class);
         MemberActionTokenMailAdapter adapter = adapter(mailSender);
@@ -28,12 +28,12 @@ class MemberActionTokenMailAdapterTest {
         ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
         verify(mailSender).send(messageCaptor.capture());
         assertThat(messageCaptor.getValue().getFrom()).isEqualTo("no-reply@masiton.click");
-        assertThat(messageCaptor.getValue().getSubject()).isEqualTo("Verify your Masit-on email");
-        assertThat(messageCaptor.getValue().getText()).contains("verification code").contains("AB7K9M2Q");
+        assertThat(messageCaptor.getValue().getSubject()).isEqualTo("맛잇온 이메일 인증 코드");
+        assertThat(messageCaptor.getValue().getText()).contains("인증 코드:").contains("AB7K9M2Q");
     }
 
     @Test
-    @DisplayName("비밀번호 재설정 메일은 password reset token 문구를 사용한다")
+    @DisplayName("비밀번호 재설정 메일은 한국어 재설정 토큰 문구를 사용한다")
     void send_비밀번호재설정_재설정토큰문구사용() {
         JavaMailSender mailSender = mock(JavaMailSender.class);
         MemberActionTokenMailAdapter adapter = adapter(mailSender);
@@ -43,8 +43,8 @@ class MemberActionTokenMailAdapterTest {
         ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
         verify(mailSender).send(messageCaptor.capture());
         assertThat(messageCaptor.getValue().getFrom()).isEqualTo("no-reply@masiton.click");
-        assertThat(messageCaptor.getValue().getSubject()).isEqualTo("Reset your Masit-on password");
-        assertThat(messageCaptor.getValue().getText()).contains("password reset token").contains("opaque-reset-token");
+        assertThat(messageCaptor.getValue().getSubject()).isEqualTo("맛잇온 비밀번호 재설정");
+        assertThat(messageCaptor.getValue().getText()).contains("재설정 토큰:").contains("opaque-reset-token");
     }
 
     private MemberActionTokenMailAdapter adapter(JavaMailSender mailSender) {
