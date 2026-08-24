@@ -14,6 +14,7 @@ related_documents:
   - ../07-adr/platform/web-006-unified-login-rbac-route.md
   - ../07-adr/platform/web-005-application-port-binding.md
   - ../07-adr/platform/deploy-004-public-api-validation-gate-boundary.md
+  - ../07-adr/platform/deploy-006-public-release-without-validation-gate.md
   - ../05-specs/api/common/validation-access-contract.md
 ---
 
@@ -29,7 +30,7 @@ Spring Security Filter Chain은 인증과 역할 인가를 담당한다. Control
 
 ## 2. 요청 유형별 경계
 
-검증 참여자 제한 공개는 서비스 권한보다 앞선 임시 운영 진입 경계다. `__Host-masiton-verification` HttpOnly 쿠키를 Nginx `auth_request`와 내부 Spring Adapter가 확인하며, 회원·관리자 Principal을 만들지 않는다. 검증 쿠키가 유효해도 각 보호 API는 기존 회원·관리자 Bearer JWT를 다시 검증한다. Basic Auth와 `WWW-Authenticate: Basic`은 사용하지 않는다.
+정식 공개에서는 M2의 검증 참여자 제한 공개 gate를 사용하지 않는다. `__Host-masiton-verification` 쿠키, Nginx `auth_request`, 내부 검증 Adapter와 `auth:verification:*` Redis namespace는 역사적 운영 경계로 제거한다. 제품 API는 검증 쿠키 없이도 각 API 계약에 따라 공개·회원·관리자 인증을 적용한다. Basic Auth와 `WWW-Authenticate: Basic`은 사용하지 않는다([ADR-DEPLOY-006](../07-adr/platform/deploy-006-public-release-without-validation-gate.md)).
 
 | 요청 | 인증 | 역할 | Application 추가 검증 |
 |---|---|---|---|
@@ -61,7 +62,7 @@ URL matcher는 다음 순서로 평가한다.
 5. 나머지 `/api/admin/**`: Bearer JWT + `ADMIN`
 6. 정의되지 않은 `/api/**`: 기본 거부
 
-`/internal/health/live`, `/internal/health/ready`, `/internal/health/dependencies`는 애플리케이션 인증 없이 호출할 수 있지만, 인증 예외보다 앞선 네트워크 경계에서 인터넷 Nginx 전달을 차단하고 EC2 내부 Agent·컨테이너에서만 호출한다. 그 밖의 `/internal/**`은 허용하지 않는다.
+`/internal/health/live`, `/internal/health/ready`, `/internal/health/dependencies`는 애플리케이션 인증 없이 호출할 수 있지만, 인증 예외보다 앞선 네트워크 경계에서 인터넷 Nginx 전달을 차단하고 EC2 내부 Agent·컨테이너에서만 호출한다. 인터넷의 `/internal`과 `/internal/**`은 자격 증명 유무와 무관하게 `404`이고 Backend로 전달하지 않는다. 그 밖의 `/internal/**`은 허용하지 않는다.
 
 이 차단은 Nginx 경로 규칙 하나에 의존하지 않는다. 운영 애플리케이션은 `server.address`를 loopback으로 고정해 인스턴스 밖에서는 애플리케이션 포트에 TCP 연결 자체가 성립하지 않게 한다. 보안 그룹이나 방화벽 규칙이 애플리케이션 포트를 열어도 Nginx를 건너뛴 직결과 `/internal/**` 노출이 생기지 않는다. 이 결정은 [ADR-WEB-005](../07-adr/platform/web-005-application-port-binding.md)가 소유하고, 경계 구성과 배포 후 확인 명령은 [애플리케이션 포트 바인딩 경계](../08-planning/issue-200-application-port-binding.md)에 있다.
 
@@ -126,7 +127,7 @@ public record AccountPrincipal(AccountId accountId, AccountRole role, SessionId 
 4. Domain: 불변 조건
 5. Persistence: NOT NULL, FK, UNIQUE, CHECK
 
-URL은 HTTPS와 허용 호스트를 검증하고 리디렉션 최종 호스트도 확인한다. 제공자 응답 문자열을 로그·오류에 그대로 출력하지 않는다. 식별자는 공통 계약의 불투명 문자열로 다룬다.
+URL은 HTTPS와 허용 호스트를 검증하고 리디렉션 최종 호스트도 확인한다. 인터넷 진입점은 허용된 Host만 라우팅하고 알 수 없는 Host·Elastic IP 직접 접근은 차단한다. YouTube Webhook은 별도 검증 Token·HMAC 자체 인증과 요청 크기·호출률 제한을 적용하며, 제한 공개 gate 제거로 이 경계를 완화하지 않는다. 제공자 응답 문자열을 로그·오류에 그대로 출력하지 않는다. 식별자는 공통 계약의 불투명 문자열로 다룬다.
 
 ## 7. 민감정보와 오류 노출
 
@@ -137,7 +138,7 @@ URL은 HTTPS와 허용 호스트를 검증하고 리디렉션 최종 호스트�
 - Kakao·YouTube API Key
 - Redis Token 검증 값
 - Authorization·Cookie 헤더
-- 검증 참여자 비밀번호와 검증 세션 ID·Redis key
+- (역사) 검증 참여자 비밀번호와 검증 세션 ID·Redis key
 - 외부 제공자 원문 오류 본문
 
 오류 응답에는 안정된 코드, 일반화된 메시지, 안전한 필드 오류와 `traceId`만 제공한다. 로그인 실패 시 계정 존재 여부를 구분하지 않는다.
@@ -186,5 +187,6 @@ TanStack Query 현재 사용자 상태는 메인 페이지 관리자 링크와 `
 - 확인 Token 원문·후보 Snapshot 로그 미노출
 - Refresh Token 회전·재사용·로그아웃·Redis 장애
 - 비밀번호·Token·API Key 로그 미노출
-- 검증 쿠키와 회원·관리자 Bearer 동시 사용, 7일 만료·폐기·Redis 장애·반복 인증창 0회
+- 정식 공개 전환 뒤 검증 쿠키 없이 공개 화면·API가 동작하고, 회원·관리자 Bearer 인증 회귀가 통과
+- Webhook 검증 Token·HMAC·본문 크기·호출률 제한과 Host·`/internal` 외부 `404`·loopback 경계를 유지
 - 비공개 자원의 공개 조회 404와 관리자 Visit 참조 422

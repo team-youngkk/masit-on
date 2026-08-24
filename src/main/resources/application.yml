@@ -137,17 +137,6 @@ masiton:
       trusted-proxy-addresses: ${MEMBER_TRUSTED_PROXY_ADDRESSES:}
       reverse-proxy-enabled: ${MEMBER_REVERSE_PROXY_ENABLED:false}
   security:
-    verification:
-      enabled: ${VERIFICATION_ENABLED:true}
-      login-id: ${VERIFICATION_LOGIN_ID:}
-      password-hash: ${VERIFICATION_PASSWORD_HASH:}
-      public-base-url: ${VERIFICATION_PUBLIC_BASE_URL:http://localhost:3000}
-      cookie-name: __Host-masiton-verification
-      session-ttl: P7D
-      failure-ttl: PT15M
-      max-attempts: 5
-      trusted-proxy-addresses: ${VERIFICATION_TRUSTED_PROXY_ADDRESSES:}
-      reverse-proxy-enabled: ${VERIFICATION_REVERSE_PROXY_ENABLED:false}
     jwt:
       issuer: masit-on
       audience: masit-on-api

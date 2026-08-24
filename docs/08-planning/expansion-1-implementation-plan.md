@@ -56,7 +56,7 @@ Task에 없는 미결정 기술을 구현으로 끌어오지 않는다. 캐시·
 | [WS-06 개인 맛집 관리](../02-analysis/first-expansion-workstreams.md#5-ws-06-개인-맛집-관리) | 박진영 / 김인안 | `FE-04`, `FE-05` | 본인 찜·최근 기록의 소유권·보존·삭제가 일관된다. |
 | [WS-07 지도 탐색](../02-analysis/first-expansion-workstreams.md#6-ws-07-지도-탐색) | 양성훈 / 박진영 | `FE-06`, `FE-07`, `FE-10` | 좌표·필터 기반 마커·대체 목록이 지도 이동과 독립적으로 동작한다. |
 | [WS-08 유튜버 상세](../02-analysis/first-expansion-workstreams.md#7-ws-08-유튜버-상세) | 이우람 / 박진영 | `FE-08` | 저장된 공개 Creator·Visit·Restaurant·Video로 상세 세 화면을 제공한다. |
-| [OPS-VALIDATION 공통 운영·배포](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙) | 이우람 / 김인안 | `FE-12` | 제한 공개 진입 경계를 회원·관리자 인증과 분리하고 정식 공개 시 전체 제거할 수 있다. |
+| [OPS-VALIDATION 공통 운영·배포](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙) (역사) | 이우람 / 김인안 | `FE-12` | M2 제한 공개 진입 경계를 회원·관리자 인증과 분리해 운영했고, 정식 공개 전환에서 전용 경계를 제거한다. |
 | 공통 품질·통합 | 이우람 / 김인안 | `FE-00`, `FE-01`, `FE-09` | 기준선 결함, MVP 잔여 흐름, 교차 인수·회귀를 닫는다. |
 
 ## 4. 공통 계약 확정
@@ -66,7 +66,7 @@ Task에 없는 미결정 기술을 구현으로 끌어오지 않는다. 캐시·
 | 회원 인증 정책·API·데이터·ADR | 확정 | `FE-02`~`FE-05`는 [ADR-AUTH-002](../07-adr/security/auth-002-member-jwt-refresh-token.md)와 회원 API·데이터 계약을 구현한다. |
 | 지도 좌표·마커 조회·외부 SDK ADR | 확정 | `FE-06`~`FE-07`, `FE-10`은 [ADR-MAP-001](../07-adr/integration/map-001-map-bounds-search.md)의 뷰포트 비종속 경계를 따른다. |
 | Creator 상세 API·데이터 계약 | 확정 | `FE-08`은 저장된 Creator·Visit·Restaurant·Video만 조회하며 사용자 조회 중 YouTube API를 호출하지 않는다. |
-| 검증 참여자 제한 공개 계약 | 확정, 구현 미반영 | [OPS-VALIDATION](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙)이 [ADR-DEPLOY-003](../07-adr/platform/deploy-003-validation-cookie-session.md)과 검증 참여자 API를 `FE-12`·`E1-T13`에서 구현하고 정식 공개 시 제거한다. |
+| 검증 참여자 제한 공개 계약 | M2 역사·정식 공개 전환으로 제거 | [ADR-DEPLOY-003](../07-adr/platform/deploy-003-validation-cookie-session.md)과 검증 참여자 API는 `FE-12`·`E1-T13`에서 구현·검증했으며, 현재는 [ADR-DEPLOY-006](../07-adr/platform/deploy-006-public-release-without-validation-gate.md)에 따라 전용 경계를 제거한다. |
 | V2~V6 Flyway 순서 | 확정 | [마이그레이션 계획](../05-specs/data/migration-plan.md#9-1차-확장-전진-마이그레이션-순서)을 지키고 V1을 수정하지 않는다. 세부 테이블·열·제약·인덱스는 [테이블 정의](../05-specs/data/table-definitions.md#14-1차-확장-v4v6-데이터-계약), [제약조건](../05-specs/data/constraints.md), [인덱스 전략](../05-specs/data/index-strategy.md#5-1차-확장-인덱스)을 기준으로 구현한다. |
 | MVP 잔여 사용자 흐름·품질 게이트 | 기준선 결함 | `FE-00`·`FE-01`에서 먼저 닫거나, 해당 미완료 상태를 1차 확장 완료로 오인하지 않는다. |
 
@@ -130,7 +130,7 @@ Task에 없는 미결정 기술을 구현으로 끌어오지 않는다. 캐시·
 | `FE-09` 1차 확장 교차 인수·회귀 | 전원 / 상호 교차 리뷰 | 1차 확장 전체 FR·NFR | 추적표 완료 확인, 보안·통합·브라우저·성능 결과와 기준선 비교 | `FE-01`, `FE-03`, `FE-05`, `FE-07`, `FE-08` | `NFR-TEST-004`, 성능 NFR, V1→V6 업그레이드, CI | 각 FR이 주 PRD·API 또는 화면·데이터·ADR·WS·테스트·Task로 추적되고 미결정 도입이 없음을 검토한다. |
 | `FE-10` 지도 뷰포트 비종속 전환 | 양성훈 / 박진영 | `FR-MAP-001`~`002`; `PRD-DISCOVERY-003` | bounds API·SQL·Query Key·idle 재조회 제거, 필터 결과·목록 유지 | `FE-06`, `FE-07` | bounds 없는 API, 이동 시 요청 0건, 결과·선택 유지, 200/201개 | 지도 이동으로 검색 결과가 사라지지 않고 네 URL 필터 변경 때만 재조회한다. |
 | `FE-11` 가입 이메일 인증 8자 코드 전환 | 김인안 / 이우람 | `FR-MEMBER-002`; `PRD-ACCOUNT-001` | 8자 CSPRNG 코드, 입력 정규화·제출 제한, 메일·화면 정합화 | `FE-02`, `FE-03` | 문자 집합·40-bit·5분·단일 소비·10분 10회·원문 비로그·장애별 입력 보존 | 가입 인증만 8자 코드로 동작하고 비밀번호 재설정·Access·Refresh Token 계약은 유지된다. |
-| `FE-12` 검증 참여자 쿠키 세션 전환 | 이우람 / 김인안 | `NFR-SECURITY-003`, `NFR-DEPLOYMENT-004`; `ADR-DEPLOY-003` | 7일 HttpOnly 쿠키, Redis 세션, Nginx `auth_request`, Basic Auth 제거 | M2-11, `FE-03` | 무세션 차단, 반복창 0회, 회원·관리자 Bearer 동시 동작, 장애·로그·배포 복구 | 제한 공개와 서비스 인증이 분리되고 정식 공개 시 검증 경계만 제거할 수 있다. |
+| `FE-12` 검증 참여자 쿠키 세션 전환 (역사) | 이우람 / 김인안 | `NFR-SECURITY-003`, `NFR-DEPLOYMENT-004`; `ADR-DEPLOY-003` | 7일 HttpOnly 쿠키, Redis 세션, Nginx `auth_request`, Basic Auth 제거 | M2-11, `FE-03` | 무세션 차단, 반복창 0회, 회원·관리자 Bearer 동시 동작, 장애·로그·배포 복구 | M2 제한 공개 전환을 완료했다. 정식 공개에서는 전용 경계·자원만 제거하고 회원·관리자 인증은 유지한다. |
 
 ## 9. Workstream별 Task
 

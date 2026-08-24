@@ -37,7 +37,7 @@ related_documents:
 - 카카오 장소 정보는 맛집 위치와 기본 연락 정보를 확인하는 용도로 사용하되, 지도 기반 탐색으로 확장하지 않는다.
 - 서비스는 웹으로 제공하며 모바일 브라우저에서도 핵심 탐색 흐름을 사용할 수 있도록 고려한다.
 - MVP 구현은 로컬 Docker 환경에서 전체 사용자 흐름을 통합 검증하는 단계다.
-- 초기 운영 배포(M2)는 다음 확장 단계 착수 전에 최초 운영 환경으로 수행하고, 이후 확장에서는 필요한 인프라 변경을 각 단계에 함께 반영한다. M2는 단일 EC2·수동 복구 기준을 유지하며, 배포 고도화의 ALB·ASG·CodeDeploy replacement와 사설 subnet 전용 Redis 기준은 2026-08-18 영향·비용 검토와 owner 결정을 거쳐 [ADR-DEPLOY-005](../07-adr/platform/deploy-005-asg-blue-green-rollout.md)로 Accepted 확정했다. 실제 운영 전환은 별도 runbook·승인·리허설을 따른다.
+- 초기 운영 배포(M2)는 다음 확장 단계 착수 전에 최초 운영 환경으로 수행하고, 이후 확장에서는 필요한 인프라 변경을 각 단계에 함께 반영한다. M2의 검증 참여자 제한 공개는 완료된 역사적 단계이며, 현재 정식 공개는 검증 참여자 gate 없이 수행한다([ADR-DEPLOY-006](../07-adr/platform/deploy-006-public-release-without-validation-gate.md)). 회원·관리자 인증, Webhook 자체 인증·rate limit, Host 검증, `/internal/**` 외부 `404`와 loopback 경계는 유지한다. M2는 단일 EC2·수동 복구 기준을 유지하며, 배포 고도화의 ALB·ASG·CodeDeploy replacement와 사설 subnet 전용 Redis 기준은 2026-08-18 영향·비용 검토와 owner 결정을 거쳐 [ADR-DEPLOY-005](../07-adr/platform/deploy-005-asg-blue-green-rollout.md)로 Accepted 확정했다. 실제 운영 전환과 `v1.0.0` tag는 별도 승인·운영 확인을 따른다.
 - 구현 방식, 데이터 구조 또는 화면 구성이 본 문서에 명시되지 않은 경우 이를 새로운 기능의 근거로 해석하지 않는다.
 - 이후 확장 기능 중 범위 변경 절차를 완료하지 않은 후보는 현재 설계 및 구현 범위에 포함하지 않는다. 승인된 확장은 해당 단계 절의 포함·제외 경계를 따른다.
 

@@ -56,7 +56,7 @@ flowchart TD
 
 ### 3.1 기준선과 공통 기반
 
-`E2-T01`에서 회원·인증·찜, `E1-T11` 지도 조회, `E1-T12` 가입 인증 코드와 [OPS-VALIDATION](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙)의 `E1-T13` 검증 참여자 쿠키 세션 정합화, ClassNotFoundException 품질 게이트, CI와 M2 운영 선행 조건을 확인한다. 통과 뒤 `E2-T02`가 V3 스키마, 회원/관리자 접근 경계, 본인 소유 검증, 멱등성과 보존 cleanup 기반을 제공한다.
+`E2-T01`에서 회원·인증·찜, `E1-T11` 지도 조회, `E1-T12` 가입 인증 코드와 M2 운영 선행 조건을 확인한다. `E1-T13` 검증 참여자 쿠키 세션은 완료된 역사 증거로만 대조하고, 현재 기준선은 [ADR-DEPLOY-006](../07-adr/platform/deploy-006-public-release-without-validation-gate.md)의 gate 제거와 회원·관리자 인증·Webhook·Host·`/internal`·loopback 경계 보존이다. 통과 뒤 `E2-T02`가 V3 스키마, 회원/관리자 접근 경계, 본인 소유 검증, 멱등성과 보존 cleanup 기반을 제공한다.
 
 ### 3.2 병렬 기능 경로
 

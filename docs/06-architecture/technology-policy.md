@@ -150,8 +150,8 @@ related_documents:
 ## 13. 실행 및 운영 배포 토폴로지 정책 (2026-07-28 변경)
 
 - MVP 구현은 로컬 Docker 환경에서 Next.js, Spring Boot, PostgreSQL과 Redis를 통합 실행하고 검증한다.
-- M2 초기 운영 배포에서 다음 확장 단계보다 먼저 최초 운영 환경을 제한 공개로 배포하고, 검증을 통과한 같은 환경을 계속 운영한다.
-- 제한 공개 인증은 [ADR-DEPLOY-004](../07-adr/platform/deploy-004-public-api-validation-gate-boundary.md)의 검증 참여자 전용 HttpOnly 쿠키 세션과 공개 API gate 경계를 사용한다. 회원·관리자 Bearer/Refresh 인증과 분리하고 정식 공개 시 제한 공개 경계만 제거한다.
+- M2 초기 운영 배포에서 다음 확장 단계보다 먼저 최초 운영 환경을 제한 공개로 배포하고, 검증을 통과한 같은 환경을 계속 운영했다. 이는 완료된 역사적 배포 단계다.
+- 현재 정식 공개는 [ADR-DEPLOY-006](../07-adr/platform/deploy-006-public-release-without-validation-gate.md)에 따라 검증 참여자 HttpOnly 쿠키 세션·Nginx gate·전용 비밀을 사용하지 않는다. 회원·관리자 Bearer/Refresh 인증, Webhook 자체 인증·rate limit, Host·`/internal`·loopback 경계는 별도 계약대로 유지한다.
 - 초기 운영 배포는 단일 EC2 인스턴스(Nginx 리버스 프록시 + Next.js 프론트엔드 + Spring Boot 백엔드)를 사용하며 다중 리전·다중 인스턴스 고가용성 구성을 필수로 하지 않는다.
 - Nginx는 `/api/**`를 Spring Boot, 나머지 외부 경로를 Next.js로 전달하며 `/internal/**`은 인터넷에서 차단한다. 세부 경로와 인증 matcher는 [ADR-WEB-006](../07-adr/platform/web-006-unified-login-rbac-route.md)을 따른다.
 - 운영 애플리케이션 포트는 loopback에만 바인딩해 인스턴스 밖에서 직접 연결할 수 없게 한다. 백엔드 `server.address`와 프론트엔드 `HOSTNAME`을 `127.0.0.1`로 고정하고 이 값을 넓히는 환경 변수를 컨테이너에 전달하지 않는다([ADR-WEB-005](../07-adr/platform/web-005-application-port-binding.md)).
@@ -160,7 +160,7 @@ related_documents:
 - GitHub Actions 빌드·테스트 품질 게이트는 전 단계에 적용하고, ECR push·EC2 승인 배포·Smoke Test는 초기 운영 배포부터 활성화한다.
 - 초기 운영 배포부터 GitHub Actions → ECR → EC2 경로를 사용한다. 배포 고도화의 ALB·ASG·CodeDeploy replacement 범위는 ADR-DEPLOY-005를 따른다.
 - 초기 운영 배포부터 로그는 14일 보관하고, DB 백업은 일 1회 자동 스냅샷 후 7일 보관(RPO 최대 24시간)하며, 운영 알림은 CloudWatch 알람을 Slack으로 담당자 1명에게 통지한다. 팀 상시 채널이 Slack뿐이고 운영 이메일 수신 체계가 없어 Slack Webhook만 사용한다([RV-NFR-013](../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준)).
-- 관련: [ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md), [ADR-WEB-006](../07-adr/platform/web-006-unified-login-rbac-route.md), [ADR-WEB-005](../07-adr/platform/web-005-application-port-binding.md), [docs/07-adr/adr-backlog.md](../07-adr/adr-backlog.md) 범위 충돌 검토, [RV-NFR-005](../01-requirements/non-functional-requirements.md#rv-nfr-005-목표-가용성과-복구-시간)·[RV-NFR-009](../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간)·[RV-NFR-010](../01-requirements/non-functional-requirements.md#rv-nfr-010-백업-주기와-복구-범위)·[RV-NFR-013](../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준).
+- 관련: [ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md), [ADR-DEPLOY-006](../07-adr/platform/deploy-006-public-release-without-validation-gate.md), [ADR-WEB-006](../07-adr/platform/web-006-unified-login-rbac-route.md), [ADR-WEB-005](../07-adr/platform/web-005-application-port-binding.md), [docs/07-adr/adr-backlog.md](../07-adr/adr-backlog.md) 범위 충돌 검토, [RV-NFR-005](../01-requirements/non-functional-requirements.md#rv-nfr-005-목표-가용성과-복구-시간)·[RV-NFR-009](../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간)·[RV-NFR-010](../01-requirements/non-functional-requirements.md#rv-nfr-010-백업-주기와-복구-범위)·[RV-NFR-013](../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준).
 
 ## 14. 위반 검증 방법
 
