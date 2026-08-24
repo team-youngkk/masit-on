@@ -110,14 +110,18 @@ resource "aws_cloudwatch_metric_alarm" "redis_memory_utilization" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "blue_unhealthy" {
-  alarm_name          = "${var.name_prefix}-blue-unhealthy-host"
-  alarm_description   = "Blue target group has an unhealthy host"
-  namespace           = "AWS/ApplicationELB"
-  metric_name         = "UnHealthyHostCount"
-  statistic           = "Maximum"
-  period              = 60
-  evaluation_periods  = 1
-  datapoints_to_alarm = 1
+  alarm_name        = "${var.name_prefix}-blue-unhealthy-host"
+  alarm_description = "Blue target group has an unhealthy host"
+  namespace         = "AWS/ApplicationELB"
+  metric_name       = "UnHealthyHostCount"
+  statistic         = "Maximum"
+  period            = 60
+  # CodeDeploy가 replacement target을 등록·draining하는 동안 한 번의
+  # 비정상 datapoint가 발생할 수 있다. 2026-08-24 운영 이력에서도
+  # 단일 datapoint마다 ALARM과 OK가 반복되어 배포가 중단됐다.
+  # 3분 연속 비정상일 때만 배포를 중단해 전환 중 일시 상태와 지속 장애를 구분한다.
+  evaluation_periods  = 3
+  datapoints_to_alarm = 3
   threshold           = 1
   comparison_operator = "GreaterThanOrEqualToThreshold"
   treat_missing_data  = "notBreaching"
