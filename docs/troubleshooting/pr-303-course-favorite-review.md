@@ -16,7 +16,7 @@ related_documents:
 | PR | [#303](https://github.com/team-youngkk/masit-on/pull/303) |
 | 작성자 | @tjdgns0618 |
 | 처리 일자 | 2026-08-24 |
-| 범위 | 관리자 세션의 회원 전용 찜 후보 노출 차단, 3차 확장 범위·제품/API/데이터 추적 문서 정합화 |
+| 범위 | 관리자 세션의 회원 전용 찜 후보 노출 차단, 3차 확장 범위·제품/API/데이터 추적 문서 정합화, 검증 총계 일치화 |
 | 주 문제 유형 | 애플리케이션, 기타(제품 범위·추적성 계약) |
 | 기존 기록 | [PR #174 코스 공개 화면](pr-174-course-public-screen-review.md), [PR #171 코스 외부 경계](pr-171-course-route-review.md), [PR #135 개인 컬렉션 소유권](pr-135-personal-collection-review.md)을 확인했다. 기존의 공개 코스·개인 데이터 경계 원칙을 이번 권한·범위 수정에 적용했다. |
 
@@ -26,6 +26,7 @@ related_documents:
 |---|---|---|---|---|---|
 | [관리자 찜 후보 노출](https://github.com/team-youngkk/masit-on/pull/303#discussion_r3840334134) | `authenticated`만 확인하지 말고 `session.role === MEMBER`일 때만 찜 후보 영역을 노출 | 애플리케이션 | 수정 필요 | `canUseCourseFavoriteSource`로 MEMBER 세션만 허용하고 ADMIN·익명·인증 불가 상태를 차단했다. | 역할별 순수 함수 회귀 테스트, 타입체크, 프론트 전체 테스트·빌드 통과 |
 | [3차 범위·추적 문서 충돌](https://github.com/team-youngkk/masit-on/pull/303#discussion_r3840336546) | 자동 추천 입력 제외 문서와 명시적 찜 후보 선택 기능의 범위를 동기화 | 기타(제품 범위·추적성) | 수정 필요 | 자동 추천·자동 선정을 제외하고, 로그인 회원의 명시적 찜 목록 불러오기만 WS-16 범위로 명시했다. 제품·API·데이터 추적표에 `API-PERSONAL-004` 연결과 비저장 경계를 반영했다. | 관련 문서 diff 검사 및 프론트 전체 테스트·빌드 통과 |
+| [검증 총계 불일치](https://github.com/team-youngkk/masit-on/pull/303#discussion_r3840387181) | 트러블슈팅 기록의 `npm.cmd test` 총계 319개를 최신 실행 결과와 일치 | 애플리케이션 | 수정 필요 | 최신 HEAD에서 테스트를 재실행해 321개 통과를 확인하고 기록의 총계를 321개로 갱신했다. | `npm.cmd test` 321개 통과, `git diff --check` 통과 |
 
 ## 3. 문제 현상과 발생 조건
 
@@ -35,12 +36,15 @@ related_documents:
 - 실제 결과: 관리자에게 `/api/me/favorites`를 호출하는 `내 찜에서 찾기` 영역이 렌더링된다.
 - 기대 결과: 관리자·익명 사용자는 공개 검색 기반 코스만 사용하고, 일반 회원만 본인 찜 후보를 명시적으로 불러온다.
 - 영향 범위: 관리자 화면의 잘못된 회원 기능 노출과 401 안내 오인 가능성, 상위 3차 확장 범위 문서와 코스 PRD의 추적성 충돌.
+- 추가 확인 결과: 트러블슈팅 기록은 `npm.cmd test`를 319개로 적었지만 최신 PR 본문과 실제 실행 결과는 321개였다.
 
 ## 4. 근본 원인
 
 첫 번째 문제의 원인은 UI가 인증 상태만 검사하고 회원 역할을 검사하지 않은 것이다. 통합 인증은 `MEMBER`와 `ADMIN` 모두 `authenticated`로 표현하므로 개인 API 경계와 화면 조건이 달랐다.
 
 두 번째 문제의 원인은 상위 범위 문서가 “찜을 추천 입력으로 사용하지 않는다”는 정책을 자동 추천과 사용자의 명시적 후보 선택으로 구분하지 않은 채 기록하고 있었던 것이다. PR #303은 PRD·흐름·와이어프레임을 먼저 확장해 상위 scope·추적표와 문장상 충돌이 생겼다.
+
+세 번째 문제의 원인은 이전 리뷰 반영 후 트러블슈팅 기록의 테스트 총계를 갱신하지 않은 것이다. 실행 명령 자체의 성공 여부와 별개로 기록·PR 본문 간 수치가 달라 검증 근거의 재현성이 떨어졌다.
 
 ## 5. 확인 및 시도
 
@@ -49,12 +53,13 @@ related_documents:
 | `useMemberSession()`의 상태·세션 역할과 개인 찜 API 계약 확인 | `ADMIN`도 `authenticated`지만 `/api/me/**`는 일반 회원 경계임을 확인 | 역할 조건을 순수 함수로 분리하고 회귀 테스트 추가 |
 | 3차 확장 scope 3.3절과 코스 PRD 6.3절 비교 | 자동 추천 제외와 명시적 수동 선택이 문서에서 구분되지 않음 | 자동 추천 제외는 유지하고 명시적 찜 불러오기를 WS-16 범위로 명시 |
 | 제품·API·데이터 추적표의 코스 행 확인 | 개인 찜 API 연결과 인증 경계가 코스 행에 누락 | `API-PERSONAL-004` 및 기존 `favorite` 비저장 조합을 추적표에 추가 |
+| 최신 HEAD에서 `npm.cmd test` 재실행 및 PR 본문·기록 비교 | 321개 통과, 기록만 319개로 불일치 | 기록의 테스트 총계를 321개로 갱신 |
 
 ## 6. 최종 해결
 
-- 변경 내용: MEMBER 역할만 코스 찜 후보 영역을 사용하도록 조건을 좁혔다. 상위 범위 문서에는 자동 추천과 명시적 후보 선택을 구분하고, 제품/API/데이터 추적표에 기존 개인 찜 API 재사용을 연결했다.
+- 변경 내용: MEMBER 역할만 코스 찜 후보 영역을 사용하도록 조건을 좁혔다. 상위 범위 문서에는 자동 추천과 명시적 후보 선택을 구분하고, 제품/API/데이터 추적표에 기존 개인 찜 API 재사용을 연결했다. 최신 테스트 실행 결과에 맞춰 이 기록의 총계를 321개로 갱신했다.
 - 선택 이유: 개인 API의 인증 경계를 UI에서 먼저 보장하면서, 사용자가 요청한 명시적 찜 후보 선택 기능은 유지할 수 있다.
-- 변경 파일: `frontend/app/course/CourseScreen.tsx`, `frontend/lib/course/course-selection.ts`, `frontend/lib/course/course-selection.test.ts`, `docs/08-planning/third-expansion-scope-and-terminology.md`, `docs/04-product/traceability.md`, `docs/05-specs/api-traceability.md`, `docs/05-specs/data/data-traceability.md`
+- 변경 파일: `frontend/app/course/CourseScreen.tsx`, `frontend/lib/course/course-selection.ts`, `frontend/lib/course/course-selection.test.ts`, `docs/08-planning/third-expansion-scope-and-terminology.md`, `docs/04-product/traceability.md`, `docs/05-specs/api-traceability.md`, `docs/05-specs/data/data-traceability.md`, `docs/troubleshooting/pr-303-course-favorite-review.md`
 - 고려한 대안: 찜 후보 기능 전체 제거는 상위 범위 충돌은 없애지만 사용자 요청과 PR의 목적을 폐기하므로 채택하지 않았다.
 
 ## 7. 검증
