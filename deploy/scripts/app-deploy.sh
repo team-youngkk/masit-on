@@ -421,8 +421,8 @@ auth_trusted_proxies=$(printf '%s\n' "$backend_env" | awk -F= '$1 == "AUTH_LOGIN
 [ "$auth_proxy_enabled" = "true" ] || { echo "통합 로그인 reverse-proxy 환경변수 주입 실패" >&2; exit 1; }
 [ "$auth_trusted_proxies" = "127.0.0.1" ] || { echo "통합 로그인 trusted-proxy 환경변수 주입 실패" >&2; exit 1; }
 
-# app-deploy는 nginx-install보다 먼저 실행될 수 있다. Nginx가 이미 설치·활성화된
-# 호스트에서는 실제 설정을 검사하고 public API 경계를 확인한다. 로그인 endpoint는
+# Nginx가 이미 설치·활성화된 호스트에서는 실제 설정을 검사하고 public API 경계를
+# 확인한다. 로그인 endpoint는
 # 공개 경로이므로 형식이 유효한 가짜 자격 증명을 보내 애플리케이션의 401을 확인한다.
 # 빈 JSON({})은 인증 경계가 아니라 입력 검증 오류(400)를 확인하게 된다.
 nginx_site_conf=/etc/nginx/conf.d/masiton.click.conf
@@ -443,7 +443,7 @@ if [ -f "$nginx_site_conf" ] && systemctl is-active --quiet nginx; then
     exit 1
   }
 else
-  echo "public Nginx 경로 smoke 스킵: 설치된 masit-on site 설정이 없거나 Nginx가 비활성 상태다(nginx-install 단계에서 검증한다)."
+  echo "public Nginx 경로 smoke 스킵: 설치된 masit-on site 설정이 없거나 Nginx가 비활성 상태다(이후 nginx-install에서 검증한다)."
 fi
 
 # 운영 Origin이 주입됐는지 확인한다. 유효한 Origin과 Token 없는 요청은 인증 실패(401)여야
@@ -528,6 +528,11 @@ for source_key in "${first_client_keys[0]}" "${second_client_keys[0]}"; do
 done
 redis_cli DEL "${smoke_redis_keys[@]}" >/dev/null
 smoke_redis_keys=()
+
+# Nginx 전환도 app-deploy의 롤백 보호 안에서 수행한다. 새 백엔드와 구버전
+# validation-gate Nginx가 섞이지 않도록, Nginx smoke/TLS 설치 실패 시 이전
+# Nginx 복구와 이전 앱 산출물 복구가 같은 실패 경로에서 실행되어야 한다.
+"$STAGE/nginx-install.sh" "$STAGE"
 
 trap - ERR
 rollback_enabled=no

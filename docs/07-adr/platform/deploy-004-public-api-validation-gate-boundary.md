@@ -17,24 +17,25 @@ related_documents:
   - ../../06-architecture/security-boundary.md
   - ../../08-planning/expansion-1-task-breakdown.md
   - deploy-003-validation-cookie-session.md
+  - deploy-006-public-release-without-validation-gate.md
   - web-006-unified-login-rbac-route.md
 supersedes:
   - ADR-DEPLOY-003
 supersedes_decision: 검증 로그인·세션 진입점과 자체 인증 Callback을 제외한 전체 화면·API의 검증 세션 gate 적용
-superseded_by: null
+superseded_by: ADR-DEPLOY-006
 ---
 
 # ADR-DEPLOY-004 비관리자 공개 API 검증 세션 gate 경계
 
 ## 1. 상태
 
-Accepted. 2026-08-14 Issue #197에서 Spring Security의 비관리자 공개 API와 Nginx 검증 세션 gate가 서로 다른 공개 범위를 적용해 운영 요청을 차단한 문제를 해결하기 위해 [ADR-DEPLOY-003](deploy-003-validation-cookie-session.md)을 대체한다. 검증 참여자 쿠키 세션 자체는 유지하되, 제품 API의 공개·보호 경계를 별도 운영 인증이 뒤집지 않도록 Nginx 예외 조건을 변경한다.
+Superseded by [ADR-DEPLOY-006](deploy-006-public-release-without-validation-gate.md). 2026-08-14 Issue #197에서 Spring Security의 비관리자 공개 API와 Nginx 검증 세션 gate가 서로 다른 공개 범위를 적용해 운영 요청을 차단한 문제를 해결하기 위해 [ADR-DEPLOY-003](deploy-003-validation-cookie-session.md)을 대체했던 역사적 결정이다. 검증 참여자 쿠키 세션과 이 ADR의 공개 API 예외 목록은 M2 제한 공개 단계에서 사용했으며, 정식 공개 전환으로 gate·쿠키·Redis namespace·전용 비밀정보를 제거한다. 회원·관리자 인증과 제품 API의 공개·보호 경계는 현재도 유지한다.
 
 ## 2. 결정 요약
 
-검증 참여자 제한 공개는 전용 로그인 화면과 서버 측 쿠키 세션을 계속 사용한다. 비관리자 공개 제품 API는 Spring Security가 `permitAll`로 공개한 경로와 Method만 검증 세션 gate 전에 Backend로 전달한다. 관리자·미정의 API와 공개 경로의 비허용 Method는 계속 Nginx `auth_request`로 검증 세션을 요구한다.
+M2 제한 공개 당시에는 전용 로그인 화면과 서버 측 쿠키 세션을 사용했다. 당시 비관리자 공개 제품 API는 Spring Security가 `permitAll`로 공개한 경로와 Method만 검증 세션 gate 전에 Backend로 전달했고, 나머지는 Nginx `auth_request`로 검증 세션을 요구했다. 이 gate는 현재 제거 대상이며 제품 API의 실제 인증 계약을 대신하지 않는다.
 
-검증 로그인·세션 진입점, 로그인 정적 자산과 자체 인증 외부 Callback 예외도 유지한다. 실제 제외 목록과 경로별 인증 수단은 [검증 참여자 제한 공개 API 계약](../../05-specs/api/common/validation-access-contract.md) 4절이 단일 목록으로 소유한다.
+검증 로그인·세션 진입점, 로그인 정적 자산과 자체 인증 외부 Callback 예외는 M2 단계의 역사적 목록이다. Webhook Callback의 자체 인증·rate limit, Host 검증과 `/internal`·loopback 경계는 현재 운영 계약으로 유지하며, 제품 API 경로별 인증 수단은 [ADR-DEPLOY-006](deploy-006-public-release-without-validation-gate.md)과 각 API 계약이 소유한다.
 
 ## 3. 배경
 

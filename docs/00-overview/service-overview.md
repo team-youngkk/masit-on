@@ -151,8 +151,9 @@ MVP의 일반 사용자는 계정 없이 맛집을 탐색한다.
 ### MVP 검증 배포와 이후 운영
 
 - 초기 운영 배포(M2)는 다음 확장 단계 착수 전에 최초 AWS 운영 환경으로 수행한다.
-- 초기 운영 배포는 단일 EC2, ECR, RDS와 CloudWatch를 사용하는 현재 기술 결정을 적용하고 검증 참여자에게 제한 공개한다. 이후 배포 고도화는 영향·비용 검토를 마친 [ADR-DEPLOY-005](../07-adr/platform/deploy-005-asg-blue-green-rollout.md) Accepted 기준(ALB·ASG·CodeDeploy replacement·사설 subnet 전용 Redis)을 따르며, 실제 전환은 별도 운영 게이트에서 수행한다.
-- 검증을 통과한 같은 환경을 계속 운영하며, 이후 확장에서는 필요한 인프라 변경을 해당 단계에 함께 반영한다.
+- 초기 운영 배포는 단일 EC2, ECR, RDS와 CloudWatch를 사용하는 기술 결정을 적용하고 M2에서 검증 참여자에게 제한 공개했다. 이 제한 공개는 완료된 역사적 단계이며 현재 정식 공개는 검증 참여자 gate 없이 수행한다([ADR-DEPLOY-006](../07-adr/platform/deploy-006-public-release-without-validation-gate.md)).
+- 회원·관리자 인증, Webhook 자체 인증·rate limit, Host 검증, `/internal/**` 외부 `404`와 loopback 애플리케이션 포트 경계는 정식 공개에서도 유지한다.
+- 이후 배포 고도화는 영향·비용 검토를 마친 [ADR-DEPLOY-005](../07-adr/platform/deploy-005-asg-blue-green-rollout.md) Accepted 기준(ALB·ASG·CodeDeploy replacement·사설 subnet 전용 Redis)을 따르며, 실제 전환과 `v1.0.0` tag는 별도 운영 승인·확인을 거친다.
 
 확장 기능의 세부 범위와 우선순위는 각 단계의 PRD에서 검토한다. 초기 운영 배포 절차는 후속 문서에서 구체화하되, 이 문서와 비기능 요구사항·ADR의 검증 기준을 충족해야 한다.
 

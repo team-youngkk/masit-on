@@ -19,6 +19,7 @@ related_documents:
   - ../../02-analysis/mvp-workstreams.md
   - ../../06-architecture/technology-policy.md
   - ci-001-github-actions-quality-gate.md
+  - deploy-006-public-release-without-validation-gate.md
   - runtime-001-docker.md
   - ../quality/obs-001-logging-observability.md
   - ../security/sec-001-secrets-workload-identity.md
@@ -38,7 +39,7 @@ Accepted
 
 ## 2. 결정 요약
 
-MVP 검증을 위한 **초기 운영 배포**(M2)를 다음 확장 단계 착수 전에 최초 운영 환경으로 먼저 수행한다. 초기에는 검증 참여자에게만 제한 공개하고, 검증을 통과한 같은 환경을 계속 운영한다. 이후 확장에서는 각 단계에 필요한 인프라 변경을 기능 변경과 함께 반영하고 검증한다. M2 초기 운영은 단일 인스턴스·수동 복구 구성을 유지하며, 배포 고도화의 ALB·ASG·CodeDeploy replacement·사설 subnet 전용 Redis 기준은 2026-08-18 [ADR-DEPLOY-005](deploy-005-asg-blue-green-rollout.md) Accepted 결정으로 확정했다. 실제 전환은 별도 운영 승인과 리허설을 통과한 뒤 수행한다.
+MVP 검증을 위한 **초기 운영 배포**(M2)를 다음 확장 단계 착수 전에 최초 운영 환경으로 먼저 수행한다. M2의 검증 참여자 제한 공개는 완료된 역사적 단계이며, 정식 공개의 현재 진입 경계는 검증 참여자 gate를 제거한 [ADR-DEPLOY-006](deploy-006-public-release-without-validation-gate.md)이 소유한다. 이후 확장에서는 각 단계에 필요한 인프라 변경을 기능 변경과 함께 반영하고 검증한다. M2 초기 운영은 단일 인스턴스·수동 복구 구성을 유지하며, 배포 고도화의 ALB·ASG·CodeDeploy replacement·사설 subnet 전용 Redis 기준은 2026-08-18 [ADR-DEPLOY-005](deploy-005-asg-blue-green-rollout.md) Accepted 결정으로 확정했다. 실제 정식 운영 전환과 `v1.0.0` tag는 별도 운영 승인·확인을 거친다.
 
 ## 2.1. 배포 단계 명칭
 
@@ -76,7 +77,7 @@ MVP 검증을 위한 **초기 운영 배포**(M2)를 다음 확장 단계 착수
 
 ## 4. 결정
 
-- M2 초기 운영 배포에서 최초 운영 환경을 먼저 배포하고 검증 참여자에게 제한 공개한다.
+- M2 초기 운영 배포에서 최초 운영 환경을 먼저 배포하고 검증 참여자에게 제한 공개했다. 이 제한 공개는 완료된 전환 단계이며 현재 공개 진입 조건이 아니다([ADR-DEPLOY-006](deploy-006-public-release-without-validation-gate.md)).
 - 초기 운영 배포 검증을 통과한 환경을 별도 재구축 없이 같은 운영 환경으로 계속 사용한다.
 - 초기 운영 배포부터 EC2·ECR·RDS·CloudWatch와 운영 비밀정보 설정을 활성화한다.
 - 초기 운영 배포에서 도메인·HTTPS·Nginx 리버스 프록시와 운영 외부 API 키를 설정하고 검증한다.
@@ -84,6 +85,7 @@ MVP 검증을 위한 **초기 운영 배포**(M2)를 다음 확장 단계 착수
 - GitHub Actions의 빌드·자동화 테스트 품질 게이트와 로컬 Docker 통합 검증은 초기 운영 배포 및 이후 확장 단계에서도 계속 유지한다.
 - 단일 EC2, GitHub Actions → ECR → EC2, 운영 RDS와 CloudWatch라는 기존 기술 선택은 유지한다. 이번 결정은 적용 순서를 변경한다.
 - M2 초기 운영과 3차 확장까지는 단일 인스턴스와 수동 복구를 유지한다. 이후 배포 고도화는 Accepted [ADR-DEPLOY-005](deploy-005-asg-blue-green-rollout.md)의 ALB·ASG·CodeDeploy replacement와 전용 Redis 기준을 사용하며, 실제 착수는 운영 적용 리허설을 통과한 뒤 시작한다.
+- 정식 공개에서는 회원·관리자 인증, Webhook 자체 인증·rate limit, Host 검증, `/internal/**` 외부 `404`와 loopback 포트 경계를 유지하며, 제거 대상은 검증 참여자 전용 gate와 그 자원뿐이다([ADR-DEPLOY-006](deploy-006-public-release-without-validation-gate.md)).
 
 ## 5. 영향
 
@@ -98,7 +100,7 @@ MVP 검증을 위한 **초기 운영 배포**(M2)를 다음 확장 단계 착수
 
 - M2 초기 운영 배포 체크리스트에서 도메인·HTTPS·Nginx 리버스 프록시·운영 외부 API 키 설정을 확인한다.
 - EC2에서 ECR 이미지를 사용해 애플리케이션을 실행하고 RDS·CloudWatch 연동을 검증한다.
-- 공개 경로와 `/api/**` 라우팅, 외부에서 차단해야 하는 `/internal/**` 경계를 확인한다.
+- 공개 경로와 `/api/**` 라우팅, Webhook 자체 인증·rate limit, 허용 Host, 외부에서 `404`여야 하는 `/internal/**`와 loopback 애플리케이션 포트 경계를 확인한다.
 - 배포 전 GitHub Actions 품질 게이트와 로컬 Docker 통합 검증이 계속 통과하는지 확인한다.
 - 각 확장 단계의 인프라 변경이 해당 단계의 기능 검증 및 복구 절차에 반영됐는지 확인한다.
 

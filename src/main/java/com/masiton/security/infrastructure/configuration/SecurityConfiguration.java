@@ -55,8 +55,6 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.GET, "/api/webhooks/youtube/channel-updates").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/webhooks/youtube/channel-updates").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/verification/sessions").permitAll()
-                        .requestMatchers(HttpMethod.DELETE, "/api/verification/sessions").permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/auth/registrations",
                                 "/api/auth/email-verifications",
@@ -79,9 +77,6 @@ public class SecurityConfiguration {
                                 "/api/restaurants/natural-language-search").permitAll()
                         .requestMatchers("/internal/health/live", "/internal/health/ready", "/internal/health/dependencies")
                         .permitAll()
-                        .requestMatchers("/internal/verification/session",
-                                "/internal/verification/access-required",
-                                "/internal/verification/unavailable").permitAll()
                         .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/auth/tokens").authenticated()
                         .requestMatchers("/api/me", "/api/me/**").authenticated()

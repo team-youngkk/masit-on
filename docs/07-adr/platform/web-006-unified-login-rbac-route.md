@@ -64,14 +64,13 @@ Accepted
 - API 버전 접두사 `/v1`은 도입하지 않는다.
 - Nginx는 경로 접두사만 사용하며 `Accept`, User-Agent 또는 응답 형식으로 목적지를 구분하지 않는다.
 
-정식 공개 전 검증 참여자 gate는 [ADR-DEPLOY-004](deploy-004-public-api-validation-gate-boundary.md)와 [검증 참여자 제한 공개 API 계약](../../05-specs/api/common/validation-access-contract.md)을 따른다. 이는 회원·관리자 Bearer 인증과 독립이며 정식 공개 시 제거한다. 운영 애플리케이션 포트의 loopback 바인딩은 [ADR-WEB-005](web-005-application-port-binding.md)가 소유한다.
+M2의 검증 참여자 gate는 [ADR-DEPLOY-003](deploy-003-validation-cookie-session.md)과 [ADR-DEPLOY-004](deploy-004-public-api-validation-gate-boundary.md)에 역사적으로 기록되어 있으며, 정식 공개 전환으로 제거한다. 현재 공개·회원·관리자 API 경계와 Webhook 자체 인증·rate limit, Host·`/internal`·loopback 경계는 [ADR-DEPLOY-006](deploy-006-public-release-without-validation-gate.md)과 각 API 계약을 따른다. 운영 애플리케이션 포트의 loopback 바인딩은 [ADR-WEB-005](web-005-application-port-binding.md)가 소유한다.
 
 ### 5.2 화면 경로
 
 | 경로 | 동작 |
 |---|---|
 | `/` | `/restaurants`로 이동 |
-| `/verification/login` | 정식 공개 전 검증 참여자 세션 생성 화면 |
 | `/login` | 회원·관리자 공용 이메일·비밀번호 로그인 |
 | `/admin/login` | 호환성을 위해 `/login?returnTo=/admin`으로 이동 |
 | `/restaurants` | 맛집 검색·필터·목록 |
@@ -148,7 +147,7 @@ Docker Healthcheck는 `live`, 배포 후 Smoke Test는 `ready`, CloudWatch Agent
 
 ## 8. 적용 범위
 
-Next.js App Router, 공통 헤더, 로그인·권한 없음·관리자 화면, TanStack Query 인증 캐시, API Client의 재발급 조정, Spring Security matcher, Refresh Token 쿠키, Nginx, Docker Healthcheck와 운영 점검에 적용한다.
+Next.js App Router, 공통 헤더, 로그인·권한 없음·관리자 화면, TanStack Query 인증 캐시, API Client의 재발급 조정, Spring Security matcher, Refresh Token 쿠키, Nginx, Docker Healthcheck와 운영 점검에 적용한다. M2 검증 참여자 로그인 화면·쿠키·gate는 현재 적용 범위에서 제외한다.
 
 ## 9. 강제 규칙
 

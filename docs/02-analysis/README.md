@@ -58,7 +58,7 @@ related_documents:
 | [WS-06](first-expansion-workstreams.md#5-ws-06-개인-맛집-관리) | 개인 맛집 관리 | 박진영 |
 | [WS-07](first-expansion-workstreams.md#6-ws-07-지도-탐색) | 지도 탐색 | 양성훈 |
 | [WS-08](first-expansion-workstreams.md#7-ws-08-유튜버-상세) | 유튜버 상세 | 이우람 |
-| [OPS-VALIDATION](first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙) | 검증 참여자 제한 공개 진입 경계 — 정식 공개 시 종료 | 이우람 |
+| [OPS-VALIDATION](first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙) | M2 검증 참여자 제한 공개의 역사·정식 공개 전환 확인 — 현재 gate 없음 | 이우람 |
 | [WS-09](second-expansion-workstreams.md#4-ws-09-개인-컬렉션) | 개인 컬렉션 | 박진영 |
 | [WS-10](second-expansion-workstreams.md#5-ws-10-인기-맛집) | 인기 맛집 | 양성훈 |
 | [WS-11](second-expansion-workstreams.md#6-ws-11-관리자-큐레이션) | 관리자 큐레이션 | 김인안 |
