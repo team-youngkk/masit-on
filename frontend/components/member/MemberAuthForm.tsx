@@ -15,7 +15,7 @@ import {
   PASSWORD_POLICY_ERROR_MESSAGE,
   prepareMemberAuthSubmission,
   isInvalidMemberCredentialsResponse,
-  extractPasswordResetToken,
+  watchPasswordResetToken,
 } from './member-auth-form-coordination'
 import styles from './MemberAuthForm.module.css'
 
@@ -54,11 +54,15 @@ export function MemberAuthForm({ mode, returnTo }: { mode: MemberAuthMode; retur
       return
     }
 
-    const resetToken = extractPasswordResetToken(window.location.hash)
-    if (resetToken) {
-      setToken(resetToken)
-      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`)
-    }
+    return watchPasswordResetToken(
+      () => window.location.hash,
+      resetToken => setToken(resetToken),
+      () => window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`),
+      listener => {
+        window.addEventListener('hashchange', listener)
+        return () => window.removeEventListener('hashchange', listener)
+      },
+    )
   }, [mode])
 
   function clearFieldError(field: keyof MemberAuthFieldErrors) {

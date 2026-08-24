@@ -6,16 +6,29 @@ import java.util.Map;
 
 import jakarta.annotation.PostConstruct;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 
 @ConfigurationProperties("masiton.member.action-mail")
 public class MemberActionMailProperties {
 
+    private final Environment environment;
     private String activeKeyId;
     private String activeKey;
     private String fromAddress;
     private String passwordResetUrl = "http://localhost:3000/password-reset";
     private Map<String, String> keys = new LinkedHashMap<>();
+
+    public MemberActionMailProperties() {
+        this(null);
+    }
+
+    @Autowired
+    public MemberActionMailProperties(Environment environment) {
+        this.environment = environment;
+    }
 
     public String getFromAddress() {
         return fromAddress;
@@ -84,11 +97,24 @@ public class MemberActionMailProperties {
         }
         try {
             URI uri = URI.create(value);
-            return ("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()))
+            boolean https = "https".equalsIgnoreCase(uri.getScheme());
+            boolean http = "http".equalsIgnoreCase(uri.getScheme());
+            return (https || (http && !isProductionProfile() && isLoopbackHost(uri.getHost())))
                     && uri.getHost() != null && !uri.getHost().isBlank()
                     && uri.getRawFragment() == null && uri.getUserInfo() == null;
         } catch (IllegalArgumentException exception) {
             return false;
         }
+    }
+
+    private boolean isProductionProfile() {
+        return environment != null && environment.acceptsProfiles(Profiles.of("prod"));
+    }
+
+    private boolean isLoopbackHost(String host) {
+        return "localhost".equalsIgnoreCase(host)
+                || "127.0.0.1".equals(host)
+                || "[::1]".equals(host)
+                || "::1".equals(host);
     }
 }

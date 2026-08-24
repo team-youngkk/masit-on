@@ -6,6 +6,7 @@ const {
   prepareMemberAuthSubmission,
   validateMemberAuthForm,
   extractPasswordResetToken,
+  watchPasswordResetToken,
 } = require('./member-auth-form-coordination.ts')
 
 function validate(overrides: Record<string, string> = {}) {
@@ -27,6 +28,34 @@ memberAuthFormTest('비밀번호 재설정 fragment에서 토큰만 읽고 잘�
   memberAuthFormAssert.equal(extractPasswordResetToken('#token=%20opaque-reset-token%20'), 'opaque-reset-token')
   memberAuthFormAssert.equal(extractPasswordResetToken('#next=1'), '')
   memberAuthFormAssert.equal(extractPasswordResetToken(''), '')
+})
+
+memberAuthFormTest('비밀번호 재설정 화면은 처음과 hash 변경 때 최신 토큰을 읽고 주소를 지운다', () => {
+  let hash = '#token=first-reset-token'
+  let listener: (() => void) | undefined
+  const tokens: string[] = []
+  let clearCount = 0
+
+  const unsubscribe = watchPasswordResetToken(
+    () => hash,
+    (token: string) => tokens.push(token),
+    () => { clearCount += 1 },
+    (nextListener: () => void) => {
+      listener = nextListener
+      return () => { listener = undefined }
+    },
+  )
+
+  hash = '#token=second-reset-token'
+  listener?.()
+
+  memberAuthFormAssert.deepEqual(tokens, ['first-reset-token', 'second-reset-token'])
+  memberAuthFormAssert.equal(clearCount, 2)
+
+  unsubscribe()
+  hash = '#token=third-reset-token'
+  listener?.()
+  memberAuthFormAssert.deepEqual(tokens, ['first-reset-token', 'second-reset-token'])
 })
 
 memberAuthFormTest('이메일을 사용하는 제출 모드는 API 요청용 정규화 이메일을 만든다', () => {
