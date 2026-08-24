@@ -20,7 +20,8 @@ public record RestaurantMapPointsResponse(
     }
 
     public record RestaurantPointItem(
-            String id, String name, String category, String addressSummary, Coordinate coordinate) {
+            String id, String name, String category, String addressSummary, Coordinate coordinate,
+            String creatorProfileImageUrl) {
 
         static RestaurantPointItem from(RestaurantMapPointSummary summary) {
             return new RestaurantPointItem(
@@ -28,7 +29,8 @@ public record RestaurantMapPointsResponse(
                     summary.name(),
                     summary.category(),
                     summary.addressSummary(),
-                    new Coordinate(summary.latitude(), summary.longitude()));
+                    new Coordinate(summary.latitude(), summary.longitude()),
+                    summary.creatorProfileImageUrl());
         }
     }
 

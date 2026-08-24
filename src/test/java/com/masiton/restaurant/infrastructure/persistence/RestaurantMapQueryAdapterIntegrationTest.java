@@ -119,6 +119,77 @@ class RestaurantMapQueryAdapterIntegrationTest extends com.masiton.test.FullCont
         assertThat(rows).extracting(RestaurantMapPointRow::id).containsExactly(first, second);
     }
 
+    @Test
+    @DisplayName("필터가 없어도 공개 유효 방문 콘텐츠의 대표 채널 이미지를 한 개 반환한다")
+    void findMatching_필터없음_대표채널이미지한개를반환한다() {
+        // given
+        UUID restaurantId = insertRestaurant("대표 이미지 맛집", MAPO_REGION_ID, KOREAN_CATEGORY_ID,
+                "PUBLIC", "ACTIVE", "37.5665", "126.9780");
+        UUID creatorId = UUID.randomUUID();
+        String externalChannelId = "channel-" + creatorId;
+        jdbcTemplate.update(
+                "INSERT INTO creator (id, external_channel_id, channel_name, channel_url, profile_image_url, "
+                        + "publication_status, lifecycle_status, external_availability_status, external_status_checked_at) "
+                        + "VALUES (?, ?, ?, ?, ?, 'PUBLIC', 'ACTIVE', 'AVAILABLE', now())",
+                creatorId, externalChannelId, "대표 채널", "https://example.com/channel/" + creatorId,
+                "https://example.com/profile/" + creatorId);
+        UUID videoId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO video (id, creator_id, external_video_id, publisher_external_channel_id, title, "
+                        + "source_url, thumbnail_url, external_status_checked_at) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, now())",
+                videoId, creatorId, "video-" + videoId.toString().substring(0, 20), externalChannelId, "대표 영상",
+                "https://example.com/video/" + videoId, "https://example.com/thumb/" + videoId);
+        jdbcTemplate.update("INSERT INTO visit (id, restaurant_id, creator_id, video_id) VALUES (?, ?, ?, ?)",
+                UUID.randomUUID(), restaurantId, creatorId, videoId);
+
+        // when
+        List<RestaurantMapPointRow> rows = restaurantMapPointsQueryPort.findMatching(
+                new RestaurantMapPointsCriteria(null, null, null, null), 201);
+
+        // then
+        assertThat(rows).singleElement()
+                .extracting(RestaurantMapPointRow::creatorProfileImageUrl)
+                .isEqualTo("https://example.com/profile/" + creatorId);
+    }
+
+    @Test
+    @DisplayName("대표 채널의 이미지가 없으면 다음 채널 이미지로 대체하지 않는다")
+    void findMatching_첫대표채널이미지없음_null을반환한다() {
+        // given
+        UUID restaurantId = insertRestaurant("이미지 없는 대표 맛집", MAPO_REGION_ID, KOREAN_CATEGORY_ID,
+                "PUBLIC", "ACTIVE", "37.5665", "126.9780");
+        insertCreatorVideoVisit(restaurantId, "가 채널", null);
+        insertCreatorVideoVisit(restaurantId, "나 채널", "https://example.com/profile/next");
+
+        // when
+        List<RestaurantMapPointRow> rows = restaurantMapPointsQueryPort.findMatching(
+                new RestaurantMapPointsCriteria(null, null, null, null), 201);
+
+        // then
+        assertThat(rows).singleElement()
+                .extracting(RestaurantMapPointRow::creatorProfileImageUrl)
+                .isNull();
+    }
+
+    private void insertCreatorVideoVisit(UUID restaurantId, String channelName, String profileImageUrl) {
+        UUID creatorId = UUID.randomUUID();
+        String externalChannelId = "channel-" + creatorId;
+        jdbcTemplate.update(
+                "INSERT INTO creator (id, external_channel_id, channel_name, channel_url, profile_image_url, "
+                        + "publication_status, lifecycle_status, external_availability_status, external_status_checked_at) "
+                        + "VALUES (?, ?, ?, ?, ?, 'PUBLIC', 'ACTIVE', 'AVAILABLE', now())",
+                creatorId, externalChannelId, channelName, "https://example.com/channel/" + creatorId, profileImageUrl);
+        UUID videoId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO video (id, creator_id, external_video_id, publisher_external_channel_id, title, "
+                        + "source_url, thumbnail_url, external_status_checked_at) VALUES (?, ?, ?, ?, ?, ?, ?, now())",
+                videoId, creatorId, "video-" + videoId.toString().substring(0, 20), externalChannelId, "테스트 영상",
+                "https://example.com/video/" + videoId, "https://example.com/thumb/" + videoId);
+        jdbcTemplate.update("INSERT INTO visit (id, restaurant_id, creator_id, video_id) VALUES (?, ?, ?, ?)",
+                UUID.randomUUID(), restaurantId, creatorId, videoId);
+    }
+
     private UUID insertRestaurant(
             String name, UUID regionId, UUID foodCategoryId, String publicationStatus, String lifecycleStatus,
             String latitude, String longitude) {
