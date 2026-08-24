@@ -5,7 +5,9 @@ import {
   MAX_COURSE_SIZE,
   MIN_COURSE_SIZE,
   addCourseCandidate,
+  appendUniqueCourseCandidates,
   canCalculateCourse,
+  courseCandidateActionState,
   courseSizeGuidance,
   isCourseCandidateSelected,
   isCourseFull,
@@ -40,6 +42,26 @@ test('isCourseCandidateSelected는 id 일치 여부만 본다', () => {
   const selected = [candidate('A')]
   assert.equal(isCourseCandidateSelected(selected, 'A'), true)
   assert.equal(isCourseCandidateSelected(selected, 'B'), false)
+})
+
+test('검색과 찜 후보의 같은 ID는 선택됨으로 판정하고 5개 상한은 추가를 막는다', () => {
+  assert.deepEqual(courseCandidateActionState([candidate('A')], 'A'), {
+    alreadySelected: true,
+    full: false,
+    disabled: true,
+  })
+  assert.deepEqual(courseCandidateActionState(['A', 'B', 'C', 'D', 'E'].map(candidate), 'F'), {
+    alreadySelected: false,
+    full: true,
+    disabled: true,
+  })
+})
+
+test('찜 목록 다음 페이지는 기존 순서를 유지하고 중복 ID를 제거한다', () => {
+  const current = [candidate('A'), candidate('B')]
+  const next = appendUniqueCourseCandidates(current, [candidate('B'), candidate('C'), candidate('C')])
+  assert.deepEqual(toCourseRestaurantIds(next), ['A', 'B', 'C'])
+  assert.equal(appendUniqueCourseCandidates(next, []), next)
 })
 
 test('지정한 위치의 후보를 제거한다', () => {

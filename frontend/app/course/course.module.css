@@ -331,6 +331,14 @@
   gap: var(--space-3);
 }
 
+.favoriteSource {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
 .selectGroup {
   position: relative;
   z-index: 1;

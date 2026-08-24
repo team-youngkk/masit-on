@@ -27,6 +27,35 @@ export function isCourseCandidateSelected(
   return selected.some((item) => item.id === candidateId)
 }
 
+export type CourseCandidateActionState = {
+  alreadySelected: boolean
+  full: boolean
+  disabled: boolean
+}
+
+export function courseCandidateActionState(
+  selected: CourseCandidate[],
+  candidateId: string,
+): CourseCandidateActionState {
+  const alreadySelected = isCourseCandidateSelected(selected, candidateId)
+  const full = isCourseFull(selected)
+  return { alreadySelected, full, disabled: alreadySelected || full }
+}
+
+/* 페이지를 이어 받을 때 같은 맛집 ID가 다시 오더라도 후보 원천의 순서를 유지한다. */
+export function appendUniqueCourseCandidates(
+  current: CourseCandidate[],
+  additions: CourseCandidate[],
+): CourseCandidate[] {
+  const ids = new Set(current.map((item) => item.id))
+  const unique = additions.filter((item) => {
+    if (ids.has(item.id)) return false
+    ids.add(item.id)
+    return true
+  })
+  return unique.length === 0 ? current : [...current, ...unique]
+}
+
 /* 이미 선택됐거나 5개가 찬 상태에서 추가를 요청하면 목록을 바꾸지 않는다. */
 export function addCourseCandidate(
   selected: CourseCandidate[],
