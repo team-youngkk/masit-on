@@ -61,4 +61,3 @@ export function NotificationBell({ showLabel = false }: { showLabel?: boolean })
     </Link>
   )
 }
-

@@ -77,7 +77,6 @@
   --layout-max-width: 1200px;
   --layout-gutter: var(--space-4);
 }
-
 /* 공개·관리자 프레임 모두 다크 테마 토큰을 적용한다. */
 html[data-theme='dark'] [data-public-frame],
 html[data-theme='dark'] [data-admin-frame] {

@@ -2,7 +2,6 @@
   display: grid;
   gap: var(--space-5);
 }
-
 .summary {
   display: flex;
   flex-wrap: wrap;

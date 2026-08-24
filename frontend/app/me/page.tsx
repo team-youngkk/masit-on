@@ -131,4 +131,3 @@ export default function MePage() {
     {message ? <StatePanel compact tone={messageIsError ? 'danger' : 'neutral'} title={message} /> : null}
   </PageShell>
 }
-

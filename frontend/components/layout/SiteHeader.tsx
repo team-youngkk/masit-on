@@ -37,7 +37,6 @@ function MapNavigationLink({
     </Link>
   )
 }
-
 type MobileNavIconName = 'search' | 'course' | 'popular' | 'curation' | 'map'
 
 function MobileNavIcon({ name }: { name: MobileNavIconName }) {
