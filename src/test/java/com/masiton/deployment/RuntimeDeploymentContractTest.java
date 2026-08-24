@@ -455,6 +455,14 @@ class RuntimeDeploymentContractTest {
         String agent = Files.readString(CLOUDWATCH_AGENT);
         String nginx = Files.readString(NGINX);
         String deploymentAlarms = section(monitoring, "locals {", "resource \"aws_cloudwatch_metric_alarm\" \"target_5xx\"");
+        String target5xx = section(
+                monitoring,
+                "resource \"aws_cloudwatch_metric_alarm\" \"target_5xx\"",
+                "resource \"aws_cloudwatch_metric_alarm\" \"target_latency\"");
+        String targetLatency = section(
+                monitoring,
+                "resource \"aws_cloudwatch_metric_alarm\" \"target_latency\"",
+                "resource \"aws_cloudwatch_metric_alarm\" \"fleet_dependency_redis\"");
         String deploymentRedis = section(
                 monitoring,
                 "resource \"aws_cloudwatch_metric_alarm\" \"fleet_dependency_redis\"",
@@ -552,6 +560,8 @@ class RuntimeDeploymentContractTest {
                 monitoring,
                 "resource \"aws_cloudwatch_metric_alarm\" \"redis_memory_utilization\"",
                 "resource \"aws_cloudwatch_metric_alarm\" \"blue_unhealthy\"");
+        String blueUnhealthy = monitoring.substring(
+                monitoring.indexOf("resource \"aws_cloudwatch_metric_alarm\" \"blue_unhealthy\""));
         assertThat(deploymentRedisMemory)
                 .contains("metric_name         = \"RedisMemoryUtilizationPercent\"")
                 .contains("threshold           = 80")
@@ -559,6 +569,27 @@ class RuntimeDeploymentContractTest {
                 .contains("datapoints_to_alarm = 3")
                 .contains("treat_missing_data = \"breaching\"")
                 .contains("Environment = \"asg\"");
+        assertThat(blueUnhealthy)
+                .contains("metric_name       = \"UnHealthyHostCount\"")
+                .contains("period            = 60")
+                .contains("evaluation_periods  = 3")
+                .contains("datapoints_to_alarm = 3")
+                .contains("threshold           = 1")
+                .contains("comparison_operator = \"GreaterThanOrEqualToThreshold\"")
+                .contains("treat_missing_data  = \"notBreaching\"")
+                .contains("TargetGroup  = aws_lb_target_group.blue.arn_suffix");
+        assertThat(target5xx)
+                .contains("metric_name         = \"HTTPCode_Target_5XX_Count\"")
+                .contains("period              = 60")
+                .contains("evaluation_periods  = 1")
+                .contains("datapoints_to_alarm = 1")
+                .contains("threshold           = 1");
+        assertThat(targetLatency)
+                .contains("metric_name         = \"TargetResponseTime\"")
+                .contains("period              = 60")
+                .contains("evaluation_periods  = 1")
+                .contains("datapoints_to_alarm = 1")
+                .contains("threshold           = 2");
         assertThat(deploymentAlarms)
                 .contains("var.redis_recovery_mode ? [] : [")
                 .contains("aws_cloudwatch_metric_alarm.target_5xx.alarm_name")
