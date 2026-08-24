@@ -63,7 +63,7 @@ related_documents:
 |---|---|---|
 | `node --test lib/course/course-selection.test.ts lib/course/course-favorites-api.test.ts` | 통과 | 19개 테스트, MEMBER만 허용·ADMIN 차단·기존 찜 후보 선택 경로 확인 |
 | `npm.cmd run typecheck` | 통과 | 역할 조건과 문서 변경에 대응하는 프론트 타입 검사 |
-| `npm.cmd test` | 통과 | 전체 프론트 테스트 319개 |
+| `npm.cmd test` | 통과 | 전체 프론트 테스트 321개 |
 | `npm.cmd run build` | 통과 | Next.js 프로덕션 빌드 및 32개 정적 페이지 생성 |
 | `git diff --check` | 통과 | 공백·EOF 오류 없음 |
 
