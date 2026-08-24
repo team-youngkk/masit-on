@@ -289,7 +289,7 @@ variable "initial_alarm_seeding" {
 }
 
 variable "redis_recovery_mode" {
-  description = "승인된 단일 Redis 복구 배포에서만 true로 두며, CodeDeploy alarm 목록에서 Redis alarm만 제외한다. ALB·latency·unhealthy-host alarm과 polling 실패 차단은 유지한다"
+  description = "승인된 단일 Redis 복구 배포에서만 true로 두며, CodeDeploy alarm 목록에서 Redis alarm만 제외한다. ALB 5xx·latency alarm과 polling 실패 차단은 유지한다"
   type        = bool
   default     = false
 }

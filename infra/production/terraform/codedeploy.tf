@@ -48,9 +48,10 @@ resource "aws_codedeploy_deployment_group" "app" {
 
   alarm_configuration {
     alarms = local.deployment_alarm_names
-    # 최초 배포에서는 blue가 아직 unhealthy해 blue-unhealthy alarm이 ALARM 상태다.
-    # 그 상태로 배포를 시작하면 DEPLOYMENT_STOP_ON_ALARM으로 즉시 중단되므로
-    # seeding 구간에만 끈다. 정상 운영 기본값은 true다.
+    # UnHealthyHostCount는 CodeDeploy가 같은 target group을 전환하는 동안
+    # replacement 등록·draining을 장애로 오인할 수 있어 관측 전용으로 둔다.
+    # 배포 게이트는 target 5xx·latency와 Redis 의존성 알람을 사용하고,
+    # 실제 target health 전환은 AllowTraffic 단계에서 확인한다.
     enabled                   = var.deployment_alarms_enabled
     ignore_poll_alarm_failure = false
   }
@@ -89,7 +90,7 @@ resource "aws_codedeploy_deployment_group" "app" {
 
     precondition {
       condition     = !var.redis_recovery_mode || var.deployment_alarms_enabled
-      error_message = "redis_recovery_mode=true requires deployment_alarms_enabled=true; ALB 5xx, latency, and unhealthy-host protections must remain enabled."
+      error_message = "redis_recovery_mode=true requires deployment_alarms_enabled=true; ALB 5xx and latency protections must remain enabled."
     }
 
     precondition {
