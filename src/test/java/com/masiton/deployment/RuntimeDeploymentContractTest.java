@@ -594,9 +594,9 @@ class RuntimeDeploymentContractTest {
                 .contains("var.redis_recovery_mode ? [] : [")
                 .contains("aws_cloudwatch_metric_alarm.target_5xx.alarm_name")
                 .contains("aws_cloudwatch_metric_alarm.target_latency.alarm_name")
-                .contains("aws_cloudwatch_metric_alarm.blue_unhealthy.alarm_name")
                 .contains("aws_cloudwatch_metric_alarm.fleet_dependency_redis.alarm_name")
                 .contains("aws_cloudwatch_metric_alarm.redis_memory_utilization.alarm_name")
+                .doesNotContain("aws_cloudwatch_metric_alarm.blue_unhealthy.alarm_name")
                 .doesNotContain("fleet_dependency_redis_freshness");
         assertThat(variables)
                 .contains("variable \"deployment_alarms_enabled\"")
@@ -658,7 +658,8 @@ class RuntimeDeploymentContractTest {
                 .doesNotContain("deployment_alarms_enabled=false")
                 .contains("ALB target 5xx")
                 .contains("target latency")
-                .contains("blue unhealthy-host")
+                .contains("blue-unhealthy-host")
+                .contains("관측 전용")
                 .contains("Enabled=true")
                 .contains("IgnorePollFailure=false");
     }
@@ -674,7 +675,7 @@ class RuntimeDeploymentContractTest {
                 .contains("precondition {")
                 .contains("condition     = !var.redis_recovery_mode || var.deployment_alarms_enabled")
                 .contains("redis_recovery_mode=true requires deployment_alarms_enabled=true")
-                .contains("ALB 5xx, latency, and unhealthy-host protections must remain enabled.");
+                .contains("ALB 5xx and latency protections must remain enabled.");
     }
 
     @Test
