@@ -16,7 +16,7 @@ related_documents:
 
 ## 1. 목적과 사용 규칙
 
-이 문서는 [1차 확장 구현 계획](expansion-1-implementation-plan.md)의 단계별 `FE-*` 작업 묶음을 실행 가능한 `E1-T01`~`E1-T13` Task로 분해한다. 이 문서의 `E1-T*`가 구현·PR·검증 진행 상태를 기록하는 최종 Task ID이며, `FE-*`는 일정·통합 순서를 설명하는 상위 묶음으로만 유지한다. `E1-T11`~`E1-T13`은 2026-08-03 승인된 지도 UX, 가입 이메일 인증 코드와 제한 공개 인증 계약 변경을 현재 구현에 반영하는 후속 정합화 Task다.
+이 문서는 [1차 확장 구현 계획](expansion-1-implementation-plan.md)의 단계별 `FE-*` 작업 묶음을 실행 가능한 `E1-T01`~`E1-T13` Task로 분해한다. 이 문서의 `E1-T*`가 구현·PR·검증 진행 상태를 기록하는 최종 Task ID이며, `FE-*`는 일정·통합 순서를 설명하는 상위 묶음으로만 유지한다. `E1-T11`~`E1-T13`은 2026-08-03 승인된 지도 UX, 가입 이메일 인증 코드와 M2 제한 공개 인증 계약 변경을 반영한 역사적 후속 정합화 Task다. 정식 공개 전환은 [ADR-DEPLOY-006](../07-adr/platform/deploy-006-public-release-without-validation-gate.md)에서 별도로 소유한다.
 
 담당자와 기본 리뷰어는 [1차 확장 Workstream](../02-analysis/first-expansion-workstreams.md)의 확정 배정을 사용한다. `E1-T13`은 같은 문서의 [OPS-VALIDATION 공통 운영·배포 트랙](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙)이 소유한다. 소유권 변경, 공통 파일 병합 책임 변경, 또는 API·데이터·ADR 계약 변경은 이 문서만 고쳐서는 안 되며 팀 합의와 상위 계약 갱신을 먼저 거친다.
 
@@ -36,7 +36,7 @@ related_documents:
 | `E1-T10` | 1차 확장 교차 인수·회귀 | 전원 / 상호 교차 리뷰 | `E1-T02`, `E1-T04`, `E1-T06`, `E1-T08`, `E1-T09` | 아니오 | L |
 | `E1-T11` | 지도 뷰포트 비종속 조회 전환 | 양성훈 / 박진영 | `E1-T07`, `E1-T08` | `E1-T09`와 가능 | M |
 | `E1-T12` | 가입 이메일 인증 8자 코드 전환 | 김인안 / 이우람 | `E1-T03`, `E1-T04` | `E1-T11`과 가능 | M |
-| `E1-T13` | 검증 참여자 제한 공개 쿠키 세션 전환 | 이우람 / 김인안 | M2-11, `E1-T04` | `E1-T11`, `E1-T12`와 가능 | L |
+| `E1-T13` | 검증 참여자 제한 공개 쿠키 세션 전환 (역사) | 이우람 / 김인안 | M2-11, `E1-T04` | `E1-T11`, `E1-T12`와 가능 | L · 완료 |
 
 크기는 한 명이 하나의 PR로 다룰 수 있는 작업량 기준으로 `S`(반일 이하), `M`(1일), `L`(1일 초과 또는 여러 계층 통합)이다. `L` Task는 내부에서 테스트·마이그레이션·화면 작업을 나눌 수 있지만, 아래 완료 조건이 충족될 때만 완료 처리한다.
 
@@ -167,7 +167,7 @@ related_documents:
 
 ### E1-T13 검증 참여자 제한 공개 쿠키 세션 전환
 
-- 현재 상태: Planned — 문서 계약 승인, 코드·운영 미반영
+- 현재 상태: M2 완료 — 정식 공개 전환으로 전용 경계 제거 확인 중
 - 담당자 / 리뷰어: 이우람 / 김인안
 - 소유 트랙: [OPS-VALIDATION 공통 운영·배포](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙)
 - 관련 계약: `NFR-SECURITY-001`, `NFR-SECURITY-003`, `NFR-DEPLOYMENT-002`, `NFR-DEPLOYMENT-004`; [검증 참여자 API 계약](../05-specs/api/common/validation-access-contract.md), [ADR-DEPLOY-003](../07-adr/platform/deploy-003-validation-cookie-session.md), [M2 배포 계획](m2-deployment-plan.md)
@@ -176,8 +176,8 @@ related_documents:
 - 선행 / 병렬 / 크기: M2-11 운영 기준선, `E1-T04` / `E1-T11`, `E1-T12`와 가능 / L
 - 테스트 범위: 최초 로그인·7일 고정 만료·종료, 쿠키 속성, Redis 해시·장애 fail-closed, 출처/ID별 15분 5회, 화면 redirect와 API JSON 401 분리, 회원 `/api/me`·찜·최근 기록과 관리자 등록 Bearer 동시 사용, 페이지 이동·새로고침 반복 인증창 0회, 비밀정보 로그 0건
 - 배포 전환: 새 세션 경계를 먼저 배포·검증한 뒤 Nginx Basic Auth와 `htpasswd` 렌더링을 제거한다. 실패 시 직전 Basic 구성으로 복구하되 Bearer 충돌이 재발하는 임시 상태임을 운영자에게 표시한다.
-- 정식 공개 제거 조건: Nginx 검증 subrequest, 로그인 화면/API, 쿠키·Redis namespace, Parameter Store 비밀과 제한 공개 전용 테스트·알람을 한 Task에서 제거하고 회원·관리자 회귀를 실행한다.
-- 완료 조건: 검증 참여자는 브라우저당 한 번 로그인한 뒤 만료 전까지 모든 화면과 회원·관리자 흐름에서 재인증창 없이 이동하며, 무세션 접근은 차단되고 회원·관리자 인증 계약은 그대로 동작한다.
+- 정식 공개 제거 조건: Nginx 검증 subrequest, 로그인 화면/API, 쿠키·Redis namespace, Parameter Store 비밀과 제한 공개 전용 테스트·알람을 제거하고 회원·관리자 회귀를 실행한다. Webhook 자체 인증·rate limit, Host·`/internal`·loopback 경계는 제거하지 않는다.
+- 완료 조건: M2에서 검증 참여자 쿠키 세션과 회원·관리자 인증의 분리가 확인됐다. 현재 정식 공개는 검증 쿠키 없이 공개 화면·API가 동작하고 회원·관리자 인증이 그대로 동작하는지 확인한다.
 
 ## 4. 변경 통제와 리뷰 순서
 

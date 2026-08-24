@@ -1,6 +1,6 @@
 'use client'
 
-import { authenticatedMemberFetch } from '@/lib/member/auth'
+import { authenticatedMemberFetch } from './auth.ts'
 
 export type PersonalRestaurantSummary = {
   id: string
@@ -83,11 +83,12 @@ export async function setFavoriteState(
 export async function getFavorites(
   page: number,
   size: number,
+  signal?: AbortSignal,
 ): Promise<FavoriteRestaurantsResponse> {
   const params = new URLSearchParams({ page: String(page), size: String(size) })
   const response = await authenticatedMemberFetch(
     `/api/me/favorites?${params.toString()}`,
-    { cache: 'no-store' },
+    { cache: 'no-store', signal },
   )
   return jsonResponse<FavoriteRestaurantsResponse>(response)
 }

@@ -71,12 +71,7 @@ class RestaurantSearchFilterResolver {
         if (creatorId == null) {
             return null;
         }
-        UUID parsedId;
-        try {
-            parsedId = UUID.fromString(creatorId);
-        } catch (IllegalArgumentException exception) {
-            throw new BusinessException(ErrorCode.INVALID_IDENTIFIER, "creatorId", "식별자 형식이 올바르지 않습니다.");
-        }
+        UUID parsedId = resolveCreatorId(creatorId);
         CreatorRestaurantCandidates candidates =
                 findRestaurantIdsByCreatorQuery.findDistinctValidRestaurantIdsByCreator(parsedId);
         if (!candidates.creatorPublic()) {
@@ -84,5 +79,16 @@ class RestaurantSearchFilterResolver {
                     ErrorCode.INVALID_FIELD_VALUE, "creatorId", "존재하지 않거나 공개되지 않은 유튜버입니다.");
         }
         return candidates.restaurantIds();
+    }
+
+    UUID resolveCreatorId(String creatorId) {
+        if (creatorId == null) {
+            return null;
+        }
+        try {
+            return UUID.fromString(creatorId);
+        } catch (IllegalArgumentException exception) {
+            throw new BusinessException(ErrorCode.INVALID_IDENTIFIER, "creatorId", "식별자 형식이 올바르지 않습니다.");
+        }
     }
 }

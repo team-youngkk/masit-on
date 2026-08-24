@@ -27,8 +27,6 @@
 #   masiton.member.rate-limit.secret
 #   spring.mail.username
 #   spring.mail.password
-#   masiton.security.verification.login-id
-#   masiton.security.verification.password-hash
 #   masiton.integration.kakao.rest-api-key   (선택)
 #   masiton.integration.youtube.api-key      (선택)
 #   masiton.integration.kakao-mobility.rest-api-key (선택)
@@ -93,12 +91,17 @@ masiton:
     youtube-webhook:
       subscription-hub-url: ${YOUTUBE_SUBSCRIPTION_HUB_URL:https://pubsubhubbub.appspot.com/subscribe}
       callback-url: ${YOUTUBE_WEBHOOK_CALLBACK_URL}
+  member:
+    action-mail:
+      password-reset-url: ${PASSWORD_RESET_PUBLIC_URL:https://masiton.click/password-reset}
   integration:
     # 운영은 실제 제공자 호스트를 쓴다. WireMock은 local 프로파일 전용이다.
     kakao:
-      base-url: ${KAKAO_BASE_URL:https://dapi.kakao.com}
+      base-url: ${KAKAO_BASE_URL:}
+      allowed-origins: https://dapi.kakao.com
     youtube:
-      base-url: ${YOUTUBE_BASE_URL:https://www.googleapis.com}
+      base-url: ${YOUTUBE_BASE_URL:}
+      allowed-origins: https://www.googleapis.com
     kakao-mobility:
       # quota·계약 확인 전에는 기본값으로 hard stop한다(ADR-ROUTE-001 9절, NFR-COST-001).
       enabled: ${KAKAO_MOBILITY_ENABLED:false}

@@ -6,6 +6,7 @@ related_documents:
   - ../06-architecture/security-boundary.md
   - ../07-adr/platform/web-005-application-port-binding.md
   - ../07-adr/platform/web-003-routing-boundary.md
+  - ../07-adr/platform/deploy-006-public-release-without-validation-gate.md
   - ../07-adr/platform/runtime-001-docker.md
   - m2-provisioning-record.md
 ---
@@ -28,7 +29,9 @@ related_documents:
 
 프론트엔드는 `HOSTNAME=127.0.0.1`로 loopback에만 바인딩하고 있었지만, 백엔드는 바인딩 주소를 지정하지 않아 Spring Boot 기본값대로 호스트의 모든 인터페이스(`0.0.0.0:8080`)에 붙었다. 현재 보안 그룹이 `8080`을 열지 않아 실제 노출은 없었지만, 경계가 보안 그룹 규칙 하나에만 의존하는 상태였다. 규칙이 추가되거나 호스트 방화벽이 바뀌면 다음이 동시에 성립한다.
 
-- Nginx를 건너뛴 `/api/**` 직결. 제한 공개 세션 `auth_request` gate와 유량 제한, `Authorization`·`Cookie` 정리가 모두 적용되지 않는다.
+- Nginx를 건너뛴 `/api/**` 직결. M2 제한 공개 단계에서는 세션 `auth_request` gate와 유량 제한,
+  `Authorization`·`Cookie` 정리가 적용되지 않았으며, 현재 gate-free 공개 정책에서는 Spring Security와
+  webhook 전용 방어가 소유한다([ADR-DEPLOY-006](../07-adr/platform/deploy-006-public-release-without-validation-gate.md)).
 - 인터넷에 공개하지 않기로 한 `/internal/**` 노출. 이 계획 작성 당시에는 [ADR-WEB-003](../07-adr/platform/web-003-routing-boundary.md) 6.5절을 근거로 삼았고, 현재 같은 상태 확인 경로와 인터넷 차단 계약은 이를 대체한 [ADR-WEB-006](../07-adr/platform/web-006-unified-login-rbac-route.md)이 소유한다. 상태 확인 세 경로는 애플리케이션 인증이 없고 네트워크 경계만이 유일한 보호다.
 
 ## 3. 경계 구성
@@ -65,10 +68,12 @@ Redis만 방식이 다르다. 애플리케이션 두 개는 `--network host`라 
 | Next.js Server Component | `API_BASE_URL=http://127.0.0.1:8080` |
 | 상태 지표 수집 | `HEALTH_BASE=http://127.0.0.1:8080` ([health-metrics.sh](../../deploy/scripts/health-metrics.sh)) |
 | 배포 후 Smoke Test | `http://127.0.0.1:8080` ([app-deploy.sh](../../deploy/scripts/app-deploy.sh)) |
-| Nginx 전환 전 gate | `http://127.0.0.1:8080/internal/verification/session` ([nginx-install.sh](../../deploy/scripts/nginx-install.sh)) |
+| 현재 Nginx 공개 경로 | `http://127.0.0.1:8080/api/**` (Nginx 직접 proxy와 백엔드 인증 경계) |
 | 운영 부하 측정 | `http://127.0.0.1:8080` (운영 참여자 전용 성능 검증. [PR #208](https://github.com/team-youngkk/masit-on/pull/208) 병합 대기) |
 
-Nginx 전환 전 gate는 단순 호출이 아니다. 그 확인이 `401`을 받지 못하면 전환이 중단되고 Basic Auth로 되돌아간다. 바인딩이나 실행 네트워크를 바꿀 때 이 경로를 함께 확인한다.
+M2의 Nginx 전환 전 validation gate와 Basic Auth fallback은 과거 운영 단계의 기록이다.
+현재 공개 전환은 [ADR-DEPLOY-006](../07-adr/platform/deploy-006-public-release-without-validation-gate.md)의
+paired app/Nginx rollback과 Host·`/internal/**`·webhook 방어를 확인한다.
 
 `/internal/**`은 이 loopback 경로에서만 도달하며, Nginx는 인터넷 진입점에서 `404`로 끊는다.
 

@@ -25,7 +25,7 @@ related_documents:
 ## 1. 목표 요약
 
 - 해결 문제: MVP 구현이 로컬 Docker 통합까지 완료됐으나 실제 공개 환경에서 검증한 적이 없다.
-- 목표: [ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md)에 따라 1차 확장 착수 전에 최초 운영 환경을 배포하고 검증 참여자에게 제한 공개한다.
+- 목표: [ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md)에 따라 1차 확장 착수 전에 최초 운영 환경을 배포하고 검증 참여자에게 제한 공개한다. 이 제한 공개는 완료된 역사적 단계이며 현재 정식 공개 전환은 [ADR-DEPLOY-006](../07-adr/platform/deploy-006-public-release-without-validation-gate.md)에 따른다.
 - 최종 결과: 도메인·HTTPS로 접근 가능한 단일 EC2에서 공개 탐색·상세와 관리자 인증·등록 흐름이 동작하고, 수동 복구 절차가 리허설로 검증된다.
 - 후속 유지: 검증을 통과한 같은 환경을 재구축 없이 계속 운영하며 1~3차 확장의 인프라 변경을 여기에 반영한다.
 - 담당: 이우람 단독. AWS 자원과 운영 비밀정보를 나눠 작업하기 어렵고 [ownership.md](../03-team/ownership.md)의 인프라·배포 최종 책임자가 이우람이다. 배포 후 기능 검증(M2-12)만 4인이 분담한다.
@@ -60,7 +60,7 @@ related_documents:
 - ALB·ASG·Blue-Green 무중단 배포 — M2 범위에서는 제외한다. 배포 고도화 기준은 2026-08-18 Accepted 된 ADR-DEPLOY-005로 확정했으며 실제 운영 전환은 별도 승인·리허설을 따른다.
 - 1~3차 확장 기능 — M2는 현재 MVP 범위를 그대로 배포한다.
 - 다중 리전·읽기 복제본·자동 복구.
-- 일반 사용자 대상 정식 공개. M2는 검증 참여자 제한 공개까지다.
+- M2 단계에서 일반 사용자 대상 정식 공개는 범위 밖이었다. M2 제한 공개는 완료된 역사적 단계이며, 현재 정식 공개는 검증 참여자 gate 없이 별도 승인·운영 확인 후 수행한다.
 
 ## 3. 확정 사항
 
@@ -96,9 +96,9 @@ related_documents:
 | RDS 인스턴스 클래스 | M2-04 | **결정** — `db.t4g.micro` ([사양·비용 산정](m2-cost-and-sizing.md) 4·7절) |
 | Redis 인스턴스 사양 | M2-05 | **결정** — ElastiCache 미사용, 앱 EC2 동거 ([사양·비용 산정](m2-cost-and-sizing.md) 5.4절). ADR-DATA-005 6절 배치 표현 개정 완료 — 4.2절 |
 
-**제한 공개 방식**은 2026-07-30 M2-11에서 Nginx Basic Auth로 시작했다. 이후 회원·관리자 Bearer JWT와 같은 `Authorization` 헤더가 충돌해 페이지 이동과 회원 로그인 중 검증 참여자 인증창이 반복되는 운영 결함을 확인했다. 2026-08-03 [ADR-DEPLOY-003](../07-adr/platform/deploy-003-validation-cookie-session.md)으로 검증 참여자 전용 7일 HttpOnly 쿠키 세션, Redis 해시 저장과 Nginx `auth_request` 방식으로 변경했다.
+**제한 공개 방식**은 2026-07-30 M2-11에서 Nginx Basic Auth로 시작했고, 이후 회원·관리자 Bearer JWT와의 충돌을 해결하기 위해 2026-08-03 [ADR-DEPLOY-003](../07-adr/platform/deploy-003-validation-cookie-session.md)의 검증 참여자 전용 7일 HttpOnly 쿠키 세션, Redis 해시 저장과 Nginx `auth_request` 방식으로 변경했다. 이 내용은 M2 역사 기록이며 현재 정식 공개 전환으로 제거한다.
 
-쿠키 세션은 제한 공개 진입만 허용하며 회원·관리자 identity나 권한을 만들지 않는다. 자격 증명과 세션 원문은 저장소·이미지·로그에 남기지 않고, 정식 공개 시 전용 로그인·세션·쿠키·Redis key·Parameter Store 값을 함께 제거한다. [OPS-VALIDATION 공통 운영·배포 트랙](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙)이 경계를 소유하고 구현·운영 전환은 [E1-T13](expansion-1-task-breakdown.md#e1-t13-검증-참여자-제한-공개-쿠키-세션-전환)에서 수행한다.
+쿠키 세션은 M2에서 제한 공개 진입만 허용했으며 회원·관리자 identity나 권한을 만들지 않았다. 자격 증명과 세션 원문은 저장소·이미지·로그에 남기지 않았고, 정식 공개 전환으로 전용 로그인·세션·쿠키·Redis key·Parameter Store 값을 함께 제거한다. [OPS-VALIDATION 공통 운영·배포 트랙](../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙)은 이 역사와 제거 확인을 소유한다. 회원·관리자 인증, Webhook 자체 인증·rate limit, Host 검증, `/internal/**` 외부 `404`와 loopback 경계는 제거하지 않는다.
 
 **인스턴스 사양과 월 예상 비용**은 `M2-01`에서 산정했다. 결과는 [M2 인스턴스 사양과 월 비용 산정](m2-cost-and-sizing.md)에 있다. 단가는 AWS Price List API로 `ap-northeast-2` 값을 실측했다. 채택 구성의 월 예상 비용은 90,100원(예산의 60%)이고 RDS를 한 단계 올려도 118,000원(79%)으로 예산 목표 150,000원 이내이며, NAT Gateway와 인터페이스 VPC 엔드포인트는 예산 비중이 커서 M2 구성에서 제외한다.
 
@@ -229,13 +229,13 @@ related_documents:
 - 완료 조건: 시험 알람이 Slack에 실제로 도달하고, PostgreSQL·Redis 연결 실패가 각각 저장소 장애 알림을 발생시키며, 로그에 비밀번호·JWT·API 키 원문이 없다
 - 근거: ADR-OBS-001, RV-NFR-009, RV-NFR-013, NFR-OBSERVABILITY-003
 
-### M2-11 검증 참여자 제한 공개 설정(과거 Basic Auth 계약)
+### M2-11 검증 참여자 제한 공개 설정(역사적 Basic Auth 계약)
 
 - 작업: Nginx Basic Auth 적용(`htpasswd` 파일을 EC2에서 생성, 자격 증명은 Parameter Store SecureString), 검증 참여자에게 접근 정보 전달
 - 선행: M2-08
 - 완료 조건: 검증 참여자만 접근하고 그 외 접근이 차단되며, 자격 증명이 저장소·이미지에 남지 않는다
 - 주의: Basic Auth는 제한 공개 수단이며 `/api/admin/**`의 JWT·`ADMIN` 검증을 대체하지 않는다(4절)
-- 후속 변경: 이 완료 기록의 Basic Auth 방식은 [ADR-DEPLOY-003](../07-adr/platform/deploy-003-validation-cookie-session.md)과 `E1-T13`에서 쿠키 세션으로 교체한다. 제한 공개 목적 자체는 유지한다.
+- 후속 변경: 이 완료 기록의 Basic Auth 방식은 [ADR-DEPLOY-003](../07-adr/platform/deploy-003-validation-cookie-session.md)과 `E1-T13`에서 쿠키 세션으로 교체했고, 정식 공개 전환에서 제한 공개 목적과 함께 제거한다([ADR-DEPLOY-006](../07-adr/platform/deploy-006-public-release-without-validation-gate.md)).
 
 ### M2-12 배포 후 기능 검증
 

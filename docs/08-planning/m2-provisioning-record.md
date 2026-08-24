@@ -23,6 +23,8 @@ M2 초기 운영 배포에서 생성한 AWS 자원의 식별자와 완료 조건
 
 이 저장소는 공개되어 있다. 개인을 식별하는 값(작업자·검증 참여자의 공인 IP)과 공격 표면을 특정하는 값(EIP, 보안 그룹 ID, 검증용 관리자 로그인 ID)은 `<...>` 자리표시자로 마스킹했다. 실제 값은 AWS 콘솔과 Parameter Store에서 확인한다. **복구 절차를 수행할 때 자리표시자를 실제 값으로 채워 넣되 문서에는 되돌려 적지 않는다.**
 
+**현재 상태(2026-08-24):** 이 기록의 검증 참여자 제한 공개·Basic Auth·쿠키 세션·Redis `auth:verification:*` 내용은 M2 완료 단계의 역사 기록이다. 정식 공개 전환은 [ADR-DEPLOY-006](../07-adr/platform/deploy-006-public-release-without-validation-gate.md)에 따라 해당 gate와 전용 자원을 제거하며, 회원·관리자 인증, Webhook 자체 인증·rate limit, Host 검증, `/internal/**` 외부 `404`와 loopback 경계는 유지한다. 실제 운영 전환과 `v1.0.0` tag는 별도 승인·운영 확인 항목이다.
+
 ## 2. 계정과 리전
 
 | 항목 | 값 |

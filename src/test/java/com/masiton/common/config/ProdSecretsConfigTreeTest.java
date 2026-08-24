@@ -40,11 +40,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @DisplayName("운영 프로파일 비밀값 주입")
 class ProdSecretsConfigTreeTest {
 
-    private static final String PRIVATE_KEY_PEM = """
-            -----BEGIN PRIVATE KEY-----
+    private static final String TEST_KEY_MATERIAL = """
+            -----BEGIN TEST KEY MATERIAL-----
             first-line
             second-line
-            -----END PRIVATE KEY-----""";
+            -----END TEST KEY MATERIAL-----""";
 
     @Test
     @DisplayName("configtree 파일 이름이 운영 속성으로 매핑된다")
@@ -65,10 +65,6 @@ class ProdSecretsConfigTreeTest {
             assertThat(environment.getProperty("masiton.member.rate-limit.secret")).isEqualTo("member-rate-secret");
             assertThat(environment.getProperty("spring.mail.username")).isEqualTo("smtp-user");
             assertThat(environment.getProperty("spring.mail.password")).isEqualTo("smtp-password");
-            assertThat(environment.getProperty("masiton.security.verification.login-id"))
-                    .isEqualTo("verification-participant");
-            assertThat(environment.getProperty("masiton.security.verification.password-hash"))
-                    .isEqualTo("verification-bcrypt-hash");
             assertThat(environment.getProperty("masiton.ai.provider.gemini.api-key"))
                     .isEqualTo("test-gemini-api-key");
             assertThat(environment.getProperty("masiton.ai.temporary-input.active-key-id"))
@@ -79,14 +75,8 @@ class ProdSecretsConfigTreeTest {
                     .containsEntry("retired-1", "ZmVkY2JhOTg3NjU0MzIxMGZlZGNiYTk4NzY1NDMyMTA=");
             assertThat(environment.getProperty("masiton.ai.youtube-webhook.secret"))
                     .isEqualTo("test-youtube-webhook-secret");
-            assertThat(environment.getProperty("masiton.security.verification.public-base-url"))
-                    .isEqualTo("https://masiton.click");
             assertThat(environment.getProperty("masiton.security.member.public-base-url"))
                     .isEqualTo("https://masiton.click");
-            assertThat(environment.getProperty("masiton.security.verification.trusted-proxy-addresses"))
-                    .isEqualTo("127.0.0.1");
-            assertThat(environment.getProperty("masiton.security.verification.reverse-proxy-enabled"))
-                    .isEqualTo("true");
         });
     }
 
@@ -120,13 +110,13 @@ class ProdSecretsConfigTreeTest {
     }
 
     @Test
-    @DisplayName("여러 줄 PEM이 이스케이프 없이 그대로 읽힌다")
+    @DisplayName("여러 줄 키 material이 이스케이프 없이 그대로 읽힌다")
     void 운영프로파일_여러줄PEM을두면_원문그대로읽힌다(@TempDir Path secrets) throws Exception {
         writeSecrets(secrets);
 
         runner(secrets).run(context -> assertThat(
                 context.getEnvironment().getProperty("masiton.security.jwt.private-key-pem"))
-                .isEqualTo(PRIVATE_KEY_PEM));
+                .isEqualTo(TEST_KEY_MATERIAL));
     }
 
     @Test
@@ -249,9 +239,6 @@ class ProdSecretsConfigTreeTest {
                         "MAIL_HOST=smtp.example.invalid",
                         "MAIL_PORT=587",
                         "AUTH_ALLOWED_ORIGINS=https://masiton.click",
-                        "VERIFICATION_PUBLIC_BASE_URL=https://masiton.click",
-                        "VERIFICATION_TRUSTED_PROXY_ADDRESSES=127.0.0.1",
-                        "VERIFICATION_REVERSE_PROXY_ENABLED=true",
                         "MEMBER_TRUSTED_PROXY_ADDRESSES=127.0.0.1",
                         "MEMBER_REVERSE_PROXY_ENABLED=true",
                         "RESTAURANT_MAP_TRUSTED_PROXY_ADDRESSES=127.0.0.1",
@@ -263,7 +250,7 @@ class ProdSecretsConfigTreeTest {
         write(secrets, "spring.datasource.password", "db-secret-value");
         write(secrets, "spring.data.redis.password", "redis-secret-value");
         write(secrets, "masiton.security.jwt.key-id", "prod-1");
-        write(secrets, "masiton.security.jwt.private-key-pem", PRIVATE_KEY_PEM);
+        write(secrets, "masiton.security.jwt.private-key-pem", TEST_KEY_MATERIAL);
         write(secrets, "masiton.security.jwt.public-key-pem", "-----BEGIN PUBLIC KEY-----\npub\n-----END PUBLIC KEY-----");
         write(secrets, "masiton.member.action-mail.active-key-id", "prod-mail-1");
         write(secrets, "masiton.member.action-mail.active-key", "mail-cipher-key");
@@ -271,8 +258,6 @@ class ProdSecretsConfigTreeTest {
         write(secrets, "masiton.member.rate-limit.secret", "member-rate-secret");
         write(secrets, "spring.mail.username", "smtp-user");
         write(secrets, "spring.mail.password", "smtp-password");
-        write(secrets, "masiton.security.verification.login-id", "verification-participant");
-        write(secrets, "masiton.security.verification.password-hash", "verification-bcrypt-hash");
         write(secrets, "masiton.integration.kakao.rest-api-key", "kakao-key-value");
         write(secrets, "masiton.integration.youtube.api-key", "youtube-key-value");
         write(secrets, "masiton.integration.kakao-mobility.rest-api-key", "kakao-mobility-key-value");

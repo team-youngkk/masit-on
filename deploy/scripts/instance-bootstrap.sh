@@ -18,7 +18,6 @@ if [ "${INSTALL_LOCAL_REDIS:-false}" = true ]; then
   "$STAGE/redis-install.sh" "$STAGE"
 fi
 "$STAGE/app-deploy.sh" "$TAG" "$STAGE"
-"$STAGE/nginx-install.sh" "$STAGE"
 
 # 상태 지표 수집을 설치한다. Redis 장애는 ready 그룹에 없어 ALB target health로
 # 드러나지 않으므로, 이 지표가 CodeDeploy alarm의 유일한 감지 경로다

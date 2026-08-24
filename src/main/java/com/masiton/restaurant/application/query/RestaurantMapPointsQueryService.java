@@ -62,10 +62,12 @@ public class RestaurantMapPointsQueryService implements SearchRestaurantMapPoint
         String normalizedQuery = filterResolver.normalizeQuery(command.query());
         UUID regionId = filterResolver.resolveRegionId(command.district());
         UUID foodCategoryId = filterResolver.resolveFoodCategoryId(command.category());
+        UUID creatorId = filterResolver.resolveCreatorId(command.creatorId());
         Set<UUID> candidateRestaurantIds = filterResolver.resolveCandidateRestaurantIds(command.creatorId());
 
         List<RestaurantMapPointRow> rows = restaurantMapPointsQueryPort.findMatching(
-                new RestaurantMapPointsCriteria(normalizedQuery, regionId, foodCategoryId, candidateRestaurantIds),
+                new RestaurantMapPointsCriteria(
+                        normalizedQuery, regionId, foodCategoryId, candidateRestaurantIds, creatorId),
                 RESULT_LIMIT + 1);
 
         if (rows.size() > RESULT_LIMIT) {
@@ -79,6 +81,7 @@ public class RestaurantMapPointsQueryService implements SearchRestaurantMapPoint
 
     private RestaurantMapPointSummary toSummary(RestaurantMapPointRow row) {
         return new RestaurantMapPointSummary(
-                row.id(), row.name(), row.category(), row.addressSummary(), row.latitude(), row.longitude());
+                row.id(), row.name(), row.category(), row.addressSummary(), row.latitude(), row.longitude(),
+                row.creatorProfileImageUrl());
     }
 }

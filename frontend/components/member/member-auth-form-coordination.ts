@@ -26,6 +26,30 @@ export function normalizeMemberEmail(email: string): string {
   return email.trim().toLowerCase()
 }
 
+export function extractPasswordResetToken(hash: string): string {
+  const fragment = hash.startsWith('#') ? hash.slice(1) : hash
+  return new URLSearchParams(fragment).get('token')?.trim() ?? ''
+}
+
+export function watchPasswordResetToken(
+  readHash: () => string,
+  onToken: (token: string) => void,
+  clearUrl: () => void,
+  subscribe: (listener: () => void) => () => void,
+): () => void {
+  const applyToken = () => {
+    const token = extractPasswordResetToken(readHash())
+    if (!token) {
+      return
+    }
+    onToken(token)
+    clearUrl()
+  }
+
+  applyToken()
+  return subscribe(applyToken)
+}
+
 export function validateMemberAuthForm(values: MemberAuthFormValues): MemberAuthFieldErrors {
   const errors: {
     email?: string

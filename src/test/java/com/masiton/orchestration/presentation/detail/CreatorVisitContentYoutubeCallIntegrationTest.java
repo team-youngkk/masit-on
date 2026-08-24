@@ -61,6 +61,8 @@ class CreatorVisitContentYoutubeCallIntegrationTest extends com.masiton.test.Ful
     static void registerYoutubeProperties(DynamicPropertyRegistry registry) {
         registry.add("masiton.integration.youtube.base-url",
                 CreatorVisitContentYoutubeCallIntegrationTest::wireMockUrl);
+        registry.add("masiton.integration.youtube.allowed-origins",
+                CreatorVisitContentYoutubeCallIntegrationTest::wireMockUrl);
         registry.add("masiton.integration.youtube.api-key", () -> "wiremock-only-key");
     }
 

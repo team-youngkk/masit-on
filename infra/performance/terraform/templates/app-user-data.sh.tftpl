@@ -202,7 +202,6 @@ SECRETS_DIR=/run/masiton/secrets
 export SECRETS_DIR
 
 export SPRING_PROFILES_ACTIVE=prod
-export VERIFICATION_ENABLED=false
 # prod 프로파일은 server.address가 127.0.0.1로 고정되어 있다(application-prod.yml).
 # 성능 환경에서는 loadgen 인스턴스가 네트워크를 통해 호출하므로 0.0.0.0으로 열어야 한다.
 export SERVER_ADDRESS=0.0.0.0
@@ -272,7 +271,6 @@ docker run -d --name masiton-perf-backend \
   --volume "$SECRETS_DIR":"$SECRETS_DIR":ro \
   --volume /opt/masiton-perf/gc:/var/log/masiton-gc \
   -e SPRING_PROFILES_ACTIVE \
-  -e VERIFICATION_ENABLED \
   -e SERVER_ADDRESS \
   -e DB_URL -e DB_USERNAME \
   -e REDIS_HOST -e REDIS_PORT \
