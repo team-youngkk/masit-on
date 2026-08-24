@@ -89,6 +89,7 @@ class MemberActionTokenMailAdapterTest {
     }
 
     private String htmlContent(MimeMessage message) throws Exception {
+        message.saveChanges();
         return htmlContent(message.getContent());
     }
 
@@ -97,8 +98,11 @@ class MemberActionTokenMailAdapterTest {
             StringBuilder html = new StringBuilder();
             for (int index = 0; index < multipart.getCount(); index++) {
                 BodyPart part = multipart.getBodyPart(index);
-                if (part.isMimeType("text/html")) {
+                if (part.isMimeType("text/html")
+                        || part.getContentType().toLowerCase().startsWith("text/html")) {
                     html.append(String.valueOf(part.getContent()));
+                } else {
+                    html.append(htmlContent(part.getContent()));
                 }
             }
             return html.toString();
