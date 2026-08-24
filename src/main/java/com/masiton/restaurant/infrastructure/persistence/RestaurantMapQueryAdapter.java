@@ -13,7 +13,8 @@ import com.masiton.restaurant.application.port.out.RestaurantMapPointsQueryPort;
 
 /**
  * RestaurantMapPointsQueryPort의 구현체다.
- * dependency-rules.md 7절 읽기 모델 예외에 따라 자기 소유 테이블(restaurant, food_category)만 조회한다.
+ * dependency-rules.md 7절 읽기 모델 예외에 따라 지도 Projection에 필요한 공개 Visit·Creator·Video
+ * 상태를 native SQL로 함께 확인한다. Entity나 다른 도메인의 Repository를 직접 참조하지 않는다.
  */
 @Component
 class RestaurantMapQueryAdapter implements RestaurantMapPointsQueryPort {
@@ -55,12 +56,29 @@ class RestaurantMapQueryAdapter implements RestaurantMapPointsQueryPort {
         }
 
         params.addValue("fetchLimit", fetchLimit);
+        params.addValue("creatorId", criteria.creatorId());
 
         return jdbcTemplate.query(
                 "SELECT r.id AS id, r.name AS name, fc.name AS category, r.road_address AS address_summary, "
-                        + "r.latitude AS latitude, r.longitude AS longitude "
+                        + "r.latitude AS latitude, r.longitude AS longitude, "
+                        + "representative_creator.profile_image_url AS creator_profile_image_url "
                         + "FROM restaurant r "
                         + "JOIN food_category fc ON fc.id = r.food_category_id "
+                        + "LEFT JOIN LATERAL ("
+                        + "SELECT c.profile_image_url AS profile_image_url "
+                        + "FROM visit v "
+                        + "JOIN creator c ON c.id = v.creator_id "
+                        + "JOIN video vi ON vi.id = v.video_id "
+                        + "WHERE v.restaurant_id = r.id "
+                        + "AND (CAST(:creatorId AS uuid) IS NULL OR c.id = CAST(:creatorId AS uuid)) "
+                        + "AND v.publication_status = 'PUBLIC' AND v.lifecycle_status = 'ACTIVE' "
+                        + "AND c.publication_status = 'PUBLIC' AND c.lifecycle_status = 'ACTIVE' "
+                        + "AND c.external_availability_status = 'AVAILABLE' "
+                        + "AND vi.publication_status = 'PUBLIC' AND vi.lifecycle_status = 'ACTIVE' "
+                        + "AND vi.external_availability_status = 'AVAILABLE' "
+                        + "ORDER BY c.channel_name COLLATE \"C\", c.id "
+                        + "LIMIT 1"
+                        + ") representative_creator ON TRUE "
                         + "WHERE " + where
                         + " ORDER BY r.name COLLATE \"C\", r.id "
                         + "LIMIT :fetchLimit",
@@ -71,7 +89,8 @@ class RestaurantMapQueryAdapter implements RestaurantMapPointsQueryPort {
                         resultSet.getString("category"),
                         resultSet.getString("address_summary"),
                         resultSet.getBigDecimal("latitude"),
-                        resultSet.getBigDecimal("longitude")));
+                        resultSet.getBigDecimal("longitude"),
+                        resultSet.getString("creator_profile_image_url")));
     }
 
     /** LIKE 와일드카드(%, _)와 이스케이프 문자 자체를 리터럴로 취급하도록 이스케이프한다. */

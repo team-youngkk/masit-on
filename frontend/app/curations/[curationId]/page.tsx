@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
-import { Card } from '@/components/ui/Card'
 import { PageShell } from '@/components/ui/PageShell'
 import { StatePanel } from '@/components/ui/StatePanel'
 import { fetchPublicCuration } from '@/lib/curations-api'
@@ -63,17 +62,25 @@ export default async function PublicCurationDetailPage({
           <ol className={styles.restaurantList}>
             {curation.items.map((restaurant) => (
               <li key={restaurant.restaurantId}>
-                <Card
-                  title={
-                    <Link
-                      href={`/restaurants/${encodeURIComponent(restaurant.restaurantId)}`}
-                    >
-                      {restaurant.name}
-                    </Link>
-                  }
-                  level={3}
-                  meta={restaurant.roadAddress}
-                />
+                <article className={styles.restaurantCard}>
+                  <div className={styles.cardHeading}>
+                    <h3>
+                      <Link
+                        href={`/restaurants/${encodeURIComponent(restaurant.restaurantId)}`}
+                      >
+                        {restaurant.name}
+                      </Link>
+                    </h3>
+                    <p className={styles.cardAddress}>{restaurant.roadAddress}</p>
+                  </div>
+                  <Link
+                    href={`/restaurants/${encodeURIComponent(restaurant.restaurantId)}`}
+                    className={styles.detailLink}
+                    aria-label={`${restaurant.name} 상세 보기`}
+                  >
+                    상세 보기 <span aria-hidden="true">→</span>
+                  </Link>
+                </article>
               </li>
             ))}
           </ol>

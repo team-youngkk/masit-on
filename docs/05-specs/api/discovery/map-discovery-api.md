@@ -54,7 +54,8 @@ URL 탐색 조건에 맞는 공개 맛집의 위치·요약을 지도 마커와 
       "coordinate": {
         "latitude": 37.5665,
         "longitude": 126.978
-      }
+      },
+      "creatorProfileImageUrl": "https://yt3.ggpht.com/example=s88-c-k-c0x00ffffff-no-rj"
     }
   ]
 }
@@ -71,6 +72,7 @@ URL 탐색 조건에 맞는 공개 맛집의 위치·요약을 지도 마커와 
 | `items[].addressSummary` | string | 예 | 저장된 전체 도로명주소 |
 | `items[].coordinate.latitude` | number | 예 | WGS84 위도 |
 | `items[].coordinate.longitude` | number | 예 | WGS84 경도 |
+| `items[].creatorProfileImageUrl` | string \| null | 예 | `creatorId` 지정 시 해당 채널, 미지정 시 유효 방문 관계가 있는 채널 중 이름 오름차순 첫 채널의 프로필 이미지. 없으면 `null` |
 
 결과가 200개 이하면 `AVAILABLE`과 전체 결과를 반환한다. 200개를 초과하면 임의 일부를 반환하지 않는다.
 
