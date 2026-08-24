@@ -25,11 +25,11 @@ masiton:
     # fail closed 한다. WireMock이 필요한 테스트는 @DynamicPropertySource로 실제 URL을 덮어쓴다.
     kakao:
       base-url: http://localhost:1
-      allowed-origins: http://localhost,http://127.0.0.1,http://wiremock
+      allowed-origins: http://localhost:1,http://127.0.0.1:1,http://wiremock:8080
       rest-api-key: test-only-non-secret-key
     youtube:
       base-url: http://localhost:1
-      allowed-origins: http://localhost,http://127.0.0.1,http://wiremock
+      allowed-origins: http://localhost:1,http://127.0.0.1:1,http://wiremock:8080
       api-key: test-only-non-secret-key
     kakao-mobility:
       enabled: true

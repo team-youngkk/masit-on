@@ -21,6 +21,7 @@ import org.springframework.stereotype.Component;
 import com.masiton.creator.application.ChannelVerificationFailedException;
 import com.masiton.creator.application.port.out.ChannelVerificationPort;
 import com.masiton.creator.application.port.out.VerifiedChannel;
+import com.masiton.common.web.OriginCanonicalizer;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
@@ -80,11 +81,7 @@ class YouTubeChannelVerificationAdapter implements ChannelVerificationPort {
         return Arrays.stream(allowedOrigins.split(","))
                 .map(String::trim)
                 .filter(origin -> !origin.isBlank())
-                .map(URI::create)
-                .anyMatch(origin -> origin.getScheme() != null
-                        && origin.getHost() != null
-                        && origin.getScheme().equalsIgnoreCase(uri.getScheme())
-                        && origin.getHost().equalsIgnoreCase(uri.getHost()));
+                .anyMatch(origin -> OriginCanonicalizer.matches(uri.toString(), origin));
     }
     @Override
     public Optional<VerifiedChannel> verify(URI channelUrl) {

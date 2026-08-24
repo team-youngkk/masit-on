@@ -21,6 +21,7 @@ import org.springframework.stereotype.Component;
 import com.masiton.video.application.VideoVerificationFailedException;
 import com.masiton.video.application.port.out.VerifiedVideo;
 import com.masiton.video.application.port.out.VideoVerificationPort;
+import com.masiton.common.web.OriginCanonicalizer;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
@@ -74,11 +75,7 @@ class YouTubeVideoVerificationAdapter implements VideoVerificationPort {
         return Arrays.stream(allowedOrigins.split(","))
                 .map(String::trim)
                 .filter(origin -> !origin.isBlank())
-                .map(URI::create)
-                .anyMatch(origin -> origin.getScheme() != null
-                        && origin.getHost() != null
-                        && origin.getScheme().equalsIgnoreCase(uri.getScheme())
-                        && origin.getHost().equalsIgnoreCase(uri.getHost()));
+                .anyMatch(origin -> OriginCanonicalizer.matches(uri.toString(), origin));
     }
     @Override
     public Optional<VerifiedVideo> verify(URI sourceUrl) {
