@@ -37,7 +37,6 @@ function MapNavigationLink({
     </Link>
   )
 }
-
 type MobileNavIconName = 'search' | 'course' | 'popular' | 'curation' | 'map'
 
 function MobileNavIcon({ name }: { name: MobileNavIconName }) {
@@ -217,6 +216,7 @@ export function SiteHeader() {
               ) : <span className={styles.sunIcon}>☀</span>) : '◐'}
             </span>
           </button>
+          {status === 'authenticated' ? <NotificationBell /> : null}
           <details className={styles.quickMenu} ref={quickMenuRef}>
             <summary aria-label="메뉴">
               <span className={styles.menuIcon} aria-hidden="true"><i /><i /><i /></span>
@@ -237,7 +237,7 @@ export function SiteHeader() {
               {status === 'authenticated' ? (
                 <>
                   {session?.role === 'ADMIN' ? <Link href="/admin" onClick={closeQuickMenu}>관리자</Link> : null}
-                  <NotificationBell />
+                  <NotificationBell showLabel />
                   <Link href="/me" onClick={closeQuickMenu}>내 정보</Link>
                   <Link href="/me/favorites" onClick={closeQuickMenu}>내 찜</Link>
                   <Link href="/me/recent-restaurants" onClick={closeQuickMenu}>최근 본 맛집</Link>
@@ -259,7 +259,6 @@ export function SiteHeader() {
           {status === 'authenticated' ? (
             <>
               {session?.role === 'ADMIN' ? <Link href="/admin">관리자</Link> : null}
-              <NotificationBell />
               <details
                 className={styles.memberMenu}
                 ref={menuRef}
@@ -322,3 +321,4 @@ export function SiteHeader() {
     </header>
   )
 }
+

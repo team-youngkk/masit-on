@@ -15,6 +15,7 @@ related_documents:
 
 ## 최신 기록
 
+- [PR #299 검증 수치와 EOF 공백 정합성](pr-299-review-verification-consistency.md)
 - [PR #296 신고 대상 컨텍스트와 fallback 경계](pr-296-contextual-report-target-review.md)
 - [PR #286 신규 접수 중복 응답의 상세 상태 확인 회귀](pr-286-participation-duplicate-detail-review.md)
 - [PR #296 신고 대상 컨텍스트와 fallback 경계](pr-296-contextual-report-target-review.md)
@@ -54,6 +55,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #299 검증 수치와 EOF 공백 정합성](pr-299-review-verification-consistency.md)
 - [PR #289 Redis local fallback의 SSM port 오염](pr-289-redis-recovery-observability-review.md)
 - [PR #280 페이지네이션 예외 정책 문서 정합성](pr-280-pagination-policy-documentation-review.md)
 - [PR #279 장소명 정규화·감사 값 호환·운영 기본값 리뷰](pr-279-ai-place-identity-review.md)

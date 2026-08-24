@@ -77,9 +77,9 @@
   --layout-max-width: 1200px;
   --layout-gutter: var(--space-4);
 }
-
-/* 관리자 화면은 공개 프레임 밖에 있으므로 이 범위의 토큰을 상속하지 않는다. */
-html[data-theme='dark'] [data-public-frame] {
+/* 공개·관리자 프레임 모두 다크 테마 토큰을 적용한다. */
+html[data-theme='dark'] [data-public-frame],
+html[data-theme='dark'] [data-admin-frame] {
   color-scheme: dark;
 
   --color-primary: #4ade80;
@@ -176,3 +176,4 @@ summary {
   outline: 2px solid var(--color-primary-strong);
   outline-offset: 2px;
 }
+
