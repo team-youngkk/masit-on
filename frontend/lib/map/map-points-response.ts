@@ -12,6 +12,7 @@ export type MapPointItem = {
     latitude: number
     longitude: number
   }
+  creatorProfileImageUrl?: string | null
 }
 
 export type MapPointsResultStatus = 'AVAILABLE' | 'TOO_MANY_RESULTS'
