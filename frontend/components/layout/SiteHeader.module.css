@@ -5,7 +5,6 @@
   border-bottom: 1px solid var(--color-border-strong);
   background: var(--color-surface);
 }
-
 .inner {
   display: flex;
   align-items: center;
@@ -269,6 +268,10 @@
   font-size: var(--font-size-lg);
 }
 
+.notificationLabel {
+  font-weight: 600;
+}
+
 .notificationBadge {
   position: absolute;
   top: var(--space-1);
@@ -481,3 +484,4 @@
     margin-left: auto;
   }
 }
+

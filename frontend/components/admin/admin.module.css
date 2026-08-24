@@ -1,8 +1,8 @@
 .layout {
   min-height: 100dvh;
   background: var(--color-surface-muted);
+  color: var(--color-text);
 }
-
 .shell {
   display: grid;
   grid-template-columns: 14rem minmax(0, 1fr);
@@ -374,3 +374,4 @@
     text-align: left;
   }
 }
+

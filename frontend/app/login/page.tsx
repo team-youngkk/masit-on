@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { LoginPageGate } from '@/components/member/LoginPageGate'
 import { MemberAuthForm } from '@/components/member/MemberAuthForm'
 import { PageShell } from '@/components/ui/PageShell'
 import { memberSignupHref } from '@/lib/member/auth-navigation'
@@ -14,7 +15,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const rawReturnTo = (await searchParams).returnTo
   const returnTo = typeof rawReturnTo === 'string' ? rawReturnTo : undefined
 
-  return (
+  return <LoginPageGate returnTo={returnTo}>
     <PageShell className={styles.page} size="narrow" eyebrow="회원" title="로그인" description="이메일과 비밀번호로 로그인하세요.">
       <MemberAuthForm mode="login" returnTo={returnTo} />
       <p className={styles.signupPrompt}>
@@ -24,5 +25,5 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         </Link>
       </p>
     </PageShell>
-  )
+  </LoginPageGate>
 }
