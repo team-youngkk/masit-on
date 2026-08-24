@@ -12,6 +12,7 @@ masiton:
   member:
     action-mail:
       from-address: ${MEMBER_ACTION_MAIL_FROM_ADDRESS:no-reply@localhost}
+      password-reset-url: ${PASSWORD_RESET_PUBLIC_URL:http://localhost:3000/password-reset}
   ai:
     youtube-webhook:
       secret: local-youtube-hub-secret

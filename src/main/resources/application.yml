@@ -132,6 +132,7 @@ masiton:
       active-key-id: ${MEMBER_ACTION_MAIL_ACTIVE_KEY_ID:}
       active-key: ${MEMBER_ACTION_MAIL_ACTIVE_KEY:}
       from-address: ${MEMBER_ACTION_MAIL_FROM_ADDRESS:}
+      password-reset-url: ${PASSWORD_RESET_PUBLIC_URL:http://localhost:3000/password-reset}
     rate-limit:
       secret: ${MEMBER_RATE_LIMIT_SECRET:}
       trusted-proxy-addresses: ${MEMBER_TRUSTED_PROXY_ADDRESSES:}

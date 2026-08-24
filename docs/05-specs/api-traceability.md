@@ -98,7 +98,7 @@ MVP와 확장 단계의 PRD, 기능 요구사항, 비즈니스 규칙, NFR, Work
 |---|---|---|---|---|---|
 | [PRD-DISCOVERY-005](../04-product/prd/discovery/natural-language-restaurant-discovery.md) | 자연어 맛집 탐색 | [자연어 맛집 탐색 API](api/discovery/natural-language-restaurant-discovery-api.md) | API-DISCOVERY-NL-001 | [WS-14](../02-analysis/third-expansion-workstreams.md#5-ws-14-자연어-맛집-탐색) | 양성훈 |
 | [PRD-ADMIN-002](../04-product/prd/admin/ai-video-information-extraction.md) | AI 영상 정보 추출 | [관리자 AI 영상 추출 API](api/admin/ai-video-extraction-api.md) | API-ADMIN-AIEXTRACT-001, API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | 김인안 |
-| [PRD-DISCOVERY-006](../04-product/prd/discovery/restaurant-course-recommendation.md) | 맛집 코스 추천 | [맛집 코스 추천 API](api/discovery/restaurant-course-recommendation-api.md) | API-DISCOVERY-COURSE-001 | [WS-16](../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천) | 이우람 |
+| [PRD-DISCOVERY-006](../04-product/prd/discovery/restaurant-course-recommendation.md) | 맛집 코스 추천 | [맛집 코스 추천 API](api/discovery/restaurant-course-recommendation-api.md) | API-DISCOVERY-COURSE-001, API-PERSONAL-004 (명시적 찜 후보 불러오기) | [WS-16](../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천) | 이우람 |
 
 3차 확장 세 기능의 API 계약은 Accepted 상태로 연결됐다. 실제 구현 전에는 각 기능의 계약 테스트·외부 계정 연결·평가·운영 게이트 증거를 확보한다. 정식 공개 전환은 제품 API의 경로·Method·회원/관리자 인증을 변경하지 않으며, Webhook 자체 인증·rate limit과 Host·`/internal`·loopback 경계를 유지한다.
 
@@ -186,7 +186,7 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 | FR-NLSEARCH-003 | API-DISCOVERY-NL-001 | 없음 | 빈 결과·`PARTIAL`·`FAILED`·전체 목록 대체 금지 테스트 | 양성훈 |
 | FR-NLSEARCH-004 | API-DISCOVERY-NL-001 | API-DISCOVERY-001 | 확정 태그 코드·Visit 공개 상태·여러 태그 AND 계약 테스트 | 양성훈 |
 | FR-AIEXTRACT-007 | API-ADMIN-AIEXTRACT-001 | API-DISCOVERY-NL-001 | 태그 후보 자동 판단·사후 보정·`VisitTag` 연결·검증 전 검색 제외 테스트 | 김인안 |
-| FR-COURSE-001 | API-DISCOVERY-COURSE-001 | API-DISCOVERY-001 | 2~5개·중복·공개·좌표·출발점 검증 테스트 | 이우람 |
+| FR-COURSE-001 | API-DISCOVERY-COURSE-001 | API-DISCOVERY-001, API-PERSONAL-004 (명시적 찜 후보 불러오기) | 2~5개·중복·공개·좌표·출발점 검증 테스트, 찜 후보 페이지·인증 경계 테스트 | 이우람 |
 | FR-COURSE-002 | API-DISCOVERY-COURSE-001 | 없음 | 자동차 순서·구간 거리/시간·30km·만료 테스트 | 이우람 |
 | FR-COURSE-003 | API-DISCOVERY-COURSE-001 | 없음 | timeout·429·5xx·부분 실패·추정 금지 테스트 | 이우람 |
 

@@ -160,6 +160,7 @@ class RestaurantMapPointsQueryServiceTest {
                 "식당".equals(criteria.normalizedQuery())
                         && regionId.equals(criteria.regionId())
                         && categoryId.equals(criteria.foodCategoryId())
+                        && creatorId.equals(criteria.creatorId())
                         && Set.of(candidateId).equals(criteria.candidateRestaurantIds())),
                 org.mockito.ArgumentMatchers.eq(201));
     }
