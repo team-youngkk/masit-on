@@ -6,7 +6,7 @@ import type { MapBounds } from '@/lib/map/map-points-query'
 import type { MapPointItem } from '@/lib/map/map-points-response'
 import { isSafeHttpsUrl } from '@/lib/map/selected-creator-profile-image'
 
-import type { KakaoGlobal, KakaoMap, KakaoMarker, KakaoMarkerImage } from './kakao-maps-types'
+import type { KakaoCustomOverlay, KakaoGlobal, KakaoMap } from './kakao-maps-types'
 
 import styles from './KakaoMapView.module.css'
 
@@ -82,42 +82,85 @@ export function loadKakaoMapsSdk(key: string, timeoutMs: number): Promise<KakaoG
   })
 }
 
-function escapeSvgAttribute(value: string): string {
-  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-}
-
-/* 채널 이미지가 있으면 핀 안에 원형으로 자르고, 없으면 기존 기본 핀을 사용한다. */
-function createMarkerImage(
-  kakaoGlobal: KakaoGlobal,
+/* 외부 이미지는 SVG data URL 안에 넣지 않고 일반 HTML img로 로드한다. */
+function createMarkerContent(
+  item: MapPointItem,
   selected: boolean,
   selectedCreatorProfileImageUrl: string | null,
-): KakaoMarkerImage {
-  if (isSafeHttpsUrl(selectedCreatorProfileImageUrl)) {
-    const size = selected ? 40 : 36
-    const fill = selected ? '#16a34a' : '#6f6a63'
-    const imageUrl = escapeSvgAttribute(selectedCreatorProfileImageUrl)
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="48" viewBox="0 0 36 48">` +
-      `<path fill="${fill}" d="M18 0C8.06 0 0 8.06 0 18c0 13.5 18 30 18 30s18-16.5 18-30C36 8.06 27.94 0 18 0Z"/>` +
-      `<defs><clipPath id="avatar"><circle cx="18" cy="18" r="11"/></clipPath></defs>` +
-      `<circle cx="18" cy="18" r="12" fill="white"/>` +
-      `<image href="${imageUrl}" x="7" y="7" width="22" height="22" preserveAspectRatio="xMidYMid slice" clip-path="url(#avatar)"/>` +
-      `<circle cx="18" cy="18" r="11" fill="none" stroke="white" stroke-width="1.5"/>` +
-      `</svg>`
-    return new kakaoGlobal.maps.MarkerImage(
-      `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
-      new kakaoGlobal.maps.Size(size, 48),
-      { offset: new kakaoGlobal.maps.Point(size / 2, 48) },
-    )
+  onSelect: (id: string) => void,
+): HTMLElement {
+  const marker = document.createElement('button')
+  marker.type = 'button'
+  marker.className = styles.marker
+  marker.setAttribute('aria-label', `${item.name} 지도에서 선택`)
+  marker.setAttribute('aria-pressed', String(selected))
+  marker.addEventListener('click', (event) => {
+    event.stopPropagation()
+    onSelect(item.id)
+  })
+
+  const background = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  background.setAttribute('class', styles.markerBackground)
+  background.setAttribute('viewBox', '0 0 36 48')
+  background.setAttribute('aria-hidden', 'true')
+
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+  path.setAttribute('fill', selected ? '#16a34a' : '#6f6a63')
+  path.setAttribute('d', 'M18 0C8.06 0 0 8.06 0 18c0 13.5 18 30 18 30s18-16.5 18-30C36 8.06 27.94 0 18 0Z')
+  background.append(path)
+  marker.append(background)
+
+  const profileImageUrl = item.creatorProfileImageUrl ?? selectedCreatorProfileImageUrl
+  if (isSafeHttpsUrl(profileImageUrl)) {
+    const fallback = createMarkerFallback()
+    const image = document.createElement('img')
+    image.className = styles.markerImage
+    image.alt = ''
+    image.hidden = true
+    image.addEventListener('load', () => {
+      image.hidden = false
+      fallback.replaceWith(image)
+    }, { once: true })
+    image.addEventListener('error', () => {
+      image.remove()
+    }, { once: true })
+    marker.append(fallback)
+    marker.append(image)
+    image.src = profileImageUrl
+  } else {
+    marker.append(createMarkerFallback())
   }
 
-  const fill = selected ? '%2316a34a' : '%236f6a63'
-  const svg =
-    `data:image/svg+xml,` +
-    `%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='40' viewBox='0 0 32 40'%3E` +
-    `%3Cpath fill='${fill}' d='M16 0C7.163 0 0 7.163 0 16c0 12 16 24 16 24s16-12 16-24C32 7.163 24.837 0 16 0z'/%3E` +
-    `%3Ccircle cx='16' cy='16' r='6' fill='white'/%3E` +
-    `%3C/svg%3E`
-  return new kakaoGlobal.maps.MarkerImage(svg, new kakaoGlobal.maps.Size(32, 40))
+  return marker
+}
+
+function createMarkerFallback(): HTMLSpanElement {
+  const fallback = document.createElement('span')
+  fallback.className = styles.markerFallback
+  fallback.setAttribute('aria-hidden', 'true')
+  return fallback
+}
+
+function createMarkerOverlay(
+  kakaoGlobal: KakaoGlobal,
+  map: KakaoMap,
+  item: MapPointItem,
+  selected: boolean,
+  selectedCreatorProfileImageUrl: string | null,
+  onSelect: (id: string) => void,
+): KakaoCustomOverlay {
+  const position = new kakaoGlobal.maps.LatLng(
+    item.coordinate.latitude,
+    item.coordinate.longitude,
+  )
+
+  return new kakaoGlobal.maps.CustomOverlay({
+    position,
+    map,
+    content: createMarkerContent(item, selected, selectedCreatorProfileImageUrl, onSelect),
+    yAnchor: 1,
+    clickable: true,
+  })
 }
 
 export function KakaoMapView({
@@ -130,8 +173,8 @@ export function KakaoMapView({
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<KakaoMap | null>(null)
   const kakaoRef = useRef<KakaoGlobal | null>(null)
-  const markersRef = useRef<KakaoMarker[]>([])
-  const markersByIdRef = useRef<Map<string, KakaoMarker>>(new Map())
+  const overlaysRef = useRef<KakaoCustomOverlay[]>([])
+  const overlaysByIdRef = useRef<Map<string, KakaoCustomOverlay>>(new Map())
   const previousSelectedIdRef = useRef<string | null>(null)
   const onSelectRef = useRef(onSelect)
   const selectedIdRef = useRef(selectedId)
@@ -182,8 +225,8 @@ export function KakaoMapView({
   }, [retryCount])
 
   /*
-   * items가 바뀔 때만 마커 집합을 처음부터 다시 만든다. selectedId를 의존성에 넣지 않아
-   * 마커 선택/해제만으로는(최대 200개까지 있을 수 있는) 전체 마커를 지우고 다시 만들지
+   * items가 바뀔 때만 오버레이 집합을 처음부터 다시 만든다. selectedId를 의존성에 넣지 않아
+   * 마커 선택/해제만으로는(최대 200개까지 있을 수 있는) 전체 오버레이를 지우고 다시 만들지
    * 않는다(Finding C). 각 마커는 응답에 포함된 대표 채널 이미지로 만들고, 현재 selectedId에
    * 해당하는 마커가 있으면 즉시 선택 이미지로 되돌려 items 갱신 전후로 선택 표시가 유지되게 한다.
    */
@@ -194,51 +237,34 @@ export function KakaoMapView({
       return
     }
 
-    for (const marker of markersRef.current) {
-      marker.setMap(null)
+    for (const overlay of overlaysRef.current) {
+      overlay.setMap(null)
     }
 
-    const markersById = new Map<string, KakaoMarker>()
+    const overlaysById = new Map<string, KakaoCustomOverlay>()
 
-    markersRef.current = items.map((item) => {
-      const position = new kakaoGlobal.maps.LatLng(
-        item.coordinate.latitude,
-        item.coordinate.longitude,
-      )
-      const marker = new kakaoGlobal.maps.Marker({
-        position,
+    overlaysRef.current = items.map((item) => {
+      const overlay = createMarkerOverlay(
+        kakaoGlobal,
         map,
-        image: createMarkerImage(
-          kakaoGlobal,
-          false,
-          item.creatorProfileImageUrl ?? selectedCreatorProfileImageUrl,
-        ),
-      })
-      kakaoGlobal.maps.event.addListener(marker, 'click', () => {
-        onSelectRef.current(item.id)
-      })
-      markersById.set(item.id, marker)
-      return marker
+        item,
+        selectedIdRef.current === item.id,
+        selectedCreatorProfileImageUrl,
+        (id) => onSelectRef.current(id),
+      )
+      overlaysById.set(item.id, overlay)
+      return overlay
     })
 
-    markersByIdRef.current = markersById
+    overlaysByIdRef.current = overlaysById
+    previousSelectedIdRef.current = selectedIdRef.current
 
-    const currentSelectedId = selectedIdRef.current
-    const currentSelectedMarker = currentSelectedId
-      ? markersById.get(currentSelectedId)
-      : undefined
-    if (currentSelectedMarker) {
-      currentSelectedMarker.setImage(
-        createMarkerImage(
-          kakaoGlobal,
-          true,
-          items.find((item) => item.id === currentSelectedId)?.creatorProfileImageUrl
-            ?? selectedCreatorProfileImageUrl,
-        ),
-      )
-      previousSelectedIdRef.current = currentSelectedId ?? null
-    } else {
-      previousSelectedIdRef.current = null
+    return () => {
+      for (const overlay of overlaysRef.current) {
+        overlay.setMap(null)
+      }
+      overlaysRef.current = []
+      overlaysByIdRef.current = new Map()
     }
   }, [items, selectedCreatorProfileImageUrl, status])
 
@@ -254,32 +280,34 @@ export function KakaoMapView({
       return
     }
 
-    const markersById = markersByIdRef.current
+    const overlaysById = overlaysByIdRef.current
     const previousId = previousSelectedIdRef.current
 
     if (previousId && previousId !== selectedId) {
-      const previousMarker = markersById.get(previousId)
-      if (previousMarker) {
-        previousMarker.setImage(
-          createMarkerImage(
-            kakaoGlobal,
+      const previousOverlay = overlaysById.get(previousId)
+      const previousItem = items.find((item) => item.id === previousId)
+      if (previousOverlay && previousItem) {
+        previousOverlay.setContent(
+          createMarkerContent(
+            previousItem,
             false,
-            items.find((item) => item.id === previousId)?.creatorProfileImageUrl
-              ?? selectedCreatorProfileImageUrl,
+            selectedCreatorProfileImageUrl,
+            (id) => onSelectRef.current(id),
           ),
         )
       }
     }
 
     if (selectedId) {
-      const selectedMarker = markersById.get(selectedId)
-      if (selectedMarker) {
-        selectedMarker.setImage(
-          createMarkerImage(
-            kakaoGlobal,
+      const selectedOverlay = overlaysById.get(selectedId)
+      const selectedItem = items.find((item) => item.id === selectedId)
+      if (selectedOverlay && selectedItem) {
+        selectedOverlay.setContent(
+          createMarkerContent(
+            selectedItem,
             true,
-            items.find((item) => item.id === selectedId)?.creatorProfileImageUrl
-              ?? selectedCreatorProfileImageUrl,
+            selectedCreatorProfileImageUrl,
+            (id) => onSelectRef.current(id),
           ),
         )
       }

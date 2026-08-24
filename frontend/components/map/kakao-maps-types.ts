@@ -19,6 +19,11 @@ export type KakaoMarker = {
   setImage(image: KakaoMarkerImage): void
 }
 
+export type KakaoCustomOverlay = {
+  setMap(map: KakaoMap | null): void
+  setContent(content: HTMLElement): void
+}
+
 export type KakaoLatLngBounds = {
   extend(latlng: KakaoLatLng): void
 }
@@ -47,6 +52,13 @@ export type KakaoMapsNamespace = {
     map?: KakaoMap
     image?: KakaoMarkerImage
   }) => KakaoMarker
+  CustomOverlay: new (options: {
+    content: HTMLElement
+    position: KakaoLatLng
+    map?: KakaoMap
+    yAnchor?: number
+    clickable?: boolean
+  }) => KakaoCustomOverlay
   MarkerImage: new (
     src: string,
     size: { width: number; height: number },
