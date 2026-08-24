@@ -56,6 +56,8 @@ class MemberActionTokenMailAdapterTest {
         assertThat(messageCaptor.getValue().getSubject()).isEqualTo("맛잇온 비밀번호 재설정");
         assertThat(textContent(messageCaptor.getValue())).contains("비밀번호 재설정").contains("opaque-reset-token");
         assertThat(textContent(messageCaptor.getValue())).contains("http://localhost:3000/password-reset#token=opaque-reset-token");
+        assertThat(htmlContent(messageCaptor.getValue()))
+                .contains("<a href=\"http://localhost:3000/password-reset#token=opaque-reset-token\">비밀번호 재설정</a>");
     }
 
     private MemberActionTokenMailAdapter adapter(JavaMailSender mailSender) {
@@ -84,5 +86,27 @@ class MemberActionTokenMailAdapterTest {
             return text.toString();
         }
         return String.valueOf(content);
+    }
+
+    private String htmlContent(MimeMessage message) throws Exception {
+        message.saveChanges();
+        return htmlContent(message.getContent());
+    }
+
+    private String htmlContent(Object content) throws Exception {
+        if (content instanceof Multipart multipart) {
+            StringBuilder html = new StringBuilder();
+            for (int index = 0; index < multipart.getCount(); index++) {
+                BodyPart part = multipart.getBodyPart(index);
+                if (part.isMimeType("text/html")
+                        || part.getContentType().toLowerCase().startsWith("text/html")) {
+                    html.append(String.valueOf(part.getContent()));
+                } else {
+                    html.append(htmlContent(part.getContent()));
+                }
+            }
+            return html.toString();
+        }
+        return "";
     }
 }
