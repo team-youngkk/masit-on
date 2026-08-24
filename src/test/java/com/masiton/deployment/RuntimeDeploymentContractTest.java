@@ -346,8 +346,8 @@ class RuntimeDeploymentContractTest {
                 .doesNotContain("if: env.DEPLOYMENT_TARGET");
         assertThat(cleanup)
                 .contains("needs.deploy.result == 'cancelled'")
+                .contains("github.event_name != 'pull_request'")
                 .contains("codedeploy_s3_bucket || 'masiton-prod-codedeploy-711457211155'")
-                .doesNotContain("github.event_name == 'workflow_dispatch'")
                 .doesNotContain("github.event.inputs.deployment_target");
     }
 

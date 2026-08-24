@@ -815,6 +815,7 @@ jobs:
     needs: [deploy]
     if: >-
       always() &&
+      github.event_name != 'pull_request' &&
       needs.deploy.result == 'cancelled'
     runs-on: ubuntu-24.04
     permissions:
