@@ -4,16 +4,11 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.util.Base64;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.ApplicationContextInitializer;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.core.env.MapPropertySource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.junit.jupiter.api.parallel.ResourceLock;
-import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
@@ -21,7 +16,6 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 @TestProfile
 @SpringBootTest
-@ContextConfiguration(initializers = FullContextIntegrationTest.JwtPropertiesInitializer.class)
 @ResourceLock("shared-test-infrastructure")
 public abstract class FullContextIntegrationTest {
 
@@ -33,6 +27,14 @@ public abstract class FullContextIntegrationTest {
     public static final GenericContainer<?> REDIS;
 
     static {
+        // application.yml의 JWT_* placeholder 경로로만 공통 테스트 키를 주입한다.
+        // 하위 테스트의 @DynamicPropertySource는 이 시스템 속성보다 우선한다.
+        System.setProperty("JWT_KEY_ID", JWT_KEY_ID);
+        System.setProperty(
+                "JWT_PRIVATE_KEY_PEM", pem("PRIVATE KEY", JWT_KEY_PAIR.getPrivate().getEncoded()));
+        System.setProperty(
+                "JWT_PUBLIC_KEY_PEM", pem("PUBLIC KEY", JWT_KEY_PAIR.getPublic().getEncoded()));
+
         POSTGRES = new PostgreSQLContainer("postgres:17.10-alpine")
                 .withDatabaseName("masiton")
                 .withUsername("masiton")
@@ -69,22 +71,6 @@ public abstract class FullContextIntegrationTest {
                 type,
                 Base64.getMimeEncoder(64, "\n".getBytes()).encodeToString(encoded),
                 type);
-    }
-
-    static final class JwtPropertiesInitializer
-            implements ApplicationContextInitializer<ConfigurableApplicationContext> {
-
-        @Override
-        public void initialize(ConfigurableApplicationContext context) {
-            context.getEnvironment().getPropertySources().addFirst(new MapPropertySource(
-                    "generated-test-jwt-properties",
-                    Map.of(
-                            "masiton.security.jwt.key-id", JWT_KEY_ID,
-                            "masiton.security.jwt.private-key-pem",
-                            pem("PRIVATE KEY", JWT_KEY_PAIR.getPrivate().getEncoded()),
-                            "masiton.security.jwt.public-key-pem",
-                            pem("PUBLIC KEY", JWT_KEY_PAIR.getPublic().getEncoded()))));
-        }
     }
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
