@@ -57,8 +57,10 @@ class AdminRegistrationJourneyAcceptanceTest extends com.masiton.test.FullContex
     @DynamicPropertySource
     static void integrationProperties(DynamicPropertyRegistry registry) {
         registry.add("masiton.integration.kakao.base-url", AdminRegistrationJourneyAcceptanceTest::wireMockUrl);
+        registry.add("masiton.integration.kakao.allowed-origins", AdminRegistrationJourneyAcceptanceTest::wireMockUrl);
         registry.add("masiton.integration.kakao.rest-api-key", () -> "wiremock-only-key");
         registry.add("masiton.integration.youtube.base-url", AdminRegistrationJourneyAcceptanceTest::wireMockUrl);
+        registry.add("masiton.integration.youtube.allowed-origins", AdminRegistrationJourneyAcceptanceTest::wireMockUrl);
         registry.add("masiton.integration.youtube.api-key", () -> "wiremock-only-key");
     }
 

@@ -52,6 +52,20 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  tracked-secrets:
+    name: 추적 파일 RSA 개인키 검사
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: secret scan 회귀 테스트
+        shell: pwsh
+        run: pwsh -NoLogo -NoProfile -File ./scripts/check-tracked-secrets.Tests.ps1
+
+      - name: 최종 tracked tree secret scan
+        shell: pwsh
+        run: pwsh -NoLogo -NoProfile -File ./scripts/check-tracked-secrets.ps1 -RepositoryRoot "$env:GITHUB_WORKSPACE"
+
   terraform-contract:
     name: Terraform 렌더링 계약
     if: github.event_name != 'workflow_dispatch'
@@ -199,7 +213,7 @@ jobs:
     name: 이미지 빌드·검증·push
     # 빌드·테스트가 하나라도 실패하면 이 job에 도달하지 않는다.
     # ADR-RUNTIME-001 13절과 M2-06 완료 조건이 요구하는 차단이다.
-    needs: [backend, frontend, terraform-contract]
+    needs: [backend, frontend, terraform-contract, tracked-secrets]
     #
     # 배포 대상 브랜치의 push에서만 실행한다. 세 가지를 동시에 만족시키기 위한 조건이다.
     #
