@@ -40,11 +40,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @DisplayName("운영 프로파일 비밀값 주입")
 class ProdSecretsConfigTreeTest {
 
-    private static final String PRIVATE_KEY_PEM = """
-            -----BEGIN PRIVATE KEY-----
+    private static final String TEST_KEY_MATERIAL = """
+            -----BEGIN TEST KEY MATERIAL-----
             first-line
             second-line
-            -----END PRIVATE KEY-----""";
+            -----END TEST KEY MATERIAL-----""";
 
     @Test
     @DisplayName("configtree 파일 이름이 운영 속성으로 매핑된다")
@@ -120,13 +120,13 @@ class ProdSecretsConfigTreeTest {
     }
 
     @Test
-    @DisplayName("여러 줄 PEM이 이스케이프 없이 그대로 읽힌다")
+    @DisplayName("여러 줄 키 material이 이스케이프 없이 그대로 읽힌다")
     void 운영프로파일_여러줄PEM을두면_원문그대로읽힌다(@TempDir Path secrets) throws Exception {
         writeSecrets(secrets);
 
         runner(secrets).run(context -> assertThat(
                 context.getEnvironment().getProperty("masiton.security.jwt.private-key-pem"))
-                .isEqualTo(PRIVATE_KEY_PEM));
+                .isEqualTo(TEST_KEY_MATERIAL));
     }
 
     @Test
@@ -263,7 +263,7 @@ class ProdSecretsConfigTreeTest {
         write(secrets, "spring.datasource.password", "db-secret-value");
         write(secrets, "spring.data.redis.password", "redis-secret-value");
         write(secrets, "masiton.security.jwt.key-id", "prod-1");
-        write(secrets, "masiton.security.jwt.private-key-pem", PRIVATE_KEY_PEM);
+        write(secrets, "masiton.security.jwt.private-key-pem", TEST_KEY_MATERIAL);
         write(secrets, "masiton.security.jwt.public-key-pem", "-----BEGIN PUBLIC KEY-----\npub\n-----END PUBLIC KEY-----");
         write(secrets, "masiton.member.action-mail.active-key-id", "prod-mail-1");
         write(secrets, "masiton.member.action-mail.active-key", "mail-cipher-key");

@@ -12,6 +12,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Arrays;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,12 +33,52 @@ class YouTubeVideoVerificationAdapter implements VideoVerificationPort {
     private final HttpClient httpClient; private final ObjectMapper objectMapper; private final URI baseUri; private final String apiKey;
     @Autowired
     YouTubeVideoVerificationAdapter(ObjectMapper objectMapper,
-                                    @Value("${masiton.integration.youtube.base-url:https://www.googleapis.com}") String baseUrl,
-                                    @Value("${masiton.integration.youtube.api-key:}") String apiKey) {
-        this(HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build(), objectMapper, baseUrl, apiKey);
+                                    @Value("${masiton.integration.youtube.base-url}") String baseUrl,
+                                    @Value("${masiton.integration.youtube.api-key:}") String apiKey,
+                                    @Value("${masiton.integration.youtube.allowed-origins:}") String allowedOrigins) {
+        this(HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build(), objectMapper, baseUrl, apiKey, allowedOrigins);
     }
     YouTubeVideoVerificationAdapter(HttpClient httpClient, ObjectMapper objectMapper, String baseUrl, String apiKey) {
-        this.httpClient = httpClient; this.objectMapper = objectMapper; this.baseUri = URI.create(baseUrl); this.apiKey = apiKey;
+        this(httpClient, objectMapper, baseUrl, apiKey, "");
+    }
+    YouTubeVideoVerificationAdapter(HttpClient httpClient, ObjectMapper objectMapper, String baseUrl, String apiKey,
+                                    String allowedOrigins) {
+        this.httpClient = httpClient; this.objectMapper = objectMapper;
+        this.baseUri = requireBaseUri(baseUrl, allowedOrigins); this.apiKey = apiKey;
+    }
+
+    private static URI requireBaseUri(String baseUrl, String allowedOrigins) {
+        if (baseUrl == null || baseUrl.isBlank()) {
+            throw new IllegalStateException("YouTube verification endpoint must be configured");
+        }
+        try {
+            URI uri = URI.create(baseUrl.trim());
+            String scheme = uri.getScheme();
+            boolean http = "http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme);
+            boolean rootPath = uri.getPath() == null || uri.getPath().isBlank() || "/".equals(uri.getPath());
+            if (!uri.isAbsolute() || !http || uri.getHost() == null || uri.getUserInfo() != null
+                    || uri.getQuery() != null || uri.getFragment() != null || !rootPath
+                    || uri.getPort() == 0 || uri.getPort() > 65535 || !isAllowedOrigin(uri, allowedOrigins)) {
+                throw new IllegalStateException("YouTube verification endpoint must be an HTTP(S) origin");
+            }
+            return uri;
+        } catch (IllegalArgumentException exception) {
+            throw new IllegalStateException("YouTube verification endpoint is malformed", exception);
+        }
+    }
+
+    private static boolean isAllowedOrigin(URI uri, String allowedOrigins) {
+        if (allowedOrigins == null || allowedOrigins.isBlank()) {
+            return true;
+        }
+        return Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isBlank())
+                .map(URI::create)
+                .anyMatch(origin -> origin.getScheme() != null
+                        && origin.getHost() != null
+                        && origin.getScheme().equalsIgnoreCase(uri.getScheme())
+                        && origin.getHost().equalsIgnoreCase(uri.getHost()));
     }
     @Override
     public Optional<VerifiedVideo> verify(URI sourceUrl) {

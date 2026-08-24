@@ -14,6 +14,7 @@ import com.masiton.creator.application.port.out.VerifiedChannel;
 import tools.jackson.databind.ObjectMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -163,6 +164,23 @@ class YouTubeChannelVerificationAdapterTest {
         URI requested = capturedRequestUri();
         assertThat(requested.getQuery()).contains("forHandle=@masiton-fixture");
         assertThat(requested.getQuery()).doesNotContain("id=");
+    }
+
+    @Test
+    @DisplayName("endpoint가 없거나 HTTP(S) origin이 아니면 HTTP 호출 전에 초기화를 거부한다")
+    void 초기화_endpoint누락또는지원하지않는형식_호출전에거부한다() {
+        assertThatThrownBy(() -> new YouTubeChannelVerificationAdapter(
+                httpClient, objectMapper, "", "test-key"))
+                .isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> new YouTubeChannelVerificationAdapter(
+                httpClient, objectMapper, "ftp://www.googleapis.com", "test-key"))
+                .isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> new YouTubeChannelVerificationAdapter(
+                httpClient, objectMapper, "http://localhost:8081/youtube", "test-key"))
+                .isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> new YouTubeChannelVerificationAdapter(
+                httpClient, objectMapper, "http://localhost:8081", "test-key", "https://www.googleapis.com"))
+                .isInstanceOf(IllegalStateException.class);
     }
 
     private URI capturedRequestUri() throws Exception {

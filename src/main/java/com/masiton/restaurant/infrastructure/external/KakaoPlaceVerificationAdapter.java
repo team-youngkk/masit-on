@@ -35,7 +35,17 @@ class KakaoPlaceVerificationAdapter implements PlaceVerificationPort {
             String baseUrl,
             String restApiKey
     ) {
-        this(new KakaoLocalKeywordClient(httpClient, objectMapper, baseUrl, restApiKey));
+        this(httpClient, objectMapper, baseUrl, restApiKey, "");
+    }
+
+    KakaoPlaceVerificationAdapter(
+            HttpClient httpClient,
+            ObjectMapper objectMapper,
+            String baseUrl,
+            String restApiKey,
+            String allowedOrigins
+    ) {
+        this(new KakaoLocalKeywordClient(httpClient, objectMapper, baseUrl, restApiKey, allowedOrigins));
     }
 
     @Override

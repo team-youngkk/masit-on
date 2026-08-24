@@ -8,6 +8,7 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import com.masiton.restaurant.application.PlaceVerificationFailedException;
 import com.masiton.restaurant.application.port.out.VerifiedPlace;
@@ -17,6 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -131,6 +133,39 @@ class KakaoPlaceVerificationAdapterTest {
         givenResponse(200, document("http://place.map.kakao.com/99999999", "서울 강남구 언주로93길 22-3"));
 
         assertThat(adapter().verify("서울집", SUBMITTED_URL, "02-501-2126")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("장소 검증은 Kakao Local keyword GET path·query·Authorization 계약을 사용한다")
+    void 검증_요청규격_KakaoLocalKeyword계약을따른다() throws Exception {
+        givenResponse(200, document("https://place.map.kakao.com/" + PLACE_ID, "서울 강남구 언주로93길 22-3"));
+
+        adapter().verify("서울집", SUBMITTED_URL, "02-501-2126");
+
+        ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(httpClient).send(captor.capture(), any(HttpResponse.BodyHandler.class));
+        HttpRequest request = captor.getValue();
+        assertThat(request.method()).isEqualTo("GET");
+        assertThat(request.uri().getPath()).isEqualTo("/v2/local/search/keyword.json");
+        assertThat(request.uri().getQuery()).contains("query=서울집");
+        assertThat(request.headers().firstValue("Authorization")).hasValue("KakaoAK test-key");
+    }
+
+    @Test
+    @DisplayName("endpoint가 없거나 HTTP(S) origin이 아니면 HTTP 호출 전에 초기화를 거부한다")
+    void 초기화_endpoint누락또는지원하지않는형식_호출전에거부한다() {
+        assertThatThrownBy(() -> new KakaoPlaceVerificationAdapter(
+                httpClient, objectMapper, "", "test-key"))
+                .isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> new KakaoPlaceVerificationAdapter(
+                httpClient, objectMapper, "ftp://dapi.kakao.com", "test-key"))
+                .isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> new KakaoPlaceVerificationAdapter(
+                httpClient, objectMapper, "http://localhost:8081/local", "test-key"))
+                .isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> new KakaoPlaceVerificationAdapter(
+                httpClient, objectMapper, "http://localhost:8081", "test-key", "https://dapi.kakao.com"))
+                .isInstanceOf(IllegalStateException.class);
     }
 
     private KakaoPlaceVerificationAdapter adapter() {
