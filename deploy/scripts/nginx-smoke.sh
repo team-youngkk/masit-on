@@ -40,7 +40,9 @@ for path in /api /api/restaurants /api/unknown-route; do
   assert_reaches_backend GET "$path"
 done
 assert_reaches_backend POST /api/auth/tokens '{}'
-assert_reaches_backend GET /
+# The public root intentionally redirects to the canonical exploration page.
+assert_status 307 GET /
+assert_status 200 GET /restaurants
 
 # Webhook GET/POST reach the application; other methods stop at Nginx.
 assert_reaches_backend GET /api/webhooks/youtube/channel-updates
