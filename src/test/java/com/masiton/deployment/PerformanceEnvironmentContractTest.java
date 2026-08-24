@@ -17,15 +17,15 @@ class PerformanceEnvironmentContractTest {
             "infra/performance/terraform/templates/app-user-data.sh.tftpl");
 
     @Test
-    @DisplayName("검증 세션 비활성화 설정을 컨테이너까지 전달하고 자격 증명을 렌더링하지 않는다")
-    void 성능환경_검증세션을명시적으로비활성화한다() throws IOException {
+    @DisplayName("성능 환경에서도 검증 참여자 설정과 자격 증명을 주입하지 않는다")
+    void 성능환경_검증참여자설정을주입하지않는다() throws IOException {
         String template = Files.readString(APP_USER_DATA, StandardCharsets.UTF_8);
 
         assertThat(template)
-                .contains("export VERIFICATION_ENABLED=false")
-                .contains("-e VERIFICATION_ENABLED")
                 .contains("write_secret 'masiton.member.action-mail.from-address' 'perf@example.invalid'")
+                .doesNotContain("VERIFICATION_")
                 .doesNotContain("write_secret 'masiton.security.verification.login-id'")
-                .doesNotContain("write_secret 'masiton.security.verification.password-hash'");
+                .doesNotContain("write_secret 'masiton.security.verification.password-hash'")
+                .doesNotContain("/masiton/access/verification-");
     }
 }

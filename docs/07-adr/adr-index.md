@@ -49,6 +49,7 @@ related_documents:
   - platform/deploy-001-release-sequencing.md
   - platform/deploy-003-validation-cookie-session.md
   - platform/deploy-004-public-api-validation-gate-boundary.md
+  - platform/deploy-006-public-release-without-validation-gate.md
   - platform/git-001-branch-merge-strategy.md
 ---
 
@@ -101,7 +102,8 @@ related_documents:
 | [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md) | GitHub Actions 빌드·테스트 품질 게이트 | Accepted | Critical | GitHub Actions | 전체 배포 후보 | [문서](platform/ci-001-github-actions-quality-gate.md) |
 | [ADR-GIT-001](platform/git-001-branch-merge-strategy.md) | 브랜치 병합 방식과 역동기화 정책 | Accepted | High | GitHub ruleset(Squash/Merge Commit) | 전체 PR 병합 | [문서](platform/git-001-branch-merge-strategy.md) |
 | [ADR-DEPLOY-001](platform/deploy-001-release-sequencing.md) | 단계별 로컬 검증과 최종 AWS 배포 순서 | Superseded | Critical | Docker, AWS | 전체 단계 및 최종 배포 | [문서](platform/deploy-001-release-sequencing.md) |
-| [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | 초기 운영 배포 선행과 확장 단계별 인프라 반영 | Accepted | Critical | Docker, AWS | M2 초기 운영 배포 및 이후 확장 | [문서](platform/deploy-002-validation-deployment-before-expansion.md) |
-| [ADR-DEPLOY-003](platform/deploy-003-validation-cookie-session.md) | 검증 참여자 제한 공개 쿠키 세션 | Superseded | Critical | Nginx `auth_request`, Spring Boot, Redis, HttpOnly Cookie | ADR-DEPLOY-004가 gate 범위를 대체 | [문서](platform/deploy-003-validation-cookie-session.md) |
-| [ADR-DEPLOY-004](platform/deploy-004-public-api-validation-gate-boundary.md) | 비관리자 공개 API 검증 세션 gate 경계 | Accepted | Critical | Nginx `auth_request`, Spring Security, 운영 smoke | 정식 공개 전 검증 참여자 제한 공개 | [문서](platform/deploy-004-public-api-validation-gate-boundary.md) |
+| [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | 초기 운영 배포 선행과 확장 단계별 인프라 반영 | Accepted | Critical | Docker, AWS | M2 제한 공개 단계 완료 및 이후 확장 | [문서](platform/deploy-002-validation-deployment-before-expansion.md) |
+| [ADR-DEPLOY-003](platform/deploy-003-validation-cookie-session.md) | 검증 참여자 제한 공개 쿠키 세션 | Superseded | Critical | Nginx `auth_request`, Spring Boot, Redis, HttpOnly Cookie | ADR-DEPLOY-004를 거친 M2 역사 ADR; 현재 최종 결정은 ADR-DEPLOY-006 | [문서](platform/deploy-003-validation-cookie-session.md) |
+| [ADR-DEPLOY-004](platform/deploy-004-public-api-validation-gate-boundary.md) | 비관리자 공개 API 검증 세션 gate 경계 | Superseded | Critical | Nginx `auth_request`, Spring Security, 운영 smoke | M2 역사 gate; ADR-DEPLOY-006이 정식 공개 전환으로 대체 | [문서](platform/deploy-004-public-api-validation-gate-boundary.md) |
 | [ADR-DEPLOY-005](platform/deploy-005-asg-blue-green-rollout.md) | ASG 기반 Blue-Green 운영 배포 | Accepted | Critical | ALB, ASG, CodeDeploy, Redis, GitHub Actions | 배포 고도화 기준 확정; 실제 운영 전환은 별도 runbook·승인·리허설 | [문서](platform/deploy-005-asg-blue-green-rollout.md) |
+| [ADR-DEPLOY-006](platform/deploy-006-public-release-without-validation-gate.md) | 검증 참여자 gate 없는 정식 공개 전환과 운영 경계 유지 | Accepted | Critical | Nginx, Spring Security, Webhook HMAC, loopback | 정식 공개 접근 경계; v1.0.0 tag·운영 전환은 별도 승인 | [문서](platform/deploy-006-public-release-without-validation-gate.md) |

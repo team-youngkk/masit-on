@@ -82,6 +82,7 @@ class RuntimeDeploymentContractTest {
                 .contains("runtime-health.sh")
                 .contains("install -d -m 0750 /opt/masiton/bin /opt/masiton/etc")
                 .contains("INSTALL_LOCAL_REDIS");
+        assertThat(script).doesNotContain("\"$STAGE/nginx-install.sh\" \"$STAGE\"");
     }
 
     @Test
@@ -91,6 +92,7 @@ class RuntimeDeploymentContractTest {
         int trap = script.indexOf("trap rollback ERR");
         int firstActiveInstall = script.indexOf("install -d -m 0755 \"$OPT_DIR/bin\" \"$OPT_DIR/etc\"");
         int health = script.lastIndexOf("\"$OPT_DIR/bin/runtime-health.sh\"");
+        int nginxInstall = script.indexOf("\"$STAGE/nginx-install.sh\" \"$STAGE\"");
         int release = script.lastIndexOf("trap - ERR");
 
         assertThat(script)
@@ -104,7 +106,9 @@ class RuntimeDeploymentContractTest {
         assertThat(trap).isGreaterThan(0);
         assertThat(firstActiveInstall).isGreaterThan(trap);
         assertThat(health).isGreaterThan(trap);
+        assertThat(nginxInstall).isGreaterThan(health);
         assertThat(release).isGreaterThan(health);
+        assertThat(release).isGreaterThan(nginxInstall);
     }
 
     @Test

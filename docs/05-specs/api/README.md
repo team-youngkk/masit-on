@@ -46,7 +46,7 @@ related_documents:
 - [필터 계약](common/filtering-contract.md)
 - [날짜·시간 계약](common/date-time-contract.md)
 - [인증 계약](common/authentication-contract.md)
-- [검증 참여자 제한 공개 계약](common/validation-access-contract.md)
+- [검증 참여자 제한 공개 계약 (역사 기록)](common/validation-access-contract.md)
 - [2차 확장 공통 계약](common/second-expansion-contract.md)
 
 ## 3. MVP·1차 확장 API

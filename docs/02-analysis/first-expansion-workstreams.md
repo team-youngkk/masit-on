@@ -31,17 +31,17 @@ related_documents:
 
 ### OPS-VALIDATION 공통 운영·배포 트랙
 
-`OPS-VALIDATION`은 사용자 가치 단위의 제품 Workstream이 아니라 정식 공개 전까지만 존재하는 교차 운영 트랙이다. 따라서 WS-09 이후의 제품 Workstream 번호를 소비하지 않는다.
+`OPS-VALIDATION`은 사용자 가치 단위의 제품 Workstream이 아니라 M2 제한 공개와 정식 공개 전환을 기록하는 교차 운영 트랙이다. M2 제한 공개는 완료됐고 현재는 검증 gate 없는 정식 공개 전환의 제거 확인만 남긴다. 따라서 WS-09 이후의 제품 Workstream 번호를 소비하지 않는다.
 
 | 구분 | 확정 내용 |
 |---|---|
 | 최종 책임자 / 기본 리뷰어 | 이우람 / 김인안 |
-| 소유 계약 | `NFR-SECURITY-001`, `NFR-SECURITY-003`, `NFR-DEPLOYMENT-002`, `NFR-DEPLOYMENT-004`; [검증 참여자 API 계약](../05-specs/api/common/validation-access-contract.md); [ADR-DEPLOY-004](../07-adr/platform/deploy-004-public-api-validation-gate-boundary.md) |
-| 구현·검증 Task | [FE-12](../08-planning/expansion-1-implementation-plan.md#8-전체-task-표), [E1-T13](../08-planning/expansion-1-task-breakdown.md#e1-t13-검증-참여자-제한-공개-쿠키-세션-전환) |
-| 구현 경계 | 검증 로그인 화면·세션 API·내부 검증 Adapter, Redis `auth:verification:` namespace와 실패 제한, Parameter Store 비밀 주입, Nginx `auth_request`, Basic Auth 제거, 배포·관측·브라우저 회귀 |
-| 협업 경계 | WS-05의 회원·관리자 Bearer 인증 계약은 변경하지 않고 동시 동작만 회귀 검증한다. M2 운영 기준선과 Nginx·Redis·비밀정보 구성을 사용한다. |
-| 완료 판단 | 최초 검증 로그인 뒤 7일 동안 페이지 이동·새로고침·회원 로그인에서 반복 인증창 0회, 무세션·Redis 장애 fail-closed, 비밀정보 로그 0건, 정식 공개 제거 리허설 통과 |
-| 종료 조건 | 정식 공개 Task에서 로그인 화면/API, 쿠키, Redis key, Parameter Store 값, Nginx subrequest와 전용 테스트·알람을 함께 제거한다. |
+| 소유 계약 | `NFR-SECURITY-001`, `NFR-SECURITY-003`, `NFR-DEPLOYMENT-002`, `NFR-DEPLOYMENT-004`; [역사적 검증 참여자 API 계약](../05-specs/api/common/validation-access-contract.md); [ADR-DEPLOY-006](../07-adr/platform/deploy-006-public-release-without-validation-gate.md) |
+| 구현·검증 Task | 역사 기록: [FE-12](../08-planning/expansion-1-implementation-plan.md#8-전체-task-표), [E1-T13](../08-planning/expansion-1-task-breakdown.md#e1-t13-검증-참여자-제한-공개-쿠키-세션-전환). 현재 전환 확인은 ADR-DEPLOY-006을 따른다. |
+| 구현 경계 | M2에서 검증 로그인·세션 API·내부 Adapter·Redis `auth:verification:`·Parameter Store·Nginx gate를 사용했고, 정식 공개 전환으로 제거한다. 회원·관리자 인증과 Webhook 자체 인증·rate limit, Host·`/internal`·loopback 경계는 유지한다. |
+| 협업 경계 | WS-05의 회원·관리자 Bearer 인증 계약은 변경하지 않는다. 정식 공개 전환은 제품 API 인증을 바꾸지 않고 운영 경계 회귀만 확인한다. |
+| 완료 판단 | M2 제한 공개·운영 기준선 검증 완료. 현재 판단은 검증 쿠키·Redis·gate 없이 공개 화면·API가 동작하고 회원·관리자 인증, Webhook·Host·`/internal`·loopback 회귀가 통과하는지로 한다. |
+| 종료 조건 | 검증 참여자 로그인 화면/API, 쿠키, Redis key, Parameter Store 값, Nginx subrequest와 전용 테스트·알람이 제거됐음을 확인하면 트랙을 종료한다. |
 
 ## 3. 공통 선행 작업
 
@@ -53,7 +53,7 @@ related_documents:
 | Kakao Maps SDK 키·오류·호출량 경계 | 양성훈 | WS-07 | 외부 연동 계약과 브라우저 검증 계획 승인 |
 | Creator 상세 표시 정보와 관계 목록 계약 | 이우람 | WS-08, WS-03, WS-04 | API·데이터 계약과 관리자 확인 흐름 승인 |
 | 공통 인증 만료·권한·빈·비공개·삭제 화면 상태 | 양성훈 | WS-05~WS-08 | 사용자 흐름·와이어프레임 인수 리뷰 완료 |
-| 검증 참여자 쿠키 세션·Nginx·Redis 진입 경계 | 이우람 | OPS-VALIDATION, WS-05 | API·ADR·M2 계약 승인과 `E1-T13` 브라우저·보안·제거 회귀 완료 |
+| 검증 참여자 쿠키 세션·Nginx·Redis 진입 경계 (역사) | 이우람 | OPS-VALIDATION, WS-05 | M2 계약·`E1-T13` 증거 보존 및 ADR-DEPLOY-006 제거·회귀 확인 |
 
 ## 4. WS-05 사용자 계정·인증
 
@@ -141,7 +141,7 @@ related_documents:
 3. 좌표 계약과 backfill 계획을 확정한 뒤 WS-07을 WS-01·WS-03 결과와 통합한다.
 4. Creator 표시·관계 계약을 확정한 뒤 WS-08을 WS-02·WS-03·WS-04와 통합한다.
 5. 공통 사용자 흐름에서 인증 장애가 공개 지도·유튜버 상세에 전파되지 않는지 교차 검증한다.
-6. `OPS-VALIDATION`은 WS-05 회원 인증과 독립된 진입 경계로 통합하고, `E1-T13` 완료 증거를 2차 확장 `E2-T01` 기준선에 인계한다.
+6. `OPS-VALIDATION`의 M2 완료 증거를 2차 확장 기준선에 인계하고, 정식 공개에서는 회원 인증과 독립된 검증 gate를 제거한다. 제품 API 인증은 WS-05 계약으로 계속 추적한다.
 
 WS-07과 WS-08은 WS-05 완료를 기다리지 않고 공개 조회 계약을 기준으로 병렬 개발할 수 있다. WS-06은 WS-05의 실제 구현 전에도 인증 주체 계약 Stub으로 내부 규칙을 검증할 수 있다.
 
