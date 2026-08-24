@@ -1,7 +1,7 @@
 ---
 id: ADR-DEPLOY-005
 title: ASG 기반 Blue-Green 운영 배포
-status: Accepted
+status: Superseded
 decision_date: 2026-08-18
 owners:
   - 이우람
@@ -21,14 +21,14 @@ related_documents:
   - runtime-001-docker.md
   - ci-001-github-actions-quality-gate.md
 supersedes: []
-superseded_by: null
+superseded_by: ADR-DEPLOY-007
 ---
 
 # ADR-DEPLOY-005 ASG 기반 Blue-Green 운영 배포
 
 ## 1. 상태
 
-Accepted. 배포 고도화 구현의 목표 토폴로지와 전환 안전장치를 고정한다. 실제 운영 자원 전환과 기존 단일 EC2 폐기는 별도 승인과 리허설을 통과한 뒤 수행한다.
+Superseded in the deployment alarm boundary by [ADR-DEPLOY-007](deploy-007-codedeploy-health-alarm-boundary.md). Blue-Green 토폴로지와 그 밖의 전환 안전장치는 계속 유효하며, 실제 운영 자원 전환과 기존 단일 EC2 폐기는 별도 승인과 리허설을 통과한 뒤 수행한다.
 
 ## 2. 결정 문제
 

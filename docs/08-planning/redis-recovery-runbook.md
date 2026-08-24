@@ -58,7 +58,8 @@ Terraform 작업 디렉터리는 `infra/production/terraform`이다. 먼저 현�
 `deployment_alarms_enabled=true`는 명령행에서만 넘긴다. `terraform.tfvars`,
 Terraform 리소스의 `treat_missing_data`, alarm 목록과 `ignore_poll_alarm_failure`를
 수정하지 않는다. 복구 모드는 CodeDeploy alarm 목록에서 전용 Redis alarm 두 개만
-제외하고 ALB target 5xx·target latency·blue unhealthy-host alarm 3개를 그대로 남긴다.
+제외하고 ALB target 5xx·target latency alarm을 그대로 남긴다. `blue-unhealthy-host`는
+CodeDeploy 전환 중 target 등록·draining을 오인할 수 있어 관측 전용이다.
 
 ```powershell
 terraform plan -var="redis_recovery_mode=true" -var="deployment_alarms_enabled=true" -out=redis-break-glass.tfplan
@@ -68,7 +69,8 @@ terraform apply redis-break-glass.tfplan
 
 plan에는 CodeDeploy deployment group의 Redis alarm 목록 제외와 그에 필요한 입력 변경만
 있어야 한다. `enabled=true`, `ignore_poll_alarm_failure=false`와 ALB target 5xx·target
-latency·blue unhealthy-host alarm 3개가 유지되는지 `terraform show`에서 확인한다. 승인
+latency alarm이 유지되는지 `terraform show`에서 확인한다. `blue-unhealthy-host`는
+관측 전용이므로 CodeDeploy alarm 목록에는 없어야 한다. 승인
 기록에 plan 요약, 승인자 2명, 유효기간 만료 시각, 복구 revision과 deployment ID를 함께
 적는다.
 
@@ -102,6 +104,6 @@ aws deploy get-deployment-group `
 ```
 
 최종 출력에서 `Enabled=true`, `IgnorePollFailure=false`, ALB target 5xx·target
-latency·blue unhealthy-host와 Redis alarm 두 개가 모두 목록에 있는 것을 확인하고 승인
+latency와 Redis alarm 두 개가 목록에 있는 것을 확인하고 승인
 기록을 닫는다. 복원 apply가 실패하면 게이트가 복원됐다고 간주하지 말고 추가 배포
 없이 수동 장애 대응으로 전환한다.

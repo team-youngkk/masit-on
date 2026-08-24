@@ -160,8 +160,8 @@ Redis 장애 때 복구 배포 자체가 위 게이트에 막히면 다음 승�
    ```
 
    plan에는 CodeDeploy deployment group의 Redis alarm 목록 제외만 있어야 하며,
-   ALB 5xx·지연·비정상 호스트 alarm과 `Enabled=true`, `IgnorePollFailure=false`가
-   유지되어야 한다. 다른 변경·삭제·교체가 보이면 중단한다. 이 상태에서 복구 목적의 **단 한 번의**
+   ALB 5xx·지연 alarm과 `Enabled=true`, `IgnorePollFailure=false`가 유지되어야 한다.
+   비정상 호스트 alarm은 관측 전용으로 남아 있어야 한다. 다른 변경·삭제·교체가 보이면 중단한다. 이 상태에서 복구 목적의 **단 한 번의**
    배포만 실행한다. 공개 탐색이 예상 상태를 벗어나거나, 회원 인증이 성공으로
    우회되거나, replacement health가 실패하면 즉시 배포를 중단하고 기존
    known-good revision으로 rollback한다.
