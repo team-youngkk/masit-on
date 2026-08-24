@@ -27,7 +27,7 @@ related_documents:
 |---|---|---|---|---|---|
 | [이미지 범위 제외](https://github.com/team-youngkk/masit-on/pull/301#discussion_r3840271074) | 큐레이션 확정 범위에서 제외된 이미지 UI를 추가하지 말 것 | 애플리케이션 | 수정 필요 | placeholder 이미지와 이미지 렌더링 CSS를 제거하고 텍스트 카드만 유지 | `docs/04-product/traceability.md`의 WS-11 범위, 구두 합의, 프런트 전체 테스트·타입 검사·빌드 |
 | [찜 범위 제외](https://github.com/team-youngkk/masit-on/pull/301#discussion_r3840271078) | WS-06 개인 찜·로그인 CTA를 공개 큐레이션 카드에 결합하지 말 것 | 애플리케이션 | 수정 필요 | `FavoriteButton`과 로그인 진입 경로를 제거하고 상세 이동만 유지 | PRD의 개인화·개인 컬렉션 제외 범위, 큐레이션 API 필드 계약, 프런트 전체 테스트·타입 검사·빌드 |
-| [승인 리뷰](https://github.com/team-youngkk/masit-on/pull/301#pullrequestreview-3211987252) | 공개 API 계약 안에서 카드·상세 이동·오류 처리·식별자 인코딩을 확인 | 애플리케이션 | 이미 해결 | 기존 이름·주소·상세 링크와 오류/빈 상태·불투명 ID 인코딩을 유지 | `npm.cmd test`, `npm.cmd run typecheck`, `npm.cmd run build` 통과 |
+| [승인 리뷰](https://github.com/team-youngkk/masit-on/pull/301#pullrequestreview-5004058190) | 공개 API 계약 안에서 카드·상세 이동·오류 처리·식별자 인코딩을 확인 | 애플리케이션 | 이미 해결 | 기존 이름·주소·상세 링크와 오류/빈 상태·불투명 ID 인코딩을 유지 | `npm.cmd test`, `npm.cmd run typecheck`, `npm.cmd run build` 통과 |
 
 ## 3. 문제 현상과 발생 조건
 
@@ -81,4 +81,4 @@ related_documents:
 
 ## 10. 남은 사항
 
-없음. `w00lam`의 미해결 변경 요청 2건을 반영한 뒤 원격 브랜치에 푸시하고 각 원래 인라인 스레드에 답글과 해결 처리를 진행한다.
+없음. `w00lam`의 미해결 변경 요청 2건을 반영하고 원격 브랜치에 푸시했으며, 각 원래 인라인 스레드에 답글과 해결 처리를 완료했다. 동일 내용을 요약 리뷰로 남긴 `inan0226`의 검토에도 반영 커밋과 기록을 연결했다.
