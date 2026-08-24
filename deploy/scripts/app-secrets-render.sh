@@ -119,8 +119,6 @@ render_required_non_blank "masiton.member.action-mail.from-address" /masiton/mem
 render_required "masiton.member.rate-limit.secret"         /masiton/member/rate-limit/secret
 render_required "spring.mail.username"                     /masiton/mail/username
 render_required "spring.mail.password"                     /masiton/mail/password
-render_required "masiton.security.verification.login-id"  /masiton/access/verification-login-id
-render_required "masiton.security.verification.password-hash" /masiton/access/verification-password-hash
 render_optional "masiton.integration.kakao.rest-api-key" /masiton/integration/kakao/rest-api-key
 render_optional "masiton.integration.youtube.api-key"    /masiton/integration/youtube/api-key
 render_optional "masiton.integration.kakao-mobility.rest-api-key" /masiton/integration/kakao-mobility/rest-api-key

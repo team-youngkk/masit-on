@@ -1,19 +1,22 @@
 ---
-status: approved
-last_reviewed: 2026-08-14
+status: historical
+last_reviewed: 2026-08-24
 owner: 이우람
 related_documents:
   - ../../../01-requirements/non-functional-requirements.md
   - ../../../06-architecture/security-boundary.md
   - ../../../07-adr/platform/deploy-004-public-api-validation-gate-boundary.md
+  - ../../../07-adr/platform/deploy-006-public-release-without-validation-gate.md
   - ../../../08-planning/expansion-1-task-breakdown.md
 ---
 
-# 검증 참여자 제한 공개 API 계약
+# 검증 참여자 제한 공개 API 계약 (역사 기록)
+
+> 이 문서는 M2 제한 공개에서 사용한 검증 참여자 로그인·쿠키·Redis·Nginx gate의 역사 기록이다. 정식 공개 전환으로 이 API, 쿠키, `auth:verification:*` Redis namespace와 gate는 제거 대상이며 현재 제품 API 계약이 아니다. 현재 공개·회원·관리자 인증은 각 제품 API와 [정식 공개 전환 ADR](../../../07-adr/platform/deploy-006-public-release-without-validation-gate.md)을 따른다. 아래 세부는 당시 결정과 제거 확인을 위한 기록으로만 보존한다.
 
 ## 1. 범위
 
-이 계약은 정식 공개 전 `masiton.click` 접근을 검증 참여자로 제한하는 임시 운영 경계다. 일반 회원·관리자 로그인이나 서비스 권한을 제공하지 않는다. [OPS-VALIDATION 공통 운영·배포 트랙](../../../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙)이 이 계약을 소유하며, 현재 Basic Auth 구현은 [E1-T13](../../../08-planning/expansion-1-task-breakdown.md#e1-t13-검증-참여자-제한-공개-쿠키-세션-전환)에서 이 계약으로 교체한다.
+이 계약은 정식 공개 전 `masiton.click` 접근을 검증 참여자로 제한했던 임시 운영 경계다. 일반 회원·관리자 로그인이나 서비스 권한을 제공하지 않았다. [OPS-VALIDATION 공통 운영·배포 트랙](../../../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙)이 M2 단계에서 이 계약을 소유했고, Basic Auth 구현을 [E1-T13](../../../08-planning/expansion-1-task-breakdown.md#e1-t13-검증-참여자-제한-공개-쿠키-세션-전환)에서 쿠키 세션으로 교체했다. 현재는 정식 공개 전환으로 제거한다.
 
 ## 2. 세션 생성
 
@@ -112,9 +115,9 @@ Nginx `auth_request` 전용 검증 경로는 외부 API가 아니다. 인터넷�
 - API 요청: `401 VALIDATION_ACCESS_REQUIRED` 공통 JSON 오류를 반환하며 로그인 HTML로 redirect하지 않는다.
 - Basic Auth challenge와 `WWW-Authenticate: Basic`은 반환하지 않는다.
 
-## 7. 완료 조건
+## 7. 역사적 완료 조건과 현재 제거 상태
 
 - 한 번 로그인한 브라우저에서 7일 동안 페이지 이동·새로고침·회원 및 관리자 Bearer 요청에 검증 로그인을 다시 요구하지 않는다.
 - 회원·관리자 로그인·로그아웃은 검증 쿠키를 변경하지 않는다.
 - 세션 원문·비밀번호·Cookie 헤더가 저장소·로그·오류에 남지 않는다.
-- 정식 공개 시 이 API와 쿠키를 제거해도 회원·관리자 인증 계약은 바뀌지 않는다.
+- 정식 공개 시 이 API와 쿠키를 제거해도 회원·관리자 인증 계약은 바뀌지 않는다. 이는 현재 제거 확인 기준이며, 회원·관리자 인증·Webhook 자체 인증·rate limit·Host·`/internal` 외부 `404`·loopback 경계는 유지한다.

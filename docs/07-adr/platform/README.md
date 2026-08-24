@@ -14,6 +14,7 @@ related_documents:
   - ci-001-github-actions-quality-gate.md
   - deploy-003-validation-cookie-session.md
   - deploy-004-public-api-validation-gate-boundary.md
+  - deploy-006-public-release-without-validation-gate.md
 ---
 
 # 플랫폼 ADR
@@ -32,6 +33,7 @@ related_documents:
 | [ADR-WEB-006](web-006-unified-login-rbac-route.md) | 통합 로그인과 역할 기반 관리자 화면 진입 |
 | [ADR-RUNTIME-001](runtime-001-docker.md) | Docker 기반 실행 환경 |
 | [ADR-CI-001](ci-001-github-actions-quality-gate.md) | GitHub Actions 빌드·테스트 품질 게이트 |
-| [ADR-DEPLOY-003](deploy-003-validation-cookie-session.md) | 검증 참여자 제한 공개 쿠키 세션(Superseded) |
-| [ADR-DEPLOY-004](deploy-004-public-api-validation-gate-boundary.md) | 비관리자 공개 API 검증 세션 gate 경계 |
+| [ADR-DEPLOY-003](deploy-003-validation-cookie-session.md) | 검증 참여자 제한 공개 쿠키 세션(역사·Superseded) |
+| [ADR-DEPLOY-004](deploy-004-public-api-validation-gate-boundary.md) | 비관리자 공개 API 검증 세션 gate 경계(역사·Superseded) |
 | [ADR-DEPLOY-005](deploy-005-asg-blue-green-rollout.md) | ASG 기반 Blue-Green 운영 배포 (Accepted) |
+| [ADR-DEPLOY-006](deploy-006-public-release-without-validation-gate.md) | 검증 참여자 gate 없는 정식 공개 전환과 운영 경계 유지 (Accepted) |

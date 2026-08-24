@@ -27,8 +27,6 @@
 #   masiton.member.rate-limit.secret
 #   spring.mail.username
 #   spring.mail.password
-#   masiton.security.verification.login-id
-#   masiton.security.verification.password-hash
 #   masiton.integration.kakao.rest-api-key   (선택)
 #   masiton.integration.youtube.api-key      (선택)
 #   masiton.integration.kakao-mobility.rest-api-key (선택)

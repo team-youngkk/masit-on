@@ -144,7 +144,7 @@ Restaurant, Creator, Video와 Visit는 일반 사용자 노출을 위한 publica
 - 외부 표시 메타데이터는 최신값만 유지하고 변경 이력을 저장하지 않는다.
 - 회원 요청·로그인 제한과 이메일 인증 코드의 요청 출처당 10분 10회 제출 제한은 Redis 인증 namespace에 저장하고, key에는 정규화 이메일·클라이언트 주소 대신 용도 분리 `rateLimitSecret`의 HMAC-SHA-256 hex만 사용한다. Refresh Token은 역할과 무관하게 `auth:session:` 통합 namespace를 사용하며 키·쿠키·검증값·회전 전략의 정본은 [ADR-AUTH-007](../../07-adr/security/auth-007-unified-account-rbac-session.md)에 둔다.
 - `member_account.role`은 `MEMBER`와 `ADMIN`만 허용한다. 역할·상태·비밀번호가 바뀌면 해당 계정의 활성 세션을 모두 폐기한다. 기존 관리자 세션은 전환 시 전부 무효화한다.
-- 제한 공개 검증 세션은 Redis `auth:verification:` namespace에 세션 ID의 SHA-256 해시와 7일 고정 만료만 저장한다. 회원·관리자 ID·권한·Refresh Token과 결합하지 않으며 정식 공개 시 namespace 전체를 제거한다.
+- 제한 공개 검증 세션은 M2에서만 Redis `auth:verification:` namespace에 세션 ID의 SHA-256 해시와 7일 고정 만료를 저장했다. 회원·관리자 ID·권한·Refresh Token과 결합하지 않았으며, 정식 공개 전환으로 해당 namespace와 전용 저장 계약을 제거한다. 현재 Redis 인증 저장은 회원·관리자 통합 `auth:session:`만 사용한다.
 - 검색 인덱스와 추가 동시성 제어는 확정 부하·데이터 규모의 성능 측정에서 병목이 확인될 때만 활성화한다.
 
 상세 상태와 우선순위는 [data-review.md](data-review.md)에 기록한다.

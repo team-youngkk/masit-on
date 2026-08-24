@@ -18,24 +18,26 @@ related_documents:
   - ../../08-planning/expansion-1-task-breakdown.md
   - web-003-routing-boundary.md
   - ../security/sec-001-secrets-workload-identity.md
+  - deploy-006-public-release-without-validation-gate.md
 supersedes: []
 supersedes_decision: M2-11 Nginx Basic Auth 제한 공개
 superseded_by: ADR-DEPLOY-004
+current_decision: ADR-DEPLOY-006
 ---
 
 # ADR-DEPLOY-003 검증 참여자 제한 공개 쿠키 세션
 
 ## 1. 상태
 
-Superseded by [ADR-DEPLOY-004](deploy-004-public-api-validation-gate-boundary.md).
+Superseded by [ADR-DEPLOY-004](deploy-004-public-api-validation-gate-boundary.md). The historical gate chain is finally retired by [ADR-DEPLOY-006](deploy-006-public-release-without-validation-gate.md); this ADR remains only as the record of the M2 cookie-session transition.
 
-2026-08-03 제한 공개의 반복 인증창 문제를 해결하기 위해 기존 Nginx Basic Auth 결정을 변경했다. [OPS-VALIDATION 공통 운영·배포 트랙](../../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙)이 결정 적용을 소유하고, 구현과 운영 전환은 [E1-T13](../../08-planning/expansion-1-task-breakdown.md#e1-t13-검증-참여자-제한-공개-쿠키-세션-전환)에서 추적한다. 비관리자 공개 API의 후속 gate 범위 결정은 ADR-DEPLOY-004가 대체한다.
+2026-08-03 제한 공개의 반복 인증창 문제를 해결하기 위해 기존 Nginx Basic Auth 결정을 변경했다. [OPS-VALIDATION 공통 운영·배포 트랙](../../02-analysis/first-expansion-workstreams.md#ops-validation-공통-운영배포-트랙)이 결정 적용을 소유했고, 구현과 운영 전환은 [E1-T13](../../08-planning/expansion-1-task-breakdown.md#e1-t13-검증-참여자-제한-공개-쿠키-세션-전환)에서 추적했다. 비관리자 공개 API의 후속 gate 범위 결정은 ADR-DEPLOY-004가 대체했으며, 현재는 ADR-DEPLOY-006에 따라 gate 자체를 제거한다.
 
 ## 2. 결정 요약
 
-검증 참여자 제한 공개는 전용 로그인 화면과 서버 측 쿠키 세션으로 처리한다. 성공 시 128-bit 이상의 불투명 세션 ID를 `__Host-masiton-verification` HttpOnly 쿠키로 발급하고 Redis에는 SHA-256 해시와 만료만 저장한다. Nginx는 `auth_request`로 내부 검증 Endpoint를 호출해 화면과 API 진입을 허용한다.
+검증 참여자 제한 공개는 M2에서 전용 로그인 화면과 서버 측 쿠키 세션으로 처리했다. 성공 시 128-bit 이상의 불투명 세션 ID를 `__Host-masiton-verification` HttpOnly 쿠키로 발급하고 Redis에는 SHA-256 해시와 만료만 저장했다. Nginx는 `auth_request`로 내부 검증 Endpoint를 호출해 화면과 API 진입을 허용했다. 이 방식과 자원은 정식 공개 전환으로 제거되며 현재 계약이 아니다.
 
-검증 세션은 회원·관리자 인증과 별개다. 회원·관리자 Access Token은 계속 `Authorization: Bearer`를 사용하고 Refresh Token 정책도 바꾸지 않는다. 정식 공개 시 검증 로그인·세션·쿠키·Nginx 검증 경계와 전용 비밀정보를 함께 제거한다.
+검증 세션은 회원·관리자 인증과 별개였다. 회원·관리자 Access Token은 계속 `Authorization: Bearer`를 사용하고 Refresh Token 정책도 바꾸지 않는다. 이 ADR의 정식 공개 제거 결과와 현재 유지할 보안 경계는 [ADR-DEPLOY-006](deploy-006-public-release-without-validation-gate.md)을 따른다.
 
 ## 3. 배경
 
