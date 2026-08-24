@@ -401,6 +401,63 @@
   content: counter(curation-restaurant);
 }
 
+.restaurantCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  height: 100%;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.cardHeading {
+  min-width: 0;
+}
+
+.cardHeading h3,
+.cardAddress {
+  margin: 0;
+}
+
+.cardHeading h3 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.35;
+}
+
+.cardAddress {
+  margin-top: 0.35rem;
+  overflow-wrap: anywhere;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  letter-spacing: -0.015em;
+  line-height: 1.4;
+}
+
+.restaurantCard .detailLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--control-min-height);
+  margin: auto 0 0;
+  color: var(--color-primary-deep);
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.restaurantCard .detailLink:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
 @media (min-width: 768px) {
   .curationList,
   .restaurantList {
