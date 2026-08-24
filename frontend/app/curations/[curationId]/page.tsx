@@ -1,11 +1,9 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
-import { FavoriteButton } from '@/components/personal/FavoriteButton'
 import { PageShell } from '@/components/ui/PageShell'
 import { StatePanel } from '@/components/ui/StatePanel'
 import { fetchPublicCuration } from '@/lib/curations-api'
-import { getRestaurantPlaceholderImage } from '@/lib/restaurant-placeholder-image'
 
 import { RetryButton } from '../RetryButton'
 import styles from '../curations.module.css'
@@ -65,36 +63,14 @@ export default async function PublicCurationDetailPage({
             {curation.items.map((restaurant) => (
               <li key={restaurant.restaurantId}>
                 <article className={styles.restaurantCard}>
-                  <div className={styles.cardMedia}>
-                    <img
-                      src={
-                        getRestaurantPlaceholderImage(
-                          restaurant.restaurantId,
-                          restaurant.name,
-                        ).src
-                      }
-                      alt=""
-                      loading="lazy"
-                      decoding="async"
-                      className={styles.cardMediaImage}
-                    />
-                  </div>
                   <div className={styles.cardHeading}>
-                    <div className={styles.cardTitleRow}>
-                      <h3>
-                        <Link
-                          href={`/restaurants/${encodeURIComponent(restaurant.restaurantId)}`}
-                        >
-                          {restaurant.name}
-                        </Link>
-                      </h3>
-                      <FavoriteButton
-                        compact
-                        restaurantId={restaurant.restaurantId}
-                        restaurantName={restaurant.name}
-                        returnTo={`/curations/${encodeURIComponent(curation.curationId)}`}
-                      />
-                    </div>
+                    <h3>
+                      <Link
+                        href={`/restaurants/${encodeURIComponent(restaurant.restaurantId)}`}
+                      >
+                        {restaurant.name}
+                      </Link>
+                    </h3>
                     <p className={styles.cardAddress}>{restaurant.roadAddress}</p>
                   </div>
                   <Link
