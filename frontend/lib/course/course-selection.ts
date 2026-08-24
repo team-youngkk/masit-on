@@ -16,6 +16,15 @@ export type CourseCandidate = {
 export const MIN_COURSE_SIZE = 2
 export const MAX_COURSE_SIZE = 5
 
+export type CourseMemberRole = 'MEMBER' | 'ADMIN'
+
+export function canUseCourseFavoriteSource(
+  memberStatus: string,
+  memberRole: CourseMemberRole | undefined,
+): boolean {
+  return memberStatus === 'authenticated' && memberRole === 'MEMBER'
+}
+
 export function isCourseFull(selected: CourseCandidate[]): boolean {
   return selected.length >= MAX_COURSE_SIZE
 }

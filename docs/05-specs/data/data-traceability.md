@@ -94,7 +94,7 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 | [FR-AIEXTRACT-006](../../01-requirements/functional-requirements.md#fr-aiextract-006-webhook-감시-채널-관리) | `youtube_channel_watch` | Creator·YouTube channel 고유성, 활성·구독·갱신·오류 상태 |
 | [FR-NLSEARCH-001](../../01-requirements/functional-requirements.md#fr-nlsearch-001-자연어-검색-요청과-결과-조회)·[FR-NLSEARCH-002](../../01-requirements/functional-requirements.md#fr-nlsearch-002-자연어-조건과-직접-필터-조합)·[FR-NLSEARCH-004](../../01-requirements/functional-requirements.md#fr-nlsearch-004-확정-태그-조건과-결과-조회) | `tag_definition`, `visit_tag` 조회 | 해석 조건은 요청 범위 값이며 기존 Restaurant·Region·FoodCategory·Creator·Visit와 확정 태그 조회를 사용 |
 | [FR-NLSEARCH-003](../../01-requirements/functional-requirements.md#fr-nlsearch-003-빈-결과와-해석-실패) | 신규 검색 이력 없음 | `APPLIED·PARTIAL·FAILED`와 빈 목록은 응답 파생값, 원문·검색 이력 비저장 |
-| [FR-COURSE-001](../../01-requirements/functional-requirements.md#fr-course-001-코스-후보-입력)·[FR-COURSE-002](../../01-requirements/functional-requirements.md#fr-course-002-이동-순서와-경로-조회) | 신규 영속 데이터 없음 | 공개 Restaurant 좌표 조회와 외부 Route 응답을 요청 범위에서 조합 |
+| [FR-COURSE-001](../../01-requirements/functional-requirements.md#fr-course-001-코스-후보-입력)·[FR-COURSE-002](../../01-requirements/functional-requirements.md#fr-course-002-이동-순서와-경로-조회) | 신규 영속 데이터 없음 | 공개 Restaurant 좌표 조회와 기존 `favorite` 관계를 인증된 개인 찜 API로 명시적으로 조회한 뒤 외부 Route 응답을 요청 범위에서 조합 |
 | [FR-COURSE-003](../../01-requirements/functional-requirements.md#fr-course-003-외부-경로-실패-시-대체-결과) | 신규 영속 데이터 없음 | 실패 범주·입력 순서·최소 표시 정보만 오류 응답으로 반환 |
 
 ## 4. 비즈니스 규칙 → 제약조건 매핑

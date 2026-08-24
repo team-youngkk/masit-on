@@ -7,6 +7,7 @@ import {
   addCourseCandidate,
   appendUniqueCourseCandidates,
   canCalculateCourse,
+  canUseCourseFavoriteSource,
   courseCandidateActionState,
   courseSizeGuidance,
   isCourseCandidateSelected,
@@ -24,6 +25,13 @@ function candidate(id: string): CourseCandidate {
 test('선택 목록에 새 후보를 추가한다', () => {
   const selected = addCourseCandidate([candidate('A')], candidate('B'))
   assert.deepEqual(toCourseRestaurantIds(selected), ['A', 'B'])
+})
+
+test('회원 세션에서만 찜 후보 원천을 사용할 수 있다', () => {
+  assert.equal(canUseCourseFavoriteSource('authenticated', 'MEMBER'), true)
+  assert.equal(canUseCourseFavoriteSource('authenticated', 'ADMIN'), false)
+  assert.equal(canUseCourseFavoriteSource('anonymous', 'MEMBER'), false)
+  assert.equal(canUseCourseFavoriteSource('unavailable', undefined), false)
 })
 
 test('이미 선택된 후보는 다시 추가되지 않는다', () => {

@@ -15,6 +15,7 @@ import {
   addCourseCandidate,
   appendUniqueCourseCandidates,
   canCalculateCourse,
+  canUseCourseFavoriteSource,
   courseCandidateActionState,
   courseSizeGuidance,
   isCourseFull,
@@ -86,7 +87,8 @@ export function CourseScreen({ designPreview = false }: { designPreview?: boolea
 }
 
 function LiveCourseScreen() {
-  const { status: memberStatus } = useMemberSession()
+  const { status: memberStatus, session } = useMemberSession()
+  const canUseFavorites = canUseCourseFavoriteSource(memberStatus, session?.role)
   const [selected, setSelected] = useState<CourseCandidate[]>([])
   const [query, setQuery] = useState('')
   const [district, setDistrict] = useState('')
@@ -588,7 +590,7 @@ function LiveCourseScreen() {
           </Button>
         ) : null}
 
-        {memberStatus === 'authenticated' ? (
+        {canUseFavorites ? (
           <section className={styles.favoriteSource} aria-labelledby="course-favorites-heading">
             <SectionHeader
               title={<span id="course-favorites-heading">내 찜에서 찾기</span>}
