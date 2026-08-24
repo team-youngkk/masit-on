@@ -44,17 +44,20 @@ class YouTubeChannelVerificationAdapter implements ChannelVerificationPort {
         this(HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build(), objectMapper, baseUrl, apiKey, allowedOrigins);
     }
     YouTubeChannelVerificationAdapter(HttpClient httpClient, ObjectMapper objectMapper, String baseUrl, String apiKey) {
-        this(httpClient, objectMapper, baseUrl, apiKey, "");
+        this.httpClient = httpClient;
+        this.objectMapper = objectMapper;
+        this.baseUri = requireBaseUri(baseUrl, "", false);
+        this.apiKey = apiKey;
     }
     YouTubeChannelVerificationAdapter(HttpClient httpClient, ObjectMapper objectMapper, String baseUrl, String apiKey,
                                       String allowedOrigins) {
         this.httpClient = httpClient;
         this.objectMapper = objectMapper;
-        this.baseUri = requireBaseUri(baseUrl, allowedOrigins);
+        this.baseUri = requireBaseUri(baseUrl, allowedOrigins, true);
         this.apiKey = apiKey;
     }
 
-    private static URI requireBaseUri(String baseUrl, String allowedOrigins) {
+    private static URI requireBaseUri(String baseUrl, String allowedOrigins, boolean requireAllowedOrigin) {
         if (baseUrl == null || baseUrl.isBlank()) {
             throw new IllegalStateException("YouTube verification endpoint must be configured");
         }
@@ -65,7 +68,8 @@ class YouTubeChannelVerificationAdapter implements ChannelVerificationPort {
             boolean rootPath = uri.getPath() == null || uri.getPath().isBlank() || "/".equals(uri.getPath());
             if (!uri.isAbsolute() || !http || uri.getHost() == null || uri.getUserInfo() != null
                     || uri.getQuery() != null || uri.getFragment() != null || !rootPath
-                    || uri.getPort() == 0 || uri.getPort() > 65535 || !isAllowedOrigin(uri, allowedOrigins)) {
+                    || uri.getPort() == 0 || uri.getPort() > 65535
+                    || !isAllowedOrigin(uri, allowedOrigins, requireAllowedOrigin)) {
                 throw new IllegalStateException("YouTube verification endpoint must be an HTTP(S) origin");
             }
             return uri;
@@ -74,9 +78,9 @@ class YouTubeChannelVerificationAdapter implements ChannelVerificationPort {
         }
     }
 
-    private static boolean isAllowedOrigin(URI uri, String allowedOrigins) {
+    private static boolean isAllowedOrigin(URI uri, String allowedOrigins, boolean requireAllowedOrigin) {
         if (allowedOrigins == null || allowedOrigins.isBlank()) {
-            return true;
+            return !requireAllowedOrigin;
         }
         return Arrays.stream(allowedOrigins.split(","))
                 .map(String::trim)

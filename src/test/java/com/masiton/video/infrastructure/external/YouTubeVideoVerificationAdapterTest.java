@@ -71,6 +71,9 @@ class YouTubeVideoVerificationAdapterTest {
         assertThatThrownBy(() -> new YouTubeVideoVerificationAdapter(
                 httpClient, objectMapper, "https://www.googleapis.com:8443", "test-key", "https://www.googleapis.com"))
                 .isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> new YouTubeVideoVerificationAdapter(
+                httpClient, objectMapper, "https://www.googleapis.com", "test-key", ""))
+                .isInstanceOf(IllegalStateException.class);
     }
 
     private YouTubeVideoVerificationAdapter adapter() {

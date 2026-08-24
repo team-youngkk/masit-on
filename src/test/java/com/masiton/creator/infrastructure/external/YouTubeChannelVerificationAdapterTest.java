@@ -184,6 +184,9 @@ class YouTubeChannelVerificationAdapterTest {
         assertThatThrownBy(() -> new YouTubeChannelVerificationAdapter(
                 httpClient, objectMapper, "https://www.googleapis.com:8443", "test-key", "https://www.googleapis.com"))
                 .isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> new YouTubeChannelVerificationAdapter(
+                httpClient, objectMapper, "https://www.googleapis.com", "test-key", ""))
+                .isInstanceOf(IllegalStateException.class);
     }
 
     private URI capturedRequestUri() throws Exception {

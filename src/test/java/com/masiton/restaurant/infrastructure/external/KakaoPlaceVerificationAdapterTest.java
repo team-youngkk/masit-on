@@ -169,6 +169,9 @@ class KakaoPlaceVerificationAdapterTest {
         assertThatThrownBy(() -> new KakaoPlaceVerificationAdapter(
                 httpClient, objectMapper, "https://dapi.kakao.com:8443", "test-key", "https://dapi.kakao.com"))
                 .isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> new KakaoPlaceVerificationAdapter(
+                httpClient, objectMapper, "https://dapi.kakao.com", "test-key", ""))
+                .isInstanceOf(IllegalStateException.class);
     }
 
     private KakaoPlaceVerificationAdapter adapter() {
