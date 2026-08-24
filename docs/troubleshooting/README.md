@@ -15,6 +15,7 @@ related_documents:
 
 ## 최신 기록
 
+- [PR #303 코스 찜 후보의 권한·범위 추적성](pr-303-course-favorite-review.md)
 - [PR #302 비밀번호 재설정 URL과 최신 fragment 처리](pr-302-password-reset-review.md)
 - [PR #301 큐레이션 범위 밖 카드 요소 제거](pr-301-curation-restaurant-card-review.md)
 - [PR #299 검증 수치와 EOF 공백 정합성](pr-299-review-verification-consistency.md)
@@ -57,6 +58,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #303 코스 찜 후보의 권한·범위 추적성](pr-303-course-favorite-review.md)
 - [PR #302 비밀번호 재설정 URL과 최신 fragment 처리](pr-302-password-reset-review.md)
 - [PR #301 큐레이션 범위 밖 카드 요소 제거](pr-301-curation-restaurant-card-review.md)
 - [PR #299 검증 수치와 EOF 공백 정합성](pr-299-review-verification-consistency.md)

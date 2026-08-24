@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 
+import { useMemberSession } from '@/components/member/MemberSessionProvider'
 import { Button } from '@/components/ui/Button'
 import { Field } from '@/components/ui/Field'
 import { SectionHeader } from '@/components/ui/PageShell'
@@ -12,9 +13,11 @@ import { CATEGORY_OPTIONS, DISTRICT_OPTIONS } from '@/lib/restaurants-api'
 import {
   MAX_COURSE_SIZE,
   addCourseCandidate,
+  appendUniqueCourseCandidates,
   canCalculateCourse,
+  canUseCourseFavoriteSource,
+  courseCandidateActionState,
   courseSizeGuidance,
-  isCourseCandidateSelected,
   isCourseFull,
   moveCourseCandidate,
   removeCourseCandidateAt,
@@ -23,6 +26,10 @@ import {
 } from '@/lib/course/course-selection'
 import { requestCourseRoute } from '@/lib/course/course-route-api'
 import { toggleCourseMapSelection } from '@/lib/course/course-route-map-state'
+import {
+  getCourseFavorites,
+  type CourseFavoritesPage,
+} from '@/lib/course/course-favorites-api'
 import {
   searchCourseCandidates,
   type CourseSearchItem,
@@ -62,6 +69,15 @@ type SearchState = {
   traceId?: string
 }
 
+type FavoriteState = {
+  status: 'idle' | 'loading' | 'loaded' | 'error'
+  items: CourseCandidate[]
+  page: CourseFavoritesPage | null
+  loadingMore: boolean
+  message?: string
+  traceId?: string
+}
+
 export function CourseScreen({ designPreview = false }: { designPreview?: boolean }) {
   if (designPreview) {
     return <DesignCoursePreview />
@@ -71,6 +87,8 @@ export function CourseScreen({ designPreview = false }: { designPreview?: boolea
 }
 
 function LiveCourseScreen() {
+  const { status: memberStatus, session } = useMemberSession()
+  const canUseFavorites = canUseCourseFavoriteSource(memberStatus, session?.role)
   const [selected, setSelected] = useState<CourseCandidate[]>([])
   const [query, setQuery] = useState('')
   const [district, setDistrict] = useState('')
@@ -83,6 +101,12 @@ function LiveCourseScreen() {
     loadingMore: false,
     filters: { query: '', district: '', category: '' },
   })
+  const [favorites, setFavorites] = useState<FavoriteState>({
+    status: 'idle',
+    items: [],
+    page: null,
+    loadingMore: false,
+  })
   const [outcome, setOutcome] = useState<CourseRouteOutcome | null>(null)
   const [calculating, setCalculating] = useState(false)
   const [now, setNow] = useState(() => Date.now())
@@ -92,6 +116,8 @@ function LiveCourseScreen() {
   const searchRequestId = useRef(0)
   const routeRequestId = useRef(0)
   const searchAbortController = useRef<AbortController | null>(null)
+  const favoriteRequestId = useRef(0)
+  const favoriteAbortController = useRef<AbortController | null>(null)
   const routeAbortController = useRef<AbortController | null>(null)
   /* 같은 tick에 연속으로 발생한 선택 변경이 서로를 덮어쓰지 않도록 최신 목록을 따로 들고 있는다. */
   const selectedRef = useRef<CourseCandidate[]>(selected)
@@ -151,10 +177,19 @@ function LiveCourseScreen() {
       searchRequestId.current += 1
       routeRequestId.current += 1
       searchAbortController.current?.abort()
+      favoriteRequestId.current += 1
+      favoriteAbortController.current?.abort()
       routeAbortController.current?.abort()
     },
     [],
   )
+
+  useEffect(() => {
+    if (memberStatus === 'authenticated') return
+    favoriteRequestId.current += 1
+    favoriteAbortController.current?.abort()
+    setFavorites({ status: 'idle', items: [], page: null, loadingMore: false })
+  }, [memberStatus])
 
   async function runSearch() {
     const filters = { query, district, category }
@@ -260,6 +295,103 @@ function LiveCourseScreen() {
     } finally {
       if (searchAbortController.current === controller) {
         searchAbortController.current = null
+      }
+    }
+  }
+
+  async function loadFavorites() {
+    if (memberStatus !== 'authenticated' || favorites.status === 'loading') {
+      return
+    }
+
+    favoriteAbortController.current?.abort()
+    const controller = new AbortController()
+    const requestId = ++favoriteRequestId.current
+    favoriteAbortController.current = controller
+    setFavorites({ status: 'loading', items: [], page: null, loadingMore: false })
+
+    try {
+      const result = await getCourseFavorites(1, controller.signal)
+      if (favoriteRequestId.current !== requestId) return
+      if (result.ok) {
+        setFavorites({
+          status: 'loaded',
+          items: result.items,
+          page: result.page,
+          loadingMore: false,
+        })
+      } else {
+        setFavorites({
+          status: 'error',
+          items: [],
+          page: null,
+          loadingMore: false,
+          message: result.message,
+          traceId: result.traceId,
+        })
+      }
+    } catch (error) {
+      if (!isAbortError(error) && favoriteRequestId.current === requestId) {
+        setFavorites({
+          status: 'error',
+          items: [],
+          page: null,
+          loadingMore: false,
+          message: '찜 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
+        })
+      }
+    } finally {
+      if (favoriteAbortController.current === controller) {
+        favoriteAbortController.current = null
+      }
+    }
+  }
+
+  async function loadMoreFavorites() {
+    if (
+      favorites.status !== 'loaded' ||
+      !favorites.page?.hasNext ||
+      favorites.loadingMore
+    ) {
+      return
+    }
+
+    const requestId = favoriteRequestId.current
+    const nextPage = favorites.page.number + 1
+    favoriteAbortController.current?.abort()
+    const controller = new AbortController()
+    favoriteAbortController.current = controller
+    setFavorites((current) => ({ ...current, loadingMore: true, message: undefined, traceId: undefined }))
+
+    try {
+      const result = await getCourseFavorites(nextPage, controller.signal)
+      if (favoriteRequestId.current !== requestId) return
+      if (result.ok) {
+        setFavorites((current) => ({
+          ...current,
+          items: appendUniqueCourseCandidates(current.items, result.items),
+          page: result.page,
+          loadingMore: false,
+        }))
+      } else {
+        setFavorites((current) => ({
+          ...current,
+          loadingMore: false,
+          message: result.message,
+          traceId: result.traceId,
+        }))
+      }
+    } catch (error) {
+      if (!isAbortError(error) && favoriteRequestId.current === requestId) {
+        setFavorites((current) => ({
+          ...current,
+          loadingMore: false,
+          message: '찜 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
+        }))
+      }
+    } finally {
+      if (favoriteAbortController.current === controller) {
+        favoriteAbortController.current = null
       }
     }
   }
@@ -423,9 +555,7 @@ function LiveCourseScreen() {
         {search.status === 'loaded' && search.items.length > 0 ? (
           <ul className={styles.searchResults}>
             {search.items.map((item) => {
-              const alreadySelected = isCourseCandidateSelected(selected, item.id)
-              const full = isCourseFull(selected)
-              const addDisabled = alreadySelected || full
+              const { alreadySelected, full, disabled: addDisabled } = courseCandidateActionState(selected, item.id)
               return (
                 <li key={item.id} className={styles.searchResultItem}>
                   <div>
@@ -458,6 +588,77 @@ function LiveCourseScreen() {
           >
             {search.loadingMore ? '더 불러오는 중' : '더 보기'}
           </Button>
+        ) : null}
+
+        {canUseFavorites ? (
+          <section className={styles.favoriteSource} aria-labelledby="course-favorites-heading">
+            <SectionHeader
+              title={<span id="course-favorites-heading">내 찜에서 찾기</span>}
+              description="찜한 맛집을 코스 후보로 불러옵니다."
+              actions={(
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={favorites.status === 'loading'}
+                  onClick={() => void loadFavorites()}
+                >
+                  {favorites.status === 'loading'
+                    ? '불러오는 중…'
+                    : favorites.status === 'loaded'
+                      ? '새로고침'
+                      : '찜 목록 불러오기'}
+                </Button>
+              )}
+            />
+
+            {favorites.status === 'error' ? (
+              <p className={styles.error} role="alert">
+                {favorites.message}
+                {favorites.traceId ? <span className={styles.traceId}>traceId: {favorites.traceId}</span> : null}
+              </p>
+            ) : null}
+            {favorites.status === 'loaded' && favorites.items.length === 0 ? (
+              <p className={styles.state}>찜한 맛집이 없습니다. 맛집을 먼저 찜해 보세요.</p>
+            ) : null}
+            {favorites.status === 'loaded' && favorites.items.length > 0 ? (
+              <ul className={styles.searchResults}>
+                {favorites.items.map((item) => {
+                  const { alreadySelected, full, disabled } = courseCandidateActionState(selected, item.id)
+                  return (
+                    <li key={item.id} className={styles.searchResultItem}>
+                      <div>
+                        <p className={styles.searchResultName}>{item.name}</p>
+                        <p className={styles.searchResultMeta}>{item.district} · {item.category}</p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={disabled}
+                        aria-describedby={full ? 'course-add-guidance' : undefined}
+                        onClick={() => addCandidate(item)}
+                      >
+                        {alreadySelected ? '선택됨' : '코스에 추가'}
+                      </Button>
+                    </li>
+                  )
+                })}
+              </ul>
+            ) : null}
+            {favorites.status === 'loaded' && favorites.page?.hasNext ? (
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={favorites.loadingMore}
+                onClick={() => void loadMoreFavorites()}
+              >
+                {favorites.loadingMore ? '더 불러오는 중' : '찜 목록 더 보기'}
+              </Button>
+            ) : null}
+          </section>
+        ) : memberStatus === 'anonymous' ? (
+          <p className={styles.selectHint}>
+            <Link href="/login?returnTo=%2Fcourse">로그인</Link>하면 내 찜 목록에서 코스 후보를 선택할 수 있습니다.
+          </p>
         ) : null}
 
         {isCourseFull(selected) ? (
