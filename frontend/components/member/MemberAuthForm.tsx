@@ -1,6 +1,6 @@
 'use client'
 
-import { useId, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Field } from '@/components/ui/Field'
@@ -15,6 +15,7 @@ import {
   PASSWORD_POLICY_ERROR_MESSAGE,
   prepareMemberAuthSubmission,
   isInvalidMemberCredentialsResponse,
+  extractPasswordResetToken,
 } from './member-auth-form-coordination'
 import styles from './MemberAuthForm.module.css'
 
@@ -47,6 +48,18 @@ export function MemberAuthForm({ mode, returnTo }: { mode: MemberAuthMode; retur
   const [message, setMessage] = useState<AuthMessage>(null)
   const [submitting, setSubmitting] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<MemberAuthFieldErrors>({})
+
+  useEffect(() => {
+    if (mode !== 'confirm-reset') {
+      return
+    }
+
+    const resetToken = extractPasswordResetToken(window.location.hash)
+    if (resetToken) {
+      setToken(resetToken)
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`)
+    }
+  }, [mode])
 
   function clearFieldError(field: keyof MemberAuthFieldErrors) {
     setFieldErrors(current => current[field] ? { ...current, [field]: undefined } : current)
@@ -155,7 +168,6 @@ export function MemberAuthForm({ mode, returnTo }: { mode: MemberAuthMode; retur
   const passwordError = fieldErrors.password === PASSWORD_POLICY_ERROR_MESSAGE ? undefined : fieldErrors.password
   return <form className={styles.form} onSubmit={submit} noValidate>
     {needsEmail ? <Field label="이메일" name="email" type="email" autoComplete="email" value={email} onChange={event => { setEmail(event.target.value); clearFieldError('email') }} error={fieldErrors.email} required /> : null}
-    {mode === 'confirm-reset' ? <Field label="비밀번호 재설정 토큰" name="token" value={token} onChange={event => { setToken(event.target.value); clearFieldError('token') }} error={fieldErrors.token} required /> : null}
     {needsPassword ? <>
       <Field label={mode === 'confirm-reset' ? '새 비밀번호' : '비밀번호'} name="password" type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={event => { const nextPassword = event.target.value; setPassword(nextPassword); clearFieldError('password'); if (nextPassword === passwordConfirmation) clearFieldError('passwordConfirmation') }} aria-describedby={passwordDescribedBy} aria-invalid={fieldErrors.password ? true : undefined} error={passwordError} required />
       {mode !== 'login' ? <>
@@ -172,6 +184,7 @@ export function MemberAuthForm({ mode, returnTo }: { mode: MemberAuthMode; retur
         {passwordMatch ? '비밀번호가 일치합니다.' : '비밀번호가 일치하지 않습니다.'}
       </p> : null}
     </div> : null}
+    {mode === 'confirm-reset' && fieldErrors.token ? <p className={styles.hint} role="alert">재설정 메일의 링크를 통해 다시 접속해 주세요.</p> : null}
     {message ? <p className={cn(styles.notice, message.tone === 'danger' && styles.noticeDanger)} role="alert">{message.text}</p> : null}
     {mode !== 'signup' || canRequestSignup ? <Button type="submit" disabled={submitting}>{submitting ? cta.submitting : cta.idle}</Button> : null}
   </form>

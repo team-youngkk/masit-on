@@ -5,6 +5,7 @@ const {
   normalizeMemberEmail,
   prepareMemberAuthSubmission,
   validateMemberAuthForm,
+  extractPasswordResetToken,
 } = require('./member-auth-form-coordination.ts')
 
 function validate(overrides: Record<string, string> = {}) {
@@ -20,6 +21,12 @@ function validate(overrides: Record<string, string> = {}) {
 
 memberAuthFormTest('이메일은 앞뒤 공백을 제거하고 소문자로 정규화한다', () => {
   memberAuthFormAssert.equal(normalizeMemberEmail(' Member@Example.COM '), 'member@example.com')
+})
+
+memberAuthFormTest('비밀번호 재설정 fragment에서 토큰만 읽고 잘못된 fragment는 비운다', () => {
+  memberAuthFormAssert.equal(extractPasswordResetToken('#token=%20opaque-reset-token%20'), 'opaque-reset-token')
+  memberAuthFormAssert.equal(extractPasswordResetToken('#next=1'), '')
+  memberAuthFormAssert.equal(extractPasswordResetToken(''), '')
 })
 
 memberAuthFormTest('이메일을 사용하는 제출 모드는 API 요청용 정규화 이메일을 만든다', () => {

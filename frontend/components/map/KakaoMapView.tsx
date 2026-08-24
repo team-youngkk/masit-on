@@ -82,18 +82,31 @@ export function loadKakaoMapsSdk(key: string, timeoutMs: number): Promise<KakaoG
   })
 }
 
-/* 선택 유튜버의 검증된 프로필 이미지가 없을 때 쓰는 기본·선택 SVG 핀이다. */
+function escapeSvgAttribute(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+/* 채널 이미지가 있으면 핀 안에 원형으로 자르고, 없으면 기존 기본 핀을 사용한다. */
 function createMarkerImage(
   kakaoGlobal: KakaoGlobal,
   selected: boolean,
   selectedCreatorProfileImageUrl: string | null,
 ): KakaoMarkerImage {
   if (isSafeHttpsUrl(selectedCreatorProfileImageUrl)) {
-    const size = selected ? 36 : 32
+    const size = selected ? 40 : 36
+    const fill = selected ? '#16a34a' : '#6f6a63'
+    const imageUrl = escapeSvgAttribute(selectedCreatorProfileImageUrl)
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="48" viewBox="0 0 36 48">` +
+      `<path fill="${fill}" d="M18 0C8.06 0 0 8.06 0 18c0 13.5 18 30 18 30s18-16.5 18-30C36 8.06 27.94 0 18 0Z"/>` +
+      `<defs><clipPath id="avatar"><circle cx="18" cy="18" r="11"/></clipPath></defs>` +
+      `<circle cx="18" cy="18" r="12" fill="white"/>` +
+      `<image href="${imageUrl}" x="7" y="7" width="22" height="22" preserveAspectRatio="xMidYMid slice" clip-path="url(#avatar)"/>` +
+      `<circle cx="18" cy="18" r="11" fill="none" stroke="white" stroke-width="1.5"/>` +
+      `</svg>`
     return new kakaoGlobal.maps.MarkerImage(
-      selectedCreatorProfileImageUrl,
-      new kakaoGlobal.maps.Size(size, size),
-      { offset: new kakaoGlobal.maps.Point(size / 2, size) },
+      `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+      new kakaoGlobal.maps.Size(size, 48),
+      { offset: new kakaoGlobal.maps.Point(size / 2, 48) },
     )
   }
 
@@ -124,39 +137,6 @@ export function KakaoMapView({
   const selectedIdRef = useRef(selectedId)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [retryCount, setRetryCount] = useState(0)
-  const [loadedProfileImageUrl, setLoadedProfileImageUrl] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!isSafeHttpsUrl(selectedCreatorProfileImageUrl)) {
-      setLoadedProfileImageUrl(null)
-      return
-    }
-
-    let cancelled = false
-    const image = new window.Image()
-    image.onload = () => {
-      if (!cancelled) {
-        setLoadedProfileImageUrl(selectedCreatorProfileImageUrl)
-      }
-    }
-    image.onerror = () => {
-      if (!cancelled) {
-        setLoadedProfileImageUrl(null)
-      }
-    }
-    image.src = selectedCreatorProfileImageUrl
-
-    return () => {
-      cancelled = true
-      image.onload = null
-      image.onerror = null
-    }
-  }, [selectedCreatorProfileImageUrl])
-
-  const usableProfileImageUrl = loadedProfileImageUrl === selectedCreatorProfileImageUrl
-    ? loadedProfileImageUrl
-    : null
-
   onSelectRef.current = onSelect
   selectedIdRef.current = selectedId
 
@@ -204,8 +184,8 @@ export function KakaoMapView({
   /*
    * items가 바뀔 때만 마커 집합을 처음부터 다시 만든다. selectedId를 의존성에 넣지 않아
    * 마커 선택/해제만으로는(최대 200개까지 있을 수 있는) 전체 마커를 지우고 다시 만들지
-   * 않는다(Finding C). 마커는 항상 기본 이미지로 만들고, 현재 selectedId에 해당하는
-   * 마커가 있으면 즉시 선택 이미지로 되돌려 items 갱신 전후로 선택 표시가 유지되게 한다.
+   * 않는다(Finding C). 각 마커는 응답에 포함된 대표 채널 이미지로 만들고, 현재 selectedId에
+   * 해당하는 마커가 있으면 즉시 선택 이미지로 되돌려 items 갱신 전후로 선택 표시가 유지되게 한다.
    */
   useEffect(() => {
     const kakaoGlobal = kakaoRef.current
@@ -218,11 +198,6 @@ export function KakaoMapView({
       marker.setMap(null)
     }
 
-    const defaultImage = createMarkerImage(
-      kakaoGlobal,
-      false,
-      usableProfileImageUrl,
-    )
     const markersById = new Map<string, KakaoMarker>()
 
     markersRef.current = items.map((item) => {
@@ -233,7 +208,11 @@ export function KakaoMapView({
       const marker = new kakaoGlobal.maps.Marker({
         position,
         map,
-        image: defaultImage,
+        image: createMarkerImage(
+          kakaoGlobal,
+          false,
+          item.creatorProfileImageUrl ?? selectedCreatorProfileImageUrl,
+        ),
       })
       kakaoGlobal.maps.event.addListener(marker, 'click', () => {
         onSelectRef.current(item.id)
@@ -250,13 +229,18 @@ export function KakaoMapView({
       : undefined
     if (currentSelectedMarker) {
       currentSelectedMarker.setImage(
-        createMarkerImage(kakaoGlobal, true, usableProfileImageUrl),
+        createMarkerImage(
+          kakaoGlobal,
+          true,
+          items.find((item) => item.id === currentSelectedId)?.creatorProfileImageUrl
+            ?? selectedCreatorProfileImageUrl,
+        ),
       )
       previousSelectedIdRef.current = currentSelectedId ?? null
     } else {
       previousSelectedIdRef.current = null
     }
-  }, [items, usableProfileImageUrl, status])
+  }, [items, selectedCreatorProfileImageUrl, status])
 
   /*
    * selectedId가 바뀔 때만 실행되어, 이전 선택 마커는 기본 이미지로 되돌리고 새 선택
@@ -277,7 +261,12 @@ export function KakaoMapView({
       const previousMarker = markersById.get(previousId)
       if (previousMarker) {
         previousMarker.setImage(
-          createMarkerImage(kakaoGlobal, false, usableProfileImageUrl),
+          createMarkerImage(
+            kakaoGlobal,
+            false,
+            items.find((item) => item.id === previousId)?.creatorProfileImageUrl
+              ?? selectedCreatorProfileImageUrl,
+          ),
         )
       }
     }
@@ -286,13 +275,18 @@ export function KakaoMapView({
       const selectedMarker = markersById.get(selectedId)
       if (selectedMarker) {
         selectedMarker.setImage(
-          createMarkerImage(kakaoGlobal, true, usableProfileImageUrl),
+          createMarkerImage(
+            kakaoGlobal,
+            true,
+            items.find((item) => item.id === selectedId)?.creatorProfileImageUrl
+              ?? selectedCreatorProfileImageUrl,
+          ),
         )
       }
     }
 
     previousSelectedIdRef.current = selectedId
-  }, [selectedId, status, usableProfileImageUrl])
+  }, [items, selectedId, selectedCreatorProfileImageUrl, status])
 
   useEffect(() => {
     const kakaoGlobal = kakaoRef.current

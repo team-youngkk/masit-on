@@ -58,7 +58,7 @@ Accepted
 ## 6. 결정
 
 - `member_action_mail_outbox`(구 V3 구간, 통합 후 `V2__add_expansion_1_schema.sql`)에 원문 Token 대신 AES-GCM 암호문(`encrypted_token`, `encryption_nonce`, `encryption_key_id`)만 저장하고, Action Token 발급과 같은 트랜잭션에서 원자적으로 기록한다. 두 쓰기 중 하나가 실패하면 전체가 rollback된다.
-- `EMAIL_VERIFICATION` 메일은 혼동 문자를 제외한 영문 대문자·숫자 8자 코드를 본문에 표시하고, `PASSWORD_RESET` 메일은 기존 고엔트로피 불투명 Token을 전달한다. 형식은 달라도 암호화 Outbox·단일 소비·만료·재시도 계약은 동일하다.
+- `EMAIL_VERIFICATION` 메일은 혼동 문자를 제외한 영문 대문자·숫자 8자 코드를 본문에 표시하고, `PASSWORD_RESET` 메일은 HTML 본문의 `비밀번호 재설정` 링크 URL fragment로 기존 고엔트로피 불투명 Token을 전달한다. HTML을 표시할 수 없는 수신자를 위해 일반 텍스트 본문에는 링크 주소를 함께 표시한다. 형식은 달라도 암호화 Outbox·단일 소비·만료·재시도 계약은 동일하다.
 - `MemberActionMailOutboxService`가 고정 주기(기본 1분, `masiton.member.action-mail.dispatch-interval`)로 `PENDING` 행을 `FOR UPDATE SKIP LOCKED`와 5분 lease(`locked_until`)로 claim해 복호화 후 발송하고, 성공하면 `SENT`로 표시한다.
 - 발송 실패는 고정 1분 지연(`RETRY_DELAY_MINUTES`) 뒤 재시도로 예약한다. 최대 재시도 횟수·backoff·jitter는 별도로 두지 않는다 — 아래 8절의 근거로 필요하지 않다고 판단했다.
 - claim 시점에 근거 Action Token이 이미 `ISSUED`가 아니거나 만료됐으면 발송하지 않고 `CANCELLED`로 전환한다(`cancelIneligible`, `confirmDelivery`).

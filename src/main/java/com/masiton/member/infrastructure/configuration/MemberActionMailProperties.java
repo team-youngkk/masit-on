@@ -1,5 +1,6 @@
 package com.masiton.member.infrastructure.configuration;
 
+import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -13,6 +14,7 @@ public class MemberActionMailProperties {
     private String activeKeyId;
     private String activeKey;
     private String fromAddress;
+    private String passwordResetUrl = "http://localhost:3000/password-reset";
     private Map<String, String> keys = new LinkedHashMap<>();
 
     public String getFromAddress() {
@@ -21,6 +23,14 @@ public class MemberActionMailProperties {
 
     public void setFromAddress(String fromAddress) {
         this.fromAddress = fromAddress;
+    }
+
+    public String getPasswordResetUrl() {
+        return passwordResetUrl;
+    }
+
+    public void setPasswordResetUrl(String passwordResetUrl) {
+        this.passwordResetUrl = passwordResetUrl;
     }
 
     public String getActiveKeyId() {
@@ -56,12 +66,29 @@ public class MemberActionMailProperties {
         if (fromAddress == null || fromAddress.isBlank()) {
             throw new IllegalStateException("A member action-mail from address is required");
         }
+        if (!isValidPasswordResetUrl(passwordResetUrl)) {
+            throw new IllegalStateException("A valid member password-reset URL is required");
+        }
         if (activeKeyId == null || activeKeyId.isBlank()) {
             throw new IllegalStateException("An active member action-mail encryption key id is required");
         }
         String configuredActiveKey = getKeys().get(activeKeyId);
         if (configuredActiveKey == null || configuredActiveKey.isBlank()) {
             throw new IllegalStateException("The active member action-mail encryption key must be configured");
+        }
+    }
+
+    private boolean isValidPasswordResetUrl(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+        try {
+            URI uri = URI.create(value);
+            return ("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()))
+                    && uri.getHost() != null && !uri.getHost().isBlank()
+                    && uri.getRawFragment() == null && uri.getUserInfo() == null;
+        } catch (IllegalArgumentException exception) {
+            return false;
         }
     }
 }

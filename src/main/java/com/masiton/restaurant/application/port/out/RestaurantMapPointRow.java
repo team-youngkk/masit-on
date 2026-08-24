@@ -10,5 +10,16 @@ public record RestaurantMapPointRow(
         String category,
         String addressSummary,
         BigDecimal latitude,
-        BigDecimal longitude) {
+        BigDecimal longitude,
+        String creatorProfileImageUrl) {
+
+    public RestaurantMapPointRow(
+            UUID id,
+            String name,
+            String category,
+            String addressSummary,
+            BigDecimal latitude,
+            BigDecimal longitude) {
+        this(id, name, category, addressSummary, latitude, longitude, null);
+    }
 }

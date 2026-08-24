@@ -93,6 +93,9 @@ masiton:
     youtube-webhook:
       subscription-hub-url: ${YOUTUBE_SUBSCRIPTION_HUB_URL:https://pubsubhubbub.appspot.com/subscribe}
       callback-url: ${YOUTUBE_WEBHOOK_CALLBACK_URL}
+  member:
+    action-mail:
+      password-reset-url: ${PASSWORD_RESET_PUBLIC_URL:https://masiton.click/password-reset}
   integration:
     # 운영은 실제 제공자 호스트를 쓴다. WireMock은 local 프로파일 전용이다.
     kakao:
