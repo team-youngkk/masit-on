@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.masiton.restaurant.application.port.in.RestaurantSearchResult;
+import com.masiton.restaurant.application.port.in.RestaurantFilterOptions;
 import com.masiton.restaurant.application.port.in.RestaurantSummary;
 import com.masiton.restaurant.application.port.in.SearchRestaurantsCommand;
 import com.masiton.restaurant.application.port.in.SearchRestaurantsUseCase;
@@ -18,6 +19,7 @@ import com.masiton.restaurant.application.port.in.VisitedCreatorSummary;
 import com.masiton.restaurant.application.port.out.FoodCategoryRepositoryPort;
 import com.masiton.restaurant.application.port.out.RegionRepositoryPort;
 import com.masiton.restaurant.application.port.out.RestaurantSearchCriteria;
+import com.masiton.restaurant.application.port.out.RestaurantFilterOptionNames;
 import com.masiton.restaurant.application.port.out.RestaurantSearchQueryPort;
 import com.masiton.restaurant.application.port.out.RestaurantSearchQueryResult;
 import com.masiton.restaurant.application.port.out.RestaurantSearchRow;
@@ -77,6 +79,13 @@ public class RestaurantSearchQueryService implements SearchRestaurantsUseCase {
 
         return new RestaurantSearchResult(
                 items, command.page(), command.size(), queryResult.totalElements(), totalPages, hasNext);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public RestaurantFilterOptions getFilterOptions() {
+        RestaurantFilterOptionNames names = restaurantSearchQueryPort.findAvailableFilterOptions();
+        return new RestaurantFilterOptions(names.districtNames(), names.categoryNames());
     }
 
     @Override

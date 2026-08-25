@@ -180,6 +180,17 @@ class SecurityBoundaryApiTest extends FullContextIntegrationTest {
     }
 
     @Test
+    @DisplayName("맛집 필터 선택지 공개 조회는 검증할 수 없는 Bearer Token이 있어도 401을 반환하지 않는다")
+    void 맛집필터선택지공개조회_검증불가Bearer토큰_401을반환하지않는다() throws Exception {
+        List<String> tokens = List.of("not-a-valid-token", UNVERIFIABLE_JWT);
+
+        for (String token : tokens) {
+            mockMvc.perform(get("/api/restaurants/filter-options").header("Authorization", "Bearer " + token))
+                    .andExpect(status().isOk());
+        }
+    }
+
+    @Test
     @DisplayName("자연어 맛집 공개 조회는 검증할 수 없는 Bearer Token이 있어도 401을 반환하지 않는다")
     void 자연어맛집공개조회_검증불가Bearer토큰_401을반환하지않는다() throws Exception {
         mockMvc.perform(post("/api/restaurants/natural-language-search")

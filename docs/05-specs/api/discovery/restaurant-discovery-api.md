@@ -75,6 +75,7 @@ related_documents:
 | API ID | Method | Path | 설명 |
 |---|---|---|---|
 | [API-DISCOVERY-001](restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색) | GET | `/api/restaurants` | 맛집 목록 및 조건 검색 |
+| [API-DISCOVERY-002](restaurant-discovery-api.md#api-discovery-002-공개-맛집-필터-선택지) | GET | `/api/restaurants/filter-options` | 공개 맛집이 사용하는 지역·음식 종류 선택지 |
 
 `/api/restaurants`를 선택한다. `/api`는 화면과 백엔드를 구분하고 검색과 필터는 목록 조회의 조건이므로 `/api/restaurant-discovery`나 `/api/search/restaurants`처럼 별도 동사·기능 경로로 분리하지 않는다.
 
@@ -168,6 +169,32 @@ related_documents:
 | `INVALID_FIELD_VALUE` | 400 | 자치구·카테고리·유튜버·태그·페이지·크기가 유효하지 않거나, 같은 필터를 반복·배열·쉼표 목록 등 복수 값 형식으로 전달함([필터링 계약](../common/filtering-contract.md) 2절) |
 | `INVALID_IDENTIFIER` | 400 | `creatorId` 형식이 잘못됨 |
 | `INTERNAL_SERVER_ERROR` | 500 | 예상하지 못한 내부 오류 |
+
+### API-DISCOVERY-002 공개 맛집 필터 선택지
+
+- Method: `GET`
+- Path: `/api/restaurants/filter-options`
+- 인증: 없음
+- 권한: 일반 공개 조회
+- 설명: 공개·활성 맛집이 실제 사용하는 활성 지역과 음식 종류만 중복 없이 정렬해 반환한다.
+
+#### Query Parameters
+
+쿼리 파라미터를 받지 않는다. 파라미터가 전달되면 `400 INVALID_REQUEST`를 반환한다.
+
+#### Success Response
+
+- 상태: `200 OK`
+- 본문:
+
+```json
+{
+  "districts": ["마포구", "강남구"],
+  "categories": ["한식", "일식"]
+}
+```
+
+`districts`는 지역 기준 순서, `categories`는 음식 종류 기준 순서로 반환한다. 공개·활성 맛집이 없으면 두 배열 모두 빈 배열이다.
 
 ## 6. 검색·필터 조합 규칙
 

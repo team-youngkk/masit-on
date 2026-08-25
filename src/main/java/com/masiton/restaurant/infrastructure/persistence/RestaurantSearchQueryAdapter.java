@@ -11,6 +11,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import com.masiton.restaurant.application.port.out.RestaurantSearchCriteria;
+import com.masiton.restaurant.application.port.out.RestaurantFilterOptionNames;
 import com.masiton.restaurant.application.port.out.RestaurantSearchQueryPort;
 import com.masiton.restaurant.application.port.out.RestaurantSearchQueryResult;
 import com.masiton.restaurant.application.port.out.RestaurantSearchRow;
@@ -125,6 +126,29 @@ class RestaurantSearchQueryAdapter implements RestaurantSearchQueryPort {
                         resultSet.getString("category")));
 
         return new RestaurantSearchQueryResult(rows, totalElements == null ? 0L : totalElements);
+    }
+
+    @Override
+    public RestaurantFilterOptionNames findAvailableFilterOptions() {
+        List<String> districts = jdbcTemplate.queryForList(
+                "SELECT reg.name "
+                        + "FROM restaurant r "
+                        + "JOIN region reg ON reg.id = r.region_id "
+                        + "WHERE " + BASE_CONDITION + " AND reg.active = true "
+                        + "GROUP BY reg.name, reg.sort_order "
+                        + "ORDER BY reg.sort_order, reg.name COLLATE \"C\"",
+                new MapSqlParameterSource(),
+                String.class);
+        List<String> categories = jdbcTemplate.queryForList(
+                "SELECT fc.name "
+                        + "FROM restaurant r "
+                        + "JOIN food_category fc ON fc.id = r.food_category_id "
+                        + "WHERE " + BASE_CONDITION + " AND fc.active = true "
+                        + "GROUP BY fc.name, fc.sort_order "
+                        + "ORDER BY fc.sort_order, fc.name COLLATE \"C\"",
+                new MapSqlParameterSource(),
+                String.class);
+        return new RestaurantFilterOptionNames(districts, categories);
     }
 
     @Override

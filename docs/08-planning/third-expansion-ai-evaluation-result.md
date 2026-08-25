@@ -1,8 +1,9 @@
 ---
-status: HOLD
+status: Historical snapshot
 evaluation_date: 2026-08-12
 workstream: QUALITY-EVAL
-release_decision: HOLD
+release_decision: Historical HOLD
+superseded_by: third-expansion-operational-completion-record.md
 related_documents:
   - third-expansion-evaluation-strategy.md
   - third-expansion-test-matrix.md
@@ -19,13 +20,15 @@ related_documents:
   - ../07-adr/adr-traceability.md
 ---
 
+> 이 문서는 2026-08-12 당시 평가 후보의 `HOLD` 판정과 미측정 상태를 보존하는 역사 기록이다. 2026-08-25 현재 운영 평가 완료·운영 중 판정은 [3차 확장 운영 완료 기록](third-expansion-operational-completion-record.md)을 기준으로 한다.
+
 # 맛있온 3차 확장 AI 평가 결과와 출시 보류 기록
 
 ## 1. 판정 요약
 
 `E3-T08`의 평가 자산과 판정 형식은 준비됐지만, 이 문서 작성 시점에는 Release holdout 24건의 실제 제공자 실행과 지정 인간 판정자·검증자의 사후 판정이 수행·승인되지 않았다. 따라서 당시 출시 후보 `GOOGLE_GEMINI` / `gemini-3-flash-preview` / Prompt `P1` / Schema `S1`의 판정은 **`HOLD`**다. 이후 운영 모델이 `gemini-3.5-flash-lite`로 변경되었으므로, 이 문서는 이전 후보의 평가 기록으로 보존하며 새 모델은 별도 평가 실행이 필요하다. 아래 목표값은 승인된 기준이지 측정 결과가 아니다.
 
-이 문서의 `HOLD`와 “운영 활성화 금지”는 위에 적은 이전 모델·Prompt·Schema 후보의 출시 판정 기록이다. 후속 정책에서는 장소명 완화 매칭의 런타임 기본값을 `true`로 운영하고, `AI_PLACE_IDENTITY_RELAXED_MATCHING_ENABLED=false`를 긴급 차단값으로 사용한다. 이는 새 모델의 품질이 검증됐다는 뜻이 아니며, 현재 모델의 Release holdout·인간 판정·Critical 오연결 0건 증거는 여전히 별도로 수집해 `E3-T13`에서 품질과 전체 AI 자동 등록의 go/no-go를 판정해야 한다.
+이 문서의 `HOLD`와 “운영 활성화 금지”는 위에 적은 이전 모델·Prompt·Schema 후보의 출시 판정 기록이다. 후속 정책에서는 장소명 완화 매칭의 런타임 기본값을 `true`로 운영하고, `AI_PLACE_IDENTITY_RELAXED_MATCHING_ENABLED=false`를 긴급 차단값으로 사용한다. 당시에는 새 모델의 품질이 검증됐다는 뜻이 아니었으며, Release holdout·인간 판정·Critical 오연결 0건 증거를 `E3-T13`에서 품질과 전체 AI 자동 등록의 go/no-go에 연결해야 한다는 조건을 기록했다. 현재 운영 판정은 상단의 운영 완료 기록을 따른다.
 
 현재 자산 점검 기준 120건의 `humanReview.status`는 모두 `PENDING`이다. Release holdout의 합성 validator 기대값은 `AUTO_CONFIRMED` 6건·`AUTO_BLOCKED` 14건·`AUTO_REJECTED` 4건이다. 이 수치는 평가기 배선 검사용 기대 분포일 뿐 실제 제공자 품질 결과나 인간 판정 결과가 아니다. 24건 모두 아직 실제 제공자 실행과 인간 판정 전이다.
 

@@ -10,6 +10,7 @@ related_documents:
   - third-expansion-scope-and-terminology.md
   - third-expansion-evaluation-strategy.md
   - third-expansion-test-matrix.md
+  - third-expansion-operational-completion-record.md
   - third-expansion-implementation-plan.md
   - third-expansion-task-breakdown.md
   - third-expansion-browser-verification.md
@@ -51,9 +52,10 @@ related_documents:
 | [3차 확장 범위와 용어 결정](third-expansion-scope-and-terminology.md) | 자연어 검색·AI 영상 정보 추출·동선 및 코스 추천의 초기 포함·제외 범위와 용어 확정 |
 | [3차 확장 평가 주도 개발 전략](third-expansion-evaluation-strategy.md) | 기능별 평가, 골든 데이터, 정답 판정, 품질 목표, 활성화·롤백과 개인정보 보호 환류 기준 |
 | [3차 확장 테스트 추적표](third-expansion-test-matrix.md) | `FR`·`BR`·`NFR`·`EVAL`을 자동화·브라우저·운영 증거와 연결 |
+| [3차 확장 운영 완료 기록](third-expansion-operational-completion-record.md) | 2026-08-25 운영 평가 완료와 현재 운영 상태의 기준점. 기존 게이트 문서는 당시 스냅샷으로 보존 |
 | [3차 확장 구현 계획](third-expansion-implementation-plan.md) | AI 자동 등록·태그 생성·예외 보정·Worker·평가·운영 게이트의 구현 순서와 Task |
 | [3차 확장 E3 Task 분해](third-expansion-task-breakdown.md) | WS-14~WS-16·QUALITY-EVAL·OPS의 담당·선행·테스트·완료 증거 |
-| [3차 확장 브라우저 검증 기록](third-expansion-browser-verification.md) | `TST-E3-E2E-001`의 확인 환경·화면 폭·키보드·사용자 여정 결과와 미검증으로 남는 항목 |
+| [3차 확장 브라우저 검증 기록](third-expansion-browser-verification.md) | `TST-E3-E2E-001`의 2026-08-13 기준선 환경·화면 폭·키보드·사용자 여정 결과와 당시 미검증 항목 |
 | [운영 애플리케이션 포트 바인딩 계획](issue-200-application-port-binding.md) | 운영 Spring Boot·Next.js 포트의 loopback 고정, Nginx 우회 차단, 배포 후 검증 명령 |
 | [이슈 231 맛집 추천 코스 지도 표시 문서화 초안](issue-231-course-route-map.md) | 코스 결과 지도 표시의 현재 공백, 계약 결정 항목, API 초안과 문서 갱신 순서. `Draft` |
 | [공개 큐레이션 구성 맛집 카드 보완](curation-restaurant-card-fix.md) | 공개 큐레이션 상세 카드의 표시 문제, 계약 경계, 적용 범위와 검증 기준 |

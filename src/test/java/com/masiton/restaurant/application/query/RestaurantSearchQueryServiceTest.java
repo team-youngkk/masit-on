@@ -12,10 +12,12 @@ import org.junit.jupiter.api.Test;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
 import com.masiton.restaurant.application.port.in.RestaurantSearchResult;
+import com.masiton.restaurant.application.port.in.RestaurantFilterOptions;
 import com.masiton.restaurant.application.port.in.SearchRestaurantsCommand;
 import com.masiton.restaurant.application.port.out.FoodCategoryRepositoryPort;
 import com.masiton.restaurant.application.port.out.RegionRepositoryPort;
 import com.masiton.restaurant.application.port.out.RestaurantSearchCriteria;
+import com.masiton.restaurant.application.port.out.RestaurantFilterOptionNames;
 import com.masiton.restaurant.application.port.out.RestaurantSearchQueryPort;
 import com.masiton.restaurant.application.port.out.RestaurantSearchQueryResult;
 import com.masiton.restaurant.application.port.out.RestaurantSearchRow;
@@ -61,6 +63,22 @@ class RestaurantSearchQueryServiceTest {
 
         // then
         verify(restaurantSearchQueryPort).search(argThatCriteria(criteria -> criteria.normalizedQuery() == null));
+    }
+
+    @Test
+    @DisplayName("필터 선택지는 Query Port가 반환한 공개 맛집 사용값을 그대로 전달한다")
+    void getFilterOptions_공개맛집사용값_그대로전달한다() {
+        // given
+        when(restaurantSearchQueryPort.findAvailableFilterOptions())
+                .thenReturn(new RestaurantFilterOptionNames(
+                        List.of("마포구", "강남구"), List.of("한식", "일식")));
+
+        // when
+        RestaurantFilterOptions result = service.getFilterOptions();
+
+        // then
+        assertThat(result.districts()).containsExactly("마포구", "강남구");
+        assertThat(result.categories()).containsExactly("한식", "일식");
     }
 
     @Test

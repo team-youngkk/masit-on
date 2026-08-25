@@ -16,12 +16,11 @@ import {
   type RestaurantStructuredFilterKey,
 } from '@/lib/restaurants-filter-navigation'
 import {
-  CATEGORY_OPTIONS,
-  DISTRICT_OPTIONS,
   buildApiSearchParams,
   buildPageNumbers,
   buildRestaurantsHref,
   fetchCreators,
+  fetchRestaurantFilterOptions,
   fetchRestaurants,
   toSingleValue,
   type RawSearchParams,
@@ -35,6 +34,13 @@ type ActiveFilter = {
   key: RestaurantStructuredFilterKey
   label: string
   value: string
+}
+
+function includeSelectedFilterValue(values: readonly string[], selectedValue: string): string[] {
+  if (!selectedValue || values.includes(selectedValue)) {
+    return [...values]
+  }
+  return [selectedValue, ...values]
 }
 
 const DESIGN_PREVIEW_ITEMS: RestaurantListItem[] = [
@@ -133,9 +139,10 @@ export default async function RestaurantsPage({
 }: RestaurantsPageProps) {
   const rawParams = await searchParams
   const apiParams = buildApiSearchParams(rawParams)
-  const [result, creatorsResult] = await Promise.all([
+  const [result, creatorsResult, filterOptionsResult] = await Promise.all([
     fetchRestaurants(apiParams),
     fetchCreators(),
+    fetchRestaurantFilterOptions(),
   ])
 
   /* 반복 URL 값은 API 요청과 같은 규칙으로 첫 값만 사용한다. */
@@ -144,6 +151,14 @@ export default async function RestaurantsPage({
   const currentCategory = toSingleValue(rawParams.category) ?? ''
   const currentCreatorId = toSingleValue(rawParams.creatorId)
   const currentSize = apiParams.get('size') ?? '21'
+  const districtOptions = includeSelectedFilterValue(
+    filterOptionsResult.ok ? filterOptionsResult.data.districts : [],
+    currentDistrict,
+  )
+  const categoryOptions = includeSelectedFilterValue(
+    filterOptionsResult.ok ? filterOptionsResult.data.categories : [],
+    currentCategory,
+  )
   const currentRoute = `/restaurants?${apiParams.toString()}`
   const currentCreatorKnown =
     creatorsResult.ok &&
@@ -259,12 +274,13 @@ export default async function RestaurantsPage({
                   id="district"
                   formId="structured-restaurant-search"
                   name="district"
-                  options={DISTRICT_OPTIONS.map((district) => ({
+                  options={districtOptions.map((district) => ({
                     value: district,
                     label: district,
                   }))}
                   value={currentDistrict}
                   placeholder="지역"
+                  disabled={!filterOptionsResult.ok || districtOptions.length === 0}
                   className={styles.select}
                   controlClassName={styles.selectControl}
                   menuClassName={styles.selectMenu}
@@ -278,12 +294,13 @@ export default async function RestaurantsPage({
                   id="category"
                   formId="structured-restaurant-search"
                   name="category"
-                  options={CATEGORY_OPTIONS.map((category) => ({
+                  options={categoryOptions.map((category) => ({
                     value: category,
                     label: category,
                   }))}
                   value={currentCategory}
                   placeholder="음식 종류"
+                  disabled={!filterOptionsResult.ok || categoryOptions.length === 0}
                   className={styles.select}
                   controlClassName={styles.selectControl}
                   menuClassName={styles.selectMenu}
@@ -372,6 +389,16 @@ export default async function RestaurantsPage({
             </p>
           ) : creatorsResult.data.items.length === 0 && currentCreatorId ? (
             <p className={styles.creatorHint}>등록된 유튜버가 없습니다.</p>
+          ) : null}
+          {!filterOptionsResult.ok ? (
+            <p className={styles.creatorError} role="alert">
+              {filterOptionsResult.message}
+              {filterOptionsResult.traceId ? (
+                <span className={styles.traceId}>
+                  traceId: {filterOptionsResult.traceId}
+                </span>
+              ) : null}
+            </p>
           ) : null}
         </div>
         <input type="hidden" name="size" value={currentSize} />

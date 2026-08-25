@@ -23,10 +23,11 @@ public final class RestaurantPathClassifier {
      * 근거: docs/05-specs/api/discovery/popular-restaurant-api.md,
      * docs/05-specs/api/discovery/map-discovery-api.md,
      * docs/05-specs/api/discovery/restaurant-course-recommendation-api.md,
-     * docs/05-specs/api/discovery/natural-language-restaurant-discovery-api.md
+     * docs/05-specs/api/discovery/natural-language-restaurant-discovery-api.md,
+     * docs/05-specs/api/discovery/restaurant-discovery-api.md
      */
     private static final Set<String> NON_IDENTIFIER_SEGMENTS =
-            Set.of("popular", "map-points", "course-routes", "natural-language-search");
+            Set.of("popular", "map-points", "course-routes", "natural-language-search", "filter-options");
 
     private RestaurantPathClassifier() {
     }
