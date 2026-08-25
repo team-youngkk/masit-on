@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1120" viewBox="0 0 1600 1120" role="img" aria-labelledby="title desc">
+  <title id="title">맛잇온 현재 저장소 기준 화면 와이어프레임</title>
+  <desc id="desc">맛집 탐색, 지도, 상세, 코스, 큐레이션, 회원과 관리자 화면을 도형으로 표현한 와이어프레임</desc>
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#17352d" flood-opacity=".13"/></filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#477b68"/></marker>
+    <style>
+      .font{font-family:'Noto Sans KR','Malgun Gothic',Arial,sans-serif;fill:#22352e}
+      .title{font-size:34px;font-weight:800;letter-spacing:-1.5px}.subtitle{font-size:15px;fill:#667770}
+      .section{font-size:21px;font-weight:800}.sectionSub{font-size:13px;fill:#667770}
+      .screenTitle{font-size:15px;font-weight:800}.route{font:11px 'Cascadia Code',Consolas,monospace;fill:#528271}
+      .label{font-size:11px;fill:#667770}.tiny{font-size:10px;fill:#7b8984}.bold{font-size:12px;font-weight:700}
+      .outer{fill:#fff;stroke:#b8cfc4;stroke-width:1.5}.chrome{fill:#edf4ef}.line{stroke:#cadbd2;stroke-width:1.3}
+      .fill{fill:#dce9e2}.fillDark{fill:#94b7a7}.fillWarm{fill:#f2e9d6}.fillGreen{fill:#d5e8dc}
+      .button{fill:#e4f0e8;stroke:#9dbdac;stroke-width:1}.buttonText{font-size:10px;font-weight:700;fill:#356451}
+      .arrow{stroke:#477b68;stroke-width:2.5;fill:none;marker-end:url(#arrow)}.dash{stroke:#8eafa0;stroke-width:2;stroke-dasharray:7 6;fill:none;marker-end:url(#arrow)}
+      .dot{fill:#3a725d}.muted{fill:#f4f6f2;stroke:#d6e0da;stroke-width:1}
+    </style>
+  </defs>
+
+  <rect width="1600" height="1120" fill="#fbfaf6"/>
+  <rect x="24" y="24" width="1552" height="1072" rx="24" fill="#f4f1e9" stroke="#e4dfd2"/>
+  <text x="800" y="70" text-anchor="middle" class="font title">맛잇온 현재 저장소 기준 화면 와이어프레임</text>
+  <text x="800" y="100" text-anchor="middle" class="font subtitle">현재 frontend/app Route를 실제 화면 도형으로 단순화한 구조 시안</text>
+
+  <text x="58" y="142" class="font section">공개 화면</text>
+  <text x="184" y="142" class="font sectionSub">비로그인 탐색 · 헤더 메뉴에서 연결</text>
+  <line x1="58" y1="154" x2="1542" y2="154" class="line"/>
+
+  <!-- Public screen 1: restaurants -->
+  <g filter="url(#shadow)">
+    <rect x="58" y="176" width="270" height="380" rx="12" class="outer"/>
+    <rect x="58" y="176" width="270" height="26" rx="12" class="chrome"/><circle cx="75" cy="189" r="4" fill="#d29d91"/><circle cx="89" cy="189" r="4" fill="#d7bd78"/><circle cx="103" cy="189" r="4" fill="#8cb59c"/>
+    <text x="116" y="194" class="font tiny">맛잇온</text><text x="294" y="194" class="font tiny">☰</text>
+    <text x="76" y="229" class="font screenTitle">맛집 탐색</text><text x="76" y="245" class="font route">/restaurants</text>
+    <rect x="76" y="258" width="234" height="35" rx="7" class="fillWarm" stroke="#ddcdaa"/><text x="88" y="280" class="font label">원하는 맛집을 알려주세요</text><circle cx="294" cy="275" r="7" fill="none" stroke="#477b68"/><path d="m299 280 6 6" stroke="#477b68"/>
+    <rect x="76" y="303" width="72" height="25" rx="5" class="button"/><text x="87" y="319" class="font buttonText">지역 ▾</text><rect x="156" y="303" width="72" height="25" rx="5" class="button"/><text x="167" y="319" class="font buttonText">음식 ▾</text><rect x="236" y="303" width="74" height="25" rx="5" class="button"/><text x="246" y="319" class="font buttonText">유튜버 ▾</text>
+    <text x="76" y="348" class="font label">맛집 21곳</text><line x1="76" y1="356" x2="310" y2="356" class="line"/>
+    <rect x="76" y="368" width="234" height="48" rx="7" class="muted"/><rect x="86" y="378" width="38" height="28" rx="5" class="fillDark"/><line x1="134" y1="383" x2="204" y2="383" class="line"/><line x1="134" y1="395" x2="245" y2="395" class="line"/><text x="253" y="395" class="font tiny">♡</text>
+    <rect x="76" y="425" width="234" height="48" rx="7" class="muted"/><rect x="86" y="435" width="38" height="28" rx="5" class="fillDark"/><line x1="134" y1="440" x2="225" y2="440" class="line"/><line x1="134" y1="452" x2="248" y2="452" class="line"/><text x="253" y="452" class="font tiny">♡</text>
+    <rect x="76" y="482" width="234" height="48" rx="7" class="muted"/><rect x="86" y="492" width="38" height="28" rx="5" class="fillDark"/><line x1="134" y1="497" x2="216" y2="497" class="line"/><line x1="134" y1="509" x2="248" y2="509" class="line"/><text x="253" y="509" class="font tiny">♡</text>
+    <text x="76" y="545" class="font tiny">‹ 1 / 8 ›</text>
+  </g>
+
+  <!-- Public screen 2: map -->
+  <g filter="url(#shadow)">
+    <rect x="354" y="176" width="270" height="380" rx="12" class="outer"/><rect x="354" y="176" width="270" height="26" rx="12" class="chrome"/><circle cx="371" cy="189" r="4" fill="#d29d91"/><circle cx="385" cy="189" r="4" fill="#d7bd78"/><circle cx="399" cy="189" r="4" fill="#8cb59c"/><text x="412" y="194" class="font tiny">맛잇온</text><text x="590" y="194" class="font tiny">☰</text>
+    <text x="372" y="229" class="font screenTitle">지도 탐색</text><text x="372" y="245" class="font route">/map</text>
+    <rect x="372" y="258" width="234" height="132" rx="7" fill="#e0ece5" stroke="#b8d2c4"/><path d="M377 367 417 305 452 364 489 278 529 346 565 299 606 365" fill="none" stroke="#b0c9bc" stroke-width="7"/><path d="M372 335 606 318M470 258 492 390" fill="none" stroke="#f8faf6" stroke-width="6"/>
+    <circle cx="430" cy="330" r="7" class="dot"/><circle cx="520" cy="333" r="7" class="dot"/><circle cx="565" cy="300" r="7" class="dot"/>
+    <rect x="372" y="402" width="234" height="42" rx="7" class="muted"/><rect x="382" y="411" width="30" height="23" rx="4" class="fillDark"/><line x1="420" y1="416" x2="503" y2="416" class="line"/><line x1="420" y1="427" x2="552" y2="427" class="line"/>
+    <rect x="372" y="452" width="234" height="42" rx="7" class="muted"/><rect x="382" y="461" width="30" height="23" rx="4" class="fillDark"/><line x1="420" y1="466" x2="530" y2="466" class="line"/><line x1="420" y1="477" x2="560" y2="477" class="line"/>
+    <rect x="372" y="502" width="234" height="35" rx="7" class="button"/><text x="489" y="524" text-anchor="middle" class="font buttonText">목록과 지도 선택 동기화</text>
+  </g>
+
+  <!-- Public screen 3: detail -->
+  <g filter="url(#shadow)">
+    <rect x="650" y="176" width="270" height="380" rx="12" class="outer"/><rect x="650" y="176" width="270" height="26" rx="12" class="chrome"/><circle cx="667" cy="189" r="4" fill="#d29d91"/><circle cx="681" cy="189" r="4" fill="#d7bd78"/><circle cx="695" cy="189" r="4" fill="#8cb59c"/><text x="708" y="194" class="font tiny">맛잇온</text><text x="886" y="194" class="font tiny">☰</text>
+    <text x="668" y="229" class="font screenTitle">맛집 상세</text><text x="668" y="245" class="font route">/restaurants/{id}</text>
+    <rect x="668" y="258" width="234" height="46" rx="7" class="fillDark"/><text x="680" y="285" class="font bold" fill="#fff">맛있는 식당</text><text x="873" y="285" class="font tiny">♡</text>
+    <line x1="668" y1="321" x2="902" y2="321" class="line"/><text x="668" y="341" class="font bold">기본 정보</text><line x1="668" y1="351" x2="902" y2="351" class="line"/><text x="668" y="370" class="font label">서울 ○○구 ○○로 12</text><text x="668" y="387" class="font label">02-000-0000 · 카카오 장소 ↗</text>
+    <text x="668" y="414" class="font bold">방문 유튜버</text><circle cx="686" cy="436" r="13" class="fill"/><circle cx="723" cy="436" r="13" class="fill"/><circle cx="760" cy="436" r="13" class="fill"/><text x="778" y="440" class="font tiny">+ 더 보기</text>
+    <text x="668" y="466" class="font bold">관련 영상</text><rect x="668" y="475" width="103" height="46" rx="5" class="fillWarm"/><polygon points="712,491 712,506 725,498" fill="#477b68"/><rect x="780" y="475" width="103" height="46" rx="5" class="fillWarm"/><polygon points="824,491 824,506 837,498" fill="#477b68"/>
+    <text x="668" y="542" class="font tiny">영상이 없으면 기본 정보만 표시</text>
+  </g>
+
+  <!-- Public screen 4: course -->
+  <g filter="url(#shadow)">
+    <rect x="946" y="176" width="270" height="380" rx="12" class="outer"/><rect x="946" y="176" width="270" height="26" rx="12" class="chrome"/><circle cx="963" cy="189" r="4" fill="#d29d91"/><circle cx="977" cy="189" r="4" fill="#d7bd78"/><circle cx="991" cy="189" r="4" fill="#8cb59c"/><text x="1004" y="194" class="font tiny">맛잇온</text><text x="1182" y="194" class="font tiny">☰</text>
+    <text x="964" y="229" class="font screenTitle">맛집 코스</text><text x="964" y="245" class="font route">/course</text>
+    <rect x="964" y="258" width="234" height="92" rx="7" fill="#e0ece5" stroke="#b8d2c4"/><path d="M980 332 1025 281 1084 325 1140 278 1180 328" fill="none" stroke="#abc6b7" stroke-width="5"/><circle cx="1002" cy="306" r="8" class="dot"/><circle cx="1084" cy="325" r="8" class="dot"/><circle cx="1150" cy="298" r="8" class="dot"/><text x="997" y="309" class="font tiny" fill="#fff">1</text><text x="1079" y="328" class="font tiny" fill="#fff">2</text><text x="1145" y="301" class="font tiny" fill="#fff">3</text>
+    <rect x="964" y="363" width="234" height="31" rx="6" class="muted"/><circle cx="980" cy="378" r="8" class="dot"/><line x1="997" y1="374" x2="1110" y2="374" class="line"/><line x1="997" y1="384" x2="1158" y2="384" class="line"/>
+    <rect x="964" y="400" width="234" height="31" rx="6" class="muted"/><circle cx="980" cy="415" r="8" class="dot"/><line x1="997" y1="411" x2="1096" y2="411" class="line"/><line x1="997" y1="421" x2="1168" y2="421" class="line"/>
+    <rect x="964" y="437" width="234" height="31" rx="6" class="muted"/><circle cx="980" cy="452" r="8" class="dot"/><line x1="997" y1="448" x2="1120" y2="448" class="line"/><line x1="997" y1="458" x2="1152" y2="458" class="line"/>
+    <rect x="964" y="484" width="110" height="31" rx="6" class="button"/><text x="1019" y="504" text-anchor="middle" class="font buttonText">선택 수정</text><rect x="1084" y="484" width="114" height="31" rx="6" class="button"/><text x="1141" y="504" text-anchor="middle" class="font buttonText">새 경로 조회</text>
+    <text x="964" y="542" class="font tiny">2~5곳 · 검색 또는 내 찜에서 추가</text>
+  </g>
+
+  <!-- Public screen 5: discovery -->
+  <g filter="url(#shadow)">
+    <rect x="1242" y="176" width="300" height="380" rx="12" class="outer"/><rect x="1242" y="176" width="300" height="26" rx="12" class="chrome"/><circle cx="1259" cy="189" r="4" fill="#d29d91"/><circle cx="1273" cy="189" r="4" fill="#d7bd78"/><circle cx="1287" cy="189" r="4" fill="#8cb59c"/><text x="1300" y="194" class="font tiny">맛잇온</text><text x="1508" y="194" class="font tiny">☰</text>
+    <text x="1260" y="229" class="font screenTitle">발견 콘텐츠</text><text x="1260" y="245" class="font route">/popular · /curations</text>
+    <rect x="1260" y="258" width="112" height="29" rx="6" class="button"/><text x="1316" y="277" text-anchor="middle" class="font buttonText">인기</text><rect x="1382" y="258" width="142" height="29" rx="6" class="button"/><text x="1453" y="277" text-anchor="middle" class="font buttonText">큐레이션</text>
+    <rect x="1260" y="305" width="264" height="68" rx="7" class="fillWarm"/><text x="1272" y="327" class="font bold">비 오는 날 생각나는 맛집</text><line x1="1272" y1="342" x2="1490" y2="342" class="line"/><line x1="1272" y1="354" x2="1450" y2="354" class="line"/>
+    <rect x="1260" y="386" width="264" height="43" rx="7" class="muted"/><rect x="1270" y="395" width="34" height="25" rx="4" class="fillDark"/><line x1="1315" y1="401" x2="1425" y2="401" class="line"/><line x1="1315" y1="412" x2="1485" y2="412" class="line"/>
+    <rect x="1260" y="438" width="264" height="43" rx="7" class="muted"/><rect x="1270" y="447" width="34" height="25" rx="4" class="fillDark"/><line x1="1315" y1="453" x2="1440" y2="453" class="line"/><line x1="1315" y1="464" x2="1485" y2="464" class="line"/>
+    <rect x="1260" y="493" width="264" height="31" rx="6" class="button"/><text x="1392" y="513" text-anchor="middle" class="font buttonText">큐레이션 상세 보기</text><text x="1260" y="542" class="font tiny">공개·활성 맛집만 노출</text>
+  </g>
+
+  <path d="M328 366 H344" class="arrow"/><path d="M624 366 H640" class="arrow"/><path d="M920 366 H936" class="arrow"/><path d="M1216 366 H1232" class="arrow"/>
+
+  <!-- Member wireframes -->
+  <text x="58" y="610" class="font section">회원 화면</text><text x="172" y="610" class="font sectionSub">로그인 후 개인화·참여 기능</text><line x1="58" y1="622" x2="778" y2="622" class="line"/>
+  <g filter="url(#shadow)">
+    <rect x="58" y="644" width="220" height="330" rx="12" class="outer"/><rect x="58" y="644" width="220" height="26" rx="12" class="chrome"/><text x="74" y="662" class="font tiny">맛잇온 · /login</text>
+    <text x="82" y="710" class="font screenTitle">로그인</text><text x="82" y="728" class="font route">/login</text><rect x="82" y="749" width="172" height="30" rx="5" class="muted"/><text x="92" y="768" class="font tiny">이메일</text><rect x="82" y="788" width="172" height="30" rx="5" class="muted"/><text x="92" y="807" class="font tiny">비밀번호</text><rect x="82" y="831" width="172" height="31" rx="6" class="button"/><text x="168" y="851" text-anchor="middle" class="font buttonText">로그인</text><text x="82" y="889" class="font tiny">회원가입 · 이메일 인증</text><text x="82" y="910" class="font tiny">역할 선택 없음</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="302" y="644" width="220" height="330" rx="12" class="outer"/><rect x="302" y="644" width="220" height="26" rx="12" class="chrome"/><text x="318" y="662" class="font tiny">맛잇온 · /me</text>
+    <text x="326" y="710" class="font screenTitle">내 정보</text><text x="326" y="728" class="font route">/me</text><rect x="326" y="744" width="172" height="37" rx="6" class="fillGreen"/><text x="340" y="767" class="font bold">회원 계정</text><rect x="326" y="793" width="172" height="31" rx="6" class="muted"/><text x="338" y="813" class="font label">찜한 맛집</text><rect x="326" y="832" width="172" height="31" rx="6" class="muted"/><text x="338" y="852" class="font label">최근 본 맛집</text><rect x="326" y="871" width="172" height="31" rx="6" class="muted"/><text x="338" y="891" class="font label">내 컬렉션</text><text x="326" y="930" class="font tiny">알림 · 제보·신고 내역</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="546" y="644" width="220" height="330" rx="12" class="outer"/><rect x="546" y="644" width="220" height="26" rx="12" class="chrome"/><text x="562" y="662" class="font tiny">맛잇온 · /me/requests</text>
+    <text x="570" y="710" class="font screenTitle">내 제보·신고</text><text x="570" y="728" class="font route">/me/requests</text><rect x="570" y="746" width="172" height="33" rx="6" class="button"/><text x="656" y="767" text-anchor="middle" class="font buttonText">새 제보·신고</text><rect x="570" y="793" width="172" height="39" rx="6" class="muted"/><circle cx="586" cy="812" r="6" class="dot"/><line x1="600" y1="806" x2="714" y2="806" class="line"/><line x1="600" y1="818" x2="690" y2="818" class="line"/><rect x="570" y="844" width="172" height="39" rx="6" class="muted"/><circle cx="586" cy="863" r="6" class="fillWarm"/><line x1="600" y1="857" x2="714" y2="857" class="line"/><line x1="600" y1="869" x2="690" y2="869" class="line"/><text x="570" y="920" class="font tiny">처리 상태 · 알림 확인</text>
+  </g>
+  <path d="M278 810 H294" class="dash"/><path d="M522 810 H538" class="dash"/>
+
+  <!-- Admin wireframes -->
+  <text x="830" y="610" class="font section">관리자 화면</text><text x="952" y="610" class="font sectionSub">ADMIN 권한 · /login에서 진입</text><line x1="830" y1="622" x2="1542" y2="622" class="line"/>
+  <g filter="url(#shadow)">
+    <rect x="830" y="644" width="330" height="330" rx="12" class="outer"/><rect x="830" y="644" width="330" height="26" rx="12" class="chrome"/><text x="846" y="662" class="font tiny">맛잇온 관리자 · /admin</text>
+    <text x="854" y="710" class="font screenTitle">관리자 대시보드</text><text x="854" y="728" class="font route">/admin</text><rect x="854" y="745" width="134" height="52" rx="7" class="fillGreen"/><text x="868" y="767" class="font bold">맛집 등록</text><text x="868" y="783" class="font tiny">/restaurants/new</text><rect x="1002" y="745" width="134" height="52" rx="7" class="fillGreen"/><text x="1016" y="767" class="font bold">유튜버 등록</text><text x="1016" y="783" class="font tiny">/creators/new</text><rect x="854" y="810" width="134" height="52" rx="7" class="fillGreen"/><text x="868" y="832" class="font bold">영상 등록</text><text x="868" y="848" class="font tiny">/videos/new</text><rect x="1002" y="810" width="134" height="52" rx="7" class="fillGreen"/><text x="1016" y="832" class="font bold">방문 관계</text><text x="1016" y="848" class="font tiny">/visits/new</text><rect x="854" y="878" width="282" height="30" rx="6" class="muted"/><text x="868" y="898" class="font label">큐레이션 · 제보·신고 검토</text><text x="854" y="938" class="font tiny">검증 미리보기 후 등록</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="1190" y="644" width="352" height="330" rx="12" class="outer"/><rect x="1190" y="644" width="352" height="26" rx="12" class="chrome"/><text x="1206" y="662" class="font tiny">맛잇온 관리자 · /admin/ai</text>
+    <text x="1214" y="710" class="font screenTitle">AI 영상 추출 관리</text><text x="1214" y="728" class="font route">/admin/ai</text><rect x="1214" y="745" width="304" height="34" rx="6" class="fillWarm"/><text x="1228" y="767" class="font label">공개 YouTube 영상 URL 입력</text><rect x="1214" y="793" width="304" height="31" rx="6" class="button"/><text x="1366" y="813" text-anchor="middle" class="font buttonText">추출 작업 접수</text><text x="1214" y="851" class="font bold">작업 목록</text><rect x="1214" y="862" width="304" height="32" rx="6" class="muted"/><circle cx="1230" cy="878" r="6" fill="#d7bd78"/><line x1="1244" y1="873" x2="1410" y2="873" class="line"/><text x="1460" y="881" class="font tiny">RUNNING</text><rect x="1214" y="902" width="304" height="32" rx="6" class="muted"/><circle cx="1230" cy="918" r="6" class="dot"/><line x1="1244" y1="913" x2="1410" y2="913" class="line"/><text x="1460" y="921" class="font tiny">DONE</text><text x="1214" y="957" class="font tiny">결과 상세 · 예외 보정 · 채널 감시</text>
+  </g>
+  <path d="M1160 810 H1182" class="dash"/>
+
+  <rect x="58" y="1010" width="1484" height="42" rx="10" fill="#e6e0d3"/><text x="80" y="1036" class="font label">도형 의미: 회색 사각형=콘텐츠 영역 · 연두색=버튼/탐색 카드 · 진한 점=마커/상태 · 화살표=대표 화면 이동</text><text x="1518" y="1036" text-anchor="end" class="font tiny">기준: frontend/app Route · 2026-08-25</text>
+</svg>
