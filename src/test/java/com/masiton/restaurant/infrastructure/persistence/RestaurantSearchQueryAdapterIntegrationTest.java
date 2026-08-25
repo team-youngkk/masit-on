@@ -20,6 +20,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import com.masiton.restaurant.application.port.out.RestaurantSearchCriteria;
+import com.masiton.restaurant.application.port.out.RestaurantFilterOptionNames;
 import com.masiton.restaurant.application.port.out.RestaurantSearchQueryPort;
 import com.masiton.restaurant.application.port.out.RestaurantSearchQueryResult;
 import com.masiton.restaurant.application.port.out.RestaurantSearchRow;
@@ -69,6 +70,46 @@ class RestaurantSearchQueryAdapterIntegrationTest extends com.masiton.test.FullC
         // then
         assertThat(result.totalElements()).isEqualTo(1);
         assertThat(result.rows()).extracting(RestaurantSearchRow::name).containsExactly("공개맛집");
+    }
+
+    @Test
+    @DisplayName("필터 선택지는 공개·활성 맛집이 사용하는 지역과 음식 종류만 정렬해 반환한다")
+    void findAvailableFilterOptions_공개활성맛집사용값만_정렬해반환한다() {
+        // given
+        insertRestaurant("강남 일식집", GANGNAM_REGION_ID, JAPANESE_CATEGORY_ID, "PUBLIC", "ACTIVE");
+        insertRestaurant("마포 한식집", MAPO_REGION_ID, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
+        insertRestaurant("비공개 중식집", MAPO_REGION_ID, UUID.fromString("20000000-0000-4000-8000-000000000002"), "PRIVATE", "ACTIVE");
+
+        // when
+        RestaurantFilterOptionNames result = restaurantSearchQueryPort.findAvailableFilterOptions();
+
+        // then
+        assertThat(result.districtNames()).containsExactly("마포구", "강남구");
+        assertThat(result.categoryNames()).containsExactly("한식", "일식");
+    }
+
+    @Test
+    @DisplayName("필터 선택지는 비활성 맛집과 비활성 지역·음식 종류를 제외한다")
+    void findAvailableFilterOptions_비활성맛집과분류_제외한다() {
+        insertRestaurant("공개 활성 맛집", MAPO_REGION_ID, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
+        insertRestaurant("생명주기 비활성 맛집", MAPO_REGION_ID, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
+        insertRestaurant("비활성 분류 맛집", GANGNAM_REGION_ID, JAPANESE_CATEGORY_ID, "PUBLIC", "ACTIVE");
+        try {
+            jdbcTemplate.update(
+                    "UPDATE restaurant SET publication_status = 'PRIVATE', lifecycle_status = 'DELETED', "
+                            + "deleted_at = CURRENT_TIMESTAMP WHERE name = ?",
+                    "생명주기 비활성 맛집");
+            jdbcTemplate.update("UPDATE region SET active = false WHERE id = ?", GANGNAM_REGION_ID);
+            jdbcTemplate.update("UPDATE food_category SET active = false WHERE id = ?", JAPANESE_CATEGORY_ID);
+
+            RestaurantFilterOptionNames result = restaurantSearchQueryPort.findAvailableFilterOptions();
+
+            assertThat(result.districtNames()).containsExactly("마포구");
+            assertThat(result.categoryNames()).containsExactly("한식");
+        } finally {
+            jdbcTemplate.update("UPDATE region SET active = true WHERE id = ?", GANGNAM_REGION_ID);
+            jdbcTemplate.update("UPDATE food_category SET active = true WHERE id = ?", JAPANESE_CATEGORY_ID);
+        }
     }
 
     @Test
