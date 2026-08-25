@@ -31,6 +31,21 @@ export function extractPasswordResetToken(hash: string): string {
   return new URLSearchParams(fragment).get('token')?.trim() ?? ''
 }
 
+export function passwordResetModeFromHash(hash: string): Extract<MemberAuthMode, 'request-reset' | 'confirm-reset'> {
+  return extractPasswordResetToken(hash) ? 'confirm-reset' : 'request-reset'
+}
+
+export function watchPasswordResetMode(
+  readHash: () => string,
+  onMode: (mode: Extract<MemberAuthMode, 'request-reset' | 'confirm-reset'>) => void,
+  subscribe: (listener: () => void) => () => void,
+): () => void {
+  const applyMode = () => onMode(passwordResetModeFromHash(readHash()))
+
+  applyMode()
+  return subscribe(applyMode)
+}
+
 export function watchPasswordResetToken(
   readHash: () => string,
   onToken: (token: string) => void,

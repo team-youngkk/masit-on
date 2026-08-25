@@ -13,8 +13,11 @@ class RestaurantPathClassifierTest {
         assertThat(RestaurantPathClassifier.isRestaurantDetailPath("/api/restaurants/popular")).isFalse();
         assertThat(RestaurantPathClassifier.isRestaurantDetailPath("/api/restaurants/map-points")).isFalse();
         assertThat(RestaurantPathClassifier.isRestaurantDetailPath("/api/restaurants/natural-language-search")).isFalse();
+        assertThat(RestaurantPathClassifier.isRestaurantDetailPath("/api/restaurants/filter-options")).isFalse();
         assertThat(RestaurantPathClassifier.isNonIdentifierPublicPath(
                 "/api/restaurants/natural-language-search")).isTrue();
+        assertThat(RestaurantPathClassifier.isNonIdentifierPublicPath(
+                "/api/restaurants/filter-options")).isTrue();
     }
 
     @Test

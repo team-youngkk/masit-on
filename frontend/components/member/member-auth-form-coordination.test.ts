@@ -6,6 +6,8 @@ const {
   prepareMemberAuthSubmission,
   validateMemberAuthForm,
   extractPasswordResetToken,
+  passwordResetModeFromHash,
+  watchPasswordResetMode,
   watchPasswordResetToken,
 } = require('./member-auth-form-coordination.ts')
 
@@ -28,6 +30,33 @@ memberAuthFormTest('비밀번호 재설정 fragment에서 토큰만 읽고 잘�
   memberAuthFormAssert.equal(extractPasswordResetToken('#token=%20opaque-reset-token%20'), 'opaque-reset-token')
   memberAuthFormAssert.equal(extractPasswordResetToken('#next=1'), '')
   memberAuthFormAssert.equal(extractPasswordResetToken(''), '')
+})
+
+memberAuthFormTest('비밀번호 재설정 fragment에 토큰이 있으면 비밀번호 변경 화면만 선택한다', () => {
+  memberAuthFormAssert.equal(passwordResetModeFromHash(''), 'request-reset')
+  memberAuthFormAssert.equal(passwordResetModeFromHash('#next=1'), 'request-reset')
+  memberAuthFormAssert.equal(passwordResetModeFromHash('#token=opaque-reset-token'), 'confirm-reset')
+})
+
+memberAuthFormTest('비밀번호 재설정 화면은 처음과 hash 변경 때 한 가지 모드만 선택한다', () => {
+  let hash = '#token=first-reset-token'
+  let listener: (() => void) | undefined
+  const modes: string[] = []
+
+  const unsubscribe = watchPasswordResetMode(
+    () => hash,
+    (mode: string) => modes.push(mode),
+    (nextListener: () => void) => {
+      listener = nextListener
+      return () => { listener = undefined }
+    },
+  )
+
+  hash = ''
+  listener?.()
+
+  memberAuthFormAssert.deepEqual(modes, ['confirm-reset', 'request-reset'])
+  unsubscribe()
 })
 
 memberAuthFormTest('비밀번호 재설정 화면은 처음과 hash 변경 때 최신 토큰을 읽고 주소를 지운다', () => {
