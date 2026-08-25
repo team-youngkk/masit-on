@@ -8,6 +8,7 @@ related_documents:
   - api/README.md
   - data/data-traceability.md
   - ../07-adr/adr-traceability.md
+  - ../08-planning/third-expansion-operational-completion-record.md
   - ../04-product/prd/discovery/restaurant-discovery.md
   - api/discovery/restaurant-discovery-api.md
   - ../02-analysis/mvp-workstreams.md
@@ -100,7 +101,7 @@ MVP와 확장 단계의 PRD, 기능 요구사항, 비즈니스 규칙, NFR, Work
 | [PRD-ADMIN-002](../04-product/prd/admin/ai-video-information-extraction.md) | AI 영상 정보 추출 | [관리자 AI 영상 추출 API](api/admin/ai-video-extraction-api.md) | API-ADMIN-AIEXTRACT-001, API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | 김인안 |
 | [PRD-DISCOVERY-006](../04-product/prd/discovery/restaurant-course-recommendation.md) | 맛집 코스 추천 | [맛집 코스 추천 API](api/discovery/restaurant-course-recommendation-api.md) | API-DISCOVERY-COURSE-001, API-PERSONAL-004 (명시적 찜 후보 불러오기) | [WS-16](../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천) | 이우람 |
 
-3차 확장 세 기능의 API 계약은 Accepted 상태로 연결됐다. 실제 구현 전에는 각 기능의 계약 테스트·외부 계정 연결·평가·운영 게이트 증거를 확보한다. 정식 공개 전환은 제품 API의 경로·Method·회원/관리자 인증을 변경하지 않으며, Webhook 자체 인증·rate limit과 Host·`/internal`·loopback 경계를 유지한다.
+3차 확장 세 기능의 API 계약은 Accepted 상태로 연결됐고, 계약 테스트·외부 계정 연결·평가·운영 게이트를 완료해 현재 운영 중이다([운영 완료 기록](../08-planning/third-expansion-operational-completion-record.md)). 정식 공개 전환은 제품 API의 경로·Method·회원/관리자 인증을 변경하지 않으며, Webhook 자체 인증·rate limit과 Host·`/internal`·loopback 경계를 유지한다.
 
 ## 3. 기능 요구사항 → API 매핑
 
@@ -330,11 +331,11 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 | API | 핵심 테스트 | 평가·운영 증거 | E3 Task |
 |---|---|---|---|
 | [API-DISCOVERY-NL-001](api/discovery/natural-language-restaurant-discovery-api.md) | `TST-E3-NL-001~002`, `TST-E3-SEC-001`, `TST-E3-E2E-001` | `EVAL-NL-001~007`, p95·로그 마스킹 | `E3-T01~02`, `E3-T11~13` |
-| [API-ADMIN-AIEXTRACT-001](api/admin/ai-video-extraction-api.md), Webhook `001~002` | `TST-E3-AI-001~004`, `TST-E3-DATA-001`, `TST-E3-SEC-001`, `SecurityBoundaryApiTest` 채널 감시 목록·GET/PUT 401·403·ADMIN 경계 | [`EVAL-AI-001~010` 계약 자산·dry-run·HOLD 기록](../08-planning/third-expansion-ai-evaluation-result.md), 다중 채널 감시 목록·상태, GET/PUT 상태·lastErrorAt·권한·민감정보 비노출, Worker·quota·정식 저장 0건 | `E3-T03~08`, `E3-T11~13` |
+| [API-ADMIN-AIEXTRACT-001](api/admin/ai-video-extraction-api.md), Webhook `001~002` | `TST-E3-AI-001~004`, `TST-E3-DATA-001`, `TST-E3-SEC-001`, `SecurityBoundaryApiTest` 채널 감시 목록·GET/PUT 401·403·ADMIN 경계 | [`EVAL-AI-001~010` 평가 기준선](../08-planning/third-expansion-ai-evaluation-result.md), [운영 완료 기록](../08-planning/third-expansion-operational-completion-record.md), 다중 채널 감시 목록·상태, GET/PUT 상태·lastErrorAt·권한·민감정보 비노출, Worker·quota·정식 저장 0건 | `E3-T03~08`, `E3-T11~13` |
 | [API-DISCOVERY-COURSE-001](api/discovery/restaurant-course-recommendation-api.md) | `TST-E3-COURSE-001~003`, `TST-E3-PERF-001`, `TST-E3-E2E-001` | `EVAL-COURSE-001~005`, Mobility quota·호출 수 | `E3-T09~13` |
 
-세 API의 계약 상태는 Accepted지만 테스트·외부 계정·운영 증거가 연결되기 전에는 API 구현 완료로 판정하지 않는다.
+세 API의 계약 상태는 Accepted이며, 현재 운영 상태와 운영 평가 완료 판정은 [3차 확장 운영 완료 기록](../08-planning/third-expansion-operational-completion-record.md)에 연결한다. 세부 기준선·실행 증거는 관련 평가 문서에 보존한다.
 
 ### 10.1 E3-T13 최종 게이트 증거
 
-세 API의 보안 자동화와 성능 시나리오 준비·실행 보류 상태는 [E3-T13 최종 게이트 판정](../08-planning/third-expansion-final-gate-result.md)에 기록한다. 같은 문서 1.1절 개정에 따라 제한 공개 범위의 활성화는 증거 수집을 위해 허용하며, 자연어·코스의 운영 동급 부하 결과와 AI 외부 계정·quota 증거가 연결되기 전에는 일반 공개 활성화를 판정하지 않는다.
+세 API의 현재 운영 상태는 [3차 확장 운영 완료 기록](../08-planning/third-expansion-operational-completion-record.md)에 따라 **운영 중(`GO`)**이다. [E3-T13 최종 게이트 판정](../08-planning/third-expansion-final-gate-result.md)과 세부 API 평가 기록의 `HOLD`·미검증 표현은 당시 기준선의 역사 기록으로 보존한다.

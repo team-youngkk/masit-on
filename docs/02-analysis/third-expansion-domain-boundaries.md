@@ -264,7 +264,7 @@ flowchart LR
 | Kakao Mobility API·quota·TTL·캐시 | 결정 완료: `/v1/directions`·1회 호출·TTL 5분·캐시 없음·월 1,000건 | Mobility ADR·API 계약·계정 연결 검증 |
 | Restaurant 좌표 보강·품질 기준 | 정책 결정 완료: 좌표 없는 맛집은 코스 제외 | 데이터 계약·운영 보강률 검증 |
 | 자연어·AI 골든 Dataset 저장·접근 | 결정 완료: 합성·승인 자산, 원문 비저장, 접근 통제·1년 보존 | 평가 전략·데이터 보안 계약 |
-| 2차 정상 50명·20 RPS 및 최대 200명·80 RPS | 미측정 | 3차 최종 완료 게이트 결과 |
+| 2차 정상 50명·20 RPS 및 최대 200명·80 RPS | 기준선 당시 미측정 | [3차 확장 운영 완료 기록](../08-planning/third-expansion-operational-completion-record.md) |
 
 ## 11. 다음 문서화 순서
 
