@@ -1,6 +1,7 @@
 ---
-status: In Progress
+status: Historical snapshot
 verification_date: 2026-08-13
+superseded_by: third-expansion-operational-completion-record.md
 owners:
   - 양성훈
   - 이우람
@@ -16,6 +17,8 @@ related_documents:
   - ../07-adr/platform/web-004-supported-browser-matrix.md
   - ../07-adr/quality/test-001-automation-strategy.md
 ---
+
+> 이 문서는 2026-08-13 로컬 기준의 브라우저 검증 스냅샷이다. 당시의 부분 검증·미검증 항목은 역사 기록으로 보존하며, 2026-08-25 현재 운영 평가 완료·운영 중 판정은 [3차 확장 운영 완료 기록](third-expansion-operational-completion-record.md)을 기준으로 한다.
 
 # 3차 확장 브라우저 검증 기록
 
@@ -221,7 +224,7 @@ java.lang.IllegalStateException: Kakao Mobility base URL is not an allowed provi
 - 개발 모드에서 `NEXTJS-PORTAL` 요소가 Tab 순회에 한 번 들어온다. Next.js 개발 오버레이이며 프로덕션 빌드에는 없다.
 - `scripts/New-LocalAdmin.ps1`은 PATH의 `java`가 JDK 21이 아니면 `비밀번호 해시 생성에 실패했습니다`만 남기고 원인을 알려주지 않는다. 이 환경은 PATH가 JDK 8이라 JDK 21 경로를 앞에 붙여 실행했다.
 
-## 6. 확인하지 못한 항목
+## 6. 기준선 실행 당시 확인하지 못한 항목 (2026-08-13)
 
 | 항목 | 상태 | 이유 | 다음 단계 |
 |---|---|---|---|
