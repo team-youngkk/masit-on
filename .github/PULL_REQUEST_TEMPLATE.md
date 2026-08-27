@@ -14,7 +14,7 @@ Closes #
 
 - Workstream·Task:
 - 담당자:
-- 리뷰어: <!-- ownership.md 9장 기본 리뷰 구조를 따른다. 작성자를 제외한 2명 승인이 필요하다 -->
+- 리뷰어: <!-- ownership.md 9장 기본 리뷰 구조를 따른다. 작성자를 제외한 최소 1명 승인이 필요하다 -->
 - 레이블: <!-- mvp / size:S·M / sequence:1-foundation~4-verification / area:backend·frontend·database·infra·security·integration·test -->
 
 ## 변경 목적
@@ -71,7 +71,7 @@ Closes #
 - [ ] API·DB 계약 변경을 사전 합의하고 문서에 반영했다.
 - [ ] 정상·예외·경계 조건과 필요한 통합 테스트가 통과했다.
 - [ ] 실제 외부 API와 운영 비밀정보를 사용하지 않았다.
-- [ ] 최소 두 명의 승인을 받았고 대상 브랜치의 병합 방식을 지켰다.
+- [ ] 작성자를 제외한 최소 한 명의 승인을 받았고 대상 브랜치의 병합 방식을 지켰다.
 
 <!-- 병합 방식: feature·fix 등 작업 브랜치 → develop 은 Squash Merge, develop → main 은 Create a merge commit -->
 <!-- 정상적인 develop → main Merge 뒤에는 커밋 수 차이만을 이유로 main → develop 역동기화 PR을 만들지 않는다. main 전용 Hotfix가 있을 때만 역동기화한다. -->
