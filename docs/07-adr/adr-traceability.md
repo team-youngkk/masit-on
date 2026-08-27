@@ -134,7 +134,7 @@ related_documents:
 | 운영 애플리케이션 포트 loopback 바인딩 | 확정 (2026-08-14) | Accepted ADR | [ADR-WEB-005](platform/web-005-application-port-binding.md), [ADR-RUNTIME-001](platform/runtime-001-docker.md) | Nginx 우회 직결과 `/internal/**` 노출을 네트워크 계층에서 차단 |
 | 검증 참여자 제한 공개 | M2 역사 단계·gate 제거 완료 결정 (2026-08-24) | Accepted ADR | [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md), [ADR-DEPLOY-003](platform/deploy-003-validation-cookie-session.md), [ADR-DEPLOY-004](platform/deploy-004-public-api-validation-gate-boundary.md), [ADR-DEPLOY-006](platform/deploy-006-public-release-without-validation-gate.md) | M2 제한 공개는 완료된 단계로 보존하고, 현재는 검증 쿠키·Redis gate 없이 공개. 회원·관리자 인증·Webhook 자체 인증·rate limit·Host·`/internal` 404·loopback은 유지 |
 | Amazon ECR·EC2 | 기술 선택 확정, 초기 운영 배포부터 적용 | Accepted ADR | [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | M2부터 단일 EC2에 배포하고 확장 단계별 변경 반영 |
-| ALB·ASG·Blue-Green | [ADR-DEPLOY-005](platform/deploy-005-asg-blue-green-rollout.md) Accepted; 비용 초과는 작업 요청자 승인, 실제 운영 전환은 미실행 | Accepted ADR | [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md), [ADR-DEPLOY-005](platform/deploy-005-asg-blue-green-rollout.md) | ALB·ASG·CodeDeploy·사설 subnet 전용 Redis를 기준으로 하되 기존 단일 EC2는 실제 환경 검증 전 유지 |
+| ALB·ASG·Blue-Green | [ADR-DEPLOY-005](platform/deploy-005-asg-blue-green-rollout.md) 토폴로지 유지, 배포 알람 경계는 [ADR-DEPLOY-007](platform/deploy-007-codedeploy-health-alarm-boundary.md)로 갱신 | Accepted ADR | [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md), [ADR-DEPLOY-005](platform/deploy-005-asg-blue-green-rollout.md), [ADR-DEPLOY-007](platform/deploy-007-codedeploy-health-alarm-boundary.md) | ALB·ASG·CodeDeploy·사설 subnet 전용 Redis를 유지하고 `UnHealthyHostCount`는 전환 중 오탐을 막기 위해 관측 전용으로 분리 |
 | GitHub Actions → ECR → EC2 | 초기 운영 배포부터 적용 | Accepted ADR | [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | 빌드·테스트 품질 게이트를 유지하고 M2부터 AWS 배포 경로 활성화 |
 | Amazon S3 이미지 저장 | 확정이나 기능 없음 | Post-MVP ADR | [ADR-MEDIA-001](adr-backlog.md#adr-media-001-s3-사용자-이미지-저장) | 이미지 업로드·사용자 이미지 요구사항 없음 |
 | FCM HTTP v1 | 외부 채널 범위 제외 | Post-MVP ADR | [ADR-NOTIFY-001](adr-backlog.md#adr-notify-001-fcm-푸시-알림), 현재 서비스 내 저장은 [ADR-NOTIFY-002](integration/notify-002-in-app-notification-reliability.md) | 채널·동의·DeviceToken·전달 SLA 미승인 |
@@ -294,8 +294,8 @@ Accepted 세 건은 현재 요구사항을 구현하는 최소 구조만 승인�
 | [ADR-ROUTE-001](integration/route-001-kakao-mobility-course-routing.md) | Mobility `/v1/directions`·순서·TTL·캐시 없음·호출/비용 | `TST-E3-COURSE-001~003`, `EVAL-COURSE-001~005`, `E3-T13` 증거 | `E3-T09~10`, `E3-T13` |
 | [ADR-TEST-001](quality/test-001-automation-strategy.md), [ADR-PERF-001](quality/perf-001-k6-load-testing.md) | 테스트 계층·WireMock·Testcontainers·부하 실행 | `TST-E3-DATA-001`, `TST-E3-E2E-001`, `TST-E3-PERF-001` | `E3-T11~13` |
 
-3차 확장 ADR은 Accepted 정책이지만, 각 행의 테스트·평가·운영 증거가 없으면 해당 ADR을 근거로 기능 완료를 선언하지 않는다. 조건부·Post-MVP ADR은 이 추적표의 3차 완료 Task에 포함하지 않는다.
+3차 확장 ADR은 Accepted 정책이며, 각 행의 테스트·평가·운영 증거는 [3차 확장 운영 완료 기록](../08-planning/third-expansion-operational-completion-record.md)과 관련 기준선 문서에 연결한다. 조건부·Post-MVP ADR은 이 추적표의 3차 완료 Task에 포함하지 않는다.
 
 ### 11.1 E3-T13 최종 게이트 증거
 
-Accepted ADR의 자동화 검증 결과와 실제 운영·평가·부하 증거의 보류 상태는 [E3-T13 최종 게이트 판정](../08-planning/third-expansion-final-gate-result.md)에 기록한다. ADR 승인 자체는 AI·Mobility 호출 활성화나 3차 확장 출시 승인을 의미하지 않는다.
+Accepted ADR의 자동화 검증 결과와 실제 운영·평가·부하 증거는 [3차 확장 운영 완료 기록](../08-planning/third-expansion-operational-completion-record.md)에 연결한다. [E3-T13 최종 게이트 판정](../08-planning/third-expansion-final-gate-result.md)의 `HOLD`·`CONDITIONAL` 표현은 당시 기준선 기록이다. ADR 승인 자체만으로 AI·Mobility 호출 활성화나 3차 확장 출시 승인을 의미하지 않지만, 현재 운영 상태는 별도 완료 기록으로 확정한다.

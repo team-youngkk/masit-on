@@ -32,6 +32,8 @@ related_documents:
   - ../07-adr/quality/obs-001-logging-observability.md
 ---
 
+> 이 문서는 평가 기준과 판정 절차를 정의한 정책 문서다. 2026-08-10 기준의 실행 대기·체크리스트 표현은 계획 수립 시점의 기록이며, 현재 운영 평가 완료·운영 중 판정은 [3차 확장 운영 완료 기록](third-expansion-operational-completion-record.md)을 기준으로 한다.
+
 # 맛잇온 3차 확장 평가 주도 개발 전략
 
 ## 1. 목적과 결정 상태

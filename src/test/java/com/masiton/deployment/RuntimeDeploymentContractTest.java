@@ -346,8 +346,9 @@ class RuntimeDeploymentContractTest {
                 .doesNotContain("if: env.DEPLOYMENT_TARGET");
         assertThat(cleanup)
                 .contains("needs.deploy.result == 'cancelled'")
+                .contains("github.event_name == 'push' || github.event_name == 'workflow_dispatch'")
+                .contains("github.ref == 'refs/heads/main' || github.ref == 'refs/heads/deploy/m2'")
                 .contains("codedeploy_s3_bucket || 'masiton-prod-codedeploy-711457211155'")
-                .doesNotContain("github.event_name == 'workflow_dispatch'")
                 .doesNotContain("github.event.inputs.deployment_target");
     }
 
@@ -455,6 +456,14 @@ class RuntimeDeploymentContractTest {
         String agent = Files.readString(CLOUDWATCH_AGENT);
         String nginx = Files.readString(NGINX);
         String deploymentAlarms = section(monitoring, "locals {", "resource \"aws_cloudwatch_metric_alarm\" \"target_5xx\"");
+        String target5xx = section(
+                monitoring,
+                "resource \"aws_cloudwatch_metric_alarm\" \"target_5xx\"",
+                "resource \"aws_cloudwatch_metric_alarm\" \"target_latency\"");
+        String targetLatency = section(
+                monitoring,
+                "resource \"aws_cloudwatch_metric_alarm\" \"target_latency\"",
+                "resource \"aws_cloudwatch_metric_alarm\" \"fleet_dependency_redis\"");
         String deploymentRedis = section(
                 monitoring,
                 "resource \"aws_cloudwatch_metric_alarm\" \"fleet_dependency_redis\"",
@@ -552,6 +561,8 @@ class RuntimeDeploymentContractTest {
                 monitoring,
                 "resource \"aws_cloudwatch_metric_alarm\" \"redis_memory_utilization\"",
                 "resource \"aws_cloudwatch_metric_alarm\" \"blue_unhealthy\"");
+        String blueUnhealthy = monitoring.substring(
+                monitoring.indexOf("resource \"aws_cloudwatch_metric_alarm\" \"blue_unhealthy\""));
         assertThat(deploymentRedisMemory)
                 .contains("metric_name         = \"RedisMemoryUtilizationPercent\"")
                 .contains("threshold           = 80")
@@ -559,13 +570,34 @@ class RuntimeDeploymentContractTest {
                 .contains("datapoints_to_alarm = 3")
                 .contains("treat_missing_data = \"breaching\"")
                 .contains("Environment = \"asg\"");
+        assertThat(blueUnhealthy)
+                .contains("metric_name       = \"UnHealthyHostCount\"")
+                .contains("period            = 60")
+                .contains("evaluation_periods  = 3")
+                .contains("datapoints_to_alarm = 3")
+                .contains("threshold           = 1")
+                .contains("comparison_operator = \"GreaterThanOrEqualToThreshold\"")
+                .contains("treat_missing_data  = \"notBreaching\"")
+                .contains("TargetGroup  = aws_lb_target_group.blue.arn_suffix");
+        assertThat(target5xx)
+                .contains("metric_name         = \"HTTPCode_Target_5XX_Count\"")
+                .contains("period              = 60")
+                .contains("evaluation_periods  = 1")
+                .contains("datapoints_to_alarm = 1")
+                .contains("threshold           = 1");
+        assertThat(targetLatency)
+                .contains("metric_name         = \"TargetResponseTime\"")
+                .contains("period              = 60")
+                .contains("evaluation_periods  = 1")
+                .contains("datapoints_to_alarm = 1")
+                .contains("threshold           = 2");
         assertThat(deploymentAlarms)
                 .contains("var.redis_recovery_mode ? [] : [")
                 .contains("aws_cloudwatch_metric_alarm.target_5xx.alarm_name")
                 .contains("aws_cloudwatch_metric_alarm.target_latency.alarm_name")
-                .contains("aws_cloudwatch_metric_alarm.blue_unhealthy.alarm_name")
                 .contains("aws_cloudwatch_metric_alarm.fleet_dependency_redis.alarm_name")
                 .contains("aws_cloudwatch_metric_alarm.redis_memory_utilization.alarm_name")
+                .doesNotContain("aws_cloudwatch_metric_alarm.blue_unhealthy.alarm_name")
                 .doesNotContain("fleet_dependency_redis_freshness");
         assertThat(variables)
                 .contains("variable \"deployment_alarms_enabled\"")
@@ -627,7 +659,8 @@ class RuntimeDeploymentContractTest {
                 .doesNotContain("deployment_alarms_enabled=false")
                 .contains("ALB target 5xx")
                 .contains("target latency")
-                .contains("blue unhealthy-host")
+                .contains("blue-unhealthy-host")
+                .contains("관측 전용")
                 .contains("Enabled=true")
                 .contains("IgnorePollFailure=false");
     }
@@ -643,7 +676,7 @@ class RuntimeDeploymentContractTest {
                 .contains("precondition {")
                 .contains("condition     = !var.redis_recovery_mode || var.deployment_alarms_enabled")
                 .contains("redis_recovery_mode=true requires deployment_alarms_enabled=true")
-                .contains("ALB 5xx, latency, and unhealthy-host protections must remain enabled.");
+                .contains("ALB 5xx and latency protections must remain enabled.");
     }
 
     @Test

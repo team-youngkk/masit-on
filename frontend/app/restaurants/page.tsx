@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import type { Metadata } from 'next'
+import { cache } from 'react'
 
 import { FavoriteButton } from '@/components/personal/FavoriteButton'
 import { FilterSelect } from '@/components/restaurants/FilterSelect'
@@ -10,18 +12,18 @@ import { cn } from '@/lib/cn'
 import { shouldUseRestaurantDesignPreview } from '@/lib/design-preview'
 import { naturalLanguageFiltersKey } from '@/lib/natural-language-filters-key'
 import { getRestaurantPlaceholderImage } from '@/lib/restaurant-placeholder-image'
+import { toPublicSiteUrl } from '@/lib/site-url'
 import {
   buildRestaurantFilterClearHref,
   buildRestaurantFiltersResetHref,
   type RestaurantStructuredFilterKey,
 } from '@/lib/restaurants-filter-navigation'
 import {
-  CATEGORY_OPTIONS,
-  DISTRICT_OPTIONS,
   buildApiSearchParams,
   buildPageNumbers,
   buildRestaurantsHref,
   fetchCreators,
+  fetchRestaurantFilterOptions,
   fetchRestaurants,
   toSingleValue,
   type RawSearchParams,
@@ -35,6 +37,50 @@ type ActiveFilter = {
   key: RestaurantStructuredFilterKey
   label: string
   value: string
+}
+
+const RESTAURANTS_TITLE = '유튜버가 방문한 맛집 탐색 | 맛잇온'
+const RESTAURANTS_DESCRIPTION =
+  '유튜버가 방문한 서울 맛집을 지역, 음식 종류, 유튜버로 탐색하세요.'
+const getRestaurants = cache((serializedParams: string) =>
+  fetchRestaurants(new URLSearchParams(serializedParams)),
+)
+
+export async function generateMetadata({
+  searchParams,
+}: RestaurantsPageProps): Promise<Metadata> {
+  const rawParams = await searchParams
+  const canonical = toPublicSiteUrl('/restaurants')
+
+  if (Object.keys(rawParams).length > 0) {
+    return {
+      robots: { index: false, follow: true },
+      alternates: canonical ? { canonical } : undefined,
+    }
+  }
+
+  if (!canonical) {
+    return { robots: { index: false, follow: false } }
+  }
+
+  const result = await getRestaurants(buildApiSearchParams(rawParams).toString())
+  if (!result.ok) {
+    return { robots: { index: false, follow: false } }
+  }
+
+  return {
+    title: RESTAURANTS_TITLE,
+    description: RESTAURANTS_DESCRIPTION,
+    robots: { index: true, follow: true },
+    alternates: { canonical },
+  }
+}
+
+function includeSelectedFilterValue(values: readonly string[], selectedValue: string): string[] {
+  if (!selectedValue || values.includes(selectedValue)) {
+    return [...values]
+  }
+  return [selectedValue, ...values]
 }
 
 const DESIGN_PREVIEW_ITEMS: RestaurantListItem[] = [
@@ -133,9 +179,10 @@ export default async function RestaurantsPage({
 }: RestaurantsPageProps) {
   const rawParams = await searchParams
   const apiParams = buildApiSearchParams(rawParams)
-  const [result, creatorsResult] = await Promise.all([
-    fetchRestaurants(apiParams),
+  const [result, creatorsResult, filterOptionsResult] = await Promise.all([
+    getRestaurants(apiParams.toString()),
     fetchCreators(),
+    fetchRestaurantFilterOptions(),
   ])
 
   /* 반복 URL 값은 API 요청과 같은 규칙으로 첫 값만 사용한다. */
@@ -144,6 +191,14 @@ export default async function RestaurantsPage({
   const currentCategory = toSingleValue(rawParams.category) ?? ''
   const currentCreatorId = toSingleValue(rawParams.creatorId)
   const currentSize = apiParams.get('size') ?? '21'
+  const districtOptions = includeSelectedFilterValue(
+    filterOptionsResult.ok ? filterOptionsResult.data.districts : [],
+    currentDistrict,
+  )
+  const categoryOptions = includeSelectedFilterValue(
+    filterOptionsResult.ok ? filterOptionsResult.data.categories : [],
+    currentCategory,
+  )
   const currentRoute = `/restaurants?${apiParams.toString()}`
   const currentCreatorKnown =
     creatorsResult.ok &&
@@ -259,12 +314,13 @@ export default async function RestaurantsPage({
                   id="district"
                   formId="structured-restaurant-search"
                   name="district"
-                  options={DISTRICT_OPTIONS.map((district) => ({
+                  options={districtOptions.map((district) => ({
                     value: district,
                     label: district,
                   }))}
                   value={currentDistrict}
                   placeholder="지역"
+                  disabled={!filterOptionsResult.ok || districtOptions.length === 0}
                   className={styles.select}
                   controlClassName={styles.selectControl}
                   menuClassName={styles.selectMenu}
@@ -278,12 +334,13 @@ export default async function RestaurantsPage({
                   id="category"
                   formId="structured-restaurant-search"
                   name="category"
-                  options={CATEGORY_OPTIONS.map((category) => ({
+                  options={categoryOptions.map((category) => ({
                     value: category,
                     label: category,
                   }))}
                   value={currentCategory}
                   placeholder="음식 종류"
+                  disabled={!filterOptionsResult.ok || categoryOptions.length === 0}
                   className={styles.select}
                   controlClassName={styles.selectControl}
                   menuClassName={styles.selectMenu}
@@ -372,6 +429,16 @@ export default async function RestaurantsPage({
             </p>
           ) : creatorsResult.data.items.length === 0 && currentCreatorId ? (
             <p className={styles.creatorHint}>등록된 유튜버가 없습니다.</p>
+          ) : null}
+          {!filterOptionsResult.ok ? (
+            <p className={styles.creatorError} role="alert">
+              {filterOptionsResult.message}
+              {filterOptionsResult.traceId ? (
+                <span className={styles.traceId}>
+                  traceId: {filterOptionsResult.traceId}
+                </span>
+              ) : null}
+            </p>
           ) : null}
         </div>
         <input type="hidden" name="size" value={currentSize} />

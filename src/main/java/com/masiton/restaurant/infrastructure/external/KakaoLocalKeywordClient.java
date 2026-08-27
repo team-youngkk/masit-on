@@ -10,11 +10,13 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Arrays;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import com.masiton.common.web.OriginCanonicalizer;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
@@ -35,17 +37,57 @@ class KakaoLocalKeywordClient {
     @Autowired
     KakaoLocalKeywordClient(
             ObjectMapper objectMapper,
-            @Value("${masiton.integration.kakao.base-url:https://dapi.kakao.com}") String baseUrl,
-            @Value("${masiton.integration.kakao.rest-api-key:}") String restApiKey
+            @Value("${masiton.integration.kakao.base-url}") String baseUrl,
+            @Value("${masiton.integration.kakao.rest-api-key:}") String restApiKey,
+            @Value("${masiton.integration.kakao.allowed-origins:}") String allowedOrigins
     ) {
-        this(HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build(), objectMapper, baseUrl, restApiKey);
+        this(HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build(), objectMapper, baseUrl, restApiKey, allowedOrigins);
     }
 
     KakaoLocalKeywordClient(HttpClient httpClient, ObjectMapper objectMapper, String baseUrl, String restApiKey) {
         this.httpClient = httpClient;
         this.objectMapper = objectMapper;
-        this.baseUri = URI.create(baseUrl);
+        this.baseUri = requireBaseUri(baseUrl, "", false);
         this.restApiKey = restApiKey;
+    }
+
+    KakaoLocalKeywordClient(HttpClient httpClient, ObjectMapper objectMapper, String baseUrl, String restApiKey,
+                            String allowedOrigins) {
+        this.httpClient = httpClient;
+        this.objectMapper = objectMapper;
+        this.baseUri = requireBaseUri(baseUrl, allowedOrigins, true);
+        this.restApiKey = restApiKey;
+    }
+
+    private static URI requireBaseUri(String baseUrl, String allowedOrigins, boolean requireAllowedOrigin) {
+        if (baseUrl == null || baseUrl.isBlank()) {
+            throw new IllegalStateException("Kakao Local endpoint must be configured");
+        }
+        try {
+            URI uri = URI.create(baseUrl.trim());
+            String scheme = uri.getScheme();
+            boolean http = "http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme);
+            boolean rootPath = uri.getPath() == null || uri.getPath().isBlank() || "/".equals(uri.getPath());
+            if (!uri.isAbsolute() || !http || uri.getHost() == null || uri.getUserInfo() != null
+                    || uri.getQuery() != null || uri.getFragment() != null || !rootPath
+                    || uri.getPort() == 0 || uri.getPort() > 65535
+                    || !isAllowedOrigin(uri, allowedOrigins, requireAllowedOrigin)) {
+                throw new IllegalStateException("Kakao Local endpoint must be an HTTP(S) origin");
+            }
+            return uri;
+        } catch (IllegalArgumentException exception) {
+            throw new IllegalStateException("Kakao Local endpoint is malformed", exception);
+        }
+    }
+
+    private static boolean isAllowedOrigin(URI uri, String allowedOrigins, boolean requireAllowedOrigin) {
+        if (allowedOrigins == null || allowedOrigins.isBlank()) {
+            return !requireAllowedOrigin;
+        }
+        return Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isBlank())
+                .anyMatch(origin -> OriginCanonicalizer.matches(uri.toString(), origin));
     }
 
     KakaoKeywordResponse search(String name) {

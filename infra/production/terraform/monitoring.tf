@@ -3,7 +3,6 @@ locals {
     [
       aws_cloudwatch_metric_alarm.target_5xx.alarm_name,
       aws_cloudwatch_metric_alarm.target_latency.alarm_name,
-      aws_cloudwatch_metric_alarm.blue_unhealthy.alarm_name,
     ],
     var.redis_recovery_mode ? [] : [
       aws_cloudwatch_metric_alarm.fleet_dependency_redis.alarm_name,
@@ -11,6 +10,11 @@ locals {
     ],
   )
 }
+
+# UnHealthyHostCount는 CodeDeploy가 같은 target group에 replacement를
+# 등록·draining하는 전환 과정 자체를 관측하므로, 배포 중지 게이트에는 넣지
+# 않는다. 알람 리소스는 운영 관측용으로 유지하고, 실제 트래픽 전환 가능 여부는
+# ALB health check와 CodeDeploy의 AllowTraffic 단계가 판단한다.
 
 resource "aws_cloudwatch_metric_alarm" "target_5xx" {
   alarm_name          = "${var.name_prefix}-alb-target-5xx"
@@ -110,14 +114,18 @@ resource "aws_cloudwatch_metric_alarm" "redis_memory_utilization" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "blue_unhealthy" {
-  alarm_name          = "${var.name_prefix}-blue-unhealthy-host"
-  alarm_description   = "Blue target group has an unhealthy host"
-  namespace           = "AWS/ApplicationELB"
-  metric_name         = "UnHealthyHostCount"
-  statistic           = "Maximum"
-  period              = 60
-  evaluation_periods  = 1
-  datapoints_to_alarm = 1
+  alarm_name        = "${var.name_prefix}-blue-unhealthy-host"
+  alarm_description = "Blue target group has an unhealthy host"
+  namespace         = "AWS/ApplicationELB"
+  metric_name       = "UnHealthyHostCount"
+  statistic         = "Maximum"
+  period            = 60
+  # CodeDeploy가 replacement target을 등록·draining하는 동안 일시적인
+  # 비정상 datapoint가 발생할 수 있다. 2026-08-24 운영 이력에서도
+  # 전환 중 ALARM과 OK가 반복됐다. 3분 연속 비정상일 때만 관측 알람을
+  # 발생시켜 전환 중 일시 상태와 지속 장애를 구분한다.
+  evaluation_periods  = 3
+  datapoints_to_alarm = 3
   threshold           = 1
   comparison_operator = "GreaterThanOrEqualToThreshold"
   treat_missing_data  = "notBreaching"

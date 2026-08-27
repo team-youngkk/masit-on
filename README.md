@@ -5,6 +5,7 @@ related_documents:
   - docs/04-product/prd/00-product-overview.md
   - docs/08-planning/mvp-2day-implementation-plan.md
   - docs/08-planning/mvp-local-verification.md
+  - docs/08-planning/third-expansion-operational-completion-record.md
   - docs/08-planning/first-expansion-baseline-review.md
   - docs/02-analysis/first-expansion-workstreams.md
   - docs/06-architecture/README.md
@@ -13,7 +14,17 @@ related_documents:
 # masit-on
 유튜버가 방문한 맛집을 지역, 음식 종류, 유튜버별로 탐색할 수 있는 맛집 정보 서비스
 
-MVP 범위(공개 탐색·상세, 관리자 데이터 등록)에 1차 확장(회원 계정·인증, 찜·최근 본 맛집, 지도 탐색, 유튜버 상세)이 더해진 상태다. 마이그레이션은 `V1`(초기 스키마) · `V2`(1차 확장 통합, [마이그레이션 계획](docs/05-specs/data/migration-plan.md) 2.3절) 두 파일로 구성된다.
+MVP 범위(공개 탐색·상세, 관리자 데이터 등록)에 1·2·3차 확장 기능을 더한 서비스로, 운영 평가를 완료하고 현재 운영 중이다. 마이그레이션은 `V1`부터 `V8`까지 순차 적용하며, 기존 마이그레이션 파일은 수정하지 않고 전진 migration으로 관리한다. 현재 범위와 단계별 상태는 [서비스 개요](docs/00-overview/service-overview.md)와 [범위](docs/00-overview/scope.md)를 따른다.
+
+## 현재 제공 범위
+
+- 공개 맛집 탐색·검색·필터·상세 조회, 유튜버 상세와 방문 영상 조회
+- 회원가입·이메일 인증·로그인·비밀번호 재설정, 찜·최근 본 맛집·개인 컬렉션
+- 지도 기반 탐색, 인기 맛집, 관리자 큐레이션
+- 사용자 제보·신고와 서비스 내 알림
+- 자연어 맛집 검색, 관리자 AI 영상 검수·등록, 맛집 코스 추천
+
+3차 확장 기능까지 운영 환경에 반영되어 있으며, 운영 평가를 완료하고 현재 운영 중이다. 현재 상태의 기준은 [3차 확장 운영 완료 기록](docs/08-planning/third-expansion-operational-completion-record.md)이다.
 
 ## 로컬 실행
 
@@ -145,5 +156,7 @@ $env:REDIS_PORT = '16379'
 ```
 
 ## 문서
+
+팀 협업·기획 자료는 [Notion 팀 문서](https://app.notion.com/p/teamsparta/5-3ba2dc3ef51480d3a93fd823aa46b90c?source=copy_link)를 참고한다.
 
 구현 규칙과 설계 문서는 [CLAUDE.md](CLAUDE.md)와 [docs/](docs/)를 따른다. 진입점은 각 디렉터리의 `README.md`다.

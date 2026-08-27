@@ -1,5 +1,5 @@
 ---
-status: CONDITIONAL
+status: Historical snapshot
 decision: PROMOTE-AND-VERIFY
 decision_date: 2026-08-13
 decision_revised_date: 2026-08-13
@@ -11,6 +11,7 @@ evidence_manifest: third-expansion-evidence-manifest.txt
 evidence_fingerprint_scope: "manifest에 고정한 E3-T13 구현·추적표 파일; manifest와 이 결과 문서 자체는 집계에서 제외"
 evidence_captured_at: 2026-08-13T14:42:00+09:00
 evidence_recaptured_at: 2026-08-17T15:56:05+09:00
+superseded_by: third-expansion-operational-completion-record.md
 related_documents:
   - third-expansion-task-breakdown.md
   - third-expansion-test-matrix.md
@@ -25,6 +26,8 @@ related_documents:
   - ../07-adr/quality/perf-001-k6-load-testing.md
   - ../07-adr/quality/perf-002-operational-participant-load-testing.md
 ---
+
+> 이 문서는 2026-08-13 기준의 3차 확장 최종 게이트 스냅샷이다. 당시 `CONDITIONAL`·`NO-GO`·`HOLD` 판정과 미해소 조건은 역사적 실행 결과로 보존하며, 2026-08-25 현재 운영 상태는 [3차 확장 운영 완료 기록](third-expansion-operational-completion-record.md)을 기준으로 한다.
 
 # 맛잇온 3차 확장 최종 게이트 판정
 
@@ -116,9 +119,9 @@ related_documents:
 5. 단일 EC2 Worker의 CPU·메모리·DB·backlog·처리시간·재기동과 Gemini/Mobility quota·비용 hard stop 증거를 비밀정보 없이 기록한다.
 6. 위 결과의 실행 커밋·명령·환경·artifact 식별자를 제품·API·데이터·ADR 추적표와 연결한다. #190 운영 직접 관찰은 실행 커밋·SSM 명령·summary SHA-256과 함께 [결과 문서](issue-190-operational-performance-result.md)에 연결했지만, 표준 PERF-001 측정 전용 환경 결과가 아니므로 성능 통과로 기록하지 않는다.
 
-## 5. 활성화 판정
+## 5. 당시 활성화 판정 (2026-08-13)
 
-현재 판정은 다음과 같다. 판정 축이 셋이므로 기능별로 나눠 기록한다.
+당시 기준 판정은 다음과 같다. 이 절의 `HOLD`는 현재 상태가 아니라 2026-08-13 실행 시점의 역사 기록이다. 현재 운영 판정은 [3차 확장 운영 완료 기록](third-expansion-operational-completion-record.md)을 따른다.
 
 ```text
 코드 승격·운영 배포: GO (세 기능 공통, v0.2.0 태그는 단계 완료 선언이 아님)
