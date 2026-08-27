@@ -178,12 +178,12 @@ WireMock 포트를 바꿨다면 `KAKAO_BASE_URL`, `YOUTUBE_BASE_URL`도 같이 �
 - Workstream 번호가 없는 기반 Task는 `feature/t-{번호}-{작업명}`, 그 밖의 작업은 커밋 유형과 같은 접두사(`docs/`, `chore/`, `build/`, `ci/`, `test/`, `refactor/`)를 쓴다.
 - `feature/**`를 포함한 작업 브랜치→`develop`은 Squash Merge, `develop`→`main`은 Create a merge commit. 정상 릴리즈 뒤에는 커밋 수 차이만 해소하려는 `main`→`develop` 역동기화를 하지 않고, `main` 전용 Hotfix가 있을 때만 PR로 역동기화한다.
 - Conventional Commits (`feat`, `fix`, `test`, `refactor`, `docs`, `build`, `ci`, `chore`). 예: `feat: 맛집 목록 조회 구현`
-- 모든 변경은 PR로 병합하고 작성자를 제외한 **최소 2명 승인**이 필요하다. AI가 작성한 코드도 동일하다.
+- 모든 변경은 PR로 병합하고 작성자를 제외한 **최소 1명 승인**이 필요하다. AI가 작성한 코드도 동일하다.
 - 위 규칙은 저장소 ruleset `Protect main`·`Protect develop`으로 강제한다. **예외 대상(`bypass_actors`)이 비어 있어 admin 권한 보유자도 우회할 수 없다.** 강제 항목은 다음과 같다.
 
 | 항목 | 값 |
 |---|---|
-| PR 필수, 승인 | 2명 |
+| PR 필수, 승인 | 1명 |
 | CI 통과 필수 | `백엔드 빌드·테스트`, `프론트엔드 빌드·타입 검사` |
 | CI 실행 기준 | 최신 대상 브랜치와 합친 상태. 뒤처진 브랜치는 갱신 후 재검사해야 병합된다 |
 | 새 커밋 push 시 | 기존 승인 무효화 |
