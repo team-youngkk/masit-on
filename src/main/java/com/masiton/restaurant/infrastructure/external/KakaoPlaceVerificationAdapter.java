@@ -38,6 +38,16 @@ class KakaoPlaceVerificationAdapter implements PlaceVerificationPort {
         this(new KakaoLocalKeywordClient(httpClient, objectMapper, baseUrl, restApiKey));
     }
 
+    KakaoPlaceVerificationAdapter(
+            HttpClient httpClient,
+            ObjectMapper objectMapper,
+            String baseUrl,
+            String restApiKey,
+            String allowedOrigins
+    ) {
+        this(new KakaoLocalKeywordClient(httpClient, objectMapper, baseUrl, restApiKey, allowedOrigins));
+    }
+
     @Override
     public Optional<VerifiedPlace> verify(String restaurantName, URI kakaoPlaceUrl, String fallbackPhoneNumber) {
         try {

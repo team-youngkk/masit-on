@@ -35,6 +35,14 @@ public class RestaurantSearchController {
         this.searchRestaurantsUseCase = searchRestaurantsUseCase;
     }
 
+    @GetMapping("/filter-options")
+    public RestaurantFilterOptionsResponse getFilterOptions(jakarta.servlet.http.HttpServletRequest request) {
+        if (!request.getParameterMap().isEmpty()) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+        return RestaurantFilterOptionsResponse.from(searchRestaurantsUseCase.getFilterOptions());
+    }
+
     @GetMapping
     public RestaurantSearchResponse search(@RequestParam MultiValueMap<String, String> queryParams) {
         validateParamNames(queryParams);

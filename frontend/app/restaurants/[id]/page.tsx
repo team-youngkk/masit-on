@@ -1,5 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { cache } from 'react'
+import type { Metadata } from 'next'
 
 import { Card } from '@/components/ui/Card'
 import { PageShell, SectionHeader } from '@/components/ui/PageShell'
@@ -15,11 +17,42 @@ import {
   isSafeHttpUrl,
   type RestaurantDetail,
 } from '@/lib/api'
+import { toPublicSiteUrl } from '@/lib/site-url'
 
 import styles from './page.module.css'
 
 type RestaurantDetailPageProps = {
   params: Promise<{ id: string }>
+}
+
+const getRestaurant = cache(getRestaurantDetail)
+
+export async function generateMetadata({
+  params,
+}: RestaurantDetailPageProps): Promise<Metadata> {
+  const { id } = await params
+  const canonical = toPublicSiteUrl(`/restaurants/${encodeURIComponent(id)}`)
+  if (!canonical) {
+    return { robots: { index: false, follow: false } }
+  }
+
+  try {
+    const restaurant = await getRestaurant(id)
+    const name = restaurant.name.trim()
+    const category = restaurant.category.trim()
+    if (!name || !category) {
+      return { robots: { index: false, follow: false } }
+    }
+
+    return {
+      title: `${name} | ${category} 맛집 | 맛잇온`,
+      description: `유튜버가 방문한 ${category} 맛집 ${name}의 정보를 확인하세요.`,
+      robots: { index: true, follow: true },
+      alternates: { canonical },
+    }
+  } catch {
+    return { robots: { index: false, follow: false } }
+  }
 }
 
 /*
@@ -33,7 +66,7 @@ export default async function RestaurantDetailPage({
 
   let restaurant: RestaurantDetail
   try {
-    restaurant = await getRestaurantDetail(id)
+    restaurant = await getRestaurant(id)
   } catch (error) {
     /*
      * 식별자 형식 오류도 찾을 수 없음으로 다뤄 404를 응답한다. 일시적 조회 실패로

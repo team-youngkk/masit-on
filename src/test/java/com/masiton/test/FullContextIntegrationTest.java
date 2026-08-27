@@ -1,5 +1,8 @@
 package com.masiton.test;
 
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.util.Base64;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -17,11 +20,21 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 public abstract class FullContextIntegrationTest {
 
     private static final int REDIS_PORT = 6379;
+    private static final String JWT_KEY_ID = "test-generated";
+    private static final KeyPair JWT_KEY_PAIR = generateJwtKeyPair();
 
     public static final PostgreSQLContainer POSTGRES;
     public static final GenericContainer<?> REDIS;
 
     static {
+        // application.yml의 JWT_* placeholder 경로로만 공통 테스트 키를 주입한다.
+        // 하위 테스트의 @DynamicPropertySource는 이 시스템 속성보다 우선한다.
+        System.setProperty("JWT_KEY_ID", JWT_KEY_ID);
+        System.setProperty(
+                "JWT_PRIVATE_KEY_PEM", pem("PRIVATE KEY", JWT_KEY_PAIR.getPrivate().getEncoded()));
+        System.setProperty(
+                "JWT_PUBLIC_KEY_PEM", pem("PUBLIC KEY", JWT_KEY_PAIR.getPublic().getEncoded()));
+
         POSTGRES = new PostgreSQLContainer("postgres:17.10-alpine")
                 .withDatabaseName("masiton")
                 .withUsername("masiton")
@@ -41,6 +54,23 @@ public abstract class FullContextIntegrationTest {
         registry.add("spring.datasource.password", POSTGRES::getPassword);
         registry.add("spring.data.redis.host", REDIS::getHost);
         registry.add("spring.data.redis.port", () -> REDIS.getMappedPort(REDIS_PORT));
+    }
+
+    private static KeyPair generateJwtKeyPair() {
+        try {
+            KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
+            generator.initialize(2048);
+            return generator.generateKeyPair();
+        } catch (Exception exception) {
+            throw new ExceptionInInitializerError(exception);
+        }
+    }
+
+    private static String pem(String type, byte[] encoded) {
+        return "-----BEGIN %s-----\n%s\n-----END %s-----".formatted(
+                type,
+                Base64.getMimeEncoder(64, "\n".getBytes()).encodeToString(encoded),
+                type);
     }
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)

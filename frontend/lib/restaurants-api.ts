@@ -16,6 +16,8 @@ const FALLBACK_ERROR_MESSAGE =
   '맛집 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
 const FALLBACK_CREATORS_ERROR_MESSAGE =
   '유튜버 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
+const FALLBACK_FILTER_OPTIONS_ERROR_MESSAGE =
+  '지역·음식 종류 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
 
 const DEFAULT_PAGE = '1'
 const DEFAULT_SIZE = '21'
@@ -104,6 +106,10 @@ export type FetchRestaurantsResult =
   | { ok: true; data: RestaurantListResponse }
   | { ok: false; message: string; traceId?: string }
 
+type FetchRestaurantsOptions = RequestInit & {
+  next?: { revalidate?: number; tags?: string[] }
+}
+
 export type Creator = {
   id: string
   channelName: string
@@ -117,6 +123,15 @@ export type CreatorListResponse = {
 
 export type FetchCreatorsResult =
   | { ok: true; data: CreatorListResponse }
+  | { ok: false; message: string; traceId?: string }
+
+export type RestaurantFilterOptions = {
+  districts: string[]
+  categories: string[]
+}
+
+export type FetchRestaurantFilterOptionsResult =
+  | { ok: true; data: RestaurantFilterOptions }
   | { ok: false; message: string; traceId?: string }
 
 /* Next.js 검색 파라미터는 반복 쿼리를 배열로 넘길 수 있다. 첫 값만 사용한다. */
@@ -163,13 +178,14 @@ export function buildApiSearchParams(
 
 export async function fetchRestaurants(
   params: URLSearchParams,
+  options: FetchRestaurantsOptions = { cache: 'no-store' },
 ): Promise<FetchRestaurantsResult> {
   let response: Response
 
   try {
     response = await fetch(
       `${API_BASE_URL}/api/restaurants?${params.toString()}`,
-      { cache: 'no-store' },
+      options,
     )
   } catch {
     return { ok: false, message: FALLBACK_ERROR_MESSAGE }
@@ -218,6 +234,40 @@ export async function fetchCreators(): Promise<FetchCreatorsResult> {
     return { ok: true, data }
   } catch {
     return { ok: false, message: FALLBACK_CREATORS_ERROR_MESSAGE }
+  }
+}
+
+/* API-DISCOVERY-002. 공개·활성 맛집이 실제 사용하는 구조화 필터 선택지를 호출한다. */
+export async function fetchRestaurantFilterOptions(): Promise<FetchRestaurantFilterOptionsResult> {
+  let response: Response
+
+  try {
+    response = await fetch(`${API_BASE_URL}/api/restaurants/filter-options`, {
+      cache: 'no-store',
+    })
+  } catch {
+    return { ok: false, message: FALLBACK_FILTER_OPTIONS_ERROR_MESSAGE }
+  }
+
+  if (!response.ok) {
+    const body = await readErrorBody(response)
+    return {
+      ok: false,
+      message: body?.message ?? FALLBACK_FILTER_OPTIONS_ERROR_MESSAGE,
+      traceId: body?.traceId,
+    }
+  }
+
+  try {
+    const data = (await response.json()) as RestaurantFilterOptions
+    if (!Array.isArray(data.districts) || !Array.isArray(data.categories)
+      || !data.districts.every((value) => typeof value === 'string')
+      || !data.categories.every((value) => typeof value === 'string')) {
+      return { ok: false, message: FALLBACK_FILTER_OPTIONS_ERROR_MESSAGE }
+    }
+    return { ok: true, data }
+  } catch {
+    return { ok: false, message: FALLBACK_FILTER_OPTIONS_ERROR_MESSAGE }
   }
 }
 

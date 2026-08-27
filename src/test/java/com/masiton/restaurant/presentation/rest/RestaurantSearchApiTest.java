@@ -76,6 +76,30 @@ class RestaurantSearchApiTest extends com.masiton.test.FullContextIntegrationTes
     }
 
     @Test
+    @DisplayName("필터 선택지는 공개·활성 맛집이 실제 사용하는 지역과 음식 종류만 반환한다")
+    void filterOptions_공개활성맛집사용값만_지역과음식종류를반환한다() throws Exception {
+        // given
+        insertRestaurant("마포 한식 맛집", MAPO_REGION_ID, KOREAN_CATEGORY_ID);
+        insertRestaurant("강남 일식 맛집", GANGNAM_REGION_ID, JAPANESE_CATEGORY_ID);
+
+        // when & then
+        mockMvc.perform(get("/api/restaurants/filter-options"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.districts[0]").value("마포구"))
+                .andExpect(jsonPath("$.districts[1]").value("강남구"))
+                .andExpect(jsonPath("$.categories[0]").value("한식"))
+                .andExpect(jsonPath("$.categories[1]").value("일식"));
+    }
+
+    @Test
+    @DisplayName("필터 선택지 API에 쿼리 파라미터를 보내면 400 INVALID_REQUEST를 반환한다")
+    void filterOptions_쿼리파라미터전달_400INVALID_REQUEST를반환한다() throws Exception {
+        mockMvc.perform(get("/api/restaurants/filter-options").param("page", "1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+    }
+
+    @Test
     @DisplayName("조건을 만족하는 맛집이 없으면 200과 빈 목록을 반환한다")
     void search_결과없음_200과빈목록을반환한다() throws Exception {
         mockMvc.perform(get("/api/restaurants").param("query", "존재하지않는이름"))

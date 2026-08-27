@@ -218,6 +218,11 @@ case "$component" in
     # 비밀이 아닌 값만 환경 변수로 넘긴다. 접속 주소와 사용자명은 비밀이 아니며
     # 기록 문서에도 그대로 적혀 있다.
     export SPRING_PROFILES_ACTIVE=prod
+    # 운영 endpoint는 application-prod.yml에서 기본값을 허용하지 않는다.
+    # 제공자 origin과 allowed-origins 계약이 어긋나지 않도록 고정된 외부 origin을
+    # 명시적으로 컨테이너에 전달한다. 이 값은 비밀이 아니다.
+    export KAKAO_BASE_URL=https://dapi.kakao.com
+    export YOUTUBE_BASE_URL=https://www.googleapis.com
     DB_URL=$(param /masiton/db/url); export DB_URL
     DB_USERNAME=$(param /masiton/db/username); export DB_USERNAME
     KAKAO_MOBILITY_ENABLED=$(optional_bool_param /masiton/integration/kakao-mobility/enabled); export KAKAO_MOBILITY_ENABLED
@@ -272,6 +277,7 @@ case "$component" in
       -e SPRING_PROFILES_ACTIVE \
       -e SPRING_FLYWAY_TARGET \
       -e DB_URL -e DB_USERNAME \
+      -e KAKAO_BASE_URL -e YOUTUBE_BASE_URL \
       -e KAKAO_MOBILITY_ENABLED -e KAKAO_MOBILITY_FREE_TIER_VERIFIED \
       -e REDIS_HOST -e REDIS_PORT \
       -e MAIL_HOST -e MAIL_PORT -e MAIL_HEALTH_ENABLED -e DEPENDENCY_HEALTH_COMPONENTS \

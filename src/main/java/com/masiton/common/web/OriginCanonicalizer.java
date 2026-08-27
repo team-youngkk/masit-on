@@ -20,7 +20,7 @@ public final class OriginCanonicalizer {
         String rawAuthority = origin.getRawAuthority();
         int port = origin.getPort();
         boolean hasOnlyOriginComponents = origin.getRawUserInfo() == null
-                && (origin.getRawPath() == null || origin.getRawPath().isEmpty())
+                && (origin.getRawPath() == null || origin.getRawPath().isEmpty() || "/".equals(origin.getRawPath()))
                 && origin.getRawQuery() == null
                 && origin.getRawFragment() == null;
         boolean validPort = port >= -1 && port <= 65535

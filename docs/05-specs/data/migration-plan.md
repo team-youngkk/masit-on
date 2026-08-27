@@ -183,7 +183,7 @@ V3 구간 아웃박스는 Action Token만 FK로 참조한다. 수신자는 `memb
 
 ## 11. V4 3차 확장 AI 영상 추출 스키마
 
-`V4__create_third_expansion_ai_schema.sql`은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)과 [ADR-EXT-003](../../07-adr/integration/ext-003-ai-extraction-async-reliability.md)의 물리 구현이다. 기존 `V1`~`V3`를 수정하지 않고, 빈 DB 전체 적용과 `V3→V4` 전진 적용을 모두 검증한다. 운영·개발·공유 데이터베이스에 V4가 아직 적용되지 않았으므로 Preview 차단 제약을 최종 통합 V4에 포함한다.
+`V4__create_third_expansion_ai_schema.sql`은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)과 [ADR-EXT-003](../../07-adr/integration/ext-003-ai-extraction-async-reliability.md)의 물리 구현이다. 기존 `V1`~`V3`를 수정하지 않고, 빈 DB 전체 적용과 `V3→V4` 전진 적용을 모두 검증한다. 운영·개발·공유 데이터베이스에 V4가 아직 적용되지 않았다는 문장은 2026-08-14 통합 이력 시점의 상태이며, 현재 운영 상태와 운영 평가 완료 판정은 [3차 확장 운영 완료 기록](../../08-planning/third-expansion-operational-completion-record.md)을 따른다.
 
 | 순서 | 변경 | 검증 경계 |
 |---:|---|---|
@@ -193,7 +193,7 @@ V3 구간 아웃박스는 Action Token만 FK로 참조한다. 수신자는 `memb
 | 4 | `ai_extraction_attempt`, `youtube_channel_watch` | 재시도·오류·quota 메타데이터, 채널별 감시 고유성·갱신 실패 상태 |
 | 5 | Worker claim·lease recovery·관리자 검수·태그 조회 인덱스 | `FOR UPDATE SKIP LOCKED` 경로, 만료 lease 복구, 공개 태그 조회 |
 
-이 마이그레이션은 원본 영상·전체 자막·Provider 응답 전문을 저장하지 않으며 외부 API를 호출하지 않는다. 실제 3차 완료 판정은 [3차 확장 테스트 추적표](../../08-planning/third-expansion-test-matrix.md), 평가 결과, Worker·quota·브라우저 증거까지 연결해 수행한다.
+이 마이그레이션은 원본 영상·전체 자막·Provider 응답 전문을 저장하지 않으며 외부 API를 호출하지 않는다. 3차 완료 판정은 [3차 확장 운영 완료 기록](../../08-planning/third-expansion-operational-completion-record.md)에 연결하고, 당시 테스트 추적표·평가 결과·Worker·quota·브라우저 증거는 기준선 및 역사 기록으로 보존한다.
 
 ### 11.3 V5 채널 감시 오류 시각 보강
 

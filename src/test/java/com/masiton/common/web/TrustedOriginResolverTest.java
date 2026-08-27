@@ -57,4 +57,13 @@ class TrustedOriginResolverTest {
         assertThat(OriginCanonicalizer.matches("https://example.test/path", "https://example.test"))
                 .isFalse();
     }
+
+    @Test
+    @DisplayName("비표준 포트는 포트가 다른 Origin과 일치하지 않는다")
+    void origin_비표준포트_다른포트와불일치() {
+        assertThat(OriginCanonicalizer.matches("https://example.test:8443", "https://example.test"))
+                .isFalse();
+        assertThat(OriginCanonicalizer.matches("https://example.test/", "https://example.test"))
+                .isTrue();
+    }
 }

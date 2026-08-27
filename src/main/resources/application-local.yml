@@ -28,9 +28,11 @@ masiton:
     # query string이 그대로 남아 Key만 노출된다.
     kakao:
       base-url: ${KAKAO_BASE_URL:http://localhost:8081}
+      allowed-origins: http://localhost:8081,http://127.0.0.1:8081,http://wiremock:8080
       rest-api-key: local-wiremock-key
     youtube:
       base-url: ${YOUTUBE_BASE_URL:http://localhost:8081}
+      allowed-origins: http://localhost:8081,http://127.0.0.1:8081,http://wiremock:8080
       api-key: local-wiremock-key
     kakao-mobility:
       enabled: true

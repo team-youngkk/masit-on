@@ -1,7 +1,8 @@
 ---
-status: In Progress
+status: Historical baseline
 plan_date: 2026-08-10
-implementation_gate: HOLD — E3-T13 운영·평가 증거 수집 중
+implementation_gate: Superseded — see third-expansion-operational-completion-record.md
+superseded_by: third-expansion-operational-completion-record.md
 related_documents:
   - third-expansion-baseline-review.md
   - third-expansion-scope-and-terminology.md
@@ -23,6 +24,8 @@ related_documents:
   - ../07-adr/platform/web-004-supported-browser-matrix.md
 ---
 
+> 이 문서는 2026-08-10 기준의 테스트·평가 기준선과 당시 미완료 목록을 보존한다. 현재 3차 확장 운영 상태와 최종 판정은 [3차 확장 운영 완료 기록](third-expansion-operational-completion-record.md)을 기준으로 한다.
+
 # 맛잇온 3차 확장 테스트 추적표
 
 ## 1. 목적과 판정 규칙
@@ -31,7 +34,7 @@ related_documents:
 
 확률적 품질은 [3차 확장 평가 주도 개발 전략](third-expansion-evaluation-strategy.md)의 `EVAL-*`로 판정하고, 결정론적 API·상태·트랜잭션·보안·외부 장애는 이 문서의 자동화 묶음으로 판정한다. 하나의 성공 사례만으로 완료하지 않으며 정상·예외·경계·동시성·부분 실패를 포함한다.
 
-현재 문서는 실행 기준선이다. `implementation_gate: Pending evidence`는 계약이 미승인이라는 뜻이 아니라, 실제 테스트·평가·운영 증거가 아직 연결되지 않았다는 뜻이다.
+이 문서는 2026-08-10 기준의 실행 기준선이다. `implementation_gate: Pending evidence`와 아래 미완료 항목은 당시 기록이며, 현재 3차 확장 최종 판정과 운영 상태는 [3차 확장 운영 완료 기록](third-expansion-operational-completion-record.md)에 따른다.
 
 ## 2. 기능 요구사항 → 테스트 묶음 → Task
 
@@ -115,4 +118,4 @@ related_documents:
 - [ ] 브라우저 인수, AI Worker 운영 측정, Mobility quota 검증, 운영 ACTIVE·공개 맛집 좌표 보강률 측정·조치·재측정과 2차 승계 부하 결과가 기록된다.
 - [ ] 제품·API·데이터·ADR 추적표와 E3 Task 분해가 동일한 ID를 사용한다.
 
-이 문서는 테스트 기준과 추적을 완료하기 위한 계획이다. 현재 실행 결과와 보류 사유는 [E3-T13 최종 게이트 판정](third-expansion-final-gate-result.md)에 기록한다. 체크되지 않은 항목이 남아 있는 동안 3차 확장 최종 완료를 선언하지 않는다.
+이 문서는 테스트 기준과 추적을 완료하기 위한 역사적 계획이다. 당시 실행 결과와 보류 사유는 [E3-T13 최종 게이트 판정](third-expansion-final-gate-result.md)에 보존하고, 현재 최종 판정은 [3차 확장 운영 완료 기록](third-expansion-operational-completion-record.md)을 따른다.

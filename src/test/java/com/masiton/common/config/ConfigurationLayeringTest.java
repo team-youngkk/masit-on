@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -70,6 +71,8 @@ class ConfigurationLayeringTest {
         // given
         List<Path> profileFiles = discoverProfileResourceFiles();
         assertThat(profileFiles).as("검증할 프로파일 설정 파일을 찾지 못했다").isNotEmpty();
+        assertThat(profileFiles.stream().map(path -> path.getFileName().toString()).toList())
+                .contains("application-local.yml", "application-test.yml", "application-prod.yml");
 
         // when & then
         for (Path profileFile : profileFiles) {
@@ -120,6 +123,57 @@ class ConfigurationLayeringTest {
                     .noneMatch(name -> name.startsWith("management."))
                     .noneMatch(name -> name.startsWith("spring.jpa."));
         }
+    }
+
+    @Test
+    @DisplayName("외부 provider endpoint는 local·test·prod 계층에 명시되고 HTTP(S) origin이어야 한다")
+    void 외부연동_endpoint설정_프로파일별로명시되고안전한origin이다() throws Exception {
+        // given
+        List<Path> profileFiles = discoverProfileResourceFiles();
+        assertThat(profileFiles).as("검증할 프로파일 설정 파일을 찾지 못했다").isNotEmpty();
+
+        // when & then
+        for (Path profileFile : profileFiles) {
+            PropertySource<?> profile = load(profileFile);
+            String fileName = profileFile.getFileName().toString();
+            if (!Map.of("application-local.yml", true, "application-test.yml", true, "application-prod.yml", true)
+                    .containsKey(fileName)) {
+                continue;
+            }
+            if (fileName.equals("application-prod.yml")) {
+                assertRequiredEndpoint(profile, profileFile, "masiton.integration.kakao.base-url", "KAKAO_BASE_URL");
+                assertRequiredEndpoint(profile, profileFile, "masiton.integration.youtube.base-url", "YOUTUBE_BASE_URL");
+                continue;
+            }
+            String kakaoEndpoint = assertEndpoint(profile, profileFile, "masiton.integration.kakao.base-url");
+            String youtubeEndpoint = assertEndpoint(profile, profileFile, "masiton.integration.youtube.base-url");
+            if (fileName.equals("application-local.yml") || fileName.equals("application-test.yml")) {
+                assertThat(kakaoEndpoint).as("%s의 Kakao endpoint가 외부 호스트다", fileName)
+                        .matches("http://(localhost|127\\.0\\.0\\.1|wiremock)(?::\\d+)?/?");
+                assertThat(youtubeEndpoint).as("%s의 YouTube endpoint가 외부 호스트다", fileName)
+                        .matches("http://(localhost|127\\.0\\.0\\.1|wiremock)(?::\\d+)?/?");
+            }
+        }
+    }
+
+    private static void assertRequiredEndpoint(PropertySource<?> profile, Path profileFile, String key, String variable) {
+        assertThat(profile.getProperty(key))
+                .as("%s는 %s가 없을 때 실제 provider 주소로 fallback하면 안 된다", key, profileFile.getFileName())
+                .isEqualTo("${" + variable + ":}");
+    }
+
+    private static String assertEndpoint(PropertySource<?> profile, Path profileFile, String key) {
+        Object value = profile.getProperty(key);
+        assertThat(value)
+                .as("%s가 %s에 누락됐다", key, profileFile.getFileName())
+                .isInstanceOf(String.class);
+        String endpoint = ((String) value).trim();
+        assertThat(endpoint).as("%s가 %s에서 비어 있다", key, profileFile.getFileName()).isNotBlank();
+        String resolved = endpoint.replaceAll("\\$\\{[^:}]+:", "").replace("}", "");
+        assertThat(resolved)
+                .as("%s가 %s에서 HTTP(S) endpoint가 아니다", key, profileFile.getFileName())
+                .matches("https?://[^/?#]+(?::\\d+)?/?");
+        return resolved;
     }
 
     @Test

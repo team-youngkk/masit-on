@@ -15,6 +15,9 @@ public interface RestaurantSearchQueryPort {
 
     RestaurantSearchQueryResult search(RestaurantSearchCriteria criteria);
 
+    /** 공개·활성 맛집이 실제로 사용하는 지역·음식 종류를 정렬해 반환한다. */
+    RestaurantFilterOptionNames findAvailableFilterOptions();
+
     /**
      * 한 페이지 분량의 restaurantId에 대해 배치로 방문 유튜버를 조회한다(N+1 금지).
      * 정렬·상위 3명 제한·remainingVisitedByCount 계산은 Application이 수행한다.
