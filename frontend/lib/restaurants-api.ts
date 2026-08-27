@@ -106,6 +106,10 @@ export type FetchRestaurantsResult =
   | { ok: true; data: RestaurantListResponse }
   | { ok: false; message: string; traceId?: string }
 
+type FetchRestaurantsOptions = RequestInit & {
+  next?: { revalidate?: number; tags?: string[] }
+}
+
 export type Creator = {
   id: string
   channelName: string
@@ -174,13 +178,14 @@ export function buildApiSearchParams(
 
 export async function fetchRestaurants(
   params: URLSearchParams,
+  options: FetchRestaurantsOptions = { cache: 'no-store' },
 ): Promise<FetchRestaurantsResult> {
   let response: Response
 
   try {
     response = await fetch(
       `${API_BASE_URL}/api/restaurants?${params.toString()}`,
-      { cache: 'no-store' },
+      options,
     )
   } catch {
     return { ok: false, message: FALLBACK_ERROR_MESSAGE }

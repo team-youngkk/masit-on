@@ -290,9 +290,13 @@ jobs:
       # Secret이 아니라 변수를 쓴다. ADR-MAP-001 6.5가 이 키를 브라우저 노출
       # 식별자로 분류하고 허용 도메인 제한을 보호 수단으로 삼는다. Secret으로 두면
       # 로그 마스킹이 붙어 값이 맞는지 확인할 수단만 사라진다.
+      # SEO 사이트 URL과 GA4 측정 ID도 브라우저에 노출되는 공개값이므로 Secret이 아닌
+      # 저장소 변수로 전달한다. 두 값은 선택 사항이며 비어 있어도 이미지 빌드는 통과한다.
       - name: 프론트엔드 이미지 빌드
         env:
           KAKAO_MAPS_JS_KEY: ${{ vars.NEXT_PUBLIC_KAKAO_MAPS_JS_KEY }}
+          NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+          NEXT_PUBLIC_GA_MEASUREMENT_ID: ${{ vars.NEXT_PUBLIC_GA_MEASUREMENT_ID }}
         run: |
           set -euo pipefail
           if [ -z "${KAKAO_MAPS_JS_KEY}" ]; then
@@ -302,6 +306,8 @@ jobs:
           fi
           docker build \
             --build-arg "NEXT_PUBLIC_KAKAO_MAPS_JS_KEY=${KAKAO_MAPS_JS_KEY}" \
+            --build-arg "NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}" \
+            --build-arg "NEXT_PUBLIC_GA_MEASUREMENT_ID=${NEXT_PUBLIC_GA_MEASUREMENT_ID}" \
             -t "masiton-frontend:${IMAGE_TAG}" -f frontend/Dockerfile frontend
 
       # ADR-RUNTIME-001 13절: 이미지에 평문 비밀값이나 .env가 포함되지 않았는지 검사한다.

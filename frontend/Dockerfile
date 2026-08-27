@@ -24,6 +24,14 @@ COPY . .
 ARG NEXT_PUBLIC_KAKAO_MAPS_JS_KEY
 ENV NEXT_PUBLIC_KAKAO_MAPS_JS_KEY=${NEXT_PUBLIC_KAKAO_MAPS_JS_KEY}
 
+# SEO 사이트 URL과 GA4 측정 ID도 `NEXT_PUBLIC_` 접두사라 `next build` 시점에
+# 클라이언트 번들에 들어간다. 두 값은 선택 사항이므로 비어 있어도 빌드를 실패시키지 않는다.
+# 둘 다 브라우저에 노출되는 공개값이며 비밀값이 아니므로 Secret으로 전달하지 않는다.
+ARG NEXT_PUBLIC_SITE_URL
+ARG NEXT_PUBLIC_GA_MEASUREMENT_ID
+ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
+ENV NEXT_PUBLIC_GA_MEASUREMENT_ID=${NEXT_PUBLIC_GA_MEASUREMENT_ID}
+
 # build arg가 비어 있으면 지도 컴포넌트가 SDK 오류 상태로 빌드된다.
 # CI 워크플로뿐 아니라 Dockerfile 자체에서도 누락을 차단해 직접 docker build 시에도
 # 키 없는 이미지가 만들어지지 않도록 한다.
@@ -38,8 +46,16 @@ RUN npm run build
 FROM node:24.18.0-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd AS runtime
 WORKDIR /app
 
+# robots.txt와 sitemap.xml은 standalone 서버 실행 시에도 사이트 URL을 읽는다.
+# build stage에서만 선언하면 최종 이미지의 런타임 환경에는 값이 남지 않으므로
+# 공개값인 두 ARG를 이 stage에도 선언해 빌드 시 전달된 설정을 기본값으로 보존한다.
+# docker run의 환경 변수로 덮어쓸 수 있고, 값이 없으면 SEO는 fail-closed로 동작한다.
+ARG NEXT_PUBLIC_SITE_URL
+ARG NEXT_PUBLIC_GA_MEASUREMENT_ID
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
+ENV NEXT_PUBLIC_GA_MEASUREMENT_ID=${NEXT_PUBLIC_GA_MEASUREMENT_ID}
 
 # uid·gid를 고정해야 베이스 이미지가 바뀌어도 실행 사용자가 동일하다.
 # 백엔드 이미지와 같은 1001을 사용해 두 컨테이너의 실행 사용자를 일치시킨다.
