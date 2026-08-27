@@ -205,7 +205,7 @@ $env:REDIS_PORT = '16379'
 - 브랜치 이름은 `feature/ws-{번호}-{기능명}`, `feature/t-{번호}-{작업명}`, `fix/{기능명}` 또는 변경 유형과 같은 접두사(`docs/`, `chore/`, `build/`, `ci/`, `test/`, `refactor/`)를 사용한다.
 - `feature/**`를 포함한 작업 브랜치 → `develop`은 Squash Merge, `develop` → `main`은 Create a merge commit을 사용한다. 정상 릴리즈 뒤에는 커밋 수 차이만 해소하려는 `main` → `develop` 역동기화를 하지 않고, `main` 전용 Hotfix가 있을 때만 PR로 역동기화한다.
 - Conventional Commits의 `feat`, `fix`, `test`, `refactor`, `docs`, `build`, `ci`, `chore`를 사용한다.
-- 모든 변경은 PR로 병합하며 작성자를 제외한 최소 2명 승인이 필요하다. AI가 작성한 코드도 동일하다.
+- 모든 변경은 PR로 병합하며 작성자를 제외한 최소 1명 승인이 필요하다. AI가 작성한 코드도 동일하다.
 - 서로 독립적인 변경은 커밋과 PR을 분리한다. 포매팅·정적 분석만 고치는 변경은 로직 변경과 분리한다.
 - PR 본문 첫 줄에 `Closes #{이슈번호}`를 둔다. 기본 브랜치는 `main`이고 GitHub는 기본 브랜치로 병합될 때만 이슈를 자동으로 닫으므로, `develop`으로 병합하면 이슈는 연결만 되고 닫히지 않는다.
 - 새 PR의 기본 대상 브랜치도 `main`이다. 기능·수정 브랜치의 PR을 만들 때 대상이 `develop`인지 확인한다.

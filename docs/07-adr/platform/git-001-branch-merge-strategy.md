@@ -71,7 +71,7 @@ MVP 초기 정책은 반대였다 — 기능·수정 브랜치에서 `develop`�
 
 ## 10. 강제 규칙
 
-GitHub 저장소 ruleset `Protect develop`의 `allowed_merge_methods: [squash]`, `Protect main`의 `allowed_merge_methods: [merge]`가 이 표를 강제한다. 두 ruleset 모두 PR 승인 2명, 미해결 리뷰 스레드 차단, 필수 상태 검사(백엔드 빌드·테스트, 프론트엔드 빌드·타입 검사)를 함께 유지하며 `bypass_actors`가 비어 있어 예외 없이 강제된다.
+GitHub 저장소 ruleset `Protect develop`의 `allowed_merge_methods: [squash]`, `Protect main`의 `allowed_merge_methods: [merge]`가 이 표를 강제한다. 두 ruleset 모두 작성자를 제외한 PR 승인 1명, 미해결 리뷰 스레드 차단, 필수 상태 검사(백엔드 빌드·테스트, 프론트엔드 빌드·타입 검사)를 함께 유지하며 `bypass_actors`가 비어 있어 예외 없이 강제된다.
 
 ## 11. 금지 사항
 
