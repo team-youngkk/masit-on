@@ -19,8 +19,8 @@ fi
 
 REGION="${AWS_REGION:-ap-northeast-2}"
 NAMESPACE="${METRIC_NAMESPACE:-masiton/health}"
-# fleet 집계 지표의 범위를 가르는 이름이다. CodeDeploy alarm은 asg만 본다.
-# 기존 단일 EC2에 이 스크립트를 설치할 때는 다른 값을 넘겨야 두 환경이 섞이지 않는다.
+# 지표의 범위를 가르는 이름이다. legacy ASG는 asg를 사용하고, 직접 EC2는
+# bootstrap 또는 SSM 배포가 production을 명시한다.
 ENVIRONMENT="${METRIC_ENVIRONMENT:-asg}"
 BASE="${HEALTH_BASE:-http://127.0.0.1:8080}"
 instance_id=$(curl -sS -m 3 -H "X-aws-ec2-metadata-token: $(curl -sS -m 3 -X PUT \
@@ -64,7 +64,7 @@ ready=$(probe ready "")
 db=$(probe dependencies db)
 redis=$(probe dependencies redis)
 
-# Redis는 앱 컨테이너와 같은 host network를 사용하므로, health-metrics도 같은
+# Redis는 별도 EC2의 endpoint를 사용하므로, health-metrics도 같은
 # endpoint를 직접 조회한다. 비밀값은 명령행이 아니라 app-secrets-render.sh가
 # tmpfs에 만든 파일에서 읽는다. 공유 모드가 아니면 SSM의 공유 endpoint를 사용하지
 # 않고 기존 단일 EC2 동거 Redis인 127.0.0.1로 고정한다. 공유 모드에서 SSM 조회가
@@ -349,13 +349,9 @@ metric_data=(
   # 위 InstanceId 지표와 섞이지 않는다. Minimum으로 집계하면 한 대라도 0이면
   # 0이 되어 "어느 인스턴스든 Redis가 끊겼다"를 표현한다.
   #
-  # Redis만 올린다. Postgres는 ready 그룹에 있어 이미 ALB가 target을 드레인하지만
-  # Redis는 ready에 없어 어느 경로로도 감지되지 않는다(ADR-DEPLOY-005 5절).
-  #
-  # 차원을 완전히 비우면 이 계정·리전의 어떤 인스턴스가 올린 값이든 같은 지표에
-  # 섞인다. 기존 단일 EC2가 이 스크립트를 받게 되면 그 인스턴스의 동거 Redis를
-  # 종료하는 순간 ASG의 Redis는 멀쩡한데도 배포가 차단된다. 인스턴스가 바뀌어도
-  # 변하지 않는 환경 이름으로 범위를 좁힌다.
+  # InstanceId 지표 외에도 환경 범위의 Redis 지표를 올린다. 단일 EC2에서는
+  # dependency alarm이 앱 인스턴스의 장애를 직접 감지하고, 여러 환경의 값이
+  # 하나의 CloudWatch series에 섞이지 않도록 Environment 차원을 사용한다.
   "MetricName=FleetDependencyRedis,Value=$redis,Unit=None,Dimensions=[{Name=Environment,Value=$ENVIRONMENT}]"
 )
 # Capacity data is intentionally environment-scoped: every ASG instance observes
@@ -369,9 +365,9 @@ if [ -n "$cert_days" ]; then
   metric_data+=("MetricName=InstalledCertificateDaysToExpiry,Value=$cert_days,Unit=Count,Dimensions=[{Name=InstanceId,Value=$instance_id}]")
 fi
 
-# 전송 실패를 삼키지 않는다. FleetDependencyRedis가 올라가지 않으면 CodeDeploy
-# alarm은 결측을 breaching으로 다뤄 배포를 차단한다. 권한 누락이나 네트워크
-# 문제는 systemd 단위 실패와 배포 게이트 차단으로 즉시 드러나야 한다.
+# 전송 실패를 삼키지 않는다. 지표가 끊기면 CloudWatch alarm이 결측을 breaching으로
+# 다뤄 장애를 숨기지 않는다. 권한 누락이나 네트워크 문제는 systemd 단위 실패와
+# alarm으로 즉시 드러나야 한다.
 put_status=0
 aws cloudwatch put-metric-data --region "$REGION" --namespace "$NAMESPACE" \
   --metric-data "${metric_data[@]}" || put_status=$?

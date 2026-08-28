@@ -1,0 +1,28 @@
+#!/bin/bash
+# 직접 서비스할 단일 앱 EC2의 최소 bootstrap.
+#
+# GitHub Actions가 SSM Run Command로 배포한다. 이미지 태그·버전을 여기 넣으면
+# 인스턴스 자체가 교체되므로, bootstrap에는 공통 실행 조건만 둔다.
+# 비밀값은 기록하지 않고 app-secrets-render.sh가 인스턴스 role로 SSM에서 읽는다.
+set -euxo pipefail
+
+REGION=${aws_region}
+
+dnf install -y docker
+systemctl enable --now docker
+
+# Amazon Linux 이미지에 기본 포함된 SSM Agent를 직접 기동한다. 이미 설치되지 않은
+# AMI를 사용할 경우에는 AMI 제작 단계에서 amazon-ssm-agent를 포함해야 한다.
+systemctl enable --now amazon-ssm-agent
+
+# 단일 EC2가 외부 요청의 종단이다. Redis는 별도 EC2의 private endpoint를 사용하고,
+# REQUIRE_SHARED_REDIS가 endpoint 누락을 fail-closed로 막는다.
+install -d -m 0750 /etc/masiton
+cat > /etc/masiton/deployment.env <<'ENV'
+REQUIRE_SHARED_REDIS=true
+# 직접 경로에서는 Nginx 자신이 넣은 X-Forwarded-For만 신뢰한다. 외부 요청이
+# 보낸 X-Forwarded-For를 신뢰하면 로그인 rate-limit 출처를 위조할 수 있다.
+NGINX_TRUSTED_PROXY_CIDRS=127.0.0.1
+METRIC_ENVIRONMENT=production
+ENV
+chmod 0640 /etc/masiton/deployment.env

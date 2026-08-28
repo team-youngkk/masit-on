@@ -1,54 +1,59 @@
----
-related_documents:
-  - ../../docs/07-adr/platform/deploy-005-asg-blue-green-rollout.md
-  - ../../docs/08-planning/deployment-hardening-impact-review.md
-  - ../../docs/07-adr/quality/perf-003-isolated-performance-terraform.md
----
+# 운영 단일 EC2 인프라
 
-# 운영 ASG·Blue-Green Terraform
+`terraform/`은 기존 VPC와 public subnet을 입력으로 받아 직접 서비스할 앱 EC2 한 대, EIP, 앱 security group, Route53 A record, CloudWatch health alarm을 준비한다. 현재는 첫 plan에서 기존 ALB·ASG·CodeDeploy 경로를 파괴하지 않도록 legacy 리소스도 함께 선언한다. 직접 경로의 state import·smoke·cutover를 확인한 뒤, 별도 plan에서 legacy 리소스를 정리한다.
 
-`terraform/`은 기존 VPC·subnet·AMI·RDS·Redis를 입력으로 받아 운영 ALB, 원본 ASG, CodeDeploy Blue-Green deployment group을 선언한다. 기존 단일 EC2·RDS·Redis를 자동으로 import하거나 삭제하지 않는다.
+PostgreSQL은 RDS에서 별도 EC2로 전환 중이며, 이 레이어는 PostgreSQL EC2를 생성하지 않는다. 앱 SG의 `database_security_group_id`에 PostgreSQL EC2 SG를 넣고, `/masiton/db/url`의 JDBC URL을 PostgreSQL EC2 endpoint로 바꾸는 것이 데이터 전환 작업이다. 전환 전까지는 `rds_security_group_id`와 기존 RDS ingress rule도 유지한다.
 
-CodeDeploy가 원본 ASG를 기준으로 replacement 환경을 만들기 때문에 Terraform에는 원본 ASG와 하나의 target group을 둔다. EC2/On-Premises 배포에서는 replacement 인스턴스를 같은 target group에 등록하고 original 인스턴스를 해제한다. listener나 별도 green target group은 사용하지 않는다. `codedeploy_termination_enabled=false`인 최초 seeding에서는 original을 유지하고, replacement ASG 전환을 확인한 뒤에만 별도 apply로 자동 종료를 활성화한다.
+전용 Redis는 `terraform-redis/`의 private EC2를 사용한다. 앱은 `/masiton/redis/host`·`/masiton/redis/port`를 통해 Redis endpoint를 읽고 `REQUIRE_SHARED_REDIS=true`로 endpoint 누락을 fail-closed 처리한다. Redis 비밀번호는 현재 재기동 때마다 SSM Parameter Store에서 렌더링하므로, 안전한 대체 비밀 주입 경로가 마련되기 전에는 Redis SSM interface endpoint를 삭제하지 않는다.
 
-이 문서와 Terraform 레이어는 Accepted [ADR-DEPLOY-005](../../docs/07-adr/platform/deploy-005-asg-blue-green-rollout.md)의 배포 고도화 구현이다. 전용 Redis 배치는 2026-08-18 owner 재합의로 개정된 Accepted [ADR-DATA-005](../../docs/07-adr/data/data-005-redis-refresh-token.md) 6절을 따른다. 실제 운영 apply·데이터 이전·CodeDeploy 전환은 별도 runbook과 승인·리허설을 통과한 뒤 수행한다.
+## 배포 경계
 
-## Redis 장애 복구 진입점
+- GitHub Actions는 `environment: production` 승인 뒤 SSM Run Command로 저장소 변수 `PRODUCTION_INSTANCE_ID`에 직접 배포한다. 수동 입력을 사용하더라도 이 변수와 다른 instance ID는 거부한다.
+- 배포 명령은 커밋 SHA와 함께 스크립트·Nginx·systemd 산출물을 전달하고 `app-deploy.sh`의 health check와 rollback 결과를 그대로 반환한다.
+- 앱 EC2의 IAM role은 런타임 SSM/ECR/ACM/CloudWatch 권한을 갖고, GitHub Actions role은 대상 EC2에 대한 SSM 명령과 명령 결과 조회만 갖는다.
+- Nginx가 TLS를 종단하고 외부의 80/443 요청을 직접 받는다. `/internal/**`은 계속 외부 `404`이며, legacy ALB target health용 `/_masiton/alb-health`는 ALB 정리 전까지 default server에만 보존한다.
+- 앱 EC2와 Redis를 동거시키지 않는다. 앱은 `t4g.small`, Redis는 전용 인스턴스에서 실행한다.
 
-전용 Redis 장애로 CodeDeploy 게이트가 복구 배포까지 막히면 [Redis 장애 복구 runbook](../../docs/08-planning/redis-recovery-runbook.md)을 유일한 break-glass 진입점으로 사용한다. 정상 감시는 fail-closed로 유지하며, 운영 담당자 2인의 승인·30분 유효기간·복구 목적의 단 한 번 배포·즉시 게이트 복원 계약을 지킨다. `treat_missing_data = "breaching"`, `ignore_poll_alarm_failure = false`와 회원 인증의 fail-closed 경계는 완화하지 않는다. `deployment_alarms_enabled=false`는 Redis 복구에 사용할 수 없고, 최초 seeding 명령에서만 `initial_alarm_seeding=true`·`deployment_alarms_enabled=false`·`deployment_auto_rollback_enabled=false`·`redis_recovery_mode=false`의 조합을 허용한다. 그 외 모드에서는 자동 rollback을 켠다.
+## 이행 순서
 
-## 적용 전 필수 확인
+1. PostgreSQL EC2의 private IP/SG와 백업·복구 절차를 확정하고 `/masiton/db/url`을 새 endpoint로 준비한다.
+2. 기존 앱 EC2의 AMI, subnet, SG, IAM profile, root volume을 확인하고 `aws_instance.app`에 state import할 대상을 확정한다. 이 저장소는 import나 종료를 자동 실행하지 않는다.
+3. 새 direct app SG의 PostgreSQL·Redis ingress가 각 대상 SG에 허용되는지 확인한다. Redis 레이어의 `app_security_group_ids`와 `ssm_endpoint_client_security_group_ids`에는 병행 기간 동안 legacy app SG와 direct app SG를 모두 넣는다.
+4. 기존 앱 EC2를 `aws_instance.app`으로 import한 뒤 EIP를 연결하고, 앱·Nginx·health metrics를 SSM 직접 배포로 검증한다.
+5. `direct_traffic_enabled=true`를 별도 plan으로 적용해 Route53 A record가 EIP를 가리키는지 확인하고 외부 HTTPS/API/smoke를 검증한다.
+6. PostgreSQL·앱·Redis가 안정화된 뒤에만 ALB·ASG·CodeDeploy·RDS의 실제 AWS 리소스를 삭제하는 별도 승인 plan을 만든다. 이 저장소에서는 `terraform apply`를 실행하지 않는다.
 
-- CodeDeploy Agent가 AMI 또는 launch template `user_data`에서 설치·기동된다.
-- 인스턴스 IAM role이 ECR, Parameter Store, KMS, SSM Agent에 필요한 최소 권한을 가진다.
-- GitHub Actions OIDC role이 CodeDeploy revision을 올리고 실행별 deployment ID pointer를 기록·조회할 S3 prefix 권한과 지정 CodeDeploy application/deployment group의 `CreateDeployment`·상태 조회·`StopDeployment` 권한을 가진다. 배포 취소 cleanup은 이 pointer를 직접 읽어 수행한다.
-- RDS 보안 그룹의 ingress를 이 모듈이 관리할지 `manage_rds_ingress_rule`로 명시한다. **새 ASG가 기존 RDS에 접근하려면 이 값이 `true`여야 한다.** 끄면 SG ingress에서 drop되어 backend가 Flyway 연결 timeout으로 기동에 실패한다. Redis ingress는 전용 Redis를 소유하는 `../terraform-redis` 레이어가 관리하므로 `manage_redis_ingress_rule`은 `false`로 둔다.
-- ACM을 연결한 ALB는 Nginx 포트 `443`으로 재암호화해 전달하고 Spring Boot `8080`에 직접 연결하지 않는다. 현재 승인된 운영 예시는 public app subnet(`app_subnet_is_private=false`)이며, private 모드를 선택하면 `0.0.0.0/0 -> NAT gateway` 경로가 필수다. CodeDeploy·SSM·ECR·S3 VPC endpoint는 별도 보조 경로로 관리하고, endpoint-only private 토폴로지는 현재 postcondition에서 지원하지 않는다.
-- `/_masiton/alb-health`는 backend readiness status만 반영하는 비민감 ALB health 응답이며 `/internal/**` 경계를 외부에 노출하지 않는다.
-- `user_data`·AMI·Parameter Store에 실제 비밀값을 기록하지 않는다. `REQUIRE_SHARED_REDIS=true`, 공유 Redis endpoint, ALB subnet CIDR를 `/etc/masiton/deployment.env`에 설정해야 한다.
-- revision bucket은 이 모듈이 versioning·SSE·Public Access Block·TLS-only policy로 관리한다. GitHub Actions role은 OIDC trust와 `id-token: write`를 별도로 유지하고, 이 모듈에 role 이름을 넘기면 revision·deployment ID pointer prefix의 S3 Put/Get과 지정 CodeDeploy 앱/그룹의 생성·상태 조회·중단 권한을 추가한다.
-- Replacement ASG는 `COPY_AUTO_SCALING_GROUP`으로 CodeDeploy가 생성하므로 Terraform state가 소유하지 않는다. 최초 apply·최초 배포에서는 `codedeploy_termination_enabled=false`를 유지해 `KEEP_ALIVE`로 seeding한다. 배포가 성공한 뒤 CodeDeploy deployment group의 `autoscaling_groups`가 Terraform 소유 `${name_prefix}-blue-asg`가 아닌 replacement ASG를 가리키고, replacement의 target health·known-good revision을 확인하면 [정리 runbook](../../docs/08-planning/blue-green-cleanup-runbook.md)의 명령으로 Terraform seed ASG를 desired capacity 0으로 축소한다. 이 ASG는 `ignore_changes = [desired_capacity]` 대상이므로 tfvars만 바꾸지 말고 AWS CLI로 실행 중인 값을 먼저 낮춘다. seed ASG의 healthy target이 남아 있지 않은 것을 확인한 뒤에만 `codedeploy_termination_enabled=true`로 바꿔 별도 plan/apply한다. `initial_alarm_seeding=true`와 `codedeploy_termination_enabled=true`를 함께 지정하면 Terraform precondition이 plan 단계에서 거부한다. 이후 성공한 배포는 기본 15분 대기 후 CodeDeploy가 original 인스턴스와 ASG를 자동 정리한다. 실패·중단 배포와 `KEEP_ALIVE` 시기에 누적된 환경만 runbook의 수동 대상이다. Terraform plan에서 replacement ASG를 관리 대상으로 추가하지 않는다.
-- 최초 apply에서는 Route53 alias가 기본으로 생성되지 않는다. blue에서 known-good revision을 기동하고 ALB health·외부 smoke를 확인한 뒤 `initial_blue_verified=true`를 별도 plan으로 승인해 DNS를 연결한다.
-- 자동 rollback은 CodeDeploy deployment failure/stop-on-alarm 이벤트에 대해 켜져 있다. ALB health가 backend readiness를 반영하고, target 5xx·latency CloudWatch alarm을 deployment group에 연결한다. `blue_unhealthy`는 CodeDeploy 전환 중 일시적인 target 등록·draining을 오인할 수 있어 관측 전용으로 유지한다.
+기존 CodeDeploy revision bucket은 상태와 보존 데이터를 확인할 때까지 `revision-bucket.tf`에 이행 자원으로 남긴다. 새 배포에서는 사용하지 않으며, bucket 삭제는 별도 데이터 보존 확인 후 수행한다.
 
-최초 전환은 다음 순서로 진행한다. `codedeploy_termination_enabled=false`로 apply하고, 앱 없는 seed ASG라서 alarm 게이트를 꺼야 한다면 다음 명령으로만 최초 known-good revision을 한 번 배포한다: `terraform plan -var="initial_alarm_seeding=true" -var="deployment_alarms_enabled=false" -var="deployment_auto_rollback_enabled=false"`. `initial_alarm_seeding=true`와 `codedeploy_termination_enabled=true`를 함께 지정하면 plan 단계에서 거부되므로, seeding이 끝날 때까지 termination은 반드시 false로 둔다. 배포 직후 `initial_alarm_seeding=false`·`deployment_alarms_enabled=true`·`deployment_auto_rollback_enabled=true`로 정상 게이트와 자동 rollback을 복원한다. 그 뒤 `aws deploy get-deployment-group`으로 deployment group의 원본 ASG가 replacement로 갱신됐는지 확인한다. Terraform seed ASG(`${name_prefix}-blue-asg`)가 계속 원본으로 남아 있으면 `true`로 바꾸지 않는다. replacement ASG와 target health를 확인하고 [정리 runbook](../../docs/08-planning/blue-green-cleanup-runbook.md)의 AWS CLI로 seed ASG를 desired capacity 0으로 축소한 뒤, seed에 healthy target이 남아 있지 않은 것을 재확인한다. 그 후에만 `codedeploy_termination_enabled=true`로 별도 plan/apply한다. 이 순서를 건너뛰면 `TERMINATE`가 Terraform state 소유 seed ASG를 삭제할 수 있다.
+## 첫 plan 파괴 방지 게이트
 
-## 검증
+준비 단계의 첫 plan은 `direct_traffic_enabled=false`로 만든다. `terraform show -json`으로
+기존 ALB·ASG·launch template·CodeDeploy·Route53 record의 action에 `delete` 또는
+`replace`가 없는지 확인한다. 아래 검사는 준비 plan에서 legacy 주소가 새로 삭제되거나
+교체되는 경우 실패한다.
 
 ```powershell
-terraform init -backend=false
-terraform fmt -check -recursive
-terraform validate
+terraform show -json preparation.tfplan | jq -e '[
+  .resource_changes[]
+  | select(.address | test("^(aws_lb|aws_lb_listener|aws_lb_target_group|aws_autoscaling_group|aws_launch_template|aws_codedeploy|aws_route53_record\\.app)"))
+  | .change.actions
+] | all(. == ["no-op"] or . == ["update"])'
 ```
 
-실제 적용은 원격 state와 locking을 먼저 준비한 뒤 수행한다.
+이 게이트를 통과하고 직접 앱 EC2의 SSM 배포·health·외부 smoke를 확인한 뒤에만 DNS
+전환 plan을 만든다. ALB·ASG·CodeDeploy·RDS 삭제는 DNS 전환 이후의 별도 정리 plan에서
+만 검토한다.
+
+## 비용 기준
+
+서울 리전 730시간, 환율 1달러=1,470원 기준의 저장소 추정치는 [단일 EC2·PostgreSQL EC2 전환 계산](../../docs/08-planning/postgres-ec2-single-instance-transition.md)에 기록한다. ALB와 RDS를 제거하고 Redis를 전용 인스턴스로 유지하며 Redis SSM endpoint까지 제거한 목표 구성은 약 `$47.72/월`이며, PostgreSQL 데이터용 20 GiB EBS를 별도로 붙이면 약 `$49.54/월`이다. 데이터 전송·요청량·백업·공인 IPv4 외 추가 사용량은 별도다.
+
+## 확인 명령
 
 ```powershell
-terraform init `
-  -backend-config=backend.hcl
-terraform plan -out=production.tfplan
-terraform show -no-color production.tfplan
+Copy-Item .env.example .env
+docker compose up -d postgres redis wiremock
+.\gradlew.bat test --tests com.masiton.deployment.RuntimeDeploymentContractTest --tests com.masiton.deployment.AppRunScriptContractTest
 ```
 
-`apply`는 plan에서 기존 운영 자원에 `replace`·`destroy`가 없는 것을 확인하고 별도 승인한 뒤 실행한다. 이 저장소 작업에서는 실제 AWS `apply`를 실행하지 않는다.
-
+운영 리소스에 대한 `terraform apply`, ALB/ASG/RDS/Redis 삭제, Redis 데이터 volume 조작은 이 저장소의 작업 범위에서 실행하지 않는다.

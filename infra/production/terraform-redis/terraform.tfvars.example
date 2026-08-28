@@ -17,12 +17,18 @@ redis_ami_id = "ami-REPLACE_ME"
 # Redis 6379에 접근하는 app security group. 운영 ASG의 SG만 둔다.
 # 단일 EC2에서 전환하는 과도기에는 /masiton/redis/host를 두 환경이 공유하므로
 # 기존 인스턴스의 SG도 함께 허용해야 하지만, 전환이 끝나면 제거한다.
-app_security_group_ids = ["sg-REPLACE_ME_APP"]
+app_security_group_ids = [
+  "sg-REPLACE_ME_APP",        # legacy app SG during the parallel phase
+  "sg-REPLACE_ME_DIRECT_APP", # terraform/ output security_group_ids.direct_app
+]
 
 # ssm endpoint는 private DNS가 VPC 전역에 적용된다. SSM Agent를 쓰는 인스턴스의
 # SG를 빠짐없이 포함해야 그 인스턴스가 SSM에서 이탈하지 않는다. 단일 EC2에서
 # 전환하는 과도기에는 기존 인스턴스의 SG도 포함하고, 종료한 뒤 제거한다.
-ssm_endpoint_client_security_group_ids = ["sg-REPLACE_ME_APP"] # masiton-prod-app-sg (운영 ASG)
+ssm_endpoint_client_security_group_ids = [
+  "sg-REPLACE_ME_APP",        # legacy app SG during the parallel phase
+  "sg-REPLACE_ME_DIRECT_APP", # direct app SG; private DNS applies VPC-wide
+]
 
 redis_assets_bucket = "masiton-prod-codedeploy-REPLACE_ACCOUNT"
 

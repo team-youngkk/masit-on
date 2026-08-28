@@ -26,6 +26,7 @@ related_documents:
   - deployment-hardening-impact-review.md
   - deployment-hardening-cutover-record.md
   - post-cutover-runtime-baseline.md
+  - postgres-ec2-single-instance-transition.md
   - issue-231-course-route-map.md
   - curation-restaurant-card-fix.md
 ---
@@ -64,6 +65,7 @@ related_documents:
 | [자연어 검색 부하 검증 모델](issue-207-natural-language-load-model.md) | 요청 제한과 충돌한 부하 모델을 계약 검증·포화 관찰로 분리한 기준, 실행 명령, 재측정 시 보존할 증적 |
 | [배포 고도화 비용·일정 영향 검토](deployment-hardening-impact-review.md) | ADR-DEPLOY-002 3.1절이 착수 조건으로 남긴 비용·일정 영향 산정과 구성별 예산 대조, 착수 권고. `ACCEPTED` |
 | [배포 고도화 전환 기록](deployment-hardening-cutover-record.md) | ALB·Blue-Green·전용 Redis 전환의 실제 적용 결과, CI 경로에서만 드러난 결함 2건과 조치, 남은 작업. `In progress` |
-| [전환 후 런타임 실측 기준선](post-cutover-runtime-baseline.md) | 전환 직후 무부하 실측값(RSS·heap·GC·CPU 크레딧·Redis)과 부하 측정 설계에 반영할 조건. `Measured` |
+| [전환 후 런타임 실측 기준선](post-cutover-runtime-baseline.md) | 기존 ALB·Blue-Green 전환 직후의 무부하 실측값 보관본. 현재 단일 EC2 전환의 참고 자료 |
+| [PostgreSQL EC2·단일 앱 EC2 전환 목표와 비용](postgres-ec2-single-instance-transition.md) | RDS 제거·PostgreSQL EC2 전환과 ALB·ASG·CodeDeploy 제거 목표의 단계별 비용·선행 조건·전환 확인 항목 |
 
 구현 계획은 제품 범위, 요구사항, API·데이터 명세와 ADR을 변경하지 않는다. 상위 문서가 바뀌면 영향받는 Task와 완료 조건을 함께 갱신한다.
