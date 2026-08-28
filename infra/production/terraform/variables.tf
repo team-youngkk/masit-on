@@ -44,9 +44,15 @@ variable "ami_id" {
 }
 
 variable "instance_type" {
-  description = "seed ASG와 직접 앱 EC2의 인스턴스 유형"
+  description = "직접 서비스할 앱 EC2의 인스턴스 유형"
   type        = string
-  default     = "t4g.medium"
+  default     = "t4g.micro"
+}
+
+variable "seed_instance_type" {
+  description = "보존 중인 seed ASG의 인스턴스 유형"
+  type        = string
+  default     = "t4g.small"
 }
 
 variable "app_port" {
