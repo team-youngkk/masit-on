@@ -28,16 +28,6 @@ variable "vpc_id" {
   type        = string
 }
 
-variable "alb_subnet_ids" {
-  description = "기존 인터넷 연결 public subnet ID 목록"
-  type        = list(string)
-
-  validation {
-    condition     = length(var.alb_subnet_ids) >= 2
-    error_message = "ALB에는 서로 다른 AZ의 subnet을 2개 이상 지정해야 한다."
-  }
-}
-
 variable "app_subnet_ids" {
   description = "기존 app subnet ID 목록. app_subnet_is_private 값에 따라 public 또는 private route를 검증한다"
   type        = list(string)
@@ -49,24 +39,24 @@ variable "app_subnet_ids" {
 }
 
 variable "ami_id" {
-  description = "blue/green Launch Template에 사용할 기존 AMI ID"
+  description = "seed ASG와 직접 앱 EC2에 사용할 기존 AMI ID"
   type        = string
 }
 
 variable "instance_type" {
-  description = "original·replacement ASG 인스턴스 유형"
+  description = "seed ASG와 직접 앱 EC2의 인스턴스 유형"
   type        = string
   default     = "t4g.medium"
 }
 
 variable "app_port" {
-  description = "ALB가 Nginx로 전달하는 인스턴스 포트. ACM 종단 후 Nginx에서 재암호화한다"
+  description = "직접 접속할 Nginx 인스턴스 포트"
   type        = number
   default     = 443
 }
 
 variable "app_protocol" {
-  description = "ALB가 Nginx로 전달하는 프로토콜"
+  description = "직접 앱 EC2에 연결할 프로토콜"
   type        = string
   default     = "HTTPS"
 
@@ -77,13 +67,13 @@ variable "app_protocol" {
 }
 
 variable "health_check_path" {
-  description = "ALB target group health check 경로. /internal/**는 외부 경계상 사용하지 않는다"
+  description = "보존 중인 seed target group의 health check 경로"
   type        = string
   default     = "/_masiton/alb-health"
 }
 
 variable "acm_certificate_arn" {
-  description = "ALB HTTPS listener와 Nginx 재암호화에 사용할 기존 ACM 인증서 ARN. 운영 배포 경로에서 필수다"
+  description = "직접 앱 EC2의 Nginx HTTPS 종단에 사용할 기존 ACM 인증서 ARN"
   type        = string
   nullable    = false
 
@@ -93,14 +83,8 @@ variable "acm_certificate_arn" {
   }
 }
 
-variable "alb_ingress_cidr_blocks" {
-  description = "ALB HTTP/HTTPS ingress CIDR. 기본값은 인터넷 공개"
-  type        = list(string)
-  default     = ["0.0.0.0/0"]
-}
-
 variable "rds_security_group_id" {
-  description = "기존 RDS security group ID"
+  description = "기존 DB/RDS security group ID (호환·롤백 경계)"
   type        = string
 }
 
@@ -110,7 +94,7 @@ variable "redis_security_group_id" {
 }
 
 variable "rds_port" {
-  description = "기존 RDS가 수신하는 포트"
+  description = "기존 DB endpoint가 수신하는 포트"
   type        = number
   default     = 5432
 }
@@ -196,7 +180,7 @@ variable "kms_key_arns" {
 }
 
 variable "codedeploy_revision_bucket_name" {
-  description = "CodeDeploy revision을 저장할 전용 S3 bucket 이름"
+  description = "SSM command pointer와 기존 배포 산출물을 보관하는 S3 bucket 이름"
   type        = string
 
   validation {
@@ -205,68 +189,50 @@ variable "codedeploy_revision_bucket_name" {
   }
 }
 
+variable "redis_password_object_key" {
+  description = "Redis 비밀번호를 담은 S3 SSE-KMS 객체 key"
+  type        = string
+  default     = "masiton/redis/secret/redis-password"
+
+  validation {
+    condition     = length(trimspace(var.redis_password_object_key)) > 0
+    error_message = "redis_password_object_key는 비어 있을 수 없다."
+  }
+}
+
 variable "github_actions_role_name" {
-  description = "기존 GitHub Actions OIDC role 이름. 지정하면 production revision/CodeDeploy 정책을 추가한다"
+  description = "기존 GitHub Actions OIDC role 이름. 지정하면 단일 EC2 SSM 배포 정책을 추가한다"
   type        = string
   default     = null
   nullable    = true
 }
 
 variable "nginx_trusted_proxy_cidrs" {
-  description = "ALB가 위치한 private 경계의 신뢰할 proxy CIDR 목록"
+  description = "Nginx가 신뢰할 proxy CIDR 목록"
   type        = list(string)
 
   validation {
     condition     = length(var.nginx_trusted_proxy_cidrs) > 0
-    error_message = "Nginx가 신뢰할 ALB proxy CIDR을 하나 이상 지정해야 한다."
+    error_message = "Nginx가 신뢰할 proxy CIDR을 하나 이상 지정해야 한다."
   }
 }
 
 variable "route53_zone_id" {
-  description = "기존 Route53 hosted zone ID. record_name과 함께 지정할 때만 alias record를 관리한다"
+  description = "기존 Route53 hosted zone ID. record_name과 함께 지정할 때만 앱 A record를 관리한다"
   type        = string
   default     = null
   nullable    = true
 }
 
 variable "route53_record_name" {
-  description = "ALB alias record 이름"
+  description = "앱 EC2 EIP를 가리킬 Route53 A record 이름"
   type        = string
   default     = null
   nullable    = true
 }
 
-variable "route53_evaluate_target_health" {
-  description = "Route53 alias의 evaluate_target_health 설정"
-  type        = bool
-  default     = true
-}
-
-variable "initial_blue_verified" {
-  description = "known-good revision이 blue ASG에서 검증되어 Route53 alias를 연결해도 된다는 운영 확인"
-  type        = bool
-  default     = false
-}
-
-variable "codedeploy_deployment_wait_minutes" {
-  description = "배포 성공 후 original 인스턴스를 종료하기까지의 대기 시간(1~15분). 이 값이 rollback 가능 시간의 상한이며 CI 배포 폴링 한도 45분에서 provisioning·hook 시간을 위한 여유를 남기는 보수적 운영 상한이다"
-  type        = number
-  default     = 15
-
-  validation {
-    condition     = var.codedeploy_deployment_wait_minutes >= 1 && var.codedeploy_deployment_wait_minutes <= 15 && var.codedeploy_deployment_wait_minutes == floor(var.codedeploy_deployment_wait_minutes)
-    error_message = "codedeploy_deployment_wait_minutes는 1 이상 15 이하의 정수여야 한다. CI 배포 폴링 45분과 provisioning·hook 시간을 함께 고려한 보수적 상한이다."
-  }
-}
-
-variable "codedeploy_termination_enabled" {
-  description = "CodeDeploy 성공 후 original 인스턴스와 ASG를 자동 종료할지 여부. 최초 seeding에서는 false로 두고 replacement ASG가 deployment group의 원본으로 전환된 것을 확인한 뒤 true로 바꾼다"
-  type        = bool
-  default     = false
-}
-
 variable "asg_health_check_type" {
-  description = "blue ASG health check 종류. 정상 운영은 ELB다. 앱이 배포되지 않은 최초 seeding 구간에만 EC2로 낮춰 빈 인스턴스가 교체 루프에 빠지지 않게 한다"
+  description = "보존 중인 seed ASG health check 종류. seed는 현재 0대로 유지한다"
   type        = string
   default     = "ELB"
 
@@ -276,34 +242,10 @@ variable "asg_health_check_type" {
   }
 }
 
-variable "deployment_alarms_enabled" {
-  description = "CodeDeploy deployment group의 alarm 게이트. 정상 운영과 Redis 복구 모드는 true이며, 명시적 최초 seeding에서만 initial_alarm_seeding=true 및 deployment_auto_rollback_enabled=false와 함께 false로 둘 수 있다"
-  type        = bool
-  default     = true
-}
-
-variable "initial_alarm_seeding" {
-  description = "앱 없는 seed ASG에 최초 known-good revision을 올리는 단 한 번의 seeding 모드. deployment_alarms_enabled=false 및 deployment_auto_rollback_enabled=false와 함께 명령행에서만 명시한다"
-  type        = bool
-  default     = false
-}
-
-variable "redis_recovery_mode" {
-  description = "승인된 단일 Redis 복구 배포에서만 true로 두며, CodeDeploy alarm 목록에서 Redis alarm만 제외한다. ALB 5xx·latency alarm과 polling 실패 차단은 유지한다"
-  type        = bool
-  default     = false
-}
-
 variable "mail_smtp_port" {
   description = "애플리케이션이 외부 SMTP relay로 나가는 포트. dependency health의 mail 항목이 이 경로를 사용한다"
   type        = number
   default     = 587
-}
-
-variable "deployment_auto_rollback_enabled" {
-  description = "CodeDeploy 자동 rollback. 정상 운영은 true다. 성공한 revision이 아직 없는 최초 seeding 구간에서는 rollback이 같은 결함 revision을 재배포하고 교체 ASG를 남기므로 false로 둔다"
-  type        = bool
-  default     = true
 }
 
 # app 인스턴스의 subnet 배치 의도를 명시한다. 오배치를 plan에서 잡되 어느 쪽이
@@ -311,17 +253,15 @@ variable "deployment_auto_rollback_enabled" {
 #
 # 현재 운영은 false다. 앱을 사설 subnet에 두면 ECR·Parameter Store·CloudWatch
 # 때문에 NAT 또는 인터페이스 엔드포인트가 필요하고, 배포 고도화 비용·일정 영향
-# 검토 6.6절이 그 비용으로 8.1절 예산을 넘긴다고 판정해 "앱은 public subnet에
-# 남기고 보안 그룹 인바운드만 ALB 출처로 좁히는" 구성을 전제로 금액을 산정했다.
-# 인터넷에서 앱으로 들어오는 경계는 subnet이 아니라 security group이 지킨다.
+# 검토 6.6절이 그 비용으로 8.1절 예산을 넘긴다고 판정해 앱은 public subnet에
+# 둔다. 인터넷에서 앱으로 들어오는 경계는 security group이 지킨다.
 variable "app_subnet_is_private" {
-  description = "true면 app subnet에 IGW 기본 경로가 없어야 하고, false면 ALB와 같은 public subnet임을 요구한다"
+  description = "true면 app subnet에 IGW 기본 경로가 없어야 하고, false면 public subnet임을 요구한다"
   type        = bool
   default     = false
 }
 
-# 직접 접속 경로를 준비하는 동안 legacy ALB/ASG 경로와 병행한다. 기존 Route53
-# record를 먼저 유지하고, 직접 EC2의 smoke·health 확인 뒤 true로 전환한다.
+# 직접 서비스할 앱 EC2의 네트워크 입력이다. Route53 record는 직접 앱 EIP를 가리킨다.
 variable "app_subnet_id" {
   description = "직접 서비스할 단일 앱 EC2의 public subnet ID"
   type        = string
@@ -345,7 +285,12 @@ variable "database_port" {
 }
 
 variable "direct_traffic_enabled" {
-  description = "true일 때 Route53 record를 ALB 대신 앱 EIP로 전환한다"
+  description = "단일 EC2 전환 완료 여부. 운영 구성에서는 true만 허용한다"
   type        = bool
   default     = false
+
+  validation {
+    condition     = var.direct_traffic_enabled
+    error_message = "단일 EC2 정리 구성에서는 direct_traffic_enabled=true여야 한다."
+  }
 }

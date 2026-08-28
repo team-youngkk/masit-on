@@ -16,3 +16,7 @@ data "aws_subnet" "redis" {
 data "aws_prefix_list" "s3" {
   name = "com.amazonaws.${var.aws_region}.s3"
 }
+
+data "aws_kms_key" "s3" {
+  key_id = "alias/aws/s3"
+}

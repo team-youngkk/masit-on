@@ -18,14 +18,15 @@ class RuntimeDeploymentContractTest {
     private static final Path DIRECT_USER_DATA = TERRAFORM.resolve("templates/direct-app-user-data.sh.tftpl");
     private static final Path LEGACY_USER_DATA = TERRAFORM.resolve("templates/app-user-data.sh.tftpl");
     private static final Path REDIS_ENDPOINTS = Path.of("infra/production/terraform-redis/endpoints.tf");
+    private static final Path REDIS_USER_DATA = Path.of("infra/production/terraform-redis/templates/redis-user-data.sh.tftpl");
     private static final Path REDIS_RENDER = Path.of("deploy/scripts/redis-render-conf.sh");
 
     @Test
-    @DisplayName("직접 EC2 경로를 준비하면서 legacy ALB·ASG·CodeDeploy state를 보존한다")
-    void terraform_직접경로와legacy경로를병행한다() throws IOException {
+    @DisplayName("직접 EC2 경로와 보존 대상 seed 리소스를 선언한다")
+    void terraform_직접경로와보존대상seed를선언한다() throws IOException {
         assertThat(TERRAFORM.resolve("alb.tf")).exists();
         assertThat(TERRAFORM.resolve("asg.tf")).exists();
-        assertThat(TERRAFORM.resolve("codedeploy.tf")).exists();
+        assertThat(TERRAFORM.resolve("codedeploy.tf")).doesNotExist();
 
         String instance = read(TERRAFORM.resolve("instance.tf"));
         String route53 = read(TERRAFORM.resolve("route53.tf"));
@@ -45,8 +46,8 @@ class RuntimeDeploymentContractTest {
                 .contains("user_data_replace_on_change = false");
         assertThat(route53)
                 .contains("resource \"aws_route53_record\" \"app\" {")
-                .contains("direct_traffic_enabled")
-                .contains("aws_lb.app.dns_name")
+                .contains("ttl     = 60")
+                .doesNotContain("aws_lb.app.dns_name")
                 .contains("aws_eip.app.public_ip");
         assertThat(security)
                 .contains("resource \"aws_vpc_security_group_ingress_rule\" \"app_http\" {")
@@ -56,7 +57,9 @@ class RuntimeDeploymentContractTest {
                 .contains("resource \"aws_vpc_security_group_ingress_rule\" \"rds_from_app\" {")
                 .contains("var.database_security_group_id")
                 .contains("referenced_security_group_id = aws_security_group.app.id")
-                .contains("referenced_security_group_id = aws_security_group.direct_app.id");
+                .contains("referenced_security_group_id = aws_security_group.direct_app.id")
+                .doesNotContain("resource \"aws_security_group\" \"alb\" {")
+                .doesNotContain("resource \"aws_vpc_security_group_ingress_rule\" \"app_from_alb\" {");
         int directDatabaseIngressStart = security.indexOf(directDatabaseIngressResource);
         int directDatabaseIngressEnd = security.indexOf("\n}", directDatabaseIngressStart);
         assertThat(directDatabaseIngressStart).isGreaterThanOrEqualTo(0);
@@ -67,7 +70,7 @@ class RuntimeDeploymentContractTest {
                 .contains("variable \"app_subnet_id\"")
                 .contains("variable \"database_security_group_id\"")
                 .contains("variable \"direct_traffic_enabled\"")
-                .contains("variable \"alb_subnet_ids\"")
+                .doesNotContain("variable \"alb_subnet_ids\"")
                 .contains("variable \"rds_security_group_id\"");
         assertThat(stateMigrations)
                 .contains("aws_route53_record.alb[\"enabled\"]")
@@ -76,13 +79,14 @@ class RuntimeDeploymentContractTest {
         assertThat(outputs)
                 .contains("output \"app_instance_id\"")
                 .contains("output \"app_public_ip\"")
-                .contains("output \"alb_dns_name\"")
-                .contains("output \"autoscaling_group_names\"");
+                .contains("output \"autoscaling_group_names\"")
+                .doesNotContain("output \"alb_dns_name\"")
+                .doesNotContain("output \"codedeploy_application_name\"");
     }
 
     @Test
-    @DisplayName("직접 배포 IAM과 legacy CodeDeploy IAM을 cutover 전까지 함께 유지한다")
-    void terraform_배포role은직접SSM과legacy권한을함께갖는다() throws IOException {
+    @DisplayName("직접 배포 IAM은 SSM 최소 권한만 유지한다")
+    void terraform_배포role은SSM최소권한을갖는다() throws IOException {
         String iam = read(TERRAFORM.resolve("iam.tf"));
         String redisIam = read(Path.of("infra/production/terraform-redis/iam.tf"));
 
@@ -99,18 +103,25 @@ class RuntimeDeploymentContractTest {
                 .contains("kms:EncryptionContext:PARAMETER_ARN")
                 .contains("parameter/masiton/*")
                 .contains("aws_instance.app.id")
-                .contains("codedeploy:")
+                .doesNotContain("codedeploy:")
                 .doesNotContain("ssm:ListCommandInvocations")
                 .doesNotContain("ssm:DescribeInstanceInformation");
         assertThat(redisIam)
+                .contains("ReadRedisPasswordObject")
+                .contains("s3:GetObject")
+                .contains("var.redis_password_object_key")
+                .contains("!startswith(var.redis_password_object_key, \"${var.redis_assets_prefix}/\")")
+                .contains("data.aws_kms_key.s3.arn")
                 .contains("kms:ViaService")
-                .contains("kms:EncryptionContext:PARAMETER_ARN")
-                .contains("var.redis_password_parameter_arn");
+                .contains("s3.${var.aws_region}.amazonaws.com")
+                .doesNotContain("ssm:GetParameter")
+                .doesNotContain("redis_password_parameter_arn")
+                .doesNotContain("kms:EncryptionContext:PARAMETER_ARN");
     }
 
     @Test
-    @DisplayName("직접 앱 지표와 legacy ALB 지표를 cutover 전까지 함께 감시한다")
-    void monitoring_직접앱과legacy경로를함께감시한다() throws IOException {
+    @DisplayName("직접 앱 지표와 의존성 지표를 감시한다")
+    void monitoring_직접앱과의존성지표를감시한다() throws IOException {
         String monitoring = read(TERRAFORM.resolve("monitoring.tf"));
 
         assertThat(monitoring)
@@ -120,23 +131,23 @@ class RuntimeDeploymentContractTest {
                 .contains("metric_name         = \"DependencyRedis\"")
                 .contains("InstanceId = aws_instance.app.id")
                 .contains("treat_missing_data  = \"breaching\"")
-                .contains("AWS/ApplicationELB")
-                .contains("aws_lb.app");
+                .doesNotContain("AWS/ApplicationELB")
+                .doesNotContain("aws_lb.app");
     }
 
     @Test
-    @DisplayName("CI는 CodeDeploy를 기본으로 유지하고 SSM 직접 배포를 명시적으로 선택한다")
-    void ci_기본CodeDeploy와SSM옵트인배포를검증한다() throws IOException {
+    @DisplayName("CI는 SSM 단일 EC2 배포를 기본 경로로 사용한다")
+    void ci_SSM단일EC2배포를검증한다() throws IOException {
         String workflow = read(CI);
 
         assertThat(workflow)
                 .contains("deployment_target:")
-                .contains("default: codedeploy")
-                .contains("aws deploy create-deployment")
-                .contains("codedeploy-cancel-cleanup")
-                .contains("needs.deploy.result == 'failure'")
-                .contains("CodeDeploy pointer 실패 후 terminal 상태")
-                .contains("CodeDeploy cleanup terminal 상태")
+                .contains("default: ssm")
+                .doesNotContain("aws deploy create-deployment")
+                .doesNotContain("codedeploy-cancel-cleanup")
+                .doesNotContain("needs.deploy.result")
+                .doesNotContain("CodeDeploy pointer 실패 후 terminal 상태")
+                .doesNotContain("CodeDeploy cleanup terminal 상태")
                 .contains("ssm-deploy:")
                 .contains("github.event.inputs.deployment_target == 'ssm'")
                 .contains("instance_id:")
@@ -162,8 +173,8 @@ class RuntimeDeploymentContractTest {
                 .contains("needs['ssm-deploy'].result == 'cancelled'");
         assertThat(workflow.indexOf("$STAGE/app-deploy.sh"))
                 .isLessThan(workflow.indexOf("$STAGE/cloudwatch-install.sh"));
-        assertThat(workflow.indexOf("  deploy:\n"))
-                .isLessThan(workflow.indexOf("  ssm-deploy:\n"));
+        assertThat(workflow.indexOf("  ssm-deploy:\n"))
+                .isGreaterThanOrEqualTo(0);
         int commandIdIndex = workflow.indexOf("echo \"CommandId: $command_id\"");
         int ssmTrapIndex = workflow.indexOf("trap on_exit EXIT", commandIdIndex);
         int ssmPointerIndex = workflow.indexOf("--key \"$SSM_POINTER_KEY\"", commandIdIndex);
@@ -207,15 +218,22 @@ class RuntimeDeploymentContractTest {
     }
 
     @Test
-    @DisplayName("Redis SSM endpoint는 대체 비밀 주입 경로가 마련될 때까지 유지한다")
-    void redis_대체비밀주입경로전까지SSMEndpoint를유지한다() throws IOException {
+    @DisplayName("Redis 비밀 객체 주입은 SSM endpoint와 분리한다")
+    void redis_비밀객체주입은SSMEndpoint와분리한다() throws IOException {
         assertThat(REDIS_ENDPOINTS).exists();
         assertThat(read(REDIS_ENDPOINTS))
-                .contains("resource \"aws_vpc_endpoint\" \"ssm\" {")
-                .contains("private_dns_enabled = true");
+                .contains("resource \"aws_vpc_endpoint\" \"s3\" {")
+                .doesNotContain("resource \"aws_vpc_endpoint\" \"ssm\" {");
         assertThat(read(REDIS_RENDER))
-                .contains("aws ssm get-parameter")
-                .contains("/masiton/redis/password");
+                .contains("REDIS_PASSWORD_BUCKET")
+                .contains("REDIS_PASSWORD_OBJECT_KEY")
+                .contains("aws s3api get-object")
+                .doesNotContain("aws ssm get-parameter")
+                .doesNotContain("/masiton/redis/password");
+        assertThat(read(REDIS_USER_DATA))
+                .contains("Environment=REDIS_PASSWORD_BUCKET=$BUCKET")
+                .contains("Environment=REDIS_PASSWORD_OBJECT_KEY=$PASSWORD_OBJECT_KEY")
+                .doesNotContain("REDIS_PASSWORD=");
     }
 
     private static String read(Path path) throws IOException {

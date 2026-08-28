@@ -42,6 +42,7 @@ related_documents:
   - quality/perf-003-isolated-performance-terraform.md
   - quality/obs-001-logging-observability.md
   - security/sec-001-secrets-workload-identity.md
+  - security/sec-002-redis-bootstrap-secret-transport.md
   - platform/runtime-001-docker.md
   - platform/ci-001-github-actions-quality-gate.md
   - ../02-analysis/second-expansion-workstreams.md
@@ -125,7 +126,7 @@ related_documents:
 | SLF4J + Logback | 확정 | Accepted ADR | [ADR-OBS-001](quality/obs-001-logging-observability.md) | 애플리케이션 로그 기준 |
 | Actuator + CloudWatch | 기술 선택 확정, 적용 시점 이관 | Accepted ADR | [ADR-OBS-001](quality/obs-001-logging-observability.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | Actuator는 전 단계, CloudWatch는 초기 운영 배포부터 적용 |
 | 로그 보관 14일 | M2부터 적용 | Operational Configuration | [ADR-OBS-001](quality/obs-001-logging-observability.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | AWS 운영 시작 후 14일 유지 |
-| Parameter Store SecureString + KMS | M2부터 적용 | Accepted ADR | [ADR-SEC-001](security/sec-001-secrets-workload-identity.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | 운영 비밀정보 보호 |
+| 운영 비밀정보 보호 | M2부터 적용 | Accepted ADR | [ADR-SEC-001](security/sec-001-secrets-workload-identity.md), [ADR-SEC-002](security/sec-002-redis-bootstrap-secret-transport.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | 기본은 Parameter Store SecureString + KMS, 전용 private Redis 부트스트랩만 S3 SSE-KMS 객체 예외 |
 | EC2 IAM Role | M2부터 적용 | Accepted ADR | [ADR-SEC-001](security/sec-001-secrets-workload-identity.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | 장기 AWS 키 제거 |
 | GitHub Actions OIDC | M2부터 적용 | Accepted ADR | [ADR-SEC-001](security/sec-001-secrets-workload-identity.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | CI의 단기 AWS 자격 증명 |
 | Docker | 확정 | Accepted ADR | [ADR-RUNTIME-001](platform/runtime-001-docker.md) | 재현 가능한 실행·배포 산출물 |

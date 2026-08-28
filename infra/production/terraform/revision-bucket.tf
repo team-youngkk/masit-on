@@ -56,6 +56,44 @@ data "aws_iam_policy_document" "codedeploy_revision_bucket" {
       values   = ["false"]
     }
   }
+
+  statement {
+    sid    = "DenyNonKmsRedisPasswordObject"
+    effect = "Deny"
+
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+
+    actions   = ["s3:PutObject"]
+    resources = ["${aws_s3_bucket.codedeploy_revision.arn}/${var.redis_password_object_key}"]
+
+    condition {
+      test     = "StringNotEquals"
+      variable = "s3:x-amz-server-side-encryption"
+      values   = ["aws:kms"]
+    }
+  }
+
+  statement {
+    sid    = "DenyWrongKmsKeyForRedisPasswordObject"
+    effect = "Deny"
+
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+
+    actions   = ["s3:PutObject"]
+    resources = ["${aws_s3_bucket.codedeploy_revision.arn}/${var.redis_password_object_key}"]
+
+    condition {
+      test     = "StringNotEquals"
+      variable = "s3:x-amz-server-side-encryption-aws-kms-key-id"
+      values   = [data.aws_kms_key.s3.arn]
+    }
+  }
 }
 
 resource "aws_s3_bucket_policy" "codedeploy_revision" {

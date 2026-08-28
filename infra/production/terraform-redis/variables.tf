@@ -44,7 +44,7 @@ variable "private_route_table_ids" {
 }
 
 variable "redis_ami_id" {
-  description = "docker와 digest 고정 Redis 이미지를 미리 담은 AMI ID. Parameter Store 접근만 런타임에 필요하도록 이미지를 미리 굽는다"
+  description = "docker와 digest 고정 Redis 이미지를 미리 담은 AMI ID. secret은 S3에서 런타임에 읽는다"
   type        = string
 }
 
@@ -82,16 +82,6 @@ variable "app_security_group_ids" {
   }
 }
 
-variable "ssm_endpoint_client_security_group_ids" {
-  description = "ssm 인터페이스 endpoint를 호출해야 하는 security group ID 목록. private DNS가 VPC 전역에 적용되므로 SSM Agent를 쓰는 기존 인스턴스의 SG도 반드시 포함한다"
-  type        = list(string)
-
-  validation {
-    condition     = length(var.ssm_endpoint_client_security_group_ids) > 0
-    error_message = "ssm endpoint를 호출할 security group을 하나 이상 지정해야 한다."
-  }
-}
-
 variable "redis_assets_bucket" {
   description = "Redis 설정 파일을 스테이징할 기존 S3 bucket 이름"
   type        = string
@@ -100,28 +90,24 @@ variable "redis_assets_bucket" {
 variable "redis_assets_prefix" {
   description = "Redis 설정 파일 S3 prefix. 끝에 슬래시를 넣지 않는다"
   type        = string
-  default     = "masiton/redis"
+  default     = "masiton/redis/assets"
+}
+
+variable "redis_password_object_key" {
+  description = "Redis 비밀번호를 담은 S3 SSE-KMS 객체 key"
+  type        = string
+  default     = "masiton/redis/secret/redis-password"
+
+  validation {
+    condition     = length(trimspace(var.redis_password_object_key)) > 0
+    error_message = "redis_password_object_key는 비어 있을 수 없다."
+  }
 }
 
 variable "redis_assets_source_dir" {
   description = "저장소의 Redis 배포 파일 경로. 이 모듈 기준 상대 경로다"
   type        = string
   default     = "../../../deploy"
-}
-
-variable "redis_password_parameter_arn" {
-  description = "Redis requirepass를 담은 SecureString parameter ARN"
-  type        = string
-}
-
-variable "kms_key_arns" {
-  description = "SecureString 복호화에 사용할 KMS key ARN 목록"
-  type        = list(string)
-
-  validation {
-    condition     = length(var.kms_key_arns) > 0
-    error_message = "SecureString 복호화용 KMS key ARN을 하나 이상 지정해야 한다."
-  }
 }
 
 variable "manage_host_parameter" {
