@@ -44,6 +44,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 FROM node:24.18.0-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd AS runtime
+# 고정된 Node 이미지가 Alpine OpenSSL 보안 업데이트보다 먼저 만들어졌으므로,
+# 최종 런타임 이미지에 수정된 패키지를 명시적으로 설치한다.
+RUN apk add --no-cache libcrypto3=3.5.8-r0 libssl3=3.5.8-r0
 WORKDIR /app
 
 # robots.txt와 sitemap.xml은 standalone 서버 실행 시에도 사이트 URL을 읽는다.
