@@ -297,6 +297,17 @@ data "aws_iam_policy_document" "github_actions_ssm_deploy" {
   statement {
     effect = "Allow"
     actions = [
+      "s3:PutObject",
+      "s3:GetObject",
+      "s3:AbortMultipartUpload",
+    ]
+    resources = ["${aws_s3_bucket.codedeploy_revision.arn}/masiton/ssm/*"]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "ssm:CancelCommand",
       "ssm:GetCommandInvocation",
       "ssm:ListCommandInvocations",
       "ssm:DescribeInstanceInformation",

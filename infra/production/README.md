@@ -8,9 +8,9 @@ PostgreSQL은 RDS에서 별도 EC2로 전환 중이며, 이 레이어는 Postgre
 
 ## 배포 경계
 
-- GitHub Actions는 `environment: production` 승인 뒤 SSM Run Command로 저장소 변수 `PRODUCTION_INSTANCE_ID`에 직접 배포한다. 수동 입력을 사용하더라도 이 변수와 다른 instance ID는 거부한다.
+- GitHub Actions는 `environment: production` 승인 뒤 기본적으로 기존 CodeDeploy Blue-Green으로 배포한다. 단일 EC2 전환 검증용 SSM Run Command는 `workflow_dispatch`에서 `deployment_target=ssm`을 명시한 경우에만 실행하며, 저장소 변수 `PRODUCTION_INSTANCE_ID`와 다른 instance ID는 거부한다.
 - 배포 명령은 커밋 SHA와 함께 스크립트·Nginx·systemd 산출물을 전달하고 `app-deploy.sh`의 health check와 rollback 결과를 그대로 반환한다.
-- 앱 EC2의 IAM role은 런타임 SSM/ECR/ACM/CloudWatch 권한을 갖고, GitHub Actions role은 대상 EC2에 대한 SSM 명령과 명령 결과 조회만 갖는다.
+- 앱 EC2의 IAM role은 런타임 SSM/ECR/ACM/CloudWatch 권한을 갖고, GitHub Actions role은 legacy CodeDeploy 권한과 opt-in SSM 명령·취소·결과 조회 및 최소 S3 command pointer 권한을 병행해서 갖는다.
 - Nginx가 TLS를 종단하고 외부의 80/443 요청을 직접 받는다. `/internal/**`은 계속 외부 `404`이며, legacy ALB target health용 `/_masiton/alb-health`는 ALB 정리 전까지 default server에만 보존한다.
 - 앱 EC2와 Redis를 동거시키지 않는다. 앱은 `t4g.small`, Redis는 전용 인스턴스에서 실행한다.
 
@@ -19,11 +19,11 @@ PostgreSQL은 RDS에서 별도 EC2로 전환 중이며, 이 레이어는 Postgre
 1. PostgreSQL EC2의 private IP/SG와 백업·복구 절차를 확정하고 `/masiton/db/url`을 새 endpoint로 준비한다.
 2. 기존 앱 EC2의 AMI, subnet, SG, IAM profile, root volume을 확인하고 `aws_instance.app`에 state import할 대상을 확정한다. 이 저장소는 import나 종료를 자동 실행하지 않는다.
 3. 새 direct app SG의 PostgreSQL·Redis ingress가 각 대상 SG에 허용되는지 확인한다. Redis 레이어의 `app_security_group_ids`와 `ssm_endpoint_client_security_group_ids`에는 병행 기간 동안 legacy app SG와 direct app SG를 모두 넣는다.
-4. 기존 앱 EC2를 `aws_instance.app`으로 import한 뒤 EIP를 연결하고, 앱·Nginx·health metrics를 SSM 직접 배포로 검증한다.
+4. 기존 앱 EC2를 `aws_instance.app`으로 import한 뒤 EIP를 연결하고, 기본 CodeDeploy 경로를 유지한 채 `deployment_target=ssm` 직접 배포로 앱·Nginx·health metrics를 검증한다.
 5. `direct_traffic_enabled=true`를 별도 plan으로 적용해 Route53 A record가 EIP를 가리키는지 확인하고 외부 HTTPS/API/smoke를 검증한다.
 6. PostgreSQL·앱·Redis가 안정화된 뒤에만 ALB·ASG·CodeDeploy·RDS의 실제 AWS 리소스를 삭제하는 별도 승인 plan을 만든다. 이 저장소에서는 `terraform apply`를 실행하지 않는다.
 
-기존 CodeDeploy revision bucket은 상태와 보존 데이터를 확인할 때까지 `revision-bucket.tf`에 이행 자원으로 남긴다. 새 배포에서는 사용하지 않으며, bucket 삭제는 별도 데이터 보존 확인 후 수행한다.
+기존 CodeDeploy revision bucket은 기본 CodeDeploy revision과 SSM command pointer를 함께 보관하므로 `revision-bucket.tf`에 이행 자원으로 남긴다. bucket 삭제는 두 배포 경로와 보존 데이터 확인 후 별도 수행한다.
 
 ## 첫 plan 파괴 방지 게이트
 

@@ -19,6 +19,7 @@ RDS를 제거하고 PostgreSQL을 별도 EC2로 옮긴다. 앱과 Redis는 동�
 
 - ALB·ASG·CodeDeploy 리소스와 기존 RDS ingress는 첫 plan의 파괴를 막기 위해 유지한다.
 - 단일 앱 EC2·EIP·direct app SG의 80/443 ingress·SSM 배포 IAM·직접 health alarm을 병행으로 준비한다. Redis 레이어에는 legacy app SG와 direct app SG를 모두 허용한다.
+- CI의 기본 운영 배포는 CodeDeploy로 유지한다. 단일 EC2 전환 검증용 직접 SSM 배포는 `workflow_dispatch`에서 `deployment_target=ssm`을 명시한 경우에만 사용한다.
 - `direct_traffic_enabled=false`에서는 Route53이 기존 ALB를 계속 가리킨다. 앱 EC2를 import하고 SSM 배포 및 외부 smoke를 검증한 뒤에만 `true`로 전환한다.
 - DNS 전환과 PostgreSQL endpoint 전환이 안정화된 뒤에야 legacy ALB·ASG·CodeDeploy·RDS를 삭제하는 정리 plan을 별도로 만든다.
 

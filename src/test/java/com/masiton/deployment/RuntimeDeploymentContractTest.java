@@ -82,8 +82,11 @@ class RuntimeDeploymentContractTest {
         assertThat(iam)
                 .contains("github_actions_ssm_deploy")
                 .contains("ssm:SendCommand")
+                .contains("ssm:CancelCommand")
                 .contains("AWS-RunShellScript")
                 .contains("ssm:GetCommandInvocation")
+                .contains("s3:PutObject")
+                .contains("masiton/ssm/*")
                 .contains("aws_instance.app.id")
                 .contains("codedeploy:");
     }
@@ -105,11 +108,20 @@ class RuntimeDeploymentContractTest {
     }
 
     @Test
-    @DisplayName("CI는 설정된 단일 EC2에 커밋별 산출물을 SSM Run Command로 전달한다")
-    void ci_커밋산출물을SSM으로배포한다() throws IOException {
+    @DisplayName("CI는 CodeDeploy를 기본으로 유지하고 SSM 직접 배포를 명시적으로 선택한다")
+    void ci_기본CodeDeploy와SSM옵트인배포를검증한다() throws IOException {
         String workflow = read(CI);
 
         assertThat(workflow)
+                .contains("deployment_target:")
+                .contains("default: codedeploy")
+                .contains("aws deploy create-deployment")
+                .contains("codedeploy-cancel-cleanup")
+                .contains("needs.deploy.result == 'failure'")
+                .contains("CodeDeploy pointer 실패 후 terminal 상태")
+                .contains("CodeDeploy cleanup terminal 상태")
+                .contains("ssm-deploy:")
+                .contains("github.event.inputs.deployment_target == 'ssm'")
                 .contains("instance_id:")
                 .contains("INSTANCE_ID:")
                 .contains("CONFIGURED_INSTANCE_ID:")
@@ -122,12 +134,25 @@ class RuntimeDeploymentContractTest {
                 .contains("METRIC_ENVIRONMENT=production")
                 .contains("REQUIRE_SHARED_REDIS=true")
                 .contains("NGINX_TRUSTED_PROXY_CIDRS=127.0.0.1")
+                .contains("aws s3api put-object")
+                .contains("aws s3api get-object")
+                .contains("ssm cancel-command")
+                .contains("SSM CommandId 보관에 실패했다")
+                .contains("SSM 중지 후 terminal 상태")
+                .contains("flock -n 9")
                 .contains("environment: production")
-                .doesNotContain("CODEDEPLOY")
-                .doesNotContain("aws deploy ")
-                .doesNotContain("codedeploy-cancel-cleanup");
+                .contains("needs['ssm-deploy'].result == 'failure'")
+                .contains("needs['ssm-deploy'].result == 'cancelled'");
         assertThat(workflow.indexOf("$STAGE/app-deploy.sh"))
                 .isLessThan(workflow.indexOf("$STAGE/cloudwatch-install.sh"));
+        assertThat(workflow.indexOf("  deploy:\n"))
+                .isLessThan(workflow.indexOf("  ssm-deploy:\n"));
+        int commandIdIndex = workflow.indexOf("echo \"CommandId: $command_id\"");
+        int ssmTrapIndex = workflow.indexOf("trap on_exit EXIT", commandIdIndex);
+        int ssmPointerIndex = workflow.indexOf("--key \"$SSM_POINTER_KEY\"", commandIdIndex);
+        assertThat(commandIdIndex).isGreaterThanOrEqualTo(0);
+        assertThat(ssmTrapIndex).isLessThan(ssmPointerIndex);
+        assertThat(workflow).contains("ci-production-deploy");
     }
 
     @Test
@@ -135,6 +160,7 @@ class RuntimeDeploymentContractTest {
     void runtime_직접경로와legacy경로의bootstrap을분리한다() throws IOException {
         String directUserData = read(DIRECT_USER_DATA);
         String legacyUserData = read(LEGACY_USER_DATA);
+        String codedeployHook = read(Path.of("deploy/codedeploy/hooks/after-install.sh"));
         String unit = read(Path.of("deploy/app/masiton-backend.service"));
         String nginx = read(Path.of("deploy/nginx/masiton.click.conf"));
         String metrics = read(Path.of("deploy/scripts/health-metrics.sh"));
@@ -158,6 +184,9 @@ class RuntimeDeploymentContractTest {
         assertThat(metrics)
                 .contains("ENVIRONMENT=\"${METRIC_ENVIRONMENT:-asg}\"")
                 .contains("DependencyRedis");
+        assertThat(codedeployHook)
+                .contains("/run/masiton/deploy.lock")
+                .contains("flock -n 9");
     }
 
     @Test
