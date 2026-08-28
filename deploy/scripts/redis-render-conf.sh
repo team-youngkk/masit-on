@@ -58,7 +58,10 @@ fi
 # S3 CLI는 객체 본문을 파일에 직접 쓰고 메타데이터 출력은 버린다. 비밀값은
 # 명령행 인자나 표준 출력에 넣지 않는다.
 password_file=$(mktemp "$RUN_DIR/.redis-password.XXXXXX")
-chmod 0400 "$password_file"
+# aws s3api get-object must be able to create/truncate this path. It is still
+# owner-only while the download is in progress, then becomes read-only before
+# the value is read and removed.
+chmod 0600 "$password_file"
 if ! aws s3api get-object \
   --region "$REGION" \
   --bucket "$REDIS_PASSWORD_BUCKET" \
@@ -68,6 +71,7 @@ if ! aws s3api get-object \
   exit 1
 fi
 
+chmod 0400 "$password_file"
 password=$(tr -d '\r\n' < "$password_file")
 
 if [ -z "$password" ]; then

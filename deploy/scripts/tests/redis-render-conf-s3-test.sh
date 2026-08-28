@@ -110,8 +110,8 @@ assert_success() {
     "$case_root/run/.redis-password."*) ;;
     *) fail 'S3 output was not written below the run fixture' ;;
   esac
-  [ "$(cat "$case_root/aws-output-mode.log")" = '400' ] ||
-    fail 'temporary password file was not 0400 during download'
+  [ "$(cat "$case_root/aws-output-mode.log")" = '600' ] ||
+    fail 'temporary password file was not owner-only writable during download'
 
   local rendered_conf="$case_root/run/redis.conf"
   [ -f "$rendered_conf" ] || fail 'rendered Redis configuration is missing'
