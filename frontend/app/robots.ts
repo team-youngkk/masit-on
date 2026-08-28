@@ -19,7 +19,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: ['/restaurants', '/restaurants/'],
+        allow: ['/restaurants', '/restaurants/', '/sitemap.xml'],
         disallow: '/',
       },
     ],
