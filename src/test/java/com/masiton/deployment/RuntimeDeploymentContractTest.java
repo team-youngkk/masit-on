@@ -85,6 +85,31 @@ class RuntimeDeploymentContractTest {
     }
 
     @Test
+    @DisplayName("저사용량 EC2 인스턴스 타입 프로파일을 선언한다")
+    void terraform_저사용량인스턴스타입프로파일을선언한다() throws IOException {
+        String appVariables = read(TERRAFORM.resolve("variables.tf"));
+        String appExample = read(TERRAFORM.resolve("terraform.tfvars.example"));
+        String redisVariables = read(Path.of("infra/production/terraform-redis/variables.tf"));
+
+        assertThat(appVariables)
+                .contains("variable \"instance_type\" {")
+                .contains("description = \"직접 서비스할 앱 EC2의 인스턴스 유형\"")
+                .contains("default     = \"t4g.micro\"");
+        assertThat(appVariables)
+                .contains("variable \"seed_instance_type\" {")
+                .contains("default     = \"t4g.small\"");
+        assertThat(appExample).contains("instance_type = \"t4g.micro\"");
+        assertThat(appExample).contains("seed_instance_type = \"t4g.small\"");
+        assertThat(read(TERRAFORM.resolve("instance.tf")))
+                .contains("instance_type               = var.instance_type");
+        assertThat(read(TERRAFORM.resolve("asg.tf")))
+                .contains("instance_type = var.seed_instance_type");
+        assertThat(redisVariables)
+                .contains("variable \"redis_instance_type\" {")
+                .contains("default     = \"t4g.nano\"");
+    }
+
+    @Test
     @DisplayName("직접 배포 IAM은 SSM 최소 권한만 유지한다")
     void terraform_배포role은SSM최소권한을갖는다() throws IOException {
         String iam = read(TERRAFORM.resolve("iam.tf"));

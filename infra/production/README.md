@@ -12,7 +12,15 @@ PostgreSQL은 별도 private EC2에서 실행하며, 이 레이어는 PostgreSQL
 - 배포 명령은 커밋 SHA와 함께 스크립트·Nginx·systemd 산출물을 전달하고 `app-deploy.sh`의 health check와 rollback 결과를 그대로 반환한다.
 - 앱 EC2의 IAM role은 런타임 SSM/ECR/ACM/CloudWatch 권한을 갖고, GitHub Actions role은 SSM 명령·취소·결과 조회 및 최소 S3 command pointer 권한만 갖는다.
 - Nginx가 TLS를 종단하고 외부의 80/443 요청을 직접 받는다. `/internal/**`은 계속 외부 `404`이며, Route53 A record는 앱 EIP를 가리킨다.
-- 앱 EC2와 Redis를 동거시키지 않는다. 앱은 `t4g.small`, Redis는 전용 인스턴스에서 실행한다.
+- 앱 EC2와 Redis를 동거시키지 않는다. 저사용량 운영 프로파일은 앱 `t4g.micro`,
+  PostgreSQL 전용 EC2 `t4g.nano`, Redis 전용 EC2 `t4g.nano`다.
+- 이 저장소의 `terraform/`과 `terraform-redis/` 레이어는 각각 앱과 Redis를 관리하지만
+  PostgreSQL EC2는 관리하지 않는다.
+  PostgreSQL 인스턴스 타입 변경은 AWS에서 별도 stop → modify → start 작업으로
+  적용하고, 연결 수·FreeableMemory·디스크 여유·OOM 로그를 확인한다.
+- 앱 `t4g.micro`는 1GiB 호스트이므로 backend/frontend 컨테이너 메모리 상한은
+  각각 `512m`/`256m`으로 둔다. 이 값은 무부하 기동만으로 안전성이 증명되지 않으므로
+  적용 후 OOMKilled·호스트 OOM·재시작·health·지연을 함께 확인한다.
 
 ## 전환 및 정리 결과
 
@@ -40,7 +48,14 @@ Terraform 변경 뒤에는 `terraform plan`에서 위 보존 리소스에 `delet
 
 ## 비용 기준
 
-서울 리전 730시간 기준으로 앱·PostgreSQL·Redis EC2 3대, EBS, 앱 EIP, hosted zone을 유지하고 SSM·SSMMessages interface endpoint를 제거한 현재 구성은 기본 비용이 대략 `$37/월`부터로 추정된다. S3 Gateway Endpoint는 추가 endpoint 사용료가 없고, 데이터 전송·요청량·백업·공인 IPv4·KMS 요청 비용은 별도다. 실제 청구액은 Cost Explorer에서 확인한다.
+서울 리전 730시간 기준으로 앱 `t4g.micro`, PostgreSQL `t4g.nano`, Redis
+`t4g.nano`, 앱 root 30GiB, PostgreSQL 20GiB, Redis volume 8GiB 2개, 앱 EIP와
+공통 Route 53·ECR·CloudWatch를 유지하는 목표 구성은 약 `$28.55/월`로 계산된다.
+SSM·SSMMessages interface endpoint는 포함하지 않으며, 데이터 전송·요청량·백업·
+KMS 요청 비용은 별도다. 위 금액에는 사용 중인 앱 EIP의 공인 IPv4 비용 `$3.65`가
+포함되어 있다. 산식은 EC2 `$15.184` + gp3 `$6.019` + IPv4 `$3.65` + 공통
+Route 53·ECR·CloudWatch `$3.70` = `$28.553`이다. 이는 정액 청구 보장이 아닌
+단가 기반 추정이며, 실제 청구액과 기존 자원 사용분은 Cost Explorer에서 확인한다.
 
 ## 확인 명령
 

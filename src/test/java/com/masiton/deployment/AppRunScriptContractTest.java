@@ -35,6 +35,23 @@ class AppRunScriptContractTest {
     }
 
     @Test
+    @DisplayName("1GiB 앱 호스트에 맞는 컨테이너 메모리 상한을 사용한다")
+    void micro호스트에맞는컨테이너메모리상한을사용한다() throws IOException {
+        String appRun = read(APP_RUN);
+        int backendStart = appRun.indexOf("backend)");
+        int frontendStart = appRun.indexOf("frontend)");
+
+        assertThat(backendStart).isGreaterThanOrEqualTo(0);
+        assertThat(frontendStart).isGreaterThan(backendStart);
+        assertThat(appRun.substring(backendStart, frontendStart))
+                .contains("--memory 512m")
+                .doesNotContain("--memory 1024m");
+        assertThat(appRun.substring(frontendStart))
+                .contains("--memory 256m")
+                .doesNotContain("--memory 512m");
+    }
+
+    @Test
     @DisplayName("Nginx는 검증 gate 없이 API와 화면을 각 upstream으로 직접 전달한다")
     void nginx는검증게이트없이경로를직접프록시한다() throws IOException {
         String site = read(NGINX_SITE);
