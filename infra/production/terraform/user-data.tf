@@ -1,8 +1,14 @@
-# 앱 인스턴스 bootstrap은 저장소에서 버전 관리한다. user_data 변수를 지정하면
-# 그 값이 우선하며, 지정하지 않으면 이 템플릿을 사용한다.
+# 기존 ASG와 직접 서비스할 단일 EC2는 bootstrap 계약이 다르다. 기존 ASG는
+# CodeDeploy를 계속 사용하고, 직접 EC2는 SSM Run Command를 사용한다. 두 경로를
+# 같은 user_data에 묶으면 legacy replacement가 CodeDeploy 없이 기동하는 회귀가
+# 생기므로 템플릿과 local을 분리한다.
 locals {
-  rendered_user_data = coalesce(var.user_data, templatefile("${path.module}/templates/app-user-data.sh.tftpl", {
+  rendered_legacy_user_data = coalesce(var.user_data, templatefile("${path.module}/templates/app-user-data.sh.tftpl", {
     aws_region                = var.aws_region
     nginx_trusted_proxy_cidrs = join(",", var.nginx_trusted_proxy_cidrs)
   }))
+
+  rendered_direct_user_data = templatefile("${path.module}/templates/direct-app-user-data.sh.tftpl", {
+    aws_region = var.aws_region
+  })
 }

@@ -14,6 +14,11 @@ related_documents:
 
 # 전환 후 런타임 실측 기준선
 
+> 보관 상태: 이 문서는 2026-08-19 기존 ALB·Blue-Green 전환 직후의 실측 historical
+> snapshot이다. 현재 PostgreSQL EC2·단일 앱 EC2 전환의 운영 완료 증거로 사용하지
+> 않으며, 최신 전환 순서는 [단일 앱 EC2 전환 문서](postgres-ec2-single-instance-transition.md)를
+> 따른다.
+
 ## 1. 문서 목적
 
 2026-08-19 ALB·Blue-Green 전환 직후 운영 인스턴스와 전용 Redis에서 **부하를 주지 않고** 수집한 실측값을 남긴다.

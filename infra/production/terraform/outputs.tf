@@ -27,9 +27,20 @@ output "codedeploy_deployment_group_name" {
 }
 
 output "security_group_ids" {
-  description = "이 모듈이 생성한 ALB/app security group ID"
+  description = "이 모듈이 생성한 ALB/legacy app/direct app security group ID"
   value = {
-    alb = aws_security_group.alb.id
-    app = aws_security_group.app.id
+    alb        = aws_security_group.alb.id
+    app        = aws_security_group.app.id
+    direct_app = aws_security_group.direct_app.id
   }
+}
+
+output "app_instance_id" {
+  description = "직접 SSM 배포 대상인 운영 앱 EC2 ID"
+  value       = aws_instance.app.id
+}
+
+output "app_public_ip" {
+  description = "운영 앱 EC2에 연결된 EIP"
+  value       = aws_eip.app.public_ip
 }

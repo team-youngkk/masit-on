@@ -9,6 +9,12 @@ related_documents:
 
 # 전용 Redis 장애 복구 runbook
 
+> 보관 상태: 이 문서는 2026-08-18 legacy ALB·ASG·CodeDeploy 배포 경로를 기준으로
+> 작성된 historical snapshot이다. 현재 단일 앱 EC2의 직접 SSM 배포에는 아래
+> CodeDeploy 명령과 alarm 게이트 절차를 적용하지 않는다. 현재 전환 순서는
+> [단일 앱 EC2 전환 문서](postgres-ec2-single-instance-transition.md)와
+> [운영 인프라 README](../../infra/production/README.md)를 기준으로 한다.
+
 이 문서는 전용 Redis 장애로 CodeDeploy 배포 게이트가 복구 배포까지 막을 때의
 유일한 break-glass 진입점이다. 평상시에는 이 절차를 사용하지 않는다. 정상 감시는
 `FleetDependencyRedis`·`RedisMemoryUtilizationPercent`의 결측을 포함해 fail-closed로

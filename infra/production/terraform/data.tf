@@ -68,3 +68,28 @@ data "aws_route_table" "app" {
     }
   }
 }
+
+data "aws_subnet" "direct_app" {
+  id = var.app_subnet_id
+
+  lifecycle {
+    postcondition {
+      condition     = self.vpc_id == var.vpc_id
+      error_message = "app_subnet_id에 지정한 subnet이 vpc_id와 다르다."
+    }
+  }
+}
+
+data "aws_route_table" "direct_app" {
+  subnet_id = var.app_subnet_id
+
+  lifecycle {
+    postcondition {
+      condition = anytrue([
+        for route in self.routes :
+        route.cidr_block == "0.0.0.0/0" && can(regex("^igw-", route.gateway_id))
+      ])
+      error_message = "직접 서비스할 app_subnet_id에는 0.0.0.0/0 -> IGW 경로가 있어야 한다."
+    }
+  }
+}

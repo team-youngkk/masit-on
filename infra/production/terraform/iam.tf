@@ -34,6 +34,18 @@ data "aws_iam_policy_document" "app_parameter_read" {
     effect    = "Allow"
     actions   = ["kms:Decrypt"]
     resources = var.kms_key_arns
+
+    condition {
+      test     = "StringEquals"
+      variable = "kms:ViaService"
+      values   = ["ssm.${var.aws_region}.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringLike"
+      variable = "kms:EncryptionContext:PARAMETER_ARN"
+      values   = ["arn:aws:ssm:${var.aws_region}:*:parameter/masiton/*"]
+    }
   }
 
   statement {
@@ -282,3 +294,41 @@ resource "aws_iam_role_policy" "github_actions_deploy" {
   policy = data.aws_iam_policy_document.github_actions_deploy.json
 }
 
+# 직접 배포 경로의 최소 권한이다. legacy CodeDeploy policy는 cutover 검증이 끝난
+# 뒤 별도 정리 단계에서 제거한다.
+data "aws_iam_policy_document" "github_actions_ssm_deploy" {
+  statement {
+    effect  = "Allow"
+    actions = ["ssm:SendCommand"]
+    resources = [
+      "arn:aws:ssm:${var.aws_region}::document/AWS-RunShellScript",
+      "arn:aws:ec2:${var.aws_region}:*:instance/${aws_instance.app.id}",
+    ]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "s3:PutObject",
+      "s3:GetObject",
+      "s3:AbortMultipartUpload",
+    ]
+    resources = ["${aws_s3_bucket.codedeploy_revision.arn}/masiton/ssm/*"]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "ssm:CancelCommand",
+      "ssm:GetCommandInvocation",
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "github_actions_ssm_deploy" {
+  count  = var.github_actions_role_name == null ? 0 : 1
+  name   = "${var.name_prefix}-ssm-deploy"
+  role   = var.github_actions_role_name
+  policy = data.aws_iam_policy_document.github_actions_ssm_deploy.json
+}

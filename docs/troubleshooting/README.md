@@ -15,6 +15,7 @@ related_documents:
 
 ## 최신 기록
 
+- [운영 전환: PostgreSQL EC2·단일 앱 EC2 준비 적용](ops-2026-08-28-single-ec2-preparation.md)
 - [PR #308 외부 endpoint Origin 포트 검증](pr-308-external-endpoint-origin-port-review.md)
 - [PR #303 코스 찜 후보의 권한·범위 추적성](pr-303-course-favorite-review.md)
 - [PR #302 비밀번호 재설정 URL과 최신 fragment 처리](pr-302-password-reset-review.md)
@@ -50,6 +51,7 @@ related_documents:
 
 ## 운영 전환
 
+- [PostgreSQL EC2·단일 앱 EC2 준비 적용](ops-2026-08-28-single-ec2-preparation.md)
 - [AI 보충 입력 검증 실패 사유가 화면에서 사라졌다](ops-2026-08-22-ai-supplement-validation-reason.md)
 
 리뷰가 아니라 실제 운영 작업 중에 드러난 문제의 기록이다. 파일명은 `ops-<날짜>-` 규약을 쓴다.

@@ -4,14 +4,14 @@
 # unit 파일에 태그를 박지 않는 이유는 배포마다 unit을 고쳐 daemon-reload하지
 # 않고 파일 한 줄만 바꿔 재기동하게 하려는 것이다.
 #
-# Redis가 먼저 떠 있어야 /internal/health/dependencies가 정상으로 보고된다.
+# Redis는 별도 EC2에서 실행되며, 앱 컨테이너가 원격 endpoint를 검사한다.
 
 [Unit]
 Description=masiton backend (Spring Boot, M2-09)
 Documentation=https://github.com/team-youngkk/masit-on/blob/main/docs/08-planning/m2-deployment-plan.md
-After=docker.service network-online.target masiton-redis.service
+After=docker.service network-online.target
 Requires=docker.service
-Wants=network-online.target masiton-redis.service
+Wants=network-online.target
 
 [Service]
 Type=exec
