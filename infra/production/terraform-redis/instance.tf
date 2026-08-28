@@ -11,11 +11,12 @@ resource "aws_instance" "redis" {
 
   user_data_replace_on_change = true
   user_data = templatefile("${path.module}/templates/redis-user-data.sh.tftpl", {
-    aws_region     = var.aws_region
-    assets_bucket  = var.redis_assets_bucket
-    assets_prefix  = var.redis_assets_prefix
-    asset_files    = local.redis_asset_files
-    data_volume_id = aws_ebs_volume.redis_data.id
+    aws_region                = var.aws_region
+    assets_bucket             = var.redis_assets_bucket
+    assets_prefix             = var.redis_assets_prefix
+    redis_password_object_key = var.redis_password_object_key
+    asset_files               = local.redis_asset_files
+    data_volume_id            = aws_ebs_volume.redis_data.id
   })
 
   root_block_device {
@@ -39,9 +40,7 @@ resource "aws_instance" "redis" {
   depends_on = [
     aws_s3_object.redis_asset,
     aws_vpc_endpoint.s3,
-    aws_vpc_endpoint.ssm,
     aws_iam_role_policy.redis_read,
-    aws_vpc_security_group_egress_rule.redis_to_vpce,
     aws_vpc_security_group_egress_rule.redis_to_s3,
     aws_vpc_security_group_egress_rule.redis_to_vpc_dns_udp,
     aws_vpc_security_group_egress_rule.redis_to_vpc_dns_tcp,

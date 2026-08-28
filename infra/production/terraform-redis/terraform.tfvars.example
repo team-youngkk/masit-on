@@ -14,7 +14,7 @@ private_route_table_ids = ["rtb-REPLACE_ME"]
 # masiton-redis.service의 digest 고정이 그대로 동작한다.
 redis_ami_id = "ami-REPLACE_ME"
 
-# Redis 6379에 접근하는 app security group. 운영 ASG의 SG만 둔다.
+# Redis 6379에 접근하는 app security group. 단일 앱과 legacy SG를 필요한 기간만 둔다.
 # 단일 EC2에서 전환하는 과도기에는 /masiton/redis/host를 두 환경이 공유하므로
 # 기존 인스턴스의 SG도 함께 허용해야 하지만, 전환이 끝나면 제거한다.
 app_security_group_ids = [
@@ -22,17 +22,11 @@ app_security_group_ids = [
   "sg-REPLACE_ME_DIRECT_APP", # terraform/ output security_group_ids.direct_app
 ]
 
-# ssm endpoint는 private DNS가 VPC 전역에 적용된다. SSM Agent를 쓰는 인스턴스의
-# SG를 빠짐없이 포함해야 그 인스턴스가 SSM에서 이탈하지 않는다. 단일 EC2에서
-# 전환하는 과도기에는 기존 인스턴스의 SG도 포함하고, 종료한 뒤 제거한다.
-ssm_endpoint_client_security_group_ids = [
-  "sg-REPLACE_ME_APP",        # legacy app SG during the parallel phase
-  "sg-REPLACE_ME_DIRECT_APP", # direct app SG; private DNS applies VPC-wide
-]
-
 redis_assets_bucket = "masiton-prod-codedeploy-REPLACE_ACCOUNT"
 
-redis_password_parameter_arn = "arn:aws:ssm:ap-northeast-2:REPLACE_ACCOUNT:parameter/masiton/redis/password"
+# 설정 자산과 비밀 객체가 IAM wildcard로 겹치지 않도록 별도 prefix를 사용한다.
+redis_assets_prefix = "masiton/redis/assets"
 
-# 고객관리 키가 없어 SecureString은 AWS 관리 alias/aws/ssm으로 암호화돼 있다.
-kms_key_arns = ["arn:aws:kms:ap-northeast-2:REPLACE_ACCOUNT:key/REPLACE_ME"]
+# 실제 비밀값은 S3에 별도로 업로드한다. 이 key는 객체 위치만 가리키며 비밀값이 아니다.
+# 객체는 SSE-KMS와 AWS 관리형 alias/aws/s3 key로 암호화되어 있어야 한다.
+redis_password_object_key = "masiton/redis/secret/redis-password"

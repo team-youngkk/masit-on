@@ -108,7 +108,7 @@ related_documents:
 ## 8. 비밀정보 관리 정책
 
 - 비밀번호, 세션 식별자, 토큰, API 키, AWS 장기 키를 코드·설정 기본값·로그·API 응답·Git에 저장하지 않는다.
-- 운영 비밀값은 AWS Systems Manager Parameter Store SecureString과 KMS로 보호한다.
+- 운영 비밀값은 기본적으로 AWS Systems Manager Parameter Store SecureString과 KMS로 보호한다. 사설 subnet 전용 Redis의 부트스트랩 비밀값만 [ADR-SEC-002](../07-adr/security/sec-002-redis-bootstrap-secret-transport.md)에 따라 버전 관리된 S3 SSE-KMS 객체를 사용할 수 있다.
 - EC2는 IAM Role, GitHub Actions는 OIDC 기반 단기 자격 증명을 사용한다.
 - 최소 권한을 적용하고 개발 환경에 운영 권한을 배포하지 않는다.
 - 비밀값 예시는 실제 값과 구분되는 명시적 placeholder만 사용한다.

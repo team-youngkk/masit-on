@@ -1,9 +1,3 @@
-resource "aws_security_group" "alb" {
-  name        = "${var.name_prefix}-alb-sg"
-  description = "Internet ingress for the production ALB"
-  vpc_id      = data.aws_vpc.existing.id
-}
-
 resource "aws_security_group" "app" {
   name        = "${var.name_prefix}-app-sg"
   description = "Application instances reachable only from the ALB"
@@ -17,44 +11,8 @@ resource "aws_security_group" "direct_app" {
   name        = "${var.name_prefix}-direct-app-sg"
   description = "Internet ingress for the direct application instance"
   vpc_id      = data.aws_vpc.existing.id
-}
 
-resource "aws_vpc_security_group_ingress_rule" "alb_http" {
-  for_each          = toset(var.alb_ingress_cidr_blocks)
-  security_group_id = aws_security_group.alb.id
-  cidr_ipv4         = each.value
-  from_port         = 80
-  to_port           = 80
-  ip_protocol       = "tcp"
-  description       = "HTTP ingress to the production ALB"
-}
-
-resource "aws_vpc_security_group_ingress_rule" "alb_https" {
-  for_each          = toset(var.alb_ingress_cidr_blocks)
-  security_group_id = aws_security_group.alb.id
-  cidr_ipv4         = each.value
-  from_port         = 443
-  to_port           = 443
-  ip_protocol       = "tcp"
-  description       = "HTTPS ingress to the production ALB"
-}
-
-resource "aws_vpc_security_group_egress_rule" "alb_to_app" {
-  security_group_id            = aws_security_group.alb.id
-  referenced_security_group_id = aws_security_group.app.id
-  from_port                    = var.app_port
-  to_port                      = var.app_port
-  ip_protocol                  = "tcp"
-  description                  = "ALB to application instances"
-}
-
-resource "aws_vpc_security_group_ingress_rule" "app_from_alb" {
-  security_group_id            = aws_security_group.app.id
-  referenced_security_group_id = aws_security_group.alb.id
-  from_port                    = var.app_port
-  to_port                      = var.app_port
-  ip_protocol                  = "tcp"
-  description                  = "Only the ALB may reach application instances"
+  egress = []
 }
 
 # direct_traffic_enabled 전환 뒤에는 ALB가 아닌 인터넷이 EIP로 직접 들어온다.

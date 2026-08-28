@@ -5,18 +5,13 @@ aws_region = "ap-northeast-2"
 # Existing network and compute inputs. This module does not create VPC, subnet, AMI, RDS, or Redis.
 vpc_id = "vpc-REPLACE_ME"
 
-alb_subnet_ids = [
-  "subnet-REPLACE_ME_PUBLIC_A",
-  "subnet-REPLACE_ME_PUBLIC_C",
-]
-
 app_subnet_ids = [
   "subnet-REPLACE_ME_PUBLIC_A",
   "subnet-REPLACE_ME_PUBLIC_C",
 ]
 
-# 현재 승인된 운영 예시는 public app subnet이다. ALB와 같은 public route를 사용하고
-# launch template이 public IPv4를 명시적으로 할당한다. private 모드로 바꾸려면
+# 현재 운영 예시는 public app subnet이다. public route를 사용하고 launch template이
+# public IPv4를 명시적으로 할당한다. private 모드로 바꾸려면
 # private subnet과 NAT gateway egress 경로를 함께 지정하고 비용·운영 조건을 재확인한다.
 app_subnet_is_private = false
 
@@ -25,41 +20,30 @@ app_subnet_is_private = false
 app_subnet_id            = "subnet-REPLACE_ME_PUBLIC_A"
 app_ingress_cidr_blocks  = ["0.0.0.0/0"]
 
-# PostgreSQL EC2에는 legacy RDS SG와 분리된 전용 DB SG를 사용한다. 전환 중
+# PostgreSQL EC2에는 기존 RDS SG와 분리된 전용 DB SG를 사용한다.
 # database_security_group_id에는 그 전용 SG를 넣고, rds_security_group_id에는
 # 기존 legacy DB SG를 유지한다. 두 값이 같아도 direct 앱 ingress는 별도로 생성된다.
 database_security_group_id = "sg-REPLACE_ME_POSTGRESQL_EC2"
 database_port              = 5432
 
-# false로 두면 Route53은 기존 ALB alias를 유지한다. 직접 앱 EC2의 SSM 배포와
-# 외부 smoke를 확인한 뒤 true로 바꾸는 별도 plan에서 EIP로 전환한다.
-direct_traffic_enabled = false
+# 단일 EC2 외부 smoke와 DNS 전환이 완료된 운영 구성은 true로 유지한다.
+direct_traffic_enabled = true
 
-# 기존 ASG의 docker·CodeDeploy Agent는 legacy user_data가 설치하고, 직접 앱 EC2의
-# docker·SSM Agent는 direct user_data가 설치한다. AMI는 기존 것을 그대로 쓴다.
+# 직접 앱 EC2의 docker·SSM Agent는 direct user_data가 설치한다. AMI는 기존 것을
+# 그대로 쓴다.
 ami_id        = "ami-REPLACE_ME"
 instance_type = "t4g.small"
 
-# ALB는 ACM 종단 후 Nginx 443으로 재암호화한다. HTTP/80 target을 쓰면 Nginx
-# 도메인 server의 301이 redirect loop를 만든다.
+# Nginx가 ACM 인증서로 TLS를 종단하고 외부 80 요청을 HTTPS로 redirect한다.
 app_port     = 443
 app_protocol = "HTTPS"
 
-# blue ASG는 CodeDeploy 교체 환경 체인의 seed다. blue_desired_capacity=1은 최초
-# seeding에 필요한 값이다. 첫 배포 후 replacement가 healthy해지면 이미 실행 중인
-# seed를 0대로 내리는 명령을 [정리 runbook](../../../docs/08-planning/blue-green-cleanup-runbook.md)에서
-# 실행한다. desired_capacity는 ignore_changes 대상이므로 tfvars만 바꾸지 않는다.
-# ASG 자체 설정을 체인에 반영해 다시 seeding할 때만 1대로 복원한다.
+# blue ASG와 target group은 기존 전환 이력과 Terraform state를 보존하기 위한 seed다.
+# 단일 EC2 SSM 배포에는 사용하지 않는다. desired_capacity는 ignore_changes 대상이므로
+# tfvars만 바꾸지 않는다.
 blue_min_size         = 0
 blue_desired_capacity = 1
 blue_max_size         = 2
-
-# 최초 seeding에서는 false로 유지한다. initial_alarm_seeding=true와
-# codedeploy_termination_enabled=true를 함께 지정하면 Terraform plan이 거부한다.
-# known-good 배포 성공 후
-# deployment group의 autoscaling_groups가 replacement ASG를 가리키는 것을
-# 확인한 뒤 별도 plan/apply에서 true로 바꿔 성공 배포 후 자동 종료를 활성화한다.
-codedeploy_termination_enabled = false
 
 # 새 ASG가 기존 RDS에 접근하려면 RDS SG에 app SG 출처 ingress가 필요하다.
 # 끄면 SG ingress에서 drop되어 backend가 Flyway 연결 timeout으로 기동에 실패한다.
@@ -70,7 +54,7 @@ manage_redis_ingress_rule = false
 rds_security_group_id   = "sg-REPLACE_ME_RDS"
 redis_security_group_id = "sg-REPLACE_ME_REDIS"
 
-# ACM is required for the ALB HTTPS listener. ALB re-encrypts traffic to Nginx on 443.
+# ACM certificate used by Nginx for direct HTTPS termination.
 acm_certificate_arn = "arn:aws:acm:ap-northeast-2:000000000000:certificate/REPLACE_ME"
 
 ecr_repository_arns = [
@@ -86,15 +70,14 @@ nginx_trusted_proxy_cidrs = [
   "10.0.0.0/16",
 ]
 
-# Route53 alias is managed only when both values are set.
+# Route53 A record is managed only when both values are set.
 # route53_zone_id     = "ZREPLACE_ME"
 # route53_record_name  = "api.example.com"
-# initial_blue_verified = true # known-good blue 검증 후에만 활성화
 
 ssm_parameter_arns = ["arn:aws:ssm:ap-northeast-2:000000000000:parameter/masiton/*"]
 # github_actions_role_name = "masiton-github-actions-role"
-# Keep secrets out of this file. user_data must install/start CodeDeploy Agent and
-# write REQUIRE_SHARED_REDIS=true plus the shared Redis endpoint configuration.
+# Keep secrets out of this file. user_data must install/start SSM Agent and write
+# REQUIRE_SHARED_REDIS=true plus the shared Redis endpoint configuration.
 # user_data = <<-EOT
 # #!/bin/bash
 # # Application bootstrap must resolve secret values from SSM using the instance role.
@@ -107,15 +90,4 @@ ssm_parameter_arns = ["arn:aws:ssm:ap-northeast-2:000000000000:parameter/masiton
 # ENV
 # EOT
 
-# ---- 최초 seeding 구간에만 필요한 완화 ----
-# 앱이 없는 빈 baseline에서는 ELB health check와 alarm 게이트, 자동 rollback이
-# 첫 배포를 막는다. 아래 세 입력은 tfvars에 저장하지 말고, 최초 known-good
-# revision을 올리는 단 한 번의 명령에만 함께 넘긴다. 배포가 성공하면 즉시
-# 기본값(ELB / true / true / initial_alarm_seeding=false / auto rollback=true)으로 복원한다.
-# codedeploy_termination_enabled=true는 replacement ASG 검증과 seed 축소 후 별도 적용한다.
-# terraform plan -var="initial_alarm_seeding=true" -var="deployment_alarms_enabled=false" -var="deployment_auto_rollback_enabled=false" -out=initial-seed.tfplan
-# terraform apply initial-seed.tfplan
-# asg_health_check_type            = "EC2"
-# initial_alarm_seeding             = true
-# deployment_alarms_enabled         = false
-# deployment_auto_rollback_enabled = false
+# 기존 seed ASG는 0대로 유지하며 자동 배포에는 사용하지 않는다.

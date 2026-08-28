@@ -1,12 +1,13 @@
 #!/bin/bash
 # 전용 private Redis 부트스트랩. 컨테이너 이미지는 AMI에 미리 pull되어 있고
 # 설정 파일은 S3 gateway endpoint로 받는다. 비밀값을 여기에 쓰지 않는다.
-# requirepass는 redis-render-conf.sh가 Parameter Store에서 읽어 tmpfs에 렌더링한다.
+# requirepass 객체의 bucket/key만 service drop-in에 전달한다. 비밀값은 여기에 쓰지 않는다.
 set -euxo pipefail
 
 REGION=${aws_region}
 BUCKET=${assets_bucket}
 PREFIX=${assets_prefix}
+PASSWORD_OBJECT_KEY=${redis_password_object_key}
 STAGE=/tmp/masiton-deploy
 DATA_VOLUME_ID=${data_volume_id}
 # Nitro NVMe serial은 EBS volume ID의 하이픈을 제거한 값이다.
@@ -43,6 +44,8 @@ install -d -m 0755 /etc/systemd/system/masiton-redis.service.d
 cat > /etc/systemd/system/masiton-redis.service.d/10-publish-addr.conf <<DROPIN
 [Service]
 Environment=REDIS_PUBLISH_ADDR=$PRIVATE_IP
+Environment=REDIS_PASSWORD_BUCKET=$BUCKET
+Environment=REDIS_PASSWORD_OBJECT_KEY=$PASSWORD_OBJECT_KEY
 DROPIN
 
 bash "$STAGE/redis-install.sh" "$STAGE"

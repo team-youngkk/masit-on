@@ -21,32 +21,6 @@ resource "aws_iam_role" "redis" {
 # EC2 Instance Connect Endpoint로 하기 때문이다.
 data "aws_iam_policy_document" "redis_read" {
   statement {
-    sid       = "ReadRedisSecret"
-    effect    = "Allow"
-    actions   = ["ssm:GetParameter", "ssm:GetParameters"]
-    resources = [var.redis_password_parameter_arn]
-  }
-
-  statement {
-    sid       = "DecryptSecureString"
-    effect    = "Allow"
-    actions   = ["kms:Decrypt"]
-    resources = var.kms_key_arns
-
-    condition {
-      test     = "StringEquals"
-      variable = "kms:ViaService"
-      values   = ["ssm.${var.aws_region}.amazonaws.com"]
-    }
-
-    condition {
-      test     = "StringLike"
-      variable = "kms:EncryptionContext:PARAMETER_ARN"
-      values   = [var.redis_password_parameter_arn]
-    }
-  }
-
-  statement {
     sid       = "ReadRedisDeployAssets"
     effect    = "Allow"
     actions   = ["s3:GetObject", "s3:GetObjectVersion"]
@@ -54,7 +28,7 @@ data "aws_iam_policy_document" "redis_read" {
   }
 
   statement {
-    sid       = "LocateBucket"
+    sid       = "LocateRedisAssetsBucket"
     effect    = "Allow"
     actions   = ["s3:GetBucketLocation", "s3:ListBucket"]
     resources = ["arn:aws:s3:::${var.redis_assets_bucket}"]
@@ -65,12 +39,39 @@ data "aws_iam_policy_document" "redis_read" {
       values   = ["${var.redis_assets_prefix}/*"]
     }
   }
+
+  statement {
+    sid       = "ReadRedisPasswordObject"
+    effect    = "Allow"
+    actions   = ["s3:GetObject", "s3:GetObjectVersion"]
+    resources = ["arn:aws:s3:::${var.redis_assets_bucket}/${var.redis_password_object_key}"]
+  }
+
+  statement {
+    sid       = "DecryptRedisPasswordObject"
+    effect    = "Allow"
+    actions   = ["kms:Decrypt"]
+    resources = [data.aws_kms_key.s3.arn]
+
+    condition {
+      test     = "StringEquals"
+      variable = "kms:ViaService"
+      values   = ["s3.${var.aws_region}.amazonaws.com"]
+    }
+  }
 }
 
 resource "aws_iam_role_policy" "redis_read" {
   name   = "${var.name_prefix}-redis-read"
   role   = aws_iam_role.redis.id
   policy = data.aws_iam_policy_document.redis_read.json
+
+  lifecycle {
+    precondition {
+      condition     = !startswith(var.redis_password_object_key, "${var.redis_assets_prefix}/")
+      error_message = "redis_assets_prefix와 redis_password_object_key는 겹치지 않아야 한다."
+    }
+  }
 }
 
 resource "aws_iam_instance_profile" "redis" {

@@ -41,13 +41,13 @@ PostgreSQL 데이터 volume을 별도 gp3 20 GiB로 추가하면 약 `$1.82`가 
 
 위 계산은 ALB `$22.27`, RDS 및 RDS volume `$20.87`, Redis SSM interface endpoint `$9.49`를 포함하지 않은 값이다. 데이터 전송, NAT gateway, 추가 EBS snapshot, CloudWatch 사용량, 공인 IPv4의 실제 과금 조건은 별도 확인한다.
 
-## Redis SSM endpoint 조건
+## Redis secret 객체와 SSM endpoint 조건
 
-계산상 Redis SSM interface endpoint `$9.49`도 제거해야 `$50/월` 아래가 된다. 하지만 현재 전용 Redis는 재기동할 때 `redis-render-conf.sh`가 `/masiton/redis/password`를 SSM에서 읽어 `/run` tmpfs에 설정 파일을 만든다. endpoint를 먼저 삭제하면 Redis 재기동이 실패한다.
+계산상 Redis SSM interface endpoint `$9.49`도 제거해야 `$50/월` 아래가 된다. 전용 Redis는 재기동할 때 `redis-render-conf.sh`가 기존 S3 bucket의 별도 SSE-KMS secret 객체를 S3 Gateway Endpoint로 읽어 `/run` tmpfs에 설정 파일을 만든다. 앱이 사용하는 기존 `/masiton/redis/password` Parameter Store 값은 유지하지만 Redis 부트스트랩은 SSM endpoint를 사용하지 않는다([ADR-SEC-002](../07-adr/security/sec-002-redis-bootstrap-secret-transport.md)).
 
 따라서 다음 조건을 모두 만족하기 전에는 endpoint 제거를 완료로 판정하지 않는다.
 
-- 비밀번호를 user data·로그·명령행에 노출하지 않는 대체 전달 경로가 있다.
+- S3 secret 객체가 Terraform state·user data·로그·명령행에 비밀번호를 노출하지 않는 별도 전달 경로로 준비되어 있다.
 - 인스턴스 교체와 재부팅 후에도 같은 경로가 재현된다.
 - Redis 설정 렌더링 계약 테스트와 재부팅 검증을 통과한다.
 - 실패 시 Redis가 인증 없이 기동하지 않고, 앱 health alarm이 장애를 감지한다.
@@ -56,7 +56,7 @@ PostgreSQL 데이터 volume을 별도 gp3 20 GiB로 추가하면 약 `$1.82`가 
 
 - `/masiton/db/url`이 PostgreSQL EC2 endpoint를 가리킨다.
 - 병행 전환 중에는 legacy RDS SG와 분리된 PostgreSQL EC2 전용 DB SG가 legacy app SG와 direct app SG의 5432를 모두 허용한다. legacy 정리 plan에서 legacy app SG rule과 기존 RDS SG를 별도로 정리한다.
-- direct app SG가 Redis SG의 6379만 참조하고, SSM endpoint client 목록에도 포함된다.
+- direct app SG가 Redis SG의 6379만 참조하고, Redis SG egress에는 S3 Gateway Endpoint 경로만 남는다.
 - Route53 A record가 ALB가 아닌 EIP를 가리킨다.
 - CI가 `PRODUCTION_INSTANCE_ID`를 비운 채 성공하지 않는다.
 - 앱·PostgreSQL·Redis 지표가 단일 EC2 alarm에서 정상으로 수집된다.

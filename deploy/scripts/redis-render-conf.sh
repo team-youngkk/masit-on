@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 운영 Redis 기동 직전에 실행한다. 저장소의 redis.conf에 Parameter Store의
+# 운영 Redis 기동 직전에 실행한다. 저장소의 redis.conf에 S3 객체의
 # requirepass를 붙여 tmpfs(/run)에 렌더링한다.
 #
 # /run을 쓰는 이유는 두 가지다.
@@ -14,7 +14,6 @@
 set -euo pipefail
 
 REGION="${AWS_REGION:-ap-northeast-2}"
-PARAMETER_NAME="${REDIS_PASSWORD_PARAMETER:-/masiton/redis/password}"
 BASE_CONF="${BASE_CONF:-/opt/masiton/redis/redis.conf}"
 RUN_DIR="${RUN_DIR:-/run/masiton}"
 RUN_CONF="${RUN_CONF:-$RUN_DIR/redis.conf}"
@@ -24,42 +23,73 @@ RUN_CONF="${RUN_CONF:-$RUN_DIR/redis.conf}"
 REDIS_UID="${REDIS_UID:-999}"
 REDIS_GID="${REDIS_GID:-999}"
 
-if [ ! -f "$BASE_CONF" ]; then
-  echo "기준 설정이 없다: $BASE_CONF" >&2
-  exit 1
-fi
-
 # /run/masiton은 0711로 통일한다. 여러 스크립트가 같은 디렉터리를 만드는데
 # 권한이 엇갈리면 마지막에 만든 쪽이 이긴다. 실제로 0700으로 만들어져 Nginx
 # worker가 htpasswd에 도달하지 못해 인증 통과 요청이 500이 된 적이 있다.
 # 0711은 탐색만 허용하고 목록 열거를 막으며, 파일 내용은 각 파일의 0400이 지킨다.
 install -d -m 0711 "$RUN_DIR"
 
-password=$(aws ssm get-parameter \
-  --region "$REGION" \
-  --name "$PARAMETER_NAME" \
-  --with-decryption \
-  --query 'Parameter.Value' --output text)
+umask 077
+password_file=''
+password=''
+cleanup() {
+  if [ -n "$password_file" ]; then
+    rm -f -- "$password_file"
+  fi
+  unset password
+  unset password_file
+}
+trap cleanup EXIT
 
-if [ -z "$password" ] || [ "$password" = "None" ]; then
-  echo "Parameter Store에서 $PARAMETER_NAME 를 읽지 못했다" >&2
+# 이전 렌더링이 남아 있으면 새 비밀값을 읽지 못한 경우에도 소비자가 낡은
+# 설정을 집어들 수 있다. 항상 먼저 제거하고, 새 렌더링이 성공한 경우에만 만든다.
+rm -f -- "$RUN_CONF"
+
+if [ ! -f "$BASE_CONF" ]; then
+  echo "기준 설정이 없다: $BASE_CONF" >&2
   exit 1
 fi
 
-# 값에 섞인 CR·LF를 걷어낸다. Windows 셸에서 생성한 값이 `\r`을 물고 등록되면
-# Redis 설정 파서가 줄 끝의 `\r`을 떼어내는 반면 클라이언트는 그대로 보내
-# WRONGPASS가 된다. 실제로 M2-05에서 이 형태로 한 번 어긋났다.
-password=$(printf %s "$password" | tr -d '\r\n')
+if [ -z "${REDIS_PASSWORD_BUCKET:-}" ] || [ -z "${REDIS_PASSWORD_OBJECT_KEY:-}" ]; then
+  echo "Redis 비밀번호 S3 위치가 설정되지 않았다" >&2
+  exit 1
+fi
+
+# S3 CLI는 객체 본문을 파일에 직접 쓰고 메타데이터 출력은 버린다. 비밀값은
+# 명령행 인자나 표준 출력에 넣지 않는다.
+password_file=$(mktemp "$RUN_DIR/.redis-password.XXXXXX")
+# aws s3api get-object must be able to create/truncate this path. It is still
+# owner-only while the download is in progress, then becomes read-only before
+# the value is read and removed.
+chmod 0600 "$password_file"
+if ! aws s3api get-object \
+  --region "$REGION" \
+  --bucket "$REDIS_PASSWORD_BUCKET" \
+  --key "$REDIS_PASSWORD_OBJECT_KEY" \
+  "$password_file" >/dev/null; then
+  echo "S3에서 Redis 비밀번호 객체를 읽지 못했다" >&2
+  exit 1
+fi
+
+chmod 0400 "$password_file"
+password=$(tr -d '\r\n' < "$password_file")
+
+if [ -z "$password" ]; then
+  echo "S3의 Redis 비밀번호 객체가 비어 있다" >&2
+  exit 1
+fi
+
+# Windows 셸에서 생성한 객체가 CR·LF를 물고 있으면 Redis 설정 파서와 클라이언트의
+# 값이 어긋날 수 있으므로 객체를 읽을 때 제거한다. 실제로 M2-05에서 한 번 어긋났다.
 
 # 공백이 있으면 설정 한 줄로 표현할 수 없다. 조용히 잘리지 않게 여기서 막는다.
 case "$password" in
   *[[:space:]]*)
-    echo "$PARAMETER_NAME 값에 공백이 있어 requirepass 한 줄로 쓸 수 없다" >&2
+    echo "S3의 Redis 비밀번호 객체에 공백이 있어 requirepass 한 줄로 쓸 수 없다" >&2
     exit 1
     ;;
 esac
 
-umask 077
 {
   cat "$BASE_CONF"
   printf 'requirepass %s\n' "$password"

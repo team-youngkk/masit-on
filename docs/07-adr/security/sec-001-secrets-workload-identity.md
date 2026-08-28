@@ -35,7 +35,7 @@ Accepted
 
 ## 2. 결정 요약
 
-M2부터 운영 비밀값은 Parameter Store SecureString과 KMS, EC2의 AWS 접근은 IAM Role, GitHub Actions의 AWS 접근은 OIDC 단기 자격 증명을 사용한다.
+M2부터 운영 비밀값은 기본적으로 Parameter Store SecureString과 KMS, EC2의 AWS 접근은 IAM Role, GitHub Actions의 AWS 접근은 OIDC 단기 자격 증명을 사용한다. 사설 subnet 전용 Redis 부트스트랩의 구체적 예외는 [ADR-SEC-002](sec-002-redis-bootstrap-secret-transport.md)로 정한다.
 
 ## 3. 배경
 
@@ -54,7 +54,7 @@ JWT 서명 키, DB·Redis 자격 증명, Kakao·YouTube API 키와 같은 운영
 
 ## 6. 결정
 
-로컬 단계에서는 Git에 포함되지 않은 환경별 비밀 주입을 사용한다. M2부터 비밀값을 Parameter Store SecureString과 KMS로 보호하고, EC2 런타임은 IAM Role, GitHub Actions는 OIDC 기반 단기 자격 증명을 사용한다.
+로컬 단계에서는 Git에 포함되지 않은 환경별 비밀 주입을 사용한다. M2부터 비밀값을 기본적으로 Parameter Store SecureString과 KMS로 보호하고, EC2 런타임은 IAM Role, GitHub Actions는 OIDC 기반 단기 자격 증명을 사용한다. 전용 private Redis 부트스트랩은 [ADR-SEC-002](sec-002-redis-bootstrap-secret-transport.md)의 S3 SSE-KMS 객체 예외를 따른다.
 
 ## 7. 선택 근거
 
@@ -66,7 +66,7 @@ JWT 서명 키, DB·Redis 자격 증명, Kakao·YouTube API 키와 같은 운영
 
 ## 9. 적용 범위
 
-JWT 서명 키, DB·Redis 자격 증명, Kakao·YouTube API 키, 배포 권한과 모든 운영 비밀에 적용한다. 로컬 개발 환경(Docker PostgreSQL·Redis)은 [technology-policy.md](../../06-architecture/technology-policy.md) 5절에 따라 운영 비밀과 분리된 별도 설정을 사용하며 이 ADR의 대상이 아니다.
+JWT 서명 키, DB·Redis 자격 증명, Kakao·YouTube API 키, 배포 권한과 모든 운영 비밀에 적용한다. 단, 사설 subnet 전용 Redis의 기동 시 secret transport는 [ADR-SEC-002](sec-002-redis-bootstrap-secret-transport.md)의 구체적 예외를 따른다. 로컬 개발 환경(Docker PostgreSQL·Redis)은 [technology-policy.md](../../06-architecture/technology-policy.md) 5절에 따라 운영 비밀과 분리된 별도 설정을 사용하며 이 ADR의 대상이 아니다.
 
 ## 10. 강제 규칙
 
@@ -78,7 +78,7 @@ JWT 서명 키, DB·Redis 자격 증명, Kakao·YouTube API 키, 배포 권한�
 
 ## 12. 구현 및 운영 영향
 
-KMS key policy, Parameter 경로 설계(서비스·환경별 네임스페이스), IAM trust policy, GitHub Actions OIDC 조건(리포지토리·브랜치 제한)과 키 교체 절차 문서화가 필요하다. Redis 장애 시 Refresh Token 재발급이 막히는 fail-closed 정책([ADR-AUTH-007](auth-007-unified-account-rbac-session.md))과 마찬가지로, Parameter Store·KMS 접근 실패 시 애플리케이션이 비밀 없이 기동되지 않고 안전하게 시작 실패하도록 부트스트랩 절차를 정의한다.
+KMS key policy, Parameter 경로 설계(서비스·환경별 네임스페이스), IAM trust policy, GitHub Actions OIDC 조건(리포지토리·브랜치 제한)과 키 교체 절차 문서화가 필요하다. Redis 장애 시 Refresh Token 재발급이 막히는 fail-closed 정책([ADR-AUTH-007](auth-007-unified-account-rbac-session.md))과 마찬가지로, Parameter Store 또는 [ADR-SEC-002](sec-002-redis-bootstrap-secret-transport.md)의 S3·KMS 접근 실패 시 애플리케이션·Redis가 비밀 없이 기동되지 않고 안전하게 시작 실패하도록 부트스트랩 절차를 정의한다.
 
 ## 13. 검증 방법
 
