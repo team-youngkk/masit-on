@@ -17,6 +17,10 @@ resource "aws_security_group" "direct_app" {
   name        = "${var.name_prefix}-direct-app-sg"
   description = "Internet ingress for the direct application instance"
   vpc_id      = data.aws_vpc.existing.id
+
+  # 이 SG는 public ingress만 소유한다. outbound는 함께 연결하는 app SG의
+  # 명시된 목적지·포트 규칙만 사용하고 AWS 기본 전체 egress는 만들지 않는다.
+  egress = []
 }
 
 resource "aws_vpc_security_group_ingress_rule" "alb_http" {

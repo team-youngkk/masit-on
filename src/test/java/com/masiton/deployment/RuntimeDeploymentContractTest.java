@@ -57,6 +57,12 @@ class RuntimeDeploymentContractTest {
                 .contains("var.database_security_group_id")
                 .contains("referenced_security_group_id = aws_security_group.app.id")
                 .contains("referenced_security_group_id = aws_security_group.direct_app.id");
+        int directAppStart = security.indexOf("resource \"aws_security_group\" \"direct_app\" {");
+        int directAppEnd = security.indexOf("\n}", directAppStart);
+        assertThat(directAppStart).isGreaterThanOrEqualTo(0);
+        assertThat(directAppEnd).isGreaterThan(directAppStart);
+        assertThat(security.substring(directAppStart, directAppEnd))
+                .contains("egress = []");
         int directDatabaseIngressStart = security.indexOf(directDatabaseIngressResource);
         int directDatabaseIngressEnd = security.indexOf("\n}", directDatabaseIngressStart);
         assertThat(directDatabaseIngressStart).isGreaterThanOrEqualTo(0);

@@ -53,10 +53,21 @@ AWS 규칙을 삭제하지 않고 해당 보안 그룹 규칙을 Terraform state
 4. SSM 배포 후 앱·Nginx·PostgreSQL·Redis health와 외부 HTTPS/API smoke를 확인한다.
 5. 검증이 끝난 별도 plan에서만 `direct_traffic_enabled=true`로 Route53을 EIP로 전환한다. ALB·ASG·CodeDeploy 정리는 DNS 전환 후 별도 승인 plan으로 다룬다.
 
-## 5. 분류와 후속 지표
+## 5. PR #333 리뷰에서 발견한 direct app outbound 경계
+
+PR #333 리뷰에서 `aws_security_group.direct_app`에 Terraform 코드상 기본 전체 egress를 차단한다는 선언이 없다는 지적이 있었다. 실제 AWS 보안 그룹의 현재 egress 조회 결과는 비어 있었지만, 코드만으로 신규 생성 시에도 같은 보안 경계를 보장해야 한다.
+
+처리 판단은 `수정 필요`, 문제 유형은 `인프라`다. direct app 인스턴스에는 legacy `app` SG도 함께 연결되므로 SG egress가 합집합으로 적용된다. `direct_app`에 기본 전체 egress가 남으면 app SG의 제한된 PostgreSQL·Redis·SMTP·AWS·DNS outbound 규칙을 우회할 수 있다.
+
+`aws_security_group.direct_app`에 `egress = []`를 명시해 이 SG가 public ingress만 소유하고 자체 outbound를 추가하지 않도록 했다. outbound는 함께 연결하는 `app` SG의 선언된 규칙에만 의존한다. 계약 테스트가 direct app SG의 빈 egress 선언을 고정한다.
+
+검증은 Terraform fmt·validate·plan과 관련 계약 테스트로 수행한다. 수치 지표가 의미 있는 성능 변경은 아니므로 도입 전후 비교 지표는 해당 없음이며, 배포 후에는 AWS `describe-security-groups`에서 direct app SG에 전체 `-1` egress가 없는지 확인한다.
+
+## 6. 분류와 후속 지표
 
 | 항목 | 분류 | 발견 경로 | 예방 지표 |
 |---|---|---|---|
 | SG rule 중복 | 인프라 / 배포 | 실제 Terraform apply | apply 전 AWS rule 조회, import 후 plan 0 변경 |
 | direct app 서비스 미기동 | 배포 전제 | 새 EC2 SSM smoke | image tag ECR 존재 여부, SSM 배포 성공, health 3종 200 |
 | legacy 경로 영향 | 안전성 | 기존 앱 SSM smoke | backend health 3종 200, Route53 ALB 유지 |
+| direct app 기본 egress | 인프라 | PR #333 보안 리뷰 | Terraform `egress = []`, AWS SG egress에 전체 `-1` 부재 |
