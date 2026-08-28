@@ -15,7 +15,6 @@ output "redis_security_group_id" {
 output "vpc_endpoint_ids" {
   value = {
     s3   = aws_vpc_endpoint.s3.id
-    ssm  = aws_vpc_endpoint.ssm.id
     eice = aws_ec2_instance_connect_endpoint.management.id
   }
 }

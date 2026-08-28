@@ -44,6 +44,7 @@ related_documents:
   - quality/perf-002-operational-participant-load-testing.md
   - quality/perf-003-isolated-performance-terraform.md
   - security/sec-001-secrets-workload-identity.md
+  - security/sec-002-redis-bootstrap-secret-transport.md
   - platform/runtime-001-docker.md
   - platform/ci-001-github-actions-quality-gate.md
   - platform/deploy-001-release-sequencing.md
@@ -93,6 +94,7 @@ related_documents:
 | [ADR-PERF-002](quality/perf-002-operational-participant-load-testing.md) | 검증 참여자 전용 운영 직접 부하 검증 예외 | Accepted | High | k6 v2.1.0, AWS SSM, 운영 PostgreSQL·Redis | 이슈 #190 일회성 제한 공개 검증 | [문서](quality/perf-002-operational-participant-load-testing.md) |
 | [ADR-PERF-003](quality/perf-003-isolated-performance-terraform.md) | 격리 성능 검증 환경 Terraform과 상태 저장소 | Accepted | High | Terraform, AWS provider, S3 backend, DynamoDB locking, 제한된 egress | 이슈 #207 격리 성능 검증 | [문서](quality/perf-003-isolated-performance-terraform.md) |
 | [ADR-SEC-001](security/sec-001-secrets-workload-identity.md) | 비밀정보와 AWS 워크로드 인증 | Accepted | Critical | Parameter Store, KMS, IAM Role, GitHub OIDC | 운영·CI·외부 연동 | [문서](security/sec-001-secrets-workload-identity.md) |
+| [ADR-SEC-002](security/sec-002-redis-bootstrap-secret-transport.md) | 전용 Redis 부트스트랩 비밀값 전달 경로 | Accepted | High | S3 Gateway Endpoint, S3 SSE-KMS, Redis IAM Role, `/run` tmpfs | 사설 subnet 전용 Redis의 기동 비밀값 | [문서](security/sec-002-redis-bootstrap-secret-transport.md) |
 | [ADR-DATA-009](data/data-009-pre-release-migration-consolidation.md) | 운영 배포 전 마이그레이션 통합 범위 | Accepted | High | Flyway | 마이그레이션 파일과 모든 환경 스키마 | [문서](data/data-009-pre-release-migration-consolidation.md) |
 | [ADR-DATA-010](data/data-010-recent-view-retention-cleanup.md) | 최근 본 맛집 보존 기간 정리 실행 | Accepted | High | Spring Scheduler, PostgreSQL | [WS-06](../02-analysis/first-expansion-workstreams.md#5-ws-06-개인-맛집-관리) 최근 기록 생명주기 | [문서](data/data-010-recent-view-retention-cleanup.md) |
 | [ADR-DATA-011](data/data-011-popular-restaurant-request-time-aggregation.md) | 인기 맛집 요청 시점 실시간 집계 | Accepted | High | PostgreSQL 집계·인덱스 | [WS-10](../02-analysis/second-expansion-workstreams.md#5-ws-10-인기-맛집) 인기 맛집 | [문서](data/data-011-popular-restaurant-request-time-aggregation.md) |

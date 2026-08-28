@@ -10,21 +10,6 @@ resource "aws_vpc_endpoint" "s3" {
   }
 }
 
-# redis-render-conf.sh가 매 기동마다 Parameter Store를 읽는다. 최초 프로비저닝용이
-# 아니라 상시 필요한 경로다. 설정이 tmpfs에 있어 재기동마다 다시 렌더링해야 한다.
-resource "aws_vpc_endpoint" "ssm" {
-  vpc_id              = data.aws_vpc.existing.id
-  service_name        = "com.amazonaws.${var.aws_region}.ssm"
-  vpc_endpoint_type   = "Interface"
-  subnet_ids          = [var.redis_subnet_id]
-  security_group_ids  = [aws_security_group.vpce.id]
-  private_dns_enabled = true
-
-  tags = {
-    Name = "${var.name_prefix}-ssm-endpoint"
-  }
-}
-
 resource "aws_ec2_instance_connect_endpoint" "management" {
   subnet_id          = var.redis_subnet_id
   security_group_ids = [aws_security_group.vpce.id]
