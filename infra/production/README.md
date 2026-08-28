@@ -2,7 +2,7 @@
 
 `terraform/`은 기존 VPC와 public subnet을 입력으로 받아 직접 서비스할 앱 EC2 한 대, EIP, 앱 security group, Route53 A record, CloudWatch health alarm을 준비한다. 현재는 첫 plan에서 기존 ALB·ASG·CodeDeploy 경로를 파괴하지 않도록 legacy 리소스도 함께 선언한다. 직접 경로의 state import·smoke·cutover를 확인한 뒤, 별도 plan에서 legacy 리소스를 정리한다.
 
-PostgreSQL은 RDS에서 별도 EC2로 전환 중이며, 이 레이어는 PostgreSQL EC2를 생성하지 않는다. 앱 SG의 `database_security_group_id`에 PostgreSQL EC2 SG를 넣고, `/masiton/db/url`의 JDBC URL을 PostgreSQL EC2 endpoint로 바꾸는 것이 데이터 전환 작업이다. 전환 전까지는 `rds_security_group_id`와 기존 RDS ingress rule도 유지한다.
+PostgreSQL은 RDS에서 별도 EC2로 전환 중이며, 이 레이어는 PostgreSQL EC2를 생성하지 않는다. PostgreSQL EC2에는 legacy RDS SG와 분리된 전용 DB SG를 사용하고, 앱 SG의 `database_security_group_id`에는 그 전용 SG를 넣는다. `/masiton/db/url`의 JDBC URL을 PostgreSQL EC2 endpoint로 바꾸는 것이 데이터 전환 작업이다. 전환 전까지는 `rds_security_group_id`와 기존 RDS ingress rule도 유지한다.
 
 전용 Redis는 `terraform-redis/`의 private EC2를 사용한다. 앱은 `/masiton/redis/host`·`/masiton/redis/port`를 통해 Redis endpoint를 읽고 `REQUIRE_SHARED_REDIS=true`로 endpoint 누락을 fail-closed 처리한다. Redis 비밀번호는 현재 재기동 때마다 SSM Parameter Store에서 렌더링하므로, 안전한 대체 비밀 주입 경로가 마련되기 전에는 Redis SSM interface endpoint를 삭제하지 않는다.
 
@@ -16,12 +16,12 @@ PostgreSQL은 RDS에서 별도 EC2로 전환 중이며, 이 레이어는 Postgre
 
 ## 이행 순서
 
-1. PostgreSQL EC2의 private IP/SG와 백업·복구 절차를 확정하고 `/masiton/db/url`을 새 endpoint로 준비한다.
+1. PostgreSQL EC2의 private IP와 legacy RDS SG와 분리된 전용 DB SG, 백업·복구 절차를 확정하고 `/masiton/db/url`을 새 endpoint로 준비한다.
 2. 기존 앱 EC2의 AMI, subnet, SG, IAM profile, root volume을 확인하고 `aws_instance.app`에 state import할 대상을 확정한다. 이 저장소는 import나 종료를 자동 실행하지 않는다.
 3. 새 direct app SG의 PostgreSQL·Redis ingress가 각 대상 SG에 허용되는지 확인한다. Redis 레이어의 `app_security_group_ids`와 `ssm_endpoint_client_security_group_ids`에는 병행 기간 동안 legacy app SG와 direct app SG를 모두 넣는다.
 4. 기존 앱 EC2를 `aws_instance.app`으로 import한 뒤 EIP를 연결하고, 기본 CodeDeploy 경로를 유지한 채 `deployment_target=ssm` 직접 배포로 앱·Nginx·health metrics를 검증한다.
 5. `direct_traffic_enabled=true`를 별도 plan으로 적용해 Route53 A record가 EIP를 가리키는지 확인하고 외부 HTTPS/API/smoke를 검증한다.
-6. PostgreSQL·앱·Redis가 안정화된 뒤에만 ALB·ASG·CodeDeploy·RDS의 실제 AWS 리소스를 삭제하는 별도 승인 plan을 만든다. 이 저장소에서는 `terraform apply`를 실행하지 않는다.
+6. PostgreSQL·앱·Redis가 안정화된 뒤에만 ALB·ASG·CodeDeploy·RDS의 실제 AWS 리소스를 삭제하는 별도 승인 plan을 만든다. 이 전환 준비에서는 legacy 삭제 apply를 실행하지 않는다.
 
 기존 CodeDeploy revision bucket은 기본 CodeDeploy revision과 SSM command pointer를 함께 보관하므로 `revision-bucket.tf`에 이행 자원으로 남긴다. bucket 삭제는 두 배포 경로와 보존 데이터 확인 후 별도 수행한다.
 
@@ -56,4 +56,4 @@ docker compose up -d postgres redis wiremock
 .\gradlew.bat test --tests com.masiton.deployment.RuntimeDeploymentContractTest --tests com.masiton.deployment.AppRunScriptContractTest
 ```
 
-운영 리소스에 대한 `terraform apply`, ALB/ASG/RDS/Redis 삭제, Redis 데이터 volume 조작은 이 저장소의 작업 범위에서 실행하지 않는다.
+legacy ALB/ASG/RDS/Redis 삭제와 Redis 데이터 volume 조작은 별도 승인 없이 실행하지 않는다. 전환 준비 리소스의 `terraform apply`는 삭제·교체가 없는 plan을 확인하고 사용자가 명시적으로 승인한 경우에만 실행한다.

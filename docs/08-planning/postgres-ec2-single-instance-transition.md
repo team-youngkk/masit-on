@@ -55,7 +55,7 @@ PostgreSQL 데이터 volume을 별도 gp3 20 GiB로 추가하면 약 `$1.82`가 
 ## 전환 확인 항목
 
 - `/masiton/db/url`이 PostgreSQL EC2 endpoint를 가리킨다.
-- 병행 전환 중에는 PostgreSQL EC2 SG가 legacy app SG와 direct app SG의 5432를 모두 허용한다. legacy 정리 plan에서 legacy app SG rule을 제거한다.
+- 병행 전환 중에는 legacy RDS SG와 분리된 PostgreSQL EC2 전용 DB SG가 legacy app SG와 direct app SG의 5432를 모두 허용한다. legacy 정리 plan에서 legacy app SG rule과 기존 RDS SG를 별도로 정리한다.
 - direct app SG가 Redis SG의 6379만 참조하고, SSM endpoint client 목록에도 포함된다.
 - Route53 A record가 ALB가 아닌 EIP를 가리킨다.
 - CI가 `PRODUCTION_INSTANCE_ID`를 비운 채 성공하지 않는다.

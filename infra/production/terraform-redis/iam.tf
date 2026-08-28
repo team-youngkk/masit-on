@@ -32,6 +32,18 @@ data "aws_iam_policy_document" "redis_read" {
     effect    = "Allow"
     actions   = ["kms:Decrypt"]
     resources = var.kms_key_arns
+
+    condition {
+      test     = "StringEquals"
+      variable = "kms:ViaService"
+      values   = ["ssm.${var.aws_region}.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringLike"
+      variable = "kms:EncryptionContext:PARAMETER_ARN"
+      values   = [var.redis_password_parameter_arn]
+    }
   }
 
   statement {

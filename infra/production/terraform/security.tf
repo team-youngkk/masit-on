@@ -160,8 +160,9 @@ resource "aws_vpc_security_group_ingress_rule" "redis_from_app" {
   description                  = "Allow production application to existing Redis"
 }
 
-# PostgreSQL EC2 전환 전에는 기존 RDS rule을 유지한다. 두 SG ID가 달라지는
-# 전환 plan에서만 새 rule을 추가해 DB 연결을 먼저 검증할 수 있다.
+# PostgreSQL EC2 전환 중에는 기존 앱 경로와 direct 앱 경로를 함께 허용한다.
+# legacy app rule은 기존 RDS SG와 새 DB SG가 다를 때만 별도로 만들지만,
+# direct 앱은 DB SG를 재사용하는 경우에도 별도 source rule이 필요하다.
 resource "aws_vpc_security_group_egress_rule" "app_to_database" {
   count = var.database_security_group_id == var.rds_security_group_id ? 0 : 1
 
@@ -185,7 +186,10 @@ resource "aws_vpc_security_group_ingress_rule" "database_from_app" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "database_from_direct_app" {
-  count = var.database_security_group_id == var.rds_security_group_id ? 0 : 1
+  # PostgreSQL EC2가 기존 RDS SG를 재사용해도 direct 앱은 별도 SG 출처다.
+  # target SG ID equality를 기준으로 이 rule을 끄면 direct 앱이 5432에
+  # 접근하지 못한다.
+  count = 1
 
   security_group_id            = var.database_security_group_id
   referenced_security_group_id = aws_security_group.direct_app.id
