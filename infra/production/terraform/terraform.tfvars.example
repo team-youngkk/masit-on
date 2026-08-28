@@ -25,9 +25,10 @@ app_subnet_is_private = false
 app_subnet_id            = "subnet-REPLACE_ME_PUBLIC_A"
 app_ingress_cidr_blocks  = ["0.0.0.0/0"]
 
-# RDS 전환 전에는 rds_security_group_id와 같은 값을 넣어 기존 DB rule만 유지한다.
-# PostgreSQL EC2를 준비한 뒤 그 인스턴스의 SG로 바꾸면 새 DB rule이 추가된다.
-database_security_group_id = "sg-REPLACE_ME_RDS"
+# PostgreSQL EC2에는 legacy RDS SG와 분리된 전용 DB SG를 사용한다. 전환 중
+# database_security_group_id에는 그 전용 SG를 넣고, rds_security_group_id에는
+# 기존 legacy DB SG를 유지한다. 두 값이 같아도 direct 앱 ingress는 별도로 생성된다.
+database_security_group_id = "sg-REPLACE_ME_POSTGRESQL_EC2"
 database_port              = 5432
 
 # false로 두면 Route53은 기존 ALB alias를 유지한다. 직접 앱 EC2의 SSM 배포와

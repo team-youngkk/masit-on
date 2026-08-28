@@ -33,6 +33,7 @@ class RuntimeDeploymentContractTest {
         String variables = read(TERRAFORM.resolve("variables.tf"));
         String outputs = read(TERRAFORM.resolve("outputs.tf"));
         String stateMigrations = read(TERRAFORM.resolve("state-migrations.tf"));
+        String directDatabaseIngressResource = "resource \"aws_vpc_security_group_ingress_rule\" \"database_from_direct_app\" {";
 
         assertThat(instance)
                 .contains("resource \"aws_instance\" \"app\" {")
@@ -54,9 +55,14 @@ class RuntimeDeploymentContractTest {
                 .contains("var.app_ingress_cidr_blocks")
                 .contains("resource \"aws_vpc_security_group_ingress_rule\" \"rds_from_app\" {")
                 .contains("var.database_security_group_id")
-                .contains("resource \"aws_vpc_security_group_ingress_rule\" \"database_from_direct_app\" {")
                 .contains("referenced_security_group_id = aws_security_group.app.id")
                 .contains("referenced_security_group_id = aws_security_group.direct_app.id");
+        int directDatabaseIngressStart = security.indexOf(directDatabaseIngressResource);
+        int directDatabaseIngressEnd = security.indexOf("\n}", directDatabaseIngressStart);
+        assertThat(directDatabaseIngressStart).isGreaterThanOrEqualTo(0);
+        assertThat(directDatabaseIngressEnd).isGreaterThan(directDatabaseIngressStart);
+        assertThat(security.substring(directDatabaseIngressStart, directDatabaseIngressEnd))
+                .contains("count = 1");
         assertThat(variables)
                 .contains("variable \"app_subnet_id\"")
                 .contains("variable \"database_security_group_id\"")
@@ -78,6 +84,7 @@ class RuntimeDeploymentContractTest {
     @DisplayName("직접 배포 IAM과 legacy CodeDeploy IAM을 cutover 전까지 함께 유지한다")
     void terraform_배포role은직접SSM과legacy권한을함께갖는다() throws IOException {
         String iam = read(TERRAFORM.resolve("iam.tf"));
+        String redisIam = read(Path.of("infra/production/terraform-redis/iam.tf"));
 
         assertThat(iam)
                 .contains("github_actions_ssm_deploy")
@@ -87,8 +94,18 @@ class RuntimeDeploymentContractTest {
                 .contains("ssm:GetCommandInvocation")
                 .contains("s3:PutObject")
                 .contains("masiton/ssm/*")
+                .contains("kms:ViaService")
+                .contains("ssm.${var.aws_region}.amazonaws.com")
+                .contains("kms:EncryptionContext:PARAMETER_ARN")
+                .contains("parameter/masiton/*")
                 .contains("aws_instance.app.id")
-                .contains("codedeploy:");
+                .contains("codedeploy:")
+                .doesNotContain("ssm:ListCommandInvocations")
+                .doesNotContain("ssm:DescribeInstanceInformation");
+        assertThat(redisIam)
+                .contains("kms:ViaService")
+                .contains("kms:EncryptionContext:PARAMETER_ARN")
+                .contains("var.redis_password_parameter_arn");
     }
 
     @Test

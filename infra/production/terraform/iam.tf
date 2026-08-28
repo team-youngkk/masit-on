@@ -34,6 +34,18 @@ data "aws_iam_policy_document" "app_parameter_read" {
     effect    = "Allow"
     actions   = ["kms:Decrypt"]
     resources = var.kms_key_arns
+
+    condition {
+      test     = "StringEquals"
+      variable = "kms:ViaService"
+      values   = ["ssm.${var.aws_region}.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringLike"
+      variable = "kms:EncryptionContext:PARAMETER_ARN"
+      values   = ["arn:aws:ssm:${var.aws_region}:*:parameter/masiton/*"]
+    }
   }
 
   statement {
@@ -286,7 +298,7 @@ resource "aws_iam_role_policy" "github_actions_deploy" {
 # 뒤 별도 정리 단계에서 제거한다.
 data "aws_iam_policy_document" "github_actions_ssm_deploy" {
   statement {
-    effect = "Allow"
+    effect  = "Allow"
     actions = ["ssm:SendCommand"]
     resources = [
       "arn:aws:ssm:${var.aws_region}::document/AWS-RunShellScript",
@@ -309,8 +321,6 @@ data "aws_iam_policy_document" "github_actions_ssm_deploy" {
     actions = [
       "ssm:CancelCommand",
       "ssm:GetCommandInvocation",
-      "ssm:ListCommandInvocations",
-      "ssm:DescribeInstanceInformation",
     ]
     resources = ["*"]
   }
