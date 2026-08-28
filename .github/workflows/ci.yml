@@ -6,6 +6,7 @@
 # ADR-CI-001). 같은 워크플로에 두는 이유는 아래 images·deploy job 주석에 있다.
 # images·deploy는 배포 대상 브랜치에서만 돌고 PR과 develop push에서는 실행되지 않으며,
 # workflow_dispatch의 배포 대상은 별도의 프론트엔드 프로덕션 의존성 감사 job을 거친다.
+# 기본 배포 경로는 CodeDeploy이며, 단일 EC2 전환 검증용 SSM은 명시적으로 선택한다.
 name: CI
 
 on:
@@ -27,28 +28,29 @@ on:
         description: '배포할 커밋 SHA 40자. 비우면 선택한 브랜치의 현재 커밋을 배포한다'
         required: false
         type: string
-      codedeploy_application:
-        description: 'CodeDeploy application name. 비우면 운영 기본값을 쓴다'
+      instance_id:
+        description: '배포할 앱 EC2 instance_id. 비우면 저장소 변수 PRODUCTION_INSTANCE_ID를 쓴다'
         required: false
         type: string
-      codedeploy_deployment_group:
-        description: 'CodeDeploy deployment group. 비우면 운영 기본값을 쓴다'
+      deployment_target:
+        description: '배포 경로: codedeploy(기본) 또는 ssm(단일 EC2 전환 검증 시에만)'
         required: false
-        type: string
-      codedeploy_s3_bucket:
-        description: 'CodeDeploy revision S3 bucket. 비우면 운영 기본값을 쓴다'
-        required: false
-        type: string
+        default: codedeploy
+        type: choice
+        options:
+          - codedeploy
+          - ssm
 
 permissions:
   contents: read
 
 # PR 검증은 같은 ref의 새 커밋이 오면 이전 실행을 취소한다. 운영 배포는 외부
-# 취소나 새 실행이 원격 CodeDeploy를 방치하지 않도록 자동 취소하지 않는다.
+# 취소나 새 실행이 원격 배포 명령을 방치할 수 있어 자동 취소하지 않는다.
 #
-# 이벤트 종류를 그룹에 넣어 PR과 push·dispatch 실행을 서로 취소하지 않는다.
+# 운영 push와 workflow_dispatch는 같은 production 그룹으로 직렬화해 CodeDeploy와
+# 직접 SSM 배포가 겹치지 않게 한다. PR은 별도 그룹에서 기존처럼 새 실행이 우선한다.
 concurrency:
-  group: ci-${{ github.event_name }}-${{ github.ref }}
+  group: ${{ github.event_name == 'pull_request' && format('ci-pr-{0}', github.ref) || ((github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/deploy/')) && 'ci-production-deploy' || format('ci-ci-{0}', github.ref)) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -513,7 +515,7 @@ jobs:
           done
 
   # 운영 배포 — #78. ADR-CI-001이 정한 "EC2 배포는 M2부터 활성화, 실제 운영 반영은
-  # 수동 승인으로 보호"를 구현한다.
+  # 수동 승인으로 보호"를 구현한다. 기본 경로는 기존 CodeDeploy Blue-Green이다.
   #
   # 별도 워크플로로 분리하지 않는다. 이미지 job과 순서를 보장하려면 `needs`가 필요하고,
   # 워크플로를 나누면 `workflow_run`에 의존해야 한다. 그 트리거는 기본 브랜치에 파일이
@@ -532,7 +534,8 @@ jobs:
     #   push               — 이미지 job이 성공해야 한다. 방금 게시한 이미지를 배포한다.
     #   workflow_dispatch  — 이미 게시된 이미지를 배포한다(롤백·재배포). 이미지 job은
     #                        push에서만 도므로 skipped이다. dispatch audit job이 성공한
-    #                        경우에만 이 skipped 의존성을 통과시킨다.
+    #                        경우에만 이 skipped 의존성을 통과시킨다. 직접 SSM은
+    #                        명시적인 workflow_dispatch 입력에서만 별도 job으로 실행한다.
     if: >-
       always() &&
       !cancelled() &&
@@ -542,6 +545,7 @@ jobs:
           needs.images.result == 'success' &&
           needs['frontend-dispatch-audit'].result == 'skipped') ||
         (github.event_name == 'workflow_dispatch' &&
+          github.event.inputs.deployment_target != 'ssm' &&
           needs.images.result == 'skipped' &&
           needs['frontend-dispatch-audit'].result == 'success')
       )
@@ -740,8 +744,26 @@ jobs:
             --body "$deployment_id_file" \
             --server-side-encryption AES256 >/dev/null; then
             echo "::error::CodeDeploy deployment ID 보관에 실패했다: $deployment_id" >&2
-            aws deploy stop-deployment --deployment-id "$deployment_id" \
-              --auto-rollback-enabled || true
+            stop_failed=false
+            if ! aws deploy stop-deployment --deployment-id "$deployment_id" \
+              --auto-rollback-enabled; then
+              stop_failed=true
+              echo "::error::CodeDeploy stop-deployment 호출에 실패했다: $deployment_id" >&2
+            fi
+            status=Unknown
+            for _ in $(seq 1 60); do
+              status=$(aws deploy get-deployment --deployment-id "$deployment_id" \
+                --query 'deploymentInfo.status' --output text 2>/dev/null || echo Unknown)
+              case "$status" in
+                Succeeded|Failed|Stopped)
+                  echo "CodeDeploy pointer 실패 후 terminal 상태: $status" >&2
+                  [ "$stop_failed" = false ] || exit 1
+                  exit 1
+                  ;;
+              esac
+              sleep 10
+            done
+            echo "::error::CodeDeploy pointer 실패 후에도 terminal 상태를 확인하지 못했다: $status" >&2
             exit 1
           fi
           deployment_terminal=false
@@ -817,13 +839,13 @@ jobs:
   # 별도 job은 취소된 deploy job이 S3에 남긴 deployment ID를 읽어 4분 이내에 stop과
   # terminal 확인을 수행한다. 5분 취소 강제 종료 한도 안에 끝나도록 polling을 제한한다.
   codedeploy-cancel-cleanup:
-    name: 취소된 CodeDeploy 정리
+    name: 실패·취소 CodeDeploy 정리
     needs: [deploy]
     if: >-
       always() &&
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
       (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/deploy/m2') &&
-      needs.deploy.result == 'cancelled'
+      (needs.deploy.result == 'failure' || needs.deploy.result == 'cancelled')
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -980,6 +1002,15 @@ jobs:
               ;;
           esac
 
+          status=$(aws deploy get-deployment --deployment-id "$deployment_id" \
+            --query 'deploymentInfo.status' --output text 2>/dev/null || echo Unknown)
+          case "$status" in
+            Succeeded|Failed|Stopped)
+              echo "CodeDeploy cleanup 대상은 이미 terminal 상태다: $status"
+              exit 0
+              ;;
+          esac
+
           stop_failed=false
           if ! aws deploy stop-deployment --deployment-id "$deployment_id" \
             --auto-rollback-enabled; then
@@ -1001,4 +1032,410 @@ jobs:
             sleep 10
           done
           echo "::error::CodeDeploy cleanup이 terminal 상태를 확인하지 못했다: $status"
+          exit 1
+  # 단일 EC2 전환 검증용 직접 배포 — 기본 CodeDeploy 경로와 분리한다.
+  # workflow_dispatch에서 deployment_target=ssm을 명시하고 production 승인을
+  # 통과한 경우에만 실행한다. push 배포는 항상 위 CodeDeploy job을 사용한다.
+  ssm-deploy:
+    name: 직접 EC2 SSM 배포
+    needs: [images, frontend-dispatch-audit]
+    if: >-
+      always() &&
+      !cancelled() &&
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.deployment_target == 'ssm' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/deploy/m2') &&
+      needs.images.result == 'skipped' &&
+      needs['frontend-dispatch-audit'].result == 'success'
+    runs-on: ubuntu-24.04
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: ap-northeast-2
+      # workflow_dispatch 입력이 없으면 저장소 변수에서 배포 대상을 읽고, 아래 단계에서
+      # 비어 있거나 EC2 instance ID 형식이 아니면 즉시 실패한다.
+      INSTANCE_ID: ${{ github.event.inputs.instance_id || vars.PRODUCTION_INSTANCE_ID }}
+      CONFIGURED_INSTANCE_ID: ${{ vars.PRODUCTION_INSTANCE_ID }}
+      # 입력이 있으면 그 커밋을, 없으면 이 실행의 커밋을 배포한다. push 이벤트에는
+      # inputs가 없어 항상 github.sha가 된다.
+      IMAGE_TAG: ${{ github.event.inputs.image_tag || github.sha }}
+      SSM_POINTER_BUCKET: ${{ vars.SSM_COMMAND_POINTER_BUCKET || 'masiton-prod-codedeploy-711457211155' }}
+      SSM_POINTER_KEY: masiton/ssm/${{ github.run_id }}/command-id
+    steps:
+      # 배포할 이미지와 같은 커밋을 체크아웃한다. 롤백 실행에서 과거 이미지에 현재
+      # 브랜치 tip의 배포 스크립트가 조합되지 않도록 한다.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.IMAGE_TAG }}
+
+      # 이 값은 SSM 명령 문자열에 들어가 인스턴스에서 root로 실행된다.
+      # 자유 문자열을 그대로 실으면 명령 주입이 되므로 커밋 SHA 형식만 받아들인다.
+      # 승인 게이트가 사람 판단을 요구하지만 그것은 입력 내용을 검사하지 않는다.
+      - name: 배포 대상 커밋 SHA 검증
+        run: |
+          set -euo pipefail
+          case "$IMAGE_TAG" in
+            "" | *[!0-9a-f]*)
+              echo "커밋 SHA는 소문자 16진수 40자여야 한다: '$IMAGE_TAG'" >&2
+              exit 1
+              ;;
+          esac
+          if [ "${#IMAGE_TAG}" -ne 40 ]; then
+            echo "커밋 SHA는 40자여야 한다 (match: ${#IMAGE_TAG}자): '$IMAGE_TAG'" >&2
+            exit 1
+          fi
+          echo "배포 대상 커밋: $IMAGE_TAG"
+
+      - name: 배포 대상 EC2 instance_id 검증
+        run: |
+          set -euo pipefail
+          if [ -z "$CONFIGURED_INSTANCE_ID" ]; then
+            echo '저장소 변수 PRODUCTION_INSTANCE_ID가 비어 있다. Terraform app_instance_id를 등록해야 한다.' >&2
+            exit 1
+          fi
+          if [ -z "$INSTANCE_ID" ]; then
+            echo '배포 대상 instance_id가 비어 있다. 저장소 변수 PRODUCTION_INSTANCE_ID 또는 workflow_dispatch 입력이 필요하다.' >&2
+            exit 1
+          fi
+          if [[ ! "$INSTANCE_ID" =~ ^i-[0-9a-f]{17}$ ]]; then
+            echo "배포 대상 instance_id 형식이 올바르지 않다: '$INSTANCE_ID'" >&2
+            exit 1
+          fi
+          if [ "$INSTANCE_ID" != "$CONFIGURED_INSTANCE_ID" ]; then
+            echo "배포 대상 instance_id가 저장소 변수 PRODUCTION_INSTANCE_ID와 다르다: '$INSTANCE_ID' != '$CONFIGURED_INSTANCE_ID'" >&2
+            exit 1
+          fi
+          echo "배포 대상 EC2: $INSTANCE_ID"
+
+      - name: AWS 자격 증명 (OIDC, 장기 키 없음)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::711457211155:role/masiton-github-actions-role
+          aws-region: ${{ env.AWS_REGION }}
+
+      # 배포 스크립트를 인스턴스로 실어 보낸다. 인스턴스에 미리 설치해 두는 방식은
+      # 스크립트를 바꿀 때 수동 단계가 생긴다. 현재 checkout한 커밋의 내용만 보내므로
+      # 이미지와 배포 스크립트의 버전이 어긋나지 않는다. base64로 싣는 이유는 인용과
+      # 개행 처리를 없애기 위한 것이다.
+      - name: SSM 명령 준비
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' > command.json
+          import base64
+          import io
+          import json
+          import os
+          import tarfile
+
+          files = [
+              "deploy/scripts/app-deploy.sh",
+              "deploy/scripts/app-run.sh",
+              "deploy/scripts/app-secrets-render.sh",
+              "deploy/scripts/runtime-health.sh",
+              "deploy/scripts/cloudwatch-install.sh",
+              "deploy/scripts/health-metrics.sh",
+              "deploy/cloudwatch/amazon-cloudwatch-agent.json",
+              "deploy/cloudwatch/masiton-health-metrics.service",
+              "deploy/cloudwatch/masiton-health-metrics.timer",
+              "deploy/scripts/nginx-install.sh",
+              "deploy/scripts/nginx-smoke.sh",
+              "deploy/scripts/tls-deploy-cert.sh",
+              "deploy/app/masiton-backend.service",
+              "deploy/app/masiton-frontend.service",
+              "deploy/nginx/nginx.conf",
+              "deploy/nginx/masiton.click.conf",
+              "deploy/nginx/00-masiton-upgrade-map.conf",
+              "deploy/nginx/masiton-tls-renew.service",
+              "deploy/nginx/masiton-tls-renew.timer",
+          ]
+
+          image_tag = os.environ["IMAGE_TAG"]
+          if len(image_tag) != 40 or any(char not in "0123456789abcdef" for char in image_tag):
+              raise SystemExit("IMAGE_TAG must be a 40-character lowercase commit SHA")
+
+          lines = [
+              "set -euo pipefail",
+              "[ \"$(id -u)\" -eq 0 ] || { echo 'SSM 명령은 root로 실행돼야 한다' >&2; exit 1; }",
+              "install -d -m 0750 /run/masiton",
+              "exec 9>/run/masiton/deploy.lock",
+              'flock -n 9 || { echo \'이미 다른 배포가 실행 중이다\' >&2; exit 1; }',
+              "STAGE=/tmp/masiton-deploy",
+              'rm -rf "$STAGE"',
+              'umask 077',
+              'mkdir -p "$STAGE"',
+          ]
+          bundle = io.BytesIO()
+          with tarfile.open(fileobj=bundle, mode="w:gz", compresslevel=9) as archive:
+              for path in files:
+                  with open(path, "rb") as handle:
+                      content = handle.read().replace(b"\r\n", b"\n")
+                  info = tarfile.TarInfo(os.path.basename(path))
+                  info.size = len(content)
+                  info.mode = 0o755 if path.endswith(".sh") else 0o644
+                  info.mtime = 0
+                  archive.addfile(info, io.BytesIO(content))
+          encoded = base64.b64encode(bundle.getvalue()).decode("ascii")
+          for index in range(0, len(encoded), 400):
+              redirect = ">" if index == 0 else ">>"
+              lines.append(f'printf %s "{encoded[index:index + 400]}" {redirect} "$STAGE/payload.tgz.b64"')
+          lines.append('base64 -d "$STAGE/payload.tgz.b64" > "$STAGE/payload.tgz"')
+          lines.append('rm -f "$STAGE/payload.tgz.b64"')
+          lines.append('tar -xzf "$STAGE/payload.tgz" -C "$STAGE"')
+          lines.append('rm -f "$STAGE/payload.tgz"')
+          lines.append('for script in app-deploy.sh app-run.sh app-secrets-render.sh runtime-health.sh cloudwatch-install.sh health-metrics.sh nginx-install.sh nginx-smoke.sh tls-deploy-cert.sh; do chmod +x "$STAGE/$script"; done')
+          lines.extend([
+              'install -d -m 0750 /etc/masiton',
+              'for setting in METRIC_ENVIRONMENT=production REQUIRE_SHARED_REDIS=true NGINX_TRUSTED_PROXY_CIDRS=127.0.0.1; do key=${setting%%=*}; if [ -f /etc/masiton/deployment.env ] && grep -q "^${key}=" /etc/masiton/deployment.env; then sed -i "s|^${key}=.*|${setting}|" /etc/masiton/deployment.env; else printf "%s\\n" "$setting" >> /etc/masiton/deployment.env; fi; done; chmod 0640 /etc/masiton/deployment.env',
+          ])
+          lines.append(f'"$STAGE/app-deploy.sh" "{image_tag}" "$STAGE"')
+          lines.append('"$STAGE/cloudwatch-install.sh" "$STAGE"')
+
+          command = "\n".join(lines)
+          max_bytes = 65536  # AWS-RunShellScript command limit: 64 KiB.
+          command_size = len(command.encode("utf-8"))
+          if command_size > max_bytes:
+              raise SystemExit(f"SSM commands가 64KB 제한을 초과했다: {command_size}바이트")
+          payload = {"commands": [command], "executionTimeout": ["1800"]}
+          payload_json = json.dumps(payload, ensure_ascii=True, separators=(",", ":"))
+          payload_size = len(payload_json.encode("utf-8"))
+          if payload_size > max_bytes:
+              raise SystemExit(f"SSM command payload가 64KB 제한을 초과했다: {payload_size}바이트")
+          print(payload_json)
+          PY
+          command_size=$(python3 -c 'import json,sys; print(len(json.load(sys.stdin)["commands"][0].encode("utf-8")))' < command.json)
+          payload_size=$(wc -c < command.json)
+          echo "SSM 명령 크기: $command_size바이트, payload: $payload_size바이트 (제한 65536바이트)"
+
+      # 배포 스크립트가 상태 확인까지 하고 실패하면 non-zero로 끝난다. 그래서
+      # SSM 명령 상태가 Success가 아니면 이 job도 실패한다. 실패를 성공으로 바꾸지 않는다.
+      # CommandId를 만든 직후 S3 pointer에 저장한다. runner가 취소·종료돼도
+      # 별도 cleanup job이 원격 명령을 찾아 취소할 수 있어야 한다.
+      - name: SSM으로 배포 실행
+        run: |
+          set -euo pipefail
+          command_id=$(aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name AWS-RunShellScript \
+            --parameters "file://command.json" \
+            --query 'Command.CommandId' --output text)
+          if [ -z "$command_id" ] || [ "$command_id" = "None" ]; then
+            echo 'SSM CommandId를 받지 못했다' >&2
+            exit 1
+          fi
+          echo "CommandId: $command_id"
+          # CommandId를 만든 즉시 trap을 설치해 pointer 업로드 실패나 runner 종료 때도
+          # 현재 프로세스가 살아 있는 동안 원격 명령을 중지하고 terminal 상태를 확인한다.
+          deployment_terminal=false
+          cancel_failed=false
+          cancel_and_wait() {
+            [ "$deployment_terminal" = true ] && return 0
+            echo "SSM 원격 명령 중지를 요청한다: $command_id" >&2
+            if ! aws ssm cancel-command --command-id "$command_id" \
+              --instance-ids "$INSTANCE_ID"; then
+              cancel_failed=true
+              echo "::error::SSM 원격 명령 중지 요청에 실패했다: $command_id" >&2
+            fi
+            status=Unknown
+            for _ in $(seq 1 24); do
+              status=$(aws ssm get-command-invocation \
+                --command-id "$command_id" --instance-id "$INSTANCE_ID" \
+                --query 'Status' --output text 2>/dev/null || echo Unknown)
+              case "$status" in
+                Success|Failed|Cancelled|TimedOut|Undeliverable|Terminated|NoInstances|AccessDenied|InvalidPlatform|DeliveryTimedOut|ExecutionTimedOut)
+                  deployment_terminal=true
+                  echo "SSM 중지 후 terminal 상태: $status" >&2
+                  [ "$cancel_failed" = false ]
+                  return $?
+                  ;;
+              esac
+              sleep 10
+            done
+            echo "::error::SSM 중지 요청 후에도 terminal 상태를 확인하지 못했다: $status" >&2
+            return 1
+          }
+          on_exit() {
+            exit_code=$?
+            if [ "$deployment_terminal" != true ]; then
+              if ! cancel_and_wait; then
+                echo '::error::SSM 원격 명령 정리에 실패했다. 인스턴스의 명령 상태를 수동 확인해야 한다.' >&2
+                [ "$exit_code" -eq 0 ] && exit_code=1
+              fi
+            fi
+            trap - EXIT INT TERM
+            exit "$exit_code"
+          }
+          on_signal() {
+            exit 143
+          }
+          trap on_exit EXIT
+          trap on_signal INT TERM
+          command_id_file="$RUNNER_TEMP/ssm-command-id"
+          printf '%s\n' "$command_id" > "$command_id_file"
+          if ! aws s3api put-object \
+            --bucket "$SSM_POINTER_BUCKET" \
+            --key "$SSM_POINTER_KEY" \
+            --body "$command_id_file" \
+            --server-side-encryption AES256 >/dev/null; then
+            echo "::error::SSM CommandId 보관에 실패했다: $command_id" >&2
+            exit 1
+          fi
+
+          status=Pending
+          terminal=false
+          for _ in $(seq 1 270); do
+            status=$(aws ssm get-command-invocation \
+              --command-id "$command_id" --instance-id "$INSTANCE_ID" \
+              --query 'Status' --output text 2>/dev/null || echo Pending)
+            case "$status" in
+              Success|Failed|Cancelled|TimedOut|Undeliverable|Terminated|NoInstances|AccessDenied|InvalidPlatform|DeliveryTimedOut|ExecutionTimedOut)
+                terminal=true
+                deployment_terminal=true
+                break
+                ;;
+            esac
+            sleep 10
+          done
+          if [ "$terminal" != true ]; then
+            status=PollingTimeout
+            echo "::error::SSM 명령 상태 polling 시간이 초과됐다: $command_id" >&2
+          fi
+
+          if ! invocation_json=$(aws ssm get-command-invocation \
+            --command-id "$command_id" --instance-id "$INSTANCE_ID" --output json); then
+            echo "::error::SSM 명령 결과 조회에 실패했다: $command_id" >&2
+            exit 1
+          fi
+          invocation_status=$(printf '%s' "$invocation_json" | jq -r '.Status // "Unknown"')
+          if [ "$invocation_status" != Unknown ]; then
+            status="$invocation_status"
+          fi
+          case "$status" in
+            Success|Failed|Cancelled|TimedOut|Undeliverable|Terminated|NoInstances|AccessDenied|InvalidPlatform|DeliveryTimedOut|ExecutionTimedOut)
+              deployment_terminal=true
+              ;;
+          esac
+          stdout=$(printf '%s' "$invocation_json" | jq -r '.StandardOutputContent // ""')
+          stderr=$(printf '%s' "$invocation_json" | jq -r '.StandardErrorContent // ""')
+
+          {
+            echo '## 운영 배포'
+            echo
+            echo "대상 인스턴스: $INSTANCE_ID"
+            echo "커밋: $IMAGE_TAG"
+            echo "SSM CommandId: $command_id"
+            echo "상태: $status"
+            echo
+            echo '### stdout'
+            echo '~~~text'
+            printf '%s\n' "$stdout"
+            echo '~~~'
+            echo
+            echo '### stderr'
+            echo '~~~text'
+            printf '%s\n' "$stderr"
+            echo '~~~'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "===== stdout ====="
+          printf '%s\n' "$stdout"
+          echo "===== stderr ====="
+          printf '%s\n' "$stderr"
+          if [ "$status" != "Success" ]; then
+            echo "배포가 실패했다 (상태 $status). 직전 이미지로 롤백하려면 Actions에서 이 워크플로를 workflow_dispatch로 실행하고 image_tag에 직전 커밋 SHA를 넣는다. 같은 production 승인 게이트를 거친다." >&2
+            exit 1
+          fi
+          echo "배포 완료: $IMAGE_TAG"
+
+  # SSM job이 취소되거나 polling timeout으로 실패해도 runner 종료 후 원격 명령이
+  # 계속 실행되지 않도록, S3 pointer를 읽어 cancel과 terminal 확인을 수행한다.
+  ssm-cancel-cleanup:
+    name: 취소·시간 초과 SSM 명령 정리
+    needs: [ssm-deploy]
+    if: >-
+      always() &&
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.deployment_target == 'ssm' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/deploy/m2') &&
+      (needs['ssm-deploy'].result == 'failure' || needs['ssm-deploy'].result == 'cancelled')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: ap-northeast-2
+      INSTANCE_ID: ${{ github.event.inputs.instance_id || vars.PRODUCTION_INSTANCE_ID }}
+      CONFIGURED_INSTANCE_ID: ${{ vars.PRODUCTION_INSTANCE_ID }}
+      SSM_POINTER_BUCKET: ${{ vars.SSM_COMMAND_POINTER_BUCKET || 'masiton-prod-codedeploy-711457211155' }}
+      SSM_POINTER_KEY: masiton/ssm/${{ github.run_id }}/command-id
+    steps:
+      - name: AWS 자격 증명 (OIDC, 장기 키 없음)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::711457211155:role/masiton-github-actions-role
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: SSM CommandId 조회
+        id: lookup
+        run: |
+          set -euo pipefail
+          if [ -z "$CONFIGURED_INSTANCE_ID" ] || [ "$INSTANCE_ID" != "$CONFIGURED_INSTANCE_ID" ]; then
+            echo 'cleanup 대상 instance_id가 저장소 변수와 다르거나 비어 있다' >&2
+            exit 1
+          fi
+          if [[ ! "$INSTANCE_ID" =~ ^i-[0-9a-f]{17}$ ]]; then
+            echo "cleanup 대상 instance_id 형식이 올바르지 않다: '$INSTANCE_ID'" >&2
+            exit 1
+          fi
+          command_id_file="$RUNNER_TEMP/ssm-command-id"
+          if ! aws s3api get-object \
+            --bucket "$SSM_POINTER_BUCKET" \
+            --key "$SSM_POINTER_KEY" \
+            "$command_id_file" >/dev/null; then
+            echo "::error::SSM CommandId pointer를 찾지 못했다: s3://$SSM_POINTER_BUCKET/$SSM_POINTER_KEY" >&2
+            exit 1
+          fi
+          command_id=$(tr -d '\r\n' < "$command_id_file")
+          if [[ ! "$command_id" =~ ^[0-9a-f-]{36}$ ]]; then
+            echo "::error::SSM CommandId 형식이 올바르지 않다: '$command_id'" >&2
+            exit 1
+          fi
+          printf 'resolved=%s\n' "$command_id" >> "$GITHUB_OUTPUT"
+
+      - name: SSM 원격 명령 중지 및 terminal 확인
+        env:
+          RESOLVED_COMMAND_ID: ${{ steps.lookup.outputs.resolved }}
+        run: |
+          set -euo pipefail
+          command_id="$RESOLVED_COMMAND_ID"
+          status=$(aws ssm get-command-invocation \
+            --command-id "$command_id" --instance-id "$INSTANCE_ID" \
+            --query 'Status' --output text 2>/dev/null || echo Unknown)
+          case "$status" in
+            Success|Failed|Cancelled|TimedOut|Undeliverable|Terminated|NoInstances|AccessDenied|InvalidPlatform|DeliveryTimedOut|ExecutionTimedOut)
+              echo "SSM cleanup 대상은 이미 terminal 상태다: $status"
+              exit 0
+              ;;
+          esac
+          cancel_failed=false
+          if ! aws ssm cancel-command --command-id "$command_id" \
+            --instance-ids "$INSTANCE_ID"; then
+            cancel_failed=true
+            echo "::error::SSM 원격 명령 중지 요청에 실패했다: $command_id" >&2
+          fi
+          for _ in $(seq 1 24); do
+            status=$(aws ssm get-command-invocation \
+              --command-id "$command_id" --instance-id "$INSTANCE_ID" \
+              --query 'Status' --output text 2>/dev/null || echo Unknown)
+            case "$status" in
+              Success|Failed|Cancelled|TimedOut|Undeliverable|Terminated|NoInstances|AccessDenied|InvalidPlatform|DeliveryTimedOut|ExecutionTimedOut)
+                echo "SSM cleanup terminal 상태: $status"
+                [ "$cancel_failed" = false ]
+                exit $?
+                ;;
+            esac
+            sleep 10
+          done
+          echo "::error::SSM cleanup이 terminal 상태를 확인하지 못했다: $status" >&2
           exit 1

@@ -20,7 +20,22 @@ app_subnet_ids = [
 # private subnet과 NAT gateway egress 경로를 함께 지정하고 비용·운영 조건을 재확인한다.
 app_subnet_is_private = false
 
-# docker와 CodeDeploy Agent는 user_data가 설치한다. AMI는 기존 것을 그대로 쓴다.
+# 직접 서비스할 단일 앱 EC2. 기존 앱을 재사용할 때는 이 인스턴스를 확인한 뒤
+# aws_instance.app으로 import하고, 새로 만들 때만 Terraform이 생성하게 한다.
+app_subnet_id            = "subnet-REPLACE_ME_PUBLIC_A"
+app_ingress_cidr_blocks  = ["0.0.0.0/0"]
+
+# RDS 전환 전에는 rds_security_group_id와 같은 값을 넣어 기존 DB rule만 유지한다.
+# PostgreSQL EC2를 준비한 뒤 그 인스턴스의 SG로 바꾸면 새 DB rule이 추가된다.
+database_security_group_id = "sg-REPLACE_ME_RDS"
+database_port              = 5432
+
+# false로 두면 Route53은 기존 ALB alias를 유지한다. 직접 앱 EC2의 SSM 배포와
+# 외부 smoke를 확인한 뒤 true로 바꾸는 별도 plan에서 EIP로 전환한다.
+direct_traffic_enabled = false
+
+# 기존 ASG의 docker·CodeDeploy Agent는 legacy user_data가 설치하고, 직접 앱 EC2의
+# docker·SSM Agent는 direct user_data가 설치한다. AMI는 기존 것을 그대로 쓴다.
 ami_id        = "ami-REPLACE_ME"
 instance_type = "t4g.small"
 
@@ -103,4 +118,3 @@ ssm_parameter_arns = ["arn:aws:ssm:ap-northeast-2:000000000000:parameter/masiton
 # initial_alarm_seeding             = true
 # deployment_alarms_enabled         = false
 # deployment_auto_rollback_enabled = false
-

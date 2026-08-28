@@ -21,7 +21,7 @@ for f in amazon-cloudwatch-agent.json health-metrics.sh \
 done
 
 # agent는 로그 전송용이고 상태 지표 수집과는 독립적이다. 이 스크립트가
-# CodeDeploy AfterInstall에서 실행되므로, 패키지 저장소 일시 장애로 배포 전체가
+# 직접 SSM 배포에서 실행되므로, 패키지 저장소 일시 장애로 배포 전체가
 # 실패하지 않도록 agent 설치·기동 실패는 경고로 남기고 계속 진행한다. 아래
 # 지표 수집 설치는 감지 경로 자체이므로 그대로 치명적으로 다룬다.
 agent_ready=true

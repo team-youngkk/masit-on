@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+install -d -m 0750 /run/masiton
+exec 9>/run/masiton/deploy.lock
+flock -n 9 || { echo '이미 다른 배포가 실행 중이다' >&2; exit 1; }
+
 ROOT=/opt/masiton/revision
 TAG_FILE="$ROOT/revision.env"
 [ -f "$TAG_FILE" ] || { echo 'CodeDeploy revision.env가 없다' >&2; exit 1; }
@@ -14,4 +18,3 @@ chmod +x "$ROOT"/instance-bootstrap.sh "$ROOT"/redis-install.sh \
   "$ROOT"/app-deploy.sh "$ROOT"/nginx-install.sh "$ROOT"/runtime-health.sh \
   "$ROOT"/cloudwatch-install.sh "$ROOT"/health-metrics.sh
 "$ROOT/instance-bootstrap.sh" "$image_tag" "$ROOT"
-

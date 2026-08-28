@@ -319,3 +319,33 @@ variable "app_subnet_is_private" {
   type        = bool
   default     = false
 }
+
+# 직접 접속 경로를 준비하는 동안 legacy ALB/ASG 경로와 병행한다. 기존 Route53
+# record를 먼저 유지하고, 직접 EC2의 smoke·health 확인 뒤 true로 전환한다.
+variable "app_subnet_id" {
+  description = "직접 서비스할 단일 앱 EC2의 public subnet ID"
+  type        = string
+}
+
+variable "app_ingress_cidr_blocks" {
+  description = "직접 앱 EC2의 HTTP/HTTPS ingress CIDR 목록"
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
+}
+
+variable "database_security_group_id" {
+  description = "RDS 또는 전환 후 PostgreSQL EC2의 security group ID"
+  type        = string
+}
+
+variable "database_port" {
+  description = "전환 대상 PostgreSQL이 수신하는 포트"
+  type        = number
+  default     = 5432
+}
+
+variable "direct_traffic_enabled" {
+  description = "true일 때 Route53 record를 ALB 대신 앱 EIP로 전환한다"
+  type        = bool
+  default     = false
+}

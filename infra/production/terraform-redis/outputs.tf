@@ -8,7 +8,7 @@ output "redis_private_ip" {
 }
 
 output "redis_security_group_id" {
-  description = "운영 ASG 모듈의 redis_security_group_id 입력값"
+  description = "운영 앱 모듈의 redis_security_group_id 입력값"
   value       = aws_security_group.redis.id
 }
 

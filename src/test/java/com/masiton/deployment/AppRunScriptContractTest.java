@@ -61,19 +61,19 @@ class AppRunScriptContractTest {
     }
 
     @Test
-    @DisplayName("Nginx의 Host·health·internal 경계를 유지한다")
+    @DisplayName("Nginx의 Host·internal 경계를 유지한다")
     void nginx의네트워크경계를유지한다() throws IOException {
         String site = read(NGINX_SITE);
         assertThat(site)
                 .contains("listen 80 default_server;")
                 .contains("listen 443 ssl default_server;")
                 .contains("location / { return 444; }")
-                .contains("location = /_masiton/alb-health {")
-                .contains("proxy_pass http://masiton_backend/internal/health/ready;")
                 .contains("location ^~ /internal/ { access_log off; return 404; }")
                 .contains("location = /internal { access_log off; return 404; }")
                 .contains("server 127.0.0.1:8080;")
                 .contains("server 127.0.0.1:3000;")
+                .contains("location = /_masiton/alb-health")
+                .contains("proxy_pass http://masiton_backend/internal/health/ready;")
                 .contains("proxy_set_header X-Forwarded-For $remote_addr;");
     }
 
