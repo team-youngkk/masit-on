@@ -271,7 +271,7 @@ case "$component" in
 
     exec /usr/bin/docker run --name masiton-backend \
       --network host \
-      --memory 1024m \
+      --memory 512m \
       --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 \
       --volume "$SECRETS_DIR":"$SECRETS_DIR":ro \
       -e SPRING_PROFILES_ACTIVE \
@@ -300,7 +300,7 @@ case "$component" in
 
     exec /usr/bin/docker run --name masiton-frontend \
       --network host \
-      --memory 512m \
+      --memory 256m \
       --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 \
       -e API_BASE_URL -e PORT -e HOSTNAME \
       "$image"

@@ -32,7 +32,11 @@ direct_traffic_enabled = true
 # 직접 앱 EC2의 docker·SSM Agent는 direct user_data가 설치한다. AMI는 기존 것을
 # 그대로 쓴다.
 ami_id        = "ami-REPLACE_ME"
-instance_type = "t4g.small"
+# 저사용량 단일 앱 프로파일. 1 GiB 호스트에 맞춘 컨테이너 상한은
+# deploy/scripts/app-run.sh에서 관리한다.
+instance_type = "t4g.micro"
+# 보존 중인 seed ASG는 직접 앱 다운사이징의 대상이 아니다.
+seed_instance_type = "t4g.small"
 
 # Nginx가 ACM 인증서로 TLS를 종단하고 외부 80 요청을 HTTPS로 redirect한다.
 app_port     = 443
