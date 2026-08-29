@@ -1,7 +1,7 @@
 resource "aws_launch_template" "blue" {
   name_prefix   = "${var.name_prefix}-blue-"
   image_id      = var.ami_id
-  instance_type = var.instance_type
+  instance_type = var.seed_instance_type
   user_data     = base64encode(local.rendered_legacy_user_data)
 
   iam_instance_profile {
