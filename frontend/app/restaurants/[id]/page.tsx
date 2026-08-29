@@ -17,23 +17,27 @@ import {
   isSafeHttpUrl,
   type RestaurantDetail,
 } from '@/lib/api'
+import type { RawSearchParams } from '@/lib/restaurants-api'
+import { buildRestaurantDetailMetadata } from '@/lib/restaurant-seo'
 import { toPublicSiteUrl } from '@/lib/site-url'
 
 import styles from './page.module.css'
 
 type RestaurantDetailPageProps = {
   params: Promise<{ id: string }>
+  searchParams: Promise<RawSearchParams>
 }
 
 const getRestaurant = cache(getRestaurantDetail)
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: RestaurantDetailPageProps): Promise<Metadata> {
-  const { id } = await params
+  const [{ id }, rawParams] = await Promise.all([params, searchParams])
   const canonical = toPublicSiteUrl(`/restaurants/${encodeURIComponent(id)}`)
   if (!canonical) {
-    return { robots: { index: false, follow: false } }
+    return buildRestaurantDetailMetadata(rawParams, null)
   }
 
   try {
@@ -41,17 +45,15 @@ export async function generateMetadata({
     const name = restaurant.name.trim()
     const category = restaurant.category.trim()
     if (!name || !category) {
-      return { robots: { index: false, follow: false } }
+      return buildRestaurantDetailMetadata(rawParams, canonical)
     }
 
-    return {
-      title: `${name} | ${category} 맛집 | 맛잇온`,
-      description: `유튜버가 방문한 ${category} 맛집 ${name}의 정보를 확인하세요.`,
-      robots: { index: true, follow: true },
-      alternates: { canonical },
-    }
+    return buildRestaurantDetailMetadata(rawParams, canonical, {
+      name,
+      category,
+    })
   } catch {
-    return { robots: { index: false, follow: false } }
+    return buildRestaurantDetailMetadata(rawParams, canonical)
   }
 }
 

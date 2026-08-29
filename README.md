@@ -69,6 +69,22 @@ npm --prefix frontend run dev
 
 로컬에서는 `frontend/.env.local`에 넣는다. **`NEXT_PUBLIC_` 값은 빌드 시점에 번들로 들어가므로 서버를 재시작해야 반영된다.** 운영 이미지는 GitHub Actions 저장소 변수 `NEXT_PUBLIC_KAKAO_MAPS_JS_KEY`를 `ci.yml`이 `--build-arg`로 넘겨 굽는다. 컨테이너 환경 변수로는 바꿀 수 없다.
 
+### 네이버 검색 노출
+
+운영 프론트엔드 이미지는 GitHub Actions 저장소 변수 `NEXT_PUBLIC_SITE_URL`을
+`https://masiton.click`으로 설정해야 한다. 이 값이 없거나 다른 주소이면 이미지 빌드가
+실패하도록 되어 있으며, 로컬·미완성 배포에서는 `robots.txt`와 페이지 메타데이터가
+검색을 차단하는 fail-closed 정책을 사용한다.
+
+배포 후 네이버 서치어드바이저에서 `https://masiton.click`을 등록·소유확인하고,
+`https://masiton.click/sitemap.xml`을 제출한다. `/robots.txt`는 공개 맛집 목록·상세만
+수집하도록 허용하며 관리자·회원·인증·API·내부 경로는 제외한다. HTML 메타태그 방식의
+소유확인이 필요하면 토큰을 전달받은 뒤 서버 렌더링 메타데이터를 별도 반영한다. 토큰은
+코드에 하드코딩하지 않는다.
+
+네이버에서 실제 수집·색인·검색 결과 노출이 완료되는 시점과 순위는 코드로 보장할 수
+없으므로, 배포 후 서치어드바이저의 URL 검사·수집 요청과 색인 리포트를 확인한다.
+
 ### 로컬 관리자 계정
 
 관리자 계정은 사전 발급 대상이라 Flyway 기준 데이터에 넣지 않는다. 관리자 화면·API를 확인하려면 로컬에서만 계정을 만든다.
