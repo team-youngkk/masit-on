@@ -14,6 +14,11 @@ export const metadata: Metadata = {
   title: '맛잇온',
   description: '유튜버가 방문한 맛집을 지역·음식 종류·유튜버로 탐색하는 서비스',
   robots: { index: false, follow: false },
+  verification: {
+    other: {
+      'naver-site-verification': '31c5ecc649e9a13063d7a6d364739d5099e45111',
+    },
+  },
 }
 
 export const viewport: Viewport = {
