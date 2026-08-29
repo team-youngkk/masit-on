@@ -12,7 +12,7 @@ import { cn } from '@/lib/cn'
 import { shouldUseRestaurantDesignPreview } from '@/lib/design-preview'
 import { naturalLanguageFiltersKey } from '@/lib/natural-language-filters-key'
 import { getRestaurantPlaceholderImage } from '@/lib/restaurant-placeholder-image'
-import { toPublicSiteUrl } from '@/lib/site-url'
+import { buildRestaurantsMetadata } from '@/lib/restaurant-seo'
 import {
   buildRestaurantFilterClearHref,
   buildRestaurantFiltersResetHref,
@@ -39,9 +39,6 @@ type ActiveFilter = {
   value: string
 }
 
-const RESTAURANTS_TITLE = '유튜버가 방문한 맛집 탐색 | 맛잇온'
-const RESTAURANTS_DESCRIPTION =
-  '유튜버가 방문한 서울 맛집을 지역, 음식 종류, 유튜버로 탐색하세요.'
 const getRestaurants = cache((serializedParams: string) =>
   fetchRestaurants(new URLSearchParams(serializedParams)),
 )
@@ -50,30 +47,11 @@ export async function generateMetadata({
   searchParams,
 }: RestaurantsPageProps): Promise<Metadata> {
   const rawParams = await searchParams
-  const canonical = toPublicSiteUrl('/restaurants')
-
-  if (Object.keys(rawParams).length > 0) {
-    return {
-      robots: { index: false, follow: true },
-      alternates: canonical ? { canonical } : undefined,
-    }
-  }
-
-  if (!canonical) {
-    return { robots: { index: false, follow: false } }
-  }
-
   const result = await getRestaurants(buildApiSearchParams(rawParams).toString())
-  if (!result.ok) {
-    return { robots: { index: false, follow: false } }
-  }
-
-  return {
-    title: RESTAURANTS_TITLE,
-    description: RESTAURANTS_DESCRIPTION,
-    robots: { index: true, follow: true },
-    alternates: { canonical },
-  }
+  return buildRestaurantsMetadata(rawParams, {
+    requestSucceeded: result.ok,
+    hasItems: result.ok && result.data.items.length > 0,
+  })
 }
 
 function includeSelectedFilterValue(values: readonly string[], selectedValue: string): string[] {

@@ -25,7 +25,7 @@ ARG NEXT_PUBLIC_KAKAO_MAPS_JS_KEY
 ENV NEXT_PUBLIC_KAKAO_MAPS_JS_KEY=${NEXT_PUBLIC_KAKAO_MAPS_JS_KEY}
 
 # SEO 사이트 URL과 GA4 측정 ID도 `NEXT_PUBLIC_` 접두사라 `next build` 시점에
-# 클라이언트 번들에 들어간다. 두 값은 선택 사항이므로 비어 있어도 빌드를 실패시키지 않는다.
+# 클라이언트 번들에 들어간다. 운영 이미지의 사이트 URL은 canonical과 일치해야 한다.
 # 둘 다 브라우저에 노출되는 공개값이며 비밀값이 아니므로 Secret으로 전달하지 않는다.
 ARG NEXT_PUBLIC_SITE_URL
 ARG NEXT_PUBLIC_GA_MEASUREMENT_ID
@@ -37,6 +37,8 @@ ENV NEXT_PUBLIC_GA_MEASUREMENT_ID=${NEXT_PUBLIC_GA_MEASUREMENT_ID}
 # 키 없는 이미지가 만들어지지 않도록 한다.
 RUN test -n "$NEXT_PUBLIC_KAKAO_MAPS_JS_KEY" \
     || (echo "ERROR: NEXT_PUBLIC_KAKAO_MAPS_JS_KEY build arg is required" >&2 && exit 1)
+RUN test "$NEXT_PUBLIC_SITE_URL" = "https://masiton.click" \
+    || (echo "ERROR: NEXT_PUBLIC_SITE_URL must be https://masiton.click" >&2 && exit 1)
 
 # package.json의 build는 `tsc --noEmit && next build`다. next.config.ts가
 # Next 내장 TypeScript 단계를 끄고 있으므로 타입 검사는 이 tsc가 담당한다.

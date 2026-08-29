@@ -5,6 +5,7 @@ set -euo pipefail
 BASE_URL="${NGINX_SMOKE_BASE_URL:-https://masiton.click}"
 SMOKE_HOST="${NGINX_SMOKE_HOST:-masiton.click}"
 SMOKE_ADDRESS="${NGINX_SMOKE_ADDRESS:-127.0.0.1}"
+SMOKE_SITE_URL="${NGINX_SMOKE_SITE_URL:-https://masiton.click}"
 RESPONSE_FILE=$(mktemp)
 trap 'rm -f "$RESPONSE_FILE"' EXIT
 
@@ -36,6 +37,20 @@ assert_status() {
   }
 }
 
+assert_body_contains() {
+  local expected_status=$1 method=$2 path=$3 expected_body=$4 status body
+  status=$(request "$method" "$path")
+  body=$(<"$RESPONSE_FILE")
+  [ "$status" = "$expected_status" ] || {
+    echo "unexpected status: ${method} ${path}, expected ${expected_status}, got ${status}" >&2
+    exit 1
+  }
+  [[ "$body" == *"$expected_body"* ]] || {
+    echo "unexpected body: ${method} ${path}, missing ${expected_body}" >&2
+    exit 1
+  }
+}
+
 for path in /api /api/restaurants /api/unknown-route; do
   assert_reaches_backend GET "$path"
 done
@@ -43,6 +58,10 @@ assert_reaches_backend POST /api/auth/tokens '{}'
 # The public root intentionally redirects to the canonical exploration page.
 assert_status 307 GET /
 assert_status 200 GET /restaurants
+assert_body_contains 200 GET /restaurants "<link rel=\"canonical\" href=\"${SMOKE_SITE_URL}/restaurants"
+assert_body_contains 200 GET /robots.txt "Sitemap: ${SMOKE_SITE_URL}/sitemap.xml"
+assert_body_contains 200 GET /robots.txt 'Allow: /restaurants'
+assert_body_contains 200 GET /sitemap.xml "${SMOKE_SITE_URL}/restaurants"
 
 # Webhook GET/POST reach the application; other methods stop at Nginx.
 assert_reaches_backend GET /api/webhooks/youtube/channel-updates

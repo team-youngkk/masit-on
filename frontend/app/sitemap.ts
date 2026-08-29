@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next'
 
-import { fetchRestaurants } from '@/lib/restaurants-api'
-import { getSiteUrl } from '@/lib/site-url'
+import { fetchRestaurants } from '../lib/restaurants-api.ts'
+import { getSiteUrl } from '../lib/site-url.ts'
 
 const SITEMAP_PAGE_SIZE = '50'
 const SITEMAP_REVALIDATE_SECONDS = 300
@@ -19,6 +19,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ]
   const restaurantIds = await getPublicRestaurantIds()
 
+  if (restaurantIds == null) {
+    return entries
+  }
+
   for (const restaurantId of restaurantIds) {
     entries.push({
       url: new URL(`/restaurants/${encodeURIComponent(restaurantId)}`, siteUrl).toString(),
@@ -28,27 +32,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return entries
 }
 
-async function getPublicRestaurantIds(): Promise<string[]> {
-  const restaurantIds: string[] = []
+async function getPublicRestaurantIds(): Promise<string[] | null> {
+  const restaurantIds = new Set<string>()
   let page = 1
 
-  while (true) {
-    const params = new URLSearchParams({ page: String(page), size: SITEMAP_PAGE_SIZE })
-    const result = await fetchRestaurants(params, {
-      next: { revalidate: SITEMAP_REVALIDATE_SECONDS },
-    })
-    if (!result.ok) {
-      throw new Error('공개 맛집 sitemap 목록을 불러오지 못했습니다.')
-    }
+  try {
+    while (true) {
+      const params = new URLSearchParams({ page: String(page), size: SITEMAP_PAGE_SIZE })
+      const result = await fetchRestaurants(params, {
+        next: { revalidate: SITEMAP_REVALIDATE_SECONDS },
+      })
+      if (!result.ok) {
+        return null
+      }
 
-    restaurantIds.push(
-      ...result.data.items
-        .map((restaurant) => restaurant.id)
-        .filter((restaurantId) => restaurantId.trim().length > 0),
-    )
-    if (!result.data.page.hasNext || page >= result.data.page.totalPages) {
-      return restaurantIds
+      for (const restaurant of result.data.items) {
+        if (restaurant.id.trim().length > 0) {
+          restaurantIds.add(restaurant.id)
+        }
+      }
+      if (!result.data.page.hasNext || page >= result.data.page.totalPages) {
+        return [...restaurantIds]
+      }
+      page += 1
     }
-    page += 1
+  } catch {
+    return null
   }
 }
