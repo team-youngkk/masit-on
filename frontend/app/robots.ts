@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next'
 
-import { getSiteUrl } from '@/lib/site-url'
+import { getSiteUrl } from '../lib/site-url.ts'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,7 +19,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: ['/restaurants', '/restaurants/', '/sitemap.xml'],
+        allow: ['/restaurants', '/restaurants/', '/sitemap.xml', '/_next/'],
         disallow: '/',
       },
     ],

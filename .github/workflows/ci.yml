@@ -295,7 +295,7 @@ jobs:
       # 식별자로 분류하고 허용 도메인 제한을 보호 수단으로 삼는다. Secret으로 두면
       # 로그 마스킹이 붙어 값이 맞는지 확인할 수단만 사라진다.
       # SEO 사이트 URL과 GA4 측정 ID도 브라우저에 노출되는 공개값이므로 Secret이 아닌
-      # 저장소 변수로 전달한다. 두 값은 선택 사항이며 비어 있어도 이미지 빌드는 통과한다.
+      # 저장소 변수로 전달한다. 운영 SEO를 위해 사이트 URL은 canonical과 정확히 일치해야 한다.
       - name: 프론트엔드 이미지 빌드
         env:
           KAKAO_MAPS_JS_KEY: ${{ vars.NEXT_PUBLIC_KAKAO_MAPS_JS_KEY }}
@@ -306,6 +306,10 @@ jobs:
           if [ -z "${KAKAO_MAPS_JS_KEY}" ]; then
             echo '저장소 변수 NEXT_PUBLIC_KAKAO_MAPS_JS_KEY가 비어 있다.'
             echo '이 값 없이 빌드하면 지도 화면이 SDK 오류 상태로 배포된다.'
+            exit 1
+          fi
+          if [ "${NEXT_PUBLIC_SITE_URL}" != 'https://masiton.click' ]; then
+            echo '저장소 변수 NEXT_PUBLIC_SITE_URL은 canonical https://masiton.click 이어야 한다.'
             exit 1
           fi
           docker build \
