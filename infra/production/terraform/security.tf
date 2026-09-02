@@ -75,7 +75,7 @@ resource "aws_vpc_security_group_egress_rule" "app_to_aws_services" {
   from_port         = 443
   to_port           = 443
   ip_protocol       = "tcp"
-  description       = "Private subnet NAT or VPC endpoints for CodeDeploy, SSM, ECR, and S3"
+  description       = "Private subnet NAT or VPC endpoints for runtime AWS services and S3"
 }
 
 resource "aws_vpc_security_group_egress_rule" "app_to_vpc_dns_udp" {

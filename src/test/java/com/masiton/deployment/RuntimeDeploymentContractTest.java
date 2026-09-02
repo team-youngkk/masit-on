@@ -110,25 +110,25 @@ class RuntimeDeploymentContractTest {
     }
 
     @Test
-    @DisplayName("직접 배포 IAM은 SSM 최소 권한만 유지한다")
-    void terraform_배포role은SSM최소권한을갖는다() throws IOException {
+    @DisplayName("앱 runtime IAM은 비밀값 조회 권한만 유지한다")
+    void terraform_앱runtime은비밀값조회만유지한다() throws IOException {
         String iam = read(TERRAFORM.resolve("iam.tf"));
         String redisIam = read(Path.of("infra/production/terraform-redis/iam.tf"));
 
         assertThat(iam)
-                .contains("github_actions_ssm_deploy")
-                .contains("ssm:SendCommand")
-                .contains("ssm:CancelCommand")
-                .contains("AWS-RunShellScript")
-                .contains("ssm:GetCommandInvocation")
-                .contains("s3:PutObject")
-                .contains("masiton/ssm/*")
+                .contains("ssm:GetParameter")
+                .contains("ssm:GetParameters")
+                .contains("ssm:GetParametersByPath")
                 .contains("kms:ViaService")
                 .contains("ssm.${var.aws_region}.amazonaws.com")
                 .contains("kms:EncryptionContext:PARAMETER_ARN")
                 .contains("parameter/masiton/*")
-                .contains("aws_instance.app.id")
+                .contains("ecr:GetAuthorizationToken")
                 .doesNotContain("codedeploy:")
+                .doesNotContain("github_actions_ssm_deploy")
+                .doesNotContain("ssm:SendCommand")
+                .doesNotContain("ssm:CancelCommand")
+                .doesNotContain("ssm:GetCommandInvocation")
                 .doesNotContain("ssm:ListCommandInvocations")
                 .doesNotContain("ssm:DescribeInstanceInformation");
         assertThat(redisIam)

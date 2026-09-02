@@ -42,7 +42,7 @@ variable "private_subnet_ids" {
 }
 
 variable "ami_id" {
-  description = "Amazon Linux 2023 arm64 AMI ID. latest 자동 선택 금지"
+  description = "Amazon Linux 2023 x86_64 AMI ID. latest 자동 선택 금지"
   type        = string
 }
 
@@ -104,7 +104,7 @@ variable "db_username" {
 }
 
 variable "wiremock_image" {
-  description = "WireMock 이미지. arm64 호환 고정 태그 사용"
+  description = "WireMock 이미지. 고정 태그 사용"
   type        = string
   default     = "wiremock/wiremock:3.13.2"
 }
@@ -148,27 +148,33 @@ variable "k6_version" {
   }
 }
 
-variable "k6_arm64_sha256" {
-  description = "k6 linux-arm64 tarball SHA-256"
+variable "k6_amd64_sha256" {
+  description = "k6 linux-amd64 tarball SHA-256"
   type        = string
-  default     = "191fa8d89512a4e5083f3fabcb4c3828af9f5b9eee016de8443f6473c029ffb5"
+  default     = "295d961ebfca306f295f1133068dcd403a8171c87f387928f5f30b0fbcff858a"
 
   validation {
-    condition     = can(regex("^[0-9a-f]{64}$", var.k6_arm64_sha256))
-    error_message = "k6_arm64_sha256는 64자리 소문자 SHA-256이어야 한다."
+    condition     = can(regex("^[0-9a-f]{64}$", var.k6_amd64_sha256))
+    error_message = "k6_amd64_sha256는 64자리 소문자 SHA-256이어야 한다."
   }
 }
 
 variable "app_instance_type" {
   description = "측정 대상 앱 EC2 타입. 운영 ASG launch template과 같은 값이어야 측정값이 운영을 대변한다"
   type        = string
-  default     = "t4g.small"
+  default     = "t2.micro"
 }
 
 variable "deps_instance_type" {
   description = "WireMock·Redis 의존 EC2 타입. 측정 대상이 아니므로 병목이 되지 않을 정도면 된다"
   type        = string
-  default     = "t4g.small"
+  default     = "t2.small"
+}
+
+variable "loadgen_instance_type" {
+  description = "k6 부하 생성기 EC2 타입"
+  type        = string
+  default     = "t2.small"
 }
 
 variable "root_volume_size_gib" {

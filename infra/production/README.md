@@ -8,17 +8,34 @@ PostgreSQL은 별도 private EC2에서 실행하며, 이 레이어는 PostgreSQL
 
 ## 배포 경계
 
-- GitHub Actions는 `environment: production` 승인 뒤 단일 앱 EC2에 SSM Run Command로 배포한다. `push`와 `workflow_dispatch` 모두 이 경로를 사용하며, 저장소 변수 `PRODUCTION_INSTANCE_ID`와 다른 instance ID는 거부한다.
-- 배포 명령은 커밋 SHA와 함께 스크립트·Nginx·systemd 산출물을 전달하고 `app-deploy.sh`의 health check와 rollback 결과를 그대로 반환한다.
-- 앱 EC2의 IAM role은 런타임 SSM/ECR/ACM/CloudWatch 권한을 갖고, GitHub Actions role은 SSM 명령·취소·결과 조회 및 최소 S3 command pointer 권한만 갖는다.
+- GitHub Actions는 `main`의 CI 성공 뒤 `environment: production` 승인 후 Docker Hub에 backend/frontend 이미지를 커밋 SHA 태그로 게시하고, digest 참조와 배포 산출물을 SSH로 앱 EC2에 전달한다. `workflow_dispatch`에서는 `main`의 조상 커밋만 지정할 수 있어 수동 롤백·재배포에 사용한다.
+- 배포에 `PRODUCTION_INSTANCE_ID`, AWS OIDC, ECR, SSM Run Command는 사용하지 않는다. 대상 계정의 public IP 또는 DNS, SSH 사용자, private key, 검증된 known_hosts만 필요하다.
+- GitHub 저장소 변수는 `DOCKERHUB_NAMESPACE`, `PRODUCTION_HOST`, `PRODUCTION_SSH_USER`를 사용하고, `production` environment secret은 `DOCKERHUB_USERNAME`, `DOCKERHUB_PUSH_TOKEN`, `DOCKERHUB_PULL_TOKEN`, `PRODUCTION_SSH_PRIVATE_KEY`, `PRODUCTION_SSH_KNOWN_HOSTS`를 사용한다. 이미지 게시에는 커밋 SHA 태그를 사용하고 결과는 digest로 고정한다. Docker Hub backend/frontend 저장소의 tag immutability도 켜는 것을 권장한다.
+- SSH 대상 서버는 Docker, `bash`, `tar`, `base64`, `curl`, AWS CLI, Python 3, `systemctl`, `sudo -n`을 제공해야 하며 workflow가 배포 전에 이를 원격 점검한다. 앱 runtime은 기존처럼 EC2 IAM role로 SSM Parameter Store·ACM·CloudWatch·Redis secret S3를 읽으므로, GitHub 배포 인증과 runtime 인증을 혼동하지 않는다.
+- 운영 job은 x86_64 GitHub-hosted `ubuntu-24.04` runner에서 실행한다. 대상 security group의 22번 포트는 GitHub Actions runner가 접근할 수 있는 네트워크 경계에서만 허용하고, known_hosts는 신뢰할 수 있는 환경에서 fingerprint를 확인해 등록하며 CI에서 `ssh-keyscan`을 실행하지 않는다.
+- 배포 명령은 커밋 SHA와 함께 스크립트·Nginx·systemd 산출물을 전달하고 `app-deploy.sh`의 이미지 pull, health check, rollback 결과를 그대로 반환한다. 이미지 pull 이후 활성 파일을 교체하는 단계에서 실패하거나 배포가 중단되면 이전 산출물로 복구한다.
+
+### 외부 AWS 계정 EC2 1회 사전 준비
+
+대상 EC2가 이 저장소의 AWS 계정 소유가 아니면 이 저장소의 Terraform은 해당 인스턴스의
+`key_name`, SSH 22번 ingress, `authorized_keys`, `sudoers`를 대신 만들 수 없다. 대상 계정
+운영자가 다음을 먼저 준비해야 한다.
+
+1. `PRODUCTION_SSH_USER`의 `authorized_keys`에 배포 public key를 등록한다.
+2. GitHub Actions runner가 접근할 수 있는 제한된 egress 범위에서만 security group의 TCP 22를 연다.
+3. 배포 사용자가 `sudo -n true`, `sudo -n docker info`를 통과하고 Docker·AWS CLI·Python 3·`systemctl`을 사용할 수 있게 한다.
+4. 같은 host key fingerprint를 확인한 known_hosts 한 줄을 `PRODUCTION_SSH_KNOWN_HOSTS`에 등록한다.
+
+workflow의 SSH preflight가 위 조건을 다시 검증하며, 조건이 맞지 않으면 Docker Hub
+로그인이나 운영 파일 교체를 시작하지 않는다.
 - Nginx가 TLS를 종단하고 외부의 80/443 요청을 직접 받는다. `/internal/**`은 계속 외부 `404`이며, Route53 A record는 앱 EIP를 가리킨다.
-- 앱 EC2와 Redis를 동거시키지 않는다. 저사용량 운영 프로파일은 앱 `t4g.micro`,
-  PostgreSQL 전용 EC2 `t4g.nano`, Redis 전용 EC2 `t4g.nano`다.
+- 앱 EC2와 Redis를 동거시키지 않는다. 현재 x86_64 운영 프로파일은 앱 `t2.micro`,
+  PostgreSQL 전용 EC2 `t2.nano`, Redis 전용 EC2 `t2.nano`다.
 - 이 저장소의 `terraform/`과 `terraform-redis/` 레이어는 각각 앱과 Redis를 관리하지만
   PostgreSQL EC2는 관리하지 않는다.
   PostgreSQL 인스턴스 타입 변경은 AWS에서 별도 stop → modify → start 작업으로
   적용하고, 연결 수·FreeableMemory·디스크 여유·OOM 로그를 확인한다.
-- 앱 `t4g.micro`는 1GiB 호스트이므로 backend/frontend 컨테이너 메모리 상한은
+- 앱 `t2.micro`는 1GiB 호스트이므로 backend/frontend 컨테이너 메모리 상한은
   각각 `512m`/`256m`으로 둔다. 이 값은 무부하 기동만으로 안전성이 증명되지 않으므로
   적용 후 OOMKilled·호스트 OOM·재시작·health·지연을 함께 확인한다.
 
@@ -31,14 +48,14 @@ PostgreSQL은 별도 private EC2에서 실행하며, 이 레이어는 PostgreSQL
 5. CodeDeploy transient ASG 5개와 레거시 앱 EC2 3대를 종료하고, 연결된 EBS volume도 삭제되었음을 확인했다.
 6. RDS 인스턴스가 없는 상태에서 전환용 수동 스냅샷 3개를 삭제했다. PostgreSQL EC2의 데이터 volume과 Redis volume은 삭제하지 않았다.
 
-기존 revision bucket은 SSM command pointer와 Redis secret 객체를 보관하므로 `revision-bucket.tf`에 남긴다. Redis secret 객체는 Terraform resource로 관리하지 않아 실제 비밀번호가 state에 들어가지 않게 한다. 객체 교체 시 기존 SSM Parameter Store 값도 함께 갱신하고 Redis 재시작·앱 health를 확인한다.
+기존 revision bucket은 Redis secret 객체를 보관하므로 `revision-bucket.tf`에 남긴다. Redis secret 객체는 Terraform resource로 관리하지 않아 실제 비밀번호가 state에 들어가지 않게 한다. 객체 교체 시 기존 SSM Parameter Store 값도 함께 갱신하고 Redis 재시작·앱 health를 확인한다.
 
 ## 보존 리소스와 재검증
 
 다음 리소스는 비용·운영 목적을 확인한 뒤 별도 변경으로 다룬다.
 
 - `masiton-prod-blue-asg`와 `masiton-prod-blue` target group은 seed/이력 보존 대상이다.
-- S3 revision bucket은 SSM command pointer를 보관하므로 유지한다.
+- S3 revision bucket은 Redis secret 객체를 보관하므로 유지한다.
 - SSM·SSMMessages interface endpoint는 Redis secret 주입에 사용하지 않으며, 앱 SSM public 경로 검증 후 삭제 완료했다. S3 Gateway Endpoint는 Redis secret·배포 자산 경로로 유지한다.
 - `masiton.click` hosted zone과 앱 EIP·앱/DB/Redis EC2·volume은 운영 대상이다.
 - `roviq.click` hosted zone은 다른 프로젝트 소유이므로 이 저장소 정리 범위가 아니다.
@@ -48,14 +65,11 @@ Terraform 변경 뒤에는 `terraform plan`에서 위 보존 리소스에 `delet
 
 ## 비용 기준
 
-서울 리전 730시간 기준으로 앱 `t4g.micro`, PostgreSQL `t4g.nano`, Redis
-`t4g.nano`, 앱 root 30GiB, PostgreSQL 20GiB, Redis volume 8GiB 2개, 앱 EIP와
-공통 Route 53·ECR·CloudWatch를 유지하는 목표 구성은 약 `$28.55/월`로 계산된다.
-SSM·SSMMessages interface endpoint는 포함하지 않으며, 데이터 전송·요청량·백업·
-KMS 요청 비용은 별도다. 위 금액에는 사용 중인 앱 EIP의 공인 IPv4 비용 `$3.65`가
-포함되어 있다. 산식은 EC2 `$15.184` + gp3 `$6.019` + IPv4 `$3.65` + 공통
-Route 53·ECR·CloudWatch `$3.70` = `$28.553`이다. 이는 정액 청구 보장이 아닌
-단가 기반 추정이며, 실제 청구액과 기존 자원 사용분은 Cost Explorer에서 확인한다.
+서울 리전 730시간 기준의 기존 `$28.55/월` 산정은 ARM `t4g` 구성에 대한 값이므로,
+현재 x86 `t2` 구성의 비용 근거로 사용하지 않는다. 새 인스턴스 타입과 실제 사용 중인
+앱 EIP·EBS·Route 53·CloudWatch 비용은 적용 전에 Cost Explorer와 AWS 요금표로
+재산정한다. Docker Hub 요금·pull 제한·데이터 전송·요청량·백업·KMS 요청 비용은
+별도다.
 
 ## 확인 명령
 
@@ -65,4 +79,4 @@ docker compose up -d postgres redis wiremock
 .\gradlew.bat test --tests com.masiton.deployment.RuntimeDeploymentContractTest --tests com.masiton.deployment.AppRunScriptContractTest
 ```
 
-운영 중인 앱·PostgreSQL·Redis EC2와 volume은 삭제하지 않는다. seed ASG·target group과 S3 bucket은 유지한다. SSM·SSMMessages interface endpoint는 Redis 재부팅 검증과 앱 SSM public smoke를 통과해 삭제 완료했다.
+운영 중인 앱·PostgreSQL·Redis EC2와 volume은 삭제하지 않는다. seed ASG·target group과 S3 bucket은 유지한다. SSM·SSMMessages interface endpoint는 Redis 재부팅 검증과 앱 SSM public smoke를 통과해 삭제 완료했다. GitHub Actions용 `PRODUCTION_INSTANCE_ID`는 등록하지 않는다.
