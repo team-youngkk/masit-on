@@ -24,7 +24,7 @@ related_documents:
 
 | 스레드 | 요청 요약 | 문제 유형 | 판단 | 처리 결과 | 근거/검증 |
 |---|---|---|---|---|---|
-| [P1 x86 이미지와 ARM 운영 인프라 불일치](https://github.com/team-youngkk/masit-on/pull/344#issuecomment-5510976678) | Docker Hub에 게시할 이미지 아키텍처와 Terraform의 앱·seed·Redis 인스턴스 아키텍처를 일치시키고, 관련 계약 테스트를 실제 구현과 맞춘다. | 인프라·배포 | 수정 필요 | PR head의 Docker Hub `images`와 SSH `ssh-deploy` 구현은 유지하고, 앱 `t2.micro`, seed `t2.small`, Redis `t2.nano`, 성능 환경·runner의 x86_64 전제를 정합화했다. runtime IAM에서 더 이상 사용하지 않는 GitHub Actions SSM 배포 정책도 제거하고 계약 테스트를 실제 경로에 맞췄다. | `RuntimeDeploymentContractTest`, `PerformanceEnvironmentContractTest`, `com.masiton.deployment.*` 통과. 수정 커밋은 PR branch push 전 상태에서 검증했다. |
+| [P1 x86 이미지와 ARM 운영 인프라 불일치](https://github.com/team-youngkk/masit-on/pull/344#issuecomment-5510976678) | Docker Hub에 게시할 이미지 아키텍처와 Terraform의 앱·seed·Redis 인스턴스 아키텍처를 일치시키고, 관련 계약 테스트를 실제 구현과 맞춘다. | 인프라·배포 | 수정 필요 | PR head의 Docker Hub `images`와 SSH `ssh-deploy` 구현은 유지하고, 앱 `t2.micro`, seed `t2.small`, Redis `t2.nano`, 성능 환경·runner의 x86_64 전제를 정합화했다. runtime IAM에서 더 이상 사용하지 않는 GitHub Actions SSM 배포 정책도 제거하고 계약 테스트를 실제 경로에 맞췄다. | 커밋 `21c0a1af`의 `RuntimeDeploymentContractTest`, `PerformanceEnvironmentContractTest`, `com.masiton.deployment.*` 통과. 해당 커밋을 PR branch에 push했고 GitHub Actions는 재실행 대기 중이다. |
 
 ## 3. 문제 현상과 발생 조건
 
@@ -64,7 +64,7 @@ PR의 배포 workflow 변경과 Terraform·운영 환경 변경이 서로 다른
 | `ruby -e 'require "yaml"; ...' .github/workflows/ci.yml .github/workflows/performance.yml` | 통과 | 현재 사용 중인 두 GitHub Actions YAML 문법을 파싱했다. |
 | `./gradlew.bat test --tests com.masiton.deployment.RuntimeDeploymentContractTest --tests com.masiton.deployment.PerformanceEnvironmentContractTest` | 통과 | 10개 운영·성능 계약 테스트가 통과했다. |
 | `./gradlew.bat test --tests 'com.masiton.deployment.*'` | 통과 | deployment 패키지 전체 계약 테스트가 통과했다. |
-| `git diff --check` | 통과 | 추적 파일 변경의 whitespace 오류가 없다. |
+| `git diff --check` | 통과 | 커밋 `21c0a1af`의 변경에 whitespace 오류가 없다. |
 | Docker/WSL 실제 셸·컨테이너 실행 | 미실행 | 이 환경에서 Docker API와 WSL 접근 권한이 거부됐다. 실제 Docker Hub 게시·SSH·EC2 smoke는 원격 push 후 CI/운영 환경에서 확인해야 한다. |
 
 ## 8. 재발 방지 및 다음 확인
@@ -82,6 +82,6 @@ PR의 배포 workflow 변경과 Terraform·운영 환경 변경이 서로 다른
 
 ## 10. 남은 사항
 
-- 원격 PR에는 아직 변경을 push하지 않았으므로 GitHub issue comment에 답변하거나 resolve하지 않았다.
+- 커밋 `21c0a1af`를 원격 PR branch에 push했다. push 직후 GitHub Actions의 필수 check는 queued 상태이며, 통과 여부는 아직 확인하지 못했다.
 - 팀의 Accepted ADR과 M2 계획 일부는 역사적 ECR·ARM 초기 운영을 기록한다. 이를 현재 Docker Hub·x86_64 경로의 결정 문서로 바꾸는 것은 별도 owner/team 결정이 필요하므로 이번 로컬 수정에서 역사 기록을 덮어쓰지 않았다.
 - 실제 Docker Hub 게시, GitHub-hosted runner에서의 SSH 접속, SSH known_hosts, sudo 정책, EC2 아키텍처와 운영 rollback은 이 환경에서 검증하지 못했다.
