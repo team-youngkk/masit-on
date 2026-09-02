@@ -28,7 +28,7 @@ test('robots는 맛집 공개 경로와 Next 정적 번들만 크롤링에 허�
       rules: [
         {
           userAgent: '*',
-          allow: ['/restaurants', '/restaurants/', '/sitemap.xml', '/_next/'],
+          allow: ['/$', '/restaurants', '/restaurants/', '/sitemap.xml', '/_next/'],
           disallow: '/',
         },
       ],
