@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
-# ECR 이미지를 받아 운영 EC2에 배포한다 — M2-09.
+# 운영 EC2에 백엔드·프론트엔드 이미지를 배포한다 — M2-09.
 #
 # 사용: sudo ./app-deploy.sh <커밋 SHA> [스테이징 디렉터리]
+#       sudo ./app-deploy.sh --image-refs <backend digest ref> <frontend digest ref> [스테이징 디렉터리]
 #
-# 태그로 받아 **digest로 굳혀** 실행한다. 리포지토리가 IMMUTABLE이라 같은 태그가
-# 다른 이미지를 가리킬 수는 없지만, 실행 참조를 digest로 두면 배포된 것이 정확히
-# 무엇인지 기록·대조할 수 있다(ADR-RUNTIME-001 11·13절, NFR-DEPLOYMENT-003).
+# 기본 모드는 ECR에서 커밋 태그를 digest로 굳힌다. `--image-refs` 모드는 이미 검증된
+# Docker Hub digest 참조를 직접 받아 ECR 조회를 하지 않는다. 두 모드 모두 실행 참조를
+# digest로 두어 배포된 것이 정확히 무엇인지 기록·대조한다(ADR-RUNTIME-001 11·13절,
+# NFR-DEPLOYMENT-003).
 #
 # 롤백은 이전 커밋 SHA로 이 스크립트를 다시 실행하는 것이다.
 set -euo pipefail
@@ -178,8 +180,22 @@ if [ -f "$DEPLOYMENT_ENV_FILE" ]; then
   set +a
 fi
 
-TAG="${1:?배포할 커밋 SHA를 지정한다}"
-STAGE="${2:-/tmp/masiton-deploy}"
+DEPLOYMENT_MODE=ecr
+BACKEND_IMAGE_REF=""
+FRONTEND_IMAGE_REF=""
+if [ "${1:-}" = --image-refs ]; then
+  [ "$#" -ge 3 ] && [ "$#" -le 4 ] || {
+    echo '사용: app-deploy.sh --image-refs <backend digest ref> <frontend digest ref> [스테이징 디렉터리]' >&2
+    exit 1
+  }
+  DEPLOYMENT_MODE=digest
+  BACKEND_IMAGE_REF="$2"
+  FRONTEND_IMAGE_REF="$3"
+  STAGE="${4:-/tmp/masiton-deploy}"
+else
+  TAG="${1:?배포할 커밋 SHA를 지정한다}"
+  STAGE="${2:-/tmp/masiton-deploy}"
+fi
 REGION="${AWS_REGION:-ap-northeast-2}"
 REGISTRY="711457211155.dkr.ecr.${REGION}.amazonaws.com"
 OPT_DIR=/opt/masiton
@@ -192,8 +208,26 @@ for f in app-run.sh app-secrets-render.sh masiton-backend.service masiton-fronte
 done
 [ -f "$STAGE/runtime-health.sh" ] || { echo "스테이징에 runtime-health.sh가 없다" >&2; exit 1; }
 
-aws ecr get-login-password --region "$REGION" \
-  | docker login --username AWS --password-stdin "$REGISTRY" >/dev/null
+validate_digest_image_ref() {
+  local component="$1"
+  local reference="$2"
+  case "$component" in
+    backend)
+      [[ "$reference" =~ ^docker\.io/[a-z0-9][a-z0-9._-]*/masiton-backend@sha256:[0-9a-f]{64}$ ]] ;;
+    frontend)
+      [[ "$reference" =~ ^docker\.io/[a-z0-9][a-z0-9._-]*/masiton-frontend@sha256:[0-9a-f]{64}$ ]] ;;
+    *)
+      return 1 ;;
+  esac || {
+    echo "$component 이미지 참조가 Docker Hub digest 형식이 아니다" >&2
+    return 1
+  }
+}
+
+if [ "$DEPLOYMENT_MODE" = ecr ]; then
+  aws ecr get-login-password --region "$REGION" \
+    | docker login --username AWS --password-stdin "$REGISTRY" >/dev/null
+fi
 
 # 두 이미지를 모두 준비한 뒤에 활성 참조와 실행 산출물을 함께 교체한다. 백엔드
 # 참조를 먼저 기록하면 프론트엔드 조회나 pull이 실패했을 때 실행 중 컨테이너는
@@ -272,15 +306,24 @@ backup_asset() {
 }
 
 for component in backend frontend; do
-  repository="masiton-${component}"
-  digest=$(aws ecr describe-images --region "$REGION" \
-    --repository-name "$repository" --image-ids "imageTag=${TAG}" \
-    --query 'imageDetails[0].imageDigest' --output text)
-  if [ -z "$digest" ] || [ "$digest" = "None" ]; then
-    echo "${repository}:${TAG} 이미지가 ECR에 없다. CI가 push했는지 확인한다." >&2
-    exit 1
+  if [ "$DEPLOYMENT_MODE" = digest ]; then
+    case "$component" in
+      backend) reference="$BACKEND_IMAGE_REF" ;;
+      frontend) reference="$FRONTEND_IMAGE_REF" ;;
+    esac
+    validate_digest_image_ref "$component" "$reference"
+    digest="${reference##*@}"
+  else
+    repository="masiton-${component}"
+    digest=$(aws ecr describe-images --region "$REGION" \
+      --repository-name "$repository" --image-ids "imageTag=${TAG}" \
+      --query 'imageDetails[0].imageDigest' --output text)
+    if [ -z "$digest" ] || [ "$digest" = "None" ]; then
+      echo "${repository}:${TAG} 이미지가 ECR에 없다. CI가 push했는지 확인한다." >&2
+      exit 1
+    fi
+    reference="${REGISTRY}/${repository}@${digest}"
   fi
-  reference="${REGISTRY}/${repository}@${digest}"
   docker pull "$reference" >/dev/null
   printf '%s\n' "$reference" > "$staged/${component}.image"
   echo "${component}: ${digest}"
@@ -296,10 +339,54 @@ backup_asset "$OPT_DIR/bin/runtime-health.sh" "$previous/opt/masiton/bin/runtime
 backup_asset "/etc/systemd/system/masiton-backend.service" "$previous/etc/systemd/system/masiton-backend.service"
 backup_asset "/etc/systemd/system/masiton-frontend.service" "$previous/etc/systemd/system/masiton-frontend.service"
 
+if [ "$DEPLOYMENT_MODE" = digest ]; then
+  for component in backend frontend; do
+    current_ref_file="$OPT_DIR/etc/${component}.image"
+    if [ -f "$current_ref_file" ]; then
+      previous_reference=$(tr -d ' \r\n' < "$current_ref_file")
+      [ -n "$previous_reference" ] || {
+        echo "기존 ${component} 이미지 참조가 비어 있어 rollback 이미지를 준비할 수 없다" >&2
+        exit 1
+      }
+      if [[ "$previous_reference" == docker.io/* ]]; then
+        validate_digest_image_ref "$component" "$previous_reference"
+        docker pull "$previous_reference" >/dev/null
+      else
+        case "$component" in
+          backend)
+            [[ "$previous_reference" =~ ^[0-9]{12}\.dkr\.ecr\.[a-z0-9-]+\.amazonaws\.com/masiton-backend@sha256:[0-9a-f]{64}$ ]] || {
+              echo '기존 backend rollback 이미지 참조가 허용된 Docker Hub 또는 ECR digest 형식이 아니다' >&2
+              exit 1
+            }
+            ;;
+          frontend)
+            [[ "$previous_reference" =~ ^[0-9]{12}\.dkr\.ecr\.[a-z0-9-]+\.amazonaws\.com/masiton-frontend@sha256:[0-9a-f]{64}$ ]] || {
+              echo '기존 frontend rollback 이미지 참조가 허용된 Docker Hub 또는 ECR digest 형식이 아니다' >&2
+              exit 1
+            }
+            ;;
+        esac
+        docker image inspect "$previous_reference" >/dev/null 2>&1 || {
+          echo "기존 ${component} rollback 이미지가 로컬에 없어 Docker Hub 전환을 시작할 수 없다" >&2
+          exit 1
+        }
+      fi
+    fi
+  done
+fi
+
 # 여기까지 왔으면 두 이미지와 이전 실행 산출물의 백업이 모두 준비됐다. 이후 첫
 # install부터 rollback 보호를 켜서 활성 경로 변경 중 실패도 복구 대상으로 포함한다.
 rollback_enabled=yes
 trap rollback ERR
+
+handle_signal() {
+  local signal_exit_code=143
+  trap - INT TERM HUP
+  rollback "$signal_exit_code"
+  exit $?
+}
+trap handle_signal INT TERM HUP
 
 # 이제 활성 경로를 교체한다.
 install -d -m 0755 "$OPT_DIR/bin" "$OPT_DIR/etc"
@@ -534,7 +621,7 @@ smoke_redis_keys=()
 # Nginx 복구와 이전 앱 산출물 복구가 같은 실패 경로에서 실행되어야 한다.
 "$STAGE/nginx-install.sh" "$STAGE"
 
-trap - ERR
+trap - ERR INT TERM HUP
 rollback_enabled=no
 
-echo "배포 완료: tag=${TAG}"
+echo "배포 완료: mode=${DEPLOYMENT_MODE}"
