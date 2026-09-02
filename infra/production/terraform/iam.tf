@@ -48,14 +48,14 @@ data "aws_iam_policy_document" "app_parameter_read" {
     }
   }
 
+  # 보존된 legacy CodeDeploy/ASG 경로는 ECR fallback을 사용할 수 있다. 새 운영
+  # Docker Hub + SSH 경로는 digest ref를 직접 전달하므로 이 권한을 호출하지 않는다.
   statement {
     effect    = "Allow"
     actions   = ["ecr:GetAuthorizationToken"]
     resources = ["*"]
   }
 
-  # app-deploy.sh는 태그로 받은 이미지를 digest로 굳히기 위해 DescribeImages를 쓴다
-  # (ADR-RUNTIME-001 11·13절). 이 action이 없으면 배포가 digest 해석에서 멈춘다.
   statement {
     effect = "Allow"
     actions = [
@@ -122,42 +122,4 @@ resource "aws_iam_role_policy" "app_parameter_read" {
 resource "aws_iam_instance_profile" "app" {
   name = "${var.name_prefix}-ec2-profile"
   role = aws_iam_role.app.name
-}
-
-# 직접 배포 경로의 최소 권한이다.
-data "aws_iam_policy_document" "github_actions_ssm_deploy" {
-  statement {
-    effect  = "Allow"
-    actions = ["ssm:SendCommand"]
-    resources = [
-      "arn:aws:ssm:${var.aws_region}::document/AWS-RunShellScript",
-      "arn:aws:ec2:${var.aws_region}:*:instance/${aws_instance.app.id}",
-    ]
-  }
-
-  statement {
-    effect = "Allow"
-    actions = [
-      "s3:PutObject",
-      "s3:GetObject",
-      "s3:AbortMultipartUpload",
-    ]
-    resources = ["${aws_s3_bucket.codedeploy_revision.arn}/masiton/ssm/*"]
-  }
-
-  statement {
-    effect = "Allow"
-    actions = [
-      "ssm:CancelCommand",
-      "ssm:GetCommandInvocation",
-    ]
-    resources = ["*"]
-  }
-}
-
-resource "aws_iam_role_policy" "github_actions_ssm_deploy" {
-  count  = var.github_actions_role_name == null ? 0 : 1
-  name   = "${var.name_prefix}-ssm-deploy"
-  role   = var.github_actions_role_name
-  policy = data.aws_iam_policy_document.github_actions_ssm_deploy.json
 }

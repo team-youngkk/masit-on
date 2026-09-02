@@ -16,7 +16,7 @@ Terraform은 기존 VPC와 서브넷을 **읽기만** 한다. 운영 EC2, 운영
 
 운영 앱 인스턴스는 backend·frontend·Nginx만 실행하고 Redis는 사설 서브넷의 전용 인스턴스에 있다. 성능 환경이 WireMock·Redis를 앱 호스트에 동거시키면 **호스트 메모리 여유와 Redis 왕복이 운영과 달라져 측정값이 운영을 대변하지 못한다.** [전환 후 런타임 실측 기준선](../../docs/08-planning/post-cutover-runtime-baseline.md) 5절이 이 조건을 정리했다.
 
-`app_instance_type` 기본값은 운영 ASG와 같은 `t4g.small`이다. **컨테이너 메모리 제한이 JVM heap 상한과 GC 선택을 결정하므로**(같은 문서 2.1·2.2절) 백엔드를 기동할 때 운영과 같은 `--memory 1024m`, 프론트엔드는 `--memory 512m`를 사용해야 한다. 이 값이 다르면 heap과 GC가 달라져 비교가 성립하지 않는다.
+`app_instance_type` 기본값은 운영 앱 EC2와 같은 x86_64 `t2.micro`이다. **컨테이너 메모리 제한이 JVM heap 상한과 GC 선택을 결정하므로**(같은 문서 2.1·2.2절) 백엔드를 기동할 때 운영과 같은 `--memory 512m`을 사용해야 한다. 프론트엔드는 이 성능 환경에서 실행하지 않으며, 운영에서 실행할 때의 제한은 `256m`이다. 이 값이 다르면 heap과 GC가 달라져 비교가 성립하지 않는다.
 
 의존 인스턴스의 Redis는 운영과 같은 `maxmemory 256mb`·`noeviction`·AOF·컨테이너 `--memory 384m`·`protected-mode yes`·`requirepass`로 기동한다. 운영과 다른 점은 비밀값의 출처뿐이며, 성능 전용 `requirepass`는 이 구성이 만드는 별도 SecureString에서 읽는다.
 
@@ -122,7 +122,7 @@ aws ec2 get-console-output --instance-id <deps_instance_id> --output text --quer
 Terraform 출력의 `app_instance_id`로 SSM 명령을 실행해 다음 순서로 진행한다.
 
 1. **백엔드를 기동하기 전에** 앱 인스턴스에서 `/opt/masiton-perf/check-dependencies.sh`를 SSM으로 실행한다. 이 스크립트는 Redis `requirepass`를 Parameter Store에서 읽어 앱 호스트에서 deps Redis로 RESP inline `AUTH`·`PING`을 보내 `Redis AUTH+PING: OK`를 확인하고, user-data가 커밋 고정 fixture archive의 SHA-256을 검증해 배포한 매핑이 WireMock `/__admin/mappings`에 로드됐는지 확인해 `WireMock mappings: OK`를 출력한다. 인증 실패는 `Redis AUTH rejected: -WRONGPASS ...`로 도달 불가와 구분된다. 확인에 실패하면 백엔드와 부하 테스트를 시작하지 않는다.
-2. 앱 인스턴스에서 `/opt/masiton-perf/start-backend.sh`를 SSM으로 실행한다. 1단계 검증을 다시 실행한 뒤 비밀값을 렌더링하고, digest 고정 이미지를 ECR에서 받아 운영과 같은 `--memory 1024m`로 기동한다. 준비성은 `/internal/health/ready`가 `200`이고 `/internal/health/dependencies`의 `db`·`redis`가 모두 `UP`인 것으로 확인한다.
+2. 앱 인스턴스에서 `/opt/masiton-perf/start-backend.sh`를 SSM으로 실행한다. 1단계 검증을 다시 실행한 뒤 비밀값을 렌더링하고, digest 고정 이미지를 ECR에서 받아 운영과 같은 `--memory 512m`으로 기동한다. 준비성은 `/internal/health/ready`가 `200`이고 `/internal/health/dependencies`의 `db`·`redis`가 모두 `UP`인 것으로 확인한다.
 
    ```bash
    aws ssm send-command --instance-ids <app_instance_id> --document-name AWS-RunShellScript      --parameters 'commands=["/opt/masiton-perf/start-backend.sh"]'

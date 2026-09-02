@@ -15,6 +15,7 @@ related_documents:
 
 ## 최신 기록
 
+- [PR #344 Docker Hub 이미지와 운영 EC2 아키텍처 정합성](pr-344-dockerhub-ssh-architecture-review.md)
 - [운영 전환: PostgreSQL EC2·단일 앱 EC2 준비 적용](ops-2026-08-28-single-ec2-preparation.md)
 - [PR #308 외부 endpoint Origin 포트 검증](pr-308-external-endpoint-origin-port-review.md)
 - [PR #303 코스 찜 후보의 권한·범위 추적성](pr-303-course-favorite-review.md)
@@ -61,6 +62,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #344 Docker Hub 이미지와 운영 EC2 아키텍처 정합성](pr-344-dockerhub-ssh-architecture-review.md)
 - [PR #308 외부 endpoint Origin 포트 검증](pr-308-external-endpoint-origin-port-review.md)
 - [PR #303 코스 찜 후보의 권한·범위 추적성](pr-303-course-favorite-review.md)
 - [PR #302 비밀번호 재설정 URL과 최신 fragment 처리](pr-302-password-reset-review.md)

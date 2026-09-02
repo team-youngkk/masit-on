@@ -86,7 +86,7 @@ resource "aws_instance" "deps" {
 
 resource "aws_instance" "loadgen" {
   ami                         = var.ami_id
-  instance_type               = "t4g.small"
+  instance_type               = var.loadgen_instance_type
   subnet_id                   = data.aws_subnet.public.id
   vpc_security_group_ids      = [aws_security_group.loadgen.id]
   iam_instance_profile        = aws_iam_instance_profile.loadgen.name
@@ -95,7 +95,7 @@ resource "aws_instance" "loadgen" {
 
   user_data = templatefile("${path.module}/templates/loadgen-user-data.sh.tftpl", {
     k6_version      = var.k6_version
-    k6_arm64_sha256 = var.k6_arm64_sha256
+    k6_amd64_sha256 = var.k6_amd64_sha256
   })
 
   user_data_replace_on_change = true

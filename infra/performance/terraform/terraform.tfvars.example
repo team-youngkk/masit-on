@@ -13,7 +13,7 @@ private_subnet_ids = [
   "subnet-REPLACE_ME_C",
 ]
 
-# Amazon Linux 2023 arm64; do not use a moving latest selector.
+# Amazon Linux 2023 x86_64; do not use a moving latest selector.
 ami_id = "ami-REPLACE_ME"
 
 # Digest-pinned ECR image. Do not use :latest.

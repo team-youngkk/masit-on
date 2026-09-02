@@ -15,7 +15,7 @@ output "security_group_ids" {
 }
 
 output "app_instance_id" {
-  description = "직접 SSM 배포 대상인 운영 앱 EC2 ID"
+  description = "Docker Hub + SSH 배포 대상인 운영 앱 EC2 ID"
   value       = aws_instance.app.id
 }
 

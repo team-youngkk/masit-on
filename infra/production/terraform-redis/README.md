@@ -93,9 +93,9 @@ manifest·`redis-check-aof`·known fixture key 검증을 모두 통과한 뒤에
 ```bash
 # user-data: dnf install -y docker; systemctl enable --now docker;
 #            docker pull redis@sha256:<digest>
-aws ec2 run-instances --image-id <al2023-arm64> --instance-type t4g.nano \
+aws ec2 run-instances --image-id <al2023-x86_64> --instance-type t2.nano \
   --subnet-id <public-subnet> --user-data fileb://ami-build-ud.sh
-aws ec2 create-image --instance-id <builder> --name masiton-redis-al2023-arm64-<digest-prefix>
+aws ec2 create-image --instance-id <builder> --name masiton-redis-al2023-x86_64-<digest-prefix>
 aws ec2 terminate-instances --instance-ids <builder>
 ```
 

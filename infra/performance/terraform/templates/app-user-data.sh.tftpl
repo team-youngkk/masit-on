@@ -190,7 +190,7 @@ chmod 0700 /opt/masiton-perf/render-secrets.sh
 
 # 운영 deploy/scripts/app-run.sh의 backend 분기를 성능 환경에 맞춘 것이다.
 # 비밀값은 환경 변수로 넘기지 않고 tmpfs 마운트로만 전달한다. 컨테이너 메모리
-# 제한은 운영과 같은 1024m이어야 JVM heap 상한과 GC 선택이 같아진다.
+# 제한은 운영과 같은 512m이어야 JVM heap 상한과 GC 선택이 같아진다.
 cat >/opt/masiton-perf/start-backend.sh <<'START_BACKEND'
 #!/bin/bash
 set -euo pipefail
@@ -265,7 +265,7 @@ install -d -m 0755 -o 1001 -g 1001 /opt/masiton-perf/gc
 
 docker run -d --name masiton-perf-backend \
   --network host \
-  --memory 1024m \
+  --memory 512m \
   --restart unless-stopped \
   --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 \
   --volume "$SECRETS_DIR":"$SECRETS_DIR":ro \

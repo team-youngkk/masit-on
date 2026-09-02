@@ -39,20 +39,20 @@ variable "app_subnet_ids" {
 }
 
 variable "ami_id" {
-  description = "seed ASG와 직접 앱 EC2에 사용할 기존 AMI ID"
+  description = "seed ASG와 직접 앱 EC2에 사용할 기존 x86_64 AMI ID"
   type        = string
 }
 
 variable "instance_type" {
   description = "직접 서비스할 앱 EC2의 인스턴스 유형"
   type        = string
-  default     = "t4g.micro"
+  default     = "t2.micro"
 }
 
 variable "seed_instance_type" {
   description = "보존 중인 seed ASG의 인스턴스 유형"
   type        = string
-  default     = "t4g.small"
+  default     = "t2.small"
 }
 
 variable "app_port" {
@@ -166,12 +166,12 @@ variable "ssm_parameter_arns" {
 }
 
 variable "ecr_repository_arns" {
-  description = "backend/frontend 이미지를 pull할 ECR repository ARN 목록"
+  description = "legacy CodeDeploy/ASG 경로가 pull할 ECR repository ARN 목록"
   type        = list(string)
 
   validation {
     condition     = length(var.ecr_repository_arns) > 0
-    error_message = "ECR repository ARN을 하나 이상 지정해야 한다."
+    error_message = "legacy ECR repository ARN을 하나 이상 지정해야 한다."
   }
 }
 
@@ -186,7 +186,7 @@ variable "kms_key_arns" {
 }
 
 variable "codedeploy_revision_bucket_name" {
-  description = "SSM command pointer와 기존 배포 산출물을 보관하는 S3 bucket 이름"
+  description = "Redis secret 객체와 보존된 legacy 산출물을 보관하는 S3 bucket 이름"
   type        = string
 
   validation {
@@ -207,7 +207,7 @@ variable "redis_password_object_key" {
 }
 
 variable "github_actions_role_name" {
-  description = "기존 GitHub Actions OIDC role 이름. 지정하면 단일 EC2 SSM 배포 정책을 추가한다"
+  description = "기존 tfvars 호환용 GitHub Actions OIDC role 이름. Docker Hub + SSH 배포에서는 사용하지 않는다"
   type        = string
   default     = null
   nullable    = true
@@ -257,7 +257,7 @@ variable "mail_smtp_port" {
 # app 인스턴스의 subnet 배치 의도를 명시한다. 오배치를 plan에서 잡되 어느 쪽이
 # 의도인지는 아키텍처 결정에 따라 달라지므로 코드에 한 방향을 굳히지 않는다.
 #
-# 현재 운영은 false다. 앱을 사설 subnet에 두면 ECR·Parameter Store·CloudWatch
+# 현재 운영은 false다. 앱을 사설 subnet에 두면 Docker Hub·Parameter Store·CloudWatch
 # 때문에 NAT 또는 인터페이스 엔드포인트가 필요하고, 배포 고도화 비용·일정 영향
 # 검토 6.6절이 그 비용으로 8.1절 예산을 넘긴다고 판정해 앱은 public subnet에
 # 둔다. 인터넷에서 앱으로 들어오는 경계는 security group이 지킨다.
