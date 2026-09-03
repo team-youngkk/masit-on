@@ -1,8 +1,8 @@
 #!/bin/bash
 # 직접 서비스할 단일 앱 EC2의 최소 bootstrap.
 #
-# GitHub Actions가 SSM Run Command로 배포한다. 이미지 태그·버전을 여기 넣으면
-# 인스턴스 자체가 교체되므로, bootstrap에는 공통 실행 조건만 둔다.
+# GitHub Actions가 Docker Hub digest와 SSH로 배포한다. 이미지 태그·버전을 여기
+# 넣으면 인스턴스 자체가 교체되므로, bootstrap에는 공통 실행 조건만 둔다.
 # 비밀값은 기록하지 않고 app-secrets-render.sh가 인스턴스 role로 SSM에서 읽는다.
 set -euxo pipefail
 

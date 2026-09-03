@@ -51,7 +51,7 @@ variable "redis_ami_id" {
 variable "redis_instance_type" {
   description = "전용 Redis 인스턴스 유형"
   type        = string
-  default     = "t4g.nano"
+  default     = "t2.nano"
 }
 
 variable "redis_root_volume_size_gib" {

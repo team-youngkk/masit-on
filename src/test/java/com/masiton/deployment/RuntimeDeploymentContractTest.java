@@ -94,41 +94,41 @@ class RuntimeDeploymentContractTest {
         assertThat(appVariables)
                 .contains("variable \"instance_type\" {")
                 .contains("description = \"직접 서비스할 앱 EC2의 인스턴스 유형\"")
-                .contains("default     = \"t4g.micro\"");
+                .contains("default     = \"t2.micro\"");
         assertThat(appVariables)
                 .contains("variable \"seed_instance_type\" {")
-                .contains("default     = \"t4g.small\"");
-        assertThat(appExample).contains("instance_type = \"t4g.micro\"");
-        assertThat(appExample).contains("seed_instance_type = \"t4g.small\"");
+                .contains("default     = \"t2.small\"");
+        assertThat(appExample).contains("instance_type = \"t2.micro\"");
+        assertThat(appExample).contains("seed_instance_type = \"t2.small\"");
         assertThat(read(TERRAFORM.resolve("instance.tf")))
                 .contains("instance_type               = var.instance_type");
         assertThat(read(TERRAFORM.resolve("asg.tf")))
                 .contains("instance_type = var.seed_instance_type");
         assertThat(redisVariables)
                 .contains("variable \"redis_instance_type\" {")
-                .contains("default     = \"t4g.nano\"");
+                .contains("default     = \"t2.nano\"");
     }
 
     @Test
-    @DisplayName("직접 배포 IAM은 SSM 최소 권한만 유지한다")
-    void terraform_배포role은SSM최소권한을갖는다() throws IOException {
+    @DisplayName("앱 runtime IAM은 비밀값 조회 권한만 유지한다")
+    void terraform_앱runtime은비밀값조회만유지한다() throws IOException {
         String iam = read(TERRAFORM.resolve("iam.tf"));
         String redisIam = read(Path.of("infra/production/terraform-redis/iam.tf"));
 
         assertThat(iam)
-                .contains("github_actions_ssm_deploy")
-                .contains("ssm:SendCommand")
-                .contains("ssm:CancelCommand")
-                .contains("AWS-RunShellScript")
-                .contains("ssm:GetCommandInvocation")
-                .contains("s3:PutObject")
-                .contains("masiton/ssm/*")
+                .contains("ssm:GetParameter")
+                .contains("ssm:GetParameters")
+                .contains("ssm:GetParametersByPath")
                 .contains("kms:ViaService")
                 .contains("ssm.${var.aws_region}.amazonaws.com")
                 .contains("kms:EncryptionContext:PARAMETER_ARN")
                 .contains("parameter/masiton/*")
-                .contains("aws_instance.app.id")
+                .contains("ecr:GetAuthorizationToken")
                 .doesNotContain("codedeploy:")
+                .doesNotContain("github_actions_ssm_deploy")
+                .doesNotContain("ssm:SendCommand")
+                .doesNotContain("ssm:CancelCommand")
+                .doesNotContain("ssm:GetCommandInvocation")
                 .doesNotContain("ssm:ListCommandInvocations")
                 .doesNotContain("ssm:DescribeInstanceInformation");
         assertThat(redisIam)
@@ -161,51 +161,72 @@ class RuntimeDeploymentContractTest {
     }
 
     @Test
-    @DisplayName("CI는 SSM 단일 EC2 배포를 기본 경로로 사용한다")
-    void ci_SSM단일EC2배포를검증한다() throws IOException {
+    @DisplayName("CI는 Docker Hub digest를 SSH로 단일 EC2에 배포한다")
+    void ci_DockerHubDigest를SSH로단일EC2에배포한다() throws IOException {
         String workflow = read(CI);
 
         assertThat(workflow)
-                .contains("deployment_target:")
-                .contains("default: ssm")
-                .doesNotContain("aws deploy create-deployment")
-                .doesNotContain("codedeploy-cancel-cleanup")
-                .doesNotContain("needs.deploy.result")
-                .doesNotContain("CodeDeploy pointer 실패 후 terminal 상태")
-                .doesNotContain("CodeDeploy cleanup terminal 상태")
-                .contains("ssm-deploy:")
-                .contains("github.event.inputs.deployment_target == 'ssm'")
-                .contains("instance_id:")
-                .contains("INSTANCE_ID:")
-                .contains("CONFIGURED_INSTANCE_ID:")
-                .contains("PRODUCTION_INSTANCE_ID")
-                .contains("ssm send-command")
-                .contains("ssm get-command-invocation")
-                .contains("SSM 명령 크기")
-                .contains("65536")
+                .contains("workflow_dispatch:")
+                .contains("image_tag:")
+                .contains("ssh-deploy:")
+                .contains("DOCKERHUB_PUSH_TOKEN")
+                .contains("DOCKERHUB_PULL_TOKEN")
+                .contains("PRODUCTION_HOST")
+                .contains("PRODUCTION_SSH_USER")
+                .contains("PRODUCTION_SSH_PRIVATE_KEY")
+                .contains("PRODUCTION_SSH_KNOWN_HOSTS")
+                .contains("StrictHostKeyChecking=yes")
+                .contains("UserKnownHostsFile=")
+                .contains("--password-stdin")
+                .contains("docker.io/")
+                .contains("@sha256:")
                 .contains("deploy/scripts/app-deploy.sh")
-                .contains("METRIC_ENVIRONMENT=production")
-                .contains("REQUIRE_SHARED_REDIS=true")
-                .contains("NGINX_TRUSTED_PROXY_CIDRS=127.0.0.1")
-                .contains("aws s3api put-object")
-                .contains("aws s3api get-object")
-                .contains("ssm cancel-command")
-                .contains("SSM CommandId 보관에 실패했다")
-                .contains("SSM 중지 후 terminal 상태")
-                .contains("flock -n 9")
+                .contains("deploy/scripts/dockerhub-app-deploy.sh")
                 .contains("environment: production")
-                .contains("needs['ssm-deploy'].result == 'failure'")
-                .contains("needs['ssm-deploy'].result == 'cancelled'");
-        assertThat(workflow.indexOf("$STAGE/app-deploy.sh"))
-                .isLessThan(workflow.indexOf("$STAGE/cloudwatch-install.sh"));
-        assertThat(workflow.indexOf("  ssm-deploy:\n"))
-                .isGreaterThanOrEqualTo(0);
-        int commandIdIndex = workflow.indexOf("echo \"CommandId: $command_id\"");
-        int ssmTrapIndex = workflow.indexOf("trap on_exit EXIT", commandIdIndex);
-        int ssmPointerIndex = workflow.indexOf("--key \"$SSM_POINTER_KEY\"", commandIdIndex);
-        assertThat(commandIdIndex).isGreaterThanOrEqualTo(0);
-        assertThat(ssmTrapIndex).isLessThan(ssmPointerIndex);
+                .doesNotContain("deployment_target:")
+                .doesNotContain("instance_id:")
+                .doesNotContain("INSTANCE_ID:")
+                .doesNotContain("PRODUCTION_INSTANCE_ID")
+                .doesNotContain("ssm-deploy:")
+                .doesNotContain("ssm-cancel-cleanup:")
+                .doesNotContain("aws-actions/configure-aws-credentials")
+                .doesNotContain("aws ecr")
+                .doesNotContain("ssm send-command")
+                .doesNotContain("ssm get-command-invocation")
+                .doesNotContain("ssm cancel-command")
+                .doesNotContain("SSM_POINTER");
+        assertThat(workflow.indexOf("deploy/scripts/app-deploy.sh"))
+                .isLessThan(workflow.indexOf("deploy/scripts/cloudwatch-install.sh"));
         assertThat(workflow).contains("ci-production-deploy");
+    }
+
+    @Test
+    @DisplayName("운영 이미지와 SSH 배포는 main 브랜치에서만 실행된다")
+    void ci_운영배포는main브랜치에서만실행된다() throws IOException {
+        String workflow = read(CI);
+        String imagesJob = section(workflow, "  images:\n", "  ssh-deploy:\n");
+        String sshDeployJob = workflow.substring(workflow.indexOf("  ssh-deploy:\n"));
+
+        assertThat(workflow)
+                .doesNotContain("deploy/m2")
+                .doesNotContain("deploy/**")
+                .doesNotContain("refs/heads/deploy/")
+                .contains("      - main");
+        assertThat(imagesJob)
+                .contains("github.event_name == 'push' &&\n      github.ref == 'refs/heads/main'")
+                .contains("runs-on: ubuntu-24.04\n")
+                .doesNotContain("ubuntu-24.04-arm");
+        assertThat(sshDeployJob)
+                .contains("github.ref == 'refs/heads/main'")
+                .contains("needs.images.result == 'success'")
+                .contains("needs['frontend-dispatch-audit'].result == 'skipped'")
+                .contains("needs.images.result == 'skipped'")
+                .contains("needs['frontend-dispatch-audit'].result == 'success'")
+                .contains("runs-on: ubuntu-24.04")
+                .contains("timeout-minutes: 30")
+                .contains("StrictHostKeyChecking=yes")
+                .doesNotContain("ssm send-command")
+                .doesNotContain("ssm cancel-command");
     }
 
     @Test
@@ -263,5 +284,14 @@ class RuntimeDeploymentContractTest {
 
     private static String read(Path path) throws IOException {
         return Files.readString(path, StandardCharsets.UTF_8);
+    }
+
+    private static String section(String content, String startMarker, String endMarker) {
+        int start = content.indexOf(startMarker);
+        int end = content.indexOf(endMarker, start + startMarker.length());
+        if (start < 0 || end < 0) {
+            throw new IllegalStateException("워크플로 job 경계를 찾지 못했다");
+        }
+        return content.substring(start, end);
     }
 }

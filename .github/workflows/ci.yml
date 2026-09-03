@@ -2,11 +2,11 @@
 # 모든 PR과 통합 브랜치 push에서 고정 런타임으로 빌드·자동 테스트를 실행하고
 # 실패한 변경을 차단한다.
 #
-# 이미지 빌드·검증·ECR push와 운영 배포는 M2부터 활성화하는 범위다(ADR-DEPLOY-002,
-# ADR-CI-001). 같은 워크플로에 두는 이유는 아래 images·ssm-deploy job 주석에 있다.
-# images·ssm-deploy는 배포 대상 브랜치에서만 돌고 PR과 develop push에서는 실행되지 않으며,
+# 이미지 빌드·검증·Docker Hub push와 운영 배포는 M2부터 활성화하는 범위다(ADR-DEPLOY-002,
+# ADR-CI-001). 같은 워크플로에 두는 이유는 아래 images·ssh-deploy job 주석에 있다.
+# images·ssh-deploy는 배포 대상 브랜치에서만 돌고 PR과 develop push에서는 실행되지 않으며,
 # workflow_dispatch의 배포 대상은 별도의 프론트엔드 프로덕션 의존성 감사 job을 거친다.
-# 운영 배포 경로는 단일 EC2 SSM Run Command다.
+# 운영 배포 경로는 단일 x86 EC2 공인 IP SSH다.
 name: CI
 
 on:
@@ -15,7 +15,6 @@ on:
     branches:
       - develop
       - main
-      - 'deploy/**'
   # 배포 대상 커밋을 직접 지정하는 입력 경로다. push 트리거만으로는 배포 job이 항상
   # 현재 실행의 커밋을 배포하게 되어, 장애 시 직전 digest로 되돌리려면 승인 게이트
   # 밖에서 배포를 수동 실행해야 한다. 롤백도 같은 경로를 쓰도록 하는 #78 완료 조건이다.
@@ -28,17 +27,6 @@ on:
         description: '배포할 커밋 SHA 40자. 비우면 선택한 브랜치의 현재 커밋을 배포한다'
         required: false
         type: string
-      instance_id:
-        description: '배포할 앱 EC2 instance_id. 비우면 저장소 변수 PRODUCTION_INSTANCE_ID를 쓴다'
-        required: false
-        type: string
-      deployment_target:
-        description: '배포 경로: 단일 EC2 SSM Run Command'
-        required: false
-        default: ssm
-        type: choice
-        options:
-          - ssm
 
 permissions:
   contents: read
@@ -46,10 +34,10 @@ permissions:
 # PR 검증은 같은 ref의 새 커밋이 오면 이전 실행을 취소한다. 운영 배포는 외부
 # 취소나 새 실행이 원격 배포 명령을 방치할 수 있어 자동 취소하지 않는다.
 #
-# 운영 push와 workflow_dispatch는 같은 production 그룹으로 직렬화해 SSM 배포가
+# 운영 push와 workflow_dispatch는 같은 production 그룹으로 직렬화해 SSH 배포가
 # 겹치지 않게 한다. PR은 별도 그룹에서 기존처럼 새 실행이 우선한다.
 concurrency:
-  group: ${{ github.event_name == 'pull_request' && format('ci-pr-{0}', github.ref) || ((github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/deploy/')) && 'ci-production-deploy' || format('ci-ci-{0}', github.ref)) }}
+  group: ${{ github.event_name == 'pull_request' && format('ci-pr-{0}', github.ref) || (github.ref == 'refs/heads/main' && 'ci-production-deploy' || format('ci-ci-{0}', github.ref)) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -221,27 +209,23 @@ jobs:
     #
     # 배포 대상 브랜치의 push에서만 실행한다. 세 가지를 동시에 만족시키기 위한 조건이다.
     #
-    #   1. OIDC 신뢰 정책 일치. IAM 역할은 refs/heads/main과 refs/heads/deploy/m2만
-    #      허용한다. push 이벤트의 OIDC `sub`가 실제 push된 ref이므로 일치한다.
-    #      workflow_run으로 분리했을 때는 `sub`가 기본 브랜치(develop)가 되어
-    #      AssumeRoleWithWebIdentity가 거절됐다.
-    #   2. 권한 상승 차단. workflow_run은 권한 있는 컨텍스트라 fork PR의 head SHA를
-    #      체크아웃한 상태로 OIDC를 주면 외부 코드가 우리 ECR에 push할 수 있다.
-    #      push 이벤트는 저장소 내부 브랜치에서만 발생해 그 경로가 없다.
-    #   3. ADR-CI-001 9절의 "이미지 생성·push는 M2부터" 범위. develop push와 PR에서는
+    #   1. 배포 권한 상승 차단. push 이벤트는 저장소 내부 main에서만 발생하고,
+    #      PR·workflow_dispatch에는 이 job이 실행되지 않는다.
+    #   2. ADR-CI-001 9절의 "이미지 생성·push는 M2부터" 범위. develop push와 PR에서는
     #      이 job이 실행되지 않는다.
     if: >-
       github.event_name == 'push' &&
-      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/deploy/m2')
-    # 운영 EC2가 arm64(t4g.medium)이므로 같은 아키텍처에서 빌드한다.
-    # 공개 저장소는 arm64 러너를 무료로 쓸 수 있어 QEMU 에뮬레이션이 필요 없다.
-    runs-on: ubuntu-24.04-arm
+      github.ref == 'refs/heads/main'
+    # 운영 EC2가 x86_64(t2 계열)이므로 같은 아키텍처에서 빌드한다.
+    # x86_64 러너에서 빌드해 런타임의 아키텍처 불일치를 막는다.
+    runs-on: ubuntu-24.04
+    outputs:
+      backend_ref: ${{ steps.publish.outputs.backend_ref }}
+      frontend_ref: ${{ steps.publish.outputs.frontend_ref }}
     permissions:
       contents: read
-      id-token: write
     env:
-      AWS_REGION: ap-northeast-2
-      ECR_REGISTRY: 711457211155.dkr.ecr.ap-northeast-2.amazonaws.com
+      DOCKERHUB_NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE }}
       IMAGE_TAG: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
@@ -427,9 +411,8 @@ jobs:
 
       # ADR-RUNTIME-001 13절 취약점 검사.
       #
-      # ECR의 scan-on-push는 이 단계를 대신할 수 없다. 이름 그대로 push된 뒤에
-      # 시작하므로 취약한 이미지가 이미 게시된 상태가 된다. 완료 조건이 "실패하면
-      # push와 배포가 차단된다"이므로 게시 전에 판정해야 한다.
+      # 레지스트리 게시 이후의 scan만으로는 게시 전 차단을 보장할 수 없다.
+      # 완료 조건이 "실패하면 push와 배포가 차단된다"이므로 게시 전에 판정해야 한다.
       #
       # --ignore-unfixed로 수정 버전이 없는 CVE는 제외한다. 베이스 이미지의 미수정
       # CVE까지 차단하면 우리가 조치할 수 없는 이유로 배포가 멈추고, 결국 기준을
@@ -454,28 +437,31 @@ jobs:
           done
           echo '수정 가능한 CRITICAL·HIGH 취약점 없음'
 
-      # 여기까지가 자격 증명 없이 수행하는 검증이다.
-      # 브랜치 제한은 job 수준 `if`가 이미 처리하므로 step마다 반복하지 않는다.
-      # 조건을 두 곳에 두면 한쪽만 고쳐 어긋날 수 있다.
-      # IAM 역할 신뢰 정책은 GitHub의 immutable subject claim 형식을 기대한다.
-      #
-      #   repo:team-youngkk@307880221/masit-on@1308471593:ref:refs/heads/deploy/m2
-      #
-      # 조직·저장소 숫자 ID가 sub에 포함된다. 이름 기반 형식(`repo:owner/repo:ref:...`)으로
-      # 정책을 쓰면 AssumeRoleWithWebIdentity가 거절된다. 저장소를 옮기거나 이름을 바꿀
-      # 때는 ID가 유지되므로 정책을 고치지 않아도 되고, 이름 재사용 공격에도 안전하다.
-      - name: AWS 자격 증명 (OIDC, 장기 키 없음)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::711457211155:role/masiton-github-actions-role
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: ECR 로그인
-        run: aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+      # 여기까지가 Docker Hub 자격 증명 없이 수행하는 검증이다.
+      # push token은 게시 단계에서만 주입하고, digest ref만 job output으로 넘긴다.
+      - name: Docker Hub 로그인
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_PUSH_TOKEN: ${{ secrets.DOCKERHUB_PUSH_TOKEN }}
+          DOCKER_CONFIG: ${{ runner.temp }}/masiton-dockerhub-push
+        run: |
+          set -euo pipefail
+          install -d -m 0700 "$DOCKER_CONFIG"
+          [ -n "$DOCKERHUB_USERNAME" ] || { echo 'DOCKERHUB_USERNAME secret이 비어 있다' >&2; exit 1; }
+          [ -n "$DOCKERHUB_PUSH_TOKEN" ] || { echo 'DOCKERHUB_PUSH_TOKEN secret이 비어 있다' >&2; exit 1; }
+          [[ "$DOCKERHUB_NAMESPACE" =~ ^[a-z0-9][a-z0-9_.-]{0,254}$ ]] || {
+            echo '저장소 변수 DOCKERHUB_NAMESPACE 형식이 올바르지 않다' >&2
+            exit 1
+          }
+          printf '%s' "$DOCKERHUB_PUSH_TOKEN" | docker login docker.io \
+            --username "$DOCKERHUB_USERNAME" --password-stdin >/dev/null
 
       # 태그는 커밋 SHA를 쓴다. `latest`는 기술 정책 3절이 금지한다.
-      # 리포지토리가 IMMUTABLE이라 같은 SHA를 다시 push할 수 없다.
+      # Docker Hub tag는 digest로 다시 조회해 배포 output에는 immutable ref만 기록한다.
       - name: 이미지 push와 digest 기록
+        id: publish
+        env:
+          DOCKER_CONFIG: ${{ runner.temp }}/masiton-dockerhub-push
         run: |
           set -euo pipefail
           {
@@ -487,84 +473,82 @@ jobs:
             echo '|---|---|---|---|'
           } >> "$GITHUB_STEP_SUMMARY"
 
-          # 리포지토리가 IMMUTABLE이라 이미 있는 태그에 push하면 실패한다.
-          # 두 이미지를 순차로 올리는 도중 뒤쪽이 실패하면 재실행 시 앞쪽에서 즉시 막혀
-          # 뒤쪽을 영구히 복구할 수 없다. 그래서 각 리포지토리를 독립적으로 멱등하게 처리한다.
-          #
-          # 태그가 커밋 SHA이므로 "이미 있는 태그"는 같은 소스에서 만든 이미지가 이미
-          # 게시됐다는 뜻이다. 그때는 push를 건너뛰고 기존 digest를 그대로 기록한다.
+          cleanup() {
+            docker logout docker.io >/dev/null 2>&1 || true
+            rm -rf "$DOCKER_CONFIG"
+          }
+          trap cleanup EXIT
+
           for name in backend frontend; do
             repo="masiton-${name}"
-            remote_tag="${ECR_REGISTRY}/${repo}:${IMAGE_TAG}"
+            local_image="${repo}:${IMAGE_TAG}"
+            remote_tag="docker.io/${DOCKERHUB_NAMESPACE}/${repo}:${IMAGE_TAG}"
+            docker tag "$local_image" "$remote_tag"
+            docker push "$remote_tag" >/dev/null
+            docker pull "$remote_tag" >/dev/null
+            repo_digest=$(docker image inspect --format '{{index .RepoDigests 0}}' "$remote_tag")
+            digest="${repo_digest##*@}"
+            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || {
+              echo "${repo}: registry digest 형식이 올바르지 않다" >&2
+              exit 1
+            }
+            reference="docker.io/${DOCKERHUB_NAMESPACE}/${repo}@${digest}"
+            echo "${repo}: push 완료 (${digest})"
 
-            existing=$(aws ecr describe-images \
-              --repository-name "$repo" \
-              --image-ids "imageTag=${IMAGE_TAG}" \
-              --query 'imageDetails[0].imageDigest' --output text 2>/dev/null || true)
-
-            if [ -n "$existing" ] && [ "$existing" != "None" ]; then
-              echo "${repo}: 태그 ${IMAGE_TAG}가 이미 있다. push를 건너뛴다 (${existing})"
-              digest="$existing"
-              state='이미 게시됨'
-            else
-              docker tag "${repo}:${IMAGE_TAG}" "$remote_tag"
-              docker push "$remote_tag"
-              digest=$(aws ecr describe-images \
-                --repository-name "$repo" \
-                --image-ids "imageTag=${IMAGE_TAG}" \
-                --query 'imageDetails[0].imageDigest' --output text)
-              echo "${repo}: push 완료 (${digest})"
-              state='새로 게시'
-            fi
-
-            echo "| ${repo} | \`${IMAGE_TAG}\` | \`${digest}\` | ${state} |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| ${repo} | \`${IMAGE_TAG}\` | \`${digest}\` | 게시 완료 |" >> "$GITHUB_STEP_SUMMARY"
+            echo "${name}_ref=${reference}" >> "$GITHUB_OUTPUT"
           done
 
-  # 단일 EC2 운영 배포 — SSM Run Command로 직접 앱 EC2에 전달한다.
+      - name: 로컬 Docker Hub 인증 정리
+        if: always()
+        env:
+          DOCKER_CONFIG: ${{ runner.temp }}/masiton-dockerhub-push
+        run: |
+          set -euo pipefail
+          docker logout docker.io >/dev/null 2>&1 || true
+          rm -rf "$DOCKER_CONFIG"
+
+  # 단일 x86 EC2 운영 배포 — Docker Hub immutable digest를 SSH로 전달한다.
   # push와 workflow_dispatch 모두 production 승인을 거친다.
-  ssm-deploy:
-    name: 직접 EC2 SSM 배포
+  ssh-deploy:
+    name: Docker Hub 이미지 SSH 배포
     needs: [images, frontend-dispatch-audit]
     if: >-
       always() &&
       !cancelled() &&
-      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/deploy/m2') &&
+      github.ref == 'refs/heads/main' &&
       (
         (github.event_name == 'push' &&
           needs.images.result == 'success' &&
           needs['frontend-dispatch-audit'].result == 'skipped') ||
         (github.event_name == 'workflow_dispatch' &&
-          github.event.inputs.deployment_target == 'ssm' &&
           needs.images.result == 'skipped' &&
           needs['frontend-dispatch-audit'].result == 'success')
       )
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     environment: production
     permissions:
       contents: read
-      id-token: write
     env:
-      AWS_REGION: ap-northeast-2
-      # workflow_dispatch 입력이 없으면 저장소 변수에서 배포 대상을 읽고, 아래 단계에서
-      # 비어 있거나 EC2 instance ID 형식이 아니면 즉시 실패한다.
-      INSTANCE_ID: ${{ github.event.inputs.instance_id || vars.PRODUCTION_INSTANCE_ID }}
-      CONFIGURED_INSTANCE_ID: ${{ vars.PRODUCTION_INSTANCE_ID }}
-      # 입력이 있으면 그 커밋을, 없으면 이 실행의 커밋을 배포한다. push 이벤트에는
-      # inputs가 없어 항상 github.sha가 된다.
       IMAGE_TAG: ${{ github.event.inputs.image_tag || github.sha }}
-      SSM_POINTER_BUCKET: ${{ vars.SSM_COMMAND_POINTER_BUCKET || 'masiton-prod-codedeploy-711457211155' }}
-      SSM_POINTER_KEY: masiton/ssm/${{ github.run_id }}/command-id
+      DOCKERHUB_NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE }}
+      PRODUCTION_HOST: ${{ vars.PRODUCTION_HOST }}
+      PRODUCTION_SSH_USER: ${{ vars.PRODUCTION_SSH_USER }}
+      PUBLISHED_BACKEND_IMAGE_REF: ${{ needs.images.outputs.backend_ref }}
+      PUBLISHED_FRONTEND_IMAGE_REF: ${{ needs.images.outputs.frontend_ref }}
     steps:
-      # 배포할 이미지와 같은 커밋을 체크아웃한다. 롤백 실행에서 과거 이미지에 현재
-      # 브랜치 tip의 배포 스크립트가 조합되지 않도록 한다.
+      # rollback 실행도 당시 커밋의 배포 스크립트를 함께 사용한다.
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.IMAGE_TAG }}
 
-      # 이 값은 SSM 명령 문자열에 들어가 인스턴스에서 root로 실행된다.
-      # 자유 문자열을 그대로 실으면 명령 주입이 되므로 커밋 SHA 형식만 받아들인다.
-      # 승인 게이트가 사람 판단을 요구하지만 그것은 입력 내용을 검사하지 않는다.
-      - name: 배포 대상 커밋 SHA 검증
+      - name: 배포 입력 및 이미지 digest 검증
+        id: resolve
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_PULL_TOKEN: ${{ secrets.DOCKERHUB_PULL_TOKEN }}
+          DOCKER_CONFIG: ${{ runner.temp }}/masiton-dockerhub-dispatch
         run: |
           set -euo pipefail
           case "$IMAGE_TAG" in
@@ -577,360 +561,205 @@ jobs:
             echo "커밋 SHA는 40자여야 한다 (match: ${#IMAGE_TAG}자): '$IMAGE_TAG'" >&2
             exit 1
           fi
-          echo "배포 대상 커밋: $IMAGE_TAG"
-
-      - name: 배포 대상 EC2 instance_id 검증
-        run: |
-          set -euo pipefail
-          if [ -z "$CONFIGURED_INSTANCE_ID" ]; then
-            echo '저장소 변수 PRODUCTION_INSTANCE_ID가 비어 있다. Terraform app_instance_id를 등록해야 한다.' >&2
+          if [[ ! "$DOCKERHUB_NAMESPACE" =~ ^[a-z0-9][a-z0-9_.-]{0,254}$ ]]; then
+            echo "DOCKERHUB_NAMESPACE 형식이 올바르지 않다" >&2
             exit 1
           fi
-          if [ -z "$INSTANCE_ID" ]; then
-            echo '배포 대상 instance_id가 비어 있다. 저장소 변수 PRODUCTION_INSTANCE_ID 또는 workflow_dispatch 입력이 필요하다.' >&2
+          if [[ ! "$DOCKERHUB_USERNAME" =~ ^[a-z0-9][a-z0-9_.-]{0,254}$ ]]; then
+            echo "DOCKERHUB_USERNAME 형식이 올바르지 않다" >&2
             exit 1
           fi
-          if [[ ! "$INSTANCE_ID" =~ ^i-[0-9a-f]{17}$ ]]; then
-            echo "배포 대상 instance_id 형식이 올바르지 않다: '$INSTANCE_ID'" >&2
+          if [ -z "$DOCKERHUB_PULL_TOKEN" ]; then
+            echo "DOCKERHUB_PULL_TOKEN이 비어 있다" >&2
             exit 1
           fi
-          if [ "$INSTANCE_ID" != "$CONFIGURED_INSTANCE_ID" ]; then
-            echo "배포 대상 instance_id가 저장소 변수 PRODUCTION_INSTANCE_ID와 다르다: '$INSTANCE_ID' != '$CONFIGURED_INSTANCE_ID'" >&2
-            exit 1
-          fi
-          echo "배포 대상 EC2: $INSTANCE_ID"
-
-      - name: AWS 자격 증명 (OIDC, 장기 키 없음)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::711457211155:role/masiton-github-actions-role
-          aws-region: ${{ env.AWS_REGION }}
-
-      # 배포 스크립트를 인스턴스로 실어 보낸다. 인스턴스에 미리 설치해 두는 방식은
-      # 스크립트를 바꿀 때 수동 단계가 생긴다. 현재 checkout한 커밋의 내용만 보내므로
-      # 이미지와 배포 스크립트의 버전이 어긋나지 않는다. base64로 싣는 이유는 인용과
-      # 개행 처리를 없애기 위한 것이다.
-      - name: SSM 명령 준비
-        run: |
-          set -euo pipefail
-          python3 - <<'PY' > command.json
-          import base64
-          import io
-          import json
-          import os
-          import tarfile
-
-          files = [
-              "deploy/scripts/app-deploy.sh",
-              "deploy/scripts/app-run.sh",
-              "deploy/scripts/app-secrets-render.sh",
-              "deploy/scripts/runtime-health.sh",
-              "deploy/scripts/cloudwatch-install.sh",
-              "deploy/scripts/health-metrics.sh",
-              "deploy/cloudwatch/amazon-cloudwatch-agent.json",
-              "deploy/cloudwatch/masiton-health-metrics.service",
-              "deploy/cloudwatch/masiton-health-metrics.timer",
-              "deploy/scripts/nginx-install.sh",
-              "deploy/scripts/nginx-smoke.sh",
-              "deploy/scripts/tls-deploy-cert.sh",
-              "deploy/app/masiton-backend.service",
-              "deploy/app/masiton-frontend.service",
-              "deploy/nginx/nginx.conf",
-              "deploy/nginx/masiton.click.conf",
-              "deploy/nginx/00-masiton-upgrade-map.conf",
-              "deploy/nginx/masiton-tls-renew.service",
-              "deploy/nginx/masiton-tls-renew.timer",
-          ]
-
-          image_tag = os.environ["IMAGE_TAG"]
-          if len(image_tag) != 40 or any(char not in "0123456789abcdef" for char in image_tag):
-              raise SystemExit("IMAGE_TAG must be a 40-character lowercase commit SHA")
-
-          lines = [
-              "set -euo pipefail",
-              "[ \"$(id -u)\" -eq 0 ] || { echo 'SSM 명령은 root로 실행돼야 한다' >&2; exit 1; }",
-              "install -d -m 0750 /run/masiton",
-              "exec 9>/run/masiton/deploy.lock",
-              'flock -n 9 || { echo \'이미 다른 배포가 실행 중이다\' >&2; exit 1; }',
-              "STAGE=/tmp/masiton-deploy",
-              'rm -rf "$STAGE"',
-              'umask 077',
-              'mkdir -p "$STAGE"',
-          ]
-          bundle = io.BytesIO()
-          with tarfile.open(fileobj=bundle, mode="w:gz", compresslevel=9) as archive:
-              for path in files:
-                  with open(path, "rb") as handle:
-                      content = handle.read().replace(b"\r\n", b"\n")
-                  info = tarfile.TarInfo(os.path.basename(path))
-                  info.size = len(content)
-                  info.mode = 0o755 if path.endswith(".sh") else 0o644
-                  info.mtime = 0
-                  archive.addfile(info, io.BytesIO(content))
-          encoded = base64.b64encode(bundle.getvalue()).decode("ascii")
-          for index in range(0, len(encoded), 400):
-              redirect = ">" if index == 0 else ">>"
-              lines.append(f'printf %s "{encoded[index:index + 400]}" {redirect} "$STAGE/payload.tgz.b64"')
-          lines.append('base64 -d "$STAGE/payload.tgz.b64" > "$STAGE/payload.tgz"')
-          lines.append('rm -f "$STAGE/payload.tgz.b64"')
-          lines.append('tar -xzf "$STAGE/payload.tgz" -C "$STAGE"')
-          lines.append('rm -f "$STAGE/payload.tgz"')
-          lines.append('for script in app-deploy.sh app-run.sh app-secrets-render.sh runtime-health.sh cloudwatch-install.sh health-metrics.sh nginx-install.sh nginx-smoke.sh tls-deploy-cert.sh; do chmod +x "$STAGE/$script"; done')
-          lines.extend([
-              'install -d -m 0750 /etc/masiton',
-              'for setting in METRIC_ENVIRONMENT=production REQUIRE_SHARED_REDIS=true NGINX_TRUSTED_PROXY_CIDRS=127.0.0.1; do key=${setting%%=*}; if [ -f /etc/masiton/deployment.env ] && grep -q "^${key}=" /etc/masiton/deployment.env; then sed -i "s|^${key}=.*|${setting}|" /etc/masiton/deployment.env; else printf "%s\\n" "$setting" >> /etc/masiton/deployment.env; fi; done; chmod 0640 /etc/masiton/deployment.env',
-          ])
-          lines.append(f'"$STAGE/app-deploy.sh" "{image_tag}" "$STAGE"')
-          lines.append('"$STAGE/cloudwatch-install.sh" "$STAGE"')
-
-          command = "\n".join(lines)
-          max_bytes = 65536  # AWS-RunShellScript command limit: 64 KiB.
-          command_size = len(command.encode("utf-8"))
-          if command_size > max_bytes:
-              raise SystemExit(f"SSM commands가 64KB 제한을 초과했다: {command_size}바이트")
-          payload = {"commands": [command], "executionTimeout": ["1800"]}
-          payload_json = json.dumps(payload, ensure_ascii=True, separators=(",", ":"))
-          payload_size = len(payload_json.encode("utf-8"))
-          if payload_size > max_bytes:
-              raise SystemExit(f"SSM command payload가 64KB 제한을 초과했다: {payload_size}바이트")
-          print(payload_json)
-          PY
-          command_size=$(python3 -c 'import json,sys; print(len(json.load(sys.stdin)["commands"][0].encode("utf-8")))' < command.json)
-          payload_size=$(wc -c < command.json)
-          echo "SSM 명령 크기: $command_size바이트, payload: $payload_size바이트 (제한 65536바이트)"
-
-      # 배포 스크립트가 상태 확인까지 하고 실패하면 non-zero로 끝난다. 그래서
-      # SSM 명령 상태가 Success가 아니면 이 job도 실패한다. 실패를 성공으로 바꾸지 않는다.
-      # CommandId를 만든 직후 S3 pointer에 저장한다. runner가 취소·종료돼도
-      # 별도 cleanup job이 원격 명령을 찾아 취소할 수 있어야 한다.
-      - name: SSM으로 배포 실행
-        run: |
-          set -euo pipefail
-          command_id=$(aws ssm send-command \
-            --instance-ids "$INSTANCE_ID" \
-            --document-name AWS-RunShellScript \
-            --parameters "file://command.json" \
-            --query 'Command.CommandId' --output text)
-          if [ -z "$command_id" ] || [ "$command_id" = "None" ]; then
-            echo 'SSM CommandId를 받지 못했다' >&2
-            exit 1
-          fi
-          echo "CommandId: $command_id"
-          # CommandId를 만든 즉시 trap을 설치해 pointer 업로드 실패나 runner 종료 때도
-          # 현재 프로세스가 살아 있는 동안 원격 명령을 중지하고 terminal 상태를 확인한다.
-          deployment_terminal=false
-          cancel_failed=false
-          cancel_and_wait() {
-            [ "$deployment_terminal" = true ] && return 0
-            echo "SSM 원격 명령 중지를 요청한다: $command_id" >&2
-            if ! aws ssm cancel-command --command-id "$command_id" \
-              --instance-ids "$INSTANCE_ID"; then
-              cancel_failed=true
-              echo "::error::SSM 원격 명령 중지 요청에 실패했다: $command_id" >&2
-            fi
-            status=Unknown
-            for _ in $(seq 1 24); do
-              status=$(aws ssm get-command-invocation \
-                --command-id "$command_id" --instance-id "$INSTANCE_ID" \
-                --query 'Status' --output text 2>/dev/null || echo Unknown)
-              case "$status" in
-                Success|Failed|Cancelled|TimedOut|Undeliverable|Terminated|NoInstances|AccessDenied|InvalidPlatform|DeliveryTimedOut|ExecutionTimedOut)
-                  deployment_terminal=true
-                  echo "SSM 중지 후 terminal 상태: $status" >&2
-                  [ "$cancel_failed" = false ]
-                  return $?
-                  ;;
-              esac
-              sleep 10
-            done
-            echo "::error::SSM 중지 요청 후에도 terminal 상태를 확인하지 못했다: $status" >&2
-            return 1
-          }
-          on_exit() {
-            exit_code=$?
-            if [ "$deployment_terminal" != true ]; then
-              if ! cancel_and_wait; then
-                echo '::error::SSM 원격 명령 정리에 실패했다. 인스턴스의 명령 상태를 수동 확인해야 한다.' >&2
-                [ "$exit_code" -eq 0 ] && exit_code=1
+          backend_ref="$PUBLISHED_BACKEND_IMAGE_REF"
+          frontend_ref="$PUBLISHED_FRONTEND_IMAGE_REF"
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            install -d -m 0700 "$DOCKER_CONFIG"
+            cleanup() {
+              docker logout docker.io >/dev/null 2>&1 || true
+              rm -rf "$DOCKER_CONFIG"
+            }
+            trap cleanup EXIT
+            printf '%s' "$DOCKERHUB_PULL_TOKEN" | docker login docker.io --username "$DOCKERHUB_USERNAME" --password-stdin >/dev/null
+            for name in backend frontend; do
+              image="docker.io/${DOCKERHUB_NAMESPACE}/masiton-${name}:${IMAGE_TAG}"
+              docker pull "$image" >/dev/null
+              ref="$(docker image inspect --format '{{index .RepoDigests 0}}' "$image")"
+              if [[ ! "$ref" =~ ^docker[.]io/[a-z0-9][a-z0-9_.-]{0,254}/masiton-${name}@sha256:[0-9a-f]{64}$ ]]; then
+                echo "$name 이미지 digest를 확인하지 못했다" >&2
+                exit 1
               fi
+              if [ "$name" = backend ]; then backend_ref="$ref"; else frontend_ref="$ref"; fi
+            done
+          fi
+          if [[ ! "$backend_ref" =~ ^docker[.]io/[a-z0-9][a-z0-9_.-]{0,254}/masiton-backend@sha256:[0-9a-f]{64}$ ]]; then
+            echo "backend 이미지 digest ref 형식이 올바르지 않다" >&2
+            exit 1
+          fi
+          if [[ ! "$frontend_ref" =~ ^docker[.]io/[a-z0-9][a-z0-9_.-]{0,254}/masiton-frontend@sha256:[0-9a-f]{64}$ ]]; then
+            echo "frontend 이미지 digest ref 형식이 올바르지 않다" >&2
+            exit 1
+          fi
+          if [ -z "$PRODUCTION_HOST" ] || [[ ! "$PRODUCTION_HOST" =~ ^([0-9]{1,3}[.]){3}[0-9]{1,3}$ ]]; then
+            echo "PRODUCTION_HOST는 public IPv4 주소여야 한다" >&2
+            exit 1
+          fi
+          IFS=. read -r octet1 octet2 octet3 octet4 <<< "$PRODUCTION_HOST"
+          for octet in "$octet1" "$octet2" "$octet3" "$octet4"; do
+            if (( 10#$octet > 255 )); then
+              echo "PRODUCTION_HOST IPv4 octet이 올바르지 않다" >&2
+              exit 1
             fi
-            trap - EXIT INT TERM
-            exit "$exit_code"
-          }
-          on_signal() {
-            exit 143
-          }
-          trap on_exit EXIT
-          trap on_signal INT TERM
-          command_id_file="$RUNNER_TEMP/ssm-command-id"
-          printf '%s\n' "$command_id" > "$command_id_file"
-          if ! aws s3api put-object \
-            --bucket "$SSM_POINTER_BUCKET" \
-            --key "$SSM_POINTER_KEY" \
-            --body "$command_id_file" \
-            --server-side-encryption AES256 >/dev/null; then
-            echo "::error::SSM CommandId 보관에 실패했다: $command_id" >&2
-            exit 1
-          fi
-
-          status=Pending
-          terminal=false
-          for _ in $(seq 1 270); do
-            status=$(aws ssm get-command-invocation \
-              --command-id "$command_id" --instance-id "$INSTANCE_ID" \
-              --query 'Status' --output text 2>/dev/null || echo Pending)
-            case "$status" in
-              Success|Failed|Cancelled|TimedOut|Undeliverable|Terminated|NoInstances|AccessDenied|InvalidPlatform|DeliveryTimedOut|ExecutionTimedOut)
-                terminal=true
-                deployment_terminal=true
-                break
-                ;;
-            esac
-            sleep 10
           done
-          if [ "$terminal" != true ]; then
-            status=PollingTimeout
-            echo "::error::SSM 명령 상태 polling 시간이 초과됐다: $command_id" >&2
-          fi
-
-          if ! invocation_json=$(aws ssm get-command-invocation \
-            --command-id "$command_id" --instance-id "$INSTANCE_ID" --output json); then
-            echo "::error::SSM 명령 결과 조회에 실패했다: $command_id" >&2
-            exit 1
-          fi
-          invocation_status=$(printf '%s' "$invocation_json" | jq -r '.Status // "Unknown"')
-          if [ "$invocation_status" != Unknown ]; then
-            status="$invocation_status"
-          fi
-          case "$status" in
-            Success|Failed|Cancelled|TimedOut|Undeliverable|Terminated|NoInstances|AccessDenied|InvalidPlatform|DeliveryTimedOut|ExecutionTimedOut)
-              deployment_terminal=true
+          case "$PRODUCTION_HOST" in
+            0.*|10.*|127.*|169.254.*|192.168.*|172.1[6-9].*|172.2[0-9].*|172.3[0-1].*)
+              echo "PRODUCTION_HOST는 public IPv4 주소여야 한다: 사설·예약 대역" >&2
+              exit 1
               ;;
           esac
-          stdout=$(printf '%s' "$invocation_json" | jq -r '.StandardOutputContent // ""')
-          stderr=$(printf '%s' "$invocation_json" | jq -r '.StandardErrorContent // ""')
+          if [[ ! "$PRODUCTION_SSH_USER" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then
+            echo "PRODUCTION_SSH_USER 형식이 올바르지 않다" >&2
+            exit 1
+          fi
+          echo "backend_ref=$backend_ref" >> "$GITHUB_OUTPUT"
+          echo "frontend_ref=$frontend_ref" >> "$GITHUB_OUTPUT"
+          echo "배포 대상: $PRODUCTION_HOST ($PRODUCTION_SSH_USER), 이미지 tag: $IMAGE_TAG"
 
+      - name: 배포 bundle 생성
+        id: bundle
+        run: |
+          set -euo pipefail
+          bundle="$RUNNER_TEMP/masiton-deploy-${GITHUB_RUN_ID}.tgz"
+          tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner -czf "$bundle" \
+            deploy/scripts/app-deploy.sh \
+            deploy/scripts/dockerhub-app-deploy.sh \
+            deploy/scripts/app-run.sh \
+            deploy/scripts/app-secrets-render.sh \
+            deploy/scripts/runtime-health.sh \
+            deploy/scripts/cloudwatch-install.sh \
+            deploy/scripts/health-metrics.sh \
+            deploy/cloudwatch/amazon-cloudwatch-agent.json \
+            deploy/cloudwatch/masiton-health-metrics.service \
+            deploy/cloudwatch/masiton-health-metrics.timer \
+            deploy/scripts/nginx-install.sh \
+            deploy/scripts/nginx-smoke.sh \
+            deploy/scripts/tls-deploy-cert.sh \
+            deploy/app/masiton-backend.service \
+            deploy/app/masiton-frontend.service \
+            deploy/nginx/nginx.conf \
+            deploy/nginx/masiton.click.conf \
+            deploy/nginx/00-masiton-upgrade-map.conf \
+            deploy/nginx/masiton-tls-renew.service \
+            deploy/nginx/masiton-tls-renew.timer
+          printf 'bundle=%s\n' "$bundle" >> "$GITHUB_OUTPUT"
+          printf 'sha256=%s\n' "$(sha256sum "$bundle" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: SSH key와 known_hosts 준비
+        id: ssh-files
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.PRODUCTION_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.PRODUCTION_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          if [ -z "$SSH_PRIVATE_KEY" ] || [ -z "$SSH_KNOWN_HOSTS" ]; then
+            echo "SSH private key와 known_hosts secret이 모두 필요하다" >&2
+            exit 1
+          fi
+          key_file="$RUNNER_TEMP/masiton-production-key"
+          known_hosts_file="$RUNNER_TEMP/masiton-production-known-hosts"
+          printf '%s' "$SSH_PRIVATE_KEY" > "$key_file"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > "$known_hosts_file"
+          chmod 0600 "$key_file" "$known_hosts_file"
+          ssh-keygen -F "$PRODUCTION_HOST" -f "$known_hosts_file" >/dev/null
+          printf 'key_file=%s\n' "$key_file" >> "$GITHUB_OUTPUT"
+          printf 'known_hosts_file=%s\n' "$known_hosts_file" >> "$GITHUB_OUTPUT"
+
+      - name: bundle 업로드 및 원격 압축 해제
+        env:
+          BUNDLE: ${{ steps.bundle.outputs.bundle }}
+          BUNDLE_SHA256: ${{ steps.bundle.outputs.sha256 }}
+          KEY_FILE: ${{ steps.ssh-files.outputs.key_file }}
+          KNOWN_HOSTS_FILE: ${{ steps.ssh-files.outputs.known_hosts_file }}
+        run: |
+          set -euo pipefail
+          ssh_opts=(
+            -o BatchMode=yes
+            -o IdentitiesOnly=yes
+            -o StrictHostKeyChecking=yes
+            -o UserKnownHostsFile="$KNOWN_HOSTS_FILE"
+            -o ConnectTimeout=10
+            -o ServerAliveInterval=15
+            -o ServerAliveCountMax=4
+            -i "$KEY_FILE"
+          )
+          remote="$PRODUCTION_SSH_USER@$PRODUCTION_HOST"
+          remote_stage="/tmp/masiton-deploy-${GITHUB_RUN_ID}"
+          remote_archive="/tmp/masiton-deploy-${GITHUB_RUN_ID}.tgz"
+          ssh "${ssh_opts[@]}" "$remote" "sudo -n install -d -m 0750 '$remote_stage'"
+          scp "${ssh_opts[@]}" "$BUNDLE" "$remote:$remote_archive"
+          remote_sha256="$(ssh "${ssh_opts[@]}" "$remote" "sha256sum '$remote_archive' | awk '{print \$1}'")"
+          if [ "$remote_sha256" != "$BUNDLE_SHA256" ]; then
+            echo "원격 bundle checksum이 다르다: $remote_sha256 != $BUNDLE_SHA256" >&2
+            exit 1
+          fi
+          ssh "${ssh_opts[@]}" "$remote" "sudo -n install -m 0600 '$remote_archive' '$remote_stage/payload.tgz' && sudo -n rm -f '$remote_archive' && sudo -n tar -xzf '$remote_stage/payload.tgz' -C '$remote_stage' && sudo -n rm -f '$remote_stage/payload.tgz' && sudo -n find '$remote_stage' -maxdepth 1 -type f -name '*.sh' -exec chmod 0750 {} +"
+
+      - name: 원격 Docker Hub 로그인과 애플리케이션 배포
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_PULL_TOKEN: ${{ secrets.DOCKERHUB_PULL_TOKEN }}
+          KEY_FILE: ${{ steps.ssh-files.outputs.key_file }}
+          KNOWN_HOSTS_FILE: ${{ steps.ssh-files.outputs.known_hosts_file }}
+          BACKEND_IMAGE_REF: ${{ steps.resolve.outputs.backend_ref }}
+          FRONTEND_IMAGE_REF: ${{ steps.resolve.outputs.frontend_ref }}
+        run: |
+          set -euo pipefail
+          ssh_opts=(
+            -o BatchMode=yes
+            -o IdentitiesOnly=yes
+            -o StrictHostKeyChecking=yes
+            -o UserKnownHostsFile="$KNOWN_HOSTS_FILE"
+            -o ConnectTimeout=10
+            -o ServerAliveInterval=15
+            -o ServerAliveCountMax=4
+            -i "$KEY_FILE"
+          )
+          remote="$PRODUCTION_SSH_USER@$PRODUCTION_HOST"
+          remote_stage="/tmp/masiton-deploy-${GITHUB_RUN_ID}"
+          printf '%s' "$DOCKERHUB_PULL_TOKEN" | ssh "${ssh_opts[@]}" "$remote" "sudo -n '$remote_stage/dockerhub-app-deploy.sh' '$DOCKERHUB_USERNAME' '$BACKEND_IMAGE_REF' '$FRONTEND_IMAGE_REF' '$remote_stage'"
           {
             echo '## 운영 배포'
             echo
-            echo "대상 인스턴스: $INSTANCE_ID"
+            echo "대상 호스트: $PRODUCTION_HOST"
             echo "커밋: $IMAGE_TAG"
-            echo "SSM CommandId: $command_id"
-            echo "상태: $status"
-            echo
-            echo '### stdout'
-            echo '~~~text'
-            printf '%s\n' "$stdout"
-            echo '~~~'
-            echo
-            echo '### stderr'
-            echo '~~~text'
-            printf '%s\n' "$stderr"
-            echo '~~~'
+            echo "backend: $BACKEND_IMAGE_REF"
+            echo "frontend: $FRONTEND_IMAGE_REF"
+            echo '상태: 성공'
           } >> "$GITHUB_STEP_SUMMARY"
 
-          echo "===== stdout ====="
-          printf '%s\n' "$stdout"
-          echo "===== stderr ====="
-          printf '%s\n' "$stderr"
-          if [ "$status" != "Success" ]; then
-            echo "배포가 실패했다 (상태 $status). 직전 이미지로 롤백하려면 Actions에서 이 워크플로를 workflow_dispatch로 실행하고 image_tag에 직전 커밋 SHA를 넣는다. 같은 production 승인 게이트를 거친다." >&2
-            exit 1
-          fi
-          echo "배포 완료: $IMAGE_TAG"
-
-  # SSM job이 취소되거나 polling timeout으로 실패해도 runner 종료 후 원격 명령이
-  # 계속 실행되지 않도록, S3 pointer를 읽어 cancel과 terminal 확인을 수행한다.
-  ssm-cancel-cleanup:
-    name: 취소·시간 초과 SSM 명령 정리
-    needs: [ssm-deploy]
-    if: >-
-      always() &&
-      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/deploy/m2') &&
-      (
-        (github.event_name == 'push' &&
-          (needs['ssm-deploy'].result == 'failure' || needs['ssm-deploy'].result == 'cancelled')) ||
-        (github.event_name == 'workflow_dispatch' &&
-          github.event.inputs.deployment_target == 'ssm' &&
-          (needs['ssm-deploy'].result == 'failure' || needs['ssm-deploy'].result == 'cancelled'))
-      )
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-      id-token: write
-    env:
-      AWS_REGION: ap-northeast-2
-      INSTANCE_ID: ${{ github.event.inputs.instance_id || vars.PRODUCTION_INSTANCE_ID }}
-      CONFIGURED_INSTANCE_ID: ${{ vars.PRODUCTION_INSTANCE_ID }}
-      SSM_POINTER_BUCKET: ${{ vars.SSM_COMMAND_POINTER_BUCKET || 'masiton-prod-codedeploy-711457211155' }}
-      SSM_POINTER_KEY: masiton/ssm/${{ github.run_id }}/command-id
-    steps:
-      - name: AWS 자격 증명 (OIDC, 장기 키 없음)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::711457211155:role/masiton-github-actions-role
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: SSM CommandId 조회
-        id: lookup
-        run: |
-          set -euo pipefail
-          if [ -z "$CONFIGURED_INSTANCE_ID" ] || [ "$INSTANCE_ID" != "$CONFIGURED_INSTANCE_ID" ]; then
-            echo 'cleanup 대상 instance_id가 저장소 변수와 다르거나 비어 있다' >&2
-            exit 1
-          fi
-          if [[ ! "$INSTANCE_ID" =~ ^i-[0-9a-f]{17}$ ]]; then
-            echo "cleanup 대상 instance_id 형식이 올바르지 않다: '$INSTANCE_ID'" >&2
-            exit 1
-          fi
-          command_id_file="$RUNNER_TEMP/ssm-command-id"
-          if ! aws s3api get-object \
-            --bucket "$SSM_POINTER_BUCKET" \
-            --key "$SSM_POINTER_KEY" \
-            "$command_id_file" >/dev/null; then
-            echo "::error::SSM CommandId pointer를 찾지 못했다: s3://$SSM_POINTER_BUCKET/$SSM_POINTER_KEY" >&2
-            exit 1
-          fi
-          command_id=$(tr -d '\r\n' < "$command_id_file")
-          if [[ ! "$command_id" =~ ^[0-9a-f-]{36}$ ]]; then
-            echo "::error::SSM CommandId 형식이 올바르지 않다: '$command_id'" >&2
-            exit 1
-          fi
-          printf 'resolved=%s\n' "$command_id" >> "$GITHUB_OUTPUT"
-
-      - name: SSM 원격 명령 중지 및 terminal 확인
+      - name: 원격 임시 파일 정리
+        if: always()
         env:
-          RESOLVED_COMMAND_ID: ${{ steps.lookup.outputs.resolved }}
+          KEY_FILE: ${{ steps.ssh-files.outputs.key_file }}
+          KNOWN_HOSTS_FILE: ${{ steps.ssh-files.outputs.known_hosts_file }}
         run: |
           set -euo pipefail
-          command_id="$RESOLVED_COMMAND_ID"
-          status=$(aws ssm get-command-invocation \
-            --command-id "$command_id" --instance-id "$INSTANCE_ID" \
-            --query 'Status' --output text 2>/dev/null || echo Unknown)
-          case "$status" in
-            Success|Failed|Cancelled|TimedOut|Undeliverable|Terminated|NoInstances|AccessDenied|InvalidPlatform|DeliveryTimedOut|ExecutionTimedOut)
-              echo "SSM cleanup 대상은 이미 terminal 상태다: $status"
-              exit 0
-              ;;
-          esac
-          cancel_failed=false
-          if ! aws ssm cancel-command --command-id "$command_id" \
-            --instance-ids "$INSTANCE_ID"; then
-            cancel_failed=true
-            echo "::error::SSM 원격 명령 중지 요청에 실패했다: $command_id" >&2
+          if [ -z "$KEY_FILE" ] || [ ! -f "$KEY_FILE" ]; then
+            exit 0
           fi
-          for _ in $(seq 1 24); do
-            status=$(aws ssm get-command-invocation \
-              --command-id "$command_id" --instance-id "$INSTANCE_ID" \
-              --query 'Status' --output text 2>/dev/null || echo Unknown)
-            case "$status" in
-              Success|Failed|Cancelled|TimedOut|Undeliverable|Terminated|NoInstances|AccessDenied|InvalidPlatform|DeliveryTimedOut|ExecutionTimedOut)
-                echo "SSM cleanup terminal 상태: $status"
-                [ "$cancel_failed" = false ]
-                exit $?
-                ;;
-            esac
-            sleep 10
-          done
-          echo "::error::SSM cleanup이 terminal 상태를 확인하지 못했다: $status" >&2
-          exit 1
+          ssh_opts=(
+            -o BatchMode=yes
+            -o IdentitiesOnly=yes
+            -o StrictHostKeyChecking=yes
+            -o UserKnownHostsFile="$KNOWN_HOSTS_FILE"
+            -o ConnectTimeout=10
+            -o ServerAliveInterval=15
+            -o ServerAliveCountMax=4
+            -i "$KEY_FILE"
+          )
+          remote="$PRODUCTION_SSH_USER@$PRODUCTION_HOST"
+          remote_stage="/tmp/masiton-deploy-${GITHUB_RUN_ID}"
+          remote_archive="/tmp/masiton-deploy-${GITHUB_RUN_ID}.tgz"
+          ssh "${ssh_opts[@]}" "$remote" "sudo -n rm -rf -- '$remote_stage' '$remote_archive'" || echo '원격 임시 파일 정리에 실패했다' >&2

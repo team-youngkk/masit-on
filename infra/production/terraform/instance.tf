@@ -11,7 +11,7 @@ resource "aws_instance" "app" {
 
   user_data = local.rendered_direct_user_data
   # user_data 변경이 기존 운영 인스턴스 교체로 이어지지 않게 한다. 앱 배포와
-  # 롤백은 SSM 배포 경로가 소유하고, bootstrap 변경은 별도 cutover로 적용한다.
+  # 롤백은 Docker Hub + SSH 경로가 소유하고, bootstrap 변경은 별도 cutover로 적용한다.
   user_data_replace_on_change = false
 
   root_block_device {
