@@ -15,5 +15,6 @@ esac
 [ "${#image_tag}" -eq 40 ] || { echo 'CodeDeploy image tag 길이가 40자가 아니다' >&2; exit 1; }
 
 chmod +x "$ROOT"/instance-bootstrap.sh "$ROOT"/redis-install.sh \
-  "$ROOT"/app-deploy.sh "$ROOT"/nginx-install.sh "$ROOT"/runtime-health.sh
+  "$ROOT"/app-deploy.sh "$ROOT"/nginx-install.sh "$ROOT"/runtime-health.sh \
+  "$ROOT"/observability-cleanup.sh
 "$ROOT/instance-bootstrap.sh" "$image_tag" "$ROOT"

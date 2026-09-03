@@ -18,6 +18,7 @@ related_documents:
   - ../adr-traceability.md
   - obs-001-logging-observability.md
   - ../../../infra/production/README.md
+  - ../../08-planning/observability-retirement-runbook.md
 supersedes:
   - ADR-OBS-001
 superseded_by: null

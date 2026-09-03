@@ -5,7 +5,7 @@ set -euo pipefail
 TAG="${1:?배포할 커밋 SHA를 지정한다}"
 STAGE="${2:-/tmp/masiton-deploy}"
 
-for script in app-deploy.sh nginx-install.sh runtime-health.sh; do
+for script in app-deploy.sh nginx-install.sh runtime-health.sh observability-cleanup.sh; do
   [ -x "$STAGE/$script" ] || { echo "스테이징에 실행 가능한 $script 가 없다" >&2; exit 1; }
 done
 
@@ -17,6 +17,7 @@ if [ "${INSTALL_LOCAL_REDIS:-false}" = true ]; then
   [ -x "$STAGE/redis-install.sh" ] || { echo "로컬 Redis 설치가 요청됐지만 redis-install.sh가 없다" >&2; exit 1; }
   "$STAGE/redis-install.sh" "$STAGE"
 fi
+"$STAGE/observability-cleanup.sh"
 "$STAGE/app-deploy.sh" "$TAG" "$STAGE"
 
 "/opt/masiton/bin/runtime-health.sh"

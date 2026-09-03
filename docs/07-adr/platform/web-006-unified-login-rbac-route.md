@@ -133,7 +133,7 @@ M2의 검증 참여자 gate는 [ADR-DEPLOY-003](deploy-003-validation-cookie-ses
 | `/internal/health/ready` | 핵심 서비스 준비 확인 | PostgreSQL |
 | `/internal/health/dependencies` | 장애 원인 구분 | PostgreSQL과 Redis를 개별 표시 |
 
-Docker Healthcheck는 `live`, 배포 후 Smoke Test는 `ready`, CloudWatch Agent와 운영자 점검은 `dependencies`를 사용한다. Kakao와 YouTube 상태는 포함하지 않는다. 응답에는 접속 정보·예외 메시지·비밀값을 넣지 않는다. 세 경로는 애플리케이션 인증 없이 EC2 내부 Agent·컨테이너 네트워크에서만 접근하며, 그 밖의 `/internal/**`은 허용하지 않는다.
+Docker Healthcheck는 `live`, 배포 후 Smoke Test는 `ready`, 인스턴스 내부 운영자 점검은 `dependencies`를 사용한다. Kakao와 YouTube 상태는 포함하지 않는다. 응답에는 접속 정보·예외 메시지·비밀값을 넣지 않는다. 세 경로는 애플리케이션 인증 없이 EC2 내부 운영자·배포 프로세스·컨테이너 네트워크에서만 접근하며, 그 밖의 `/internal/**`은 허용하지 않는다.
 
 ## 6. 선택 근거
 

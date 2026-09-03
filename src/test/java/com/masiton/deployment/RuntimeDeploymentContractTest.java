@@ -154,6 +154,7 @@ class RuntimeDeploymentContractTest {
         String deploy = read(Path.of("deploy/scripts/dockerhub-app-deploy.sh"));
         String bootstrap = read(Path.of("deploy/scripts/instance-bootstrap.sh"));
         String hook = read(Path.of("deploy/codedeploy/hooks/after-install.sh"));
+        String observabilityCleanup = read(Path.of("deploy/scripts/observability-cleanup.sh"));
         String runtime = String.join("\n", workflow, appDeploy, deploy, bootstrap, hook);
 
         assertThat(runtime)
@@ -161,6 +162,16 @@ class RuntimeDeploymentContractTest {
                 .doesNotContain("health-metrics.sh")
                 .doesNotContain("amazon-cloudwatch-agent")
                 .doesNotContain("aws cloudwatch put-metric-data");
+        assertThat(deploy).contains("observability-cleanup.sh");
+        assertThat(bootstrap).contains("observability-cleanup.sh");
+        assertThat(hook).contains("observability-cleanup.sh");
+        assertThat(workflow).contains("deploy/scripts/observability-cleanup.sh");
+        assertThat(observabilityCleanup)
+                .contains("masiton-health-metrics.timer")
+                .contains("amazon-cloudwatch-agent.service")
+                .contains("dnf remove -y amazon-cloudwatch-agent")
+                .contains("/opt/masiton/bin/health-metrics.sh")
+                .contains("/opt/aws/amazon-cloudwatch-agent");
     }
 
     @Test
@@ -243,7 +254,6 @@ class RuntimeDeploymentContractTest {
                 .contains("amazon-ssm-agent")
                 .contains("REQUIRE_SHARED_REDIS=true")
                 .contains("NGINX_TRUSTED_PROXY_CIDRS=127.0.0.1")
-                .contains("METRIC_ENVIRONMENT=production")
                 .doesNotContain("codedeploy-agent");
         assertThat(legacyUserData)
                 .contains("codedeploy-agent")
