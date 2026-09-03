@@ -33,6 +33,14 @@ ext {
      * 재정의를 사용한다(기술 정책 4절). BOM이 이 버전 이상으로 올라가면 이 항목을 지운다.
      */
     set('postgresql.version', '42.7.13')
+
+    /*
+     * Spring Boot 4.1.0 BOM이 고정하는 Tomcat 11.0.22에는 Trivy가 CRITICAL로 탐지한
+     * CVE-2026-65182, CVE-2026-65905, CVE-2026-68525가 있다. 세 취약점은 11.0.25에서
+     * 수정됐다. 개별 dependency에 버전을 중복 선언하지 않고 BOM 속성 재정의를
+     * 사용한다(기술 정책 4절). BOM이 이 버전 이상으로 올라가면 이 항목을 지운다.
+     */
+    set('tomcat.version', '11.0.25')
 }
 
 dependencies {
