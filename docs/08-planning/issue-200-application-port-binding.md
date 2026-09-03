@@ -66,7 +66,7 @@ Redis만 방식이 다르다. 애플리케이션 두 개는 `--network host`라 
 |---|---|
 | Nginx `/api/**` upstream | `127.0.0.1:8080` ([masiton.click.conf](../../deploy/nginx/masiton.click.conf)) |
 | Next.js Server Component | `API_BASE_URL=http://127.0.0.1:8080` |
-| 상태 지표 수집 | `HEALTH_BASE=http://127.0.0.1:8080` ([health-metrics.sh](../../deploy/scripts/health-metrics.sh)) |
+| 내부 health 점검 | `http://127.0.0.1:8080/internal/health/ready` (배포 후 Smoke) |
 | 배포 후 Smoke Test | `http://127.0.0.1:8080` ([app-deploy.sh](../../deploy/scripts/app-deploy.sh)) |
 | 현재 Nginx 공개 경로 | `http://127.0.0.1:8080/api/**` (Nginx 직접 proxy와 백엔드 인증 경계) |
 | 운영 부하 측정 | `http://127.0.0.1:8080` (운영 참여자 전용 성능 검증. [PR #208](https://github.com/team-youngkk/masit-on/pull/208) 병합 대기) |
@@ -161,7 +161,7 @@ curl -sS -o /dev/null -w '%{http_code}\n' https://masiton.click/internal/health/
 - `app-run.sh` 두 분기의 `docker run`이 `--network host`를 쓴다. 브리지로 바뀌면 컨테이너 안의 loopback이 호스트와 달라져 Nginx가 도달하지 못한다.
 - frontend 분기가 `HOSTNAME=127.0.0.1`을 export하고 컨테이너에 전달한다. 없으면 Next.js standalone 서버가 모든 인터페이스에 붙는다.
 - Nginx upstream이 `127.0.0.1:8080`과 `127.0.0.1:3000`이다.
-- `health-metrics.sh`의 기본 대상이 `http://127.0.0.1:8080`이다.
+- 배포 후 내부 health Smoke의 기본 대상이 `http://127.0.0.1:8080`이다.
 
 바인딩만 좁히고 실행 네트워크나 프록시 대상을 옮기면 인터넷 차단은 유지되지만 정상 요청과 상태 지표가 끊긴다. 두 방향의 회귀를 같이 막는 것이 이 테스트의 목적이다.
 

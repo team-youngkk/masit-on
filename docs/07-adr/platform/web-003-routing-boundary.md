@@ -117,9 +117,9 @@ Refresh Token 쿠키는 `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/api/admi
 | `/internal/health/ready` | 핵심 서비스 준비 확인 | PostgreSQL |
 | `/internal/health/dependencies` | 장애 원인 구분 | PostgreSQL과 Redis를 개별 표시 |
 
-Docker Healthcheck는 `live`, 배포 후 Smoke Test는 `ready`, CloudWatch Agent와 운영자 점검은 `dependencies`를 사용한다. Kakao와 YouTube 상태는 포함하지 않는다. 응답은 상태 구분에 필요한 최소 정보만 제공하고 접속 정보, 예외 메시지와 비밀값을 노출하지 않는다.
+Docker Healthcheck는 `live`, 배포 후 Smoke Test는 `ready`, 인스턴스 내부 운영자 점검은 `dependencies`를 사용한다. Kakao와 YouTube 상태는 포함하지 않는다. 응답은 상태 구분에 필요한 최소 정보만 제공하고 접속 정보, 예외 메시지와 비밀값을 노출하지 않는다.
 
-세 상태 확인 경로는 애플리케이션 인증 없이 호출할 수 있지만 EC2 내부 Agent·컨테이너 네트워크에서만 접근할 수 있다. 그 밖의 `/internal/**`은 허용하지 않는다.
+세 상태 확인 경로는 애플리케이션 인증 없이 호출할 수 있지만 EC2 내부 운영자·배포 프로세스·컨테이너 네트워크에서만 접근할 수 있다. 그 밖의 `/internal/**`은 허용하지 않는다.
 
 ## 7. 선택 근거
 
@@ -129,11 +129,11 @@ Docker Healthcheck는 `live`, 배포 후 Smoke Test는 `ready`, CloudWatch Agent
 
 ## 8. 트레이드오프
 
-기존 API 계약의 모든 경로와 클라이언트 호출부를 `/api` 기준으로 함께 변경해야 한다. 상태 확인은 Nginx 외부 경로에서 직접 호출할 수 없으므로 EC2 내부 Agent나 컨테이너 네트워크를 통해 점검해야 한다. 메모리 Access Token은 새로고침마다 Redis 재발급 호출을 발생시키며 Redis 장애 시 관리자 화면 복구가 실패한다.
+기존 API 계약의 모든 경로와 클라이언트 호출부를 `/api` 기준으로 함께 변경해야 한다. 상태 확인은 Nginx 외부 경로에서 직접 호출할 수 없으므로 EC2 내부 운영자·배포 프로세스 또는 컨테이너 네트워크를 통해 점검해야 한다. 메모리 Access Token은 새로고침마다 Redis 재발급 호출을 발생시키며 Redis 장애 시 관리자 화면 복구가 실패한다.
 
 ## 9. 적용 범위
 
-Next.js App Router, Spring MVC Controller, Spring Security Filter Chain, Refresh Token 쿠키, Nginx 리버스 프록시, Docker Healthcheck, 배포 Smoke Test와 CloudWatch 운영 점검에 적용한다.
+Next.js App Router, Spring MVC Controller, Spring Security Filter Chain, Refresh Token 쿠키, Nginx 리버스 프록시, Docker Healthcheck, 배포 Smoke Test와 인스턴스 내부 운영자 점검에 적용한다.
 
 ## 10. 강제 규칙
 

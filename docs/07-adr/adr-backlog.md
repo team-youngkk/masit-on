@@ -228,7 +228,7 @@ MVP 구현 전 필수 결정과 3차 확장 정책 결정은 완료됐다. 아�
 | Nginx·EC2·ECR | 기술 선택 완료, M2 적용 (2026-07-28) | [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md)에서 단계 순서 변경 | M2부터 단일 EC2 인스턴스에 적용 |
 | ALB·ASG·Blue-Green | [ADR-DEPLOY-005](platform/deploy-005-asg-blue-green-rollout.md) Accepted (2026-08-18); 비용 초과는 작업 요청자가 부담하기로 승인. 전용 Redis 배치는 [ADR-DATA-005](data/data-005-redis-refresh-token.md) 6절 owner 재합의로 해소 | 초기 운영 배포는 단일 인스턴스 수동 복구 | 실제 AWS apply, Redis 데이터 이전, CodeDeploy 취소·rollback 리허설과 비용·알람 증거를 운영 전환 전에 남김 |
 | 전체 CI/CD 배포 흐름 | M2 적용 (2026-07-28) | 전 단계 CI는 빌드·테스트 수행 | M2부터 ECR push·EC2 승인 배포·Smoke Test 활성화 |
-| 로그 14일 보관 | M2 적용 (2026-07-28) | 로컬 단계에는 CloudWatch 미사용 | M2부터 로그·백업·알림 정책 활성화 |
+| 운영 로그 로컬 보관 | 결정 변경 (2026-09-03) | CloudWatch 중앙 수집·14일 검색 보관을 폐기하고 Docker 로그 저장량을 제한 | [ADR-OBS-002](quality/obs-002-local-operations-without-cloudwatch.md) 적용 |
 
 ## 6. 활성화 조건
 
@@ -246,7 +246,7 @@ Conditional·Post-MVP Backlog 항목은 다음을 모두 충족해야 활성화�
 1. [결정 완료 2026-07-27] 관리자 검증 미리보기의 확인 Token 저장·단일 사용·재시도 정책 결정
 2. [결정 완료 2026-08-18] 배포 토폴로지와 ALB·ASG·Blue-Green 충돌 해결 및 전용 Redis 배치 owner 재합의
 3. [결정 완료 2026-07-24] 관리자 JWT 만료·서명 키와 Redis Refresh Token 키·회전·장애 정책 결정
-4. [결정 완료 2026-07-24] 로그 보관·운영 지표·알림 기준 결정
+4. [결정 변경 2026-09-03] CloudWatch 제거와 로컬 로그·Actuator 운영 확인 기준 결정
 5. 동시성·조회 확장·자동 복원력은 테스트·운영 근거 발생 시 검토
 6. AI·Mobility 3차 확장 ADR은 Accepted 정책을 적용하고, RAG·알림·이미지·자동화·독립 배포·권한 세분화는 해당 범위 승인 후 검토
 
@@ -261,9 +261,9 @@ Conditional·Post-MVP Backlog 항목은 다음을 모두 충족해야 활성화�
 | 통합 JWT | Access Token 만료 30분, `aud=masit-on-api`, DB 현재 역할 기반 RBAC |
 | 통합 Refresh session(Redis) | TTL 14일, MEMBER 최대 3개·ADMIN 최대 1개, 재발급마다 회전 + 재사용 탐지·즉시 폐기 |
 | Redis 장애 처리 | Fail-closed(재발급 차단, Access Token 만료 후 강제 재로그인) |
-| 로그 보관 | 14일 (기존 기술 스펙 값 유지) |
+| 로그 보관 | 인스턴스 로컬 저장, Docker `json-file` `max-size=10m`, `max-file=3` |
 | 백업 | PostgreSQL 일 1회 자동 스냅샷, 7일 보관, RPO 최대 24시간 |
-| 운영 알림 | CloudWatch 알람 → Slack, 담당자 1명 |
+| 운영 알림 | 외부 채널 미사용, 내부 health endpoint·로컬 로그 수동 확인 |
 | 부하 테스트 도구 | k6 v2.1.0 고정, `perf/k6/` 시나리오와 `perf/seed/` 기준 데이터, `workflow_dispatch` 전용 실행으로 정기 CI 비용 없음 |
 | 성능 측정 기준 데이터 | `RV-NFR-002` 4종에 더해 회원 1,000명·찜 20,000건(상위권 편차 분포)을 `ADR-PERF-001`이 확정 |
 | 정상 부하 실측 시점 | 2026-08-15 이슈 #207 격리 환경에서 측정 완료. 정본 문서와 ADR-PERF-001에 Verified 기록 |

@@ -52,6 +52,7 @@ related_documents:
 | Gradle 의존성 관리 플러그인 | io.spring.dependency-management 1.1.7 | MVP Accepted, `T-01`에서 고정 |
 | WireMock 로컬 컨테이너 | `wiremock/wiremock:3.13.2-alpine` | MVP Accepted, `T-01`에서 고정. Compose와 통합 테스트가 같은 태그를 사용한다 |
 | PostgreSQL JDBC 드라이버 | 42.7.13 | `M2-06`에서 BOM 속성(`postgresql.version`) 재정의로 고정. Spring Boot 4.1.0 BOM의 42.7.11에 CVE-2026-54291(HIGH)이 있어 올렸다. BOM이 이 버전 이상으로 올라가면 재정의를 제거한다 |
+| Apache Tomcat embedded | 11.0.25 | `M2-06`에서 BOM 속성(`tomcat.version`) 재정의로 고정. Spring Boot 4.1.0 BOM의 11.0.22에 Trivy가 CRITICAL로 탐지한 CVE-2026-65182·CVE-2026-65905·CVE-2026-68525가 있어 올렸다. BOM이 이 버전 이상으로 올라가면 재정의를 제거한다 |
 | 백엔드 컨테이너 베이스 이미지 | `amazoncorretto:21.0.12-alpine` (digest 고정) | `M2-06`에서 고정. eclipse-temurin이 21.0.12 이미지를 배포하지 않아 [ADR-LANG-001](../07-adr/platform/lang-001-java-21-runtime.md)의 패치 일치를 지키려면 다른 벤더가 필요했다. temurin이 21.0.12를 배포하면 되돌린다 |
 | 프론트엔드 컨테이너 베이스 이미지 | `node:24.18.0-alpine` (digest 고정) | `M2-06`에서 고정 |
 | 컨테이너 취약점 스캐너 | `aquasec/trivy:0.72.0` (digest 고정) | `M2-06`에서 고정. CI 전용이며 운영 이미지에 포함되지 않는다. 차단 기준은 수정 버전이 있는 `CRITICAL`·`HIGH` |
@@ -159,7 +160,7 @@ related_documents:
 - ALB·Blue-Green·ASG 다중 인스턴스 자동화는 2026-08-18 영향·비용 검토와 owner 결정을 거쳐 배포 고도화 기준으로 Accepted 확정했다. M2 초기 운영의 단일 인스턴스·수동 복구 기준은 유지하고, 고도화 실제 전환은 별도 runbook·승인·리허설을 따른다. Nginx의 애플리케이션 경로 라우팅 책임은 ALB가 대체하지 않는다.
 - GitHub Actions 빌드·테스트 품질 게이트는 전 단계에 적용하고, ECR push·EC2 승인 배포·Smoke Test는 초기 운영 배포부터 활성화한다.
 - 초기 운영 배포부터 GitHub Actions → ECR → EC2 경로를 사용한다. 배포 고도화의 ALB·ASG·CodeDeploy replacement 범위는 ADR-DEPLOY-005를 따른다.
-- 초기 운영 배포부터 로그는 14일 보관하고, DB 백업은 일 1회 자동 스냅샷 후 7일 보관(RPO 최대 24시간)하며, 운영 알림은 CloudWatch 알람을 Slack으로 담당자 1명에게 통지한다. 팀 상시 채널이 Slack뿐이고 운영 이메일 수신 체계가 없어 Slack Webhook만 사용한다([RV-NFR-013](../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준)).
+- 초기 운영 배포부터 로그는 인스턴스 로컬에 저장하고 Docker 컨테이너 로그는 `json-file` `max-size=10m`, `max-file=3`으로 제한한다. DB 백업은 일 1회 자동 스냅샷 후 7일 보관(RPO 최대 24시간)하며, CloudWatch·Slack 외부 운영 알림은 사용하지 않는다([ADR-OBS-002](../07-adr/quality/obs-002-local-operations-without-cloudwatch.md), [RV-NFR-009](../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간), [RV-NFR-013](../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준)).
 - 관련: [ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md), [ADR-DEPLOY-006](../07-adr/platform/deploy-006-public-release-without-validation-gate.md), [ADR-WEB-006](../07-adr/platform/web-006-unified-login-rbac-route.md), [ADR-WEB-005](../07-adr/platform/web-005-application-port-binding.md), [docs/07-adr/adr-backlog.md](../07-adr/adr-backlog.md) 범위 충돌 검토, [RV-NFR-005](../01-requirements/non-functional-requirements.md#rv-nfr-005-목표-가용성과-복구-시간)·[RV-NFR-009](../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간)·[RV-NFR-010](../01-requirements/non-functional-requirements.md#rv-nfr-010-백업-주기와-복구-범위)·[RV-NFR-013](../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준).
 
 ## 14. 위반 검증 방법

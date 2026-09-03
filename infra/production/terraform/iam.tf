@@ -80,37 +80,6 @@ data "aws_iam_policy_document" "app_parameter_read" {
     }
   }
 
-  # health-metrics.sh가 1분 주기로 상태 지표를 올린다. PutMetricData는 resource
-  # 수준 제한을 지원하지 않으므로 namespace 조건으로 이 서비스의 지표만 허용한다.
-  # CloudWatch Agent도 이 role을 사용하며 masiton/host namespace로 host 지표를 보낸다.
-  statement {
-    effect    = "Allow"
-    actions   = ["cloudwatch:PutMetricData"]
-    resources = ["*"]
-
-    condition {
-      test     = "StringEquals"
-      variable = "cloudwatch:namespace"
-      values   = ["masiton/health", "masiton/host"]
-    }
-  }
-
-  # cloudwatch-install.sh가 설치하는 agent는 Nginx·컨테이너 로그를 CloudWatch Logs로
-  # 보낸다. 설정이 선언한 로그 그룹으로 범위를 제한한다.
-  statement {
-    effect = "Allow"
-    actions = [
-      "logs:CreateLogGroup",
-      "logs:CreateLogStream",
-      "logs:PutLogEvents",
-      "logs:PutRetentionPolicy",
-      "logs:DescribeLogStreams",
-    ]
-    resources = [
-      "arn:aws:logs:${var.aws_region}:*:log-group:/masiton/*",
-      "arn:aws:logs:${var.aws_region}:*:log-group:/masiton/*:log-stream:*",
-    ]
-  }
 }
 
 resource "aws_iam_role_policy" "app_parameter_read" {

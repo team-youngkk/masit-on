@@ -60,7 +60,7 @@ Accepted
 
 - `application-prod.yml`의 `server.address`가 `127.0.0.1`인지 확인한다.
 - `app-run.sh`가 `SERVER_ADDRESS`·`SERVER_PORT`를 전달하지 않고 backend를 `--network host`로 실행하는지 계약 테스트로 확인한다.
-- frontend의 `HOSTNAME`, Nginx upstream, `health-metrics.sh`의 대상이 같은 loopback 주소를 사용하는지 확인한다.
+- frontend의 `HOSTNAME`, Nginx upstream, 배포 후 `runtime-health.sh`의 대상이 같은 loopback 주소를 사용하는지 확인한다.
 - 운영 배포 후 인스턴스 외부의 8080 직결이 차단되고, Nginx 경유 API·화면·내부 health check가 정상인지 확인한다([운영 애플리케이션 포트 바인딩 계획](../../08-planning/issue-200-application-port-binding.md)).
 
 ## 7. 재검토 조건

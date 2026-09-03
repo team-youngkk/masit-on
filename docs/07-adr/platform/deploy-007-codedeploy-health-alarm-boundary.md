@@ -1,7 +1,7 @@
 ---
 id: ADR-DEPLOY-007
 title: CodeDeploy 전환 중 ALB 호스트 상태 알람과 배포 게이트 분리
-status: Accepted
+status: Superseded
 decision_date: 2026-08-24
 owners:
   - 이우람
@@ -19,24 +19,24 @@ related_documents:
   - ../../08-planning/redis-recovery-runbook.md
 supersedes:
   - ADR-DEPLOY-005 (deployment alarm boundary only)
-superseded_by: null
+superseded_by: ADR-OBS-002
 ---
 
 # ADR-DEPLOY-007 CodeDeploy 전환 중 ALB 호스트 상태 알람과 배포 게이트 분리
 
 ## 1. 상태
 
-Accepted. 2026-08-24 배포에서 같은 target group의 replacement 등록·기존 target
-draining 중 `UnHealthyHostCount`가 ALARM↔OK로 반복되고 `ALARM_ACTIVE`로 배포를
-중단한 운영 증적을 반영한다. [ADR-DEPLOY-005](deploy-005-asg-blue-green-rollout.md)의
-Blue-Green 토폴로지와 나머지 장애 게이트는 유지하고, 배포 알람 경계만 이 ADR이
-대체한다.
+Superseded by [ADR-OBS-002](../quality/obs-002-local-operations-without-cloudwatch.md).
+2026-08-24 배포에서 같은 target group의 replacement 등록·기존 target draining 중
+`UnHealthyHostCount`가 ALARM↔OK로 반복되고 `ALARM_ACTIVE`로 배포를 중단한 운영
+증적을 반영한 역사적 결정이다. [ADR-DEPLOY-005](deploy-005-asg-blue-green-rollout.md)의
+Blue-Green 토폴로지는 별도 승인 시 재검토할 수 있지만, 이 ADR의 CloudWatch alarm과
+CodeDeploy 배포 게이트는 현재 운영 계약이 아니다.
 
 ## 2. 결정
 
-- `${name_prefix}-blue-unhealthy-host` CloudWatch alarm 리소스는 운영 관측용으로
-  유지한다. metric, threshold, missing-data 정책과 ALB target group health check는
-  변경하지 않는다.
+- `${name_prefix}-blue-unhealthy-host` CloudWatch alarm 리소스는 당시 운영 관측용으로
+  유지했다. 현재 해당 Terraform 리소스와 관측 경로는 제거됐다.
 - `UnHealthyHostCount` alarm은 CodeDeploy deployment group의 alarm 목록에서
   제외한다. CodeDeploy가 같은 target group을 전환하는 동안 target 등록·deregistering
   자체가 일시적인 비정상 host로 관측될 수 있기 때문이다.
