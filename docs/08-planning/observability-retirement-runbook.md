@@ -58,6 +58,7 @@ aws ssm get-parameters-by-path \
 5. Lambda가 더 이상 읽지 않는 `/masiton/alerts/slack-webhook-url` 같은 전용 SSM SecureString을 삭제한다. 운영 애플리케이션의 비밀 파라미터는 삭제하지 않는다.
 6. `/masiton/*` 로그 그룹을 인벤토리와 대조해 삭제한다. 애플리케이션이 현재 로그를 로컬에만 남기는지 확인한 뒤 실행한다.
 7. Terraform을 적용해 CloudWatch·Logs 전용 IAM 권한이 state와 실제 역할에서 사라졌는지 확인한다. SSM, KMS, ECR, S3 secret, SSM Agent 권한은 보존한다.
+8. Terraform plan에서 단일 EC2의 `monitoring = false`가 유지되고 Detailed Monitoring 변경이 남지 않는지 확인한다.
 
 AWS 리소스 삭제 명령은 인벤토리의 실제 이름을 변수에 대입한 뒤, 한 리소스씩 실행한다. 이 런북에는 오삭제를 막기 위해 재사용 가능한 `delete-all` 명령을 두지 않는다.
 

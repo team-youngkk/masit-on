@@ -1,8 +1,8 @@
 ---
 related_documents:
   - ../../infra/production/README.md
-  - ../../infra/production/terraform/monitoring.tf
-  - ../../infra/production/terraform/codedeploy.tf
+  - ../07-adr/quality/obs-002-local-operations-without-cloudwatch.md
+  - observability-retirement-runbook.md
   - post-cutover-runtime-baseline.md
   - ../07-adr/data/data-005-redis-refresh-token.md
 ---

@@ -43,6 +43,7 @@ class RuntimeDeploymentContractTest {
                 .contains("subnet_id                   = data.aws_subnet.direct_app.id")
                 .contains("aws_security_group.direct_app.id")
                 .contains("associate_public_ip_address = true")
+                .contains("monitoring                  = false")
                 .contains("user_data_replace_on_change = false");
         assertThat(route53)
                 .contains("resource \"aws_route53_record\" \"app\" {")

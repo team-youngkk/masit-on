@@ -43,6 +43,7 @@ SLF4J·Logback과 Spring Boot Actuator는 모든 단계에서 유지한다. 운�
 - 애플리케이션의 구조화 로그, 요청 상관관계, 오류 분류와 Actuator health group은 유지한다.
 - `/internal/health/live`, `/internal/health/ready`, `/internal/health/dependencies`는 기존처럼 인스턴스 내부·배포 smoke 용도로 사용한다. 외부 Nginx 차단과 loopback 경계도 유지한다.
 - Docker 컨테이너 로그는 `json-file` `max-size=10m`, `max-file=3`으로 로컬 저장량을 제한하고, Nginx access/error 로그도 로컬에 남긴다.
+- 단일 EC2의 `monitoring`은 `false`로 두어 EC2 Detailed Monitoring도 사용하지 않는다.
 - CloudWatch Agent 설치, `aws cloudwatch put-metric-data`, CloudWatch Logs 권한, CloudWatch metric alarm과 외부 Slack 운영 알림은 배포·Terraform에서 제거한다.
 - 운영 장애 확인은 운영자가 health endpoint와 로컬 로그를 점검하는 방식으로 수행한다. 인스턴스 교체·재기동 시 로컬 로그가 유실될 수 있다는 점을 수용한다.
 - 중앙 관측이나 외부 알림을 다시 도입할 때는 예상 비용, 보존 기간, 수신자, 장애·복구 절차를 포함한 새 ADR을 작성한다.
