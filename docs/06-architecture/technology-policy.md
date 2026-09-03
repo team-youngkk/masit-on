@@ -52,6 +52,7 @@ related_documents:
 | Gradle 의존성 관리 플러그인 | io.spring.dependency-management 1.1.7 | MVP Accepted, `T-01`에서 고정 |
 | WireMock 로컬 컨테이너 | `wiremock/wiremock:3.13.2-alpine` | MVP Accepted, `T-01`에서 고정. Compose와 통합 테스트가 같은 태그를 사용한다 |
 | PostgreSQL JDBC 드라이버 | 42.7.13 | `M2-06`에서 BOM 속성(`postgresql.version`) 재정의로 고정. Spring Boot 4.1.0 BOM의 42.7.11에 CVE-2026-54291(HIGH)이 있어 올렸다. BOM이 이 버전 이상으로 올라가면 재정의를 제거한다 |
+| Apache Tomcat embedded | 11.0.25 | `M2-06`에서 BOM 속성(`tomcat.version`) 재정의로 고정. Spring Boot 4.1.0 BOM의 11.0.22에 Trivy가 CRITICAL로 탐지한 CVE-2026-65182·CVE-2026-65905·CVE-2026-68525가 있어 올렸다. BOM이 이 버전 이상으로 올라가면 재정의를 제거한다 |
 | 백엔드 컨테이너 베이스 이미지 | `amazoncorretto:21.0.12-alpine` (digest 고정) | `M2-06`에서 고정. eclipse-temurin이 21.0.12 이미지를 배포하지 않아 [ADR-LANG-001](../07-adr/platform/lang-001-java-21-runtime.md)의 패치 일치를 지키려면 다른 벤더가 필요했다. temurin이 21.0.12를 배포하면 되돌린다 |
 | 프론트엔드 컨테이너 베이스 이미지 | `node:24.18.0-alpine` (digest 고정) | `M2-06`에서 고정 |
 | 컨테이너 취약점 스캐너 | `aquasec/trivy:0.72.0` (digest 고정) | `M2-06`에서 고정. CI 전용이며 운영 이미지에 포함되지 않는다. 차단 기준은 수정 버전이 있는 `CRITICAL`·`HIGH` |
