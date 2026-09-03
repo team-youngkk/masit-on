@@ -15,14 +15,13 @@ class RedisEndpointParityContractTest {
 
     private static final List<Path> PRODUCERS = List.of(
             Path.of("deploy/scripts/app-run.sh"),
-            Path.of("deploy/scripts/app-deploy.sh"),
-            Path.of("deploy/scripts/health-metrics.sh"));
+            Path.of("deploy/scripts/app-deploy.sh"));
     private static final String CONTRACT_START = "# BEGIN SHARED REDIS ENDPOINT CONTRACT";
     private static final String CONTRACT_END = "# END SHARED REDIS ENDPOINT CONTRACT";
 
     @Test
-    @DisplayName("앱 실행·배포 smoke·health 지표가 동일한 endpoint 검증 계약과 fallback 경계를 사용한다")
-    void redisEndpoint_세producer가동일한검증계약과fallback경계를사용한다() throws IOException {
+    @DisplayName("앱 실행·배포 smoke가 동일한 endpoint 검증 계약과 fallback 경계를 사용한다")
+    void redisEndpoint_앱실행과배포가동일한검증계약과fallback경계를사용한다() throws IOException {
         List<String> scripts = PRODUCERS.stream()
                 .map(this::read)
                 .toList();
@@ -60,13 +59,6 @@ class RedisEndpointParityContractTest {
                 .contains("REDIS_HOST=\"$REDIS_VALIDATED_HOST\"")
                 .contains("redis-cli --askpass")
                 .contains("--mount \"type=bind,source=$REDIS_PASSWORD_FILE,target=/run/secrets/redis-password,readonly\"");
-        assertThat(scripts.get(2))
-                .contains("REDIS_HOST=127.0.0.1")
-                .contains("REDIS_PORT=\"${REDIS_PORT:-6379}\"")
-                .contains("validate_local_redis_endpoint \"$REDIS_PORT\"")
-                .contains("REDIS_ENDPOINT_HOST=\"$REDIS_VALIDATED_HOST\"")
-                .contains("REDIS_ENDPOINT_PORT=\"$REDIS_VALIDATED_PORT\"")
-                .contains("redis-cli --askpass");
     }
 
     private String read(Path path) {

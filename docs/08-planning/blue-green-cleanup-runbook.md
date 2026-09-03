@@ -63,7 +63,7 @@ aws autoscaling delete-auto-scaling-group `
   --auto-scaling-group-name <idle-replacement-asg-name> --force-delete
 ```
 
-정리 후 target group에 남은 등록 인스턴스와 CloudWatch alarm 상태를 확인한다. 삭제 전에는 반드시 Terraform이 관리하는 `${name_prefix}-blue-asg`와 현재 healthy target instance가 속한 ASG를 후보에서 제외한다. **직전 배포의 original 환경도 대기 시간이 지나기 전에는 지우지 않는다.** 그 시간 동안은 rollback 대상이다.
+정리 후 target group에 남은 등록 인스턴스와 deployment 상태를 확인한다. 삭제 전에는 반드시 Terraform이 관리하는 `${name_prefix}-blue-asg`와 현재 healthy target instance가 속한 ASG를 후보에서 제외한다. **직전 배포의 original 환경도 대기 시간이 지나기 전에는 지우지 않는다.** 그 시간 동안은 rollback 대상이다.
 
 이 절차는 자동화하지 않는다. 삭제 대상 판정과 관찰 종료는 운영자가 deployment ID·target instance ID·ASG membership·target health를 함께 확인해야 한다.
 

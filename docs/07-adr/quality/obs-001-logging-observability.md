@@ -1,7 +1,7 @@
 ---
 id: ADR-OBS-001
 title: 애플리케이션 로그와 운영 관측 기준
-status: Accepted
+status: Superseded
 decision_date: 2026-07-27
 owners:
   - 이우람
@@ -26,14 +26,14 @@ related_documents:
   - ../platform/deploy-002-validation-deployment-before-expansion.md
   - ../adr-backlog.md
 supersedes: []
-superseded_by: null
+superseded_by: ADR-OBS-002
 ---
 
 # ADR-OBS-001 애플리케이션 로그와 운영 관측 기준
 
 ## 1. 상태
 
-Accepted
+Superseded by [ADR-OBS-002](obs-002-local-operations-without-cloudwatch.md)
 
 ## 2. 결정 요약
 

@@ -638,11 +638,7 @@ jobs:
             deploy/scripts/app-run.sh \
             deploy/scripts/app-secrets-render.sh \
             deploy/scripts/runtime-health.sh \
-            deploy/scripts/cloudwatch-install.sh \
-            deploy/scripts/health-metrics.sh \
-            deploy/cloudwatch/amazon-cloudwatch-agent.json \
-            deploy/cloudwatch/masiton-health-metrics.service \
-            deploy/cloudwatch/masiton-health-metrics.timer \
+            deploy/scripts/observability-cleanup.sh \
             deploy/scripts/nginx-install.sh \
             deploy/scripts/nginx-smoke.sh \
             deploy/scripts/tls-deploy-cert.sh \

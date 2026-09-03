@@ -28,7 +28,7 @@ superseded_by: ADR-DEPLOY-007
 
 ## 1. 상태
 
-Superseded in the deployment alarm boundary by [ADR-DEPLOY-007](deploy-007-codedeploy-health-alarm-boundary.md). Blue-Green 토폴로지와 그 밖의 전환 안전장치는 계속 유효하며, 실제 운영 자원 전환과 기존 단일 EC2 폐기는 별도 승인과 리허설을 통과한 뒤 수행한다.
+Superseded in the deployment alarm boundary by [ADR-DEPLOY-007](deploy-007-codedeploy-health-alarm-boundary.md). Blue-Green 토폴로지와 그 밖의 전환 안전장치는 계속 유효하며, 실제 운영 자원 전환과 기존 단일 EC2 폐기는 별도 승인과 리허설을 통과한 뒤 수행한다. 이 ADR의 CloudWatch Agent·custom metric·deployment alarm 상세는 [ADR-OBS-002](../quality/obs-002-local-operations-without-cloudwatch.md)에 따라 2026-09-03 현재 운영 계약이 아니며, ASG를 다시 활성화할 때 별도 관측성 ADR로 재검토해야 한다.
 
 ## 2. 결정 문제
 
@@ -70,9 +70,9 @@ Internet
 - launch template와 CodeDeploy hook은 ECR digest와 Parameter Store 경로를 사용하며 비밀값을 이미지·user data·로그에 기록하지 않는다.
 - replacement health 실패 시 CodeDeploy가 original 인스턴스를 유지하고 replacement를 폐기한다. 배포 후 오류율·지연·readiness alarm이 임계값을 넘으면 deployment를 중지하고 original ASG membership를 복구 대상으로 삼는다. listener rollback은 사용하지 않는다.
 - **ALB health check는 readiness만 반영하고 readiness에는 Redis가 없다.** 따라서 Redis 장애는 target health로 드러나지 않고, 공개 GET은 `200`이지만 인증은 [ADR-AUTH-007](../security/auth-007-unified-account-rbac-session.md) 12절대로 fail-closed가 되는 구간이 생긴다. 이 상태는 **배포 게이트로 감지하고 트래픽 경로로는 감지하지 않는다.** Redis는 fleet 전체가 인스턴스 하나를 공유하므로 readiness에 넣으면 모든 target이 동시에 unhealthy가 되어 Redis와 무관한 공개 탐색까지 전면 중단된다. 감지를 얻고 가용성을 잃는 교환이므로 채택하지 않는다.
-- 감지 경로는 `masiton/health` 네임스페이스의 `FleetDependencyRedis` 지표다. `health-metrics.sh`가 1분 주기로 `Environment=asg` 차원으로 올리고, `Minimum`이 연속 3회 `1` 미만이면 deployment alarm이 된다. 이 alarm은 CodeDeploy deployment group의 alarm 목록에 포함되므로 **Redis가 끊긴 상태에서는 새 배포가 시작되지 않고 진행 중인 배포는 자동 rollback된다.** 이미 서비스 중인 트래픽은 끊지 않는다.
-- ALB의 `UnHealthyHostCount` 배포 알람도 1분 주기 3회 연속 비정상일 때만 중단한다. replacement target 등록·draining 중 발생하는 단일 datapoint를 지속적인 장애와 구분하기 위한 운영 기준이며, 2026-08-24의 ALARM↔OK 반복 이력으로 근거를 보강했다. 5xx·지연·Redis 알람의 기준은 변경하지 않는다.
-- 최초 seeding에서만 `initial_alarm_seeding=true`, `deployment_alarms_enabled=false`, `deployment_auto_rollback_enabled=false`, `redis_recovery_mode=false`를 같은 명령행에 명시해 deployment alarm과 자동 rollback을 제외한다. 네 입력은 앱 없는 seed ASG에 known-good revision을 올리는 단 한 번의 명시적 조합이며, Terraform precondition은 이 조합 외의 alarm·자동 rollback 비활성화와 `initial_alarm_seeding=false`·`deployment_auto_rollback_enabled=false`를 거부한다. 따라서 Redis 복구를 포함한 정상 운영에서는 alarm과 자동 rollback을 켜고, 지표 수집 중단도 감지 경로 장애이므로 deployment alarm의 결측을 `breaching`으로 처리해 새 배포를 막는다.
+- (역사적 설계) 감지 경로는 `masiton/health` 네임스페이스의 `FleetDependencyRedis` 지표였다. `health-metrics.sh`와 deployment alarm은 ADR-OBS-002에 따라 현재 배포에서 제거됐으며, ASG 재개 시 별도 관측성 ADR의 범위로 다시 결정한다.
+- (역사적 설계) ALB의 `UnHealthyHostCount`와 5xx·지연·Redis deployment alarm 기준은 당시 Blue-Green 리허설을 위해 기록해 둔 값이다. 현재 단일 EC2 배포에는 적용하지 않는다.
+- (역사적 설계) 최초 seeding의 `initial_alarm_seeding`·`deployment_alarms_enabled`·`deployment_auto_rollback_enabled`·`redis_recovery_mode` 조합은 현재 Terraform 운영 경로의 입력 계약이 아니다. ASG를 다시 활성화할 때 새 ADR과 plan 검증을 함께 추가한다.
 - 기존 단일 EC2는 새 환경에서 배포·복구·비용을 확인하기 전까지 제거하지 않는다.
 
 ## 6. 검증
@@ -82,7 +82,7 @@ Internet
 - replacement readiness와 Nginx smoke가 통과하기 전 original target instance가 target group에서 해제되지 않는지 확인한다.
 - 의도적 health 실패와 배포 후 오류율 상승을 주입해 original 유지·replacement 폐기와 ASG membership 복구를 확인한다.
 - Redis 재기동과 앱 인스턴스 교체 뒤 세션·Refresh Token·rate-limit 상태가 유지되는지 확인한다.
-- 교체 환경 인스턴스에서 `masiton-health-metrics.timer`가 활성이고 `FleetDependencyRedis`가 실제로 올라오는지 확인한다. 최초 seeding은 `terraform plan -var="initial_alarm_seeding=true" -var="deployment_alarms_enabled=false" -var="deployment_auto_rollback_enabled=false"` 명령으로만 실행하고, 성공 직후 `initial_alarm_seeding=false`·`deployment_alarms_enabled=true`·`deployment_auto_rollback_enabled=true`로 복원한다. 정상 운영에서 Redis를 의도적으로 끊거나 지표 수집을 중단해 deployment alarm이 `ALARM`으로 전이하는지 확인한다.
+- (역사적 검증 기록) 교체 환경의 `masiton-health-metrics.timer`, `FleetDependencyRedis`, 최초 seeding과 deployment alarm 전이 검증은 CloudWatch 관측성 경로가 운영 계약이었던 시점의 절차다. 현재는 실행하지 않으며 ASG 재개 시 새 관측성 ADR에서 검증 항목을 정한다.
 - expand 단계가 아닌 destructive migration이 배포 gate에서 차단되는지 확인한다.
 - 비용은 실제 청구와 대조하고 ASG·ALB·Redis 전용 인스턴스의 상시 비용을 별도 기록한다.
 
