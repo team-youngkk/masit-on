@@ -219,6 +219,9 @@ jobs:
     # 운영 EC2가 x86_64(t2 계열)이므로 같은 아키텍처에서 빌드한다.
     # x86_64 러너에서 빌드해 런타임의 아키텍처 불일치를 막는다.
     runs-on: ubuntu-24.04
+    # Docker Hub 자격 증명과 namespace가 production 환경에 저장되어 있다.
+    # 이미지 게시 job도 같은 환경을 참조해야 해당 값이 주입된다.
+    environment: production
     outputs:
       backend_ref: ${{ steps.publish.outputs.backend_ref }}
       frontend_ref: ${{ steps.publish.outputs.frontend_ref }}
