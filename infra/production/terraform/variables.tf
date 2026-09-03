@@ -257,7 +257,7 @@ variable "mail_smtp_port" {
 # app 인스턴스의 subnet 배치 의도를 명시한다. 오배치를 plan에서 잡되 어느 쪽이
 # 의도인지는 아키텍처 결정에 따라 달라지므로 코드에 한 방향을 굳히지 않는다.
 #
-# 현재 운영은 false다. 앱을 사설 subnet에 두면 Docker Hub·Parameter Store·CloudWatch
+# 현재 운영은 false다. 앱을 사설 subnet에 두면 Docker Hub·Parameter Store
 # 때문에 NAT 또는 인터페이스 엔드포인트가 필요하고, 배포 고도화 비용·일정 영향
 # 검토 6.6절이 그 비용으로 8.1절 예산을 넘긴다고 판정해 앱은 public subnet에
 # 둔다. 인터넷에서 앱으로 들어오는 경계는 security group이 지킨다.

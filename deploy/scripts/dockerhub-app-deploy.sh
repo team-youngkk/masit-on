@@ -33,10 +33,6 @@ STAGE="${4:?스테이징 디렉터리를 지정한다}"
   echo "app-deploy.sh가 없다: $STAGE" >&2
   exit 1
 }
-[ -x "$STAGE/cloudwatch-install.sh" ] || {
-  echo "cloudwatch-install.sh가 없다: $STAGE" >&2
-  exit 1
-}
 
 install -d -m 0750 /run/masiton
 DOCKER_CONFIG=$(mktemp -d /run/masiton/dockerhub-config.XXXXXX)
@@ -54,4 +50,3 @@ trap cleanup EXIT
 
 /usr/bin/docker login docker.io --username "$USERNAME" --password-stdin >/dev/null
 "$STAGE/app-deploy.sh" --image-refs "$BACKEND_IMAGE_REF" "$FRONTEND_IMAGE_REF" "$STAGE"
-"$STAGE/cloudwatch-install.sh" "$STAGE"
