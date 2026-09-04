@@ -15,10 +15,12 @@ class AppRunScriptContractTest {
 
     private static final Path APP_RUN = Path.of("deploy/scripts/app-run.sh");
     private static final Path SECRETS = Path.of("deploy/scripts/app-secrets-render.sh");
+    private static final Path APP_DEPLOY = Path.of("deploy/scripts/app-deploy.sh");
     private static final Path NGINX_SITE = Path.of("deploy/nginx/masiton.click.conf");
     private static final Path NGINX_MAIN = Path.of("deploy/nginx/nginx.conf");
     private static final Path NGINX_INSTALL = Path.of("deploy/scripts/nginx-install.sh");
     private static final Path NGINX_SMOKE = Path.of("deploy/scripts/nginx-smoke.sh");
+    private static final Path DOCKERHUB_DEPLOY = Path.of("deploy/scripts/dockerhub-app-deploy.sh");
     private static final String CALLBACK = "/api/webhooks/youtube/channel-updates";
 
     @Test
@@ -138,6 +140,57 @@ class AppRunScriptContractTest {
         assertThat(configTest).isGreaterThanOrEqualTo(0);
         assertThat(restart).isGreaterThan(configTest);
         assertThat(smoke).isGreaterThan(restart);
+    }
+
+    @Test
+    @DisplayName("Docker Hub 원격 배포는 로그인 전에 입력·호스트·산출물을 검증한다")
+    void dockerHub원격배포는로그인전에사전검증한다() throws IOException {
+        String deploy = read(DOCKERHUB_DEPLOY);
+        int validation = deploy.indexOf("validate_image_ref backend");
+        int login = deploy.indexOf("docker login docker.io");
+        int preflight = deploy.indexOf("host_arch=\"$(uname -m)\"");
+
+        assertThat(deploy)
+                .contains("[ \"$#\" -eq 5 ]")
+                .contains("ALLOWED_NAMESPACE")
+                .contains("validate_image_ref frontend")
+                .contains("require_stage_file")
+                .contains("^/run/masiton/deploy/masiton-deploy\\.[A-Za-z0-9]{6}$")
+                .contains("docker info --format '{{.Architecture}}'")
+                .contains("export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin")
+                .contains("getent seq sleep dirname cp mkdir find wc cut chown tee")
+                .contains("LOGIN_DONE=no")
+                .contains("/run/masiton/deploy/dockerhub-config.XXXXXX")
+                .contains("rm -rf \"$DOCKER_CONFIG\" \"$STAGE\"")
+                .doesNotContain("install -d -m 0750 /run/masiton");
+        assertThat(validation).isGreaterThanOrEqualTo(0);
+        assertThat(preflight).isGreaterThan(validation);
+        assertThat(login).isGreaterThan(preflight);
+    }
+
+    @Test
+    @DisplayName("CloudWatch 실패는 앱·지표 산출물을 함께 롤백한다")
+    void cloudWatch설치는앱롤백보호안에서먼저실행된다() throws IOException {
+        String appDeploy = read(APP_DEPLOY);
+        int cloudwatch = appDeploy.indexOf("\"$STAGE/cloudwatch-install.sh\" \"$STAGE\"");
+        int nginx = appDeploy.indexOf("\"$STAGE/nginx-install.sh\" \"$STAGE\"");
+        int rollbackDisable = appDeploy.indexOf("trap - ERR INT TERM HUP");
+
+        assertThat(appDeploy)
+                .contains("CLOUDWATCH_AGENT_CONFIG=")
+                .contains("backup_asset \"$OPT_DIR/bin/health-metrics.sh\"")
+                .contains("restore_asset \"$OPT_DIR/bin/health-metrics.sh\"")
+                .contains("masiton-health-metrics.timer")
+                .contains("metrics_timer_was_active")
+                .contains("cloudwatch_agent_was_installed")
+                .contains("systemctl disable --now amazon-cloudwatch-agent")
+                .contains("fetch-config -m ec2 -c \"file:$CLOUDWATCH_AGENT_CONFIG\"")
+                .doesNotContain("rollback_enabled=no\n\"$STAGE/cloudwatch-install.sh\"");
+        assertThat(cloudwatch).isGreaterThanOrEqualTo(0);
+        assertThat(nginx).isGreaterThan(cloudwatch);
+        assertThat(rollbackDisable).isGreaterThan(nginx);
+        assertThat(read(DOCKERHUB_DEPLOY))
+                .doesNotContain("\"$STAGE/cloudwatch-install.sh\" \"$STAGE\"");
     }
 
     private static String read(Path path) throws IOException {
