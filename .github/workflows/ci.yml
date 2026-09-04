@@ -586,11 +586,13 @@ jobs:
             for name in backend frontend; do
               image="docker.io/${DOCKERHUB_NAMESPACE}/masiton-${name}:${IMAGE_TAG}"
               docker pull "$image" >/dev/null
-              ref="$(docker image inspect --format '{{index .RepoDigests 0}}' "$image")"
-              if [[ ! "$ref" =~ ^docker[.]io/[a-z0-9][a-z0-9_.-]{0,254}/masiton-${name}@sha256:[0-9a-f]{64}$ ]]; then
+              repo_digest="$(docker image inspect --format '{{index .RepoDigests 0}}' "$image")"
+              digest="${repo_digest##*@}"
+              if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
                 echo "$name 이미지 digest를 확인하지 못했다" >&2
                 exit 1
               fi
+              ref="docker.io/${DOCKERHUB_NAMESPACE}/masiton-${name}@${digest}"
               if [ "$name" = backend ]; then backend_ref="$ref"; else frontend_ref="$ref"; fi
             done
           fi

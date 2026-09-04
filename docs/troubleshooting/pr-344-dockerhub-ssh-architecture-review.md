@@ -53,6 +53,7 @@ PR의 배포 workflow 변경과 Terraform·운영 환경 변경이 서로 다른
 - CI의 기존 Docker Hub `images`·SSH `ssh-deploy` job을 유지하고, x86_64 runner에서 게시 후 확인한 backend/frontend digest ref를 SSH 원격 래퍼에 전달하게 했다.
 - `dockerhub-app-deploy.sh`가 Docker Hub token을 표준 입력으로 한 번만 인증하고 임시 `DOCKER_CONFIG`를 정리한 뒤 `app-deploy.sh --image-refs`를 호출하도록 추가했다.
 - `app-deploy.sh`는 명시적 Docker Hub digest 경로와 보존된 legacy ECR tag 경로를 구분하고, Docker Hub 참조가 허용된 저장소·digest 형식인지 검증한다.
+- 후속 장애에서 확인된 `workflow_dispatch`의 Docker `RepoDigests[0]` 레지스트리 접두사 차이는 `@` 뒤 digest만 검증한 뒤 `docker.io/<namespace>/masiton-<component>@sha256:...` canonical ref로 재조합하도록 보완했다.
 - 앱 runtime IAM에서는 SSM parameter 조회·KMS 복호화와 보존된 legacy ECR pull 권한만 유지하고, GitHub Actions의 직접 SSM 배포 정책은 제거했다.
 - x86_64 운영·성능 Terraform 기본값과 관련 계약 테스트를 유지하고, 운영 README에 필요한 SSH 사전 조건을 반영했다.
 - 선택 이유: 이미지 digest를 workflow 산출물 파일과 원격 셸의 표준 입력에 섞지 않고 명시적 인자로 전달하면 참조 누락·부분 전달을 조기에 실패시킬 수 있다. legacy ECR 경로는 seed/보존 자원의 호환성을 위해 별도 경로로 남긴다.
@@ -70,6 +71,7 @@ PR의 배포 workflow 변경과 Terraform·운영 환경 변경이 서로 다른
 ## 8. 재발 방지 및 다음 확인
 
 - 재발 방지: CI의 운영 게시·배포 job과 `app-deploy.sh --image-refs` 호출 계약을 계약 테스트로 고정한다.
+- 재발 방지: raw `RepoDigests[0]`의 repository prefix를 신뢰하지 않고 `@` 뒤 `sha256` digest만 검증한 뒤 canonical Docker Hub ref를 구성하는 workflow dispatch 계약을 함께 테스트한다.
 - 재발 방지: 운영·성능 Terraform 인스턴스 타입과 runner/bootstrap 아키텍처를 같은 계약 테스트에서 확인한다.
 - 다음 확인: 로컬 변경을 원격 PR head에 push한 뒤 GitHub Actions backend build/test와 Docker Hub SSH workflow를 확인하고, 운영 EC2에서 `uname -m`, `docker image inspect`, 내부 health 및 rollback 결과를 기록한다.
 
