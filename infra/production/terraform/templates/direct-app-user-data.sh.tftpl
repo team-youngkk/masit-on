@@ -23,6 +23,5 @@ REQUIRE_SHARED_REDIS=true
 # 직접 경로에서는 Nginx 자신이 넣은 X-Forwarded-For만 신뢰한다. 외부 요청이
 # 보낸 X-Forwarded-For를 신뢰하면 로그인 rate-limit 출처를 위조할 수 있다.
 NGINX_TRUSTED_PROXY_CIDRS=127.0.0.1
-METRIC_ENVIRONMENT=production
 ENV
 chmod 0640 /etc/masiton/deployment.env

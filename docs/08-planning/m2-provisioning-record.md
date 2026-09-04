@@ -757,9 +757,9 @@ Basic Auth는 제한 공개 수단이며 관리자 인증을 대체하지 않는
 aws ssm get-parameter --profile masiton --name /masiton/access/basic-auth-password --with-decryption --query Parameter.Value --output text
 ```
 
-## 11. M2-10 CloudWatch 로그·지표·알람 (#49)
+## 11. M2-10 CloudWatch 로그·지표·알람 (#49, 2026-09-03 폐기)
 
-구성 일시 2026-07-30. **부분 완료다.** Slack 도달 시험만 남았고 이유는 11.4절에 있다.
+구성 일시 2026-07-30. **역사적 운영 기록이다.** 이 절의 CloudWatch·SNS·Lambda 관측성 구성은 2026-09-03 비용 절감 작업으로 폐기했고, 현재 운영 계약은 [ADR-OBS-002](../07-adr/quality/obs-002-local-operations-without-cloudwatch.md)다. 아래 당시 측정값과 검증 결과는 보존하되 현재 배포·권한·삭제 대상의 근거로 사용하지 않는다.
 
 ### 11.1. 로그 수집
 
@@ -769,7 +769,7 @@ aws ssm get-parameter --profile masiton --name /masiton/access/basic-auth-passwo
 | `/masiton/nginx/error` | `/var/log/nginx/error.log` | 14일 |
 | `/masiton/containers` | `/var/lib/docker/containers/*/*-json.log` | 14일 |
 
-수집은 CloudWatch Agent `1.300067.1`(arm64)이 한다. 설정은 [`deploy/cloudwatch/amazon-cloudwatch-agent.json`](../../deploy/cloudwatch/amazon-cloudwatch-agent.json)이고 호스트 지표로 `MemoryUsedPercent`·`DiskUsedPercent`를 함께 올린다.
+수집은 당시 CloudWatch Agent `1.300067.1`(arm64)이 했다. 설정은 `deploy/cloudwatch/amazon-cloudwatch-agent.json`이었고 호스트 지표로 `MemoryUsedPercent`·`DiskUsedPercent`를 함께 올렸다. 현재 해당 자산은 삭제됐다.
 
 **Nginx 로그 포맷을 JSON으로 바꿨다.** 배포판 기본 `main` 포맷에는 응답 시간이 없어 p95를 계산할 수 없었다. `status`와 `request_time`을 필드로 남겨 지표 필터가 읽는다. 요청·응답 본문은 남기지 않는다(ADR-OBS-001 11장).
 
@@ -787,7 +787,7 @@ aws ssm get-parameter --profile masiton --name /masiton/access/basic-auth-passwo
 | `masiton-server-error-count` | `{ $.status >= 500 }` | `masiton/nginx ServerErrorCount` |
 | `masiton-request-time` | `{ $.request_time >= 0 }` | `masiton/nginx RequestTimeSeconds` (값은 `$.request_time`) |
 
-상태 확인은 `/internal/**`이 인터넷에서 차단돼 외부 감시로 볼 수 없으므로 인스턴스 안에서 1분 주기로 호출해 지표로 올린다([`health-metrics.sh`](../../deploy/scripts/health-metrics.sh), `masiton-health-metrics.timer`). 정상 1 / 실패 0이고 `masiton/health` 네임스페이스에 `HealthLive`·`HealthReady`·`DependencyPostgres`·`DependencyRedis`로 남는다.
+상태 확인은 `/internal/**`이 인터넷에서 차단돼 외부 감시로 볼 수 없으므로 당시 인스턴스 안에서 1분 주기로 호출해 지표로 올렸다(`health-metrics.sh`, `masiton-health-metrics.timer`). 정상 1 / 실패 0이고 `masiton/health` 네임스페이스에 `HealthLive`·`HealthReady`·`DependencyPostgres`·`DependencyRedis`로 남겼다. 현재는 배포 Smoke와 운영자 점검이 내부 health endpoint를 직접 확인한다.
 
 ### 11.3. 알람
 
@@ -814,7 +814,7 @@ CloudWatch 알람 → SNS masiton-alerts → Lambda masiton-slack-notifier → S
 | SNS 토픽 | `arn:aws:sns:ap-northeast-2:711457211155:masiton-alerts` |
 | Lambda | `masiton-slack-notifier` (python3.13, arm64, 128 MB, 15초) |
 | 실행 역할 | `masiton-slack-notifier-role` (`AWSLambdaBasicExecutionRole` + `/masiton/alerts/*` 읽기) |
-| 코드 | [`deploy/lambda/slack_notifier.py`](../../deploy/lambda/slack_notifier.py). 표준 라이브러리와 boto3만 사용 |
+| 코드 | `deploy/lambda/slack_notifier.py` (현재 삭제된 역사적 자산). 표준 라이브러리와 boto3만 사용 |
 
 **Webhook URL은 코드와 환경 변수에 넣지 않고 Parameter Store SecureString `/masiton/alerts/slack-webhook-url`에서 읽는다.** URL 자체가 그 채널에 글을 쓸 수 있는 자격 증명이다.
 
@@ -869,7 +869,7 @@ PR 리뷰 지적으로 추가했다. 배포 계획 4.1절이 M2-10 알람에 포
 | `masiton-acm-certificate-expiry` | `AWS/CertificateManager DaysToExpiry` | 30일 | ACM 자동 갱신 실패 |
 | `masiton-installed-certificate-expiry` | `masiton/health InstalledCertificateDaysToExpiry` | 21일 | 갱신본 재배포 실패 |
 
-**ACM 지표만으로는 두 번째를 잡을 수 없다.** ACM이 갱신하면 그쪽 남은 일수는 늘어나고 설치본만 만료로 간다. 그래서 [`health-metrics.sh`](../../deploy/scripts/health-metrics.sh)가 Nginx에 설치된 인증서의 남은 일수를 지표로 올린다. 임계를 다르게 둬 두 알람의 원인이 구분된다. ACM 알람 없이 설치본 알람만 뜨면 재배포 경로 문제다.
+**ACM 지표만으로는 두 번째를 잡을 수 없다.** ACM이 갱신하면 그쪽 남은 일수는 늘어나고 설치본만 만료로 간다. 그래서 당시 `health-metrics.sh`가 Nginx에 설치된 인증서의 남은 일수를 지표로 올렸다. 임계를 다르게 둬 두 알람의 원인을 구분했다. 현재 이 알람 경로는 폐기됐다.
 
 인증서를 읽지 못하면 지표를 올리지 않는다. 0을 올리면 만료 임박으로 오탐하고 임의값을 올리면 실제 만료를 가린다. 지표가 끊기는 것은 `treat-missing-data=breaching`이 잡는다.
 

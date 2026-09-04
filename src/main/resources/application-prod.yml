@@ -77,7 +77,7 @@ server:
   #
   # loopback에만 바인딩해 그 경로를 네트워크 계층에서 없앤다. 8080에 접근하는 정당한
   # 호출자는 모두 같은 인스턴스의 127.0.0.1이다. Nginx upstream(deploy/nginx/masiton.click.conf),
-  # 프론트엔드 `API_BASE_URL`, 상태 지표 수집(deploy/scripts/health-metrics.sh)이 그렇다.
+  # 프론트엔드 `API_BASE_URL`, 배포 후 내부 health smoke가 그렇다.
   # `--network host`이므로 컨테이너 안의 127.0.0.1이 호스트 loopback과 같다.
   #
   # 환경 변수 placeholder를 두지 않는다. 운영에서 이 값을 넓히는 것은 설정 실수로 일어날
