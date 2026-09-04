@@ -214,6 +214,27 @@ class RuntimeDeploymentContractTest {
     }
 
     @Test
+    @DisplayName("workflow dispatch는 Docker Hub digest를 canonical ref로 정규화한다")
+    void ci_workflowDispatch는DockerHubDigest를CanonicalRef로정규화한다() throws IOException {
+        String workflow = read(CI);
+        String dispatchStartMarker = "          if [ \"$GITHUB_EVENT_NAME\" = \"workflow_dispatch\" ]; then";
+        String dispatchEndMarker = "          fi\n          if [[ ! \"$backend_ref\"";
+        int dispatchStart = workflow.indexOf(dispatchStartMarker);
+        int dispatchEnd = workflow.indexOf(dispatchEndMarker, dispatchStart + dispatchStartMarker.length());
+
+        assertThat(dispatchStart).isGreaterThanOrEqualTo(0);
+        assertThat(dispatchEnd).isGreaterThan(dispatchStart);
+        assertThat(workflow.substring(dispatchStart, dispatchEnd))
+                .contains("repo_digest")
+                .contains("docker image inspect --format '{{index .RepoDigests 0}}'")
+                .contains("repo_digest##*@")
+                .contains("if [[ ! \"$digest\" =~ ^sha256:[0-9a-f]{64}$ ]]; then")
+                .contains("ref=\"docker.io/${DOCKERHUB_NAMESPACE}/masiton-${name}@${digest}\"")
+                .contains("if [ \"$name\" = backend ]; then backend_ref=\"$ref\"; else frontend_ref=\"$ref\"; fi")
+                .doesNotContain("if [[ ! \"$ref\" =~");
+    }
+
+    @Test
     @DisplayName("운영 이미지와 SSH 배포는 main 브랜치에서만 실행된다")
     void ci_운영배포는main브랜치에서만실행된다() throws IOException {
         String workflow = read(CI);
