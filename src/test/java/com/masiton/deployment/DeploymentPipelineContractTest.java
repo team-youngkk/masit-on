@@ -121,13 +121,29 @@ class DeploymentPipelineContractTest {
 
         assertThat(imagesJob)
                 .contains("environment: production")
-                .contains("if docker pull \"$remote_tag\" >/dev/null 2>&1; then")
+                .contains("pull_output=" + "$" + "{docker pull \"$remote_tag\" 2>&1}")
+                .contains("*'manifest unknown'*")
                 .contains("기존 tag를 덮어쓰지 않으며")
                 .doesNotContain("actions/checkout@v4");
         assertThat(workflow)
                 .doesNotContain("actions/checkout@v4")
                 .doesNotContain("actions/setup-java@v4")
                 .doesNotContain("actions/upload-artifact@v4");
+    }
+
+    @Test
+    @DisplayName("두 이미지 태그를 모두 사전 확인한 뒤 push를 시작한다")
+    void 두이미지태그를모두사전확인한뒤push를시작한다() throws IOException {
+        String workflow = read(CI);
+        String publishStep = section(workflow, "      - name: 이미지 push와 digest 기록", "      - name: 게시 output 검증");
+
+        assertThat(publishStep)
+                .contains("pull_output=" + "$" + "{docker pull \"$remote_tag\" 2>&1}")
+                .contains("pull_output_lower=" + "$" + "{pull_output,,}")
+                .contains("Docker Hub에 tag 없음 확인: $remote_tag")
+                .contains("위 preflight loop가 backend·frontend 모두의 부재를 확인한 뒤에 push한다.");
+        assertThat(indexOfOrFail(publishStep, "pull_output=" + "$" + "{docker pull \"$remote_tag\" 2>&1}"))
+                .isLessThan(indexOfOrFail(publishStep, "docker push \"$remote_tag\""));
     }
 
     @Test

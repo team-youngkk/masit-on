@@ -505,15 +505,38 @@ jobs:
           }
           trap cleanup EXIT
 
+          # 두 태그의 존재 여부를 모두 확인한 뒤에야 첫 push를 시작한다.
+          # backend만 먼저 push하고 frontend 확인을 뒤에 하면 frontend 검증·push 실패
+          # 뒤에 backend immutable tag만 남아 같은 커밋의 재시도가 막힌다.
           for name in backend frontend; do
             repo="masiton-${name}"
-            local_image="${repo}:${IMAGE_TAG}"
             remote_tag="docker.io/${DOCKERHUB_NAMESPACE}/${repo}:${IMAGE_TAG}"
-            if docker pull "$remote_tag" >/dev/null 2>&1; then
+            set +e
+            pull_output=${docker pull "$remote_tag" 2>&1}
+            pull_status=$?
+            set -e
+            if [ "$pull_status" -eq 0 ]; then
               echo "Docker Hub에 이미 immutable tag가 있다: $remote_tag" >&2
               echo '기존 tag를 덮어쓰지 않으며, 재배포는 workflow_dispatch를 사용한다.' >&2
               exit 1
             fi
+            pull_output_lower=${pull_output,,}
+            case "$pull_output_lower" in
+              *'manifest unknown'*) ;;
+              *)
+                printf '%s\n' "$pull_output" >&2
+                echo "Docker Hub tag 존재 여부를 확인하지 못했다: $remote_tag" >&2
+                exit 1
+                ;;
+            esac
+            echo "Docker Hub에 tag 없음 확인: $remote_tag"
+          done
+
+          # 위 preflight loop가 backend·frontend 모두의 부재를 확인한 뒤에 push한다.
+          for name in backend frontend; do
+            repo="masiton-${name}"
+            local_image="${repo}:${IMAGE_TAG}"
+            remote_tag="docker.io/${DOCKERHUB_NAMESPACE}/${repo}:${IMAGE_TAG}"
             docker tag "$local_image" "$remote_tag"
             docker push "$remote_tag" >/dev/null
             docker pull "$remote_tag" >/dev/null

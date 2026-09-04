@@ -15,6 +15,7 @@ related_documents:
 
 ## 최신 기록
 
+- [PR #356 Docker Hub 두 이미지 게시 사전 검증](pr-356-dockerhub-push-atomicity-review.md)
 - [PR #344 Docker Hub 이미지와 운영 EC2 아키텍처 정합성](pr-344-dockerhub-ssh-architecture-review.md)
 - [운영 전환: PostgreSQL EC2·단일 앱 EC2 준비 적용](ops-2026-08-28-single-ec2-preparation.md)
 - [PR #308 외부 endpoint Origin 포트 검증](pr-308-external-endpoint-origin-port-review.md)
@@ -62,6 +63,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #356 Docker Hub 두 이미지 게시 사전 검증](pr-356-dockerhub-push-atomicity-review.md)
 - [PR #344 Docker Hub 이미지와 운영 EC2 아키텍처 정합성](pr-344-dockerhub-ssh-architecture-review.md)
 - [PR #308 외부 endpoint Origin 포트 검증](pr-308-external-endpoint-origin-port-review.md)
 - [PR #303 코스 찜 후보의 권한·범위 추적성](pr-303-course-favorite-review.md)
