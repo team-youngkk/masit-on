@@ -225,6 +225,56 @@ validate_digest_image_ref() {
   }
 }
 
+validate_ecr_digest_image_ref() {
+  local component="$1"
+  local reference="$2"
+  case "$component" in
+    backend)
+      [[ "$reference" =~ ^[0-9]{12}\.dkr\.ecr\.[a-z0-9-]+\.amazonaws\.com/masiton-backend@sha256:[0-9a-f]{64}$ ]] ;;
+    frontend)
+      [[ "$reference" =~ ^[0-9]{12}\.dkr\.ecr\.[a-z0-9-]+\.amazonaws\.com/masiton-frontend@sha256:[0-9a-f]{64}$ ]] ;;
+    *)
+      return 1 ;;
+  esac || {
+    echo "기존 ${component} rollback 이미지 참조가 허용된 Docker Hub 또는 ECR digest 형식이 아니다" >&2
+    return 1
+  }
+}
+
+prepare_ecr_rollback_image() {
+  local component="$1"
+  local reference="$2"
+  local registry ecr_region ecr_docker_config
+
+  if docker image inspect "$reference" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  registry="${reference%%/*}"
+  if [[ "$registry" =~ ^[0-9]{12}\.dkr\.ecr\.([a-z0-9-]+)\.amazonaws\.com$ ]]; then
+    ecr_region="${BASH_REMATCH[1]}"
+  else
+    echo "기존 ${component} rollback ECR registry 형식을 확인할 수 없다" >&2
+    return 1
+  fi
+
+  # ECR 자격 증명이 운영자의 기존 Docker config에 남지 않도록 fallback pull에만
+  # 사용하는 임시 config를 둔다. 비밀번호는 AWS CLI stdout에서 stdin으로만 흐른다.
+  ecr_docker_config=$(mktemp -d "$staged/ecr-docker-config.XXXXXX")
+  chmod 0700 "$ecr_docker_config"
+  if ! (
+    export DOCKER_CONFIG="$ecr_docker_config"
+    aws ecr get-login-password --region "$ecr_region" \
+      | docker login --username AWS --password-stdin "$registry" >/dev/null
+    docker pull "$reference" >/dev/null
+  ); then
+    rm -rf "$ecr_docker_config"
+    echo "기존 ${component} rollback ECR 이미지 login/pull 실패" >&2
+    return 1
+  fi
+  rm -rf "$ecr_docker_config"
+}
+
 if [ "$DEPLOYMENT_MODE" = ecr ]; then
   aws ecr get-login-password --region "$REGION" \
     | docker login --username AWS --password-stdin "$REGISTRY" >/dev/null
@@ -254,6 +304,7 @@ rollback() {
   local original_exit_code="${1:-$?}"
   set +e
   trap - ERR
+  trap '' INT TERM HUP
   [ "$rollback_enabled" = yes ] || return "$original_exit_code"
   echo '배포 후 health 실패: 이전 이미지·실행 산출물로 rollback을 시도한다' >&2
   local rollback_failed=no
@@ -261,10 +312,17 @@ rollback() {
   restore_asset() {
     local source="$1"
     local backup="$2"
+    local temporary
     if [ -f "$backup" ]; then
       install -d "$(dirname "$source")" || rollback_failed=yes
-      rm -f "$source" || rollback_failed=yes
-      cp -a "$backup" "$source" || rollback_failed=yes
+      temporary="${source}.rollback.$$"
+      rm -f "$temporary" || rollback_failed=yes
+      if cp -a "$backup" "$temporary" && mv -f "$temporary" "$source"; then
+        :
+      else
+        rm -f "$temporary" || true
+        rollback_failed=yes
+      fi
     elif [ -f "${backup}.missing" ]; then
       rm -f "$source" || rollback_failed=yes
     fi
@@ -317,6 +375,64 @@ rollback() {
     fi
   else
     systemctl disable --now amazon-cloudwatch-agent >/dev/null 2>&1 || true
+  fi
+
+  rollback_backend_health=no
+  rollback_frontend_health=no
+  for attempt in $(seq 1 12); do
+    if [ "$rollback_backend_health" != yes ] &&
+       curl -fsS -m 3 http://127.0.0.1:8080/internal/health/ready >/dev/null 2>&1; then
+      rollback_backend_health=yes
+    fi
+    if [ "$rollback_frontend_health" != yes ] &&
+       curl -fsS -m 3 http://127.0.0.1:3000/ >/dev/null 2>&1; then
+      rollback_frontend_health=yes
+    fi
+    if [ "$rollback_backend_health" = yes ] && [ "$rollback_frontend_health" = yes ]; then
+      break
+    fi
+    [ "$attempt" -lt 12 ] && sleep 5
+  done
+  rollback_dependencies_body="$staged/rollback-dependencies.json"
+  rollback_dependencies_status=$(curl -sS -m 5 -o "$rollback_dependencies_body" -w '%{http_code}' \
+    http://127.0.0.1:8080/internal/health/dependencies 2>/dev/null || printf '000')
+  if [ "$rollback_dependencies_status" = 200 ]; then
+    if ! python3 - "$rollback_dependencies_body" <<'PY'
+import json
+import sys
+
+try:
+    with open(sys.argv[1], encoding="utf-8") as response:
+        body = json.load(response)
+except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+    raise SystemExit(1)
+
+components = body.get("components") if isinstance(body, dict) else None
+if not isinstance(components, dict) or any(
+    not isinstance(component, dict) or component.get("status") != "UP"
+    for component in components.values()
+):
+    raise SystemExit(1)
+PY
+    then
+      echo 'rollback 후 dependency health 확인 실패' >&2
+      rollback_failed=yes
+    fi
+  else
+    echo "rollback 후 dependency health HTTP 실패: $rollback_dependencies_status" >&2
+    rollback_failed=yes
+  fi
+  if [ -x "$OPT_DIR/bin/runtime-health.sh" ] && ! "$OPT_DIR/bin/runtime-health.sh"; then
+    echo 'rollback 후 runtime health 확인 실패' >&2
+    rollback_failed=yes
+  fi
+  if command -v nginx >/dev/null 2>&1 && [ -f /etc/nginx/conf.d/masiton.click.conf ]; then
+    nginx -t >/dev/null 2>&1 || rollback_failed=yes
+    systemctl is-active --quiet nginx || rollback_failed=yes
+  fi
+  if [ "$rollback_backend_health" != yes ] || [ "$rollback_frontend_health" != yes ]; then
+    echo 'rollback 후 backend/frontend 최소 health 확인 실패' >&2
+    rollback_failed=yes
   fi
 
   if [ "$rollback_failed" = yes ]; then
@@ -413,24 +529,8 @@ if [ "$DEPLOYMENT_MODE" = digest ]; then
         validate_digest_image_ref "$component" "$previous_reference"
         docker pull "$previous_reference" >/dev/null
       else
-        case "$component" in
-          backend)
-            [[ "$previous_reference" =~ ^[0-9]{12}\.dkr\.ecr\.[a-z0-9-]+\.amazonaws\.com/masiton-backend@sha256:[0-9a-f]{64}$ ]] || {
-              echo '기존 backend rollback 이미지 참조가 허용된 Docker Hub 또는 ECR digest 형식이 아니다' >&2
-              exit 1
-            }
-            ;;
-          frontend)
-            [[ "$previous_reference" =~ ^[0-9]{12}\.dkr\.ecr\.[a-z0-9-]+\.amazonaws\.com/masiton-frontend@sha256:[0-9a-f]{64}$ ]] || {
-              echo '기존 frontend rollback 이미지 참조가 허용된 Docker Hub 또는 ECR digest 형식이 아니다' >&2
-              exit 1
-            }
-            ;;
-        esac
-        docker image inspect "$previous_reference" >/dev/null 2>&1 || {
-          echo "기존 ${component} rollback 이미지가 로컬에 없어 Docker Hub 전환을 시작할 수 없다" >&2
-          exit 1
-        }
+        validate_ecr_digest_image_ref "$component" "$previous_reference"
+        prepare_ecr_rollback_image "$component" "$previous_reference"
       fi
     fi
   done

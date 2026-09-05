@@ -487,6 +487,8 @@ jobs:
       - name: 이미지 push와 digest 기록
         id: publish
         env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_PUSH_TOKEN: ${{ secrets.DOCKERHUB_PUSH_TOKEN }}
           DOCKER_CONFIG: ${{ runner.temp }}/masiton-dockerhub-push
         run: |
           set -euo pipefail
@@ -499,37 +501,58 @@ jobs:
             echo '|---|---|---|---|'
           } >> "$GITHUB_STEP_SUMMARY"
 
+          registry_netrc="$RUNNER_TEMP/masiton-dockerhub-netrc"
+          auth_json="$RUNNER_TEMP/masiton-dockerhub-auth.json"
+          manifest_config="$RUNNER_TEMP/masiton-dockerhub-manifest.conf"
+          declare -A tag_states=()
+
           cleanup() {
             docker logout docker.io >/dev/null 2>&1 || true
             rm -rf "$DOCKER_CONFIG"
+            rm -f "$registry_netrc" "$auth_json" "$manifest_config"
           }
           trap cleanup EXIT
 
+          command -v curl >/dev/null
+          command -v jq >/dev/null
+          printf 'machine auth.docker.io login %s password %s\n' \
+            "$DOCKERHUB_USERNAME" "$DOCKERHUB_PUSH_TOKEN" > "$registry_netrc"
+          chmod 0600 "$registry_netrc"
+
+          dockerhub_tag_state() {
+            local repo="$1"
+            local registry_token manifest_status
+            curl --fail --silent --show-error --netrc-file "$registry_netrc" --get \
+              --data-urlencode 'service=registry.docker.io' \
+              --data-urlencode "scope=repository:${DOCKERHUB_NAMESPACE}/${repo}:pull" \
+              'https://auth.docker.io/token' > "$auth_json"
+            registry_token=$(jq -er '.token // empty' "$auth_json")
+            printf 'url = "https://registry-1.docker.io/v2/%s/%s/manifests/%s"\n' \
+              "$DOCKERHUB_NAMESPACE" "$repo" "$IMAGE_TAG" > "$manifest_config"
+            printf 'header = "Authorization: Bearer %s"\n' "$registry_token" >> "$manifest_config"
+            printf 'header = "Accept: application/vnd.docker.distribution.manifest.v2+json"\n' >> "$manifest_config"
+            manifest_status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+              --config "$manifest_config")
+            case "$manifest_status" in
+              200) echo existing ;;
+              404) echo missing ;;
+              *) echo "Docker Hub tag 조회 실패: HTTP $manifest_status" >&2; return 1 ;;
+            esac
+          }
+
           # 두 태그의 존재 여부를 모두 확인한 뒤에야 첫 push를 시작한다.
           # backend만 먼저 push하고 frontend 확인을 뒤에 하면 frontend 검증·push 실패
-          # 뒤에 backend immutable tag만 남아 같은 커밋의 재시도가 막힌다.
+          # 뒤에 backend immutable tag만 남는다. 이미 한쪽만 게시된 재시도는 기존 tag를
+          # 같은 이미지인지 검증해 재사용하고, 다른 쪽만 계속 게시할 수 있어야 한다.
           for name in backend frontend; do
             repo="masiton-${name}"
             remote_tag="docker.io/${DOCKERHUB_NAMESPACE}/${repo}:${IMAGE_TAG}"
-            set +e
-            pull_output=${docker pull "$remote_tag" 2>&1}
-            pull_status=$?
-            set -e
-            if [ "$pull_status" -eq 0 ]; then
-              echo "Docker Hub에 이미 immutable tag가 있다: $remote_tag" >&2
-              echo '기존 tag를 덮어쓰지 않으며, 재배포는 workflow_dispatch를 사용한다.' >&2
-              exit 1
-            fi
-            pull_output_lower=${pull_output,,}
-            case "$pull_output_lower" in
-              *'manifest unknown'*) ;;
-              *)
-                printf '%s\n' "$pull_output" >&2
-                echo "Docker Hub tag 존재 여부를 확인하지 못했다: $remote_tag" >&2
-                exit 1
-                ;;
+            tag_states["$name"]=$(dockerhub_tag_state "$repo")
+            case "${tag_states[$name]}" in
+              missing) echo "Docker Hub에 tag 없음 확인: $remote_tag" ;;
+              existing) echo "Docker Hub에 기존 tag 확인: $remote_tag" ;;
+              *) echo "Docker Hub tag 상태가 올바르지 않다: $remote_tag" >&2; exit 1 ;;
             esac
-            echo "Docker Hub에 tag 없음 확인: $remote_tag"
           done
 
           # 위 preflight loop가 backend·frontend 모두의 부재를 확인한 뒤에 push한다.
@@ -537,8 +560,20 @@ jobs:
             repo="masiton-${name}"
             local_image="${repo}:${IMAGE_TAG}"
             remote_tag="docker.io/${DOCKERHUB_NAMESPACE}/${repo}:${IMAGE_TAG}"
-            docker tag "$local_image" "$remote_tag"
-            docker push "$remote_tag" >/dev/null
+            local_id=$(docker image inspect "$local_image" --format '{{.Id}}')
+            if [ "${tag_states[$name]}" = existing ]; then
+              docker pull "$remote_tag" >/dev/null
+              existing_id=$(docker image inspect "$remote_tag" --format '{{.Id}}')
+              if [ "$local_id" != "$existing_id" ]; then
+                echo "${repo}: 동일 SHA tag가 다른 이미지 digest를 가리킨다" >&2
+                exit 1
+              fi
+              state='기존 digest 재사용'
+            else
+              docker tag "$local_image" "$remote_tag"
+              docker push "$remote_tag" >/dev/null
+              state='새로 게시'
+            fi
             docker pull "$remote_tag" >/dev/null
             repo_digest=$(docker image inspect --format '{{index .RepoDigests 0}}' "$remote_tag")
             digest="${repo_digest##*@}"
@@ -547,9 +582,9 @@ jobs:
               exit 1
             }
             reference="docker.io/${DOCKERHUB_NAMESPACE}/${repo}@${digest}"
-            echo "${repo}: push 완료 (${digest})"
+            echo "${repo}: ${state} (${digest})"
 
-            echo "| ${repo} | \`${IMAGE_TAG}\` | \`${digest}\` | 게시 완료 |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| ${repo} | \`${IMAGE_TAG}\` | \`${digest}\` | ${state} |" >> "$GITHUB_STEP_SUMMARY"
             echo "${name}_ref=${reference}" >> "$GITHUB_OUTPUT"
           done
 
@@ -812,6 +847,36 @@ jobs:
           printf 'key_file=%s\n' "$key_file" >> "$GITHUB_OUTPUT"
           printf 'known_hosts_file=%s\n' "$known_hosts_file" >> "$GITHUB_OUTPUT"
           trap - EXIT
+
+      - name: 원격 SSH 배포 preflight
+        env:
+          KEY_FILE: ${{ steps.ssh-files.outputs.key_file }}
+          KNOWN_HOSTS_FILE: ${{ steps.ssh-files.outputs.known_hosts_file }}
+        run: |
+          set -euo pipefail
+          ssh_opts=(
+            -o BatchMode=yes
+            -o IdentitiesOnly=yes
+            -o StrictHostKeyChecking=yes
+            -o UserKnownHostsFile="$KNOWN_HOSTS_FILE"
+            -o ConnectTimeout=10
+            -o ServerAliveInterval=15
+            -o ServerAliveCountMax=4
+            -i "$KEY_FILE"
+          )
+          remote="$PRODUCTION_SSH_USER@$PRODUCTION_HOST"
+          ssh "${ssh_opts[@]}" "$remote" "sudo -n bash -s" <<'REMOTE_PREFLIGHT'
+          set -euo pipefail
+          for command in bash tar sha256sum curl python3 docker aws systemctl sudo install find unzip stat; do
+            command -v "$command" >/dev/null || {
+              echo "원격 필수 명령이 없다: $command" >&2
+              exit 1
+            }
+          done
+          sudo -n true
+          sudo -n docker info >/dev/null
+          test "$(uname -m)" = x86_64
+          REMOTE_PREFLIGHT
 
       - name: bundle 업로드 및 원격 압축 해제
         id: remote-stage

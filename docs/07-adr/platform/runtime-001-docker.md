@@ -33,6 +33,19 @@ superseded_by: null
 
 Accepted
 
+## 현재 운영 기준 (2026-09-05)
+
+Docker 실행 결정은 유지하되, 운영 이미지의 저장소·전달 경계는 M2 당시 ECR 기준에서 Docker Hub + SSH 기준으로 전환되었다.
+
+- 운영은 x86_64 단일 앱 EC2 한 대에서 Nginx, backend, frontend 컨테이너를 실행한다. GitHub Actions `ubuntu-24.04` runner에서 같은 x86_64 대상으로 이미지를 빌드한다.
+- 운영 배포는 Docker Hub 커밋 SHA tag를 게시한 뒤 digest를 확인해 `docker.io/<namespace>/masiton-backend@sha256:...` 및 frontend 동등 ref를 SSH로 전달한다. 현재 운영 job에는 ECR pull, GitHub Actions OIDC, SSM Run Command가 없다. `app-deploy.sh`의 legacy ECR tag 모드는 보존된 호환 경로일 뿐 현재 SSH 운영 경로가 아니다.
+- Dockerfile의 `FROM`은 tag와 digest를 함께 고정하고, 운영 배포 ref도 digest로 고정한다. 이미지에는 평문 비밀값·`.env`를 넣지 않으며 비루트 실행과 취약점 검사를 유지한다.
+- workflow는 bundle을 원격 `/run/masiton/deploy-<run_id>` root-owned stage-root에 평탄화해 풀고 checksum과 필수 파일을 확인한다. stage-root preflight가 성공한 뒤에만 원격 Docker Hub 로그인과 활성 파일 교체를 시작한다. dispatch 이미지 digest 해석을 위한 runner 로그인은 이 preflight보다 먼저 수행된다.
+- SSH preflight는 public IPv4 host, SSH 사용자, private key·known_hosts 및 known_hosts 일치, 원격 Docker·`sudo -n`·AWS CLI·Python 3·`systemctl`·필수 명령과 x86_64 아키텍처를 확인한다.
+- 배포 스크립트는 두 이미지 pull과 기존 참조·실행 산출물 백업을 먼저 끝낸 뒤 활성 파일을 교체한다. 이후 backend ready, `db`·`mail`·`redis` dependency health, frontend 응답, runtime health와 Nginx smoke를 검사하고, 실패 또는 중단 시 이전 이미지·스크립트·systemd unit 및 Nginx 설정을 rollback한다. rollback 후 backend/frontend 최소 health도 확인한다.
+
+> 역사 구분: 아래 기존 절의 ECR 실행·용량·digest 목록은 M2 당시 운영 설계의 사실을 보존한 기록이다. 현재 저장소·배포 경계는 위 Docker Hub + SSH 기준을 따른다.
+
 ## 2. 결정 요약
 
 애플리케이션과 개발 의존 서비스의 재현 가능한 실행·배포 산출물은 Docker를 사용한다.
