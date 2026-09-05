@@ -36,7 +36,7 @@ related_documents:
 
 - 운영 토폴로지는 x86_64 단일 앱 EC2 한 대다. GitHub Actions `ubuntu-24.04`에서 backend/frontend 이미지를 빌드해 Docker Hub에 커밋 SHA tag로 게시하고, 확인된 digest ref와 bundle을 SSH로 전달한다. ECR·GitHub Actions OIDC·SSM Run Command·ARM은 현재 운영 경로가 아니다.
 - `workflow_dispatch`는 `main` ref에서만 운영 배포 job이 실행되며 `image_tag`는 40자리 소문자 SHA로 검증된다. dispatch guard가 입력 SHA가 `main`의 조상인지 자동 검사한다.
-- bundle은 원격 `/run/masiton/deploy-<run_id>` root-owned stage-root에 평탄화해 풀고 로컬·원격 필수 파일과 SHA-256을 확인한다. stage-root와 실행 경계가 일치한 뒤에만 실제 SSH 운영 smoke를 수행한다.
+- bundle은 원격 `/run/masiton/deploy/masiton-deploy.<무작위 6자>` root-owned stage-root에 평탄화해 풀고 로컬·원격 필수 파일과 SHA-256을 확인한다. bundle 업로드 전 원격 preflight와 stage-root 실행 경계가 일치한 뒤에만 실제 SSH 운영 smoke를 수행한다.
 - SSH preflight는 host·사용자·key·known_hosts와 원격 sudo·Docker·필수 명령·x86_64 아키텍처를 bundle 업로드 전에 확인한다.
 - `app-deploy.sh`의 운영 검증 기준은 두 digest 선행 pull, 기존 이미지·실행 산출물 백업, backend ready, `db`·`mail`·`redis` dependency health, frontend/runtime health 및 Nginx smoke다. 실패·중단 시 이전 산출물로 rollback한다.
 

@@ -121,9 +121,10 @@ class DeploymentPipelineContractTest {
 
         assertThat(imagesJob)
                 .contains("environment: production")
-                .contains("pull_output=" + "$" + "{docker pull \"$remote_tag\" 2>&1}")
-                .contains("*'manifest unknown'*")
-                .contains("기존 tag를 덮어쓰지 않으며")
+                .contains("dockerhub_tag_state()")
+                .contains("registry-1.docker.io")
+                .contains("404) echo missing")
+                .contains("state='기존 digest 재사용'")
                 .doesNotContain("actions/checkout@v4");
         assertThat(workflow)
                 .doesNotContain("actions/checkout@v4")
@@ -138,11 +139,12 @@ class DeploymentPipelineContractTest {
         String publishStep = section(workflow, "      - name: 이미지 push와 digest 기록", "      - name: 게시 output 검증");
 
         assertThat(publishStep)
-                .contains("pull_output=" + "$" + "{docker pull \"$remote_tag\" 2>&1}")
-                .contains("pull_output_lower=" + "$" + "{pull_output,,}")
+                .contains("tag_states[\"$name\"]=$(dockerhub_tag_state \"$repo\")")
+                .contains("existing) echo \"Docker Hub에 기존 tag 확인: $remote_tag\"")
+                .contains("missing) echo \"Docker Hub에 tag 없음 확인: $remote_tag\"")
                 .contains("Docker Hub에 tag 없음 확인: $remote_tag")
                 .contains("위 preflight loop가 backend·frontend 모두의 부재를 확인한 뒤에 push한다.");
-        assertThat(indexOfOrFail(publishStep, "pull_output=" + "$" + "{docker pull \"$remote_tag\" 2>&1}"))
+        assertThat(indexOfOrFail(publishStep, "tag_states[\"$name\"]=$(dockerhub_tag_state \"$repo\")"))
                 .isLessThan(indexOfOrFail(publishStep, "docker push \"$remote_tag\""));
     }
 

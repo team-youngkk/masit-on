@@ -40,7 +40,7 @@ Accepted
 - `main` push의 `images` job은 `environment: production` 승인 후 x86_64 `ubuntu-24.04` runner에서 backend/frontend 이미지를 빌드·검증하고 Docker Hub에 커밋 SHA tag로 게시한다. 게시 후 `sha256` digest를 추출해 canonical Docker Hub ref만 `ssh-deploy`에 전달한다. `latest`와 tag 기반 운영 실행 참조는 사용하지 않는다.
 - `ssh-deploy`는 `main` ref에서 push 또는 `workflow_dispatch`로만 실행되고 `environment: production` 승인을 거친다. AWS OIDC, ECR login, GitHub Actions의 SSM Run Command는 현재 운영 배포 job에 없다. EC2 runtime role의 Parameter Store·KMS·S3 조회 권한은 애플리케이션 runtime 용도로 남아 있으며 배포 인증과는 별개다.
 - `workflow_dispatch`는 `main`에서 실행하고 `image_tag` 또는 실행 SHA를 40자리 소문자 커밋 SHA로 검증한다. dispatch guard가 해당 SHA가 `main`의 조상인지 확인한 뒤, 프론트엔드 production dependency audit과 Docker Hub tag의 digest 확인을 수행한다.
-- bundle은 원격 `/run/masiton/deploy-<run_id>`를 root-owned stage-root로 삼고, archive entry도 stage-root 직하에 평탄화한다. 로컬·원격 필수 파일 목록과 checksum을 확인한 뒤 원격 Docker Hub 로그인과 배포를 시작한다. dispatch 이미지 digest 해석을 위한 runner 로그인은 이 preflight보다 먼저 수행된다.
+- bundle은 원격 `/run/masiton/deploy/masiton-deploy.<무작위 6자>`를 root-owned stage-root로 삼고, archive entry도 stage-root 직하에 평탄화한다. 원격 preflight와 로컬·원격 필수 파일 목록 및 checksum을 확인한 뒤 원격 Docker Hub 로그인과 배포를 시작한다. dispatch 이미지 digest 해석을 위한 runner 로그인은 이 preflight보다 먼저 수행된다.
 - SSH preflight는 public IPv4 host, SSH 사용자, private key·known_hosts 및 known_hosts 일치를 검사하고, bundle 업로드 전에 원격 Docker·`sudo -n`·AWS CLI·Python 3·`systemctl`·필수 명령과 x86_64 아키텍처를 확인한다.
 - 실제 앱 스크립트의 rollback/health 계약은 두 digest pull 선행, 이전 이미지·스크립트·unit 백업, 활성 교체 이후 `ERR`/signal rollback, backend ready·`db`/`mail`/`redis` dependency health·frontend·runtime health·Nginx smoke 검증이다. bundle 경계가 정렬되어 실행되기 전까지는 이 계약의 운영 smoke 증거를 완료로 기록하지 않는다.
 
