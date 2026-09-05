@@ -45,7 +45,7 @@ jobs:
     name: 추적 파일 RSA 개인키 검사
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: secret scan 회귀 테스트
         shell: pwsh
@@ -60,7 +60,7 @@ jobs:
     if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       # Redis user-data는 Terraform templatefile()과 Bash가 함께 해석한다.
       # 고정된 Terraform 버전으로 실제 렌더링 결과를 검사해 plan 단계의 보간
@@ -92,7 +92,7 @@ jobs:
     if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: 공유 Redis endpoint 셸 계약
         run: ./deploy/scripts/tests/redis-endpoint-contract-test.sh
@@ -104,7 +104,7 @@ jobs:
       # `21`처럼 major만 주면 setup-java가 최신 21.x를 고를 수 있어 저장소 변경 없이
       # CI 런타임이 달라진다. 패치까지 명시한다.
       # Gradle은 Wrapper만 사용하며 시스템 Gradle로 우회하지 않는다(CLAUDE.md 5절).
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
         with:
           distribution: temurin
           java-version: '21.0.12'
@@ -118,7 +118,7 @@ jobs:
       # 실패 원인을 PR에서 바로 확인할 수 있어야 게이트가 쓸모 있다.
       - name: 테스트 리포트 보관
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: backend-test-results
           path: |
@@ -131,7 +131,7 @@ jobs:
     if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       # ADR-CI-001 9·10절이 고정 런타임(Node 24.18.0)에서 프론트엔드 빌드를 요구한다.
       #
@@ -192,6 +192,19 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: ${{ steps.target.outputs.image_tag }}
+          fetch-depth: 0
+
+      - name: dispatch 대상이 main 조상인지 검증
+        env:
+          IMAGE_TAG: ${{ steps.target.outputs.image_tag }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor "$IMAGE_TAG" refs/remotes/origin/main; then
+            echo "배포 대상 커밋이 main의 조상이 아니다: $IMAGE_TAG" >&2
+            exit 1
+          fi
+          echo "배포 대상 커밋이 main의 조상임을 확인했다: $IMAGE_TAG"
 
       - name: 프로덕션 의존성 감사 (고정 런타임)
         run: |
@@ -231,7 +244,7 @@ jobs:
       DOCKERHUB_NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE }}
       IMAGE_TAG: ${{ github.sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       # ADR-RUNTIME-001 13절: 베이스 이미지가 명시 태그(운영은 digest)를 쓰는지 대조한다.
       # digest 없이 태그만 쓴 FROM이 하나라도 있으면 실패시킨다.
@@ -412,6 +425,18 @@ jobs:
             echo "비루트 실행 확인 (uid=$uid)"
           done
 
+      - name: 게시 전 이미지 플랫폼 검증
+        run: |
+          set -euo pipefail
+          for image in "masiton-backend:${IMAGE_TAG}" "masiton-frontend:${IMAGE_TAG}"; do
+            platform=$(docker image inspect --format '{{.Os}}/{{.Architecture}}' "$image")
+            [ "$platform" = 'linux/amd64' ] || {
+              echo "운영 이미지 플랫폼이 linux/amd64가 아니다: $image ($platform)" >&2
+              exit 1
+            }
+            echo "$image 플랫폼 확인: $platform"
+          done
+
       # ADR-RUNTIME-001 13절 취약점 검사.
       #
       # 레지스트리 게시 이후의 scan만으로는 게시 전 차단을 보장할 수 없다.
@@ -464,6 +489,8 @@ jobs:
       - name: 이미지 push와 digest 기록
         id: publish
         env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_PUSH_TOKEN: ${{ secrets.DOCKERHUB_PUSH_TOKEN }}
           DOCKER_CONFIG: ${{ runner.temp }}/masiton-dockerhub-push
         run: |
           set -euo pipefail
@@ -476,18 +503,79 @@ jobs:
             echo '|---|---|---|---|'
           } >> "$GITHUB_STEP_SUMMARY"
 
+          registry_netrc="$RUNNER_TEMP/masiton-dockerhub-netrc"
+          auth_json="$RUNNER_TEMP/masiton-dockerhub-auth.json"
+          manifest_config="$RUNNER_TEMP/masiton-dockerhub-manifest.conf"
+          declare -A tag_states=()
+
           cleanup() {
             docker logout docker.io >/dev/null 2>&1 || true
             rm -rf "$DOCKER_CONFIG"
+            rm -f "$registry_netrc" "$auth_json" "$manifest_config"
           }
           trap cleanup EXIT
 
+          command -v curl >/dev/null
+          command -v jq >/dev/null
+          printf 'machine auth.docker.io login %s password %s\n' \
+            "$DOCKERHUB_USERNAME" "$DOCKERHUB_PUSH_TOKEN" > "$registry_netrc"
+          chmod 0600 "$registry_netrc"
+
+          dockerhub_tag_state() {
+            local repo="$1"
+            local registry_token manifest_status
+            curl --fail --silent --show-error --netrc-file "$registry_netrc" --get \
+              --data-urlencode 'service=registry.docker.io' \
+              --data-urlencode "scope=repository:${DOCKERHUB_NAMESPACE}/${repo}:pull" \
+              'https://auth.docker.io/token' > "$auth_json"
+            registry_token=$(jq -er '.token // empty' "$auth_json")
+            printf 'url = "https://registry-1.docker.io/v2/%s/%s/manifests/%s"\n' \
+              "$DOCKERHUB_NAMESPACE" "$repo" "$IMAGE_TAG" > "$manifest_config"
+            printf 'header = "Authorization: Bearer %s"\n' "$registry_token" >> "$manifest_config"
+            printf 'header = "Accept: application/vnd.docker.distribution.manifest.v2+json"\n' >> "$manifest_config"
+            manifest_status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+              --config "$manifest_config")
+            case "$manifest_status" in
+              200) echo existing ;;
+              404) echo missing ;;
+              *) echo "Docker Hub tag 조회 실패: HTTP $manifest_status" >&2; return 1 ;;
+            esac
+          }
+
+          # 두 태그의 존재 여부를 모두 확인한 뒤에야 첫 push를 시작한다.
+          # backend만 먼저 push하고 frontend 확인을 뒤에 하면 frontend 검증·push 실패
+          # 뒤에 backend immutable tag만 남는다. 이미 한쪽만 게시된 재시도는 기존 tag를
+          # 같은 이미지인지 검증해 재사용하고, 다른 쪽만 계속 게시할 수 있어야 한다.
+          for name in backend frontend; do
+            repo="masiton-${name}"
+            remote_tag="docker.io/${DOCKERHUB_NAMESPACE}/${repo}:${IMAGE_TAG}"
+            tag_states["$name"]=$(dockerhub_tag_state "$repo")
+            case "${tag_states[$name]}" in
+              missing) echo "Docker Hub에 tag 없음 확인: $remote_tag" ;;
+              existing) echo "Docker Hub에 기존 tag 확인: $remote_tag" ;;
+              *) echo "Docker Hub tag 상태가 올바르지 않다: $remote_tag" >&2; exit 1 ;;
+            esac
+          done
+
+          # 위 preflight loop가 backend·frontend 모두의 부재를 확인한 뒤에 push한다.
           for name in backend frontend; do
             repo="masiton-${name}"
             local_image="${repo}:${IMAGE_TAG}"
             remote_tag="docker.io/${DOCKERHUB_NAMESPACE}/${repo}:${IMAGE_TAG}"
-            docker tag "$local_image" "$remote_tag"
-            docker push "$remote_tag" >/dev/null
+            local_id=$(docker image inspect "$local_image" --format '{{.Id}}')
+            if [ "${tag_states[$name]}" = existing ]; then
+              docker pull "$remote_tag" >/dev/null
+              existing_id=$(docker image inspect "$remote_tag" --format '{{.Id}}')
+              if [ "$local_id" != "$existing_id" ]; then
+                echo "${repo}: 동일 SHA tag가 다른 이미지 digest를 가리킨다" >&2
+                exit 1
+              fi
+              state='기존 digest 재사용'
+            else
+              docker tag "$local_image" "$remote_tag"
+              docker push "$remote_tag" >/dev/null
+              state='새로 게시'
+            fi
             docker pull "$remote_tag" >/dev/null
             repo_digest=$(docker image inspect --format '{{index .RepoDigests 0}}' "$remote_tag")
             digest="${repo_digest##*@}"
@@ -496,11 +584,34 @@ jobs:
               exit 1
             }
             reference="docker.io/${DOCKERHUB_NAMESPACE}/${repo}@${digest}"
-            echo "${repo}: push 완료 (${digest})"
+            echo "${repo}: ${state} (${digest})"
 
-            echo "| ${repo} | \`${IMAGE_TAG}\` | \`${digest}\` | 게시 완료 |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| ${repo} | \`${IMAGE_TAG}\` | \`${digest}\` | ${state} |" >> "$GITHUB_STEP_SUMMARY"
             echo "${name}_ref=${reference}" >> "$GITHUB_OUTPUT"
           done
+
+      - name: 게시 output 검증
+        env:
+          BACKEND_REF: ${{ steps.publish.outputs.backend_ref }}
+          FRONTEND_REF: ${{ steps.publish.outputs.frontend_ref }}
+        run: |
+          set -euo pipefail
+          validate_ref() {
+            local component="$1" reference="$2"
+            local prefix="docker.io/${DOCKERHUB_NAMESPACE}/masiton-${component}@sha256:"
+            case "$reference" in
+              "$prefix"*) ;;
+              *) echo "게시된 ${component} output이 비어 있거나 저장소가 다르다" >&2; return 1 ;;
+            esac
+            local digest="${reference#"$prefix"}"
+            [[ "$digest" =~ ^[0-9a-f]{64}$ ]] || {
+              echo "게시된 ${component} output의 digest가 올바르지 않다" >&2
+              return 1
+            }
+          }
+          validate_ref backend "$BACKEND_REF"
+          validate_ref frontend "$FRONTEND_REF"
+          echo 'backend/frontend 게시 output 검증 완료'
 
       - name: 로컬 Docker Hub 인증 정리
         if: always()
@@ -541,17 +652,10 @@ jobs:
       PUBLISHED_BACKEND_IMAGE_REF: ${{ needs.images.outputs.backend_ref }}
       PUBLISHED_FRONTEND_IMAGE_REF: ${{ needs.images.outputs.frontend_ref }}
     steps:
-      # rollback 실행도 당시 커밋의 배포 스크립트를 함께 사용한다.
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ env.IMAGE_TAG }}
-
-      - name: 배포 입력 및 이미지 digest 검증
-        id: resolve
+      - name: 배포 대상 SHA 기본 검증
+        id: target
         env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_PULL_TOKEN: ${{ secrets.DOCKERHUB_PULL_TOKEN }}
-          DOCKER_CONFIG: ${{ runner.temp }}/masiton-dockerhub-dispatch
+          IMAGE_TAG: ${{ github.event.inputs.image_tag || github.sha }}
         run: |
           set -euo pipefail
           case "$IMAGE_TAG" in
@@ -564,6 +668,37 @@ jobs:
             echo "커밋 SHA는 40자여야 한다 (match: ${#IMAGE_TAG}자): '$IMAGE_TAG'" >&2
             exit 1
           fi
+          printf 'image_tag=%s\n' "$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+
+      # rollback 실행도 당시 커밋의 배포 스크립트를 함께 사용한다.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ steps.target.outputs.image_tag }}
+          fetch-depth: 0
+
+      - name: dispatch 대상이 main 조상인지 검증
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          IMAGE_TAG: ${{ steps.target.outputs.image_tag }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor "$IMAGE_TAG" refs/remotes/origin/main; then
+            echo "배포 대상 커밋이 main의 조상이 아니다: $IMAGE_TAG" >&2
+            exit 1
+          fi
+          echo "배포 대상 커밋이 main의 조상임을 확인했다: $IMAGE_TAG"
+
+      - name: 배포 입력 및 이미지 digest 검증
+        id: resolve
+        env:
+          IMAGE_TAG: ${{ steps.target.outputs.image_tag }}
+          DEPLOYMENT_EVENT: ${{ github.event_name }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_PULL_TOKEN: ${{ secrets.DOCKERHUB_PULL_TOKEN }}
+          DOCKER_CONFIG: ${{ runner.temp }}/masiton-dockerhub-dispatch
+        run: |
+          set -euo pipefail
           if [[ ! "$DOCKERHUB_NAMESPACE" =~ ^[a-z0-9][a-z0-9_.-]{0,254}$ ]]; then
             echo "DOCKERHUB_NAMESPACE 형식이 올바르지 않다" >&2
             exit 1
@@ -578,7 +713,7 @@ jobs:
           fi
           backend_ref="$PUBLISHED_BACKEND_IMAGE_REF"
           frontend_ref="$PUBLISHED_FRONTEND_IMAGE_REF"
-          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+          if [ "$DEPLOYMENT_EVENT" = "workflow_dispatch" ]; then
             install -d -m 0700 "$DOCKER_CONFIG"
             cleanup() {
               docker logout docker.io >/dev/null 2>&1 || true
@@ -595,18 +730,42 @@ jobs:
                 echo "$name 이미지 digest를 확인하지 못했다" >&2
                 exit 1
               fi
+              platform=$(docker image inspect --format '{{.Os}}/{{.Architecture}}' "$image")
+              if [ "$platform" != 'linux/amd64' ]; then
+                echo "$name 이미지 플랫폼이 linux/amd64가 아니다: $platform" >&2
+                exit 1
+              fi
               ref="docker.io/${DOCKERHUB_NAMESPACE}/masiton-${name}@${digest}"
               if [ "$name" = backend ]; then backend_ref="$ref"; else frontend_ref="$ref"; fi
             done
-          fi
-          if [[ ! "$backend_ref" =~ ^docker[.]io/[a-z0-9][a-z0-9_.-]{0,254}/masiton-backend@sha256:[0-9a-f]{64}$ ]]; then
-            echo "backend 이미지 digest ref 형식이 올바르지 않다" >&2
+          elif [ "$DEPLOYMENT_EVENT" = "push" ]; then
+            [ -n "$backend_ref" ] || {
+              echo 'images job의 backend_ref output이 비어 있다. 이미지 게시 결과를 전달하지 못했다.' >&2
+              exit 1
+            }
+            [ -n "$frontend_ref" ] || {
+              echo 'images job의 frontend_ref output이 비어 있다. 이미지 게시 결과를 전달하지 못했다.' >&2
+              exit 1
+            }
+          else
+            echo "지원하지 않는 배포 이벤트다: $DEPLOYMENT_EVENT" >&2
             exit 1
           fi
-          if [[ ! "$frontend_ref" =~ ^docker[.]io/[a-z0-9][a-z0-9_.-]{0,254}/masiton-frontend@sha256:[0-9a-f]{64}$ ]]; then
-            echo "frontend 이미지 digest ref 형식이 올바르지 않다" >&2
-            exit 1
-          fi
+          validate_ref() {
+            local component="$1" reference="$2"
+            local prefix="docker.io/${DOCKERHUB_NAMESPACE}/masiton-${component}@sha256:"
+            case "$reference" in
+              "$prefix"*) ;;
+              *) echo "${component} 이미지 digest ref가 비어 있거나 허용된 저장소가 아니다" >&2; return 1 ;;
+            esac
+            local digest="${reference#"$prefix"}"
+            [[ "$digest" =~ ^[0-9a-f]{64}$ ]] || {
+              echo "${component} 이미지 digest ref 형식이 올바르지 않다" >&2
+              return 1
+            }
+          }
+          validate_ref backend "$backend_ref"
+          validate_ref frontend "$frontend_ref"
           if [ -z "$PRODUCTION_HOST" ] || [[ ! "$PRODUCTION_HOST" =~ ^([0-9]{1,3}[.]){3}[0-9]{1,3}$ ]]; then
             echo "PRODUCTION_HOST는 public IPv4 주소여야 한다" >&2
             exit 1
@@ -628,8 +787,8 @@ jobs:
             echo "PRODUCTION_SSH_USER 형식이 올바르지 않다" >&2
             exit 1
           fi
-          echo "backend_ref=$backend_ref" >> "$GITHUB_OUTPUT"
-          echo "frontend_ref=$frontend_ref" >> "$GITHUB_OUTPUT"
+          printf 'backend_ref=%s\n' "$backend_ref" >> "$GITHUB_OUTPUT"
+          printf 'frontend_ref=%s\n' "$frontend_ref" >> "$GITHUB_OUTPUT"
           echo "배포 대상: $PRODUCTION_HOST ($PRODUCTION_SSH_USER), 이미지 tag: $IMAGE_TAG"
 
       - name: 배포 bundle 생성
@@ -638,22 +797,28 @@ jobs:
           set -euo pipefail
           bundle="$RUNNER_TEMP/masiton-deploy-${GITHUB_RUN_ID}.tgz"
           tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner -czf "$bundle" \
-            deploy/scripts/app-deploy.sh \
-            deploy/scripts/dockerhub-app-deploy.sh \
-            deploy/scripts/app-run.sh \
-            deploy/scripts/app-secrets-render.sh \
-            deploy/scripts/runtime-health.sh \
-            deploy/scripts/observability-cleanup.sh \
-            deploy/scripts/nginx-install.sh \
-            deploy/scripts/nginx-smoke.sh \
-            deploy/scripts/tls-deploy-cert.sh \
-            deploy/app/masiton-backend.service \
-            deploy/app/masiton-frontend.service \
-            deploy/nginx/nginx.conf \
-            deploy/nginx/masiton.click.conf \
-            deploy/nginx/00-masiton-upgrade-map.conf \
-            deploy/nginx/masiton-tls-renew.service \
-            deploy/nginx/masiton-tls-renew.timer
+            -C "$GITHUB_WORKSPACE/deploy/scripts" \
+            app-deploy.sh dockerhub-app-deploy.sh app-run.sh app-secrets-render.sh \
+            runtime-health.sh observability-cleanup.sh \
+            nginx-install.sh nginx-smoke.sh tls-deploy-cert.sh \
+            -C "$GITHUB_WORKSPACE/deploy/app" \
+            masiton-backend.service masiton-frontend.service \
+            -C "$GITHUB_WORKSPACE/deploy/nginx" \
+            nginx.conf masiton.click.conf 00-masiton-upgrade-map.conf \
+            masiton-tls-renew.service masiton-tls-renew.timer
+          bundle_entries=$(tar -tzf "$bundle")
+          for entry in \
+            app-deploy.sh dockerhub-app-deploy.sh app-run.sh app-secrets-render.sh \
+            runtime-health.sh observability-cleanup.sh \
+            nginx-install.sh nginx-smoke.sh tls-deploy-cert.sh \
+            masiton-backend.service masiton-frontend.service \
+            nginx.conf masiton.click.conf 00-masiton-upgrade-map.conf \
+            masiton-tls-renew.service masiton-tls-renew.timer; do
+            if ! grep -Fqx "$entry" <<< "$bundle_entries"; then
+              echo "배포 bundle에 필요한 파일이 없거나 경로가 평탄화되지 않았다: $entry" >&2
+              exit 1
+            fi
+          done
           printf 'bundle=%s\n' "$bundle" >> "$GITHUB_OUTPUT"
           printf 'sha256=%s\n' "$(sha256sum "$bundle" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
 
@@ -670,14 +835,50 @@ jobs:
           fi
           key_file="$RUNNER_TEMP/masiton-production-key"
           known_hosts_file="$RUNNER_TEMP/masiton-production-known-hosts"
+          cleanup() {
+            rm -f -- "$key_file" "$known_hosts_file"
+          }
+          trap cleanup EXIT
           printf '%s' "$SSH_PRIVATE_KEY" > "$key_file"
           printf '%s\n' "$SSH_KNOWN_HOSTS" > "$known_hosts_file"
           chmod 0600 "$key_file" "$known_hosts_file"
           ssh-keygen -F "$PRODUCTION_HOST" -f "$known_hosts_file" >/dev/null
           printf 'key_file=%s\n' "$key_file" >> "$GITHUB_OUTPUT"
           printf 'known_hosts_file=%s\n' "$known_hosts_file" >> "$GITHUB_OUTPUT"
+          trap - EXIT
+
+      - name: 원격 SSH 배포 preflight
+        env:
+          KEY_FILE: ${{ steps.ssh-files.outputs.key_file }}
+          KNOWN_HOSTS_FILE: ${{ steps.ssh-files.outputs.known_hosts_file }}
+        run: |
+          set -euo pipefail
+          ssh_opts=(
+            -o BatchMode=yes
+            -o IdentitiesOnly=yes
+            -o StrictHostKeyChecking=yes
+            -o UserKnownHostsFile="$KNOWN_HOSTS_FILE"
+            -o ConnectTimeout=10
+            -o ServerAliveInterval=15
+            -o ServerAliveCountMax=4
+            -i "$KEY_FILE"
+          )
+          remote="$PRODUCTION_SSH_USER@$PRODUCTION_HOST"
+          ssh "${ssh_opts[@]}" "$remote" "sudo -n bash -s" <<'REMOTE_PREFLIGHT'
+          set -euo pipefail
+          for command in bash tar sha256sum curl python3 docker aws systemctl sudo install find unzip stat; do
+            command -v "$command" >/dev/null || {
+              echo "원격 필수 명령이 없다: $command" >&2
+              exit 1
+            }
+          done
+          sudo -n true
+          sudo -n docker info >/dev/null
+          test "$(uname -m)" = x86_64
+          REMOTE_PREFLIGHT
 
       - name: bundle 업로드 및 원격 압축 해제
+        id: remote-stage
         env:
           BUNDLE: ${{ steps.bundle.outputs.bundle }}
           BUNDLE_SHA256: ${{ steps.bundle.outputs.sha256 }}
@@ -696,16 +897,23 @@ jobs:
             -i "$KEY_FILE"
           )
           remote="$PRODUCTION_SSH_USER@$PRODUCTION_HOST"
-          remote_stage="/tmp/masiton-deploy-${GITHUB_RUN_ID}"
-          remote_archive="/tmp/masiton-deploy-${GITHUB_RUN_ID}.tgz"
-          ssh "${ssh_opts[@]}" "$remote" "sudo -n install -d -m 0750 '$remote_stage'"
-          scp "${ssh_opts[@]}" "$BUNDLE" "$remote:$remote_archive"
-          remote_sha256="$(ssh "${ssh_opts[@]}" "$remote" "sha256sum '$remote_archive' | awk '{print \$1}'")"
+          remote_stage="$(ssh "${ssh_opts[@]}" "$remote" "sudo -n test ! -L /run/masiton && sudo -n install -d -o root -g root -m 0711 /run/masiton && sudo -n test ! -L /run/masiton/deploy && sudo -n install -d -o root -g root -m 0700 /run/masiton/deploy && sudo -n mktemp -d -m 0700 -p /run/masiton/deploy masiton-deploy.XXXXXX")"
+          [[ "$remote_stage" =~ ^/run/masiton/deploy/masiton-deploy\.[A-Za-z0-9]{6}$ ]] || {
+            echo "원격 stage 경로가 예상한 root 임시 디렉터리가 아니다: $remote_stage" >&2
+            exit 1
+          }
+          printf 'path=%s\n' "$remote_stage" >> "$GITHUB_OUTPUT"
+          remote_archive="$remote_stage/payload.tgz"
+          # archive는 일반 SSH 사용자 소유의 /tmp에 먼저 만들지 않는다. root가
+          # 0700 stage 안의 파일을 직접 열어 쓰게 해 checksum 확인과 root tar
+          # 추출 사이에 같은 계정이 archive를 바꿀 수 있는 TOCTOU를 차단한다.
+          ssh "${ssh_opts[@]}" "$remote" "sudo -n install -d -o root -g root -m 0700 '$remote_stage' && sudo -n tee '$remote_archive' >/dev/null" < "$BUNDLE"
+          remote_sha256="$(ssh "${ssh_opts[@]}" "$remote" "sudo -n sha256sum '$remote_archive' | awk '{print \$1}'")"
           if [ "$remote_sha256" != "$BUNDLE_SHA256" ]; then
             echo "원격 bundle checksum이 다르다: $remote_sha256 != $BUNDLE_SHA256" >&2
             exit 1
           fi
-          ssh "${ssh_opts[@]}" "$remote" "sudo -n install -m 0600 '$remote_archive' '$remote_stage/payload.tgz' && sudo -n rm -f '$remote_archive' && sudo -n tar -xzf '$remote_stage/payload.tgz' -C '$remote_stage' && sudo -n rm -f '$remote_stage/payload.tgz' && sudo -n find '$remote_stage' -maxdepth 1 -type f -name '*.sh' -exec chmod 0750 {} +"
+          ssh "${ssh_opts[@]}" "$remote" "sudo -n tar --extract --gzip --file '$remote_archive' --directory '$remote_stage' --no-same-owner --no-same-permissions && sudo -n rm -f '$remote_archive' && sudo -n find '$remote_stage' -maxdepth 1 -type f -name '*.sh' -exec chmod 0750 {} + && sudo -n test -x '$remote_stage/dockerhub-app-deploy.sh' && sudo -n test -x '$remote_stage/app-deploy.sh' && sudo -n test -x '$remote_stage/observability-cleanup.sh' && sudo -n test -f '$remote_stage/nginx-install.sh'"
 
       - name: 원격 Docker Hub 로그인과 애플리케이션 배포
         env:
@@ -713,6 +921,7 @@ jobs:
           DOCKERHUB_PULL_TOKEN: ${{ secrets.DOCKERHUB_PULL_TOKEN }}
           KEY_FILE: ${{ steps.ssh-files.outputs.key_file }}
           KNOWN_HOSTS_FILE: ${{ steps.ssh-files.outputs.known_hosts_file }}
+          REMOTE_STAGE: ${{ steps.remote-stage.outputs.path }}
           BACKEND_IMAGE_REF: ${{ steps.resolve.outputs.backend_ref }}
           FRONTEND_IMAGE_REF: ${{ steps.resolve.outputs.frontend_ref }}
         run: |
@@ -728,8 +937,9 @@ jobs:
             -i "$KEY_FILE"
           )
           remote="$PRODUCTION_SSH_USER@$PRODUCTION_HOST"
-          remote_stage="/tmp/masiton-deploy-${GITHUB_RUN_ID}"
-          printf '%s' "$DOCKERHUB_PULL_TOKEN" | ssh "${ssh_opts[@]}" "$remote" "sudo -n '$remote_stage/dockerhub-app-deploy.sh' '$DOCKERHUB_USERNAME' '$BACKEND_IMAGE_REF' '$FRONTEND_IMAGE_REF' '$remote_stage'"
+          remote_stage="$REMOTE_STAGE"
+          [[ "$remote_stage" =~ ^/run/masiton/deploy/masiton-deploy\.[A-Za-z0-9]{6}$ ]] || { echo '원격 stage output이 올바르지 않다' >&2; exit 1; }
+          printf '%s' "$DOCKERHUB_PULL_TOKEN" | ssh "${ssh_opts[@]}" "$remote" "sudo -n '$remote_stage/dockerhub-app-deploy.sh' '$DOCKERHUB_USERNAME' '$DOCKERHUB_NAMESPACE' '$BACKEND_IMAGE_REF' '$FRONTEND_IMAGE_REF' '$remote_stage'"
           {
             echo '## 운영 배포'
             echo
@@ -745,11 +955,16 @@ jobs:
         env:
           KEY_FILE: ${{ steps.ssh-files.outputs.key_file }}
           KNOWN_HOSTS_FILE: ${{ steps.ssh-files.outputs.known_hosts_file }}
+          REMOTE_STAGE: ${{ steps.remote-stage.outputs.path }}
         run: |
           set -euo pipefail
-          if [ -z "$KEY_FILE" ] || [ ! -f "$KEY_FILE" ]; then
+          if [ -z "$KEY_FILE" ] || [ ! -f "$KEY_FILE" ] || [ -z "$REMOTE_STAGE" ]; then
             exit 0
           fi
+          [[ "$REMOTE_STAGE" =~ ^/run/masiton/deploy/masiton-deploy\.[A-Za-z0-9]{6}$ ]] || {
+            echo '원격 stage output이 올바르지 않아 정리를 중단한다' >&2
+            exit 1
+          }
           ssh_opts=(
             -o BatchMode=yes
             -o IdentitiesOnly=yes
@@ -761,6 +976,15 @@ jobs:
             -i "$KEY_FILE"
           )
           remote="$PRODUCTION_SSH_USER@$PRODUCTION_HOST"
-          remote_stage="/tmp/masiton-deploy-${GITHUB_RUN_ID}"
-          remote_archive="/tmp/masiton-deploy-${GITHUB_RUN_ID}.tgz"
-          ssh "${ssh_opts[@]}" "$remote" "sudo -n rm -rf -- '$remote_stage' '$remote_archive'" || echo '원격 임시 파일 정리에 실패했다' >&2
+          remote_stage="$REMOTE_STAGE"
+          ssh "${ssh_opts[@]}" "$remote" "sudo -n rm -rf -- '$remote_stage'" || echo '원격 임시 파일 정리에 실패했다' >&2
+
+      - name: 로컬 SSH 비밀 파일 정리
+        if: always()
+        env:
+          KEY_FILE: ${{ steps.ssh-files.outputs.key_file || format('{0}/masiton-production-key', runner.temp) }}
+          KNOWN_HOSTS_FILE: ${{ steps.ssh-files.outputs.known_hosts_file || format('{0}/masiton-production-known-hosts', runner.temp) }}
+        run: |
+          set -euo pipefail
+          [ -z "$KEY_FILE" ] || rm -f -- "$KEY_FILE"
+          [ -z "$KNOWN_HOSTS_FILE" ] || rm -f -- "$KNOWN_HOSTS_FILE"

@@ -166,7 +166,7 @@ class RuntimeDeploymentContractTest {
         assertThat(deploy).contains("observability-cleanup.sh");
         assertThat(bootstrap).contains("observability-cleanup.sh");
         assertThat(hook).contains("observability-cleanup.sh");
-        assertThat(workflow).contains("deploy/scripts/observability-cleanup.sh");
+        assertThat(workflow).contains("observability-cleanup.sh");
         assertThat(observabilityCleanup)
                 .contains("masiton-health-metrics.timer")
                 .contains("amazon-cloudwatch-agent.service")
@@ -195,9 +195,10 @@ class RuntimeDeploymentContractTest {
                 .contains("--password-stdin")
                 .contains("docker.io/")
                 .contains("@sha256:")
-                .contains("deploy/scripts/app-deploy.sh")
-                .contains("deploy/scripts/dockerhub-app-deploy.sh")
+                .contains("app-deploy.sh")
+                .contains("dockerhub-app-deploy.sh")
                 .contains("environment: production")
+                .contains("'$DOCKERHUB_USERNAME' '$DOCKERHUB_NAMESPACE' '$BACKEND_IMAGE_REF' '$FRONTEND_IMAGE_REF'")
                 .doesNotContain("deployment_target:")
                 .doesNotContain("instance_id:")
                 .doesNotContain("INSTANCE_ID:")
@@ -210,6 +211,8 @@ class RuntimeDeploymentContractTest {
                 .doesNotContain("ssm get-command-invocation")
                 .doesNotContain("ssm cancel-command")
                 .doesNotContain("SSM_POINTER");
+        assertThat(workflow.indexOf("app-deploy.sh dockerhub-app-deploy.sh"))
+                .isLessThan(workflow.indexOf("observability-cleanup.sh"));
         assertThat(workflow).contains("ci-production-deploy");
     }
 
@@ -217,8 +220,8 @@ class RuntimeDeploymentContractTest {
     @DisplayName("workflow dispatch는 Docker Hub digest를 canonical ref로 정규화한다")
     void ci_workflowDispatch는DockerHubDigest를CanonicalRef로정규화한다() throws IOException {
         String workflow = read(CI);
-        String dispatchStartMarker = "          if [ \"$GITHUB_EVENT_NAME\" = \"workflow_dispatch\" ]; then";
-        String dispatchEndMarker = "          fi\n          if [[ ! \"$backend_ref\"";
+        String dispatchStartMarker = "          if [ \"$DEPLOYMENT_EVENT\" = \"workflow_dispatch\" ]; then";
+        String dispatchEndMarker = "          elif [ \"$DEPLOYMENT_EVENT\" = \"push\" ]; then";
         int dispatchStart = workflow.indexOf(dispatchStartMarker);
         int dispatchEnd = workflow.indexOf(dispatchEndMarker, dispatchStart + dispatchStartMarker.length());
 
@@ -229,9 +232,41 @@ class RuntimeDeploymentContractTest {
                 .contains("docker image inspect --format '{{index .RepoDigests 0}}'")
                 .contains("repo_digest##*@")
                 .contains("if [[ ! \"$digest\" =~ ^sha256:[0-9a-f]{64}$ ]]; then")
+                .contains("docker image inspect --format '{{.Os}}/{{.Architecture}}'")
+                .contains("[ \"$platform\" != 'linux/amd64' ]")
                 .contains("ref=\"docker.io/${DOCKERHUB_NAMESPACE}/masiton-${name}@${digest}\"")
                 .contains("if [ \"$name\" = backend ]; then backend_ref=\"$ref\"; else frontend_ref=\"$ref\"; fi")
                 .doesNotContain("if [[ ! \"$ref\" =~");
+        assertThat(workflow)
+                .contains("DEPLOYMENT_EVENT: ${{ github.event_name }}")
+                .contains("images job의 backend_ref output이 비어 있다")
+                .contains("images job의 frontend_ref output이 비어 있다")
+                .contains("git merge-base --is-ancestor \"$IMAGE_TAG\" refs/remotes/origin/main")
+                .contains("fetch-depth: 0");
+    }
+
+    @Test
+    @DisplayName("운영 배포 bundle은 원격 stage 루트에 필요한 산출물을 둔다")
+    void ci_운영배포Bundle은원격Stage루트에산출물을둔다() throws IOException {
+        String workflow = read(CI);
+        String bundleStep = workflow.substring(workflow.indexOf("      - name: 배포 bundle 생성"),
+                workflow.indexOf("      - name: SSH key와 known_hosts 준비"));
+
+        assertThat(bundleStep)
+                .contains("-C \"$GITHUB_WORKSPACE/deploy/scripts\"")
+                .contains("-C \"$GITHUB_WORKSPACE/deploy/app\"")
+                .contains("-C \"$GITHUB_WORKSPACE/deploy/nginx\"")
+                .contains("observability-cleanup.sh")
+                .contains("bundle_entries=$(tar -tzf \"$bundle\")")
+                .contains("배포 bundle에 필요한 파일이 없거나 경로가 평탄화되지 않았다")
+                .doesNotContain("deploy/scripts/app-deploy.sh");
+        assertThat(workflow)
+                .contains("sudo -n test -x '$remote_stage/dockerhub-app-deploy.sh'")
+                .contains("sudo -n test -x '$remote_stage/app-deploy.sh'")
+                .contains("sudo -n test -x '$remote_stage/observability-cleanup.sh'")
+                .doesNotContain("cloudwatch-install.sh")
+                .doesNotContain("health-metrics.sh")
+                .doesNotContain("amazon-cloudwatch-agent.json");
     }
 
     @Test
