@@ -15,7 +15,7 @@ related_documents:
 | PR | [#356 Docker Hub SSH 배포 파이프라인 하드닝](https://github.com/team-youngkk/masit-on/pull/356) |
 | 작성자 | w00lam |
 | 처리 일자 | 2026-09-05 |
-| 범위 | P1 변경 요청 1건: backend·frontend Docker Hub tag 부분 게시 방지 |
+| 범위 | P1 변경 요청과 후속 P2 문서 정정: backend·frontend Docker Hub tag 부분 게시 재시도와 실제 동작 기록 |
 | 주 문제 유형 | 배포 |
 | 기존 기록 | [PR #344 Docker Hub 이미지와 운영 EC2 아키텍처 정합성](pr-344-dockerhub-ssh-architecture-review.md)을 확인했다. 해당 기록은 digest·SSH·CPU 아키텍처 경계를 다루지만 두 이미지 tag의 사전 존재 확인 순서는 다루지 않아, 이번 P1을 별도 결함으로 기록한다. |
 
@@ -23,20 +23,21 @@ related_documents:
 
 | 스레드 | 요청 요약 | 문제 유형 | 판단 | 처리 결과 | 근거/검증 |
 |---|---|---|---|---|---|
-| [P1 두 이미지의 부분 게시](https://github.com/team-youngkk/masit-on/pull/356#pullrequestreview-5115378602) | backend push 뒤 frontend push 또는 digest 확인이 실패하면 backend immutable tag만 남아 같은 tag 재시도가 막힌다. 두 tag의 부재를 모두 확인한 뒤 push를 시작한다. | 배포 | 수정 필요 | publish step을 tag preflight loop와 push loop로 분리하고, tag 존재 확인 오류는 fail-closed로 중단한다. | DeploymentPipelineContractTest의 사전 검증 순서 회귀 테스트 통과, 배포 계약 테스트 전체 통과 |
+| [P1 두 이미지의 부분 게시](https://github.com/team-youngkk/masit-on/pull/356#pullrequestreview-5115378602) | backend push 뒤 frontend push 또는 digest 확인이 실패하면 backend immutable tag만 남아 같은 tag 재시도가 막힌다. 두 tag의 부재를 모두 확인한 뒤 push를 시작한다. | 배포 | 수정 필요 | publish step을 tag preflight loop와 push loop로 분리하고, 기존 tag는 이미지 ID 검증 후 재사용하며, tag 존재 확인 오류는 fail-closed로 중단한다. | DeploymentPipelineContractTest의 사전 검증·idempotent 재시도 회귀 테스트 통과, 배포 계약 테스트 전체 통과 |
+| [P2 기존 tag 처리 문서 정정](https://github.com/team-youngkk/masit-on/pull/356) | workflow는 동일 이미지 ID의 기존 tag를 재사용하고 누락된 이미지만 게시하지만, 기존 문서는 tag 하나라도 있으면 중단한다고 설명했다. | 문서 | 수정 필요 | 부분 게시 후 재시도 시나리오와 동일 이미지 ID 검증·재사용 동작을 이 기록에 반영했다. | 현재 workflow와 문서의 tag 상태 분기 대조 |
 
 ## 3. 문제 현상과 발생 조건
 
 - 오류 메시지: 없음. 리뷰에서 지적한 부분 게시 시나리오다.
 - 발생 환경: GitHub Actions ubuntu-24.04의 main push 이미지 게시 job, Docker Hub immutable commit-SHA tag
 - 재현 조건: backend tag가 아직 없음을 확인한 직후 backend push가 성공하고, frontend의 push 또는 digest 확인이 실패하는 경우
-- 실제 결과: Docker Hub에 backend tag만 남고 frontend digest ref가 생성되지 않는다. 같은 commit-SHA로 재시도하면 backend immutable tag 존재 검사에서 중단된다.
-- 기대 결과: backend·frontend 두 tag가 모두 없음을 확인하기 전에는 어느 이미지도 push하지 않는다. 하나라도 이미 존재하거나 존재 여부 확인이 실패하면 push를 시작하지 않는다.
+- 실제 결과(수정 전): Docker Hub에 backend tag만 남고 frontend digest ref가 생성되지 않았다. 같은 commit-SHA로 재시도하면 backend immutable tag 존재 검사에서 중단됐다.
+- 기대 결과: backend·frontend 두 tag 상태를 먼저 확인하고, 이미 존재하는 tag는 해당 이미지 ID가 현재 빌드와 같은지 검증한 뒤 재사용한다. 누락된 tag만 게시해 부분 게시 뒤에도 재시도할 수 있어야 하며, 이미지 ID가 다르거나 존재 여부 확인이 실패하면 게시를 중단한다.
 - 영향 범위: 이미지 게시 결과의 불완전성, 같은 커밋 재시도, 이후 SSH 배포 입력의 digest ref 생성과 운영 배포
 
 ## 4. 근본 원인
 
-기존 publish step은 backend와 frontend를 한 loop에서 순차 처리했다. 각 반복에서 해당 tag만 확인한 뒤 즉시 tag·push·digest 조회를 수행했기 때문에, frontend의 사전 확인이 backend push 이후로 밀렸다. Docker Hub tag를 immutable 정책으로 운영하므로 backend tag를 자동 삭제해 복구하는 대안도 허용되지 않는다.
+기존 publish step은 backend와 frontend를 한 loop에서 순차 처리했다. 각 반복에서 해당 tag만 확인한 뒤 즉시 tag·push·digest 조회를 수행했기 때문에, frontend의 사전 확인이 backend push 이후로 밀렸다. Docker Hub tag를 immutable 정책으로 운영하므로 backend tag를 자동 삭제해 복구하는 대안도 허용되지 않는다. 또한 기존 문서는 tag 존재 시 무조건 중단한다고 설명해, 동일 이미지 ID tag를 검증 후 재사용하는 실제 재시도 정책과 불일치했다.
 
 ## 5. 확인 및 시도
 
@@ -44,13 +45,14 @@ related_documents:
 |---|---|---|
 | 기존 PR #344 트러블슈팅 기록 확인 | digest canonical ref·SSH 전달·아키텍처 정합성은 기록돼 있었지만 두 이미지 게시 순서 기록은 없었다. | 이번 P1은 별도 배포 결함으로 기록한다. |
 | 현재 CI publish step의 loop 순서 확인 | 각 이미지의 tag 확인과 push가 같은 loop에 있어 backend push 전에 frontend tag를 확인하지 않았다. | 두 단계 loop로 분리한다. |
+| 부분 게시 재시도 경로 확인 | immutable tag가 이미 있으면 Docker Hub manifest와 현재 로컬 이미지 ID를 비교하고, 같을 때만 기존 tag를 재사용한다. 누락된 tag는 별도로 게시한다. | 동일 이미지 ID 재사용을 문서와 계약 테스트에 반영한다. |
 | non-existent tag 조회 결과를 manifest unknown과 그 밖의 오류로 구분 | manifest unknown만 tag 부재로 인정하고 인증·네트워크 등 다른 오류는 게시 중단 대상으로 정했다. | 존재 여부를 확인하지 못한 상태에서 push하지 않도록 fail-closed를 적용한다. |
 | 배포 계약 테스트 추가 | preflight 조회가 첫 push보다 앞서는 계약을 고정했다. | 코드 변경과 함께 회귀 테스트를 커밋한다. |
 
 ## 6. 최종 해결
 
-- 변경 내용: 두 이미지 tag를 먼저 조회하는 preflight loop를 추가했다. 조회 성공은 기존 immutable tag로 판단해 중단하고, 실패 응답은 manifest unknown일 때만 부재로 인정한다. 두 tag 검증이 모두 끝난 뒤 별도의 loop에서 tag·push·digest 조회를 수행한다.
-- 선택 이유: 두 이미지가 모두 게시 가능한 상태인지 먼저 확인해 검증 순서 때문에 발생하는 부분 게시 가능성을 제거한다. immutable tag를 삭제하는 복구 방식은 이력 보존과 권한 경계를 훼손하므로 선택하지 않았다.
+- 변경 내용: 두 이미지 tag를 먼저 조회하는 preflight loop를 추가했다. 조회 성공은 기존 tag 상태로 기록하고, 실패 응답은 manifest unknown일 때만 부재로 인정한다. 두 tag 상태 확인이 모두 끝난 뒤 별도의 loop에서 기존 tag는 이미지 ID를 검증해 재사용하고, 누락된 tag만 tag·push·digest 조회를 수행한다. 다른 이미지가 가리키는 immutable tag이거나 인증·네트워크 오류가 발생하면 fail-closed로 중단한다.
+- 선택 이유: 두 이미지 상태를 모두 먼저 확인해 검증 순서로 인한 부분 게시 가능성을 줄이고, push 이후 실패해도 동일 이미지 ID의 기존 tag를 재사용해 남은 이미지를 게시할 수 있게 한다. immutable tag를 삭제하는 복구 방식은 이력 보존과 권한 경계를 훼손하므로 선택하지 않았다.
 - 변경 파일: .github/workflows/ci.yml, src/test/java/com/masiton/deployment/DeploymentPipelineContractTest.java
 - 고려한 대안: backend tag를 먼저 push한 뒤 frontend 실패 시 Docker Hub tag를 삭제하는 방법은 immutable 정책과 최소 권한 원칙에 맞지 않아 채택하지 않았다.
 
@@ -58,15 +60,15 @@ related_documents:
 
 | 검증 | 결과 | 확인한 내용 |
 |---|---|---|
-| .\gradlew.bat test --tests 'com.masiton.deployment.*' --no-daemon --rerun-tasks --console=plain | 통과 | 배포 계약 테스트를 포함한 deployment 패키지 테스트가 BUILD SUCCESSFUL로 완료됐다. 신규 두 이미지 preflight 순서 테스트도 통과했다. |
+| .\gradlew.bat --no-daemon test --tests 'com.masiton.deployment.*' | 통과 | deployment 패키지 41개 테스트가 BUILD SUCCESSFUL로 완료됐다. 두 이미지 preflight·idempotent 재시도와 최신 운영 전환 계약도 통과했다. |
 | ruby YAML parse for ci.yml and performance.yml | 통과 | GitHub Actions YAML 두 파일을 파싱했다. |
-| Git Bash bash -n app-deploy.sh dockerhub-app-deploy.sh nginx-install.sh cloudwatch-install.sh | 통과 | 변경과 연관된 운영 셸 문법을 확인했다. |
+| Git Bash bash -n app-deploy.sh dockerhub-app-deploy.sh nginx-install.sh observability-cleanup.sh | 통과 | 변경과 연관된 운영 셸 문법을 확인했다. |
 | git diff --check | 통과 | 변경 diff에 whitespace 오류가 없다. |
 | Gradle Wrapper sandbox 실행 | 실패 후 재시도 통과 | 초기 실행은 샌드박스 네트워크 차단으로 Gradle 8.14.3 다운로드에 실패했다. 외부 네트워크 권한으로 같은 명령을 재실행해 통과했다. |
 
 ## 8. 재발 방지 및 다음 확인
 
-- 재발 방지: DeploymentPipelineContractTest가 모든 tag preflight 조회가 첫 docker push보다 앞서는 순서를 고정한다. manifest unknown 외 조회 오류는 게시 중단으로 처리한다.
+- 재발 방지: DeploymentPipelineContractTest가 모든 tag preflight 조회가 첫 docker push보다 앞서는 순서와, 기존 이미지 ID 검증 후 재사용·누락 tag만 게시하는 idempotent 경로를 고정한다. manifest unknown 외 조회 오류와 이미지 ID 불일치는 게시 중단으로 처리한다.
 - 다음 확인: 리뷰 승인 후 첫 main push에서 GitHub Actions 이미지 게시 결과와 backend·frontend tag 동시 존재를 확인한다. 담당자는 이우람이며, 실제 Docker Hub·EC2 smoke와 rollback은 운영 배포 승인 후 수행한다.
 
 ## 9. 도입 전후 비교 지표
