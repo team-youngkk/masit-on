@@ -195,6 +195,10 @@ class RuntimeDeploymentContractTest {
                 .contains("--password-stdin")
                 .contains("docker.io/")
                 .contains("@sha256:")
+                .contains("PUBLISHED_BACKEND_IMAGE_DIGEST: ${{ needs.images.outputs.backend_digest }}")
+                .contains("PUBLISHED_FRONTEND_IMAGE_DIGEST: ${{ needs.images.outputs.frontend_digest }}")
+                .contains("backend_ref=\"docker.io/${DOCKERHUB_NAMESPACE}/masiton-backend@${backend_digest}\"")
+                .contains("frontend_ref=\"docker.io/${DOCKERHUB_NAMESPACE}/masiton-frontend@${frontend_digest}\"")
                 .contains("app-deploy.sh")
                 .contains("dockerhub-app-deploy.sh")
                 .contains("environment: production")
@@ -234,13 +238,12 @@ class RuntimeDeploymentContractTest {
                 .contains("if [[ ! \"$digest\" =~ ^sha256:[0-9a-f]{64}$ ]]; then")
                 .contains("docker image inspect --format '{{.Os}}/{{.Architecture}}'")
                 .contains("[ \"$platform\" != 'linux/amd64' ]")
-                .contains("ref=\"docker.io/${DOCKERHUB_NAMESPACE}/masiton-${name}@${digest}\"")
-                .contains("if [ \"$name\" = backend ]; then backend_ref=\"$ref\"; else frontend_ref=\"$ref\"; fi")
+                .contains("if [ \"$name\" = backend ]; then backend_digest=\"$digest\"; else frontend_digest=\"$digest\"; fi")
                 .doesNotContain("if [[ ! \"$ref\" =~");
         assertThat(workflow)
                 .contains("DEPLOYMENT_EVENT: ${{ github.event_name }}")
-                .contains("images job의 backend_ref output이 비어 있다")
-                .contains("images job의 frontend_ref output이 비어 있다")
+                .contains("images job의 backend_digest output이 비어 있다")
+                .contains("images job의 frontend_digest output이 비어 있다")
                 .contains("git merge-base --is-ancestor \"$IMAGE_TAG\" refs/remotes/origin/main")
                 .contains("fetch-depth: 0");
     }
