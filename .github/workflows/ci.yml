@@ -236,8 +236,11 @@ jobs:
     # 이미지 게시 job도 같은 환경을 참조해야 해당 값이 주입된다.
     environment: production
     outputs:
-      backend_ref: ${{ steps.publish.outputs.backend_ref }}
-      frontend_ref: ${{ steps.publish.outputs.frontend_ref }}
+      # Docker Hub username과 namespace가 같은 환경에서는 canonical ref가
+      # secret으로 판단되어 GitHub가 job output을 제거할 수 있다. output에는
+      # secret과 겹칠 수 없는 digest만 남기고, 배포 job에서 ref를 조합한다.
+      backend_digest: ${{ steps.publish.outputs.backend_digest }}
+      frontend_digest: ${{ steps.publish.outputs.frontend_digest }}
     permissions:
       contents: read
     env:
@@ -466,7 +469,9 @@ jobs:
           echo '수정 가능한 CRITICAL·HIGH 취약점 없음'
 
       # 여기까지가 Docker Hub 자격 증명 없이 수행하는 검증이다.
-      # push token은 게시 단계에서만 주입하고, digest ref만 job output으로 넘긴다.
+      # push token은 게시 단계에서만 주입하고, secret과 겹칠 수 있는 namespace를
+      # 포함하지 않은 digest만 job output으로 넘긴다. canonical ref는 배포 job에서
+      # 공개 namespace와 digest를 조합한다.
       - name: Docker Hub 로그인
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -583,35 +588,28 @@ jobs:
               echo "${repo}: registry digest 형식이 올바르지 않다" >&2
               exit 1
             }
-            reference="docker.io/${DOCKERHUB_NAMESPACE}/${repo}@${digest}"
             echo "${repo}: ${state} (${digest})"
 
             echo "| ${repo} | \`${IMAGE_TAG}\` | \`${digest}\` | ${state} |" >> "$GITHUB_STEP_SUMMARY"
-            echo "${name}_ref=${reference}" >> "$GITHUB_OUTPUT"
+            echo "${name}_digest=${digest}" >> "$GITHUB_OUTPUT"
           done
 
       - name: 게시 output 검증
         env:
-          BACKEND_REF: ${{ steps.publish.outputs.backend_ref }}
-          FRONTEND_REF: ${{ steps.publish.outputs.frontend_ref }}
+          BACKEND_DIGEST: ${{ steps.publish.outputs.backend_digest }}
+          FRONTEND_DIGEST: ${{ steps.publish.outputs.frontend_digest }}
         run: |
           set -euo pipefail
-          validate_ref() {
-            local component="$1" reference="$2"
-            local prefix="docker.io/${DOCKERHUB_NAMESPACE}/masiton-${component}@sha256:"
-            case "$reference" in
-              "$prefix"*) ;;
-              *) echo "게시된 ${component} output이 비어 있거나 저장소가 다르다" >&2; return 1 ;;
-            esac
-            local digest="${reference#"$prefix"}"
-            [[ "$digest" =~ ^[0-9a-f]{64}$ ]] || {
-              echo "게시된 ${component} output의 digest가 올바르지 않다" >&2
+          validate_digest() {
+            local component="$1" digest="$2"
+            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || {
+              echo "게시된 ${component} output이 비어 있거나 digest 형식이 올바르지 않다" >&2
               return 1
             }
           }
-          validate_ref backend "$BACKEND_REF"
-          validate_ref frontend "$FRONTEND_REF"
-          echo 'backend/frontend 게시 output 검증 완료'
+          validate_digest backend "$BACKEND_DIGEST"
+          validate_digest frontend "$FRONTEND_DIGEST"
+          echo 'backend/frontend 게시 digest output 검증 완료'
 
       - name: 로컬 Docker Hub 인증 정리
         if: always()
@@ -649,8 +647,8 @@ jobs:
       DOCKERHUB_NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE }}
       PRODUCTION_HOST: ${{ vars.PRODUCTION_HOST }}
       PRODUCTION_SSH_USER: ${{ vars.PRODUCTION_SSH_USER }}
-      PUBLISHED_BACKEND_IMAGE_REF: ${{ needs.images.outputs.backend_ref }}
-      PUBLISHED_FRONTEND_IMAGE_REF: ${{ needs.images.outputs.frontend_ref }}
+      PUBLISHED_BACKEND_IMAGE_DIGEST: ${{ needs.images.outputs.backend_digest }}
+      PUBLISHED_FRONTEND_IMAGE_DIGEST: ${{ needs.images.outputs.frontend_digest }}
     steps:
       - name: 배포 대상 SHA 기본 검증
         id: target
@@ -711,8 +709,8 @@ jobs:
             echo "DOCKERHUB_PULL_TOKEN이 비어 있다" >&2
             exit 1
           fi
-          backend_ref="$PUBLISHED_BACKEND_IMAGE_REF"
-          frontend_ref="$PUBLISHED_FRONTEND_IMAGE_REF"
+          backend_digest="$PUBLISHED_BACKEND_IMAGE_DIGEST"
+          frontend_digest="$PUBLISHED_FRONTEND_IMAGE_DIGEST"
           if [ "$DEPLOYMENT_EVENT" = "workflow_dispatch" ]; then
             install -d -m 0700 "$DOCKER_CONFIG"
             cleanup() {
@@ -735,16 +733,15 @@ jobs:
                 echo "$name 이미지 플랫폼이 linux/amd64가 아니다: $platform" >&2
                 exit 1
               fi
-              ref="docker.io/${DOCKERHUB_NAMESPACE}/masiton-${name}@${digest}"
-              if [ "$name" = backend ]; then backend_ref="$ref"; else frontend_ref="$ref"; fi
+              if [ "$name" = backend ]; then backend_digest="$digest"; else frontend_digest="$digest"; fi
             done
           elif [ "$DEPLOYMENT_EVENT" = "push" ]; then
-            [ -n "$backend_ref" ] || {
-              echo 'images job의 backend_ref output이 비어 있다. 이미지 게시 결과를 전달하지 못했다.' >&2
+            [ -n "$backend_digest" ] || {
+              echo 'images job의 backend_digest output이 비어 있다. 이미지 게시 결과를 전달하지 못했다.' >&2
               exit 1
             }
-            [ -n "$frontend_ref" ] || {
-              echo 'images job의 frontend_ref output이 비어 있다. 이미지 게시 결과를 전달하지 못했다.' >&2
+            [ -n "$frontend_digest" ] || {
+              echo 'images job의 frontend_digest output이 비어 있다. 이미지 게시 결과를 전달하지 못했다.' >&2
               exit 1
             }
           else
@@ -757,6 +754,29 @@ jobs:
             case "$reference" in
               "$prefix"*) ;;
               *) echo "${component} 이미지 digest ref가 비어 있거나 허용된 저장소가 아니다" >&2; return 1 ;;
+            esac
+            local digest="${reference#"$prefix"}"
+            [[ "$digest" =~ ^[0-9a-f]{64}$ ]] || {
+              echo "${component} 이미지 digest ref 형식이 올바르지 않다" >&2
+              return 1
+            }
+          }
+          [[ "$backend_digest" =~ ^sha256:[0-9a-f]{64}$ ]] || {
+            echo 'backend 이미지 digest output 형식이 올바르지 않다' >&2
+            exit 1
+          }
+          [[ "$frontend_digest" =~ ^sha256:[0-9a-f]{64}$ ]] || {
+            echo 'frontend 이미지 digest output 형식이 올바르지 않다' >&2
+            exit 1
+          }
+          backend_ref="docker.io/${DOCKERHUB_NAMESPACE}/masiton-backend@${backend_digest}"
+          frontend_ref="docker.io/${DOCKERHUB_NAMESPACE}/masiton-frontend@${frontend_digest}"
+          validate_ref() {
+            local component="$1" reference="$2"
+            local prefix="docker.io/${DOCKERHUB_NAMESPACE}/masiton-${component}@sha256:"
+            case "$reference" in
+              "$prefix"*) ;;
+              *) echo "${component} 이미지 digest ref가 허용된 저장소가 아니다" >&2; return 1 ;;
             esac
             local digest="${reference#"$prefix"}"
             [[ "$digest" =~ ^[0-9a-f]{64}$ ]] || {
