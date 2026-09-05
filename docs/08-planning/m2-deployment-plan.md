@@ -55,16 +55,16 @@ related_documents:
 | [NFR-DEPLOYMENT-004](../01-requirements/non-functional-requirements.md#nfr-deployment-004-단계별-실행-및-초기-운영-배포-복잡도-제한) | 수동 승인 배포 허용, 무중단 배포는 요구하지 않음 |
 | [NFR-SECURITY-001](../01-requirements/non-functional-requirements.md#nfr-security-001-공개-조회와-관리자-접근-통제) | 공개 GET 무인증, 관리자 API는 JWT·`ADMIN` |
 | [NFR-SECURITY-003](../01-requirements/non-functional-requirements.md#nfr-security-003-비밀정보와-오류-정보-보호) | 운영 비밀정보를 소스·이미지와 분리 |
-| [NFR-OBSERVABILITY-001](../01-requirements/non-functional-requirements.md#nfr-observability-001-요청-추적과-오류-분류)~003 | CloudWatch 수집, 로그 14일 보관, 민감정보 미노출 |
+| [NFR-OBSERVABILITY-001](../01-requirements/non-functional-requirements.md#nfr-observability-001-요청-추적과-오류-분류)~003 | 로컬 로그와 내부 health 점검, 민감정보 미노출 |
 
 ### 적용되는 ADR
 
 - [ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md) — 배포 순서와 활성화 범위
 - [ADR-WEB-006](../07-adr/platform/web-006-unified-login-rbac-route.md) — Nginx 경로 경계와 통합 인증 matcher
 - [ADR-SEC-001](../07-adr/security/sec-001-secrets-workload-identity.md) — Parameter Store SecureString, KMS, EC2 IAM Role, GitHub Actions OIDC
-- [ADR-OBS-001](../07-adr/quality/obs-001-logging-observability.md) — CloudWatch 수집, 로그 14일, 스냅샷, Slack 알림
+- [ADR-OBS-002](../07-adr/quality/obs-002-local-operations-without-cloudwatch.md) — 로컬 로그 회전, 내부 health 점검, 외부 알림 없음
 - [ADR-CI-001](../07-adr/platform/ci-001-github-actions-quality-gate.md) — 품질 게이트 유지, ECR push와 EC2 배포 활성화
-- [ADR-RUNTIME-001](../07-adr/platform/runtime-001-docker.md) — 이미지 검증(클린 빌드·비밀·취약점·명시 태그), ECR digest, CloudWatch Agent, 배포 후 Smoke Test
+- [ADR-RUNTIME-001](../07-adr/platform/runtime-001-docker.md) — 이미지 검증(클린 빌드·비밀·취약점·명시 태그), 이미지 digest, 배포 후 Smoke Test
 - [ADR-DATA-005](../07-adr/data/data-005-redis-refresh-token.md) — Redis 8.8, Refresh Token 회전·재사용 탐지, 로그인 실패 제한, 장애 시 fail-closed. 6절의 배치 표현은 4.2절 결정에 따라 2026-07-30에 개정했다(앱 EC2 동거, `127.0.0.1:6379` 바인딩)
 
 ### 범위 제외
@@ -86,8 +86,8 @@ related_documents:
 | CI 경로 | GitHub Actions → ECR → EC2, 수동 승인 | RV-NFR-012 |
 | 브랜치 전략 | `deploy/m2` 한 브랜치에 M2 변경을 모으고 완료 시 `main`으로 병합 | 이번 마일스톤은 배포와 기능 구현을 함께 진행해 변경을 나눠 병합할 이점이 없다(2026-07-29 결정) |
 | 백업 | 일 1회 자동 스냅샷, 7일 보관, RPO 최대 24시간 | RV-NFR-010 |
-| 로그 | CloudWatch, 14일 보관 | RV-NFR-009 |
-| 알림 | CloudWatch 알람 → Slack Webhook, 담당자 1명 | RV-NFR-013 |
+| 로그 | Docker local logs, `json-file` 10 MiB × 3 | RV-NFR-009 |
+| 알림 | 외부 알림 없음, 내부 health·로컬 로그 수동 확인 | RV-NFR-013 |
 | 월 인프라 예산 목표 | 150,000원 | ADR 추적표 |
 | 목표 완료일 | 2026-07-31 | [M2 마일스톤](https://github.com/team-youngkk/masit-on/milestone/2) |
 
@@ -181,7 +181,7 @@ related_documents:
 - 작업: VPC 서브넷 구성(RDS용 사설 서브넷 포함), 보안 그룹 생성(인터넷 인바운드는 80·443만, 22는 작업자 IP로 제한), EC2 인스턴스 생성, Elastic IP 할당, EC2 IAM Role 부여
 - 사양: `t4g.medium`(arm64, 2 vCPU / 4 GiB), 루트 볼륨 gp3 30 GiB. NAT Gateway와 인터페이스 VPC 엔드포인트는 만들지 않는다([사양·비용 산정](m2-cost-and-sizing.md) 3·6.3절)
 - 선행: M2-01
-- 완료 조건: 22 포트가 전체 공개되지 않고, EC2가 IAM Role로 Parameter Store·ECR·CloudWatch에 접근하며, 사설 서브넷이 인터넷에서 직접 도달되지 않는다
+- 완료 조건: 22 포트가 전체 공개되지 않고, EC2가 IAM Role로 Parameter Store·ECR에 접근하며, 사설 서브넷이 인터넷에서 직접 도달되지 않는다
 - 근거: ADR-SEC-001
 
 ### M2-04 RDS PostgreSQL 프로비저닝
@@ -234,9 +234,9 @@ related_documents:
 - 근거: NFR-DEPLOYMENT-002, NFR-DEPLOYMENT-003
 - 주의: 마이그레이션은 빈 RDS를 대상으로 적용하며 적용된 파일을 수정하지 않는다. 이후 스키마 변경은 새 버전 파일로만 추가한다([migration-plan.md](../05-specs/data/migration-plan.md))
 
-### M2-10 CloudWatch 로그·지표·알람
+### M2-10 CloudWatch 로그·지표·알람 (2026-09-03 폐기)
 
-- 작업: CloudWatch Agent 설치, 로그 그룹 14일 보관 설정, 알람 4종 구성(5분 구간 서버 오류율 5% 이상, 5분 구간 p95 2초 초과, 상태 확인 연속 3회 실패, 저장소 연결 실패 연속 3회), Slack Webhook 연결
+- 작업: 당시 CloudWatch Agent 설치, 로그 그룹 14일 보관, 알람 4종과 Slack Webhook을 구성했다. 해당 관측성 경로는 2026-09-03 폐기했고, 현재는 로컬 로그 회전과 내부 health 점검을 사용한다([ADR-OBS-002](../07-adr/quality/obs-002-local-operations-without-cloudwatch.md)).
 - 선행: M2-09
 - 완료 조건: 시험 알람이 Slack에 실제로 도달하고, PostgreSQL·Redis 연결 실패가 각각 저장소 장애 알림을 발생시키며, 로그에 비밀번호·JWT·API 키 원문이 없다
 - 근거: ADR-OBS-001, RV-NFR-009, RV-NFR-013, NFR-OBSERVABILITY-003
@@ -327,7 +327,7 @@ M2-01 AWS 기반
 - `/internal/**`이 인터넷에서 차단되고 EC2 내부에서만 응답하며 PostgreSQL·Redis 상태를 각각 구분한다.
 - 운영 비밀정보가 소스·이미지·환경 파일에 없고 Parameter Store와 IAM Role로만 조회된다.
 - 이미지 검증 게이트를 통과한 이미지만 ECR에 게시되고 배포된다.
-- CloudWatch 로그 14일 보관과 알람 4종이 활성화되고 시험 알람이 Slack에 도달한다.
+- 로컬 로그 회전과 내부 health 점검이 활성화되고 외부 알림 없이 운영자 확인 절차가 동작한다. (CloudWatch 로그·알람·Slack 경로는 2026-09-03 폐기)
 - RDS 자동 스냅샷이 일 1회 생성되고 7일 보관되며, Redis 인증 상태가 재기동 후에도 유지된다.
 - 복구 리허설이 문서화된 절차만으로 성공하고 결과가 기록된다.
 - 인증서 갱신·재배포 절차가 문서화되고 최소 1회 시연된다.

@@ -199,7 +199,6 @@ fi
 REGION="${AWS_REGION:-ap-northeast-2}"
 REGISTRY="711457211155.dkr.ecr.${REGION}.amazonaws.com"
 OPT_DIR=/opt/masiton
-CLOUDWATCH_AGENT_CONFIG=/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
 
 # app-secrets-render.sh도 배포 산출물이다. backend unit의 ExecStartPre가
 # /opt/masiton/bin/app-secrets-render.sh를 실행하므로 설치하지 않으면 새 인스턴스는
@@ -334,12 +333,8 @@ rollback() {
   restore_asset "$OPT_DIR/bin/app-run.sh" "$previous/opt/masiton/bin/app-run.sh"
   restore_asset "$OPT_DIR/bin/app-secrets-render.sh" "$previous/opt/masiton/bin/app-secrets-render.sh"
   restore_asset "$OPT_DIR/bin/runtime-health.sh" "$previous/opt/masiton/bin/runtime-health.sh"
-  restore_asset "$OPT_DIR/bin/health-metrics.sh" "$previous/opt/masiton/bin/health-metrics.sh"
   restore_asset "/etc/systemd/system/masiton-backend.service" "$previous/etc/systemd/system/masiton-backend.service"
   restore_asset "/etc/systemd/system/masiton-frontend.service" "$previous/etc/systemd/system/masiton-frontend.service"
-  restore_asset "/etc/systemd/system/masiton-health-metrics.service" "$previous/etc/systemd/system/masiton-health-metrics.service"
-  restore_asset "/etc/systemd/system/masiton-health-metrics.timer" "$previous/etc/systemd/system/masiton-health-metrics.timer"
-  restore_asset "$CLOUDWATCH_AGENT_CONFIG" "$previous$CLOUDWATCH_AGENT_CONFIG"
   systemctl daemon-reload || rollback_failed=yes
   for service in masiton-backend.service masiton-frontend.service; do
     if [ -f "/etc/systemd/system/$service" ]; then
@@ -348,35 +343,6 @@ rollback() {
       systemctl disable --now "$service" >/dev/null 2>&1 || true
     fi
   done
-  if [ "${metrics_timer_was_enabled:-no}" = yes ]; then
-    systemctl enable masiton-health-metrics.timer >/dev/null || rollback_failed=yes
-  else
-    systemctl disable masiton-health-metrics.timer >/dev/null 2>&1 || true
-  fi
-  if [ "${metrics_timer_was_active:-no}" = yes ]; then
-    systemctl start masiton-health-metrics.timer >/dev/null || rollback_failed=yes
-  else
-    systemctl stop masiton-health-metrics.timer >/dev/null 2>&1 || true
-  fi
-  agent_ctl=/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl
-  if [ "${cloudwatch_agent_was_installed:-no}" = yes ]; then
-    if [ -x "$agent_ctl" ] && [ -f "$CLOUDWATCH_AGENT_CONFIG" ]; then
-      "$agent_ctl" -a fetch-config -m ec2 -c "file:$CLOUDWATCH_AGENT_CONFIG" >/dev/null || rollback_failed=yes
-    fi
-    if [ "${cloudwatch_agent_was_enabled:-no}" = yes ]; then
-      systemctl enable amazon-cloudwatch-agent >/dev/null || rollback_failed=yes
-    else
-      systemctl disable amazon-cloudwatch-agent >/dev/null 2>&1 || true
-    fi
-    if [ "${cloudwatch_agent_was_active:-no}" = yes ]; then
-      systemctl start amazon-cloudwatch-agent >/dev/null || rollback_failed=yes
-    else
-      systemctl stop amazon-cloudwatch-agent >/dev/null 2>&1 || true
-    fi
-  else
-    systemctl disable --now amazon-cloudwatch-agent >/dev/null 2>&1 || true
-  fi
-
   rollback_backend_health=no
   rollback_frontend_health=no
   for attempt in $(seq 1 12); do
@@ -485,36 +451,8 @@ done
 backup_asset "$OPT_DIR/bin/app-run.sh" "$previous/opt/masiton/bin/app-run.sh"
 backup_asset "$OPT_DIR/bin/app-secrets-render.sh" "$previous/opt/masiton/bin/app-secrets-render.sh"
 backup_asset "$OPT_DIR/bin/runtime-health.sh" "$previous/opt/masiton/bin/runtime-health.sh"
-backup_asset "$OPT_DIR/bin/health-metrics.sh" "$previous/opt/masiton/bin/health-metrics.sh"
 backup_asset "/etc/systemd/system/masiton-backend.service" "$previous/etc/systemd/system/masiton-backend.service"
 backup_asset "/etc/systemd/system/masiton-frontend.service" "$previous/etc/systemd/system/masiton-frontend.service"
-backup_asset "/etc/systemd/system/masiton-health-metrics.service" "$previous/etc/systemd/system/masiton-health-metrics.service"
-backup_asset "/etc/systemd/system/masiton-health-metrics.timer" "$previous/etc/systemd/system/masiton-health-metrics.timer"
-backup_asset "$CLOUDWATCH_AGENT_CONFIG" "$previous$CLOUDWATCH_AGENT_CONFIG"
-
-# CloudWatch는 앱 health를 확인하는 배포 산출물이지만 별도 프로세스이므로,
-# 실패한 설치가 timer·agent의 활성 상태까지 바꾸고 남지 않도록 설치 전 상태를
-# 기록한다. rollback은 파일뿐 아니라 이 상태도 복원한다.
-metrics_timer_was_active=no
-metrics_timer_was_enabled=no
-cloudwatch_agent_was_installed=no
-cloudwatch_agent_was_active=no
-cloudwatch_agent_was_enabled=no
-if systemctl is-active --quiet masiton-health-metrics.timer; then
-  metrics_timer_was_active=yes
-fi
-if systemctl is-enabled --quiet masiton-health-metrics.timer; then
-  metrics_timer_was_enabled=yes
-fi
-if rpm -q amazon-cloudwatch-agent >/dev/null 2>&1; then
-  cloudwatch_agent_was_installed=yes
-  if systemctl is-active --quiet amazon-cloudwatch-agent; then
-    cloudwatch_agent_was_active=yes
-  fi
-  if systemctl is-enabled --quiet amazon-cloudwatch-agent; then
-    cloudwatch_agent_was_enabled=yes
-  fi
-fi
 
 if [ "$DEPLOYMENT_MODE" = digest ]; then
   for component in backend frontend; do
@@ -776,11 +714,6 @@ for source_key in "${first_client_keys[0]}" "${second_client_keys[0]}"; do
 done
 redis_cli DEL "${smoke_redis_keys[@]}" >/dev/null
 smoke_redis_keys=()
-
-# CloudWatch 설치를 먼저 수행한다. 첫 지표 전송까지 실패하면 app-deploy의
-# 롤백이 새 앱과 새 지표 수집 산출물을 함께 되돌린다. Nginx는 그 다음에 바꿔야
-# CloudWatch 실패 시 이미 성공한 Nginx 전환이 남지 않는다.
-"$STAGE/cloudwatch-install.sh" "$STAGE"
 
 # Nginx 전환도 app-deploy의 롤백 보호 안에서 수행한다. 새 백엔드와 구버전
 # validation-gate Nginx가 섞이지 않도록, Nginx smoke/TLS 설치 실패 시 이전

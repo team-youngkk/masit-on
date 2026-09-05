@@ -232,6 +232,8 @@ jobs:
     # 운영 EC2가 x86_64(t2 계열)이므로 같은 아키텍처에서 빌드한다.
     # x86_64 러너에서 빌드해 런타임의 아키텍처 불일치를 막는다.
     runs-on: ubuntu-24.04
+    # Docker Hub 자격 증명과 namespace가 production 환경에 저장되어 있다.
+    # 이미지 게시 job도 같은 환경을 참조해야 해당 값이 주입된다.
     environment: production
     outputs:
       backend_ref: ${{ steps.publish.outputs.backend_ref }}
@@ -797,10 +799,8 @@ jobs:
           tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner -czf "$bundle" \
             -C "$GITHUB_WORKSPACE/deploy/scripts" \
             app-deploy.sh dockerhub-app-deploy.sh app-run.sh app-secrets-render.sh \
-            runtime-health.sh cloudwatch-install.sh health-metrics.sh \
+            runtime-health.sh observability-cleanup.sh \
             nginx-install.sh nginx-smoke.sh tls-deploy-cert.sh \
-            -C "$GITHUB_WORKSPACE/deploy/cloudwatch" \
-            amazon-cloudwatch-agent.json masiton-health-metrics.service masiton-health-metrics.timer \
             -C "$GITHUB_WORKSPACE/deploy/app" \
             masiton-backend.service masiton-frontend.service \
             -C "$GITHUB_WORKSPACE/deploy/nginx" \
@@ -809,9 +809,8 @@ jobs:
           bundle_entries=$(tar -tzf "$bundle")
           for entry in \
             app-deploy.sh dockerhub-app-deploy.sh app-run.sh app-secrets-render.sh \
-            runtime-health.sh cloudwatch-install.sh health-metrics.sh \
+            runtime-health.sh observability-cleanup.sh \
             nginx-install.sh nginx-smoke.sh tls-deploy-cert.sh \
-            amazon-cloudwatch-agent.json masiton-health-metrics.service masiton-health-metrics.timer \
             masiton-backend.service masiton-frontend.service \
             nginx.conf masiton.click.conf 00-masiton-upgrade-map.conf \
             masiton-tls-renew.service masiton-tls-renew.timer; do
@@ -914,7 +913,7 @@ jobs:
             echo "원격 bundle checksum이 다르다: $remote_sha256 != $BUNDLE_SHA256" >&2
             exit 1
           fi
-          ssh "${ssh_opts[@]}" "$remote" "sudo -n tar --extract --gzip --file '$remote_archive' --directory '$remote_stage' --no-same-owner --no-same-permissions && sudo -n rm -f '$remote_archive' && sudo -n find '$remote_stage' -maxdepth 1 -type f -name '*.sh' -exec chmod 0750 {} + && sudo -n test -x '$remote_stage/dockerhub-app-deploy.sh' && sudo -n test -x '$remote_stage/app-deploy.sh' && sudo -n test -x '$remote_stage/cloudwatch-install.sh' && sudo -n test -f '$remote_stage/nginx-install.sh'"
+          ssh "${ssh_opts[@]}" "$remote" "sudo -n tar --extract --gzip --file '$remote_archive' --directory '$remote_stage' --no-same-owner --no-same-permissions && sudo -n rm -f '$remote_archive' && sudo -n find '$remote_stage' -maxdepth 1 -type f -name '*.sh' -exec chmod 0750 {} + && sudo -n test -x '$remote_stage/dockerhub-app-deploy.sh' && sudo -n test -x '$remote_stage/app-deploy.sh' && sudo -n test -x '$remote_stage/observability-cleanup.sh' && sudo -n test -f '$remote_stage/nginx-install.sh'"
 
       - name: 원격 Docker Hub 로그인과 애플리케이션 배포
         env:

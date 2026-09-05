@@ -43,6 +43,7 @@ class RuntimeDeploymentContractTest {
                 .contains("subnet_id                   = data.aws_subnet.direct_app.id")
                 .contains("aws_security_group.direct_app.id")
                 .contains("associate_public_ip_address = true")
+                .contains("monitoring                  = false")
                 .contains("user_data_replace_on_change = false");
         assertThat(route53)
                 .contains("resource \"aws_route53_record\" \"app\" {")
@@ -145,19 +146,33 @@ class RuntimeDeploymentContractTest {
     }
 
     @Test
-    @DisplayName("직접 앱 지표와 의존성 지표를 감시한다")
-    void monitoring_직접앱과의존성지표를감시한다() throws IOException {
-        String monitoring = read(TERRAFORM.resolve("monitoring.tf"));
+    @DisplayName("운영 배포 경로에서 CloudWatch 설치·수집 경로를 제거한다")
+    void runtime_운영배포경로에서CloudWatch경로를제거한다() throws IOException {
+        assertThat(TERRAFORM.resolve("monitoring.tf")).doesNotExist();
 
-        assertThat(monitoring)
-                .contains("metric_name         = \"HealthLive\"")
-                .contains("metric_name         = \"HealthReady\"")
-                .contains("metric_name         = \"DependencyPostgres\"")
-                .contains("metric_name         = \"DependencyRedis\"")
-                .contains("InstanceId = aws_instance.app.id")
-                .contains("treat_missing_data  = \"breaching\"")
-                .doesNotContain("AWS/ApplicationELB")
-                .doesNotContain("aws_lb.app");
+        String workflow = read(CI);
+        String appDeploy = read(Path.of("deploy/scripts/app-deploy.sh"));
+        String deploy = read(Path.of("deploy/scripts/dockerhub-app-deploy.sh"));
+        String bootstrap = read(Path.of("deploy/scripts/instance-bootstrap.sh"));
+        String hook = read(Path.of("deploy/codedeploy/hooks/after-install.sh"));
+        String observabilityCleanup = read(Path.of("deploy/scripts/observability-cleanup.sh"));
+        String runtime = String.join("\n", workflow, appDeploy, deploy, bootstrap, hook);
+
+        assertThat(runtime)
+                .doesNotContain("cloudwatch-install.sh")
+                .doesNotContain("health-metrics.sh")
+                .doesNotContain("amazon-cloudwatch-agent")
+                .doesNotContain("aws cloudwatch put-metric-data");
+        assertThat(deploy).contains("observability-cleanup.sh");
+        assertThat(bootstrap).contains("observability-cleanup.sh");
+        assertThat(hook).contains("observability-cleanup.sh");
+        assertThat(workflow).contains("observability-cleanup.sh");
+        assertThat(observabilityCleanup)
+                .contains("masiton-health-metrics.timer")
+                .contains("amazon-cloudwatch-agent.service")
+                .contains("dnf remove -y amazon-cloudwatch-agent")
+                .contains("/opt/masiton/bin/health-metrics.sh")
+                .contains("/opt/aws/amazon-cloudwatch-agent");
     }
 
     @Test
@@ -197,7 +212,7 @@ class RuntimeDeploymentContractTest {
                 .doesNotContain("ssm cancel-command")
                 .doesNotContain("SSM_POINTER");
         assertThat(workflow.indexOf("app-deploy.sh dockerhub-app-deploy.sh"))
-                .isLessThan(workflow.indexOf("cloudwatch-install.sh health-metrics.sh"));
+                .isLessThan(workflow.indexOf("observability-cleanup.sh"));
         assertThat(workflow).contains("ci-production-deploy");
     }
 
@@ -239,15 +254,19 @@ class RuntimeDeploymentContractTest {
 
         assertThat(bundleStep)
                 .contains("-C \"$GITHUB_WORKSPACE/deploy/scripts\"")
-                .contains("-C \"$GITHUB_WORKSPACE/deploy/cloudwatch\"")
                 .contains("-C \"$GITHUB_WORKSPACE/deploy/app\"")
                 .contains("-C \"$GITHUB_WORKSPACE/deploy/nginx\"")
+                .contains("observability-cleanup.sh")
                 .contains("bundle_entries=$(tar -tzf \"$bundle\")")
                 .contains("배포 bundle에 필요한 파일이 없거나 경로가 평탄화되지 않았다")
                 .doesNotContain("deploy/scripts/app-deploy.sh");
         assertThat(workflow)
                 .contains("sudo -n test -x '$remote_stage/dockerhub-app-deploy.sh'")
-                .contains("sudo -n test -x '$remote_stage/app-deploy.sh'");
+                .contains("sudo -n test -x '$remote_stage/app-deploy.sh'")
+                .contains("sudo -n test -x '$remote_stage/observability-cleanup.sh'")
+                .doesNotContain("cloudwatch-install.sh")
+                .doesNotContain("health-metrics.sh")
+                .doesNotContain("amazon-cloudwatch-agent.json");
     }
 
     @Test
@@ -287,13 +306,11 @@ class RuntimeDeploymentContractTest {
         String codedeployHook = read(Path.of("deploy/codedeploy/hooks/after-install.sh"));
         String unit = read(Path.of("deploy/app/masiton-backend.service"));
         String nginx = read(Path.of("deploy/nginx/masiton.click.conf"));
-        String metrics = read(Path.of("deploy/scripts/health-metrics.sh"));
 
         assertThat(directUserData)
                 .contains("amazon-ssm-agent")
                 .contains("REQUIRE_SHARED_REDIS=true")
                 .contains("NGINX_TRUSTED_PROXY_CIDRS=127.0.0.1")
-                .contains("METRIC_ENVIRONMENT=production")
                 .doesNotContain("codedeploy-agent");
         assertThat(legacyUserData)
                 .contains("codedeploy-agent")
@@ -305,9 +322,6 @@ class RuntimeDeploymentContractTest {
         assertThat(nginx)
                 .contains("location = /_masiton/alb-health")
                 .contains("location ^~ /internal/ { access_log off; return 404; }");
-        assertThat(metrics)
-                .contains("ENVIRONMENT=\"${METRIC_ENVIRONMENT:-asg}\"")
-                .contains("DependencyRedis");
         assertThat(codedeployHook)
                 .contains("/run/masiton/deploy.lock")
                 .contains("flock -n 9");

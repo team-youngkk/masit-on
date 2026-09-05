@@ -91,14 +91,16 @@ class DeploymentPipelineContractTest {
 
         assertThat(bundleStep)
                 .contains("-C \"$GITHUB_WORKSPACE/deploy/scripts\"")
-                .contains("-C \"$GITHUB_WORKSPACE/deploy/cloudwatch\"")
                 .contains("-C \"$GITHUB_WORKSPACE/deploy/app\"")
                 .contains("-C \"$GITHUB_WORKSPACE/deploy/nginx\"")
+                .contains("observability-cleanup.sh")
                 .contains("bundle_entries=$(tar -tzf \"$bundle\")")
                 .contains("grep -Fqx \"$entry\" <<< \"$bundle_entries\"")
                 .contains("배포 bundle에 필요한 파일이 없거나 경로가 평탄화되지 않았다")
                 .doesNotContain("deploy/scripts/app-deploy.sh")
-                .doesNotContain("deploy/cloudwatch/amazon-cloudwatch-agent.json");
+                .doesNotContain("deploy/cloudwatch/amazon-cloudwatch-agent.json")
+                .doesNotContain("cloudwatch-install.sh")
+                .doesNotContain("health-metrics.sh");
     }
 
     @Test

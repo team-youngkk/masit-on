@@ -1,5 +1,5 @@
 ---
-status: In progress
+status: Historical
 started_date: 2026-08-19
 owners:
   - 이우람
@@ -13,6 +13,12 @@ related_documents:
 ---
 
 # 배포 고도화 전환 기록
+
+> 보관 상태: 이 문서는 2026-08-19 ALB·ASG·CodeDeploy 전환 당시의 historical snapshot이다.
+> 현재 운영은 단일 앱 EC2·내부 health·로컬 로그 경계를 사용하며, CloudWatch alarm과
+> CodeDeploy 배포 게이트는 [ADR-OBS-002](../07-adr/quality/obs-002-local-operations-without-cloudwatch.md)에
+> 따라 폐기됐다. 현재 관측성 AWS 리소스 정리는
+> [CloudWatch 관측성 폐기 런북](observability-retirement-runbook.md)을 따른다.
 
 ## 1. 문서 목적
 
@@ -93,11 +99,11 @@ codedeploy:RegisterApplicationRevision on resource: ...application:masiton-prod-
 - `terraform-redis` 레이어를 apply해 `aws_ssm_parameter.redis_host`가 실제 사설 IP를 갖도록 했다. 이 파라미터는 원래 Terraform이 소유(`manage_host_parameter` 기본값 `true`)하고 있었으므로 코드 변경 없이 apply만으로 교정됐다.
 - Redis 보안 그룹의 6379 ingress에 **기존 medium 인스턴스의 보안 그룹을 함께 추가**했다. 파라미터가 공유 자원이라 medium도 다음 재기동 때 전용 Redis로 붙게 되는데, ingress에 신규 ASG SG만 있으면 그 시점에 rollback 경로가 깨진다.
 
-### 4.3. 배포 알람 게이트의 순환 의존
+### 4.3. (역사적 기록) 배포 알람 게이트의 순환 의존
 
-`fleet_dependency_redis` 알람은 `treat_missing_data = "breaching"`이고, 이 알람이 감시하는 `FleetDependencyRedis`(`Environment=asg`) 지표는 배포 리비전에 포함된 `health-metrics.sh`가 올린다. 즉 **지표를 올려줄 리비전을 배포하려는데 그 지표가 없다고 배포가 막히는** 순환이 성립한다.
+당시 `fleet_dependency_redis` 알람은 `treat_missing_data = "breaching"`이고, `FleetDependencyRedis`(`Environment=asg`) 지표는 배포 리비전의 `health-metrics.sh`가 올렸다. **지표를 올려줄 리비전을 배포하려는데 그 지표가 없다고 배포가 막히는** 순환을 기록한 절이다.
 
-[codedeploy.tf](../../infra/production/terraform/codedeploy.tf)가 이 상황을 위해 `deployment_alarms_enabled`를 두고 있다. 최초 seeding에서만 `initial_alarm_seeding=true`, `deployment_alarms_enabled=false`, `deployment_auto_rollback_enabled=false`, `redis_recovery_mode=false`를 같은 명령행에 넘겨 한 사이클을 완화하고, 지표 발생과 알람 `OK` 전환을 확인한 뒤 곧바로 `initial_alarm_seeding=false`·`deployment_alarms_enabled=true`·`deployment_auto_rollback_enabled=true`로 되돌린다. Terraform precondition은 이 명시적 조합 외의 alarm·자동 rollback 비활성화와 `initial_alarm_seeding=false`·`deployment_auto_rollback_enabled=false`를 거부한다. `terraform.tfvars`는 수정하지 않는다. Redis 복구 모드에서는 이 완화를 사용하지 않는다.
+당시 CodeDeploy seeding의 alarm 완화 입력과 복구 절차도 같은 배포 게이트를 전제로 했다. 해당 alarm·timer·CodeDeploy 경로는 현재 단일 EC2 운영에 적용하지 않으며, ASG를 다시 활성화할 때 새 ADR과 Terraform 계약으로 재검토한다.
 
 ### 4.4. 아웃바운드 공인 IP가 바뀌어 YouTube API 키가 거부됐다
 

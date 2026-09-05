@@ -7,7 +7,8 @@ resource "aws_instance" "app" {
   vpc_security_group_ids      = [aws_security_group.app.id, aws_security_group.direct_app.id]
   iam_instance_profile        = aws_iam_instance_profile.app.name
   associate_public_ip_address = true
-  monitoring                  = true
+  # 단일 EC2에서는 CloudWatch 상세 모니터링을 사용하지 않아 기본 모니터링을 쓴다.
+  monitoring                  = false
 
   user_data = local.rendered_direct_user_data
   # user_data 변경이 기존 운영 인스턴스 교체로 이어지지 않게 한다. 앱 배포와

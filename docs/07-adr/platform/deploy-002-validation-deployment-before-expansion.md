@@ -79,17 +79,17 @@ MVP 검증을 위한 **초기 운영 배포**(M2)를 다음 확장 단계 착수
 
 - M2 초기 운영 배포에서 최초 운영 환경을 먼저 배포하고 검증 참여자에게 제한 공개했다. 이 제한 공개는 완료된 전환 단계이며 현재 공개 진입 조건이 아니다([ADR-DEPLOY-006](deploy-006-public-release-without-validation-gate.md)).
 - 초기 운영 배포 검증을 통과한 환경을 별도 재구축 없이 같은 운영 환경으로 계속 사용한다.
-- 초기 운영 배포부터 EC2·ECR·RDS·CloudWatch와 운영 비밀정보 설정을 활성화한다.
+- 초기 운영 배포부터 EC2·ECR·RDS와 운영 비밀정보 설정을 활성화한다.
 - 초기 운영 배포에서 도메인·HTTPS·Nginx 리버스 프록시와 운영 외부 API 키를 설정하고 검증한다.
 - 이후 각 확장 단계에서는 기능에 필요한 인프라 변경을 같은 단계에 반영하고 검증한다.
 - GitHub Actions의 빌드·자동화 테스트 품질 게이트와 로컬 Docker 통합 검증은 초기 운영 배포 및 이후 확장 단계에서도 계속 유지한다.
-- 단일 EC2, GitHub Actions → ECR → EC2, 운영 RDS와 CloudWatch라는 기존 기술 선택은 유지한다. 이번 결정은 적용 순서를 변경한다.
+- 단일 EC2, GitHub Actions → ECR → EC2와 운영 RDS라는 기존 기술 선택은 유지한다. 이번 결정은 적용 순서를 변경한다.
 - M2 초기 운영과 3차 확장까지는 단일 인스턴스와 수동 복구를 유지한다. 이후 배포 고도화는 Accepted [ADR-DEPLOY-005](deploy-005-asg-blue-green-rollout.md)의 ALB·ASG·CodeDeploy replacement와 전용 Redis 기준을 사용하며, 실제 착수는 운영 적용 리허설을 통과한 뒤 시작한다.
 - 정식 공개에서는 회원·관리자 인증, Webhook 자체 인증·rate limit, Host 검증, `/internal/**` 외부 `404`와 loopback 포트 경계를 유지하며, 제거 대상은 검증 참여자 전용 gate와 그 자원뿐이다([ADR-DEPLOY-006](deploy-006-public-release-without-validation-gate.md)).
 
 ## 5. 영향
 
-- ADR-DEPLOY-001이 최종 배포로 미뤘던 EC2·ECR·RDS·CloudWatch·도메인·HTTPS·Nginx·운영 외부 API 키 설정이 초기 운영 배포 시점부터 배포 범위가 된다.
+- ADR-DEPLOY-001이 최종 배포로 미뤘던 EC2·ECR·RDS·도메인·HTTPS·Nginx·운영 외부 API 키 설정이 초기 운영 배포 시점부터 배포 범위가 된다.
 - AWS 배포 경로는 확장 완료 뒤 한 번에 검증하지 않고 초기 운영 배포에서 먼저 검증한 뒤 단계별로 유지·변경한다.
 - 로컬 Docker 환경은 개발과 통합 검증의 재현 가능한 기준으로 계속 사용한다.
 - GitHub Actions 품질 게이트는 배포 순서와 관계없이 모든 배포 후보에 계속 적용한다.
@@ -99,7 +99,7 @@ MVP 검증을 위한 **초기 운영 배포**(M2)를 다음 확장 단계 착수
 ## 6. 검증
 
 - M2 초기 운영 배포 체크리스트에서 도메인·HTTPS·Nginx 리버스 프록시·운영 외부 API 키 설정을 확인한다.
-- EC2에서 ECR 이미지를 사용해 애플리케이션을 실행하고 RDS·CloudWatch 연동을 검증한다.
+- EC2에서 이미지 digest를 사용해 애플리케이션을 실행하고 RDS 연동과 내부 health 경로를 검증한다.
 - 공개 경로와 `/api/**` 라우팅, Webhook 자체 인증·rate limit, 허용 Host, 외부에서 `404`여야 하는 `/internal/**`와 loopback 애플리케이션 포트 경계를 확인한다.
 - 배포 전 GitHub Actions 품질 게이트와 로컬 Docker 통합 검증이 계속 통과하는지 확인한다.
 - 각 확장 단계의 인프라 변경이 해당 단계의 기능 검증 및 복구 절차에 반영됐는지 확인한다.

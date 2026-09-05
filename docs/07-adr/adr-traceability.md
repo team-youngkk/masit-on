@@ -124,8 +124,8 @@ related_documents:
 | k6 v2.1.0 | 도구·버전·실행 비용 확정 (2026-08-06) | Accepted ADR | [ADR-PERF-001](quality/perf-001-k6-load-testing.md) | `perf/k6/` 시나리오, `workflow_dispatch` 전용 실행, 정기 CI 비용 증가 없음 |
 | Terraform + AWS provider | 이슈 #207 격리 성능 환경 프로비저닝과 S3/DynamoDB state locking, 제한된 egress | Accepted ADR | [ADR-PERF-003](quality/perf-003-isolated-performance-terraform.md) | Terraform·egress 정책은 팀 승인; 실제 backend bootstrap은 실행 전 확인 |
 | SLF4J + Logback | 확정 | Accepted ADR | [ADR-OBS-001](quality/obs-001-logging-observability.md) | 애플리케이션 로그 기준 |
-| Actuator + CloudWatch | 기술 선택 확정, 적용 시점 이관 | Accepted ADR | [ADR-OBS-001](quality/obs-001-logging-observability.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | Actuator는 전 단계, CloudWatch는 초기 운영 배포부터 적용 |
-| 로그 보관 14일 | M2부터 적용 | Operational Configuration | [ADR-OBS-001](quality/obs-001-logging-observability.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | AWS 운영 시작 후 14일 유지 |
+| Actuator + 로컬 로그 | CloudWatch 제거, 내부 health와 로컬 로그로 운영 확인 | Accepted ADR | [ADR-OBS-002](quality/obs-002-local-operations-without-cloudwatch.md) | Actuator·Docker local logs는 유지하고 중앙 수집은 사용하지 않음 |
+| 운영 로그 저장량 제한 | 결정 변경 (2026-09-03) | Operational Configuration | [ADR-OBS-002](quality/obs-002-local-operations-without-cloudwatch.md), [RV-NFR-009](../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간) | 컨테이너별 Docker `json-file` 10 MiB × 3, 인스턴스 교체 시 유실 가능 |
 | 운영 비밀정보 보호 | M2부터 적용 | Accepted ADR | [ADR-SEC-001](security/sec-001-secrets-workload-identity.md), [ADR-SEC-002](security/sec-002-redis-bootstrap-secret-transport.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | 기본은 Parameter Store SecureString + KMS, 전용 private Redis 부트스트랩만 S3 SSE-KMS 객체 예외 |
 | EC2 IAM Role | M2부터 적용 | Accepted ADR | [ADR-SEC-001](security/sec-001-secrets-workload-identity.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | 장기 AWS 키 제거 |
 | GitHub Actions OIDC | M2부터 적용 | Accepted ADR | [ADR-SEC-001](security/sec-001-secrets-workload-identity.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | CI의 단기 AWS 자격 증명 |
@@ -135,7 +135,7 @@ related_documents:
 | 운영 애플리케이션 포트 loopback 바인딩 | 확정 (2026-08-14) | Accepted ADR | [ADR-WEB-005](platform/web-005-application-port-binding.md), [ADR-RUNTIME-001](platform/runtime-001-docker.md) | Nginx 우회 직결과 `/internal/**` 노출을 네트워크 계층에서 차단 |
 | 검증 참여자 제한 공개 | M2 역사 단계·gate 제거 완료 결정 (2026-08-24) | Accepted ADR | [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md), [ADR-DEPLOY-003](platform/deploy-003-validation-cookie-session.md), [ADR-DEPLOY-004](platform/deploy-004-public-api-validation-gate-boundary.md), [ADR-DEPLOY-006](platform/deploy-006-public-release-without-validation-gate.md) | M2 제한 공개는 완료된 단계로 보존하고, 현재는 검증 쿠키·Redis gate 없이 공개. 회원·관리자 인증·Webhook 자체 인증·rate limit·Host·`/internal` 404·loopback은 유지 |
 | Amazon ECR·EC2 | 기술 선택 확정, 초기 운영 배포부터 적용 | Accepted ADR | [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | M2부터 단일 EC2에 배포하고 확장 단계별 변경 반영 |
-| ALB·ASG·Blue-Green | [ADR-DEPLOY-005](platform/deploy-005-asg-blue-green-rollout.md) 토폴로지 유지, 배포 알람 경계는 [ADR-DEPLOY-007](platform/deploy-007-codedeploy-health-alarm-boundary.md)로 갱신 | Accepted ADR | [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md), [ADR-DEPLOY-005](platform/deploy-005-asg-blue-green-rollout.md), [ADR-DEPLOY-007](platform/deploy-007-codedeploy-health-alarm-boundary.md) | ALB·ASG·CodeDeploy·사설 subnet 전용 Redis를 유지하고 `UnHealthyHostCount`는 전환 중 오탐을 막기 위해 관측 전용으로 분리 |
+| ALB·ASG·Blue-Green | [ADR-DEPLOY-005](platform/deploy-005-asg-blue-green-rollout.md) 토폴로지는 향후 재검토 대상으로 보존하고 CloudWatch 배포 알람 경계는 폐기 | Historical ADR | [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md), [ADR-DEPLOY-005](platform/deploy-005-asg-blue-green-rollout.md), [ADR-DEPLOY-007](platform/deploy-007-codedeploy-health-alarm-boundary.md), [ADR-OBS-002](quality/obs-002-local-operations-without-cloudwatch.md) | 현재 운영은 단일 EC2·내부 health·로컬 로그를 사용하며 ASG·ALB·CodeDeploy 활성화 시 별도 관측성 결정을 추가한다 |
 | GitHub Actions → ECR → EC2 | 초기 운영 배포부터 적용 | Accepted ADR | [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md), [ADR-DEPLOY-002](platform/deploy-002-validation-deployment-before-expansion.md) | 빌드·테스트 품질 게이트를 유지하고 M2부터 AWS 배포 경로 활성화 |
 | Amazon S3 이미지 저장 | 확정이나 기능 없음 | Post-MVP ADR | [ADR-MEDIA-001](adr-backlog.md#adr-media-001-s3-사용자-이미지-저장) | 이미지 업로드·사용자 이미지 요구사항 없음 |
 | FCM HTTP v1 | 외부 채널 범위 제외 | Post-MVP ADR | [ADR-NOTIFY-001](adr-backlog.md#adr-notify-001-fcm-푸시-알림), 현재 서비스 내 저장은 [ADR-NOTIFY-002](integration/notify-002-in-app-notification-reliability.md) | 채널·동의·DeviceToken·전달 SLA 미승인 |
@@ -244,7 +244,7 @@ related_documents:
 - Nginx·ECR·EC2를 포함한 초기 운영 배포 토폴로지(단일 EC2 인스턴스)
 - `/api` 화면·백엔드 분리, 관리자 인증 matcher와 `/internal` 상태 확인 경계
 - ALB·ASG·Blue-Green: M2 초기 운영에는 미도입하고, 2026-08-18 영향·비용 검토 후 배포 고도화 기준을 [ADR-DEPLOY-005](platform/deploy-005-asg-blue-green-rollout.md)로 Accepted 확정. 실제 적용·리허설은 별도 운영 게이트로 남김
-- 로그 14일 보관, 백업(일 1회 자동 스냅샷·7일 보관), 운영 알림(CloudWatch→Slack, 담당자 1명. 팀 상시 채널이 Slack뿐이라는 근거는 [RV-NFR-013](../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준))
+- 운영 로그 로컬 보관·백업(일 1회 자동 스냅샷·7일 보관), 운영자 health·로그 수동 확인(외부 운영 알림 미사용)
 
 다음은 여전히 팀 결정이 필요한 미결정 항목이다.
 

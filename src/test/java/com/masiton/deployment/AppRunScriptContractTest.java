@@ -169,25 +169,18 @@ class AppRunScriptContractTest {
     }
 
     @Test
-    @DisplayName("CloudWatch 실패는 앱·지표 산출물을 함께 롤백한다")
-    void cloudWatch설치는앱롤백보호안에서먼저실행된다() throws IOException {
+    @DisplayName("앱 배포는 폐기된 CloudWatch 경로를 호출하지 않는다")
+    void 앱배포는폐기된CloudWatch경로를호출하지않는다() throws IOException {
         String appDeploy = read(APP_DEPLOY);
-        int cloudwatch = appDeploy.indexOf("\"$STAGE/cloudwatch-install.sh\" \"$STAGE\"");
         int nginx = appDeploy.indexOf("\"$STAGE/nginx-install.sh\" \"$STAGE\"");
         int rollbackDisable = appDeploy.indexOf("trap - ERR INT TERM HUP");
 
         assertThat(appDeploy)
-                .contains("CLOUDWATCH_AGENT_CONFIG=")
-                .contains("backup_asset \"$OPT_DIR/bin/health-metrics.sh\"")
-                .contains("restore_asset \"$OPT_DIR/bin/health-metrics.sh\"")
-                .contains("masiton-health-metrics.timer")
-                .contains("metrics_timer_was_active")
-                .contains("cloudwatch_agent_was_installed")
-                .contains("systemctl disable --now amazon-cloudwatch-agent")
-                .contains("fetch-config -m ec2 -c \"file:$CLOUDWATCH_AGENT_CONFIG\"")
-                .doesNotContain("rollback_enabled=no\n\"$STAGE/cloudwatch-install.sh\"");
-        assertThat(cloudwatch).isGreaterThanOrEqualTo(0);
-        assertThat(nginx).isGreaterThan(cloudwatch);
+                .doesNotContain("CLOUDWATCH_AGENT_CONFIG=")
+                .doesNotContain("health-metrics.sh")
+                .doesNotContain("amazon-cloudwatch-agent")
+                .doesNotContain("\"$STAGE/cloudwatch-install.sh\" \"$STAGE\"");
+        assertThat(nginx).isGreaterThanOrEqualTo(0);
         assertThat(rollbackDisable).isGreaterThan(nginx);
         assertThat(read(DOCKERHUB_DEPLOY))
                 .doesNotContain("\"$STAGE/cloudwatch-install.sh\" \"$STAGE\"");

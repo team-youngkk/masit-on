@@ -82,15 +82,14 @@ require_stage_file() {
 
 for file in \
   app-deploy.sh app-run.sh app-secrets-render.sh runtime-health.sh \
-  cloudwatch-install.sh health-metrics.sh nginx-install.sh nginx-smoke.sh \
+  observability-cleanup.sh nginx-install.sh nginx-smoke.sh \
   tls-deploy-cert.sh masiton-backend.service masiton-frontend.service \
-  amazon-cloudwatch-agent.json masiton-health-metrics.service masiton-health-metrics.timer \
   nginx.conf masiton.click.conf 00-masiton-upgrade-map.conf \
   masiton-tls-renew.service masiton-tls-renew.timer; do
   require_stage_file "$file"
 done
 for file in app-deploy.sh app-run.sh app-secrets-render.sh runtime-health.sh \
-  cloudwatch-install.sh health-metrics.sh nginx-install.sh nginx-smoke.sh tls-deploy-cert.sh; do
+  observability-cleanup.sh nginx-install.sh nginx-smoke.sh tls-deploy-cert.sh; do
   [ -x "$STAGE/$file" ] || {
     echo "배포 스크립트가 실행 가능하지 않다: $STAGE/$file" >&2
     exit 1
@@ -150,4 +149,5 @@ trap cleanup EXIT
 
 /usr/bin/docker login docker.io --username "$USERNAME" --password-stdin >/dev/null
 LOGIN_DONE=yes
+"$STAGE/observability-cleanup.sh"
 "$STAGE/app-deploy.sh" --image-refs "$BACKEND_IMAGE_REF" "$FRONTEND_IMAGE_REF" "$STAGE"

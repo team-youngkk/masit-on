@@ -32,7 +32,10 @@ assert_contains '[[ "$STAGE" =~ ^/run/masiton/deploy/masiton-deploy\.[A-Za-z0-9]
 assert_contains 'ALLOWED_NAMESPACE="${2:?Docker Hub namespace를 지정한다}"' "$DOCKERHUB_SCRIPT"
 assert_contains 'validate_image_ref backend "$BACKEND_IMAGE_REF"' "$DOCKERHUB_SCRIPT"
 assert_contains 'require_stage_file "$file"' "$DOCKERHUB_SCRIPT"
-assert_contains 'cloudwatch-install.sh health-metrics.sh nginx-install.sh nginx-smoke.sh' "$DOCKERHUB_SCRIPT"
+assert_contains 'observability-cleanup.sh nginx-install.sh nginx-smoke.sh' "$DOCKERHUB_SCRIPT"
+assert_contains '"$STAGE/observability-cleanup.sh"' "$DOCKERHUB_SCRIPT"
+assert_not_contains 'cloudwatch-install.sh' "$DOCKERHUB_SCRIPT"
+assert_not_contains 'health-metrics.sh' "$DOCKERHUB_SCRIPT"
 assert_contains '/usr/bin/docker login docker.io --username "$USERNAME" --password-stdin' "$DOCKERHUB_SCRIPT"
 assert_not_contains 'DOCKERHUB_PULL_TOKEN' "$DOCKERHUB_SCRIPT"
 if grep -Eq -- 'docker login[^[:space:]]*[[:space:]].*(--password|-p)[[:space:]=]' "$DOCKERHUB_SCRIPT"; then
