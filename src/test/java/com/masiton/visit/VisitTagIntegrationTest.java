@@ -259,7 +259,7 @@ class VisitTagIntegrationTest extends com.masiton.test.FullContextIntegrationTes
                 INSERT INTO restaurant(id, region_id, food_category_id, name, kakao_place_id, kakao_place_url,
                                        road_address, phone_number)
                 VALUES (?, '10000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001',
-                        '태그 테스트', ?, 'https://example.com/place', '서울 종로구 테스트로 1', '')
+                        '태그 테스트', ?, 'https://example.com/place', '서울 종로구 테스트로 1', '02-1234-5678')
                 """, r, r.toString());
         jdbc.update("""
                 INSERT INTO creator(id, external_channel_id, channel_name, channel_url, external_availability_status,
