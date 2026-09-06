@@ -29,7 +29,9 @@ class DeploymentPipelineContractTest {
                 .contains("지원하지 않는 배포 이벤트다")
                 .contains("docker pull \"$image\"")
                 .contains("repo_digest=")
-                .contains("ref=\"docker.io/${DOCKERHUB_NAMESPACE}/masiton-${name}@${digest}\"");
+                .contains("if [ \"$name\" = backend ]; then backend_digest=\"$digest\"; else frontend_digest=\"$digest\"; fi")
+                .contains("backend_ref=\"docker.io/${DOCKERHUB_NAMESPACE}/masiton-backend@${backend_digest}\"")
+                .contains("frontend_ref=\"docker.io/${DOCKERHUB_NAMESPACE}/masiton-frontend@${frontend_digest}\"");
     }
 
     @Test
@@ -40,14 +42,14 @@ class DeploymentPipelineContractTest {
         String resolveStep = section(workflow, "      - name: 배포 입력 및 이미지 digest 검증", "      - name: 배포 bundle 생성");
 
         assertThat(imagesJob)
-                .contains("backend_ref: ${{ steps.publish.outputs.backend_ref }}")
-                .contains("frontend_ref: ${{ steps.publish.outputs.frontend_ref }}")
+                .contains("backend_digest: ${{ steps.publish.outputs.backend_digest }}")
+                .contains("frontend_digest: ${{ steps.publish.outputs.frontend_digest }}")
                 .contains("docker image inspect --format '{{.Os}}/{{.Architecture}}'")
                 .contains("[ \"$platform\" = 'linux/amd64' ]")
                 .contains("docker push");
         assertThat(resolveStep)
-                .contains("images job의 backend_ref output이 비어 있다")
-                .contains("images job의 frontend_ref output이 비어 있다")
+                .contains("images job의 backend_digest output이 비어 있다")
+                .contains("images job의 frontend_digest output이 비어 있다")
                 .contains("docker image inspect --format '{{.Os}}/{{.Architecture}}'")
                 .contains("[ \"$platform\" != 'linux/amd64' ]");
 
@@ -127,6 +129,8 @@ class DeploymentPipelineContractTest {
                 .contains("registry-1.docker.io")
                 .contains("404) echo missing")
                 .contains("state='기존 digest 재사용'")
+                .contains("echo \"${name}_digest=${digest}\" >> \"$GITHUB_OUTPUT\"")
+                .doesNotContain("${name}_ref=${reference}")
                 .doesNotContain("actions/checkout@v4");
         assertThat(workflow)
                 .doesNotContain("actions/checkout@v4")
@@ -145,6 +149,7 @@ class DeploymentPipelineContractTest {
                 .contains("existing) echo \"Docker Hub에 기존 tag 확인: $remote_tag\"")
                 .contains("missing) echo \"Docker Hub에 tag 없음 확인: $remote_tag\"")
                 .contains("Docker Hub에 tag 없음 확인: $remote_tag")
+                .contains("${name}_digest=${digest}")
                 .contains("위 preflight loop가 backend·frontend 모두의 부재를 확인한 뒤에 push한다.");
         assertThat(indexOfOrFail(publishStep, "tag_states[\"$name\"]=$(dockerhub_tag_state \"$repo\")"))
                 .isLessThan(indexOfOrFail(publishStep, "docker push \"$remote_tag\""));
