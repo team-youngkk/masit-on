@@ -305,3 +305,7 @@ Refresh Token 세션은 역할과 무관하게 Redis 8.8 `auth:session:` namespa
 | `youtube_channel_watch` | YouTube 채널 감시·갱신 상태 | Creator·채널별 unique, 구독 상태 |
 
 정식 Restaurant·Creator·Video·Visit 저장은 이 후보 테이블과 별도의 애플리케이션 원자성·외부 검증 규칙을 따른다. 후보가 실패하거나 외부 검증이 실패하면 정식 Entity는 0건이어야 한다.
+
+## 방문 태그 보정 감사 — 이슈 #358
+
+V9 visit_tag_revision의 컬럼·타입·FK·감사 원자성은 [AI 데이터 계약 14절](third-expansion-ai-video-data-contract.md#14-맛집-상세의-방문-태그-보정-감사--이슈-358)을 따른다. 기존 VisitTag와 후보 이력의 구조는 변경하지 않는다.

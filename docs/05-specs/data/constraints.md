@@ -244,3 +244,7 @@ related_documents:
 - 태그·정식 데이터: `TagDefinition` 코드와 `VisitTag` 관계를 중복 없이 유지하고, `UNKNOWN` 근거는 `AI_AUTO_CONFIRMED` VisitTag가 될 수 없다.
 - 시도·감시: 작업별 시도 번호, 오류 결과 필수값, Creator·YouTube 채널 감시 설정의 고유성을 저장소에서 보장한다.
 - 원자성: 후보·Provider 장애·외부 검증 실패 시 정식 Restaurant·Creator·Video·Visit 저장은 0건이어야 하며, 이 조건은 DB 제약만으로 대체하지 않고 통합 테스트로 검증한다.
+
+## 방문 태그 보정 제약 — 이슈 #358
+
+V9 visit_tag_revision은 양수 revision, Visit별 revision 유일성, 전후 JSON 배열, 비어 있지 않은 사유, visit/member_account FK를 강제한다. 일반 UPDATE/DELETE를 금지하며 회원 삭제 시 행위자 FK SET NULL 익명화만 허용한다. 연결 교체와 감사 INSERT를 원자적으로 처리한다. [AI 데이터 계약](third-expansion-ai-video-data-contract.md) 참조.

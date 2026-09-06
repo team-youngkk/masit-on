@@ -123,3 +123,7 @@ Creator 필터는 `visit`에서 고유 Restaurant ID를 구한 뒤 Restaurant의
 ## 9. 운영 점검
 
 출시 후 `pg_stat_user_indexes`로 사용 횟수와 크기를 확인한다. 장기간 미사용 인덱스도 즉시 삭제하지 않고 쿼리 빈도·FK 보조 역할을 확인한 뒤 전진 마이그레이션으로 제거한다. 인덱스 추가·제거는 운영 수동 DDL이 아니라 Flyway만 사용한다.
+
+## 방문 태그 보정 인덱스 — 이슈 #358
+
+visit_tag_revision(visit_id, revision) unique B-tree가 방문별 최신 revision 역방향 조회와 유일성을 함께 지원한다. 현재 연결 조회는 기존 VisitTag 방문/태그 unique 인덱스를 사용한다.

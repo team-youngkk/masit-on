@@ -193,3 +193,9 @@ related_documents:
 
 - 상세 조합은 `com.masiton.orchestration.application.query`가 담당한다.
 - 일반 상세 조회 p95 500ms 이하를 검증하고 외부 링크는 일반 조회에서 실시간 확인하지 않는다.
+
+## 관리자 방문 태그 보정 — 이슈 #358
+
+ADMIN은 상세에서 방문·영상별 현재 태그를 확인하고 기존 활성 태그를 선택·해제한다. 태그가 없는 방문에도 편집을 제공한다. 사유를 입력한 뒤 저장하거나 취소하며, 저장 중 중복 요청을 차단한다. 충돌 시 최신 태그를 다시 조회하고 재편집한다. 익명·MEMBER에게 관리 패널을 노출하지 않는다.
+
+현재 상세에 표시 가능한 공개·활성·이용 가능 방문만 대상으로 한다. 여러 영상의 태그를 합쳐 하나의 방문 근거로 표시하지 않는다. 자유 태그 생성·별도 관리자 맛집 목록은 범위 밖이다. FR-AIEXTRACT-007·FR-NLSEARCH-004의 사후 보정이며 [구현 계획](../../../08-planning/restaurant-visit-tag-editing.md)과 [관리 API](../../../05-specs/api/admin/restaurant-visit-tags-api.md)를 따른다.
