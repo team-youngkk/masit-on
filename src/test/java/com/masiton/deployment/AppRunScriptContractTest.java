@@ -157,8 +157,12 @@ class AppRunScriptContractTest {
                 .contains("require_stage_file")
                 .contains("^/run/masiton/deploy/masiton-deploy\\.[A-Za-z0-9]{6}$")
                 .contains("docker info --format '{{.Architecture}}'")
+                .contains("[ \"$docker_arch\" = amd64 ] || [ \"$docker_arch\" = x86_64 ] || {\n"
+                        + "  echo \"Docker daemon 플랫폼이 amd64 또는 x86_64가 아니다: $docker_arch\" >&2\n"
+                        + "  exit 1\n"
+                        + "}")
                 .contains("export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin")
-                .contains("getent seq sleep dirname cp mkdir find wc cut chown tee")
+                .contains("getent seq sleep dirname cp mkdir find wc cut chown chmod mv tee")
                 .contains("LOGIN_DONE=no")
                 .contains("/run/masiton/deploy/dockerhub-config.XXXXXX")
                 .contains("rm -rf \"$DOCKER_CONFIG\" \"$STAGE\"")
