@@ -14,6 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class DeploymentPipelineContractTest {
 
     private static final Path CI = Path.of(".github/workflows/ci.yml");
+    private static final Path DOCKERHUB_DEPLOY = Path.of("deploy/scripts/dockerhub-app-deploy.sh");
 
     @Test
     @DisplayName("배포 입력은 이벤트별로 이미지 참조를 결정한다")
@@ -118,6 +119,37 @@ class DeploymentPipelineContractTest {
     }
 
     @Test
+    @DisplayName("SSH preflight는 wrapper의 필수 명령을 bundle 업로드 전에 확인한다")
+    void SSHpreflight는wrapper의필수명령을bundle업로드전에확인한다() throws IOException {
+        String workflow = read(CI);
+        String wrapper = read(DOCKERHUB_DEPLOY);
+        String preflightStep = section(workflow, "      - name: 원격 SSH 배포 preflight", "      - name: bundle 업로드 및 원격 압축 해제");
+        int preflightCommandStart = indexOfOrFail(preflightStep, "for command in ");
+        String commands = preflightStep.substring(
+                        preflightCommandStart + "for command in ".length(),
+                        indexOfOrFail(preflightStep, "; do", preflightCommandStart))
+                .replace("\\", "")
+                .replaceAll("\\s+", " ")
+                .trim();
+        int wrapperCommandStart = indexOfOrFail(wrapper, "for command_name in ");
+        String wrapperCommands = wrapper.substring(
+                        wrapperCommandStart + "for command_name in ".length(),
+                        indexOfOrFail(wrapper, "; do", wrapperCommandStart))
+                .replace("\\", "")
+                .replaceAll("\\s+", " ")
+                .trim();
+
+        assertThat(commands).isEqualTo(wrapperCommands);
+        assertThat(commands).contains("mktemp").contains("dnf").contains("rpm").contains("chmod").contains("mv");
+        assertThat(preflightStep)
+                .contains("command -v \"$command\"")
+                .contains("sudo -n test -x /usr/bin/docker")
+                .contains("sudo -n /usr/bin/docker info");
+        assertThat(indexOfOrFail(workflow, "      - name: 원격 SSH 배포 preflight"))
+                .isLessThan(indexOfOrFail(workflow, "      - name: bundle 업로드 및 원격 압축 해제"));
+    }
+
+    @Test
     @DisplayName("운영 publish는 보호 환경·immutable tag·고정 Action을 사용한다")
     void 운영publish는보호환경과immutabletag를사용한다() throws IOException {
         String workflow = read(CI);
@@ -164,13 +196,23 @@ class DeploymentPipelineContractTest {
 
         assertThat(uploadStep)
                 .contains("remote_stage=\"$(ssh")
-                .contains("mktemp -d -m 0700 -p /run/masiton/deploy masiton-deploy.XXXXXX")
+                .contains("mktemp -d -p /run/masiton/deploy masiton-deploy.XXXXXX")
+                .doesNotContain("mktemp -d -m 0700 -p /run/masiton/deploy masiton-deploy.XXXXXX")
+                .contains("sudo -n install -d -o root -g root -m 0700 '$remote_stage'")
                 .contains("remote_archive=\"$remote_stage/payload.tgz\"")
                 .contains("sudo -n tee '$remote_archive'")
                 .contains("sudo -n sha256sum '$remote_archive'")
                 .contains("--no-same-owner")
                 .contains("--no-same-permissions")
                 .doesNotContain("scp \"${ssh_opts[@]}\"");
+        assertThat(indexOfOrFail(uploadStep, "mktemp -d -p /run/masiton/deploy masiton-deploy.XXXXXX"))
+                .isLessThan(indexOfOrFail(uploadStep, "^/run/masiton/deploy/masiton-deploy\\.[A-Za-z0-9]{6}$"));
+        assertThat(indexOfOrFail(uploadStep, "^/run/masiton/deploy/masiton-deploy\\.[A-Za-z0-9]{6}$"))
+                .isLessThan(indexOfOrFail(uploadStep, "sudo -n tee '$remote_archive'"));
+        assertThat(indexOfOrFail(uploadStep, "sudo -n tee '$remote_archive'"))
+                .isLessThan(indexOfOrFail(uploadStep, "sudo -n sha256sum '$remote_archive'"));
+        assertThat(indexOfOrFail(uploadStep, "sudo -n sha256sum '$remote_archive'"))
+                .isLessThan(indexOfOrFail(uploadStep, "sudo -n tar --extract"));
         assertThat(keyStep)
                 .contains("trap cleanup EXIT")
                 .contains("rm -f -- \"$key_file\" \"$known_hosts_file\"");
@@ -192,6 +234,12 @@ class DeploymentPipelineContractTest {
 
     private static int indexOfOrFail(String text, String marker) {
         int index = text.indexOf(marker);
+        assertThat(index).as("필수 CI 계약 표식: %s", marker).isGreaterThanOrEqualTo(0);
+        return index;
+    }
+
+    private static int indexOfOrFail(String text, String marker, int fromIndex) {
+        int index = text.indexOf(marker, fromIndex);
         assertThat(index).as("필수 CI 계약 표식: %s", marker).isGreaterThanOrEqualTo(0);
         return index;
     }

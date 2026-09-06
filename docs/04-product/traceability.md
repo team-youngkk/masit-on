@@ -503,3 +503,7 @@ related_documents:
 ### 11.1 E3-T13 최종 게이트 증거
 
 현재 3차 확장 운영 상태는 [3차 확장 운영 완료 기록](../08-planning/third-expansion-operational-completion-record.md)에 따라 **운영 중(`GO`)**이다. [E3-T13 최종 게이트 판정](../08-planning/third-expansion-final-gate-result.md)과 세부 평가 문서는 당시 기준선의 `HOLD`·`CONDITIONAL`·미검증 상태를 보존하는 역사 기록으로 연결한다.
+
+### 맛집 상세 방문 태그 보정 추적 — 이슈 #358
+
+FR-AIEXTRACT-007·FR-NLSEARCH-004 → [맛집 상세 PRD](prd/detail/restaurant-detail.md)·[AI 관리 PRD](prd/admin/ai-video-information-extraction.md) → [방문 태그 API](../05-specs/api/admin/restaurant-visit-tags-api.md) → visit_tag·tag_definition·visit_tag_revision → [구현 계획·검증](../08-planning/restaurant-visit-tag-editing.md). WS-02 화면·WS-15 보정·WS-14 검색 계약을 연결한다.

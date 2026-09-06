@@ -84,7 +84,7 @@ public abstract class FullContextIntegrationTest {
     }
 
     public static void cleanupTransactionalState(org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
-        jdbcTemplate.execute("TRUNCATE TABLE ai_candidate_tag_review, ai_extraction_manual_review");
+        jdbcTemplate.execute("TRUNCATE TABLE ai_candidate_tag_review, ai_extraction_manual_review, visit_tag_revision");
         jdbcTemplate.execute("DELETE FROM ai_registration_unit_review");
         jdbcTemplate.execute("DELETE FROM ai_registration_unit");
         jdbcTemplate.execute("DELETE FROM visit_tag");

@@ -126,3 +126,7 @@ related_documents:
 - 멱등 성공 기록은 24시간 뒤 물리 삭제한다.
 
 정확한 FK 삭제 정책과 cleanup 인덱스는 [2차 확장 데이터 계약](second-expansion-data-contract.md)을 따른다.
+
+## 방문 태그 보정 이력 — 이슈 #358
+
+visit_tag_revision은 변경 전후 코드와 당시 관리자 계정 ID·사유·시각을 보존하는 append-only 감사다. 자동 purge하지 않는다. AI 후보 감사의 1년 정책과 별도이며 일반 수정·삭제는 DB에서 거부한다. 회원 탈퇴의 FK SET NULL로 행위자 연결만 익명화하는 동작은 허용한다. 보존 정책 변경은 별도 합의와 전진 변경으로 수행한다. [정의](third-expansion-ai-video-data-contract.md)를 따른다.

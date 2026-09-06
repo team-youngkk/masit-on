@@ -251,3 +251,7 @@ V6은 1~3번을 전진 적용하고, V7은 승인 입력 적재 뒤 4~10번을 �
 - 적용 대상 버전이 운영·공유 환경에 이미 존재하지 않는다는 `flyway_schema_history` 읽기 증거와, 신규 마이그레이션 적용 테스트가 남아 있다.
 
 증명 후 legacy FK·제약, `admin_account`와 `admin_account_migration_map`을 같은 계약 단계에서 제거한다. 제거 이후 롤백은 DB 복원 또는 전진 수정만 허용한다. 이 변경은 기존 적용 파일의 수정·삭제나 릴리스 전 통합 예외로 처리하지 않는다.
+
+## V9 방문 태그 보정 감사 — 이슈 #358
+
+V9__add_visit_tag_revision.sql은 visit_tag_revision과 불변 감사 트리거를 추가한다. V1~V8은 수정하지 않는다. 빈 DB 및 V8→V9 적용, FK·unique·배열·사유·불변성, 수정·감사 원자성을 검증한다. [AI 데이터 계약 14절](third-expansion-ai-video-data-contract.md#14-맛집-상세의-방문-태그-보정-감사--이슈-358)을 따른다. 번호 충돌은 병합 전 데이터 소유자 리뷰에서 확인한다.

@@ -886,14 +886,17 @@ jobs:
           remote="$PRODUCTION_SSH_USER@$PRODUCTION_HOST"
           ssh "${ssh_opts[@]}" "$remote" "sudo -n bash -s" <<'REMOTE_PREFLIGHT'
           set -euo pipefail
-          for command in bash tar sha256sum curl python3 docker aws systemctl sudo install find unzip stat; do
+          for command in docker sudo systemctl bash tar base64 curl aws python3 \
+            id stat uname install mktemp rm dnf rpm tr tail awk sha256sum cmp openssl \
+            getent seq sleep dirname cp mkdir find wc cut chown chmod mv tee; do
             command -v "$command" >/dev/null || {
               echo "원격 필수 명령이 없다: $command" >&2
               exit 1
             }
           done
           sudo -n true
-          sudo -n docker info >/dev/null
+          sudo -n test -x /usr/bin/docker
+          sudo -n /usr/bin/docker info >/dev/null
           test "$(uname -m)" = x86_64
           REMOTE_PREFLIGHT
 
@@ -917,7 +920,7 @@ jobs:
             -i "$KEY_FILE"
           )
           remote="$PRODUCTION_SSH_USER@$PRODUCTION_HOST"
-          remote_stage="$(ssh "${ssh_opts[@]}" "$remote" "sudo -n test ! -L /run/masiton && sudo -n install -d -o root -g root -m 0711 /run/masiton && sudo -n test ! -L /run/masiton/deploy && sudo -n install -d -o root -g root -m 0700 /run/masiton/deploy && sudo -n mktemp -d -m 0700 -p /run/masiton/deploy masiton-deploy.XXXXXX")"
+          remote_stage="$(ssh "${ssh_opts[@]}" "$remote" "sudo -n test ! -L /run/masiton && sudo -n install -d -o root -g root -m 0711 /run/masiton && sudo -n test ! -L /run/masiton/deploy && sudo -n install -d -o root -g root -m 0700 /run/masiton/deploy && sudo -n mktemp -d -p /run/masiton/deploy masiton-deploy.XXXXXX")"
           [[ "$remote_stage" =~ ^/run/masiton/deploy/masiton-deploy\.[A-Za-z0-9]{6}$ ]] || {
             echo "원격 stage 경로가 예상한 root 임시 디렉터리가 아니다: $remote_stage" >&2
             exit 1

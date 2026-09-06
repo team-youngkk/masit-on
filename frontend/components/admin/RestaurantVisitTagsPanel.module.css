@@ -1,0 +1,15 @@
+.panel { padding: var(--space-5); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); background: var(--color-surface); }
+.panel h2, .panel h3 { margin-top: 0; }
+.panel p { overflow-wrap: anywhere; }
+.admin { font-size: 0.75rem; color: var(--color-text-muted); }
+.visits { padding: 0; margin: var(--space-4) 0 0; list-style: none; display: grid; gap: var(--space-4); }
+.visit { padding: var(--space-4); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); min-width: 0; }
+.tags, .actions, .options { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.tags { margin-bottom: var(--space-3); }
+.tag { padding: var(--space-1) var(--space-2); border-radius: var(--radius-full); background: var(--color-surface-muted); }
+.options { gap: var(--space-3); max-height: 20rem; overflow: auto; padding: var(--space-2) 0; }
+.options label { display: flex; align-items: center; gap: var(--space-1); min-height: 2.75rem; }
+.form fieldset { border: 0; padding: 0; min-width: 0; }
+.reason { display: grid; gap: var(--space-2); margin: var(--space-3) 0; }
+.reason textarea { width: 100%; box-sizing: border-box; padding: var(--space-2); font: inherit; color: inherit; background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); resize: vertical; }
+.error { color: var(--color-danger); }

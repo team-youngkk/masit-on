@@ -107,7 +107,7 @@ require_command() {
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 for command_name in docker sudo systemctl bash tar base64 curl aws python3 \
   id stat uname install mktemp rm dnf rpm tr tail awk sha256sum cmp openssl \
-  getent seq sleep dirname cp mkdir find wc cut chown tee; do
+  getent seq sleep dirname cp mkdir find wc cut chown chmod mv tee; do
   require_command "$command_name"
 done
 [ -x /usr/bin/docker ] || {
@@ -125,8 +125,8 @@ host_arch="$(uname -m)"
   exit 1
 }
 docker_arch="$(/usr/bin/docker info --format '{{.Architecture}}' 2>/dev/null)"
-[ "$docker_arch" = amd64 ] || {
-  echo "Docker daemon 플랫폼이 amd64가 아니다: $docker_arch" >&2
+[ "$docker_arch" = amd64 ] || [ "$docker_arch" = x86_64 ] || {
+  echo "Docker daemon 플랫폼이 amd64 또는 x86_64가 아니다: $docker_arch" >&2
   exit 1
 }
 
