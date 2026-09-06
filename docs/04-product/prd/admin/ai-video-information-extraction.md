@@ -231,3 +231,7 @@ related_documents:
 - 태그 정의·별칭·근거 정책 변경은 데이터 계약과 평가 Dataset 버전을 함께 올린다.
 - 장소 동일성 자동 확정 기준(`BR-AIEXTRACT-009`) 또는 containment/LIKE fallback 조건을 완화하면 Critical 오연결 위험이 직접 올라간다. 완화 경로는 `AI_PLACE_IDENTITY_RELAXED_MATCHING_ENABLED=true`를 기본값으로 운영에서 활성화하되, 동일 구·카테고리·유일 후보 조건을 유지하고 오연결 감시 또는 긴급 차단이 필요하면 환경 변수로 `false`를 주입한다. 양방향 이름 containment와 지점명 접미사 제거는 기존 안전 조건을 완화하지 않으며 Release holdout·인간 판정 지표를 계속 수집한다.
 - 카테고리 매핑 표 변경은 기준정보 변경으로 취급하고 변경 이력을 남긴다. 매핑 표를 넓혀 `CATEGORY_UNRESOLVED`를 줄이는 변경은 오분류율을 함께 측정한다.
+
+## 맛집 상세의 확정 태그 보정 — 이슈 #358
+
+등록이 끝난 방문의 태그는 [맛집 상세 관리 패널](../detail/restaurant-detail.md)에서도 보정한다. Snapshot 후보 재검수와 구분하며 수동 등록 방문도 지원한다. 기존 연결의 출처·근거를 유지하고 추가·제거 및 사유·관리자를 별도 append-only 감사로 보존한다. 동시성·권한·입력 경계는 [방문 태그 API](../../../05-specs/api/admin/restaurant-visit-tags-api.md)를 따른다.
