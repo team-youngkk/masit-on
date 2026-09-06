@@ -69,3 +69,7 @@ related_documents:
 | [PostgreSQL EC2·단일 앱 EC2 전환 목표와 비용](postgres-ec2-single-instance-transition.md) | RDS 제거·PostgreSQL EC2 전환과 ALB·ASG·CodeDeploy 제거 목표의 단계별 비용·선행 조건·전환 확인 항목 |
 
 구현 계획은 제품 범위, 요구사항, API·데이터 명세와 ADR을 변경하지 않는다. 상위 문서가 바뀌면 영향받는 Task와 완료 조건을 함께 갱신한다.
+
+## 맛집 상세 태그 보정
+
+- [관리자 방문 태그 조회·수정 계획](restaurant-visit-tag-editing.md) — [이슈 #358](https://github.com/team-youngkk/masit-on/issues/358)

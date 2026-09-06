@@ -9,6 +9,7 @@ import { StatePanel } from '@/components/ui/StatePanel'
 import { FavoriteButton } from '@/components/personal/FavoriteButton'
 import { CollectionAddControl } from '@/components/personal/CollectionAddControl'
 import { RecentViewRecorder } from '@/components/personal/RecentViewRecorder'
+import { RestaurantVisitTagsPanel } from '@/components/admin/RestaurantVisitTagsPanel'
 import {
   RestaurantDetailUnavailableError,
   RestaurantIdentifierInvalidError,
@@ -170,6 +171,7 @@ export default async function RestaurantDetailPage({
         <SectionHeader title="방문 콘텐츠" />
         <RestaurantContent restaurant={restaurant} />
       </section>
+      <RestaurantVisitTagsPanel restaurantId={restaurant.id} />
     </article>
     </PageShell>
   )

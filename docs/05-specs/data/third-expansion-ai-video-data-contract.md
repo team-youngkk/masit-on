@@ -398,3 +398,22 @@ Webhook Raw Payload, 원본 영상, 자동 수집 전체 자막, Gemini 응답 �
 - [ ] Flyway 빈 DB·`V3→V4` 적용, 제약 위반, lease 동시성·정식 Entity 0건 테스트 결과가 보존된다.
 - [ ] `ai_registration_unit`의 새 마이그레이션이 Flyway 순서 소유자 합의를 거쳐 추가되고, 단위별 상태·`registered_restaurant_id` 조합 제약이 검증된다.
 - [ ] 다장소 영상에서 일부 등록 단위가 차단돼도 통과한 단위의 정식 Entity가 유지되는 원자성 경계가 검증된다.
+
+## 14. 맛집 상세의 방문 태그 보정 감사 — 이슈 #358
+
+[관리자 방문 태그 API](../api/admin/restaurant-visit-tags-api.md)를 위한 visit_tag_revision을 V9에 추가한다. Snapshot이 없는 수동 등록 방문도 지원하므로 ai_candidate_tag_review를 재사용하지 않는다. 기존 후보 판단과 Snapshot은 역사적 사실로 유지한다.
+
+| 컬럼 | 타입 | 제약·역할 |
+|---|---|---|
+| id | uuid | PK |
+| visit_id | uuid | NN, FK visit, 삭제 RESTRICT |
+| revision | bigint | NN, 양수, (visit_id, revision) unique |
+| before_tag_codes | jsonb | NN, 배열, 변경 전 전체 태그 코드 |
+| after_tag_codes | jsonb | NN, 배열, 변경 후 전체 태그 코드 |
+| reason | varchar(1000) | NN, trim 후 비어 있지 않음 |
+| changed_by_member_id | uuid | nullable, FK member_account, ON DELETE SET NULL; 당시 ADMIN인 통합 계정, 탈퇴 후 NULL |
+| changed_at | timestamptz | NN, 현재 시각 |
+
+Visit 행 잠금 안에서 revision을 증가시키고 연결 변경과 같은 트랜잭션에 INSERT한다. 일반 UPDATE/DELETE는 트리거로 금지한다. 회원 탈퇴 시 FK SET NULL로 행위자 연결만 익명화하고 다른 감사 값은 보존한다. 트리거는 해당 계정이 삭제된 경우의 actor NULL 전환만 예외로 허용한다. 최신 감사 revision과 현재 연결 상태의 해시를 동시성 토큰에 포함한다. no-op은 새 감사를 만들지 않는다. 기존 연결은 출처·근거·Snapshot을 유지하며 새 연결만 ADMIN_OVERRIDE/UNKNOWN으로 기록한다. 태그 정의 생성·사전 확대는 포함하지 않는다.
+
+감사는 자동 삭제하지 않으며 원본 영상·자막·개인정보 원문을 저장하지 않는다. 보존 정책 변경·purge는 별도 합의와 전진 변경 대상이다. 사용자의 기능 구현 요청을 근거로 작성했으며 팀 API·데이터 소유자 리뷰는 병합 전에 확인한다.

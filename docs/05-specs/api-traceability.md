@@ -339,3 +339,7 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 ### 10.1 E3-T13 최종 게이트 증거
 
 세 API의 현재 운영 상태는 [3차 확장 운영 완료 기록](../08-planning/third-expansion-operational-completion-record.md)에 따라 **운영 중(`GO`)**이다. [E3-T13 최종 게이트 판정](../08-planning/third-expansion-final-gate-result.md)과 세부 API 평가 기록의 `HOLD`·미검증 표현은 당시 기준선의 역사 기록으로 보존한다.
+
+## 맛집 상세 방문 태그 관리 — 이슈 #358
+
+FR-AIEXTRACT-007·FR-NLSEARCH-004 → [API-ADMIN-VISIT-TAGS-001](api/admin/restaurant-visit-tags-api.md): GET /api/admin/restaurants/{restaurantId}/visit-tags, PUT /api/admin/restaurants/{restaurantId}/visits/{visitId}/tags → VisitTag 조회/교체·V9 감사. ADMIN 인가·동시 수정·원자성·검색 반영은 [구현 계획](../08-planning/restaurant-visit-tag-editing.md) 참조.

@@ -282,3 +282,7 @@ V3 전진 적용과 전체 FK·UNIQUE·CHECK·인덱스는 `TST-E2-E2E-001`, `E2
 ### 14.1 E3-T13 최종 게이트 증거
 
 자연어·코스의 비저장 경계, 공개 좌표 데이터 의존성, AI Worker lease·quota 경계에 대한 자동화 결과와 운영 측정 보류 사유는 [E3-T13 최종 게이트 판정](../../08-planning/third-expansion-final-gate-result.md)에 기록한다. 운영 좌표 보강률과 Worker·Mobility 측정이 없으면 데이터·운영 완료로 판정하지 않는다.
+
+## 방문 태그 보정 추적 — 이슈 #358
+
+FR-AIEXTRACT-007·FR-NLSEARCH-004 → [방문 태그 API](../api/admin/restaurant-visit-tags-api.md) → visit·visit_tag·tag_definition·visit_tag_revision. V9가 보정 전후와 통합 계정 행위자 감사를 소유하며 [데이터 계약](third-expansion-ai-video-data-contract.md)을 따른다.
