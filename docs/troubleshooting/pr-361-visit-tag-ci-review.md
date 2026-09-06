@@ -26,7 +26,7 @@ related_documents:
 |---|---|---|---|---|---|
 | [변경 요청 리뷰](https://github.com/team-youngkk/masit-on/pull/361#pullrequestreview-4567787220) | 신규 통합 테스트 fixture의 빈 전화번호를 계약에 맞게 수정 | 데이터베이스 | 수정 필요 | `02-1234-5678`로 수정 | CI 8건이 같은 CHECK 위반으로 실패한 XML과 V1 제약을 대조 |
 | [백엔드 CI](https://github.com/team-youngkk/masit-on/actions/runs/34010902833/job/101426432821) | V9 추가 뒤 최신 마이그레이션 목록 기대값이 V8에 머묾 | 애플리케이션 | 수정 필요 | 기존 빈 DB 테스트 기대값에 V9 추가 | CI XML에서 실제 1~9와 기대 1~8 불일치를 확인 |
-| [백엔드 CI](https://github.com/team-youngkk/masit-on/actions/runs/34010902833/job/101426432821) | Kakao Mobility WireMock 테스트 29건이 모두 EOF로 실패 | 인프라 | 수정 불필요 | 첫 실행의 독립적인 WireMock 서버 시작 실패로 분류하고 후속 CI에서 재현 여부 확인 | 29건 모두 0.272초 안에 같은 HTTP header EOF로 실패했고 이번 PR의 변경 파일과 실행 경로에 해당 모듈이 없음 |
+| [백엔드 CI](https://github.com/team-youngkk/masit-on/actions/runs/34010902833/job/101426432821) | Kakao Mobility WireMock 테스트 29건이 모두 EOF로 실패 | 인프라 | 수정 불필요 | 첫 실행의 독립적인 WireMock 서버 시작 실패로 분류하고 후속 CI에서 비재현 확인 | 29건 모두 0.272초 안에 같은 HTTP header EOF로 실패했고 [후속 전체 백엔드 CI](https://github.com/team-youngkk/masit-on/actions/runs/34023577158/job/101460483329)가 코드 변경 없이 통과 |
 
 ## 3. 문제 현상과 발생 조건
 
@@ -41,7 +41,7 @@ related_documents:
 
 신규 fixture를 작성하면서 `phone_number`가 NOT NULL이고 7~20자의 허용 문자 형식을 가져야 한다는 V1 제약을 반영하지 않았다. 또한 신규 마이그레이션 전용 테스트와 공통 `FlywayMigrationIntegrationTest`는 V9로 갱신했지만, 별도 스키마를 생성하는 `Expansion3FlywayMigrationIntegrationTest`의 최신 버전 목록 단언을 함께 갱신하지 않았다.
 
-WireMock 29건은 테스트 본문 진입 전 서버 응답이 없는 동일 EOF이고, PR이 해당 코드·fixture·설정을 변경하지 않았다. 최초 CI 결과만으로 근본 원인을 확정하지 않고 후속 CI 재현 여부로 판단한다.
+WireMock 29건은 테스트 본문 진입 전 서버 응답이 없는 동일 EOF이고, PR이 해당 코드·fixture·설정을 변경하지 않았다. 후속 전체 CI가 해당 모듈 변경 없이 통과해 일시적인 테스트 서버 기동 실패였음을 확인했다.
 
 ## 5. 확인 및 시도
 
@@ -66,22 +66,21 @@ WireMock 29건은 테스트 본문 진입 전 서버 응답이 없는 동일 EOF
 |---|---|---|
 | `.\gradlew.bat compileTestJava --no-daemon --console=plain` | 통과 | 수정된 테스트 소스 컴파일 |
 | `git diff --check` | 통과 | 공백·패치 형식 |
-| GitHub Actions 후속 전체 백엔드 CI | 확인 예정 | VisitTag 10건, V9 migration, 기존 Flyway와 WireMock 회귀 |
+| [GitHub Actions 후속 전체 백엔드 CI](https://github.com/team-youngkk/masit-on/actions/runs/34023577158/job/101460483329) | 통과 | VisitTag 통합 10건, V9 migration, 기존 Flyway와 WireMock을 포함한 전체 `clean build` |
 
 ## 8. 재발 방지 및 다음 확인
 
 - 재발 방지: 통합 fixture는 실제 V1 CHECK를 만족하는 값을 사용하고, 신규 Flyway 파일 추가 시 최신 버전을 단언하는 모든 테스트를 함께 갱신한다.
-- 다음 확인: `@tjdgns0618`이 PR #361 후속 CI에서 전체 백엔드 결과와 WireMock EOF 재현 여부를 확인한다.
+- 다음 확인: 없음. PR #361 후속 전체 백엔드 CI에서 WireMock EOF가 재현되지 않았다.
 
 ## 9. 도입 전후 비교 지표
 
 | 지표 | 도입 전 기준값 | 측정 방법·기간 | 배포 확장 후 값 | 비교 결과 | 담당자·확인 시점/이슈 |
 |---|---|---|---|---|---|
-| 이번 PR 원인의 백엔드 실패 | 9건 | PR #361 CI 테스트 XML | 후속 CI 확인 예정 | 확인 예정 | 양성훈, PR #361 후속 CI |
-| 방문 태그 통합 테스트 실행 | 10건 중 8건 fixture 실패, 권한 2건 통과 | `VisitTagIntegrationTest` | 후속 CI 확인 예정 | 확인 예정 | 양성훈, PR #361 후속 CI |
-| WireMock EOF | 29건 | 같은 전체 백엔드 job 재실행 | 후속 CI 확인 예정 | 재현 시 별도 인프라 진단 | 양성훈, PR #361 후속 CI |
+| 이번 PR 원인의 백엔드 실패 | 9건 | PR #361 CI 테스트 XML | 후속 CI 0건 | fixture·최신 버전 단언 수정 후 해소 | 양성훈, PR #361 후속 CI |
+| 방문 태그 통합 테스트 실행 | 10건 중 8건 fixture 실패, 권한 2건 통과 | `VisitTagIntegrationTest` | 10건 전체 통과 | 실제 태그 조회·수정·감사 경계 실행 | 양성훈, PR #361 후속 CI |
+| WireMock EOF | 29건 | 같은 전체 백엔드 job 재실행 | 0건 | 일시 테스트 서버 기동 실패로 확인 | 양성훈, PR #361 후속 CI |
 
 ## 10. 남은 사항
 
-- 후속 GitHub Actions 전체 백엔드 CI 결과를 확인한 뒤 7·9절을 최종 값으로 갱신한다.
-- 변경 요청은 인라인 스레드가 아닌 리뷰 본문으로 작성되어 GitHub API로 개별 resolve할 대상은 없다. 수정 커밋과 결과를 PR 대화에 회신하고 재검토를 기다린다.
+- 변경 요청은 인라인 스레드가 아닌 리뷰 본문으로 작성되어 GitHub API로 개별 resolve할 대상은 없었다. 수정 커밋과 후속 CI 통과 뒤 리뷰어가 승인으로 갱신했다.
