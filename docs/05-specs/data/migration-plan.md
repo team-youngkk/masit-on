@@ -255,3 +255,17 @@ V6은 1~3번을 전진 적용하고, V7은 승인 입력 적재 뒤 4~10번을 �
 ## V9 방문 태그 보정 감사 — 이슈 #358
 
 V9__add_visit_tag_revision.sql은 visit_tag_revision과 불변 감사 트리거를 추가한다. V1~V8은 수정하지 않는다. 빈 DB 및 V8→V9 적용, FK·unique·배열·사유·불변성, 수정·감사 원자성을 검증한다. [AI 데이터 계약 14절](third-expansion-ai-video-data-contract.md#14-맛집-상세의-방문-태그-보정-감사--이슈-358)을 따른다. 번호 충돌은 병합 전 데이터 소유자 리뷰에서 확인한다.
+
+## V10 태그 정의 정규화 용어 — 이슈 #363
+
+`V10__add_tag_definition_term.sql`은 정규화 함수와 `tag_definition_term`을 추가하고 기존 `tag_definition.display_name`·`aliases`를 역적재한다. 적용된 V1~V9는 수정하지 않는다. 기존 AI 작성자가 표시명과 같은 값을 자기 별칭으로 자동 저장한 `AI_AUTO` 행은 그 중복 별칭만 JSONB에서 제거한 뒤 역적재한다. 의미가 같은 별칭을 잃는 변경이 아니며 다른 출처나 서로 다른 정의의 충돌에는 적용하지 않는다.
+
+적용 순서는 다음과 같다.
+
+1. Unicode NFKC, trim, 연속 Unicode 공백 축약, 영문 소문자를 적용하는 DB 정규화 함수를 만든다.
+2. `AI_AUTO`의 표시명 자기 중복 별칭만 제거하고, 나머지 역적재 대상에 빈 값·200자 초과·정규화 용어 충돌이 있는지 검사한다. 하나라도 있으면 원본 태그를 임의 변경하거나 합치지 않고 마이그레이션을 실패시킨다.
+3. term 테이블과 CHECK·FK를 만들고 표시명 1개와 모든 JSONB 별칭을 역적재한다.
+4. `normalized_term` 전역 unique와 정의별 DISPLAY_NAME partial unique를 만든다.
+5. 태그 코드 형식과 `tag_type` 접두사 일치 CHECK를 기존 행 검증과 함께 추가한다.
+
+빈 DB V1→V10과 V9→V10 전진 적용, V4 18개 seed 보존, 기존 AI 태그 역적재, Unicode·공백·대소문자 정규화 동등성, 기존 충돌 시 전체 실패, ADMIN·AI 동시 생성 unique, 정의·용어 원자성을 검증한다. 다른 통합 테스트가 migration 목록을 고정한다면 V10을 포함하도록 기대값을 갱신하되 seed를 삭제해 통과시키지 않는다. [AI 데이터 계약 15절](third-expansion-ai-video-data-contract.md#15-태그-정규화-용어--이슈-363)을 따른다.

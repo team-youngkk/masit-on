@@ -19,4 +19,11 @@ class AiTagPolicyTest {
     void isNewTagCandidate_원본과표시라벨불일치_신규태그후보로허용하지않는다() {
         assertThat(AiTagPolicy.isNewTagCandidate("MENU", "김밥집", "김밥", "MENU_KIMBAP")).isFalse();
     }
+
+    @Test
+    @DisplayName("끝 밑줄이나 연속 밑줄이 있는 코드는 신규 태그 후보가 되지 않는다")
+    void isNewTagCandidate_잘못된밑줄코드_신규태그후보로허용하지않는다() {
+        assertThat(AiTagPolicy.isNewTagCandidate("MENU", "김밥", "김밥", "MENU_KIMBAP_")).isFalse();
+        assertThat(AiTagPolicy.isNewTagCandidate("MENU", "김밥", "김밥", "MENU__KIMBAP")).isFalse();
+    }
 }

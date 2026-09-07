@@ -41,7 +41,9 @@ final class AiTagPolicy {
         String normalizedRawLabel = normalize(rawLabel);
         return !normalizedLabel.isBlank() && normalizedLabel.equals(normalizedRawLabel)
                 && normalizedCode != null
-                && normalizedCode.matches(java.util.regex.Pattern.quote(tagType) + "_[A-Z0-9][A-Z0-9_]{0,63}");
+                && normalizedCode.length() <= 64
+                && normalizedCode.matches(java.util.regex.Pattern.quote(tagType)
+                        + "_[A-Z0-9]+(?:_[A-Z0-9]+)*");
     }
 
     private static String normalize(String value) {

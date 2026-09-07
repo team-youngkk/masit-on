@@ -2,7 +2,26 @@
 
 import { ensureMemberSession } from '../member/auth.ts'
 import { adminJson } from './api.ts'
-import { withinAdminScope, type RestaurantVisitTags, type TagEdit } from './visit-tags-coordination.ts'
+import {
+  withinAdminScope,
+  type CreateTagDefinitionRequest,
+  type RestaurantVisitTags,
+  type TagDefinition,
+  type TagDefinitionList,
+  type TagEdit,
+} from './visit-tags-coordination.ts'
+
+export function getTagDefinitions(accountId: string, signal: AbortSignal) {
+  return withinAdminScope(accountId, ensureMemberSession, () => adminJson<TagDefinitionList>(
+    '/api/admin/tag-definitions', { cache: 'no-store', signal },
+  ), signal)
+}
+
+export function createTagDefinition(accountId: string, request: CreateTagDefinitionRequest, signal: AbortSignal) {
+  return withinAdminScope(accountId, ensureMemberSession, () => adminJson<TagDefinition>(
+    '/api/admin/tag-definitions', { method: 'POST', signal, body: JSON.stringify(request) },
+  ), signal)
+}
 
 export function getRestaurantVisitTags(restaurantId: string, accountId: string, signal: AbortSignal) {
   return withinAdminScope(accountId, ensureMemberSession, () => adminJson<RestaurantVisitTags>(

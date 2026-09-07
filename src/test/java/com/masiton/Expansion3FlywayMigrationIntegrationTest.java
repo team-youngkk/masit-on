@@ -126,7 +126,7 @@ class Expansion3FlywayMigrationIntegrationTest {
         // then
         assertThat(jdbcTemplate.queryForList(
                 "SELECT version FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank", String.class))
-                .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9");
+                .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10");
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM pg_indexes WHERE schemaname = current_schema() "
                 + "AND indexname IN ('ix_ai_job__video_input_versions', 'ix_ai_job__video_mode_versions', "
                 + "'ix_ai_temporary_input__expires_at', 'ix_visit_tag__created_from_snapshot')", Integer.class)).isEqualTo(4);
@@ -352,6 +352,17 @@ class Expansion3FlywayMigrationIntegrationTest {
                 .as(name)
                 .contains(fragments.toArray(String[]::new)));
 
+        List<String> tagDefinitionChecks = new ArrayList<>(List.of(
+                "ck_tag_definition__code_not_blank", "ck_tag_definition__type",
+                "ck_tag_definition__display_name_not_blank", "ck_tag_definition__aliases_array",
+                "ck_tag_definition__aliases_text_unique", "ck_tag_definition__status",
+                "ck_tag_definition__source", "ck_tag_definition__snapshot_source",
+                "ck_tag_definition__updated_after_created"));
+        if (includeLastErrorAt) {
+            tagDefinitionChecks.addAll(List.of(
+                    "ck_tag_definition__code_format", "ck_tag_definition__code_type_prefix",
+                    "ck_tag_definition__aliases_max_count", "ck_tag_definition__aliases_max_length"));
+        }
         Map<String, List<String>> expectedChecks = new HashMap<>(Map.of(
                 "ai_extraction_job", List.of(
                         "ck_ai_extraction_job__source", "ck_ai_extraction_job__priority",
@@ -382,12 +393,7 @@ class Expansion3FlywayMigrationIntegrationTest {
                         "ck_ai_candidate_tag_review__decision", "ck_ai_candidate_tag_review__decision_source",
                         "ck_ai_candidate_tag_review__decision_pair", "ck_ai_candidate_tag_review__decision_actor",
                         "ck_ai_candidate_tag_review__manual_tag_code"),
-                "tag_definition", List.of(
-                        "ck_tag_definition__code_not_blank", "ck_tag_definition__type",
-                        "ck_tag_definition__display_name_not_blank", "ck_tag_definition__aliases_array",
-                        "ck_tag_definition__aliases_text_unique", "ck_tag_definition__status",
-                        "ck_tag_definition__source", "ck_tag_definition__snapshot_source",
-                        "ck_tag_definition__updated_after_created"),
+                "tag_definition", tagDefinitionChecks,
                 "visit_tag", List.of(
                         "ck_visit_tag__source", "ck_visit_tag__confidence", "ck_visit_tag__evidence_object",
                         "ck_visit_tag__ai_evidence"),

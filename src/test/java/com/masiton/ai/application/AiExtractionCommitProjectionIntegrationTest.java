@@ -3,6 +3,7 @@ package com.masiton.ai.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -117,6 +118,89 @@ class AiExtractionCommitProjectionIntegrationTest extends FullContextIntegration
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.interpretation.status").value("APPLIED"))
                 .andExpect(jsonPath("$.results.items[0].id").value(fixture.restaurantId().toString()));
+    }
+
+    @Test
+    @DisplayName("AI 신규 태그는 정의와 정규화 용어를 같은 커밋에서 생성한다")
+    void ai확정커밋_신규태그_정의와용어를함께생성한다() {
+        // given
+        Fixture fixture = insertExistingPublicContent();
+        OffsetDateTime finishedAt = OffsetDateTime.now();
+        UUID jobId = insertRunningJob(finishedAt.minusSeconds(2));
+        given(autoRegister.register(any())).willReturn(new AutoRegisterVerifiedContentUseCase.RegistrationResult(
+                fixture.restaurantId(), fixture.creatorId(), fixture.videoId(), fixture.visitId(),
+                false, false, false, false));
+        var command = new AiExtractionResultCommitService.ProcessCommand(
+                jobId, "worker-1", 1, finishedAt.minusSeconds(2), finishedAt, "provider-request-new-tag", "COMPLETE",
+                "{}", "[]", "{}", "{}", "[]", false, null, "AUTO_CONFIRMED",
+                List.of(new AiExtractionResultCommitService.AiTagCandidate(
+                        "candidate-family", "OCCASION", "OCCASION_FAMILY", "가족 모임", BigDecimal.valueOf(0.95),
+                        "{\"type\":\"TIMESTAMP\",\"startMs\":1000,\"endMs\":2000}",
+                        "[]", "P1/S1", "AUTO_ACCEPT", null, true, null)),
+                List.of());
+
+        // when
+        assertThat(commitService.persistConfirmed(command,
+                mock(AutoRegisterVerifiedContentUseCase.VerifiedContentCommand.class))).isTrue();
+
+        // then
+        assertThat(jdbcTemplate.queryForList("""
+                SELECT term_kind || ':' || normalized_term
+                  FROM tag_definition_term t
+                  JOIN tag_definition d ON d.id = t.tag_definition_id
+                 WHERE d.tag_code = 'OCCASION_FAMILY'
+                 ORDER BY term_kind DESC
+                """, String.class)).containsExactly("DISPLAY_NAME:가족 모임");
+    }
+
+    @Test
+    @DisplayName("AI 후보 표시명이 기존 관리자 별칭과 같으면 기존 태그에 병합한다")
+    void ai확정커밋_표시명이기존관리자별칭과같으면_기존태그에병합한다() {
+        // given
+        UUID existingTagId = UUID.randomUUID();
+        OffsetDateTime createdAt = OffsetDateTime.now().minusMinutes(1);
+        jdbcTemplate.update("""
+                INSERT INTO tag_definition (
+                    id, tag_code, tag_type, display_name, aliases, status, source, created_at, updated_at
+                ) VALUES (?, 'OCCASION_TOGETHER', 'OCCASION', '함께 식사', '["가족 모임"]'::jsonb,
+                          'ACTIVE', 'MANUAL_OVERRIDE', ?, ?)
+                """, existingTagId, createdAt, createdAt);
+        jdbcTemplate.update("""
+                INSERT INTO tag_definition_term (
+                    id, tag_definition_id, term_kind, normalized_term, created_at
+                ) VALUES (?, ?, 'DISPLAY_NAME', '함께 식사', ?), (?, ?, 'ALIAS', '가족 모임', ?)
+                """, UUID.randomUUID(), existingTagId, createdAt, UUID.randomUUID(), existingTagId, createdAt);
+        Fixture fixture = insertExistingPublicContent();
+        OffsetDateTime finishedAt = OffsetDateTime.now();
+        UUID jobId = insertRunningJob(finishedAt.minusSeconds(2));
+        given(autoRegister.register(any())).willReturn(new AutoRegisterVerifiedContentUseCase.RegistrationResult(
+                fixture.restaurantId(), fixture.creatorId(), fixture.videoId(), fixture.visitId(),
+                false, false, false, false));
+        var command = new AiExtractionResultCommitService.ProcessCommand(
+                jobId, "worker-1", 1, finishedAt.minusSeconds(2), finishedAt, "provider-request-alias", "COMPLETE",
+                "{}", "[]", "{}", "{}", "[]", false, null, "AUTO_CONFIRMED",
+                List.of(new AiExtractionResultCommitService.AiTagCandidate(
+                        "candidate-family-alias", "OCCASION", "OCCASION_FAMILY", "가족 모임",
+                        BigDecimal.valueOf(0.95),
+                        "{\"type\":\"TIMESTAMP\",\"startMs\":1000,\"endMs\":2000}",
+                        "[]", "P1/S1", "AUTO_ACCEPT", null, true, null)),
+                List.of());
+
+        // when
+        assertThat(commitService.persistConfirmed(command,
+                mock(AutoRegisterVerifiedContentUseCase.VerifiedContentCommand.class))).isTrue();
+
+        // then
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM tag_definition WHERE tag_code = 'OCCASION_FAMILY'", Integer.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM visit_tag WHERE visit_id = ? AND tag_definition_id = ?",
+                Integer.class, fixture.visitId(), existingTagId)).isOne();
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT decision || ':' || replacement_tag_definition_id
+                  FROM ai_candidate_tag_review
+                 WHERE candidate_tag_id = 'candidate-family-alias'
+                """, String.class)).isEqualTo("AUTO_MERGE:" + existingTagId);
     }
 
     private Fixture insertExistingPublicContent() {

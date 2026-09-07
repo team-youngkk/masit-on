@@ -88,9 +88,10 @@ related_documents:
 | [FR-ADMIN-002](../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록) | 맛집 정보 등록 | [PRD-ADMIN-001](prd/admin/admin-data-management.md) | [PRD-DISCOVERY-001](prd/discovery/restaurant-discovery.md), [PRD-DETAIL-001](prd/detail/restaurant-detail.md) | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 김인안 |
 | [FR-ADMIN-003](../01-requirements/functional-requirements.md#fr-admin-003-유튜버-정보-등록) | 유튜버 정보 등록 | [PRD-ADMIN-001](prd/admin/admin-data-management.md) | [PRD-DISCOVERY-002](prd/discovery/creator-discovery.md), [PRD-DETAIL-001](prd/detail/restaurant-detail.md) | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 김인안 |
 | [FR-ADMIN-004](../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록) | 영상 정보 등록 | [PRD-ADMIN-001](prd/admin/admin-data-management.md) | [PRD-DISCOVERY-002](prd/discovery/creator-discovery.md), [PRD-DETAIL-001](prd/detail/restaurant-detail.md) | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 김인안 |
+| [FR-ADMIN-005](../01-requirements/functional-requirements.md#fr-admin-005-관리자-태그-정의-생성) | 관리자 태그 정의 생성 | [PRD-ADMIN-001](prd/admin/admin-data-management.md) | [PRD-DETAIL-001](prd/detail/restaurant-detail.md) | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록)·WS-15 | 김인안 |
 | [FR-VISIT-001](../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록) | 맛집·유튜버·영상 방문 관계 등록 | [PRD-ADMIN-001](prd/admin/admin-data-management.md) | [PRD-DISCOVERY-001](prd/discovery/restaurant-discovery.md), [PRD-DISCOVERY-002](prd/discovery/creator-discovery.md), [PRD-DETAIL-001](prd/detail/restaurant-detail.md) | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 김인안 |
 
-기능 요구사항 20개는 각각 정확히 하나의 주 PRD에 배정됐다. 보조 PRD는 데이터 또는 계약 영향을 뜻하며 요구사항 완료 책임을 중복시키지 않는다.
+기능 요구사항 21개는 각각 정확히 하나의 주 PRD에 배정됐다. 보조 PRD는 데이터 또는 계약 영향을 뜻하며 요구사항 완료 책임을 중복시키지 않는다.
 
 ### 3.1 1차 확장 PRD 목록
 
@@ -507,3 +508,7 @@ related_documents:
 ### 맛집 상세 방문 태그 보정 추적 — 이슈 #358
 
 FR-AIEXTRACT-007·FR-NLSEARCH-004 → [맛집 상세 PRD](prd/detail/restaurant-detail.md)·[AI 관리 PRD](prd/admin/ai-video-information-extraction.md) → [방문 태그 API](../05-specs/api/admin/restaurant-visit-tags-api.md) → visit_tag·tag_definition·visit_tag_revision → [구현 계획·검증](../08-planning/restaurant-visit-tag-editing.md). WS-02 화면·WS-15 보정·WS-14 검색 계약을 연결한다.
+
+### 관리자 태그 정의 생성 추적 — 이슈 #363
+
+[FR-ADMIN-005](../01-requirements/functional-requirements.md#fr-admin-005-관리자-태그-정의-생성)·[BR-ADMIN-009](../01-requirements/business-rules.md#br-admin-009-태그-용어의-전역-고유성과-원자적-생성) → [관리자 등록 PRD](prd/admin/admin-data-management.md)·[맛집 상세 PRD](prd/detail/restaurant-detail.md) → [태그 정의 API](../05-specs/api/admin/tag-definition-api.md) → tag_definition·tag_definition_term → [구현 계획·검증](../08-planning/admin-tag-definition-creation.md). WS-04의 ADMIN 경계, WS-02의 상세 편집, WS-15의 AI 작성 원자성과 후속 WS-14 동적 사전을 연결한다.

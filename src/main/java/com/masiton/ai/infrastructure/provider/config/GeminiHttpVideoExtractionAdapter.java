@@ -156,8 +156,9 @@ final class GeminiHttpVideoExtractionAdapter implements AiVideoExtractionProvide
                 + "Use resultCompleteness COMPLETE only when missingFields is empty; use PARTIAL only when missingFields "
                 + "contains one or more of restaurantName, menu, address, location, visitEvidence, or tag. "
                 + "A candidate with field \"tag\" never has a value field; instead it must include candidateTagId, "
-                + "tagType, rawLabel, normalizedCode, and label. normalizedCode must match [A-Z0-9_]{1,64} and start "
-                + "with tagType followed by an underscore, for example MENU_NAENGMYEON when tagType is MENU. Never "
+                + "tagType, rawLabel, normalizedCode, and label. normalizedCode must be at most 64 characters, match "
+                + "(MENU|TASTE|OCCASION|ATMOSPHERE)_[A-Z0-9]+(_[A-Z0-9]+)*, and start with tagType followed by "
+                + "an underscore, for example MENU_NAENGMYEON when tagType is MENU. Never "
                 + "produce a tag whose rawLabel, label, or normalizedCode expresses price, quality, rating, business "
                 + "hours, current availability, or reservation status (including 가격, 품질, 평점, 영업시간, 영업, "
                 + "방문가능, 예약, price, rating, hours, or availability). "
@@ -339,7 +340,8 @@ final class GeminiHttpVideoExtractionAdapter implements AiVideoExtractionProvide
                 .add("MENU").add("TASTE").add("OCCASION").add("ATMOSPHERE");
         properties.putObject("rawLabel").put("type", "string").put("minLength", 1)
                 .put("maxLength", MAX_STRING_LENGTH);
-        properties.putObject("normalizedCode").put("type", "string").put("pattern", "^[A-Z0-9_]{1,64}$");
+        properties.putObject("normalizedCode").put("type", "string").put("maxLength", 64)
+                .put("pattern", "^(MENU|TASTE|OCCASION|ATMOSPHERE)_[A-Z0-9]+(_[A-Z0-9]+)*$");
         properties.putObject("label").put("type", "string").put("minLength", 1)
                 .put("maxLength", MAX_STRING_LENGTH);
         properties.putObject("confidence").put("type", "number").put("minimum", 0).put("maximum", 1);

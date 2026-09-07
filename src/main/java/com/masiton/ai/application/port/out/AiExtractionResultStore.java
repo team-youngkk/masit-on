@@ -26,6 +26,8 @@ public interface AiExtractionResultStore {
 
     Optional<TagDefinition> findTagForUpdate(String tagCode);
 
+    Optional<TagDefinition> findTagByNormalizedTermForUpdate(String normalizedTerm);
+
     Optional<TagDefinition> insertTagIfAbsent(UUID id, String tagCode, String tagType, String displayName,
                                                String aliases, String source, UUID snapshotId,
                                                OffsetDateTime createdAt);
