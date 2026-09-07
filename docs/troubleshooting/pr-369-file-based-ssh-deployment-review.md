@@ -73,7 +73,7 @@ related_documents:
 | `deploy/scripts/tests/nginx-tls-files-test.sh` | 통과 | files/acm 입력 검증, TLS 무변경, signal/EXIT·timer 복구 계약 |
 | `./gradlew.bat --no-daemon test --tests 'com.masiton.deployment.*' --console=plain` | 통과 | deployment 계약 테스트 전체와 완료 경계 순서 |
 | `git diff --check` | 통과 | 변경 diff 공백 |
-| [GitHub Actions backend build/test](https://github.com/team-youngkk/masit-on/actions/runs/34114814429) | 통과 | 앱 설정·TLS 셸 계약과 전체 backend 테스트가 함께 통과 |
+| [GitHub Actions backend build/test](https://github.com/team-youngkk/masit-on/actions/runs/34115328697) | 통과 | 앱 설정·TLS 셸 계약과 전체 backend 테스트가 함께 통과 |
 
 ## 8. 재발 방지 및 다음 확인
 
@@ -91,5 +91,5 @@ related_documents:
 
 ## 10. 남은 사항
 
-- 코드·테스트·CI 수정과 GitHub Actions 검증은 완료했으며, 각 리뷰 스레드에 답글과 해결 처리를 완료한다.
+- 코드·테스트·CI 수정과 GitHub Actions 검증, 각 리뷰 스레드 답글·해결 처리를 완료했다.
 - 실제 운영 호스트에서 signal을 유발하는 복구 리허설은 실행하지 않았다.
