@@ -40,9 +40,11 @@ class AppRunScriptContractTest {
     @DisplayName("1GiB 앱 호스트에 맞는 컨테이너 메모리 상한을 사용한다")
     void micro호스트에맞는컨테이너메모리상한을사용한다() throws IOException {
         String appRun = read(APP_RUN);
-        int backendStart = appRun.indexOf("backend)");
-        int frontendStart = appRun.indexOf("frontend)");
+        int componentSwitch = appRun.lastIndexOf("case \"$component\" in");
+        int backendStart = appRun.indexOf("backend)", componentSwitch);
+        int frontendStart = appRun.indexOf("frontend)", backendStart);
 
+        assertThat(componentSwitch).isGreaterThanOrEqualTo(0);
         assertThat(backendStart).isGreaterThanOrEqualTo(0);
         assertThat(frontendStart).isGreaterThan(backendStart);
         assertThat(appRun.substring(backendStart, frontendStart))
