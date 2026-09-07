@@ -99,11 +99,38 @@ redis_ip_is_approved() {
     (( first_octet == 10 )) && return 0
     (( first_octet == 172 && second_octet >= 16 && second_octet <= 31 )) && return 0
     (( first_octet == 192 && second_octet == 168 )) && return 0
-    return 1
+    redis_public_host_is_allowed "$address"
+    return $?
   fi
   redis_ipv6_to_words "$address" || return 1
   words=("${redis_ipv6_words[@]}")
-  (( words[0] >= 0xfc00 && words[0] <= 0xfdff ))
+  (( words[0] >= 0xfc00 && words[0] <= 0xfdff )) || redis_public_host_is_allowed "$address"
+}
+
+redis_ipv4_is_public_routable() {
+  local address="$1" first_octet second_octet third_octet
+  redis_ipv4_to_words "$address" || return 1
+  first_octet=$((REDIS_IPV4_HIGH / 256)); second_octet=$((REDIS_IPV4_HIGH % 256))
+  third_octet=$((REDIS_IPV4_LOW / 256))
+  (( first_octet != 0 && first_octet != 10 && first_octet != 127 )) || return 1
+  (( first_octet != 100 || second_octet < 64 || second_octet > 127 )) || return 1
+  (( first_octet != 169 || second_octet != 254 )) || return 1
+  (( first_octet != 172 || second_octet < 16 || second_octet > 31 )) || return 1
+  (( first_octet != 192 || (second_octet != 0 && second_octet != 2 && second_octet != 168) )) || return 1
+  (( first_octet != 198 || (second_octet != 18 && second_octet != 19 && second_octet != 51) )) || return 1
+  (( first_octet != 203 || second_octet != 0 || third_octet != 113 )) || return 1
+  (( first_octet < 224 )) || return 1
+}
+
+redis_public_host_is_allowed() {
+  local address="$1" candidate
+  local -a allowed_hosts=()
+  redis_ipv4_is_public_routable "$address" || return 1
+  IFS=',' read -r -a allowed_hosts <<< "${REDIS_ALLOWED_PUBLIC_HOSTS:-}"
+  for candidate in "${allowed_hosts[@]}"; do
+    [ "$candidate" = "$address" ] && return 0
+  done
+  return 1
 }
 
 redis_host_is_noncanonical_numeric_ipv4() {
@@ -168,7 +195,7 @@ validate_shared_redis_endpoint() {
   local host="${1-}"
   local port="${2-}"
   if ! validate_redis_host "$host"; then
-    echo "공유 Redis host가 비어 있거나 승인된 사설 주소가 아니다" >&2
+    echo "공유 Redis host가 비어 있거나 승인된 사설·allowlist 공인 주소가 아니다" >&2
     return 1
   fi
   if ! validate_redis_port "$port"; then
@@ -178,24 +205,36 @@ validate_shared_redis_endpoint() {
 }
 # END SHARED REDIS ENDPOINT CONTRACT
 
+APP_CONFIG_SOURCE="${APP_CONFIG_SOURCE:-files}"
+case "$APP_CONFIG_SOURCE" in files|ssm) ;; *) echo 'APP_CONFIG_SOURCE는 files 또는 ssm이어야 한다' >&2; exit 1 ;; esac
 DEPLOYMENT_ENV_FILE="${DEPLOYMENT_ENV_FILE:-/etc/masiton/deployment.env}"
-if [ -f "$DEPLOYMENT_ENV_FILE" ]; then
+if [ "$APP_CONFIG_SOURCE" = ssm ] && [ -f "$DEPLOYMENT_ENV_FILE" ]; then
   set -a
   # shellcheck disable=SC1090
   . "$DEPLOYMENT_ENV_FILE"
   set +a
 fi
 
-component="${1:?backend 또는 frontend를 지정한다}"
+check_config=false
+if [ "${1-}" = --check-config ]; then
+  component=backend
+  check_config=true
+else
+  component="${1:?backend 또는 frontend를 지정한다}"
+  [ "${2-}" != --check-config ] || check_config=true
+fi
+case "$component" in backend|frontend) ;; *) echo '알 수 없는 구성 요소' >&2; exit 1 ;; esac
 REGION="${AWS_REGION:-ap-northeast-2}"
 IMAGE_REF_FILE="/opt/masiton/etc/${component}.image"
 # 컨테이너 안과 밖의 경로를 같게 둔다. application-prod.yml이 이 값을 그대로 읽는다.
 SECRETS_DIR="${SECRETS_DIR:-/run/masiton/secrets}"
 export SECRETS_DIR
 
-[ -f "$IMAGE_REF_FILE" ] || { echo "배포된 이미지 참조가 없다: $IMAGE_REF_FILE" >&2; exit 1; }
-image=$(tr -d ' \r\n' < "$IMAGE_REF_FILE")
-[ -n "$image" ] || { echo "이미지 참조가 비어 있다: $IMAGE_REF_FILE" >&2; exit 1; }
+load_image() {
+  [ -f "$IMAGE_REF_FILE" ] || { echo "배포된 이미지 참조가 없다: $IMAGE_REF_FILE" >&2; return 1; }
+  image=$(tr -d ' \r\n' < "$IMAGE_REF_FILE")
+  [ -n "$image" ] || { echo "이미지 참조가 비어 있다: $IMAGE_REF_FILE" >&2; return 1; }
+}
 
 # Parameter Store 값을 셸 환경으로만 읽어들인다.
 param() {
@@ -215,6 +254,15 @@ optional_bool_param() {
 
 case "$component" in
   backend)
+    if [ "$APP_CONFIG_SOURCE" = files ]; then
+      # 저장소의 라이브러리만 로드하고, app.env는 Python parser로 데이터로 읽는다.
+      . "$(dirname "${BASH_SOURCE[0]}")/app-file-config.sh"
+      load_file_config || exit 1
+      if [ "$REQUIRE_SHARED_REDIS" = true ]; then
+        validate_shared_redis_endpoint "$REDIS_HOST" "$REDIS_PORT" || exit 1
+        export REDIS_HOST="$REDIS_VALIDATED_HOST"
+      fi
+    else
     # 비밀이 아닌 값만 환경 변수로 넘긴다. 접속 주소와 사용자명은 비밀이 아니며
     # 기록 문서에도 그대로 적혀 있다.
     export SPRING_PROFILES_ACTIVE=prod
@@ -223,6 +271,7 @@ case "$component" in
     # 명시적으로 컨테이너에 전달한다. 이 값은 비밀이 아니다.
     export KAKAO_BASE_URL=https://dapi.kakao.com
     export YOUTUBE_BASE_URL=https://www.googleapis.com
+    export PASSWORD_RESET_PUBLIC_URL=https://masiton.click/password-reset
     DB_URL=$(param /masiton/db/url); export DB_URL
     DB_USERNAME=$(param /masiton/db/username); export DB_USERNAME
     KAKAO_MOBILITY_ENABLED=$(optional_bool_param /masiton/integration/kakao-mobility/enabled); export KAKAO_MOBILITY_ENABLED
@@ -268,16 +317,22 @@ case "$component" in
     GEMINI_PAID_BILLING_ENABLED=$(optional_bool_param /masiton/ai/gemini/paid-billing-enabled); export GEMINI_PAID_BILLING_ENABLED
 
     [ -d "$SECRETS_DIR" ] || { echo "비밀값 디렉터리가 없다: $SECRETS_DIR" >&2; exit 1; }
+    APP_SECRET_MOUNT="$SECRETS_DIR"
+    fi
+
+    [ "$check_config" != true ] || exit 0
+    load_image
 
     exec /usr/bin/docker run --name masiton-backend \
       --network host \
       --memory 512m \
       --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 \
-      --volume "$SECRETS_DIR":"$SECRETS_DIR":ro \
+      --volume "$APP_SECRET_MOUNT":"$SECRETS_DIR":ro \
       -e SPRING_PROFILES_ACTIVE \
       -e SPRING_FLYWAY_TARGET \
       -e DB_URL -e DB_USERNAME \
       -e KAKAO_BASE_URL -e YOUTUBE_BASE_URL \
+      -e PASSWORD_RESET_PUBLIC_URL \
       -e KAKAO_MOBILITY_ENABLED -e KAKAO_MOBILITY_FREE_TIER_VERIFIED \
       -e REDIS_HOST -e REDIS_PORT \
       -e MAIL_HOST -e MAIL_PORT -e MAIL_HEALTH_ENABLED -e DEPENDENCY_HEALTH_COMPONENTS \
@@ -293,6 +348,8 @@ case "$component" in
       "$image"
     ;;
   frontend)
+    [ "$check_config" != true ] || exit 0
+    load_image
     # 프론트엔드는 같은 인스턴스의 백엔드로 /api를 전달한다. 비밀값이 없다.
     export API_BASE_URL=http://127.0.0.1:8080
     export PORT=3000

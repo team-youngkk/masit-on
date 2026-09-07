@@ -44,9 +44,13 @@ class RedisEndpointContractTest {
                 .doesNotContain("REDISCLI_AUTH")
                 .doesNotContain("redis_password")
                 .doesNotContain("${REDIS_CLI_IMAGE");
-        assertThat(appDeploy.lastIndexOf("validate_shared_redis_endpoint \"$REDIS_HOST\" \"$REDIS_PORT\""))
-                .isLessThan(appDeploy.indexOf("REDIS_PASSWORD_FILE="))
-                .isLessThan(appDeploy.indexOf("redis_cli() {"));
+        int validationStart = appDeploy.lastIndexOf("validate_shared_redis_endpoint \"$REDIS_HOST\" \"$REDIS_PORT\"");
+        int passwordReadStart = appDeploy.indexOf("[ -r \"$REDIS_PASSWORD_FILE\" ]", validationStart);
+        int redisCliStart = appDeploy.indexOf("redis_cli() {", passwordReadStart);
+
+        assertThat(validationStart).isGreaterThanOrEqualTo(0);
+        assertThat(passwordReadStart).isGreaterThan(validationStart);
+        assertThat(redisCliStart).isGreaterThan(passwordReadStart);
     }
 
     private static String contract(String script) {

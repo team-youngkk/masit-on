@@ -81,7 +81,7 @@ require_stage_file() {
 }
 
 for file in \
-  app-deploy.sh app-run.sh app-secrets-render.sh runtime-health.sh \
+  app-deploy.sh app-run.sh app-secrets-render.sh app-file-config.sh runtime-health.sh \
   observability-cleanup.sh nginx-install.sh nginx-smoke.sh \
   tls-deploy-cert.sh masiton-backend.service masiton-frontend.service \
   nginx.conf masiton.click.conf 00-masiton-upgrade-map.conf \
@@ -105,9 +105,9 @@ require_command() {
 # sudo의 secure_path와 무관하게 배포 하위 스크립트가 사용자 writable PATH의
 # 동명 명령을 실행하지 않도록 운영 표준 경로로 고정한다.
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-for command_name in docker sudo systemctl bash tar base64 curl aws python3 \
+for command_name in docker sudo systemctl bash tar base64 curl python3 \
   id stat uname install mktemp rm dnf rpm tr tail awk sha256sum cmp openssl \
-  getent seq sleep dirname cp mkdir find wc cut chown chmod mv tee; do
+  getent seq sleep dirname cp mkdir find wc cut chown chmod mv tee date readlink sort grep; do
   require_command "$command_name"
 done
 [ -x /usr/bin/docker ] || {
@@ -147,6 +147,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# 잘못된 설정으로 기존 서비스를 중단하기 전에 서버 소유 설정을 검증한다.
+bash "$STAGE/app-run.sh" --check-config
+bash "$STAGE/nginx-install.sh" --check-config "$STAGE"
 /usr/bin/docker login docker.io --username "$USERNAME" --password-stdin >/dev/null
 LOGIN_DONE=yes
 "$STAGE/observability-cleanup.sh"

@@ -42,6 +42,8 @@ related_documents:
 
 기대 결과는 세 producer가 같은 shared endpoint 정책을 사용하고, local 모드에서는 공통적으로 SSM을 읽지 않으며, 검증된 endpoint만 Redis client에 전달하는 것이다.
 
+이 기록의 private IPv4·ULA 규칙은 기존 AWS private Redis 토폴로지 기준이다. 제3자 SSH 서버의 파일 설정 경로에서는 외부 Redis를 사용할 수 있지만, 공인 주소는 `REDIS_ALLOWED_PUBLIC_HOSTS`에 명시된 값만 예외적으로 허용한다. allowlist가 없거나 `REDIS_HOST`와 일치하지 않으면 같은 fail-closed 원칙으로 거부한다.
+
 ## 4. 근본 원인
 
 SSM 조회 위치 문제와 endpoint 검증 정책 변경이 서로 다른 시점에 반영되면서 producer와 테스트가 분리됐다. app-run/app-deploy는 최신 develop의 IPv4/private·ULA IPv6 정책을 사용했지만 health-metrics와 parity 테스트가 구 계약에 남아 있었다. parity 테스트가 구현의 실제 endpoint 계약이 아니라 과거 helper 이름과 port 대입 문자열을 고정한 것이 CI 실패를 재현했다.

@@ -40,9 +40,11 @@ class AppRunScriptContractTest {
     @DisplayName("1GiB 앱 호스트에 맞는 컨테이너 메모리 상한을 사용한다")
     void micro호스트에맞는컨테이너메모리상한을사용한다() throws IOException {
         String appRun = read(APP_RUN);
-        int backendStart = appRun.indexOf("backend)");
-        int frontendStart = appRun.indexOf("frontend)");
+        int componentSwitch = appRun.lastIndexOf("case \"$component\" in");
+        int backendStart = appRun.indexOf("backend)", componentSwitch);
+        int frontendStart = appRun.indexOf("frontend)", backendStart);
 
+        assertThat(componentSwitch).isGreaterThanOrEqualTo(0);
         assertThat(backendStart).isGreaterThanOrEqualTo(0);
         assertThat(frontendStart).isGreaterThan(backendStart);
         assertThat(appRun.substring(backendStart, frontendStart))
@@ -75,7 +77,10 @@ class AppRunScriptContractTest {
                 .doesNotContain("rollback_basic_auth")
                 .contains("BASIC_AUTH_DROPIN")
                 .contains("OLD_AUTH_MAP")
-                .contains("trap on_install_failure")
+                .contains("on_install_failure")
+                .contains("trap 'on_install_failure 130' INT")
+                .contains("trap 'on_install_failure $?'")
+                .contains("restore_acm_timer_state")
                 .contains("restore_or_remove");
     }
 
@@ -136,10 +141,16 @@ class AppRunScriptContractTest {
         int configTest = install.indexOf("nginx -t");
         int restart = install.lastIndexOf("systemctl restart nginx");
         int smoke = install.indexOf("bash \"$STAGE/nginx-smoke.sh\"");
+        int rollbackCommit = install.lastIndexOf("INSTALL_ROLLBACK_ACTIVE=no");
+        int trapDisable = install.indexOf("trap - ERR EXIT INT TERM HUP", rollbackCommit);
+        int timerStateDiscard = install.lastIndexOf("TIMER_STATE_CAPTURED=no");
         assertThat(install).contains("tls-deploy-cert.sh").contains("systemctl enable nginx");
         assertThat(configTest).isGreaterThanOrEqualTo(0);
         assertThat(restart).isGreaterThan(configTest);
         assertThat(smoke).isGreaterThan(restart);
+        assertThat(rollbackCommit).isGreaterThan(smoke);
+        assertThat(trapDisable).isGreaterThan(rollbackCommit);
+        assertThat(timerStateDiscard).isGreaterThan(trapDisable);
     }
 
     @Test
@@ -188,6 +199,25 @@ class AppRunScriptContractTest {
         assertThat(rollbackDisable).isGreaterThan(nginx);
         assertThat(read(DOCKERHUB_DEPLOY))
                 .doesNotContain("\"$STAGE/cloudwatch-install.sh\" \"$STAGE\"");
+    }
+
+    @Test
+    @DisplayName("첫 설치 실패 롤백은 이전에 없던 systemd unit의 health를 요구하지 않는다")
+    void 첫설치실패롤백은_이전에없던SystemdUnit의Health를요구하지않는다() throws IOException {
+        String appDeploy = read(APP_DEPLOY);
+
+        assertThat(appDeploy)
+                .contains("previous_backend_unit_present=no")
+                .contains("previous_frontend_unit_present=no")
+                .contains("previous_backend_active=no")
+                .contains("previous_frontend_active=no")
+                .contains("previous_backend_enabled=no")
+                .contains("previous_frontend_enabled=no")
+                .contains("docker rm -f \"$container\"")
+                .contains("rm -f \"/etc/systemd/system/multi-user.target.wants/$service\"")
+                .contains("if [ \"$previous_backend_active\" = yes ]; then")
+                .contains("if [ \"$previous_backend_active\" = yes ] && [ \"$previous_frontend_active\" = yes ] &&")
+                .contains("if [ \"$previous_frontend_active\" = yes ]; then");
     }
 
     private static String read(Path path) throws IOException {
