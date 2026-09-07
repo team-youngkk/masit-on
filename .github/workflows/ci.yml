@@ -818,7 +818,7 @@ jobs:
           bundle="$RUNNER_TEMP/masiton-deploy-${GITHUB_RUN_ID}.tgz"
           tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner -czf "$bundle" \
             -C "$GITHUB_WORKSPACE/deploy/scripts" \
-            app-deploy.sh dockerhub-app-deploy.sh app-run.sh app-secrets-render.sh \
+            app-deploy.sh dockerhub-app-deploy.sh app-run.sh app-secrets-render.sh app-file-config.sh \
             runtime-health.sh observability-cleanup.sh \
             nginx-install.sh nginx-smoke.sh tls-deploy-cert.sh \
             -C "$GITHUB_WORKSPACE/deploy/app" \
@@ -828,7 +828,7 @@ jobs:
             masiton-tls-renew.service masiton-tls-renew.timer
           bundle_entries=$(tar -tzf "$bundle")
           for entry in \
-            app-deploy.sh dockerhub-app-deploy.sh app-run.sh app-secrets-render.sh \
+            app-deploy.sh dockerhub-app-deploy.sh app-run.sh app-secrets-render.sh app-file-config.sh \
             runtime-health.sh observability-cleanup.sh \
             nginx-install.sh nginx-smoke.sh tls-deploy-cert.sh \
             masiton-backend.service masiton-frontend.service \
@@ -886,9 +886,9 @@ jobs:
           remote="$PRODUCTION_SSH_USER@$PRODUCTION_HOST"
           ssh "${ssh_opts[@]}" "$remote" "sudo -n bash -s" <<'REMOTE_PREFLIGHT'
           set -euo pipefail
-          for command in docker sudo systemctl bash tar base64 curl aws python3 \
+          for command in docker sudo systemctl bash tar base64 curl python3 \
             id stat uname install mktemp rm dnf rpm tr tail awk sha256sum cmp openssl \
-            getent seq sleep dirname cp mkdir find wc cut chown chmod mv tee; do
+            getent seq sleep dirname cp mkdir find wc cut chown chmod mv tee date readlink sort grep; do
             command -v "$command" >/dev/null || {
               echo "원격 필수 명령이 없다: $command" >&2
               exit 1

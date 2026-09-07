@@ -190,6 +190,25 @@ class AppRunScriptContractTest {
                 .doesNotContain("\"$STAGE/cloudwatch-install.sh\" \"$STAGE\"");
     }
 
+    @Test
+    @DisplayName("첫 설치 실패 롤백은 이전에 없던 systemd unit의 health를 요구하지 않는다")
+    void 첫설치실패롤백은_이전에없던SystemdUnit의Health를요구하지않는다() throws IOException {
+        String appDeploy = read(APP_DEPLOY);
+
+        assertThat(appDeploy)
+                .contains("previous_backend_unit_present=no")
+                .contains("previous_frontend_unit_present=no")
+                .contains("previous_backend_active=no")
+                .contains("previous_frontend_active=no")
+                .contains("previous_backend_enabled=no")
+                .contains("previous_frontend_enabled=no")
+                .contains("docker rm -f \"$container\"")
+                .contains("rm -f \"/etc/systemd/system/multi-user.target.wants/$service\"")
+                .contains("if [ \"$previous_backend_active\" = yes ]; then")
+                .contains("if [ \"$previous_backend_active\" = yes ] && [ \"$previous_frontend_active\" = yes ] &&")
+                .contains("if [ \"$previous_frontend_active\" = yes ]; then");
+    }
+
     private static String read(Path path) throws IOException {
         return Files.readString(path, StandardCharsets.UTF_8);
     }
