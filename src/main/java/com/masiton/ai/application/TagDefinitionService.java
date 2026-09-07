@@ -65,8 +65,10 @@ public class TagDefinitionService implements ManageTagDefinitionsUseCase {
         List<String> aliases = command.aliases() == null ? List.of()
                 : command.aliases().stream().map(alias -> SafeTextPolicy.requireSafe(alias, "aliases")).toList();
         if (!TYPES.contains(type) || code.length() < 3 || code.length() > 64 || !CODE.matcher(code).matches()
-                || !code.startsWith(type + "_") || displayName.isEmpty() || displayName.length() > 100
-                || aliases.size() > 20 || aliases.stream().anyMatch(alias -> alias.isEmpty() || alias.length() > 100)) {
+                || !code.startsWith(type + "_") || displayName.isEmpty()
+                || displayName.length() > TagTermNormalizer.MAX_RAW_LENGTH
+                || aliases.size() > 20 || aliases.stream().anyMatch(
+                        alias -> alias.isEmpty() || alias.length() > TagTermNormalizer.MAX_RAW_LENGTH)) {
             throw invalid("tagDefinition");
         }
         String normalizedDisplayName = TagTermNormalizer.normalize(displayName);

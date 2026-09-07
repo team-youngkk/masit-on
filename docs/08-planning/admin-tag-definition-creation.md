@@ -75,7 +75,7 @@ related_documents:
 ### 단계 2. 백엔드 생성 경로
 
 - 태그 정의 도메인의 application port/service와 JDBC adapter가 활성 목록과 생성 명령을 소유한다.
-- 입력 형식·금지 표현을 검증하고 애플리케이션 정규화와 DB 함수의 동등성을 유지한다.
+- ADMIN과 AI 신규 태그의 원문 1~100자, 정규화 결과 1~200자, 입력 형식·금지 표현을 저장 전에 검증하고 애플리케이션 정규화와 DB 함수의 동등성을 유지한다.
 - tag code와 normalized term unique 위반을 구분된 409 오류로 변환한다.
 - 기존 AI 정의 저장 경로에도 term 원자 저장을 적용한다. 후보·정식 Entity 원자성은 유지한다.
 - `/api/admin/**` 서버 인가와 no-store·traceId 공통 계약을 적용한다.
@@ -103,7 +103,7 @@ related_documents:
 | 정규화 | NFKC 호환 문자, 앞뒤/연속 Unicode 공백, ASCII 영문 대소문자, Java↔PostgreSQL corpus 동등성, 정규화 결과 200자 초과, 표시명↔별칭·별칭↔별칭 충돌 |
 | 동시성·원자성 | 같은 코드·같은 normalized term 동시 POST에서 하나만 201, 나머지 409, 부분 definition/term 0건 |
 | 마이그레이션 | 빈 DB V1→V10, V9→V10, 18개 seed 보존·역적재, V9 유효 `AI_AUTO` 연속·끝 밑줄 코드 정리와 ID 보존, AI 자기 중복 별칭 정리, 수동·복구 불가·충돌 legacy는 V10 전체 실패, 버전 목록 V10 포함 |
-| AI 회귀 | AI 신규 태그가 정의·term을 함께 생성, 실패 시 후보 외 정식 부분 저장 0건, 기존 provenance 유지 |
+| AI 회귀 | AI 신규 태그 원문 100자는 허용하고 101자는 `TAG_POLICY`로 거부, 유효 태그는 정의·term을 함께 생성, 실패 시 후보 외 정식 부분 저장 0건, 기존 provenance 유지 |
 | 방문 연결·감사 | POST만으로 VisitTag/revision 0건, 이후 PUT 성공 시 연결·감사 일치, PUT 취소/실패 시 연결 없음 |
 | 프론트 | 생성 후 현재 방문 즉시 선택, 다른 선택·사유 유지, 목록 갱신, 중복 제출 방지, 오류 후 재시도, 세션 전환 캐시 폐기 |
 | 전체 회귀 | 백엔드 clean build, 프론트 test/typecheck/build, 관련 통합 테스트와 관리자 상세 브라우저 검증 |

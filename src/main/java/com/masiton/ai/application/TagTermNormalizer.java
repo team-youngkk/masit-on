@@ -4,6 +4,7 @@ import java.text.Normalizer;
 import java.util.regex.Pattern;
 
 public final class TagTermNormalizer {
+    public static final int MAX_RAW_LENGTH = 100;
     public static final int MAX_NORMALIZED_LENGTH = 200;
     private static final Pattern UNICODE_WHITESPACE = Pattern.compile("[\\p{Z}\\s]+");
 

@@ -432,7 +432,7 @@ V10 `tag_definition_term`은 표시명과 별칭의 정규화 키를 태그 정�
 | `normalized_term` | `varchar(200)` | NN | 전역 unique, 빈 값 금지 | 중복 판정과 후속 자연어 사전 키 |
 | `created_at` | `timestamptz` | NN | 현재 시각 | 용어 생성 시각 |
 
-정규화는 원문에 Unicode NFKC, 앞뒤 공백 제거, 연속 Unicode 공백 한 칸 축약, ASCII `A-Z`를 `a-z`로 변환하는 순서로 적용한다. PostgreSQL과 Java는 같은 알고리즘과 Unicode 경계 corpus를 사용하며 결과는 1~200자여야 한다. 원문이 100자 이하여도 NFKC 확장 뒤 200자를 넘으면 ADMIN은 필드 400 오류로 거부하고 AI 후보는 새 정의로 만들지 않는다. 표시명·별칭 원문은 기존 `tag_definition`에서 보존하고 용어 테이블에는 정규화 키만 저장한다. 한 태그 정의에는 `DISPLAY_NAME` 용어가 정확히 하나 있어야 하고, 전체 용어 수는 표시명 1개와 별칭 0~20개다. `normalized_term`은 ACTIVE와 DEPRECATED를 구분하지 않고 전역 고유하므로 폐기한 용어도 새 정의에서 재사용하지 않는다.
+정규화는 원문에 Unicode NFKC, 앞뒤 공백 제거, 연속 Unicode 공백 한 칸 축약, ASCII `A-Z`를 `a-z`로 변환하는 순서로 적용한다. PostgreSQL과 Java는 같은 알고리즘과 Unicode 경계 corpus를 사용하며 결과는 1~200자여야 한다. ADMIN 표시명·별칭과 AI 신규 태그 후보의 `rawLabel`·`label` 원문은 각각 1~100자여야 한다. 원문이 100자 이하여도 NFKC 확장 뒤 200자를 넘으면 ADMIN은 필드 400 오류로 거부하고 AI 후보는 새 정의로 만들지 않는다. AI 후보가 원문 또는 정규화 상한을 위반하면 정식 정의 저장 전에 `TAG_POLICY`로 거부해 같은 등록 단위의 Restaurant·Visit 커밋을 방해하지 않는다. 표시명·별칭 원문은 기존 `tag_definition`에서 보존하고 용어 테이블에는 정규화 키만 저장한다. 한 태그 정의에는 `DISPLAY_NAME` 용어가 정확히 하나 있어야 하고, 전체 용어 수는 표시명 1개와 별칭 0~20개다. `normalized_term`은 ACTIVE와 DEPRECATED를 구분하지 않고 전역 고유하므로 폐기한 용어도 새 정의에서 재사용하지 않는다.
 
 V10은 기존 seed와 AI 생성 정의의 표시명·JSONB 별칭을 역적재한다. V9가 허용했던 연속·끝 밑줄의 `AI_AUTO` 코드는 축약·제거한 결과가 현재 형식과 유형 접두사를 만족하고 다른 코드와 충돌하지 않을 때만 정리하며 ID와 참조를 유지한다. 수동 출처, 복구 불가 값, 정리 후 충돌은 마이그레이션을 중단한다. 기존 AI 작성자가 표시명을 별칭에 다시 저장한 자기 중복은 해당 별칭만 JSONB에서 제거한다. 그 밖의 같은 정의 내부 중복과 서로 다른 정의의 정규화 용어 충돌은 임의 병합 없이 마이그레이션을 실패시킨다. 테스트 fixture도 V4의 18개 seed를 삭제하거나 대체하지 않고 그 위에 V10 역적재 결과를 검증한다.
 

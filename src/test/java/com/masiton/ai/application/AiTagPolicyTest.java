@@ -50,4 +50,17 @@ class AiTagPolicyTest {
 
         assertThat(AiTagPolicy.isNewTagCandidate("MENU", label, label, "MENU_EXPANDED")).isFalse();
     }
+
+    @Test
+    @DisplayName("원문 라벨은 100자까지 허용하고 101자부터 신규 태그 후보에서 제외한다")
+    void isNewTagCandidate_원문라벨100자와101자_저장열상한을지킨다() {
+        String maximum = "가".repeat(100);
+        String tooLongWithSameNormalizedTerm = maximum + " ";
+
+        assertThat(AiTagPolicy.isNewTagCandidate("MENU", maximum, maximum, "MENU_MAXIMUM")).isTrue();
+        assertThat(AiTagPolicy.isNewTagCandidate(
+                "MENU", tooLongWithSameNormalizedTerm, maximum, "MENU_RAW_TOO_LONG")).isFalse();
+        assertThat(AiTagPolicy.isNewTagCandidate(
+                "MENU", maximum, tooLongWithSameNormalizedTerm, "MENU_LABEL_TOO_LONG")).isFalse();
+    }
 }
