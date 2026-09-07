@@ -112,6 +112,18 @@ assert_accepted() {
   run_validation "$script" "$host" "$port" >/dev/null
 }
 
+assert_public_allowlisted() {
+  local script="$1"
+  local host="$2"
+  local port="$3"
+  local contract
+  contract="$(extract_contract "$script")"
+  REDIS_ALLOWED_PUBLIC_HOSTS='43.201.7.105' PATH="$TEST_BIN_DIR:$PATH" \
+    bash -c "$contract
+validate_shared_redis_endpoint \"\$1\" \"\$2\"" \
+    -- "$host" "$port"
+}
+
 run_contract_cases() {
   local script="$1"
   assert_rejected "$script" '' '6379'
@@ -156,6 +168,9 @@ run_contract_cases() {
   assert_rejected "$script" 'redis.internal.example' '0'
   assert_rejected "$script" 'redis.internal.example' '65536'
   assert_rejected "$script" 'redis.internal.example' 'not-a-port'
+  assert_public_allowlisted "$script" '43.201.7.105' '6379'
+  REDIS_ALLOWED_PUBLIC_HOSTS='43.201.7.105' assert_rejected "$script" '8.8.8.8' '6379'
+  REDIS_ALLOWED_PUBLIC_HOSTS='127.0.0.1' assert_rejected "$script" '127.0.0.1' '6379'
   assert_accepted "$script" 'redis.internal.example' '6379'
   assert_accepted "$script" '10.0.0.1' '6379'
   assert_accepted "$script" '10.20.30.40' '6379'
@@ -204,7 +219,7 @@ assert_redis_smoke_secret_contract() {
   fi
   local validate_line password_file_line redis_cli_line
   validate_line="$(grep -nF 'validate_shared_redis_endpoint "$REDIS_HOST" "$REDIS_PORT"' "$script" | cut -d: -f1)"
-  password_file_line="$(grep -nF 'REDIS_PASSWORD_FILE=' "$script" | head -n1 | cut -d: -f1)"
+  password_file_line="$(grep -nF '[ -r "$REDIS_PASSWORD_FILE" ]' "$script" | head -n1 | cut -d: -f1)"
   redis_cli_line="$(grep -nF 'redis_cli() {' "$script" | cut -d: -f1)"
   [ -n "$validate_line" ] && [ -n "$password_file_line" ] && [ -n "$redis_cli_line" ] &&
     [ "$validate_line" -lt "$password_file_line" ] && [ "$validate_line" -lt "$redis_cli_line" ] || {

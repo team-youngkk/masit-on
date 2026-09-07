@@ -100,6 +100,12 @@ jobs:
       - name: Redis S3 비밀값 렌더링 셸 계약
         run: ./deploy/scripts/tests/redis-render-conf-s3-test.sh
 
+      - name: 파일 기반 앱 설정 셸 계약
+        run: sudo bash ./deploy/scripts/tests/app-file-config-test.sh
+
+      - name: 파일 기반 TLS·Nginx 셸 계약
+        run: bash ./deploy/scripts/tests/nginx-tls-files-test.sh
+
       # ADR-CI-001 9·10절과 기술 정책 3절이 CI 런타임을 JDK 21.0.12로 고정한다.
       # `21`처럼 major만 주면 setup-java가 최신 21.x를 고를 수 있어 저장소 변경 없이
       # CI 런타임이 달라진다. 패치까지 명시한다.
@@ -818,7 +824,7 @@ jobs:
           bundle="$RUNNER_TEMP/masiton-deploy-${GITHUB_RUN_ID}.tgz"
           tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner -czf "$bundle" \
             -C "$GITHUB_WORKSPACE/deploy/scripts" \
-            app-deploy.sh dockerhub-app-deploy.sh app-run.sh app-secrets-render.sh \
+            app-deploy.sh dockerhub-app-deploy.sh app-run.sh app-secrets-render.sh app-file-config.sh \
             runtime-health.sh observability-cleanup.sh \
             nginx-install.sh nginx-smoke.sh tls-deploy-cert.sh \
             -C "$GITHUB_WORKSPACE/deploy/app" \
@@ -828,7 +834,7 @@ jobs:
             masiton-tls-renew.service masiton-tls-renew.timer
           bundle_entries=$(tar -tzf "$bundle")
           for entry in \
-            app-deploy.sh dockerhub-app-deploy.sh app-run.sh app-secrets-render.sh \
+            app-deploy.sh dockerhub-app-deploy.sh app-run.sh app-secrets-render.sh app-file-config.sh \
             runtime-health.sh observability-cleanup.sh \
             nginx-install.sh nginx-smoke.sh tls-deploy-cert.sh \
             masiton-backend.service masiton-frontend.service \
@@ -886,9 +892,9 @@ jobs:
           remote="$PRODUCTION_SSH_USER@$PRODUCTION_HOST"
           ssh "${ssh_opts[@]}" "$remote" "sudo -n bash -s" <<'REMOTE_PREFLIGHT'
           set -euo pipefail
-          for command in docker sudo systemctl bash tar base64 curl aws python3 \
+          for command in docker sudo systemctl bash tar base64 curl python3 \
             id stat uname install mktemp rm dnf rpm tr tail awk sha256sum cmp openssl \
-            getent seq sleep dirname cp mkdir find wc cut chown chmod mv tee; do
+            getent seq sleep dirname cp mkdir find wc cut chown chmod mv tee date readlink sort grep; do
             command -v "$command" >/dev/null || {
               echo "원격 필수 명령이 없다: $command" >&2
               exit 1

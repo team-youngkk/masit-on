@@ -93,11 +93,38 @@ redis_ip_is_approved() {
     (( first_octet == 10 )) && return 0
     (( first_octet == 172 && second_octet >= 16 && second_octet <= 31 )) && return 0
     (( first_octet == 192 && second_octet == 168 )) && return 0
-    return 1
+    redis_public_host_is_allowed "$address"
+    return $?
   fi
   redis_ipv6_to_words "$address" || return 1
   words=("${redis_ipv6_words[@]}")
-  (( words[0] >= 0xfc00 && words[0] <= 0xfdff ))
+  (( words[0] >= 0xfc00 && words[0] <= 0xfdff )) || redis_public_host_is_allowed "$address"
+}
+
+redis_ipv4_is_public_routable() {
+  local address="$1" first_octet second_octet third_octet
+  redis_ipv4_to_words "$address" || return 1
+  first_octet=$((REDIS_IPV4_HIGH / 256)); second_octet=$((REDIS_IPV4_HIGH % 256))
+  third_octet=$((REDIS_IPV4_LOW / 256))
+  (( first_octet != 0 && first_octet != 10 && first_octet != 127 )) || return 1
+  (( first_octet != 100 || second_octet < 64 || second_octet > 127 )) || return 1
+  (( first_octet != 169 || second_octet != 254 )) || return 1
+  (( first_octet != 172 || second_octet < 16 || second_octet > 31 )) || return 1
+  (( first_octet != 192 || (second_octet != 0 && second_octet != 2 && second_octet != 168) )) || return 1
+  (( first_octet != 198 || (second_octet != 18 && second_octet != 19 && second_octet != 51) )) || return 1
+  (( first_octet != 203 || second_octet != 0 || third_octet != 113 )) || return 1
+  (( first_octet < 224 )) || return 1
+}
+
+redis_public_host_is_allowed() {
+  local address="$1" candidate
+  local -a allowed_hosts=()
+  redis_ipv4_is_public_routable "$address" || return 1
+  IFS=',' read -r -a allowed_hosts <<< "${REDIS_ALLOWED_PUBLIC_HOSTS:-}"
+  for candidate in "${allowed_hosts[@]}"; do
+    [ "$candidate" = "$address" ] && return 0
+  done
+  return 1
 }
 
 redis_host_is_noncanonical_numeric_ipv4() {
@@ -162,7 +189,7 @@ validate_shared_redis_endpoint() {
   local host="${1-}"
   local port="${2-}"
   if ! validate_redis_host "$host"; then
-    echo "공유 Redis host가 비어 있거나 승인된 사설 주소가 아니다" >&2
+    echo "공유 Redis host가 비어 있거나 승인된 사설·allowlist 공인 주소가 아니다" >&2
     return 1
   fi
   if ! validate_redis_port "$port"; then
@@ -172,8 +199,9 @@ validate_shared_redis_endpoint() {
 }
 # END SHARED REDIS ENDPOINT CONTRACT
 
+APP_CONFIG_SOURCE="${APP_CONFIG_SOURCE:-files}"
 DEPLOYMENT_ENV_FILE="${DEPLOYMENT_ENV_FILE:-/etc/masiton/deployment.env}"
-if [ -f "$DEPLOYMENT_ENV_FILE" ]; then
+if [ "$APP_CONFIG_SOURCE" = ssm ] && [ -f "$DEPLOYMENT_ENV_FILE" ]; then
   set -a
   # shellcheck disable=SC1090
   . "$DEPLOYMENT_ENV_FILE"
@@ -203,10 +231,20 @@ OPT_DIR=/opt/masiton
 # app-secrets-render.sh도 배포 산출물이다. backend unit의 ExecStartPre가
 # /opt/masiton/bin/app-secrets-render.sh를 실행하므로 설치하지 않으면 새 인스턴스는
 # 파일 없음으로 기동에 실패하고, 기존 인스턴스는 렌더러 변경이 배포에 반영되지 않는다.
-for f in app-run.sh app-secrets-render.sh masiton-backend.service masiton-frontend.service; do
+for f in app-run.sh app-secrets-render.sh app-file-config.sh masiton-backend.service masiton-frontend.service; do
   [ -f "$STAGE/$f" ] || { echo "스테이징에 $f 가 없다: $STAGE" >&2; exit 1; }
 done
 [ -f "$STAGE/runtime-health.sh" ] || { echo "스테이징에 runtime-health.sh가 없다" >&2; exit 1; }
+
+# 직접 실행도 wrapper와 동일하게 서비스 변경 전에 설정·TLS를 검증한다.
+bash "$STAGE/app-run.sh" --check-config
+bash "$STAGE/nginx-install.sh" --check-config "$STAGE"
+if [ "$APP_CONFIG_SOURCE" = files ]; then
+  . "$STAGE/app-file-config.sh"
+  load_file_config
+  REDIS_PASSWORD_FILE="$APP_SECRET_MOUNT/spring.data.redis.password"
+  RATE_LIMIT_SECRET_FILE="$APP_SECRET_MOUNT/masiton.member.rate-limit.secret"
+fi
 
 validate_digest_image_ref() {
   local component="$1"
@@ -248,6 +286,10 @@ prepare_ecr_rollback_image() {
   if docker image inspect "$reference" >/dev/null 2>&1; then
     return 0
   fi
+  if [ "$APP_CONFIG_SOURCE" = files ]; then
+    echo '파일 설정 모드의 ECR rollback 이미지는 서버에 미리 존재해야 한다.' >&2
+    return 1
+  fi
 
   registry="${reference%%/*}"
   if [[ "$registry" =~ ^[0-9]{12}\.dkr\.ecr\.([a-z0-9-]+)\.amazonaws\.com$ ]]; then
@@ -275,6 +317,7 @@ prepare_ecr_rollback_image() {
 }
 
 if [ "$DEPLOYMENT_MODE" = ecr ]; then
+  [ "$APP_CONFIG_SOURCE" = ssm ] || { echo '파일 설정 배포는 Docker Hub --image-refs를 사용한다.' >&2; exit 1; }
   aws ecr get-login-password --region "$REGION" \
     | docker login --username AWS --password-stdin "$REGISTRY" >/dev/null
 fi
@@ -291,11 +334,52 @@ staged=$(mktemp -d)
 smoke_redis_keys=()
 previous="$staged/previous"
 rollback_enabled=no
+
+# 롤백은 이전 실행 상태를 복원해야 한다. 신규 인스턴스처럼 unit이 없던
+# 경우에는 새 unit을 제거한 뒤, 존재하지 않던 backend/frontend health를
+# 복구 대상으로 요구하지 않는다.
+previous_backend_unit_present=no
+previous_frontend_unit_present=no
+previous_backend_active=no
+previous_frontend_active=no
+previous_backend_enabled=no
+previous_frontend_enabled=no
+previous_nginx_active=no
+if [ -e /etc/systemd/system/masiton-backend.service ]; then
+  previous_backend_unit_present=yes
+fi
+if [ -e /etc/systemd/system/masiton-frontend.service ]; then
+  previous_frontend_unit_present=yes
+fi
+if systemctl is-active --quiet masiton-backend.service; then
+  previous_backend_active=yes
+fi
+if systemctl is-active --quiet masiton-frontend.service; then
+  previous_frontend_active=yes
+fi
+if systemctl is-enabled --quiet masiton-backend.service; then
+  previous_backend_enabled=yes
+fi
+if systemctl is-enabled --quiet masiton-frontend.service; then
+  previous_frontend_enabled=yes
+fi
+if systemctl is-active --quiet nginx; then
+  previous_nginx_active=yes
+fi
+
 cleanup() {
+  local exit_code=$?
+  trap - EXIT
+  # 명시적 exit 실패도 ERR와 동일하게 복구한다. rollback은 한 번만 실행한다.
+  if [ "$exit_code" -ne 0 ] && [ "$rollback_enabled" = yes ]; then
+    rollback "$exit_code"
+    exit_code=$?
+  fi
   if [ "${#smoke_redis_keys[@]}" -gt 0 ] && declare -F redis_cli >/dev/null 2>&1; then
     redis_cli DEL "${smoke_redis_keys[@]}" >/dev/null 2>&1 || true
   fi
   rm -rf "$staged"
+  exit "$exit_code"
 }
 trap cleanup EXIT
 
@@ -305,6 +389,7 @@ rollback() {
   trap - ERR
   trap '' INT TERM HUP
   [ "$rollback_enabled" = yes ] || return "$original_exit_code"
+  rollback_enabled=no
   echo '배포 후 health 실패: 이전 이미지·실행 산출물로 rollback을 시도한다' >&2
   local rollback_failed=no
 
@@ -327,43 +412,104 @@ rollback() {
     fi
   }
 
+  # 새 배포가 띄운 프로세스와 enablement를 unit 파일이 아직 있는 동안
+  # 정리한다. 이후 이전 unit이 없던 경우 파일을 제거해도 dangling wants
+  # symlink나 고아 컨테이너가 남지 않아야 한다.
+  for service in masiton-backend.service masiton-frontend.service; do
+    case "$service" in
+      masiton-backend.service)
+        previous_enabled="$previous_backend_enabled"
+        previous_active="$previous_backend_active"
+        container=masiton-backend
+        ;;
+      masiton-frontend.service)
+        previous_enabled="$previous_frontend_enabled"
+        previous_active="$previous_frontend_active"
+        container=masiton-frontend
+        ;;
+    esac
+    systemctl stop "$service" >/dev/null 2>&1 || true
+    if [ "$previous_active" != yes ]; then
+      docker rm -f "$container" >/dev/null 2>&1 || true
+    fi
+    if [ "$previous_enabled" != yes ]; then
+      systemctl disable "$service" >/dev/null 2>&1 || true
+    fi
+  done
+
   for component in backend frontend; do
     restore_asset "$OPT_DIR/etc/${component}.image" "$previous/${component}.image"
   done
   restore_asset "$OPT_DIR/bin/app-run.sh" "$previous/opt/masiton/bin/app-run.sh"
   restore_asset "$OPT_DIR/bin/app-secrets-render.sh" "$previous/opt/masiton/bin/app-secrets-render.sh"
+  restore_asset "$OPT_DIR/bin/app-file-config.sh" "$previous/opt/masiton/bin/app-file-config.sh"
   restore_asset "$OPT_DIR/bin/runtime-health.sh" "$previous/opt/masiton/bin/runtime-health.sh"
   restore_asset "/etc/systemd/system/masiton-backend.service" "$previous/etc/systemd/system/masiton-backend.service"
   restore_asset "/etc/systemd/system/masiton-frontend.service" "$previous/etc/systemd/system/masiton-frontend.service"
   systemctl daemon-reload || rollback_failed=yes
   for service in masiton-backend.service masiton-frontend.service; do
-    if [ -f "/etc/systemd/system/$service" ]; then
-      systemctl restart "$service" || rollback_failed=yes
+    case "$service" in
+      masiton-backend.service)
+        previous_unit_present="$previous_backend_unit_present"
+        previous_active="$previous_backend_active"
+        previous_enabled="$previous_backend_enabled"
+        ;;
+      masiton-frontend.service)
+        previous_unit_present="$previous_frontend_unit_present"
+        previous_active="$previous_frontend_active"
+        previous_enabled="$previous_frontend_enabled"
+        ;;
+    esac
+    if [ "$previous_unit_present" = yes ]; then
+      if [ "$previous_enabled" = yes ]; then
+        systemctl enable "$service" >/dev/null 2>&1 || rollback_failed=yes
+      else
+        systemctl disable "$service" >/dev/null 2>&1 || rollback_failed=yes
+      fi
+      if [ "$previous_active" = yes ]; then
+        systemctl restart "$service" || rollback_failed=yes
+      else
+        systemctl stop "$service" >/dev/null 2>&1 || rollback_failed=yes
+      fi
     else
-      systemctl disable --now "$service" >/dev/null 2>&1 || true
+      # backup_asset가 unit 파일을 제거했으므로 systemctl disable만으로
+      # dangling wants symlink가 남지 않도록 알려진 enable 경로도 정리한다.
+      rm -f "/etc/systemd/system/multi-user.target.wants/$service" || rollback_failed=yes
     fi
   done
-  rollback_backend_health=no
-  rollback_frontend_health=no
-  for attempt in $(seq 1 12); do
-    if [ "$rollback_backend_health" != yes ] &&
-       curl -fsS -m 3 http://127.0.0.1:8080/internal/health/ready >/dev/null 2>&1; then
-      rollback_backend_health=yes
-    fi
-    if [ "$rollback_frontend_health" != yes ] &&
-       curl -fsS -m 3 http://127.0.0.1:3000/ >/dev/null 2>&1; then
-      rollback_frontend_health=yes
-    fi
-    if [ "$rollback_backend_health" = yes ] && [ "$rollback_frontend_health" = yes ]; then
-      break
-    fi
-    [ "$attempt" -lt 12 ] && sleep 5
-  done
-  rollback_dependencies_body="$staged/rollback-dependencies.json"
-  rollback_dependencies_status=$(curl -sS -m 5 -o "$rollback_dependencies_body" -w '%{http_code}' \
-    http://127.0.0.1:8080/internal/health/dependencies 2>/dev/null || printf '000')
-  if [ "$rollback_dependencies_status" = 200 ]; then
-    if ! python3 - "$rollback_dependencies_body" <<'PY'
+  rollback_backend_health=$([ "$previous_backend_active" = yes ] && printf no || printf yes)
+  rollback_frontend_health=$([ "$previous_frontend_active" = yes ] && printf no || printf yes)
+  if [ "$previous_backend_active" = yes ]; then
+    for attempt in $(seq 1 12); do
+      if [ "$rollback_backend_health" != yes ] &&
+         curl -fsS -m 3 http://127.0.0.1:8080/internal/health/ready >/dev/null 2>&1; then
+        rollback_backend_health=yes
+      fi
+      if [ "$rollback_frontend_health" != yes ] &&
+         curl -fsS -m 3 http://127.0.0.1:3000/ >/dev/null 2>&1; then
+        rollback_frontend_health=yes
+      fi
+      if [ "$rollback_backend_health" = yes ] && [ "$rollback_frontend_health" = yes ]; then
+        break
+      fi
+      [ "$attempt" -lt 12 ] && sleep 5
+    done
+  elif [ "$previous_frontend_active" = yes ]; then
+    for attempt in $(seq 1 12); do
+      if [ "$rollback_frontend_health" != yes ] &&
+         curl -fsS -m 3 http://127.0.0.1:3000/ >/dev/null 2>&1; then
+        rollback_frontend_health=yes
+      fi
+      [ "$rollback_frontend_health" = yes ] && break
+      [ "$attempt" -lt 12 ] && sleep 5
+    done
+  fi
+  if [ "$previous_backend_active" = yes ]; then
+    rollback_dependencies_body="$staged/rollback-dependencies.json"
+    rollback_dependencies_status=$(curl -sS -m 5 -o "$rollback_dependencies_body" -w '%{http_code}' \
+      http://127.0.0.1:8080/internal/health/dependencies 2>/dev/null || printf '000')
+    if [ "$rollback_dependencies_status" = 200 ]; then
+      if ! python3 - "$rollback_dependencies_body" <<'PY'
 import json
 import sys
 
@@ -380,19 +526,22 @@ if not isinstance(components, dict) or any(
 ):
     raise SystemExit(1)
 PY
-    then
-      echo 'rollback 후 dependency health 확인 실패' >&2
+      then
+        echo 'rollback 후 dependency health 확인 실패' >&2
+        rollback_failed=yes
+      fi
+    else
+      echo "rollback 후 dependency health HTTP 실패: $rollback_dependencies_status" >&2
       rollback_failed=yes
     fi
-  else
-    echo "rollback 후 dependency health HTTP 실패: $rollback_dependencies_status" >&2
-    rollback_failed=yes
   fi
-  if [ -x "$OPT_DIR/bin/runtime-health.sh" ] && ! "$OPT_DIR/bin/runtime-health.sh"; then
-    echo 'rollback 후 runtime health 확인 실패' >&2
-    rollback_failed=yes
+  if [ "$previous_backend_active" = yes ] && [ "$previous_frontend_active" = yes ] &&
+     [ -x "$OPT_DIR/bin/runtime-health.sh" ] && ! "$OPT_DIR/bin/runtime-health.sh"; then
+      echo 'rollback 후 runtime health 확인 실패' >&2
+      rollback_failed=yes
   fi
-  if command -v nginx >/dev/null 2>&1 && [ -f /etc/nginx/conf.d/masiton.click.conf ]; then
+  if [ "$previous_nginx_active" = yes ] &&
+     command -v nginx >/dev/null 2>&1 && [ -f /etc/nginx/conf.d/masiton.click.conf ]; then
     nginx -t >/dev/null 2>&1 || rollback_failed=yes
     systemctl is-active --quiet nginx || rollback_failed=yes
   fi
@@ -404,6 +553,10 @@ PY
   if [ "$rollback_failed" = yes ]; then
     echo 'rollback 자체가 실패했다. 수동 복구가 필요하다.' >&2
     return 1
+  fi
+  if [ "$previous_backend_unit_present" = no ] &&
+     [ "$previous_frontend_unit_present" = no ]; then
+    echo '초기 설치 실패: 이전 실행 산출물이 없어 새 배포 unit과 컨테이너만 정리했으며 rollback health 검증은 건너뛰었다.' >&2
   fi
   return "$original_exit_code"
 }
@@ -450,6 +603,7 @@ for component in backend frontend; do
 done
 backup_asset "$OPT_DIR/bin/app-run.sh" "$previous/opt/masiton/bin/app-run.sh"
 backup_asset "$OPT_DIR/bin/app-secrets-render.sh" "$previous/opt/masiton/bin/app-secrets-render.sh"
+backup_asset "$OPT_DIR/bin/app-file-config.sh" "$previous/opt/masiton/bin/app-file-config.sh"
 backup_asset "$OPT_DIR/bin/runtime-health.sh" "$previous/opt/masiton/bin/runtime-health.sh"
 backup_asset "/etc/systemd/system/masiton-backend.service" "$previous/etc/systemd/system/masiton-backend.service"
 backup_asset "/etc/systemd/system/masiton-frontend.service" "$previous/etc/systemd/system/masiton-frontend.service"
@@ -476,6 +630,8 @@ fi
 
 # 여기까지 왔으면 두 이미지와 이전 실행 산출물의 백업이 모두 준비됐다. 이후 첫
 # install부터 rollback 보호를 켜서 활성 경로 변경 중 실패도 복구 대상으로 포함한다.
+readonly REDIS_CLI_IMAGE='redis@sha256:8096655e437712b07503796fb64d81359256cfcff0ab29d95a7da72863786efb'
+docker image inspect "$REDIS_CLI_IMAGE" >/dev/null 2>&1 || docker pull "$REDIS_CLI_IMAGE" >/dev/null
 rollback_enabled=yes
 trap rollback ERR
 
@@ -491,6 +647,7 @@ trap handle_signal INT TERM HUP
 install -d -m 0755 "$OPT_DIR/bin" "$OPT_DIR/etc"
 install -m 0750 "$STAGE/app-run.sh" "$OPT_DIR/bin/app-run.sh"
 install -m 0750 "$STAGE/app-secrets-render.sh" "$OPT_DIR/bin/app-secrets-render.sh"
+install -m 0750 "$STAGE/app-file-config.sh" "$OPT_DIR/bin/app-file-config.sh"
 install -m 0644 "$STAGE/masiton-backend.service" /etc/systemd/system/masiton-backend.service
 install -m 0644 "$STAGE/masiton-frontend.service" /etc/systemd/system/masiton-frontend.service
 install -m 0750 "$STAGE/runtime-health.sh" "$OPT_DIR/bin/runtime-health.sh"
@@ -641,10 +798,12 @@ refresh_status=$(curl -sS -m 5 -o /dev/null -w '%{http_code}' \
 # Nginx peer(127.0.0.1)를 신뢰해 서로 다른 X-Forwarded-For가 실제로 별도
 # login-source 버킷을 만드는지 Redis 키로 확인한다.
 if [ "${REQUIRE_SHARED_REDIS:-false}" = true ]; then
+  if [ "$APP_CONFIG_SOURCE" = ssm ]; then
   REDIS_HOST="${REDIS_HOST:-$(aws ssm get-parameter --region "$REGION" --name /masiton/redis/host \
     --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || printf '')}"
   REDIS_PORT="${REDIS_PORT:-$(aws ssm get-parameter --region "$REGION" --name /masiton/redis/port \
     --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || printf '')}"
+  fi
   validate_shared_redis_endpoint "$REDIS_HOST" "$REDIS_PORT" || exit 1
   REDIS_HOST="$REDIS_VALIDATED_HOST"
 else
@@ -665,7 +824,6 @@ read -r REDIS_PASSWORD_UID REDIS_PASSWORD_GID < <(stat -c '%u %g' "$REDIS_PASSWO
   echo "Redis smoke 비밀값 파일 소유자 UID:GID를 확인할 수 없다: $REDIS_PASSWORD_FILE" >&2
   exit 1
 }
-readonly REDIS_CLI_IMAGE='redis@sha256:8096655e437712b07503796fb64d81359256cfcff0ab29d95a7da72863786efb'
 redis_cli() {
   docker run --rm --network host \
     --mount "type=bind,source=$REDIS_PASSWORD_FILE,target=/run/secrets/redis-password,readonly" \
@@ -675,12 +833,12 @@ redis_cli() {
     redis-smoke "$REDIS_HOST" "$REDIS_PORT" "$@"
 }
 rate_limit_keys() {
-  python3 - "$1" "$2" <<'PY'
+  python3 - "$1" "$2" "${RATE_LIMIT_SECRET_FILE:-/run/masiton/secrets/masiton.member.rate-limit.secret}" <<'PY'
 import hashlib
 import hmac
 import sys
 
-with open("/run/masiton/secrets/masiton.member.rate-limit.secret", "rb") as secret_file:
+with open(sys.argv[3], "rb") as secret_file:
     secret = secret_file.read().rstrip(b"\r\n")
 source = sys.argv[1]
 email = sys.argv[2]
