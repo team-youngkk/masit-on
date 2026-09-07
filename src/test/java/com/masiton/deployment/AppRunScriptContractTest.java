@@ -77,7 +77,10 @@ class AppRunScriptContractTest {
                 .doesNotContain("rollback_basic_auth")
                 .contains("BASIC_AUTH_DROPIN")
                 .contains("OLD_AUTH_MAP")
-                .contains("trap on_install_failure")
+                .contains("on_install_failure")
+                .contains("trap 'on_install_failure 130' INT")
+                .contains("trap 'on_install_failure $?'")
+                .contains("restore_acm_timer_state")
                 .contains("restore_or_remove");
     }
 

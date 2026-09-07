@@ -113,6 +113,10 @@ NGINX_CONF=/etc/nginx/nginx.conf
 REAL_IP_CONF=/etc/nginx/conf.d/10-masiton-real-ip.conf
 BASIC_AUTH_DROPIN=/etc/systemd/system/nginx.service.d/10-masiton-basic-auth.conf
 OLD_AUTH_MAP=/etc/nginx/conf.d/01-masiton-api-auth-map.conf
+TLS_RENEW_TIMER=masiton-tls-renew.timer
+TIMER_STATE_CAPTURED=no
+TIMER_WAS_ENABLED=no
+TIMER_WAS_ACTIVE=no
 
 # Nginx와 백엔드가 함께 gate-free 릴리즈로 전환된다. 새 설정의 구문은
 # 유효하지만 smoke가 실패하는 경우를 포함해, 설치 중 바꾼 Nginx 산출물을
@@ -134,6 +138,46 @@ backup_or_ignore "$REAL_IP_CONF" "$ROLLBACK_DIR/real-ip.conf"
 backup_or_ignore "$BASIC_AUTH_DROPIN" "$ROLLBACK_DIR/basic-auth-dropin.conf"
 backup_or_ignore "$OLD_AUTH_MAP" "$ROLLBACK_DIR/auth-map.conf"
 
+capture_acm_timer_state() {
+  [ "$TLS_SOURCE" = files ] || return 0
+  TIMER_STATE_CAPTURED=yes
+  if systemctl is-enabled --quiet "$TLS_RENEW_TIMER"; then
+    TIMER_WAS_ENABLED=yes
+  fi
+  if systemctl is-active --quiet "$TLS_RENEW_TIMER"; then
+    TIMER_WAS_ACTIVE=yes
+  fi
+}
+
+disable_acm_timer_for_files() {
+  [ "$TLS_SOURCE" = files ] || return 0
+  capture_acm_timer_state
+  if [ "$TIMER_WAS_ACTIVE" = yes ]; then
+    systemctl stop "$TLS_RENEW_TIMER"
+  fi
+  if [ "$TIMER_WAS_ENABLED" = yes ]; then
+    systemctl disable "$TLS_RENEW_TIMER" >/dev/null
+  fi
+}
+
+restore_acm_timer_state() {
+  [ "$TIMER_STATE_CAPTURED" = yes ] || return 0
+  if [ "$TIMER_WAS_ENABLED" = yes ]; then
+    systemctl enable "$TLS_RENEW_TIMER" >/dev/null || {
+      echo "ACM 갱신 timer enable 상태 복구에 실패했다: $TLS_RENEW_TIMER" >&2
+    }
+  else
+    systemctl disable "$TLS_RENEW_TIMER" >/dev/null || true
+  fi
+  if [ "$TIMER_WAS_ACTIVE" = yes ]; then
+    systemctl start "$TLS_RENEW_TIMER" >/dev/null || {
+      echo "ACM 갱신 timer active 상태 복구에 실패했다: $TLS_RENEW_TIMER" >&2
+    }
+  else
+    systemctl stop "$TLS_RENEW_TIMER" >/dev/null || true
+  fi
+}
+
 restore_or_remove() {
   local backup="$1" target="$2"
   if [ -f "$backup" ]; then
@@ -145,21 +189,31 @@ restore_or_remove() {
 }
 
 on_install_failure() {
-  local status=$?
-  trap - ERR
+  local status="${1:-$?}"
+  [ "${INSTALL_ROLLBACK_ACTIVE:-no}" = yes ] || return "$status"
+  INSTALL_ROLLBACK_ACTIVE=no
+  trap - ERR EXIT INT TERM HUP
   echo "Nginx gate-free 전환에 실패했다. 직전 Nginx 구성을 복구한다." >&2
-  restore_or_remove "$ROLLBACK_DIR/site.conf" "$SITE_CONF"
-  restore_or_remove "$ROLLBACK_DIR/upgrade-map.conf" "$UPGRADE_MAP_CONF"
-  restore_or_remove "$ROLLBACK_DIR/nginx.conf" "$NGINX_CONF"
-  restore_or_remove "$ROLLBACK_DIR/real-ip.conf" "$REAL_IP_CONF"
-  restore_or_remove "$ROLLBACK_DIR/basic-auth-dropin.conf" "$BASIC_AUTH_DROPIN"
-  restore_or_remove "$ROLLBACK_DIR/auth-map.conf" "$OLD_AUTH_MAP"
+  restore_or_remove "$ROLLBACK_DIR/site.conf" "$SITE_CONF" || true
+  restore_or_remove "$ROLLBACK_DIR/upgrade-map.conf" "$UPGRADE_MAP_CONF" || true
+  restore_or_remove "$ROLLBACK_DIR/nginx.conf" "$NGINX_CONF" || true
+  restore_or_remove "$ROLLBACK_DIR/real-ip.conf" "$REAL_IP_CONF" || true
+  restore_or_remove "$ROLLBACK_DIR/basic-auth-dropin.conf" "$BASIC_AUTH_DROPIN" || true
+  restore_or_remove "$ROLLBACK_DIR/auth-map.conf" "$OLD_AUTH_MAP" || true
   systemctl daemon-reload || true
   systemctl restart nginx || echo "Nginx 복구 후 재시작도 실패했다. paired rollback과 수동 복구가 필요하다." >&2
-  rm -rf "$ROLLBACK_DIR"
+  restore_acm_timer_state || true
+  rm -rf "$ROLLBACK_DIR" || true
   exit "$status"
 }
-trap on_install_failure ERR
+INSTALL_ROLLBACK_ACTIVE=yes
+trap 'on_install_failure $?' ERR
+trap 'on_install_failure 129' HUP
+trap 'on_install_failure 130' INT
+trap 'on_install_failure 143' TERM
+trap 'on_install_failure $?' EXIT
+
+disable_acm_timer_for_files
 
 
 # 인증서를 먼저 내려받아야 Nginx가 기동한다. ssl_certificate 파일이 없으면
@@ -222,12 +276,14 @@ systemctl daemon-reload
 systemctl enable --now masiton-tls-renew.timer >/dev/null
 fi
 
-trap - ERR
+TIMER_STATE_CAPTURED=no
+INSTALL_ROLLBACK_ACTIVE=no
+trap - ERR EXIT INT TERM HUP
 rm -rf "$ROLLBACK_DIR"
 
 echo "nginx: enabled=$(systemctl is-enabled nginx) active=$(systemctl is-active nginx)"
 if [ "$TLS_SOURCE" = acm ]; then
   echo "timer: enabled=$(systemctl is-enabled masiton-tls-renew.timer) active=$(systemctl is-active masiton-tls-renew.timer)"
 else
-  echo 'TLS files: 기존 인증서와 외부 갱신 설정을 유지했다.'
+  echo 'TLS files: 기존 인증서와 ACM 갱신 timer를 비활성화했다.'
 fi

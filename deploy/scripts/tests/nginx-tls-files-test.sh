@@ -2,8 +2,25 @@
 # 실제 OpenSSL 인증서를 이용한 입력 검사. OS 소유권만 격리된 stat으로 모사한다.
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../../.." && pwd)
+NGINX_INSTALL="$ROOT/deploy/scripts/nginx-install.sh"
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
+
+assert_contains() {
+  local file="$1" expected="$2"
+  grep -Fq -- "$expected" "$file" || {
+    echo "기대 문자열이 없다: $expected ($file)" >&2
+    exit 1
+  }
+}
+
+assert_contains "$NGINX_INSTALL" "trap 'on_install_failure 129' HUP"
+assert_contains "$NGINX_INSTALL" "trap 'on_install_failure 130' INT"
+assert_contains "$NGINX_INSTALL" "trap 'on_install_failure 143' TERM"
+assert_contains "$NGINX_INSTALL" "trap 'on_install_failure \$?' EXIT"
+assert_contains "$NGINX_INSTALL" 'disable_acm_timer_for_files'
+assert_contains "$NGINX_INSTALL" 'restore_acm_timer_state'
+
 mkdir -p "$work/bin" "$work/stage" "$work/tls"
 cp "$ROOT"/deploy/nginx/{nginx.conf,masiton.click.conf,00-masiton-upgrade-map.conf} "$work/stage/"
 cp "$ROOT/deploy/scripts/nginx-smoke.sh" "$work/stage/"
@@ -12,7 +29,7 @@ openssl req -x509 -newkey rsa:2048 -nodes -subj /CN=masiton.click \
 openssl genpkey -algorithm RSA -out "$work/tls/other.pem" >/dev/null 2>&1
 openssl req -new -key "$work/tls/key.pem" -subj /CN=masiton.click -out "$work/tls/request.pem" >/dev/null 2>&1
 openssl x509 -req -in "$work/tls/request.pem" -signkey "$work/tls/key.pem" \
-  -days -1 -out "$work/tls/expired.pem" >/dev/null 2>&1
+  -days 0 -out "$work/tls/expired.pem" >/dev/null 2>&1
 cat > "$work/bin/stat" <<'SH'
 #!/usr/bin/env bash
 case "$2" in
