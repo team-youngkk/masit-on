@@ -14,6 +14,17 @@
 # 이름들을 실제 속성에 매핑한다. 이름을 바꾸면 그 파일도 함께 바꿔야 한다.
 set -euo pipefail
 
+APP_CONFIG_SOURCE="${APP_CONFIG_SOURCE:-files}"
+case "$APP_CONFIG_SOURCE" in
+  files)
+    . "$(dirname "${BASH_SOURCE[0]}")/app-file-config.sh"
+    load_file_config || exit 1
+    exit 0
+    ;;
+  ssm) ;;
+  *) echo 'APP_CONFIG_SOURCE는 files 또는 ssm이어야 한다' >&2; exit 1 ;;
+esac
+
 REGION="${AWS_REGION:-ap-northeast-2}"
 SECRETS_DIR="${SECRETS_DIR:-/run/masiton/secrets}"
 # 컨테이너의 애플리케이션 사용자 uid·gid다. 두 이미지 모두 1001을 쓴다.

@@ -1,4 +1,24 @@
-# 운영 단일 EC2 인프라
+---
+related_documents:
+  - server-file-config-runbook.md
+  - ../../docs/07-adr/security/sec-001-secrets-workload-identity.md
+  - ../../docs/07-adr/platform/runtime-001-docker.md
+  - ../../docs/07-adr/platform/ci-001-github-actions-quality-gate.md
+---
+
+# 운영 SSH 서버와 기존 AWS 인프라
+
+## 제3자 SSH 앱 서버 기준 (2026-09-06 사용자 승인)
+
+제3자 SSH 앱 서버는 `/etc/masiton/app.env`의 비밀이 아닌 설정과 `/etc/masiton/secrets`의 속성별 비밀 파일을 사용한다. 비밀은 필요한 컨테이너에만 읽기 전용으로 마운트한다. 앱 runtime에 IAM Role·IMDS·SSM·KMS·S3 비밀 조회·ACM을 요구하거나 AWS fallback을 두지 않는다. TLS 인증서·개인 키는 로컬 Nginx가 사용하며 발급·갱신은 별도로 관리한다.
+
+이 서버의 DB·Spring·Redis가 서로 다른 외부 endpoint를 사용하는 경우에도 `DB_URL`·`REDIS_HOST`를 실제 연결 주소로 둔다. Redis 공인 주소는 `/etc/masiton/app.env`의 `REDIS_ALLOWED_PUBLIC_HOSTS`에 명시한 주소만 배포 preflight가 허용하며, 임의의 공인 주소는 허용하지 않는다.
+
+[ADR-SEC-001 승인 예외](../../docs/07-adr/security/sec-001-secrets-workload-identity.md)와 [파일 설정 운영 런북](server-file-config-runbook.md)이 이 대상의 기준이다. 호스트 관리자는 비밀을 읽을 수 있으므로 서버 밖 암호화 백업, 분리된 복호화 키, 수동 교체와 복원 점검이 필요하다. 이 문서는 실행 결과가 아니며 백업·복원·배포 성공 또는 IAM 분리 완료를 증명하지 않는다.
+
+## 기존 AWS 인프라 기록
+
+아래 Terraform 토폴로지·SSM/S3 경로와 뒤의 전환·정리 결과는 기존 AWS 환경에 대한 기록이다. 제3자 서버의 현재 상태나 준비 완료를 뜻하지 않으며, 해당 서버는 아래 AWS 설정을 기동 의존성으로 사용하지 않는다. 기존 자원 정리·IAM 변경은 별도 범위다.
 
 `terraform/`은 기존 VPC와 public subnet을 입력으로 받아 직접 서비스할 앱 EC2 한 대, EIP, 앱 security group, Route53 A record를 관리한다. 운영 전환은 완료되었고, ALB·CodeDeploy·CloudWatch 실행 경로와 관련 권한·알람은 Terraform에서 제거했다. 기존 blue seed ASG와 target group은 정리 런북의 보존 대상이라 state에 남겨 두며, 자동 배포에는 사용하지 않는다.
 
@@ -11,11 +31,11 @@ PostgreSQL은 별도 private EC2에서 실행하며, 이 레이어는 PostgreSQL
 - GitHub Actions는 `main`의 CI 성공 뒤 `environment: production` 승인 후 Docker Hub에 backend/frontend 이미지를 커밋 SHA 태그로 게시하고, 게시 job이 반환한 두 개의 digest output으로 canonical digest 참조를 조합해 배포 산출물과 함께 SSH로 앱 EC2에 전달한다. `workflow_dispatch`에서는 게시 job output을 사용하지 않고 지정한 태그를 Docker Hub에서 직접 pull해 digest로 확인한다. 두 경로 모두 `main`의 조상 커밋만 지정할 수 있어 수동 롤백·재배포에 사용한다.
 - 배포에 `PRODUCTION_INSTANCE_ID`, AWS OIDC, ECR, SSM Run Command는 사용하지 않는다. 대상 계정의 public IPv4, SSH 사용자, private key, 검증된 known_hosts만 필요하다.
 - GitHub 저장소 변수는 `DOCKERHUB_NAMESPACE`, `PRODUCTION_HOST`, `PRODUCTION_SSH_USER`를 사용하고, `production` environment secret은 `DOCKERHUB_USERNAME`, `DOCKERHUB_PUSH_TOKEN`, `DOCKERHUB_PULL_TOKEN`, `PRODUCTION_SSH_PRIVATE_KEY`, `PRODUCTION_SSH_KNOWN_HOSTS`를 사용한다. 이미지 게시에는 커밋 SHA 태그를 사용하고 결과는 digest로 고정한다. `images` job도 `production` environment에 속하며, Docker Hub backend/frontend 저장소의 tag immutability를 필수로 켠다. workflow도 이미 존재하는 SHA tag를 덮어쓰지 않고 실패시킨다.
-- SSH 대상 서버는 Docker, `bash`, `tar`, `base64`, `curl`, AWS CLI, Python 3, `systemctl`, `sudo -n`을 제공해야 하며 workflow와 원격 wrapper가 Docker daemon·x86_64/amd64 플랫폼·필수 산출물·명령을 배포 전에 점검한다. 점검이 끝나기 전에는 Docker Hub 로그인이나 활성 파일 교체를 시작하지 않는다. 앱 runtime은 기존처럼 EC2 IAM role로 SSM Parameter Store·ACM·Redis secret S3를 읽으므로, GitHub 배포 인증과 runtime 인증을 혼동하지 않는다.
+- SSH 대상 서버는 Docker, `bash`, `tar`, `base64`, `curl`, Python 3, `systemctl`, `sudo -n`과 배포 스크립트가 요구하는 명령을 제공해야 한다. 제3자 파일 설정 경로에는 AWS CLI를 요구하지 않는다. workflow와 원격 wrapper는 Docker daemon·x86_64/amd64 플랫폼·필수 산출물·명령을 점검한다. 설정·비밀 파일·읽기 권한·읽기 전용 마운트 조건·로컬 TLS 사전 점검도 서비스 중지와 활성 파일 교체 전에 통과해야 한다. 실패하면 기존 서비스를 유지한다. 원격 Docker Hub 로그인도 원격 preflight 이후에 수행한다.
 - 운영 job은 x86_64 GitHub-hosted `ubuntu-24.04` runner에서 실행한다. 대상 security group의 22번 포트는 GitHub Actions runner가 접근할 수 있는 네트워크 경계에서만 허용하고, known_hosts는 신뢰할 수 있는 환경에서 fingerprint를 확인해 등록하며 CI에서 `ssh-keyscan`을 실행하지 않는다.
 - 배포 bundle은 root 소유의 `/run/masiton/deploy` 아래 무작위 stage 최상위에 필요한 파일을 평탄화해 담고, 로컬 manifest·원격 SHA-256·압축 해제 결과를 순서대로 확인한다. 일반 SSH 사용자가 쓰는 `/tmp` archive는 사용하지 않는다. 배포 명령은 커밋 SHA와 함께 스크립트·Nginx·systemd 산출물을 전달하고 `observability-cleanup.sh`, `app-deploy.sh`의 이미지 pull, health check, rollback 결과를 그대로 반환한다. 이미지 pull 이후 활성 파일을 교체하는 단계에서 실패하거나 배포가 중단되면 이전 산출물로 복구하며, 임시 bundle·Docker 인증 설정·runner SSH 비밀 파일은 성공·실패와 관계없이 정리한다.
 
-### 외부 AWS 계정 EC2 1회 사전 준비
+### 제3자 SSH 서버 1회 사전 준비
 
 대상 EC2가 이 저장소의 AWS 계정 소유가 아니면 이 저장소의 Terraform은 해당 인스턴스의
 `key_name`, SSH 22번 ingress, `authorized_keys`, `sudoers`를 대신 만들 수 없다. 대상 계정
@@ -23,11 +43,15 @@ PostgreSQL은 별도 private EC2에서 실행하며, 이 레이어는 PostgreSQL
 
 1. `PRODUCTION_SSH_USER`의 `authorized_keys`에 배포 public key를 등록한다.
 2. GitHub Actions runner가 접근할 수 있는 제한된 egress 범위에서만 security group의 TCP 22를 연다.
-3. 배포 사용자가 `sudo -n true`, `sudo -n docker info`를 통과하고 Docker·AWS CLI·Python 3·`systemctl`을 사용할 수 있게 한다.
+3. 배포 사용자가 `sudo -n true`, `sudo -n docker info`를 통과하고 Docker·Python 3·`systemctl` 및 필수 명령을 사용할 수 있게 한다.
 4. 같은 host key fingerprint를 확인한 known_hosts 한 줄을 `PRODUCTION_SSH_KNOWN_HOSTS`에 등록한다.
+5. [런북](server-file-config-runbook.md)에 따라 `app.env`, 비밀 파일, 로컬 TLS와 서버 밖 암호화 백업·복원 절차를 준비한다. 실제 준비·검증 결과가 없는 항목은 미검증으로 남긴다.
 
 workflow의 SSH preflight가 위 조건을 다시 검증하며, 조건이 맞지 않으면 Docker Hub
 로그인이나 운영 파일 교체를 시작하지 않는다.
+
+### 기존 AWS 토폴로지와 운영 이력
+
 - Nginx가 TLS를 종단하고 외부의 80/443 요청을 직접 받는다. `/internal/**`은 계속 외부 `404`이며, Route53 A record는 앱 EIP를 가리킨다.
 - 앱 EC2와 Redis를 동거시키지 않는다. 현재 x86_64 운영 프로파일은 앱 `t2.micro`,
   PostgreSQL 전용 EC2 `t2.nano`, Redis 전용 EC2 `t2.nano`다.
