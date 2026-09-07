@@ -73,23 +73,23 @@ related_documents:
 | `deploy/scripts/tests/nginx-tls-files-test.sh` | 통과 | files/acm 입력 검증, TLS 무변경, signal/EXIT·timer 복구 계약 |
 | `./gradlew.bat --no-daemon test --tests 'com.masiton.deployment.*' --console=plain` | 통과 | deployment 계약 테스트 전체와 완료 경계 순서 |
 | `git diff --check` | 통과 | 변경 diff 공백 |
-| [GitHub Actions backend build/test](https://github.com/team-youngkk/masit-on/actions/runs/34113562757) | 통과 | 앱 설정·TLS 셸 계약과 전체 backend 테스트가 함께 통과 |
+| [GitHub Actions backend build/test](https://github.com/team-youngkk/masit-on/actions/runs/34114814429) | 통과 | 앱 설정·TLS 셸 계약과 전체 backend 테스트가 함께 통과 |
 
 ## 8. 재발 방지 및 다음 확인
 
 - 재발 방지: files TLS 셸 계약을 backend 필수 CI 단계에서 실행하고, Nginx installer의 signal/EXIT trap과 ACM timer 복구 표식을 계약 테스트로 고정한다.
 - 재발 방지: rollback 상태를 폐기하는 완료 경계의 순서도 `AppRunScriptContractTest`로 고정한다.
 - 재발 방지: 배포 경로 변경 시 생산자(workflow)·소비자(script)·계약 테스트를 같은 PR에서 갱신한다.
-- 다음 확인: 새 커밋의 GitHub Actions backend job에서 root 권한 앱 설정 테스트와 TLS 테스트가 통과하는지 확인한다. 실제 운영에서 signal 중단·timer 상태 복구를 의도적으로 유발하는 검증은 운영 장애를 만들 수 있어 이번 PR에서는 실행하지 않는다.
+- 다음 확인: 실제 운영에서 signal 중단·timer 상태 복구를 의도적으로 유발하는 검증은 운영 장애를 만들 수 있어 이번 PR에서는 실행하지 않는다.
 
 ## 9. 도입 전후 비교 지표
 
 | 지표 | 도입 전 기준값 | 측정 방법·기간 | 배포 확장 후 값 | 비교 결과 | 담당자·확인 시점/이슈 |
 |---|---|---|---|---|---|
-| 파일 기반 설정·TLS 계약의 필수 CI 실행 여부 | 0/2 | backend job 단계 목록 확인 | 2/2 | CI 누락 경로를 제거 | GitHub Actions run 34113562757 |
+| 파일 기반 설정·TLS 계약의 필수 CI 실행 여부 | 0/2 | backend job 단계 목록 확인 | 2/2 | CI 누락 경로를 제거 | GitHub Actions run 34114814429 |
 | Nginx signal/timer 복구 실패율 | 측정 없음 | 실제 운영 중단 없이 정적 계약·셸 fixture로 복구 경계 확인 | 운영 적용 전이라 측정 없음 | 수치 비교 불가 | 운영 장애를 유발하지 않는 별도 복구 리허설 필요 |
 
 ## 10. 남은 사항
 
-- 코드·테스트·CI 수정과 GitHub Actions 검증은 완료했으며, 각 리뷰 스레드에 답글과 해결 처리를 진행한다.
+- 코드·테스트·CI 수정과 GitHub Actions 검증은 완료했으며, 각 리뷰 스레드에 답글과 해결 처리를 완료한다.
 - 실제 운영 호스트에서 signal을 유발하는 복구 리허설은 실행하지 않았다.
