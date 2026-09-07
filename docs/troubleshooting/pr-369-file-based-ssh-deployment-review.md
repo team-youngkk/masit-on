@@ -70,7 +70,7 @@ related_documents:
 | `deploy/scripts/tests/nginx-tls-files-test.sh` | 통과 | files/acm 입력 검증, TLS 무변경, signal/EXIT·timer 복구 계약 |
 | `./gradlew.bat --no-daemon test --tests 'com.masiton.deployment.*' --console=plain` | 통과 | deployment 계약 테스트 전체 |
 | `git diff --check` | 통과 | 변경 diff 공백 |
-| GitHub Actions backend build/test | 확인 예정 | 새 커밋 push 후 앱 설정·TLS 셸 계약과 전체 backend 테스트를 함께 재확인 |
+| [GitHub Actions backend build/test](https://github.com/team-youngkk/masit-on/actions/runs/34113562757) | 통과 | 앱 설정·TLS 셸 계약과 전체 backend 테스트가 함께 통과 |
 
 ## 8. 재발 방지 및 다음 확인
 
@@ -82,10 +82,10 @@ related_documents:
 
 | 지표 | 도입 전 기준값 | 측정 방법·기간 | 배포 확장 후 값 | 비교 결과 | 담당자·확인 시점/이슈 |
 |---|---|---|---|---|---|
-| 파일 기반 설정·TLS 계약의 필수 CI 실행 여부 | 0/2 | backend job 단계 목록 확인 | 새 커밋 CI에서 2/2 확인 예정 | CI 누락 경로를 제거 | 이우람, 새 CI run 완료 시 |
+| 파일 기반 설정·TLS 계약의 필수 CI 실행 여부 | 0/2 | backend job 단계 목록 확인 | 2/2 | CI 누락 경로를 제거 | GitHub Actions run 34113562757 |
 | Nginx signal/timer 복구 실패율 | 측정 없음 | 실제 운영 중단 없이 정적 계약·셸 fixture로 복구 경계 확인 | 운영 적용 전이라 측정 없음 | 수치 비교 불가 | 운영 장애를 유발하지 않는 별도 복구 리허설 필요 |
 
 ## 10. 남은 사항
 
-- 코드와 테스트 수정은 완료했으며, 새 커밋 push 후 CI 결과와 각 리뷰 스레드 답글·해결 처리를 진행한다.
+- 코드·테스트·CI 수정과 GitHub Actions 검증은 완료했으며, 각 리뷰 스레드에 답글과 해결 처리를 진행한다.
 - 실제 운영 호스트에서 signal을 유발하는 복구 리허설은 실행하지 않았다.
