@@ -276,9 +276,9 @@ systemctl daemon-reload
 systemctl enable --now masiton-tls-renew.timer >/dev/null
 fi
 
-TIMER_STATE_CAPTURED=no
 INSTALL_ROLLBACK_ACTIVE=no
 trap - ERR EXIT INT TERM HUP
+TIMER_STATE_CAPTURED=no
 rm -rf "$ROLLBACK_DIR"
 
 echo "nginx: enabled=$(systemctl is-enabled nginx) active=$(systemctl is-active nginx)"

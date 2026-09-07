@@ -141,10 +141,16 @@ class AppRunScriptContractTest {
         int configTest = install.indexOf("nginx -t");
         int restart = install.lastIndexOf("systemctl restart nginx");
         int smoke = install.indexOf("bash \"$STAGE/nginx-smoke.sh\"");
+        int rollbackCommit = install.lastIndexOf("INSTALL_ROLLBACK_ACTIVE=no");
+        int trapDisable = install.indexOf("trap - ERR EXIT INT TERM HUP", rollbackCommit);
+        int timerStateDiscard = install.lastIndexOf("TIMER_STATE_CAPTURED=no");
         assertThat(install).contains("tls-deploy-cert.sh").contains("systemctl enable nginx");
         assertThat(configTest).isGreaterThanOrEqualTo(0);
         assertThat(restart).isGreaterThan(configTest);
         assertThat(smoke).isGreaterThan(restart);
+        assertThat(rollbackCommit).isGreaterThan(smoke);
+        assertThat(trapDisable).isGreaterThan(rollbackCommit);
+        assertThat(timerStateDiscard).isGreaterThan(trapDisable);
     }
 
     @Test
