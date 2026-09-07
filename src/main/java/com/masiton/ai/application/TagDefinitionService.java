@@ -69,9 +69,17 @@ public class TagDefinitionService implements ManageTagDefinitionsUseCase {
                 || aliases.size() > 20 || aliases.stream().anyMatch(alias -> alias.isEmpty() || alias.length() > 100)) {
             throw invalid("tagDefinition");
         }
+        String normalizedDisplayName = TagTermNormalizer.normalize(displayName);
+        List<String> normalizedAliases = aliases.stream().map(TagTermNormalizer::normalize).toList();
+        if (normalizedDisplayName.length() > TagTermNormalizer.MAX_NORMALIZED_LENGTH) {
+            throw invalid("displayName");
+        }
+        if (normalizedAliases.stream().anyMatch(
+                alias -> alias.length() > TagTermNormalizer.MAX_NORMALIZED_LENGTH)) {
+            throw invalid("aliases");
+        }
         List<String> normalizedTerms = java.util.stream.Stream.concat(
-                java.util.stream.Stream.of(displayName), aliases.stream())
-                .map(TagTermNormalizer::normalize).toList();
+                java.util.stream.Stream.of(normalizedDisplayName), normalizedAliases.stream()).toList();
         if (normalizedTerms.stream().anyMatch(String::isBlank)
                 || new HashSet<>(normalizedTerms).size() != normalizedTerms.size()) {
             throw invalid("aliases");

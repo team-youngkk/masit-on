@@ -313,4 +313,4 @@ V9 visit_tag_revision의 컬럼·타입·FK·감사 원자성은 [AI 데이터 �
 
 ## 관리자 태그 정의 용어 — 이슈 #363
 
-V10 `tag_definition_term`의 컬럼·정규화·전역 고유성·역적재 계약은 [AI 데이터 계약 15절](third-expansion-ai-video-data-contract.md#15-태그-정규화-용어--이슈-363)을 따른다. 기존 `tag_definition.display_name`과 `aliases`는 표시 및 호환 계약으로 유지하고, ADMIN·AI 작성자는 정의와 용어를 한 트랜잭션에서 함께 저장한다.
+V10 `tag_definition_term`의 컬럼·1~200자 정규화·전역 고유성·역적재 계약은 [AI 데이터 계약 15절](third-expansion-ai-video-data-contract.md#15-태그-정규화-용어--이슈-363)을 따른다. 기존 `tag_definition.display_name`과 `aliases`는 표시 및 호환 계약으로 유지하고, ADMIN·AI 작성자는 정의와 용어를 한 트랜잭션에서 함께 저장한다. V9의 `AI_AUTO` legacy 코드는 유형과 유일성을 보존하는 연속·끝 밑줄만 정리하며 ID와 참조는 바꾸지 않는다.

@@ -262,10 +262,11 @@ V9__add_visit_tag_revision.sql은 visit_tag_revision과 불변 감사 트리거�
 
 적용 순서는 다음과 같다.
 
-1. Unicode NFKC, trim, 연속 Unicode 공백 축약, 영문 소문자를 적용하는 DB 정규화 함수를 만든다.
-2. `AI_AUTO`의 표시명 자기 중복 별칭만 제거하고, 나머지 역적재 대상에 빈 값·200자 초과·정규화 용어 충돌이 있는지 검사한다. 하나라도 있으면 원본 태그를 임의 변경하거나 합치지 않고 마이그레이션을 실패시킨다.
-3. term 테이블과 CHECK·FK를 만들고 표시명 1개와 모든 JSONB 별칭을 역적재한다.
-4. `normalized_term` 전역 unique와 정의별 DISPLAY_NAME partial unique를 만든다.
-5. 태그 코드 형식과 `tag_type` 접두사 일치 CHECK를 기존 행 검증과 함께 추가한다.
+1. Unicode NFKC, trim, 연속 Unicode 공백 축약, ASCII `A-Z`를 `a-z`로 변환하는 DB 정규화 함수를 만든다. Java와 PostgreSQL은 Unicode 경계 corpus로 결과 동등성을 검증한다.
+2. V9가 허용한 연속·끝 밑줄이 있는 `AI_AUTO` 코드는 유형 접두사와 유일성이 보존되는 경우에만 밑줄을 축약·제거한다. ID와 참조는 유지하며 수동 출처·복구 불가 코드·정리 후 충돌은 전체 마이그레이션을 실패시킨다.
+3. `AI_AUTO`의 표시명 자기 중복 별칭만 제거하고, 나머지 역적재 대상에 빈 값·200자 초과·정규화 용어 충돌이 있는지 검사한다. 하나라도 있으면 원본 태그를 임의 변경하거나 합치지 않고 마이그레이션을 실패시킨다.
+4. term 테이블과 CHECK·FK를 만들고 표시명 1개와 모든 JSONB 별칭을 역적재한다.
+5. `normalized_term` 전역 unique와 정의별 DISPLAY_NAME partial unique를 만든다.
+6. 태그 코드 형식과 `tag_type` 접두사 일치 CHECK를 기존 행 검증과 함께 추가한다.
 
-빈 DB V1→V10과 V9→V10 전진 적용, V4 18개 seed 보존, 기존 AI 태그 역적재, Unicode·공백·대소문자 정규화 동등성, 기존 충돌 시 전체 실패, ADMIN·AI 동시 생성 unique, 정의·용어 원자성을 검증한다. 다른 통합 테스트가 migration 목록을 고정한다면 V10을 포함하도록 기대값을 갱신하되 seed를 삭제해 통과시키지 않는다. [AI 데이터 계약 15절](third-expansion-ai-video-data-contract.md#15-태그-정규화-용어--이슈-363)을 따른다.
+빈 DB V1→V10과 V9→V10 전진 적용, V4 18개 seed 보존, V9 유효 AI legacy 코드의 무손실 정리, 기존 AI 태그 역적재, Unicode·공백·ASCII 대소문자 정규화 동등성, 기존 충돌 시 전체 실패, ADMIN·AI 동시 생성 unique, 정의·용어 원자성을 검증한다. 다른 통합 테스트가 migration 목록을 고정한다면 V10을 포함하도록 기대값을 갱신하되 seed를 삭제해 통과시키지 않는다. [AI 데이터 계약 15절](third-expansion-ai-video-data-contract.md#15-태그-정규화-용어--이슈-363)을 따른다.

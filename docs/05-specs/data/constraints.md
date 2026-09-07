@@ -253,4 +253,4 @@ V9 visit_tag_revision은 양수 revision, Visit별 revision 유일성, 전후 JS
 
 V10 `tag_definition_term.normalized_term`은 모든 ACTIVE·DEPRECATED 정의를 통틀어 unique다. `term_kind`는 `DISPLAY_NAME/ALIAS`만 허용하고 partial unique가 정의마다 DISPLAY_NAME 행을 최대 하나로 제한한다. 생성 트랜잭션과 역적재 검증이 표시명 행 정확히 하나를 보장한다. 정의 삭제는 RESTRICT하며 물리 삭제 경로는 제공하지 않는다. 코드 형식과 유형 접두사 일치는 DB CHECK로 강제한다.
 
-표시명·별칭은 Unicode NFKC → trim → 연속 Unicode 공백 축약 → 영문 소문자 순으로 정규화한다. DB 정규화 함수와 애플리케이션 결과의 동등성을 계약 테스트로 고정한다. ADMIN·AI 작성자는 `tag_definition`, JSONB 별칭과 모든 term 행을 같은 트랜잭션에서 쓰며 unique 충돌을 409로 변환한다. V10은 과거 AI 작성자가 만든 표시명 자기 중복 별칭만 제거하고, 기존 V4 seed를 지우거나 fixture에서 우회하지 않은 채 나머지 역적재 충돌 실패를 검증한다.
+표시명·별칭은 Unicode NFKC → trim → 연속 Unicode 공백 축약 → ASCII `A-Z`를 `a-z`로 변환하는 순서로 정규화하며 결과는 1~200자여야 한다. PostgreSQL은 `translate`, Java는 같은 ASCII 변환을 사용하고 Unicode 경계 corpus 계약 테스트로 결과 동등성을 고정한다. ADMIN·AI 작성자는 `tag_definition`, JSONB 별칭과 모든 term 행을 같은 트랜잭션에서 쓰며 unique 충돌을 409로 변환한다. V10은 과거 AI 작성자가 만든 표시명 자기 중복 별칭을 제거하고 V9가 허용한 `AI_AUTO` 코드의 연속·끝 밑줄을 유형·유일성이 보존되는 경우에만 정리한다. 수동 출처·복구 불가·충돌 코드는 중단하며 기존 V4 seed를 지우거나 fixture에서 우회하지 않은 채 나머지 역적재 충돌 실패를 검증한다.

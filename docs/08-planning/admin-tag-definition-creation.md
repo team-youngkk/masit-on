@@ -46,7 +46,7 @@ related_documents:
 
 - `tag_definition`은 코드·유형·표시 원문·별칭 JSONB·상태·출처를 계속 소유한다.
 - V10 `tag_definition_term`은 중복 판정용 정규화 키를 소유한다. `normalized_term`은 ACTIVE/DEPRECATED 전체에서 전역 unique다.
-- 정규화 순서는 NFKC → trim → 연속 Unicode 공백 한 칸 → `Locale.ROOT` 영문 소문자다.
+- 정규화 순서는 NFKC → trim → 연속 Unicode 공백 한 칸 → ASCII `A-Z`를 `a-z`로 변환이며 결과는 1~200자다. Java와 PostgreSQL은 같은 Unicode 경계 corpus로 결과 동등성을 검증한다.
 - 표시명은 하나, 별칭은 0~20개이고 요청 내부에서도 서로 다른 정규화 키여야 한다.
 - ADMIN 생성은 `ACTIVE/MANUAL_OVERRIDE`, AI Snapshot 없음이다. AI 생성은 기존 source·Snapshot 근거를 유지한다.
 - ADMIN·AI 작성자는 정의·JSONB 별칭·모든 term을 한 트랜잭션에서 생성한다. unique 위반은 409이며 부분 저장은 0건이다.
@@ -67,8 +67,9 @@ related_documents:
 ### 단계 1. V10 데이터 경계
 
 - 정규화 DB 함수, `tag_definition_term`, FK·CHECK·unique·partial unique를 전진 마이그레이션으로 추가한다.
+- V9가 허용한 `AI_AUTO` 코드의 연속·끝 밑줄은 현재 형식·유형·유일성을 만족하는 경우에만 정리하고 ID·참조를 보존한다. 수동 출처·복구 불가·충돌 코드는 적용 전에 실패시킨다.
 - 기존 표시명·별칭을 역적재한다. 과거 AI 작성자가 만든 표시명 자기 중복 별칭만 명시적으로 제거하고, 그 밖의 충돌은 사전 검사 결과가 0건일 때만 적용하며 임의 병합하지 않는다.
-- V4의 18개 seed와 기존 AI 생성 데이터를 그대로 보존한다.
+- V4의 18개 seed와 기존 AI 생성 데이터의 ID·관계를 보존한다.
 - 고정 migration 버전 기대값이 있는 테스트는 V10을 포함하도록 갱신한다.
 
 ### 단계 2. 백엔드 생성 경로
@@ -99,9 +100,9 @@ related_documents:
 |---|---|
 | 인증·공개 경계 | 익명 401, MEMBER 403, ADMIN 200/201, 공개 상세 응답과 화면에 내부 코드·생성 UI 없음 |
 | 입력 | 네 유형 정상, 잘못된 유형·접두사·코드 문자·길이, 빈 표시명, 별칭 20개 경계·초과, 금지 표현 |
-| 정규화 | NFKC 호환 문자, 앞뒤/연속 공백, 영문 대소문자, 표시명↔별칭·별칭↔별칭 충돌 |
+| 정규화 | NFKC 호환 문자, 앞뒤/연속 Unicode 공백, ASCII 영문 대소문자, Java↔PostgreSQL corpus 동등성, 정규화 결과 200자 초과, 표시명↔별칭·별칭↔별칭 충돌 |
 | 동시성·원자성 | 같은 코드·같은 normalized term 동시 POST에서 하나만 201, 나머지 409, 부분 definition/term 0건 |
-| 마이그레이션 | 빈 DB V1→V10, V9→V10, 18개 seed 보존·역적재, AI 자기 중복 별칭 정리, 그 밖의 legacy 충돌 시 V10 전체 실패, 버전 목록 V10 포함 |
+| 마이그레이션 | 빈 DB V1→V10, V9→V10, 18개 seed 보존·역적재, V9 유효 `AI_AUTO` 연속·끝 밑줄 코드 정리와 ID 보존, AI 자기 중복 별칭 정리, 수동·복구 불가·충돌 legacy는 V10 전체 실패, 버전 목록 V10 포함 |
 | AI 회귀 | AI 신규 태그가 정의·term을 함께 생성, 실패 시 후보 외 정식 부분 저장 0건, 기존 provenance 유지 |
 | 방문 연결·감사 | POST만으로 VisitTag/revision 0건, 이후 PUT 성공 시 연결·감사 일치, PUT 취소/실패 시 연결 없음 |
 | 프론트 | 생성 후 현재 방문 즉시 선택, 다른 선택·사유 유지, 목록 갱신, 중복 제출 방지, 오류 후 재시도, 세션 전환 캐시 폐기 |

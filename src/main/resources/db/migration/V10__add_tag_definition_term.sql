@@ -4,8 +4,68 @@ LANGUAGE sql
 IMMUTABLE
 STRICT
 AS $$
-    SELECT lower(btrim(regexp_replace(normalize(value, NFKC), '[\s   -     　]+', ' ', 'g')))
+    SELECT translate(
+        btrim(regexp_replace(normalize(value, NFKC), '[\s   -     　]+', ' ', 'g')),
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+        'abcdefghijklmnopqrstuvwxyz'
+    )
 $$;
+
+-- V4~V9의 AI 작성자는 끝 밑줄과 연속 밑줄을 허용했다. 의미가 하나로
+-- 결정되는 AI_AUTO 코드만 V10 형식으로 정리하고, 수동 값·복구 불가 값·충돌은 중단한다.
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM tag_definition
+         WHERE source <> 'AI_AUTO'
+           AND (
+               tag_code !~ '^(MENU|TASTE|OCCASION|ATMOSPHERE)_[A-Z0-9]+(_[A-Z0-9]+)*$'
+               OR tag_code NOT LIKE tag_type || '\_%' ESCAPE '\'
+           )
+    ) THEN
+        RAISE EXCEPTION 'Non-AI tag definition contains an invalid legacy code.' USING ERRCODE = '23514';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM tag_definition
+         WHERE source = 'AI_AUTO'
+           AND (
+               tag_code !~ '^(MENU|TASTE|OCCASION|ATMOSPHERE)_[A-Z0-9]+(_[A-Z0-9]+)*$'
+               OR tag_code NOT LIKE tag_type || '\_%' ESCAPE '\'
+           )
+           AND (
+               regexp_replace(btrim(tag_code, '_'), '_+', '_', 'g')
+                   !~ '^(MENU|TASTE|OCCASION|ATMOSPHERE)_[A-Z0-9]+(_[A-Z0-9]+)*$'
+               OR regexp_replace(btrim(tag_code, '_'), '_+', '_', 'g')
+                   NOT LIKE tag_type || '\_%' ESCAPE '\'
+           )
+    ) THEN
+        RAISE EXCEPTION 'AI tag definition contains an unrepairable legacy code.' USING ERRCODE = '23514';
+    END IF;
+
+    IF EXISTS (
+        WITH canonical_codes AS (
+            SELECT CASE
+                       WHEN source = 'AI_AUTO' THEN regexp_replace(btrim(tag_code, '_'), '_+', '_', 'g')
+                       ELSE tag_code
+                   END AS tag_code
+              FROM tag_definition
+        )
+        SELECT 1 FROM canonical_codes GROUP BY tag_code HAVING count(*) > 1
+    ) THEN
+        RAISE EXCEPTION 'Legacy AI tag code normalization would create a duplicate.' USING ERRCODE = '23505';
+    END IF;
+END;
+$$;
+
+UPDATE tag_definition
+   SET tag_code = regexp_replace(btrim(tag_code, '_'), '_+', '_', 'g'),
+       updated_at = CURRENT_TIMESTAMP
+ WHERE source = 'AI_AUTO'
+   AND (
+       tag_code !~ '^(MENU|TASTE|OCCASION|ATMOSPHERE)_[A-Z0-9]+(_[A-Z0-9]+)*$'
+       OR tag_code NOT LIKE tag_type || '\_%' ESCAPE '\'
+   );
 
 -- The legacy AI writer stored its display name again as the first alias. Remove only
 -- that system-generated self-alias before enforcing global term uniqueness.

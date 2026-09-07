@@ -83,6 +83,23 @@ class TagDefinitionServiceTest {
                         error -> assertThat(error.code()).isEqualTo("TAG_TERM_ALREADY_EXISTS"));
     }
 
+    @Test
+    @DisplayName("원문 길이가 허용 범위여도 NFKC 결과가 200자를 넘으면 400으로 거절한다")
+    void 생성_NFKC확장후길이초과_400으로거절한다() {
+        String compatibilityLigatures = "\ufdfa".repeat(100);
+
+        assertThat(compatibilityLigatures).hasSize(100);
+        assertThat(TagTermNormalizer.normalize(compatibilityLigatures).length()).isGreaterThan(200);
+        assertThatThrownBy(() -> service.create(new CreateCommand(
+                "MENU_EXPANDED", "MENU", compatibilityLigatures, List.of())))
+                .isInstanceOfSatisfying(BusinessException.class, error -> {
+                    assertThat(error.status().value()).isEqualTo(400);
+                    assertThat(error.code()).isEqualTo("INVALID_FIELD_VALUE");
+                    assertThat(error.fieldErrors()).extracting(field -> field.field())
+                            .containsExactly("displayName");
+                });
+    }
+
     private CreateCommand validCommand() {
         return new CreateCommand("OCCASION_FAMILY", "OCCASION", "가족 모임", List.of("가족 외식"));
     }

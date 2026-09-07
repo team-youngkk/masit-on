@@ -64,7 +64,8 @@ related_documents:
 - `code`는 trim 후 3~64자이며 `^(MENU|TASTE|OCCASION|ATMOSPHERE)_[A-Z0-9]+(?:_[A-Z0-9]+)*$`를 만족하고 접두사가 `type`과 같아야 한다.
 - `displayName`은 trim 후 1~100자다.
 - `aliases`는 선택 입력이며 생략하면 빈 배열이다. 최대 20개이고 각 값은 trim 후 1~100자다.
-- 표시명과 별칭은 각각 Unicode NFKC 정규화, 앞뒤 공백 제거, 연속 Unicode 공백을 한 칸으로 축약, 영문 `Locale.ROOT` 소문자 변환을 순서대로 적용해 `normalizedTerm`을 만든다.
+- 표시명과 별칭은 각각 Unicode NFKC 정규화, 앞뒤 공백 제거, 연속 Unicode 공백을 한 칸으로 축약, ASCII `A-Z`를 `a-z`로 변환하는 순서로 `normalizedTerm`을 만든다. Java와 PostgreSQL은 같은 Unicode 경계 corpus로 결과 동등성을 검증한다.
+- `normalizedTerm`은 1~200자여야 한다. 원문이 100자 이하여도 NFKC 결과가 200자를 넘으면 해당 `displayName` 또는 `aliases` 필드의 400 오류로 거부한다.
 - 요청 내부와 기존 모든 태그의 표시명·별칭 사이에서 `normalizedTerm`은 전역 고유해야 한다. 상태가 `DEPRECATED`인 기존 정의의 용어도 재사용하지 않는다.
 - 가격·평점·품질 단정, 영업시간·영업 여부, 방문 가능 여부와 근거 없는 홍보 표현 등 `BR-AIEXTRACT-008`의 금지 표현은 생성할 수 없다.
 
@@ -85,7 +86,7 @@ related_documents:
 
 | 상태 | 코드 | 조건 |
 |---:|---|---|
-| 400 | `INVALID_FIELD_VALUE` | 필수값·길이·배열 상한·유형·코드 형식 또는 접두사 불일치 |
+| 400 | `INVALID_FIELD_VALUE` | 필수값·원문 또는 정규화 결과 길이·배열 상한·유형·코드 형식 또는 접두사 불일치 |
 | 400 | `TAG_TERM_FORBIDDEN` | 표시명 또는 별칭이 금지 표현 정책에 해당 |
 | 401 | 공통 인증 오류 | 유효한 인증 없음 |
 | 403 | 공통 권한 오류 | 현재 역할이 ADMIN이 아님 |

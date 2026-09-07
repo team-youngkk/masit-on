@@ -53,7 +53,7 @@ class TagDefinitionMigrationIntegrationTest {
         jdbc.update("""
                 INSERT INTO tag_definition(
                     id, tag_code, tag_type, display_name, aliases, status, source, created_from_snapshot_id)
-                VALUES (?, 'MENU_KIMBAP', 'MENU', '김밥', '["김밥"]'::jsonb, 'ACTIVE', 'AI_AUTO', ?)
+                VALUES (?, 'MENU__KIMBAP_', 'MENU', '김밥', '["김밥"]'::jsonb, 'ACTIVE', 'AI_AUTO', ?)
                 """, aiTagId, snapshotId);
 
         int migrated = flyway(schema, "10").migrate().migrationsExecuted;
@@ -65,6 +65,8 @@ class TagDefinitionMigrationIntegrationTest {
                 .isEqualTo("DEPRECATED");
         assertThat(jdbc.queryForObject("SELECT aliases::text FROM tag_definition WHERE id = ?", String.class, aiTagId))
                 .isEqualTo("[]");
+        assertThat(jdbc.queryForObject("SELECT tag_code FROM tag_definition WHERE id = ?", String.class, aiTagId))
+                .isEqualTo("MENU_KIMBAP");
         assertThat(jdbc.queryForList("SELECT normalized_term FROM tag_definition_term WHERE tag_definition_id = ?",
                 String.class, aiTagId)).containsExactly("김밥");
     }

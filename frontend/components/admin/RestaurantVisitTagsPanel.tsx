@@ -150,7 +150,7 @@ function AdminTags({ accountId, restaurantId }: { accountId: string; restaurantI
       await saveMutation.mutateAsync(editing)
       if (!active.current) return
       setEditing(null)
-      setNotice('태그를 저장했습니다. 다음 자연어 검색부터 반영됩니다.')
+      setNotice('방문 태그를 저장했습니다.')
       await query.refetch()
     } catch (reason) {
       if (!active.current) return

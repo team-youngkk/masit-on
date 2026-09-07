@@ -22,6 +22,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.masiton.ai.application.port.in.ManageTagDefinitionsUseCase;
+import com.masiton.ai.application.TagTermNormalizer;
 import com.masiton.common.web.BusinessException;
 
 @AutoConfigureMockMvc
@@ -130,5 +131,22 @@ class TagDefinitionIntegrationTest extends com.masiton.test.FullContextIntegrati
                 .andExpect(status().isForbidden());
         mvc.perform(post("/api/admin/tag-definitions").contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("Java와 PostgreSQL 정규화는 Unicode corpus에서 같은 결과를 만든다")
+    void 정규화_Java와PostgreSQL_동등하다() {
+        List<String> corpus = List.of(
+                " ＡＢＣ\u00a0가족 ",
+                "A\tB\u2003C",
+                "Iİıi",
+                "Σ Straße",
+                "가족\u2028외식");
+
+        for (String value : corpus) {
+            assertThat(jdbc.queryForObject("SELECT normalize_tag_definition_term(?)", String.class, value))
+                    .as("정규화 corpus: %s", value)
+                    .isEqualTo(TagTermNormalizer.normalize(value));
+        }
     }
 }
