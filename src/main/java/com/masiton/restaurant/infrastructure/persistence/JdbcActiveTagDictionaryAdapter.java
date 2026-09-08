@@ -18,7 +18,7 @@ import com.masiton.restaurant.application.port.out.ActiveTagDictionaryUnavailabl
 
 /** tag_definition 정본을 읽고 30초 동안 프로세스 내 snapshot으로 공유한다. */
 @Repository
-public final class JdbcActiveTagDictionaryAdapter implements ActiveTagDictionaryPort {
+public class JdbcActiveTagDictionaryAdapter implements ActiveTagDictionaryPort {
 
     static final Duration DEFAULT_TTL = Duration.ofSeconds(30);
 
