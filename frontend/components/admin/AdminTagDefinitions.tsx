@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { AdminApiError, messageFor } from '@/lib/admin/api'
 import { changeTagDefinitionStatus, getManagedTagDefinitions, getTagDefinitionHistory, updateTagDefinition } from '@/lib/admin/visit-tags'
 import { adminTagScope, type TagDefinition } from '@/lib/admin/visit-tags-coordination'
+import { MEMBER_SESSION_CHANGED_EVENT } from '@/lib/member/auth'
 import styles from './AdminTagDefinitions.module.css'
 
 type Draft = { displayName: string; aliases: string; reason: string }
@@ -26,19 +27,21 @@ function TagDefinitionsContent({ accountId }: { accountId: string }) {
   const [historyPage, setHistoryPage] = useState(1)
   const [conflict, setConflict] = useState(false)
   const preserveDraft = useRef(false)
+  const requests = useRef(new Set<AbortController>())
+  const active = useRef(true)
   const [draft, setDraft] = useState<Draft>({ displayName: '', aliases: '', reason: '' })
   const [notice, setNotice] = useState('')
   const queryKey = ['auth', accountId, 'tag-definition-management', status, page] as const
   const query = useQuery({
     queryKey,
-    queryFn: ({ signal }) => getManagedTagDefinitions(accountId, status, page, signal),
+    queryFn: ({ signal }) => tracked(requestSignal => getManagedTagDefinitions(accountId, status, page, requestSignal), signal),
     retry: false,
     gcTime: 0,
   })
   const selected = query.data?.items.find(item => item.code === selectedCode) ?? null
   const history = useQuery({
     queryKey: ['auth', accountId, 'tag-definition-history', selectedCode, historyPage],
-    queryFn: ({ signal }) => getTagDefinitionHistory(accountId, selectedCode!, historyPage, signal),
+    queryFn: ({ signal }) => tracked(requestSignal => getTagDefinitionHistory(accountId, selectedCode!, historyPage, requestSignal), signal),
     enabled: Boolean(selectedCode),
     retry: false,
     gcTime: 0,
@@ -47,33 +50,48 @@ function TagDefinitionsContent({ accountId }: { accountId: string }) {
     if (preserveDraft.current) { preserveDraft.current = false; return }
     if (selected) setDraft({ displayName: selected.displayName, aliases: selected.aliases.join('\n'), reason: '' })
   }, [selected?.code, selected?.version])
-  useEffect(() => () => {
-    void client.cancelQueries({ queryKey: ['auth', accountId, 'tag-definition-management'] })
-    void client.cancelQueries({ queryKey: ['auth', accountId, 'tag-definition-history'] })
-    void client.cancelQueries({ queryKey: ['auth', accountId, 'tag-definitions'] })
-    client.removeQueries({ queryKey: ['auth', accountId, 'tag-definition-management'] })
-    client.removeQueries({ queryKey: ['auth', accountId, 'tag-definition-history'] })
-    client.removeQueries({ queryKey: ['auth', accountId, 'tag-definitions'] })
+  useEffect(() => {
+    active.current = true
+    const discard = () => {
+      active.current = false
+      requests.current.forEach(controller => controller.abort())
+      requests.current.clear()
+      void client.cancelQueries({ queryKey: ['auth', accountId, 'tag-definition-management'] })
+      void client.cancelQueries({ queryKey: ['auth', accountId, 'tag-definition-history'] })
+      void client.cancelQueries({ queryKey: ['auth', accountId, 'tag-definitions'] })
+      client.removeQueries({ queryKey: ['auth', accountId, 'tag-definition-management'] })
+      client.removeQueries({ queryKey: ['auth', accountId, 'tag-definition-history'] })
+      client.removeQueries({ queryKey: ['auth', accountId, 'tag-definitions'] })
+    }
+    window.addEventListener(MEMBER_SESSION_CHANGED_EVENT, discard)
+    return () => { window.removeEventListener(MEMBER_SESSION_CHANGED_EVENT, discard); discard() }
   }, [accountId, client])
 
+  async function tracked<T>(request: (signal: AbortSignal) => Promise<T>, signal?: AbortSignal): Promise<T> {
+    const controller = new AbortController()
+    requests.current.add(controller)
+    try { return await request(signal ? AbortSignal.any([signal, controller.signal]) : controller.signal) }
+    finally { requests.current.delete(controller) }
+  }
+
   const updateMutation = useMutation({
-    mutationFn: ({ definition, draft }: { definition: TagDefinition; draft: Draft }) => updateTagDefinition(accountId, definition.code, {
+    mutationFn: ({ definition, draft }: { definition: TagDefinition; draft: Draft }) => tracked(signal => updateTagDefinition(accountId, definition.code, {
       expectedVersion: definition.version,
       displayName: draft.displayName.trim(),
       aliases: draft.aliases.split(/\r?\n/u).map(value => value.trim()).filter(Boolean),
       reason: draft.reason.trim(),
-    }, new AbortController().signal),
-    onSuccess: async definition => { setConflict(false); setNotice(`${definition.displayName} 태그를 수정했습니다.`); await refresh(definition.code) },
-    onError: error => setConflict(error instanceof AdminApiError && error.status === 409),
+    }, signal)),
+    onSuccess: async definition => { if (!active.current) return; setConflict(false); setNotice(`${definition.displayName} 태그를 수정했습니다.`); await refresh(definition.code) },
+    onError: error => { if (active.current) setConflict(error instanceof AdminApiError && error.status === 409) },
   })
   const statusMutation = useMutation({
-    mutationFn: ({ definition, reason }: { definition: TagDefinition; reason: string }) => changeTagDefinitionStatus(accountId, definition.code, {
+    mutationFn: ({ definition, reason }: { definition: TagDefinition; reason: string }) => tracked(signal => changeTagDefinitionStatus(accountId, definition.code, {
       expectedVersion: definition.version,
       status: definition.status === 'ACTIVE' ? 'DEPRECATED' : 'ACTIVE',
       reason: reason.trim(),
-    }, new AbortController().signal),
-    onSuccess: async definition => { setConflict(false); setNotice(`${definition.displayName} 태그를 ${definition.status === 'ACTIVE' ? '활성화' : '비활성화'}했습니다.`); await refresh(definition.code) },
-    onError: error => setConflict(error instanceof AdminApiError && error.status === 409),
+    }, signal)),
+    onSuccess: async definition => { if (!active.current) return; setConflict(false); setNotice(`${definition.displayName} 태그를 ${definition.status === 'ACTIVE' ? '활성화' : '비활성화'}했습니다.`); await refresh(definition.code) },
+    onError: error => { if (active.current) setConflict(error instanceof AdminApiError && error.status === 409) },
   })
   async function refresh(code: string) {
     await Promise.all([
@@ -115,8 +133,8 @@ function TagDefinitionsContent({ accountId }: { accountId: string }) {
       {!selected ? <p>목록에서 수정할 태그를 선택해 주세요.</p> : <>
         <header><div><h2>{selected.displayName}</h2><code>{selected.code}</code></div><span className={selected.status === 'ACTIVE' ? styles.active : styles.deprecated}>{selected.status === 'ACTIVE' ? '활성' : '비활성'}</span></header>
         <p>유형 {selected.type} · 출처 {selected.source} · 버전 {selected.version}</p>
-        <label>표시명<input maxLength={200} value={draft.displayName} onChange={event => setDraft(value => ({ ...value, displayName: event.target.value }))} /></label>
-        <label>별칭<textarea rows={5} maxLength={4020} value={draft.aliases} onChange={event => setDraft(value => ({ ...value, aliases: event.target.value }))} /><small>줄마다 하나씩 최대 20개</small></label>
+        <label>표시명<input maxLength={100} value={draft.displayName} onChange={event => setDraft(value => ({ ...value, displayName: event.target.value }))} /></label>
+        <label>별칭<textarea rows={5} maxLength={2020} value={draft.aliases} onChange={event => setDraft(value => ({ ...value, aliases: event.target.value }))} /><small>줄마다 하나씩 최대 20개</small></label>
         <label>변경 사유<textarea rows={3} maxLength={1000} value={draft.reason} onChange={event => setDraft(value => ({ ...value, reason: event.target.value }))} /></label>
         {(updateMutation.isError || statusMutation.isError) && <p role="alert" className={styles.error}>{messageFor(updateMutation.error ?? statusMutation.error)}</p>}
         {conflict && <Button variant="secondary" onClick={() => void reloadLatest()}>입력값을 유지하고 최신 버전 불러오기</Button>}
