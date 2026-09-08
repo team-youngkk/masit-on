@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.masiton.restaurant.application.port.out.ActiveTagDictionaryPort.ActiveTagDictionarySnapshot;
 import com.masiton.restaurant.application.port.out.ActiveTagDictionaryUnavailableException;
@@ -74,6 +75,40 @@ class JdbcActiveTagDictionaryAdapterTest {
                 .isInstanceOf(UnsupportedOperationException.class);
         assertThatThrownBy(() -> first.definitions().getFirst().terms().add("다"))
                 .isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    @Test
+    @DisplayName("트랜잭션 안에서는 공유 cache를 읽거나 채우지 않는다")
+    void getActiveTagDictionary_트랜잭션활성_공유Cache를우회한다() {
+        // given
+        AtomicInteger loadCount = new AtomicInteger();
+        JdbcActiveTagDictionaryAdapter adapter = new JdbcActiveTagDictionaryAdapter(
+                () -> List.of(new JdbcActiveTagDictionaryAdapter.TagTermRow(
+                        "TAG_" + loadCount.incrementAndGet(), "용어")),
+                Clock.fixed(INITIAL_TIME, ZoneOffset.UTC), Duration.ofSeconds(30));
+
+        try {
+            TransactionSynchronizationManager.setActualTransactionActive(true);
+
+            // when
+            ActiveTagDictionarySnapshot first = adapter.getActiveTagDictionary();
+            ActiveTagDictionarySnapshot second = adapter.getActiveTagDictionary();
+
+            // then
+            assertThat(first.definitions()).extracting(definition -> definition.code())
+                    .containsExactly("TAG_1");
+            assertThat(second.definitions()).extracting(definition -> definition.code())
+                    .containsExactly("TAG_2");
+        } finally {
+            TransactionSynchronizationManager.setActualTransactionActive(false);
+        }
+
+        ActiveTagDictionarySnapshot cached = adapter.getActiveTagDictionary();
+        ActiveTagDictionarySnapshot reused = adapter.getActiveTagDictionary();
+        assertThat(cached.definitions()).extracting(definition -> definition.code())
+                .containsExactly("TAG_3");
+        assertThat(reused).isSameAs(cached);
+        assertThat(loadCount).hasValue(3);
     }
 
     @Test

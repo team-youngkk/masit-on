@@ -10,6 +10,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.masiton.restaurant.application.port.out.ActiveTagDictionaryPort;
 import com.masiton.restaurant.application.port.out.ActiveTagDictionaryPort.ActiveTagDictionarySnapshot;
@@ -58,6 +59,10 @@ public class JdbcActiveTagDictionaryAdapter implements ActiveTagDictionaryPort {
 
     @Override
     public ActiveTagDictionarySnapshot getActiveTagDictionary() {
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            return loadSnapshot();
+        }
+
         Instant now = clock.instant();
         CachedSnapshot current = cachedSnapshot;
         if (isFresh(current, now)) {

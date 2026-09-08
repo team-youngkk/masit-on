@@ -240,7 +240,7 @@ V3 전진 적용과 전체 FK·UNIQUE·CHECK·인덱스는 `TST-E2-E2E-001`, `E2
 | `ai_extraction_attempt` | BR-AIEXTRACT-004·007, NFR-EXTERNAL-005 | Provider request 식별·오류 분류·토큰·무료 quota 사용량 집계만 저장, 원문 미저장 | WS-15 | timeout·429·5xx·무료 quota hard stop |
 | `youtube_channel_watch` | FR-AIEXTRACT-004·006, API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | Creator·channel unique, 구독·갱신·오류 상태 | WS-15 | 구독 확인·중복 알림·해지·renewal 실패 |
 | `tag_definition` | FR-AIEXTRACT-007·FR-ADMIN-005·FR-NLSEARCH-004, BR-AIEXTRACT-008·BR-ADMIN-009·BR-NLSEARCH-003, API-ADMIN-AIEXTRACT-001·API-ADMIN-TAG-DEFINITION-002·API-DISCOVERY-NL-001 | `MENU/TASTE/OCCASION/ATMOSPHERE` 통제 코드·별칭·활성 상태 | WS-15 생성·WS-14 읽기 | 코드·별칭 충돌·폐기·후보 허용값·ACTIVE 동적 자연어 사전 |
-| `tag_definition_term` | FR-ADMIN-005·FR-NLSEARCH-004, BR-ADMIN-009·BR-NLSEARCH-003, API-ADMIN-TAG-DEFINITION-001~002·API-DISCOVERY-NL-001 | 표시명·별칭의 정규화 용어와 종류 | WS-15 생성·WS-14 동적 조회 | 전역 unique·정의별 표시명 하나·V10 역적재·원자성·ACTIVE만 자연어 사전 포함 |
+| `tag_definition_term` | FR-ADMIN-005·FR-NLSEARCH-004, BR-ADMIN-009·BR-NLSEARCH-003, API-ADMIN-TAG-DEFINITION-001~002·API-DISCOVERY-NL-001 | 표시명·별칭의 정규화 용어와 종류 | WS-15 생성·WS-14 동적 조회 | 전역 unique·정의별 표시명 하나·V10 역적재·V11 seed 별칭 이관·원자성·ACTIVE만 자연어 사전 포함 |
 | `visit_tag` | FR-AIEXTRACT-007·FR-NLSEARCH-004, BR-AIEXTRACT-008·BR-NLSEARCH-003, API-ADMIN-AIEXTRACT-001·API-DISCOVERY-NL-001 | 자동 확정 또는 관리자 사후 보정 태그와 Visit 연결, `(visit_id, tag_definition_id)` unique | WS-15 생성·WS-14 조회 | 자동 검증 전 공개 금지·태그 AND·Visit 비공개 전파 |
 | 자연어 해석 결과 | FR-NLSEARCH-001~004, API-DISCOVERY-NL-001 | 검색 이력·원문·임베딩 비저장, 기존 조회와 확정 태그만 사용 | WS-14 | 해석 상태·조건 병합·로그 마스킹·기존 목록 격리 |
 | 코스 경로 결과 | FR-COURSE-001~003, API-DISCOVERY-COURSE-001 | `Course`·Route 결과·현재 위치·선택 이력 비저장, 요청 시점 응답만 반환 | WS-16 | 좌표·외부 실패·30km·TTL·quota·호출 1회 |

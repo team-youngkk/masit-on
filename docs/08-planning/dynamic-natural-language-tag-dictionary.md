@@ -29,6 +29,7 @@ related_documents:
 - 라이브러리 없는 프로세스 내 read-through cache, TTL 30초, 동시 갱신 단일화
 - 최초 적재·만료 갱신 DB 실패의 `NATURAL_LANGUAGE_UNAVAILABLE` 503 fail-closed
 - 초기 18개 seed Golden V1, 지역·카테고리·유튜버 조합, 직접 필터 우선, 같은 Visit 태그 AND, 최대 5개 회귀
+- V4 seed에 빠진 기존 P1 별칭을 새 전진 마이그레이션으로 이관
 - 요구사항·PRD·API·데이터·ADR·추적표와 구현·검증 동기화
 
 ## 3. 제외 범위
@@ -84,6 +85,7 @@ Application의 동적 태그 사전 공급 Adapter는 외부 라이브러리 없
 - 최초 적재가 실패하면 요청을 `NATURAL_LANGUAGE_UNAVAILABLE` 503으로 종료한다.
 - 만료 갱신이 실패해도 stale snapshot과 초기 18개 seed를 반환하지 않고 같은 503으로 종료한다.
 - 다음 요청은 다시 갱신할 수 있다. 실패를 새 30초 성공 snapshot으로 간주하지 않는다.
+- 트랜잭션 내부 조회는 미커밋 데이터를 프로세스 공유 cache에 남기지 않도록 cache를 우회한다.
 - 자연어 API의 실패는 `GET /api/restaurants`와 상세·관리자 태그 API에 전파하지 않는다.
 
 이 정책은 사전 DB 상태와 다른 검색 해석을 조용히 제공하지 않기 위한 fail-closed 선택이다. 별도 cache 무효화는 #365의 수정·폐기 구현과 결합하지 않고 짧은 TTL로 경계를 유지한다.
@@ -92,7 +94,7 @@ Application의 동적 태그 사전 공급 Adapter는 외부 라이브러리 없
 
 `parserVersion: P1`은 문장 패턴, 조건 추출, 충돌, 최대 태그 수와 정규화 알고리즘의 계약 버전이다. `ACTIVE` 태그 정의의 코드·표시명·별칭 데이터가 바뀌는 것은 같은 알고리즘의 입력 사전 변경이므로 `P1`을 유지한다.
 
-V4 초기 18개 seed의 코드·표시명·별칭은 Golden V1 기준이다. 동적 사전 전환 전후에 기존 문장의 적용 조건·ignored condition·conflict·status가 같아야 한다. 지역·카테고리·유튜버 동시 조합, 직접 필터 우선, 같은 Visit 태그 AND와 최대 5개 계약도 유지한다.
+V4 초기 18개 seed의 코드·표시명과 기존 P1 별칭은 Golden V1 기준이다. V11은 V4에 빠진 별칭을 `tag_definition.aliases`와 `tag_definition_term`에 함께 이관한다. 동적 사전 전환 전후에 기존 문장의 적용 조건·ignored condition·conflict·status가 같아야 한다. 지역·카테고리·유튜버 동시 조합, 직접 필터 우선, 같은 Visit 태그 AND와 최대 5개 계약도 유지한다.
 
 정규화 순서, 단어 경계, 별칭 충돌 의미, 5개 상한 또는 조건 병합 의미가 바뀌면 데이터 변경과 구분해 parserVersion 증가와 새 Golden 버전을 검토한다.
 

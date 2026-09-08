@@ -88,6 +88,36 @@ class TagDefinitionMigrationIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT count(*) FROM tag_definition", Integer.class)).isEqualTo(19);
     }
 
+    @Test
+    @DisplayName("V10에 seed 별칭과 충돌하는 용어가 있으면 V11 전체를 롤백한다")
+    void 마이그레이션_V10seed별칭충돌_V11전체롤백() {
+        String schema = "tag_alias_collision";
+        flyway(schema, "10").migrate();
+        JdbcTemplate jdbc = jdbc(schema);
+        UUID definitionId = UUID.randomUUID();
+        jdbc.update("""
+                INSERT INTO tag_definition(id, tag_code, tag_type, display_name, aliases, status, source)
+                VALUES (?, 'MENU_COLD_NOODLES', 'MENU', '찬 국수', '["물냉면"]'::jsonb,
+                        'ACTIVE', 'MANUAL_OVERRIDE')
+                """, definitionId);
+        jdbc.update("""
+                INSERT INTO tag_definition_term(id, tag_definition_id, term_kind, normalized_term)
+                VALUES (?, ?, 'DISPLAY_NAME', '찬 국수'), (?, ?, 'ALIAS', '물냉면')
+                """, UUID.randomUUID(), definitionId, UUID.randomUUID(), definitionId);
+
+        assertThatThrownBy(() -> flyway(schema, "11").migrate()).isInstanceOf(RuntimeException.class);
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM flyway_schema_history WHERE version = '11' AND success", Integer.class))
+                .isZero();
+        assertThat(jdbc.queryForObject(
+                "SELECT aliases::text FROM tag_definition WHERE tag_code = 'MENU_NAENGMYEON'", String.class))
+                .isEqualTo("[]");
+        assertThat(jdbc.queryForList(
+                "SELECT normalized_term FROM tag_definition_term WHERE tag_definition_id = "
+                        + "(SELECT id FROM tag_definition WHERE tag_code = 'MENU_NAENGMYEON')",
+                String.class)).containsExactly("냉면");
+    }
+
     private Flyway flyway(String schema, String target) {
         return Flyway.configure().dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
                 .schemas(schema).defaultSchema(schema).createSchemas(true).target(target).load();

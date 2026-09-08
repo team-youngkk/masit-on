@@ -270,3 +270,9 @@ V9__add_visit_tag_revision.sql은 visit_tag_revision과 불변 감사 트리거�
 6. 태그 코드 형식과 `tag_type` 접두사 일치 CHECK를 기존 행 검증과 함께 추가한다.
 
 빈 DB V1→V10과 V9→V10 전진 적용, V4 18개 seed 보존, V9 유효 AI legacy 코드의 무손실 정리, 기존 AI 태그 역적재, Unicode·공백·ASCII 대소문자 정규화 동등성, 기존 충돌 시 전체 실패, ADMIN·AI 동시 생성 unique, 정의·용어 원자성을 검증한다. 다른 통합 테스트가 migration 목록을 고정한다면 V10을 포함하도록 기대값을 갱신하되 seed를 삭제해 통과시키지 않는다. [AI 데이터 계약 15절](third-expansion-ai-video-data-contract.md#15-태그-정규화-용어--이슈-363)을 따른다.
+
+## V11 초기 자연어 태그 별칭 이관 — 이슈 #364
+
+`V11__backfill_natural_language_tag_aliases.sql`은 V4의 초기 18개 `SEED` 태그에서 누락된 기존 P1 자연어 별칭을 `tag_definition.aliases`와 `tag_definition_term`에 함께 이관한다. 적용된 V4·V10을 수정하지 않으며 태그 코드·표시명·상태와 Visit 연결은 변경하지 않는다.
+
+V11은 코드와 `source=SEED`가 모두 일치하는 정의만 갱신한다. 별칭 용어는 V10 정규화 함수를 사용하고 기존 전역 unique 제약을 그대로 적용하므로 다른 정의의 용어와 충돌하면 마이그레이션 전체가 실패한다. 빈 DB V1→V11 적용, Flyway 이력, `MENU_NAENGMYEON`과 `TASTE_SPICY`를 포함한 별칭 역적재, 초기 18개 Golden V1 회귀를 검증한다. [AI 데이터 계약 16절](third-expansion-ai-video-data-contract.md#16-동적-자연어-태그-사전--이슈-364)을 따른다.
