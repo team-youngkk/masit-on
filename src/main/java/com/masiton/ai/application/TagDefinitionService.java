@@ -45,7 +45,8 @@ public class TagDefinitionService implements ManageTagDefinitionsUseCase {
         if (!(filter.equals("ALL") || STATUSES.contains(filter)) || page < 1 || !PAGE_SIZES.contains(size)) throw invalid("page");
         long total = store.count(filter);
         int totalPages = (int) Math.ceil((double) total / size);
-        return new ManagementResult(store.find(filter, (page - 1) * size, size), new Page(page, size, total, totalPages, page < totalPages));
+        long offset = ((long) page - 1) * size;
+        return new ManagementResult(store.find(filter, offset, size), new Page(page, size, total, totalPages, page < totalPages));
     }
 
     @Override @Transactional(readOnly = true)
@@ -75,7 +76,8 @@ public class TagDefinitionService implements ManageTagDefinitionsUseCase {
         get(code);
         long total = store.historyCount(code);
         int totalPages = (int) Math.ceil((double) total / size);
-        return new HistoryResult(store.history(code, (page - 1) * size, size), new Page(page, size, total, totalPages, page < totalPages));
+        long offset = ((long) page - 1) * size;
+        return new HistoryResult(store.history(code, offset, size), new Page(page, size, total, totalPages, page < totalPages));
     }
 
     private TagDefinition change(TagDefinitionStore.Change value) {

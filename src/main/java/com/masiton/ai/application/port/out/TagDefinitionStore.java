@@ -12,11 +12,11 @@ public interface TagDefinitionStore {
 
     TagDefinition create(NewTagDefinition definition);
 
-    List<TagDefinition> find(String status, int offset, int size);
+    List<TagDefinition> find(String status, long offset, int size);
     long count(String status);
     TagDefinition get(String code);
     TagDefinition update(Change definition);
-    List<AuditEntry> history(String code, int offset, int size);
+    List<AuditEntry> history(String code, long offset, int size);
     long historyCount(String code);
 
     record NewTagDefinition(UUID id, String code, String type, String displayName, List<String> aliases,

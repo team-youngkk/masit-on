@@ -5,6 +5,7 @@ import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -41,7 +42,7 @@ class JdbcTagDefinitionStore implements TagDefinitionStore {
         return new TagDefinition(definition.code(), definition.type(), definition.displayName(), definition.aliases(), "ACTIVE", "MANUAL_OVERRIDE", 0);
     }
 
-    @Override public List<TagDefinition> find(String status, int offset, int size) {
+    @Override public List<TagDefinition> find(String status, long offset, int size) {
         if (status.equals("ALL")) return jdbc.query("SELECT " + COLUMNS + " FROM tag_definition ORDER BY tag_code LIMIT ? OFFSET ?", this::map, size, offset);
         return jdbc.query("SELECT " + COLUMNS + " FROM tag_definition WHERE status = ? ORDER BY tag_code LIMIT ? OFFSET ?", this::map, status, size, offset);
     }
@@ -69,7 +70,10 @@ class JdbcTagDefinitionStore implements TagDefinitionStore {
         if (displayName.equals(before.displayName()) && aliases.equals(before.aliases()) && status.equals(before.status())) return before;
         long nextVersion = before.version() + 1;
         if (change.displayName() != null) {
-            lockTerms(change.normalizedTerms());
+            List<String> currentTerms = jdbc.queryForList(
+                    "SELECT normalized_term FROM tag_definition_term WHERE tag_definition_id = ?",
+                    String.class, locked.id());
+            lockTerms(Stream.concat(currentTerms.stream(), change.normalizedTerms().stream()).distinct().toList());
             jdbc.update("DELETE FROM tag_definition_term WHERE tag_definition_id = ?", locked.id());
             insertTerms(locked.id(), change.normalizedTerms(), change.changedAt());
         }
@@ -88,7 +92,7 @@ class JdbcTagDefinitionStore implements TagDefinitionStore {
         }
     }
 
-    @Override public List<AuditEntry> history(String code, int offset, int size) {
+    @Override public List<AuditEntry> history(String code, long offset, int size) {
         return jdbc.query("""
                 SELECT a.id, a.action, a.before_snapshot::text, a.after_snapshot::text, a.reason,
                        a.changed_by_member_id, a.changed_at, a.version

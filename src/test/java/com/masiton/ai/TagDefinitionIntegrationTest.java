@@ -169,6 +169,41 @@ class TagDefinitionIntegrationTest extends com.masiton.test.FullContextIntegrati
     }
 
     @Test
+    @DisplayName("서로 다른 정의의 용어 교환 수정은 교착 없이 충돌로 수렴한다")
+    void 관리_서로다른정의용어교환_교착없이충돌한다() throws Exception {
+        tagDefinitions.create(new ManageTagDefinitionsUseCase.CreateCommand(
+                "ATMOSPHERE_REVIEW_SWAP_ALPHA", "ATMOSPHERE", "리뷰 교환 알파", List.of()));
+        tagDefinitions.create(new ManageTagDefinitionsUseCase.CreateCommand(
+                "ATMOSPHERE_REVIEW_SWAP_BETA", "ATMOSPHERE", "리뷰 교환 베타", List.of()));
+        CountDownLatch start = new CountDownLatch(1);
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var jobs = List.of(
+                    executor.submit(() -> updateAfterStart(
+                            start, "ATMOSPHERE_REVIEW_SWAP_ALPHA", "리뷰 교환 베타")),
+                    executor.submit(() -> updateAfterStart(
+                            start, "ATMOSPHERE_REVIEW_SWAP_BETA", "리뷰 교환 알파")));
+            start.countDown();
+
+            assertThat(List.of(jobs.get(0).get(), jobs.get(1).get()))
+                    .containsOnly("TAG_TERM_ALREADY_EXISTS");
+        }
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM tag_definition_audit", Integer.class)).isZero();
+    }
+
+    @Test
+    @DisplayName("매우 큰 양수 페이지는 목록과 이력에서 200 빈 목록을 반환한다")
+    void 관리_매우큰양수페이지_빈목록을반환한다() throws Exception {
+        mvc.perform(get("/api/admin/tag-definitions/management?page=50000000&size=50")
+                        .with(user(ADMIN_ID.toString()).authorities(() -> "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items").isEmpty());
+        mvc.perform(get("/api/admin/tag-definitions/MENU_NAENGMYEON/history?page=50000000&size=50")
+                        .with(user(ADMIN_ID.toString()).authorities(() -> "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items").isEmpty());
+    }
+
+    @Test
     @DisplayName("ADMIN은 활성 목록을 조회하고 새 정의와 정규화 용어를 원자적으로 생성한다")
     void 요청_ADMIN_목록조회와생성에성공한다() throws Exception {
         mvc.perform(get("/api/admin/tag-definitions").with(user("admin").authorities(() -> "ADMIN")))
@@ -266,6 +301,17 @@ class TagDefinitionIntegrationTest extends com.masiton.test.FullContextIntegrati
             assertThat(jdbc.queryForObject("SELECT normalize_tag_definition_term(?)", String.class, value))
                     .as("정규화 corpus: %s", value)
                     .isEqualTo(TagTermNormalizer.normalize(value));
+        }
+    }
+
+    private String updateAfterStart(CountDownLatch start, String code, String displayName) throws Exception {
+        start.await();
+        try {
+            tagDefinitions.update(code, new ManageTagDefinitionsUseCase.UpdateCommand(
+                    0L, displayName, List.of(), "용어 교환"), ADMIN_ID.toString());
+            return "OK";
+        } catch (BusinessException exception) {
+            return exception.code();
         }
     }
 }

@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/Button'
 import { AdminApiError, messageFor } from '@/lib/admin/api'
 import { changeTagDefinitionStatus, getManagedTagDefinitions, getTagDefinitionHistory, updateTagDefinition } from '@/lib/admin/visit-tags'
 import { adminTagScope, type TagDefinition } from '@/lib/admin/visit-tags-coordination'
-import { MEMBER_SESSION_CHANGED_EVENT } from '@/lib/member/auth'
 import styles from './AdminTagDefinitions.module.css'
 
 type Draft = { displayName: string; aliases: string; reason: string }
@@ -63,8 +62,7 @@ function TagDefinitionsContent({ accountId }: { accountId: string }) {
       client.removeQueries({ queryKey: ['auth', accountId, 'tag-definition-history'] })
       client.removeQueries({ queryKey: ['auth', accountId, 'tag-definitions'] })
     }
-    window.addEventListener(MEMBER_SESSION_CHANGED_EVENT, discard)
-    return () => { window.removeEventListener(MEMBER_SESSION_CHANGED_EVENT, discard); discard() }
+    return discard
   }, [accountId, client])
 
   async function tracked<T>(request: (signal: AbortSignal) => Promise<T>, signal?: AbortSignal): Promise<T> {
