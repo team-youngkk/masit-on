@@ -66,11 +66,12 @@ related_documents:
 | `.\gradlew.bat test --tests 'com.masiton.restaurant.application.naturallanguage.NaturalLanguageRestaurantParserTest' --no-daemon --console=plain` | 통과 | parser 22건. 태그 코드 입력, 같은 구간의 접두사 제외, 별도 위치의 짧은 용어 적용과 기존 자연어 경계 회귀 확인 |
 | `.\gradlew.bat clean test --tests 'com.masiton.restaurant.application.naturallanguage.*Test' --tests 'com.masiton.restaurant.infrastructure.persistence.JdbcActiveTagDictionaryAdapterTest' --tests 'com.masiton.architecture.ArchitectureTest' --no-daemon --console=plain` | 통과 | Golden V1 240문장 동적 경로, 사전 연결·cache, 자연어 병합, 정규화와 ArchUnit 회귀 확인 |
 | `.\gradlew.bat build -x test --no-daemon --console=plain` 및 `git diff --check` | 통과 | 운영·테스트 소스 컴파일, 패키징과 whitespace 확인 |
+| [GitHub Actions CI #34190726932](https://github.com/team-youngkk/masit-on/actions/runs/34190726932) | 통과 | 백엔드 전체 빌드·자동화 테스트, 프론트엔드 빌드·타입 검사, secret scan과 Terraform 렌더링 계약 확인 |
 
 ## 8. 재발 방지 및 다음 확인
 
 - 재발 방지: 동적 사전의 태그 코드 포함과 중첩·비중첩 용어를 같은 회귀 테스트에 고정했다.
-- 다음 확인: 원격 브랜치 반영 뒤 PR CI 전체 검증 결과를 이 문서에 추가한다.
+- 다음 확인: 없음.
 
 ## 9. 도입 전후 비교 지표
 
@@ -81,4 +82,4 @@ related_documents:
 
 ## 10. 남은 사항
 
-- 원격 브랜치의 전체 CI 통과와 리뷰 스레드 답글·해결 처리가 남아 있다.
+- 미해결 코드·검증 사항 없음.
