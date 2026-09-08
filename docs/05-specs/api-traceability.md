@@ -186,7 +186,7 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 | FR-NLSEARCH-001 | API-DISCOVERY-NL-001 | API-DISCOVERY-001 | 자연어 해석·적용 조건·기존 목록 응답 계약 테스트 | 양성훈 |
 | FR-NLSEARCH-002 | API-DISCOVERY-NL-001 | API-DISCOVERY-001 | 직접 필터 우선·AND 조합·충돌 요약 테스트 | 양성훈 |
 | FR-NLSEARCH-003 | API-DISCOVERY-NL-001 | 없음 | 빈 결과·`PARTIAL`·`FAILED`·전체 목록 대체 금지 테스트 | 양성훈 |
-| FR-NLSEARCH-004 | API-DISCOVERY-NL-001 | API-DISCOVERY-001 | 확정 태그 코드·Visit 공개 상태·여러 태그 AND 계약 테스트 | 양성훈 |
+| FR-NLSEARCH-004 | API-DISCOVERY-NL-001 | API-DISCOVERY-001 | ACTIVE 동적 태그 사전·DEPRECATED 제외·모호성/6개 상한·503 fail-closed·Visit 공개 상태·여러 태그 AND·Golden V1 계약 테스트 | 양성훈 |
 | FR-AIEXTRACT-007 | API-ADMIN-AIEXTRACT-001 | API-DISCOVERY-NL-001 | 태그 후보 자동 판단·사후 보정·`VisitTag` 연결·검증 전 검색 제외 테스트 | 김인안 |
 | FR-COURSE-001 | API-DISCOVERY-COURSE-001 | API-DISCOVERY-001, API-PERSONAL-004 (명시적 찜 후보 불러오기) | 2~5개·중복·공개·좌표·출발점 검증 테스트, 찜 후보 페이지·인증 경계 테스트 | 이우람 |
 | FR-COURSE-002 | API-DISCOVERY-COURSE-001 | 없음 | 자동차 순서·구간 거리/시간·30km·만료 테스트 | 이우람 |

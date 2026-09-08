@@ -23,6 +23,7 @@ related_documents:
   - ../../07-adr/integration/ext-003-ai-extraction-async-reliability.md
   - ../../07-adr/security/auth-007-unified-account-rbac-session.md
   - ../../08-planning/third-expansion-evaluation-strategy.md
+  - ../../08-planning/dynamic-natural-language-tag-dictionary.md
 ---
 
 # 3차 확장 AI 영상 추출 데이터 계약
@@ -290,7 +291,7 @@ API 3.5절 `review`의 `CONFIRM`·`DISCARD`·`ROLLBACK`·`ADJUST_CATEGORY` 네 `
 
 AI·자연어 파서는 `ACTIVE` 정의만 사용한다. `DEPRECATED` 태그는 기존 확정 데이터의 이력을 보존하지만 신규 후보·검색 조건으로 사용하지 않는다.
 
-이슈 #363 이후 표시명·별칭 중복 판정의 정본은 V10 `tag_definition_term.normalized_term`이다. `tag_definition.display_name`과 `aliases`는 API 표시와 기존 소비자 호환을 위해 유지한다. ADMIN과 AI 생성 경로는 정의와 용어를 한 트랜잭션에서 함께 쓰며 일부만 성공할 수 없다. 자연어 파서가 이 용어 테이블을 동적으로 조회하는 전환은 #364 범위다.
+이슈 #363 이후 표시명·별칭 중복 판정의 정본은 V10 `tag_definition_term.normalized_term`이다. `tag_definition.display_name`과 `aliases`는 API 표시와 기존 소비자 호환을 위해 유지한다. ADMIN과 AI 생성 경로는 정의와 용어를 한 트랜잭션에서 함께 쓰며 일부만 성공할 수 없다. 이슈 #364부터 자연어 파서는 `ACTIVE` 정의의 코드·표시명·별칭을 동적으로 조회하고 V10과 같은 정규화 결과를 사용한다.
 
 초기 `tag_definition` seed는 다음 18개다. 18개는 초기값이며, AI가 기존에 없는 태그를 생성할 수 있다. 단, 태그 유형 자체를 새로 만들지는 않고 허용된 태그 유형·금지 표현·정규화·중복·근거 검사를 통과한 경우에만 자동 `ACTIVE`로 등록한다.
 
@@ -393,6 +394,7 @@ Webhook Raw Payload, 원본 영상, 자동 수집 전체 자막, Gemini 응답 �
 - [ ] Worker 재기동·lease 만료·동시 claim 뒤 작업 유실·중복 후보·중복 정식 등록이 발생하지 않는다.
 - [ ] 후보 Snapshot 버전과 모델·Prompt·Schema 버전이 과거 결과를 덮어쓰지 않고 보존된다.
 - [ ] 허용 태그 정의·후보 태그·확정 `VisitTag`의 중복·공개·생명주기 규칙이 검증된다.
+- [ ] `ACTIVE` 정의·정규화 용어의 동적 자연어 사전 조회, `DEPRECATED` 제외, 결정적 순서와 DB 실패 격리가 검증된다.
 - [ ] 자동 태그 정규화·중복·근거 판단과 사후 보정 이력이 append-only로 보존되고, `UNKNOWN` AI 근거가 `AI_AUTO_CONFIRMED` `VisitTag`로 연결되지 않는다.
 - [ ] 원본 영상·자동 수집 전체 자막·AI 응답 전문·보완 텍스트 평문이 저장·로그·API 응답에 노출되지 않는다.
 - [ ] 보완 텍스트 암호문이 작업 종료 후 24시간 이내 삭제되고, 관리자 재시도가 이전 입력을 재사용하지 않는다.
@@ -438,4 +440,19 @@ V10은 기존 seed와 AI 생성 정의의 표시명·JSONB 별칭을 역적재�
 
 새 ADMIN 정의는 `source=MANUAL_OVERRIDE`, `status=ACTIVE`, `created_from_snapshot_id=null`이다. AI 정의는 기존 근거·출처 규칙을 유지하되 V10 이후 반드시 같은 정규화 함수와 용어 저장 경로를 사용한다. 정의 INSERT, 모든 용어 INSERT 중 하나라도 실패하면 요청 전체를 롤백한다. 이 생성은 Visit 연결 또는 `visit_tag_revision`을 만들지 않으며, 기존 방문 태그 교체가 별도로 성공할 때만 연결과 감사가 함께 기록된다.
 
-코드는 `^(MENU|TASTE|OCCASION|ATMOSPHERE)_[A-Z0-9]+(?:_[A-Z0-9]+)*$`이고 접두사가 `tag_type`과 일치해야 한다. 태그 정의 수정·비활성화·감사, 병합·VisitTag 이전, 물리 삭제는 #365·#366으로 분리한다. 별칭의 조사·단어 경계와 자연어 검색 매칭 방식은 #364에서 결정한다.
+코드는 `^(MENU|TASTE|OCCASION|ATMOSPHERE)_[A-Z0-9]+(?:_[A-Z0-9]+)*$`이고 접두사가 `tag_type`과 일치해야 한다. 태그 정의 수정·비활성화·감사, 병합·VisitTag 이전, 물리 삭제는 #365·#366으로 분리한다. 별칭의 자연어 검색 정규화·모호성·상한·cache 계약은 16절과 [#364 구현 계획](../../08-planning/dynamic-natural-language-tag-dictionary.md)을 따른다.
+
+## 16. 동적 자연어 태그 사전 — 이슈 #364
+
+자연어 검색 Application Port는 `ACTIVE` `tag_definition`의 `tag_code`, `display_name`, `aliases`를 읽기 전용 사전 snapshot으로 제공한다. `DEPRECATED` 정의와 자동 검증 전 후보는 포함하지 않는다. 표시명·별칭은 15절과 같은 Unicode NFKC → 앞뒤 공백 제거 → 연속 Unicode 공백 한 칸 축약 → ASCII `A-Z` 소문자 변환 결과를 사용한다. 저장된 `tag_definition_term.normalized_term`은 이 결과의 데이터 정본이며 동적 사전 조회와 같은 정의에 속해야 한다.
+
+사전 조회는 다음 결정성을 보장한다.
+
+- 하나의 정규화 용어가 둘 이상의 `ACTIVE` 코드에 매핑되면 해당 요청의 자연어 `tags` 조건 전체를 `UNRESOLVED_VALUE`로 처리한다. 데이터 제약이 정상인 경우 발생하지 않지만, 손상되거나 불일치한 snapshot을 임의로 선택하지 않는 방어 계약이다.
+- 별칭은 길이 내림차순 후 사전순으로 판정하고, 해석 결과의 태그 코드는 `tag_code` 사전순으로 반환한다.
+- 자연어에서 태그가 6개 이상 인식되면 앞의 5개만 적용하지 않고 자연어 `tags` 전체를 unresolved로 처리한다.
+- 여러 태그 검색은 기존과 같이 같은 공개·유효 Visit에 대한 AND이며, 직접 `filters.tags`가 있으면 직접 필터 우선과 충돌 표시 규칙을 적용한다.
+
+DB 조회 횟수는 라이브러리를 추가하지 않은 프로세스 내 read-through cache로 제한한다. 불변 snapshot TTL은 30초이며 생성·수정·폐기는 최대 30초 뒤 반영될 수 있다. 최초 적재와 만료 뒤 첫 요청은 사전을 갱신하고, 같은 시점의 동시 요청은 하나의 갱신 결과를 공유한다. 최초 적재 또는 만료 갱신에서 DB 조회가 실패하면 stale snapshot이나 초기 18개 seed로 대체하지 않고 `NATURAL_LANGUAGE_UNAVAILABLE` 503으로 fail-closed 처리한다.
+
+`parserVersion: P1`은 문장 패턴·조건 해석·충돌·상한·정규화 알고리즘의 버전이다. 동적 사전의 코드·표시명·별칭 데이터 변경만으로 버전을 증가시키지 않는다. V11은 V4 초기 18개 seed에서 빠진 기존 P1 별칭을 JSONB와 정규화 용어 정본에 함께 이관한다. 초기 seed와 별칭은 Golden V1 회귀 기준으로 보존하며 동적 전환 전후의 해석 결과가 같아야 한다.

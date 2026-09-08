@@ -1,6 +1,7 @@
 package com.masiton.restaurant.application.port.out;
 
 import java.util.List;
+import java.util.Set;
 
 /** 해석기가 반환하는 제한된 구조화 결과다. 자유 형식 답변이나 검색 결과를 포함하지 않는다. */
 public record NaturalLanguageInterpretation(
@@ -8,6 +9,7 @@ public record NaturalLanguageInterpretation(
         AppliedConditions appliedConditions,
         List<IgnoredCondition> ignoredConditions,
         List<Conflict> conflicts,
+        Set<Conflict.Field> unresolvedFields,
         String parserVersion
 ) {
 
@@ -16,6 +18,17 @@ public record NaturalLanguageInterpretation(
         appliedConditions = appliedConditions == null ? AppliedConditions.empty() : appliedConditions;
         ignoredConditions = ignoredConditions == null ? List.of() : List.copyOf(ignoredConditions);
         conflicts = conflicts == null ? List.of() : List.copyOf(conflicts);
+        unresolvedFields = unresolvedFields == null ? Set.of() : Set.copyOf(unresolvedFields);
+    }
+
+    public NaturalLanguageInterpretation(
+            Status status,
+            AppliedConditions appliedConditions,
+            List<IgnoredCondition> ignoredConditions,
+            List<Conflict> conflicts,
+            String parserVersion
+    ) {
+        this(status, appliedConditions, ignoredConditions, conflicts, Set.of(), parserVersion);
     }
 
     public enum Status {

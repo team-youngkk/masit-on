@@ -41,7 +41,7 @@ MVP 구현 전 필수 결정과 3차 확장 정책 결정은 완료됐다. 아�
 - 문서: [ADR-ARCH-005](architecture/arch-005-natural-language-filter-interpretation.md)
 - 결정 시점: 자연어 API·평가 Dataset·구현 Task 작성 전
 - 핵심: 별도 검색 도메인·임베딩·RAG 없이 WS-14에서 구조화 조건으로 해석하고 기존 Restaurant·Creator·Visit 조회 계약을 재사용한다.
-- 결정 완료: 임베딩·RAG·챗봇은 도입하지 않는다. P1 규칙·태그 18종·태그 AND·`UNRESOLVED`·품질 목표를 사용한다.
+- 결정 완료: 임베딩·RAG·챗봇은 도입하지 않는다. P1 규칙·`ACTIVE` 동적 태그 사전·초기 18종 Golden V1·태그 AND·`UNRESOLVED`·품질 목표를 사용한다.
 
 ### ADR-AI-001 AI 영상 추출 후보 경계와 제공자 선택 기준
 
