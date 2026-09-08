@@ -162,7 +162,7 @@ public final class NaturalLanguageDictionary {
         }
 
         Builder tagTerms(String tagCode, Collection<String> terms) {
-            return add(ConditionField.TAGS, tagCode, false, terms);
+            return add(ConditionField.TAGS, tagCode, true, terms);
         }
 
         public NaturalLanguageDictionary build() {

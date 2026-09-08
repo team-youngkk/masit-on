@@ -242,6 +242,35 @@ class NaturalLanguageRestaurantParserTest {
     }
 
     @Test
+    @DisplayName("동적 태그 사전은 태그 코드 자체도 검색 용어로 사용한다")
+    void 동적태그사전_태그코드도검색용어로사용한다() {
+        NaturalLanguageDictionary dictionary = NaturalLanguageDictionary.standard(
+                Map.of(), Map.of("TAG_FAMILY", List.of("가족 외식")));
+
+        NaturalLanguageParseResult result = new NaturalLanguageRestaurantParser(dictionary)
+                .parse("TAG_FAMILY 맛집");
+
+        assertThat(result.status()).isEqualTo(InterpretationStatus.APPLIED);
+        assertThat(result.appliedConditions().tags()).containsExactly("TAG_FAMILY");
+    }
+
+    @Test
+    @DisplayName("긴 태그 용어가 차지한 구간에서는 접두사인 짧은 용어를 중복 적용하지 않는다")
+    void 동적태그사전_긴용어와겹치는짧은용어는중복적용하지않는다() {
+        NaturalLanguageDictionary dictionary = NaturalLanguageDictionary.standard(Map.of(), Map.of(
+                "TAG_FAMILY", List.of("family"),
+                "TAG_FAMILY_DINNER", List.of("family dinner")));
+        NaturalLanguageRestaurantParser dynamicParser = new NaturalLanguageRestaurantParser(dictionary);
+
+        NaturalLanguageParseResult overlapped = dynamicParser.parse("family dinner place");
+        NaturalLanguageParseResult separate = dynamicParser.parse("family dinner place and family place");
+
+        assertThat(overlapped.appliedConditions().tags()).containsExactly("TAG_FAMILY_DINNER");
+        assertThat(separate.appliedConditions().tags())
+                .containsExactly("TAG_FAMILY", "TAG_FAMILY_DINNER");
+    }
+
+    @Test
     @DisplayName("호환 문자 Unicode 공백과 ASCII 대소문자를 태그 정의와 같은 규칙으로 정규화한다")
     void 동적태그사전_NFKC와유니코드공백_ASCII대소문자를정규화한다() {
         NaturalLanguageDictionary dictionary = NaturalLanguageDictionary.standard(

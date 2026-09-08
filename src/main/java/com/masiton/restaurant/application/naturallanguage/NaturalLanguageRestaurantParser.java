@@ -203,14 +203,23 @@ public final class NaturalLanguageRestaurantParser {
         Set<String> values = new TreeSet<>();
         List<String> matchedAliases = new ArrayList<>();
         boolean ambiguous = false;
-        aliases.entrySet().stream()
+        boolean[] occupied = new boolean[sentence.length()];
+        List<Map.Entry<String, Set<String>>> orderedAliases = aliases.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey(ALIAS_ORDER))
-                .forEach(entry -> {
-                    if (containsAlias(sentence, entry.getKey())) {
-                        matchedAliases.add(entry.getKey());
-                        values.addAll(entry.getValue());
-                    }
-                });
+                .toList();
+        for (Map.Entry<String, Set<String>> entry : orderedAliases) {
+            boolean matched = false;
+            for (MatchRange range : findAliasMatches(sentence, entry.getKey())) {
+                if (!overlaps(occupied, range)) {
+                    occupy(occupied, range);
+                    matched = true;
+                }
+            }
+            if (matched) {
+                matchedAliases.add(entry.getKey());
+                values.addAll(entry.getValue());
+            }
+        }
         for (String alias : matchedAliases) {
             if (aliases.get(alias).size() > 1) {
                 ambiguous = true;
@@ -411,33 +420,51 @@ public final class NaturalLanguageRestaurantParser {
     }
 
     private static boolean containsAlias(String sentence, String alias) {
+        return !findAliasMatches(sentence, alias).isEmpty();
+    }
+
+    private static List<MatchRange> findAliasMatches(String sentence, String alias) {
         String[] parts = alias.split(" ");
+        List<MatchRange> matches = new ArrayList<>();
         int searchFrom = 0;
         while (searchFrom < sentence.length()) {
             int start = sentence.indexOf(parts[0], searchFrom);
             if (start < 0) {
-                return false;
+                break;
             }
             boolean startsAtBoundary = start == 0
                     || !Character.isLetterOrDigit(sentence.codePointBefore(start));
             int cursor = start + parts[0].length();
-            boolean matches = startsAtBoundary;
-            for (int index = 1; matches && index < parts.length; index++) {
+            boolean aliasMatches = startsAtBoundary;
+            for (int index = 1; aliasMatches && index < parts.length; index++) {
                 while (cursor < sentence.length() && Character.isWhitespace(sentence.charAt(cursor))) {
                     cursor++;
                 }
                 if (!sentence.startsWith(parts[index], cursor)) {
-                    matches = false;
+                    aliasMatches = false;
                 } else {
                     cursor += parts[index].length();
                 }
             }
-            if (matches) {
-                return true;
+            if (aliasMatches) {
+                matches.add(new MatchRange(start, cursor));
             }
             searchFrom = start + parts[0].length();
         }
+        return matches;
+    }
+
+    private static boolean overlaps(boolean[] occupied, MatchRange range) {
+        for (int index = range.start(); index < range.end(); index++) {
+            if (occupied[index]) {
+                return true;
+            }
+        }
         return false;
+    }
+
+    private static void occupy(boolean[] occupied, MatchRange range) {
+        Arrays.fill(occupied, range.start(), range.end(), true);
     }
 
     private static String normalizeSentence(String sentence) {
@@ -495,6 +522,9 @@ public final class NaturalLanguageRestaurantParser {
         private boolean matched() {
             return !matchedAliases.isEmpty();
         }
+    }
+
+    private record MatchRange(int start, int end) {
     }
 
     private record MergeState(

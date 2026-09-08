@@ -15,6 +15,7 @@ related_documents:
 
 ## 최신 기록
 
+- [PR #371 동적 태그 코드와 중첩 용어 해석](pr-371-dynamic-tag-dictionary-review.md)
 - [PR #368 태그 코드 전진 적용과 정규화 경계](pr-368-tag-definition-normalization-review.md)
 - [PR #369 파일 기반 SSH 운영 배포와 Nginx 전환 경계](pr-369-file-based-ssh-deployment-review.md)
 - [PR #361 방문 태그 fixture와 최신 Flyway 기대값](pr-361-visit-tag-ci-review.md)
