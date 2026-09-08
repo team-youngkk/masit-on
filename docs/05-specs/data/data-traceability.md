@@ -292,3 +292,7 @@ FR-AIEXTRACT-007·FR-NLSEARCH-004 → [방문 태그 API](../api/admin/restauran
 ## 관리자 태그 정의 생성 추적 — 이슈 #363
 
 [FR-ADMIN-005](../../01-requirements/functional-requirements.md#fr-admin-005-관리자-태그-정의-생성)·[BR-ADMIN-009](../../01-requirements/business-rules.md#br-admin-009-태그-용어의-전역-고유성과-원자적-생성) → [태그 정의 API](../api/admin/tag-definition-api.md) → `tag_definition`·`tag_definition_term`. V10은 유일하게 정리 가능한 `AI_AUTO` legacy 코드의 연속·끝 밑줄과 표시명 자기 중복 별칭을 정리한 뒤 기존 표시명·별칭을 역적재하고 `normalized_term` 전역 unique를 소유한다. ADMIN·AI 생성은 정의·JSONB 별칭·용어를 한 트랜잭션에서 기록하며, 생성만으로 `visit_tag`·`visit_tag_revision`을 만들지 않는다. [데이터 계약 15절](third-expansion-ai-video-data-contract.md#15-태그-정규화-용어--이슈-363)과 [구현 계획](../../08-planning/admin-tag-definition-creation.md)을 따른다.
+
+## 관리자 태그 정의 생명주기 추적 — 이슈 #365
+
+[FR-ADMIN-006](../../01-requirements/functional-requirements.md#fr-admin-006-관리자-태그-정의-생명주기-관리)·[BR-ADMIN-010](../../01-requirements/business-rules.md#br-admin-010-태그-정의-상태와-감사) → `tag_definition.version`·`tag_definition_term`·`tag_definition_audit`. V12는 기존 ID·참조를 유지하며 버전과 append-only 감사를 전진 추가한다. 정의·용어·감사 원자성, 회원 탈퇴 행위자 익명화와 비활성 VisitTag 연결 경계는 [데이터 계약 15.1절](third-expansion-ai-video-data-contract.md#151-태그-정의-생명주기와-감사--이슈-365)과 [구현 계획](../../08-planning/admin-tag-definition-lifecycle.md)을 따른다.

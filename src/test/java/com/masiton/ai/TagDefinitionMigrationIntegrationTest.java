@@ -118,6 +118,31 @@ class TagDefinitionMigrationIntegrationTest {
                 String.class)).containsExactly("냉면");
     }
 
+    @Test
+    @DisplayName("V11 정의와 정규화 용어를 보존하며 V12 버전과 감사 구조를 전진 추가한다")
+    void 마이그레이션_V11에서V12_정의와용어를보존한다() {
+        String schema = "tag_lifecycle_success";
+        flyway(schema, "11").migrate();
+        JdbcTemplate jdbc = jdbc(schema);
+        UUID definitionId = jdbc.queryForObject(
+                "SELECT id FROM tag_definition WHERE tag_code = 'MENU_NAENGMYEON'", UUID.class);
+        var terms = jdbc.queryForList(
+                "SELECT term_kind || ':' || normalized_term FROM tag_definition_term WHERE tag_definition_id = ? ORDER BY term_kind, normalized_term",
+                String.class, definitionId);
+
+        int migrated = flyway(schema, "12").migrate().migrationsExecuted;
+
+        assertThat(migrated).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT id FROM tag_definition WHERE tag_code = 'MENU_NAENGMYEON'", UUID.class))
+                .isEqualTo(definitionId);
+        assertThat(jdbc.queryForList(
+                "SELECT term_kind || ':' || normalized_term FROM tag_definition_term WHERE tag_definition_id = ? ORDER BY term_kind, normalized_term",
+                String.class, definitionId)).containsExactlyElementsOf(terms);
+        assertThat(jdbc.queryForObject("SELECT version FROM tag_definition WHERE id = ?", Long.class, definitionId))
+                .isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM tag_definition_audit", Integer.class)).isZero();
+    }
+
     private Flyway flyway(String schema, String target) {
         return Flyway.configure().dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
                 .schemas(schema).defaultSchema(schema).createSchemas(true).target(target).load();

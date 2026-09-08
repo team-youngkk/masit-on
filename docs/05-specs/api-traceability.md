@@ -348,3 +348,7 @@ FR-AIEXTRACT-007·FR-NLSEARCH-004 → [API-ADMIN-VISIT-TAGS-001](api/admin/resta
 ## 관리자 태그 정의 생성 — 이슈 #363
 
 [FR-ADMIN-005](../01-requirements/functional-requirements.md#fr-admin-005-관리자-태그-정의-생성)·[BR-ADMIN-009](../01-requirements/business-rules.md#br-admin-009-태그-용어의-전역-고유성과-원자적-생성) → [API-ADMIN-TAG-DEFINITION-001~002](api/admin/tag-definition-api.md): GET/POST `/api/admin/tag-definitions` → ACTIVE 선택 목록·`MANUAL_OVERRIDE` 생성·V10 전역 정규화 용어 unique. ADMIN 인가, 201/no-store, 입력 오류·코드/용어 동시 충돌, 정의/용어 원자성과 상세 즉시 선택은 [구현 계획](../08-planning/admin-tag-definition-creation.md)에서 검증한다. 생성은 VisitTag를 만들지 않으며 [방문 태그 PUT](api/admin/restaurant-visit-tags-api.md#3-방문-태그-교체)이 별도로 연결·감사를 확정한다.
+
+## 관리자 태그 정의 생명주기 — 이슈 #365
+
+[FR-ADMIN-006](../01-requirements/functional-requirements.md#fr-admin-006-관리자-태그-정의-생명주기-관리)·[BR-ADMIN-010](../01-requirements/business-rules.md#br-admin-010-태그-정의-상태와-감사) → [태그 정의 관리 API](api/admin/tag-definition-api.md#6-관리-목록상세변경-이력)와 [방문 태그 API](api/admin/restaurant-visit-tags-api.md) → 상태 필터·내용 수정·상태 전환·버전 충돌·append-only 감사·비활성 기존 연결 경계를 [구현 계획](../08-planning/admin-tag-definition-lifecycle.md)에서 검증한다.

@@ -440,7 +440,15 @@ V10은 기존 seed와 AI 생성 정의의 표시명·JSONB 별칭을 역적재�
 
 새 ADMIN 정의는 `source=MANUAL_OVERRIDE`, `status=ACTIVE`, `created_from_snapshot_id=null`이다. AI 정의는 기존 근거·출처 규칙을 유지하되 V10 이후 반드시 같은 정규화 함수와 용어 저장 경로를 사용한다. 정의 INSERT, 모든 용어 INSERT 중 하나라도 실패하면 요청 전체를 롤백한다. 이 생성은 Visit 연결 또는 `visit_tag_revision`을 만들지 않으며, 기존 방문 태그 교체가 별도로 성공할 때만 연결과 감사가 함께 기록된다.
 
-코드는 `^(MENU|TASTE|OCCASION|ATMOSPHERE)_[A-Z0-9]+(?:_[A-Z0-9]+)*$`이고 접두사가 `tag_type`과 일치해야 한다. 태그 정의 수정·비활성화·감사, 병합·VisitTag 이전, 물리 삭제는 #365·#366으로 분리한다. 별칭의 자연어 검색 정규화·모호성·상한·cache 계약은 16절과 [#364 구현 계획](../../08-planning/dynamic-natural-language-tag-dictionary.md)을 따른다.
+코드는 `^(MENU|TASTE|OCCASION|ATMOSPHERE)_[A-Z0-9]+(?:_[A-Z0-9]+)*$`이고 접두사가 `tag_type`과 일치해야 한다. 태그 정의 수정·비활성화·감사는 #365에서, 병합·VisitTag 이전과 물리 삭제는 #366 이후에서 다룬다. 별칭의 자연어 검색 정규화·모호성·상한·cache 계약은 16절과 [#364 구현 계획](../../08-planning/dynamic-natural-language-tag-dictionary.md)을 따른다.
+
+### 15.1 태그 정의 생명주기와 감사 — 이슈 #365
+
+`tag_definition.version`은 0부터 시작하고 실질 변경마다 1 증가한다. 코드·유형·출처는 불변이다. 표시명·별칭 수정은 `tag_definition_term`을 같은 트랜잭션에서 교체하며, 현재 상태와 관계없이 새 용어의 전역 unique를 검사한다. 제거된 용어는 재사용할 수 있고 과거 값은 감사 snapshot으로 보존한다.
+
+`tag_definition_audit`은 정의 FK, `UPDATE/DEPRECATE/REACTIVATE` 행위, 변경 전후 JSONB object snapshot, 사유, nullable 회원 행위자, 시각과 변경 뒤 버전을 저장한다. 정의별 버전은 unique다. 일반 UPDATE/DELETE는 트리거로 거부하고 회원 탈퇴 FK `SET NULL`에 따른 행위자 익명화만 허용한다.
+
+비활성 정의는 자연어 사전과 신규 `visit_tag` 연결에서 제외한다. 비활성화 전 존재한 연결은 유지 또는 제거할 수 있지만 제거 뒤 재연결할 수 없다. 정의 상태 변경의 행 잠금과 신규 연결의 공유 잠금으로 두 쓰기를 직렬화한다.
 
 ## 16. 동적 자연어 태그 사전 — 이슈 #364
 

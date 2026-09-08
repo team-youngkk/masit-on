@@ -276,3 +276,10 @@ V9__add_visit_tag_revision.sql은 visit_tag_revision과 불변 감사 트리거�
 `V11__backfill_natural_language_tag_aliases.sql`은 V4의 초기 18개 `SEED` 태그에서 누락된 기존 P1 자연어 별칭을 `tag_definition.aliases`와 `tag_definition_term`에 함께 이관한다. 적용된 V4·V10을 수정하지 않으며 태그 코드·표시명·상태와 Visit 연결은 변경하지 않는다.
 
 V11은 코드와 `source=SEED`가 모두 일치하는 정의만 갱신한다. 별칭 용어는 V10 정규화 함수를 사용하고 기존 전역 unique 제약을 그대로 적용하므로 다른 정의의 용어와 충돌하면 마이그레이션 전체가 실패한다. 빈 DB V1→V11 적용, Flyway 이력, `MENU_NAENGMYEON`과 `TASTE_SPICY`를 포함한 별칭 역적재, 초기 18개 Golden V1 회귀를 검증한다. [AI 데이터 계약 16절](third-expansion-ai-video-data-contract.md#16-동적-자연어-태그-사전--이슈-364)을 따른다.
+## V12 태그 정의 생명주기 감사 — 이슈 #365
+
+- `tag_definition.version bigint NOT NULL DEFAULT 0 CHECK (version >= 0)`을 전진 추가한다.
+- `tag_definition_audit`에 정의 FK, 행위, 변경 전후 JSONB object snapshot, 사유, nullable 회원 행위자, 시각과 변경 뒤 버전을 둔다.
+- 정의별 버전 unique와 조회 인덱스를 추가하고 일반 UPDATE/DELETE를 트리거로 금지한다. 회원 탈퇴의 FK `SET NULL`만 허용한다.
+- V1~V11은 수정하지 않으며 기존 정의 ID·용어·VisitTag 참조를 그대로 보존한다.
+- 빈 DB의 V1~V12 순서, V11 상태에서의 전진 적용, 기존 참조 보존과 감사 변조 거부를 검증한다.

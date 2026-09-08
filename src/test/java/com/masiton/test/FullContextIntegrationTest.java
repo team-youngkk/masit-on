@@ -84,14 +84,14 @@ public abstract class FullContextIntegrationTest {
     }
 
     public static void cleanupTransactionalState(org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
-        jdbcTemplate.execute("TRUNCATE TABLE ai_candidate_tag_review, ai_extraction_manual_review, visit_tag_revision");
+        jdbcTemplate.execute("TRUNCATE TABLE ai_candidate_tag_review, ai_extraction_manual_review, visit_tag_revision, tag_definition_audit");
         jdbcTemplate.execute("DELETE FROM ai_registration_unit_review");
         jdbcTemplate.execute("DELETE FROM ai_registration_unit");
         jdbcTemplate.execute("DELETE FROM visit_tag");
         jdbcTemplate.execute("DELETE FROM tag_definition_term WHERE tag_definition_id IN "
                 + "(SELECT id FROM tag_definition WHERE source <> 'SEED')");
         jdbcTemplate.execute("DELETE FROM tag_definition WHERE source <> 'SEED'");
-        jdbcTemplate.update("UPDATE tag_definition SET status = 'ACTIVE' WHERE source = 'SEED'");
+        jdbcTemplate.update("UPDATE tag_definition SET status = 'ACTIVE', version = 0 WHERE source = 'SEED'");
         restoreSeedTagAliases(jdbcTemplate);
         jdbcTemplate.execute("DELETE FROM ai_candidate_snapshot");
         jdbcTemplate.execute("DELETE FROM ai_extraction_attempt");

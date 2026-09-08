@@ -1064,6 +1064,14 @@ related_documents:
   - [FR-ADMIN-005](functional-requirements.md#fr-admin-005-관리자-태그-정의-생성)
   - [FR-AIEXTRACT-007](functional-requirements.md#fr-aiextract-007-ai-태그-후보-생성과-확정)
 
+### BR-ADMIN-010 태그 정의 상태와 감사
+
+- 규칙: 태그 정의의 코드·유형·출처는 불변이며 내용 수정과 상태 전환은 버전 검증 뒤 정의·용어·감사를 원자적으로 기록한다. 감사는 일반 수정·삭제를 금지한다.
+- 허용: 기존 방문에 연결된 `DEPRECATED` 태그의 유지·제거, 사유가 있는 재활성화, 표시명·별칭 수정으로 제거된 용어의 재사용.
+- 금지: `DEPRECATED` 태그의 신규 방문 연결, 감사 없는 실질 변경, 오래된 버전의 덮어쓰기, 물리 삭제.
+- 위반 시 처리: 동시 수정·용어 충돌은 409이며 정의·용어·감사는 모두 롤백한다.
+- 관련 요구사항: [FR-ADMIN-006](functional-requirements.md#fr-admin-006-관리자-태그-정의-생명주기-관리)
+
 ## 9. 공개·비공개 및 삭제 규칙
 
 ### BR-PUBLICATION-001 일반 사용자 공개 범위
