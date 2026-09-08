@@ -19,6 +19,7 @@ related_documents:
   - ../../02-analysis/third-expansion-workstreams.md
   - ../../04-product/prd/discovery/natural-language-restaurant-discovery.md
   - ../../08-planning/third-expansion-evaluation-strategy.md
+  - ../../08-planning/dynamic-natural-language-tag-dictionary.md
   - ../architecture/arch-001-domain-monolith.md
   - ../architecture/arch-002-external-ports-adapters.md
   - ../adr-backlog.md
@@ -70,12 +71,15 @@ Accepted. 2026-08-10 팀 결정으로 P1의 지원 필드·태그·규칙 기반
 
 - 입력은 요청 처리 중 해석하고, 초기에는 자연어 원문과 해석 결과를 장기 영속하지 않는다.
 - P1 해석기는 지원 사전·문장 패턴·정규화 규칙을 사용하고 `parserVersion: P1`을 반환한다.
-- 출력은 `restaurantName`, `district`, `category`, `creator`, `tags`에 해당하는 기존 조건의 구조화 값과 해석 상태로 제한한다. 태그는 데이터 계약의 초기 18개 seed만 사용한다.
+- 출력은 `restaurantName`, `district`, `category`, `creator`, `tags`에 해당하는 기존 조건의 구조화 값과 해석 상태로 제한한다. 태그는 `ACTIVE` 태그 정의의 코드·표시명·별칭을 동적으로 사용하고 `DEPRECATED` 정의는 제외한다.
 - 구조화 조건은 기존 목록 조회의 조건 조합·페이지·정렬·공개 상태 계약을 사용한다.
 - 유튜버 조건은 Creator 선택 정보와 Visit의 유효 관계를 기존 계약으로 조합한다.
 - 같은 조건 종류에서 자연어와 직접 필터가 충돌하면 직접 필터가 우선한다.
 - 해석 실패·미지원 조건·낮은 확신·복수 후보는 명시적인 상태로 반환하며 전체 목록으로 대체하지 않는다.
 - 태그는 모두 AND로 조합하고, 별칭이 여러 코드와 충돌하면 임의 선택하지 않고 `UNRESOLVED`로 반환한다.
+- 태그 용어는 태그 정의 생성과 같은 NFKC·Unicode 공백·ASCII 소문자 규칙으로 정규화한다. 별칭은 길이 내림차순 후 사전순, 반환 코드는 `tag_code` 사전순으로 처리한다.
+- 하나의 별칭이 여러 활성 코드에 매핑되거나 자연어에서 태그가 6개 이상 인식되면 자연어 `tags` 전체를 `UNRESOLVED`로 반환한다. 직접 `filters.tags`가 있으면 직접 필터 우선과 충돌 표시를 유지한다.
+- 동적 태그 사전은 조회 애플리케이션이 소유한 출력 Port로 공급하고 인프라 Adapter가 `ACTIVE` 태그 용어를 조회한다. 프로세스 내 read-through cache의 TTL은 30초이며, 최초 적재·만료 갱신 실패 때 stale 또는 seed로 폴백하지 않고 503으로 fail-closed 처리한다.
 - 임베딩·pgvector·RAG·대화 메모리·새 추천 순위는 도입하지 않는다. 관련 후보인 [ADR-SEARCH-002](../adr-backlog.md#adr-search-002-pgvector-자연어-검색rag)는 Post-MVP 상태를 유지한다.
 
 ## 7. 강제 규칙
@@ -101,6 +105,8 @@ Accepted. 2026-08-10 팀 결정으로 P1의 지원 필드·태그·규칙 기반
 
 ## 10. 확정 운영 규칙
 
-- P1은 지원 사전·문장 패턴·정규화 규칙을 사용하고 모든 규칙·태그 seed 변경은 `parserVersion`을 증가시킨다.
+- P1은 지원 사전·문장 패턴·정규화 알고리즘을 사용한다. 알고리즘·조건 의미·충돌·상한 변경은 `parserVersion`을 증가시키지만 `ACTIVE` 태그 정의의 코드·표시명·별칭 데이터 변경은 알고리즘 변경이 아니므로 `P1`을 유지한다.
+- 초기 18개 seed는 Golden V1 회귀 기준으로 보존하며 동적 사전 전환 뒤에도 같은 문장의 해석 결과가 달라지지 않아야 한다.
+- `ACTIVE` 사전 변경은 TTL 안에서 최대 30초 지연될 수 있다. TTL 만료 뒤 동시 요청은 하나의 갱신 결과를 공유하고, DB 조회 실패는 [자연어 맛집 탐색 API](../../05-specs/api/discovery/natural-language-restaurant-discovery-api.md)의 `NATURAL_LANGUAGE_UNAVAILABLE` 503으로 처리한다.
 - LLM·임베딩 도입은 현재 범위에 포함하지 않으며 별도 범위 변경·ADR·비용·개인정보 승인 없이는 허용하지 않는다.
 - API 오류·응답 Schema와 지연 목표는 [자연어 맛집 탐색 API](../../05-specs/api/discovery/natural-language-restaurant-discovery-api.md) 계약을 따른다.

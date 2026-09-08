@@ -1,11 +1,11 @@
 package com.masiton.restaurant.application.naturallanguage;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -32,12 +32,33 @@ public final class NaturalLanguageDictionary {
         return new Builder();
     }
 
+    /** P1 Golden V1 검증용 초기 18개 태그 seed 사전이다. 운영 동적 사전의 fallback으로 사용하지 않는다. */
     public static NaturalLanguageDictionary standard() {
         return standard(Map.of());
     }
 
-    /** 공개 Creator 선택 목록을 P1의 opaque ID 별칭으로 추가한 사전을 만든다. */
+    /** P1 Golden V1 seed에 공개 Creator 선택 목록의 opaque ID 별칭을 추가한다. */
     public static NaturalLanguageDictionary standard(Map<String, String> creatorAliases) {
+        Builder builder = standardFields(creatorAliases);
+
+        addGoldenV1Tags(builder);
+
+        return builder.build();
+    }
+
+    /**
+     * 지역·카테고리·Creator의 P1 규칙과 외부에서 읽은 활성 태그 snapshot을 조합한다.
+     * 전달된 태그 용어만 사용하며 Golden V1 seed로 fallback하지 않는다.
+     */
+    public static NaturalLanguageDictionary standard(
+            Map<String, String> creatorAliases,
+            Map<String, ? extends Collection<String>> activeTagTerms) {
+        Builder builder = standardFields(creatorAliases);
+        activeTagTerms.forEach((tagCode, terms) -> builder.tagTerms(tagCode, terms));
+        return builder.build();
+    }
+
+    private static Builder standardFields(Map<String, String> creatorAliases) {
         Builder builder = builder();
 
         addDistrict(builder, "종로구", "종로", "대학로");
@@ -77,6 +98,12 @@ public final class NaturalLanguageDictionary {
                 .category("술집·주점", "술집", "주점", "포차")
                 .category("기타", "기타");
 
+        creatorAliases.forEach((creatorId, alias) -> builder.creator(creatorId, alias));
+
+        return builder;
+    }
+
+    private static void addGoldenV1Tags(Builder builder) {
         builder.tag("MENU_NAENGMYEON", "냉면", "물냉면", "비빔냉면")
                 .tag("MENU_GUKBAP", "국밥")
                 .tag("MENU_RAMEN", "라멘")
@@ -95,12 +122,6 @@ public final class NaturalLanguageDictionary {
                 .tag("ATMOSPHERE_QUIET", "조용한", "조용한 분위기")
                 .tag("ATMOSPHERE_LIVELY", "활기찬", "북적이는", "활기찬 분위기")
                 .tag("ATMOSPHERE_BAR", "바 분위기", "포차 분위기");
-
-        creatorAliases.forEach((creatorId, alias) -> {
-            builder.creator(creatorId, alias);
-        });
-
-        return builder.build();
     }
 
     Map<String, Set<String>> aliasesFor(ConditionField field) {
@@ -112,7 +133,7 @@ public final class NaturalLanguageDictionary {
     }
 
     private static String normalizeAlias(String value) {
-        return value == null ? "" : value.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+        return NaturalLanguageTermNormalizer.normalize(value);
     }
 
     public static final class Builder {
@@ -140,21 +161,35 @@ public final class NaturalLanguageDictionary {
             return add(ConditionField.TAGS, tagCode, aliases);
         }
 
+        Builder tagTerms(String tagCode, Collection<String> terms) {
+            return add(ConditionField.TAGS, tagCode, false, terms);
+        }
+
         public NaturalLanguageDictionary build() {
             return new NaturalLanguageDictionary(aliases);
         }
 
         private Builder add(ConditionField field, String value, String... rawAliases) {
+            List<String> aliases = rawAliases == null ? List.of() : java.util.Arrays.asList(rawAliases);
+            return add(field, value, true, aliases);
+        }
+
+        private Builder add(
+                ConditionField field,
+                String value,
+                boolean includeValue,
+                Collection<String> rawAliases) {
             String normalizedValue = Objects.requireNonNull(value).trim();
             if (normalizedValue.isEmpty()) {
                 throw new IllegalArgumentException("사전 값은 비어 있을 수 없습니다.");
             }
             Map<String, Set<String>> fieldAliases = aliases.computeIfAbsent(field, ignored -> new LinkedHashMap<>());
-            List<String> allAliases = rawAliases == null || rawAliases.length == 0
-                    ? List.of(normalizedValue)
-                    : java.util.stream.Stream.concat(
-                            java.util.stream.Stream.of(normalizedValue), java.util.Arrays.stream(rawAliases))
-                            .toList();
+            Collection<String> safeAliases = rawAliases == null ? List.of() : rawAliases;
+            List<String> allAliases = includeValue
+                    ? java.util.stream.Stream.concat(
+                            java.util.stream.Stream.of(normalizedValue), safeAliases.stream())
+                            .toList()
+                    : List.copyOf(safeAliases);
             for (String rawAlias : allAliases) {
                 String alias = normalizeAlias(Objects.requireNonNull(rawAlias));
                 if (alias.isEmpty()) {

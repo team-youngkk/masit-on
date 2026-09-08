@@ -14,17 +14,21 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
+import com.masiton.restaurant.application.port.out.ActiveTagDictionaryPort;
+import com.masiton.restaurant.application.port.out.ActiveTagDictionaryUnavailableException;
 import com.masiton.restaurant.application.port.out.NaturalLanguageRateLimitPort;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 
@@ -57,6 +61,9 @@ class NaturalLanguageSearchApiTest extends com.masiton.test.FullContextIntegrati
 
     @MockitoBean
     private NaturalLanguageRateLimitPort rateLimitPort;
+
+    @MockitoSpyBean
+    private ActiveTagDictionaryPort activeTagDictionaryPort;
 
     @BeforeEach
     void cleanUpTransactionalTables() {
@@ -202,6 +209,24 @@ class NaturalLanguageSearchApiTest extends com.masiton.test.FullContextIntegrati
                         .content("{\"sentence\":\"   \"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("NATURAL_LANGUAGE_EMPTY"))
+                .andExpect(jsonPath("$.traceId").isString())
+                .andExpect(jsonPath("$.traceId").isNotEmpty());
+    }
+
+    @Test
+    @DisplayName("태그 사전 조회 실패는 503 NATURAL_LANGUAGE_UNAVAILABLE과 traceId를 반환한다")
+    void search_태그사전조회실패_503공통오류계약을반환한다() throws Exception {
+        // given
+        doThrow(new ActiveTagDictionaryUnavailableException(new IllegalStateException("database unavailable")))
+                .when(activeTagDictionaryPort).getActiveTagDictionary();
+
+        // when & then
+        mockMvc.perform(post("/api/restaurants/natural-language-search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"sentence\":\"성수 맛집\"}"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("NATURAL_LANGUAGE_UNAVAILABLE"))
+                .andExpect(jsonPath("$.message").value("자연어 해석 구성요소를 사용할 수 없습니다."))
                 .andExpect(jsonPath("$.traceId").isString())
                 .andExpect(jsonPath("$.traceId").isNotEmpty());
     }

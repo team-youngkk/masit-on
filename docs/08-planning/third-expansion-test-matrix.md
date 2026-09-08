@@ -43,7 +43,7 @@ related_documents:
 | `FR-NLSEARCH-001` | 자연어 입력·맛집명/지역/카테고리/유튜버 조건 해석과 기존 목록 응답 | `TST-E3-NL-001` | `E3-T01`, `E3-T02` |
 | `FR-NLSEARCH-002` | 직접 지정 필터 우선, 차원 간 AND, 동일 차원 충돌 요약 | `TST-E3-NL-001` | `E3-T01` |
 | `FR-NLSEARCH-003` | 빈 결과·부분 미지원·해석 실패 구분, 전체 목록 대체 금지 | `TST-E3-NL-002` | `E3-T01`, `E3-T13` |
-| `FR-NLSEARCH-004` | 활성 `TagDefinition`, 확정 `VisitTag`, 여러 태그 AND와 공개 상태 | `TST-E3-NL-001`, `TST-E3-DATA-001` | `E3-T01`, `E3-T06` |
+| `FR-NLSEARCH-004` | ACTIVE 동적 태그 사전, DEPRECATED 제외, 모호성·6개 상한, 30초 TTL·503 fail-closed, Golden V1, 확정 `VisitTag`, 여러 태그 AND와 공개 상태 | `TST-E3-NL-001`, `TST-E3-DATA-001` | `E3-T01`, `E3-T06`, 이슈 #364 |
 | `FR-AIEXTRACT-001` | 관리자 작업 접수, URL·보완 텍스트 검증, `202`와 멱등성 | `TST-E3-AI-001` | `E3-T04` |
 | `FR-AIEXTRACT-002` | 작업 목록·상세, 부분 결과·실패·페이지·입력 원문 비노출 | `TST-E3-AI-002` | `E3-T07` |
 | `FR-AIEXTRACT-003` | 자동 확정·차단·폐기·사후 보정·롤백과 정식 Entity 원자성 | `TST-E3-AI-003`, `TST-E3-DATA-001` | `E3-T06`, `E3-T07` |

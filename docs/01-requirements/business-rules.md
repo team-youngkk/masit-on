@@ -1690,6 +1690,9 @@ related_documents:
 ### BR-NLSEARCH-003 태그 검색과 공개 Visit 기준
 
 - 검색에 사용하는 태그는 활성 상태인 `TagDefinition`과 공개·유효한 `Visit`에 연결된 `VisitTag`만 허용한다.
+- 자연어 태그 사전은 `ACTIVE` `TagDefinition`의 코드와 `tag_definition_term` 표시명·별칭을 사용하고 `DEPRECATED` 정의는 제외한다. 용어는 BR-ADMIN-009와 같은 Unicode NFKC → Unicode 공백 축약·trim → ASCII 소문자 순서로 정규화한다.
+- 하나의 정규화 용어가 둘 이상의 활성 코드에 매핑되면 임의의 코드를 선택하지 않고 자연어 `tags` 조건 전체를 `UNRESOLVED_VALUE`로 처리한다. 별칭은 길이 내림차순 후 사전순으로 판정하고, 적용하는 태그 코드는 `tag_code` 사전순으로 정렬한다.
+- 자연어에서 태그가 6개 이상 인식되면 상한 일부만 적용하지 않고 자연어 `tags` 조건 전체를 `UNRESOLVED_VALUE`로 처리한다. 사용자가 직접 지정한 `filters.tags`가 있으면 직접 필터 우선과 충돌 표시 규칙을 그대로 적용한다.
 - 여러 태그 조건은 같은 유효한 `Visit`에 모두 연결되어 있을 때만 만족하며, 결과 맛집은 중복 없이 반환한다.
 - 자동 검증 전 AI 후보, 폐기 태그, 비공개·삭제·무효 `Visit`에 연결된 태그는 검색 조건과 결과에서 제외한다.
 

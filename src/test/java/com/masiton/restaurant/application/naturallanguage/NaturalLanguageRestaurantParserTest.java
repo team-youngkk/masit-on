@@ -2,6 +2,7 @@ package com.masiton.restaurant.application.naturallanguage;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -222,6 +223,101 @@ class NaturalLanguageRestaurantParserTest {
         assertThat(result.status()).isEqualTo(InterpretationStatus.PARTIAL);
         assertThat(result.appliedConditions().tags()).containsExactly("MENU_PIZZA");
         assertThat(result.interpretation().conflicts())
+                .containsExactly(new NaturalLanguageConflict(ConditionField.TAGS, ConflictResolution.DIRECT_FILTER_WON));
+    }
+
+    @Test
+    @DisplayName("동적 태그 사전은 전달된 활성 용어만 사용하고 seed로 대체하지 않는다")
+    void 동적태그사전_전달된용어만사용한다() {
+        NaturalLanguageDictionary dictionary = NaturalLanguageDictionary.standard(
+                Map.of(), Map.of("OCCASION_FAMILY", List.of("가족 외식")));
+        NaturalLanguageRestaurantParser dynamicParser = new NaturalLanguageRestaurantParser(dictionary);
+
+        NaturalLanguageParseResult active = dynamicParser.parse("가족 외식 맛집");
+        NaturalLanguageParseResult seedOnly = dynamicParser.parse("냉면 맛집");
+
+        assertThat(active.appliedConditions().tags()).containsExactly("OCCASION_FAMILY");
+        assertThat(seedOnly.status()).isEqualTo(InterpretationStatus.FAILED);
+        assertThat(seedOnly.appliedConditions().tags()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("호환 문자 Unicode 공백과 ASCII 대소문자를 태그 정의와 같은 규칙으로 정규화한다")
+    void 동적태그사전_NFKC와유니코드공백_ASCII대소문자를정규화한다() {
+        NaturalLanguageDictionary dictionary = NaturalLanguageDictionary.standard(
+                Map.of(), Map.of("OCCASION_FAMILY", List.of("abc 가족 외식")));
+
+        NaturalLanguageParseResult result = new NaturalLanguageRestaurantParser(dictionary)
+                .parse("ＡＢＣ\u00a0가족\u3000외식 맛집");
+
+        assertThat(result.status()).isEqualTo(InterpretationStatus.APPLIED);
+        assertThat(result.appliedConditions().tags()).containsExactly("OCCASION_FAMILY");
+        assertThat(result.interpretation().parserVersion()).isEqualTo("P1");
+    }
+
+    @Test
+    @DisplayName("태그 snapshot 순서와 alias 길이 동률과 무관하게 코드를 사전순으로 반환한다")
+    void 동적태그사전_입력순서와무관하게결정적으로반환한다() {
+        Map<String, List<String>> firstTerms = new LinkedHashMap<>();
+        firstTerms.put("TAG_Z", List.of("다나"));
+        firstTerms.put("TAG_A", List.of("가나"));
+        Map<String, List<String>> reversedTerms = new LinkedHashMap<>();
+        reversedTerms.put("TAG_A", List.of("가나"));
+        reversedTerms.put("TAG_Z", List.of("다나"));
+
+        NaturalLanguageParseResult first = new NaturalLanguageRestaurantParser(
+                NaturalLanguageDictionary.standard(Map.of(), firstTerms)).parse("다나 가나 맛집");
+        NaturalLanguageParseResult reversed = new NaturalLanguageRestaurantParser(
+                NaturalLanguageDictionary.standard(Map.of(), reversedTerms)).parse("다나 가나 맛집");
+
+        assertThat(first.appliedConditions().tags()).containsExactly("TAG_A", "TAG_Z");
+        assertThat(reversed.appliedConditions()).isEqualTo(first.appliedConditions());
+    }
+
+    @Test
+    @DisplayName("같은 정규화 alias가 여러 활성 코드에 연결되면 자연어 tags 전체를 미해석 처리한다")
+    void 동적태그사전_별칭충돌은_tags전체를미해석처리한다() {
+        NaturalLanguageDictionary dictionary = NaturalLanguageDictionary.standard(
+                Map.of(), Map.of("TAG_A", List.of("가족 외식"), "TAG_B", List.of("가족\u00a0외식")));
+
+        NaturalLanguageParseResult result = new NaturalLanguageRestaurantParser(dictionary)
+                .parse("강남에서 가족 외식 맛집");
+
+        assertThat(result.status()).isEqualTo(InterpretationStatus.PARTIAL);
+        assertThat(result.appliedConditions().district()).isEqualTo("강남구");
+        assertThat(result.appliedConditions().tags()).isEmpty();
+        assertThat(result.interpretation().ignoredConditions())
+                .anyMatch(condition -> condition.type() == IgnoredConditionType.UNRESOLVED
+                        && condition.reason().equals("UNRESOLVED_VALUE"));
+    }
+
+    @Test
+    @DisplayName("자연어 태그는 정확히 5개까지 적용하고 6개부터 전체를 미해석 처리한다")
+    void 자연어태그_5개는적용하고_6개는전체미해석처리한다() {
+        NaturalLanguageDictionary dictionary = NaturalLanguageDictionary.standard(Map.of(), Map.of(
+                "TAG_F", List.of("여섯째"),
+                "TAG_E", List.of("다섯째"),
+                "TAG_D", List.of("넷째"),
+                "TAG_C", List.of("셋째"),
+                "TAG_B", List.of("둘째"),
+                "TAG_A", List.of("첫째")));
+        NaturalLanguageRestaurantParser dynamicParser = new NaturalLanguageRestaurantParser(dictionary);
+
+        NaturalLanguageParseResult five = dynamicParser.parse("다섯째 넷째 셋째 둘째 첫째 맛집");
+        NaturalLanguageParseResult six = dynamicParser.parse("여섯째 다섯째 넷째 셋째 둘째 첫째 맛집");
+        NaturalLanguageParseResult direct = dynamicParser.parse(
+                "여섯째 다섯째 넷째 셋째 둘째 첫째 맛집",
+                new NaturalLanguageFilters(null, null, null, null, List.of("DIRECT_TAG")));
+
+        assertThat(five.status()).isEqualTo(InterpretationStatus.APPLIED);
+        assertThat(five.appliedConditions().tags())
+                .containsExactly("TAG_A", "TAG_B", "TAG_C", "TAG_D", "TAG_E");
+        assertThat(six.status()).isEqualTo(InterpretationStatus.FAILED);
+        assertThat(six.interpretation().parsedConditions().tags()).isEmpty();
+        assertThat(six.appliedConditions().tags()).isEmpty();
+        assertThat(direct.status()).isEqualTo(InterpretationStatus.PARTIAL);
+        assertThat(direct.appliedConditions().tags()).containsExactly("DIRECT_TAG");
+        assertThat(direct.interpretation().conflicts())
                 .containsExactly(new NaturalLanguageConflict(ConditionField.TAGS, ConflictResolution.DIRECT_FILTER_WON));
     }
 }

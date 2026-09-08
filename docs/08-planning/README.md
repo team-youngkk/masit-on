@@ -31,6 +31,7 @@ related_documents:
   - curation-restaurant-card-fix.md
   - restaurant-visit-tag-editing.md
   - admin-tag-definition-creation.md
+  - dynamic-natural-language-tag-dictionary.md
 ---
 
 # 맛잇온 구현 계획
@@ -65,6 +66,7 @@ related_documents:
 | [3차 확장 AI 후보 손실 분석](third-expansion-ai-candidate-loss-analysis.md) | 등록 0건의 원인인 태그 Schema 불일치·복수 후보 폐기 결함과 장소 확정 전제의 남은 결정 |
 | [3차 확장 AI 후보 등록 보조 설계](third-expansion-ai-candidate-registration-assist.md) | 후보 선택 화면과 카카오 장소 검색 자동 입력의 API·화면 설계, 소유자 합의 필요 항목. `PROPOSED` |
 | [자연어 검색 부하 검증 모델](issue-207-natural-language-load-model.md) | 요청 제한과 충돌한 부하 모델을 계약 검증·포화 관찰로 분리한 기준, 실행 명령, 재측정 시 보존할 증적 |
+| [동적 자연어 태그 사전 구현 계획](dynamic-natural-language-tag-dictionary.md) | `ACTIVE` 태그 정의 연동, 결정적 별칭 해석, 30초 cache와 fail-closed 오류, Golden V1 회귀 범위 |
 | [배포 고도화 비용·일정 영향 검토](deployment-hardening-impact-review.md) | ADR-DEPLOY-002 3.1절이 착수 조건으로 남긴 비용·일정 영향 산정과 구성별 예산 대조, 착수 권고. `ACCEPTED` |
 | [배포 고도화 전환 기록](deployment-hardening-cutover-record.md) | ALB·Blue-Green·전용 Redis 전환의 실제 적용 결과, CI 경로에서만 드러난 결함 2건과 조치, 남은 작업. `In progress` |
 | [전환 후 런타임 실측 기준선](post-cutover-runtime-baseline.md) | 기존 ALB·Blue-Green 전환 직후의 무부하 실측값 보관본. 현재 단일 EC2 전환의 참고 자료 |
@@ -76,3 +78,4 @@ related_documents:
 
 - [관리자 방문 태그 조회·수정 계획](restaurant-visit-tag-editing.md) — [이슈 #358](https://github.com/team-youngkk/masit-on/issues/358)
 - [관리자 태그 정의 생성 및 상세 즉시 선택 계획](admin-tag-definition-creation.md) — [이슈 #363](https://github.com/team-youngkk/masit-on/issues/363)
+- [동적 자연어 태그 사전 구현 계획](dynamic-natural-language-tag-dictionary.md) — [이슈 #364](https://github.com/team-youngkk/masit-on/issues/364)

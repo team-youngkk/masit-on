@@ -8,9 +8,9 @@ import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -21,6 +21,10 @@ import java.util.regex.Pattern;
 public final class NaturalLanguageRestaurantParser {
 
     public static final String PARSER_VERSION = "P1";
+    private static final int MAX_NATURAL_TAGS = 5;
+    private static final Comparator<String> ALIAS_ORDER = Comparator.comparingInt(String::length)
+            .reversed()
+            .thenComparing(Comparator.naturalOrder());
 
     private static final Pattern QUOTED_QUERY = Pattern.compile("[\\\"'“‘]([^\\\"'”’]{1,100})[\\\"'”’]");
     private static final Pattern CREATOR_ID = Pattern.compile(
@@ -49,13 +53,13 @@ public final class NaturalLanguageRestaurantParser {
 
     public NaturalLanguageParseResult parse(String sentence, NaturalLanguageFilters directFilters) {
         String normalizedSentence = normalizeSentence(sentence);
-        if (SUSPICIOUS_INPUT.matcher(normalizedSentence).find()) {
+        String aliasSentence = NaturalLanguageTermNormalizer.normalize(normalizedSentence);
+        if (SUSPICIOUS_INPUT.matcher(aliasSentence).find()) {
             return failedForSuspiciousInput();
         }
         NaturalLanguageFilters direct = directFilters == null ? NaturalLanguageFilters.empty() : directFilters;
         List<IgnoredCondition> ignored = new ArrayList<>();
         List<NaturalLanguageConflict> conflicts = new ArrayList<>();
-        String aliasSentence = normalizedSentence.toLowerCase(Locale.ROOT);
         EnumMap<ConditionField, Extraction> extractions = extractFields(normalizedSentence, aliasSentence, ignored);
         NaturalLanguageFilters parsed = toParsedFilters(extractions);
         MergeState merged = merge(parsed, extractions, direct, ignored, conflicts);
@@ -78,6 +82,7 @@ public final class NaturalLanguageRestaurantParser {
                 merged.appliedFilters(),
                 ignored,
                 conflicts,
+                unresolvedFields(extractions),
                 PARSER_VERSION);
         return new NaturalLanguageParseResult(interpretation);
     }
@@ -90,6 +95,7 @@ public final class NaturalLanguageRestaurantParser {
                 List.of(new IgnoredCondition(
                         IgnoredConditionType.UNSUPPORTED, "지원하지 않는 입력", "SUSPICIOUS_INPUT")),
                 List.of(),
+                Set.of(),
                 PARSER_VERSION);
         return new NaturalLanguageParseResult(interpretation);
     }
@@ -118,7 +124,7 @@ public final class NaturalLanguageRestaurantParser {
         Set<String> values = new LinkedHashSet<>();
         List<String> matchedAliases = new ArrayList<>();
         aliases.entrySet().stream()
-                .sorted(Map.Entry.<String, Set<String>>comparingByKey(Comparator.comparingInt(String::length).reversed()))
+                .sorted(Map.Entry.comparingByKey(ALIAS_ORDER))
                 .forEach(entry -> {
                     if (containsAlias(sentence, entry.getKey())) {
                         matchedAliases.add(entry.getKey());
@@ -154,7 +160,7 @@ public final class NaturalLanguageRestaurantParser {
         Set<String> values = new LinkedHashSet<>();
         List<String> matchedAliases = new ArrayList<>();
         aliases.entrySet().stream()
-                .sorted(Map.Entry.<String, Set<String>>comparingByKey(Comparator.comparingInt(String::length).reversed()))
+                .sorted(Map.Entry.comparingByKey(ALIAS_ORDER))
                 .forEach(entry -> {
                     if (containsAlias(sentence, entry.getKey())
                             && isCreatorAliasConnectedToContext(sentence, entry.getKey())) {
@@ -194,11 +200,11 @@ public final class NaturalLanguageRestaurantParser {
 
     private Extraction extractTags(String sentence, List<IgnoredCondition> ignored) {
         Map<String, Set<String>> aliases = dictionary.aliasesFor(ConditionField.TAGS);
-        Set<String> values = new LinkedHashSet<>();
+        Set<String> values = new TreeSet<>();
         List<String> matchedAliases = new ArrayList<>();
         boolean ambiguous = false;
         aliases.entrySet().stream()
-                .sorted(Map.Entry.<String, Set<String>>comparingByKey(Comparator.comparingInt(String::length).reversed()))
+                .sorted(Map.Entry.comparingByKey(ALIAS_ORDER))
                 .forEach(entry -> {
                     if (containsAlias(sentence, entry.getKey())) {
                         matchedAliases.add(entry.getKey());
@@ -211,6 +217,7 @@ public final class NaturalLanguageRestaurantParser {
                 break;
             }
         }
+        ambiguous = ambiguous || values.size() > MAX_NATURAL_TAGS;
         Extraction extraction = new Extraction(ConditionField.TAGS, values, matchedAliases, ambiguous, values.size());
         if (ambiguous) {
             ignored.add(unresolved(ConditionField.TAGS));
@@ -385,6 +392,16 @@ public final class NaturalLanguageRestaurantParser {
                 "UNRESOLVED_VALUE");
     }
 
+    private static Set<ConditionField> unresolvedFields(EnumMap<ConditionField, Extraction> extractions) {
+        EnumSet<ConditionField> fields = EnumSet.noneOf(ConditionField.class);
+        extractions.forEach((field, extraction) -> {
+            if (extraction.ambiguous()) {
+                fields.add(field);
+            }
+        });
+        return fields;
+    }
+
     private static String scalarValue(Extraction extraction) {
         return extraction.ambiguous() || extraction.values().isEmpty() ? null : extraction.values().iterator().next();
     }
@@ -435,7 +452,7 @@ public final class NaturalLanguageRestaurantParser {
     }
 
     private static String compact(String value) {
-        return cleanText(value).replaceAll("\\s+", "").toLowerCase(Locale.ROOT);
+        return NaturalLanguageTermNormalizer.normalize(value).replace(" ", "");
     }
 
     private static String safeSummary(String value) {
