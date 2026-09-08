@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -37,6 +38,7 @@ public final class JdbcActiveTagDictionaryAdapter implements ActiveTagDictionary
 
     private volatile CachedSnapshot cachedSnapshot;
 
+    @Autowired
     public JdbcActiveTagDictionaryAdapter(JdbcTemplate jdbcTemplate) {
         this(() -> jdbcTemplate.query(
                 SELECT_ACTIVE_TERMS,
