@@ -29,6 +29,8 @@ related_documents:
   - postgres-ec2-single-instance-transition.md
   - issue-231-course-route-map.md
   - curation-restaurant-card-fix.md
+  - restaurant-visit-tag-editing.md
+  - admin-tag-definition-creation.md
 ---
 
 # 맛잇온 구현 계획
@@ -73,3 +75,4 @@ related_documents:
 ## 맛집 상세 태그 보정
 
 - [관리자 방문 태그 조회·수정 계획](restaurant-visit-tag-editing.md) — [이슈 #358](https://github.com/team-youngkk/masit-on/issues/358)
+- [관리자 태그 정의 생성 및 상세 즉시 선택 계획](admin-tag-definition-creation.md) — [이슈 #363](https://github.com/team-youngkk/masit-on/issues/363)

@@ -85,6 +85,89 @@ class AiExtractionResultProcessorServiceTest {
     }
 
     @Test
+    @DisplayName("신규 태그 후보는 표시명과 같은 자기 별칭을 만들지 않는다")
+    void process_신규태그후보_빈별칭으로커밋한다() throws Exception {
+        UUID jobId = UUID.randomUUID();
+        OffsetDateTime finishedAt = OffsetDateTime.parse("2026-08-11T00:00:10Z");
+        given(resultStore.lockProcessingJob(jobId, "worker-1", 1))
+                .willReturn(Optional.of(new AiExtractionResultStore.ProcessingJob(
+                        jobId, "channel-1", "video-1", URI.create("https://www.youtube.com/watch?v=video-1"))));
+        given(contentVerification.verify(any())).willReturn(VerifyAiContentCandidateUseCase.VerificationResult.verified(
+                new VerifyAiContentCandidateUseCase.VerifiedContent(
+                        UUID.randomUUID(), UUID.randomUUID(), "맛집", "kakao-1",
+                        "https://place.map.kakao.com/123", "서울특별시 마포구 월드컵로 1", "02-1234-5678",
+                        java.math.BigDecimal.valueOf(126.9), java.math.BigDecimal.valueOf(37.5),
+                        "channel-1", "채널", "https://www.youtube.com/channel/channel-1", "video-1", "영상 제목",
+                        "https://www.youtube.com/watch?v=video-1", "https://img.youtube.com/vi/video-1/0.jpg",
+                        finishedAt, finishedAt)));
+        given(resultStore.findTag("OCCASION_FAMILY")).willReturn(Optional.empty());
+        given(commitService.persistConfirmed(any(), any())).willReturn(true);
+
+        boolean processed = processor.process(jobId, "worker-1", 1, finishedAt.minusSeconds(5), finishedAt,
+                result("""
+                        {"resultCompleteness":"COMPLETE","candidates":[
+                          {"field":"restaurantName","value":"맛집","confidence":0.95,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}},
+                          {"field":"menu","value":"냉면","confidence":0.90,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}},
+                          {"field":"address","value":"서울특별시 마포구 월드컵로 1","confidence":0.90,"evidence":{"type":"TEXT_RANGE","startOffset":1,"endOffset":5,"sourceHash":"hash"}},
+                          {"field":"location","value":"https://place.map.kakao.com/123","confidence":0.90,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}},
+                          {"field":"visitEvidence","value":"직접 방문","confidence":0.90,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}},
+                          {"field":"tag","candidateTagId":"tag-family","tagType":"OCCASION","rawLabel":"가족 모임","normalizedCode":"OCCASION_FAMILY","label":"가족 모임","confidence":0.90,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}}
+                        ],"missingFields":[]}
+                        """));
+
+        assertThat(processed).isTrue();
+        var command = forClass(AiExtractionResultCommitService.ProcessCommand.class);
+        verify(commitService).persistConfirmed(command.capture(), any());
+        assertThat(command.getValue().tags()).singleElement()
+                .satisfies(tag -> assertThat(tag.aliasesJson()).isEqualTo("[]"));
+    }
+
+    @Test
+    @DisplayName("101자 AI 태그 원문은 저장 전에 정책 거부로 분류한다")
+    void process_AI태그원문101자_정식저장대상에서제외한다() throws Exception {
+        // Given
+        UUID jobId = UUID.randomUUID();
+        OffsetDateTime finishedAt = OffsetDateTime.parse("2026-08-11T00:00:10Z");
+        String tooLongLabel = "가".repeat(101);
+        given(resultStore.lockProcessingJob(jobId, "worker-1", 1))
+                .willReturn(Optional.of(new AiExtractionResultStore.ProcessingJob(
+                        jobId, "channel-1", "video-1", URI.create("https://www.youtube.com/watch?v=video-1"))));
+        given(contentVerification.verify(any())).willReturn(VerifyAiContentCandidateUseCase.VerificationResult.verified(
+                new VerifyAiContentCandidateUseCase.VerifiedContent(
+                        UUID.randomUUID(), UUID.randomUUID(), "맛집", "kakao-1",
+                        "https://place.map.kakao.com/123", "서울특별시 마포구 월드컵로 1", "02-1234-5678",
+                        java.math.BigDecimal.valueOf(126.9), java.math.BigDecimal.valueOf(37.5),
+                        "channel-1", "채널", "https://www.youtube.com/channel/channel-1", "video-1", "영상 제목",
+                        "https://www.youtube.com/watch?v=video-1", "https://img.youtube.com/vi/video-1/0.jpg",
+                        finishedAt, finishedAt)));
+        given(resultStore.findTag("MENU_TOO_LONG")).willReturn(Optional.empty());
+        given(commitService.persistConfirmed(any(), any())).willReturn(true);
+
+        // When
+        boolean processed = processor.process(jobId, "worker-1", 1, finishedAt.minusSeconds(5), finishedAt,
+                result("""
+                        {"resultCompleteness":"COMPLETE","candidates":[
+                          {"field":"restaurantName","value":"맛집","confidence":0.95,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}},
+                          {"field":"menu","value":"냉면","confidence":0.90,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}},
+                          {"field":"address","value":"서울특별시 마포구 월드컵로 1","confidence":0.90,"evidence":{"type":"TEXT_RANGE","startOffset":1,"endOffset":5,"sourceHash":"hash"}},
+                          {"field":"location","value":"https://place.map.kakao.com/123","confidence":0.90,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}},
+                          {"field":"visitEvidence","value":"직접 방문","confidence":0.90,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}},
+                          {"field":"tag","candidateTagId":"tag-too-long","tagType":"MENU","rawLabel":"%s","normalizedCode":"MENU_TOO_LONG","label":"%s","confidence":0.90,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}}
+                        ],"missingFields":[]}
+                        """.formatted(tooLongLabel, tooLongLabel)));
+
+        // Then
+        assertThat(processed).isTrue();
+        var command = forClass(AiExtractionResultCommitService.ProcessCommand.class);
+        verify(commitService).persistConfirmed(command.capture(), any());
+        assertThat(command.getValue().tags()).singleElement().satisfies(tag -> {
+            assertThat(tag.decision()).isEqualTo("AUTO_REJECT");
+            assertThat(tag.reason()).isEqualTo("TAG_POLICY");
+            assertThat(tag.autoConnectable()).isFalse();
+        });
+    }
+
+    @Test
     @DisplayName("외부 검증이 실제 방문 근거를 확정하지 않으면 정식 등록을 호출하지 않는다")
     void process_외부방문근거미확정_정식등록하지않는다() throws Exception {
         // Given

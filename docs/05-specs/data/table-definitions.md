@@ -300,6 +300,7 @@ Refresh Token 세션은 역할과 무관하게 Redis 8.8 `auth:session:` namespa
 | `ai_candidate_snapshot` | 버전별 후보와 근거 | 작업·버전 unique, JSON object/array·근거 Schema |
 | `ai_candidate_tag_review` | 후보 태그 자동 판단·사후 보정 이력 | Snapshot FK, decision·actor·replacement 조합 |
 | `tag_definition` | 통제 태그 정의·18개 초기 기준 데이터 | 코드 unique, 유형·상태·별칭·생성 근거 |
+| `tag_definition_term` | 표시명·별칭의 정규화 용어 | 정규화 용어 전역 unique, 정의 FK, DISPLAY_NAME/ALIAS 구분 |
 | `visit_tag` | 확정 Visit와 태그 연결 | `(visit_id, tag_definition_id)` unique, AI 근거·Snapshot provenance |
 | `ai_extraction_attempt` | Provider 시도·오류·비용 메타데이터 | `(job_id, attempt_no)` unique, 결과·오류 조합 |
 | `youtube_channel_watch` | YouTube 채널 감시·갱신 상태 | Creator·채널별 unique, 구독 상태 |
@@ -309,3 +310,7 @@ Refresh Token 세션은 역할과 무관하게 Redis 8.8 `auth:session:` namespa
 ## 방문 태그 보정 감사 — 이슈 #358
 
 V9 visit_tag_revision의 컬럼·타입·FK·감사 원자성은 [AI 데이터 계약 14절](third-expansion-ai-video-data-contract.md#14-맛집-상세의-방문-태그-보정-감사--이슈-358)을 따른다. 기존 VisitTag와 후보 이력의 구조는 변경하지 않는다.
+
+## 관리자 태그 정의 용어 — 이슈 #363
+
+V10 `tag_definition_term`의 컬럼·1~200자 정규화·전역 고유성·역적재 계약은 [AI 데이터 계약 15절](third-expansion-ai-video-data-contract.md#15-태그-정규화-용어--이슈-363)을 따른다. 기존 `tag_definition.display_name`과 `aliases`는 표시 및 호환 계약으로 유지하고, ADMIN·AI 작성자는 정의와 용어를 한 트랜잭션에서 함께 저장한다. V9의 `AI_AUTO` legacy 코드는 유형과 유일성을 보존하는 연속·끝 밑줄만 정리하며 ID와 참조는 바꾸지 않는다.

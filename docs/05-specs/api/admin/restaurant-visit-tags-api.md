@@ -2,11 +2,13 @@
 id: API-ADMIN-VISIT-TAGS-001
 related_documents:
   - ../../../08-planning/restaurant-visit-tag-editing.md
+  - ../../../08-planning/admin-tag-definition-creation.md
   - ../../../04-product/prd/detail/restaurant-detail.md
   - ../../data/third-expansion-ai-video-data-contract.md
   - ../discovery/natural-language-restaurant-discovery-api.md
   - ../common/authentication-contract.md
   - ../common/error-contract.md
+  - tag-definition-api.md
 ---
 
 # 관리자 맛집 방문 태그 API
@@ -35,7 +37,7 @@ FR-AIEXTRACT-007·FR-NLSEARCH-004의 상세 화면 사후 보정 경로다. 두 
 }
 ```
 
-`tags`는 현재 연결된 태그(비활성 정의 포함), `tagOptions`는 ACTIVE 정의다. 비활성 태그는 제거할 수 있으나 새로 선택·저장할 수 없다. `version`은 현재 연결 상태와 최신 감사 이력을 반영한 불투명 동시성 토큰이다. 프론트는 계산·해석하지 않고 저장 시 그대로 돌려준다.
+`tags`는 현재 연결된 태그(비활성 정의 포함), `tagOptions`는 이 응답 시점의 ACTIVE 정의다. 비활성 태그는 제거할 수 있으나 새로 선택·저장할 수 없다. `version`은 현재 연결 상태와 최신 감사 이력을 반영한 불투명 동시성 토큰이다. 프론트는 계산·해석하지 않고 저장 시 그대로 돌려준다. 이슈 #363 이후 활성 목록의 갱신 기준은 [태그 정의 목록 API](tag-definition-api.md#2-활성-태그-정의-목록)이며 기존 `tagOptions`는 #358 소비자 호환을 위해 유지한다.
 
 ## 3. 방문 태그 교체
 
@@ -58,7 +60,7 @@ FR-AIEXTRACT-007·FR-NLSEARCH-004의 상세 화면 사후 보정 경로다. 두 
 
 ADMIN에서만 조회하며 방문별 태그를 표시한다. 저장 버튼과 취소 버튼, 사유 입력, 저장 중 중복 제출 방지, 실패 사유와 재시도, 409 최신 조회 후 재편집을 제공한다. 로그아웃/계정 변경 시 캐시와 편집 상태를 폐기한다. 공개 상세 서버 렌더링은 유지한다.
 
-검색은 기존 VisitTag를 사용하므로 다음 요청부터 변경을 반영한다. 다중 태그는 동일 Visit 내 AND이며 다른 방문의 태그를 합치지 않는다. 사전/별칭을 새로 추가하는 기능은 포함하지 않는다.
+검색은 기존 VisitTag를 사용하므로 다음 요청부터 변경을 반영한다. 다중 태그는 동일 Visit 내 AND이며 다른 방문의 태그를 합치지 않는다. 이슈 #363에서 새 태그 정의를 생성할 수 있지만 생성만으로 VisitTag와 감사 이력을 만들지 않는다. 생성 성공 뒤 새 태그를 로컬 선택에 추가하고 이 PUT을 별도로 저장해야 연결과 `visit_tag_revision`이 함께 확정된다. 자연어 파서가 새 용어를 동적으로 읽는 기능은 #364 범위다.
 
 ## 5. 데이터 보강
 

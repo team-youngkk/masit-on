@@ -88,6 +88,8 @@ public abstract class FullContextIntegrationTest {
         jdbcTemplate.execute("DELETE FROM ai_registration_unit_review");
         jdbcTemplate.execute("DELETE FROM ai_registration_unit");
         jdbcTemplate.execute("DELETE FROM visit_tag");
+        jdbcTemplate.execute("DELETE FROM tag_definition_term WHERE tag_definition_id IN "
+                + "(SELECT id FROM tag_definition WHERE source <> 'SEED')");
         jdbcTemplate.execute("DELETE FROM tag_definition WHERE source <> 'SEED'");
         jdbcTemplate.update("UPDATE tag_definition SET status = 'ACTIVE' WHERE source = 'SEED'");
         jdbcTemplate.execute("DELETE FROM ai_candidate_snapshot");

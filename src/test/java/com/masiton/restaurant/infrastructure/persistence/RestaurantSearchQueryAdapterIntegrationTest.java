@@ -277,7 +277,7 @@ class RestaurantSearchQueryAdapterIntegrationTest extends com.masiton.test.FullC
     @DisplayName("비활성 태그 정의와 비공개·무효 Visit 태그는 검색에서 제외한다")
     void search_비활성태그와비공개무효Visit_검색에서제외한다() {
         // given
-        UUID inactiveTagId = insertTagDefinition("TEST_INACTIVE_TAG", "DEPRECATED");
+        UUID inactiveTagId = insertTagDefinition("MENU_TEST_INACTIVE_TAG", "DEPRECATED");
         UUID inactiveTagRestaurantId =
                 insertRestaurant("비활성 태그 맛집", MAPO_REGION_ID, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
         UUID hiddenVisitRestaurantId =

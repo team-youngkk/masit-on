@@ -108,6 +108,9 @@ class AiExtractionResultCommitService {
                 continue;
             }
             Optional<AiExtractionResultStore.TagDefinition> existing = resultStore.findTagForUpdate(tag.normalizedCode());
+            if (existing.isEmpty()) {
+                existing = resultStore.findTagByNormalizedTermForUpdate(TagTermNormalizer.normalize(tag.label()));
+            }
             boolean merged = existing.isPresent();
             AiExtractionResultStore.TagDefinition definition = existing.orElse(null);
             if (definition == null) {
@@ -116,8 +119,10 @@ class AiExtractionResultCommitService {
                         "AI_AUTO", snapshotId, reviewedAt);
                 definition = inserted.orElseGet(() -> {
                     AiExtractionResultStore.TagDefinition concurrent = resultStore.findTagForUpdate(tag.normalizedCode())
+                            .or(() -> resultStore.findTagByNormalizedTermForUpdate(
+                                    TagTermNormalizer.normalize(tag.label())))
                             .orElseThrow(() -> new IllegalStateException(
-                                    "Concurrent AI tag result was not found."));
+                                    "Concurrent AI tag result was not found by code or term."));
                     return concurrent;
                 });
                 merged = inserted.isEmpty();

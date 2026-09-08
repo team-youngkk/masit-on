@@ -1,7 +1,5 @@
 package com.masiton.ai.application;
 
-import java.util.Locale;
-
 import com.masiton.ai.application.port.out.AiExtractionResultStore;
 
 import tools.jackson.core.JacksonException;
@@ -16,8 +14,8 @@ final class AiTagPolicy {
 
     static boolean matchesApprovedLabel(String label, AiExtractionResultStore.TagDefinition definition,
                                         ObjectMapper objectMapper) {
-        String candidate = normalize(label);
-        if (candidate.equals(normalize(definition.displayName()))) {
+        String candidate = TagTermNormalizer.normalize(label);
+        if (candidate.equals(TagTermNormalizer.normalize(definition.displayName()))) {
             return true;
         }
         try {
@@ -26,7 +24,7 @@ final class AiTagPolicy {
                 return false;
             }
             for (JsonNode alias : aliases) {
-                if (alias.isTextual() && candidate.equals(normalize(alias.textValue()))) {
+                if (alias.isTextual() && candidate.equals(TagTermNormalizer.normalize(alias.textValue()))) {
                     return true;
                 }
             }
@@ -37,14 +35,19 @@ final class AiTagPolicy {
     }
 
     static boolean isNewTagCandidate(String tagType, String rawLabel, String label, String normalizedCode) {
-        String normalizedLabel = normalize(label);
-        String normalizedRawLabel = normalize(rawLabel);
-        return !normalizedLabel.isBlank() && normalizedLabel.equals(normalizedRawLabel)
+        String normalizedLabel = TagTermNormalizer.normalize(label);
+        String normalizedRawLabel = TagTermNormalizer.normalize(rawLabel);
+        return hasValidRawLength(rawLabel) && hasValidRawLength(label)
+                && !normalizedLabel.isBlank() && normalizedLabel.equals(normalizedRawLabel)
+                && normalizedLabel.length() <= TagTermNormalizer.MAX_NORMALIZED_LENGTH
                 && normalizedCode != null
-                && normalizedCode.matches(java.util.regex.Pattern.quote(tagType) + "_[A-Z0-9][A-Z0-9_]{0,63}");
+                && normalizedCode.length() <= 64
+                && normalizedCode.matches(java.util.regex.Pattern.quote(tagType)
+                        + "_[A-Z0-9]+(?:_[A-Z0-9]+)*");
     }
 
-    private static String normalize(String value) {
-        return value == null ? "" : value.replaceAll("\\s+", "").toLowerCase(Locale.ROOT);
+    private static boolean hasValidRawLength(String value) {
+        return value != null && value.length() <= TagTermNormalizer.MAX_RAW_LENGTH;
     }
+
 }
