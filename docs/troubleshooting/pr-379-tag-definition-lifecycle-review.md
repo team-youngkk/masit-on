@@ -17,7 +17,7 @@ related_documents:
 | PR | [#379 관리자 태그 정의 생명주기 관리](https://github.com/team-youngkk/masit-on/pull/379) |
 | 작성자 | 양성훈 (`@tjdgns0618`) |
 | 처리 일자 | 2026-09-08 |
-| 범위 | 관리자 태그 관리의 세션 이벤트, 용어 교환 동시성, 큰 페이지 OFFSET 리뷰 3건 |
+| 범위 | 관리자 태그 관리의 세션 이벤트, 용어 교환 동시성, 큰 페이지 OFFSET, 로그인 복귀 경로 리뷰 4건 |
 | 주 문제 유형 | 애플리케이션·데이터베이스 |
 | 기존 기록 | [PR #273 화면 상태 동기화](pr-273-frontend-ui-sync-review.md), [PR #368 태그 정규화·원자성](pr-368-tag-definition-normalization-review.md), [PR #280 페이지 계약](pr-280-pagination-policy-documentation-review.md)을 확인했다. 계정별 상태 격리, 정규화 용어의 DB 최종 판정, 범위 밖 페이지의 빈 목록 원칙을 이번 수정에 적용했다. |
 
@@ -28,14 +28,15 @@ related_documents:
 | [토큰 갱신을 계정 전환으로 오인](https://github.com/team-youngkk/masit-on/pull/379#discussion_r3957010126) | 같은 계정의 Token 갱신 뒤에도 관리 화면 요청과 갱신을 계속 허용 | 애플리케이션 | 수정 필요 | 세션 이벤트 리스너를 제거하고 `accountId`가 바뀌어 컴포넌트가 교체되거나 unmount될 때만 요청·캐시를 폐기 | TypeScript 검사, 프론트 340건, 프로덕션 빌드 통과 |
 | [서로 다른 정의의 용어 교환 교착](https://github.com/team-youngkk/masit-on/pull/379#discussion_r3957010135) | A→B와 B→A 동시 수정의 advisory lock 순환 대기 방지 | 데이터베이스 | 수정 필요 | 현재 용어와 신규 용어의 합집합을 정렬해 advisory lock한 뒤 용어를 교체 | 동시 용어 교환이 교착이나 500 없이 두 건 모두 `TAG_TERM_ALREADY_EXISTS`로 수렴 |
 | [큰 페이지 OFFSET 오버플로](https://github.com/team-youngkk/masit-on/pull/379#discussion_r3957010143) | 목록과 이력의 OFFSET을 `long`으로 계산 | 애플리케이션 | 수정 필요 | 서비스 계산과 Store Port·JDBC 인자의 offset을 `long`으로 변경 | `page=50000000&size=50` 목록·이력이 200 빈 `items` 반환 |
+| [태그 관리 로그인 복귀 경로 누락](https://github.com/team-youngkk/masit-on/pull/379#discussion_r3957665716) | 비로그인 직접 접근 뒤 원래 태그 관리 화면으로 복귀 | 애플리케이션 | 수정 필요 | 관리자 복귀 경로 allowlist에 `/admin/tag-definitions`를 추가하고 회귀 테스트로 고정 | `safeAdminReturnTo('/admin/tag-definitions')`가 동일 경로 반환, 프론트 340건 통과 |
 
 ## 3. 문제 현상과 발생 조건
 
 - 오류 메시지: 용어 교환 경쟁에서는 PostgreSQL deadlock이 발생하면 500으로 전파될 수 있었고, 큰 페이지에서는 음수 OFFSET 오류가 발생할 수 있었다. Token 갱신 문제는 오류 응답 없이 이후 성공 콜백과 캐시 갱신을 무시했다.
 - 발생 환경: Next.js 16.2.11, TanStack Query 관리자 화면, Java 21·Spring JDBC·PostgreSQL 17, `feature/t-365-admin-tag-lifecycle`.
-- 재현 조건: 같은 관리자에서 Access Token만 갱신하거나, 서로 다른 두 태그가 현재 용어를 맞교환하도록 동시에 수정하거나, `page=50000000&size=50`을 요청한다.
-- 실제 결과: Token 갱신 이벤트가 `active=false`를 남겼고, 용어 수정은 새 용어만 잠가 교차 잠금 순서가 달랐으며, `(page - 1) * size`가 `int` 범위에서 넘쳤다.
-- 기대 결과: 동일 계정 Token 갱신은 화면 작업을 유지하고, 용어 충돌은 교착 없이 409로 수렴하며, 1 이상의 범위 밖 페이지는 200 빈 목록을 반환해야 한다.
+- 재현 조건: 같은 관리자에서 Access Token만 갱신하거나, 서로 다른 두 태그가 현재 용어를 맞교환하도록 동시에 수정하거나, `page=50000000&size=50`을 요청하거나, 비로그인 상태에서 `/admin/tag-definitions`에 직접 접근한다.
+- 실제 결과: Token 갱신 이벤트가 `active=false`를 남겼고, 용어 수정은 새 용어만 잠가 교차 잠금 순서가 달랐으며, `(page - 1) * size`가 `int` 범위에서 넘쳤다. 새 관리자 경로는 복귀 allowlist에 없어 로그인 뒤 `/admin`으로 대체됐다.
+- 기대 결과: 동일 계정 Token 갱신은 화면 작업을 유지하고, 용어 충돌은 교착 없이 409로 수렴하며, 1 이상의 범위 밖 페이지는 200 빈 목록을 반환하고, 로그인 성공 뒤 요청한 태그 관리 화면으로 돌아와야 한다.
 - 영향 범위: 관리자 태그 내용·상태 저장 후 화면 갱신, 태그 정의와 감사의 동시 수정 원자성, 관리 목록·감사 이력 조회다.
 
 ## 4. 근본 원인
@@ -46,6 +47,8 @@ related_documents:
 
 페이지 OFFSET은 반환 형식만 `long`과 호환됐지만 산술식의 두 피연산자가 모두 `int`였다. 캐스팅 전에 오버플로가 발생해 정상적인 큰 양수 페이지가 음수 OFFSET으로 바뀔 수 있었다.
 
+태그 관리 Route를 추가하면서 `ADMIN_RETURN_TO_PATHS`의 정확한 경로 allowlist를 함께 갱신하지 않았다. `safeAdminReturnTo`는 보안을 위해 미등록 관리자 경로를 거부하므로 정상 경로도 `/admin`으로 대체됐다.
+
 ## 5. 확인 및 시도
 
 | 확인하거나 시도한 방법 | 결과 | 판단과 다음 단계 |
@@ -55,13 +58,16 @@ related_documents:
 | 두 정의의 현재·신규 용어 잠금 집합 대조 | 기존 구현은 각 요청의 신규 용어만 잠금 | 두 집합의 합집합을 정렬해 동일 잠금 순서를 강제 |
 | 동시 용어 교환 통합 테스트 | 수정 후 두 요청이 교착 없이 계약된 409 코드로 종료 | 회귀 테스트로 유지 |
 | `page=50000000`, `size=50` 산술 대조 | `int` 계산은 `-1794967346`, `long` 계산은 `2499999950` | 서비스와 저장소 경계를 `long`으로 통일 |
+| `safeAdminReturnTo`와 신규 관리자 Route 대조 | `/admin/tag-definitions`가 allowlist에 없어 `null` 반환 | 정확한 신규 경로를 등록하고 기존 외부·이중 인코딩 거부 테스트를 유지 |
 
 ## 6. 최종 해결
 
-- 변경 내용: 관리자 태그 화면은 `accountId`가 바뀌거나 unmount될 때만 요청과 계정 scope 캐시를 폐기한다. 내용 수정은 현재·신규 정규화 용어 합집합을 정렬해 잠근다. 목록과 이력은 OFFSET을 `long`으로 계산하고 JDBC까지 전달한다.
+- 변경 내용: 관리자 태그 화면은 `accountId`가 바뀌거나 unmount될 때만 요청과 계정 scope 캐시를 폐기한다. 내용 수정은 현재·신규 정규화 용어 합집합을 정렬해 잠근다. 목록과 이력은 OFFSET을 `long`으로 계산하고 JDBC까지 전달한다. 태그 관리 경로는 관리자 로그인 복귀 allowlist에 등록한다.
 - 선택 이유: API·DB 계약을 바꾸지 않고 각 결함의 실제 경계인 계정 식별자, 정규화 용어 집합, 페이지 산술 타입만 바로잡는 최소 변경이다.
 - 변경 파일:
   - `frontend/components/admin/AdminTagDefinitions.tsx`
+  - `frontend/lib/member/auth-navigation.ts`
+  - `frontend/lib/member/auth-navigation.test.ts`
   - `src/main/java/com/masiton/ai/application/TagDefinitionService.java`
   - `src/main/java/com/masiton/ai/application/port/out/TagDefinitionStore.java`
   - `src/main/java/com/masiton/ai/infrastructure/persistence/JdbcTagDefinitionStore.java`
@@ -89,7 +95,8 @@ related_documents:
 | 큰 페이지 OFFSET | `page=50000000,size=50`에서 `-1794967346` | Java `int`·`long` 산술과 API 통합 테스트 | `2499999950`, 200 빈 목록 | 부호 오버플로 제거 | 양성훈, PR #379 리뷰 반영 시점 |
 | 용어 교환 요청 완료 | 교착 시 DB 예외가 500으로 전파될 가능성 | 두 정의 동시 교환 통합 테스트 | 두 요청 모두 409 용어 충돌 | 교착·500 없이 계약 코드로 수렴 | 양성훈, PR #379 리뷰 반영 시점 |
 | Token 갱신 뒤 화면 활성 상태 | 이벤트 뒤 `active=false`가 같은 계정에서 유지 | 이벤트 리스너와 effect 의존성 정적 대조 | Token 이벤트가 폐기 함수를 호출하지 않음 | 계정 scope가 유지되는 동안 요청·갱신 허용 | 양성훈, PR #379 리뷰 반영 시점 |
+| 태그 관리 로그인 복귀 | 미등록 allowlist로 `null`, 로그인 뒤 `/admin` | `safeAdminReturnTo` 단위 테스트 | `/admin/tag-definitions` 반환 | 직접 접근 목적지 보존 | 양성훈, PR #379 리뷰 반영 시점 |
 
 ## 10. 남은 사항
 
-- 원격 CI 확인과 세 리뷰 스레드 답글·해결 처리가 남아 있다.
+- 신규 복귀 경로 수정의 원격 CI 확인과 네 번째 리뷰 스레드 답글·해결 처리가 남아 있다. 앞선 세 스레드는 답글과 해결 처리를 완료했다.
