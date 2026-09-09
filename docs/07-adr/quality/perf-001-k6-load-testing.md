@@ -127,7 +127,7 @@ Gatling은 JVM 의존성과 Gradle 플러그인을 백엔드 빌드에 추가한
 
 무엇보다 [ADR 백로그](../adr-backlog.md)가 이미 이 항목을 "k6 성능 테스트 체계"로 지목했다. 활성화 조건이 "정확한 k6 버전과 CI 비용 승인"이었으므로, 다른 도구를 고르면 조건 자체를 다시 쓰는 결정이 된다. 그럴 만한 근거가 없다.
 
-버전은 최신 안정판 v2.1.0을 고정한다. 이 저장소는 Spring Boot 4.1.0, Next.js 16.2.11, Testcontainers 2.0.5처럼 최신 안정 major를 고정하는 [기술 정책](../../06-architecture/technology-policy.md)을 따르며, k6도 같은 규칙을 적용한다.
+버전은 최신 안정판 v2.1.0을 고정한다. 이 저장소는 Spring Boot 4.1.0, Next.js 16.3.4, Testcontainers 2.0.5처럼 승인된 정확한 버전을 고정하는 [기술 정책](../../06-architecture/technology-policy.md)을 따르며, k6도 같은 규칙을 적용한다.
 
 ## 8. 트레이드오프
 
