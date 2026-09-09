@@ -14,6 +14,32 @@ export type Page = { number: number; size: number; totalElements: number; totalP
 export type TagDefinitionManagement = { items: TagDefinition[]; page: Page }
 export type TagDefinitionAudit = { id: string; action: string; before: TagDefinition; after: TagDefinition; reason: string; changedByMemberId: string | null; changedAt: string; version: number }
 export type TagDefinitionHistory = { items: TagDefinitionAudit[]; page: Page }
+export type TagDefinitionMergePreview = {
+  source: TagDefinition
+  target: TagDefinition
+  affectedVisitCount: number
+  movedVisitTagCount: number
+  deduplicatedVisitTagCount: number
+  previewFingerprint: string
+}
+export type MergeTagDefinitionRequest = {
+  targetCode: string
+  expectedSourceVersion: number
+  expectedTargetVersion: number
+  previewFingerprint: string
+  reason: string
+}
+export type TagDefinitionMergeResult = {
+  mergeId: string
+  sourceCode: string
+  targetCode: string
+  affectedVisitCount: number
+  movedVisitTagCount: number
+  deduplicatedVisitTagCount: number
+  sourceVersion: number
+  targetVersion: number
+  mergedAt: string
+}
 export type TagDefinitionDraft = {
   code: string
   type: TagDefinitionType
@@ -95,6 +121,34 @@ export function validateTagEdit(edit: TagEdit, options: TagOption[], existingCod
     return '새로 선택하는 태그는 활성 상태여야 합니다.'
   }
   return null
+}
+
+export function mergeTargetOptions(source: TagDefinition | null, definitions: TagDefinition[]): TagDefinition[] {
+  if (!source || source.status !== 'ACTIVE') return []
+  return definitions.filter(definition =>
+    definition.status === 'ACTIVE' && definition.type === source.type && definition.code !== source.code,
+  )
+}
+
+export function validMergeReason(reason: string): boolean {
+  const length = reason.trim().length
+  return length >= 1 && length <= 1000
+}
+
+export function canExecuteTagMerge(input: {
+  targetCode: string
+  preview: TagDefinitionMergePreview | undefined
+  previewStale: boolean
+  reason: string
+  busy: boolean
+}): boolean {
+  return Boolean(
+    input.targetCode
+    && input.preview?.target.code === input.targetCode
+    && !input.previewStale
+    && validMergeReason(input.reason)
+    && !input.busy,
+  )
 }
 
 // 응답 본문을 읽는 동안에도 계정이 바뀔 수 있으므로 요청 전후 모두 검사한다.

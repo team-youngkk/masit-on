@@ -2,7 +2,7 @@
 .list, .detail { min-width: 0; padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-lg); }
 .toolbar, .pagination, .actions, .detail header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .toolbar label { display: flex; align-items: center; gap: var(--space-2); }
-.toolbar select, .detail input, .detail textarea { width: 100%; padding: var(--space-2); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); color: inherit; background: var(--color-surface); font: inherit; }
+.toolbar select, .detail input, .detail textarea, .detail select { width: 100%; padding: var(--space-2); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); color: inherit; background: var(--color-surface); font: inherit; }
 .list ul { display: grid; gap: var(--space-2); padding: 0; list-style: none; }
 .row, .selected { display: grid; grid-template-columns: 1fr auto; gap: var(--space-1) var(--space-3); width: 100%; padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: inherit; text-align: left; cursor: pointer; }
 .selected { border-color: var(--color-primary); background: var(--color-primary-soft); }
@@ -15,5 +15,13 @@
 .detail label { display: grid; gap: var(--space-1); font-weight: 600; }
 .detail small, .history span { color: var(--color-text-muted); font-weight: 400; }
 .history { display: grid; gap: var(--space-3); margin: 0; padding-left: var(--space-5); }
+.merge { display: grid; gap: var(--space-3); margin-top: var(--space-3); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-muted); }
+.merge p { color: var(--color-text-muted); }
+.impact { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); margin: 0; }
+.impact div { padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-surface); text-align: center; }
+.impact dt { color: var(--color-text-muted); font-size: .8rem; }
+.impact dd { margin: var(--space-1) 0 0; font-weight: 700; }
+.stale { display: grid; gap: var(--space-2); }
+.stale p { color: var(--color-danger); }
 .error { color: var(--color-danger); }
-@media (max-width: 56rem) { .layout { grid-template-columns: 1fr; } }
+@media (max-width: 56rem) { .layout { grid-template-columns: 1fr; } .impact { grid-template-columns: 1fr; } }

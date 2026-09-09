@@ -450,6 +450,14 @@ V10은 기존 seed와 AI 생성 정의의 표시명·JSONB 별칭을 역적재�
 
 비활성 정의는 자연어 사전과 신규 `visit_tag` 연결에서 제외한다. 비활성화 전 존재한 연결은 유지 또는 제거할 수 있지만 제거 뒤 재연결할 수 없다. 정의 상태 변경의 행 잠금과 신규 연결의 공유 잠금으로 두 쓰기를 직렬화한다.
 
+### 15.2 태그 정의 병합과 VisitTag provenance — 이슈 #366
+
+V13 `tag_definition_merge`는 원본·대상 정의, 병합 전후 원본과 대상 snapshot, 두 version, 미리보기 fingerprint, 사유·행위자·시각과 영향 건수를 원본별 한 건으로 보존한다. 원본은 `DEPRECATED`가 되며 병합된 원본은 재활성화할 수 없다. 원본 용어 행은 옮기지 않고 병합 경로를 따라 최종 `ACTIVE` 대상 코드로 해석한다.
+
+`visit_tag_merge_provenance`는 영향을 받은 원본 VisitTag의 변경 전 전체 JSONB snapshot을 기록한다. 중복 제거에서는 유지되는 대상 snapshot도 함께 기록한다. 대상 연결이 없으면 원본 행의 정의 FK만 바꿔 식별자·출처·신뢰도·근거·추출기 버전·AI snapshot 연결·생성 시각을 보존한다. 대상 연결이 있으면 기존 대상 행을 유지하고 원본 행을 삭제한다. provenance, FK 이동·삭제, 원본 상태·version, 상태 감사와 병합 감사는 한 트랜잭션이며 두 ledger는 append-only다.
+
+자동 역병합은 제공하지 않는다. 운영 복구는 두 ledger와 `tag_definition_audit`의 snapshot을 조회해 별도 검증된 전진 변경으로 수행한다. 상세 절차는 [병합 구현·복구 계획](../../08-planning/tag-definition-merge.md#5-복구)과 [ADR-DATA-013](../../07-adr/data/data-013-tag-definition-merge-provenance.md)을 따른다.
+
 ## 16. 동적 자연어 태그 사전 — 이슈 #364
 
 자연어 검색 Application Port는 `ACTIVE` `tag_definition`의 `tag_code`, `display_name`, `aliases`를 읽기 전용 사전 snapshot으로 제공한다. `DEPRECATED` 정의와 자동 검증 전 후보는 포함하지 않는다. 표시명·별칭은 15절과 같은 Unicode NFKC → 앞뒤 공백 제거 → 연속 Unicode 공백 한 칸 축약 → ASCII `A-Z` 소문자 변환 결과를 사용한다. 저장된 `tag_definition_term.normalized_term`은 이 결과의 데이터 정본이며 동적 사전 조회와 같은 정의에 속해야 한다.

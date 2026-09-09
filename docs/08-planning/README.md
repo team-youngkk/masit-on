@@ -68,6 +68,7 @@ related_documents:
 | [자연어 검색 부하 검증 모델](issue-207-natural-language-load-model.md) | 요청 제한과 충돌한 부하 모델을 계약 검증·포화 관찰로 분리한 기준, 실행 명령, 재측정 시 보존할 증적 |
 | [동적 자연어 태그 사전 구현 계획](dynamic-natural-language-tag-dictionary.md) | `ACTIVE` 태그 정의 연동, 결정적 별칭 해석, 30초 cache와 fail-closed 오류, Golden V1 회귀 범위 |
 | [관리자 태그 정의 생명주기 구현 계획](admin-tag-definition-lifecycle.md) | 표시명·별칭 수정, 비활성화·재활성화, 버전 충돌과 append-only 감사, 기존 VisitTag 경계 |
+| [중복 태그 병합 구현·복구 계획](tag-definition-merge.md) | 병합 미리보기, VisitTag 안전 이전, provenance·감사, 동시성·수동 복구 |
 | [배포 고도화 비용·일정 영향 검토](deployment-hardening-impact-review.md) | ADR-DEPLOY-002 3.1절이 착수 조건으로 남긴 비용·일정 영향 산정과 구성별 예산 대조, 착수 권고. `ACCEPTED` |
 | [배포 고도화 전환 기록](deployment-hardening-cutover-record.md) | ALB·Blue-Green·전용 Redis 전환의 실제 적용 결과, CI 경로에서만 드러난 결함 2건과 조치, 남은 작업. `In progress` |
 | [전환 후 런타임 실측 기준선](post-cutover-runtime-baseline.md) | 기존 ALB·Blue-Green 전환 직후의 무부하 실측값 보관본. 현재 단일 EC2 전환의 참고 자료 |
@@ -80,4 +81,5 @@ related_documents:
 - [관리자 방문 태그 조회·수정 계획](restaurant-visit-tag-editing.md) — [이슈 #358](https://github.com/team-youngkk/masit-on/issues/358)
 - [관리자 태그 정의 생성 및 상세 즉시 선택 계획](admin-tag-definition-creation.md) — [이슈 #363](https://github.com/team-youngkk/masit-on/issues/363)
 - [관리자 태그 정의 생명주기 계획](admin-tag-definition-lifecycle.md) — [이슈 #365](https://github.com/team-youngkk/masit-on/issues/365)
+- [중복 태그 병합 구현·복구 계획](tag-definition-merge.md) — [이슈 #366](https://github.com/team-youngkk/masit-on/issues/366)
 - [동적 자연어 태그 사전 구현 계획](dynamic-natural-language-tag-dictionary.md) — [이슈 #364](https://github.com/team-youngkk/masit-on/issues/364)

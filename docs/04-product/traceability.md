@@ -517,6 +517,8 @@ FR-AIEXTRACT-007·FR-NLSEARCH-004 → [맛집 상세 PRD](prd/detail/restaurant-
 
 [FR-ADMIN-006](../01-requirements/functional-requirements.md#fr-admin-006-관리자-태그-정의-생명주기-관리)·[BR-ADMIN-010](../01-requirements/business-rules.md#br-admin-010-태그-정의-상태와-감사) → [관리자 등록 PRD](prd/admin/admin-data-management.md)·[맛집 상세 PRD](prd/detail/restaurant-detail.md) → [태그 정의 API](../05-specs/api/admin/tag-definition-api.md) → `tag_definition`·`tag_definition_term`·`tag_definition_audit` → [구현 계획·검증](../08-planning/admin-tag-definition-lifecycle.md).
 
+[FR-ADMIN-007](../01-requirements/functional-requirements.md#fr-admin-007-관리자-중복-태그-병합)·[BR-ADMIN-011](../01-requirements/business-rules.md#br-admin-011-중복-태그-병합과-근거-보존) → [관리자 등록 PRD](prd/admin/admin-data-management.md) → [태그 정의 병합 API](../05-specs/api/admin/tag-definition-api.md#8-중복-태그-병합) → `tag_definition`·`visit_tag`·`tag_definition_merge`·`visit_tag_merge_provenance` → [ADR-DATA-013](../07-adr/data/data-013-tag-definition-merge-provenance.md) → [구현 계획·복구](../08-planning/tag-definition-merge.md).
+
 ### 동적 자연어 태그 사전 추적 — 이슈 #364
 
 [FR-NLSEARCH-004](../01-requirements/functional-requirements.md#fr-nlsearch-004-확정-태그-조건과-결과-조회)·[BR-NLSEARCH-003](../01-requirements/business-rules.md#br-nlsearch-003-태그-검색과-공개-visit-기준) → [자연어 탐색 PRD](prd/discovery/natural-language-restaurant-discovery.md) → [자연어 API](../05-specs/api/discovery/natural-language-restaurant-discovery-api.md) → `tag_definition`·`tag_definition_term` 읽기 → [해석 ADR](../07-adr/architecture/arch-005-natural-language-filter-interpretation.md) → [구현 계획·검증](../08-planning/dynamic-natural-language-tag-dictionary.md). WS-15의 태그 정의를 WS-14의 읽기 전용 Application Port로 공급하며 Visit 태그 AND 조회 의미는 유지한다.

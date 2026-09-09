@@ -283,3 +283,10 @@ V11은 코드와 `source=SEED`가 모두 일치하는 정의만 갱신한다. �
 - 정의별 버전 unique와 조회 인덱스를 추가하고 일반 UPDATE/DELETE를 트리거로 금지한다. 회원 탈퇴의 FK `SET NULL`만 허용한다.
 - V1~V11은 수정하지 않으며 기존 정의 ID·용어·VisitTag 참조를 그대로 보존한다.
 - 빈 DB의 V1~V12 순서, V11 상태에서의 전진 적용, 기존 참조 보존과 감사 변조 거부를 검증한다.
+
+## V13 태그 정의 병합 감사 — 이슈 #366
+
+- 기존 V12 테이블과 행을 수정하지 않고 `tag_definition_merge`, `visit_tag_merge_provenance`와 조회 인덱스를 전진 추가한다.
+- 원본별 단일 병합, 자기 병합 금지, 영향 건수 합계, provenance 역할·결과 조합과 append-only 트리거를 DB 제약으로 고정한다.
+- 회원 탈퇴는 병합 감사 행위자만 `SET NULL`로 익명화하며 정의·Visit·병합 FK는 `RESTRICT`한다.
+- 빈 DB의 V1~V13 순서, V12 상태 전진 적용, 기존 정의·용어·VisitTag 보존, 제약 위반과 감사 변조 거부를 PostgreSQL Testcontainers로 검증한다.
