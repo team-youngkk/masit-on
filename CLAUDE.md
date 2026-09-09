@@ -67,7 +67,7 @@ MVP 범위 밖 기능(지도, 찜, 테마 큐레이션, 일반 사용자 로그�
 | 영역 | 확정 |
 |---|---|
 | 백엔드 | Java 21, Spring Boot 4.1.0, Gradle 8.14.3 Groovy DSL, 단일 모듈 |
-| 프론트엔드 | Node.js 24.18.0, Next.js 16.2.11 App Router, TypeScript 7.0.2 |
+| 프론트엔드 | Node.js 24.18.0, Next.js 16.3.4 App Router, TypeScript 7.0.2 |
 | 데이터 | PostgreSQL 17.10, Spring Data JPA, Flyway 12.4.0, Redis 8.8 |
 | 인증 | Spring Security 7.1.0, JWT(RS256) + Redis Refresh Token, `ADMIN` 단일 역할 |
 | 외부 연동 | Kakao Local REST API V2, YouTube Data API v3 (Port/Adapter) |

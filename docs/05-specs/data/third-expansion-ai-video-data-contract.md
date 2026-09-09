@@ -23,6 +23,7 @@ related_documents:
   - ../../07-adr/integration/ext-003-ai-extraction-async-reliability.md
   - ../../07-adr/security/auth-007-unified-account-rbac-session.md
   - ../../08-planning/third-expansion-evaluation-strategy.md
+  - ../../08-planning/dynamic-natural-language-tag-dictionary.md
 ---
 
 # 3차 확장 AI 영상 추출 데이터 계약
@@ -49,7 +50,7 @@ related_documents:
 | AI Candidate Snapshot | 저장 | WS-15 | 필드별 후보·신뢰도·`TIMESTAMP`·`TEXT_RANGE`·`UNKNOWN` 근거·완전성·자동 등록 상태를 버전별 보존 |
 | AI Registration Unit | 저장 | WS-15 | Snapshot을 장소 단위로 나눈 등록 단위와 단위별 판정 상태·장소·카테고리 근거·등록 결과를 보존 |
 | AI Candidate Tag Review | 저장 | WS-15 | 후보 태그별 자동 판단·사후 보정·사유·주체·시각을 append-only로 보존 |
-| Tag Definition | 저장 | WS-15·WS-14 협업 | 허용 태그 코드·유형·표시명·별칭·활성 상태를 보존 |
+| Tag Definition·Term | 저장 | WS-15·WS-14 협업 | 허용 태그 코드·유형·표시명·별칭·활성 상태와 전역 고유 정규화 용어를 보존 |
 | Visit Tag | 저장 | WS-15 생성·WS-14 조회 | 관리자 확정 태그와 확정 Visit의 연결·근거·버전을 보존 |
 | AI Extraction Attempt | 저장 | WS-15 | 시도 횟수·오류 범주·처리 시간·Token·무료 quota 사용량 메타데이터만 보존 |
 | YouTube Channel Watch | 저장 | WS-15 | 관리자 활성화 채널·구독 상태·갱신·마지막 알림 상태를 보존 |
@@ -290,6 +291,8 @@ API 3.5절 `review`의 `CONFIRM`·`DISCARD`·`ROLLBACK`·`ADJUST_CATEGORY` 네 `
 
 AI·자연어 파서는 `ACTIVE` 정의만 사용한다. `DEPRECATED` 태그는 기존 확정 데이터의 이력을 보존하지만 신규 후보·검색 조건으로 사용하지 않는다.
 
+이슈 #363 이후 표시명·별칭 중복 판정의 정본은 V10 `tag_definition_term.normalized_term`이다. `tag_definition.display_name`과 `aliases`는 API 표시와 기존 소비자 호환을 위해 유지한다. ADMIN과 AI 생성 경로는 정의와 용어를 한 트랜잭션에서 함께 쓰며 일부만 성공할 수 없다. 이슈 #364부터 자연어 파서는 `ACTIVE` 정의의 코드·표시명·별칭을 동적으로 조회하고 V10과 같은 정규화 결과를 사용한다.
+
 초기 `tag_definition` seed는 다음 18개다. 18개는 초기값이며, AI가 기존에 없는 태그를 생성할 수 있다. 단, 태그 유형 자체를 새로 만들지는 않고 허용된 태그 유형·금지 표현·정규화·중복·근거 검사를 통과한 경우에만 자동 `ACTIVE`로 등록한다.
 
 | 유형 | 초기 태그 코드 |
@@ -391,6 +394,7 @@ Webhook Raw Payload, 원본 영상, 자동 수집 전체 자막, Gemini 응답 �
 - [ ] Worker 재기동·lease 만료·동시 claim 뒤 작업 유실·중복 후보·중복 정식 등록이 발생하지 않는다.
 - [ ] 후보 Snapshot 버전과 모델·Prompt·Schema 버전이 과거 결과를 덮어쓰지 않고 보존된다.
 - [ ] 허용 태그 정의·후보 태그·확정 `VisitTag`의 중복·공개·생명주기 규칙이 검증된다.
+- [ ] `ACTIVE` 정의·정규화 용어의 동적 자연어 사전 조회, `DEPRECATED` 제외, 결정적 순서와 DB 실패 격리가 검증된다.
 - [ ] 자동 태그 정규화·중복·근거 판단과 사후 보정 이력이 append-only로 보존되고, `UNKNOWN` AI 근거가 `AI_AUTO_CONFIRMED` `VisitTag`로 연결되지 않는다.
 - [ ] 원본 영상·자동 수집 전체 자막·AI 응답 전문·보완 텍스트 평문이 저장·로그·API 응답에 노출되지 않는다.
 - [ ] 보완 텍스트 암호문이 작업 종료 후 24시간 이내 삭제되고, 관리자 재시도가 이전 입력을 재사용하지 않는다.
@@ -417,3 +421,46 @@ Webhook Raw Payload, 원본 영상, 자동 수집 전체 자막, Gemini 응답 �
 Visit 행 잠금 안에서 revision을 증가시키고 연결 변경과 같은 트랜잭션에 INSERT한다. 일반 UPDATE/DELETE는 트리거로 금지한다. 회원 탈퇴 시 FK SET NULL로 행위자 연결만 익명화하고 다른 감사 값은 보존한다. 트리거는 해당 계정이 삭제된 경우의 actor NULL 전환만 예외로 허용한다. 최신 감사 revision과 현재 연결 상태의 해시를 동시성 토큰에 포함한다. no-op은 새 감사를 만들지 않는다. 기존 연결은 출처·근거·Snapshot을 유지하며 새 연결만 ADMIN_OVERRIDE/UNKNOWN으로 기록한다. 태그 정의 생성·사전 확대는 포함하지 않는다.
 
 감사는 자동 삭제하지 않으며 원본 영상·자막·개인정보 원문을 저장하지 않는다. 보존 정책 변경·purge는 별도 합의와 전진 변경 대상이다. 사용자의 기능 구현 요청을 근거로 작성했으며 팀 API·데이터 소유자 리뷰는 병합 전에 확인한다.
+
+## 15. 태그 정규화 용어 — 이슈 #363
+
+V10 `tag_definition_term`은 표시명과 별칭의 정규화 키를 태그 정의와 분리해 저장한다. 전역 unique 제약으로 ADMIN·AI 동시 생성에서도 의미가 같은 용어 하나만 등록되게 하며 #364의 동적 자연어 사전이 재사용한다.
+
+| 컬럼 | SQL 타입 | Null | 키·제약 | 설명 |
+|---|---|---:|---|---|
+| `id` | `uuid` | NN | PK | 용어 ID |
+| `tag_definition_id` | `uuid` | NN | FK → `tag_definition.id`, 삭제 RESTRICT | 소유 태그 정의 |
+| `term_kind` | `varchar(16)` | NN | `DISPLAY_NAME/ALIAS` | 표시명 또는 별칭 구분 |
+| `normalized_term` | `varchar(200)` | NN | 전역 unique, 빈 값 금지 | 중복 판정과 후속 자연어 사전 키 |
+| `created_at` | `timestamptz` | NN | 현재 시각 | 용어 생성 시각 |
+
+정규화는 원문에 Unicode NFKC, 앞뒤 공백 제거, 연속 Unicode 공백 한 칸 축약, ASCII `A-Z`를 `a-z`로 변환하는 순서로 적용한다. PostgreSQL과 Java는 같은 알고리즘과 Unicode 경계 corpus를 사용하며 결과는 1~200자여야 한다. ADMIN 표시명·별칭과 AI 신규 태그 후보의 `rawLabel`·`label` 원문은 각각 1~100자여야 한다. 원문이 100자 이하여도 NFKC 확장 뒤 200자를 넘으면 ADMIN은 필드 400 오류로 거부하고 AI 후보는 새 정의로 만들지 않는다. AI 후보가 원문 또는 정규화 상한을 위반하면 정식 정의 저장 전에 `TAG_POLICY`로 거부해 같은 등록 단위의 Restaurant·Visit 커밋을 방해하지 않는다. 표시명·별칭 원문은 기존 `tag_definition`에서 보존하고 용어 테이블에는 정규화 키만 저장한다. 한 태그 정의에는 `DISPLAY_NAME` 용어가 정확히 하나 있어야 하고, 전체 용어 수는 표시명 1개와 별칭 0~20개다. `normalized_term`은 ACTIVE와 DEPRECATED를 구분하지 않고 전역 고유하므로 폐기한 용어도 새 정의에서 재사용하지 않는다.
+
+V10은 기존 seed와 AI 생성 정의의 표시명·JSONB 별칭을 역적재한다. V9가 허용했던 연속·끝 밑줄의 `AI_AUTO` 코드는 축약·제거한 결과가 현재 형식과 유형 접두사를 만족하고 다른 코드와 충돌하지 않을 때만 정리하며 ID와 참조를 유지한다. 수동 출처, 복구 불가 값, 정리 후 충돌은 마이그레이션을 중단한다. 기존 AI 작성자가 표시명을 별칭에 다시 저장한 자기 중복은 해당 별칭만 JSONB에서 제거한다. 그 밖의 같은 정의 내부 중복과 서로 다른 정의의 정규화 용어 충돌은 임의 병합 없이 마이그레이션을 실패시킨다. 테스트 fixture도 V4의 18개 seed를 삭제하거나 대체하지 않고 그 위에 V10 역적재 결과를 검증한다.
+
+새 ADMIN 정의는 `source=MANUAL_OVERRIDE`, `status=ACTIVE`, `created_from_snapshot_id=null`이다. AI 정의는 기존 근거·출처 규칙을 유지하되 V10 이후 반드시 같은 정규화 함수와 용어 저장 경로를 사용한다. 정의 INSERT, 모든 용어 INSERT 중 하나라도 실패하면 요청 전체를 롤백한다. 이 생성은 Visit 연결 또는 `visit_tag_revision`을 만들지 않으며, 기존 방문 태그 교체가 별도로 성공할 때만 연결과 감사가 함께 기록된다.
+
+코드는 `^(MENU|TASTE|OCCASION|ATMOSPHERE)_[A-Z0-9]+(?:_[A-Z0-9]+)*$`이고 접두사가 `tag_type`과 일치해야 한다. 태그 정의 수정·비활성화·감사는 #365에서, 병합·VisitTag 이전과 물리 삭제는 #366 이후에서 다룬다. 별칭의 자연어 검색 정규화·모호성·상한·cache 계약은 16절과 [#364 구현 계획](../../08-planning/dynamic-natural-language-tag-dictionary.md)을 따른다.
+
+### 15.1 태그 정의 생명주기와 감사 — 이슈 #365
+
+`tag_definition.version`은 0부터 시작하고 실질 변경마다 1 증가한다. 코드·유형·출처는 불변이다. 표시명·별칭 수정은 `tag_definition_term`을 같은 트랜잭션에서 교체하며, 현재 상태와 관계없이 새 용어의 전역 unique를 검사한다. 제거된 용어는 재사용할 수 있고 과거 값은 감사 snapshot으로 보존한다.
+
+`tag_definition_audit`은 정의 FK, `UPDATE/DEPRECATE/REACTIVATE` 행위, 변경 전후 JSONB object snapshot, 사유, nullable 회원 행위자, 시각과 변경 뒤 버전을 저장한다. 정의별 버전은 unique다. 일반 UPDATE/DELETE는 트리거로 거부하고 회원 탈퇴 FK `SET NULL`에 따른 행위자 익명화만 허용한다.
+
+비활성 정의는 자연어 사전과 신규 `visit_tag` 연결에서 제외한다. 비활성화 전 존재한 연결은 유지 또는 제거할 수 있지만 제거 뒤 재연결할 수 없다. 정의 상태 변경의 행 잠금과 신규 연결의 공유 잠금으로 두 쓰기를 직렬화한다.
+
+## 16. 동적 자연어 태그 사전 — 이슈 #364
+
+자연어 검색 Application Port는 `ACTIVE` `tag_definition`의 `tag_code`, `display_name`, `aliases`를 읽기 전용 사전 snapshot으로 제공한다. `DEPRECATED` 정의와 자동 검증 전 후보는 포함하지 않는다. 표시명·별칭은 15절과 같은 Unicode NFKC → 앞뒤 공백 제거 → 연속 Unicode 공백 한 칸 축약 → ASCII `A-Z` 소문자 변환 결과를 사용한다. 저장된 `tag_definition_term.normalized_term`은 이 결과의 데이터 정본이며 동적 사전 조회와 같은 정의에 속해야 한다.
+
+사전 조회는 다음 결정성을 보장한다.
+
+- 하나의 정규화 용어가 둘 이상의 `ACTIVE` 코드에 매핑되면 해당 요청의 자연어 `tags` 조건 전체를 `UNRESOLVED_VALUE`로 처리한다. 데이터 제약이 정상인 경우 발생하지 않지만, 손상되거나 불일치한 snapshot을 임의로 선택하지 않는 방어 계약이다.
+- 별칭은 길이 내림차순 후 사전순으로 판정하고, 해석 결과의 태그 코드는 `tag_code` 사전순으로 반환한다.
+- 자연어에서 태그가 6개 이상 인식되면 앞의 5개만 적용하지 않고 자연어 `tags` 전체를 unresolved로 처리한다.
+- 여러 태그 검색은 기존과 같이 같은 공개·유효 Visit에 대한 AND이며, 직접 `filters.tags`가 있으면 직접 필터 우선과 충돌 표시 규칙을 적용한다.
+
+DB 조회 횟수는 라이브러리를 추가하지 않은 프로세스 내 read-through cache로 제한한다. 불변 snapshot TTL은 30초이며 생성·수정·폐기는 최대 30초 뒤 반영될 수 있다. 최초 적재와 만료 뒤 첫 요청은 사전을 갱신하고, 같은 시점의 동시 요청은 하나의 갱신 결과를 공유한다. 최초 적재 또는 만료 갱신에서 DB 조회가 실패하면 stale snapshot이나 초기 18개 seed로 대체하지 않고 `NATURAL_LANGUAGE_UNAVAILABLE` 503으로 fail-closed 처리한다.
+
+`parserVersion: P1`은 문장 패턴·조건 해석·충돌·상한·정규화 알고리즘의 버전이다. 동적 사전의 코드·표시명·별칭 데이터 변경만으로 버전을 증가시키지 않는다. V11은 V4 초기 18개 seed에서 빠진 기존 P1 별칭을 JSONB와 정규화 용어 정본에 함께 이관한다. 초기 seed와 별칭은 Golden V1 회귀 기준으로 보존하며 동적 전환 전후의 해석 결과가 같아야 한다.

@@ -130,3 +130,5 @@ related_documents:
 ## 방문 태그 보정 이력 — 이슈 #358
 
 visit_tag_revision은 변경 전후 코드와 당시 관리자 계정 ID·사유·시각을 보존하는 append-only 감사다. 자동 purge하지 않는다. AI 후보 감사의 1년 정책과 별도이며 일반 수정·삭제는 DB에서 거부한다. 회원 탈퇴의 FK SET NULL로 행위자 연결만 익명화하는 동작은 허용한다. 보존 정책 변경은 별도 합의와 전진 변경으로 수행한다. [정의](third-expansion-ai-video-data-contract.md)를 따른다.
+
+tag_definition은 물리 삭제하지 않고 `ACTIVE/DEPRECATED`를 전환한다. tag_definition_audit은 변경 전후 snapshot·사유·행위자·시각·버전을 기한 없이 보존하며 일반 수정·삭제를 거부한다. 회원 탈퇴 시 행위자 연결만 익명화한다. 비활성화 전 생성된 visit_tag는 유지·제거할 수 있고 제거 뒤 재연결할 수 없다.

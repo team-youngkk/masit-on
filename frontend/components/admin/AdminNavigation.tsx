@@ -15,6 +15,7 @@ const items = [
   { href: '/admin/curations', label: '큐레이션 관리', icon: '▤' },
   { href: '/admin/ai', label: 'AI 영상 추출 관리', icon: '▷' },
   { href: '/admin/ai/youtube-channel-watches', label: 'YouTube 채널 감시', icon: '◉' },
+  { href: '/admin/tag-definitions', label: '태그 정의 관리', icon: '#' },
   { href: '/admin/restaurants/new', label: '맛집 등록', icon: '⌁' },
   { href: '/admin/creators/new', label: '유튜버 등록', icon: '♙' },
   { href: '/admin/videos/new', label: '영상 등록', icon: '▹' },

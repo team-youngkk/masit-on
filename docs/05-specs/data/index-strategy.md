@@ -110,6 +110,8 @@ Creator 필터는 `visit`에서 고유 Restaurant ID를 구한 뒤 Restaurant의
 | `ix_ai_job__video_input_versions` | youtube_video_id·input_hash·Provider/Model/Prompt/Schema 버전 | 외부 검증 전 관리자 작업 재사용 조회 |
 | `ix_ai_job__video_mode_versions` | youtube_video_id·input_mode·Provider/Model/Prompt/Schema 버전 | 기존 Webhook 작업 호환 재사용 조회 |
 | `ix_ai_temporary_input__expires_at` | expires_at·job_id | 만료 임시 입력 cleanup 선택 |
+| `ux_tag_definition_term__normalized_term` | normalized_term unique | 표시명·별칭 전역 중복 및 동시 생성 차단 |
+| `ux_tag_definition_term__display_name_owner` | tag_definition_id, DISPLAY_NAME partial unique | 정의별 표시명 용어 하나 보장 |
 
 멱등성·Snapshot·시도·채널 감시의 unique 제약은 보조 인덱스를 별도로 중복 생성하지 않는다. 실제 운영 성능은 Worker claim·공개 태그 조회와 3차 성능 Task의 실행계획·부하 결과로 검증한다.
 
@@ -127,3 +129,7 @@ Creator 필터는 `visit`에서 고유 Restaurant ID를 구한 뒤 Restaurant의
 ## 방문 태그 보정 인덱스 — 이슈 #358
 
 visit_tag_revision(visit_id, revision) unique B-tree가 방문별 최신 revision 역방향 조회와 유일성을 함께 지원한다. 현재 연결 조회는 기존 VisitTag 방문/태그 unique 인덱스를 사용한다.
+
+## 관리자 태그 정의 용어 인덱스 — 이슈 #363
+
+V10은 `normalized_term` 전역 unique B-tree와 `term_kind='DISPLAY_NAME'`인 `tag_definition_id` partial unique를 추가한다. 전자는 사전 중복 확인과 동시 INSERT를 함께 확정하고 #364의 정규화 용어 조회에 재사용한다. 별칭 목록 크기는 정의당 최대 20개이므로 별도 `(tag_definition_id, term_kind)` 비고유 인덱스는 실제 실행계획에서 필요성이 확인되기 전 추가하지 않는다.

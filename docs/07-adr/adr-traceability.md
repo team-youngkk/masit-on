@@ -71,7 +71,7 @@ related_documents:
 | Spring Boot 4.1.0 | 고정 | Accepted ADR | [ADR-FRAME-001](platform/frame-001-spring-boot.md) | 백엔드 프레임워크 기준선 |
 | Spring Security 7.1.0 | BOM 파생·고정 | Duplicate or Derived Rule | [ADR-FRAME-001](platform/frame-001-spring-boot.md), [ADR-AUTH-007](security/auth-007-unified-account-rbac-session.md) | 버전은 Boot BOM 파생, 사용 방식은 통합 인증 결정에 종속 |
 | Node.js 24.18.0 LTS | 고정 | Accepted ADR | [ADR-WEB-001](platform/web-001-frontend-platform.md) | 프론트엔드 런타임 기준선 |
-| Next.js 16.2.11 + TypeScript 7.0.2 | 고정 | Accepted ADR | [ADR-WEB-001](platform/web-001-frontend-platform.md) | 웹 프레임워크·언어 기준선 |
+| Next.js 16.3.4 + TypeScript 7.0.2 | 고정 | Accepted ADR | [ADR-WEB-001](platform/web-001-frontend-platform.md) | 웹 프레임워크·언어 기준선 |
 | Server Components `fetch` + TanStack Query 5.101.4 | 확정 | Accepted ADR | [ADR-WEB-002](platform/web-002-data-state.md) | 초기·상호작용 데이터 책임 분리, 정확한 버전 고정 |
 | URL Query Parameter | 확정 | Accepted ADR | [ADR-WEB-002](platform/web-002-data-state.md) | 검색 상태의 공유·재현 |
 | React `useState` | 확정 | Duplicate or Derived Rule | [ADR-WEB-002](platform/web-002-data-state.md) | 화면 지역 상태 구현 규칙 |
@@ -115,7 +115,7 @@ related_documents:
 | 하루 1회 이상 최근 기록 cleanup | 1차 확장 적용 | Operational Configuration | [ADR-DATA-010](data/data-010-recent-view-retention-cleanup.md) | 신규 조회와 독립된 30일 경과 `recent_restaurant_view` 물리 삭제; 실패 관측·재시도 |
 | AI 제공자·모델 | Gemini Free Tier global endpoint, `gemini-3.5-flash-lite` | Accepted ADR | [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md) | 공개 YouTube URL 입력, 후보·검수·무료 quota·보존 기준 |
 | JSON Schema + Prompt Template | 현재 Prompt `P8`, 결과 Schema `S2`; 기존 `P1`·`P2`·`P3`·`P4`·`P5`·`P6`·`P7` 이력 보존 | Accepted ADR | [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md) | AI 후보 계약과 평가 기준에 연결 |
-| 자연어 조건 해석 | P1 규칙 기반·태그 18종·태그 AND·`UNRESOLVED` | Accepted ADR | [ADR-ARCH-005](architecture/arch-005-natural-language-filter-interpretation.md) | 임베딩·RAG 없이 WS-14 조회 애플리케이션에서 처리 |
+| 자연어 조건 해석 | P1 규칙 기반·ACTIVE 동적 태그 사전·초기 18종 Golden V1·태그 AND·`UNRESOLVED`·30초 TTL fail-closed | Accepted ADR | [ADR-ARCH-005](architecture/arch-005-natural-language-filter-interpretation.md) | 임베딩·RAG 없이 WS-14 조회 애플리케이션에서 처리 |
 | AI 추출 비동기 Worker | Worker 1개/인스턴스·lease 120초·polling 5초·재시도 고정, 용량 실측은 최종 게이트 | Accepted ADR | [ADR-EXT-003](integration/ext-003-ai-extraction-async-reliability.md) | 작업 상태·복구·비용 격리 |
 | JUnit 5 + Mockito | 확정 | Accepted ADR | [ADR-TEST-001](quality/test-001-automation-strategy.md) | 단위 테스트 기준 |
 | Spring Boot Test + Testcontainers 2.0.5 | 고정 | Accepted ADR | [ADR-TEST-001](quality/test-001-automation-strategy.md) | 실제 저장소 통합 검증 |

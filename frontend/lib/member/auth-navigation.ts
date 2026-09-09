@@ -21,6 +21,7 @@ const ADMIN_RETURN_TO_PATHS = new Set([
   '/admin/creators/new',
   '/admin/videos/new',
   '/admin/visits/new',
+  '/admin/tag-definitions',
 ])
 
 const AUTHENTICATION_PATHS = new Set(['/login', '/signup', '/verify-email', '/password-reset', '/admin/login'])

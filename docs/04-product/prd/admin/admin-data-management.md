@@ -11,6 +11,7 @@ related_requirements:
   - FR-ADMIN-002
   - FR-ADMIN-003
   - FR-ADMIN-004
+  - FR-ADMIN-005
   - FR-AUTH-004
   - FR-VISIT-001
 related_business_rules:
@@ -45,6 +46,7 @@ related_business_rules:
   - BR-ADMIN-006
   - BR-ADMIN-007
   - BR-ADMIN-008
+  - BR-ADMIN-009
   - BR-AUTH-009
   - BR-AUTH-010
 related_nfr:
@@ -72,6 +74,7 @@ related_documents:
   - ../../../02-analysis/mvp-workstreams.md
   - ../../../03-team/ownership.md
   - ../../../05-specs/api/admin/README.md
+  - ../../../05-specs/api/admin/tag-definition-api.md
   - ../../../05-specs/data/README.md
   - ../../../07-adr/security/auth-007-unified-account-rbac-session.md
   - ../../../07-adr/platform/web-006-unified-login-rbac-route.md
@@ -84,7 +87,7 @@ related_documents:
 
 ## 1. 문서 정보
 
-관리자 접근부터 맛집·유튜버·영상 기본 데이터, 방문 관계 등록과 사용자 조회 반영까지 하나의 완결된 [WS-04](../../../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 업무 흐름으로 정의한다. 로그인 화면은 일반 회원과 공유하고, 메인 페이지의 관리자 진입 링크에서 `/admin/restaurants/new`, `/admin/creators/new`, `/admin/videos/new`, `/admin/visits/new`로 이동한다. 백엔드 호출은 `/api/admin/**`를 사용한다.
+관리자 접근부터 맛집·유튜버·영상 기본 데이터, 방문 관계와 통제 태그 정의 등록, 사용자 조회 반영까지 관리 업무 흐름으로 정의한다. 로그인 화면은 일반 회원과 공유하고, 기본 데이터는 관리자 Route, 태그 정의는 공개 맛집 상세의 ADMIN 전용 방문 태그 패널에서 등록한다. 백엔드 호출은 `/api/admin/**`를 사용한다.
 
 ## 2. 기능 개요
 
@@ -102,7 +105,7 @@ related_documents:
 
 ## 5. 비목표
 
-관리자 회원가입·등급·세분 권한·계정 화면, 데이터 수정·삭제 UI, 승인 워크플로, 별도 검증 상태, 관리자 확인 없는 자동 등록·자동 주기 동기화, AI 추출, 영상 원본 저장과 실제 방문 날짜 관리는 목표가 아니다.
+관리자 회원가입·등급·세분 권한·계정 화면, 기본 데이터 수정·삭제 UI, 승인 워크플로, 별도 검증 상태, 관리자 확인 없는 자동 등록·자동 주기 동기화, AI 추출, 영상 원본 저장과 실제 방문 날짜 관리는 목표가 아니다. 이슈 #363은 태그 정의 생성만 포함하며 기존 태그 수정·비활성화·재활성화·병합·물리 삭제와 자연어 파서의 동적 DB 사전 전환은 제외한다.
 
 ## 6. 대상 사용자
 
@@ -152,6 +155,21 @@ related_documents:
 
 - 사용자 제보·신고는 2차 확장 범위에서 검토한다. 수정·삭제 UI는 정정 정책을 유지한 별도 범위 변경 후 검토한다.
 
+### 맛집 상세에서 태그 정의 생성 — 이슈 #363
+
+- ADMIN은 방문 태그 편집 중 유형·코드·표시명·선택적 별칭을 입력해 `ACTIVE`, `MANUAL_OVERRIDE` 태그를 생성한다.
+- 허용 유형은 `MENU`, `TASTE`, `OCCASION`, `ATMOSPHERE`이며 코드는 같은 유형 접두사를 사용한다.
+- 표시명과 별칭은 정규화 용어의 전역 고유성을 만족해야 한다. ADMIN과 AI 생성 경로 모두 태그 정의와 용어 행을 원자적으로 저장한다.
+- 생성 성공 즉시 TanStack Query의 활성 태그 목록을 갱신하고 새 태그를 현재 방문의 로컬 편집 상태에 선택한다. 기존 방문 태그 저장은 별도 동작이므로 생성만으로 `VisitTag`를 만들지 않는다.
+- 익명·MEMBER에게 생성 UI와 태그 코드를 노출하지 않는다. 공개 맛집 상세 응답은 변경하지 않는다.
+
+### 태그 정의 관리 — 이슈 #365
+
+- `/admin/tag-definitions`에서 상태별 정의 목록, 표시명·별칭 편집, 비활성화·재활성화와 변경 이력을 제공한다.
+- 모든 변경에 사유와 현재 버전이 필요하며 충돌 시 최신 데이터를 다시 확인하게 한다.
+- 비활성 정의는 자연어 검색과 신규 방문 태그 선택에서 제외하고, 기존 연결은 유지·제거할 수 있게 표시한다.
+- 검색 사전 반영에는 최대 30초가 걸릴 수 있음을 관리자에게 안내한다.
+
 ## 10. 제품 요구사항
 
 | PRD 요구사항 | 제품 동작 | 관련 기능 요구사항 | 중요도 | 상태 |
@@ -161,12 +179,14 @@ related_documents:
 | PR-ADMIN-003 | YouTube 채널 단위 유튜버 정보를 검증해 등록한다. | [FR-ADMIN-003](../../../01-requirements/functional-requirements.md#fr-admin-003-유튜버-정보-등록) | Must | 확정 |
 | PR-ADMIN-004 | 방문 근거로 사용할 영상 정보와 원본 링크를 검증해 등록한다. | [FR-ADMIN-004](../../../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록) | Must | 확정 |
 | PR-ADMIN-005 | 존재하는 세 대상과 실제 방문 영상을 근거로 고유 방문 관계를 등록한다. | [FR-VISIT-001](../../../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록) | Must | 확정 |
+| PR-ADMIN-006 | 맛집 상세의 관리자 태그 편집 중 전역 중복 없는 활성 태그 정의를 생성한다. | [FR-ADMIN-005](../../../01-requirements/functional-requirements.md#fr-admin-005-관리자-태그-정의-생성) | Must | 확정 |
+| PR-ADMIN-007 | 태그 정의를 버전·사유·감사와 함께 수정하고 비활성화·재활성화한다. | [FR-ADMIN-006](../../../01-requirements/functional-requirements.md#fr-admin-006-관리자-태그-정의-생명주기-관리) | Must | 확정 |
 
 ## 11. 비즈니스 규칙
 
 - 기본 데이터 최소 정보·동일성·공개 조건은 [BR-RESTAURANT-003](../../../01-requirements/business-rules.md#br-restaurant-003-맛집-최소-등록-정보)~[BR-RESTAURANT-008](../../../01-requirements/business-rules.md#br-restaurant-008-맛집-공개-조건), [BR-CREATOR-001](../../../01-requirements/business-rules.md#br-creator-001-유튜버-정보의-의미)~[BR-CREATOR-003](../../../01-requirements/business-rules.md#br-creator-003-동일-채널-중복-판단), [BR-CREATOR-005](../../../01-requirements/business-rules.md#br-creator-005-방문-관계의-유튜버-일치), [BR-VIDEO-001](../../../01-requirements/business-rules.md#br-video-001-영상의-의미와-보관-범위)~[BR-VIDEO-006](../../../01-requirements/business-rules.md#br-video-006-게시일과-방문일의-구분)을 따른다.
 - 관계의 구성·근거·중복·참조·유효성과 날짜 제외는 [BR-VISIT-001](../../../01-requirements/business-rules.md#br-visit-001-방문-관계의-구성)~[BR-VISIT-007](../../../01-requirements/business-rules.md#br-visit-007-등록-완료와-검증-상태)을 따른다.
-- 접근, 사실·정합성 검증, 조회 반영, MVP 경계, 정정·동시성·보류는 [BR-ADMIN-001](../../../01-requirements/business-rules.md#br-admin-001-관리자-권한-검증)~[BR-ADMIN-008](../../../01-requirements/business-rules.md#br-admin-008-보류-요청의-처리)을 따른다.
+- 접근, 사실·정합성 검증, 조회 반영, MVP 경계, 정정·동시성·보류는 [BR-ADMIN-001](../../../01-requirements/business-rules.md#br-admin-001-관리자-권한-검증)~[BR-ADMIN-008](../../../01-requirements/business-rules.md#br-admin-008-보류-요청의-처리)을 따른다. 태그 표시명·별칭의 전역 고유성과 원자적 생성은 [BR-ADMIN-009](../../../01-requirements/business-rules.md#br-admin-009-태그-용어의-전역-고유성과-원자적-생성)를 따른다.
 - 공개·비공개와 상태 변경 일관성은 [BR-PUBLICATION-001](../../../01-requirements/business-rules.md#br-publication-001-일반-사용자-공개-범위), [BR-PUBLICATION-002](../../../01-requirements/business-rules.md#br-publication-002-비공개-데이터의-접근), [BR-PUBLICATION-008](../../../01-requirements/business-rules.md#br-publication-008-상태-변경의-일관성)을 따른다.
 
 ## 12. 예외 및 경계 상황
@@ -180,6 +200,7 @@ related_documents:
 | 참조 대상 없음·게시 채널 불일치·근거 없음 | 방문 관계를 등록하지 않는다. |
 | 동일성 판정 불가 | 일반 사용자에게 노출하지 않고 보류한다. |
 | 단계 중 실패 | 불완전 데이터나 관계가 공개되지 않도록 원자성을 유지한다. |
+| 태그 코드·표시명·별칭 중복 또는 동시 생성 충돌 | 태그 정의와 용어를 모두 롤백하고 기존 정의를 변경하지 않는다. |
 
 ## 13. 품질 요구사항
 
@@ -211,7 +232,7 @@ related_documents:
 
 ## 17. 완료 기준
 
-- 5개 요구사항과 관련 규칙의 구현·자동화 테스트가 완료된다.
+- 6개 요구사항과 관련 규칙의 구현·자동화 테스트가 완료된다.
 - 인증, 필수값, 중복·동시성, 참조·채널 일치, 원자성과 보류 시나리오가 통과한다.
 - 세 조회 Workstream에서 실제 등록 결과를 인수 검증한다.
 - API·인증·오류 계약, 운영 문서와 추적성이 실제 동작과 일치한다.

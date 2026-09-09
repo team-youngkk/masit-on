@@ -255,3 +255,31 @@ V6은 1~3번을 전진 적용하고, V7은 승인 입력 적재 뒤 4~10번을 �
 ## V9 방문 태그 보정 감사 — 이슈 #358
 
 V9__add_visit_tag_revision.sql은 visit_tag_revision과 불변 감사 트리거를 추가한다. V1~V8은 수정하지 않는다. 빈 DB 및 V8→V9 적용, FK·unique·배열·사유·불변성, 수정·감사 원자성을 검증한다. [AI 데이터 계약 14절](third-expansion-ai-video-data-contract.md#14-맛집-상세의-방문-태그-보정-감사--이슈-358)을 따른다. 번호 충돌은 병합 전 데이터 소유자 리뷰에서 확인한다.
+
+## V10 태그 정의 정규화 용어 — 이슈 #363
+
+`V10__add_tag_definition_term.sql`은 정규화 함수와 `tag_definition_term`을 추가하고 기존 `tag_definition.display_name`·`aliases`를 역적재한다. 적용된 V1~V9는 수정하지 않는다. 기존 AI 작성자가 표시명과 같은 값을 자기 별칭으로 자동 저장한 `AI_AUTO` 행은 그 중복 별칭만 JSONB에서 제거한 뒤 역적재한다. 의미가 같은 별칭을 잃는 변경이 아니며 다른 출처나 서로 다른 정의의 충돌에는 적용하지 않는다.
+
+적용 순서는 다음과 같다.
+
+1. Unicode NFKC, trim, 연속 Unicode 공백 축약, ASCII `A-Z`를 `a-z`로 변환하는 DB 정규화 함수를 만든다. Java와 PostgreSQL은 Unicode 경계 corpus로 결과 동등성을 검증한다.
+2. V9가 허용한 연속·끝 밑줄이 있는 `AI_AUTO` 코드는 유형 접두사와 유일성이 보존되는 경우에만 밑줄을 축약·제거한다. ID와 참조는 유지하며 수동 출처·복구 불가 코드·정리 후 충돌은 전체 마이그레이션을 실패시킨다.
+3. `AI_AUTO`의 표시명 자기 중복 별칭만 제거하고, 나머지 역적재 대상에 빈 값·200자 초과·정규화 용어 충돌이 있는지 검사한다. 하나라도 있으면 원본 태그를 임의 변경하거나 합치지 않고 마이그레이션을 실패시킨다.
+4. term 테이블과 CHECK·FK를 만들고 표시명 1개와 모든 JSONB 별칭을 역적재한다.
+5. `normalized_term` 전역 unique와 정의별 DISPLAY_NAME partial unique를 만든다.
+6. 태그 코드 형식과 `tag_type` 접두사 일치 CHECK를 기존 행 검증과 함께 추가한다.
+
+빈 DB V1→V10과 V9→V10 전진 적용, V4 18개 seed 보존, V9 유효 AI legacy 코드의 무손실 정리, 기존 AI 태그 역적재, Unicode·공백·ASCII 대소문자 정규화 동등성, 기존 충돌 시 전체 실패, ADMIN·AI 동시 생성 unique, 정의·용어 원자성을 검증한다. 다른 통합 테스트가 migration 목록을 고정한다면 V10을 포함하도록 기대값을 갱신하되 seed를 삭제해 통과시키지 않는다. [AI 데이터 계약 15절](third-expansion-ai-video-data-contract.md#15-태그-정규화-용어--이슈-363)을 따른다.
+
+## V11 초기 자연어 태그 별칭 이관 — 이슈 #364
+
+`V11__backfill_natural_language_tag_aliases.sql`은 V4의 초기 18개 `SEED` 태그에서 누락된 기존 P1 자연어 별칭을 `tag_definition.aliases`와 `tag_definition_term`에 함께 이관한다. 적용된 V4·V10을 수정하지 않으며 태그 코드·표시명·상태와 Visit 연결은 변경하지 않는다.
+
+V11은 코드와 `source=SEED`가 모두 일치하는 정의만 갱신한다. 별칭 용어는 V10 정규화 함수를 사용하고 기존 전역 unique 제약을 그대로 적용하므로 다른 정의의 용어와 충돌하면 마이그레이션 전체가 실패한다. 빈 DB V1→V11 적용, Flyway 이력, `MENU_NAENGMYEON`과 `TASTE_SPICY`를 포함한 별칭 역적재, 초기 18개 Golden V1 회귀를 검증한다. [AI 데이터 계약 16절](third-expansion-ai-video-data-contract.md#16-동적-자연어-태그-사전--이슈-364)을 따른다.
+## V12 태그 정의 생명주기 감사 — 이슈 #365
+
+- `tag_definition.version bigint NOT NULL DEFAULT 0 CHECK (version >= 0)`을 전진 추가한다.
+- `tag_definition_audit`에 정의 FK, 행위, 변경 전후 JSONB object snapshot, 사유, nullable 회원 행위자, 시각과 변경 뒤 버전을 둔다.
+- 정의별 버전 unique와 조회 인덱스를 추가하고 일반 UPDATE/DELETE를 트리거로 금지한다. 회원 탈퇴의 FK `SET NULL`만 허용한다.
+- V1~V11은 수정하지 않으며 기존 정의 ID·용어·VisitTag 참조를 그대로 보존한다.
+- 빈 DB의 V1~V12 순서, V11 상태에서의 전진 적용, 기존 참조 보존과 감사 변조 거부를 검증한다.

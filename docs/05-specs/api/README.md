@@ -96,3 +96,4 @@ related_documents:
 ## 관리자 상세 태그 보정
 
 - [방문 태그 조회·수정 API](admin/restaurant-visit-tags-api.md): 맛집 공개 상세의 ADMIN 전용 패널, 이슈 #358.
+- [태그 정의 조회·생성 API](admin/tag-definition-api.md): 활성 태그 선택 목록과 전역 중복 없는 ADMIN 생성, 이슈 #363.

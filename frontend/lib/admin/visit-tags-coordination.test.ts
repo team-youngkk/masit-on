@@ -1,6 +1,16 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { adminTagScope, validateTagEdit, withinAdminScope } from './visit-tags-coordination.ts'
+import {
+  adminTagScope,
+  appendTagDefinition,
+  appendTagDefinitionToList,
+  prepareTagDefinition,
+  selectCreatedTag,
+  validateTagDefinition,
+  validateTagEdit,
+  withinAdminScope,
+  type TagDefinition,
+} from './visit-tags-coordination.ts'
 
 const admin = { id: 'admin-a', role: 'ADMIN' }
 const option = { code: 'MENU_NOODLES', displayName: '국수', type: 'MENU' }
@@ -18,6 +28,7 @@ test('태그 전체 해제와 50개 저장은 허용하고 사유·비활성·�
   assert.ok(validateTagEdit({ ...edit, reason: '  ' }, [option]))
   assert.ok(validateTagEdit({ ...edit, reason: '가'.repeat(1001) }, [option]))
   assert.ok(validateTagEdit({ ...edit, tagCodes: ['INACTIVE'] }, [option]))
+  assert.equal(validateTagEdit({ ...edit, tagCodes: ['INACTIVE'] }, [option], ['INACTIVE']), null)
   assert.ok(validateTagEdit({ ...edit, tagCodes: [option.code, option.code] }, [option]))
   const options = Array.from({ length: 51 }, (_, index) => ({ ...option, code: `TAG_${index}` }))
   assert.equal(validateTagEdit({ ...edit, tagCodes: options.slice(0, 50).map(tag => tag.code) }, options), null)
@@ -52,4 +63,49 @@ test('동일 ADMIN 세션의 요청 성공과 서버 오류를 호출자에게 �
   assert.equal(await withinAdminScope(admin.id, async () => admin, async () => 'tags'), 'tags')
   const conflict = new Error('VISIT_TAG_CONCURRENT_UPDATE')
   await assert.rejects(withinAdminScope(admin.id, async () => admin, async () => { throw conflict }), error => error === conflict)
+})
+
+const created: TagDefinition = {
+  code: 'OCCASION_FAMILY',
+  type: 'OCCASION',
+  displayName: '가족 모임',
+  aliases: ['가족식사'],
+  status: 'ACTIVE',
+  source: 'MANUAL_OVERRIDE',
+  version: 0,
+}
+
+test('태그 생성 입력을 trim하고 줄 단위 별칭 배열로 변환한다', () => {
+  assert.deepEqual(prepareTagDefinition({
+    code: ' OCCASION_FAMILY ',
+    type: 'OCCASION',
+    displayName: ' 가족 모임 ',
+    aliases: ' 가족식사 \n\n 가족 외식 ',
+  }), {
+    code: 'OCCASION_FAMILY',
+    type: 'OCCASION',
+    displayName: '가족 모임',
+    aliases: ['가족식사', '가족 외식'],
+  })
+})
+
+test('태그 생성의 코드 형식·유형 접두사·길이·정규화 중복을 검증한다', () => {
+  assert.deepEqual(validateTagDefinition({ code: created.code, type: created.type, displayName: created.displayName, aliases: created.aliases }), {})
+  assert.ok(validateTagDefinition({ code: 'occasion_family', type: 'OCCASION', displayName: created.displayName, aliases: [] }).code)
+  assert.ok(validateTagDefinition({ code: 'MENU_FAMILY', type: 'OCCASION', displayName: created.displayName, aliases: [] }).code)
+  assert.ok(validateTagDefinition({ code: created.code, type: created.type, displayName: '', aliases: [] }).displayName)
+  assert.ok(validateTagDefinition({ code: created.code, type: created.type, displayName: 'ＡＢＣ', aliases: [' abc '] }).aliases)
+  assert.ok(validateTagDefinition({ code: created.code, type: created.type, displayName: created.displayName, aliases: Array(21).fill('별칭') }).aliases)
+})
+
+test('생성 성공 시 두 목록 캐시에 한 번만 추가하고 편집 값과 사유를 보존해 선택한다', () => {
+  const visitTags = { items: [], tagOptions: [option] }
+  assert.deepEqual(appendTagDefinition(visitTags, created)?.tagOptions.map(tag => tag.code), [option.code, created.code])
+  assert.strictEqual(appendTagDefinition({ items: [], tagOptions: [created] }, created)?.tagOptions[0], created)
+  assert.deepEqual(appendTagDefinitionToList(undefined, created), { items: [created] })
+  assert.deepEqual(appendTagDefinitionToList({ items: [created] }, created), { items: [created] })
+
+  const edit = { expectedVersion: 'opaque', tagCodes: [option.code], reason: '영상 확인' }
+  assert.deepEqual(selectCreatedTag(edit, created.code), { ...edit, tagCodes: [option.code, created.code] })
+  assert.strictEqual(selectCreatedTag({ ...edit, tagCodes: [created.code] }, created.code).reason, edit.reason)
 })

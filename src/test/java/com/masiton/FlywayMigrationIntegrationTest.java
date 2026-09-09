@@ -49,9 +49,9 @@ class FlywayMigrationIntegrationTest extends com.masiton.test.FullContextIntegra
     private MemberSessionRevocationStore memberSessionRevocationStore;
 
     @Test
-    @DisplayName("빈 데이터베이스에 V1부터 V9까지 계약된 순서와 파일명으로 성공 기록된다")
-    void 마이그레이션적용_빈데이터베이스_V1부터V9까지계약된순서와파일명으로성공기록된다() {
-        // given: 컨텍스트 기동 시점에 Flyway가 V1부터 V9 변경을 적용했다.
+    @DisplayName("빈 데이터베이스에 V1부터 V12까지 계약된 순서와 파일명으로 성공 기록된다")
+    void 마이그레이션적용_빈데이터베이스_V1부터V12까지계약된순서와파일명으로성공기록된다() {
+        // given: 컨텍스트 기동 시점에 Flyway가 V1부터 V12 변경을 적용했다.
 
         // when
         List<AppliedMigration> appliedMigrations = jdbcTemplate.query(
@@ -83,8 +83,48 @@ class FlywayMigrationIntegrationTest extends com.masiton.test.FullContextIntegra
                 new AppliedMigration("8", "add ai registration unit and food category mapping", "SQL",
                         "V8__add_ai_registration_unit_and_food_category_mapping.sql", true),
                 new AppliedMigration("9", "add visit tag revision", "SQL",
-                        "V9__add_visit_tag_revision.sql", true)
+                        "V9__add_visit_tag_revision.sql", true),
+                new AppliedMigration("10", "add tag definition term", "SQL",
+                        "V10__add_tag_definition_term.sql", true),
+                new AppliedMigration("11", "backfill natural language tag aliases", "SQL",
+                        "V11__backfill_natural_language_tag_aliases.sql", true),
+                new AppliedMigration("12", "add tag definition lifecycle audit", "SQL",
+                        "V12__add_tag_definition_lifecycle_audit.sql", true)
         );
+    }
+
+    @Test
+    @DisplayName("초기 태그 별칭은 JSONB와 정규화 용어 정본에 함께 이관된다")
+    void 태그별칭조회_V11적용후_기존자연어사전과동일하게이관된다() {
+        // when
+        List<String> seedTerms = jdbcTemplate.queryForList(
+                "SELECT definition.tag_code || ':' || term.normalized_term FROM tag_definition definition "
+                        + "JOIN tag_definition_term term ON term.tag_definition_id = definition.id "
+                        + "WHERE definition.source = 'SEED'",
+                String.class);
+        String aliases = jdbcTemplate.queryForObject(
+                "SELECT aliases::text FROM tag_definition WHERE tag_code = 'TASTE_SPICY'",
+                String.class);
+
+        // then
+        assertThat(seedTerms).containsExactlyInAnyOrder(
+                "MENU_NAENGMYEON:냉면", "MENU_NAENGMYEON:물냉면", "MENU_NAENGMYEON:비빔냉면",
+                "MENU_GUKBAP:국밥", "MENU_RAMEN:라멘", "MENU_SUSHI:스시", "MENU_SUSHI:초밥",
+                "MENU_PIZZA:피자", "MENU_SAMGYEOPSAL:삼겹살",
+                "TASTE_SPICY:매운맛", "TASTE_SPICY:매운", "TASTE_SPICY:매콤",
+                "TASTE_SWEET:단맛", "TASTE_SWEET:달콤", "TASTE_SWEET:달달",
+                "TASTE_SAVORY:감칠맛", "TASTE_SAVORY:고소",
+                "TASTE_LIGHT:담백한 맛", "TASTE_LIGHT:담백", "TASTE_LIGHT:깔끔한 맛",
+                "OCCASION_SOLO:혼밥", "OCCASION_SOLO:혼자 식사", "OCCASION_SOLO:혼자 먹기",
+                "OCCASION_DATE:데이트", "OCCASION_DATE:연인과",
+                "OCCASION_GROUP:모임", "OCCASION_GROUP:회식", "OCCASION_GROUP:단체 모임",
+                "OCCASION_LATE_NIGHT:야식", "OCCASION_LATE_NIGHT:늦은 밤", "OCCASION_LATE_NIGHT:심야",
+                "ATMOSPHERE_CASUAL:캐주얼", "ATMOSPHERE_CASUAL:편안한 분위기",
+                "ATMOSPHERE_QUIET:조용한", "ATMOSPHERE_QUIET:조용한 분위기",
+                "ATMOSPHERE_LIVELY:활기찬", "ATMOSPHERE_LIVELY:북적이는",
+                "ATMOSPHERE_LIVELY:활기찬 분위기", "ATMOSPHERE_BAR:바",
+                "ATMOSPHERE_BAR:바 분위기", "ATMOSPHERE_BAR:포차 분위기");
+        assertThat(aliases).isEqualTo("[\"매운\", \"매콤\"]");
     }
 
     @Test
