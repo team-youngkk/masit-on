@@ -90,11 +90,12 @@ related_documents:
 | `npm audit --omit=dev --audit-level=high` | 통과, 취약점 0건 | Next.js·sharp 보안 감사 차단 해소 |
 | `npm ls next typescript sharp postcss nanoid` | 통과 | 고정 버전 Next.js 16.3.4, TypeScript 7.0.2, sharp 0.35.4 확인 |
 | `git diff --check` | 통과 | 코드·문서 패치 공백 오류 없음 |
+| PR #379 원격 CI | 통과 | 백엔드 빌드·테스트, 프론트 빌드·타입 검사·보안 감사, Terraform 계약, RSA 개인키 검사 |
 
 ## 8. 재발 방지 및 다음 확인
 
 - 재발 방지: 서로 다른 정의의 용어 교환과 매우 큰 페이지를 PostgreSQL 통합 테스트에 추가했다.
-- 다음 확인: 원격 CI에서 전체 백엔드·프론트 회귀를 재확인한다.
+- 다음 확인: 원격 CI에서 전체 백엔드·프론트 회귀 통과를 확인했다.
 
 ## 9. 도입 전후 비교 지표
 
@@ -108,4 +109,4 @@ related_documents:
 
 ## 10. 남은 사항
 
-- 신규 복귀 경로 수정의 원격 CI 확인과 네 번째 리뷰 스레드 답글·해결 처리가 남아 있다. 앞선 세 스레드는 답글과 해결 처리를 완료했다.
+- 없음. 네 건의 리뷰 지적에 대한 수정과 원격 검증을 완료했다.
