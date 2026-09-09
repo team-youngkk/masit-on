@@ -18,12 +18,19 @@ public interface ManageTagDefinitionsUseCase {
 
     HistoryResult history(String code, int page, int size);
 
+    MergePreview previewMerge(String sourceCode, String targetCode);
+
+    MergeResult merge(String sourceCode, MergeCommand command, String memberId);
+
     record CreateCommand(String code, String type, String displayName, List<String> aliases) {
     }
 
     record UpdateCommand(Long expectedVersion, String displayName, List<String> aliases, String reason) { }
 
     record StatusCommand(Long expectedVersion, String status, String reason) { }
+
+    record MergeCommand(String targetCode, Long expectedSourceVersion, Long expectedTargetVersion,
+                        String previewFingerprint, String reason) { }
 
     record TagDefinition(String code, String type, String displayName, List<String> aliases,
                          String status, String source, long version) {
@@ -40,4 +47,12 @@ public interface ManageTagDefinitionsUseCase {
 
     record AuditEntry(String id, String action, TagDefinition before, TagDefinition after, String reason,
                       String changedByMemberId, OffsetDateTime changedAt, long version) { }
+
+    record MergePreview(TagDefinition source, TagDefinition target,
+                        long affectedVisitCount, long movedVisitTagCount, long deduplicatedVisitTagCount,
+                        String previewFingerprint) { }
+
+    record MergeResult(String mergeId, String sourceCode, String targetCode, long sourceVersion,
+                       long targetVersion, long affectedVisitCount, long movedVisitTagCount,
+                       long deduplicatedVisitTagCount, OffsetDateTime mergedAt) { }
 }

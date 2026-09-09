@@ -53,6 +53,7 @@ related_documents:
   - ../08-planning/third-expansion-task-breakdown.md
   - data/data-011-popular-restaurant-request-time-aggregation.md
   - data/data-012-second-expansion-retention-cleanup.md
+  - data/data-013-tag-definition-merge-provenance.md
   - integration/notify-002-in-app-notification-reliability.md
 ---
 
@@ -293,6 +294,7 @@ Accepted 세 건은 현재 요구사항을 구현하는 최소 구조만 승인�
 | [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md) | Gemini 현재 P8/S2·기존 P1·P2·P3·P4·P5·P6·P7 이력·후보 Snapshot·근거·자동 검증·무료 quota | `TST-E3-AI-001~003`, `TST-E3-SEC-001`, [`EVAL-AI-001~010` 역사적 P1 계약 자산·dry-run·HOLD 기록](../08-planning/third-expansion-ai-evaluation-result.md) | `E3-T03~08` |
 | [ADR-EXT-003](integration/ext-003-ai-extraction-async-reliability.md) | PostgreSQL claim·lease·heartbeat·retry·재기동·단일 EC2 | `TST-E3-AI-004`, `TST-E3-DATA-001`, `E3-T13` 증거 | `E3-T04~05`, `E3-T13` |
 | [ADR-ROUTE-001](integration/route-001-kakao-mobility-course-routing.md) | Mobility `/v1/directions`·순서·TTL·캐시 없음·호출/비용 | `TST-E3-COURSE-001~003`, `EVAL-COURSE-001~005`, `E3-T13` 증거 | `E3-T09~10`, `E3-T13` |
+| [ADR-DATA-013](data/data-013-tag-definition-merge-provenance.md) | 원본별 병합 경로·VisitTag 변경 전 provenance·전진 복구 | 병합 API·마이그레이션·자연어 사전 통합 테스트 | 이슈 #366 |
 | [ADR-TEST-001](quality/test-001-automation-strategy.md), [ADR-PERF-001](quality/perf-001-k6-load-testing.md) | 테스트 계층·WireMock·Testcontainers·부하 실행 | `TST-E3-DATA-001`, `TST-E3-E2E-001`, `TST-E3-PERF-001` | `E3-T11~13` |
 
 3차 확장 ADR은 Accepted 정책이며, 각 행의 테스트·평가·운영 증거는 [3차 확장 운영 완료 기록](../08-planning/third-expansion-operational-completion-record.md)과 관련 기준선 문서에 연결한다. 조건부·Post-MVP ADR은 이 추적표의 3차 완료 Task에 포함하지 않는다.

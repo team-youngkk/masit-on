@@ -11,6 +11,9 @@ import {
   type TagEdit,
   type TagDefinitionManagement,
   type TagDefinitionHistory,
+  type MergeTagDefinitionRequest,
+  type TagDefinitionMergePreview,
+  type TagDefinitionMergeResult,
 } from './visit-tags-coordination.ts'
 
 export function getTagDefinitions(accountId: string, signal: AbortSignal) {
@@ -50,6 +53,20 @@ export function getTagDefinitionHistory(accountId: string, code: string, page: n
   return withinAdminScope(accountId, ensureMemberSession, () => adminJson<TagDefinitionHistory>(
     `/api/admin/tag-definitions/${encodeURIComponent(code)}/history?page=${page}&size=20`,
     { cache: 'no-store', signal },
+  ), signal)
+}
+
+export function getTagDefinitionMergePreview(accountId: string, sourceCode: string, targetCode: string, signal: AbortSignal) {
+  return withinAdminScope(accountId, ensureMemberSession, () => adminJson<TagDefinitionMergePreview>(
+    `/api/admin/tag-definitions/${encodeURIComponent(sourceCode)}/merge-preview?targetCode=${encodeURIComponent(targetCode)}`,
+    { cache: 'no-store', signal },
+  ), signal)
+}
+
+export function mergeTagDefinition(accountId: string, sourceCode: string, request: MergeTagDefinitionRequest, signal: AbortSignal) {
+  return withinAdminScope(accountId, ensureMemberSession, () => adminJson<TagDefinitionMergeResult>(
+    `/api/admin/tag-definitions/${encodeURIComponent(sourceCode)}/merge`,
+    { method: 'POST', signal, body: JSON.stringify({ ...request, reason: request.reason.trim() }) },
   ), signal)
 }
 

@@ -241,6 +241,8 @@ V3 전진 적용과 전체 FK·UNIQUE·CHECK·인덱스는 `TST-E2-E2E-001`, `E2
 | `youtube_channel_watch` | FR-AIEXTRACT-004·006, API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | Creator·channel unique, 구독·갱신·오류 상태 | WS-15 | 구독 확인·중복 알림·해지·renewal 실패 |
 | `tag_definition` | FR-AIEXTRACT-007·FR-ADMIN-005·FR-NLSEARCH-004, BR-AIEXTRACT-008·BR-ADMIN-009·BR-NLSEARCH-003, API-ADMIN-AIEXTRACT-001·API-ADMIN-TAG-DEFINITION-002·API-DISCOVERY-NL-001 | `MENU/TASTE/OCCASION/ATMOSPHERE` 통제 코드·별칭·활성 상태 | WS-15 생성·WS-14 읽기 | 코드·별칭 충돌·폐기·후보 허용값·ACTIVE 동적 자연어 사전 |
 | `tag_definition_term` | FR-ADMIN-005·FR-NLSEARCH-004, BR-ADMIN-009·BR-NLSEARCH-003, API-ADMIN-TAG-DEFINITION-001~002·API-DISCOVERY-NL-001 | 표시명·별칭의 정규화 용어와 종류 | WS-15 생성·WS-14 동적 조회 | 전역 unique·정의별 표시명 하나·V10 역적재·V11 seed 별칭 이관·원자성·ACTIVE만 자연어 사전 포함 |
+| `tag_definition_merge` | FR-ADMIN-007, BR-ADMIN-011, 태그 정의 병합 API | 원본별 최종 대상 redirect와 정의·영향 감사 | WS-04 관리·WS-14 동적 조회 | 원본 unique·자기 병합 금지·append-only·회원 탈퇴 actor 익명화 |
+| `visit_tag_merge_provenance` | FR-ADMIN-007, BR-ADMIN-011, 태그 정의 병합 API | 이동·중복 제거 전 VisitTag 근거 snapshot | WS-04 관리 | 병합·행·역할 unique·append-only·Visit/병합 FK RESTRICT |
 | `visit_tag` | FR-AIEXTRACT-007·FR-NLSEARCH-004, BR-AIEXTRACT-008·BR-NLSEARCH-003, API-ADMIN-AIEXTRACT-001·API-DISCOVERY-NL-001 | 자동 확정 또는 관리자 사후 보정 태그와 Visit 연결, `(visit_id, tag_definition_id)` unique | WS-15 생성·WS-14 조회 | 자동 검증 전 공개 금지·태그 AND·Visit 비공개 전파 |
 | 자연어 해석 결과 | FR-NLSEARCH-001~004, API-DISCOVERY-NL-001 | 검색 이력·원문·임베딩 비저장, 기존 조회와 확정 태그만 사용 | WS-14 | 해석 상태·조건 병합·로그 마스킹·기존 목록 격리 |
 | 코스 경로 결과 | FR-COURSE-001~003, API-DISCOVERY-COURSE-001 | `Course`·Route 결과·현재 위치·선택 이력 비저장, 요청 시점 응답만 반환 | WS-16 | 좌표·외부 실패·30km·TTL·quota·호출 1회 |
@@ -296,3 +298,5 @@ FR-AIEXTRACT-007·FR-NLSEARCH-004 → [방문 태그 API](../api/admin/restauran
 ## 관리자 태그 정의 생명주기 추적 — 이슈 #365
 
 [FR-ADMIN-006](../../01-requirements/functional-requirements.md#fr-admin-006-관리자-태그-정의-생명주기-관리)·[BR-ADMIN-010](../../01-requirements/business-rules.md#br-admin-010-태그-정의-상태와-감사) → `tag_definition.version`·`tag_definition_term`·`tag_definition_audit`. V12는 기존 ID·참조를 유지하며 버전과 append-only 감사를 전진 추가한다. 정의·용어·감사 원자성, 회원 탈퇴 행위자 익명화와 비활성 VisitTag 연결 경계는 [데이터 계약 15.1절](third-expansion-ai-video-data-contract.md#151-태그-정의-생명주기와-감사--이슈-365)과 [구현 계획](../../08-planning/admin-tag-definition-lifecycle.md)을 따른다.
+
+[FR-ADMIN-007](../../01-requirements/functional-requirements.md#fr-admin-007-관리자-중복-태그-병합)·[BR-ADMIN-011](../../01-requirements/business-rules.md#br-admin-011-중복-태그-병합과-근거-보존) → `tag_definition_merge`·`visit_tag_merge_provenance`·`tag_definition_audit`·`visit_tag`. V13은 원본별 단일 append-only 병합 경로와 이동·중복 제거 전 snapshot을 보존한다. [데이터 계약 15.2절](third-expansion-ai-video-data-contract.md#152-태그-정의-병합과-visit-tag-provenance--이슈-366), [ADR-DATA-013](../../07-adr/data/data-013-tag-definition-merge-provenance.md)과 [구현 계획](../../08-planning/tag-definition-merge.md)을 따른다.

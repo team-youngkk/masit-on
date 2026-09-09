@@ -1,7 +1,11 @@
 package com.masiton.visit.infrastructure.persistence;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -59,42 +63,46 @@ public class JdbcVisitTagStore implements VisitTagStore {
 
     @Override
     public void replace(UUID restaurantId, UUID visitId, Change change, UUID memberId) {
-        // Lock the relation before reading its token; concurrent editors then observe the committed revision.
+        List<String> observedBefore = tags(visitId).stream().map(Tag::code).toList();
+        List<String> requested = change.tagCodes().stream().sorted().toList();
+        Map<String, LockedDefinition> definitions = lockDefinitions(Stream.concat(
+                observedBefore.stream(), requested.stream()).distinct().sorted().toList());
+
+        // Tag definitions are always locked before the Visit row. A merge takes the same definition locks
+        // exclusively, so a replace that raced with a merge rechecks its token after the merge commits.
         if (jdbc.query("SELECT v.id " + VALID_VISITS + " AND v.id = ? FOR UPDATE OF v",
                 (rs, row) -> rs.getObject(1, UUID.class), restaurantId, visitId).isEmpty()) {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
         }
         if (!version(visitId).equals(change.expectedVersion())) {
-            throw new BusinessException(HttpStatus.CONFLICT, "VISIT_TAG_CONCURRENT_UPDATE",
-                    "다른 변경이 있습니다. 최신 태그를 조회한 후 다시 수정해 주세요.");
+            throw concurrentUpdate();
         }
         List<String> before = tags(visitId).stream().map(Tag::code).sorted().toList();
+        if (!definitions.keySet().containsAll(before)) {
+            throw concurrentUpdate();
+        }
         // Existing connections can be retained after deprecation; only newly added codes require ACTIVE.
-        var definitions = new java.util.LinkedHashMap<String, UUID>();
-        for (String code : change.tagCodes().stream().sorted().toList()) {
-            List<UUID> ids = before.contains(code)
-                    ? jdbc.query("SELECT id FROM tag_definition WHERE tag_code = ? FOR SHARE",
-                            (rs, row) -> rs.getObject(1, UUID.class), code)
-                    : jdbc.query("SELECT id FROM tag_definition WHERE tag_code = ? AND status = 'ACTIVE' FOR SHARE",
-                            (rs, row) -> rs.getObject(1, UUID.class), code);
-            if (ids.isEmpty()) {
+        var selectedDefinitions = new LinkedHashMap<String, UUID>();
+        for (String code : requested) {
+            LockedDefinition definition = definitions.get(code);
+            if (definition == null || (!before.contains(code) && !"ACTIVE".equals(definition.status()))) {
                 throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, "tagCodes", "활성 태그를 선택해 주세요.");
             }
-            definitions.put(code, ids.getFirst());
+            selectedDefinitions.put(code, definition.id());
         }
-        List<String> after = change.tagCodes().stream().sorted().toList();
+        List<String> after = requested;
         if (before.equals(after)) {
             return;
         }
         for (String code : before) {
-            if (!definitions.containsKey(code)) {
+            if (!selectedDefinitions.containsKey(code)) {
                 jdbc.update("""
                         DELETE FROM visit_tag WHERE visit_id = ? AND tag_definition_id =
                         (SELECT id FROM tag_definition WHERE tag_code = ?)
                         """, visitId, code);
             }
         }
-        definitions.forEach((code, definitionId) -> {
+        selectedDefinitions.forEach((code, definitionId) -> {
             if (!before.contains(code)) {
                 jdbc.update("""
                         INSERT INTO visit_tag(id, visit_id, tag_definition_id, source, evidence)
@@ -109,6 +117,27 @@ public class JdbcVisitTagStore implements VisitTagStore {
                         ?::jsonb, ?::jsonb, ?, ?)
                 """, UUID.randomUUID(), visitId, visitId, mapper.writeValueAsString(before),
                 mapper.writeValueAsString(after), change.reason(), memberId);
+    }
+
+    private Map<String, LockedDefinition> lockDefinitions(List<String> codes) {
+        if (codes.isEmpty()) {
+            return Map.of();
+        }
+        String placeholders = String.join(",", Collections.nCopies(codes.size(), "?"));
+        Map<String, LockedDefinition> result = new LinkedHashMap<>();
+        jdbc.query("SELECT id, tag_code, status FROM tag_definition WHERE tag_code IN (" + placeholders
+                        + ") ORDER BY id FOR SHARE",
+                rs -> {
+                    LockedDefinition definition = new LockedDefinition(
+                            rs.getObject("id", UUID.class), rs.getString("status"));
+                    result.put(rs.getString("tag_code"), definition);
+                }, codes.toArray());
+        return result;
+    }
+
+    private BusinessException concurrentUpdate() {
+        return new BusinessException(HttpStatus.CONFLICT, "VISIT_TAG_CONCURRENT_UPDATE",
+                "다른 변경이 있습니다. 최신 태그를 조회한 후 다시 수정해 주세요.");
     }
 
     private List<Tag> tags(UUID visitId) {
@@ -130,4 +159,6 @@ public class JdbcVisitTagStore implements VisitTagStore {
                     (SELECT COALESCE(MAX(revision), 0)::text FROM visit_tag_revision WHERE visit_id = ?))
                 """, String.class, visitId, visitId, visitId);
     }
+
+    private record LockedDefinition(UUID id, String status) { }
 }

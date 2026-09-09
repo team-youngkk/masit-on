@@ -24,12 +24,29 @@ public class JdbcActiveTagDictionaryAdapter implements ActiveTagDictionaryPort {
     static final Duration DEFAULT_TTL = Duration.ofSeconds(30);
 
     private static final String SELECT_ACTIVE_TERMS = """
-            SELECT definition.tag_code, term.normalized_term
-              FROM tag_definition definition
+            WITH RECURSIVE resolution(origin_id, current_id, path, cycle) AS (
+                SELECT id, id, ARRAY[id], false FROM tag_definition
+                UNION ALL
+                SELECT resolution.origin_id, m.target_tag_definition_id,
+                       resolution.path || m.target_tag_definition_id,
+                       m.target_tag_definition_id = ANY(resolution.path)
+                  FROM resolution
+                  JOIN tag_definition_merge m ON m.source_tag_definition_id = resolution.current_id
+                 WHERE NOT resolution.cycle
+            ), terminal AS (
+                SELECT resolution.origin_id, resolution.current_id
+                  FROM resolution
+                  JOIN tag_definition final_definition ON final_definition.id = resolution.current_id
+                 WHERE NOT resolution.cycle AND final_definition.status = 'ACTIVE'
+                   AND NOT EXISTS (SELECT 1 FROM tag_definition_merge next_merge
+                                    WHERE next_merge.source_tag_definition_id = resolution.current_id)
+            )
+            SELECT final_definition.tag_code, term.normalized_term
+              FROM terminal
+              JOIN tag_definition final_definition ON final_definition.id = terminal.current_id
               JOIN tag_definition_term term
-                ON term.tag_definition_id = definition.id
-             WHERE definition.status = 'ACTIVE'
-             ORDER BY definition.tag_code, term.normalized_term
+                ON term.tag_definition_id = terminal.origin_id
+             ORDER BY final_definition.tag_code, term.normalized_term
             """;
 
     private final TagDictionaryRowLoader rowLoader;

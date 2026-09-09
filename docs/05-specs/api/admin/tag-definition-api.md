@@ -6,6 +6,7 @@ related_documents:
   - ../../../04-product/prd/admin/admin-data-management.md
   - ../../../04-product/prd/detail/restaurant-detail.md
   - ../../../08-planning/admin-tag-definition-creation.md
+  - ../../../08-planning/tag-definition-merge.md
   - ../../data/third-expansion-ai-video-data-contract.md
   - restaurant-visit-tags-api.md
   - ../common/authentication-contract.md
@@ -18,7 +19,7 @@ related_documents:
 
 `FR-ADMIN-005`의 통제 태그 생성·관리 계약이다. 모든 API는 Bearer JWT와 요청 시점의 `ACTIVE/ADMIN` 권한이 필요하다. 인증 실패는 401, `MEMBER`는 403이며 모든 오류는 공통 오류 응답과 서버 생성 `traceId`를 포함한다. 성공 응답을 포함한 모든 응답은 `Cache-Control: no-store`다.
 
-병합·물리 삭제는 제공하지 않는다. 공개 맛집 상세 API에는 태그 코드·별칭·관리 기능을 추가하지 않는다.
+물리 삭제는 제공하지 않는다. 공개 맛집 상세 API에는 태그 코드·별칭·관리 기능을 추가하지 않는다.
 
 ## 2. 활성 태그 정의 목록
 
@@ -120,3 +121,32 @@ ADMIN 상세 패널은 활성 목록을 TanStack Query로 조회한다. 생성 �
 `POST /api/admin/tag-definitions/{code}/status`는 `expectedVersion`, `status(ACTIVE/DEPRECATED)`, `reason`으로 상태만 전환한다. 실질 변경은 정의 버전을 1 증가시키고 `UPDATE`, `DEPRECATE`, `REACTIVATE` 감사 한 건을 같은 트랜잭션에서 추가한다. 동일 내용·상태 요청은 버전 확인 뒤 감사 없이 현재 값을 반환한다.
 
 낡은 버전은 409 `TAG_DEFINITION_VERSION_CONFLICT`, 용어 충돌은 409 `TAG_TERM_ALREADY_EXISTS`다. 비활성 정의는 자연어 사전과 신규 방문 태그 선택지에서 제외된다. #364의 동적 사전 cache는 별도 즉시 무효화 없이 최대 30초 안에 상태·용어 변경을 반영한다.
+
+## 8. 중복 태그 병합
+
+`GET /api/admin/tag-definitions/{sourceCode}/merge-preview?targetCode=...`는 실행 가능한 병합만 200으로 반환한다. 응답은 원본·대상 정의, `affectedVisitCount`, `movedVisitTagCount`, `deduplicatedVisitTagCount`, `previewFingerprint`를 포함한다. 성공 응답에 `eligible` 또는 blocker 필드를 두지 않는다.
+
+`POST /api/admin/tag-definitions/{sourceCode}/merge` 요청은 다음과 같다.
+
+```json
+{
+  "targetCode": "MENU_GOPCHANG",
+  "expectedSourceVersion": 2,
+  "expectedTargetVersion": 4,
+  "previewFingerprint": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "reason": "동일 의미 태그를 기준 코드로 통합"
+}
+```
+
+원본·대상은 같은 유형의 서로 다른 `ACTIVE` 정의여야 한다. 원본은 아직 병합되지 않아야 하고 대상은 기존 inbound 병합을 가질 수 있다. 서버는 실행 트랜잭션에서 version·상태·재귀 경로·영향 VisitTag와 SHA-256 fingerprint를 다시 검증한다. 원본은 `DEPRECATED`와 새 version으로 바뀌며 `DEPRECATE` 정의 감사와 병합 감사를 함께 남긴다. 병합된 원본은 용어 호환 경로를 고정하기 위해 상태·표시명·별칭을 더 변경할 수 없다.
+
+대상 연결이 없는 VisitTag는 기존 행 ID와 provenance를 유지한 채 FK만 최종 활성 대상으로 바꾼다. 대상 연결이 있으면 기존 대상 행을 남기고 원본 행을 삭제하되 양쪽 snapshot을 append-only provenance에 먼저 기록한다. 원본 용어는 대상 별칭으로 복사하지 않는다. 자연어 사전은 병합 redirect를 재귀 해석하므로 원본 표시명·별칭도 최종 `ACTIVE` 코드를 가리키며 대상의 직접 별칭 20개 상한에 포함되지 않는다.
+
+| 상태 | 코드 | 조건 |
+|---:|---|---|
+| 400 | `INVALID_FIELD_VALUE` | 잘못된 입력, 자기 병합, 유형 불일치 |
+| 404 | `RESOURCE_NOT_FOUND` | 원본 또는 대상이 없음 |
+| 409 | `TAG_DEFINITION_VERSION_CONFLICT` | 원본 또는 대상 expectedVersion 불일치 |
+| 409 | `TAG_DEFINITION_MERGE_CONFLICT` | 이미 병합된 원본, 상태 변경, 비활성 대상, stale fingerprint, 순환 경로 |
+
+정의·VisitTag·provenance·정의 감사·병합 감사 중 하나라도 실패하면 전부 롤백한다. 자동 역병합은 제공하지 않으며 [병합 계획](../../../08-planning/tag-definition-merge.md)의 append-only snapshot으로 수동 복구를 판단한다.
