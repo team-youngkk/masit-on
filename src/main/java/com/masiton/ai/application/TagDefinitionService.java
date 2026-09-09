@@ -80,11 +80,48 @@ public class TagDefinitionService implements ManageTagDefinitionsUseCase {
         return new HistoryResult(store.history(code, offset, size), new Page(page, size, total, totalPages, page < totalPages));
     }
 
+    @Override @Transactional(readOnly = true)
+    public MergePreview previewMerge(String sourceCode, String targetCode) {
+        validateCode(sourceCode);
+        validateCode(targetCode);
+        if (sourceCode.equals(targetCode)) throw invalid("targetCode");
+        try { return store.previewMerge(sourceCode, targetCode); }
+        catch (TagDefinitionStore.NotFoundException e) { throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND); }
+        catch (TagDefinitionStore.InvalidMergeException e) {
+            if ("targetCode".equals(e.code())) throw invalid("targetCode");
+            throw conflict("TAG_DEFINITION_MERGE_CONFLICT", "Tag definitions cannot be merged in their current state.");
+        }
+    }
+
+    @Override @Transactional
+    public MergeResult merge(String sourceCode, MergeCommand command, String memberId) {
+        validateCode(sourceCode);
+        if (command == null) throw invalid("request");
+        validateCode(command.targetCode());
+        if (sourceCode.equals(command.targetCode())) throw invalid("targetCode");
+        if (command.expectedSourceVersion() == null || command.expectedSourceVersion() < 0) throw invalid("expectedSourceVersion");
+        if (command.expectedTargetVersion() == null || command.expectedTargetVersion() < 0) throw invalid("expectedTargetVersion");
+        String fingerprint = trimmed(command.previewFingerprint());
+        if (!fingerprint.matches("^[0-9a-f]{64}$")) throw invalid("previewFingerprint");
+        try {
+            return store.merge(new TagDefinitionStore.MergeChange(sourceCode, command.targetCode(),
+                    command.expectedSourceVersion(), command.expectedTargetVersion(), fingerprint,
+                    reason(command.reason()), identifier(memberId), OffsetDateTime.now()));
+        } catch (TagDefinitionStore.NotFoundException e) { throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND); }
+        catch (TagDefinitionStore.ConcurrentUpdateException e) { throw conflict("TAG_DEFINITION_VERSION_CONFLICT", "최신 태그 정의를 조회한 후 다시 병합해 주세요."); }
+        catch (TagDefinitionStore.StaleMergePreviewException e) { throw conflict("TAG_DEFINITION_MERGE_CONFLICT", "병합 미리보기가 만료되었습니다. 다시 확인해 주세요."); }
+        catch (TagDefinitionStore.InvalidMergeException e) {
+            if ("targetCode".equals(e.code())) throw invalid("targetCode");
+            throw conflict("TAG_DEFINITION_MERGE_CONFLICT", "Tag definitions cannot be merged in their current state.");
+        }
+    }
+
     private TagDefinition change(TagDefinitionStore.Change value) {
         try { return store.update(value); }
         catch (TagDefinitionStore.NotFoundException e) { throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND); }
         catch (TagDefinitionStore.ConcurrentUpdateException e) { throw conflict("TAG_DEFINITION_VERSION_CONFLICT", "최신 태그 정의를 조회한 후 다시 수정해 주세요."); }
         catch (TagDefinitionStore.DuplicateTermException e) { throw conflict("TAG_TERM_ALREADY_EXISTS", "Tag term already exists."); }
+        catch (TagDefinitionStore.MergedSourceMutationException e) { throw conflict("TAG_DEFINITION_MERGE_CONFLICT", "병합된 원본 태그는 내용이나 상태를 변경할 수 없습니다."); }
     }
     private <T> T callStore(java.util.function.Supplier<T> supplier) {
         try { return supplier.get(); } catch (TagDefinitionStore.NotFoundException e) { throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND); }

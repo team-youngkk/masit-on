@@ -12,6 +12,8 @@ related_requirements:
   - FR-ADMIN-003
   - FR-ADMIN-004
   - FR-ADMIN-005
+  - FR-ADMIN-006
+  - FR-ADMIN-007
   - FR-AUTH-004
   - FR-VISIT-001
 related_business_rules:
@@ -47,6 +49,8 @@ related_business_rules:
   - BR-ADMIN-007
   - BR-ADMIN-008
   - BR-ADMIN-009
+  - BR-ADMIN-010
+  - BR-ADMIN-011
   - BR-AUTH-009
   - BR-AUTH-010
 related_nfr:
@@ -170,6 +174,14 @@ related_documents:
 - 비활성 정의는 자연어 검색과 신규 방문 태그 선택에서 제외하고, 기존 연결은 유지·제거할 수 있게 표시한다.
 - 검색 사전 반영에는 최대 30초가 걸릴 수 있음을 관리자에게 안내한다.
 
+### 중복 태그 병합 — 이슈 #366
+
+- 관리자는 활성 태그 상세에서 같은 유형의 활성 대상을 고르고 영향 방문·이전·중복 제거 건수를 미리 확인한다.
+- 확인 뒤 사유를 입력해 병합하면 대상이 없는 VisitTag는 근거를 유지한 채 이전되고, 중복 연결은 유지·제거 양쪽 snapshot을 보존한 뒤 하나로 정리된다.
+- 원본은 비활성화되지만 기존 용어는 최종 활성 대상의 자연어 검색 별칭으로 유지된다.
+- stale 미리보기나 버전·상태 충돌이면 입력값을 유지하고 최신 미리보기를 다시 확인하게 한다.
+- 자동 되돌리기는 제공하지 않으며 감사 자료를 사용한 전진 복구만 허용한다.
+
 ## 10. 제품 요구사항
 
 | PRD 요구사항 | 제품 동작 | 관련 기능 요구사항 | 중요도 | 상태 |
@@ -181,12 +193,13 @@ related_documents:
 | PR-ADMIN-005 | 존재하는 세 대상과 실제 방문 영상을 근거로 고유 방문 관계를 등록한다. | [FR-VISIT-001](../../../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록) | Must | 확정 |
 | PR-ADMIN-006 | 맛집 상세의 관리자 태그 편집 중 전역 중복 없는 활성 태그 정의를 생성한다. | [FR-ADMIN-005](../../../01-requirements/functional-requirements.md#fr-admin-005-관리자-태그-정의-생성) | Must | 확정 |
 | PR-ADMIN-007 | 태그 정의를 버전·사유·감사와 함께 수정하고 비활성화·재활성화한다. | [FR-ADMIN-006](../../../01-requirements/functional-requirements.md#fr-admin-006-관리자-태그-정의-생명주기-관리) | Must | 확정 |
+| PR-ADMIN-008 | 중복 활성 태그의 영향을 미리 확인하고 VisitTag 근거와 병합 감사를 보존하며 하나의 활성 태그로 병합한다. | [FR-ADMIN-007](../../../01-requirements/functional-requirements.md#fr-admin-007-관리자-중복-태그-병합) | Must | 확정 |
 
 ## 11. 비즈니스 규칙
 
 - 기본 데이터 최소 정보·동일성·공개 조건은 [BR-RESTAURANT-003](../../../01-requirements/business-rules.md#br-restaurant-003-맛집-최소-등록-정보)~[BR-RESTAURANT-008](../../../01-requirements/business-rules.md#br-restaurant-008-맛집-공개-조건), [BR-CREATOR-001](../../../01-requirements/business-rules.md#br-creator-001-유튜버-정보의-의미)~[BR-CREATOR-003](../../../01-requirements/business-rules.md#br-creator-003-동일-채널-중복-판단), [BR-CREATOR-005](../../../01-requirements/business-rules.md#br-creator-005-방문-관계의-유튜버-일치), [BR-VIDEO-001](../../../01-requirements/business-rules.md#br-video-001-영상의-의미와-보관-범위)~[BR-VIDEO-006](../../../01-requirements/business-rules.md#br-video-006-게시일과-방문일의-구분)을 따른다.
 - 관계의 구성·근거·중복·참조·유효성과 날짜 제외는 [BR-VISIT-001](../../../01-requirements/business-rules.md#br-visit-001-방문-관계의-구성)~[BR-VISIT-007](../../../01-requirements/business-rules.md#br-visit-007-등록-완료와-검증-상태)을 따른다.
-- 접근, 사실·정합성 검증, 조회 반영, MVP 경계, 정정·동시성·보류는 [BR-ADMIN-001](../../../01-requirements/business-rules.md#br-admin-001-관리자-권한-검증)~[BR-ADMIN-008](../../../01-requirements/business-rules.md#br-admin-008-보류-요청의-처리)을 따른다. 태그 표시명·별칭의 전역 고유성과 원자적 생성은 [BR-ADMIN-009](../../../01-requirements/business-rules.md#br-admin-009-태그-용어의-전역-고유성과-원자적-생성)를 따른다.
+- 접근, 사실·정합성 검증, 조회 반영, MVP 경계, 정정·동시성·보류는 [BR-ADMIN-001](../../../01-requirements/business-rules.md#br-admin-001-관리자-권한-검증)~[BR-ADMIN-008](../../../01-requirements/business-rules.md#br-admin-008-보류-요청의-처리)을 따른다. 태그 표시명·별칭의 전역 고유성과 원자적 생성은 [BR-ADMIN-009](../../../01-requirements/business-rules.md#br-admin-009-태그-용어의-전역-고유성과-원자적-생성), 생명주기와 병합은 [BR-ADMIN-010](../../../01-requirements/business-rules.md#br-admin-010-태그-정의-상태와-감사)~[BR-ADMIN-011](../../../01-requirements/business-rules.md#br-admin-011-중복-태그-병합과-근거-보존)을 따른다.
 - 공개·비공개와 상태 변경 일관성은 [BR-PUBLICATION-001](../../../01-requirements/business-rules.md#br-publication-001-일반-사용자-공개-범위), [BR-PUBLICATION-002](../../../01-requirements/business-rules.md#br-publication-002-비공개-데이터의-접근), [BR-PUBLICATION-008](../../../01-requirements/business-rules.md#br-publication-008-상태-변경의-일관성)을 따른다.
 
 ## 12. 예외 및 경계 상황

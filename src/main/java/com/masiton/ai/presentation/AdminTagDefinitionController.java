@@ -33,6 +33,8 @@ import tools.jackson.databind.JsonNode;
 public class AdminTagDefinitionController {
     private static final Set<String> UPDATE_FIELDS = Set.of("expectedVersion", "displayName", "aliases", "reason");
     private static final Set<String> STATUS_FIELDS = Set.of("expectedVersion", "status", "reason");
+    private static final Set<String> MERGE_FIELDS = Set.of("targetCode", "expectedSourceVersion",
+            "expectedTargetVersion", "previewFingerprint", "reason");
     private final ManageTagDefinitionsUseCase useCase;
 
     public AdminTagDefinitionController(ManageTagDefinitionsUseCase useCase) {
@@ -82,6 +84,21 @@ public class AdminTagDefinitionController {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(useCase.history(code, page, size));
     }
 
+    @GetMapping("/{sourceCode}/merge-preview")
+    public ResponseEntity<ManageTagDefinitionsUseCase.MergePreview> mergePreview(
+            @PathVariable String sourceCode, @RequestParam String targetCode) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(useCase.previewMerge(sourceCode, targetCode));
+    }
+
+    @PostMapping("/{sourceCode}/merge")
+    public ResponseEntity<ManageTagDefinitionsUseCase.MergeResult> merge(
+            @PathVariable String sourceCode, @RequestBody(required = false) JsonNode body,
+            Authentication authentication) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(useCase.merge(sourceCode, mergeCommand(body), authentication.getName()));
+    }
+
     private UpdateCommand updateCommand(JsonNode body) {
         requireObject(body, UPDATE_FIELDS);
         return new UpdateCommand(longValue(body.get("expectedVersion")), text(body.get("displayName")),
@@ -92,6 +109,13 @@ public class AdminTagDefinitionController {
         requireObject(body, STATUS_FIELDS);
         return new StatusCommand(longValue(body.get("expectedVersion")), text(body.get("status")),
                 text(body.get("reason")));
+    }
+
+    private ManageTagDefinitionsUseCase.MergeCommand mergeCommand(JsonNode body) {
+        requireObject(body, MERGE_FIELDS);
+        return new ManageTagDefinitionsUseCase.MergeCommand(text(body.get("targetCode")),
+                longValue(body.get("expectedSourceVersion")), longValue(body.get("expectedTargetVersion")),
+                text(body.get("previewFingerprint")), text(body.get("reason")));
     }
 
     private void requireObject(JsonNode body, Set<String> fields) {

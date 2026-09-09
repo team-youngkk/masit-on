@@ -4,6 +4,8 @@ import {
   adminTagScope,
   appendTagDefinition,
   appendTagDefinitionToList,
+  canExecuteTagMerge,
+  mergeTargetOptions,
   prepareTagDefinition,
   selectCreatedTag,
   validateTagDefinition,
@@ -108,4 +110,33 @@ test('생성 성공 시 두 목록 캐시에 한 번만 추가하고 편집 값�
   const edit = { expectedVersion: 'opaque', tagCodes: [option.code], reason: '영상 확인' }
   assert.deepEqual(selectCreatedTag(edit, created.code), { ...edit, tagCodes: [option.code, created.code] })
   assert.strictEqual(selectCreatedTag({ ...edit, tagCodes: [created.code] }, created.code).reason, edit.reason)
+})
+
+test('병합 대상은 활성 원본과 유형이 같고 자기 자신이 아닌 활성 태그만 허용한다', () => {
+  const target = { ...created, code: 'OCCASION_GROUP', displayName: '단체 모임' }
+  const wrongType = { ...created, code: 'MENU_GROUP', type: 'MENU' as const }
+  const deprecated = { ...created, code: 'OCCASION_OLD', status: 'DEPRECATED' as const }
+
+  assert.deepEqual(mergeTargetOptions(created, [created, target, wrongType, deprecated]), [target])
+  assert.deepEqual(mergeTargetOptions(deprecated, [target]), [])
+  assert.deepEqual(mergeTargetOptions(null, [target]), [])
+})
+
+test('현재 대상의 유효한 미리보기와 사유가 있고 요청 중이 아닐 때만 병합할 수 있다', () => {
+  const preview = {
+    source: created,
+    target: { ...created, code: 'OCCASION_GROUP' },
+    affectedVisitCount: 2,
+    movedVisitTagCount: 1,
+    deduplicatedVisitTagCount: 1,
+    previewFingerprint: 'a'.repeat(64),
+  }
+  const input = { targetCode: preview.target.code, preview, previewStale: false, reason: '중복 정리', busy: false }
+
+  assert.equal(canExecuteTagMerge(input), true)
+  assert.equal(canExecuteTagMerge({ ...input, targetCode: 'OCCASION_OTHER' }), false)
+  assert.equal(canExecuteTagMerge({ ...input, previewStale: true }), false)
+  assert.equal(canExecuteTagMerge({ ...input, reason: ' ' }), false)
+  assert.equal(canExecuteTagMerge({ ...input, reason: '가'.repeat(1001) }), false)
+  assert.equal(canExecuteTagMerge({ ...input, busy: true }), false)
 })

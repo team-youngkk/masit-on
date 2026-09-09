@@ -133,3 +133,5 @@ visit_tag_revision(visit_id, revision) unique B-tree가 방문별 최신 revisio
 ## 관리자 태그 정의 용어 인덱스 — 이슈 #363
 
 V10은 `normalized_term` 전역 unique B-tree와 `term_kind='DISPLAY_NAME'`인 `tag_definition_id` partial unique를 추가한다. 전자는 사전 중복 확인과 동시 INSERT를 함께 확정하고 #364의 정규화 용어 조회에 재사용한다. 별칭 목록 크기는 정의당 최대 20개이므로 별도 `(tag_definition_id, term_kind)` 비고유 인덱스는 실제 실행계획에서 필요성이 확인되기 전 추가하지 않는다.
+
+V13은 `tag_definition_merge.source_tag_definition_id` unique 인덱스로 원본의 단일 병합을 보장한다. `(target_tag_definition_id, merged_at DESC)`는 inbound 병합과 운영 감사 조회를, `visit_tag_merge_provenance(visit_id, recorded_at DESC)`는 방문별 복구 자료 조회를 지원한다. provenance는 `(tag_definition_merge_id, visit_tag_id, snapshot_role)` unique로 같은 snapshot의 중복 기록을 막는다.
