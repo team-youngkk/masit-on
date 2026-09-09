@@ -29,7 +29,7 @@ class TagDefinitionServiceTest {
             TagDefinitionStore.NewTagDefinition value = invocation.getArgument(0);
             assertThat(value.normalizedTerms()).containsExactly("abc 가족", "가족 외식");
             return new com.masiton.ai.application.port.in.ManageTagDefinitionsUseCase.TagDefinition(
-                    value.code(), value.type(), value.displayName(), value.aliases(), "ACTIVE", "MANUAL_OVERRIDE");
+                    value.code(), value.type(), value.displayName(), value.aliases(), "ACTIVE", "MANUAL_OVERRIDE", 0);
         });
 
         var result = service.create(new CreateCommand(

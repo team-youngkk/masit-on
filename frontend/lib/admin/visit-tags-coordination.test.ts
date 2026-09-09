@@ -28,6 +28,7 @@ test('태그 전체 해제와 50개 저장은 허용하고 사유·비활성·�
   assert.ok(validateTagEdit({ ...edit, reason: '  ' }, [option]))
   assert.ok(validateTagEdit({ ...edit, reason: '가'.repeat(1001) }, [option]))
   assert.ok(validateTagEdit({ ...edit, tagCodes: ['INACTIVE'] }, [option]))
+  assert.equal(validateTagEdit({ ...edit, tagCodes: ['INACTIVE'] }, [option], ['INACTIVE']), null)
   assert.ok(validateTagEdit({ ...edit, tagCodes: [option.code, option.code] }, [option]))
   const options = Array.from({ length: 51 }, (_, index) => ({ ...option, code: `TAG_${index}` }))
   assert.equal(validateTagEdit({ ...edit, tagCodes: options.slice(0, 50).map(tag => tag.code) }, options), null)
@@ -71,6 +72,7 @@ const created: TagDefinition = {
   aliases: ['가족식사'],
   status: 'ACTIVE',
   source: 'MANUAL_OVERRIDE',
+  version: 0,
 }
 
 test('태그 생성 입력을 trim하고 줄 단위 별칭 배열로 변환한다', () => {

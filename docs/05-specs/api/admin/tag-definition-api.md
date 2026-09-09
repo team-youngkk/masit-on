@@ -12,13 +12,13 @@ related_documents:
   - ../common/error-contract.md
 ---
 
-# 관리자 태그 정의 조회·생성 API
+# 관리자 태그 정의 조회·생성·생명주기 API
 
 ## 1. 범위와 권한
 
-`FR-ADMIN-005`의 통제 태그 생성 계약이다. 두 API 모두 Bearer JWT와 요청 시점의 `ACTIVE/ADMIN` 권한이 필요하다. 인증 실패는 401, `MEMBER`는 403이며 모든 오류는 공통 오류 응답과 서버 생성 `traceId`를 포함한다. 성공 응답을 포함한 모든 응답은 `Cache-Control: no-store`다.
+`FR-ADMIN-005`의 통제 태그 생성·관리 계약이다. 모든 API는 Bearer JWT와 요청 시점의 `ACTIVE/ADMIN` 권한이 필요하다. 인증 실패는 401, `MEMBER`는 403이며 모든 오류는 공통 오류 응답과 서버 생성 `traceId`를 포함한다. 성공 응답을 포함한 모든 응답은 `Cache-Control: no-store`다.
 
-기존 태그 수정·비활성화·재활성화·병합·물리 삭제, 자연어 해석기의 동적 DB 사전 전환은 제공하지 않는다. 공개 맛집 상세 API에는 태그 코드·별칭·생성 기능을 추가하지 않는다.
+병합·물리 삭제는 제공하지 않는다. 공개 맛집 상세 API에는 태그 코드·별칭·관리 기능을 추가하지 않는다.
 
 ## 2. 활성 태그 정의 목록
 
@@ -37,7 +37,8 @@ related_documents:
       "displayName": "국밥",
       "aliases": ["돼지국밥"],
       "status": "ACTIVE",
-      "source": "SEED"
+      "source": "SEED",
+      "version": 0
     }
   ]
 }
@@ -78,7 +79,8 @@ related_documents:
   "displayName": "가족 모임",
   "aliases": ["가족식사", "가족 외식"],
   "status": "ACTIVE",
-  "source": "MANUAL_OVERRIDE"
+  "source": "MANUAL_OVERRIDE",
+  "version": 0
 }
 ```
 
@@ -102,3 +104,19 @@ ADMIN 상세 패널은 활성 목록을 TanStack Query로 조회한다. 생성 �
 생성 API는 `VisitTag` 또는 `visit_tag_revision`을 만들지 않는다. 관리자가 [방문 태그 교체 API](restaurant-visit-tags-api.md#3-방문-태그-교체)를 별도로 저장했을 때만 연결과 보정 감사가 같은 트랜잭션으로 생긴다. 태그 생성에 성공한 뒤 방문 저장이 취소되거나 실패해도 새 태그 정의는 활성 목록에 남는다.
 
 로그아웃·계정 변경 시 목록 캐시와 생성·편집 상태를 폐기한다. 익명·MEMBER 화면은 이 API를 호출하지 않는다.
+
+## 6. 관리 목록·상세·변경 이력
+
+- `GET /api/admin/tag-definitions/management?status=ALL&page=1&size=20`: `ALL/ACTIVE/DEPRECATED` 상태 필터와 공통 1-base 페이지 계약으로 코드 오름차순 목록을 반환한다.
+- `GET /api/admin/tag-definitions/{code}`: 현재 정의를 반환한다. 없는 코드는 404다.
+- `GET /api/admin/tag-definitions/{code}/history?page=1&size=20`: 버전 내림차순 감사 이력을 반환한다.
+
+정의 응답의 `version`은 0부터 시작하는 정수다. 감사 항목은 `id`, `action`, 변경 전후 전체 정의인 `before`·`after`, `reason`, `changedByMemberId`, `changedAt`, `version`을 포함한다. 회원 탈퇴 시 `changedByMemberId`만 `null`이 될 수 있다.
+
+## 7. 내용 수정과 상태 전환
+
+`PUT /api/admin/tag-definitions/{code}`는 `expectedVersion`, `displayName`, `aliases`, `reason`으로 표시 내용을 전체 교체한다. 코드·유형·출처는 바꿀 수 없다. 표시명·별칭 검증과 용어 전역 고유성은 생성 계약과 같다.
+
+`POST /api/admin/tag-definitions/{code}/status`는 `expectedVersion`, `status(ACTIVE/DEPRECATED)`, `reason`으로 상태만 전환한다. 실질 변경은 정의 버전을 1 증가시키고 `UPDATE`, `DEPRECATE`, `REACTIVATE` 감사 한 건을 같은 트랜잭션에서 추가한다. 동일 내용·상태 요청은 버전 확인 뒤 감사 없이 현재 값을 반환한다.
+
+낡은 버전은 409 `TAG_DEFINITION_VERSION_CONFLICT`, 용어 충돌은 409 `TAG_TERM_ALREADY_EXISTS`다. 비활성 정의는 자연어 사전과 신규 방문 태그 선택지에서 제외된다. #364의 동적 사전 cache는 별도 즉시 무효화 없이 최대 30초 안에 상태·용어 변경을 반영한다.

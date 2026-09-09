@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { useMemberSession } from '@/components/member/MemberSessionProvider'
 import { Button } from '@/components/ui/Button'
 import { AdminApiError, fieldErrorsFor, messageFor } from '@/lib/admin/api'
@@ -142,7 +143,8 @@ function AdminTags({ accountId, restaurantId }: { accountId: string; restaurantI
   async function submit(event: React.FormEvent) {
     event.preventDefault()
     if (!editing || saving.current || !active.current || !query.data) return
-    const validation = validateTagEdit(editing.edit, query.data.tagOptions)
+    const currentVisit = query.data.items.find(visit => visit.visitId === editing.visitId)
+    const validation = validateTagEdit(editing.edit, query.data.tagOptions, currentVisit?.tags.map(tag => tag.code))
     if (validation) { setError(validation); return }
     saving.current = true
     setError('')
@@ -168,6 +170,7 @@ function AdminTags({ accountId, restaurantId }: { accountId: string; restaurantI
   return <section className={styles.panel} aria-label="관리자 방문 태그 관리">
     <h2>방문 태그 관리 <span className={styles.admin}>관리자</span></h2>
     <p>자연어 검색에 사용하는 태그입니다. 여러 태그 조건은 같은 방문에 함께 있어야 검색됩니다.</p>
+    <p><Link href="/admin/tag-definitions">태그 정의 관리에서 표시명·별칭과 활성 상태 수정하기 →</Link></p>
     {notice && <p role="status">{notice}</p>}
     {error && <p role="alert" className={styles.error}>{error}</p>}
     {query.isPending || definitionsQuery.isPending ? <p role="status">방문 태그를 불러오는 중…</p> : query.isError || definitionsQuery.isError ? <div>
@@ -187,7 +190,7 @@ function AdminTags({ accountId, restaurantId }: { accountId: string; restaurantI
           {draft ? <form onSubmit={submit} className={styles.form}>
             <fieldset disabled={saveMutation.isPending}>
               <legend>이 방문의 태그 선택 ({draft.tagCodes.length}/50)</legend>
-              {inactive.length > 0 && <p>비활성 태그는 해제해야 저장할 수 있습니다.</p>}
+              {inactive.length > 0 && <p>비활성 태그는 유지하거나 해제할 수 있지만, 해제한 뒤 다시 추가할 수 없습니다.</p>}
               <div className={styles.options}>{[...options, ...inactive].map(tag => {
                 const checked = draft.tagCodes.includes(tag.code)
                 const disabled = !checked && (!options.some(option => option.code === tag.code) || draft.tagCodes.length >= 50)

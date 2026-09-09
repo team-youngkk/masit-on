@@ -68,18 +68,20 @@ public class JdbcVisitTagStore implements VisitTagStore {
             throw new BusinessException(HttpStatus.CONFLICT, "VISIT_TAG_CONCURRENT_UPDATE",
                     "다른 변경이 있습니다. 최신 태그를 조회한 후 다시 수정해 주세요.");
         }
-        // Share locks prevent a selected definition from being deprecated during this write.
+        List<String> before = tags(visitId).stream().map(Tag::code).sorted().toList();
+        // Existing connections can be retained after deprecation; only newly added codes require ACTIVE.
         var definitions = new java.util.LinkedHashMap<String, UUID>();
         for (String code : change.tagCodes().stream().sorted().toList()) {
-            List<UUID> ids = jdbc.query("""
-                    SELECT id FROM tag_definition WHERE tag_code = ? AND status = 'ACTIVE' FOR SHARE
-                    """, (rs, row) -> rs.getObject(1, UUID.class), code);
+            List<UUID> ids = before.contains(code)
+                    ? jdbc.query("SELECT id FROM tag_definition WHERE tag_code = ? FOR SHARE",
+                            (rs, row) -> rs.getObject(1, UUID.class), code)
+                    : jdbc.query("SELECT id FROM tag_definition WHERE tag_code = ? AND status = 'ACTIVE' FOR SHARE",
+                            (rs, row) -> rs.getObject(1, UUID.class), code);
             if (ids.isEmpty()) {
                 throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, "tagCodes", "활성 태그를 선택해 주세요.");
             }
             definitions.put(code, ids.getFirst());
         }
-        List<String> before = tags(visitId).stream().map(Tag::code).sorted().toList();
         List<String> after = change.tagCodes().stream().sorted().toList();
         if (before.equals(after)) {
             return;
