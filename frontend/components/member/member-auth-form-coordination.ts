@@ -12,6 +12,11 @@ export type MemberAuthFieldErrors = Readonly<{
   token?: string
 }>
 
+export type PasswordResetFlowSnapshot = Readonly<{
+  token: string
+  revision: number
+}>
+
 type MemberAuthFormValues = Readonly<{
   mode: MemberAuthMode
   email: string
@@ -29,6 +34,27 @@ export function normalizeMemberEmail(email: string): string {
 export function extractPasswordResetToken(hash: string): string {
   const fragment = hash.startsWith('#') ? hash.slice(1) : hash
   return new URLSearchParams(fragment).get('token')?.trim() ?? ''
+}
+
+export async function isInvalidPasswordResetTokenResponse(reason: unknown): Promise<boolean> {
+  if (!(reason instanceof Response) || reason.status !== 400) {
+    return false
+  }
+
+  try {
+    const body = (await reason.clone().json()) as { code?: unknown }
+    return body.code === 'INVALID_PASSWORD_RESET_TOKEN'
+  } catch {
+    return false
+  }
+}
+
+export function advancePasswordResetFlow(current: PasswordResetFlowSnapshot, token: string): PasswordResetFlowSnapshot {
+  return { token, revision: current.revision + 1 }
+}
+
+export function isCurrentPasswordResetFlow(current: PasswordResetFlowSnapshot, submitted: PasswordResetFlowSnapshot): boolean {
+  return current.token === submitted.token && current.revision === submitted.revision
 }
 
 export function passwordResetModeFromHash(hash: string): Extract<MemberAuthMode, 'request-reset' | 'confirm-reset'> {
@@ -54,10 +80,10 @@ export function watchPasswordResetToken(
 ): () => void {
   const applyToken = () => {
     const token = extractPasswordResetToken(readHash())
+    onToken(token)
     if (!token) {
       return
     }
-    onToken(token)
     clearUrl()
   }
 
