@@ -4,7 +4,6 @@ import { fetchRestaurants } from '../lib/restaurants-api.ts'
 import { getSiteUrl } from '../lib/site-url.ts'
 
 const SITEMAP_PAGE_SIZE = '50'
-const SITEMAP_REVALIDATE_SECONDS = 300
 
 export const dynamic = 'force-dynamic'
 
@@ -40,7 +39,7 @@ async function getPublicRestaurantIds(): Promise<string[] | null> {
     while (true) {
       const params = new URLSearchParams({ page: String(page), size: SITEMAP_PAGE_SIZE })
       const result = await fetchRestaurants(params, {
-        next: { revalidate: SITEMAP_REVALIDATE_SECONDS },
+        cache: 'no-store',
       })
       if (!result.ok) {
         return null
