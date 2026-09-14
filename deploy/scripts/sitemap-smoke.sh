@@ -101,11 +101,16 @@ PY
 python3 - "$robots_body" "$SMOKE_SITE_URL" "$url_list" "$USER_AGENT" <<'PY'
 import re
 import sys
-from urllib.parse import unquote, urlparse
+from urllib.parse import quote, urlparse
 
 robots_path, site_url, url_list_path, user_agent = sys.argv[1:]
 site_url = site_url.rstrip('/')
 product = user_agent.split('/', 1)[0].lower()
+
+
+def percent_encode(value, safe):
+    encoded = quote(value, safe=safe)
+    return re.sub(r'%[0-9a-fA-F]{2}', lambda match: match.group(0).upper(), encoded)
 
 
 def parse_groups(lines):
@@ -171,15 +176,19 @@ def selected_rules(groups):
 
 
 def can_fetch(rules, url):
-    parsed = urlparse(unquote(url))
-    target = parsed.path or '/'
+    parsed = urlparse(url)
+    target = percent_encode(parsed.path or '/', safe='/%')
     if parsed.params:
-        target += f';{parsed.params}'
+        target += f';{percent_encode(parsed.params, safe="/%")}'
     if parsed.query:
-        target += f'?{parsed.query}'
+        target += f'?{percent_encode(parsed.query, safe="/%")}'
 
     matches = []
     for allow, path in rules:
+        path = percent_encode(path, safe='/%*$')
+        end_anchor = path.endswith('$')
+        if end_anchor:
+            path = path[:-1]
         if not path:
             if not allow:
                 continue
@@ -187,13 +196,16 @@ def can_fetch(rules, url):
             continue
         if '*' in path:
             expression = '^' + re.escape(path).replace(r'\*', '.*')
-            if path.endswith('$'):
-                expression = expression[:-2] + '$'
+            if end_anchor:
+                expression += '$'
             if not re.match(expression, target):
+                continue
+        elif end_anchor:
+            if target != path:
                 continue
         elif not target.startswith(path):
             continue
-        matches.append((len(path.rstrip('$')), allow))
+        matches.append((len(path), allow))
 
     if not matches:
         return True
@@ -230,12 +242,33 @@ body_path, header_path, url = sys.argv[1:]
 body = open(body_path, encoding='utf-8').read()
 
 headers = open(header_path, encoding='iso-8859-1').read()
+
+
+def blocking_directive(value):
+    for directive in re.split(r',', value):
+        token = directive.strip().split(':', 1)[0].strip().lower()
+        if token in {'noindex', 'none'}:
+            return token
+    return None
+
+
+def googlebot_header_directive(value):
+    prefix, separator, directives = value.partition(':')
+    if separator and prefix.strip().lower() not in {'noindex', 'none'}:
+        if prefix.strip().lower() != 'googlebot':
+            return None
+        value = directives
+    return blocking_directive(value)
+
+
 for line in headers.splitlines():
     if ':' not in line:
         continue
     name, value = line.split(':', 1)
-    if name.strip().lower() == 'x-robots-tag' and re.search(r'\bnoindex\b', value, flags=re.IGNORECASE):
-        raise SystemExit(f'sitemap URL response contains X-Robots-Tag noindex: {url}')
+    if name.strip().lower() == 'x-robots-tag':
+        directive = googlebot_header_directive(value)
+        if directive:
+            raise SystemExit(f'sitemap URL response contains X-Robots-Tag {directive}: {url}')
 
 
 class RobotsMetaParser(HTMLParser):
@@ -245,8 +278,10 @@ class RobotsMetaParser(HTMLParser):
         attributes = {name.lower(): value or '' for name, value in attrs}
         name = attributes.get('name', '').strip().lower()
         content = attributes.get('content', '')
-        if name in {'robots', 'googlebot'} and re.search(r'\bnoindex\b', content, flags=re.IGNORECASE):
-            raise SystemExit(f'sitemap URL page contains {name} noindex: {url}')
+        if name in {'robots', 'googlebot'}:
+            directive = blocking_directive(content)
+            if directive:
+                raise SystemExit(f'sitemap URL page contains {name} {directive}: {url}')
 
 
 RobotsMetaParser().feed(body)

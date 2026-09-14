@@ -34,6 +34,7 @@ assert_contains 'validate_image_ref backend "$BACKEND_IMAGE_REF"' "$DOCKERHUB_SC
 assert_contains 'require_stage_file "$file"' "$DOCKERHUB_SCRIPT"
 assert_contains 'observability-cleanup.sh nginx-install.sh nginx-smoke.sh sitemap-smoke.sh' "$DOCKERHUB_SCRIPT"
 assert_contains '"$STAGE/observability-cleanup.sh"' "$DOCKERHUB_SCRIPT"
+assert_contains 'install -m 0750 "$STAGE/nginx-smoke.sh" /opt/masiton/bin/nginx-smoke.sh' "$DOCKERHUB_SCRIPT"
 assert_contains 'install -m 0750 "$STAGE/sitemap-smoke.sh" /opt/masiton/bin/sitemap-smoke.sh' "$DOCKERHUB_SCRIPT"
 assert_not_contains 'cloudwatch-install.sh' "$DOCKERHUB_SCRIPT"
 assert_not_contains 'health-metrics.sh' "$DOCKERHUB_SCRIPT"

@@ -221,6 +221,7 @@ class RuntimeDeploymentContractTest {
         assertThat(workflow).contains("ci-production-deploy");
         assertThat(deploy)
                 .contains("sitemap-smoke.sh")
+                .contains("install -m 0750 \"$STAGE/nginx-smoke.sh\" /opt/masiton/bin/nginx-smoke.sh")
                 .contains("install -m 0750 \"$STAGE/sitemap-smoke.sh\" /opt/masiton/bin/sitemap-smoke.sh");
     }
 

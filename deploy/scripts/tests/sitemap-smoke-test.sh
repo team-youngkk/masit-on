@@ -49,11 +49,17 @@ if [[ "$url" == */robots.txt ]]; then
     happy|meta-robots|meta-googlebot|header-noindex)
       body=$'User-agent: Googlebot\nDisallow: /\nAllow: /sitemap.xml\nAllow: /restaurants\nUser-agent: *\nDisallow: /\nSitemap: https://masiton.click/sitemap.xml'
       ;;
+    meta-none|header-googlebot-none|header-otherbot)
+      body=$'User-agent: Googlebot\nDisallow: /\nAllow: /sitemap.xml\nAllow: /restaurants\nUser-agent: *\nDisallow: /\nSitemap: https://masiton.click/sitemap.xml'
+      ;;
     googlebot-blocked)
       body=$'User-agent: Googlebot\nDisallow: /\nUser-agent: *\nAllow: /\nSitemap: https://masiton.click/sitemap.xml'
       ;;
     wildcard-blocked)
       body=$'User-agent: *\nDisallow: /\nSitemap: https://masiton.click/sitemap.xml'
+      ;;
+    encoded-path-blocked)
+      body=$'User-agent: Googlebot\nDisallow: /restaurants/a%2Fb$\nAllow: /restaurants/\nSitemap: https://masiton.click/sitemap.xml'
       ;;
     *)
       echo "알 수 없는 fixture: $FIXTURE" >&2
@@ -62,7 +68,11 @@ if [[ "$url" == */robots.txt ]]; then
   esac
 elif [[ "$url" == */sitemap.xml ]]; then
   content_type='application/xml'
-  body='<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://masiton.click/restaurants</loc></url><url><loc>https://masiton.click/restaurants/1</loc></url></urlset>'
+  if [ "$FIXTURE" = encoded-path-blocked ]; then
+    body='<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://masiton.click/restaurants/a%2Fb</loc></url></urlset>'
+  else
+    body='<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://masiton.click/restaurants</loc></url><url><loc>https://masiton.click/restaurants/1</loc></url></urlset>'
+  fi
 elif [[ "$url" == */restaurants* ]]; then
   case "$FIXTURE" in
     meta-robots)
@@ -71,9 +81,20 @@ elif [[ "$url" == */restaurants* ]]; then
     meta-googlebot)
       body='<html><head><meta content="noindex, follow" NAME="GoogleBot"></head><body>ok</body></html>'
       ;;
+    meta-none)
+      body='<html><head><meta name="robots" content="NONE, follow"></head><body>ok</body></html>'
+      ;;
     header-noindex)
       body='<html><head><meta name="description" content="ok"></head><body>ok</body></html>'
       extra_header=$'x-robots-tag: NoIndex, follow'
+      ;;
+    header-googlebot-none)
+      body='<html><head><meta name="description" content="ok"></head><body>ok</body></html>'
+      extra_header=$'X-Robots-Tag: GoogleBot: none'
+      ;;
+    header-otherbot)
+      body='<html><head><meta name="description" content="ok"></head><body>ok</body></html>'
+      extra_header=$'X-Robots-Tag: otherbot: noindex'
       ;;
     *)
       body='<html><head><meta name="robots" content="index, follow"></head><body>ok</body></html>'
@@ -126,8 +147,12 @@ run_case() {
 run_case happy pass ''
 run_case googlebot-blocked fail 'robots.txt disallows Googlebot access'
 run_case wildcard-blocked fail 'robots.txt disallows Googlebot access'
+run_case encoded-path-blocked fail 'robots.txt disallows Googlebot access'
 run_case meta-robots fail 'page contains robots noindex'
 run_case meta-googlebot fail 'page contains googlebot noindex'
+run_case meta-none fail 'page contains robots none'
 run_case header-noindex fail 'response contains X-Robots-Tag noindex'
+run_case header-googlebot-none fail 'response contains X-Robots-Tag none'
+run_case header-otherbot pass ''
 
 echo 'Sitemap smoke fixture contract: PASS'

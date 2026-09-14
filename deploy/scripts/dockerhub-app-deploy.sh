@@ -154,4 +154,5 @@ bash "$STAGE/nginx-install.sh" --check-config "$STAGE"
 LOGIN_DONE=yes
 "$STAGE/observability-cleanup.sh"
 "$STAGE/app-deploy.sh" --image-refs "$BACKEND_IMAGE_REF" "$FRONTEND_IMAGE_REF" "$STAGE"
+install -m 0750 "$STAGE/nginx-smoke.sh" /opt/masiton/bin/nginx-smoke.sh
 install -m 0750 "$STAGE/sitemap-smoke.sh" /opt/masiton/bin/sitemap-smoke.sh
