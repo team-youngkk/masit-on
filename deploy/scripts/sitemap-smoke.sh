@@ -98,6 +98,120 @@ for loc in locs:
     print(loc)
 PY
 
+python3 - "$robots_body" "$SMOKE_SITE_URL" "$url_list" "$USER_AGENT" <<'PY'
+import re
+import sys
+from urllib.parse import unquote, urlparse
+
+robots_path, site_url, url_list_path, user_agent = sys.argv[1:]
+site_url = site_url.rstrip('/')
+product = user_agent.split('/', 1)[0].lower()
+
+
+def parse_groups(lines):
+    groups = []
+    agents = []
+    rules = []
+
+    def flush():
+        if agents:
+            groups.append((tuple(agents), tuple(rules)))
+        agents.clear()
+        rules.clear()
+
+    for raw_line in lines:
+        line = raw_line.split('#', 1)[0].strip()
+        if not line:
+            flush()
+            continue
+        if ':' not in line:
+            continue
+        directive, value = line.split(':', 1)
+        directive = directive.strip().lower()
+        value = value.strip()
+        if directive == 'user-agent':
+            if rules:
+                flush()
+            if value:
+                agents.append(value.lower())
+        elif directive in {'allow', 'disallow'} and agents:
+            rules.append((directive == 'allow', value))
+    flush()
+    return groups
+
+
+def selected_rules(groups):
+    specific = [
+        group for group in groups
+        if any(agent != '*' and (agent == product or agent in product) for agent in group[0])
+    ]
+    if specific:
+        most_specific = max(
+            len(agent)
+            for agents, _ in specific
+            for agent in agents
+            if agent != '*' and (agent == product or agent in product)
+        )
+        return [
+            rule
+            for agents, rules in specific
+            if any(
+                agent != '*' and len(agent) == most_specific
+                and (agent == product or agent in product)
+                for agent in agents
+            )
+            for rule in rules
+        ]
+    return [
+        rule
+        for agents, rules in groups
+        if '*' in agents
+        for rule in rules
+    ]
+
+
+def can_fetch(rules, url):
+    parsed = urlparse(unquote(url))
+    target = parsed.path or '/'
+    if parsed.params:
+        target += f';{parsed.params}'
+    if parsed.query:
+        target += f'?{parsed.query}'
+
+    matches = []
+    for allow, path in rules:
+        if not path:
+            if not allow:
+                continue
+            matches.append((0, allow))
+            continue
+        if '*' in path:
+            expression = '^' + re.escape(path).replace(r'\*', '.*')
+            if path.endswith('$'):
+                expression = expression[:-2] + '$'
+            if not re.match(expression, target):
+                continue
+        elif not target.startswith(path):
+            continue
+        matches.append((len(path.rstrip('$')), allow))
+
+    if not matches:
+        return True
+    return max(matches, key=lambda match: (match[0], match[1]))[1]
+
+
+with open(robots_path, encoding='utf-8') as robots_file:
+    rules = selected_rules(parse_groups(robots_file.read().splitlines()))
+
+urls = [f'{site_url}/sitemap.xml']
+with open(url_list_path, encoding='utf-8') as url_list:
+    urls.extend(line.strip() for line in url_list if line.strip())
+
+for url in urls:
+    if not can_fetch(rules, url):
+        raise SystemExit(f'robots.txt disallows Googlebot access: {url}')
+PY
+
 url_count=0
 while IFS= read -r loc; do
   url_count=$((url_count + 1))
@@ -107,19 +221,35 @@ while IFS= read -r loc; do
   status=$(fetch "${BASE_URL}${path}" "$body_file" "$header_file")
   assert_status 200 "$status" "GET ${path}"
 
-  python3 - "$body_file" "$loc" <<'PY'
+  python3 - "$body_file" "$header_file" "$loc" <<'PY'
 import re
 import sys
+from html.parser import HTMLParser
 
-body_path, url = sys.argv[1:]
+body_path, header_path, url = sys.argv[1:]
 body = open(body_path, encoding='utf-8').read()
 
-for tag in re.findall(r'<meta\b[^>]*>', body, flags=re.IGNORECASE):
-    name = re.search(r'\bname\s*=\s*(["\'])(.*?)\1', tag, flags=re.IGNORECASE)
-    content = re.search(r'\bcontent\s*=\s*(["\'])(.*?)\1', tag, flags=re.IGNORECASE)
-    if name and name.group(2).strip().lower() == 'robots' and content:
-        if re.search(r'\bnoindex\b', content.group(2), flags=re.IGNORECASE):
-            raise SystemExit(f'sitemap URL points to a noindex page: {url}')
+headers = open(header_path, encoding='iso-8859-1').read()
+for line in headers.splitlines():
+    if ':' not in line:
+        continue
+    name, value = line.split(':', 1)
+    if name.strip().lower() == 'x-robots-tag' and re.search(r'\bnoindex\b', value, flags=re.IGNORECASE):
+        raise SystemExit(f'sitemap URL response contains X-Robots-Tag noindex: {url}')
+
+
+class RobotsMetaParser(HTMLParser):
+    def handle_starttag(self, tag, attrs):
+        if tag.lower() != 'meta':
+            return
+        attributes = {name.lower(): value or '' for name, value in attrs}
+        name = attributes.get('name', '').strip().lower()
+        content = attributes.get('content', '')
+        if name in {'robots', 'googlebot'} and re.search(r'\bnoindex\b', content, flags=re.IGNORECASE):
+            raise SystemExit(f'sitemap URL page contains {name} noindex: {url}')
+
+
+RobotsMetaParser().feed(body)
 PY
 done < "$url_list"
 

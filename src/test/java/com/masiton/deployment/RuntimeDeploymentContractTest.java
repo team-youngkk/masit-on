@@ -179,6 +179,7 @@ class RuntimeDeploymentContractTest {
     @DisplayName("CI는 Docker Hub digest를 SSH로 단일 EC2에 배포한다")
     void ci_DockerHubDigest를SSH로단일EC2에배포한다() throws IOException {
         String workflow = read(CI);
+        String deploy = read(Path.of("deploy/scripts/dockerhub-app-deploy.sh"));
 
         assertThat(workflow)
                 .contains("workflow_dispatch:")
@@ -218,6 +219,9 @@ class RuntimeDeploymentContractTest {
         assertThat(workflow.indexOf("app-deploy.sh dockerhub-app-deploy.sh"))
                 .isLessThan(workflow.indexOf("observability-cleanup.sh"));
         assertThat(workflow).contains("ci-production-deploy");
+        assertThat(deploy)
+                .contains("sitemap-smoke.sh")
+                .contains("install -m 0750 \"$STAGE/sitemap-smoke.sh\" /opt/masiton/bin/sitemap-smoke.sh");
     }
 
     @Test
@@ -260,6 +264,7 @@ class RuntimeDeploymentContractTest {
                 .contains("-C \"$GITHUB_WORKSPACE/deploy/app\"")
                 .contains("-C \"$GITHUB_WORKSPACE/deploy/nginx\"")
                 .contains("observability-cleanup.sh")
+                .contains("sitemap-smoke.sh")
                 .contains("bundle_entries=$(tar -tzf \"$bundle\")")
                 .contains("배포 bundle에 필요한 파일이 없거나 경로가 평탄화되지 않았다")
                 .doesNotContain("deploy/scripts/app-deploy.sh");
@@ -267,6 +272,7 @@ class RuntimeDeploymentContractTest {
                 .contains("sudo -n test -x '$remote_stage/dockerhub-app-deploy.sh'")
                 .contains("sudo -n test -x '$remote_stage/app-deploy.sh'")
                 .contains("sudo -n test -x '$remote_stage/observability-cleanup.sh'")
+                .contains("sudo -n test -x '$remote_stage/sitemap-smoke.sh'")
                 .doesNotContain("cloudwatch-install.sh")
                 .doesNotContain("health-metrics.sh")
                 .doesNotContain("amazon-cloudwatch-agent.json");

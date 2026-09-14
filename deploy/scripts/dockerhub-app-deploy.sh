@@ -82,14 +82,14 @@ require_stage_file() {
 
 for file in \
   app-deploy.sh app-run.sh app-secrets-render.sh app-file-config.sh runtime-health.sh \
-  observability-cleanup.sh nginx-install.sh nginx-smoke.sh \
+  observability-cleanup.sh nginx-install.sh nginx-smoke.sh sitemap-smoke.sh \
   tls-deploy-cert.sh masiton-backend.service masiton-frontend.service \
   nginx.conf masiton.click.conf 00-masiton-upgrade-map.conf \
   masiton-tls-renew.service masiton-tls-renew.timer; do
   require_stage_file "$file"
 done
 for file in app-deploy.sh app-run.sh app-secrets-render.sh runtime-health.sh \
-  observability-cleanup.sh nginx-install.sh nginx-smoke.sh tls-deploy-cert.sh; do
+  observability-cleanup.sh nginx-install.sh nginx-smoke.sh sitemap-smoke.sh tls-deploy-cert.sh; do
   [ -x "$STAGE/$file" ] || {
     echo "배포 스크립트가 실행 가능하지 않다: $STAGE/$file" >&2
     exit 1
@@ -154,3 +154,4 @@ bash "$STAGE/nginx-install.sh" --check-config "$STAGE"
 LOGIN_DONE=yes
 "$STAGE/observability-cleanup.sh"
 "$STAGE/app-deploy.sh" --image-refs "$BACKEND_IMAGE_REF" "$FRONTEND_IMAGE_REF" "$STAGE"
+install -m 0750 "$STAGE/sitemap-smoke.sh" /opt/masiton/bin/sitemap-smoke.sh

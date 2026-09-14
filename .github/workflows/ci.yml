@@ -106,6 +106,9 @@ jobs:
       - name: 파일 기반 TLS·Nginx 셸 계약
         run: bash ./deploy/scripts/tests/nginx-tls-files-test.sh
 
+      - name: Sitemap smoke 셸 계약
+        run: bash ./deploy/scripts/tests/sitemap-smoke-test.sh
+
       # ADR-CI-001 9·10절과 기술 정책 3절이 CI 런타임을 JDK 21.0.12로 고정한다.
       # `21`처럼 major만 주면 setup-java가 최신 21.x를 고를 수 있어 저장소 변경 없이
       # CI 런타임이 달라진다. 패치까지 명시한다.
@@ -826,7 +829,7 @@ jobs:
             -C "$GITHUB_WORKSPACE/deploy/scripts" \
             app-deploy.sh dockerhub-app-deploy.sh app-run.sh app-secrets-render.sh app-file-config.sh \
             runtime-health.sh observability-cleanup.sh \
-            nginx-install.sh nginx-smoke.sh tls-deploy-cert.sh \
+            nginx-install.sh nginx-smoke.sh sitemap-smoke.sh tls-deploy-cert.sh \
             -C "$GITHUB_WORKSPACE/deploy/app" \
             masiton-backend.service masiton-frontend.service \
             -C "$GITHUB_WORKSPACE/deploy/nginx" \
@@ -836,7 +839,7 @@ jobs:
           for entry in \
             app-deploy.sh dockerhub-app-deploy.sh app-run.sh app-secrets-render.sh app-file-config.sh \
             runtime-health.sh observability-cleanup.sh \
-            nginx-install.sh nginx-smoke.sh tls-deploy-cert.sh \
+            nginx-install.sh nginx-smoke.sh sitemap-smoke.sh tls-deploy-cert.sh \
             masiton-backend.service masiton-frontend.service \
             nginx.conf masiton.click.conf 00-masiton-upgrade-map.conf \
             masiton-tls-renew.service masiton-tls-renew.timer; do
@@ -942,7 +945,7 @@ jobs:
             echo "원격 bundle checksum이 다르다: $remote_sha256 != $BUNDLE_SHA256" >&2
             exit 1
           fi
-          ssh "${ssh_opts[@]}" "$remote" "sudo -n tar --extract --gzip --file '$remote_archive' --directory '$remote_stage' --no-same-owner --no-same-permissions && sudo -n rm -f '$remote_archive' && sudo -n find '$remote_stage' -maxdepth 1 -type f -name '*.sh' -exec chmod 0750 {} + && sudo -n test -x '$remote_stage/dockerhub-app-deploy.sh' && sudo -n test -x '$remote_stage/app-deploy.sh' && sudo -n test -x '$remote_stage/observability-cleanup.sh' && sudo -n test -f '$remote_stage/nginx-install.sh'"
+          ssh "${ssh_opts[@]}" "$remote" "sudo -n tar --extract --gzip --file '$remote_archive' --directory '$remote_stage' --no-same-owner --no-same-permissions && sudo -n rm -f '$remote_archive' && sudo -n find '$remote_stage' -maxdepth 1 -type f -name '*.sh' -exec chmod 0750 {} + && sudo -n test -x '$remote_stage/dockerhub-app-deploy.sh' && sudo -n test -x '$remote_stage/app-deploy.sh' && sudo -n test -x '$remote_stage/observability-cleanup.sh' && sudo -n test -x '$remote_stage/sitemap-smoke.sh' && sudo -n test -f '$remote_stage/nginx-install.sh'"
 
       - name: 원격 Docker Hub 로그인과 애플리케이션 배포
         env:

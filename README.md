@@ -92,14 +92,14 @@ Google Search Console도 같은 속성 `https://masiton.click/`을 등록·소�
 1. `https://masiton.click/robots.txt`가 `200`이고 `Sitemap: https://masiton.click/sitemap.xml`을 포함하는지 확인한다.
 2. `https://masiton.click/sitemap.xml`이 `200`·`application/xml`로 응답하고 XML 파싱에 성공하는지 확인한다.
 3. sitemap의 모든 `<loc>`가 `https://masiton.click/restaurants` 또는 공개 상세 경로이고, 중복·404·5xx·`noindex` 페이지가 없는지 확인한다.
-4. 운영 호스트 또는 동일한 프록시 경로에서 `deploy/scripts/nginx-smoke.sh`와 `deploy/scripts/sitemap-smoke.sh`를 실행한다. 운영 호스트에서 실행하면 두 스크립트의 기본값이 각각 `SMOKE_ADDRESS=127.0.0.1`, `SITEMAP_SMOKE_ADDRESS=127.0.0.1`이다.
+4. 운영 호스트 또는 동일한 프록시 경로에서 `deploy/scripts/nginx-smoke.sh`와 `/opt/masiton/bin/sitemap-smoke.sh`를 실행한다. 표준 SSH 배포가 성공하면 sitemap smoke가 `/opt/masiton/bin/sitemap-smoke.sh`에 설치된다. 운영 호스트에서 실행하면 두 스크립트의 기본값이 각각 `SMOKE_ADDRESS=127.0.0.1`, `SITEMAP_SMOKE_ADDRESS=127.0.0.1`이다.
 5. Search Console의 sitemap 보고서에서 상태가 성공으로 바뀌고 발견 페이지 수가 1 이상인지 확인한다. 결과에 시각, 제출한 sitemap URL, 발견 페이지 수를 남긴다.
 
 운영 프록시의 기본 점검은 다음처럼 실행한다.
 
 ```bash
 bash deploy/scripts/nginx-smoke.sh
-bash deploy/scripts/sitemap-smoke.sh
+bash /opt/masiton/bin/sitemap-smoke.sh
 ```
 
 Google Search Console의 처리 상태와 발견 페이지 집계는 Google의 비동기 외부 상태이므로
