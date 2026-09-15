@@ -88,7 +88,9 @@ class YoutubeChannelBackfillServiceTest {
 
         service.poll();
 
-        verify(runs).completePage(runId, "owner", 2, 1, 1, "page-2", false, false, now);
+        verify(runs).recordVideo(runId, "video-1", false, now);
+        verify(runs).recordVideo(runId, "video-2", true, now);
+        verify(runs).completePage(runId, "owner", 2, "page-2", false, false, now);
     }
 
     @Test
@@ -113,7 +115,33 @@ class YoutubeChannelBackfillServiceTest {
         service.poll();
 
         verify(videos).query("channel-id", "page-1", 25);
-        verify(runs).completePage(runId, "owner", 25, 25, 0, "page-3", false, true, now);
+        verify(runs).completePage(runId, "owner", 25, "page-3", false, true, now);
+    }
+
+    @Test
+    @DisplayName("페이지 중간 예외가 나도 이미 접수한 영상의 처리 결과를 기록한다")
+    void 폴링_페이지중간예외_이미접수한영상결과를기록한다() {
+        properties.setEnabled(true);
+        UUID runId = UUID.randomUUID();
+        YoutubeChannelBackfillRunStore.ClaimedRun claimed = new YoutubeChannelBackfillRunStore.ClaimedRun(
+                runId, creatorId, "channel-id", null, 0, 0, "owner");
+        when(runs.claim(any(), any(), any())).thenReturn(Optional.of(claimed));
+        when(runs.isClaimActive(any(), any(), any())).thenReturn(true);
+        when(videos.query("channel-id", null, 50))
+                .thenReturn(new YoutubeChannelVideoQueryPort.VideoPage(List.of("video-1", "video-2"), "next"));
+        AiExtractionJobView created = mock(AiExtractionJobView.class);
+        when(created.reused()).thenReturn(false);
+        when(jobs.submitBackfillIfClaimActive(runId, "owner", "channel-id", "video-1"))
+                .thenReturn(Optional.of(created));
+        when(jobs.submitBackfillIfClaimActive(runId, "owner", "channel-id", "video-2"))
+                .thenThrow(new IllegalStateException("job persistence failed"));
+
+        service.poll();
+
+        verify(runs).recordVideo(runId, "video-1", false, now);
+        verify(runs).fail(runId, "owner", "BACKFILL_PROCESSING", now);
+        verify(runs, org.mockito.Mockito.never()).completePage(any(), any(), anyInt(), any(), anyBoolean(),
+                anyBoolean(), any());
     }
 
     @Test
@@ -131,8 +159,8 @@ class YoutubeChannelBackfillServiceTest {
         service.poll();
 
         verifyNoInteractions(jobs);
-        verify(runs, org.mockito.Mockito.never()).completePage(any(), any(), anyInt(), anyInt(), anyInt(), any(),
-                anyBoolean(), anyBoolean(), any());
+        verify(runs, org.mockito.Mockito.never()).completePage(any(), any(), anyInt(), any(), anyBoolean(),
+                anyBoolean(), any());
     }
 
     @Test

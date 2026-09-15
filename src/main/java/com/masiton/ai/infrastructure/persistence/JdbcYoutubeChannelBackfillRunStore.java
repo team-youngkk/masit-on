@@ -48,8 +48,8 @@ public class JdbcYoutubeChannelBackfillRunStore implements YoutubeChannelBackfil
                 )
                 UPDATE youtube_channel_backfill_run r
                    SET status='QUEUED', page_count=0, scanned_count=0,
-                       submitted_count=0, reused_count=0, last_error_category=NULL,
-                       stop_reason=NULL, lease_owner=NULL, lease_expires_at=NULL, updated_at=?
+                       last_error_category=NULL, stop_reason=NULL, lease_owner=NULL,
+                       lease_expires_at=NULL, updated_at=?
                   FROM candidate c
                  WHERE r.id=c.id
                 RETURNING r.*
@@ -119,7 +119,25 @@ public class JdbcYoutubeChannelBackfillRunStore implements YoutubeChannelBackfil
     }
 
     @Override
-    public void completePage(UUID id, String owner, int scanned, int submitted, int reused,
+    public void recordVideo(UUID runId, String videoId, boolean reused, OffsetDateTime now) {
+        jdbc.update("""
+                WITH inserted AS (
+                    INSERT INTO youtube_channel_backfill_video (run_id, youtube_video_id, result, created_at)
+                    VALUES (?, ?, ?, ?)
+                    ON CONFLICT (run_id, youtube_video_id) DO NOTHING
+                    RETURNING result
+                )
+                UPDATE youtube_channel_backfill_run r
+                   SET submitted_count = submitted_count + CASE WHEN inserted.result='SUBMITTED' THEN 1 ELSE 0 END,
+                       reused_count = reused_count + CASE WHEN inserted.result='REUSED' THEN 1 ELSE 0 END,
+                       updated_at = ?
+                  FROM inserted
+                 WHERE r.id = ?
+                """, runId, videoId, reused ? "REUSED" : "SUBMITTED", now, now, runId);
+    }
+
+    @Override
+    public void completePage(UUID id, String owner, int scanned,
                              String token, boolean done, boolean limitReached, OffsetDateTime now) {
         jdbc.update("""
                 UPDATE youtube_channel_backfill_run r
@@ -137,14 +155,12 @@ public class JdbcYoutubeChannelBackfillRunStore implements YoutubeChannelBackfil
                        stop_reason = CASE WHEN ? THEN 'MAX_VIDEOS_PER_RUN' ELSE NULL END,
                        page_count = page_count + 1,
                        scanned_count = scanned_count + ?,
-                       submitted_count = submitted_count + ?,
-                       reused_count = reused_count + ?,
                        page_token = ?,
                        lease_owner = NULL,
                        lease_expires_at = NULL,
                        updated_at = ?
                  WHERE id=? AND status='RUNNING' AND lease_owner=? AND lease_expires_at > ?
-                """, done, limitReached, limitReached, scanned, submitted, reused, token, now, id, owner, now);
+                """, done, limitReached, limitReached, scanned, token, now, id, owner, now);
     }
 
     @Override

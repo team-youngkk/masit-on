@@ -97,7 +97,7 @@ Creator 필터는 `visit`에서 고유 Restaurant ID를 구한 뒤 Restaurant의
 
 ## 7. 3차 확장 AI 영상 추출 인덱스
 
-3차 확장 인덱스의 정확한 SQL은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)과 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql), [`V14__create_youtube_channel_backfill_run.sql`](../../../src/main/resources/db/migration/V14__create_youtube_channel_backfill_run.sql), [`V15__add_youtube_channel_backfill_stop_reason.sql`](../../../src/main/resources/db/migration/V15__add_youtube_channel_backfill_stop_reason.sql)을 따른다.
+3차 확장 인덱스의 정확한 SQL은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)과 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql), [`V14__create_youtube_channel_backfill_run.sql`](../../../src/main/resources/db/migration/V14__create_youtube_channel_backfill_run.sql), [`V15__add_youtube_channel_backfill_stop_reason.sql`](../../../src/main/resources/db/migration/V15__add_youtube_channel_backfill_stop_reason.sql), [`V16__add_youtube_channel_backfill_video_ledger.sql`](../../../src/main/resources/db/migration/V16__add_youtube_channel_backfill_video_ledger.sql)을 따른다.
 
 | 인덱스 | 대상 경로 | 목적 |
 |---|---|---|
@@ -115,6 +115,7 @@ Creator 필터는 `visit`에서 고유 Restaurant ID를 구한 뒤 Restaurant의
 | `ux_youtube_backfill_active_creator` | `creator_id` partial unique, `status IN ('QUEUED','RUNNING')` | Creator별 진행 중 보정 실행 하나만 허용 |
 | `ix_youtube_backfill_due` | `updated_at`, `id` partial, `status='QUEUED'` | 다음 보정 페이지 claim 순서 |
 | `ix_youtube_backfill_expired_lease` | `lease_expires_at`, `id` partial, `status='RUNNING'` | 만료 lease 복구 후보 선택 |
+| `ix_youtube_backfill_video_run` | `run_id`, `created_at` | 보정 run 영상 처리 원장 조회 |
 
 멱등성·Snapshot·시도·채널 감시의 unique 제약은 보조 인덱스를 별도로 중복 생성하지 않는다. 실제 운영 성능은 Worker claim·공개 태그 조회와 3차 성능 Task의 실행계획·부하 결과로 검증한다.
 

@@ -107,19 +107,17 @@ public class YoutubeChannelBackfillService implements YoutubeChannelBackfillUseC
             if (page.videoIds().size() > remainingVideos) {
                 throw new YoutubeChannelVideoQueryException("YOUTUBE_MALFORMED_RESPONSE");
             }
-            int submitted = 0;
-            int reused = 0;
             for (String videoId : page.videoIds()) {
                 Optional<AiExtractionJobView> accepted = jobs.submitBackfillIfClaimActive(
                         run.runId(), run.leaseOwner(), run.channelId(), videoId);
                 if (accepted.isEmpty()) return;
                 AiExtractionJobView job = accepted.get();
-                if (job.reused()) reused++; else submitted++;
+                runs.recordVideo(run.runId(), videoId, job.reused(), now());
             }
             boolean completed = page.nextPageToken() == null;
             boolean limitReached = !completed && run.scannedCount() + page.videoIds().size()
                     >= properties.getMaxVideosPerRun();
-            runs.completePage(run.runId(), run.leaseOwner(), page.videoIds().size(), submitted, reused,
+            runs.completePage(run.runId(), run.leaseOwner(), page.videoIds().size(),
                     page.nextPageToken(), completed, limitReached, now());
             metrics.recordPage(page.nextPageToken() == null ? "completed" : "continued");
         } catch (YoutubeChannelVideoQueryException exception) {

@@ -109,10 +109,34 @@ class JdbcYoutubeChannelBackfillRunStoreIntegrationTest extends FullContextInteg
             assertThat(resumed.run().runId()).isEqualTo(runId);
             assertThat(resumed.run().status()).isEqualTo("QUEUED");
             assertThat(resumed.run().scannedCount()).isZero();
+            assertThat(resumed.run().submittedCount()).isEqualTo(50);
+            assertThat(resumed.run().reusedCount()).isEqualTo(25);
             assertThat(claimed.runId()).isEqualTo(runId);
             assertThat(claimed.pageToken()).isEqualTo("resume-token");
             assertThat(claimed.pageCount()).isZero();
             assertThat(claimed.scannedCount()).isZero();
+        } finally {
+            deleteFixture(creatorId);
+        }
+    }
+
+    @Test
+    @DisplayName("같은 run의 영상 처리 결과는 재시도해도 신규·재사용 누계를 중복 집계하지 않는다")
+    void recordVideo_같은Run영상재시도_누계를한번만집계한다() {
+        UUID creatorId = UUID.randomUUID();
+        String channelId = "channel-" + UUID.randomUUID();
+        OffsetDateTime now = OffsetDateTime.parse("2026-09-15T00:00:00Z");
+        insertCreatorAndWatch(creatorId, channelId, true, "ACTIVE");
+
+        try {
+            UUID runId = store.createOrReuse(creatorId, now).orElseThrow().run().runId();
+            store.recordVideo(runId, "video-1", false, now);
+            store.recordVideo(runId, "video-1", true, now.plusSeconds(1));
+            store.recordVideo(runId, "video-2", true, now.plusSeconds(1));
+
+            YoutubeChannelBackfillRunStore.Run run = store.find(creatorId, runId).orElseThrow();
+            assertThat(run.submittedCount()).isEqualTo(1);
+            assertThat(run.reusedCount()).isEqualTo(1);
         } finally {
             deleteFixture(creatorId);
         }

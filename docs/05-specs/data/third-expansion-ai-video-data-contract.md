@@ -30,7 +30,7 @@ related_documents:
 
 ## 1. 결정 상태와 범위
 
-이 문서는 AI 영상 추출 작업, 후보 Snapshot, 통제 태그, Gemini 영상 입력 이력과 YouTube 채널 감시·보정 실행 상태의 논리·물리 데이터 경계를 정의하는 Accepted 계약이다. Google Gemini API는 `gemini-3.5-flash-lite`, Gemini Developer API global endpoint, Free Tier 전용·유료 호출 금지, 현재 Prompt `P8`, 결과 Schema `S2`를 사용한다. 기존 Prompt `P1`·`P2`·`P3`·`P4`·`P5`·`P6`·`P7` 작업과 Snapshot은 재현성을 위한 역사적 이력으로만 보존한다. V4 AI 스키마의 정본은 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql)이고, 채널 감시 오류 시각 보강은 [`V5__add_youtube_channel_watch_last_error_at.sql`](../../../src/main/resources/db/migration/V5__add_youtube_channel_watch_last_error_at.sql), YouTube 보정 실행은 [`V14__create_youtube_channel_backfill_run.sql`](../../../src/main/resources/db/migration/V14__create_youtube_channel_backfill_run.sql), 중지 원인은 [`V15__add_youtube_channel_backfill_stop_reason.sql`](../../../src/main/resources/db/migration/V15__add_youtube_channel_backfill_stop_reason.sql)로 관리한다.
+이 문서는 AI 영상 추출 작업, 후보 Snapshot, 통제 태그, Gemini 영상 입력 이력과 YouTube 채널 감시·보정 실행 상태의 논리·물리 데이터 경계를 정의하는 Accepted 계약이다. Google Gemini API는 `gemini-3.5-flash-lite`, Gemini Developer API global endpoint, Free Tier 전용·유료 호출 금지, 현재 Prompt `P8`, 결과 Schema `S2`를 사용한다. 기존 Prompt `P1`·`P2`·`P3`·`P4`·`P5`·`P6`·`P7` 작업과 Snapshot은 재현성을 위한 역사적 이력으로만 보존한다. V4 AI 스키마의 정본은 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql)이고, 채널 감시 오류 시각 보강은 [`V5__add_youtube_channel_watch_last_error_at.sql`](../../../src/main/resources/db/migration/V5__add_youtube_channel_watch_last_error_at.sql), YouTube 보정 실행은 [`V14__create_youtube_channel_backfill_run.sql`](../../../src/main/resources/db/migration/V14__create_youtube_channel_backfill_run.sql), 중지 원인은 [`V15__add_youtube_channel_backfill_stop_reason.sql`](../../../src/main/resources/db/migration/V15__add_youtube_channel_backfill_stop_reason.sql), 영상 처리 원장은 [`V16__add_youtube_channel_backfill_video_ledger.sql`](../../../src/main/resources/db/migration/V16__add_youtube_channel_backfill_video_ledger.sql)로 관리한다.
 
 `ai_registration_unit`(5.1절), `ai_registration_unit_review`(5.3절), `food_category_mapping`(5.2절), `ai_candidate_snapshot.candidate_truncated`는 [PR #226](https://github.com/team-youngkk/masit-on/pull/226)에서 Flyway 순서 소유자(박진영)와 restaurant 도메인 소유자의 승인으로 합의를 확정했다. 네 항목은 `V8__add_ai_registration_unit_and_food_category_mapping.sql`로 구현했다. 절차는 [ADR-AI-001 1절](../../07-adr/integration/ai-001-video-extraction-candidate-boundary.md)에 있다.
 
@@ -375,6 +375,17 @@ Creator 등록만으로 `enabled=true`가 되지 않는다. 감시 중지·구�
 
 Creator별 `QUEUED/RUNNING` 실행은 partial unique index로 하나만 허용한다. 실행을 처리할 때 `youtube_channel_watch.enabled=true`와 `subscription_status=ACTIVE`를 다시 확인하며, 감시 중지나 구독 비활성화가 확인되면 실행을 `STOPPED`로 종결한다. 영상 상한에 도달하면서 다음 Cursor가 남으면 `STOPPED/MAX_VIDEOS_PER_RUN`으로 저장하고, 명시적 재시작 시 누적 건수와 lease만 초기화해 Cursor를 유지한다. 수동 중지는 `STOPPED/MANUAL`로 저장해 자동 재개하지 않는다. Job 생성은 기존 `ai_extraction_job`의 영상 식별자·입력 모드·Provider·Model·Prompt·Schema 멱등성 경계를 재사용한다.
 
+## 10.2 `youtube_channel_backfill_video`
+
+한 보정 run에서 영상별 Job 접수 결과를 한 건씩 기록하는 재시도 원장이다. `(run_id, youtube_video_id)` unique로 lease 만료나 페이지 중간 예외 뒤 같은 영상을 다시 처리해도 `submitted_count`·`reused_count`를 중복 집계하지 않는다. `SUBMITTED`는 해당 run이 신규 Job을 접수한 결과이고 `REUSED`는 기존 Job을 재사용한 결과다.
+
+| 컬럼 | SQL 타입 후보 | Null | 키·제약 | 설명 |
+|---|---|---:|---|---|
+| `run_id` | `uuid` | NN | PK 일부, FK → `youtube_channel_backfill_run.id`, CASCADE | 보정 실행 |
+| `youtube_video_id` | `varchar(128)` | NN | PK 일부, 공백 금지 | 처리한 YouTube 영상 |
+| `result` | `varchar(16)` | NN | `SUBMITTED/REUSED` | Job 접수 결과 |
+| `created_at` | 시간 | NN | 시각 규칙 | 최초 처리 결과 기록 시각 |
+
 ## 11. 제약·인덱스 후보
 
 | 이름 | 정의 후보 | 목적 |
@@ -397,12 +408,12 @@ Creator별 `QUEUED/RUNNING` 실행은 partial unique index로 하나만 허용�
 | `ix_visit_tag__tag_lookup` | `tag_definition_id`, 공개 Visit 상태 조합 | 태그 기반 맛집 조회 |
 | `ix_ai_temporary_input__expires_at` | `expires_at`, `job_id` | 만료 임시 입력 cleanup 선택 |
 
-정확한 PostgreSQL partial index·FK 삭제 동작·lease claim SQL과 Gemini 모델 CHECK 제약은 [ADR-EXT-003](../../07-adr/integration/ext-003-ai-extraction-async-reliability.md), [테이블 정의](table-definitions.md), [제약조건](constraints.md), [인덱스 전략](index-strategy.md), [Flyway 계획](migration-plan.md)과 통합 `V4`·보강 `V5`·보정 `V14`·중지 원인 `V15` DDL의 대응으로 확인한다.
+정확한 PostgreSQL partial index·FK 삭제 동작·lease claim SQL과 Gemini 모델 CHECK 제약은 [ADR-EXT-003](../../07-adr/integration/ext-003-ai-extraction-async-reliability.md), [테이블 정의](table-definitions.md), [제약조건](constraints.md), [인덱스 전략](index-strategy.md), [Flyway 계획](migration-plan.md)과 통합 `V4`·보강 `V5`·보정 `V14`·중지 원인 `V15`·영상 원장 `V16` DDL의 대응으로 확인한다.
 
 ## 12. 생명주기와 보존
 
 1. Webhook·관리자 요청 또는 YouTube 보정 실행이 `ai_extraction_job`을 생성한다.
-2. 보정 실행은 Cursor를 저장하고 페이지별로 영상을 조회한다. Worker가 lease를 claim한 뒤 외부 API 호출과 Job 접수를 수행하며 DB 트랜잭션을 외부 호출과 묶지 않는다.
+2. 보정 실행은 Cursor를 저장하고 페이지별로 영상을 조회한다. Worker가 lease를 claim한 뒤 외부 API 호출과 Job 접수를 수행하며 DB 트랜잭션을 외부 호출과 묶지 않는다. 영상별 Job 접수 결과는 보정 영상 원장에 멱등 기록해 중간 실패·lease 재확보 뒤 누계를 보존한다.
 3. 일반 AI Worker가 lease를 claim하고 Gemini URL 입력 또는 관리자 텍스트 입력을 처리한다.
 4. 성공·부분 결과는 새로운 `ai_candidate_snapshot`으로 저장하고 작업을 종료한다.
 5. 시스템은 Snapshot을 장소 단위 등록 단위로 나눠 `ai_registration_unit` 행을 만들고, 단위마다 Kakao 장소 동일성·대표 카테고리를 포함한 자동 검증을 수행해 `AUTO_CONFIRMED`, `AUTO_BLOCKED`, `AUTO_REJECTED`로 판정한다.
@@ -423,7 +434,7 @@ Webhook Raw Payload, 원본 영상, 자동 수집 전체 자막, Gemini 응답 �
 - [ ] 자동 태그 정규화·중복·근거 판단과 사후 보정 이력이 append-only로 보존되고, `UNKNOWN` AI 근거가 `AI_AUTO_CONFIRMED` `VisitTag`로 연결되지 않는다.
 - [ ] 원본 영상·자동 수집 전체 자막·AI 응답 전문·보완 텍스트 평문이 저장·로그·API 응답에 노출되지 않는다.
 - [ ] 보완 텍스트 암호문이 작업 종료 후 24시간 이내 삭제되고, 관리자 재시도가 이전 입력을 재사용하지 않는다.
-- [x] `data-traceability.md`, 물리 테이블 정의, 제약·인덱스·Flyway 계획과 `V4`·`V5`·`V14`·`V15` DDL의 구조적 대응이 문서화된다.
+- [x] `data-traceability.md`, 물리 테이블 정의, 제약·인덱스·Flyway 계획과 `V4`·`V5`·`V14`·`V15`·`V16` DDL의 구조적 대응이 문서화된다.
 - [ ] Flyway 빈 DB·`V3→V4` 적용, 제약 위반, lease 동시성·정식 Entity 0건 테스트 결과가 보존된다.
 - [ ] `ai_registration_unit`의 새 마이그레이션이 Flyway 순서 소유자 합의를 거쳐 추가되고, 단위별 상태·`registered_restaurant_id` 조합 제약이 검증된다.
 - [ ] 다장소 영상에서 일부 등록 단위가 차단돼도 통과한 단위의 정식 Entity가 유지되는 원자성 경계가 검증된다.
