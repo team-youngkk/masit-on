@@ -53,6 +53,7 @@ related_documents:
   - ../08-planning/third-expansion-task-breakdown.md
   - data/data-011-popular-restaurant-request-time-aggregation.md
   - data/data-012-second-expansion-retention-cleanup.md
+  - data/data-013-tag-definition-merge-provenance.md
   - integration/notify-002-in-app-notification-reliability.md
 ---
 
@@ -71,7 +72,7 @@ related_documents:
 | Spring Boot 4.1.0 | 고정 | Accepted ADR | [ADR-FRAME-001](platform/frame-001-spring-boot.md) | 백엔드 프레임워크 기준선 |
 | Spring Security 7.1.0 | BOM 파생·고정 | Duplicate or Derived Rule | [ADR-FRAME-001](platform/frame-001-spring-boot.md), [ADR-AUTH-007](security/auth-007-unified-account-rbac-session.md) | 버전은 Boot BOM 파생, 사용 방식은 통합 인증 결정에 종속 |
 | Node.js 24.18.0 LTS | 고정 | Accepted ADR | [ADR-WEB-001](platform/web-001-frontend-platform.md) | 프론트엔드 런타임 기준선 |
-| Next.js 16.2.11 + TypeScript 7.0.2 | 고정 | Accepted ADR | [ADR-WEB-001](platform/web-001-frontend-platform.md) | 웹 프레임워크·언어 기준선 |
+| Next.js 16.3.4 + TypeScript 7.0.2 | 고정 | Accepted ADR | [ADR-WEB-001](platform/web-001-frontend-platform.md) | 웹 프레임워크·언어 기준선 |
 | Server Components `fetch` + TanStack Query 5.101.4 | 확정 | Accepted ADR | [ADR-WEB-002](platform/web-002-data-state.md) | 초기·상호작용 데이터 책임 분리, 정확한 버전 고정 |
 | URL Query Parameter | 확정 | Accepted ADR | [ADR-WEB-002](platform/web-002-data-state.md) | 검색 상태의 공유·재현 |
 | React `useState` | 확정 | Duplicate or Derived Rule | [ADR-WEB-002](platform/web-002-data-state.md) | 화면 지역 상태 구현 규칙 |
@@ -115,7 +116,7 @@ related_documents:
 | 하루 1회 이상 최근 기록 cleanup | 1차 확장 적용 | Operational Configuration | [ADR-DATA-010](data/data-010-recent-view-retention-cleanup.md) | 신규 조회와 독립된 30일 경과 `recent_restaurant_view` 물리 삭제; 실패 관측·재시도 |
 | AI 제공자·모델 | Gemini Free Tier global endpoint, `gemini-3.5-flash-lite` | Accepted ADR | [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md) | 공개 YouTube URL 입력, 후보·검수·무료 quota·보존 기준 |
 | JSON Schema + Prompt Template | 현재 Prompt `P8`, 결과 Schema `S2`; 기존 `P1`·`P2`·`P3`·`P4`·`P5`·`P6`·`P7` 이력 보존 | Accepted ADR | [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md) | AI 후보 계약과 평가 기준에 연결 |
-| 자연어 조건 해석 | P1 규칙 기반·태그 18종·태그 AND·`UNRESOLVED` | Accepted ADR | [ADR-ARCH-005](architecture/arch-005-natural-language-filter-interpretation.md) | 임베딩·RAG 없이 WS-14 조회 애플리케이션에서 처리 |
+| 자연어 조건 해석 | P1 규칙 기반·ACTIVE 동적 태그 사전·초기 18종 Golden V1·태그 AND·`UNRESOLVED`·30초 TTL fail-closed | Accepted ADR | [ADR-ARCH-005](architecture/arch-005-natural-language-filter-interpretation.md) | 임베딩·RAG 없이 WS-14 조회 애플리케이션에서 처리 |
 | AI 추출 비동기 Worker | Worker 1개/인스턴스·lease 120초·polling 5초·재시도 고정, 용량 실측은 최종 게이트 | Accepted ADR | [ADR-EXT-003](integration/ext-003-ai-extraction-async-reliability.md) | 작업 상태·복구·비용 격리 |
 | JUnit 5 + Mockito | 확정 | Accepted ADR | [ADR-TEST-001](quality/test-001-automation-strategy.md) | 단위 테스트 기준 |
 | Spring Boot Test + Testcontainers 2.0.5 | 고정 | Accepted ADR | [ADR-TEST-001](quality/test-001-automation-strategy.md) | 실제 저장소 통합 검증 |
@@ -293,6 +294,7 @@ Accepted 세 건은 현재 요구사항을 구현하는 최소 구조만 승인�
 | [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md) | Gemini 현재 P8/S2·기존 P1·P2·P3·P4·P5·P6·P7 이력·후보 Snapshot·근거·자동 검증·무료 quota | `TST-E3-AI-001~003`, `TST-E3-SEC-001`, [`EVAL-AI-001~010` 역사적 P1 계약 자산·dry-run·HOLD 기록](../08-planning/third-expansion-ai-evaluation-result.md) | `E3-T03~08` |
 | [ADR-EXT-003](integration/ext-003-ai-extraction-async-reliability.md) | PostgreSQL claim·lease·heartbeat·retry·재기동·단일 EC2 | `TST-E3-AI-004`, `TST-E3-DATA-001`, `E3-T13` 증거 | `E3-T04~05`, `E3-T13` |
 | [ADR-ROUTE-001](integration/route-001-kakao-mobility-course-routing.md) | Mobility `/v1/directions`·순서·TTL·캐시 없음·호출/비용 | `TST-E3-COURSE-001~003`, `EVAL-COURSE-001~005`, `E3-T13` 증거 | `E3-T09~10`, `E3-T13` |
+| [ADR-DATA-013](data/data-013-tag-definition-merge-provenance.md) | 원본별 병합 경로·VisitTag 변경 전 provenance·전진 복구 | 병합 API·마이그레이션·자연어 사전 통합 테스트 | 이슈 #366 |
 | [ADR-TEST-001](quality/test-001-automation-strategy.md), [ADR-PERF-001](quality/perf-001-k6-load-testing.md) | 테스트 계층·WireMock·Testcontainers·부하 실행 | `TST-E3-DATA-001`, `TST-E3-E2E-001`, `TST-E3-PERF-001` | `E3-T11~13` |
 
 3차 확장 ADR은 Accepted 정책이며, 각 행의 테스트·평가·운영 증거는 [3차 확장 운영 완료 기록](../08-planning/third-expansion-operational-completion-record.md)과 관련 기준선 문서에 연결한다. 조건부·Post-MVP ADR은 이 추적표의 3차 완료 Task에 포함하지 않는다.

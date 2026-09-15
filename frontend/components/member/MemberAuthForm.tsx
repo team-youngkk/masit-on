@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Field } from '@/components/ui/Field'
@@ -10,11 +10,14 @@ import { memberLoginDestination, memberLoginHref, memberVerifyEmailHref, safeMem
 import {
   type MemberAuthFieldErrors,
   type MemberAuthMode,
+  advancePasswordResetFlow,
   PENDING_MEMBER_REGISTRATION_EMAIL_KEY,
   PENDING_MEMBER_REGISTRATION_REQUESTED_AT_KEY,
   PASSWORD_POLICY_ERROR_MESSAGE,
   prepareMemberAuthSubmission,
   isInvalidMemberCredentialsResponse,
+  isInvalidPasswordResetTokenResponse,
+  isCurrentPasswordResetFlow,
   watchPasswordResetToken,
 } from './member-auth-form-coordination'
 import styles from './MemberAuthForm.module.css'
@@ -38,7 +41,13 @@ const CTA_LABELS: Record<MemberAuthMode, { idle: string; submitting: string }> =
 
 type AuthMessage = { tone: 'success' | 'danger'; text: string } | null
 
-export function MemberAuthForm({ mode, returnTo }: { mode: MemberAuthMode; returnTo?: string | null }) {
+type MemberAuthFormProps = {
+  mode: MemberAuthMode
+  returnTo?: string | null
+  onPasswordResetFlowReset?: () => void
+}
+
+export function MemberAuthForm({ mode, returnTo, onPasswordResetFlowReset }: MemberAuthFormProps) {
   const router = useRouter()
   const passwordRulesId = useId()
   const [email, setEmail] = useState('')
@@ -48,6 +57,7 @@ export function MemberAuthForm({ mode, returnTo }: { mode: MemberAuthMode; retur
   const [message, setMessage] = useState<AuthMessage>(null)
   const [submitting, setSubmitting] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<MemberAuthFieldErrors>({})
+  const passwordResetFlowRef = useRef({ token: '', revision: 0 })
 
   useEffect(() => {
     if (mode !== 'confirm-reset') {
@@ -56,7 +66,10 @@ export function MemberAuthForm({ mode, returnTo }: { mode: MemberAuthMode; retur
 
     return watchPasswordResetToken(
       () => window.location.hash,
-      resetToken => setToken(resetToken),
+      resetToken => {
+        passwordResetFlowRef.current = advancePasswordResetFlow(passwordResetFlowRef.current, resetToken)
+        setToken(resetToken)
+      },
       () => window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`),
       listener => {
         window.addEventListener('hashchange', listener)
@@ -128,17 +141,37 @@ export function MemberAuthForm({ mode, returnTo }: { mode: MemberAuthMode; retur
       return
     }
 
+    const submittedPasswordResetFlow = mode === 'confirm-reset' ? passwordResetFlowRef.current : null
     setSubmitting(true)
     try {
       if (mode === 'login') { await memberLogin(normalizedEmail, password); router.replace(getSafeReturnTo(returnTo)) }
       if (mode === 'request-reset') { await requestPasswordReset(normalizedEmail); setMessage({ tone: 'success', text: '비밀번호 재설정 요청을 접수했습니다. 이메일을 확인해 주세요.' }) }
       if (mode === 'confirm-reset') {
         await confirmPasswordReset(token, password)
+        if (!submittedPasswordResetFlow || !isCurrentPasswordResetFlow(passwordResetFlowRef.current, submittedPasswordResetFlow)) {
+          return
+        }
         setPassword('')
         setPasswordConfirmation('')
+        passwordResetFlowRef.current = advancePasswordResetFlow(passwordResetFlowRef.current, '')
+        setToken('')
+        onPasswordResetFlowReset?.()
         setMessage({ tone: 'success', text: '비밀번호를 변경하고 기존 로그인 세션을 종료했습니다. 새 비밀번호로 로그인해 주세요.' })
       }
     } catch (reason) {
+      if (mode === 'confirm-reset' && (!submittedPasswordResetFlow || !isCurrentPasswordResetFlow(passwordResetFlowRef.current, submittedPasswordResetFlow))) {
+        return
+      }
+      if (mode === 'confirm-reset' && await isInvalidPasswordResetTokenResponse(reason)) {
+        setPassword('')
+        setPasswordConfirmation('')
+        passwordResetFlowRef.current = advancePasswordResetFlow(passwordResetFlowRef.current, '')
+        setToken('')
+        onPasswordResetFlowReset?.()
+        setMessage({ tone: 'danger', text: '재설정 링크가 만료되었거나 이미 사용되었습니다. 새 재설정 요청을 시작해 주세요.' })
+        return
+      }
+
       const invalidCredentials = isInvalidMemberCredentialsResponse(reason)
       if (mode === 'login') {
         setMessage({

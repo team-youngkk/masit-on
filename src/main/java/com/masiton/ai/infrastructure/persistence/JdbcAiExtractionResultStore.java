@@ -88,9 +88,42 @@ class JdbcAiExtractionResultStore implements AiExtractionResultStore {
     }
 
     @Override
+    public Optional<TagDefinition> findTagByNormalizedTermForUpdate(String normalizedTerm) {
+        List<TagDefinition> rows = jdbcTemplate.query("""
+                SELECT definition.id, definition.tag_code, definition.tag_type, definition.display_name,
+                       definition.aliases::text, definition.status
+                  FROM tag_definition_term term
+                  JOIN tag_definition definition ON definition.id = term.tag_definition_id
+                 WHERE term.normalized_term = ?
+                 FOR UPDATE OF definition
+                """, this::mapTagDefinition, normalizedTerm);
+        return rows.stream().findFirst();
+    }
+
+    @Override
     public Optional<TagDefinition> insertTagIfAbsent(UUID id, String tagCode, String tagType, String displayName,
                                                       String aliases, String source, UUID snapshotId,
                                                       OffsetDateTime createdAt) {
+        List<String> normalizedTerms = jdbcTemplate.queryForList("""
+                SELECT normalized_term
+                  FROM (
+                      SELECT normalize_tag_definition_term(?) AS normalized_term
+                      UNION
+                      SELECT normalize_tag_definition_term(alias.value)
+                        FROM jsonb_array_elements_text(?::jsonb) AS alias(value)
+                  ) terms
+                 ORDER BY normalized_term
+                """, String.class, displayName, aliases);
+        normalizedTerms.forEach(term -> jdbcTemplate.queryForObject(
+                "SELECT 1 FROM (SELECT pg_advisory_xact_lock(hashtextextended(?, 0))) locked",
+                Integer.class, term));
+        for (String normalizedTerm : normalizedTerms) {
+            if (Boolean.TRUE.equals(jdbcTemplate.queryForObject(
+                    "SELECT EXISTS (SELECT 1 FROM tag_definition_term WHERE normalized_term = ?)",
+                    Boolean.class, normalizedTerm))) {
+                return Optional.empty();
+            }
+        }
         List<TagDefinition> rows = jdbcTemplate.query("""
                 INSERT INTO tag_definition (
                     id, tag_code, tag_type, display_name, aliases, status, source,
@@ -100,6 +133,22 @@ class JdbcAiExtractionResultStore implements AiExtractionResultStore {
                 RETURNING id, tag_code, tag_type, display_name, aliases::text, status
                 """, this::mapTagDefinition, id, tagCode, tagType, displayName, aliases, source, snapshotId,
                 createdAt, createdAt);
+        if (!rows.isEmpty()) {
+            jdbcTemplate.update("""
+                    INSERT INTO tag_definition_term (
+                        id, tag_definition_id, term_kind, normalized_term, created_at
+                    )
+                    SELECT gen_random_uuid(), ?, term_kind,
+                           normalize_tag_definition_term(term_value), ?
+                      FROM (
+                          SELECT 'DISPLAY_NAME'::varchar AS term_kind, ?::text AS term_value, 0::bigint AS ordering
+                          UNION ALL
+                          SELECT 'ALIAS'::varchar, alias.value, alias.ordinality
+                            FROM jsonb_array_elements_text(?::jsonb) WITH ORDINALITY AS alias(value, ordinality)
+                      ) terms
+                     ORDER BY ordering
+                    """, id, createdAt, displayName, aliases);
+        }
         return rows.stream().findFirst();
     }
 

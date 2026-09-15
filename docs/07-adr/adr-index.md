@@ -31,6 +31,7 @@ related_documents:
   - data/data-010-recent-view-retention-cleanup.md
   - data/data-011-popular-restaurant-request-time-aggregation.md
   - data/data-012-second-expansion-retention-cleanup.md
+  - data/data-013-tag-definition-merge-provenance.md
   - integration/notify-002-in-app-notification-reliability.md
   - integration/ext-001-reference-verification.md
   - integration/ai-001-video-extraction-candidate-boundary.md
@@ -61,7 +62,7 @@ related_documents:
 | [ADR-LANG-001](platform/lang-001-java-21-runtime.md) | Java 21 런타임 기준 | Accepted | Critical | JDK 21.0.12 LTS | 전체 백엔드 | [문서](platform/lang-001-java-21-runtime.md) |
 | [ADR-BUILD-001](platform/build-001-gradle-groovy.md) | Gradle과 Groovy DSL 빌드 체계 | Accepted | Critical | Gradle 8.14.3, Groovy DSL | 전체 백엔드·CI | [문서](platform/build-001-gradle-groovy.md) |
 | [ADR-FRAME-001](platform/frame-001-spring-boot.md) | Spring Boot 애플리케이션 기준 | Accepted | Critical | Spring Boot 4.1.0, Spring Security 7.1.0 BOM | 전체 백엔드 | [문서](platform/frame-001-spring-boot.md) |
-| [ADR-WEB-001](platform/web-001-frontend-platform.md) | 프론트엔드 런타임과 프레임워크 기준 | Accepted | High | Node.js 24.18.0, Next.js 16.2.11, TypeScript 7.0.2 | 전체 웹 UI | [문서](platform/web-001-frontend-platform.md) |
+| [ADR-WEB-001](platform/web-001-frontend-platform.md) | 프론트엔드 런타임과 프레임워크 기준 | Accepted | High | Node.js 24.18.0, Next.js 16.3.4, TypeScript 7.0.2 | 전체 웹 UI | [문서](platform/web-001-frontend-platform.md) |
 | [ADR-WEB-002](platform/web-002-data-state.md) | 프론트엔드 데이터와 상태 책임 분리 | Accepted | Medium | Server Components `fetch`, TanStack Query, URL Query Parameter, `useState` | [WS-01](../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)~[WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 웹 UI | [문서](platform/web-002-data-state.md) |
 | [ADR-WEB-003](platform/web-003-routing-boundary.md) | 웹 화면·API·운영 경로 경계 | Superseded | Critical | Next.js App Router, Nginx, Spring Security, `/api`, `/internal` | ADR-WEB-006이 전체 경계를 대체 | [문서](platform/web-003-routing-boundary.md) |
 | [ADR-WEB-004](platform/web-004-supported-browser-matrix.md) | 지원 브라우저 매트릭스와 iPhone Safari 지원 수준 | Accepted | High | PC Chrome·Edge, Android Chrome, 화면 폭 5종 | 전체 웹 UI 인수 판정 | [문서](platform/web-004-supported-browser-matrix.md) |
@@ -100,6 +101,7 @@ related_documents:
 | [ADR-DATA-010](data/data-010-recent-view-retention-cleanup.md) | 최근 본 맛집 보존 기간 정리 실행 | Accepted | High | Spring Scheduler, PostgreSQL | [WS-06](../02-analysis/first-expansion-workstreams.md#5-ws-06-개인-맛집-관리) 최근 기록 생명주기 | [문서](data/data-010-recent-view-retention-cleanup.md) |
 | [ADR-DATA-011](data/data-011-popular-restaurant-request-time-aggregation.md) | 인기 맛집 요청 시점 실시간 집계 | Accepted | High | PostgreSQL 집계·인덱스 | [WS-10](../02-analysis/second-expansion-workstreams.md#5-ws-10-인기-맛집) 인기 맛집 | [문서](data/data-011-popular-restaurant-request-time-aggregation.md) |
 | [ADR-DATA-012](data/data-012-second-expansion-retention-cleanup.md) | 2차 확장 보존 정책 정리 실행 | Accepted | High | Spring Scheduler, PostgreSQL | [WS-12](../02-analysis/second-expansion-workstreams.md#7-ws-12-제보신고-검토)·[WS-13](../02-analysis/second-expansion-workstreams.md#8-ws-13-사용자-알림) 보존 | [문서](data/data-012-second-expansion-retention-cleanup.md) |
+| [ADR-DATA-013](data/data-013-tag-definition-merge-provenance.md) | 태그 정의 병합 경로와 VisitTag provenance | Accepted | High | PostgreSQL JSONB, append-only ledger | 관리자 중복 태그 병합·자연어 용어 호환 | [문서](data/data-013-tag-definition-merge-provenance.md) |
 | [ADR-NOTIFY-002](integration/notify-002-in-app-notification-reliability.md) | 서비스 내 사용자 알림의 저장 신뢰성 경계 | Accepted | Critical | PostgreSQL 단일 트랜잭션 | [WS-12](../02-analysis/second-expansion-workstreams.md#7-ws-12-제보신고-검토)·[WS-13](../02-analysis/second-expansion-workstreams.md#8-ws-13-사용자-알림) | [문서](integration/notify-002-in-app-notification-reliability.md) |
 | [ADR-RUNTIME-001](platform/runtime-001-docker.md) | Docker 기반 실행 환경 | Accepted | High | Docker | 개발·테스트·배포 산출물 | [문서](platform/runtime-001-docker.md) |
 | [ADR-CI-001](platform/ci-001-github-actions-quality-gate.md) | GitHub Actions 빌드·테스트 품질 게이트 | Accepted | Critical | GitHub Actions | 전체 배포 후보 | [문서](platform/ci-001-github-actions-quality-gate.md) |

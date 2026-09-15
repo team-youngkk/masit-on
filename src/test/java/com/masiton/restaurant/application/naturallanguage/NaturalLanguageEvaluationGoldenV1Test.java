@@ -10,10 +10,16 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import com.masiton.creator.application.port.in.CreatorSelectionItem;
+import com.masiton.restaurant.application.port.out.ActiveTagDictionaryPort.ActiveTagDictionarySnapshot;
+import com.masiton.restaurant.application.port.out.ActiveTagDictionaryPort.TagDefinition;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -88,6 +94,24 @@ class NaturalLanguageEvaluationGoldenV1Test {
         assertThat(expectedScalarValues(cases, "creatorId")).contains("creator-opaque-eval");
         assertThat(cases.stream().flatMap(testCase -> testCase.evalIds().stream()).collect(Collectors.toSet()))
                 .contains("EVAL-NL-001", "EVAL-NL-002", "EVAL-NL-003", "EVAL-NL-004", "EVAL-NL-007");
+    }
+
+    @Test
+    @DisplayName("240개 Golden 문장은 동적 활성 태그 snapshot Adapter에서도 정적 P1과 같다")
+    void 동적태그snapshot_전체Golden문장_정적P1과동등하다() {
+        UUID creatorId = UUID.fromString("00000000-0000-4000-8000-000000000001");
+        NaturalLanguageParserAdapter staticAdapter = new NaturalLanguageParserAdapter(
+                new NaturalLanguageRestaurantParser(NaturalLanguageDictionary.standard(
+                        Map.of(creatorId.toString(), "먹방연구소"))));
+        NaturalLanguageParserAdapter dynamicAdapter = new NaturalLanguageParserAdapter(
+                () -> List.of(new CreatorSelectionItem(creatorId, "먹방연구소", null)),
+                () -> new ActiveTagDictionarySnapshot(goldenTagDefinitions()));
+
+        for (EvaluationCase testCase : loadCases()) {
+            assertThat(dynamicAdapter.parse(testCase.sentence()))
+                    .as(testCase.caseId())
+                    .isEqualTo(staticAdapter.parse(testCase.sentence()));
+        }
     }
 
     @Test
@@ -218,6 +242,19 @@ class NaturalLanguageEvaluationGoldenV1Test {
     private static NaturalLanguageRestaurantParser parser() {
         return new NaturalLanguageRestaurantParser(NaturalLanguageDictionary.standard(
                 Map.of("creator-opaque-eval", "먹방연구소")));
+    }
+
+    private static List<TagDefinition> goldenTagDefinitions() {
+        Map<String, List<String>> termsByCode = new TreeMap<>();
+        NaturalLanguageDictionary.standard().aliasesFor(ConditionField.TAGS).forEach((term, tagCodes) ->
+                tagCodes.forEach(tagCode -> {
+                    if (!term.equals(NaturalLanguageTermNormalizer.normalize(tagCode))) {
+                        termsByCode.computeIfAbsent(tagCode, ignored -> new ArrayList<>()).add(term);
+                    }
+                }));
+        return termsByCode.entrySet().stream()
+                .map(entry -> new TagDefinition(entry.getKey(), entry.getValue()))
+                .toList();
     }
 
     private static List<EvaluationCase> enabledCases() {

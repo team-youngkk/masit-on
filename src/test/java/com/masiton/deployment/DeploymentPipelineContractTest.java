@@ -97,6 +97,7 @@ class DeploymentPipelineContractTest {
                 .contains("-C \"$GITHUB_WORKSPACE/deploy/app\"")
                 .contains("-C \"$GITHUB_WORKSPACE/deploy/nginx\"")
                 .contains("observability-cleanup.sh")
+                .contains("sitemap-smoke.sh")
                 .contains("bundle_entries=$(tar -tzf \"$bundle\")")
                 .contains("grep -Fqx \"$entry\" <<< \"$bundle_entries\"")
                 .contains("배포 bundle에 필요한 파일이 없거나 경로가 평탄화되지 않았다")

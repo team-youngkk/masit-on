@@ -643,7 +643,9 @@ class GeminiHttpVideoExtractionAdapterTest {
             }
         }
         assertThat(tagBranch).isNotNull();
-        assertThat(tagBranch.at("/properties/normalizedCode/pattern").asText()).isEqualTo("^[A-Z0-9_]{1,64}$");
+        assertThat(tagBranch.at("/properties/normalizedCode/maxLength").asInt()).isEqualTo(64);
+        assertThat(tagBranch.at("/properties/normalizedCode/pattern").asText())
+                .isEqualTo("^(MENU|TASTE|OCCASION|ATMOSPHERE)_[A-Z0-9]+(_[A-Z0-9]+)*$");
     }
 
     @Test

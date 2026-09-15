@@ -31,6 +31,7 @@ related_documents:
   - ../../../01-requirements/non-functional-requirements.md
   - ../../../08-planning/third-expansion-scope-and-terminology.md
   - ../../../08-planning/third-expansion-evaluation-strategy.md
+  - ../../../08-planning/dynamic-natural-language-tag-dictionary.md
   - ../../../02-analysis/third-expansion-workstreams.md
   - restaurant-discovery.md
   - ../../user-flows/third-expansion-user-flows.md
@@ -64,6 +65,7 @@ related_documents:
 - 자연어 문장 하나의 입력
 - 맛집 이름·서울 자치구·음식 카테고리·유튜버·관리자 확정 태그 조건 해석
 - `MENU`, `TASTE`, `OCCASION`, `ATMOSPHERE` 유형의 허용 태그와 태그별 별칭 해석
+- `ACTIVE` 태그 정의의 표시명·별칭을 사용하는 동적 자연어 태그 사전
 - 직접 지정 필터와 해석 조건의 조합
 - 실제 적용 조건과 제외된 해석 조건 요약
 - 기존 공개·활성 맛집 목록·페이지·정렬
@@ -116,7 +118,7 @@ related_documents:
 
 태그만으로는 검색하지 않는다. `sentence`가 필수이므로 태그 선택은 다음 문장 검색에 함께 적용되고, 문장 없이 검색하면 문장 입력 안내를 표시한다. 태그 선택을 바꿔도 자동으로 다시 조회하지 않는다는 점은 구조화 필터와 같으며, 선택 영역에 적용 시점과 자연어 태그 대체를 함께 안내한다. URL이 소유한 직접 필터(이름·자치구·음식·유튜버)가 바뀌면 자연어 영역의 문장·태그 선택과 이전 결과를 초기화한다. 구조화 필터 폼 GET 제출과 유튜버 필터 해제 같은 화면 내 이동을 모두 포함한다. 목록 페이지 이동은 직접 필터 변경이 아니므로 초기화하지 않는다.
 
-태그 선택지는 [AI 영상 추출 데이터 계약](../../../05-specs/data/third-expansion-ai-video-data-contract.md)의 확정 태그 seed와 같은 목록을 화면 상수로 유지한다. 활성 태그 목록을 조회하는 공개 API가 없으므로, 태그가 `DEPRECATED`로 바뀌면 화면에는 남고 서버가 `INVALID_FIELD_VALUE`로 거부한다. 태그 lifecycle을 실제로 변경하기 전에 선택지 공급 방식을 함께 결정한다.
+직접 지정 태그 선택지는 [AI 영상 추출 데이터 계약](../../../05-specs/data/third-expansion-ai-video-data-contract.md)의 초기 18개 seed와 같은 목록을 화면 상수로 유지한다. 활성 태그 목록을 조회하는 공개 API가 없으므로, 태그가 `DEPRECATED`로 바뀌면 화면에는 남고 서버가 `INVALID_FIELD_VALUE`로 거부한다. 이 화면 제약은 자연어 해석 사전과 분리한다. 자연어 해석은 `ACTIVE` 태그 정의의 코드·표시명·별칭을 동적으로 사용하므로 새 활성 태그는 최대 30초 뒤 문장에서 인식되고 폐기 태그는 같은 시간 안에 제외된다.
 
 화면 구조는 [3차 확장 와이어프레임](../../wireframes/third-expansion-wireframes.md#3-자연어-맛집-탐색)을 따른다.
 
@@ -139,6 +141,7 @@ related_documents:
 ## 10. 완료 조건
 
 - [ ] FR-NLSEARCH-001~004와 BR-NLSEARCH-001~003의 정상·빈 결과·충돌·태그 AND·해석 실패가 검증된다.
+- [ ] ACTIVE 동적 태그 반영·DEPRECATED 제외·별칭 모호성·6개 상한·30초 cache 갱신·503 fail-closed와 초기 18개 Golden V1 회귀가 검증된다.
 - [ ] 고정 평가 데이터와 회귀 보고서가 있고 NFR-ACCURACY-001 목표값을 팀이 확정한다.
 - [ ] 입력 원문·검색 이력·임베딩 저장 0건과 로그 민감정보 차단이 검증된다.
 - [ ] 정상 50명·20 RPS와 최대 200명·80 RPS에서 성능·장애 격리를 검증한다.
@@ -146,6 +149,7 @@ related_documents:
 
 ## 11. 운영 리스크와 변경 게이트
 
-- 운영 표현 변화와 회귀 Dataset 갱신은 `parserVersion`을 증가시키는 변경으로 관리한다.
-- 태그 코드·별칭·폐기 정책 변경은 [AI 영상 추출 데이터 계약](../../../05-specs/data/third-expansion-ai-video-data-contract.md)의 seed·lifecycle 규칙을 따른다.
+- 문장 패턴·조건 해석·충돌·상한·정규화 알고리즘 변경은 `parserVersion`을 증가시키고 회귀 Dataset을 갱신한다. 같은 알고리즘이 읽는 동적 태그 사전의 데이터 변경은 버전 증가 사유가 아니며 `P1`을 유지한다.
+- 태그 코드·별칭·폐기 정책 변경은 [AI 영상 추출 데이터 계약](../../../05-specs/data/third-expansion-ai-video-data-contract.md)의 lifecycle 규칙을 따른다. 초기 18개 seed의 기존 P1 해석 결과는 동적 전환 뒤에도 그대로 유지한다.
+- 자연어 태그 사전은 프로세스 내 read-through cache에 30초 TTL로 보관한다. 최초 적재 또는 만료 후 갱신에서 DB 조회가 실패하면 stale cache나 초기 seed로 대체하지 않고 `NATURAL_LANGUAGE_UNAVAILABLE`을 반환한다.
 - 지원 범위를 넓히거나 LLM·임베딩을 도입하려면 별도 범위 변경·ADR·평가 게이트가 필요하다.
