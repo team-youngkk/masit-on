@@ -56,6 +56,38 @@ docker compose up -d postgres redis wiremock
 .\gradlew.bat bootRun
 ```
 
+### AI Worker 격리 부하 검증
+
+실제 Gemini·Kakao·YouTube quota를 사용하지 않고, 위 개발 루프처럼 애플리케이션을 호스트에서 실행한 상태에서 WireMock 응답만 사용한다. `GEMINI_LOOPBACK_TEST_ENDPOINT_ALLOWED=true`는 `localhost` 또는 `127.0.0.1`의 명시적 테스트 endpoint만 허용하며 운영 설정의 기본값은 `false`다.
+
+애플리케이션을 실행하는 PowerShell 세션에 다음 값을 설정한다.
+
+```powershell
+$env:GEMINI_ENABLED = 'true'
+$env:GEMINI_FREE_TIER_VERIFIED = 'true'
+$env:GEMINI_PAID_BILLING_ENABLED = 'false'
+$env:MASITON_AI_PROVIDER_GEMINI_API_KEY = 'wiremock-test-key'
+$env:GEMINI_BASE_URL = 'http://localhost:8081'
+$env:GEMINI_LOOPBACK_TEST_ENDPOINT_ALLOWED = 'true'
+$env:AI_WORKER_ENABLED = 'true'
+$env:AI_WORKER_PROVIDER_QUOTA_LIMIT = '1000'
+$env:AI_WORKER_APPLICATION_QUOTA_LIMIT = '900'
+$env:AI_WORKER_QUOTA_WINDOW = 'P1D'
+$env:MEMBER_RATE_LIMIT_SECRET = 'local-rate-limit-secret'
+.\gradlew.bat bootRun
+```
+
+관리자 로그인 계정을 준비한 뒤, 별도 PowerShell 세션에서 관리자 이메일과 비밀번호를 주입해 실행한다. 기본 시나리오는 10건/초로 20초 동안 200건을 제출하며, 작업 제출 결과와 `dropped_iterations`를 기록한다.
+
+```powershell
+$env:BASE_URL = 'http://localhost:8080'
+$env:ADMIN_EMAIL = 'load-admin@example.com'
+$env:ADMIN_PASSWORD = '<local-admin-password>'
+k6 run -e AI_SUBMIT_RATE=10 -e AI_SUBMIT_DURATION=20s perf/k6/ai-worker-load.js
+```
+
+이 시나리오는 티켓팅 좌석 경쟁을 재현하지 않는다. 제출 수용률·terminal 실패율·backlog 소진 시간·중복 리소스 수를 별도 기준으로 확인한다. WireMock 매핑은 `docker/wiremock/mappings/gemini-video-ai-load-normal.json`과 `docker/wiremock/mappings/kakao-place-ai-load-normal.json`에 있으며, 실행 중 실제 외부 API를 호출하지 않는다.
+
 ### 프론트엔드
 
 ```powershell

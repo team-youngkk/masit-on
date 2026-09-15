@@ -24,6 +24,7 @@ public class GeminiProviderProperties {
     private boolean paidBillingEnabled;
     private String apiKey = "";
     private String baseUrl = "https://generativelanguage.googleapis.com";
+    private boolean loopbackTestEndpointAllowed;
     private String model = MODEL_VERSION;
     private String promptVersion = PROMPT_VERSION;
     private String schemaVersion = SCHEMA_VERSION;
@@ -41,7 +42,8 @@ public class GeminiProviderProperties {
         if (enabled && (apiKey.isBlank() || !freeTierVerified)) {
             throw new IllegalStateException("An enabled Gemini provider requires an API key and verified Free Tier status");
         }
-        if (enabled && (!hasUsableEndpoint() || !hasUsableTimeouts())) {
+        if (enabled && (!hasUsableEndpoint(loopbackTestEndpointAllowed)
+                || !hasUsableTimeouts(loopbackTestEndpointAllowed))) {
             throw new IllegalStateException("An enabled Gemini provider requires a valid endpoint and positive timeouts");
         }
     }
@@ -107,6 +109,10 @@ public class GeminiProviderProperties {
     public void setApiKey(String apiKey) { this.apiKey = apiKey == null ? "" : apiKey.trim(); }
     public String getBaseUrl() { return baseUrl; }
     public void setBaseUrl(String baseUrl) { this.baseUrl = baseUrl; }
+    public boolean isLoopbackTestEndpointAllowed() { return loopbackTestEndpointAllowed; }
+    public void setLoopbackTestEndpointAllowed(boolean loopbackTestEndpointAllowed) {
+        this.loopbackTestEndpointAllowed = loopbackTestEndpointAllowed;
+    }
     public String getModel() { return model; }
     public void setModel(String model) { this.model = model; }
     public String getPromptVersion() { return promptVersion; }
