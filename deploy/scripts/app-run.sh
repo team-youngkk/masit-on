@@ -308,6 +308,10 @@ case "$component" in
     # 실제로 도달할 수 있는 주소여야 하고, localhost 기본값이 조용히 쓰이면 구독이
     # 성립한 것처럼 보이면서 알림이 오지 않는다. 비밀이 아니므로 환경 변수로 넘긴다.
     export YOUTUBE_WEBHOOK_CALLBACK_URL=https://masiton.click/api/webhooks/youtube/channel-updates
+    YOUTUBE_BACKFILL_ENABLED=$(optional_bool_param /masiton/ai/youtube-backfill/enabled); export YOUTUBE_BACKFILL_ENABLED
+    YOUTUBE_BACKFILL_QUOTA_WINDOW=$(optional_param /masiton/ai/youtube-backfill/quota-window); export YOUTUBE_BACKFILL_QUOTA_WINDOW="${YOUTUBE_BACKFILL_QUOTA_WINDOW:-P1D}"
+    YOUTUBE_BACKFILL_PROVIDER_QUOTA_LIMIT=$(optional_param /masiton/ai/youtube-backfill/provider-quota-limit); export YOUTUBE_BACKFILL_PROVIDER_QUOTA_LIMIT="${YOUTUBE_BACKFILL_PROVIDER_QUOTA_LIMIT:-0}"
+    YOUTUBE_BACKFILL_QUOTA_LIMIT=$(optional_param /masiton/ai/youtube-backfill/quota-limit); export YOUTUBE_BACKFILL_QUOTA_LIMIT="${YOUTUBE_BACKFILL_QUOTA_LIMIT:-0}"
     AI_WORKER_ENABLED=$(optional_param /masiton/ai/worker/enabled); export AI_WORKER_ENABLED="${AI_WORKER_ENABLED:-false}"
     AI_WORKER_PROVIDER_QUOTA_LIMIT=$(optional_param /masiton/ai/worker/provider-quota-limit); export AI_WORKER_PROVIDER_QUOTA_LIMIT="${AI_WORKER_PROVIDER_QUOTA_LIMIT:-0}"
     AI_WORKER_APPLICATION_QUOTA_LIMIT=$(optional_param /masiton/ai/worker/application-quota-limit); export AI_WORKER_APPLICATION_QUOTA_LIMIT="${AI_WORKER_APPLICATION_QUOTA_LIMIT:-0}"
@@ -343,6 +347,8 @@ case "$component" in
       -e AI_WORKER_ENABLED -e AI_WORKER_PROVIDER_QUOTA_LIMIT \
       -e AI_WORKER_APPLICATION_QUOTA_LIMIT -e AI_WORKER_QUOTA_WINDOW \
       -e GEMINI_ENABLED -e GEMINI_FREE_TIER_VERIFIED -e GEMINI_PAID_BILLING_ENABLED \
+      -e YOUTUBE_BACKFILL_ENABLED -e YOUTUBE_BACKFILL_QUOTA_WINDOW \
+      -e YOUTUBE_BACKFILL_PROVIDER_QUOTA_LIMIT -e YOUTUBE_BACKFILL_QUOTA_LIMIT \
       -e YOUTUBE_WEBHOOK_CALLBACK_URL \
       -e SECRETS_DIR \
       "$image"
