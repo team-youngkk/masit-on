@@ -15,7 +15,7 @@ public interface YoutubeChannelBackfillRunStore {
     boolean isClaimActive(UUID runId, String leaseOwner, OffsetDateTime now);
 
     void completePage(UUID runId, String leaseOwner, int scanned, int submitted, int reused,
-                      String nextPageToken, boolean completed, OffsetDateTime now);
+                      String nextPageToken, boolean completed, boolean limitReached, OffsetDateTime now);
 
     void fail(UUID runId, String leaseOwner, String errorCategory, OffsetDateTime now);
 

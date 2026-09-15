@@ -96,11 +96,16 @@ public class YoutubeChannelBackfillService implements YoutubeChannelBackfillUseC
                 return;
             }
             if (!runs.isClaimActive(run.runId(), run.leaseOwner(), now())) return;
-            YoutubeChannelVideoQueryPort.VideoPage page = videos.query(run.channelId(), run.pageToken());
-            if (!runs.isClaimActive(run.runId(), run.leaseOwner(), now())) return;
-            if (run.scannedCount() + page.videoIds().size() > properties.getMaxVideosPerRun()) {
+            long remainingVideos = properties.getMaxVideosPerRun() - run.scannedCount();
+            if (remainingVideos <= 0) {
                 runs.stop(run.creatorId(), run.runId(), now());
                 return;
+            }
+            int pageSize = (int) Math.min(50L, remainingVideos);
+            YoutubeChannelVideoQueryPort.VideoPage page = videos.query(run.channelId(), run.pageToken(), pageSize);
+            if (!runs.isClaimActive(run.runId(), run.leaseOwner(), now())) return;
+            if (page.videoIds().size() > remainingVideos) {
+                throw new YoutubeChannelVideoQueryException("YOUTUBE_MALFORMED_RESPONSE");
             }
             int submitted = 0;
             int reused = 0;
@@ -111,8 +116,11 @@ public class YoutubeChannelBackfillService implements YoutubeChannelBackfillUseC
                 AiExtractionJobView job = accepted.get();
                 if (job.reused()) reused++; else submitted++;
             }
+            boolean completed = page.nextPageToken() == null;
+            boolean limitReached = !completed && run.scannedCount() + page.videoIds().size()
+                    >= properties.getMaxVideosPerRun();
             runs.completePage(run.runId(), run.leaseOwner(), page.videoIds().size(), submitted, reused,
-                    page.nextPageToken(), page.nextPageToken() == null, now());
+                    page.nextPageToken(), completed, limitReached, now());
             metrics.recordPage(page.nextPageToken() == null ? "completed" : "continued");
         } catch (YoutubeChannelVideoQueryException exception) {
             runs.fail(run.runId(), run.leaseOwner(), exception.category(), now());

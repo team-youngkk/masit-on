@@ -63,8 +63,16 @@ fixture
 rm "$TEST_ROOT/backend.image"
 check
 printf '%s\n' 'YOUTUBE_BACKFILL_ENABLED=true' >> "$APP_ENV_FILE"
-check
+reject youtube-backfill-missing-key
 fixture
+printf '%s\n' 'YOUTUBE_BACKFILL_ENABLED=true' >> "$APP_ENV_FILE"
+printf '%s\n' 'YOUTUBE_BACKFILL_PROVIDER_QUOTA_LIMIT=100' >> "$APP_ENV_FILE"
+printf '%s\n' 'YOUTUBE_BACKFILL_QUOTA_LIMIT=50' >> "$APP_ENV_FILE"
+printf '%s\n' 'YOUTUBE_BACKFILL_QUOTA_WINDOW=P1D' >> "$APP_ENV_FILE"
+printf '%s\n' 'file-mode-sensitive-youtube-key' > "$APP_SECRETS_DIR/masiton.integration.youtube.api-key"
+chmod 400 "$APP_SECRETS_DIR/masiton.integration.youtube.api-key"
+chown 1001:1001 "$APP_SECRETS_DIR/masiton.integration.youtube.api-key"
+check
 # parser 및 secret-only 공개 인터페이스를 실제로 호출한다.
 source "$TEST_ROOT/app-file-config.sh"
 load_file_config

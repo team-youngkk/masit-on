@@ -25,6 +25,8 @@ import org.springframework.stereotype.Component;
 
 import com.masiton.ai.application.YoutubeChannelVideoQueryException;
 import com.masiton.ai.application.port.out.YoutubeChannelVideoQueryPort;
+import com.masiton.ai.application.port.out.YoutubeChannelBackfillQuotaPort;
+import com.masiton.ai.application.port.out.YoutubeChannelBackfillQuotaUnavailableException;
 import com.masiton.ai.infrastructure.worker.YoutubeChannelBackfillProperties;
 import com.masiton.common.web.OriginCanonicalizer;
 
@@ -41,42 +43,65 @@ public class YouTubeChannelVideoQueryAdapter implements YoutubeChannelVideoQuery
     private final HttpClient httpClient;
     private final JsonParser parser = JsonParserFactory.getJsonParser();
     private final YoutubeChannelBackfillProperties properties;
+    private final YoutubeChannelBackfillQuotaPort quota;
     private final URI baseUri;
 
     @Autowired
+    public YouTubeChannelVideoQueryAdapter(YoutubeChannelBackfillProperties properties,
+                                           YoutubeChannelBackfillQuotaPort quota) {
+        this(HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build(), properties, quota);
+    }
+
     public YouTubeChannelVideoQueryAdapter(YoutubeChannelBackfillProperties properties) {
-        this(HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build(), properties);
+        this(HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build(), properties, cost -> true);
     }
 
     YouTubeChannelVideoQueryAdapter(HttpClient httpClient, YoutubeChannelBackfillProperties properties) {
+        this(httpClient, properties, cost -> true);
+    }
+
+    YouTubeChannelVideoQueryAdapter(HttpClient httpClient, YoutubeChannelBackfillProperties properties,
+                                    YoutubeChannelBackfillQuotaPort quota) {
         this.httpClient = httpClient;
         this.properties = properties;
+        this.quota = quota;
         this.baseUri = requireAllowedOrigin(properties);
     }
 
     @Override
     public VideoPage query(String channelId, String pageToken) {
+        return query(channelId, pageToken, MAX_RESULTS);
+    }
+
+    @Override
+    public VideoPage query(String channelId, String pageToken, int maxResults) {
         validateId(channelId);
         validatePageToken(pageToken);
+        if (maxResults < 1 || maxResults > MAX_RESULTS) {
+            throw malformed();
+        }
 
         Map<String, Object> channelResponse = get("/youtube/v3/channels?part=contentDetails&id="
-                + encode(channelId));
+                + encode(channelId), 1);
         String uploadsPlaylistId = uploadsPlaylist(channelResponse);
         if (uploadsPlaylistId == null) {
             throw malformed();
         }
 
         String pageQuery = "/youtube/v3/playlistItems?part=contentDetails,snippet&playlistId="
-                + encode(uploadsPlaylistId) + "&maxResults=" + MAX_RESULTS;
+                + encode(uploadsPlaylistId) + "&maxResults=" + maxResults;
         if (pageToken != null) {
             pageQuery += "&pageToken=" + encode(pageToken);
         }
-        Map<String, Object> playlistResponse = get(pageQuery);
+        Map<String, Object> playlistResponse = get(pageQuery, 1);
         return parseVideoPage(playlistResponse);
     }
 
-    private Map<String, Object> get(String path) {
+    private Map<String, Object> get(String path, int cost) {
         try {
+            if (!quota.tryReserve(cost)) {
+                throw new YoutubeChannelVideoQueryException("YOUTUBE_QUOTA_EXCEEDED");
+            }
             URI requestUri = baseUri.resolve(path + "&key=" + encode(properties.getApiKey()));
             HttpResponse<String> response = httpClient.send(
                     HttpRequest.newBuilder(requestUri).timeout(RESPONSE_TIMEOUT).GET().build(),
@@ -103,6 +128,8 @@ public class YouTubeChannelVideoQueryAdapter implements YoutubeChannelVideoQuery
             }
         } catch (YoutubeChannelVideoQueryException exception) {
             throw exception;
+        } catch (YoutubeChannelBackfillQuotaUnavailableException exception) {
+            throw new YoutubeChannelVideoQueryException("YOUTUBE_QUOTA_UNAVAILABLE", exception);
         } catch (HttpTimeoutException exception) {
             throw new YoutubeChannelVideoQueryException("YOUTUBE_TIMEOUT", exception);
         } catch (IOException exception) {

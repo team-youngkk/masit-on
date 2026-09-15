@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -74,7 +75,7 @@ class YoutubeChannelBackfillServiceTest {
                 runId, creatorId, "channel-id", "page-1", 0, 0, "owner");
         when(runs.claim(any(), any(), any())).thenReturn(Optional.of(claimed));
         when(runs.isClaimActive(any(), any(), any())).thenReturn(true);
-        when(videos.query("channel-id", "page-1"))
+        when(videos.query("channel-id", "page-1", 50))
                 .thenReturn(new YoutubeChannelVideoQueryPort.VideoPage(List.of("video-1", "video-2"), "page-2"));
         AiExtractionJobView created = mock(AiExtractionJobView.class);
         AiExtractionJobView reused = mock(AiExtractionJobView.class);
@@ -87,7 +88,32 @@ class YoutubeChannelBackfillServiceTest {
 
         service.poll();
 
-        verify(runs).completePage(runId, "owner", 2, 1, 1, "page-2", false, now);
+        verify(runs).completePage(runId, "owner", 2, 1, 1, "page-2", false, false, now);
+    }
+
+    @Test
+    @DisplayName("영상 상한에 걸린 페이지도 남은 수만 조회하고 다음 커서를 보존한다")
+    void 폴링_영상상한도달_남은수만조회하고커서를보존한다() {
+        properties.setEnabled(true);
+        properties.setMaxVideosPerRun(75);
+        UUID runId = UUID.randomUUID();
+        YoutubeChannelBackfillRunStore.ClaimedRun claimed = new YoutubeChannelBackfillRunStore.ClaimedRun(
+                runId, creatorId, "channel-id", "page-1", 1, 50, "owner");
+        when(runs.claim(any(), any(), any())).thenReturn(Optional.of(claimed));
+        when(runs.isClaimActive(any(), any(), any())).thenReturn(true);
+        List<String> remaining = java.util.stream.IntStream.rangeClosed(1, 25)
+                .mapToObj(index -> "video-" + index).toList();
+        when(videos.query("channel-id", "page-1", 25))
+                .thenReturn(new YoutubeChannelVideoQueryPort.VideoPage(remaining, "page-3"));
+        AiExtractionJobView created = mock(AiExtractionJobView.class);
+        when(created.reused()).thenReturn(false);
+        when(jobs.submitBackfillIfClaimActive(any(), anyString(), anyString(), anyString()))
+                .thenReturn(Optional.of(created));
+
+        service.poll();
+
+        verify(videos).query("channel-id", "page-1", 25);
+        verify(runs).completePage(runId, "owner", 25, 25, 0, "page-3", false, true, now);
     }
 
     @Test
@@ -99,14 +125,14 @@ class YoutubeChannelBackfillServiceTest {
                 runId, creatorId, "channel-id", null, 0, 0, "owner");
         when(runs.claim(any(), any(), any())).thenReturn(Optional.of(claimed));
         when(runs.isClaimActive(any(), any(), any())).thenReturn(true, false);
-        when(videos.query("channel-id", null))
+        when(videos.query("channel-id", null, 50))
                 .thenReturn(new YoutubeChannelVideoQueryPort.VideoPage(List.of("video-1"), null));
 
         service.poll();
 
         verifyNoInteractions(jobs);
         verify(runs, org.mockito.Mockito.never()).completePage(any(), any(), anyInt(), anyInt(), anyInt(), any(),
-                anyBoolean(), any());
+                anyBoolean(), anyBoolean(), any());
     }
 
     @Test
@@ -118,7 +144,7 @@ class YoutubeChannelBackfillServiceTest {
                 runId, creatorId, "channel-id", null, 0, 0, "owner");
         when(runs.claim(any(), any(), any())).thenReturn(Optional.of(claimed));
         when(runs.isClaimActive(any(), any(), any())).thenReturn(true);
-        when(videos.query("channel-id", null)).thenThrow(new YoutubeChannelVideoQueryException("YOUTUBE_RATE_LIMIT"));
+        when(videos.query("channel-id", null, 50)).thenThrow(new YoutubeChannelVideoQueryException("YOUTUBE_RATE_LIMIT"));
 
         service.poll();
 

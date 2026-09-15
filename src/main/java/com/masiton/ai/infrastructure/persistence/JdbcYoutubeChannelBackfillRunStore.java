@@ -31,6 +31,30 @@ public class JdbcYoutubeChannelBackfillRunStore implements YoutubeChannelBackfil
                  LIMIT 1
                 """, (rs, n) -> map(rs), creatorId);
         if (!existing.isEmpty()) return Optional.of(new StartRun(existing.getFirst(), true));
+        List<Run> resumable = jdbc.query("""
+                WITH candidate AS (
+                    SELECT r.id
+                      FROM youtube_channel_backfill_run r
+                      JOIN youtube_channel_watch w ON w.creator_id = r.creator_id
+                                                    AND w.youtube_channel_id = r.youtube_channel_id
+                     WHERE r.creator_id=?
+                       AND r.status='STOPPED'
+                       AND r.stop_reason='MAX_VIDEOS_PER_RUN'
+                       AND r.page_token IS NOT NULL
+                       AND w.enabled=true AND w.subscription_status='ACTIVE'
+                     ORDER BY r.updated_at DESC, r.id DESC
+                     LIMIT 1
+                     FOR UPDATE SKIP LOCKED
+                )
+                UPDATE youtube_channel_backfill_run r
+                   SET status='QUEUED', page_count=0, scanned_count=0,
+                       submitted_count=0, reused_count=0, last_error_category=NULL,
+                       stop_reason=NULL, lease_owner=NULL, lease_expires_at=NULL, updated_at=?
+                  FROM candidate c
+                 WHERE r.id=c.id
+                RETURNING r.*
+                """, (rs, n) -> map(rs), creatorId, now);
+        if (!resumable.isEmpty()) return Optional.of(new StartRun(resumable.getFirst(), false));
         List<Run> rows = jdbc.query("""
             INSERT INTO youtube_channel_backfill_run (id, creator_id, youtube_channel_id, status, created_at, updated_at)
             SELECT ?, w.creator_id, w.youtube_channel_id, 'QUEUED', ?, ? FROM youtube_channel_watch w
@@ -96,7 +120,7 @@ public class JdbcYoutubeChannelBackfillRunStore implements YoutubeChannelBackfil
 
     @Override
     public void completePage(UUID id, String owner, int scanned, int submitted, int reused,
-                             String token, boolean done, OffsetDateTime now) {
+                             String token, boolean done, boolean limitReached, OffsetDateTime now) {
         jdbc.update("""
                 UPDATE youtube_channel_backfill_run r
                    SET status = CASE
@@ -106,7 +130,11 @@ public class JdbcYoutubeChannelBackfillRunStore implements YoutubeChannelBackfil
                               AND w.youtube_channel_id = r.youtube_channel_id
                               AND w.enabled = true
                               AND w.subscription_status = 'ACTIVE'
-                       ) THEN ? ELSE 'STOPPED' END,
+                       ) THEN CASE WHEN ? THEN 'SUCCEEDED'
+                                   WHEN ? THEN 'STOPPED'
+                                   ELSE 'QUEUED' END
+                       ELSE 'STOPPED' END,
+                       stop_reason = CASE WHEN ? THEN 'MAX_VIDEOS_PER_RUN' ELSE NULL END,
                        page_count = page_count + 1,
                        scanned_count = scanned_count + ?,
                        submitted_count = submitted_count + ?,
@@ -116,7 +144,7 @@ public class JdbcYoutubeChannelBackfillRunStore implements YoutubeChannelBackfil
                        lease_expires_at = NULL,
                        updated_at = ?
                  WHERE id=? AND status='RUNNING' AND lease_owner=? AND lease_expires_at > ?
-                """, done ? "SUCCEEDED" : "QUEUED", scanned, submitted, reused, token, now, id, owner, now);
+                """, done, limitReached, limitReached, scanned, submitted, reused, token, now, id, owner, now);
     }
 
     @Override
@@ -133,7 +161,8 @@ public class JdbcYoutubeChannelBackfillRunStore implements YoutubeChannelBackfil
     public void stop(UUID creatorId, UUID runId, OffsetDateTime now) {
         jdbc.update("""
                 UPDATE youtube_channel_backfill_run
-                   SET status='STOPPED', lease_owner=NULL, lease_expires_at=NULL, updated_at=?
+                   SET status='STOPPED', stop_reason='MANUAL', lease_owner=NULL,
+                       lease_expires_at=NULL, updated_at=?
                  WHERE creator_id=? AND id=? AND status IN ('QUEUED','RUNNING')
                 """, now, creatorId, runId);
     }
@@ -142,7 +171,8 @@ public class JdbcYoutubeChannelBackfillRunStore implements YoutubeChannelBackfil
     public void stopRunsForInactiveWatches(OffsetDateTime now) {
         jdbc.update("""
                 UPDATE youtube_channel_backfill_run r
-                   SET status='STOPPED', lease_owner=NULL, lease_expires_at=NULL, updated_at=?
+                   SET status='STOPPED', stop_reason=NULL, lease_owner=NULL,
+                       lease_expires_at=NULL, updated_at=?
                  WHERE r.status IN ('QUEUED','RUNNING')
                    AND NOT EXISTS (
                        SELECT 1 FROM youtube_channel_watch w

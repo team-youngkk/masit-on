@@ -240,7 +240,7 @@ V3 전진 적용과 전체 FK·UNIQUE·CHECK·인덱스는 `TST-E2-E2E-001`, `E2
 | `ai_candidate_tag_review` | BR-AIEXTRACT-008, API-ADMIN-AIEXTRACT-001 | 후보 태그별 자동 판단·사후 보정 append-only 이력, `UNKNOWN` AI 근거 확정 금지 | WS-15 | 자동 판단·사후 보정 이력·VisitTag 연결 |
 | `ai_extraction_attempt` | BR-AIEXTRACT-004·007, NFR-EXTERNAL-005 | Provider request 식별·오류 분류·토큰·무료 quota 사용량 집계만 저장, 원문 미저장 | WS-15 | timeout·429·5xx·무료 quota hard stop |
 | `youtube_channel_watch` | FR-AIEXTRACT-004·006, API-ADMIN-AIEXTRACT-WEBHOOK-001~002, API-ADMIN-AIEXTRACT-BACKFILL-001~003 | Creator·channel unique, 구독·갱신·오류 상태와 보정 실행의 활성 경계 | WS-15 | 구독 확인·중복 알림·해지·renewal 실패·비활성 보정 중지 |
-| `youtube_channel_backfill_run` | FR-AIEXTRACT-004, API-ADMIN-AIEXTRACT-BACKFILL-001~003 | Creator별 진행 실행 partial unique, 상태·lease·Cursor·누적 건수 CHECK | WS-15 | 보정 조회 재기동·중복 실행·lease 만료 복구 |
+| `youtube_channel_backfill_run` | FR-AIEXTRACT-004, API-ADMIN-AIEXTRACT-BACKFILL-001~003 | Creator별 진행 실행 partial unique, 상태·lease·Cursor·중지 원인·누적 건수 CHECK | WS-15 | 보정 조회 재기동·중복 실행·영상 상한 Cursor 재개·lease 만료 복구 |
 | `tag_definition` | FR-AIEXTRACT-007·FR-ADMIN-005·FR-NLSEARCH-004, BR-AIEXTRACT-008·BR-ADMIN-009·BR-NLSEARCH-003, API-ADMIN-AIEXTRACT-001·API-ADMIN-TAG-DEFINITION-002·API-DISCOVERY-NL-001 | `MENU/TASTE/OCCASION/ATMOSPHERE` 통제 코드·별칭·활성 상태 | WS-15 생성·WS-14 읽기 | 코드·별칭 충돌·폐기·후보 허용값·ACTIVE 동적 자연어 사전 |
 | `tag_definition_term` | FR-ADMIN-005·FR-NLSEARCH-004, BR-ADMIN-009·BR-NLSEARCH-003, API-ADMIN-TAG-DEFINITION-001~002·API-DISCOVERY-NL-001 | 표시명·별칭의 정규화 용어와 종류 | WS-15 생성·WS-14 동적 조회 | 전역 unique·정의별 표시명 하나·V10 역적재·V11 seed 별칭 이관·원자성·ACTIVE만 자연어 사전 포함 |
 | `tag_definition_merge` | FR-ADMIN-007, BR-ADMIN-011, 태그 정의 병합 API | 원본별 최종 대상 redirect와 정의·영향 감사 | WS-04 관리·WS-14 동적 조회 | 원본 unique·자기 병합 금지·append-only·회원 탈퇴 actor 익명화 |

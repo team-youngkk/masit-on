@@ -94,6 +94,9 @@ masiton:
       base-url: ${YOUTUBE_BASE_URL:https://www.googleapis.com}
       allowed-origins: ${YOUTUBE_BASE_URL:https://www.googleapis.com}
       api-key: ${masiton.integration.youtube.api-key:}
+      quota-window: ${YOUTUBE_BACKFILL_QUOTA_WINDOW:P1D}
+      provider-quota-limit: ${YOUTUBE_BACKFILL_PROVIDER_QUOTA_LIMIT:0}
+      backfill-quota-limit: ${YOUTUBE_BACKFILL_QUOTA_LIMIT:0}
       max-pages-per-run: 10
       max-videos-per-run: 500
     temporary-input:

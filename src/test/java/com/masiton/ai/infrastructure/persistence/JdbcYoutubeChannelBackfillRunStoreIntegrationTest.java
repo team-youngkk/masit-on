@@ -83,6 +83,42 @@ class JdbcYoutubeChannelBackfillRunStoreIntegrationTest extends FullContextInteg
     }
 
     @Test
+    @DisplayName("영상 상한으로 중지된 run은 저장한 커서에서 새 실행으로 재개한다")
+    void createOrReuse_영상상한중지Run_다음커서에서재개한다() {
+        UUID creatorId = UUID.randomUUID();
+        String channelId = "channel-" + UUID.randomUUID();
+        OffsetDateTime now = OffsetDateTime.parse("2026-09-15T00:00:00Z");
+        insertCreatorAndWatch(creatorId, channelId, true, "ACTIVE");
+
+        try {
+            UUID runId = store.createOrReuse(creatorId, now).orElseThrow().run().runId();
+            jdbcTemplate.update("""
+                    UPDATE youtube_channel_backfill_run
+                       SET status='STOPPED', stop_reason='MAX_VIDEOS_PER_RUN', page_token='resume-token',
+                           page_count=2, scanned_count=75, submitted_count=50, reused_count=25,
+                           updated_at=?
+                     WHERE id=?
+                    """, now.plusSeconds(1), runId);
+
+            YoutubeChannelBackfillRunStore.StartRun resumed = store.createOrReuse(creatorId, now.plusSeconds(2))
+                    .orElseThrow();
+            YoutubeChannelBackfillRunStore.ClaimedRun claimed = store.claim(
+                    now.plusSeconds(2), now.plusMinutes(2), "owner").orElseThrow();
+
+            assertThat(resumed.reused()).isFalse();
+            assertThat(resumed.run().runId()).isEqualTo(runId);
+            assertThat(resumed.run().status()).isEqualTo("QUEUED");
+            assertThat(resumed.run().scannedCount()).isZero();
+            assertThat(claimed.runId()).isEqualTo(runId);
+            assertThat(claimed.pageToken()).isEqualTo("resume-token");
+            assertThat(claimed.pageCount()).isZero();
+            assertThat(claimed.scannedCount()).isZero();
+        } finally {
+            deleteFixture(creatorId);
+        }
+    }
+
+    @Test
     @DisplayName("만료된 lease는 다른 소유자가 같은 run을 재확보할 수 있다")
     void claim_lease만료_다른소유자가재확보한다() {
         UUID creatorId = UUID.randomUUID();
