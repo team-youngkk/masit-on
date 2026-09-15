@@ -97,7 +97,9 @@ masiton:
         paid-billing-enabled: ${GEMINI_PAID_BILLING_ENABLED:false}
         # Production credentials are supplied by the existing configtree secret mount, never a URL or default profile.
         api-key:
-        base-url: https://generativelanguage.googleapis.com
+        base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
+        # Only an explicit local/test opt-in may point the adapter at a loopback WireMock fixture.
+        loopback-test-endpoint-allowed: ${GEMINI_LOOPBACK_TEST_ENDPOINT_ALLOWED:false}
         model: gemini-3.5-flash-lite
         prompt-version: P8
         schema-version: S2

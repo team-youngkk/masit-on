@@ -22,6 +22,7 @@ public class GeminiProviderConfiguration {
         HttpClient httpClient = HttpClient.newBuilder()
                 .connectTimeout(properties.getConnectTimeout())
                 .build();
-        return new GeminiHttpVideoExtractionAdapter(httpClient, objectMapper, properties);
+        return new GeminiHttpVideoExtractionAdapter(httpClient, objectMapper, properties,
+                properties.isLoopbackTestEndpointAllowed());
     }
 }

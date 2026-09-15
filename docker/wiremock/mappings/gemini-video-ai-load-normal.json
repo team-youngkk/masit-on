@@ -1,0 +1,21 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1beta/models/gemini-3.5-flash-lite:generateContent",
+    "headers": {
+      "x-goog-api-key": { "equalTo": "wiremock-test-key" },
+      "Content-Type": { "equalTo": "application/json" },
+      "Accept": { "equalTo": "application/json" }
+    },
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$.contents[0].parts[?(@.fileData.fileUri == 'https://www.youtube.com/watch?v=fixtureVid1')]"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json; charset=utf-8" },
+    "bodyFileName": "gemini-video-ai-load-normal.json"
+  }
+}
