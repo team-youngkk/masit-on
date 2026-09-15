@@ -632,6 +632,49 @@ Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-0
 - 폐기된 각 등록 단위는 3.5절 `DISCARD`와 동일하게 `MANUAL_OVERRIDE`가 되고 `discarded_at`이 채워지며 감사 이력(`ai_registration_unit_review`)에 `DISCARD` 행이 남는다.
 - 작업 자체가 없으면 `404 AIEXTRACT_JOB_NOT_FOUND`로 응답한다.
 
+### 3.11 YouTube 채널 보정 조회 실행
+
+Webhook·Atom 누락을 보완하기 위해 관리자가 활성 감시 채널의 업로드 목록을 비동기로 조회하고, 발견한 영상은 기존 `BACKFILL` Job 접수 경로로 수렴시킨다. 이 API는 주기별 새 실행을 자동 생성하지 않으며, 명시적으로 시작한 실행의 다음 페이지 처리를 전용 Worker가 이어 간다.
+
+#### API-ADMIN-AIEXTRACT-BACKFILL-001 `POST /api/admin/ai/youtube-channel-watches/{creatorId}/backfills`
+
+`enabled=true`이고 `subscriptionStatus=ACTIVE`인 검증 채널에 대해 보정 실행을 시작한다. 이미 `QUEUED` 또는 `RUNNING` 실행이 있으면 새 실행을 만들지 않고 기존 실행을 반환한다.
+
+- 새 실행: `202 Accepted`
+- 기존 실행 재사용: `200 OK`
+- 보정 기능이 비활성화되어 있으면 `503 AIEXTRACT_YOUTUBE_BACKFILL_DISABLED`
+- 감시 채널이 없거나 활성 상태가 아니면 `409 AIEXTRACT_YOUTUBE_BACKFILL_WATCH_NOT_ACTIVE`
+
+```json
+{
+  "runId": "opaque-run-id",
+  "status": "QUEUED"
+}
+```
+
+#### API-ADMIN-AIEXTRACT-BACKFILL-002 `GET /api/admin/ai/youtube-channel-watches/{creatorId}/backfills/{runId}`
+
+실행 상태와 누적 처리 건수를 반환한다. `status`는 `QUEUED`, `RUNNING`, `SUCCEEDED`, `FAILED`, `STOPPED` 중 하나다. 존재하지 않거나 다른 Creator의 실행이면 `404 RESOURCE_NOT_FOUND`다.
+
+```json
+{
+  "runId": "opaque-run-id",
+  "status": "SUCCEEDED",
+  "scannedCount": 42,
+  "submittedCount": 18,
+  "reusedCount": 24,
+  "lastErrorCategory": null,
+  "createdAt": "2026-09-15T09:00:00Z",
+  "updatedAt": "2026-09-15T09:01:30Z"
+}
+```
+
+#### API-ADMIN-AIEXTRACT-BACKFILL-003 `POST /api/admin/ai/youtube-channel-watches/{creatorId}/backfills/{runId}/stop`
+
+`QUEUED` 또는 `RUNNING` 실행을 `STOPPED`로 중지한다. 이미 종결된 실행에 대한 반복 요청도 안전하게 무시하며 `204 No Content`를 반환한다. 감시를 `enabled=false`로 바꾸면 신규 Webhook과 보정 Worker 처리를 함께 중지한다.
+
+보정 조회는 한 번에 최대 50개 업로드를 읽고 실행별 페이지·영상 상한을 적용한다. YouTube API 오류는 원문을 저장하지 않고 `YOUTUBE_TIMEOUT`, `YOUTUBE_RATE_LIMIT`, `YOUTUBE_4XX`, `YOUTUBE_5XX`, `YOUTUBE_UPSTREAM`, `YOUTUBE_MALFORMED_RESPONSE` 범주로 기록한다. 발견 영상의 실제 Job 등록은 기존 영상 ID·입력 모드·Provider·Model·Prompt·Schema 조합 멱등성 제약을 사용하므로 Webhook과 중복되지 않는다.
+
 ## 4. YouTube Webhook API
 
 | API ID | Method | Path | 설명 |

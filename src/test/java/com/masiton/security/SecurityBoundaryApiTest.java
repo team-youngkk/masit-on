@@ -28,6 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class SecurityBoundaryApiTest extends FullContextIntegrationTest {
 
     private static final String UNKNOWN_CREATOR_ID = "00000000-0000-4000-8000-000000000000";
+    private static final String UNKNOWN_RUN_ID = "00000000-0000-4000-8000-000000000001";
 
     /*
      * {"alg":"RS256"}.{"sub":"someone","aud":"other","exp":1}.서명 형태의 값이다. 실제 키로 서명하지
@@ -114,6 +115,39 @@ class SecurityBoundaryApiTest extends FullContextIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"enabled\":false}"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("채널 백필 시작·상태·중지 경로는 인증 없이 401을 반환한다")
+    void 채널백필경로_미인증_401공통오류를반환한다() throws Exception {
+        String creatorPath = "/api/admin/ai/youtube-channel-watches/" + UNKNOWN_CREATOR_ID;
+
+        mockMvc.perform(post(creatorPath + "/backfills"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
+        mockMvc.perform(get(creatorPath + "/backfills/" + UNKNOWN_RUN_ID))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
+        mockMvc.perform(post(creatorPath + "/backfills/" + UNKNOWN_RUN_ID + "/stop"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
+    }
+
+    @Test
+    @DisplayName("채널 백필 시작·상태·중지 경로는 ADMIN이 아니면 403을 반환한다")
+    void 채널백필경로_비관리자_403공통오류를반환한다() throws Exception {
+        String creatorPath = "/api/admin/ai/youtube-channel-watches/" + UNKNOWN_CREATOR_ID;
+        var viewer = user("viewer").authorities(new SimpleGrantedAuthority("VIEWER"));
+
+        mockMvc.perform(post(creatorPath + "/backfills").with(viewer))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+        mockMvc.perform(get(creatorPath + "/backfills/" + UNKNOWN_RUN_ID).with(viewer))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+        mockMvc.perform(post(creatorPath + "/backfills/" + UNKNOWN_RUN_ID + "/stop").with(viewer))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
     }
 
     @Test

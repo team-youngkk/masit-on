@@ -62,6 +62,9 @@ reject() {
 fixture
 rm "$TEST_ROOT/backend.image"
 check
+printf '%s\n' 'YOUTUBE_BACKFILL_ENABLED=true' >> "$APP_ENV_FILE"
+check
+fixture
 # parser 및 secret-only 공개 인터페이스를 실제로 호출한다.
 source "$TEST_ROOT/app-file-config.sh"
 load_file_config

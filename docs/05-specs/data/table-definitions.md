@@ -291,7 +291,7 @@ Refresh Token 세션은 역할과 무관하게 Redis 8.8 `auth:session:` namespa
 
 ## 17. 3차 확장 AI 영상 추출 테이블
 
-3차 확장 물리 테이블·컬럼·재사용 조회 인덱스·재시도/태그 롤백 provenance의 정본은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)의 표와 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql)에 둔다.
+3차 확장 물리 테이블·컬럼·재사용 조회 인덱스·재시도/태그 롤백 provenance와 YouTube 보정 실행의 정본은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)의 표와 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql), [`V14__create_youtube_channel_backfill_run.sql`](../../../src/main/resources/db/migration/V14__create_youtube_channel_backfill_run.sql)에 둔다.
 
 | 테이블 | 역할 | 핵심 무결성 |
 |---|---|---|
@@ -304,6 +304,7 @@ Refresh Token 세션은 역할과 무관하게 Redis 8.8 `auth:session:` namespa
 | `visit_tag` | 확정 Visit와 태그 연결 | `(visit_id, tag_definition_id)` unique, AI 근거·Snapshot provenance |
 | `ai_extraction_attempt` | Provider 시도·오류·비용 메타데이터 | `(job_id, attempt_no)` unique, 결과·오류 조합 |
 | `youtube_channel_watch` | YouTube 채널 감시·갱신 상태 | Creator·채널별 unique, 구독 상태 |
+| `youtube_channel_backfill_run` | YouTube 누락 영상 보정 조회 실행·Cursor·Worker lease | Creator별 진행 실행 partial unique, 상태·lease·누적 건수 CHECK |
 
 정식 Restaurant·Creator·Video·Visit 저장은 이 후보 테이블과 별도의 애플리케이션 원자성·외부 검증 규칙을 따른다. 후보가 실패하거나 외부 검증이 실패하면 정식 Entity는 0건이어야 한다.
 

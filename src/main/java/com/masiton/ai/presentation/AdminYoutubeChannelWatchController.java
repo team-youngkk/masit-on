@@ -6,15 +6,18 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.masiton.ai.application.port.in.YoutubeChannelWatchManagementUseCase;
+import com.masiton.ai.application.port.in.YoutubeChannelBackfillUseCase;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
 
@@ -25,9 +28,31 @@ public class AdminYoutubeChannelWatchController {
     private static final Set<Integer> ALLOWED_SIZES = Set.of(10, 20, 50);
 
     private final YoutubeChannelWatchManagementUseCase useCase;
+    private final YoutubeChannelBackfillUseCase backfill;
 
-    public AdminYoutubeChannelWatchController(YoutubeChannelWatchManagementUseCase useCase) {
+    @Autowired
+    public AdminYoutubeChannelWatchController(YoutubeChannelWatchManagementUseCase useCase, YoutubeChannelBackfillUseCase backfill) {
         this.useCase = useCase;
+        this.backfill = backfill;
+    }
+
+    @PostMapping("/{creatorId}/backfills")
+    public ResponseEntity<BackfillStartResponse> startBackfill(@PathVariable UUID creatorId) {
+        YoutubeChannelBackfillUseCase.StartResult result = backfill.start(creatorId);
+        return ResponseEntity.status(result.reused() ? 200 : 202).body(new BackfillStartResponse(result.runId(), result.status()));
+    }
+
+    @GetMapping("/{creatorId}/backfills/{runId}")
+    public BackfillStatusResponse getBackfill(@PathVariable UUID creatorId, @PathVariable UUID runId) {
+        YoutubeChannelBackfillUseCase.RunStatus result = backfill.get(creatorId, runId);
+        return new BackfillStatusResponse(result.runId(), result.status(), result.scannedCount(), result.submittedCount(),
+                result.reusedCount(), result.lastErrorCategory(), result.createdAt(), result.updatedAt());
+    }
+
+    @PostMapping("/{creatorId}/backfills/{runId}/stop")
+    public ResponseEntity<Void> stopBackfill(@PathVariable UUID creatorId, @PathVariable UUID runId) {
+        backfill.stop(creatorId, runId);
+        return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/{creatorId}")
@@ -58,6 +83,10 @@ public class AdminYoutubeChannelWatchController {
     }
 
     public record WatchRequest(Boolean enabled) { }
+    public record BackfillStartResponse(UUID runId, String status) { }
+    public record BackfillStatusResponse(UUID runId, String status, long scannedCount, long submittedCount,
+                                         long reusedCount, String lastErrorCategory, OffsetDateTime createdAt,
+                                         OffsetDateTime updatedAt) { }
 
     public record WatchResponse(boolean enabled, String subscriptionStatus, OffsetDateTime lastNotificationAt,
                                 OffsetDateTime lastRenewedAt, String lastErrorCategory, OffsetDateTime lastErrorAt) {

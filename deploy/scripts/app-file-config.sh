@@ -51,6 +51,7 @@ defaults = {
     "YOUTUBE_WEBHOOK_CALLBACK_URL": "https://masiton.click/api/webhooks/youtube/channel-updates",
     "PASSWORD_RESET_PUBLIC_URL": "https://masiton.click/password-reset",
     "AI_WORKER_ENABLED": "false",
+    "YOUTUBE_BACKFILL_ENABLED": "false",
     "AI_WORKER_PROVIDER_QUOTA_LIMIT": "0",
     "AI_WORKER_APPLICATION_QUOTA_LIMIT": "0",
     "AI_WORKER_QUOTA_WINDOW": "P1D",
