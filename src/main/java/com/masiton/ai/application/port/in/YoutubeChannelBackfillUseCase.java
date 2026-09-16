@@ -13,6 +13,8 @@ public interface YoutubeChannelBackfillUseCase {
 
     void poll();
 
+    void scheduleDue();
+
     record StartResult(UUID runId, String status, boolean reused) { }
 
     record RunStatus(UUID runId, String status, long scannedCount, long submittedCount,

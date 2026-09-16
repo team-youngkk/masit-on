@@ -201,7 +201,7 @@ V3 구간 아웃박스는 Action Token만 FK로 참조한다. 수신자는 `memb
 
 ### 11.4 V14 YouTube 채널 보정 실행
 
-[`V14__create_youtube_channel_backfill_run.sql`](../../../src/main/resources/db/migration/V14__create_youtube_channel_backfill_run.sql)은 기존 감시 설정과 AI Job을 수정하지 않고 `youtube_channel_backfill_run`과 진행·lease·만료 claim 인덱스를 추가한다. 관리자가 명시적으로 시작한 보정 실행의 Cursor와 누적 건수를 저장하며, `youtube_channel_watch`가 `enabled=true`·`ACTIVE`가 아니면 실행을 claim하거나 다음 페이지로 진행하지 않는다. 영상 Job은 기존 `BACKFILL` 우선순위와 영상 식별자 멱등성 제약을 재사용한다.
+[`V14__create_youtube_channel_backfill_run.sql`](../../../src/main/resources/db/migration/V14__create_youtube_channel_backfill_run.sql)은 기존 감시 설정과 AI Job을 수정하지 않고 `youtube_channel_backfill_run`과 진행·lease·만료 claim 인덱스를 추가한다. 자동 주기 또는 관리자가 명시적으로 시작한 보정 실행의 Cursor와 누적 건수를 저장하며, `youtube_channel_watch`가 `enabled=true`·`ACTIVE`가 아니면 실행을 claim하거나 다음 페이지로 진행하지 않는다. 영상 Job은 기존 `BACKFILL` 우선순위와 영상 식별자 멱등성 제약을 재사용한다.
 
 [`V15__add_youtube_channel_backfill_stop_reason.sql`](../../../src/main/resources/db/migration/V15__add_youtube_channel_backfill_stop_reason.sql)은 영상 상한 중지 시 저장한 Cursor를 다음 명시적 실행에서 재개할 수 있도록 중지 원인 열과 허용값 제약을 추가한다. 기존 `V14` 파일은 수정하지 않는다.
 
@@ -209,7 +209,7 @@ V3 구간 아웃박스는 Action Token만 FK로 참조한다. 수신자는 `memb
 
 [`V17__add_youtube_backfill_page_limit_reason.sql`](../../../src/main/resources/db/migration/V17__add_youtube_backfill_page_limit_reason.sql)은 페이지 상한 중지를 재개 가능한 `MAX_PAGES_PER_RUN`으로 구분하도록 기존 중지 사유 CHECK를 확장한다. 적용된 V15는 수정하지 않는다.
 
-외부 YouTube 호출은 마이그레이션에서 수행하지 않는다. 실행별 최대 1,000페이지·50,000영상 상한과 응답 크기·Cursor 길이 제한은 애플리케이션 설정으로 적용하고, API key·원문 응답·영상 데이터는 테이블과 로그에 저장하지 않는다. provider/job quota와 백필 전용 quota는 Redis에서 원자 예약하며, quota 확인 실패 시 외부 호출을 하지 않는다. 자동 주기별 실행 생성은 [ADR-AUTO-001](../../../07-adr/adr-backlog.md)의 결정이 필요한 범위로 남긴다.
+외부 YouTube 호출은 마이그레이션에서 수행하지 않는다. 실행별 최대 1,000페이지·50,000영상 상한과 응답 크기·Cursor 길이 제한은 애플리케이션 설정으로 적용하고, API key·원문 응답·영상 데이터는 테이블과 로그에 저장하지 않는다. provider/job quota와 백필 전용 quota는 Redis에서 원자 예약하며, quota 확인 실패 시 외부 호출을 하지 않는다. 자동 주기별 실행 생성은 [ADR-EXT-004](../../07-adr/integration/ext-004-youtube-periodic-reconciliation.md)에 따라 허용한다. [V18](../../../src/main/resources/db/migration/V18__index_youtube_backfill_schedule.sql)은 채널별 최신 실행 조회 인덱스를 추가한다. 주기는 마지막 종결 `updated_at`을 기준으로 판단하며 기존 실행 이력과 Cursor는 유지한다.
 
 ### 11.1 AI 누적 변경 통합 구성
 

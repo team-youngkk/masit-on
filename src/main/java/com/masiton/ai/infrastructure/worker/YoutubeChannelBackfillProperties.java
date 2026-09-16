@@ -11,6 +11,7 @@ import com.masiton.common.web.OriginCanonicalizer;
 @ConfigurationProperties("masiton.ai.youtube-backfill")
 public class YoutubeChannelBackfillProperties implements YoutubeChannelBackfillPolicy {
     private boolean enabled;
+    private int runIntervalSeconds;
     private Duration pollInterval = Duration.ofSeconds(30);
     private Duration leaseDuration = Duration.ofMinutes(2);
     private String baseUrl = "https://www.googleapis.com";
@@ -24,6 +25,9 @@ public class YoutubeChannelBackfillProperties implements YoutubeChannelBackfillP
 
     @PostConstruct
     void validate() {
+        if (runIntervalSeconds < 0 || (enabled && runIntervalSeconds == 0)) {
+            throw new IllegalStateException("Enabled YouTube backfill requires an explicit positive run interval");
+        }
         if (allowedOrigins == null || allowedOrigins.isEmpty()) {
             throw new IllegalStateException("YouTube backfill origin allow-list is required");
         }
@@ -52,6 +56,8 @@ public class YoutubeChannelBackfillProperties implements YoutubeChannelBackfillP
         }
     }
     public boolean isEnabled() { return enabled; } public void setEnabled(boolean value) { enabled = value; }
+    public int getRunIntervalSeconds() { return runIntervalSeconds; }
+    public void setRunIntervalSeconds(int value) { runIntervalSeconds = value; }
     public Duration getPollInterval() { return pollInterval; } public void setPollInterval(Duration value) { pollInterval = value; }
     public Duration getLeaseDuration() { return leaseDuration; } public void setLeaseDuration(Duration value) { leaseDuration = value; }
     public String getBaseUrl() { return baseUrl; } public void setBaseUrl(String value) { baseUrl = value; }

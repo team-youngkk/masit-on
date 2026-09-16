@@ -50,9 +50,9 @@ class FlywayMigrationIntegrationTest extends com.masiton.test.FullContextIntegra
     private MemberSessionRevocationStore memberSessionRevocationStore;
 
     @Test
-    @DisplayName("빈 데이터베이스에 V1부터 V17까지 계약된 순서와 파일명으로 성공 기록된다")
-    void 마이그레이션적용_빈데이터베이스_V1부터V17까지계약된순서와파일명으로성공기록된다() {
-        // given: 컨텍스트 기동 시점에 Flyway가 V1부터 V17 변경을 적용했다.
+    @DisplayName("빈 데이터베이스에 V1부터 V18까지 계약된 순서와 파일명으로 성공 기록된다")
+    void 마이그레이션적용_빈데이터베이스_V1부터V18까지계약된순서와파일명으로성공기록된다() {
+        // given: 컨텍스트 기동 시점에 Flyway가 V1부터 V18 변경을 적용했다.
 
         // when
         List<AppliedMigration> appliedMigrations = jdbcTemplate.query(
@@ -100,7 +100,9 @@ class FlywayMigrationIntegrationTest extends com.masiton.test.FullContextIntegra
                 new AppliedMigration("16", "add youtube channel backfill video ledger", "SQL",
                         "V16__add_youtube_channel_backfill_video_ledger.sql", true),
                 new AppliedMigration("17", "add youtube backfill page limit reason", "SQL",
-                        "V17__add_youtube_backfill_page_limit_reason.sql", true)
+                        "V17__add_youtube_backfill_page_limit_reason.sql", true),
+                new AppliedMigration("18", "index youtube backfill schedule", "SQL",
+                        "V18__index_youtube_backfill_schedule.sql", true)
         );
     }
 

@@ -52,6 +52,7 @@ defaults = {
     "PASSWORD_RESET_PUBLIC_URL": "https://masiton.click/password-reset",
     "AI_WORKER_ENABLED": "false",
     "YOUTUBE_BACKFILL_ENABLED": "false",
+    "YOUTUBE_BACKFILL_RUN_INTERVAL_SECONDS": "0",
     "YOUTUBE_BACKFILL_QUOTA_WINDOW": "P1D",
     "YOUTUBE_BACKFILL_PROVIDER_QUOTA_LIMIT": "0",
     "YOUTUBE_BACKFILL_QUOTA_LIMIT": "0",
@@ -118,6 +119,12 @@ try:
     for key in ("YOUTUBE_BACKFILL_PROVIDER_QUOTA_LIMIT", "YOUTUBE_BACKFILL_QUOTA_LIMIT",
                 "AI_WORKER_PROVIDER_QUOTA_LIMIT", "AI_WORKER_APPLICATION_QUOTA_LIMIT"):
         if not values[key].isdigit():
+            fail()
+    interval = values["YOUTUBE_BACKFILL_RUN_INTERVAL_SECONDS"]
+    if not interval.isdigit() or not 0 <= int(interval) <= 2147483647:
+        fail()
+    if values["YOUTUBE_BACKFILL_ENABLED"] == "true":
+        if int(interval) == 0 or not 0 < int(values["YOUTUBE_BACKFILL_QUOTA_LIMIT"]) <= int(values["YOUTUBE_BACKFILL_PROVIDER_QUOTA_LIMIT"]):
             fail()
     for key in ("KAKAO_BASE_URL", "YOUTUBE_BASE_URL", "YOUTUBE_WEBHOOK_CALLBACK_URL",
                 "PASSWORD_RESET_PUBLIC_URL", "AUTH_ALLOWED_ORIGINS"):

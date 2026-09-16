@@ -171,7 +171,7 @@ AI 추출 후보와 `Restaurant`, `Creator`, `Video`, `Visit`는 같은 의미�
 
 - YouTube 원본 영상·자막의 저장 또는 재배포
 - 자동 검증 없이 AI 결과만으로 정식 맛집·유튜버·영상·방문 관계를 생성하는 기능
-- 자동 검증 전 공개와 자동 주기 동기화
+- 자동 검증 전 공개와 일반 정식 데이터 자동 주기 동기화. 활성 YouTube Watch의 누락 영상 보정은 [ADR-EXT-004](../07-adr/integration/ext-004-youtube-periodic-reconciliation.md)의 승인 범위로 포함한다.
 - 영상 전체를 자동 요약해 공개하는 기능
 - AI가 영업시간, 폐업 여부, 예약 가능 여부, 가격을 사실로 확정하는 기능
 - 무제한 대량 재처리, 모델 변경 시 자동 전체 재계산, 외부 AI 제공자 간 자동 failover
@@ -232,7 +232,7 @@ AI 추출 후보와 `Restaurant`, `Creator`, `Video`, `Visit`는 같은 의미�
 다음 항목은 세 기능 어느 쪽에도 초기 범위로 포함하지 않는다.
 
 - 자유 형식 AI 챗봇, RAG 답변, 사실 근거 없는 생성 답변
-- 자동 검증 전 공개 데이터 생성과 자동 주기 동기화
+- 자동 검증 전 공개 데이터 생성과 일반 자동 주기 동기화. 활성 YouTube Watch의 누락 보정은 [ADR-EXT-004](../07-adr/integration/ext-004-youtube-periodic-reconciliation.md)에 따라 예외로 허용한다.
 - 예약·주문·결제·상업적 거래
 - 현재 위치와 개인 이동 이력 수집
 - 개인화 추천, 회원 행동 기반 자동 맛집 선정

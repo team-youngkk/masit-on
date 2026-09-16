@@ -6,6 +6,8 @@ public interface YoutubeChannelBackfillPolicy {
 
     boolean isEnabled();
 
+    int getRunIntervalSeconds();
+
     Duration getLeaseDuration();
 
     int getMaxPagesPerRun();

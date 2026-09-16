@@ -634,7 +634,7 @@ Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-0
 
 ### 3.11 YouTube 채널 보정 조회 실행
 
-Webhook·Atom 누락을 보완하기 위해 관리자가 활성 감시 채널의 업로드 목록을 비동기로 조회하고, 발견한 영상은 기존 `BACKFILL` Job 접수 경로로 수렴시킨다. 이 API는 주기별 새 실행을 자동 생성하지 않으며, 명시적으로 시작한 실행의 다음 페이지 처리를 전용 Worker가 이어 간다.
+Webhook·Atom 누락을 보완하기 위해 관리자가 활성 감시 채널의 업로드 목록을 비동기로 조회하고, 발견한 영상은 기존 `BACKFILL` Job 접수 경로로 수렴시킨다. 활성·구독 검증된 채널은 운영 주기별로 자동 실행하고, 이 API는 즉시 수동 시작·상태 조회·중지를 제공한다. 전용 Worker가 접수된 실행의 페이지 처리를 이어 간다. [ADR-EXT-004](../../../07-adr/integration/ext-004-youtube-periodic-reconciliation.md)에 따라 운영 주기 `YOUTUBE_BACKFILL_RUN_INTERVAL_SECONDS`는 필수 양의 정수 초이며 활성 상태의 미설정은 기동·배포 사전검사에서 거부한다. 최초 실행은 다음 polling에 접수하고 이후 마지막 종결 갱신 시각에서 주기가 지나면 재접수한다. 한 polling에서 최대 20개 채널을 예약하며 진행 중 실행은 중복 생성하지 않는다.
 
 #### API-ADMIN-AIEXTRACT-BACKFILL-001 `POST /api/admin/ai/youtube-channel-watches/{creatorId}/backfills`
 
@@ -671,9 +671,9 @@ Webhook·Atom 누락을 보완하기 위해 관리자가 활성 감시 채널의
 
 #### API-ADMIN-AIEXTRACT-BACKFILL-003 `POST /api/admin/ai/youtube-channel-watches/{creatorId}/backfills/{runId}/stop`
 
-`QUEUED` 또는 `RUNNING` 실행을 `STOPPED`로 중지한다. 이미 종결된 실행에 대한 반복 요청도 안전하게 무시하며 `204 No Content`를 반환한다. 감시를 `enabled=false`로 바꾸면 신규 Webhook과 보정 Worker 처리를 함께 중지한다.
+`QUEUED` 또는 `RUNNING` 실행을 `STOPPED`로 중지한다. 이미 종결된 실행에 대한 반복 요청도 안전하게 무시하며 `204 No Content`를 반환한다. 수동 중지 실행은 다음 자동 주기에도 재개하지 않으며, 명시적 시작으로 다시 실행해야 자동 주기 대상이 된다. 감시를 `enabled=false`로 바꾸면 신규 Webhook과 보정 Worker 처리를 함께 중지한다.
 
-보정 조회는 한 번에 최대 50개 업로드를 읽고 실행별 페이지·영상 상한을 적용한다. 마지막 페이지가 상한을 넘으면 남은 수만큼 `maxResults`를 줄여 조회하고, 다음 Cursor가 있으면 `MAX_VIDEOS_PER_RUN` 중단 사유와 함께 저장해 다음 명시적 실행에서 해당 Cursor부터 재개한다. 페이지 상한에 도달한 실행도 `MAX_PAGES_PER_RUN` 사유로 현재 Cursor를 보존해 다음 명시적 실행에서 재개한다. 영상별 Job 생성과 run별 원장 기록은 동일 트랜잭션에서 커밋하므로 페이지 중간 예외나 lease 재확보 뒤 `submittedCount`·`reusedCount`를 중복 집계하지 않는다. YouTube API 오류는 원문을 저장하지 않고 `YOUTUBE_TIMEOUT`, `YOUTUBE_RATE_LIMIT`, `YOUTUBE_4XX`, `YOUTUBE_5XX`, `YOUTUBE_UPSTREAM`, `YOUTUBE_MALFORMED_RESPONSE`, `YOUTUBE_QUOTA_EXCEEDED`, `YOUTUBE_QUOTA_UNAVAILABLE` 범주로 기록한다. `channels.list`·`playlistItems.list` 호출은 YouTube provider quota와 백필 전용 quota를 Redis에서 원자 예약한 뒤 수행하며, quota를 확인할 수 없으면 호출하지 않는다. 발견 영상의 실제 Job 등록은 기존 영상 ID·입력 모드·Provider·Model·Prompt·Schema 조합 멱등성 제약을 사용하므로 Webhook과 중복되지 않는다.
+보정 조회는 한 번에 최대 50개 업로드를 읽고 실행별 페이지·영상 상한을 적용한다. 마지막 페이지가 상한을 넘으면 남은 수만큼 `maxResults`를 줄여 조회하고, 다음 Cursor가 있으면 `MAX_VIDEOS_PER_RUN` 중단 사유와 함께 저장해 다음 자동 주기 또는 명시적 실행에서 해당 Cursor부터 재개한다. 페이지 상한에 도달한 실행도 `MAX_PAGES_PER_RUN` 사유로 현재 Cursor를 보존해 다음 자동 주기 또는 명시적 실행에서 재개한다. 성공 뒤 다음 주기는 첫 페이지에서 시작한다. 실패는 마지막 Cursor에서 다음 주기에 재개하며 페이지·스캔 구간 건수는 초기화하고 신규·재사용 누계는 유지한다. 주기는 재접수 대기 기준이며 처리량·quota로 인한 완료 지연은 실행 상태와 지표로 확인한다. 영상별 Job 생성과 run별 원장 기록은 동일 트랜잭션에서 커밋하므로 페이지 중간 예외나 lease 재확보 뒤 `submittedCount`·`reusedCount`를 중복 집계하지 않는다. YouTube API 오류는 원문을 저장하지 않고 `YOUTUBE_TIMEOUT`, `YOUTUBE_RATE_LIMIT`, `YOUTUBE_4XX`, `YOUTUBE_5XX`, `YOUTUBE_UPSTREAM`, `YOUTUBE_MALFORMED_RESPONSE`, `YOUTUBE_QUOTA_EXCEEDED`, `YOUTUBE_QUOTA_UNAVAILABLE` 범주로 기록한다. `channels.list`·`playlistItems.list` 호출은 YouTube provider quota와 백필 전용 quota를 Redis에서 원자 예약한 뒤 수행하며, quota를 확인할 수 없으면 호출하지 않는다. 발견 영상의 실제 Job 등록은 기존 영상 ID·입력 모드·Provider·Model·Prompt·Schema 조합 멱등성 제약을 사용하므로 Webhook과 중복되지 않는다.
 
 ## 4. YouTube Webhook API
 

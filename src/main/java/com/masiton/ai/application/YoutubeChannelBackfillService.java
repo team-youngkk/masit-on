@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.masiton.ai.application.port.in.YoutubeChannelBackfillUseCase;
 import com.masiton.ai.application.port.in.AiExtractionJobUseCase;
@@ -45,6 +46,7 @@ public class YoutubeChannelBackfillService implements YoutubeChannelBackfillUseC
     }
 
     @Override
+    @Transactional(timeout = 5)
     public StartResult start(UUID creatorId) {
         if (creatorId == null) throw new BusinessException(ErrorCode.INVALID_IDENTIFIER);
         if (!properties.isEnabled()) {
@@ -73,6 +75,17 @@ public class YoutubeChannelBackfillService implements YoutubeChannelBackfillUseC
             throw new BusinessException(ErrorCode.INVALID_IDENTIFIER);
         }
         runs.stop(creatorId, runId, now());
+    }
+
+    @Override
+    @Transactional(timeout = 5)
+    public void scheduleDue() {
+        if (!properties.isEnabled()) return;
+        OffsetDateTime now = now();
+        for (UUID creatorId : runs.findDueCreatorsForUpdate(
+                now.minusSeconds(properties.getRunIntervalSeconds()), 20)) {
+            runs.createOrReuse(creatorId, now).ifPresent(start -> metrics.recordRunStart(start.reused()));
+        }
     }
 
     @Override

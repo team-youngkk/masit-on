@@ -19,7 +19,39 @@ public class JdbcYoutubeChannelBackfillRunStore implements YoutubeChannelBackfil
     }
 
     @Override
+    public List<UUID> findDueCreatorsForUpdate(OffsetDateTime dueBefore, int limit) {
+        return jdbc.query("""
+                SELECT w.creator_id
+                  FROM youtube_channel_watch w
+                  LEFT JOIN LATERAL (
+                      SELECT r.status, r.stop_reason, r.updated_at
+                        FROM youtube_channel_backfill_run r
+                       WHERE r.creator_id=w.creator_id AND r.youtube_channel_id=w.youtube_channel_id
+                       ORDER BY r.updated_at DESC, r.id DESC LIMIT 1
+                  ) latest ON true
+                 WHERE w.enabled=true AND w.subscription_status='ACTIVE'
+                   AND (latest.updated_at IS NULL OR (
+                       latest.status IN ('SUCCEEDED','FAILED','STOPPED')
+                       AND latest.stop_reason IS DISTINCT FROM 'MANUAL'
+                       AND latest.updated_at <= ?))
+                   AND NOT EXISTS (
+                       SELECT 1 FROM youtube_channel_backfill_run active
+                        WHERE active.creator_id=w.creator_id AND active.status IN ('QUEUED','RUNNING'))
+                 ORDER BY latest.updated_at ASC NULLS FIRST, w.creator_id
+                 LIMIT ? FOR UPDATE OF w SKIP LOCKED
+                """, (rs, n) -> rs.getObject("creator_id", UUID.class), dueBefore, limit);
+    }
+
+    @Override
     public Optional<StartRun> createOrReuse(UUID creatorId, OffsetDateTime now) {
+        // Manual starts and scheduled starts serialize on the same Watch row in the application transaction.
+        if (jdbc.query("""
+                SELECT creator_id FROM youtube_channel_watch
+                 WHERE creator_id=? AND enabled=true AND subscription_status='ACTIVE'
+                 FOR UPDATE
+                """, (rs, n) -> rs.getObject("creator_id", UUID.class), creatorId).isEmpty()) {
+            return Optional.empty();
+        }
         List<Run> existing = jdbc.query("""
                 SELECT r.*
                   FROM youtube_channel_backfill_run r
@@ -38,9 +70,14 @@ public class JdbcYoutubeChannelBackfillRunStore implements YoutubeChannelBackfil
                       JOIN youtube_channel_watch w ON w.creator_id = r.creator_id
                                                     AND w.youtube_channel_id = r.youtube_channel_id
                      WHERE r.creator_id=?
-                       AND r.status='STOPPED'
-                       AND r.stop_reason IN ('MAX_VIDEOS_PER_RUN', 'MAX_PAGES_PER_RUN')
-                       AND r.page_token IS NOT NULL
+                       AND (r.status='FAILED' OR (r.status='STOPPED'
+                           AND r.stop_reason IN ('MAX_VIDEOS_PER_RUN', 'MAX_PAGES_PER_RUN')
+                           AND r.page_token IS NOT NULL))
+                       AND r.id = (
+                           SELECT latest.id FROM youtube_channel_backfill_run latest
+                            WHERE latest.creator_id=r.creator_id
+                              AND latest.youtube_channel_id=r.youtube_channel_id
+                            ORDER BY latest.updated_at DESC, latest.id DESC LIMIT 1)
                        AND w.enabled=true AND w.subscription_status='ACTIVE'
                      ORDER BY r.updated_at DESC, r.id DESC
                      LIMIT 1

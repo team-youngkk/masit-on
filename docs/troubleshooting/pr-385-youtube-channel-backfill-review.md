@@ -6,6 +6,7 @@ related_documents:
   - ../05-specs/data/third-expansion-ai-video-data-contract.md
   - ../05-specs/data/migration-plan.md
   - ../07-adr/adr-backlog.md
+  - ../07-adr/integration/ext-004-youtube-periodic-reconciliation.md
   - ../../src/main/java/com/masiton/ai/application/YoutubeChannelBackfillService.java
   - ../../src/main/java/com/masiton/ai/application/AiExtractionJobService.java
   - pr-184-youtube-channel-watch-review.md
@@ -29,7 +30,7 @@ related_documents:
 | 스레드 | 요청 요약 | 문제 유형 | 판단 | 처리 결과 | 근거/검증 |
 |---|---|---|---|---|---|
 | [r4012961603](https://github.com/team-youngkk/masit-on/pull/385#discussion_r4012961603) | 영상 상한에서 Cursor 보존 | 애플리케이션 | 이미 해결 | PR 기존 커밋이 남은 영상 수만 조회하고 `MAX_VIDEOS_PER_RUN`으로 다음 Cursor를 저장함 | 75개 상한·50개 처리 후 25개 조회 서비스 테스트 통과. DB 재개 테스트도 PR CI 통과 |
-| [r4013054198](https://github.com/team-youngkk/masit-on/pull/385#discussion_r4013054198) | 자동 실행 주기와 계약 충돌 | 애플리케이션 | 결정 필요 | 자동 생성 여부·주기 합의가 없어 현재 수동 실행 계약을 변경하지 않음 | FR-AIEXTRACT-004, API 3.11, ADR-AUTO-001 대조 |
+| [r4013054198](https://github.com/team-youngkk/masit-on/pull/385#discussion_r4013054198) | 자동 실행 주기와 계약 충돌 | 애플리케이션 | 수정 필요 | 사용자가 자동 보정 채택을 승인해 ADR-EXT-004·필수 운영 주기·자동 접수를 추가 | 11절의 후속 검증 |
 | [r4013054213](https://github.com/team-youngkk/masit-on/pull/385#discussion_r4013054213) | 호출 전 quota 예약·별도 백필 상한 | 인프라 | 이미 해결 | PR 기존 커밋에 Redis Lua 예약 및 두 API 각각 호출 전 차단이 있음 | Adapter의 quota 예약·차단 테스트 통과. Redis 예약·초과 반환 테스트도 PR CI 통과 |
 | [r4013054217](https://github.com/team-youngkk/masit-on/pull/385#discussion_r4013054217) | 활성 backfill의 API key 누락 거부 | 배포 | 이미 해결 | PR 기존 커밋에 flag-secret 매핑과 누락 거부 fixture가 있음 | WSL Ubuntu root 파일 설정 테스트 `App file config runtime: PASS` |
 | [r4015589465](https://github.com/team-youngkk/masit-on/pull/385#discussion_r4015589465) | 중간 실패·lease 상실 시 신규·재사용 누계 보존 | 데이터베이스 | 수정 필요 | Job 생성과 원장 기록을 `submitBackfillIfClaimActive`의 동일 트랜잭션으로 이동 | 컴파일·서비스 테스트 통과. 실제 DB 롤백·lease 재확보 회귀 테스트 추가, PR CI에서 실행·통과 |
@@ -103,4 +104,16 @@ related_documents:
 
 - 배포 API key 스레드는 [검증 답글](https://github.com/team-youngkk/masit-on/pull/385#discussion_r4023581418)을 게시하고 해결 처리했다. 자동 실행 스레드는 [결정 요청 답글](https://github.com/team-youngkk/masit-on/pull/385#discussion_r4023584284)을 게시하고 미해결로 유지했다. 이 두 답글은 CI 통합 검증 전에 게시했다. 최종 스레드 상태는 PR에서 확인한다.
 - 로컬 Docker 기동 오류는 남아 있지만 PostgreSQL·Redis·Flyway 검증은 CI #1121에서 완료했다. 실제 운영 제공자 호출·quota 수치 검증은 수행하지 않았다.
-- 나머지 영상 상한·quota·처리 원장·페이지 상한 4개 스레드는 원격 코드와 통합 검증을 확인해 해결 처리할 수 있다. 자동 실행 계약 충돌은 소유자 결정이 필요하다.
+- 나머지 영상 상한·quota·처리 원장·페이지 상한 4개 스레드는 원격 코드와 통합 검증을 확인해 해결 처리할 수 있다. 이후 사용자가 자동 보정 채택을 승인했다. 최종 변경과 검증은 11절을 따른다.
+
+## 11. 자동 보정 계약 확정과 후속 구현 — 2026-09-16
+
+사용자는 활성 채널 자동 보정을 채택하고 운영 주기를 필수 설정으로 두는 제안을 승인했다. 상위 FR·#375의 목적을 유지하고, 수동 실행만 허용하던 API·데이터 계약 및 일반 자동 수집 제외 문구에 제한적 예외를 명시했다. 결정은 [ADR-EXT-004](../07-adr/integration/ext-004-youtube-periodic-reconciliation.md), 추적표·PRD·범위 문서에 연결했다. 위 초기 조사에서 남겼던 결정 대기 상태는 이 승인으로 해소됐다.
+
+- 신규 정책: `YOUTUBE_BACKFILL_RUN_INTERVAL_SECONDS`는 기본 0(미설정)이고 활성화 시 양의 정수 초가 필수다. 실제 운영 값을 임의 확정하거나 운영 설정에 적용하지 않는다.
+- 실행: 30초 polling마다 최대 20개 도래 채널의 Watch를 잠그고 자동 접수한다. 첫 실행은 즉시 대상, 이후 마지막 종결 갱신 시각과 운영 주기로 판단한다. 진행 실행은 재사용하며 성공 뒤 새 run, 실패·상한 뒤 Cursor 재개를 수행한다.
+- 중지: 비활성·미검증 Watch와 수동 중지 run은 제외한다. 수동 시작으로 재개하면 이후 자동 주기를 다시 적용한다.
+- 원자성: 자동 접수·수동 시작을 애플리케이션 트랜잭션과 Watch 잠금으로 직렬화하고, 기존 활성 실행 unique를 유지한다. 외부 호출은 트랜잭션 밖이며 quota와 Job 멱등성을 재사용한다.
+- 변경 파일: `YoutubeChannelBackfillService`, `JdbcYoutubeChannelBackfillRunStore`, scheduler·properties·Port, application·Compose·파일/SSM 설정 경로, V18 최신 실행 조회 인덱스, 관련 회귀 테스트와 계약 문서.
+- 로컬 검증: 자동 접수·스케줄러·설정·기존 배포 계약 테스트 통과. WSL 파일 설정 fixture PASS(주기 누락·0·음수 거부, 정상값 전달). PostgreSQL 동시 접수·주기 경계·실패/상한 재개 테스트는 PR CI에서 추가 확인한다.
+- 비교: 이전에는 수동 POST 없이 생성되는 run이 0건이었다. 새 fixture는 수동 POST 없이 첫 실행 1건, 종결 후 주기 직전 1건 유지, 정확히 주기 도래 시 누적 2건을 기대한다. 실제 운영 보정 지연과 quota 차단률은 운영 담당자가 #375 활성화 시 동일 지표로 확인한다.

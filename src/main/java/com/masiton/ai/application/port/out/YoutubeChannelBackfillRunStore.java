@@ -2,6 +2,7 @@ package com.masiton.ai.application.port.out;
 
 import java.time.OffsetDateTime;
 import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 public interface YoutubeChannelBackfillRunStore {
@@ -9,6 +10,8 @@ public interface YoutubeChannelBackfillRunStore {
     Optional<Run> find(UUID creatorId, UUID runId);
 
     Optional<StartRun> createOrReuse(UUID creatorId, OffsetDateTime now);
+
+    List<UUID> findDueCreatorsForUpdate(OffsetDateTime dueBefore, int limit);
 
     Optional<ClaimedRun> claim(OffsetDateTime now, OffsetDateTime leaseExpiresAt, String leaseOwner);
 

@@ -210,6 +210,36 @@ class YoutubeChannelBackfillServiceTest {
     }
 
     @Test
+    @DisplayName("자동 보정은 명시한 주기가 지난 채널의 실행을 만들고 외부 호출은 하지 않는다")
+    void 자동접수_운영주기도래_실행만등록한다() {
+        // Given
+        properties.setEnabled(true);
+        properties.setRunIntervalSeconds(3600);
+        when(runs.findDueCreatorsForUpdate(now.minusHours(1), 20)).thenReturn(List.of(creatorId));
+        Run run = new Run(UUID.randomUUID(), creatorId, "QUEUED", 0, 0, 0, null, now, now);
+        when(runs.createOrReuse(creatorId, now))
+                .thenReturn(Optional.of(new YoutubeChannelBackfillRunStore.StartRun(run, false)));
+
+        // When
+        service.scheduleDue();
+
+        // Then
+        verify(runs).createOrReuse(creatorId, now);
+        verify(metrics).recordRunStart(false);
+        verifyNoInteractions(videos, jobs);
+    }
+
+    @Test
+    @DisplayName("비활성 자동 보정은 채널 조회나 실행 생성을 하지 않는다")
+    void 자동접수_기능비활성_조회하지않는다() {
+        // Given: 기본값은 비활성이다.
+        // When
+        service.scheduleDue();
+        // Then
+        verifyNoInteractions(runs, videos, jobs, metrics);
+    }
+
+    @Test
     @DisplayName("YouTube 목록 조회 실패는 외부 오류 범주로 run을 실패 처리한다")
     void 폴링_YouTube목록조회실패_오류범주로실패처리한다() {
         properties.setEnabled(true);

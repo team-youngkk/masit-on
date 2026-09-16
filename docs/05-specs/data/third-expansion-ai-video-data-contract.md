@@ -356,7 +356,7 @@ Creator 등록만으로 `enabled=true`가 되지 않는다. 감시 중지·구�
 
 ## 10.1 `youtube_channel_backfill_run`
 
-관리자가 명시적으로 시작한 YouTube 보정 조회의 진행 상태와 페이지 Cursor를 저장한다. 주기별 실행을 자동 생성하는 스케줄러가 아니라, `QUEUED` 실행의 다음 페이지를 전용 Worker가 처리하는 재기동·lease 복구 경계다. 영상 상한으로 중지된 실행은 다음 Cursor를 보존하고 다음 명시적 시작에서 해당 위치부터 재개한다.
+자동 주기 또는 관리자 요청으로 시작한 YouTube 보정 조회의 진행 상태와 페이지 Cursor를 저장한다. [ADR-EXT-004](../../07-adr/integration/ext-004-youtube-periodic-reconciliation.md)에 따라 활성·검증 Watch의 최초 실행 및 마지막 종결 `updated_at` 이후 운영 주기가 지난 실행을 예약하고, 전용 Worker가 `QUEUED` 실행의 다음 페이지를 처리한다. 성공은 새 run을 첫 페이지에서 생성하고 실패는 기존 Cursor·원장을 보존해 재개한다. Watch 행 잠금과 진행 실행 partial unique가 동시 수동·자동 접수를 직렬화한다. `ix_youtube_backfill_latest_channel`은 Creator·채널별 최신 `updated_at` 조회를 지원한다. 영상 상한으로 중지된 실행은 다음 Cursor를 보존하고 다음 자동 주기 또는 명시적 시작에서 해당 위치부터 재개한다.
 
 | 컬럼 | SQL 타입 후보 | Null | 키·제약 | 설명 |
 |---|---|---:|---|---|
@@ -373,7 +373,7 @@ Creator 등록만으로 `enabled=true`가 되지 않는다. 감시 중지·구�
 | `last_error_category` | `varchar(64)` | Yes | 오류 시 범주 코드 | 외부 오류 원문 미저장 |
 | `created_at`, `updated_at` | 시간 | NN | 시각 규칙 | 생성·진행 시각 |
 
-Creator별 `QUEUED/RUNNING` 실행은 partial unique index로 하나만 허용한다. 실행을 처리할 때 `youtube_channel_watch.enabled=true`와 `subscription_status=ACTIVE`를 다시 확인하며, 감시 중지나 구독 비활성화가 확인되면 실행을 `STOPPED`로 종결한다. 영상 상한에 도달하면서 다음 Cursor가 남으면 `STOPPED/MAX_VIDEOS_PER_RUN`으로 저장하고, 명시적 재시작 시 페이지·스캔 건수와 lease만 초기화하고 신규·재사용 누계는 유지해 Cursor를 유지한다. 페이지 상한에 도달한 실행은 `STOPPED/MAX_PAGES_PER_RUN`으로 현재 Cursor를 보존하며 같은 재개 경계를 사용한다. 수동 중지는 `STOPPED/MANUAL`로 저장해 자동 재개하지 않는다. Job 생성은 기존 `ai_extraction_job`의 영상 식별자·입력 모드·Provider·Model·Prompt·Schema 멱등성 경계를 재사용한다.
+Creator별 `QUEUED/RUNNING` 실행은 partial unique index로 하나만 허용한다. 실행을 처리할 때 `youtube_channel_watch.enabled=true`와 `subscription_status=ACTIVE`를 다시 확인하며, 감시 중지나 구독 비활성화가 확인되면 실행을 `STOPPED`로 종결한다. 영상 상한에 도달하면서 다음 Cursor가 남으면 `STOPPED/MAX_VIDEOS_PER_RUN`으로 저장하고, 자동 또는 명시적 재시작 시 페이지·스캔 건수와 lease만 초기화하고 신규·재사용 누계는 유지해 Cursor를 유지한다. 페이지 상한에 도달한 실행은 `STOPPED/MAX_PAGES_PER_RUN`으로 현재 Cursor를 보존하며 같은 재개 경계를 사용한다. 수동 중지는 `STOPPED/MANUAL`로 저장해 자동 재개하지 않는다. Job 생성은 기존 `ai_extraction_job`의 영상 식별자·입력 모드·Provider·Model·Prompt·Schema 멱등성 경계를 재사용한다.
 
 ## 10.2 `youtube_channel_backfill_video`
 

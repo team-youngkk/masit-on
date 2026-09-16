@@ -63,6 +63,7 @@ fixture
 rm "$TEST_ROOT/backend.image"
 check
 printf '%s\n' 'YOUTUBE_BACKFILL_ENABLED=true' >> "$APP_ENV_FILE"
+printf '%s\n' 'YOUTUBE_BACKFILL_RUN_INTERVAL_SECONDS=3600' 'YOUTUBE_BACKFILL_PROVIDER_QUOTA_LIMIT=100' 'YOUTUBE_BACKFILL_QUOTA_LIMIT=50' >> "$APP_ENV_FILE"
 reject youtube-backfill-missing-key
 fixture
 printf '%s\n' 'YOUTUBE_BACKFILL_ENABLED=true' >> "$APP_ENV_FILE"
@@ -72,6 +73,12 @@ printf '%s\n' 'YOUTUBE_BACKFILL_QUOTA_WINDOW=P1D' >> "$APP_ENV_FILE"
 printf '%s\n' 'file-mode-sensitive-youtube-key' > "$APP_SECRETS_DIR/masiton.integration.youtube.api-key"
 chmod 400 "$APP_SECRETS_DIR/masiton.integration.youtube.api-key"
 chown 1001:1001 "$APP_SECRETS_DIR/masiton.integration.youtube.api-key"
+reject youtube-backfill-missing-run-interval
+printf '%s\n' 'YOUTUBE_BACKFILL_RUN_INTERVAL_SECONDS=0' >> "$APP_ENV_FILE"
+reject youtube-backfill-zero-run-interval
+sed -i 's/YOUTUBE_BACKFILL_RUN_INTERVAL_SECONDS=0/YOUTUBE_BACKFILL_RUN_INTERVAL_SECONDS=-1/' "$APP_ENV_FILE"
+reject youtube-backfill-negative-run-interval
+sed -i 's/YOUTUBE_BACKFILL_RUN_INTERVAL_SECONDS=-1/YOUTUBE_BACKFILL_RUN_INTERVAL_SECONDS=3600/' "$APP_ENV_FILE"
 check
 # parser 및 secret-only 공개 인터페이스를 실제로 호출한다.
 source "$TEST_ROOT/app-file-config.sh"
@@ -79,6 +86,7 @@ load_file_config
 [ "$REDIS_HOST" = 10.0.0.3 ] && [ "$REDIS_PORT" = 6379 ] && [ "$REDIS_ALLOWED_PUBLIC_HOSTS" = 43.201.7.105 ]
 [ "$APP_SECRET_MOUNT" = "$APP_SECRETS_DIR" ]
 [ "$SECRETS_DIR" = /run/masiton/secrets ]
+[ "$YOUTUBE_BACKFILL_RUN_INTERVAL_SECONDS" = 3600 ]
 validate_file_secrets
 before=$(find "$APP_SECRETS_DIR" -type f -exec sha256sum {} \; | sort)
 bash "$TEST_ROOT/app-secrets-render.sh"

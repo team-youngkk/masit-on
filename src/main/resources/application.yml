@@ -87,6 +87,7 @@ masiton:
       callback-url: ${YOUTUBE_WEBHOOK_CALLBACK_URL:http://localhost:8080/api/webhooks/youtube/channel-updates}
     youtube-backfill:
       enabled: ${YOUTUBE_BACKFILL_ENABLED:false}
+      run-interval-seconds: ${YOUTUBE_BACKFILL_RUN_INTERVAL_SECONDS:0}
       poll-interval: PT30S
       lease-duration: PT120S
       # 운영에서는 기존 YouTube configtree secret과 endpoint 계약을 재사용한다.
