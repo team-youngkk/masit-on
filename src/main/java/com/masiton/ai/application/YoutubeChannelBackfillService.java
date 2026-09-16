@@ -16,7 +16,6 @@ import com.masiton.ai.application.port.out.YoutubeChannelBackfillRunStore;
 import com.masiton.ai.application.port.out.YoutubeChannelBackfillRunStore.ClaimedRun;
 import com.masiton.ai.application.port.out.YoutubeChannelBackfillRunStore.Run;
 import com.masiton.ai.application.port.out.YoutubeChannelVideoQueryPort;
-import com.masiton.ai.application.port.out.dto.AiExtractionJobView;
 import com.masiton.ai.application.port.out.YoutubeChannelBackfillPolicy;
 import com.masiton.ai.application.port.out.YoutubeChannelBackfillMetrics;
 import com.masiton.common.web.BusinessException;
@@ -92,15 +91,13 @@ public class YoutubeChannelBackfillService implements YoutubeChannelBackfillUseC
         try {
             if (run.pageCount() >= properties.getMaxPagesPerRun()
                     || run.scannedCount() >= properties.getMaxVideosPerRun()) {
-                runs.stop(run.creatorId(), run.runId(), now());
+                runs.stopAtLimit(run.runId(), run.leaseOwner(),
+                        run.pageCount() >= properties.getMaxPagesPerRun()
+                                ? "MAX_PAGES_PER_RUN" : "MAX_VIDEOS_PER_RUN", now());
                 return;
             }
             if (!runs.isClaimActive(run.runId(), run.leaseOwner(), now())) return;
             long remainingVideos = properties.getMaxVideosPerRun() - run.scannedCount();
-            if (remainingVideos <= 0) {
-                runs.stop(run.creatorId(), run.runId(), now());
-                return;
-            }
             int pageSize = (int) Math.min(50L, remainingVideos);
             YoutubeChannelVideoQueryPort.VideoPage page = videos.query(run.channelId(), run.pageToken(), pageSize);
             if (!runs.isClaimActive(run.runId(), run.leaseOwner(), now())) return;
@@ -108,11 +105,8 @@ public class YoutubeChannelBackfillService implements YoutubeChannelBackfillUseC
                 throw new YoutubeChannelVideoQueryException("YOUTUBE_MALFORMED_RESPONSE");
             }
             for (String videoId : page.videoIds()) {
-                Optional<AiExtractionJobView> accepted = jobs.submitBackfillIfClaimActive(
-                        run.runId(), run.leaseOwner(), run.channelId(), videoId);
-                if (accepted.isEmpty()) return;
-                AiExtractionJobView job = accepted.get();
-                runs.recordVideo(run.runId(), videoId, job.reused(), now());
+                if (jobs.submitBackfillIfClaimActive(
+                        run.runId(), run.leaseOwner(), run.channelId(), videoId).isEmpty()) return;
             }
             boolean completed = page.nextPageToken() == null;
             boolean limitReached = !completed && run.scannedCount() + page.videoIds().size()

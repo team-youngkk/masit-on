@@ -39,7 +39,7 @@ public class JdbcYoutubeChannelBackfillRunStore implements YoutubeChannelBackfil
                                                     AND w.youtube_channel_id = r.youtube_channel_id
                      WHERE r.creator_id=?
                        AND r.status='STOPPED'
-                       AND r.stop_reason='MAX_VIDEOS_PER_RUN'
+                       AND r.stop_reason IN ('MAX_VIDEOS_PER_RUN', 'MAX_PAGES_PER_RUN')
                        AND r.page_token IS NOT NULL
                        AND w.enabled=true AND w.subscription_status='ACTIVE'
                      ORDER BY r.updated_at DESC, r.id DESC
@@ -181,6 +181,19 @@ public class JdbcYoutubeChannelBackfillRunStore implements YoutubeChannelBackfil
                        lease_expires_at=NULL, updated_at=?
                  WHERE creator_id=? AND id=? AND status IN ('QUEUED','RUNNING')
                 """, now, creatorId, runId);
+    }
+
+    @Override
+    public void stopAtLimit(UUID runId, String owner, String reason, OffsetDateTime now) {
+        if (!"MAX_PAGES_PER_RUN".equals(reason) && !"MAX_VIDEOS_PER_RUN".equals(reason)) {
+            throw new IllegalArgumentException("Invalid backfill limit reason");
+        }
+        jdbc.update("""
+                UPDATE youtube_channel_backfill_run
+                   SET status='STOPPED', stop_reason=?, lease_owner=NULL,
+                       lease_expires_at=NULL, updated_at=?
+                 WHERE id=? AND status='RUNNING' AND lease_owner=? AND lease_expires_at > ?
+                """, reason, now, runId, owner, now);
     }
 
     @Override

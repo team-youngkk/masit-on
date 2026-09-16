@@ -207,6 +207,8 @@ V3 구간 아웃박스는 Action Token만 FK로 참조한다. 수신자는 `memb
 
 [`V16__add_youtube_channel_backfill_video_ledger.sql`](../../../src/main/resources/db/migration/V16__add_youtube_channel_backfill_video_ledger.sql)은 보정 run의 영상별 `SUBMITTED/REUSED` 접수 결과와 unique 원장을 추가한다. 페이지 중간 예외나 lease 재확보 뒤 같은 영상이 다시 처리되어도 run 누계를 중복 집계하지 않으며, 기존 `V14`·`V15` 파일은 수정하지 않는다.
 
+[`V17__add_youtube_backfill_page_limit_reason.sql`](../../../src/main/resources/db/migration/V17__add_youtube_backfill_page_limit_reason.sql)은 페이지 상한 중지를 재개 가능한 `MAX_PAGES_PER_RUN`으로 구분하도록 기존 중지 사유 CHECK를 확장한다. 적용된 V15는 수정하지 않는다.
+
 외부 YouTube 호출은 마이그레이션에서 수행하지 않는다. 실행별 최대 1,000페이지·50,000영상 상한과 응답 크기·Cursor 길이 제한은 애플리케이션 설정으로 적용하고, API key·원문 응답·영상 데이터는 테이블과 로그에 저장하지 않는다. provider/job quota와 백필 전용 quota는 Redis에서 원자 예약하며, quota 확인 실패 시 외부 호출을 하지 않는다. 자동 주기별 실행 생성은 [ADR-AUTO-001](../../../07-adr/adr-backlog.md)의 결정이 필요한 범위로 남긴다.
 
 ### 11.1 AI 누적 변경 통합 구성

@@ -1,6 +1,7 @@
 package com.masiton.ai.infrastructure.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -12,6 +13,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.masiton.ai.application.port.out.YoutubeChannelBackfillRunStore;
+import com.masiton.ai.application.port.in.AiExtractionJobUseCase;
 import com.masiton.test.FullContextIntegrationTest;
 import com.masiton.test.TestProfile;
 
@@ -25,6 +27,113 @@ class JdbcYoutubeChannelBackfillRunStoreIntegrationTest extends FullContextInteg
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private AiExtractionJobUseCase jobs;
+
+    @Test
+    @DisplayName("페이지 상한 중지는 커서와 처리 누계를 유지하고 수동 중지는 재개하지 않는다")
+    void stopAtLimit_페이지상한_커서재개와수동중지를구분한다() {
+        // Given
+        UUID creatorId = UUID.randomUUID();
+        String channelId = "channel-" + UUID.randomUUID();
+        OffsetDateTime now = OffsetDateTime.now();
+        insertCreatorAndWatch(creatorId, channelId, true, "ACTIVE");
+        try {
+            UUID runId = store.createOrReuse(creatorId, now).orElseThrow().run().runId();
+            store.claim(now, now.plusMinutes(2), "owner").orElseThrow();
+            store.recordVideo(runId, "video-1", false, now);
+            store.completePage(runId, "owner", 10, "page-11", false, false, now);
+            store.claim(now, now.plusMinutes(2), "owner").orElseThrow();
+
+            // When
+            store.stopAtLimit(runId, "stale-owner", "MAX_PAGES_PER_RUN", now);
+            assertThat(store.find(creatorId, runId).orElseThrow().status()).isEqualTo("RUNNING");
+            store.stopAtLimit(runId, "owner", "MAX_PAGES_PER_RUN", now.plusMinutes(3));
+            assertThat(store.find(creatorId, runId).orElseThrow().status()).isEqualTo("RUNNING");
+            store.stopAtLimit(runId, "owner", "MAX_PAGES_PER_RUN", now);
+            YoutubeChannelBackfillRunStore.StartRun resumed = store.createOrReuse(creatorId, now).orElseThrow();
+            YoutubeChannelBackfillRunStore.ClaimedRun claimed = store.claim(now, now.plusMinutes(2), "next-owner")
+                    .orElseThrow();
+
+            // Then
+            assertThat(resumed.run().runId()).isEqualTo(runId);
+            assertThat(resumed.run().submittedCount()).isEqualTo(1);
+            assertThat(claimed.pageToken()).isEqualTo("page-11");
+            assertThat(claimed.pageCount()).isZero();
+            assertThat(claimed.scannedCount()).isZero();
+            store.stop(creatorId, runId, now);
+            assertThat(store.createOrReuse(creatorId, now).orElseThrow().run().runId()).isNotEqualTo(runId);
+        } finally {
+            deleteFixture(creatorId);
+        }
+    }
+
+    @Test
+    @DisplayName("영상 원장 저장 실패는 Job 생성도 롤백하고 재접수는 신규로 집계한다")
+    void 접수_원장저장실패_Job과누계를함께롤백한다() {
+        // Given
+        UUID creatorId = UUID.randomUUID();
+        String channelId = "channel-" + UUID.randomUUID();
+        String videoId = "video-" + UUID.randomUUID();
+        OffsetDateTime now = OffsetDateTime.now();
+        insertCreatorAndWatch(creatorId, channelId, true, "ACTIVE");
+        try {
+            UUID runId = store.createOrReuse(creatorId, now).orElseThrow().run().runId();
+            store.claim(now, now.plusMinutes(2), "owner").orElseThrow();
+            jdbcTemplate.execute("ALTER TABLE youtube_channel_backfill_video ADD CONSTRAINT test_reject_ledger "
+                    + "CHECK (youtube_video_id <> '" + videoId + "') NOT VALID");
+
+            // When
+            assertThatThrownBy(() -> jobs.submitBackfillIfClaimActive(runId, "owner", channelId, videoId))
+                    .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+
+            // Then
+            assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM ai_extraction_job WHERE youtube_video_id=?",
+                    Long.class, videoId)).isZero();
+            assertThat(store.find(creatorId, runId).orElseThrow().submittedCount()).isZero();
+            jdbcTemplate.execute("ALTER TABLE youtube_channel_backfill_video DROP CONSTRAINT test_reject_ledger");
+            assertThat(jobs.submitBackfillIfClaimActive(runId, "owner", channelId, videoId)
+                    .orElseThrow().reused()).isFalse();
+            assertThat(store.find(creatorId, runId).orElseThrow().submittedCount()).isEqualTo(1);
+        } finally {
+            jdbcTemplate.execute("ALTER TABLE youtube_channel_backfill_video DROP CONSTRAINT IF EXISTS test_reject_ledger");
+            jdbcTemplate.update("DELETE FROM ai_extraction_job WHERE youtube_video_id=?", videoId);
+            deleteFixture(creatorId);
+        }
+    }
+
+    @Test
+    @DisplayName("lease 재확보 뒤 같은 영상을 접수해도 최초 신규 처리 누계를 유지한다")
+    void 접수_Lease재확보후재시도_최초신규누계를유지한다() {
+        // Given
+        UUID creatorId = UUID.randomUUID();
+        String channelId = "channel-" + UUID.randomUUID();
+        String videoId = "video-" + UUID.randomUUID();
+        OffsetDateTime now = OffsetDateTime.now();
+        insertCreatorAndWatch(creatorId, channelId, true, "ACTIVE");
+        try {
+            UUID runId = store.createOrReuse(creatorId, now).orElseThrow().run().runId();
+            store.claim(now, now.plusMinutes(2), "owner").orElseThrow();
+            jobs.submitBackfillIfClaimActive(runId, "owner", channelId, videoId).orElseThrow();
+            jdbcTemplate.update("UPDATE youtube_channel_backfill_run SET lease_expires_at=? WHERE id=?",
+                    now.minusSeconds(1), runId);
+
+            // When
+            store.claim(now, now.plusMinutes(2), "recovered-owner").orElseThrow();
+            assertThat(jobs.submitBackfillIfClaimActive(runId, "owner", channelId, videoId)).isEmpty();
+            assertThat(jobs.submitBackfillIfClaimActive(runId, "recovered-owner", channelId, videoId)
+                    .orElseThrow().reused()).isTrue();
+
+            // Then
+            YoutubeChannelBackfillRunStore.Run run = store.find(creatorId, runId).orElseThrow();
+            assertThat(run.submittedCount()).isEqualTo(1);
+            assertThat(run.reusedCount()).isZero();
+        } finally {
+            jdbcTemplate.update("DELETE FROM ai_extraction_job WHERE youtube_video_id=?", videoId);
+            deleteFixture(creatorId);
+        }
+    }
 
     @Test
     @DisplayName("활성 Watch의 백필 run은 중복 접수 시 하나로 수렴한다")

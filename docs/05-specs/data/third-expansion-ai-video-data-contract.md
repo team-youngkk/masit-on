@@ -366,18 +366,18 @@ Creator 등록만으로 `enabled=true`가 되지 않는다. 감시 중지·구�
 | `status` | `varchar(16)` | NN | `QUEUED/RUNNING/SUCCEEDED/FAILED/STOPPED` | 실행 상태 |
 | `lease_owner`, `lease_expires_at` | 문자열·시간 | Yes | 함께 NULL이거나 함께 설정 | Worker lease |
 | `page_token` | `varchar(512)` | Yes | 다음 YouTube 페이지 Cursor | 원문 영상·응답 대신 진행 위치만 저장 |
-| `stop_reason` | `varchar(32)` | Yes | `MAX_VIDEOS_PER_RUN/MANUAL` | 중지 원인. 영상 상한 중지는 저장한 Cursor 재개 대상 |
+| `stop_reason` | `varchar(32)` | Yes | `MAX_VIDEOS_PER_RUN/MAX_PAGES_PER_RUN/MANUAL` | 중지 원인. 영상·페이지 상한 중지는 저장한 Cursor 재개 대상 |
 | `page_count` | `integer` | NN | 0 이상 | 처리한 페이지 수 |
 | `scanned_count` | `bigint` | NN | 0 이상 | 조회한 영상 수 |
 | `submitted_count`, `reused_count` | `bigint` | NN | 0 이상 | 신규 Job·기존 Job 재사용 수 |
 | `last_error_category` | `varchar(64)` | Yes | 오류 시 범주 코드 | 외부 오류 원문 미저장 |
 | `created_at`, `updated_at` | 시간 | NN | 시각 규칙 | 생성·진행 시각 |
 
-Creator별 `QUEUED/RUNNING` 실행은 partial unique index로 하나만 허용한다. 실행을 처리할 때 `youtube_channel_watch.enabled=true`와 `subscription_status=ACTIVE`를 다시 확인하며, 감시 중지나 구독 비활성화가 확인되면 실행을 `STOPPED`로 종결한다. 영상 상한에 도달하면서 다음 Cursor가 남으면 `STOPPED/MAX_VIDEOS_PER_RUN`으로 저장하고, 명시적 재시작 시 누적 건수와 lease만 초기화해 Cursor를 유지한다. 수동 중지는 `STOPPED/MANUAL`로 저장해 자동 재개하지 않는다. Job 생성은 기존 `ai_extraction_job`의 영상 식별자·입력 모드·Provider·Model·Prompt·Schema 멱등성 경계를 재사용한다.
+Creator별 `QUEUED/RUNNING` 실행은 partial unique index로 하나만 허용한다. 실행을 처리할 때 `youtube_channel_watch.enabled=true`와 `subscription_status=ACTIVE`를 다시 확인하며, 감시 중지나 구독 비활성화가 확인되면 실행을 `STOPPED`로 종결한다. 영상 상한에 도달하면서 다음 Cursor가 남으면 `STOPPED/MAX_VIDEOS_PER_RUN`으로 저장하고, 명시적 재시작 시 페이지·스캔 건수와 lease만 초기화하고 신규·재사용 누계는 유지해 Cursor를 유지한다. 페이지 상한에 도달한 실행은 `STOPPED/MAX_PAGES_PER_RUN`으로 현재 Cursor를 보존하며 같은 재개 경계를 사용한다. 수동 중지는 `STOPPED/MANUAL`로 저장해 자동 재개하지 않는다. Job 생성은 기존 `ai_extraction_job`의 영상 식별자·입력 모드·Provider·Model·Prompt·Schema 멱등성 경계를 재사용한다.
 
 ## 10.2 `youtube_channel_backfill_video`
 
-한 보정 run에서 영상별 Job 접수 결과를 한 건씩 기록하는 재시도 원장이다. `(run_id, youtube_video_id)` unique로 lease 만료나 페이지 중간 예외 뒤 같은 영상을 다시 처리해도 `submitted_count`·`reused_count`를 중복 집계하지 않는다. `SUBMITTED`는 해당 run이 신규 Job을 접수한 결과이고 `REUSED`는 기존 Job을 재사용한 결과다.
+한 보정 run에서 영상별 Job 접수 결과를 한 건씩 기록하는 재시도 원장이다. 활성 lease와 Watch를 잠근 동일 트랜잭션에서 Job 생성·원장·누계를 함께 커밋하며, 원장 저장이 실패하면 Job 생성도 롤백한다. `(run_id, youtube_video_id)` unique로 lease 만료나 페이지 중간 예외 뒤 같은 영상을 다시 처리해도 `submitted_count`·`reused_count`를 중복 집계하지 않는다. `SUBMITTED`는 해당 run이 신규 Job을 접수한 결과이고 `REUSED`는 기존 Job을 재사용한 결과다.
 
 | 컬럼 | SQL 타입 후보 | Null | 키·제약 | 설명 |
 |---|---|---:|---|---|

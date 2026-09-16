@@ -23,6 +23,8 @@ public interface YoutubeChannelBackfillRunStore {
 
     void stop(UUID creatorId, UUID runId, OffsetDateTime now);
 
+    void stopAtLimit(UUID runId, String leaseOwner, String reason, OffsetDateTime now);
+
     void stopRunsForInactiveWatches(OffsetDateTime now);
 
     record Run(UUID runId, UUID creatorId, String status, long scannedCount, long submittedCount,

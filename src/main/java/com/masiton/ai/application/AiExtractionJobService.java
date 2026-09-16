@@ -147,7 +147,9 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
         if (!backfillRuns.isClaimActive(runId, leaseOwner, OffsetDateTime.now(ZoneOffset.UTC))) {
             return Optional.empty();
         }
-        return Optional.of(submitBackfill(normalizedChannelId, normalizedVideoId));
+        AiExtractionJobView job = submitBackfill(normalizedChannelId, normalizedVideoId);
+        backfillRuns.recordVideo(runId, normalizedVideoId, job.reused(), OffsetDateTime.now(ZoneOffset.UTC));
+        return Optional.of(job);
     }
 
     @Override
