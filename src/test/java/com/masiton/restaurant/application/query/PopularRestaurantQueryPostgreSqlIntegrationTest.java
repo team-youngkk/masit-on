@@ -81,6 +81,47 @@ class PopularRestaurantQueryPostgreSqlIntegrationTest extends com.masiton.test.F
     }
 
     @Test
+    @DisplayName("대표 영상 썸네일은 공개·유효 관계의 영상 제목과 ID 순서로 첫 후보를 반환한다")
+    void findPopularRestaurants_대표영상썸네일_공개유효관계의상세영상정렬첫후보를반환한다() {
+        // given
+        UUID memberId = UUID.randomUUID();
+        insertMember(memberId);
+        UUID restaurantId = UUID.randomUUID();
+        insertRestaurant(restaurantId, "PUBLIC", "ACTIVE");
+        insertFavorite(memberId, restaurantId, OffsetDateTime.parse("2026-07-01T00:00:00Z"));
+
+        UUID creatorId = UUID.randomUUID();
+        insertCreator(creatorId, "PUBLIC", "ACTIVE", "AVAILABLE");
+        String channelId = "UC-" + creatorId;
+        UUID laterVideoId = UUID.fromString("00000000-0000-0000-0000-000000000002");
+        UUID earlierVideoId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        insertVideo(laterVideoId, creatorId, channelId, "같은 제목", "https://example.com/thumbnail/later",
+                "PUBLIC", "ACTIVE", "AVAILABLE");
+        insertVideo(earlierVideoId, creatorId, channelId, "같은 제목", "https://example.com/thumbnail/earlier",
+                "PUBLIC", "ACTIVE", "AVAILABLE");
+        insertVisit(restaurantId, creatorId, laterVideoId);
+        insertVisit(restaurantId, creatorId, earlierVideoId);
+
+        UUID unavailableCreatorId = UUID.randomUUID();
+        insertCreator(unavailableCreatorId, "PRIVATE", "ACTIVE", "UNAVAILABLE");
+        UUID unavailableVideoId = UUID.randomUUID();
+        insertVideo(unavailableVideoId, unavailableCreatorId, "UC-" + unavailableCreatorId, "가장 앞 제목",
+                "https://example.com/thumbnail/unavailable", "PUBLIC", "ACTIVE", "AVAILABLE");
+        insertVisit(restaurantId, unavailableCreatorId, unavailableVideoId);
+
+        // when
+        List<PopularRestaurantSummary> result = query.findPopularRestaurants();
+
+        // then
+        assertThat(result).singleElement().satisfies(item -> {
+            assertThat(item.restaurantId()).isEqualTo(restaurantId);
+            assertThat(item.representativeImageUrl()).isEqualTo("https://example.com/thumbnail/earlier");
+            assertThat(item.favoriteCount()).isEqualTo(1L);
+            assertThat(item.rank()).isEqualTo(1);
+        });
+    }
+
+    @Test
     @DisplayName("찜이 없는 공개·활성 맛집은 찜 1건 이상 조건에 걸려 제외한다")
     void findPopularRestaurants_찜0건공개활성맛집_찜1건이상조건으로제외한다() {
         // given
@@ -462,6 +503,58 @@ class PopularRestaurantQueryPostgreSqlIntegrationTest extends com.masiton.test.F
                 publicationStatus,
                 lifecycleStatus,
                 deletedAt);
+    }
+
+    private void insertCreator(
+            UUID creatorId, String publicationStatus, String lifecycleStatus, String externalAvailabilityStatus) {
+        jdbcTemplate.update("""
+                INSERT INTO creator
+                    (id, external_channel_id, channel_name, channel_url, publication_status,
+                     lifecycle_status, external_availability_status, external_status_checked_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                """,
+                creatorId,
+                "UC-" + creatorId,
+                "테스트 채널",
+                "https://example.com/channel/" + creatorId,
+                publicationStatus,
+                lifecycleStatus,
+                externalAvailabilityStatus);
+    }
+
+    private void insertVideo(
+            UUID videoId,
+            UUID creatorId,
+            String publisherExternalChannelId,
+            String title,
+            String thumbnailUrl,
+            String publicationStatus,
+            String lifecycleStatus,
+            String externalAvailabilityStatus) {
+        jdbcTemplate.update("""
+                INSERT INTO video
+                    (id, creator_id, external_video_id, publisher_external_channel_id, title,
+                     source_url, thumbnail_url, publication_status, lifecycle_status,
+                     external_availability_status, external_status_checked_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                """,
+                videoId,
+                creatorId,
+                "VID-" + UUID.randomUUID().toString().substring(0, 20),
+                publisherExternalChannelId,
+                title,
+                "https://example.com/video/" + videoId,
+                thumbnailUrl,
+                publicationStatus,
+                lifecycleStatus,
+                externalAvailabilityStatus);
+    }
+
+    private void insertVisit(UUID restaurantId, UUID creatorId, UUID videoId) {
+        jdbcTemplate.update("""
+                INSERT INTO visit (id, restaurant_id, creator_id, video_id, publication_status, lifecycle_status)
+                VALUES (?, ?, ?, ?, 'PUBLIC', 'ACTIVE')
+                """, UUID.randomUUID(), restaurantId, creatorId, videoId);
     }
 
     private void insertFavorite(UUID memberId, UUID restaurantId, OffsetDateTime favoritedAt) {

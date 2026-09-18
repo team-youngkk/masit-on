@@ -8,5 +8,6 @@ public record PopularRestaurantRow(
         String name,
         String roadAddress,
         String category,
+        String representativeImageUrl,
         long favoriteCount) {
 }

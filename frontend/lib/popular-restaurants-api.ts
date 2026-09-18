@@ -19,6 +19,7 @@ export type PopularRestaurantItem = {
   name: string
   roadAddress: string
   category: string
+  representativeImageUrl: string | null
   favoriteCount: number
 }
 

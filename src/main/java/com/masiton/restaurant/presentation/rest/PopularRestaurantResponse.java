@@ -22,6 +22,7 @@ public record PopularRestaurantResponse(List<PopularRestaurantItem> items) {
             String name,
             String roadAddress,
             String category,
+            String representativeImageUrl,
             long favoriteCount) {
 
         static PopularRestaurantItem from(PopularRestaurantSummary summary) {
@@ -31,6 +32,7 @@ public record PopularRestaurantResponse(List<PopularRestaurantItem> items) {
                     summary.name(),
                     summary.roadAddress(),
                     summary.category(),
+                    summary.representativeImageUrl(),
                     summary.favoriteCount());
         }
     }

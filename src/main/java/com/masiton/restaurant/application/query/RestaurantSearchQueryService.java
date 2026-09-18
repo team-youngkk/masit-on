@@ -113,6 +113,13 @@ public class RestaurantSearchQueryService implements SearchRestaurantsUseCase {
                 .map(visit -> new VisitedCreatorSummary(visit.creatorId(), visit.channelName()))
                 .toList();
         int remaining = Math.max(0, visitedBy.size() - MAX_DISPLAYED_VISITED_BY);
-        return new RestaurantSummary(row.id(), row.name(), row.district(), row.category(), visible, remaining);
+        return new RestaurantSummary(
+                row.id(),
+                row.name(),
+                row.district(),
+                row.category(),
+                row.representativeImageUrl(),
+                visible,
+                remaining);
     }
 }

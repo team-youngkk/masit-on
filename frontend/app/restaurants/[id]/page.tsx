@@ -10,6 +10,7 @@ import { FavoriteButton } from '@/components/personal/FavoriteButton'
 import { CollectionAddControl } from '@/components/personal/CollectionAddControl'
 import { RecentViewRecorder } from '@/components/personal/RecentViewRecorder'
 import { RestaurantVisitTagsPanel } from '@/components/admin/RestaurantVisitTagsPanel'
+import { RestaurantImage } from '@/components/restaurants/RestaurantImage'
 import {
   RestaurantDetailUnavailableError,
   RestaurantIdentifierInvalidError,
@@ -108,6 +109,13 @@ export default async function RestaurantDetailPage({
     <article className={styles.page}>
       <RecentViewRecorder restaurantId={restaurant.id} />
       <header className={styles.header}>
+        <RestaurantImage
+          restaurantId={restaurant.id}
+          category={restaurant.category}
+          representativeImageUrl={restaurant.videos[0]?.thumbnailUrl}
+          alt={`${restaurant.name} 대표 이미지`}
+          className={styles.representativeImage}
+        />
         <div className={styles.heading}>
           <h1 className={styles.name}>{restaurant.name}</h1>
           <p className={styles.category}>{restaurant.category}</p>
@@ -231,11 +239,11 @@ function RestaurantContent({ restaurant }: { restaurant: RestaurantDetail }) {
                * 일반 img 태그를 사용한다.
                */
               const thumbnail = (
-                <img
-                  src={video.thumbnailUrl}
+                <RestaurantImage
+                  restaurantId={restaurant.id}
+                  category={restaurant.category}
+                  representativeImageUrl={video.thumbnailUrl}
                   alt={video.title}
-                  loading="lazy"
-                  decoding="async"
                   className={styles.thumbnail}
                 />
               )

@@ -61,6 +61,9 @@ class PopularRestaurantApiTest extends com.masiton.test.FullContextIntegrationTe
         UUID lessPopularRestaurantId = UUID.randomUUID();
         insertRestaurant(popularRestaurantId, "인기 맛집");
         insertRestaurant(lessPopularRestaurantId, "덜 인기 있는 맛집");
+        UUID creatorId = insertCreator();
+        UUID videoId = insertVideo(creatorId);
+        insertVisit(popularRestaurantId, creatorId, videoId);
         OffsetDateTime favoritedAt = OffsetDateTime.parse("2026-07-01T00:00:00Z");
         insertFavorite(firstMemberId, popularRestaurantId, favoritedAt);
         insertFavorite(secondMemberId, popularRestaurantId, favoritedAt);
@@ -74,6 +77,8 @@ class PopularRestaurantApiTest extends com.masiton.test.FullContextIntegrationTe
                 .andExpect(jsonPath("$.items[0].name").value("인기 맛집"))
                 .andExpect(jsonPath("$.items[0].roadAddress").value("서울특별시 종로구 테스트로 1"))
                 .andExpect(jsonPath("$.items[0].category").value("한식"))
+                .andExpect(jsonPath("$.items[0].representativeImageUrl")
+                        .value("https://example.com/thumbnail/" + videoId))
                 .andExpect(jsonPath("$.items[0].favoriteCount").value(2))
                 .andExpect(jsonPath("$.items[1].rank").value(2))
                 .andExpect(jsonPath("$.items[1].restaurantId").value(lessPopularRestaurantId.toString()))
@@ -120,5 +125,42 @@ class PopularRestaurantApiTest extends com.masiton.test.FullContextIntegrationTe
                 INSERT INTO favorite (member_id, restaurant_id, favorited_at)
                 VALUES (?, ?, ?)
                 """, memberId, restaurantId, favoritedAt);
+    }
+
+    private UUID insertCreator() {
+        UUID creatorId = UUID.randomUUID();
+        jdbcTemplate.update("""
+                INSERT INTO creator
+                    (id, external_channel_id, channel_name, channel_url, external_status_checked_at)
+                VALUES (?, ?, '인기 채널', ?, CURRENT_TIMESTAMP)
+                """,
+                creatorId,
+                "UC-" + creatorId,
+                "https://example.com/channel/" + creatorId);
+        return creatorId;
+    }
+
+    private UUID insertVideo(UUID creatorId) {
+        UUID videoId = UUID.randomUUID();
+        jdbcTemplate.update("""
+                INSERT INTO video
+                    (id, creator_id, external_video_id, publisher_external_channel_id, title,
+                     source_url, thumbnail_url, external_status_checked_at)
+                VALUES (?, ?, ?, ?, '인기 영상', ?, ?, CURRENT_TIMESTAMP)
+                """,
+                videoId,
+                creatorId,
+                "VID-" + UUID.randomUUID().toString().substring(0, 20),
+                "UC-" + creatorId,
+                "https://example.com/video/" + videoId,
+                "https://example.com/thumbnail/" + videoId);
+        return videoId;
+    }
+
+    private void insertVisit(UUID restaurantId, UUID creatorId, UUID videoId) {
+        jdbcTemplate.update("""
+                INSERT INTO visit (id, restaurant_id, creator_id, video_id)
+                VALUES (?, ?, ?, ?)
+                """, UUID.randomUUID(), restaurantId, creatorId, videoId);
     }
 }

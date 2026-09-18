@@ -1,10 +1,10 @@
 import Link from 'next/link'
 
+import { RestaurantImage } from '@/components/restaurants/RestaurantImage'
 import { PageShell } from '@/components/ui/PageShell'
 import { StatePanel } from '@/components/ui/StatePanel'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { isDesignPreviewEnvironment } from '@/lib/design-preview'
-import { getRestaurantPlaceholderImage } from '@/lib/restaurant-placeholder-image'
 import {
   fetchPopularRestaurants,
   type PopularRestaurantItem,
@@ -20,6 +20,7 @@ const POPULAR_DESIGN_PREVIEW_ITEMS: PopularRestaurantItem[] = [
     name: '을지로 고기곰탕',
     roadAddress: '중구 을지로',
     category: '한식',
+    representativeImageUrl: null,
     favoriteCount: 12430,
   },
   {
@@ -28,6 +29,7 @@ const POPULAR_DESIGN_PREVIEW_ITEMS: PopularRestaurantItem[] = [
     name: '연남동 분식집',
     roadAddress: '마포구 연남동',
     category: '분식',
+    representativeImageUrl: null,
     favoriteCount: 9812,
   },
   {
@@ -36,6 +38,7 @@ const POPULAR_DESIGN_PREVIEW_ITEMS: PopularRestaurantItem[] = [
     name: '서래마을 파스타',
     roadAddress: '서초구 서래로',
     category: '양식',
+    representativeImageUrl: null,
     favoriteCount: 9765,
   },
   {
@@ -44,6 +47,7 @@ const POPULAR_DESIGN_PREVIEW_ITEMS: PopularRestaurantItem[] = [
     name: '망원동 연탄구이',
     roadAddress: '마포구 망원동',
     category: '고기·구이',
+    representativeImageUrl: null,
     favoriteCount: 7654,
   },
   {
@@ -52,6 +56,7 @@ const POPULAR_DESIGN_PREVIEW_ITEMS: PopularRestaurantItem[] = [
     name: '상수 스시오마카세',
     roadAddress: '마포구 상수동',
     category: '일식',
+    representativeImageUrl: null,
     favoriteCount: 6321,
   },
 ]
@@ -110,17 +115,12 @@ export default async function PopularRestaurantsPage() {
               <li key={item.restaurantId} className={styles.item}>
                 <article className={styles.popularCard}>
                 <div className={styles.cardMedia}>
-                  <img
-                    src={
-                      getRestaurantPlaceholderImage(
-                        item.restaurantId,
-                        item.category,
-                      ).src
-                    }
+                  <RestaurantImage
+                    representativeImageUrl={item.representativeImageUrl}
+                    restaurantId={item.restaurantId}
+                    category={item.category}
                     alt=""
                     className={styles.cardMediaImage}
-                    loading="lazy"
-                    decoding="async"
                   />
                 </div>
                 <div className={styles.cardBody}>

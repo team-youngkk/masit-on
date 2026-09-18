@@ -12,5 +12,6 @@ public record PopularRestaurantSummary(
         String name,
         String roadAddress,
         String category,
+        String representativeImageUrl,
         long favoriteCount) {
 }
