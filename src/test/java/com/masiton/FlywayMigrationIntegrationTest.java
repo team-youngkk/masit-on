@@ -10,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -50,9 +51,9 @@ class FlywayMigrationIntegrationTest extends com.masiton.test.FullContextIntegra
     private MemberSessionRevocationStore memberSessionRevocationStore;
 
     @Test
-    @DisplayName("빈 데이터베이스에 V1부터 V18까지 계약된 순서와 파일명으로 성공 기록된다")
-    void 마이그레이션적용_빈데이터베이스_V1부터V18까지계약된순서와파일명으로성공기록된다() {
-        // given: 컨텍스트 기동 시점에 Flyway가 V1부터 V18 변경을 적용했다.
+    @DisplayName("빈 데이터베이스에 V1부터 V19까지 계약된 순서와 파일명으로 성공 기록된다")
+    void 마이그레이션적용_빈데이터베이스_V1부터V19까지계약된순서와파일명으로성공기록된다() {
+        // given: 컨텍스트 기동 시점에 Flyway가 V1부터 V19 변경을 적용했다.
 
         // when
         List<AppliedMigration> appliedMigrations = jdbcTemplate.query(
@@ -102,8 +103,84 @@ class FlywayMigrationIntegrationTest extends com.masiton.test.FullContextIntegra
                 new AppliedMigration("17", "add youtube backfill page limit reason", "SQL",
                         "V17__add_youtube_backfill_page_limit_reason.sql", true),
                 new AppliedMigration("18", "index youtube backfill schedule", "SQL",
-                        "V18__index_youtube_backfill_schedule.sql", true)
+                        "V18__index_youtube_backfill_schedule.sql", true),
+                new AppliedMigration("19", "add restaurant kakao revalidation", "SQL",
+                        "V19__add_restaurant_kakao_revalidation.sql", true)
         );
+    }
+
+    @Test
+    @DisplayName("V19 Kakao 재검증은 lease CAS·결과 감사·append-only 제약을 강제한다")
+    void V19_Kakao재검증_leaseCAS결과감사appendOnly제약강제() {
+        // given
+        assertIndexCount(
+                "ix_restaurant_kakao_revalidation__claim_due",
+                "ix_restaurant_kakao_revalidation__claim_expired_lease",
+                "ix_restaurant_kakao_revalidation_audit__restaurant_checked",
+                "ix_restaurant__place_revalidation_seed"
+        );
+        assertForeignKey("fk_restaurant_kakao_revalidation__restaurant", "pk_restaurant", "RESTRICT");
+        assertForeignKey("fk_restaurant_kakao_revalidation_audit__restaurant", "pk_restaurant", "RESTRICT");
+
+        UUID restaurantId = UUID.randomUUID();
+        UUID executionId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO restaurant (id, region_id, food_category_id, name, kakao_place_id, "
+                        + "kakao_place_url, road_address, phone_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                restaurantId,
+                UUID.fromString("10000000-0000-4000-8000-000000000014"),
+                UUID.fromString("20000000-0000-4000-8000-000000000001"),
+                "재검증 맛집", "KAKAO-" + restaurantId,
+                "https://example.com/place/" + restaurantId, "서울특별시 마포구 월드컵로 1", "02-0000-0000"
+        );
+        jdbcTemplate.update("INSERT INTO restaurant_kakao_revalidation (restaurant_id) VALUES (?)", restaurantId);
+
+        // when
+        int claimed = jdbcTemplate.update(
+                "UPDATE restaurant_kakao_revalidation SET status = 'RUNNING', attempt_count = attempt_count + 1, "
+                        + "lease_owner = ?, lease_expires_at = CURRENT_TIMESTAMP + interval '5 minutes', "
+                        + "last_execution_id = ?, next_attempt_at = NULL, updated_at = CURRENT_TIMESTAMP "
+                        + "WHERE restaurant_id = ? AND status IN ('PENDING', 'RETRY_SCHEDULED') "
+                        + "AND next_attempt_at <= CURRENT_TIMESTAMP",
+                "worker-1", executionId, restaurantId
+        );
+        int duplicateClaim = jdbcTemplate.update(
+                "UPDATE restaurant_kakao_revalidation SET status = 'RUNNING' "
+                        + "WHERE restaurant_id = ? AND status IN ('PENDING', 'RETRY_SCHEDULED') "
+                        + "AND next_attempt_at <= CURRENT_TIMESTAMP",
+                restaurantId
+        );
+        UUID auditId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO restaurant_kakao_revalidation_audit (id, execution_id, restaurant_id, status, "
+                        + "observed_values, previous_values, applied_values, reason_code, checked_at, next_attempt_at) "
+                        + "VALUES (?, ?, ?, 'AUTO_CORRECTED', ?::jsonb, ?::jsonb, ?::jsonb, "
+                        + "'SAFE_FIELDS_CHANGED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + interval '1 day')",
+                auditId, executionId, restaurantId,
+                "{\"kakaoPlaceId\":\"KAKAO-" + restaurantId + "\",\"phoneNumber\":\"02-1111-1111\"}",
+                "{\"phoneNumber\":\"02-0000-0000\"}", "{\"phoneNumber\":\"02-1111-1111\"}"
+        );
+        int finalized = jdbcTemplate.update(
+                "UPDATE restaurant_kakao_revalidation SET status = 'AUTO_CORRECTED', lease_owner = NULL, "
+                        + "lease_expires_at = NULL, last_checked_at = CURRENT_TIMESTAMP, "
+                        + "last_reason_code = 'SAFE_FIELDS_CHANGED', next_attempt_at = CURRENT_TIMESTAMP + interval '1 day', "
+                        + "updated_at = CURRENT_TIMESTAMP "
+                        + "WHERE restaurant_id = ? AND status = 'RUNNING' AND last_execution_id = ? "
+                        + "AND lease_owner = ?",
+                restaurantId, executionId, "worker-1"
+        );
+
+        // then
+        assertThat(claimed).isEqualTo(1);
+        assertThat(duplicateClaim).isZero();
+        assertThat(finalized).isEqualTo(1);
+        assertThatThrownBy(() -> jdbcTemplate.update(
+                "UPDATE restaurant_kakao_revalidation_audit SET reason_code = 'NO_CHANGE' WHERE id = ?", auditId))
+                .isInstanceOf(DataAccessException.class);
+        assertThatThrownBy(() -> jdbcTemplate.update(
+                "INSERT INTO restaurant_kakao_revalidation (restaurant_id, status, next_attempt_at) "
+                        + "VALUES (?, 'RETRY_SCHEDULED', CURRENT_TIMESTAMP)", UUID.randomUUID()))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     @Test

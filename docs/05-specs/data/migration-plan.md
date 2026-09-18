@@ -302,3 +302,11 @@ V11은 코드와 `source=SEED`가 모두 일치하는 정의만 갱신한다. �
 - 원본별 단일 병합, 자기 병합 금지, 영향 건수 합계, provenance 역할·결과 조합과 append-only 트리거를 DB 제약으로 고정한다.
 - 회원 탈퇴는 병합 감사 행위자만 `SET NULL`로 익명화하며 정의·Visit·병합 FK는 `RESTRICT`한다.
 - 빈 DB의 V1~V13 순서, V12 상태 전진 적용, 기존 정의·용어·VisitTag 보존, 제약 위반과 감사 변조 거부를 PostgreSQL Testcontainers로 검증한다.
+
+## V19 Kakao 장소 재검증 상태·감사 — 이슈 #377
+
+`V19__add_restaurant_kakao_revalidation.sql`은 이미 적용된 V9와 V10~V18을 수정하지 않고, Restaurant당 현재 재검증 상태 1행과 실행별 append-only 감사 테이블을 add-only로 생성한다. 새 테이블이 비어 있는 상태로 시작하므로 기존 `restaurant` 전체 INSERT/UPDATE backfill은 하지 않는다. 관리자 수동 실행과 Worker가 작은 batch로 상태 행을 lazy upsert해 대상화한다.
+
+Worker claim은 due 상태와 만료 lease용 partial btree index를 이용해 `FOR UPDATE SKIP LOCKED`와 execution ID CAS로 수행한다. 외부 Kakao 호출은 claim transaction 밖에서 실행하고, 결과 상태 반영과 감사 삽입은 한 짧은 transaction으로 묶는다. 정상·검토 완료 상태도 다음 정기 실행 시각을 `next_attempt_at`에 저장한다. stale Worker의 CAS 실패는 무시하며 Restaurant 본문·감사 이력을 수정하지 않는다. 429/5xx/timeout의 재시도 간격은 application이 결정해 미래 `next_attempt_at`으로 저장한다.
+
+이 migration은 새 테이블·FK·일반 index만 추가하므로 `CREATE INDEX CONCURRENTLY`를 사용하지 않는다. 다만 운영 적용 전에는 실제 Restaurant 수, 동시에 실행될 Worker 수, due/expired-lease index의 `EXPLAIN (ANALYZE, BUFFERS)`와 장기 transaction 여부, WAL·replica replay lag를 측정한다. 기존 JPA Entity를 ALTER하지 않으므로 현 `ddl-auto=validate`와 호환되며, 후속 Entity를 추가할 때는 SQL 타입·nullable·제약 이름을 이 계약과 대조한다. 되돌림은 schema drop이 아니라 application Worker 비활성화이며, 적용 뒤 결함은 forward-only migration으로 보정한다.
