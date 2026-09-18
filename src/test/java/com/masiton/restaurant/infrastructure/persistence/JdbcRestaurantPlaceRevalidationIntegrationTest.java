@@ -2,6 +2,7 @@ package com.masiton.restaurant.infrastructure.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -16,10 +17,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.masiton.restaurant.application.port.out.KakaoPlaceRevalidationPort;
@@ -28,6 +32,7 @@ import com.masiton.test.FullContextIntegrationTest;
 
 @SpringBootTest
 @AutoConfigureMockMvc(addFilters = false)
+@Import(JdbcRestaurantPlaceRevalidationIntegrationTest.RevalidationTestConfiguration.class)
 @TestPropertySource(properties = {
         "masiton.restaurant.place-revalidation.enabled=true",
         "masiton.restaurant.place-revalidation.poll-interval=PT1H"
@@ -44,7 +49,7 @@ class JdbcRestaurantPlaceRevalidationIntegrationTest extends FullContextIntegrat
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    @MockitoBean
+    @Autowired
     private KakaoPlaceRevalidationPort kakao;
 
     @BeforeEach
@@ -87,5 +92,14 @@ class JdbcRestaurantPlaceRevalidationIntegrationTest extends FullContextIntegrat
                 restaurantId, MAPO_REGION_ID, KOREAN_CATEGORY_ID, "원본 맛집", "kakao-" + restaurantId,
                 "https://place.map.kakao.com/" + restaurantId, "서울특별시 마포구 월드컵로 1", "02-0000-0000",
                 new BigDecimal("37.5665"), new BigDecimal("126.9780"));
+    }
+
+    @TestConfiguration(proxyBeanMethods = false)
+    static class RevalidationTestConfiguration {
+        @Bean
+        @Primary
+        KakaoPlaceRevalidationPort kakaoPlaceRevalidationPort() {
+            return mock(KakaoPlaceRevalidationPort.class);
+        }
     }
 }
