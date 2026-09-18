@@ -37,6 +37,8 @@ related_documents:
 | CI run `35341373370` | 통합 테스트가 공유 Testcontainers 데이터베이스에서 다른 full-context 테스트의 cleanup과 경합해 삽입한 Restaurant를 찾지 못함 | 수정 필요: 테스트 실행 격리 |
 | CI run `35341754906` | full-context MockMvc 통합 테스트가 공유 DB cleanup 경합으로 404가 재현되어, DB 원자성 검증과 API 계약 검증을 분리할 필요가 확인됨 | 수정 필요: 테스트 경계 |
 | CI run `35342378655` | 공유 DB 경합이 JDBC claim 단계에서도 재현되어 전용 Testcontainers로 분리할 필요가 확인됨 | 수정 필요: 테스트 실행 격리 |
+| CI run `35343331016` | 전용 Testcontainers에서도 테스트가 claim 결과에 의존해 빈 Optional을 반환함 | 수정 필요: 통합 테스트 fixture |
+| CI run `35343927288` | RUNNING fixture의 생성 시각보다 `checked_at`이 앞서 DB check constraint에 걸림 | 수정 필요: 테스트 시간 경계 |
 
 ## 3. 근본 원인
 
@@ -57,6 +59,7 @@ V19 상태 테이블은 의도적으로 Restaurant FK를 `RESTRICT`로 두고 �
 - 최신 migration 버전 기대값을 V19까지 확장하고 append-only 변조 검증은 Spring의 공통 `DataAccessException` 계층으로 검사하도록 조정했다.
 - Restaurant 본문 CAS 실패는 전용 `RestaurantPlaceRevalidationStaleException`으로 즉시 rollback하고, application service가 이를 `STALE_DISCARDED`로 변환하도록 수정했다. 실제 PostgreSQL 기반 통합 테스트에서 `RUNNING` 상태 유지, 감사 행 0건, 동시 변경 본문 보존을 검증하고, API 테스트에서 409 응답을 검증한다.
 - 실제 PostgreSQL 검증은 전용 Testcontainers PostgreSQL·Redis를 사용하는 JDBC store·transaction 통합 테스트로 격리했고, 409 응답 계약은 `AdminRestaurantPlaceRevalidationControllerApiTest`에서 독립적으로 검증한다.
+- 통합 테스트는 claim 구현의 별도 사전 조건에 의존하지 않고 PostgreSQL에 RUNNING lease를 직접 준비하며, lease 준비 시각과 apply 시각을 분리해 상태 check constraint까지 검증한다.
 
 ## 5. 검증
 
@@ -77,6 +80,9 @@ V19 상태 테이블은 의도적으로 Restaurant FK를 `RESTRICT`로 두고 �
 | PR CI 재실행 `35341373370` | 실패 | 통합 테스트 데이터가 공유 full-context cleanup과 경합해 404가 발생함 |
 | PR CI 재실행 `35341754906` | 실패 | 동일한 공유 full-context DB 경합이 MockMvc 통합 테스트에서 재현됨 |
 | PR CI 재실행 `35342378655` | 실패 | 공유 DB 경합이 JDBC claim 단계에서도 재현되어 전용 Testcontainers로 분리함 |
+| PR CI 재실행 `35343331016` | 실패 | 전용 PostgreSQL·Redis는 정상 기동했으나 claim 사전 조건이 빈 결과를 반환함 |
+| PR CI 재실행 `35343927288` | 실패 | claim 의존성을 제거한 뒤 RUNNING fixture의 시간 제약 위반을 확인함 |
+| PR CI 재실행 `35344365166` | 통과 | 전용 PostgreSQL·Redis에서 CAS stale 예외, rollback, 본문 보존, 감사 0건 검증과 전체 CI 통과 |
 
 ## 6. 재발 방지
 
@@ -88,6 +94,6 @@ V19 상태 테이블은 의도적으로 Restaurant FK를 `RESTRICT`로 두고 �
 
 | 지표 | 투입 전 | 목표 |
 |---|---:|---:|
-| 리뷰 미해결 스레드 | 2 | 0 |
+| 리뷰 미해결 스레드 | 3 | 0 |
 | PR #389 백엔드 실패 테스트 | 489 | 0 (최종 CI 달성) |
 | 정상 terminal outcome 이후 retry budget | 누적 | 0으로 재설정 |
