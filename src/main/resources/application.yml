@@ -85,6 +85,21 @@ masiton:
       secret: ${YOUTUBE_WEBHOOK_SECRET:}
       subscription-hub-url: ${YOUTUBE_SUBSCRIPTION_HUB_URL:https://pubsubhubbub.appspot.com/subscribe}
       callback-url: ${YOUTUBE_WEBHOOK_CALLBACK_URL:http://localhost:8080/api/webhooks/youtube/channel-updates}
+    youtube-backfill:
+      enabled: ${YOUTUBE_BACKFILL_ENABLED:false}
+      run-interval-seconds: ${YOUTUBE_BACKFILL_RUN_INTERVAL_SECONDS:0}
+      poll-interval: PT30S
+      lease-duration: PT120S
+      # 운영에서는 기존 YouTube configtree secret과 endpoint 계약을 재사용한다.
+      # 별도 환경변수로 API key를 전달하면 Docker inspect에 노출될 수 있다.
+      base-url: ${YOUTUBE_BASE_URL:https://www.googleapis.com}
+      allowed-origins: ${YOUTUBE_BASE_URL:https://www.googleapis.com}
+      api-key: ${masiton.integration.youtube.api-key:}
+      quota-window: ${YOUTUBE_BACKFILL_QUOTA_WINDOW:P1D}
+      provider-quota-limit: ${YOUTUBE_BACKFILL_PROVIDER_QUOTA_LIMIT:0}
+      backfill-quota-limit: ${YOUTUBE_BACKFILL_QUOTA_LIMIT:0}
+      max-pages-per-run: 10
+      max-videos-per-run: 500
     temporary-input:
       active-key-id: ${AI_TEMPORARY_INPUT_KEY_ID:}
       active-key: ${AI_TEMPORARY_INPUT_KEY:}

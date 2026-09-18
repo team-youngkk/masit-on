@@ -98,7 +98,7 @@ MVP와 확장 단계의 PRD, 기능 요구사항, 비즈니스 규칙, NFR, Work
 | PRD ID | 기능 PRD | 주 API 문서 | 관련 API ID | Workstream | 담당자 |
 |---|---|---|---|---|---|
 | [PRD-DISCOVERY-005](../04-product/prd/discovery/natural-language-restaurant-discovery.md) | 자연어 맛집 탐색 | [자연어 맛집 탐색 API](api/discovery/natural-language-restaurant-discovery-api.md) | API-DISCOVERY-NL-001 | [WS-14](../02-analysis/third-expansion-workstreams.md#5-ws-14-자연어-맛집-탐색) | 양성훈 |
-| [PRD-ADMIN-002](../04-product/prd/admin/ai-video-information-extraction.md) | AI 영상 정보 추출 | [관리자 AI 영상 추출 API](api/admin/ai-video-extraction-api.md) | API-ADMIN-AIEXTRACT-001, API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | 김인안 |
+| [PRD-ADMIN-002](../04-product/prd/admin/ai-video-information-extraction.md) | AI 영상 정보 추출·YouTube 보정 조회 | [관리자 AI 영상 추출 API](api/admin/ai-video-extraction-api.md) | API-ADMIN-AIEXTRACT-001, API-ADMIN-AIEXTRACT-WEBHOOK-001~002, API-ADMIN-AIEXTRACT-BACKFILL-001~003 | [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | 김인안 |
 | [PRD-DISCOVERY-006](../04-product/prd/discovery/restaurant-course-recommendation.md) | 맛집 코스 추천 | [맛집 코스 추천 API](api/discovery/restaurant-course-recommendation-api.md) | API-DISCOVERY-COURSE-001, API-PERSONAL-004 (명시적 찜 후보 불러오기) | [WS-16](../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천) | 이우람 |
 
 3차 확장 세 기능의 API 계약은 Accepted 상태로 연결됐고, 계약 테스트·외부 계정 연결·평가·운영 게이트를 완료해 현재 운영 중이다([운영 완료 기록](../08-planning/third-expansion-operational-completion-record.md)). 정식 공개 전환은 제품 API의 경로·Method·회원/관리자 인증을 변경하지 않으며, Webhook 자체 인증·rate limit과 Host·`/internal`·loopback 경계를 유지한다.
@@ -181,7 +181,7 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 | FR-AIEXTRACT-001·FR-AIEXTRACT-005 | API-ADMIN-AIEXTRACT-001 | API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | URL 검증·관리자 신규 추가·멱등 접수·202 응답 계약 테스트 | 김인안 |
 | FR-AIEXTRACT-002 | API-ADMIN-AIEXTRACT-001 | 없음 | 목록·상세·부분 결과·실패·페이지 계약 테스트 | 김인안 |
 | FR-AIEXTRACT-003 | API-ADMIN-AIEXTRACT-001 | 기존 관리자 등록·방문 API | 자동 확정·자동 차단·사후 보정·롤백·정식 Entity 원자성·`AUTO_BLOCKED` 등록 단위 일괄 폐기(BR-AIEXTRACT-011 `DISCARD` 종결 동작의 다건 확장) 테스트 | 김인안 |
-| FR-AIEXTRACT-004 | API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | API-ADMIN-AIEXTRACT-001 | 구독 확인·신규 영상 Atom·중복 알림·AI 호출 격리 테스트 | 김인안 |
+| FR-AIEXTRACT-004 | API-ADMIN-AIEXTRACT-WEBHOOK-001~002·API-ADMIN-AIEXTRACT-BACKFILL-001~003 | API-ADMIN-AIEXTRACT-001 | 구독 확인·신규 영상 Atom·누락 보정·중복 알림·AI 호출 격리 테스트 | 김인안 |
 | FR-AIEXTRACT-006 | API-ADMIN-AIEXTRACT-001 | API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | Creator 채널 식별자·감시 행 부재의 200 기본 상태, 다중 채널 목록·일괄 상태 조회, GET 상태·lastErrorAt 조회, PUT 활성화·해지·renewal 실패 상태 테스트 | 김인안 |
 | FR-NLSEARCH-001 | API-DISCOVERY-NL-001 | API-DISCOVERY-001 | 자연어 해석·적용 조건·기존 목록 응답 계약 테스트 | 양성훈 |
 | FR-NLSEARCH-002 | API-DISCOVERY-NL-001 | API-DISCOVERY-001 | 직접 필터 우선·AND 조합·충돌 요약 테스트 | 양성훈 |
@@ -238,7 +238,7 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 | 규칙 ID | 적용 API | 핵심 검증 | 담당자 |
 |---|---|---|---|
 | BR-AIEXTRACT-001~004·008 | API-ADMIN-AIEXTRACT-001 | 후보·태그 범위·자동 검증 전 저장 금지·통과 후 무승인 공개·동일 영상 멱등성·Provider/Prompt/Schema 버전 | WS-15 |
-| BR-AIEXTRACT-005~007 | API-ADMIN-AIEXTRACT-001·API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | GET/PUT 채널 상태와 `UNKNOWN`·`ACTIVE` Webhook 수락 경계·유입 경로 수렴·Gemini URL 입력과 관리자 텍스트 fallback | WS-15 |
+| BR-AIEXTRACT-005~007 | API-ADMIN-AIEXTRACT-001·API-ADMIN-AIEXTRACT-WEBHOOK-001~002·API-ADMIN-AIEXTRACT-BACKFILL-001~003 | GET/PUT 채널 상태와 `UNKNOWN`·`ACTIVE` Webhook/보정 수락 경계·유입 경로 수렴·Gemini URL 입력과 관리자 텍스트 fallback | WS-15 |
 | BR-NLSEARCH-001~003 | API-DISCOVERY-NL-001·API-DISCOVERY-001 | 직접 필터 우선·태그 AND·공개·활성 결과·전체 목록 대체 금지 | WS-14 |
 | BR-NLSEARCH-003 | API-DISCOVERY-NL-001·API-DISCOVERY-001 | 활성 TagDefinition·확정 VisitTag·공개 Visit·태그 AND·중복 제거 | WS-14 |
 | BR-AIEXTRACT-008 | API-ADMIN-AIEXTRACT-001 | 허용 태그 정의·근거·자동 결정·사후 보정·검증 전 공개 금지 | WS-15 |
@@ -303,7 +303,7 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 | [WS-12](../02-analysis/second-expansion-workstreams.md#7-ws-12-제보신고-검토) | 제보·신고 회원·관리자 API | WS-13 알림과 같은 트랜잭션, 기존 관리자 실제 조치 흐름 사용 |
 | [WS-13](../02-analysis/second-expansion-workstreams.md#8-ws-13-사용자-알림) | API-NOTIFICATION-001~004 | WS-12 상태를 변경하지 않고 알림 생성·읽음 소유 |
 
-| [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | API-ADMIN-AIEXTRACT-001·API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | 비동기 Job·후보 Snapshot·자동 등록·예외 보정·채널 감시 목록·GET/PUT 상태 소유 |
+| [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | API-ADMIN-AIEXTRACT-001·API-ADMIN-AIEXTRACT-WEBHOOK-001~002·API-ADMIN-AIEXTRACT-BACKFILL-001~003 | 비동기 Job·후보 Snapshot·자동 등록·예외 보정·채널 감시·YouTube 보정 실행과 lease 소유 |
 | [WS-14](../02-analysis/third-expansion-workstreams.md#5-ws-14-자연어-맛집-탐색) | API-DISCOVERY-NL-001 | 기존 API-DISCOVERY-001에 구조화 조건을 전달하고 해석 실패를 격리 |
 | [WS-16](../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천) | API-DISCOVERY-COURSE-001 | 선택 맛집 좌표를 Route Provider Port로 전달하고 결과를 비저장 반환 |
 

@@ -26,7 +26,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * 빈 PostgreSQL에 V1 baseline, V2(1차 확장 통합 스키마), V3(2차 확장 스키마),
- * V4(통합 3차 확장 AI 후보 스키마와 Lite 단일 모델 제약), V5(채널 감시 오류 시각)가
+ * V4(통합 3차 확장 AI 후보 스키마와 Lite 단일 모델 제약), V5(채널 감시 오류 시각),
+ * V14(YouTube 채널 보정 실행), V15(보정 실행 중지 원인), V16(영상 처리 원장)이
  * V6(통합 계정 전환의 역할 열과 staging), V7(승인된 관리자 계정 복사),
  * V8(AI 등록 단위·카테고리 매핑 기준정보와 Snapshot 절단 표시)이
  * 순서대로 성공적으로 적용되고,
@@ -49,9 +50,9 @@ class FlywayMigrationIntegrationTest extends com.masiton.test.FullContextIntegra
     private MemberSessionRevocationStore memberSessionRevocationStore;
 
     @Test
-    @DisplayName("빈 데이터베이스에 V1부터 V13까지 계약된 순서와 파일명으로 성공 기록된다")
-    void 마이그레이션적용_빈데이터베이스_V1부터V13까지계약된순서와파일명으로성공기록된다() {
-        // given: 컨텍스트 기동 시점에 Flyway가 V1부터 V13 변경을 적용했다.
+    @DisplayName("빈 데이터베이스에 V1부터 V18까지 계약된 순서와 파일명으로 성공 기록된다")
+    void 마이그레이션적용_빈데이터베이스_V1부터V18까지계약된순서와파일명으로성공기록된다() {
+        // given: 컨텍스트 기동 시점에 Flyway가 V1부터 V18 변경을 적용했다.
 
         // when
         List<AppliedMigration> appliedMigrations = jdbcTemplate.query(
@@ -91,7 +92,17 @@ class FlywayMigrationIntegrationTest extends com.masiton.test.FullContextIntegra
                 new AppliedMigration("12", "add tag definition lifecycle audit", "SQL",
                         "V12__add_tag_definition_lifecycle_audit.sql", true),
                 new AppliedMigration("13", "add tag definition merge audit", "SQL",
-                        "V13__add_tag_definition_merge_audit.sql", true)
+                        "V13__add_tag_definition_merge_audit.sql", true),
+                new AppliedMigration("14", "create youtube channel backfill run", "SQL",
+                        "V14__create_youtube_channel_backfill_run.sql", true),
+                new AppliedMigration("15", "add youtube channel backfill stop reason", "SQL",
+                        "V15__add_youtube_channel_backfill_stop_reason.sql", true),
+                new AppliedMigration("16", "add youtube channel backfill video ledger", "SQL",
+                        "V16__add_youtube_channel_backfill_video_ledger.sql", true),
+                new AppliedMigration("17", "add youtube backfill page limit reason", "SQL",
+                        "V17__add_youtube_backfill_page_limit_reason.sql", true),
+                new AppliedMigration("18", "index youtube backfill schedule", "SQL",
+                        "V18__index_youtube_backfill_schedule.sql", true)
         );
     }
 

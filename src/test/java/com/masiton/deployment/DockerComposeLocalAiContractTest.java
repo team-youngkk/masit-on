@@ -23,6 +23,8 @@ class DockerComposeLocalAiContractTest {
     private static final Path ENV_EXAMPLE = Path.of(".env.example");
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final List<String> AI_ENVIRONMENT_NAMES = List.of(
+            "YOUTUBE_BACKFILL_ENABLED",
+            "YOUTUBE_BACKFILL_RUN_INTERVAL_SECONDS",
             "AI_WORKER_ENABLED",
             "AI_WORKER_QUOTA_WINDOW",
             "AI_WORKER_PROVIDER_QUOTA_LIMIT",
@@ -78,6 +80,8 @@ class DockerComposeLocalAiContractTest {
         JsonNode environment = renderedAppEnvironment(Map.of());
 
         assertThat(environment.path("AI_WORKER_ENABLED").asText()).isEqualTo("false");
+        assertThat(environment.path("YOUTUBE_BACKFILL_ENABLED").asText()).isEqualTo("false");
+        assertThat(environment.path("YOUTUBE_BACKFILL_RUN_INTERVAL_SECONDS").asText()).isEqualTo("0");
         assertThat(environment.path("AI_WORKER_QUOTA_WINDOW").asText()).isEqualTo("P1D");
         assertThat(environment.path("AI_WORKER_PROVIDER_QUOTA_LIMIT").asText()).isEqualTo("0");
         assertThat(environment.path("AI_WORKER_APPLICATION_QUOTA_LIMIT").asText()).isEqualTo("0");
@@ -86,6 +90,17 @@ class DockerComposeLocalAiContractTest {
         assertThat(environment.path("GEMINI_FREE_TIER_VERIFIED").asText()).isEqualTo("false");
         assertThat(environment.path("GEMINI_PAID_BILLING_ENABLED").asText()).isEqualTo("false");
         assertThat(environment.path("MASITON_AI_PROVIDER_GEMINI_API_KEY").asText()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("자동 보정의 명시적 운영 주기를 앱 컨테이너에 전달한다")
+    void composeConfig_보정주기설정_컨테이너에전달한다() throws Exception {
+        // Given / When
+        JsonNode environment = renderedAppEnvironment(Map.of(
+                "YOUTUBE_BACKFILL_ENABLED", "true", "YOUTUBE_BACKFILL_RUN_INTERVAL_SECONDS", "3600"));
+        // Then
+        assertThat(environment.path("YOUTUBE_BACKFILL_ENABLED").asText()).isEqualTo("true");
+        assertThat(environment.path("YOUTUBE_BACKFILL_RUN_INTERVAL_SECONDS").asText()).isEqualTo("3600");
     }
 
     @Test
