@@ -236,13 +236,14 @@ related_documents:
 
 ## 12. 3차 확장 AI 영상 추출 제약
 
-3차 확장 제약의 상세 필드·상태 조합은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)과 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql)의 `CHECK`, `FK`, `UNIQUE`, Trigger를 함께 따른다.
+3차 확장 제약의 상세 필드·상태 조합은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)과 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql), [`V14__create_youtube_channel_backfill_run.sql`](../../../src/main/resources/db/migration/V14__create_youtube_channel_backfill_run.sql), [`V15__add_youtube_channel_backfill_stop_reason.sql`](../../../src/main/resources/db/migration/V15__add_youtube_channel_backfill_stop_reason.sql), [`V16__add_youtube_channel_backfill_video_ledger.sql`](../../../src/main/resources/db/migration/V16__add_youtube_channel_backfill_video_ledger.sql)의 `CHECK`, `FK`, `UNIQUE`, Trigger를 함께 따른다.
 
 - 작업: YouTube URL·외부 식별자·Provider·모델·Prompt·Schema 버전과 입력 해시의 멱등성, `QUEUED/RUNNING/SUCCEEDED/FAILED` 상태별 lease·시각·결과 조합을 강제한다.
 - 임시 입력: `ADMIN/ADMIN_TEXT` 작업만 암호문을 가질 수 있고, 평문은 저장하지 않으며 작업 종료 뒤 24시간 이내 만료되어야 한다.
 - 후보·검수: Snapshot 버전·JSON 구조·근거 유형·신뢰도 범위를 검증하고, 태그 검수 이력의 보정 주체와 대체 TagDefinition 조합을 강제한다.
 - 태그·정식 데이터: `TagDefinition` 코드와 `VisitTag` 관계를 중복 없이 유지하고, `UNKNOWN` 근거는 `AI_AUTO_CONFIRMED` VisitTag가 될 수 없다.
 - 시도·감시: 작업별 시도 번호, 오류 결과 필수값, Creator·YouTube 채널 감시 설정의 고유성을 저장소에서 보장한다.
+- 보정 실행: Creator별 `QUEUED/RUNNING` 하나, 허용 상태, `MAX_VIDEOS_PER_RUN/MANUAL` 중지 원인, 0 이상 누적 건수, lease 소유자·만료 시각 쌍을 저장소에서 보장하고 활성 `youtube_channel_watch`가 없으면 `STOPPED`로 종결한다. 영상별 접수 원장은 `(run_id, youtube_video_id)` unique와 `SUBMITTED/REUSED` CHECK로 부분 실패 재시도의 누계 중복을 막는다.
 - 원자성: 후보·Provider 장애·외부 검증 실패 시 정식 Restaurant·Creator·Video·Visit 저장은 0건이어야 하며, 이 조건은 DB 제약만으로 대체하지 않고 통합 테스트로 검증한다.
 
 ## 방문 태그 보정 제약 — 이슈 #358

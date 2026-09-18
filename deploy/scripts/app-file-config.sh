@@ -51,6 +51,11 @@ defaults = {
     "YOUTUBE_WEBHOOK_CALLBACK_URL": "https://masiton.click/api/webhooks/youtube/channel-updates",
     "PASSWORD_RESET_PUBLIC_URL": "https://masiton.click/password-reset",
     "AI_WORKER_ENABLED": "false",
+    "YOUTUBE_BACKFILL_ENABLED": "false",
+    "YOUTUBE_BACKFILL_RUN_INTERVAL_SECONDS": "0",
+    "YOUTUBE_BACKFILL_QUOTA_WINDOW": "P1D",
+    "YOUTUBE_BACKFILL_PROVIDER_QUOTA_LIMIT": "0",
+    "YOUTUBE_BACKFILL_QUOTA_LIMIT": "0",
     "AI_WORKER_PROVIDER_QUOTA_LIMIT": "0",
     "AI_WORKER_APPLICATION_QUOTA_LIMIT": "0",
     "AI_WORKER_QUOTA_WINDOW": "P1D",
@@ -111,8 +116,15 @@ try:
     for key in defaults:
         if defaults[key] in ("true", "false") and values[key] not in ("true", "false"):
             fail()
-    for key in ("AI_WORKER_PROVIDER_QUOTA_LIMIT", "AI_WORKER_APPLICATION_QUOTA_LIMIT"):
+    for key in ("YOUTUBE_BACKFILL_PROVIDER_QUOTA_LIMIT", "YOUTUBE_BACKFILL_QUOTA_LIMIT",
+                "AI_WORKER_PROVIDER_QUOTA_LIMIT", "AI_WORKER_APPLICATION_QUOTA_LIMIT"):
         if not values[key].isdigit():
+            fail()
+    interval = values["YOUTUBE_BACKFILL_RUN_INTERVAL_SECONDS"]
+    if not interval.isdigit() or not 0 <= int(interval) <= 2147483647:
+        fail()
+    if values["YOUTUBE_BACKFILL_ENABLED"] == "true":
+        if int(interval) == 0 or not 0 < int(values["YOUTUBE_BACKFILL_QUOTA_LIMIT"]) <= int(values["YOUTUBE_BACKFILL_PROVIDER_QUOTA_LIMIT"]):
             fail()
     for key in ("KAKAO_BASE_URL", "YOUTUBE_BASE_URL", "YOUTUBE_WEBHOOK_CALLBACK_URL",
                 "PASSWORD_RESET_PUBLIC_URL", "AUTH_ALLOWED_ORIGINS"):
@@ -130,7 +142,8 @@ try:
     if not required_secrets <= names:
         fail()
     for flag, secret in (("GEMINI_ENABLED", "masiton.ai.provider.gemini.api-key"),
-                         ("KAKAO_MOBILITY_ENABLED", "masiton.integration.kakao-mobility.rest-api-key")):
+                         ("KAKAO_MOBILITY_ENABLED", "masiton.integration.kakao-mobility.rest-api-key"),
+                         ("YOUTUBE_BACKFILL_ENABLED", "masiton.integration.youtube.api-key")):
         if values[flag] == "true" and secret not in names:
             fail()
     pair = {"masiton.ai.temporary-input.active-key-id", "masiton.ai.temporary-input.active-key"}

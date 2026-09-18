@@ -199,6 +199,18 @@ V3 구간 아웃박스는 Action Token만 FK로 참조한다. 수신자는 `memb
 
 [`V5__add_youtube_channel_watch_last_error_at.sql`](../../../src/main/resources/db/migration/V5__add_youtube_channel_watch_last_error_at.sql)은 기존 `youtube_channel_watch`를 수정하지 않고 `last_error_at` nullable 시간 열을 추가한다. 구독 처리 실패 시각을 저장하고 challenge 성공 시 오류 범주와 함께 초기화하며, 기존 행과 감시 상태는 백필하거나 외부 API를 호출하지 않는다. 빈 DB의 V1→V5 적용과 V3→V4 전진 적용 뒤 V5 적용은 Flyway 통합 테스트로 검증한다.
 
+### 11.4 V14 YouTube 채널 보정 실행
+
+[`V14__create_youtube_channel_backfill_run.sql`](../../../src/main/resources/db/migration/V14__create_youtube_channel_backfill_run.sql)은 기존 감시 설정과 AI Job을 수정하지 않고 `youtube_channel_backfill_run`과 진행·lease·만료 claim 인덱스를 추가한다. 자동 주기 또는 관리자가 명시적으로 시작한 보정 실행의 Cursor와 누적 건수를 저장하며, `youtube_channel_watch`가 `enabled=true`·`ACTIVE`가 아니면 실행을 claim하거나 다음 페이지로 진행하지 않는다. 영상 Job은 기존 `BACKFILL` 우선순위와 영상 식별자 멱등성 제약을 재사용한다.
+
+[`V15__add_youtube_channel_backfill_stop_reason.sql`](../../../src/main/resources/db/migration/V15__add_youtube_channel_backfill_stop_reason.sql)은 영상 상한 중지 시 저장한 Cursor를 다음 명시적 실행에서 재개할 수 있도록 중지 원인 열과 허용값 제약을 추가한다. 기존 `V14` 파일은 수정하지 않는다.
+
+[`V16__add_youtube_channel_backfill_video_ledger.sql`](../../../src/main/resources/db/migration/V16__add_youtube_channel_backfill_video_ledger.sql)은 보정 run의 영상별 `SUBMITTED/REUSED` 접수 결과와 unique 원장을 추가한다. 페이지 중간 예외나 lease 재확보 뒤 같은 영상이 다시 처리되어도 run 누계를 중복 집계하지 않으며, 기존 `V14`·`V15` 파일은 수정하지 않는다.
+
+[`V17__add_youtube_backfill_page_limit_reason.sql`](../../../src/main/resources/db/migration/V17__add_youtube_backfill_page_limit_reason.sql)은 페이지 상한 중지를 재개 가능한 `MAX_PAGES_PER_RUN`으로 구분하도록 기존 중지 사유 CHECK를 확장한다. 적용된 V15는 수정하지 않는다.
+
+외부 YouTube 호출은 마이그레이션에서 수행하지 않는다. 실행별 최대 1,000페이지·50,000영상 상한과 응답 크기·Cursor 길이 제한은 애플리케이션 설정으로 적용하고, API key·원문 응답·영상 데이터는 테이블과 로그에 저장하지 않는다. provider/job quota와 백필 전용 quota는 Redis에서 원자 예약하며, quota 확인 실패 시 외부 호출을 하지 않는다. 자동 주기별 실행 생성은 [ADR-EXT-004](../../07-adr/integration/ext-004-youtube-periodic-reconciliation.md)에 따라 허용한다. [V18](../../../src/main/resources/db/migration/V18__index_youtube_backfill_schedule.sql)은 채널별 최신 실행 조회 인덱스를 추가한다. 주기는 마지막 종결 `updated_at`을 기준으로 판단하며 기존 실행 이력과 Cursor는 유지한다.
+
 ### 11.1 AI 누적 변경 통합 구성
 
 AI 영상 추출 스키마·재사용 조회 인덱스·수동 검수 감사·재시도 사유·태그 롤백 provenance는 `V4__create_third_expansion_ai_schema.sql`에 적용 순서대로 포함한다. 외부 YouTube 검증 전 멱등 조회 인덱스는 `youtube_video_id`와 입력 hash 또는 입력 모드·Provider/Model/Prompt/Schema 버전을 선두 조건으로 사용하며, 최신 작업 조회와 `expires_at` 만료 행 선택을 지원한다. 기존 작업·태그 행의 provenance는 nullable로 유지하고 새 자동 확정·수동 보정 연결부터 Snapshot ID를 기록한다.
@@ -211,7 +223,7 @@ AI 영상 추출 스키마·재사용 조회 인덱스·수동 검수 감사·�
 
 ## 12. 향후 변경 번호
 
-초기 스키마 baseline 다음 변경은 `V2`로 적용됐고, 1차 확장 변경은 2.3절 통합 이후 다시 `V2` 하나로 적용됐다. 2차 확장은 `V3`, 3차 확장 AI 영상 추출·누적 AI 변경·Gemini 모델 전환 제약은 통합 `V4`, 채널 감시 오류 시각 보강은 `V5`를 사용한다.
+초기 스키마 baseline 다음 변경은 `V2`로 적용됐고, 1차 확장 변경은 2.3절 통합 이후 다시 `V2` 하나로 적용됐다. 2차 확장은 `V3`, 3차 확장 AI 영상 추출·누적 AI 변경·Gemini 모델 전환 제약은 통합 `V4`, 채널 감시 오류 시각 보강은 `V5`, YouTube 채널 보정 실행은 `V14`, 보정 실행 중지 원인은 `V15`, 영상별 접수 원장은 `V16`을 사용한다.
 
 `V1`과 `V2`는 각각 적용된 시점부터 수정하지 않는다. 현행 `V3__add_expansion_2_schema.sql` 또는 `V4__create_third_expansion_ai_schema.sql`을 향후 통합하려면 2.1절과 ADR-DATA-009의 강제 규칙을 모두 증명해야 하며, 이미 운영에 적용된 파일은 통합·수정하지 않는다.
 

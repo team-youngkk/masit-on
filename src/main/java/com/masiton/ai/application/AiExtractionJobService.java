@@ -19,6 +19,7 @@ import com.masiton.ai.application.port.out.AiExtractionJobStore;
 import com.masiton.ai.application.port.out.TemporaryInputCipher;
 import com.masiton.ai.application.port.out.TemporaryInputCipher.EncryptedInput;
 import com.masiton.ai.application.port.out.YoutubeChannelWatchStore;
+import com.masiton.ai.application.port.out.YoutubeChannelBackfillRunStore;
 import com.masiton.ai.application.port.out.dto.AiExtractionJobView;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
@@ -35,16 +36,19 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
     private final ResolveVerifiedVideoUseCase verifiedVideoResolver;
     private final AiExtractionJobPersistenceService persistence;
     private final YoutubeChannelWatchStore watchStore;
+    private final YoutubeChannelBackfillRunStore backfillRuns;
     private final TemporaryInputCipher temporaryInputCipher;
 
     public AiExtractionJobService(ResolveVerifiedVideoUseCase verifiedVideoResolver,
                                   AiExtractionJobPersistenceService persistence,
                                   YoutubeChannelWatchStore watchStore,
-                                  TemporaryInputCipher temporaryInputCipher) {
+                                  TemporaryInputCipher temporaryInputCipher,
+                                  YoutubeChannelBackfillRunStore backfillRuns) {
         this.verifiedVideoResolver = verifiedVideoResolver;
         this.persistence = persistence;
         this.watchStore = watchStore;
         this.temporaryInputCipher = temporaryInputCipher;
+        this.backfillRuns = backfillRuns;
     }
 
     @Override
@@ -121,6 +125,30 @@ public class AiExtractionJobService implements AiExtractionJobUseCase {
         AiExtractionJobView job = create("WEBHOOK", "REALTIME", normalizedChannelId, normalizedVideoId,
                 canonicalVideoUrl, "GEMINI_VIDEO_URL", hash(canonicalVideoUrl.toString(), "", null), Optional.empty(), null);
         watchStore.markNotificationReceived(normalizedChannelId, OffsetDateTime.now(ZoneOffset.UTC));
+        return Optional.of(job);
+    }
+
+    @Override
+    public AiExtractionJobView submitBackfill(String channelId, String videoId) {
+        String normalizedChannelId = requiredId(channelId, "channelId");
+        String normalizedVideoId = requiredId(videoId, "videoId");
+        URI canonicalVideoUrl = canonicalYoutubeUrl(normalizedVideoId);
+        return create("ADMIN", "BACKFILL", normalizedChannelId, normalizedVideoId, canonicalVideoUrl,
+                "GEMINI_VIDEO_URL", hash(canonicalVideoUrl.toString(), "", null), Optional.empty(), null);
+    }
+
+    @Override
+    @Transactional(timeout = 5)
+    public Optional<AiExtractionJobView> submitBackfillIfClaimActive(UUID runId, String leaseOwner,
+                                                                       String channelId, String videoId) {
+        if (runId == null || leaseOwner == null || leaseOwner.isBlank()) return Optional.empty();
+        String normalizedChannelId = requiredId(channelId, "channelId");
+        String normalizedVideoId = requiredId(videoId, "videoId");
+        if (!backfillRuns.isClaimActive(runId, leaseOwner, OffsetDateTime.now(ZoneOffset.UTC))) {
+            return Optional.empty();
+        }
+        AiExtractionJobView job = submitBackfill(normalizedChannelId, normalizedVideoId);
+        backfillRuns.recordVideo(runId, normalizedVideoId, job.reused(), OffsetDateTime.now(ZoneOffset.UTC));
         return Optional.of(job);
     }
 
