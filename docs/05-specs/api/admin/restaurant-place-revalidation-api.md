@@ -27,7 +27,7 @@ Issue #377의 재검증은 일반 사용자 조회가 아니라 `/api/admin` 관
 ```json
 {
   "outcome": "AUTO_CORRECTED",
-  "nextAttemptAt": null
+  "nextAttemptAt": "2026-09-19T00:00:00Z"
 }
 ```
 
@@ -44,7 +44,7 @@ Issue #377의 재검증은 일반 사용자 조회가 아니라 `/api/admin` 관
 {
   "status": "REVIEW_REQUIRED",
   "attemptCount": 1,
-  "nextAttemptAt": null,
+  "nextAttemptAt": "2026-09-19T00:00:00Z",
   "lastCheckedAt": "2026-09-18T00:00:00Z",
   "reasonCode": "DISTRICT_CHANGED",
   "errorCode": null

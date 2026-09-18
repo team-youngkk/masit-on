@@ -39,6 +39,7 @@ related_documents:
 | CI run `35342378655` | 공유 DB 경합이 JDBC claim 단계에서도 재현되어 전용 Testcontainers로 분리할 필요가 확인됨 | 수정 필요: 테스트 실행 격리 |
 | CI run `35343331016` | 전용 Testcontainers에서도 테스트가 claim 결과에 의존해 빈 Optional을 반환함 | 수정 필요: 통합 테스트 fixture |
 | CI run `35343927288` | RUNNING fixture의 생성 시각보다 `checked_at`이 앞서 DB check constraint에 걸림 | 수정 필요: 테스트 시간 경계 |
+| 리뷰 스레드 `4047036086` | `AUTO_CORRECTED` 응답 예시의 `nextAttemptAt: null`이 24시간 정기 재검증 정책과 불일치함 | 수정 필요: API 계약 문서 |
 
 ## 3. 근본 원인
 
@@ -47,6 +48,8 @@ related_documents:
 별도로 claim 때 증가한 `attempt_count`를 정상 완료 상태에서 되돌리지 않아, 정기 재검증의 과거 실패가 다음 재검증 주기의 재시도 예산을 잠식했다.
 
 V19 상태 테이블은 의도적으로 Restaurant FK를 `RESTRICT`로 두고 있으므로, 기능 변경으로 추가된 상태·감사 테이블을 기존 공통 테스트 cleanup 목록에 포함하지 않은 것이 두 번째 CI 실패의 원인이었다. 감사 테이블은 append-only라 일반 `DELETE`가 불가능하므로 테스트 격리에서는 상태 테이블과 함께 `TRUNCATE`해야 한다.
+
+후속 리뷰에서는 API 실행 응답과 현재 상태 조회 응답의 예시가 `nextAttemptAt: null`을 사용하고 있었지만, 구현 기본값 `PT24H`와 API 계약 문구는 정상 완료·검토 상태에 다음 정기 재검증 시각을 저장하도록 정의한 점이 확인됐다. 문서 예시만 오래된 계약을 보여 주는 문서 정합성 문제였다.
 
 ## 4. 최종 수정
 
@@ -60,6 +63,7 @@ V19 상태 테이블은 의도적으로 Restaurant FK를 `RESTRICT`로 두고 �
 - Restaurant 본문 CAS 실패는 전용 `RestaurantPlaceRevalidationStaleException`으로 즉시 rollback하고, application service가 이를 `STALE_DISCARDED`로 변환하도록 수정했다. 실제 PostgreSQL 기반 통합 테스트에서 `RUNNING` 상태 유지, 감사 행 0건, 동시 변경 본문 보존을 검증하고, API 테스트에서 409 응답을 검증한다.
 - 실제 PostgreSQL 검증은 전용 Testcontainers PostgreSQL·Redis를 사용하는 JDBC store·transaction 통합 테스트로 격리했고, 409 응답 계약은 `AdminRestaurantPlaceRevalidationControllerApiTest`에서 독립적으로 검증한다.
 - 통합 테스트는 claim 구현의 별도 사전 조건에 의존하지 않고 PostgreSQL에 RUNNING lease를 직접 준비하며, lease 준비 시각과 apply 시각을 분리해 상태 check constraint까지 검증한다.
+- 관리자 재검증 API의 `AUTO_CORRECTED` 실행 응답과 `REVIEW_REQUIRED` 상태 조회 예시를 기본 정기 주기(`PT24H`)에 맞춘 미래 시각으로 갱신했다.
 
 ## 5. 검증
 
@@ -83,6 +87,8 @@ V19 상태 테이블은 의도적으로 Restaurant FK를 `RESTRICT`로 두고 �
 | PR CI 재실행 `35343331016` | 실패 | 전용 PostgreSQL·Redis는 정상 기동했으나 claim 사전 조건이 빈 결과를 반환함 |
 | PR CI 재실행 `35343927288` | 실패 | claim 의존성을 제거한 뒤 RUNNING fixture의 시간 제약 위반을 확인함 |
 | PR CI 재실행 `35344365166` | 통과 | 전용 PostgreSQL·Redis에서 CAS stale 예외, rollback, 본문 보존, 감사 0건 검증과 전체 CI 통과 |
+| `git fetch origin develop` 및 `git merge --no-edit origin/develop` | 통과 | `develop`의 최신 커밋을 작업 브랜치에 병합했고 충돌 없이 정리함 |
+| API 계약 예시 대조 | 통과 | 구현 기본값 `PT24H`, ADR, 테이블 계약과 예시의 `nextAttemptAt`을 일치시킴 |
 
 ## 6. 재발 방지
 
@@ -95,5 +101,6 @@ V19 상태 테이블은 의도적으로 Restaurant FK를 `RESTRICT`로 두고 �
 | 지표 | 투입 전 | 목표 |
 |---|---:|---:|
 | 리뷰 미해결 스레드 | 3 | 0 |
+| 이번 후속 리뷰 미해결 스레드 | 1 | 0 |
 | PR #389 백엔드 실패 테스트 | 489 | 0 (최종 CI 달성) |
 | 정상 terminal outcome 이후 retry budget | 누적 | 0으로 재설정 |
