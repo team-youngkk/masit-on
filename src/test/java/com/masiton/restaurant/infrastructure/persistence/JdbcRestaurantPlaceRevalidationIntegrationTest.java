@@ -30,6 +30,8 @@ import com.masiton.restaurant.application.RestaurantPlaceRevalidationStaleExcept
 import com.masiton.restaurant.application.port.out.RestaurantPlaceRevalidationStore;
 import com.masiton.restaurant.application.port.out.RestaurantPlaceRevalidationStore.ClaimedRestaurant;
 import com.masiton.restaurant.application.port.out.RestaurantPlaceRevalidationStore.Decision;
+import com.masiton.restaurant.domain.model.LifecycleStatus;
+import com.masiton.restaurant.domain.model.PublicationStatus;
 import com.masiton.restaurant.domain.model.Restaurant;
 
 @SpringBootTest
@@ -83,8 +85,23 @@ class JdbcRestaurantPlaceRevalidationIntegrationTest {
         UUID restaurantId = UUID.randomUUID();
         insertRestaurant(restaurantId);
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-        ClaimedRestaurant claimed = store.claim(restaurantId, now, now.plusMinutes(5), "integration-test-owner")
-                .orElseThrow();
+        OffsetDateTime createdAt = jdbcTemplate.queryForObject(
+                "SELECT created_at FROM restaurant WHERE id = ?", OffsetDateTime.class, restaurantId);
+        OffsetDateTime updatedAt = jdbcTemplate.queryForObject(
+                "SELECT updated_at FROM restaurant WHERE id = ?", OffsetDateTime.class, restaurantId);
+        Restaurant claimedRestaurant = new Restaurant(
+                restaurantId, MAPO_REGION_ID, KOREAN_CATEGORY_ID, "원본 맛집", "kakao-" + restaurantId,
+                "https://place.map.kakao.com/" + restaurantId, "서울특별시 마포구 월드컵로 1", null,
+                "02-0000-0000", new BigDecimal("37.5665"), new BigDecimal("126.9780"),
+                PublicationStatus.PUBLIC, LifecycleStatus.ACTIVE, createdAt, updatedAt, null);
+        UUID executionId = UUID.randomUUID();
+        String owner = "integration-test-owner";
+        jdbcTemplate.update(
+                "INSERT INTO restaurant_kakao_revalidation "
+                        + "(restaurant_id, status, attempt_count, lease_owner, lease_expires_at, "
+                        + "last_execution_id, next_attempt_at) VALUES (?, 'RUNNING', 1, ?, ?, ?, NULL)",
+                restaurantId, owner, now.plusMinutes(5), executionId);
+        ClaimedRestaurant claimed = new ClaimedRestaurant(claimedRestaurant, 1, executionId, owner);
 
         jdbcTemplate.update("UPDATE restaurant SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
                 "동시 변경 맛집", restaurantId);
