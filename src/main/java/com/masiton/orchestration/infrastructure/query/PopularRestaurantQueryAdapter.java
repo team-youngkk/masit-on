@@ -26,7 +26,20 @@ class PopularRestaurantQueryAdapter implements PopularRestaurantQueryPort {
      */
     static final String AGGREGATION_SQL = """
             SELECT r.id AS restaurant_id, r.name AS name, r.road_address AS road_address,
-                   category.name AS category, count(*) AS favorite_count
+                   category.name AS category,
+                   (SELECT vi.thumbnail_url
+                      FROM visit v
+                      JOIN creator c ON c.id = v.creator_id
+                      JOIN video vi ON vi.id = v.video_id
+                     WHERE v.restaurant_id = r.id
+                       AND v.publication_status = 'PUBLIC' AND v.lifecycle_status = 'ACTIVE'
+                       AND c.publication_status = 'PUBLIC' AND c.lifecycle_status = 'ACTIVE'
+                       AND c.external_availability_status = 'AVAILABLE'
+                       AND vi.publication_status = 'PUBLIC' AND vi.lifecycle_status = 'ACTIVE'
+                       AND vi.external_availability_status = 'AVAILABLE'
+                     ORDER BY vi.title COLLATE "C", vi.id
+                     LIMIT 1) AS representative_image_url,
+                   count(*) AS favorite_count
               FROM favorite relation
               JOIN restaurant r ON r.id = relation.restaurant_id
               JOIN food_category category ON category.id = r.food_category_id
@@ -53,6 +66,7 @@ class PopularRestaurantQueryAdapter implements PopularRestaurantQueryPort {
                 resultSet.getString("name"),
                 resultSet.getString("road_address"),
                 resultSet.getString("category"),
+                resultSet.getString("representative_image_url"),
                 resultSet.getLong("favorite_count"));
     }
 }

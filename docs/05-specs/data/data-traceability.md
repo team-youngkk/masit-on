@@ -65,7 +65,7 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 
 | PRD | 사용자·관리자 결과 | 주 데이터 | 관계·조합 데이터 |
 |---|---|---|---|
-| [PRD-DISCOVERY-001](../../04-product/prd/discovery/restaurant-discovery.md) | 맛집 목록·이름·지역·카테고리 탐색 | Restaurant, Region, FoodCategory | Visit, Creator |
+| [PRD-DISCOVERY-001](../../04-product/prd/discovery/restaurant-discovery.md) | 맛집 목록·이름·지역·카테고리 탐색 | Restaurant, Region, FoodCategory | Visit, Creator, Video |
 | [PRD-DISCOVERY-002](../../04-product/prd/discovery/creator-discovery.md) | 유튜버 선택 및 방문 맛집 탐색 | Creator | Visit, Restaurant, Video 공개 유효성 |
 | [PRD-DETAIL-001](../../04-product/prd/detail/restaurant-detail.md) | 맛집 기본 정보와 방문 콘텐츠 | Restaurant | Region, FoodCategory, Visit, Creator, Video |
 | [PRD-ADMIN-001](../../04-product/prd/admin/admin-data-management.md) | 인증된 관리자 검증·등록 | `MemberAccount(role=ADMIN)`, `AuthSession` | Restaurant, Creator, Video, Visit |
@@ -148,7 +148,7 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 
 | API ID | 응답 영역 | 주 데이터 | 조합 데이터 | 파생 필드 | 조회 책임 |
 |---|---|---|---|---|---|
-| [API-DISCOVERY-001](../api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색) | 맛집 목록 | Restaurant | Region, FoodCategory, 공개 Visit·Creator | `visitedBy` 최대 3명, `remainingVisitedByCount`, page | [WS-01](../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색), 관계 판정 [WS-03](../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) |
+| [API-DISCOVERY-001](../api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색) | 맛집 목록 | Restaurant | Region, FoodCategory, 공개·유효 Visit·Creator·Video | `representativeImageUrl`, `visitedBy` 최대 3명, `remainingVisitedByCount`, page | [WS-01](../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색), 관계 판정 [WS-03](../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) |
 | [API-CREATOR-DISCOVERY-001](../api/discovery/creator-discovery-api.md#api-creator-discovery-001-유튜버-필터-선택-목록) | 유튜버 선택 목록 | Creator | 없음 | 채널명 정렬 | [WS-03](../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) |
 | [API-DETAIL-001](../api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회) | 맛집 기본 정보 | Restaurant | Region, FoodCategory | address DTO | [WS-02](../../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) |
 | [API-DETAIL-001](../api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회) | 방문 유튜버 | Visit | Creator, Video 공개 유효성 | Creator 식별자 중복 제거 | [WS-02](../../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회), 판정 Visit |
@@ -203,7 +203,7 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 | 범위 | 요구사항·API | 저장·파생 데이터 | 핵심 제약·생명주기 | Workstream |
 |---|---|---|---|---|
 | 개인 컬렉션 | `FR-COLLECTION-001~006`, `API-COLLECTION-001~008` | `personal_collection`, `collection_restaurant` | 회원 소유, 복합 PK, 20/100 상한, 고정 정렬, 탈퇴 CASCADE | WS-09 |
-| 인기 맛집 | `FR-POPULAR-001`, `API-POPULAR-001` | 기존 `favorite` 실시간 집계, 순위 비저장 | 현재 찜 1건 이상, 상위 20, Restaurant 공개 상태 | WS-10 |
+| 인기 맛집 | `FR-POPULAR-001`, `API-POPULAR-001` | 기존 `favorite` 실시간 집계, 순위 비저장, 공개·유효 Video 썸네일 조회 | 현재 찜 1건 이상, 상위 20, Restaurant 공개 상태 | WS-10 |
 | 큐레이션 | `FR-CURATION-001~004`, `API-CURATION-001~009` | `curation`, `curation_restaurant` | `DRAFT/PUBLISHED`, 메인 5·구성 20, 위치 고유, 관리자 감사 | WS-11 |
 | 제보 | `FR-SUBMISSION-001~003`, 회원·관리자 제보 API | `submission`, `moderation_history` | 열린 지문 중복, 합산 일일 제한, 상태 이력, 1년 뒤 회원 연결 제거 | WS-12 |
 | 신고 | `FR-REPORT-001~003`, 회원·관리자 신고 API | `report`, `moderation_history` | 열린 대상·유형 중복, 자동 비공개 없음, 상태 이력, 1년 뒤 회원 연결 제거 | WS-12 |
@@ -259,7 +259,7 @@ V3 전진 적용과 전체 FK·UNIQUE·CHECK·인덱스는 `TST-E2-E2E-001`, `E2
 
 ## 12. 미매핑 항목
 
-- Restaurant 설명·대표 이미지·영업 정보는 확정 요구사항/API가 없어 저장 모델에서 제외했다.
+- Restaurant 대표 이미지는 별도 저장하지 않고 공개·유효한 관련 Video의 `thumbnail_url`에서 조회 시 파생한다. Restaurant 설명·영업 정보는 저장 모델에서 제외했다.
 - Creator 구독자 수·조회 수 같은 통계와 Video 게시일의 외부 API 노출, Visit 방문일·검증 상태·검증자는 저장 모델에서 제외하거나 선택 데이터다. V6 상세 표시 필드인 Creator 프로필 이미지·소개·handle은 저장 계약에 포함한다.
 - 수정·삭제·승인·보류 목록 API가 없으므로 관련 운영 전환은 API 변경으로 만들지 않았다.
 - 로그인 실패 제한 카운터는 저장 방식이 미정이다. 확인 Token은 PostgreSQL 단기 기술 테이블로 확정됐지만 핵심 도메인 ERD에는 포함하지 않는다.

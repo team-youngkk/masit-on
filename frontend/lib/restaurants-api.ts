@@ -77,6 +77,7 @@ export type RestaurantListItem = {
   name: string
   district: string
   category: string
+  representativeImageUrl: string | null
   visitedBy: RestaurantVisitedByCreator[]
   remainingVisitedByCount: number
 }

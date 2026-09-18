@@ -65,6 +65,8 @@ class RestaurantSearchApiTest extends com.masiton.test.FullContextIntegrationTes
                 .andExpect(jsonPath("$.items[0].name").value("마포 맛집"))
                 .andExpect(jsonPath("$.items[0].district").value("마포구"))
                 .andExpect(jsonPath("$.items[0].category").value("한식"))
+                .andExpect(jsonPath("$.items[0].representativeImageUrl")
+                        .value("https://example.com/thumbnail/" + videoId))
                 .andExpect(jsonPath("$.items[0].visitedBy[0].id").value(creatorId.toString()))
                 .andExpect(jsonPath("$.items[0].visitedBy[0].channelName").value("테스트 채널"))
                 .andExpect(jsonPath("$.items[0].remainingVisitedByCount").value(0))
