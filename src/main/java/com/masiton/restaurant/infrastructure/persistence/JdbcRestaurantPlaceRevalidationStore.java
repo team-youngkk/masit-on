@@ -104,16 +104,17 @@ class JdbcRestaurantPlaceRevalidationStore implements RestaurantPlaceRevalidatio
 
     @Override
     public boolean apply(ClaimedRestaurant claimed, Decision decision, OffsetDateTime now) {
+        int nextAttemptCount = resetsRetryBudget(decision.outcome()) ? 0 : claimed.attemptCount();
         int updated = jdbc.update(
                 """
                 UPDATE restaurant_kakao_revalidation
-                SET status = ?, next_attempt_at = ?, last_checked_at = ?, last_reason_code = ?,
+                SET status = ?, attempt_count = ?, next_attempt_at = ?, last_checked_at = ?, last_reason_code = ?,
                     last_error_code = ?, last_error_message = ?, lease_owner = NULL,
                     lease_expires_at = NULL, updated_at = ?
                 WHERE restaurant_id = ? AND lease_owner = ? AND last_execution_id = ?
                   AND lease_expires_at > ?
                 """,
-                decision.outcome().name(), decision.nextAttemptAt(), now, decision.reasonCode(),
+                decision.outcome().name(), nextAttemptCount, decision.nextAttemptAt(), now, decision.reasonCode(),
                 decision.errorCode(), decision.errorMessage(), now, claimed.restaurant().getId(),
                 claimed.leaseOwner(), claimed.executionId(), now);
         if (updated != 1) {
@@ -136,6 +137,13 @@ class JdbcRestaurantPlaceRevalidationStore implements RestaurantPlaceRevalidatio
                 decision.correctedRestaurant() == null ? null : json(previousValues(decision.correctedRestaurant())),
                 decision.reasonCode(), decision.errorCode(), decision.errorMessage(), now, decision.nextAttemptAt());
         return true;
+    }
+
+    private boolean resetsRetryBudget(Outcome outcome) {
+        return switch (outcome) {
+            case VERIFIED, AUTO_CORRECTED, REVIEW_REQUIRED, MATCH_NOT_FOUND -> true;
+            case RETRY_SCHEDULED, RETRY_EXHAUSTED -> false;
+        };
     }
 
     private boolean updateRestaurant(ClaimedRestaurant claimed, Restaurant restaurant, OffsetDateTime now) {

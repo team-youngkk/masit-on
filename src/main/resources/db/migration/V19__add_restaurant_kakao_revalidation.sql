@@ -18,7 +18,7 @@ CREATE TABLE restaurant_kakao_revalidation
     lease_expires_at    timestamp(6) with time zone,
     last_execution_id   uuid,
     last_checked_at     timestamp(6) with time zone,
-    next_attempt_at     timestamp(6) with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    next_attempt_at     timestamp(6) with time zone DEFAULT CURRENT_TIMESTAMP,
     last_reason_code    varchar(48),
     last_error_code     varchar(32),
     last_error_message  varchar(1000),

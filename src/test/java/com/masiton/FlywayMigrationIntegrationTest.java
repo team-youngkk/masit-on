@@ -161,7 +161,7 @@ class FlywayMigrationIntegrationTest extends com.masiton.test.FullContextIntegra
         );
         int finalized = jdbcTemplate.update(
                 "UPDATE restaurant_kakao_revalidation SET status = 'AUTO_CORRECTED', lease_owner = NULL, "
-                        + "lease_expires_at = NULL, last_checked_at = CURRENT_TIMESTAMP, next_attempt_at = NULL, "
+                        + "lease_expires_at = NULL, last_checked_at = CURRENT_TIMESTAMP, "
                         + "last_reason_code = 'SAFE_FIELDS_CHANGED', next_attempt_at = CURRENT_TIMESTAMP + interval '1 day', "
                         + "updated_at = CURRENT_TIMESTAMP "
                         + "WHERE restaurant_id = ? AND status = 'RUNNING' AND last_execution_id = ? "
