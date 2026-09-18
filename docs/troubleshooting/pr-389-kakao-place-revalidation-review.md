@@ -33,6 +33,8 @@ related_documents:
 | CI run `35338753729` | cleanup 수정 후 V19 감사 INSERT가 `next_attempt_at` 값을 컬럼 목록 없이 전달해 컬럼 수 불일치 | 수정 필요: 테스트 SQL |
 | CI run `35339196672` | V19 추가 후 기존 최신 migration 버전 기대값이 18에 고정되어 있었고, append-only trigger의 SQLSTATE가 `DataIntegrityViolationException`이 아닌 일반 `DataAccessException`으로 번역됨 | 수정 필요: 회귀 테스트 기대값 |
 | CI run `35339747103` | 최신 수정 반영 후 프론트엔드·Terraform·RSA·백엔드 전체 검증 통과 | 해결 |
+| CI run `35340887037` | 새 PostgreSQL 통합 테스트의 Kakao 재검증 mock이 dual-port adapter bean을 대체해 ApplicationContext가 깨짐 | 수정 필요: 테스트 격리 |
+| CI run `35341373370` | 통합 테스트가 공유 Testcontainers 데이터베이스에서 다른 full-context 테스트의 cleanup과 경합해 삽입한 Restaurant를 찾지 못함 | 수정 필요: 테스트 실행 격리 |
 
 ## 3. 근본 원인
 
@@ -68,6 +70,8 @@ V19 상태 테이블은 의도적으로 Restaurant FK를 `RESTRICT`로 두고 �
 | PR CI 재실행 `35339196672` | 실패 | V19 버전 기대값과 append-only 예외 타입 기대값이 기존 테스트에 남아 있는 것을 확인함 |
 | PR CI 재실행 `35339747103` | 통과 | 프론트엔드·Terraform·RSA 검사와 백엔드 빌드·자동화 테스트 전체 통과 |
 | PR CI 재실행 `35340166251` | 통과 | stale 충돌 처리와 PostgreSQL 통합 테스트가 포함된 최신 커밋 검증 통과 |
+| PR CI 재실행 `35340887037` | 실패 | dual-port adapter mock 설정 오류로 통합 테스트 ApplicationContext 초기화 실패 |
+| PR CI 재실행 `35341373370` | 실패 | 통합 테스트 데이터가 공유 full-context cleanup과 경합해 404가 발생함 |
 
 ## 6. 재발 방지
 

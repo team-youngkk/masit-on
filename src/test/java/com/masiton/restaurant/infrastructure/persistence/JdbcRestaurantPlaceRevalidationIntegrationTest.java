@@ -15,6 +15,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceLock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -33,6 +34,7 @@ import com.masiton.test.FullContextIntegrationTest;
 @SpringBootTest
 @AutoConfigureMockMvc(addFilters = false)
 @Import(JdbcRestaurantPlaceRevalidationIntegrationTest.RevalidationTestConfiguration.class)
+@ResourceLock("shared-test-infrastructure")
 @TestPropertySource(properties = {
         "masiton.restaurant.place-revalidation.enabled=true",
         "masiton.restaurant.place-revalidation.poll-interval=PT1H"
