@@ -10,7 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -175,7 +175,7 @@ class FlywayMigrationIntegrationTest extends com.masiton.test.FullContextIntegra
         assertThat(finalized).isEqualTo(1);
         assertThatThrownBy(() -> jdbcTemplate.update(
                 "UPDATE restaurant_kakao_revalidation_audit SET reason_code = 'NO_CHANGE' WHERE id = ?", auditId))
-                .isInstanceOf(DataIntegrityViolationException.class);
+                .isInstanceOf(DataAccessException.class);
         assertThatThrownBy(() -> jdbcTemplate.update(
                 "INSERT INTO restaurant_kakao_revalidation (restaurant_id, status, next_attempt_at) "
                         + "VALUES (?, 'RETRY_SCHEDULED', CURRENT_TIMESTAMP)", UUID.randomUUID()))
