@@ -86,7 +86,8 @@ class JdbcRestaurantPlaceRevalidationIntegrationTest extends FullContextIntegrat
     private void insertRestaurant(UUID restaurantId) {
         jdbcTemplate.update(
                 "INSERT INTO restaurant (id, region_id, food_category_id, name, kakao_place_id, kakao_place_url, "
-                        + "road_address, phone_number, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        + "road_address, phone_number, latitude, longitude, publication_status, lifecycle_status) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PUBLIC', 'ACTIVE')",
                 restaurantId, MAPO_REGION_ID, KOREAN_CATEGORY_ID, "원본 맛집", "kakao-" + restaurantId,
                 "https://place.map.kakao.com/" + restaurantId, "서울특별시 마포구 월드컵로 1", "02-0000-0000",
                 new BigDecimal("37.5665"), new BigDecimal("126.9780"));
