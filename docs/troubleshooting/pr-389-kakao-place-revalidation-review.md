@@ -88,6 +88,7 @@ V19 상태 테이블은 의도적으로 Restaurant FK를 `RESTRICT`로 두고 �
 | PR CI 재실행 `35343927288` | 실패 | claim 의존성을 제거한 뒤 RUNNING fixture의 시간 제약 위반을 확인함 |
 | PR CI 재실행 `35344365166` | 통과 | 전용 PostgreSQL·Redis에서 CAS stale 예외, rollback, 본문 보존, 감사 0건 검증과 전체 CI 통과 |
 | PR CI 재실행 `35349650404` | 통과 | 최신 develop 병합과 API 예시 정합화 후 백엔드·프론트엔드·Terraform·RSA 전체 검증 통과 |
+| PR CI 재실행 `35350186530` | 통과 | 최종 트러블슈팅 기록 커밋 기준 백엔드·프론트엔드·Terraform·RSA 전체 검증 통과 |
 | `git fetch origin develop` 및 `git merge --no-edit origin/develop` | 통과 | `develop`의 최신 커밋을 작업 브랜치에 병합했고 충돌 없이 정리함 |
 | API 계약 예시 대조 | 통과 | 구현 기본값 `PT24H`, ADR, 테이블 계약과 예시의 `nextAttemptAt`을 일치시킴 |
 
