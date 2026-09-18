@@ -306,6 +306,8 @@ Refresh Token 세션은 역할과 무관하게 Redis 8.8 `auth:session:` namespa
 | `youtube_channel_watch` | YouTube 채널 감시·갱신 상태 | Creator·채널별 unique, 구독 상태 |
 | `youtube_channel_backfill_run` | YouTube 누락 영상 보정 조회 실행·Cursor·Worker lease | Creator별 진행 실행 partial unique, 상태·lease·중지 원인·누적 건수 CHECK |
 | `youtube_channel_backfill_video` | 보정 run 영상별 Job 접수 원장 | `(run_id, youtube_video_id)` PK, `SUBMITTED/REUSED` CHECK, run CASCADE |
+| `restaurant_kakao_revalidation` | 등록 후 Kakao 장소 재검증의 현재 상태·lease | Restaurant당 1행 PK, 상태·결과·lease·재시도 시각 조합 CHECK |
+| `restaurant_kakao_revalidation_audit` | Kakao 재검증 실행별 append-only 감사 | execution ID unique, JSONB object, 결과·사유·오류·재시도 시각 조합 CHECK, UPDATE/DELETE 거부 |
 
 정식 Restaurant·Creator·Video·Visit 저장은 이 후보 테이블과 별도의 애플리케이션 원자성·외부 검증 규칙을 따른다. 후보가 실패하거나 외부 검증이 실패하면 정식 Entity는 0건이어야 한다.
 
@@ -316,3 +318,13 @@ V9 visit_tag_revision의 컬럼·타입·FK·감사 원자성은 [AI 데이터 �
 ## 관리자 태그 정의 용어 — 이슈 #363
 
 V10 `tag_definition_term`의 컬럼·1~200자 정규화·전역 고유성·역적재 계약은 [AI 데이터 계약 15절](third-expansion-ai-video-data-contract.md#15-태그-정규화-용어--이슈-363)을 따른다. 기존 `tag_definition.display_name`과 `aliases`는 표시 및 호환 계약으로 유지하고, ADMIN·AI 작성자는 정의와 용어를 한 트랜잭션에서 함께 저장한다. V12는 `tag_definition.version`과 append-only `tag_definition_audit`을 추가한다. 감사의 행위자 FK는 회원 탈퇴 시 `SET NULL`, 정의 FK는 `RESTRICT`다. V13은 원본별 병합 경로·정의 snapshot·영향 건수를 보존하는 `tag_definition_merge`와 변경 전 VisitTag snapshot을 보존하는 `visit_tag_merge_provenance`를 추가한다. 두 테이블의 상세 컬럼과 이전 규칙은 [AI 데이터 계약 15.2절](third-expansion-ai-video-data-contract.md#152-태그-정의-병합과-visittag-provenance--이슈-366)을 따른다. V9의 `AI_AUTO` legacy 코드는 유형과 유일성을 보존하는 연속·끝 밑줄만 정리하며 ID와 참조는 바꾸지 않는다.
+
+## Kakao 장소 재검증 — 이슈 #377
+
+`V19__add_restaurant_kakao_revalidation.sql`은 `restaurant` 본문을 변경하지 않고 현재 실행 상태와 append-only 감사 이력을 별도 테이블로 추가한다. `restaurant_kakao_revalidation`은 Restaurant당 1행이며 `PENDING`, `RUNNING`, `VERIFIED`, `AUTO_CORRECTED`, `REVIEW_REQUIRED`, `MATCH_NOT_FOUND`, `RETRY_SCHEDULED`, `RETRY_EXHAUSTED`를 허용한다. `PENDING`/`RETRY_SCHEDULED`와 정기 재검증 대상 완료 상태의 due index, `RUNNING` 만료 lease index는 다중 Worker의 claim 후보를 제한한다.
+
+기존 Restaurant는 migration에서 일괄 적재하지 않는다. 관리자 수동 실행 또는 보정 Worker가 제한된 batch로 상태 행을 lazy upsert해 기존 행을 점진적으로 대상화한다. 완료 상태에도 다음 정기 재검증 시각을 저장해 due 후보로 되돌린다. 따라서 migration은 대형 `restaurant` scan·backfill 쓰기·복제 지연을 유발하지 않는다.
+
+claim은 `PENDING`/due `RETRY_SCHEDULED` 또는 lease 만료 `RUNNING`을 `FOR UPDATE SKIP LOCKED`로 잠깐 잠근 뒤 `RUNNING`, 새 execution ID, lease owner/expiry로 조건부 갱신하고 즉시 commit한다. Kakao 호출은 그 transaction 밖에서 한다. 완료는 audit INSERT와 `WHERE restaurant_id = :id AND status = 'RUNNING' AND last_execution_id = :executionId AND lease_owner = :workerId` 상태 갱신을 하나의 짧은 transaction으로 수행한다. 0행 갱신은 lease를 잃은 stale Worker이므로 Restaurant와 audit 어느 쪽도 변경하지 않는다.
+
+`observed_values`, `previous_values`, `applied_values`는 JSON object만 저장한다. `AUTO_CORRECTED`는 같은 Kakao place ID가 확인되고 name·phone·좌표 쌍·같은 시·구 도로명주소만 안전하게 달라진 경우에만 `SAFE_FIELDS_CHANGED`와 비어 있지 않은 `applied_values`를 기록한다. place ID/URL 불일치·자치구 변경·모호한 동일성은 `REVIEW_REQUIRED`, Kakao 검색 결과 부재는 `MATCH_NOT_FOUND`로 기록하며 `applied_values`는 반드시 `NULL`이다. 429/5xx/timeout은 `RETRY_SCHEDULED`와 `HTTP_429`/`HTTP_5XX`/`TIMEOUT`, 미래 `next_attempt_at`만 허용한다. 이 판정은 외부 응답과 Restaurant 값의 의미 비교가 필요하므로 application transaction에서 수행하며 DB는 허용 상태·감사 불변성만 강제한다. API는 이 migration만으로 추가하지 않는다.

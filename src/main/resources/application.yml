@@ -140,6 +140,16 @@ masiton:
       cron: ${RECENT_RESTAURANT_CLEANUP_CRON:0 0 3 * * *}
       zone: ${RECENT_RESTAURANT_CLEANUP_ZONE:UTC}
   restaurant:
+    place-revalidation:
+      # Disabled by default: enable only after Kakao quota and V9 state/audit schema rollout are verified.
+      enabled: ${RESTAURANT_PLACE_REVALIDATION_ENABLED:false}
+      poll-interval: ${RESTAURANT_PLACE_REVALIDATION_POLL_INTERVAL:PT5M}
+      revalidation-interval: ${RESTAURANT_PLACE_REVALIDATION_INTERVAL:PT24H}
+      lease-duration: ${RESTAURANT_PLACE_REVALIDATION_LEASE_DURATION:PT5M}
+      batch-size: ${RESTAURANT_PLACE_REVALIDATION_BATCH_SIZE:20}
+      max-attempts: ${RESTAURANT_PLACE_REVALIDATION_MAX_ATTEMPTS:5}
+      first-backoff: ${RESTAURANT_PLACE_REVALIDATION_FIRST_BACKOFF:PT1M}
+      max-backoff: ${RESTAURANT_PLACE_REVALIDATION_MAX_BACKOFF:PT1H}
     map:
       rate-limit:
         trusted-proxy-addresses: ${RESTAURANT_MAP_TRUSTED_PROXY_ADDRESSES:}
