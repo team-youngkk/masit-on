@@ -112,6 +112,18 @@ class RestaurantSearchQueryAdapter implements RestaurantSearchQueryPort {
 
         List<RestaurantSearchRow> rows = jdbcTemplate.query(
                 "SELECT r.id AS id, r.name AS name, reg.name AS district, fc.name AS category "
+                        + ", (SELECT vi.thumbnail_url "
+                        + "FROM visit v "
+                        + "JOIN creator c ON c.id = v.creator_id "
+                        + "JOIN video vi ON vi.id = v.video_id "
+                        + "WHERE v.restaurant_id = r.id "
+                        + "AND v.publication_status = 'PUBLIC' AND v.lifecycle_status = 'ACTIVE' "
+                        + "AND c.publication_status = 'PUBLIC' AND c.lifecycle_status = 'ACTIVE' "
+                        + "AND c.external_availability_status = 'AVAILABLE' "
+                        + "AND vi.publication_status = 'PUBLIC' AND vi.lifecycle_status = 'ACTIVE' "
+                        + "AND vi.external_availability_status = 'AVAILABLE' "
+                        + "ORDER BY vi.title COLLATE \"C\", vi.id "
+                        + "LIMIT 1) AS representative_image_url "
                         + "FROM restaurant r "
                         + "JOIN region reg ON reg.id = r.region_id "
                         + "JOIN food_category fc ON fc.id = r.food_category_id "
@@ -123,7 +135,8 @@ class RestaurantSearchQueryAdapter implements RestaurantSearchQueryPort {
                         resultSet.getObject("id", UUID.class),
                         resultSet.getString("name"),
                         resultSet.getString("district"),
-                        resultSet.getString("category")));
+                        resultSet.getString("category"),
+                        resultSet.getString("representative_image_url")));
 
         return new RestaurantSearchQueryResult(rows, totalElements == null ? 0L : totalElements);
     }

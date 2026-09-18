@@ -10,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -26,7 +27,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * 빈 PostgreSQL에 V1 baseline, V2(1차 확장 통합 스키마), V3(2차 확장 스키마),
- * V4(통합 3차 확장 AI 후보 스키마와 Lite 단일 모델 제약), V5(채널 감시 오류 시각)가
+ * V4(통합 3차 확장 AI 후보 스키마와 Lite 단일 모델 제약), V5(채널 감시 오류 시각),
+ * V14(YouTube 채널 보정 실행), V15(보정 실행 중지 원인), V16(영상 처리 원장)이
  * V6(통합 계정 전환의 역할 열과 staging), V7(승인된 관리자 계정 복사),
  * V8(AI 등록 단위·카테고리 매핑 기준정보와 Snapshot 절단 표시)이
  * 순서대로 성공적으로 적용되고,
@@ -49,9 +51,9 @@ class FlywayMigrationIntegrationTest extends com.masiton.test.FullContextIntegra
     private MemberSessionRevocationStore memberSessionRevocationStore;
 
     @Test
-    @DisplayName("빈 데이터베이스에 V1부터 V9까지 계약된 순서와 파일명으로 성공 기록된다")
-    void 마이그레이션적용_빈데이터베이스_V1부터V9까지계약된순서와파일명으로성공기록된다() {
-        // given: 컨텍스트 기동 시점에 Flyway가 V1부터 V9 변경을 적용했다.
+    @DisplayName("빈 데이터베이스에 V1부터 V19까지 계약된 순서와 파일명으로 성공 기록된다")
+    void 마이그레이션적용_빈데이터베이스_V1부터V19까지계약된순서와파일명으로성공기록된다() {
+        // given: 컨텍스트 기동 시점에 Flyway가 V1부터 V19 변경을 적용했다.
 
         // when
         List<AppliedMigration> appliedMigrations = jdbcTemplate.query(
@@ -83,8 +85,136 @@ class FlywayMigrationIntegrationTest extends com.masiton.test.FullContextIntegra
                 new AppliedMigration("8", "add ai registration unit and food category mapping", "SQL",
                         "V8__add_ai_registration_unit_and_food_category_mapping.sql", true),
                 new AppliedMigration("9", "add visit tag revision", "SQL",
-                        "V9__add_visit_tag_revision.sql", true)
+                        "V9__add_visit_tag_revision.sql", true),
+                new AppliedMigration("10", "add tag definition term", "SQL",
+                        "V10__add_tag_definition_term.sql", true),
+                new AppliedMigration("11", "backfill natural language tag aliases", "SQL",
+                        "V11__backfill_natural_language_tag_aliases.sql", true),
+                new AppliedMigration("12", "add tag definition lifecycle audit", "SQL",
+                        "V12__add_tag_definition_lifecycle_audit.sql", true),
+                new AppliedMigration("13", "add tag definition merge audit", "SQL",
+                        "V13__add_tag_definition_merge_audit.sql", true),
+                new AppliedMigration("14", "create youtube channel backfill run", "SQL",
+                        "V14__create_youtube_channel_backfill_run.sql", true),
+                new AppliedMigration("15", "add youtube channel backfill stop reason", "SQL",
+                        "V15__add_youtube_channel_backfill_stop_reason.sql", true),
+                new AppliedMigration("16", "add youtube channel backfill video ledger", "SQL",
+                        "V16__add_youtube_channel_backfill_video_ledger.sql", true),
+                new AppliedMigration("17", "add youtube backfill page limit reason", "SQL",
+                        "V17__add_youtube_backfill_page_limit_reason.sql", true),
+                new AppliedMigration("18", "index youtube backfill schedule", "SQL",
+                        "V18__index_youtube_backfill_schedule.sql", true),
+                new AppliedMigration("19", "add restaurant kakao revalidation", "SQL",
+                        "V19__add_restaurant_kakao_revalidation.sql", true)
         );
+    }
+
+    @Test
+    @DisplayName("V19 Kakao 재검증은 lease CAS·결과 감사·append-only 제약을 강제한다")
+    void V19_Kakao재검증_leaseCAS결과감사appendOnly제약강제() {
+        // given
+        assertIndexCount(
+                "ix_restaurant_kakao_revalidation__claim_due",
+                "ix_restaurant_kakao_revalidation__claim_expired_lease",
+                "ix_restaurant_kakao_revalidation_audit__restaurant_checked",
+                "ix_restaurant__place_revalidation_seed"
+        );
+        assertForeignKey("fk_restaurant_kakao_revalidation__restaurant", "pk_restaurant", "RESTRICT");
+        assertForeignKey("fk_restaurant_kakao_revalidation_audit__restaurant", "pk_restaurant", "RESTRICT");
+
+        UUID restaurantId = UUID.randomUUID();
+        UUID executionId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO restaurant (id, region_id, food_category_id, name, kakao_place_id, "
+                        + "kakao_place_url, road_address, phone_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                restaurantId,
+                UUID.fromString("10000000-0000-4000-8000-000000000014"),
+                UUID.fromString("20000000-0000-4000-8000-000000000001"),
+                "재검증 맛집", "KAKAO-" + restaurantId,
+                "https://example.com/place/" + restaurantId, "서울특별시 마포구 월드컵로 1", "02-0000-0000"
+        );
+        jdbcTemplate.update("INSERT INTO restaurant_kakao_revalidation (restaurant_id) VALUES (?)", restaurantId);
+
+        // when
+        int claimed = jdbcTemplate.update(
+                "UPDATE restaurant_kakao_revalidation SET status = 'RUNNING', attempt_count = attempt_count + 1, "
+                        + "lease_owner = ?, lease_expires_at = CURRENT_TIMESTAMP + interval '5 minutes', "
+                        + "last_execution_id = ?, next_attempt_at = NULL, updated_at = CURRENT_TIMESTAMP "
+                        + "WHERE restaurant_id = ? AND status IN ('PENDING', 'RETRY_SCHEDULED') "
+                        + "AND next_attempt_at <= CURRENT_TIMESTAMP",
+                "worker-1", executionId, restaurantId
+        );
+        int duplicateClaim = jdbcTemplate.update(
+                "UPDATE restaurant_kakao_revalidation SET status = 'RUNNING' "
+                        + "WHERE restaurant_id = ? AND status IN ('PENDING', 'RETRY_SCHEDULED') "
+                        + "AND next_attempt_at <= CURRENT_TIMESTAMP",
+                restaurantId
+        );
+        UUID auditId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO restaurant_kakao_revalidation_audit (id, execution_id, restaurant_id, status, "
+                        + "observed_values, previous_values, applied_values, reason_code, checked_at, next_attempt_at) "
+                        + "VALUES (?, ?, ?, 'AUTO_CORRECTED', ?::jsonb, ?::jsonb, ?::jsonb, "
+                        + "'SAFE_FIELDS_CHANGED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + interval '1 day')",
+                auditId, executionId, restaurantId,
+                "{\"kakaoPlaceId\":\"KAKAO-" + restaurantId + "\",\"phoneNumber\":\"02-1111-1111\"}",
+                "{\"phoneNumber\":\"02-0000-0000\"}", "{\"phoneNumber\":\"02-1111-1111\"}"
+        );
+        int finalized = jdbcTemplate.update(
+                "UPDATE restaurant_kakao_revalidation SET status = 'AUTO_CORRECTED', lease_owner = NULL, "
+                        + "lease_expires_at = NULL, last_checked_at = CURRENT_TIMESTAMP, "
+                        + "last_reason_code = 'SAFE_FIELDS_CHANGED', next_attempt_at = CURRENT_TIMESTAMP + interval '1 day', "
+                        + "updated_at = CURRENT_TIMESTAMP "
+                        + "WHERE restaurant_id = ? AND status = 'RUNNING' AND last_execution_id = ? "
+                        + "AND lease_owner = ?",
+                restaurantId, executionId, "worker-1"
+        );
+
+        // then
+        assertThat(claimed).isEqualTo(1);
+        assertThat(duplicateClaim).isZero();
+        assertThat(finalized).isEqualTo(1);
+        assertThatThrownBy(() -> jdbcTemplate.update(
+                "UPDATE restaurant_kakao_revalidation_audit SET reason_code = 'NO_CHANGE' WHERE id = ?", auditId))
+                .isInstanceOf(DataAccessException.class);
+        assertThatThrownBy(() -> jdbcTemplate.update(
+                "INSERT INTO restaurant_kakao_revalidation (restaurant_id, status, next_attempt_at) "
+                        + "VALUES (?, 'RETRY_SCHEDULED', CURRENT_TIMESTAMP)", UUID.randomUUID()))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    @DisplayName("초기 태그 별칭은 JSONB와 정규화 용어 정본에 함께 이관된다")
+    void 태그별칭조회_V11적용후_기존자연어사전과동일하게이관된다() {
+        // when
+        List<String> seedTerms = jdbcTemplate.queryForList(
+                "SELECT definition.tag_code || ':' || term.normalized_term FROM tag_definition definition "
+                        + "JOIN tag_definition_term term ON term.tag_definition_id = definition.id "
+                        + "WHERE definition.source = 'SEED'",
+                String.class);
+        String aliases = jdbcTemplate.queryForObject(
+                "SELECT aliases::text FROM tag_definition WHERE tag_code = 'TASTE_SPICY'",
+                String.class);
+
+        // then
+        assertThat(seedTerms).containsExactlyInAnyOrder(
+                "MENU_NAENGMYEON:냉면", "MENU_NAENGMYEON:물냉면", "MENU_NAENGMYEON:비빔냉면",
+                "MENU_GUKBAP:국밥", "MENU_RAMEN:라멘", "MENU_SUSHI:스시", "MENU_SUSHI:초밥",
+                "MENU_PIZZA:피자", "MENU_SAMGYEOPSAL:삼겹살",
+                "TASTE_SPICY:매운맛", "TASTE_SPICY:매운", "TASTE_SPICY:매콤",
+                "TASTE_SWEET:단맛", "TASTE_SWEET:달콤", "TASTE_SWEET:달달",
+                "TASTE_SAVORY:감칠맛", "TASTE_SAVORY:고소",
+                "TASTE_LIGHT:담백한 맛", "TASTE_LIGHT:담백", "TASTE_LIGHT:깔끔한 맛",
+                "OCCASION_SOLO:혼밥", "OCCASION_SOLO:혼자 식사", "OCCASION_SOLO:혼자 먹기",
+                "OCCASION_DATE:데이트", "OCCASION_DATE:연인과",
+                "OCCASION_GROUP:모임", "OCCASION_GROUP:회식", "OCCASION_GROUP:단체 모임",
+                "OCCASION_LATE_NIGHT:야식", "OCCASION_LATE_NIGHT:늦은 밤", "OCCASION_LATE_NIGHT:심야",
+                "ATMOSPHERE_CASUAL:캐주얼", "ATMOSPHERE_CASUAL:편안한 분위기",
+                "ATMOSPHERE_QUIET:조용한", "ATMOSPHERE_QUIET:조용한 분위기",
+                "ATMOSPHERE_LIVELY:활기찬", "ATMOSPHERE_LIVELY:북적이는",
+                "ATMOSPHERE_LIVELY:활기찬 분위기", "ATMOSPHERE_BAR:바",
+                "ATMOSPHERE_BAR:바 분위기", "ATMOSPHERE_BAR:포차 분위기");
+        assertThat(aliases).isEqualTo("[\"매운\", \"매콤\"]");
     }
 
     @Test

@@ -38,7 +38,7 @@ Accepted
 
 ## 2. 결정 요약
 
-웹 프론트엔드는 Node.js 24.18.0 LTS, Next.js 16.2.11과 TypeScript 7.0.2를 사용한다.
+웹 프론트엔드는 Node.js 24.18.0 LTS, Next.js 16.3.4와 TypeScript 7.0.2를 사용한다.
 
 ## 3. 배경
 
@@ -54,7 +54,7 @@ MVP는 웹·모바일 브라우저의 탐색과 관리자 등록 화면을 재�
 
 ## 5. 고려한 선택지
 
-- 확정된 Node.js 24.18.0 · Next.js 16.2.11 · TypeScript 7.0.2 조합을 정확한 버전으로 고정
+- 확정된 Node.js 24.18.0 · Next.js 16.3.4 · TypeScript 7.0.2 조합을 정확한 버전으로 고정
 - 범위 버전(semver range) 또는 패키지 매니저·CI의 최신 버전 자동 추종
 - Next.js 외 다른 프레임워크(예: Vite 기반 React SPA, 별도 메타프레임워크) 채택
 
@@ -65,7 +65,7 @@ MVP는 웹·모바일 브라우저의 탐색과 관리자 등록 화면을 재�
 
 ## 6. 결정
 
-Node.js 24.18.0, Next.js 16.2.11, TypeScript 7.0.2를 정확히 고정한다.
+Node.js 24.18.0, Next.js 16.3.4, TypeScript 7.0.2를 정확히 고정한다. Next.js 16.2.11은 [GHSA-p293-qw3h-jr36](https://github.com/advisories/GHSA-p293-qw3h-jr36)과 [GHSA-2xp9-vwfh-vxw4](https://github.com/advisories/GHSA-2xp9-vwfh-vxw4)의 영향 범위에 포함되므로 2026-09-09에 보안 패치 기준선을 16.3.4로 갱신했다. 같은 변경에서 이미지 처리 전이 의존성 `sharp`를 [GHSA-rgj7-g3m4-5g8c](https://github.com/advisories/GHSA-rgj7-g3m4-5g8c)의 수정 버전인 0.35.4로 고정한다.
 
 ## 7. 선택 근거
 
@@ -85,18 +85,11 @@ Node.js 24.18.0, Next.js 16.2.11, TypeScript 7.0.2를 정확히 고정한다.
 
 런타임·패키지 버전과 `package-lock.json` 등 잠금 파일을 저장소에 고정하고, Server Components와 Client Components(`"use client"`) 경계를 파일 단위로 명시한다. 관리자 화면은 공개 화면과 같은 코드베이스를 쓰되, [ADR-WEB-006](web-006-unified-login-rbac-route.md)의 통합 `/login`, 역할 기반 `/admin/**` 진입과 인증 복구 흐름으로 구분한다.
 
-### 10.1 승인된 예외 — Next 내장 TypeScript 검사 비활성화
+### 10.1 해소된 예외 — Next 내장 TypeScript 검사 비활성화
 
-6장이 고정한 Next.js 16.2.11과 TypeScript 7.0.2 조합에서 `next build`의 내장 TypeScript 단계가 동작하지 않는다. TypeScript 7 패키지는 `main` 없이 `exports`만 노출하고 API 표면이 재편되어, Next이 설치된 TypeScript를 탐지하지 못하고 재설치를 시도하다 `The "id" argument must be of type string. Received undefined`로 중단된다. TypeScript 5.9.3으로 바꾸면 통과하며, 6장이 정한 Node 24.18.0과 npm 11.16.0에서도 같은 오류를 재현했으므로 런타임 문제가 아니다.
+Next.js 16.2.11과 TypeScript 7.0.2 조합에서는 `next build`의 내장 TypeScript 단계가 동작하지 않아 `frontend/next.config.ts`의 `typescript.ignoreBuildErrors`로 내장 단계만 비활성화하고 `npm run typecheck`를 별도로 실행했다.
 
-6장의 버전 고정을 유지하기 위해 `frontend/next.config.ts`에서 `typescript.ignoreBuildErrors`로 내장 단계만 비활성화하고, 타입 검사는 `npm run typecheck`(`tsc --noEmit`)로 수행한다. TypeScript 7.0.2에서 `tsc` 자체는 정상 동작하므로 7장이 말하는 "타입 불일치를 컴파일 시점에 드러낸다"는 목적은 유지된다.
-
-이 예외는 다음 조건에서 제거한다.
-
-- Next.js가 TypeScript 7을 지원해 내장 단계가 정상 동작할 때
-- 또는 6장의 TypeScript 버전을 변경하는 후속 결정이 승인될 때
-
-13장의 검증 항목 중 CI의 `tsc --noEmit` 통과를 타입 검사 기준으로 사용한다.
+Next.js 16.3.4로 갱신한 뒤 내장 TypeScript 단계가 TypeScript 7.0.2에서 정상 완료됨을 확인했다. 따라서 `ignoreBuildErrors`를 제거하고 `next build`와 별도 `npm run typecheck`가 모두 타입 오류를 차단하도록 복원한다.
 
 ## 11. 금지 사항
 
@@ -108,7 +101,7 @@ Node.js 24.18.0, Next.js 16.2.11, TypeScript 7.0.2를 정확히 고정한다.
 
 ## 13. 검증 방법
 
-CI에서 `node -v`, `npm ls next typescript` 결과가 각각 정확히 24.18.0, 16.2.11, 7.0.2인지 확인하고 불일치 시 빌드를 실패시킨다. `package-lock.json`이 커밋되어 있고 CI가 `npm ci`(또는 동등한 고정 설치)를 사용하는지, 의존성 선언에 범위 버전 문자열이 없는지 검사한다. 컨테이너 이미지 태그가 고정되어 있는지 확인한다. 이 검증은 [ADR-CI-001](ci-001-github-actions-quality-gate.md)의 품질 게이트 실행 결과로 판단하며, 별도의 성능 측정(p95 응답 시간 등)은 [ADR-WEB-002](web-002-data-state.md)의 데이터 패칭 패턴에서 검증한다.
+CI에서 `node -v`, `npm ls next typescript sharp` 결과가 각각 정확히 24.18.0, 16.3.4, 7.0.2, 0.35.4인지 확인하고 불일치 시 빌드를 실패시킨다. `npm audit --omit=dev --audit-level=high`에서 high 이상 취약점이 0건인지 확인한다. `package-lock.json`이 커밋되어 있고 CI가 `npm ci`(또는 동등한 고정 설치)를 사용하는지, 의존성 선언에 범위 버전 문자열이 없는지 검사한다. 컨테이너 이미지 태그가 고정되어 있는지 확인한다. 이 검증은 [ADR-CI-001](ci-001-github-actions-quality-gate.md)의 품질 게이트 실행 결과로 판단하며, 별도의 성능 측정(p95 응답 시간 등)은 [ADR-WEB-002](web-002-data-state.md)의 데이터 패칭 패턴에서 검증한다.
 
 ## 14. 재검토 조건
 

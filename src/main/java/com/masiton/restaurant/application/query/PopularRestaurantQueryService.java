@@ -41,6 +41,7 @@ public class PopularRestaurantQueryService implements PopularRestaurantUseCase {
                     row.name(),
                     row.roadAddress(),
                     row.category(),
+                    row.representativeImageUrl(),
                     row.favoriteCount()));
         }
         return List.copyOf(items);

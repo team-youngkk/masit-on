@@ -236,15 +236,26 @@ related_documents:
 
 ## 12. 3차 확장 AI 영상 추출 제약
 
-3차 확장 제약의 상세 필드·상태 조합은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)과 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql)의 `CHECK`, `FK`, `UNIQUE`, Trigger를 함께 따른다.
+3차 확장 제약의 상세 필드·상태 조합은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)과 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql), [`V14__create_youtube_channel_backfill_run.sql`](../../../src/main/resources/db/migration/V14__create_youtube_channel_backfill_run.sql), [`V15__add_youtube_channel_backfill_stop_reason.sql`](../../../src/main/resources/db/migration/V15__add_youtube_channel_backfill_stop_reason.sql), [`V16__add_youtube_channel_backfill_video_ledger.sql`](../../../src/main/resources/db/migration/V16__add_youtube_channel_backfill_video_ledger.sql)의 `CHECK`, `FK`, `UNIQUE`, Trigger를 함께 따른다.
 
 - 작업: YouTube URL·외부 식별자·Provider·모델·Prompt·Schema 버전과 입력 해시의 멱등성, `QUEUED/RUNNING/SUCCEEDED/FAILED` 상태별 lease·시각·결과 조합을 강제한다.
 - 임시 입력: `ADMIN/ADMIN_TEXT` 작업만 암호문을 가질 수 있고, 평문은 저장하지 않으며 작업 종료 뒤 24시간 이내 만료되어야 한다.
 - 후보·검수: Snapshot 버전·JSON 구조·근거 유형·신뢰도 범위를 검증하고, 태그 검수 이력의 보정 주체와 대체 TagDefinition 조합을 강제한다.
 - 태그·정식 데이터: `TagDefinition` 코드와 `VisitTag` 관계를 중복 없이 유지하고, `UNKNOWN` 근거는 `AI_AUTO_CONFIRMED` VisitTag가 될 수 없다.
 - 시도·감시: 작업별 시도 번호, 오류 결과 필수값, Creator·YouTube 채널 감시 설정의 고유성을 저장소에서 보장한다.
+- 보정 실행: Creator별 `QUEUED/RUNNING` 하나, 허용 상태, `MAX_VIDEOS_PER_RUN/MANUAL` 중지 원인, 0 이상 누적 건수, lease 소유자·만료 시각 쌍을 저장소에서 보장하고 활성 `youtube_channel_watch`가 없으면 `STOPPED`로 종결한다. 영상별 접수 원장은 `(run_id, youtube_video_id)` unique와 `SUBMITTED/REUSED` CHECK로 부분 실패 재시도의 누계 중복을 막는다.
 - 원자성: 후보·Provider 장애·외부 검증 실패 시 정식 Restaurant·Creator·Video·Visit 저장은 0건이어야 하며, 이 조건은 DB 제약만으로 대체하지 않고 통합 테스트로 검증한다.
 
 ## 방문 태그 보정 제약 — 이슈 #358
 
 V9 visit_tag_revision은 양수 revision, Visit별 revision 유일성, 전후 JSON 배열, 비어 있지 않은 사유, visit/member_account FK를 강제한다. 일반 UPDATE/DELETE를 금지하며 회원 삭제 시 행위자 FK SET NULL 익명화만 허용한다. 연결 교체와 감사 INSERT를 원자적으로 처리한다. [AI 데이터 계약](third-expansion-ai-video-data-contract.md) 참조.
+
+## 관리자 태그 정의 용어 제약 — 이슈 #363
+
+V10 `tag_definition_term.normalized_term`은 모든 ACTIVE·DEPRECATED 정의를 통틀어 unique다. `term_kind`는 `DISPLAY_NAME/ALIAS`만 허용하고 partial unique가 정의마다 DISPLAY_NAME 행을 최대 하나로 제한한다. 생성 트랜잭션과 역적재 검증이 표시명 행 정확히 하나를 보장한다. 정의 삭제는 RESTRICT하며 물리 삭제 경로는 제공하지 않는다. 코드 형식과 유형 접두사 일치는 DB CHECK로 강제한다.
+
+표시명·별칭은 Unicode NFKC → trim → 연속 Unicode 공백 축약 → ASCII `A-Z`를 `a-z`로 변환하는 순서로 정규화하며 결과는 1~200자여야 한다. PostgreSQL은 `translate`, Java는 같은 ASCII 변환을 사용하고 Unicode 경계 corpus 계약 테스트로 결과 동등성을 고정한다. ADMIN·AI 작성자는 `tag_definition`, JSONB 별칭과 모든 term 행을 같은 트랜잭션에서 쓰며 unique 충돌을 409로 변환한다. V10은 과거 AI 작성자가 만든 표시명 자기 중복 별칭을 제거하고 V9가 허용한 `AI_AUTO` 코드의 연속·끝 밑줄을 유형·유일성이 보존되는 경우에만 정리한다. 수동 출처·복구 불가·충돌 코드는 중단하며 기존 V4 seed를 지우거나 fixture에서 우회하지 않은 채 나머지 역적재 충돌 실패를 검증한다.
+
+## 태그 정의 병합 제약 — 이슈 #366
+
+`tag_definition_merge.source_tag_definition_id`는 unique이고 원본·대상은 달라야 한다. `preview_fingerprint`는 SHA-256 소문자 hex 64자이며 영향 건수는 `affected = moved + deduplicated`를 만족한다. `visit_tag_merge_provenance`는 병합·VisitTag·snapshot 역할 조합이 unique이고 `MOVED`는 `SOURCE` snapshot만 허용한다. 두 테이블은 일반 UPDATE/DELETE를 거부하고 병합 감사의 회원 탈퇴 FK `SET NULL`만 허용한다. V13 VisitTag trigger는 신규 연결과 정의 FK 변경의 대상이 실행 시점에도 `ACTIVE`인지 강제한다. 애플리케이션은 같은 유형의 서로 다른 ACTIVE 정의, 버전, 기존 원본 병합과 순환 경로를 잠금 뒤 재검증한다.

@@ -28,7 +28,7 @@ class VisitTagMigrationIntegrationTest {
         String before = jdbc.queryForObject("SELECT jsonb_agg(to_jsonb(t) ORDER BY id)::text FROM tag_definition t", String.class);
         // When
         var result = Flyway.configure().dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
-                .load().migrate();
+                .target("9").load().migrate();
         // Then
         assertThat(result.migrationsExecuted).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT jsonb_agg(to_jsonb(t) ORDER BY id)::text FROM tag_definition t", String.class))

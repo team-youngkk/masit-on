@@ -56,7 +56,7 @@ related_documents:
 - 1차 확장: 일반 사용자 인증, 찜, 최근 본 맛집, 지도, 유튜버 상세
 - 2차 확장: 컬렉션, 인기 맛집, 큐레이션, 제보·신고, 알림
 - 3차 확장: 자연어 검색, AI 영상 추출, 동선·코스 추천
-- 평점·리뷰·Restaurant 대표 이미지·영업시간·이메일 구독·예약·결제
+- 평점·리뷰·별도 Restaurant 이미지 저장·영업시간·이메일 구독·예약·결제
 - EC2·ECR·RDS·CloudWatch와 AWS 운영 배포
 
 ## 3. 사용자 흐름 및 예외 시나리오
@@ -89,7 +89,7 @@ related_documents:
 | 애플리케이션 소스 | 없음 | 백엔드·프론트엔드 스캐폴딩부터 필요 |
 | 제품·API·데이터 명세 | 문서화 완료 | 문서를 구현 계약으로 사용 |
 | 백엔드 | Java 21, Spring Boot 4.1, Gradle Groovy 단일 모듈 | `com.masiton` 도메인 중심 패키지 구성 |
-| 프론트엔드 | Next.js 16.2.11, TypeScript 7.0.2 | App Router, URL 검색 상태 사용 |
+| 프론트엔드 | Next.js 16.3.4, TypeScript 7.0.2 | App Router, URL 검색 상태 사용 |
 | 저장소 | PostgreSQL 17.10, Redis 8.8 | Docker와 Testcontainers 사용 |
 | 외부 연동 | Kakao·YouTube Port/Adapter 결정 | WireMock 시나리오로 로컬 검증 |
 | 와이어프레임 | 확장 기능을 포함한 5개 이미지 | MVP 요소만 적용하고 제외 메뉴 미노출 |

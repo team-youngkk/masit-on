@@ -73,6 +73,45 @@ test('sitemap은 모든 페이지의 공개 맛집을 한 번씩만 포함한다
   }
 })
 
+test('sitemap은 매 생성 시 최신 공개 목록을 읽어 이전 URL을 재사용하지 않는다', async () => {
+  const previousSiteUrl = process.env['NEXT_PUBLIC_SITE_URL']
+  const previousFetch = globalThis.fetch
+  const fetchOptions: RequestInit[] = []
+  let restaurantId = 'restaurant-before-unpublish'
+  process.env['NEXT_PUBLIC_SITE_URL'] = 'https://masit-on.example'
+  globalThis.fetch = async (_input, init) => {
+    fetchOptions.push(init ?? {})
+    return new Response(
+      JSON.stringify({
+        items: [{ id: restaurantId }],
+        page: { hasNext: false, totalPages: 1 },
+      }),
+      { status: 200 },
+    )
+  }
+
+  try {
+    assert.deepEqual(await sitemap(), [
+      { url: 'https://masit-on.example/restaurants' },
+      { url: 'https://masit-on.example/restaurants/restaurant-before-unpublish' },
+    ])
+
+    restaurantId = 'restaurant-after-publish'
+
+    assert.deepEqual(await sitemap(), [
+      { url: 'https://masit-on.example/restaurants' },
+      { url: 'https://masit-on.example/restaurants/restaurant-after-publish' },
+    ])
+    assert.deepEqual(fetchOptions, [
+      { cache: 'no-store' },
+      { cache: 'no-store' },
+    ])
+  } finally {
+    process.env['NEXT_PUBLIC_SITE_URL'] = previousSiteUrl
+    globalThis.fetch = previousFetch
+  }
+})
+
 test('sitemap API가 실패해도 기본 목록 URL을 담은 200 응답용 결과를 만든다', async () => {
   const previousSiteUrl = process.env['NEXT_PUBLIC_SITE_URL']
   const previousFetch = globalThis.fetch

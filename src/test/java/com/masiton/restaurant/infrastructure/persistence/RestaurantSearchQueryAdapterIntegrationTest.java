@@ -277,7 +277,7 @@ class RestaurantSearchQueryAdapterIntegrationTest extends com.masiton.test.FullC
     @DisplayName("비활성 태그 정의와 비공개·무효 Visit 태그는 검색에서 제외한다")
     void search_비활성태그와비공개무효Visit_검색에서제외한다() {
         // given
-        UUID inactiveTagId = insertTagDefinition("TEST_INACTIVE_TAG", "DEPRECATED");
+        UUID inactiveTagId = insertTagDefinition("MENU_TEST_INACTIVE_TAG", "ACTIVE");
         UUID inactiveTagRestaurantId =
                 insertRestaurant("비활성 태그 맛집", MAPO_REGION_ID, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
         UUID hiddenVisitRestaurantId =
@@ -287,6 +287,7 @@ class RestaurantSearchQueryAdapterIntegrationTest extends com.masiton.test.FullC
         UUID inactiveTagVisitId = insertVisit(inactiveTagRestaurantId, creatorId, videoId, "PUBLIC", "ACTIVE");
         UUID hiddenVisitId = insertVisit(hiddenVisitRestaurantId, creatorId, videoId, "PRIVATE", "ACTIVE");
         insertVisitTag(inactiveTagVisitId, inactiveTagId);
+        jdbcTemplate.update("UPDATE tag_definition SET status='DEPRECATED' WHERE id=?", inactiveTagId);
         insertVisitTag(hiddenVisitId, NOODLE_TAG_CODE);
 
         // when
@@ -349,6 +350,36 @@ class RestaurantSearchQueryAdapterIntegrationTest extends com.masiton.test.FullC
                 .collect(Collectors.toList());
         assertThat(collected).hasSize(25).containsExactlyInAnyOrderElementsOf(allIds);
         assertThat(collected).doesNotHaveDuplicates();
+    }
+
+    @Test
+    @DisplayName("대표 영상 썸네일은 공개·유효 관계의 영상 제목과 ID 순서로 첫 후보를 반환한다")
+    void search_대표영상썸네일_공개유효관계의상세영상정렬첫후보를반환한다() {
+        // given
+        UUID restaurantId = insertRestaurant("대표 영상 맛집", MAPO_REGION_ID, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
+        UUID creatorId = insertCreator("대표 채널", "PUBLIC", "ACTIVE", "AVAILABLE");
+        String channelId = channelIdOf(creatorId);
+        UUID laterId = UUID.fromString("00000000-0000-4000-8000-000000000002");
+        UUID earlierId = UUID.fromString("00000000-0000-4000-8000-000000000001");
+        insertVideo(restaurantId, creatorId, laterId, channelId, "같은 제목", "https://example.com/thumbnail/later",
+                "PUBLIC", "ACTIVE", "AVAILABLE");
+        insertVideo(restaurantId, creatorId, earlierId, channelId, "같은 제목", "https://example.com/thumbnail/earlier",
+                "PUBLIC", "ACTIVE", "AVAILABLE");
+
+        UUID unavailableCreatorId = insertCreator("이용 불가 채널", "PRIVATE", "ACTIVE", "UNAVAILABLE");
+        UUID unavailableVideoId = UUID.randomUUID();
+        insertVideo(restaurantId, unavailableCreatorId, unavailableVideoId, channelIdOf(unavailableCreatorId), "가장 앞 제목",
+                "https://example.com/thumbnail/unavailable", "PUBLIC", "ACTIVE", "AVAILABLE");
+
+        // when
+        RestaurantSearchQueryResult result = restaurantSearchQueryPort.search(
+                criteria(null, null, null, null, 1, 20));
+
+        // then
+        assertThat(result.rows()).singleElement().satisfies(row -> {
+            assertThat(row.id()).isEqualTo(restaurantId);
+            assertThat(row.representativeImageUrl()).isEqualTo("https://example.com/thumbnail/earlier");
+        });
     }
 
     @Test
@@ -469,6 +500,28 @@ class RestaurantSearchQueryAdapterIntegrationTest extends com.masiton.test.FullC
                 "https://example.com/video/" + id, "https://example.com/thumbnail/" + id,
                 publicationStatus, lifecycleStatus, externalAvailabilityStatus, OffsetDateTime.now());
         return id;
+    }
+
+    private void insertVideo(
+            UUID restaurantId,
+            UUID creatorId,
+            UUID videoId,
+            String publisherExternalChannelId,
+            String title,
+            String thumbnailUrl,
+            String publicationStatus,
+            String lifecycleStatus,
+            String externalAvailabilityStatus) {
+        jdbcTemplate.update(
+                "INSERT INTO video "
+                        + "(id, creator_id, external_video_id, publisher_external_channel_id, title, "
+                        + "source_url, thumbnail_url, publication_status, lifecycle_status, "
+                        + "external_availability_status, external_status_checked_at) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                videoId, creatorId, shortId("VID-"), publisherExternalChannelId, title,
+                "https://example.com/video/" + videoId, thumbnailUrl, publicationStatus, lifecycleStatus,
+                externalAvailabilityStatus, OffsetDateTime.now());
+        insertVisit(restaurantId, creatorId, videoId, "PUBLIC", "ACTIVE");
     }
 
     private UUID insertVisit(

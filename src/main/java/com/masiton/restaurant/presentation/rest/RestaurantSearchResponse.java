@@ -30,6 +30,7 @@ public record RestaurantSearchResponse(List<RestaurantItem> items, PageInfo page
             String name,
             String district,
             String category,
+            String representativeImageUrl,
             List<VisitedByItem> visitedBy,
             int remainingVisitedByCount) {
 
@@ -42,6 +43,7 @@ public record RestaurantSearchResponse(List<RestaurantItem> items, PageInfo page
                     summary.name(),
                     summary.district(),
                     summary.category(),
+                    summary.representativeImageUrl(),
                     visitedBy,
                     summary.remainingVisitedByCount());
         }

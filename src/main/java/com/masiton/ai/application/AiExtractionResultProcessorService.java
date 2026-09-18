@@ -36,7 +36,8 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
 
     private static final Pattern KAKAO_PLACE_URL = Pattern.compile(
             "https://place\\.map\\.kakao\\.com/[^/?#]+", Pattern.CASE_INSENSITIVE);
-    private static final Pattern TAG_CODE = Pattern.compile("[A-Z0-9_]{1,64}");
+    private static final Pattern TAG_CODE = Pattern.compile(
+            "(?:MENU|TASTE|OCCASION|ATMOSPHERE)_[A-Z0-9]+(?:_[A-Z0-9]+)*");
     private static final Set<String> FORBIDDEN_TAG_WORDS = Set.of(
             "가격", "품질", "평점", "영업시간", "영업", "방문가능", "예약",
             "price", "rating", "hours", "availability");
@@ -228,7 +229,7 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
                                                                    boolean autoConnectable, UUID existingId) {
         return new AiExtractionResultCommitService.AiTagCandidate(
                 tag.candidateTagId(), tag.tagType(), tag.normalizedCode(), tag.label(), tag.confidence(),
-                json(tag.evidence()), aliases(tag.label()),
+                json(tag.evidence()), emptyAliases(),
                 AiExtractionContract.MODEL_VERSION + "/" + AiExtractionContract.PROMPT_VERSION + "/"
                         + AiExtractionContract.SCHEMA_VERSION,
                 decision, reason, autoConnectable, existingId);
@@ -324,10 +325,8 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
         }
     }
 
-    private String aliases(String label) {
-        ArrayNode aliases = objectMapper.createArrayNode();
-        aliases.add(label);
-        return json(aliases);
+    private String emptyAliases() {
+        return json(objectMapper.createArrayNode());
     }
 
     private record ParsedField(String field, String value, BigDecimal confidence, JsonNode evidence) {

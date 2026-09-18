@@ -2,6 +2,7 @@
 related_documents:
   - ../README.md
   - ext-001-reference-verification.md
+  - ext-004-youtube-periodic-reconciliation.md
   - ../architecture/arch-002-external-ports-adapters.md
   - ../../05-specs/api/admin/reference-data-api.md
   - notify-002-in-app-notification-reliability.md
@@ -14,4 +15,5 @@ related_documents:
 | ADR | 제목 |
 |---|---|
 | [ADR-EXT-001](ext-001-reference-verification.md) | 관리자 외부 기준정보 확인 서비스 |
+| [ADR-EXT-004](ext-004-youtube-periodic-reconciliation.md) | 활성 YouTube 채널의 주기적 누락 보정 |
 | [ADR-NOTIFY-002](notify-002-in-app-notification-reliability.md) | 서비스 내 사용자 알림의 저장 신뢰성 경계 |

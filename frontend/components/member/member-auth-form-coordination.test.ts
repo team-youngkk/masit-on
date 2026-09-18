@@ -2,10 +2,13 @@ const memberAuthFormAssert = require('node:assert/strict')
 const memberAuthFormTest = require('node:test')
 const {
   isInvalidMemberCredentialsResponse,
+  advancePasswordResetFlow,
   normalizeMemberEmail,
   prepareMemberAuthSubmission,
   validateMemberAuthForm,
   extractPasswordResetToken,
+  isInvalidPasswordResetTokenResponse,
+  isCurrentPasswordResetFlow,
   passwordResetModeFromHash,
   watchPasswordResetMode,
   watchPasswordResetToken,
@@ -78,13 +81,43 @@ memberAuthFormTest('비밀번호 재설정 화면은 처음과 hash 변경 때 �
   hash = '#token=second-reset-token'
   listener?.()
 
-  memberAuthFormAssert.deepEqual(tokens, ['first-reset-token', 'second-reset-token'])
+  hash = ''
+  listener?.()
+
+  memberAuthFormAssert.deepEqual(tokens, ['first-reset-token', 'second-reset-token', ''])
   memberAuthFormAssert.equal(clearCount, 2)
 
   unsubscribe()
   hash = '#token=third-reset-token'
   listener?.()
-  memberAuthFormAssert.deepEqual(tokens, ['first-reset-token', 'second-reset-token'])
+  memberAuthFormAssert.deepEqual(tokens, ['first-reset-token', 'second-reset-token', ''])
+})
+
+memberAuthFormTest('비밀번호 재설정 Token 오류만 브라우저 상태를 초기화한다', async () => {
+  memberAuthFormAssert.equal(
+    await isInvalidPasswordResetTokenResponse(new Response(JSON.stringify({ code: 'INVALID_PASSWORD_RESET_TOKEN' }), { status: 400 })),
+    true,
+  )
+  memberAuthFormAssert.equal(
+    await isInvalidPasswordResetTokenResponse(new Response(JSON.stringify({ code: 'INVALID_FIELD_VALUE' }), { status: 400 })),
+    false,
+  )
+  memberAuthFormAssert.equal(
+    await isInvalidPasswordResetTokenResponse(new Response(null, { status: 503 })),
+    false,
+  )
+})
+
+memberAuthFormTest('최신 비밀번호 재설정 흐름만 완료 응답을 반영한다', () => {
+  const initial = { token: '', revision: 0 }
+  const submitted = advancePasswordResetFlow(initial, 'first-reset-token')
+  const latest = advancePasswordResetFlow(submitted, 'second-reset-token')
+  const cleared = advancePasswordResetFlow(latest, '')
+
+  memberAuthFormAssert.equal(isCurrentPasswordResetFlow(submitted, submitted), true)
+  memberAuthFormAssert.equal(isCurrentPasswordResetFlow(latest, submitted), false)
+  memberAuthFormAssert.equal(isCurrentPasswordResetFlow(latest, latest), true)
+  memberAuthFormAssert.equal(isCurrentPasswordResetFlow(cleared, latest), false)
 })
 
 memberAuthFormTest('이메일을 사용하는 제출 모드는 API 요청용 정규화 이메일을 만든다', () => {

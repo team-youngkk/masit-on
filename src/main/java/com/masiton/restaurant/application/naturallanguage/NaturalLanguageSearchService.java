@@ -65,8 +65,6 @@ public class NaturalLanguageSearchService {
 
         MergedConditions merged = isSuspiciousInput(parsed)
                 ? new MergedConditions(NaturalLanguageInterpretation.AppliedConditions.empty(), List.of())
-                : parsed.status() == NaturalLanguageInterpretation.Status.FAILED
-                ? new MergedConditions(directConditions(command), List.of())
                 : merge(parsed, command);
         RestaurantSearchResult result;
         if (merged.conditions().hasAny()) {
@@ -113,7 +111,11 @@ public class NaturalLanguageSearchService {
         NaturalLanguageInterpretation.Status status = filtered.hasAny()
                 ? NaturalLanguageInterpretation.Status.PARTIAL
                 : NaturalLanguageInterpretation.Status.FAILED;
-        return new NaturalLanguageInterpretation(status, filtered, ignored, parsed.conflicts(), parsed.parserVersion());
+        Set<NaturalLanguageInterpretation.Conflict.Field> unresolvedFields =
+                new HashSet<>(parsed.unresolvedFields());
+        unresolvedFields.add(NaturalLanguageInterpretation.Conflict.Field.tags);
+        return new NaturalLanguageInterpretation(
+                status, filtered, ignored, parsed.conflicts(), unresolvedFields, parsed.parserVersion());
     }
 
     private boolean isSuspiciousInput(NaturalLanguageInterpretation parsed) {
@@ -125,11 +127,11 @@ public class NaturalLanguageSearchService {
         NaturalLanguageInterpretation.AppliedConditions natural = parsed.appliedConditions();
         List<NaturalLanguageInterpretation.Conflict> conflicts = new ArrayList<>(parsed.conflicts());
 
-        String query = directOrNatural(command.query(), natural.query(), "query", conflicts);
-        String district = directOrNatural(command.district(), natural.district(), "district", conflicts);
-        String category = directOrNatural(command.category(), natural.category(), "category", conflicts);
-        String creatorId = directOrNatural(command.creatorId(), natural.creatorId(), "creatorId", conflicts);
-        List<String> tags = directTagsOrNatural(command.tags(), natural.tags(), conflicts);
+        String query = directOrNatural(command.query(), natural.query(), "query", parsed, conflicts);
+        String district = directOrNatural(command.district(), natural.district(), "district", parsed, conflicts);
+        String category = directOrNatural(command.category(), natural.category(), "category", parsed, conflicts);
+        String creatorId = directOrNatural(command.creatorId(), natural.creatorId(), "creatorId", parsed, conflicts);
+        List<String> tags = directTagsOrNatural(command.tags(), natural.tags(), parsed, conflicts);
 
         return new MergedConditions(
                 new NaturalLanguageInterpretation.AppliedConditions(query, district, category, creatorId, tags),
@@ -163,14 +165,18 @@ public class NaturalLanguageSearchService {
             String direct,
             String natural,
             String field,
+            NaturalLanguageInterpretation parsed,
             List<NaturalLanguageInterpretation.Conflict> conflicts
     ) {
         if (direct == null) {
             return natural;
         }
-        if (natural != null && !Objects.equals(direct, natural)) {
+        NaturalLanguageInterpretation.Conflict.Field conflictField =
+                NaturalLanguageInterpretation.Conflict.Field.valueOf(field);
+        if ((natural != null && !Objects.equals(direct, natural))
+                || parsed.unresolvedFields().contains(conflictField)) {
             conflicts.add(new NaturalLanguageInterpretation.Conflict(
-                    NaturalLanguageInterpretation.Conflict.Field.valueOf(field),
+                    conflictField,
                     NaturalLanguageInterpretation.Conflict.Resolution.DIRECT_FILTER_WON));
         }
         return direct;
@@ -179,13 +185,15 @@ public class NaturalLanguageSearchService {
     private List<String> directTagsOrNatural(
             List<String> direct,
             List<String> natural,
+            NaturalLanguageInterpretation parsed,
             List<NaturalLanguageInterpretation.Conflict> conflicts
     ) {
         if (direct == null || direct.isEmpty()) {
             return natural;
         }
-        if (natural != null && !natural.isEmpty()
-                && !new HashSet<>(direct).equals(new HashSet<>(natural))) {
+        if ((natural != null && !natural.isEmpty()
+                && !new HashSet<>(direct).equals(new HashSet<>(natural)))
+                || parsed.unresolvedFields().contains(NaturalLanguageInterpretation.Conflict.Field.tags)) {
             conflicts.add(new NaturalLanguageInterpretation.Conflict(
                     NaturalLanguageInterpretation.Conflict.Field.tags,
                     NaturalLanguageInterpretation.Conflict.Resolution.DIRECT_FILTER_WON));

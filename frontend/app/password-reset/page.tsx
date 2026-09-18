@@ -20,10 +20,14 @@ export default function PasswordResetPage() {
     )
   }, [])
 
+  function resetPasswordResetFlow() {
+    setMode('request-reset')
+  }
+
   return (
     <PageShell className={styles.page} size="narrow" eyebrow="회원" title="비밀번호 재설정" description="재설정 메일을 요청하거나 메일의 링크로 새 비밀번호를 설정하세요.">
       <div className={styles.forms}>
-        {mode ? <MemberAuthForm mode={mode} /> : null}
+        {mode ? <MemberAuthForm mode={mode} onPasswordResetFlowReset={resetPasswordResetFlow} /> : null}
       </div>
     </PageShell>
   )

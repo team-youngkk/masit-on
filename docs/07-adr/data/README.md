@@ -13,6 +13,7 @@ related_documents:
   - data-010-recent-view-retention-cleanup.md
   - data-011-popular-restaurant-request-time-aggregation.md
   - data-012-second-expansion-retention-cleanup.md
+  - data-013-tag-definition-merge-provenance.md
 ---
 
 # 데이터 ADR
@@ -32,3 +33,4 @@ related_documents:
 | [ADR-DATA-010](data-010-recent-view-retention-cleanup.md) | 최근 본 맛집 보존 기간 정리 실행 |
 | [ADR-DATA-011](data-011-popular-restaurant-request-time-aggregation.md) | 인기 맛집 요청 시점 실시간 집계 |
 | [ADR-DATA-012](data-012-second-expansion-retention-cleanup.md) | 2차 확장 보존 정책 정리 실행 |
+| [ADR-DATA-013](data-013-tag-definition-merge-provenance.md) | 태그 정의 병합 경로와 VisitTag provenance |

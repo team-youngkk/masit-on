@@ -1,10 +1,18 @@
 package com.masiton.restaurant.application.naturallanguage;
 
-import org.springframework.stereotype.Component;
-import org.springframework.beans.factory.annotation.Autowired;
+import java.util.Collection;
+import java.util.Map;
+import java.util.TreeMap;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Component;
+
+import com.masiton.common.web.BusinessException;
 import com.masiton.creator.application.port.in.CreatorSelectionItem;
 import com.masiton.creator.application.port.in.GetPublicCreatorSelectionListUseCase;
+import com.masiton.restaurant.application.port.out.ActiveTagDictionaryPort;
+import com.masiton.restaurant.application.port.out.ActiveTagDictionaryUnavailableException;
 import com.masiton.restaurant.application.port.out.NaturalLanguageInterpretation;
 import com.masiton.restaurant.application.port.out.NaturalLanguageParser;
 
@@ -14,39 +22,70 @@ public final class NaturalLanguageParserAdapter implements NaturalLanguageParser
 
     private final NaturalLanguageRestaurantParser delegate;
     private final GetPublicCreatorSelectionListUseCase creatorSelectionListUseCase;
+    private final ActiveTagDictionaryPort activeTagDictionaryPort;
 
     public NaturalLanguageParserAdapter() {
-        this(new NaturalLanguageRestaurantParser(), null);
+        this(new NaturalLanguageRestaurantParser(), null, null);
+    }
+
+    public NaturalLanguageParserAdapter(GetPublicCreatorSelectionListUseCase creatorSelectionListUseCase) {
+        this(new NaturalLanguageRestaurantParser(), creatorSelectionListUseCase, null);
     }
 
     @Autowired
-    public NaturalLanguageParserAdapter(GetPublicCreatorSelectionListUseCase creatorSelectionListUseCase) {
-        this(new NaturalLanguageRestaurantParser(), creatorSelectionListUseCase);
+    public NaturalLanguageParserAdapter(
+            GetPublicCreatorSelectionListUseCase creatorSelectionListUseCase,
+            ActiveTagDictionaryPort activeTagDictionaryPort
+    ) {
+        this(new NaturalLanguageRestaurantParser(), creatorSelectionListUseCase, activeTagDictionaryPort);
     }
 
     NaturalLanguageParserAdapter(NaturalLanguageRestaurantParser delegate) {
-        this(delegate, null);
+        this(delegate, null, null);
     }
 
     private NaturalLanguageParserAdapter(
             NaturalLanguageRestaurantParser delegate,
-            GetPublicCreatorSelectionListUseCase creatorSelectionListUseCase) {
+            GetPublicCreatorSelectionListUseCase creatorSelectionListUseCase,
+            ActiveTagDictionaryPort activeTagDictionaryPort) {
         this.delegate = delegate;
         this.creatorSelectionListUseCase = creatorSelectionListUseCase;
+        this.activeTagDictionaryPort = activeTagDictionaryPort;
     }
 
     @Override
     public NaturalLanguageInterpretation parse(String sentence) {
-        NaturalLanguageRestaurantParser parser = creatorSelectionListUseCase == null
-                ? delegate
-                : new NaturalLanguageRestaurantParser(NaturalLanguageDictionary.standard(
-                        creatorSelectionListUseCase.getPublicSelectionList().stream()
-                                .collect(java.util.stream.Collectors.toMap(
-                                        item -> item.id().toString(),
-                                        CreatorSelectionItem::channelName,
-                                        (first, ignored) -> first))));
+        NaturalLanguageRestaurantParser parser = createParser();
         NaturalLanguageInterpretation source = convert(parser.parse(sentence).interpretation());
         return source;
+    }
+
+    private NaturalLanguageRestaurantParser createParser() {
+        if (creatorSelectionListUseCase == null || activeTagDictionaryPort == null) {
+            return creatorSelectionListUseCase == null
+                    ? delegate
+                    : new NaturalLanguageRestaurantParser(NaturalLanguageDictionary.standard(creatorAliases()));
+        }
+        try {
+            Map<String, Collection<String>> tagTerms = new TreeMap<>();
+            activeTagDictionaryPort.getActiveTagDictionary().definitions()
+                    .forEach(definition -> tagTerms.put(definition.code(), definition.terms()));
+            return new NaturalLanguageRestaurantParser(
+                    NaturalLanguageDictionary.standard(creatorAliases(), tagTerms));
+        } catch (ActiveTagDictionaryUnavailableException exception) {
+            throw new BusinessException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "NATURAL_LANGUAGE_UNAVAILABLE",
+                    "자연어 해석 구성요소를 사용할 수 없습니다.");
+        }
+    }
+
+    private Map<String, String> creatorAliases() {
+        return creatorSelectionListUseCase.getPublicSelectionList().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        item -> item.id().toString(),
+                        CreatorSelectionItem::channelName,
+                        (first, ignored) -> first));
     }
 
     private NaturalLanguageInterpretation convert(
@@ -61,6 +100,9 @@ public final class NaturalLanguageParserAdapter implements NaturalLanguageParser
                 source.conflicts().stream()
                         .map(this::convert)
                         .toList(),
+                source.unresolvedFields().stream()
+                        .map(this::convert)
+                        .collect(java.util.stream.Collectors.toUnmodifiableSet()),
                 source.parserVersion());
     }
 
@@ -84,6 +126,10 @@ public final class NaturalLanguageParserAdapter implements NaturalLanguageParser
         return new NaturalLanguageInterpretation.Conflict(
                 NaturalLanguageInterpretation.Conflict.Field.valueOf(toPortField(source.field())),
                 NaturalLanguageInterpretation.Conflict.Resolution.valueOf(source.resolution().name()));
+    }
+
+    private NaturalLanguageInterpretation.Conflict.Field convert(ConditionField source) {
+        return NaturalLanguageInterpretation.Conflict.Field.valueOf(toPortField(source));
     }
 
     private String toPortField(ConditionField field) {

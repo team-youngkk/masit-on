@@ -13,6 +13,8 @@ related_documents:
   - ../../../07-adr/integration/ext-003-ai-extraction-async-reliability.md
   - ../../../04-product/prd/admin/ai-video-information-extraction.md
   - ../../../02-analysis/third-expansion-workstreams.md
+  - restaurant-place-revalidation-api.md
+  - ../../../07-adr/integration/ext-005-kakao-place-periodic-revalidation.md
 ---
 
 # 관리자 등록 API
@@ -22,6 +24,9 @@ related_documents:
 1. [통합 계정·인증 API](../account/member-authentication-api.md)로 `member_account.role=ADMIN` 계정의 JWT Access Token과 Refresh Token을 발급한다. [관리자 인증 API](authentication-api.md)는 폐기 경로와 대체 API의 호환 관계만 기록한다.
 2. [관리자 기본 데이터 API](reference-data-api.md)로 외부 정보를 미리 확인하고 맛집, 유튜버, 영상을 각각 등록한다.
 3. [관리자 방문 관계 등록 API](visit-registration-api.md)로 이미 등록된 세 대상을 연결한다.
+
+등록 후 Kakao 장소 재검증은 [관리자 Kakao 장소 재검증 API](restaurant-place-revalidation-api.md)와
+[ADR-EXT-005](../../../07-adr/integration/ext-005-kakao-place-periodic-revalidation.md)의 Proposed 정책을 따른다. Worker는 기본 비활성화이며 관리자 수동 실행·상태·감사 조회는 ADMIN만 허용한다.
 
 모든 `/api/admin` 등록 요청은 `Authorization: Bearer` JWT Access Token과 `ADMIN` 권한을 요구한다. 로그인·재발급·로그아웃의 matcher와 Refresh Token 쿠키 경로는 [통합 계정·인증 API](../account/member-authentication-api.md)를 따른다. 수정·삭제·승인 상태 관리, 일반 사용자 등록, 자동 등록과 원본 영상 업로드는 MVP에 포함하지 않는다.
 
