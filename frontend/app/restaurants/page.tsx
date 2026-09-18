@@ -5,13 +5,13 @@ import { cache } from 'react'
 import { FavoriteButton } from '@/components/personal/FavoriteButton'
 import { FilterSelect } from '@/components/restaurants/FilterSelect'
 import { NaturalLanguageRestaurantSearch } from '@/components/restaurants/NaturalLanguageRestaurantSearch'
+import { RestaurantImage } from '@/components/restaurants/RestaurantImage'
 import { Button } from '@/components/ui/Button'
 import { PageShell } from '@/components/ui/PageShell'
 import { StatePanel } from '@/components/ui/StatePanel'
 import { cn } from '@/lib/cn'
 import { shouldUseRestaurantDesignPreview } from '@/lib/design-preview'
 import { naturalLanguageFiltersKey } from '@/lib/natural-language-filters-key'
-import { getRestaurantPlaceholderImage } from '@/lib/restaurant-placeholder-image'
 import { buildRestaurantsMetadata } from '@/lib/restaurant-seo'
 import {
   buildRestaurantFilterClearHref,
@@ -67,6 +67,7 @@ const DESIGN_PREVIEW_ITEMS: RestaurantListItem[] = [
     name: '연남동 진짜곱창',
     district: '마포구',
     category: '곱창',
+    representativeImageUrl: null,
     visitedBy: [
       { id: 'preview-sungsik', channelName: '성시경' },
       { id: 'preview-baek', channelName: '백종원' },
@@ -79,6 +80,7 @@ const DESIGN_PREVIEW_ITEMS: RestaurantListItem[] = [
     name: '홍대 멘야하루',
     district: '마포구',
     category: '라멘',
+    representativeImageUrl: null,
     visitedBy: [{ id: 'preview-baek', channelName: '백종원' }],
     remainingVisitedByCount: 0,
   },
@@ -87,6 +89,7 @@ const DESIGN_PREVIEW_ITEMS: RestaurantListItem[] = [
     name: '성수동 우마카세',
     district: '성동구',
     category: '이자카야',
+    representativeImageUrl: null,
     visitedBy: [
       { id: 'preview-jjayang', channelName: '쯔양' },
       { id: 'preview-kwak', channelName: '곽튜브' },
@@ -98,6 +101,7 @@ const DESIGN_PREVIEW_ITEMS: RestaurantListItem[] = [
     name: '이태원 소담순두부',
     district: '용산구',
     category: '순두부찌개',
+    representativeImageUrl: null,
     visitedBy: [{ id: 'preview-lee', channelName: '이밥' }],
     remainingVisitedByCount: 0,
   },
@@ -106,6 +110,7 @@ const DESIGN_PREVIEW_ITEMS: RestaurantListItem[] = [
     name: '방이동 평양집',
     district: '송파구',
     category: '냉면',
+    representativeImageUrl: null,
     visitedBy: [{ id: 'preview-kwak', channelName: '곽튜브' }],
     remainingVisitedByCount: 0,
   },
@@ -114,6 +119,7 @@ const DESIGN_PREVIEW_ITEMS: RestaurantListItem[] = [
     name: '서래마을 오스테리아',
     district: '서초구',
     category: '파스타',
+    representativeImageUrl: null,
     visitedBy: [{ id: 'preview-choi', channelName: '최자로드' }],
     remainingVisitedByCount: 0,
   },
@@ -122,6 +128,7 @@ const DESIGN_PREVIEW_ITEMS: RestaurantListItem[] = [
     name: '명동 만리장성',
     district: '중구',
     category: '중식',
+    representativeImageUrl: null,
     visitedBy: [{ id: 'preview-baek', channelName: '백종원' }],
     remainingVisitedByCount: 0,
   },
@@ -130,6 +137,7 @@ const DESIGN_PREVIEW_ITEMS: RestaurantListItem[] = [
     name: '노량진 바다식당',
     district: '동작구',
     category: '해산물',
+    representativeImageUrl: null,
     visitedBy: [{ id: 'preview-jjayang', channelName: '쯔양' }],
     remainingVisitedByCount: 0,
   },
@@ -138,6 +146,7 @@ const DESIGN_PREVIEW_ITEMS: RestaurantListItem[] = [
     name: '연희동 작은 디저트',
     district: '서대문구',
     category: '디저트',
+    representativeImageUrl: null,
     visitedBy: [{ id: 'preview-sungsik', channelName: '성시경' }],
     remainingVisitedByCount: 0,
   },
@@ -146,6 +155,7 @@ const DESIGN_PREVIEW_ITEMS: RestaurantListItem[] = [
     name: '망원 커피하우스',
     district: '마포구',
     category: '카페',
+    representativeImageUrl: null,
     visitedBy: [{ id: 'preview-kwak', channelName: '곽튜브' }],
     remainingVisitedByCount: 0,
   },
@@ -468,17 +478,12 @@ export default async function RestaurantsPage({
               <li key={restaurant.id} className={styles.listItem}>
                 <article className={styles.restaurantCard}>
                   <div className={styles.cardMedia}>
-                    <img
-                      src={
-                        getRestaurantPlaceholderImage(
-                          restaurant.id,
-                          restaurant.category,
-                        ).src
-                      }
+                    <RestaurantImage
+                      representativeImageUrl={restaurant.representativeImageUrl}
+                      restaurantId={restaurant.id}
+                      category={restaurant.category}
                       alt=""
                       className={styles.cardMediaImage}
-                      loading="lazy"
-                      decoding="async"
                     />
                   </div>
                   <div className={styles.cardHeading}>

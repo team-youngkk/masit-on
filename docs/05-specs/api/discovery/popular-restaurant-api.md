@@ -39,6 +39,7 @@ related_documents:
       "name": "맛집",
       "roadAddress": "서울특별시 ...",
       "category": "한식",
+      "representativeImageUrl": "https://i.ytimg.com/vi/video-id/hqdefault.jpg",
       "favoriteCount": 42
     }
   ]
@@ -47,5 +48,6 @@ related_documents:
 
 - 정렬은 `favoriteCount` 내림차순, `restaurantId` 오름차순이며 `rank`는 1부터 결과 순서대로 부여한다.
 - `favoriteCount`는 전체 기간의 현재 찜 관계 수다. 회원 식별자, 상세·최근 조회 기록, 비로그인 상세 조회 이벤트와 개인별 찜 여부는 포함하지 않는다.
+- `representativeImageUrl`은 공개·유효한 관련 영상 중 제목·영상 ID 순으로 가장 앞선 영상의 기존 YouTube 썸네일 URL이다. 후보가 없으면 `null`이며 새 이미지를 저장하거나 외부 API를 호출하지 않는다.
 - 조건에 맞는 맛집이 없으면 `200 OK`와 `{ "items": [] }`다.
 - 매 요청은 커밋된 현재 찜 관계와 Restaurant 공개 상태를 사용한다. 배치·캐시·Snapshot API는 두지 않는다.
