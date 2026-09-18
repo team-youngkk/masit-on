@@ -113,6 +113,7 @@ public abstract class FullContextIntegrationTest {
         jdbcTemplate.execute("DELETE FROM visit");
         jdbcTemplate.execute("DELETE FROM video");
         jdbcTemplate.execute("DELETE FROM creator");
+        jdbcTemplate.execute("TRUNCATE TABLE restaurant_kakao_revalidation_audit, restaurant_kakao_revalidation");
         jdbcTemplate.execute("DELETE FROM restaurant");
         jdbcTemplate.execute("DELETE FROM member_action_token");
         jdbcTemplate.execute("DELETE FROM member_action_mail_outbox");

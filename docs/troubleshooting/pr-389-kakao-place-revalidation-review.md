@@ -26,6 +26,7 @@ related_documents:
 | 리뷰 스레드 `4045957609` | 정상 검증 뒤에도 `attempt_count`가 누적되어 이후 429가 발생하면 재시도 예산을 즉시 소진함 | 수정 필요: 영속성 상태 전이 |
 | 리뷰 스레드 `4046003979` | V19 통합 테스트의 한 `UPDATE` 문장에서 `next_attempt_at`을 NULL과 1일 뒤 시각으로 중복 대입함 | 수정 필요: 테스트 SQL |
 | CI run `35335174496` | 백엔드 1,570건 중 489건 실패. 최초 원인은 V19 테스트의 `RUNNING` 전환 시 `next_attempt_at = NULL`이 `NOT NULL` 제약에 막힌 것 | 수정 필요: 스키마·상태 계약 |
+| CI run `35338304823` | V19 수정 후 공통 통합 테스트 cleanup이 재검증 상태·감사 행을 남긴 채 `restaurant`를 삭제해 FK `RESTRICT`에 막힘 | 수정 필요: 테스트 격리 |
 
 ## 3. 근본 원인
 
@@ -33,12 +34,15 @@ related_documents:
 
 별도로 claim 때 증가한 `attempt_count`를 정상 완료 상태에서 되돌리지 않아, 정기 재검증의 과거 실패가 다음 재검증 주기의 재시도 예산을 잠식했다.
 
+V19 상태 테이블은 의도적으로 Restaurant FK를 `RESTRICT`로 두고 있으므로, 기능 변경으로 추가된 상태·감사 테이블을 기존 공통 테스트 cleanup 목록에 포함하지 않은 것이 두 번째 CI 실패의 원인이었다. 감사 테이블은 append-only라 일반 `DELETE`가 불가능하므로 테스트 격리에서는 상태 테이블과 함께 `TRUNCATE`해야 한다.
+
 ## 4. 최종 수정
 
 - `JdbcRestaurantPlaceRevalidationStore.apply`에서 `VERIFIED`, `AUTO_CORRECTED`, `REVIEW_REQUIRED`, `MATCH_NOT_FOUND`로 완료하면 `attempt_count`를 0으로 초기화했다.
 - `RETRY_SCHEDULED`와 `RETRY_EXHAUSTED`는 현재 주기의 시도 횟수를 유지해 bounded retry 정책을 보존했다.
 - V19의 `next_attempt_at`을 nullable로 변경해 `RUNNING`·`RETRY_EXHAUSTED` 상태 제약과 claim SQL을 일치시켰다.
 - V19 통합 테스트의 중복 `next_attempt_at` 대입을 제거했다.
+- 공통 통합 테스트 cleanup에서 재검증 상태·감사 테이블을 먼저 `TRUNCATE`해 `restaurant` FK `RESTRICT`를 보존하면서 테스트 간 격리를 회복했다.
 
 ## 5. 검증
 
@@ -48,7 +52,8 @@ related_documents:
 | 관련 단위 테스트 3개 클래스 | 통과 | 서비스·컨트롤러·Kakao 어댑터 총 23건 |
 | `gradlew.bat test --tests com.masiton.FlywayMigrationIntegrationTest` | 로컬 실행 불가 | Docker Desktop 엔진에 연결할 수 없어 Testcontainers 초기화 실패 |
 | `git diff --check` | 통과 | 공백 오류 없음 |
-| PR CI 재실행 | 대기 | 수정 커밋 push 후 결과를 갱신한다 |
+| PR CI 재실행 `35338304823` | 실패 | 스키마 오류는 해소됐고, 공통 cleanup의 FK 정리 누락이 새 원인으로 확인됨 |
+| PR CI 재실행 | 대기 | cleanup 수정 커밋 push 후 결과를 갱신한다 |
 
 ## 6. 재발 방지
 
