@@ -84,7 +84,7 @@ class JdbcRestaurantPlaceRevalidationIntegrationTest {
     void 재검증_동시본문변경_rollback과부분저장없음() {
         UUID restaurantId = UUID.randomUUID();
         insertRestaurant(restaurantId);
-        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime claimNow = OffsetDateTime.now(ZoneOffset.UTC);
         OffsetDateTime createdAt = jdbcTemplate.queryForObject(
                 "SELECT created_at FROM restaurant WHERE id = ?", OffsetDateTime.class, restaurantId);
         OffsetDateTime updatedAt = jdbcTemplate.queryForObject(
@@ -100,8 +100,9 @@ class JdbcRestaurantPlaceRevalidationIntegrationTest {
                 "INSERT INTO restaurant_kakao_revalidation "
                         + "(restaurant_id, status, attempt_count, lease_owner, lease_expires_at, "
                         + "last_execution_id, next_attempt_at) VALUES (?, 'RUNNING', 1, ?, ?, ?, NULL)",
-                restaurantId, owner, now.plusMinutes(5), executionId);
+                restaurantId, owner, claimNow.plusMinutes(5), executionId);
         ClaimedRestaurant claimed = new ClaimedRestaurant(claimedRestaurant, 1, executionId, owner);
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
 
         jdbcTemplate.update("UPDATE restaurant SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
                 "동시 변경 맛집", restaurantId);
