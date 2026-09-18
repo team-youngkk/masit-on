@@ -92,7 +92,14 @@ public class RestaurantPlaceRevalidationService implements RestaurantPlaceRevali
             result = KakaoPlaceRevalidationPort.Result.of(KakaoPlaceRevalidationPort.Kind.EXTERNAL_FAILURE);
         }
         Decision decision = classify(claimed, result);
-        boolean applied = persistence.apply(claimed, decision, now());
+        boolean applied;
+        try {
+            applied = persistence.apply(claimed, decision, now());
+        } catch (RestaurantPlaceRevalidationStaleException exception) {
+            log.warn("Restaurant place revalidation result discarded because the restaurant changed: restaurantId={}, executionId={}",
+                    restaurant.getId(), claimed.executionId());
+            return new Result(restaurant.getId(), "STALE_DISCARDED", null);
+        }
         if (!applied) {
             log.warn("Restaurant place revalidation result discarded because the lease was lost: restaurantId={}, executionId={}",
                     restaurant.getId(), claimed.executionId());

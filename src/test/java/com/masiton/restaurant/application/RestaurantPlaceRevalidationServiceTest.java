@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import com.masiton.restaurant.application.port.in.RestaurantPlaceRevalidationUseCase;
 import com.masiton.restaurant.application.port.out.KakaoPlaceRevalidationPort;
 import com.masiton.restaurant.application.port.out.RestaurantPlaceRevalidationStore;
 import com.masiton.restaurant.application.port.out.RestaurantPlaceRevalidationStore.ClaimedRestaurant;
@@ -64,6 +65,18 @@ class RestaurantPlaceRevalidationServiceTest {
     void 재검증_외부실패_원본미변경() {
         claim(0); when(kakao.verify(any(), any(), any())).thenThrow(new IllegalStateException());
         service.run(restaurant.getId()); Decision decision=decision(); assertThat(decision.outcome().name()).isEqualTo("RETRY_SCHEDULED"); assertThat(decision.errorCode()).isEqualTo("HTTP_5XX"); assertThat(decision.correctedRestaurant()).isNull();
+    }
+    @Test @DisplayName("맛집 본문이 먼저 변경되면 stale 결과로 폐기하고 예외를 노출하지 않는다")
+    void 재검증_맛집본문선변경_stale결과로폐기한다() {
+        claim(0);
+        when(kakao.verify(any(), any(), any())).thenReturn(KakaoPlaceRevalidationPort.Result.found(
+                place("새 맛집", "02-333-4444", "서울특별시 강남구 역삼로 2")));
+        when(persistence.apply(any(), any(), any())).thenThrow(new RestaurantPlaceRevalidationStaleException());
+
+        var result = service.run(restaurant.getId());
+
+        assertThat(result).contains(new RestaurantPlaceRevalidationUseCase.Result(
+                restaurant.getId(), "STALE_DISCARDED", null));
     }
     private void claim(int attempts) { when(store.claim(eq(restaurant.getId()), any(), any(), any())).thenReturn(Optional.of(new ClaimedRestaurant(restaurant, attempts, UUID.randomUUID(), "owner"))); when(persistence.apply(any(), any(), any())).thenReturn(true); }
     private Decision decision() { var c=org.mockito.ArgumentCaptor.forClass(Decision.class); verify(persistence).apply(any(), c.capture(), any()); return c.getValue(); }

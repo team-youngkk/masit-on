@@ -1,6 +1,8 @@
 ---
 related_documents:
   - ../../src/main/java/com/masiton/restaurant/infrastructure/persistence/JdbcRestaurantPlaceRevalidationStore.java
+  - ../../src/main/java/com/masiton/restaurant/application/RestaurantPlaceRevalidationStaleException.java
+  - ../../src/test/java/com/masiton/restaurant/infrastructure/persistence/JdbcRestaurantPlaceRevalidationIntegrationTest.java
   - ../../src/main/resources/db/migration/V19__add_restaurant_kakao_revalidation.sql
   - ../../src/test/java/com/masiton/FlywayMigrationIntegrationTest.java
   - ./pr-192-flyway-model-contract-review.md
@@ -25,6 +27,7 @@ related_documents:
 |---|---|---|
 | 리뷰 스레드 `4045957609` | 정상 검증 뒤에도 `attempt_count`가 누적되어 이후 429가 발생하면 재시도 예산을 즉시 소진함 | 수정 필요: 영속성 상태 전이 |
 | 리뷰 스레드 `4046003979` | V19 통합 테스트의 한 `UPDATE` 문장에서 `next_attempt_at`을 NULL과 1일 뒤 시각으로 중복 대입함 | 수정 필요: 테스트 SQL |
+| 리뷰 스레드 `4046338617` | Restaurant 본문 CAS 실패 후 rollback-only 트랜잭션이 `UnexpectedRollbackException`으로 변환되어 API의 stale 409 처리를 건너뛸 수 있음 | 수정 필요: 트랜잭션·동시성 경계 |
 | CI run `35335174496` | 백엔드 1,570건 중 489건 실패. 최초 원인은 V19 테스트의 `RUNNING` 전환 시 `next_attempt_at = NULL`이 `NOT NULL` 제약에 막힌 것 | 수정 필요: 스키마·상태 계약 |
 | CI run `35338304823` | V19 수정 후 공통 통합 테스트 cleanup이 재검증 상태·감사 행을 남긴 채 `restaurant`를 삭제해 FK `RESTRICT`에 막힘 | 수정 필요: 테스트 격리 |
 | CI run `35338753729` | cleanup 수정 후 V19 감사 INSERT가 `next_attempt_at` 값을 컬럼 목록 없이 전달해 컬럼 수 불일치 | 수정 필요: 테스트 SQL |
@@ -48,6 +51,7 @@ V19 상태 테이블은 의도적으로 Restaurant FK를 `RESTRICT`로 두고 �
 - 공통 통합 테스트 cleanup에서 재검증 상태·감사 테이블을 먼저 `TRUNCATE`해 `restaurant` FK `RESTRICT`를 보존하면서 테스트 간 격리를 회복했다.
 - V19 감사 INSERT의 컬럼 목록에 `next_attempt_at`을 명시해 상태 감사 계약과 입력 값을 일치시켰다.
 - 최신 migration 버전 기대값을 V19까지 확장하고 append-only 변조 검증은 Spring의 공통 `DataAccessException` 계층으로 검사하도록 조정했다.
+- Restaurant 본문 CAS 실패는 전용 `RestaurantPlaceRevalidationStaleException`으로 즉시 rollback하고, application service가 이를 `STALE_DISCARDED`로 변환하도록 수정했다. 실제 PostgreSQL 기반 API 통합 테스트에서 409 응답, `RUNNING` 상태 유지, 감사 행 0건, 동시 변경 본문 보존을 검증한다.
 
 ## 5. 검증
 
@@ -56,11 +60,14 @@ V19 상태 테이블은 의도적으로 Restaurant FK를 `RESTRICT`로 두고 �
 | `gradlew.bat compileJava compileTestJava --no-daemon --console=plain` | 통과 | 컴파일 성공, 기존 varargs 경고 1건 |
 | 관련 단위 테스트 3개 클래스 | 통과 | 서비스·컨트롤러·Kakao 어댑터 총 23건 |
 | `gradlew.bat test --tests com.masiton.FlywayMigrationIntegrationTest` | 로컬 실행 불가 | Docker Desktop 엔진에 연결할 수 없어 Testcontainers 초기화 실패 |
+| `gradlew.bat test --tests com.masiton.restaurant.infrastructure.persistence.JdbcRestaurantPlaceRevalidationIntegrationTest` | 로컬 실행 불가 | Docker Desktop 엔진에 연결할 수 없어 Testcontainers 초기화 실패. 테스트 소스는 컴파일 통과 |
+| 관련 단위 테스트 2개 클래스 | 통과 | stale 변환·409 응답 포함 총 9건 |
 | `git diff --check` | 통과 | 공백 오류 없음 |
 | PR CI 재실행 `35338304823` | 실패 | 스키마 오류는 해소됐고, 공통 cleanup의 FK 정리 누락이 새 원인으로 확인됨 |
 | PR CI 재실행 `35338753729` | 실패 | cleanup은 통과했고, 감사 INSERT의 컬럼 수 불일치가 새 원인으로 확인됨 |
 | PR CI 재실행 `35339196672` | 실패 | V19 버전 기대값과 append-only 예외 타입 기대값이 기존 테스트에 남아 있는 것을 확인함 |
 | PR CI 재실행 `35339747103` | 통과 | 프론트엔드·Terraform·RSA 검사와 백엔드 빌드·자동화 테스트 전체 통과 |
+| PR CI 재실행 `35340166251` | 통과 | stale 충돌 처리와 PostgreSQL 통합 테스트가 포함된 최신 커밋 검증 통과 |
 
 ## 6. 재발 방지
 

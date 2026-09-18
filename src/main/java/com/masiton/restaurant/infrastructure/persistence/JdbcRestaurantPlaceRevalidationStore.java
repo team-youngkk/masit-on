@@ -11,8 +11,8 @@ import java.util.UUID;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.interceptor.TransactionAspectSupport;
 
+import com.masiton.restaurant.application.RestaurantPlaceRevalidationStaleException;
 import com.masiton.restaurant.application.port.out.RestaurantPlaceRevalidationStore;
 import com.masiton.restaurant.domain.model.LifecycleStatus;
 import com.masiton.restaurant.domain.model.PublicationStatus;
@@ -122,8 +122,7 @@ class JdbcRestaurantPlaceRevalidationStore implements RestaurantPlaceRevalidatio
         }
         if (decision.correctedRestaurant() != null
                 && !updateRestaurant(claimed, decision.correctedRestaurant(), now)) {
-            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-            return false;
+            throw new RestaurantPlaceRevalidationStaleException();
         }
         jdbc.update(
                 """
