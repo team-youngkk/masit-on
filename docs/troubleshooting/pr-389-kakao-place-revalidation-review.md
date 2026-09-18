@@ -29,6 +29,7 @@ related_documents:
 | CI run `35338304823` | V19 수정 후 공통 통합 테스트 cleanup이 재검증 상태·감사 행을 남긴 채 `restaurant`를 삭제해 FK `RESTRICT`에 막힘 | 수정 필요: 테스트 격리 |
 | CI run `35338753729` | cleanup 수정 후 V19 감사 INSERT가 `next_attempt_at` 값을 컬럼 목록 없이 전달해 컬럼 수 불일치 | 수정 필요: 테스트 SQL |
 | CI run `35339196672` | V19 추가 후 기존 최신 migration 버전 기대값이 18에 고정되어 있었고, append-only trigger의 SQLSTATE가 `DataIntegrityViolationException`이 아닌 일반 `DataAccessException`으로 번역됨 | 수정 필요: 회귀 테스트 기대값 |
+| CI run `35339747103` | 최신 수정 반영 후 프론트엔드·Terraform·RSA·백엔드 전체 검증 통과 | 해결 |
 
 ## 3. 근본 원인
 
@@ -59,7 +60,7 @@ V19 상태 테이블은 의도적으로 Restaurant FK를 `RESTRICT`로 두고 �
 | PR CI 재실행 `35338304823` | 실패 | 스키마 오류는 해소됐고, 공통 cleanup의 FK 정리 누락이 새 원인으로 확인됨 |
 | PR CI 재실행 `35338753729` | 실패 | cleanup은 통과했고, 감사 INSERT의 컬럼 수 불일치가 새 원인으로 확인됨 |
 | PR CI 재실행 `35339196672` | 실패 | V19 버전 기대값과 append-only 예외 타입 기대값이 기존 테스트에 남아 있는 것을 확인함 |
-| PR CI 재실행 | 대기 | 회귀 테스트 기대값 수정 커밋 push 후 결과를 갱신한다 |
+| PR CI 재실행 `35339747103` | 통과 | 프론트엔드·Terraform·RSA 검사와 백엔드 빌드·자동화 테스트 전체 통과 |
 
 ## 6. 재발 방지
 
@@ -72,5 +73,5 @@ V19 상태 테이블은 의도적으로 Restaurant FK를 `RESTRICT`로 두고 �
 | 지표 | 투입 전 | 목표 |
 |---|---:|---:|
 | 리뷰 미해결 스레드 | 2 | 0 |
-| PR #389 백엔드 실패 테스트 | 489 | 0 |
+| PR #389 백엔드 실패 테스트 | 489 | 0 (최종 CI 달성) |
 | 정상 terminal outcome 이후 retry budget | 누적 | 0으로 재설정 |
