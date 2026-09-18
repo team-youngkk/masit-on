@@ -36,6 +36,7 @@ related_documents:
 | CI run `35340887037` | 새 PostgreSQL 통합 테스트의 Kakao 재검증 mock이 dual-port adapter bean을 대체해 ApplicationContext가 깨짐 | 수정 필요: 테스트 격리 |
 | CI run `35341373370` | 통합 테스트가 공유 Testcontainers 데이터베이스에서 다른 full-context 테스트의 cleanup과 경합해 삽입한 Restaurant를 찾지 못함 | 수정 필요: 테스트 실행 격리 |
 | CI run `35341754906` | full-context MockMvc 통합 테스트가 공유 DB cleanup 경합으로 404가 재현되어, DB 원자성 검증과 API 계약 검증을 분리할 필요가 확인됨 | 수정 필요: 테스트 경계 |
+| CI run `35342378655` | 공유 DB 경합이 JDBC claim 단계에서도 재현되어 전용 Testcontainers로 분리할 필요가 확인됨 | 수정 필요: 테스트 실행 격리 |
 
 ## 3. 근본 원인
 
@@ -54,8 +55,8 @@ V19 상태 테이블은 의도적으로 Restaurant FK를 `RESTRICT`로 두고 �
 - 공통 통합 테스트 cleanup에서 재검증 상태·감사 테이블을 먼저 `TRUNCATE`해 `restaurant` FK `RESTRICT`를 보존하면서 테스트 간 격리를 회복했다.
 - V19 감사 INSERT의 컬럼 목록에 `next_attempt_at`을 명시해 상태 감사 계약과 입력 값을 일치시켰다.
 - 최신 migration 버전 기대값을 V19까지 확장하고 append-only 변조 검증은 Spring의 공통 `DataAccessException` 계층으로 검사하도록 조정했다.
-- Restaurant 본문 CAS 실패는 전용 `RestaurantPlaceRevalidationStaleException`으로 즉시 rollback하고, application service가 이를 `STALE_DISCARDED`로 변환하도록 수정했다. 실제 PostgreSQL 기반 API 통합 테스트에서 409 응답, `RUNNING` 상태 유지, 감사 행 0건, 동시 변경 본문 보존을 검증한다.
-- 실제 PostgreSQL 검증은 공유 full-context cleanup 경합을 피하도록 JDBC store·transaction 통합 테스트로 분리했고, 409 응답 계약은 `AdminRestaurantPlaceRevalidationControllerApiTest`에서 독립적으로 검증한다.
+- Restaurant 본문 CAS 실패는 전용 `RestaurantPlaceRevalidationStaleException`으로 즉시 rollback하고, application service가 이를 `STALE_DISCARDED`로 변환하도록 수정했다. 실제 PostgreSQL 기반 통합 테스트에서 `RUNNING` 상태 유지, 감사 행 0건, 동시 변경 본문 보존을 검증하고, API 테스트에서 409 응답을 검증한다.
+- 실제 PostgreSQL 검증은 전용 Testcontainers PostgreSQL·Redis를 사용하는 JDBC store·transaction 통합 테스트로 격리했고, 409 응답 계약은 `AdminRestaurantPlaceRevalidationControllerApiTest`에서 독립적으로 검증한다.
 
 ## 5. 검증
 
@@ -75,6 +76,7 @@ V19 상태 테이블은 의도적으로 Restaurant FK를 `RESTRICT`로 두고 �
 | PR CI 재실행 `35340887037` | 실패 | dual-port adapter mock 설정 오류로 통합 테스트 ApplicationContext 초기화 실패 |
 | PR CI 재실행 `35341373370` | 실패 | 통합 테스트 데이터가 공유 full-context cleanup과 경합해 404가 발생함 |
 | PR CI 재실행 `35341754906` | 실패 | 동일한 공유 full-context DB 경합이 MockMvc 통합 테스트에서 재현됨 |
+| PR CI 재실행 `35342378655` | 실패 | 공유 DB 경합이 JDBC claim 단계에서도 재현되어 전용 Testcontainers로 분리함 |
 
 ## 6. 재발 방지
 
