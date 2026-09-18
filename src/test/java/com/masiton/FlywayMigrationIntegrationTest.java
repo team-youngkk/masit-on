@@ -152,7 +152,7 @@ class FlywayMigrationIntegrationTest extends com.masiton.test.FullContextIntegra
         UUID auditId = UUID.randomUUID();
         jdbcTemplate.update(
                 "INSERT INTO restaurant_kakao_revalidation_audit (id, execution_id, restaurant_id, status, "
-                        + "observed_values, previous_values, applied_values, reason_code, checked_at) "
+                        + "observed_values, previous_values, applied_values, reason_code, checked_at, next_attempt_at) "
                         + "VALUES (?, ?, ?, 'AUTO_CORRECTED', ?::jsonb, ?::jsonb, ?::jsonb, "
                         + "'SAFE_FIELDS_CHANGED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + interval '1 day')",
                 auditId, executionId, restaurantId,
