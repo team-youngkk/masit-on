@@ -75,6 +75,8 @@ class ProdSecretsConfigTreeTest {
                     .containsEntry("retired-1", "ZmVkY2JhOTg3NjU0MzIxMGZlZGNiYTk4NzY1NDMyMTA=");
             assertThat(environment.getProperty("masiton.ai.youtube-webhook.secret"))
                     .isEqualTo("test-youtube-webhook-secret");
+            assertThat(environment.getProperty("masiton.ai.youtube-backfill.api-key"))
+                    .isEqualTo("youtube-key-value");
             assertThat(environment.getProperty("masiton.security.member.public-base-url"))
                     .isEqualTo("https://masiton.click");
         });

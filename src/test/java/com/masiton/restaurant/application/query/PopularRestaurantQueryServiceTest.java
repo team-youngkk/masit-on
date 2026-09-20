@@ -46,9 +46,9 @@ class PopularRestaurantQueryServiceTest {
         UUID secondId = UUID.randomUUID();
         UUID thirdId = UUID.randomUUID();
         when(popularRestaurantQueryPort.findTopByFavoriteCount(20)).thenReturn(List.of(
-                new PopularRestaurantRow(firstId, "첫째 맛집", "서울특별시 종로구 1", "한식", 30L),
-                new PopularRestaurantRow(secondId, "둘째 맛집", "서울특별시 종로구 2", "한식", 20L),
-                new PopularRestaurantRow(thirdId, "셋째 맛집", "서울특별시 종로구 3", "한식", 10L)));
+                new PopularRestaurantRow(firstId, "첫째 맛집", "서울특별시 종로구 1", "한식", null, 30L),
+                new PopularRestaurantRow(secondId, "둘째 맛집", "서울특별시 종로구 2", "한식", null, 20L),
+                new PopularRestaurantRow(thirdId, "셋째 맛집", "서울특별시 종로구 3", "한식", null, 10L)));
 
         // when
         List<PopularRestaurantSummary> result = service.findPopularRestaurants();

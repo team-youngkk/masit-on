@@ -8,6 +8,7 @@ public record RestaurantSummary(
         String name,
         String district,
         String category,
+        String representativeImageUrl,
         List<VisitedCreatorSummary> visitedBy,
         int remainingVisitedByCount) {
 }

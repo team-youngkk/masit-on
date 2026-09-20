@@ -215,7 +215,8 @@ public class JdbcAiExtractionAdminQueryAdapter implements AiExtractionAdminQuery
             return java.util.Map.of();
         }
         String placeholders = String.join(",", java.util.Collections.nCopies(codes.size(), "?"));
-        return jdbc.query("SELECT id, tag_code FROM tag_definition WHERE status='ACTIVE' AND tag_code IN (" + placeholders + ")",
+        return jdbc.query("SELECT id, tag_code FROM tag_definition WHERE status='ACTIVE' AND tag_code IN ("
+                        + placeholders + ") ORDER BY id FOR SHARE",
                 rs -> {
                     java.util.Map<String, UUID> definitions = new java.util.HashMap<>();
                     while (rs.next()) {

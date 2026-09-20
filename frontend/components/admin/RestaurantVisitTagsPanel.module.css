@@ -12,4 +12,16 @@
 .form fieldset { border: 0; padding: 0; min-width: 0; }
 .reason { display: grid; gap: var(--space-2); margin: var(--space-3) 0; }
 .reason textarea { width: 100%; box-sizing: border-box; padding: var(--space-2); font: inherit; color: inherit; background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); resize: vertical; }
+.createArea { margin: var(--space-3) 0; }
+.createForm { padding: var(--space-3) !important; border: 1px solid var(--color-border-strong) !important; border-radius: var(--radius-md); background: var(--color-surface-muted); }
+.createGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.createGrid label { display: grid; gap: var(--space-1); min-width: 0; }
+.createGrid input, .createGrid select, .createGrid textarea { width: 100%; box-sizing: border-box; padding: var(--space-2); font: inherit; color: inherit; background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); }
+.createGrid textarea { resize: vertical; }
+.aliases { grid-column: 1 / -1; }
 .error { color: var(--color-danger); }
+
+@media (max-width: 40rem) {
+  .createGrid { grid-template-columns: 1fr; }
+  .aliases { grid-column: auto; }
+}

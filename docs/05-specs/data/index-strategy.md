@@ -97,7 +97,7 @@ Creator 필터는 `visit`에서 고유 Restaurant ID를 구한 뒤 Restaurant의
 
 ## 7. 3차 확장 AI 영상 추출 인덱스
 
-3차 확장 인덱스의 정확한 SQL은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)과 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql)을 따른다.
+3차 확장 인덱스의 정확한 SQL은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)과 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql), [`V14__create_youtube_channel_backfill_run.sql`](../../../src/main/resources/db/migration/V14__create_youtube_channel_backfill_run.sql), [`V15__add_youtube_channel_backfill_stop_reason.sql`](../../../src/main/resources/db/migration/V15__add_youtube_channel_backfill_stop_reason.sql), [`V16__add_youtube_channel_backfill_video_ledger.sql`](../../../src/main/resources/db/migration/V16__add_youtube_channel_backfill_video_ledger.sql)을 따른다.
 
 | 인덱스 | 대상 경로 | 목적 |
 |---|---|---|
@@ -110,6 +110,12 @@ Creator 필터는 `visit`에서 고유 Restaurant ID를 구한 뒤 Restaurant의
 | `ix_ai_job__video_input_versions` | youtube_video_id·input_hash·Provider/Model/Prompt/Schema 버전 | 외부 검증 전 관리자 작업 재사용 조회 |
 | `ix_ai_job__video_mode_versions` | youtube_video_id·input_mode·Provider/Model/Prompt/Schema 버전 | 기존 Webhook 작업 호환 재사용 조회 |
 | `ix_ai_temporary_input__expires_at` | expires_at·job_id | 만료 임시 입력 cleanup 선택 |
+| `ux_tag_definition_term__normalized_term` | normalized_term unique | 표시명·별칭 전역 중복 및 동시 생성 차단 |
+| `ux_tag_definition_term__display_name_owner` | tag_definition_id, DISPLAY_NAME partial unique | 정의별 표시명 용어 하나 보장 |
+| `ux_youtube_backfill_active_creator` | `creator_id` partial unique, `status IN ('QUEUED','RUNNING')` | Creator별 진행 중 보정 실행 하나만 허용 |
+| `ix_youtube_backfill_due` | `updated_at`, `id` partial, `status='QUEUED'` | 다음 보정 페이지 claim 순서 |
+| `ix_youtube_backfill_expired_lease` | `lease_expires_at`, `id` partial, `status='RUNNING'` | 만료 lease 복구 후보 선택 |
+| `ix_youtube_backfill_video_run` | `run_id`, `created_at` | 보정 run 영상 처리 원장 조회 |
 
 멱등성·Snapshot·시도·채널 감시의 unique 제약은 보조 인덱스를 별도로 중복 생성하지 않는다. 실제 운영 성능은 Worker claim·공개 태그 조회와 3차 성능 Task의 실행계획·부하 결과로 검증한다.
 
@@ -127,3 +133,9 @@ Creator 필터는 `visit`에서 고유 Restaurant ID를 구한 뒤 Restaurant의
 ## 방문 태그 보정 인덱스 — 이슈 #358
 
 visit_tag_revision(visit_id, revision) unique B-tree가 방문별 최신 revision 역방향 조회와 유일성을 함께 지원한다. 현재 연결 조회는 기존 VisitTag 방문/태그 unique 인덱스를 사용한다.
+
+## 관리자 태그 정의 용어 인덱스 — 이슈 #363
+
+V10은 `normalized_term` 전역 unique B-tree와 `term_kind='DISPLAY_NAME'`인 `tag_definition_id` partial unique를 추가한다. 전자는 사전 중복 확인과 동시 INSERT를 함께 확정하고 #364의 정규화 용어 조회에 재사용한다. 별칭 목록 크기는 정의당 최대 20개이므로 별도 `(tag_definition_id, term_kind)` 비고유 인덱스는 실제 실행계획에서 필요성이 확인되기 전 추가하지 않는다.
+
+V13은 `tag_definition_merge.source_tag_definition_id` unique 인덱스로 원본의 단일 병합을 보장한다. `(target_tag_definition_id, merged_at DESC)`는 inbound 병합과 운영 감사 조회를, `visit_tag_merge_provenance(visit_id, recorded_at DESC)`는 방문별 복구 자료 조회를 지원한다. provenance는 `(tag_definition_merge_id, visit_tag_id, snapshot_role)` unique로 같은 snapshot의 중복 기록을 막는다.

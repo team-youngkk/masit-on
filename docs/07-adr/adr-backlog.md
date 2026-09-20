@@ -41,7 +41,7 @@ MVP 구현 전 필수 결정과 3차 확장 정책 결정은 완료됐다. 아�
 - 문서: [ADR-ARCH-005](architecture/arch-005-natural-language-filter-interpretation.md)
 - 결정 시점: 자연어 API·평가 Dataset·구현 Task 작성 전
 - 핵심: 별도 검색 도메인·임베딩·RAG 없이 WS-14에서 구조화 조건으로 해석하고 기존 Restaurant·Creator·Visit 조회 계약을 재사용한다.
-- 결정 완료: 임베딩·RAG·챗봇은 도입하지 않는다. P1 규칙·태그 18종·태그 AND·`UNRESOLVED`·품질 목표를 사용한다.
+- 결정 완료: 임베딩·RAG·챗봇은 도입하지 않는다. P1 규칙·`ACTIVE` 동적 태그 사전·초기 18종 Golden V1·태그 AND·`UNRESOLVED`·품질 목표를 사용한다.
 
 ### ADR-AI-001 AI 영상 추출 후보 경계와 제공자 선택 기준
 
@@ -165,7 +165,7 @@ MVP 구현 전 필수 결정과 3차 확장 정책 결정은 완료됐다. 아�
 ### ADR-AUTO-001 자동 수집과 배치 처리
 
 - 현재 상태: Post-MVP
-- 현재 결정: Jsoup, n8n, Spring Scheduler, Spring Batch 6.0.4와 자동 주기 수집·동기화를 도입하지 않는다.
+- 현재 결정: 일반 자동 수집·동기화와 Jsoup·n8n·Spring Batch 도입은 Post-MVP로 유지한다. 활성·구독 검증된 YouTube 채널의 누락 보정은 [ADR-EXT-004](integration/ext-004-youtube-periodic-reconciliation.md)에서 기존 Spring Scheduler를 이용하는 제한적 예외로 승인했다.
 - 분리된 결정: 최근 본 맛집 30일 보존은 [ADR-DATA-010](data/data-010-recent-view-retention-cleanup.md), 2차 확장 보존 정리는 [ADR-DATA-012](data/data-012-second-expansion-retention-cleanup.md)에서 제한적 Scheduler로 관리한다. 둘 다 자동 수집·집계·동기화를 허용하지 않는다.
 - 활성화 조건: 관리자 확인 없는 자동 등록과 구분되는 승인된 수집·검수 흐름이 범위에 포함된다.
 - 도입 전 확인: n8n·Scheduler·Batch 책임 경계, 정확한 n8n·Jsoup 버전, 실행 이력·재시작·중복 방지, 외부 API 비용

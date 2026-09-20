@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import com.masiton.common.address.SeoulRoadAddressNormalizer;
 import com.masiton.restaurant.application.PlaceVerificationFailedException;
 import com.masiton.restaurant.application.port.out.PlaceVerificationPort;
+import com.masiton.restaurant.application.port.out.KakaoPlaceRevalidationPort;
 import com.masiton.restaurant.application.port.out.VerifiedPlace;
 import tools.jackson.databind.ObjectMapper;
 
@@ -20,7 +21,7 @@ import tools.jackson.databind.ObjectMapper;
  * Kakao Local Keyword API를 호출해 제출된 Kakao 장소 URL의 동일성을 확인한다.
  */
 @Component
-class KakaoPlaceVerificationAdapter implements PlaceVerificationPort {
+class KakaoPlaceVerificationAdapter implements PlaceVerificationPort, KakaoPlaceRevalidationPort {
 
     private final KakaoLocalKeywordClient client;
 
@@ -68,20 +69,47 @@ class KakaoPlaceVerificationAdapter implements PlaceVerificationPort {
         }
     }
 
+    @Override
+    public Result verify(String kakaoPlaceId, String restaurantName, URI expectedPlaceUrl) {
+        try {
+            KakaoLocalKeywordClient.KakaoKeywordResponse response = client.search(restaurantName);
+            if (response.statusCode() == 429) return Result.of(Kind.QUOTA_EXCEEDED);
+            if (response.statusCode() == 404 || response.documents().isEmpty()) return Result.of(Kind.NOT_FOUND);
+            if (response.statusCode() < 200 || response.statusCode() >= 300) return Result.of(Kind.EXTERNAL_FAILURE);
+            List<VerifiedPlace> candidates = response.documents().stream()
+                    .map(document -> toVerifiedPlace(document, null, false))
+                    .filter(Optional::isPresent).map(Optional::get).toList();
+            List<VerifiedPlace> identityMatches = candidates.stream()
+                    .filter(place -> kakaoPlaceId.equals(place.identityKey())).toList();
+            if (identityMatches.size() > 1) return Result.of(Kind.IDENTITY_AMBIGUOUS);
+            if (identityMatches.isEmpty()) return Result.of(Kind.PLACE_ID_MISMATCH);
+            VerifiedPlace matched = identityMatches.getFirst();
+            return samePlaceUrl(matched.kakaoPlaceUrl(), expectedPlaceUrl)
+                    ? Result.found(matched) : Result.of(Kind.URL_MISMATCH);
+        } catch (RuntimeException exception) {
+            if (exception instanceof KakaoLocalKeywordClient.KakaoLocalKeywordClientException clientException
+                    && clientException.getCause() instanceof java.net.http.HttpTimeoutException) {
+                return Result.of(Kind.TIMEOUT);
+            }
+            return Result.of(Kind.EXTERNAL_FAILURE);
+        }
+    }
+
     private Optional<VerifiedPlace> selectPlace(
             List<Map<String, Object>> documents,
             URI submittedUrl,
             String fallbackPhoneNumber
     ) {
         return documents.stream()
-                .map(document -> toVerifiedPlace(document, fallbackPhoneNumber))
+                .map(document -> toVerifiedPlace(document, fallbackPhoneNumber, true))
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .filter(place -> samePlaceUrl(place.kakaoPlaceUrl(), submittedUrl))
                 .findFirst();
     }
 
-    private Optional<VerifiedPlace> toVerifiedPlace(Map<String, Object> document, String fallbackPhoneNumber) {
+    private Optional<VerifiedPlace> toVerifiedPlace(
+            Map<String, Object> document, String fallbackPhoneNumber, boolean requirePhone) {
         String id = stringValue(document.get("id"));
         String name = stringValue(document.get("place_name"));
         String placeUrl = stringValue(document.get("place_url"));
@@ -90,7 +118,8 @@ class KakaoPlaceVerificationAdapter implements PlaceVerificationPort {
         if (phoneNumber == null) {
             phoneNumber = fallbackPhoneNumber;
         }
-        if (id == null || name == null || placeUrl == null || roadAddress == null || phoneNumber == null) {
+        if (id == null || name == null || placeUrl == null || roadAddress == null
+                || (requirePhone && phoneNumber == null)) {
             throw new PlaceVerificationFailedException();
         }
         BigDecimal longitude = decimalValue(document.get("x"), -180, 180);

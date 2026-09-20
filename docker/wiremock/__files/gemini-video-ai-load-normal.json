@@ -1,0 +1,15 @@
+{
+  "responseId": "wiremock-ai-load-response",
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "{\"resultCompleteness\":\"COMPLETE\",\"candidates\":[{\"field\":\"restaurantName\",\"value\":\"맛잇온 테스트 식당\",\"confidence\":0.99,\"evidence\":{\"type\":\"TIMESTAMP\",\"startMs\":42000,\"endMs\":49000}},{\"field\":\"menu\",\"value\":\"테스트 메뉴\",\"confidence\":0.99,\"evidence\":{\"type\":\"TIMESTAMP\",\"startMs\":42000,\"endMs\":49000}},{\"field\":\"address\",\"value\":\"서울 마포구 월드컵로 1\",\"confidence\":0.99,\"evidence\":{\"type\":\"TIMESTAMP\",\"startMs\":42000,\"endMs\":49000}},{\"field\":\"location\",\"value\":\"http://place.map.kakao.com/fixture-place-normal\",\"confidence\":0.99,\"evidence\":{\"type\":\"TIMESTAMP\",\"startMs\":42000,\"endMs\":49000}},{\"field\":\"visitEvidence\",\"value\":\"맛잇온 테스트 식당에 방문했다\",\"confidence\":0.99,\"evidence\":{\"type\":\"TIMESTAMP\",\"startMs\":42000,\"endMs\":49000}}],\"missingFields\":[],\"candidateTruncated\":false}"
+          }
+        ]
+      },
+      "finishReason": "STOP"
+    }
+  ]
+}

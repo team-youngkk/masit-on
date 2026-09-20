@@ -93,6 +93,8 @@ related_documents:
 - 자동 확정 후보의 기존 Kakao·YouTube·Visit 검증·등록·공개 흐름 연결
 - 제한 재시도, 실패 보관과 예외 수동 등록 대체
 
+관리자가 활성화하고 구독 검증을 마친 채널의 Webhook 누락 보정은 포함 범위다. 운영자가 명시한 주기로 자동 실행하고 기존 수동 시작·중지·상태 조회를 유지한다. 미설정 주기의 활성화, 진행 실행의 중복 생성, 수동 중지의 자동 재개를 금지한다. [ADR-EXT-004](../../../07-adr/integration/ext-004-youtube-periodic-reconciliation.md)의 quota·Cursor·복구 경계를 따른다. 아래 일반 수집·재처리 제외와 구분한다.
+
 ### 제외
 
 - 자동 검증 없이 공개하는 AI 단독 정식 Entity 생성

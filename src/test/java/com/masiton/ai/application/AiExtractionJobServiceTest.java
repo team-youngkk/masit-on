@@ -23,6 +23,7 @@ import org.springframework.http.HttpStatus;
 import com.masiton.ai.application.port.out.AiExtractionJobStore;
 import com.masiton.ai.application.port.out.TemporaryInputCipher;
 import com.masiton.ai.application.port.out.YoutubeChannelWatchStore;
+import com.masiton.ai.application.port.out.YoutubeChannelBackfillRunStore;
 import com.masiton.common.web.BusinessException;
 import com.masiton.ai.application.port.out.dto.AiExtractionJobView;
 import com.masiton.video.application.port.in.ResolveVerifiedVideoUseCase;
@@ -35,8 +36,9 @@ class AiExtractionJobServiceTest {
     private final AiExtractionJobStore store = mock(AiExtractionJobStore.class);
     private final YoutubeChannelWatchStore watchStore = mock(YoutubeChannelWatchStore.class);
     private final TemporaryInputCipher cipher = mock(TemporaryInputCipher.class);
+    private final YoutubeChannelBackfillRunStore backfillRuns = mock(YoutubeChannelBackfillRunStore.class);
     private final AiExtractionJobService service = new AiExtractionJobService(resolver,
-            new AiExtractionJobPersistenceService(store), watchStore, cipher);
+            new AiExtractionJobPersistenceService(store), watchStore, cipher, backfillRuns);
 
     @Test
     @DisplayName("관리자 동일 요청의 기존 작업이 있으면 resolver 실패와 무관하게 재사용한다")

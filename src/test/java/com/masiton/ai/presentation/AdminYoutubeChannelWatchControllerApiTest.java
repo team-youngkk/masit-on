@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -22,6 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.masiton.ai.application.port.in.YoutubeChannelWatchManagementUseCase;
+import com.masiton.ai.application.port.in.YoutubeChannelBackfillUseCase;
 import com.masiton.common.observability.TraceIdFilter;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.GlobalExceptionHandler;
@@ -30,10 +32,73 @@ import com.masiton.common.web.GlobalExceptionHandler;
 class AdminYoutubeChannelWatchControllerApiTest {
 
     private final YoutubeChannelWatchManagementUseCase useCase = mock(YoutubeChannelWatchManagementUseCase.class);
-    private final MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new AdminYoutubeChannelWatchController(useCase))
+    private final YoutubeChannelBackfillUseCase backfill = mock(YoutubeChannelBackfillUseCase.class);
+    private final MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new AdminYoutubeChannelWatchController(useCase, backfill))
             .setControllerAdvice(new GlobalExceptionHandler())
             .addFilters(new TraceIdFilter())
             .build();
+
+    @Test
+    @DisplayName("백필 접수는 외부 호출 없이 새 run을 202로 반환한다")
+    void 백필접수_새run_202을반환한다() throws Exception {
+        UUID creatorId = UUID.randomUUID(); UUID runId = UUID.randomUUID();
+        when(backfill.start(creatorId)).thenReturn(new YoutubeChannelBackfillUseCase.StartResult(runId, "QUEUED", false));
+        mockMvc.perform(post("/api/admin/ai/youtube-channel-watches/{creatorId}/backfills", creatorId))
+                .andExpect(status().isAccepted()).andExpect(jsonPath("$.runId").value(runId.toString()))
+                .andExpect(jsonPath("$.status").value("QUEUED"));
+    }
+
+    @Test
+    @DisplayName("활성 백필 재접수는 기존 run을 200으로 반환한다")
+    void 백필접수_활성run중복_200을반환한다() throws Exception {
+        UUID creatorId = UUID.randomUUID(); UUID runId = UUID.randomUUID();
+        when(backfill.start(creatorId)).thenReturn(new YoutubeChannelBackfillUseCase.StartResult(runId, "RUNNING", true));
+        mockMvc.perform(post("/api/admin/ai/youtube-channel-watches/{creatorId}/backfills", creatorId))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.runId").value(runId.toString()));
+    }
+
+    @Test
+    @DisplayName("백필 중지 요청은 run 소유자 기준으로 204를 반환한다")
+    void 백필중지_정상요청_204를반환한다() throws Exception {
+        UUID creatorId = UUID.randomUUID(); UUID runId = UUID.randomUUID();
+
+        mockMvc.perform(post("/api/admin/ai/youtube-channel-watches/{creatorId}/backfills/{runId}/stop",
+                        creatorId, runId))
+                .andExpect(status().isNoContent());
+
+        verify(backfill).stop(creatorId, runId);
+    }
+
+    @Test
+    @DisplayName("백필 상태 조회는 안전한 집계와 오류 범주를 반환한다")
+    void 백필상태조회_정상run_집계와오류범주를반환한다() throws Exception {
+        UUID creatorId = UUID.randomUUID(); UUID runId = UUID.randomUUID();
+        OffsetDateTime timestamp = OffsetDateTime.parse("2026-09-15T00:00:00Z");
+        when(backfill.get(creatorId, runId)).thenReturn(new YoutubeChannelBackfillUseCase.RunStatus(
+                runId, "FAILED", 50, 40, 10, "YOUTUBE_RATE_LIMIT", timestamp, timestamp));
+
+        mockMvc.perform(get("/api/admin/ai/youtube-channel-watches/{creatorId}/backfills/{runId}", creatorId, runId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.runId").value(runId.toString()))
+                .andExpect(jsonPath("$.status").value("FAILED"))
+                .andExpect(jsonPath("$.scannedCount").value(50))
+                .andExpect(jsonPath("$.submittedCount").value(40))
+                .andExpect(jsonPath("$.reusedCount").value(10))
+                .andExpect(jsonPath("$.lastErrorCategory").value("YOUTUBE_RATE_LIMIT"));
+    }
+
+    @Test
+    @DisplayName("다른 Creator의 백필 run 조회는 404와 traceId를 반환한다")
+    void 백필상태조회_소유자불일치_404와traceId를반환한다() throws Exception {
+        UUID creatorId = UUID.randomUUID(); UUID runId = UUID.randomUUID();
+        when(backfill.get(creatorId, runId)).thenThrow(new BusinessException(
+                HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "요청한 자원을 찾을 수 없습니다."));
+
+        mockMvc.perform(get("/api/admin/ai/youtube-channel-watches/{creatorId}/backfills/{runId}", creatorId, runId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"))
+                .andExpect(jsonPath("$.traceId").isNotEmpty());
+    }
 
     @Test
     @DisplayName("감시 목록은 여러 유튜버와 각 상태를 한 번에 반환한다")

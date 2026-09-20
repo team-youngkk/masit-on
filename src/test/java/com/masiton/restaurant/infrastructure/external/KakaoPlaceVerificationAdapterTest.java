@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import com.masiton.restaurant.application.PlaceVerificationFailedException;
+import com.masiton.restaurant.application.port.out.KakaoPlaceRevalidationPort;
 import com.masiton.restaurant.application.port.out.VerifiedPlace;
 import tools.jackson.databind.ObjectMapper;
 
@@ -152,6 +153,42 @@ class KakaoPlaceVerificationAdapterTest {
     }
 
     @Test
+    @DisplayName("재검증은 같은 place ID와 URL을 확인하면 FOUND를 반환한다")
+    void 재검증_같은placeId와URL이면_FOUND를반환한다() throws Exception {
+        givenResponse(200, document("https://place.map.kakao.com/" + PLACE_ID,
+                "서울 강남구 언주로93길 22-3"));
+
+        KakaoPlaceRevalidationPort.Result result = adapter().verify(
+                PLACE_ID, "서울집", SUBMITTED_URL);
+
+        assertThat(result.kind()).isEqualTo(KakaoPlaceRevalidationPort.Kind.FOUND);
+        assertThat(result.place()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("재검증은 place ID가 달라지면 PLACE_ID_MISMATCH를 반환한다")
+    void 재검증_placeId가다르면_PLACE_ID_MISMATCH를반환한다() throws Exception {
+        givenResponse(200, document("other-place", "https://place.map.kakao.com/other-place",
+                "서울 강남구 언주로93길 22-3"));
+
+        KakaoPlaceRevalidationPort.Result result = adapter().verify(
+                PLACE_ID, "서울집", SUBMITTED_URL);
+
+        assertThat(result.kind()).isEqualTo(KakaoPlaceRevalidationPort.Kind.PLACE_ID_MISMATCH);
+    }
+
+    @Test
+    @DisplayName("재검증은 Kakao 429를 QUOTA_EXCEEDED로 분류한다")
+    void 재검증_Kakao429이면_QUOTA_EXCEEDED를반환한다() throws Exception {
+        givenResponse(429, "{}");
+
+        KakaoPlaceRevalidationPort.Result result = adapter().verify(
+                PLACE_ID, "서울집", SUBMITTED_URL);
+
+        assertThat(result.kind()).isEqualTo(KakaoPlaceRevalidationPort.Kind.QUOTA_EXCEEDED);
+    }
+
+    @Test
     @DisplayName("endpoint가 없거나 HTTP(S) origin이 아니면 HTTP 호출 전에 초기화를 거부한다")
     void 초기화_endpoint누락또는지원하지않는형식_호출전에거부한다() {
         assertThatThrownBy(() -> new KakaoPlaceVerificationAdapter(
@@ -187,6 +224,10 @@ class KakaoPlaceVerificationAdapterTest {
     }
 
     private String document(String placeUrl, String roadAddress) {
+        return document(PLACE_ID, placeUrl, roadAddress);
+    }
+
+    private String document(String id, String placeUrl, String roadAddress) {
         return """
                 {
                   "documents": [
@@ -199,6 +240,6 @@ class KakaoPlaceVerificationAdapterTest {
                     }
                   ]
                 }
-                """.formatted(PLACE_ID, placeUrl, roadAddress);
+                """.formatted(id, placeUrl, roadAddress);
     }
 }

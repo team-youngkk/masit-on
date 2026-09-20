@@ -1,5 +1,6 @@
 package com.masiton.ai.infrastructure.provider.config;
 
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
@@ -61,6 +62,21 @@ class GeminiProviderPropertiesTest {
         assertThatThrownBy(properties::validateFixedContract)
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("valid endpoint");
+    }
+
+    @Test
+    @DisplayName("명시적으로 허용한 loopback endpoint는 격리 테스트에서 사용할 수 있다")
+    void 설정_명시적LoopbackEndpoint_격리테스트에서허용한다() {
+        GeminiProviderProperties properties = new GeminiProviderProperties();
+        properties.setEnabled(true);
+        properties.setFreeTierVerified(true);
+        properties.setApiKey("test-only-key");
+        properties.setBaseUrl("http://localhost:8081");
+        properties.setLoopbackTestEndpointAllowed(true);
+        properties.setConnectTimeout(Duration.ofSeconds(1));
+        properties.setResponseTimeout(Duration.ofSeconds(1));
+
+        assertThatCode(properties::validateFixedContract).doesNotThrowAnyException();
     }
 
     @Test

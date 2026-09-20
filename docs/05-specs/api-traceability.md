@@ -70,7 +70,7 @@ MVP와 확장 단계의 PRD, 기능 요구사항, 비즈니스 규칙, NFR, Work
 | [PRD-DISCOVERY-001](../04-product/prd/discovery/restaurant-discovery.md) | 맛집 탐색 | [api/discovery/restaurant-discovery-api.md](api/discovery/restaurant-discovery-api.md) | [API-DISCOVERY-001](api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색), [API-DISCOVERY-002](api/discovery/restaurant-discovery-api.md#api-discovery-002-공개-맛집-필터-선택지) | [WS-01](../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색) | 양성훈 |
 | [PRD-DISCOVERY-002](../04-product/prd/discovery/creator-discovery.md) | 유튜버 기반 탐색 | [api/discovery/creator-discovery-api.md](api/discovery/creator-discovery-api.md) | [API-CREATOR-DISCOVERY-001](api/discovery/creator-discovery-api.md#api-creator-discovery-001-유튜버-필터-선택-목록), [API-DISCOVERY-001](api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색) | [WS-03](../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) | 이우람 |
 | [PRD-DETAIL-001](../04-product/prd/detail/restaurant-detail.md) | 맛집 상세 및 콘텐츠 조회 | [api/detail/restaurant-detail-api.md](api/detail/restaurant-detail-api.md) | [API-DETAIL-001](api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회) | [WS-02](../02-analysis/mvp-workstreams.md#6-ws-02-맛집-상세-및-콘텐츠-조회) | 박진영 |
-| [PRD-ADMIN-001](../04-product/prd/admin/admin-data-management.md) | 관리자 데이터 등록 | [api/account/member-authentication-api.md](api/account/member-authentication-api.md), [api/admin/authentication-api.md](api/admin/authentication-api.md), [api/admin/reference-data-api.md](api/admin/reference-data-api.md), [api/admin/visit-registration-api.md](api/admin/visit-registration-api.md) | [API-MEMBER-AUTH-006](api/account/member-authentication-api.md#api-member-auth-006-통합-로그인)~[API-MEMBER-AUTH-009](api/account/member-authentication-api.md#api-member-auth-009-현재-사용자-정보), 기본 데이터 미리보기·생성 API, [API-ADMIN-VISIT-001](api/admin/visit-registration-api.md#api-admin-visit-001-방문-관계-등록) | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 김인안 |
+| [PRD-ADMIN-001](../04-product/prd/admin/admin-data-management.md) | 관리자 데이터 등록 | [api/account/member-authentication-api.md](api/account/member-authentication-api.md), [api/admin/authentication-api.md](api/admin/authentication-api.md), [api/admin/reference-data-api.md](api/admin/reference-data-api.md), [api/admin/visit-registration-api.md](api/admin/visit-registration-api.md), [api/admin/tag-definition-api.md](api/admin/tag-definition-api.md) | [API-MEMBER-AUTH-006](api/account/member-authentication-api.md#api-member-auth-006-통합-로그인)~[API-MEMBER-AUTH-009](api/account/member-authentication-api.md#api-member-auth-009-현재-사용자-정보), 기본 데이터 미리보기·생성 API, [API-ADMIN-VISIT-001](api/admin/visit-registration-api.md#api-admin-visit-001-방문-관계-등록), API-ADMIN-TAG-DEFINITION-001~002 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) | 김인안 |
 
 [PRD-PRODUCT-001](../04-product/prd/00-product-overview.md)은 전체 제품 범위를 제공하며 하나의 주 API에만 매핑하지 않는다.
 
@@ -98,7 +98,7 @@ MVP와 확장 단계의 PRD, 기능 요구사항, 비즈니스 규칙, NFR, Work
 | PRD ID | 기능 PRD | 주 API 문서 | 관련 API ID | Workstream | 담당자 |
 |---|---|---|---|---|---|
 | [PRD-DISCOVERY-005](../04-product/prd/discovery/natural-language-restaurant-discovery.md) | 자연어 맛집 탐색 | [자연어 맛집 탐색 API](api/discovery/natural-language-restaurant-discovery-api.md) | API-DISCOVERY-NL-001 | [WS-14](../02-analysis/third-expansion-workstreams.md#5-ws-14-자연어-맛집-탐색) | 양성훈 |
-| [PRD-ADMIN-002](../04-product/prd/admin/ai-video-information-extraction.md) | AI 영상 정보 추출 | [관리자 AI 영상 추출 API](api/admin/ai-video-extraction-api.md) | API-ADMIN-AIEXTRACT-001, API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | 김인안 |
+| [PRD-ADMIN-002](../04-product/prd/admin/ai-video-information-extraction.md) | AI 영상 정보 추출·YouTube 보정 조회 | [관리자 AI 영상 추출 API](api/admin/ai-video-extraction-api.md) | API-ADMIN-AIEXTRACT-001, API-ADMIN-AIEXTRACT-WEBHOOK-001~002, API-ADMIN-AIEXTRACT-BACKFILL-001~003 | [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | 김인안 |
 | [PRD-DISCOVERY-006](../04-product/prd/discovery/restaurant-course-recommendation.md) | 맛집 코스 추천 | [맛집 코스 추천 API](api/discovery/restaurant-course-recommendation-api.md) | API-DISCOVERY-COURSE-001, API-PERSONAL-004 (명시적 찜 후보 불러오기) | [WS-16](../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천) | 이우람 |
 
 3차 확장 세 기능의 API 계약은 Accepted 상태로 연결됐고, 계약 테스트·외부 계정 연결·평가·운영 게이트를 완료해 현재 운영 중이다([운영 완료 기록](../08-planning/third-expansion-operational-completion-record.md)). 정식 공개 전환은 제품 API의 경로·Method·회원/관리자 인증을 변경하지 않으며, Webhook 자체 인증·rate limit과 Host·`/internal`·loopback 경계를 유지한다.
@@ -126,6 +126,7 @@ MVP와 확장 단계의 PRD, 기능 요구사항, 비즈니스 규칙, NFR, Work
 | [FR-ADMIN-002](../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록) | 맛집 등록 | [API-ADMIN-RESTAURANT-001](api/admin/reference-data-api.md#api-admin-restaurant-001-맛집-등록-확정) | [API-ADMIN-RESTAURANT-PLACE-SEARCH-001](api/admin/reference-data-api.md#api-admin-restaurant-place-search-001-맛집-장소-검색), [API-ADMIN-RESTAURANT-PREVIEW-001](api/admin/reference-data-api.md#api-admin-restaurant-preview-001-맛집-등록-검증-미리보기), [API-DISCOVERY-001](api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색), [API-DETAIL-001](api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회) | 장소 후보 검색·외부 확인·관리자 확정·중복·서울·조회 반영 테스트 | 김인안 |
 | [FR-ADMIN-003](../01-requirements/functional-requirements.md#fr-admin-003-유튜버-정보-등록) | 유튜버 등록 | [API-ADMIN-CREATOR-001](api/admin/reference-data-api.md#api-admin-creator-001-유튜버-등록-확정) | [API-ADMIN-CREATOR-PREVIEW-001](api/admin/reference-data-api.md#api-admin-creator-preview-001-유튜버-등록-검증-미리보기), [API-CREATOR-DISCOVERY-001](api/discovery/creator-discovery-api.md#api-creator-discovery-001-유튜버-필터-선택-목록) | 외부 확인·관리자 확정·동일 채널·조회 반영 테스트 | 김인안 |
 | [FR-ADMIN-004](../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록) | 영상 등록 | [API-ADMIN-VIDEO-001](api/admin/reference-data-api.md#api-admin-video-001-영상-등록-확정) | [API-ADMIN-VIDEO-PREVIEW-001](api/admin/reference-data-api.md#api-admin-video-preview-001-영상-등록-검증-미리보기), [API-DETAIL-001](api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회) | 외부 확인·관리자 확정·동일 영상·원본 미저장 테스트 | 김인안 |
+| [FR-ADMIN-005](../01-requirements/functional-requirements.md#fr-admin-005-관리자-태그-정의-생성) | 관리자 태그 정의 생성 | [API-ADMIN-TAG-DEFINITION-001~002](api/admin/tag-definition-api.md) | [API-ADMIN-VISIT-TAGS-001](api/admin/restaurant-visit-tags-api.md) | ADMIN 인가·활성 목록·입력·정규화·동시 충돌·원자성·상세 즉시 선택 테스트 | 김인안 |
 | [FR-VISIT-001](../01-requirements/functional-requirements.md#fr-visit-001-맛집유튜버영상-방문-관계-등록) | 방문 관계 등록 | [API-ADMIN-VISIT-001](api/admin/visit-registration-api.md#api-admin-visit-001-방문-관계-등록) | [API-DISCOVERY-001](api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색), [API-DETAIL-001](api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회) | 참조·채널 일치·근거·중복·원자성 통합 테스트 | 김인안 |
 
 API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br-admin-006-잘못-등록된-데이터의-정정-원칙)의 정정 구현, 공개 상태 저장 구조, 동시성 보장 방식과 외부 동일성 식별값 저장 방식은 외부 API 기능이 아니라 후속 내부 설계다. 다만 그 결과는 공개 제외·중복 오류 계약으로 관찰된다.
@@ -180,12 +181,12 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 | FR-AIEXTRACT-001·FR-AIEXTRACT-005 | API-ADMIN-AIEXTRACT-001 | API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | URL 검증·관리자 신규 추가·멱등 접수·202 응답 계약 테스트 | 김인안 |
 | FR-AIEXTRACT-002 | API-ADMIN-AIEXTRACT-001 | 없음 | 목록·상세·부분 결과·실패·페이지 계약 테스트 | 김인안 |
 | FR-AIEXTRACT-003 | API-ADMIN-AIEXTRACT-001 | 기존 관리자 등록·방문 API | 자동 확정·자동 차단·사후 보정·롤백·정식 Entity 원자성·`AUTO_BLOCKED` 등록 단위 일괄 폐기(BR-AIEXTRACT-011 `DISCARD` 종결 동작의 다건 확장) 테스트 | 김인안 |
-| FR-AIEXTRACT-004 | API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | API-ADMIN-AIEXTRACT-001 | 구독 확인·신규 영상 Atom·중복 알림·AI 호출 격리 테스트 | 김인안 |
+| FR-AIEXTRACT-004 | API-ADMIN-AIEXTRACT-WEBHOOK-001~002·API-ADMIN-AIEXTRACT-BACKFILL-001~003 | API-ADMIN-AIEXTRACT-001 | 구독 확인·신규 영상 Atom·누락 보정·중복 알림·AI 호출 격리 테스트 | 김인안 |
 | FR-AIEXTRACT-006 | API-ADMIN-AIEXTRACT-001 | API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | Creator 채널 식별자·감시 행 부재의 200 기본 상태, 다중 채널 목록·일괄 상태 조회, GET 상태·lastErrorAt 조회, PUT 활성화·해지·renewal 실패 상태 테스트 | 김인안 |
 | FR-NLSEARCH-001 | API-DISCOVERY-NL-001 | API-DISCOVERY-001 | 자연어 해석·적용 조건·기존 목록 응답 계약 테스트 | 양성훈 |
 | FR-NLSEARCH-002 | API-DISCOVERY-NL-001 | API-DISCOVERY-001 | 직접 필터 우선·AND 조합·충돌 요약 테스트 | 양성훈 |
 | FR-NLSEARCH-003 | API-DISCOVERY-NL-001 | 없음 | 빈 결과·`PARTIAL`·`FAILED`·전체 목록 대체 금지 테스트 | 양성훈 |
-| FR-NLSEARCH-004 | API-DISCOVERY-NL-001 | API-DISCOVERY-001 | 확정 태그 코드·Visit 공개 상태·여러 태그 AND 계약 테스트 | 양성훈 |
+| FR-NLSEARCH-004 | API-DISCOVERY-NL-001 | API-DISCOVERY-001 | ACTIVE 동적 태그 사전·DEPRECATED 제외·모호성/6개 상한·503 fail-closed·Visit 공개 상태·여러 태그 AND·Golden V1 계약 테스트 | 양성훈 |
 | FR-AIEXTRACT-007 | API-ADMIN-AIEXTRACT-001 | API-DISCOVERY-NL-001 | 태그 후보 자동 판단·사후 보정·`VisitTag` 연결·검증 전 검색 제외 테스트 | 김인안 |
 | FR-COURSE-001 | API-DISCOVERY-COURSE-001 | API-DISCOVERY-001, API-PERSONAL-004 (명시적 찜 후보 불러오기) | 2~5개·중복·공개·좌표·출발점 검증 테스트, 찜 후보 페이지·인증 경계 테스트 | 이우람 |
 | FR-COURSE-002 | API-DISCOVERY-COURSE-001 | 없음 | 자동차 순서·구간 거리/시간·30km·만료 테스트 | 이우람 |
@@ -216,7 +217,7 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 | [BR-VIDEO-007](../01-requirements/business-rules.md#br-video-007-외부-링크-장애의-격리)~[BR-VIDEO-009](../01-requirements/business-rules.md#br-video-009-영상-이용-불가-처리) | 링크 장애·표시 변경·이용 불가 | [API-DETAIL-001](api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회) | 없음 | 기본 상세 유지, 무효 영상 제외 | 박진영 |
 | [BR-VISIT-001](../01-requirements/business-rules.md#br-visit-001-방문-관계의-구성)~[BR-VISIT-007](../01-requirements/business-rules.md#br-visit-007-등록-완료와-검증-상태) | 세 대상 관계·근거·중복·유효성·날짜·검증 | [API-ADMIN-VISIT-001](api/admin/visit-registration-api.md#api-admin-visit-001-방문-관계-등록), [API-DISCOVERY-001](api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색), [API-DETAIL-001](api/detail/restaurant-detail-api.md#api-detail-001-맛집-상세-조회) | 세 참조·조합·근거·채널 일치 | 201·404·409·422, 공개 관계만 조회 | 김인안·이우람·박진영 |
 | [BR-SEARCH-001](../01-requirements/business-rules.md#br-search-001-검색-대상과-일치-기준)~[BR-SEARCH-009](../01-requirements/business-rules.md#br-search-009-기본-정렬) | 검색·필터·고유성·빈 결과·페이지·정렬 | [API-DISCOVERY-001](api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색) | 쿼리 허용값과 단일 값 | AND 결과, 빈 목록, 안정 페이지 | 양성훈·이우람 |
-| [BR-ADMIN-001](../01-requirements/business-rules.md#br-admin-001-관리자-권한-검증)~[BR-ADMIN-005](../01-requirements/business-rules.md#br-admin-005-mvp-관리-기능의-경계)·[BR-ADMIN-007](../01-requirements/business-rules.md#br-admin-007-동시-등록의-고유성)·[BR-ADMIN-008](../01-requirements/business-rules.md#br-admin-008-보류-요청의-처리) | 권한·검증·정합성·반영·MVP 경계·동시성·보류 | 인증 및 모든 관리자 등록 API | JWT·ADMIN 권한, 필수값, 미리보기, 확인 토큰, 중복 | 401·403·409 및 공개 조회 반영 | 김인안 |
+| [BR-ADMIN-001](../01-requirements/business-rules.md#br-admin-001-관리자-권한-검증)~[BR-ADMIN-005](../01-requirements/business-rules.md#br-admin-005-mvp-관리-기능의-경계)·[BR-ADMIN-007](../01-requirements/business-rules.md#br-admin-007-동시-등록의-고유성)~[BR-ADMIN-009](../01-requirements/business-rules.md#br-admin-009-태그-용어의-전역-고유성과-원자적-생성) | 권한·검증·정합성·반영·MVP 경계·동시성·보류·태그 용어 고유성 | 인증 및 모든 관리자 등록 API | JWT·ADMIN 권한, 필수값, 미리보기, 확인 토큰, 코드·정규화 용어 중복 | 401·403·409 및 공개 조회 반영 | 김인안 |
 | [BR-ADMIN-006](../01-requirements/business-rules.md#br-admin-006-잘못-등록된-데이터의-정정-원칙) | 잘못된 데이터 정정 | API 직접 노출 없음 | 수정·삭제 API 없음 | 비공개된 대상은 조회 제외 | 김인안 |
 | [BR-AUTH-009](../01-requirements/business-rules.md#br-auth-009-통합-계정과-rbac)·[BR-AUTH-010](../01-requirements/business-rules.md#br-auth-010-보안-속성-변경과-즉시-폐기) | 통합 계정·RBAC·보안 속성 변경 | [API-MEMBER-AUTH-006](api/account/member-authentication-api.md#api-member-auth-006-통합-로그인)~[API-MEMBER-AUTH-009](api/account/member-authentication-api.md#api-member-auth-009-현재-사용자-정보), 모든 `/api/admin/**` API | 가입 role 입력 금지, DB role 검증, 역할·상태·비밀번호 변경 시 전 세션 폐기 | `role`, 401·403·503 구분 | 김인안 |
 | [BR-PUBLICATION-001](../01-requirements/business-rules.md#br-publication-001-일반-사용자-공개-범위)~[BR-PUBLICATION-008](../01-requirements/business-rules.md#br-publication-008-상태-변경의-일관성) | 공개·비공개·삭제와 일관성 | 모든 공개 조회, 모든 등록 결과 | 관리자 등록 공개 정책 | 비공개·삭제 제외, 기본 맛집 유지 | 전체 Workstream |
@@ -237,7 +238,7 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 | 규칙 ID | 적용 API | 핵심 검증 | 담당자 |
 |---|---|---|---|
 | BR-AIEXTRACT-001~004·008 | API-ADMIN-AIEXTRACT-001 | 후보·태그 범위·자동 검증 전 저장 금지·통과 후 무승인 공개·동일 영상 멱등성·Provider/Prompt/Schema 버전 | WS-15 |
-| BR-AIEXTRACT-005~007 | API-ADMIN-AIEXTRACT-001·API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | GET/PUT 채널 상태와 `UNKNOWN`·`ACTIVE` Webhook 수락 경계·유입 경로 수렴·Gemini URL 입력과 관리자 텍스트 fallback | WS-15 |
+| BR-AIEXTRACT-005~007 | API-ADMIN-AIEXTRACT-001·API-ADMIN-AIEXTRACT-WEBHOOK-001~002·API-ADMIN-AIEXTRACT-BACKFILL-001~003 | GET/PUT 채널 상태와 `UNKNOWN`·`ACTIVE` Webhook/보정 수락 경계·유입 경로 수렴·Gemini URL 입력과 관리자 텍스트 fallback | WS-15 |
 | BR-NLSEARCH-001~003 | API-DISCOVERY-NL-001·API-DISCOVERY-001 | 직접 필터 우선·태그 AND·공개·활성 결과·전체 목록 대체 금지 | WS-14 |
 | BR-NLSEARCH-003 | API-DISCOVERY-NL-001·API-DISCOVERY-001 | 활성 TagDefinition·확정 VisitTag·공개 Visit·태그 AND·중복 제거 | WS-14 |
 | BR-AIEXTRACT-008 | API-ADMIN-AIEXTRACT-001 | 허용 태그 정의·근거·자동 결정·사후 보정·검증 전 공개 금지 | WS-15 |
@@ -302,7 +303,7 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 | [WS-12](../02-analysis/second-expansion-workstreams.md#7-ws-12-제보신고-검토) | 제보·신고 회원·관리자 API | WS-13 알림과 같은 트랜잭션, 기존 관리자 실제 조치 흐름 사용 |
 | [WS-13](../02-analysis/second-expansion-workstreams.md#8-ws-13-사용자-알림) | API-NOTIFICATION-001~004 | WS-12 상태를 변경하지 않고 알림 생성·읽음 소유 |
 
-| [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | API-ADMIN-AIEXTRACT-001·API-ADMIN-AIEXTRACT-WEBHOOK-001~002 | 비동기 Job·후보 Snapshot·자동 등록·예외 보정·채널 감시 목록·GET/PUT 상태 소유 |
+| [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | API-ADMIN-AIEXTRACT-001·API-ADMIN-AIEXTRACT-WEBHOOK-001~002·API-ADMIN-AIEXTRACT-BACKFILL-001~003 | 비동기 Job·후보 Snapshot·자동 등록·예외 보정·채널 감시·YouTube 보정 실행과 lease 소유 |
 | [WS-14](../02-analysis/third-expansion-workstreams.md#5-ws-14-자연어-맛집-탐색) | API-DISCOVERY-NL-001 | 기존 API-DISCOVERY-001에 구조화 조건을 전달하고 해석 실패를 격리 |
 | [WS-16](../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천) | API-DISCOVERY-COURSE-001 | 선택 맛집 좌표를 Route Provider Port로 전달하고 결과를 비저장 반환 |
 
@@ -343,3 +344,13 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 ## 맛집 상세 방문 태그 관리 — 이슈 #358
 
 FR-AIEXTRACT-007·FR-NLSEARCH-004 → [API-ADMIN-VISIT-TAGS-001](api/admin/restaurant-visit-tags-api.md): GET /api/admin/restaurants/{restaurantId}/visit-tags, PUT /api/admin/restaurants/{restaurantId}/visits/{visitId}/tags → VisitTag 조회/교체·V9 감사. ADMIN 인가·동시 수정·원자성·검색 반영은 [구현 계획](../08-planning/restaurant-visit-tag-editing.md) 참조.
+
+## 관리자 태그 정의 생성 — 이슈 #363
+
+[FR-ADMIN-005](../01-requirements/functional-requirements.md#fr-admin-005-관리자-태그-정의-생성)·[BR-ADMIN-009](../01-requirements/business-rules.md#br-admin-009-태그-용어의-전역-고유성과-원자적-생성) → [API-ADMIN-TAG-DEFINITION-001~002](api/admin/tag-definition-api.md): GET/POST `/api/admin/tag-definitions` → ACTIVE 선택 목록·`MANUAL_OVERRIDE` 생성·V10 전역 정규화 용어 unique. ADMIN 인가, 201/no-store, 입력 오류·코드/용어 동시 충돌, 정의/용어 원자성과 상세 즉시 선택은 [구현 계획](../08-planning/admin-tag-definition-creation.md)에서 검증한다. 생성은 VisitTag를 만들지 않으며 [방문 태그 PUT](api/admin/restaurant-visit-tags-api.md#3-방문-태그-교체)이 별도로 연결·감사를 확정한다.
+
+## 관리자 태그 정의 생명주기 — 이슈 #365
+
+[FR-ADMIN-006](../01-requirements/functional-requirements.md#fr-admin-006-관리자-태그-정의-생명주기-관리)·[BR-ADMIN-010](../01-requirements/business-rules.md#br-admin-010-태그-정의-상태와-감사) → [태그 정의 관리 API](api/admin/tag-definition-api.md#6-관리-목록상세변경-이력)와 [방문 태그 API](api/admin/restaurant-visit-tags-api.md) → 상태 필터·내용 수정·상태 전환·버전 충돌·append-only 감사·비활성 기존 연결 경계를 [구현 계획](../08-planning/admin-tag-definition-lifecycle.md)에서 검증한다.
+
+[FR-ADMIN-007](../01-requirements/functional-requirements.md#fr-admin-007-관리자-중복-태그-병합)·[BR-ADMIN-011](../01-requirements/business-rules.md#br-admin-011-중복-태그-병합과-근거-보존) → [태그 정의 병합 API](api/admin/tag-definition-api.md#8-중복-태그-병합) → ADMIN 미리보기·버전/fingerprint 확인·VisitTag 안전 이전·중복 provenance·append-only 병합 감사를 [구현 계획](../08-planning/tag-definition-merge.md)에서 검증한다.

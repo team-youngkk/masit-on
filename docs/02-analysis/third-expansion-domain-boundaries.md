@@ -50,7 +50,7 @@ related_documents:
 | AI 제공자 결합 | Provider Port/Adapter 뒤에 Google Gemini API Free Tier의 Gemini Developer API global endpoint와 `gemini-3.5-flash-lite`를 연결한다. 현재 운영 계약인 Prompt `P8`, 결과 Schema `S2`, 유료 호출 0원·무료 quota hard stop을 적용한다. | 운영 계정의 실제 billing 미연결·quota 연결 확인 |
 | AI 데이터 | 후보 Snapshot·검수 이력과 정식 Entity·확정 VisitTag를 분리하고 검수·외부 검증 후에만 저장한다. 허용 태그 18종과 `TIMESTAMP`·`TEXT_RANGE`·`UNKNOWN` 근거 유형을 사용한다. | 실제 마이그레이션 적용 증거 |
 | 원문 보존 | 원본 영상·전체 자막·전체 모델 응답을 저장하지 않고 근거 위치·해시만 관리자 전용으로 보존 | 실제 Google 계정 데이터 처리 설정 확인 |
-| 자연어 검색 | P1 규칙 기반 해석만 사용하며 LLM·임베딩·RAG·챗봇을 도입하지 않는다. 지원 태그 18종, 태그 AND, 별칭 모호성 `UNRESOLVED`를 적용한다. | 운영 전 평가 Dataset 실행 증거 |
+| 자연어 검색 | P1 규칙 기반 해석만 사용하며 LLM·임베딩·RAG·챗봇을 도입하지 않는다. `ACTIVE` 동적 태그 사전, 초기 18종 Golden V1, 태그 AND, 별칭 모호성 `UNRESOLVED`를 적용한다. | 운영 전 평가 Dataset 실행 증거 |
 | 코스 결과 | Kakao Mobility 자동차 길찾기 `/v1/directions`를 1회 호출하고 첫 장소 출발·최근접 이웃 순서·동률 Restaurant ID 오름차순·TTL 5분·캐시 없음·앱 월 1,000건 상한을 적용한다. | 운영 계정의 실제 quota 연결 확인 |
 
 ## 2. 경계 결정 요약
@@ -257,7 +257,7 @@ flowchart LR
 
 | 결정 항목 | 현재 상태 | 확정 문서 |
 |---|---|---|
-| 자연어 P1 규칙·사전과 오류 Schema | 결정 완료: 지원 태그 18종·AND·`UNRESOLVED`·기존 목록 API 재사용 | 자연어 해석 ADR·API 계약 |
+| 자연어 P1 규칙·사전과 오류 Schema | 결정 완료: `ACTIVE` 동적 태그 사전·초기 18종 Golden V1·AND·`UNRESOLVED`·30초 TTL fail-closed·기존 목록 API 재사용 | 자연어 해석 ADR·API 계약 |
 | AI 후보 Snapshot·근거 구간·보존 | 결정 완료: 현재 P8/S2·근거 3종·원문 비저장·1년 보존, 기존 P1·P2·P3·P4·P5·P6·P7 Snapshot 이력 보존 | AI 작업 ADR·데이터 명세 |
 | AI 제공자·모델·Prompt·리전·비용 | 결정 완료: Gemini Free Tier 전용·유료 호출 0원·global·`gemini-3.5-flash-lite`·quota hard stop | AI 제공자 ADR·비용 설정 검증 |
 | 비동기 Worker·claim·재기동 복구 | 결정 완료: Worker 1개/인스턴스·polling 5초·lease 120초·heartbeat 30초 | 비동기·운영 ADR |

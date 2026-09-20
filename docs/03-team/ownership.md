@@ -144,6 +144,7 @@ MVP 기능 요구사항 20개는 모두 정확히 하나의 Workstream과 최종
 |---|---|---|---|---|---|
 | `FR-NLSEARCH-001~004` | 자연어 검색·필터·확정 태그 조합·실패 처리 | [WS-14](../02-analysis/third-expansion-workstreams.md#5-ws-14-자연어-맛집-탐색) | 양성훈 | 이우람 | 배정 완료 |
 | `FR-AIEXTRACT-001~007` | AI 추출·태그 후보·관리자 검수 | [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | 김인안 | 박진영 | 배정 완료 |
+| [FR-ADMIN-005](../01-requirements/functional-requirements.md#fr-admin-005-관리자-태그-정의-생성) | 관리자 태그 정의 생성과 상세 즉시 선택 | [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | 김인안 | 박진영 | 배정 완료 |
 | `FR-COURSE-001~003` | 코스 입력·경로·외부 실패 대체 | [WS-16](../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천) | 이우람 | 양성훈 | 배정 완료 |
 
 개별 요구사항 링크와 보조 PRD는 [제품 추적표 3.6절](../04-product/traceability.md#36-3차-확장-요구사항--prd-매핑)에서 관리한다.
@@ -218,6 +219,7 @@ MVP 기능 요구사항 20개는 모두 정확히 하나의 Workstream과 최종
 |---|---|---|---|---|
 | `BR-NLSEARCH-001~003` | 직접 필터 우선·태그·공개 생명주기 | 양성훈 | 이우람, 김인안 | 배정 완료 |
 | `BR-AIEXTRACT-001~011` | 후보·태그 범위·검수 전 저장 금지·중복·버전 | 김인안 | 박진영, 이우람 | 배정 완료 |
+| [BR-ADMIN-009](../01-requirements/business-rules.md#br-admin-009-태그-용어의-전역-고유성과-원자적-생성) | 태그 용어의 전역 고유성과 원자적 생성 | 김인안 | 박진영, 양성훈 | 배정 완료 |
 | `BR-COURSE-001~004` | 입력 수·좌표·TTL·부분 실패 | 이우람 | 양성훈, 박진영 | 배정 완료 |
 
 공동 검토가 필요한 규칙도 최종 책임자는 한 명이다. 해당 상태는 소유권 미배정이 아니라 여러 Workstream의 공개 상태, 데이터 관계 또는 조회 결과에 영향을 주므로 변경 시 공동 리뷰가 필요하다는 뜻이다.

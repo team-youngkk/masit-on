@@ -26,6 +26,7 @@ import com.masiton.ai.application.port.in.YoutubeChannelWatchManagementUseCase;
 import com.masiton.ai.application.port.out.AiExtractionJobStore;
 import com.masiton.ai.application.port.out.TemporaryInputCipher;
 import com.masiton.ai.application.port.out.YoutubeChannelWatchStore;
+import com.masiton.ai.application.port.out.YoutubeChannelBackfillRunStore;
 import com.masiton.ai.application.port.out.YoutubeChannelWatchSubscriptionPort;
 import com.masiton.ai.application.port.out.YoutubeChannelWatchVerificationTokenPort;
 import com.masiton.common.web.BusinessException;
@@ -184,7 +185,8 @@ class YoutubeChannelWatchManagementServiceTest {
                 mock(ResolveVerifiedVideoUseCase.class),
                 new AiExtractionJobPersistenceService(mock(AiExtractionJobStore.class)),
                 watchStore,
-                mock(TemporaryInputCipher.class));
+                mock(TemporaryInputCipher.class),
+                mock(YoutubeChannelBackfillRunStore.class));
 
         assertThat(jobService.verifyChallenge("channel-id", "verify-token", "challenge"))
                 .isEqualTo("challenge");

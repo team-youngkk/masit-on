@@ -37,6 +37,7 @@ related_documents:
   - ../../../02-analysis/third-expansion-domain-boundaries.md
   - ../../../07-adr/architecture/arch-005-natural-language-filter-interpretation.md
   - ../../../08-planning/third-expansion-evaluation-strategy.md
+  - ../../../08-planning/dynamic-natural-language-tag-dictionary.md
   - restaurant-discovery-api.md
   - ../common/response-contract.md
   - ../common/error-contract.md
@@ -51,7 +52,7 @@ related_documents:
 사용자의 자연어 문장을 기존 맛집 조건으로 해석하고, 기존 공개 맛집 목록을 반환한다. 이 API는 임베딩·벡터 유사도 검색·RAG·자유 형식 챗봇·결과 선정 이유 생성을 제공하지 않는다.
 
 - 입력 원문과 검색 이력은 저장하지 않는다.
-- 해석 결과는 `restaurantName`, `district`, `category`, `creatorId`, `tags` 조건으로만 제한한다. `tags`는 [AI 영상 추출 데이터 계약](../../data/third-expansion-ai-video-data-contract.md)의 초기 seed에 있는 관리자 확정 `VisitTag` 코드다.
+- 해석 결과는 `restaurantName`, `district`, `category`, `creatorId`, `tags` 조건으로만 제한한다. 자연어 `tags`는 [AI 영상 추출 데이터 계약](../../data/third-expansion-ai-video-data-contract.md)의 `ACTIVE` 태그 정의 코드·표시명·별칭으로 해석하고, 목록 결과는 관리자 확정 `VisitTag`만 사용한다.
 - 실제 목록 조합·공개 상태·Visit 유효성·정렬·페이지네이션은 [맛집 탐색 API](restaurant-discovery-api.md)를 따른다.
 - 직접 지정 필터와 자연어 조건이 같은 종류에서 충돌하면 직접 지정 필터를 적용한다.
 
@@ -159,7 +160,7 @@ related_documents:
 | `interpretation.conflicts` | array | 예 | 직접 필터가 자연어 조건을 대체한 충돌 목록 |
 | `interpretation.conflicts[].field` | enum | 예 | `query`, `district`, `category`, `creatorId`, `tags` |
 | `interpretation.conflicts[].resolution` | enum | 예 | `DIRECT_FILTER_WON` |
-| `interpretation.parserVersion` | string | 예 | 규칙·사전·정규화 규칙 버전. P1은 `P1` |
+| `interpretation.parserVersion` | string | 예 | 문장 패턴·조건 해석·충돌·상한·정규화 알고리즘 버전. P1은 `P1`이며 동적 태그 데이터 변경만으로 증가하지 않음 |
 | `results` | object | 예 | 기존 맛집 목록 응답 조합 |
 | `results.items` | array | 예 | [맛집 탐색 API](restaurant-discovery-api.md)의 목록 항목 |
 | `results.page` | object | 예 | 공통 페이지 정보 |
@@ -188,6 +189,8 @@ related_documents:
 6. 자연어 조건을 하나도 적용하지 못하면 전체 목록으로 대체하지 않는다.
 7. 결과 선정 이유·생성 답변·관리자 미확정 태그·가격대 조건은 제공하지 않는다.
 8. 태그 별칭이 둘 이상의 코드로 해석되면 임의 선택하지 않고 `UNRESOLVED`로 처리한다.
+9. 자연어 태그 용어는 Unicode NFKC → 연속 Unicode 공백 한 칸 축약·trim → ASCII 소문자 순서로 정규화한다. 별칭 판정은 길이 내림차순 후 사전순, 반환 코드는 `tag_code` 사전순으로 고정한다.
+10. 하나의 별칭이 둘 이상의 `ACTIVE` 코드에 매핑되거나 자연어에서 태그가 6개 이상 인식되면 자연어 `tags` 조건 전체를 `UNRESOLVED_VALUE`로 처리한다. `filters.tags`가 있으면 직접 필터를 적용하고 기존 `DIRECT_FILTER_WON` 충돌 정보를 반환한다.
 
 ## 6. Error Cases
 
@@ -197,7 +200,7 @@ related_documents:
 | `INVALID_FIELD_VALUE` | 400 | 문장 길이, 필터, 페이지, 크기 또는 허용값 검증 실패 |
 | `INVALID_IDENTIFIER` | 400 | `creatorId` 형식 오류 |
 | `NATURAL_LANGUAGE_RATE_LIMITED` | 429 | 요청 제한 초과 |
-| `NATURAL_LANGUAGE_UNAVAILABLE` | 503 | 규칙 사전·해석 구성요소를 사용할 수 없음. 기존 구조화 탐색은 계속 제공 |
+| `NATURAL_LANGUAGE_UNAVAILABLE` | 503 | 최초 동적 태그 사전 적재 또는 TTL 만료 갱신을 포함해 규칙 사전·해석 구성요소를 사용할 수 없음. stale·seed로 대체하지 않으며 기존 구조화 탐색은 계속 제공 |
 | `INTERNAL_SERVER_ERROR` | 500 | 예상하지 못한 내부 오류 |
 
 해석 결과가 `FAILED`인 것은 API 오류가 아니며 `200 OK`로 반환한다. 모든 오류는 [공통 오류 계약](../common/error-contract.md)의 `traceId`를 포함한다.
@@ -210,10 +213,14 @@ related_documents:
 - 신규 유료 임베딩 호출과 저장은 초기 범위에서 0건이며 태그 검색은 저장된 확정 태그의 정확 일치만 사용한다.
 - 내부 처리 p95 800ms 이하, 서버 오류율 1% 미만을 목표로 하며 외부 사용자 네트워크 지연은 제외한다.
 - 자연어 API 장애는 `GET /api/restaurants`와 기존 상세 API로 전파되지 않는다.
+- `ACTIVE` 태그 사전은 애플리케이션 프로세스의 라이브러리 없는 read-through cache에 30초 TTL로 보관한다. TTL 안의 생성·수정·폐기 반영은 최대 30초 지연될 수 있고, 만료 뒤 첫 요청이 한 번 갱신한 불변 snapshot을 동시 요청이 공유한다.
+- 최초 적재와 TTL 만료 갱신이 실패하면 `NATURAL_LANGUAGE_UNAVAILABLE` 503으로 fail-closed 처리하며 stale snapshot 또는 초기 18개 seed로 폴백하지 않는다.
+- `parserVersion: P1`은 알고리즘 계약을 나타낸다. 태그 정의 데이터 변경만으로 증가하지 않으며 초기 18개 seed의 Golden V1 해석 결과는 유지한다.
 
 ## 8. API 완료 조건
 
 - [ ] FR-NLSEARCH-001~004와 BR-NLSEARCH-001~003의 정상·빈 결과·충돌·태그 AND·실패 계약 테스트가 있다.
+- [ ] ACTIVE 동적 태그 반영·DEPRECATED 제외·별칭 모호성·5/6개 경계·cache TTL/동시 갱신·DB 실패 503·stale/seed 폴백 금지·Golden V1 계약 테스트가 있다.
 - [ ] `APPLIED·PARTIAL·FAILED`와 직접 필터 우선 상태를 고정한 계약 테스트가 있다.
 - [ ] 입력 원문·검색 이력·임베딩 저장 0건과 로그 마스킹을 검증한다.
 - [ ] 정확도 목표·Dataset 분할·P1 사전·규칙과 `parserVersion` 변경 절차를 팀이 승인한다.

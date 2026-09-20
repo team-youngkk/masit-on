@@ -261,7 +261,7 @@ class RestaurantSearchQueryServiceTest {
     void search_방문유튜버4명이상_상위3명과나머지수를계산한다() {
         // given
         UUID restaurantId = UUID.randomUUID();
-        RestaurantSearchRow row = new RestaurantSearchRow(restaurantId, "맛집", "마포구", "한식");
+        RestaurantSearchRow row = new RestaurantSearchRow(restaurantId, "맛집", "마포구", "한식", null);
         when(restaurantSearchQueryPort.search(any()))
                 .thenReturn(new RestaurantSearchQueryResult(List.of(row), 1));
 

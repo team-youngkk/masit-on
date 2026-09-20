@@ -56,6 +56,38 @@ docker compose up -d postgres redis wiremock
 .\gradlew.bat bootRun
 ```
 
+### AI Worker 격리 부하 검증
+
+실제 Gemini·Kakao·YouTube quota를 사용하지 않고, 위 개발 루프처럼 애플리케이션을 호스트에서 실행한 상태에서 WireMock 응답만 사용한다. `GEMINI_LOOPBACK_TEST_ENDPOINT_ALLOWED=true`는 `localhost` 또는 `127.0.0.1`의 명시적 테스트 endpoint만 허용하며 운영 설정의 기본값은 `false`다.
+
+애플리케이션을 실행하는 PowerShell 세션에 다음 값을 설정한다.
+
+```powershell
+$env:GEMINI_ENABLED = 'true'
+$env:GEMINI_FREE_TIER_VERIFIED = 'true'
+$env:GEMINI_PAID_BILLING_ENABLED = 'false'
+$env:MASITON_AI_PROVIDER_GEMINI_API_KEY = 'wiremock-test-key'
+$env:GEMINI_BASE_URL = 'http://localhost:8081'
+$env:GEMINI_LOOPBACK_TEST_ENDPOINT_ALLOWED = 'true'
+$env:AI_WORKER_ENABLED = 'true'
+$env:AI_WORKER_PROVIDER_QUOTA_LIMIT = '1000'
+$env:AI_WORKER_APPLICATION_QUOTA_LIMIT = '900'
+$env:AI_WORKER_QUOTA_WINDOW = 'P1D'
+$env:MEMBER_RATE_LIMIT_SECRET = 'local-rate-limit-secret'
+.\gradlew.bat bootRun
+```
+
+관리자 로그인 계정을 준비한 뒤, 별도 PowerShell 세션에서 관리자 이메일과 비밀번호를 주입해 실행한다. 기본 시나리오는 10건/초로 20초 동안 200건을 제출하며, 작업 제출 결과와 `dropped_iterations`를 기록한다.
+
+```powershell
+$env:BASE_URL = 'http://localhost:8080'
+$env:ADMIN_EMAIL = 'load-admin@example.com'
+$env:ADMIN_PASSWORD = '<local-admin-password>'
+k6 run -e AI_SUBMIT_RATE=10 -e AI_SUBMIT_DURATION=20s perf/k6/ai-worker-load.js
+```
+
+이 시나리오는 티켓팅 좌석 경쟁을 재현하지 않는다. 제출 수용률·terminal 실패율·backlog 소진 시간·중복 리소스 수를 별도 기준으로 확인한다. WireMock 매핑은 `docker/wiremock/mappings/gemini-video-ai-load-normal.json`과 `docker/wiremock/mappings/kakao-place-ai-load-normal.json`에 있으며, 실행 중 실제 외부 API를 호출하지 않는다.
+
 ### 프론트엔드
 
 ```powershell
@@ -69,7 +101,7 @@ npm --prefix frontend run dev
 
 로컬에서는 `frontend/.env.local`에 넣는다. **`NEXT_PUBLIC_` 값은 빌드 시점에 번들로 들어가므로 서버를 재시작해야 반영된다.** 운영 이미지는 GitHub Actions 저장소 변수 `NEXT_PUBLIC_KAKAO_MAPS_JS_KEY`를 `ci.yml`이 `--build-arg`로 넘겨 굽는다. 컨테이너 환경 변수로는 바꿀 수 없다.
 
-### 네이버 검색 노출
+### 네이버·Google 검색 노출
 
 운영 프론트엔드 이미지는 GitHub Actions 저장소 변수 `NEXT_PUBLIC_SITE_URL`을
 `https://masiton.click`으로 설정해야 한다. 이 값이 없거나 다른 주소이면 이미지 빌드가
@@ -84,6 +116,32 @@ npm --prefix frontend run dev
 
 네이버에서 실제 수집·색인·검색 결과 노출이 완료되는 시점과 순위는 코드로 보장할 수
 없으므로, 배포 후 서치어드바이저의 URL 검사·수집 요청과 색인 리포트를 확인한다.
+
+Google Search Console도 같은 속성 `https://masiton.click/`을 등록·소유확인한 뒤,
+정확한 sitemap 주소 `https://masiton.click/sitemap.xml`을 제출한다. 제출 또는 재제출
+전후에는 다음 순서로 운영 응답을 확인한다.
+
+1. `https://masiton.click/robots.txt`가 `200`이고 `Sitemap: https://masiton.click/sitemap.xml`을 포함하는지 확인한다.
+2. `https://masiton.click/sitemap.xml`이 `200`·`application/xml`로 응답하고 XML 파싱에 성공하는지 확인한다.
+3. sitemap의 모든 `<loc>`가 `https://masiton.click/restaurants` 또는 공개 상세 경로이고, 중복·404·5xx·`noindex`·`none` 페이지가 없는지 확인한다.
+4. 운영 호스트 또는 동일한 프록시 경로에서 `/opt/masiton/bin/nginx-smoke.sh`와 `/opt/masiton/bin/sitemap-smoke.sh`를 실행한다. 표준 SSH 배포가 성공하면 두 smoke가 각각 영구 경로에 설치된다. 운영 호스트에서 실행하면 두 스크립트의 기본값이 각각 `SMOKE_ADDRESS=127.0.0.1`, `SITEMAP_SMOKE_ADDRESS=127.0.0.1`이다.
+5. Search Console의 sitemap 보고서에서 상태가 성공으로 바뀌고 발견 페이지 수가 1 이상인지 확인한다. 결과에 시각, 제출한 sitemap URL, 발견 페이지 수를 남긴다.
+
+운영 프록시의 기본 점검은 다음처럼 실행한다.
+
+```bash
+bash /opt/masiton/bin/nginx-smoke.sh
+bash /opt/masiton/bin/sitemap-smoke.sh
+```
+
+Google Search Console의 처리 상태와 발견 페이지 집계는 Google의 비동기 외부 상태이므로
+코드나 CI 통과만으로 보장할 수 없다. sitemap 응답이 정상인데도 `가져올 수 없음`이
+계속되면 Search Console의 URL 검사에서 sitemap URL의 실시간 테스트를 실행한다.
+`Crawl allowed`가 `Yes`이고 `Page fetch`가 `Successful`인 경우에만 sitemap을
+재제출하며, 어느 하나라도 실패하면 실패 원인과 시각을 기록하고 수정 후 재검증한다.
+재제출 뒤 sitemap 보고서가 `성공`이고 발견 페이지 수가 1 이상일 때만 이 이슈의
+운영 완료로 기록한다. 동일 시각의 `robots.txt`·sitemap HTTP 응답과 Search Console
+결과를 함께 보관한다.
 
 ### 로컬 관리자 계정
 

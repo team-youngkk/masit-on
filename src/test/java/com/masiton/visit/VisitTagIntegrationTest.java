@@ -182,6 +182,24 @@ class VisitTagIntegrationTest extends com.masiton.test.FullContextIntegrationTes
     }
 
     @Test
+    @DisplayName("비활성 태그의 기존 연결은 유지와 제거를 허용하고 제거 뒤 재연결은 거절한다")
+    void 저장_기존태그비활성화_유지제거와신규연결경계를검증한다() {
+        Fixture f = fixture();
+        replace(f, version(f), List.of("MENU_NAENGMYEON"));
+        jdbc.update("UPDATE tag_definition SET status = 'DEPRECATED' WHERE tag_code = 'MENU_NAENGMYEON'");
+
+        replace(f, version(f), List.of("MENU_NAENGMYEON", "OCCASION_SOLO"));
+        assertThat(tags.list(f.restaurant.toString()).items().getFirst().tags())
+                .extracting(ManageVisitTagsUseCase.Tag::code)
+                .containsExactly("MENU_NAENGMYEON", "OCCASION_SOLO");
+
+        replace(f, version(f), List.of("OCCASION_SOLO"));
+        assertThatThrownBy(() -> replace(f, version(f), List.of("MENU_NAENGMYEON", "OCCASION_SOLO")))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        error -> assertThat(error.code()).isEqualTo("INVALID_FIELD_VALUE"));
+    }
+
+    @Test
     @DisplayName("익명과 일반 회원의 관리자 태그 조회 및 수정을 차단한다")
     void 요청_관리자권한없음_401과403을반환한다() throws Exception {
         // Given

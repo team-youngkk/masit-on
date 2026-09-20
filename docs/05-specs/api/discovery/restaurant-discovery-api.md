@@ -125,6 +125,7 @@ related_documents:
       "name": "맛집 이름",
       "district": "마포구",
       "category": "한식",
+      "representativeImageUrl": "https://i.ytimg.com/vi/video-id/hqdefault.jpg",
       "visitedBy": [
         {
           "id": "creator-id",
@@ -155,6 +156,7 @@ related_documents:
 | `items[].name` | string | 예 | 등록된 맛집 이름 | 빈 문자열 불가 |
 | `items[].district` | string | 예 | 서울특별시 자치구 | 빈 문자열 불가 |
 | `items[].category` | string | 예 | 대표 음식 카테고리 1개 | `null` 불가 |
+| `items[].representativeImageUrl` | string \| null | 예 | 공개·유효한 관련 영상 중 제목·영상 ID 순으로 가장 앞선 영상의 YouTube 썸네일 URL | 후보가 없으면 `null` |
 | `items[].visitedBy` | array | 예 | 채널명 오름차순, 중복 제거한 방문 유튜버 최대 3명 | 없으면 `[]` |
 | `items[].visitedBy[].id` | Identifier | 예 | 유튜버 식별자 | `null` 불가 |
 | `items[].visitedBy[].channelName` | string | 예 | 현재 YouTube 채널명 | 빈 문자열 불가 |
@@ -206,7 +208,9 @@ related_documents:
 
 ## 8. 응답 모델
 
-목록은 상세 주소·전화번호·영상 전체를 포함하지 않는다. 방문 유튜버 표시용으로 최대 3명의 식별자·채널명과 나머지 수만 제공하며 프론트엔드는 `remainingVisitedByCount > 0`이면 `외 N명`을 표시할 수 있다.
+목록은 상세 주소·전화번호·영상 전체를 포함하지 않는다. 다만 카드 대표 이미지용으로 공개·유효한 관련 영상 하나의 기존 YouTube 썸네일 URL을 `representativeImageUrl`로 제공한다. 방문 유튜버 표시용으로 최대 3명의 식별자·채널명과 나머지 수만 제공하며 프론트엔드는 `remainingVisitedByCount > 0`이면 `외 N명`을 표시할 수 있다.
+
+`representativeImageUrl`은 새 이미지를 저장하거나 외부 API를 호출해 생성하지 않는다. 공개·활성 Visit와 공개·활성·외부 `AVAILABLE` Video만 후보로 삼으며, 후보가 없으면 `null`이다. 프론트엔드는 `null` 또는 이미지 로드 실패 시 카테고리 placeholder를 표시한다.
 
 ## 9. 오류 응답
 
