@@ -41,6 +41,14 @@ ext {
      * 사용한다(기술 정책 4절). BOM이 이 버전 이상으로 올라가면 이 항목을 지운다.
      */
     set('tomcat.version', '11.0.25')
+
+    /*
+     * Spring Boot 4.1.0 BOM이 고정하는 Netty 4.2.15.Final은 CI 이미지 검사에서
+     * CVE-2026-75595(CRITICAL)로 탐지됐다. 4.2.17.Final에서 수정됐으며, 4.2.18.Final은
+     * Netty가 권고한 최신 보안 릴리즈다. BOM 속성 재정의로 모듈 간 버전을 함께 올린다.
+     * BOM이 이 버전 이상으로 올라가면 이 항목을 지운다.
+     */
+    set('netty.version', '4.2.18.Final')
 }
 
 dependencies {
