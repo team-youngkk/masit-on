@@ -8,6 +8,8 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
@@ -285,6 +287,75 @@ class RestaurantSearchQueryServiceTest {
                 .extracting("channelName")
                 .containsExactly("A채널", "B채널", "C채널");
         assertThat(result.items().get(0).remainingVisitedByCount()).isEqualTo(1);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"1100000000", "1168000000", "3611000000"})
+    @DisplayName("시도·자치구·세종의 행정구역 코드를 내부 지역 ID로 변환한다")
+    void search_활성행정구역코드_지역ID로조회한다(String code) {
+        // given
+        UUID id = UUID.randomUUID();
+        when(regionRepositoryPort.findByAdministrativeCode(code)).thenReturn(Optional.of(region(id, "지역")));
+        when(restaurantSearchQueryPort.search(any())).thenReturn(new RestaurantSearchQueryResult(List.of(), 0));
+
+        // when
+        service.search(new SearchRestaurantsCommand(null, null, null, null, List.of(), 1, 21, code));
+
+        // then
+        verify(restaurantSearchQueryPort).search(argThatCriteria(criteria -> id.equals(criteria.regionId())));
+        verify(regionRepositoryPort, never()).findByName(any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", " ", "110000000", "11000000000", "abcdefghij", "1100000000,2600000000",
+            " 1100000000", "1100000000 "})
+    @DisplayName("행정구역 코드는 공백 없는 ASCII 숫자 10자리만 허용한다")
+    void search_행정구역코드형식오류_조회없이거부한다(String code) {
+        // given
+        SearchRestaurantsCommand command = new SearchRestaurantsCommand(
+                null, null, null, null, List.of(), 1, 21, code);
+
+        // when & then
+        assertThatThrownBy(() -> service.search(command))
+                .isInstanceOfSatisfying(BusinessException.class, exception -> {
+                    assertThat(exception.code()).isEqualTo("INVALID_FIELD_VALUE");
+                    assertThat(exception.fieldErrors()).extracting("field").containsExactly("regionCode");
+                });
+        verify(restaurantSearchQueryPort, never()).search(any());
+        verify(regionRepositoryPort, never()).findByAdministrativeCode(any());
+    }
+
+    @Test
+    @DisplayName("존재하지 않거나 비활성인 행정구역 코드는 조회 없이 거부한다")
+    void search_미등록또는비활성지역_조회없이거부한다() {
+        // given
+        Region inactive = new Region(UUID.randomUUID(), "INACTIVE", "비활성", (short) 1, false,
+                OffsetDateTime.now(), OffsetDateTime.now());
+        when(regionRepositoryPort.findByAdministrativeCode("1100000000")).thenReturn(Optional.of(inactive));
+
+        // when & then
+        for (String code : List.of("1100000000", "9999999999")) {
+            assertThatThrownBy(() -> service.search(new SearchRestaurantsCommand(
+                    null, null, null, null, List.of(), 1, 21, code)))
+                    .isInstanceOfSatisfying(BusinessException.class, exception ->
+                            assertThat(exception.fieldErrors()).extracting("field").containsExactly("regionCode"));
+        }
+        verify(restaurantSearchQueryPort, never()).search(any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"마포구", "", " "})
+    @DisplayName("district가 빈 값이어도 regionCode와 동시에 지정하면 거부한다")
+    void validateFilters_지역조건동시지정_조회없이거부한다(String district) {
+        // given
+        SearchRestaurantsCommand command = new SearchRestaurantsCommand(
+                null, district, null, null, List.of(), 1, 21, "1100000000");
+
+        // when & then
+        assertThatThrownBy(() -> service.validateFilters(command))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.fieldErrors()).extracting("field").containsExactly("regionCode"));
+        verify(restaurantSearchQueryPort, never()).search(any());
     }
 
     private Region region(UUID id, String name) {

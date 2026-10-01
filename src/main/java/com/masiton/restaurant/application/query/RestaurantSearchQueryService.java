@@ -53,7 +53,7 @@ public class RestaurantSearchQueryService implements SearchRestaurantsUseCase {
     @Transactional(readOnly = true)
     public RestaurantSearchResult search(SearchRestaurantsCommand command) {
         String normalizedQuery = filterResolver.normalizeQuery(command.query());
-        UUID regionId = filterResolver.resolveRegionId(command.district());
+        UUID regionId = filterResolver.resolveRegionId(command.district(), command.regionCode());
         UUID foodCategoryId = filterResolver.resolveFoodCategoryId(command.category());
         Set<UUID> candidateRestaurantIds = filterResolver.resolveCandidateRestaurantIds(command.creatorId());
 
@@ -92,7 +92,7 @@ public class RestaurantSearchQueryService implements SearchRestaurantsUseCase {
     @Transactional(readOnly = true)
     public void validateFilters(SearchRestaurantsCommand command) {
         filterResolver.normalizeQuery(command.query());
-        filterResolver.resolveRegionId(command.district());
+        filterResolver.resolveRegionId(command.district(), command.regionCode());
         filterResolver.resolveFoodCategoryId(command.category());
         filterResolver.resolveCandidateRestaurantIds(command.creatorId());
     }

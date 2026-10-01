@@ -5,13 +5,13 @@ import java.net.URI;
 import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.masiton.common.address.RoadAddressNormalizer;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
 import com.masiton.restaurant.application.port.in.RestaurantRegistrationUseCase;
@@ -41,12 +41,11 @@ import tools.jackson.databind.ObjectMapper;
 public class RestaurantRegistrationService implements RestaurantRegistrationUseCase {
 
     private static final short SNAPSHOT_SCHEMA_VERSION = 1;
-    private static final Pattern SEOUL_ROAD_ADDRESS = Pattern.compile("^서울특별시\\s+([^\\s]+구)\\s+.+$");
     private static final Pattern PHONE_NUMBER = Pattern.compile("^[0-9 +()\\-]{7,20}$");
 
     private final PlaceVerificationPort placeVerificationPort;
     private final RestaurantRepositoryPort restaurantRepository;
-    private final RegionRepositoryPort regionRepository;
+    private final RegionAddressResolver regionAddressResolver;
     private final FoodCategoryRepositoryPort foodCategoryRepository;
     private final ConfirmationTokenUseCase confirmationTokenUseCase;
     private final ObjectMapper objectMapper;
@@ -61,7 +60,7 @@ public class RestaurantRegistrationService implements RestaurantRegistrationUseC
     ) {
         this.placeVerificationPort = placeVerificationPort;
         this.restaurantRepository = restaurantRepository;
-        this.regionRepository = regionRepository;
+        this.regionAddressResolver = new RegionAddressResolver(regionRepository);
         this.foodCategoryRepository = foodCategoryRepository;
         this.confirmationTokenUseCase = confirmationTokenUseCase;
         this.objectMapper = objectMapper;
@@ -170,7 +169,7 @@ public class RestaurantRegistrationService implements RestaurantRegistrationUseC
         String name = required(command.name(), "name", 100);
         URI kakaoPlaceUrl = kakaoPlaceUrl(command.kakaoPlaceUrl());
         required(command.roadAddress(), "roadAddress", 255);
-        if (!command.roadAddress().trim().startsWith("서울특별시")) {
+        if (RoadAddressNormalizer.extractRegion(command.roadAddress()).isEmpty()) {
             throw invalid("roadAddress");
         }
         String detailAddress = optional(command.detailAddress(), "detailAddress", 200);
@@ -188,9 +187,10 @@ public class RestaurantRegistrationService implements RestaurantRegistrationUseC
         verifyProviderValue(place.kakaoPlaceUrl(), 2048);
         verifyProviderValue(place.roadAddress(), 255);
         verifyProviderValue(place.phoneNumber(), 20);
-        String district = districtOf(place.roadAddress());
-        Region region = regionRepository.findByName(district)
-                .filter(Region::isActive)
+        if (RoadAddressNormalizer.extractRegion(place.roadAddress()).isEmpty()) {
+            throw new PlaceVerificationFailedException();
+        }
+        Region region = regionAddressResolver.resolve(place.roadAddress())
                 .orElseThrow(() -> new BusinessException(ErrorCode.IDENTITY_VERIFICATION_REQUIRED));
         FoodCategory category = foodCategoryRepository.findByName(input.category())
                 .filter(FoodCategory::isActive)
@@ -203,10 +203,10 @@ public class RestaurantRegistrationService implements RestaurantRegistrationUseC
                 category.getId(),
                 place.identityKey(),
                 place.name(),
-                district,
+                region.getName(),
                 category.getName(),
                 place.kakaoPlaceUrl(),
-                place.roadAddress(),
+                RoadAddressNormalizer.normalize(place.roadAddress()),
                 input.detailAddress(),
                 place.phoneNumber(),
                 place.latitude(),
@@ -249,14 +249,6 @@ public class RestaurantRegistrationService implements RestaurantRegistrationUseC
         }
         return restaurantRepository.findById(id)
                 .orElseThrow(() -> new IllegalStateException("Completed restaurant result was not found."));
-    }
-
-    private String districtOf(String roadAddress) {
-        Matcher matcher = SEOUL_ROAD_ADDRESS.matcher(roadAddress.trim());
-        if (!matcher.matches()) {
-            throw new PlaceVerificationFailedException();
-        }
-        return matcher.group(1);
     }
 
     private URI kakaoPlaceUrl(String value) {

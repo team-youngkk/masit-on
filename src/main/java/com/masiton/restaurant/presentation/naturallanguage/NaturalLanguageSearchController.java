@@ -57,7 +57,8 @@ public class NaturalLanguageSearchController {
                 tags,
                 page,
                 size,
-                clientAddressResolver.resolve(httpRequest))));
+                clientAddressResolver.resolve(httpRequest),
+                filters == null ? null : filters.regionCode())));
     }
 
     private String requiredSentence(String raw) {
@@ -76,6 +77,16 @@ public class NaturalLanguageSearchController {
             return;
         }
         validateQuery(filters.query());
+        if (filters.regionCode() != null) {
+            if (!filters.regionCode().matches("[0-9]{10}")) {
+                throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, "filters.regionCode",
+                        "10자리 행정구역 코드를 지정해야 합니다.");
+            }
+            if (filters.district() != null) {
+                throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, "filters.regionCode",
+                        "district와 regionCode는 함께 지정할 수 없습니다.");
+            }
+        }
         for (String tag : tags) {
             if (tag == null || tag.trim().isEmpty()) {
                 throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, "filters.tags", "비어 있지 않은 태그만 허용합니다.");

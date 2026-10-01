@@ -1,5 +1,6 @@
 package com.masiton.restaurant.application.port.out;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -15,5 +16,12 @@ public interface RegionRepositoryPort {
 
     Optional<Region> findById(UUID id);
 
+    /** 기존 district 필터와의 호환을 위해 서울 자치구만 조회한다. */
     Optional<Region> findByName(String name);
+
+    Optional<Region> findByAdministrativeCode(String code);
+
+    List<Region> findAllActive();
+
+    Optional<Region> findByProvinceAndName(String province, String name);
 }

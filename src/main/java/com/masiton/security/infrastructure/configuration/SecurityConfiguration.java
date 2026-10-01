@@ -64,6 +64,7 @@ public class SecurityConfiguration {
                                 "/api/auth/tokens",
                                 "/api/auth/tokens/refresh").permitAll()
                         .requestMatchers(HttpMethod.GET,
+                                "/api/regions",
                                 "/api/restaurants",
                                 "/api/restaurants/*",
                                 "/api/curations",
@@ -131,6 +132,7 @@ public class SecurityConfiguration {
         }
         String requestUri = request.getRequestURI();
         return requestUri.equals("/api/restaurants")
+                || requestUri.equals("/api/regions")
                 || RestaurantPathClassifier.isNonIdentifierPublicPath(requestUri)
                 || isCurationPublicReadRequest(requestUri)
                 || requestUri.equals("/api/creators")

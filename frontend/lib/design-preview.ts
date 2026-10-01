@@ -14,6 +14,8 @@ type RestaurantDesignPreviewInput = DesignPreviewEnvironment & {
   hasItems: boolean
   query: string
   district: string
+  regionCode?: string
+  tag?: string
   category: string
   creatorId?: string | null
 }
@@ -24,6 +26,8 @@ export function shouldUseRestaurantDesignPreview({
   hasItems,
   query,
   district,
+  regionCode,
+  tag,
   category,
   creatorId,
 }: RestaurantDesignPreviewInput): boolean {
@@ -32,6 +36,8 @@ export function shouldUseRestaurantDesignPreview({
     !hasItems &&
     !query.trim() &&
     !district &&
+    !regionCode &&
+    !tag &&
     !category &&
     !creatorId
   )

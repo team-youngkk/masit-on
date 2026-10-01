@@ -22,8 +22,13 @@ public record NaturalLanguageInterpretationView(
             String district,
             String category,
             String creatorId,
-            List<String> tags
+            List<String> tags,
+            String regionCode
     ) {
+        public AppliedConditions(
+                String query, String district, String category, String creatorId, List<String> tags) {
+            this(query, district, category, creatorId, tags, null);
+        }
     }
 
     public record IgnoredCondition(String type, String text, String reason) {

@@ -10,10 +10,12 @@ const FILTERED_EXPLORATION_PATHS = new Set(['/restaurants', '/map'])
 export function buildMapNavigationHref(
   pathname: string,
   currentSearchParams: Pick<ReadonlyURLSearchParams, 'get'>,
-): string {
+): string | null {
   if (!FILTERED_EXPLORATION_PATHS.has(pathname)) {
     return '/map'
   }
+
+  if (currentSearchParams.get('regionCode')) return null
 
   const next = new URLSearchParams()
   for (const key of MAP_FILTER_KEYS) {

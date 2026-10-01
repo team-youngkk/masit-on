@@ -1,6 +1,8 @@
 ---
 status: accepted
 related_documents:
+  - ../api/common/region-contract.md
+  - ../../../src/main/resources/db/migration/V20__add_region_hierarchy.sql
   - physical-data-model.md
   - table-definitions.md
   - constraint-mapping.md
@@ -302,6 +304,19 @@ V11은 코드와 `source=SEED`가 모두 일치하는 정의만 갱신한다. �
 - 원본별 단일 병합, 자기 병합 금지, 영향 건수 합계, provenance 역할·결과 조합과 append-only 트리거를 DB 제약으로 고정한다.
 - 회원 탈퇴는 병합 감사 행위자만 `SET NULL`로 익명화하며 정의·Visit·병합 FK는 `RESTRICT`한다.
 - 빈 DB의 V1~V13 순서, V12 상태 전진 적용, 기존 정의·용어·VisitTag 보존, 제약 위반과 감사 변조 거부를 PostgreSQL Testcontainers로 검증한다.
+
+## V20 전국 지역 계층 — 이슈 #394
+
+[V20__add_region_hierarchy.sql](../../../src/main/resources/db/migration/V20__add_region_hierarchy.sql)은 `region`에 `administrative_code`, `parent_id`와 DB 파생 `parent_administrative_code`를 추가한다. 사용자 구현 요청에 따른 [지역 계층 계약](../api/common/region-contract.md)의 API·DB 소유자 리뷰를 요청하며, 이 기록은 팀 승인이나 운영 적용 완료를 뜻하지 않는다. 이미 적용된 V1~V19는 수정하지 않는다.
+
+1. 전역 이름·표시 순서 유일 제약과 서울 `1..25` 순서 CHECK를 교체할 준비를 하고 새 컬럼을 추가한다.
+2. [2026-09-30 스냅샷](../../../src/main/resources/db/reference/regions-2026-09-30.json)의 상위 16개·하위 229개, 총 245개를 임시 seed 테이블에 적재한다. 전남광주통합특별시 `1200000000`, 세종 최상위 `3611000000`, 제주 하위 2개를 포함한다.
+3. 새 상위 행을 만든 뒤 기존 서울 25개 행에는 행정코드·부모만 채운다. 기존 UUID·`SEOUL_*` 코드·sort와 `restaurant.region_id`는 보존한다. 서울 밖 하위 지역은 새 행으로 추가한다.
+4. 행정코드 NOT NULL·유일성·형식 CHECK, 부모별 이름·순서 `UNIQUE NULLS NOT DISTINCT`, 양수 순서 CHECK, 계층 CHECK·파생 부모 코드 복합 FK를 적용한다. 다른 시·도 부모·3단계·순환을 DB 제약으로 거부한다.
+
+최신 빈 DB·이전 버전 업그레이드 검증은 V20까지 실행하고 스냅샷 전체 집합, 기존 서울 식별자·FK, 동명 지역, 계층 위반 거부를 확인한다. 최신 Flyway 버전 기대값은 V20으로 갱신하되 특정 과거 전환을 검증하는 테스트의 target은 보존한다. 원천 사이트 호출을 마이그레이션·자동화 테스트에 넣지 않는다.
+
+운영 적용 전 실제 baseline·추가 지역 drift·장기 트랜잭션·ALTER 잠금 영향을 확인한다. 기존에 마스터에 임의 추가한 행을 자동 삭제하거나 잘못된 값을 숨기지 않는다. 적용 이후 되돌림을 위해 지역 행이나 FK를 삭제하지 않고, 결함은 새 전진 마이그레이션으로 보정한다. 전국 데이터 등록 뒤 서울 전용 애플리케이션으로 되돌리는 호환성은 별도 검토가 필요하다.
 
 ## V19 Kakao 장소 재검증 상태·감사 — 이슈 #377
 

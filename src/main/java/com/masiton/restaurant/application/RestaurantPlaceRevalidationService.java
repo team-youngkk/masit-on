@@ -13,13 +13,13 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
+import com.masiton.common.address.RoadAddressNormalizer;
 import com.masiton.common.web.BusinessException;
 import com.masiton.restaurant.application.port.in.RestaurantPlaceRevalidationUseCase;
 import com.masiton.restaurant.application.port.out.KakaoPlaceRevalidationPort;
@@ -33,7 +33,6 @@ import com.masiton.restaurant.domain.model.Restaurant;
 public class RestaurantPlaceRevalidationService implements RestaurantPlaceRevalidationUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(RestaurantPlaceRevalidationService.class);
-    private static final Pattern DISTRICT = Pattern.compile("^서울특별시\\s+([^\\s]+구)\\s+.*$");
 
     private final RestaurantPlaceRevalidationStore store;
     private final KakaoPlaceRevalidationPort kakao;
@@ -125,9 +124,9 @@ public class RestaurantPlaceRevalidationService implements RestaurantPlaceRevali
     }
 
     private Decision classifyFound(VerifiedPlace observed, Restaurant current) {
-        String currentDistrict = district(current.getRoadAddress());
-        String observedDistrict = district(observed.roadAddress());
-        if (currentDistrict == null || observedDistrict == null || !currentDistrict.equals(observedDistrict)) {
+        var currentRegion = RoadAddressNormalizer.extractRegion(current.getRoadAddress());
+        var observedRegion = RoadAddressNormalizer.extractRegion(observed.roadAddress());
+        if (currentRegion.isEmpty() || observedRegion.isEmpty() || !currentRegion.equals(observedRegion)) {
             return decision(Outcome.REVIEW_REQUIRED, KakaoPlaceRevalidationPort.Result.found(observed),
                     "DISTRICT_CHANGED", null, null);
         }
@@ -192,11 +191,6 @@ public class RestaurantPlaceRevalidationService implements RestaurantPlaceRevali
             values.put("kakaoPlaceUrl", place.kakaoPlaceUrl());
         }
         return values;
-    }
-
-    private String district(String address) {
-        var matcher = DISTRICT.matcher(address == null ? "" : address.trim());
-        return matcher.matches() ? matcher.group(1) : null;
     }
 
     private boolean same(BigDecimal left, BigDecimal right) {

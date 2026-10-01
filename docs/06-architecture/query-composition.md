@@ -1,5 +1,6 @@
 ---
 related_documents:
+  - ../05-specs/api/common/region-contract.md
   - application-flow.md
   - transaction-boundaries.md
   - dependency-rules.md
@@ -136,6 +137,14 @@ Visit 정책 변경은 Visit 도메인의 Query 구현 한 곳에 반영하고, 
 이 규칙은 후보 ID 집합을 쓰는 목록 필터에 적용된다. 상세 Projection은 5절 적용 범위를 따른다.
 
 ## 7. 페이징과 결과 크기
+
+### 전국 지역 조회와 목록 필터 — #394
+
+[지역 계층 계약](../05-specs/api/common/region-contract.md)의 공개 `GET /api/regions`는 Restaurant 소유 `RegionRepositoryPort`로 활성 마스터를 한 번 읽어 부모별로 조합한다. `RegionHierarchyQueryService`의 읽기 전용 트랜잭션에서 처리하며 외부 행정코드 사이트를 호출하지 않는다. 최상위·하위는 각각 `sortOrder`, 같은 순서는 `administrativeCode`로 정렬하고 맛집 유무는 선택지를 제한하지 않는다.
+
+목록은 `regionCode`를 활성 Region ID로 검증한 뒤 자기 ID 또는 그 ID를 부모로 둔 활성 지역을 기존 이름·카테고리·Creator·태그 조건과 AND로 결합한다. 비자치구의 세 번째 계층이나 새로운 검색 저장소는 만들지 않는다. 자연어 직접 코드는 같은 검증·조회 경계를 재사용하고 조회 생략 분기에서도 직접 필터를 검증한다. 이 변경은 API·DB 소유자 리뷰 요청 상태다.
+
+### 페이지 정책
 
 - 일반 목록은 공통 페이지 계약(기본 20, 허용 10/20/50)을 따른다.
 - 단, 3열 카드 UI를 사용하는 WS-01 맛집 탐색의 `GET /api/restaurants`와 자연어 검색의 `POST /api/restaurants/natural-language-search`는 endpoint 계약에 따라 기본 21, 허용 10/20/21/50을 적용하며 기존 `size=20` 호출을 호환한다.

@@ -39,3 +39,9 @@ test('빈 검색 조건은 생략한다', () => {
 
   assert.equal(buildMapNavigationHref('/restaurants', params), '/map')
 })
+
+test('전국 지역 코드가 있으면 지원하지 않는 지도 링크를 만들지 않는다', () => {
+  for (const regionCode of ['4111000000', '3611000000', '1114000000']) {
+    assert.equal(buildMapNavigationHref('/restaurants', new URLSearchParams({ regionCode, query: '국밥' })), null)
+  }
+})

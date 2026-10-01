@@ -35,7 +35,8 @@ public record NaturalLanguageSearchResponse(
                             view.appliedConditions().district(),
                             view.appliedConditions().category(),
                             view.appliedConditions().creatorId(),
-                            view.appliedConditions().tags()),
+                            view.appliedConditions().tags(),
+                            view.appliedConditions().regionCode()),
                     view.ignoredConditions().stream()
                             .map(value -> new IgnoredCondition(value.type(), value.text(), value.reason()))
                             .toList(),
@@ -51,7 +52,8 @@ public record NaturalLanguageSearchResponse(
             String district,
             String category,
             String creatorId,
-            List<String> tags
+            List<String> tags,
+            String regionCode
     ) {
     }
 

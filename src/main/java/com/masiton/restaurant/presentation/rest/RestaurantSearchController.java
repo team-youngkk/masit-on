@@ -25,8 +25,9 @@ import com.masiton.restaurant.application.port.in.SearchRestaurantsUseCase;
 public class RestaurantSearchController {
 
     private static final Set<String> KNOWN_FIELDS =
-            Set.of("query", "district", "category", "creatorId", "page", "size");
-    private static final Set<String> ARRAY_STYLE_FILTER_FIELDS = Set.of("district", "category", "creatorId");
+            Set.of("query", "district", "regionCode", "category", "creatorId", "page", "size");
+    private static final Set<String> ARRAY_STYLE_FILTER_FIELDS =
+            Set.of("district", "regionCode", "category", "creatorId");
     private static final Set<Integer> ALLOWED_SIZES = Set.of(10, 20, 21, 50);
 
     private final SearchRestaurantsUseCase searchRestaurantsUseCase;
@@ -57,7 +58,8 @@ public class RestaurantSearchController {
         int size = parseSize(queryParams.getFirst("size"));
 
         RestaurantSearchResult result = searchRestaurantsUseCase.search(
-                new SearchRestaurantsCommand(query, district, category, creatorId, page, size));
+                new SearchRestaurantsCommand(query, district, category, creatorId,
+                        List.of(), page, size, queryParams.getFirst("regionCode")));
 
         return RestaurantSearchResponse.from(result);
     }

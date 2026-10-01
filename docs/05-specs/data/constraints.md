@@ -1,5 +1,6 @@
 ---
 related_documents:
+  - ../api/common/region-contract.md
   - ../../01-requirements/business-rules.md
   - data-model.md
   - entity-definitions.md
@@ -78,7 +79,7 @@ related_documents:
 ### DATA-CONSTRAINT-005 참조 데이터 표준값 유일성
 
 - 적용 데이터: Region, FoodCategory
-- 제약: Region.name과 FoodCategory.name은 각 집합 안에서 유일하다. 별도 code를 도입하면 각 code도 유일해야 한다.
+- 제약: #394의 [지역 계층 계약](../api/common/region-contract.md)에 따라 Region.name은 같은 부모 아래에서 유일하고 최상위끼리도 중복할 수 없다. Region의 애플리케이션 code와 administrativeCode는 각각 전역 유일하다. FoodCategory.name·code의 기존 전역 유일성은 유지한다. 지역 변경은 소유자 리뷰 요청 상태다.
 - 보장 수준: 저장소와 애플리케이션 모두
 - 위반 시 처리: 기준 데이터 변경 거부
 - 관련 규칙/API: [BR-RESTAURANT-004](../../01-requirements/business-rules.md#br-restaurant-004-대표-음식-카테고리)·[BR-RESTAURANT-005](../../01-requirements/business-rules.md#br-restaurant-005-맛집의-지역-소속), [API-DISCOVERY-001](../api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색)

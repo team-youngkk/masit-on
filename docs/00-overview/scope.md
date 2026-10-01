@@ -1,5 +1,6 @@
 ---
 related_documents:
+  - ../05-specs/api/common/region-contract.md
   - service-overview.md
   - glossary.md
   - ../08-planning/second-expansion-baseline-review.md
@@ -31,7 +32,7 @@ related_documents:
 - 일반 사용자는 계정 없이 서비스를 이용하며, 서비스는 사용자별 데이터를 저장하지 않는다.
 - 일반 사용자는 맛집, 유튜버, 영상 및 방문 관계를 직접 등록하거나 수정하지 않는다.
 - 서비스에 노출하는 데이터는 관리자가 검증하여 등록한다.
-- MVP의 서비스 지역은 서울특별시로 한정한다.
+- 최초 MVP의 서비스 지역은 서울특별시로 한정했다. #394에서는 목록 탐색·등록을 전국 시·도 → 시·군·구로 확장한다. [지역 계층 계약](../05-specs/api/common/region-contract.md)은 사용자 구현 요청을 반영하며 API·DB 소유자 리뷰를 PR에서 요청한다. 지도 범위는 확장하지 않는다.
 - 맛집과 유튜버의 방문 관계는 실제 방문을 확인할 수 있는 YouTube 영상을 근거로 등록한다.
 - 영상 연결 정보가 없는 맛집도 목록과 상세에서 기본 정보를 조회할 수 있어야 한다.
 - YouTube 영상 원본은 저장하거나 재배포하지 않고, 원본 링크와 서비스 제공에 필요한 메타데이터만 저장한다.

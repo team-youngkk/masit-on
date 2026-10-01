@@ -25,10 +25,15 @@ function MapNavigationLink({
 }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const href = buildMapNavigationHref(pathname, searchParams)
+
+  if (!href) {
+    return <span className={className} aria-disabled="true" title="지도는 기존 서울 자치구 필터만 지원합니다. 지역 필터를 해제한 뒤 이용해 주세요.">{children} (지역 필터 미지원)</span>
+  }
 
   return (
     <Link
-      href={buildMapNavigationHref(pathname, searchParams)}
+      href={href}
       className={className}
       onClick={onClick}
       aria-current={pathname.startsWith('/map') ? 'page' : undefined}
