@@ -5,15 +5,17 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
-import com.masiton.common.address.SeoulRoadAddressNormalizer;
+import com.masiton.common.address.RoadAddressNormalizer;
 import com.masiton.common.web.BusinessException;
 import com.masiton.common.web.ErrorCode;
 import com.masiton.restaurant.application.port.in.SearchAdminPlaceCandidatesUseCase;
 import com.masiton.restaurant.application.port.out.PlaceSearchCandidate;
 import com.masiton.restaurant.application.port.out.PlaceSearchPort;
+import com.masiton.restaurant.application.port.out.RegionRepositoryPort;
+import com.masiton.restaurant.domain.model.Region;
 
 /**
- * 검색 결과 정렬과 자치구 파생을 담당한다. 외부 HTTP 호출만 있으므로 트랜잭션을 열지 않는다.
+ * 검색 결과 정렬과 지역 파생을 담당한다. 외부 HTTP 호출을 포함하므로 트랜잭션을 열지 않는다.
  */
 @Service
 class SearchAdminPlaceCandidatesService implements SearchAdminPlaceCandidatesUseCase {
@@ -21,9 +23,11 @@ class SearchAdminPlaceCandidatesService implements SearchAdminPlaceCandidatesUse
     private static final int MAX_ROAD_ADDRESS_LENGTH = 255;
 
     private final PlaceSearchPort placeSearchPort;
+    private final RegionAddressResolver regionAddressResolver;
 
-    SearchAdminPlaceCandidatesService(PlaceSearchPort placeSearchPort) {
+    SearchAdminPlaceCandidatesService(PlaceSearchPort placeSearchPort, RegionRepositoryPort regionRepository) {
         this.placeSearchPort = placeSearchPort;
+        this.regionAddressResolver = new RegionAddressResolver(regionRepository);
     }
 
     @Override
@@ -52,7 +56,7 @@ class SearchAdminPlaceCandidatesService implements SearchAdminPlaceCandidatesUse
             return 0;
         }
         String[] hintTokens = normalizedHint.split("\\s+");
-        String[] addressTokens = roadAddress.trim().split("\\s+");
+        String[] addressTokens = RoadAddressNormalizer.normalize(roadAddress).split("\\s+");
         int score = 0;
         int limit = Math.min(hintTokens.length, addressTokens.length);
         for (int i = 0; i < limit; i++) {
@@ -68,21 +72,21 @@ class SearchAdminPlaceCandidatesService implements SearchAdminPlaceCandidatesUse
         return new PlaceCandidateResult(
                 candidate.placeName(),
                 candidate.kakaoPlaceUrl(),
-                candidate.roadAddress(),
+                RoadAddressNormalizer.normalize(candidate.roadAddress()),
                 candidate.phoneNumber(),
                 districtOf(candidate.roadAddress()));
     }
 
-    /** 서울 자치구를 뽑을 수 없으면 null로 두고 항목 자체는 남긴다. */
+    /** 활성 지역으로 매핑할 수 없으면 null로 두고 항목 자체는 남긴다. */
     private String districtOf(String roadAddress) {
-        return SeoulRoadAddressNormalizer.extractDistrict(roadAddress).orElse(null);
+        return regionAddressResolver.resolve(roadAddress).map(Region::getName).orElse(null);
     }
 
     private String normalizeHint(String roadAddressHint) {
         if (roadAddressHint == null) {
             return null;
         }
-        String normalized = SeoulRoadAddressNormalizer.normalize(roadAddressHint);
+        String normalized = RoadAddressNormalizer.normalize(roadAddressHint);
         if (normalized.isEmpty()) {
             return null;
         }

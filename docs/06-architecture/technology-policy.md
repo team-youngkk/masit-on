@@ -39,8 +39,8 @@ related_documents:
 | 빌드 | Gradle 8.14.3 + Groovy DSL | MVP Accepted |
 | DB 마이그레이션 | Flyway 12.4.0 | MVP Accepted |
 | Node.js | 24.18.0 LTS | MVP Accepted |
-| 프론트엔드 | Next.js 16.3.4 + TypeScript 7.0.2 | MVP Accepted |
-| React | 19.2.0 (`react`, `react-dom`) | MVP Accepted. Next.js 16.3.4의 peer 범위가 `^19.0.0`으로 넓어 Next 고정만으로는 패치가 고정되지 않으므로 별도로 명시한다 |
+| 프론트엔드 | Next.js 16.3.8 + TypeScript 7.0.2 | MVP 선택 유지. 16.3.8 보안 패치는 [ADR-WEB-007](../07-adr/platform/web-007-next-security-patch-baseline.md) 소유자 리뷰 요청 |
+| React | 19.2.0 (`react`, `react-dom`) | MVP Accepted. Next.js 16.3.8의 peer 범위가 `^19.0.0`으로 넓어 Next 고정만으로는 패치가 고정되지 않으므로 별도로 명시한다 |
 | 프론트엔드 타입 정의 | `@types/node` 24.10.1, `@types/react` 19.2.2, `@types/react-dom` 19.2.1 | MVP Accepted |
 | PostgreSQL | 17.10 | MVP Accepted |
 | Redis | Redis Open Source 8.8 | 통합 계정 Refresh session 저장에 적용, 캐시·락은 조건부 |

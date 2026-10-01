@@ -1,5 +1,6 @@
 ---
 related_documents:
+  - ../05-specs/api/common/region-contract.md
   - ../00-overview/scope.md
   - ../01-requirements/functional-requirements.md
   - ../01-requirements/business-rules.md
@@ -54,6 +55,8 @@ related_documents:
 맛잇온 MVP와 단계별 확장의 기능 요구사항, 비즈니스 규칙, NFR, Workstream과 담당자를 PRD에 연결한다. 원문 정의는 각 기준 문서가 소유하며 이 문서는 배정과 변경 영향을 관리한다.
 
 ## 2. 기능 PRD 목록
+
+#394의 [전국 지역 계층 계약](../05-specs/api/common/region-contract.md)은 FR-RESTAURANT-003·005·009와 FR-ADMIN-002, BR-RESTAURANT-003·005를 맛집 탐색·등록 PRD에 연결한다. 자연어 PRD에는 전국 직접 필터와 기존 서울 파서 범위의 구분을 적용한다. 최초 MVP 범위 이후의 사용자 요청이며 소유자 리뷰를 요청한다.
 
 | PRD ID | 문서 | Workstream | 담당자 | 기본 리뷰어 |
 |---|---|---|---|---|

@@ -10,7 +10,32 @@ test('요청은 기존 구조화 필터를 POST 본문에 보존한다', async (
 test('PARTIAL과 중첩된 잘못된 응답을 구분한다', () => { const partial = structuredClone(response) as any; partial.interpretation.status = 'PARTIAL'; partial.interpretation.ignoredConditions = [{ type: 'UNRESOLVED', text: '안전한 요약', reason: 'UNRESOLVED_VALUE' }]; assert.equal(decodeNaturalLanguageResult(partial)?.interpretation.status, 'PARTIAL'); partial.results.items[0].visitedBy = [{ id: 1, channelName: 'x' }]; assert.equal(decodeNaturalLanguageResult(partial), null) })
 test('400은 재시도하지 않고 429·503·500은 계약 상태와 traceId를 보존한다', async () => { const previous = globalThis.fetch; const cases = [[400, 'invalid'], [429, 'rateLimited'], [503, 'unavailable'], [500, 'error']] as const; try { for (const [status, kind] of cases) { globalThis.fetch = async () => new Response(JSON.stringify({ message: 'm', traceId: 'trace-1' }), { status, headers: status === 429 ? { 'Retry-After': '30' } : undefined }); const outcome = await searchRestaurantsByNaturalLanguage('문장', filters, 2); assert.equal(outcome.kind, kind); assert.equal((outcome as { traceId?: string }).traceId, 'trace-1'); assert.equal(isNaturalLanguageRetryAllowed(outcome), status !== 400) } } finally { globalThis.fetch = previous } })
 test('페이지 번호와 페이지 크기는 URL 대신 POST 본문으로 전달한다', async () => { const previous = globalThis.fetch; let body = ''; globalThis.fetch = async (_input, init) => { body = String(init?.body); return new Response(JSON.stringify(response), { status: 200 }) }; try { await searchRestaurantsByNaturalLanguage('문장', filters, 3); assert.equal(JSON.parse(body).page, 3); assert.equal(JSON.parse(body).size, 21) } finally { globalThis.fetch = previous } })
-test('구조화 폼의 현재 편집값을 자연어 직접 필터로 정규화한다', () => { const data = new FormData(); data.set('query', '  냉면집  '); data.set('district', '성동구'); data.set('category', ''); data.set('creatorId', 'creator-live'); assert.deepEqual(naturalLanguageFiltersFromFormData(data, ['MENU_NAENGMYEON']), { query: '냉면집', district: '성동구', category: null, creatorId: 'creator-live', tags: ['MENU_NAENGMYEON'] }) })
+test('구조화 폼의 현재 편집값을 자연어 직접 필터로 정규화한다', () => { const data = new FormData(); data.set('query', '  냉면집  '); data.set('district', '성동구'); data.set('category', ''); data.set('creatorId', 'creator-live'); assert.deepEqual(naturalLanguageFiltersFromFormData(data, ['MENU_NAENGMYEON']), { query: '냉면집', district: '성동구', regionCode: null, category: null, creatorId: 'creator-live', tags: ['MENU_NAENGMYEON'] }) })
+
+test('전국 지역 직접 필터는 폼·요청·적용 안내·초기화 키에 유지된다', async () => {
+  const data = new FormData()
+  data.set('regionCode', '2600000000')
+  const direct = naturalLanguageFiltersFromFormData(data, [])
+  assert.equal(direct.regionCode, '2600000000')
+  assert.equal(direct.district, null)
+  assert.notEqual(naturalLanguageFiltersKey(direct), naturalLanguageFiltersKey({ ...direct, regionCode: '5000000000' }))
+  assert.deepEqual(formatNaturalLanguageAppliedConditions(direct, {}, { '2600000000': '부산광역시' }), ['지역: 부산광역시'])
+  const previous = globalThis.fetch
+  try {
+    let sent: any
+    globalThis.fetch = async (_input, init) => {
+      sent = JSON.parse(String(init?.body))
+      return new Response(JSON.stringify({
+        ...response, interpretation: { ...response.interpretation, appliedConditions: direct },
+      }))
+    }
+    const outcome = await searchRestaurantsByNaturalLanguage('국밥', direct)
+    assert.equal(outcome.kind, 'success')
+    assert.equal(sent.filters.regionCode, '2600000000')
+  } finally {
+    globalThis.fetch = previous
+  }
+})
 test('적용 조건은 opaque ID와 태그 코드 대신 사용자용 이름을 표시한다', () => { assert.deepEqual(formatNaturalLanguageAppliedConditions(response.interpretation.appliedConditions, { 'opaque-id': '먹방연구소' }), ['자치구: 성동구', '유튜버: 먹방연구소', '태그: 냉면']); assert.deepEqual(formatNaturalLanguageAppliedConditions({ ...response.interpretation.appliedConditions, creatorId: 'unknown', tags: ['UNKNOWN'] }, {}), ['자치구: 성동구', '유튜버: 선택한 유튜버', '태그: 알 수 없는 태그']) })
 test('같은 400도 오류 코드마다 다른 안내를 만든다', async () => { const previous = globalThis.fetch; const cases = [['NATURAL_LANGUAGE_EMPTY', []], ['INVALID_FIELD_VALUE', [{ field: 'filters.tags', reason: '최대 5개까지 허용합니다.' }]], ['INVALID_IDENTIFIER', [{ field: 'creatorId', reason: '식별자 형식이 올바르지 않습니다.' }]]] as const; const messages = new Set<string>(); try { for (const [code, errors] of cases) { globalThis.fetch = async () => new Response(JSON.stringify({ code, message: '요청 값을 확인해 주세요.', errors, traceId: 'trace-1' }), { status: 400 }); const outcome = await searchRestaurantsByNaturalLanguage('문장', filters); assert.equal(outcome.kind, 'invalid'); const invalid = outcome as { code?: string; message: string; fieldGuidance: Array<{ label: string; reason: string }> }; assert.equal(invalid.code, code); assert.equal(invalid.fieldGuidance.length, errors.length); messages.add(invalid.message) } assert.equal(messages.size, 3) } finally { globalThis.fetch = previous } })
 test('필드 안내는 filters 접두사를 벗기고 사용자용 라벨을 쓴다', () => { assert.equal(naturalLanguageFieldLabel('filters.tags'), '태그'); assert.equal(naturalLanguageFieldLabel('creatorId'), '유튜버'); assert.equal(naturalLanguageFieldLabel('sentence'), '검색 문장'); assert.equal(naturalLanguageFieldLabel('unknownField'), 'unknownField'); assert.deepEqual(naturalLanguageFieldGuidance([{ field: 'filters.query', reason: '최대 100자까지 허용합니다.' }, { field: 'district' }, 'bad']), [{ label: '이름', reason: '최대 100자까지 허용합니다.' }]) })

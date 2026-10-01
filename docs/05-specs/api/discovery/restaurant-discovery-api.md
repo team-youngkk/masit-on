@@ -41,6 +41,7 @@ related_nfr:
   - NFR-TEST-001
   - NFR-TEST-002
 related_documents:
+  - ../common/region-contract.md
   - ../../../04-product/prd/discovery/restaurant-discovery.md
   - ../../../04-product/prd/discovery/creator-discovery.md
   - creator-discovery-api.md
@@ -60,7 +61,7 @@ related_documents:
 
 ## 1. 문서 목적
 
-로그인하지 않은 일반 사용자가 공개 맛집을 이름, 서울특별시 자치구, 대표 음식 카테고리와 유튜버 조건으로 탐색하는 외부 계약을 정의한다.
+로그인하지 않은 일반 사용자가 공개 맛집을 이름, 전국 시·도 또는 시·군·구, 대표 음식 카테고리와 유튜버 조건으로 탐색하는 외부 계약을 정의한다. #394의 지역 변경은 [지역 계층 계약](../common/region-contract.md)에 따르며 API·DB 소유자 리뷰를 요청한다.
 
 ## 2. 적용 범위
 
@@ -75,7 +76,8 @@ related_documents:
 | API ID | Method | Path | 설명 |
 |---|---|---|---|
 | [API-DISCOVERY-001](restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색) | GET | `/api/restaurants` | 맛집 목록 및 조건 검색 |
-| [API-DISCOVERY-002](restaurant-discovery-api.md#api-discovery-002-공개-맛집-필터-선택지) | GET | `/api/restaurants/filter-options` | 공개 맛집이 사용하는 지역·음식 종류 선택지 |
+| [API-DISCOVERY-002](restaurant-discovery-api.md#api-discovery-002-공개-맛집-필터-선택지) | GET | `/api/restaurants/filter-options` | 공개 맛집이 사용하는 레거시 서울 지역·음식 종류 선택지 |
+| [전국 지역 계층](../common/region-contract.md#3-공개-지역-목록) | GET | `/api/regions` | 맛집 유무와 무관한 활성 지역 전체 마스터 |
 
 `/api/restaurants`를 선택한다. `/api`는 화면과 백엔드를 구분하고 검색과 필터는 목록 조회의 조건이므로 `/api/restaurant-discovery`나 `/api/search/restaurants`처럼 별도 동사·기능 경로로 분리하지 않는다.
 
@@ -96,7 +98,8 @@ related_documents:
 | 이름 | 타입 | 필수 | 기본값 | 설명 | 검증 규칙 |
 |---|---|---:|---|---|---|
 | `query` | string | 아니요 | 없음 | 맛집 이름 부분 일치 검색어 | 앞뒤 공백 제거, 공백뿐이면 조건 미적용, 최대 100자 |
-| `district` | string | 아니요 | 없음 | 서울특별시 자치구 1개 | 서울 자치구 이름만 허용, 반복 불가 |
+| `regionCode` | string | 아니요 | 없음 | 시·도 또는 시·군·구 1개 | 활성 마스터의 10자리 행정코드, 반복 불가, `district`와 상호 배제 |
+| `district` | string | 아니요 | 없음 | 레거시 서울특별시 자치구 1개 | 서울 자치구 이름만 허용, 반복 불가, `regionCode`와 상호 배제 |
 | `category` | string | 아니요 | 없음 | 대표 음식 카테고리 1개 | 공통 계약의 10개 값만 허용, 반복 불가 |
 | `creatorId` | Identifier | 아니요 | 없음 | 유튜버 1명의 식별자 | 공개 유튜버만 허용, 반복 불가 |
 | `tag` | string | 아니요 | 없음 | 활성 관리자 확정 태그 코드 1개 | 공개·유효 Visit에 연결된 활성 태그만 허용, 반복 불가 |
@@ -106,6 +109,7 @@ related_documents:
 #### Request Rules
 
 - 검색과 서로 다른 필터는 AND로 적용하고 미지정 조건은 적용하지 않는다.
+- 시·도 코드는 자신과 활성 하위 지역, 시·군·구 코드는 해당 지역만 조회한다. 세종은 `3611000000`을 직접 사용한다. 유효한 코드에 등록 맛집이 없어도 정상 빈 목록이다.
 - `creatorId` 조건의 유효 관계 판정은 [WS-03](../../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 계약을 따르며 최종 조합·정렬·페이지는 [WS-01](../../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)이 수행한다.
 - 비공개·삭제 맛집과 무효 관계는 제외한다. 영상 관계가 없는 공개 맛집은 유튜버 조건이 없을 때 포함한다.
 - `tag` 조건은 공개·유효 Visit에 연결된 확정 태그가 있는 맛집만 포함하며, 같은 맛집에 여러 관계가 있어도 한 번만 반환한다.
@@ -154,7 +158,7 @@ related_documents:
 | `items` | array | 예 | 고유 맛집 목록 | 결과가 없으면 `[]` |
 | `items[].id` | Identifier | 예 | 맛집 식별자 | `null`·빈 값 불가 |
 | `items[].name` | string | 예 | 등록된 맛집 이름 | 빈 문자열 불가 |
-| `items[].district` | string | 예 | 서울특별시 자치구 | 빈 문자열 불가 |
+| `items[].district` | string | 예 | 연결된 지역 표시명. 예: 마포구·수원시·제주시·세종특별자치시 | 빈 문자열 불가, 레거시 요청값으로 재사용하지 않음 |
 | `items[].category` | string | 예 | 대표 음식 카테고리 1개 | `null` 불가 |
 | `items[].representativeImageUrl` | string \| null | 예 | 공개·유효한 관련 영상 중 제목·영상 ID 순으로 가장 앞선 영상의 YouTube 썸네일 URL | 후보가 없으면 `null` |
 | `items[].visitedBy` | array | 예 | 채널명 오름차순, 중복 제거한 방문 유튜버 최대 3명 | 없으면 `[]` |
@@ -168,7 +172,7 @@ related_documents:
 | 오류 코드 | HTTP 상태 | 발생 조건 |
 |---|---:|---|
 | `INVALID_REQUEST` | 400 | 지원하지 않는 쿼리 파라미터 |
-| `INVALID_FIELD_VALUE` | 400 | 자치구·카테고리·유튜버·태그·페이지·크기가 유효하지 않거나, 같은 필터를 반복·배열·쉼표 목록 등 복수 값 형식으로 전달함([필터링 계약](../common/filtering-contract.md) 2절) |
+| `INVALID_FIELD_VALUE` | 400 | 지역 코드·레거시 자치구·카테고리·유튜버·태그·페이지·크기가 유효하지 않거나, `regionCode`와 `district`를 동시에 지정하거나, 같은 필터를 반복·배열·쉼표 목록 등 복수 값 형식으로 전달함([필터링 계약](../common/filtering-contract.md) 2절) |
 | `INVALID_IDENTIFIER` | 400 | `creatorId` 형식이 잘못됨 |
 | `INTERNAL_SERVER_ERROR` | 500 | 예상하지 못한 내부 오류 |
 
@@ -178,7 +182,7 @@ related_documents:
 - Path: `/api/restaurants/filter-options`
 - 인증: 없음
 - 권한: 일반 공개 조회
-- 설명: 공개·활성 맛집이 실제 사용하는 활성 지역과 음식 종류만 중복 없이 정렬해 반환한다.
+- 설명: 공개·활성 맛집이 실제 사용하는 활성 서울 자치구와 전국 음식 종류만 중복 없이 정렬해 반환한다. 전국 지역 계층은 `/api/regions`로 조회한다.
 
 #### Query Parameters
 
@@ -196,11 +200,11 @@ related_documents:
 }
 ```
 
-`districts`는 지역 기준 순서, `categories`는 음식 종류 기준 순서로 반환한다. 공개·활성 맛집이 없으면 두 배열 모두 빈 배열이다.
+`districts`는 기존 서울 자치구의 지역 기준 순서, `categories`는 전국 맛집이 사용하는 음식 종류의 기준 순서로 반환한다. 전국에 공개·활성 맛집이 없으면 두 배열 모두 빈 배열이다. 서울 밖 맛집만 있으면 `districts: []`이고 `categories`는 값이 있을 수 있다.
 
 ## 6. 검색·필터 조합 규칙
 
-`query`, `district`, `category`, `creatorId`, `tag`는 모두 선택이며 지정한 조건을 모두 만족해야 한다. 같은 종류의 복수 값은 지원하지 않는다. 유효한 조건의 무결과는 `200`과 빈 목록이다. 여러 태그의 AND 조합은 자연어 탐색 API의 `filters.tags`를 사용한다.
+`query`, 지역(`regionCode` 또는 레거시 `district`), `category`, `creatorId`, `tag`는 모두 선택이며 지정한 조건을 모두 만족해야 한다. 두 지역 필터의 동시 지정과 같은 종류의 복수 값은 지원하지 않는다. 유효한 조건의 무결과는 `200`과 빈 목록이다. 여러 태그의 AND 조합은 자연어 탐색 API의 `filters.tags`를 사용한다.
 
 ## 7. 정렬 및 페이지네이션
 
@@ -220,7 +224,7 @@ related_documents:
 
 `GET /api/restaurants?query=식당&district=마포구&category=한식&creatorId=creator-id&tag=MENU_NAENGMYEON&page=1&size=21`
 
-이 요청은 네 탐색 조건을 모두 만족하는 공개 맛집의 첫 페이지를 요청한다.
+이 요청은 다섯 탐색 조건을 모두 만족하는 공개 맛집의 첫 페이지를 요청한다. 전국 지역 선택은 `district=마포구` 대신 `regionCode=1144000000`을 보낸다. 서울 전체는 `regionCode=1100000000`, 수원시는 `regionCode=4111000000`으로 조회한다.
 
 ## 11. 관련 요구사항 및 규칙
 

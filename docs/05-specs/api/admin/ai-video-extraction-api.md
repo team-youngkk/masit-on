@@ -6,6 +6,7 @@ owner: 김인안
 reviewers:
   - 박진영
 related_documents:
+  - ../common/region-contract.md
   - ../README.md
   - ../../../01-requirements/functional-requirements.md
   - ../../../01-requirements/business-rules.md
@@ -38,6 +39,8 @@ related_documents:
 - 실제 Google Gemini API 호출, 원본 영상 다운로드, 전체 자막 저장은 이 API 요청 수명에 포함하지 않는다.
 
 ## 2. 상태와 공통 자원
+
+#394의 [지역 계층 계약](../common/region-contract.md)은 등록 전 물리 참조 해석에 전국 주소 정규화·활성 마스터 판정을 적용한다. 시·도와 시·군·구를 함께 판정하고 비자치구는 시로, 세종은 최상위로 연결한다. 매핑 불가 시 임의 지역 생성 없이 기존 실패·보류 흐름으로 보내며 정식 핵심 Entity를 부분 저장하지 않는다. 외부 Kakao·YouTube 검증은 DB 트랜잭션 밖에서 끝낸 뒤 기존 등록 단위 원자성을 유지한다. 이 지역 변경은 소유자 리뷰 요청 상태다.
 
 ### 2.1 작업 상태
 

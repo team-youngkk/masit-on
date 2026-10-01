@@ -36,6 +36,7 @@ related_nfr:
   - NFR-TEST-001
   - NFR-TEST-002
 related_documents:
+  - ../../../05-specs/api/common/region-contract.md
   - ../00-product-overview.md
   - README.md
   - creator-discovery.md
@@ -58,7 +59,7 @@ related_documents:
 
 ## 2. 기능 개요
 
-사용자는 맛집 목록을 열고 이름, 서울특별시 자치구, 대표 음식 카테고리와 유튜버 조건을 단독 또는 조합해 원하는 공개 맛집을 찾는다.
+사용자는 맛집 목록을 열고 이름, 전국 시·도 또는 시·군·구, 대표 음식 카테고리와 유튜버 조건을 단독 또는 조합해 원하는 공개 맛집을 찾는다. #394 지역 변경은 [지역 계층 계약](../../../05-specs/api/common/region-contract.md)에 따르며 소유자 리뷰를 요청한다.
 
 ## 3. 문제 및 사용자 요구
 
@@ -80,7 +81,7 @@ related_documents:
 
 ## 7. 전제 조건
 
-- 맛집은 서울특별시 자치구와 대표 음식 카테고리 1개를 가진다.
+- 맛집은 활성 지역과 대표 음식 카테고리 1개를 가진다. 비자치구는 시에 귀속하고 세종은 최상위에 직접 연결한다.
 - 공개 맛집과 공개·유효 방문 관계만 사용자 결과에 포함된다.
 - 유튜버 조건은 [WS-03](../../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)이 제공하는 유효 맛집 판정 결과를 사용한다.
 
@@ -109,8 +110,9 @@ related_documents:
 - 공개 맛집 목록과 목록용 방문 YouTube 채널명
 - 중복 제거한 채널명 오름차순 최대 3명과 나머지 `외 N명` 축약
 - 맛집 이름 부분 일치, 앞뒤 공백 제거와 영문 대소문자 무시
-- 서울 자치구 1개, 대표 음식 카테고리 1개 필터
-- 지역·음식 종류 선택지는 공개·활성 맛집이 실제 사용하는 값만 표시
+- 시·도 또는 시·군·구 1개, 대표 음식 카테고리 1개 필터. 서울 이름 필터는 호환한다.
+- 전국 지역 선택지는 맛집이 없어도 활성 마스터 전체를 표시한다. 음식 종류와 레거시 서울 선택지는 기존 공개·활성 맛집 기준을 유지한다.
+- 시·도 변경 시 하위 지역·페이지를 초기화한다. 세종은 하위 선택 없이 조회하고 제주 아래에는 제주시·서귀포시를 표시한다.
 - [WS-03](../../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색) 결과를 이용한 유튜버 1명 조건과 모든 조건의 AND 조합
 - 10·20·21·50개 페이지 크기, 기본 21개, 안정된 기본 정렬과 빈 결과
 
@@ -129,7 +131,7 @@ related_documents:
 |---|---|---|---|---|
 | PR-DISC-001 | 사용자는 공개 맛집 요약 목록을 조회한다. | [FR-RESTAURANT-001](../../../01-requirements/functional-requirements.md#fr-restaurant-001-맛집-목록-조회) | Must | 확정 |
 | PR-DISC-002 | 이름 일부와 일치하는 맛집을 찾고 공백·영문 대소문자를 일관되게 처리한다. | [FR-RESTAURANT-002](../../../01-requirements/functional-requirements.md#fr-restaurant-002-맛집-이름-검색) | Must | 확정 |
-| PR-DISC-003 | 서울특별시 자치구 1개로 결과를 제한한다. | [FR-RESTAURANT-003](../../../01-requirements/functional-requirements.md#fr-restaurant-003-지역별-필터) | Must | 확정 |
+| PR-DISC-003 | 시·도 전체 또는 시·군·구 1개로 결과를 제한한다. | [FR-RESTAURANT-003](../../../01-requirements/functional-requirements.md#fr-restaurant-003-지역별-필터) | Must | #394 소유자 리뷰 요청 |
 | PR-DISC-004 | 확정된 대표 음식 카테고리 1개로 결과를 제한한다. | [FR-RESTAURANT-004](../../../01-requirements/functional-requirements.md#fr-restaurant-004-음식-카테고리별-필터) | Must | 확정 |
 | PR-DISC-005 | 지정한 서로 다른 탐색 조건을 모두 만족하는 고유 맛집만 제공한다. | [FR-RESTAURANT-005](../../../01-requirements/functional-requirements.md#fr-restaurant-005-검색-및-필터-조건-조합) | Must | 확정 |
 | PR-DISC-006 | 결과를 허용된 크기의 페이지 단위로 제공한다. | [FR-RESTAURANT-006](../../../01-requirements/functional-requirements.md#fr-restaurant-006-페이지-단위-조회) | Must | 확정 |
@@ -147,7 +149,7 @@ related_documents:
 |---|---|
 | 결과 없음 또는 범위 밖 페이지 | 오류가 아닌 빈 목록을 제공한다. |
 | 앞뒤 공백 또는 공백뿐인 검색어 | 공백을 제거하며 비면 이름 조건을 적용하지 않는다. |
-| 서울 자치구·카테고리·페이지 값이 유효하지 않음 | 잘못된 요청으로 처리한다. |
+| 지역 코드·레거시 서울 이름·카테고리·페이지 값이 유효하지 않거나 지역 필터를 동시에 지정함 | 잘못된 요청으로 처리한다. |
 | 동일 맛집에 여러 유효 관계가 있음 | 맛집은 한 번만 표시한다. |
 | 방문 유튜버가 4명 이상임 | 채널명 오름차순 3명과 나머지 `외 N명`을 표시한다. |
 | 비공개·삭제 맛집 또는 무효 관계 | 결과에서 제외한다. |

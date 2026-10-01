@@ -1,5 +1,6 @@
 package com.masiton.restaurant.infrastructure.persistence;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -33,6 +34,22 @@ class RegionPersistenceAdapter implements RegionRepositoryPort {
 
     @Override
     public Optional<Region> findByName(String name) {
-        return springDataRegionRepository.findByName(name).map(RegionMapper::toDomain);
+        return findByProvinceAndName("서울특별시", name);
+    }
+
+    @Override
+    public Optional<Region> findByAdministrativeCode(String code) {
+        return springDataRegionRepository.findByAdministrativeCode(code).map(RegionMapper::toDomain);
+    }
+
+    @Override
+    public List<Region> findAllActive() {
+        return springDataRegionRepository.findByActiveTrueOrderBySortOrderAscAdministrativeCodeAsc().stream()
+                .map(RegionMapper::toDomain).toList();
+    }
+
+    @Override
+    public Optional<Region> findByProvinceAndName(String province, String name) {
+        return springDataRegionRepository.findByProvinceAndName(province, name).map(RegionMapper::toDomain);
     }
 }

@@ -10,6 +10,7 @@ related_requirements:
   - NFR-COMPATIBILITY-001
   - NFR-DEPLOYMENT-001
 related_documents:
+  - web-007-next-security-patch-baseline.md
   - ../../00-overview/scope.md
   - ../../03-team/ownership.md
   - ../../04-product/prd/00-product-overview.md
@@ -38,7 +39,7 @@ Accepted
 
 ## 2. 결정 요약
 
-웹 프론트엔드는 Node.js 24.18.0 LTS, Next.js 16.3.4와 TypeScript 7.0.2를 사용한다.
+웹 프론트엔드는 Node.js 24.18.0 LTS와 TypeScript 7.0.2를 사용한다. Next.js의 기존 16.3.4 패치 기준선은 [ADR-WEB-007](web-007-next-security-patch-baseline.md)의 16.3.8 보안 갱신안으로 변경하며 소유자 리뷰를 요청한다. 아래의 2026-09-09 결정 이력은 보존한다.
 
 ## 3. 배경
 
@@ -101,7 +102,7 @@ Next.js 16.3.4로 갱신한 뒤 내장 TypeScript 단계가 TypeScript 7.0.2에�
 
 ## 13. 검증 방법
 
-CI에서 `node -v`, `npm ls next typescript sharp` 결과가 각각 정확히 24.18.0, 16.3.4, 7.0.2, 0.35.4인지 확인하고 불일치 시 빌드를 실패시킨다. `npm audit --omit=dev --audit-level=high`에서 high 이상 취약점이 0건인지 확인한다. `package-lock.json`이 커밋되어 있고 CI가 `npm ci`(또는 동등한 고정 설치)를 사용하는지, 의존성 선언에 범위 버전 문자열이 없는지 검사한다. 컨테이너 이미지 태그가 고정되어 있는지 확인한다. 이 검증은 [ADR-CI-001](ci-001-github-actions-quality-gate.md)의 품질 게이트 실행 결과로 판단하며, 별도의 성능 측정(p95 응답 시간 등)은 [ADR-WEB-002](web-002-data-state.md)의 데이터 패칭 패턴에서 검증한다.
+CI에서 `node -v`, `npm ls next typescript sharp` 결과가 각각 정확히 24.18.0, 16.3.8, 7.0.2, 0.35.4인지 확인하고 불일치 시 빌드를 실패시킨다. `npm audit --omit=dev --audit-level=high`에서 high 이상 취약점이 0건인지 확인한다. `package-lock.json`이 커밋되어 있고 CI가 `npm ci`(또는 동등한 고정 설치)를 사용하는지, 의존성 선언에 범위 버전 문자열이 없는지 검사한다. 컨테이너 이미지 태그가 고정되어 있는지 확인한다. 이 검증은 [ADR-CI-001](ci-001-github-actions-quality-gate.md)의 품질 게이트 실행 결과로 판단하며, 별도의 성능 측정(p95 응답 시간 등)은 [ADR-WEB-002](web-002-data-state.md)의 데이터 패칭 패턴에서 검증한다.
 
 ## 14. 재검토 조건
 
