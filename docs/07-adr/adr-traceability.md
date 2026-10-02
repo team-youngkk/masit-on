@@ -72,7 +72,8 @@ related_documents:
 | Spring Boot 4.1.0 | 고정 | Accepted ADR | [ADR-FRAME-001](platform/frame-001-spring-boot.md) | 백엔드 프레임워크 기준선 |
 | Spring Security 7.1.0 | BOM 파생·고정 | Duplicate or Derived Rule | [ADR-FRAME-001](platform/frame-001-spring-boot.md), [ADR-AUTH-007](security/auth-007-unified-account-rbac-session.md) | 버전은 Boot BOM 파생, 사용 방식은 통합 인증 결정에 종속 |
 | Node.js 24.18.0 LTS | 고정 | Accepted ADR | [ADR-WEB-001](platform/web-001-frontend-platform.md) | 프론트엔드 런타임 기준선 |
-| Next.js 16.3.4 + TypeScript 7.0.2 | 고정 | Accepted ADR | [ADR-WEB-001](platform/web-001-frontend-platform.md) | 웹 프레임워크·언어 기준선 |
+| Next.js 16.3.4 + TypeScript 7.0.2 | 고정 | Accepted ADR | [ADR-WEB-001](platform/web-001-frontend-platform.md) | 승인된 웹 프레임워크·언어 기준선 |
+| Next.js 16.3.8 보안 패치 | 제안 | Proposed ADR | [ADR-WEB-007](platform/web-007-next-security-patch-baseline.md) | PR #396 검증 대상, 소유자 합의 전 구현 기준 아님 |
 | Server Components `fetch` + TanStack Query 5.101.4 | 확정 | Accepted ADR | [ADR-WEB-002](platform/web-002-data-state.md) | 초기·상호작용 데이터 책임 분리, 정확한 버전 고정 |
 | URL Query Parameter | 확정 | Accepted ADR | [ADR-WEB-002](platform/web-002-data-state.md) | 검색 상태의 공유·재현 |
 | React `useState` | 확정 | Duplicate or Derived Rule | [ADR-WEB-002](platform/web-002-data-state.md) | 화면 지역 상태 구현 규칙 |

@@ -10,6 +10,7 @@ related_requirements:
   - NFR-COMPATIBILITY-001
   - NFR-DEPLOYMENT-001
 related_documents:
+  - web-007-next-security-patch-baseline.md
   - ../../00-overview/scope.md
   - ../../03-team/ownership.md
   - ../../04-product/prd/00-product-overview.md
@@ -39,6 +40,8 @@ Accepted
 ## 2. 결정 요약
 
 웹 프론트엔드는 Node.js 24.18.0 LTS, Next.js 16.3.4와 TypeScript 7.0.2를 사용한다.
+
+[ADR-WEB-007](web-007-next-security-patch-baseline.md)은 Next.js 16.3.8 보안 패치의 Proposed 변경안이다. 이 문서의 Accepted 결정과 2026-09-09 검증 이력을 대체하지 않는다. PR #396의 16.3.8 의존성·CI 결과는 변경안의 검증 증거이며, 승인된 구현 기준이나 운영 적용을 뜻하지 않는다. 병합 전 소유자 합의와 ADR 상태·연관 문서 갱신이 필요하다.
 
 ## 3. 배경
 
