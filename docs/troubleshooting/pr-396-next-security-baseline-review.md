@@ -70,6 +70,7 @@ related_documents:
 | 저장소 전체 활성 기준선 검색 | 통과 | 과거 이력 외에 활성 기준 문서가 Next.js 16.3.8을 사용 |
 | 변경 Markdown 11개 상대 링크 검사 | 통과 | 내부 상대 링크 대상이 모두 존재 |
 | `git diff --check` | 통과 | 공백 오류 없음 |
+| [PR HEAD CI run 37317149479](https://github.com/team-youngkk/masit-on/actions/runs/37317149479) | 통과 | 프론트 빌드·타입, 백엔드 빌드·테스트, RSA 키, Terraform 계약 검사 통과. 배포·이미지 작업은 PR 이벤트에서 skip |
 | 기존 [보안 패치 CI](https://github.com/team-youngkk/masit-on/actions/runs/36842275221) | 통과 — 리뷰 반영 전 커밋 | Node 24.18.0 감사·프론트 빌드·타입, 백엔드, 비밀키, Terraform. 새 문서 커밋 결과로 간주하지 않음 |
 | [문서 수정 CI](https://github.com/team-youngkk/masit-on/actions/runs/36976885014) | 통과 — `3fc8a39b` | 백엔드·프론트 감사/빌드/타입·비밀키·Terraform 통과. 추가 P1 처리 기록만 보완한 후속 커밋과 구별 |
 
@@ -85,4 +86,4 @@ related_documents:
 
 ## 10. 남은 사항
 
-로컬 수정 기준으로 기존 P1과 최신 재리뷰 P1/P2를 반영했다. GitHub 스레드 답글·해결은 수정 커밋이 PR에 반영되고 검증된 뒤 수행한다. 실제 브라우저 인수·운영 적용은 수행하지 않았다.
+기존 P1과 최신 재리뷰 P1/P2를 반영하고 PR HEAD CI 통과를 확인했다. 실제 브라우저 인수·운영 적용은 수행하지 않았다.
