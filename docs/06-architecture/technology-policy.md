@@ -39,8 +39,8 @@ related_documents:
 | 빌드 | Gradle 8.14.3 + Groovy DSL | MVP Accepted |
 | DB 마이그레이션 | Flyway 12.4.0 | MVP Accepted |
 | Node.js | 24.18.0 LTS | MVP Accepted |
-| 프론트엔드 | Next.js 16.3.4 + TypeScript 7.0.2 | MVP Accepted. 16.3.8 보안 패치는 아래의 승인 대기 변경안으로 분리한다 |
-| React | 19.2.0 (`react`, `react-dom`) | MVP Accepted. Next.js 16.3.4의 peer 범위가 `^19.0.0`으로 넓어 Next 고정만으로는 패치가 고정되지 않으므로 별도로 명시한다 |
+| 프론트엔드 | Next.js 16.3.8 + TypeScript 7.0.2 | MVP Accepted |
+| React | 19.2.0 (`react`, `react-dom`) | MVP Accepted. Next.js의 peer 범위가 `^19.0.0`으로 넓어 Next 고정만으로는 패치가 고정되지 않으므로 별도로 명시한다 |
 | 프론트엔드 타입 정의 | `@types/node` 24.10.1, `@types/react` 19.2.2, `@types/react-dom` 19.2.1 | MVP Accepted |
 | PostgreSQL | 17.10 | MVP Accepted |
 | Redis | Redis Open Source 8.8 | 통합 계정 Refresh session 저장에 적용, 캐시·락은 조건부 |
@@ -67,11 +67,9 @@ related_documents:
 - RC, Snapshot, 미승인 Preview 의존성을 사용하지 않는다.
 - 컨테이너 이미지는 검증된 명시 태그를 사용하고 운영 확정 시 digest도 고정한다.
 
-### 3.1 승인 대기 중인 보안 패치 변경안
+### 3.1 보안 패치 기준선 채택
 
-[ADR-WEB-007](../07-adr/platform/web-007-next-security-patch-baseline.md)의 Next.js 16.3.8은 Proposed이며 위 Accepted 기준을 아직 대체하지 않는다. PR #396의 패키지 선언·잠금 파일과 CI는 이 변경안을 검증하기 위한 형상이다. 기존 승인 기준을 문서에 보존하는 것은 취약한 버전으로 의존성을 되돌리거나 배포하라는 지시가 아니다.
-
-양성훈·김인안이 소유자 합의 근거를 PR #396에 남긴 뒤, 병합 전에 ADR 상태·대체 범위와 인덱스·추적표·이 정책·AGENTS.md·CLAUDE.md의 승인 기준을 함께 갱신한다. CI 통과만으로 Proposed를 Accepted로 간주하지 않는다.
+[ADR-WEB-007](../07-adr/platform/web-007-next-security-patch-baseline.md)은 양성훈·김인안의 채택 합의에 따라 Next.js 16.3.8을 Accepted 보안 패치 기준선으로 확정한다. [ADR-WEB-001](../07-adr/platform/web-001-frontend-platform.md)의 프레임워크 선택과 나머지 런타임·언어 기준은 유지한다. 16.3.4 결정과 검증 기록은 과거 이력으로 보존한다.
 
 ## 4. 의존성 관리 정책
 
