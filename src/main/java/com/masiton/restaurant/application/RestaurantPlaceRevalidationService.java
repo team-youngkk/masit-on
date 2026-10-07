@@ -160,20 +160,22 @@ public class RestaurantPlaceRevalidationService implements RestaurantPlaceRevali
     }
 
     private Restaurant corrected(Restaurant current, VerifiedPlace observed) {
+        String currentRoadAddress = RoadAddressNormalizer.normalize(current.getRoadAddress());
+        String roadAddress = RoadAddressNormalizer.normalize(observed.roadAddress());
         String phone = observed.phoneNumber() == null ? current.getPhoneNumber() : observed.phoneNumber();
         BigDecimal latitude = observed.latitude() != null && observed.longitude() != null
                 ? observed.latitude() : current.getLatitude();
         BigDecimal longitude = observed.latitude() != null && observed.longitude() != null
                 ? observed.longitude() : current.getLongitude();
         if (Objects.equals(current.getName(), observed.name())
-                && Objects.equals(current.getRoadAddress(), observed.roadAddress())
+                && Objects.equals(currentRoadAddress, roadAddress)
                 && Objects.equals(current.getPhoneNumber(), phone)
                 && same(current.getLatitude(), latitude)
                 && same(current.getLongitude(), longitude)) {
             return null;
         }
         return new Restaurant(current.getId(), current.getRegionId(), current.getFoodCategoryId(), observed.name(),
-                current.getKakaoPlaceId(), current.getKakaoPlaceUrl(), observed.roadAddress(), current.getDetailAddress(),
+                current.getKakaoPlaceId(), current.getKakaoPlaceUrl(), roadAddress, current.getDetailAddress(),
                 phone, latitude, longitude, current.getPublicationStatus(), current.getLifecycleStatus(),
                 current.getCreatedAt(), current.getUpdatedAt(), current.getDeletedAt());
     }

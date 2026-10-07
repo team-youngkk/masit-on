@@ -13,6 +13,8 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import com.masiton.restaurant.application.port.in.RestaurantPlaceRevalidationUseCase;
 import com.masiton.restaurant.application.port.out.KakaoPlaceRevalidationPort;
 import com.masiton.restaurant.application.port.out.RestaurantPlaceRevalidationStore;
@@ -49,7 +51,33 @@ class RestaurantPlaceRevalidationServiceTest {
     @Test @DisplayName("동일 구의 안전 필드 변경은 AUTO_CORRECTED로 원자 적용한다")
     void 재검증_변경_자동보정() {
         claim(0); when(kakao.verify(any(), any(), any())).thenReturn(KakaoPlaceRevalidationPort.Result.found(place("새 맛집", "02-333-4444", "서울특별시 강남구 역삼로 2")));
-        service.run(restaurant.getId()); Decision decision=decision(); assertThat(decision.outcome().name()).isEqualTo("AUTO_CORRECTED"); assertThat(decision.correctedRestaurant().getName()).isEqualTo("새 맛집");
+        service.run(restaurant.getId()); Decision decision=decision(); assertThat(decision.outcome().name()).isEqualTo("AUTO_CORRECTED"); assertThat(decision.correctedRestaurant().getName()).isEqualTo("새 맛집"); assertThat(decision.correctedRestaurant().getRoadAddress()).isEqualTo("서울특별시 강남구 역삼로 2");
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "'서울특별시 강남구 테헤란로 1', '서울 강남구 테헤란로 1'",
+            "'서울 강남구 테헤란로 1', '서울특별시 강남구 테헤란로 1'",
+            "'부산광역시 해운대구 해운대로 1', '부산 해운대구 해운대로 1'",
+            "'부산 해운대구 해운대로 1', '부산광역시 해운대구 해운대로 1'"
+    })
+    @DisplayName("시도 별칭만 다른 주소는 동일한 주소로 검증한다")
+    void 재검증_시도별칭차이_보정하지않음(String currentAddress, String observedAddress) {
+        // Given
+        Restaurant current = withAddress(currentAddress);
+        when(store.claim(eq(current.getId()), any(), any(), any())).thenReturn(Optional.of(
+                new ClaimedRestaurant(current, 0, UUID.randomUUID(), "owner")));
+        when(persistence.apply(any(), any(), any())).thenReturn(true);
+        when(kakao.verify(any(), any(), any())).thenReturn(KakaoPlaceRevalidationPort.Result.found(
+                place("맛집", "02-111-2222", observedAddress)));
+
+        // When
+        service.run(current.getId());
+
+        // Then
+        Decision result = decision();
+        assertThat(result.outcome().name()).isEqualTo("VERIFIED");
+        assertThat(result.correctedRestaurant()).isNull();
     }
     @Test @DisplayName("Kakao 매칭 실패는 기존 맛집을 수정하지 않고 MATCH_NOT_FOUND로 남긴다")
     void 재검증_매칭실패_원본미변경() {
