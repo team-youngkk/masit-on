@@ -198,6 +198,8 @@ class RestaurantSearchQueryServiceTest {
         // given
         when(restaurantSearchQueryPort.search(any()))
                 .thenReturn(new RestaurantSearchQueryResult(List.of(), 0));
+        when(restaurantSearchQueryPort.findActiveTagCodes(List.of("MENU_NAENGMYEON", "OCCASION_SOLO")))
+                .thenReturn(Set.of("MENU_NAENGMYEON", "OCCASION_SOLO"));
 
         // when
         service.search(new SearchRestaurantsCommand(
