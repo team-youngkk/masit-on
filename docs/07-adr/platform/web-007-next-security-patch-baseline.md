@@ -1,13 +1,14 @@
 ---
 id: ADR-WEB-007
 title: Next.js 16.3.8 보안 패치 기준선
-status: Proposed
-decision_date: 2026-10-01
+status: Accepted
+decision_date: 2026-10-05
 owners:
   - 양성훈
   - 김인안
 related_documents:
   - web-001-frontend-platform.md
+  - README.md
   - ci-001-github-actions-quality-gate.md
   - ../../06-architecture/technology-policy.md
   - ../adr-index.md
@@ -18,9 +19,13 @@ superseded_by: null
 
 # ADR-WEB-007 Next.js 16.3.8 보안 패치 기준선
 
-## 1. 상태와 범위
+## 1. 결정과 범위
 
-Proposed — 사용자에게 별도 보안 패치와 버전 정책 갱신의 진행 승인을 받았으며, 병합 전 프론트·보안 소유자 리뷰를 요청한다. 팀 승인을 이미 받았다는 뜻은 아니다. [ADR-WEB-001](web-001-frontend-platform.md)의 프레임워크 선택·Node·TypeScript·React 결정은 유지하고 Next.js 패치 기준선만 16.3.4에서 16.3.8로 갱신하는 변경안이다. 과거 보안 패치 이력은 삭제하지 않는다.
+Accepted — 2026-10-05 채택 합의를 확인했다. [ADR-WEB-001](web-001-frontend-platform.md)의 프레임워크 선택·Node·TypeScript·React 결정은 유지하고 Next.js 패치 기준선만 16.3.4에서 16.3.8로 갱신한다. 2026-09-09의 16.3.4 보안 패치 이력은 해당 시점의 결정으로 보존한다.
+
+### ADR 관계와 승인 범위
+
+이 ADR은 [ADR-WEB-001](web-001-frontend-platform.md)의 프레임워크·언어 결정을 대체하지 않고 Next.js 보안 패치 기준선만 보완한다. 양 ADR은 함께 유효하며 현재 구현 버전은 Next.js 16.3.8이다. 이 결정과 파생 문서는 소유자 합의를 반영한다.
 
 ## 2. 배경과 근거
 
@@ -44,4 +49,4 @@ Proposed — 사용자에게 별도 보안 패치와 버전 정책 갱신의 진
 
 ## 5. 복구와 후속 조건
 
-회귀가 발견되면 배포를 보류하고 수정된 패치 버전을 검토한다. 취약한 16.3.4를 장기 복구 기준선으로 재고정하거나 감사 게이트를 우회하지 않는다. 긴급 롤백은 기존 운영 승인 절차로 영향·보완 통제를 먼저 판단한다. 소유자 승인 후 상태와 인덱스를 함께 확정한다. 새 보안 공지, 고정 런타임 회귀 또는 기존 override를 제거할 수 있는 upstream 갱신이 재검토 조건이다.
+회귀가 발견되면 배포를 보류하고 수정된 패치 버전을 검토한다. 취약한 16.3.4를 장기 복구 기준선으로 재고정하거나 감사 게이트를 우회하지 않는다. 긴급 롤백은 기존 운영 승인 절차로 영향·보완 통제를 먼저 판단한다. 새 보안 공지, 고정 런타임 회귀 또는 기존 override를 제거할 수 있는 upstream 갱신이 재검토 조건이다.

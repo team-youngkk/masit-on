@@ -15,6 +15,8 @@ related_documents:
 
 ## 최신 기록
 
+- [PR #396 승인 기준과 보안 패치 변경안 분리](pr-396-next-security-baseline-review.md)
+
 - [PR #385 YouTube 채널 보정 조회의 Cursor·quota·비밀 설정](pr-385-youtube-channel-backfill-review.md)
 - [PR #384 운영 sitemap 검증 경계](pr-384-sitemap-production-verification-review.md)
 - [PR #379 태그 관리 세션·용어 잠금·페이지 경계](pr-379-tag-definition-lifecycle-review.md)
@@ -69,6 +71,8 @@ related_documents:
 - [ALB·Blue-Green 트래픽 전환에서 드러난 결함 3건](ops-2026-08-19-alb-cutover-review.md)
 
 ## PR 리뷰
+
+- [PR #396 승인 기준과 보안 패치 변경안 분리](pr-396-next-security-baseline-review.md)
 
 - [PR #385 YouTube 채널 보정 조회의 Cursor·quota·비밀 설정](pr-385-youtube-channel-backfill-review.md)
 - [PR #384 운영 sitemap 검증 경계](pr-384-sitemap-production-verification-review.md)
