@@ -4,7 +4,6 @@ import test from 'node:test'
 import {
   buildRestaurantFilterClearHref,
   buildRestaurantFiltersResetHref,
-  type RestaurantStructuredFilterKey,
 } from './restaurants-filter-navigation.ts'
 
 const FILTER_VALUES = {
@@ -15,7 +14,7 @@ const FILTER_VALUES = {
 } as const
 
 test('선택한 구조화 필터만 제거하고 나머지 조건과 size를 유지하며 첫 페이지로 이동한다', () => {
-  const keys = Object.keys(FILTER_VALUES) as RestaurantStructuredFilterKey[]
+  const keys = Object.keys(FILTER_VALUES) as Array<keyof typeof FILTER_VALUES>
 
   for (const key of keys) {
     const current = new URLSearchParams({
@@ -35,7 +34,7 @@ test('선택한 구조화 필터만 제거하고 나머지 조건과 size를 유
     }
     assert.equal(next.searchParams.get('page'), '1')
     assert.equal(next.searchParams.get('size'), '50')
-    assert.equal(next.searchParams.get('tag'), null)
+    assert.equal(next.searchParams.get('tag'), 'MENU_NAENGMYEON')
     assert.equal(next.searchParams.get('unknown'), null)
   }
 })
@@ -43,6 +42,7 @@ test('선택한 구조화 필터만 제거하고 나머지 조건과 size를 유
 test('전체 초기화는 구조화 필터를 모두 제거하고 size만 유지하며 첫 페이지로 이동한다', () => {
   const current = new URLSearchParams({
     ...FILTER_VALUES,
+    regionCode: '4111000000',
     page: '4',
     size: '10',
     tag: 'MENU_GUKBAP',
@@ -53,6 +53,23 @@ test('전체 초기화는 구조화 필터를 모두 제거하고 size만 유지
     buildRestaurantFiltersResetHref(current),
     '/restaurants?page=1&size=10',
   )
+})
+
+test('지역 코드는 검색어·음식 종류·유튜버·태그 해제 링크에서 보존된다', () => {
+  const current = new URLSearchParams({
+    query: '국밥', regionCode: '2611000000', category: '한식', creatorId: 'creator-1',
+    tag: 'MENU_GUKBAP', page: '5', size: '50',
+  })
+  for (const key of ['query', 'category', 'creatorId', 'tag'] as const) {
+    const next = new URL(buildRestaurantFilterClearHref(current, key), 'https://example.com').searchParams
+    assert.equal(next.get('regionCode'), '2611000000')
+    assert.equal(next.get('page'), '1')
+    assert.equal(next.has(key), false)
+  }
+  const cleared = new URL(buildRestaurantFilterClearHref(current, 'regionCode'), 'https://example.com').searchParams
+  assert.equal(cleared.has('regionCode'), false)
+  assert.equal(cleared.get('tag'), 'MENU_GUKBAP')
+  assert.equal(cleared.get('creatorId'), 'creator-1')
 })
 
 test('반복된 검색 조건은 URLSearchParams.get이 반환하는 첫 값만 유지한다', () => {

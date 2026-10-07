@@ -18,7 +18,9 @@ final class RegionMapper {
                 entity.getSortOrder(),
                 entity.isActive(),
                 entity.getCreatedAt(),
-                entity.getUpdatedAt());
+                entity.getUpdatedAt(),
+                entity.getAdministrativeCode(),
+                entity.getParentId());
     }
 
     static RegionJpaEntity toEntity(Region domain) {
@@ -27,6 +29,8 @@ final class RegionMapper {
                 domain.getCode(),
                 domain.getName(),
                 domain.getSortOrder(),
-                domain.isActive());
+                domain.isActive(),
+                domain.getAdministrativeCode(),
+                domain.getParentId());
     }
 }

@@ -1,6 +1,7 @@
 ---
 status: accepted
 related_documents:
+  - ../api/common/region-contract.md
   - physical-data-model.md
   - constraint-mapping.md
   - index-strategy.md
@@ -19,17 +20,24 @@ related_documents:
 
 ## 2. `region`
 
-서울특별시 자치구 기준 데이터다.
+전국 시·도 → 시·군·구의 최대 2단계 기준 데이터다. #394의 [지역 계층 계약](../api/common/region-contract.md)과 V20 변경은 소유자 리뷰 요청 상태다. 기존 서울 25개 행의 UUID·`SEOUL_*` 코드·표시 순서와 Restaurant FK를 보존한다.
 
 | 컬럼 | SQL 타입 | Null | 기본값 | 키·제약 | 설명 |
 |---|---|---:|---|---|---|
 | `id` | `uuid` | NN | 없음 | PK | 내부 ID |
 | `code` | `varchar(32)` | NN | 없음 | UK, 빈 값 금지 | 변경되지 않는 애플리케이션 코드 |
-| `name` | `varchar(20)` | NN | 없음 | UK, 빈 값 금지 | API 표준 자치구 이름 |
-| `sort_order` | `smallint` | NN | 없음 | UK, `1..25` | 선택 목록 순서 |
+| `administrative_code` | `varchar(10)` | NN | 없음 | UK, `^[0-9]{5}00000$` CHECK | 10자리 법정동 코드 문자열. 공개 지역 API의 `code`·목록 요청의 `regionCode` |
+| `parent_id` | `uuid` | Yes | `NULL` | 아래 복합 FK | 최상위는 null, 하위는 소속 시·도 ID |
+| `parent_administrative_code` | `varchar(10)` | Yes | STORED 생성식 | 아래 복합 FK | 부모가 있으면 자기 코드 앞 2자리 + `00000000`, 최상위는 null |
+| `name` | `varchar(20)` | NN | 없음 | 부모별 UK, 빈 값 금지 | 지역 표시명, 다른 시·도의 동명 지역 허용 |
+| `sort_order` | `smallint` | NN | 없음 | 부모별 UK, `> 0` | 같은 부모 아래 선택 목록 순서 |
 | `active` | `boolean` | NN | `true` |  | 신규 Restaurant 연결 허용 |
 | `created_at` | 시간 | NN | `CURRENT_TIMESTAMP` |  | 생성 시각 |
 | `updated_at` | 시간 | NN | `CURRENT_TIMESTAMP` |  | 변경 시각 |
+
+V20은 전역 이름·순서 UK를 `uk_region__parent_name(parent_id, name)`과 `uk_region__parent_sort_order(parent_id, sort_order)`로 교체한다. 두 제약은 `UNIQUE NULLS NOT DISTINCT`이므로 최상위끼리도 이름·순서 중복을 거부한다. `uk_region__administrative_code`와 `uk_region__id_administrative_code(id, administrative_code)`를 추가한다.
+
+`fk_region__province(parent_id, parent_administrative_code)`는 `region(id, administrative_code)`를 `ON DELETE RESTRICT`로 참조한다. `ck_region__administrative_code`와 `ck_region__hierarchy`를 함께 적용해 다른 시·도 부모·3단계·순환을 차단한다. 최상위는 뒤 8자리가 0인 시·도 코드 또는 세종 `3611000000`이고, 하위는 이 두 형태가 아니다. `parent_administrative_code`는 DB 파생값이며 API 입력이나 별도 애플리케이션 식별자가 아니다.
 
 ## 3. `food_category`
 
@@ -81,12 +89,12 @@ V1에 존재하는 사전 발급 관리자 계정이다. 단일 계정 전환의
 | 컬럼 | SQL 타입 | Null | 기본값 | 키·제약 | 설명 |
 |---|---|---:|---|---|---|
 | `id` | `uuid` | NN | 없음 | PK | API 식별자 |
-| `region_id` | `uuid` | NN | 없음 | FK → `region.id` | 서울 자치구 |
+| `region_id` | `uuid` | NN | 없음 | FK → `region.id` | 주소에 해당하는 시·군·구, 세종은 최상위 직접 참조 |
 | `food_category_id` | `uuid` | NN | 없음 | FK → `food_category.id` | 대표 카테고리 |
 | `name` | `varchar(100)` | NN | 없음 | trim 1~100 | 표시 이름 |
 | `kakao_place_id` | `varchar(64)` | NN | 없음 | UK, 빈 값 금지 | 검증된 Kakao 장소 ID |
 | `kakao_place_url` | `varchar(2048)` | NN | 없음 | 빈 값 금지 | 검증·정규화된 HTTPS URL |
-| `road_address` | `varchar(255)` | NN | 없음 | trim 1~255 | 서울 전체 도로명주소 |
+| `road_address` | `varchar(255)` | NN | 없음 | trim 1~255 | 전국 전체 도로명주소, 비자치구 표기 보존 |
 | `detail_address` | `varchar(200)` | Yes | `NULL` | null 또는 빈 값 금지 | 상세 위치 |
 | `phone_number` | `varchar(20)` | NN | 없음 | 길이 7~20, 허용 문자 | 확인된 전화번호 |
 | `latitude` | `numeric(9,6)` | Yes | `NULL` | `-90..90`, longitude와 null 쌍 | WGS84 위도 |

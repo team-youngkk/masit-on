@@ -2,14 +2,14 @@
 
 import { parseRetryAfterHeader } from './map/retry-after.ts'
 
-export type NaturalLanguageSearchFilters = { query: string | null; district: string | null; category: string | null; creatorId: string | null; tags: string[] }
+export type NaturalLanguageSearchFilters = { query: string | null; district: string | null; regionCode?: string | null; category: string | null; creatorId: string | null; tags: string[] }
 export type NaturalLanguageCondition = NaturalLanguageSearchFilters
 export type NaturalLanguageRestaurant = { id: string; name: string; district: string; category: string; visitedBy: Array<{ id: string; channelName: string }>; remainingVisitedByCount: number }
 export type NaturalLanguageResult = { interpretation: { status: 'APPLIED' | 'PARTIAL' | 'FAILED'; appliedConditions: NaturalLanguageCondition; ignoredConditions: Array<{ type: string; text: string; reason: string }>; conflicts: Array<{ field: string; resolution: string }>; parserVersion: string }; results: { items: NaturalLanguageRestaurant[]; page: { number: number; size: number; totalElements: number; totalPages: number; hasNext: boolean } } }
 export type NaturalLanguageFieldGuidance = { label: string; reason: string }
 export type NaturalLanguageSearchOutcome = { kind: 'success'; result: NaturalLanguageResult } | { kind: 'invalid'; message: string; code?: string; fieldGuidance: NaturalLanguageFieldGuidance[]; traceId?: string } | { kind: 'rateLimited'; message: string; traceId?: string; retryAvailableAt: number | null } | { kind: 'unavailable'; message: string; traceId?: string } | { kind: 'error'; message: string; traceId?: string; retryAllowed: boolean }
 
-const CONDITION_LABELS: Record<keyof NaturalLanguageCondition, string> = { query: '이름', district: '자치구', category: '음식 종류', creatorId: '유튜버', tags: '태그' }
+const CONDITION_LABELS: Record<keyof NaturalLanguageCondition, string> = { query: '이름', district: '자치구', regionCode: '지역', category: '음식 종류', creatorId: '유튜버', tags: '태그' }
 const TAG_LABELS: Record<string, string> = {
   MENU_NAENGMYEON: '냉면', MENU_GUKBAP: '국밥', MENU_RAMEN: '라멘', MENU_SUSHI: '스시', MENU_PIZZA: '피자', MENU_SAMGYEOPSAL: '삼겹살',
   TASTE_SPICY: '매운맛', TASTE_SWEET: '단맛', TASTE_SAVORY: '감칠맛', TASTE_LIGHT: '담백한 맛',
@@ -50,11 +50,12 @@ export function naturalLanguageConditionLabel(field: string): string {
   return Object.entries(CONDITION_LABELS).find(([key]) => key.toLowerCase() === normalized)?.[1] ?? field
 }
 
-export function formatNaturalLanguageAppliedConditions(conditions: NaturalLanguageCondition, creatorLabels: Record<string, string>): string[] {
+export function formatNaturalLanguageAppliedConditions(conditions: NaturalLanguageCondition, creatorLabels: Record<string, string>, regionLabels: Record<string, string> = {}): string[] {
   return Object.entries(conditions).flatMap(([field, value]) => {
     if (field === 'tags' && Array.isArray(value)) return value.length ? [`태그: ${value.map((tag) => TAG_LABELS[tag] ?? '알 수 없는 태그').join(', ')}`] : []
     if (!value || Array.isArray(value)) return []
-    const displayValue = field === 'creatorId' ? creatorLabels[value] ?? '선택한 유튜버' : value
+    const displayValue = field === 'creatorId' ? creatorLabels[value] ?? '선택한 유튜버'
+      : field === 'regionCode' ? regionLabels[value] ?? '선택한 지역' : value
     return [`${naturalLanguageConditionLabel(field)}: ${displayValue}`]
   })
 }
@@ -64,7 +65,7 @@ export function naturalLanguageFiltersFromFormData(data: FormData, tags: string[
     const entry = data.get(name)
     return typeof entry === 'string' && entry.trim() ? entry.trim() : null
   }
-  return { query: value('query'), district: value('district'), category: value('category'), creatorId: value('creatorId'), tags }
+  return { query: value('query'), district: value('district'), regionCode: value('regionCode'), category: value('category'), creatorId: value('creatorId'), tags }
 }
 
 const FALLBACK_ERROR = '자연어 검색을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.'
@@ -77,7 +78,8 @@ const strings = (value: unknown): string[] | null => Array.isArray(value) && val
 function condition(value: unknown): NaturalLanguageCondition | null {
   if (!isRecord(value) || strings(value.tags) === null) return null
   for (const field of ['query', 'district', 'category', 'creatorId'] as const) if (value[field] !== null && typeof value[field] !== 'string') return null
-  return { query: value.query as string | null, district: value.district as string | null, category: value.category as string | null, creatorId: value.creatorId as string | null, tags: strings(value.tags)! }
+  if (value.regionCode !== undefined && value.regionCode !== null && typeof value.regionCode !== 'string') return null
+  return { query: value.query as string | null, district: value.district as string | null, regionCode: value.regionCode as string | null | undefined ?? null, category: value.category as string | null, creatorId: value.creatorId as string | null, tags: strings(value.tags)! }
 }
 
 /* errors[].reason은 계약상 안전한 검증 실패 설명이므로 필드 라벨과 함께 그대로 표시한다. */

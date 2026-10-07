@@ -39,7 +39,7 @@ class ResolveVerifiedRestaurantReferenceServiceTest {
         Region region = mock(Region.class);
         given(region.isActive()).willReturn(true);
         given(region.getId()).willReturn(UUID.randomUUID());
-        given(regionRepository.findByName("마포구")).willReturn(Optional.of(region));
+        given(regionRepository.findByProvinceAndName("서울특별시", "마포구")).willReturn(Optional.of(region));
         FoodCategory category = mock(FoodCategory.class);
         given(category.isActive()).willReturn(true);
         UUID categoryId = UUID.randomUUID();

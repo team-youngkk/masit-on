@@ -1,0 +1,1697 @@
+{
+  "checkedOn": "2026-09-30",
+  "source": "행정안전부 행정표준코드관리시스템 법정동코드",
+  "provinceCandidates": {
+    "url": "https://www.code.go.kr/stdcode/regCodeL.do",
+    "method": "GET",
+    "selector": "select[name=\"sidoCd\"]"
+  },
+  "municipalityCandidates": {
+    "url": "https://www.code.go.kr/stdcode/sggCodeIL.do",
+    "method": "POST",
+    "body": {
+      "sidoCd": "시도 2자리",
+      "disuseAt": "0",
+      "searchOk": "0"
+    },
+    "fields": [
+      "strSggNm",
+      "strSggCd"
+    ],
+    "codeRule": "sidoCd + strSggCd + 00000"
+  },
+  "activeVerification": {
+    "url": "https://www.code.go.kr/stdcode/regCodeL.do",
+    "method": "POST",
+    "body": {
+      "regionCd": "각 행의 정확한 10자리 코드",
+      "disuseAt": "0",
+      "pageSize": "10",
+      "cPage": "1"
+    },
+    "rule": "시도·시군구 후보마다 현존 결과 테이블에 정확한 코드와 지역명이 있음을 개별 확인. 선택 목록과 sggCodeIL에는 폐지 코드도 포함되므로 그대로 적재하지 않는다."
+  },
+  "hierarchyRule": "이름에 공백이 있는 비자치구는 제외하고 그 시를 직접 시도 자식으로 사용. 세종 3611000000은 최상위 1행만 사용. 제주에는 제주시·서귀포시.",
+  "excludedInactive": [
+    {
+      "code": "2900000000",
+      "name": "광주광역시"
+    },
+    {
+      "code": "4600000000",
+      "name": "전라남도"
+    },
+    {
+      "code": "2814000000",
+      "name": "인천광역시 동구"
+    },
+    {
+      "code": "2826000000",
+      "name": "인천광역시 서구"
+    },
+    {
+      "code": "2811000000",
+      "name": "인천광역시 중구"
+    },
+    {
+      "code": "4371000000",
+      "name": "충청북도 청원군"
+    }
+  ],
+  "excludedLowerLevels": [
+    {
+      "code": "4128100000",
+      "name": "경기도 고양시 덕양구"
+    },
+    {
+      "code": "4128500000",
+      "name": "경기도 고양시 일산동구"
+    },
+    {
+      "code": "4128700000",
+      "name": "경기도 고양시 일산서구"
+    },
+    {
+      "code": "4119400000",
+      "name": "경기도 부천시 소사구"
+    },
+    {
+      "code": "4119600000",
+      "name": "경기도 부천시 오정구"
+    },
+    {
+      "code": "4119200000",
+      "name": "경기도 부천시 원미구"
+    },
+    {
+      "code": "4113500000",
+      "name": "경기도 성남시 분당구"
+    },
+    {
+      "code": "4113100000",
+      "name": "경기도 성남시 수정구"
+    },
+    {
+      "code": "4113300000",
+      "name": "경기도 성남시 중원구"
+    },
+    {
+      "code": "4111300000",
+      "name": "경기도 수원시 권선구"
+    },
+    {
+      "code": "4111700000",
+      "name": "경기도 수원시 영통구"
+    },
+    {
+      "code": "4111100000",
+      "name": "경기도 수원시 장안구"
+    },
+    {
+      "code": "4111500000",
+      "name": "경기도 수원시 팔달구"
+    },
+    {
+      "code": "4127300000",
+      "name": "경기도 안산시 단원구"
+    },
+    {
+      "code": "4127100000",
+      "name": "경기도 안산시 상록구"
+    },
+    {
+      "code": "4117300000",
+      "name": "경기도 안양시 동안구"
+    },
+    {
+      "code": "4117100000",
+      "name": "경기도 안양시 만안구"
+    },
+    {
+      "code": "4146300000",
+      "name": "경기도 용인시 기흥구"
+    },
+    {
+      "code": "4146500000",
+      "name": "경기도 용인시 수지구"
+    },
+    {
+      "code": "4146100000",
+      "name": "경기도 용인시 처인구"
+    },
+    {
+      "code": "4159700000",
+      "name": "경기도 화성시 동탄구"
+    },
+    {
+      "code": "4159100000",
+      "name": "경기도 화성시 만세구"
+    },
+    {
+      "code": "4159500000",
+      "name": "경기도 화성시 병점구"
+    },
+    {
+      "code": "4159300000",
+      "name": "경기도 화성시 효행구"
+    },
+    {
+      "code": "4311100000",
+      "name": "충청북도 청주시 상당구"
+    },
+    {
+      "code": "4311200000",
+      "name": "충청북도 청주시 서원구"
+    },
+    {
+      "code": "4311400000",
+      "name": "충청북도 청주시 청원구"
+    },
+    {
+      "code": "4311300000",
+      "name": "충청북도 청주시 흥덕구"
+    },
+    {
+      "code": "4413100000",
+      "name": "충청남도 천안시 동남구"
+    },
+    {
+      "code": "4413300000",
+      "name": "충청남도 천안시 서북구"
+    },
+    {
+      "code": "4711100000",
+      "name": "경상북도 포항시 남구"
+    },
+    {
+      "code": "4711300000",
+      "name": "경상북도 포항시 북구"
+    },
+    {
+      "code": "4812500000",
+      "name": "경상남도 창원시 마산합포구"
+    },
+    {
+      "code": "4812700000",
+      "name": "경상남도 창원시 마산회원구"
+    },
+    {
+      "code": "4812300000",
+      "name": "경상남도 창원시 성산구"
+    },
+    {
+      "code": "4812100000",
+      "name": "경상남도 창원시 의창구"
+    },
+    {
+      "code": "4812900000",
+      "name": "경상남도 창원시 진해구"
+    },
+    {
+      "code": "5211300000",
+      "name": "전북특별자치도 전주시 덕진구"
+    },
+    {
+      "code": "5211100000",
+      "name": "전북특별자치도 전주시 완산구"
+    }
+  ],
+  "counts": {
+    "provinces": 16,
+    "municipalities": 229,
+    "total": 245,
+    "seoulMunicipalities": 25
+  },
+  "rows": [
+    {
+      "code": "1100000000",
+      "name": "서울특별시",
+      "parentCode": null,
+      "sortOrder": 1
+    },
+    {
+      "code": "1111000000",
+      "name": "종로구",
+      "parentCode": "1100000000",
+      "sortOrder": 1
+    },
+    {
+      "code": "1114000000",
+      "name": "중구",
+      "parentCode": "1100000000",
+      "sortOrder": 2
+    },
+    {
+      "code": "1117000000",
+      "name": "용산구",
+      "parentCode": "1100000000",
+      "sortOrder": 3
+    },
+    {
+      "code": "1120000000",
+      "name": "성동구",
+      "parentCode": "1100000000",
+      "sortOrder": 4
+    },
+    {
+      "code": "1121500000",
+      "name": "광진구",
+      "parentCode": "1100000000",
+      "sortOrder": 5
+    },
+    {
+      "code": "1123000000",
+      "name": "동대문구",
+      "parentCode": "1100000000",
+      "sortOrder": 6
+    },
+    {
+      "code": "1126000000",
+      "name": "중랑구",
+      "parentCode": "1100000000",
+      "sortOrder": 7
+    },
+    {
+      "code": "1129000000",
+      "name": "성북구",
+      "parentCode": "1100000000",
+      "sortOrder": 8
+    },
+    {
+      "code": "1130500000",
+      "name": "강북구",
+      "parentCode": "1100000000",
+      "sortOrder": 9
+    },
+    {
+      "code": "1132000000",
+      "name": "도봉구",
+      "parentCode": "1100000000",
+      "sortOrder": 10
+    },
+    {
+      "code": "1135000000",
+      "name": "노원구",
+      "parentCode": "1100000000",
+      "sortOrder": 11
+    },
+    {
+      "code": "1138000000",
+      "name": "은평구",
+      "parentCode": "1100000000",
+      "sortOrder": 12
+    },
+    {
+      "code": "1141000000",
+      "name": "서대문구",
+      "parentCode": "1100000000",
+      "sortOrder": 13
+    },
+    {
+      "code": "1144000000",
+      "name": "마포구",
+      "parentCode": "1100000000",
+      "sortOrder": 14
+    },
+    {
+      "code": "1147000000",
+      "name": "양천구",
+      "parentCode": "1100000000",
+      "sortOrder": 15
+    },
+    {
+      "code": "1150000000",
+      "name": "강서구",
+      "parentCode": "1100000000",
+      "sortOrder": 16
+    },
+    {
+      "code": "1153000000",
+      "name": "구로구",
+      "parentCode": "1100000000",
+      "sortOrder": 17
+    },
+    {
+      "code": "1154500000",
+      "name": "금천구",
+      "parentCode": "1100000000",
+      "sortOrder": 18
+    },
+    {
+      "code": "1156000000",
+      "name": "영등포구",
+      "parentCode": "1100000000",
+      "sortOrder": 19
+    },
+    {
+      "code": "1159000000",
+      "name": "동작구",
+      "parentCode": "1100000000",
+      "sortOrder": 20
+    },
+    {
+      "code": "1162000000",
+      "name": "관악구",
+      "parentCode": "1100000000",
+      "sortOrder": 21
+    },
+    {
+      "code": "1165000000",
+      "name": "서초구",
+      "parentCode": "1100000000",
+      "sortOrder": 22
+    },
+    {
+      "code": "1168000000",
+      "name": "강남구",
+      "parentCode": "1100000000",
+      "sortOrder": 23
+    },
+    {
+      "code": "1171000000",
+      "name": "송파구",
+      "parentCode": "1100000000",
+      "sortOrder": 24
+    },
+    {
+      "code": "1174000000",
+      "name": "강동구",
+      "parentCode": "1100000000",
+      "sortOrder": 25
+    },
+    {
+      "code": "1200000000",
+      "name": "전남광주통합특별시",
+      "parentCode": null,
+      "sortOrder": 2
+    },
+    {
+      "code": "1211000000",
+      "name": "목포시",
+      "parentCode": "1200000000",
+      "sortOrder": 1
+    },
+    {
+      "code": "1213000000",
+      "name": "여수시",
+      "parentCode": "1200000000",
+      "sortOrder": 2
+    },
+    {
+      "code": "1215000000",
+      "name": "순천시",
+      "parentCode": "1200000000",
+      "sortOrder": 3
+    },
+    {
+      "code": "1217000000",
+      "name": "나주시",
+      "parentCode": "1200000000",
+      "sortOrder": 4
+    },
+    {
+      "code": "1219000000",
+      "name": "광양시",
+      "parentCode": "1200000000",
+      "sortOrder": 5
+    },
+    {
+      "code": "1221000000",
+      "name": "동구",
+      "parentCode": "1200000000",
+      "sortOrder": 6
+    },
+    {
+      "code": "1224000000",
+      "name": "서구",
+      "parentCode": "1200000000",
+      "sortOrder": 7
+    },
+    {
+      "code": "1227000000",
+      "name": "남구",
+      "parentCode": "1200000000",
+      "sortOrder": 8
+    },
+    {
+      "code": "1230000000",
+      "name": "북구",
+      "parentCode": "1200000000",
+      "sortOrder": 9
+    },
+    {
+      "code": "1233000000",
+      "name": "광산구",
+      "parentCode": "1200000000",
+      "sortOrder": 10
+    },
+    {
+      "code": "1271000000",
+      "name": "담양군",
+      "parentCode": "1200000000",
+      "sortOrder": 11
+    },
+    {
+      "code": "1272000000",
+      "name": "곡성군",
+      "parentCode": "1200000000",
+      "sortOrder": 12
+    },
+    {
+      "code": "1273000000",
+      "name": "구례군",
+      "parentCode": "1200000000",
+      "sortOrder": 13
+    },
+    {
+      "code": "1274000000",
+      "name": "고흥군",
+      "parentCode": "1200000000",
+      "sortOrder": 14
+    },
+    {
+      "code": "1275000000",
+      "name": "보성군",
+      "parentCode": "1200000000",
+      "sortOrder": 15
+    },
+    {
+      "code": "1276000000",
+      "name": "화순군",
+      "parentCode": "1200000000",
+      "sortOrder": 16
+    },
+    {
+      "code": "1277000000",
+      "name": "장흥군",
+      "parentCode": "1200000000",
+      "sortOrder": 17
+    },
+    {
+      "code": "1278000000",
+      "name": "강진군",
+      "parentCode": "1200000000",
+      "sortOrder": 18
+    },
+    {
+      "code": "1279000000",
+      "name": "해남군",
+      "parentCode": "1200000000",
+      "sortOrder": 19
+    },
+    {
+      "code": "1280000000",
+      "name": "영암군",
+      "parentCode": "1200000000",
+      "sortOrder": 20
+    },
+    {
+      "code": "1281000000",
+      "name": "무안군",
+      "parentCode": "1200000000",
+      "sortOrder": 21
+    },
+    {
+      "code": "1282000000",
+      "name": "함평군",
+      "parentCode": "1200000000",
+      "sortOrder": 22
+    },
+    {
+      "code": "1283000000",
+      "name": "영광군",
+      "parentCode": "1200000000",
+      "sortOrder": 23
+    },
+    {
+      "code": "1284000000",
+      "name": "장성군",
+      "parentCode": "1200000000",
+      "sortOrder": 24
+    },
+    {
+      "code": "1285000000",
+      "name": "완도군",
+      "parentCode": "1200000000",
+      "sortOrder": 25
+    },
+    {
+      "code": "1286000000",
+      "name": "진도군",
+      "parentCode": "1200000000",
+      "sortOrder": 26
+    },
+    {
+      "code": "1287000000",
+      "name": "신안군",
+      "parentCode": "1200000000",
+      "sortOrder": 27
+    },
+    {
+      "code": "2600000000",
+      "name": "부산광역시",
+      "parentCode": null,
+      "sortOrder": 3
+    },
+    {
+      "code": "2611000000",
+      "name": "중구",
+      "parentCode": "2600000000",
+      "sortOrder": 1
+    },
+    {
+      "code": "2614000000",
+      "name": "서구",
+      "parentCode": "2600000000",
+      "sortOrder": 2
+    },
+    {
+      "code": "2617000000",
+      "name": "동구",
+      "parentCode": "2600000000",
+      "sortOrder": 3
+    },
+    {
+      "code": "2620000000",
+      "name": "영도구",
+      "parentCode": "2600000000",
+      "sortOrder": 4
+    },
+    {
+      "code": "2623000000",
+      "name": "부산진구",
+      "parentCode": "2600000000",
+      "sortOrder": 5
+    },
+    {
+      "code": "2626000000",
+      "name": "동래구",
+      "parentCode": "2600000000",
+      "sortOrder": 6
+    },
+    {
+      "code": "2629000000",
+      "name": "남구",
+      "parentCode": "2600000000",
+      "sortOrder": 7
+    },
+    {
+      "code": "2632000000",
+      "name": "북구",
+      "parentCode": "2600000000",
+      "sortOrder": 8
+    },
+    {
+      "code": "2635000000",
+      "name": "해운대구",
+      "parentCode": "2600000000",
+      "sortOrder": 9
+    },
+    {
+      "code": "2638000000",
+      "name": "사하구",
+      "parentCode": "2600000000",
+      "sortOrder": 10
+    },
+    {
+      "code": "2641000000",
+      "name": "금정구",
+      "parentCode": "2600000000",
+      "sortOrder": 11
+    },
+    {
+      "code": "2644000000",
+      "name": "강서구",
+      "parentCode": "2600000000",
+      "sortOrder": 12
+    },
+    {
+      "code": "2647000000",
+      "name": "연제구",
+      "parentCode": "2600000000",
+      "sortOrder": 13
+    },
+    {
+      "code": "2650000000",
+      "name": "수영구",
+      "parentCode": "2600000000",
+      "sortOrder": 14
+    },
+    {
+      "code": "2653000000",
+      "name": "사상구",
+      "parentCode": "2600000000",
+      "sortOrder": 15
+    },
+    {
+      "code": "2671000000",
+      "name": "기장군",
+      "parentCode": "2600000000",
+      "sortOrder": 16
+    },
+    {
+      "code": "2700000000",
+      "name": "대구광역시",
+      "parentCode": null,
+      "sortOrder": 4
+    },
+    {
+      "code": "2711000000",
+      "name": "중구",
+      "parentCode": "2700000000",
+      "sortOrder": 1
+    },
+    {
+      "code": "2714000000",
+      "name": "동구",
+      "parentCode": "2700000000",
+      "sortOrder": 2
+    },
+    {
+      "code": "2717000000",
+      "name": "서구",
+      "parentCode": "2700000000",
+      "sortOrder": 3
+    },
+    {
+      "code": "2720000000",
+      "name": "남구",
+      "parentCode": "2700000000",
+      "sortOrder": 4
+    },
+    {
+      "code": "2723000000",
+      "name": "북구",
+      "parentCode": "2700000000",
+      "sortOrder": 5
+    },
+    {
+      "code": "2726000000",
+      "name": "수성구",
+      "parentCode": "2700000000",
+      "sortOrder": 6
+    },
+    {
+      "code": "2729000000",
+      "name": "달서구",
+      "parentCode": "2700000000",
+      "sortOrder": 7
+    },
+    {
+      "code": "2771000000",
+      "name": "달성군",
+      "parentCode": "2700000000",
+      "sortOrder": 8
+    },
+    {
+      "code": "2772000000",
+      "name": "군위군",
+      "parentCode": "2700000000",
+      "sortOrder": 9
+    },
+    {
+      "code": "2800000000",
+      "name": "인천광역시",
+      "parentCode": null,
+      "sortOrder": 5
+    },
+    {
+      "code": "2812500000",
+      "name": "제물포구",
+      "parentCode": "2800000000",
+      "sortOrder": 1
+    },
+    {
+      "code": "2815500000",
+      "name": "영종구",
+      "parentCode": "2800000000",
+      "sortOrder": 2
+    },
+    {
+      "code": "2817700000",
+      "name": "미추홀구",
+      "parentCode": "2800000000",
+      "sortOrder": 3
+    },
+    {
+      "code": "2818500000",
+      "name": "연수구",
+      "parentCode": "2800000000",
+      "sortOrder": 4
+    },
+    {
+      "code": "2820000000",
+      "name": "남동구",
+      "parentCode": "2800000000",
+      "sortOrder": 5
+    },
+    {
+      "code": "2823700000",
+      "name": "부평구",
+      "parentCode": "2800000000",
+      "sortOrder": 6
+    },
+    {
+      "code": "2824500000",
+      "name": "계양구",
+      "parentCode": "2800000000",
+      "sortOrder": 7
+    },
+    {
+      "code": "2827500000",
+      "name": "서해구",
+      "parentCode": "2800000000",
+      "sortOrder": 8
+    },
+    {
+      "code": "2829000000",
+      "name": "검단구",
+      "parentCode": "2800000000",
+      "sortOrder": 9
+    },
+    {
+      "code": "2871000000",
+      "name": "강화군",
+      "parentCode": "2800000000",
+      "sortOrder": 10
+    },
+    {
+      "code": "2872000000",
+      "name": "옹진군",
+      "parentCode": "2800000000",
+      "sortOrder": 11
+    },
+    {
+      "code": "3000000000",
+      "name": "대전광역시",
+      "parentCode": null,
+      "sortOrder": 6
+    },
+    {
+      "code": "3011000000",
+      "name": "동구",
+      "parentCode": "3000000000",
+      "sortOrder": 1
+    },
+    {
+      "code": "3014000000",
+      "name": "중구",
+      "parentCode": "3000000000",
+      "sortOrder": 2
+    },
+    {
+      "code": "3017000000",
+      "name": "서구",
+      "parentCode": "3000000000",
+      "sortOrder": 3
+    },
+    {
+      "code": "3020000000",
+      "name": "유성구",
+      "parentCode": "3000000000",
+      "sortOrder": 4
+    },
+    {
+      "code": "3023000000",
+      "name": "대덕구",
+      "parentCode": "3000000000",
+      "sortOrder": 5
+    },
+    {
+      "code": "3100000000",
+      "name": "울산광역시",
+      "parentCode": null,
+      "sortOrder": 7
+    },
+    {
+      "code": "3111000000",
+      "name": "중구",
+      "parentCode": "3100000000",
+      "sortOrder": 1
+    },
+    {
+      "code": "3114000000",
+      "name": "남구",
+      "parentCode": "3100000000",
+      "sortOrder": 2
+    },
+    {
+      "code": "3117000000",
+      "name": "동구",
+      "parentCode": "3100000000",
+      "sortOrder": 3
+    },
+    {
+      "code": "3120000000",
+      "name": "북구",
+      "parentCode": "3100000000",
+      "sortOrder": 4
+    },
+    {
+      "code": "3171000000",
+      "name": "울주군",
+      "parentCode": "3100000000",
+      "sortOrder": 5
+    },
+    {
+      "code": "3611000000",
+      "name": "세종특별자치시",
+      "parentCode": null,
+      "sortOrder": 8
+    },
+    {
+      "code": "4100000000",
+      "name": "경기도",
+      "parentCode": null,
+      "sortOrder": 9
+    },
+    {
+      "code": "4111000000",
+      "name": "수원시",
+      "parentCode": "4100000000",
+      "sortOrder": 1
+    },
+    {
+      "code": "4113000000",
+      "name": "성남시",
+      "parentCode": "4100000000",
+      "sortOrder": 2
+    },
+    {
+      "code": "4115000000",
+      "name": "의정부시",
+      "parentCode": "4100000000",
+      "sortOrder": 3
+    },
+    {
+      "code": "4117000000",
+      "name": "안양시",
+      "parentCode": "4100000000",
+      "sortOrder": 4
+    },
+    {
+      "code": "4119000000",
+      "name": "부천시",
+      "parentCode": "4100000000",
+      "sortOrder": 5
+    },
+    {
+      "code": "4121000000",
+      "name": "광명시",
+      "parentCode": "4100000000",
+      "sortOrder": 6
+    },
+    {
+      "code": "4122000000",
+      "name": "평택시",
+      "parentCode": "4100000000",
+      "sortOrder": 7
+    },
+    {
+      "code": "4125000000",
+      "name": "동두천시",
+      "parentCode": "4100000000",
+      "sortOrder": 8
+    },
+    {
+      "code": "4127000000",
+      "name": "안산시",
+      "parentCode": "4100000000",
+      "sortOrder": 9
+    },
+    {
+      "code": "4128000000",
+      "name": "고양시",
+      "parentCode": "4100000000",
+      "sortOrder": 10
+    },
+    {
+      "code": "4129000000",
+      "name": "과천시",
+      "parentCode": "4100000000",
+      "sortOrder": 11
+    },
+    {
+      "code": "4131000000",
+      "name": "구리시",
+      "parentCode": "4100000000",
+      "sortOrder": 12
+    },
+    {
+      "code": "4136000000",
+      "name": "남양주시",
+      "parentCode": "4100000000",
+      "sortOrder": 13
+    },
+    {
+      "code": "4137000000",
+      "name": "오산시",
+      "parentCode": "4100000000",
+      "sortOrder": 14
+    },
+    {
+      "code": "4139000000",
+      "name": "시흥시",
+      "parentCode": "4100000000",
+      "sortOrder": 15
+    },
+    {
+      "code": "4141000000",
+      "name": "군포시",
+      "parentCode": "4100000000",
+      "sortOrder": 16
+    },
+    {
+      "code": "4143000000",
+      "name": "의왕시",
+      "parentCode": "4100000000",
+      "sortOrder": 17
+    },
+    {
+      "code": "4145000000",
+      "name": "하남시",
+      "parentCode": "4100000000",
+      "sortOrder": 18
+    },
+    {
+      "code": "4146000000",
+      "name": "용인시",
+      "parentCode": "4100000000",
+      "sortOrder": 19
+    },
+    {
+      "code": "4148000000",
+      "name": "파주시",
+      "parentCode": "4100000000",
+      "sortOrder": 20
+    },
+    {
+      "code": "4150000000",
+      "name": "이천시",
+      "parentCode": "4100000000",
+      "sortOrder": 21
+    },
+    {
+      "code": "4155000000",
+      "name": "안성시",
+      "parentCode": "4100000000",
+      "sortOrder": 22
+    },
+    {
+      "code": "4157000000",
+      "name": "김포시",
+      "parentCode": "4100000000",
+      "sortOrder": 23
+    },
+    {
+      "code": "4159000000",
+      "name": "화성시",
+      "parentCode": "4100000000",
+      "sortOrder": 24
+    },
+    {
+      "code": "4161000000",
+      "name": "광주시",
+      "parentCode": "4100000000",
+      "sortOrder": 25
+    },
+    {
+      "code": "4163000000",
+      "name": "양주시",
+      "parentCode": "4100000000",
+      "sortOrder": 26
+    },
+    {
+      "code": "4165000000",
+      "name": "포천시",
+      "parentCode": "4100000000",
+      "sortOrder": 27
+    },
+    {
+      "code": "4167000000",
+      "name": "여주시",
+      "parentCode": "4100000000",
+      "sortOrder": 28
+    },
+    {
+      "code": "4180000000",
+      "name": "연천군",
+      "parentCode": "4100000000",
+      "sortOrder": 29
+    },
+    {
+      "code": "4182000000",
+      "name": "가평군",
+      "parentCode": "4100000000",
+      "sortOrder": 30
+    },
+    {
+      "code": "4183000000",
+      "name": "양평군",
+      "parentCode": "4100000000",
+      "sortOrder": 31
+    },
+    {
+      "code": "4300000000",
+      "name": "충청북도",
+      "parentCode": null,
+      "sortOrder": 10
+    },
+    {
+      "code": "4311000000",
+      "name": "청주시",
+      "parentCode": "4300000000",
+      "sortOrder": 1
+    },
+    {
+      "code": "4313000000",
+      "name": "충주시",
+      "parentCode": "4300000000",
+      "sortOrder": 2
+    },
+    {
+      "code": "4315000000",
+      "name": "제천시",
+      "parentCode": "4300000000",
+      "sortOrder": 3
+    },
+    {
+      "code": "4372000000",
+      "name": "보은군",
+      "parentCode": "4300000000",
+      "sortOrder": 4
+    },
+    {
+      "code": "4373000000",
+      "name": "옥천군",
+      "parentCode": "4300000000",
+      "sortOrder": 5
+    },
+    {
+      "code": "4374000000",
+      "name": "영동군",
+      "parentCode": "4300000000",
+      "sortOrder": 6
+    },
+    {
+      "code": "4374500000",
+      "name": "증평군",
+      "parentCode": "4300000000",
+      "sortOrder": 7
+    },
+    {
+      "code": "4375000000",
+      "name": "진천군",
+      "parentCode": "4300000000",
+      "sortOrder": 8
+    },
+    {
+      "code": "4376000000",
+      "name": "괴산군",
+      "parentCode": "4300000000",
+      "sortOrder": 9
+    },
+    {
+      "code": "4377000000",
+      "name": "음성군",
+      "parentCode": "4300000000",
+      "sortOrder": 10
+    },
+    {
+      "code": "4380000000",
+      "name": "단양군",
+      "parentCode": "4300000000",
+      "sortOrder": 11
+    },
+    {
+      "code": "4400000000",
+      "name": "충청남도",
+      "parentCode": null,
+      "sortOrder": 11
+    },
+    {
+      "code": "4413000000",
+      "name": "천안시",
+      "parentCode": "4400000000",
+      "sortOrder": 1
+    },
+    {
+      "code": "4415000000",
+      "name": "공주시",
+      "parentCode": "4400000000",
+      "sortOrder": 2
+    },
+    {
+      "code": "4418000000",
+      "name": "보령시",
+      "parentCode": "4400000000",
+      "sortOrder": 3
+    },
+    {
+      "code": "4420000000",
+      "name": "아산시",
+      "parentCode": "4400000000",
+      "sortOrder": 4
+    },
+    {
+      "code": "4421000000",
+      "name": "서산시",
+      "parentCode": "4400000000",
+      "sortOrder": 5
+    },
+    {
+      "code": "4423000000",
+      "name": "논산시",
+      "parentCode": "4400000000",
+      "sortOrder": 6
+    },
+    {
+      "code": "4425000000",
+      "name": "계룡시",
+      "parentCode": "4400000000",
+      "sortOrder": 7
+    },
+    {
+      "code": "4427000000",
+      "name": "당진시",
+      "parentCode": "4400000000",
+      "sortOrder": 8
+    },
+    {
+      "code": "4471000000",
+      "name": "금산군",
+      "parentCode": "4400000000",
+      "sortOrder": 9
+    },
+    {
+      "code": "4476000000",
+      "name": "부여군",
+      "parentCode": "4400000000",
+      "sortOrder": 10
+    },
+    {
+      "code": "4477000000",
+      "name": "서천군",
+      "parentCode": "4400000000",
+      "sortOrder": 11
+    },
+    {
+      "code": "4479000000",
+      "name": "청양군",
+      "parentCode": "4400000000",
+      "sortOrder": 12
+    },
+    {
+      "code": "4480000000",
+      "name": "홍성군",
+      "parentCode": "4400000000",
+      "sortOrder": 13
+    },
+    {
+      "code": "4481000000",
+      "name": "예산군",
+      "parentCode": "4400000000",
+      "sortOrder": 14
+    },
+    {
+      "code": "4482500000",
+      "name": "태안군",
+      "parentCode": "4400000000",
+      "sortOrder": 15
+    },
+    {
+      "code": "4700000000",
+      "name": "경상북도",
+      "parentCode": null,
+      "sortOrder": 12
+    },
+    {
+      "code": "4711000000",
+      "name": "포항시",
+      "parentCode": "4700000000",
+      "sortOrder": 1
+    },
+    {
+      "code": "4713000000",
+      "name": "경주시",
+      "parentCode": "4700000000",
+      "sortOrder": 2
+    },
+    {
+      "code": "4715000000",
+      "name": "김천시",
+      "parentCode": "4700000000",
+      "sortOrder": 3
+    },
+    {
+      "code": "4717000000",
+      "name": "안동시",
+      "parentCode": "4700000000",
+      "sortOrder": 4
+    },
+    {
+      "code": "4719000000",
+      "name": "구미시",
+      "parentCode": "4700000000",
+      "sortOrder": 5
+    },
+    {
+      "code": "4721000000",
+      "name": "영주시",
+      "parentCode": "4700000000",
+      "sortOrder": 6
+    },
+    {
+      "code": "4723000000",
+      "name": "영천시",
+      "parentCode": "4700000000",
+      "sortOrder": 7
+    },
+    {
+      "code": "4725000000",
+      "name": "상주시",
+      "parentCode": "4700000000",
+      "sortOrder": 8
+    },
+    {
+      "code": "4728000000",
+      "name": "문경시",
+      "parentCode": "4700000000",
+      "sortOrder": 9
+    },
+    {
+      "code": "4729000000",
+      "name": "경산시",
+      "parentCode": "4700000000",
+      "sortOrder": 10
+    },
+    {
+      "code": "4773000000",
+      "name": "의성군",
+      "parentCode": "4700000000",
+      "sortOrder": 11
+    },
+    {
+      "code": "4775000000",
+      "name": "청송군",
+      "parentCode": "4700000000",
+      "sortOrder": 12
+    },
+    {
+      "code": "4776000000",
+      "name": "영양군",
+      "parentCode": "4700000000",
+      "sortOrder": 13
+    },
+    {
+      "code": "4777000000",
+      "name": "영덕군",
+      "parentCode": "4700000000",
+      "sortOrder": 14
+    },
+    {
+      "code": "4782000000",
+      "name": "청도군",
+      "parentCode": "4700000000",
+      "sortOrder": 15
+    },
+    {
+      "code": "4783000000",
+      "name": "고령군",
+      "parentCode": "4700000000",
+      "sortOrder": 16
+    },
+    {
+      "code": "4784000000",
+      "name": "성주군",
+      "parentCode": "4700000000",
+      "sortOrder": 17
+    },
+    {
+      "code": "4785000000",
+      "name": "칠곡군",
+      "parentCode": "4700000000",
+      "sortOrder": 18
+    },
+    {
+      "code": "4790000000",
+      "name": "예천군",
+      "parentCode": "4700000000",
+      "sortOrder": 19
+    },
+    {
+      "code": "4792000000",
+      "name": "봉화군",
+      "parentCode": "4700000000",
+      "sortOrder": 20
+    },
+    {
+      "code": "4793000000",
+      "name": "울진군",
+      "parentCode": "4700000000",
+      "sortOrder": 21
+    },
+    {
+      "code": "4794000000",
+      "name": "울릉군",
+      "parentCode": "4700000000",
+      "sortOrder": 22
+    },
+    {
+      "code": "4800000000",
+      "name": "경상남도",
+      "parentCode": null,
+      "sortOrder": 13
+    },
+    {
+      "code": "4812000000",
+      "name": "창원시",
+      "parentCode": "4800000000",
+      "sortOrder": 1
+    },
+    {
+      "code": "4817000000",
+      "name": "진주시",
+      "parentCode": "4800000000",
+      "sortOrder": 2
+    },
+    {
+      "code": "4822000000",
+      "name": "통영시",
+      "parentCode": "4800000000",
+      "sortOrder": 3
+    },
+    {
+      "code": "4824000000",
+      "name": "사천시",
+      "parentCode": "4800000000",
+      "sortOrder": 4
+    },
+    {
+      "code": "4825000000",
+      "name": "김해시",
+      "parentCode": "4800000000",
+      "sortOrder": 5
+    },
+    {
+      "code": "4827000000",
+      "name": "밀양시",
+      "parentCode": "4800000000",
+      "sortOrder": 6
+    },
+    {
+      "code": "4831000000",
+      "name": "거제시",
+      "parentCode": "4800000000",
+      "sortOrder": 7
+    },
+    {
+      "code": "4833000000",
+      "name": "양산시",
+      "parentCode": "4800000000",
+      "sortOrder": 8
+    },
+    {
+      "code": "4872000000",
+      "name": "의령군",
+      "parentCode": "4800000000",
+      "sortOrder": 9
+    },
+    {
+      "code": "4873000000",
+      "name": "함안군",
+      "parentCode": "4800000000",
+      "sortOrder": 10
+    },
+    {
+      "code": "4874000000",
+      "name": "창녕군",
+      "parentCode": "4800000000",
+      "sortOrder": 11
+    },
+    {
+      "code": "4882000000",
+      "name": "고성군",
+      "parentCode": "4800000000",
+      "sortOrder": 12
+    },
+    {
+      "code": "4884000000",
+      "name": "남해군",
+      "parentCode": "4800000000",
+      "sortOrder": 13
+    },
+    {
+      "code": "4885000000",
+      "name": "하동군",
+      "parentCode": "4800000000",
+      "sortOrder": 14
+    },
+    {
+      "code": "4886000000",
+      "name": "산청군",
+      "parentCode": "4800000000",
+      "sortOrder": 15
+    },
+    {
+      "code": "4887000000",
+      "name": "함양군",
+      "parentCode": "4800000000",
+      "sortOrder": 16
+    },
+    {
+      "code": "4888000000",
+      "name": "거창군",
+      "parentCode": "4800000000",
+      "sortOrder": 17
+    },
+    {
+      "code": "4889000000",
+      "name": "합천군",
+      "parentCode": "4800000000",
+      "sortOrder": 18
+    },
+    {
+      "code": "5000000000",
+      "name": "제주특별자치도",
+      "parentCode": null,
+      "sortOrder": 14
+    },
+    {
+      "code": "5011000000",
+      "name": "제주시",
+      "parentCode": "5000000000",
+      "sortOrder": 1
+    },
+    {
+      "code": "5013000000",
+      "name": "서귀포시",
+      "parentCode": "5000000000",
+      "sortOrder": 2
+    },
+    {
+      "code": "5100000000",
+      "name": "강원특별자치도",
+      "parentCode": null,
+      "sortOrder": 15
+    },
+    {
+      "code": "5111000000",
+      "name": "춘천시",
+      "parentCode": "5100000000",
+      "sortOrder": 1
+    },
+    {
+      "code": "5113000000",
+      "name": "원주시",
+      "parentCode": "5100000000",
+      "sortOrder": 2
+    },
+    {
+      "code": "5115000000",
+      "name": "강릉시",
+      "parentCode": "5100000000",
+      "sortOrder": 3
+    },
+    {
+      "code": "5117000000",
+      "name": "동해시",
+      "parentCode": "5100000000",
+      "sortOrder": 4
+    },
+    {
+      "code": "5119000000",
+      "name": "태백시",
+      "parentCode": "5100000000",
+      "sortOrder": 5
+    },
+    {
+      "code": "5121000000",
+      "name": "속초시",
+      "parentCode": "5100000000",
+      "sortOrder": 6
+    },
+    {
+      "code": "5123000000",
+      "name": "삼척시",
+      "parentCode": "5100000000",
+      "sortOrder": 7
+    },
+    {
+      "code": "5172000000",
+      "name": "홍천군",
+      "parentCode": "5100000000",
+      "sortOrder": 8
+    },
+    {
+      "code": "5173000000",
+      "name": "횡성군",
+      "parentCode": "5100000000",
+      "sortOrder": 9
+    },
+    {
+      "code": "5175000000",
+      "name": "영월군",
+      "parentCode": "5100000000",
+      "sortOrder": 10
+    },
+    {
+      "code": "5176000000",
+      "name": "평창군",
+      "parentCode": "5100000000",
+      "sortOrder": 11
+    },
+    {
+      "code": "5177000000",
+      "name": "정선군",
+      "parentCode": "5100000000",
+      "sortOrder": 12
+    },
+    {
+      "code": "5178000000",
+      "name": "철원군",
+      "parentCode": "5100000000",
+      "sortOrder": 13
+    },
+    {
+      "code": "5179000000",
+      "name": "화천군",
+      "parentCode": "5100000000",
+      "sortOrder": 14
+    },
+    {
+      "code": "5180000000",
+      "name": "양구군",
+      "parentCode": "5100000000",
+      "sortOrder": 15
+    },
+    {
+      "code": "5181000000",
+      "name": "인제군",
+      "parentCode": "5100000000",
+      "sortOrder": 16
+    },
+    {
+      "code": "5182000000",
+      "name": "고성군",
+      "parentCode": "5100000000",
+      "sortOrder": 17
+    },
+    {
+      "code": "5183000000",
+      "name": "양양군",
+      "parentCode": "5100000000",
+      "sortOrder": 18
+    },
+    {
+      "code": "5200000000",
+      "name": "전북특별자치도",
+      "parentCode": null,
+      "sortOrder": 16
+    },
+    {
+      "code": "5211000000",
+      "name": "전주시",
+      "parentCode": "5200000000",
+      "sortOrder": 1
+    },
+    {
+      "code": "5213000000",
+      "name": "군산시",
+      "parentCode": "5200000000",
+      "sortOrder": 2
+    },
+    {
+      "code": "5214000000",
+      "name": "익산시",
+      "parentCode": "5200000000",
+      "sortOrder": 3
+    },
+    {
+      "code": "5218000000",
+      "name": "정읍시",
+      "parentCode": "5200000000",
+      "sortOrder": 4
+    },
+    {
+      "code": "5219000000",
+      "name": "남원시",
+      "parentCode": "5200000000",
+      "sortOrder": 5
+    },
+    {
+      "code": "5221000000",
+      "name": "김제시",
+      "parentCode": "5200000000",
+      "sortOrder": 6
+    },
+    {
+      "code": "5271000000",
+      "name": "완주군",
+      "parentCode": "5200000000",
+      "sortOrder": 7
+    },
+    {
+      "code": "5272000000",
+      "name": "진안군",
+      "parentCode": "5200000000",
+      "sortOrder": 8
+    },
+    {
+      "code": "5273000000",
+      "name": "무주군",
+      "parentCode": "5200000000",
+      "sortOrder": 9
+    },
+    {
+      "code": "5274000000",
+      "name": "장수군",
+      "parentCode": "5200000000",
+      "sortOrder": 10
+    },
+    {
+      "code": "5275000000",
+      "name": "임실군",
+      "parentCode": "5200000000",
+      "sortOrder": 11
+    },
+    {
+      "code": "5277000000",
+      "name": "순창군",
+      "parentCode": "5200000000",
+      "sortOrder": 12
+    },
+    {
+      "code": "5279000000",
+      "name": "고창군",
+      "parentCode": "5200000000",
+      "sortOrder": 13
+    },
+    {
+      "code": "5280000000",
+      "name": "부안군",
+      "parentCode": "5200000000",
+      "sortOrder": 14
+    }
+  ]
+}

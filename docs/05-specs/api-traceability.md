@@ -1,5 +1,6 @@
 ---
 related_documents:
+  - api/common/region-contract.md
   - ../01-requirements/functional-requirements.md
   - ../01-requirements/business-rules.md
   - ../01-requirements/non-functional-requirements.md
@@ -65,6 +66,8 @@ MVP와 확장 단계의 PRD, 기능 요구사항, 비즈니스 규칙, NFR, Work
 
 ## 2. PRD → API 매핑
 
+#394의 [전국 지역 계층 계약](api/common/region-contract.md)은 FR-RESTAURANT-003의 선택지를 공개 `GET /api/regions`에, 선택 결과를 API-DISCOVERY-001의 `regionCode`와 API-DISCOVERY-NL-001의 `filters.regionCode`에 연결한다. FR-ADMIN-002는 같은 활성 마스터로 전국 주소를 귀속한다. 16개 상위·229개 하위 스냅샷, 기존 서울 식별자·필터 호환, 코드 검증·상호 배제·빈 결과·자연어 실패 경로를 검증 대상으로 두며 소유자 리뷰를 요청한다.
+
 | PRD ID | 기능 PRD | 주 API 문서 | 관련 API ID | Workstream | 담당자 |
 |---|---|---|---|---|---|
 | [PRD-DISCOVERY-001](../04-product/prd/discovery/restaurant-discovery.md) | 맛집 탐색 | [api/discovery/restaurant-discovery-api.md](api/discovery/restaurant-discovery-api.md) | [API-DISCOVERY-001](api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색), [API-DISCOVERY-002](api/discovery/restaurant-discovery-api.md#api-discovery-002-공개-맛집-필터-선택지) | [WS-01](../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색) | 양성훈 |
@@ -109,7 +112,7 @@ MVP와 확장 단계의 PRD, 기능 요구사항, 비즈니스 규칙, NFR, Work
 |---|---|---|---|---|---|
 | [FR-RESTAURANT-001](../01-requirements/functional-requirements.md#fr-restaurant-001-맛집-목록-조회) | 맛집 목록 조회 | [API-DISCOVERY-001](api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색) | 없음 | 공개·영상 없음·빈 목록 계약 테스트 | 양성훈 |
 | [FR-RESTAURANT-002](../01-requirements/functional-requirements.md#fr-restaurant-002-맛집-이름-검색) | 맛집 이름 검색 | [API-DISCOVERY-001](api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색) | 없음 | 부분 일치·공백·영문 대소문자 테스트 | 양성훈 |
-| [FR-RESTAURANT-003](../01-requirements/functional-requirements.md#fr-restaurant-003-지역별-필터) | 지역별 필터 | [API-DISCOVERY-001](api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색) | 없음 | 서울 자치구 허용·거부 테스트 | 양성훈 |
+| [FR-RESTAURANT-003](../01-requirements/functional-requirements.md#fr-restaurant-003-지역별-필터) | 지역별 필터 | [API-DISCOVERY-001](api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색) | [GET /api/regions](api/common/region-contract.md#3-공개-지역-목록) | 전국 계층·활성 코드·상위 범위·빈 지역·서울 호환·동시 필터 거부 테스트 | 양성훈 |
 | [FR-RESTAURANT-004](../01-requirements/functional-requirements.md#fr-restaurant-004-음식-카테고리별-필터) | 음식 카테고리 필터 | [API-DISCOVERY-001](api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색) | 없음 | 10개 허용값·복수 거부 테스트 | 양성훈 |
 | [FR-CREATOR-001](../01-requirements/functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회) | 유튜버 기준 방문 맛집 | [API-DISCOVERY-001](api/discovery/restaurant-discovery-api.md#api-discovery-001-맛집-목록-및-조건-검색) | [API-CREATOR-DISCOVERY-001](api/discovery/creator-discovery-api.md#api-creator-discovery-001-유튜버-필터-선택-목록) | 유효 관계·공개 상태·고유 결과 통합 테스트 | 이우람 |
 | [FR-CREATOR-003](../01-requirements/functional-requirements.md#fr-creator-003-유튜버-필터-선택-목록-조회) | 유튜버 필터 선택 목록 | [API-CREATOR-DISCOVERY-001](api/discovery/creator-discovery-api.md#api-creator-discovery-001-유튜버-필터-선택-목록) | 없음 | 최소 필드·채널명 정렬·빈 목록 테스트 | 이우람 |

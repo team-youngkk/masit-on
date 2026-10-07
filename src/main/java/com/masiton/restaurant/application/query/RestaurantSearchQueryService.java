@@ -1,6 +1,7 @@
 package com.masiton.restaurant.application.query;
 
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -10,6 +11,8 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.masiton.common.web.BusinessException;
+import com.masiton.common.web.ErrorCode;
 import com.masiton.restaurant.application.port.in.RestaurantSearchResult;
 import com.masiton.restaurant.application.port.in.RestaurantFilterOptions;
 import com.masiton.restaurant.application.port.in.RestaurantSummary;
@@ -52,8 +55,9 @@ public class RestaurantSearchQueryService implements SearchRestaurantsUseCase {
     @Override
     @Transactional(readOnly = true)
     public RestaurantSearchResult search(SearchRestaurantsCommand command) {
+        validateTags(command.tags());
         String normalizedQuery = filterResolver.normalizeQuery(command.query());
-        UUID regionId = filterResolver.resolveRegionId(command.district());
+        UUID regionId = filterResolver.resolveRegionId(command.district(), command.regionCode());
         UUID foodCategoryId = filterResolver.resolveFoodCategoryId(command.category());
         Set<UUID> candidateRestaurantIds = filterResolver.resolveCandidateRestaurantIds(command.creatorId());
 
@@ -91,10 +95,21 @@ public class RestaurantSearchQueryService implements SearchRestaurantsUseCase {
     @Override
     @Transactional(readOnly = true)
     public void validateFilters(SearchRestaurantsCommand command) {
+        validateTags(command.tags());
         filterResolver.normalizeQuery(command.query());
-        filterResolver.resolveRegionId(command.district());
+        filterResolver.resolveRegionId(command.district(), command.regionCode());
         filterResolver.resolveFoodCategoryId(command.category());
         filterResolver.resolveCandidateRestaurantIds(command.creatorId());
+    }
+
+    private void validateTags(List<String> tags) {
+        if (tags.isEmpty()) {
+            return;
+        }
+        if (restaurantSearchQueryPort.findActiveTagCodes(tags).size() != new HashSet<>(tags).size()) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_FIELD_VALUE, "tag", "활성 상태의 태그 코드만 사용할 수 있습니다.");
+        }
     }
 
     private Map<UUID, List<VisitedByRow>> loadVisitedBy(List<RestaurantSearchRow> rows) {

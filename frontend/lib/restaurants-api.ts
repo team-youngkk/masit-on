@@ -1,3 +1,5 @@
+import { decodeRegions, type Province } from './regions.ts'
+
 /*
  * GET /api/restaurants 연동 전용 타입·상수·헬퍼.
  * 계약: docs/05-specs/api/discovery/restaurant-discovery-api.md
@@ -158,6 +160,11 @@ export function buildApiSearchParams(
     params.set('district', district)
   }
 
+  const regionCode = toSingleValue(rawParams.regionCode)
+  if (regionCode) params.set('regionCode', regionCode)
+  const tag = toSingleValue(rawParams.tag)
+  if (tag) params.set('tag', tag)
+
   const category = toSingleValue(rawParams.category)
   if (category) {
     params.set('category', category)
@@ -269,6 +276,23 @@ export async function fetchRestaurantFilterOptions(): Promise<FetchRestaurantFil
     return { ok: true, data }
   } catch {
     return { ok: false, message: FALLBACK_FILTER_OPTIONS_ERROR_MESSAGE }
+  }
+}
+
+export async function fetchRegions(): Promise<
+  { ok: true; data: Province[] } | { ok: false; message: string; traceId?: string }
+> {
+  const message = '지역 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/regions`, { cache: 'no-store' })
+    if (!response.ok) {
+      const body = await readErrorBody(response)
+      return { ok: false, message: body?.message ?? message, traceId: body?.traceId }
+    }
+    const data = decodeRegions(await response.json())
+    return data ? { ok: true, data } : { ok: false, message }
+  } catch {
+    return { ok: false, message }
   }
 }
 

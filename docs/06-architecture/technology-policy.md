@@ -58,8 +58,8 @@ related_documents:
 | 프론트엔드 컨테이너 베이스 이미지 | `node:24.18.0-alpine` (digest 고정) | `M2-06`에서 고정 |
 | 컨테이너 취약점 스캐너 | `aquasec/trivy:0.72.0` (digest 고정) | `M2-06`에서 고정. CI 전용이며 운영 이미지에 포함되지 않는다. 차단 기준은 수정 버전이 있는 `CRITICAL`·`HIGH` |
 | 부하 테스트 도구 | k6 v2.1.0 | [ADR-PERF-001](../07-adr/quality/perf-001-k6-load-testing.md)에서 고정. 측정 시점에만 설치하는 외부 바이너리이며 `build.gradle`·`package.json` 어디에도 의존성으로 넣지 않는다 |
-| sharp | 0.35.4 | npm `overrides`로 고정. 0.35.0 이하의 libheif 취약점([GHSA-rgj7-g3m4-5g8c](https://github.com/advisories/GHSA-rgj7-g3m4-5g8c), HIGH)을 해소한다. Next이 이 버전 이상을 직접 고정하면 override를 제거한다 |
-| 프론트엔드 전이 의존성 보안 고정 | `postcss` 8.5.23, `nanoid` 3.3.18 | npm `overrides`로 고정. Next.js가 선언한 이전 버전의 high 취약점을 해소하며, 기준선 변경 때 필요성을 함께 재검토한다 |
+| sharp | 0.35.5 | npm `overrides`로 고정. libheif([GHSA-rgj7-g3m4-5g8c](https://github.com/advisories/GHSA-rgj7-g3m4-5g8c))와 librsvg([GHSA-wq5f-xc86-pv6w](https://github.com/advisories/GHSA-wq5f-xc86-pv6w))의 HIGH 취약점을 해소한다. Next가 이 버전 이상을 직접 고정하면 override를 제거한다 |
+| 프론트엔드 전이 의존성 보안 고정 | `postcss` 8.5.23, `nanoid` 3.3.18, `source-map-js` 1.2.2 | npm `overrides`로 고정. Next.js가 선언한 취약 버전을 차단하고, 기준선 변경 때 필요성을 함께 재검토한다. `source-map-js`는 [GHSA-68fv-2mgg-jv7q](https://github.com/advisories/GHSA-68fv-2mgg-jv7q)의 HIGH 수정 버전이다 |
 | Spring Batch | 6.0.4, Spring Boot BOM 관리 | Post-MVP |
 
 - `latest`, `+`, `x`, `^`, `~` 또는 동등한 범위 버전을 사용하지 않는다.

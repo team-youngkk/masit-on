@@ -71,6 +71,7 @@ related_nfr:
   - NFR-PRIVACY-001
   - NFR-PRIVACY-002
 related_documents:
+  - ../../../05-specs/api/common/region-contract.md
   - ../00-product-overview.md
   - ../../../01-requirements/functional-requirements.md
   - ../../../01-requirements/requirements-review.md
@@ -123,6 +124,8 @@ related_documents:
 - 관리자는 출처와 사실, 영상 게시 채널과 실제 방문 근거를 확인한다.
 
 ## 8. 핵심 사용자 흐름
+
+#394의 [지역 계층 계약](../../../05-specs/api/common/region-contract.md)에 따라 전국 도로명주소를 활성 지역 마스터로 귀속한다. 동명 시·군·구는 시·도와 함께 판정하고 비자치구는 시로, 세종은 최상위로 연결한다. 수동 등록·AI 물리 참조 해석·장소 후보가 활성 마스터 판정을 공유하며 등록의 외부 검증·지역 매핑 실패 시 핵심 데이터는 저장하지 않는다. 장소 재검증은 같은 주소 정규화로 기존·관측 시·도와 시·군·구를 비교할 뿐 마스터 조회나 지역 ID 재배정을 하지 않는다. 지역 변경·추출 불가 시 수동 검토로 보내고 공개·생명주기 플래그 및 기존 감사 사유를 보존한다. 이 계약 변경의 소유자 리뷰는 PR에서 요청한다.
 
 ### 기본 데이터 등록
 

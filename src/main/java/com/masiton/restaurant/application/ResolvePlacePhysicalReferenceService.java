@@ -5,7 +5,7 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
-import com.masiton.common.address.SeoulRoadAddressNormalizer;
+import com.masiton.common.address.RoadAddressNormalizer;
 import com.masiton.restaurant.application.port.in.ResolvePlacePhysicalReferenceUseCase;
 import com.masiton.restaurant.application.port.out.PlaceVerificationPort;
 import com.masiton.restaurant.application.port.out.RegionRepositoryPort;
@@ -21,12 +21,12 @@ import com.masiton.restaurant.domain.model.Region;
 class ResolvePlacePhysicalReferenceService implements ResolvePlacePhysicalReferenceUseCase {
 
     private final PlaceVerificationPort placeVerification;
-    private final RegionRepositoryPort regionRepository;
+    private final RegionAddressResolver regionAddressResolver;
 
     ResolvePlacePhysicalReferenceService(PlaceVerificationPort placeVerification,
                                          RegionRepositoryPort regionRepository) {
         this.placeVerification = placeVerification;
-        this.regionRepository = regionRepository;
+        this.regionAddressResolver = new RegionAddressResolver(regionRepository);
     }
 
     @Override
@@ -39,17 +39,13 @@ class ResolvePlacePhysicalReferenceService implements ResolvePlacePhysicalRefere
             return Optional.empty();
         }
         VerifiedPlace place = verifiedPlace.get();
-        Optional<String> district = SeoulRoadAddressNormalizer.extractDistrict(
-                SeoulRoadAddressNormalizer.normalize(place.roadAddress()));
-        if (district.isEmpty()) {
-            return Optional.empty();
-        }
-        Region region = regionRepository.findByName(district.get()).filter(Region::isActive).orElse(null);
+        Region region = regionAddressResolver.resolve(place.roadAddress()).orElse(null);
         if (region == null) {
             return Optional.empty();
         }
         return Optional.of(new VerifiedPlacePhysicalReference(
-                region.getId(), place.name(), place.identityKey(), place.kakaoPlaceUrl(), place.roadAddress(),
+                region.getId(), place.name(), place.identityKey(), place.kakaoPlaceUrl(),
+                RoadAddressNormalizer.normalize(place.roadAddress()),
                 place.phoneNumber(), place.latitude(), place.longitude()));
     }
 

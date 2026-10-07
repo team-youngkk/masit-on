@@ -1,5 +1,6 @@
 ---
 related_documents:
+  - ../api/common/region-contract.md
   - ../../01-requirements/business-rules.md
   - data-model.md
   - entity-definitions.md
@@ -24,7 +25,7 @@ related_documents:
 
 | 관계 | 카디널리티 | 관계 소유 | 핵심 제약 |
 |---|---|---|---|
-| Region–Restaurant | 1 : N | Restaurant | Restaurant당 자치구 1개 |
+| Region–Restaurant | 1 : N | Restaurant | Restaurant당 지역 1개 |
 | FoodCategory–Restaurant | 1 : N | Restaurant | Restaurant당 대표 카테고리 1개 |
 | Creator–Video | Creator 1 : N, Video 0..1 : Creator | Video | 외부 게시 채널은 필수, 내부 Creator 연결은 선택 |
 | Restaurant–Visit | 1 : N | Visit | Visit의 Restaurant 필수 |
@@ -40,14 +41,14 @@ related_documents:
 
 ### 의미와 필수성
 
-- Restaurant는 전체 도로명주소가 속한 서울특별시 자치구 정확히 1개를 참조한다.
+- Restaurant는 전국 전체 도로명주소가 속한 시·군·구 정확히 1개를 참조한다. 세종은 최상위 직접 참조, 비자치구는 소속 시 참조다.
 - Region은 Restaurant 없이도 기준값으로 존재할 수 있다.
-- MVP에는 Region 상위·하위 관계가 없다.
+- 최초 MVP의 단일 단계 이후 #394에서 Region 상위 1 : 하위 N 관계를 추가한다. 최대 2단계이며 [지역 계층 계약](../api/common/region-contract.md)의 소유자 리뷰를 요청한다.
 
 ### 생성·중복·상태 규칙
 
 - 도로명주소에서 판정한 활성 Region만 신규 Restaurant에 연결한다.
-- Region 이름은 표준값으로 유일하다.
+- Region 이름은 같은 부모 아래에서 유일하다. 최상위끼리도 중복할 수 없으며 다른 시·도의 동명 지역은 허용한다.
 - Region 비활성화는 기존 Restaurant의 지역 의미를 지우지 않으며 신규 연결만 막는다.
 
 ### 관련 규칙

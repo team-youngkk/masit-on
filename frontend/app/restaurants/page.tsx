@@ -4,6 +4,7 @@ import { cache } from 'react'
 
 import { FavoriteButton } from '@/components/personal/FavoriteButton'
 import { FilterSelect } from '@/components/restaurants/FilterSelect'
+import { RegionFilter } from '@/components/restaurants/RegionFilter'
 import { NaturalLanguageRestaurantSearch } from '@/components/restaurants/NaturalLanguageRestaurantSearch'
 import { RestaurantImage } from '@/components/restaurants/RestaurantImage'
 import { Button } from '@/components/ui/Button'
@@ -12,6 +13,7 @@ import { StatePanel } from '@/components/ui/StatePanel'
 import { cn } from '@/lib/cn'
 import { shouldUseRestaurantDesignPreview } from '@/lib/design-preview'
 import { naturalLanguageFiltersKey } from '@/lib/natural-language-filters-key'
+import { regionLabels } from '@/lib/regions'
 import { buildRestaurantsMetadata } from '@/lib/restaurant-seo'
 import {
   buildRestaurantFilterClearHref,
@@ -24,6 +26,7 @@ import {
   buildRestaurantsHref,
   fetchCreators,
   fetchRestaurantFilterOptions,
+  fetchRegions,
   fetchRestaurants,
   toSingleValue,
   type RawSearchParams,
@@ -167,22 +170,23 @@ export default async function RestaurantsPage({
 }: RestaurantsPageProps) {
   const rawParams = await searchParams
   const apiParams = buildApiSearchParams(rawParams)
-  const [result, creatorsResult, filterOptionsResult] = await Promise.all([
+  const [result, creatorsResult, filterOptionsResult, regionsResult] = await Promise.all([
     getRestaurants(apiParams.toString()),
     fetchCreators(),
     fetchRestaurantFilterOptions(),
+    fetchRegions(),
   ])
 
   /* 반복 URL 값은 API 요청과 같은 규칙으로 첫 값만 사용한다. */
   const currentQuery = toSingleValue(rawParams.query) ?? ''
   const currentDistrict = toSingleValue(rawParams.district) ?? ''
+  const currentRegionCode = toSingleValue(rawParams.regionCode) ?? ''
+  const currentTag = toSingleValue(rawParams.tag) ?? ''
+  const provinces = regionsResult.ok ? regionsResult.data : []
+  const labels = regionLabels(provinces)
   const currentCategory = toSingleValue(rawParams.category) ?? ''
   const currentCreatorId = toSingleValue(rawParams.creatorId)
   const currentSize = apiParams.get('size') ?? '21'
-  const districtOptions = includeSelectedFilterValue(
-    filterOptionsResult.ok ? filterOptionsResult.data.districts : [],
-    currentDistrict,
-  )
   const categoryOptions = includeSelectedFilterValue(
     filterOptionsResult.ok ? filterOptionsResult.data.categories : [],
     currentCategory,
@@ -195,13 +199,14 @@ export default async function RestaurantsPage({
         (creator) => creator.id === currentCreatorId,
       ))
 
-  /* 이 4개만 URL이 소유한 직접 필터다. page/size/tags는 포함하지 않는다. */
+  /* URL 직접 필터와 자연어 영역의 로컬 태그 선택을 구분한다. */
   const naturalLanguageFilters = {
     query: currentQuery.trim() || null,
     district: currentDistrict || null,
+    regionCode: currentRegionCode || null,
     category: currentCategory || null,
     creatorId: currentCreatorId ?? null,
-    tags: [],
+    tags: currentTag ? [currentTag] : [],
   }
   const activeFilters: ActiveFilter[] = [
     ...(currentQuery.trim()
@@ -209,6 +214,12 @@ export default async function RestaurantsPage({
       : []),
     ...(currentDistrict
       ? [{ key: 'district' as const, label: '지역', value: currentDistrict }]
+      : []),
+    ...(currentRegionCode
+      ? [{ key: 'regionCode' as const, label: '지역', value: labels[currentRegionCode] ?? '선택한 지역 (확인 불가)' }]
+      : []),
+    ...(currentTag
+      ? [{ key: 'tag' as const, label: '태그', value: '선택한 태그' }]
       : []),
     ...(currentCategory
       ? [
@@ -240,6 +251,8 @@ export default async function RestaurantsPage({
     hasItems: items.length > 0,
     query: currentQuery,
     district: currentDistrict,
+    regionCode: currentRegionCode,
+    tag: currentTag,
     category: currentCategory,
     creatorId: currentCreatorId,
   })
@@ -296,26 +309,19 @@ export default async function RestaurantsPage({
         <div className={styles.toolbarWrap}>
           <div className={styles.toolbar}>
             <div className={styles.filterControls}>
-              <label className={styles.selectLabel} htmlFor="district">
-                <span className={styles.srOnly}>지역</span>
-                <FilterSelect
-                  id="district"
-                  formId="structured-restaurant-search"
-                  name="district"
-                  options={districtOptions.map((district) => ({
-                    value: district,
-                    label: district,
-                  }))}
-                  value={currentDistrict}
-                  placeholder="지역"
-                  disabled={!filterOptionsResult.ok || districtOptions.length === 0}
-                  className={styles.select}
-                  controlClassName={styles.selectControl}
-                  menuClassName={styles.selectMenu}
-                  optionClassName={styles.selectOption}
-                  selectedOptionClassName={styles.selectOptionSelected}
-                />
-              </label>
+              <RegionFilter
+                key={JSON.stringify([currentRegionCode, currentDistrict])}
+                provinces={provinces}
+                regionCode={currentRegionCode}
+                district={currentDistrict}
+                disabled={!regionsResult.ok}
+                formId="structured-restaurant-search"
+                className={styles.select}
+                controlClassName={styles.selectControl}
+                menuClassName={styles.selectMenu}
+                optionClassName={styles.selectOption}
+                selectedOptionClassName={styles.selectOptionSelected}
+              />
               <label className={styles.selectLabel} htmlFor="category">
                 <span className={styles.srOnly}>음식 종류</span>
                 <FilterSelect
@@ -418,6 +424,12 @@ export default async function RestaurantsPage({
           ) : creatorsResult.data.items.length === 0 && currentCreatorId ? (
             <p className={styles.creatorHint}>등록된 유튜버가 없습니다.</p>
           ) : null}
+          {!regionsResult.ok ? (
+            <p className={styles.creatorError} role="alert">
+              {regionsResult.message}
+              {regionsResult.traceId ? <span className={styles.traceId}>traceId: {regionsResult.traceId}</span> : null}
+            </p>
+          ) : null}
           {!filterOptionsResult.ok ? (
             <p className={styles.creatorError} role="alert">
               {filterOptionsResult.message}
@@ -430,6 +442,7 @@ export default async function RestaurantsPage({
           ) : null}
         </div>
         <input type="hidden" name="size" value={currentSize} />
+        {currentTag ? <input type="hidden" name="tag" value={currentTag} /> : null}
         </form>
       </section>
 
@@ -461,7 +474,7 @@ export default async function RestaurantsPage({
             aria-labelledby="results-title"
           >
             <h2 id="results-title">
-              {isDesignPreview ? '서울 맛집' : '검색 결과'}{' '}
+              {isDesignPreview ? '맛집 미리보기' : '검색 결과'}{' '}
               {isDesignPreview
                 ? `${displayItems.length}곳`
                 : `${page?.totalElements ?? displayItems.length}곳`}
@@ -617,7 +630,8 @@ export default async function RestaurantsPage({
       )}
 
       <NaturalLanguageRestaurantSearch
-        key={naturalLanguageFiltersKey(naturalLanguageFilters)}
+        key={JSON.stringify([naturalLanguageFiltersKey(naturalLanguageFilters), currentTag])}
+        regionLabels={labels}
         structuredFormId="structured-restaurant-search"
         creatorLabels={
           creatorsResult.ok

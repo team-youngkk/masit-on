@@ -57,6 +57,25 @@ class RestaurantSearchFilterResolver {
         return region.getId();
     }
 
+    UUID resolveRegionId(String district, String regionCode) {
+        if (regionCode == null) {
+            return resolveRegionId(district);
+        }
+        if (district != null) {
+            throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, "regionCode",
+                    "district와 regionCode는 함께 지정할 수 없습니다.");
+        }
+        if (!regionCode.matches("[0-9]{10}")) {
+            throw new BusinessException(ErrorCode.INVALID_FIELD_VALUE, "regionCode",
+                    "10자리 행정구역 코드를 지정해야 합니다.");
+        }
+        return regionRepositoryPort.findByAdministrativeCode(regionCode)
+                .filter(Region::isActive)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_FIELD_VALUE, "regionCode",
+                        "존재하지 않거나 비활성인 지역입니다."))
+                .getId();
+    }
+
     UUID resolveFoodCategoryId(String category) {
         if (category == null) {
             return null;
