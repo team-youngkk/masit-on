@@ -51,7 +51,7 @@ related_documents:
 | PR diff와 리뷰 인라인 문맥 확인 | 프론트 요청 파라미터와 백엔드 컨트롤러 허용 필드가 불일치 | 리뷰 현상을 코드 경로로 확인 |
 | API 계약 및 검색 Query Adapter 확인 | 계약은 단일 `tag`와 활성 태그·공개 Visit 조건을 정의하고 Query Adapter는 필터 SQL을 이미 구현 | 계약 변경이나 필터 제거 대신 기존 기능 경로를 연결 |
 | 최신 `origin/develop` 반영 | ADR 문서 5곳에서 보안 패치 ADR 상태 충돌; develop에서 확정된 Accepted 상태와 문구로 해결 | 최신 기반선 유지 |
-| PR #395 및 최신 develop CI 로그 | `sharp 0.35.4`, `source-map-js 1.2.1`의 새 HIGH advisory로 감사 실패; 백엔드 빌드·테스트, Terraform, RSA 검사는 통과 | 보안 ADR의 감사 기준에 맞춰 두 의존성을 수정 버전으로 갱신 |
+| PR #395 및 최신 develop CI 로그 | `sharp 0.35.4`, `source-map-js 1.2.1`의 새 HIGH advisory로 감사 실패; 백엔드 빌드·테스트, Terraform, RSA 검사는 통과 | 보안 ADR의 감사 기준에 맞춰 두 의존성을 수정 버전으로 갱신한 뒤 CI 재실행 |
 | GitHub Advisory Database 확인 | `sharp` 수정 버전은 0.35.5, `source-map-js` 수정 버전은 1.2.2 | 해당 버전만 npm override와 lockfile에 반영 |
 
 ## 6. 최종 해결
@@ -68,12 +68,13 @@ related_documents:
 | `git diff --check` | 통과 | 공백 오류 없음 |
 | `npm audit --omit=dev --audit-level=high` | 통과 | 0 vulnerabilities |
 | `npm ls next typescript sharp source-map-js` | 통과 | Next 16.3.8, TypeScript 7.0.2, sharp 0.35.5, source-map-js 1.2.2 확인. 로컬 Node는 24.14.0이며 프로젝트 기준 24.18.0과 차이 있음 |
-| PR CI `37579600027` | 백엔드·Terraform·RSA 통과, 프론트 보안 감사 실패 | 전이 의존성 갱신 전 실행. 새 버전 반영 후 CI 재실행 필요 |
+| PR CI [`37579600027`](https://github.com/team-youngkk/masit-on/actions/runs/37579600027) | 실패 | 전이 의존성 갱신 전 실행. 프론트 보안 감사에서 HIGH 취약점 검출 |
+| PR CI [`37580483799`](https://github.com/team-youngkk/masit-on/actions/runs/37580483799) | 통과 | 최신 PR 커밋 기준 백엔드 빌드·자동화 테스트, 프론트 감사·타입 검사·프로덕션 빌드, Terraform, RSA 검사 통과 |
 
 ## 8. 재발 방지 및 다음 확인
 
 - 재발 방지: 기존 API 계약과 Query Adapter 기능 사이의 호출 경로를 연결하고 기존 태그 Criteria 단위 테스트에서 활성 태그 조회를 명시적으로 stub 했다. 프론트 보안 기준선 문서와 npm override 버전을 같은 변경에서 갱신했다.
-- 다음 확인: 수정한 의존성을 포함한 PR CI에서 프론트 빌드·감사와 전체 백엔드 검사가 통과하는지 확인한다.
+- 다음 확인: 없음. 최신 PR 커밋의 필수 CI가 모두 통과했다.
 
 ## 9. 도입 전후 비교 지표
 
@@ -83,4 +84,4 @@ related_documents:
 
 ## 10. 남은 사항
 
-- 수정 버전 반영 후 실행되는 PR CI 결과를 확인해야 한다.
+- 없음.
