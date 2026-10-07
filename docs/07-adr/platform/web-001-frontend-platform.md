@@ -67,7 +67,7 @@ MVP는 웹·모바일 브라우저의 탐색과 관리자 등록 화면을 재�
 
 ## 6. 결정
 
-Node.js 24.18.0, Next.js 16.3.8, TypeScript 7.0.2를 정확히 고정한다. Next.js 16.2.11은 [GHSA-p293-qw3h-jr36](https://github.com/advisories/GHSA-p293-qw3h-jr36)과 [GHSA-2xp9-vwfh-vxw4](https://github.com/advisories/GHSA-2xp9-vwfh-vxw4)의 영향 범위에 포함되므로 2026-09-09에 보안 패치 기준선을 16.3.4로 갱신했다. 2026-10-05에는 Next.js 16.3.8 보안 패치를 [ADR-WEB-007](web-007-next-security-patch-baseline.md)에 따라 채택했다. 같은 보안 기준선 갱신 과정에서 이미지 처리 전이 의존성 `sharp`를 [GHSA-rgj7-g3m4-5g8c](https://github.com/advisories/GHSA-rgj7-g3m4-5g8c)의 수정 버전인 0.35.4로 고정했다.
+Node.js 24.18.0, Next.js 16.3.8, TypeScript 7.0.2를 정확히 고정한다. Next.js 16.2.11은 [GHSA-p293-qw3h-jr36](https://github.com/advisories/GHSA-p293-qw3h-jr36)과 [GHSA-2xp9-vwfh-vxw4](https://github.com/advisories/GHSA-2xp9-vwfh-vxw4)의 영향 범위에 포함되므로 2026-09-09에 보안 패치 기준선을 16.3.4로 갱신했다. 2026-10-05에는 Next.js 16.3.8 보안 패치를 [ADR-WEB-007](web-007-next-security-patch-baseline.md)에 따라 채택했다. 2026-10-07 보안 감사에서 확인한 librsvg([GHSA-wq5f-xc86-pv6w](https://github.com/advisories/GHSA-wq5f-xc86-pv6w))와 `source-map-js`([GHSA-68fv-2mgg-jv7q](https://github.com/advisories/GHSA-68fv-2mgg-jv7q)) 취약점을 막기 위해 각각 `sharp` 0.35.5와 `source-map-js` 1.2.2를 npm `overrides`로 고정했다. 이는 기존 Next.js 기준선을 바꾸지 않는 전이 의존성 보강이다.
 
 ## 7. 선택 근거
 
@@ -103,7 +103,7 @@ Next.js 16.3.4로 갱신한 뒤 내장 TypeScript 단계가 TypeScript 7.0.2에�
 
 ## 13. 검증 방법
 
-CI에서 `node -v`, `npm ls next typescript sharp` 결과가 각각 정확히 24.18.0, 16.3.8, 7.0.2, 0.35.4인지 확인하고 불일치 시 빌드를 실패시킨다. `npm audit --omit=dev --audit-level=high`에서 high 이상 취약점이 0건인지 확인한다. `package-lock.json`이 커밋되어 있고 CI가 `npm ci`(또는 동등한 고정 설치)를 사용하는지, 의존성 선언에 범위 버전 문자열이 없는지 검사한다. 컨테이너 이미지 태그가 고정되어 있는지 확인한다. 이 검증은 [ADR-CI-001](ci-001-github-actions-quality-gate.md)의 품질 게이트 실행 결과로 판단하며, 별도의 성능 측정(p95 응답 시간 등)은 [ADR-WEB-002](web-002-data-state.md)의 데이터 패칭 패턴에서 검증한다.
+CI에서 `node -v`, `npm ls next typescript sharp source-map-js` 결과가 각각 정확히 24.18.0, 16.3.8, 7.0.2, 0.35.5, 1.2.2인지 확인하고 불일치 시 빌드를 실패시킨다. `npm audit --omit=dev --audit-level=high`에서 high 이상 취약점이 0건인지 확인한다. `package-lock.json`이 커밋되어 있고 CI가 `npm ci`(또는 동등한 고정 설치)를 사용하는지, 의존성 선언에 범위 버전 문자열이 없는지 검사한다. 컨테이너 이미지 태그가 고정되어 있는지 확인한다. 이 검증은 [ADR-CI-001](ci-001-github-actions-quality-gate.md)의 품질 게이트 실행 결과로 판단하며, 별도의 성능 측정(p95 응답 시간 등)은 [ADR-WEB-002](web-002-data-state.md)의 데이터 패칭 패턴에서 검증한다.
 
 ## 14. 재검토 조건
 
