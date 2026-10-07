@@ -10,6 +10,7 @@ related_requirements:
   - NFR-COMPATIBILITY-001
   - NFR-DEPLOYMENT-001
 related_documents:
+  - web-007-next-security-patch-baseline.md
   - ../../00-overview/scope.md
   - ../../03-team/ownership.md
   - ../../04-product/prd/00-product-overview.md
@@ -38,7 +39,8 @@ Accepted
 
 ## 2. 결정 요약
 
-웹 프론트엔드는 Node.js 24.18.0 LTS, Next.js 16.3.4와 TypeScript 7.0.2를 사용한다.
+웹 프론트엔드는 Node.js 24.18.0 LTS, Next.js 16.3.8과 TypeScript 7.0.2를 사용한다. Next.js 16.3.8의 패치 기준선은 [ADR-WEB-007](web-007-next-security-patch-baseline.md)에서 Accepted로 확정했다. 2026-09-09에 16.3.4로 갱신했던 이력은 6절에 보존한다.
+
 
 ## 3. 배경
 
@@ -54,7 +56,7 @@ MVP는 웹·모바일 브라우저의 탐색과 관리자 등록 화면을 재�
 
 ## 5. 고려한 선택지
 
-- 확정된 Node.js 24.18.0 · Next.js 16.3.4 · TypeScript 7.0.2 조합을 정확한 버전으로 고정
+- 확정된 Node.js 24.18.0 · Next.js 16.3.8 · TypeScript 7.0.2 조합을 정확한 버전으로 고정
 - 범위 버전(semver range) 또는 패키지 매니저·CI의 최신 버전 자동 추종
 - Next.js 외 다른 프레임워크(예: Vite 기반 React SPA, 별도 메타프레임워크) 채택
 
@@ -65,7 +67,7 @@ MVP는 웹·모바일 브라우저의 탐색과 관리자 등록 화면을 재�
 
 ## 6. 결정
 
-Node.js 24.18.0, Next.js 16.3.4, TypeScript 7.0.2를 정확히 고정한다. Next.js 16.2.11은 [GHSA-p293-qw3h-jr36](https://github.com/advisories/GHSA-p293-qw3h-jr36)과 [GHSA-2xp9-vwfh-vxw4](https://github.com/advisories/GHSA-2xp9-vwfh-vxw4)의 영향 범위에 포함되므로 2026-09-09에 보안 패치 기준선을 16.3.4로 갱신했다. 같은 변경에서 이미지 처리 전이 의존성 `sharp`를 [GHSA-rgj7-g3m4-5g8c](https://github.com/advisories/GHSA-rgj7-g3m4-5g8c)의 수정 버전인 0.35.4로 고정한다.
+Node.js 24.18.0, Next.js 16.3.8, TypeScript 7.0.2를 정확히 고정한다. Next.js 16.2.11은 [GHSA-p293-qw3h-jr36](https://github.com/advisories/GHSA-p293-qw3h-jr36)과 [GHSA-2xp9-vwfh-vxw4](https://github.com/advisories/GHSA-2xp9-vwfh-vxw4)의 영향 범위에 포함되므로 2026-09-09에 보안 패치 기준선을 16.3.4로 갱신했다. 2026-10-05에는 Next.js 16.3.8 보안 패치를 [ADR-WEB-007](web-007-next-security-patch-baseline.md)에 따라 채택했다. 같은 보안 기준선 갱신 과정에서 이미지 처리 전이 의존성 `sharp`를 [GHSA-rgj7-g3m4-5g8c](https://github.com/advisories/GHSA-rgj7-g3m4-5g8c)의 수정 버전인 0.35.4로 고정했다.
 
 ## 7. 선택 근거
 
@@ -101,7 +103,7 @@ Next.js 16.3.4로 갱신한 뒤 내장 TypeScript 단계가 TypeScript 7.0.2에�
 
 ## 13. 검증 방법
 
-CI에서 `node -v`, `npm ls next typescript sharp` 결과가 각각 정확히 24.18.0, 16.3.4, 7.0.2, 0.35.4인지 확인하고 불일치 시 빌드를 실패시킨다. `npm audit --omit=dev --audit-level=high`에서 high 이상 취약점이 0건인지 확인한다. `package-lock.json`이 커밋되어 있고 CI가 `npm ci`(또는 동등한 고정 설치)를 사용하는지, 의존성 선언에 범위 버전 문자열이 없는지 검사한다. 컨테이너 이미지 태그가 고정되어 있는지 확인한다. 이 검증은 [ADR-CI-001](ci-001-github-actions-quality-gate.md)의 품질 게이트 실행 결과로 판단하며, 별도의 성능 측정(p95 응답 시간 등)은 [ADR-WEB-002](web-002-data-state.md)의 데이터 패칭 패턴에서 검증한다.
+CI에서 `node -v`, `npm ls next typescript sharp` 결과가 각각 정확히 24.18.0, 16.3.8, 7.0.2, 0.35.4인지 확인하고 불일치 시 빌드를 실패시킨다. `npm audit --omit=dev --audit-level=high`에서 high 이상 취약점이 0건인지 확인한다. `package-lock.json`이 커밋되어 있고 CI가 `npm ci`(또는 동등한 고정 설치)를 사용하는지, 의존성 선언에 범위 버전 문자열이 없는지 검사한다. 컨테이너 이미지 태그가 고정되어 있는지 확인한다. 이 검증은 [ADR-CI-001](ci-001-github-actions-quality-gate.md)의 품질 게이트 실행 결과로 판단하며, 별도의 성능 측정(p95 응답 시간 등)은 [ADR-WEB-002](web-002-data-state.md)의 데이터 패칭 패턴에서 검증한다.
 
 ## 14. 재검토 조건
 
