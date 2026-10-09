@@ -259,11 +259,17 @@
   scrollbar-width: thin;
 }
 .creatorError,
-.creatorHint {
+.creatorHint,
+.regionMapNotice {
   max-width: var(--layout-max-width);
   margin: var(--space-2) auto 0;
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
+}
+.regionMapNotice a {
+  color: var(--color-primary-deep);
+  font-weight: 700;
+  text-decoration: underline;
 }
 .creatorError {
   color: var(--color-danger);
