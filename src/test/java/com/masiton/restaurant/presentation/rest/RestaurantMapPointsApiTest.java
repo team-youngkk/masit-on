@@ -98,6 +98,15 @@ class RestaurantMapPointsApiTest extends com.masiton.test.FullContextIntegration
     }
 
     @Test
+    @DisplayName("전국 regionCode를 보내면 400 INVALID_REQUEST를 반환한다")
+    void mapPoints_regionCode전송_400INVALID_REQUEST를반환한다() throws Exception {
+        mockMvc.perform(get("/api/restaurants/map-points")
+                        .param("regionCode", "4111000000"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+    }
+
+    @Test
     @DisplayName("creatorId가 UUID 형식이 아니면 400 INVALID_IDENTIFIER를 반환한다")
     void mapPoints_creatorId형식오류_400INVALID_IDENTIFIER를반환한다() throws Exception {
         mockMvc.perform(get("/api/restaurants/map-points")

@@ -14,6 +14,24 @@ import { Brand } from './Brand'
 import { NotificationBell } from './NotificationBell'
 import styles from './SiteHeader.module.css'
 
+function MapNavigationUnavailable({
+  className,
+  children,
+}: {
+  className?: string
+  children?: React.ReactNode
+}) {
+  return (
+    <span
+      className={className}
+      aria-disabled="true"
+      title="지도는 기존 서울 자치구 필터만 지원합니다. 지역 필터를 해제한 뒤 이용해 주세요."
+    >
+      {children}
+    </span>
+  )
+}
+
 function MapNavigationLink({
   className,
   onClick,
@@ -28,7 +46,7 @@ function MapNavigationLink({
   const href = buildMapNavigationHref(pathname, searchParams)
 
   if (!href) {
-    return <span className={className} aria-disabled="true" title="지도는 기존 서울 자치구 필터만 지원합니다. 지역 필터를 해제한 뒤 이용해 주세요.">{children} (지역 필터 미지원)</span>
+    return <MapNavigationUnavailable className={className}>{children} (지역 필터 미지원)</MapNavigationUnavailable>
   }
 
   return (
@@ -197,7 +215,7 @@ export function SiteHeader() {
           <Link href={COURSE_NAVIGATION.href} className={navClass(COURSE_NAVIGATION.href)} aria-current={pathname.startsWith(COURSE_NAVIGATION.href) ? 'page' : undefined}>{COURSE_NAVIGATION.label}</Link>
           <Link href="/popular" className={navClass('/popular')} aria-current={pathname.startsWith('/popular') ? 'page' : undefined}>인기</Link>
           <Link href="/curations" className={navClass('/curations')} aria-current={pathname.startsWith('/curations') ? 'page' : undefined}>큐레이션</Link>
-          <Suspense fallback={<Link href="/map" className={navClass('/map')}>지도</Link>}>
+          <Suspense fallback={<MapNavigationUnavailable className={navClass('/map')}>지도</MapNavigationUnavailable>}>
             <MapNavigationLink className={navClass('/map')} />
           </Suspense>
         </nav>
@@ -231,7 +249,7 @@ export function SiteHeader() {
               <Link href={COURSE_NAVIGATION.href} onClick={closeQuickMenu}>{COURSE_NAVIGATION.label}</Link>
               <Link href="/popular" onClick={closeQuickMenu}>인기</Link>
               <Link href="/curations" onClick={closeQuickMenu}>큐레이션</Link>
-              <Suspense fallback={<Link href="/map" onClick={closeQuickMenu}>지도</Link>}>
+                <Suspense fallback={<MapNavigationUnavailable>지도</MapNavigationUnavailable>}>
                 <MapNavigationLink onClick={closeQuickMenu}>지도</MapNavigationLink>
               </Suspense>
               <span className={styles.quickMenuDivider} aria-hidden="true" />
@@ -319,7 +337,7 @@ export function SiteHeader() {
         <Link href="/curations" className={navClass('/curations')} aria-current={pathname.startsWith('/curations') ? 'page' : undefined}>
           <MobileNavIcon name="curation" /><span>큐레이션</span>
         </Link>
-        <Suspense fallback={<Link href="/map" className={navClass('/map')}><MobileNavIcon name="map" /><span>지도</span></Link>}>
+        <Suspense fallback={<MapNavigationUnavailable className={navClass('/map')}><MobileNavIcon name="map" /><span>지도</span></MapNavigationUnavailable>}>
           <MapNavigationLink className={navClass('/map')}><MobileNavIcon name="map" /><span>지도</span></MapNavigationLink>
         </Suspense>
       </nav>
