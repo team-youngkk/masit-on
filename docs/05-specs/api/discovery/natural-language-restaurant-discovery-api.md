@@ -53,7 +53,7 @@ related_documents:
 사용자의 자연어 문장을 기존 맛집 조건으로 해석하고, 기존 공개 맛집 목록을 반환한다. 이 API는 임베딩·벡터 유사도 검색·RAG·자유 형식 챗봇·결과 선정 이유 생성을 제공하지 않는다.
 
 - 입력 원문과 검색 이력은 저장하지 않는다.
-- 파서 해석 결과는 `restaurantName`, `district`, `category`, `creatorId`, `tags` 조건으로만 제한한다. #394는 직접 필터 `regionCode`를 추가하며 파서의 서울 지명 해석 범위는 유지한다. 지역 변경은 [지역 계층 계약](../common/region-contract.md)에 따르며 소유자 리뷰를 요청한다. 자연어 `tags`는 [AI 영상 추출 데이터 계약](../../data/third-expansion-ai-video-data-contract.md)의 `ACTIVE` 태그 정의 코드·표시명·별칭으로 해석하고, 목록 결과는 관리자 확정 `VisitTag`만 사용한다.
+- 파서 해석 결과는 `restaurantName`, `regionCode`, `category`, `creatorId`, `tags` 조건으로 제한한다. `district`는 직접 필터의 서울 호환 필드다. #394의 전국 직접 필터에 이어 #400은 활성 전국 지역 마스터 기반 P2 해석을 추가한다. 지역 변경은 [지역 계층 계약](../common/region-contract.md)에 따르며 소유자 리뷰를 요청한다. 자연어 `tags`는 [AI 영상 추출 데이터 계약](../../data/third-expansion-ai-video-data-contract.md)의 `ACTIVE` 태그 정의 코드·표시명·별칭으로 해석하고, 목록 결과는 관리자 확정 `VisitTag`만 사용한다.
 - 실제 목록 조합·공개 상태·Visit 유효성·정렬·페이지네이션은 [맛집 탐색 API](restaurant-discovery-api.md)를 따른다.
 - 직접 지정 필터와 자연어 조건이 같은 종류에서 충돌하면 직접 지정 필터를 적용한다.
 
@@ -127,15 +127,15 @@ related_documents:
     "status": "APPLIED",
     "appliedConditions": {
       "query": null,
-      "district": "성동구",
-      "regionCode": null,
+      "district": null,
+      "regionCode": "1120000000",
       "category": "한식",
       "creatorId": "creator-id",
       "tags": ["MENU_NAENGMYEON", "OCCASION_SOLO"]
     },
     "ignoredConditions": [],
     "conflicts": [],
-    "parserVersion": "P1"
+    "parserVersion": "P2"
   },
   "results": {
     "items": [],
@@ -157,15 +157,15 @@ related_documents:
 | `interpretation` | object | 예 | 자연어 해석 및 필터 병합 결과 |
 | `interpretation.status` | enum | 예 | `APPLIED`, `PARTIAL`, `FAILED` |
 | `interpretation.appliedConditions` | object | 예 | 실제 목록 조회에 적용한 기존 필터. 값이 없으면 `null` |
-| `interpretation.appliedConditions.regionCode` | string 또는 null | 예 | 실제 적용한 직접 지역 코드. 적용하지 않았으면 `null` |
+| `interpretation.appliedConditions.regionCode` | string 또는 null | 예 | 실제 적용한 직접 또는 자연어 지역 코드. 적용하지 않았으면 `null` |
 | `interpretation.ignoredConditions` | array | 예 | 적용하지 않은 표현과 사유. 없으면 `[]` |
 | `interpretation.ignoredConditions[].type` | enum | 예 | `UNSUPPORTED`, `UNRESOLVED`, `CONFLICT` |
 | `interpretation.ignoredConditions[].text` | string | 예 | 원문을 그대로 저장·반환하지 않는 정책에 따라 마스킹 또는 짧은 안전 요약 |
 | `interpretation.ignoredConditions[].reason` | string | 예 | `UNSUPPORTED_CONDITION`, `UNRESOLVED_VALUE`, `DIRECT_FILTER_WON` 등 |
 | `interpretation.conflicts` | array | 예 | 직접 필터가 자연어 조건을 대체한 충돌 목록 |
-| `interpretation.conflicts[].field` | enum | 예 | `query`, `district`, `category`, `creatorId`, `tags` |
+| `interpretation.conflicts[].field` | enum | 예 | `query`, `district`, `regionCode`, `category`, `creatorId`, `tags` |
 | `interpretation.conflicts[].resolution` | enum | 예 | `DIRECT_FILTER_WON` |
-| `interpretation.parserVersion` | string | 예 | 문장 패턴·조건 해석·충돌·상한·정규화 알고리즘 버전. P1은 `P1`이며 동적 태그 데이터 변경만으로 증가하지 않음 |
+| `interpretation.parserVersion` | string | 예 | 문장 패턴·조건 해석·충돌·상한·정규화 알고리즘 버전. #400 전국 지역 알고리즘은 `P2`, 기존 P1은 역사적 회귀 기준. 동적 태그 데이터 변경만으로 증가하지 않음 |
 | `results` | object | 예 | 기존 맛집 목록 응답 조합 |
 | `results.items` | array | 예 | [맛집 탐색 API](restaurant-discovery-api.md)의 목록 항목 |
 | `results.page` | object | 예 | 공통 페이지 정보 |
@@ -197,7 +197,7 @@ related_documents:
 9. 자연어 태그 용어는 Unicode NFKC → 연속 Unicode 공백 한 칸 축약·trim → ASCII 소문자 순서로 정규화한다. 별칭 판정은 길이 내림차순 후 사전순, 반환 코드는 `tag_code` 사전순으로 고정한다.
 10. 하나의 별칭이 둘 이상의 `ACTIVE` 코드에 매핑되거나 자연어에서 태그가 6개 이상 인식되면 자연어 `tags` 조건 전체를 `UNRESOLVED_VALUE`로 처리한다. `filters.tags`가 있으면 직접 필터를 적용하고 기존 `DIRECT_FILTER_WON` 충돌 정보를 반환한다.
 11. 직접 `filters.regionCode`는 파서 해석 전에 기존 목록의 필터 검증을 통과해야 한다. 시·도는 자신과 활성 자식을, 시·군·구는 해당 지역만 조회한다. 직접 `filters.district`와 함께 보내면 `400 INVALID_FIELD_VALUE`다.
-12. 직접 코드가 적용되면 `appliedConditions.district`는 `null`이고 `appliedConditions.regionCode`에 코드를 반환한다. 자연어 지역과 다른 범위이거나 지역 해석이 미해결이면 `field: district`, `resolution: DIRECT_FILTER_WON`을 사용한다. 같은 서울 자치구를 나타내는 코드와 이름은 충돌로 표시하지 않는다.
+12. 직접 또는 자연어 코드가 적용되면 `appliedConditions.district`는 `null`이고 `appliedConditions.regionCode`에 코드를 반환한다. 직접 레거시 `district`는 자연어 코드보다 우선하며 이 경우 코드는 `null`이다. 자연어 지역과 다른 범위이거나 지역 해석이 미해결이면 `field: regionCode`, `resolution: DIRECT_FILTER_WON`을 사용한다. 실제 적용 지역이 같은 코드와 이름은 충돌로 표시하지 않는다.
 13. 의심 입력 등 조회를 생략하는 경로에서도 직접 지역·카테고리·유튜버·태그의 유효성을 검증한다. 의심 입력은 유효한 직접 코드가 있어도 `FAILED`·빈 적용 조건·빈 결과로 끝내며 전체 목록으로 대체하지 않는다.
 
 ## 6. Error Cases
@@ -223,7 +223,7 @@ related_documents:
 - 자연어 API 장애는 `GET /api/restaurants`와 기존 상세 API로 전파되지 않는다.
 - `ACTIVE` 태그 사전은 애플리케이션 프로세스의 라이브러리 없는 read-through cache에 30초 TTL로 보관한다. TTL 안의 생성·수정·폐기 반영은 최대 30초 지연될 수 있고, 만료 뒤 첫 요청이 한 번 갱신한 불변 snapshot을 동시 요청이 공유한다.
 - 최초 적재와 TTL 만료 갱신이 실패하면 `NATURAL_LANGUAGE_UNAVAILABLE` 503으로 fail-closed 처리하며 stale snapshot 또는 초기 18개 seed로 폴백하지 않는다.
-- `parserVersion: P1`은 알고리즘 계약을 나타낸다. 태그 정의 데이터 변경만으로 증가하지 않으며 초기 18개 seed의 Golden V1 해석 결과는 유지한다.
+- `parserVersion: P2`는 #400 전국 지역 해석 알고리즘을 나타낸다. 태그 정의 데이터 변경만으로 증가하지 않으며 기존 P1·초기 18개 seed Golden V1은 별도 역사적 회귀 경로로 보존한다.
 
 ## 8. API 완료 조건
 
@@ -236,3 +236,14 @@ related_documents:
 - [ ] 50명·20 RPS와 200명·80 RPS에서 기존 탐색 격리와 응답 시간을 검증한다.
 
 ---
+
+## 9. #400 전국 자연어 지역 계약 — 소유자 리뷰 요청
+
+2026-10-11 사용자 요청으로 문서화 후 구현할 제안이다. 기존 Accepted 계약의 이력은 유지하고 이 절의 변경 승인은 PR에서 소유자에게 요청한다. [구현 계획·Golden 보충 사례](../../../08-planning/issue-400-national-natural-language-regions.md)를 따른다.
+
+1. 활성 시·도/시·군·구 마스터의 표시명·확인된 시·도 별칭을 읽어 `regionCode`로 해석한다. 비활성 부모의 자식은 해석 후보에서 제외한다. `서울 마포구`는 `1144000000`, `경기도 수원시`는 해당 활성 수원시 코드로 적용한다.
+2. 하위 이름의 활성 후보가 여러 개면 명시한 부모로 좁힌다. `중구`·`강서구`처럼 부모 없는 동명 하위는 `UNRESOLVED_VALUE`이며 기존 서울 사전으로 강제하지 않는다. 미등록·비활성·틀린 지역과 불일치 부모·자식도 미해결로 남기고 이름 검색 조건으로 바꾸지 않는다.
+3. 직접 `regionCode` 또는 레거시 `district`가 자연어 지역보다 우선한다. 전국 지역 충돌·미해결은 `regionCode` 필드와 `DIRECT_FILTER_WON`·`UNRESOLVED_VALUE`로 보고하며, 동일한 실제 적용 지역이면 충돌을 추가하지 않는다. 미해결 자연어 지역을 직접 필터가 대신하면 대체 사실을 표시한다.
+4. 시·도는 자신과 활성 자식, 세종은 자신, 제주는 제주시·서귀포시를 포함한다. 유효 조건의 빈 목록은 정상이다. 미해결 지역뿐이면 `FAILED`·빈 적용 조건·빈 결과이며, 다른 조건을 적용하면 `PARTIAL`이다. 의심 입력은 유효한 직접 지역도 적용하지 않고 `FAILED`·빈 결과이며 직접 필터 검증은 수행한다.
+5. 적용 조건의 코드는 기계 계약으로 반환하지만 UI는 공개 마스터의 이름 또는 안전한 일반 안내를 사용한다. 내부 ID·행정코드를 사용자 라벨로 표시하지 않는다. 이름·카테고리·불투명 유튜버 ID·태그 AND와 30초 태그 cache·503·stale/seed 대체 금지는 유지한다.
+6. 운영 경로는 `P2`다. 기존 Golden V1의 데이터·정답·분할은 수정하지 않고 P1 회귀 평가로 격리한다. 전국 지역은 별도 P2 Golden 보충 자산으로 평가하며 P1 점수를 P2 정확도라고 보고하지 않는다.

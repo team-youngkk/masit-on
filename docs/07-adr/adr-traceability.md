@@ -303,3 +303,7 @@ Accepted 세 건은 현재 요구사항을 구현하는 최소 구조만 승인�
 ### 11.1 E3-T13 최종 게이트 증거
 
 Accepted ADR의 자동화 검증 결과와 실제 운영·평가·부하 증거는 [3차 확장 운영 완료 기록](../08-planning/third-expansion-operational-completion-record.md)에 연결한다. [E3-T13 최종 게이트 판정](../08-planning/third-expansion-final-gate-result.md)의 `HOLD`·`CONDITIONAL` 표현은 당시 기준선 기록이다. ADR 승인 자체만으로 AI·Mobility 호출 활성화나 3차 확장 출시 승인을 의미하지 않지만, 현재 운영 상태는 별도 완료 기록으로 확정한다.
+
+### 전국 자연어 지역 후속 추적 — 이슈 #400
+
+[ADR-ARCH-005 후속 제안](architecture/arch-005-natural-language-filter-interpretation.md#11-400-전국-지역-해석-후속-제안--review-requested) → FR-NLSEARCH-001~003·FR-RESTAURANT-003 → [#400 계획](../08-planning/issue-400-national-natural-language-regions.md). P2 전국 마스터 해석과 별도 Golden 보충 자산을 추가하고 Accepted P1·Golden V1은 역사적 회귀로 보존한다. 후속 제안은 소유자 리뷰 요청이며 기존 팀 승인을 확장하지 않는다.

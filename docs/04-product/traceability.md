@@ -525,3 +525,7 @@ FR-AIEXTRACT-007·FR-NLSEARCH-004 → [맛집 상세 PRD](prd/detail/restaurant-
 ### 동적 자연어 태그 사전 추적 — 이슈 #364
 
 [FR-NLSEARCH-004](../01-requirements/functional-requirements.md#fr-nlsearch-004-확정-태그-조건과-결과-조회)·[BR-NLSEARCH-003](../01-requirements/business-rules.md#br-nlsearch-003-태그-검색과-공개-visit-기준) → [자연어 탐색 PRD](prd/discovery/natural-language-restaurant-discovery.md) → [자연어 API](../05-specs/api/discovery/natural-language-restaurant-discovery-api.md) → `tag_definition`·`tag_definition_term` 읽기 → [해석 ADR](../07-adr/architecture/arch-005-natural-language-filter-interpretation.md) → [구현 계획·검증](../08-planning/dynamic-natural-language-tag-dictionary.md). WS-15의 태그 정의를 WS-14의 읽기 전용 Application Port로 공급하며 Visit 태그 AND 조회 의미는 유지한다.
+
+### 전국 자연어 지역 추적 — 이슈 #400
+
+FR-NLSEARCH-001~003·FR-RESTAURANT-003 → [자연어 PRD](prd/discovery/natural-language-restaurant-discovery.md) → [전국 지역 계약](../05-specs/api/common/region-contract.md) → [#400 계획·인수 조건](../08-planning/issue-400-national-natural-language-regions.md). P2 활성 전국 마스터·동명 지역 미해결·직접 필터 우선·동일 지역 비충돌·안전 표시명을 추적한다. 사용자 요청에 따른 소유자 리뷰 요청이며 P1 이력은 보존한다.

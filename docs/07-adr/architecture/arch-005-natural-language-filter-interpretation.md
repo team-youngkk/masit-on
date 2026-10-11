@@ -110,3 +110,13 @@ Accepted. 2026-08-10 팀 결정으로 P1의 지원 필드·태그·규칙 기반
 - `ACTIVE` 사전 변경은 TTL 안에서 최대 30초 지연될 수 있다. TTL 만료 뒤 동시 요청은 하나의 갱신 결과를 공유하고, DB 조회 실패는 [자연어 맛집 탐색 API](../../05-specs/api/discovery/natural-language-restaurant-discovery-api.md)의 `NATURAL_LANGUAGE_UNAVAILABLE` 503으로 처리한다.
 - LLM·임베딩 도입은 현재 범위에 포함하지 않으며 별도 범위 변경·ADR·비용·개인정보 승인 없이는 허용하지 않는다.
 - API 오류·응답 Schema와 지연 목표는 [자연어 맛집 탐색 API](../../05-specs/api/discovery/natural-language-restaurant-discovery-api.md) 계약을 따른다.
+
+## 11. #400 전국 지역 해석 후속 제안 — review-requested
+
+2026-10-11 사용자 요청은 문서화 이후 P2 구현까지 승인한다. 이 절은 소유자 리뷰 요청 상태이며 2026-08-10의 Accepted P1 결정이나 팀 승인 이력을 변경하지 않는다. [전국 지역 계약](../../05-specs/api/common/region-contract.md)과 [#400 구현 계획](../../08-planning/issue-400-national-natural-language-regions.md)에 추적한다.
+
+- 기존 Restaurant Application output Port와 지역 마스터 Adapter를 활용해 활성 시·도/시·군·구를 읽고 `regionCode`로 해석한다. Domain·Application은 JPA·JDBC·다른 도메인 Entity를 직접 참조하지 않는다.
+- 하위 동명 후보는 부모가 없으면 미해결로 처리한다. `중구`·`강서구`를 서울로 추정하는 P1 동작은 P2에서 사용하지 않는다. 비활성·미등록·부모와 불일치하는 지역을 목록 조회나 이름 검색으로 흘리지 않는다.
+- 직접 지역 필터 우선·동일 유효 지역 비충돌·상위 자신과 활성 자식 조회·전체 목록 대체 금지·의심 입력의 직접 필터 검증을 유지한다. 코드 응답을 화면에서는 안전한 마스터 이름으로 표시한다.
+- 전국 지역 해석·충돌 알고리즘 변경은 `parserVersion: P2`다. 기존 P1·Golden V1은 고정된 역사적 경로에서 회귀 평가하고 전국 P2 보충 자산을 추가한다. 태그 30초 TTL·만료 실패 503·stale/seed 대체 금지·불투명 식별자는 유지한다.
+- 새 라이브러리·외부 서비스·마이그레이션·지역 저장 변경은 필요하지 않다. #398의 코스와 #399의 지도 범위는 별도 작업이다.

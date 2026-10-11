@@ -119,3 +119,7 @@ related_documents:
 - [ ] 제품·API·데이터·ADR 추적표와 E3 Task 분해가 동일한 ID를 사용한다.
 
 이 문서는 테스트 기준과 추적을 완료하기 위한 역사적 계획이다. 당시 실행 결과와 보류 사유는 [E3-T13 최종 게이트 판정](third-expansion-final-gate-result.md)에 보존하고, 현재 최종 판정은 [3차 확장 운영 완료 기록](third-expansion-operational-completion-record.md)을 따른다.
+
+## #400 전국 자연어 지역 보충 검증 — 소유자 리뷰 요청
+
+FR-NLSEARCH-001~003·FR-RESTAURANT-003 → TST-E3-NL-001~002·TST-E3-SEC-001·TST-E3-E2E-001 → [#400 인수 사례와 완료 조건](issue-400-national-natural-language-regions.md). P2 전국 활성 마스터·동명 부모 구분·미해결/직접 지역 우선/동일 지역 비충돌·상위 범위·세종/제주·의심 입력 직접 검증·지역 사전 장애503·UI 코드 비노출을 parser/Service/API/DB/UI에서 검증한다. P1 Golden V1과 동적 태그 30초 TTL·fail-closed·opaque ID·화면 초기화는 회귀 기준이다. 이 절은 실행 계획이며 통과 결과가 아니다.
