@@ -12,6 +12,7 @@ import { PageShell } from '@/components/ui/PageShell'
 import { StatePanel } from '@/components/ui/StatePanel'
 import { cn } from '@/lib/cn'
 import { shouldUseRestaurantDesignPreview } from '@/lib/design-preview'
+import { buildMapNavigationHrefAfterRegionClear } from '@/lib/map/map-navigation'
 import { naturalLanguageFiltersKey } from '@/lib/natural-language-filters-key'
 import { regionLabels } from '@/lib/regions'
 import { buildRestaurantsMetadata } from '@/lib/restaurant-seo'
@@ -404,6 +405,14 @@ export default async function RestaurantsPage({
                 </Link>
               ))}
             </div>
+          ) : null}
+          {currentRegionCode ? (
+            <p className={styles.regionMapNotice} role="status">
+              선택한 지역은 현재 지도에서 지원하지 않습니다.{' '}
+              <Link href={buildMapNavigationHrefAfterRegionClear('/restaurants', apiParams)}>
+                지역 필터를 해제하고 지도 이용하기
+              </Link>
+            </p>
           ) : null}
           {!creatorsResult.ok ? (
             <p className={styles.creatorError} role="alert">

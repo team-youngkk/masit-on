@@ -16,7 +16,7 @@ related_documents:
 
 ## 1. 문서 목적
 
-URL 탐색 조건에 맞는 공개 맛집의 위치·요약을 지도 마커와 대체 목록에 제공한다. Kakao 지도 뷰포트와 SDK 타입은 프론트엔드 내부 상태이며 API 요청·응답에 포함하지 않는다.
+URL 탐색 조건에 맞는 공개 맛집의 위치·요약을 지도 마커와 대체 목록에 제공한다. 이 API는 기존 서울 자치구 기반 지도 범위만 지원하며 전국 지역 계층의 `regionCode`를 받지 않는다. Kakao 지도 뷰포트와 SDK 타입은 프론트엔드 내부 상태이며 API 요청·응답에 포함하지 않는다.
 
 이 계약은 2026-08-03 승인됐고 이전 bounds 기반 구현은 [E1-T11](../../../08-planning/expansion-1-task-breakdown.md)에서 이 계약으로 교체했다.
 
@@ -36,6 +36,8 @@ URL 탐색 조건에 맞는 공개 맛집의 위치·요약을 지도 마커와 
 | `creatorId` | Identifier | 아니요 | 방문 유튜버 | 공개 유튜버 한 명, 반복 불가 |
 
 `south`, `west`, `north`, `east`는 지원하지 않는다. 지도 뷰포트는 서버 조회 조건이 아니며 알 수 없는 쿼리, 배열·반복 값과 쉼표 목록은 `400`이다. 지정한 네 탐색 조건은 모두 AND로 적용한다.
+
+전국 지역 계층 계약의 `regionCode`는 이 API의 쿼리·Query Key·응답 조건에 포함하지 않는다. 목록에서 `regionCode`를 선택한 상태의 지도 이동은 프론트엔드가 링크를 비활성화하고, 지역 코드를 제거한 지도 요청을 만들지 않는다.
 
 ### Success Response
 
@@ -100,7 +102,7 @@ URL 탐색 조건에 맞는 공개 맛집의 위치·요약을 지도 마커와 
 
 | HTTP | 코드 | 조건 |
 |---:|---|---|
-| 400 | `INVALID_REQUEST` | `south`·`west`·`north`·`east`를 포함한 알 수 없는 쿼리 |
+| 400 | `INVALID_REQUEST` | `regionCode`, `south`·`west`·`north`·`east`를 포함한 알 수 없는 쿼리 |
 | 400 | `INVALID_FIELD_VALUE` | 검색·필터 값 오류 또는 반복·배열·쉼표 목록 |
 | 400 | `INVALID_IDENTIFIER` | `creatorId` 형식 오류 |
 | 429 | `RATE_LIMIT_EXCEEDED` | 초당 조회 제한 초과 |
@@ -110,6 +112,8 @@ URL 탐색 조건에 맞는 공개 맛집의 위치·요약을 지도 마커와 
 ## 5. 프론트엔드 조회 계약
 
 - Query Key는 `query`, `district`, `category`, `creatorId`만 포함한다.
+- `regionCode`가 있는 목록 상태에서 지도 이동을 제공하지 않으며, 이를 제거해 다른 지도 결과를 조회하지 않는다.
+- `/map?regionCode=...` 직접 진입도 지도 API prefetch를 실행하지 않고 지역 미지원 안내와 해제 행동을 표시한다.
 - 지도 뷰포트와 중심 좌표는 Query Key·URL·API 요청·분석 이벤트에 포함하지 않는다.
 - 지도 이동만으로 invalidate·refetch하지 않는다.
 - 필터 변경 또는 명시적 오류 재시도 때만 새 조회를 수행한다.
