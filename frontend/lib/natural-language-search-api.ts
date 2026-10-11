@@ -9,7 +9,7 @@ export type NaturalLanguageResult = { interpretation: { status: 'APPLIED' | 'PAR
 export type NaturalLanguageFieldGuidance = { label: string; reason: string }
 export type NaturalLanguageSearchOutcome = { kind: 'success'; result: NaturalLanguageResult } | { kind: 'invalid'; message: string; code?: string; fieldGuidance: NaturalLanguageFieldGuidance[]; traceId?: string } | { kind: 'rateLimited'; message: string; traceId?: string; retryAvailableAt: number | null } | { kind: 'unavailable'; message: string; traceId?: string } | { kind: 'error'; message: string; traceId?: string; retryAllowed: boolean }
 
-const CONDITION_LABELS: Record<keyof NaturalLanguageCondition, string> = { query: '이름', district: '자치구', regionCode: '지역', category: '음식 종류', creatorId: '유튜버', tags: '태그' }
+const CONDITION_LABELS: Record<keyof NaturalLanguageCondition, string> = { query: '이름', district: '지역', regionCode: '지역', category: '음식 종류', creatorId: '유튜버', tags: '태그' }
 const TAG_LABELS: Record<string, string> = {
   MENU_NAENGMYEON: '냉면', MENU_GUKBAP: '국밥', MENU_RAMEN: '라멘', MENU_SUSHI: '스시', MENU_PIZZA: '피자', MENU_SAMGYEOPSAL: '삼겹살',
   TASTE_SPICY: '매운맛', TASTE_SWEET: '단맛', TASTE_SAVORY: '감칠맛', TASTE_LIGHT: '담백한 맛',

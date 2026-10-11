@@ -61,7 +61,7 @@ public class NaturalLanguageSearchService {
                     60);
         }
         validateDirectTags(command.tags());
-        if (command.regionCode() != null) {
+        if (command.regionCode() != null || command.district() != null) {
             searchRestaurantsUseCase.validateFilters(toSearchCommand(directConditions(command), command));
         }
         NaturalLanguageInterpretation parsed = parser.parse(command.sentence());
@@ -109,7 +109,8 @@ public class NaturalLanguageSearchService {
         List<String> applicableTags = tags.stream().filter(activeTags::contains).toList();
         NaturalLanguageInterpretation.AppliedConditions conditions = parsed.appliedConditions();
         NaturalLanguageInterpretation.AppliedConditions filtered = new NaturalLanguageInterpretation.AppliedConditions(
-                conditions.query(), conditions.district(), conditions.category(), conditions.creatorId(), applicableTags);
+                conditions.query(), conditions.district(), conditions.category(), conditions.creatorId(), applicableTags,
+                conditions.regionCode());
         List<NaturalLanguageInterpretation.IgnoredCondition> ignored = new ArrayList<>(parsed.ignoredConditions());
         ignored.add(new NaturalLanguageInterpretation.IgnoredCondition(
                 NaturalLanguageInterpretation.IgnoredCondition.Kind.UNRESOLVED,
@@ -135,29 +136,39 @@ public class NaturalLanguageSearchService {
         List<NaturalLanguageInterpretation.Conflict> conflicts = new ArrayList<>(parsed.conflicts());
 
         String query = directOrNatural(command.query(), natural.query(), "query", parsed, conflicts);
-        String district;
-        if (command.regionCode() == null) {
-            district = directOrNatural(command.district(), natural.district(), "district", parsed, conflicts);
-        } else {
-            boolean sameDistrict = natural.district() != null
-                    && regionRepositoryPort.findByName(natural.district())
-                            .map(region -> command.regionCode().equals(region.getAdministrativeCode()))
-                            .orElse(false);
-            if ((natural.district() != null && !sameDistrict)
-                    || parsed.unresolvedFields().contains(NaturalLanguageInterpretation.Conflict.Field.district)) {
+        String district = natural.district();
+        String regionCode = natural.regionCode();
+        if (command.regionCode() != null || command.district() != null) {
+            String directCode = command.regionCode() != null ? command.regionCode()
+                    : codeForDistrict(command.district());
+            String naturalCode = natural.regionCode() != null ? natural.regionCode()
+                    : codeForDistrict(natural.district());
+            boolean unresolved = parsed.unresolvedFields().contains(NaturalLanguageInterpretation.Conflict.Field.regionCode)
+                    || parsed.unresolvedFields().contains(NaturalLanguageInterpretation.Conflict.Field.district);
+            boolean hasNaturalRegion = natural.regionCode() != null || natural.district() != null;
+            boolean sameRegion = (directCode != null && Objects.equals(directCode, naturalCode))
+                    || (command.district() != null && Objects.equals(command.district(), natural.district()));
+            if ((hasNaturalRegion && !sameRegion) || unresolved) {
                 conflicts.add(new NaturalLanguageInterpretation.Conflict(
-                        NaturalLanguageInterpretation.Conflict.Field.district,
+                        "P2".equals(parsed.parserVersion()) ? NaturalLanguageInterpretation.Conflict.Field.regionCode
+                                : NaturalLanguageInterpretation.Conflict.Field.district,
                         NaturalLanguageInterpretation.Conflict.Resolution.DIRECT_FILTER_WON));
             }
-            district = null;
+            district = command.district();
+            regionCode = command.regionCode();
         }
         String category = directOrNatural(command.category(), natural.category(), "category", parsed, conflicts);
         String creatorId = directOrNatural(command.creatorId(), natural.creatorId(), "creatorId", parsed, conflicts);
         List<String> tags = directTagsOrNatural(command.tags(), natural.tags(), parsed, conflicts);
 
         return new MergedConditions(
-                new NaturalLanguageInterpretation.AppliedConditions(query, district, category, creatorId, tags),
-                conflicts, command.regionCode());
+                new NaturalLanguageInterpretation.AppliedConditions(query, district, category, creatorId, tags, regionCode),
+                conflicts, regionCode);
+    }
+
+    private String codeForDistrict(String district) {
+        return district == null ? null : regionRepositoryPort.findByName(district)
+                .map(com.masiton.restaurant.domain.model.Region::getAdministrativeCode).orElse(null);
     }
 
     private SearchRestaurantsCommand toSearchCommand(
@@ -172,7 +183,7 @@ public class NaturalLanguageSearchService {
                 conditions.tags(),
                 command.page(),
                 command.size(),
-                command.regionCode());
+                conditions.regionCode());
     }
 
     private NaturalLanguageInterpretation.AppliedConditions directConditions(NaturalLanguageSearchCommand command) {
@@ -181,7 +192,8 @@ public class NaturalLanguageSearchService {
                 command.district(),
                 command.category(),
                 command.creatorId(),
-                command.tags());
+                command.tags(),
+                command.regionCode());
     }
 
     private String directOrNatural(
