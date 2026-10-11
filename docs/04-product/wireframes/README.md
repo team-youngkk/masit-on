@@ -7,6 +7,8 @@ related_documents:
   - ../prd/admin/admin-data-management.md
   - ../../05-specs/data/entity-definitions.md
   - ../../07-adr/platform/web-006-unified-login-rbac-route.md
+  - ../../05-specs/api/common/region-contract.md
+  - ../../05-specs/api/discovery/map-discovery-api.md
   - second-expansion-wireframes.md
   - third-expansion-wireframes.md
 ---
@@ -29,6 +31,12 @@ related_documents:
 
 이 화면 와이어프레임은 기능 계약을 새로 정의하지 않는다. 각 화면의 상태·오류·권한·반응형 세부 기준은 해당 PRD, API 계약과 [2차 확장 와이어프레임](second-expansion-wireframes.md), [3차 확장 와이어프레임](third-expansion-wireframes.md)을 따른다.
 
+### 1.2 전국 지역 선택과 지도 경계
+
+- 맛집 목록의 지역 선택은 시·도·시·군·구까지 전국을 지원한다.
+- 지도는 기존 서울 자치구 조건만 지원한다. 목록에서 `regionCode`를 선택하면 지도 메뉴를 링크로 표시하지 않고, “지도는 서울 자치구 필터만 지원합니다”라는 안내와 지역 필터 해제 행동을 제공한다.
+- 지역 코드를 제거해 사용자가 모르는 사이에 전국 또는 전체 맛집 지도로 이동시키지 않는다. 지역 목록과 맛집 상세 이동은 계속 사용할 수 있다.
+
 ## 2. 이미지별 단계 분류
 
 | 이미지 | 화면 | MVP 적용 | 제외 또는 후속 단계 |
@@ -43,7 +51,7 @@ related_documents:
 
 ### 공개 화면
 
-- `/` 또는 `/restaurants`: 맛집 목록, 이름 검색, 서울 자치구·음식 카테고리·유튜버 필터, 페이지 이동
+- `/` 또는 `/restaurants`: 맛집 목록, 이름 검색, 전국 지역·음식 카테고리·유튜버 필터, 페이지 이동. `regionCode` 선택 시 지도 미지원 안내를 표시한다.
 - `/restaurants/{restaurantId}`: 맛집 기본 정보, 카카오 장소 링크, 방문 유튜버와 관련 YouTube 영상
 - 영상이 없는 맛집의 상세: 기본 정보는 표시하고 콘텐츠 영역은 정상 빈 상태로 표현
 
