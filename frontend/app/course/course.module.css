@@ -331,6 +331,17 @@
   gap: var(--space-3);
 }
 
+.regionControls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.regionControls > .selectHint,
+.regionControls > .error {
+  grid-column: 1 / -1;
+}
+
 .favoriteSource {
   display: flex;
   flex-direction: column;
@@ -732,6 +743,12 @@
 
   .selectionActions {
     justify-content: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .regionControls {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

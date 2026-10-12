@@ -25,6 +25,7 @@ export type CourseSearchItem = {
 export type CourseSearchFilters = {
   query?: string
   district?: string
+  regionCode?: string
   category?: string
 }
 
@@ -54,8 +55,12 @@ export function buildCourseSearchParams(
   if (query) {
     params.set('query', query)
   }
-  if (filters.district) {
+  /* regionCode가 있으면 이름 기반 district를 함께 보내 API 상호배제 계약을 지킨다. */
+  if (filters.district && !filters.regionCode) {
     params.set('district', filters.district)
+  }
+  if (filters.regionCode) {
+    params.set('regionCode', filters.regionCode)
   }
   if (filters.category) {
     params.set('category', filters.category)
@@ -65,6 +70,15 @@ export function buildCourseSearchParams(
   params.set('size', SEARCH_PAGE_SIZE)
 
   return params
+}
+
+/* 코스 후보 검색 조건은 페이지 이동과 재시도 뒤에도 같은 URL로 복원한다. */
+export function buildCourseSearchHref(filters: CourseSearchFilters): string {
+  const params = buildCourseSearchParams(filters)
+  params.delete('page')
+  params.delete('size')
+  const query = params.toString()
+  return query ? `/course?${query}` : '/course'
 }
 
 /*
