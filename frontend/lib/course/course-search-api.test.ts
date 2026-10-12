@@ -3,6 +3,7 @@ import test from 'node:test'
 
 import {
   buildCourseSearchParams,
+  buildCourseSearchHref,
   normalizeCourseSearchItems,
   searchCourseCandidates,
 } from './course-search-api.ts'
@@ -23,6 +24,21 @@ test('공백을 제거한 검색어와 지정한 필터를 쿼리에 담는다',
   assert.equal(params.get('query'), '냉면')
   assert.equal(params.get('district'), '마포구')
   assert.equal(params.get('category'), '한식')
+})
+
+test('지역 코드는 이름이 아닌 행정 코드로 요청과 코스 URL에 보존한다', () => {
+  const filters = { query: '국밥', regionCode: '2611000000', category: '한식' }
+  const params = buildCourseSearchParams(filters)
+
+  assert.equal(params.get('regionCode'), '2611000000')
+  assert.equal(buildCourseSearchHref(filters), '/course?query=%EA%B5%AD%EB%B0%A5&regionCode=2611000000&category=%ED%95%9C%EC%8B%9D')
+})
+
+test('지역 코드가 있으면 기존 district를 함께 보내지 않는다', () => {
+  const params = buildCourseSearchParams({ district: '중구', regionCode: '2611000000' })
+
+  assert.equal(params.get('regionCode'), '2611000000')
+  assert.equal(params.has('district'), false)
 })
 
 test('형식이 어긋난 항목은 걸러내고 유효한 항목만 남긴다', () => {
