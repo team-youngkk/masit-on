@@ -1,5 +1,7 @@
 ---
 status: review-requested
+api_contract_status: approved
+architecture_status: Proposed
 issue: 400
 related_documents:
   - README.md
@@ -8,6 +10,7 @@ related_documents:
   - ../05-specs/api/discovery/natural-language-restaurant-discovery-api.md
   - ../05-specs/api/common/region-contract.md
   - ../07-adr/architecture/arch-005-natural-language-filter-interpretation.md
+  - ../07-adr/architecture/arch-006-national-natural-language-region-interpretation.md
   - third-expansion-evaluation-strategy.md
   - third-expansion-test-matrix.md
   - dynamic-natural-language-tag-dictionary.md
@@ -21,7 +24,13 @@ related_documents:
 
 ## 1. 범위와 승인 상태
 
-2026-10-11 사용자가 [#400](https://github.com/team-youngkk/masit-on/issues/400)의 문서화 후 구현·PR 작성을 요청했다. #394의 활성 전국 지역 마스터와 조회 범위를 재사용해 FR-NLSEARCH-001~003·FR-RESTAURANT-003을 확장한다. 이 문서와 API·PRD·ADR 후속 절은 소유자 리뷰 요청 상태다. 기존 팀 승인이나 과거 운영 평가 완료를 이 변경의 승인·검증 증거로 사용하지 않는다.
+2026-10-11 사용자가 [#400](https://github.com/team-youngkk/masit-on/issues/400)의 문서화 후 구현·PR 작성을 요청했다. #394의 활성 전국 지역 마스터와 조회 범위를 재사용해 FR-NLSEARCH-001~003·FR-RESTAURANT-003을 확장한다. API·지역 응답 계약은 아래 승인 기록으로 확정됐으며, 아키텍처는 새 [ADR-ARCH-006](../07-adr/architecture/arch-006-national-natural-language-region-interpretation.md)의 문서·CI 확인 후 최종 승인 대기다. 기존 팀 승인이나 과거 운영 평가 완료를 이 변경의 승인·검증 증거로 사용하지 않는다.
+
+| 결정 대상 | 상태 | 근거와 남은 조건 |
+|---|---|---|
+| P2 regionCode·직접 district 호환·충돌·PARTIAL/FAILED API 응답 | 승인 완료 | [김인안 2026-10-11 승인](https://github.com/team-youngkk/masit-on/pull/403#issuecomment-6107809352); 변경 요청 없음 |
+| P2 아키텍처 기록 방식 | 새 ADR 분리 결정 완료 | [이우람 2026-10-12 결정](https://github.com/team-youngkk/masit-on/pull/403#issuecomment-6116173635); ADR-ARCH-005 §11 확정 대신 ADR-ARCH-006 작성 |
+| 새 ADR 최종 승인 | Proposed·승인 대기 | 새 ADR·인덱스·추적표·본 계획의 갱신과 수정 커밋 CI 확인 후 이우람 승인; 기존 P1·Golden V1은 보존 |
 
 문서의 계약과 인수 조건을 먼저 작성한 뒤 구현한다. 새 의존성·마이그레이션·지역 마스터 변경·LLM·외부 호출은 추가하지 않는다. #398 코스·#399 지도·#401 전국 통합 인수는 별도 작업이다.
 
@@ -66,10 +75,16 @@ PR #169의 의심 입력·조회 없는 직접 검증·동일 값 비충돌·opa
 
 ## 5. 순서와 완료 조건
 
-1. 요구사항·PRD·API·지역 계약·ADR 후속 제안과 추적표·평가 조건을 문서화한다.
+1. 요구사항·PRD·API·지역 계약·독립 ADR-ARCH-006과 추적표·평가 조건을 문서화한다.
 2. 지역 Port/Adapter 공급, P2 해석·직접 필터 병합·실패 경로를 구현한다.
 3. 화면 지역 라벨과 충돌 표시를 반영한다.
 4. parser·Service·MockMvc·PostgreSQL 범위·UI 회귀, 기존 Golden V1·ArchUnit과 컴파일을 실행하고 독립 리뷰를 수행한다. 실행하지 못한 항목은 명시한다.
 5. 저장소 PR 템플릿으로 develop 대상 PR을 작성하고 `Closes #400`, 사용자 assignee·변경 범위 라벨·소유자 리뷰 요청·실측 검증 결과를 기록한다.
 
-이 문서는 검증 계획이다. 구현이나 테스트 통과·운영 완료를 이미 달성한 것으로 서술하지 않는다.
+1~5절은 계약·인수 계획이며 실측 구현·검증 결과는 6절에서 구분한다. 계획 작성이나 자동화 통과만으로 운영 완료를 선언하지 않는다.
+
+## 6. 구현·검증 기록과 이번 결정 반영
+
+[PR #403](https://github.com/team-youngkk/masit-on/pull/403)의 기존 구현은 승인된 API 계약과 일치한다. 이번 결정은 ADR 분리·승인 상태와 링크를 바로잡는 문서 변경이며 코드의 조건 해석·응답 변경을 요구하지 않는다.
+
+develop 동기화 커밋 `9d643a4` 기준 [CI](https://github.com/team-youngkk/masit-on/actions/runs/38127809534)는 백엔드·프론트·RSA 검사·Terraform 계약 검사에서 통과했다. 기존 WireMock 12건의 로컬 전체 빌드 HTTP 연결 오류는 단독 재실행과 해당 CI에서 재현되지 않았고, 최초 환경 원인을 특정한 것은 아니다. 이번 문서 수정 커밋의 CI는 별도로 확인한다. #401 실제 백엔드·브라우저 통합 인수와 실사용 부하·운영 완료는 이 기록으로 대체하지 않는다.

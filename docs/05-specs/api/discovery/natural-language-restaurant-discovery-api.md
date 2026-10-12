@@ -37,6 +37,7 @@ related_documents:
   - ../../../02-analysis/third-expansion-workstreams.md
   - ../../../02-analysis/third-expansion-domain-boundaries.md
   - ../../../07-adr/architecture/arch-005-natural-language-filter-interpretation.md
+  - ../../../07-adr/architecture/arch-006-national-natural-language-region-interpretation.md
   - ../../../08-planning/third-expansion-evaluation-strategy.md
   - ../../../08-planning/dynamic-natural-language-tag-dictionary.md
   - restaurant-discovery-api.md
@@ -53,7 +54,7 @@ related_documents:
 사용자의 자연어 문장을 기존 맛집 조건으로 해석하고, 기존 공개 맛집 목록을 반환한다. 이 API는 임베딩·벡터 유사도 검색·RAG·자유 형식 챗봇·결과 선정 이유 생성을 제공하지 않는다.
 
 - 입력 원문과 검색 이력은 저장하지 않는다.
-- 파서 해석 결과는 `restaurantName`, `regionCode`, `category`, `creatorId`, `tags` 조건으로 제한한다. `district`는 직접 필터의 서울 호환 필드다. #394의 전국 직접 필터에 이어 #400은 활성 전국 지역 마스터 기반 P2 해석을 추가한다. 지역 변경은 [지역 계층 계약](../common/region-contract.md)에 따르며 소유자 리뷰를 요청한다. 자연어 `tags`는 [AI 영상 추출 데이터 계약](../../data/third-expansion-ai-video-data-contract.md)의 `ACTIVE` 태그 정의 코드·표시명·별칭으로 해석하고, 목록 결과는 관리자 확정 `VisitTag`만 사용한다.
+- 파서 해석 결과는 `restaurantName`, `regionCode`, `category`, `creatorId`, `tags` 조건으로 제한한다. `district`는 직접 필터의 서울 호환 필드다. #394의 전국 직접 필터에 이어 #400은 활성 전국 지역 마스터 기반 P2 해석을 추가한다. 지역 변경은 [지역 계층 계약](../common/region-contract.md)을 따르며, #400 API 승인과 독립 ADR 최종 승인 대기는 9절에서 구분한다. 자연어 `tags`는 [AI 영상 추출 데이터 계약](../../data/third-expansion-ai-video-data-contract.md)의 `ACTIVE` 태그 정의 코드·표시명·별칭으로 해석하고, 목록 결과는 관리자 확정 `VisitTag`만 사용한다.
 - 실제 목록 조합·공개 상태·Visit 유효성·정렬·페이지네이션은 [맛집 탐색 API](restaurant-discovery-api.md)를 따른다.
 - 직접 지정 필터와 자연어 조건이 같은 종류에서 충돌하면 직접 지정 필터를 적용한다.
 
@@ -237,9 +238,9 @@ related_documents:
 
 ---
 
-## 9. #400 전국 자연어 지역 계약 — 소유자 리뷰 요청
+## 9. #400 전국 자연어 지역 계약 — API 승인 완료
 
-2026-10-11 사용자 요청으로 문서화 후 구현할 제안이다. 기존 Accepted 계약의 이력은 유지하고 이 절의 변경 승인은 PR에서 소유자에게 요청한다. [구현 계획·Golden 보충 사례](../../../08-planning/issue-400-national-natural-language-regions.md)를 따른다.
+이 절의 API·지역 응답 계약은 [김인안이 2026-10-11 승인](https://github.com/team-youngkk/masit-on/pull/403#issuecomment-6107809352)했다. 아키텍처는 [2026-10-12 분리 결정](https://github.com/team-youngkk/masit-on/pull/403#issuecomment-6116173635)에 따라 독립 [ADR-ARCH-006](../../../07-adr/architecture/arch-006-national-natural-language-region-interpretation.md)에 기록하며, 새 문서·수정 커밋 CI 확인 후 최종 승인 대기다. 기존 P1 이력은 보존하고 [구현 계획·Golden 보충 사례](../../../08-planning/issue-400-national-natural-language-regions.md)를 따른다.
 
 1. 활성 시·도/시·군·구 마스터의 표시명·확인된 시·도 별칭을 읽어 `regionCode`로 해석한다. 비활성 부모의 자식은 해석 후보에서 제외한다. `서울 마포구`는 `1144000000`, `경기도 수원시`는 해당 활성 수원시 코드로 적용한다.
 2. 하위 이름의 활성 후보가 여러 개면 명시한 부모로 좁힌다. `중구`·`강서구`처럼 부모 없는 동명 하위는 `UNRESOLVED_VALUE`이며 기존 서울 사전으로 강제하지 않는다. 미등록·비활성·틀린 지역과 불일치 부모·자식도 미해결로 남기고 이름 검색 조건으로 바꾸지 않는다.

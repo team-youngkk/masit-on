@@ -528,4 +528,4 @@ FR-AIEXTRACT-007·FR-NLSEARCH-004 → [맛집 상세 PRD](prd/detail/restaurant-
 
 ### 전국 자연어 지역 추적 — 이슈 #400
 
-FR-NLSEARCH-001~003·FR-RESTAURANT-003 → [자연어 PRD](prd/discovery/natural-language-restaurant-discovery.md) → [전국 지역 계약](../05-specs/api/common/region-contract.md) → [#400 계획·인수 조건](../08-planning/issue-400-national-natural-language-regions.md). P2 활성 전국 마스터·동명 지역 미해결·직접 필터 우선·동일 지역 비충돌·안전 표시명을 추적한다. 사용자 요청에 따른 소유자 리뷰 요청이며 P1 이력은 보존한다.
+FR-NLSEARCH-001~003·FR-RESTAURANT-003 → [자연어 PRD](prd/discovery/natural-language-restaurant-discovery.md) → [전국 지역 계약](../05-specs/api/common/region-contract.md) → [ADR-ARCH-006](../07-adr/architecture/arch-006-national-natural-language-region-interpretation.md) → [#400 계획·인수 조건](../08-planning/issue-400-national-natural-language-regions.md). P2 활성 전국 마스터·동명 지역 미해결·직접 필터 우선·동일 지역 비충돌·안전 표시명을 추적한다. API 승인 완료, 독립 ADR 최종 승인 대기이며 P1·Golden V1 이력은 보존한다.

@@ -1,6 +1,7 @@
 ---
 status: review-requested
 related_documents:
+  - ../../../07-adr/architecture/arch-006-national-natural-language-region-interpretation.md
   - ../../../00-overview/scope.md
   - ../../../01-requirements/functional-requirements.md
   - ../../../01-requirements/business-rules.md
@@ -60,17 +61,17 @@ related_documents:
 
 ## 5. 자연어 검색
 
-`POST /api/restaurants/natural-language-search`는 `filters.regionCode`를 받으며 일반 목록과 같은 검증·범위·`filters.district`와의 상호 배제를 적용한다. #400의 후속 범위에서는 활성 전국 마스터의 시·도/시·군·구를 `regionCode`로 해석한다. 해당 알고리즘 변경은 `parserVersion: P2`이며 [구현 계획](../../../08-planning/issue-400-national-natural-language-regions.md)의 소유자 리뷰 요청 대상이다.
+`POST /api/restaurants/natural-language-search`는 `filters.regionCode`를 받으며 일반 목록과 같은 검증·범위·`filters.district`와의 상호 배제를 적용한다. #400의 후속 범위에서는 활성 전국 마스터의 시·도/시·군·구를 `regionCode`로 해석한다. 해당 알고리즘 변경은 `parserVersion: P2`다. API 응답은 [김인안 승인](https://github.com/team-youngkk/masit-on/pull/403#issuecomment-6107809352) 완료이며, 독립 [ADR-ARCH-006](../../../07-adr/architecture/arch-006-national-natural-language-region-interpretation.md)과 [구현 계획](../../../08-planning/issue-400-national-natural-language-regions.md)의 아키텍처 최종 승인은 대기 중이다.
 
 직접 `regionCode` 또는 레거시 `district`가 있으면 자연어 지역 대신 직접 지역 조건을 적용한다. 직접 또는 자연어 지역 코드를 적용하면 `interpretation.appliedConditions.regionCode`에 코드를 반환하고 `district`는 `null`이다. 직접 레거시 `district`를 적용하면 `district`에 이름을 반환하고 `regionCode`는 `null`이다. 실제 불일치 또는 지역 해석의 미해결 상태는 전국 지역 `regionCode` 필드와 `DIRECT_FILTER_WON`으로 설명한다. 직접 지역과 자연어 지역의 실제 적용 지역이 같으면 충돌로 표시하지 않는다. 자연어로 확정한 전국 지역은 직접 코드가 없어도 `regionCode`에 반환한다. 직접 `district`를 적용하거나 의심 입력으로 적용 조건을 비운 응답의 `regionCode`는 `null`이다.
 
 의심 입력 등으로 조회하지 않는 실패 경로에서도 직접 지역·기타 필터의 유효성을 검증한다. 유효한 직접 필터가 있어도 의심 입력은 결과를 반환하지 않으며 전체 목록으로 대체하지 않는다.
 
-### 5.1. #400 전국 지역 해석 제안
+### 5.1. #400 전국 지역 해석 — API 승인 완료
 
 활성 부모·자식 마스터를 같은 해석 snapshot에서 확인한다. 동일 이름의 자식 후보가 여러 개면 명시한 부모로 좁히고, 부모 없이 `중구`·`강서구` 등을 선택하지 않는다. 미등록·비활성·틀린 지역 표현과 서로 맞지 않는 부모·자식은 `UNRESOLVED_VALUE`다. 다른 유효 조건만 적용할 수 있고, 조건이 없으면 전체 목록 대신 `FAILED`·빈 결과를 반환한다. 자연어 지역을 레거시 서울 `district`로 자동 대체하지 않는다.
 
-전국 자연어 코드도 4절의 조회 범위를 따른다. 직접 `regionCode`와 `district`의 상호 배제·코드 검증은 해석 전과 조회를 생략하는 실패 경로에 모두 적용한다. UI 지역 요약은 공개 마스터 이름을 사용하며 원시 코드를 표시하지 않는다. 이 절의 상태는 사용자 요청에 따른 소유자 리뷰 요청이며 팀 승인 완료를 뜻하지 않는다.
+전국 자연어 코드도 4절의 조회 범위를 따른다. 직접 `regionCode`와 `district`의 상호 배제·코드 검증은 해석 전과 조회를 생략하는 실패 경로에 모두 적용한다. UI 지역 요약은 공개 마스터 이름을 사용하며 원시 코드를 표시하지 않는다. 이 절의 API 승인 범위와 별도로 ADR-ARCH-006의 아키텍처 최종 승인·운영 완료는 대기 중이다. 문서 전체의 #394 리뷰 상태를 이 승인으로 소급 변경하지 않는다.
 
 ## 6. 등록·저장과 검증
 

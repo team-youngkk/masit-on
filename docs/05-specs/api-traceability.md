@@ -360,4 +360,4 @@ FR-AIEXTRACT-007·FR-NLSEARCH-004 → [API-ADMIN-VISIT-TAGS-001](api/admin/resta
 
 ### 전국 자연어 지역 추적 — 이슈 #400
 
-FR-NLSEARCH-001~003·FR-RESTAURANT-003 → API-DISCOVERY-NL-001·API-DISCOVERY-001·GET /api/regions → [#400 검증 계획](../08-planning/issue-400-national-natural-language-regions.md). P2 regionCode 해석·regionCode 충돌 필드·활성 부모/자식·동명 후보·상위 자신 포함·세종/제주·전체 목록 대체 금지·의심 입력 검증·사전 장애 503·코드 비노출을 검증한다. 소유자 리뷰 요청 상태다.
+FR-NLSEARCH-001~003·FR-RESTAURANT-003 → API-DISCOVERY-NL-001·API-DISCOVERY-001·GET /api/regions → [#400 검증 계획](../08-planning/issue-400-national-natural-language-regions.md) → [ADR-ARCH-006](../07-adr/architecture/arch-006-national-natural-language-region-interpretation.md). P2 regionCode 해석·regionCode 충돌 필드·활성 부모/자식·동명 후보·상위 자신 포함·세종/제주·전체 목록 대체 금지·의심 입력 검증·사전 장애 503·코드 비노출을 검증한다. API·지역 응답 승인 완료, 독립 ADR 최종 승인은 문서·CI 확인 후 대기 중이다.
