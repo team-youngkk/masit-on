@@ -357,3 +357,7 @@ FR-AIEXTRACT-007·FR-NLSEARCH-004 → [API-ADMIN-VISIT-TAGS-001](api/admin/resta
 [FR-ADMIN-006](../01-requirements/functional-requirements.md#fr-admin-006-관리자-태그-정의-생명주기-관리)·[BR-ADMIN-010](../01-requirements/business-rules.md#br-admin-010-태그-정의-상태와-감사) → [태그 정의 관리 API](api/admin/tag-definition-api.md#6-관리-목록상세변경-이력)와 [방문 태그 API](api/admin/restaurant-visit-tags-api.md) → 상태 필터·내용 수정·상태 전환·버전 충돌·append-only 감사·비활성 기존 연결 경계를 [구현 계획](../08-planning/admin-tag-definition-lifecycle.md)에서 검증한다.
 
 [FR-ADMIN-007](../01-requirements/functional-requirements.md#fr-admin-007-관리자-중복-태그-병합)·[BR-ADMIN-011](../01-requirements/business-rules.md#br-admin-011-중복-태그-병합과-근거-보존) → [태그 정의 병합 API](api/admin/tag-definition-api.md#8-중복-태그-병합) → ADMIN 미리보기·버전/fingerprint 확인·VisitTag 안전 이전·중복 provenance·append-only 병합 감사를 [구현 계획](../08-planning/tag-definition-merge.md)에서 검증한다.
+
+### 전국 자연어 지역 추적 — 이슈 #400
+
+FR-NLSEARCH-001~003·FR-RESTAURANT-003 → API-DISCOVERY-NL-001·API-DISCOVERY-001·GET /api/regions → [#400 검증 계획](../08-planning/issue-400-national-natural-language-regions.md) → [ADR-ARCH-006](../07-adr/architecture/arch-006-national-natural-language-region-interpretation.md). P2 regionCode 해석·regionCode 충돌 필드·활성 부모/자식·동명 후보·상위 자신 포함·세종/제주·전체 목록 대체 금지·의심 입력 검증·사전 장애 503·코드 비노출을 검증한다. API·지역 응답 승인 완료, 독립 ADR 최종 승인은 문서·CI 확인 후 대기 중이다.

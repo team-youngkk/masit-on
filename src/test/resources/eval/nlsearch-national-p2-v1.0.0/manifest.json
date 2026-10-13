@@ -1,0 +1,13 @@
+{
+  "datasetId": "nlsearch-national-p2-v1.0.0",
+  "parserVersion": "P2",
+  "caseCount": 32,
+  "masterReference": "db/reference/regions-2026-09-30.json",
+  "scope": "활성 전국 지역의 부모 문맥·동명·상위·하위·실패 계약 보충 평가",
+  "directFilterEvidence": "NaturalLanguageSearchApiTest의 동일 유효 지역·직접 우선·동시 지정·의심 입력 검증",
+  "historicalDataset": "nlsearch-golden-v1.0.0",
+  "historicalDatasetChanged": false,
+  "split": "REGRESSION",
+  "syntheticNegativeRegions": ["휴면구", "휴면도", "가림시"],
+  "approval": "소유자 리뷰 요청; 구현 계획의 필수 사례를 고정하고 역사적 P1 품질과 분리"
+}

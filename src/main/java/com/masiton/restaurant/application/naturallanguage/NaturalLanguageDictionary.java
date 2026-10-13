@@ -58,6 +58,15 @@ public final class NaturalLanguageDictionary {
         return builder.build();
     }
 
+    /** P2는 활성 마스터가 지역을 공급하며 정적 서울 후보를 사용하지 않는다. */
+    static NaturalLanguageDictionary national(
+            Map<String, String> creatorAliases, Map<String, ? extends Collection<String>> activeTagTerms) {
+        Builder builder = standardFields(creatorAliases);
+        builder.aliases.remove(ConditionField.DISTRICT);
+        activeTagTerms.forEach((tagCode, terms) -> builder.tagTerms(tagCode, terms));
+        return builder.build();
+    }
+
     private static Builder standardFields(Map<String, String> creatorAliases) {
         Builder builder = builder();
 

@@ -9,6 +9,7 @@ related_documents:
   - ../07-adr/adr-index.md
   - ../07-adr/adr-backlog.md
   - ../07-adr/adr-traceability.md
+  - ../07-adr/architecture/arch-006-national-natural-language-region-interpretation.md
 ---
 
 # 맛잇온 기술 정책
@@ -169,6 +170,8 @@ related_documents:
 - 관련: [ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md), [ADR-DEPLOY-006](../07-adr/platform/deploy-006-public-release-without-validation-gate.md), [ADR-WEB-006](../07-adr/platform/web-006-unified-login-rbac-route.md), [ADR-WEB-005](../07-adr/platform/web-005-application-port-binding.md), [docs/07-adr/adr-backlog.md](../07-adr/adr-backlog.md) 범위 충돌 검토, [RV-NFR-005](../01-requirements/non-functional-requirements.md#rv-nfr-005-목표-가용성과-복구-시간)·[RV-NFR-009](../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간)·[RV-NFR-010](../01-requirements/non-functional-requirements.md#rv-nfr-010-백업-주기와-복구-범위)·[RV-NFR-013](../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준).
 
 ## 14. 위반 검증 방법
+
+전국 자연어 지역 P2는 [ADR-ARCH-006](../07-adr/architecture/arch-006-national-natural-language-region-interpretation.md)에 별도 제안으로 기록한다. API·지역 응답은 승인됐지만 문서·수정 커밋 CI 확인 후 아키텍처 최종 승인 대기다. ADR-ARCH-005의 P1·Golden V1 역사와 공통 조회 경계를 보존하며, 새 ADR을 Accepted 정책으로 간주하지 않는다.
 
 - Gradle·npm 의존성에서 범위 버전, 직접 버전 중복과 미승인 의존성을 검사한다.
 - Wrapper, toolchain, Node·컨테이너 이미지와 CI 런타임 버전을 대조한다.

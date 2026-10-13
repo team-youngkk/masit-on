@@ -15,14 +15,17 @@ import com.masiton.restaurant.application.port.out.ActiveTagDictionaryPort;
 import com.masiton.restaurant.application.port.out.ActiveTagDictionaryUnavailableException;
 import com.masiton.restaurant.application.port.out.NaturalLanguageInterpretation;
 import com.masiton.restaurant.application.port.out.NaturalLanguageParser;
+import com.masiton.restaurant.application.port.out.RegionRepositoryPort;
+import org.springframework.dao.DataAccessException;
 
-/** P1 parser 담당 구현을 Restaurant Application의 해석기 Port에 연결하는 Adapter다. */
+/** 운영 P2와 역사적 P1 회귀 경로를 Restaurant Application의 해석기 Port에 연결한다. */
 @Component
 public final class NaturalLanguageParserAdapter implements NaturalLanguageParser {
 
     private final NaturalLanguageRestaurantParser delegate;
     private final GetPublicCreatorSelectionListUseCase creatorSelectionListUseCase;
     private final ActiveTagDictionaryPort activeTagDictionaryPort;
+    private final RegionRepositoryPort regionRepositoryPort;
 
     public NaturalLanguageParserAdapter() {
         this(new NaturalLanguageRestaurantParser(), null, null);
@@ -32,12 +35,22 @@ public final class NaturalLanguageParserAdapter implements NaturalLanguageParser
         this(new NaturalLanguageRestaurantParser(), creatorSelectionListUseCase, null);
     }
 
-    @Autowired
     public NaturalLanguageParserAdapter(
             GetPublicCreatorSelectionListUseCase creatorSelectionListUseCase,
             ActiveTagDictionaryPort activeTagDictionaryPort
     ) {
         this(new NaturalLanguageRestaurantParser(), creatorSelectionListUseCase, activeTagDictionaryPort);
+    }
+
+    @Autowired
+    public NaturalLanguageParserAdapter(
+            GetPublicCreatorSelectionListUseCase creatorSelectionListUseCase,
+            ActiveTagDictionaryPort activeTagDictionaryPort,
+            RegionRepositoryPort regionRepositoryPort) {
+        this.delegate = null;
+        this.creatorSelectionListUseCase = java.util.Objects.requireNonNull(creatorSelectionListUseCase);
+        this.activeTagDictionaryPort = java.util.Objects.requireNonNull(activeTagDictionaryPort);
+        this.regionRepositoryPort = java.util.Objects.requireNonNull(regionRepositoryPort);
     }
 
     NaturalLanguageParserAdapter(NaturalLanguageRestaurantParser delegate) {
@@ -51,6 +64,7 @@ public final class NaturalLanguageParserAdapter implements NaturalLanguageParser
         this.delegate = delegate;
         this.creatorSelectionListUseCase = creatorSelectionListUseCase;
         this.activeTagDictionaryPort = activeTagDictionaryPort;
+        this.regionRepositoryPort = null;
     }
 
     @Override
@@ -70,9 +84,14 @@ public final class NaturalLanguageParserAdapter implements NaturalLanguageParser
             Map<String, Collection<String>> tagTerms = new TreeMap<>();
             activeTagDictionaryPort.getActiveTagDictionary().definitions()
                     .forEach(definition -> tagTerms.put(definition.code(), definition.terms()));
+            if (regionRepositoryPort != null) {
+                return new NaturalLanguageRestaurantParser(
+                        NaturalLanguageDictionary.national(creatorAliases(), tagTerms),
+                        new NaturalLanguageRegionResolver(regionRepositoryPort.findAllActive()));
+            }
             return new NaturalLanguageRestaurantParser(
                     NaturalLanguageDictionary.standard(creatorAliases(), tagTerms));
-        } catch (ActiveTagDictionaryUnavailableException exception) {
+        } catch (ActiveTagDictionaryUnavailableException | DataAccessException exception) {
             throw new BusinessException(
                     HttpStatus.SERVICE_UNAVAILABLE,
                     "NATURAL_LANGUAGE_UNAVAILABLE",
@@ -112,7 +131,8 @@ public final class NaturalLanguageParserAdapter implements NaturalLanguageParser
                 source.district(),
                 source.category(),
                 source.creatorId(),
-                source.tags());
+                source.tags(),
+                source.regionCode());
     }
 
     private NaturalLanguageInterpretation.IgnoredCondition convert(IgnoredCondition source) {
@@ -136,6 +156,7 @@ public final class NaturalLanguageParserAdapter implements NaturalLanguageParser
         return switch (field) {
             case QUERY -> "query";
             case DISTRICT -> "district";
+            case REGION_CODE -> "regionCode";
             case CATEGORY -> "category";
             case CREATOR_ID -> "creatorId";
             case TAGS -> "tags";
