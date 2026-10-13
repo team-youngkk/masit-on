@@ -154,9 +154,10 @@ export function NaturalLanguageRestaurantSearch({ filters, returnTo, structuredF
       <form className={styles.form} onSubmit={(event) => { event.preventDefault(); void submit(sentence) }}>
         <label htmlFor="natural-language-sentence" className={styles.label}>원하는 조건</label>
         <div className={styles.controls}>
-          <input ref={searchInputRef} id="natural-language-sentence" className={styles.input} value={sentence} onChange={(event) => setSentence(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); void submit(sentence) } }} maxLength={500} required disabled={pending} placeholder="예: 성동구에서 냉면 먹기 좋은 곳" />
+          <input ref={searchInputRef} id="natural-language-sentence" className={styles.input} aria-describedby="natural-language-region-hint" value={sentence} onChange={(event) => setSentence(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); void submit(sentence) } }} maxLength={500} required disabled={pending} placeholder="예: 부산 해운대구에서 국밥 먹기 좋은 곳" />
           <Button type="submit" disabled={pending}>{pending ? '찾는 중…' : '찾아보기'}</Button>
         </div>
+        <p id="natural-language-region-hint" className={styles.tagHint}>이름이 같은 지역은 ‘부산 중구’처럼 시·도를 함께 적어주세요.</p>
         <fieldset className={styles.tags} disabled={pending}>
           <legend className={styles.label}>추천 조건 ({tags.length}/{NATURAL_LANGUAGE_TAG_LIMIT})</legend>
           <p className={styles.tagHint}>조건을 골라두면 입력한 내용과 함께 검색해요.</p>

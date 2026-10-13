@@ -1,8 +1,43 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { naturalLanguageFiltersKey } from './natural-language-filters-key.ts'
-import { NATURAL_LANGUAGE_TAG_OPTIONS, decodeNaturalLanguageResult, formatNaturalLanguageAppliedConditions, isNaturalLanguageRetryAllowed, naturalLanguageFieldGuidance, naturalLanguageFieldLabel, naturalLanguageFiltersFromFormData, naturalLanguageRetryDelay, searchRestaurantsByNaturalLanguage, toggleNaturalLanguageTag } from './natural-language-search-api.ts'
+import { regionLabels } from './regions.ts'
+import { NATURAL_LANGUAGE_TAG_OPTIONS, decodeNaturalLanguageResult, formatNaturalLanguageAppliedConditions, isNaturalLanguageRetryAllowed, naturalLanguageFieldGuidance, naturalLanguageFieldLabel, naturalLanguageConditionLabel, naturalLanguageFiltersFromFormData, naturalLanguageRetryDelay, searchRestaurantsByNaturalLanguage, toggleNaturalLanguageTag } from './natural-language-search-api.ts'
 const response = { interpretation: { status: 'APPLIED', appliedConditions: { query: null, district: '성동구', category: null, creatorId: 'opaque-id', tags: ['MENU_NAENGMYEON'] }, ignoredConditions: [], conflicts: [], parserVersion: 'P1' }, results: { items: [{ id: 'r-1', name: '냉면집', district: '성동구', category: '한식', visitedBy: [], remainingVisitedByCount: 0 }], page: { number: 1, size: 21, totalElements: 1, totalPages: 1, hasNext: false } } }; const filters = { query: null, district: null, category: null, creatorId: 'opaque-id', tags: [] }
+
+test('P2 자연어 지역은 상위 지역을 포함한 이름으로 표시하고 코드를 노출하지 않는다', () => {
+  const labels = regionLabels([
+    { code: '1100000000', name: '서울특별시', children: [{ code: '1114000000', name: '중구' }] },
+    { code: '2600000000', name: '부산광역시', children: [{ code: '2611000000', name: '중구' }] },
+  ])
+  const conditions = { ...filters, creatorId: null, regionCode: '2611000000' }
+  const decoded = decodeNaturalLanguageResult({
+    ...response,
+    interpretation: { ...response.interpretation, appliedConditions: conditions, parserVersion: 'P2' },
+  })
+  assert.ok(decoded)
+  assert.equal(decoded.interpretation.parserVersion, 'P2')
+  assert.deepEqual(formatNaturalLanguageAppliedConditions(decoded.interpretation.appliedConditions, {}, labels), ['지역: 부산광역시 중구'])
+  assert.deepEqual(formatNaturalLanguageAppliedConditions({ ...conditions, regionCode: '9999999999' }, {}, labels), ['지역: 선택한 지역'])
+})
+
+test('P2 지역 미해결과 직접 지역 우선 충돌을 구분해 유지한다', () => {
+  const conditions = { ...filters, creatorId: null, regionCode: '2600000000' }
+  const partial = decodeNaturalLanguageResult({
+    ...response,
+    interpretation: {
+      status: 'PARTIAL', appliedConditions: conditions, parserVersion: 'P2',
+      ignoredConditions: [{ type: 'UNRESOLVED', text: '해석할 수 없는 지역 조건', reason: 'UNRESOLVED_VALUE' }],
+      conflicts: [{ field: 'regionCode', resolution: 'DIRECT_FILTER_WON' }],
+    },
+  })
+  assert.ok(partial)
+  assert.equal(partial.interpretation.status, 'PARTIAL')
+  assert.equal(partial.interpretation.ignoredConditions[0].type, 'UNRESOLVED')
+  assert.equal(partial.interpretation.conflicts[0].resolution, 'DIRECT_FILTER_WON')
+  assert.equal(naturalLanguageConditionLabel(partial.interpretation.conflicts[0].field), '지역')
+  assert.equal(naturalLanguageConditionLabel('district'), '지역')
+})
 test('정상 응답은 opaque Creator ID와 함께 안전하게 해석한다', () => assert.equal(decodeNaturalLanguageResult(response)?.interpretation.appliedConditions.creatorId, 'opaque-id'))
 test('FAILED 빈 결과와 잘못된 응답을 구분한다', () => { assert.equal(decodeNaturalLanguageResult({}), null); const failed = structuredClone(response) as any; failed.interpretation.status = 'FAILED'; failed.interpretation.appliedConditions = { query: null, district: null, category: null, creatorId: null, tags: [] }; failed.results.items = []; assert.equal(decodeNaturalLanguageResult(failed)?.interpretation.status, 'FAILED') })
 test('429와 일시 오류만 재시도를 허용한다', () => { assert.equal(isNaturalLanguageRetryAllowed({ kind: 'invalid', message: 'bad', fieldGuidance: [] }), false); assert.equal(isNaturalLanguageRetryAllowed({ kind: 'rateLimited', message: 'slow', retryAvailableAt: null }), true); assert.equal(isNaturalLanguageRetryAllowed({ kind: 'error', message: 'server', retryAllowed: true }), true) })
@@ -36,7 +71,7 @@ test('전국 지역 직접 필터는 폼·요청·적용 안내·초기화 키�
     globalThis.fetch = previous
   }
 })
-test('적용 조건은 opaque ID와 태그 코드 대신 사용자용 이름을 표시한다', () => { assert.deepEqual(formatNaturalLanguageAppliedConditions(response.interpretation.appliedConditions, { 'opaque-id': '먹방연구소' }), ['자치구: 성동구', '유튜버: 먹방연구소', '태그: 냉면']); assert.deepEqual(formatNaturalLanguageAppliedConditions({ ...response.interpretation.appliedConditions, creatorId: 'unknown', tags: ['UNKNOWN'] }, {}), ['자치구: 성동구', '유튜버: 선택한 유튜버', '태그: 알 수 없는 태그']) })
+test('적용 조건은 opaque ID와 태그 코드 대신 사용자용 이름을 표시한다', () => { assert.deepEqual(formatNaturalLanguageAppliedConditions(response.interpretation.appliedConditions, { 'opaque-id': '먹방연구소' }), ['지역: 성동구', '유튜버: 먹방연구소', '태그: 냉면']); assert.deepEqual(formatNaturalLanguageAppliedConditions({ ...response.interpretation.appliedConditions, creatorId: 'unknown', tags: ['UNKNOWN'] }, {}), ['지역: 성동구', '유튜버: 선택한 유튜버', '태그: 알 수 없는 태그']) })
 test('같은 400도 오류 코드마다 다른 안내를 만든다', async () => { const previous = globalThis.fetch; const cases = [['NATURAL_LANGUAGE_EMPTY', []], ['INVALID_FIELD_VALUE', [{ field: 'filters.tags', reason: '최대 5개까지 허용합니다.' }]], ['INVALID_IDENTIFIER', [{ field: 'creatorId', reason: '식별자 형식이 올바르지 않습니다.' }]]] as const; const messages = new Set<string>(); try { for (const [code, errors] of cases) { globalThis.fetch = async () => new Response(JSON.stringify({ code, message: '요청 값을 확인해 주세요.', errors, traceId: 'trace-1' }), { status: 400 }); const outcome = await searchRestaurantsByNaturalLanguage('문장', filters); assert.equal(outcome.kind, 'invalid'); const invalid = outcome as { code?: string; message: string; fieldGuidance: Array<{ label: string; reason: string }> }; assert.equal(invalid.code, code); assert.equal(invalid.fieldGuidance.length, errors.length); messages.add(invalid.message) } assert.equal(messages.size, 3) } finally { globalThis.fetch = previous } })
 test('필드 안내는 filters 접두사를 벗기고 사용자용 라벨을 쓴다', () => { assert.equal(naturalLanguageFieldLabel('filters.tags'), '태그'); assert.equal(naturalLanguageFieldLabel('creatorId'), '유튜버'); assert.equal(naturalLanguageFieldLabel('sentence'), '검색 문장'); assert.equal(naturalLanguageFieldLabel('unknownField'), 'unknownField'); assert.deepEqual(naturalLanguageFieldGuidance([{ field: 'filters.query', reason: '최대 100자까지 허용합니다.' }, { field: 'district' }, 'bad']), [{ label: '이름', reason: '최대 100자까지 허용합니다.' }]) })
 test('알 수 없는 400 코드는 서버 메시지를 그대로 쓴다', async () => { const previous = globalThis.fetch; try { globalThis.fetch = async () => new Response(JSON.stringify({ code: 'UNMAPPED_CODE', message: '서버 문구', errors: [] }), { status: 400 }); const outcome = await searchRestaurantsByNaturalLanguage('문장', filters); assert.equal(outcome.kind === 'invalid' && outcome.message, '서버 문구') } finally { globalThis.fetch = previous } })

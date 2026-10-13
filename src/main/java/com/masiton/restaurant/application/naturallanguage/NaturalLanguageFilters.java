@@ -11,11 +11,17 @@ public record NaturalLanguageFilters(
         String district,
         String category,
         String creatorId,
-        List<String> tags) {
+        List<String> tags,
+        String regionCode) {
+
+    public NaturalLanguageFilters(String query, String district, String category, String creatorId, List<String> tags) {
+        this(query, district, category, creatorId, tags, null);
+    }
 
     public NaturalLanguageFilters {
         query = trimToNull(query);
         district = trimToNull(district);
+        regionCode = trimToNull(regionCode);
         category = trimToNull(category);
         creatorId = trimToNull(creatorId);
         tags = normalizeTags(tags);
@@ -29,6 +35,7 @@ public record NaturalLanguageFilters(
         return switch (Objects.requireNonNull(field)) {
             case QUERY -> query != null;
             case DISTRICT -> district != null;
+            case REGION_CODE -> regionCode != null;
             case CATEGORY -> category != null;
             case CREATOR_ID -> creatorId != null;
             case TAGS -> !tags.isEmpty();
@@ -39,6 +46,7 @@ public record NaturalLanguageFilters(
         return switch (Objects.requireNonNull(field)) {
             case QUERY -> query;
             case DISTRICT -> district;
+            case REGION_CODE -> regionCode;
             case CATEGORY -> category;
             case CREATOR_ID -> creatorId;
             case TAGS -> tags;

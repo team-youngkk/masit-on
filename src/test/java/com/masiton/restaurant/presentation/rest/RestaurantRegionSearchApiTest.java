@@ -98,6 +98,24 @@ class RestaurantRegionSearchApiTest {
     }
 
     @Test
+    @DisplayName("비활성 지역 코드는 조회하지 않고 400과 traceId로 거부한다")
+    void search_비활성지역코드_400을반환한다() throws Exception {
+        // given
+        String inactiveCode = "5013000000";
+        Region inactive = new Region(UUID.randomUUID(), "KR_" + inactiveCode, "서귀포시", (short) 2, false,
+                OffsetDateTime.now(), OffsetDateTime.now(), inactiveCode, UUID.randomUUID());
+        when(regions.findByAdministrativeCode(inactiveCode)).thenReturn(Optional.of(inactive));
+
+        // when / then
+        mockMvc.perform(get("/api/restaurants").param("regionCode", inactiveCode))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_FIELD_VALUE"))
+                .andExpect(jsonPath("$.errors[0].field").value("regionCode"))
+                .andExpect(jsonPath("$.traceId").isNotEmpty());
+        verify(queries, never()).search(any());
+    }
+
+    @Test
     @DisplayName("같은 지역 코드를 반복해도 복수 값으로 거부한다")
     void search_지역코드반복_400을반환한다() throws Exception {
         // given / when / then

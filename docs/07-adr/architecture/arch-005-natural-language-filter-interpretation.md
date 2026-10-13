@@ -15,6 +15,7 @@ related_requirements:
   - NFR-PERFORMANCE-007
   - NFR-SECURITY-007
 related_documents:
+  - arch-006-national-natural-language-region-interpretation.md
   - ../../02-analysis/third-expansion-domain-boundaries.md
   - ../../02-analysis/third-expansion-workstreams.md
   - ../../04-product/prd/discovery/natural-language-restaurant-discovery.md
@@ -33,6 +34,8 @@ superseded_by: null
 ## 1. 상태
 
 Accepted. 2026-08-10 팀 결정으로 P1의 지원 필드·태그·규칙 기반 해석·평가 목표를 확정했다.
+
+2026-10-12 아키텍처 소유자의 요청으로 전국 지역 P2 제안을 [ADR-ARCH-006](arch-006-national-natural-language-region-interpretation.md)에 분리했다. 이 문서의 Accepted P1·Golden V1 역사와 공통 조회 경계는 유지한다. P2 운영 지역 규칙·버전·평가 게이트의 최종 승인은 새 ADR에서 관리한다. 후속 제안과의 관계는 `related_documents`와 이력으로 연결하며, 승인 전 전체 대체를 뜻하는 `superseded_by`를 설정하지 않는다.
 
 ## 2. 결정 요약
 
@@ -110,3 +113,7 @@ Accepted. 2026-08-10 팀 결정으로 P1의 지원 필드·태그·규칙 기반
 - `ACTIVE` 사전 변경은 TTL 안에서 최대 30초 지연될 수 있다. TTL 만료 뒤 동시 요청은 하나의 갱신 결과를 공유하고, DB 조회 실패는 [자연어 맛집 탐색 API](../../05-specs/api/discovery/natural-language-restaurant-discovery-api.md)의 `NATURAL_LANGUAGE_UNAVAILABLE` 503으로 처리한다.
 - LLM·임베딩 도입은 현재 범위에 포함하지 않으며 별도 범위 변경·ADR·비용·개인정보 승인 없이는 허용하지 않는다.
 - API 오류·응답 Schema와 지연 목표는 [자연어 맛집 탐색 API](../../05-specs/api/discovery/natural-language-restaurant-discovery-api.md) 계약을 따른다.
+
+## 11. #400 P2 제안의 분리 이력
+
+[2026-10-12 아키텍처 결정](https://github.com/team-youngkk/masit-on/pull/403#issuecomment-6116173635)에 따라 기존 §11의 전국 지역 P2 제안은 [ADR-ARCH-006](arch-006-national-natural-language-region-interpretation.md)으로 이동했다. 이 절을 P1 결정의 확정 변경으로 사용하지 않는다. API 계약 승인과 새 ADR 최종 승인 상태는 [#400 구현 계획](../../08-planning/issue-400-national-natural-language-regions.md)에서 구분한다.

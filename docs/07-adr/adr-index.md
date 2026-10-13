@@ -39,6 +39,7 @@ related_documents:
   - integration/ext-004-youtube-periodic-reconciliation.md
   - integration/route-001-kakao-mobility-course-routing.md
   - architecture/arch-005-natural-language-filter-interpretation.md
+  - architecture/arch-006-national-natural-language-region-interpretation.md
   - integration/map-001-map-bounds-search.md
   - quality/test-001-automation-strategy.md
   - quality/obs-001-logging-observability.md
@@ -88,6 +89,7 @@ related_documents:
 | [ADR-EXT-001](integration/ext-001-reference-verification.md) | 관리자 외부 기준정보 확인 서비스 | Accepted | High | Kakao Local REST API V2, YouTube Data API v3 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 등록 | [문서](integration/ext-001-reference-verification.md) |
 | [ADR-EXT-005](integration/ext-005-kakao-place-periodic-revalidation.md) | 등록 후 Kakao 장소 주기 재검증과 안전 보정 | Proposed | High | Kakao Local REST API V2, PostgreSQL lease·JSONB audit | Issue #377 관리자 재검증 | [문서](integration/ext-005-kakao-place-periodic-revalidation.md) |
 | [ADR-ARCH-005](architecture/arch-005-natural-language-filter-interpretation.md) | 자연어 조건 해석과 기존 필터 조회 경계 | Accepted | High | P1 규칙·사전, TagDefinition·VisitTag | [WS-14](../02-analysis/third-expansion-workstreams.md#5-ws-14-자연어-맛집-탐색) | [문서](architecture/arch-005-natural-language-filter-interpretation.md) |
+| [ADR-ARCH-006](architecture/arch-006-national-natural-language-region-interpretation.md) | 전국 자연어 지역 해석 P2와 지역 마스터 경계 | Proposed | High | 활성 지역 마스터·출력 Port·regionCode·P2 | #400 / WS-14; API 승인 완료, 문서·CI 확인 후 아키텍처 승인 대기 | [문서](architecture/arch-006-national-natural-language-region-interpretation.md) |
 | [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md) | AI 영상 추출 후보 경계와 제공자 선택 기준 | Accepted | Critical | Gemini Free Tier 전용, `gemini-3.5-flash-lite`, 현재 P8/S2·기존 P1·P2·P3·P4·P5·P6·P7 이력 보존 | [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | [문서](integration/ai-001-video-extraction-candidate-boundary.md) |
 | [ADR-EXT-003](integration/ext-003-ai-extraction-async-reliability.md) | AI 추출 비동기 작업과 단일 EC2 복구 경계 | Accepted | Critical | PostgreSQL lease, 내부 Worker, Gemini retry | [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | [문서](integration/ext-003-ai-extraction-async-reliability.md) |
 | [ADR-ROUTE-001](integration/route-001-kakao-mobility-course-routing.md) | Kakao Mobility 자동차 경로와 코스 결과 경계 | Accepted | High | Kakao Mobility `/v1/directions`, 자동차 경로 | [WS-16](../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천) | [문서](integration/route-001-kakao-mobility-course-routing.md) |
