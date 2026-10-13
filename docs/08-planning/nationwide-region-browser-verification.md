@@ -86,13 +86,14 @@ API 응답의 지역 코드 적용·직접 필터 우선·미해결 구분을 �
 
 ## 6. 자동화 회귀 검증
 
-브라우저 러너를 새 의존성으로 추가하지 않고 기존 순수 상태·API 계약 테스트를 기준으로 회귀를 확인했다.
+브라우저 러너를 새 의존성으로 추가하지 않고 기존 순수 상태·API 계약 테스트를 기준으로 회귀를 확인했다. 프론트는 전체 build 스크립트로 자연어 테스트, 전체 프론트 테스트, 타입 검사, production build를 한 번에 실행했고, 백엔드는 clean build로 단위·통합·아키텍처 검사를 포함해 실행했다.
 
 | 명령 | 결과 |
 |---|---|
-| `npm.cmd test` (`frontend`, `origin/develop` 기준) | 368 passed, 0 failed |
-| `npm.cmd run typecheck` (`frontend`) | 성공 |
-| `./gradlew.bat test --no-daemon --console=plain` | `BUILD SUCCESSFUL` |
+| `npm.cmd run build` (`frontend`) | 자연어 18개 + 전체 360개 테스트 통과, TypeScript 통과, Next production build 성공 |
+| `./gradlew.bat clean build --no-daemon --console=plain` | `BUILD SUCCESSFUL` (8분 31초) |
+
+첫 프론트 병렬 실행에서는 Windows `.next` 산출물 디렉터리 생성 단계가 `EPERM`으로 중단됐으나, 해당 생성 산출물을 정리한 뒤 단독 재실행해 성공했다. 저장소 소스 변경이나 테스트 실패는 없었다.
 
 기존 테스트에는 전국 지역 코드·세종·제주·동명 지역·필터 초기화·지도 `regionCode` 차단·자연어 직접 지역 우선 및 코스 지역 마스터 계약이 포함돼 있다. 현재 저장소에는 Playwright/Cypress 실행 기반이 없고, 이번 이슈는 브라우저 매트릭스 수동 증적이 주 목적이므로 새 브라우저 의존성은 추가하지 않았다.
 
