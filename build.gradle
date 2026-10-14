@@ -49,6 +49,19 @@ ext {
      * BOM이 이 버전 이상으로 올라가면 이 항목을 지운다.
      */
     set('netty.version', '4.2.18.Final')
+
+    /*
+     * Spring Boot 4.1.0 BOM이 고정하는 Spring Framework 7.0.8에는 Trivy가
+     * CVE-2026-47884·CVE-2026-47890(CRITICAL)을 탐지했다. 두 취약점은 7.0.9에서
+     * 수정됐다. 개별 모듈 버전을 중복 선언하지 않고 BOM 속성 재정의를 사용한다.
+     */
+    set('spring-framework.version', '7.0.9')
+
+    /*
+     * Spring Boot 4.1.0 BOM이 고정하는 Jackson 3.1.4에는 Trivy가 HIGH 취약점을
+     * 탐지했다. 해당 취약점들의 3.1 계열 수정 기준선은 3.1.7이다.
+     */
+    set('jackson-bom.version', '3.1.7')
 }
 
 dependencies {
