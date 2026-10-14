@@ -51,7 +51,7 @@ class RegistrationUnitExecutionServiceTest {
 
     private final RegistrationUnitExecutionService service = new RegistrationUnitExecutionService(
             resolvePlaceIdentity, resolveFoodCategory, resolvePlacePhysicalReference, videoVerification,
-            duplicateRegistrationCheck, autoRegister);
+            autoRegister);
 
     @Test
     @DisplayName("상호명이 없으면 MISSING_REQUIRED_FIELD로 차단한다")
@@ -119,17 +119,19 @@ class RegistrationUnitExecutionServiceTest {
     }
 
     @Test
-    @DisplayName("같은 Kakao 장소 식별자의 맛집이 이미 있으면 유튜버·영상 조합과 무관하게 DUPLICATE_CONFLICT로 차단한다")
-    void execute_같은맛집이이미있으면_DUPLICATE_CONFLICT로차단한다() {
+    @DisplayName("기존 맛집은 차단하지 않고 검증된 새 영상과 방문 등록을 진행한다")
+    void execute_기존맛집_재사용등록을진행한다() {
         stubConfirmedPlace();
         stubResolvedCategory();
         stubVerifiedVideo();
-        when(duplicateRegistrationCheck.restaurantExists(KAKAO_PLACE_ID)).thenReturn(true);
+        when(autoRegister.register(any())).thenReturn(new AutoRegisterVerifiedContentUseCase.RegistrationResult(
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), false, true, true, true));
 
         RegistrationUnitExecutionResult result = service.execute(commandWithVisitEvidence());
 
-        assertThat(result.blockReason()).isEqualTo("DUPLICATE_CONFLICT");
-        verify(autoRegister, never()).register(any());
+        assertThat(result.confirmed()).isTrue();
+        assertThat(result.registration().restaurantCreated()).isFalse();
+        verify(autoRegister).register(any());
     }
 
     @Test
@@ -138,7 +140,6 @@ class RegistrationUnitExecutionServiceTest {
         stubConfirmedPlace();
         stubResolvedCategory();
         stubVerifiedVideo();
-        when(duplicateRegistrationCheck.restaurantExists(KAKAO_PLACE_ID)).thenReturn(false);
         AutoRegisterVerifiedContentUseCase.RegistrationResult registration =
                 new AutoRegisterVerifiedContentUseCase.RegistrationResult(
                         UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),

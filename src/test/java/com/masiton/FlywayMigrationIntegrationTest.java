@@ -51,9 +51,9 @@ class FlywayMigrationIntegrationTest extends com.masiton.test.FullContextIntegra
     private MemberSessionRevocationStore memberSessionRevocationStore;
 
     @Test
-    @DisplayName("빈 데이터베이스에 V1부터 V20까지 계약된 순서와 파일명으로 성공 기록된다")
-    void 마이그레이션적용_빈데이터베이스_V1부터V20까지계약된순서와파일명으로성공기록된다() {
-        // given: 컨텍스트 기동 시점에 Flyway가 V1부터 V20 변경을 적용했다.
+    @DisplayName("빈 데이터베이스에 V1부터 V21까지 계약된 순서와 파일명으로 성공 기록된다")
+    void 마이그레이션적용_빈데이터베이스_V1부터V21까지계약된순서와파일명으로성공기록된다() {
+        // given: 컨텍스트 기동 시점에 Flyway가 V1부터 V21 변경을 적용했다.
 
         // when
         List<AppliedMigration> appliedMigrations = jdbcTemplate.query(
@@ -107,7 +107,9 @@ class FlywayMigrationIntegrationTest extends com.masiton.test.FullContextIntegra
                 new AppliedMigration("19", "add restaurant kakao revalidation", "SQL",
                         "V19__add_restaurant_kakao_revalidation.sql", true),
                 new AppliedMigration("20", "add region hierarchy", "SQL",
-                        "V20__add_region_hierarchy.sql", true)
+                        "V20__add_region_hierarchy.sql", true),
+                new AppliedMigration("21", "allow ai restaurant and visit reuse", "SQL",
+                        "V21__allow_ai_restaurant_and_visit_reuse.sql", true)
         );
     }
 

@@ -179,3 +179,8 @@ candidate_fields JSON에는 registrationUnits를 변경 없이 저장하고 cand
 ## 이슈 #414 승인된 지역 단서 경계 (2026-10-14)
 
 소유자 합의에 따라 주소가 없는 S3 등록 단위는 명시적 candidateUnitId와 같은 restaurantName에 결속된 location의 시도·시군구를 장소 동일성 검색 단서로 사용할 수 있다. 주소가 존재하면 기존 주소를 우선하며 잘못된 주소를 location으로 대체하지 않는다. S2 전역 위치와 청량리시장 같은 상권명 단독 표현은 사용하지 않는다. 이름·행정구역·카테고리 및 단일 후보 기준, Kakao 물리 검증을 유지하고 location으로 주소를 추정하거나 저장하지 않는다. 상세 설계와 검증은 [이슈 414 설계](../../08-planning/issue-414-ai-contract-proposal.md)를 따른다.
+## 기존 맛집·방문 재사용 정책 (#419)
+
+2026-10-14 승인된 계약에 따라 기존 Kakao 장소 ID의 맛집과 동일 `(restaurant_id, creator_id, video_id)` 관계를 재사용한다. 외부 장소·채널·영상·방문 근거 검증은 동일하게 적용하고 DB transaction 밖에서 수행한다. 등록 transaction은 도메인별 `ON CONFLICT DO NOTHING`과 재조회로 동시 요청에 수렴하며 중간 실패는 신규 저장 전체를 롤백한다. 단순 존재를 `DUPLICATE_CONFLICT`로 차단하지 않는다. 기존 차단 감사 값의 조회·복구 안내는 보존한다.
+
+V21에서 reused_resources의 허용값을 restaurant·creator·video·visit로 확장한다. 별도 createdResources 컬럼 없이 이 배열의 여집합으로 생성 여부를 복원한다. 롤백·보상은 재사용 자원을 삭제하거나 비공개로 바꾸지 않는다. 신규 자원도 다른 방문·등록 단위·Snapshot이 참조하면 보존하며, row lock과 참조 확인 뒤 역순 보상한다. 일반 관리자 롤백은 기존 감사 보존용 PRIVATE 전환, 연결 실패 보상은 참조 없는 신규 자원 하드 삭제를 유지한다.

@@ -22,7 +22,6 @@ import com.masiton.orchestration.application.port.in.AutoRegisterVerifiedContent
 import com.masiton.orchestration.application.port.in.ExecuteRegistrationUnitUseCase;
 import com.masiton.orchestration.application.port.in.ResolveFoodCategoryUseCase;
 import com.masiton.orchestration.application.port.in.ResolvePlaceIdentityUseCase;
-import com.masiton.orchestration.application.port.out.DuplicateRegistrationCheckPort;
 import com.masiton.restaurant.application.port.in.ResolvePlacePhysicalReferenceUseCase;
 import com.masiton.video.application.port.in.ResolveVerifiedVideoUseCase;
 import com.masiton.video.application.port.out.VerifiedVideo;
@@ -53,7 +52,6 @@ class RegistrationUnitExecutionService implements ExecuteRegistrationUnitUseCase
     private final ResolveFoodCategoryUseCase resolveFoodCategory;
     private final ResolvePlacePhysicalReferenceUseCase resolvePlacePhysicalReference;
     private final ResolveVerifiedVideoUseCase videoVerification;
-    private final DuplicateRegistrationCheckPort duplicateRegistrationCheck;
     private final AutoRegisterVerifiedContentUseCase autoRegister;
 
     RegistrationUnitExecutionService(
@@ -61,13 +59,11 @@ class RegistrationUnitExecutionService implements ExecuteRegistrationUnitUseCase
             ResolveFoodCategoryUseCase resolveFoodCategory,
             ResolvePlacePhysicalReferenceUseCase resolvePlacePhysicalReference,
             ResolveVerifiedVideoUseCase videoVerification,
-            DuplicateRegistrationCheckPort duplicateRegistrationCheck,
             AutoRegisterVerifiedContentUseCase autoRegister) {
         this.resolvePlaceIdentity = resolvePlaceIdentity;
         this.resolveFoodCategory = resolveFoodCategory;
         this.resolvePlacePhysicalReference = resolvePlacePhysicalReference;
         this.videoVerification = videoVerification;
-        this.duplicateRegistrationCheck = duplicateRegistrationCheck;
         this.autoRegister = autoRegister;
     }
 
@@ -120,10 +116,6 @@ class RegistrationUnitExecutionService implements ExecuteRegistrationUnitUseCase
         if (!VisitEvidenceConfirmation.confirmsActualVisit(command.visitEvidence(), placeStep.name(),
                 verifiedVideo.channelName())) {
             return blocked("VISIT_EVIDENCE_REQUIRED");
-        }
-
-        if (isDuplicate(placeStep)) {
-            return blocked("DUPLICATE_CONFLICT");
         }
 
         AutoRegisterVerifiedContentUseCase.RegistrationResult registration = autoRegister.register(
@@ -198,15 +190,6 @@ class RegistrationUnitExecutionService implements ExecuteRegistrationUnitUseCase
         ResolveFoodCategoryUseCase.ResolvedFoodCategory resolved = resolution.resolvedFoodCategory();
         return new CategoryStep(resolved.foodCategoryId(), resolved.foodCategoryName(), resolved.resolvedBy(),
                 resolved.matchedMappingId());
-    }
-
-    /**
-     * 데이터 계약(third-expansion-ai-video-data-contract.md 11절)상 맛집은 재사용 대상이 아니다.
-     * 같은 {@code kakaoPlaceId}의 맛집이 이미 있으면 이 방문의 유튜버·영상 조합과 무관하게 항상
-     * {@code DUPLICATE_CONFLICT}로 차단한다.
-     */
-    private boolean isDuplicate(PlaceStep placeStep) {
-        return duplicateRegistrationCheck.restaurantExists(placeStep.kakaoPlaceId());
     }
 
     private boolean matchesVideo(RegistrationUnitExecutionCommand command, VerifiedVideo video) {

@@ -167,7 +167,7 @@ related_documents:
 | `registered_creator_id` | `uuid` | Yes | FK → `creator.id` | 등록하거나 재사용한 유튜버 |
 | `registered_video_id` | `uuid` | Yes | FK → `video.id` | 등록하거나 재사용한 영상 |
 | `registered_visit_id` | `uuid` | Yes | FK → `visit.id` | 같은 실행에서 만든 방문 관계 |
-| `reused_resources` | `jsonb` | NN | 배열, 허용값 `creator`·`video` CHECK | 새로 만들지 않고 재사용한 자원 |
+| `reused_resources` | `jsonb` | NN | 배열, 허용값 `restaurant`·`creator`·`video`·`visit` CHECK | 새로 만들지 않고 재사용한 자원 |
 | `executed_by` | `varchar(16)` | NN | `WORKER`·`ADMIN` CHECK | 등록 실행 주체 |
 | `decided_at` | 시간 | NN | 기본 현재 시각 | 판정 시각 |
 | `rolled_back_at` | 시간 | Yes | `MANUAL_OVERRIDE`에서만 non-null | 관리자 롤백 시각 |
@@ -189,7 +189,7 @@ related_documents:
 - 폐기는 등록 결과 컬럼을 건드리지 않고 `discarded_at`만 채운다. 롤백·폐기 완료 단위는 등록 API와 `review`의 모든 `decision`을 거절하는 종결 상태다.
 - API 응답의 `manualOverrideType`은 이 두 컬럼에서 계산한다. `rolled_back_at`이 있으면 `ROLLED_BACK`, `discarded_at`이 있으면 `DISCARDED`, 둘 다 없으면 `null`이다. 별도 컬럼으로 저장하지 않는다.
 - 맛집·유튜버·영상·방문 관계 4종 등록은 `BR-AIEXTRACT-011`에 따라 하나의 트랜잭션으로 저장한다. `executed_by`는 Worker 자동 실행과 관리자 실행을 구분하며 판정 기준은 두 경우가 같다.
-- 재사용이 일어나는 자원은 유튜버와 영상뿐이다. 맛집과 방문 관계는 같은 것이 이미 있으면 `DUPLICATE_CONFLICT`로 차단되어 등록 자체가 일어나지 않으므로 재사용 대상이 될 수 없다. `reused_resources`의 허용값을 `creator`·`video`로 좁혀 이 경계를 DB에서 강제한다.
+- 맛집·유튜버·영상·동일 방문 관계는 기존 식별자를 재사용한다. `reused_resources` 허용값은 `restaurant`·`creator`·`video`·`visit`이며 신규 생성 여부는 네 자원 중 이 배열에 없는 자원으로 복원한다. 기존 `creator`·`video` 감사 값은 그대로 유지한다. 기존 맛집의 필드·공개/생명주기 상태를 재사용 과정에서 덮어쓰지 않는다.
 - 유튜버·영상은 기존 행이 있으면 재사용한다. 재사용한 경우에도 참조 컬럼에 그 식별자를 기록하고 `reused_resources`에 자원 이름을 남긴다. 등록 단위 일괄 등록 API 응답은 감사 이력이 아니라 이 컬럼들에서 재구성한다.
 - 등록 단위의 실패는 같은 Snapshot의 다른 등록 단위 행과 그 정식 등록 결과를 변경하지 않는다. 원자성 경계는 등록 단위 하나다.
 - 관리자 사후 보정·롤백은 판정 이력을 덮어쓰지 않고 append-only 감사 이력을 추가한 뒤 `review_status`를 `MANUAL_OVERRIDE`로 전환한다.
@@ -521,3 +521,6 @@ S3 루트는 resultCompleteness, candidates, registrationUnits, missingFields, c
 candidate_fields JSON에는 registrationUnits를 변경 없이 저장하고 candidateUnitId와 메뉴 배열을 보존한다. 새 DB 컬럼·마이그레이션은 필요하지 않다. 등록 단위 unit_index는 Snapshot의 단위 배열에서 1부터 배정하되, 필드 소속은 candidateUnitId를 가진 단위 객체로만 결정한다. S1/S2 복수 식당은 순서로 결속하지 않고 보류하며 과거 Snapshot은 재작성하지 않는다.
 
 설계·검증 근거: [이슈 417 설계](../../08-planning/issue-417-ai-contract-proposal.md).
+### #419 등록 재사용·롤백 보호
+
+승인된 등록 재사용 정책의 상세 설계와 검증은 [이슈 #419 설계](../../08-planning/issue-419-ai-contract-proposal.md)에 따른다. V21은 기존 `reused_resources` CHECK 함수의 허용값만 확장한다. 롤백은 배열에 포함된 네 자원을 보존하며, 신규 자원도 다른 관계의 참조가 있으면 공개 상태와 행을 보존한다. 신규 자원 생성 중 실패는 기존 ON CONFLICT 기반 등록 transaction에서 전체 롤백한다.
