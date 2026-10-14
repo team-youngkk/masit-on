@@ -10,6 +10,7 @@ type Props = {
   regionCode: string
   district: string
   disabled: boolean
+  submitOnChange?: boolean
   formId: string
   className: string
   controlClassName: string
@@ -18,7 +19,7 @@ type Props = {
   selectedOptionClassName: string
 }
 
-export function RegionFilter({ provinces, regionCode, district, disabled, ...selectProps }: Props) {
+export function RegionFilter({ provinces, regionCode, district, disabled, submitOnChange = false, ...selectProps }: Props) {
   const [selection, setSelection] = useState({ regionCode, district })
   const { province, child } = regionSelection(provinces, selection.regionCode, selection.district)
   const change = (code: string) => setSelection(changeRegionSelection(code))
@@ -28,6 +29,7 @@ export function RegionFilter({ provinces, regionCode, district, disabled, ...sel
     {selection.district ? <input type="hidden" name="district" value={selection.district} form={selectProps.formId} /> : null}
     <FilterSelect
       {...selectProps}
+      submitOnChange={submitOnChange}
       id="province"
       options={provinces.map(({ code, name }) => ({ value: code, label: name }))}
       value={province?.code ?? ''}
@@ -37,6 +39,7 @@ export function RegionFilter({ provinces, regionCode, district, disabled, ...sel
     />
     <FilterSelect
       {...selectProps}
+      submitOnChange={submitOnChange}
       key={province?.code ?? ''}
       id="municipality"
       options={province?.children.map(({ code, name }) => ({ value: code, label: name })) ?? []}

@@ -316,6 +316,7 @@ export default async function RestaurantsPage({
                 regionCode={currentRegionCode}
                 district={currentDistrict}
                 disabled={!regionsResult.ok}
+                submitOnChange
                 formId="structured-restaurant-search"
                 className={styles.select}
                 controlClassName={styles.selectControl}
@@ -329,6 +330,7 @@ export default async function RestaurantsPage({
                   id="category"
                   formId="structured-restaurant-search"
                   name="category"
+                  submitOnChange
                   options={categoryOptions.map((category) => ({
                     value: category,
                     label: category,
@@ -350,6 +352,7 @@ export default async function RestaurantsPage({
                     id="creatorId"
                     formId="structured-restaurant-search"
                     name="creatorId"
+                    submitOnChange
                     options={creatorsResult.data.items.map((creator) => ({
                       value: creator.id,
                       label: creator.channelName,
@@ -368,6 +371,7 @@ export default async function RestaurantsPage({
                       id="creatorId"
                       formId="structured-restaurant-search"
                       name="creatorId"
+                      submitOnChange
                       options={[]}
                       value=""
                       submittedValue={currentCreatorId ?? ''}
