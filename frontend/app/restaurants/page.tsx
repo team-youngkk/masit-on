@@ -437,6 +437,7 @@ export default async function RestaurantsPage({
             <p className={styles.creatorError} role="alert">
               {regionsResult.message}
               {regionsResult.traceId ? <span className={styles.traceId}>traceId: {regionsResult.traceId}</span> : null}
+              <a href={currentRoute}>다시 시도</a>
             </p>
           ) : null}
           {!filterOptionsResult.ok ? (
