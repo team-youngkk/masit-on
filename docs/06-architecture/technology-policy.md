@@ -36,6 +36,7 @@ related_documents:
 |---|---|---|
 | Java | JDK 21.0.12 LTS | MVP Accepted |
 | 백엔드 프레임워크 | Spring Boot 4.1.0 | MVP Accepted |
+| Spring Framework | 7.0.9 | `M2-06`에서 BOM 속성(`spring-framework.version`) 재정의로 고정. Spring Boot 4.1.0 BOM의 7.0.8에 Trivy가 CVE-2026-47884·CVE-2026-47890(CRITICAL)을 탐지해 올렸다. BOM이 이 버전 이상으로 올라가면 재정의를 제거한다 |
 | Spring Security | 7.1.0, Spring Boot BOM 관리 | 관리자 JWT 인증·인가에 적용 |
 | 빌드 | Gradle 8.14.3 + Groovy DSL | MVP Accepted |
 | DB 마이그레이션 | Flyway 12.4.0 | MVP Accepted |
@@ -55,6 +56,7 @@ related_documents:
 | PostgreSQL JDBC 드라이버 | 42.7.13 | `M2-06`에서 BOM 속성(`postgresql.version`) 재정의로 고정. Spring Boot 4.1.0 BOM의 42.7.11에 CVE-2026-54291(HIGH)이 있어 올렸다. BOM이 이 버전 이상으로 올라가면 재정의를 제거한다 |
 | Apache Tomcat embedded | 11.0.25 | `M2-06`에서 BOM 속성(`tomcat.version`) 재정의로 고정. Spring Boot 4.1.0 BOM의 11.0.22에 Trivy가 CRITICAL로 탐지한 CVE-2026-65182·CVE-2026-65905·CVE-2026-68525가 있어 올렸다. BOM이 이 버전 이상으로 올라가면 재정의를 제거한다 |
 | Netty | 4.2.18.Final | Spring Boot 4.1.0 BOM의 4.2.15.Final에서 Trivy가 CVE-2026-75595(CRITICAL)를 탐지해 BOM 속성(`netty.version`)을 재정의했다. 취약점은 4.2.17.Final에서 수정됐고, 4.2.18.Final은 Netty의 보안 릴리즈다. BOM이 이 버전 이상으로 올라가면 재정의를 제거한다 |
+| Jackson 3 | 3.1.7 | `M2-06`에서 BOM 속성(`jackson-bom.version`) 재정의로 고정. Spring Boot 4.1.0 BOM의 3.1.4에 Trivy가 HIGH 취약점을 탐지해 3.1 계열 수정 기준선으로 올렸다. BOM이 이 버전 이상으로 올라가면 재정의를 제거한다 |
 | 백엔드 컨테이너 베이스 이미지 | `amazoncorretto:21.0.12-alpine` (digest 고정) | `M2-06`에서 고정. eclipse-temurin이 21.0.12 이미지를 배포하지 않아 [ADR-LANG-001](../07-adr/platform/lang-001-java-21-runtime.md)의 패치 일치를 지키려면 다른 벤더가 필요했다. temurin이 21.0.12를 배포하면 되돌린다 |
 | 프론트엔드 컨테이너 베이스 이미지 | `node:24.18.0-alpine` (digest 고정) | `M2-06`에서 고정 |
 | 컨테이너 취약점 스캐너 | `aquasec/trivy:0.72.0` (digest 고정) | `M2-06`에서 고정. CI 전용이며 운영 이미지에 포함되지 않는다. 차단 기준은 수정 버전이 있는 `CRITICAL`·`HIGH` |
