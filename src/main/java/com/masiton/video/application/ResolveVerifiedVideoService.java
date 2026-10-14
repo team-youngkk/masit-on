@@ -25,7 +25,9 @@ public class ResolveVerifiedVideoService implements ResolveVerifiedVideoUseCase 
         try {
             return videoVerificationPort.verify(sourceUrl);
         } catch (VideoVerificationFailedException exception) {
-            throw new BusinessException(ErrorCode.EXTERNAL_SERVICE_ERROR);
+            BusinessException failure = new BusinessException(ErrorCode.EXTERNAL_SERVICE_ERROR);
+            failure.initCause(exception);
+            throw failure;
         }
     }
 }
