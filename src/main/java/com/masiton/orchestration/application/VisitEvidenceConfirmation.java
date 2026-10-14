@@ -15,7 +15,7 @@ import com.masiton.orchestration.application.port.in.VerifyAiContentCandidateUse
  * Worker/관리자 단일 후보 검증({@link VerifyAiContentCandidateService})과 등록 단위 실행
  * ({@link RegistrationUnitExecutionService})이 모두 이 클래스를 호출한다.
  *
- * <p>이 클래스는 기계적 추출이며 판단 로직 자체는 바꾸지 않는다.</p>
+ * <p>완료형 문장 끝의 마침표·느낌표를 정규화하며 방문 근거 조건은 공유한다.</p>
  */
 final class VisitEvidenceConfirmation {
 
@@ -65,11 +65,11 @@ final class VisitEvidenceConfirmation {
     }
 
     private static String normalizeClaim(String value) {
-        return normalizeText(value).replaceAll("\\s+", "").replaceFirst("[.。]+$", "");
+        return normalizeText(value).replaceAll("\\s+", "").replaceFirst("[.。!！]+$", "");
     }
 
     private static String normalizePhrase(String value) {
-        return value.trim().replaceAll("\\s+", " ").replaceFirst("[.。]+$", "").toLowerCase(Locale.ROOT);
+        return value.trim().replaceAll("\\s+", " ").replaceFirst("[.。!！]+$", "").toLowerCase(Locale.ROOT);
     }
 
     private static boolean hasBlockingVisitContext(String normalized) {

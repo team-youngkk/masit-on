@@ -33,6 +33,12 @@ related_documents:
   - admin-tag-definition-creation.md
   - dynamic-natural-language-tag-dictionary.md
   - issue-400-national-natural-language-regions.md
+  - issue-418-visit-evidence-punctuation.md
+---
+
+# 맛잇온 구현 계획
+
+- [#418 방문 근거 문장부호 정규화](issue-418-visit-evidence-punctuation.md)
   - issue-415-national-place-diagnosis.md
 ---
 
