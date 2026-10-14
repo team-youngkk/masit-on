@@ -33,9 +33,12 @@ related_documents:
   - admin-tag-definition-creation.md
   - dynamic-natural-language-tag-dictionary.md
   - issue-400-national-natural-language-regions.md
+  - issue-415-national-place-diagnosis.md
 ---
 
 # 맛잇온 구현 계획
+
+- [#415 전국 주소와 인천 장소 검색 진단](issue-415-national-place-diagnosis.md)
 
 | 문서 | 목적 |
 |---|---|
