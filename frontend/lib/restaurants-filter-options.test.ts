@@ -56,6 +56,22 @@ test('지역 응답의 잘못된 구조와 중복 코드 및 네트워크 실패
   assert.equal((await fetchRegions()).ok, false)
 })
 
+test('지역 목록 요청이 실패한 뒤 다시 요청하면 복구된 응답을 사용한다', async (t: any) => {
+  const originalFetch = globalThis.fetch
+  t.after(() => { globalThis.fetch = originalFetch })
+  let attempts = 0
+  globalThis.fetch = (async () => {
+    attempts += 1
+    return attempts === 1
+      ? Response.json({ message: '일시 오류' }, { status: 503 })
+      : Response.json({ items: provinces })
+  }) as typeof fetch
+
+  assert.equal((await fetchRegions()).ok, false)
+  assert.deepEqual(await fetchRegions(), { ok: true, data: provinces })
+  assert.equal(attempts, 2)
+})
+
 test('지역 코드와 모든 검색 조건을 목록 요청과 페이지 이동에서 보존한다', () => {
   const params = buildApiSearchParams({ query: ' 국밥 ', regionCode: ['2611000000', '1114000000'], category: '한식', creatorId: 'creator-1', tag: 'MENU_GUKBAP', page: '3', size: '50' })
   const next = new URL(buildRestaurantsHref(params, 4), 'https://example.com').searchParams

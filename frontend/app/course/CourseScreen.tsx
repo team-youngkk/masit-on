@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useMemberSession } from '@/components/member/MemberSessionProvider'
 import { Button } from '@/components/ui/Button'
@@ -210,36 +210,42 @@ function LiveCourseScreen({ initialFilters }: { initialFilters: CourseSearchFilt
     [],
   )
 
-  useEffect(() => {
+  const loadRegions = useCallback(async () => {
+    regionsAbortController.current?.abort()
     const controller = new AbortController()
     regionsAbortController.current = controller
+    setRegions((current) => ({ ...current, status: 'loading', message: undefined, traceId: undefined }))
 
-    void fetchCourseRegions(controller.signal)
-      .then((result) => {
-        if (regionsAbortController.current !== controller) return
-        if (result.ok) {
-          setRegions({ status: 'loaded', items: result.items })
-        } else {
-          setRegions({ status: 'error', items: [], message: result.message, traceId: result.traceId })
-        }
-      })
-      .catch((error) => {
-        if (!isAbortError(error) && regionsAbortController.current === controller) {
-          setRegions({
-            status: 'error',
-            items: [],
-            message: '지역 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
-          })
-        }
-      })
-      .finally(() => {
-        if (regionsAbortController.current === controller) {
-          regionsAbortController.current = null
-        }
-      })
-
-    return () => controller.abort()
+    try {
+      const result = await fetchCourseRegions(controller.signal)
+      if (regionsAbortController.current !== controller) return
+      if (result.ok) {
+        setRegions({ status: 'loaded', items: result.items })
+      } else {
+        setRegions({ status: 'error', items: [], message: result.message, traceId: result.traceId })
+      }
+    } catch (error) {
+      if (!isAbortError(error) && regionsAbortController.current === controller) {
+        setRegions({
+          status: 'error',
+          items: [],
+          message: '지역 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
+        })
+      }
+    } finally {
+      if (regionsAbortController.current === controller) {
+        regionsAbortController.current = null
+      }
+    }
   }, [])
+
+  useEffect(() => {
+    void loadRegions()
+
+    return () => {
+      regionsAbortController.current?.abort()
+    }
+  }, [loadRegions])
 
   useEffect(() => {
     if (memberStatus === 'authenticated') return
@@ -627,6 +633,7 @@ function LiveCourseScreen({ initialFilters }: { initialFilters: CourseSearchFilt
               <div className={styles.error} role="alert">
                 <p>{regions.message}</p>
                 {regions.traceId ? <span className={styles.traceId}>traceId: {regions.traceId}</span> : null}
+                <Button type="button" variant="secondary" onClick={() => void loadRegions()}>다시 시도</Button>
                 {regionCode ? <Button type="button" variant="secondary" onClick={() => changeRegion('')}>지역 조건 해제</Button> : null}
               </div>
             ) : null}

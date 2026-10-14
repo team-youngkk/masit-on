@@ -34,3 +34,17 @@ test('잘못된 지역 응답과 오류 응답은 안전한 오류 결과로 닫
     traceId: 'trace-region',
   })
 })
+
+test('지역 목록 요청이 실패한 뒤 다시 요청하면 복구된 응답을 사용한다', async (t) => {
+  let attempts = 0
+  t.mock.method(globalThis, 'fetch', async () => {
+    attempts += 1
+    return attempts === 1
+      ? Response.json({ message: '일시 오류' }, { status: 503 })
+      : Response.json({ items: regions })
+  })
+
+  assert.equal((await fetchCourseRegions()).ok, false)
+  assert.deepEqual(await fetchCourseRegions(), { ok: true, items: regions })
+  assert.equal(attempts, 2)
+})
