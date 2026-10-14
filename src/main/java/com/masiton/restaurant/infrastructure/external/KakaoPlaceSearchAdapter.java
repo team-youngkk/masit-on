@@ -81,6 +81,28 @@ class KakaoPlaceSearchAdapter implements PlaceSearchPort {
         return candidates;
     }
 
+    @Override
+    public List<PlaceSearchCandidate> searchCandidates(String name, String district) {
+        try {
+            KakaoLocalKeywordClient.KakaoKeywordResponse response = client.searchCandidates(name, district);
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                throw new PlaceSearchFailedException();
+            }
+            List<CandidateConversion> conversions = response.documents().stream().map(this::toCandidate).toList();
+            if (conversions.stream().anyMatch(conversion -> conversion.candidate().isEmpty())) {
+                throw new PlaceSearchFailedException();
+            }
+            Map<String, PlaceSearchCandidate> unique = new java.util.LinkedHashMap<>();
+            for (CandidateConversion conversion : conversions) {
+                PlaceSearchCandidate candidate = conversion.candidate().orElseThrow();
+                unique.putIfAbsent(candidate.kakaoPlaceUrl(), candidate);
+            }
+            return List.copyOf(unique.values());
+        } catch (KakaoLocalKeywordClient.KakaoLocalKeywordClientException exception) {
+            throw new PlaceSearchFailedException(exception);
+        }
+    }
+
     /** 도로명주소나 장소 링크가 없으면 등록에 쓸 수 없으므로 이 문서를 조용히 제외한다. */
     private CandidateConversion toCandidate(Map<String, Object> document) {
         String name = stringValue(document.get("place_name"));

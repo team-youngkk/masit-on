@@ -27,9 +27,33 @@ class ResolvePlaceIdentityServiceTest {
             placeSearchPort, categoryMapping, relaxedMatchingEnabled);
 
     @Test
+    @DisplayName("지역 단서는 정규화된 시도와 자치구로 검색 경계에 전달한다")
+    void resolve_지역단서_정규화시도로전달() {
+        given(placeSearchPort.searchCandidates("행복식당", "부산광역시 중구")).willReturn(List.of());
+
+        var result = service.resolve(new PlaceIdentityCommand("행복식당", "부산 중구 중앙대로 10"));
+
+        assertThat(result.status()).isEqualTo(PlaceIdentityStatus.PLACE_NOT_FOUND);
+        org.mockito.Mockito.verify(placeSearchPort).searchCandidates("행복식당", "부산광역시 중구");
+        org.mockito.Mockito.verify(placeSearchPort, org.mockito.Mockito.never()).search(org.mockito.ArgumentMatchers.anyString());
+    }
+
+    @Test
+    @DisplayName("불완전한 검색 수집 오류는 장소를 확정하거나 미발견으로 바꾸지 않는다")
+    void resolve_불완전후보수집_외부실패전파() {
+        var failure = new com.masiton.restaurant.application.PlaceSearchFailedException();
+        given(placeSearchPort.searchCandidates("행복식당", "서울특별시 마포구")).willThrow(failure);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.resolve(
+                new PlaceIdentityCommand("행복식당", "서울특별시 마포구 월드컵로 1"))).isSameAs(failure);
+
+        org.mockito.Mockito.verifyNoInteractions(categoryMapping);
+    }
+
+    @Test
     @DisplayName("이름 완전일치와 시구 일치를 만족하는 결과가 정확히 1건이면 확정한다")
     void resolve_이름과시구가일치하는결과가하나_확정한다() {
-        given(placeSearchPort.search("행복식당")).willReturn(List.of(
+        given(placeSearchPort.searchCandidates(org.mockito.ArgumentMatchers.eq("행복식당"), org.mockito.ArgumentMatchers.anyString())).willReturn(List.of(
                 new PlaceSearchCandidate("행복식당", "https://place.map.kakao.com/1",
                         "서울특별시 영등포구 도림로131길 17", "02-000-0000", "음식점 > 한식 > 냉면")));
 
@@ -48,7 +72,7 @@ class ResolvePlaceIdentityServiceTest {
     @DisplayName("전국 동명 자치구의 후보는 시도까지 일치해야 확정한다")
     void resolve_전국동명구후보_같은시도후보만확정한다() {
         // Given
-        given(placeSearchPort.search("행복식당")).willReturn(List.of(
+        given(placeSearchPort.searchCandidates(org.mockito.ArgumentMatchers.eq("행복식당"), org.mockito.ArgumentMatchers.anyString())).willReturn(List.of(
                 new PlaceSearchCandidate("행복식당", "https://place.map.kakao.com/seoul",
                         "서울특별시 중구 세종대로 1", "02-123-4567", "한식"),
                 new PlaceSearchCandidate("행복식당", "https://place.map.kakao.com/busan",
@@ -63,7 +87,7 @@ class ResolvePlaceIdentityServiceTest {
     @Test
     @DisplayName("공백과 대소문자 차이는 정규화 후 비교해 확정한다")
     void resolve_공백과대소문자차이_정규화후확정한다() {
-        given(placeSearchPort.search("ABC Cafe")).willReturn(List.of(
+        given(placeSearchPort.searchCandidates(org.mockito.ArgumentMatchers.eq("ABC Cafe"), org.mockito.ArgumentMatchers.anyString())).willReturn(List.of(
                 new PlaceSearchCandidate("abccafe", "https://place.map.kakao.com/1",
                         "서울특별시 마포구 월드컵로 1", "02-000-0000", "카페")));
 
@@ -75,7 +99,7 @@ class ResolvePlaceIdentityServiceTest {
     @Test
     @DisplayName("정확 일치 후보가 있으면 완화 후보가 있어도 정확 일치 결과를 우선한다")
     void resolve_정확일치와완화후보가함께있으면_정확일치를우선한다() {
-        given(placeSearchPort.search("우래옥")).willReturn(List.of(
+        given(placeSearchPort.searchCandidates(org.mockito.ArgumentMatchers.eq("우래옥"), org.mockito.ArgumentMatchers.anyString())).willReturn(List.of(
                 new PlaceSearchCandidate("우래옥", "https://place.map.kakao.com/exact",
                         "서울특별시 중구 세종대로 1", "02-000-0000", null),
                 new PlaceSearchCandidate("우래옥 본점", "https://place.map.kakao.com/relaxed",
@@ -92,7 +116,7 @@ class ResolvePlaceIdentityServiceTest {
     @Test
     @DisplayName("정확 일치 후보가 여러 개면 완화 후보가 있어도 모호하게 차단한다")
     void resolve_정확일치가여러개이고완화후보가있으면_모호하게차단한다() {
-        given(placeSearchPort.search("우래옥")).willReturn(List.of(
+        given(placeSearchPort.searchCandidates(org.mockito.ArgumentMatchers.eq("우래옥"), org.mockito.ArgumentMatchers.anyString())).willReturn(List.of(
                 new PlaceSearchCandidate("우래옥", "https://place.map.kakao.com/exact-1",
                         "서울특별시 중구 세종대로 1", "02-000-0000", null),
                 new PlaceSearchCandidate("우래옥", "https://place.map.kakao.com/exact-2",
@@ -110,7 +134,7 @@ class ResolvePlaceIdentityServiceTest {
     @Test
     @DisplayName("조건을 만족하는 검색 결과가 없으면 장소를 찾지 못한 것으로 판정한다")
     void resolve_조건을만족하는결과가없으면_장소를찾지못한것으로판정한다() {
-        given(placeSearchPort.search("행복식당")).willReturn(List.of(
+        given(placeSearchPort.searchCandidates(org.mockito.ArgumentMatchers.eq("행복식당"), org.mockito.ArgumentMatchers.anyString())).willReturn(List.of(
                 new PlaceSearchCandidate("다른가게", "https://place.map.kakao.com/1",
                         "서울특별시 영등포구 도림로131길 17", "02-000-0000", null)));
 
@@ -123,7 +147,7 @@ class ResolvePlaceIdentityServiceTest {
     @Test
     @DisplayName("이름은 같아도 자치구가 다르면 장소를 찾지 못한 것으로 판정한다")
     void resolve_이름은같아도자치구가다르면_장소를찾지못한것으로판정한다() {
-        given(placeSearchPort.search("행복식당")).willReturn(List.of(
+        given(placeSearchPort.searchCandidates(org.mockito.ArgumentMatchers.eq("행복식당"), org.mockito.ArgumentMatchers.anyString())).willReturn(List.of(
                 new PlaceSearchCandidate("행복식당", "https://place.map.kakao.com/1",
                         "서울특별시 마포구 월드컵로 1", "02-000-0000", null)));
 
@@ -135,7 +159,7 @@ class ResolvePlaceIdentityServiceTest {
     @Test
     @DisplayName("이름과 도로명주소가 모두 없는 후보는 필수값 누락으로 제외한다")
     void resolve_도로명주소가없는후보는_필수값누락으로제외한다() {
-        given(placeSearchPort.search("행복식당")).willReturn(List.of(
+        given(placeSearchPort.searchCandidates(org.mockito.ArgumentMatchers.eq("행복식당"), org.mockito.ArgumentMatchers.anyString())).willReturn(List.of(
                 new PlaceSearchCandidate("행복식당", "https://place.map.kakao.com/1", null, "02-000-0000", null)));
 
         var result = service.resolve(new PlaceIdentityCommand("행복식당", "서울특별시 영등포구 도림로 100"));
@@ -146,7 +170,7 @@ class ResolvePlaceIdentityServiceTest {
     @Test
     @DisplayName("조건을 만족하는 결과가 둘 이상이면 모호한 것으로 판정한다")
     void resolve_조건을만족하는결과가둘이상이면_모호한것으로판정한다() {
-        given(placeSearchPort.search("행복식당")).willReturn(List.of(
+        given(placeSearchPort.searchCandidates(org.mockito.ArgumentMatchers.eq("행복식당"), org.mockito.ArgumentMatchers.anyString())).willReturn(List.of(
                 new PlaceSearchCandidate("행복식당", "https://place.map.kakao.com/1",
                         "서울특별시 영등포구 도림로131길 17", "02-000-0000", null),
                 new PlaceSearchCandidate("행복식당", "https://place.map.kakao.com/2",
@@ -181,7 +205,7 @@ class ResolvePlaceIdentityServiceTest {
     void resolve_우래옥과우래옥본점이카테고리까지일치하는유일후보면_완화확정한다() {
         // Given
         var foodCategoryId = java.util.UUID.randomUUID();
-        given(placeSearchPort.search("우래옥")).willReturn(List.of(
+        given(placeSearchPort.searchCandidates(org.mockito.ArgumentMatchers.eq("우래옥"), org.mockito.ArgumentMatchers.anyString())).willReturn(List.of(
                 new PlaceSearchCandidate("우래옥 본점", "https://place.map.kakao.com/1",
                         "서울특별시 중구 창경궁로 62-29", "02-000-0000", "음식점 > 한식 > 냉면")));
         given(categoryMapping.resolveByKakaoPlaceCategory("음식점 > 한식 > 냉면"))
@@ -203,8 +227,8 @@ class ResolvePlaceIdentityServiceTest {
     void resolve_AI상호명에지점명이붙고Kakao상호명은기본명이면_역방향완화확정한다() {
         // Given
         var foodCategoryId = java.util.UUID.randomUUID();
-        given(placeSearchPort.search("우래옥 본점")).willReturn(List.of());
-        given(placeSearchPort.search("우래옥")).willReturn(List.of(
+        given(placeSearchPort.searchCandidates(org.mockito.ArgumentMatchers.eq("우래옥 본점"), org.mockito.ArgumentMatchers.anyString())).willReturn(List.of());
+        given(placeSearchPort.searchCandidates(org.mockito.ArgumentMatchers.eq("우래옥"), org.mockito.ArgumentMatchers.anyString())).willReturn(List.of(
                 new PlaceSearchCandidate("우래옥", "https://place.map.kakao.com/1",
                         "서울특별시 중구 창경궁로 62-29", "02-000-0000", "음식점 > 한식 > 냉면")));
         given(categoryMapping.resolveByKakaoPlaceCategory("음식점 > 한식 > 냉면"))
@@ -221,8 +245,8 @@ class ResolvePlaceIdentityServiceTest {
         assertThat(result.confirmedPlace().matchedBy())
                 .isEqualTo("NAME_CONTAINMENT_AND_DISTRICT_AND_CATEGORY");
         assertThat(result.confirmedPlace().kakaoPlaceUrl()).isEqualTo("https://place.map.kakao.com/1");
-        org.mockito.Mockito.verify(placeSearchPort).search("우래옥 본점");
-        org.mockito.Mockito.verify(placeSearchPort).search("우래옥");
+        org.mockito.Mockito.verify(placeSearchPort).searchCandidates(org.mockito.ArgumentMatchers.eq("우래옥 본점"), org.mockito.ArgumentMatchers.anyString());
+        org.mockito.Mockito.verify(placeSearchPort).searchCandidates(org.mockito.ArgumentMatchers.eq("우래옥"), org.mockito.ArgumentMatchers.anyString());
     }
 
     @Test
@@ -232,8 +256,8 @@ class ResolvePlaceIdentityServiceTest {
         var candidate = new PlaceSearchCandidate(
                 "우래옥", "https://place.map.kakao.com/1",
                 "서울특별시 중구 창경궁로 62-29", "02-000-0000", "음식점 > 한식 > 냉면");
-        given(placeSearchPort.search("우래옥 본점")).willReturn(List.of(candidate));
-        given(placeSearchPort.search("우래옥")).willReturn(List.of(candidate));
+        given(placeSearchPort.searchCandidates(org.mockito.ArgumentMatchers.eq("우래옥 본점"), org.mockito.ArgumentMatchers.anyString())).willReturn(List.of(candidate));
+        given(placeSearchPort.searchCandidates(org.mockito.ArgumentMatchers.eq("우래옥"), org.mockito.ArgumentMatchers.anyString())).willReturn(List.of(candidate));
         given(categoryMapping.resolveByKakaoPlaceCategory("음식점 > 한식 > 냉면"))
                 .willReturn(MappingResolution.matched(java.util.UUID.randomUUID(), foodCategoryId));
         given(categoryMapping.resolveByMenuExpression("냉면"))
@@ -250,8 +274,8 @@ class ResolvePlaceIdentityServiceTest {
     @DisplayName("AI 상호명에 붙은 지점 표기도 기본 상호명 검색으로 역방향 완화한다")
     void resolve_AI상호명에지점표기가붙으면_기본상호명검색으로완화한다() {
         var foodCategoryId = java.util.UUID.randomUUID();
-        given(placeSearchPort.search("우래옥 지점")).willReturn(List.of());
-        given(placeSearchPort.search("우래옥")).willReturn(List.of(
+        given(placeSearchPort.searchCandidates(org.mockito.ArgumentMatchers.eq("우래옥 지점"), org.mockito.ArgumentMatchers.anyString())).willReturn(List.of());
+        given(placeSearchPort.searchCandidates(org.mockito.ArgumentMatchers.eq("우래옥"), org.mockito.ArgumentMatchers.anyString())).willReturn(List.of(
                 new PlaceSearchCandidate("우래옥", "https://place.map.kakao.com/1",
                         "서울특별시 중구 창경궁로 62-29", "02-000-0000", "음식점 > 한식 > 냉면")));
         given(categoryMapping.resolveByKakaoPlaceCategory("음식점 > 한식 > 냉면"))
@@ -264,16 +288,16 @@ class ResolvePlaceIdentityServiceTest {
 
         assertThat(result.isConfirmed()).isTrue();
         assertThat(result.confirmedPlace().kakaoPlaceUrl()).isEqualTo("https://place.map.kakao.com/1");
-        org.mockito.Mockito.verify(placeSearchPort).search("우래옥 지점");
-        org.mockito.Mockito.verify(placeSearchPort).search("우래옥");
+        org.mockito.Mockito.verify(placeSearchPort).searchCandidates(org.mockito.ArgumentMatchers.eq("우래옥 지점"), org.mockito.ArgumentMatchers.anyString());
+        org.mockito.Mockito.verify(placeSearchPort).searchCandidates(org.mockito.ArgumentMatchers.eq("우래옥"), org.mockito.ArgumentMatchers.anyString());
     }
 
     @Test
     @DisplayName("끝 공백이 있는 AI 상호명도 지점 접미사를 제거해 기본 상호명을 검색한다")
     void resolve_끝공백이있는상호명은_정규화후기본상호명을검색한다() {
         var foodCategoryId = java.util.UUID.randomUUID();
-        given(placeSearchPort.search("우래옥 본점 ")).willReturn(List.of());
-        given(placeSearchPort.search("우래옥")).willReturn(List.of(
+        given(placeSearchPort.searchCandidates(org.mockito.ArgumentMatchers.eq("우래옥 본점 "), org.mockito.ArgumentMatchers.anyString())).willReturn(List.of());
+        given(placeSearchPort.searchCandidates(org.mockito.ArgumentMatchers.eq("우래옥"), org.mockito.ArgumentMatchers.anyString())).willReturn(List.of(
                 new PlaceSearchCandidate("우래옥", "https://place.map.kakao.com/1",
                         "서울특별시 중구 창경궁로 62-29", "02-000-0000", "음식점 > 한식 > 냉면")));
         given(categoryMapping.resolveByKakaoPlaceCategory("음식점 > 한식 > 냉면"))
@@ -286,16 +310,16 @@ class ResolvePlaceIdentityServiceTest {
 
         assertThat(result.isConfirmed()).isTrue();
         assertThat(result.confirmedPlace().kakaoPlaceUrl()).isEqualTo("https://place.map.kakao.com/1");
-        org.mockito.Mockito.verify(placeSearchPort).search("우래옥 본점 ");
-        org.mockito.Mockito.verify(placeSearchPort).search("우래옥");
+        org.mockito.Mockito.verify(placeSearchPort).searchCandidates(org.mockito.ArgumentMatchers.eq("우래옥 본점 "), org.mockito.ArgumentMatchers.anyString());
+        org.mockito.Mockito.verify(placeSearchPort).searchCandidates(org.mockito.ArgumentMatchers.eq("우래옥"), org.mockito.ArgumentMatchers.anyString());
     }
 
     @Test
     @DisplayName("괄호로 감싼 본점 표기도 기본 상호명 검색으로 역방향 완화한다")
     void resolve_괄호로감싼본점표기는_기본상호명검색으로완화한다() {
         var foodCategoryId = java.util.UUID.randomUUID();
-        given(placeSearchPort.search("우래옥 (본점)")).willReturn(List.of());
-        given(placeSearchPort.search("우래옥")).willReturn(List.of(
+        given(placeSearchPort.searchCandidates(org.mockito.ArgumentMatchers.eq("우래옥 (본점)"), org.mockito.ArgumentMatchers.anyString())).willReturn(List.of());
+        given(placeSearchPort.searchCandidates(org.mockito.ArgumentMatchers.eq("우래옥"), org.mockito.ArgumentMatchers.anyString())).willReturn(List.of(
                 new PlaceSearchCandidate("우래옥", "https://place.map.kakao.com/1",
                         "서울특별시 중구 창경궁로 62-29", "02-000-0000", "음식점 > 한식 > 냉면")));
         given(categoryMapping.resolveByKakaoPlaceCategory("음식점 > 한식 > 냉면"))
@@ -308,20 +332,20 @@ class ResolvePlaceIdentityServiceTest {
 
         assertThat(result.isConfirmed()).isTrue();
         assertThat(result.confirmedPlace().kakaoPlaceUrl()).isEqualTo("https://place.map.kakao.com/1");
-        org.mockito.Mockito.verify(placeSearchPort).search("우래옥 (본점)");
-        org.mockito.Mockito.verify(placeSearchPort).search("우래옥");
+        org.mockito.Mockito.verify(placeSearchPort).searchCandidates(org.mockito.ArgumentMatchers.eq("우래옥 (본점)"), org.mockito.ArgumentMatchers.anyString());
+        org.mockito.Mockito.verify(placeSearchPort).searchCandidates(org.mockito.ArgumentMatchers.eq("우래옥"), org.mockito.ArgumentMatchers.anyString());
     }
 
     @Test
     @DisplayName("일반 단어의 점으로 끝나는 표현은 지점 접미사로 오인하지 않는다")
     void resolve_일반단어의점표현은_지점접미사로오인하지않는다() {
-        given(placeSearchPort.search("독점")).willReturn(List.of());
+        given(placeSearchPort.searchCandidates(org.mockito.ArgumentMatchers.eq("독점"), org.mockito.ArgumentMatchers.anyString())).willReturn(List.of());
 
         var result = service.resolve(new PlaceIdentityCommand(
                 "독점", "서울특별시 중구 세종대로 1", "냉면"));
 
         assertThat(result.status()).isEqualTo(PlaceIdentityStatus.PLACE_NOT_FOUND);
-        org.mockito.Mockito.verify(placeSearchPort).search("독점");
+        org.mockito.Mockito.verify(placeSearchPort).searchCandidates(org.mockito.ArgumentMatchers.eq("독점"), org.mockito.ArgumentMatchers.anyString());
         org.mockito.Mockito.verifyNoMoreInteractions(placeSearchPort);
     }
 
@@ -331,7 +355,7 @@ class ResolvePlaceIdentityServiceTest {
         // Given
         var kakaoCategoryId = java.util.UUID.randomUUID();
         var menuCategoryId = java.util.UUID.randomUUID();
-        given(placeSearchPort.search("우래옥")).willReturn(List.of(
+        given(placeSearchPort.searchCandidates(org.mockito.ArgumentMatchers.eq("우래옥"), org.mockito.ArgumentMatchers.anyString())).willReturn(List.of(
                 new PlaceSearchCandidate("우래옥 본점", "https://place.map.kakao.com/1",
                         "서울특별시 중구 창경궁로 62-29", "02-000-0000", "음식점 > 한식 > 냉면")));
         given(categoryMapping.resolveByKakaoPlaceCategory("음식점 > 한식 > 냉면"))
@@ -351,7 +375,7 @@ class ResolvePlaceIdentityServiceTest {
     void resolve_완화조건을만족하는후보가둘이면_모호하게판정한다() {
         // Given
         var foodCategoryId = java.util.UUID.randomUUID();
-        given(placeSearchPort.search("우래옥")).willReturn(List.of(
+        given(placeSearchPort.searchCandidates(org.mockito.ArgumentMatchers.eq("우래옥"), org.mockito.ArgumentMatchers.anyString())).willReturn(List.of(
                 new PlaceSearchCandidate("우래옥 본점", "https://place.map.kakao.com/1",
                         "서울특별시 중구 창경궁로 62-29", "02-000-0000", "음식점 > 한식 > 냉면"),
                 new PlaceSearchCandidate("우래옥 별관", "https://place.map.kakao.com/2",
@@ -373,7 +397,7 @@ class ResolvePlaceIdentityServiceTest {
     @DisplayName("완화 후보에 카테고리 근거가 없으면 확정하지 않는다")
     void resolve_완화후보에카테고리근거가없으면_확정하지않는다() {
         // Given
-        given(placeSearchPort.search("우래옥")).willReturn(List.of(
+        given(placeSearchPort.searchCandidates(org.mockito.ArgumentMatchers.eq("우래옥"), org.mockito.ArgumentMatchers.anyString())).willReturn(List.of(
                 new PlaceSearchCandidate("우래옥 본점", "https://place.map.kakao.com/1",
                         "서울특별시 중구 창경궁로 62-29", "02-000-0000", null)));
 
@@ -389,7 +413,7 @@ class ResolvePlaceIdentityServiceTest {
     void resolve_완화후보의필수필드가없으면_확정하지않는다() {
         // Given
         var foodCategoryId = java.util.UUID.randomUUID();
-        given(placeSearchPort.search("우래옥")).willReturn(List.of(
+        given(placeSearchPort.searchCandidates(org.mockito.ArgumentMatchers.eq("우래옥"), org.mockito.ArgumentMatchers.anyString())).willReturn(List.of(
                 new PlaceSearchCandidate("우래옥 본점", null,
                         "서울특별시 중구 창경궁로 62-29", "02-000-0000", "음식점 > 한식 > 냉면")));
         given(categoryMapping.resolveByKakaoPlaceCategory("음식점 > 한식 > 냉면"))
@@ -407,7 +431,7 @@ class ResolvePlaceIdentityServiceTest {
     @Test
     @DisplayName("완화 판정 플래그가 꺼져 있으면 이름 포함 후보를 확정하지 않는다")
     void resolve_완화판정플래그가꺼져있으면_이름포함후보를확정하지않는다() {
-        given(placeSearchPort.search("우래옥 본점")).willReturn(List.of());
+        given(placeSearchPort.searchCandidates(org.mockito.ArgumentMatchers.eq("우래옥 본점"), org.mockito.ArgumentMatchers.anyString())).willReturn(List.of());
 
         ResolvePlaceIdentityService disabledService = new ResolvePlaceIdentityService(
                 placeSearchPort, categoryMapping, () -> false);
@@ -417,7 +441,7 @@ class ResolvePlaceIdentityServiceTest {
 
         assertThat(result.status()).isEqualTo(PlaceIdentityStatus.PLACE_NOT_FOUND);
         org.mockito.Mockito.verifyNoInteractions(categoryMapping);
-        org.mockito.Mockito.verify(placeSearchPort).search("우래옥 본점");
+        org.mockito.Mockito.verify(placeSearchPort).searchCandidates(org.mockito.ArgumentMatchers.eq("우래옥 본점"), org.mockito.ArgumentMatchers.anyString());
         org.mockito.Mockito.verifyNoMoreInteractions(placeSearchPort);
     }
 }

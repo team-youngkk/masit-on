@@ -12,4 +12,7 @@ import com.masiton.restaurant.application.port.out.PlaceSearchCandidate;
 public interface SearchPlacesByNameUseCase {
 
     List<PlaceSearchCandidate> search(String name);
+
+    /** 지역 단서가 있는 자동 판정용 검색이다. 불완전한 후보 수집은 실패한다. */
+    List<PlaceSearchCandidate> searchCandidates(String name, String district);
 }
