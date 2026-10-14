@@ -767,3 +767,6 @@ candidate_fields JSON에는 registrationUnits를 변경 없이 저장하고 cand
 | blockReasons | 현재 AUTO_BLOCKED의 사유별 `{count, blockedShare}`. blockedShare = 사유별 count / blockedUnits |
 
 롤백·폐기 단위는 manualOverrideUnits에 포함하고 registeredUnits에서는 제외한다. 비어 있는 상태별 count는 0, 사유 map은 `{}`, groups는 `[]`, 분모 0의 비율은 null이다. 6개 확정·4개 차단이면 totalUnits=10, evaluatedUnits=10, blockedUnits=4, blockedRate=0.4다. 단위 join으로 작업 수가 늘어나지 않도록 작업/단위 분모를 별도 집계하며 단일 SQL 문으로 동일한 조회 snapshot을 사용한다. DB·Prompt·Schema 변경과 운영 데이터 재실행은 없다.
+## 이슈 #414 승인된 지역 단서 경계 (2026-10-14)
+
+소유자 합의에 따라 주소가 없는 S3 등록 단위는 명시적 candidateUnitId와 같은 restaurantName에 결속된 location의 시도·시군구를 장소 동일성 검색 단서로 사용할 수 있다. 주소가 존재하면 기존 주소를 우선하며 잘못된 주소를 location으로 대체하지 않는다. S2 전역 위치와 청량리시장 같은 상권명 단독 표현은 사용하지 않는다. 이름·행정구역·카테고리 및 단일 후보 기준, Kakao 물리 검증을 유지하고 location으로 주소를 추정하거나 저장하지 않는다. 상세 설계와 검증은 [이슈 414 설계](../../../08-planning/issue-414-ai-contract-proposal.md)를 따른다.

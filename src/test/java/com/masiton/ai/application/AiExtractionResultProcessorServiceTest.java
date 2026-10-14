@@ -57,6 +57,8 @@ class AiExtractionResultProcessorServiceTest {
         verify(commitService).persistBlocked(command.capture());
         assertThat(objectMapper.readTree(command.getValue().candidateFields()).at("/registrationUnits/0/candidateUnitId").asText())
                 .isEqualTo("a");
+        assertThat(objectMapper.readTree(command.getValue().candidateFields()).at("/registrationUnits/0/location/value").asText())
+                .isEqualTo("서울 강남구");
         assertThat(command.getValue().resultCompleteness()).isEqualTo("COMPLETE");
         assertThat(command.getValue().reviewStatus()).isEqualTo("AUTO_BLOCKED");
         verifyNoInteractions(contentVerification);

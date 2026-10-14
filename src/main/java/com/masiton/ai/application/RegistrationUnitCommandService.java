@@ -120,7 +120,7 @@ public class RegistrationUnitCommandService {
     private RegistrationExecutionView executeAndPersist(AiExtractionAdminQueryPort.JobVideoReference jobRef,
                                                          AiRegistrationUnitStore.RegistrationUnitRow unit) {
         RegistrationUnitBundle bundle = bundleFor(unit);
-        RegistrationUnitExecutionCommand command = buildCommand(bundle, jobRef, null, null, null);
+        RegistrationUnitExecutionCommand command = buildCommand(bundle, unit.snapshotId(), jobRef, null, null, null);
         RegistrationUnitExecutionResult result = executeRegistrationUnit.execute(command);
         if (!result.confirmed()) {
             throw validationConflict(result.blockReason());
@@ -266,7 +266,7 @@ public class RegistrationUnitCommandService {
         }
 
         RegistrationUnitBundle bundle = bundleFor(unit);
-        RegistrationUnitExecutionCommand command = buildCommand(bundle, jobRef, suppliedKakaoPlaceUrl,
+        RegistrationUnitExecutionCommand command = buildCommand(bundle, unit.snapshotId(), jobRef, suppliedKakaoPlaceUrl,
                 suppliedFoodCategoryId, suppliedFoodCategoryName);
         RegistrationUnitExecutionResult result = executeRegistrationUnit.execute(command);
         if (!result.confirmed()) {
@@ -480,16 +480,21 @@ public class RegistrationUnitCommandService {
                         "Registration unit bundle could not be re-derived: " + unit.id()));
     }
 
-    private RegistrationUnitExecutionCommand buildCommand(RegistrationUnitBundle bundle,
+    private RegistrationUnitExecutionCommand buildCommand(RegistrationUnitBundle bundle, UUID snapshotId,
                                                            AiExtractionAdminQueryPort.JobVideoReference jobRef,
                                                            String suppliedKakaoPlaceUrl, UUID suppliedFoodCategoryId,
                                                            String suppliedFoodCategoryName) {
+        RegistrationUnitJsonSupport.BoundLocation location = port.snapshotCandidates(snapshotId)
+                .map(snapshot -> RegistrationUnitJsonSupport.boundLocation(snapshot.candidateFields(),
+                        bundle.unitIndex(), bundle.candidateUnitId(),
+                        RegistrationUnitJsonSupport.value(bundle.restaurantName())))
+                .orElse(new RegistrationUnitJsonSupport.BoundLocation(null, null));
         return new RegistrationUnitExecutionCommand(
                 RegistrationUnitJsonSupport.value(bundle.restaurantName()),
                 RegistrationUnitJsonSupport.value(bundle.address()), RegistrationUnitJsonSupport.value(bundle.menu()),
                 RegistrationUnitJsonSupport.toVisitEvidence(bundle.visitEvidence()), jobRef.channelId(),
                 jobRef.videoId(), URI.create(jobRef.videoUrl()), suppliedKakaoPlaceUrl, suppliedFoodCategoryId,
-                suppliedFoodCategoryName);
+                suppliedFoodCategoryName, location.candidateUnitId(), location.location());
     }
 
     private void requireDecision(String decision) {

@@ -50,11 +50,12 @@ class ResolvePlaceIdentityService implements ResolvePlaceIdentityUseCase {
     @Override
     public PlaceIdentityResult resolve(PlaceIdentityCommand command) {
         Objects.requireNonNull(command, "command");
-        if (blank(command.restaurantName()) || blank(command.candidateAddress())) {
+        if (blank(command.restaurantName())) {
             return PlaceIdentityResult.notFound();
         }
 
-        Optional<String> candidateDistrict = extractDistrict(command.candidateAddress());
+        Optional<String> candidateDistrict = blank(command.candidateAddress())
+                ? extractLocationDistrict(command.location()) : extractDistrict(command.candidateAddress());
         if (candidateDistrict.isEmpty()) {
             return PlaceIdentityResult.notFound();
         }
@@ -189,6 +190,19 @@ class ResolvePlaceIdentityService implements ResolvePlaceIdentityUseCase {
             return Optional.empty();
         }
         return RoadAddressNormalizer.extractRegion(roadAddress)
+                .map(region -> region.province() + " " + region.municipality());
+    }
+
+    private Optional<String> extractLocationDistrict(String location) {
+        if (blank(location)) {
+            return Optional.empty();
+        }
+        String normalized = RoadAddressNormalizer.normalize(location);
+        if ("세종특별자치시".equals(normalized)) {
+            return Optional.of("세종특별자치시 세종특별자치시");
+        }
+        // 지역 단서에 도로명이 없어도 행정구역 검증은 주소 정규화 규칙과 공유한다.
+        return RoadAddressNormalizer.extractRegion(normalized + " 지역단서")
                 .map(region -> region.province() + " " + region.municipality());
     }
 

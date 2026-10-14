@@ -57,10 +57,12 @@ class RegistrationUnitAutoExecutionService {
             }
             String menuExpression = bundle.menus().stream().filter(menu -> !unknownEvidence(menu)).map(BoundCandidate::value)
                     .reduce((first, second) -> first + ", " + second).orElse(null);
+            RegistrationUnitJsonSupport.BoundLocation location = RegistrationUnitJsonSupport.boundLocation(
+                    candidateFields, bundle.unitIndex(), bundle.candidateUnitId(), restaurantName);
             RegistrationUnitExecutionCommand command = new RegistrationUnitExecutionCommand(
-                    restaurantName, RegistrationUnitJsonSupport.value(bundle.address()),
-                    menuExpression,
-                    RegistrationUnitJsonSupport.toVisitEvidence(bundle.visitEvidence()), channelId, videoId, videoUrl);
+                    restaurantName, RegistrationUnitJsonSupport.value(bundle.address()), menuExpression,
+                    RegistrationUnitJsonSupport.toVisitEvidence(bundle.visitEvidence()), channelId, videoId, videoUrl,
+                    null, null, null, location.candidateUnitId(), location.location());
             RegistrationUnitExecutionResult result = executeRegistrationUnit.execute(command);
             outcomes.add(toOutcome(bundle.unitIndex(), restaurantName, result));
         }

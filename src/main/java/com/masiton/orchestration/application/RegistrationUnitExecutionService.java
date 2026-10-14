@@ -17,7 +17,7 @@ import com.masiton.common.observability.ExternalFailureCauseClassifier;
 import com.masiton.common.web.ErrorCode;
 import com.masiton.restaurant.application.PlaceSearchFailedException;
 import com.masiton.restaurant.application.PlaceVerificationFailedException;
-
+import com.masiton.common.address.RoadAddressNormalizer;
 import com.masiton.orchestration.application.port.in.AutoRegisterVerifiedContentUseCase;
 import com.masiton.orchestration.application.port.in.ExecuteRegistrationUnitUseCase;
 import com.masiton.orchestration.application.port.in.ResolveFoodCategoryUseCase;
@@ -74,7 +74,8 @@ class RegistrationUnitExecutionService implements ExecuteRegistrationUnitUseCase
     @Override
     public RegistrationUnitExecutionResult execute(RegistrationUnitExecutionCommand command) {
         Objects.requireNonNull(command, "command");
-        if (blank(command.restaurantName()) || (blank(command.address()) && !command.hasSuppliedKakaoPlaceUrl())) {
+        if (blank(command.restaurantName()) || (blank(command.address()) && !command.hasSuppliedKakaoPlaceUrl()
+                && (blank(command.candidateUnitId()) || blank(command.location())))) {
             return blocked("MISSING_REQUIRED_FIELD");
         }
 
@@ -162,7 +163,8 @@ class RegistrationUnitExecutionService implements ExecuteRegistrationUnitUseCase
         ResolvePlaceIdentityUseCase.PlaceIdentityResult identity = diagnose("PLACE_SEARCH", traceId,
                 () -> resolvePlaceIdentity.resolve(
                 new ResolvePlaceIdentityUseCase.PlaceIdentityCommand(
-                        command.restaurantName(), command.address(), command.menu())));
+                        command.restaurantName(), command.address(), command.menu(),
+                        blank(command.candidateUnitId()) ? null : command.location())));
         if (identity.status() == ResolvePlaceIdentityUseCase.PlaceIdentityStatus.PLACE_AMBIGUOUS) {
             return PlaceStep.ambiguousResult();
         }
@@ -172,7 +174,10 @@ class RegistrationUnitExecutionService implements ExecuteRegistrationUnitUseCase
         ResolvePlaceIdentityUseCase.ConfirmedPlace confirmed = identity.confirmedPlace();
         return diagnose("PLACE_PHYSICAL_VERIFICATION", traceId,
                 () -> resolvePlacePhysicalReference
-                        .resolve(command.restaurantName(), URI.create(confirmed.kakaoPlaceUrl())))
+                        .resolve(command.restaurantName(), URI.create(confirmed.kakaoPlaceUrl()))
+                        .filter(place -> !blank(command.address()) || RoadAddressNormalizer.extractRegion(place.roadAddress())
+                                .filter(region -> RoadAddressNormalizer.extractRegion(confirmed.roadAddress())
+                                        .map(region::equals).orElse(false)).isPresent()))
                 .map(place -> new PlaceStep(false, place.regionId(), place.name(), place.kakaoPlaceId(),
                         place.kakaoPlaceUrl(), place.roadAddress(), place.phoneNumber(), place.latitude(),
                         place.longitude(), confirmed.matchedBy(), confirmed.placeCategory()))
