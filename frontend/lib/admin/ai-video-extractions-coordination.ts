@@ -11,6 +11,29 @@ import type {
 } from './ai-video-extractions'
 import { idempotencyAttempt, type IdempotencyAttempt } from '../idempotency.ts'
 
+export function registrationUnitSummary(units: AiRegistrationUnit[]) {
+  const registered = units.filter((unit) => unit.manualOverrideType === null
+    && (unit.reviewStatus === 'AUTO_CONFIRMED' || unit.reviewStatus === 'MANUAL_OVERRIDE')
+    && unit.registeredRestaurantId && unit.registeredCreatorId
+    && unit.registeredVideoId && unit.registeredVisitId).length
+  return {
+    total: units.length,
+    autoConfirmed: units.filter((unit) => unit.reviewStatus === 'AUTO_CONFIRMED').length,
+    autoBlocked: units.filter((unit) => unit.reviewStatus === 'AUTO_BLOCKED').length,
+    autoRejected: units.filter((unit) => unit.reviewStatus === 'AUTO_REJECTED').length,
+    manualOverride: units.filter((unit) => unit.reviewStatus === 'MANUAL_OVERRIDE').length,
+    registered,
+    partialRegistration: registered > 0 && registered < units.length,
+  }
+}
+
+export function registrationSummaryLabel(summary: ReturnType<typeof registrationUnitSummary>): string {
+  if (summary.total === 0) return '등록 단위 없음'
+  if (summary.registered === summary.total) return '전체 등록'
+  if (summary.partialRegistration) return '부분 등록'
+  return '현재 등록 없음'
+}
+
 export type AiExtractionFilters = {
   executionStatus: AiExecutionStatus | ''
   source: AiExtractionSource | ''
