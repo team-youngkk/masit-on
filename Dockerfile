@@ -13,7 +13,7 @@
 FROM amazoncorretto:21.0.12-alpine@sha256:58c1d555f4ff3be0cfe90d3b4d1762bde080b57afbb71d48657b9d22748cad5b AS build
 # 고정된 Corretto 이미지가 Alpine OpenSSL 보안 업데이트보다 먼저 만들어졌으므로,
 # JDK·베이스 이미지 digest는 유지하고 수정된 패키지를 명시적으로 설치한다.
-RUN apk add --no-cache libcrypto3=3.5.8-r0 libssl3=3.5.8-r0
+RUN apk add --no-cache libcrypto3=3.5.9-r0 libssl3=3.5.9-r0
 WORKDIR /workspace
 
 COPY gradlew gradlew.bat settings.gradle build.gradle ./
@@ -29,7 +29,7 @@ RUN ./gradlew --no-daemon clean bootJar
 # temurin의 jre-alpine보다 이미지가 커지지만 ADR-LANG-001의 패치 일치가 우선이다.
 FROM amazoncorretto:21.0.12-alpine@sha256:58c1d555f4ff3be0cfe90d3b4d1762bde080b57afbb71d48657b9d22748cad5b AS runtime
 # 런타임 이미지는 별도로 스캔하므로 build 단계와 같은 OpenSSL 패키지 버전을 고정한다.
-RUN apk add --no-cache libcrypto3=3.5.8-r0 libssl3=3.5.8-r0
+RUN apk add --no-cache libcrypto3=3.5.9-r0 libssl3=3.5.9-r0
 WORKDIR /app
 
 # uid·gid를 고정해야 베이스 이미지가 바뀌어도 실행 사용자가 동일하다
