@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Service;
 
-import com.masiton.common.address.SeoulRoadAddressNormalizer;
+import com.masiton.common.address.RoadAddressNormalizer;
 import com.masiton.orchestration.application.port.in.ResolvePlaceIdentityUseCase;
 import com.masiton.orchestration.application.port.out.PlaceIdentityMatchingPolicy;
 import com.masiton.restaurant.application.port.in.LookupFoodCategoryMappingUseCase;
@@ -188,7 +188,8 @@ class ResolvePlaceIdentityService implements ResolvePlaceIdentityUseCase {
         if (blank(roadAddress)) {
             return Optional.empty();
         }
-        return SeoulRoadAddressNormalizer.extractDistrict(SeoulRoadAddressNormalizer.normalize(roadAddress));
+        return RoadAddressNormalizer.extractRegion(roadAddress)
+                .map(region -> region.province() + " " + region.municipality());
     }
 
     private String normalize(String value) {

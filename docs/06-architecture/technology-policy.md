@@ -9,6 +9,7 @@ related_documents:
   - ../07-adr/adr-index.md
   - ../07-adr/adr-backlog.md
   - ../07-adr/adr-traceability.md
+  - ../07-adr/architecture/arch-006-national-natural-language-region-interpretation.md
 ---
 
 # 맛잇온 기술 정책
@@ -39,8 +40,8 @@ related_documents:
 | 빌드 | Gradle 8.14.3 + Groovy DSL | MVP Accepted |
 | DB 마이그레이션 | Flyway 12.4.0 | MVP Accepted |
 | Node.js | 24.18.0 LTS | MVP Accepted |
-| 프론트엔드 | Next.js 16.3.4 + TypeScript 7.0.2 | MVP Accepted |
-| React | 19.2.0 (`react`, `react-dom`) | MVP Accepted. Next.js 16.3.4의 peer 범위가 `^19.0.0`으로 넓어 Next 고정만으로는 패치가 고정되지 않으므로 별도로 명시한다 |
+| 프론트엔드 | Next.js 16.3.8 + TypeScript 7.0.2 | MVP Accepted |
+| React | 19.2.0 (`react`, `react-dom`) | MVP Accepted. Next.js의 peer 범위가 `^19.0.0`으로 넓어 Next 고정만으로는 패치가 고정되지 않으므로 별도로 명시한다 |
 | 프론트엔드 타입 정의 | `@types/node` 24.10.1, `@types/react` 19.2.2, `@types/react-dom` 19.2.1 | MVP Accepted |
 | PostgreSQL | 17.10 | MVP Accepted |
 | Redis | Redis Open Source 8.8 | 통합 계정 Refresh session 저장에 적용, 캐시·락은 조건부 |
@@ -58,14 +59,18 @@ related_documents:
 | 프론트엔드 컨테이너 베이스 이미지 | `node:24.18.0-alpine` (digest 고정) | `M2-06`에서 고정 |
 | 컨테이너 취약점 스캐너 | `aquasec/trivy:0.72.0` (digest 고정) | `M2-06`에서 고정. CI 전용이며 운영 이미지에 포함되지 않는다. 차단 기준은 수정 버전이 있는 `CRITICAL`·`HIGH` |
 | 부하 테스트 도구 | k6 v2.1.0 | [ADR-PERF-001](../07-adr/quality/perf-001-k6-load-testing.md)에서 고정. 측정 시점에만 설치하는 외부 바이너리이며 `build.gradle`·`package.json` 어디에도 의존성으로 넣지 않는다 |
-| sharp | 0.35.4 | npm `overrides`로 고정. 0.35.0 이하의 libheif 취약점([GHSA-rgj7-g3m4-5g8c](https://github.com/advisories/GHSA-rgj7-g3m4-5g8c), HIGH)을 해소한다. Next이 이 버전 이상을 직접 고정하면 override를 제거한다 |
-| 프론트엔드 전이 의존성 보안 고정 | `postcss` 8.5.23, `nanoid` 3.3.18 | npm `overrides`로 고정. Next.js가 선언한 이전 버전의 high 취약점을 해소하며, 기준선 변경 때 필요성을 함께 재검토한다 |
+| sharp | 0.35.5 | npm `overrides`로 고정. libheif([GHSA-rgj7-g3m4-5g8c](https://github.com/advisories/GHSA-rgj7-g3m4-5g8c))와 librsvg([GHSA-wq5f-xc86-pv6w](https://github.com/advisories/GHSA-wq5f-xc86-pv6w))의 HIGH 취약점을 해소한다. Next가 이 버전 이상을 직접 고정하면 override를 제거한다 |
+| 프론트엔드 전이 의존성 보안 고정 | `postcss` 8.5.23, `nanoid` 3.3.18, `source-map-js` 1.2.2 | npm `overrides`로 고정. Next.js가 선언한 취약 버전을 차단하고, 기준선 변경 때 필요성을 함께 재검토한다. `source-map-js`는 [GHSA-68fv-2mgg-jv7q](https://github.com/advisories/GHSA-68fv-2mgg-jv7q)의 HIGH 수정 버전이다 |
 | Spring Batch | 6.0.4, Spring Boot BOM 관리 | Post-MVP |
 
 - `latest`, `+`, `x`, `^`, `~` 또는 동등한 범위 버전을 사용하지 않는다.
 - 고정 버전을 다른 패치·메이저 버전으로 바꾸지 않는다.
 - RC, Snapshot, 미승인 Preview 의존성을 사용하지 않는다.
 - 컨테이너 이미지는 검증된 명시 태그를 사용하고 운영 확정 시 digest도 고정한다.
+
+### 3.1 보안 패치 기준선 채택
+
+[ADR-WEB-007](../07-adr/platform/web-007-next-security-patch-baseline.md)은 양성훈·김인안의 채택 합의에 따라 Next.js 16.3.8을 Accepted 보안 패치 기준선으로 확정한다. [ADR-WEB-001](../07-adr/platform/web-001-frontend-platform.md)의 프레임워크 선택과 나머지 런타임·언어 기준은 유지한다. 16.3.4 결정과 검증 기록은 과거 이력으로 보존한다.
 
 ## 4. 의존성 관리 정책
 
@@ -165,6 +170,8 @@ related_documents:
 - 관련: [ADR-DEPLOY-002](../07-adr/platform/deploy-002-validation-deployment-before-expansion.md), [ADR-DEPLOY-006](../07-adr/platform/deploy-006-public-release-without-validation-gate.md), [ADR-WEB-006](../07-adr/platform/web-006-unified-login-rbac-route.md), [ADR-WEB-005](../07-adr/platform/web-005-application-port-binding.md), [docs/07-adr/adr-backlog.md](../07-adr/adr-backlog.md) 범위 충돌 검토, [RV-NFR-005](../01-requirements/non-functional-requirements.md#rv-nfr-005-목표-가용성과-복구-시간)·[RV-NFR-009](../01-requirements/non-functional-requirements.md#rv-nfr-009-로그-보관-기간)·[RV-NFR-010](../01-requirements/non-functional-requirements.md#rv-nfr-010-백업-주기와-복구-범위)·[RV-NFR-013](../01-requirements/non-functional-requirements.md#rv-nfr-013-운영-알림-기준).
 
 ## 14. 위반 검증 방법
+
+전국 자연어 지역 P2는 [ADR-ARCH-006](../07-adr/architecture/arch-006-national-natural-language-region-interpretation.md)에 별도 제안으로 기록한다. API·지역 응답은 승인됐지만 문서·수정 커밋 CI 확인 후 아키텍처 최종 승인 대기다. ADR-ARCH-005의 P1·Golden V1 역사와 공통 조회 경계를 보존하며, 새 ADR을 Accepted 정책으로 간주하지 않는다.
 
 - Gradle·npm 의존성에서 범위 버전, 직접 버전 중복과 미승인 의존성을 검사한다.
 - Wrapper, toolchain, Node·컨테이너 이미지와 CI 런타임 버전을 대조한다.

@@ -1,6 +1,9 @@
 ---
 status: accepted
 related_documents:
+  - ../api/common/region-contract.md
+  - ../../../src/main/resources/db/reference/regions-2026-09-30.json
+  - ../../../src/main/resources/db/migration/V20__add_region_hierarchy.sql
   - table-definitions.md
   - migration-plan.md
   - ../../01-requirements/functional-requirements.md
@@ -11,13 +14,13 @@ related_documents:
 
 ## 1. 범위
 
-공통 환경에 들어가는 권위 있는 seed는 `region` 25개와 `food_category` 10개뿐이다. Restaurant, Creator, Video, Visit, 확인 Token, 관리자 비밀번호와 Refresh Token은 공용 seed에 포함하지 않는다.
+이 문서는 공통 기준 데이터 `region`과 `food_category`의 seed를 정의한다. 최초 서울 Region 25개를 V20에서 전국 245개로 확장하며 FoodCategory 10개는 유지한다. #394의 [지역 계층 계약](../api/common/region-contract.md)은 소유자 리뷰 요청 상태다. 별도 확장 계약의 태그 seed는 해당 데이터 계약을 따른다. Restaurant, Creator, Video, Visit, 확인 Token, 관리자 비밀번호와 Refresh Token은 공용 seed에 포함하지 않는다.
 
-기준 데이터 ID는 환경마다 같도록 아래 고정 UUID를 사용한다. 애플리케이션·API는 UUID 값 자체에 의미를 부여하지 않고 `code` 또는 외부 계약의 `name`으로 기준값을 찾는다.
+기준 데이터 ID는 환경마다 같도록 고정 UUID를 사용한다. API 자원 식별자는 불투명 문자열이며 UUID 생성 규칙을 외부 계약으로 노출하지 않는다. 지역의 공개 `code`·검색 `regionCode`는 별도 `administrative_code`이고 기존 `SEOUL_*` 애플리케이션 코드와 구분한다.
 
-## 2. Region 25개
+## 2. Region — 보존하는 서울 25개와 전국 확장
 
-행정구 순서는 서울특별시 표준 자치구 목록의 고정 표시 순서다.
+아래는 보존하는 기존 서울 행이다. V20에서 서울특별시(`1100000000`)를 부모로 연결하며 UUID·code·표시 순서는 바꾸지 않는다.
 
 | UUID | code | name | sort |
 |---|---|---|---:|
@@ -49,6 +52,18 @@ related_documents:
 
 모든 행은 `active=true`다.
 
+### 2.1 전국 현존 코드 스냅샷
+
+전국 시드는 [2026-09-30 공식 코드 검증 스냅샷](../../../src/main/resources/db/reference/regions-2026-09-30.json)의 코드·이름·부모·표시 순서와 정확히 일치해야 한다. 상위 16개·하위 229개, 총 245개이며 기존 서울 25개 외에 220개를 추가한다. 상위·하위 모두 처음 적재할 때 `active=true`다.
+
+- `전남광주통합특별시(1200000000)`와 그 아래 27개 지역을 사용한다. 폐지된 광주광역시(`2900000000`)·전라남도(`4600000000`)를 별도 상위 행으로 적재하지 않는다.
+- 세종 `3611000000`은 최상위 1행이며 하위가 없다. `3600000000`을 대신 만들지 않는다.
+- 제주 `5000000000` 아래에는 제주시 `5011000000`·서귀포시 `5013000000` 두 행을 둔다.
+- 수원시 등 비자치구가 있는 시는 시까지 적재하며 `수원시 장안구` 같은 3단계 행은 제외한다.
+- 원천 선택 목록과 시·군·구 후보에는 폐지 코드도 섞이므로 스냅샷의 개별 현존 검증과 `excludedInactive`·`excludedLowerLevels`를 함께 확인한다. 행 개수만으로 정확성을 판정하지 않는다.
+
+새 행의 애플리케이션 코드는 `KR_` + 10자리 행정코드이고, UUID는 V20의 고정 namespace로 환경 간 동일하게 생성한다. 이 생성 규칙은 마이그레이션 내부 구현이며 외부 ID 해석 규칙이 아니다. 주소에 남은 광주·전남 표기는 현행 통합 지역으로 정규화한 뒤 활성 자식을 확인하고, 귀속을 확인하지 못한 폐지 이름은 등록을 거부한다.
+
 ## 3. FoodCategory 10개
 
 | UUID | code | name | sort |
@@ -76,14 +91,14 @@ related_documents:
 - API 표준 이름 변경은 요구사항·API 계약 변경 후 새 migration으로 `name`을 갱신한다.
 - 더 이상 신규 연결하지 않는 값은 삭제하지 않고 `active=false`로 바꾼다.
 - 새 값은 새 UUID·code·sort order로 추가한다.
-- sort order 재배열은 유일 제약 충돌을 피하도록 임시 음수 또는 충분히 떨어진 값으로 2단계 갱신한다.
+- Region의 sort order는 부모별 유일성과 양수 CHECK를 만족해야 한다. 재배열 시 같은 부모의 미사용 양수 범위를 확보하고 `smallint` 상한을 확인한 뒤 2단계 갱신한다. 기존 FoodCategory의 `1..10` CHECK에도 음수 임시값을 사용하지 않는다.
 - 카테고리 `OTHER`의 이름·의미 변경은 API 표준값에 영향을 주므로 애플리케이션과 같은 릴리스에서 검토한다.
 
 ## 5. 환경별 fixture
 
 | 환경 | 데이터 | 방법 |
 |---|---|---|
-| 모든 환경 | Region·FoodCategory | Flyway 초기 스키마 baseline |
+| 모든 환경 | Region·FoodCategory | Flyway baseline 및 V20 전국 지역 전진 마이그레이션 |
 | 로컬 개발 | 가상 Restaurant·Creator·Video·Visit | 테스트/로컬 profile fixture, 운영 artifact 제외 |
 | CI | 시나리오별 최소 fixture | 테스트 코드·SQL fixture, 테스트 종료 시 폐기 |
 | 운영 | 검증된 실제 데이터 | 관리자 등록 API만 사용 |
@@ -95,7 +110,9 @@ related_documents:
 
 배포 smoke test는 다음을 단언한다.
 
-- active Region가 정확히 25개이고 code/name/sort가 모두 유일하다.
+- V20 기준 초기 active Region가 상위 16개·하위 229개, 총 245개이며 코드·이름·부모·순서 집합이 스냅샷과 정확히 일치한다. 이후 행정구역 변경은 새 스냅샷·전진 마이그레이션으로 검토한다.
+- Region의 `id`·`code`·`administrative_code`는 전역 유일하고, 이름·표시 순서는 같은 부모 아래에서 유일하다. 다른 시·도의 `중구`는 공존한다.
+- 기존 서울 25개 UUID·`SEOUL_*` 코드·sort와 기존 Restaurant FK가 보존되고, 세종 직접 연결·제주 2개 자식·비자치구 제외·폐지 코드 제외가 일치한다.
 - active FoodCategory가 정확히 10개이고 code `OTHER`가 정확히 한 행이다.
-- API 계약의 Region·Category 이름 집합과 DB 집합이 정확히 같다.
+- `/api/regions`는 활성 마스터 전체와 일치한다. `/api/restaurants/filter-options`의 서울 이름·카테고리는 실제 공개·활성 맛집이 쓰는 부분집합이므로 전체 seed와 같다고 단언하지 않는다.
 - 기준 테이블에 예상하지 않은 비활성 또는 추가 행이 있으면 자동 삭제하지 않고 배포 경고·검토 대상으로 남긴다.

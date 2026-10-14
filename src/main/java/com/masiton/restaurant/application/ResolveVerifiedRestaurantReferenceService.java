@@ -7,7 +7,7 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
-import com.masiton.common.address.SeoulRoadAddressNormalizer;
+import com.masiton.common.address.RoadAddressNormalizer;
 import com.masiton.restaurant.application.port.in.ResolveVerifiedRestaurantReferenceUseCase;
 import com.masiton.restaurant.application.port.out.FoodCategoryRepositoryPort;
 import com.masiton.restaurant.application.port.out.PlaceVerificationPort;
@@ -38,14 +38,14 @@ class ResolveVerifiedRestaurantReferenceService implements ResolveVerifiedRestau
             Map.entry("주점", "술집·주점"), Map.entry("포차", "술집·주점"), Map.entry("기타", "기타"));
 
     private final PlaceVerificationPort placeVerification;
-    private final RegionRepositoryPort regionRepository;
+    private final RegionAddressResolver regionAddressResolver;
     private final FoodCategoryRepositoryPort foodCategoryRepository;
 
     ResolveVerifiedRestaurantReferenceService(PlaceVerificationPort placeVerification,
                                                RegionRepositoryPort regionRepository,
                                                FoodCategoryRepositoryPort foodCategoryRepository) {
         this.placeVerification = placeVerification;
-        this.regionRepository = regionRepository;
+        this.regionAddressResolver = new RegionAddressResolver(regionRepository);
         this.foodCategoryRepository = foodCategoryRepository;
     }
 
@@ -58,7 +58,8 @@ class ResolveVerifiedRestaurantReferenceService implements ResolveVerifiedRestau
         Optional<VerifiedPlace> verifiedPlace = placeVerification.verify(restaurantName, kakaoPlaceUrl, null);
         if (verifiedPlace.isEmpty() || !complete(verifiedPlace.get())
                 || !matches(restaurantName, verifiedPlace.get().name())
-                || !matches(candidateAddress, verifiedPlace.get().roadAddress())) {
+                || !matches(RoadAddressNormalizer.normalize(candidateAddress),
+                        RoadAddressNormalizer.normalize(verifiedPlace.get().roadAddress()))) {
             return Optional.empty();
         }
 
@@ -66,13 +67,7 @@ class ResolveVerifiedRestaurantReferenceService implements ResolveVerifiedRestau
         if (categoryName == null) {
             return Optional.empty();
         }
-        Optional<String> district = SeoulRoadAddressNormalizer.extractDistrict(verifiedPlace.get().roadAddress());
-        if (district.isEmpty()) {
-            return Optional.empty();
-        }
-        var region = regionRepository.findByName(district.get())
-                .filter(value -> value.isActive())
-                .orElse(null);
+        var region = regionAddressResolver.resolve(verifiedPlace.get().roadAddress()).orElse(null);
         var foodCategory = foodCategoryRepository.findByName(categoryName)
                 .filter(value -> value.isActive())
                 .orElse(null);
@@ -83,7 +78,8 @@ class ResolveVerifiedRestaurantReferenceService implements ResolveVerifiedRestau
         VerifiedPlace place = verifiedPlace.get();
         return Optional.of(new VerifiedRestaurantReference(
                 region.getId(), foodCategory.getId(), place.name(), place.identityKey(), place.kakaoPlaceUrl(),
-                place.roadAddress(), place.phoneNumber(), place.latitude(), place.longitude()));
+                RoadAddressNormalizer.normalize(place.roadAddress()), place.phoneNumber(),
+                place.latitude(), place.longitude()));
     }
 
     private boolean matches(String left, String right) {

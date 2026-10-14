@@ -41,6 +41,7 @@ related_nfr:
   - NFR-TEST-001
   - NFR-TEST-002
 related_documents:
+  - ../common/region-contract.md
   - ../../../04-product/prd/detail/restaurant-detail.md
   - ../../../04-product/prd/discovery/creator-discovery.md
   - ../common/identifier-contract.md
@@ -145,7 +146,7 @@ related_documents:
 | `name` | string | 예 | 맛집 이름 | 빈 문자열 불가 |
 | `category` | string | 예 | 대표 음식 카테고리 1개 | `null` 불가 |
 | `address` | object | 예 | 위치 표시 정보 | 생략·`null` 불가 |
-| `address.roadAddress` | string | 예 | 서울특별시 전체 도로명주소 | 빈 문자열 불가 |
+| `address.roadAddress` | string | 예 | 전국 전체 도로명주소. #394의 [지역 계층 계약](../common/region-contract.md) 적용, 비자치구 표기 보존 | 빈 문자열 불가 |
 | `address.detailAddress` | string 또는 null | 예 | 건물명·층·호 등 등록된 상세 위치 | 미등록이면 `null`, 빈 문자열 불가 |
 | `phoneNumber` | string | 예 | 등록된 전화번호 | 빈 문자열·`null` 불가 |
 | `kakaoPlaceUrl` | string | 예 | 등록된 카카오 장소 링크 | 빈 문자열·`null` 불가; 실시간 유효성 보장 아님 |

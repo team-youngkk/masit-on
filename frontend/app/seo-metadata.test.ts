@@ -172,7 +172,7 @@ test('데이터가 있는 기본 목록만 색인과 follow를 허용한다', ()
       ),
       {
         title: '유튜버가 방문한 맛집 탐색 | 맛잇온',
-        description: '유튜버가 방문한 서울 맛집을 지역, 음식 종류, 유튜버로 탐색하세요.',
+        description: '유튜버가 방문한 전국 맛집을 지역, 음식 종류, 유튜버로 탐색하세요.',
         robots: { index: true, follow: true },
         alternates: { canonical: 'https://masit-on.example/restaurants' },
       },

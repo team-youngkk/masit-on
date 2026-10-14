@@ -1,6 +1,7 @@
 ---
 status: accepted
 related_documents:
+  - ../api/common/region-contract.md
   - constraints.md
   - lifecycle-rules.md
   - physical-data-model.md
@@ -18,7 +19,8 @@ related_documents:
 | Creator 동일 채널 금지 | `uk_creator__external_channel_id` | YouTube 확인, 생성 전 조회 | `DUPLICATE_CREATOR` |
 | Video 동일 원본 금지 | `uk_video__external_video_id` | YouTube 확인, 생성 전 조회 | `DUPLICATE_VIDEO` |
 | Visit 세 대상 조합 유일 | `uk_visit__restaurant_creator_video` | 생성 전 조회 | `DUPLICATE_VISIT_RELATIONSHIP` |
-| Region·Category 표준값 유일 | 각 `code`, `name`, `sort_order` UK | Flyway seed 검증 | 기준 데이터 배포 실패 |
+| Region 표준값 유일·계층 | 전역 `code`·`administrative_code` UK, 부모별 `name`·`sort_order` UK, 파생 부모 코드 복합 FK·CHECK | #394 [지역 계약](../api/common/region-contract.md)의 현존 seed·활성 지역 검증, 소유자 리뷰 요청 | 기준 데이터 배포 실패 또는 입력 거부 |
+| Category 표준값 유일 | `code`, `name`, `sort_order` UK | Flyway seed 검증 | 기준 데이터 배포 실패 |
 | 통합 계정 이메일 유일 | `uk_member_account__email` | 정규화 이메일, 역할 입력과 무관 | 가입·운영 발급 거부 |
 | 계정 역할 허용값 | `ck_member_account__role` | 공개 가입은 `MEMBER`; `ADMIN`은 승인 운영 절차 | 잘못된 역할 거부 |
 | Video.Creator와 게시 채널 일치 | `fk_video__creator_channel` 복합 FK | Video 연결 전 외부 ID 비교 | `VIDEO_CHANNEL_MISMATCH` |
@@ -34,8 +36,10 @@ related_documents:
 |---|---|---|
 | `pk_region` | `region` | `id` |
 | `uk_region__code` | `region` | `code` |
-| `uk_region__name` | `region` | `name` |
-| `uk_region__sort_order` | `region` | `sort_order` |
+| `uk_region__administrative_code` | `region` | `administrative_code` |
+| `uk_region__id_administrative_code` | `region` | `id, administrative_code` |
+| `uk_region__parent_name` | `region` | `parent_id, name`, `NULLS NOT DISTINCT` |
+| `uk_region__parent_sort_order` | `region` | `parent_id, sort_order`, `NULLS NOT DISTINCT` |
 | `pk_food_category` | `food_category` | `id` |
 | `uk_food_category__code` | `food_category` | `code` |
 | `uk_food_category__name` | `food_category` | `name` |
@@ -69,6 +73,7 @@ PostgreSQL의 `UNIQUE`는 이미 동일 컬럼 B-tree 인덱스를 만든다. �
 | 이름 | 자식 컬럼 | 부모 키 | 삭제·수정 |
 |---|---|---|---|
 | `fk_restaurant__region` | `restaurant.region_id` | `region.id` | `ON DELETE RESTRICT ON UPDATE RESTRICT` |
+| `fk_region__province` | `region(parent_id, parent_administrative_code)` | `region(id, administrative_code)` | `ON DELETE RESTRICT`, 更新은 기본 `NO ACTION` |
 | `fk_restaurant__food_category` | `restaurant.food_category_id` | `food_category.id` | 동일 |
 | `fk_video__creator_channel` | `video(creator_id, publisher_external_channel_id)` | `creator(id, external_channel_id)` | 동일 |
 | `fk_visit__restaurant` | `visit.restaurant_id` | `restaurant.id` | 동일 |
@@ -91,7 +96,9 @@ PostgreSQL의 `UNIQUE`는 이미 동일 컬럼 B-tree 인덱스를 만든다. �
 
 | 이름 | 식 |
 |---|---|
-| `ck_region__sort_order` | `sort_order BETWEEN 1 AND 25` |
+| `ck_region__sort_order` | `sort_order > 0` |
+| `ck_region__administrative_code` | `administrative_code ~ '^[0-9]{5}00000$'` |
+| `ck_region__hierarchy` | 부모가 없으면 뒤 8자리가 0인 코드 또는 세종 `3611000000`, 부모가 있으면 그 외 시·군·구 코드. [테이블 정의](table-definitions.md#2-region)의 복합 FK와 함께 적용 |
 | `ck_food_category__sort_order` | `sort_order BETWEEN 1 AND 10` |
 | `ck_admin_account__login_id_not_blank` (legacy) | `btrim(login_id) <> ''` |
 | `ck_admin_account__role` (legacy) | `role = 'ADMIN'` |
@@ -117,7 +124,7 @@ PostgreSQL의 `UNIQUE`는 이미 동일 컬럼 B-tree 인덱스를 만든다. �
 | `ck_confirmation_token__expiry` | `expires_at > issued_at` |
 | `ck_confirmation_token__completion_pair` | `ISSUED`면 완료 컬럼 둘 다 null, 완료 상태면 둘 다 not null |
 
-필수 문자열에는 테이블별 `btrim(column) <> ''` CHECK를 둔다. nullable 문자열은 `column IS NULL OR btrim(column) <> ''`를 사용한다. URL scheme·host와 서울 주소 판정은 신뢰 가능한 URL parser 및 외부 검증이 필요하므로 DB 정규식으로 흉내 내지 않는다.
+필수 문자열에는 테이블별 `btrim(column) <> ''` CHECK를 둔다. nullable 문자열은 `column IS NULL OR btrim(column) <> ''`를 사용한다. URL scheme·host와 전국 주소의 지역 귀속은 URL parser·외부 검증·활성 지역 마스터 판정으로 확인하며 DB 정규식으로 흉내 내지 않는다.
 
 ## 5. 상태 전환 불변식
 

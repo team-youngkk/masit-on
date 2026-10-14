@@ -10,7 +10,7 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import com.masiton.common.address.SeoulRoadAddressNormalizer;
+import com.masiton.common.address.RoadAddressNormalizer;
 import com.masiton.restaurant.application.PlaceVerificationFailedException;
 import com.masiton.restaurant.application.port.out.PlaceVerificationPort;
 import com.masiton.restaurant.application.port.out.KakaoPlaceRevalidationPort;
@@ -131,7 +131,7 @@ class KakaoPlaceVerificationAdapter implements PlaceVerificationPort, KakaoPlace
         URI canonicalPlaceUrl = KakaoPlaceUrlPolicy.canonicalize(placeUrl)
                 .orElseThrow(PlaceVerificationFailedException::new);
         return Optional.of(new VerifiedPlace(
-                id, name, canonicalPlaceUrl.toString(), SeoulRoadAddressNormalizer.normalize(roadAddress), phoneNumber,
+                id, name, canonicalPlaceUrl.toString(), RoadAddressNormalizer.normalize(roadAddress), phoneNumber,
                 latitude, longitude));
     }
 

@@ -55,6 +55,7 @@ related_nfr:
   - NFR-PRIVACY-001
   - NFR-PRIVACY-002
 related_documents:
+  - ../common/region-contract.md
   - ../../../04-product/prd/admin/admin-data-management.md
   - authentication-api.md
   - ../common/identifier-contract.md
@@ -113,6 +114,8 @@ Token 소비와 Entity 생성 또는 동시 중복 완료는 한 PostgreSQL 트�
 
 ## 5. 맛집 등록
 
+#394의 [지역 계층 계약](../common/region-contract.md)에 따라 전국 도로명주소를 활성 지역에 연결한다. API·DB·등록 경계 소유자 리뷰를 요청하며, 기존 Token·외부 동일성 검증·원자성 계약을 유지한다. 수동 등록·AI 물리 참조 해석·장소 후보는 같은 시·도 정규화와 활성 마스터 판정을 사용한다. 장소 재검증은 같은 정규화로 두 주소의 시·도·시·군·구를 비교하되 마스터 조회나 `regionId` 이동을 하지 않고 변경·추출 불가를 수동 검토로 보낸다. 기존 공개·생명주기 플래그와 감사 사유 `DISTRICT_CHANGED`를 유지한다. Kakao·YouTube 호출은 DB 트랜잭션 밖에서 수행하고, 등록의 외부 검증 또는 지역 귀속 실패 시 핵심 Entity는 부분 저장하지 않는다.
+
 ### API-ADMIN-RESTAURANT-PREVIEW-001 맛집 등록 검증 미리보기
 
 - Method: `POST`
@@ -139,12 +142,12 @@ Token 소비와 Entity 생성 또는 동시 중복 완료는 한 PostgreSQL 트�
 |---|---|---:|---|---|
 | `name` | string | 예 | 관리자가 확인한 맛집 이름 | 앞뒤 공백 제거 후 1~100자 |
 | `kakaoPlaceUrl` | string | 예 | 동일 장소 확인에 사용한 카카오 장소 링크 | 최대 2,048자, HTTPS 카카오 장소 URL |
-| `roadAddress` | string | 예 | 서울특별시 전체 도로명주소 | 앞뒤 공백 제거 후 1~255자, 서울 밖 주소 불가 |
+| `roadAddress` | string | 예 | 전국 전체 도로명주소 | 앞뒤 공백 제거 후 1~255자, 활성 지역에 귀속 가능한 주소 |
 | `detailAddress` | string 또는 null | 예 | 건물명·층·호 등 상세 위치 | 없으면 `null`, 있으면 앞뒤 공백 제거 후 1~200자 |
 | `phoneNumber` | string | 예 | 확인된 전화번호 | 7~20자, 숫자·공백·`+`·`-`·`(`·`)`만 허용 |
 | `category` | string | 예 | 대표 음식 카테고리 정확히 1개 | 공통 10개 값 중 하나 |
 
-대표 이미지는 확정 요구사항에 없으므로 요청·응답에 포함하지 않는다. 자치구는 전체 도로명주소에 해당하는 값이며 별도 다중 입력을 받지 않는다. `기타` 카테고리도 별도 구체 음식 종류 필드를 받지 않는다.
+대표 이미지는 확정 요구사항에 없으므로 요청·응답에 포함하지 않는다. 지역은 전체 도로명주소의 시·도와 시·군·구로 판정하며 요청에 지역 ID·코드·다중 지역을 별도 입력받지 않는다. 비자치구는 시에 귀속하되 주소의 구 표기는 보존하고, 세종은 `3611000000`인 최상위 지역에 직접 연결한다. 기존 광주·전남 표기는 현행 전남광주통합특별시로 정규화한 후 활성 자식을 확인하며, 귀속할 수 없는 폐지 이름은 임의로 대체하지 않는다. `기타` 카테고리도 별도 구체 음식 종류 필드를 받지 않는다.
 
 #### Success Response
 
@@ -170,14 +173,16 @@ Token 소비와 Entity 생성 또는 동시 중복 완료는 한 PostgreSQL 트�
 
 `DUPLICATE`이면 `existingResource`에 기존 맛집의 `id`, `name`, `roadAddress`를 제공한다. `REVIEW_REQUIRED`이면 동일 장소 판단을 완료할 수 없어 두 토큰 필드는 `null`이다. 미리보기는 자원을 생성하거나 공개하지 않는다.
 
+`candidate.district`와 확정 응답의 `district`는 연결된 지역 표시명으로 필드명을 유지한다. 서울 자치구뿐 아니라 수원시·제주시·세종특별자치시도 가능하며 레거시 목록 요청의 `district` 허용값과 구분한다.
+
 #### Error Cases
 
 | 오류 코드 | HTTP | 조건 |
 |---|---:|---|
 | `MISSING_REQUIRED_FIELD` | 400 | 필수 필드 누락 |
-| `INVALID_FIELD_VALUE` | 400 | URL·서울 주소·카테고리 값 오류 |
+| `INVALID_FIELD_VALUE` | 400 | URL·도로명주소 형식·카테고리 값 오류 |
 | `DUPLICATE_RESTAURANT` | 409 | 생성 확정 직전 동일 장소가 등록됨 |
-| `IDENTITY_VERIFICATION_REQUIRED` | 409 | 생성 확정 시 동일 장소 판단 상태가 변경됨 |
+| `IDENTITY_VERIFICATION_REQUIRED` | 409 | 검증된 주소를 활성 지역에 연결할 수 없거나 생성 확정 시 동일 장소 판단 상태가 변경됨 |
 | `EXTERNAL_SERVICE_ERROR` | 502 | 등록에 필요한 카카오 확인을 완료할 수 없음 |
 
 중복과 보류는 정상적인 미리보기 판정이므로 서버가 판정 가능한 경우 `200`의 `decision`으로 반환한다. `409`는 생성 API에 잘못된 상태의 토큰을 제출했거나 동시 등록으로 미리보기 이후 상태가 바뀐 경우 사용한다.
@@ -240,7 +245,7 @@ Token 소비와 Entity 생성 또는 동시 중복 완료는 한 PostgreSQL 트�
 }
 ```
 
-페이지가 필요 없는 최소 선택 목록이므로 `{ "items": [...] }` 형태를 쓴다. 후보가 없어도 `200`과 빈 `items`이며 오류가 아니다. `phoneNumber`가 카카오 응답에 없는 장소는 `null`로 내보내고 관리자가 직접 입력한다. 도로명주소나 장소 링크가 없어 등록에 쓸 수 없는 문서는 `items`에서 제외한다. `district`는 도로명주소에서 파생한 서울 자치구이며, 뽑을 수 없으면 `null`이고 항목 자체는 남는다. `roadAddressHint`가 있으면 그 값과 더 잘 맞는 후보를 앞에 두며, 동점이면 카카오 응답 순서를 유지한다.
+페이지가 필요 없는 최소 선택 목록이므로 `{ "items": [...] }` 형태를 쓴다. 후보가 없어도 `200`과 빈 `items`이며 오류가 아니다. `phoneNumber`가 카카오 응답에 없는 장소는 `null`로 내보내고 관리자가 직접 입력한다. 도로명주소나 장소 링크가 없어 등록에 쓸 수 없는 문서는 `items`에서 제외한다. `district`는 정규화한 도로명주소를 활성 지역 마스터로 판정한 지역 표시명이며, 귀속할 수 없으면 `null`이고 항목 자체는 남는다. 이 후보가 반환되어도 검증 미리보기·등록의 지역 검증을 통과한 것은 아니다. `roadAddressHint`가 있으면 같은 시·도 정규화 후 그 값과 더 잘 맞는 후보를 앞에 두며, 동점이면 카카오 응답 순서를 유지한다.
 
 #### Error Cases
 

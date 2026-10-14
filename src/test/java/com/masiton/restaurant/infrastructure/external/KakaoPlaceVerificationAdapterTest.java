@@ -61,14 +61,14 @@ class KakaoPlaceVerificationAdapterTest {
     }
 
     @Test
-    @DisplayName("서울 밖 주소는 정규화하지 않고 그대로 넘긴다")
-    void 검증_서울밖주소는_그대로넘긴다() throws Exception {
+    @DisplayName("서울 밖 주소도 공식 시도명으로 정규화한다")
+    void 검증_서울밖주소는_공식시도명으로넘긴다() throws Exception {
         givenResponse(200, document("https://place.map.kakao.com/" + PLACE_ID, "부산 영도구 태종로99번길 28"));
 
         Optional<VerifiedPlace> verified = adapter().verify("서울집", SUBMITTED_URL, "051-416-4845");
 
         assertThat(verified).isPresent();
-        assertThat(verified.get().roadAddress()).isEqualTo("부산 영도구 태종로99번길 28");
+        assertThat(verified.get().roadAddress()).isEqualTo("부산광역시 영도구 태종로99번길 28");
     }
 
     @Test

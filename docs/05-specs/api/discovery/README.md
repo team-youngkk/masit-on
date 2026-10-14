@@ -1,5 +1,6 @@
 ---
 related_documents:
+  - ../common/region-contract.md
   - ../README.md
   - restaurant-discovery-api.md
   - natural-language-restaurant-discovery-api.md
@@ -19,6 +20,8 @@ related_documents:
 # 탐색 API
 
 탐색 영역은 각 PRD와 Workstream의 책임 경계를 유지한다.
+
+#394의 [전국 지역 계층 계약](../common/region-contract.md)은 `GET /api/regions` 전체 활성 마스터와 목록·자연어의 직접 `regionCode`를 정의한다. 레거시 서울 `district`와 지도 API 범위는 해당 계약의 호환 경계를 따른다. 소유자 리뷰 요청 상태다.
 
 - [WS-01](../../../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)은 `GET /api/restaurants`의 이름·지역·카테고리·유튜버·단일 태그 조건 AND 조합, 최종 목록, 정렬과 페이지를 소유한다.
 - [WS-03](../../../02-analysis/mvp-workstreams.md#7-ws-03-유튜버-기반-탐색)은 공개 유튜버 최소 선택 목록과 `creatorId`에 해당하는 유효 방문 맛집 판정 의미를 소유한다.

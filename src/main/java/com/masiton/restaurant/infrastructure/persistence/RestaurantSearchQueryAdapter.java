@@ -66,7 +66,7 @@ class RestaurantSearchQueryAdapter implements RestaurantSearchQueryPort {
             params.addValue("query", "%" + escapeLikeWildcards(criteria.normalizedQuery()) + "%");
         }
         if (criteria.regionId() != null) {
-            where.append(" AND r.region_id = :regionId");
+            where.append(" AND reg.active = true AND (r.region_id = :regionId OR reg.parent_id = :regionId)");
             params.addValue("regionId", criteria.regionId());
         }
         if (criteria.foodCategoryId() != null) {
@@ -105,7 +105,8 @@ class RestaurantSearchQueryAdapter implements RestaurantSearchQueryPort {
         }
 
         Long totalElements = jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM restaurant r WHERE " + where, params, Long.class);
+                "SELECT count(*) FROM restaurant r JOIN region reg ON reg.id = r.region_id WHERE " + where,
+                params, Long.class);
 
         params.addValue("limit", criteria.size());
         params.addValue("offset", (long) (criteria.page() - 1) * criteria.size());
@@ -148,6 +149,7 @@ class RestaurantSearchQueryAdapter implements RestaurantSearchQueryPort {
                         + "FROM restaurant r "
                         + "JOIN region reg ON reg.id = r.region_id "
                         + "WHERE " + BASE_CONDITION + " AND reg.active = true "
+                        + "AND reg.code LIKE 'SEOUL\\_%' ESCAPE '\\' "
                         + "GROUP BY reg.name, reg.sort_order "
                         + "ORDER BY reg.sort_order, reg.name COLLATE \"C\"",
                 new MapSqlParameterSource(),

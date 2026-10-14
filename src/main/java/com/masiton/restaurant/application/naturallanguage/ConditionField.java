@@ -4,6 +4,7 @@ package com.masiton.restaurant.application.naturallanguage;
 public enum ConditionField {
     QUERY,
     DISTRICT,
+    REGION_CODE,
     CATEGORY,
     CREATOR_ID,
     TAGS

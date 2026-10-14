@@ -4,6 +4,7 @@ import { RegistrationFlow } from '@/components/admin/RegistrationFlow'
 export default function RestaurantRegistrationPage() {
   return (
     <AdminPage title="맛집 등록">
+      <p>전국 맛집을 등록할 수 있습니다. 지역은 카카오에서 검증한 도로명주소로 자동 연결됩니다. 미리보기에서 주소와 지역을 확인해 주세요.</p>
       <RegistrationFlow
         resourceName="맛집"
         previewPath="/api/admin/restaurant-registration-previews"

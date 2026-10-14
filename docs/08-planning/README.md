@@ -32,12 +32,14 @@ related_documents:
   - restaurant-visit-tag-editing.md
   - admin-tag-definition-creation.md
   - dynamic-natural-language-tag-dictionary.md
+  - issue-400-national-natural-language-regions.md
 ---
 
 # 맛잇온 구현 계획
 
 | 문서 | 목적 |
 |---|---|
+| [전국 자연어 지역 해석 계획 — #400](issue-400-national-natural-language-regions.md) | P2 활성 전국 마스터·모호 지역·직접 필터·Golden 보충 사례·API 승인 완료와 독립 ADR-ARCH-006 최종 승인 대기 |
 | [MVP 구현 계획](mvp-2day-implementation-plan.md) | 4명이 순서와 선행 관계에 따라 수행할 Task, 의존성, 검증과 완료 조건 |
 | [MVP 로컬 실행·회귀 검증 결과](mvp-local-verification.md) | `T-14`가 실행한 필수 명령과 결과, 완료 정의 판정, 알려진 위험 |
 | [M2 초기 운영 배포 계획](m2-deployment-plan.md) | M2 Task 분해, 선행 관계, 검증·복구 절차, 확인 필요 항목 |

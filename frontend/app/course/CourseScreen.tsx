@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useMemberSession } from '@/components/member/MemberSessionProvider'
 import { Button } from '@/components/ui/Button'
@@ -9,7 +10,8 @@ import { Field } from '@/components/ui/Field'
 import { SectionHeader } from '@/components/ui/PageShell'
 import { StatePanel } from '@/components/ui/StatePanel'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { CATEGORY_OPTIONS, DISTRICT_OPTIONS } from '@/lib/restaurants-api'
+import { CATEGORY_OPTIONS } from '@/lib/restaurants-api'
+import { regionSelection, type Province } from '@/lib/regions'
 import {
   MAX_COURSE_SIZE,
   addCourseCandidate,
@@ -31,9 +33,19 @@ import {
   type CourseFavoritesPage,
 } from '@/lib/course/course-favorites-api'
 import {
+  buildCourseSearchHref,
   searchCourseCandidates,
+  type CourseSearchFilters,
   type CourseSearchItem,
 } from '@/lib/course/course-search-api'
+import {
+  courseScreenSearchFiltersKey,
+  isCurrentCourseSearchRequest,
+  normalizeCourseScreenSearchFilters,
+  resetCourseSearchState,
+  type CourseScreenSearchFilters,
+} from '@/lib/course/course-search-state'
+import { fetchCourseRegions } from '@/lib/course/course-regions-api'
 import {
   courseFailureCategoryLabel,
   courseInvalidCategoryLabel,
@@ -52,10 +64,13 @@ import styles from './course.module.css'
 /* 만료 여부를 반영하기 위해 이 주기로 현재 시각을 다시 읽는다. 실시간 카운트다운은 아니다. */
 const EXPIRY_CHECK_INTERVAL_MS = 15_000
 
-type SearchFilters = {
-  query: string
-  district: string
-  category: string
+type SearchFilters = CourseScreenSearchFilters
+
+type RegionState = {
+  status: 'loading' | 'loaded' | 'error'
+  items: Province[]
+  message?: string
+  traceId?: string
 }
 
 type SearchState = {
@@ -78,29 +93,37 @@ type FavoriteState = {
   traceId?: string
 }
 
-export function CourseScreen({ designPreview = false }: { designPreview?: boolean }) {
+export function CourseScreen({
+  designPreview = false,
+  initialFilters = {},
+}: {
+  designPreview?: boolean
+  initialFilters?: CourseSearchFilters
+}) {
   if (designPreview) {
     return <DesignCoursePreview />
   }
 
-  return <LiveCourseScreen />
+  return <LiveCourseScreen initialFilters={initialFilters} />
 }
 
-function LiveCourseScreen() {
+function LiveCourseScreen({ initialFilters }: { initialFilters: CourseSearchFilters }) {
+  const router = useRouter()
   const { status: memberStatus, session } = useMemberSession()
   const canUseFavorites = canUseCourseFavoriteSource(memberStatus, session?.role)
   const [selected, setSelected] = useState<CourseCandidate[]>([])
-  const [query, setQuery] = useState('')
-  const [district, setDistrict] = useState('')
-  const [category, setCategory] = useState('')
+  const [query, setQuery] = useState(initialFilters.query ?? '')
+  const [regionCode, setRegionCode] = useState(initialFilters.regionCode ?? '')
+  const [category, setCategory] = useState(initialFilters.category ?? '')
   const [search, setSearch] = useState<SearchState>({
     status: 'idle',
     items: [],
     page: 1,
     hasNext: false,
     loadingMore: false,
-    filters: { query: '', district: '', category: '' },
+    filters: { query: initialFilters.query ?? '', regionCode: initialFilters.regionCode ?? '', category: initialFilters.category ?? '' },
   })
+  const [regions, setRegions] = useState<RegionState>({ status: 'loading', items: [] })
   const [favorites, setFavorites] = useState<FavoriteState>({
     status: 'idle',
     items: [],
@@ -116,6 +139,8 @@ function LiveCourseScreen() {
   const searchRequestId = useRef(0)
   const routeRequestId = useRef(0)
   const searchAbortController = useRef<AbortController | null>(null)
+  const regionsAbortController = useRef<AbortController | null>(null)
+  const syncedInitialFiltersKey = useRef<string | null>(null)
   const favoriteRequestId = useRef(0)
   const favoriteAbortController = useRef<AbortController | null>(null)
   const routeAbortController = useRef<AbortController | null>(null)
@@ -177,12 +202,50 @@ function LiveCourseScreen() {
       searchRequestId.current += 1
       routeRequestId.current += 1
       searchAbortController.current?.abort()
+      regionsAbortController.current?.abort()
       favoriteRequestId.current += 1
       favoriteAbortController.current?.abort()
       routeAbortController.current?.abort()
     },
     [],
   )
+
+  const loadRegions = useCallback(async () => {
+    regionsAbortController.current?.abort()
+    const controller = new AbortController()
+    regionsAbortController.current = controller
+    setRegions((current) => ({ ...current, status: 'loading', message: undefined, traceId: undefined }))
+
+    try {
+      const result = await fetchCourseRegions(controller.signal)
+      if (regionsAbortController.current !== controller) return
+      if (result.ok) {
+        setRegions({ status: 'loaded', items: result.items })
+      } else {
+        setRegions({ status: 'error', items: [], message: result.message, traceId: result.traceId })
+      }
+    } catch (error) {
+      if (!isAbortError(error) && regionsAbortController.current === controller) {
+        setRegions({
+          status: 'error',
+          items: [],
+          message: '지역 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
+        })
+      }
+    } finally {
+      if (regionsAbortController.current === controller) {
+        regionsAbortController.current = null
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadRegions()
+
+    return () => {
+      regionsAbortController.current?.abort()
+    }
+  }, [loadRegions])
 
   useEffect(() => {
     if (memberStatus === 'authenticated') return
@@ -191,19 +254,39 @@ function LiveCourseScreen() {
     setFavorites({ status: 'idle', items: [], page: null, loadingMore: false })
   }, [memberStatus])
 
-  async function runSearch() {
-    const filters = { query, district, category }
+  useEffect(() => {
+    const nextFilters = normalizeCourseScreenSearchFilters(initialFilters)
+    const nextKey = courseScreenSearchFiltersKey(nextFilters)
+    if (syncedInitialFiltersKey.current === nextKey) {
+      return
+    }
+    syncedInitialFiltersKey.current = nextKey
+    searchAbortController.current?.abort()
+    searchRequestId.current += 1
+    setQuery(nextFilters.query)
+    setRegionCode(nextFilters.regionCode)
+    setCategory(nextFilters.category)
+    setSearch(resetCourseSearchState(nextFilters))
+  }, [initialFilters.category, initialFilters.query, initialFilters.regionCode])
+
+  async function runSearch(filters: SearchFilters = { query, regionCode, category }) {
+    const nextFilters = normalizeCourseScreenSearchFilters(filters)
+    syncedInitialFiltersKey.current = courseScreenSearchFiltersKey(nextFilters)
+    setQuery(nextFilters.query)
+    setRegionCode(nextFilters.regionCode)
+    setCategory(nextFilters.category)
+    router.replace(buildCourseSearchHref(nextFilters), { scroll: false })
     searchAbortController.current?.abort()
     const controller = new AbortController()
     const requestId = ++searchRequestId.current
     searchAbortController.current = controller
-    setSearch({ status: 'loading', items: [], page: 1, hasNext: false, loadingMore: false, filters })
+    setSearch({ status: 'loading', items: [], page: 1, hasNext: false, loadingMore: false, filters: nextFilters })
     try {
       const result = await searchCourseCandidates(
-        filters,
+        nextFilters,
         controller.signal,
       )
-      if (searchRequestId.current !== requestId) {
+      if (!isCurrentCourseSearchRequest(searchRequestId.current, requestId)) {
         return
       }
       if (result.ok) {
@@ -213,7 +296,7 @@ function LiveCourseScreen() {
           page: result.page.number,
           hasNext: result.page.hasNext,
           loadingMore: false,
-          filters,
+          filters: nextFilters,
         })
       } else {
         setSearch({
@@ -222,7 +305,7 @@ function LiveCourseScreen() {
           page: 1,
           hasNext: false,
           loadingMore: false,
-          filters,
+          filters: nextFilters,
           message: result.message,
           traceId: result.traceId,
         })
@@ -235,7 +318,7 @@ function LiveCourseScreen() {
           page: 1,
           hasNext: false,
           loadingMore: false,
-          filters,
+          filters: nextFilters,
           message: '맛집 검색을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.',
         })
       }
@@ -244,6 +327,11 @@ function LiveCourseScreen() {
         searchAbortController.current = null
       }
     }
+  }
+
+  function changeRegion(nextRegionCode: string) {
+    setRegionCode(nextRegionCode)
+    void runSearch({ query, regionCode: nextRegionCode, category })
   }
 
   async function loadMoreSearchResults() {
@@ -265,7 +353,7 @@ function LiveCourseScreen() {
         controller.signal,
         nextPage,
       )
-      if (searchRequestId.current !== requestId) {
+      if (!isCurrentCourseSearchRequest(searchRequestId.current, requestId)) {
         return
       }
       if (result.ok) {
@@ -489,6 +577,7 @@ function LiveCourseScreen() {
   const calculateDisabled = !canCalculateCourse(selected) || calculating
   const showResult = outcome?.kind === 'success'
   const expired = showResult && isCourseRouteExpired(outcome.route.expiresAt, now)
+  const { province, child } = regionSelection(regions.items, regionCode)
 
   return (
     <div className={styles.layout}>
@@ -512,17 +601,48 @@ function LiveCourseScreen() {
             placeholder="예: 강된장"
             maxLength={100}
           />
-          <div className={styles.selectGroup}>
-            <label className={styles.selectLabel} htmlFor="course-district">
-              자치구
-            </label>
-            <CourseFilterSelect
-              id="course-district"
-              ariaLabel="자치구"
-              options={[{ value: '', label: '전체' }, ...DISTRICT_OPTIONS.map((option) => ({ value: option, label: option }))]}
-              value={district}
-              onChange={setDistrict}
-            />
+          <div className={styles.regionControls} aria-live="polite">
+            <div className={styles.selectGroup}>
+              <label className={styles.selectLabel} htmlFor="course-province">
+                시·도
+              </label>
+              <CourseFilterSelect
+                id="course-province"
+                ariaLabel="시·도"
+                options={[{ value: '', label: '전체' }, ...regions.items.map((item) => ({ value: item.code, label: item.name }))]}
+                value={province?.code ?? ''}
+                onChange={changeRegion}
+                disabled={regions.status !== 'loaded'}
+              />
+            </div>
+            <div className={styles.selectGroup}>
+              <label className={styles.selectLabel} htmlFor="course-municipality">
+                시·군·구
+              </label>
+              <CourseFilterSelect
+                id="course-municipality"
+                ariaLabel="시·군·구"
+                options={[{ value: '', label: province?.children.length ? '전체' : '하위 지역 없음' }, ...(province?.children ?? []).map((item) => ({ value: item.code, label: item.name }))]}
+                value={child?.code ?? ''}
+                onChange={(code) => changeRegion(code || province?.code || '')}
+                disabled={regions.status !== 'loaded' || !province?.children.length}
+              />
+            </div>
+            {regions.status === 'loading' ? <p className={styles.selectHint}>지역 목록을 불러오는 중입니다.</p> : null}
+            {regions.status === 'error' ? (
+              <div className={styles.error} role="alert">
+                <p>{regions.message}</p>
+                {regions.traceId ? <span className={styles.traceId}>traceId: {regions.traceId}</span> : null}
+                <Button type="button" variant="secondary" onClick={() => void loadRegions()}>다시 시도</Button>
+                {regionCode ? <Button type="button" variant="secondary" onClick={() => changeRegion('')}>지역 조건 해제</Button> : null}
+              </div>
+            ) : null}
+            {regions.status === 'loaded' && regionCode && !province ? (
+              <div className={styles.error} role="alert">
+                <p>선택한 지역을 확인할 수 없습니다. 지역을 다시 선택해 주세요.</p>
+                <Button type="button" variant="secondary" onClick={() => changeRegion('')}>지역 조건 해제</Button>
+              </div>
+            ) : null}
           </div>
           <div className={styles.selectGroup}>
             <label className={styles.selectLabel} htmlFor="course-category">
@@ -542,10 +662,11 @@ function LiveCourseScreen() {
         </form>
 
         {search.status === 'error' || (search.status === 'loaded' && search.message) ? (
-          <p className={styles.error} role="alert">
-            {search.message}
+          <div className={styles.error} role="alert">
+            <p>{search.message}</p>
             {search.traceId ? <span className={styles.traceId}>traceId: {search.traceId}</span> : null}
-          </p>
+            <Button type="button" variant="secondary" onClick={() => void runSearch(search.filters)}>다시 시도</Button>
+          </div>
         ) : null}
 
         {search.status === 'loaded' && search.items.length === 0 ? (

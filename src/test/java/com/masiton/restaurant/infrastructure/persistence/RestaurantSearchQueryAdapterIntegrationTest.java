@@ -176,6 +176,78 @@ class RestaurantSearchQueryAdapterIntegrationTest extends com.masiton.test.FullC
     }
 
     @Test
+    @DisplayName("시도 지역 필터는 활성 자식만 포함하고 다른 시도와 비활성 자식은 제외한다")
+    void search_시도지역필터_활성자식만포함하고다른시도와비활성자식제외한다() {
+        UUID seoulId = regionId("1100000000");
+        UUID jongnoId = regionId("1111000000");
+        UUID busanJungId = regionId("2611000000");
+        insertRestaurant("서울 시도 직접", seoulId, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
+        insertRestaurant("서울 마포", MAPO_REGION_ID, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
+        insertRestaurant("서울 종로 비활성", jongnoId, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
+        insertRestaurant("부산 중구", busanJungId, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
+        jdbcTemplate.update("UPDATE region SET active = false WHERE id = ?", jongnoId);
+
+        try {
+            RestaurantSearchQueryResult result = restaurantSearchQueryPort.search(
+                    criteria(null, seoulId, null, null, 1, 20));
+
+            assertThat(result.rows()).extracting(RestaurantSearchRow::name)
+                    .containsExactlyInAnyOrder("서울 시도 직접", "서울 마포");
+        } finally {
+            jdbcTemplate.update("UPDATE region SET active = true WHERE id = ?", jongnoId);
+        }
+    }
+
+    @Test
+    @DisplayName("시군구 지역 필터는 정확히 해당 지역의 맛집만 반환한다")
+    void search_시군구지역필터_정확히해당지역만반환한다() {
+        insertRestaurant("마포맛집", MAPO_REGION_ID, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
+        insertRestaurant("강남맛집", GANGNAM_REGION_ID, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
+
+        RestaurantSearchQueryResult result = restaurantSearchQueryPort.search(
+                criteria(null, MAPO_REGION_ID, null, null, 1, 20));
+
+        assertThat(result.rows()).extracting(RestaurantSearchRow::name).containsExactly("마포맛집");
+    }
+
+    @Test
+    @DisplayName("동명 하위 지역은 행정구역 ID가 일치하는 지역만 반환한다")
+    void search_동명하위지역_선택한지역만반환한다() {
+        UUID seoulJungId = regionId("1114000000");
+        UUID busanJungId = regionId("2611000000");
+        UUID seoulRestaurantId = insertRestaurant("서울 중구 맛집", seoulJungId, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
+        insertRestaurant("부산 중구 맛집", busanJungId, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
+
+        RestaurantSearchQueryResult result = restaurantSearchQueryPort.search(
+                criteria(null, seoulJungId, null, null, 1, 20));
+
+        assertThat(result.rows()).extracting(RestaurantSearchRow::id).containsExactly(seoulRestaurantId);
+    }
+
+    @Test
+    @DisplayName("세종 직접 지역과 제주 하위 지역은 각각 유효한 검색 범위를 가진다")
+    void search_세종과제주지역_각각의지역만반환한다() {
+        UUID sejongId = regionId("3611000000");
+        UUID jejuCityId = regionId("5011000000");
+        UUID seogwipoId = regionId("5013000000");
+        UUID sejongRestaurantId = insertRestaurant("세종맛집", sejongId, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
+        UUID jejuRestaurantId = insertRestaurant("제주시맛집", jejuCityId, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
+        UUID seogwipoRestaurantId = insertRestaurant("서귀포맛집", seogwipoId, KOREAN_CATEGORY_ID, "PUBLIC", "ACTIVE");
+
+        RestaurantSearchQueryResult sejong = restaurantSearchQueryPort.search(
+                criteria(null, sejongId, null, null, 1, 20));
+        RestaurantSearchQueryResult jejuProvince = restaurantSearchQueryPort.search(
+                criteria(null, regionId("5000000000"), null, null, 1, 20));
+        RestaurantSearchQueryResult jejuCity = restaurantSearchQueryPort.search(
+                criteria(null, jejuCityId, null, null, 1, 20));
+
+        assertThat(sejong.rows()).extracting(RestaurantSearchRow::id).containsExactly(sejongRestaurantId);
+        assertThat(jejuProvince.rows()).extracting(RestaurantSearchRow::id)
+                .containsExactlyInAnyOrder(jejuRestaurantId, seogwipoRestaurantId);
+        assertThat(jejuCity.rows()).extracting(RestaurantSearchRow::id).containsExactly(jejuRestaurantId);
+    }
+
+    @Test
     @DisplayName("category 필터는 지정한 카테고리의 맛집만 반환한다")
     void search_category필터_지정한카테고리만반환한다() {
         // given
@@ -467,6 +539,11 @@ class RestaurantSearchQueryAdapterIntegrationTest extends com.masiton.test.FullC
                 "https://example.com/place/" + id, "서울특별시 테스트로 1", "02-1234-5678",
                 publicationStatus, lifecycleStatus);
         return id;
+    }
+
+    private UUID regionId(String administrativeCode) {
+        return jdbcTemplate.queryForObject(
+                "SELECT id FROM region WHERE administrative_code = ?", UUID.class, administrativeCode);
     }
 
     private UUID insertCreator(

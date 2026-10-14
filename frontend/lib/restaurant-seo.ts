@@ -5,7 +5,7 @@ import { toPublicSiteUrl } from './site-url.ts'
 
 const RESTAURANTS_TITLE = '유튜버가 방문한 맛집 탐색 | 맛잇온'
 const RESTAURANTS_DESCRIPTION =
-  '유튜버가 방문한 서울 맛집을 지역, 음식 종류, 유튜버로 탐색하세요.'
+  '유튜버가 방문한 전국 맛집을 지역, 음식 종류, 유튜버로 탐색하세요.'
 
 type RestaurantMetadataState = {
   requestSucceeded: boolean

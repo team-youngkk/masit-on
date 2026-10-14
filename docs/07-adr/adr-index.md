@@ -39,6 +39,7 @@ related_documents:
   - integration/ext-004-youtube-periodic-reconciliation.md
   - integration/route-001-kakao-mobility-course-routing.md
   - architecture/arch-005-natural-language-filter-interpretation.md
+  - architecture/arch-006-national-natural-language-region-interpretation.md
   - integration/map-001-map-bounds-search.md
   - quality/test-001-automation-strategy.md
   - quality/obs-001-logging-observability.md
@@ -63,7 +64,8 @@ related_documents:
 | [ADR-LANG-001](platform/lang-001-java-21-runtime.md) | Java 21 런타임 기준 | Accepted | Critical | JDK 21.0.12 LTS | 전체 백엔드 | [문서](platform/lang-001-java-21-runtime.md) |
 | [ADR-BUILD-001](platform/build-001-gradle-groovy.md) | Gradle과 Groovy DSL 빌드 체계 | Accepted | Critical | Gradle 8.14.3, Groovy DSL | 전체 백엔드·CI | [문서](platform/build-001-gradle-groovy.md) |
 | [ADR-FRAME-001](platform/frame-001-spring-boot.md) | Spring Boot 애플리케이션 기준 | Accepted | Critical | Spring Boot 4.1.0, Spring Security 7.1.0 BOM | 전체 백엔드 | [문서](platform/frame-001-spring-boot.md) |
-| [ADR-WEB-001](platform/web-001-frontend-platform.md) | 프론트엔드 런타임과 프레임워크 기준 | Accepted | High | Node.js 24.18.0, Next.js 16.3.4, TypeScript 7.0.2 | 전체 웹 UI | [문서](platform/web-001-frontend-platform.md) |
+| [ADR-WEB-001](platform/web-001-frontend-platform.md) | 프론트엔드 런타임과 프레임워크 기준 | Accepted | High | Node.js 24.18.0, Next.js 16.3.8, TypeScript 7.0.2 | 전체 웹 UI | [문서](platform/web-001-frontend-platform.md) |
+| [ADR-WEB-007](platform/web-007-next-security-patch-baseline.md) | Next.js 보안 패치 기준선 | Accepted | High | Next.js 16.3.8 | 프론트 빌드·의존성 감사 | [문서](platform/web-007-next-security-patch-baseline.md) |
 | [ADR-WEB-002](platform/web-002-data-state.md) | 프론트엔드 데이터와 상태 책임 분리 | Accepted | Medium | Server Components `fetch`, TanStack Query, URL Query Parameter, `useState` | [WS-01](../02-analysis/mvp-workstreams.md#5-ws-01-맛집-탐색)~[WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 웹 UI | [문서](platform/web-002-data-state.md) |
 | [ADR-WEB-003](platform/web-003-routing-boundary.md) | 웹 화면·API·운영 경로 경계 | Superseded | Critical | Next.js App Router, Nginx, Spring Security, `/api`, `/internal` | ADR-WEB-006이 전체 경계를 대체 | [문서](platform/web-003-routing-boundary.md) |
 | [ADR-WEB-004](platform/web-004-supported-browser-matrix.md) | 지원 브라우저 매트릭스와 iPhone Safari 지원 수준 | Accepted | High | PC Chrome·Edge, Android Chrome, 화면 폭 5종 | 전체 웹 UI 인수 판정 | [문서](platform/web-004-supported-browser-matrix.md) |
@@ -87,6 +89,7 @@ related_documents:
 | [ADR-EXT-001](integration/ext-001-reference-verification.md) | 관리자 외부 기준정보 확인 서비스 | Accepted | High | Kakao Local REST API V2, YouTube Data API v3 | [WS-04](../02-analysis/mvp-workstreams.md#8-ws-04-관리자-데이터-등록) 등록 | [문서](integration/ext-001-reference-verification.md) |
 | [ADR-EXT-005](integration/ext-005-kakao-place-periodic-revalidation.md) | 등록 후 Kakao 장소 주기 재검증과 안전 보정 | Proposed | High | Kakao Local REST API V2, PostgreSQL lease·JSONB audit | Issue #377 관리자 재검증 | [문서](integration/ext-005-kakao-place-periodic-revalidation.md) |
 | [ADR-ARCH-005](architecture/arch-005-natural-language-filter-interpretation.md) | 자연어 조건 해석과 기존 필터 조회 경계 | Accepted | High | P1 규칙·사전, TagDefinition·VisitTag | [WS-14](../02-analysis/third-expansion-workstreams.md#5-ws-14-자연어-맛집-탐색) | [문서](architecture/arch-005-natural-language-filter-interpretation.md) |
+| [ADR-ARCH-006](architecture/arch-006-national-natural-language-region-interpretation.md) | 전국 자연어 지역 해석 P2와 지역 마스터 경계 | Proposed | High | 활성 지역 마스터·출력 Port·regionCode·P2 | #400 / WS-14; API 승인 완료, 문서·CI 확인 후 아키텍처 승인 대기 | [문서](architecture/arch-006-national-natural-language-region-interpretation.md) |
 | [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md) | AI 영상 추출 후보 경계와 제공자 선택 기준 | Accepted | Critical | Gemini Free Tier 전용, `gemini-3.5-flash-lite`, 현재 P8/S2·기존 P1·P2·P3·P4·P5·P6·P7 이력 보존 | [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | [문서](integration/ai-001-video-extraction-candidate-boundary.md) |
 | [ADR-EXT-003](integration/ext-003-ai-extraction-async-reliability.md) | AI 추출 비동기 작업과 단일 EC2 복구 경계 | Accepted | Critical | PostgreSQL lease, 내부 Worker, Gemini retry | [WS-15](../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출) | [문서](integration/ext-003-ai-extraction-async-reliability.md) |
 | [ADR-ROUTE-001](integration/route-001-kakao-mobility-course-routing.md) | Kakao Mobility 자동차 경로와 코스 결과 경계 | Accepted | High | Kakao Mobility `/v1/directions`, 자동차 경로 | [WS-16](../02-analysis/third-expansion-workstreams.md#7-ws-16-맛집-코스-추천) | [문서](integration/route-001-kakao-mobility-course-routing.md) |

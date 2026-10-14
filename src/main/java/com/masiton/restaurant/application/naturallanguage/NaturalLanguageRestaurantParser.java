@@ -15,7 +15,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 외부 Provider 없이 P1 규칙·사전으로 자연어를 기존 맛집 검색 조건으로 변환한다.
+ * 외부 Provider 없이 규칙·사전으로 자연어를 기존 맛집 검색 조건으로 변환한다.
+ * 활성 전국 지역 resolver를 주입한 운영 경로는 P2, 역사적 Golden 경로는 P1이다.
  * 이 클래스는 저장소, Entity, 기존 목록 UseCase를 직접 호출하지 않는다.
  */
 public final class NaturalLanguageRestaurantParser {
@@ -38,13 +39,19 @@ public final class NaturalLanguageRestaurantParser {
             "집", "식당", "맛집", "조건", "태그", "그리고", "또는", "및", "좋은", "좋고");
 
     private final NaturalLanguageDictionary dictionary;
+    private final NaturalLanguageRegionResolver regionResolver;
 
     public NaturalLanguageRestaurantParser() {
         this(NaturalLanguageDictionary.standard());
     }
 
     public NaturalLanguageRestaurantParser(NaturalLanguageDictionary dictionary) {
+        this(dictionary, null);
+    }
+
+    NaturalLanguageRestaurantParser(NaturalLanguageDictionary dictionary, NaturalLanguageRegionResolver regionResolver) {
         this.dictionary = java.util.Objects.requireNonNull(dictionary);
+        this.regionResolver = regionResolver;
     }
 
     public NaturalLanguageParseResult parse(String sentence) {
@@ -83,7 +90,7 @@ public final class NaturalLanguageRestaurantParser {
                 ignored,
                 conflicts,
                 unresolvedFields(extractions),
-                PARSER_VERSION);
+                parserVersion());
         return new NaturalLanguageParseResult(interpretation);
     }
 
@@ -96,7 +103,7 @@ public final class NaturalLanguageRestaurantParser {
                         IgnoredConditionType.UNSUPPORTED, "지원하지 않는 입력", "SUSPICIOUS_INPUT")),
                 List.of(),
                 Set.of(),
-                PARSER_VERSION);
+                parserVersion());
         return new NaturalLanguageParseResult(interpretation);
     }
 
@@ -106,7 +113,9 @@ public final class NaturalLanguageRestaurantParser {
             List<IgnoredCondition> ignored) {
         EnumMap<ConditionField, Extraction> result = new EnumMap<>(ConditionField.class);
         for (ConditionField field : ConditionField.values()) {
-            if (field == ConditionField.TAGS) {
+            if (field == ConditionField.REGION_CODE) {
+                continue;
+            } else if (field == ConditionField.TAGS) {
                 result.put(field, extractTags(aliasSentence, ignored));
             } else if (field == ConditionField.QUERY) {
                 result.put(field, extractQuery(sentence, aliasSentence, ignored));
@@ -115,6 +124,26 @@ public final class NaturalLanguageRestaurantParser {
             } else {
                 result.put(field, extractScalar(field, aliasSentence, ignored));
             }
+        }
+        String geographicSentence = aliasSentence;
+        if (regionResolver != null) {
+            char[] unclaimed = aliasSentence.toCharArray();
+            Matcher quoted = QUOTED_QUERY.matcher(aliasSentence);
+            while (quoted.find()) {
+                Arrays.fill(unclaimed, quoted.start(), quoted.end(), ' ');
+            }
+            geographicSentence = new String(unclaimed);
+        }
+        NaturalLanguageRegionResolver.Resolution region = regionResolver == null
+                ? new NaturalLanguageRegionResolver.Resolution(null, false, List.of())
+                : regionResolver.resolve(geographicSentence,
+                        List.of(ConditionField.CATEGORY, ConditionField.TAGS, ConditionField.CREATOR_ID).stream()
+                                .flatMap(field -> result.get(field).matchedAliases().stream()).toList());
+        result.put(ConditionField.REGION_CODE, new Extraction(ConditionField.REGION_CODE,
+                region.code() == null ? Set.of() : Set.of(region.code()), region.aliases(), region.unresolved(),
+                region.code() == null ? 0 : 1));
+        if (region.unresolved()) {
+            ignored.add(unresolved(ConditionField.REGION_CODE));
         }
         return result;
     }
@@ -260,7 +289,8 @@ public final class NaturalLanguageRestaurantParser {
                 scalarValue(extractions.get(ConditionField.DISTRICT)),
                 scalarValue(extractions.get(ConditionField.CATEGORY)),
                 scalarValue(extractions.get(ConditionField.CREATOR_ID)),
-                tagValues(extractions.get(ConditionField.TAGS)));
+                tagValues(extractions.get(ConditionField.TAGS)),
+                scalarValue(extractions.get(ConditionField.REGION_CODE)));
     }
 
     private MergeState merge(
@@ -276,6 +306,8 @@ public final class NaturalLanguageRestaurantParser {
                 conflicts, appliedNaturalFields);
         String district = mergeScalar(ConditionField.DISTRICT, parsed.district(), direct.district(), extractions, direct,
                 ignored, conflicts, appliedNaturalFields);
+        String regionCode = mergeScalar(ConditionField.REGION_CODE, parsed.regionCode(), direct.regionCode(), extractions,
+                direct, ignored, conflicts, appliedNaturalFields);
         String category = mergeScalar(ConditionField.CATEGORY, parsed.category(), direct.category(), extractions, direct,
                 ignored, conflicts, appliedNaturalFields);
         String creatorId = mergeScalar(ConditionField.CREATOR_ID, parsed.creatorId(), direct.creatorId(), extractions,
@@ -305,7 +337,7 @@ public final class NaturalLanguageRestaurantParser {
             }
         }
 
-        NaturalLanguageFilters applied = new NaturalLanguageFilters(query, district, category, creatorId, tags);
+        NaturalLanguageFilters applied = new NaturalLanguageFilters(query, district, category, creatorId, tags, regionCode);
         return new MergeState(applied, appliedNaturalFields, appliedNaturalTags);
     }
 
@@ -362,8 +394,9 @@ public final class NaturalLanguageRestaurantParser {
                     "UNSUPPORTED_CONDITION"));
             return;
         }
-        boolean hasAnyMatch = extractions.values().stream().anyMatch(Extraction::matched);
-        if (!hasAnyMatch || hasUnknownTagPhrase(sentence, extractions.get(ConditionField.TAGS))) {
+        boolean hasAnyMatch = extractions.values().stream().anyMatch(extraction -> extraction.matched() || extraction.ambiguous());
+        if (!hasAnyMatch || hasUnknownTagPhrase(sentence, extractions.get(ConditionField.TAGS),
+                extractions.get(ConditionField.REGION_CODE).matchedAliases())) {
             ignored.add(new IgnoredCondition(
                     IgnoredConditionType.UNSUPPORTED,
                     hasAnyMatch ? "해석할 수 없는 태그 조건" : "지원하지 않는 조건",
@@ -371,7 +404,7 @@ public final class NaturalLanguageRestaurantParser {
         }
     }
 
-    private boolean hasUnknownTagPhrase(String sentence, Extraction tagExtraction) {
+    private boolean hasUnknownTagPhrase(String sentence, Extraction tagExtraction, List<String> regionAliases) {
         int tagMarker = sentence.indexOf("태그");
         if (tagMarker < 0) {
             return false;
@@ -383,7 +416,10 @@ public final class NaturalLanguageRestaurantParser {
                 continue;
             }
             String compactCandidate = compact(candidate);
-            boolean known = Arrays.stream(ConditionField.values())
+            boolean knownRegion = regionAliases.stream().map(NaturalLanguageRestaurantParser::compact)
+                    .anyMatch(alias -> compactCandidate.equals(alias)
+                            || compactCandidate.matches(Pattern.quote(alias) + "(에서|에|의|은|는|이|가|을|를)?"));
+            boolean known = knownRegion || Arrays.stream(ConditionField.values())
                     .flatMap(field -> dictionary.aliasesFor(field).keySet().stream())
                     .map(NaturalLanguageRestaurantParser::compact)
                     .anyMatch(alias -> compactCandidate.contains(alias) || alias.contains(compactCandidate));
@@ -423,7 +459,7 @@ public final class NaturalLanguageRestaurantParser {
         return !findAliasMatches(sentence, alias).isEmpty();
     }
 
-    private static List<MatchRange> findAliasMatches(String sentence, String alias) {
+    static List<MatchRange> findAliasMatches(String sentence, String alias) {
         String[] parts = alias.split(" ");
         List<MatchRange> matches = new ArrayList<>();
         int searchFrom = 0;
@@ -454,7 +490,7 @@ public final class NaturalLanguageRestaurantParser {
         return matches;
     }
 
-    private static boolean overlaps(boolean[] occupied, MatchRange range) {
+    static boolean overlaps(boolean[] occupied, MatchRange range) {
         for (int index = range.start(); index < range.end(); index++) {
             if (occupied[index]) {
                 return true;
@@ -463,7 +499,7 @@ public final class NaturalLanguageRestaurantParser {
         return false;
     }
 
-    private static void occupy(boolean[] occupied, MatchRange range) {
+    static void occupy(boolean[] occupied, MatchRange range) {
         Arrays.fill(occupied, range.start(), range.end(), true);
     }
 
@@ -501,6 +537,7 @@ public final class NaturalLanguageRestaurantParser {
         return switch (field) {
             case QUERY -> "맛집명";
             case DISTRICT -> "지역";
+            case REGION_CODE -> "지역";
             case CATEGORY -> "카테고리";
             case CREATOR_ID -> "유튜버";
             case TAGS -> "태그";
@@ -524,7 +561,11 @@ public final class NaturalLanguageRestaurantParser {
         }
     }
 
-    private record MatchRange(int start, int end) {
+    private String parserVersion() {
+        return regionResolver == null ? PARSER_VERSION : "P2";
+    }
+
+    record MatchRange(int start, int end) {
     }
 
     private record MergeState(

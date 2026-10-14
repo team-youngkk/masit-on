@@ -21,7 +21,8 @@ public record NaturalLanguageSearchRequest(
             String district,
             String category,
             String creatorId,
-            List<String> tags
+            List<String> tags,
+            String regionCode
     ) {
 
         @JsonAnySetter

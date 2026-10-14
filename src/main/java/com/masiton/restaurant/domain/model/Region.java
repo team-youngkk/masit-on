@@ -11,6 +11,8 @@ public class Region {
 
     private final UUID id;
     private final String code;
+    private final String administrativeCode;
+    private final UUID parentId;
     private final String name;
     private final short sortOrder;
     private final boolean active;
@@ -25,8 +27,23 @@ public class Region {
             boolean active,
             OffsetDateTime createdAt,
             OffsetDateTime updatedAt) {
+        this(id, code, name, sortOrder, active, createdAt, updatedAt, null, null);
+    }
+
+    public Region(
+            UUID id,
+            String code,
+            String name,
+            short sortOrder,
+            boolean active,
+            OffsetDateTime createdAt,
+            OffsetDateTime updatedAt,
+            String administrativeCode,
+            UUID parentId) {
         this.id = id;
         this.code = code;
+        this.administrativeCode = administrativeCode;
+        this.parentId = parentId;
         this.name = name;
         this.sortOrder = sortOrder;
         this.active = active;
@@ -40,6 +57,14 @@ public class Region {
 
     public String getCode() {
         return code;
+    }
+
+    public String getAdministrativeCode() {
+        return administrativeCode;
+    }
+
+    public UUID getParentId() {
+        return parentId;
     }
 
     public String getName() {

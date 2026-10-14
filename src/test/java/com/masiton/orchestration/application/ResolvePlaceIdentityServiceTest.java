@@ -45,6 +45,22 @@ class ResolvePlaceIdentityServiceTest {
     }
 
     @Test
+    @DisplayName("전국 동명 자치구의 후보는 시도까지 일치해야 확정한다")
+    void resolve_전국동명구후보_같은시도후보만확정한다() {
+        // Given
+        given(placeSearchPort.search("행복식당")).willReturn(List.of(
+                new PlaceSearchCandidate("행복식당", "https://place.map.kakao.com/seoul",
+                        "서울특별시 중구 세종대로 1", "02-123-4567", "한식"),
+                new PlaceSearchCandidate("행복식당", "https://place.map.kakao.com/busan",
+                        "부산광역시 중구 중앙대로 1", "051-123-4567", "한식")));
+        // When
+        var result = service.resolve(new PlaceIdentityCommand("행복식당", "부산 중구 중앙대로 10"));
+        // Then
+        assertThat(result.isConfirmed()).isTrue();
+        assertThat(result.confirmedPlace().kakaoPlaceUrl()).isEqualTo("https://place.map.kakao.com/busan");
+    }
+
+    @Test
     @DisplayName("공백과 대소문자 차이는 정규화 후 비교해 확정한다")
     void resolve_공백과대소문자차이_정규화후확정한다() {
         given(placeSearchPort.search("ABC Cafe")).willReturn(List.of(
@@ -152,9 +168,9 @@ class ResolvePlaceIdentityServiceTest {
     }
 
     @Test
-    @DisplayName("주소 후보에서 서울 자치구를 추출할 수 없으면 장소를 찾지 못한 것으로 판정한다")
+    @DisplayName("주소 후보에서 시도와 시군구를 추출할 수 없으면 검색하지 않는다")
     void resolve_자치구를추출할수없는주소후보는_장소를찾지못한것으로판정한다() {
-        var result = service.resolve(new PlaceIdentityCommand("행복식당", "부산광역시 해운대구 어딘가"));
+        var result = service.resolve(new PlaceIdentityCommand("행복식당", "해운대구 어딘가"));
 
         assertThat(result.status()).isEqualTo(PlaceIdentityStatus.PLACE_NOT_FOUND);
         org.mockito.Mockito.verifyNoInteractions(placeSearchPort);

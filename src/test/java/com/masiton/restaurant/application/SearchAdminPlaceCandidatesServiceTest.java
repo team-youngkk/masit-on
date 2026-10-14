@@ -2,6 +2,9 @@ package com.masiton.restaurant.application;
 
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.time.OffsetDateTime;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -12,6 +15,8 @@ import com.masiton.common.web.ErrorCode;
 import com.masiton.restaurant.application.port.in.SearchAdminPlaceCandidatesUseCase;
 import com.masiton.restaurant.application.port.out.PlaceSearchCandidate;
 import com.masiton.restaurant.application.port.out.PlaceSearchPort;
+import com.masiton.restaurant.application.port.out.RegionRepositoryPort;
+import com.masiton.restaurant.domain.model.Region;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -25,7 +30,8 @@ import static org.mockito.Mockito.when;
 class SearchAdminPlaceCandidatesServiceTest {
 
     private final PlaceSearchPort placeSearchPort = mock(PlaceSearchPort.class);
-    private final SearchAdminPlaceCandidatesService service = new SearchAdminPlaceCandidatesService(placeSearchPort);
+    private final RegionRepositoryPort regions = mock(RegionRepositoryPort.class);
+    private final SearchAdminPlaceCandidatesService service = new SearchAdminPlaceCandidatesService(placeSearchPort, regions);
 
     @Test
     @DisplayName("name이 없으면 MISSING_REQUIRED_FIELD를 던진다")
@@ -118,7 +124,7 @@ class SearchAdminPlaceCandidatesServiceTest {
     }
 
     @Test
-    @DisplayName("서울 자치구를 뽑을 수 없는 주소는 district를 null로 두고 항목을 남긴다")
+    @DisplayName("마스터에 등록되지 않은 지역은 district를 null로 두고 항목을 남긴다")
     void 검색_자치구추출불가_district를null로남긴다() {
         when(placeSearchPort.search(any())).thenReturn(List.of(
                 new PlaceSearchCandidate("부산집", "https://place.map.kakao.com/1", "부산 영도구 태종로99번길 28", null)));
@@ -129,6 +135,27 @@ class SearchAdminPlaceCandidatesServiceTest {
         assertThat(results).hasSize(1);
         assertThat(results.get(0).district()).isNull();
         assertThat(results.get(0).phoneNumber()).isNull();
+    }
+
+    @Test
+    @DisplayName("전국 주소 후보는 활성 시도와 시군구 조합으로 지역을 표시한다")
+    void 검색_전국활성지역_시군구를반환한다() {
+        // Given
+        Region region = new Region(UUID.randomUUID(), "KR_2611000000", "중구", (short) 1, true,
+                OffsetDateTime.MIN, OffsetDateTime.MIN, "2611000000", UUID.randomUUID());
+        when(regions.findByProvinceAndName("부산광역시", "중구")).thenReturn(Optional.of(region));
+        when(placeSearchPort.search(any())).thenReturn(List.of(
+                new PlaceSearchCandidate("부산집", "https://place.map.kakao.com/1",
+                        "부산 중구 중앙대로 1", "051-123-4567")));
+
+        // When
+        var results = service.search(
+                new SearchAdminPlaceCandidatesUseCase.SearchAdminPlaceCandidatesCommand("부산집", null));
+
+        // Then
+        assertThat(results).hasSize(1);
+        assertThat(results.getFirst().district()).isEqualTo("중구");
+        assertThat(results.getFirst().roadAddress()).isEqualTo("부산광역시 중구 중앙대로 1");
     }
 
     @Test

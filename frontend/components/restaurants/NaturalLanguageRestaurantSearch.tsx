@@ -25,7 +25,7 @@ import {
 
 import styles from './NaturalLanguageRestaurantSearch.module.css'
 
-type Props = { filters: NaturalLanguageSearchFilters; returnTo: string; structuredFormId: string; creatorLabels: Record<string, string> }
+type Props = { filters: NaturalLanguageSearchFilters; returnTo: string; structuredFormId: string; creatorLabels: Record<string, string>; regionLabels: Record<string, string> }
 
 const TAG_GROUPS = [
   { label: '음식 종류', prefix: 'MENU_' },
@@ -34,7 +34,7 @@ const TAG_GROUPS = [
   { label: '분위기', prefix: 'ATMOSPHERE_' },
 ] as const
 
-export function NaturalLanguageRestaurantSearch({ filters, returnTo, structuredFormId, creatorLabels }: Props) {
+export function NaturalLanguageRestaurantSearch({ filters, returnTo, structuredFormId, creatorLabels, regionLabels }: Props) {
   const [sentence, setSentence] = useState('')
   /* 여러 태그 AND는 목록 API(단일 `tag`)가 아니라 자연어 API의 filters.tags가 담당하므로
    * (restaurant-discovery-api.md 6절) 직접 태그 선택은 구조화 폼이 아니라 이 영역이 소유한다.
@@ -97,10 +97,11 @@ export function NaturalLanguageRestaurantSearch({ filters, returnTo, structuredF
     active?.abort()
     if (controller.current === active) controller.current = null
   }, [])
-  const applied = result ? formatNaturalLanguageAppliedConditions(result.interpretation.appliedConditions, creatorLabels) : []
+  const applied = result ? formatNaturalLanguageAppliedConditions(result.interpretation.appliedConditions, creatorLabels, regionLabels) : []
   const selectedConditions = [
     filters.query ? `“${filters.query}”` : null,
     filters.district,
+    filters.regionCode ? regionLabels[filters.regionCode] ?? '선택한 지역' : null,
     filters.category,
     filters.creatorId ? creatorLabels[filters.creatorId] ?? '선택한 유튜버' : null,
     ...tags.map((tag) => NATURAL_LANGUAGE_TAG_OPTIONS.find((option) => option.code === tag)?.label ?? tag),
@@ -153,9 +154,10 @@ export function NaturalLanguageRestaurantSearch({ filters, returnTo, structuredF
       <form className={styles.form} onSubmit={(event) => { event.preventDefault(); void submit(sentence) }}>
         <label htmlFor="natural-language-sentence" className={styles.label}>원하는 조건</label>
         <div className={styles.controls}>
-          <input ref={searchInputRef} id="natural-language-sentence" className={styles.input} value={sentence} onChange={(event) => setSentence(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); void submit(sentence) } }} maxLength={500} required disabled={pending} placeholder="예: 성동구에서 냉면 먹기 좋은 곳" />
+          <input ref={searchInputRef} id="natural-language-sentence" className={styles.input} aria-describedby="natural-language-region-hint" value={sentence} onChange={(event) => setSentence(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); void submit(sentence) } }} maxLength={500} required disabled={pending} placeholder="예: 부산 해운대구에서 국밥 먹기 좋은 곳" />
           <Button type="submit" disabled={pending}>{pending ? '찾는 중…' : '찾아보기'}</Button>
         </div>
+        <p id="natural-language-region-hint" className={styles.tagHint}>이름이 같은 지역은 ‘부산 중구’처럼 시·도를 함께 적어주세요.</p>
         <fieldset className={styles.tags} disabled={pending}>
           <legend className={styles.label}>추천 조건 ({tags.length}/{NATURAL_LANGUAGE_TAG_LIMIT})</legend>
           <p className={styles.tagHint}>조건을 골라두면 입력한 내용과 함께 검색해요.</p>

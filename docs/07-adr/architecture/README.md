@@ -3,6 +3,8 @@ related_documents:
   - ../README.md
   - arch-001-domain-monolith.md
   - arch-002-external-ports-adapters.md
+  - arch-005-natural-language-filter-interpretation.md
+  - arch-006-national-natural-language-region-interpretation.md
   - ../../02-analysis/domain-boundaries.md
   - ../../06-architecture/technology-policy.md
 ---
@@ -15,4 +17,6 @@ related_documents:
 |---|---|
 | [ADR-ARCH-001](arch-001-domain-monolith.md) | 단일 모듈 도메인 중심 모놀리스 |
 | [ADR-ARCH-002](arch-002-external-ports-adapters.md) | 외부 연동 Port/Adapter 경계 |
+| [ADR-ARCH-005](arch-005-natural-language-filter-interpretation.md) | 자연어 P1·Golden V1의 역사와 기존 필터 조회 경계 |
+| [ADR-ARCH-006](arch-006-national-natural-language-region-interpretation.md) | 전국 자연어 지역 P2·마스터 의존·검증 게이트 제안(Proposed) |
 

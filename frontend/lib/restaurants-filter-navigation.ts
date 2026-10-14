@@ -1,12 +1,16 @@
 export type RestaurantStructuredFilterKey =
   | 'query'
   | 'district'
+  | 'regionCode'
+  | 'tag'
   | 'category'
   | 'creatorId'
 
 const STRUCTURED_FILTER_KEYS: readonly RestaurantStructuredFilterKey[] = [
   'query',
   'district',
+  'regionCode',
+  'tag',
   'category',
   'creatorId',
 ]

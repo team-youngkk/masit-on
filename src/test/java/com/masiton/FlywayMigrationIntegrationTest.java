@@ -51,9 +51,9 @@ class FlywayMigrationIntegrationTest extends com.masiton.test.FullContextIntegra
     private MemberSessionRevocationStore memberSessionRevocationStore;
 
     @Test
-    @DisplayName("빈 데이터베이스에 V1부터 V19까지 계약된 순서와 파일명으로 성공 기록된다")
-    void 마이그레이션적용_빈데이터베이스_V1부터V19까지계약된순서와파일명으로성공기록된다() {
-        // given: 컨텍스트 기동 시점에 Flyway가 V1부터 V19 변경을 적용했다.
+    @DisplayName("빈 데이터베이스에 V1부터 V20까지 계약된 순서와 파일명으로 성공 기록된다")
+    void 마이그레이션적용_빈데이터베이스_V1부터V20까지계약된순서와파일명으로성공기록된다() {
+        // given: 컨텍스트 기동 시점에 Flyway가 V1부터 V20 변경을 적용했다.
 
         // when
         List<AppliedMigration> appliedMigrations = jdbcTemplate.query(
@@ -105,7 +105,9 @@ class FlywayMigrationIntegrationTest extends com.masiton.test.FullContextIntegra
                 new AppliedMigration("18", "index youtube backfill schedule", "SQL",
                         "V18__index_youtube_backfill_schedule.sql", true),
                 new AppliedMigration("19", "add restaurant kakao revalidation", "SQL",
-                        "V19__add_restaurant_kakao_revalidation.sql", true)
+                        "V19__add_restaurant_kakao_revalidation.sql", true),
+                new AppliedMigration("20", "add region hierarchy", "SQL",
+                        "V20__add_region_hierarchy.sql", true)
         );
     }
 
@@ -218,15 +220,17 @@ class FlywayMigrationIntegrationTest extends com.masiton.test.FullContextIntegra
     }
 
     @Test
-    @DisplayName("Region 기준 데이터는 정확히 25건이다")
-    void Region조회_기준데이터적용후_정확히25건이다() {
-        // given: baseline이 region 25건을 적재했다.
+    @DisplayName("V20 전국 Region 기준 데이터는 245건이며 기존 서울 25건을 보존한다")
+    void Region조회_전국마스터적용후_서울기준값을보존한다() {
+        // given: V20이 전국 지역을 추가했다.
 
         // when
         Integer count = jdbcTemplate.queryForObject("SELECT count(*) FROM region", Integer.class);
 
         // then
-        assertThat(count).isEqualTo(25);
+        assertThat(count).isEqualTo(245);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM region WHERE code LIKE 'SEOUL_%'", Integer.class)).isEqualTo(25);
     }
 
     @Test
@@ -246,11 +250,16 @@ class FlywayMigrationIntegrationTest extends com.masiton.test.FullContextIntegra
     }
 
     @Test
-    @DisplayName("Region의 code, name, sort_order가 각각 유일하다")
-    void Region조회_기준데이터적용후_codeName정렬순서가모두유일하다() {
+    @DisplayName("V20 Region 코드는 전역 유일하고 이름과 정렬 순서는 부모 안에서 유일하다")
+    void Region조회_기준데이터적용후_코드와부모별이름이유일하다() {
         assertColumnValuesAreUnique("region", "code");
-        assertColumnValuesAreUnique("region", "name");
-        assertColumnValuesAreUnique("region", "sort_order");
+        assertColumnValuesAreUnique("region", "administrative_code");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM (SELECT parent_id, name FROM region GROUP BY parent_id, name HAVING count(*) > 1) duplicates",
+                Integer.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM (SELECT parent_id, sort_order FROM region GROUP BY parent_id, sort_order HAVING count(*) > 1) duplicates",
+                Integer.class)).isZero();
     }
 
     @Test

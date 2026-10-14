@@ -1,5 +1,6 @@
 ---
 related_documents:
+  - common/region-contract.md
   - ../README.md
   - ../../00-overview/scope.md
   - ../../01-requirements/functional-requirements.md
@@ -44,6 +45,7 @@ related_documents:
 - [오류 계약](common/error-contract.md)
 - [페이지네이션 계약](common/pagination-contract.md)
 - [필터 계약](common/filtering-contract.md)
+- [전국 지역 계층 계약 — #394, 소유자 리뷰 요청](common/region-contract.md): 공개 `GET /api/regions`, 목록·자연어 직접 지역 필터, 등록 주소 귀속
 - [날짜·시간 계약](common/date-time-contract.md)
 - [인증 계약](common/authentication-contract.md)
 - [검증 참여자 제한 공개 계약 (역사 기록)](common/validation-access-contract.md)

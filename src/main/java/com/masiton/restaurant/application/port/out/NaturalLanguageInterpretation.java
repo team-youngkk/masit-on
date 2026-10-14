@@ -42,8 +42,13 @@ public record NaturalLanguageInterpretation(
             String district,
             String category,
             String creatorId,
-            List<String> tags
+            List<String> tags,
+            String regionCode
     ) {
+
+        public AppliedConditions(String query, String district, String category, String creatorId, List<String> tags) {
+            this(query, district, category, creatorId, tags, null);
+        }
 
         public AppliedConditions {
             tags = tags == null ? List.of() : List.copyOf(tags);
@@ -54,7 +59,7 @@ public record NaturalLanguageInterpretation(
         }
 
         public boolean hasAny() {
-            return query != null || district != null || category != null || creatorId != null || !tags.isEmpty();
+            return query != null || district != null || regionCode != null || category != null || creatorId != null || !tags.isEmpty();
         }
     }
 
@@ -72,6 +77,7 @@ public record NaturalLanguageInterpretation(
         public enum Field {
             query,
             district,
+            regionCode,
             category,
             creatorId,
             tags

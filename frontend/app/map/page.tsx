@@ -1,13 +1,34 @@
+import Link from 'next/link'
 import { HydrationBoundary, QueryClient, dehydrate } from '@tanstack/react-query'
 import { headers } from 'next/headers'
 
 import { MapScreen } from '@/components/map/MapScreen'
+import { PageShell } from '@/components/ui/PageShell'
+import {
+  buildMapNavigationHrefAfterRegionClear,
+  getMapUnsupportedRegionCode,
+} from '@/lib/map/map-navigation'
 import { buildMapPointsQueryKey } from '@/lib/map/map-points-query'
 import { fetchMapPointsOnServer } from '@/lib/map/map-points-server'
 import { fetchCreators, toSingleValue, type RawSearchParams } from '@/lib/restaurants-api'
 
+import styles from '@/components/map/MapScreen.module.css'
+
 type MapPageProps = {
   searchParams: Promise<RawSearchParams>
+}
+
+const MAP_FILTER_KEYS = ['query', 'district', 'category', 'creatorId'] as const
+
+function buildMapNavigationParams(rawParams: RawSearchParams): URLSearchParams {
+  const params = new URLSearchParams()
+  for (const key of MAP_FILTER_KEYS) {
+    const value = toSingleValue(rawParams[key])?.trim()
+    if (value) {
+      params.set(key, value)
+    }
+  }
+  return params
 }
 
 /*
@@ -16,8 +37,29 @@ type MapPageProps = {
  * (ADR-WEB-002, ADR-MAP-001 4.2~4.4).
  */
 export default async function MapPage({ searchParams }: MapPageProps) {
-  const [rawParams, requestHeaders] = await Promise.all([searchParams, headers()])
-  const creatorsResult = await fetchCreators()
+  const rawParams = await searchParams
+  const navigationParams = buildMapNavigationParams(rawParams)
+  const selectedRegionCode = getMapUnsupportedRegionCode(rawParams.regionCode)
+
+  if (selectedRegionCode) {
+    return (
+      <PageShell
+        className={styles.screen}
+        eyebrow="지역 기반 탐색"
+        title="지도 탐색"
+        description="지도는 기존 서울 자치구 조건만 지원합니다. 전국 지역은 맛집 목록에서 탐색할 수 있습니다."
+      >
+        <p className={styles.notice} role="status">
+          선택한 지역은 현재 지도에서 지원하지 않습니다.{' '}
+          <Link href={buildMapNavigationHrefAfterRegionClear('/map', navigationParams)}>
+            지역 필터를 해제하고 지도 이용하기
+          </Link>
+        </p>
+      </PageShell>
+    )
+  }
+
+  const [requestHeaders, creatorsResult] = await Promise.all([headers(), fetchCreators()])
   const trustedClientAddress = requestHeaders.get('x-masiton-client-ip') ?? undefined
 
   const initialFilters = {

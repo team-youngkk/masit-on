@@ -1,5 +1,6 @@
 ---
 related_documents:
+  - ../api/common/region-contract.md
   - ../../01-requirements/functional-requirements.md
   - ../../01-requirements/business-rules.md
   - ../../03-team/ownership.md
@@ -63,6 +64,8 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 
 ## 2. PRD → 데이터 개념 매핑
 
+#394의 [지역 계층 계약](../api/common/region-contract.md)은 FR-RESTAURANT-003·005·009 및 FR-ADMIN-002를 `region.administrative_code`, `region.parent_id`와 기존 `restaurant.region_id`에 연결한다. V20·공식 스냅샷의 245개 집합·부모별 유일성·계층 FK는 [테이블](table-definitions.md#2-region), [마이그레이션](migration-plan.md#v20-전국-지역-계층--이슈-394), [시드](seed-data-plan.md)에 정의한다. API·DB 소유자 리뷰 요청 상태다.
+
 | PRD | 사용자·관리자 결과 | 주 데이터 | 관계·조합 데이터 |
 |---|---|---|---|
 | [PRD-DISCOVERY-001](../../04-product/prd/discovery/restaurant-discovery.md) | 맛집 목록·이름·지역·카테고리 탐색 | Restaurant, Region, FoodCategory | Visit, Creator, Video |
@@ -78,14 +81,14 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 | 요구사항 | 데이터 모델 반영 | 주요 제약·파생 |
 |---|---|---|
 | [FR-RESTAURANT-001](../../01-requirements/functional-requirements.md#fr-restaurant-001-맛집-목록-조회)·[FR-RESTAURANT-002](../../01-requirements/functional-requirements.md#fr-restaurant-002-맛집-이름-검색)·[FR-RESTAURANT-005](../../01-requirements/functional-requirements.md#fr-restaurant-005-검색-및-필터-조건-조합)~[FR-RESTAURANT-007](../../01-requirements/functional-requirements.md#fr-restaurant-007-기본-정렬-적용) | Restaurant | publication 필터, 이름 검색, 고유 결과·정렬·페이지는 조회 책임 |
-| [FR-RESTAURANT-003](../../01-requirements/functional-requirements.md#fr-restaurant-003-지역별-필터)·[FR-RESTAURANT-009](../../01-requirements/functional-requirements.md#fr-restaurant-009-지역-정보-확인) | Region, Restaurant | 서울 자치구 1개 참조 |
+| [FR-RESTAURANT-003](../../01-requirements/functional-requirements.md#fr-restaurant-003-지역별-필터)·[FR-RESTAURANT-009](../../01-requirements/functional-requirements.md#fr-restaurant-009-지역-정보-확인) | Region, Restaurant | 전국 시·군·구 1개 참조, 세종은 최상위 직접 참조; 상위 선택은 활성 자식 포함 |
 | [FR-RESTAURANT-004](../../01-requirements/functional-requirements.md#fr-restaurant-004-음식-카테고리별-필터)·[FR-RESTAURANT-010](../../01-requirements/functional-requirements.md#fr-restaurant-010-음식-카테고리-확인) | FoodCategory, Restaurant | 대표 카테고리 정확히 1개 |
 | [FR-RESTAURANT-008](../../01-requirements/functional-requirements.md#fr-restaurant-008-맛집-기본-정보-조회)·[FR-RESTAURANT-011](../../01-requirements/functional-requirements.md#fr-restaurant-011-영상-연결이-없는-맛집-상세-조회) | Restaurant | Visit 없이 기본 상세 조회 |
 | [FR-CREATOR-001](../../01-requirements/functional-requirements.md#fr-creator-001-유튜버-기준-방문-맛집-조회)·[FR-CREATOR-002](../../01-requirements/functional-requirements.md#fr-creator-002-방문-유튜버-정보-확인) | Creator, Visit, Video | 공개·유효 관계와 채널 일치, 중복 제거 |
 | [FR-CREATOR-003](../../01-requirements/functional-requirements.md#fr-creator-003-유튜버-필터-선택-목록-조회) | Creator | 공개 Creator 최소 선택 정보 |
 | [FR-VIDEO-001](../../01-requirements/functional-requirements.md#fr-video-001-관련-영상-정보-확인) | Video, Creator, Visit | 공개 관련 영상, 외부 장애 격리 |
 | [FR-ADMIN-001](../../01-requirements/functional-requirements.md#fr-admin-001-관리자-등록-기능-접근)·[FR-AUTH-004](../../01-requirements/functional-requirements.md#fr-auth-004-통합-로그인과-rbac) | `MemberAccount(role=ADMIN)`, `AuthSession` | 운영 절차로 부여한 ADMIN 역할, 통합 JWT·Refresh 회전·현재 역할 재검증 |
-| [FR-ADMIN-002](../../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록) | Restaurant, Region, FoodCategory | 카카오 동일성, 서울 주소, 단일 카테고리, 원자적 공개 생성 |
+| [FR-ADMIN-002](../../01-requirements/functional-requirements.md#fr-admin-002-맛집-정보-등록) | Restaurant, Region, FoodCategory | 카카오 동일성, 전국 주소의 활성 지역 귀속, 단일 카테고리, 원자적 공개 생성 |
 | [FR-ADMIN-003](../../01-requirements/functional-requirements.md#fr-admin-003-유튜버-정보-등록) | Creator | 외부 채널 ID 유일, 채널 단위 생성 |
 | [FR-ADMIN-004](../../01-requirements/functional-requirements.md#fr-admin-004-영상-정보-등록) | Video, Creator | 외부 영상 ID 유일, 게시 채널 필수, 원본 미저장 |
 | [FR-ADMIN-005](../../01-requirements/functional-requirements.md#fr-admin-005-관리자-태그-정의-생성) | `tag_definition`, `tag_definition_term` | 통제 코드·ACTIVE/MANUAL_OVERRIDE, 표시명·별칭 정규화 용어 전역 unique, ADMIN·AI 원자 저장 |

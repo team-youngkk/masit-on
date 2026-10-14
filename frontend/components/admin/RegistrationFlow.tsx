@@ -247,6 +247,7 @@ export function RegistrationFlow({
           {preview.decision === 'READY' ? (
             <>
               <p>등록할 {resourceName} 정보를 확인했습니다.</p>
+              {previewPath === '/api/admin/restaurant-registration-previews' ? <p>지역은 검증된 도로명주소를 기준으로 자동 연결됩니다.</p> : null}
               {candidate ? <pre>{candidate}</pre> : null}
               {preview.expiresAt ? <p>확인 유효 시간: {preview.expiresAt}</p> : null}
               <Button onClick={handleCreate} disabled={createMutation.isPending}>

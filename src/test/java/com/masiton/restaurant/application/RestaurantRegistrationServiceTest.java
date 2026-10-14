@@ -6,6 +6,8 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.masiton.restaurant.application.port.in.RestaurantRegistrationUseCase;
 import com.masiton.restaurant.application.port.out.FoodCategoryRepositoryPort;
@@ -198,14 +200,14 @@ class RestaurantRegistrationServiceTest {
     }
 
     @Test
-    @DisplayName("카카오가 서울 형식이 아닌 도로명주소를 반환하면 외부 서비스 오류로 변환한다")
+    @DisplayName("카카오가 지역을 해석할 수 없는 주소를 반환하면 외부 서비스 오류로 변환한다")
     void 미리보기_카카오주소형식오류_EXTERNAL_SERVICE_ERROR() {
         prepareReferences();
         when(placeVerificationPort.verify(any(), any(), any())).thenReturn(Optional.of(new VerifiedPlace(
                 "place-1",
                 "맛잇온 테스트 식당",
                 "https://place.map.kakao.com/place-1",
-                "부산광역시 해운대구 해운대로 1",
+                "알수없는지역 해운대로 1",
                 "02-000-0000",
                 null,
                 null)));
@@ -216,8 +218,62 @@ class RestaurantRegistrationServiceTest {
                 .isEqualTo(com.masiton.common.web.ErrorCode.EXTERNAL_SERVICE_ERROR.name());
     }
 
+    @ParameterizedTest
+    @CsvSource({
+            "부산 해운대구 해운대로 1,부산광역시,해운대구",
+            "경기 수원시 영통구 광교로 1,경기도,수원시",
+            "제주 제주시 첨단로 1,제주특별자치도,제주시",
+            "제주 서귀포시 중문로 1,제주특별자치도,서귀포시",
+            "세종 한누리대로 1,세종특별자치시,세종특별자치시"
+    })
+    @DisplayName("전국의 검증된 주소를 확인 Token의 지역 ID와 미리보기에 자동 지정한다")
+    void 미리보기_전국주소_검증주소의지역을자동지정한다(String address, String province, String municipality) {
+        // Given
+        Region region = new Region(regionId, "TEST", municipality, (short) 1, true, null, null);
+        if ("세종특별자치시".equals(province)) {
+            when(regionRepository.findByAdministrativeCode("3611000000")).thenReturn(Optional.of(region));
+        } else {
+            when(regionRepository.findByProvinceAndName(province, municipality)).thenReturn(Optional.of(region));
+        }
+        when(foodCategoryRepository.findByName("한식")).thenReturn(Optional.of(new FoodCategory(
+                categoryId, "KOREAN", "한식", (short) 1, true, null, null)));
+        when(placeVerificationPort.verify(any(), any(), any())).thenReturn(Optional.of(new VerifiedPlace(
+                "place-1", "검증된 식당", "https://place.map.kakao.com/place-1", address,
+                "051-123-4567", null, null)));
+        when(confirmationTokenUseCase.issue(any())).thenReturn(
+                new IssuedConfirmationToken("opaque-token", OffsetDateTime.parse("2026-07-27T12:10:00Z")));
+        var input = new RestaurantRegistrationUseCase.RestaurantPreviewCommand(adminId, "입력명",
+                "https://place.map.kakao.com/place-1", address, null, "051-123-4567", "한식");
+        var captor = org.mockito.ArgumentCaptor.forClass(
+                com.masiton.security.application.ConfirmationTokenIssueCommand.class);
+        // When
+        var result = service.preview(input);
+        // Then
+        assertThat(result.candidate().district()).isEqualTo(municipality);
+        assertThat(result.candidate().roadAddress()).startsWith(province + " ");
+        verify(confirmationTokenUseCase).issue(captor.capture());
+        assertThat(captor.getValue().candidateSnapshot()).contains(regionId.toString());
+        verify(restaurantRepository, never()).insertIfAbsent(any());
+    }
+
+    @Test
+    @DisplayName("활성 마스터가 없는 검증 주소는 Token이나 맛집을 저장하지 않는다")
+    void 미리보기_미등록지역_부분저장없이거부한다() {
+        // Given
+        when(placeVerificationPort.verify(any(), any(), any())).thenReturn(Optional.of(new VerifiedPlace(
+                "place-1", "검증된 식당", "https://place.map.kakao.com/place-1",
+                "부산광역시 없는구 도로 1", "051-123-4567", null, null)));
+        // When / Then
+        assertThatThrownBy(() -> service.preview(command()))
+                .isInstanceOf(com.masiton.common.web.BusinessException.class)
+                .extracting(exception -> ((com.masiton.common.web.BusinessException) exception).code())
+                .isEqualTo("IDENTITY_VERIFICATION_REQUIRED");
+        verify(confirmationTokenUseCase, never()).issue(any());
+        verify(restaurantRepository, never()).insertIfAbsent(any());
+    }
+
     private void prepareReferences() {
-        when(regionRepository.findByName("마포구")).thenReturn(Optional.of(new Region(
+        when(regionRepository.findByProvinceAndName("서울특별시", "마포구")).thenReturn(Optional.of(new Region(
                 regionId, "SEOUL_MAPO", "마포구", (short) 14, true, null, null)));
         when(foodCategoryRepository.findByName("한식")).thenReturn(Optional.of(new FoodCategory(
                 categoryId, "KOREAN", "한식", (short) 1, true, null, null)));

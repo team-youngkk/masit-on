@@ -10,7 +10,8 @@ export type FilterSelectOption = {
 type FilterSelectProps = {
   id: string
   formId: string
-  name: string
+  name?: string
+  onValueChange?: (value: string) => void
   options: readonly FilterSelectOption[]
   value: string
   submittedValue?: string
@@ -27,6 +28,7 @@ export function FilterSelect({
   id,
   formId,
   name,
+  onValueChange,
   options,
   value,
   submittedValue,
@@ -130,13 +132,14 @@ export function FilterSelect({
   }
   const selectValue = (nextValue: string, nextIndex: number) => {
     setSelectedValue(nextValue)
+    onValueChange?.(nextValue)
     setActiveIndex(nextIndex)
     closeAndRestoreFocus()
   }
 
   return (
     <div ref={controlRef} className={controlClassName}>
-      <input type="hidden" name={name} value={formValue} form={formId} />
+      {name ? <input type="hidden" name={name} value={formValue} form={formId} /> : null}
       <button
         type="button"
         id={id}

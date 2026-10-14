@@ -12,12 +12,14 @@
 export function naturalLanguageFiltersKey(filters: {
   query: string | null
   district: string | null
+  regionCode?: string | null
   category: string | null
   creatorId: string | null
 }): string {
   return JSON.stringify([
     filters.query,
     filters.district,
+    filters.regionCode ?? null,
     filters.category,
     filters.creatorId,
   ])

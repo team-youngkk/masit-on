@@ -51,5 +51,7 @@ test('검색 조건이나 실제 결과가 있으면 맛집 미리보기를 끈�
   }
 
   assert.equal(shouldUseRestaurantDesignPreview({ ...base, query: '곱창' }), false)
+  assert.equal(shouldUseRestaurantDesignPreview({ ...base, regionCode: '3611000000' }), false)
+  assert.equal(shouldUseRestaurantDesignPreview({ ...base, tag: 'MENU_GUKBAP' }), false)
   assert.equal(shouldUseRestaurantDesignPreview({ ...base, hasItems: true }), false)
 })

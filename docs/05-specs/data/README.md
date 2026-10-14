@@ -1,5 +1,6 @@
 ---
 related_documents:
+  - ../api/common/region-contract.md
   - ../README.md
   - ../../01-requirements/business-rules.md
   - ../api/README.md
@@ -37,6 +38,8 @@ related_documents:
 이 디렉터리는 맛잇온 MVP가 관리하는 데이터 개념, 소유권, 관계, 제약과 생명주기를 논리 수준에서 정의하고, 이를 PostgreSQL에 구현할 물리 스키마까지 연결한다. API DTO를 그대로 저장 구조로 옮기지 않으며, 조회 응답의 조합·축약·파생 값과 영속 데이터를 구분한다.
 
 ## 2. 데이터 모델 문서 구성
+
+#394의 [전국 지역 계층 계약](../api/common/region-contract.md)은 Region의 10자리 행정코드·부모 관계를 추가한다. 물리 정의는 [테이블](table-definitions.md#2-region), 현존 집합은 [시드](seed-data-plan.md), 전진 적용은 [V20 계획](migration-plan.md#v20-전국-지역-계층--이슈-394)을 따른다. API·DB 소유자 리뷰 요청 상태다.
 
 | 문서 | 책임 |
 |---|---|

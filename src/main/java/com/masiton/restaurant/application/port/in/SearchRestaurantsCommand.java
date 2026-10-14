@@ -14,7 +14,14 @@ public record SearchRestaurantsCommand(
         String creatorId,
         List<String> tags,
         int page,
-        int size) {
+        int size,
+        String regionCode) {
+
+    public SearchRestaurantsCommand(
+            String query, String district, String category, String creatorId,
+            List<String> tags, int page, int size) {
+        this(query, district, category, creatorId, tags, page, size, null);
+    }
 
     public SearchRestaurantsCommand(
             String query,

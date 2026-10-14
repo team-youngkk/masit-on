@@ -12,8 +12,15 @@ public record NaturalLanguageSearchCommand(
         List<String> tags,
         int page,
         int size,
-        String clientAddress
+        String clientAddress,
+        String regionCode
 ) {
+
+    public NaturalLanguageSearchCommand(
+            String sentence, String query, String district, String category, String creatorId,
+            List<String> tags, int page, int size, String clientAddress) {
+        this(sentence, query, district, category, creatorId, tags, page, size, clientAddress, null);
+    }
 
     public NaturalLanguageSearchCommand {
         tags = tags == null ? List.of() : List.copyOf(tags);

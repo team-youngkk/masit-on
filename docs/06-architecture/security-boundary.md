@@ -1,5 +1,6 @@
 ---
 related_documents:
+  - ../05-specs/api/common/region-contract.md
   - architecture-overview.md
   - package-structure.md
   - application-flow.md
@@ -43,6 +44,8 @@ Spring Security Filter Chain은 인증과 역할 인가를 담당한다. Control
 | Visit 등록 | Bearer JWT | `ADMIN` | 세 참조, 공개, 채널 일치, 근거·중복 |
 
 ## 3. 계층별 책임
+
+#394의 공개 `GET /api/regions`는 무인증 전체 활성 지역 마스터 조회다. 입력·오류는 [지역 계층 계약](../05-specs/api/common/region-contract.md)을 따른다. 지역 마스터 변경용 공개 쓰기 API는 추가하지 않으며 관리자 등록의 JWT·ADMIN 경계를 유지한다. 지역 API 추가는 소유자 리뷰 요청 상태다.
 
 ### Security Infrastructure
 
