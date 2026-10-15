@@ -34,15 +34,15 @@ related_documents:
 
 컴파일과 등록 실행 11건·ArchUnit 10건은 통과했다. 최초 ArchUnit에서 Application의 HTTP 예외 직접 참조를 검출했고 common observability 원인 분류기로 분리해 해결했다. YouTube cause 보존 신규 회귀를 포함한 최종 재검증 결과는 아래에 추가한다. 독립 리뷰는 주 에이전트가 통합 전에 수행한다.
 
-## 전체 통계 계약 제안 — 미확정
+## 전체 통계 계약 — 소유자 합의 확보
 
-아래는 AI/API/데이터 소유자 합의 전 제안이며 API·쿼리를 구현하지 않는다.
+사용자 확인으로 AI/API/데이터 소유자 합의를 확보했다. from/to는 필수 ISO-8601 offset 시각이며 UTC instant로 비교한다. from < to, 최대 365일을 허용한다. source/modelVersion/promptVersion/schemaVersion 필터와 해당 네 차원의 고정 그룹을 제공한다. 실행 시도 누적 지표는 포함하지 않고 작업의 저장된 버전만 사용한다.
 
-- 후보 API: 관리자 전용 `GET /api/admin/ai/video-extractions/statistics`. 기존 작업 API namespace에 추가한다. `from` 포함·`to` 제외 UTC 작업 생성 시각 범위를 사용하고, 유입경로·모델·Prompt 버전·Schema 버전으로 필터/그룹을 선택한다. 기간은 작업 created_at 기준이며 마지막 수정 시각 기준과 혼용하지 않는다.
+- API: 관리자 전용 `GET /api/admin/ai/video-extractions/statistics`. 기존 작업 API namespace에 추가한다. `from` 포함·`to` 제외 UTC 작업 생성 시각 범위를 사용하고, 유입경로·모델·Prompt 버전·Schema 버전으로 필터하고 네 차원의 고정 그룹을 반환한다. 기간은 작업 created_at 기준이며 마지막 수정 시각 기준과 혼용하지 않는다.
 - 작업 분모: 해당 범위의 고유 작업 수. 상태별 작업 수는 작업 테이블에서 별도로 집계한다. 등록 단위 join으로 작업 수를 중복 계산하지 않는다.
 - 단위 분모: 해당 작업의 최신 Snapshot에 속한 등록 단위 총수. 현재 상태별 전체 수와 판정 완료 분모를 모두 반환한다. 판정 완료 분모는 AUTO_CONFIRMED + AUTO_BLOCKED + AUTO_REJECTED이고, MANUAL_OVERRIDE는 별도 수로 노출하며 롤백·폐기 단위도 그 상태 개수에 포함한다. 실제 등록 여부는 registration_result 존재와 현재 lifecycle을 별도 지표로 집계해 AUTO_CONFIRMED를 누적 등록 성공 횟수로 해석하지 않는다.
 - 차단율: AUTO_BLOCKED / 판정 완료 단위 수. 사유 비율은 사유별 AUTO_BLOCKED / 전체 AUTO_BLOCKED이며 전체 단위 대비 비율과 필드명을 구분한다. 분모 0이면 비율 null, count는 0으로 반환한다. 6개 확정/4개 차단 고정 사례는 totalUnits=10, evaluatedUnits=10, blockedUnits=4, blockedRate=0.4로 검증한다.
-- 이행: 재시도한 단위의 현재 상태 집계와 실행 시도별 누적 감사 집계를 다른 지표로 제공한다. 기존 스키마가 감사 당시 모델/Prompt/Schema를 보존하는지 확인한 뒤 지원 가능한 차원만 확정한다. 없는 차원의 과거 값을 추정해 채우지 않는다.
+- 이행: 재시도한 단위의 현재 상태만 집계한다. 실행 시도별 누적 감사 집계는 이번 범위에서 제외한다. 차원은 작업의 저장된 버전이며 없는 과거 값을 추정해 채우지 않는다.
 - 로그의 실패 단계·유형은 내부 진단이며 DB 통계 차원이 아니다. 영속 단계 집계가 필요하면 nullable 진단 필드·감사 이벤트 스키마·보존기간·migration을 별도 합의한다. 원문·비밀값은 저장하지 않는다.
 
 ## Worker 경계 확인
@@ -53,3 +53,17 @@ AiExtractionWorkerService는 일반 RuntimeException을 INFRASTRUCTURE로 기록
 
 최종 검증: `.\gradlew.bat test --tests com.masiton.orchestration.application.RegistrationUnitExecutionServiceTest --tests com.masiton.video.application.ResolveVerifiedVideoServiceTest --tests com.masiton.architecture.ArchitectureTest --no-daemon --console=plain` 통과(22건, 실패 0건). `git diff --check` 통과. 실제 외부 API·운영 데이터는 호출/변경하지 않았다. 전체 통계·Worker 통합 전체 테스트·독립 리뷰는 후속 통합 범위로 남긴다.
 
+
+## 전체 통계 구현과 검증
+
+별도 Statistics Port/Application Service/Controller/JDBC Adapter로 구현해 기존 작업 목록·상세 Controller와 등록 실행 공통 파일은 수정하지 않았다. 고유 작업의 상태별 집계와 최신 Snapshot의 단위별 집계를 별도로 만든 뒤 단일 SQL UNION 결과를 합쳐 조회 시점 불일치와 작업 분모 중복을 방지한다. SQL 필터는 바인딩 파라미터를 사용한다. 기존 PostgreSQL 모델 고정 제약은 유지한다.
+
+검증은 실제 PostgreSQL Testcontainers와 MockMvc를 사용한다. 6개 확정/4개 차단, 전체 확정/차단/빈 분모, 최신 Snapshot, 수동 등록/롤백/폐기, 자동 거절 분모, 시작 포함/끝 제외, source/모델/Prompt/Schema 필터 및 그룹, ADMIN·미인증·비관리자와 400·traceId를 확인한다. 초기 테스트에서 잘못된 fixture 모델/URL/입력 모드/리소스 ID 길이와 SQL GROUP BY 위치 오류를 확인하고 수정했다. 최종 결과는 재검증 후 기록한다. 운영 데이터·실제 외부 API·DB migration은 변경하지 않는다.
+
+최종 통계 검증: `.\gradlew.bat test --tests '*AiExtractionStatistics*' --tests com.masiton.architecture.ArchitectureTest --no-daemon --console=plain` 성공(통계 10건 + ArchUnit 10건, 실패 0건). `compileJava`와 `git diff --check` 성공. 독립 리뷰 및 전체 통합 검증은 주 에이전트의 후속 검증 범위다.
+
+## 독립 리뷰 입력 경계 보완
+
+버전 필터 NUL 및 제어 문자를 저장소 호출 전에 400과 traceId로 거부한다. 기존 SafeTextPolicy와 원문 제어 문자 검사를 사용하며 집계 SQL과 null 비율은 유지한다.
+
+리뷰 보완 검증: 컴파일과 관련 테스트 17건(ArchUnit 포함)이 통과했다. 실제 Provider 호출 없이 고정 후보·Mockito 및 통계 MockMvc/Testcontainers로 검증했다.
