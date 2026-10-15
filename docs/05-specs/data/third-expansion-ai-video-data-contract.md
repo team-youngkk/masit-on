@@ -140,7 +140,7 @@ related_documents:
 | `provider_result_key_id` | `varchar(128)` | Yes | 응답 암호문 쌍 CHECK | 응답 암호화 키 식별자 |
 | `provider_result_at` | `timestamp with time zone` | Yes | `created_at`~`created_at + 24 hours`, 예약 시도 필수 | 응답 checkpoint 저장 시각 |
 
-원/결과 Snapshot이 같은 `job_id`에 속함은 trigger로 검증한다. Claim 행은 재시작 가능한 단일 mutable gate로 `PENDING`에서 `SUCCEEDED` 또는 `BLOCKED`로 전이하며 terminal 상태에서 결과 Snapshot과 완료 시각이 함께 기록된다. Provider 호출 예약과 동시에 `provider_attempt_no`가 기록된다. 응답을 받으면 Provider의 `SUCCEEDED` attempt 이력과 암호화 응답 checkpoint를 한 저장 문장에서 기록하므로, 두 기록 사이 crash window가 없다. 재기동 시 예약 번호와 checkpoint가 모두 있으면 checkpoint를 복호화해 결과 처리를 이어가며 Provider를 다시 호출하지 않는다. 예약 번호만 있으면 결과를 알 수 없는 in-flight 호출로 보고 자동 재호출하지 않는다. Provider Attempt와 Candidate Snapshot은 기존 행을 덮어쓰지 않는 이력으로 유지한다. 입력·응답 암호문은 작업 종료 또는 만료 시 정리하고, hash·허용 출처·사유·결과·Snapshot 링크와 Provider Attempt 이력은 계약된 이력 보존기간 동안 남긴다. Provider 호출 횟수는 `ai_extraction_attempt`로 집계한다.
+원/결과 Snapshot이 같은 `job_id`에 속함은 trigger로 검증한다. Claim 행은 재시작 가능한 단일 mutable gate로 `PENDING`에서 `SUCCEEDED` 또는 `BLOCKED`로 전이하며 terminal 상태에서 결과 Snapshot과 완료 시각이 함께 기록된다. Provider 호출 예약과 동시에 `provider_attempt_no`가 기록된다. 응답을 받으면 Provider의 `SUCCEEDED` attempt 이력과 암호화 응답 checkpoint를 한 저장 문장에서 기록하므로, 두 기록 사이 crash window가 없다. 재기동 시 예약 번호와 checkpoint가 모두 있으면 checkpoint를 복호화해 결과 처리를 이어가며 Provider를 다시 호출하지 않는다. 예약 번호만 있고 대응하는 terminal attempt 이력이 없으면 결과를 알 수 없는 호출로 보고 자동 재호출하지 않는다. 대응 attempt가 `FAILED`로 기록되어 있으면 기존 호출 상한과 quota 정책 아래에서 다음 재시도를 예약할 수 있다. Provider Attempt와 Candidate Snapshot은 기존 행을 덮어쓰지 않는 이력으로 유지한다. 입력·응답 암호문은 작업 종료 또는 만료 시 정리하고, hash·허용 출처·사유·결과·Snapshot 링크와 Provider Attempt 이력은 계약된 이력 보존기간 동안 남긴다. Provider 호출 횟수는 `ai_extraction_attempt`로 집계한다.
 
 ## 5. `ai_candidate_snapshot`
 
