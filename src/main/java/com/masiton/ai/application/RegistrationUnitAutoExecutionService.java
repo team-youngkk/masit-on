@@ -44,12 +44,20 @@ class RegistrationUnitAutoExecutionService {
 
     List<RegistrationUnitOutcome> execute(JsonNode candidateFields, JsonNode fieldConfidences, JsonNode evidence,
                                           String channelId, String videoId, URI videoUrl) {
+        return execute(candidateFields, fieldConfidences, evidence, channelId, videoId, videoUrl, null);
+    }
+
+    List<RegistrationUnitOutcome> execute(JsonNode candidateFields, JsonNode fieldConfidences, JsonNode evidence,
+                                          String channelId, String videoId, URI videoUrl, Integer selectedUnitIndex) {
         List<RegistrationUnitBundle> bundles = decomposeRegistrationUnits.decompose(
                 new DecomposeRegistrationUnitsUseCase.DecomposeRegistrationUnitsCommand(
                         candidateFields, fieldConfidences, evidence));
 
         List<RegistrationUnitOutcome> outcomes = new ArrayList<>();
         for (RegistrationUnitBundle bundle : bundles) {
+            if (selectedUnitIndex != null && bundle.unitIndex() != selectedUnitIndex) {
+                continue;
+            }
             String restaurantName = bundle.restaurantName().value();
             if (bundle.candidateUnitId() != null && (unknownEvidence(bundle.restaurantName()) || unknownEvidence(bundle.visitEvidence()))) {
                 outcomes.add(RegistrationUnitOutcome.blocked(bundle.unitIndex(), restaurantName, "MISSING_REQUIRED_FIELD"));

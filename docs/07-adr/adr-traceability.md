@@ -11,6 +11,7 @@ related_documents:
   - ../08-planning/second-expansion-test-matrix.md
   - ../08-planning/expansion-2-implementation-plan.md
   - ../08-planning/expansion-2-task-breakdown.md
+  - ../08-planning/issue-421-ai-failure-remediation.md
   - platform/lang-001-java-21-runtime.md
   - platform/build-001-gradle-groovy.md
   - platform/frame-001-spring-boot.md
@@ -181,7 +182,7 @@ related_documents:
 | 인기 맛집 API | [ADR-DATA-011](data/data-011-popular-restaurant-request-time-aggregation.md) | 현재 Favorite 요청 시 집계, Snapshot·Batch·Redis 캐시 없음 |
 | 제보·신고 상태와 사용자 알림 API | [ADR-NOTIFY-002](integration/notify-002-in-app-notification-reliability.md), [ADR-DATA-012](data/data-012-second-expansion-retention-cleanup.md) | 상태·이력·알림 원자 저장, 외부 전달 없음, 독립 보존 cleanup |
 | 자연어 검색 API | [ADR-ARCH-005](architecture/arch-005-natural-language-filter-interpretation.md), [ADR-ARCH-006](architecture/arch-006-national-natural-language-region-interpretation.md)(P2 Proposed), [ADR-WEB-002](platform/web-002-data-state.md), [ADR-ARCH-001](architecture/arch-001-domain-monolith.md) | P1 이력·P2 regionCode와 직접 필터 우선·기존 목록 계약 재사용 |
-| AI 추출 작업·자동 등록 API | [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md), [ADR-EXT-003](integration/ext-003-ai-extraction-async-reliability.md), [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md) | 후보 상태·비동기 작업·자동 검증·예외 보정·정식 등록 |
+| AI 추출 작업·자동 등록 API | [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md), [ADR-EXT-003](integration/ext-003-ai-extraction-async-reliability.md), [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md) | 후보 상태·비동기 작업·자동 검증·예외 보정·정식 등록·실패 단위 제한 보완 |
 | 맛집 코스·경로 API | [ADR-ROUTE-001](integration/route-001-kakao-mobility-course-routing.md), [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md) | 선택 맛집 좌표·자동차 경로·외부 실패·초기 비저장 |
 
 ## 5. 데이터 모델 → ADR 매핑

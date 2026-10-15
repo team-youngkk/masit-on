@@ -13,6 +13,7 @@ related_requirements:
   - FR-AIEXTRACT-006
   - BR-AIEXTRACT-003
   - BR-AIEXTRACT-005
+  - BR-AIEXTRACT-012
   - NFR-RELIABILITY-005
   - NFR-EXTERNAL-005
   - NFR-AVAILABILITY-003
@@ -23,6 +24,7 @@ related_documents:
   - ../../04-product/prd/admin/ai-video-information-extraction.md
   - ../../08-planning/third-expansion-baseline-review.md
   - ../../08-planning/third-expansion-evaluation-strategy.md
+  - ../../08-planning/issue-421-ai-failure-remediation.md
   - ../integration/ext-001-reference-verification.md
   - ../architecture/arch-002-external-ports-adapters.md
   - ../data/data-001-postgresql.md
@@ -71,6 +73,7 @@ AI 호출은 외부 지연·quota·실패가 있고 관리자 요청과 같은 H
 - 한 작업은 claim/lease를 획득한 Worker만 실행한다.
 - lease 만료·프로세스 재기동 시 `RUNNING` 작업을 재시도 가능 상태로 되돌릴 수 있어야 한다.
 - 인스턴스당 Worker 1개, polling 5초, lease 120초, heartbeat 30초를 사용한다. Gemini는 연결 5초·응답 90초·시도 120초 timeout, 최대 2회 재시도(총 3회), backoff 5초·30초를 적용한다. 정책·입력·Schema 오류는 재시도하지 않는다.
+- 일반 추출의 기존 Provider 재시도와 별도로, 실패 사유별 자동 보완을 같은 작업 내에서 단위당 한 번 수행할 수 있다. eligible 단위는 기존 YouTube videos API 제목·설명과 같은 단위 location을 사용하며, 전체 Gemini Provider 호출은 최대 4회다. quota·비용 hard stop·timeout·backoff 정책은 유지한다.
 - 별도 메시지 브로커·n8n·Spring Batch·Redis 분산 락은 3차 확장에 포함하지 않는다. Worker 한계가 확인될 때만 별도 ADR로 재검토한다.
 
 ### 5.3. 장애와 기능 격리
@@ -82,6 +85,7 @@ AI 호출은 외부 지연·quota·실패가 있고 관리자 요청과 같은 H
 - 초기 데이터 적립 작업은 `BACKFILL` 우선순위로 두고 실시간 신규 영상 작업보다 낮게 처리한다. 관리자가 초기 적립 범위를 나누어 실행·일시정지할 수 있어야 한다.
 - 입력 원문·자막·비밀정보를 작업 로그에 기록하지 않는다. 로그에는 작업 식별자, 상태, 오류 분류와 시각만 남긴다.
 - 관리자 보완 텍스트는 Worker 재시작 복구에 필요한 동안만 암호화된 임시 입력으로 저장하고, 작업 종료 후 24시간 이내 삭제한다. Webhook 작업에는 보완 텍스트 임시 입력을 만들지 않는다.
+- 자동 보완 입력도 AES-GCM 임시 암호문으로 최대 24시간 보관한다. 새로운 Snapshot은 기존 전체 후보를 복사해 실패 단위 후보만 교체하고, 성공 단위는 후보·판정·등록 결과를 그대로 이어받아 다시 검증하지 않는다.
 
 ## 6. 고려한 선택지
 

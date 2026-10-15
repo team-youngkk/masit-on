@@ -17,6 +17,7 @@ related_documents:
   - ../../../07-adr/integration/ai-001-video-extraction-candidate-boundary.md
   - ../../../07-adr/integration/ext-003-ai-extraction-async-reliability.md
   - ../../../08-planning/third-expansion-evaluation-strategy.md
+  - ../../../08-planning/issue-421-ai-failure-remediation.md
   - ../common/authentication-contract.md
   - ../common/error-contract.md
   - ../common/pagination-contract.md
@@ -306,6 +307,10 @@ related_documents:
 - 이전 후보를 덮어쓰지 않고 새 입력 해시·버전 후보를 만든다.
 - `reason`은 trim 후 1,000자 이내 필수 값이며 새 작업의 `retry_reason`으로 보존한다.
 - 무료 quota 소진·결제 연결 요구·설정 미검증 상태에서는 `429` 또는 공통 오류 계약의 제공자 차단 오류를 반환하고 수동 등록 fallback을 안내한다.
+
+이 API는 관리자가 새 작업 재시도를 요청하는 기존 계약이다. Worker의 자동 보완은 공개 Route·Enum 추가 없이 원 작업에서 수행한다. 승인된 실패 단위만 기존 YouTube videos API에서 조회한 공개 제목·설명과 동일 단위의 `registrationUnits[].location` 후보를 사용한다. 단위마다 한 번이며 작업 전체 Gemini Provider 호출 상한은 기존 재시도를 포함해 4회다. quota·비용 hard stop은 그대로 적용한다.
+
+자동 보완 뒤 최신 Snapshot은 기존 전체 후보를 복사하고 실패 단위의 재검증 성공 후보만 교체한다. 성공 단위는 후보·판정·등록 결과를 그대로 유지하고 재검증하지 않는다. 이전 Snapshot과 판정은 보존한다. 재검증 후에도 실패한 단위는 최종 사유로 관리자 보류하며, 상세 응답은 기존 latest-Snapshot 계약을 따른다.
 
 ### 3.5 `POST /api/admin/ai/video-extractions/{jobId}/review` 사후 보정·롤백
 

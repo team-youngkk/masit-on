@@ -11,6 +11,8 @@ related_documents:
   - ../../07-adr/data/data-004-flyway.md
   - ../../07-adr/data/data-009-pre-release-migration-consolidation.md
   - second-expansion-data-contract.md
+  - third-expansion-ai-video-data-contract.md
+  - ../../08-planning/issue-421-ai-failure-remediation.md
 ---
 
 # 맛잇온 Flyway 마이그레이션 계획
@@ -223,9 +225,17 @@ AI 영상 추출 스키마·재사용 조회 인덱스·수동 검수 감사·�
 
 운영·개발·공유 데이터베이스에 V4가 아직 적용되지 않았으므로 통합 V4의 `model_version` CHECK 제약은 `gemini-3.5-flash-lite`만 허용한다. 기존 `gemini-3-flash-preview` 평가 자산은 데이터베이스 작업 이력이 아니라 역사적 평가 fixture로 보존하며, 최종 V4에는 저장할 수 없다. 모델 계약 변경을 포함한 최종 V4는 배포 전 한 번만 적용하고, 병합 전 개발·공유 DB가 V4로 선행 적용되지 않았는지 확인한다.
 
+### 11.5 V22 실패 단위 자동 보완 claim
+
+[`V22__add_ai_failure_remediation_claim.sql`](../../../src/main/resources/db/migration/V22__add_ai_failure_remediation_claim.sql)은 `ai_registration_unit_retry` claim·결과 이력을 추가하고 기존 등록 단위의 `(id, snapshot_id)` 복합 유일성을 제공한다. 작업·원 Snapshot·원 단위·candidate unit ID·결과 Snapshot을 연결하며, 작업별 원 단위와 `(job_id, candidate_unit_id)` unique로 중복 보완을 막는다. 공개 제목·설명·같은 단위 location의 허용 출처 식별자와 입력 해시·실패 사유를 저장하고, AES-GCM 입력은 암호문·키 ID·24시간 이내 만료 시각으로만 저장한다. Claim 행은 mutable `PENDING` gate에서 `SUCCEEDED/BLOCKED`로 완료되며, Provider Attempt와 Snapshot 행은 append-only 이력으로 보존한다. Provider 호출 횟수는 기존 `ai_extraction_attempt`를 사용한다.
+
+### 11.6 V23 보완 Provider 응답 checkpoint
+
+[`V23__add_ai_supplement_response_checkpoint.sql`](../../../src/main/resources/db/migration/V23__add_ai_supplement_response_checkpoint.sql)은 `ai_registration_unit_retry`에 `provider_result_ciphertext`, `provider_result_key_id`, `provider_result_at`을 추가한다. Worker는 lease와 예약 attempt 번호가 일치하는 동안 Provider 성공 Attempt와 AES-GCM 암호화 응답 checkpoint를 한 statement에서 기록한다. 재기동 시 checkpoint가 있으면 이를 복호화해 결과 처리를 재개하고 Provider를 재호출하지 않는다. 예약 번호만 있고 응답 checkpoint가 없으면 호출 결과를 알 수 없는 상태로 취급한다. 응답 암호문은 terminal 완료 또는 입력의 24시간 만료 시 함께 삭제하고 checkpoint 시각 및 Provider Attempt 이력은 유지한다.
+
 ## 12. 향후 변경 번호
 
-초기 스키마 baseline 다음 변경은 `V2`로 적용됐고, 1차 확장 변경은 2.3절 통합 이후 다시 `V2` 하나로 적용됐다. 2차 확장은 `V3`, 3차 확장 AI 영상 추출·누적 AI 변경·Gemini 모델 전환 제약은 통합 `V4`, 채널 감시 오류 시각 보강은 `V5`, YouTube 채널 보정 실행은 `V14`, 보정 실행 중지 원인은 `V15`, 영상별 접수 원장은 `V16`을 사용한다.
+초기 스키마 baseline 다음 변경은 `V2`로 적용됐고, 1차 확장 변경은 2.3절 통합 이후 다시 `V2` 하나로 적용됐다. 2차 확장은 `V3`, 3차 확장 AI 영상 추출·누적 AI 변경·Gemini 모델 전환 제약은 통합 `V4`, 채널 감시 오류 시각 보강은 `V5`, YouTube 채널 보정 실행은 `V14`, 보정 실행 중지 원인은 `V15`, 영상별 접수 원장은 `V16`, 실패 단위 자동 보완 claim 및 응답 checkpoint는 `V22`·`V23`을 사용한다. 현재 저장소의 최신 마이그레이션은 `V23`이다.
 
 `V1`과 `V2`는 각각 적용된 시점부터 수정하지 않는다. 현행 `V3__add_expansion_2_schema.sql` 또는 `V4__create_third_expansion_ai_schema.sql`을 향후 통합하려면 2.1절과 ADR-DATA-009의 강제 규칙을 모두 증명해야 하며, 이미 운영에 적용된 파일은 통합·수정하지 않는다.
 

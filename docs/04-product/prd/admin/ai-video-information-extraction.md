@@ -26,6 +26,7 @@ related_business_rules:
   - BR-AIEXTRACT-009
   - BR-AIEXTRACT-010
   - BR-AIEXTRACT-011
+  - BR-AIEXTRACT-012
 related_nfr:
   - NFR-ACCURACY-002
   - NFR-INTEGRITY-006
@@ -44,6 +45,7 @@ related_documents:
   - ../../../01-requirements/non-functional-requirements.md
   - ../../../08-planning/third-expansion-scope-and-terminology.md
   - ../../../08-planning/third-expansion-evaluation-strategy.md
+  - ../../../08-planning/issue-421-ai-failure-remediation.md
   - ../../../02-analysis/third-expansion-workstreams.md
   - admin-data-management.md
   - ../../user-flows/third-expansion-user-flows.md
@@ -63,6 +65,7 @@ related_documents:
 - 입력: Webhook이 전달한 공개 YouTube URL을 Google Gemini API의 `gemini-3.5-flash-lite` 영상 입력으로 사용하거나, 관리자 화면의 YouTube URL과 최대 20,000자의 선택적 보완 텍스트를 사용한다.
 - 시스템은 원본 영상이나 전체 YouTube 자막·전사를 자동 수집·저장하지 않는다.
 - Gemini 영상 입력 실패·접근 제한·부분 추출 시 관리자가 보완 텍스트를 추가해 재시도할 수 있다.
+- 승인된 실패 등록 단위는 공개 제목·설명과 같은 단위의 location 후보로 자동 보완을 한 번 수행하고, 실패 단위만 제한 재검증한다.
 - 구현은 [WS-15](../../../02-analysis/third-expansion-workstreams.md#6-ws-15-ai-영상-정보-추출)가 담당하며 최종 책임자는 김인안, 기본 리뷰어는 박진영이다.
 
 ## 3. 목표와 성공 기준
@@ -92,6 +95,7 @@ related_documents:
 - exact-name 우선·주소 시·구 일치 기반 Kakao 장소 동일성 자동 판정과, exact 후보가 없을 때만 허용하는 제한적 이름 containment/LIKE fallback, 대표 음식 카테고리 자동 선정
 - 자동 확정 후보의 기존 Kakao·YouTube·Visit 검증·등록·공개 흐름 연결
 - 제한 재시도, 실패 보관과 예외 수동 등록 대체
+- 실패 등록 단위 1회 자동 보완, 작업 전체 Provider 호출 최대 4회, 전체 Snapshot carry-forward와 실패 단위만 재검증
 
 관리자가 활성화하고 구독 검증을 마친 채널의 Webhook 누락 보정은 포함 범위다. 운영자가 명시한 주기로 자동 실행하고 기존 수동 시작·중지·상태 조회를 유지한다. 미설정 주기의 활성화, 진행 실행의 중복 생성, 수동 중지의 자동 재개를 금지한다. [ADR-EXT-004](../../../07-adr/integration/ext-004-youtube-periodic-reconciliation.md)의 quota·Cursor·복구 경계를 따른다. 아래 일반 수집·재처리 제외와 구분한다.
 
@@ -172,7 +176,8 @@ related_documents:
 - 작업 실행과 출력 Schema 검증에 성공하면 일부 필드가 `UNKNOWN`이어도 작업 상태는 `SUCCEEDED`이고 결과 완전성은 `PARTIAL`로 표시한다.
 - 맛집 동일성·주소·방문 근거 등 정식 등록에 필요한 값이 부족하면 해당 등록 단위의 자동 검증을 차단하고 부족한 항목을 표시한다. 같은 작업의 다른 등록 단위는 계속 진행한다.
 - 추출 필수값이 누락되거나 근거가 `UNKNOWN`이면 결과 완전성을 `PARTIAL`로 표시한다. 외부 검증·중복 등 등록 판정과 필드 완전성은 독립이며, 필드가 완전한 `COMPLETE` 결과도 `AUTO_BLOCKED`일 수 있다. 일부 등록 단위가 차단돼도 통과한 단위의 정식 등록은 유지한다. 이 의미 정합화는 #413 설계 제안에 대한 계약 소유자 합의 확보를 2026-10-14 사용자가 확인한 결과다.
-- 관리자 보완 경로는 두 가지이며 성격이 다르다. 두 경로를 한 화면에 섞지 않는다.
+- 관리자 보완 경로는 자동 보완, 새 작업의 보완 텍스트 재추출, 등록 단위의 `review` 보충 입력으로 구분한다.
+  - **실패 단위 자동 보완**: 기존 YouTube videos API의 공개 제목·설명과 해당 단위의 승인된 location 후보만 사용한다. 단위당 한 번이며 이미 성공한 단위는 재검증하지 않는다.
   - **보완 텍스트 재추출**: 관리자가 `supplementText`를 제출해 새 작업을 만든다. 맛집명·주소·메뉴·Kakao 장소 URL은 보완 텍스트의 해시·문자 범위가 일치하는 `TEXT_RANGE` 근거를 가질 때만 후보가 된다. 값을 직접 등록하는 것이 아니라 AI가 근거와 함께 다시 추출하는 것이다.
   - **`review`의 보충 입력**: 이미 만들어진 등록 단위의 차단을 푸는 판정 선택이며 Kakao 장소 URL과 음식 카테고리만 받는다. 후보 값을 새로 만들지 않는다.
 - 어느 경로에서도 관리자가 맛집명·주소·방문 근거 값을 화면에서 직접 입력해 등록하지 않는다. 보완값도 기존 외부 검증을 우회하지 않는다.
@@ -187,6 +192,8 @@ related_documents:
 - 한 영상의 후보 수에는 상한이 있다. 상한보다 장소가 많으면 근거가 강한 후보만 남기고 나머지를 생략하되, 생략 사실을 결과에 표시하고 관리자 화면에 일부 맛집이 누락됐음을 경고한다. 표시 없는 조용한 누락을 허용하지 않는다.
 - 상한을 지키지 않은 응답은 `SCHEMA` 실패로 기각하고 등록 단위를 만들지 않는다. 이 경우 관리자는 보완 텍스트 재시도 또는 기존 수동 등록으로 복구한다.
 - timeout·429·5xx는 제공자 ADR의 제한 횟수와 전체 시간 예산 안에서만 재시도한다.
+- 작업 전체 Provider 호출은 일반 추출과 기존 재시도를 포함해 최대 4회다. 기존 quota·비용 hard stop, timeout과 backoff 설정을 유지한다.
+- 자동 보완 Snapshot은 이전 Snapshot의 전체 후보를 복사하고 실패 단위 후보만 교체한다. 성공 단위의 후보·판정·등록 결과는 그대로 이어받고 재검증하지 않는다. 미해결 단위는 기존 차단 사유로 관리자 보류한다.
 - Worker·단일 EC2 재시작 뒤 미종결 작업은 중복 정식 등록 없이 재개 또는 실패 종결한다.
 - 비용·quota 상한을 넘으면 새 호출을 차단하고 관리자 수동 등록을 안내한다.
 - 모델·Prompt·Schema 변경 재처리는 새 작업·후보를 만들고 이전 결과를 덮어쓰지 않는다.
