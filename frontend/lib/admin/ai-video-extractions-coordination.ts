@@ -34,6 +34,12 @@ export function registrationSummaryLabel(summary: ReturnType<typeof registration
   return '현재 등록 없음'
 }
 
+export function extractionResultNotice(executionStatus: AiExecutionStatus, candidateCount: number, unitCount: number): string | null {
+  if (executionStatus !== 'SUCCEEDED') return null
+  if (candidateCount === 0 && unitCount === 0) return '추출 처리는 완료됐지만 후보와 등록 단위가 없습니다. 원본 영상을 확인하고 보완 텍스트 재추출 또는 기존 수동 등록을 이용해 주세요.'
+  return 'SUCCEEDED는 추출 처리 성공을 뜻합니다. 실제 등록 여부와 차단 사유는 등록 단위에서 확인해 주세요.'
+}
+
 export type AiExtractionFilters = {
   executionStatus: AiExecutionStatus | ''
   source: AiExtractionSource | ''
