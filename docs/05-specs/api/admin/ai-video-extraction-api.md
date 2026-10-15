@@ -738,3 +738,20 @@ Webhook 수신 경로는 공개 인터넷 진입점이므로 Nginx·Spring Secur
 ## #412 등록 단위 집계 계약
 
 소유자 합의 확보 후 목록과 상세 GET에 registrationSummary를 추가한다. total, autoConfirmed, autoBlocked, autoRejected, manualOverride, registered는 음이 아닌 정수이며 네 상태 개수 합은 total이다. registered는 최신 Snapshot 단위 중 AUTO_CONFIRMED 또는 MANUAL_OVERRIDE 상태로 등록 결과 ID 4종이 모두 존재하고 롤백·폐기가 없는 개수다. partialRegistration은 0 < registered < total이다. 단위가 없으면 모든 개수는 0이고 false다. 접수·재시도 응답은 변경하지 않는다. 상세의 registrationUnits가 권위 있는 단위별 결과이며 상태 Enum과 DB 구조는 유지한다. [설계와 검증](../../../08-planning/issue-412-ai-unit-summary.md)을 따른다.
+## 3.11 추출 작업·등록 단위 통계 (#420)
+
+계약 소유자 합의를 확보한 관리자 전용 `GET /api/admin/ai/video-extractions/statistics`다. JWT + `ADMIN`을 요구한다. `from`·`to`는 필수 ISO-8601 offset 시각이며 UTC instant 기준 작업 `created_at >= from AND created_at < to`를 적용한다. `from < to`, 기간 최대 365일이며 누락·잘못된 형식·역전·초과 범위는 `400`과 공통 `traceId` 오류를 반환한다. 선택 필터는 `source`(`ADMIN`·`WEBHOOK`), `modelVersion`(최대 128자), `promptVersion`·`schemaVersion`(최대 64자)이다. 버전은 빈 문자열을 허용하지 않고 저장된 값과 정확히 일치하는 필터를 적용한다.
+
+응답은 `{ "totals": {...}, "groups": [...] }`다. 그룹은 source/modelVersion/promptVersion/schemaVersion 네 차원의 고정 조합이며 각 그룹은 동일한 `counts`를 포함한다. 이 차원은 작업에 저장된 버전이며 과거 실행 시도의 버전을 추정하지 않는다. 실행 시도 누적 통계와 내부 실패 단계·traceId는 응답에 포함하지 않는다.
+
+| counts 필드 | 정의 |
+|---|---|
+| totalJobs / jobStatuses | 고유 작업 수 / QUEUED·RUNNING·SUCCEEDED·FAILED별 작업 수 |
+| totalUnits | 해당 작업 최신 Snapshot의 단위 수. 이전 Snapshot·시도는 누적하지 않음 |
+| confirmedUnits / blockedUnits / rejectedUnits / manualOverrideUnits | 현재 AUTO_CONFIRMED / AUTO_BLOCKED / AUTO_REJECTED / MANUAL_OVERRIDE 수 |
+| evaluatedUnits | confirmedUnits + blockedUnits + rejectedUnits |
+| registeredUnits | 등록 결과 4개 ID가 모두 있고 rolledBackAt·discardedAt이 없는 현재 등록 단위 수 |
+| blockedRate | blockedUnits / evaluatedUnits. 분모 0이면 null |
+| blockReasons | 현재 AUTO_BLOCKED의 사유별 `{count, blockedShare}`. blockedShare = 사유별 count / blockedUnits |
+
+롤백·폐기 단위는 manualOverrideUnits에 포함하고 registeredUnits에서는 제외한다. 비어 있는 상태별 count는 0, 사유 map은 `{}`, groups는 `[]`, 분모 0의 비율은 null이다. 6개 확정·4개 차단이면 totalUnits=10, evaluatedUnits=10, blockedUnits=4, blockedRate=0.4다. 단위 join으로 작업 수가 늘어나지 않도록 작업/단위 분모를 별도 집계하며 단일 SQL 문으로 동일한 조회 snapshot을 사용한다. DB·Prompt·Schema 변경과 운영 데이터 재실행은 없다.
