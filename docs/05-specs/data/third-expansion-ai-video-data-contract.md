@@ -166,7 +166,7 @@ related_documents:
 | `registered_restaurant_id` | `uuid` | Yes | FK → `restaurant.id` | 등록한 맛집 |
 | `registered_creator_id` | `uuid` | Yes | FK → `creator.id` | 등록하거나 재사용한 유튜버 |
 | `registered_video_id` | `uuid` | Yes | FK → `video.id` | 등록하거나 재사용한 영상 |
-| `registered_visit_id` | `uuid` | Yes | FK → `visit.id` | 같은 실행에서 만든 방문 관계 |
+| `registered_visit_id` | `uuid` | Yes | FK → `visit.id` | 등록하거나 재사용한 방문 관계 |
 | `reused_resources` | `jsonb` | NN | 배열, 허용값 `restaurant`·`creator`·`video`·`visit` CHECK | 새로 만들지 않고 재사용한 자원 |
 | `executed_by` | `varchar(16)` | NN | `WORKER`·`ADMIN` CHECK | 등록 실행 주체 |
 | `decided_at` | 시간 | NN | 기본 현재 시각 | 판정 시각 |

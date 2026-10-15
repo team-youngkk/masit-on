@@ -5,10 +5,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -226,6 +228,22 @@ class AutoRegisterRestaurantReusePostgreSqlIntegrationTest extends FullContextIn
     private AiRegistrationUnitStore.RegistrationUnitRow registeredUnit(RegistrationResult result) {
         UUID jobId = UUID.randomUUID();
         UUID snapshotId = UUID.randomUUID();
+        var reusedResources = new ArrayList<String>();
+        if (!result.restaurantCreated()) {
+            reusedResources.add("restaurant");
+        }
+        if (!result.creatorCreated()) {
+            reusedResources.add("creator");
+        }
+        if (!result.videoCreated()) {
+            reusedResources.add("video");
+        }
+        if (!result.visitCreated()) {
+            reusedResources.add("visit");
+        }
+        String reusedResourcesJson = reusedResources.stream()
+                .map(resource -> "\"" + resource + "\"")
+                .collect(Collectors.joining(",", "[", "]"));
         jdbc.update("""
                 INSERT INTO ai_extraction_job (id, source, priority, youtube_channel_id, youtube_video_id,
                     video_url, input_mode, input_hash, provider, model_version, prompt_version, schema_version,
@@ -240,7 +258,7 @@ class AutoRegisterRestaurantReusePostgreSqlIntegrationTest extends FullContextIn
                 """, snapshotId, jobId);
         unitStore.insert(new AiRegistrationUnitStore.RegistrationUnitInsert(snapshotId, 1, "고정 식당",
                 "AUTO_CONFIRMED", null, "{}", "{}", result.restaurantId(), result.creatorId(), result.videoId(),
-                result.visitId(), "[]", "WORKER", OffsetDateTime.now()));
+                result.visitId(), reusedResourcesJson, "WORKER", OffsetDateTime.now()));
         return unitStore.findBySnapshotId(snapshotId).get(0);
     }
 
@@ -346,6 +364,34 @@ class AutoRegisterRestaurantReusePostgreSqlIntegrationTest extends FullContextIn
         compensate(first);
         assertCounts(1, 1, 1, 1);
         assertThat(jdbc.queryForObject("SELECT id FROM visit", UUID.class)).isEqualTo(second.visitId());
+    }
+
+    @Test
+    @DisplayName("기존 미완성 Video에 이번에 만든 Creator를 연결한 경우 Creator를 보존한다")
+    void rollback_기존미완성영상에신규유튜버연결_공개참조보존() {
+        // Given: PUBLIC Video가 기존 Creator와 Visit 없이 남아 있는 재사용 상태
+        RegistrationResult initial = registration.register(command("place", "channel", "shared-video"));
+        jdbc.update("DELETE FROM visit_tag WHERE visit_id = ?", initial.visitId());
+        jdbc.update("DELETE FROM visit WHERE id = ?", initial.visitId());
+        jdbc.update("UPDATE video SET creator_id = NULL WHERE id = ?", initial.videoId());
+        jdbc.update("DELETE FROM creator WHERE id = ?", initial.creatorId());
+
+        // When: 기존 Video에 신규 Creator를 연결하고, 해당 등록 단위를 롤백한다
+        RegistrationResult registered = registration.register(command("place", "channel", "shared-video"));
+        assertThat(registered.videoCreated()).isFalse();
+        assertThat(registered.creatorCreated()).isTrue();
+        var unit = registeredUnit(registered);
+        assertThat(postCommit.rollback(unit, "재사용 영상 Creator 보존", reverted(registered), admin())).isTrue();
+
+        // Then: 재사용 공개 Video가 참조하는 신규 Creator도 공개 상태를 유지한다
+        assertThat(jdbc.queryForObject("SELECT creator_id FROM video WHERE id = ?", UUID.class,
+                registered.videoId())).isEqualTo(registered.creatorId());
+        assertThat(jdbc.queryForObject("SELECT publication_status FROM video WHERE id = ?", String.class,
+                registered.videoId())).isEqualTo("PUBLIC");
+        assertThat(jdbc.queryForObject("SELECT publication_status FROM creator WHERE id = ?", String.class,
+                registered.creatorId())).isEqualTo("PUBLIC");
+        assertThat(jdbc.queryForObject("SELECT publication_status FROM visit WHERE id = ?", String.class,
+                registered.visitId())).isEqualTo("PRIVATE");
     }
 
     @Test

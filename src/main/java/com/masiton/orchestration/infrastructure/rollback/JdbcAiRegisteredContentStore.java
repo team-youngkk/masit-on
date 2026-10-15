@@ -127,8 +127,8 @@ public class JdbcAiRegisteredContentStore implements AiRegisteredContentStore {
             return true;
         }
         if ("creator".equals(resource)) {
-            return exists("SELECT EXISTS (SELECT 1 FROM video WHERE creator_id = ? AND id NOT IN "
-                    + "(SELECT video_id FROM visit WHERE id = ?))", id, ownVisitId);
+            return exists("SELECT EXISTS (SELECT 1 FROM video WHERE creator_id = ? "
+                    + "AND publication_status = 'PUBLIC')", id);
         }
         return false;
     }
