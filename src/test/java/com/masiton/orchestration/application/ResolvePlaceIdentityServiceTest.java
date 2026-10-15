@@ -30,39 +30,42 @@ class ResolvePlaceIdentityServiceTest {
 
     @ParameterizedTest
     @CsvSource({
-            "손선장,인천 남동구 소래역로 12,인천광역시 남동구 소래역로 12",
-            "대풍식당,인천 강화군 교동면 대룡리,인천광역시 강화군 교동면 대룡안길 1",
-            "교동다방,인천 강화군 교동면 대룡리,인천광역시 강화군 교동면 대룡안길 2"
+            "손선장,인천 남동구 소래역로 12,인천광역시 남동구 소래역로 12,인천광역시 남동구",
+            "대풍식당,인천 강화군 교동면 대룡리,인천광역시 강화군 교동면 대룡안길 1,인천광역시 강화군",
+            "교동다방,인천 강화군 교동면 대룡리,인천광역시 강화군 교동면 대룡안길 2,인천광역시 강화군"
     })
     @DisplayName("인천 세 사례는 동일 지역의 도로명 후보가 하나 있을 때 확정한다")
-    void resolve_인천지역과유일후보_주소표기차이에도확정한다(String name, String address, String roadAddress) {
+    void resolve_인천지역과유일후보_주소표기차이에도확정한다(
+            String name, String address, String roadAddress, String district) {
         // Given
-        given(placeSearchPort.search(name)).willReturn(List.of(new PlaceSearchCandidate(
+        given(placeSearchPort.searchCandidates(name, district)).willReturn(List.of(new PlaceSearchCandidate(
                 name, "https://place.map.kakao.com/415", roadAddress, null, null)));
         // When
         var result = service.resolve(new PlaceIdentityCommand(name, address));
         // Then
         assertThat(result.isConfirmed()).isTrue();
         assertThat(result.confirmedPlace().matchedBy()).isEqualTo("NAME_AND_DISTRICT");
+        org.mockito.Mockito.verify(placeSearchPort).searchCandidates(name, district);
     }
 
     @Test
     @DisplayName("인천 동명 식당이라도 다른 군의 후보는 확정하지 않는다")
     void resolve_인천다른군후보_장소없음으로보류한다() {
         // Given
-        given(placeSearchPort.search("대풍식당")).willReturn(List.of(new PlaceSearchCandidate(
+        given(placeSearchPort.searchCandidates("대풍식당", "인천광역시 강화군")).willReturn(List.of(new PlaceSearchCandidate(
                 "대풍식당", "https://place.map.kakao.com/415", "인천광역시 옹진군 영흥면 영흥로 1", null, null)));
         // When
         var result = service.resolve(new PlaceIdentityCommand("대풍식당", "인천 강화군 교동면 대룡리"));
         // Then
         assertThat(result.status()).isEqualTo(PlaceIdentityStatus.PLACE_NOT_FOUND);
+        org.mockito.Mockito.verify(placeSearchPort).searchCandidates("대풍식당", "인천광역시 강화군");
     }
 
     @Test
     @DisplayName("강화군에 같은 이름의 식당 두 곳이 있으면 임의로 고르지 않는다")
     void resolve_강화군동명다중후보_모호한장소로보류한다() {
         // Given
-        given(placeSearchPort.search("교동다방")).willReturn(List.of(
+        given(placeSearchPort.searchCandidates("교동다방", "인천광역시 강화군")).willReturn(List.of(
                 new PlaceSearchCandidate("교동다방", "https://place.map.kakao.com/4151",
                         "인천광역시 강화군 교동면 대룡안길 1", null, null),
                 new PlaceSearchCandidate("교동다방", "https://place.map.kakao.com/4152",

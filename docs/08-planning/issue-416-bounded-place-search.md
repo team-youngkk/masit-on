@@ -38,8 +38,12 @@ related_documents:
 
 독립 리뷰에서 P1/P2 지적 없이 위 판정과 diff 검사를 확인했다. 리뷰자가 같은 작업 디렉터리에서 테스트를 동시에 실행해 결과 파일 잠금이 발생한 1회 시도는 환경 충돌이며, 실행을 직렬화한 최종 검증 결과를 사용한다.
 
+## PR #430 후속 검증
+
+CI에서 기존 `ResolvePlaceIdentityServiceTest` 네 건이 실패해 원인을 분석하고 [리뷰 반영 기록](../troubleshooting/pr-430-bounded-place-search-ci-review.md)에 수정·재검증 내용을 남겼다. 지역 후보 검색 포트 전환 뒤 테스트 스텁이 이전 `search(name)`에 남은 것이 원인이었다. 수정 후 `ResolvePlaceIdentityServiceTest`, `KakaoPlaceSearchAdapterWireMockIntegrationTest`, `KakaoPlaceVerificationAdapterTest` 71건이 통과했다.
+
 ## 제공자 계약 확인
 
 [Kakao Local 공식 문서](https://developers.kakao.com/docs/ko/local/dev-guide#search-by-keyword)의 meta.total_count(전체 결과), pageable_count(노출 가능 결과), is_end(후속 페이지 여부)를 확인했다. 전체 결과가 노출 가능 결과보다 많으면 마지막 페이지를 받더라도 유일성 증명이 불가능하므로 검색 실패한다. 조회 예산은 제공자의 전체 쿼터를 변경하는 설정이 아니라 단위 실행의 최대 호출 수다. 유입 증가에 대한 전역 rate limit은 기존 ADR의 실측 후 결정 정책을 유지한다.
 
-최종 검증: `.\gradlew.bat test --tests '*KakaoPlaceSearchAdapterWireMockIntegrationTest' --tests '*ResolvePlaceIdentityServiceTest' --tests '*KakaoPlaceVerificationAdapterTest' --no-daemon --console=plain` 통과. 장소 판정 25건·후보 WireMock 22건·기존 물리 검증 15건·ArchUnit 10건, 총 72건 실패·오류 0건이다. compileJava·compileTestJava 포함 통과했고 `git diff --check`도 통과했다. 고정 후보·WireMock만 사용했으며 실제 Kakao 요청·운영 데이터 작업은 수행하지 않았다. 최종 이슈 간 통합 회귀는 아직 남아 있다.
+초기 PR 검증 (기준 커밋 `a730ce17`): `.\gradlew.bat test --tests '*KakaoPlaceSearchAdapterWireMockIntegrationTest' --tests '*ResolvePlaceIdentityServiceTest' --tests '*KakaoPlaceVerificationAdapterTest' --no-daemon --console=plain` 통과. 장소 판정 25건·후보 WireMock 22건·기존 물리 검증 15건·ArchUnit 10건, 총 72건 실패·오류 0건이다. compileJava·compileTestJava 포함 통과했고 `git diff --check`도 통과했다. 고정 후보·WireMock만 사용했으며 실제 Kakao 요청·운영 데이터 작업은 수행하지 않았다. 최종 이슈 간 통합 회귀는 아직 남아 있다.
