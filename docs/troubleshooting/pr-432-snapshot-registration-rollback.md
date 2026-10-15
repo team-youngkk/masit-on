@@ -22,7 +22,7 @@ related_documents:
 
 | 스레드 | 요청 요약 | 문제 유형 | 판단 | 처리 결과 | 근거/검증 |
 |---|---|---|---|---|---|
-| [같은 Snapshot의 등록 참조 보존](https://github.com/team-youngkk/masit-on/pull/432#discussion_r4278167816) | 등록 단위 참조를 CAS로 지운 뒤에도 같은 Snapshot의 `registered_*` 참조가 남으면 공개 자원과 방문 태그를 보존해야 함 | 데이터베이스 | 수정 필요 | 공유 자원 조회에서 Snapshot ID 제외 조건을 제거하고 PostgreSQL 회귀 테스트를 추가 | `AutoRegisterRestaurantReusePostgreSqlIntegrationTest`에서 동일 Snapshot 작업 참조가 있을 때 네 자원의 공개 상태가 유지됨을 검증 |
+| [같은 Snapshot의 등록 참조 보존](https://github.com/team-youngkk/masit-on/pull/432#discussion_r4278167816) | 등록 단위 참조를 CAS로 지운 뒤에도 같은 Snapshot의 `registered_*` 참조가 남으면 공개 자원과 방문 태그를 보존해야 함 | 데이터베이스 | 수정 필요 | 단위 롤백은 같은 Snapshot의 작업 수준 참조를 보존 대상으로 계산하고, 작업 전체 롤백은 같은 Job의 이전/대상 Snapshot 참조를 외부 공유로 오인하지 않도록 범위를 제한. PostgreSQL 회귀 테스트 추가 | `AutoRegisterRestaurantReusePostgreSqlIntegrationTest`의 같은 Snapshot 단위 참조 보존 및 `Expansion3FlywayMigrationIntegrationTest`의 작업 전체 CONFIRM→ROLLBACK 비공개 전환 검증 |
 
 ## 3. 문제 현상과 발생 조건
 
@@ -35,30 +35,32 @@ related_documents:
 
 ## 4. 근본 원인
 
-`JdbcAiRegisteredContentStore.isShared()`가 다른 Snapshot의 `registered_*`만 검사하도록 `id <> snapshotId` 조건을 사용했다. 롤백 경로에서는 단위 참조가 CAS로 이미 지워질 수 있으므로, 동일 Snapshot의 작업 수준 참조도 생존한 참조로 계산해야 한다.
+`JdbcAiRegisteredContentStore.isShared()`는 단위 CAS 뒤에도 같은 Snapshot의 작업 수준 등록 참조를 보존해야 한다. 다만 이 조회를 무조건 모든 Snapshot 참조로 넓히면 관리자 확정 후 작업 전체 롤백 때 같은 Job의 원본·검토 Snapshot을 별도 공유 등록으로 오인해 자원이 계속 공개된다. 참조 소유 Job과 롤백 범위(전체 작업 또는 개별 등록 단위)를 함께 고려해야 한다.
 
 ## 5. 확인 및 시도
 
 | 확인하거나 시도한 방법 | 결과 | 판단과 다음 단계 |
 |---|---|---|
 | 기존 PR #244 트러블슈팅 기록 검색 | 다른 등록 단위 참조 및 보상 경계는 다뤘으나 Snapshot 작업 참조 누락은 없음 | 동일 원인으로 오인하지 않고 별도 회귀 기록 작성 |
-| `isShared()`의 단위 CAS 이후 조회 조건 확인 | 단위 CAS 뒤 Snapshot 조회가 같은 Snapshot을 제외함 | 같은 Snapshot도 공유 참조로 계산하도록 수정 |
+| `isShared()`와 기존 CONFIRM→ROLLBACK 회귀 경로 확인 | 모든 Snapshot 참조를 공유로 세면 같은 Job의 원본·검토 Snapshot 참조만으로 전체 롤백의 비공개 처리가 막힘 | 단위 롤백에서 같은 Job 참조를 보호하고, 전체 작업 롤백에서는 다른 Job만 외부 공유로 계산 |
+| GitHub PR CI의 Flyway 회귀 2건 재현 | 마이그레이션 목록 기대값이 V20에서 멈췄고, 같은 Job의 검토 Snapshot 참조 때문에 기존 PRIVATE 기대 동작이 깨짐 | V21 기대값 동기화 및 Job 경계가 있는 공유 조회로 수정 |
 
 ## 6. 최종 해결
 
-- 변경 내용: 자원별 Snapshot 참조가 어느 Snapshot에서든 존재하면 공유로 판단한다.
-- 선택 이유: 작업 수준 참조가 유효한 동안 그 자원은 삭제·비공개 전환 대상이 아니기 때문이다.
-- 변경 파일: `src/main/java/com/masiton/orchestration/infrastructure/rollback/JdbcAiRegisteredContentStore.java`, `src/test/java/com/masiton/orchestration/application/command/AutoRegisterRestaurantReusePostgreSqlIntegrationTest.java`
+- 변경 내용: 단위 롤백은 같은 Snapshot의 작업 수준 참조를 포함해 보호하고, 전체 작업 롤백은 다른 Job의 Snapshot 참조만 외부 공유로 보호한다. 현재 Job의 원본·검토 Snapshot은 전체 작업 롤백 대상에 속한다. V21 마이그레이션 추가에 맞춰 최신 버전 검증을 21까지 갱신했다.
+- 선택 이유: 단위 CAS 후 남은 job-level 참조는 해당 자원의 생존 근거지만, 같은 Job의 과거/검토 Snapshot은 전체 작업 롤백에서 별도 소유자가 아니다.
+- 변경 파일: `src/main/java/com/masiton/orchestration/infrastructure/rollback/JdbcAiRegisteredContentStore.java`, `src/test/java/com/masiton/orchestration/application/command/AutoRegisterRestaurantReusePostgreSqlIntegrationTest.java`, `src/test/java/com/masiton/Expansion3FlywayMigrationIntegrationTest.java`
 
 ## 7. 검증
 
 | 검증 | 결과 | 확인한 내용 |
 |---|---|---|
-| `./gradlew.bat test --tests '*AutoRegisterRestaurantReusePostgreSqlIntegrationTest' --no-daemon --console=plain` | 통과 | PostgreSQL 통합 테스트 12건과 ArchUnit 검사 10건 통과. 동일 Snapshot의 작업 참조가 있는 롤백도 통과 |
+| `./gradlew.bat test --tests '*Expansion3FlywayMigrationIntegrationTest' --tests '*AutoRegisterRestaurantReusePostgreSqlIntegrationTest' --no-daemon --console=plain` | 통과 | PostgreSQL 통합 테스트 24건과 ArchUnit 검사 10건 통과. 같은 Snapshot의 단위 참조 보존, 다른 Job Snapshot이 참조하는 리소스 공개 보존, 동일 Job의 CONFIRM→ROLLBACK 비공개 처리, V21 migration 이력을 검증 |
+| `./gradlew.bat clean build --no-daemon --console=plain` | 실패 (환경 제약) | 1,743건 중 3건이 `배포 dependency health 진단 계약`에서 실패했다. 스크립트 테스트가 로컬에서 Python 실행 파일을 찾지 못해 진단 JSON 대신 `Python 백엔드 dependency health JSON 파싱 실패`를 출력했고, 예상 종료 코드 1/2 대신 Windows `9009`를 반환했다. 관련 Gradle 테스트와 코드 변경은 통과했고, 이 수정과 무관한 실행환경 제약으로 분리했다. |
 
 ## 8. 재발 방지 및 다음 확인
 
-- 재발 방지: 같은 Snapshot 작업 수준 참조를 함께 만들고 롤백 후 공개 상태를 확인하는 PostgreSQL 회귀 테스트 추가
+- 재발 방지: 단위 롤백의 같은 Snapshot 작업 수준 참조와 전체 롤백의 다른 Job 참조를 각각 구성해 공개 상태를 확인하고, 전체 롤백의 동일 Job Snapshot은 PRIVATE 처리되는 기존 PostgreSQL 회귀 테스트로 범위를 구분
 - 다음 확인: 없음
 
 ## 9. 도입 전후 비교 지표

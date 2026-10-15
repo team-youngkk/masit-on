@@ -157,6 +157,52 @@ class AutoRegisterRestaurantReusePostgreSqlIntegrationTest extends FullContextIn
         }
     }
 
+    @Test
+    @DisplayName("작업 전체 롤백은 다른 Job Snapshot이 참조하는 자원을 공개 상태로 보존한다")
+    void rollback_다른작업스냅샷참조_공개자원보존() {
+        // Given: 현재 등록 단위 외에 다른 Job의 Snapshot이 같은 자원을 참조한다
+        RegistrationResult registered = registration.register(command("place", "channel", "video"));
+        var unit = registeredUnit(registered);
+        UUID otherJobId = UUID.randomUUID();
+        UUID otherSnapshotId = UUID.randomUUID();
+        jdbc.update("""
+                INSERT INTO ai_extraction_job (id, source, priority, youtube_channel_id, youtube_video_id,
+                    video_url, input_mode, input_hash, provider, model_version, prompt_version, schema_version,
+                    execution_status, attempt_count, created_at)
+                VALUES (?, 'ADMIN', 'REALTIME', 'other-channel', 'other-video',
+                    'https://www.youtube.com/watch?v=other-video', 'ADMIN_TEXT', ?, 'GOOGLE_GEMINI',
+                    'gemini-3.5-flash-lite', 'P8', 'S2', 'QUEUED', 0, CURRENT_TIMESTAMP)
+                """, otherJobId, com.masiton.test.IntegrationTestFixtures.sha256(otherJobId.toString()));
+        jdbc.update("""
+                INSERT INTO ai_candidate_snapshot (id, job_id, snapshot_version, candidate_fields, candidate_tags,
+                    field_confidences, evidence, missing_fields, review_status, registered_restaurant_id,
+                    reviewed_at, restaurant_created, registered_creator_id, creator_created, registered_video_id,
+                    video_created, registered_visit_id, visit_created, created_at)
+                VALUES (?, ?, 1, '{}', '[]', '{}', '{}', '[]', 'AUTO_CONFIRMED', ?, CURRENT_TIMESTAMP, true, ?, true,
+                    ?, true, ?, true, CURRENT_TIMESTAMP)
+                """, otherSnapshotId, otherJobId, registered.restaurantId(), registered.creatorId(),
+                registered.videoId(), registered.visitId());
+
+        // When
+        assertThat(postCommit.rollback(unit, "다른 작업 참조 보존", reverted(registered), admin())).isTrue();
+
+        // Then: 외부 Job의 참조가 살아 있는 동안 네 자원을 공개 상태로 유지한다
+        for (String table : java.util.List.of("restaurant", "creator", "video", "visit")) {
+            assertThat(jdbc.queryForObject("SELECT publication_status FROM " + table + " WHERE id = ?",
+                    String.class, resourceId(table, registered))).isEqualTo("PUBLIC");
+        }
+    }
+
+    private UUID resourceId(String table, RegistrationResult registered) {
+        return switch (table) {
+            case "restaurant" -> registered.restaurantId();
+            case "creator" -> registered.creatorId();
+            case "video" -> registered.videoId();
+            case "visit" -> registered.visitId();
+            default -> throw new IllegalArgumentException("지원하지 않는 등록 자원");
+        };
+    }
+
     private void awaitStart(CountDownLatch ready, CountDownLatch start) throws InterruptedException {
         ready.countDown();
         if (!start.await(10, TimeUnit.SECONDS)) {

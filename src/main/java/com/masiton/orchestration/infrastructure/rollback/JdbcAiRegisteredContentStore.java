@@ -112,11 +112,14 @@ public class JdbcAiRegisteredContentStore implements AiRegisteredContentStore {
                         + column + " = ?) > 1", id, snapshotId, id)
                 : exists("SELECT EXISTS (SELECT 1 FROM ai_registration_unit WHERE " + column
                         + " = ? AND id <> ?)", id, registrationUnitId);
-        // A job-level registration and a registration unit can reference the same resources
-        // from the same snapshot. The unit CAS may already have cleared its reference, so
-        // the snapshot reference must still protect those resources from being hidden.
-        if (sharedUnit || exists("SELECT EXISTS (SELECT 1 FROM ai_candidate_snapshot WHERE "
-                + column + " = ?)", id)) {
+        // Unit CAS can clear its reference while the same snapshot's job-level registration
+        // remains. Protect it during unit rollback; whole-job rollback treats snapshots from
+        // that same job as part of the rollback scope, not as independent shared owners.
+        boolean sharedSnapshot = exists("SELECT EXISTS (SELECT 1 FROM ai_candidate_snapshot current_snapshot "
+                + "JOIN ai_candidate_snapshot other_snapshot ON other_snapshot." + column + " = ? "
+                + "WHERE current_snapshot.id = ? AND (other_snapshot.job_id <> current_snapshot.job_id OR ? = true))",
+                id, snapshotId, registrationUnitId != null);
+        if (sharedUnit || sharedSnapshot) {
             return true;
         }
         if (!"visit".equals(resource) && exists("SELECT EXISTS (SELECT 1 FROM visit WHERE " + resource
