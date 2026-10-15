@@ -34,17 +34,14 @@ related_documents:
   - dynamic-natural-language-tag-dictionary.md
   - issue-400-national-natural-language-regions.md
   - issue-418-visit-evidence-punctuation.md
+  - issue-417-ai-contract-proposal.md
 ---
 
 # 맛잇온 구현 계획
 
 - [#418 방문 근거 문장부호 정규화](issue-418-visit-evidence-punctuation.md)
-  - issue-415-national-place-diagnosis.md
----
-
-# 맛잇온 구현 계획
-
 - [#415 전국 주소와 인천 장소 검색 진단](issue-415-national-place-diagnosis.md)
+- [#417 식당별 후보 결속 계약](issue-417-ai-contract-proposal.md)
 
 | 문서 | 목적 |
 |---|---|

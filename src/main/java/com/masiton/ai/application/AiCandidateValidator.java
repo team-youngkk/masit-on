@@ -37,10 +37,13 @@ public final class AiCandidateValidator {
     private static final Set<String> TAG_TYPES = Set.of(
             "MENU", "TASTE", "OCCASION", "ATMOSPHERE");
     private static final Set<String> ROOT_FIELDS = Set.of(
-            "resultCompleteness", "candidates", "missingFields", "candidateTruncated");
+            "resultCompleteness", "candidates", "registrationUnits", "missingFields", "candidateTruncated");
     private static final Set<String> EVIDENCE_TYPES = Set.of("TIMESTAMP", "TEXT_RANGE", "UNKNOWN");
 
     public AiCandidateValidationResult validate(JsonNode payload) {
+        if (payload != null && payload.has("registrationUnits")) {
+            return validateS3(payload);
+        }
         if (payload == null || !payload.isObject() || !hasOnlyFields(payload, ROOT_FIELDS)) {
             return rejected(Map.of(), null, List.of(), List.of(), List.of(), false,
                     issue("INVALID_PAYLOAD", null));
@@ -184,6 +187,129 @@ public final class AiCandidateValidator {
 
         return new AiCandidateValidationResult(decision, selectedCandidates, foodCategoryName,
                 connectableTags, rejectedTags, new ArrayList<>(missingFields), issues, candidateTruncated);
+    }
+
+    /** S3 has one authoritative binding: nested fields belong only to their enclosing unit. */
+    public AiCandidateValidationResult validateS3(JsonNode payload) {
+        if (payload == null || !payload.isObject() || !hasOnlyFields(payload, ROOT_FIELDS)
+                || !payload.path("registrationUnits").isArray()
+                || !payload.path("candidates").isArray()
+                || !payload.path("missingFields").isArray()
+                || !payload.path("candidateTruncated").isBoolean()
+                || payload.path("registrationUnits").size() > 300) {
+            return rejected(Map.of(), null, List.of(), List.of(), List.of(), false,
+                    issue("INVALID_PAYLOAD", null));
+        }
+        Set<String> ids = new LinkedHashSet<>();
+        List<ValidationIssue> issues = new ArrayList<>();
+        List<TagCandidate> tags = new ArrayList<>();
+        List<TagCandidate> rejectedTags = new ArrayList<>();
+        LinkedHashSet<String> missing = new LinkedHashSet<>();
+        boolean blocked = payload.path("registrationUnits").isEmpty();
+        if (blocked) missing.addAll(REQUIRED_FIELDS);
+        int candidateCount = payload.path("candidates").size();
+        for (JsonNode unit : payload.path("registrationUnits")) {
+            if (!unit.isObject() || !hasOnlyFields(unit, Set.of("candidateUnitId", "restaurantName",
+                    "address", "location", "menus", "visitEvidence"))
+                    || isBlank(textValue(unit.path("candidateUnitId")))
+                    || unit.path("candidateUnitId").asText().length() > 4096
+                    || !ids.add(unit.path("candidateUnitId").asText())
+                    || !unit.path("menus").isArray()) {
+                return rejected(Map.of(), null, List.of(), List.of(), List.of(), false,
+                        issue("CANDIDATE_BINDING_UNRESOLVED", null));
+            }
+            for (String field : REQUIRED_FIELDS) {
+                if (!unit.has(field)) {
+                    return rejected(Map.of(), null, List.of(), List.of(), List.of(), false,
+                            issue("INVALID_PAYLOAD", field));
+                }
+                JsonNode node = unit.path(field);
+                if (node.isNull() && !"restaurantName".equals(field)) {
+                    missing.add(field);
+                    blocked = true;
+                    continue;
+                }
+                if (!validBoundCandidate(node, field, issues)) {
+                    return rejected(Map.of(), null, List.of(), List.of(), List.of(), false,
+                            issue("INVALID_CANDIDATE", field));
+                }
+                candidateCount++;
+                if (validateBoundEvidence(node.path("evidence"))) {
+                    missing.add(field);
+                    blocked = true;
+                }
+                if ("visitEvidence".equals(field)
+                        && !"TIMESTAMP".equals(node.path("evidence").path("type").asText())) blocked = true;
+            }
+            if (unit.path("menus").isEmpty()) {
+                missing.add("menu");
+                blocked = true;
+            }
+            for (JsonNode menu : unit.path("menus")) {
+                if (!validBoundCandidate(menu, "menu", issues)) {
+                    return rejected(Map.of(), null, List.of(), List.of(), List.of(), false,
+                            issue("INVALID_CANDIDATE", "menu"));
+                }
+                candidateCount++;
+                if (validateBoundEvidence(menu.path("evidence"))) {
+                    missing.add("menu");
+                    blocked = true;
+                }
+            }
+        }
+        for (JsonNode candidate : payload.path("candidates")) {
+            if (!"tag".equals(candidate.path("field").asText())) {
+                return rejected(Map.of(), null, List.of(), List.of(), List.of(), false,
+                        issue("CANDIDATE_BINDING_UNRESOLVED", null));
+            }
+            TagParseResult tag = parseTag(candidate, issues);
+            if (tag.structurallyInvalid() || tag.candidate() == null) {
+                return rejected(Map.of(), null, List.of(), List.of(), List.of(), false,
+                        issue("INVALID_TAG", "tag"));
+            }
+            (tag.candidate().decision() == TagDecision.AUTO_CONNECTABLE ? tags : rejectedTags).add(tag.candidate());
+        }
+        if (candidateCount > 300 || payload.path("missingFields").size() > 20) {
+            return rejected(Map.of(), null, List.of(), List.of(), List.of(), false, issue("INVALID_PAYLOAD", null));
+        }
+        Set<String> declared = new LinkedHashSet<>();
+        for (JsonNode field : payload.path("missingFields")) {
+            if (!field.isTextual() || !MISSING_FIELD_NAMES.contains(field.asText()) || !declared.add(field.asText())) {
+                return rejected(Map.of(), null, List.of(), List.of(), List.of(), false, issue("INVALID_MISSING_FIELD", null));
+            }
+        }
+        String completeness = payload.path("resultCompleteness").asText();
+        if (!("COMPLETE".equals(completeness) && declared.isEmpty()
+                || "PARTIAL".equals(completeness) && !declared.isEmpty())) {
+            return rejected(Map.of(), null, List.of(), List.of(), List.of(), false,
+                    issue("INVALID_RESULT_COMPLETENESS", null));
+        }
+        missing.addAll(declared);
+        blocked |= !missing.isEmpty();
+        return new AiCandidateValidationResult(blocked ? Decision.AUTO_BLOCKED : Decision.AUTO_CONFIRMED,
+                Map.of(), null, tags, rejectedTags, new ArrayList<>(missing), issues,
+                payload.path("candidateTruncated").asBoolean() || candidateCount == 300);
+    }
+
+    boolean validateBoundEvidence(JsonNode evidence) {
+        EvidenceParseResult result = parseEvidence(evidence, null, new ArrayList<>());
+        return result.structurallyInvalid() || result.blocked() || result.evidence() == null
+                || result.evidence().type() == EvidenceType.UNKNOWN;
+    }
+
+    private boolean validBoundCandidate(JsonNode node, String field, List<ValidationIssue> issues) {
+        if (!node.isObject() || !hasOnlyFields(node, Set.of("value", "confidence", "evidence"))
+                || isBlank(textValue(node.path("value"))) || node.path("value").asText().length() > 4096
+                || !node.path("confidence").isNumber() || !Double.isFinite(node.path("confidence").doubleValue())
+                || node.path("confidence").doubleValue() < 0 || node.path("confidence").doubleValue() > 1) return false;
+        JsonNode rawEvidence = node.path("evidence");
+        for (String numberField : List.of("startMs", "endMs", "startOffset", "endOffset")) {
+            if (rawEvidence.hasNonNull(numberField) && !rawEvidence.path(numberField).isIntegralNumber()) return false;
+        }
+        if (rawEvidence.hasNonNull("sourceHash") && !rawEvidence.path("sourceHash").isTextual()) return false;
+        if (rawEvidence.hasNonNull("type") && !rawEvidence.path("type").isTextual()) return false;
+        EvidenceParseResult evidence = parseEvidence(rawEvidence, field, issues);
+        return !evidence.structurallyInvalid();
     }
 
     private CandidateParseResult parseCandidate(JsonNode node, String field, List<ValidationIssue> issues) {
