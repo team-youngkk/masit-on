@@ -91,6 +91,25 @@ class RegistrationUnitCommandServiceTest {
     }
 
     @Test
+    @DisplayName("이미 보존된 S2 다중 식당 단위는 다시 인덱스로 결속하거나 500을 반환하지 않는다")
+    void registerUnit_기존S2다중식당이력_422로보류하고등록하지않는다() throws Exception {
+        // Given
+        when(registrationUnitStore.lockByJobAndUnitId(JOB_ID, UNIT_ID)).thenReturn(Optional.of(blockedUnitRow()));
+        var fields = objectMapper.readTree("""
+                {"restaurantName":[{"value":"행복식당"},{"value":"다른식당"}]}
+                """);
+        when(port.snapshotCandidates(SNAPSHOT_ID)).thenReturn(Optional.of(
+                new AiExtractionAdminQueryPort.SnapshotCandidateJson(fields, null, null, null)));
+        when(decomposeRegistrationUnits.decompose(any())).thenReturn(List.of());
+        // When / Then
+        assertThatThrownBy(() -> service.registerUnit(JOB_ID, UNIT_ID)).isInstanceOf(BusinessException.class)
+                .satisfies(exception -> assertThat(((BusinessException) exception).status())
+                        .isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY));
+        verify(executeRegistrationUnit, never()).execute(any());
+        verify(registrationUnitStore, never()).markRegistered(any(), anyString(), any());
+    }
+
+    @Test
     @DisplayName("등록 단위 일괄 등록 중 동시 요청이 먼저 반영하면 409를 던지고 방금 만든 등록 콘텐츠를 하드 삭제로 보상한다")
     void registerUnit_동시요청이먼저반영하면_409충돌을던지고보상삭제한다() {
         // Given

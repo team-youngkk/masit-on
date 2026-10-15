@@ -228,7 +228,7 @@ related_documents:
 ## 13. 운영 리스크와 변경 게이트
 
 - 모델 종료·quota·장애 시 자동 모델 교체 없이 실패·수동 등록으로 전환한다.
-- 현재 운영 계약인 `gemini-3.5-flash-lite`·Prompt `P8`·Schema `S2` 중 하나라도 변경하면 새 후보 버전과 평가 보고서를 만든다.
+- 현재 운영 계약인 `gemini-3.5-flash-lite`·Prompt `P9`·Schema `S3` 중 하나라도 변경하면 새 후보 버전과 평가 보고서를 만든다.
 - 예외 보정 처리량이 추출 요청량을 따라가지 못하는 경우 BACKFILL 작업을 먼저 중지하고 Webhook 실시간 작업을 우선한다.
 - 태그 정의·별칭·근거 정책 변경은 데이터 계약과 평가 Dataset 버전을 함께 올린다.
 - 장소 동일성 자동 확정 기준(`BR-AIEXTRACT-009`) 또는 containment/LIKE fallback 조건을 완화하면 Critical 오연결 위험이 직접 올라간다. 완화 경로는 `AI_PLACE_IDENTITY_RELAXED_MATCHING_ENABLED=true`를 기본값으로 운영에서 활성화하되, 동일 구·카테고리·유일 후보 조건을 유지하고 오연결 감시 또는 긴급 차단이 필요하면 환경 변수로 `false`를 주입한다. 양방향 이름 containment와 지점명 접미사 제거는 기존 안전 조건을 완화하지 않으며 Release holdout·인간 판정 지표를 계속 수집한다.
@@ -237,3 +237,16 @@ related_documents:
 ## 맛집 상세의 확정 태그 보정 — 이슈 #358
 
 등록이 끝난 방문의 태그는 [맛집 상세 관리 패널](../detail/restaurant-detail.md)에서도 보정한다. Snapshot 후보 재검수와 구분하며 수동 등록 방문도 지원한다. 기존 연결의 출처·근거를 유지하고 추가·제거 및 사유·관리자를 별도 append-only 감사로 보존한다. 동시성·권한·입력 경계는 [방문 태그 API](../../../05-specs/api/admin/restaurant-visit-tags-api.md)를 따른다.
+
+
+## 이슈 #417: P9 / S3 식당별 후보 결속
+
+2026-10-14 계약 소유자 합의를 확보했다. 신규 추출은 P9/S3를 사용하며 P8/S2와 이전 Snapshot은 생성 당시 의미로 읽기 전용 보존한다. 비용·Provider·모델·호출 상한은 변경하지 않는다.
+
+S3 루트는 resultCompleteness, candidates, registrationUnits, missingFields, candidateTruncated를 모두 요구한다. candidates는 기존 통제 태그 후보 전용이며, 식당 관련 값을 단위 밖에 두면 Schema 오류다. registrationUnits의 각 객체는 candidateUnitId(중복 없는 불투명 문자열), restaurantName, address, location, menus, visitEvidence만 허용한다. restaurantName은 반드시 하나의 후보 객체이며 address·location·visitEvidence는 후보 객체 또는 null, menus는 후보 객체 배열이다. 후보 객체는 value(1~4096자), confidence(유한한 0~1), evidence만 허용한다. 명시적 단위 밖 필드를 복사하거나 후보 배열 순서로 결속하지 않는다.
+
+전체 후보 수(태그 + 모든 단위의 non-null 필드 + 모든 메뉴)는 300 이하이고 상한에 닿으면 서버가 candidateTruncated=true를 강제한다. 단위별 결측·UNKNOWN은 missingFields와 PARTIAL에 반영한다. 외부 검증·중복·등록 차단은 필드 완전성과 독립이다. 중복 ID·추가 키·잘못된 중첩 구조·단위 없는 flat 후보는 Provider SCHEMA 오류이며 Snapshot 저장과 실행 전에 거부한다.
+
+candidate_fields JSON에는 registrationUnits를 변경 없이 저장하고 candidateUnitId와 메뉴 배열을 보존한다. 새 DB 컬럼·마이그레이션은 필요하지 않다. 등록 단위 unit_index는 Snapshot의 단위 배열에서 1부터 배정하되, 필드 소속은 candidateUnitId를 가진 단위 객체로만 결정한다. S1/S2 복수 식당은 순서로 결속하지 않고 보류하며 과거 Snapshot은 재작성하지 않는다.
+
+설계·검증 근거: [이슈 417 설계](../../../08-planning/issue-417-ai-contract-proposal.md).

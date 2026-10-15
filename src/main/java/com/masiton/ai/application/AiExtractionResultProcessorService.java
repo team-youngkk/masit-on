@@ -72,6 +72,18 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
         }
 
         ParsedCandidate candidate = parse(result.candidates());
+        if (result.candidates().has("registrationUnits")) {
+            AiCandidateValidationResult validation = candidateValidator.validateS3(result.candidates());
+            List<RegistrationUnitOutcome> outcomes = validation.isAutoRejected() ? List.of()
+                    : registrationUnitAutoExecution.execute(candidate.fields(), candidate.confidences(), candidate.evidence(),
+                            job.get().channelId(), job.get().videoId(), job.get().videoUrl());
+            AiExtractionResultCommitService.ProcessCommand unitCommand = command(jobId, workerId, attemptNo,
+                    attemptStartedAt, finishedAt, result, candidate, outcomes);
+            String reviewStatus = validation.isAutoRejected() ? "AUTO_REJECTED"
+                    : !outcomes.isEmpty() && outcomes.stream().allMatch(outcome -> "AUTO_CONFIRMED".equals(outcome.reviewStatus()))
+                    ? "AUTO_CONFIRMED" : "AUTO_BLOCKED";
+            return commitService.persistBlocked(withTags(unitCommand, resolveTags(candidate.tags()), reviewStatus));
+        }
         // BR-AIEXTRACT-001: registration units are judged independently of the job-level candidate
         // outcome below, so a video with multiple places can still auto-register the places that
         // clear steps 1-2 even when the legacy single-candidate pipeline blocks the job itself.
@@ -154,6 +166,11 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
             parsedFields.put(field, new ParsedField(field, candidate.value(),
                     BigDecimal.valueOf(candidate.confidence()), candidateEvidence));
         });
+        if (root.path("registrationUnits").isArray()) {
+            // S3 keeps the provider-declared grouping as raw Snapshot evidence.  The decomposition
+            // service rejects malformed or missing restaurant values rather than inferring a relation.
+            fields.set("registrationUnits", root.path("registrationUnits").deepCopy());
+        }
         validation.missingFields().forEach(missing::add);
         boolean candidateTruncated = validation.candidateTruncated();
 
@@ -173,7 +190,7 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
                     tag.label(), BigDecimal.valueOf(tag.confidence()), evidenceNode(tag.evidence())));
         });
 
-        String reason = validation.isAutoConfirmable() && validation.foodCategoryName() != null
+        String reason = validation.isAutoConfirmable() && (root.has("registrationUnits") || validation.foodCategoryName() != null)
                 ? null : validation.reasonCodes().stream().findFirst().orElse("FOOD_CATEGORY_REQUIRED");
         String rawCompleteness = root.path("resultCompleteness").asText();
         String completeness = validation.resultCompleteness(rawCompleteness);
