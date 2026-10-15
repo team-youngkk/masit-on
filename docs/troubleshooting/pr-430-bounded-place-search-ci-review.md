@@ -26,7 +26,7 @@ related_documents:
 | 스레드 | 요청 요약 | 문제 유형 | 판단 | 처리 결과 | 근거/검증 |
 |---|---|---|---|---|---|
 | [검색 수집 경계 확인](https://github.com/team-youngkk/masit-on/pull/430#discussion_r4278168080) | meta 불완전·노출 상한 초과·후속 페이지 오류에서 부분 후보를 확정하지 않는 정책 확인 | 애플리케이션 | 이미 해결 | 최신 코드가 전체 수집 완료와 제공자 metadata 유효성을 확인한 경우에만 후보를 반환한다. 이 스레드는 결함 요청이 아닌 검토 메모다. | `KakaoPlaceSearchAdapterWireMockIntegrationTest`의 meta 누락·상한·후속 오류 사례 통과 |
-| [지역 검색 단위 테스트 회귀](https://github.com/team-youngkk/masit-on/pull/430#discussion_r4278934183) | `searchCandidates` 전환과 지역 기반 단위 테스트 스텁을 함께 정정하고 전체 테스트 통과 | 애플리케이션 | 수정 필요 | 기존 네 시나리오의 Mockito 설정을 `searchCandidates(name, normalizedDistrict)`로 바꾸고 실제 지역 인수를 검증했다. | 세 관련 테스트 클래스 71건 통과; 새 PR CI 재실행 대기 |
+| [지역 검색 단위 테스트 회귀](https://github.com/team-youngkk/masit-on/pull/430#discussion_r4278934183) | `searchCandidates` 전환과 지역 기반 단위 테스트 스텁을 함께 정정하고 전체 테스트 통과 | 애플리케이션 | 수정 필요 | 기존 네 시나리오의 Mockito 설정을 `searchCandidates(name, normalizedDistrict)`로 바꾸고 실제 지역 인수를 검증했다. | 세 관련 테스트 클래스 71건 통과; [최신 PR CI](https://github.com/team-youngkk/masit-on/actions/runs/38691691260) 전체 성공 |
 
 ## 3. 문제 현상과 발생 조건
 
@@ -66,7 +66,7 @@ related_documents:
 | `.\gradlew.bat test --tests com.masiton.orchestration.application.ResolvePlaceIdentityServiceTest --no-daemon --console=plain` | 통과 | 장소 동일성 테스트 30건, 실패·오류 0건 |
 | `.\gradlew.bat test --tests com.masiton.orchestration.application.ResolvePlaceIdentityServiceTest --tests com.masiton.restaurant.infrastructure.external.KakaoPlaceSearchAdapterWireMockIntegrationTest --tests com.masiton.restaurant.infrastructure.external.KakaoPlaceVerificationAdapterTest --no-daemon --console=plain` | 통과 | 세 클래스 합계 71건, 실패·오류 0건. 컴파일 포함 |
 | `git diff --check` | 통과 | 문서·테스트 패치 공백 오류 없음 |
-| GitHub Actions PR CI | 실패 | 수정 전 head `a8425d99`에서 1,778건 완료, 4건 실패, 2건 건너뜀. 수정 커밋 push 후 새 backend workflow 결과로 대체 확인 예정 |
+| GitHub Actions PR CI | 통과 | 수정 전 head `a8425d99`의 1,778건 완료·4건 실패·2건 건너뜀을 수정 커밋 `b62c8766`으로 해결. [run 38691691260](https://github.com/team-youngkk/masit-on/actions/runs/38691691260) 전체 성공 |
 
 전체 로컬 `test`의 세 실패는 이번 변경과 무관한 Windows 실행환경 문제였다. `bash.exe`·`python.exe`가 `WindowsApps` 실행 별칭을 가리켜 실제 shell/Python 인터프리터가 실행되지 않았다(출력 종료 코드 `9009`). 실제 Git Bash와 bundled Python 경로를 우선해 해당 클래스 네 건이 통과하는 것을 확인했다. 전체 suite는 환경을 교정한 뒤 다시 통째로 실행하지 않았으며, 나머지 1,775건은 전체 실행에서 통과했다.
 
@@ -75,15 +75,16 @@ related_documents:
 ## 8. 재발 방지 및 다음 확인
 
 - 재발 방지: 단위 테스트가 변경된 Port 시그니처를 통해 stub 할 뿐 아니라 정규화된 시·구 인수를 검증하도록 했다.
-- 다음 확인: 수정 커밋을 push하고 새 GitHub backend CI가 통과하는지 확인한 뒤 관련 스레드에 검증 링크를 답하고 해결 처리한다.
+- 확인 결과: 수정 커밋 `b62c8766`의 [GitHub Actions PR CI](https://github.com/team-youngkk/masit-on/actions/runs/38691691260)가 전체 성공했다. 리뷰 스레드 답글과 해결 상태를 동기화한다.
 
 ## 9. 도입 전후 비교 지표
 
 | 지표 | 도입 전 기준값 | 측정 방법·기간 | 배포 확장 후 값 | 비교 결과 | 담당자·확인 시점/이슈 |
 |---|---|---|---|---|---|
-| 장소 동일성 CI 실패 건수 | 1,778건 중 4건 실패 | 관련 테스트를 새 지역 검색 계약에 맞춰 실행 | 로컬 관련 회귀 71건 중 0건 실패; 원격 CI 대기 | 실패한 경계 시나리오가 로컬에서는 모두 통과 | PR #430 backend CI 완료 시 업데이트 |
+| 장소 동일성 CI 실패 건수 | 1,778건 중 4건 실패 | 수정 커밋 이후 새 PR head에서 workflow 실행 | 로컬 관련 회귀 71건 중 0건 실패; 원격 전체 CI 통과 | 네 경계 시나리오와 전체 backend CI가 통과 | PR #430 run 38691691260, 2026-10-15 |
 
 ## 10. 남은 사항
 
-- 두 스레드는 수정 커밋과 새 CI 결과가 원격에 보인 뒤 답글을 달고 해결 처리한다.
-- 전체 backend PR CI는 로컬 targeted suite와 별도로 새 PR head에서 확인해야 한다.
+- 회귀 수정 요청 스레드 두 건에 동일 원인·수정·검증 결과를 답글로 남겼다.
+- 남은 절차: 답글이 표시되는지 확인하고 세 스레드를 해결 처리한다. 새 head CI 전체 성공을 확인했다.
+
