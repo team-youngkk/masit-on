@@ -41,3 +41,11 @@ PRD 8절은 일부 등록 단위 차단 시 결과 완전성 PARTIAL을 요구�
 - Node는 시스템 24.19.0에서 실행했으며 계약 버전 24.18.0 재실행은 미검증이다. 격리 작업 디렉터리는 기존 루트 node_modules를 Junction으로 참조했다. 새로운 의존성은 추가하지 않았다.
 - 저장된 과거 Snapshot과 운영 데이터는 수정하지 않았다. 독립 리뷰·커밋·푸시·PR은 주 에이전트가 이어서 진행한다.
 - 독립 리뷰의 PRD/API 충돌 지적을 소유자 합의로 정정했고 재검토에서 P1/P2 지적 없이 대상 Java 테스트·ArchUnit·diff 검사를 다시 통과했다.
+
+## PR #427 리뷰 스레드 확인 (2026-10-15)
+
+| 스레드 | 문제 유형 | 판단 | 처리 |
+|---|---|---|---|
+| [서버 계산 완전성을 persistence 경계에서 반영](https://github.com/team-youngkk/masit-on/pull/427#discussion_r4278168484) | 애플리케이션 | 이미 해결 | 수정 요청이 아닌 구현 위치 확인 메모다. `AiCandidateValidationResult.resultCompleteness()`가 서버 계산 `missingFields`와 보존 후보의 UNKNOWN 근거를 검사하고 Processor가 그 결과를 저장 명령에 전달한다. 현재 PR의 검증 통과를 확인해 원 스레드에 근거와 검증을 답하고 해결 처리한다. |
+
+확인 기준: [AiCandidateValidationResult.java](../../src/main/java/com/masiton/ai/application/AiCandidateValidationResult.java)의 결과 정규화와 [PR #427 CI](https://github.com/team-youngkk/masit-on/actions/runs/38668942132) 백엔드·프론트엔드 검사 성공. 코드 변경 요청은 없어서 소스는 수정하지 않았다.
