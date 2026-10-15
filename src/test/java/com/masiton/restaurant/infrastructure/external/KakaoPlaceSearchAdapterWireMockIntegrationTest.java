@@ -14,6 +14,8 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
@@ -46,6 +48,36 @@ class KakaoPlaceSearchAdapterWireMockIntegrationTest {
             .withExposedPorts(WIREMOCK_PORT);
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @ParameterizedTest
+    @CsvSource({
+            "손선장,인천 남동구 소래역로 12,인천광역시 남동구 소래역로 12",
+            "대풍식당,인천 강화군 교동면 대룡안길 1,인천광역시 강화군 교동면 대룡안길 1",
+            "교동다방,인천 강화군 교동면 대룡안길 2,인천광역시 강화군 교동면 대룡안길 2"
+    })
+    @DisplayName("인천 세 사례의 고정 도로명 후보를 전국 주소로 정규화한다")
+    void 검색_인천고정후보_시도전체명으로정규화한다(String name, String address, String expected) throws Exception {
+        // Given
+        stubKeywordSearch(200, Map.of("documents", List.of(Map.of(
+                "place_name", name, "place_url", "https://place.map.kakao.com/415",
+                "road_address_name", address))));
+        // When
+        var results = adapter().search(name);
+        // Then
+        assertThat(results).hasSize(1);
+        assertThat(results.get(0).roadAddress()).isEqualTo(expected);
+    }
+
+    @Test
+    @DisplayName("강화 지번주소만 있고 도로명주소가 없으면 등록 후보로 사용하지 않는다")
+    void 검색_강화지번주소만존재_후보를제외한다() throws Exception {
+        // Given
+        stubKeywordSearch(200, Map.of("documents", List.of(Map.of(
+                "place_name", "대풍식당", "place_url", "https://place.map.kakao.com/415",
+                "address_name", "인천 강화군 교동면 대룡리", "road_address_name", ""))));
+        // When / Then
+        assertThat(adapter().search("대풍식당")).isEmpty();
+    }
 
     @BeforeEach
     void resetMappingsAndJournal() throws Exception {

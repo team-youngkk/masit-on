@@ -154,6 +154,7 @@ export function AiVideoExtractionList() {
 }
 
 function JobCard({ job, formatDate }: { job: AiExtractionJob; formatDate: (value: string | null) => string }) {
+  const summary = job.registrationSummary
   return <li className={styles.card}>
     <div className={styles.toolbar}>
       <div>
@@ -166,8 +167,9 @@ function JobCard({ job, formatDate }: { job: AiExtractionJob; formatDate: (value
     <div className={`${styles.meta} ${styles.statusSummary}`} aria-label="AI 작업 상태 요약">
       <span className={styles.statusItem}>실행 상태 <StatusBadge tone={executionTone(job.executionStatus)}>{job.executionStatus}</StatusBadge></span>
       <span className={styles.statusItem}>결과 완전성 <StatusBadge tone={completenessTone(job.resultCompleteness)}>{job.resultCompleteness ?? '미완료'}</StatusBadge></span>
-      <span className={styles.statusItem}>자동 등록 상태 <StatusBadge tone={reviewTone(job.reviewStatus)}>{job.reviewStatus ?? '미정'}</StatusBadge></span>
+      <span className={styles.statusItem}>후보 판정 요약 <StatusBadge tone={reviewTone(job.reviewStatus)}>{job.reviewStatus ?? '미정'}</StatusBadge></span>
     </div>
+    {summary ? <p className={styles.meta} aria-label="등록 결과 집계">{summary.total === 0 ? '등록 단위 없음' : summary.registered === summary.total ? '전체 등록' : summary.partialRegistration ? '부분 등록' : '현재 등록 없음'} · 현재 등록 {summary.registered}/{summary.total}개 · 자동 확정 {summary.autoConfirmed}개 · 보류 {summary.autoBlocked}개 · 거부 {summary.autoRejected}개 · 수동 보정 {summary.manualOverride}개</p> : null}
     <p className={styles.meta}>버전 {job.modelVersion} / {job.promptVersion} / {job.schemaVersion} · 시도 {job.attemptCount}회</p>
     <p className={styles.meta}>생성 {formatDate(job.createdAt)} · 완료 {formatDate(job.finishedAt)}</p>
   </li>

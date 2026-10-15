@@ -7,6 +7,10 @@ export type AiExecutionStatus = 'QUEUED' | 'RUNNING' | 'SUCCEEDED' | 'FAILED'
 export type AiExtractionSource = 'WEBHOOK' | 'ADMIN'
 export type AiExtractionReviewStatus = 'AUTO_CONFIRMED' | 'AUTO_BLOCKED' | 'AUTO_REJECTED' | 'MANUAL_OVERRIDE'
 export type AiResultCompleteness = 'COMPLETE' | 'PARTIAL'
+export type AiRegistrationSummary = {
+  total: number; autoConfirmed: number; autoBlocked: number; autoRejected: number
+  manualOverride: number; registered: number; partialRegistration: boolean
+}
 
 export type AiExtractionJob = {
   jobId: string
@@ -24,6 +28,7 @@ export type AiExtractionJob = {
   startedAt: string | null
   finishedAt: string | null
   reused?: boolean
+  registrationSummary?: AiRegistrationSummary
 }
 
 export type AiExtractionSubmissionResult = AiExtractionJob & { reused: boolean }

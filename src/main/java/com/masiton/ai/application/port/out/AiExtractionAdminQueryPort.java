@@ -25,7 +25,12 @@ public interface AiExtractionAdminQueryPort {
     /** 등록 단위의 근거 Snapshot 원본 후보 JSON을 조회한다. {@code unit_index} 재분해에 쓴다. */
     Optional<SnapshotCandidateJson> snapshotCandidates(UUID snapshotId);
 
-    record Page(List<AiExtractionJobView> items, long totalElements) { }
+    record Page(List<AiExtractionJobView> items, long totalElements,
+                java.util.Map<UUID, com.masiton.ai.application.RegistrationSummary> registrationSummaries) {
+        public Page(List<AiExtractionJobView> items, long totalElements) {
+            this(items, totalElements, java.util.Map.of());
+        }
+    }
     record Detail(AiExtractionJobView job, JsonNode candidateFields, JsonNode candidateTags, JsonNode fieldConfidences,
                   JsonNode evidence, JsonNode missingFields, boolean candidateTruncated, String errorCategory,
                   Boolean retryable, List<Attempt> attempts) { }

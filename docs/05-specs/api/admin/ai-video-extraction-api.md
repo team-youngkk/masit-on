@@ -155,7 +155,7 @@ related_documents:
 | `page` | 아니요 | 1-base, 기본 1 |
 | `size` | 아니요 | 10·20·50, 기본 20 |
 
-응답은 최신 생성 시각과 작업 ID 오름차순으로 안정 정렬한다. 목록에는 작업 ID, 영상 식별 정보, 유입 경로, 실행 상태, 결과 완전성, 자동 등록 상태, 버전, 시각만 포함하고 입력 원문은 포함하지 않는다.
+응답은 최신 생성 시각과 작업 ID 오름차순으로 안정 정렬한다. 목록에는 작업 ID, 영상 식별 정보, 유입 경로, 실행 상태, 결과 완전성, 후보 판정 요약, 등록 단위 집계, 버전, 시각을 포함하고 입력 원문은 포함하지 않는다.
 
 ### 3.3 `GET /api/admin/ai/video-extractions/{jobId}` 작업·후보 상세
 
@@ -734,3 +734,7 @@ Webhook 수신 경로는 공개 인터넷 진입점이므로 Nginx·Spring Secur
 - [ ] 등록 단위 일괄 등록의 4종 결과·자원 재사용·재요청 멱등·동시 요청 충돌과 예외 전환 `blockReason`·`requiredSupplements`가 계약 테스트로 고정된다.
 - [ ] 일괄 등록 중간 실패에서 해당 등록 단위 정식 저장 0건과 외부 호출 중 트랜잭션 미개방이 검증된다.
 - [ ] [데이터 계약](../../data/third-expansion-ai-video-data-contract.md), API 추적표, 후보·Worker 테스트와 연결된다.
+
+## #412 등록 단위 집계 계약
+
+소유자 합의 확보 후 목록과 상세 GET에 registrationSummary를 추가한다. total, autoConfirmed, autoBlocked, autoRejected, manualOverride, registered는 음이 아닌 정수이며 네 상태 개수 합은 total이다. registered는 최신 Snapshot 단위 중 AUTO_CONFIRMED 또는 MANUAL_OVERRIDE 상태로 등록 결과 ID 4종이 모두 존재하고 롤백·폐기가 없는 개수다. partialRegistration은 0 < registered < total이다. 단위가 없으면 모든 개수는 0이고 false다. 접수·재시도 응답은 변경하지 않는다. 상세의 registrationUnits가 권위 있는 단위별 결과이며 상태 Enum과 DB 구조는 유지한다. [설계와 검증](../../../08-planning/issue-412-ai-unit-summary.md)을 따른다.
