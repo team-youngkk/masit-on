@@ -2,6 +2,8 @@
 
 import { useEffect, useId, useRef, useState } from 'react'
 
+import { shouldSubmitFilterChange, submitFilterForm } from '@/lib/filter-submit'
+
 export type FilterSelectOption = {
   value: string
   label: string
@@ -12,6 +14,7 @@ type FilterSelectProps = {
   formId: string
   name?: string
   onValueChange?: (value: string) => void
+  submitOnChange?: boolean
   options: readonly FilterSelectOption[]
   value: string
   submittedValue?: string
@@ -29,6 +32,7 @@ export function FilterSelect({
   formId,
   name,
   onValueChange,
+  submitOnChange = false,
   options,
   value,
   submittedValue,
@@ -50,6 +54,7 @@ export function FilterSelect({
   const controlRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([])
+  const submitAfterSelectionRef = useRef(false)
   const listboxId = useId()
 
   useEffect(() => {
@@ -58,6 +63,13 @@ export function FilterSelect({
     setActiveIndex(selectedIndex >= 0 ? selectedIndex + 1 : 0)
     setOpen(false)
   }, [options, value])
+
+  useEffect(() => {
+    if (!submitOnChange || !submitAfterSelectionRef.current) return
+
+    submitAfterSelectionRef.current = false
+    submitFilterForm(document, formId)
+  }, [formId, selectedValue, submitOnChange])
 
   useEffect(() => {
     if (!open) return
@@ -132,6 +144,9 @@ export function FilterSelect({
   }
   const selectValue = (nextValue: string, nextIndex: number) => {
     setSelectedValue(nextValue)
+    if (shouldSubmitFilterChange(submitOnChange, selectedValue, nextValue)) {
+      submitAfterSelectionRef.current = true
+    }
     onValueChange?.(nextValue)
     setActiveIndex(nextIndex)
     closeAndRestoreFocus()
