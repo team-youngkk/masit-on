@@ -35,7 +35,7 @@ class YouTubeVideoVerificationAdapterTest {
         when(response.statusCode()).thenReturn(200);
         when(response.body()).thenReturn("""
                 {"items":[{"id":"fixtureVid1","snippet":{
-                  "title":"테스트 영상","channelId":"UCfixture","channelTitle":"테스트 채널",
+                  "title":"테스트 영상","description":"서울 마포구 냉면 맛집 방문기","channelId":"UCfixture","channelTitle":"테스트 채널",
                   "publishedAt":"2026-01-01T00:00:00Z",
                   "thumbnails":{"default":{"url":"https://i.ytimg.com/fixture.jpg"}}
                 }}]}
@@ -45,6 +45,7 @@ class YouTubeVideoVerificationAdapterTest {
         Optional<VerifiedVideo> verified = adapter().verify(URI.create("https://www.youtube.com/watch?v=" + VIDEO_ID));
 
         assertThat(verified).isPresent();
+        assertThat(verified.orElseThrow().description()).isEqualTo("서울 마포구 냉면 맛집 방문기");
         ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
         verify(httpClient).send(captor.capture(), any(HttpResponse.BodyHandler.class));
         HttpRequest request = captor.getValue();

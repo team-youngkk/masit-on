@@ -7,6 +7,8 @@ related_documents:
   - index-strategy.md
   - migration-plan.md
   - second-expansion-data-contract.md
+  - third-expansion-ai-video-data-contract.md
+  - ../../08-planning/issue-421-ai-failure-remediation.md
 ---
 
 # 맛잇온 테이블 정의
@@ -300,6 +302,8 @@ Refresh Token 세션은 역할과 무관하게 Redis 8.8 `auth:session:` namespa
 ## 17. 3차 확장 AI 영상 추출 테이블
 
 3차 확장 물리 테이블·컬럼·재사용 조회 인덱스·재시도/태그 롤백 provenance와 YouTube 보정 실행의 정본은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)의 표와 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql), [`V14__create_youtube_channel_backfill_run.sql`](../../../src/main/resources/db/migration/V14__create_youtube_channel_backfill_run.sql), [`V15__add_youtube_channel_backfill_stop_reason.sql`](../../../src/main/resources/db/migration/V15__add_youtube_channel_backfill_stop_reason.sql), [`V16__add_youtube_channel_backfill_video_ledger.sql`](../../../src/main/resources/db/migration/V16__add_youtube_channel_backfill_video_ledger.sql)에 둔다.
+
+실패 단위 자동 보완 claim의 실제 컬럼·상태·FK·후보 단위와 원 등록 단위의 작업별 unique 제약은 [AI 데이터 계약 4.2절](third-expansion-ai-video-data-contract.md#42-ai_registration_unit_retry)과 [`V22__add_ai_failure_remediation_claim.sql`](../../../src/main/resources/db/migration/V22__add_ai_failure_remediation_claim.sql)에 둔다. Claim은 mutable `PENDING`→`SUCCEEDED/BLOCKED` gate다. Provider Attempt와 Candidate Snapshot은 기존 행을 변경하지 않는 append-only 이력으로 보존한다.
 
 | 테이블 | 역할 | 핵심 무결성 |
 |---|---|---|

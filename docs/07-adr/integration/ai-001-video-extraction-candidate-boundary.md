@@ -22,6 +22,7 @@ related_requirements:
   - BR-AIEXTRACT-009
   - BR-AIEXTRACT-010
   - BR-AIEXTRACT-011
+  - BR-AIEXTRACT-012
   - NFR-ACCURACY-002
   - NFR-INTEGRITY-006
   - NFR-PRIVACY-006
@@ -32,6 +33,7 @@ related_documents:
   - ../../02-analysis/third-expansion-workstreams.md
   - ../../04-product/prd/admin/ai-video-information-extraction.md
   - ../../08-planning/third-expansion-evaluation-strategy.md
+  - ../../08-planning/issue-421-ai-failure-remediation.md
   - ../architecture/arch-002-external-ports-adapters.md
   - ../security/sec-001-secrets-workload-identity.md
   - ../quality/obs-001-logging-observability.md
@@ -76,6 +78,8 @@ AI 호출 결과를 어디에 저장하고 어떤 조건에서 기존 정식 등
 - 추출 작업, 후보 Snapshot, 검수 상태, 검수 사유와 감사 이벤트는 AI 후보 경계가 소유한다.
 - Webhook과 관리자 신규 추가는 유입 경로만 다르고 동일한 후보·검수·정식 등록 경계를 사용한다. Webhook은 채널·영상 식별과 작업 접수만 수행한다.
 - Webhook 작업은 공개 YouTube URL을 Gemini 영상 입력으로 전달하는 것을 기본 경로로 하며, 접근 불가·정책 제한·시간 초과·부분 추출은 관리자 보완 텍스트 재시도로 대체할 수 있다.
+- #421 자동 보완은 기존 YouTube videos API의 공개 제목·설명과 같은 등록 단위에 결속한 #417 location만 사용한다. 단위당 한 번이고 작업 전체 Gemini Provider 호출 상한은 기존 재시도 포함 4회다. 기존 quota·비용 hard stop과 Provider·모델·Prompt·Schema 계약은 유지한다.
+- 제한 재검증은 새 Snapshot에 이전 전체 후보를 carry-forward하고 실패 단위만 교체한다. 성공 단위는 재검증하지 않으며 이전 Snapshot·후보·판정을 보존한다. 끝까지 미해결인 단위는 사유와 함께 관리자 보류한다.
 - 후보에는 영상 식별자, 입력 텍스트 해시, 후보 필드·태그, 필드별 신뢰도, 근거 위치 또는 `UNKNOWN`, 모델·Prompt·결과 Schema 버전, 생성 시각을 포함한다.
 - 원본 영상·자동 수집 전체 자막·전체 응답은 저장하지 않는다. 관리자가 직접 입력한 보완 텍스트는 암호화된 임시 입력으로만 저장하고 작업 종료 후 24시간 이내 삭제한다. 근거는 `TIMESTAMP`(`startMs`·`endMs`) 또는 `TEXT_RANGE`(`startOffset`·`endOffset`·`sourceHash`) 위치만 저장하며 후보·자동 판단·사후 보정 이력은 1년 보존한다.
 - 같은 영상·입력 해시·모델·Prompt·Schema 조합의 중복 요청은 같은 작업으로 수렴시킨다.

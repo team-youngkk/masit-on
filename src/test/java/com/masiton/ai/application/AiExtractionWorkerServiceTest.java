@@ -19,6 +19,8 @@ import java.util.List;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.LoggerFactory;
 
 import com.masiton.ai.application.port.out.*;
@@ -178,7 +180,7 @@ class AiExtractionWorkerServiceTest {
         AiVideoExtractionResult result = new AiVideoExtractionResult(
                 new ObjectMapper().readTree("{\"resultCompleteness\":\"COMPLETE\"}"), "req-1");
         when(provider.extract(any())).thenReturn(result);
-        when(processor.process(eq(jobId), any(), eq(1), any(), any(), eq(result)))
+        when(processor.process(eq(jobId), any(), eq(1), any(), any(), eq(result), any()))
                 .thenThrow(new IllegalStateException("database unavailable"));
 
         service.poll();
@@ -198,7 +200,7 @@ class AiExtractionWorkerServiceTest {
         AiVideoExtractionResult result = new AiVideoExtractionResult(
                 new ObjectMapper().readTree("{\"resultCompleteness\":\"COMPLETE\"}"), "req-1");
         when(provider.extract(any())).thenReturn(result);
-        when(processor.process(any(), any(), anyInt(), any(), any(), any()))
+        when(processor.process(any(), any(), anyInt(), any(), any(), any(), any()))
                 .thenThrow(new IllegalStateException("PROVIDER_RESPONSE_SENTINEL",
                         new IllegalArgumentException("CAUSE_SENTINEL")));
 
@@ -219,7 +221,7 @@ class AiExtractionWorkerServiceTest {
         assertThat(event.getFormattedMessage())
                 .contains("category=INFRASTRUCTURE")
                 .contains("exceptionType=java.lang.IllegalStateException")
-                .contains("stackTrace=com.masiton.ai.application.AiExtractionWorkerService.execute")
+                .contains("com.masiton.ai.application.AiExtractionWorkerService.execute")
                 .doesNotContain("PROVIDER_RESPONSE_SENTINEL", "CAUSE_SENTINEL");
         assertThat(event.getThrowableProxy()).isNull();
     }
@@ -261,11 +263,139 @@ class AiExtractionWorkerServiceTest {
                 .when(store).claim(any(), any(), any(), anyInt(), any(), anyLong());
         AiVideoExtractionResult result = new AiVideoExtractionResult(new ObjectMapper().readTree("{\"resultCompleteness\":\"COMPLETE\"}"), "req-1");
         when(provider.extract(any())).thenReturn(result);
-        when(processor.process(eq(id), anyString(), eq(1), any(), any(), eq(result))).thenReturn(true);
+        when(processor.process(eq(id), anyString(), eq(1), any(), any(), eq(result), any())).thenReturn(true);
 
         service.poll();
 
-        verify(processor).process(eq(id), anyString(), eq(1), any(), any(), eq(result));
+        verify(processor).process(eq(id), anyString(), eq(1), any(), any(), eq(result), any());
+    }
+
+    @Test
+    @DisplayName("재기동 시 pending 보완 claim이 복구되면 최초 전체 Provider를 다시 호출하지 않는다")
+    void poll_pending보완Claim복구_최초Provider와재실행을생략한다() {
+        when(store.quotaUsage(any(java.time.OffsetDateTime.class))).thenReturn(0L);
+        UUID id = UUID.randomUUID();
+        doReturn(Optional.of(new AiExtractionWorkerStore.ClaimedJob(id,
+                URI.create("https://www.youtube.com/watch?v=video-id"), null, 2)))
+                .when(store).claim(any(), any(), any(), anyInt(), any(), anyLong());
+        when(processor.resumePending(eq(id), anyString(), eq(2), any(), any(), any()))
+                .thenReturn(Optional.of(true));
+
+        service.poll();
+
+        verify(processor).resumePending(eq(id), anyString(), eq(2), any(), any(), any());
+        verify(processor, never()).process(any(), any(), anyInt(), any(), any(), any(), any());
+        verifyNoInteractions(provider);
+    }
+
+    @Test
+    @DisplayName("자동 보완 Provider 호출은 최초 호출을 포함해 작업당 최대 4회로 제한한다")
+    void poll_자동보완Provider호출_작업전체네번을초과하지않는다() throws Exception {
+        when(store.quotaUsage(any(java.time.OffsetDateTime.class))).thenReturn(0L);
+        UUID id = UUID.randomUUID();
+        doReturn(Optional.of(new AiExtractionWorkerStore.ClaimedJob(id,
+                URI.create("https://www.youtube.com/watch?v=video-id"), null, 1)))
+                .when(store).claim(any(), any(), any(), anyInt(), any(), anyLong());
+        AiVideoExtractionResult result = new AiVideoExtractionResult(
+                new ObjectMapper().readTree("{\"resultCompleteness\":\"COMPLETE\"}"), "req-1");
+        when(provider.extract(any())).thenReturn(result);
+        when(store.reserveSupplementProviderCall(any(), any(), any(), any(), any(), anyLong()))
+                .thenReturn(Optional.of(2), Optional.of(3), Optional.of(4), Optional.empty());
+        doAnswer(invocation -> {
+            AiExtractionResultProcessor.SupplementProvider supplement = invocation.getArgument(6);
+            supplement.extract(id, null, "location: 서울 마포구");
+            supplement.extract(id, null, "location: 서울 종로구");
+            supplement.extract(id, null, "location: 서울 영등포구");
+            supplement.extract(id, null, "location: 서울 강남구");
+            return true;
+        }).when(processor).process(eq(id), anyString(), eq(1), any(), any(), eq(result), any());
+
+        service.poll();
+
+        verify(provider, times(4)).extract(any());
+        verify(store, times(4)).reserveSupplementProviderCall(any(), any(), any(), any(), any(), anyLong());
+    }
+
+    @Test
+    @DisplayName("보완 Provider 응답과 성공 원장은 하나의 fenced 저장 경로로 기록한다")
+    void poll_보완응답_암호화checkpoint와성공원장을원자저장한다() throws Exception {
+        when(store.quotaUsage(any(java.time.OffsetDateTime.class))).thenReturn(0L);
+        UUID id = UUID.randomUUID();
+        UUID retryId = UUID.randomUUID();
+        doReturn(Optional.of(new AiExtractionWorkerStore.ClaimedJob(id,
+                URI.create("https://www.youtube.com/watch?v=video-id"), null, 1)))
+                .when(store).claim(any(), any(), any(), anyInt(), any(), anyLong());
+        AiVideoExtractionResult initial = new AiVideoExtractionResult(
+                new ObjectMapper().readTree("{\"resultCompleteness\":\"COMPLETE\"}"), "req-initial");
+        AiVideoExtractionResult supplement = new AiVideoExtractionResult(
+                new ObjectMapper().readTree("{\"resultCompleteness\":\"COMPLETE\"}"), "req-supplement");
+        when(provider.extract(any())).thenReturn(initial, supplement);
+        when(store.reserveSupplementProviderCall(eq(id), anyString(), eq(retryId), any(), any(), any(), anyLong()))
+                .thenReturn(Optional.of(2));
+        when(store.recordSuccessfulSupplementAttempt(eq(id), anyString(), eq(2), any(), any(), eq("req-supplement")))
+                .thenReturn(true);
+        TemporaryInputCipher.EncryptedInput encrypted = new TemporaryInputCipher.EncryptedInput(new byte[] {9}, "result-key");
+        when(cipher.encrypt(anyString())).thenReturn(encrypted);
+        AiRegistrationUnitRetryStore retries = mock(AiRegistrationUnitRetryStore.class);
+        when(retries.storeProviderResult(eq(retryId), eq(id), anyString(), eq(2), eq("req-supplement"), any(),
+                eq(encrypted.ciphertext()), eq("result-key"), any())).thenReturn(true);
+        AiExtractionWorkerService worker = new AiExtractionWorkerService(store, retries, provider, Optional.of(processor),
+                cipher, properties, Clock.fixed(Instant.parse("2026-08-11T00:00:00Z"), ZoneOffset.UTC), delay);
+        doAnswer(invocation -> {
+            AiExtractionResultProcessor.SupplementProvider supplementProvider = invocation.getArgument(6);
+            supplementProvider.extract(id, retryId, "approved scoped input");
+            return true;
+        }).when(processor).process(eq(id), anyString(), eq(1), any(), any(), eq(initial), any());
+
+        worker.poll();
+
+        verify(retries).storeProviderResult(eq(retryId), eq(id), anyString(), eq(2), eq("req-supplement"), any(),
+                eq(encrypted.ciphertext()), eq("result-key"), any());
+        verify(store, never()).recordSuccessfulSupplementAttempt(any(), anyString(), anyInt(), any(), any(), any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {3, 4})
+    @DisplayName("시도 한도에 도달한 만료 작업도 보완 checkpoint가 있으면 재시작 복구한다")
+    void poll_시도횟수소진후Checkpoint복구_추가Provider호출없이프로세서로넘긴다(int attemptNo) {
+        UUID jobId = UUID.randomUUID();
+        when(store.claimRecovery(anyString(), any(), any())).thenReturn(Optional.of(
+                new AiExtractionWorkerStore.ClaimedJob(jobId,
+                        URI.create("https://www.youtube.com/watch?v=video-id"), null, attemptNo)));
+        when(processor.resumePending(eq(jobId), anyString(), eq(attemptNo), any(), any(), any()))
+                .thenReturn(Optional.of(true));
+
+        service.poll();
+
+        verify(processor).resumePending(eq(jobId), anyString(), eq(attemptNo), any(), any(), any());
+        verify(store, never()).failExpiredExhausted(any(), anyInt());
+        verify(store, never()).claim(any(), any(), any(), anyInt(), any(), anyLong());
+        verifyNoInteractions(provider);
+    }
+
+    @Test
+    @DisplayName("자동 보완 quota hard stop이면 최초 추출 뒤 추가 Provider 호출을 거부한다")
+    void poll_자동보완QuotaHardStop_추가Provider호출하지않는다() throws Exception {
+        when(store.quotaUsage(any(java.time.OffsetDateTime.class))).thenReturn(0L);
+        UUID id = UUID.randomUUID();
+        doReturn(Optional.of(new AiExtractionWorkerStore.ClaimedJob(id,
+                URI.create("https://www.youtube.com/watch?v=video-id"), null, 1)))
+                .when(store).claim(any(), any(), any(), anyInt(), any(), anyLong());
+        AiVideoExtractionResult result = new AiVideoExtractionResult(
+                new ObjectMapper().readTree("{\"resultCompleteness\":\"COMPLETE\"}"), "req-1");
+        when(provider.extract(any())).thenReturn(result);
+        when(store.reserveSupplementProviderCall(any(), any(), any(), any(), any(), anyLong()))
+                .thenReturn(Optional.empty());
+        doAnswer(invocation -> {
+            AiExtractionResultProcessor.SupplementProvider supplement = invocation.getArgument(6);
+            assertThat(supplement.extract(id, null, "location: 서울 마포구")).isEmpty();
+            return true;
+        }).when(processor).process(eq(id), anyString(), eq(1), any(), any(), eq(result), any());
+
+        service.poll();
+
+        verify(provider).extract(any());
+        verify(store).reserveSupplementProviderCall(any(), any(), any(), any(), any(), anyLong());
     }
 
     private static AiExtractionWorkerStore.ClaimedJob job(int attempt) {

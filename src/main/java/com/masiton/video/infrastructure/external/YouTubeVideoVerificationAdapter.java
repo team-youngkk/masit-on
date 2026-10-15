@@ -116,10 +116,11 @@ class YouTubeVideoVerificationAdapter implements VideoVerificationPort {
             if (!(itemsValue instanceof List<?> items) || items.isEmpty() || !(items.getFirst() instanceof Map<?, ?> item)) return Optional.empty();
             if (!(item.get("id") instanceof String id) || !expectedVideoId.equals(id) || !(item.get("snippet") instanceof Map<?, ?> rawSnippet)) throw new VideoVerificationFailedException();
             Map<String, Object> snippet = (Map<String, Object>) rawSnippet;
-            String title = value(snippet.get("title")); String channelId = value(snippet.get("channelId")); String channelTitle = value(snippet.get("channelTitle"));
+            String title = value(snippet.get("title")); String description = value(snippet.get("description"));
+            String channelId = value(snippet.get("channelId")); String channelTitle = value(snippet.get("channelTitle"));
             String publishedAt = value(snippet.get("publishedAt")); String thumbnailUrl = thumbnail(snippet.get("thumbnails"));
             if (title == null || channelId == null || channelTitle == null || publishedAt == null || thumbnailUrl == null) throw new VideoVerificationFailedException();
-            return Optional.of(new VerifiedVideo(id, channelId, title, thumbnailUrl, channelTitle, "https://www.youtube.com/watch?v=" + id,
+            return Optional.of(new VerifiedVideo(id, channelId, title, description, thumbnailUrl, channelTitle, "https://www.youtube.com/watch?v=" + id,
                     OffsetDateTime.parse(publishedAt), OffsetDateTime.now()));
         } catch (JacksonException | IllegalArgumentException exception) { throw new VideoVerificationFailedException(exception); }
     }

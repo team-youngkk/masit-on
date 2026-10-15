@@ -14,6 +14,7 @@ related_documents:
   - ../08-planning/second-expansion-scope-and-terminology.md
   - ../08-planning/third-expansion-scope-and-terminology.md
   - ../08-planning/third-expansion-evaluation-strategy.md
+  - ../08-planning/issue-421-ai-failure-remediation.md
 ---
 
 # 맛잇온 비기능 요구사항
@@ -1028,12 +1029,12 @@ related_documents:
 
 - 요구사항:
   - 모든 AI·Mobility 호출은 연결·응답·전체 작업 timeout, 동시 처리 수와 요청 rate limit을 명시적으로 설정해야 한다.
-  - 자동 재시도는 멱등한 작업에만 유한 횟수로 수행하고 429의 제공자 재시도 시각, 지수 backoff와 전체 시간 예산을 따라야 한다. Gemini는 연결 5초·응답 90초·시도 전체 120초·최대 2회 재시도, Mobility는 연결 1초·응답 4초·전체 5초·자동 재시도 0회로 고정한다.
+  - 자동 재시도는 멱등한 작업에만 유한 횟수로 수행하고 429의 제공자 재시도 시각, 지수 backoff와 전체 시간 예산을 따라야 한다. Gemini 일반 추출은 연결 5초·응답 90초·시도 전체 120초·최대 2회 재시도(최대 3회 호출), Mobility는 연결 1초·응답 4초·전체 5초·자동 재시도 0회로 고정한다. BR-AIEXTRACT-012 자동 보완은 등록 단위당 최대 1회이며 일반 추출 재시도 정책은 바꾸지 않는다. 작업의 Gemini Provider 호출은 자동 보완을 포함해 최대 4회로 제한하고, 호출 여유나 quota가 없으면 남은 실패 단위를 보류한다.
   - 설정이 없거나 quota·비용 상한을 확인할 수 없으면 fail-closed로 호출하지 않아야 한다.
 - 적용 대상:
   - 비동기 AI 추출 작업과 동기 경로 계산 호출
 - 검증 방법:
-  - 지연·timeout·429·5xx·연결 실패·동시 요청 WireMock 테스트와 시도 횟수·전체 시간 검사
+  - 지연·timeout·429·5xx·연결 실패·동시 요청 WireMock 테스트와 일반 추출 재시도 횟수·작업 전체 Provider 호출 상한·전체 시간 검사
 - 중요도:
   - Critical
 - 결정 상태:
@@ -1189,7 +1190,7 @@ related_documents:
 | [NFR-SECURITY-007](non-functional-requirements.md#nfr-security-007-prompt-injection과-악성-ai-입력-방어) | Prompt Injection과 악성 AI 입력 방어 | Critical | 악성 입력·Schema 검사 | 확정 | 구현에서 검증 |
 | [NFR-PRIVACY-006](non-functional-requirements.md#nfr-privacy-006-ai-입력저작권자막-보존-경계) | AI 입력·저작권·자막 보존 경계 | Critical | 저장·외부 전송·권한 검사 | 확정 | 제공자 계약 전 확정 |
 | [NFR-COST-001](non-functional-requirements.md#nfr-cost-001-ai임베딩mobility-호출-비용-상한) | AI·임베딩·Mobility 호출 비용 상한 | Critical | quota·비용 hard stop | 확정 | 외부 연동 활성화 전 검증 |
-| [NFR-EXTERNAL-005](non-functional-requirements.md#nfr-external-005-ai와-mobility-timeoutrate-limit재시도) | AI와 Mobility timeout·rate limit·재시도 | Critical | 외부 장애·시도 횟수 검사 | 확정 | Gemini 5/90/120초·2회 재시도, Mobility 1/4/5초·무재시도 실행 |
+| [NFR-EXTERNAL-005](non-functional-requirements.md#nfr-external-005-ai와-mobility-timeoutrate-limit재시도) | AI와 Mobility timeout·rate limit·재시도 | Critical | 외부 장애·시도 횟수 검사 | 확정 | Gemini 5/90/120초·2회 일반 재시도, 보완 포함 작업당 최대 4회·기존 quota hard stop, Mobility 1/4/5초·무재시도 실행 |
 | [NFR-PERFORMANCE-007](non-functional-requirements.md#nfr-performance-007-자연어-검색과-경로-응답-시간) | 자연어 검색과 경로 응답 시간 | High | 부하·외부 지연 분리 | 확정 | 단계 완료 전 검증 |
 | [NFR-RELIABILITY-005](non-functional-requirements.md#nfr-reliability-005-ai-비동기-작업-복구) | AI 비동기 작업 복구 | Critical | 재기동·동시 claim 검사 | 확정 | 운영 배포 전 검증 |
 | [NFR-AVAILABILITY-003](non-functional-requirements.md#nfr-availability-003-ai모델외부-api-장애-격리) | AI 모델·외부 API 장애 격리 | Critical | 장애 주입·기존 기능 검사 | 확정 | 단계 완료 전 검증 |

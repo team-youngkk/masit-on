@@ -50,6 +50,10 @@ public class JdbcAiExtractionWorkerStore implements AiExtractionWorkerStore {
                        AND job.attempt_count < ?
                        AND (job.execution_status = 'QUEUED'
                             OR (job.execution_status = 'RUNNING' AND job.lease_expires_at <= ?))
+                       AND NOT EXISTS (
+                           SELECT 1 FROM ai_registration_unit_retry retry
+                            WHERE retry.job_id = job.id AND retry.outcome = 'PENDING'
+                       )
                      ORDER BY CASE WHEN job.execution_status = 'RUNNING' THEN 0 ELSE 1 END,
                               job.priority DESC, COALESCE(job.lease_expires_at, job.created_at), job.id
                      FOR UPDATE OF job SKIP LOCKED
@@ -89,6 +93,43 @@ public class JdbcAiExtractionWorkerStore implements AiExtractionWorkerStore {
     }
 
     @Override
+    public Optional<ClaimedJob> claimRecovery(String workerId, OffsetDateTime now,
+                                               OffsetDateTime leaseExpiresAt) {
+        List<ClaimedJob> rows = jdbcTemplate.query("""
+                WITH candidate AS (
+                    SELECT job.id, job.video_url, job.attempt_count
+                      FROM ai_extraction_job job
+                     WHERE job.execution_status = 'RUNNING' AND job.lease_expires_at <= ?
+                       AND job.attempt_count BETWEEN 0 AND 4
+                       AND EXISTS (
+                           SELECT 1 FROM ai_registration_unit_retry retry
+                           JOIN LATERAL (
+                               SELECT snapshot.id
+                                 FROM ai_candidate_snapshot snapshot
+                                WHERE snapshot.job_id = job.id
+                                ORDER BY snapshot.snapshot_version DESC, snapshot.created_at DESC, snapshot.id DESC
+                                LIMIT 1
+                           ) latest ON latest.id = retry.source_snapshot_id
+                            WHERE retry.job_id = job.id AND retry.outcome = 'PENDING'
+                       )
+                     ORDER BY job.lease_expires_at, job.priority DESC, job.created_at, job.id
+                     FOR UPDATE OF job SKIP LOCKED
+                     LIMIT 1
+                ), claimed AS (
+                    UPDATE ai_extraction_job job
+                       SET lease_owner = ?, lease_expires_at = ?
+                      FROM candidate
+                     WHERE job.id = candidate.id
+                    RETURNING job.id, candidate.video_url, candidate.attempt_count
+                )
+                SELECT claimed.id, claimed.video_url, claimed.attempt_count,
+                       NULL::bytea AS ciphertext, NULL::varchar AS encryption_key_id
+                  FROM claimed
+                """, this::claimedJob, now, workerId, leaseExpiresAt);
+        return rows.stream().findFirst();
+    }
+
+    @Override
     public boolean heartbeat(UUID jobId, String workerId, OffsetDateTime now, OffsetDateTime leaseExpiresAt) {
         return jdbcTemplate.update("""
                 UPDATE ai_extraction_job
@@ -104,6 +145,28 @@ public class JdbcAiExtractionWorkerStore implements AiExtractionWorkerStore {
                                           String errorCategory) {
         return insertOwnedAttempt(jobId, workerId, attemptNo, startedAt, finishedAt,
                 "FAILED", errorCategory, null);
+    }
+
+    @Override
+    public boolean recordSuccessfulSupplementAttempt(UUID jobId, String workerId, int attemptNo,
+                                                      OffsetDateTime startedAt, OffsetDateTime finishedAt,
+                                                      String providerRequestId) {
+        Integer changed = jdbcTemplate.queryForObject("""
+                WITH owned AS (
+                    SELECT id FROM ai_extraction_job
+                     WHERE id = ? AND execution_status = 'RUNNING' AND lease_owner = ?
+                       AND lease_expires_at > ? AND attempt_count = ?
+                ), recorded AS (
+                    INSERT INTO ai_extraction_attempt (
+                        id, job_id, attempt_no, provider_request_id, started_at, finished_at, outcome
+                    )
+                    SELECT gen_random_uuid(), owned.id, ?, ?, ?, ?, 'SUCCEEDED' FROM owned
+                    RETURNING id
+                )
+                SELECT count(*) FROM recorded
+                """, Integer.class, jobId, workerId, finishedAt, attemptNo, attemptNo,
+                providerRequestId, startedAt, finishedAt);
+        return changed != null && changed == 1;
     }
 
     @Override
@@ -135,6 +198,89 @@ public class JdbcAiExtractionWorkerStore implements AiExtractionWorkerStore {
                 RETURNING job.attempt_count
                 """, (rs, rowNum) -> rs.getInt(1), CLAIM_LOCK_KEY, quotaWindowStart,
                 leaseExpiresAt, jobId, workerId, now, maxAttempts, quotaLimit);
+        return rows.stream().findFirst();
+    }
+
+    @Override
+    public Optional<Integer> reserveSupplementProviderCall(UUID jobId, String workerId, OffsetDateTime now,
+                                                            OffsetDateTime leaseExpiresAt,
+                                                            OffsetDateTime quotaWindowStart, long quotaLimit) {
+        List<Integer> rows = jdbcTemplate.query("""
+                WITH quota_guard AS (
+                    SELECT pg_advisory_xact_lock(?)
+                ), usage AS (
+                    SELECT (
+                        SELECT count(*) FROM ai_extraction_attempt WHERE finished_at >= ?
+                    ) + (
+                        SELECT count(*) FROM ai_extraction_job job
+                         WHERE job.execution_status = 'RUNNING'
+                           AND NOT EXISTS (
+                               SELECT 1 FROM ai_extraction_attempt attempt
+                                WHERE attempt.job_id = job.id AND attempt.attempt_no = job.attempt_count
+                           )
+                    ) AS used
+                    FROM quota_guard
+                )
+                UPDATE ai_extraction_job job
+                   SET attempt_count = job.attempt_count + 1, lease_expires_at = ?
+                  FROM usage
+                 WHERE job.id = ? AND job.execution_status = 'RUNNING'
+                   AND job.lease_owner = ? AND job.lease_expires_at > ?
+                   AND job.attempt_count < 4 AND usage.used < ?
+                RETURNING job.attempt_count
+                """, (rs, rowNum) -> rs.getInt(1), CLAIM_LOCK_KEY, quotaWindowStart,
+                leaseExpiresAt, jobId, workerId, now, quotaLimit);
+        return rows.stream().findFirst();
+    }
+
+    @Override
+    public Optional<Integer> reserveSupplementProviderCall(UUID jobId, String workerId, UUID retryId,
+                                                            OffsetDateTime now, OffsetDateTime leaseExpiresAt,
+                                                            OffsetDateTime quotaWindowStart, long quotaLimit) {
+        List<Integer> rows = jdbcTemplate.query("""
+                WITH quota_guard AS (
+                    SELECT pg_advisory_xact_lock(?)
+                ), claim_guard AS (
+                    SELECT retry.id
+                      FROM ai_registration_unit_retry retry
+                     WHERE retry.id = ? AND retry.job_id = ? AND retry.outcome = 'PENDING'
+                       AND (retry.provider_attempt_no IS NULL OR EXISTS (
+                           SELECT 1 FROM ai_extraction_attempt previous_attempt
+                            WHERE previous_attempt.job_id = retry.job_id
+                              AND previous_attempt.attempt_no = retry.provider_attempt_no
+                              AND previous_attempt.outcome = 'FAILED'
+                       ))
+                     FOR UPDATE
+                ), usage AS (
+                    SELECT (
+                        SELECT count(*) FROM ai_extraction_attempt WHERE finished_at >= ?
+                    ) + (
+                        SELECT count(*) FROM ai_extraction_job job
+                         WHERE job.execution_status = 'RUNNING'
+                           AND NOT EXISTS (
+                               SELECT 1 FROM ai_extraction_attempt attempt
+                                WHERE attempt.job_id = job.id AND attempt.attempt_no = job.attempt_count
+                           )
+                    ) AS used
+                    FROM quota_guard
+                ), reserved AS (
+                    UPDATE ai_extraction_job job
+                       SET attempt_count = job.attempt_count + 1, lease_expires_at = ?
+                      FROM usage, claim_guard
+                     WHERE job.id = ? AND job.execution_status = 'RUNNING'
+                       AND job.lease_owner = ? AND job.lease_expires_at > ?
+                       AND job.attempt_count < 4 AND usage.used < ?
+                    RETURNING job.id, job.attempt_count
+                ), linked AS (
+                    UPDATE ai_registration_unit_retry retry
+                       SET provider_attempt_no = reserved.attempt_count
+                      FROM reserved, claim_guard
+                     WHERE retry.id = claim_guard.id AND retry.job_id = reserved.id
+                    RETURNING retry.provider_attempt_no
+                )
+                SELECT linked.provider_attempt_no FROM linked
+                """, (rs, rowNum) -> rs.getInt(1), CLAIM_LOCK_KEY, retryId, jobId,
+                quotaWindowStart, leaseExpiresAt, jobId, workerId, now, quotaLimit);
         return rows.stream().findFirst();
     }
 
@@ -174,6 +320,10 @@ public class JdbcAiExtractionWorkerStore implements AiExtractionWorkerStore {
                       FROM ai_extraction_job job
                      WHERE job.execution_status = 'RUNNING' AND job.lease_expires_at <= ?
                        AND job.attempt_count >= ?
+                       AND NOT EXISTS (
+                           SELECT 1 FROM ai_registration_unit_retry retry
+                            WHERE retry.job_id = job.id AND retry.outcome = 'PENDING'
+                       )
                      FOR UPDATE
                 ), recovered AS (
                     INSERT INTO ai_extraction_attempt (

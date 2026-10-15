@@ -14,6 +14,7 @@ related_documents:
   - ../../08-planning/second-expansion-test-matrix.md
   - ../../08-planning/expansion-2-implementation-plan.md
   - ../../08-planning/expansion-2-task-breakdown.md
+  - ../../08-planning/issue-421-ai-failure-remediation.md
   - ../../04-product/prd/discovery/restaurant-discovery.md
   - ../../04-product/prd/discovery/creator-discovery.md
   - ../../04-product/prd/detail/restaurant-detail.md
@@ -126,6 +127,7 @@ PRD, 기능·비기능 요구사항, 비즈니스 규칙, API와 Workstream이 �
 | [BR-AIEXTRACT-008](../../01-requirements/business-rules.md#br-aiextract-008-태그-후보-자동-등록과-공개) | 태그 후보 통제·공개 | TagDefinition 허용 코드, VisitTag 확정 연결 | 태그 코드·Visit 연결 unique, 공개 상태 조합 | 필요 |
 | [BR-AIEXTRACT-009](../../01-requirements/business-rules.md#br-aiextract-009-장소-동일성-자동-확정)·[BR-AIEXTRACT-010](../../01-requirements/business-rules.md#br-aiextract-010-대표-음식-카테고리-자동-선정) | 장소·카테고리 자동 판정 | `ai_registration_unit`에 등록 단위별 상태·장소·카테고리 근거·등록 결과 보존 | 단위 순번 unique, 확정 상태와 등록 결과 조합 CHECK | 필요 |
 | [BR-AIEXTRACT-011](../../01-requirements/business-rules.md#br-aiextract-011-등록-단위-일괄-등록과-예외-전환) | 등록 단위 일괄 등록 | 맛집·유튜버·영상·방문 관계 4종을 하나의 트랜잭션으로 저장, 실행 주체와 등록 결과 보존 | `executed_by` CHECK, 맛집·방문 등록 결과 FK, 부분 저장 0건 | 필요 |
+| [BR-AIEXTRACT-012](../../01-requirements/business-rules.md#br-aiextract-012-실패-단위-자동-보완과-제한-재검증)·[NFR-EXTERNAL-005](../../01-requirements/non-functional-requirements.md#nfr-external-005-ai와-mobility-timeoutrate-limit재시도) | 실패 단위 자동 보완·최대 호출 수 | `ai_registration_unit_retry`, `ai_extraction_attempt`, 새 Snapshot | 원/결과 Snapshot·원 등록 단위 provenance, 단위당 claim 1회, AES-GCM 입력 만료 | 성공 단위 carry-forward·실패 단위 교체·잔여 실패 보류·작업당 Gemini 4회 hard cap | 필요 |
 
 ## 5. API 요청 → 데이터 변경 매핑
 
@@ -236,6 +238,7 @@ V3 전진 적용과 전체 FK·UNIQUE·CHECK·인덱스는 `TST-E2-E2E-001`, `E2
 |---|---|---|---|---|
 | `ai_extraction_job` | FR-AIEXTRACT-001~007, API-ADMIN-AIEXTRACT-001 | [AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md), 현재 Gemini P9/S3·기존 P1·P2·P3·P4·P5·P6·P7·P8 이력·모델·보존 정책 Accepted | WS-15 | 중복 접수·lease 복구·재시도·원자성 |
 | `ai_extraction_temporary_input` | BR-AIEXTRACT-007, NFR-PRIVACY-006 | 관리자 보완 텍스트 암호화 임시 저장, 작업 종료 후 24시간 이내 삭제, Webhook 작업 미생성 | WS-15 | 재시작 복구·암호화·자동 삭제·재시도 입력 재사용 금지 |
+| `ai_registration_unit_retry` | BR-AIEXTRACT-012, API-ADMIN-AIEXTRACT-001, NFR-EXTERNAL-005 | 원 등록 단위·`candidate_unit_id`별 mutable claim gate·실패 사유·허용 출처·입력 해시·결과 Snapshot, 암호화 입력 | WS-15 | 작업별 원 단위 및 candidate unit 중복 claim 차단, PENDING terminal 전이, 24시간 만료, 성공 단위 재검증 금지, Attempt·Snapshot append-only, Provider 4회 상한 |
 | `ai_candidate_snapshot` | FR-AIEXTRACT-002~003·007, BR-AIEXTRACT-001~004·008 | 필드·태그 후보 Schema·근거·자동 등록 상태 버전 보존, 정식 Entity와 분리 | WS-15 | 부분 추출·환각·태그 오분류·자동 차단·폐기 |
 | `ai_registration_unit` | FR-AIEXTRACT-003, BR-AIEXTRACT-001·009·010·011, API-ADMIN-AIEXTRACT-001 | Snapshot의 장소 단위 등록 단위와 단위별 판정 상태·차단 사유·장소·카테고리 근거·맛집·유튜버·영상·방문 등록 결과·재사용 자원 | WS-15 | 다장소 영상 독립 판정, 부분 차단 시 원자성 경계, 등록 완료·롤백 완료·폐기 완료 `MANUAL_OVERRIDE` 구분, 단위별 롤백 |
 | `ai_registration_unit_review` | BR-AIEXTRACT-011, API-ADMIN-AIEXTRACT-001 | `CONFIRM`·`DISCARD`·`ROLLBACK`·`ADJUST_CATEGORY` 등록 단위 사후 조작의 append-only 감사 이력, 사유·제출자·보충값·이전 카테고리·되돌린 등록 식별자 보존 | WS-15 | 반복 보정 이력 재현, 현재 상태 계산과 분리된 감사 전용 저장 |

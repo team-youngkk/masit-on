@@ -8,6 +8,8 @@ related_documents:
   - ../api/discovery/creator-discovery-api.md
   - ../api/detail/restaurant-detail-api.md
   - second-expansion-data-contract.md
+  - ../../08-planning/issue-421-ai-failure-remediation.md
+  - third-expansion-ai-video-data-contract.md
   - ../../07-adr/data/data-011-popular-restaurant-request-time-aggregation.md
 ---
 
@@ -97,7 +99,7 @@ Creator 필터는 `visit`에서 고유 Restaurant ID를 구한 뒤 Restaurant의
 
 ## 7. 3차 확장 AI 영상 추출 인덱스
 
-3차 확장 인덱스의 정확한 SQL은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)과 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql), [`V14__create_youtube_channel_backfill_run.sql`](../../../src/main/resources/db/migration/V14__create_youtube_channel_backfill_run.sql), [`V15__add_youtube_channel_backfill_stop_reason.sql`](../../../src/main/resources/db/migration/V15__add_youtube_channel_backfill_stop_reason.sql), [`V16__add_youtube_channel_backfill_video_ledger.sql`](../../../src/main/resources/db/migration/V16__add_youtube_channel_backfill_video_ledger.sql)을 따른다.
+3차 확장 인덱스의 정확한 SQL은 [3차 확장 AI 영상 추출 데이터 계약](third-expansion-ai-video-data-contract.md)과 관련 migration을 따른다.
 
 | 인덱스 | 대상 경로 | 목적 |
 |---|---|---|
@@ -110,6 +112,9 @@ Creator 필터는 `visit`에서 고유 Restaurant ID를 구한 뒤 Restaurant의
 | `ix_ai_job__video_input_versions` | youtube_video_id·input_hash·Provider/Model/Prompt/Schema 버전 | 외부 검증 전 관리자 작업 재사용 조회 |
 | `ix_ai_job__video_mode_versions` | youtube_video_id·input_mode·Provider/Model/Prompt/Schema 버전 | 기존 Webhook 작업 호환 재사용 조회 |
 | `ix_ai_temporary_input__expires_at` | expires_at·job_id | 만료 임시 입력 cleanup 선택 |
+| `ix_ai_registration_unit_retry__expires_at` | `expires_at` where `ciphertext IS NOT NULL` | 보완 입력 암호문 cleanup 선택 |
+| `ux_ai_registration_unit_retry__job_unit` | `(job_id, source_registration_unit_id)` unique | 원 등록 단위당 자동 보완 claim 하나 |
+| `ux_ai_registration_unit_retry__job_candidate_unit` | `(job_id, candidate_unit_id)` unique | 작업 내 재추출 후보 단위 중복 claim 차단 |
 | `ux_tag_definition_term__normalized_term` | normalized_term unique | 표시명·별칭 전역 중복 및 동시 생성 차단 |
 | `ux_tag_definition_term__display_name_owner` | tag_definition_id, DISPLAY_NAME partial unique | 정의별 표시명 용어 하나 보장 |
 | `ux_youtube_backfill_active_creator` | `creator_id` partial unique, `status IN ('QUEUED','RUNNING')` | Creator별 진행 중 보정 실행 하나만 허용 |

@@ -17,6 +17,8 @@ public interface AiExtractionResultStore {
 
     int nextSnapshotVersion(UUID jobId);
 
+    Optional<SnapshotCandidate> latestSnapshotCandidate(UUID jobId);
+
     UUID insertSnapshot(UUID jobId, int snapshotVersion, String candidateFields, String candidateTags,
                         String fieldConfidences, String evidence, String missingFields, boolean candidateTruncated,
                         String reviewStatus, String reviewReason, OffsetDateTime reviewedAt,
@@ -45,7 +47,18 @@ public interface AiExtractionResultStore {
     void completeSuccess(UUID jobId, String workerId, int attemptNo, String resultCompleteness,
                          OffsetDateTime attemptStartedAt, OffsetDateTime finishedAt, String providerRequestId);
 
+    void recordSuccessfulAttempt(UUID jobId, int attemptNo, OffsetDateTime attemptStartedAt,
+                                 OffsetDateTime finishedAt, String providerRequestId);
+
+    void completeSuccessWithoutAttempt(UUID jobId, String workerId, int attemptNo, String resultCompleteness,
+                                       OffsetDateTime finishedAt);
+
     record ProcessingJob(UUID jobId, String channelId, String videoId, URI videoUrl) {
+    }
+
+    record SnapshotCandidate(UUID id, int version, String candidateFields, String candidateTags,
+                             String fieldConfidences, String evidence, String missingFields,
+                             boolean candidateTruncated, String reviewStatus, String reviewReason) {
     }
 
     record TagDefinition(UUID id, String tagCode, String tagType, String displayName, String aliases,

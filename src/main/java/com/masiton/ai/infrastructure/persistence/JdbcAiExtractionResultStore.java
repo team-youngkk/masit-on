@@ -49,6 +49,23 @@ class JdbcAiExtractionResultStore implements AiExtractionResultStore {
     }
 
     @Override
+    public Optional<SnapshotCandidate> latestSnapshotCandidate(UUID jobId) {
+        List<SnapshotCandidate> rows = jdbcTemplate.query("""
+                SELECT id, snapshot_version, candidate_fields::text, candidate_tags::text,
+                       field_confidences::text, evidence::text, missing_fields::text,
+                       candidate_truncated, review_status, review_reason
+                  FROM ai_candidate_snapshot
+                 WHERE job_id = ?
+                 ORDER BY snapshot_version DESC, created_at DESC, id DESC
+                 LIMIT 1
+                """, (rs, rowNum) -> new SnapshotCandidate(rs.getObject("id", UUID.class),
+                rs.getInt("snapshot_version"), rs.getString("candidate_fields"), rs.getString("candidate_tags"),
+                rs.getString("field_confidences"), rs.getString("evidence"), rs.getString("missing_fields"),
+                rs.getBoolean("candidate_truncated"), rs.getString("review_status"), rs.getString("review_reason")), jobId);
+        return rows.stream().findFirst();
+    }
+
+    @Override
     public UUID insertSnapshot(UUID jobId, int snapshotVersion, String candidateFields, String candidateTags,
                                String fieldConfidences, String evidence, String missingFields,
                                boolean candidateTruncated, String reviewStatus, String reviewReason,
@@ -196,12 +213,14 @@ class JdbcAiExtractionResultStore implements AiExtractionResultStore {
     public void completeSuccess(UUID jobId, String workerId, int attemptNo, String resultCompleteness,
                                 OffsetDateTime attemptStartedAt, OffsetDateTime finishedAt,
                                 String providerRequestId) {
-        jdbcTemplate.update("""
+        int inserted = jdbcTemplate.update("""
                 INSERT INTO ai_extraction_attempt (
                     id, job_id, attempt_no, provider_request_id, started_at, finished_at, outcome
                 ) VALUES (?, ?, ?, ?, ?, ?, 'SUCCEEDED')
-                ON CONFLICT (job_id, attempt_no) DO NOTHING
                 """, UUID.randomUUID(), jobId, attemptNo, providerRequestId, attemptStartedAt, finishedAt);
+        if (inserted != 1) {
+            throw new IllegalStateException("AI extraction attempt could not be recorded.");
+        }
         int updated = jdbcTemplate.update("""
                 UPDATE ai_extraction_job
                    SET execution_status = 'SUCCEEDED', result_completeness = ?, finished_at = ?,
@@ -211,6 +230,32 @@ class JdbcAiExtractionResultStore implements AiExtractionResultStore {
                 """, resultCompleteness, finishedAt, jobId, workerId, attemptNo);
         if (updated != 1) {
             throw new IllegalStateException("AI extraction job lease was lost while completing the result.");
+        }
+    }
+
+    @Override
+    public void recordSuccessfulAttempt(UUID jobId, int attemptNo, OffsetDateTime attemptStartedAt,
+                                        OffsetDateTime finishedAt, String providerRequestId) {
+        jdbcTemplate.update("""
+                INSERT INTO ai_extraction_attempt (
+                    id, job_id, attempt_no, provider_request_id, started_at, finished_at, outcome
+                ) VALUES (?, ?, ?, ?, ?, ?, 'SUCCEEDED')
+                ON CONFLICT (job_id, attempt_no) DO NOTHING
+                """, UUID.randomUUID(), jobId, attemptNo, providerRequestId, attemptStartedAt, finishedAt);
+    }
+
+    @Override
+    public void completeSuccessWithoutAttempt(UUID jobId, String workerId, int attemptNo,
+                                              String resultCompleteness, OffsetDateTime finishedAt) {
+        int updated = jdbcTemplate.update("""
+                UPDATE ai_extraction_job
+                   SET execution_status = 'SUCCEEDED', result_completeness = ?, finished_at = ?,
+                       lease_owner = NULL, lease_expires_at = NULL
+                 WHERE id = ? AND execution_status = 'RUNNING'
+                   AND lease_owner = ? AND attempt_count = ? AND lease_expires_at > clock_timestamp()
+                """, resultCompleteness, finishedAt, jobId, workerId, attemptNo);
+        if (updated != 1) {
+            throw new IllegalStateException("AI extraction job lease was lost while completing remediation.");
         }
     }
 

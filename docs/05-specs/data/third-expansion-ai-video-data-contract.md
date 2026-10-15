@@ -23,6 +23,7 @@ related_documents:
   - ../../07-adr/integration/ext-003-ai-extraction-async-reliability.md
   - ../../07-adr/security/auth-007-unified-account-rbac-session.md
   - ../../08-planning/third-expansion-evaluation-strategy.md
+  - ../../08-planning/issue-421-ai-failure-remediation.md
   - ../../08-planning/dynamic-natural-language-tag-dictionary.md
 ---
 
@@ -65,6 +66,9 @@ related_documents:
 - 입력 원문과 자동 수집 자막·전사 원문은 저장하지 않는다. 단, 관리자가 직접 제출한 보완 텍스트는 비동기 Worker 재시작 복구를 위해 별도 암호화 저장소에 임시 보존하고, 작업 종료 후 24시간 이내 삭제한다. 정규화 입력 해시는 작업 멱등성 검사용으로 보존하며 후보 Snapshot·시도·검수 이력은 1년 보존 후 정리한다.
 - JSON 후보 필드는 Schema 버전을 함께 저장하고, 모델·Prompt·Schema 변경 시 기존 Snapshot을 덮어쓰지 않는다.
 - Provider 호출은 DB 핵심 저장 트랜잭션과 분리한다. 후보 저장 실패와 정식 Entity 저장은 원자적으로 연결되지 않는다.
+- 실패 단위 자동 보완은 기존 YouTube videos API의 공개 제목·설명과 원 등록 단위에 결속된 승인 location만 사용한다. 입력 원문은 AES-GCM 암호화 임시 입력으로 보존하고 24시간 이내 만료한다.
+- 작업 전체 Gemini Provider 호출은 기존 시도를 포함해 최대 4회다. 등록 단위별 claim은 한 번만 허용하고 quota·비용 hard stop과 기존 timeout·backoff를 유지한다.
+- 보완 Snapshot은 원 Snapshot 전체 후보를 복사하고 실패 단위 후보만 교체한다. 성공 단위 후보·판정·등록 결과는 그대로 유지하며 재검증하지 않는다.
 - AI는 자막에서 태그 후보를 생성할 수 있다. 후보는 정규화·동의어·문자 유사도·금지 표현·근거 검사를 통과하면 자동으로 `TagDefinition`을 만들거나 기존 정의와 통합하고, 자동 확정된 `Visit`에 `VisitTag`를 연결한다.
 
 ## 4. `ai_extraction_job`
@@ -110,6 +114,33 @@ related_documents:
 - Worker가 `QUEUED/RUNNING` 작업을 재시작 복구할 때만 복호화할 수 있다.
 - `SUCCEEDED`·`FAILED` 작업은 종료 후 24시간 이내 암호문을 삭제한다. 관리자 재시도는 이전 입력을 재사용하지 않고 새 `supplementText`를 제출한다.
 - 암호문 삭제 후에도 입력 해시와 작업·후보·시도·검수 이력은 계약된 보존 기간 동안 유지한다.
+
+### 4.2 `ai_registration_unit_retry`
+
+이력·claim 테이블은 V22에서 추가하고 Provider 응답 checkpoint는 V23에서 추가한다. `(job_id, source_registration_unit_id)`와 `(job_id, candidate_unit_id)` unique로 단위별 claim을 한 번으로 제한하고 원 작업, 원 Snapshot, 원 등록 단위 및 결과 Snapshot 사이 provenance를 검증한다.
+
+| 컬럼 | SQL 타입 | Null | 키·제약 | 설명 |
+|---|---|---:|---|---|
+| `id` | `uuid` | NN | PK | claim·이력 ID |
+| `job_id` | `uuid` | NN | FK → `ai_extraction_job.id` | 원 작업 |
+| `source_snapshot_id` | `uuid` | NN | FK → `ai_candidate_snapshot.id` | 보완 전 Snapshot |
+| `source_registration_unit_id` | `uuid` | NN | `(id, snapshot_id)` 복합 FK, `(job_id, source_registration_unit_id)` unique | claim의 원 등록 단위 |
+| `candidate_unit_id` | `varchar(4096)` | NN | non-blank CHECK, `(job_id, candidate_unit_id)` unique | 재추출 대상 후보 단위 ID |
+| `failure_reason` | `varchar(64)` | NN | non-blank CHECK | 자동 보완 원인이 된 실패 사유 |
+| `approved_source_identifiers` | `jsonb` | NN | 문자열 배열 CHECK | 공개 제목·설명과 같은 단위 location 근거의 허용 출처 식별자 |
+| `input_hash` | `bytea` | NN | SHA-256 32 byte CHECK | 처리 입력 지문 |
+| `ciphertext` | `bytea` | Yes | `encryption_key_id`·`expires_at`와 함께 null 또는 non-empty | 제한 입력 암호문 |
+| `encryption_key_id` | `varchar(128)` | Yes | 암호문 쌍 제약 | 암호화 키 식별자 |
+| `expires_at` | 시간 | Yes | 생성 시각 +24시간 이내 | 암호문 만료 시각 |
+| `provider_attempt_no` | `smallint` | Yes | 1~4 CHECK | quota·작업 호출 상한으로 예약된 Provider 시도. 재예약은 직전 시도가 `FAILED` 이력으로 기록된 경우에만 허용 |
+| `outcome` | `varchar(16)` | NN | `PENDING/SUCCEEDED/BLOCKED` | claim·재검증 결과 |
+| `result_snapshot_id` | `uuid` | Yes | FK → `ai_candidate_snapshot.id` | 결과 Snapshot. 완료 상태에서 필수 |
+| `created_at`, `finished_at` | 시간 | 상태별 | 완료 시각 CHECK | claim·완료 시각 |
+| `provider_result_ciphertext` | `bytea` | Yes | 아래 3개 필드는 모두 null 또는 모두 non-null; 암호문 non-empty | 성공한 보완 Provider 응답의 AES-GCM 암호문 |
+| `provider_result_key_id` | `varchar(128)` | Yes | 응답 암호문 쌍 CHECK | 응답 암호화 키 식별자 |
+| `provider_result_at` | `timestamp with time zone` | Yes | `created_at`~`created_at + 24 hours`, 예약 시도 필수 | 응답 checkpoint 저장 시각 |
+
+원/결과 Snapshot이 같은 `job_id`에 속함은 trigger로 검증한다. Claim 행은 재시작 가능한 단일 mutable gate로 `PENDING`에서 `SUCCEEDED` 또는 `BLOCKED`로 전이하며 terminal 상태에서 결과 Snapshot과 완료 시각이 함께 기록된다. Provider 호출 예약과 동시에 `provider_attempt_no`가 기록된다. 응답을 받으면 Provider의 `SUCCEEDED` attempt 이력과 암호화 응답 checkpoint를 한 저장 문장에서 기록하므로, 두 기록 사이 crash window가 없다. 재기동 시 예약 번호와 checkpoint가 모두 있으면 checkpoint를 복호화해 결과 처리를 이어가며 Provider를 다시 호출하지 않는다. 예약 번호만 있고 대응하는 terminal attempt 이력이 없으면 결과를 알 수 없는 호출로 보고 자동 재호출하지 않는다. 대응 attempt가 `FAILED`로 기록되어 있으면 기존 호출 상한과 quota 정책 아래에서 다음 재시도를 예약할 수 있다. Provider Attempt와 Candidate Snapshot은 기존 행을 덮어쓰지 않는 이력으로 유지한다. 입력·응답 암호문은 작업 종료 또는 만료 시 정리하고, hash·허용 출처·사유·결과·Snapshot 링크와 Provider Attempt 이력은 계약된 이력 보존기간 동안 남긴다. Provider 호출 횟수는 `ai_extraction_attempt`로 집계한다.
 
 ## 5. `ai_candidate_snapshot`
 

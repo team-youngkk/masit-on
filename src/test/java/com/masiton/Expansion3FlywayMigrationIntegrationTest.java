@@ -126,11 +126,12 @@ class Expansion3FlywayMigrationIntegrationTest {
         // then
         assertThat(jdbcTemplate.queryForList(
                 "SELECT version FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank", String.class))
-                .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21");
+                .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23");
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM pg_indexes WHERE schemaname = current_schema() "
                 + "AND indexname IN ('ix_ai_job__video_input_versions', 'ix_ai_job__video_mode_versions', "
                 + "'ix_ai_temporary_input__expires_at', 'ix_visit_tag__created_from_snapshot')", Integer.class)).isEqualTo(4);
         assertAiSchemaAndContracts(jdbcTemplate, database.schema(), true);
+        assertFailureRemediationSchema(jdbcTemplate, database.schema());
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM information_schema.columns "
                 + "WHERE table_schema = ? AND table_name = 'youtube_channel_watch' "
                 + "AND column_name = 'last_error_at'", Integer.class, database.schema())).isEqualTo(1);
@@ -157,6 +158,52 @@ class Expansion3FlywayMigrationIntegrationTest {
                         + "AND conname = 'ck_ai_extraction_job__model_version'", String.class))
                 .contains("gemini-3.5-flash-lite")
                 .doesNotContain("gemini-3-flash-preview");
+    }
+
+    @Test
+    @DisplayName("V22·V23 실패 단위 자동 보완은 claim·입력·응답 checkpoint 제약을 적용한다")
+    void 실패단위자동보완_마이그레이션_등록단위와응답checkpoint제약을적용한다() {
+        SchemaDatabase database = createSchemaDatabase();
+        migrate(database.dataSource(), database.schema(), null);
+
+        assertFailureRemediationSchema(new JdbcTemplate(database.dataSource()), database.schema());
+    }
+
+    private void assertFailureRemediationSchema(JdbcTemplate jdbcTemplate, String schema) {
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM information_schema.tables "
+                + "WHERE table_schema = ? AND table_name = 'ai_registration_unit_retry'",
+                Integer.class, schema)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForList("SELECT column_name FROM information_schema.columns "
+                + "WHERE table_schema = ? AND table_name = 'ai_registration_unit_retry' "
+                + "AND column_name IN ('candidate_unit_id', 'provider_attempt_no', 'provider_result_ciphertext', "
+                + "'provider_result_key_id', 'provider_result_at') ORDER BY column_name", String.class, schema))
+                .containsExactly("candidate_unit_id", "provider_attempt_no", "provider_result_at",
+                        "provider_result_ciphertext", "provider_result_key_id");
+        assertThat(jdbcTemplate.queryForList("SELECT conname FROM pg_constraint "
+                + "WHERE connamespace = ?::regnamespace AND conrelid = 'ai_registration_unit_retry'::regclass "
+                + "ORDER BY conname", String.class, schema))
+                .contains("pk_ai_registration_unit_retry",
+                        "ux_ai_registration_unit_retry__job_unit",
+                        "ux_ai_registration_unit_retry__job_candidate_unit",
+                        "fk_ai_registration_unit_retry__job",
+                        "fk_ai_registration_unit_retry__source_unit",
+                        "fk_ai_registration_unit_retry__source_snapshot",
+                        "fk_ai_registration_unit_retry__result_snapshot",
+                        "ck_ai_registration_unit_retry__input_hash",
+                        "ck_ai_registration_unit_retry__candidate_unit_id",
+                        "ck_ai_registration_unit_retry__source_ids",
+                        "ck_ai_registration_unit_retry__cipher_pair",
+                        "ck_ai_registration_unit_retry__expiry",
+                        "ck_ai_registration_unit_retry__outcome",
+                        "ck_ai_registration_unit_retry__provider_attempt_no",
+                        "ck_ai_registration_unit_retry__completion",
+                        "ck_ai_registration_unit_retry__provider_result_pair");
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM pg_indexes "
+                + "WHERE schemaname = ? AND indexname = 'ix_ai_registration_unit_retry__expires_at'",
+                Integer.class, schema)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM pg_constraint "
+                + "WHERE connamespace = ?::regnamespace "
+                + "AND conname = 'ux_ai_registration_unit__id_snapshot'", Integer.class, schema)).isEqualTo(1);
     }
 
     @Test
