@@ -58,7 +58,7 @@ public class AdminAiVideoExtractionController {
         validateFilter(reviewStatus, REVIEW_STATUSES, "reviewStatus");
         AiExtractionAdminQueryPort.Page result = queryService.list(executionStatus, source, reviewStatus, page, size);
         long totalPages = (result.totalElements() + size - 1) / size;
-        return new PageResponse(result.items().stream().map(AiExtractionJobResponse::from).toList(), new Page(page, size, result.totalElements(), totalPages, page < totalPages));
+        return new PageResponse(result.items().stream().map(item -> AiExtractionJobResponse.from(item, result.registrationSummaries().get(item.jobId()))).toList(), new Page(page, size, result.totalElements(), totalPages, page < totalPages));
     }
     private void validateFilter(String value, Set<String> allowed, String field) {
         if (value != null && !allowed.contains(value)) {
@@ -150,14 +150,19 @@ public class AdminAiVideoExtractionController {
             java.time.OffsetDateTime createdAt,
             java.time.OffsetDateTime startedAt,
             java.time.OffsetDateTime finishedAt,
-            boolean reused
+            boolean reused,
+            @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+            com.masiton.ai.application.RegistrationSummary registrationSummary
     ) {
         static AiExtractionJobResponse from(AiExtractionJobView view) {
+            return from(view, null);
+        }
+        static AiExtractionJobResponse from(AiExtractionJobView view, com.masiton.ai.application.RegistrationSummary summary) {
             return new AiExtractionJobResponse(view.jobId(), view.source(),
                     new YoutubeReference(view.channelId(), view.videoId(), view.videoUrl()),
                     view.executionStatus(), view.resultCompleteness(), view.reviewStatus(), view.provider(),
                     view.modelVersion(), view.promptVersion(), view.schemaVersion(), view.attemptCount(),
-                    view.createdAt(), view.startedAt(), view.finishedAt(), view.reused());
+                    view.createdAt(), view.startedAt(), view.finishedAt(), view.reused(), summary);
         }
     }
 
@@ -207,7 +212,7 @@ public class AdminAiVideoExtractionController {
             int attemptCount, java.time.OffsetDateTime createdAt, java.time.OffsetDateTime startedAt,
             java.time.OffsetDateTime finishedAt, boolean reused, List<Object> candidates, Object missingFields,
             boolean candidateTruncated, List<RegistrationUnitResponse> registrationUnits, Error error,
-            List<AiExtractionAdminQueryPort.Attempt> attempts) {
+            List<AiExtractionAdminQueryPort.Attempt> attempts, com.masiton.ai.application.RegistrationSummary registrationSummary) {
         static DetailResponse from(AdminAiExtractionQueryService.AdminJobDetail jobDetail, ObjectMapper objectMapper) {
             AiExtractionAdminQueryPort.Detail d = jobDetail.detail();
             AiExtractionJobResponse job = AiExtractionJobResponse.from(d.job());
@@ -220,7 +225,7 @@ public class AdminAiVideoExtractionController {
                     job.finishedAt(), job.reused(), candidates(d), d.missingFields(), d.candidateTruncated(),
                     registrationUnits,
                     d.errorCategory() == null ? null : new Error(d.errorCategory(), d.retryable(), job.attemptCount()),
-                    d.attempts());
+                    d.attempts(), com.masiton.ai.application.RegistrationSummary.from(jobDetail.registrationUnits()));
         }
 
         private static List<Object> candidates(AiExtractionAdminQueryPort.Detail d) {
