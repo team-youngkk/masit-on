@@ -106,8 +106,8 @@ related_documents:
   "reviewStatus": null,
   "provider": "GOOGLE_GEMINI",
   "modelVersion": "gemini-3.5-flash-lite",
-  "promptVersion": "P8",
-  "schemaVersion": "S2",
+  "promptVersion": "P9",
+  "schemaVersion": "S3",
   "attemptCount": 0,
   "createdAt": "2026-08-10T12:00:00+09:00",
   "startedAt": null,
@@ -738,3 +738,32 @@ Webhook 수신 경로는 공개 인터넷 진입점이므로 Nginx·Spring Secur
 ## #412 등록 단위 집계 계약
 
 소유자 합의 확보 후 목록과 상세 GET에 registrationSummary를 추가한다. total, autoConfirmed, autoBlocked, autoRejected, manualOverride, registered는 음이 아닌 정수이며 네 상태 개수 합은 total이다. registered는 최신 Snapshot 단위 중 AUTO_CONFIRMED 또는 MANUAL_OVERRIDE 상태로 등록 결과 ID 4종이 모두 존재하고 롤백·폐기가 없는 개수다. partialRegistration은 0 < registered < total이다. 단위가 없으면 모든 개수는 0이고 false다. 접수·재시도 응답은 변경하지 않는다. 상세의 registrationUnits가 권위 있는 단위별 결과이며 상태 Enum과 DB 구조는 유지한다. [설계와 검증](../../../08-planning/issue-412-ai-unit-summary.md)을 따른다.
+## 이슈 #417: P9 / S3 식당별 후보 결속
+
+2026-10-14 계약 소유자 합의를 확보했다. 신규 추출은 P9/S3를 사용하며 P8/S2와 이전 Snapshot은 생성 당시 의미로 읽기 전용 보존한다. 비용·Provider·모델·호출 상한은 변경하지 않는다.
+
+S3 루트는 resultCompleteness, candidates, registrationUnits, missingFields, candidateTruncated를 모두 요구한다. candidates는 기존 통제 태그 후보 전용이며, 식당 관련 값을 단위 밖에 두면 Schema 오류다. registrationUnits의 각 객체는 candidateUnitId(중복 없는 불투명 문자열), restaurantName, address, location, menus, visitEvidence만 허용한다. restaurantName은 반드시 하나의 후보 객체이며 address·location·visitEvidence는 후보 객체 또는 null, menus는 후보 객체 배열이다. 후보 객체는 value(1~4096자), confidence(유한한 0~1), evidence만 허용한다. 명시적 단위 밖 필드를 복사하거나 후보 배열 순서로 결속하지 않는다.
+
+전체 후보 수(태그 + 모든 단위의 non-null 필드 + 모든 메뉴)는 300 이하이고 상한에 닿으면 서버가 candidateTruncated=true를 강제한다. 단위별 결측·UNKNOWN은 missingFields와 PARTIAL에 반영한다. 외부 검증·중복·등록 차단은 필드 완전성과 독립이다. 중복 ID·추가 키·잘못된 중첩 구조·단위 없는 flat 후보는 Provider SCHEMA 오류이며 Snapshot 저장과 실행 전에 거부한다.
+
+candidate_fields JSON에는 registrationUnits를 변경 없이 저장하고 candidateUnitId와 메뉴 배열을 보존한다. 새 DB 컬럼·마이그레이션은 필요하지 않다. 등록 단위 unit_index는 Snapshot의 단위 배열에서 1부터 배정하되, 필드 소속은 candidateUnitId를 가진 단위 객체로만 결정한다. S1/S2 복수 식당은 순서로 결속하지 않고 보류하며 과거 Snapshot은 재작성하지 않는다.
+
+설계·검증 근거: [이슈 417 설계](../../../08-planning/issue-417-ai-contract-proposal.md).
+
+## 3.11 추출 작업·등록 단위 통계 (#420)
+
+계약 소유자 합의를 확보한 관리자 전용 `GET /api/admin/ai/video-extractions/statistics`다. JWT + `ADMIN`을 요구한다. `from`·`to`는 필수 ISO-8601 offset 시각이며 UTC instant 기준 작업 `created_at >= from AND created_at < to`를 적용한다. `from < to`, 기간 최대 365일이며 누락·잘못된 형식·역전·초과 범위는 `400`과 공통 `traceId` 오류를 반환한다. 선택 필터는 `source`(`ADMIN`·`WEBHOOK`), `modelVersion`(최대 128자), `promptVersion`·`schemaVersion`(최대 64자)이다. 버전은 빈 문자열을 허용하지 않고 저장된 값과 정확히 일치하는 필터를 적용한다.
+
+응답은 `{ "totals": {...}, "groups": [...] }`다. 그룹은 source/modelVersion/promptVersion/schemaVersion 네 차원의 고정 조합이며 각 그룹은 동일한 `counts`를 포함한다. 이 차원은 작업에 저장된 버전이며 과거 실행 시도의 버전을 추정하지 않는다. 실행 시도 누적 통계와 내부 실패 단계·traceId는 응답에 포함하지 않는다.
+
+| counts 필드 | 정의 |
+|---|---|
+| totalJobs / jobStatuses | 고유 작업 수 / QUEUED·RUNNING·SUCCEEDED·FAILED별 작업 수 |
+| totalUnits | 해당 작업 최신 Snapshot의 단위 수. 이전 Snapshot·시도는 누적하지 않음 |
+| confirmedUnits / blockedUnits / rejectedUnits / manualOverrideUnits | 현재 AUTO_CONFIRMED / AUTO_BLOCKED / AUTO_REJECTED / MANUAL_OVERRIDE 수 |
+| evaluatedUnits | confirmedUnits + blockedUnits + rejectedUnits |
+| registeredUnits | 등록 결과 4개 ID가 모두 있고 rolledBackAt·discardedAt이 없는 현재 등록 단위 수 |
+| blockedRate | blockedUnits / evaluatedUnits. 분모 0이면 null |
+| blockReasons | 현재 AUTO_BLOCKED의 사유별 `{count, blockedShare}`. blockedShare = 사유별 count / blockedUnits |
+
+롤백·폐기 단위는 manualOverrideUnits에 포함하고 registeredUnits에서는 제외한다. 비어 있는 상태별 count는 0, 사유 map은 `{}`, groups는 `[]`, 분모 0의 비율은 null이다. 6개 확정·4개 차단이면 totalUnits=10, evaluatedUnits=10, blockedUnits=4, blockedRate=0.4다. 단위 join으로 작업 수가 늘어나지 않도록 작업/단위 분모를 별도 집계하며 단일 SQL 문으로 동일한 조회 snapshot을 사용한다. DB·Prompt·Schema 변경과 운영 데이터 재실행은 없다.

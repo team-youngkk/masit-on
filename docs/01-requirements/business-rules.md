@@ -1905,3 +1905,16 @@ related_documents:
 경로 결과의 정확한 만료 시간은 후속 API·캐시 계약에서 확정한다. 그 밖의 합의된 결정은 [requirements-review.md](requirements-review.md)와 제3장부터 제12장의 규칙에 반영했다. 프로젝트 범위에 남아 있는 미결정 사항은 [docs/00-overview/scope.md](../00-overview/scope.md) 제9장을 단일 기준으로 사용한다.
 
 비즈니스 정책을 변경하지 않는 후속 기술 선택은 [requirements-review.md](requirements-review.md) 제3장을 따른다.
+
+
+## 이슈 #417: P9 / S3 식당별 후보 결속
+
+2026-10-14 계약 소유자 합의를 확보했다. 신규 추출은 P9/S3를 사용하며 P8/S2와 이전 Snapshot은 생성 당시 의미로 읽기 전용 보존한다. 비용·Provider·모델·호출 상한은 변경하지 않는다.
+
+S3 루트는 resultCompleteness, candidates, registrationUnits, missingFields, candidateTruncated를 모두 요구한다. candidates는 기존 통제 태그 후보 전용이며, 식당 관련 값을 단위 밖에 두면 Schema 오류다. registrationUnits의 각 객체는 candidateUnitId(중복 없는 불투명 문자열), restaurantName, address, location, menus, visitEvidence만 허용한다. restaurantName은 반드시 하나의 후보 객체이며 address·location·visitEvidence는 후보 객체 또는 null, menus는 후보 객체 배열이다. 후보 객체는 value(1~4096자), confidence(유한한 0~1), evidence만 허용한다. 명시적 단위 밖 필드를 복사하거나 후보 배열 순서로 결속하지 않는다.
+
+전체 후보 수(태그 + 모든 단위의 non-null 필드 + 모든 메뉴)는 300 이하이고 상한에 닿으면 서버가 candidateTruncated=true를 강제한다. 단위별 결측·UNKNOWN은 missingFields와 PARTIAL에 반영한다. 외부 검증·중복·등록 차단은 필드 완전성과 독립이다. 중복 ID·추가 키·잘못된 중첩 구조·단위 없는 flat 후보는 Provider SCHEMA 오류이며 Snapshot 저장과 실행 전에 거부한다.
+
+candidate_fields JSON에는 registrationUnits를 변경 없이 저장하고 candidateUnitId와 메뉴 배열을 보존한다. 새 DB 컬럼·마이그레이션은 필요하지 않다. 등록 단위 unit_index는 Snapshot의 단위 배열에서 1부터 배정하되, 필드 소속은 candidateUnitId를 가진 단위 객체로만 결정한다. S1/S2 복수 식당은 순서로 결속하지 않고 보류하며 과거 Snapshot은 재작성하지 않는다.
+
+설계·검증 근거: [이슈 417 설계](../08-planning/issue-417-ai-contract-proposal.md).

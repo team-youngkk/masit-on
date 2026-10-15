@@ -15,6 +15,7 @@ import org.springframework.http.InvalidMediaTypeException;
 import org.springframework.http.MediaType;
 
 import com.masiton.ai.application.port.out.AiProviderException;
+import com.masiton.ai.application.AiCandidateValidator;
 import com.masiton.ai.application.port.out.AiProviderFailureCategory;
 import com.masiton.ai.application.port.out.AiVideoExtractionProvider;
 import com.masiton.ai.application.port.out.dto.AiVideoExtractionRequest;
@@ -35,7 +36,7 @@ final class GeminiHttpVideoExtractionAdapter implements AiVideoExtractionProvide
     private static final int MAX_MISSING_FIELDS = 20;
     private static final int MAX_STRING_LENGTH = 4_096;
     private static final Set<String> S1_ROOT_FIELDS = Set.of(
-            "resultCompleteness", "candidates", "missingFields", "candidateTruncated");
+            "resultCompleteness", "candidates", "registrationUnits", "missingFields", "candidateTruncated");
     private static final Set<String> S1_COMMON_CANDIDATE_FIELDS = Set.of("field", "value", "confidence", "evidence");
     private static final Set<String> S1_TAG_CANDIDATE_FIELDS = Set.of(
             "field", "candidateTagId", "tagType", "rawLabel", "normalizedCode", "label", "confidence", "evidence");
@@ -153,6 +154,10 @@ final class GeminiHttpVideoExtractionAdapter implements AiVideoExtractionProvide
                 + "visit evidence. The visitEvidence value is a normalized short claim, not a verbatim transcript: "
                 + "when video proof is sufficient, include the exact restaurantName as the direct visit target and "
                 + "end with an actual-visit verb, while the TIMESTAMP points to that video proof. "
+                + "candidates contains tags only. Put every restaurant-related value exclusively in registrationUnits. "
+                + "Each unit has a unique opaque candidateUnitId, exactly one restaurantName, nullable address, "
+                + "nullable location, a menus array, and nullable visitEvidence. Each non-null field has value, "
+                + "confidence, and evidence. Never copy another unit's fields or bind by list order. "
                 + "Use resultCompleteness COMPLETE only when missingFields is empty; use PARTIAL only when missingFields "
                 + "contains one or more of restaurantName, menu, address, location, visitEvidence, or tag. "
                 + "A candidate with field \"tag\" never has a value field; instead it must include candidateTagId, "
@@ -257,16 +262,20 @@ final class GeminiHttpVideoExtractionAdapter implements AiVideoExtractionProvide
         required.add("candidates");
         required.add("missingFields");
         required.add("candidateTruncated");
+        required.add("registrationUnits");
         ObjectNode propertiesNode = schema.putObject("properties");
         propertiesNode.putObject("resultCompleteness").put("type", "string").putArray("enum").add(completenessValue);
         propertiesNode.putObject("candidateTruncated").put("type", "boolean");
+        ObjectNode registrationUnits = propertiesNode.putObject("registrationUnits");
+        registrationUnits.put("type", "array");
+        registrationUnits.put("maxItems", MAX_CANDIDATES);
+        registrationUnits.set("items", registrationUnitSchema());
         ObjectNode candidates = propertiesNode.putObject("candidates");
         candidates.put("type", "array");
         ObjectNode candidateItems = candidates.putObject("items");
         ArrayNode candidateAnyOf = candidateItems.putArray("anyOf");
-        candidateAnyOf.add(commonCandidateSchema());
-        candidateAnyOf.add(visitCandidateSchema());
         candidateAnyOf.add(tagCandidateSchema());
+        candidates.put("maxItems", MAX_CANDIDATES);
         ObjectNode missingFields = propertiesNode.putObject("missingFields");
         missingFields.put("type", "array");
         missingFields.putObject("items").put("type", "string").putArray("enum")
@@ -279,6 +288,39 @@ final class GeminiHttpVideoExtractionAdapter implements AiVideoExtractionProvide
             missingFields.put("maxItems", 0);
         }
         return schema;
+    }
+
+    private ObjectNode registrationUnitSchema() {
+        ObjectNode unit = objectMapper.createObjectNode();
+        unit.put("type", "object").put("additionalProperties", false);
+        unit.putArray("required").add("candidateUnitId").add("restaurantName").add("address")
+                .add("location").add("menus").add("visitEvidence");
+        ObjectNode fields = unit.putObject("properties");
+        fields.putObject("candidateUnitId").put("type", "string").put("minLength", 1)
+                .put("maxLength", MAX_STRING_LENGTH);
+        fields.set("restaurantName", boundCandidateSchema());
+        for (String field : Set.of("address", "location", "visitEvidence")) {
+            ArrayNode alternatives = fields.putObject(field).putArray("anyOf");
+            if ("visitEvidence".equals(field)) {
+                ObjectNode visit = visitCandidateSchema();
+                visit.putArray("required").add("value").add("confidence").add("evidence");
+                ((ObjectNode) visit.path("properties")).remove("field");
+                alternatives.add(visit);
+            } else {
+                alternatives.add(boundCandidateSchema());
+            }
+            alternatives.addObject().put("type", "null");
+        }
+        fields.putObject("menus").put("type", "array").put("maxItems", MAX_CANDIDATES)
+                .set("items", boundCandidateSchema());
+        return unit;
+    }
+
+    private ObjectNode boundCandidateSchema() {
+        ObjectNode field = commonCandidateSchema();
+        field.putArray("required").add("value").add("confidence").add("evidence");
+        ((ObjectNode) field.path("properties")).remove("field");
+        return field;
     }
 
     /** field in {restaurantName, menu, address, location}: field, value, confidence, evidence only. */
@@ -429,7 +471,7 @@ final class GeminiHttpVideoExtractionAdapter implements AiVideoExtractionProvide
             throw new AiProviderException(AiProviderFailureCategory.SCHEMA);
         }
         JsonNode payload = objectMapper.readTree(text.textValue());
-        if (!validS1(payload, request)) {
+        if (!validS3(payload, request)) {
             throw new AiProviderException(AiProviderFailureCategory.SCHEMA);
         }
         downgradeUnsourcedTagEvidence(payload);
@@ -443,9 +485,38 @@ final class GeminiHttpVideoExtractionAdapter implements AiVideoExtractionProvide
      * report it, so the server forces the flag to true regardless of the reported value.
      */
     private void applyTruncationOverride(JsonNode payload) {
-        if (payload.path("candidates").size() == MAX_CANDIDATES) {
+        int count = payload.path("candidates").size();
+        for (JsonNode unit : payload.path("registrationUnits")) {
+            count += unit.path("menus").size();
+            for (String field : S1_FIELD_NAMES) {
+                if (!"menu".equals(field) && !unit.path(field).isNull()) count++;
+            }
+        }
+        if (count == MAX_CANDIDATES) {
             ((ObjectNode) payload).put("candidateTruncated", true);
         }
+    }
+
+    private boolean validS3(JsonNode payload, AiVideoExtractionRequest request) {
+        if (new AiCandidateValidator().validateS3(payload).isAutoRejected()) return false;
+        for (JsonNode candidate : payload.path("candidates")) {
+            if (!validCandidate(candidate, request)) return false;
+        }
+        for (JsonNode unit : payload.path("registrationUnits")) {
+            for (String field : Set.of("restaurantName", "address", "location", "visitEvidence")) {
+                JsonNode candidate = unit.path(field);
+                if (!candidate.isNull() && (!validEvidence(candidate.path("evidence"))
+                        || !("UNKNOWN".equals(candidate.path("evidence").path("type").asText())
+                        || validRequestEvidence(field, candidate.path("value").asText(), candidate.path("evidence"), request)))) {
+                    return false;
+                }
+            }
+            for (JsonNode menu : unit.path("menus")) {
+                if (!validEvidence(menu.path("evidence")) || !validRequestEvidence("menu",
+                        menu.path("value").asText(), menu.path("evidence"), request)) return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -474,6 +545,9 @@ final class GeminiHttpVideoExtractionAdapter implements AiVideoExtractionProvide
                 || !payload.path("missingFields").isArray()
                 || payload.path("missingFields").size() > MAX_MISSING_FIELDS
                 || !payload.path("candidateTruncated").isBoolean()) {
+            return false;
+        }
+        if (payload.has("registrationUnits") && !payload.path("registrationUnits").isArray()) {
             return false;
         }
         String completeness = payload.path("resultCompleteness").asText();

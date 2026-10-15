@@ -37,6 +37,57 @@ class AiExtractionResultProcessorServiceTest {
     private final AiExtractionResultProcessorService processor = new AiExtractionResultProcessorService(
             resultStore, commitService, contentVerification, registrationUnitAutoExecution, objectMapper);
 
+    @Test
+    @DisplayName("S3 단위 결과를 보존하고 기존 단일 등록 경로는 실행하지 않는다")
+    void process_S3명시단위_단위실행결과만커밋한다() throws Exception {
+        UUID jobId = UUID.randomUUID();
+        OffsetDateTime finished = OffsetDateTime.parse("2026-10-14T00:00:10Z");
+        given(resultStore.lockProcessingJob(jobId, "worker", 1)).willReturn(Optional.of(
+                new AiExtractionResultStore.ProcessingJob(jobId, "channel", "video", URI.create("https://www.youtube.com/watch?v=video"))));
+        given(registrationUnitAutoExecution.execute(any(), any(), any(), any(), any(), any()))
+                .willReturn(List.of(RegistrationUnitOutcome.blocked(1, "식당A", "PLACE_UNRESOLVED")));
+        given(commitService.persistBlocked(any())).willReturn(true);
+        JsonNode payload;
+        try (var input = getClass().getResourceAsStream("/ai/s3-two-restaurants.json")) {
+            payload = objectMapper.readTree(input);
+        }
+        assertThat(processor.process(jobId, "worker", 1, finished.minusSeconds(5), finished,
+                new AiVideoExtractionResult(payload, "request"))).isTrue();
+        var command = forClass(AiExtractionResultCommitService.ProcessCommand.class);
+        verify(commitService).persistBlocked(command.capture());
+        assertThat(objectMapper.readTree(command.getValue().candidateFields()).at("/registrationUnits/0/candidateUnitId").asText())
+                .isEqualTo("a");
+        assertThat(command.getValue().resultCompleteness()).isEqualTo("COMPLETE");
+        assertThat(command.getValue().reviewStatus()).isEqualTo("AUTO_BLOCKED");
+        verifyNoInteractions(contentVerification);
+        verify(commitService, never()).persistConfirmed(any(), any());
+    }
+
+    @Test
+    @DisplayName("COMPLETE 선언의 필수 후보 누락은 서버 계산 누락과 PARTIAL을 함께 저장한다")
+    void process_COMPLETE필수누락_PARTIAL과계산누락저장() throws Exception {
+        // Given
+        UUID jobId = UUID.randomUUID();
+        OffsetDateTime finishedAt = OffsetDateTime.parse("2026-10-14T00:00:10Z");
+        given(resultStore.lockProcessingJob(jobId, "worker-1", 1)).willReturn(Optional.of(
+                new AiExtractionResultStore.ProcessingJob(jobId, "channel", "video", URI.create("https://youtu.be/video"))));
+        given(commitService.persistBlocked(any())).willReturn(true);
+        // When
+        processor.process(jobId, "worker-1", 1, finishedAt.minusSeconds(5), finishedAt, result("""
+                {"resultCompleteness":"COMPLETE","candidates":[
+                  {"field":"restaurantName","value":"맛집","confidence":0.9,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}},
+                  {"field":"visitEvidence","value":"직접 방문","confidence":0.9,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}}
+                ],"missingFields":[]}
+                """));
+        // Then
+        var command = forClass(AiExtractionResultCommitService.ProcessCommand.class);
+        verify(commitService).persistBlocked(command.capture());
+        assertThat(command.getValue().resultCompleteness()).isEqualTo("PARTIAL");
+        assertThat(objectMapper.readTree(command.getValue().missingFields()).toString())
+                .isEqualTo("[\"address\",\"location\"]");
+        verifyNoInteractions(contentVerification);
+    }
+
     {
         given(registrationUnitAutoExecution.execute(any(), any(), any(), any(), any(), any())).willReturn(List.of());
     }
@@ -118,6 +169,7 @@ class AiExtractionResultProcessorServiceTest {
         assertThat(processed).isTrue();
         var command = forClass(AiExtractionResultCommitService.ProcessCommand.class);
         verify(commitService).persistConfirmed(command.capture(), any());
+        assertThat(command.getValue().resultCompleteness()).isEqualTo("COMPLETE");
         assertThat(command.getValue().tags()).singleElement()
                 .satisfies(tag -> assertThat(tag.aliasesJson()).isEqualTo("[]"));
     }

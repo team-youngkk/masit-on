@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import com.masiton.orchestration.application.port.in.AutoRegisterVerifiedContentUseCase;
 import com.masiton.orchestration.application.port.in.DecomposeRegistrationUnitsUseCase;
 import com.masiton.orchestration.application.port.in.DecomposeRegistrationUnitsUseCase.RegistrationUnitBundle;
+import com.masiton.orchestration.application.port.in.DecomposeRegistrationUnitsUseCase.BoundCandidate;
 import com.masiton.orchestration.application.port.in.ExecuteRegistrationUnitUseCase;
 import com.masiton.orchestration.application.port.in.ExecuteRegistrationUnitUseCase.RegistrationUnitExecutionCommand;
 import com.masiton.orchestration.application.port.in.ExecuteRegistrationUnitUseCase.RegistrationUnitExecutionResult;
@@ -50,14 +51,25 @@ class RegistrationUnitAutoExecutionService {
         List<RegistrationUnitOutcome> outcomes = new ArrayList<>();
         for (RegistrationUnitBundle bundle : bundles) {
             String restaurantName = bundle.restaurantName().value();
+            if (bundle.candidateUnitId() != null && (unknownEvidence(bundle.restaurantName()) || unknownEvidence(bundle.visitEvidence()))) {
+                outcomes.add(RegistrationUnitOutcome.blocked(bundle.unitIndex(), restaurantName, "MISSING_REQUIRED_FIELD"));
+                continue;
+            }
+            String menuExpression = bundle.menus().stream().filter(menu -> !unknownEvidence(menu)).map(BoundCandidate::value)
+                    .reduce((first, second) -> first + ", " + second).orElse(null);
             RegistrationUnitExecutionCommand command = new RegistrationUnitExecutionCommand(
                     restaurantName, RegistrationUnitJsonSupport.value(bundle.address()),
-                    RegistrationUnitJsonSupport.value(bundle.menu()),
+                    menuExpression,
                     RegistrationUnitJsonSupport.toVisitEvidence(bundle.visitEvidence()), channelId, videoId, videoUrl);
             RegistrationUnitExecutionResult result = executeRegistrationUnit.execute(command);
             outcomes.add(toOutcome(bundle.unitIndex(), restaurantName, result));
         }
         return List.copyOf(outcomes);
+    }
+
+    private boolean unknownEvidence(BoundCandidate candidate) {
+        return candidate == null || candidate.evidence() == null
+                || new AiCandidateValidator().validateBoundEvidence(candidate.evidence());
     }
 
     private RegistrationUnitOutcome toOutcome(int unitIndex, String restaurantName,
