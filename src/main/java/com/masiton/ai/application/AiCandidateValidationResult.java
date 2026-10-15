@@ -37,6 +37,14 @@ public record AiCandidateValidationResult(
         AUTO_REJECTED
     }
 
+    public String resultCompleteness(String declaredCompleteness) {
+        boolean unknownEvidence = candidates.values().stream().flatMap(List::stream)
+                .anyMatch(candidate -> candidate.evidence().type() == EvidenceType.UNKNOWN)
+                || allTags().stream().anyMatch(tag -> tag.evidence().type() == EvidenceType.UNKNOWN);
+        return "COMPLETE".equals(declaredCompleteness) && missingFields.isEmpty() && !unknownEvidence
+                ? "COMPLETE" : "PARTIAL";
+    }
+
     public enum EvidenceType {
         TIMESTAMP,
         TEXT_RANGE,

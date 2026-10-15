@@ -15,7 +15,7 @@ import {
   type AiCandidate,
   type AiExtractionDetail,
 } from '@/lib/admin/ai-video-extractions'
-import { candidateTruncatedBannerMessage, registrationSummaryLabel, registrationUnitSummary, retryActionAvailable } from '@/lib/admin/ai-video-extractions-coordination'
+import { candidateTruncatedBannerMessage, extractionResultNotice, registrationSummaryLabel, registrationUnitSummary, retryActionAvailable } from '@/lib/admin/ai-video-extractions-coordination'
 
 import { AiRegistrationUnits } from './AiRegistrationUnits'
 import styles from './AiVideoExtractionScreen.module.css'
@@ -73,6 +73,7 @@ export function AiVideoExtractionDetail({ jobId }: { jobId: string }) {
   const truncatedMessage = candidateTruncatedBannerMessage(data.candidateTruncated)
   const hasBlockedUnit = data.registrationUnits.some((unit) => unit.reviewStatus === 'AUTO_BLOCKED')
   const summary = registrationUnitSummary(data.registrationUnits)
+  const resultNotice = extractionResultNotice(data.executionStatus, data.candidates.length, data.registrationUnits.length)
 
   return <div className={styles.detail}>
     <div className={styles.toolbar}><Link href="/admin/ai">← 작업 목록</Link><Button variant="secondary" disabled={busy} onClick={() => void refresh('최신 상태를 조회했습니다.')}>새로고침</Button></div>
@@ -81,6 +82,7 @@ export function AiVideoExtractionDetail({ jobId }: { jobId: string }) {
 
     <section className={styles.panel} aria-labelledby="job-summary-heading">
       <h2 id="job-summary-heading">작업 상태</h2>
+      {resultNotice ? <p className={styles.hint}>{resultNotice}</p> : null}
       <p className={styles.meta}><code>{data.jobId}</code></p>
       <div className={`${styles.meta} ${styles.statusSummary}`}><span>실행 상태 <StatusBadge tone={executionTone(data.executionStatus)}>{data.executionStatus}</StatusBadge></span><span>결과 완전성 <StatusBadge>{data.resultCompleteness ?? '미완료'}</StatusBadge></span><span>후보 판정 요약 <StatusBadge tone={reviewTone(data.reviewStatus)}>{data.reviewStatus ?? '미정'}</StatusBadge></span><span className={styles.statusItem}>시도 {data.attemptCount}회</span></div>
       <p className={styles.meta} aria-label="등록 결과 집계">{registrationSummaryLabel(summary)} · 현재 등록 {summary.registered}/{summary.total}개 · 자동 확정 {summary.autoConfirmed}개 · 보류 {summary.autoBlocked}개 · 거부 {summary.autoRejected}개 · 수동 보정 {summary.manualOverride}개</p>
