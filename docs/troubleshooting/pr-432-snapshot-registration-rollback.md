@@ -55,7 +55,7 @@ related_documents:
 
 | 검증 | 결과 | 확인한 내용 |
 |---|---|---|
-| `./gradlew.bat test --tests '*Expansion3FlywayMigrationIntegrationTest' --tests '*AutoRegisterRestaurantReusePostgreSqlIntegrationTest' --no-daemon --console=plain` | 통과 | PostgreSQL 통합 테스트 24건과 ArchUnit 검사 10건 통과. 같은 Snapshot의 단위 참조 보존, 다른 Job Snapshot이 참조하는 리소스 공개 보존, 동일 Job의 CONFIRM→ROLLBACK 비공개 처리, V21 migration 이력을 검증 |
+| `./gradlew.bat test --tests '*Expansion3FlywayMigrationIntegrationTest' --tests '*AutoRegisterRestaurantReusePostgreSqlIntegrationTest' --no-daemon --console=plain` | 통과 | PostgreSQL 통합 테스트 24건과 ArchUnit 검사 10건 통과. 단위 롤백의 같은 Snapshot 참조 보존, 전체 작업 롤백의 다른 Job 참조 공개 보존, 동일 Job의 CONFIRM→ROLLBACK 비공개 처리, V21 migration 이력을 검증 |
 | `./gradlew.bat clean build --no-daemon --console=plain` | 실패 (환경 제약) | 1,743건 중 3건이 `배포 dependency health 진단 계약`에서 실패했다. 스크립트 테스트가 로컬에서 Python 실행 파일을 찾지 못해 진단 JSON 대신 `Python 백엔드 dependency health JSON 파싱 실패`를 출력했고, 예상 종료 코드 1/2 대신 Windows `9009`를 반환했다. 관련 Gradle 테스트와 코드 변경은 통과했고, 이 수정과 무관한 실행환경 제약으로 분리했다. |
 
 ## 8. 재발 방지 및 다음 확인

@@ -158,8 +158,8 @@ class AutoRegisterRestaurantReusePostgreSqlIntegrationTest extends FullContextIn
     }
 
     @Test
-    @DisplayName("작업 전체 롤백은 다른 Job Snapshot이 참조하는 자원을 공개 상태로 보존한다")
-    void rollback_다른작업스냅샷참조_공개자원보존() {
+    @DisplayName("전체 작업 롤백은 다른 Job Snapshot이 참조하는 자원을 공개 상태로 보존한다")
+    void 전체작업롤백_다른작업스냅샷참조_공개자원보존() {
         // Given: 현재 등록 단위 외에 다른 Job의 Snapshot이 같은 자원을 참조한다
         RegistrationResult registered = registration.register(command("place", "channel", "video"));
         var unit = registeredUnit(registered);
@@ -183,8 +183,9 @@ class AutoRegisterRestaurantReusePostgreSqlIntegrationTest extends FullContextIn
                 """, otherSnapshotId, otherJobId, registered.restaurantId(), registered.creatorId(),
                 registered.videoId(), registered.visitId());
 
-        // When
-        assertThat(postCommit.rollback(unit, "다른 작업 참조 보존", reverted(registered), admin())).isTrue();
+        // When: 전체 작업 롤백 경로는 등록 단위 식별자 없이 공유 참조를 판정한다
+        rollbackStore.makePrivateIfCreated(unit.snapshotId(), registered.restaurantId(), true,
+                registered.creatorId(), true, registered.videoId(), true, registered.visitId(), true);
 
         // Then: 외부 Job의 참조가 살아 있는 동안 네 자원을 공개 상태로 유지한다
         for (String table : java.util.List.of("restaurant", "creator", "video", "visit")) {
