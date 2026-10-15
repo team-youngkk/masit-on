@@ -129,6 +129,34 @@ class AutoRegisterRestaurantReusePostgreSqlIntegrationTest extends FullContextIn
         }
     }
 
+    @Test
+    @DisplayName("CAS 후 같은 Snapshot의 작업 등록 참조가 있으면 자원과 태그를 공개 상태로 보존한다")
+    void rollback_같은스냅샷작업등록참조_공개자원보존() {
+        // Given: 작업 단위와 작업 수준 등록 결과가 동일한 자원을 가리키는 상태
+        RegistrationResult registered = registration.register(command("place", "channel", "video"));
+        var unit = registeredUnit(registered);
+        jdbc.update("""
+                UPDATE ai_candidate_snapshot SET registered_restaurant_id = ?, restaurant_created = true,
+                    registered_creator_id = ?, creator_created = true, registered_video_id = ?, video_created = true,
+                    registered_visit_id = ?, visit_created = true WHERE id = ?
+                """, registered.restaurantId(), registered.creatorId(), registered.videoId(), registered.visitId(),
+                unit.snapshotId());
+        // When: 등록 단위 참조는 롤백 CAS에서 제거된 뒤 공개 상태 보존 판정을 한다
+        assertThat(postCommit.rollback(unit, "작업 참조 보존", reverted(registered), admin())).isTrue();
+        // Then: 작업 Snapshot 참조가 남아 있으므로 네 자원 모두 계속 공개된다
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM visit WHERE id = ? AND publication_status = 'PUBLIC'",
+                Integer.class, registered.visitId())).isEqualTo(1);
+        for (String table : java.util.List.of("restaurant", "creator", "video")) {
+            UUID id = switch (table) {
+                case "restaurant" -> registered.restaurantId();
+                case "creator" -> registered.creatorId();
+                default -> registered.videoId();
+            };
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM " + table
+                    + " WHERE id = ? AND publication_status = 'PUBLIC'", Integer.class, id)).isEqualTo(1);
+        }
+    }
+
     private void awaitStart(CountDownLatch ready, CountDownLatch start) throws InterruptedException {
         ready.countDown();
         if (!start.await(10, TimeUnit.SECONDS)) {

@@ -112,8 +112,11 @@ public class JdbcAiRegisteredContentStore implements AiRegisteredContentStore {
                         + column + " = ?) > 1", id, snapshotId, id)
                 : exists("SELECT EXISTS (SELECT 1 FROM ai_registration_unit WHERE " + column
                         + " = ? AND id <> ?)", id, registrationUnitId);
+        // A job-level registration and a registration unit can reference the same resources
+        // from the same snapshot. The unit CAS may already have cleared its reference, so
+        // the snapshot reference must still protect those resources from being hidden.
         if (sharedUnit || exists("SELECT EXISTS (SELECT 1 FROM ai_candidate_snapshot WHERE "
-                + column + " = ? AND id <> ?)", id, snapshotId)) {
+                + column + " = ?)", id)) {
             return true;
         }
         if (!"visit".equals(resource) && exists("SELECT EXISTS (SELECT 1 FROM visit WHERE " + resource
