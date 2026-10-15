@@ -85,7 +85,9 @@ class RegistrationUnitExecutionServiceTest {
     @Test
     @DisplayName("장소 조회 중 외부 호출이 실패하면 EXTERNAL_SERVICE_ERROR로 차단한다")
     void execute_장소조회외부호출실패_EXTERNAL_SERVICE_ERROR로차단한다() {
-        when(resolvePlaceIdentity.resolve(any())).thenThrow(new RuntimeException("Kakao timeout"));
+        when(resolvePlaceIdentity.resolve(any())).thenThrow(
+                new com.masiton.restaurant.application.PlaceSearchFailedException(
+                        new java.net.http.HttpTimeoutException("secret-response")));
 
         RegistrationUnitExecutionResult result = service.execute(command("행복식당", "서울특별시 마포구 월드컵로 1"));
 
@@ -154,6 +156,65 @@ class RegistrationUnitExecutionServiceTest {
         assertThat(result.categoryDecision().matchedMappingId()).isNotNull();
         verify(resolvePlaceIdentity).resolve(new ResolvePlaceIdentityUseCase.PlaceIdentityCommand(
                 "행복식당", "서울특별시 마포구 월드컵로 1", "냉면"));
+    }
+
+    @Test
+    @DisplayName("서버 결함은 외부 장애로 차단하지 않고 원래 예외를 전달한다")
+    void execute_카테고리서버결함_원래예외전파() {
+        stubConfirmedPlace();
+        IllegalStateException failure = new IllegalStateException("secret-database-detail");
+        when(resolveFoodCategory.resolve(any())).thenThrow(failure);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.execute(commandWithVisitEvidence()))
+                .isSameAs(failure);
+
+        verify(autoRegister, never()).register(any());
+    }
+
+    @Test
+    @DisplayName("물리 검증 실패는 검색 단계와 구분하고 안전한 서버 traceId만 기록한다")
+    void execute_물리검증시간초과_단계와TraceId기록() {
+        stubConfirmedPlace();
+        when(resolvePlacePhysicalReference.resolve(any(), any())).thenThrow(
+                new com.masiton.restaurant.application.PlaceVerificationFailedException(
+                        new java.net.http.HttpTimeoutException("secret-token")));
+        ch.qos.logback.classic.Logger logger = (ch.qos.logback.classic.Logger)
+                org.slf4j.LoggerFactory.getLogger(RegistrationUnitExecutionService.class);
+        ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent> appender =
+                new ch.qos.logback.core.read.ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        org.slf4j.MDC.put("traceId", "server-test-trace");
+        try {
+            RegistrationUnitExecutionResult result = service.execute(commandWithVisitEvidence());
+
+            assertThat(result.blockReason()).isEqualTo("EXTERNAL_SERVICE_ERROR");
+            assertThat(appender.list).singleElement().satisfies(event -> {
+                assertThat(event.getFormattedMessage()).contains("stage=PLACE_PHYSICAL_VERIFICATION",
+                        "failureType=EXTERNAL_TIMEOUT", "traceId=server-test-trace")
+                        .doesNotContain("secret-token", "행복식당", "월드컵로");
+                assertThat(event.getThrowableProxy()).isNull();
+            });
+            verify(autoRegister, never()).register(any());
+        } finally {
+            org.slf4j.MDC.remove("traceId");
+            logger.detachAppender(appender);
+            appender.stop();
+        }
+    }
+
+    @Test
+    @DisplayName("YouTube 외부 조회 오류는 등록 저장 전에 차단한다")
+    void execute_영상외부조회실패_등록저장0건() {
+        stubConfirmedPlace();
+        stubResolvedCategory();
+        when(videoVerification.resolve(any())).thenThrow(new com.masiton.common.web.BusinessException(
+                com.masiton.common.web.ErrorCode.EXTERNAL_SERVICE_ERROR));
+
+        RegistrationUnitExecutionResult result = service.execute(commandWithVisitEvidence());
+
+        assertThat(result.blockReason()).isEqualTo("EXTERNAL_SERVICE_ERROR");
+        verify(autoRegister, never()).register(any());
     }
 
     private void stubConfirmedPlace() {

@@ -193,7 +193,7 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
         String reason = validation.isAutoConfirmable() && (root.has("registrationUnits") || validation.foodCategoryName() != null)
                 ? null : validation.reasonCodes().stream().findFirst().orElse("FOOD_CATEGORY_REQUIRED");
         String rawCompleteness = root.path("resultCompleteness").asText();
-        String completeness = missing.isEmpty() && "COMPLETE".equals(rawCompleteness) ? "COMPLETE" : "PARTIAL";
+        String completeness = validation.resultCompleteness(rawCompleteness);
         return new ParsedCandidate(completeness, fields, tagsJson,
                 confidences, evidence, missing, candidateTruncated, tags, parsedFields.get("restaurantName"),
                 parsedFields.get("menu"), parsedFields.get("address"), parsedFields.get("location"),
