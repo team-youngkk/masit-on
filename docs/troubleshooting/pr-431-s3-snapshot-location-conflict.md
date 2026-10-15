@@ -25,7 +25,7 @@ related_documents:
 
 | 스레드 | 요청 요약 | 문제 유형 | 판단 | 처리 결과 | 근거/검증 |
 |---|---|---|---|---|---|
-| [S3 registrationUnits Snapshot 보존](https://github.com/team-youngkk/masit-on/pull/431#discussion_r4278167463) | Provider 응답에서 Snapshot `candidate_fields`까지 단위 location을 보존하고, Worker·관리자 양 경로가 같은 S3 단위 location을 사용하는 회귀 검증 | 애플리케이션 | 수정 필요 | 최신 develop의 #417 생산자 경로를 유지하고 양쪽 실행 경로에 expected `candidateUnitId`와 식당명 일치 검사를 연결했다. Snapshot 전달·양 경로 명령 인수·지역 재검증 테스트를 보강했다. | 8개 관련 테스트 클래스 97건 통과; push 뒤 스레드 답글과 해결 상태를 동기화한다. |
+| [S3 registrationUnits Snapshot 보존](https://github.com/team-youngkk/masit-on/pull/431#discussion_r4278167463) | Provider 응답에서 Snapshot `candidate_fields`까지 단위 location을 보존하고, Worker·관리자 양 경로가 같은 S3 단위 location을 사용하는 회귀 검증 | 애플리케이션 | 수정 필요 | 최신 develop의 #417 생산자 경로를 유지하고 양쪽 실행 경로에 expected `candidateUnitId`와 식당명 일치 검사를 연결했다. Snapshot 전달·양 경로 명령 인수·지역 재검증 테스트를 보강했다. | 8개 관련 테스트 클래스 97건 통과; 수정 답글을 달고 원격 스레드를 해결 처리했다. |
 
 ## 3. 문제 현상과 발생 조건
 
@@ -44,7 +44,7 @@ PR #431은 #417 생산자 경로가 아직 base에 없는 시점에 구현되었
 
 | 확인하거나 시도한 방법 | 결과 | 판단과 다음 단계 |
 |---|---|---|
-| 미해결 인라인 스레드와 PR 작성자·head 확인 | P1 한 건, 작성자 `tjdgns0618`, head `c06f5afa` | 검증 후 수정하고 동일 스레드에 답한다. |
+| 인라인 스레드와 PR 작성자·head 확인 | P1 한 건, 작성자 `tjdgns0618`, 수정 head `d2d85bb6` | 통합 검증 후 원래 스레드에 답글을 남기고 해결 처리했다. |
 | 현재 `origin/develop`과 PR 브랜치 비교 | #417/#416 선행 코드가 develop에 있고 PR 파일 9곳에서 충돌 | 최신 develop 위로 PR 변경을 재기반화한다. |
 | `ResolvePlaceIdentityServiceTest` 실행 | 구형 `search(name)` stub 한 건 실패 | #430 계약에 맞춰 정규화된 district 인수 stub·검증으로 변경했다. |
 | Snapshot producer와 Worker·관리자 consumer 테스트 확인 | producer는 전체 registrationUnits JSON을 전달하고, consumer는 각자 실행 명령을 구성 | Snapshot location 보존 단언과 양 consumer 경로의 expected ID·location 단언을 추가했다. |
@@ -62,19 +62,19 @@ PR #431은 #417 생산자 경로가 아직 base에 없는 시점에 구현되었
 | 관련 8개 테스트 클래스 Gradle Wrapper 실행 | 통과 | Provider/Snapshot 필드 보존, S3 분해, Worker·관리자 location 결속, 주소 누락 검색, 지역 불일치 저장 0건 및 기존 #420 진단 테스트 포함 97건 통과 |
 | `git diff --check` | 통과 | 통합 변경의 공백 오류 없음 |
 | 실제 Kakao·YouTube 호출 | 실행하지 않음 | 고정 후보·Mockito 기반 검증 |
-| GitHub PR CI | 대기 | 수정 커밋 push 뒤 최신 head에서 확인 |
+| GitHub PR CI | 통과 | head `d2d85bb6`의 CI run `38697699279` | 백엔드·프론트엔드·Terraform·추적 파일 검사가 모두 성공했다. 배포·이미지 작업은 PR CI에서 건너뛰었다. |
 
 ## 8. 재발 방지 및 다음 확인
 
 - 재발 방지: Snapshot JSON의 provider→candidate_fields→Worker/관리자 전달을 각각 단언하고, location 복원 시 expected `candidateUnitId`와 식당명을 모두 검사한다.
-- 다음 확인: push 후 P1 스레드에 수정·검증 링크를 답하고 해결 처리한다. PR CI 통과와 리뷰 재승인을 확인한다.
+- 다음 확인: P1 스레드 답글·해결 처리는 완료했다. 과거 `CHANGES_REQUESTED` review state가 남아 있어 작성자 외 새 승인 1건이 필요하다.
 
 ## 9. 도입 전후 비교 지표
 
 | 지표 | 도입 전 기준값 | 측정 방법·기간 | 배포 확장 후 값 | 비교 결과 | 담당자·확인 시점/이슈 |
 |---|---|---|---|---|---|
-| 관련 자동화 테스트 실패 | 최신 base 통합 테스트 전 | 동일 8개 관련 클래스 실행 | 97건 중 0건 실패 | 실행 경로별 S3 단위 location 전달 회귀가 로컬에서 통과 | PR #431 CI 완료 시 원격 결과 갱신 |
+| 관련 자동화 테스트 실패 | 최신 base 통합 테스트 전 | 동일 8개 관련 클래스 실행 | 97건 중 0건 실패 | 실행 경로별 S3 단위 location 전달 회귀가 로컬에서 통과 | GitHub Actions run `38697699279` 통과 |
 
 ## 10. 남은 사항
 
-- 코드·문서 변경은 최신 develop에 재기반화했다. push 후 PR CI, 새 승인 및 리뷰 스레드의 원격 상태를 확인해야 한다.
+- 코드·문서 변경은 최신 develop에 재기반화했고, head `d2d85bb6`의 GitHub Actions는 통과했다. P1 스레드는 해결됐으며 작성자 외 새 승인이 남아 있다.
