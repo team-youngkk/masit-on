@@ -37,6 +37,7 @@ related_documents:
   - issue-417-ai-contract-proposal.md
   - issue-420-ai-failure-diagnostics.md
   - issue-413-candidate-completeness.md
+  - issue-414-ai-contract-proposal.md
 ---
 
 # 맛잇온 구현 계획
@@ -46,6 +47,7 @@ related_documents:
 - [#417 식당별 후보 결속 계약](issue-417-ai-contract-proposal.md)
 - [#420 AI 등록 실패 진단과 통계](issue-420-ai-failure-diagnostics.md)
 - [#413 후보 완전성과 처리 성공 표시](issue-413-candidate-completeness.md)
+- [#414 위치 표현 지역 검증 설계·결과](issue-414-ai-contract-proposal.md)
 
 | 문서 | 목적 |
 |---|---|

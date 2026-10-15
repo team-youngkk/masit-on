@@ -217,6 +217,50 @@ class RegistrationUnitExecutionServiceTest {
         verify(autoRegister, never()).register(any());
     }
 
+    @Test
+    @DisplayName("주소 없이 결속된 위치를 사용해도 물리 검증 지역이 일치하면 등록한다")
+    void execute_결속위치와물리검증지역일치_등록을확정한다() {
+        // Given
+        stubConfirmedPlace();
+        stubResolvedCategory();
+        stubVerifiedVideo();
+        var registration = new AutoRegisterVerifiedContentUseCase.RegistrationResult(
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), true, true, true, true);
+        when(autoRegister.register(any())).thenReturn(registration);
+        var base = commandWithVisitEvidence();
+        var command = new RegistrationUnitExecutionCommand(base.restaurantName(), null, base.menu(),
+                base.visitEvidence(), base.channelId(), base.videoId(), base.videoUrl(), null, null, null,
+                "fixture-unit", "서울 마포구");
+        // When
+        var result = service.execute(command);
+        // Then
+        assertThat(result.confirmed()).isTrue();
+        assertThat(result.placeDecision().roadAddress()).isEqualTo("서울특별시 마포구 월드컵로 1");
+        verify(resolvePlaceIdentity).resolve(new ResolvePlaceIdentityUseCase.PlaceIdentityCommand(
+                "행복식당", null, "냉면", "서울 마포구"));
+    }
+
+    @Test
+    @DisplayName("위치로 검색한 장소라도 물리 재검증 지역이 바뀌면 저장하지 않는다")
+    void execute_위치검색후물리지역불일치_저장0건으로보류한다() {
+        // Given
+        stubConfirmedPlace();
+        when(resolvePlacePhysicalReference.resolve(any(), any())).thenReturn(Optional.of(
+                new ResolvePlacePhysicalReferenceUseCase.VerifiedPlacePhysicalReference(
+                        REGION_ID, "행복식당", KAKAO_PLACE_ID, KAKAO_PLACE_URL, "부산광역시 중구 중앙대로 1",
+                        null, null, null)));
+        var base = commandWithVisitEvidence();
+        var command = new RegistrationUnitExecutionCommand(base.restaurantName(), null, base.menu(),
+                base.visitEvidence(), base.channelId(), base.videoId(), base.videoUrl(), null, null, null,
+                "fixture-unit", "서울 마포구");
+        // When
+        var result = service.execute(command);
+        // Then
+        assertThat(result.blockReason()).isEqualTo("PLACE_NOT_FOUND");
+        verify(autoRegister, never()).register(any());
+        verify(resolveFoodCategory, never()).resolve(any());
+    }
+
     private void stubConfirmedPlace() {
         when(resolvePlaceIdentity.resolve(any())).thenReturn(ResolvePlaceIdentityUseCase.PlaceIdentityResult.confirmed(
                 new ResolvePlaceIdentityUseCase.ConfirmedPlace(KAKAO_PLACE_URL, "서울특별시 마포구 월드컵로 1",

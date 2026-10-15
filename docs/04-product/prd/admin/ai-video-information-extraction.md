@@ -250,3 +250,6 @@ S3 루트는 resultCompleteness, candidates, registrationUnits, missingFields, c
 candidate_fields JSON에는 registrationUnits를 변경 없이 저장하고 candidateUnitId와 메뉴 배열을 보존한다. 새 DB 컬럼·마이그레이션은 필요하지 않다. 등록 단위 unit_index는 Snapshot의 단위 배열에서 1부터 배정하되, 필드 소속은 candidateUnitId를 가진 단위 객체로만 결정한다. S1/S2 복수 식당은 순서로 결속하지 않고 보류하며 과거 Snapshot은 재작성하지 않는다.
 
 설계·검증 근거: [이슈 417 설계](../../../08-planning/issue-417-ai-contract-proposal.md).
+## 이슈 #414 승인된 지역 단서 경계 (2026-10-14)
+
+소유자 합의에 따라 주소가 없는 S3 등록 단위는 명시적 candidateUnitId와 같은 restaurantName에 결속된 location의 시도·시군구를 장소 동일성 검색 단서로 사용할 수 있다. 주소가 존재하면 기존 주소를 우선하며 잘못된 주소를 location으로 대체하지 않는다. S2 전역 위치와 청량리시장 같은 상권명 단독 표현은 사용하지 않는다. 이름·행정구역·카테고리 및 단일 후보 기준, Kakao 물리 검증을 유지하고 location으로 주소를 추정하거나 저장하지 않는다. 상세 설계와 검증은 [이슈 414 설계](../../../08-planning/issue-414-ai-contract-proposal.md)를 따른다.

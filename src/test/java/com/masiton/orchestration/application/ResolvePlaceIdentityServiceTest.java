@@ -22,6 +22,41 @@ import com.masiton.restaurant.application.port.out.PlaceSearchCandidate;
 @DisplayName("BR-AIEXTRACT-009 장소 동일성 자동 확정")
 class ResolvePlaceIdentityServiceTest {
 
+    @Test
+    @DisplayName("주소가 없으면 검증된 시도 시군구 단서와 같은 유일 후보를 확정한다")
+    void resolve_주소없이지역단서일치_확정한다() {
+        // Given
+        given(placeSearchPort.searchCandidates("행복식당", "인천광역시 강화군")).willReturn(List.of(new PlaceSearchCandidate(
+                "행복식당", "https://place.map.kakao.com/1", "인천광역시 강화군 강화대로 1", null, "한식")));
+        // When
+        var result = service.resolve(new PlaceIdentityCommand("행복식당", null, null, "인천 강화군"));
+        // Then
+        assertThat(result.isConfirmed()).isTrue();
+        assertThat(result.confirmedPlace().roadAddress()).isEqualTo("인천광역시 강화군 강화대로 1");
+        org.mockito.Mockito.verify(placeSearchPort).searchCandidates("행복식당", "인천광역시 강화군");
+    }
+
+    @Test
+    @DisplayName("상권명이나 시도 없는 단서는 주소로 추정하지 않는다")
+    void resolve_모호한지역단서_차단한다() {
+        // Given / When / Then
+        for (String location : List.of("청량리시장", "강화군", "서울", "서울 청량리시장")) {
+            assertThat(service.resolve(new PlaceIdentityCommand("행복식당", null, null, location)).status())
+                    .isEqualTo(PlaceIdentityStatus.PLACE_NOT_FOUND);
+        }
+        org.mockito.Mockito.verifyNoInteractions(placeSearchPort);
+    }
+
+    @Test
+    @DisplayName("존재하는 잘못된 주소를 지역 단서로 덮어쓰지 않는다")
+    void resolve_주소존재지역단서정상_주소검증실패유지한다() {
+        // Given / When
+        var result = service.resolve(new PlaceIdentityCommand("행복식당", "미상", null, "서울 중구"));
+        // Then
+        assertThat(result.isConfirmed()).isFalse();
+        org.mockito.Mockito.verifyNoInteractions(placeSearchPort);
+    }
+
     private final SearchPlacesByNameUseCase placeSearchPort = mock(SearchPlacesByNameUseCase.class);
     private final LookupFoodCategoryMappingUseCase categoryMapping = mock(LookupFoodCategoryMappingUseCase.class);
     private final PlaceIdentityMatchingPolicy relaxedMatchingEnabled = () -> true;
@@ -98,6 +133,32 @@ class ResolvePlaceIdentityServiceTest {
                 new PlaceIdentityCommand("행복식당", "서울특별시 마포구 월드컵로 1"))).isSameAs(failure);
 
         org.mockito.Mockito.verifyNoInteractions(categoryMapping);
+    }
+
+    @Test
+    @DisplayName("지역 단서도 다른 지역 후보를 거부하고 같은 지역 복수 후보는 모호하게 차단한다")
+    void resolve_지역단서복수후보_유일성유지한다() {
+        // Given
+        given(placeSearchPort.searchCandidates("행복식당", "서울특별시 중구")).willReturn(List.of(
+                new PlaceSearchCandidate("행복식당", "https://place.map.kakao.com/1", "서울 중구 도로 1", null, "한식"),
+                new PlaceSearchCandidate("행복식당", "https://place.map.kakao.com/2", "서울 중구 도로 2", null, "한식")));
+        given(placeSearchPort.searchCandidates("행복식당", "부산광역시 중구")).willReturn(List.of(
+                new PlaceSearchCandidate("행복식당", "https://place.map.kakao.com/3", "서울 중구 도로 1", null, "한식")));
+        // When / Then
+        assertThat(service.resolve(new PlaceIdentityCommand("행복식당", null, null, "서울 중구")).status())
+                .isEqualTo(PlaceIdentityStatus.PLACE_AMBIGUOUS);
+        assertThat(service.resolve(new PlaceIdentityCommand("행복식당", null, null, "부산 중구")).status())
+                .isEqualTo(PlaceIdentityStatus.PLACE_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("세종의 단독 시도 표현은 같은 세종 주소 후보만 확정한다")
+    void resolve_세종단독위치_같은세종후보확정한다() {
+        // Given
+        given(placeSearchPort.searchCandidates("행복식당", "세종특별자치시 세종특별자치시")).willReturn(List.of(new PlaceSearchCandidate(
+                "행복식당", "https://place.map.kakao.com/1", "세종특별자치시 한누리대로 1", null, "한식")));
+        // When / Then
+        assertThat(service.resolve(new PlaceIdentityCommand("행복식당", null, null, "세종")).isConfirmed()).isTrue();
     }
 
     @Test

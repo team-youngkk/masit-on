@@ -80,6 +80,30 @@ class RegistrationUnitAutoExecutionServiceTest {
     }
 
     @Test
+    @DisplayName("Snapshot의 같은 식당 단위 location을 Worker 실행 명령에 보존한다")
+    void execute_S3Snapshot단위위치_Worker명령에전달한다() {
+        // Given
+        String snapshotFields = """
+                {"registrationUnits":[{"candidateUnitId":"unit-a",
+                  "restaurantName":{"value":"행복식당"},"location":{"value":"서울 강남구"}}]}
+                """;
+        given(decomposeRegistrationUnits.decompose(any())).willReturn(List.of(
+                new RegistrationUnitBundle(1, "unit-a", withEvidence("행복식당"), null, withEvidence("서울 강남구"),
+                        List.of(withEvidence("냉면")), withEvidence("방문했습니다"))));
+        given(executeRegistrationUnit.execute(any())).willReturn(
+                RegistrationUnitExecutionResult.blocked("PLACE_NOT_FOUND"));
+
+        // When
+        service.execute(json(snapshotFields), json("{}"), json("{}"), "channel-1", "video-1", videoUrl);
+
+        // Then
+        var command = org.mockito.ArgumentCaptor.forClass(RegistrationUnitExecutionCommand.class);
+        verify(executeRegistrationUnit).execute(command.capture());
+        assertThat(command.getValue().candidateUnitId()).isEqualTo("unit-a");
+        assertThat(command.getValue().location()).isEqualTo("서울 강남구");
+    }
+
+    @Test
     @DisplayName("장소 동일성을 확정하지 못하면 AUTO_BLOCKED/PLACE_NOT_FOUND를 반환한다")
     void execute_장소동일성실패_AUTO_BLOCKED_PLACE_NOT_FOUND를반환한다() {
         given(decomposeRegistrationUnits.decompose(any())).willReturn(List.of(
@@ -210,6 +234,12 @@ class RegistrationUnitAutoExecutionServiceTest {
     private RegistrationUnitBundle bundle(int unitIndex, String restaurantName, String address, String menu) {
         return new RegistrationUnitBundle(unitIndex, candidate(restaurantName), candidate(address), candidate(menu),
                 null);
+    }
+
+    private BoundCandidate withEvidence(String value) {
+        return new BoundCandidate(value, java.math.BigDecimal.valueOf(0.9), json("""
+                {"type":"TIMESTAMP","startMs":1000,"endMs":2000}
+                """));
     }
 
     private BoundCandidate candidate(String value) {

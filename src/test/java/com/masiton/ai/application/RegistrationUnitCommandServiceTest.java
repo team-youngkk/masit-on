@@ -31,6 +31,7 @@ import com.masiton.orchestration.application.port.in.AdjustRegisteredCategoryUse
 import com.masiton.orchestration.application.port.in.AutoRegisterVerifiedContentUseCase;
 import com.masiton.orchestration.application.port.in.DecomposeRegistrationUnitsUseCase;
 import com.masiton.orchestration.application.port.in.ExecuteRegistrationUnitUseCase;
+import com.masiton.orchestration.application.port.in.ExecuteRegistrationUnitUseCase.RegistrationUnitExecutionCommand;
 import com.masiton.orchestration.application.port.in.ExecuteRegistrationUnitUseCase.CategoryDecision;
 import com.masiton.orchestration.application.port.in.ExecuteRegistrationUnitUseCase.PlaceDecision;
 import com.masiton.orchestration.application.port.in.ExecuteRegistrationUnitUseCase.RegistrationUnitExecutionResult;
@@ -184,6 +185,35 @@ class RegistrationUnitCommandServiceTest {
         // Then
         assertThat(view.reviewStatus()).isEqualTo("AUTO_CONFIRMED");
         assertThat(view.unitId()).isEqualTo(UNIT_ID);
+    }
+
+    @Test
+    @DisplayName("Snapshot의 같은 식당 단위 location을 관리자 등록 실행 명령에 보존한다")
+    void registerUnit_S3Snapshot단위위치_관리자명령에전달한다() throws Exception {
+        // Given
+        AiRegistrationUnitStore.RegistrationUnitRow unit = blockedUnitRow();
+        when(registrationUnitStore.lockByJobAndUnitId(JOB_ID, UNIT_ID)).thenReturn(Optional.of(unit));
+        when(executeRegistrationUnit.execute(any())).thenReturn(confirmedResult());
+        when(registrationUnitStore.markRegistered(eq(UNIT_ID), eq("AUTO_BLOCKED"), any())).thenReturn(true);
+        var fields = objectMapper.readTree("""
+                {"registrationUnits":[{"candidateUnitId":"unit-a",
+                  "restaurantName":{"value":"행복식당"},"location":{"value":"서울 강남구"}}]}
+                """);
+        when(port.snapshotCandidates(SNAPSHOT_ID)).thenReturn(Optional.of(
+                new AiExtractionAdminQueryPort.SnapshotCandidateJson(fields, null, null, null)));
+        when(decomposeRegistrationUnits.decompose(any())).thenReturn(List.of(
+                new DecomposeRegistrationUnitsUseCase.RegistrationUnitBundle(1, "unit-a",
+                        new DecomposeRegistrationUnitsUseCase.BoundCandidate("행복식당", null, null), null,
+                        new DecomposeRegistrationUnitsUseCase.BoundCandidate("서울 강남구", null, null), List.of(), null)));
+
+        // When
+        service.registerUnit(JOB_ID, UNIT_ID);
+
+        // Then
+        var command = org.mockito.ArgumentCaptor.forClass(RegistrationUnitExecutionCommand.class);
+        verify(executeRegistrationUnit).execute(command.capture());
+        assertThat(command.getValue().candidateUnitId()).isEqualTo("unit-a");
+        assertThat(command.getValue().location()).isEqualTo("서울 강남구");
     }
 
     @Test
