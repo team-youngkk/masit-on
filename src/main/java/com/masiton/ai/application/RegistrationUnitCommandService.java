@@ -67,6 +67,7 @@ public class RegistrationUnitCommandService {
     private final AdjustRegisteredCategoryUseCase adjustCategoryUseCase;
     private final RegistrationUnitConfirmCommitService confirmCommitService;
     private final RegistrationUnitDiscardCommitService discardCommitService;
+    private final RegistrationUnitPostRegistrationCommitService postRegistrationCommitService;
     private final LegacyAdminActorResolver legacyAdminActorResolver;
     private final ObjectMapper objectMapper;
 
@@ -81,6 +82,7 @@ public class RegistrationUnitCommandService {
             AdjustRegisteredCategoryUseCase adjustCategoryUseCase,
             RegistrationUnitConfirmCommitService confirmCommitService,
             RegistrationUnitDiscardCommitService discardCommitService,
+            RegistrationUnitPostRegistrationCommitService postRegistrationCommitService,
             LegacyAdminActorResolver legacyAdminActorResolver,
             ObjectMapper objectMapper) {
         this.port = port;
@@ -93,6 +95,7 @@ public class RegistrationUnitCommandService {
         this.adjustCategoryUseCase = adjustCategoryUseCase;
         this.confirmCommitService = confirmCommitService;
         this.discardCommitService = discardCommitService;
+        this.postRegistrationCommitService = postRegistrationCommitService;
         this.legacyAdminActorResolver = legacyAdminActorResolver;
         this.objectMapper = objectMapper;
     }
@@ -202,9 +205,8 @@ public class RegistrationUnitCommandService {
      * {@code ROLLBACK}·{@code ADJUST_CATEGORY}는 {@code registered_restaurant_id IS NOT NULL}도 함께)
      * 조건을 만족할 때만 반영되게 한다. 조건이 어긋나면(동시 요청이 먼저 반영) 아무것도 바꾸지 않고
      * {@code false}를 반환하며 이 클래스가 {@code concurrentConflict()}로 응답한다. {@code ROLLBACK}·
-     * {@code ADJUST_CATEGORY}의 등록 콘텐츠 반영은 {@link RollbackAiRegisteredContentUseCase}·
-     * {@link AdjustRegisteredCategoryUseCase}가 각자 소유한 트랜잭션에서 먼저 수행한 뒤 등록 단위
-     * 상태를 반영한다.
+     * {@code ADJUST_CATEGORY}의 단위 CAS·콘텐츠 반영·감사는
+     * {@link RegistrationUnitPostRegistrationCommitService}의 하나의 트랜잭션에서 수행한다.
      */
     public void review(UUID jobId, String decision, String unitIdRaw, String reason, String suppliedKakaoPlaceUrl,
                        String suppliedFoodCategoryIdRaw, List<AiExtractionAdminQueryPort.TagDecision> tagDecisions,
@@ -334,15 +336,9 @@ public class RegistrationUnitCommandService {
         reverted.put("videoId", unit.registeredVideoId().toString());
         reverted.put("visitId", unit.registeredVisitId().toString());
 
-        rollbackUseCase.rollback(new RollbackAiRegisteredContentUseCase.RegistrationReference(
-                unit.snapshotId(), unit.registeredRestaurantId(), true, unit.registeredCreatorId(),
-                !unit.reusedResources().contains("creator"), unit.registeredVideoId(),
-                !unit.reusedResources().contains("video"), unit.registeredVisitId(), true));
-        if (!registrationUnitStore.rollback(unit.id(), unit.reviewStatus(), OffsetDateTime.now())) {
+        if (!postRegistrationCommitService.rollback(unit, reason, writeJson(reverted), adminId)) {
             throw concurrentConflict();
         }
-        registrationUnitReviewStore.insert(new AiRegistrationUnitReviewStore.RegistrationUnitReviewInsert(
-                unit.id(), "ROLLBACK", reason, null, null, writeJson(reverted), adminId));
     }
 
     private void adjustCategory(AiRegistrationUnitStore.RegistrationUnitRow unit, String reason,
@@ -363,12 +359,10 @@ public class RegistrationUnitCommandService {
         newDecision.put("foodCategoryName", categoryName);
         newDecision.put("resolvedBy", "MANUAL_OVERRIDE");
 
-        adjustCategoryUseCase.adjust(unit.registeredRestaurantId(), categoryId);
-        if (!registrationUnitStore.adjustCategory(unit.id(), unit.reviewStatus(), writeJson(newDecision))) {
+        if (!postRegistrationCommitService.adjustCategory(unit, categoryId, writeJson(newDecision), reason,
+                adminId)) {
             throw concurrentConflict();
         }
-        registrationUnitReviewStore.insert(new AiRegistrationUnitReviewStore.RegistrationUnitReviewInsert(
-                unit.id(), "ADJUST_CATEGORY", reason, null, unit.categoryDecisionJson(), null, adminId));
     }
 
     private boolean isRegisteredEligibleForManualOverride(AiRegistrationUnitStore.RegistrationUnitRow unit) {
@@ -638,11 +632,17 @@ public class RegistrationUnitCommandService {
 
         private static List<String> reusedResourcesOf(AutoRegisterVerifiedContentUseCase.RegistrationResult result) {
             List<String> resources = new java.util.ArrayList<>();
+            if (!result.restaurantCreated()) {
+                resources.add("restaurant");
+            }
             if (!result.creatorCreated()) {
                 resources.add("creator");
             }
             if (!result.videoCreated()) {
                 resources.add("video");
+            }
+            if (!result.visitCreated()) {
+                resources.add("visit");
             }
             return List.copyOf(resources);
         }

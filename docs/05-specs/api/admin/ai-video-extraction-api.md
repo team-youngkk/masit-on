@@ -59,7 +59,7 @@ related_documents:
 
 `SUCCEEDED`와 `PARTIAL`은 실행 상태와 결과 완전성을 각각 표현한다. `AUTO_CONFIRMED`는 자동 검증과 기존 정식 등록 명령이 성공했다는 의미이며, 관리자의 사전 승인을 뜻하지 않는다.
 
-중복은 종결이 아니라 복구 가능한 보류다. 같은 맛집·방문 관계가 이미 존재하는 `DUPLICATE_CONFLICT`는 `AUTO_BLOCKED`로 귀결하며 `AUTO_REJECTED`로 매핑하지 않는다. `BR-AIEXTRACT-011`의 예외 전환 대상이지만, `recoveryPaths`로서 관리자가 할 수 있는 것은 기존 등록 결과를 확인하는 것(`EXISTING_RESOURCE`)뿐이다. `CONFIRM`·`ADJUST_CATEGORY`로 사후 보정하지 않으며 재추출·재실행·수동 등록 경로도 없다. 다만 `DISCARD`는 `recoveryPaths`와 무관한 공통 종결 동작이므로 다른 `AUTO_BLOCKED`와 같이 허용한다.
+과거 `DUPLICATE_CONFLICT` 감사 값과 복구 경로는 조회 호환으로 유지한다. 새 실행은 검증된 기존 맛집과 동일 방문을 재사용한다. 과거 동일 자원 존재로 저장된 `DUPLICATE_CONFLICT`는 `AUTO_BLOCKED`로 귀결하며 `AUTO_REJECTED`로 매핑하지 않는다. `BR-AIEXTRACT-011`의 예외 전환 대상이지만, `recoveryPaths`로서 관리자가 할 수 있는 것은 기존 등록 결과를 확인하는 것(`EXISTING_RESOURCE`)뿐이다. `CONFIRM`·`ADJUST_CATEGORY`로 사후 보정하지 않으며 재추출·재실행·수동 등록 경로도 없다. 다만 `DISCARD`는 `recoveryPaths`와 무관한 공통 종결 동작이므로 다른 `AUTO_BLOCKED`와 같이 허용한다.
 
 #### 작업 최상위 `reviewStatus` 요약 규칙
 
@@ -455,12 +455,12 @@ Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-0
 }
 ```
 
-- `reusedResources`는 새로 만들지 않고 기존 식별자를 재사용한 자원 목록이다. 허용값은 `creator`와 `video`뿐이다. 유튜버·영상 재사용은 정상 경로이며 예외가 아니다. 맛집과 방문 관계는 이미 존재하면 `DUPLICATE_CONFLICT`로 차단되어 등록 자체가 일어나지 않으므로 재사용 대상이 될 수 없다.
+- `reusedResources`는 새로 만들지 않고 기존 식별자를 재사용한 자원 목록이다. 허용값은 `restaurant`, `creator`, `video`, `visit`다. 검증된 Kakao ID의 맛집과 동일 creator-video-restaurant 방문 관계 재사용은 정상 경로이며 예외가 아니다. 같은 관계를 반복 요청해도 추가 자원을 생성하지 않고 동일 식별자를 반환한다.
 - 응답의 네 식별자와 `reusedResources`는 `ai_registration_unit`의 `registered_restaurant_id`, `registered_creator_id`, `registered_video_id`, `registered_visit_id`, `reused_resources` 컬럼에서 읽는다. 재요청 시 같은 값을 그대로 재구성할 수 있어야 하므로 별도 감사 이력이 아니라 이 테이블이 응답의 소스다.
 - 4종 등록의 원자 경계는 등록 단위 하나다. 중간 실패 시 이 등록 단위의 정식 저장은 0건이고, 같은 작업의 다른 등록 단위는 변경하지 않는다.
 - 외부 조회·검증은 DB 트랜잭션 밖에서 수행하고, 검증 통과 후 4종을 하나의 트랜잭션으로 저장한다.
 - 재요청과 상태별 허용 범위는 위 표를 따른다.
-- 같은 등록 단위에 대한 동시 요청은 `409 AIEXTRACT_CONCURRENT_REQUEST_CONFLICT`로 처리한다. 이 코드는 동시성 충돌이며, 같은 맛집·방문 관계가 이미 존재한다는 업무 중복을 뜻하는 `blockReason`의 `DUPLICATE_CONFLICT`와 다르다. 전자는 잠시 후 재시도하면 되고, 후자는 이미 등록된 자원을 확인해야 한다.
+- 같은 등록 단위에 대한 동시 요청은 `409 AIEXTRACT_CONCURRENT_REQUEST_CONFLICT`로 처리한다. 이 코드는 동시성 충돌이며, 과거 실행에서 같은 맛집·방문 관계 존재로 저장된 `blockReason`의 `DUPLICATE_CONFLICT`와 다르다. 전자는 잠시 후 재시도하면 되고, 후자는 이미 등록된 자원을 확인해야 한다.
 
 #### 예외 전환 응답 `422 AIEXTRACT_VALIDATION_CONFLICT`
 
@@ -526,7 +526,7 @@ Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-0
 | `CATEGORY_UNRESOLVED` | 카테고리 근거를 찾지 못했다 | `CONFIRM` 보충 입력 | `foodCategoryId` |
 | `MISSING_REQUIRED_FIELD` | 등록 단위에 맛집명·주소 등 필수 후보가 없다 | 보완 텍스트 재추출 또는 기존 수동 등록 | 빈 배열 |
 | `VISIT_EVIDENCE_REQUIRED` | 방문 근거가 `UNKNOWN`이거나 영상 `TIMESTAMP`가 아니다 | 재추출 또는 기존 수동 등록. 방문 근거는 보완 텍스트 주장으로 확정하지 않는다 | 빈 배열 |
-| `DUPLICATE_CONFLICT` | 같은 맛집·방문 관계가 이미 존재한다 | `EXISTING_RESOURCE`. 이미 등록된 자원으로 이동해 확인한다 | 빈 배열 |
+| `DUPLICATE_CONFLICT` | 과거 실행에서 동일 자원 존재로 차단된 기록. 새 실행은 멱등 재사용한다 | `EXISTING_RESOURCE`. 이미 등록된 자원으로 이동해 확인한다 | 빈 배열 |
 | `EXTERNAL_SERVICE_ERROR` | Kakao·YouTube 조회 실패·시간 초과 | 등록 재실행 또는 기존 수동 등록 | 빈 배열 |
 
 이 표의 복구 경로 열은 3.6절 `recoveryPaths` 배열과 같은 의미다. `MISSING_REQUIRED_FIELD`·`VISIT_EVIDENCE_REQUIRED`·`EXTERNAL_SERVICE_ERROR`는 재추출·재실행 뒤에도 관리자가 기존 수동 등록으로 우회할 수 있다. `DUPLICATE_CONFLICT`는 `recoveryPaths`상 `EXISTING_RESOURCE`만 가지며 재추출·재실행·수동 등록 우회 경로가 없다. 일곱 사유 모두 `DISCARD`는 이 표와 무관하게 공통으로 허용한다.

@@ -29,6 +29,12 @@ public interface RollbackAiRegisteredContentUseCase {
             UUID restaurantId, boolean restaurantCreated,
             UUID creatorId, boolean creatorCreated,
             UUID videoId, boolean videoCreated,
-            UUID visitId, boolean visitCreated) {
+            UUID visitId, boolean visitCreated, UUID registrationUnitId) {
+        public RegistrationReference(UUID snapshotId, UUID restaurantId, boolean restaurantCreated,
+                UUID creatorId, boolean creatorCreated, UUID videoId, boolean videoCreated,
+                UUID visitId, boolean visitCreated) {
+            this(snapshotId, restaurantId, restaurantCreated, creatorId, creatorCreated,
+                    videoId, videoCreated, visitId, visitCreated, null);
+        }
     }
 }

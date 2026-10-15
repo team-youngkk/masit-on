@@ -18,6 +18,7 @@ related_documents:
 - [PR #431 S3 Snapshot 위치 결속과 develop 충돌](pr-431-s3-snapshot-location-conflict.md)
 - [PR #430 지역 결합 후보 검색 전환 후 CI 회귀](pr-430-bounded-place-search-ci-review.md)
 
+- [PR #432 같은 Snapshot의 작업 등록 참조 보존](pr-432-snapshot-registration-rollback.md)
 - [PR #396 승인 기준과 보안 패치 변경안 분리](pr-396-next-security-baseline-review.md)
 - [PR #395 목록 API 태그 필터 누락](pr-395-restaurant-tag-filter.md)
 

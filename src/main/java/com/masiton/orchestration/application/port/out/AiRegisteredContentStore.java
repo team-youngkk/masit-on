@@ -3,10 +3,17 @@ package com.masiton.orchestration.application.port.out;
 import java.util.UUID;
 
 public interface AiRegisteredContentStore {
-    void makePrivateIfCreated(UUID snapshotId, UUID restaurantId, boolean created,
-                              UUID creatorId, boolean creatorCreated,
-                              UUID videoId, boolean videoCreated,
-                              UUID visitId, boolean visitCreated);
+    default void makePrivateIfCreated(UUID snapshotId, UUID restaurantId, boolean restaurantCreated,
+            UUID creatorId, boolean creatorCreated, UUID videoId, boolean videoCreated,
+            UUID visitId, boolean visitCreated) {
+        makePrivateIfCreated(snapshotId, restaurantId, restaurantCreated, creatorId, creatorCreated,
+                videoId, videoCreated, visitId, visitCreated, null);
+    }
+
+    /** 등록 단위 경로에서는 자기 단위만 공유 참조에서 제외한다. null은 과거 Snapshot 경로다. */
+    void makePrivateIfCreated(UUID snapshotId, UUID restaurantId, boolean restaurantCreated,
+            UUID creatorId, boolean creatorCreated, UUID videoId, boolean videoCreated,
+            UUID visitId, boolean visitCreated, UUID registrationUnitId);
 
     /**
      * 동시 요청에 선점당해 등록 단위에 결코 연결되지 못한 채 방금 만든 콘텐츠를 하드 삭제한다.

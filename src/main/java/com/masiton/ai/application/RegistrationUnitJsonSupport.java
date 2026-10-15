@@ -103,11 +103,17 @@ final class RegistrationUnitJsonSupport {
     static String reusedResourcesJson(ObjectMapper objectMapper,
                                       AutoRegisterVerifiedContentUseCase.RegistrationResult registration) {
         ArrayNode array = objectMapper.createArrayNode();
+        if (!registration.restaurantCreated()) {
+            array.add("restaurant");
+        }
         if (!registration.creatorCreated()) {
             array.add("creator");
         }
         if (!registration.videoCreated()) {
             array.add("video");
+        }
+        if (!registration.visitCreated()) {
+            array.add("visit");
         }
         return json(objectMapper, array);
     }

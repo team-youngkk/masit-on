@@ -75,7 +75,8 @@ class RegistrationUnitCommandServiceTest {
     void setUp() {
         service = new RegistrationUnitCommandService(port, registrationUnitStore, registrationUnitReviewStore,
                 decomposeRegistrationUnits, executeRegistrationUnit, resolveFoodCategory, rollbackUseCase,
-                adjustCategoryUseCase, confirmCommitService, discardCommitService, legacyAdminActorResolver,
+                adjustCategoryUseCase, confirmCommitService, discardCommitService, new RegistrationUnitPostRegistrationCommitService(registrationUnitStore,
+                        registrationUnitReviewStore, rollbackUseCase, adjustCategoryUseCase), legacyAdminActorResolver,
                 objectMapper);
 
         when(port.jobVideoReference(JOB_ID)).thenReturn(Optional.of(
@@ -345,6 +346,7 @@ class RegistrationUnitCommandServiceTest {
                 .satisfies(exception -> assertThat(((BusinessException) exception).code())
                         .isEqualTo("AIEXTRACT_CONCURRENT_REQUEST_CONFLICT"));
         verify(registrationUnitReviewStore, never()).insert(any());
+        verify(rollbackUseCase, never()).rollback(any());
     }
 
     @Test
@@ -365,6 +367,7 @@ class RegistrationUnitCommandServiceTest {
                 .satisfies(exception -> assertThat(((BusinessException) exception).code())
                         .isEqualTo("AIEXTRACT_CONCURRENT_REQUEST_CONFLICT"));
         verify(registrationUnitReviewStore, never()).insert(any());
+        verify(adjustCategoryUseCase, never()).adjust(any(), any());
     }
 
     @Test
