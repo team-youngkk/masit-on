@@ -1,6 +1,12 @@
 const assert = require('node:assert/strict')
 const test = require('node:test')
-const { fetchRestaurantFilterOptions, fetchRegions, buildApiSearchParams, buildRestaurantsHref } = require('./restaurants-api.ts')
+const {
+  fetchRestaurantFilterOptions,
+  fetchRegions,
+  buildApiSearchParams,
+  buildRestaurantsHref,
+  getAvailableRestaurantCategories,
+} = require('./restaurants-api.ts')
 const { decodeRegions, regionSelection, regionLabels, changeRegionSelection } = require('./regions.ts')
 
 const provinces = [
@@ -102,6 +108,23 @@ test('공개 맛집 필터 선택지는 지역과 음식 종류 목록을 요청
 
   assert.deepEqual(result, { ok: true, data: { districts: ['마포구'], categories: ['한식'] } })
   assert.equal(requestedUrl, 'http://localhost:8080/api/restaurants/filter-options')
+})
+
+test('카테고리 선택지는 API가 반환한 실제 사용값만 유지하고 데이터 없는 값은 포함하지 않는다', () => {
+  const result = getAvailableRestaurantCategories({
+    ok: true,
+    data: { districts: ['마포구'], categories: ['한식'] },
+  })
+
+  assert.deepEqual(result, ['한식'])
+  assert.equal(result.includes('데이터 없는 카테고리'), false)
+})
+
+test('카테고리 선택지 조회에 실패하면 빈 목록을 사용한다', () => {
+  assert.deepEqual(
+    getAvailableRestaurantCategories({ ok: false, message: '조회 실패' }),
+    [],
+  )
 })
 
 test('필터 선택지 응답 형식이 잘못되면 안전한 오류 결과를 반환한다', async (t: any) => {

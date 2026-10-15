@@ -29,6 +29,7 @@ import {
   fetchRestaurantFilterOptions,
   fetchRegions,
   fetchRestaurants,
+  getAvailableRestaurantCategories,
   toSingleValue,
   type RawSearchParams,
   type RestaurantListItem,
@@ -56,13 +57,6 @@ export async function generateMetadata({
     requestSucceeded: result.ok,
     hasItems: result.ok && result.data.items.length > 0,
   })
-}
-
-function includeSelectedFilterValue(values: readonly string[], selectedValue: string): string[] {
-  if (!selectedValue || values.includes(selectedValue)) {
-    return [...values]
-  }
-  return [selectedValue, ...values]
 }
 
 const DESIGN_PREVIEW_ITEMS: RestaurantListItem[] = [
@@ -188,10 +182,7 @@ export default async function RestaurantsPage({
   const currentCategory = toSingleValue(rawParams.category) ?? ''
   const currentCreatorId = toSingleValue(rawParams.creatorId)
   const currentSize = apiParams.get('size') ?? '21'
-  const categoryOptions = includeSelectedFilterValue(
-    filterOptionsResult.ok ? filterOptionsResult.data.categories : [],
-    currentCategory,
-  )
+  const categoryOptions = getAvailableRestaurantCategories(filterOptionsResult)
   const currentRoute = `/restaurants?${apiParams.toString()}`
   const currentCreatorKnown =
     creatorsResult.ok &&
