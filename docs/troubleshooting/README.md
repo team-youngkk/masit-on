@@ -15,6 +15,7 @@ related_documents:
 
 ## 최신 기록
 
+- [PR #431 S3 Snapshot 위치 결속과 develop 충돌](pr-431-s3-snapshot-location-conflict.md)
 - [PR #430 지역 결합 후보 검색 전환 후 CI 회귀](pr-430-bounded-place-search-ci-review.md)
 
 - [PR #396 승인 기준과 보안 패치 변경안 분리](pr-396-next-security-baseline-review.md)
@@ -75,6 +76,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #431 S3 Snapshot 위치 결속과 develop 충돌](pr-431-s3-snapshot-location-conflict.md)
 - [PR #430 지역 결합 후보 검색 전환 후 CI 회귀](pr-430-bounded-place-search-ci-review.md)
 
 - [PR #396 승인 기준과 보안 패치 변경안 분리](pr-396-next-security-baseline-review.md)

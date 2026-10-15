@@ -42,4 +42,4 @@ WireMock으로 서울·인천 남동구·강화군의 정상 일치, 동명 식�
 
 2026-10-14 Gradle Wrapper로 `ResolvePlaceIdentityServiceTest`, `RegistrationUnitExecutionServiceTest`, `RegistrationUnitCommandServiceTest`, `RegistrationUnitAutoExecutionServiceTest`, `RegistrationUnitJsonSupportTest` 및 자동 포함된 ArchUnit을 실행했다. 컴파일 성공, 66건 통과·실패 0건이다. 고정 Kakao 후보와 Mockito를 사용했으며 실제 외부 API를 호출하지 않았다. 같은 단위 위치 결속·다른 식당 결속 거부·legacy 전역 위치 거부·중복 식별자 거부·모호한 상권·지역 불일치·복수 후보·기존 주소 우선·세종 경계를 검증했다. 최종 물리 검증 결과의 지역도 장소 동일성 결과와 다시 비교한다.
 
-#416 지역 결합 검색과 #417 S3 단위 분해는 이 브랜치에 복사하지 않았다. 선행 PR 통합 후 해당 검색·분해 경로의 통합 검증이 필요하다. 독립 리뷰에서 P1/P2 지적은 없었다. 부모 에이전트가 최종 물리 지역 일치 성공·불일치 시 저장 0건 회귀 2건을 추가하여 동일 대상 재검증 68건이 실패 없이 통과했다.
+#416 지역 결합 검색(#430)과 #417 S3 단위 분해(#433)가 develop에 병합된 뒤 이 브랜치를 최신 develop 위에 재기반화했다. #417의 `registrationUnits` Snapshot 보존을 유지하고 Worker·관리자 경로 모두에서 명시적 `candidateUnitId`와 식당명이 일치할 때만 bound location을 실행 명령에 전달하도록 통합했다. 동일 단위 location 기반 검색과 최종 물리 지역 일치·불일치 저장 0건도 포함해 2026-10-15 기준 8개 테스트 클래스 97건이 통과했다. 실제 Kakao·YouTube API 호출은 없었다.
