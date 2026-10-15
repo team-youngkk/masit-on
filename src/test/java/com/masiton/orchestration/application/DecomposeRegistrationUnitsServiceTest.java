@@ -21,6 +21,56 @@ class DecomposeRegistrationUnitsServiceTest {
     private final DecomposeRegistrationUnitsService service = new DecomposeRegistrationUnitsService();
 
     @Test
+    @DisplayName("S3 두 식당의 다섯 메뉴와 공통 지역은 각 식별자 안에서만 결속된다")
+    void decompose_S3두식당다섯메뉴_식별자안에서만결속한다() throws Exception {
+        JsonNode payload;
+        try (var input = getClass().getResourceAsStream("/ai/s3-two-restaurants.json")) {
+            payload = objectMapper.readTree(input);
+        }
+        var fields = objectMapper.createObjectNode();
+        fields.set("registrationUnits", payload.path("registrationUnits"));
+        var bundles = service.decompose(new DecomposeRegistrationUnitsCommand(fields, null, null));
+        assertThat(bundles).hasSize(2);
+        assertThat(bundles.get(0).candidateUnitId()).isEqualTo("a");
+        assertThat(bundles.get(0).menus()).extracting(candidate -> candidate.value())
+                .containsExactly("냉면", "수육");
+        assertThat(bundles.get(1).menus()).extracting(candidate -> candidate.value())
+                .containsExactly("냉면", "칼국수", "만두");
+        ((tools.jackson.databind.node.ObjectNode) payload.at("/registrationUnits/0")).putNull("address");
+        bundles = service.decompose(new DecomposeRegistrationUnitsCommand(fields, null, null));
+        assertThat(bundles.get(0).address()).isNull();
+        assertThat(bundles.get(1).address().value()).isEqualTo("b 주소");
+    }
+
+    @Test
+    @DisplayName("S3 단위와 메뉴 순서를 바꿔도 식당별 주소와 같은 이름의 메뉴가 이동하지 않는다")
+    void decompose_S3단위와메뉴순서변경_식당별결속을유지한다() throws Exception {
+        // Given
+        JsonNode payload;
+        try (var input = getClass().getResourceAsStream("/ai/s3-two-restaurants.json")) {
+            payload = objectMapper.readTree(input);
+        }
+        var originalUnits = payload.path("registrationUnits");
+        var firstUnit = originalUnits.get(0).deepCopy();
+        var firstMenus = objectMapper.createArrayNode()
+                .add(firstUnit.path("menus").get(1)).add(firstUnit.path("menus").get(0));
+        ((tools.jackson.databind.node.ObjectNode) firstUnit).set("menus", firstMenus);
+        var fields = objectMapper.createObjectNode();
+        fields.set("registrationUnits", objectMapper.createArrayNode().add(originalUnits.get(1)).add(firstUnit));
+
+        // When
+        var bundles = service.decompose(new DecomposeRegistrationUnitsCommand(fields, null, null));
+
+        // Then
+        assertThat(bundles).extracting(RegistrationUnitBundle::candidateUnitId).containsExactly("b", "a");
+        assertThat(bundles.get(0).address().value()).isEqualTo("b 주소");
+        assertThat(bundles.get(1).address().value()).isEqualTo("a 주소");
+        assertThat(bundles.get(0).menus()).extracting(candidate -> candidate.value())
+                .containsExactly("냉면", "칼국수", "만두");
+        assertThat(bundles.get(1).menus()).extracting(candidate -> candidate.value()).containsExactly("수육", "냉면");
+    }
+
+    @Test
     @DisplayName("모든 필드가 후보 1건이면 등록 단위 하나로 묶는다")
     void decompose_모든필드후보1건_등록단위하나로묶는다() {
         JsonNode fields = json("""
@@ -88,8 +138,8 @@ class DecomposeRegistrationUnitsServiceTest {
     }
 
     @Test
-    @DisplayName("맛집명과 주소 후보가 모두 복수면 같은 순번끼리 결속한다")
-    void decompose_복수후보_같은순번끼리결속한다() {
+    @DisplayName("S2 복수 맛집 후보는 배열 순서로 결속하지 않고 보류한다")
+    void decompose_S2복수맛집후보_배열순서로결속하지않고보류한다() {
         JsonNode fields = json("""
                 {
                   "restaurantName": [
@@ -107,23 +157,12 @@ class DecomposeRegistrationUnitsServiceTest {
         List<RegistrationUnitBundle> bundles = service.decompose(
                 new DecomposeRegistrationUnitsCommand(fields, json("{}"), json("{}")));
 
-        assertThat(bundles).hasSize(2);
-        RegistrationUnitBundle first = bundles.get(0);
-        assertThat(first.unitIndex()).isEqualTo(1);
-        assertThat(first.restaurantName().value()).isEqualTo("첫 맛집");
-        assertThat(first.address().value()).isEqualTo("서울특별시 마포구 월드컵로 1");
-        assertThat(first.menu().value()).isEqualTo("냉면");
-
-        RegistrationUnitBundle second = bundles.get(1);
-        assertThat(second.unitIndex()).isEqualTo(2);
-        assertThat(second.restaurantName().value()).isEqualTo("둘째 맛집");
-        assertThat(second.address().value()).isEqualTo("서울특별시 영등포구 여의대로 10");
-        assertThat(second.menu().value()).isEqualTo("냉면");
+        assertThat(bundles).isEmpty();
     }
 
     @Test
-    @DisplayName("결속 대상 배열이 맛집명 후보 수보다 짧으면 초과 순번은 결측으로 남긴다")
-    void decompose_결속배열이더짧으면_초과순번은결측으로남긴다() {
+    @DisplayName("S2 복수 맛집과 길이가 다른 필드 배열도 추론하지 않는다")
+    void decompose_S2복수맛집과길이가다른필드배열_추론하지않는다() {
         JsonNode fields = json("""
                 {
                   "restaurantName": [
@@ -141,10 +180,7 @@ class DecomposeRegistrationUnitsServiceTest {
         List<RegistrationUnitBundle> bundles = service.decompose(
                 new DecomposeRegistrationUnitsCommand(fields, json("{}"), json("{}")));
 
-        assertThat(bundles).hasSize(3);
-        assertThat(bundles.get(0).address().value()).isEqualTo("서울특별시 마포구 월드컵로 1");
-        assertThat(bundles.get(1).address().value()).isEqualTo("서울특별시 영등포구 여의대로 10");
-        assertThat(bundles.get(2).address()).isNull();
+        assertThat(bundles).isEmpty();
     }
 
     private JsonNode json(String value) {

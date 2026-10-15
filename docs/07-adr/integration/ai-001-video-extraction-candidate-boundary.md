@@ -104,7 +104,7 @@ Worker는 후보를 장소 단위 등록 단위로 나눈 뒤, 등록 단위마�
 
 2번은 1번에서 확정한 Kakao 장소의 분류 표현을 1순위, AI 메뉴 후보 표현을 2순위 근거로 기준정보 매핑 표에 대조해 공통 10개 값 중 하나를 정한다. 두 근거 모두 대응 값을 찾지 못하면 임의 기본값을 쓰지 않고 `CATEGORY_UNRESOLVED`로 차단한다.
 
-후보 수 상한은 100에서 300으로 올린다. 상한 초과의 정상 동작은 응답 기각이 아니라 모델의 자체 절삭이므로, 절삭이 일어난 결과는 그 사실을 표시해 관리자가 누락을 인지할 수 있게 한다. 후보 수가 상한과 같으면 표시가 없어도 절삭 가능으로 취급한다. 이 변경은 시스템 지시와 결과 Schema를 함께 바꾸므로 Prompt를 `P8`, 결과 Schema를 `S2`로 올리고 수신 검증기·`ai_candidate_snapshot`·관리자 응답·와이어프레임을 같은 PR에서 갱신했다. 현재 운영 계약은 `P8`·`S2`이며 `P7`·`S1`은 기존 이력으로 보존한다. 근거와 파급 범위는 [후보 손실 분석 9.1절](../../08-planning/third-expansion-ai-candidate-loss-analysis.md)에 있다.
+후보 수 상한은 100에서 300으로 올린다. 상한 초과의 정상 동작은 응답 기각이 아니라 모델의 자체 절삭이므로, 절삭이 일어난 결과는 그 사실을 표시해 관리자가 누락을 인지할 수 있게 한다. 후보 수가 상한과 같으면 표시가 없어도 절삭 가능으로 취급한다. 이 변경은 시스템 지시와 결과 Schema를 함께 바꾸므로 Prompt를 `P8`, 결과 Schema를 `S2`로 올리고 수신 검증기·`ai_candidate_snapshot`·관리자 응답·와이어프레임을 같은 PR에서 갱신했다. 현재 운영 계약은 `P9`·`S3`이며 `P7`·`S1`은 기존 이력으로 보존한다. 근거와 파급 범위는 [후보 손실 분석 9.1절](../../08-planning/third-expansion-ai-candidate-loss-analysis.md)에 있다.
 
 검증 중 하나라도 실패하면 그 등록 단위는 후보·자동 판단 이력만 남기고 Restaurant·Creator·Video·Visit 정식 저장 0건으로 끝난다. 판정과 원자성 경계는 등록 단위이며, 한 단위의 실패가 같은 작업에서 이미 통과한 다른 단위를 되돌리지 않는다. 후보가 기존 등록과 중복이면 새 Entity를 만들지 않고 `AUTO_BLOCKED`로 보관한다. 유일한 복구 경로는 기존 등록 결과를 확인하는 것(`EXISTING_RESOURCE`)이며, 사후 보정·재추출·재실행·수동 등록으로 전환하는 경로는 없다. 다만 공통 종결 동작인 `DISCARD`는 다른 `AUTO_BLOCKED`와 같이 허용한다.
 
@@ -151,7 +151,7 @@ Worker는 후보를 장소 단위 등록 단위로 나눈 뒤, 등록 단위마�
 
 ## 10. 확정 운영 규칙
 
-- 모델 `gemini-3.5-flash-lite`, global endpoint, Prompt `P8`, Schema `S2`를 사용한다.
+- 모델 `gemini-3.5-flash-lite`, global endpoint, Prompt `P9`, Schema `S3`를 사용한다. `P8`/`S2` 이력은 생성 당시 의미로 보존한다.
 - Prompt는 2026-08-14에 `P1`에서 `P2`로 올렸다. 송신 요청 Schema가 수신 검증 계약을 표현하지 못해 태그 후보와 완결성 결합에서 응답이 기각되던 결함을 고치면서 시스템 지시와 요청 Schema 표현이 함께 바뀌었기 때문이다. 수신 계약 자체는 바뀌지 않았으므로 결과 Schema는 `S1`을 유지한다. `BR-AIEXTRACT-004`가 요구하는 버전별 재현성을 지키기 위해 라벨을 유지하지 않았고, `P1` 후보 Snapshot은 덮어쓰거나 폐기하지 않는다. `aiextract-golden-v1.0.0` 평가 자산은 `gemini-3-flash-preview`·`P1` 기준의 역사적 fixture로 보존하며 운영 작업 계약에 포함하지 않는다. 근거는 [AI 후보 손실 분석](../../08-planning/third-expansion-ai-candidate-loss-analysis.md)에 있다.
 - Prompt는 2026-08-16에 `P2`에서 `P3`로 올렸다. P2 실측에서 영상에 직접 노출되지 않는 도로명주소와 Kakao 장소 URL이 관리자 보완 텍스트에 있어도 누락되어 자동 등록 경로에 진입하지 못했다. P3는 네 식당 기준정보 필드에만 보완 텍스트의 검증 가능한 `TEXT_RANGE`를 허용하고, 방문 근거는 영상 `TIMESTAMP`로 제한한다. 수신 Schema는 기존 `TEXT_RANGE`를 그대로 사용하므로 `S1`을 유지하며, P2 작업과 Snapshot은 생성 당시 의미로 보존한다.
 - 같은 날 P3 실측 두 건은 Gemini가 엄격한 범위 계약과 일치하는 후보를 반환하지 않아 `SCHEMA`로 차단됐다. P4는 서버가 보완 텍스트의 비어 있지 않은 줄마다 정확한 UTF-16 `referenceSpans`를 제공해 모델의 범위 계산 편차를 줄인다. 수신 검증은 정확 일치와 방문 `TIMESTAMP` 제한을 그대로 유지하며 P3 작업은 역사적 이력으로 보존한다.
@@ -163,3 +163,16 @@ Worker는 후보를 장소 단위 등록 단위로 나눈 뒤, 등록 단위마�
 - 재시도는 작업 실행 상태뿐 아니라 등록 단위의 AUTO_BLOCKED 여부도 함께 판정한다.
 - 근거는 timestamp 또는 text range 위치·입력 hash만 저장하며 원문은 저장하지 않는다.
 - 호출 timeout·retry·hard stop은 [비동기 신뢰성 ADR](ext-003-ai-extraction-async-reliability.md)과 NFR 수치를 따른다.
+
+
+## 이슈 #417: P9 / S3 식당별 후보 결속
+
+2026-10-14 계약 소유자 합의를 확보했다. 신규 추출은 P9/S3를 사용하며 P8/S2와 이전 Snapshot은 생성 당시 의미로 읽기 전용 보존한다. 비용·Provider·모델·호출 상한은 변경하지 않는다.
+
+S3 루트는 resultCompleteness, candidates, registrationUnits, missingFields, candidateTruncated를 모두 요구한다. candidates는 기존 통제 태그 후보 전용이며, 식당 관련 값을 단위 밖에 두면 Schema 오류다. registrationUnits의 각 객체는 candidateUnitId(중복 없는 불투명 문자열), restaurantName, address, location, menus, visitEvidence만 허용한다. restaurantName은 반드시 하나의 후보 객체이며 address·location·visitEvidence는 후보 객체 또는 null, menus는 후보 객체 배열이다. 후보 객체는 value(1~4096자), confidence(유한한 0~1), evidence만 허용한다. 명시적 단위 밖 필드를 복사하거나 후보 배열 순서로 결속하지 않는다.
+
+전체 후보 수(태그 + 모든 단위의 non-null 필드 + 모든 메뉴)는 300 이하이고 상한에 닿으면 서버가 candidateTruncated=true를 강제한다. 단위별 결측·UNKNOWN은 missingFields와 PARTIAL에 반영한다. 외부 검증·중복·등록 차단은 필드 완전성과 독립이다. 중복 ID·추가 키·잘못된 중첩 구조·단위 없는 flat 후보는 Provider SCHEMA 오류이며 Snapshot 저장과 실행 전에 거부한다.
+
+candidate_fields JSON에는 registrationUnits를 변경 없이 저장하고 candidateUnitId와 메뉴 배열을 보존한다. 새 DB 컬럼·마이그레이션은 필요하지 않다. 등록 단위 unit_index는 Snapshot의 단위 배열에서 1부터 배정하되, 필드 소속은 candidateUnitId를 가진 단위 객체로만 결정한다. S1/S2 복수 식당은 순서로 결속하지 않고 보류하며 과거 Snapshot은 재작성하지 않는다.
+
+설계·검증 근거: [이슈 417 설계](../../08-planning/issue-417-ai-contract-proposal.md).

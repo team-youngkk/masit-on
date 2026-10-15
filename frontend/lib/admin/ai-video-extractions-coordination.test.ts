@@ -14,6 +14,7 @@ import {
   reviewRequest,
   registrationUnitSummary,
   registrationSummaryLabel,
+  extractionResultNotice,
 } from './ai-video-extractions-coordination.ts'
 import type { AiRegistrationUnit } from './ai-video-extractions.ts'
 
@@ -58,6 +59,19 @@ test('수동 등록과 거부는 구분하고 롤백 폐기 및 불완전한 ID�
   assert.equal(summary.autoRejected, 1)
   assert.equal(summary.registered, 1)
   assert.equal(summary.partialRegistration, true)
+})
+
+test('SUCCEEDED는 추출 처리 성공이며 등록 완료와 구분해 안내한다', () => {
+  assert.match(extractionResultNotice('SUCCEEDED', 5, 1) ?? '', /추출 처리 성공/)
+  assert.match(extractionResultNotice('SUCCEEDED', 5, 1) ?? '', /실제 등록 여부/)
+})
+
+test('후보와 등록 단위 0개는 별도 안내하고 미종결과 실패에는 성공 안내를 표시하지 않는다', () => {
+  assert.match(extractionResultNotice('SUCCEEDED', 0, 0) ?? '', /후보와 등록 단위가 없습니다/)
+  assert.match(extractionResultNotice('SUCCEEDED', 0, 0) ?? '', /보완 텍스트 재추출/)
+  assert.doesNotMatch(extractionResultNotice('SUCCEEDED', 0, 1) ?? '', /후보와 등록 단위가 없습니다/)
+  assert.equal(extractionResultNotice('RUNNING', 0, 0), null)
+  assert.equal(extractionResultNotice('FAILED', 0, 0), null)
 })
 
 test('신규 접수 입력 오류는 각 필드에 연결할 수 있는 형태로 반환한다', () => {

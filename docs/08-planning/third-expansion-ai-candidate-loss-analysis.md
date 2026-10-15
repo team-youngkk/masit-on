@@ -248,7 +248,7 @@ P2 변경 전 배포본과 동일한 역사적 계약(`gemini-3.5-flash-lite`, P
 
 `ux_ai_job__idempotency`가 `prompt_version`과 `schema_version`을 포함하므로 P7·S1으로 처리한 영상은 재추출 대상이 된다. 무료 quota를 한 번 더 소모하므로 운영에서 켜기 전에 `AI_WORKER_PROVIDER_QUOTA_LIMIT`·`AI_WORKER_APPLICATION_QUOTA_LIMIT`를 먼저 확인한다. P7까지의 작업과 Snapshot은 생성 당시 의미로 보존한다.
 
-**버전 라벨은 이 구현 PR에서 코드와 함께 올렸다.** [PR #220](../troubleshooting/pr-220-ai-prompt-version-propagation-review.md)이 문서만 앞서 올려 배포되지 않은 상태를 배포된 것처럼 기록했던 같은 유형의 전파 누락을 남긴 적이 있어, 이번에는 위 표의 다섯 대상(시스템 지시, 결과 Schema, 수신 검증기, `ai_candidate_snapshot`, 관리자 상세 응답·화면)을 코드와 같은 PR에서 함께 갱신했다. 현재 운영 계약은 `P8`·`S2`이며, `P7`·`S1`은 기존 이력으로 보존한다.
+**버전 라벨은 이 구현 PR에서 코드와 함께 올렸다.** [PR #220](../troubleshooting/pr-220-ai-prompt-version-propagation-review.md)이 문서만 앞서 올려 배포되지 않은 상태를 배포된 것처럼 기록했던 같은 유형의 전파 누락을 남긴 적이 있어, 이번에는 위 표의 다섯 대상(시스템 지시, 결과 Schema, 수신 검증기, `ai_candidate_snapshot`, 관리자 상세 응답·화면)을 코드와 같은 PR에서 함께 갱신했다. 현재 운영 계약은 `P9`·`S3`이며, `P7`·`S1`은 기존 이력으로 보존한다.
 
 ## 10. Prompt P3 보완 텍스트 근거 경계
 

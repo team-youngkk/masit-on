@@ -61,7 +61,7 @@ class ResolvePlaceIdentityService implements ResolvePlaceIdentityUseCase {
 
         String normalizedRestaurantName = command.restaurantName().strip();
         String normalizedName = normalize(normalizedRestaurantName);
-        List<PlaceSearchCandidate> candidates = searchCandidates(command.restaurantName());
+        List<PlaceSearchCandidate> candidates = searchCandidates(command.restaurantName(), candidateDistrict.get());
         List<PlaceSearchCandidate> exactMatches = candidates.stream()
                 .filter(this::hasRequiredFields)
                 .filter(candidate -> normalize(candidate.placeName()).equals(normalizedName))
@@ -78,7 +78,7 @@ class ResolvePlaceIdentityService implements ResolvePlaceIdentityUseCase {
 
         String baseName = stripBranchSuffix(normalizedRestaurantName);
         if (!blank(baseName) && !baseName.equals(normalizedRestaurantName)) {
-            candidates = mergeCandidates(candidates, searchCandidates(baseName));
+            candidates = mergeCandidates(candidates, searchCandidates(baseName, candidateDistrict.get()));
         }
         List<PlaceSearchCandidate> relaxedMatches = candidates.stream()
                 .filter(this::hasRelaxedRequiredFields)
@@ -89,8 +89,8 @@ class ResolvePlaceIdentityService implements ResolvePlaceIdentityUseCase {
         return toResult(relaxedMatches, MATCHED_BY_NAME_CONTAINMENT_AND_DISTRICT_AND_CATEGORY);
     }
 
-    private List<PlaceSearchCandidate> searchCandidates(String restaurantName) {
-        return mergeCandidates(List.of(), searchPlacesByName.search(restaurantName));
+    private List<PlaceSearchCandidate> searchCandidates(String restaurantName, String district) {
+        return mergeCandidates(List.of(), searchPlacesByName.searchCandidates(restaurantName, district));
     }
 
     private List<PlaceSearchCandidate> mergeCandidates(List<PlaceSearchCandidate> initial,

@@ -30,7 +30,7 @@ related_documents:
 
 ## 1. 결정 상태와 범위
 
-이 문서는 AI 영상 추출 작업, 후보 Snapshot, 통제 태그, Gemini 영상 입력 이력과 YouTube 채널 감시·보정 실행 상태의 논리·물리 데이터 경계를 정의하는 Accepted 계약이다. Google Gemini API는 `gemini-3.5-flash-lite`, Gemini Developer API global endpoint, Free Tier 전용·유료 호출 금지, 현재 Prompt `P8`, 결과 Schema `S2`를 사용한다. 기존 Prompt `P1`·`P2`·`P3`·`P4`·`P5`·`P6`·`P7` 작업과 Snapshot은 재현성을 위한 역사적 이력으로만 보존한다. V4 AI 스키마의 정본은 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql)이고, 채널 감시 오류 시각 보강은 [`V5__add_youtube_channel_watch_last_error_at.sql`](../../../src/main/resources/db/migration/V5__add_youtube_channel_watch_last_error_at.sql), YouTube 보정 실행은 [`V14__create_youtube_channel_backfill_run.sql`](../../../src/main/resources/db/migration/V14__create_youtube_channel_backfill_run.sql), 중지 원인은 [`V15__add_youtube_channel_backfill_stop_reason.sql`](../../../src/main/resources/db/migration/V15__add_youtube_channel_backfill_stop_reason.sql), 영상 처리 원장은 [`V16__add_youtube_channel_backfill_video_ledger.sql`](../../../src/main/resources/db/migration/V16__add_youtube_channel_backfill_video_ledger.sql)로 관리한다.
+이 문서는 AI 영상 추출 작업, 후보 Snapshot, 통제 태그, Gemini 영상 입력 이력과 YouTube 채널 감시·보정 실행 상태의 논리·물리 데이터 경계를 정의하는 Accepted 계약이다. Google Gemini API는 `gemini-3.5-flash-lite`, Gemini Developer API global endpoint, Free Tier 전용·유료 호출 금지, 현재 Prompt `P9`, 결과 Schema `S3`를 사용한다. 기존 Prompt `P1`·`P2`·`P3`·`P4`·`P5`·`P6`·`P7`·`P8` 작업과 Snapshot은 재현성을 위한 역사적 이력으로만 보존한다. V4 AI 스키마의 정본은 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql)이고, 채널 감시 오류 시각 보강은 [`V5__add_youtube_channel_watch_last_error_at.sql`](../../../src/main/resources/db/migration/V5__add_youtube_channel_watch_last_error_at.sql), YouTube 보정 실행은 [`V14__create_youtube_channel_backfill_run.sql`](../../../src/main/resources/db/migration/V14__create_youtube_channel_backfill_run.sql), 중지 원인은 [`V15__add_youtube_channel_backfill_stop_reason.sql`](../../../src/main/resources/db/migration/V15__add_youtube_channel_backfill_stop_reason.sql), 영상 처리 원장은 [`V16__add_youtube_channel_backfill_video_ledger.sql`](../../../src/main/resources/db/migration/V16__add_youtube_channel_backfill_video_ledger.sql)로 관리한다.
 
 `ai_registration_unit`(5.1절), `ai_registration_unit_review`(5.3절), `food_category_mapping`(5.2절), `ai_candidate_snapshot.candidate_truncated`는 [PR #226](https://github.com/team-youngkk/masit-on/pull/226)에서 Flyway 순서 소유자(박진영)와 restaurant 도메인 소유자의 승인으로 합의를 확정했다. 네 항목은 `V8__add_ai_registration_unit_and_food_category_mapping.sql`로 구현했다. 절차는 [ADR-AI-001 1절](../../07-adr/integration/ai-001-video-extraction-candidate-boundary.md)에 있다.
 
@@ -508,3 +508,16 @@ V13 `tag_definition_merge`는 원본·대상 정의, 병합 전후 원본과 대
 DB 조회 횟수는 라이브러리를 추가하지 않은 프로세스 내 read-through cache로 제한한다. 불변 snapshot TTL은 30초이며 생성·수정·폐기는 최대 30초 뒤 반영될 수 있다. 최초 적재와 만료 뒤 첫 요청은 사전을 갱신하고, 같은 시점의 동시 요청은 하나의 갱신 결과를 공유한다. 최초 적재 또는 만료 갱신에서 DB 조회가 실패하면 stale snapshot이나 초기 18개 seed로 대체하지 않고 `NATURAL_LANGUAGE_UNAVAILABLE` 503으로 fail-closed 처리한다.
 
 `parserVersion: P1`은 문장 패턴·조건 해석·충돌·상한·정규화 알고리즘의 버전이다. 동적 사전의 코드·표시명·별칭 데이터 변경만으로 버전을 증가시키지 않는다. V11은 V4 초기 18개 seed에서 빠진 기존 P1 별칭을 JSONB와 정규화 용어 정본에 함께 이관한다. 초기 seed와 별칭은 Golden V1 회귀 기준으로 보존하며 동적 전환 전후의 해석 결과가 같아야 한다.
+
+
+## 이슈 #417: P9 / S3 식당별 후보 결속
+
+2026-10-14 계약 소유자 합의를 확보했다. 신규 추출은 P9/S3를 사용하며 P8/S2와 이전 Snapshot은 생성 당시 의미로 읽기 전용 보존한다. 비용·Provider·모델·호출 상한은 변경하지 않는다.
+
+S3 루트는 resultCompleteness, candidates, registrationUnits, missingFields, candidateTruncated를 모두 요구한다. candidates는 기존 통제 태그 후보 전용이며, 식당 관련 값을 단위 밖에 두면 Schema 오류다. registrationUnits의 각 객체는 candidateUnitId(중복 없는 불투명 문자열), restaurantName, address, location, menus, visitEvidence만 허용한다. restaurantName은 반드시 하나의 후보 객체이며 address·location·visitEvidence는 후보 객체 또는 null, menus는 후보 객체 배열이다. 후보 객체는 value(1~4096자), confidence(유한한 0~1), evidence만 허용한다. 명시적 단위 밖 필드를 복사하거나 후보 배열 순서로 결속하지 않는다.
+
+전체 후보 수(태그 + 모든 단위의 non-null 필드 + 모든 메뉴)는 300 이하이고 상한에 닿으면 서버가 candidateTruncated=true를 강제한다. 단위별 결측·UNKNOWN은 missingFields와 PARTIAL에 반영한다. 외부 검증·중복·등록 차단은 필드 완전성과 독립이다. 중복 ID·추가 키·잘못된 중첩 구조·단위 없는 flat 후보는 Provider SCHEMA 오류이며 Snapshot 저장과 실행 전에 거부한다.
+
+candidate_fields JSON에는 registrationUnits를 변경 없이 저장하고 candidateUnitId와 메뉴 배열을 보존한다. 새 DB 컬럼·마이그레이션은 필요하지 않다. 등록 단위 unit_index는 Snapshot의 단위 배열에서 1부터 배정하되, 필드 소속은 candidateUnitId를 가진 단위 객체로만 결정한다. S1/S2 복수 식당은 순서로 결속하지 않고 보류하며 과거 Snapshot은 재작성하지 않는다.
+
+설계·검증 근거: [이슈 417 설계](../../08-planning/issue-417-ai-contract-proposal.md).

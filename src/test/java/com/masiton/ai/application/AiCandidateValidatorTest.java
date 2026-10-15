@@ -25,6 +25,35 @@ class AiCandidateValidatorTest {
     private final AiCandidateValidator validator = new AiCandidateValidator();
 
     @Test
+    @DisplayName("COMPLETE 선언에서도 실제 주소와 위치 누락을 계산해 PARTIAL로 정규화한다")
+    void validate_COMPLETE선언필수누락_PARTIAL로계산한다() throws Exception {
+        // Given
+        JsonNode input = payload("""
+                {"resultCompleteness":"COMPLETE","candidates":[
+                  {"field":"restaurantName","value":"맛집","confidence":0.9,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}},
+                  {"field":"visitEvidence","value":"직접 방문","confidence":0.9,"evidence":{"type":"TIMESTAMP","startMs":1,"endMs":2}}
+                ],"missingFields":[]}
+                """);
+        // When
+        AiCandidateValidationResult result = validator.validate(input);
+        // Then
+        assertThat(result.missingFields()).containsExactly("address", "location");
+        assertThat(result.resultCompleteness("COMPLETE")).isEqualTo("PARTIAL");
+        assertThat(result.decision()).isEqualTo(Decision.AUTO_BLOCKED);
+    }
+
+    @Test
+    @DisplayName("후보 0개의 COMPLETE 선언은 필수 누락과 PARTIAL로 표시한다")
+    void validate_후보0개_COMPLETE를PARTIAL로계산한다() throws Exception {
+        // Given / When
+        AiCandidateValidationResult result = validator.validate(payload(
+                "{\"resultCompleteness\":\"COMPLETE\",\"candidates\":[],\"missingFields\":[]}"));
+        // Then
+        assertThat(result.missingFields()).containsExactly("restaurantName", "address", "location", "visitEvidence");
+        assertThat(result.resultCompleteness("COMPLETE")).isEqualTo("PARTIAL");
+    }
+
+    @Test
     @DisplayName("검증 결과의 후보 목록은 원본 변경과 외부 수정을 허용하지 않는다")
     void validationResult_후보목록_깊은불변성을보장한다() {
         // Given
@@ -69,6 +98,7 @@ class AiCandidateValidatorTest {
         // Then
         assertThat(result.decision()).isEqualTo(Decision.AUTO_CONFIRMED);
         assertThat(result.isAutoConfirmable()).isTrue();
+        assertThat(result.resultCompleteness("COMPLETE")).isEqualTo("COMPLETE");
         assertThat(result.candidates()).containsKeys("restaurantName", "address", "location", "visitEvidence");
         assertThat(result.foodCategoryName()).isEqualTo("냉면");
     }
@@ -232,6 +262,7 @@ class AiCandidateValidatorTest {
         // Then
         assertThat(result.decision()).isEqualTo(Decision.AUTO_BLOCKED);
         assertThat(result.reasonCodes()).contains("UNKNOWN_EVIDENCE");
+        assertThat(result.resultCompleteness("COMPLETE")).isEqualTo("PARTIAL");
         assertThat(result.foodCategoryName()).isNull();
         assertThat(result.missingFields()).doesNotContain("menu");
         assertThat(result.candidates().get("menu")).extracting(

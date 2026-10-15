@@ -9,4 +9,6 @@ import java.util.List;
 public interface PlaceSearchPort {
 
     List<PlaceSearchCandidate> search(String name);
+
+    List<PlaceSearchCandidate> searchCandidates(String name, String district);
 }

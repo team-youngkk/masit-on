@@ -1,0 +1,135 @@
+{
+  "resultCompleteness": "COMPLETE",
+  "candidates": [],
+  "registrationUnits": [
+    {
+      "candidateUnitId": "a",
+      "restaurantName": {
+        "value": "식당A",
+        "confidence": 0.9,
+        "evidence": {
+          "type": "TIMESTAMP",
+          "startMs": 1,
+          "endMs": 2
+        }
+      },
+      "address": {
+        "value": "a 주소",
+        "confidence": 0.9,
+        "evidence": {
+          "type": "TIMESTAMP",
+          "startMs": 1,
+          "endMs": 2
+        }
+      },
+      "location": {
+        "value": "서울 강남구",
+        "confidence": 0.9,
+        "evidence": {
+          "type": "TIMESTAMP",
+          "startMs": 1,
+          "endMs": 2
+        }
+      },
+      "menus": [
+        {
+          "value": "냉면",
+          "confidence": 0.9,
+          "evidence": {
+            "type": "TIMESTAMP",
+            "startMs": 1,
+            "endMs": 2
+          }
+        },
+        {
+          "value": "수육",
+          "confidence": 0.9,
+          "evidence": {
+            "type": "TIMESTAMP",
+            "startMs": 1,
+            "endMs": 2
+          }
+        }
+      ],
+      "visitEvidence": {
+        "value": "제가 식당A을 방문했습니다",
+        "confidence": 0.9,
+        "evidence": {
+          "type": "TIMESTAMP",
+          "startMs": 1,
+          "endMs": 2
+        }
+      }
+    },
+    {
+      "candidateUnitId": "b",
+      "restaurantName": {
+        "value": "식당B",
+        "confidence": 0.9,
+        "evidence": {
+          "type": "TIMESTAMP",
+          "startMs": 1,
+          "endMs": 2
+        }
+      },
+      "address": {
+        "value": "b 주소",
+        "confidence": 0.9,
+        "evidence": {
+          "type": "TIMESTAMP",
+          "startMs": 1,
+          "endMs": 2
+        }
+      },
+      "location": {
+        "value": "서울 강남구",
+        "confidence": 0.9,
+        "evidence": {
+          "type": "TIMESTAMP",
+          "startMs": 1,
+          "endMs": 2
+        }
+      },
+      "menus": [
+        {
+          "value": "냉면",
+          "confidence": 0.9,
+          "evidence": {
+            "type": "TIMESTAMP",
+            "startMs": 1,
+            "endMs": 2
+          }
+        },
+        {
+          "value": "칼국수",
+          "confidence": 0.9,
+          "evidence": {
+            "type": "TIMESTAMP",
+            "startMs": 1,
+            "endMs": 2
+          }
+        },
+        {
+          "value": "만두",
+          "confidence": 0.9,
+          "evidence": {
+            "type": "TIMESTAMP",
+            "startMs": 1,
+            "endMs": 2
+          }
+        }
+      ],
+      "visitEvidence": {
+        "value": "제가 식당B을 방문했습니다",
+        "confidence": 0.9,
+        "evidence": {
+          "type": "TIMESTAMP",
+          "startMs": 1,
+          "endMs": 2
+        }
+      }
+    }
+  ],
+  "missingFields": [],
+  "candidateTruncated": false
+}

@@ -25,4 +25,9 @@ class SearchPlacesByNameService implements SearchPlacesByNameUseCase {
     public List<PlaceSearchCandidate> search(String name) {
         return placeSearchPort.search(name);
     }
+
+    @Override
+    public List<PlaceSearchCandidate> searchCandidates(String name, String district) {
+        return placeSearchPort.searchCandidates(name, district);
+    }
 }

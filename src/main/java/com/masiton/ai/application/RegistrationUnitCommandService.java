@@ -469,6 +469,12 @@ public class RegistrationUnitCommandService {
         List<RegistrationUnitBundle> bundles = decomposeRegistrationUnits.decompose(
                 new DecomposeRegistrationUnitsUseCase.DecomposeRegistrationUnitsCommand(
                         snapshot.candidateFields(), snapshot.fieldConfidences(), snapshot.evidence()));
+        if (bundles.isEmpty() && snapshot.candidateFields() != null
+                && !snapshot.candidateFields().has("registrationUnits")
+                && snapshot.candidateFields().path("restaurantName").isArray()
+                && snapshot.candidateFields().path("restaurantName").size() > 1) {
+            throw validationConflict("MISSING_REQUIRED_FIELD");
+        }
         return bundles.stream().filter(bundle -> bundle.unitIndex() == unit.unitIndex()).findFirst()
                 .orElseThrow(() -> new IllegalStateException(
                         "Registration unit bundle could not be re-derived: " + unit.id()));
