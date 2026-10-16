@@ -3,6 +3,9 @@ package com.masiton.ai.application;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.time.OffsetDateTime;
+import java.time.Clock;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -14,10 +17,21 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 import com.masiton.ai.application.port.out.AiExtractionResultProcessor;
 import com.masiton.ai.application.port.out.AiExtractionResultStore;
+import com.masiton.ai.application.port.out.AiRegistrationUnitStore;
+import com.masiton.ai.application.port.out.AiRegistrationUnitRetryStore;
+import com.masiton.ai.application.port.out.TemporaryInputCipher;
+import com.masiton.ai.application.port.out.TemporaryInputDecryptionException;
+import com.masiton.ai.application.port.out.TemporaryInputCipher.EncryptedInput;
+import com.masiton.ai.application.port.out.AiExtractionResultProcessor.SupplementProvider;
+import com.masiton.ai.application.port.out.AiExtractionResultProcessor.SupplementResult;
 import com.masiton.ai.application.port.out.dto.AiVideoExtractionResult;
+import com.masiton.video.application.port.in.ResolveVerifiedVideoUseCase;
+import com.masiton.video.application.port.out.VerifiedVideo;
 import com.masiton.orchestration.application.port.in.AutoRegisterVerifiedContentUseCase;
 import com.masiton.orchestration.application.port.in.VerifyAiContentCandidateUseCase;
 
@@ -47,24 +61,188 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
     private final VerifyAiContentCandidateUseCase contentVerification;
     private final RegistrationUnitAutoExecutionService registrationUnitAutoExecution;
     private final ObjectMapper objectMapper;
+    private final AiRegistrationUnitStore registrationUnitStore;
+    private final AiRegistrationUnitRetryStore retryStore;
+    private final TemporaryInputCipher temporaryInputCipher;
+    private final ResolveVerifiedVideoUseCase videoResolver;
+    private final Clock clock;
     private final AiCandidateValidator candidateValidator = new AiCandidateValidator();
 
+    @Autowired
     AiExtractionResultProcessorService(
             AiExtractionResultStore resultStore,
             AiExtractionResultCommitService commitService,
             VerifyAiContentCandidateUseCase contentVerification,
             RegistrationUnitAutoExecutionService registrationUnitAutoExecution,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            AiRegistrationUnitStore registrationUnitStore,
+            AiRegistrationUnitRetryStore retryStore,
+            TemporaryInputCipher temporaryInputCipher,
+            ResolveVerifiedVideoUseCase videoResolver,
+            @Qualifier("aiWorkerClock") Clock aiWorkerClock) {
         this.resultStore = resultStore;
         this.commitService = commitService;
         this.contentVerification = contentVerification;
         this.registrationUnitAutoExecution = registrationUnitAutoExecution;
         this.objectMapper = objectMapper;
+        this.registrationUnitStore = registrationUnitStore;
+        this.retryStore = retryStore;
+        this.temporaryInputCipher = temporaryInputCipher;
+        this.videoResolver = videoResolver;
+        this.clock = aiWorkerClock;
+    }
+
+    AiExtractionResultProcessorService(AiExtractionResultStore resultStore,
+                                       AiExtractionResultCommitService commitService,
+                                       VerifyAiContentCandidateUseCase contentVerification,
+                                       RegistrationUnitAutoExecutionService registrationUnitAutoExecution,
+                                       ObjectMapper objectMapper) {
+        this(resultStore, commitService, contentVerification, registrationUnitAutoExecution, objectMapper,
+                null, null, null, null, Clock.systemUTC());
     }
 
     @Override
     public boolean process(UUID jobId, String workerId, int attemptNo, OffsetDateTime attemptStartedAt,
                            OffsetDateTime finishedAt, AiVideoExtractionResult result) {
+        return processInternal(jobId, workerId, attemptNo, attemptStartedAt, finishedAt, result, null);
+    }
+
+    @Override
+    public boolean process(UUID jobId, String workerId, int attemptNo, OffsetDateTime attemptStartedAt,
+                           OffsetDateTime finishedAt, AiVideoExtractionResult result,
+                           SupplementProvider supplementProvider) {
+        return processInternal(jobId, workerId, attemptNo, attemptStartedAt, finishedAt, result, supplementProvider);
+    }
+
+    @Override
+    public Optional<Boolean> resumePending(UUID jobId, String workerId, int attemptNo,
+                                           OffsetDateTime attemptStartedAt, OffsetDateTime finishedAt,
+                                           SupplementProvider supplementProvider) {
+        if (retryStore == null || registrationUnitStore == null || temporaryInputCipher == null) {
+            return Optional.empty();
+        }
+        Optional<AiExtractionResultStore.ProcessingJob> job = resultStore.lockProcessingJob(jobId, workerId, attemptNo);
+        Optional<AiExtractionResultStore.SnapshotCandidate> latest = resultStore.latestSnapshotCandidate(jobId);
+        if (job.isEmpty() || latest.isEmpty()) return Optional.empty();
+        AiExtractionResultStore.SnapshotCandidate snapshot = latest.get();
+        JsonNode root;
+        try {
+            root = objectMapper.readTree(snapshot.candidateFields());
+        } catch (JacksonException exception) {
+            return Optional.empty();
+        }
+        JsonNode units = root.path("registrationUnits");
+        if (!units.isArray()) return Optional.empty();
+        List<AiRegistrationUnitStore.RegistrationUnitRow> rows = registrationUnitStore.findBySnapshotId(snapshot.id());
+        Map<Integer, AiRegistrationUnitStore.RegistrationUnitRow> rowsByIndex = new LinkedHashMap<>();
+        rows.forEach(row -> rowsByIndex.put(row.unitIndex(), row));
+        List<RegistrationUnitOutcome> outcomes = rows.stream().map(this::toOutcome).collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+        Map<UUID, Integer> pending = new LinkedHashMap<>();
+        boolean remediationCheckpoint = "AUTO_BLOCKED".equals(snapshot.reviewStatus()) && !rows.isEmpty();
+        int finalAttemptNo = attemptNo;
+        OffsetDateTime finalStartedAt = attemptStartedAt;
+        OffsetDateTime finalFinishedAt = finishedAt;
+        AiVideoExtractionResult finalResult = new AiVideoExtractionResult(root, null);
+        ArrayNode mutableUnits = (ArrayNode) units.deepCopy();
+        boolean found = false;
+        for (int index = 0; index < units.size(); index++) {
+            String candidateUnitId = units.path(index).path("candidateUnitId").asText("");
+            Optional<AiRegistrationUnitRetryStore.RetryClaim> existing = retryStore
+                    .findByJobAndCandidateUnitId(jobId, candidateUnitId);
+            if (existing.isEmpty() || !"PENDING".equals(existing.get().outcome())
+                    || !snapshot.id().equals(existing.get().sourceSnapshotId())) continue;
+            AiRegistrationUnitRetryStore.RetryClaim claim = existing.get();
+            int unitIndex = index + 1;
+            AiRegistrationUnitStore.RegistrationUnitRow sourceRow = rowsByIndex.get(unitIndex);
+            if (sourceRow == null || !sourceRow.id().equals(claim.sourceRegistrationUnitId())) continue;
+            found = true;
+            pending.put(claim.id(), unitIndex);
+            AiVideoExtractionResult recoveredResult = null;
+            if (claim.providerResultCiphertext() != null && claim.providerResultKeyId() != null) {
+                try {
+                    String saved = temporaryInputCipher.decrypt(new EncryptedInput(
+                            claim.providerResultCiphertext(), claim.providerResultKeyId()));
+                    JsonNode savedPayload = objectMapper.readTree(saved);
+                    recoveredResult = new AiVideoExtractionResult(savedPayload.path("candidates"),
+                            savedPayload.path("providerRequestId").isNull() ? null
+                                    : savedPayload.path("providerRequestId").asText());
+                } catch (TemporaryInputDecryptionException | JacksonException exception) {
+                    // The HTTP response exists but cannot be recovered; preserve the source unit and block.
+                }
+            }
+            boolean priorAttemptFailed = "FAILED".equals(claim.providerAttemptOutcome());
+            if (recoveredResult == null && (claim.providerAttemptNo() != null && !priorAttemptFailed
+                    || claim.ciphertext() == null || claim.encryptionKeyId() == null)) continue;
+            try {
+                SupplementResult supplied;
+                if (recoveredResult != null) {
+                    OffsetDateTime recoveredAt = claim.providerResultAt() == null ? finishedAt : claim.providerResultAt();
+                    supplied = new SupplementResult(claim.providerAttemptNo() == null ? attemptNo : claim.providerAttemptNo(), recoveredAt, recoveredAt,
+                            recoveredResult, true);
+                } else {
+                    String approvedInput = temporaryInputCipher.decrypt(new EncryptedInput(
+                            claim.ciphertext(), claim.encryptionKeyId()));
+                    Optional<SupplementResult> response = supplementProvider.extract(jobId, claim.id(), approvedInput);
+                    if (response.isEmpty()) continue;
+                    supplied = response.get();
+                }
+                finalAttemptNo = supplied.attemptNo();
+                finalStartedAt = supplied.attemptStartedAt();
+                finalFinishedAt = supplied.finishedAt();
+                finalResult = supplied.result();
+                JsonNode replacement = supplied.providerSucceeded()
+                        ? validatedSupplementUnit(supplied.result().candidates(), candidateUnitId) : null;
+                if (replacement == null) continue;
+                mutableUnits.set(index, replacement.deepCopy());
+                ParsedCandidate changed = parse(withRegistrationUnits(root, mutableUnits));
+                List<RegistrationUnitOutcome> unitOutcome = registrationUnitAutoExecution.execute(changed.fields(),
+                        changed.confidences(), changed.evidence(), job.get().channelId(), job.get().videoId(),
+                        job.get().videoUrl(), unitIndex);
+                if (!unitOutcome.isEmpty()) replaceOutcome(outcomes, unitOutcome.get(0));
+            } catch (TemporaryInputDecryptionException exception) {
+                // Expired or unavailable ciphertext is terminal for this one remediation.
+            }
+        }
+        if (!found && !remediationCheckpoint) return Optional.empty();
+        JsonNode merged = withRegistrationUnits(root, mutableUnits);
+        ParsedCandidate candidate = parse(merged);
+        List<ParsedTag> parsedTags = candidate.tags();
+        String status = !outcomes.isEmpty() && outcomes.stream().allMatch(o -> "AUTO_CONFIRMED".equals(o.reviewStatus()))
+                ? "AUTO_CONFIRMED" : "AUTO_BLOCKED";
+        AiExtractionResultCommitService.ProcessCommand finalCommand = withTags(command(jobId, workerId,
+                finalAttemptNo, finalStartedAt, finalFinishedAt, finalResult, candidate, outcomes),
+                resolveTags(parsedTags), status);
+        boolean committed = commitService.persistRemediationResult(finalCommand, retryStatuses(pending, outcomes));
+        return Optional.of(committed);
+    }
+
+    private JsonNode withRegistrationUnits(JsonNode original, ArrayNode units) {
+        ObjectNode copy = (ObjectNode) original.deepCopy();
+        copy.set("registrationUnits", units.deepCopy());
+        return copy;
+    }
+
+    private void replaceOutcome(List<RegistrationUnitOutcome> outcomes, RegistrationUnitOutcome replacement) {
+        for (int i = 0; i < outcomes.size(); i++) {
+            if (outcomes.get(i).unitIndex() == replacement.unitIndex()) {
+                outcomes.set(i, replacement);
+                return;
+            }
+        }
+    }
+
+    private RegistrationUnitOutcome toOutcome(AiRegistrationUnitStore.RegistrationUnitRow row) {
+        if ("AUTO_CONFIRMED".equals(row.reviewStatus())) {
+            return RegistrationUnitOutcome.confirmed(row.unitIndex(), row.restaurantName(), row.placeDecisionJson(),
+                    row.categoryDecisionJson(), row.registeredRestaurantId(), row.registeredCreatorId(),
+                    row.registeredVideoId(), row.registeredVisitId(), json(objectMapper.valueToTree(row.reusedResources())));
+        }
+        return RegistrationUnitOutcome.blocked(row.unitIndex(), row.restaurantName(), row.blockReason());
+    }
+
+    private boolean processInternal(UUID jobId, String workerId, int attemptNo, OffsetDateTime attemptStartedAt,
+                                    OffsetDateTime finishedAt, AiVideoExtractionResult result,
+                                    SupplementProvider supplementProvider) {
         Optional<AiExtractionResultStore.ProcessingJob> job = resultStore.lockProcessingJob(
                 jobId, workerId, attemptNo);
         if (job.isEmpty()) {
@@ -72,6 +250,25 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
         }
 
         ParsedCandidate candidate = parse(result.candidates());
+        if (result.candidates().has("registrationUnits")) {
+            AiCandidateValidationResult validation = candidateValidator.validateS3(result.candidates());
+            List<RegistrationUnitOutcome> outcomes = validation.isAutoRejected() ? List.of()
+                    : registrationUnitAutoExecution.execute(candidate.fields(), candidate.confidences(), candidate.evidence(),
+                            job.get().channelId(), job.get().videoId(), job.get().videoUrl());
+            AiExtractionResultCommitService.ProcessCommand unitCommand = command(jobId, workerId, attemptNo,
+                    attemptStartedAt, finishedAt, result, candidate, outcomes);
+            String reviewStatus = validation.isAutoRejected() ? "AUTO_REJECTED"
+                    : !outcomes.isEmpty() && outcomes.stream().allMatch(outcome -> "AUTO_CONFIRMED".equals(outcome.reviewStatus()))
+                    ? "AUTO_CONFIRMED" : "AUTO_BLOCKED";
+            if (supplementProvider != null && !validation.isAutoRejected()) {
+                List<RegistrationUnitOutcome> eligible = outcomes.stream().filter(this::isRemediable).toList();
+                if (!eligible.isEmpty()) {
+                    return remediateRegistrationUnits(job.get(), jobId, workerId, attemptNo, attemptStartedAt,
+                            finishedAt, result, candidate, outcomes, eligible, supplementProvider);
+                }
+            }
+            return commitService.persistBlocked(withTags(unitCommand, resolveTags(candidate.tags()), reviewStatus));
+        }
         // BR-AIEXTRACT-001: registration units are judged independently of the job-level candidate
         // outcome below, so a video with multiple places can still auto-register the places that
         // clear steps 1-2 even when the legacy single-candidate pipeline blocks the job itself.
@@ -154,6 +351,11 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
             parsedFields.put(field, new ParsedField(field, candidate.value(),
                     BigDecimal.valueOf(candidate.confidence()), candidateEvidence));
         });
+        if (root.path("registrationUnits").isArray()) {
+            // S3 keeps the provider-declared grouping as raw Snapshot evidence.  The decomposition
+            // service rejects malformed or missing restaurant values rather than inferring a relation.
+            fields.set("registrationUnits", root.path("registrationUnits").deepCopy());
+        }
         validation.missingFields().forEach(missing::add);
         boolean candidateTruncated = validation.candidateTruncated();
 
@@ -173,11 +375,10 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
                     tag.label(), BigDecimal.valueOf(tag.confidence()), evidenceNode(tag.evidence())));
         });
 
-        String reason = validation.isAutoConfirmable() && validation.foodCategoryName() != null
+        String reason = validation.isAutoConfirmable() && (root.has("registrationUnits") || validation.foodCategoryName() != null)
                 ? null : validation.reasonCodes().stream().findFirst().orElse("FOOD_CATEGORY_REQUIRED");
         String rawCompleteness = root.path("resultCompleteness").asText();
-        String completeness = "COMPLETE".equals(rawCompleteness) || "PARTIAL".equals(rawCompleteness)
-                ? rawCompleteness : "PARTIAL";
+        String completeness = validation.resultCompleteness(rawCompleteness);
         return new ParsedCandidate(completeness, fields, tagsJson,
                 confidences, evidence, missing, candidateTruncated, tags, parsedFields.get("restaurantName"),
                 parsedFields.get("menu"), parsedFields.get("address"), parsedFields.get("location"),
@@ -215,6 +416,172 @@ class AiExtractionResultProcessorService implements AiExtractionResultProcessor 
     private boolean persistBlocked(AiExtractionResultCommitService.ProcessCommand command,
                                    ParsedCandidate candidate) {
         return commitService.persistBlocked(withTags(command, resolveTags(candidate.tags()), command.reviewStatus()));
+    }
+
+    private boolean remediateRegistrationUnits(AiExtractionResultStore.ProcessingJob job, UUID jobId, String workerId,
+                                                int attemptNo, OffsetDateTime attemptStartedAt,
+                                                OffsetDateTime finishedAt, AiVideoExtractionResult initialResult,
+                                                ParsedCandidate initialCandidate,
+                                                List<RegistrationUnitOutcome> initialOutcomes,
+                                                List<RegistrationUnitOutcome> eligible,
+                                                SupplementProvider supplementProvider) {
+        if (registrationUnitStore == null || retryStore == null || temporaryInputCipher == null || videoResolver == null) {
+            return commitService.persistBlocked(withTags(command(jobId, workerId, attemptNo, attemptStartedAt,
+                    finishedAt, initialResult, initialCandidate, initialOutcomes), resolveTags(initialCandidate.tags()),
+                    "AUTO_BLOCKED"));
+        }
+        AiExtractionResultCommitService.ProcessCommand checkpoint = withTags(command(jobId, workerId, attemptNo,
+                attemptStartedAt, finishedAt, initialResult, initialCandidate, initialOutcomes),
+                resolveTags(initialCandidate.tags()), "AUTO_BLOCKED");
+        UUID sourceSnapshotId = commitService.persistRemediationCheckpoint(checkpoint);
+        if (sourceSnapshotId == null) {
+            return false;
+        }
+        List<AiRegistrationUnitStore.RegistrationUnitRow> sourceRows = registrationUnitStore.findBySnapshotId(sourceSnapshotId);
+        Map<Integer, AiRegistrationUnitStore.RegistrationUnitRow> rowsByIndex = new LinkedHashMap<>();
+        sourceRows.forEach(row -> rowsByIndex.put(row.unitIndex(), row));
+
+        VerifiedVideo metadata;
+        try {
+            metadata = videoResolver.resolve(job.videoUrl()).orElse(null);
+        } catch (RuntimeException exception) {
+            metadata = null;
+        }
+        JsonNode mergedRoot = initialResult.candidates().deepCopy();
+        List<RegistrationUnitOutcome> mergedOutcomes = new ArrayList<>(initialOutcomes);
+        Map<UUID, Integer> claimedRetries = new LinkedHashMap<>();
+        int finalAttemptNo = attemptNo;
+        OffsetDateTime finalStartedAt = attemptStartedAt;
+        OffsetDateTime finalFinishedAt = finishedAt;
+        AiVideoExtractionResult finalResult = initialResult;
+
+        for (RegistrationUnitOutcome failed : eligible) {
+            if (metadata == null) {
+                break;
+            }
+            int index = failed.unitIndex() - 1;
+            JsonNode sourceUnit = mergedRoot.path("registrationUnits").path(index);
+            String candidateUnitId = sourceUnit.path("candidateUnitId").asText("");
+            String locationExpression = sourceUnit.path("location").path("value").asText("");
+            AiRegistrationUnitStore.RegistrationUnitRow sourceRow = rowsByIndex.get(failed.unitIndex());
+            if (candidateUnitId.isBlank() || locationExpression.isBlank() || sourceRow == null
+                    || !candidateUnitId.equals(sourceUnit.path("candidateUnitId").asText())) {
+                continue;
+            }
+            String supplementText = "YouTube title: " + nullToEmpty(metadata.title())
+                    + "\nYouTube description: " + nullToEmpty(metadata.description())
+                    + "\nApproved location expression for candidateUnitId " + candidateUnitId + ": " + locationExpression
+                    + "\nFailure reason: " + failed.blockReason()
+                    + "\nSupplement only this registration unit. Preserve candidateUnitId exactly as " + candidateUnitId + ".";
+            EncryptedInput encrypted = temporaryInputCipher.encrypt(supplementText);
+            OffsetDateTime claimTime = OffsetDateTime.now(clock);
+            UUID retryId = UUID.randomUUID();
+            ArrayNode approvedIdentifiers = objectMapper.createArrayNode();
+            approvedIdentifiers.add("videoId=" + job.videoId());
+            approvedIdentifiers.add("candidateUnitId=" + candidateUnitId);
+            approvedIdentifiers.add("sourceRegistrationUnitId=" + sourceRow.id());
+            Optional<AiRegistrationUnitRetryStore.RetryClaim> claim = retryStore.claim(
+                    new AiRegistrationUnitRetryStore.RetryClaimRequest(retryId, jobId, sourceSnapshotId,
+                            sourceRow.id(), candidateUnitId, failed.blockReason(), json(approvedIdentifiers), sha256(supplementText),
+                            encrypted.ciphertext(), encrypted.keyId(), claimTime.plusHours(24), claimTime));
+            if (claim.isEmpty()) {
+                continue;
+            }
+            claimedRetries.put(retryId, failed.unitIndex());
+            Optional<SupplementResult> response = supplementProvider.extract(jobId, retryId, supplementText);
+            if (response.isEmpty()) {
+                continue;
+            }
+            SupplementResult supplied = response.get();
+            finalAttemptNo = supplied.attemptNo();
+            finalStartedAt = supplied.attemptStartedAt();
+            finalFinishedAt = supplied.finishedAt();
+            finalResult = supplied.result();
+            JsonNode replacement = validatedSupplementUnit(supplied.result().candidates(), candidateUnitId);
+            if (replacement == null) {
+                continue;
+            }
+            ((ArrayNode) mergedRoot.path("registrationUnits")).set(index, replacement.deepCopy());
+            ParsedCandidate updatedCandidate = parse(mergedRoot);
+            List<RegistrationUnitOutcome> updated = registrationUnitAutoExecution.execute(
+                    updatedCandidate.fields(), updatedCandidate.confidences(), updatedCandidate.evidence(),
+                    job.channelId(), job.videoId(), job.videoUrl(), failed.unitIndex());
+            updated.stream().findFirst().ifPresent(outcome -> {
+                for (int i = 0; i < mergedOutcomes.size(); i++) {
+                    if (mergedOutcomes.get(i).unitIndex() == failed.unitIndex()) {
+                        mergedOutcomes.set(i, outcome);
+                        break;
+                    }
+                }
+            });
+        }
+
+        ParsedCandidate finalCandidate = parse(mergedRoot);
+        String status = !mergedOutcomes.isEmpty() && mergedOutcomes.stream()
+                .allMatch(outcome -> "AUTO_CONFIRMED".equals(outcome.reviewStatus())) ? "AUTO_CONFIRMED" : "AUTO_BLOCKED";
+        AiExtractionResultCommitService.ProcessCommand finalCommand = withTags(command(jobId, workerId,
+                finalAttemptNo, finalStartedAt, finalFinishedAt, finalResult, finalCandidate, mergedOutcomes),
+                resolveTags(finalCandidate.tags()), status);
+        boolean committed = commitService.persistRemediationResult(finalCommand, retryStatuses(claimedRetries, mergedOutcomes));
+        return committed;
+    }
+
+    private Map<UUID, String> retryStatuses(Map<UUID, Integer> retries, List<RegistrationUnitOutcome> outcomes) {
+        Map<UUID, String> statuses = new LinkedHashMap<>();
+        retries.forEach((retryId, unitIndex) -> {
+            RegistrationUnitOutcome outcome = outcomes.stream()
+                    .filter(candidate -> candidate.unitIndex() == unitIndex).findFirst().orElse(null);
+            statuses.put(retryId, outcome != null && "AUTO_CONFIRMED".equals(outcome.reviewStatus())
+                    ? "SUCCEEDED" : "BLOCKED");
+        });
+        return statuses;
+    }
+
+    private boolean isRemediable(RegistrationUnitOutcome outcome) {
+        return "AUTO_BLOCKED".equals(outcome.reviewStatus())
+                && Set.of("MISSING_REQUIRED_FIELD", "PLACE_NOT_FOUND", "PLACE_AMBIGUOUS", "VISIT_EVIDENCE_REQUIRED")
+                .contains(outcome.blockReason());
+    }
+
+    private JsonNode findUnit(JsonNode result, String candidateUnitId) {
+        JsonNode units = result == null ? null : result.path("registrationUnits");
+        if (units == null || !units.isArray()) {
+            return null;
+        }
+        JsonNode found = null;
+        for (JsonNode unit : units) {
+            if (candidateUnitId.equals(unit.path("candidateUnitId").asText())) {
+                if (found != null) {
+                    return null;
+                }
+                found = unit;
+            }
+        }
+        return found;
+    }
+
+    private JsonNode validatedSupplementUnit(JsonNode result, String candidateUnitId) {
+        AiCandidateValidationResult validation = candidateValidator.validateS3(result);
+        JsonNode units = result == null ? null : result.path("registrationUnits");
+        if (validation.isAutoRejected() || units == null || !units.isArray() || units.size() != 1
+                || !candidateUnitId.equals(units.path(0).path("candidateUnitId").asText())) {
+            return null;
+        }
+        JsonNode unit = units.path(0);
+        return unit.path("location").hasNonNull("candidateUnitId")
+                && !candidateUnitId.equals(unit.path("location").path("candidateUnitId").asText()) ? null : unit;
+    }
+
+    private byte[] sha256(String value) {
+        try {
+            return MessageDigest.getInstance("SHA-256").digest(value.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 must be available.", exception);
+        }
+    }
+
+    private String nullToEmpty(String value) {
+        return value == null ? "" : value;
     }
 
     private boolean isTagAutoConnectable(ParsedTag tag) {

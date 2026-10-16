@@ -11,6 +11,7 @@ related_documents:
   - ../08-planning/second-expansion-test-matrix.md
   - ../08-planning/expansion-2-implementation-plan.md
   - ../08-planning/expansion-2-task-breakdown.md
+  - ../08-planning/issue-421-ai-failure-remediation.md
   - platform/lang-001-java-21-runtime.md
   - platform/build-001-gradle-groovy.md
   - platform/frame-001-spring-boot.md
@@ -115,7 +116,7 @@ related_documents:
 | Spring Batch 6.0.4 | 고정이나 자동화 제외 | Post-MVP ADR | [ADR-AUTO-001](adr-backlog.md#adr-auto-001-자동-수집과-배치-처리) | 이력·재시작 배치 범위 없음 |
 | 하루 1회 이상 최근 기록 cleanup | 1차 확장 적용 | Operational Configuration | [ADR-DATA-010](data/data-010-recent-view-retention-cleanup.md) | 신규 조회와 독립된 30일 경과 `recent_restaurant_view` 물리 삭제; 실패 관측·재시도 |
 | AI 제공자·모델 | Gemini Free Tier global endpoint, `gemini-3.5-flash-lite` | Accepted ADR | [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md) | 공개 YouTube URL 입력, 후보·검수·무료 quota·보존 기준 |
-| JSON Schema + Prompt Template | 현재 Prompt `P8`, 결과 Schema `S2`; 기존 `P1`·`P2`·`P3`·`P4`·`P5`·`P6`·`P7` 이력 보존 | Accepted ADR | [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md) | AI 후보 계약과 평가 기준에 연결 |
+| JSON Schema + Prompt Template | 현재 Prompt `P9`, 결과 Schema `S3`; 기존 `P1`·`P2`·`P3`·`P4`·`P5`·`P6`·`P7`·`P8` 이력 보존 | Accepted ADR | [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md) | AI 후보 계약과 평가 기준에 연결 |
 | 자연어 조건 해석 | P1 규칙 기반·ACTIVE 동적 태그 사전·초기 18종 Golden V1·태그 AND·30초 TTL; P2 전국 지역 마스터·문맥·모호성·fail-closed | P1 Accepted / P2 Proposed | [ADR-ARCH-005](architecture/arch-005-natural-language-filter-interpretation.md), [ADR-ARCH-006](architecture/arch-006-national-natural-language-region-interpretation.md) | WS-14 기존 조회 경계와 P1 이력 유지, P2 최종 승인 대기 |
 | AI 추출 비동기 Worker | Worker 1개/인스턴스·lease 120초·polling 5초·재시도 고정, 용량 실측은 최종 게이트 | Accepted ADR | [ADR-EXT-003](integration/ext-003-ai-extraction-async-reliability.md) | 작업 상태·복구·비용 격리 |
 | JUnit 5 + Mockito | 확정 | Accepted ADR | [ADR-TEST-001](quality/test-001-automation-strategy.md) | 단위 테스트 기준 |
@@ -181,7 +182,7 @@ related_documents:
 | 인기 맛집 API | [ADR-DATA-011](data/data-011-popular-restaurant-request-time-aggregation.md) | 현재 Favorite 요청 시 집계, Snapshot·Batch·Redis 캐시 없음 |
 | 제보·신고 상태와 사용자 알림 API | [ADR-NOTIFY-002](integration/notify-002-in-app-notification-reliability.md), [ADR-DATA-012](data/data-012-second-expansion-retention-cleanup.md) | 상태·이력·알림 원자 저장, 외부 전달 없음, 독립 보존 cleanup |
 | 자연어 검색 API | [ADR-ARCH-005](architecture/arch-005-natural-language-filter-interpretation.md), [ADR-ARCH-006](architecture/arch-006-national-natural-language-region-interpretation.md)(P2 Proposed), [ADR-WEB-002](platform/web-002-data-state.md), [ADR-ARCH-001](architecture/arch-001-domain-monolith.md) | P1 이력·P2 regionCode와 직접 필터 우선·기존 목록 계약 재사용 |
-| AI 추출 작업·자동 등록 API | [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md), [ADR-EXT-003](integration/ext-003-ai-extraction-async-reliability.md), [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md) | 후보 상태·비동기 작업·자동 검증·예외 보정·정식 등록 |
+| AI 추출 작업·자동 등록 API | [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md), [ADR-EXT-003](integration/ext-003-ai-extraction-async-reliability.md), [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md) | 후보 상태·비동기 작업·자동 검증·예외 보정·정식 등록·실패 단위 제한 보완 |
 | 맛집 코스·경로 API | [ADR-ROUTE-001](integration/route-001-kakao-mobility-course-routing.md), [ADR-ARCH-002](architecture/arch-002-external-ports-adapters.md) | 선택 맛집 좌표·자동차 경로·외부 실패·초기 비저장 |
 
 ## 5. 데이터 모델 → ADR 매핑
@@ -292,7 +293,7 @@ Accepted 세 건은 현재 요구사항을 구현하는 최소 구조만 승인�
 |---|---|---|---|
 | [ADR-ARCH-005](architecture/arch-005-natural-language-filter-interpretation.md) | P1 규칙·사전·기존 목록 Query·태그 AND·해석 실패 | `TST-E3-NL-001~002`, `EVAL-NL-001~007` | `E3-T01~02` |
 | [ADR-ARCH-006](architecture/arch-006-national-natural-language-region-interpretation.md)(Proposed) | P2 전국 문맥·모호성·regionCode·직접 필터·DB 503·P1 이력 보존 | P2 보충 32문장·현행 마스터 245개·MockMvc/PostgreSQL·UI·PR CI | #400 / PR #403; 문서·CI 확인 후 최종 승인 대기 |
-| [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md) | Gemini 현재 P8/S2·기존 P1·P2·P3·P4·P5·P6·P7 이력·후보 Snapshot·근거·자동 검증·무료 quota | `TST-E3-AI-001~003`, `TST-E3-SEC-001`, [`EVAL-AI-001~010` 역사적 P1 계약 자산·dry-run·HOLD 기록](../08-planning/third-expansion-ai-evaluation-result.md) | `E3-T03~08` |
+| [ADR-AI-001](integration/ai-001-video-extraction-candidate-boundary.md) | Gemini 현재 P9/S3·기존 P1·P2·P3·P4·P5·P6·P7·P8 이력·후보 Snapshot·근거·자동 검증·무료 quota | `TST-E3-AI-001~003`, `TST-E3-SEC-001`, [`EVAL-AI-001~010` 역사적 P1 계약 자산·dry-run·HOLD 기록](../08-planning/third-expansion-ai-evaluation-result.md) | `E3-T03~08` |
 | [ADR-EXT-003](integration/ext-003-ai-extraction-async-reliability.md) | PostgreSQL claim·lease·heartbeat·retry·재기동·단일 EC2 | `TST-E3-AI-004`, `TST-E3-DATA-001`, `E3-T13` 증거 | `E3-T04~05`, `E3-T13` |
 | [ADR-EXT-004](integration/ext-004-youtube-periodic-reconciliation.md) | FR-AIEXTRACT-004·NFR-COST-001의 활성 Watch 자동 보정·필수 운영 주기·중지·quota | `YoutubeChannelBackfillServiceTest`, `JdbcYoutubeChannelBackfillRunStoreIntegrationTest`, `YoutubeChannelBackfillPropertiesTest`, 파일 배포 fixture | 이슈 #375 / PR #385 |
 | [ADR-ROUTE-001](integration/route-001-kakao-mobility-course-routing.md) | Mobility `/v1/directions`·순서·TTL·캐시 없음·호출/비용 | `TST-E3-COURSE-001~003`, `EVAL-COURSE-001~005`, `E3-T13` 증거 | `E3-T09~10`, `E3-T13` |

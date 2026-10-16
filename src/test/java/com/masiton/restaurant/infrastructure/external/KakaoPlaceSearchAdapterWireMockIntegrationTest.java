@@ -14,6 +14,8 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
@@ -46,6 +48,36 @@ class KakaoPlaceSearchAdapterWireMockIntegrationTest {
             .withExposedPorts(WIREMOCK_PORT);
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @ParameterizedTest
+    @CsvSource({
+            "손선장,인천 남동구 소래역로 12,인천광역시 남동구 소래역로 12",
+            "대풍식당,인천 강화군 교동면 대룡안길 1,인천광역시 강화군 교동면 대룡안길 1",
+            "교동다방,인천 강화군 교동면 대룡안길 2,인천광역시 강화군 교동면 대룡안길 2"
+    })
+    @DisplayName("인천 세 사례의 고정 도로명 후보를 전국 주소로 정규화한다")
+    void 검색_인천고정후보_시도전체명으로정규화한다(String name, String address, String expected) throws Exception {
+        // Given
+        stubKeywordSearch(200, Map.of("documents", List.of(Map.of(
+                "place_name", name, "place_url", "https://place.map.kakao.com/415",
+                "road_address_name", address))));
+        // When
+        var results = adapter().search(name);
+        // Then
+        assertThat(results).hasSize(1);
+        assertThat(results.get(0).roadAddress()).isEqualTo(expected);
+    }
+
+    @Test
+    @DisplayName("강화 지번주소만 있고 도로명주소가 없으면 등록 후보로 사용하지 않는다")
+    void 검색_강화지번주소만존재_후보를제외한다() throws Exception {
+        // Given
+        stubKeywordSearch(200, Map.of("documents", List.of(Map.of(
+                "place_name", "대풍식당", "place_url", "https://place.map.kakao.com/415",
+                "address_name", "인천 강화군 교동면 대룡리", "road_address_name", ""))));
+        // When / Then
+        assertThat(adapter().search("대풍식당")).isEmpty();
+    }
 
     @BeforeEach
     void resetMappingsAndJournal() throws Exception {
@@ -224,6 +256,139 @@ class KakaoPlaceSearchAdapterWireMockIntegrationTest {
         stubKeywordSearch(404, Map.of("error", "not found"));
 
         assertThatThrownBy(() -> adapter().search("없는가게"))
+                .isInstanceOf(PlaceSearchFailedException.class);
+    }
+
+    @Test
+    @DisplayName("지역 결합 검색은 후속 페이지의 목표를 수집하고 같은 장소 ID를 중복 제거한다")
+    void 후보검색_후속페이지목표_지역쿼리와중복제거() throws Exception {
+        stubCandidatePage(1, 200, false, List.of(candidate("other", "다른식당")), 0);
+        stubCandidatePage(2, 200, true, List.of(candidate("target", "목표식당"),
+                candidate("other", "다른식당")), 0);
+
+        List<PlaceSearchCandidate> results = adapter().searchCandidates("목표식당", "서울특별시 마포구");
+
+        assertThat(results).extracting(PlaceSearchCandidate::kakaoPlaceUrl)
+                .containsExactly("https://place.map.kakao.com/other", "https://place.map.kakao.com/target");
+        assertThat(keywordSearchRequests()).hasSize(2).allSatisfy(request -> {
+            String url = URLDecoder.decode(request.path("url").asText(), StandardCharsets.UTF_8);
+            assertThat(url).contains("query=서울특별시 마포구 목표식당", "size=15");
+        });
+    }
+
+    @Test
+    @DisplayName("동명 식당 후보 여러 개는 임의로 하나를 고르지 않고 모두 반환한다")
+    void 후보검색_동명식당여럿_모두반환() throws Exception {
+        stubCandidatePage(1, 200, true, List.of(candidate("one", "목표식당"),
+                candidate("two", "목표식당")), 0);
+
+        List<PlaceSearchCandidate> results = adapter().searchCandidates("목표식당", "서울특별시 마포구");
+
+        assertThat(results).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("3페이지 뒤에도 후보 수집이 끝나지 않으면 부분집합을 반환하지 않는다")
+    void 후보검색_페이지상한도달_부분후보확정금지() throws Exception {
+        for (int page = 1; page <= 3; page++) {
+            stubCandidatePage(page, 200, false, List.of(candidate("target", "목표식당")), 0);
+        }
+
+        assertThatThrownBy(() -> adapter().searchCandidates("목표식당", "서울특별시 마포구"))
+                .isInstanceOf(PlaceSearchFailedException.class);
+
+        assertThat(keywordSearchRequests()).hasSize(3);
+    }
+
+    @Test
+    @DisplayName("meta가 없으면 첫 페이지의 단일 후보를 확정하지 않는다")
+    void 후보검색_meta누락_검색실패() throws Exception {
+        stubKeywordSearch(200, Map.of("documents", List.of(candidate("target", "목표식당"))));
+
+        assertThatThrownBy(() -> adapter().searchCandidates("목표식당", "서울특별시 마포구"))
+                .isInstanceOf(PlaceSearchFailedException.class);
+        assertThat(keywordSearchRequests()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("후속 페이지 외부 오류는 앞 페이지의 후보를 반환하지 않는다")
+    void 후보검색_후속페이지500_부분후보반환금지() throws Exception {
+        stubCandidatePage(1, 200, false, List.of(candidate("target", "목표식당")), 0);
+        stubCandidatePage(2, 500, true, List.of(), 0);
+
+        assertThatThrownBy(() -> adapter().searchCandidates("목표식당", "서울특별시 마포구"))
+                .isInstanceOf(PlaceSearchFailedException.class);
+        assertThat(keywordSearchRequests()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("응답 시간 초과는 추가 호출 없이 검색 실패로 끝난다")
+    void 후보검색_시간초과_추가호출없이실패() throws Exception {
+        stubCandidatePage(1, 200, true, List.of(candidate("target", "목표식당")), 5500);
+
+        assertThatThrownBy(() -> adapter().searchCandidates("목표식당", "서울특별시 마포구"))
+                .isInstanceOf(PlaceSearchFailedException.class);
+        assertThat(keywordSearchRequests()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("누락 필드가 있는 문서는 후보 유일성 판단에서 조용히 제거하지 않는다")
+    void 후보검색_불완전문서_검색실패() throws Exception {
+        stubCandidatePage(1, 200, true, List.of(candidate("target", "목표식당"),
+                Map.of("place_name", "목표식당")), 0);
+
+        assertThatThrownBy(() -> adapter().searchCandidates("목표식당", "서울특별시 마포구"))
+                .isInstanceOf(PlaceSearchFailedException.class);
+    }
+
+    @Test
+    @DisplayName("후속 페이지는 query 전체 시간 예산의 남은 시간만 사용한다")
+    void 후보검색_후속페이지누적지연_전체예산초과실패() throws Exception {
+        stubCandidatePage(1, 200, false, List.of(candidate("target", "목표식당")), 3000);
+        stubCandidatePage(2, 200, true, List.of(candidate("other", "다른식당")), 3000);
+
+        assertThatThrownBy(() -> adapter().searchCandidates("목표식당", "서울특별시 마포구"))
+                .isInstanceOf(PlaceSearchFailedException.class);
+
+        assertThat(keywordSearchRequests()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("제공자 전체 결과가 조회 가능 결과보다 많으면 유일성을 확정하지 않는다")
+    void 후보검색_제공자페이지범위초과_검색실패() throws Exception {
+        stubKeywordSearch(200, Map.of("meta", Map.of("is_end", true, "total_count", 100, "pageable_count", 45),
+                "documents", List.of(candidate("target", "목표식당"))));
+
+        assertThatThrownBy(() -> adapter().searchCandidates("목표식당", "서울특별시 마포구"))
+                .isInstanceOf(PlaceSearchFailedException.class);
+        assertThat(keywordSearchRequests()).hasSize(1);
+    }
+
+    private Map<String, Object> candidate(String id, String name) {
+        return Map.of("place_name", name, "place_url", "https://place.map.kakao.com/" + id,
+                "road_address_name", "서울특별시 마포구 월드컵로 1", "category_name", "음식점 > 한식");
+    }
+
+    private void stubCandidatePage(int page, int status, boolean isEnd, List<?> documents, int delay) throws Exception {
+        Map<String, Object> mapping = Map.of(
+                "request", Map.of("method", "GET", "urlPath", "/v2/local/search/keyword.json",
+                        "queryParameters", Map.of("page", Map.of("equalTo", String.valueOf(page)))),
+                "response", Map.of("status", status, "fixedDelayMilliseconds", delay,
+                        "jsonBody", Map.of("meta", Map.of("is_end", isEnd, "total_count", documents.size(),
+                                "pageable_count", documents.size()), "documents", documents),
+                        "headers", Map.of("Content-Type", "application/json")));
+        admin("POST", "/__admin/mappings", objectMapper.writeValueAsString(mapping));
+    }
+
+    @Test
+    @DisplayName("노출 가능한 수가 전체 수보다 큰 불가능한 metadata는 검색 실패로 처리한다")
+    void 후보검색_전체수보다큰노출수_검색실패() throws Exception {
+        // Given
+        stubKeywordSearch(200, Map.of("meta", Map.of("is_end", true, "total_count", 1, "pageable_count", 2),
+                "documents", List.of(Map.of("place_name", "식당", "place_url", "https://place.map.kakao.com/1",
+                        "road_address_name", "인천광역시 남동구 소래역로 12"))));
+        // When / Then
+        assertThatThrownBy(() -> adapter().searchCandidates("식당", "인천광역시 남동구"))
                 .isInstanceOf(PlaceSearchFailedException.class);
     }
 

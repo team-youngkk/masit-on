@@ -50,18 +50,19 @@ class ResolvePlaceIdentityService implements ResolvePlaceIdentityUseCase {
     @Override
     public PlaceIdentityResult resolve(PlaceIdentityCommand command) {
         Objects.requireNonNull(command, "command");
-        if (blank(command.restaurantName()) || blank(command.candidateAddress())) {
+        if (blank(command.restaurantName())) {
             return PlaceIdentityResult.notFound();
         }
 
-        Optional<String> candidateDistrict = extractDistrict(command.candidateAddress());
+        Optional<String> candidateDistrict = blank(command.candidateAddress())
+                ? extractLocationDistrict(command.location()) : extractDistrict(command.candidateAddress());
         if (candidateDistrict.isEmpty()) {
             return PlaceIdentityResult.notFound();
         }
 
         String normalizedRestaurantName = command.restaurantName().strip();
         String normalizedName = normalize(normalizedRestaurantName);
-        List<PlaceSearchCandidate> candidates = searchCandidates(command.restaurantName());
+        List<PlaceSearchCandidate> candidates = searchCandidates(command.restaurantName(), candidateDistrict.get());
         List<PlaceSearchCandidate> exactMatches = candidates.stream()
                 .filter(this::hasRequiredFields)
                 .filter(candidate -> normalize(candidate.placeName()).equals(normalizedName))
@@ -78,7 +79,7 @@ class ResolvePlaceIdentityService implements ResolvePlaceIdentityUseCase {
 
         String baseName = stripBranchSuffix(normalizedRestaurantName);
         if (!blank(baseName) && !baseName.equals(normalizedRestaurantName)) {
-            candidates = mergeCandidates(candidates, searchCandidates(baseName));
+            candidates = mergeCandidates(candidates, searchCandidates(baseName, candidateDistrict.get()));
         }
         List<PlaceSearchCandidate> relaxedMatches = candidates.stream()
                 .filter(this::hasRelaxedRequiredFields)
@@ -89,8 +90,8 @@ class ResolvePlaceIdentityService implements ResolvePlaceIdentityUseCase {
         return toResult(relaxedMatches, MATCHED_BY_NAME_CONTAINMENT_AND_DISTRICT_AND_CATEGORY);
     }
 
-    private List<PlaceSearchCandidate> searchCandidates(String restaurantName) {
-        return mergeCandidates(List.of(), searchPlacesByName.search(restaurantName));
+    private List<PlaceSearchCandidate> searchCandidates(String restaurantName, String district) {
+        return mergeCandidates(List.of(), searchPlacesByName.searchCandidates(restaurantName, district));
     }
 
     private List<PlaceSearchCandidate> mergeCandidates(List<PlaceSearchCandidate> initial,
@@ -189,6 +190,19 @@ class ResolvePlaceIdentityService implements ResolvePlaceIdentityUseCase {
             return Optional.empty();
         }
         return RoadAddressNormalizer.extractRegion(roadAddress)
+                .map(region -> region.province() + " " + region.municipality());
+    }
+
+    private Optional<String> extractLocationDistrict(String location) {
+        if (blank(location)) {
+            return Optional.empty();
+        }
+        String normalized = RoadAddressNormalizer.normalize(location);
+        if ("세종특별자치시".equals(normalized)) {
+            return Optional.of("세종특별자치시 세종특별자치시");
+        }
+        // 지역 단서에 도로명이 없어도 행정구역 검증은 주소 정규화 규칙과 공유한다.
+        return RoadAddressNormalizer.extractRegion(normalized + " 지역단서")
                 .map(region -> region.province() + " " + region.municipality());
     }
 

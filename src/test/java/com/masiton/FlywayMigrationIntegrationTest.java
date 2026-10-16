@@ -30,7 +30,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * V4(통합 3차 확장 AI 후보 스키마와 Lite 단일 모델 제약), V5(채널 감시 오류 시각),
  * V14(YouTube 채널 보정 실행), V15(보정 실행 중지 원인), V16(영상 처리 원장)이
  * V6(통합 계정 전환의 역할 열과 staging), V7(승인된 관리자 계정 복사),
- * V8(AI 등록 단위·카테고리 매핑 기준정보와 Snapshot 절단 표시)이
+ * V8(AI 등록 단위·카테고리 매핑 기준정보와 Snapshot 절단 표시), V22(실패 단위 자동 보완 claim),
+ * V23(보완 Provider 응답 checkpoint)이
  * 순서대로 성공적으로 적용되고,
  * ddl-auto=validate로 컨텍스트가 기동하며, Region·FoodCategory 기준 데이터가
  * seed-data-plan.md 2~4·6절 기준과 일치하는지 확인한다.
@@ -51,9 +52,9 @@ class FlywayMigrationIntegrationTest extends com.masiton.test.FullContextIntegra
     private MemberSessionRevocationStore memberSessionRevocationStore;
 
     @Test
-    @DisplayName("빈 데이터베이스에 V1부터 V20까지 계약된 순서와 파일명으로 성공 기록된다")
-    void 마이그레이션적용_빈데이터베이스_V1부터V20까지계약된순서와파일명으로성공기록된다() {
-        // given: 컨텍스트 기동 시점에 Flyway가 V1부터 V20 변경을 적용했다.
+    @DisplayName("빈 데이터베이스에 V1부터 V23까지 계약된 순서와 파일명으로 성공 기록된다")
+    void 마이그레이션적용_빈데이터베이스_V1부터V23까지계약된순서와파일명으로성공기록된다() {
+        // given: 컨텍스트 기동 시점에 Flyway가 V1부터 V23 변경을 적용했다.
 
         // when
         List<AppliedMigration> appliedMigrations = jdbcTemplate.query(
@@ -107,7 +108,13 @@ class FlywayMigrationIntegrationTest extends com.masiton.test.FullContextIntegra
                 new AppliedMigration("19", "add restaurant kakao revalidation", "SQL",
                         "V19__add_restaurant_kakao_revalidation.sql", true),
                 new AppliedMigration("20", "add region hierarchy", "SQL",
-                        "V20__add_region_hierarchy.sql", true)
+                        "V20__add_region_hierarchy.sql", true),
+                new AppliedMigration("21", "allow ai restaurant and visit reuse", "SQL",
+                        "V21__allow_ai_restaurant_and_visit_reuse.sql", true),
+                new AppliedMigration("22", "add ai failure remediation claim", "SQL",
+                        "V22__add_ai_failure_remediation_claim.sql", true),
+                new AppliedMigration("23", "add ai supplement response checkpoint", "SQL",
+                        "V23__add_ai_supplement_response_checkpoint.sql", true)
         );
     }
 

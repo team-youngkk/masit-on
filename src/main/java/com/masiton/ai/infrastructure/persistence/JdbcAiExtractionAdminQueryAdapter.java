@@ -44,7 +44,36 @@ public class JdbcAiExtractionAdminQueryAdapter implements AiExtractionAdminQuery
         List<AiExtractionJobView> items = jdbc.query(
                 listSelect() + from + where + " ORDER BY job.created_at DESC, job.id ASC LIMIT ? OFFSET ?",
                 this::job, queryArgs.toArray());
-        return new Page(items, total);
+        return new Page(items, total, summaries(items));
+    }
+
+    private java.util.Map<UUID, com.masiton.ai.application.RegistrationSummary> summaries(List<AiExtractionJobView> items) {
+        if (items.isEmpty()) return java.util.Map.of();
+        String placeholders = String.join(",", java.util.Collections.nCopies(items.size(), "?"));
+        java.util.Map<UUID, com.masiton.ai.application.RegistrationSummary> summaries = new java.util.HashMap<>();
+        jdbc.query("""
+                SELECT job.id, count(unit.id) AS total,
+                       count(unit.id) FILTER (WHERE unit.review_status='AUTO_CONFIRMED') AS confirmed,
+                       count(unit.id) FILTER (WHERE unit.review_status='AUTO_BLOCKED') AS blocked,
+                       count(unit.id) FILTER (WHERE unit.review_status='AUTO_REJECTED') AS rejected,
+                       count(unit.id) FILTER (WHERE unit.review_status='MANUAL_OVERRIDE') AS manual,
+                       count(unit.id) FILTER (WHERE unit.review_status IN ('AUTO_CONFIRMED','MANUAL_OVERRIDE')
+                         AND unit.rolled_back_at IS NULL AND unit.discarded_at IS NULL
+                         AND unit.registered_restaurant_id IS NOT NULL AND unit.registered_creator_id IS NOT NULL
+                         AND unit.registered_video_id IS NOT NULL AND unit.registered_visit_id IS NOT NULL) AS registered
+                  FROM ai_extraction_job job
+                  LEFT JOIN LATERAL (SELECT id FROM ai_candidate_snapshot WHERE job_id=job.id
+                    ORDER BY snapshot_version DESC, created_at DESC, id DESC LIMIT 1) snapshot ON true
+                  LEFT JOIN ai_registration_unit unit ON unit.snapshot_id=snapshot.id
+                 WHERE job.id IN (
+                """ + placeholders + ") GROUP BY job.id", rs -> {
+                    long total = rs.getLong("total");
+                    long registered = rs.getLong("registered");
+                    summaries.put(rs.getObject("id", UUID.class), new com.masiton.ai.application.RegistrationSummary(
+                            total, rs.getLong("confirmed"), rs.getLong("blocked"), rs.getLong("rejected"),
+                            rs.getLong("manual"), registered, registered > 0 && registered < total));
+                }, items.stream().map(AiExtractionJobView::jobId).toArray());
+        return summaries;
     }
 
     @Override

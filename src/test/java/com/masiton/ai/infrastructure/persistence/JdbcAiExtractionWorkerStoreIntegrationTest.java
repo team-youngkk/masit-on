@@ -24,6 +24,8 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import com.masiton.ai.application.port.out.AiExtractionWorkerStore;
 import com.masiton.ai.application.port.out.AiExtractionWorkerStore.ClaimedJob;
+import com.masiton.ai.application.port.out.AiRegistrationUnitRetryStore;
+import com.masiton.ai.application.port.out.AiRegistrationUnitStore;
 import com.masiton.test.TestProfile;
 
 @SpringBootTest
@@ -37,8 +39,15 @@ class JdbcAiExtractionWorkerStoreIntegrationTest extends com.masiton.test.FullCo
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private AiRegistrationUnitRetryStore retryStore;
+
+    @Autowired
+    private AiRegistrationUnitStore registrationUnitStore;
+
     @BeforeEach
     void setUp() {
+        jdbcTemplate.update("DELETE FROM ai_registration_unit_retry");
         jdbcTemplate.update("DELETE FROM ai_extraction_attempt");
         jdbcTemplate.update("DELETE FROM ai_extraction_job");
     }
@@ -110,6 +119,60 @@ class JdbcAiExtractionWorkerStoreIntegrationTest extends com.masiton.test.FullCo
     }
 
     @Test
+    @DisplayName("네 번째 Provider 성공 응답이 저장된 작업은 시도 증가 없이 lease를 복구한다")
+    void claimRecovery_네번째성공응답Checkpoint_시도추가없이재Lease한다() {
+        OffsetDateTime now = OffsetDateTime.parse("2026-08-11T00:05:00Z");
+        UUID jobId = insertRunning("video-retry-result-recovery", now.minusMinutes(3), now.minusSeconds(1));
+        jdbcTemplate.update("UPDATE ai_extraction_job SET attempt_count = 4 WHERE id = ?", jobId);
+        for (short attemptNo = 1; attemptNo <= 4; attemptNo++) {
+            OffsetDateTime startedAt = now.minusSeconds(30 - attemptNo * 3L);
+            jdbcTemplate.update("""
+                    INSERT INTO ai_extraction_attempt (
+                        id, job_id, attempt_no, started_at, finished_at, outcome
+                    ) VALUES (?, ?, ?, ?, ?, 'SUCCEEDED')
+                    """, UUID.randomUUID(), jobId, attemptNo, startedAt, startedAt.plusSeconds(1));
+        }
+        UUID snapshotId = UUID.randomUUID();
+        jdbcTemplate.update("""
+                INSERT INTO ai_candidate_snapshot (
+                    id, job_id, snapshot_version, candidate_fields, candidate_tags, field_confidences,
+                    evidence, missing_fields, review_status, reviewed_at, created_at
+                ) VALUES (?, ?, 1, '{}'::jsonb, '[]'::jsonb, '{}'::jsonb, '{}'::jsonb, '[]'::jsonb,
+                          'AUTO_BLOCKED', ?, ?)
+                """, snapshotId, jobId, now.minusMinutes(1), now.minusMinutes(1));
+        UUID sourceUnitId = registrationUnitStore.insert(new AiRegistrationUnitStore.RegistrationUnitInsert(
+                snapshotId, 1, "복구식당", "AUTO_BLOCKED", "PLACE_NOT_FOUND", null, null,
+                null, null, null, null, null, "WORKER", now.minusMinutes(1)));
+        UUID retryId = UUID.randomUUID();
+        retryStore.claim(new AiRegistrationUnitRetryStore.RetryClaimRequest(retryId, jobId, snapshotId,
+                sourceUnitId, "candidate-recovery", "PLACE_NOT_FOUND", "[\"video-title\"]",
+                sha256("recovery-input"), new byte[]{1}, "input-key", now.plusHours(23), now.minusMinutes(1)))
+                .orElseThrow();
+        jdbcTemplate.update("""
+                UPDATE ai_registration_unit_retry
+                   SET provider_attempt_no = 4, provider_result_ciphertext = ?,
+                       provider_result_key_id = 'result-key', provider_result_at = ?
+                 WHERE id = ?
+                """, new byte[]{9, 8, 7}, now.minusSeconds(2), retryId);
+
+        assertThat(store.failExpiredExhausted(now, 4)).isZero();
+        ClaimedJob claimed = store.claimRecovery("worker-recovery", now, now.plusMinutes(2)).orElseThrow();
+
+        assertThat(claimed.jobId()).isEqualTo(jobId);
+        assertThat(claimed.attemptNo()).isEqualTo(4);
+        assertThat(jdbcTemplate.queryForObject("SELECT attempt_count FROM ai_extraction_job WHERE id = ?",
+                Integer.class, jobId)).isEqualTo(4);
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM ai_extraction_attempt WHERE job_id = ?",
+                Integer.class, jobId)).isEqualTo(4);
+        assertThat(jdbcTemplate.queryForObject("SELECT lease_owner FROM ai_extraction_job WHERE id = ?",
+                String.class, jobId)).isEqualTo("worker-recovery");
+        assertThat(store.reserveSupplementProviderCall(jobId, "worker-recovery", retryId,
+                now.plusSeconds(1), now.plusMinutes(2), now.minusDays(1), 100)).isEmpty();
+        assertThat(store.claim("another-worker", now.plusMinutes(1), now.plusMinutes(3), 4,
+                now.minusDays(1), 100)).isEmpty();
+    }
+
+    @Test
     @DisplayName("시도를 소진한 만료 lease는 마지막 시도를 기록하고 작업을 실패 처리한다")
     void failExpiredExhausted_시도소진Lease만료_작업과마지막시도를실패처리한다() {
         // given
@@ -137,6 +200,53 @@ class JdbcAiExtractionWorkerStoreIntegrationTest extends com.masiton.test.FullCo
                 .containsEntry("attempt_no", 3)
                 .containsEntry("outcome", "FAILED")
                 .containsEntry("error_category", "LEASE_EXPIRED");
+    }
+
+    @Test
+    @DisplayName("자동 보완 호출은 기존 작업의 네 번째 호출까지만 quota 아래에서 예약된다")
+    void reserveSupplementProviderCall_세번째시도Quota허용_네번째까지만예약된다() {
+        OffsetDateTime now = OffsetDateTime.parse("2026-08-11T00:05:00Z");
+        UUID jobId = insertRunning("video-supplement-cap", now.minusMinutes(1), now.plusMinutes(2));
+        jdbcTemplate.update("UPDATE ai_extraction_job SET attempt_count = 3 WHERE id = ?", jobId);
+
+        assertThat(store.reserveSupplementProviderCall(jobId, "worker-old", now, now.plusMinutes(3),
+                now.minusDays(1), 100)).contains(4);
+        assertThat(store.reserveSupplementProviderCall(jobId, "worker-old", now, now.plusMinutes(3),
+                now.minusDays(1), 100)).isEmpty();
+        assertThat(jdbcTemplate.queryForObject("SELECT attempt_count FROM ai_extraction_job WHERE id = ?",
+                Integer.class, jobId)).isEqualTo(4);
+    }
+
+    @Test
+    @DisplayName("자동 보완 호출은 quota hard stop에서 예약되지 않는다")
+    void reserveSupplementProviderCall_Quota초과_예약되지않는다() {
+        OffsetDateTime now = OffsetDateTime.parse("2026-08-11T00:05:00Z");
+        UUID jobId = insertRunning("video-supplement-quota", now.minusMinutes(1), now.plusMinutes(2));
+
+        assertThat(store.reserveSupplementProviderCall(jobId, "worker-old", now, now.plusMinutes(3),
+                now.minusDays(1), 1)).isEmpty();
+        assertThat(jdbcTemplate.queryForObject("SELECT attempt_count FROM ai_extraction_job WHERE id = ?",
+                Integer.class, jobId)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("자동 보완 성공은 현재 lease와 시도 번호를 확인해 성공 이력을 남긴다")
+    void recordSuccessfulSupplementAttempt_현재Lease_성공시도기록된다() {
+        OffsetDateTime now = OffsetDateTime.parse("2026-08-11T00:05:00Z");
+        UUID jobId = insertRunning("video-supplement-success", now.minusMinutes(1), now.plusMinutes(2));
+        int attemptNo = store.reserveSupplementProviderCall(jobId, "worker-old", now, now.plusMinutes(3),
+                now.minusDays(1), 100).orElseThrow();
+
+        assertThat(store.recordSuccessfulSupplementAttempt(jobId, "worker-old", attemptNo,
+                now, now.plusSeconds(1), "request-supplement-1")).isTrue();
+        assertThat(store.recordSuccessfulSupplementAttempt(jobId, "worker-wrong", attemptNo,
+                now, now.plusSeconds(1), "request-supplement-2")).isFalse();
+        assertThat(jdbcTemplate.queryForMap("""
+                SELECT attempt_no, provider_request_id, outcome
+                  FROM ai_extraction_attempt WHERE job_id = ?
+                """, jobId)).containsEntry("attempt_no", 2)
+                .containsEntry("provider_request_id", "request-supplement-1")
+                .containsEntry("outcome", "SUCCEEDED");
     }
 
     @Test

@@ -31,6 +31,7 @@ import com.masiton.orchestration.application.port.in.AdjustRegisteredCategoryUse
 import com.masiton.orchestration.application.port.in.AutoRegisterVerifiedContentUseCase;
 import com.masiton.orchestration.application.port.in.DecomposeRegistrationUnitsUseCase;
 import com.masiton.orchestration.application.port.in.ExecuteRegistrationUnitUseCase;
+import com.masiton.orchestration.application.port.in.ExecuteRegistrationUnitUseCase.RegistrationUnitExecutionCommand;
 import com.masiton.orchestration.application.port.in.ExecuteRegistrationUnitUseCase.CategoryDecision;
 import com.masiton.orchestration.application.port.in.ExecuteRegistrationUnitUseCase.PlaceDecision;
 import com.masiton.orchestration.application.port.in.ExecuteRegistrationUnitUseCase.RegistrationUnitExecutionResult;
@@ -74,7 +75,8 @@ class RegistrationUnitCommandServiceTest {
     void setUp() {
         service = new RegistrationUnitCommandService(port, registrationUnitStore, registrationUnitReviewStore,
                 decomposeRegistrationUnits, executeRegistrationUnit, resolveFoodCategory, rollbackUseCase,
-                adjustCategoryUseCase, confirmCommitService, discardCommitService, legacyAdminActorResolver,
+                adjustCategoryUseCase, confirmCommitService, discardCommitService, new RegistrationUnitPostRegistrationCommitService(registrationUnitStore,
+                        registrationUnitReviewStore, rollbackUseCase, adjustCategoryUseCase), legacyAdminActorResolver,
                 objectMapper);
 
         when(port.jobVideoReference(JOB_ID)).thenReturn(Optional.of(
@@ -88,6 +90,25 @@ class RegistrationUnitCommandServiceTest {
                         new DecomposeRegistrationUnitsUseCase.BoundCandidate("서울특별시 마포구", null, null),
                         null, null);
         when(decomposeRegistrationUnits.decompose(any())).thenReturn(List.of(bundle));
+    }
+
+    @Test
+    @DisplayName("이미 보존된 S2 다중 식당 단위는 다시 인덱스로 결속하거나 500을 반환하지 않는다")
+    void registerUnit_기존S2다중식당이력_422로보류하고등록하지않는다() throws Exception {
+        // Given
+        when(registrationUnitStore.lockByJobAndUnitId(JOB_ID, UNIT_ID)).thenReturn(Optional.of(blockedUnitRow()));
+        var fields = objectMapper.readTree("""
+                {"restaurantName":[{"value":"행복식당"},{"value":"다른식당"}]}
+                """);
+        when(port.snapshotCandidates(SNAPSHOT_ID)).thenReturn(Optional.of(
+                new AiExtractionAdminQueryPort.SnapshotCandidateJson(fields, null, null, null)));
+        when(decomposeRegistrationUnits.decompose(any())).thenReturn(List.of());
+        // When / Then
+        assertThatThrownBy(() -> service.registerUnit(JOB_ID, UNIT_ID)).isInstanceOf(BusinessException.class)
+                .satisfies(exception -> assertThat(((BusinessException) exception).status())
+                        .isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY));
+        verify(executeRegistrationUnit, never()).execute(any());
+        verify(registrationUnitStore, never()).markRegistered(any(), anyString(), any());
     }
 
     @Test
@@ -165,6 +186,35 @@ class RegistrationUnitCommandServiceTest {
         // Then
         assertThat(view.reviewStatus()).isEqualTo("AUTO_CONFIRMED");
         assertThat(view.unitId()).isEqualTo(UNIT_ID);
+    }
+
+    @Test
+    @DisplayName("Snapshot의 같은 식당 단위 location을 관리자 등록 실행 명령에 보존한다")
+    void registerUnit_S3Snapshot단위위치_관리자명령에전달한다() throws Exception {
+        // Given
+        AiRegistrationUnitStore.RegistrationUnitRow unit = blockedUnitRow();
+        when(registrationUnitStore.lockByJobAndUnitId(JOB_ID, UNIT_ID)).thenReturn(Optional.of(unit));
+        when(executeRegistrationUnit.execute(any())).thenReturn(confirmedResult());
+        when(registrationUnitStore.markRegistered(eq(UNIT_ID), eq("AUTO_BLOCKED"), any())).thenReturn(true);
+        var fields = objectMapper.readTree("""
+                {"registrationUnits":[{"candidateUnitId":"unit-a",
+                  "restaurantName":{"value":"행복식당"},"location":{"value":"서울 강남구"}}]}
+                """);
+        when(port.snapshotCandidates(SNAPSHOT_ID)).thenReturn(Optional.of(
+                new AiExtractionAdminQueryPort.SnapshotCandidateJson(fields, null, null, null)));
+        when(decomposeRegistrationUnits.decompose(any())).thenReturn(List.of(
+                new DecomposeRegistrationUnitsUseCase.RegistrationUnitBundle(1, "unit-a",
+                        new DecomposeRegistrationUnitsUseCase.BoundCandidate("행복식당", null, null), null,
+                        new DecomposeRegistrationUnitsUseCase.BoundCandidate("서울 강남구", null, null), List.of(), null)));
+
+        // When
+        service.registerUnit(JOB_ID, UNIT_ID);
+
+        // Then
+        var command = org.mockito.ArgumentCaptor.forClass(RegistrationUnitExecutionCommand.class);
+        verify(executeRegistrationUnit).execute(command.capture());
+        assertThat(command.getValue().candidateUnitId()).isEqualTo("unit-a");
+        assertThat(command.getValue().location()).isEqualTo("서울 강남구");
     }
 
     @Test
@@ -296,6 +346,7 @@ class RegistrationUnitCommandServiceTest {
                 .satisfies(exception -> assertThat(((BusinessException) exception).code())
                         .isEqualTo("AIEXTRACT_CONCURRENT_REQUEST_CONFLICT"));
         verify(registrationUnitReviewStore, never()).insert(any());
+        verify(rollbackUseCase, never()).rollback(any());
     }
 
     @Test
@@ -316,6 +367,7 @@ class RegistrationUnitCommandServiceTest {
                 .satisfies(exception -> assertThat(((BusinessException) exception).code())
                         .isEqualTo("AIEXTRACT_CONCURRENT_REQUEST_CONFLICT"));
         verify(registrationUnitReviewStore, never()).insert(any());
+        verify(adjustCategoryUseCase, never()).adjust(any(), any());
     }
 
     @Test

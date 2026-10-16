@@ -45,7 +45,17 @@ public interface ExecuteRegistrationUnitUseCase {
             URI videoUrl,
             String suppliedKakaoPlaceUrl,
             UUID suppliedFoodCategoryId,
-            String suppliedFoodCategoryName) {
+            String suppliedFoodCategoryName,
+            String candidateUnitId,
+            String location) {
+
+        public RegistrationUnitExecutionCommand(String restaurantName, String address, String menu,
+                VerifyAiContentCandidateUseCase.VisitEvidenceCandidate visitEvidence,
+                String channelId, String videoId, URI videoUrl, String suppliedKakaoPlaceUrl,
+                UUID suppliedFoodCategoryId, String suppliedFoodCategoryName) {
+            this(restaurantName, address, menu, visitEvidence, channelId, videoId, videoUrl,
+                    suppliedKakaoPlaceUrl, suppliedFoodCategoryId, suppliedFoodCategoryName, null, null);
+        }
 
         public RegistrationUnitExecutionCommand(
                 String restaurantName, String address, String menu,

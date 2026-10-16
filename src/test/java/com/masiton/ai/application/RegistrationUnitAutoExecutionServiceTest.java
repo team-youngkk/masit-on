@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 
 import java.net.URI;
 import java.util.List;
@@ -78,6 +80,30 @@ class RegistrationUnitAutoExecutionServiceTest {
     }
 
     @Test
+    @DisplayName("Snapshot의 같은 식당 단위 location을 Worker 실행 명령에 보존한다")
+    void execute_S3Snapshot단위위치_Worker명령에전달한다() {
+        // Given
+        String snapshotFields = """
+                {"registrationUnits":[{"candidateUnitId":"unit-a",
+                  "restaurantName":{"value":"행복식당"},"location":{"value":"서울 강남구"}}]}
+                """;
+        given(decomposeRegistrationUnits.decompose(any())).willReturn(List.of(
+                new RegistrationUnitBundle(1, "unit-a", withEvidence("행복식당"), null, withEvidence("서울 강남구"),
+                        List.of(withEvidence("냉면")), withEvidence("방문했습니다"))));
+        given(executeRegistrationUnit.execute(any())).willReturn(
+                RegistrationUnitExecutionResult.blocked("PLACE_NOT_FOUND"));
+
+        // When
+        service.execute(json(snapshotFields), json("{}"), json("{}"), "channel-1", "video-1", videoUrl);
+
+        // Then
+        var command = org.mockito.ArgumentCaptor.forClass(RegistrationUnitExecutionCommand.class);
+        verify(executeRegistrationUnit).execute(command.capture());
+        assertThat(command.getValue().candidateUnitId()).isEqualTo("unit-a");
+        assertThat(command.getValue().location()).isEqualTo("서울 강남구");
+    }
+
+    @Test
     @DisplayName("장소 동일성을 확정하지 못하면 AUTO_BLOCKED/PLACE_NOT_FOUND를 반환한다")
     void execute_장소동일성실패_AUTO_BLOCKED_PLACE_NOT_FOUND를반환한다() {
         given(decomposeRegistrationUnits.decompose(any())).willReturn(List.of(
@@ -132,9 +158,88 @@ class RegistrationUnitAutoExecutionServiceTest {
                 && restaurantName.equals(command.restaurantName()));
     }
 
+    @Test
+    @DisplayName("S3 단위의 여러 메뉴를 전달하고 메뉴 결측도 Kakao 분류 판정으로 전달한다")
+    void execute_S3여러메뉴와결측단위_결속과독립판정을유지한다() {
+        // Given
+        BoundCandidate firstMenu = evidenced("냉면");
+        BoundCandidate secondMenu = evidenced("만두");
+        given(decomposeRegistrationUnits.decompose(any())).willReturn(List.of(
+                new RegistrationUnitBundle(1, "a", evidenced("첫 식당"), evidenced("서울 마포구"),
+                        evidenced("서울 마포구"), List.of(firstMenu, secondMenu), evidenced("방문해 먹었다")),
+                new RegistrationUnitBundle(2, "b", evidenced("둘째 식당"), evidenced("서울 종로구"),
+                        evidenced("서울 종로구"), List.of(), evidenced("방문해 먹었다"))));
+        given(executeRegistrationUnit.execute(any())).willReturn(
+                RegistrationUnitExecutionResult.blocked("PLACE_NOT_FOUND"));
+
+        // When
+        List<RegistrationUnitOutcome> outcomes = service.execute(json("{}"), json("{}"), json("{}"),
+                "channel-1", "video-1", videoUrl);
+
+        // Then
+        assertThat(outcomes).extracting(RegistrationUnitOutcome::blockReason)
+                .containsExactly("PLACE_NOT_FOUND", "PLACE_NOT_FOUND");
+        verify(executeRegistrationUnit, times(1)).execute(org.mockito.ArgumentMatchers.argThat(command ->
+                "첫 식당".equals(command.restaurantName()) && "냉면, 만두".equals(command.menu())));
+    }
+
+    @Test
+    @DisplayName("UNKNOWN 메뉴는 제외하고 Kakao 카테고리 판정으로 전달한다")
+    void execute_UNKNOWN메뉴_카테고리판정에메뉴를전달하지않는다() {
+        BoundCandidate unknownMenu = new BoundCandidate("냉면", null, json("{\"type\":\"UNKNOWN\"}"));
+        given(decomposeRegistrationUnits.decompose(any())).willReturn(List.of(
+                new RegistrationUnitBundle(1, "a", evidenced("식당"), evidenced("서울 마포구"),
+                        null, List.of(unknownMenu), evidenced("먹었다"))));
+        given(executeRegistrationUnit.execute(any())).willReturn(RegistrationUnitExecutionResult.blocked("CATEGORY_UNRESOLVED"));
+        var outcomes = service.execute(json("{}"), json("{}"), json("{}"), "channel", "video", videoUrl);
+        assertThat(outcomes.get(0).blockReason()).isEqualTo("CATEGORY_UNRESOLVED");
+        verify(executeRegistrationUnit).execute(org.mockito.ArgumentMatchers.argThat(command -> command.menu() == null));
+    }
+
+    @Test
+    @DisplayName("S3 이름 UNKNOWN과 불완전 방문 근거는 실행 전에 차단한다")
+    void execute_이름방문근거불완전_실행전에차단한다() {
+        BoundCandidate unknown = new BoundCandidate("식당", null, json("{\"type\":\"UNKNOWN\"}"));
+        BoundCandidate incomplete = new BoundCandidate("먹었다", null, json("{\"type\":\"TIMESTAMP\"}"));
+        given(decomposeRegistrationUnits.decompose(any())).willReturn(List.of(
+                new RegistrationUnitBundle(1, "a", unknown, null, null, List.of(), evidenced("먹었다")),
+                new RegistrationUnitBundle(2, "b", evidenced("식당"), null, null, List.of(), incomplete)));
+        var outcomes = service.execute(json("{}"), json("{}"), json("{}"), "channel", "video", videoUrl);
+        assertThat(outcomes).extracting(RegistrationUnitOutcome::blockReason)
+                .containsExactly("MISSING_REQUIRED_FIELD", "MISSING_REQUIRED_FIELD");
+        org.mockito.Mockito.verifyNoInteractions(executeRegistrationUnit);
+    }
+
+    @Test
+    @DisplayName("S3 메뉴가 없어도 Kakao 분류 확정 결과를 등록 결과로 보존한다")
+    void execute_메뉴없는Kakao분류확정_등록결과를보존한다() {
+        given(decomposeRegistrationUnits.decompose(any())).willReturn(List.of(
+                new RegistrationUnitBundle(1, "a", evidenced("식당"), evidenced("서울 마포구"),
+                        null, List.of(), evidenced("먹었다"))));
+        given(executeRegistrationUnit.execute(any())).willReturn(RegistrationUnitExecutionResult.confirmed(
+                new PlaceDecision("https://place.map.kakao.com/1", "서울 마포구", "NAME_AND_DISTRICT"),
+                new CategoryDecision(UUID.randomUUID(), "한식", "KAKAO_PLACE_CATEGORY"),
+                new AutoRegisterVerifiedContentUseCase.RegistrationResult(UUID.randomUUID(), UUID.randomUUID(),
+                        UUID.randomUUID(), UUID.randomUUID(), true, false, false, true)));
+        var outcomes = service.execute(json("{}"), json("{}"), json("{}"), "channel", "video", videoUrl);
+        assertThat(outcomes.get(0).reviewStatus()).isEqualTo("AUTO_CONFIRMED");
+        assertThat(outcomes.get(0).categoryDecisionJson()).contains("KAKAO_PLACE_CATEGORY");
+        verify(executeRegistrationUnit).execute(org.mockito.ArgumentMatchers.argThat(command -> command.menu() == null));
+    }
+
+    private BoundCandidate evidenced(String value) {
+        return new BoundCandidate(value, null, json("{\"type\":\"TIMESTAMP\",\"startMs\":1000,\"endMs\":2000}"));
+    }
+
     private RegistrationUnitBundle bundle(int unitIndex, String restaurantName, String address, String menu) {
         return new RegistrationUnitBundle(unitIndex, candidate(restaurantName), candidate(address), candidate(menu),
                 null);
+    }
+
+    private BoundCandidate withEvidence(String value) {
+        return new BoundCandidate(value, java.math.BigDecimal.valueOf(0.9), json("""
+                {"type":"TIMESTAMP","startMs":1000,"endMs":2000}
+                """));
     }
 
     private BoundCandidate candidate(String value) {

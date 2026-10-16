@@ -23,6 +23,7 @@ related_documents:
   - ../../07-adr/integration/ext-003-ai-extraction-async-reliability.md
   - ../../07-adr/security/auth-007-unified-account-rbac-session.md
   - ../../08-planning/third-expansion-evaluation-strategy.md
+  - ../../08-planning/issue-421-ai-failure-remediation.md
   - ../../08-planning/dynamic-natural-language-tag-dictionary.md
 ---
 
@@ -30,7 +31,7 @@ related_documents:
 
 ## 1. 결정 상태와 범위
 
-이 문서는 AI 영상 추출 작업, 후보 Snapshot, 통제 태그, Gemini 영상 입력 이력과 YouTube 채널 감시·보정 실행 상태의 논리·물리 데이터 경계를 정의하는 Accepted 계약이다. Google Gemini API는 `gemini-3.5-flash-lite`, Gemini Developer API global endpoint, Free Tier 전용·유료 호출 금지, 현재 Prompt `P8`, 결과 Schema `S2`를 사용한다. 기존 Prompt `P1`·`P2`·`P3`·`P4`·`P5`·`P6`·`P7` 작업과 Snapshot은 재현성을 위한 역사적 이력으로만 보존한다. V4 AI 스키마의 정본은 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql)이고, 채널 감시 오류 시각 보강은 [`V5__add_youtube_channel_watch_last_error_at.sql`](../../../src/main/resources/db/migration/V5__add_youtube_channel_watch_last_error_at.sql), YouTube 보정 실행은 [`V14__create_youtube_channel_backfill_run.sql`](../../../src/main/resources/db/migration/V14__create_youtube_channel_backfill_run.sql), 중지 원인은 [`V15__add_youtube_channel_backfill_stop_reason.sql`](../../../src/main/resources/db/migration/V15__add_youtube_channel_backfill_stop_reason.sql), 영상 처리 원장은 [`V16__add_youtube_channel_backfill_video_ledger.sql`](../../../src/main/resources/db/migration/V16__add_youtube_channel_backfill_video_ledger.sql)로 관리한다.
+이 문서는 AI 영상 추출 작업, 후보 Snapshot, 통제 태그, Gemini 영상 입력 이력과 YouTube 채널 감시·보정 실행 상태의 논리·물리 데이터 경계를 정의하는 Accepted 계약이다. Google Gemini API는 `gemini-3.5-flash-lite`, Gemini Developer API global endpoint, Free Tier 전용·유료 호출 금지, 현재 Prompt `P9`, 결과 Schema `S3`를 사용한다. 기존 Prompt `P1`·`P2`·`P3`·`P4`·`P5`·`P6`·`P7`·`P8` 작업과 Snapshot은 재현성을 위한 역사적 이력으로만 보존한다. V4 AI 스키마의 정본은 [`V4__create_third_expansion_ai_schema.sql`](../../../src/main/resources/db/migration/V4__create_third_expansion_ai_schema.sql)이고, 채널 감시 오류 시각 보강은 [`V5__add_youtube_channel_watch_last_error_at.sql`](../../../src/main/resources/db/migration/V5__add_youtube_channel_watch_last_error_at.sql), YouTube 보정 실행은 [`V14__create_youtube_channel_backfill_run.sql`](../../../src/main/resources/db/migration/V14__create_youtube_channel_backfill_run.sql), 중지 원인은 [`V15__add_youtube_channel_backfill_stop_reason.sql`](../../../src/main/resources/db/migration/V15__add_youtube_channel_backfill_stop_reason.sql), 영상 처리 원장은 [`V16__add_youtube_channel_backfill_video_ledger.sql`](../../../src/main/resources/db/migration/V16__add_youtube_channel_backfill_video_ledger.sql)로 관리한다.
 
 `ai_registration_unit`(5.1절), `ai_registration_unit_review`(5.3절), `food_category_mapping`(5.2절), `ai_candidate_snapshot.candidate_truncated`는 [PR #226](https://github.com/team-youngkk/masit-on/pull/226)에서 Flyway 순서 소유자(박진영)와 restaurant 도메인 소유자의 승인으로 합의를 확정했다. 네 항목은 `V8__add_ai_registration_unit_and_food_category_mapping.sql`로 구현했다. 절차는 [ADR-AI-001 1절](../../07-adr/integration/ai-001-video-extraction-candidate-boundary.md)에 있다.
 
@@ -65,6 +66,9 @@ related_documents:
 - 입력 원문과 자동 수집 자막·전사 원문은 저장하지 않는다. 단, 관리자가 직접 제출한 보완 텍스트는 비동기 Worker 재시작 복구를 위해 별도 암호화 저장소에 임시 보존하고, 작업 종료 후 24시간 이내 삭제한다. 정규화 입력 해시는 작업 멱등성 검사용으로 보존하며 후보 Snapshot·시도·검수 이력은 1년 보존 후 정리한다.
 - JSON 후보 필드는 Schema 버전을 함께 저장하고, 모델·Prompt·Schema 변경 시 기존 Snapshot을 덮어쓰지 않는다.
 - Provider 호출은 DB 핵심 저장 트랜잭션과 분리한다. 후보 저장 실패와 정식 Entity 저장은 원자적으로 연결되지 않는다.
+- 실패 단위 자동 보완은 기존 YouTube videos API의 공개 제목·설명과 원 등록 단위에 결속된 승인 location만 사용한다. 입력 원문은 AES-GCM 암호화 임시 입력으로 보존하고 24시간 이내 만료한다.
+- 작업 전체 Gemini Provider 호출은 기존 시도를 포함해 최대 4회다. 등록 단위별 claim은 한 번만 허용하고 quota·비용 hard stop과 기존 timeout·backoff를 유지한다.
+- 보완 Snapshot은 원 Snapshot 전체 후보를 복사하고 실패 단위 후보만 교체한다. 성공 단위 후보·판정·등록 결과는 그대로 유지하며 재검증하지 않는다.
 - AI는 자막에서 태그 후보를 생성할 수 있다. 후보는 정규화·동의어·문자 유사도·금지 표현·근거 검사를 통과하면 자동으로 `TagDefinition`을 만들거나 기존 정의와 통합하고, 자동 확정된 `Visit`에 `VisitTag`를 연결한다.
 
 ## 4. `ai_extraction_job`
@@ -110,6 +114,33 @@ related_documents:
 - Worker가 `QUEUED/RUNNING` 작업을 재시작 복구할 때만 복호화할 수 있다.
 - `SUCCEEDED`·`FAILED` 작업은 종료 후 24시간 이내 암호문을 삭제한다. 관리자 재시도는 이전 입력을 재사용하지 않고 새 `supplementText`를 제출한다.
 - 암호문 삭제 후에도 입력 해시와 작업·후보·시도·검수 이력은 계약된 보존 기간 동안 유지한다.
+
+### 4.2 `ai_registration_unit_retry`
+
+이력·claim 테이블은 V22에서 추가하고 Provider 응답 checkpoint는 V23에서 추가한다. `(job_id, source_registration_unit_id)`와 `(job_id, candidate_unit_id)` unique로 단위별 claim을 한 번으로 제한하고 원 작업, 원 Snapshot, 원 등록 단위 및 결과 Snapshot 사이 provenance를 검증한다.
+
+| 컬럼 | SQL 타입 | Null | 키·제약 | 설명 |
+|---|---|---:|---|---|
+| `id` | `uuid` | NN | PK | claim·이력 ID |
+| `job_id` | `uuid` | NN | FK → `ai_extraction_job.id` | 원 작업 |
+| `source_snapshot_id` | `uuid` | NN | FK → `ai_candidate_snapshot.id` | 보완 전 Snapshot |
+| `source_registration_unit_id` | `uuid` | NN | `(id, snapshot_id)` 복합 FK, `(job_id, source_registration_unit_id)` unique | claim의 원 등록 단위 |
+| `candidate_unit_id` | `varchar(4096)` | NN | non-blank CHECK, `(job_id, candidate_unit_id)` unique | 재추출 대상 후보 단위 ID |
+| `failure_reason` | `varchar(64)` | NN | non-blank CHECK | 자동 보완 원인이 된 실패 사유 |
+| `approved_source_identifiers` | `jsonb` | NN | 문자열 배열 CHECK | 공개 제목·설명과 같은 단위 location 근거의 허용 출처 식별자 |
+| `input_hash` | `bytea` | NN | SHA-256 32 byte CHECK | 처리 입력 지문 |
+| `ciphertext` | `bytea` | Yes | `encryption_key_id`·`expires_at`와 함께 null 또는 non-empty | 제한 입력 암호문 |
+| `encryption_key_id` | `varchar(128)` | Yes | 암호문 쌍 제약 | 암호화 키 식별자 |
+| `expires_at` | 시간 | Yes | 생성 시각 +24시간 이내 | 암호문 만료 시각 |
+| `provider_attempt_no` | `smallint` | Yes | 1~4 CHECK | quota·작업 호출 상한으로 예약된 Provider 시도. 재예약은 직전 시도가 `FAILED` 이력으로 기록된 경우에만 허용 |
+| `outcome` | `varchar(16)` | NN | `PENDING/SUCCEEDED/BLOCKED` | claim·재검증 결과 |
+| `result_snapshot_id` | `uuid` | Yes | FK → `ai_candidate_snapshot.id` | 결과 Snapshot. 완료 상태에서 필수 |
+| `created_at`, `finished_at` | 시간 | 상태별 | 완료 시각 CHECK | claim·완료 시각 |
+| `provider_result_ciphertext` | `bytea` | Yes | 아래 3개 필드는 모두 null 또는 모두 non-null; 암호문 non-empty | 성공한 보완 Provider 응답의 AES-GCM 암호문 |
+| `provider_result_key_id` | `varchar(128)` | Yes | 응답 암호문 쌍 CHECK | 응답 암호화 키 식별자 |
+| `provider_result_at` | `timestamp with time zone` | Yes | `created_at`~`created_at + 24 hours`, 예약 시도 필수 | 응답 checkpoint 저장 시각 |
+
+원/결과 Snapshot이 같은 `job_id`에 속함은 trigger로 검증한다. Claim 행은 재시작 가능한 단일 mutable gate로 `PENDING`에서 `SUCCEEDED` 또는 `BLOCKED`로 전이하며 terminal 상태에서 결과 Snapshot과 완료 시각이 함께 기록된다. Provider 호출 예약과 동시에 `provider_attempt_no`가 기록된다. 응답을 받으면 Provider의 `SUCCEEDED` attempt 이력과 암호화 응답 checkpoint를 한 저장 문장에서 기록하므로, 두 기록 사이 crash window가 없다. 재기동 시 예약 번호와 checkpoint가 모두 있으면 checkpoint를 복호화해 결과 처리를 이어가며 Provider를 다시 호출하지 않는다. 예약 번호만 있고 대응하는 terminal attempt 이력이 없으면 결과를 알 수 없는 호출로 보고 자동 재호출하지 않는다. 대응 attempt가 `FAILED`로 기록되어 있으면 기존 호출 상한과 quota 정책 아래에서 다음 재시도를 예약할 수 있다. Provider Attempt와 Candidate Snapshot은 기존 행을 덮어쓰지 않는 이력으로 유지한다. 입력·응답 암호문은 작업 종료 또는 만료 시 정리하고, hash·허용 출처·사유·결과·Snapshot 링크와 Provider Attempt 이력은 계약된 이력 보존기간 동안 남긴다. Provider 호출 횟수는 `ai_extraction_attempt`로 집계한다.
 
 ## 5. `ai_candidate_snapshot`
 
@@ -166,8 +197,8 @@ related_documents:
 | `registered_restaurant_id` | `uuid` | Yes | FK → `restaurant.id` | 등록한 맛집 |
 | `registered_creator_id` | `uuid` | Yes | FK → `creator.id` | 등록하거나 재사용한 유튜버 |
 | `registered_video_id` | `uuid` | Yes | FK → `video.id` | 등록하거나 재사용한 영상 |
-| `registered_visit_id` | `uuid` | Yes | FK → `visit.id` | 같은 실행에서 만든 방문 관계 |
-| `reused_resources` | `jsonb` | NN | 배열, 허용값 `creator`·`video` CHECK | 새로 만들지 않고 재사용한 자원 |
+| `registered_visit_id` | `uuid` | Yes | FK → `visit.id` | 등록하거나 재사용한 방문 관계 |
+| `reused_resources` | `jsonb` | NN | 배열, 허용값 `restaurant`·`creator`·`video`·`visit` CHECK | 새로 만들지 않고 재사용한 자원 |
 | `executed_by` | `varchar(16)` | NN | `WORKER`·`ADMIN` CHECK | 등록 실행 주체 |
 | `decided_at` | 시간 | NN | 기본 현재 시각 | 판정 시각 |
 | `rolled_back_at` | 시간 | Yes | `MANUAL_OVERRIDE`에서만 non-null | 관리자 롤백 시각 |
@@ -189,7 +220,7 @@ related_documents:
 - 폐기는 등록 결과 컬럼을 건드리지 않고 `discarded_at`만 채운다. 롤백·폐기 완료 단위는 등록 API와 `review`의 모든 `decision`을 거절하는 종결 상태다.
 - API 응답의 `manualOverrideType`은 이 두 컬럼에서 계산한다. `rolled_back_at`이 있으면 `ROLLED_BACK`, `discarded_at`이 있으면 `DISCARDED`, 둘 다 없으면 `null`이다. 별도 컬럼으로 저장하지 않는다.
 - 맛집·유튜버·영상·방문 관계 4종 등록은 `BR-AIEXTRACT-011`에 따라 하나의 트랜잭션으로 저장한다. `executed_by`는 Worker 자동 실행과 관리자 실행을 구분하며 판정 기준은 두 경우가 같다.
-- 재사용이 일어나는 자원은 유튜버와 영상뿐이다. 맛집과 방문 관계는 같은 것이 이미 있으면 `DUPLICATE_CONFLICT`로 차단되어 등록 자체가 일어나지 않으므로 재사용 대상이 될 수 없다. `reused_resources`의 허용값을 `creator`·`video`로 좁혀 이 경계를 DB에서 강제한다.
+- 맛집·유튜버·영상·동일 방문 관계는 기존 식별자를 재사용한다. `reused_resources` 허용값은 `restaurant`·`creator`·`video`·`visit`이며 신규 생성 여부는 네 자원 중 이 배열에 없는 자원으로 복원한다. 기존 `creator`·`video` 감사 값은 그대로 유지한다. 기존 맛집의 필드·공개/생명주기 상태를 재사용 과정에서 덮어쓰지 않는다.
 - 유튜버·영상은 기존 행이 있으면 재사용한다. 재사용한 경우에도 참조 컬럼에 그 식별자를 기록하고 `reused_resources`에 자원 이름을 남긴다. 등록 단위 일괄 등록 API 응답은 감사 이력이 아니라 이 컬럼들에서 재구성한다.
 - 등록 단위의 실패는 같은 Snapshot의 다른 등록 단위 행과 그 정식 등록 결과를 변경하지 않는다. 원자성 경계는 등록 단위 하나다.
 - 관리자 사후 보정·롤백은 판정 이력을 덮어쓰지 않고 append-only 감사 이력을 추가한 뒤 `review_status`를 `MANUAL_OVERRIDE`로 전환한다.
@@ -508,3 +539,19 @@ V13 `tag_definition_merge`는 원본·대상 정의, 병합 전후 원본과 대
 DB 조회 횟수는 라이브러리를 추가하지 않은 프로세스 내 read-through cache로 제한한다. 불변 snapshot TTL은 30초이며 생성·수정·폐기는 최대 30초 뒤 반영될 수 있다. 최초 적재와 만료 뒤 첫 요청은 사전을 갱신하고, 같은 시점의 동시 요청은 하나의 갱신 결과를 공유한다. 최초 적재 또는 만료 갱신에서 DB 조회가 실패하면 stale snapshot이나 초기 18개 seed로 대체하지 않고 `NATURAL_LANGUAGE_UNAVAILABLE` 503으로 fail-closed 처리한다.
 
 `parserVersion: P1`은 문장 패턴·조건 해석·충돌·상한·정규화 알고리즘의 버전이다. 동적 사전의 코드·표시명·별칭 데이터 변경만으로 버전을 증가시키지 않는다. V11은 V4 초기 18개 seed에서 빠진 기존 P1 별칭을 JSONB와 정규화 용어 정본에 함께 이관한다. 초기 seed와 별칭은 Golden V1 회귀 기준으로 보존하며 동적 전환 전후의 해석 결과가 같아야 한다.
+
+
+## 이슈 #417: P9 / S3 식당별 후보 결속
+
+2026-10-14 계약 소유자 합의를 확보했다. 신규 추출은 P9/S3를 사용하며 P8/S2와 이전 Snapshot은 생성 당시 의미로 읽기 전용 보존한다. 비용·Provider·모델·호출 상한은 변경하지 않는다.
+
+S3 루트는 resultCompleteness, candidates, registrationUnits, missingFields, candidateTruncated를 모두 요구한다. candidates는 기존 통제 태그 후보 전용이며, 식당 관련 값을 단위 밖에 두면 Schema 오류다. registrationUnits의 각 객체는 candidateUnitId(중복 없는 불투명 문자열), restaurantName, address, location, menus, visitEvidence만 허용한다. restaurantName은 반드시 하나의 후보 객체이며 address·location·visitEvidence는 후보 객체 또는 null, menus는 후보 객체 배열이다. 후보 객체는 value(1~4096자), confidence(유한한 0~1), evidence만 허용한다. 명시적 단위 밖 필드를 복사하거나 후보 배열 순서로 결속하지 않는다.
+
+전체 후보 수(태그 + 모든 단위의 non-null 필드 + 모든 메뉴)는 300 이하이고 상한에 닿으면 서버가 candidateTruncated=true를 강제한다. 단위별 결측·UNKNOWN은 missingFields와 PARTIAL에 반영한다. 외부 검증·중복·등록 차단은 필드 완전성과 독립이다. 중복 ID·추가 키·잘못된 중첩 구조·단위 없는 flat 후보는 Provider SCHEMA 오류이며 Snapshot 저장과 실행 전에 거부한다.
+
+candidate_fields JSON에는 registrationUnits를 변경 없이 저장하고 candidateUnitId와 메뉴 배열을 보존한다. 새 DB 컬럼·마이그레이션은 필요하지 않다. 등록 단위 unit_index는 Snapshot의 단위 배열에서 1부터 배정하되, 필드 소속은 candidateUnitId를 가진 단위 객체로만 결정한다. S1/S2 복수 식당은 순서로 결속하지 않고 보류하며 과거 Snapshot은 재작성하지 않는다.
+
+설계·검증 근거: [이슈 417 설계](../../08-planning/issue-417-ai-contract-proposal.md).
+### #419 등록 재사용·롤백 보호
+
+승인된 등록 재사용 정책의 상세 설계와 검증은 [이슈 #419 설계](../../08-planning/issue-419-ai-contract-proposal.md)에 따른다. V21은 기존 `reused_resources` CHECK 함수의 허용값만 확장한다. 롤백은 배열에 포함된 네 자원을 보존하며, 신규 자원도 다른 관계의 참조가 있으면 공개 상태와 행을 보존한다. 신규 자원 생성 중 실패는 기존 ON CONFLICT 기반 등록 transaction에서 전체 롤백한다.

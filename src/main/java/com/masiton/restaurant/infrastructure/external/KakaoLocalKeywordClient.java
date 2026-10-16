@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Arrays;
+import java.util.ArrayList;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -91,11 +92,44 @@ class KakaoLocalKeywordClient {
     }
 
     KakaoKeywordResponse search(String name) {
+        return searchPage(name, null, RESPONSE_TIMEOUT);
+    }
+
+    KakaoKeywordResponse searchCandidates(String name, String district) {
+        long started = System.nanoTime();
+        List<Map<String, Object>> documents = new ArrayList<>();
+        int documentCount = 0;
+        for (int page = 1; page <= 3; page++) {
+            Duration remaining = RESPONSE_TIMEOUT.minusNanos(System.nanoTime() - started);
+            if (remaining.isNegative() || remaining.isZero()) {
+                throw new KakaoLocalKeywordClientException(new java.net.http.HttpTimeoutException("Search budget exceeded"));
+            }
+            KakaoKeywordResponse response = searchPage(district.strip() + " " + name.strip(), page, remaining);
+            if (System.nanoTime() - started >= RESPONSE_TIMEOUT.toNanos()) {
+                throw new KakaoLocalKeywordClientException(new java.net.http.HttpTimeoutException("Search budget exceeded"));
+            }
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                return response;
+            }
+            if (response.isEnd() == null || response.documentCount() != response.documents().size()) {
+                throw new KakaoLocalKeywordClientException();
+            }
+            documents.addAll(response.documents());
+            documentCount += response.documentCount();
+            if (response.isEnd()) {
+                return new KakaoKeywordResponse(response.statusCode(), documentCount, List.copyOf(documents), true);
+            }
+        }
+        throw new KakaoLocalKeywordClientException();
+    }
+
+    private KakaoKeywordResponse searchPage(String name, Integer page, Duration timeout) {
         try {
             String query = URLEncoder.encode(name, StandardCharsets.UTF_8);
-            URI requestUri = baseUri.resolve("/v2/local/search/keyword.json?query=" + query);
+            URI requestUri = baseUri.resolve("/v2/local/search/keyword.json?query=" + query
+                    + (page == null ? "" : "&page=" + page + "&size=15"));
             HttpRequest.Builder request = HttpRequest.newBuilder(requestUri)
-                    .timeout(RESPONSE_TIMEOUT)
+                    .timeout(timeout)
                     .GET();
             if (!restApiKey.isBlank()) {
                 request.header("Authorization", "KakaoAK " + restApiKey);
@@ -132,13 +166,30 @@ class KakaoLocalKeywordClient {
                     .map(Map.class::cast)
                     .map(document -> (Map<String, Object>) document)
                     .toList();
-            return new KakaoKeywordResponse(statusCode, documents.size(), mappedDocuments);
+            Object meta = payload.get("meta");
+            Boolean isEnd = meta instanceof Map<?, ?> metadata && metadata.get("is_end") instanceof Boolean end
+                    ? end : null;
+            if (isEnd != null && meta instanceof Map<?, ?> metadata) {
+                Object totalCount = metadata.get("total_count");
+                Object pageableCount = metadata.get("pageable_count");
+                if (!(totalCount instanceof Integer total) || !(pageableCount instanceof Integer pageable)
+                        || total < 0 || pageable < 0 || total < pageable) {
+                    isEnd = null;
+                } else if (total > pageable) {
+                    // 정상 meta라도 노출 상한 밖 후보가 남으므로 전체 수집 완료로 취급하지 않는다.
+                    isEnd = null;
+                }
+            }
+            return new KakaoKeywordResponse(statusCode, documents.size(), mappedDocuments, isEnd);
         } catch (JacksonException exception) {
             throw new KakaoLocalKeywordClientException(exception);
         }
     }
 
-    record KakaoKeywordResponse(int statusCode, int documentCount, List<Map<String, Object>> documents) {
+    record KakaoKeywordResponse(int statusCode, int documentCount, List<Map<String, Object>> documents, Boolean isEnd) {
+        KakaoKeywordResponse(int statusCode, int documentCount, List<Map<String, Object>> documents) {
+            this(statusCode, documentCount, documents, null);
+        }
     }
 
     static final class KakaoLocalKeywordClientException extends RuntimeException {

@@ -33,9 +33,25 @@ related_documents:
   - admin-tag-definition-creation.md
   - dynamic-natural-language-tag-dictionary.md
   - issue-400-national-natural-language-regions.md
+  - issue-418-visit-evidence-punctuation.md
+  - issue-417-ai-contract-proposal.md
+  - issue-420-ai-failure-diagnostics.md
+  - issue-413-candidate-completeness.md
+  - issue-414-ai-contract-proposal.md
+  - issue-419-ai-contract-proposal.md
+  - issue-421-ai-failure-remediation.md
 ---
 
 # 맛잇온 구현 계획
+
+- [#418 방문 근거 문장부호 정규화](issue-418-visit-evidence-punctuation.md)
+- [#415 전국 주소와 인천 장소 검색 진단](issue-415-national-place-diagnosis.md)
+- [#417 식당별 후보 결속 계약](issue-417-ai-contract-proposal.md)
+- [#420 AI 등록 실패 진단과 통계](issue-420-ai-failure-diagnostics.md)
+- [#421 실패 사유별 자동 보완·제한 재검증 설계](issue-421-ai-failure-remediation.md)
+- [#413 후보 완전성과 처리 성공 표시](issue-413-candidate-completeness.md)
+- [#414 위치 표현 지역 검증 설계·결과](issue-414-ai-contract-proposal.md)
+- [#419 기존 맛집 재사용·원자 롤백 설계·결과](issue-419-ai-contract-proposal.md)
 
 | 문서 | 목적 |
 |---|---|

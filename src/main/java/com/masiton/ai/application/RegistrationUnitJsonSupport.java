@@ -31,6 +31,29 @@ final class RegistrationUnitJsonSupport {
         return candidate == null ? null : candidate.value();
     }
 
+    static BoundLocation boundLocation(JsonNode fields, int unitIndex, String candidateUnitId, String restaurantName) {
+        JsonNode units = fields == null ? null : fields.path("registrationUnits");
+        if (units == null || !units.isArray() || unitIndex < 1 || unitIndex > units.size()
+                || candidateUnitId == null || candidateUnitId.isBlank()) {
+            return new BoundLocation(null, null);
+        }
+        JsonNode unit = units.path(unitIndex - 1);
+        String id = unit.path("candidateUnitId").asText("");
+        String name = unit.path("restaurantName").path("value").asText("");
+        if (id.isBlank() || !id.equals(candidateUnitId) || !name.equals(restaurantName)) {
+            return new BoundLocation(null, null);
+        }
+        for (JsonNode other : units) {
+            if (other != unit && id.equals(other.path("candidateUnitId").asText(""))) {
+                return new BoundLocation(null, null);
+            }
+        }
+        JsonNode location = unit.path("location").path("value");
+        return new BoundLocation(id, location.isTextual() ? location.textValue() : null);
+    }
+
+    record BoundLocation(String candidateUnitId, String location) { }
+
     static VisitEvidenceCandidate toVisitEvidence(BoundCandidate candidate) {
         if (candidate == null || candidate.value() == null) {
             return null;
@@ -80,11 +103,17 @@ final class RegistrationUnitJsonSupport {
     static String reusedResourcesJson(ObjectMapper objectMapper,
                                       AutoRegisterVerifiedContentUseCase.RegistrationResult registration) {
         ArrayNode array = objectMapper.createArrayNode();
+        if (!registration.restaurantCreated()) {
+            array.add("restaurant");
+        }
         if (!registration.creatorCreated()) {
             array.add("creator");
         }
         if (!registration.videoCreated()) {
             array.add("video");
+        }
+        if (!registration.visitCreated()) {
+            array.add("visit");
         }
         return json(objectMapper, array);
     }

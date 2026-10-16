@@ -30,6 +30,9 @@ class JdbcAiRegistrationUnitStorePostgreSqlIntegrationTest extends FullContextIn
     private AiRegistrationUnitStore store;
 
     @Autowired
+    private com.masiton.ai.application.port.out.AiExtractionAdminQueryPort adminQuery;
+
+    @Autowired
     private JdbcTemplate jdbcTemplate;
 
     private UUID jobId;
@@ -113,6 +116,21 @@ class JdbcAiRegistrationUnitStorePostgreSqlIntegrationTest extends FullContextIn
         assertThat(row.reusedResources()).containsExactly("creator", "video");
         assertThat(row.placeDecisionJson()).contains("NAME_AND_DISTRICT");
         assertThat(row.categoryDecisionJson()).contains("한식");
+        assertThat(adminQuery.list(null, null, null, 0, 50).registrationSummaries().get(jobId))
+                .isEqualTo(com.masiton.ai.application.RegistrationSummary.from(store.findByJobId(jobId)));
+    }
+
+    @Test
+    @DisplayName("목록 집계는 단위 0개와 전체 보류를 상세 단위 집계와 동일하게 반환한다")
+    void 목록집계_빈단위와전체보류_상세와일치() {
+        // Given / When / Then
+        assertThat(adminQuery.list(null, null, null, 0, 50).registrationSummaries().get(jobId))
+                .isEqualTo(com.masiton.ai.application.RegistrationSummary.from(store.findByJobId(jobId)));
+        store.insert(new AiRegistrationUnitStore.RegistrationUnitInsert(
+                snapshotId, 1, "보류 맛집", "AUTO_BLOCKED", "PLACE_NOT_FOUND", null, null,
+                null, null, null, null, null, "WORKER", OffsetDateTime.now()));
+        assertThat(adminQuery.list(null, null, null, 0, 50).registrationSummaries().get(jobId))
+                .isEqualTo(com.masiton.ai.application.RegistrationSummary.from(store.findByJobId(jobId)));
     }
 
     @Test

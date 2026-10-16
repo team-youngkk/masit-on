@@ -17,6 +17,7 @@ related_documents:
   - ../../../07-adr/integration/ai-001-video-extraction-candidate-boundary.md
   - ../../../07-adr/integration/ext-003-ai-extraction-async-reliability.md
   - ../../../08-planning/third-expansion-evaluation-strategy.md
+  - ../../../08-planning/issue-421-ai-failure-remediation.md
   - ../common/authentication-contract.md
   - ../common/error-contract.md
   - ../common/pagination-contract.md
@@ -59,7 +60,7 @@ related_documents:
 
 `SUCCEEDED`와 `PARTIAL`은 실행 상태와 결과 완전성을 각각 표현한다. `AUTO_CONFIRMED`는 자동 검증과 기존 정식 등록 명령이 성공했다는 의미이며, 관리자의 사전 승인을 뜻하지 않는다.
 
-중복은 종결이 아니라 복구 가능한 보류다. 같은 맛집·방문 관계가 이미 존재하는 `DUPLICATE_CONFLICT`는 `AUTO_BLOCKED`로 귀결하며 `AUTO_REJECTED`로 매핑하지 않는다. `BR-AIEXTRACT-011`의 예외 전환 대상이지만, `recoveryPaths`로서 관리자가 할 수 있는 것은 기존 등록 결과를 확인하는 것(`EXISTING_RESOURCE`)뿐이다. `CONFIRM`·`ADJUST_CATEGORY`로 사후 보정하지 않으며 재추출·재실행·수동 등록 경로도 없다. 다만 `DISCARD`는 `recoveryPaths`와 무관한 공통 종결 동작이므로 다른 `AUTO_BLOCKED`와 같이 허용한다.
+과거 `DUPLICATE_CONFLICT` 감사 값과 복구 경로는 조회 호환으로 유지한다. 새 실행은 검증된 기존 맛집과 동일 방문을 재사용한다. 과거 동일 자원 존재로 저장된 `DUPLICATE_CONFLICT`는 `AUTO_BLOCKED`로 귀결하며 `AUTO_REJECTED`로 매핑하지 않는다. `BR-AIEXTRACT-011`의 예외 전환 대상이지만, `recoveryPaths`로서 관리자가 할 수 있는 것은 기존 등록 결과를 확인하는 것(`EXISTING_RESOURCE`)뿐이다. `CONFIRM`·`ADJUST_CATEGORY`로 사후 보정하지 않으며 재추출·재실행·수동 등록 경로도 없다. 다만 `DISCARD`는 `recoveryPaths`와 무관한 공통 종결 동작이므로 다른 `AUTO_BLOCKED`와 같이 허용한다.
 
 #### 작업 최상위 `reviewStatus` 요약 규칙
 
@@ -106,8 +107,8 @@ related_documents:
   "reviewStatus": null,
   "provider": "GOOGLE_GEMINI",
   "modelVersion": "gemini-3.5-flash-lite",
-  "promptVersion": "P8",
-  "schemaVersion": "S2",
+  "promptVersion": "P9",
+  "schemaVersion": "S3",
   "attemptCount": 0,
   "createdAt": "2026-08-10T12:00:00+09:00",
   "startedAt": null,
@@ -155,7 +156,7 @@ related_documents:
 | `page` | 아니요 | 1-base, 기본 1 |
 | `size` | 아니요 | 10·20·50, 기본 20 |
 
-응답은 최신 생성 시각과 작업 ID 오름차순으로 안정 정렬한다. 목록에는 작업 ID, 영상 식별 정보, 유입 경로, 실행 상태, 결과 완전성, 자동 등록 상태, 버전, 시각만 포함하고 입력 원문은 포함하지 않는다.
+응답은 최신 생성 시각과 작업 ID 오름차순으로 안정 정렬한다. 목록에는 작업 ID, 영상 식별 정보, 유입 경로, 실행 상태, 결과 완전성, 후보 판정 요약, 등록 단위 집계, 버전, 시각을 포함하고 입력 원문은 포함하지 않는다.
 
 ### 3.3 `GET /api/admin/ai/video-extractions/{jobId}` 작업·후보 상세
 
@@ -307,6 +308,10 @@ related_documents:
 - `reason`은 trim 후 1,000자 이내 필수 값이며 새 작업의 `retry_reason`으로 보존한다.
 - 무료 quota 소진·결제 연결 요구·설정 미검증 상태에서는 `429` 또는 공통 오류 계약의 제공자 차단 오류를 반환하고 수동 등록 fallback을 안내한다.
 
+이 API는 관리자가 새 작업 재시도를 요청하는 기존 계약이다. Worker의 자동 보완은 공개 Route·Enum 추가 없이 원 작업에서 수행한다. 승인된 실패 단위만 기존 YouTube videos API에서 조회한 공개 제목·설명과 동일 단위의 `registrationUnits[].location` 후보를 사용한다. 단위마다 한 번이며 작업 전체 Gemini Provider 호출 상한은 기존 재시도를 포함해 4회다. quota·비용 hard stop은 그대로 적용한다.
+
+자동 보완 뒤 최신 Snapshot은 기존 전체 후보를 복사하고 실패 단위의 재검증 성공 후보만 교체한다. 성공 단위는 후보·판정·등록 결과를 그대로 유지하고 재검증하지 않는다. 이전 Snapshot과 판정은 보존한다. 재검증 후에도 실패한 단위는 최종 사유로 관리자 보류하며, 상세 응답은 기존 latest-Snapshot 계약을 따른다.
+
 ### 3.5 `POST /api/admin/ai/video-extractions/{jobId}/review` 사후 보정·롤백
 
 이 API의 `review`는 정상 등록을 승인하는 API가 아니라 자동 판정 결과를 사후에 보정·롤백하는 관리자 API다. 모든 변경은 `MANUAL_OVERRIDE` 이력으로 남긴다.
@@ -455,12 +460,12 @@ Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-0
 }
 ```
 
-- `reusedResources`는 새로 만들지 않고 기존 식별자를 재사용한 자원 목록이다. 허용값은 `creator`와 `video`뿐이다. 유튜버·영상 재사용은 정상 경로이며 예외가 아니다. 맛집과 방문 관계는 이미 존재하면 `DUPLICATE_CONFLICT`로 차단되어 등록 자체가 일어나지 않으므로 재사용 대상이 될 수 없다.
+- `reusedResources`는 새로 만들지 않고 기존 식별자를 재사용한 자원 목록이다. 허용값은 `restaurant`, `creator`, `video`, `visit`다. 검증된 Kakao ID의 맛집과 동일 creator-video-restaurant 방문 관계 재사용은 정상 경로이며 예외가 아니다. 같은 관계를 반복 요청해도 추가 자원을 생성하지 않고 동일 식별자를 반환한다.
 - 응답의 네 식별자와 `reusedResources`는 `ai_registration_unit`의 `registered_restaurant_id`, `registered_creator_id`, `registered_video_id`, `registered_visit_id`, `reused_resources` 컬럼에서 읽는다. 재요청 시 같은 값을 그대로 재구성할 수 있어야 하므로 별도 감사 이력이 아니라 이 테이블이 응답의 소스다.
 - 4종 등록의 원자 경계는 등록 단위 하나다. 중간 실패 시 이 등록 단위의 정식 저장은 0건이고, 같은 작업의 다른 등록 단위는 변경하지 않는다.
 - 외부 조회·검증은 DB 트랜잭션 밖에서 수행하고, 검증 통과 후 4종을 하나의 트랜잭션으로 저장한다.
 - 재요청과 상태별 허용 범위는 위 표를 따른다.
-- 같은 등록 단위에 대한 동시 요청은 `409 AIEXTRACT_CONCURRENT_REQUEST_CONFLICT`로 처리한다. 이 코드는 동시성 충돌이며, 같은 맛집·방문 관계가 이미 존재한다는 업무 중복을 뜻하는 `blockReason`의 `DUPLICATE_CONFLICT`와 다르다. 전자는 잠시 후 재시도하면 되고, 후자는 이미 등록된 자원을 확인해야 한다.
+- 같은 등록 단위에 대한 동시 요청은 `409 AIEXTRACT_CONCURRENT_REQUEST_CONFLICT`로 처리한다. 이 코드는 동시성 충돌이며, 과거 실행에서 같은 맛집·방문 관계 존재로 저장된 `blockReason`의 `DUPLICATE_CONFLICT`와 다르다. 전자는 잠시 후 재시도하면 되고, 후자는 이미 등록된 자원을 확인해야 한다.
 
 #### 예외 전환 응답 `422 AIEXTRACT_VALIDATION_CONFLICT`
 
@@ -526,7 +531,7 @@ Worker 자동 등록과 같은 판정 규칙(`BR-AIEXTRACT-009`·`BR-AIEXTRACT-0
 | `CATEGORY_UNRESOLVED` | 카테고리 근거를 찾지 못했다 | `CONFIRM` 보충 입력 | `foodCategoryId` |
 | `MISSING_REQUIRED_FIELD` | 등록 단위에 맛집명·주소 등 필수 후보가 없다 | 보완 텍스트 재추출 또는 기존 수동 등록 | 빈 배열 |
 | `VISIT_EVIDENCE_REQUIRED` | 방문 근거가 `UNKNOWN`이거나 영상 `TIMESTAMP`가 아니다 | 재추출 또는 기존 수동 등록. 방문 근거는 보완 텍스트 주장으로 확정하지 않는다 | 빈 배열 |
-| `DUPLICATE_CONFLICT` | 같은 맛집·방문 관계가 이미 존재한다 | `EXISTING_RESOURCE`. 이미 등록된 자원으로 이동해 확인한다 | 빈 배열 |
+| `DUPLICATE_CONFLICT` | 과거 실행에서 동일 자원 존재로 차단된 기록. 새 실행은 멱등 재사용한다 | `EXISTING_RESOURCE`. 이미 등록된 자원으로 이동해 확인한다 | 빈 배열 |
 | `EXTERNAL_SERVICE_ERROR` | Kakao·YouTube 조회 실패·시간 초과 | 등록 재실행 또는 기존 수동 등록 | 빈 배열 |
 
 이 표의 복구 경로 열은 3.6절 `recoveryPaths` 배열과 같은 의미다. `MISSING_REQUIRED_FIELD`·`VISIT_EVIDENCE_REQUIRED`·`EXTERNAL_SERVICE_ERROR`는 재추출·재실행 뒤에도 관리자가 기존 수동 등록으로 우회할 수 있다. `DUPLICATE_CONFLICT`는 `recoveryPaths`상 `EXISTING_RESOURCE`만 가지며 재추출·재실행·수동 등록 우회 경로가 없다. 일곱 사유 모두 `DISCARD`는 이 표와 무관하게 공통으로 허용한다.
@@ -734,3 +739,39 @@ Webhook 수신 경로는 공개 인터넷 진입점이므로 Nginx·Spring Secur
 - [ ] 등록 단위 일괄 등록의 4종 결과·자원 재사용·재요청 멱등·동시 요청 충돌과 예외 전환 `blockReason`·`requiredSupplements`가 계약 테스트로 고정된다.
 - [ ] 일괄 등록 중간 실패에서 해당 등록 단위 정식 저장 0건과 외부 호출 중 트랜잭션 미개방이 검증된다.
 - [ ] [데이터 계약](../../data/third-expansion-ai-video-data-contract.md), API 추적표, 후보·Worker 테스트와 연결된다.
+
+## #412 등록 단위 집계 계약
+
+소유자 합의 확보 후 목록과 상세 GET에 registrationSummary를 추가한다. total, autoConfirmed, autoBlocked, autoRejected, manualOverride, registered는 음이 아닌 정수이며 네 상태 개수 합은 total이다. registered는 최신 Snapshot 단위 중 AUTO_CONFIRMED 또는 MANUAL_OVERRIDE 상태로 등록 결과 ID 4종이 모두 존재하고 롤백·폐기가 없는 개수다. partialRegistration은 0 < registered < total이다. 단위가 없으면 모든 개수는 0이고 false다. 접수·재시도 응답은 변경하지 않는다. 상세의 registrationUnits가 권위 있는 단위별 결과이며 상태 Enum과 DB 구조는 유지한다. [설계와 검증](../../../08-planning/issue-412-ai-unit-summary.md)을 따른다.
+## 이슈 #417: P9 / S3 식당별 후보 결속
+
+2026-10-14 계약 소유자 합의를 확보했다. 신규 추출은 P9/S3를 사용하며 P8/S2와 이전 Snapshot은 생성 당시 의미로 읽기 전용 보존한다. 비용·Provider·모델·호출 상한은 변경하지 않는다.
+
+S3 루트는 resultCompleteness, candidates, registrationUnits, missingFields, candidateTruncated를 모두 요구한다. candidates는 기존 통제 태그 후보 전용이며, 식당 관련 값을 단위 밖에 두면 Schema 오류다. registrationUnits의 각 객체는 candidateUnitId(중복 없는 불투명 문자열), restaurantName, address, location, menus, visitEvidence만 허용한다. restaurantName은 반드시 하나의 후보 객체이며 address·location·visitEvidence는 후보 객체 또는 null, menus는 후보 객체 배열이다. 후보 객체는 value(1~4096자), confidence(유한한 0~1), evidence만 허용한다. 명시적 단위 밖 필드를 복사하거나 후보 배열 순서로 결속하지 않는다.
+
+전체 후보 수(태그 + 모든 단위의 non-null 필드 + 모든 메뉴)는 300 이하이고 상한에 닿으면 서버가 candidateTruncated=true를 강제한다. 단위별 결측·UNKNOWN은 missingFields와 PARTIAL에 반영한다. 외부 검증·중복·등록 차단은 필드 완전성과 독립이다. 중복 ID·추가 키·잘못된 중첩 구조·단위 없는 flat 후보는 Provider SCHEMA 오류이며 Snapshot 저장과 실행 전에 거부한다.
+
+candidate_fields JSON에는 registrationUnits를 변경 없이 저장하고 candidateUnitId와 메뉴 배열을 보존한다. 새 DB 컬럼·마이그레이션은 필요하지 않다. 등록 단위 unit_index는 Snapshot의 단위 배열에서 1부터 배정하되, 필드 소속은 candidateUnitId를 가진 단위 객체로만 결정한다. S1/S2 복수 식당은 순서로 결속하지 않고 보류하며 과거 Snapshot은 재작성하지 않는다.
+
+설계·검증 근거: [이슈 417 설계](../../../08-planning/issue-417-ai-contract-proposal.md).
+
+## 3.11 추출 작업·등록 단위 통계 (#420)
+
+계약 소유자 합의를 확보한 관리자 전용 `GET /api/admin/ai/video-extractions/statistics`다. JWT + `ADMIN`을 요구한다. `from`·`to`는 필수 ISO-8601 offset 시각이며 UTC instant 기준 작업 `created_at >= from AND created_at < to`를 적용한다. `from < to`, 기간 최대 365일이며 누락·잘못된 형식·역전·초과 범위는 `400`과 공통 `traceId` 오류를 반환한다. 선택 필터는 `source`(`ADMIN`·`WEBHOOK`), `modelVersion`(최대 128자), `promptVersion`·`schemaVersion`(최대 64자)이다. 버전은 빈 문자열을 허용하지 않고 저장된 값과 정확히 일치하는 필터를 적용한다.
+
+응답은 `{ "totals": {...}, "groups": [...] }`다. 그룹은 source/modelVersion/promptVersion/schemaVersion 네 차원의 고정 조합이며 각 그룹은 동일한 `counts`를 포함한다. 이 차원은 작업에 저장된 버전이며 과거 실행 시도의 버전을 추정하지 않는다. 실행 시도 누적 통계와 내부 실패 단계·traceId는 응답에 포함하지 않는다.
+
+| counts 필드 | 정의 |
+|---|---|
+| totalJobs / jobStatuses | 고유 작업 수 / QUEUED·RUNNING·SUCCEEDED·FAILED별 작업 수 |
+| totalUnits | 해당 작업 최신 Snapshot의 단위 수. 이전 Snapshot·시도는 누적하지 않음 |
+| confirmedUnits / blockedUnits / rejectedUnits / manualOverrideUnits | 현재 AUTO_CONFIRMED / AUTO_BLOCKED / AUTO_REJECTED / MANUAL_OVERRIDE 수 |
+| evaluatedUnits | confirmedUnits + blockedUnits + rejectedUnits |
+| registeredUnits | 등록 결과 4개 ID가 모두 있고 rolledBackAt·discardedAt이 없는 현재 등록 단위 수 |
+| blockedRate | blockedUnits / evaluatedUnits. 분모 0이면 null |
+| blockReasons | 현재 AUTO_BLOCKED의 사유별 `{count, blockedShare}`. blockedShare = 사유별 count / blockedUnits |
+
+롤백·폐기 단위는 manualOverrideUnits에 포함하고 registeredUnits에서는 제외한다. 비어 있는 상태별 count는 0, 사유 map은 `{}`, groups는 `[]`, 분모 0의 비율은 null이다. 6개 확정·4개 차단이면 totalUnits=10, evaluatedUnits=10, blockedUnits=4, blockedRate=0.4다. 단위 join으로 작업 수가 늘어나지 않도록 작업/단위 분모를 별도 집계하며 단일 SQL 문으로 동일한 조회 snapshot을 사용한다. DB·Prompt·Schema 변경과 운영 데이터 재실행은 없다.
+## 이슈 #414 승인된 지역 단서 경계 (2026-10-14)
+
+소유자 합의에 따라 주소가 없는 S3 등록 단위는 명시적 candidateUnitId와 같은 restaurantName에 결속된 location의 시도·시군구를 장소 동일성 검색 단서로 사용할 수 있다. 주소가 존재하면 기존 주소를 우선하며 잘못된 주소를 location으로 대체하지 않는다. S2 전역 위치와 청량리시장 같은 상권명 단독 표현은 사용하지 않는다. 이름·행정구역·카테고리 및 단일 후보 기준, Kakao 물리 검증을 유지하고 location으로 주소를 추정하거나 저장하지 않는다. 상세 설계와 검증은 [이슈 414 설계](../../../08-planning/issue-414-ai-contract-proposal.md)를 따른다.

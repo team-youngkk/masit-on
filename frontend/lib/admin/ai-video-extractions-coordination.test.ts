@@ -12,7 +12,67 @@ import {
   registrationUnitActionsFor,
   retryActionAvailable,
   reviewRequest,
+  registrationUnitSummary,
+  registrationSummaryLabel,
+  extractionResultNotice,
 } from './ai-video-extractions-coordination.ts'
+import type { AiRegistrationUnit } from './ai-video-extractions.ts'
+
+function summaryUnit(reviewStatus: AiRegistrationUnit['reviewStatus'], registered = false,
+  manualOverrideType: AiRegistrationUnit['manualOverrideType'] = null): AiRegistrationUnit {
+  return { unitId: 'unit', restaurantName: '맛집', reviewStatus, manualOverrideType, blockReason: null,
+    registeredRestaurantId: registered ? 'restaurant' : null, registeredCreatorId: registered ? 'creator' : null,
+    registeredVideoId: registered ? 'video' : null, registeredVisitId: registered ? 'visit' : null,
+    reusedResources: [], placeDecision: null, categoryDecision: null }
+}
+
+test('6개 등록과 4개 보류는 최상위 후보 상태와 별도로 부분 등록을 표시한다', () => {
+  const summary = registrationUnitSummary([
+    ...Array.from({ length: 6 }, () => summaryUnit('AUTO_CONFIRMED', true)),
+    ...Array.from({ length: 4 }, () => summaryUnit('AUTO_BLOCKED')),
+  ])
+  assert.deepEqual(summary, { total: 10, autoConfirmed: 6, autoBlocked: 4, autoRejected: 0,
+    manualOverride: 0, registered: 6, partialRegistration: true })
+  assert.equal(registrationSummaryLabel(summary), '부분 등록')
+})
+
+test('전부 등록과 전부 보류 및 단위 0개의 결과는 서로 구분한다', () => {
+  const registered = registrationUnitSummary([summaryUnit('AUTO_CONFIRMED', true)])
+  assert.equal(registered.registered, 1)
+  assert.equal(registrationSummaryLabel(registered), '전체 등록')
+  const blocked = registrationUnitSummary([summaryUnit('AUTO_BLOCKED')])
+  assert.equal(blocked.autoBlocked, 1)
+  assert.equal(blocked.registered, 0)
+  assert.equal(registrationSummaryLabel(blocked), '현재 등록 없음')
+  const empty = registrationUnitSummary([])
+  assert.deepEqual(empty, { total: 0, autoConfirmed: 0, autoBlocked: 0, autoRejected: 0,
+    manualOverride: 0, registered: 0, partialRegistration: false })
+  assert.equal(registrationSummaryLabel(empty), '등록 단위 없음')
+})
+
+test('수동 등록과 거부는 구분하고 롤백 폐기 및 불완전한 ID는 등록 성공으로 세지 않는다', () => {
+  const incomplete = { ...summaryUnit('AUTO_CONFIRMED', true), registeredVisitId: null }
+  const summary = registrationUnitSummary([summaryUnit('MANUAL_OVERRIDE', true),
+    summaryUnit('MANUAL_OVERRIDE', false, 'ROLLED_BACK'),
+    summaryUnit('MANUAL_OVERRIDE', false, 'DISCARDED'), summaryUnit('AUTO_REJECTED'), incomplete])
+  assert.equal(summary.manualOverride, 3)
+  assert.equal(summary.autoRejected, 1)
+  assert.equal(summary.registered, 1)
+  assert.equal(summary.partialRegistration, true)
+})
+
+test('SUCCEEDED는 추출 처리 성공이며 등록 완료와 구분해 안내한다', () => {
+  assert.match(extractionResultNotice('SUCCEEDED', 5, 1) ?? '', /추출 처리 성공/)
+  assert.match(extractionResultNotice('SUCCEEDED', 5, 1) ?? '', /실제 등록 여부/)
+})
+
+test('후보와 등록 단위 0개는 별도 안내하고 미종결과 실패에는 성공 안내를 표시하지 않는다', () => {
+  assert.match(extractionResultNotice('SUCCEEDED', 0, 0) ?? '', /후보와 등록 단위가 없습니다/)
+  assert.match(extractionResultNotice('SUCCEEDED', 0, 0) ?? '', /보완 텍스트 재추출/)
+  assert.doesNotMatch(extractionResultNotice('SUCCEEDED', 0, 1) ?? '', /후보와 등록 단위가 없습니다/)
+  assert.equal(extractionResultNotice('RUNNING', 0, 0), null)
+  assert.equal(extractionResultNotice('FAILED', 0, 0), null)
+})
 
 test('신규 접수 입력 오류는 각 필드에 연결할 수 있는 형태로 반환한다', () => {
   const expected = {

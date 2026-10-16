@@ -11,6 +11,7 @@ related_documents:
   - ../05-specs/data/lifecycle-rules.md
   - ../08-planning/second-expansion-scope-and-terminology.md
   - ../08-planning/third-expansion-scope-and-terminology.md
+  - ../08-planning/issue-421-ai-failure-remediation.md
 ---
 
 # 맛잇온 비즈니스 규칙
@@ -1764,7 +1765,7 @@ related_documents:
 
 - 모든 추출 작업과 후보에는 제공자, 모델, Prompt와 결과 Schema의 불변 버전을 기록한다.
 - 검수 화면과 감사 이력은 후보를 만든 버전을 식별할 수 있어야 하며, 버전 변경 뒤 과거 결과를 조용히 재해석하지 않는다.
-- 재처리는 관리자가 명시적으로 요청한 대상에만 수행하고 새 결과를 별도 후보로 보존한다.
+- 일반 재처리는 관리자가 명시적으로 요청한 대상에만 수행하고 새 결과를 별도 후보로 보존한다. 실패한 등록 단위의 제한된 자동 보완은 `BR-AIEXTRACT-012`를 따른다.
 
 <a id="br-aiextract-005-영상-유입-경로와-작업-수렴"></a>
 
@@ -1789,9 +1790,20 @@ related_documents:
 
 - 공개 YouTube URL이 유효하고 제공자 계약·quota 조건을 만족하면 Google Gemini API 영상 입력을 우선 사용한다.
 - Gemini가 영상을 접근하지 못하거나 정책 제한·시간 초과·부분 추출로 정식 검수에 필요한 정보가 부족하면 추정값으로 보완하지 않고 실패·부분 상태를 기록한다.
+- 자동 보완은 실패 사유가 허용된 등록 단위에 한해 공개 영상 제목·설명과 동일 단위에 결속된 승인 위치 표현을 추가 입력으로 사용할 수 있다. 추가 입력은 기존 YouTube videos API에서만 조회하고, 전체 자막이나 다른 단위 후보를 사용하지 않는다.
 - 관리자가 제공한 보완 텍스트는 명시적 재시도 입력으로만 사용하며, 이전 Gemini 결과를 조용히 덮어쓰지 않고 입력·모델·Prompt·Schema 버전이 다른 새 후보를 만든다.
 - 보완 텍스트는 작업 처리와 Worker 재시작 복구를 위해 암호화된 임시 입력으로만 보존하고, 작업 종료 후 24시간 이내 삭제한다. 관리자 재시도는 이전 보완 텍스트를 자동 재사용하지 않는다.
 - Gemini 영상 분석 결과의 timestamp·근거가 없으면 방문 여부나 장소 동일성을 확정하지 않는다.
+
+<a id="br-aiextract-012-실패-단위-자동-보완과-제한-재검증"></a>
+
+### BR-AIEXTRACT-012 실패 단위 자동 보완과 제한 재검증
+
+- 실패 사유별 자동 보완은 승인된 대상 등록 단위에 한해 수행한다. 추가 입력은 기존 YouTube videos API로 조회한 공개 영상 제목·설명과 #417에서 동일 단위에 결속한 `registrationUnits[].location` 후보로 제한한다. 신규 API·서비스는 추가하지 않는다.
+- 등록 단위마다 자동 보완은 한 번만 허용한다. 입력은 AES-GCM 암호화 임시 입력으로 보존하고 24시간 이내 삭제한다. 평문은 영속 저장·로그·API 응답에 남기지 않는다.
+- 작업 전체 Gemini Provider 호출은 최초 호출 및 기존 재시도를 포함해 최대 4회다. 기존 timeout·backoff·quota·비용 정책을 유지하고 quota hard stop 뒤에는 호출하지 않는다.
+- 자동 보완 후 새 Snapshot은 기존 전체 후보를 복사하고 실패 단위 후보만 교체한다. 이미 성공한 단위는 후보·판정·등록 결과를 그대로 carry-forward하고 재검증하지 않는다. 기존 Snapshot·후보·판정은 덮어쓰거나 삭제하지 않는다.
+- 제한 재검증 후에도 실패한 단위는 최종 실패 사유와 함께 관리자 보류한다. 자동 보완을 다시 수행하지 않는다.
 
 <a id="br-aiextract-009-장소-동일성-자동-확정"></a>
 
@@ -1837,7 +1849,7 @@ related_documents:
   - `CATEGORY_UNRESOLVED`: 카테고리 근거를 찾지 못했다.
   - `MISSING_REQUIRED_FIELD`: 등록 단위에 상호명·주소 등 필수 후보가 없다.
   - `VISIT_EVIDENCE_REQUIRED`: 방문 근거가 `UNKNOWN`이거나 영상 `TIMESTAMP` 근거가 아니다.
-  - `DUPLICATE_CONFLICT`: 같은 맛집·방문 관계가 이미 존재해 새 등록이 필요 없다.
+  - `DUPLICATE_CONFLICT`: 이전 실행의 차단 사유로 조회 호환을 유지한다. 새 실행은 검증된 기존 맛집과 동일 방문 관계를 멱등 재사용하므로 단순 존재만으로 이 사유를 생성하지 않는다.
   - `EXTERNAL_SERVICE_ERROR`: Kakao·YouTube 조회가 실패하거나 시간을 초과했다.
 - **관리자 보조 입력은 판정 선택만 받고 후보 값 생성은 받지 않는다.** 보조 입력으로 복구할 수 있는 예외는 장소 동일성과 카테고리 두 가지뿐이다. 두 값은 관리자가 외부 기준정보 중 하나를 고르는 것이므로 AI 근거를 대체하지 않는다.
 - 맛집명·주소·방문 근거가 부족한 예외는 보조 입력 대상이 아니다. 관리자가 값을 만들어 넣으면 영상 근거 없는 데이터가 등록되기 때문이다. 이 경우 보완 텍스트 재추출 또는 기존 수동 등록으로 처리하며, 방문 근거는 보완 텍스트 주장으로 확정할 수 없고 영상 `TIMESTAMP`를 요구한다.
@@ -1905,3 +1917,19 @@ related_documents:
 경로 결과의 정확한 만료 시간은 후속 API·캐시 계약에서 확정한다. 그 밖의 합의된 결정은 [requirements-review.md](requirements-review.md)와 제3장부터 제12장의 규칙에 반영했다. 프로젝트 범위에 남아 있는 미결정 사항은 [docs/00-overview/scope.md](../00-overview/scope.md) 제9장을 단일 기준으로 사용한다.
 
 비즈니스 정책을 변경하지 않는 후속 기술 선택은 [requirements-review.md](requirements-review.md) 제3장을 따른다.
+
+
+## 이슈 #417: P9 / S3 식당별 후보 결속
+
+2026-10-14 계약 소유자 합의를 확보했다. 신규 추출은 P9/S3를 사용하며 P8/S2와 이전 Snapshot은 생성 당시 의미로 읽기 전용 보존한다. 비용·Provider·모델·호출 상한은 변경하지 않는다.
+
+S3 루트는 resultCompleteness, candidates, registrationUnits, missingFields, candidateTruncated를 모두 요구한다. candidates는 기존 통제 태그 후보 전용이며, 식당 관련 값을 단위 밖에 두면 Schema 오류다. registrationUnits의 각 객체는 candidateUnitId(중복 없는 불투명 문자열), restaurantName, address, location, menus, visitEvidence만 허용한다. restaurantName은 반드시 하나의 후보 객체이며 address·location·visitEvidence는 후보 객체 또는 null, menus는 후보 객체 배열이다. 후보 객체는 value(1~4096자), confidence(유한한 0~1), evidence만 허용한다. 명시적 단위 밖 필드를 복사하거나 후보 배열 순서로 결속하지 않는다.
+
+전체 후보 수(태그 + 모든 단위의 non-null 필드 + 모든 메뉴)는 300 이하이고 상한에 닿으면 서버가 candidateTruncated=true를 강제한다. 단위별 결측·UNKNOWN은 missingFields와 PARTIAL에 반영한다. 외부 검증·중복·등록 차단은 필드 완전성과 독립이다. 중복 ID·추가 키·잘못된 중첩 구조·단위 없는 flat 후보는 Provider SCHEMA 오류이며 Snapshot 저장과 실행 전에 거부한다.
+
+candidate_fields JSON에는 registrationUnits를 변경 없이 저장하고 candidateUnitId와 메뉴 배열을 보존한다. 새 DB 컬럼·마이그레이션은 필요하지 않다. 등록 단위 unit_index는 Snapshot의 단위 배열에서 1부터 배정하되, 필드 소속은 candidateUnitId를 가진 단위 객체로만 결정한다. S1/S2 복수 식당은 순서로 결속하지 않고 보류하며 과거 Snapshot은 재작성하지 않는다.
+
+설계·검증 근거: [이슈 417 설계](../08-planning/issue-417-ai-contract-proposal.md).
+## 이슈 #414 승인된 지역 단서 경계 (2026-10-14)
+
+소유자 합의에 따라 주소가 없는 S3 등록 단위는 명시적 candidateUnitId와 같은 restaurantName에 결속된 location의 시도·시군구를 장소 동일성 검색 단서로 사용할 수 있다. 주소가 존재하면 기존 주소를 우선하며 잘못된 주소를 location으로 대체하지 않는다. S2 전역 위치와 청량리시장 같은 상권명 단독 표현은 사용하지 않는다. 이름·행정구역·카테고리 및 단일 후보 기준, Kakao 물리 검증을 유지하고 location으로 주소를 추정하거나 저장하지 않는다. 상세 설계와 검증은 [이슈 414 설계](../08-planning/issue-414-ai-contract-proposal.md)를 따른다.

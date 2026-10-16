@@ -51,7 +51,7 @@ class RegistrationUnitExecutionServiceTest {
 
     private final RegistrationUnitExecutionService service = new RegistrationUnitExecutionService(
             resolvePlaceIdentity, resolveFoodCategory, resolvePlacePhysicalReference, videoVerification,
-            duplicateRegistrationCheck, autoRegister);
+            autoRegister);
 
     @Test
     @DisplayName("상호명이 없으면 MISSING_REQUIRED_FIELD로 차단한다")
@@ -85,7 +85,9 @@ class RegistrationUnitExecutionServiceTest {
     @Test
     @DisplayName("장소 조회 중 외부 호출이 실패하면 EXTERNAL_SERVICE_ERROR로 차단한다")
     void execute_장소조회외부호출실패_EXTERNAL_SERVICE_ERROR로차단한다() {
-        when(resolvePlaceIdentity.resolve(any())).thenThrow(new RuntimeException("Kakao timeout"));
+        when(resolvePlaceIdentity.resolve(any())).thenThrow(
+                new com.masiton.restaurant.application.PlaceSearchFailedException(
+                        new java.net.http.HttpTimeoutException("secret-response")));
 
         RegistrationUnitExecutionResult result = service.execute(command("행복식당", "서울특별시 마포구 월드컵로 1"));
 
@@ -117,17 +119,19 @@ class RegistrationUnitExecutionServiceTest {
     }
 
     @Test
-    @DisplayName("같은 Kakao 장소 식별자의 맛집이 이미 있으면 유튜버·영상 조합과 무관하게 DUPLICATE_CONFLICT로 차단한다")
-    void execute_같은맛집이이미있으면_DUPLICATE_CONFLICT로차단한다() {
+    @DisplayName("기존 맛집은 차단하지 않고 검증된 새 영상과 방문 등록을 진행한다")
+    void execute_기존맛집_재사용등록을진행한다() {
         stubConfirmedPlace();
         stubResolvedCategory();
         stubVerifiedVideo();
-        when(duplicateRegistrationCheck.restaurantExists(KAKAO_PLACE_ID)).thenReturn(true);
+        when(autoRegister.register(any())).thenReturn(new AutoRegisterVerifiedContentUseCase.RegistrationResult(
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), false, true, true, true));
 
         RegistrationUnitExecutionResult result = service.execute(commandWithVisitEvidence());
 
-        assertThat(result.blockReason()).isEqualTo("DUPLICATE_CONFLICT");
-        verify(autoRegister, never()).register(any());
+        assertThat(result.confirmed()).isTrue();
+        assertThat(result.registration().restaurantCreated()).isFalse();
+        verify(autoRegister).register(any());
     }
 
     @Test
@@ -136,7 +140,6 @@ class RegistrationUnitExecutionServiceTest {
         stubConfirmedPlace();
         stubResolvedCategory();
         stubVerifiedVideo();
-        when(duplicateRegistrationCheck.restaurantExists(KAKAO_PLACE_ID)).thenReturn(false);
         AutoRegisterVerifiedContentUseCase.RegistrationResult registration =
                 new AutoRegisterVerifiedContentUseCase.RegistrationResult(
                         UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
@@ -154,6 +157,109 @@ class RegistrationUnitExecutionServiceTest {
         assertThat(result.categoryDecision().matchedMappingId()).isNotNull();
         verify(resolvePlaceIdentity).resolve(new ResolvePlaceIdentityUseCase.PlaceIdentityCommand(
                 "행복식당", "서울특별시 마포구 월드컵로 1", "냉면"));
+    }
+
+    @Test
+    @DisplayName("서버 결함은 외부 장애로 차단하지 않고 원래 예외를 전달한다")
+    void execute_카테고리서버결함_원래예외전파() {
+        stubConfirmedPlace();
+        IllegalStateException failure = new IllegalStateException("secret-database-detail");
+        when(resolveFoodCategory.resolve(any())).thenThrow(failure);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.execute(commandWithVisitEvidence()))
+                .isSameAs(failure);
+
+        verify(autoRegister, never()).register(any());
+    }
+
+    @Test
+    @DisplayName("물리 검증 실패는 검색 단계와 구분하고 안전한 서버 traceId만 기록한다")
+    void execute_물리검증시간초과_단계와TraceId기록() {
+        stubConfirmedPlace();
+        when(resolvePlacePhysicalReference.resolve(any(), any())).thenThrow(
+                new com.masiton.restaurant.application.PlaceVerificationFailedException(
+                        new java.net.http.HttpTimeoutException("secret-token")));
+        ch.qos.logback.classic.Logger logger = (ch.qos.logback.classic.Logger)
+                org.slf4j.LoggerFactory.getLogger(RegistrationUnitExecutionService.class);
+        ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent> appender =
+                new ch.qos.logback.core.read.ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        org.slf4j.MDC.put("traceId", "server-test-trace");
+        try {
+            RegistrationUnitExecutionResult result = service.execute(commandWithVisitEvidence());
+
+            assertThat(result.blockReason()).isEqualTo("EXTERNAL_SERVICE_ERROR");
+            assertThat(appender.list).singleElement().satisfies(event -> {
+                assertThat(event.getFormattedMessage()).contains("stage=PLACE_PHYSICAL_VERIFICATION",
+                        "failureType=EXTERNAL_TIMEOUT", "traceId=server-test-trace")
+                        .doesNotContain("secret-token", "행복식당", "월드컵로");
+                assertThat(event.getThrowableProxy()).isNull();
+            });
+            verify(autoRegister, never()).register(any());
+        } finally {
+            org.slf4j.MDC.remove("traceId");
+            logger.detachAppender(appender);
+            appender.stop();
+        }
+    }
+
+    @Test
+    @DisplayName("YouTube 외부 조회 오류는 등록 저장 전에 차단한다")
+    void execute_영상외부조회실패_등록저장0건() {
+        stubConfirmedPlace();
+        stubResolvedCategory();
+        when(videoVerification.resolve(any())).thenThrow(new com.masiton.common.web.BusinessException(
+                com.masiton.common.web.ErrorCode.EXTERNAL_SERVICE_ERROR));
+
+        RegistrationUnitExecutionResult result = service.execute(commandWithVisitEvidence());
+
+        assertThat(result.blockReason()).isEqualTo("EXTERNAL_SERVICE_ERROR");
+        verify(autoRegister, never()).register(any());
+    }
+
+    @Test
+    @DisplayName("주소 없이 결속된 위치를 사용해도 물리 검증 지역이 일치하면 등록한다")
+    void execute_결속위치와물리검증지역일치_등록을확정한다() {
+        // Given
+        stubConfirmedPlace();
+        stubResolvedCategory();
+        stubVerifiedVideo();
+        var registration = new AutoRegisterVerifiedContentUseCase.RegistrationResult(
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), true, true, true, true);
+        when(autoRegister.register(any())).thenReturn(registration);
+        var base = commandWithVisitEvidence();
+        var command = new RegistrationUnitExecutionCommand(base.restaurantName(), null, base.menu(),
+                base.visitEvidence(), base.channelId(), base.videoId(), base.videoUrl(), null, null, null,
+                "fixture-unit", "서울 마포구");
+        // When
+        var result = service.execute(command);
+        // Then
+        assertThat(result.confirmed()).isTrue();
+        assertThat(result.placeDecision().roadAddress()).isEqualTo("서울특별시 마포구 월드컵로 1");
+        verify(resolvePlaceIdentity).resolve(new ResolvePlaceIdentityUseCase.PlaceIdentityCommand(
+                "행복식당", null, "냉면", "서울 마포구"));
+    }
+
+    @Test
+    @DisplayName("위치로 검색한 장소라도 물리 재검증 지역이 바뀌면 저장하지 않는다")
+    void execute_위치검색후물리지역불일치_저장0건으로보류한다() {
+        // Given
+        stubConfirmedPlace();
+        when(resolvePlacePhysicalReference.resolve(any(), any())).thenReturn(Optional.of(
+                new ResolvePlacePhysicalReferenceUseCase.VerifiedPlacePhysicalReference(
+                        REGION_ID, "행복식당", KAKAO_PLACE_ID, KAKAO_PLACE_URL, "부산광역시 중구 중앙대로 1",
+                        null, null, null)));
+        var base = commandWithVisitEvidence();
+        var command = new RegistrationUnitExecutionCommand(base.restaurantName(), null, base.menu(),
+                base.visitEvidence(), base.channelId(), base.videoId(), base.videoUrl(), null, null, null,
+                "fixture-unit", "서울 마포구");
+        // When
+        var result = service.execute(command);
+        // Then
+        assertThat(result.blockReason()).isEqualTo("PLACE_NOT_FOUND");
+        verify(autoRegister, never()).register(any());
+        verify(resolveFoodCategory, never()).resolve(any());
     }
 
     private void stubConfirmedPlace() {

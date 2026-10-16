@@ -87,6 +87,7 @@ public abstract class FullContextIntegrationTest {
         jdbcTemplate.execute("TRUNCATE TABLE ai_candidate_tag_review, ai_extraction_manual_review, "
                 + "visit_tag_merge_provenance, tag_definition_merge, visit_tag_revision, tag_definition_audit");
         jdbcTemplate.execute("DELETE FROM ai_registration_unit_review");
+        jdbcTemplate.execute("DELETE FROM ai_registration_unit_retry");
         jdbcTemplate.execute("DELETE FROM ai_registration_unit");
         jdbcTemplate.execute("DELETE FROM visit_tag");
         jdbcTemplate.execute("DELETE FROM tag_definition_term WHERE tag_definition_id IN "

@@ -3,14 +3,25 @@ package com.masiton.orchestration.application;
 import java.net.URI;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.function.Supplier;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 import org.springframework.stereotype.Service;
 
+import com.masiton.common.web.BusinessException;
+import com.masiton.common.observability.ExternalFailureCauseClassifier;
+import com.masiton.common.web.ErrorCode;
+import com.masiton.restaurant.application.PlaceSearchFailedException;
+import com.masiton.restaurant.application.PlaceVerificationFailedException;
+import com.masiton.common.address.RoadAddressNormalizer;
 import com.masiton.orchestration.application.port.in.AutoRegisterVerifiedContentUseCase;
 import com.masiton.orchestration.application.port.in.ExecuteRegistrationUnitUseCase;
 import com.masiton.orchestration.application.port.in.ResolveFoodCategoryUseCase;
 import com.masiton.orchestration.application.port.in.ResolvePlaceIdentityUseCase;
-import com.masiton.orchestration.application.port.out.DuplicateRegistrationCheckPort;
 import com.masiton.restaurant.application.port.in.ResolvePlacePhysicalReferenceUseCase;
 import com.masiton.video.application.port.in.ResolveVerifiedVideoUseCase;
 import com.masiton.video.application.port.out.VerifiedVideo;
@@ -33,13 +44,14 @@ import com.masiton.video.application.port.out.VerifiedVideo;
 @Service
 class RegistrationUnitExecutionService implements ExecuteRegistrationUnitUseCase {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(RegistrationUnitExecutionService.class);
+
     private static final String MATCHED_BY_MANUAL_OVERRIDE = "MANUAL_OVERRIDE";
 
     private final ResolvePlaceIdentityUseCase resolvePlaceIdentity;
     private final ResolveFoodCategoryUseCase resolveFoodCategory;
     private final ResolvePlacePhysicalReferenceUseCase resolvePlacePhysicalReference;
     private final ResolveVerifiedVideoUseCase videoVerification;
-    private final DuplicateRegistrationCheckPort duplicateRegistrationCheck;
     private final AutoRegisterVerifiedContentUseCase autoRegister;
 
     RegistrationUnitExecutionService(
@@ -47,27 +59,28 @@ class RegistrationUnitExecutionService implements ExecuteRegistrationUnitUseCase
             ResolveFoodCategoryUseCase resolveFoodCategory,
             ResolvePlacePhysicalReferenceUseCase resolvePlacePhysicalReference,
             ResolveVerifiedVideoUseCase videoVerification,
-            DuplicateRegistrationCheckPort duplicateRegistrationCheck,
             AutoRegisterVerifiedContentUseCase autoRegister) {
         this.resolvePlaceIdentity = resolvePlaceIdentity;
         this.resolveFoodCategory = resolveFoodCategory;
         this.resolvePlacePhysicalReference = resolvePlacePhysicalReference;
         this.videoVerification = videoVerification;
-        this.duplicateRegistrationCheck = duplicateRegistrationCheck;
         this.autoRegister = autoRegister;
     }
 
     @Override
     public RegistrationUnitExecutionResult execute(RegistrationUnitExecutionCommand command) {
         Objects.requireNonNull(command, "command");
-        if (blank(command.restaurantName()) || (blank(command.address()) && !command.hasSuppliedKakaoPlaceUrl())) {
+        if (blank(command.restaurantName()) || (blank(command.address()) && !command.hasSuppliedKakaoPlaceUrl()
+                && (blank(command.candidateUnitId()) || blank(command.location())))) {
             return blocked("MISSING_REQUIRED_FIELD");
         }
 
+        String requestTraceId = MDC.get("traceId");
+        String traceId = requestTraceId != null ? requestTraceId : UUID.randomUUID().toString().replace("-", "");
         PlaceStep placeStep;
         try {
-            placeStep = resolvePlace(command);
-        } catch (RuntimeException exception) {
+            placeStep = resolvePlace(command, traceId);
+        } catch (ExternalStepFailure exception) {
             return blocked("EXTERNAL_SERVICE_ERROR");
         }
         if (placeStep == null) {
@@ -79,8 +92,8 @@ class RegistrationUnitExecutionService implements ExecuteRegistrationUnitUseCase
 
         CategoryStep categoryStep;
         try {
-            categoryStep = resolveCategory(command, placeStep);
-        } catch (RuntimeException exception) {
+            categoryStep = diagnose("CATEGORY", traceId, () -> resolveCategory(command, placeStep));
+        } catch (ExternalStepFailure exception) {
             return blocked("EXTERNAL_SERVICE_ERROR");
         }
         if (categoryStep == null) {
@@ -89,22 +102,20 @@ class RegistrationUnitExecutionService implements ExecuteRegistrationUnitUseCase
 
         VerifiedVideo verifiedVideo;
         try {
-            Optional<VerifiedVideo> resolved = videoVerification.resolve(command.videoUrl());
+            Optional<VerifiedVideo> resolved = diagnose("YOUTUBE", traceId,
+                    () -> videoVerification.resolve(command.videoUrl()));
             if (resolved.isEmpty() || !matchesVideo(command, resolved.get())) {
+                logFailure("YOUTUBE", "EXTERNAL_RESPONSE_FAILURE", traceId);
                 return blocked("EXTERNAL_SERVICE_ERROR");
             }
             verifiedVideo = resolved.get();
-        } catch (RuntimeException exception) {
+        } catch (ExternalStepFailure exception) {
             return blocked("EXTERNAL_SERVICE_ERROR");
         }
 
         if (!VisitEvidenceConfirmation.confirmsActualVisit(command.visitEvidence(), placeStep.name(),
                 verifiedVideo.channelName())) {
             return blocked("VISIT_EVIDENCE_REQUIRED");
-        }
-
-        if (isDuplicate(placeStep)) {
-            return blocked("DUPLICATE_CONFLICT");
         }
 
         AutoRegisterVerifiedContentUseCase.RegistrationResult registration = autoRegister.register(
@@ -130,19 +141,22 @@ class RegistrationUnitExecutionService implements ExecuteRegistrationUnitUseCase
                 registration);
     }
 
-    private PlaceStep resolvePlace(RegistrationUnitExecutionCommand command) {
+    private PlaceStep resolvePlace(RegistrationUnitExecutionCommand command, String traceId) {
         if (command.hasSuppliedKakaoPlaceUrl()) {
             URI suppliedUrl = URI.create(command.suppliedKakaoPlaceUrl());
-            return resolvePlacePhysicalReference.resolve(command.restaurantName(), suppliedUrl)
+            return diagnose("PLACE_PHYSICAL_VERIFICATION", traceId,
+                    () -> resolvePlacePhysicalReference.resolve(command.restaurantName(), suppliedUrl))
                     .map(place -> new PlaceStep(false, place.regionId(), place.name(), place.kakaoPlaceId(),
                             place.kakaoPlaceUrl(), place.roadAddress(), place.phoneNumber(), place.latitude(),
                             place.longitude(), MATCHED_BY_MANUAL_OVERRIDE, null))
                     .orElse(null);
         }
 
-        ResolvePlaceIdentityUseCase.PlaceIdentityResult identity = resolvePlaceIdentity.resolve(
+        ResolvePlaceIdentityUseCase.PlaceIdentityResult identity = diagnose("PLACE_SEARCH", traceId,
+                () -> resolvePlaceIdentity.resolve(
                 new ResolvePlaceIdentityUseCase.PlaceIdentityCommand(
-                        command.restaurantName(), command.address(), command.menu()));
+                        command.restaurantName(), command.address(), command.menu(),
+                        blank(command.candidateUnitId()) ? null : command.location())));
         if (identity.status() == ResolvePlaceIdentityUseCase.PlaceIdentityStatus.PLACE_AMBIGUOUS) {
             return PlaceStep.ambiguousResult();
         }
@@ -150,8 +164,12 @@ class RegistrationUnitExecutionService implements ExecuteRegistrationUnitUseCase
             return null;
         }
         ResolvePlaceIdentityUseCase.ConfirmedPlace confirmed = identity.confirmedPlace();
-        return resolvePlacePhysicalReference
-                .resolve(command.restaurantName(), URI.create(confirmed.kakaoPlaceUrl()))
+        return diagnose("PLACE_PHYSICAL_VERIFICATION", traceId,
+                () -> resolvePlacePhysicalReference
+                        .resolve(command.restaurantName(), URI.create(confirmed.kakaoPlaceUrl()))
+                        .filter(place -> !blank(command.address()) || RoadAddressNormalizer.extractRegion(place.roadAddress())
+                                .filter(region -> RoadAddressNormalizer.extractRegion(confirmed.roadAddress())
+                                        .map(region::equals).orElse(false)).isPresent()))
                 .map(place -> new PlaceStep(false, place.regionId(), place.name(), place.kakaoPlaceId(),
                         place.kakaoPlaceUrl(), place.roadAddress(), place.phoneNumber(), place.latitude(),
                         place.longitude(), confirmed.matchedBy(), confirmed.placeCategory()))
@@ -174,20 +192,38 @@ class RegistrationUnitExecutionService implements ExecuteRegistrationUnitUseCase
                 resolved.matchedMappingId());
     }
 
-    /**
-     * 데이터 계약(third-expansion-ai-video-data-contract.md 11절)상 맛집은 재사용 대상이 아니다.
-     * 같은 {@code kakaoPlaceId}의 맛집이 이미 있으면 이 방문의 유튜버·영상 조합과 무관하게 항상
-     * {@code DUPLICATE_CONFLICT}로 차단한다.
-     */
-    private boolean isDuplicate(PlaceStep placeStep) {
-        return duplicateRegistrationCheck.restaurantExists(placeStep.kakaoPlaceId());
-    }
-
     private boolean matchesVideo(RegistrationUnitExecutionCommand command, VerifiedVideo video) {
         return command.videoId().equals(video.externalVideoId())
                 && command.channelId().equals(video.publisherExternalChannelId())
                 && nonBlank(video.channelName()) && nonBlank(video.title())
                 && nonBlank(video.sourceUrl()) && nonBlank(video.thumbnailUrl());
+    }
+
+    private <T> T diagnose(String stage, String traceId, Supplier<T> operation) {
+        try {
+            return operation.get();
+        } catch (RuntimeException exception) {
+            boolean external = exception instanceof PlaceSearchFailedException
+                    || exception instanceof PlaceVerificationFailedException
+                    || exception instanceof BusinessException business
+                    && ErrorCode.EXTERNAL_SERVICE_ERROR.name().equals(business.code());
+            String failureType = external ? "EXTERNAL_RESPONSE_FAILURE" : "INTERNAL_FAILURE";
+            if (external && ExternalFailureCauseClassifier.hasTimeoutCause(exception)) {
+                failureType = "EXTERNAL_TIMEOUT";
+            }
+            logFailure(stage, failureType, traceId);
+            if (external) {
+                throw new ExternalStepFailure();
+            }
+            throw exception;
+        }
+    }
+
+    private void logFailure(String stage, String failureType, String traceId) {
+        LOGGER.warn("aiRegistrationFailure stage={} failureType={} traceId={}", stage, failureType, traceId);
+    }
+
+    private static final class ExternalStepFailure extends RuntimeException {
     }
 
     private RegistrationUnitExecutionResult blocked(String reason) {

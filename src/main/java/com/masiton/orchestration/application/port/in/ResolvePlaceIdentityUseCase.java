@@ -13,7 +13,12 @@ public interface ResolvePlaceIdentityUseCase {
      * 같은 등록 단위의 주소 후보, {@code menuExpression}은 완화된 장소명 대조에서만 쓰는
      * AI 메뉴 표현이다. 세 값 모두 Kakao 장소 식별자를 전제하지 않는다.
      */
-    record PlaceIdentityCommand(String restaurantName, String candidateAddress, String menuExpression) {
+    record PlaceIdentityCommand(String restaurantName, String candidateAddress, String menuExpression,
+                                String location) {
+
+        public PlaceIdentityCommand(String restaurantName, String candidateAddress, String menuExpression) {
+            this(restaurantName, candidateAddress, menuExpression, null);
+        }
 
         public PlaceIdentityCommand(String restaurantName, String candidateAddress) {
             this(restaurantName, candidateAddress, null);

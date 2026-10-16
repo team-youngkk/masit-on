@@ -7,10 +7,12 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.masiton.ai.application.port.out.AiExtractionResultStore;
 import com.masiton.ai.application.port.out.AiRegistrationUnitStore;
+import com.masiton.ai.application.port.out.AiRegistrationUnitRetryStore;
 import com.masiton.orchestration.application.port.in.AutoRegisterVerifiedContentUseCase;
 
 import tools.jackson.databind.ObjectMapper;
@@ -33,15 +35,26 @@ class AiExtractionResultCommitService {
     private final AiRegistrationUnitStore registrationUnitStore;
     private final AutoRegisterVerifiedContentUseCase autoRegister;
     private final ObjectMapper objectMapper;
+    private final AiRegistrationUnitRetryStore retryStore;
+
+    @Autowired
+    AiExtractionResultCommitService(AiExtractionResultStore resultStore,
+                                    AiRegistrationUnitStore registrationUnitStore,
+                                    AutoRegisterVerifiedContentUseCase autoRegister,
+                                    ObjectMapper objectMapper,
+                                    AiRegistrationUnitRetryStore retryStore) {
+        this.resultStore = resultStore;
+        this.registrationUnitStore = registrationUnitStore;
+        this.autoRegister = autoRegister;
+        this.objectMapper = objectMapper;
+        this.retryStore = retryStore;
+    }
 
     AiExtractionResultCommitService(AiExtractionResultStore resultStore,
                                     AiRegistrationUnitStore registrationUnitStore,
                                     AutoRegisterVerifiedContentUseCase autoRegister,
                                     ObjectMapper objectMapper) {
-        this.resultStore = resultStore;
-        this.registrationUnitStore = registrationUnitStore;
-        this.autoRegister = autoRegister;
-        this.objectMapper = objectMapper;
+        this(resultStore, registrationUnitStore, autoRegister, objectMapper, null);
     }
 
     @Transactional
@@ -57,6 +70,48 @@ class AiExtractionResultCommitService {
         resultStore.completeSuccess(command.jobId(), command.workerId(), command.attemptNo(),
                 command.resultCompleteness(), command.attemptStartedAt(), command.finishedAt(),
                 command.providerRequestId());
+        return true;
+    }
+
+    @Transactional
+    UUID persistRemediationCheckpoint(ProcessCommand command) {
+        Optional<AiExtractionResultStore.ProcessingJob> job = resultStore.lockProcessingJob(
+                command.jobId(), command.workerId(), command.attemptNo());
+        if (job.isEmpty()) {
+            return null;
+        }
+        UUID snapshotId = insertSnapshot(command, command.reviewStatus(), command.blockReason());
+        insertTagReviews(snapshotId, command.tags(), command.finishedAt());
+        insertRegistrationUnits(snapshotId, command.registrationUnitOutcomes(), command.finishedAt());
+        resultStore.recordSuccessfulAttempt(command.jobId(), command.attemptNo(), command.attemptStartedAt(),
+                command.finishedAt(), command.providerRequestId());
+        return snapshotId;
+    }
+
+    @Transactional
+    boolean persistRemediationResult(ProcessCommand command) {
+        return persistRemediationResult(command, java.util.Map.of());
+    }
+
+    @Transactional
+    boolean persistRemediationResult(ProcessCommand command, java.util.Map<UUID, String> retryOutcomes) {
+        Optional<AiExtractionResultStore.ProcessingJob> job = resultStore.lockProcessingJob(
+                command.jobId(), command.workerId(), command.attemptNo());
+        if (job.isEmpty()) {
+            return false;
+        }
+        UUID snapshotId = insertSnapshot(command, command.reviewStatus(), command.blockReason());
+        insertTagReviews(snapshotId, command.tags(), command.finishedAt());
+        insertRegistrationUnits(snapshotId, command.registrationUnitOutcomes(), command.finishedAt());
+        if (!retryOutcomes.isEmpty() && retryStore != null) {
+            for (var retry : retryOutcomes.entrySet()) {
+                if (!retryStore.complete(retry.getKey(), retry.getValue(), snapshotId, command.finishedAt())) {
+                    throw new IllegalStateException("Remediation claim completion lost its pending state.");
+                }
+            }
+        }
+        resultStore.completeSuccessWithoutAttempt(command.jobId(), command.workerId(), command.attemptNo(),
+                command.resultCompleteness(), command.finishedAt());
         return true;
     }
 

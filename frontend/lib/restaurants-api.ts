@@ -137,6 +137,13 @@ export type FetchRestaurantFilterOptionsResult =
   | { ok: true; data: RestaurantFilterOptions }
   | { ok: false; message: string; traceId?: string }
 
+/* 공개·활성 맛집이 실제 사용하는 카테고리만 화면 선택지로 사용한다. */
+export function getAvailableRestaurantCategories(
+  result: FetchRestaurantFilterOptionsResult,
+): string[] {
+  return result.ok ? [...result.data.categories] : []
+}
+
 /* Next.js 검색 파라미터는 반복 쿼리를 배열로 넘길 수 있다. 첫 값만 사용한다. */
 export function toSingleValue(
   value: string | string[] | undefined,

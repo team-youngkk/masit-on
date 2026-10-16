@@ -20,6 +20,7 @@ related_documents:
   - ../08-planning/second-expansion-test-matrix.md
   - ../08-planning/expansion-2-implementation-plan.md
   - ../08-planning/expansion-2-task-breakdown.md
+  - ../08-planning/issue-421-ai-failure-remediation.md
   - ../04-product/prd/admin/admin-data-management.md
   - api/admin/authentication-api.md
   - api/admin/reference-data-api.md
@@ -247,6 +248,7 @@ API 직접 노출 없음: [BR-ADMIN-006](../01-requirements/business-rules.md#br
 | BR-AIEXTRACT-008 | API-ADMIN-AIEXTRACT-001 | 허용 태그 정의·근거·자동 결정·사후 보정·검증 전 공개 금지 | WS-15 |
 | BR-AIEXTRACT-009~010 | API-ADMIN-AIEXTRACT-001 | 등록 단위별 판정·상호명·주소 기반 장소 자동 확정·카테고리 자동 선정·`registrationUnits` 응답과 차단 사유 코드 | WS-15 |
 | BR-AIEXTRACT-011 | API-ADMIN-AIEXTRACT-001 | 등록 단위 일괄 등록 실행, 4종 원자 등록과 자원 재사용, 예외 7종의 `recoveryPaths` 매핑, `CONFIRM`·`ADJUST_CATEGORY` 허용 상태, `AUTO_BLOCKED` 등록 단위 일괄 폐기(`DISCARD` 다건 확장) | WS-15 |
+| BR-AIEXTRACT-012 | API-ADMIN-AIEXTRACT-001 | 기존 YouTube videos metadata·같은 등록 단위 location, 단위당 1회 자동 보완, 기존 quota hard stop·job당 Gemini 최대 4회, 성공 단위 carry-forward, 실패 단위만 재검증 및 latest Snapshot 유지 | WS-15 |
 | BR-COURSE-001~004 | API-DISCOVERY-COURSE-001 | 2~5개·첫 출발점 고정·좌표 필수·30km·만료·부분 결과 금지 | WS-16 |
 | BR-COURSE-005 | API-DISCOVERY-COURSE-001 | 방문지·구간 좌표 노출, 구간 형상 상태(`shapeStatus`), 상한 초과 샘플링 | WS-16 |
 

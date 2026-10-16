@@ -142,7 +142,7 @@ class GeminiHttpVideoExtractionAdapterTest {
         assertThat(wrappedData.at("/referenceSpans/0/startOffset").asInt()).isEqualTo(4);
         assertThat(wrappedData.at("/referenceSpans/0/endOffset").asInt())
                 .isEqualTo("식당: 서이축산 😀".length());
-        assertThat(result.candidates().at("/candidates/0/value").asText()).isEqualTo("서이축산");
+        assertThat(result.candidates().at("/registrationUnits/0/restaurantName/value").asText()).isEqualTo("서이축산");
     }
 
     @Test
@@ -155,7 +155,7 @@ class GeminiHttpVideoExtractionAdapterTest {
                         request.supplementSourceHash()))));
 
         assertThat(adapter(serverUrl()).extract(request).candidates()
-                .at("/candidates/0/value").asText()).isEqualTo("seoi bbq");
+                .at("/registrationUnits/0/restaurantName/value").asText()).isEqualTo("seoi bbq");
     }
 
     @Test
@@ -250,7 +250,7 @@ class GeminiHttpVideoExtractionAdapterTest {
                         + "\"missingFields\":[],\"candidateTruncated\":false}")));
 
         assertThat(adapter(serverUrl()).extract(request).candidates()
-                .at("/candidates/0/evidence/type").asText()).isEqualTo("TIMESTAMP");
+                .at("/registrationUnits/0/restaurantName/evidence/type").asText()).isEqualTo("TIMESTAMP");
     }
 
     @Test
@@ -352,8 +352,8 @@ class GeminiHttpVideoExtractionAdapterTest {
 
         AiVideoExtractionResult result = adapter(serverUrl()).extract(request);
 
-        assertThat(result.candidates().at("/candidates/0/evidence/type").asText()).isEqualTo("TIMESTAMP");
-        assertThat(result.candidates().at("/candidates/1/evidence/type").asText()).isEqualTo("TEXT_RANGE");
+        assertThat(result.candidates().at("/registrationUnits/0/visitEvidence/evidence/type").asText()).isEqualTo("TIMESTAMP");
+        assertThat(result.candidates().at("/registrationUnits/0/menus/0/evidence/type").asText()).isEqualTo("TEXT_RANGE");
     }
 
     @Test
@@ -455,8 +455,8 @@ class GeminiHttpVideoExtractionAdapterTest {
         // Then
         assertThat(result.candidates().at("/candidates/0/evidence").toString())
                 .isEqualTo("{\"type\":\"UNKNOWN\"}");
-        assertThat(result.candidates().at("/candidates/1/field").asText()).isEqualTo("menu");
-        assertThat(result.candidates().at("/candidates/1/evidence/type").asText()).isEqualTo("TIMESTAMP");
+        assertThat(result.candidates().at("/registrationUnits/0/menus/0/value").asText()).isEqualTo("삼계탕");
+        assertThat(result.candidates().at("/registrationUnits/0/menus/0/evidence/type").asText()).isEqualTo("TIMESTAMP");
     }
 
     @Test
@@ -524,9 +524,9 @@ class GeminiHttpVideoExtractionAdapterTest {
                 commonFields = branchFields;
             }
         }
-        assertThat(commonFields).isEqualTo(readAllowedFields(GeminiHttpVideoExtractionAdapter.class, "S1_COMMON_CANDIDATE_FIELDS"));
+        assertThat(commonFields).isNull();
         assertThat(tagFields).isEqualTo(readAllowedFields(GeminiHttpVideoExtractionAdapter.class, "S1_TAG_CANDIDATE_FIELDS"));
-        assertThat(commonFields).isEqualTo(readAllowedFields(AiCandidateValidator.class, "COMMON_CANDIDATE_FIELDS"));
+        assertThat(schemaBoundFields(sent)).containsExactlyInAnyOrder("value", "confidence", "evidence");
         assertThat(tagFields).isEqualTo(readAllowedFields(AiCandidateValidator.class, "TAG_CANDIDATE_FIELDS"));
     }
 
@@ -543,7 +543,7 @@ class GeminiHttpVideoExtractionAdapterTest {
 
         JsonNode branches = objectMapper.readTree(requestBody.get()).at(
                 "/generationConfig/responseJsonSchema/anyOf/0/properties/candidates/items/anyOf");
-        JsonNode visitBranch = null;
+        JsonNode visitBranch = objectMapper.readTree(requestBody.get()).at("/generationConfig/responseJsonSchema/anyOf/0/properties/registrationUnits/items/properties/visitEvidence/anyOf/0");
         for (JsonNode branch : branches) {
             if ("visitEvidence".equals(branch.at("/properties/field/enum/0").asText())) {
                 visitBranch = branch;
@@ -565,6 +565,10 @@ class GeminiHttpVideoExtractionAdapterTest {
         assertThat(value.matcher("제가 서이축산을 방문했습니다!").matches()).isFalse();
         assertThat(value.matcher("제가 서이축산을 방문했을까요?").matches()).isFalse();
         assertThat(value.matcher("제가 서이축산에서 주문했다").matches()).isFalse();
+    }
+
+    private java.util.Set<String> schemaBoundFields(JsonNode sent) {
+        return new java.util.HashSet<>(sent.at("/generationConfig/responseJsonSchema/anyOf/0/properties/registrationUnits/items/properties/restaurantName/properties").propertyNames());
     }
 
     @SuppressWarnings("unchecked")
@@ -662,7 +666,7 @@ class GeminiHttpVideoExtractionAdapterTest {
         JsonNode sent = objectMapper.readTree(requestBody.get());
         JsonNode candidateAnyOf = sent.at(
                 "/generationConfig/responseJsonSchema/anyOf/0/properties/candidates/items/anyOf");
-        JsonNode commonBranch = null;
+        JsonNode commonBranch = sent.at("/generationConfig/responseJsonSchema/anyOf/0/properties/registrationUnits/items/properties/restaurantName");
         JsonNode tagBranch = null;
         for (JsonNode branch : candidateAnyOf) {
             if (branch.path("properties").has("value")) {
@@ -846,10 +850,68 @@ class GeminiHttpVideoExtractionAdapterTest {
     }
 
     private String geminiEnvelopeWithPayload(String payload) throws IOException {
+        payload = s3Fixture(payload);
+        return rawEnvelope(payload);
+    }
+
+    private String rawEnvelope(String payload) throws IOException {
         return objectMapper.writeValueAsString(java.util.Map.of(
                 "responseId", "request-123",
                 "candidates", java.util.List.of(java.util.Map.of(
                         "content", java.util.Map.of("parts", java.util.List.of(java.util.Map.of("text", payload)))))));
+    }
+
+    @Test
+    @DisplayName("새 S3 수신은 명시 단위 없는 flat 응답을 거부한다")
+    void 추출_S3단위없는flat응답_SCHEMA로거부한다() throws Exception {
+        startServer(exchange -> respond(exchange, 200, rawEnvelope(
+                "{\"resultCompleteness\":\"COMPLETE\",\"candidates\":[],\"missingFields\":[],\"candidateTruncated\":false}")));
+        assertFailure(AiProviderFailureCategory.SCHEMA);
+    }
+
+    @Test
+    @DisplayName("S3 고정 응답의 다섯 메뉴를 보존하고 중복 단위 ID는 거부한다")
+    void 추출_S3다섯메뉴와중복ID_보존또는거부한다() throws Exception {
+        JsonNode payload;
+        try (var input = getClass().getResourceAsStream("/ai/s3-two-restaurants.json")) {
+            payload = objectMapper.readTree(input);
+        }
+        startServer(exchange -> respond(exchange, 200, rawEnvelope(payload.toString())));
+        var result = adapter(serverUrl()).extract(request());
+        assertThat(result.candidates().at("/registrationUnits/1/menus").size()).isEqualTo(3);
+        ((tools.jackson.databind.node.ObjectNode) payload.at("/registrationUnits/1")).put("candidateUnitId", "a");
+        assertFailure(AiProviderFailureCategory.SCHEMA);
+    }
+
+    private String s3Fixture(String payload) {
+        var root = objectMapper.readTree(payload);
+        if (!root.isObject() || root.has("registrationUnits") || !root.path("candidates").isArray()) return payload;
+        var units = objectMapper.createArrayNode();
+        var tags = objectMapper.createArrayNode();
+        var unit = objectMapper.createObjectNode().put("candidateUnitId", "fixture-unit");
+        for (String field : java.util.List.of("restaurantName", "address", "location", "visitEvidence")) {
+            var candidate = objectMapper.createObjectNode().put("value", field).put("confidence", 0.9);
+            candidate.set("evidence", objectMapper.createObjectNode().put("type", "TIMESTAMP").put("startMs", 1).put("endMs", 2));
+            unit.set(field, candidate);
+        }
+        var menus = unit.putArray("menus");
+        boolean hasRestaurantFields = false;
+        for (JsonNode candidate : root.path("candidates")) {
+            String field = candidate.path("field").asText();
+            if ("tag".equals(field)) { tags.add(candidate); continue; }
+            hasRestaurantFields = true;
+            var bound = (tools.jackson.databind.node.ObjectNode) candidate.deepCopy();
+            bound.remove("field");
+            if ("menu".equals(field)) menus.add(bound);
+            else unit.set(field, bound);
+        }
+        if (hasRestaurantFields) {
+            if (menus.isEmpty()) menus.add(unit.path("address").deepCopy());
+            units.add(unit);
+        }
+        ((tools.jackson.databind.node.ObjectNode) root).set("registrationUnits", units);
+        ((tools.jackson.databind.node.ObjectNode) root).set("candidates", tags);
+        return root.toString();
     }
 
     private void respond(HttpExchange exchange, int status, String body) throws IOException {
