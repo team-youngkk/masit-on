@@ -7,6 +7,7 @@ import { FilterSelect } from '@/components/restaurants/FilterSelect'
 import { RegionFilter } from '@/components/restaurants/RegionFilter'
 import { NaturalLanguageRestaurantSearch } from '@/components/restaurants/NaturalLanguageRestaurantSearch'
 import { RestaurantImage } from '@/components/restaurants/RestaurantImage'
+import { RestaurantHeroCarousel } from '@/components/restaurants/RestaurantHeroCarousel'
 import { Button } from '@/components/ui/Button'
 import { PageShell } from '@/components/ui/PageShell'
 import { StatePanel } from '@/components/ui/StatePanel'
@@ -15,6 +16,10 @@ import { shouldUseRestaurantDesignPreview } from '@/lib/design-preview'
 import { buildMapNavigationHrefAfterRegionClear } from '@/lib/map/map-navigation'
 import { naturalLanguageFiltersKey } from '@/lib/natural-language-filters-key'
 import { regionLabels } from '@/lib/regions'
+import {
+  buildRestaurantHeroSlides,
+  shuffleRestaurantHeroSlides,
+} from '@/lib/restaurant-hero'
 import { buildRestaurantsMetadata } from '@/lib/restaurant-seo'
 import {
   buildRestaurantFilterClearHref,
@@ -251,6 +256,9 @@ export default async function RestaurantsPage({
   const displayItems: RestaurantListItem[] = isDesignPreview
     ? DESIGN_PREVIEW_ITEMS
     : items
+  const heroSlides = shuffleRestaurantHeroSlides(
+    buildRestaurantHeroSlides(displayItems),
+  )
   const previewApiWarning = isDesignPreview && !result.ok
   const page = result.ok ? result.data.page : null
   const pageNumbers = page ? buildPageNumbers(page.number, page.totalPages) : []
@@ -267,12 +275,8 @@ export default async function RestaurantsPage({
             </h1>
             <p>검증된 맛집을 영상으로 확인하고, 실패 없는 선택을 즐겨보세요.</p>
           </div>
-          <div className={styles.heroVisual} aria-hidden="true">
-            <img
-              src="/images/restaurant-hero-mascot.png"
-              alt=""
-              className={styles.heroImage}
-            />
+          <div className={styles.heroVisual}>
+            <RestaurantHeroCarousel slides={heroSlides} />
           </div>
         </section>
 
