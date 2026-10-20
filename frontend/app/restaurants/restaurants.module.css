@@ -53,12 +53,6 @@
   background: var(--color-surface-muted);
   box-shadow: 0 1.5rem 3rem rgb(67 51 28 / 20%);
 }
-.heroImage {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
 .eyebrow {
   color: var(--color-primary-deep);
   font-size: var(--font-size-sm);
