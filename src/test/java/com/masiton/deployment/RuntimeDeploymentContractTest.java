@@ -15,6 +15,7 @@ class RuntimeDeploymentContractTest {
 
     private static final Path TERRAFORM = Path.of("infra/production/terraform");
     private static final Path CI = Path.of(".github/workflows/ci.yml");
+    private static final Path DOCKERFILE = Path.of("Dockerfile");
     private static final Path DIRECT_USER_DATA = TERRAFORM.resolve("templates/direct-app-user-data.sh.tftpl");
     private static final Path LEGACY_USER_DATA = TERRAFORM.resolve("templates/app-user-data.sh.tftpl");
     private static final Path REDIS_ENDPOINTS = Path.of("infra/production/terraform-redis/endpoints.tf");
@@ -312,6 +313,7 @@ class RuntimeDeploymentContractTest {
     @DisplayName("PR 백엔드 이미지 계약은 push 없이 빌드·JDK·취약점을 검증한다")
     void ci_PR백엔드이미지계약은push없이빌드JDK취약점을검증한다() throws IOException {
         String workflow = read(CI);
+        String dockerfile = read(DOCKERFILE);
         String imageContractJob = section(workflow, "  backend-image-contract:\n", "  frontend-dispatch-audit:\n");
 
         assertThat(imageContractJob)
@@ -327,6 +329,8 @@ class RuntimeDeploymentContractTest {
                 .doesNotContain("docker push")
                 .doesNotContain("DOCKERHUB_PUSH_TOKEN")
                 .doesNotContain("environment: production");
+        assertThat(dockerfile)
+                .contains("libcrypto3=3.5.9-r0 libssl3=3.5.9-r0 expat=2.9.0-r0");
     }
 
     @Test
