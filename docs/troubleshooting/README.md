@@ -15,6 +15,7 @@ related_documents:
 
 ## 최신 기록
 
+- [PR #443 PR 이미지 검증 경계 보완](pr-443-backend-image-review.md)
 - [PR #431 S3 Snapshot 위치 결속과 develop 충돌](pr-431-s3-snapshot-location-conflict.md)
 - [PR #430 지역 결합 후보 검색 전환 후 CI 회귀](pr-430-bounded-place-search-ci-review.md)
 
@@ -77,6 +78,7 @@ related_documents:
 
 ## PR 리뷰
 
+- [PR #443 PR 이미지 검증 경계 보완](pr-443-backend-image-review.md)
 - [PR #431 S3 Snapshot 위치 결속과 develop 충돌](pr-431-s3-snapshot-location-conflict.md)
 - [PR #430 지역 결합 후보 검색 전환 후 CI 회귀](pr-430-bounded-place-search-ci-review.md)
 

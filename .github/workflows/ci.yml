@@ -2,9 +2,10 @@
 # 모든 PR과 통합 브랜치 push에서 고정 런타임으로 빌드·자동 테스트를 실행하고
 # 실패한 변경을 차단한다.
 #
-# 이미지 빌드·검증·Docker Hub push와 운영 배포는 M2부터 활성화하는 범위다(ADR-DEPLOY-002,
-# ADR-CI-001). 같은 워크플로에 두는 이유는 아래 images·ssh-deploy job 주석에 있다.
-# images·ssh-deploy는 배포 대상 브랜치에서만 돌고 PR과 develop push에서는 실행되지 않으며,
+# 운영 이미지 빌드·검증·Docker Hub push와 운영 배포는 M2부터 활성화하는 범위다
+# (ADR-DEPLOY-002, ADR-CI-001). 같은 워크플로에 두는 이유는 아래 images·ssh-deploy job
+# 주석에 있다. 운영 images·ssh-deploy는 배포 대상 브랜치에서만 돌고 PR과 develop push에서는
+# 실행되지 않으며, PR에서는 push 없는 백엔드 이미지 계약 검증만 별도로 실행한다.
 # workflow_dispatch의 배포 대상은 별도의 프론트엔드 프로덕션 의존성 감사 job을 거친다.
 # 운영 배포 경로는 단일 x86 EC2 공인 IP SSH다.
 name: CI
@@ -171,6 +172,50 @@ jobs:
             -w /app \
             node:24.18.0-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd \
             sh -c 'npm ci && npm audit --omit=dev --audit-level=high && npm run build'
+
+  backend-image-contract:
+    name: PR 백엔드 이미지 계약 검증
+    # 운영 이미지 게시 없이, PR에서 변경한 Dockerfile의 실제 build/runtime 단계와
+    # ADR-LANG-001의 컨테이너 JDK 버전을 검증한다. 운영 images job은 main push에서만
+    # 실행되므로 이 검사가 없으면 베이스 이미지 교체가 병합 전 검증되지 않는다.
+    if: github.event_name == 'pull_request'
+    needs: [backend]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    env:
+      IMAGE_TAG: pr-${{ github.event.pull_request.number }}-${{ github.sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: 백엔드 이미지 빌드 (push 없음)
+        run: docker build -t "masiton-backend:${IMAGE_TAG}" -f Dockerfile .
+
+      - name: 이미지 JDK 패치 버전 대조
+        run: |
+          set -euo pipefail
+          expected='21.0.12'
+          version_output=$(docker run --rm --entrypoint java "masiton-backend:${IMAGE_TAG}" -version 2>&1)
+          actual=${version_output%%$'\n'*}
+          echo "이미지 java -version: ${actual}"
+          case "$actual" in
+            *"\"${expected}\""*) echo "JDK ${expected} 확인" ;;
+            *) echo "ADR-LANG-001이 요구하는 ${expected}가 아니다"; exit 1 ;;
+          esac
+
+      - name: 백엔드 이미지 취약점 검사
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v trivy-db:/root/.cache/trivy \
+            aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f \
+            image \
+              --scanners vuln \
+              --severity CRITICAL,HIGH \
+              --ignore-unfixed \
+              --exit-code 1 \
+              "masiton-backend:${IMAGE_TAG}"
 
   # workflow_dispatch에서만 실행한다. dispatch의 image_tag는 현재 워크플로 소스와
   # 다를 수 있으므로, 반드시 배포 job과 같은 대상(image_tag 또는 github.sha)을
