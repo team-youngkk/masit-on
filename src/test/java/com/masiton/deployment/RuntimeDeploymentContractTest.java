@@ -309,6 +309,27 @@ class RuntimeDeploymentContractTest {
     }
 
     @Test
+    @DisplayName("PR 백엔드 이미지 계약은 push 없이 빌드·JDK·취약점을 검증한다")
+    void ci_PR백엔드이미지계약은push없이빌드JDK취약점을검증한다() throws IOException {
+        String workflow = read(CI);
+        String imageContractJob = section(workflow, "  backend-image-contract:\n", "  frontend-dispatch-audit:\n");
+
+        assertThat(imageContractJob)
+                .contains("if: github.event_name == 'pull_request'")
+                .contains("needs: [backend]")
+                .contains("docker build -t \"masiton-backend:${IMAGE_TAG}\" -f Dockerfile .")
+                .contains("expected='21.0.12'")
+                .contains("docker run --rm --entrypoint java \"masiton-backend:${IMAGE_TAG}\" -version 2>&1")
+                .contains("aquasec/trivy:0.72.0@sha256:")
+                .contains("--severity CRITICAL,HIGH")
+                .contains("--ignore-unfixed")
+                .contains("--exit-code 1")
+                .doesNotContain("docker push")
+                .doesNotContain("DOCKERHUB_PUSH_TOKEN")
+                .doesNotContain("environment: production");
+    }
+
+    @Test
     @DisplayName("직접 bootstrap과 legacy bootstrap이 서로의 배포 경계를 침범하지 않는다")
     void runtime_직접경로와legacy경로의bootstrap을분리한다() throws IOException {
         String directUserData = read(DIRECT_USER_DATA);
