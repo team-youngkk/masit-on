@@ -330,7 +330,7 @@ class RuntimeDeploymentContractTest {
                 .doesNotContain("DOCKERHUB_PUSH_TOKEN")
                 .doesNotContain("environment: production");
         assertThat(dockerfile)
-                .contains("libcrypto3=3.5.9-r0 libssl3=3.5.9-r0 expat=2.9.0-r0");
+                .contains("libcrypto3=3.5.9-r0 libssl3=3.5.9-r0 expat=2.9.0-r0 libexpat=2.9.0-r0");
     }
 
     @Test
