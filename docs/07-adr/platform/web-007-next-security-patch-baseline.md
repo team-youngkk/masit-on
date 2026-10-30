@@ -1,7 +1,7 @@
 ---
 id: ADR-WEB-007
 title: Next.js 16.3.8 보안 패치 기준선
-status: Accepted
+status: Superseded
 decision_date: 2026-10-05
 owners:
   - 양성훈
@@ -14,18 +14,18 @@ related_documents:
   - ../adr-index.md
   - ../adr-traceability.md
 supersedes: []
-superseded_by: null
+superseded_by: ADR-WEB-008
 ---
 
 # ADR-WEB-007 Next.js 16.3.8 보안 패치 기준선
 
 ## 1. 결정과 범위
 
-Accepted — 2026-10-05 채택 합의를 확인했다. [ADR-WEB-001](web-001-frontend-platform.md)의 프레임워크 선택·Node·TypeScript·React 결정은 유지하고 Next.js 패치 기준선만 16.3.4에서 16.3.8로 갱신한다. 2026-09-09의 16.3.4 보안 패치 이력은 해당 시점의 결정으로 보존한다.
+2026-10-05 Accepted로 채택했고, 2026-10-30 [ADR-WEB-008](web-008-next-16-4-3-security-baseline.md)이 대체했다. 당시 [ADR-WEB-001](web-001-frontend-platform.md)의 프레임워크 선택·Node·TypeScript·React 결정은 유지하고 Next.js 패치 기준선만 16.3.4에서 16.3.8로 갱신했다. 2026-09-09의 16.3.4 보안 패치 이력도 보존한다.
 
 ### ADR 관계와 승인 범위
 
-이 ADR은 [ADR-WEB-001](web-001-frontend-platform.md)의 프레임워크·언어 결정을 대체하지 않고 Next.js 보안 패치 기준선만 보완한다. 양 ADR은 함께 유효하며 현재 구현 버전은 Next.js 16.3.8이다. 이 결정과 파생 문서는 소유자 합의를 반영한다.
+이 ADR은 [ADR-WEB-001](web-001-frontend-platform.md)의 프레임워크·언어 결정을 대체하지 않고 당시 Next.js 보안 패치 기준선만 보완했다. 현재 구현 버전은 [ADR-WEB-008](web-008-next-16-4-3-security-baseline.md)의 16.4.3이다. 이 결정과 당시 파생 문서는 소유자 합의를 반영한다.
 
 ## 2. 배경과 근거
 

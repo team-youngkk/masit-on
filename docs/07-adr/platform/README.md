@@ -7,6 +7,7 @@ related_documents:
   - frame-001-spring-boot.md
   - web-001-frontend-platform.md
   - web-007-next-security-patch-baseline.md
+  - web-008-next-16-4-3-security-baseline.md
   - web-002-data-state.md
   - web-003-routing-boundary.md
   - web-006-unified-login-rbac-route.md
@@ -29,6 +30,7 @@ related_documents:
 | [ADR-FRAME-001](frame-001-spring-boot.md) | Spring Boot 애플리케이션 기준 |
 | [ADR-WEB-001](web-001-frontend-platform.md) | 프론트엔드 런타임과 프레임워크 기준 |
 | [ADR-WEB-007](web-007-next-security-patch-baseline.md) | Next.js 보안 패치 기준선 |
+| [ADR-WEB-008](web-008-next-16-4-3-security-baseline.md) | Next.js 16.4.3 보안 기준선 |
 | [ADR-WEB-002](web-002-data-state.md) | 프론트엔드 데이터와 상태 책임 분리 |
 | [ADR-WEB-003](web-003-routing-boundary.md) | 웹 화면·API·운영 경로 경계(Superseded) |
 | [ADR-WEB-005](web-005-application-port-binding.md) | 운영 애플리케이션 포트 loopback 바인딩 |
