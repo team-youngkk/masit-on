@@ -37,7 +37,13 @@ public interface AiExtractionAdminQueryPort {
     record JobVideoReference(String channelId, String videoId, String videoUrl) { }
     record SnapshotCandidateJson(
             JsonNode candidateFields, JsonNode fieldConfidences, JsonNode evidence, JsonNode candidateTags) { }
-    record Attempt(int attemptNo, String outcome, String errorCategory, OffsetDateTime startedAt, OffsetDateTime finishedAt) { }
+    record Attempt(int attemptNo, String outcome, String errorCategory, OffsetDateTime startedAt,
+                   OffsetDateTime finishedAt, Integer failureHttpStatus) {
+        public Attempt(int attemptNo, String outcome, String errorCategory, OffsetDateTime startedAt,
+                       OffsetDateTime finishedAt) {
+            this(attemptNo, outcome, errorCategory, startedAt, finishedAt, null);
+        }
+    }
     record RetryTarget(String videoUrl, String executionStatus, String resultCompleteness) { }
     record ReviewTarget(UUID snapshotId, String reviewStatus, UUID jobId, String channelId, String videoId,
                         String videoUrl, JsonNode candidateFields, JsonNode candidateTags, JsonNode fieldConfidences, JsonNode evidence,

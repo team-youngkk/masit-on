@@ -6,5 +6,11 @@ public enum AiProviderFailureCategory {
     TIMEOUT,
     RATE_LIMIT,
     UPSTREAM,
-    SCHEMA
+    SCHEMA,
+    AUTHENTICATION,
+    PAYMENT_REQUIRED,
+    REQUEST_REJECTED,
+    RESOURCE_NOT_FOUND,
+    SERVER_ERROR,
+    NETWORK_ERROR
 }

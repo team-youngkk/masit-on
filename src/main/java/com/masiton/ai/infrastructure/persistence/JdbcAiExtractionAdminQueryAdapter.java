@@ -341,14 +341,14 @@ public class JdbcAiExtractionAdminQueryAdapter implements AiExtractionAdminQuery
         return "SELECT job.id,job.source,job.youtube_channel_id,job.youtube_video_id,job.video_url,"
                 + "job.execution_status,job.result_completeness,snapshot.review_status,job.provider,"
                 + "job.model_version,job.prompt_version,job.schema_version,job.attempt_count,"
-                + "job.created_at,job.started_at,job.finished_at";
+                + "job.created_at,job.started_at,job.finished_at,job.error_category,job.failure_http_status";
     }
 
     private String select() {
         return "SELECT job.id,job.source,job.youtube_channel_id,job.youtube_video_id,job.video_url,"
                 + "job.execution_status,job.result_completeness,snapshot.review_status,job.provider,"
                 + "job.model_version,job.prompt_version,job.schema_version,job.attempt_count,"
-                + "job.created_at,job.started_at,job.finished_at,job.error_category,"
+                + "job.created_at,job.started_at,job.finished_at,job.error_category,job.failure_http_status,"
                 + "snapshot.candidate_fields,snapshot.candidate_tags,snapshot.field_confidences,"
                 + "snapshot.evidence,snapshot.missing_fields,snapshot.candidate_truncated";
     }
@@ -363,15 +363,16 @@ public class JdbcAiExtractionAdminQueryAdapter implements AiExtractionAdminQuery
                 resultSet.getString("prompt_version"), resultSet.getString("schema_version"),
                 resultSet.getInt("attempt_count"), resultSet.getObject("created_at", OffsetDateTime.class),
                 resultSet.getObject("started_at", OffsetDateTime.class),
-                resultSet.getObject("finished_at", OffsetDateTime.class), false);
+                resultSet.getObject("finished_at", OffsetDateTime.class), false,
+                resultSet.getString("error_category"), (Integer) resultSet.getObject("failure_http_status"));
     }
 
     private List<Attempt> attempts(UUID id) {
-        return jdbc.query("SELECT attempt_no,outcome,error_category,started_at,finished_at "
+        return jdbc.query("SELECT attempt_no,outcome,error_category,started_at,finished_at,failure_http_status "
                         + "FROM ai_extraction_attempt WHERE job_id=? ORDER BY attempt_no ASC",
                 (resultSet, rowNumber) -> new Attempt(resultSet.getInt(1), resultSet.getString(2),
                         resultSet.getString(3), resultSet.getObject(4, OffsetDateTime.class),
-                        resultSet.getObject(5, OffsetDateTime.class)), id);
+                        resultSet.getObject(5, OffsetDateTime.class), (Integer) resultSet.getObject(6)), id);
     }
 
     private JsonNode json(ResultSet resultSet, String column) throws SQLException {
@@ -386,7 +387,9 @@ public class JdbcAiExtractionAdminQueryAdapter implements AiExtractionAdminQuery
     private Boolean retryable(String category) {
         return category == null
                 ? null
-                : !(category.equals("INPUT") || category.equals("SCHEMA") || category.equals("PROVIDER_BLOCKED"));
+                : !(category.equals("INPUT") || category.equals("SCHEMA") || category.equals("PROVIDER_BLOCKED")
+                    || category.equals("AUTHENTICATION") || category.equals("PAYMENT_REQUIRED")
+                    || category.equals("REQUEST_REJECTED") || category.equals("RESOURCE_NOT_FOUND"));
     }
 
     private void filter(StringBuilder where, List<Object> arguments, String column, String value) {
