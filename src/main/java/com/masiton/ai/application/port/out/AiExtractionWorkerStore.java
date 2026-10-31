@@ -20,6 +20,11 @@ public interface AiExtractionWorkerStore {
     boolean recordRetryableFailure(UUID jobId, String workerId, int attemptNo, OffsetDateTime startedAt,
                                    OffsetDateTime finishedAt, String errorCategory);
 
+    default boolean recordRetryableFailure(UUID jobId, String workerId, int attemptNo, OffsetDateTime startedAt,
+                                           OffsetDateTime finishedAt, String errorCategory, Integer httpStatus) {
+        return recordRetryableFailure(jobId, workerId, attemptNo, startedAt, finishedAt, errorCategory);
+    }
+
     boolean recordSuccessfulSupplementAttempt(UUID jobId, String workerId, int attemptNo,
                                               OffsetDateTime startedAt, OffsetDateTime finishedAt,
                                               String providerRequestId);
@@ -39,6 +44,11 @@ public interface AiExtractionWorkerStore {
 
     boolean completeFailure(UUID jobId, String workerId, int attemptNo, OffsetDateTime startedAt,
                             OffsetDateTime finishedAt, String errorCategory);
+
+    default boolean completeFailure(UUID jobId, String workerId, int attemptNo, OffsetDateTime startedAt,
+                                    OffsetDateTime finishedAt, String errorCategory, Integer httpStatus) {
+        return completeFailure(jobId, workerId, attemptNo, startedAt, finishedAt, errorCategory);
+    }
 
     boolean failWithoutAttempt(UUID jobId, String workerId, OffsetDateTime finishedAt, String errorCategory);
 

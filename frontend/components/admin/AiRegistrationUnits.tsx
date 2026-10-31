@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { StatePanel } from '@/components/ui/StatePanel'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { AdminApiError } from '@/lib/admin/api'
+import { aiDiagnosticAction, aiDiagnosticLabel } from '@/lib/admin/ai-diagnostics'
 import {
   aiExtractionMessageFor,
   AI_BLOCK_REASON_LABELS,
@@ -201,7 +202,7 @@ function RegistrationUnitCard({ jobId, unit, refresh, onRequestRetry }: CardProp
       </div>
 
       {unit.manualOverrideType ? <p className={styles.hint}>{MANUAL_OVERRIDE_LABELS[unit.manualOverrideType]}</p> : null}
-      {!unit.manualOverrideType && unit.blockReason ? <p className={styles.hint}>{AI_BLOCK_REASON_LABELS[unit.blockReason] ?? unit.blockReason}</p> : null}
+      {!unit.manualOverrideType && unit.blockReason ? <p className={styles.hint}>{aiDiagnosticLabel(unit.blockDiagnostic) ?? AI_BLOCK_REASON_LABELS[unit.blockReason] ?? unit.blockReason}{aiDiagnosticAction(unit.blockDiagnostic) ? ` · ${aiDiagnosticAction(unit.blockDiagnostic)}` : ''}</p> : null}
 
       {unit.placeDecision && unit.categoryDecision ? (
         <dl className={styles.unitDetails}>
@@ -313,6 +314,7 @@ function ExceptionPanel({
   const actions = exceptionActionsFor(unit.reviewStatus, conflict.recoveryPaths)
   const supplementField = conflict.requiredSupplements[0]
   const validationFailureMessage = aiValidationFailureMessageFor(conflict.validationFailureReason)
+  const validationDiagnosticMessage = aiDiagnosticLabel(conflict.validationDiagnostic)
 
   if (!actions.length) {
     return (
@@ -323,6 +325,7 @@ function ExceptionPanel({
         description={
           <>
             {validationFailureMessage ? <p className={styles.error}>{validationFailureMessage}</p> : null}
+            {validationDiagnosticMessage ? <p className={styles.error}>이번 검증 근거: {validationDiagnosticMessage}</p> : null}
             <p>이 예외는 자동 복구할 수 없습니다. 새 작업으로 다시 추출해 주세요.</p>
           </>
         }
@@ -340,6 +343,7 @@ function ExceptionPanel({
       description={
         <>
           {validationFailureMessage ? <p className={styles.error}>{validationFailureMessage}</p> : null}
+          {validationDiagnosticMessage ? <p className={styles.error}>이번 검증 근거: {validationDiagnosticMessage}</p> : null}
           <div className={styles.actions}>
             {actions.includes('SUPPLEMENT') && supplementField ? (
               <form

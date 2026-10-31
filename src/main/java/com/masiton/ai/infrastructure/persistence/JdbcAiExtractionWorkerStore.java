@@ -143,8 +143,15 @@ public class JdbcAiExtractionWorkerStore implements AiExtractionWorkerStore {
     public boolean recordRetryableFailure(UUID jobId, String workerId, int attemptNo,
                                           OffsetDateTime startedAt, OffsetDateTime finishedAt,
                                           String errorCategory) {
+        return recordRetryableFailure(jobId, workerId, attemptNo, startedAt, finishedAt, errorCategory, null);
+    }
+
+    @Override
+    public boolean recordRetryableFailure(UUID jobId, String workerId, int attemptNo,
+                                          OffsetDateTime startedAt, OffsetDateTime finishedAt,
+                                          String errorCategory, Integer httpStatus) {
         return insertOwnedAttempt(jobId, workerId, attemptNo, startedAt, finishedAt,
-                "FAILED", errorCategory, null);
+                "FAILED", errorCategory, null, httpStatus);
     }
 
     @Override
@@ -287,7 +294,13 @@ public class JdbcAiExtractionWorkerStore implements AiExtractionWorkerStore {
     @Override
     public boolean completeFailure(UUID jobId, String workerId, int attemptNo, OffsetDateTime startedAt,
                                    OffsetDateTime finishedAt, String errorCategory) {
-        return completeFailureWithAttempt(jobId, workerId, attemptNo, startedAt, finishedAt, errorCategory);
+        return completeFailureWithAttempt(jobId, workerId, attemptNo, startedAt, finishedAt, errorCategory, null);
+    }
+
+    @Override
+    public boolean completeFailure(UUID jobId, String workerId, int attemptNo, OffsetDateTime startedAt,
+                                   OffsetDateTime finishedAt, String errorCategory, Integer httpStatus) {
+        return completeFailureWithAttempt(jobId, workerId, attemptNo, startedAt, finishedAt, errorCategory, httpStatus);
     }
 
     @Override
@@ -371,31 +384,34 @@ public class JdbcAiExtractionWorkerStore implements AiExtractionWorkerStore {
 
     private boolean completeFailureWithAttempt(UUID jobId, String workerId, int attemptNo,
                                                OffsetDateTime startedAt, OffsetDateTime finishedAt,
-                                               String errorCategory) {
+                                               String errorCategory, Integer httpStatus) {
         Integer changed = jdbcTemplate.queryForObject("""
                 WITH owned AS (
                     UPDATE ai_extraction_job
                        SET execution_status = 'FAILED', result_completeness = NULL, error_category = ?,
+                           failure_http_status = ?,
                            finished_at = ?, lease_owner = NULL, lease_expires_at = NULL
                      WHERE id = ? AND execution_status = 'RUNNING' AND lease_owner = ?
                        AND lease_expires_at > ?
                     RETURNING id
                 ), recorded AS (
                     INSERT INTO ai_extraction_attempt (
-                        id, job_id, attempt_no, provider_request_id, started_at, finished_at, outcome, error_category
+                        id, job_id, attempt_no, provider_request_id, started_at, finished_at, outcome, error_category,
+                        failure_http_status
                     )
-                    SELECT gen_random_uuid(), owned.id, ?, ?, ?, ?, ?, ? FROM owned
+                    SELECT gen_random_uuid(), owned.id, ?, ?, ?, ?, ?, ?, ? FROM owned
                     RETURNING id
                 )
                 SELECT count(*) FROM recorded
-                """, Integer.class, errorCategory, finishedAt, jobId, workerId, finishedAt, attemptNo,
-                null, startedAt, finishedAt, "FAILED", errorCategory);
+                """, Integer.class, errorCategory, httpStatus, finishedAt, jobId, workerId, finishedAt, attemptNo,
+                null, startedAt, finishedAt, "FAILED", errorCategory, httpStatus);
         return changed != null && changed == 1;
     }
 
     private boolean insertOwnedAttempt(UUID jobId, String workerId, int attemptNo,
                                        OffsetDateTime startedAt, OffsetDateTime finishedAt,
-                                       String outcome, String errorCategory, String providerRequestId) {
+                                       String outcome, String errorCategory, String providerRequestId,
+                                       Integer httpStatus) {
         Integer changed = jdbcTemplate.queryForObject("""
                 WITH owned AS (
                     SELECT id FROM ai_extraction_job
@@ -403,15 +419,16 @@ public class JdbcAiExtractionWorkerStore implements AiExtractionWorkerStore {
                        AND lease_expires_at > ?
                 ), recorded AS (
                     INSERT INTO ai_extraction_attempt (
-                        id, job_id, attempt_no, provider_request_id, started_at, finished_at, outcome, error_category
+                        id, job_id, attempt_no, provider_request_id, started_at, finished_at, outcome, error_category,
+                        failure_http_status
                     )
-                    SELECT gen_random_uuid(), owned.id, ?, ?, ?, ?, ?, ? FROM owned
+                    SELECT gen_random_uuid(), owned.id, ?, ?, ?, ?, ?, ?, ? FROM owned
                     ON CONFLICT (job_id, attempt_no) DO NOTHING
                     RETURNING id
                 )
                 SELECT count(*) FROM recorded
                 """, Integer.class, jobId, workerId, finishedAt, attemptNo, providerRequestId,
-                startedAt, finishedAt, outcome, errorCategory);
+                startedAt, finishedAt, outcome, errorCategory, httpStatus);
         return changed != null && changed == 1;
     }
 

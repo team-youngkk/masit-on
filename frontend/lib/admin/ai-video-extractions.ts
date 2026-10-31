@@ -2,6 +2,7 @@
 
 import { adminJson, AdminApiError, messageFor } from './api.ts'
 import { aiExtractionMessageForCode } from './ai-video-extractions-coordination.ts'
+import { parseAiDiagnostic, type AiDiagnostic } from './ai-diagnostics.ts'
 
 export type AiExecutionStatus = 'QUEUED' | 'RUNNING' | 'SUCCEEDED' | 'FAILED'
 export type AiExtractionSource = 'WEBHOOK' | 'ADMIN'
@@ -29,6 +30,7 @@ export type AiExtractionJob = {
   finishedAt: string | null
   reused?: boolean
   registrationSummary?: AiRegistrationSummary
+  failureDiagnostic?: AiDiagnostic | null
 }
 
 export type AiExtractionSubmissionResult = AiExtractionJob & { reused: boolean }
@@ -104,6 +106,7 @@ export type AiRegistrationUnit = {
   reusedResources: Array<'creator' | 'video'>
   placeDecision: AiPlaceDecision | null
   categoryDecision: AiCategoryDecision | null
+  blockDiagnostic?: AiDiagnostic | null
 }
 
 export type AiExtractionDetail = AiExtractionJob & {
@@ -113,9 +116,10 @@ export type AiExtractionDetail = AiExtractionJob & {
   registrationUnits: AiRegistrationUnit[]
   error: { category: string; retryable: boolean } | null
   attempts: AiExtractionAttempt[]
+  snapshotDiagnostic?: AiDiagnostic | null
 }
 
-export type AiExtractionAttempt = { attemptNo: number; outcome: string; errorCategory: string | null; startedAt: string; finishedAt: string | null }
+export type AiExtractionAttempt = { attemptNo: number; outcome: string; errorCategory: string | null; startedAt: string; finishedAt: string | null; failureDiagnostic?: AiDiagnostic | null }
 
 export type AiExtractionPage = {
   items: AiExtractionJob[]
@@ -137,7 +141,7 @@ export async function getAiVideoExtractions(filters: AiExtractionFilters): Promi
   if (filters.reviewStatus) query.set('reviewStatus', filters.reviewStatus)
   const raw = await adminJson<RawAiExtractionPage>(`/api/admin/ai/video-extractions?${query}`, { cache: 'no-store' })
   const totalPages = Math.ceil(raw.page.totalElements / raw.page.size)
-  return { ...raw, page: { ...raw.page, totalPages, hasNext: raw.page.number < totalPages } }
+  return { ...raw, items: raw.items.map((item) => ({ ...item, failureDiagnostic: parseAiDiagnostic(item.failureDiagnostic) })), page: { ...raw.page, totalPages, hasNext: raw.page.number < totalPages } }
 }
 
 export async function getAiVideoExtraction(jobId: string): Promise<AiExtractionDetail> {
@@ -210,6 +214,7 @@ export type AiValidationConflict = {
   recoveryPaths: AiRecoveryPath[]
   requiredSupplements: AiRequiredSupplementField[]
   validationFailureReason: AiBlockReason | null
+  validationDiagnostic?: AiDiagnostic | null
   traceId?: string
 }
 
@@ -237,7 +242,8 @@ export function aiValidationConflictFrom(error: unknown): AiValidationConflict |
     && (BLOCK_REASONS as string[]).includes(details.validationFailureReason)
     ? details.validationFailureReason as AiBlockReason
     : null
-  return { blockReason, recoveryPaths, requiredSupplements, validationFailureReason, traceId: error.traceId }
+  return { blockReason, recoveryPaths, requiredSupplements, validationFailureReason,
+    validationDiagnostic: parseAiDiagnostic(details.validationDiagnostic), traceId: error.traceId }
 }
 
 /** 요청 본문은 비어 있다. 이미 등록된 단위는 멱등 `200 OK`로 기존 결과를 그대로 반환한다. */
@@ -287,6 +293,8 @@ type RawAiExtractionDetail = {
   registrationUnits?: unknown
   error: { category: string; retryable: boolean; attemptCount: number } | null
   attempts: AiExtractionAttempt[]
+  failureDiagnostic?: unknown
+  snapshotDiagnostic?: unknown
 }
 
 type RawAiExtractionPage = {
@@ -298,12 +306,14 @@ function normalizeDetail(raw: RawAiExtractionDetail): AiExtractionDetail {
   const candidates = Array.isArray(raw.candidates) ? raw.candidates.map(normalizeCandidate).filter((value): value is AiCandidate => value !== null) : []
   return {
     ...raw,
+    failureDiagnostic: parseAiDiagnostic(raw.failureDiagnostic),
+    snapshotDiagnostic: parseAiDiagnostic(raw.snapshotDiagnostic),
     candidates,
     missingFields: Array.isArray(raw.missingFields) ? raw.missingFields.filter((value): value is string => typeof value === 'string') : [],
     candidateTruncated: raw.candidateTruncated === true,
     registrationUnits: Array.isArray(raw.registrationUnits) ? raw.registrationUnits.map(normalizeRegistrationUnit).filter((value): value is AiRegistrationUnit => value !== null) : [],
     error: raw.error ? { category: raw.error.category, retryable: raw.error.retryable } : null,
-    attempts: Array.isArray(raw.attempts) ? raw.attempts : [],
+    attempts: Array.isArray(raw.attempts) ? raw.attempts.map((attempt) => ({ ...attempt, failureDiagnostic: parseAiDiagnostic(attempt.failureDiagnostic) })) : [],
   }
 }
 
@@ -343,6 +353,7 @@ function normalizeRegistrationUnit(value: unknown): AiRegistrationUnit | null {
     reusedResources: reusedResourcesValue(raw.reusedResources),
     placeDecision: placeDecisionValue(raw.placeDecision),
     categoryDecision: categoryDecisionValue(raw.categoryDecision),
+    blockDiagnostic: parseAiDiagnostic(raw.blockDiagnostic),
   }
 }
 
