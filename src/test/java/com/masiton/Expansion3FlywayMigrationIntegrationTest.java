@@ -472,6 +472,18 @@ class Expansion3FlywayMigrationIntegrationTest {
                         "ck_youtube_channel_watch__token_hash_not_empty",
                         "ck_youtube_channel_watch__last_error_not_blank",
                         "ck_youtube_channel_watch__updated_after_created")));
+        if (includeLastErrorAt) {
+            expectedChecks.compute("ai_extraction_job", (table, names) -> {
+                List<String> updated = new ArrayList<>(names);
+                updated.add("ck_ai_extraction_job_failure_http_status");
+                return updated;
+            });
+            expectedChecks.compute("ai_extraction_attempt", (table, names) -> {
+                List<String> updated = new ArrayList<>(names);
+                updated.add("ck_ai_extraction_attempt_failure_http_status");
+                return updated;
+            });
+        }
         expectedChecks.forEach((table, names) -> assertThat(jdbcTemplate.queryForList(
                 "SELECT conname FROM pg_constraint WHERE connamespace=current_schema()::regnamespace "
                         + "AND contype='c' AND conrelid=?::regclass",
@@ -511,6 +523,13 @@ class Expansion3FlywayMigrationIntegrationTest {
                         "id", "job_id", "attempt_no", "provider_request_id", "started_at", "finished_at",
                         "outcome", "error_category", "input_tokens", "output_tokens", "estimated_cost_minor"),
                 "youtube_channel_watch", watchColumns));
+        if (includeLastErrorAt) {
+            for (String table : List.of("ai_extraction_job", "ai_extraction_attempt")) {
+                List<String> columns = new ArrayList<>(expectedColumns.get(table));
+                columns.add("failure_http_status");
+                expectedColumns.put(table, columns);
+            }
+        }
         expectedColumns.forEach((table, columns) -> assertThat(jdbcTemplate.queryForList(
                 "SELECT column_name FROM information_schema.columns WHERE table_schema=? AND table_name=? "
                         + "ORDER BY ordinal_position",
