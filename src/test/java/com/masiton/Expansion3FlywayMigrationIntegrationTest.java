@@ -126,7 +126,7 @@ class Expansion3FlywayMigrationIntegrationTest {
         // then
         assertThat(jdbcTemplate.queryForList(
                 "SELECT version FROM flyway_schema_history WHERE version IS NOT NULL ORDER BY installed_rank", String.class))
-                .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23");
+                .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24");
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM pg_indexes WHERE schemaname = current_schema() "
                 + "AND indexname IN ('ix_ai_job__video_input_versions', 'ix_ai_job__video_mode_versions', "
                 + "'ix_ai_temporary_input__expires_at', 'ix_visit_tag__created_from_snapshot')", Integer.class)).isEqualTo(4);
@@ -472,6 +472,18 @@ class Expansion3FlywayMigrationIntegrationTest {
                         "ck_youtube_channel_watch__token_hash_not_empty",
                         "ck_youtube_channel_watch__last_error_not_blank",
                         "ck_youtube_channel_watch__updated_after_created")));
+        if (includeLastErrorAt) {
+            expectedChecks.compute("ai_extraction_job", (table, names) -> {
+                List<String> updated = new ArrayList<>(names);
+                updated.add("ck_ai_extraction_job_failure_http_status");
+                return updated;
+            });
+            expectedChecks.compute("ai_extraction_attempt", (table, names) -> {
+                List<String> updated = new ArrayList<>(names);
+                updated.add("ck_ai_extraction_attempt_failure_http_status");
+                return updated;
+            });
+        }
         expectedChecks.forEach((table, names) -> assertThat(jdbcTemplate.queryForList(
                 "SELECT conname FROM pg_constraint WHERE connamespace=current_schema()::regnamespace "
                         + "AND contype='c' AND conrelid=?::regclass",
@@ -511,6 +523,13 @@ class Expansion3FlywayMigrationIntegrationTest {
                         "id", "job_id", "attempt_no", "provider_request_id", "started_at", "finished_at",
                         "outcome", "error_category", "input_tokens", "output_tokens", "estimated_cost_minor"),
                 "youtube_channel_watch", watchColumns));
+        if (includeLastErrorAt) {
+            for (String table : List.of("ai_extraction_job", "ai_extraction_attempt")) {
+                List<String> columns = new ArrayList<>(expectedColumns.get(table));
+                columns.add("failure_http_status");
+                expectedColumns.put(table, columns);
+            }
+        }
         expectedColumns.forEach((table, columns) -> assertThat(jdbcTemplate.queryForList(
                 "SELECT column_name FROM information_schema.columns WHERE table_schema=? AND table_name=? "
                         + "ORDER BY ordinal_position",

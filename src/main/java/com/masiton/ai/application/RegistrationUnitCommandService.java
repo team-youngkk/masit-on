@@ -576,7 +576,9 @@ public class RegistrationUnitCommandService {
         return new BusinessException(HttpStatus.UNPROCESSABLE_ENTITY, "AIEXTRACT_VALIDATION_CONFLICT",
                 "Registration unit validation conflict.",
                 new ValidationConflictDetails(blockReason, validationFailureReason, mapping.recoveryPaths(),
-                        mapping.requiredSupplements()));
+                        mapping.requiredSupplements(), validationFailureReason == null ? null
+                                : java.util.Map.of("version", 1, "reasonCode", validationFailureReason,
+                                        "service", "APPLICATION", "stage", "UNKNOWN", "missingFields", List.of())));
     }
 
     private RecoveryMapping recoveryMappingFor(String blockReason) {
@@ -604,7 +606,12 @@ public class RegistrationUnitCommandService {
     public record ValidationConflictDetails(String blockReason,
                                             @JsonInclude(JsonInclude.Include.NON_NULL) String validationFailureReason,
                                             List<String> recoveryPaths,
-                                            List<String> requiredSupplements) {
+                                            List<String> requiredSupplements,
+                                            @JsonInclude(JsonInclude.Include.NON_NULL) java.util.Map<String, Object> validationDiagnostic) {
+        public ValidationConflictDetails(String blockReason, String validationFailureReason,
+                                         List<String> recoveryPaths, List<String> requiredSupplements) {
+            this(blockReason, validationFailureReason, recoveryPaths, requiredSupplements, null);
+        }
     }
 
     /** API 3.6절 {@code 200 OK} 응답 페이로드다. */
