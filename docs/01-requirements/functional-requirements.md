@@ -1,5 +1,6 @@
 ---
 related_documents:
+  - ../08-planning/issue-445-ai-failure-diagnostics.md
   - ../05-specs/api/common/region-contract.md
   - ../02-analysis/third-expansion-workstreams.md
   - ../00-overview/scope.md
@@ -1480,6 +1481,9 @@ related_documents:
 <a id="fr-aiextract-002-추출-상태와-결과-조회"></a>
 
 ### FR-AIEXTRACT-002 추출 상태와 결과 조회
+
+- 관리자는 실패 작업의 대표 사유와 확인된 근거, 재시도·설정 확인 등 실제 가능한 해결 방법을 조회할 수 있어야 한다. HTTP 상태만으로 결제·권한 문제를 단정하지 않으며 과거 상세 원인이 저장되지 않은 작업은 미기록으로 알린다.
+- 관리자는 등록 단위별 자동 보류 사유·근거와 작업의 실제 등록·보류 개수를 구분해 확인할 수 있어야 한다. 세부 진단 계약은 [이슈 #445 설계](../08-planning/issue-445-ai-failure-diagnostics.md)를 따른다.
 
 - 인증된 관리자는 본인이 접근 가능한 추출 작업의 `QUEUED`, `RUNNING`, `SUCCEEDED`, `FAILED` 상태와 생성·시작·종료 시각을 조회할 수 있다.
 - 성공 결과에서는 맛집명·메뉴·주소 또는 위치 표현·방문 여부·통제 태그 후보와 필드별 신뢰도·출처 구간·모델·Prompt·Schema 버전을 확인할 수 있다.

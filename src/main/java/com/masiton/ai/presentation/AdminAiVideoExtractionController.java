@@ -151,6 +151,7 @@ public class AdminAiVideoExtractionController {
             java.time.OffsetDateTime startedAt,
             java.time.OffsetDateTime finishedAt,
             boolean reused,
+            FailureDiagnostic failureDiagnostic,
             @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
             com.masiton.ai.application.RegistrationSummary registrationSummary
     ) {
@@ -162,7 +163,8 @@ public class AdminAiVideoExtractionController {
                     new YoutubeReference(view.channelId(), view.videoId(), view.videoUrl()),
                     view.executionStatus(), view.resultCompleteness(), view.reviewStatus(), view.provider(),
                     view.modelVersion(), view.promptVersion(), view.schemaVersion(), view.attemptCount(),
-                    view.createdAt(), view.startedAt(), view.finishedAt(), view.reused(), summary);
+                    view.createdAt(), view.startedAt(), view.finishedAt(), view.reused(),
+                    FailureDiagnostic.from(view.errorCategory(), view.failureHttpStatus(), view.finishedAt()), summary);
         }
     }
 
@@ -191,14 +193,36 @@ public class AdminAiVideoExtractionController {
     public record RegistrationUnitResponse(
             UUID unitId, String restaurantName, String reviewStatus, String manualOverrideType, String blockReason,
             UUID registeredRestaurantId, UUID registeredCreatorId, UUID registeredVideoId, UUID registeredVisitId,
-            List<String> reusedResources, JsonNode placeDecision, JsonNode categoryDecision) {
+            List<String> reusedResources, JsonNode placeDecision, JsonNode categoryDecision,
+            FailureDiagnostic blockDiagnostic) {
 
-        static RegistrationUnitResponse from(AiRegistrationUnitStore.RegistrationUnitRow row, ObjectMapper mapper) {
+        static RegistrationUnitResponse from(AiRegistrationUnitStore.RegistrationUnitRow row, ObjectMapper mapper,
+                                             JsonNode candidateFields) {
             return new RegistrationUnitResponse(row.id(), row.restaurantName(), row.reviewStatus(),
                     row.manualOverrideType(), row.blockReason(), row.registeredRestaurantId(),
                     row.registeredCreatorId(), row.registeredVideoId(), row.registeredVisitId(),
                     row.reusedResources(), readTree(mapper, row.placeDecisionJson()),
-                    readTree(mapper, row.categoryDecisionJson()));
+                    readTree(mapper, row.categoryDecisionJson()),
+                    FailureDiagnostic.fromBlockReason(row.blockReason(), row.decidedAt(),
+                            missingFieldsForUnit(row, candidateFields)));
+        }
+
+        private static List<String> missingFieldsForUnit(AiRegistrationUnitStore.RegistrationUnitRow row,
+                                                         JsonNode candidateFields) {
+            if (!"MISSING_REQUIRED_FIELD".equals(row.blockReason()) || candidateFields == null) return List.of();
+            JsonNode units = candidateFields.path("registrationUnits");
+            if (!units.isArray() || row.unitIndex() < 1 || row.unitIndex() > units.size()) return List.of();
+            JsonNode unit = units.path(row.unitIndex() - 1);
+            if (!unit.isObject()) return List.of();
+            List<String> missing = new java.util.ArrayList<>();
+            for (String field : List.of("restaurantName", "address", "location", "visitEvidence")) {
+                JsonNode candidate = unit.path(field);
+                if (candidate.isMissingNode() || candidate.isNull()
+                        || (candidate.isObject() && candidate.path("value").asText("").isBlank())) {
+                    missing.add(field);
+                }
+            }
+            return List.copyOf(missing);
         }
 
         private static JsonNode readTree(ObjectMapper mapper, String json) {
@@ -212,12 +236,14 @@ public class AdminAiVideoExtractionController {
             int attemptCount, java.time.OffsetDateTime createdAt, java.time.OffsetDateTime startedAt,
             java.time.OffsetDateTime finishedAt, boolean reused, List<Object> candidates, Object missingFields,
             boolean candidateTruncated, List<RegistrationUnitResponse> registrationUnits, Error error,
-            List<AiExtractionAdminQueryPort.Attempt> attempts, com.masiton.ai.application.RegistrationSummary registrationSummary) {
+            List<AttemptResponse> attempts, FailureDiagnostic failureDiagnostic,
+            FailureDiagnostic snapshotDiagnostic,
+            com.masiton.ai.application.RegistrationSummary registrationSummary) {
         static DetailResponse from(AdminAiExtractionQueryService.AdminJobDetail jobDetail, ObjectMapper objectMapper) {
             AiExtractionAdminQueryPort.Detail d = jobDetail.detail();
             AiExtractionJobResponse job = AiExtractionJobResponse.from(d.job());
             List<RegistrationUnitResponse> registrationUnits = jobDetail.registrationUnits().stream()
-                    .map(row -> RegistrationUnitResponse.from(row, objectMapper))
+                    .map(row -> RegistrationUnitResponse.from(row, objectMapper, d.candidateFields()))
                     .toList();
             return new DetailResponse(job.jobId(), job.source(), job.youtube(), job.executionStatus(),
                     job.resultCompleteness(), jobDetail.topReviewStatus(), job.provider(), job.modelVersion(),
@@ -225,7 +251,27 @@ public class AdminAiVideoExtractionController {
                     job.finishedAt(), job.reused(), candidates(d), d.missingFields(), d.candidateTruncated(),
                     registrationUnits,
                     d.errorCategory() == null ? null : new Error(d.errorCategory(), d.retryable(), job.attemptCount()),
-                    d.attempts(), com.masiton.ai.application.RegistrationSummary.from(jobDetail.registrationUnits()));
+                    d.attempts().stream().map(AttemptResponse::from).toList(), job.failureDiagnostic(),
+                    snapshotDiagnostic(jobDetail, d),
+                    com.masiton.ai.application.RegistrationSummary.from(jobDetail.registrationUnits()));
+        }
+
+        private static FailureDiagnostic snapshotDiagnostic(AdminAiExtractionQueryService.AdminJobDetail detail,
+                                                            AiExtractionAdminQueryPort.Detail snapshot) {
+            if (!detail.registrationUnits().isEmpty() || !"AUTO_BLOCKED".equals(detail.topReviewStatus())) {
+                return null;
+            }
+            List<String> missing = new java.util.ArrayList<>();
+            if (snapshot.missingFields() != null && snapshot.missingFields().isArray()) {
+                snapshot.missingFields().forEach(field -> {
+                    String value = field.asText("");
+                    if (List.of("restaurantName", "address", "location", "menu", "visitEvidence").contains(value)
+                            && !missing.contains(value)) missing.add(value);
+                });
+            }
+            return new FailureDiagnostic(1, missing.isEmpty() ? "UNKNOWN_FAILURE" : "MISSING_REQUIRED_FIELD",
+                    "APPLICATION", "CANDIDATE_VALIDATION", null, null, List.copyOf(missing),
+                    snapshot.job().finishedAt(), null);
         }
 
         private static List<Object> candidates(AiExtractionAdminQueryPort.Detail d) {
@@ -260,4 +306,59 @@ public class AdminAiVideoExtractionController {
         }
     }
     public record Error(String category, Boolean retryable, int attemptCount) { }
+
+    public record AttemptResponse(int attemptNo, String outcome, String errorCategory,
+                                  java.time.OffsetDateTime startedAt, java.time.OffsetDateTime finishedAt,
+                                  FailureDiagnostic failureDiagnostic) {
+        static AttemptResponse from(AiExtractionAdminQueryPort.Attempt attempt) {
+            return new AttemptResponse(attempt.attemptNo(), attempt.outcome(), attempt.errorCategory(),
+                    attempt.startedAt(), attempt.finishedAt(),
+                    FailureDiagnostic.from(attempt.errorCategory(), attempt.failureHttpStatus(), attempt.finishedAt()));
+        }
+    }
+
+    public record FailureDiagnostic(int version, String reasonCode, String service, String stage,
+                                    Integer httpStatus, String providerCode, List<String> missingFields,
+                                    java.time.OffsetDateTime observedAt, String traceId) {
+        static FailureDiagnostic from(String category, Integer httpStatus, java.time.OffsetDateTime observedAt) {
+            if (category == null) return null;
+            String reason = switch (category) {
+                case "QUOTA_HARD_STOP" -> "APPLICATION_QUOTA_EXHAUSTED";
+                case "AUTHENTICATION" -> "PROVIDER_AUTHENTICATION_FAILED";
+                case "PAYMENT_REQUIRED" -> "PROVIDER_PAYMENT_REQUIRED";
+                case "PROVIDER_BLOCKED" -> httpStatus != null && httpStatus == 403
+                        ? "PROVIDER_ACCESS_DENIED" : "PROVIDER_CONFIGURATION_OR_POLICY_BLOCKED";
+                case "RATE_LIMIT" -> "PROVIDER_RATE_LIMITED";
+                case "REQUEST_REJECTED" -> "PROVIDER_REQUEST_REJECTED";
+                case "RESOURCE_NOT_FOUND" -> "PROVIDER_RESOURCE_NOT_FOUND";
+                case "SERVER_ERROR" -> "PROVIDER_SERVER_ERROR";
+                case "TIMEOUT" -> "EXTERNAL_TIMEOUT";
+                case "NETWORK_ERROR" -> "EXTERNAL_NETWORK_ERROR";
+                case "SCHEMA" -> "RESPONSE_INVALID";
+                case "UPSTREAM" -> "DETAIL_NOT_RECORDED";
+                default -> "UNKNOWN_FAILURE";
+            };
+            String service = "QUOTA_HARD_STOP".equals(category) || "INPUT".equals(category)
+                    || "LEASE_EXPIRED".equals(category) ? "APPLICATION" : "GEMINI";
+            String stage = "QUOTA_HARD_STOP".equals(category) ? "QUOTA_CHECK"
+                    : "SCHEMA".equals(category) ? "RESPONSE_VALIDATION"
+                    : "LEASE_EXPIRED".equals(category) ? "WORKER_RECOVERY"
+                    : "INPUT".equals(category) ? "UNKNOWN" : "PROVIDER_REQUEST";
+            return new FailureDiagnostic(1, reason, service, stage, httpStatus, null, List.of(), observedAt, null);
+        }
+
+        static FailureDiagnostic fromBlockReason(String reason, java.time.OffsetDateTime observedAt,
+                                                 List<String> missingFields) {
+            if (reason == null) return null;
+            String stage = switch (reason) {
+                case "MISSING_REQUIRED_FIELD", "VISIT_EVIDENCE_REQUIRED" -> "CANDIDATE_VALIDATION";
+                case "PLACE_NOT_FOUND", "PLACE_AMBIGUOUS" -> "PLACE_SEARCH";
+                case "CATEGORY_UNRESOLVED" -> "CATEGORY_RESOLUTION";
+                case "DUPLICATE_CONFLICT" -> "REGISTRATION";
+                default -> "UNKNOWN";
+            };
+            String service = "PLACE_SEARCH".equals(stage) ? "KAKAO" : "APPLICATION";
+            return new FailureDiagnostic(1, reason, service, stage, null, null, missingFields, observedAt, null);
+        }
+    }
 }

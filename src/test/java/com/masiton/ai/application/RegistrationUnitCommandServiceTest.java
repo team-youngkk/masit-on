@@ -282,6 +282,7 @@ class RegistrationUnitCommandServiceTest {
                             (RegistrationUnitCommandService.ValidationConflictDetails) businessException.details();
                     assertThat(details.blockReason()).isEqualTo("PLACE_AMBIGUOUS");
                     assertThat(details.validationFailureReason()).isEqualTo("VISIT_EVIDENCE_REQUIRED");
+                    assertThat(details.validationDiagnostic()).containsEntry("reasonCode", "VISIT_EVIDENCE_REQUIRED");
                     assertThat(details.recoveryPaths()).containsExactly("REEXTRACT", "MANUAL_REGISTRATION");
                     assertThat(details.requiredSupplements()).isEmpty();
                     assertThat(objectMapper.writeValueAsString(details))

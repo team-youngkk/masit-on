@@ -165,11 +165,11 @@ public class AiExtractionWorkerService {
                     OffsetDateTime finishedAt = now();
                     if (!exception.retryable() || attemptNo >= properties.getMaxAttempts()) {
                         store.completeFailure(job.jobId(), workerId, attemptNo, attemptStartedAt,
-                                finishedAt, exception.category().name());
+                                finishedAt, exception.category().name(), exception.httpStatus());
                         return;
                     }
                     if (!store.recordRetryableFailure(job.jobId(), workerId, attemptNo, attemptStartedAt,
-                            finishedAt, exception.category().name())) {
+                            finishedAt, exception.category().name(), exception.httpStatus())) {
                         return;
                     }
                     Duration backoff = attemptNo == 1
@@ -255,12 +255,12 @@ public class AiExtractionWorkerService {
                 lastFinishedAt = finishedAt;
                 if (!exception.retryable() || attemptNo >= properties.getMaxAttempts() || attemptNo >= 4) {
                     store.recordRetryableFailure(job.jobId(), workerId, attemptNo, startedAt, finishedAt,
-                            exception.category().name());
+                            exception.category().name(), exception.httpStatus());
                     return Optional.of(new AiExtractionResultProcessor.SupplementResult(attemptNo, startedAt,
                             finishedAt, new AiVideoExtractionResult(new tools.jackson.databind.ObjectMapper().createObjectNode(), null), false));
                 }
                 if (!store.recordRetryableFailure(job.jobId(), workerId, attemptNo, startedAt, finishedAt,
-                        exception.category().name())) {
+                        exception.category().name(), exception.httpStatus())) {
                     return Optional.empty();
                 }
                 Duration backoff = attemptNo == 1 ? properties.getFirstBackoff() : properties.getSecondBackoff();

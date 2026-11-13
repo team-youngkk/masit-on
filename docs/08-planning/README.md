@@ -1,5 +1,6 @@
 ---
 related_documents:
+  - issue-445-ai-failure-diagnostics.md
   - mvp-2day-implementation-plan.md
   - m2-deployment-plan.md
   - second-expansion-baseline-review.md
@@ -55,6 +56,7 @@ related_documents:
 
 | 문서 | 목적 |
 |---|---|
+| [이슈 445 AI 실패·보류 진단 설계](issue-445-ai-failure-diagnostics.md) | 안전한 실패 사유, 등록 단위별 보류 근거, 관리자 표시와 검증 기준 |
 | [전국 자연어 지역 해석 계획 — #400](issue-400-national-natural-language-regions.md) | P2 활성 전국 마스터·모호 지역·직접 필터·Golden 보충 사례·API 승인 완료와 독립 ADR-ARCH-006 최종 승인 대기 |
 | [MVP 구현 계획](mvp-2day-implementation-plan.md) | 4명이 순서와 선행 관계에 따라 수행할 Task, 의존성, 검증과 완료 조건 |
 | [MVP 로컬 실행·회귀 검증 결과](mvp-local-verification.md) | `T-14`가 실행한 필수 명령과 결과, 완료 정의 판정, 알려진 위험 |

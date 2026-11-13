@@ -219,6 +219,7 @@ test('등록 단위 등록 API의 422 예외 전환 응답은 blockReason·recov
       recoveryPaths: ['SUPPLEMENT', 'MANUAL_REGISTRATION'],
       requiredSupplements: ['kakaoPlaceUrl'],
       validationFailureReason: null,
+      validationDiagnostic: null,
       traceId: 'trace-2',
     })
   } finally {
@@ -251,6 +252,7 @@ test('AdminApiError.details에 이미 언랩된 blockReason·recoveryPaths·requ
     recoveryPaths: ['REEXTRACT', 'MANUAL_REGISTRATION'],
     requiredSupplements: [],
     validationFailureReason: null,
+    validationDiagnostic: null,
     traceId: 'trace-3',
   })
 })
@@ -285,6 +287,7 @@ test('details가 배열이면 AdminApiError.details는 빈 객체로 정규화�
       recoveryPaths: [],
       requiredSupplements: [],
       validationFailureReason: null,
+      validationDiagnostic: null,
       traceId: 'trace-4',
     })
   } finally {
@@ -313,6 +316,7 @@ test('보충 검증 실패 사유는 원래 차단 사유와 실제 복구 경�
     recoveryPaths: ['REEXTRACT', 'MANUAL_REGISTRATION'],
     requiredSupplements: [],
     validationFailureReason: 'VISIT_EVIDENCE_REQUIRED',
+    validationDiagnostic: null,
     traceId: 'trace-5',
   })
 })
@@ -337,6 +341,7 @@ test('보충 후속 중복 실패는 기존 자원 확인 경로만 파싱한다
     recoveryPaths: ['EXISTING_RESOURCE'],
     requiredSupplements: [],
     validationFailureReason: 'DUPLICATE_CONFLICT',
+    validationDiagnostic: null,
     traceId: undefined,
   })
 })

@@ -294,11 +294,11 @@ class GeminiHttpVideoExtractionAdapterTest {
     }
 
     @Test
-    @DisplayName("인증·권한 차단을 PROVIDER_BLOCKED로 정규화한다")
-    void 추출_인증권한차단_PROVIDER_BLOCKED로정규화한다() throws Exception {
-        for (int status : new int[]{401, 403}) {
-            assertStatusFailure(status, AiProviderFailureCategory.PROVIDER_BLOCKED);
-        }
+    @DisplayName("인증·결제·권한 오류를 구분한다")
+    void 추출_인증결제권한오류_각각구분한다() throws Exception {
+        assertStatusFailure(401, AiProviderFailureCategory.AUTHENTICATION);
+        assertStatusFailure(402, AiProviderFailureCategory.PAYMENT_REQUIRED);
+        assertStatusFailure(403, AiProviderFailureCategory.PROVIDER_BLOCKED);
     }
 
     @Test
@@ -309,20 +309,22 @@ class GeminiHttpVideoExtractionAdapterTest {
     }
 
     @Test
-    @DisplayName("Gemini 요청 오류 4xx를 UPSTREAM으로 정규화한다")
-    void 추출_요청오류4xx_UPSTREAM으로정규화한다() throws Exception {
-        for (int status : new int[]{400, 404, 415}) {
-            assertStatusFailure(status, AiProviderFailureCategory.UPSTREAM);
+    @DisplayName("Gemini 요청 거부와 자원 미발견을 구분한다")
+    void 추출_요청거부와자원미발견_각각구분한다() throws Exception {
+        for (int status : new int[]{400, 415}) {
+            assertStatusFailure(status, AiProviderFailureCategory.REQUEST_REJECTED);
             assertStatusRetryable(status, false);
         }
+        assertStatusFailure(404, AiProviderFailureCategory.RESOURCE_NOT_FOUND);
+        assertStatusRetryable(404, false);
     }
 
     @Test
-    @DisplayName("Gemini 5xx를 UPSTREAM으로 정규화한다")
-    void 추출_5xx_UPSTREAM으로정규화한다() throws Exception {
+    @DisplayName("Gemini 5xx를 SERVER_ERROR로 정규화한다")
+    void 추출_5xx_SERVER_ERROR로정규화한다() throws Exception {
         startServer(exchange -> respond(exchange, 503, "{\"error\":{}}"));
 
-        assertFailure(AiProviderFailureCategory.UPSTREAM);
+        assertFailure(AiProviderFailureCategory.SERVER_ERROR);
         assertThatThrownBy(() -> adapter(serverUrl()).extract(request()))
                 .isInstanceOf(AiProviderException.class)
                 .extracting(exception -> ((AiProviderException) exception).retryable())
@@ -776,7 +778,13 @@ class GeminiHttpVideoExtractionAdapterTest {
     private void assertStatusFailure(int status, AiProviderFailureCategory expectedCategory) throws Exception {
         startServer(exchange -> respond(exchange, status, "{\"error\":{}}"));
         try {
-            assertFailure(expectedCategory);
+            assertThatThrownBy(() -> adapter(serverUrl()).extract(request()))
+                    .isInstanceOf(AiProviderException.class)
+                    .satisfies(exception -> {
+                        AiProviderException failure = (AiProviderException) exception;
+                        assertThat(failure.category()).isEqualTo(expectedCategory);
+                        assertThat(failure.httpStatus()).isEqualTo(status);
+                    });
         } finally {
             server.stop(0);
             server = null;

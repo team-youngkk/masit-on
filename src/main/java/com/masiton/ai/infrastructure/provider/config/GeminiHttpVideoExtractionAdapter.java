@@ -81,7 +81,7 @@ final class GeminiHttpVideoExtractionAdapter implements AiVideoExtractionProvide
         } catch (java.net.http.HttpTimeoutException exception) {
             throw new AiProviderException(AiProviderFailureCategory.TIMEOUT, exception);
         } catch (IOException exception) {
-            throw new AiProviderException(AiProviderFailureCategory.UPSTREAM, exception);
+            throw new AiProviderException(AiProviderFailureCategory.NETWORK_ERROR, exception);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             throw new AiProviderException(AiProviderFailureCategory.TIMEOUT, exception);
@@ -437,20 +437,33 @@ final class GeminiHttpVideoExtractionAdapter implements AiVideoExtractionProvide
 
     private void classifyStatus(int statusCode) {
         if (statusCode == 408) {
-            throw new AiProviderException(AiProviderFailureCategory.TIMEOUT);
+            throw failure(AiProviderFailureCategory.TIMEOUT, statusCode, true);
         }
-        if (statusCode == 401 || statusCode == 403) {
-            throw new AiProviderException(AiProviderFailureCategory.PROVIDER_BLOCKED);
+        if (statusCode == 401) {
+            throw failure(AiProviderFailureCategory.AUTHENTICATION, statusCode, false);
+        }
+        if (statusCode == 402) {
+            throw failure(AiProviderFailureCategory.PAYMENT_REQUIRED, statusCode, false);
+        }
+        if (statusCode == 403) {
+            throw failure(AiProviderFailureCategory.PROVIDER_BLOCKED, statusCode, false);
         }
         if (statusCode == 429) {
-            throw new AiProviderException(AiProviderFailureCategory.RATE_LIMIT);
+            throw failure(AiProviderFailureCategory.RATE_LIMIT, statusCode, true);
+        }
+        if (statusCode == 404) {
+            throw failure(AiProviderFailureCategory.RESOURCE_NOT_FOUND, statusCode, false);
         }
         if (statusCode >= 400 && statusCode < 500) {
-            throw new AiProviderException(AiProviderFailureCategory.UPSTREAM, false);
+            throw failure(AiProviderFailureCategory.REQUEST_REJECTED, statusCode, false);
         }
         if (statusCode < 200 || statusCode >= 300) {
-            throw new AiProviderException(AiProviderFailureCategory.UPSTREAM);
+            throw failure(AiProviderFailureCategory.SERVER_ERROR, statusCode, true);
         }
+    }
+
+    private AiProviderException failure(AiProviderFailureCategory category, int httpStatus, boolean retryable) {
+        return new AiProviderException(category, retryable, null, httpStatus);
     }
 
     private AiVideoExtractionResult normalize(HttpResponse<InputStream> response, AiVideoExtractionRequest request)
