@@ -50,7 +50,7 @@ class AiExtractionWorkerServiceTest {
         doReturn(Optional.of(job(1))).when(store).claim(any(), any(), any(), anyInt(), any(), anyLong());
         when(store.beginRetry(any(), any(), any(), any(), anyInt(), any(), anyLong()))
                 .thenReturn(Optional.of(2), Optional.of(3));
-        when(store.recordRetryableFailure(any(), any(), anyInt(), any(), any(), anyString())).thenReturn(true);
+        when(store.recordRetryableFailure(any(), any(), anyInt(), any(), any(), anyString(), any())).thenReturn(true);
         doThrow(new AiProviderException(AiProviderFailureCategory.TIMEOUT))
                 .doThrow(new AiProviderException(AiProviderFailureCategory.RATE_LIMIT))
                 .doThrow(new AiProviderException(AiProviderFailureCategory.UPSTREAM))
@@ -59,7 +59,7 @@ class AiExtractionWorkerServiceTest {
         service.poll();
 
         verify(provider, times(3)).extract(any());
-        verify(store).completeFailure(any(), any(), eq(3), any(), any(), eq("UPSTREAM"));
+        verify(store).completeFailure(any(), any(), eq(3), any(), any(), eq("UPSTREAM"), any());
         assertThat(delay.delays).containsExactly(Duration.ofSeconds(5), Duration.ofSeconds(30));
     }
 
@@ -73,7 +73,7 @@ class AiExtractionWorkerServiceTest {
         service.poll();
 
         verify(provider).extract(any());
-        verify(store).completeFailure(any(), any(), eq(1), any(), any(), eq("SCHEMA"));
+        verify(store).completeFailure(any(), any(), eq(1), any(), any(), eq("SCHEMA"), any());
         verify(store, never()).recordRetryableFailure(any(), any(), anyInt(), any(), any(), any());
         assertThat(delay.delays).isEmpty();
     }

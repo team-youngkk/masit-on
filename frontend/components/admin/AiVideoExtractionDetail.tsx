@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { StatePanel } from '@/components/ui/StatePanel'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { aiConfidenceTone } from '@/lib/admin/ai-confidence'
+import { aiDiagnosticAction, aiDiagnosticLabel } from '@/lib/admin/ai-diagnostics'
 import {
   aiExtractionMessageFor,
   discardAllBlockedRegistrationUnits,
@@ -88,7 +89,7 @@ export function AiVideoExtractionDetail({ jobId }: { jobId: string }) {
       <p className={styles.meta} aria-label="등록 결과 집계">{registrationSummaryLabel(summary)} · 현재 등록 {summary.registered}/{summary.total}개 · 자동 확정 {summary.autoConfirmed}개 · 보류 {summary.autoBlocked}개 · 거부 {summary.autoRejected}개 · 수동 보정 {summary.manualOverride}개</p>
       <p className={styles.meta}>버전 {data.provider} / {data.modelVersion} / {data.promptVersion} / {data.schemaVersion}</p>
       <p className={styles.meta}><a href={data.youtube.videoUrl} target="_blank" rel="noreferrer">원본 유튜브 영상 보기</a></p>
-      {data.error ? <p className={styles.warning} role="alert">실패 범주: {data.error.category} · {data.error.retryable ? '재시도 가능' : '재시도 불가'} · 시도 {data.attemptCount}회</p> : null}
+      {data.error ? <p className={styles.warning} role="alert">실패 사유: {aiDiagnosticLabel(data.failureDiagnostic, data.error.category)} · 시도 {data.attemptCount}회{aiDiagnosticAction(data.failureDiagnostic) ? ` · ${aiDiagnosticAction(data.failureDiagnostic)}` : ''}</p> : null}
     </section>
 
     <section className={styles.panel} aria-labelledby="registration-unit-heading">
@@ -109,11 +110,12 @@ export function AiVideoExtractionDetail({ jobId }: { jobId: string }) {
       <p className={styles.hint}>입력 원문, 보완 텍스트, Provider 응답 전문과 비밀정보는 표시하지 않습니다.</p>
       {data.candidates.length ? <ul className={styles.candidates}>{data.candidates.map((candidate, index) => <CandidateCard key={candidate.candidateTagId ?? `${candidate.field}-${index}`} candidate={candidate} />)}</ul> : <p className={styles.hint}>표시할 후보가 없습니다.</p>}
       {data.missingFields.length ? <p className={styles.warning}>누락 필드: {data.missingFields.join(', ')}</p> : null}
+      {data.snapshotDiagnostic ? <p className={styles.warning}>후보 판정 사유: {aiDiagnosticLabel(data.snapshotDiagnostic)}</p> : null}
     </section>
 
     <section className={styles.panel} aria-labelledby="attempt-heading">
       <h2 id="attempt-heading">실행 시도</h2>
-      {data.attempts.length ? <ul>{data.attempts.map((attempt) => <li key={attempt.attemptNo}>#{attempt.attemptNo} · {attempt.outcome}{attempt.errorCategory ? ` · ${attempt.errorCategory}` : ''}</li>)}</ul> : <p className={styles.hint}>기록된 실행 시도가 없습니다.</p>}
+      {data.attempts.length ? <ul>{data.attempts.map((attempt) => <li key={attempt.attemptNo}>#{attempt.attemptNo} · {attempt.outcome}{attempt.errorCategory ? ` · ${aiDiagnosticLabel(attempt.failureDiagnostic, attempt.errorCategory)}` : ''}</li>)}</ul> : <p className={styles.hint}>기록된 실행 시도가 없습니다.</p>}
     </section>
 
     <section className={styles.panel} aria-labelledby="retry-heading">

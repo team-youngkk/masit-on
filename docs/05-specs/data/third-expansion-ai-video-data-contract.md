@@ -6,6 +6,7 @@ owner: 김인안
 reviewers:
   - 박진영
 related_documents:
+  - ../../08-planning/issue-445-ai-failure-diagnostics.md
   - README.md
   - data-model.md
   - entity-definitions.md
@@ -28,6 +29,8 @@ related_documents:
 ---
 
 # 3차 확장 AI 영상 추출 데이터 계약
+
+진단 확장은 [이슈 #445 설계](../../08-planning/issue-445-ai-failure-diagnostics.md)를 근거로 한다. 작업·시도의 기존 `error_category`와 새 `failure_http_status`에서 읽기 응답의 `failureDiagnostic`을 구성한다. 단위의 `blockDiagnostic`은 기존 `block_reason`에서 파생한다. Provider 응답 전문과 자유 문장은 보존하지 않는다. 추가 진단 필드의 저장은 설계 문서의 후속 검토 대상으로 남긴다.
 
 ## 1. 결정 상태와 범위
 
@@ -94,6 +97,7 @@ related_documents:
 | `lease_owner` | `varchar(128)` | Yes | 실행 상태와 조합 | Worker 소유자 |
 | `lease_expires_at` | 시간 | Yes | lease 소유와 조합 | claim 만료 |
 | `error_category` | `varchar(64)` | Yes | 실패 상태와 조합 | 정규화 오류 범주 |
+| `failure_http_status` | `integer` | Yes | `100..599`, 신규 V24 | 실패 응답의 실제 HTTP 상태. 응답 전 실패·과거 작업은 null |
 | `created_at`, `started_at`, `finished_at` | 시간 | 상태별 | 시각 규칙 | 접수·시작·종료 |
 
 멱등성 후보 키는 `(youtube_channel_id, youtube_video_id, input_hash, provider, model_version, prompt_version, schema_version)`다. 동일 키의 Webhook 반복, 관리자 재입력과 초기 적립 요청은 하나의 작업으로 수렴한다.
@@ -359,6 +363,7 @@ AI·자연어 파서는 `ACTIVE` 정의만 사용한다. `DEPRECATED` 태그는 
 | `job_id` | `uuid` | NN | FK → `ai_extraction_job.id` `ON DELETE CASCADE` | 작업 |
 | `attempt_no` | `smallint` | NN | `(job_id, attempt_no)` unique | 시도 번호 |
 | `provider_request_id` | `varchar(128)` | Yes | 외부 요청 식별자 | 비밀정보가 아닌 추적값만 저장 |
+| `failure_http_status` | `integer` | Yes | `100..599`, 신규 V24 | 해당 실패 시도의 HTTP 상태. 응답 전 실패·과거 시도는 null |
 | `started_at`, `finished_at` | 시간 | NN | 시각 규칙 | 처리 시간 |
 | `outcome` | `varchar(16)` | NN | `SUCCEEDED/FAILED/PARTIAL` | 시도 결과 |
 | `error_category` | `varchar(64)` | Yes | 실패 시 필수 | timeout·429·5xx·schema 등 |

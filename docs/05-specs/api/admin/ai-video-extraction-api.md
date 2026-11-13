@@ -6,6 +6,7 @@ owner: 김인안
 reviewers:
   - 박진영
 related_documents:
+  - ../../../08-planning/issue-445-ai-failure-diagnostics.md
   - ../common/region-contract.md
   - ../README.md
   - ../../../01-requirements/functional-requirements.md
@@ -290,7 +291,11 @@ related_documents:
 - exact-name 후보가 2건 이상이면 `PLACE_AMBIGUOUS`로 차단하고 fallback으로 전환하지 않는다. exact-name 후보가 없을 때 fallback 조건을 만족하는 후보가 없으면 `PLACE_NOT_FOUND`, 2건 이상이면 `PLACE_AMBIGUOUS`로 차단한다.
 - 자동 확정 응답의 장소 검색어·채택한 Kakao 장소 식별자·URL·도로명주소·`matchedBy`는 `place_decision`에 기록하고, 대표 카테고리·판정 당시 사용한 매핑 행 식별자(`matchedMappingId`)·`resolvedBy`는 `category_decision`에 기록한다. 보충 입력으로 확정한 장소는 `MANUAL_OVERRIDE`로 기록하며, 매핑 행을 사용하지 않은 수동 카테고리 보정의 `matchedMappingId`는 `null`이다. 원문 검색 응답 전체는 저장하지 않는다.
 - `registeredRestaurantId`, `kakaoPlaceUrl` 등 모든 식별자는 불투명 문자열이며 클라이언트는 생성 규칙을 검증하지 않는다.
-- 실패 응답은 `error.category`, `retryable`, `attemptCount`만 제공하며 외부 응답 전문은 제공하지 않는다.
+- 실패 응답은 기존 `error.category`, `retryable`, `attemptCount`에 안전한 구조화 `failureDiagnostic`을 추가한다. 작업과 각 실행 시도에서 최종 실패 이벤트·시도별 실패 이벤트를 구분하고, 과거 상세 정보가 없는 경우 null을 허용한다. 외부 응답 전문은 제공하지 않는다. 필드·사유·호환 규칙은 [이슈 #445 설계](../../../08-planning/issue-445-ai-failure-diagnostics.md) 3~6절을 따른다.
+
+`failureDiagnostic`은 `version=1`, `reasonCode`, `service`, `stage`, nullable `httpStatus`, nullable `providerCode`, `missingFields` 배열, nullable `observedAt`, nullable `traceId`로 구성한다. 새 작업·시도는 기존 `error.category` 및 실제 `failure_http_status`에서 생성한다. 저장되지 않은 Provider 코드는 null로 응답한다. 과거 `UPSTREAM` 등 상세 근거가 없는 경우 `DETAIL_NOT_RECORDED`로 표시하고 HTTP 상태나 결제 원인을 추정하지 않는다. 작업의 최종 진단과 `attempts[].failureDiagnostic`은 각각 최종 종료 원인과 개별 시도 원인을 나타낸다. 등록 단위 `blockDiagnostic`은 기존 `blockReason`에 대응하며, 추가 근거가 그 단위와 결속되지 않으면 `missingFields`를 빈 배열로 둔다.
+
+단위가 없는 `AUTO_BLOCKED` Snapshot의 상세 응답에는 `snapshotDiagnostic`을 제공한다. 기존 Snapshot의 누락 필드 중 허용 필드만 근거로 사용하고, 누락 필드가 없으면 `UNKNOWN_FAILURE`로 표시한다. 보충 입력 `CONFIRM`의 422 응답에는 기존 `details.validationFailureReason`이 존재할 때 같은 사유의 `details.validationDiagnostic`을 추가한다. 이 일시적 진단은 기존 `blockReason`을 바꾸지 않는다. 추가 HTTP 상태·Provider 코드가 관측되지 않은 경우 null 또는 미포함으로 두며 추정하지 않는다.
 
 ### 3.4 `POST /api/admin/ai/video-extractions/{jobId}/retry` 수동 재시도
 

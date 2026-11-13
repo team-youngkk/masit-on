@@ -1,6 +1,7 @@
 ---
 status: accepted
 related_documents:
+  - ../../08-planning/issue-445-ai-failure-diagnostics.md
   - ../api/common/region-contract.md
   - ../../../src/main/resources/db/migration/V20__add_region_hierarchy.sql
   - physical-data-model.md
@@ -16,6 +17,8 @@ related_documents:
 ---
 
 # 맛잇온 Flyway 마이그레이션 계획
+
+`V24__add_ai_failure_http_status.sql`은 [이슈 #445 진단 설계](../../08-planning/issue-445-ai-failure-diagnostics.md)의 실행 실패 HTTP 근거를 위해 `ai_extraction_job`과 `ai_extraction_attempt`에 nullable `failure_http_status integer`를 추가하고 `100..599` CHECK를 둔다. 과거 행은 null로 남겨 실제 상태를 추정하지 않는다. 기존 마이그레이션을 변경하지 않으며, 작업·시도 실패 기록과 상태값 저장은 같은 트랜잭션으로 검증한다.
 
 ## 1. 파일 규칙
 
