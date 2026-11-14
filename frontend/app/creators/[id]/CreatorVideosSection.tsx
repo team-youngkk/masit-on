@@ -2,7 +2,6 @@
 
 import { useCallback, useState } from 'react'
 
-import { Card } from '@/components/ui/Card'
 import { StatePanel } from '@/components/ui/StatePanel'
 import { isSafeHttpUrl } from '@/lib/api'
 import type { CreatorVideosResponse, FetchCreatorVideosResult } from '@/lib/creators-api'
@@ -111,7 +110,8 @@ export function CreatorVideosSection({
           ) : null
 
           return (
-            <Card key={video.id} title={video.title} level={3}>
+            <article key={video.id} className={styles.videoEntry}>
+              <h3>{video.title}</h3>
               {isSafeHttpUrl(video.sourceUrl) ? (
                 <a
                   href={video.sourceUrl}
@@ -128,7 +128,7 @@ export function CreatorVideosSection({
                   <span className={styles.videoLinkLabel}>{video.sourceUrl}</span>
                 </div>
               )}
-            </Card>
+            </article>
           )
         })}
       </div>
@@ -140,3 +140,4 @@ export function CreatorVideosSection({
     </>
   )
 }
+

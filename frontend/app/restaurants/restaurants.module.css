@@ -1,12 +1,13 @@
 .page {
   min-width: 0;
-  margin-top: calc(-1 * var(--space-8));
+  margin-top: 0;
 }
 .heroShell {
   width: auto;
   margin-inline: calc(50% - 50vw);
   padding-inline: var(--layout-gutter);
-  background: linear-gradient(115deg, var(--color-hero-start) 0%, var(--color-hero-mid) 58%, var(--color-hero-end) 100%);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-background);
 }
 .hero {
   display: grid;
@@ -16,7 +17,7 @@
   max-width: var(--layout-max-width);
   min-height: 16rem;
   margin: 0 auto;
-  padding: clamp(2rem, 4vw, 3rem) 0 clamp(3.5rem, 5vw, 4.5rem);
+  padding: clamp(2rem, 4vw, 3rem) 0 var(--space-6);
 }
 .heroCopy {
   min-width: 0;
@@ -32,10 +33,6 @@
   line-height: 1.08;
   letter-spacing: -0.04em;
 }
-.hero h1 strong {
-  color: var(--color-primary-strong);
-  font-weight: inherit;
-}
 .hero > p:last-child {
   color: var(--color-text-muted);
 }
@@ -49,12 +46,13 @@
   aspect-ratio: 16 / 9;
   min-height: 0;
   overflow: hidden;
-  border-radius: 2rem 2rem 0.75rem 2rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
   background: var(--color-surface-muted);
-  box-shadow: 0 1.5rem 3rem rgb(67 51 28 / 20%);
+  box-shadow: var(--shadow-card);
 }
 .eyebrow {
-  color: var(--color-primary-deep);
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   font-weight: 800;
 }
@@ -66,18 +64,18 @@
   max-width: var(--layout-max-width);
   position: relative;
   z-index: 1;
-  margin: -2rem auto 0;
-  padding-bottom: 0;
+  margin: var(--space-6) auto 0;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
 }
 .nameSearch {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--space-2);
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-card);
+  padding: 0;
 }
 .queryInput {
   min-width: 0;
@@ -99,11 +97,9 @@
   white-space: nowrap;
 }
 .toolbarWrap {
-  margin-inline: 0;
   margin-top: var(--space-4);
-  padding: 0;
-  border: 0;
-  background: transparent;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
 }
 .toolbar {
   display: flex;
@@ -134,7 +130,7 @@
   position: relative;
 }
 .select {
-  min-height: 34px;
+  min-height: var(--control-min-height);
   max-width: 9.5rem;
   padding: 0 0.75rem;
   border: 1px solid var(--color-border-strong);
@@ -228,7 +224,7 @@
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  min-height: 36px;
+  min-height: var(--control-min-height);
   padding: 0 0.875rem;
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-full);
@@ -318,10 +314,16 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
-  box-shadow: var(--shadow-card);
+  box-shadow: none;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+.restaurantCard:hover,
+.restaurantCard:focus-within {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
 }
 .cardMedia {
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 4 / 3;
   min-height: 0;
   overflow: hidden;
   background: var(--color-surface-muted);
@@ -357,7 +359,7 @@
 .cardAddress {
   margin-top: 0.35rem;
   color: var(--color-text-muted);
-  font-size: 0.75rem;
+  font-size: var(--font-size-sm);
   font-weight: 400;
   letter-spacing: -0.015em;
   line-height: 1.4;
@@ -415,7 +417,7 @@
   min-height: var(--control-min-height);
   margin-top: auto;
   margin-bottom: var(--space-4);
-  padding: 0;
+  padding-inline: var(--space-1);
   color: var(--color-primary-deep);
   font-size: 0.875rem;
   font-weight: 700;
@@ -499,9 +501,6 @@
   }
 }
 @media (max-width: 767px) {
-  .page {
-    margin-top: calc(-1 * var(--space-4));
-  }
   .heroShell {
     padding-top: 0;
   }
@@ -513,11 +512,8 @@
   .heroVisual {
     min-height: 0;
   }
-  .hero {
-    padding-bottom: 5rem;
-  }
   .structuredSearch {
-    margin-top: -2rem;
+    margin-top: var(--space-4);
   }
   .toolbar {
     align-items: flex-start;
@@ -526,3 +522,4 @@
     padding-inline: var(--space-2);
   }
 }
+

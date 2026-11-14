@@ -4,7 +4,6 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
-  box-shadow: var(--shadow-card);
 }
 
 .collapsedSearch {
@@ -131,9 +130,9 @@
 }
 
 :global(html[data-theme='dark']) .criteriaChips span {
-  border-color: #52705a;
-  background: #193f29;
-  color: #d8f3df;
+  border-color: var(--color-border-strong);
+  background: var(--color-primary-faint);
+  color: var(--color-primary-strong);
 }
 
 :global(html[data-theme='dark']) .criteriaChips .emptyCriteria {
@@ -216,34 +215,6 @@
   font-weight: 800;
 }
 
-:global(html[data-theme='dark']) .tagOption {
-  border-color: #52705a;
-  color: #d8f3df;
-}
-
-:global(html[data-theme='dark']) .tagOption:hover,
-:global(html[data-theme='dark']) .tagOption:focus-within {
-  border-color: #86efac;
-  color: #f2fff4;
-}
-
-:global(html[data-theme='dark']) .tagSelected:hover,
-:global(html[data-theme='dark']) .tagSelected:focus-within {
-  color: #052e16;
-}
-
-:global(html[data-theme='dark']) .tagSelected {
-  border-color: #86efac;
-  background: #4ade80;
-  color: #052e16;
-}
-
-:global(html[data-theme='dark']) .appliedBadge {
-  border-color: #65d98a;
-  background: #1f6b3b;
-  color: #eaffef;
-}
-
 .tagHint { margin: 0; color: var(--color-text-muted); font-size: var(--font-size-sm); }
 .tags:disabled { opacity: 0.6; }
 .guidance { margin: var(--space-2) 0 0; padding-left: var(--space-4); }
@@ -267,3 +238,4 @@
 @media (min-width: 1280px) {
   .search { padding: var(--space-6); }
 }
+
