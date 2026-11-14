@@ -2,7 +2,8 @@
   position: relative;
   min-height: clamp(16rem, 42vh, 28rem);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
   overflow: hidden;
 }
 

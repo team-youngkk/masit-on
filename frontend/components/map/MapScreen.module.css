@@ -9,17 +9,20 @@
   min-height: var(--control-min-height);
   margin: var(--space-2) 0;
   padding: 0 var(--space-4);
-  border: 1px solid color-mix(in srgb, var(--color-primary) 45%, var(--color-border));
-  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
   background: var(--color-surface);
-  color: var(--color-primary-strong);
-  font-weight: 700;
+  color: var(--color-text);
+  font-weight: 600;
   cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
 }
 
 .filterToggle:hover,
 .filterToggle:focus-visible {
   background: var(--color-primary-faint);
+  border-color: var(--color-primary-strong);
+  color: var(--color-primary-deep);
 }
 
 .filterContent {
@@ -34,7 +37,7 @@
   margin: 0;
   padding: var(--space-3) var(--space-4);
   border: 1px solid color-mix(in srgb, var(--color-warning) 28%, var(--color-border));
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   background: var(--color-warning-soft);
   color: var(--color-text);
 }
@@ -61,6 +64,7 @@
     'summary'
     'list';
   gap: var(--space-4);
+  align-items: start;
 }
 
 .mapArea {
@@ -88,7 +92,7 @@
   }
 
   .layout {
-    /* 768px에서는 요약·목록 레일이 지도보다 넓어지지 않게 제한한다. */
+    /* 768px에서는 지도와 선택·목록 레일의 관계가 한눈에 보이도록 고정한다. */
     grid-template-columns: minmax(0, 1fr) minmax(18rem, 20rem);
     grid-template-areas:
       'map summary'
@@ -103,6 +107,10 @@
   .summaryArea {
     position: sticky;
     top: var(--space-6);
+  }
+
+  .listArea {
+    min-width: 0;
   }
 }
 
