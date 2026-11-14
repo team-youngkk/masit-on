@@ -41,18 +41,25 @@
   z-index: 2;
   min-height: var(--control-min-height);
   padding: 0 var(--space-3);
-  border: 1px solid rgb(255 255 255 / 75%);
+  border: 1px solid color-mix(in srgb, var(--color-text-on-image) 75%, transparent);
   border-radius: var(--radius-full);
-  background: rgb(31 29 26 / 68%);
+  background: color-mix(in srgb, var(--color-text) 80%, transparent);
   color: var(--color-text-on-image);
   font-size: var(--font-size-sm);
   font-weight: 700;
   cursor: pointer;
-  backdrop-filter: blur(4px);
 }
 
 .pauseButton:hover {
-  background: rgb(31 29 26 / 82%);
+  background: color-mix(in srgb, var(--color-text) 92%, transparent);
+}
+
+:global(html[data-theme='dark']) .pauseButton {
+  background: color-mix(in srgb, var(--color-background) 88%, transparent);
+}
+
+:global(html[data-theme='dark']) .pauseButton:hover {
+  background: color-mix(in srgb, var(--color-background) 96%, transparent);
 }
 
 .pauseButton:focus-visible {
@@ -65,3 +72,4 @@
     transition: none;
   }
 }
+

@@ -3,7 +3,6 @@ import Link from 'next/link'
 import { cache } from 'react'
 import type { Metadata } from 'next'
 
-import { Card } from '@/components/ui/Card'
 import { PageShell, SectionHeader } from '@/components/ui/PageShell'
 import { StatePanel } from '@/components/ui/StatePanel'
 import { FavoriteButton } from '@/components/personal/FavoriteButton'
@@ -118,6 +117,13 @@ export default async function RestaurantDetailPage({
         />
         <div className={styles.heading}>
           <h1 className={styles.name}>{restaurant.name}</h1>
+          <p className={styles.address}>
+            <span className={styles.srOnly}>주소: </span>
+            {restaurant.address.roadAddress}
+          </p>
+          {restaurant.address.detailAddress != null ? (
+            <p className={styles.detailAddress}>{restaurant.address.detailAddress}</p>
+          ) : null}
           <p className={styles.category}>{restaurant.category}</p>
         </div>
         <div className={styles.personalActions}>
@@ -141,17 +147,6 @@ export default async function RestaurantDetailPage({
 
       <section className={styles.infoSection} aria-label="기본 정보">
         <dl className={styles.infoList}>
-          <div className={styles.infoRow}>
-            <dt>주소</dt>
-            <dd>
-              {restaurant.address.roadAddress}
-              {restaurant.address.detailAddress != null ? (
-                <span className={styles.detailAddress}>
-                  {restaurant.address.detailAddress}
-                </span>
-              ) : null}
-            </dd>
-          </div>
           <div className={styles.infoRow}>
             <dt>전화번호</dt>
             <dd>{restaurant.phoneNumber}</dd>
@@ -249,12 +244,9 @@ function RestaurantContent({ restaurant }: { restaurant: RestaurantDetail }) {
               )
 
               return (
-                <Card
-                  key={video.id}
-                  title={video.title}
-                  level={4}
-                  meta={video.channelName}
-                >
+                <article key={video.id} className={styles.videoItem}>
+                  <h4 className={styles.videoTitle}>{video.title}</h4>
+                  <p className={styles.videoChannel}>{video.channelName}</p>
                   {isSafeHttpUrl(video.sourceUrl) ? (
                     <a
                       href={video.sourceUrl}
@@ -275,7 +267,7 @@ function RestaurantContent({ restaurant }: { restaurant: RestaurantDetail }) {
                       </span>
                     </div>
                   )}
-                </Card>
+                </article>
               )
             })}
           </div>
@@ -284,3 +276,4 @@ function RestaurantContent({ restaurant }: { restaurant: RestaurantDetail }) {
     </div>
   )
 }
+

@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { useCallback, useState } from 'react'
 
-import { Card } from '@/components/ui/Card'
 import { StatePanel } from '@/components/ui/StatePanel'
 import type { CreatorRestaurantsResponse, FetchCreatorRestaurantsResult } from '@/lib/creators-api'
 import {
@@ -105,15 +104,14 @@ export function CreatorRestaurantsSection({
       <ul className={styles.restaurantList}>
         {items.map((restaurant) => (
           <li key={restaurant.id}>
-            <Card
-              title={
+            <article className={styles.restaurantEntry}>
+              <h3>
                 <Link href={`/restaurants/${encodeURIComponent(restaurant.id)}`}>
                   {restaurant.name}
                 </Link>
-              }
-              level={3}
-              meta={`${restaurant.district} · ${restaurant.category}`}
-            />
+              </h3>
+              <p>{restaurant.district} · {restaurant.category}</p>
+            </article>
           </li>
         ))}
       </ul>
@@ -125,3 +123,4 @@ export function CreatorRestaurantsSection({
     </>
   )
 }
+

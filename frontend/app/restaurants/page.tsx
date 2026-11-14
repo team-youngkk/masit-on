@@ -271,7 +271,7 @@ export default async function RestaurantsPage({
             <p className={styles.eyebrow}>맛집 탐색</p>
             <h1 id="restaurants-title">
               유튜버가 다녀온 맛집,<br />
-              <strong>오늘은 어디로 갈까요?</strong>
+              오늘은 어디로 갈까요?
             </h1>
             <p>검증된 맛집을 영상으로 확인하고, 실패 없는 선택을 즐겨보세요.</p>
           </div>
@@ -658,3 +658,4 @@ export default async function RestaurantsPage({
     </PageShell>
   )
 }
+
