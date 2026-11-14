@@ -80,11 +80,14 @@ export default async function PopularRestaurantsPage() {
 
   return (
     <PageShell
+      eyebrow="동네 취재 노트"
       title="인기 맛집"
-      description="지금 가장 많은 관심을 받는 공개 맛집이에요."
+      description="현재 찜 수가 많은 공개 맛집을 순서대로 기록했어요."
     >
       {/* 정렬 기준 설명은 상태와 무관하게 항상 표시한다(wireframe 4절 POPULAR-LIST). */}
-      <p className={styles.subtitle}>현재 가장 많이 찜한 공개 맛집</p>
+      <p className={styles.subtitle}>
+        지역과 음식 종류를 먼저 보고, 찜 수와 순위를 비교해 보세요.
+      </p>
 
       {!result.ok && !isDesignPreview ? (
         <StatePanel
@@ -110,57 +113,79 @@ export default async function PopularRestaurantsPage() {
               description="인기 맛집 API가 연결되지 않아 더미 데이터로 표시하고 있습니다."
             />
           ) : null}
-          <ol className={styles.list}>
+          <ol className={styles.list} aria-label="현재 많이 찜한 공개 맛집">
             {displayItems.map((item) => (
               <li key={item.restaurantId} className={styles.item}>
                 <article className={styles.popularCard}>
-                <div className={styles.cardMedia}>
-                  <RestaurantImage
-                    representativeImageUrl={item.representativeImageUrl}
-                    restaurantId={item.restaurantId}
-                    category={item.category}
-                    alt=""
-                    className={styles.cardMediaImage}
-                  />
-                </div>
-                <div className={styles.cardBody}>
-                  <div className={styles.cardTitleRow}>
-                    <span
-                      className={styles.rank}
-                      aria-label={`인기 ${item.rank}위`}
-                    >
-                      {item.rank}
-                    </span>
-                    <h2>
-                      <Link
-                        href={
-                          isDesignPreview
-                            ? `/restaurants?query=${encodeURIComponent(item.name)}`
-                            : `/restaurants/${encodeURIComponent(item.restaurantId)}`
-                        }
-                      >
-                        {item.name}
-                      </Link>
-                    </h2>
+                  <div className={styles.cardMedia}>
+                    <RestaurantImage
+                      representativeImageUrl={item.representativeImageUrl}
+                      restaurantId={item.restaurantId}
+                      category={item.category}
+                      alt=""
+                      className={styles.cardMediaImage}
+                    />
                   </div>
-                  <p className={styles.cardMeta}>
-                    {item.roadAddress} · {item.category}
-                  </p>
-                  <StatusBadge className={styles.favoriteBadge} tone="success">
-                    찜 {item.favoriteCount.toLocaleString()}
-                  </StatusBadge>
-                  <Link
-                    href={
-                      isDesignPreview
-                        ? `/restaurants?query=${encodeURIComponent(item.name)}`
-                        : `/restaurants/${encodeURIComponent(item.restaurantId)}`
-                    }
-                    className={styles.detailLink}
-                    aria-label={`${item.name} 상세 보기`}
-                  >
-                    상세 보기 <span aria-hidden="true">→</span>
-                  </Link>
-                </div>
+                  <div className={styles.cardBody}>
+                    <div className={styles.cardTitleRow}>
+                      <span
+                        className={styles.rank}
+                        aria-label={`인기 ${item.rank}위`}
+                      >
+                        <span className={styles.rankLabel} aria-hidden="true">
+                          순위
+                        </span>
+                        <span className={styles.rankNumber} aria-hidden="true">
+                          {item.rank}
+                        </span>
+                      </span>
+                      <h2>
+                        <Link
+                          href={
+                            isDesignPreview
+                              ? `/restaurants?query=${encodeURIComponent(item.name)}`
+                              : `/restaurants/${encodeURIComponent(item.restaurantId)}`
+                          }
+                        >
+                          {item.name}
+                        </Link>
+                      </h2>
+                    </div>
+                    <div
+                      className={styles.cardMeta}
+                      aria-label={`${item.roadAddress}, ${item.category}`}
+                    >
+                      <span className={styles.metaItem}>
+                        <span className={styles.metaLabel} aria-hidden="true">
+                          지역
+                        </span>
+                        <span>{item.roadAddress}</span>
+                      </span>
+                      <span className={styles.metaDivider} aria-hidden="true">
+                        ·
+                      </span>
+                      <span className={styles.metaItem}>
+                        <span className={styles.metaLabel} aria-hidden="true">
+                          음식
+                        </span>
+                        <span>{item.category}</span>
+                      </span>
+                    </div>
+                    <StatusBadge className={styles.favoriteBadge} tone="neutral">
+                      찜 {item.favoriteCount.toLocaleString()}
+                    </StatusBadge>
+                    <Link
+                      href={
+                        isDesignPreview
+                          ? `/restaurants?query=${encodeURIComponent(item.name)}`
+                          : `/restaurants/${encodeURIComponent(item.restaurantId)}`
+                      }
+                      className={styles.detailLink}
+                      aria-label={`${item.name} 상세 보기`}
+                    >
+                      상세 보기
+                    </Link>
+                  </div>
                 </article>
               </li>
             ))}

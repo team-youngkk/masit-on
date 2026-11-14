@@ -4,8 +4,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  background: var(--color-primary-faint);
-  box-shadow: var(--shadow-card);
+  background: var(--color-surface-muted);
 }
 
 .map {
@@ -38,7 +37,7 @@
   gap: var(--space-3);
   margin: 0;
   padding: var(--space-4);
-  background: color-mix(in srgb, var(--color-surface-muted) 92%, var(--color-primary-soft));
+  background: color-mix(in srgb, var(--color-surface) 94%, var(--color-surface-muted));
   color: var(--color-text-muted);
   text-align: center;
 }
@@ -47,12 +46,17 @@
   min-height: var(--control-min-height);
   min-width: var(--control-min-height);
   padding: 0 var(--space-4);
-  border: 1px solid color-mix(in srgb, var(--color-primary) 45%, var(--color-border));
-  border-radius: var(--radius-full);
-  background: var(--color-surface);
-  color: var(--color-primary-strong);
-  font-weight: 700;
+  border: 1px solid var(--color-primary-deep);
+  border-radius: var(--radius-md);
+  background: var(--color-primary-deep);
+  color: var(--color-text-on-primary);
+  font-weight: 600;
   cursor: pointer;
+}
+
+.retry:hover,
+.retry:focus-visible {
+  background: var(--color-primary-strong);
 }
 
 .marker {

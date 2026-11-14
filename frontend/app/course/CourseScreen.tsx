@@ -804,7 +804,6 @@ function LiveCourseScreen({ initialFilters }: { initialFilters: CourseSearchFilt
             headingLevel={3}
             title="코스를 구성해 주세요"
             description="맛집을 2곳 이상 선택하면 자동차 이동 순서를 계산할 수 있습니다."
-            icon="1"
           />
         ) : (
           <ol className={styles.selectionList}>
@@ -981,7 +980,6 @@ function DesignCoursePreview() {
       <section className={styles.previewPicker} aria-labelledby="preview-course-picker-heading">
         <div className={styles.previewHeading}>
           <div>
-            <p className={styles.previewEyebrow}>맛집 코스</p>
             <h2 id="preview-course-picker-heading">맛집을 선택하세요</h2>
             <p>2~5곳을 선택해서 나만의 맛집 코스를 만들어보세요.</p>
           </div>
@@ -1007,7 +1005,6 @@ function DesignCoursePreview() {
                 <strong>{candidate.name}</strong>
                 <small>{candidate.district} · {candidate.category}</small>
               </span>
-              <span className={styles.previewDragHandle} aria-hidden="true">⠿</span>
             </li>
           ))}
         </ul>
@@ -1027,7 +1024,6 @@ function DesignCoursePreview() {
       <section className={styles.previewRoute} aria-labelledby="preview-course-route-heading">
         <div className={styles.previewHeading}>
           <div>
-            <p className={styles.previewEyebrow}>방문 순서</p>
             <h2 id="preview-course-route-heading">추천 이동 순서</h2>
             <p>선택한 맛집을 자동차로 이동하기 좋은 순서예요.</p>
           </div>
@@ -1045,7 +1041,6 @@ function DesignCoursePreview() {
           ))}
         </ol>
         <div className={styles.previewErrorCard} role="status">
-          <span className={styles.previewErrorIcon} aria-hidden="true">{generated ? '✓' : '⌁'}</span>
           <h3>{generated ? '코스를 준비했어요' : '경로를 불러오지 못했습니다'}</h3>
           <p>{generated ? `${route.length}곳을 방문하는 코스 후보입니다.` : '잠시 후 다시 시도해 주세요.'}</p>
           <button type="button" className={styles.previewRetryAction} onClick={() => setGenerated(!generated)}>
