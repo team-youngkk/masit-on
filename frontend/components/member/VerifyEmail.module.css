@@ -1,17 +1,19 @@
 .page {
   display: grid;
   gap: var(--space-6);
+  width: 100%;
   max-width: 680px;
 }
 
 .card {
   display: grid;
   gap: var(--space-4);
+  width: 100%;
+  min-width: 0;
   padding: clamp(var(--space-5), 4vw, var(--space-6));
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
-  box-shadow: var(--shadow-card);
 }
 
 .header,
@@ -20,6 +22,11 @@
 .successPanel {
   display: grid;
   gap: var(--space-4);
+}
+
+.sectionHeader {
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .form > button,
@@ -58,6 +65,7 @@
 .help {
   margin: 0;
   color: var(--color-text-muted);
+  line-height: var(--line-height-relaxed);
   overflow-wrap: anywhere;
 }
 
@@ -79,7 +87,7 @@
 
 .timer {
   margin: 0;
-  color: var(--color-danger);
+  color: var(--color-warning);
 }
 
 .helpList {
@@ -93,18 +101,22 @@
   margin: 0;
   padding: var(--space-3) var(--space-4);
   border: 1px solid transparent;
+  line-height: var(--line-height-base);
+  overflow-wrap: anywhere;
   border-radius: var(--radius-md);
 }
 
 .alert {
   border-color: color-mix(in srgb, var(--color-danger) 25%, var(--color-border));
+  border-inline-start: 3px solid var(--color-danger);
   background: var(--color-danger-soft);
-  color: var(--color-danger);
+  color: var(--color-danger-deep);
 }
 
 .status {
   border-color: color-mix(in srgb, var(--color-primary) 22%, var(--color-border));
-  background: var(--color-primary-soft);
+  border-inline-start: 3px solid var(--color-primary-strong);
+  background: var(--color-primary-faint);
   color: var(--color-primary-strong);
 }
 
@@ -118,6 +130,7 @@
   justify-content: center;
   min-height: var(--control-min-height);
   padding: 0 var(--space-4);
+  border: 1px solid var(--color-primary-deep);
   border-radius: var(--radius-md);
   background: var(--color-primary-deep);
   color: var(--color-text-on-primary);
