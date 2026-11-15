@@ -50,7 +50,7 @@ export function AiRegistrationUnits({ jobId, units, refresh, onRequestRetry }: U
   }
 
   return (
-    <ul className={styles.candidates}>
+    <ul className={styles.unitList}>
       {units.map((unit) => (
         <RegistrationUnitCard key={unit.unitId} jobId={jobId} unit={unit} refresh={refresh} onRequestRetry={onRequestRetry} />
       ))}
@@ -195,14 +195,29 @@ function RegistrationUnitCard({ jobId, unit, refresh, onRequestRetry }: CardProp
   }
 
   return (
-    <li className={styles.candidate}>
-      <div className={styles.toolbar}>
-        <h3>{unit.restaurantName}</h3>
-        <StatusBadge tone={unitTone(unit)}>{unit.reviewStatus}{unit.manualOverrideType ? ` · ${unit.manualOverrideType}` : ''}</StatusBadge>
+    <li className={styles.unitCard}>
+      <div className={styles.unitHeader}>
+        <div className={styles.unitHeading}>
+          <p className={styles.unitKicker}>등록 단위 · <code>{unit.unitId}</code></p>
+          <h3>{unit.restaurantName}</h3>
+        </div>
+        <dl className={styles.unitStatus}>
+          <dt>등록 판정</dt>
+          <dd><StatusBadge tone={unitTone(unit)}>{unitStatusLabel(unit)}</StatusBadge> <span className={styles.code}>{unit.reviewStatus}</span></dd>
+        </dl>
       </div>
 
-      {unit.manualOverrideType ? <p className={styles.hint}>{MANUAL_OVERRIDE_LABELS[unit.manualOverrideType]}</p> : null}
-      {!unit.manualOverrideType && unit.blockReason ? <p className={styles.hint}>{aiDiagnosticLabel(unit.blockDiagnostic) ?? AI_BLOCK_REASON_LABELS[unit.blockReason] ?? unit.blockReason}{aiDiagnosticAction(unit.blockDiagnostic) ? ` · ${aiDiagnosticAction(unit.blockDiagnostic)}` : ''}</p> : null}
+      {unit.manualOverrideType ? <p className={styles.notice}><strong>사후 상태</strong> · {MANUAL_OVERRIDE_LABELS[unit.manualOverrideType]} <span className={styles.code}>{unit.manualOverrideType}</span></p> : null}
+      {!unit.manualOverrideType && (unit.blockReason || unit.blockDiagnostic) ? <dl className={styles.reasonDetails}>
+        <div className={styles.reasonItem}>
+          <dt>차단 사유</dt>
+          <dd>{unit.blockReason ? <><strong>{AI_BLOCK_REASON_LABELS[unit.blockReason] ?? unit.blockReason}</strong> <span className={styles.code}>{unit.blockReason}</span></> : '응답에 기록되지 않음'}</dd>
+        </div>
+        {unit.blockDiagnostic ? <div className={styles.reasonItem}>
+          <dt>판정 근거</dt>
+          <dd>{aiDiagnosticLabel(unit.blockDiagnostic) ?? '세부 근거 미기록'}{aiDiagnosticAction(unit.blockDiagnostic) ? ` · ${aiDiagnosticAction(unit.blockDiagnostic)}` : ''}</dd>
+        </div> : null}
+      </dl> : null}
 
       {unit.placeDecision && unit.categoryDecision ? (
         <dl className={styles.unitDetails}>
@@ -216,7 +231,7 @@ function RegistrationUnitCard({ jobId, unit, refresh, onRequestRetry }: CardProp
           </div>
           <div>
             <dt>등록 결과</dt>
-            <dd>맛집 {unit.registeredRestaurantId} · 유튜버 {unit.registeredCreatorId} · 영상 {unit.registeredVideoId} · 방문 {unit.registeredVisitId}</dd>
+            <dd>맛집 <code>{unit.registeredRestaurantId}</code> · 유튜버 <code>{unit.registeredCreatorId}</code> · 영상 <code>{unit.registeredVideoId}</code> · 방문 <code>{unit.registeredVisitId}</code></dd>
           </div>
           <div>
             <dt>자원 재사용</dt>
@@ -315,17 +330,24 @@ function ExceptionPanel({
   const supplementField = conflict.requiredSupplements[0]
   const validationFailureMessage = aiValidationFailureMessageFor(conflict.validationFailureReason)
   const validationDiagnosticMessage = aiDiagnosticLabel(conflict.validationDiagnostic)
+  const primaryAction = actions[0]
+  const blockReasonMessage = conflict.blockReason
+    ? AI_BLOCK_REASON_LABELS[conflict.blockReason] ?? conflict.blockReason
+    : '응답에 등록 단위 차단 사유가 없습니다.'
 
   if (!actions.length) {
     return (
       <StatePanel
         tone="danger"
         headingLevel={4}
-        title={conflict.blockReason ? AI_BLOCK_REASON_LABELS[conflict.blockReason] ?? conflict.blockReason : '등록 조건을 충족하지 못했습니다.'}
+        title="등록 단위 검증 보류"
         description={
           <>
-            {validationFailureMessage ? <p className={styles.error}>{validationFailureMessage}</p> : null}
-            {validationDiagnosticMessage ? <p className={styles.error}>이번 검증 근거: {validationDiagnosticMessage}</p> : null}
+            <div className={styles.exceptionMeta}>
+              <p><strong>차단 사유</strong> · {blockReasonMessage}{conflict.blockReason ? <> <span className={styles.code}>{conflict.blockReason}</span></> : null}</p>
+              {validationFailureMessage ? <p><strong>이번 보충 검증 실패</strong> · {validationFailureMessage.replace(/^이번 보충 검증 실패: /, '')}{conflict.validationFailureReason ? <> <span className={styles.code}>{conflict.validationFailureReason}</span></> : null}</p> : null}
+              {validationDiagnosticMessage ? <p><strong>이번 검증 근거</strong> · {validationDiagnosticMessage}</p> : null}
+            </div>
             <p>이 예외는 자동 복구할 수 없습니다. 새 작업으로 다시 추출해 주세요.</p>
           </>
         }
@@ -338,12 +360,22 @@ function ExceptionPanel({
     <StatePanel
       tone="warning"
       headingLevel={4}
-      title={conflict.blockReason ? AI_BLOCK_REASON_LABELS[conflict.blockReason] ?? conflict.blockReason : '등록 조건을 충족하지 못했습니다.'}
+      title="등록 단위 검증 보류"
       traceId={conflict.traceId ?? null}
       description={
         <>
-          {validationFailureMessage ? <p className={styles.error}>{validationFailureMessage}</p> : null}
-          {validationDiagnosticMessage ? <p className={styles.error}>이번 검증 근거: {validationDiagnosticMessage}</p> : null}
+          <div className={styles.exceptionMeta}>
+            <p><strong>차단 사유</strong> · {blockReasonMessage}{conflict.blockReason ? <> <span className={styles.code}>{conflict.blockReason}</span></> : null}</p>
+            {validationFailureMessage ? <p><strong>이번 보충 검증 실패</strong> · {validationFailureMessage.replace(/^이번 보충 검증 실패: /, '')}{conflict.validationFailureReason ? <> <span className={styles.code}>{conflict.validationFailureReason}</span></> : null}</p> : null}
+            {validationDiagnosticMessage ? <p><strong>이번 검증 근거</strong> · {validationDiagnosticMessage}</p> : null}
+          </div>
+          <ul className={styles.recoveryPaths} aria-label="복구 경로">
+            {actions.map((action, index) => <li className={styles.recoveryPath} key={action}>
+              <strong>{index === 0 ? '우선 경로' : '복구 경로'}</strong>
+              <span>{recoveryPathLabel(action)}</span>
+              <span className={styles.recoveryPathCode}>{action}</span>
+            </li>)}
+          </ul>
           <div className={styles.actions}>
             {actions.includes('SUPPLEMENT') && supplementField ? (
               <form
@@ -355,17 +387,17 @@ function ExceptionPanel({
                   <input required value={supplementValue} onChange={(event) => onSupplementValueChange(event.target.value)} />
                 </label>
                 <label>보충 사유<input required value={reason} onChange={(event) => onReasonChange(event.target.value)} /></label>
-                <Button type="submit" disabled={busy}>보충 입력 제출</Button>
+                <Button type="submit" variant={primaryAction === 'SUPPLEMENT' ? 'primary' : 'secondary'} disabled={busy}>보충 입력 제출</Button>
               </form>
             ) : null}
-            {actions.includes('REEXTRACT') ? <Button variant="secondary" disabled={busy} onClick={onRequestRetryExtraction}>보완 텍스트 재추출</Button> : null}
-            {actions.includes('MANUAL_REGISTRATION') ? <Link href="/admin/restaurants/new" className={`${buttonStyles.button} ${buttonStyles.secondary}`}>기존 수동 등록으로 전환</Link> : null}
-            {actions.includes('EXISTING_RESOURCE') ? <p className={styles.hint}>이미 등록된 맛집·방문 관계를 관리자 화면에서 직접 확인해 주세요.</p> : null}
-            {actions.includes('RETRY') ? <Button variant="secondary" disabled={busy} onClick={onRetry}>등록 재실행</Button> : null}
+            {actions.includes('REEXTRACT') ? <Button variant={primaryAction === 'REEXTRACT' ? 'primary' : 'secondary'} disabled={busy} onClick={onRequestRetryExtraction}>보완 텍스트 재추출</Button> : null}
+            {actions.includes('MANUAL_REGISTRATION') ? <Link href="/admin/restaurants/new" className={`${buttonStyles.button} ${primaryAction === 'MANUAL_REGISTRATION' ? buttonStyles.primary : buttonStyles.secondary}`}>기존 수동 등록으로 전환</Link> : null}
+            {actions.includes('EXISTING_RESOURCE') ? <p className={styles.notice}><strong>기존 등록 자원 확인</strong> · 이미 등록된 맛집·방문 관계를 관리자 화면에서 직접 확인해 주세요. 새 작업을 만들지 않습니다.</p> : null}
+            {actions.includes('RETRY') ? <Button variant={primaryAction === 'RETRY' ? 'primary' : 'secondary'} disabled={busy} onClick={onRetry}>등록 재실행</Button> : null}
             {actions.includes('DISCARD') ? (
               <form className={styles.retryForm} onSubmit={(event) => { event.preventDefault(); onDiscard() }}>
                 <label>폐기 사유<input required value={reason} onChange={(event) => onReasonChange(event.target.value)} /></label>
-                <Button type="submit" variant="secondary" disabled={busy}>폐기</Button>
+                <Button type="submit" variant={primaryAction === 'DISCARD' ? 'danger' : 'secondary'} disabled={busy}>폐기</Button>
               </form>
             ) : null}
           </div>
@@ -381,4 +413,23 @@ function unitTone(unit: AiRegistrationUnit): 'success' | 'warning' | 'danger' | 
   if (unit.reviewStatus === 'AUTO_BLOCKED') return 'warning'
   if (unit.reviewStatus === 'AUTO_REJECTED') return 'danger'
   return 'neutral'
+}
+
+function unitStatusLabel(unit: AiRegistrationUnit): string {
+  if (unit.manualOverrideType === 'ROLLED_BACK') return '롤백 완료'
+  if (unit.manualOverrideType === 'DISCARDED') return '폐기 완료'
+  if (unit.reviewStatus === 'AUTO_CONFIRMED') return '자동 확정·등록 유지'
+  if (unit.reviewStatus === 'MANUAL_OVERRIDE') return '수동 보정·등록 유지'
+  if (unit.reviewStatus === 'AUTO_BLOCKED') return '자동 보류'
+  if (unit.reviewStatus === 'AUTO_REJECTED') return '자동 거부'
+  return unit.reviewStatus
+}
+
+function recoveryPathLabel(action: string): string {
+  if (action === 'SUPPLEMENT') return '필요한 장소·카테고리 보충 입력'
+  if (action === 'REEXTRACT') return '보완 텍스트로 새 작업 재추출'
+  if (action === 'MANUAL_REGISTRATION') return '기존 수동 등록으로 전환'
+  if (action === 'EXISTING_RESOURCE') return '이미 등록된 자원 확인'
+  if (action === 'RETRY') return '등록 재실행'
+  return '등록 단위 폐기'
 }

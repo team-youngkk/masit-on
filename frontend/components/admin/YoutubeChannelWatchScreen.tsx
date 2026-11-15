@@ -109,18 +109,30 @@ export function YoutubeChannelWatchScreen() {
     return <StatePanel title="감시할 유튜버가 없습니다." description="먼저 YouTube 채널이 연결된 Creator를 등록해 주세요." />
   }
 
+  const activeCount = summaries.filter((summary) => summary.status.subscriptionStatus === 'ACTIVE').length
+  const pendingCount = summaries.filter((summary) => summary.status.subscriptionStatus === 'UNKNOWN').length
+  const renewalFailedCount = summaries.filter((summary) => summary.status.subscriptionStatus === 'RENEWAL_FAILED').length
+  const inactiveCount = summaries.filter((summary) => summary.status.subscriptionStatus === 'INACTIVE').length
+
   return <div className={styles.screen}>
     <section className={styles.creatorPanel} aria-labelledby="youtube-watch-creator-heading">
       <div className={styles.statusHeader}>
         <div>
-          <h1 id="youtube-watch-creator-heading">YouTube 채널 감시</h1>
-          <p className={styles.hint}>여러 유튜버를 동시에 감시할 수 있습니다. 각 행의 상태와 Webhook 수신 여부를 독립적으로 관리합니다.</p>
+          <p className={styles.sectionKicker}>AI 운영</p>
+          <h2 id="youtube-watch-creator-heading">감시 대상</h2>
+          <p className={styles.hint}>각 채널의 구독 상태와 Webhook 수신 가능 여부를 독립적으로 확인하고 조정합니다.</p>
         </div>
         <div className={styles.pageActions}>
           <Button className={styles.retryButton} variant="secondary" onClick={() => void watchesQuery.refetch()}>목록 새로고침</Button>
           <span className={styles.pageLabel}>{pageInfo.number} / {Math.max(pageInfo.totalPages, 1)} 페이지</span>
         </div>
       </div>
+      <dl className={styles.overviewGrid} aria-label="현재 페이지 채널 감시 상태 집계">
+        <div className={styles.overviewItem}><dt>구독 활성</dt><dd><StatusBadge tone="success">{activeCount}개</StatusBadge></dd></div>
+        <div className={styles.overviewItem}><dt>확인 대기</dt><dd><StatusBadge tone="warning">{pendingCount}개</StatusBadge></dd></div>
+        <div className={styles.overviewItem}><dt>갱신 실패</dt><dd><StatusBadge tone="danger">{renewalFailedCount}개</StatusBadge></dd></div>
+        <div className={styles.overviewItem}><dt>중지</dt><dd><StatusBadge tone="neutral">{inactiveCount}개</StatusBadge></dd></div>
+      </dl>
     </section>
 
     <div className={styles.watchList}>
@@ -158,23 +170,28 @@ function WatchStatusPanel({
   const action = watchToggleAction(summary)
   const headingId = `youtube-watch-status-heading-${summary.creatorId}`
 
-  return <section className={styles.statusPanel} aria-labelledby={headingId}>
+  return <section className={styles.statusPanel} aria-labelledby={headingId} aria-busy={busy}>
     <div className={styles.statusHeader}>
       <div className={styles.statusTitle}>
         <div>
+          <p className={styles.sectionKicker}>채널 감시</p>
           <h2 id={headingId}>{summary.channelName}</h2>
           <p className={styles.availability}>{availabilityLabel(summary)}</p>
         </div>
         <StatusBadge tone={presentation.tone}>{presentation.label}</StatusBadge>
       </div>
       <div className={styles.statusActions}>
-        <span className={styles.meta}>{watchEnabledLabel(status.enabled)}</span>
+        <div className={styles.actionMeta}>
+          <span className={styles.meta}>감시 의도</span>
+          <strong>{watchEnabledLabel(status.enabled)}</strong>
+        </div>
         <Button disabled={busy || !action.allowed} onClick={onToggle}>
           {busy ? '저장 중…' : watchToggleLabel(status, action.enabled)}
         </Button>
       </div>
     </div>
     <p className={styles.statusDescription}>{presentation.description}</p>
+    {status.subscriptionStatus === 'RENEWAL_FAILED' ? <p className={styles.recoveryHint}>{renewalRecoveryMessage(summary, action.enabled)}</p> : null}
     {!action.allowed ? <p className={styles.hint}>공개·외부 이용 가능한 채널만 감시를 시작할 수 있습니다. 기존 감시는 중지할 수 있습니다.</p> : null}
     {errorMessage ? <p className={styles.errorNotice}>{errorMessage}</p> : null}
     {rowError ? <p className={styles.errorNotice} role="alert">{rowError}</p> : null}
@@ -191,6 +208,12 @@ function availabilityLabel(summary: YoutubeChannelWatchSummary): string {
   if (summary.publiclyVisible && summary.externallyAvailable) return '감시 시작 가능'
   if (summary.status.enabled) return '현재 감시 중 · 중지 가능'
   return '현재 감시 시작 불가'
+}
+
+function renewalRecoveryMessage(summary: YoutubeChannelWatchSummary, restartAllowed: boolean): string {
+  if (restartAllowed) return '복구 경로: 감시 재시작. 재시작 전까지 신규 Webhook을 받지 않습니다.'
+  if (summary.status.enabled) return '복구 경로: 채널이 공개·외부 이용 가능 상태인지 확인한 뒤 감시를 재시작하세요. 현재 감시를 중지할 수 있습니다.'
+  return '복구 경로: 채널이 공개·외부 이용 가능 상태인지 확인한 뒤 감시를 다시 시작하세요.'
 }
 
 function formatDate(value: string | null): string {

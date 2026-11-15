@@ -1,27 +1,276 @@
-.panel { padding: var(--space-5); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); background: var(--color-surface); }
-.panel h2, .panel h3 { margin-top: 0; }
-.panel p { overflow-wrap: anywhere; }
-.admin { font-size: 0.75rem; color: var(--color-text-muted); }
-.visits { padding: 0; margin: var(--space-4) 0 0; list-style: none; display: grid; gap: var(--space-4); }
-.visit { padding: var(--space-4); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); min-width: 0; }
-.tags, .actions, .options { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.tags { margin-bottom: var(--space-3); }
-.tag { padding: var(--space-1) var(--space-2); border-radius: var(--radius-full); background: var(--color-surface-muted); }
-.options { gap: var(--space-3); max-height: 20rem; overflow: auto; padding: var(--space-2) 0; }
-.options label { display: flex; align-items: center; gap: var(--space-1); min-height: 2.75rem; }
-.form fieldset { border: 0; padding: 0; min-width: 0; }
-.reason { display: grid; gap: var(--space-2); margin: var(--space-3) 0; }
-.reason textarea { width: 100%; box-sizing: border-box; padding: var(--space-2); font: inherit; color: inherit; background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); resize: vertical; }
-.createArea { margin: var(--space-3) 0; }
-.createForm { padding: var(--space-3) !important; border: 1px solid var(--color-border-strong) !important; border-radius: var(--radius-md); background: var(--color-surface-muted); }
-.createGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
-.createGrid label { display: grid; gap: var(--space-1); min-width: 0; }
-.createGrid input, .createGrid select, .createGrid textarea { width: 100%; box-sizing: border-box; padding: var(--space-2); font: inherit; color: inherit; background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); }
-.createGrid textarea { resize: vertical; }
-.aliases { grid-column: 1 / -1; }
-.error { color: var(--color-danger); }
+.panel {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-5);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.panelHeader,
+.visitHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.kicker {
+  margin: 0 0 var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.panel h2,
+.panel h3 {
+  margin: 0;
+  line-height: var(--line-height-tight);
+  overflow-wrap: anywhere;
+}
+
+.panel h2 {
+  font-size: var(--font-size-xl);
+}
+
+.panel h3 {
+  font-size: var(--font-size-lg);
+}
+
+.panelState,
+.visitCount {
+  flex: 0 0 auto;
+  min-height: var(--space-8);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.description,
+.notice,
+.panel > p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.description {
+  color: var(--color-text-muted);
+}
+
+.referenceLink {
+  margin: calc(var(--space-2) * -1) 0 0;
+}
+
+.referenceLink a,
+.videoTitle a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-min-height);
+  max-width: 100%;
+  color: var(--color-primary-strong);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+  overflow-wrap: anywhere;
+}
+
+.notice {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-faint);
+}
+
+.error {
+  margin: 0;
+  color: var(--color-danger);
+  overflow-wrap: anywhere;
+}
+
+.visits {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.visit {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+}
+
+.visitHeader > div {
+  min-width: 0;
+}
+
+.videoTitle {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.tags,
+.actions,
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.tags {
+  margin: 0;
+}
+
+.tag {
+  max-width: 100%;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  overflow-wrap: anywhere;
+}
+
+.form {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.form fieldset {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+}
+
+.form legend {
+  margin-bottom: var(--space-2);
+  font-weight: 700;
+}
+
+.options {
+  max-height: 20rem;
+  padding: var(--space-2) 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.options label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  min-height: var(--control-min-height);
+  overflow-wrap: anywhere;
+}
+
+.options input {
+  flex: 0 0 auto;
+  width: var(--space-5);
+  height: var(--space-5);
+}
+
+.createArea {
+  margin: var(--space-2) 0;
+}
+
+.createForm {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3) !important;
+  border: 1px solid var(--color-border-strong) !important;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.createGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.createGrid label,
+.reason {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.createGrid input,
+.createGrid select,
+.createGrid textarea,
+.reason textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: var(--control-min-height);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.createGrid textarea,
+.reason textarea {
+  min-height: calc(var(--space-12) * 2);
+  resize: vertical;
+}
+
+.aliases {
+  grid-column: 1 / -1;
+}
+
+.reason {
+  margin: 0;
+}
+
+.actions {
+  align-items: center;
+}
+
+.referenceLink a:focus-visible,
+.videoTitle a:focus-visible,
+.options input:focus-visible,
+.createGrid input:focus-visible,
+.createGrid select:focus-visible,
+.createGrid textarea:focus-visible,
+.reason textarea:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 3px;
+}
 
 @media (max-width: 40rem) {
-  .createGrid { grid-template-columns: 1fr; }
-  .aliases { grid-column: auto; }
+  .panel {
+    padding: var(--space-4);
+  }
+
+  .visit {
+    padding: var(--space-3);
+  }
+
+  .createGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .aliases {
+    grid-column: auto;
+  }
 }

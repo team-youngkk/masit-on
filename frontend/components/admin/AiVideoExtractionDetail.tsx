@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/Button'
 import { StatePanel } from '@/components/ui/StatePanel'
@@ -31,18 +31,29 @@ export function AiVideoExtractionDetail({ jobId }: { jobId: string }) {
   const [reason, setReason] = useState('')
   const [discardAllOpen, setDiscardAllOpen] = useState(false)
   const [discardAllReason, setDiscardAllReason] = useState('')
+  const requestId = useRef(0)
 
   const load = useCallback(async () => {
+    const currentRequest = ++requestId.current
     const next = await getAiVideoExtraction(jobId)
+    if (currentRequest !== requestId.current) return { requestId: currentRequest, applied: false }
     setData(next)
-    return next
+    return { requestId: currentRequest, applied: true }
   }, [jobId])
 
   const refresh = useCallback(async (message = '') => {
     setBusy(true); setError(false)
-    try { await load(); setNotice(message) }
-    catch (reason) { setError(true); setNotice(aiExtractionMessageFor(reason)) }
-    finally { setBusy(false) }
+    const expectedRequest = requestId.current + 1
+    try {
+      const result = await load()
+      if (result.applied && requestId.current === result.requestId) setNotice(message)
+    }
+    catch (reason) {
+      if (requestId.current === expectedRequest) { setError(true); setNotice(aiExtractionMessageFor(reason)) }
+    }
+    finally {
+      if (requestId.current === expectedRequest) setBusy(false)
+    }
   }, [load])
 
   useEffect(() => { void refresh() }, [refresh])
@@ -82,14 +93,43 @@ export function AiVideoExtractionDetail({ jobId }: { jobId: string }) {
     {truncatedMessage ? <StatePanel compact tone="warning" className={styles.banner} title={truncatedMessage} /> : null}
 
     <section className={styles.panel} aria-labelledby="job-summary-heading">
-      <h2 id="job-summary-heading">작업 상태</h2>
-      {resultNotice ? <p className={styles.hint}>{resultNotice}</p> : null}
-      <p className={styles.meta}><code>{data.jobId}</code></p>
-      <div className={`${styles.meta} ${styles.statusSummary}`}><span>실행 상태 <StatusBadge tone={executionTone(data.executionStatus)}>{data.executionStatus}</StatusBadge></span><span>결과 완전성 <StatusBadge>{data.resultCompleteness ?? '미완료'}</StatusBadge></span><span>후보 판정 요약 <StatusBadge tone={reviewTone(data.reviewStatus)}>{data.reviewStatus ?? '미정'}</StatusBadge></span><span className={styles.statusItem}>시도 {data.attemptCount}회</span></div>
-      <p className={styles.meta} aria-label="등록 결과 집계">{registrationSummaryLabel(summary)} · 현재 등록 {summary.registered}/{summary.total}개 · 자동 확정 {summary.autoConfirmed}개 · 보류 {summary.autoBlocked}개 · 거부 {summary.autoRejected}개 · 수동 보정 {summary.manualOverride}개</p>
-      <p className={styles.meta}>버전 {data.provider} / {data.modelVersion} / {data.promptVersion} / {data.schemaVersion}</p>
-      <p className={styles.meta}><a href={data.youtube.videoUrl} target="_blank" rel="noreferrer">원본 유튜브 영상 보기</a></p>
-      {data.error ? <p className={styles.warning} role="alert">실패 사유: {aiDiagnosticLabel(data.failureDiagnostic, data.error.category)} · 시도 {data.attemptCount}회{aiDiagnosticAction(data.failureDiagnostic) ? ` · ${aiDiagnosticAction(data.failureDiagnostic)}` : ''}</p> : null}
+      <div className={styles.toolbar}>
+        <div>
+          <p className={styles.sectionKicker}>AI 운영</p>
+          <h2 id="job-summary-heading">작업 상태</h2>
+        </div>
+        <p className={styles.meta}>작업 ID <code>{data.jobId}</code></p>
+      </div>
+      {resultNotice ? <p className={styles.notice}>{resultNotice}</p> : null}
+      <div className={styles.statusSummary} aria-label="AI 작업 상태 요약">
+        <div className={styles.statusItem}>
+          <span className={styles.statusItemLabel}>실행 상태</span>
+          <div className={styles.statusItemValue}><StatusBadge tone={executionTone(data.executionStatus)}>{executionLabel(data.executionStatus)}</StatusBadge><span className={styles.code}>{data.executionStatus}</span></div>
+        </div>
+        <div className={styles.statusItem}>
+          <span className={styles.statusItemLabel}>결과 완전성</span>
+          <div className={styles.statusItemValue}><StatusBadge tone={completenessTone(data.resultCompleteness)}>{completenessLabel(data.resultCompleteness)}</StatusBadge>{data.resultCompleteness ? <span className={styles.code}>{data.resultCompleteness}</span> : null}</div>
+        </div>
+        <div className={styles.statusItem}>
+          <span className={styles.statusItemLabel}>자동 등록 상태</span>
+          <div className={styles.statusItemValue}><StatusBadge tone={reviewTone(data.reviewStatus)}>{reviewLabel(data.reviewStatus)}</StatusBadge>{data.reviewStatus ? <span className={styles.code}>{data.reviewStatus}</span> : null}</div>
+        </div>
+      </div>
+      <dl className={styles.registrationSummary} aria-label="등록 결과 집계">
+        <div className={styles.summaryItem}><dt>등록 결과</dt><dd>{registrationSummaryLabel(summary)}</dd></div>
+        <div className={styles.summaryItem}><dt>현재 등록</dt><dd>{summary.registered}/{summary.total}개</dd></div>
+        <div className={styles.summaryItem}><dt>자동 확정</dt><dd>{summary.autoConfirmed}개</dd></div>
+        <div className={styles.summaryItem}><dt>자동 보류 / 거부</dt><dd>{summary.autoBlocked}개 / {summary.autoRejected}개</dd></div>
+        <div className={styles.summaryItem}><dt>수동 보정</dt><dd>{summary.manualOverride}개</dd></div>
+      </dl>
+      <dl className={styles.metaGrid}>
+        <div className={styles.metaItem}><dt>유입 경로</dt><dd>{sourceLabel(data.source)}</dd></div>
+        <div className={styles.metaItem}><dt>시도</dt><dd>{data.attemptCount}회</dd></div>
+        <div className={styles.metaItem}><dt>버전</dt><dd>{data.provider} / {data.modelVersion} / {data.promptVersion} / {data.schemaVersion}</dd></div>
+        <div className={styles.metaItem}><dt>생성 / 시작 / 완료</dt><dd>{formatDate(data.createdAt)} / {formatDate(data.startedAt)} / {formatDate(data.finishedAt)}</dd></div>
+      </dl>
+      <p className={styles.meta}><a className={styles.videoLink} href={data.youtube.videoUrl} target="_blank" rel="noreferrer">원본 유튜브 영상 보기</a></p>
+      {data.error ? <p className={styles.warning} role="alert"><strong>실행 실패</strong><span>{aiDiagnosticLabel(data.failureDiagnostic, data.error.category)}</span><span>시도 {data.attemptCount}회</span>{aiDiagnosticAction(data.failureDiagnostic) ? <span>{aiDiagnosticAction(data.failureDiagnostic)}</span> : null}</p> : null}
     </section>
 
     <section className={styles.panel} aria-labelledby="registration-unit-heading">
@@ -115,7 +155,7 @@ export function AiVideoExtractionDetail({ jobId }: { jobId: string }) {
 
     <section className={styles.panel} aria-labelledby="attempt-heading">
       <h2 id="attempt-heading">실행 시도</h2>
-      {data.attempts.length ? <ul>{data.attempts.map((attempt) => <li key={attempt.attemptNo}>#{attempt.attemptNo} · {attempt.outcome}{attempt.errorCategory ? ` · ${aiDiagnosticLabel(attempt.failureDiagnostic, attempt.errorCategory)}` : ''}</li>)}</ul> : <p className={styles.hint}>기록된 실행 시도가 없습니다.</p>}
+      {data.attempts.length ? <ul className={styles.attemptList}>{data.attempts.map((attempt) => <li className={styles.attemptItem} key={attempt.attemptNo}><span>시도 #{attempt.attemptNo}</span><span>{attempt.outcome}</span>{attempt.errorCategory ? <span>{aiDiagnosticLabel(attempt.failureDiagnostic, attempt.errorCategory)}</span> : null}</li>)}</ul> : <p className={styles.hint}>기록된 실행 시도가 없습니다.</p>}
     </section>
 
     <section className={styles.panel} aria-labelledby="retry-heading">
@@ -132,10 +172,22 @@ export function AiVideoExtractionDetail({ jobId }: { jobId: string }) {
 }
 
 function CandidateCard({ candidate }: { candidate: AiCandidate }) {
+  const confidence = confidencePresentation(candidate.confidence)
   return <li className={styles.candidate}>
-    <h3>{candidate.field}</h3>
-    <p>{candidate.label ?? candidate.value ?? candidate.normalizedCode ?? '값 없음'}</p>
-    <p className={styles.meta}><StatusBadge tone={aiConfidenceTone(candidate.confidence)}>신뢰도 {(candidate.confidence * 100).toFixed(0)}%</StatusBadge> 근거 {evidenceLabel(candidate)}</p>
+    <div className={styles.cardHeading}>
+      <p className={styles.sectionKicker}>후보 필드</p>
+      <h3>{candidate.field}</h3>
+      <p className={styles.candidateValue}>{candidate.label ?? candidate.value ?? candidate.normalizedCode ?? '값 없음'}</p>
+    </div>
+    <div className={styles.candidateConfidence} aria-label={`신뢰도 ${confidence.label} ${confidence.percentage}%`}>
+      <span>신뢰도</span>
+      <StatusBadge tone={aiConfidenceTone(candidate.confidence)}>{confidence.label}</StatusBadge>
+      <span>{confidence.percentage}% ({candidate.confidence.toFixed(2)})</span>
+    </div>
+    <dl className={styles.candidateEvidence}>
+      <dt>근거</dt>
+      <dd>{evidenceLabel(candidate)}</dd>
+    </dl>
   </li>
 }
 
@@ -144,6 +196,44 @@ function executionTone(status: AiExtractionDetail['executionStatus']): 'success'
   if (status === 'FAILED') return 'danger'
   if (status === 'RUNNING') return 'warning'
   return 'neutral'
+}
+
+function executionLabel(status: AiExtractionDetail['executionStatus']): string {
+  if (status === 'QUEUED') return '대기'
+  if (status === 'RUNNING') return '실행 중'
+  if (status === 'SUCCEEDED') return '성공'
+  return '실패'
+}
+
+function completenessTone(status: AiExtractionDetail['resultCompleteness']): 'success' | 'warning' | 'neutral' {
+  if (status === 'COMPLETE') return 'success'
+  if (status === 'PARTIAL') return 'warning'
+  return 'neutral'
+}
+
+function completenessLabel(status: AiExtractionDetail['resultCompleteness']): string {
+  if (status === 'COMPLETE') return '완전'
+  if (status === 'PARTIAL') return '부분'
+  return '미완료'
+}
+
+function reviewLabel(status: AiExtractionDetail['reviewStatus']): string {
+  if (status === 'AUTO_CONFIRMED') return '자동 확정·등록 유지'
+  if (status === 'MANUAL_OVERRIDE') return '수동 보정·등록 유지'
+  if (status === 'AUTO_BLOCKED') return '자동 보류'
+  if (status === 'AUTO_REJECTED') return '자동 거부'
+  return '미정'
+}
+
+function sourceLabel(source: AiExtractionDetail['source']): string {
+  return source === 'WEBHOOK' ? 'Webhook' : '관리자'
+}
+
+function confidencePresentation(confidence: number): { label: string; percentage: number } {
+  if (!Number.isFinite(confidence)) return { label: '확인 필요', percentage: 0 }
+  if (confidence < 0.6) return { label: '낮음', percentage: Math.round(confidence * 100) }
+  if (confidence < 0.8) return { label: '중간', percentage: Math.round(confidence * 100) }
+  return { label: '높음', percentage: Math.round(confidence * 100) }
 }
 
 function reviewTone(status: AiExtractionDetail['reviewStatus']): 'success' | 'warning' | 'danger' | 'neutral' {
@@ -163,4 +253,10 @@ function evidenceLabel(candidate: AiCandidate) {
 function formatTimestamp(milliseconds: number) {
   const seconds = Math.floor(milliseconds / 1000)
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
+}
+
+function formatDate(value: string | null): string {
+  if (!value) return '기록 없음'
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? '기록 없음' : parsed.toLocaleString('ko-KR')
 }

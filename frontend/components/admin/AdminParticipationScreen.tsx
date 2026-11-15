@@ -253,24 +253,24 @@ export function AdminParticipationScreen() {
   const nextStatuses = selected ? allowedNextStatuses(selected.status) : []
   const completing = selected?.status === 'ACCEPTED'
 
-  return <div className={styles.screen}>
+  return <div className={styles.screen} aria-busy={busy}>
     <p className={styles.intro}>오래 접수된 요청부터 검토합니다. 승인은 실제 데이터 반영과 별개입니다.</p>
 
     <div className={styles.tabs} role="tablist" aria-label="검토 요청 종류">
-      <button type="button" role="tab" disabled={busy} aria-selected={kind === 'submission'} onClick={() => changeQuery({ kind: 'submission' })}>제보</button>
-      <button type="button" role="tab" disabled={busy} aria-selected={kind === 'report'} onClick={() => changeQuery({ kind: 'report' })}>신고</button>
+      <button id="submission-tab" type="button" role="tab" disabled={busy} aria-selected={kind === 'submission'} aria-controls="participation-queue" onClick={() => changeQuery({ kind: 'submission' })}>제보</button>
+      <button id="report-tab" type="button" role="tab" disabled={busy} aria-selected={kind === 'report'} aria-controls="participation-queue" onClick={() => changeQuery({ kind: 'report' })}>신고</button>
     </div>
 
-    <section className={styles.queue} aria-label="검토 대기열">
+    <section id="participation-queue" className={styles.queue} role="tabpanel" aria-labelledby={`${kind === 'submission' ? 'submission' : 'report'}-tab`} aria-busy={busy}>
       <div className={styles.filters}>
-        <label>상태
-          <select disabled={busy} value={status} onChange={(event) => changeQuery({ status: event.target.value as AdminParticipationStatus | '' })}>
+        <label htmlFor="participation-status-filter">상태
+          <select id="participation-status-filter" disabled={busy} value={status} onChange={(event) => changeQuery({ status: event.target.value as AdminParticipationStatus | '' })}>
             <option value="">전체</option>
             {STATUSES.map((value) => <option key={value} value={value}>{STATUS_LABELS[value]}</option>)}
           </select>
         </label>
-        <label>대상 유형
-          <select disabled={busy} value={targetType} onChange={(event) => changeQuery({ targetType: event.target.value as AdminTargetType | '' })}>
+        <label htmlFor="participation-target-filter">대상 유형
+          <select id="participation-target-filter" disabled={busy} value={targetType} onChange={(event) => changeQuery({ targetType: event.target.value as AdminTargetType | '' })}>
             <option value="">전체</option>
             {TARGET_TYPES.map((value) => <option key={value} value={value}>{TARGET_TYPE_LABELS[value]}</option>)}
           </select>
@@ -278,15 +278,15 @@ export function AdminParticipationScreen() {
         <Button variant="secondary" disabled={busy} onClick={() => void refreshList()}>새로고침</Button>
       </div>
 
-      <ul className={styles.list}>
+      {items.length ? <ul className={styles.list} aria-label={`${kind === 'submission' ? '제보' : '신고'} 검토 목록`}>
         {items.map((item) => <li key={item.requestId}>
           <button type="button" disabled={busy} className={styles.item} aria-current={selected?.requestId === item.requestId} onClick={() => void openDetail(item)}>
             <span className={styles.itemHeader}><strong>{TARGET_TYPE_LABELS[item.targetType]}</strong><StatusBadge className={styles.itemStatus} tone={participationStatusTone(item.status)}>{STATUS_LABELS[item.status]}</StatusBadge></span>
-            <span>{item.description}</span>
+            <span className={styles.itemDescription}>{item.description}</span>
             <small>{new Date(item.createdAt).toLocaleString('ko-KR')} · 회원 {item.memberId ?? '연결 제거됨'}</small>
           </button>
         </li>)}
-      </ul>
+      </ul> : !busy && !error ? <p className={styles.muted} role="status" aria-live="polite">조건에 맞는 {kind === 'submission' ? '제보' : '신고'}가 없습니다.</p> : null}
 
       <nav className={styles.pagination} aria-label="관리자 검토 목록 페이지">
         <Button variant="secondary" disabled={busy || pageNumber <= 1} onClick={() => setPageNumber(pageNumber - 1)}>이전</Button>
@@ -295,8 +295,8 @@ export function AdminParticipationScreen() {
       </nav>
     </section>
 
-    {selected ? <section className={styles.detail} aria-label="요청 상세">
-      <h2>요청 상세</h2>
+    {selected ? <section className={styles.detail} aria-labelledby="participation-detail-heading" aria-busy={busy}>
+      <h2 id="participation-detail-heading">요청 상세</h2>
       <dl className={styles.metadata}>
         <div><dt>요청 ID</dt><dd>{selected.requestId}</dd></div>
         <div><dt>회원 ID</dt><dd>{selected.memberId ?? '보존 정책에 따라 식별 연결이 제거됨'}</dd></div>
@@ -315,22 +315,23 @@ export function AdminParticipationScreen() {
 
       {nextStatuses.length ? <div className={styles.reviewForm}>
         <h3>검토 상태 변경</h3>
-        <label>회원 공개 사유 <span>반려·처리 완료 필수, 1~1000자</span>
-          <textarea rows={4} maxLength={1000} value={memberReason} onChange={(event) => setMemberReason(event.target.value)} />
+        <label htmlFor="member-reason">회원 공개 사유 <span id="member-reason-help">반려·처리 완료 필수, 1~1000자</span>
+          <textarea id="member-reason" rows={4} maxLength={1000} aria-describedby="member-reason-help" value={memberReason} onChange={(event) => setMemberReason(event.target.value)} />
         </label>
-        <label>관리자 내부 메모
-          <textarea rows={4} value={internalNote} onChange={(event) => setInternalNote(event.target.value)} />
+        <label htmlFor="internal-note">관리자 내부 메모
+          <textarea id="internal-note" rows={4} value={internalNote} onChange={(event) => setInternalNote(event.target.value)} />
         </label>
-        {completing ? <fieldset className={styles.completion}>
+        {completing ? <fieldset className={styles.completion} aria-describedby="completion-help">
           <legend>실제 조치 결과</legend>
-          <label className={styles.checkbox}><input type="checkbox" checked={actionConfirmed} onChange={(event) => setActionConfirmed(event.target.checked)} /> 실제 데이터 등록·정정·숨김 조치를 완료했습니다.</label>
-          <label>조치 유형<select value={actionType} onChange={(event) => setActionType(event.target.value as AdminActionType | '')}>
+           <p id="completion-help" className={styles.muted}>승인 후 실제 데이터 반영을 확인한 경우에만 처리 완료로 전환합니다.</p>
+           <label className={styles.checkbox}><input type="checkbox" checked={actionConfirmed} onChange={(event) => setActionConfirmed(event.target.checked)} /> 실제 데이터 등록·정정·숨김 조치를 완료했습니다.</label>
+           <label htmlFor="action-type">조치 유형<select id="action-type" value={actionType} onChange={(event) => setActionType(event.target.value as AdminActionType | '')}>
             <option value="">선택</option>{ACTION_TYPES.map((value) => <option key={value} value={value}>{ACTION_TYPE_LABELS[value]}</option>)}
           </select></label>
-          <label>조치 대상 유형<select value={resultTargetType} onChange={(event) => setResultTargetType(event.target.value as AdminTargetType | '')}>
+           <label htmlFor="action-target-type">조치 대상 유형<select id="action-target-type" value={resultTargetType} onChange={(event) => setResultTargetType(event.target.value as AdminTargetType | '')}>
             <option value="">선택</option>{TARGET_TYPES.map((value) => <option key={value} value={value}>{TARGET_TYPE_LABELS[value]}</option>)}
           </select></label>
-          <label>조치 대상 ID<input value={resultTargetId} onChange={(event) => setResultTargetId(event.target.value)} /></label>
+           <label htmlFor="action-target-id">조치 대상 ID<input id="action-target-id" value={resultTargetId} onChange={(event) => setResultTargetId(event.target.value)} /></label>
         </fieldset> : null}
         <div className={styles.actions}>
           {nextStatuses.map((next) => <Button key={next} disabled={busy} variant={next === 'REJECTED' ? 'secondary' : 'primary'} onClick={() => void changeStatus(next)}>
@@ -353,6 +354,6 @@ export function AdminParticipationScreen() {
       </section>
     </section> : <p className={styles.muted}>목록에서 요청을 선택하면 원문과 검토 이력을 확인할 수 있습니다.</p>}
 
-    {notice ? <p className={error ? styles.error : styles.notice} role={error ? 'alert' : 'status'}>{notice}</p> : null}
+    {notice ? <p className={error ? styles.error : styles.notice} role={error ? 'alert' : 'status'} aria-live={error ? 'assertive' : 'polite'}>{notice}</p> : null}
   </div>
 }

@@ -1,4 +1,4 @@
-import { createElement, Fragment } from 'react'
+import { createElement } from 'react'
 
 export function RegistrationDuplicateResult({
   resourceName,
@@ -14,7 +14,7 @@ export function RegistrationDuplicateResult({
   buttonClassName?: string
 }) {
   return createElement(
-    Fragment,
+    'div',
     null,
     createElement('p', { className: errorClassName }, `이미 등록된 ${resourceName}입니다.`),
     existing ? createElement('pre', null, existing) : null,

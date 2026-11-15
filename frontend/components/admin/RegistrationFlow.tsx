@@ -40,6 +40,16 @@ type RegistrationFlowProps = {
   onCompleted?: (resourceId: string, kind: 'created' | 'duplicate') => void
 }
 
+type RegistrationStageKey = 'input' | 'validation' | 'review' | 'confirm' | 'complete'
+
+const registrationStages: Array<{ key: RegistrationStageKey; label: string; description: string }> = [
+  { key: 'input', label: '입력', description: '기본 정보 작성' },
+  { key: 'validation', label: '검증', description: '외부 근거 확인' },
+  { key: 'review', label: '중복·검토', description: '판정과 예외 확인' },
+  { key: 'confirm', label: '확정', description: '등록 전 최종 확인' },
+  { key: 'complete', label: '완료', description: '결과 식별자 기록' },
+]
+
 function formatRecord(record: Record<string, unknown> | null): string | null {
   if (!record) {
     return null
@@ -193,57 +203,114 @@ export function RegistrationFlow({
   const candidate = formatRecord(preview?.candidate ?? null)
   const existing = formatRecord(preview?.existingResource ?? null)
   const createdResource = formatRecord(created)
+  const currentStage: RegistrationStageKey = created
+    ? 'complete'
+    : preview?.decision === 'READY'
+      ? 'confirm'
+      : preview
+        ? 'review'
+        : previewMutation.isPending
+          ? 'validation'
+          : 'input'
+  const currentStageIndex = registrationStages.findIndex((stage) => stage.key === currentStage)
+  const currentStageDescription = registrationStages[currentStageIndex]?.description ?? ''
 
   return (
     <div className={styles.flow}>
-      <form className={styles.form} onSubmit={handlePreview} noValidate>
-        {inputs.map((input) => {
-          const fieldId = `${fieldIdPrefix}-${input.name}`
-          const errorId = `${fieldId}-error`
+      <section className={styles.flowOverview} aria-labelledby={`${fieldIdPrefix}-flow-heading`}>
+        <div className={styles.flowHeading}>
+          <p className={styles.eyebrow}>등록 작업</p>
+          <h2 id={`${fieldIdPrefix}-flow-heading`}>{resourceName} 등록 흐름</h2>
+          <p>입력한 정보를 검증하고 판정을 확인한 뒤 등록 결과를 남깁니다.</p>
+        </div>
+        <ol className={styles.stepRail} aria-label={`${resourceName} 등록 진행 단계`}>
+          {registrationStages.map((stage, index) => {
+            const state = index < currentStageIndex ? 'complete' : index === currentStageIndex ? 'current' : 'upcoming'
+            const stateClass = state === 'complete'
+              ? styles.stepComplete
+              : state === 'current'
+                ? styles.stepCurrent
+                : styles.stepUpcoming
 
-          return input.options ? (
-            <div key={input.name} className={styles.selectField}>
-              <label htmlFor={fieldId}>{input.label}</label>
-              <select
-                id={fieldId}
+            return (
+              <li key={stage.key} className={`${styles.step} ${stateClass}`} aria-current={state === 'current' ? 'step' : undefined}>
+                <span className={styles.stepMarker} aria-hidden="true" />
+                <span className={styles.stepCopy}>
+                  <strong className={styles.stepLabel}>{stage.label}</strong>
+                  <small className={styles.stepState}>{state === 'current' ? currentStageDescription : stage.description}</small>
+                </span>
+              </li>
+            )
+          })}
+        </ol>
+        <p className={styles.flowStatus}>현재 단계: <strong>{registrationStages[currentStageIndex]?.label}</strong></p>
+      </section>
+
+      <form className={styles.form} onSubmit={handlePreview} noValidate aria-busy={previewMutation.isPending}>
+        <div className={styles.formHeader}>
+          <div>
+            <h3>기본 정보 입력</h3>
+            <p>확인할 값을 입력한 뒤 미리보기 확인을 눌러 다음 단계로 이동합니다.</p>
+          </div>
+          <span className={styles.formState}>{previewMutation.isPending ? '검증 중' : '입력 대기'}</span>
+        </div>
+        <div className={styles.inputGrid}>
+          {inputs.map((input) => {
+            const fieldId = `${fieldIdPrefix}-${input.name}`
+            const errorId = `${fieldId}-error`
+
+            return input.options ? (
+              <div key={input.name} className={styles.selectField}>
+                <label htmlFor={fieldId}>{input.label}</label>
+                <select
+                  id={fieldId}
+                  name={input.name}
+                  value={values[input.name] ?? ''}
+                  onChange={(event) => updateValue(input.name, event.target.value)}
+                  required={input.required ?? true}
+                  aria-invalid={fieldErrors[input.name] ? true : undefined}
+                  aria-describedby={fieldErrors[input.name] ? errorId : undefined}
+                >
+                  <option value="">선택하세요</option>
+                  {input.options.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+                {fieldErrors[input.name] ? <small id={errorId} className={styles.error}>{fieldErrors[input.name]}</small> : null}
+              </div>
+            ) : (
+              <Field
+                key={input.name}
+                label={input.label}
                 name={input.name}
+                type={input.type ?? 'text'}
                 value={values[input.name] ?? ''}
                 onChange={(event) => updateValue(input.name, event.target.value)}
+                error={fieldErrors[input.name]}
                 required={input.required ?? true}
-                aria-invalid={fieldErrors[input.name] ? true : undefined}
-                aria-describedby={fieldErrors[input.name] ? errorId : undefined}
-              >
-                <option value="">선택하세요</option>
-                {input.options.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-              {fieldErrors[input.name] ? <small id={errorId} className={styles.error}>{fieldErrors[input.name]}</small> : null}
-            </div>
-          ) : (
-            <Field
-              key={input.name}
-              label={input.label}
-              name={input.name}
-              type={input.type ?? 'text'}
-              value={values[input.name] ?? ''}
-              onChange={(event) => updateValue(input.name, event.target.value)}
-              error={fieldErrors[input.name]}
-              required={input.required ?? true}
-            />
-          )
-        })}
+              />
+            )
+          })}
+        </div>
         {error ? <p className={styles.error} role="alert">{error}</p> : null}
-        <Button type="submit" disabled={previewMutation.isPending}>
-          {previewMutation.isPending ? '미리보기 확인 중…' : '미리보기 확인'}
-        </Button>
+        <div className={styles.formActions}>
+          <Button type="submit" disabled={previewMutation.isPending}>
+            {previewMutation.isPending ? '미리보기 확인 중…' : '미리보기 확인'}
+          </Button>
+        </div>
       </form>
 
       {preview ? (
-        <section className={styles.result} aria-live="polite">
-          <h2>미리보기 결과</h2>
+        <section className={`${styles.result} ${preview.decision === 'READY' ? styles.resultReady : styles.resultReview}`} aria-live="polite">
+          <div className={styles.resultHeader}>
+            <div>
+              <p className={styles.eyebrow}>{preview.decision === 'READY' ? '확정 단계' : '검토 단계'}</p>
+              <h2>미리보기 결과</h2>
+            </div>
+            <span className={styles.formState}>{preview.decision === 'READY' ? '확정 대기' : '확인 필요'}</span>
+          </div>
           {preview.decision === 'READY' ? (
             <>
               <p>등록할 {resourceName} 정보를 확인했습니다.</p>
@@ -256,19 +323,23 @@ export function RegistrationFlow({
             </>
           ) : null}
           {preview.decision === 'DUPLICATE' ? (
-            <RegistrationDuplicateResult
-              resourceName={resourceName}
-              existing={existing}
-              onContinue={onCompleted ? handleDuplicateContinue : undefined}
-              errorClassName={styles.error}
-              buttonClassName={`${buttonStyles.button} ${buttonStyles.secondary}`}
-            />
+            <div className={styles.reviewPanel}>
+              <p className={styles.panelLabel}>중복 확인</p>
+              <RegistrationDuplicateResult
+                resourceName={resourceName}
+                existing={existing}
+                onContinue={onCompleted ? handleDuplicateContinue : undefined}
+                errorClassName={styles.error}
+                buttonClassName={`${buttonStyles.button} ${buttonStyles.secondary}`}
+              />
+            </div>
           ) : null}
           {preview.decision === 'REVIEW_REQUIRED' ? (
-            <>
+            <div className={styles.reviewPanel}>
+              <p className={styles.panelLabel}>수동 검토</p>
               <p className={styles.notice}>자동 등록할 수 없어 검토가 필요합니다. 내용을 확인한 뒤 다시 시도해 주세요.</p>
               {candidate ? <pre>{candidate}</pre> : null}
-            </>
+            </div>
           ) : null}
         </section>
       ) : null}
