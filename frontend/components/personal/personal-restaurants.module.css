@@ -37,28 +37,93 @@
 .list {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-4);
-  margin: var(--space-6) 0 0;
+  gap: 0;
+  margin: var(--space-5) 0 0;
   padding: 0;
+  border-top: 1px solid var(--color-border);
   list-style: none;
 }
 
 .list li {
   min-width: 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.list li > article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2) var(--space-4);
+  min-width: 0;
+  padding: var(--space-5) 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transition: background-color 140ms ease;
+}
+
+.list li > article:hover,
+.list li > article:focus-within {
+  background: var(--color-surface-muted);
+}
+
+.list li > article > h2,
+.list li > article > p:first-of-type {
+  grid-column: 1;
+  min-width: 0;
+}
+
+.list li > article > h2 {
+  grid-row: 1;
+  margin: 0;
+}
+
+.list li > article > h2 a {
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.list li > article > h2 a:hover,
+.list li > article > h2 a:focus-visible {
+  color: var(--color-primary-strong);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.16em;
+}
+
+.list li > article > p:first-of-type {
+  grid-row: 2;
+  margin: 0;
 }
 
 .timestamp {
+  grid-column: 1;
+  grid-row: 3;
   margin: 0;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
   overflow-wrap: anywhere;
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
 
 .actions {
-  margin-top: var(--space-4);
+  display: flex;
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  margin: 0;
+}
+
+.actions > button {
+  max-width: 100%;
 }
 
 .itemError {
+  grid-column: 1 / -1;
+  grid-row: auto;
   margin: var(--space-2) 0 0;
   font-size: var(--font-size-sm);
   overflow-wrap: anywhere;
@@ -72,7 +137,11 @@
 }
 
 .pagination {
+  display: grid;
+  gap: var(--space-3);
   margin-top: var(--space-8);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border);
 }
 
 .pageStatus {
@@ -114,5 +183,32 @@
 @media (min-width: 768px) {
   .list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--space-6);
+  }
+}
+
+@media (max-width: 480px) {
+  .list li > article {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+    padding-block: var(--space-4);
+  }
+
+  .list li > article > h2,
+  .list li > article > p:first-of-type,
+  .timestamp,
+  .actions {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .actions {
+    align-items: stretch;
+    justify-content: stretch;
+    margin-top: var(--space-1);
+  }
+
+  .actions > button {
+    width: 100%;
   }
 }

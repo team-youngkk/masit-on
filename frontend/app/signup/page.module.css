@@ -1,11 +1,15 @@
 .page {
   display: grid;
   gap: var(--space-5);
+  width: 100%;
 }
 
 .prompt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
   margin: 0;
-  padding-inline: var(--space-1);
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
@@ -14,7 +18,7 @@
   display: inline-flex;
   align-items: center;
   min-height: var(--control-min-height);
-  padding: 0 var(--space-1);
+  padding: 0 var(--space-2);
   color: var(--color-primary-strong);
   font-weight: 700;
   text-decoration: underline;

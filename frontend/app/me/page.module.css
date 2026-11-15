@@ -1,30 +1,28 @@
 .page {
   display: grid;
-  gap: var(--space-5);
+  gap: var(--space-6);
 }
+
 .summary {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: clamp(var(--space-4), 4vw, var(--space-5));
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-card);
+  gap: var(--space-4);
+  padding: var(--space-5) 0;
+  border-block: 1px solid var(--color-border);
 }
 
 .summaryAccount {
   display: grid;
   min-width: 0;
-  flex: 1 1 auto;
   gap: var(--space-1);
 }
 
 .summaryAccount strong {
   min-width: 0;
   overflow-wrap: anywhere;
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-tight);
 }
 
 .passwordResetLink {
@@ -47,10 +45,7 @@
 .menu {
   display: grid;
   overflow: hidden;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-card);
+  border-block: 1px solid var(--color-border);
 }
 
 .menu a {
@@ -59,7 +54,7 @@
   gap: var(--space-1) var(--space-3);
   align-items: center;
   min-height: calc(var(--control-min-height) + var(--space-2));
-  padding: var(--space-4);
+  padding: var(--space-4) 0;
   color: var(--color-text);
   text-decoration: none;
   transition: background-color 140ms ease, color 140ms ease;
@@ -71,8 +66,12 @@
 
 .menu a:hover,
 .menu a:focus-visible {
-  background: var(--color-primary-faint);
+  background: var(--color-surface-muted);
   color: var(--color-primary-strong);
+}
+
+.menu strong {
+  font-weight: 700;
 }
 
 .menu span {
@@ -91,7 +90,8 @@
   gap: var(--space-3);
   padding: clamp(var(--space-4), 4vw, var(--space-5));
   border: 1px solid color-mix(in srgb, var(--color-danger) 28%, var(--color-border));
-  border-radius: var(--radius-lg);
+  border-inline-start: 3px solid var(--color-danger);
+  border-radius: var(--radius-md);
   background: var(--color-danger-soft);
 }
 
@@ -111,8 +111,17 @@
 }
 
 @media (max-width: 480px) {
-  .summaryAccount { width: 100%; }
-  .summary > button,
-  .withdrawalActions > button { flex: 1 1 100%; }
+  .summary {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .summary > button {
+    width: 100%;
+  }
+
+  .withdrawalActions > button {
+    flex: 1 1 100%;
+  }
 }
 
