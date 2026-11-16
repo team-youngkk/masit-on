@@ -9,7 +9,22 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { AdminApiError } from '@/lib/admin/api'
 import { createAiVideoExtraction, getAiVideoExtractions, aiExtractionMessageFor, type AiExtractionJob, type AiExtractionPage, type AiExecutionStatus, type AiExtractionReviewStatus, type AiExtractionSource, type AiExtractionSubmissionResult } from '@/lib/admin/ai-video-extractions'
 import { aiDiagnosticAction, aiDiagnosticLabel } from '@/lib/admin/ai-diagnostics'
-import { aiExtractionSubmissionAttempt, aiExtractionSubmissionFieldErrors, aiExtractionSubmissionPresentation, nextAiExtractionFilters, type AiExtractionFilters, type AiExtractionSubmissionAttempt, type AiExtractionSubmissionFieldErrors } from '@/lib/admin/ai-video-extractions-coordination'
+import {
+  aiCompletenessLabel,
+  aiCompletenessTone,
+  aiExecutionLabel,
+  aiExecutionTone,
+  aiExtractionSubmissionAttempt,
+  aiExtractionSubmissionFieldErrors,
+  aiExtractionSubmissionPresentation,
+  aiReviewLabel,
+  aiReviewTone,
+  aiSourceLabel,
+  nextAiExtractionFilters,
+  type AiExtractionFilters,
+  type AiExtractionSubmissionAttempt,
+  type AiExtractionSubmissionFieldErrors,
+} from '@/lib/admin/ai-video-extractions-coordination'
 
 import styles from './AiVideoExtractionScreen.module.css'
 
@@ -172,20 +187,20 @@ function JobCard({ job, formatDate }: { job: AiExtractionJob; formatDate: (value
     </div>
     <div className={styles.cardSource}>
       <a className={styles.videoLink} href={job.youtube.videoUrl} target="_blank" rel="noreferrer">영상 {job.youtube.videoId} 확인</a>
-      <span>유입 경로: {sourceLabel(job.source)}</span>
+      <span>유입 경로: {aiSourceLabel(job.source)}</span>
     </div>
     <div className={styles.statusSummary} aria-label="AI 작업 상태 요약">
       <div className={styles.statusItem}>
         <span className={styles.statusItemLabel}>실행 상태</span>
-        <div className={styles.statusItemValue}><StatusBadge tone={executionTone(job.executionStatus)}>{executionLabel(job.executionStatus)}</StatusBadge><span className={styles.code}>{job.executionStatus}</span></div>
+        <div className={styles.statusItemValue}><StatusBadge tone={aiExecutionTone(job.executionStatus)}>{aiExecutionLabel(job.executionStatus)}</StatusBadge><span className={styles.code}>{job.executionStatus}</span></div>
       </div>
       <div className={styles.statusItem}>
         <span className={styles.statusItemLabel}>결과 완전성</span>
-        <div className={styles.statusItemValue}><StatusBadge tone={completenessTone(job.resultCompleteness)}>{completenessLabel(job.resultCompleteness)}</StatusBadge>{job.resultCompleteness ? <span className={styles.code}>{job.resultCompleteness}</span> : null}</div>
+        <div className={styles.statusItemValue}><StatusBadge tone={aiCompletenessTone(job.resultCompleteness)}>{aiCompletenessLabel(job.resultCompleteness)}</StatusBadge>{job.resultCompleteness ? <span className={styles.code}>{job.resultCompleteness}</span> : null}</div>
       </div>
       <div className={styles.statusItem}>
         <span className={styles.statusItemLabel}>자동 등록 상태</span>
-        <div className={styles.statusItemValue}><StatusBadge tone={reviewTone(job.reviewStatus)}>{reviewLabel(job.reviewStatus)}</StatusBadge>{job.reviewStatus ? <span className={styles.code}>{job.reviewStatus}</span> : null}</div>
+        <div className={styles.statusItemValue}><StatusBadge tone={aiReviewTone(job.reviewStatus)}>{aiReviewLabel(job.reviewStatus)}</StatusBadge>{job.reviewStatus ? <span className={styles.code}>{job.reviewStatus}</span> : null}</div>
       </div>
     </div>
     {summary ? <dl className={styles.registrationSummary} aria-label="등록 결과 집계">
@@ -203,49 +218,4 @@ function JobCard({ job, formatDate }: { job: AiExtractionJob; formatDate: (value
       <div className={styles.metaItem}><dt>완료</dt><dd>{formatDate(job.finishedAt)}</dd></div>
     </dl>
   </li>
-}
-
-function executionTone(status: AiExecutionStatus): 'success' | 'warning' | 'danger' | 'neutral' {
-  if (status === 'SUCCEEDED') return 'success'
-  if (status === 'FAILED') return 'danger'
-  if (status === 'RUNNING') return 'warning'
-  return 'neutral'
-}
-
-function executionLabel(status: AiExecutionStatus): string {
-  if (status === 'QUEUED') return '대기'
-  if (status === 'RUNNING') return '실행 중'
-  if (status === 'SUCCEEDED') return '성공'
-  return '실패'
-}
-
-function completenessLabel(status: AiExtractionJob['resultCompleteness']): string {
-  if (status === 'COMPLETE') return '완전'
-  if (status === 'PARTIAL') return '부분'
-  return '미완료'
-}
-
-function reviewLabel(status: AiExtractionReviewStatus | null): string {
-  if (status === 'AUTO_CONFIRMED') return '자동 확정·등록 유지'
-  if (status === 'MANUAL_OVERRIDE') return '수동 보정·등록 유지'
-  if (status === 'AUTO_BLOCKED') return '자동 보류'
-  if (status === 'AUTO_REJECTED') return '자동 거부'
-  return '미정'
-}
-
-function sourceLabel(source: AiExtractionSource): string {
-  return source === 'WEBHOOK' ? 'Webhook' : '관리자'
-}
-
-function completenessTone(status: AiExtractionJob['resultCompleteness']): 'success' | 'warning' | 'neutral' {
-  if (status === 'COMPLETE') return 'success'
-  if (status === 'PARTIAL') return 'warning'
-  return 'neutral'
-}
-
-function reviewTone(status: AiExtractionReviewStatus | null): 'success' | 'warning' | 'danger' | 'neutral' {
-  if (status === 'AUTO_CONFIRMED' || status === 'MANUAL_OVERRIDE') return 'success'
-  if (status === 'AUTO_BLOCKED') return 'warning'
-  if (status === 'AUTO_REJECTED') return 'danger'
-  return 'neutral'
 }

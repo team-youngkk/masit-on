@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { StatePanel } from '@/components/ui/StatePanel'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { aiConfidenceTone } from '@/lib/admin/ai-confidence'
+import { aiConfidencePresentation, aiConfidenceTone } from '@/lib/admin/ai-confidence'
 import { aiDiagnosticAction, aiDiagnosticLabel } from '@/lib/admin/ai-diagnostics'
 import {
   aiExtractionMessageFor,
@@ -16,7 +16,20 @@ import {
   type AiCandidate,
   type AiExtractionDetail,
 } from '@/lib/admin/ai-video-extractions'
-import { candidateTruncatedBannerMessage, extractionResultNotice, registrationSummaryLabel, registrationUnitSummary, retryActionAvailable } from '@/lib/admin/ai-video-extractions-coordination'
+import {
+  aiCompletenessLabel,
+  aiCompletenessTone,
+  aiExecutionLabel,
+  aiExecutionTone,
+  aiReviewLabel,
+  aiReviewTone,
+  aiSourceLabel,
+  candidateTruncatedBannerMessage,
+  extractionResultNotice,
+  registrationSummaryLabel,
+  registrationUnitSummary,
+  retryActionAvailable,
+} from '@/lib/admin/ai-video-extractions-coordination'
 
 import { AiRegistrationUnits } from './AiRegistrationUnits'
 import styles from './AiVideoExtractionScreen.module.css'
@@ -104,15 +117,15 @@ export function AiVideoExtractionDetail({ jobId }: { jobId: string }) {
       <div className={styles.statusSummary} aria-label="AI 작업 상태 요약">
         <div className={styles.statusItem}>
           <span className={styles.statusItemLabel}>실행 상태</span>
-          <div className={styles.statusItemValue}><StatusBadge tone={executionTone(data.executionStatus)}>{executionLabel(data.executionStatus)}</StatusBadge><span className={styles.code}>{data.executionStatus}</span></div>
+          <div className={styles.statusItemValue}><StatusBadge tone={aiExecutionTone(data.executionStatus)}>{aiExecutionLabel(data.executionStatus)}</StatusBadge><span className={styles.code}>{data.executionStatus}</span></div>
         </div>
         <div className={styles.statusItem}>
           <span className={styles.statusItemLabel}>결과 완전성</span>
-          <div className={styles.statusItemValue}><StatusBadge tone={completenessTone(data.resultCompleteness)}>{completenessLabel(data.resultCompleteness)}</StatusBadge>{data.resultCompleteness ? <span className={styles.code}>{data.resultCompleteness}</span> : null}</div>
+          <div className={styles.statusItemValue}><StatusBadge tone={aiCompletenessTone(data.resultCompleteness)}>{aiCompletenessLabel(data.resultCompleteness)}</StatusBadge>{data.resultCompleteness ? <span className={styles.code}>{data.resultCompleteness}</span> : null}</div>
         </div>
         <div className={styles.statusItem}>
           <span className={styles.statusItemLabel}>자동 등록 상태</span>
-          <div className={styles.statusItemValue}><StatusBadge tone={reviewTone(data.reviewStatus)}>{reviewLabel(data.reviewStatus)}</StatusBadge>{data.reviewStatus ? <span className={styles.code}>{data.reviewStatus}</span> : null}</div>
+          <div className={styles.statusItemValue}><StatusBadge tone={aiReviewTone(data.reviewStatus)}>{aiReviewLabel(data.reviewStatus)}</StatusBadge>{data.reviewStatus ? <span className={styles.code}>{data.reviewStatus}</span> : null}</div>
         </div>
       </div>
       <dl className={styles.registrationSummary} aria-label="등록 결과 집계">
@@ -123,7 +136,7 @@ export function AiVideoExtractionDetail({ jobId }: { jobId: string }) {
         <div className={styles.summaryItem}><dt>수동 보정</dt><dd>{summary.manualOverride}개</dd></div>
       </dl>
       <dl className={styles.metaGrid}>
-        <div className={styles.metaItem}><dt>유입 경로</dt><dd>{sourceLabel(data.source)}</dd></div>
+        <div className={styles.metaItem}><dt>유입 경로</dt><dd>{aiSourceLabel(data.source)}</dd></div>
         <div className={styles.metaItem}><dt>시도</dt><dd>{data.attemptCount}회</dd></div>
         <div className={styles.metaItem}><dt>버전</dt><dd>{data.provider} / {data.modelVersion} / {data.promptVersion} / {data.schemaVersion}</dd></div>
         <div className={styles.metaItem}><dt>생성 / 시작 / 완료</dt><dd>{formatDate(data.createdAt)} / {formatDate(data.startedAt)} / {formatDate(data.finishedAt)}</dd></div>
@@ -172,7 +185,7 @@ export function AiVideoExtractionDetail({ jobId }: { jobId: string }) {
 }
 
 function CandidateCard({ candidate }: { candidate: AiCandidate }) {
-  const confidence = confidencePresentation(candidate.confidence)
+  const confidence = aiConfidencePresentation(candidate.confidence)
   return <li className={styles.candidate}>
     <div className={styles.cardHeading}>
       <p className={styles.sectionKicker}>후보 필드</p>
@@ -189,58 +202,6 @@ function CandidateCard({ candidate }: { candidate: AiCandidate }) {
       <dd>{evidenceLabel(candidate)}</dd>
     </dl>
   </li>
-}
-
-function executionTone(status: AiExtractionDetail['executionStatus']): 'success' | 'warning' | 'danger' | 'neutral' {
-  if (status === 'SUCCEEDED') return 'success'
-  if (status === 'FAILED') return 'danger'
-  if (status === 'RUNNING') return 'warning'
-  return 'neutral'
-}
-
-function executionLabel(status: AiExtractionDetail['executionStatus']): string {
-  if (status === 'QUEUED') return '대기'
-  if (status === 'RUNNING') return '실행 중'
-  if (status === 'SUCCEEDED') return '성공'
-  return '실패'
-}
-
-function completenessTone(status: AiExtractionDetail['resultCompleteness']): 'success' | 'warning' | 'neutral' {
-  if (status === 'COMPLETE') return 'success'
-  if (status === 'PARTIAL') return 'warning'
-  return 'neutral'
-}
-
-function completenessLabel(status: AiExtractionDetail['resultCompleteness']): string {
-  if (status === 'COMPLETE') return '완전'
-  if (status === 'PARTIAL') return '부분'
-  return '미완료'
-}
-
-function reviewLabel(status: AiExtractionDetail['reviewStatus']): string {
-  if (status === 'AUTO_CONFIRMED') return '자동 확정·등록 유지'
-  if (status === 'MANUAL_OVERRIDE') return '수동 보정·등록 유지'
-  if (status === 'AUTO_BLOCKED') return '자동 보류'
-  if (status === 'AUTO_REJECTED') return '자동 거부'
-  return '미정'
-}
-
-function sourceLabel(source: AiExtractionDetail['source']): string {
-  return source === 'WEBHOOK' ? 'Webhook' : '관리자'
-}
-
-function confidencePresentation(confidence: number): { label: string; percentage: number } {
-  if (!Number.isFinite(confidence)) return { label: '확인 필요', percentage: 0 }
-  if (confidence < 0.6) return { label: '낮음', percentage: Math.round(confidence * 100) }
-  if (confidence < 0.8) return { label: '중간', percentage: Math.round(confidence * 100) }
-  return { label: '높음', percentage: Math.round(confidence * 100) }
-}
-
-function reviewTone(status: AiExtractionDetail['reviewStatus']): 'success' | 'warning' | 'danger' | 'neutral' {
-  if (status === 'AUTO_CONFIRMED' || status === 'MANUAL_OVERRIDE') return 'success'
-  if (status === 'AUTO_BLOCKED') return 'warning'
-  if (status === 'AUTO_REJECTED') return 'danger'
-  return 'neutral'
 }
 
 function evidenceLabel(candidate: AiCandidate) {

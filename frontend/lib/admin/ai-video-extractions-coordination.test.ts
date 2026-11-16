@@ -3,6 +3,14 @@ import test from 'node:test'
 
 import {
   aiExtractionMessageForCode,
+  aiCompletenessLabel,
+  aiCompletenessTone,
+  aiExecutionLabel,
+  aiExecutionTone,
+  aiRegistrationUnitStatusLabel,
+  aiReviewLabel,
+  aiReviewTone,
+  aiSourceLabel,
   aiExtractionSubmissionFieldErrors,
   aiExtractionSubmissionAttempt,
   aiExtractionSubmissionPresentation,
@@ -213,4 +221,52 @@ test('AI 오류 코드는 상태 코드가 아닌 계약 코드별 안내로 분
 test('신규 접수 오류는 URL 오류와 정식 등록 충돌을 구분해 안내한다', () => {
   assert.equal(aiExtractionMessageForCode('AIEXTRACT_INVALID_VIDEO_URL'), '공개 YouTube 영상 URL을 확인해 주세요.')
   assert.equal(aiExtractionMessageForCode('AIEXTRACT_DUPLICATE_CONFLICT', 'submission'), '이미 정식 등록된 영상과 충돌해 작업을 접수하지 못했습니다.')
+})
+
+test('AI 작업 목록과 상세는 공통 상태 표현을 사용한다', () => {
+  assert.equal(aiExecutionLabel('RUNNING'), '실행 중')
+  assert.equal(aiExecutionTone('RUNNING'), 'warning')
+  assert.equal(aiCompletenessLabel('PARTIAL'), '부분')
+  assert.equal(aiCompletenessTone('PARTIAL'), 'warning')
+  assert.equal(aiReviewLabel('AUTO_BLOCKED'), '자동 보류')
+  assert.equal(aiReviewTone('AUTO_BLOCKED'), 'warning')
+  assert.equal(aiSourceLabel('WEBHOOK'), 'Webhook')
+  assert.equal(aiRegistrationUnitStatusLabel({ reviewStatus: 'MANUAL_OVERRIDE', manualOverrideType: 'DISCARDED' }), '폐기 완료')
+  assert.equal(aiRegistrationUnitStatusLabel({ reviewStatus: 'AUTO_REJECTED', manualOverrideType: null }), '자동 거부')
+})
+
+test('공통 상태 표현은 AI 계약 enum 전체를 같은 라벨과 tone으로 변환한다', () => {
+  const executionCases = [
+    ['QUEUED', '대기', 'neutral'],
+    ['RUNNING', '실행 중', 'warning'],
+    ['SUCCEEDED', '성공', 'success'],
+    ['FAILED', '실패', 'danger'],
+  ] as const
+  const completenessCases = [
+    ['COMPLETE', '완전', 'success'],
+    ['PARTIAL', '부분', 'warning'],
+    [null, '미완료', 'neutral'],
+  ] as const
+  const reviewCases = [
+    ['AUTO_CONFIRMED', '자동 확정·등록 유지', 'success'],
+    ['AUTO_BLOCKED', '자동 보류', 'warning'],
+    ['AUTO_REJECTED', '자동 거부', 'danger'],
+    ['MANUAL_OVERRIDE', '수동 보정·등록 유지', 'success'],
+    [null, '미정', 'neutral'],
+  ] as const
+
+  for (const [status, label, tone] of executionCases) {
+    assert.equal(aiExecutionLabel(status), label)
+    assert.equal(aiExecutionTone(status), tone)
+  }
+  for (const [status, label, tone] of completenessCases) {
+    assert.equal(aiCompletenessLabel(status), label)
+    assert.equal(aiCompletenessTone(status), tone)
+  }
+  for (const [status, label, tone] of reviewCases) {
+    assert.equal(aiReviewLabel(status), label)
+    assert.equal(aiReviewTone(status), tone)
+  }
+  assert.equal(aiSourceLabel('WEBHOOK'), 'Webhook')
+  assert.equal(aiSourceLabel('ADMIN'), '관리자')
 })

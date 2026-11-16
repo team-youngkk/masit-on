@@ -11,6 +11,7 @@ import {
   setYoutubeChannelWatchEnabled,
   youtubeChannelWatchMessageFor,
   youtubeChannelWatchesQueryKey,
+  type YoutubeChannelWatchSubscriptionStatus,
   type YoutubeChannelWatchSummary,
 } from '@/lib/admin/youtube-channel-watches'
 import {
@@ -25,6 +26,7 @@ import {
 import styles from './YoutubeChannelWatchScreen.module.css'
 
 const WATCH_PAGE_SIZE = 50
+const WATCH_STATUS_ORDER: YoutubeChannelWatchSubscriptionStatus[] = ['ACTIVE', 'UNKNOWN', 'RENEWAL_FAILED', 'INACTIVE']
 
 export function YoutubeChannelWatchScreen() {
   const [page, setPage] = useState(1)
@@ -109,18 +111,13 @@ export function YoutubeChannelWatchScreen() {
     return <StatePanel title="감시할 유튜버가 없습니다." description="먼저 YouTube 채널이 연결된 Creator를 등록해 주세요." />
   }
 
-  const activeCount = summaries.filter((summary) => summary.status.subscriptionStatus === 'ACTIVE').length
-  const pendingCount = summaries.filter((summary) => summary.status.subscriptionStatus === 'UNKNOWN').length
-  const renewalFailedCount = summaries.filter((summary) => summary.status.subscriptionStatus === 'RENEWAL_FAILED').length
-  const inactiveCount = summaries.filter((summary) => summary.status.subscriptionStatus === 'INACTIVE').length
-
   return <div className={styles.screen}>
     <section className={styles.creatorPanel} aria-labelledby="youtube-watch-creator-heading">
       <div className={styles.statusHeader}>
         <div>
           <p className={styles.sectionKicker}>AI 운영</p>
           <h2 id="youtube-watch-creator-heading">감시 대상</h2>
-          <p className={styles.hint}>각 채널의 구독 상태와 Webhook 수신 가능 여부를 독립적으로 확인하고 조정합니다.</p>
+          <p className={styles.hint}>현재 페이지에 표시된 채널 기준으로 집계합니다. 각 채널의 구독 상태와 Webhook 수신 가능 여부를 독립적으로 확인하고 조정합니다.</p>
         </div>
         <div className={styles.pageActions}>
           <Button className={styles.retryButton} variant="secondary" onClick={() => void watchesQuery.refetch()}>목록 새로고침</Button>
@@ -128,10 +125,14 @@ export function YoutubeChannelWatchScreen() {
         </div>
       </div>
       <dl className={styles.overviewGrid} aria-label="현재 페이지 채널 감시 상태 집계">
-        <div className={styles.overviewItem}><dt>구독 활성</dt><dd><StatusBadge tone="success">{activeCount}개</StatusBadge></dd></div>
-        <div className={styles.overviewItem}><dt>확인 대기</dt><dd><StatusBadge tone="warning">{pendingCount}개</StatusBadge></dd></div>
-        <div className={styles.overviewItem}><dt>갱신 실패</dt><dd><StatusBadge tone="danger">{renewalFailedCount}개</StatusBadge></dd></div>
-        <div className={styles.overviewItem}><dt>중지</dt><dd><StatusBadge tone="neutral">{inactiveCount}개</StatusBadge></dd></div>
+        {WATCH_STATUS_ORDER.map((status) => {
+          const presentation = watchStatusPresentation(status)
+          const count = summaries.filter((summary) => summary.status.subscriptionStatus === status).length
+          return <div className={styles.overviewItem} key={status}>
+            <dt>{presentation.label}</dt>
+            <dd><StatusBadge tone={presentation.tone}>{count}개</StatusBadge></dd>
+          </div>
+        })}
       </dl>
     </section>
 

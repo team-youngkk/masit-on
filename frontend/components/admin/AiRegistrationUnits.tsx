@@ -11,7 +11,6 @@ import { aiDiagnosticAction, aiDiagnosticLabel } from '@/lib/admin/ai-diagnostic
 import {
   aiExtractionMessageFor,
   AI_BLOCK_REASON_LABELS,
-  aiValidationFailureMessageFor,
   aiValidationConflictFrom,
   aiValidationRetryActionFor,
   registerAiRegistrationUnit,
@@ -21,7 +20,7 @@ import {
   type AiReviewSupplements,
   type AiValidationConflict,
 } from '@/lib/admin/ai-video-extractions'
-import { exceptionActionsFor, registrationUnitActionsFor, reviewRequest } from '@/lib/admin/ai-video-extractions-coordination'
+import { aiRegistrationUnitStatusLabel, exceptionActionsFor, registrationUnitActionsFor, reviewRequest } from '@/lib/admin/ai-video-extractions-coordination'
 import { CATEGORY_OPTIONS } from '@/lib/restaurants-api'
 
 import styles from './AiVideoExtractionScreen.module.css'
@@ -203,7 +202,7 @@ function RegistrationUnitCard({ jobId, unit, refresh, onRequestRetry }: CardProp
         </div>
         <dl className={styles.unitStatus}>
           <dt>등록 판정</dt>
-          <dd><StatusBadge tone={unitTone(unit)}>{unitStatusLabel(unit)}</StatusBadge> <span className={styles.code}>{unit.reviewStatus}</span></dd>
+          <dd><StatusBadge tone={unitTone(unit)}>{aiRegistrationUnitStatusLabel(unit)}</StatusBadge> <span className={styles.code}>{unit.reviewStatus}</span></dd>
         </dl>
       </div>
 
@@ -328,7 +327,9 @@ function ExceptionPanel({
 }) {
   const actions = exceptionActionsFor(unit.reviewStatus, conflict.recoveryPaths)
   const supplementField = conflict.requiredSupplements[0]
-  const validationFailureMessage = aiValidationFailureMessageFor(conflict.validationFailureReason)
+  const validationFailureLabel = conflict.validationFailureReason
+    ? AI_BLOCK_REASON_LABELS[conflict.validationFailureReason]
+    : null
   const validationDiagnosticMessage = aiDiagnosticLabel(conflict.validationDiagnostic)
   const primaryAction = actions[0]
   const blockReasonMessage = conflict.blockReason
@@ -345,7 +346,7 @@ function ExceptionPanel({
           <>
             <div className={styles.exceptionMeta}>
               <p><strong>차단 사유</strong> · {blockReasonMessage}{conflict.blockReason ? <> <span className={styles.code}>{conflict.blockReason}</span></> : null}</p>
-              {validationFailureMessage ? <p><strong>이번 보충 검증 실패</strong> · {validationFailureMessage.replace(/^이번 보충 검증 실패: /, '')}{conflict.validationFailureReason ? <> <span className={styles.code}>{conflict.validationFailureReason}</span></> : null}</p> : null}
+              {validationFailureLabel ? <p><strong>이번 보충 검증 실패</strong> · {validationFailureLabel}{conflict.validationFailureReason ? <> <span className={styles.code}>{conflict.validationFailureReason}</span></> : null}</p> : null}
               {validationDiagnosticMessage ? <p><strong>이번 검증 근거</strong> · {validationDiagnosticMessage}</p> : null}
             </div>
             <p>이 예외는 자동 복구할 수 없습니다. 새 작업으로 다시 추출해 주세요.</p>
@@ -366,7 +367,7 @@ function ExceptionPanel({
         <>
           <div className={styles.exceptionMeta}>
             <p><strong>차단 사유</strong> · {blockReasonMessage}{conflict.blockReason ? <> <span className={styles.code}>{conflict.blockReason}</span></> : null}</p>
-            {validationFailureMessage ? <p><strong>이번 보충 검증 실패</strong> · {validationFailureMessage.replace(/^이번 보충 검증 실패: /, '')}{conflict.validationFailureReason ? <> <span className={styles.code}>{conflict.validationFailureReason}</span></> : null}</p> : null}
+            {validationFailureLabel ? <p><strong>이번 보충 검증 실패</strong> · {validationFailureLabel}{conflict.validationFailureReason ? <> <span className={styles.code}>{conflict.validationFailureReason}</span></> : null}</p> : null}
             {validationDiagnosticMessage ? <p><strong>이번 검증 근거</strong> · {validationDiagnosticMessage}</p> : null}
           </div>
           <ul className={styles.recoveryPaths} aria-label="복구 경로">
@@ -413,16 +414,6 @@ function unitTone(unit: AiRegistrationUnit): 'success' | 'warning' | 'danger' | 
   if (unit.reviewStatus === 'AUTO_BLOCKED') return 'warning'
   if (unit.reviewStatus === 'AUTO_REJECTED') return 'danger'
   return 'neutral'
-}
-
-function unitStatusLabel(unit: AiRegistrationUnit): string {
-  if (unit.manualOverrideType === 'ROLLED_BACK') return '롤백 완료'
-  if (unit.manualOverrideType === 'DISCARDED') return '폐기 완료'
-  if (unit.reviewStatus === 'AUTO_CONFIRMED') return '자동 확정·등록 유지'
-  if (unit.reviewStatus === 'MANUAL_OVERRIDE') return '수동 보정·등록 유지'
-  if (unit.reviewStatus === 'AUTO_BLOCKED') return '자동 보류'
-  if (unit.reviewStatus === 'AUTO_REJECTED') return '자동 거부'
-  return unit.reviewStatus
 }
 
 function recoveryPathLabel(action: string): string {
