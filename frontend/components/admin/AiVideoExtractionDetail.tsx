@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { StatePanel } from '@/components/ui/StatePanel'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { aiConfidencePresentation, aiConfidenceTone } from '@/lib/admin/ai-confidence'
+import { aiConfidencePresentation } from '@/lib/admin/ai-confidence'
 import { aiDiagnosticAction, aiDiagnosticLabel } from '@/lib/admin/ai-diagnostics'
 import {
   aiExtractionMessageFor,
@@ -186,6 +186,7 @@ export function AiVideoExtractionDetail({ jobId }: { jobId: string }) {
 
 function CandidateCard({ candidate }: { candidate: AiCandidate }) {
   const confidence = aiConfidencePresentation(candidate.confidence)
+  const confidenceValue = Number.isFinite(candidate.confidence) ? candidate.confidence.toFixed(2) : '확인 필요'
   return <li className={styles.candidate}>
     <div className={styles.cardHeading}>
       <p className={styles.sectionKicker}>후보 필드</p>
@@ -194,8 +195,8 @@ function CandidateCard({ candidate }: { candidate: AiCandidate }) {
     </div>
     <div className={styles.candidateConfidence} aria-label={`신뢰도 ${confidence.label} ${confidence.percentage}%`}>
       <span>신뢰도</span>
-      <StatusBadge tone={aiConfidenceTone(candidate.confidence)}>{confidence.label}</StatusBadge>
-      <span>{confidence.percentage}% ({candidate.confidence.toFixed(2)})</span>
+      <StatusBadge tone={confidence.tone}>{confidence.label}</StatusBadge>
+      <span>{confidence.percentage}% ({confidenceValue})</span>
     </div>
     <dl className={styles.candidateEvidence}>
       <dt>근거</dt>
