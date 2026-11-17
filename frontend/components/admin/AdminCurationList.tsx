@@ -64,9 +64,9 @@ export function AdminCurationList() {
     } finally { setBusy(false) }
   }
 
-  return <div className={styles.screen}>
+  return <div className={styles.screen} aria-busy={busy}>
     <div className={styles.toolbar}>
-      <label>상태 필터<select value={status} disabled={busy} onChange={(event) => changeStatus(event.target.value as CurationStatus | '')}>
+      <label htmlFor="curation-status-filter">상태 필터<select id="curation-status-filter" value={status} disabled={busy} onChange={(event) => changeStatus(event.target.value as CurationStatus | '')}>
         <option value="">전체</option><option value="DRAFT">초안</option><option value="PUBLISHED">게시 중</option>
       </select></label>
       <Link className={styles.linkButton} href="/admin/curations/new">새 큐레이션 만들기</Link>
@@ -91,19 +91,19 @@ export function AdminCurationList() {
 
     {busy && !items.length ? <p role="status">큐레이션 목록을 불러오는 중입니다.</p> : null}
     {!busy && !items.length && !error ? <p className={styles.notice}>조건에 맞는 큐레이션이 없습니다.</p> : null}
-    <ul className={styles.list}>
+    <ul className={styles.list} aria-label="큐레이션 목록">
       {items.map((item) => <li className={styles.card} key={item.curationId}>
         <span className={`${styles.badge} ${item.status === 'PUBLISHED' ? styles.activeBadge : styles.draftBadge}`}>{LABELS[item.status]}</span>
         <h2><Link href={`/admin/curations/${encodeURIComponent(item.curationId)}`}>{item.title}</Link></h2>
         <p>{item.description || '설명 없음'}</p>
-        <p className={styles.meta}>맛집 {item.restaurantCount ?? 0}곳 · 최근 수정 {new Date(item.updatedAt).toLocaleString('ko-KR')}</p>
+        <p className={styles.meta}><span className={styles.metaPart}>맛집 {item.restaurantCount ?? 0}곳</span><span className={styles.metaPart}>최근 수정 {new Date(item.updatedAt).toLocaleString('ko-KR')}</span></p>
         {item.hasHiddenRestaurants
           ? <p className={styles.warning}>비공개 또는 비활성 맛집이 포함되어 공개 화면에서 숨겨질 수 있습니다.</p> : null}
       </li>)}
     </ul>
     <nav className={styles.pagination} aria-label="큐레이션 목록 페이지">
       <Button variant="secondary" disabled={busy || page <= 1} onClick={() => setPage(page - 1)}>이전</Button>
-      <span>{page} / {Math.max(pageInfo.totalPages, 1)} 페이지 · 총 {pageInfo.totalElements}건</span>
+      <span aria-live="polite">{page} / {Math.max(pageInfo.totalPages, 1)} 페이지 <span className={styles.paginationTotal}>총 {pageInfo.totalElements}건</span></span>
       <Button variant="secondary" disabled={busy || !pageInfo.hasNext} onClick={() => setPage(page + 1)}>다음</Button>
     </nav>
     {notice ? <p className={error ? styles.error : styles.notice} role={error ? 'alert' : 'status'}>{notice}</p> : null}

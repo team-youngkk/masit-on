@@ -9,7 +9,22 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { AdminApiError } from '@/lib/admin/api'
 import { createAiVideoExtraction, getAiVideoExtractions, aiExtractionMessageFor, type AiExtractionJob, type AiExtractionPage, type AiExecutionStatus, type AiExtractionReviewStatus, type AiExtractionSource, type AiExtractionSubmissionResult } from '@/lib/admin/ai-video-extractions'
 import { aiDiagnosticAction, aiDiagnosticLabel } from '@/lib/admin/ai-diagnostics'
-import { aiExtractionSubmissionAttempt, aiExtractionSubmissionFieldErrors, aiExtractionSubmissionPresentation, nextAiExtractionFilters, type AiExtractionFilters, type AiExtractionSubmissionAttempt, type AiExtractionSubmissionFieldErrors } from '@/lib/admin/ai-video-extractions-coordination'
+import {
+  aiCompletenessLabel,
+  aiCompletenessTone,
+  aiExecutionLabel,
+  aiExecutionTone,
+  aiExtractionSubmissionAttempt,
+  aiExtractionSubmissionFieldErrors,
+  aiExtractionSubmissionPresentation,
+  aiReviewLabel,
+  aiReviewTone,
+  aiSourceLabel,
+  nextAiExtractionFilters,
+  type AiExtractionFilters,
+  type AiExtractionSubmissionAttempt,
+  type AiExtractionSubmissionFieldErrors,
+} from '@/lib/admin/ai-video-extractions-coordination'
 
 import styles from './AiVideoExtractionScreen.module.css'
 
@@ -101,7 +116,13 @@ export function AiVideoExtractionList() {
 
   return <div className={styles.screen}>
     <section className={styles.panel} aria-labelledby="new-ai-extraction-heading">
-      <h2 id="new-ai-extraction-heading">신규 영상 추가</h2>
+      <div className={styles.toolbar}>
+        <div>
+          <p className={styles.sectionKicker}>작업 접수</p>
+          <h2 id="new-ai-extraction-heading">신규 영상 추가</h2>
+        </div>
+        <p className={styles.meta}>관리자 입력은 새 비동기 작업으로 수렴합니다.</p>
+      </div>
       <p className={styles.hint}>전송 범위: 공개 YouTube 영상 URL과 관리자가 입력한 보완 텍스트만 Google Gemini로 전송됩니다. 보완 텍스트는 암호화된 임시 입력으로 보존될 수 있으며 작업 종료 후 24시간 이내 삭제됩니다. 원본 영상·전체 자막·Provider 응답 전문은 저장하거나 화면에 다시 표시하지 않습니다.</p>
       <form className={styles.form} noValidate onSubmit={(event) => void submit(event)}>
         <label htmlFor="ai-video-url">YouTube 영상 URL</label>
@@ -147,7 +168,7 @@ export function AiVideoExtractionList() {
     {data?.items.length ? <ul className={styles.list}>{data.items.map((job) => <JobCard key={job.jobId} job={job} formatDate={formatDate} />)}</ul> : null}
     <nav className={styles.pagination} aria-label="AI 작업 목록 페이지">
       <Button variant="secondary" disabled={busy || filters.page <= 1} onClick={() => change({ page: filters.page - 1 })}>이전</Button>
-      <span>{filters.page} / {Math.max(data?.page.totalPages ?? 1, 1)} 페이지 · 총 {data?.page.totalElements ?? 0}건</span>
+      <span>{filters.page} / {Math.max(data?.page.totalPages ?? 1, 1)} 페이지 <span className={styles.paginationTotal}>총 {data?.page.totalElements ?? 0}건</span></span>
       <Button variant="secondary" disabled={busy || !data?.page.hasNext} onClick={() => change({ page: filters.page + 1 })}>다음</Button>
     </nav>
     {notice ? <p className={error ? styles.error : styles.notice} role={error ? 'alert' : 'status'}>{notice}</p> : null}
@@ -157,42 +178,44 @@ export function AiVideoExtractionList() {
 function JobCard({ job, formatDate }: { job: AiExtractionJob; formatDate: (value: string | null) => string }) {
   const summary = job.registrationSummary
   return <li className={styles.card}>
-    <div className={styles.toolbar}>
-      <div>
-        <p className={styles.meta}>작업 ID <code>{job.jobId}</code></p>
+    <div className={styles.cardHeader}>
+      <div className={styles.cardHeading}>
+        <p className={styles.sectionKicker}>AI 추출 작업</p>
         <h2><Link href={`/admin/ai/${encodeURIComponent(job.jobId)}`}>작업 상세</Link></h2>
+        <p className={styles.meta}>작업 ID <code>{job.jobId}</code></p>
       </div>
-      <StatusBadge tone={executionTone(job.executionStatus)}>{job.executionStatus}</StatusBadge>
     </div>
-    <p className={styles.meta}><a className={styles.videoLink} href={job.youtube.videoUrl} target="_blank" rel="noreferrer">영상 {job.youtube.videoId} 확인</a> · 유입 {job.source}</p>
-    <div className={`${styles.meta} ${styles.statusSummary}`} aria-label="AI 작업 상태 요약">
-      <span className={styles.statusItem}>실행 상태 <StatusBadge tone={executionTone(job.executionStatus)}>{job.executionStatus}</StatusBadge></span>
-      <span className={styles.statusItem}>결과 완전성 <StatusBadge tone={completenessTone(job.resultCompleteness)}>{job.resultCompleteness ?? '미완료'}</StatusBadge></span>
-      <span className={styles.statusItem}>후보 판정 요약 <StatusBadge tone={reviewTone(job.reviewStatus)}>{job.reviewStatus ?? '미정'}</StatusBadge></span>
+    <div className={styles.cardSource}>
+      <a className={styles.videoLink} href={job.youtube.videoUrl} target="_blank" rel="noreferrer">영상 {job.youtube.videoId} 확인</a>
+      <span>유입 경로: {aiSourceLabel(job.source)}</span>
     </div>
-    {summary ? <p className={styles.meta} aria-label="등록 결과 집계">{summary.total === 0 ? '등록 단위 없음' : summary.registered === summary.total ? '전체 등록' : summary.partialRegistration ? '부분 등록' : '현재 등록 없음'} · 현재 등록 {summary.registered}/{summary.total}곳 · 보류 {summary.autoBlocked}곳 · 거부 {summary.autoRejected}곳 · 수동 보정 {summary.manualOverride}곳</p> : null}
-    {job.executionStatus === 'FAILED' ? <p className={styles.warning}>실패 사유: {aiDiagnosticLabel(job.failureDiagnostic, job.failureDiagnostic ? null : '미기록') ?? '세부 원인 미기록'}{aiDiagnosticAction(job.failureDiagnostic) ? ` · ${aiDiagnosticAction(job.failureDiagnostic)}` : ''}</p> : null}
-    <p className={styles.meta}>버전 {job.modelVersion} / {job.promptVersion} / {job.schemaVersion} · 시도 {job.attemptCount}회</p>
-    <p className={styles.meta}>생성 {formatDate(job.createdAt)} · 완료 {formatDate(job.finishedAt)}</p>
+    <div className={styles.statusSummary} aria-label="AI 작업 상태 요약">
+      <div className={styles.statusItem}>
+        <span className={styles.statusItemLabel}>실행 상태</span>
+        <div className={styles.statusItemValue}><StatusBadge tone={aiExecutionTone(job.executionStatus)}>{aiExecutionLabel(job.executionStatus)}</StatusBadge><span className={styles.code}>{job.executionStatus}</span></div>
+      </div>
+      <div className={styles.statusItem}>
+        <span className={styles.statusItemLabel}>결과 완전성</span>
+        <div className={styles.statusItemValue}><StatusBadge tone={aiCompletenessTone(job.resultCompleteness)}>{aiCompletenessLabel(job.resultCompleteness)}</StatusBadge>{job.resultCompleteness ? <span className={styles.code}>{job.resultCompleteness}</span> : null}</div>
+      </div>
+      <div className={styles.statusItem}>
+        <span className={styles.statusItemLabel}>자동 등록 상태</span>
+        <div className={styles.statusItemValue}><StatusBadge tone={aiReviewTone(job.reviewStatus)}>{aiReviewLabel(job.reviewStatus)}</StatusBadge>{job.reviewStatus ? <span className={styles.code}>{job.reviewStatus}</span> : null}</div>
+      </div>
+    </div>
+    {summary ? <dl className={styles.registrationSummary} aria-label="등록 결과 집계">
+      <div className={styles.summaryItem}><dt>등록 단위</dt><dd>{summary.total}개</dd></div>
+      <div className={styles.summaryItem}><dt>현재 등록</dt><dd><span>{summary.registered}개</span><span>{summary.total === 0 ? '등록 단위 없음' : summary.registered === summary.total ? '전체 등록' : summary.partialRegistration ? '부분 등록' : '현재 등록 없음'}</span></dd></div>
+      <div className={styles.summaryItem}><dt>자동 확정</dt><dd>{summary.autoConfirmed}개</dd></div>
+      <div className={styles.summaryItem}><dt>자동 보류</dt><dd>{summary.autoBlocked}개</dd></div>
+      <div className={styles.summaryItem}><dt>자동 거부 / 수동 보정</dt><dd>{summary.autoRejected}개 / {summary.manualOverride}개</dd></div>
+    </dl> : null}
+    {job.executionStatus === 'FAILED' ? <p className={styles.warning}><span>실패 사유: {aiDiagnosticLabel(job.failureDiagnostic, job.failureDiagnostic ? null : '미기록') ?? '세부 원인 미기록'}</span>{aiDiagnosticAction(job.failureDiagnostic) ? <span>{aiDiagnosticAction(job.failureDiagnostic)}</span> : null}</p> : null}
+    <dl className={styles.metaGrid}>
+      <div className={styles.metaItem}><dt>버전</dt><dd>{job.provider} / {job.modelVersion} / {job.promptVersion} / {job.schemaVersion}</dd></div>
+      <div className={styles.metaItem}><dt>시도</dt><dd>{job.attemptCount}회</dd></div>
+      <div className={styles.metaItem}><dt>생성</dt><dd>{formatDate(job.createdAt)}</dd></div>
+      <div className={styles.metaItem}><dt>완료</dt><dd>{formatDate(job.finishedAt)}</dd></div>
+    </dl>
   </li>
-}
-
-function executionTone(status: AiExecutionStatus): 'success' | 'warning' | 'danger' | 'neutral' {
-  if (status === 'SUCCEEDED') return 'success'
-  if (status === 'FAILED') return 'danger'
-  if (status === 'RUNNING') return 'warning'
-  return 'neutral'
-}
-
-function completenessTone(status: AiExtractionJob['resultCompleteness']): 'success' | 'warning' | 'neutral' {
-  if (status === 'COMPLETE') return 'success'
-  if (status === 'PARTIAL') return 'warning'
-  return 'neutral'
-}
-
-function reviewTone(status: AiExtractionReviewStatus | null): 'success' | 'warning' | 'danger' | 'neutral' {
-  if (status === 'AUTO_CONFIRMED' || status === 'MANUAL_OVERRIDE') return 'success'
-  if (status === 'AUTO_BLOCKED') return 'warning'
-  if (status === 'AUTO_REJECTED') return 'danger'
-  return 'neutral'
 }

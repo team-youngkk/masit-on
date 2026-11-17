@@ -167,11 +167,18 @@ function AdminTags({ accountId, restaurantId }: { accountId: string; restaurantI
   }
 
   const options = definitionsQuery.data?.items ?? query.data?.tagOptions ?? []
-  return <section className={styles.panel} aria-label="관리자 방문 태그 관리">
-    <h2>방문 태그 관리 <span className={styles.admin}>관리자</span></h2>
-    <p>자연어 검색에 사용하는 태그입니다. 여러 태그 조건은 같은 방문에 함께 있어야 검색됩니다.</p>
-    <p><Link href="/admin/tag-definitions">태그 정의 관리에서 표시명·별칭과 활성 상태 수정하기 →</Link></p>
-    {notice && <p role="status">{notice}</p>}
+  const isLoading = query.isPending || definitionsQuery.isPending
+  return <section className={styles.panel} aria-label="관리자 방문 태그 관리" aria-busy={isLoading}>
+    <header className={styles.panelHeader}>
+      <div>
+        <p className={styles.kicker}>방문 기록 보정</p>
+        <h2>방문 태그 관리</h2>
+      </div>
+      <span className={styles.panelState}>관리 화면</span>
+    </header>
+    <p className={styles.description}>자연어 검색에 사용하는 태그입니다. 여러 태그 조건은 같은 방문에 함께 있어야 검색됩니다.</p>
+    <p className={styles.referenceLink}><Link href="/admin/tag-definitions">태그 정의 관리에서 표시명·별칭과 활성 상태 수정하기</Link></p>
+    {notice && <p className={styles.notice} role="status">{notice}</p>}
     {error && <p role="alert" className={styles.error}>{error}</p>}
     {query.isPending || definitionsQuery.isPending ? <p role="status">방문 태그를 불러오는 중…</p> : query.isError || definitionsQuery.isError ? <div>
       <p role="alert" className={styles.error}>{messageFor(query.error ?? definitionsQuery.error)}</p>
@@ -182,12 +189,17 @@ function AdminTags({ accountId, restaurantId }: { accountId: string; restaurantI
         const inactive = visit.tags.filter(tag => !options.some(option => option.code === tag.code))
         const videoUrl = /^https?:\/\//i.test(visit.videoUrl) ? visit.videoUrl : null
         return <li key={visit.visitId} className={styles.visit}>
-          <h3>{visit.creatorName}</h3>
-          <p>{videoUrl ? <a href={videoUrl} target="_blank" rel="noopener noreferrer">{visit.videoTitle} ↗</a> : visit.videoTitle}</p>
+          <header className={styles.visitHeader}>
+            <div>
+              <h3>{visit.creatorName}</h3>
+              <p className={styles.videoTitle}>{videoUrl ? <a href={videoUrl} target="_blank" rel="noopener noreferrer" aria-label={`${visit.videoTitle} (새 창)`}>{visit.videoTitle}</a> : visit.videoTitle}</p>
+            </div>
+            <span className={styles.visitCount}>태그 {visit.tags.length}/50</span>
+          </header>
           <div className={styles.tags}>{visit.tags.length ? visit.tags.map(tag => <span key={tag.code} className={styles.tag}>
             {tag.displayName}{inactive.some(item => item.code === tag.code) ? ' (비활성)' : ''}
           </span>) : <span>등록된 태그가 없습니다.</span>}</div>
-          {draft ? <form onSubmit={submit} className={styles.form}>
+          {draft ? <form onSubmit={submit} className={styles.form} aria-busy={saveMutation.isPending || createMutation.isPending}>
             <fieldset disabled={saveMutation.isPending}>
               <legend>이 방문의 태그 선택 ({draft.tagCodes.length}/50)</legend>
               {inactive.length > 0 && <p>비활성 태그는 유지하거나 해제할 수 있지만, 해제한 뒤 다시 추가할 수 없습니다.</p>}
