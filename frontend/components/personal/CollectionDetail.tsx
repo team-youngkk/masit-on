@@ -84,7 +84,6 @@ export function CollectionDetail({ collectionId, page, size }: {
     sequence.current += 1
     setData(null)
     setError(null)
-    setAction(null)
     setActionError(null)
     setConfirmingDelete(false)
     setLoading(status === 'loading')

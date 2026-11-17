@@ -39,7 +39,7 @@ export function Field({ label, error, className, ...props }: FieldProps) {
         aria-describedby={describedBy}
       />
       {error ? (
-        <p id={errorId} className={styles.error} role="alert">
+        <p id={errorId} className={styles.error}>
           {error}
         </p>
       ) : null}

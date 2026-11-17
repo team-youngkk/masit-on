@@ -5,20 +5,11 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/Button'
 import { AdminCuration, curationMessageFor, getAdminCuration, replaceCurationRestaurants, setCurationPublication, updateAdminCuration } from '@/lib/admin/curations'
-import { moveItem, parseRestaurantIds, validateCurationText } from '@/lib/admin/curations-coordination'
+import { moveItem, parseRestaurantIds, validateCurationTextFields } from '@/lib/admin/curations-coordination'
 
 import styles from './AdminCurationScreen.module.css'
 
-type CurationBasicInfoField = 'title' | 'description'
-type CurationBasicInfoFieldErrors = Partial<Record<CurationBasicInfoField, string>>
-
-function curationBasicInfoFieldErrors(messages: string[]): CurationBasicInfoFieldErrors {
-  return messages.reduce<CurationBasicInfoFieldErrors>((fieldErrors, message) => {
-    if (message.startsWith('제목은')) fieldErrors.title = message
-    if (message.startsWith('설명은')) fieldErrors.description = message
-    return fieldErrors
-  }, {})
-}
+type CurationBasicInfoFieldErrors = ReturnType<typeof validateCurationTextFields>
 
 export function AdminCurationDetail({ curationId }: { curationId: string }) {
   const [data, setData] = useState<AdminCuration | null>(null)
@@ -77,11 +68,11 @@ export function AdminCurationDetail({ curationId }: { curationId: string }) {
 
     <form className={`${styles.form} ${styles.panel}`} onSubmit={(event) => {
         event.preventDefault()
-        const errors = validateCurationText(title, description)
-        if (errors.length) {
-          setBasicInfoErrors(curationBasicInfoFieldErrors(errors))
+        const errors = validateCurationTextFields(title, description)
+        if (Object.keys(errors).length) {
+          setBasicInfoErrors(errors)
           setError(true)
-          setNotice(errors.join(' '))
+          setNotice(Object.values(errors).join(' '))
           return
         }
         setBasicInfoErrors({})
