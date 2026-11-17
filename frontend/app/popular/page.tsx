@@ -128,16 +128,9 @@ export default async function PopularRestaurantsPage() {
                   </div>
                   <div className={styles.cardBody}>
                     <div className={styles.cardTitleRow}>
-                      <span
-                        className={styles.rank}
-                        aria-label={`인기 ${item.rank}위`}
-                      >
-                        <span className={styles.rankLabel} aria-hidden="true">
-                          순위
-                        </span>
-                        <span className={styles.rankNumber} aria-hidden="true">
-                          {item.rank}
-                        </span>
+                      <span className={styles.rank}>
+                        <span className={styles.rankLabel}>순위</span>
+                        <span className={styles.rankNumber}>{item.rank}</span>
                       </span>
                       <h2>
                         <Link

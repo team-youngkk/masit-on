@@ -26,6 +26,8 @@ import {
 import styles from './NaturalLanguageRestaurantSearch.module.css'
 
 type Props = { filters: NaturalLanguageSearchFilters; returnTo: string; structuredFormId: string; creatorLabels: Record<string, string>; regionLabels: Record<string, string> }
+type SearchFailureOutcome = Exclude<NaturalLanguageSearchOutcome, { kind: 'success' }>
+type SearchFailurePresentation = { title: string; tone: 'warning' | 'danger'; message: string }
 
 const TAG_GROUPS = [
   { label: '음식 종류', prefix: 'MENU_' },
@@ -33,6 +35,19 @@ const TAG_GROUPS = [
   { label: '상황', prefix: 'OCCASION_' },
   { label: '분위기', prefix: 'ATMOSPHERE_' },
 ] as const
+
+function searchFailurePresentation(outcome: SearchFailureOutcome): SearchFailurePresentation {
+  switch (outcome.kind) {
+    case 'invalid':
+      return { title: '검색 조건을 확인해 주세요', tone: 'danger', message: outcome.message }
+    case 'rateLimited':
+      return { title: '요청이 잠시 제한됐습니다', tone: 'warning', message: outcome.message }
+    case 'unavailable':
+      return { title: '자연어 검색을 일시적으로 사용할 수 없습니다', tone: 'warning', message: outcome.message }
+    case 'error':
+      return { title: '자연어 검색을 처리하지 못했습니다', tone: 'danger', message: outcome.message }
+  }
+}
 
 export function NaturalLanguageRestaurantSearch({ filters, returnTo, structuredFormId, creatorLabels, regionLabels }: Props) {
   const [sentence, setSentence] = useState('')
@@ -46,11 +61,17 @@ export function NaturalLanguageRestaurantSearch({ filters, returnTo, structuredF
   const [now, setNow] = useState(Date.now())
   const controller = useRef<AbortController | null>(null)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
+  const collapsedTriggerRef = useRef<HTMLButtonElement | null>(null)
   const last = useRef({ sentence: '', page: 1, filters })
 
   function expandSearch() {
     setExpanded(true)
     window.requestAnimationFrame(() => searchInputRef.current?.focus())
+  }
+
+  function collapseSearch() {
+    setExpanded(false)
+    window.requestAnimationFrame(() => collapsedTriggerRef.current?.focus())
   }
 
   function liveFilters() {
@@ -98,6 +119,7 @@ export function NaturalLanguageRestaurantSearch({ filters, returnTo, structuredF
     if (controller.current === active) controller.current = null
   }, [])
   const applied = result ? formatNaturalLanguageAppliedConditions(result.interpretation.appliedConditions, creatorLabels, regionLabels) : []
+  const failure = outcome && outcome.kind !== 'success' ? searchFailurePresentation(outcome) : null
   const selectedConditions = [
     filters.query ? `“${filters.query}”` : null,
     filters.district,
@@ -107,12 +129,13 @@ export function NaturalLanguageRestaurantSearch({ filters, returnTo, structuredF
     ...tags.map((tag) => NATURAL_LANGUAGE_TAG_OPTIONS.find((option) => option.code === tag)?.label ?? tag),
   ].filter((condition): condition is string => Boolean(condition))
 
-  if (!expanded) {
-    return <section id="natural-language-search-panel" className={styles.collapsedSearch} aria-label="원하는 맛집 찾기">
+  return <>
+    <section className={styles.collapsedSearch} aria-label="원하는 맛집 찾기" hidden={expanded}>
       <button
         type="button"
+        ref={collapsedTriggerRef}
         className={styles.collapsedButton}
-        aria-expanded={false}
+        aria-expanded={expanded}
         aria-controls="natural-language-search-panel"
         onClick={expandSearch}
       >
@@ -132,9 +155,8 @@ export function NaturalLanguageRestaurantSearch({ filters, returnTo, structuredF
         <span className={styles.collapsedArrow} aria-hidden="true">→</span>
       </button>
     </section>
-  }
 
-  return <section id="natural-language-search-panel" className={styles.search} aria-label="원하는 맛집 찾기">
+  <section id="natural-language-search-panel" className={styles.search} aria-label="원하는 맛집 찾기" hidden={!expanded}>
     <div className={styles.headingRow}>
       <div>
         <h2 className={styles.title}>찾고 싶은 맛집을 알려주세요</h2>
@@ -145,7 +167,7 @@ export function NaturalLanguageRestaurantSearch({ filters, returnTo, structuredF
         className={styles.collapseButton}
         aria-expanded={true}
         aria-controls="natural-language-search-panel"
-        onClick={() => setExpanded(false)}
+        onClick={collapseSearch}
       >
         접기
       </button>
@@ -165,7 +187,7 @@ export function NaturalLanguageRestaurantSearch({ filters, returnTo, structuredF
             <h3 className={styles.tagGroupTitle}>{group.label}</h3>
             <div className={styles.tagOptions}>
               {NATURAL_LANGUAGE_TAG_OPTIONS.filter((option) => option.code.startsWith(group.prefix)).map((option) => <label key={option.code} className={`${styles.tagOption} ${tags.includes(option.code) ? styles.tagSelected : ''}`}>
-                <input type="checkbox" checked={tags.includes(option.code)} disabled={!tags.includes(option.code) && tags.length >= NATURAL_LANGUAGE_TAG_LIMIT} onChange={() => toggleTag(option.code)} />
+                <input type="checkbox" checked={tags.includes(option.code)} disabled={!tags.includes(option.code) && tags.length >= NATURAL_LANGUAGE_TAG_LIMIT} onChange={(event) => { toggleTag(option.code); event.currentTarget.focus() }} />
                 {option.label}
               </label>)}
             </div>
@@ -199,7 +221,8 @@ export function NaturalLanguageRestaurantSearch({ filters, returnTo, structuredF
           {result.results.page.totalPages > 1 ? <nav className={styles.pagination} aria-label="자연어 검색 결과 페이지"><Button type="button" variant="secondary" disabled={pending || result.results.page.number <= 1} onClick={() => void submit(last.current.sentence, result.results.page.number - 1, last.current.filters)}>이전</Button><span>{result.results.page.number} / {result.results.page.totalPages}</span><Button type="button" variant="secondary" disabled={pending || !result.results.page.hasNext} onClick={() => void submit(last.current.sentence, result.results.page.number + 1, last.current.filters)}>다음</Button></nav> : null}
         </>}
       </> : null}
-      {outcome && outcome.kind !== 'success' ? <StatePanel tone="danger" title="검색 조건을 확인해 주세요" description={<><p>{outcome.message}</p>{outcome.kind === 'invalid' && outcome.fieldGuidance.length ? <ul className={styles.guidance}>{outcome.fieldGuidance.map((item, index) => <li key={`${index}-${item.label}`}>{item.label}: {item.reason}</li>)}</ul> : null}<p><a href="#structured-restaurant-search">기존 필터 검색으로 이동</a></p></>} traceId={outcome.traceId} actions={isNaturalLanguageRetryAllowed(outcome) ? <Button type="button" variant="secondary" onClick={() => void submit(last.current.sentence, last.current.page, last.current.filters)} disabled={pending || retryBlocked}>{retryBlocked ? '잠시 후 다시 시도' : '다시 시도'}</Button> : null} /> : null}
+      {outcome && outcome.kind !== 'success' && failure ? <StatePanel tone={failure.tone} title={failure.title} description={<><p>{failure.message}</p>{outcome.kind === 'invalid' && outcome.fieldGuidance.length ? <ul className={styles.guidance}>{outcome.fieldGuidance.map((item, index) => <li key={`${index}-${item.label}`}>{item.label}: {item.reason}</li>)}</ul> : null}<p><a href="#structured-restaurant-search">기존 필터 검색으로 이동</a></p></>} traceId={outcome.traceId} actions={isNaturalLanguageRetryAllowed(outcome) ? <Button type="button" variant="secondary" onClick={() => void submit(last.current.sentence, last.current.page, last.current.filters)} disabled={pending || retryBlocked}>{retryBlocked ? '잠시 후 다시 시도' : '다시 시도'}</Button> : null} /> : null}
     </div>
   </section>
+  </>
 }

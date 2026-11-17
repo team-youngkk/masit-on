@@ -9,6 +9,17 @@ import { moveItem, parseRestaurantIds, validateCurationText } from '@/lib/admin/
 
 import styles from './AdminCurationScreen.module.css'
 
+type CurationBasicInfoField = 'title' | 'description'
+type CurationBasicInfoFieldErrors = Partial<Record<CurationBasicInfoField, string>>
+
+function curationBasicInfoFieldErrors(messages: string[]): CurationBasicInfoFieldErrors {
+  return messages.reduce<CurationBasicInfoFieldErrors>((fieldErrors, message) => {
+    if (message.startsWith('제목은')) fieldErrors.title = message
+    if (message.startsWith('설명은')) fieldErrors.description = message
+    return fieldErrors
+  }, {})
+}
+
 export function AdminCurationDetail({ curationId }: { curationId: string }) {
   const [data, setData] = useState<AdminCuration | null>(null)
   const [title, setTitle] = useState('')
@@ -18,10 +29,12 @@ export function AdminCurationDetail({ curationId }: { curationId: string }) {
   const [busy, setBusy] = useState(true)
   const [error, setError] = useState(false)
   const [notice, setNotice] = useState('')
+  const [basicInfoErrors, setBasicInfoErrors] = useState<CurationBasicInfoFieldErrors>({})
 
   const apply = useCallback((next: AdminCuration) => {
     setData(next); setTitle(next.title); setDescription(next.description)
     setRestaurantIds([...next.items].sort((a, b) => a.position - b.position).map((item) => item.restaurantId))
+    setBasicInfoErrors({})
   }, [])
 
   async function retryLoad() {
@@ -62,10 +75,23 @@ export function AdminCurationDetail({ curationId }: { curationId: string }) {
     <div className={styles.toolbar}><Link href="/admin/curations">← 목록으로</Link><span className={`${styles.badge} ${data.status === 'PUBLISHED' ? styles.activeBadge : styles.draftBadge}`}>{data.status === 'PUBLISHED' ? '게시 중' : '초안'}</span></div>
     {warnings.length ? <div className={styles.warning} role="alert" aria-live="assertive"><strong>공개 노출 경고</strong>{warnings.map((item) => <p key={item.restaurantId}>{item.restaurantId}: {item.warning ?? `${item.availability} 상태로 공개 화면에서 숨겨집니다.`}</p>)}</div> : null}
 
-    <form className={`${styles.form} ${styles.panel}`} onSubmit={(event) => { event.preventDefault(); const errors = validateCurationText(title, description); if (errors.length) { setError(true); setNotice(errors.join(' ')); return } void run(() => updateAdminCuration(curationId, title, description), '제목과 설명을 저장했습니다.') }}>
+    <form className={`${styles.form} ${styles.panel}`} onSubmit={(event) => {
+        event.preventDefault()
+        const errors = validateCurationText(title, description)
+        if (errors.length) {
+          setBasicInfoErrors(curationBasicInfoFieldErrors(errors))
+          setError(true)
+          setNotice(errors.join(' '))
+          return
+        }
+        setBasicInfoErrors({})
+        void run(() => updateAdminCuration(curationId, title, description), '제목과 설명을 저장했습니다.')
+    }}>
       <h2>기본 정보</h2>
-      <label htmlFor="curation-detail-title">제목 <span id="curation-detail-title-hint">1~100자</span><input id="curation-detail-title" maxLength={100} aria-describedby="curation-detail-title-hint" value={title} onChange={(event) => setTitle(event.target.value)} /></label>
-      <label htmlFor="curation-detail-description">설명 <span id="curation-detail-description-hint">0~1000자</span><textarea id="curation-detail-description" rows={5} maxLength={1000} aria-describedby="curation-detail-description-hint" value={description} onChange={(event) => setDescription(event.target.value)} /></label>
+      <label htmlFor="curation-detail-title">제목 <span id="curation-detail-title-hint">1~100자</span><input id="curation-detail-title" maxLength={100} aria-invalid={basicInfoErrors.title ? 'true' : undefined} aria-describedby={basicInfoErrors.title ? 'curation-detail-title-hint curation-detail-title-error' : 'curation-detail-title-hint'} value={title} onChange={(event) => { setTitle(event.target.value); setBasicInfoErrors((current) => { if (!current.title) return current; const next = { ...current }; delete next.title; return next }) }} /></label>
+      {basicInfoErrors.title ? <p id="curation-detail-title-error" className={styles.error}>{basicInfoErrors.title}</p> : null}
+      <label htmlFor="curation-detail-description">설명 <span id="curation-detail-description-hint">0~1000자</span><textarea id="curation-detail-description" rows={5} maxLength={1000} aria-invalid={basicInfoErrors.description ? 'true' : undefined} aria-describedby={basicInfoErrors.description ? 'curation-detail-description-hint curation-detail-description-error' : 'curation-detail-description-hint'} value={description} onChange={(event) => { setDescription(event.target.value); setBasicInfoErrors((current) => { if (!current.description) return current; const next = { ...current }; delete next.description; return next }) }} /></label>
+      {basicInfoErrors.description ? <p id="curation-detail-description-error" className={styles.error}>{basicInfoErrors.description}</p> : null}
       <div className={styles.formActions}>
         <Button type="submit" disabled={busy}>기본 정보 저장</Button>
       </div>

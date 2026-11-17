@@ -61,7 +61,8 @@
 
 .marker {
   position: relative;
-  width: 36px;
+  width: var(--control-min-height);
+  min-width: var(--control-min-height);
   height: 48px;
   padding: 0;
   border: 0;
@@ -71,8 +72,9 @@
 
 .markerBackground {
   position: absolute;
-  inset: 0;
-  width: 100%;
+  top: 0;
+  left: 4px;
+  width: 36px;
   height: 100%;
   pointer-events: none;
 }
@@ -81,7 +83,7 @@
 .markerFallback {
   position: absolute;
   top: 4px;
-  left: 4px;
+  left: 8px;
   z-index: 1;
   width: 28px;
   height: 28px;
@@ -93,7 +95,7 @@
 
 .markerFallback {
   top: 9px;
-  left: 9px;
+  left: 13px;
   width: 18px;
   height: 18px;
   border: 0;
@@ -102,14 +104,14 @@
 @media (max-width: 389px) {
   .markerImage {
     top: 5px;
-    left: 5px;
+    left: 9px;
     width: 26px;
     height: 26px;
   }
 
   .markerFallback {
     top: 10px;
-    left: 10px;
+    left: 14px;
     width: 16px;
     height: 16px;
   }
