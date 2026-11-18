@@ -434,4 +434,3 @@ class RuntimeDeploymentContractTest {
         return content.substring(start, end);
     }
 }
-
