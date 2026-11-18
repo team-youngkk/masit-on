@@ -1,46 +1,47 @@
 /*
  * 디자인 토큰.
- * 색상·간격·타이포는 이 파일에서만 정의하고 컴포넌트는 var()로 참조한다.
- * 값의 근거는 docs/04-product/wireframes/README.md 4절 시각 규칙이다.
+ * 동네 취재 노트 방향의 공통 계약은 frontend/DESIGN.md에서 설명하고,
+ * 실제 값은 이 파일에서만 정의한다. 컴포넌트는 var()로 참조한다.
  */
 
 :root {
-  /* 주요 색상 — 와이어프레임 녹색 계열 */
-  --color-primary: #22c55e;
-  --color-primary-strong: #056b33;
-  --color-primary-deep: #056b33;
-  --color-primary-contrast: #044e28;
-  --color-primary-soft: #e8f6ec;
-  --color-primary-faint: #f3fbf5;
-  --color-border-strong: #d9ded5;
+  /* 색상 역할 — 녹색은 행동·선택·검증에만 사용한다 */
+  --color-primary: #82ad8e;
+  --color-primary-strong: #2f6b4f;
+  --color-primary-deep: #285b43;
+  --color-primary-contrast: #163522;
+  --color-primary-soft: #e0eee1;
+  --color-primary-faint: #f0f6ed;
+  --color-border-strong: #b8aa98;
+  --color-focus-ring: #2f6b4f;
 
-  /* 표면 */
-  --color-background: #fdfbf8;
-  --color-surface: #ffffff;
-  --color-surface-muted: #f6f3ee;
-  --color-border: #eae7e1;
+  /* 표면 — 종이 바닥, 카드, 보조 표면의 차이를 낮은 대비로 만든다 */
+  --color-background: #f4efe5;
+  --color-surface: #fffaf0;
+  --color-surface-muted: #ebe3d6;
+  --color-border: #d8cebf;
 
-  /* 텍스트 */
-  --color-text: #1f1d1a;
-  --color-text-muted: #6f6a63;
-  --color-text-on-primary: #ffffff;
+  /* 텍스트 — 잉크색 본문과 읽을 수 있는 보조 문장 */
+  --color-text: #2e2a25;
+  --color-text-muted: #645c52;
+  --color-text-on-primary: #fffaf0;
 
-  /* 상태 */
-  --color-danger: #d93f0b;
-  --color-danger-deep: #a92d08;
-  --color-danger-soft: #fff3ef;
-  --color-warning: #b45309;
-  --color-warning-soft: #fff8e7;
-  --color-info: #2563eb;
-  --color-info-soft: #eff6ff;
+  /* 상태 — 녹색과 의미가 겹치지 않는 오류·주의·정보 색상 */
+  --color-danger: #b7462d;
+  --color-danger-deep: #8c2f1f;
+  --color-danger-soft: #f8e5dc;
+  --color-warning: #9b6a1f;
+  --color-warning-soft: #f6edcf;
+  --color-info: #3d6882;
+  --color-info-soft: #e5eff3;
 
-  /* 장식용 공개 화면 표면 */
-  --color-hero-start: #fffdf8;
-  --color-hero-mid: #f6f0e4;
-  --color-hero-end: #ece1cd;
-  --color-text-on-image: #ffffff;
+  /* 공개 화면 표면 — 음식 이미지와 정보가 주인공이 되도록 톤을 낮춘다 */
+  --color-hero-start: #fffaf0;
+  --color-hero-mid: #f0e6d3;
+  --color-hero-end: #e5d5bb;
+  --color-text-on-image: #fffaf0;
 
-  /* 타이포 */
+  /* 타입 — 별도 폰트 의존성 없이 한국어 가독성을 우선한다 */
   --font-sans: 'Pretendard', 'Noto Sans KR', 'Apple SD Gothic Neo',
     'Malgun Gothic', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-size-sm: 0.875rem;
@@ -51,27 +52,29 @@
   --font-size-3xl: clamp(2rem, 5vw, 3.25rem);
   --line-height-tight: 1.3;
   --line-height-base: 1.6;
+  --line-height-relaxed: 1.75;
 
-  /* 간격 */
+  /* 간격 — 4px 단위를 바탕으로 화면 역할에 따라 리듬을 만든다 */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
   --space-4: 1rem;
   --space-5: 1.25rem;
   --space-6: 1.5rem;
+  --space-7: 1.75rem;
   --space-8: 2rem;
   --space-12: 3rem;
 
   /* 컨트롤 — 모바일 터치 목표 크기. 입력 컨트롤이 공통으로 참조한다 */
   --control-min-height: 44px;
 
-  /* 모양 */
+  /* 모양과 깊이 — 카드만 살짝 들어 올리고 나머지는 평면으로 둔다 */
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
   --radius-full: 999px;
-  --shadow-card: 0 1px 2px rgb(31 29 26 / 6%), 0 4px 12px rgb(31 29 26 / 4%);
-  --shadow-raised: 0 12px 36px rgb(31 29 26 / 10%);
+  --shadow-card: 0 1px 2px rgb(46 42 37 / 7%), 0 4px 12px rgb(46 42 37 / 5%);
+  --shadow-raised: 0 12px 36px rgb(46 42 37 / 12%);
 
   /* 레이아웃 — 1280·1440px에서 본문이 과도하게 늘어나지 않게 상한을 둔다 */
   --layout-max-width: 1200px;
@@ -82,38 +85,39 @@ html[data-theme='dark'] [data-public-frame],
 html[data-theme='dark'] [data-admin-frame] {
   color-scheme: dark;
 
-  --color-primary: #4ade80;
-  --color-primary-strong: #86efac;
-  --color-primary-deep: #22c55e;
-  --color-primary-contrast: #052e16;
-  --color-primary-soft: #143b25;
-  --color-primary-faint: #10281a;
-  --color-border-strong: #3f4d42;
+  --color-primary: #82b18e;
+  --color-primary-strong: #b0d0b5;
+  --color-primary-deep: #5e936d;
+  --color-primary-contrast: #16281b;
+  --color-primary-soft: #294335;
+  --color-primary-faint: #24382b;
+  --color-border-strong: #6b5d4d;
+  --color-focus-ring: #b0d0b5;
 
-  --color-background: #111410;
-  --color-surface: #1b201c;
-  --color-surface-muted: #252b26;
-  --color-border: #354239;
+  --color-background: #28241f;
+  --color-surface: #342f28;
+  --color-surface-muted: #3d372f;
+  --color-border: #554b3d;
 
-  --color-text: #f2f7f2;
-  --color-text-muted: #b1bcb2;
-  --color-text-on-primary: #06140a;
+  --color-text: #f4eee4;
+  --color-text-muted: #c0b5a5;
+  --color-text-on-primary: #172319;
 
-  --color-danger: #fb7185;
-  --color-danger-deep: #fda4af;
-  --color-danger-soft: #3d1f22;
-  --color-warning: #fbbf24;
-  --color-warning-soft: #3d3012;
-  --color-info: #60a5fa;
-  --color-info-soft: #142b46;
+  --color-danger: #e08368;
+  --color-danger-deep: #f2a18c;
+  --color-danger-soft: #4d2d25;
+  --color-warning: #e2b663;
+  --color-warning-soft: #4b3b1f;
+  --color-info: #8fb5c5;
+  --color-info-soft: #293f4a;
 
-  --color-hero-start: #1a211a;
-  --color-hero-mid: #273126;
-  --color-hero-end: #374435;
-  --color-text-on-image: #ffffff;
+  --color-hero-start: #302b24;
+  --color-hero-mid: #40372b;
+  --color-hero-end: #514432;
+  --color-text-on-image: #f8f1e6;
 
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 22%), 0 4px 12px rgb(0 0 0 / 18%);
-  --shadow-raised: 0 12px 36px rgb(0 0 0 / 32%);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 24%), 0 4px 12px rgb(0 0 0 / 18%);
+  --shadow-raised: 0 12px 36px rgb(0 0 0 / 34%);
 }
 
 @media (min-width: 768px) {
@@ -173,7 +177,24 @@ summary {
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-primary-strong);
-  outline-offset: 2px;
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (forced-colors: active) {
+  :focus-visible {
+    outline: 2px solid CanvasText;
+  }
 }
 

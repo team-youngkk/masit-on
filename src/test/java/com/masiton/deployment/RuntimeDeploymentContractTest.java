@@ -329,8 +329,14 @@ class RuntimeDeploymentContractTest {
                 .doesNotContain("docker push")
                 .doesNotContain("DOCKERHUB_PUSH_TOKEN")
                 .doesNotContain("environment: production");
+        String pinnedPackages =
+                "libcrypto3=3.5.9-r0 libssl3=3.5.9-r0 musl=1.2.5-r13 musl-utils=1.2.5-r13 zlib=1.4-r0 expat=2.10.0-r0 libexpat=2.10.0-r0";
         assertThat(dockerfile)
-                .contains("libcrypto3=3.5.9-r0 libssl3=3.5.9-r0 expat=2.9.0-r0 libexpat=2.9.0-r0");
+                .contains(pinnedPackages);
+        assertThat(dockerfile.lines()
+                .filter(line -> line.contains("RUN apk add --no-cache " + pinnedPackages))
+                .count())
+                .isEqualTo(2L);
     }
 
     @Test

@@ -10,7 +10,29 @@
 .control,
 .loginLink {
   min-height: var(--control-min-height);
+  max-width: 100%;
   white-space: nowrap;
+}
+
+.control {
+  border-color: var(--color-border-strong);
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.control[aria-pressed='true'] {
+  border-color: color-mix(in srgb, var(--color-primary) 55%, var(--color-border));
+  background: var(--color-primary-soft);
+  color: var(--color-primary-deep);
+  font-weight: 700;
+}
+
+.control[aria-pressed='true']:hover:not(:disabled) {
+  background: var(--color-primary-faint);
+  border-color: var(--color-primary-strong);
+}
+
+.control:disabled {
+  cursor: wait;
 }
 
 .loginLink {
@@ -23,22 +45,25 @@
   background: var(--color-surface);
   color: var(--color-primary-strong);
   font-weight: 600;
+  text-decoration: none;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
 }
 
 .loginLink:hover,
 .loginLink:focus-visible {
   background: var(--color-surface-muted);
+  border-color: var(--color-primary-strong);
 }
 
 .compactControl,
 .compactLoginLink {
-  width: 2.25rem;
-  min-width: 2.25rem;
-  min-height: 2.25rem;
-  height: 2.25rem;
+  width: var(--control-min-height);
+  min-width: var(--control-min-height);
+  min-height: var(--control-min-height);
+  height: var(--control-min-height);
   padding: 0;
   border-radius: var(--radius-full);
-  font-size: 1.35rem;
+  font-size: 1.25rem;
   line-height: 1;
 }
 
@@ -62,4 +87,6 @@
   max-width: 18rem;
   color: var(--color-danger);
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-base);
+  overflow-wrap: anywhere;
 }

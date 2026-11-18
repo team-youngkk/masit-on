@@ -3,6 +3,7 @@ export { idempotencyAttempt }
 export type { IdempotencyAttempt } from '../idempotency.ts'
 
 export type CurationStatus = 'DRAFT' | 'PUBLISHED'
+export type CurationTextFieldErrors = Partial<Record<'title' | 'description', string>>
 
 export function nextCurationPage(
   current: { status: CurationStatus | ''; page: number },
@@ -13,11 +14,15 @@ export function nextCurationPage(
 }
 
 export function validateCurationText(title: string, description: string): string[] {
-  const errors: string[] = []
+  return Object.values(validateCurationTextFields(title, description))
+}
+
+export function validateCurationTextFields(title: string, description: string): CurationTextFieldErrors {
+  const errors: CurationTextFieldErrors = {}
   const titleLength = Array.from(title.trim()).length
   const descriptionLength = Array.from(description.trim()).length
-  if (titleLength < 1 || titleLength > 100) errors.push('제목은 공백을 제외하고 1~100자로 입력해 주세요.')
-  if (descriptionLength > 1000) errors.push('설명은 공백을 제외하고 1000자 이하로 입력해 주세요.')
+  if (titleLength < 1 || titleLength > 100) errors.title = '제목은 공백을 제외하고 1~100자로 입력해 주세요.'
+  if (descriptionLength > 1000) errors.description = '설명은 공백을 제외하고 1000자 이하로 입력해 주세요.'
   return errors
 }
 

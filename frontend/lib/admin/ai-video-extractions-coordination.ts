@@ -3,6 +3,7 @@ import type {
   AiExtractionJob,
   AiExtractionReviewStatus,
   AiExtractionSource,
+  AiResultCompleteness,
   AiExtractionSubmissionResult,
   AiRecoveryPath,
   AiRegistrationUnit,
@@ -10,6 +11,59 @@ import type {
   AiReviewSupplements,
 } from './ai-video-extractions'
 import { idempotencyAttempt, type IdempotencyAttempt } from '../idempotency.ts'
+
+export type AiStatusTone = 'success' | 'warning' | 'danger' | 'neutral'
+
+export function aiExecutionTone(status: AiExecutionStatus): AiStatusTone {
+  if (status === 'SUCCEEDED') return 'success'
+  if (status === 'FAILED') return 'danger'
+  if (status === 'RUNNING') return 'warning'
+  return 'neutral'
+}
+
+export function aiExecutionLabel(status: AiExecutionStatus): string {
+  if (status === 'QUEUED') return '대기'
+  if (status === 'RUNNING') return '실행 중'
+  if (status === 'SUCCEEDED') return '성공'
+  return '실패'
+}
+
+export function aiCompletenessTone(status: AiResultCompleteness | null): 'success' | 'warning' | 'neutral' {
+  if (status === 'COMPLETE') return 'success'
+  if (status === 'PARTIAL') return 'warning'
+  return 'neutral'
+}
+
+export function aiCompletenessLabel(status: AiResultCompleteness | null): string {
+  if (status === 'COMPLETE') return '완전'
+  if (status === 'PARTIAL') return '부분'
+  return '미완료'
+}
+
+export function aiReviewTone(status: AiExtractionReviewStatus | null): AiStatusTone {
+  if (status === 'AUTO_CONFIRMED' || status === 'MANUAL_OVERRIDE') return 'success'
+  if (status === 'AUTO_BLOCKED') return 'warning'
+  if (status === 'AUTO_REJECTED') return 'danger'
+  return 'neutral'
+}
+
+export function aiReviewLabel(status: AiExtractionReviewStatus | null): string {
+  if (status === 'AUTO_CONFIRMED') return '자동 확정·등록 유지'
+  if (status === 'MANUAL_OVERRIDE') return '수동 보정·등록 유지'
+  if (status === 'AUTO_BLOCKED') return '자동 보류'
+  if (status === 'AUTO_REJECTED') return '자동 거부'
+  return '미정'
+}
+
+export function aiSourceLabel(source: AiExtractionSource): string {
+  return source === 'WEBHOOK' ? 'Webhook' : '관리자'
+}
+
+export function aiRegistrationUnitStatusLabel(unit: Pick<AiRegistrationUnit, 'reviewStatus' | 'manualOverrideType'>): string {
+  if (unit.manualOverrideType === 'ROLLED_BACK') return '롤백 완료'
+  if (unit.manualOverrideType === 'DISCARDED') return '폐기 완료'
+  return aiReviewLabel(unit.reviewStatus)
+}
 
 export function registrationUnitSummary(units: AiRegistrationUnit[]) {
   const registered = units.filter((unit) => unit.manualOverrideType === null

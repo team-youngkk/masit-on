@@ -138,7 +138,7 @@ export function PersonalRestaurantList({
   size,
 }: PersonalRestaurantListProps) {
   const router = useRouter()
-  const { status } = useMemberSession()
+  const { status, refreshSession } = useMemberSession()
   const copy = listCopy[kind]
   const requestSequence = useRef(0)
   const currentViewKey = `${kind}:${page}:${size}`
@@ -205,6 +205,7 @@ export function PersonalRestaurantList({
   const loginHref = `/login?returnTo=${encodeURIComponent(currentRoute)}`
 
   async function remove(restaurantId: string) {
+    if (status !== 'authenticated') return
     const started = startPersonalListDeletion(coordinationRef.current)
     coordinationRef.current = started.coordination
     if (!started.deletion) return
@@ -266,6 +267,13 @@ export function PersonalRestaurantList({
 
       {status === 'loading' ? (
         <StatePanel title="목록을 불러오는 중입니다." />
+      ) : status === 'unavailable' ? (
+        <StatePanel
+          tone="warning"
+          title="인증 상태를 확인하지 못했습니다."
+          description="잠시 후 다시 시도해 주세요."
+          actions={<Button variant="secondary" onClick={() => void refreshSession()}>다시 시도</Button>}
+        />
       ) : status === 'anonymous' || error?.status === 401 ? (
         <StatePanel tone="warning" title="로그인이 필요합니다." description="다시 로그인해 주세요." actions={<Link href={loginHref} className={styles.cta}>로그인하기</Link>} />
       ) : loading && !data ? (

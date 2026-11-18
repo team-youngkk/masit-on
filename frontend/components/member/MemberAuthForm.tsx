@@ -32,6 +32,19 @@ function getSafeReturnTo(returnTo?: string | null): string {
   return memberLoginDestination(candidate)
 }
 
+function temporaryAuthFailureMessage(reason: unknown): string | null {
+  if (!(reason instanceof Response)) {
+    return '요청을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.'
+  }
+  if (reason.status === 429) {
+    return '요청이 잠시 제한됐습니다. 잠시 후 다시 시도해 주세요.'
+  }
+  if (reason.status >= 500) {
+    return '인증 서비스를 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.'
+  }
+  return null
+}
+
 const CTA_LABELS: Record<MemberAuthMode, { idle: string; submitting: string }> = {
   login: { idle: '로그인', submitting: '로그인하는 중...' },
   signup: { idle: '인증 요청', submitting: '인증 요청을 보내는 중...' },
@@ -113,9 +126,10 @@ export function MemberAuthForm({ mode, returnTo, onPasswordResetFlowReset }: Mem
       }
       router.push(memberVerifyEmailHref(returnTo))
     } catch (reason) {
+      const temporaryFailure = temporaryAuthFailureMessage(reason)
       setMessage({
         tone: 'danger',
-        text: reason instanceof Response ? '인증 요청을 완료하지 못했습니다. 입력 내용을 확인하고 다시 시도해 주세요.' : '인증 요청을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+        text: temporaryFailure ?? '인증 요청을 완료하지 못했습니다. 입력 내용을 확인하고 다시 시도해 주세요.',
       })
     } finally { setSubmitting(false) }
   }
@@ -179,9 +193,10 @@ export function MemberAuthForm({ mode, returnTo, onPasswordResetFlowReset }: Mem
           text: invalidCredentials ? '이메일 또는 비밀번호를 확인해 주세요.' : '로그인 요청을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.',
         })
       } else {
+        const temporaryFailure = temporaryAuthFailureMessage(reason)
         setMessage({
           tone: 'danger',
-          text: reason instanceof Response ? '요청을 완료하지 못했습니다. 입력 내용을 확인하고 다시 시도해 주세요.' : '요청을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+          text: temporaryFailure ?? '요청을 완료하지 못했습니다. 입력 내용을 확인하고 다시 시도해 주세요.',
         })
       }
     } finally { setSubmitting(false) }

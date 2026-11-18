@@ -1,11 +1,12 @@
 .form {
   display: grid;
   gap: var(--space-5);
+  width: 100%;
+  min-width: 0;
   padding: clamp(var(--space-5), 4vw, var(--space-6));
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
-  box-shadow: var(--shadow-card);
 }
 
 .form > button {
@@ -16,14 +17,18 @@
   margin: 0;
   padding: var(--space-3) var(--space-4);
   border: 1px solid color-mix(in srgb, var(--color-primary) 22%, var(--color-border));
+  border-inline-start: 3px solid var(--color-primary-strong);
   border-radius: var(--radius-md);
-  background: var(--color-primary-soft);
+  background: var(--color-primary-faint);
   color: var(--color-primary-strong);
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-base);
+  overflow-wrap: anywhere;
 }
 
 .noticeDanger {
   border-color: color-mix(in srgb, var(--color-danger) 25%, var(--color-border));
+  border-inline-start-color: var(--color-danger);
   background: var(--color-danger-soft);
   color: var(--color-danger-deep);
 }
@@ -32,6 +37,7 @@
   margin: calc(var(--space-2) * -1) 0 0;
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-base);
 }
 
 .passwordRules {
@@ -39,7 +45,8 @@
   flex-wrap: wrap;
   gap: var(--space-2) var(--space-4);
   margin: calc(var(--space-3) * -1) 0 0;
-  padding: 0;
+  padding: var(--space-2) 0 0;
+  border-top: 1px solid var(--color-border);
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   list-style: none;
@@ -64,11 +71,13 @@
 .passwordConfirmationField {
   display: grid;
   gap: var(--space-2);
+  min-width: 0;
 }
 
 .passwordMatch {
   margin: 0;
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-base);
 }
 
 .passwordMatchValid {
@@ -76,7 +85,7 @@
 }
 
 .passwordMatchInvalid {
-  color: var(--color-danger);
+  color: var(--color-danger-deep);
 }
 
 @media (max-width: 480px) {

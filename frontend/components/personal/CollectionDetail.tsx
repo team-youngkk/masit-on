@@ -45,7 +45,7 @@ export function CollectionDetail({ collectionId, page, size }: {
   size: number
 }) {
   const router = useRouter()
-  const { status } = useMemberSession()
+  const { status, refreshSession } = useMemberSession()
   const sequence = useRef(0)
   const [data, setData] = useState<CollectionDetailData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -84,6 +84,8 @@ export function CollectionDetail({ collectionId, page, size }: {
     sequence.current += 1
     setData(null)
     setError(null)
+    setActionError(null)
+    setConfirmingDelete(false)
     setLoading(status === 'loading')
   }, [load, status])
 
@@ -100,6 +102,7 @@ export function CollectionDetail({ collectionId, page, size }: {
 
   async function submitRename(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (status !== 'authenticated') return
     const validationError = collectionNameError(name)
     setNameError(validationError)
     setActionError(null)
@@ -117,7 +120,7 @@ export function CollectionDetail({ collectionId, page, size }: {
   }
 
   async function confirmDelete() {
-    if (action) return
+    if (status !== 'authenticated' || action) return
     setAction('delete')
     setActionError(null)
     try {
@@ -130,7 +133,7 @@ export function CollectionDetail({ collectionId, page, size }: {
   }
 
   async function removeRestaurant(restaurantId: string) {
-    if (action) return
+    if (status !== 'authenticated' || action) return
     setAction(restaurantId)
     setActionError(null)
     try {
@@ -163,6 +166,13 @@ export function CollectionDetail({ collectionId, page, size }: {
     >
       {status === 'loading' || (loading && !data) ? (
         <StatePanel title="컬렉션을 불러오는 중입니다." />
+      ) : status === 'unavailable' ? (
+        <StatePanel
+          tone="warning"
+          title="인증 상태를 확인하지 못했습니다."
+          description="잠시 후 다시 시도해 주세요."
+          actions={<Button variant="secondary" onClick={() => void refreshSession()}>다시 시도</Button>}
+        />
       ) : unauthenticated ? (
         <StatePanel tone="warning" title="로그인이 필요합니다." actions={<Link className={styles.cta} href={loginHref}>로그인하기</Link>} />
       ) : error ? (

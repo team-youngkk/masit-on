@@ -3,35 +3,39 @@
   align-items: center;
   min-height: 1.75rem;
   padding: 0 var(--space-2);
-  border: 1px solid transparent;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
   font-size: var(--font-size-sm);
   font-weight: 700;
-  line-height: 1;
+  line-height: 1.2;
   white-space: nowrap;
 }
 
 .success {
+  border-color: color-mix(in srgb, var(--color-primary) 28%, var(--color-border));
   background: var(--color-primary-soft);
-  color: var(--color-primary-contrast);
+  color: var(--color-primary-strong);
 }
 
 .neutral {
   background: var(--color-surface-muted);
-  color: var(--color-text-muted);
+  color: var(--color-text);
 }
 
 .warning {
+  border-color: color-mix(in srgb, var(--color-warning) 32%, var(--color-border));
   background: var(--color-warning-soft);
   color: var(--color-warning);
 }
 
 .danger {
+  border-color: color-mix(in srgb, var(--color-danger) 28%, var(--color-border));
   background: var(--color-danger-soft);
   color: var(--color-danger-deep);
 }
 
 .info {
+  border-color: color-mix(in srgb, var(--color-info) 28%, var(--color-border));
   background: var(--color-info-soft);
   color: var(--color-info);
 }

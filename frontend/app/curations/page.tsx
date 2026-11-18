@@ -1,9 +1,7 @@
 import Link from 'next/link'
 
-import { Card } from '@/components/ui/Card'
 import { PageShell } from '@/components/ui/PageShell'
 import { StatePanel } from '@/components/ui/StatePanel'
-import { StatusBadge } from '@/components/ui/StatusBadge'
 import { fetchPublicCurations, type PublicCuration } from '@/lib/curations-api'
 import { isDesignPreviewEnvironment } from '@/lib/design-preview'
 
@@ -43,16 +41,16 @@ export default async function PublicCurationsPage() {
   return (
     <PageShell
       className={styles.page}
-      title="큐레이션"
-      description="관리자가 직접 고른 주제별 맛집을 만나보세요."
+      eyebrow="공개 취재 기록"
+      title="동네 취재 노트"
+      description="지역을 천천히 살펴보며, 맛잇온이 공개한 맛집 기록을 읽어보세요."
     >
-
       {!result.ok ? (
         <ErrorState message={result.message} traceId={result.traceId} />
       ) : curations.length === 0 ? (
         <StatePanel
-          title="게시 중인 큐레이션이 없습니다"
-          description="새로운 큐레이션이 준비되면 이곳에서 소개할게요."
+          title="공개된 취재 기록이 없습니다"
+          description="새로운 기록이 준비되면 이곳에서 소개할게요."
           compact
           actions={<Link href="/restaurants" className={styles.actionLink}>맛집 탐색하기</Link>}
         />
@@ -69,11 +67,10 @@ export default async function PublicCurationsPage() {
             </ul>
           ) : null}
           {isDesignPreview ? (
-            <section className={styles.previewFooter} aria-label="큐레이션 준비 안내">
-              <span className={styles.previewFooterIcon} aria-hidden="true">＋</span>
+            <section className={styles.previewFooter} aria-label="취재 기록 준비 안내">
               <div>
-                <h2>새로운 큐레이션을 준비하고 있어요</h2>
-                <p>맛잇온이 고른 다음 주제별 맛집도 곧 만나보세요.</p>
+                <h2>다음 취재 기록을 준비하고 있어요</h2>
+                <p>새로운 지역과 맛집 이야기를 곧 소개할게요.</p>
               </div>
             </section>
           ) : null}
@@ -85,60 +82,49 @@ export default async function PublicCurationsPage() {
 
 function FeaturedCuration({ curation, preview }: { curation: PublicCuration; preview: boolean }) {
   const previewItems = curation.items.slice(0, 5)
-  const mediaEyebrow = preview ? '오늘의 큐레이션' : '맛잇온 큐레이션'
-  const mediaTitle = preview ? '비 오는 날의 따뜻한 한 끼' : curation.title
-  const mediaIcon = preview ? '☂' : '✦'
   const title = preview ? (
     <span>{curation.title}</span>
   ) : (
     <Link href={`/curations/${encodeURIComponent(curation.curationId)}`}>{curation.title}</Link>
   )
+  const detailHref = preview
+    ? `/restaurants?query=${encodeURIComponent(previewItems[0]?.name ?? '')}`
+    : `/curations/${encodeURIComponent(curation.curationId)}`
 
   return (
     <article className={styles.featuredCard}>
-      <div className={styles.featuredMedia} aria-hidden="true">
-        <span className={styles.mediaEyebrow}>{mediaEyebrow}</span>
-        <span className={styles.mediaTitle}>{mediaTitle}</span>
-        <span className={styles.mediaRain}>{mediaIcon}</span>
-      </div>
-      <div className={styles.featuredBody}>
+      <div className={styles.featuredIntro}>
+        <p className={styles.noteLabel}>먼저 읽어볼 기록</p>
         <div className={styles.featuredHeading}>
-          <div>
-            <StatusBadge tone="success">공개</StatusBadge>
-            <h2>{title}</h2>
-          </div>
-          <span className={styles.featuredArrow} aria-hidden="true">↗</span>
+          <h2>{title}</h2>
+          <p className={styles.recordCount}>{curation.items.length}곳</p>
         </div>
         <p className={styles.description}>{curation.description}</p>
-        <div className={styles.featuredRestaurants}>
-          {previewItems.map((restaurant, index) => (
-            <div className={styles.featuredRestaurant} key={restaurant.restaurantId}>
-              <span className={styles.restaurantNumber}>{index + 1}</span>
-              <span className={styles.restaurantName}>
+        <Link href={detailHref} className={styles.detailLink}>
+          {preview ? '맛집 탐색으로 이어가기' : '기록 전체 읽기'}
+        </Link>
+      </div>
+      <div className={styles.featuredBody}>
+        <div className={styles.sectionHeading}>
+          <h3>구성 맛집</h3>
+          <span>{previewItems.length}곳 미리보기</span>
+        </div>
+        {previewItems.length === 0 ? (
+          <p className={styles.emptyPreview}>현재 공개 중인 구성 맛집이 없습니다.</p>
+        ) : (
+          <ol className={styles.featuredRestaurantList}>
+            {previewItems.map((restaurant) => (
+              <li className={styles.featuredRestaurant} key={restaurant.restaurantId}>
                 <Link
                   href={preview ? `/restaurants?query=${encodeURIComponent(restaurant.name)}` : `/restaurants/${encodeURIComponent(restaurant.restaurantId)}`}
+                  className={styles.restaurantName}
                 >
                   {restaurant.name}
                 </Link>
-              </span>
-              <span className={styles.restaurantMeta}>{restaurant.roadAddress}</span>
-            </div>
-          ))}
-        </div>
-        {preview ? (
-          <Link
-            href={`/restaurants?query=${encodeURIComponent(previewItems[0]?.name ?? '')}`}
-            className={styles.detailLink}
-          >
-            맛집 둘러보기 →
-          </Link>
-        ) : (
-          <Link
-            href={`/curations/${encodeURIComponent(curation.curationId)}`}
-            className={styles.detailLink}
-          >
-            큐레이션 자세히 보기 →
-          </Link>
+                <span className={styles.restaurantMeta}>{restaurant.roadAddress}</span>
+              </li>
+            ))}
+          </ol>
         )}
       </div>
     </article>
@@ -150,43 +136,52 @@ function CurationCard({ curation }: { curation: PublicCuration }) {
   const remainingCount = curation.items.length - previewItems.length
 
   return (
-    <Card
-      title={
-        <Link href={`/curations/${encodeURIComponent(curation.curationId)}`}>
-          {curation.title}
-        </Link>
-      }
-      level={2}
-    >
+    <article className={styles.curationCard}>
+      <header className={styles.curationCardHeader}>
+        <p className={styles.noteLabel}>공개 취재 기록</p>
+        <p className={styles.recordCount}>{curation.items.length}곳</p>
+        <h2>
+          <Link href={`/curations/${encodeURIComponent(curation.curationId)}`}>
+            {curation.title}
+          </Link>
+        </h2>
+      </header>
       <p className={styles.description}>{curation.description}</p>
-      <StatusBadge tone="success">공개</StatusBadge>
       {previewItems.length === 0 ? (
         <p className={styles.emptyPreview}>현재 공개 중인 구성 맛집이 없습니다.</p>
       ) : (
         <div className={styles.preview}>
           <h3>구성 맛집 미리보기</h3>
-          <ul>
+          <ol className={styles.curationRestaurantList}>
             {previewItems.map((restaurant) => (
-              <li key={restaurant.restaurantId}>{restaurant.name}</li>
+              <li key={restaurant.restaurantId}>
+                <Link
+                  href={`/restaurants/${encodeURIComponent(restaurant.restaurantId)}`}
+                  className={styles.restaurantName}
+                >
+                  {restaurant.name}
+                </Link>
+                <span className={styles.restaurantMeta}>{restaurant.roadAddress}</span>
+              </li>
             ))}
-          </ul>
-          {remainingCount > 0 ? <p>외 {remainingCount}곳</p> : null}
+          </ol>
+          {remainingCount > 0 ? <p className={styles.previewMore}>외 {remainingCount}곳 더 있음</p> : null}
         </div>
       )}
       <Link
         href={`/curations/${encodeURIComponent(curation.curationId)}`}
         className={styles.detailLink}
       >
-        큐레이션 자세히 보기
+        기록 상세 보기
       </Link>
-    </Card>
+    </article>
   )
 }
 
 function ErrorState({ message, traceId }: { message: string; traceId?: string }) {
   return (
     <StatePanel
-      title="큐레이션을 불러올 수 없습니다"
+      title="취재 기록을 불러올 수 없습니다"
       description={message}
       tone="danger"
       traceId={traceId}

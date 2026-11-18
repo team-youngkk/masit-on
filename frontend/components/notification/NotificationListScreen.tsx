@@ -47,7 +47,7 @@ function formatCreatedAt(value: string): string {
 }
 
 export function NotificationListScreen() {
-  const { status: session } = useMemberSession()
+  const { status: session, refreshSession } = useMemberSession()
 
   // 목록 조회 상태 — 개별 읽음/전체 읽음/상세 조회와 절대 공유하지 않는다.
   const [items, setItems] = useState<NotificationItem[]>([])
@@ -120,7 +120,7 @@ export function NotificationListScreen() {
   useEffect(() => { void load() }, [load])
 
   async function markRead(item: NotificationItem) {
-    if (item.read) return
+    if (session !== 'authenticated' || item.read) return
     const epoch = readEpoch.current
     setItems((prev) => setNotificationRead(prev, item.notificationId, true))
     setUnreadCount((prev) => Math.max(0, prev - 1))
@@ -158,6 +158,7 @@ export function NotificationListScreen() {
   }
 
   async function handleMarkAllRead() {
+    if (session !== 'authenticated') return
     setMarkAllBusy(true)
     setMarkAllNotice({ text: '처리 중입니다...', isError: false })
     try {
@@ -188,6 +189,7 @@ export function NotificationListScreen() {
   }
 
   async function toggleDetail(item: NotificationItem) {
+    if (session !== 'authenticated') return
     if (expandedId === item.notificationId) {
       detailRequest.current += 1
       setExpandedId(null)
@@ -235,6 +237,18 @@ export function NotificationListScreen() {
 
   if (session === 'loading') {
     return <PageShell title="알림"><StatePanel title="로그인 상태를 확인하고 있습니다." /></PageShell>
+  }
+  if (session === 'unavailable') {
+    return (
+      <PageShell title="알림">
+        <StatePanel
+          tone="warning"
+          title="인증 상태를 확인하지 못했습니다."
+          description="잠시 후 다시 시도해 주세요."
+          actions={<Button variant="secondary" onClick={() => void refreshSession()}>다시 시도</Button>}
+        />
+      </PageShell>
+    )
   }
   if (session === 'anonymous') {
     return (

@@ -1,24 +1,8 @@
 .subtitle {
-  margin: var(--space-2) 0 var(--space-6);
-  color: var(--color-text-muted);
-}
-
-.state {
-  padding: var(--space-8) var(--space-4);
-  color: var(--color-text-muted);
-  text-align: center;
-}
-
-.error {
-  composes: state;
-  color: var(--color-danger);
-}
-
-.traceId {
-  display: block;
-  margin-top: var(--space-2);
+  margin: calc(var(--space-8) * -1) 0 var(--space-2);
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
 }
 
 .retryButton {
@@ -42,36 +26,31 @@
 .list {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-4);
+  gap: 0;
   margin: 0;
   padding: 0;
+  border-top: 1px solid var(--color-border);
   list-style: none;
 }
 
 .item {
   min-width: 0;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .popularCard {
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(8rem, 11rem);
   min-width: 0;
-  height: 100%;
+  min-height: 12rem;
   overflow: hidden;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
   background: var(--color-surface);
-  box-shadow: var(--shadow-card);
-  transition: transform 160ms ease, box-shadow 160ms ease;
-}
-
-.popularCard:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-raised);
 }
 
 .cardMedia {
-  aspect-ratio: 16 / 9;
+  grid-column: 2;
+  grid-row: 1;
+  aspect-ratio: 4 / 3;
   min-height: 0;
   overflow: hidden;
   background: var(--color-surface-muted);
@@ -85,16 +64,18 @@
 
 .cardBody {
   display: flex;
+  grid-column: 1;
+  grid-row: 1;
   min-width: 0;
   flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-4);
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-5) var(--space-5) 0;
 }
 
 .cardTitleRow {
   display: flex;
   align-items: flex-start;
-  gap: var(--space-2);
+  gap: var(--space-3);
   min-width: 0;
 }
 
@@ -106,52 +87,83 @@
 .cardTitleRow h2 {
   min-width: 0;
   overflow-wrap: anywhere;
-  font-size: 1rem;
+  font-size: 1.125rem;
   font-weight: 700;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.03em;
   line-height: 1.35;
 }
 
 .rank {
-  display: inline-flex;
+  display: grid;
   flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  width: 1.75rem;
-  min-width: 1.75rem;
-  height: 1.75rem;
-  border-radius: var(--radius-full);
-  background: var(--color-primary);
-  color: var(--color-primary-contrast);
-  font-size: var(--font-size-sm);
+  min-width: 2.75rem;
+  gap: 0.15rem;
+  padding-top: 0.25rem;
+  border-top: 2px solid var(--color-text);
+  color: var(--color-text);
+  line-height: 1;
+}
+
+.rankLabel {
+  color: var(--color-text-muted);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.rankNumber {
+  font-size: 1.5rem;
   font-weight: 700;
-  text-align: center;
+  letter-spacing: -0.04em;
 }
 
 .cardMeta {
-  color: var(--color-text-muted);
-  font-size: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
   letter-spacing: -0.015em;
-  line-height: 1.4;
+  line-height: 1.5;
+}
+
+.metaItem {
+  display: inline-flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.metaLabel {
+  flex: 0 0 auto;
+  color: var(--color-text-muted);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.metaDivider {
+  color: var(--color-border-strong);
 }
 
 .favoriteBadge {
   align-self: flex-start;
-  border: 1px solid color-mix(in srgb, var(--color-primary) 45%, var(--color-border));
-  background: var(--color-primary-faint);
-  color: var(--color-primary-strong);
+  margin-top: 0.125rem;
 }
 
 .detailLink {
   display: inline-flex;
   align-items: center;
-  justify-content: space-between;
   min-height: var(--control-min-height);
   margin-top: auto;
   color: var(--color-primary-deep);
   font-size: 0.875rem;
   font-weight: 700;
   letter-spacing: -0.02em;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
 }
 
 .detailLink:hover,
@@ -162,13 +174,36 @@
 }
 
 @media (min-width: 768px) {
-  .list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .cardMedia {
+    border-left: 1px solid var(--color-border);
   }
 }
 
-@media (min-width: 1100px) {
-  .list {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+@media (max-width: 560px) {
+  .popularCard {
+    grid-template-columns: minmax(0, 1fr) minmax(5.5rem, 7rem);
+    min-height: 0;
+  }
+
+  .cardBody {
+    padding-block: var(--space-4);
+  }
+
+  .cardTitleRow {
+    gap: var(--space-2);
+  }
+
+  .cardTitleRow h2 {
+    font-size: 1rem;
+  }
+
+  .cardMeta {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .metaDivider {
+    display: none;
   }
 }
