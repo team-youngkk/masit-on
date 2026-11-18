@@ -1108,4 +1108,3 @@ jobs:
           set -euo pipefail
           [ -z "$KEY_FILE" ] || rm -f -- "$KEY_FILE"
           [ -z "$KNOWN_HOSTS_FILE" ] || rm -f -- "$KNOWN_HOSTS_FILE"
-
