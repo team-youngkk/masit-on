@@ -16,6 +16,7 @@ class RuntimeDeploymentContractTest {
     private static final Path TERRAFORM = Path.of("infra/production/terraform");
     private static final Path CI = Path.of(".github/workflows/ci.yml");
     private static final Path DOCKERFILE = Path.of("Dockerfile");
+    private static final Path FRONTEND_DOCKERFILE = Path.of("frontend/Dockerfile");
     private static final Path DIRECT_USER_DATA = TERRAFORM.resolve("templates/direct-app-user-data.sh.tftpl");
     private static final Path LEGACY_USER_DATA = TERRAFORM.resolve("templates/app-user-data.sh.tftpl");
     private static final Path REDIS_ENDPOINTS = Path.of("infra/production/terraform-redis/endpoints.tf");
@@ -340,6 +341,33 @@ class RuntimeDeploymentContractTest {
     }
 
     @Test
+    @DisplayName("PR 프론트엔드 이미지 계약은 push 없이 빌드·취약점을 검증한다")
+    void ci_PR프론트엔드이미지계약은push없이빌드취약점을검증한다() throws IOException {
+        String workflow = read(CI);
+        String dockerfile = read(FRONTEND_DOCKERFILE);
+        String imageContractJob = section(workflow, "  frontend-image-contract:\n", "  # workflow_dispatch에서만 실행한다.");
+
+        assertThat(imageContractJob)
+                .contains("if: github.event_name == 'pull_request'")
+                .contains("needs: [frontend]")
+                .contains("docker build")
+                .contains("-f frontend/Dockerfile frontend")
+                .contains("NEXT_PUBLIC_KAKAO_MAPS_JS_KEY=${NEXT_PUBLIC_KAKAO_MAPS_JS_KEY}")
+                .contains("NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}")
+                .contains("aquasec/trivy:0.72.0@sha256:")
+                .contains("--severity CRITICAL,HIGH")
+                .contains("--ignore-unfixed")
+                .contains("--exit-code 1")
+                .doesNotContain("docker push")
+                .doesNotContain("DOCKERHUB_PUSH_TOKEN")
+                .doesNotContain("environment: production");
+        assertThat(dockerfile)
+                .contains("musl=1.2.6-r3")
+                .contains("musl-utils=1.2.6-r3")
+                .contains("zlib=1.3.2-r1");
+    }
+
+    @Test
     @DisplayName("직접 bootstrap과 legacy bootstrap이 서로의 배포 경계를 침범하지 않는다")
     void runtime_직접경로와legacy경로의bootstrap을분리한다() throws IOException {
         String directUserData = read(DIRECT_USER_DATA);
@@ -400,3 +428,4 @@ class RuntimeDeploymentContractTest {
         return content.substring(start, end);
     }
 }
+
