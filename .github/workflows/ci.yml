@@ -5,7 +5,7 @@
 # 운영 이미지 빌드·검증·Docker Hub push와 운영 배포는 M2부터 활성화하는 범위다
 # (ADR-DEPLOY-002, ADR-CI-001). 같은 워크플로에 두는 이유는 아래 images·ssh-deploy job
 # 주석에 있다. 운영 images·ssh-deploy는 배포 대상 브랜치에서만 돌고 PR과 develop push에서는
-# 실행되지 않으며, PR에서는 push 없는 백엔드 이미지 계약 검증만 별도로 실행한다.
+# 실행되지 않으며, PR에서는 push 없는 백엔드·프론트엔드 이미지 계약 검증을 별도로 실행한다.
 # workflow_dispatch의 배포 대상은 별도의 프론트엔드 프로덕션 의존성 감사 job을 거친다.
 # 운영 배포 경로는 단일 x86 EC2 공인 IP SSH다.
 name: CI
@@ -216,6 +216,49 @@ jobs:
               --ignore-unfixed \
               --exit-code 1 \
               "masiton-backend:${IMAGE_TAG}"
+
+  frontend-image-contract:
+    name: PR 프론트엔드 이미지 계약 검증
+    # 운영 이미지 게시 없이, PR에서 변경한 프론트 Dockerfile의 실제 runtime
+    # 단계와 수정 가능한 CRITICAL·HIGH 취약점을 병합 전에 검증한다. 운영 images
+    # job은 main push에서만 실행되므로 이 검사가 없으면 frontend 이미지의 Alpine
+    # 패키지 기준선 변경이 머지 뒤에야 드러난다.
+    if: github.event_name == 'pull_request'
+    needs: [frontend]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    env:
+      IMAGE_TAG: pr-${{ github.event.pull_request.number }}-${{ github.sha }}
+      # 공개 클라이언트 식별자이며 PR 이미지 계약 build에만 사용하는 placeholder다.
+      NEXT_PUBLIC_KAKAO_MAPS_JS_KEY: ci-contract-public-key
+      NEXT_PUBLIC_SITE_URL: https://masiton.click
+      NEXT_PUBLIC_GA_MEASUREMENT_ID: ''
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: 프론트엔드 이미지 빌드 (push 없음)
+        run: |
+          set -euo pipefail
+          docker build \
+            --build-arg "NEXT_PUBLIC_KAKAO_MAPS_JS_KEY=${NEXT_PUBLIC_KAKAO_MAPS_JS_KEY}" \
+            --build-arg "NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}" \
+            --build-arg "NEXT_PUBLIC_GA_MEASUREMENT_ID=${NEXT_PUBLIC_GA_MEASUREMENT_ID}" \
+            -t "masiton-frontend:${IMAGE_TAG}" -f frontend/Dockerfile frontend
+
+      - name: 프론트엔드 이미지 취약점 검사
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v trivy-db:/root/.cache/trivy \
+            aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f \
+            image \
+              --scanners vuln \
+              --severity CRITICAL,HIGH \
+              --ignore-unfixed \
+              --exit-code 1 \
+              "masiton-frontend:${IMAGE_TAG}"
 
   # workflow_dispatch에서만 실행한다. dispatch의 image_tag는 현재 워크플로 소스와
   # 다를 수 있으므로, 반드시 배포 job과 같은 대상(image_tag 또는 github.sha)을
@@ -1065,3 +1108,4 @@ jobs:
           set -euo pipefail
           [ -z "$KEY_FILE" ] || rm -f -- "$KEY_FILE"
           [ -z "$KNOWN_HOSTS_FILE" ] || rm -f -- "$KNOWN_HOSTS_FILE"
+
