@@ -16,6 +16,7 @@ class RuntimeDeploymentContractTest {
     private static final Path TERRAFORM = Path.of("infra/production/terraform");
     private static final Path CI = Path.of(".github/workflows/ci.yml");
     private static final Path DOCKERFILE = Path.of("Dockerfile");
+    private static final Path FRONTEND_DOCKERFILE = Path.of("frontend/Dockerfile");
     private static final Path DIRECT_USER_DATA = TERRAFORM.resolve("templates/direct-app-user-data.sh.tftpl");
     private static final Path LEGACY_USER_DATA = TERRAFORM.resolve("templates/app-user-data.sh.tftpl");
     private static final Path REDIS_ENDPOINTS = Path.of("infra/production/terraform-redis/endpoints.tf");
@@ -337,6 +338,39 @@ class RuntimeDeploymentContractTest {
                 .filter(line -> line.contains("RUN apk add --no-cache " + pinnedPackages))
                 .count())
                 .isEqualTo(2L);
+    }
+
+    @Test
+    @DisplayName("PR 프론트엔드 이미지 계약은 push 없이 빌드·취약점을 검증한다")
+    void ci_PR프론트엔드이미지계약은push없이빌드취약점을검증한다() throws IOException {
+        String workflow = read(CI);
+        String dockerfile = read(FRONTEND_DOCKERFILE);
+        String imageContractJob = section(workflow, "  frontend-image-contract:\n", "  # workflow_dispatch에서만 실행한다.");
+        int runtimeStageStart = dockerfile.indexOf(" AS runtime\n");
+        assertThat(runtimeStageStart).isGreaterThanOrEqualTo(0);
+        String runtimeStage = dockerfile.substring(runtimeStageStart);
+        String pinnedRuntimePackages =
+                "RUN apk add --no-cache \\\n    libcrypto3=3.5.9-r0 \\\n    libssl3=3.5.9-r0 \\\n    musl=1.2.6-r3 \\\n    musl-utils=1.2.6-r3 \\\n    zlib=1.4-r0";
+
+        assertThat(imageContractJob)
+                .contains("if: github.event_name == 'pull_request'")
+                .contains("needs: [frontend]")
+                .contains("permissions:\n      contents: read")
+                .contains("docker build")
+                .contains("-f frontend/Dockerfile frontend")
+                .contains("NEXT_PUBLIC_KAKAO_MAPS_JS_KEY=${NEXT_PUBLIC_KAKAO_MAPS_JS_KEY}")
+                .contains("NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}")
+                .contains("aquasec/trivy:0.72.0@sha256:")
+                .contains("--severity CRITICAL,HIGH")
+                .contains("--ignore-unfixed")
+                .contains("--exit-code 1")
+                .doesNotContain("docker push")
+                .doesNotContain("DOCKERHUB_PUSH_TOKEN")
+                .doesNotContain("docker login")
+                .doesNotContain("secrets.")
+                .doesNotContain("\n    environment:")
+                .doesNotContain("environment: production");
+        assertThat(runtimeStage).contains(pinnedRuntimePackages);
     }
 
     @Test
