@@ -53,7 +53,7 @@ RUN apk add --no-cache \
     libssl3=3.5.9-r0 \
     musl=1.2.6-r3 \
     musl-utils=1.2.6-r3 \
-    zlib=1.3.2-r1
+    zlib=1.4-r0
 WORKDIR /app
 
 # robots.txt와 sitemap.xml은 standalone 서버 실행 시에도 사이트 URL을 읽는다.
