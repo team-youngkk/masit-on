@@ -346,10 +346,16 @@ class RuntimeDeploymentContractTest {
         String workflow = read(CI);
         String dockerfile = read(FRONTEND_DOCKERFILE);
         String imageContractJob = section(workflow, "  frontend-image-contract:\n", "  # workflow_dispatch에서만 실행한다.");
+        int runtimeStageStart = dockerfile.indexOf(" AS runtime\n");
+        assertThat(runtimeStageStart).isGreaterThanOrEqualTo(0);
+        String runtimeStage = dockerfile.substring(runtimeStageStart);
+        String pinnedRuntimePackages =
+                "RUN apk add --no-cache \\\n    libcrypto3=3.5.9-r0 \\\n    libssl3=3.5.9-r0 \\\n    musl=1.2.6-r3 \\\n    musl-utils=1.2.6-r3 \\\n    zlib=1.4-r0";
 
         assertThat(imageContractJob)
                 .contains("if: github.event_name == 'pull_request'")
                 .contains("needs: [frontend]")
+                .contains("permissions:\n      contents: read")
                 .contains("docker build")
                 .contains("-f frontend/Dockerfile frontend")
                 .contains("NEXT_PUBLIC_KAKAO_MAPS_JS_KEY=${NEXT_PUBLIC_KAKAO_MAPS_JS_KEY}")
@@ -360,11 +366,11 @@ class RuntimeDeploymentContractTest {
                 .contains("--exit-code 1")
                 .doesNotContain("docker push")
                 .doesNotContain("DOCKERHUB_PUSH_TOKEN")
+                .doesNotContain("docker login")
+                .doesNotContain("secrets.")
+                .doesNotContain("\n    environment:")
                 .doesNotContain("environment: production");
-        assertThat(dockerfile)
-                .contains("musl=1.2.6-r3")
-                .contains("musl-utils=1.2.6-r3")
-                .contains("zlib=1.3.2-r1");
+        assertThat(runtimeStage).contains(pinnedRuntimePackages);
     }
 
     @Test
