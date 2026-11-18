@@ -137,6 +137,12 @@ export function MapScreen({ initialFilters, creatorsResult }: MapScreenProps) {
   )
   const [banner, setBanner] = useState<Banner | null>(() => deriveBanner(data))
 
+  const [previousQueryKey, setPreviousQueryKey] = useState(queryKey)
+  if (queryKey !== previousQueryKey) {
+    setPreviousQueryKey(queryKey)
+    setBanner(null)
+  }
+
   const [previousData, setPreviousData] = useState(data)
   if (data !== previousData) {
     setPreviousData(data)

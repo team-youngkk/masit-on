@@ -549,8 +549,8 @@ function LiveCourseScreen({ initialFilters }: { initialFilters: CourseSearchFilt
         })
       }
     } finally {
-      setCalculating(false)
-      if (routeAbortController.current === controller) {
+      if (routeRequestId.current === requestId && routeAbortController.current === controller) {
+        setCalculating(false)
         routeAbortController.current = null
       }
     }

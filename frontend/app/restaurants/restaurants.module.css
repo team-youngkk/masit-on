@@ -194,7 +194,7 @@
   box-shadow: var(--shadow-card);
 }
 .selectOption {
-  min-height: 2.25rem;
+  min-height: var(--control-min-height);
   padding: 0.45rem 0.75rem;
   border: 0;
   border-radius: calc(var(--radius-md) - 0.2rem);
@@ -240,13 +240,17 @@
   border-color: var(--color-primary);
   background: var(--color-primary);
   color: var(--color-text-on-primary);
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
 }
 .chipStrip {
   max-width: var(--layout-max-width);
   margin: var(--space-2) auto 0;
-  overflow-x: auto;
+  overflow-x: visible;
+  flex-wrap: wrap;
   padding-bottom: 1px;
-  scrollbar-width: thin;
 }
 .creatorError,
 .creatorHint,

@@ -24,10 +24,15 @@ function SessionState({ children }: { children: React.ReactNode }) {
   }, [queryClient])
   const refreshSession = useCallback(async () => {
     setStatus('loading')
-    const restored = await restoreMemberSessionOnce()
-    if (restored.unavailable) { apply(null, 'unavailable'); return false }
-    apply(restored.session, restored.session ? 'authenticated' : 'anonymous')
-    return restored.session !== null
+    try {
+      const restored = await restoreMemberSessionOnce()
+      if (restored.unavailable) { apply(null, 'unavailable'); return false }
+      apply(restored.session, restored.session ? 'authenticated' : 'anonymous')
+      return restored.session !== null
+    } catch {
+      apply(null, 'unavailable')
+      return false
+    }
   }, [apply])
   const logout = useCallback(async () => { try { await memberLogout() } finally { apply(null, 'anonymous') } }, [apply])
   useEffect(() => { const sync = () => { void refreshSession() }; window.addEventListener(MEMBER_SESSION_CHANGED_EVENT, sync); void refreshSession(); return () => window.removeEventListener(MEMBER_SESSION_CHANGED_EVENT, sync) }, [refreshSession])

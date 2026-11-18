@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { idempotencyAttempt, moveItem, nextCurationPage, parseRestaurantIds, validateCurationText } from './curations-coordination.ts'
+import { idempotencyAttempt, moveItem, nextCurationPage, parseRestaurantIds, validateCurationText, validateCurationTextFields } from './curations-coordination.ts'
 
 test('상태 필터를 바꾸면 첫 페이지로 돌아간다', () => {
   assert.deepEqual(nextCurationPage({ status: '', page: 4 }, { status: 'DRAFT' }), { status: 'DRAFT', page: 1 })
@@ -12,6 +12,13 @@ test('제목과 설명을 유니코드 코드 포인트 기준으로 검증한�
   assert.deepEqual(validateCurationText(' ', ''), ['제목은 공백을 제외하고 1~100자로 입력해 주세요.'])
   assert.deepEqual(validateCurationText('😀'.repeat(100), '가'.repeat(1000)), [])
   assert.equal(validateCurationText('😀'.repeat(101), '')[0], '제목은 공백을 제외하고 1~100자로 입력해 주세요.')
+})
+
+test('큐레이션 텍스트 검증은 오류를 필드별로 반환한다', () => {
+  assert.deepEqual(validateCurationTextFields(' ', '가'.repeat(1001)), {
+    title: '제목은 공백을 제외하고 1~100자로 입력해 주세요.',
+    description: '설명은 공백을 제외하고 1000자 이하로 입력해 주세요.',
+  })
 })
 
 test('맛집 식별자는 불투명 문자열로 유지하고 중복 및 20개 상한만 검증한다', () => {

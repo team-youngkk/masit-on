@@ -59,13 +59,29 @@ export function AiVideoExtractionList() {
   useEffect(() => {
     let active = true
     setBusy(true)
+    setData(null)
+    setError(false)
+    setNotice('')
     void load().then(() => { if (active) { setError(false); setNotice('') } })
       .catch((reason) => { if (active) { setError(true); setNotice(aiExtractionMessageFor(reason)) } })
       .finally(() => { if (active) setBusy(false) })
     return () => { active = false }
   }, [load, refreshVersion])
 
-  function change(change: Partial<AiExtractionFilters>) { setFilters((current) => nextAiExtractionFilters(current, change)) }
+  function change(change: Partial<AiExtractionFilters>) {
+    setBusy(true)
+    setData(null)
+    setError(false)
+    setNotice('')
+    setFilters((current) => nextAiExtractionFilters(current, change))
+  }
+  function refresh() {
+    setBusy(true)
+    setData(null)
+    setError(false)
+    setNotice('')
+    setRefreshVersion((current) => current + 1)
+  }
   function formatDate(value: string | null) { return value ? new Date(value).toLocaleString('ko-KR') : '—' }
 
   async function submit(event: React.FormEvent) {
@@ -148,7 +164,7 @@ export function AiVideoExtractionList() {
           <h2 id="ai-extraction-filter-heading">작업 목록</h2>
           <p className={styles.hint}>실행 상태와 자동 등록 상태를 분리해 확인할 수 있습니다.</p>
         </div>
-        <Button variant="secondary" disabled={busy} onClick={() => setRefreshVersion((current) => current + 1)}>새로고침</Button>
+        <Button variant="secondary" disabled={busy} onClick={refresh}>새로고침</Button>
       </div>
       <div className={styles.filterRow} aria-label="작업 목록 필터">
         <label>실행 상태<select value={filters.executionStatus} disabled={busy} onChange={(event) => change({ executionStatus: event.target.value as AiExecutionStatus | '' })}>
@@ -165,11 +181,11 @@ export function AiVideoExtractionList() {
 
     {busy && !data ? <StatePanel compact title="AI 작업 목록을 불러오는 중입니다" /> : null}
     {!busy && !error && data?.items.length === 0 ? <StatePanel compact title="조건에 맞는 AI 작업이 없습니다" description="필터를 바꾸거나 새로고침해 주세요." /> : null}
-    {data?.items.length ? <ul className={styles.list}>{data.items.map((job) => <JobCard key={job.jobId} job={job} formatDate={formatDate} />)}</ul> : null}
+    {!busy && !error && data && data.items.length > 0 ? <ul className={styles.list}>{data.items.map((job) => <JobCard key={job.jobId} job={job} formatDate={formatDate} />)}</ul> : null}
     <nav className={styles.pagination} aria-label="AI 작업 목록 페이지">
-      <Button variant="secondary" disabled={busy || filters.page <= 1} onClick={() => change({ page: filters.page - 1 })}>이전</Button>
+      <Button variant="secondary" disabled={busy || !data || error || filters.page <= 1} onClick={() => change({ page: filters.page - 1 })}>이전</Button>
       <span>{filters.page} / {Math.max(data?.page.totalPages ?? 1, 1)} 페이지 <span className={styles.paginationTotal}>총 {data?.page.totalElements ?? 0}건</span></span>
-      <Button variant="secondary" disabled={busy || !data?.page.hasNext} onClick={() => change({ page: filters.page + 1 })}>다음</Button>
+      <Button variant="secondary" disabled={busy || !data || error || !data.page.hasNext} onClick={() => change({ page: filters.page + 1 })}>다음</Button>
     </nav>
     {notice ? <p className={error ? styles.error : styles.notice} role={error ? 'alert' : 'status'}>{notice}</p> : null}
   </div>

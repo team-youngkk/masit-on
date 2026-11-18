@@ -7,16 +7,20 @@ import { Button } from '@/components/ui/Button'
 import { PageShell } from '@/components/ui/PageShell'
 import { StatePanel } from '@/components/ui/StatePanel'
 import { authenticatedMemberFetch, clearMemberAccessToken, memberLogout } from '@/lib/member/auth'
+import { memberLoginHref } from '@/lib/member/auth-navigation'
 import styles from './page.module.css'
 
 type Me = { id: string; email: string }
 type Action = 'logout' | 'withdraw' | null
+type AccountIssue = 'unauthorized' | 'unavailable' | null
 
 export default function MePage() {
-  const { status } = useMemberSession()
+  const { status, refreshSession } = useMemberSession()
   const [member, setMember] = useState<Me | null>(null)
   const [message, setMessage] = useState('Loading account...')
   const [messageIsError, setMessageIsError] = useState(false)
+  const [accountIssue, setAccountIssue] = useState<AccountIssue>(null)
+  const [retryCount, setRetryCount] = useState(0)
   const [action, setAction] = useState<Action>(null)
   const [confirmingWithdrawal, setConfirmingWithdrawal] = useState(false)
 
@@ -24,8 +28,13 @@ export default function MePage() {
     let active = true
     if (status !== 'authenticated') {
       setMember(null)
-      setMessage(status === 'loading' ? 'Loading account...' : 'Sign in is required.')
+      setMessage(status === 'loading'
+        ? 'Loading account...'
+        : status === 'unavailable'
+          ? 'Could not verify your sign-in state.'
+          : 'Sign in is required.')
       setMessageIsError(false)
+      setAccountIssue(status === 'unavailable' ? 'unavailable' : status === 'anonymous' ? 'unauthorized' : null)
       return () => { active = false }
     }
 
@@ -33,22 +42,26 @@ export default function MePage() {
       .then(async response => {
         if (!active) return
         if (!response.ok) {
-          setMessageIsError(response.status !== 401)
+          const unauthorized = response.status === 401
+          setAccountIssue(unauthorized ? 'unauthorized' : 'unavailable')
+          setMessageIsError(!unauthorized)
           setMessage(response.status === 401 ? 'Sign in is required.' : 'Could not load your account.')
           return
         }
         const nextMember = (await response.json()) as Me
         if (!active) return
         setMember(nextMember)
+        setAccountIssue(null)
         setMessage('')
       })
       .catch(() => {
         if (!active) return
+        setAccountIssue('unavailable')
         setMessageIsError(true)
         setMessage('Could not load your account.')
       })
     return () => { active = false }
-  }, [status])
+  }, [retryCount, status])
 
   async function logout() {
     setAction('logout')
@@ -57,9 +70,11 @@ export default function MePage() {
     try {
       await memberLogout()
       setMember(null)
+      setAccountIssue(null)
       setMessage('You have been signed out.')
     } catch (reason) {
       setMember(null)
+      setAccountIssue(null)
       if (reason instanceof Response && reason.status === 401) {
         setMessageIsError(false)
         setMessage('Your session has expired. This device is signed out; sign in again to continue.')
@@ -102,6 +117,15 @@ export default function MePage() {
     ['알림', '/me/notifications', '제보·신고 처리 알림을 확인합니다.'],
     ['제보·신고', '/me/requests', '제보·신고 내역을 확인합니다.'],
   ] as const
+  const loginHref = memberLoginHref('/me')
+  const accountRecoveryAction = accountIssue === 'unauthorized'
+    ? <Link href={loginHref}>Sign in</Link>
+    : accountIssue === 'unavailable'
+      ? <Button variant="secondary" onClick={() => {
+        if (status === 'unavailable') void refreshSession()
+        else setRetryCount((current) => current + 1)
+      }}>Try again</Button>
+      : null
 
   return <PageShell className={styles.page} size="narrow" eyebrow="회원" title="내 정보" description="내 계정과 개인화 메뉴를 관리합니다.">
     {member ? <>
@@ -128,6 +152,6 @@ export default function MePage() {
           </div>
         </div>}
     </> : null}
-    {message ? <StatePanel compact tone={messageIsError ? 'danger' : 'neutral'} title={message} /> : null}
+    {message ? <StatePanel compact tone={messageIsError ? 'danger' : 'neutral'} title={message} actions={accountRecoveryAction} /> : null}
   </PageShell>
 }

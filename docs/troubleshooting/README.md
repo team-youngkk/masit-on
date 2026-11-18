@@ -10,6 +10,7 @@ related_documents:
 구현과 리뷰 과정에서 재현·검증한 문제의 현상, 원인, 처리 결과를 보존한다.
 
 - [PR #460 관리자 운영 화면 상태 표현 보완](pr-460-admin-operations-review.md)
+- [PR #461 프론트 통합 리뷰 후속 보완](pr-461-frontend-integration-review.md)
 
 ## 기록 분류와 파일명 규약
 

@@ -43,7 +43,7 @@ function formatUpdatedAt(value: string): string {
 }
 
 export function CollectionList() {
-  const { status } = useMemberSession()
+  const { status, refreshSession } = useMemberSession()
   const sequence = useRef(0)
   const creationAttempt = useRef<CollectionCreationAttempt | null>(null)
   const [items, setItems] = useState<CollectionSummary[] | null>(null)
@@ -83,6 +83,7 @@ export function CollectionList() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (status !== 'authenticated') return
     const validationError = collectionNameError(name)
     setNameError(validationError)
     setCreateError(null)
@@ -112,6 +113,13 @@ export function CollectionList() {
 
       {status === 'loading' || (loading && !items) ? (
         <StatePanel title="컬렉션을 불러오는 중입니다." />
+      ) : status === 'unavailable' ? (
+        <StatePanel
+          tone="warning"
+          title="인증 상태를 확인하지 못했습니다."
+          description="잠시 후 다시 시도해 주세요."
+          actions={<Button variant="secondary" onClick={() => void refreshSession()}>다시 시도</Button>}
+        />
       ) : unauthenticated ? (
         <StatePanel tone="warning" title="로그인이 필요합니다." actions={<Link className={styles.cta} href={loginHref}>로그인하기</Link>} />
       ) : loadError ? (
